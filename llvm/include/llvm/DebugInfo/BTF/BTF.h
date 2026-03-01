@@ -304,14 +304,12 @@ enum PatchableRelocKind : uint32_t {
 // For CommonType sub-types that are followed by a single entry of
 // some type in the binary format.
 #define BTF_DEFINE_TAIL(Type, Accessor)                                        \
-  const Type &Accessor() const { return *getTrailingObjects<Type>(); }
+  const Type &Accessor() const { return *getTrailingObjects(); }
 
 // For CommonType sub-types that are followed by CommonType::getVlen()
 // number of entries of some type in the binary format.
 #define BTF_DEFINE_TAIL_ARR(Type, Accessor)                                    \
-  ArrayRef<Type> Accessor() const {                                            \
-    return ArrayRef<Type>(getTrailingObjects<Type>(), getVlen());              \
-  }
+  ArrayRef<Type> Accessor() const { return getTrailingObjects(getVlen()); }
 
 struct ArrayType final : CommonType,
                          private TrailingObjects<ArrayType, BTFArray> {

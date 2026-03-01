@@ -40,7 +40,7 @@ public:
 
   PluginProperties() {
     m_collection_sp = std::make_shared<OptionValueProperties>(GetSettingName());
-    m_collection_sp->Initialize(g_symbollocatordebuginfod_properties);
+    m_collection_sp->Initialize(g_symbollocatordebuginfod_properties_def);
 
     // We need to read the default value first to read the environment variable.
     llvm::SmallVector<llvm::StringRef> urls = llvm::getDefaultDebuginfodUrls();
@@ -87,9 +87,8 @@ private:
   void ServerURLsChangedCallback() {
     m_server_urls = GetDebugInfoDURLs();
     llvm::SmallVector<llvm::StringRef> dbginfod_urls;
-    llvm::for_each(m_server_urls, [&](const auto &obj) {
+    for (const auto &obj : m_server_urls)
       dbginfod_urls.push_back(obj.ref());
-    });
     llvm::setDefaultDebuginfodUrls(dbginfod_urls);
   }
   // Storage for the StringRef's used within the Debuginfod library.

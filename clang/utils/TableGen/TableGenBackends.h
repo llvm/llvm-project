@@ -24,6 +24,7 @@ class RecordKeeper;
 
 namespace clang {
 
+void EmitCIRLowering(const llvm::RecordKeeper &RK, llvm::raw_ostream &OS);
 void EmitClangDeclContext(const llvm::RecordKeeper &RK, llvm::raw_ostream &OS);
 /**
   @param PriorizeIfSubclassOf These classes should be prioritized in the output.
@@ -51,6 +52,8 @@ void EmitClangAttrSubjectMatchRulesParserStringSwitches(
     const llvm::RecordKeeper &Records, llvm::raw_ostream &OS);
 void EmitCXX11AttributeInfo(const llvm::RecordKeeper &Records,
                             llvm::raw_ostream &OS);
+void EmitAttributeSpellingList(const llvm::RecordKeeper &Records,
+                               llvm::raw_ostream &OS);
 void EmitClangAttrClass(const llvm::RecordKeeper &Records,
                         llvm::raw_ostream &OS);
 void EmitClangAttrImpl(const llvm::RecordKeeper &Records,
@@ -79,6 +82,8 @@ void EmitClangAttrParsedAttrImpl(const llvm::RecordKeeper &Records,
                                  llvm::raw_ostream &OS);
 void EmitClangAttrParsedAttrKinds(const llvm::RecordKeeper &Records,
                                   llvm::raw_ostream &OS);
+void EmitClangAttrIsTypeDependent(const llvm::RecordKeeper &Records,
+                                  llvm::raw_ostream &OS);
 void EmitClangAttrTextNodeDump(const llvm::RecordKeeper &Records,
                                llvm::raw_ostream &OS);
 void EmitClangAttrNodeTraverse(const llvm::RecordKeeper &Records,
@@ -88,6 +93,8 @@ void EmitClangAttrDocTable(const llvm::RecordKeeper &Records,
 
 void EmitClangBuiltins(const llvm::RecordKeeper &Records,
                        llvm::raw_ostream &OS);
+void EmitClangBuiltinDocs(const llvm::RecordKeeper &Records,
+                          llvm::raw_ostream &OS);
 void EmitClangBuiltinTemplates(const llvm::RecordKeeper &Records,
                                llvm::raw_ostream &OS);
 
@@ -137,6 +144,8 @@ void EmitImmCheckTypes(const llvm::RecordKeeper &Records,
                        llvm::raw_ostream &OS);
 void EmitSveHeader(const llvm::RecordKeeper &Records, llvm::raw_ostream &OS);
 void EmitSveBuiltins(const llvm::RecordKeeper &Records, llvm::raw_ostream &OS);
+void EmitSveBuiltinsJSON(const llvm::RecordKeeper &Records,
+                         llvm::raw_ostream &OS);
 void EmitSveBuiltinCG(const llvm::RecordKeeper &Records, llvm::raw_ostream &OS);
 void EmitSveTypeFlags(const llvm::RecordKeeper &Records, llvm::raw_ostream &OS);
 void EmitSveRangeChecks(const llvm::RecordKeeper &Records,
@@ -146,6 +155,8 @@ void EmitSveStreamingAttrs(const llvm::RecordKeeper &Records,
 
 void EmitSmeHeader(const llvm::RecordKeeper &Records, llvm::raw_ostream &OS);
 void EmitSmeBuiltins(const llvm::RecordKeeper &Records, llvm::raw_ostream &OS);
+void EmitSmeBuiltinsJSON(const llvm::RecordKeeper &Records,
+                         llvm::raw_ostream &OS);
 void EmitSmeBuiltinCG(const llvm::RecordKeeper &Records, llvm::raw_ostream &OS);
 void EmitSmeRangeChecks(const llvm::RecordKeeper &Records,
                         llvm::raw_ostream &OS);

@@ -4,9 +4,9 @@
 declare i64 @llvm.uadd.sat.i64(i64, i64)
 declare i64 @llvm.usub.sat.i64(i64, i64)
 
-define i1 @uadd_sat_uge(i64 %a, i64 %b) {
+define i1 @uadd_sat_uge(i64 noundef %a, i64 noundef %b) {
 ; CHECK-LABEL: define i1 @uadd_sat_uge(
-; CHECK-SAME: i64 [[A:%.*]], i64 [[B:%.*]]) {
+; CHECK-SAME: i64 noundef [[A:%.*]], i64 noundef [[B:%.*]]) {
 ; CHECK-NEXT:    [[ADD_SAT:%.*]] = call i64 @llvm.uadd.sat.i64(i64 [[A]], i64 [[B]])
 ; CHECK-NEXT:    [[CMP:%.*]] = and i1 true, true
 ; CHECK-NEXT:    ret i1 [[CMP]]
@@ -18,9 +18,9 @@ define i1 @uadd_sat_uge(i64 %a, i64 %b) {
   ret i1 %cmp
 }
 
-define i1 @usub_sat_ule_lhs(i64 %a, i64 %b) {
+define i1 @usub_sat_ule_lhs(i64 noundef %a, i64 noundef %b) {
 ; CHECK-LABEL: define i1 @usub_sat_ule_lhs(
-; CHECK-SAME: i64 [[A:%.*]], i64 [[B:%.*]]) {
+; CHECK-SAME: i64 noundef [[A:%.*]], i64 noundef [[B:%.*]]) {
 ; CHECK-NEXT:    [[SUB_SAT:%.*]] = call i64 @llvm.usub.sat.i64(i64 [[A]], i64 [[B]])
 ; CHECK-NEXT:    ret i1 true
 ;
@@ -30,9 +30,9 @@ define i1 @usub_sat_ule_lhs(i64 %a, i64 %b) {
 }
 
 ; Negative test
-define i1 @usub_sat_not_ule_rhs(i64 %a, i64 %b) {
+define i1 @usub_sat_not_ule_rhs(i64 noundef %a, i64 noundef %b) {
 ; CHECK-LABEL: define i1 @usub_sat_not_ule_rhs(
-; CHECK-SAME: i64 [[A:%.*]], i64 [[B:%.*]]) {
+; CHECK-SAME: i64 noundef [[A:%.*]], i64 noundef [[B:%.*]]) {
 ; CHECK-NEXT:    [[SUB_SAT:%.*]] = call i64 @llvm.usub.sat.i64(i64 [[A]], i64 [[B]])
 ; CHECK-NEXT:    [[CMP:%.*]] = icmp ule i64 [[SUB_SAT]], [[B]]
 ; CHECK-NEXT:    ret i1 [[CMP]]
@@ -41,3 +41,22 @@ define i1 @usub_sat_not_ule_rhs(i64 %a, i64 %b) {
   %cmp = icmp ule i64 %sub.sat, %b
   ret i1 %cmp
 }
+
+define i1 @pr135603(i64 %conv6, i64 %str.coerce, ptr %conv) {
+; CHECK-LABEL: define i1 @pr135603(
+; CHECK-SAME: i64 [[CONV6:%.*]], i64 [[STR_COERCE:%.*]], ptr [[CONV:%.*]]) {
+; CHECK-NEXT:    [[A:%.*]] = load i32, ptr [[CONV]], align 4
+; CHECK-NEXT:    [[CMP:%.*]] = icmp sgt i32 [[A]], -1
+; CHECK-NEXT:    [[CONV2:%.*]] = zext nneg i32 [[A]] to i64
+; CHECK-NEXT:    [[ADD:%.*]] = add i64 [[STR_COERCE]], [[CONV6]]
+; CHECK-NEXT:    [[SPEC_SELECT:%.*]] = call i64 @llvm.usub.sat.i64(i64 [[CONV2]], i64 [[ADD]])
+; CHECK-NEXT:    ret i1 [[CMP]]
+;
+  %a = load i32, ptr %conv, align 4
+  %cmp = icmp sgt i32 %a, -1
+  %conv2 = zext nneg i32 %a to i64
+  %add = add i64 %str.coerce, %conv6
+  %spec.select = call i64 @llvm.usub.sat.i64(i64 %conv2, i64 %add)
+  ret i1 %cmp
+}
+

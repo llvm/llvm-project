@@ -161,9 +161,7 @@ class StackSlotColoringLegacy : public MachineFunctionPass {
 public:
   static char ID; // Pass identification
 
-  StackSlotColoringLegacy() : MachineFunctionPass(ID) {
-    initializeStackSlotColoringLegacyPass(*PassRegistry::getPassRegistry());
-  }
+  StackSlotColoringLegacy() : MachineFunctionPass(ID) {}
 
   void getAnalysisUsage(AnalysisUsage &AU) const override {
     AU.setPreservesCFG();
@@ -287,8 +285,10 @@ void StackSlotColoring::InitializeSlots() {
 
     auto StackID = MFI->getStackID(FI);
     if (StackID != 0) {
-      AllColors.resize(StackID + 1);
-      UsedColors.resize(StackID + 1);
+      if (StackID >= AllColors.size()) {
+        AllColors.resize(StackID + 1);
+        UsedColors.resize(StackID + 1);
+      }
       AllColors[StackID].resize(LastFI);
       UsedColors[StackID].resize(LastFI);
     }

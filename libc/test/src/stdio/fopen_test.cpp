@@ -15,18 +15,20 @@
 #include "test/UnitTest/Test.h"
 
 TEST(LlvmLibcFOpenTest, PrintToFile) {
-  int result;
+  size_t result;
 
-  FILE *file = LIBC_NAMESPACE::fopen("./testdata/test_data.txt", "w");
+  FILE *file =
+      LIBC_NAMESPACE::fopen(APPEND_LIBC_TEST("testdata/test.txt"), "w");
   ASSERT_FALSE(file == nullptr);
 
   static constexpr char STRING[] = "A simple string written to a file\n";
   result = LIBC_NAMESPACE::fwrite(STRING, 1, sizeof(STRING) - 1, file);
-  EXPECT_GE(result, 0);
+  EXPECT_GE(result, size_t(0));
 
   ASSERT_EQ(0, LIBC_NAMESPACE::fclose(file));
 
-  FILE *new_file = LIBC_NAMESPACE::fopen("./testdata/test_data.txt", "r");
+  FILE *new_file =
+      LIBC_NAMESPACE::fopen(APPEND_LIBC_TEST("testdata/test.txt"), "r");
   ASSERT_FALSE(new_file == nullptr);
 
   static char data[64] = {0};

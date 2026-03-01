@@ -51,3 +51,15 @@ void use(void) {
   // ...including conversion errors.
   fp other_local = diag; // expected-error {{incompatible function pointer types initializing 'fp' (aka 'void (*)(...)') with an expression of type 'void (int, int, ...)'}}
 }
+
+// int(...) not parsed as variadic function type.
+// https://github.com/llvm/llvm-project/issues/145250
+int va_fn(...);  // expected-warning {{'...' as the only parameter of a function is incompatible with C standards before C23}}
+
+// As typeof() argument
+typeof(int(...))*fn_ptr = &va_fn;  // expected-warning {{'...' as the only parameter of a function is incompatible with C standards before C23}} \
+                                   // expected-warning {{'typeof' is incompatible with C standards before C23}}
+
+// As _Generic association type
+int i = _Generic(typeof(va_fn), int(...):1);  // expected-warning {{'...' as the only parameter of a function is incompatible with C standards before C23}} \
+                                              // expected-warning {{'typeof' is incompatible with C standards before C23}}

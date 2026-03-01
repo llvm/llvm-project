@@ -1,0 +1,8 @@
+# REQUIRES: x86-registered-target
+## Test that using the same prefix for both ASM and MIR outputs generates a warning
+## and doesn't produce any checks.
+
+# RUN: cp -f %S/Inputs/x86_asm_mir_same_prefix.ll %t.ll && %update_llc_test_checks %t.ll 2>&1 | FileCheck %s --check-prefix=WARNING
+# RUN: diff -u %S/Inputs/x86_asm_mir_same_prefix.ll.expected %t.ll
+
+# WARNING: WARNING: The following prefixes are used for both ASM and MIR output, which will cause FileCheck failures: CHECK

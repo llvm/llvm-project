@@ -21,6 +21,7 @@
 
 namespace llvm {
 class StringRef;
+class Triple;
 
 /// Command line parser for toggling SPIR-V extensions.
 struct SPIRVExtensionsParser
@@ -42,6 +43,14 @@ public:
   static StringRef
   checkExtensions(const std::vector<std::string> &ExtNames,
                   std::set<SPIRV::Extension::Extension> &AllowedExtensions);
+
+  /// Returns the list of extensions that are valid for a particular
+  /// target environment (i.e., OpenCL or Vulkan).
+  static std::set<SPIRV::Extension::Extension>
+  getValidExtensions(const Triple &TT);
+
+private:
+  static std::set<SPIRV::Extension::Extension> DisabledExtensions;
 };
 
 } // namespace llvm

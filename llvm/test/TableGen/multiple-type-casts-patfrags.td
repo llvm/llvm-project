@@ -18,8 +18,8 @@ def INSTR_FOO_I32_I16 : Instruction {
   let InOperandList = (ins);
 }
 
-// SDAG: 7*/ OPC_SwitchType {{.*}}, 10, /*MVT::i16*/6
-// SDAG: OPC_CheckTypeRes, 1, /*MVT::i32*/7
+// SDAG: 7*/ OPC_SwitchType {{.*}}, 10, MVT::i16
+// SDAG: OPC_CheckTypeRes, 1, MVT::i32
 // SDAG: OPC_MorphNodeTo2Chain, TARGET_VAL(::INSTR_FOO_I16_I32)
 
 // GISEL: GIM_RootCheckType, /*Op*/0, /*Type*/GILLT_s16
@@ -27,8 +27,8 @@ def INSTR_FOO_I32_I16 : Instruction {
 // GISEL: GIR_BuildRootMI, /*Opcode*/GIMT_Encode2(::INSTR_FOO_I16_I32)
 def : Pat<([i16, i32] (int_foo)), ([i16, i32] (INSTR_FOO_I16_I32))>;
 
-// SDAG: 20*/ /*SwitchType*/ {{.*}} /*MVT::i32*/7
-// SDAG: OPC_CheckTypeRes, 1, /*MVT::i16*/6
+// SDAG: 20*/ /*SwitchType*/ {{.*}} MVT::i32
+// SDAG: OPC_CheckTypeRes, 1, MVT::i16
 // SDAG: OPC_MorphNodeTo2Chain, TARGET_VAL(::INSTR_FOO_I32_I16)
 
 // GISEL: GIM_RootCheckType, /*Op*/0, /*Type*/GILLT_s32

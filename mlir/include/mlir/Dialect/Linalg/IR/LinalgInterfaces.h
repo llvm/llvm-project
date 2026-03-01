@@ -20,6 +20,7 @@
 #include "mlir/IR/ImplicitLocOpBuilder.h"
 #include "mlir/IR/OpDefinition.h"
 #include "mlir/Interfaces/DestinationStyleOpInterface.h"
+#include "mlir/Interfaces/IndexingMapOpInterface.h"
 #include "mlir/Interfaces/InferTypeOpInterface.h"
 #include "mlir/Interfaces/ViewLikeInterface.h"
 #include "mlir/Support/RawOstreamExtras.h"
@@ -104,8 +105,12 @@ struct ConvolutionDimensions {
 ///   7. All dimensions appear only once in any given indexing map.
 /// This allows e.g. detecting that some convolution is embedded within
 /// `linalgOp` with some orthogonal heuristic.
-/// When multiple dimension occurrences exist that match any classification
-/// indices are returned in sorted order.
+///
+/// The `outputImage` and `filterLoop` arrays are ordered such that
+/// `outputImage[i]` pairs with `filterLoop[i]` based on the convolution access
+/// pattern in the input indexing map (e.g., `d0 + d2` pairs dimension 0 with
+/// dimension 2). Other dimension sets are returned in sorted order.
+///
 /// Returns a failure if `output_image` (and implicitly `filter_loop`) is empty.
 FailureOr<ConvolutionDimensions> inferConvolutionDims(LinalgOp linalgOp);
 
@@ -120,10 +125,9 @@ bool isaConvolutionOpInterface(LinalgOp linalgOp,
 /// Checks whether `linalgOp` is semantically equivalent to a `linalg.copyOp`.
 bool isaCopyOpInterface(LinalgOp linalgOp);
 
-/// Checks whether `genericOp` is semantically equivalent to a
-///  `linalg.broadcast`. Returns broadcast dimensions if true.
-std::optional<SmallVector<int64_t>>
-isaBroadcastOpInterface(GenericOp genericOp);
+/// Checks whether `linalgOp` is semantically equivalent to a broadcast
+/// operation. Returns broadcast dimensions if true.
+std::optional<SmallVector<int64_t>> isaBroadcastOpInterface(LinalgOp linalgOp);
 
 /// Checks whether `genericOp` is semantically equivalent to a
 ///  `linalg.transpose`. Returns permuted dimensions if true.
@@ -142,6 +146,9 @@ bool isaElemwiseSingleUnaryOpInterface(GenericOp genericOp);
 bool isaElemwiseSingleBinaryOpInterface(GenericOp genericOp);
 
 /// Checks whether `genericOp` is semantically equivalent to a `linalg.fill`.
+/// Supports two patterns:
+/// 1. External: linalg.generic ins(%scalar) outs(%tensor) { yield %scalar }
+/// 2. Inlined: linalg.generic outs(%tensor) { yield %constant }
 /// Returns the scalar fill value if true.
 std::optional<Value> isaFillOpInterface(GenericOp genericOp);
 

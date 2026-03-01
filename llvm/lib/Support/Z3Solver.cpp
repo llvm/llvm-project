@@ -932,7 +932,8 @@ public:
   };
   unsigned getUnsigned(StringRef Key) const override {
     auto It = UnsignedValues.find(Key.str());
-    assert(It != UnsignedValues.end());
+    if (It == UnsignedValues.end())
+      return 0;
     return It->second;
   };
 
@@ -956,7 +957,7 @@ std::unique_ptr<SMTSolverStatistics> Z3Solver::getStatistics() const {
   auto const &C = Context.Context;
   Z3_stats S = Z3_solver_get_statistics(C, Solver);
   Z3_stats_inc_ref(C, S);
-  auto StatsGuard = llvm::make_scope_exit([&C, &S] { Z3_stats_dec_ref(C, S); });
+  llvm::scope_exit StatsGuard([&C, &S] { Z3_stats_dec_ref(C, S); });
   Z3Statistics Result;
 
   unsigned NumKeys = Z3_stats_size(C, S);
@@ -989,7 +990,9 @@ llvm::SMTSolverRef llvm::CreateZ3Solver() {
 #endif
 }
 
+#if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
 LLVM_DUMP_METHOD void SMTSort::dump() const { print(llvm::errs()); }
 LLVM_DUMP_METHOD void SMTExpr::dump() const { print(llvm::errs()); }
 LLVM_DUMP_METHOD void SMTSolver::dump() const { print(llvm::errs()); }
 LLVM_DUMP_METHOD void SMTSolverStatistics::dump() const { print(llvm::errs()); }
+#endif

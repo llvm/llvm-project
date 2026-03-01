@@ -83,7 +83,8 @@ private:
   void emitInlineAsmStart() const override;
 
   void emitInlineAsmEnd(const MCSubtargetInfo &StartInfo,
-                        const MCSubtargetInfo *EndInfo) const override;
+                        const MCSubtargetInfo *EndInfo,
+                        const MachineInstr *MI) override;
 
   void emitJumpTableEntry(const MachineJumpTableInfo &MJTI,
                           const MachineBasicBlock *MBB,
@@ -112,18 +113,18 @@ private:
 
   void EmitFPCallStub(const char *, const Mips16HardFloatInfo::FuncSignature *);
 
-  void NaClAlignIndirectJumpTargets(MachineFunction &MF);
-
   bool isLongBranchPseudo(int Opcode) const;
 
 public:
+  static char ID;
+
   const MipsSubtarget *Subtarget;
   const MipsFunctionInfo *MipsFI;
   MipsMCInstLower MCInstLowering;
 
   explicit MipsAsmPrinter(TargetMachine &TM,
                           std::unique_ptr<MCStreamer> Streamer)
-      : AsmPrinter(TM, std::move(Streamer)), MCInstLowering(*this) {}
+      : AsmPrinter(TM, std::move(Streamer), ID), MCInstLowering(*this) {}
 
   StringRef getPassName() const override { return "Mips Assembly Printer"; }
 

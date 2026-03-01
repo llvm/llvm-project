@@ -12,11 +12,12 @@ body:             |
 
     ; CHECK-LABEL: name: sextload_from_inreg
     ; CHECK: liveins: $x0
-    ; CHECK: [[COPY:%[0-9]+]]:_(p0) = COPY $x0
-    ; CHECK: [[SEXTLOAD:%[0-9]+]]:_(s16) = G_SEXTLOAD [[COPY]](p0) :: (load (s8), align 2)
-    ; CHECK: [[ANYEXT:%[0-9]+]]:_(s32) = G_ANYEXT [[SEXTLOAD]](s16)
-    ; CHECK: $w0 = COPY [[ANYEXT]](s32)
-    ; CHECK: RET_ReallyLR implicit $w0
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(p0) = COPY $x0
+    ; CHECK-NEXT: [[SEXTLOAD:%[0-9]+]]:_(s16) = G_SEXTLOAD [[COPY]](p0) :: (load (s8), align 2)
+    ; CHECK-NEXT: [[ANYEXT:%[0-9]+]]:_(s32) = G_ANYEXT [[SEXTLOAD]](s16)
+    ; CHECK-NEXT: $w0 = COPY [[ANYEXT]](s32)
+    ; CHECK-NEXT: RET_ReallyLR implicit $w0
     %0:_(p0) = COPY $x0
     %1:_(s16) = G_LOAD %0(p0) :: (load (s16))
     %2:_(s16) = G_SEXT_INREG %1, 8
@@ -38,12 +39,13 @@ body:             |
     ; could cause mem dependence violations.
     ; CHECK-LABEL: name: sextload_from_inreg_across_store
     ; CHECK: liveins: $x0
-    ; CHECK: [[COPY:%[0-9]+]]:_(p0) = COPY $x0
-    ; CHECK: [[SEXTLOAD:%[0-9]+]]:_(s16) = G_SEXTLOAD [[COPY]](p0) :: (load (s8), align 2)
-    ; CHECK: G_STORE [[COPY]](p0), [[COPY]](p0) :: (store (p0))
-    ; CHECK: [[ANYEXT:%[0-9]+]]:_(s32) = G_ANYEXT [[SEXTLOAD]](s16)
-    ; CHECK: $w0 = COPY [[ANYEXT]](s32)
-    ; CHECK: RET_ReallyLR implicit $w0
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(p0) = COPY $x0
+    ; CHECK-NEXT: [[SEXTLOAD:%[0-9]+]]:_(s16) = G_SEXTLOAD [[COPY]](p0) :: (load (s8), align 2)
+    ; CHECK-NEXT: G_STORE [[COPY]](p0), [[COPY]](p0) :: (store (p0))
+    ; CHECK-NEXT: [[ANYEXT:%[0-9]+]]:_(s32) = G_ANYEXT [[SEXTLOAD]](s16)
+    ; CHECK-NEXT: $w0 = COPY [[ANYEXT]](s32)
+    ; CHECK-NEXT: RET_ReallyLR implicit $w0
     %0:_(p0) = COPY $x0
     %1:_(s16) = G_LOAD %0(p0) :: (load (s16))
     G_STORE %0(p0), %0(p0) :: (store (p0))
@@ -65,11 +67,12 @@ body:             |
 
     ; CHECK-LABEL: name: non_pow_2_inreg
     ; CHECK: liveins: $x0
-    ; CHECK: [[COPY:%[0-9]+]]:_(p0) = COPY $x0
-    ; CHECK: [[LOAD:%[0-9]+]]:_(s32) = G_LOAD [[COPY]](p0) :: (load (s32))
-    ; CHECK: [[SEXT_INREG:%[0-9]+]]:_(s32) = G_SEXT_INREG [[LOAD]], 24
-    ; CHECK: $w0 = COPY [[SEXT_INREG]](s32)
-    ; CHECK: RET_ReallyLR implicit $w0
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(p0) = COPY $x0
+    ; CHECK-NEXT: [[LOAD:%[0-9]+]]:_(s32) = G_LOAD [[COPY]](p0) :: (load (s32))
+    ; CHECK-NEXT: [[SEXT_INREG:%[0-9]+]]:_(s32) = G_SEXT_INREG [[LOAD]], 24
+    ; CHECK-NEXT: $w0 = COPY [[SEXT_INREG]](s32)
+    ; CHECK-NEXT: RET_ReallyLR implicit $w0
     %0:_(p0) = COPY $x0
     %1:_(s32) = G_LOAD %0(p0) :: (load (s32))
     %2:_(s32) = G_SEXT_INREG %1, 24
@@ -89,12 +92,13 @@ body:             |
 
     ; CHECK-LABEL: name: atomic
     ; CHECK: liveins: $x0
-    ; CHECK: [[COPY:%[0-9]+]]:_(p0) = COPY $x0
-    ; CHECK: [[LOAD:%[0-9]+]]:_(s16) = G_LOAD [[COPY]](p0) :: (load acquire (s16))
-    ; CHECK: [[SEXT_INREG:%[0-9]+]]:_(s16) = G_SEXT_INREG [[LOAD]], 8
-    ; CHECK: [[ANYEXT:%[0-9]+]]:_(s32) = G_ANYEXT [[SEXT_INREG]](s16)
-    ; CHECK: $w0 = COPY [[ANYEXT]](s32)
-    ; CHECK: RET_ReallyLR implicit $w0
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(p0) = COPY $x0
+    ; CHECK-NEXT: [[LOAD:%[0-9]+]]:_(s16) = G_LOAD [[COPY]](p0) :: (load acquire (s16))
+    ; CHECK-NEXT: [[SEXT_INREG:%[0-9]+]]:_(s16) = G_SEXT_INREG [[LOAD]], 8
+    ; CHECK-NEXT: [[ANYEXT:%[0-9]+]]:_(s32) = G_ANYEXT [[SEXT_INREG]](s16)
+    ; CHECK-NEXT: $w0 = COPY [[ANYEXT]](s32)
+    ; CHECK-NEXT: RET_ReallyLR implicit $w0
     %0:_(p0) = COPY $x0
     %1:_(s16) = G_LOAD %0(p0) :: (load acquire (s16))
     %2:_(s16) = G_SEXT_INREG %1, 8
@@ -115,12 +119,13 @@ body:             |
 
     ; CHECK-LABEL: name: volatile
     ; CHECK: liveins: $x0
-    ; CHECK: [[COPY:%[0-9]+]]:_(p0) = COPY $x0
-    ; CHECK: [[LOAD:%[0-9]+]]:_(s16) = G_LOAD [[COPY]](p0) :: (volatile load (s16))
-    ; CHECK: [[SEXT_INREG:%[0-9]+]]:_(s16) = G_SEXT_INREG [[LOAD]], 8
-    ; CHECK: [[ANYEXT:%[0-9]+]]:_(s32) = G_ANYEXT [[SEXT_INREG]](s16)
-    ; CHECK: $w0 = COPY [[ANYEXT]](s32)
-    ; CHECK: RET_ReallyLR implicit $w0
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(p0) = COPY $x0
+    ; CHECK-NEXT: [[LOAD:%[0-9]+]]:_(s16) = G_LOAD [[COPY]](p0) :: (volatile load (s16))
+    ; CHECK-NEXT: [[SEXT_INREG:%[0-9]+]]:_(s16) = G_SEXT_INREG [[LOAD]], 8
+    ; CHECK-NEXT: [[ANYEXT:%[0-9]+]]:_(s32) = G_ANYEXT [[SEXT_INREG]](s16)
+    ; CHECK-NEXT: $w0 = COPY [[ANYEXT]](s32)
+    ; CHECK-NEXT: RET_ReallyLR implicit $w0
     %0:_(p0) = COPY $x0
     %1:_(s16) = G_LOAD %0(p0) :: (volatile load (s16))
     %2:_(s16) = G_SEXT_INREG %1, 8

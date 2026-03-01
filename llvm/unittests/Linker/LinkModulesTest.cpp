@@ -106,10 +106,10 @@ TEST_F(LinkModuleTest, BlockAddress) {
   const GlobalVariable *LinkedGV = LinkedModule->getNamedGlobal("switch.bas");
   const Constant *Init = LinkedGV->getInitializer();
 
-  // @switch.bas = internal global [3 x i8*]
-  //   [i8* blockaddress(@ba_func, %switch.case.1),
-  //    i8* blockaddress(@ba_func, %switch.case.2),
-  //    i8* inttoptr (i32 1 to i8*)]
+  // @switch.bas = internal global [3 x ptr]
+  //   [ptr blockaddress(@ba_func, %switch.case.1),
+  //    ptr blockaddress(@ba_func, %switch.case.2),
+  //    ptr inttoptr (i32 1 to ptr)]
 
   ArrayType *AT = ArrayType::get(PointerType::getUnqual(Ctx), 3);
   EXPECT_EQ(AT, Init->getType());
@@ -358,7 +358,7 @@ TEST_F(LinkModuleTest, RemangleIntrinsics) {
   // types, so they must be uniquified by linker. Check that they use the same
   // intrinsic definition.
   Function *F = Foo->getFunction("llvm.ssa.copy.s_struct.rtx_defs");
-  ASSERT_EQ(F->getNumUses(), (unsigned)2);
+  ASSERT_TRUE(F->hasNUses(2));
 }
 
 } // end anonymous namespace

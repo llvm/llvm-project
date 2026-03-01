@@ -13,6 +13,7 @@
 #include "llvm/MC/MCCodeEmitter.h"
 #include "llvm/MC/MCContext.h"
 #include "llvm/MC/MCInstPrinter.h"
+#include "llvm/MC/MCLFI.h"
 #include "llvm/MC/MCObjectStreamer.h"
 #include "llvm/MC/MCObjectWriter.h"
 #include "llvm/Support/raw_ostream.h"
@@ -32,7 +33,8 @@ MCStreamer *Target::createMCObjectStreamer(
   case Triple::UnknownObjectFormat:
     llvm_unreachable("Unknown object format");
   case Triple::COFF:
-    assert(T.isOSWindowsOrUEFI() && "only Windows and UEFI COFF are supported");
+    assert((T.isOSWindows() || T.isUEFI()) &&
+           "only Windows and UEFI COFF are supported");
     S = COFFStreamerCtorFn(Ctx, std::move(TAB), std::move(OW),
                            std::move(Emitter));
     break;
@@ -75,6 +77,8 @@ MCStreamer *Target::createMCObjectStreamer(
   }
   if (ObjectTargetStreamerCtorFn)
     ObjectTargetStreamerCtorFn(*S, STI);
+  if (T.isLFI())
+    initializeLFIMCStreamer(*S, Ctx, T);
   return S;
 }
 

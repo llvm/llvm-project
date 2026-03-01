@@ -58,6 +58,7 @@ static_library("MCTargetDesc") {
     "//llvm/lib/MC",
     "//llvm/lib/Support",
     "//llvm/lib/Target/RISCV:RISCVGenCompressInstEmitter",
+    "//llvm/lib/Target/RISCV/TargetInfo",
     "//llvm/lib/TargetParser",
   ]
   include_dirs = [ ".." ]
@@ -72,6 +73,7 @@ static_library("MCTargetDesc") {
     "RISCVMCExpr.cpp",
     "RISCVMCObjectFileInfo.cpp",
     "RISCVMCTargetDesc.cpp",
+    "RISCVMachObjectWriter.cpp",
     "RISCVMatInt.cpp",
     "RISCVTargetStreamer.cpp",
   ]

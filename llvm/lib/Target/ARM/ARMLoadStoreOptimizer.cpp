@@ -119,8 +119,7 @@ namespace {
     bool runOnMachineFunction(MachineFunction &Fn) override;
 
     MachineFunctionProperties getRequiredProperties() const override {
-      return MachineFunctionProperties().set(
-          MachineFunctionProperties::Property::NoVRegs);
+      return MachineFunctionProperties().setNoVRegs();
     }
 
     StringRef getPassName() const override { return ARM_LOAD_STORE_OPT_NAME; }
@@ -2425,7 +2424,7 @@ bool ARMPreAllocLoadStoreOpt::RescheduleOps(
           Ops.pop_back();
 
           const MCInstrDesc &MCID = TII->get(NewOpc);
-          const TargetRegisterClass *TRC = TII->getRegClass(MCID, 0, TRI, *MF);
+          const TargetRegisterClass *TRC = TII->getRegClass(MCID, 0);
           MRI->constrainRegClass(FirstReg, TRC);
           MRI->constrainRegClass(SecondReg, TRC);
 
@@ -3015,7 +3014,7 @@ static void AdjustBaseAndOffset(MachineInstr *MI, Register NewBaseReg,
   MachineFunction *MF = MI->getMF();
   MachineRegisterInfo &MRI = MF->getRegInfo();
   const MCInstrDesc &MCID = TII->get(MI->getOpcode());
-  const TargetRegisterClass *TRC = TII->getRegClass(MCID, BaseOp, TRI, *MF);
+  const TargetRegisterClass *TRC = TII->getRegClass(MCID, BaseOp);
   MRI.constrainRegClass(NewBaseReg, TRC);
 
   int OldOffset = MI->getOperand(BaseOp + 1).getImm();
@@ -3072,10 +3071,10 @@ static MachineInstr *createPostIncLoadStore(MachineInstr *MI, int Offset,
 
   const MCInstrDesc &MCID = TII->get(NewOpcode);
   // Constrain the def register class
-  const TargetRegisterClass *TRC = TII->getRegClass(MCID, 0, TRI, *MF);
+  const TargetRegisterClass *TRC = TII->getRegClass(MCID, 0);
   MRI.constrainRegClass(NewReg, TRC);
   // And do the same for the base operand
-  TRC = TII->getRegClass(MCID, 2, TRI, *MF);
+  TRC = TII->getRegClass(MCID, 2);
   MRI.constrainRegClass(MI->getOperand(1).getReg(), TRC);
 
   unsigned AddrMode = (MCID.TSFlags & ARMII::AddrModeMask);

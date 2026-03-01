@@ -14,16 +14,17 @@
 #define LLVM_EXECUTIONENGINE_ORC_EHFRAMEREGISTRATIONPLUGIN_H
 
 #include "llvm/ExecutionEngine/Orc/LinkGraphLinkingLayer.h"
+#include "llvm/Support/Compiler.h"
 
 #include <memory>
 #include <mutex>
-#include <vector>
 
 namespace llvm::orc {
 
 /// Adds AllocationActions to register and deregister eh-frame sections in the
 /// absence of native Platform support.
-class EHFrameRegistrationPlugin : public LinkGraphLinkingLayer::Plugin {
+class LLVM_ABI EHFrameRegistrationPlugin
+    : public LinkGraphLinkingLayer::Plugin {
 public:
   static Expected<std::unique_ptr<EHFrameRegistrationPlugin>>
   Create(ExecutionSession &ES);

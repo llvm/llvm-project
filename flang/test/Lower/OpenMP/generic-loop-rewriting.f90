@@ -38,12 +38,12 @@ end subroutine target_teams_loop
 !CHECK:             %[[UB:.*]] = arith.constant 10 : i32
 !CHECK:             %[[STEP:.*]] = arith.constant 1 : i32
 
-!CHECK:             omp.parallel private(@{{.*}} %[[I_DECL]]#0 
+!CHECK:             omp.parallel private(@{{.*}} %[[I_DECL]]#0
 !CHECK-SAME:          -> %[[I_PRIV_ARG:[^[:space:]]+]] : !fir.ref<i32>) {
 !CHECK:               omp.distribute {
 !CHECK:                 omp.wsloop {
 
-!CHECK:                   omp.loop_nest (%{{.*}}) : i32 = 
+!CHECK:                   omp.loop_nest (%{{.*}}) : i32 =
 !CHECK-SAME:                (%[[LB]]) to (%[[UB]]) inclusive step (%[[STEP]]) {
 !CHECK:                     %[[I_PRIV_DECL:.*]]:2 = hlfir.declare %[[I_PRIV_ARG]]
 !CHECK:                     hlfir.assign %{{.*}} to %[[I_PRIV_DECL]]#0 : i32, !fir.ref<i32>

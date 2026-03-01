@@ -7,10 +7,10 @@
 //===----------------------------------------------------------------------===//
 
 #include "mlir/Dialect/MPI/IR/MPI.h"
+#include "mlir/Dialect/MPI/IR/Utils.h"
 #include "mlir/Dialect/MemRef/IR/MemRef.h"
 #include "mlir/IR/Builders.h"
 #include "mlir/IR/BuiltinAttributes.h"
-#include "mlir/IR/PatternMatch.h"
 
 using namespace mlir;
 using namespace mlir::mpi;
@@ -41,6 +41,23 @@ struct FoldCast final : public mlir::OpRewritePattern<OpT> {
     return mlir::success();
   }
 };
+
+struct FoldRank final : public mlir::OpRewritePattern<mlir::mpi::CommRankOp> {
+  using mlir::OpRewritePattern<mlir::mpi::CommRankOp>::OpRewritePattern;
+  LogicalResult matchAndRewrite(mlir::mpi::CommRankOp op,
+                                mlir::PatternRewriter &b) const override {
+    return FoldToDLTIConst(op, "MPI:comm_world_rank", b);
+  }
+};
+
+struct FoldSize final : public mlir::OpRewritePattern<mlir::mpi::CommSizeOp> {
+  using mlir::OpRewritePattern<mlir::mpi::CommSizeOp>::OpRewritePattern;
+
+  LogicalResult matchAndRewrite(mlir::mpi::CommSizeOp op,
+                                mlir::PatternRewriter &b) const override {
+    return FoldToDLTIConst(op, "MPI:comm_world_size", b);
+  }
+};
 } // namespace
 
 void mlir::mpi::SendOp::getCanonicalizationPatterns(
@@ -61,6 +78,16 @@ void mlir::mpi::ISendOp::getCanonicalizationPatterns(
 void mlir::mpi::IRecvOp::getCanonicalizationPatterns(
     mlir::RewritePatternSet &results, mlir::MLIRContext *context) {
   results.add<FoldCast<mlir::mpi::IRecvOp>>(context);
+}
+
+void mlir::mpi::CommRankOp::getCanonicalizationPatterns(
+    mlir::RewritePatternSet &results, mlir::MLIRContext *context) {
+  results.add<FoldRank>(context);
+}
+
+void mlir::mpi::CommSizeOp::getCanonicalizationPatterns(
+    mlir::RewritePatternSet &results, mlir::MLIRContext *context) {
+  results.add<FoldSize>(context);
 }
 
 //===----------------------------------------------------------------------===//

@@ -25,48 +25,64 @@
 
 #include <iterator>
 
+#include "MinSequenceContainer.h"
 #include "test_macros.h"
+#include "min_allocator.h"
 
-int main(int, char**) {
-  {
-    using M     = std::flat_map<int, char, std::less<int>, std::deque<int>, std::deque<char>>;
-    M m         = {{1, 'a'}, {2, 'b'}, {3, 'c'}, {4, 'd'}};
-    const M& cm = m;
-    ASSERT_SAME_TYPE(decltype(m.rbegin()), M::reverse_iterator);
-    ASSERT_SAME_TYPE(decltype(m.crbegin()), M::const_reverse_iterator);
-    ASSERT_SAME_TYPE(decltype(cm.rbegin()), M::const_reverse_iterator);
-    ASSERT_SAME_TYPE(decltype(m.rend()), M::reverse_iterator);
-    ASSERT_SAME_TYPE(decltype(m.crend()), M::const_reverse_iterator);
-    ASSERT_SAME_TYPE(decltype(cm.rend()), M::const_reverse_iterator);
-    static_assert(noexcept(m.rbegin()));
-    static_assert(noexcept(cm.rbegin()));
-    static_assert(noexcept(m.crbegin()));
-    static_assert(noexcept(m.rend()));
-    static_assert(noexcept(cm.rend()));
-    static_assert(noexcept(m.crend()));
-    assert(m.size() == 4);
-    assert(std::distance(m.rbegin(), m.rend()) == 4);
-    assert(std::distance(cm.rbegin(), cm.rend()) == 4);
-    assert(std::distance(m.crbegin(), m.crend()) == 4);
-    assert(std::distance(cm.crbegin(), cm.crend()) == 4);
-    M::reverse_iterator i; // default-construct
-    ASSERT_SAME_TYPE(decltype(i->first), const int&);
-    ASSERT_SAME_TYPE(decltype(i->second), char&);
-    i                           = m.rbegin(); // move-assignment
-    M::const_reverse_iterator k = i;          // converting constructor
-    assert(i == k);                           // comparison
-    for (int j = 4; j >= 1; --j, ++i) {       // pre-increment
-      assert(i->first == j);                  // operator->
-      assert(i->second == 'a' + j - 1);
-    }
-    assert(i == m.rend());
-    for (int j = 1; j <= 4; ++j) {
-      --i; // pre-decrement
-      assert((*i).first == j);
-      assert((*i).second == 'a' + j - 1);
-    }
-    assert(i == m.rbegin());
+template <class KeyContainer, class ValueContainer>
+constexpr void test() {
+  using Key   = typename KeyContainer::value_type;
+  using Value = typename ValueContainer::value_type;
+  using M     = std::flat_map<Key, Value, std::less<Key>, KeyContainer, ValueContainer>;
+  M m         = {{1, 'a'}, {2, 'b'}, {3, 'c'}, {4, 'd'}};
+  const M& cm = m;
+  ASSERT_SAME_TYPE(decltype(m.rbegin()), typename M::reverse_iterator);
+  ASSERT_SAME_TYPE(decltype(m.crbegin()), typename M::const_reverse_iterator);
+  ASSERT_SAME_TYPE(decltype(cm.rbegin()), typename M::const_reverse_iterator);
+  ASSERT_SAME_TYPE(decltype(m.rend()), typename M::reverse_iterator);
+  ASSERT_SAME_TYPE(decltype(m.crend()), typename M::const_reverse_iterator);
+  ASSERT_SAME_TYPE(decltype(cm.rend()), typename M::const_reverse_iterator);
+  static_assert(noexcept(m.rbegin()));
+  static_assert(noexcept(cm.rbegin()));
+  static_assert(noexcept(m.crbegin()));
+  static_assert(noexcept(m.rend()));
+  static_assert(noexcept(cm.rend()));
+  static_assert(noexcept(m.crend()));
+  assert(m.size() == 4);
+  assert(std::distance(m.rbegin(), m.rend()) == 4);
+  assert(std::distance(cm.rbegin(), cm.rend()) == 4);
+  assert(std::distance(m.crbegin(), m.crend()) == 4);
+  assert(std::distance(cm.crbegin(), cm.crend()) == 4);
+  typename M::reverse_iterator i; // default-construct
+  ASSERT_SAME_TYPE(decltype(i->first), const int&);
+  ASSERT_SAME_TYPE(decltype(i->second), char&);
+  i                                    = m.rbegin(); // move-assignment
+  typename M::const_reverse_iterator k = i;          // converting constructor
+  assert(i == k);                                    // comparison
+  for (int j = 4; j >= 1; --j, ++i) {                // pre-increment
+    assert(i->first == j);                           // operator->
+    assert(i->second == 'a' + j - 1);
   }
+  assert(i == m.rend());
+  for (int j = 1; j <= 4; ++j) {
+    --i; // pre-decrement
+    assert((*i).first == j);
+    assert((*i).second == 'a' + j - 1);
+  }
+  assert(i == m.rbegin());
+}
+
+constexpr bool test() {
+  test<std::vector<int>, std::vector<char>>();
+#ifndef __cpp_lib_constexpr_deque
+  if (!TEST_IS_CONSTANT_EVALUATED)
+#endif
+  {
+    test<std::deque<int>, std::vector<char>>();
+  }
+  test<MinSequenceContainer<int>, MinSequenceContainer<char>>();
+  test<std::vector<int, min_allocator<int>>, std::vector<char, min_allocator<char>>>();
+
   {
     // N3644 testing
     using C = std::flat_map<int, char>;
@@ -82,6 +98,14 @@ int main(int, char**) {
     assert(!(ii1 != cii));
     assert(!(cii != ii1));
   }
+  return true;
+}
+
+int main(int, char**) {
+  test();
+#if TEST_STD_VER >= 26
+  static_assert(test());
+#endif
 
   return 0;
 }

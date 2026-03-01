@@ -12,7 +12,7 @@ from lldbsuite.test.lldbpexpect import PExpectTest
 class EditlineTest(PExpectTest):
     @skipIfAsan
     @skipIfEditlineSupportMissing
-    @skipIf(oslist=["linux"], archs=["arm", "aarch64"])
+    @skipIf(oslist=["linux"], archs=["arm$", "aarch64"])
     def test_left_right_arrow(self):
         """Test that ctrl+left/right arrow navigates words correctly.
 
@@ -94,4 +94,27 @@ class EditlineTest(PExpectTest):
         # after the prompt.
         self.child.send("foo")
         # Check that there are no escape codes.
-        self.child.expect(re.escape("\n(lldb) foo"))
+        self.child.expect(re.escape("\n\r\x1b[K(lldb) foo"))
+
+    @skipIfAsan
+    @skipIfEditlineSupportMissing
+    def test_enable_and_disable_color(self):
+        """Test that when we change the color during debugging it applies the changes"""
+        # launch with colors enabled.
+        self.launch(use_colors=True)
+        self.child.send('settings set prompt-ansi-prefix "${ansi.fg.red}"\n')
+        self.child.expect(re.escape("\x1b[31m(lldb) \x1b[0m\x1b[8G"))
+
+        # set use color to false.
+        self.child.send("settings set use-color false\n")
+
+        # check that there is no color.
+        self.child.send("foo\n")
+        self.child.expect(re.escape("(lldb) foo"))
+
+        # set use-color to true
+        self.child.send("settings set use-color true\n")
+
+        # check that there is colors;
+        self.child.send("foo")
+        self.child.expect(re.escape("\x1b[31m(lldb) \x1b[0m\x1b[8Gfoo"))

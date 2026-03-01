@@ -69,7 +69,7 @@ define void @p2(i64 %n, ptr %A, ptr %B) nounwind uwtable ssp {
 ; CHECK-NEXT:  Src: %0 = load i64, ptr %arrayidx17, align 8 --> Dst: store i64 %0, ptr %B.addr.24, align 8
 ; CHECK-NEXT:    da analyze - confused!
 ; CHECK-NEXT:  Src: store i64 %0, ptr %B.addr.24, align 8 --> Dst: store i64 %0, ptr %B.addr.24, align 8
-; CHECK-NEXT:    da analyze - output [* * *]!
+; CHECK-NEXT:    da analyze - confused!
 ;
 entry:
   %cmp10 = icmp sgt i64 %n, 0

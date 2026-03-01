@@ -1,4 +1,8 @@
+# Not run on Windows because we are not able to break on all the required functions.
+# Even if we could, function.name* formatting also does not work correctly:
+# https://github.com/llvm/llvm-project/issues/143149
 # UNSUPPORTED: system-windows
+
 # Test different name formats.
 
 # RUN: %build %S/Inputs/names.cpp --std c++17 -o %t.out
@@ -22,13 +26,13 @@ c
 c
 # NAME_WITH_ARGS: frame int ns::foo<void (Foo::*)(int (*)(int)) const noexcept>(str="method")
 c
-# NAME_WITH_ARGS: frame ns::returns_func_ptr<int>((null)={{.*}})
+# NAME_WITH_ARGS: frame detail::Quux<double> (* (*ns::returns_func_ptr<int>((null)={{.*}}))(int))(float)
 c
 # NAME_WITH_ARGS: frame void Foo::foo<int (*)()>(this={{.*}}, arg=({{.*}}`(anonymous namespace)::anon_bar() at {{.*}}))
 c
 # NAME_WITH_ARGS: frame void Foo::operator<<<1>(this={{.*}}, (null)=0)
 c
-# NAME_WITH_ARGS: frame Foo::returns_func_ptr<int>(this={{.*}}, (null)={{.*}})
+# NAME_WITH_ARGS: frame detail::Quux<double> (* (*Foo::returns_func_ptr<int>(this={{.*}}, (null)={{.*}}))(int))(float) const
 c
 # NAME_WITH_ARGS: frame inlined_foo(str="bar")
 q

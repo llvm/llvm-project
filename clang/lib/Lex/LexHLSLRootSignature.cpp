@@ -16,8 +16,10 @@ using TokenKind = RootSignatureToken::Kind;
 // Lexer Definitions
 
 static bool isNumberChar(char C) {
-  // TODO(#126565): extend for float support exponents
-  return isdigit(C); // integer support
+  return isdigit(C)                                      // integer support
+         || C == '.'                                     // float support
+         || C == 'e' || C == 'E' || C == '-' || C == '+' // exponent support
+         || C == 'f' || C == 'F'; // explicit float support
 }
 
 RootSignatureToken RootSignatureLexer::lexToken() {
@@ -25,10 +27,10 @@ RootSignatureToken RootSignatureLexer::lexToken() {
   advanceBuffer(Buffer.take_while(isspace).size());
 
   if (isEndOfBuffer())
-    return RootSignatureToken(TokenKind::end_of_stream, SourceLoc);
+    return RootSignatureToken(TokenKind::end_of_stream, LocOffset);
 
   // Record where this token is in the text for usage in parser diagnostics
-  RootSignatureToken Result(SourceLoc);
+  RootSignatureToken Result(LocOffset);
 
   char C = Buffer.front();
 
@@ -45,17 +47,22 @@ RootSignatureToken RootSignatureLexer::lexToken() {
     break;
   }
 
-  // Integer literal
-  if (isdigit(C)) {
-    Result.TokKind = TokenKind::int_literal;
+  // Number literal
+  if (isdigit(C) || C == '.') {
     Result.NumSpelling = Buffer.take_while(isNumberChar);
+
+    // If all values are digits then we have an int literal
+    bool IsInteger = Result.NumSpelling.find_if_not(isdigit) == StringRef::npos;
+
+    Result.TokKind =
+        IsInteger ? TokenKind::int_literal : TokenKind::float_literal;
     advanceBuffer(Result.NumSpelling.size());
     return Result;
   }
 
   // All following tokens require at least one additional character
   if (Buffer.size() <= 1) {
-    Result = RootSignatureToken(TokenKind::invalid, SourceLoc);
+    Result = RootSignatureToken(TokenKind::invalid, LocOffset);
     return Result;
   }
 

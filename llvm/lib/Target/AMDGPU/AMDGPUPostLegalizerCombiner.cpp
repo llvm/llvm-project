@@ -367,10 +367,10 @@ bool AMDGPUPostLegalizerCombinerImpl::matchRemoveFcanonicalize(
   return TLI->isCanonicalized(Reg, MF);
 }
 
-// The buffer_load_{i8, i16} intrinsics are intially lowered as buffer_load_{u8,
-// u16} instructions. Here, the buffer_load_{u8, u16} instructions are combined
-// with sign extension instrucions in order to generate buffer_load_{i8, i16}
-// instructions.
+// The buffer_load_{i8, i16} intrinsics are initially lowered as
+// buffer_load_{u8, u16} instructions. Here, the buffer_load_{u8, u16}
+// instructions are combined with sign extension instrucions in order to
+// generate buffer_load_{i8, i16} instructions.
 
 // Identify buffer_load_{u8, u16}.
 bool AMDGPUPostLegalizerCombinerImpl::matchCombineSignExtendInReg(
@@ -462,8 +462,8 @@ void AMDGPUPostLegalizerCombiner::getAnalysisUsage(AnalysisUsage &AU) const {
   AU.addRequired<TargetPassConfig>();
   AU.setPreservesCFG();
   getSelectionDAGFallbackAnalysisUsage(AU);
-  AU.addRequired<GISelValueTrackingAnalysis>();
-  AU.addPreserved<GISelValueTrackingAnalysis>();
+  AU.addRequired<GISelValueTrackingAnalysisLegacy>();
+  AU.addPreserved<GISelValueTrackingAnalysisLegacy>();
   if (!IsOptNone) {
     AU.addRequired<MachineDominatorTreeWrapperPass>();
     AU.addPreserved<MachineDominatorTreeWrapperPass>();
@@ -478,8 +478,7 @@ AMDGPUPostLegalizerCombiner::AMDGPUPostLegalizerCombiner(bool IsOptNone)
 }
 
 bool AMDGPUPostLegalizerCombiner::runOnMachineFunction(MachineFunction &MF) {
-  if (MF.getProperties().hasProperty(
-          MachineFunctionProperties::Property::FailedISel))
+  if (MF.getProperties().hasFailedISel())
     return false;
   auto *TPC = &getAnalysis<TargetPassConfig>();
   const Function &F = MF.getFunction();
@@ -490,7 +489,8 @@ bool AMDGPUPostLegalizerCombiner::runOnMachineFunction(MachineFunction &MF) {
   const AMDGPULegalizerInfo *LI =
       static_cast<const AMDGPULegalizerInfo *>(ST.getLegalizerInfo());
 
-  GISelValueTracking *VT = &getAnalysis<GISelValueTrackingAnalysis>().get(MF);
+  GISelValueTracking *VT =
+      &getAnalysis<GISelValueTrackingAnalysisLegacy>().get(MF);
   MachineDominatorTree *MDT =
       IsOptNone ? nullptr
                 : &getAnalysis<MachineDominatorTreeWrapperPass>().getDomTree();
@@ -512,7 +512,7 @@ INITIALIZE_PASS_BEGIN(AMDGPUPostLegalizerCombiner, DEBUG_TYPE,
                       "Combine AMDGPU machine instrs after legalization", false,
                       false)
 INITIALIZE_PASS_DEPENDENCY(TargetPassConfig)
-INITIALIZE_PASS_DEPENDENCY(GISelValueTrackingAnalysis)
+INITIALIZE_PASS_DEPENDENCY(GISelValueTrackingAnalysisLegacy)
 INITIALIZE_PASS_END(AMDGPUPostLegalizerCombiner, DEBUG_TYPE,
                     "Combine AMDGPU machine instrs after legalization", false,
                     false)

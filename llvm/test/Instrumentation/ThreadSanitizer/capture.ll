@@ -45,6 +45,22 @@ entry:
 ; CHECK-LABEL: define void @captured2
 ; CHECK: __tsan_write
 ; CHECK: __tsan_write
+; CHECK-NOT: __tsan_write
+; CHECK: ret void
+
+define void @captured3() nounwind uwtable sanitize_thread {
+entry:
+  %stkobj = alloca [2 x i32], align 8
+  ; escapes due to store into global
+  store ptr %stkobj, ptr @sink, align 8
+  ; derived is captured as its base object is captured
+  %derived = getelementptr inbounds i32, ptr %stkobj, i64 1
+  store i32 42, ptr %derived, align 4
+  ret void
+}
+; CHECK-LABEL: define void @captured3
+; CHECK: __tsan_write
+; CHECK: __tsan_write
 ; CHECK: ret void
 
 define void @notcaptured0() nounwind uwtable sanitize_thread {
@@ -86,6 +102,7 @@ entry:
 ; CHECK-LABEL: define void @notcaptured2
 ; CHECK: __tsan_write
 ; CHECK: __tsan_write
+; CHECK-NOT: __tsan_write
 ; CHECK: ret void
 
 define void @notcaptured3(i1 %cond) nounwind uwtable sanitize_thread {

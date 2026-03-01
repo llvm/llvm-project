@@ -38,7 +38,7 @@ class TlsGlobalTestCase(TestBase):
     # TLS works differently on Windows, this would need to be implemented
     # separately.
     @skipIfWindows
-    @skipIf(oslist=["linux"], archs=["arm", "aarch64"])
+    @skipIf(oslist=["linux"], archs=["arm$", "aarch64"])
     @skipIf(oslist=no_match([lldbplatformutil.getDarwinOSTriples(), "linux"]))
     @expectedFailureIf(lldbplatformutil.xcode15LinkerBug())
     def test(self):
@@ -46,14 +46,13 @@ class TlsGlobalTestCase(TestBase):
         self.build()
         exe = self.getBuildArtifact("a.out")
         target = self.dbg.CreateTarget(exe)
-        if self.platformIsDarwin():
-            self.registerSharedLibrariesWithTarget(target, ["liba.dylib"])
+        env = self.registerSharedLibrariesWithTarget(target, ["a"])
 
         line1 = line_number("main.c", "// thread breakpoint")
         lldbutil.run_break_set_by_file_and_line(
             self, "main.c", line1, num_expected_locations=1, loc_exact=True
         )
-        self.runCmd("run", RUN_SUCCEEDED)
+        target.LaunchSimple(None, env, self.get_process_working_directory())
 
         # The stop reason of the thread should be breakpoint.
         self.runCmd("process status", "Get process status")
@@ -72,6 +71,11 @@ class TlsGlobalTestCase(TestBase):
             "expr var_static",
             VARIABLES_DISPLAYED_CORRECTLY,
             patterns=[r"\(int\) \$.* = 88"],
+        )
+        self.expect(
+            "expr var_static2",
+            VARIABLES_DISPLAYED_CORRECTLY,
+            patterns=[r"\(int\) \$.* = 66"],
         )
         self.expect(
             "expr var_shared",
@@ -103,6 +107,11 @@ class TlsGlobalTestCase(TestBase):
             "expr var_static",
             VARIABLES_DISPLAYED_CORRECTLY,
             patterns=[r"\(int\) \$.* = 44"],
+        )
+        self.expect(
+            "expr var_static2",
+            VARIABLES_DISPLAYED_CORRECTLY,
+            patterns=[r"\(int\) \$.* = 22"],
         )
         self.expect(
             "expr var_shared",

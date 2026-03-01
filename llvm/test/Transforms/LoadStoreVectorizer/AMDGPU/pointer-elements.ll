@@ -1,7 +1,5 @@
 ; RUN: opt -mtriple=amdgcn-amd-amdhsa -passes=load-store-vectorizer -S -o - %s | FileCheck %s
 
-target datalayout = "e-p:64:64-p1:64:64-p2:32:32-p3:32:32-p4:64:64-p5:32:32-p6:32:32-p7:160:256:256:32-p8:128:128-i64:64-v16:16-v24:32-v32:32-v48:64-v96:128-v192:256-v256:256-v512:512-v1024:1024-v2048:2048-n32:64-S32-A5"
-
 declare i32 @llvm.amdgcn.workitem.id.x() #1
 
 ; CHECK-LABEL: @merge_v2p1i8(
@@ -36,8 +34,8 @@ entry:
   %ld.c = load ptr addrspace(3), ptr addrspace(3) %b, align 4
   %ld.c.idx.1 = load ptr addrspace(3), ptr addrspace(3) %b.1, align 4
 
-  store ptr addrspace(3) null, ptr addrspace(3) %a, align 4
-  store ptr addrspace(3) null, ptr addrspace(3) %a.1, align 4
+  store ptr addrspace(3) zeroinitializer, ptr addrspace(3) %a, align 4
+  store ptr addrspace(3) zeroinitializer, ptr addrspace(3) %a.1, align 4
 
   ret void
 }
@@ -60,7 +58,7 @@ entry:
   %ld.2 = load <2 x i32>, ptr addrspace(3) %b.2, align 8
 
   store i32 0, ptr addrspace(3) %a.0, align 16
-  store ptr addrspace(3) null, ptr addrspace(3) %a.1, align 4
+  store ptr addrspace(3) zeroinitializer, ptr addrspace(3) %a.1, align 4
   store <2 x i32> <i32 0, i32 0>, ptr addrspace(3) %a.2, align 8
 
   ret void
@@ -84,7 +82,7 @@ entry:
   %ld.2 = load i32, ptr addrspace(3) %b.2, align 4
 
   store <2 x i32> <i32 0, i32 0>, ptr addrspace(3) %a.0, align 16
-  store ptr addrspace(3) null, ptr addrspace(3) %a.1, align 8
+  store ptr addrspace(3) zeroinitializer, ptr addrspace(3) %a.1, align 8
   store i32 0, ptr addrspace(3) %a.2, align 4
 
   ret void

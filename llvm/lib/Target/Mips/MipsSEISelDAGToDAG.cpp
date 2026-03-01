@@ -48,7 +48,7 @@ void MipsSEDAGToDAGISel::addDSPCtrlRegOperands(bool IsDef, MachineInstr &MI,
                                                MachineFunction &MF) {
   MachineInstrBuilder MIB(MF, &MI);
   unsigned Mask = MI.getOperand(1).getImm();
-  unsigned Flag =
+  RegState Flag =
       IsDef ? RegState::ImplicitDefine : RegState::Implicit | RegState::Undef;
 
   if (Mask & 1)
@@ -176,7 +176,8 @@ void MipsSEDAGToDAGISel::processFunctionAfterISel(MachineFunction &MF) {
       case Mips::JAL:
       case Mips::JAL_MM:
         if (MI.getOperand(0).isGlobal() &&
-            MI.getOperand(0).getGlobal()->getGlobalIdentifier() == "_mcount")
+            MI.getOperand(0).getGlobal()->hasExternalLinkage() &&
+            MI.getOperand(0).getGlobal()->getName() == "_mcount")
           emitMCountABI(MI, MBB, MF);
         break;
       case Mips::JALRPseudo:
@@ -1158,10 +1159,8 @@ bool MipsSEDAGToDAGISel::trySelect(SDNode *Node) {
                                      Hi ? SDValue(Res, 0) : ZeroVal, LoVal);
 
       Res = CurDAG->getMachineNode(
-              Mips::SUBREG_TO_REG, DL, MVT::i64,
-              CurDAG->getTargetConstant(((Hi >> 15) & 0x1), DL, MVT::i64),
-              SDValue(Res, 0),
-              CurDAG->getTargetConstant(Mips::sub_32, DL, MVT::i64));
+          Mips::SUBREG_TO_REG, DL, MVT::i64, SDValue(Res, 0),
+          CurDAG->getTargetConstant(Mips::sub_32, DL, MVT::i64));
 
       Res =
           CurDAG->getMachineNode(Mips::FILL_D, DL, MVT::v2i64, SDValue(Res, 0));
@@ -1264,16 +1263,12 @@ bool MipsSEDAGToDAGISel::trySelect(SDNode *Node) {
 
         if (HiResNonZero)
           HiRes = CurDAG->getMachineNode(
-              Mips::SUBREG_TO_REG, DL, MVT::i64,
-              CurDAG->getTargetConstant(((Highest >> 15) & 0x1), DL, MVT::i64),
-              SDValue(HiRes, 0),
+              Mips::SUBREG_TO_REG, DL, MVT::i64, SDValue(HiRes, 0),
               CurDAG->getTargetConstant(Mips::sub_32, DL, MVT::i64));
 
         if (ResNonZero)
           Res = CurDAG->getMachineNode(
-              Mips::SUBREG_TO_REG, DL, MVT::i64,
-              CurDAG->getTargetConstant(((Hi >> 15) & 0x1), DL, MVT::i64),
-              SDValue(Res, 0),
+              Mips::SUBREG_TO_REG, DL, MVT::i64, SDValue(Res, 0),
               CurDAG->getTargetConstant(Mips::sub_32, DL, MVT::i64));
 
         // We have 3 cases:

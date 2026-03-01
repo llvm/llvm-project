@@ -11,6 +11,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "flang/Optimizer/Analysis/AliasAnalysis.h"
+#include "flang/Optimizer/Analysis/ArraySectionAnalyzer.h"
 #include "flang/Optimizer/Builder/FIRBuilder.h"
 #include "flang/Optimizer/Builder/HLFIRTools.h"
 #include "flang/Optimizer/HLFIR/HLFIROps.h"
@@ -93,35 +94,32 @@ public:
       // and proceed with the inlining.
       fir::AliasAnalysis aliasAnalysis;
       mlir::AliasResult aliasRes = aliasAnalysis.alias(lhs, rhs);
-      // TODO: use areIdenticalOrDisjointSlices() from
-      // OptimizedBufferization.cpp to check if we can still do the expansion.
       if (!aliasRes.isNo()) {
-        LLVM_DEBUG(llvm::dbgs() << "InlineHLFIRAssign:\n"
-                                << "\tLHS: " << lhs << "\n"
-                                << "\tRHS: " << rhs << "\n"
-                                << "\tALIAS: " << aliasRes << "\n");
-        return rewriter.notifyMatchFailure(assign, "RHS/LHS may alias");
+        // Alias analysis reports potential aliasing, but we can use
+        // ArraySectionAnalyzer to check if the slices are disjoint
+        // or identical (which is safe for element-wise assignment).
+        fir::ArraySectionAnalyzer::SlicesOverlapKind overlap =
+            fir::ArraySectionAnalyzer::analyze(lhs, rhs);
+        if (overlap == fir::ArraySectionAnalyzer::SlicesOverlapKind::Unknown) {
+          LLVM_DEBUG(llvm::dbgs() << "InlineHLFIRAssign:\n"
+                                  << "\tLHS: " << lhs << "\n"
+                                  << "\tRHS: " << rhs << "\n"
+                                  << "\tALIAS: " << aliasRes << "\n");
+          return rewriter.notifyMatchFailure(assign, "RHS/LHS may alias");
+        }
       }
     }
 
     mlir::Location loc = assign->getLoc();
     fir::FirOpBuilder builder(rewriter, assign.getOperation());
     builder.setInsertionPoint(assign);
-    rhs = hlfir::derefPointersAndAllocatables(loc, builder, rhs);
-    lhs = hlfir::derefPointersAndAllocatables(loc, builder, lhs);
-    mlir::Value shape = hlfir::genShape(loc, builder, lhs);
-    llvm::SmallVector<mlir::Value> extents =
-        hlfir::getIndexExtents(loc, builder, shape);
-    hlfir::LoopNest loopNest =
-        hlfir::genLoopNest(loc, builder, extents, /*isUnordered=*/true,
-                           flangomp::shouldUseWorkshareLowering(assign));
-    builder.setInsertionPointToStart(loopNest.body);
-    auto rhsArrayElement =
-        hlfir::getElementAt(loc, builder, rhs, loopNest.oneBasedIndices);
-    rhsArrayElement = hlfir::loadTrivialScalar(loc, builder, rhsArrayElement);
-    auto lhsArrayElement =
-        hlfir::getElementAt(loc, builder, lhs, loopNest.oneBasedIndices);
-    builder.create<hlfir::AssignOp>(loc, rhsArrayElement, lhsArrayElement);
+    mlir::ArrayAttr accessGroups;
+    if (auto attrs = assign.getOperation()->getAttrOfType<mlir::ArrayAttr>(
+            fir::getAccessGroupsAttrName()))
+      accessGroups = attrs;
+    hlfir::genNoAliasArrayAssignment(
+        loc, builder, rhs, lhs, flangomp::shouldUseWorkshareLowering(assign),
+        /*temporaryLHS=*/false, /*combiner=*/nullptr, accessGroups);
     rewriter.eraseOp(assign);
     return mlir::success();
   }
@@ -135,8 +133,8 @@ public:
 
     mlir::GreedyRewriteConfig config;
     // Prevent the pattern driver from merging blocks.
-    config.enableRegionSimplification =
-        mlir::GreedySimplifyRegionLevel::Disabled;
+    config.setRegionSimplificationLevel(
+        mlir::GreedySimplifyRegionLevel::Disabled);
 
     mlir::RewritePatternSet patterns(context);
     patterns.insert<InlineHLFIRAssignConversion>(context);

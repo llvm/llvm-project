@@ -28,6 +28,7 @@
 #include <cstdint>
 #include <optional>
 #include <utility>
+#include <variant>
 #include <vector>
 
 namespace llvm {
@@ -46,7 +47,9 @@ class ImplicitControlFlowTracking;
 class LoadInst;
 class LoopInfo;
 class MemDepResult;
+class MemoryAccess;
 class MemoryDependenceResults;
+class MemoryLocation;
 class MemorySSA;
 class MemorySSAUpdater;
 class NonLocalDepResult;
@@ -54,6 +57,7 @@ class OptimizationRemarkEmitter;
 class PHINode;
 class TargetLibraryInfo;
 class Value;
+class IntrinsicInst;
 /// A private "module" namespace for types and utilities used by GVN. These
 /// are implementation details and should not be used by clients.
 namespace LLVM_LIBRARY_VISIBILITY_NAMESPACE gvn {
@@ -130,28 +134,26 @@ public:
   GVNPass(GVNOptions Options = {}) : Options(Options) {}
 
   /// Run the pass over the function.
-  PreservedAnalyses run(Function &F, FunctionAnalysisManager &AM);
+  LLVM_ABI PreservedAnalyses run(Function &F, FunctionAnalysisManager &AM);
 
-  void printPipeline(raw_ostream &OS,
-                     function_ref<StringRef(StringRef)> MapClassName2PassName);
+  LLVM_ABI void
+  printPipeline(raw_ostream &OS,
+                function_ref<StringRef(StringRef)> MapClassName2PassName);
 
   /// This removes the specified instruction from
   /// our various maps and marks it for deletion.
-  void markInstructionForDeletion(Instruction *I) {
-    VN.erase(I);
-    InstrsToErase.push_back(I);
-  }
+  LLVM_ABI void salvageAndRemoveInstruction(Instruction *I);
 
   DominatorTree &getDominatorTree() const { return *DT; }
   AAResults *getAliasAnalysis() const { return VN.getAliasAnalysis(); }
   MemoryDependenceResults &getMemDep() const { return *MD; }
 
-  bool isPREEnabled() const;
-  bool isLoadPREEnabled() const;
-  bool isLoadInLoopPREEnabled() const;
-  bool isLoadPRESplitBackedgeEnabled() const;
-  bool isMemDepEnabled() const;
-  bool isMemorySSAEnabled() const;
+  LLVM_ABI bool isPREEnabled() const;
+  LLVM_ABI bool isLoadPREEnabled() const;
+  LLVM_ABI bool isLoadInLoopPREEnabled() const;
+  LLVM_ABI bool isLoadPRESplitBackedgeEnabled() const;
+  LLVM_ABI bool isMemDepEnabled() const;
+  LLVM_ABI bool isMemorySSAEnabled() const;
 
   /// This class holds the mapping between values and value numbers.  It is used
   /// as an efficient mechanism to determine the expression-wise equivalence of
@@ -172,6 +174,10 @@ public:
     // Value number to PHINode mapping. Used for phi-translate in scalarpre.
     DenseMap<uint32_t, PHINode *> NumberingPhi;
 
+    // Value number to BasicBlock mapping. Used for phi-translate across
+    // MemoryPhis.
+    DenseMap<uint32_t, BasicBlock *> NumberingBB;
+
     // Cache for phi-translate in scalarpre.
     using PhiTranslateMap =
         DenseMap<std::pair<uint32_t, const BasicBlock *>, uint32_t>;
@@ -179,6 +185,9 @@ public:
 
     AAResults *AA = nullptr;
     MemoryDependenceResults *MD = nullptr;
+    bool IsMDEnabled = false;
+    MemorySSA *MSSA = nullptr;
+    bool IsMSSAEnabled = false;
     DominatorTree *DT = nullptr;
 
     uint32_t NextValueNumber = 1;
@@ -189,37 +198,49 @@ public:
     Expression createExtractvalueExpr(ExtractValueInst *EI);
     Expression createGEPExpr(GetElementPtrInst *GEP);
     uint32_t lookupOrAddCall(CallInst *C);
+    uint32_t computeLoadStoreVN(Instruction *I);
     uint32_t phiTranslateImpl(const BasicBlock *BB, const BasicBlock *PhiBlock,
                               uint32_t Num, GVNPass &GVN);
     bool areCallValsEqual(uint32_t Num, uint32_t NewNum, const BasicBlock *Pred,
                           const BasicBlock *PhiBlock, GVNPass &GVN);
     std::pair<uint32_t, bool> assignExpNewValueNum(Expression &Exp);
     bool areAllValsInBB(uint32_t Num, const BasicBlock *BB, GVNPass &GVN);
+    void addMemoryStateToExp(Instruction *I, Expression &Exp);
 
   public:
-    ValueTable();
-    ValueTable(const ValueTable &Arg);
-    ValueTable(ValueTable &&Arg);
-    ~ValueTable();
-    ValueTable &operator=(const ValueTable &Arg);
+    LLVM_ABI ValueTable();
+    LLVM_ABI ValueTable(const ValueTable &Arg);
+    LLVM_ABI ValueTable(ValueTable &&Arg);
+    LLVM_ABI ~ValueTable();
+    LLVM_ABI ValueTable &operator=(const ValueTable &Arg);
 
-    uint32_t lookupOrAdd(Value *V);
-    uint32_t lookup(Value *V, bool Verify = true) const;
-    uint32_t lookupOrAddCmp(unsigned Opcode, CmpInst::Predicate Pred,
-                            Value *LHS, Value *RHS);
-    uint32_t phiTranslate(const BasicBlock *BB, const BasicBlock *PhiBlock,
-                          uint32_t Num, GVNPass &GVN);
-    void eraseTranslateCacheEntry(uint32_t Num, const BasicBlock &CurrBlock);
-    bool exists(Value *V) const;
-    void add(Value *V, uint32_t Num);
-    void clear();
-    void erase(Value *V);
+    LLVM_ABI uint32_t lookupOrAdd(MemoryAccess *MA);
+    LLVM_ABI uint32_t lookupOrAdd(Value *V);
+    LLVM_ABI uint32_t lookup(Value *V, bool Verify = true) const;
+    LLVM_ABI uint32_t lookupOrAddCmp(unsigned Opcode, CmpInst::Predicate Pred,
+                                     Value *LHS, Value *RHS);
+    LLVM_ABI uint32_t phiTranslate(const BasicBlock *BB,
+                                   const BasicBlock *PhiBlock, uint32_t Num,
+                                   GVNPass &GVN);
+    LLVM_ABI void eraseTranslateCacheEntry(uint32_t Num,
+                                           const BasicBlock &CurrBlock);
+    LLVM_ABI bool exists(Value *V) const;
+    LLVM_ABI void add(Value *V, uint32_t Num);
+    LLVM_ABI void clear();
+    LLVM_ABI void erase(Value *V);
     void setAliasAnalysis(AAResults *A) { AA = A; }
     AAResults *getAliasAnalysis() const { return AA; }
-    void setMemDep(MemoryDependenceResults *M) { MD = M; }
+    void setMemDep(MemoryDependenceResults *M, bool MDEnabled = true) {
+      MD = M;
+      IsMDEnabled = MDEnabled;
+    }
+    void setMemorySSA(MemorySSA *M, bool MSSAEnabled = false) {
+      MSSA = M;
+      IsMSSAEnabled = MSSAEnabled;
+    }
     void setDomTree(DominatorTree *D) { DT = D; }
     uint32_t getNextUnusedValueNumber() { return NextValueNumber; }
-    void verifyRemoved(const Value *) const;
+    LLVM_ABI void verifyRemoved(const Value *) const;
   };
 
 private:
@@ -292,21 +313,15 @@ private:
                             leader_iterator(nullptr));
     }
 
-    void insert(uint32_t N, Value *V, const BasicBlock *BB);
-    void erase(uint32_t N, Instruction *I, const BasicBlock *BB);
-    void verifyRemoved(const Value *Inst) const;
+    LLVM_ABI void insert(uint32_t N, Value *V, const BasicBlock *BB);
+    LLVM_ABI void erase(uint32_t N, Instruction *I, const BasicBlock *BB);
+    LLVM_ABI void verifyRemoved(const Value *Inst) const;
     void clear() {
       NumToLeaders.clear();
       TableAllocator.Reset();
     }
   };
   LeaderMap LeaderTable;
-
-  // Block-local map of equivalent values to their leader, does not
-  // propagate to any successors. Entries added mid-block are applied
-  // to the remaining instructions in the block.
-  SmallMapVector<Value *, Value *, 4> ReplaceOperandsWithMap;
-  SmallVector<Instruction *, 8> InstrsToErase;
 
   // Map the block to reversed postorder traversal number. It is used to
   // find back edge easily.
@@ -331,6 +346,7 @@ private:
 
   // Helper functions of redundant load elimination.
   bool processLoad(LoadInst *L);
+  bool processMaskedLoad(IntrinsicInst *I);
   bool processNonLocalLoad(LoadInst *L);
   bool processAssumeIntrinsic(AssumeInst *II);
 
@@ -382,9 +398,9 @@ private:
   void verifyRemoved(const Instruction *I) const;
   bool splitCriticalEdges();
   BasicBlock *splitCriticalEdges(BasicBlock *Pred, BasicBlock *Succ);
-  bool replaceOperandsForInBlockEquality(Instruction *I) const;
-  bool propagateEquality(Value *LHS, Value *RHS, const BasicBlockEdge &Root,
-                         bool DominatesByEdge);
+  bool
+  propagateEquality(Value *LHS, Value *RHS,
+                    const std::variant<BasicBlockEdge, Instruction *> &Root);
   bool processFoldableCondBr(BranchInst *BI);
   void addDeadBlock(BasicBlock *BB);
   void assignValNumForDeadCode();
@@ -392,20 +408,20 @@ private:
 };
 
 /// Create a legacy GVN pass.
-FunctionPass *createGVNPass();
+LLVM_ABI FunctionPass *createGVNPass();
 
 /// A simple and fast domtree-based GVN pass to hoist common expressions
 /// from sibling branches.
 struct GVNHoistPass : PassInfoMixin<GVNHoistPass> {
   /// Run the pass over the function.
-  PreservedAnalyses run(Function &F, FunctionAnalysisManager &AM);
+  LLVM_ABI PreservedAnalyses run(Function &F, FunctionAnalysisManager &AM);
 };
 
 /// Uses an "inverted" value numbering to decide the similarity of
 /// expressions and sinks similar expressions into successors.
 struct GVNSinkPass : PassInfoMixin<GVNSinkPass> {
   /// Run the pass over the function.
-  PreservedAnalyses run(Function &F, FunctionAnalysisManager &AM);
+  LLVM_ABI PreservedAnalyses run(Function &F, FunctionAnalysisManager &AM);
 };
 
 } // end namespace llvm

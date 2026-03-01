@@ -20,6 +20,7 @@
 #include "mlir/Dialect/LLVMIR/LLVMAttrs.h"
 #include "mlir/Interfaces/LoopLikeInterface.h"
 #include "mlir/Interfaces/SideEffectInterfaces.h"
+#include "mlir/Interfaces/ViewLikeInterface.h"
 
 namespace fir {
 
@@ -40,6 +41,7 @@ mlir::ParseResult parseSelector(mlir::OpAsmParser &parser,
                                 mlir::OperationState &result,
                                 mlir::OpAsmParser::UnresolvedOperand &selector,
                                 mlir::Type &type);
+bool useStrictVolatileVerification();
 
 static constexpr llvm::StringRef getNormalizedLowerBoundAttrName() {
   return "normalized.lb";
@@ -145,6 +147,15 @@ private:
   mlir::DenseI32ArrayAttr fieldIndices;
   mlir::ValueRange values;
 };
+
+struct LocalitySpecifierOperands {
+  llvm::SmallVector<::mlir::Value> privateVars;
+  llvm::SmallVector<::mlir::Attribute> privateSyms;
+};
+
+/// Returns true if the given box value may be absent.
+/// The given value must have BaseBoxType.
+bool mayBeAbsentBox(mlir::Value val);
 
 } // namespace fir
 

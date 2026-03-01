@@ -22,7 +22,6 @@
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/raw_ostream.h"
 #include <cstdint>
-#include <memory>
 
 namespace llvm {
 class Module;
@@ -85,19 +84,25 @@ struct ComputedShaderFlags {
 };
 
 struct ModuleShaderFlags {
-  void initialize(Module &, DXILResourceTypeMap &DRTM, DXILResourceMap &DRM,
-                  const ModuleMetadataInfo &MMDI);
+  void initialize(Module &, DXILResourceTypeMap &DRTM,
+                  const DXILResourceMap &DRM, const ModuleMetadataInfo &MMDI);
   const ComputedShaderFlags &getFunctionFlags(const Function *) const;
   const ComputedShaderFlags &getCombinedFlags() const { return CombinedSFMask; }
 
 private:
+  // This boolean is inversely set by the LLVM module flag dx.resmayalias to
+  // determine whether or not the ResMayNotAlias DXIL module flag can be set
   bool CanSetResMayNotAlias;
+
   /// Map of Function-Shader Flag Mask pairs representing properties of each of
   /// the functions in the module. Shader Flags of each function represent both
   /// module-level and function-level flags
   DenseMap<const Function *, ComputedShaderFlags> FunctionFlags;
   /// Combined Shader Flag Mask of all functions of the module
   ComputedShaderFlags CombinedSFMask{};
+  ComputedShaderFlags gatherGlobalModuleFlags(const Module &M,
+                                              const DXILResourceMap &,
+                                              const ModuleMetadataInfo &);
   void updateFunctionFlags(ComputedShaderFlags &, const Instruction &,
                            DXILResourceTypeMap &, const ModuleMetadataInfo &);
 };

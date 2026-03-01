@@ -227,7 +227,8 @@ bool BPFMIPeephole::eliminateZExtSeq() {
         }
 
         BuildMI(MBB, MI, MI.getDebugLoc(), TII->get(BPF::SUBREG_TO_REG), DstReg)
-          .addImm(0).addReg(SubReg).addImm(BPF::sub_32);
+            .addReg(SubReg)
+            .addImm(BPF::sub_32);
 
         SllMI->eraseFromParent();
         MovMI->eraseFromParent();
@@ -278,7 +279,8 @@ bool BPFMIPeephole::eliminateZExt() {
 
       // Build a SUBREG_TO_REG instruction.
       BuildMI(MBB, MI, MI.getDebugLoc(), TII->get(BPF::SUBREG_TO_REG), dst)
-        .addImm(0).addReg(src).addImm(BPF::sub_32);
+          .addReg(src)
+          .addImm(BPF::sub_32);
 
       ToErase = &MI;
       Eliminated = true;
@@ -320,6 +322,7 @@ private:
   bool adjustBranch();
   bool insertMissingCallerSavedSpills();
   bool removeMayGotoZero();
+  bool addExitAfterUnreachable();
 
 public:
 
@@ -336,6 +339,7 @@ public:
       Changed = adjustBranch() || Changed;
     Changed |= insertMissingCallerSavedSpills();
     Changed |= removeMayGotoZero();
+    Changed |= addExitAfterUnreachable();
     return Changed;
   }
 };
@@ -732,6 +736,20 @@ bool BPFMIPreEmitPeephole::removeMayGotoZero() {
   }
 
   return Changed;
+}
+
+// If the last insn in a funciton is 'JAL &bpf_unreachable', let us add an
+// 'exit' insn after that insn. This will ensure no fallthrough at the last
+// insn, making kernel verification easier.
+bool BPFMIPreEmitPeephole::addExitAfterUnreachable() {
+  MachineBasicBlock &MBB = MF->back();
+  MachineInstr &MI = MBB.back();
+  if (MI.getOpcode() != BPF::JAL || !MI.getOperand(0).isGlobal() ||
+      MI.getOperand(0).getGlobal()->getName() != BPF_TRAP)
+    return false;
+
+  BuildMI(&MBB, MI.getDebugLoc(), TII->get(BPF::RET));
+  return true;
 }
 
 } // end default namespace

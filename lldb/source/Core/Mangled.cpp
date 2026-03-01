@@ -9,6 +9,7 @@
 #include "lldb/Core/Mangled.h"
 
 #include "lldb/Core/DataFileCache.h"
+#include "lldb/Core/DemangledNameInfo.h"
 #include "lldb/Core/RichManglingContext.h"
 #include "lldb/Target/Language.h"
 #include "lldb/Utility/ConstString.h"
@@ -39,7 +40,7 @@ bool Mangled::IsMangledName(llvm::StringRef name) {
   return Mangled::GetManglingScheme(name) != Mangled::eManglingSchemeNone;
 }
 
-Mangled::ManglingScheme Mangled::GetManglingScheme(llvm::StringRef const name) {
+Mangled::ManglingScheme Mangled::GetManglingScheme(llvm::StringRef name) {
   if (name.empty())
     return Mangled::eManglingSchemeNone;
 
@@ -111,6 +112,7 @@ Mangled::operator bool() const { return m_mangled || m_demangled; }
 void Mangled::Clear() {
   m_mangled.Clear();
   m_demangled.Clear();
+  m_demangled_info.reset();
 }
 
 // Compare the string values.
@@ -124,13 +126,16 @@ void Mangled::SetValue(ConstString name) {
     if (IsMangledName(name.GetStringRef())) {
       m_demangled.Clear();
       m_mangled = name;
+      m_demangled_info.reset();
     } else {
       m_demangled = name;
       m_mangled.Clear();
+      m_demangled_info.reset();
     }
   } else {
     m_demangled.Clear();
     m_mangled.Clear();
+    m_demangled_info.reset();
   }
 }
 
@@ -152,20 +157,26 @@ static char *GetMSVCDemangledStr(llvm::StringRef M) {
   return demangled_cstr;
 }
 
-static char *GetItaniumDemangledStr(const char *M) {
+static std::pair<char *, DemangledNameInfo>
+GetItaniumDemangledStr(const char *M) {
   char *demangled_cstr = nullptr;
 
+  DemangledNameInfo info;
   llvm::ItaniumPartialDemangler ipd;
   bool err = ipd.partialDemangle(M);
   if (!err) {
-    // Default buffer and size (will realloc in case it's too small).
+    // Default buffer and size (OutputBuffer will realloc in case it's too
+    // small).
     size_t demangled_size = 80;
-    demangled_cstr = static_cast<char *>(std::malloc(demangled_size));
-    demangled_cstr = ipd.finishDemangle(demangled_cstr, &demangled_size);
+    demangled_cstr = static_cast<char *>(std::malloc(80));
+
+    TrackingOutputBuffer OB(demangled_cstr, demangled_size);
+    demangled_cstr = ipd.finishDemangle(&OB);
+    info = std::move(OB.NameInfo);
 
     assert(demangled_cstr &&
            "finishDemangle must always succeed if partialDemangle did");
-    assert(demangled_cstr[demangled_size - 1] == '\0' &&
+    assert(demangled_cstr[OB.getCurrentPosition() - 1] == '\0' &&
            "Expected demangled_size to return length including trailing null");
   }
 
@@ -174,9 +185,14 @@ static char *GetItaniumDemangledStr(const char *M) {
       LLDB_LOGF(log, "demangled itanium: %s -> \"%s\"", M, demangled_cstr);
     else
       LLDB_LOGF(log, "demangled itanium: %s -> error: failed to demangle", M);
+
+    if (!info.hasBasename())
+      LLDB_LOGF(log,
+                "demangled itanium: %s -> error: failed to retrieve name info",
+                M);
   }
 
-  return demangled_cstr;
+  return {demangled_cstr, std::move(info)};
 }
 
 static char *GetRustV0DemangledStr(llvm::StringRef M) {
@@ -265,19 +281,31 @@ bool Mangled::GetRichManglingInfo(RichManglingContext &context,
   llvm_unreachable("Fully covered switch above!");
 }
 
+ConstString Mangled::GetDemangledName() const {
+  return GetDemangledNameImpl(/*force=*/false);
+}
+
+std::optional<DemangledNameInfo> const &Mangled::GetDemangledInfo() const {
+  if (!m_demangled_info)
+    GetDemangledNameImpl(/*force=*/true);
+
+  return m_demangled_info;
+}
+
 // Generate the demangled name on demand using this accessor. Code in this
 // class will need to use this accessor if it wishes to decode the demangled
 // name. The result is cached and will be kept until a new string value is
 // supplied to this object, or until the end of the object's lifetime.
-ConstString Mangled::GetDemangledName() const {
+ConstString Mangled::GetDemangledNameImpl(bool force) const {
   if (!m_mangled)
     return m_demangled;
 
   // Re-use previously demangled names.
-  if (!m_demangled.IsNull())
+  if (!force && !m_demangled.IsNull())
     return m_demangled;
 
-  if (m_mangled.GetMangledCounterpart(m_demangled) && !m_demangled.IsNull())
+  if (!force && m_mangled.GetMangledCounterpart(m_demangled) &&
+      !m_demangled.IsNull())
     return m_demangled;
 
   // We didn't already mangle this name, demangle it and if all goes well
@@ -288,7 +316,10 @@ ConstString Mangled::GetDemangledName() const {
     demangled_name = GetMSVCDemangledStr(m_mangled);
     break;
   case eManglingSchemeItanium: {
-    demangled_name = GetItaniumDemangledStr(m_mangled.GetCString());
+    std::pair<char *, DemangledNameInfo> demangled =
+        GetItaniumDemangledStr(m_mangled.GetCString());
+    demangled_name = demangled.first;
+    m_demangled_info.emplace(std::move(demangled.second));
     break;
   }
   case eManglingSchemeRustV0:
@@ -397,9 +428,9 @@ lldb::LanguageType Mangled::GuessLanguage() const {
   Language::ForEach([this, &result](Language *l) {
     if (l->SymbolNameFitsToLanguage(*this)) {
       result = l->GetLanguageType();
-      return false;
+      return IterationAction::Stop;
     }
-    return true;
+    return IterationAction::Continue;
   });
   return result;
 }
@@ -447,6 +478,7 @@ bool Mangled::Decode(const DataExtractor &data, lldb::offset_t *offset_ptr,
                      const StringTableReader &strtab) {
   m_mangled.Clear();
   m_demangled.Clear();
+  m_demangled_info.reset();
   MangledEncoding encoding = (MangledEncoding)data.GetU8(offset_ptr);
   switch (encoding) {
     case Empty:
@@ -523,4 +555,19 @@ void Mangled::Encode(DataEncoder &file, ConstStringTable &strtab) const {
       file.AppendU32(strtab.Add(m_demangled));
       break;
   }
+}
+
+ConstString Mangled::GetBaseName() const {
+  const auto &demangled_info = GetDemangledInfo();
+  if (!demangled_info.has_value())
+    return {};
+
+  ConstString demangled_name = GetDemangledName();
+  if (!demangled_name)
+    return {};
+
+  const char *name_str = demangled_name.AsCString();
+  const auto &range = demangled_info->BasenameRange;
+  return ConstString(
+      llvm::StringRef(name_str + range.first, range.second - range.first));
 }

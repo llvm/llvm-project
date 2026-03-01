@@ -62,7 +62,7 @@ protected:
                           bool HasRelocationAddend_, uint8_t ABIVersion_ = 0);
 
 public:
-  virtual ~MCELFObjectTargetWriter() = default;
+  ~MCELFObjectTargetWriter() override = default;
 
   Triple::ObjectFormatType getFormat() const override { return Triple::ELF; }
   static bool classof(const MCObjectTargetWriter *W) {
@@ -85,14 +85,14 @@ public:
     }
   }
 
-  virtual unsigned getRelocType(MCContext &Ctx, const MCValue &Target,
-                                const MCFixup &Fixup, bool IsPCRel) const = 0;
+  virtual unsigned getRelocType(const MCFixup &Fixup, const MCValue &Target,
+                                bool IsPCRel) const = 0;
 
-  virtual bool needsRelocateWithSymbol(const MCValue &Val, const MCSymbol &Sym,
-                                       unsigned Type) const;
+  virtual bool needsRelocateWithSymbol(const MCValue &, unsigned Type) const {
+    return false;
+  }
 
-  virtual void sortRelocs(const MCAssembler &Asm,
-                          std::vector<ELFRelocationEntry> &Relocs);
+  virtual void sortRelocs(std::vector<ELFRelocationEntry> &Relocs);
 
   /// \name Accessors
   /// @{
@@ -149,6 +149,8 @@ public:
 
   DenseMap<const MCSectionELF *, std::vector<ELFRelocationEntry>> Relocations;
   DenseMap<const MCSymbolELF *, const MCSymbolELF *> Renames;
+  // .weakref aliases
+  SmallVector<const MCSymbolELF *, 0> Weakrefs;
   bool IsLittleEndian = false;
   bool SeenGnuAbi = false;
   std::optional<uint8_t> OverrideABIVersion;
@@ -169,24 +171,22 @@ public:
                   bool IsLittleEndian);
 
   void reset() override;
-  void executePostLayoutBinding(MCAssembler &Asm) override;
-  void recordRelocation(MCAssembler &Asm, const MCFragment *Fragment,
-                        const MCFixup &Fixup, MCValue Target,
-                        uint64_t &FixedValue) override;
-  bool isSymbolRefDifferenceFullyResolvedImpl(const MCAssembler &Asm,
-                                              const MCSymbol &SymA,
+  void setAssembler(MCAssembler *Asm) override;
+  void executePostLayoutBinding() override;
+  void recordRelocation(const MCFragment &F, const MCFixup &Fixup,
+                        MCValue Target, uint64_t &FixedValue) override;
+  bool isSymbolRefDifferenceFullyResolvedImpl(const MCSymbol &SymA,
                                               const MCFragment &FB, bool InSet,
                                               bool IsPCRel) const override;
-  uint64_t writeObject(MCAssembler &Asm) override;
+  uint64_t writeObject() override;
 
   bool hasRelocationAddend() const;
   bool usesRela(const MCTargetOptions *TO, const MCSectionELF &Sec) const;
 
-  bool useSectionSymbol(const MCAssembler &Asm, const MCValue &Val,
-                        const MCSymbolELF *Sym, uint64_t C,
+  bool useSectionSymbol(const MCValue &Val, const MCSymbolELF *Sym, uint64_t C,
                         unsigned Type) const;
 
-  bool checkRelocation(MCContext &Ctx, SMLoc Loc, const MCSectionELF *From,
+  bool checkRelocation(SMLoc Loc, const MCSectionELF *From,
                        const MCSectionELF *To);
 
   unsigned getELFHeaderEFlags() const { return ELFHeaderEFlags; }

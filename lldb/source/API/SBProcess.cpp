@@ -7,6 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "lldb/API/SBProcess.h"
+#include "lldb/Host/File.h"
 #include "lldb/Utility/Instrumentation.h"
 
 #include <cinttypes>
@@ -310,7 +311,8 @@ void SBProcess::ReportEventState(const SBEvent &event, SBFile out) const {
 
 void SBProcess::ReportEventState(const SBEvent &event, FILE *out) const {
   LLDB_INSTRUMENT_VA(this, event, out);
-  FileSP outfile = std::make_shared<NativeFile>(out, false);
+  FileSP outfile =
+      std::make_shared<NativeFile>(out, File::eOpenOptionWriteOnly, false);
   return ReportEventState(event, outfile);
 }
 
@@ -590,7 +592,7 @@ SBError SBProcess::ContinueInDirection(RunDirection direction) {
     if (direction == RunDirection::eRunReverse &&
         !process_sp->SupportsReverseDirection())
       return Status::FromErrorStringWithFormatv(
-          "error: {0} does not support reverse execution of processes",
+          "{0} does not support reverse execution of processes",
           GetPluginName());
     process_sp->SetBaseDirection(direction);
   }
@@ -1263,6 +1265,15 @@ lldb::SBError SBProcess::SaveCore(SBSaveCoreOptions &options) {
     return error;
   }
 
+  if (!options.GetProcess())
+    options.SetProcess(process_sp);
+
+  if (options.GetProcess().GetSP() != process_sp) {
+    error = Status::FromErrorString(
+        "Save Core Options configured for a different process.");
+    return error;
+  }
+
   std::lock_guard<std::recursive_mutex> guard(
       process_sp->GetTarget().GetAPIMutex());
 
@@ -1271,7 +1282,7 @@ lldb::SBError SBProcess::SaveCore(SBSaveCoreOptions &options) {
     return error;
   }
 
-  error.ref() = PluginManager::SaveCore(process_sp, options.ref());
+  error.ref() = PluginManager::SaveCore(options.ref());
 
   return error;
 }

@@ -6,7 +6,6 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "MCTargetDesc/X86MCExpr.h"
 #include "X86MCTargetDesc.h"
 #include "X86TargetStreamer.h"
 #include "llvm/MC/MCAsmBackend.h"
@@ -45,8 +44,11 @@ void X86WinCOFFStreamer::emitWinEHHandlerData(SMLoc Loc) {
 
   // We have to emit the unwind info now, because this directive
   // actually switches to the .xdata section.
-  if (WinEH::FrameInfo *CurFrame = getCurrentWinFrameInfo())
+  if (WinEH::FrameInfo *CurFrame = getCurrentWinFrameInfo()) {
+    // Handlers are always associated with the parent frame.
+    CurFrame = CurFrame->ChainedParent ? CurFrame->ChainedParent : CurFrame;
     EHStreamer.EmitUnwindInfo(*this, CurFrame, /* HandlerData = */ true);
+  }
 }
 
 void X86WinCOFFStreamer::emitWindowsUnwindTables(WinEH::FrameInfo *Frame) {
@@ -66,7 +68,7 @@ void X86WinCOFFStreamer::emitCVFPOData(const MCSymbol *ProcSym, SMLoc Loc) {
 }
 
 void X86WinCOFFStreamer::finishImpl() {
-  emitFrames(nullptr);
+  emitFrames();
   emitWindowsUnwindTables();
 
   MCWinCOFFStreamer::finishImpl();

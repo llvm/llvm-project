@@ -71,6 +71,8 @@ def X86fhadd   : SDNode<"X86ISD::FHADD",     SDTFPBinOp>;
 def X86fhsub   : SDNode<"X86ISD::FHSUB",     SDTFPBinOp>;
 def X86hadd    : SDNode<"X86ISD::HADD",      SDTIntBinOp>;
 def X86hsub    : SDNode<"X86ISD::HSUB",      SDTIntBinOp>;
+def X86hadds   : SDNode<"X86ISD::HADDS",     SDTIntBinOp>;
+def X86hsubs   : SDNode<"X86ISD::HSUBS",     SDTIntBinOp>;
 def X86comi    : SDNode<"X86ISD::COMI",      SDTX86FCmp>;
 def X86ucomi   : SDNode<"X86ISD::UCOMI",     SDTX86FCmp>;
 def X86comi512       : SDNode<"X86ISD::COMX",      SDTX86FCmp>;
@@ -406,16 +408,6 @@ def X86VAlign  : SDNode<"X86ISD::VALIGN", SDTShuff3OpI>;
 
 def X86VShld   : SDNode<"X86ISD::VSHLD", SDTShuff3OpI>;
 def X86VShrd   : SDNode<"X86ISD::VSHRD", SDTShuff3OpI>;
-def X86VShldv  : SDNode<"X86ISD::VSHLDV",
-                        SDTypeProfile<1, 3, [SDTCisVec<0>,
-                                             SDTCisSameAs<0,1>,
-                                             SDTCisSameAs<0,2>,
-                                             SDTCisSameAs<0,3>]>>;
-def X86VShrdv  : SDNode<"X86ISD::VSHRDV",
-                        SDTypeProfile<1, 3, [SDTCisVec<0>,
-                                             SDTCisSameAs<0,1>,
-                                             SDTCisSameAs<0,2>,
-                                             SDTCisSameAs<0,3>]>>;
 
 def X86Conflict : SDNode<"X86ISD::CONFLICT", SDTIntUnaryOp>;
 
@@ -846,6 +838,9 @@ def X86GF2P8affineinvqb : SDNode<"X86ISD::GF2P8AFFINEINVQB", SDTBlend>;
 def X86GF2P8affineqb    : SDNode<"X86ISD::GF2P8AFFINEQB", SDTBlend>;
 def X86GF2P8mulb        : SDNode<"X86ISD::GF2P8MULB", SDTIntBinOp>;
 
+// carry-less multiplication
+def X86pclmulqdq : SDNode<"X86ISD::PCLMULQDQ", SDTBlend>;
+
 def SDTX86MaskedStore: SDTypeProfile<0, 3, [       // masked store
   SDTCisVec<0>, SDTCisPtrTy<1>, SDTCisVec<2>, SDTCisSameNumEltsAs<0, 2>
 ]>;
@@ -1008,13 +1003,23 @@ def alignedstore : PatFrag<(ops node:$val, node:$ptr),
                            (store node:$val, node:$ptr), [{
   auto *St = cast<StoreSDNode>(N);
   return St->getAlign() >= St->getMemoryVT().getStoreSize();
-}]>;
+}]> {
+  let GISelPredicateCode = [{
+    auto &LdSt = cast<GLoadStore>(MI);
+    return LdSt.getAlign() >= LdSt.getMemSize().getValue();
+  }];
+}
 
 // Like 'load', but always requires vector size alignment.
 def alignedload : PatFrag<(ops node:$ptr), (load node:$ptr), [{
   auto *Ld = cast<LoadSDNode>(N);
   return Ld->getAlign() >= Ld->getMemoryVT().getStoreSize();
-}]>;
+}]> {
+  let GISelPredicateCode = [{
+    auto &LdSt = cast<GLoadStore>(MI);
+    return LdSt.getAlign() >= LdSt.getMemSize().getValue();
+  }];
+}
 
 // 128-bit aligned load pattern fragments
 // NOTE: all 128-bit integer vector loads are promoted to v2i64

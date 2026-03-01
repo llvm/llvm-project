@@ -25,7 +25,7 @@
 // CodeGenMapTable parses this map and generates a table in XXXGenInstrInfo.inc
 // file that contains the instructions modeling this relationship. This table
 // is defined in the function
-// "int getPredOpcode(uint16_t Opcode, enum PredSense inPredSense)"
+// "int getPredOpcode(uint32_t Opcode, enum PredSense inPredSense)"
 // that can be used to retrieve the predicated form of the instruction by
 // passing its opcode value and the predicate sense (true/false) of the desired
 // instruction as arguments.
@@ -80,13 +80,14 @@
 #include "TableGenBackends.h"
 #include "llvm/ADT/SetVector.h"
 #include "llvm/ADT/StringExtras.h"
+#include "llvm/TableGen/CodeGenHelpers.h"
 #include "llvm/TableGen/Error.h"
 #include "llvm/TableGen/Record.h"
 
 using namespace llvm;
-typedef std::map<std::string, std::vector<const Record *>> InstrRelMapTy;
-typedef std::map<std::vector<const Init *>, std::vector<const Record *>>
-    RowInstrMapTy;
+using InstrRelMapTy = std::map<std::string, std::vector<const Record *>>;
+using RowInstrMapTy =
+    std::map<std::vector<const Init *>, std::vector<const Record *>>;
 
 namespace {
 
@@ -103,7 +104,7 @@ private:
 
 public:
   InstrMap(const Record *MapRec) {
-    Name = std::string(MapRec->getName());
+    Name = MapRec->getName().str();
 
     // FilterClass - It's used to reduce the search space only to the
     // instructions that define the kind of relationship modeled by
@@ -133,18 +134,18 @@ public:
 
     // Each instruction map must specify at least one column for it to be valid.
     if (ColValList->empty())
-      PrintFatalError(MapRec->getLoc(), "InstrMapping record `" +
-                                            MapRec->getName() + "' has empty " +
+      PrintFatalError(MapRec->getLoc(), "InstrMapping record `" + Name +
+                                            "' has empty " +
                                             "`ValueCols' field!");
 
-    for (const Init *I : ColValList->getValues()) {
+    for (const Init *I : ColValList->getElements()) {
       const auto *ColI = cast<ListInit>(I);
 
       // Make sure that all the sub-lists in 'ValueCols' have same number of
       // elements as the fields in 'ColFields'.
       if (ColI->size() != ColFields->size())
         PrintFatalError(MapRec->getLoc(),
-                        "Record `" + MapRec->getName() +
+                        "Record `" + Name +
                             "', field `ValueCols' entries don't match with " +
                             " the entries in 'ColFields'!");
       ValueCols.push_back(ColI);
@@ -228,7 +229,7 @@ void MapTableEmitter::buildRowInstrMap() {
   for (const Record *CurInstr : InstrDefs) {
     std::vector<const Init *> KeyValue;
     const ListInit *RowFields = InstrMapDesc.getRowFields();
-    for (const Init *RowField : RowFields->getValues()) {
+    for (const Init *RowField : RowFields->getElements()) {
       const RecordVal *RecVal = CurInstr->getValue(RowField);
       if (RecVal == nullptr)
         PrintFatalError(CurInstr->getLoc(),
@@ -303,7 +304,7 @@ const Record *MapTableEmitter::getInstrForColumn(const Record *KeyInstr,
   std::vector<const Init *> KeyValue;
 
   // Construct KeyValue using KeyInstr's values for RowFields.
-  for (const Init *RowField : RowFields->getValues()) {
+  for (const Init *RowField : RowFields->getElements()) {
     const Init *KeyInstrVal = KeyInstr->getValue(RowField)->getValue();
     KeyValue.push_back(KeyInstrVal);
   }
@@ -358,7 +359,7 @@ const Record *MapTableEmitter::getInstrForColumn(const Record *KeyInstr,
 
 unsigned MapTableEmitter::emitBinSearchTable(raw_ostream &OS) {
   ArrayRef<const CodeGenInstruction *> NumberedInstructions =
-      Target.getInstructionsByEnumValue();
+      Target.getInstructions();
   StringRef Namespace = Target.getInstNamespace();
   ArrayRef<const ListInit *> ValueCols = InstrMapDesc.getValueCols();
   unsigned NumCol = ValueCols.size();
@@ -380,13 +381,13 @@ unsigned MapTableEmitter::emitBinSearchTable(raw_ostream &OS) {
         OutStr += ", ";
         OutStr += ColInstr->getName();
       } else {
-        OutStr += ", (uint16_t)-1U";
+        OutStr += ", INSTRUCTION_LIST_END";
       }
     }
 
     if (RelExists) {
       if (TableSize == 0)
-        OS << "  static constexpr uint16_t Table[][" << NumCol + 1 << "] = {\n";
+        OS << "  static constexpr uint32_t Table[][" << NumCol + 1 << "] = {\n";
       OS << "    { " << CurInstr->getName() << OutStr << " },\n";
       ++TableSize;
     }
@@ -454,7 +455,7 @@ void MapTableEmitter::emitMapFuncBody(raw_ostream &OS, unsigned TableSize) {
       OS << ")\n";
       OS << "    return Table[mid][" << I + 1 << "];\n";
     }
-    OS << "  return -1;";
+    OS << "  llvm_unreachable(\"Unrecognized column value!\");\n";
   } else {
     OS << "  return Table[mid][1];\n";
   }
@@ -473,9 +474,9 @@ void MapTableEmitter::emitTablesWithFunc(raw_ostream &OS) {
   const ListInit *ColFields = InstrMapDesc.getColFields();
   ArrayRef<const ListInit *> ValueCols = InstrMapDesc.getValueCols();
   OS << "// " << InstrMapDesc.getName() << "\nLLVM_READONLY\n";
-  OS << "int " << InstrMapDesc.getName() << "(uint16_t Opcode";
+  OS << "int32_t " << InstrMapDesc.getName() << "(uint32_t Opcode";
   if (ValueCols.size() > 1) {
-    for (const Init *CF : ColFields->getValues()) {
+    for (const Init *CF : ColFields->getElements()) {
       std::string ColName = CF->getAsUnquotedString();
       OS << ", enum " << ColName << " in" << ColName;
     }
@@ -549,9 +550,8 @@ void llvm::EmitMapTable(const RecordKeeper &Records, raw_ostream &OS) {
   if (InstrMapVec.empty())
     return;
 
-  OS << "#ifdef GET_INSTRMAP_INFO\n";
-  OS << "#undef GET_INSTRMAP_INFO\n";
-  OS << "namespace llvm::" << NameSpace << " {\n\n";
+  IfDefEmitter IfDef(OS, "GET_INSTRMAP_INFO");
+  NamespaceEmitter NS(OS, ("llvm::" + NameSpace).str());
 
   // Emit coulumn field names and their values as enums.
   emitEnums(OS, Records);
@@ -574,6 +574,4 @@ void llvm::EmitMapTable(const RecordKeeper &Records, raw_ostream &OS) {
     // Emit map tables and the functions to query them.
     IMap.emitTablesWithFunc(OS);
   }
-  OS << "} // end namespace llvm::" << NameSpace << '\n';
-  OS << "#endif // GET_INSTRMAP_INFO\n\n";
 }

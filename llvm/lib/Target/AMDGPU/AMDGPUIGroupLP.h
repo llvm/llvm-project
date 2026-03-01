@@ -11,7 +11,6 @@
 
 #include "llvm/CodeGen/ScheduleDAGMutation.h"
 #include <memory>
-#include <vector>
 
 namespace llvm {
 

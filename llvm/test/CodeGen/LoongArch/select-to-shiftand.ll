@@ -148,8 +148,8 @@ define i8 @sub_clamp_zero_i8(i8 signext %x, i8 signext %y) {
 ; LA32-LABEL: sub_clamp_zero_i8:
 ; LA32:       # %bb.0:
 ; LA32-NEXT:    sub.w $a0, $a0, $a1
-; LA32-NEXT:    ext.w.b $a1, $a0
-; LA32-NEXT:    srai.w $a1, $a1, 7
+; LA32-NEXT:    slli.w $a1, $a0, 24
+; LA32-NEXT:    srai.w $a1, $a1, 31
 ; LA32-NEXT:    andn $a0, $a0, $a1
 ; LA32-NEXT:    ret
 ;
@@ -170,8 +170,8 @@ define i16 @sub_clamp_zero_i16(i16 signext %x, i16 signext %y) {
 ; LA32-LABEL: sub_clamp_zero_i16:
 ; LA32:       # %bb.0:
 ; LA32-NEXT:    sub.w $a0, $a0, $a1
-; LA32-NEXT:    ext.w.h $a1, $a0
-; LA32-NEXT:    srai.w $a1, $a1, 15
+; LA32-NEXT:    slli.w $a1, $a0, 16
+; LA32-NEXT:    srai.w $a1, $a1, 31
 ; LA32-NEXT:    andn $a0, $a0, $a1
 ; LA32-NEXT:    ret
 ;

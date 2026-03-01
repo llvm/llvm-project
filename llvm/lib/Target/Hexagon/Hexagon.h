@@ -26,6 +26,8 @@ class Pass;
 extern char &HexagonCopyHoistingID;
 extern char &HexagonExpandCondsetsID;
 extern char &HexagonTfrCleanupID;
+extern char &HexagonLiveVariablesID;
+void initializeHexagonAsmPrinterPass(PassRegistry &);
 void initializeHexagonBitSimplifyPass(PassRegistry &);
 void initializeHexagonBranchRelaxationPass(PassRegistry &);
 void initializeHexagonCFGOptimizerPass(PassRegistry &);
@@ -39,7 +41,9 @@ void initializeHexagonEarlyIfConversionPass(PassRegistry &);
 void initializeHexagonExpandCondsetsPass(PassRegistry &);
 void initializeHexagonGenMemAbsolutePass(PassRegistry &);
 void initializeHexagonGenMuxPass(PassRegistry &);
+void initializeHexagonGlobalSchedulerPass(PassRegistry &);
 void initializeHexagonHardwareLoopsPass(PassRegistry &);
+void initializeHexagonLiveVariablesPass(PassRegistry &);
 void initializeHexagonLoopIdiomRecognizeLegacyPassPass(PassRegistry &);
 void initializeHexagonLoopAlignPass(PassRegistry &);
 void initializeHexagonLoopReschedulingPass(PassRegistry &);
@@ -66,6 +70,8 @@ void initializeHexagonPeepholePass(PassRegistry &);
 void initializeHexagonSplitConst32AndConst64Pass(PassRegistry &);
 void initializeHexagonVectorPrintPass(PassRegistry &);
 
+void initializeHexagonQFPOptimizerPass(PassRegistry &);
+
 Pass *createHexagonLoopIdiomPass();
 Pass *createHexagonVectorLoopCarriedReuseLegacyPass();
 
@@ -89,6 +95,7 @@ FunctionPass *createHexagonGenInsert();
 FunctionPass *createHexagonGenMemAbsolute();
 FunctionPass *createHexagonGenMux();
 FunctionPass *createHexagonGenPredicate();
+FunctionPass *createHexagonGlobalScheduler();
 FunctionPass *createHexagonHardwareLoops();
 FunctionPass *createHexagonISelDag(HexagonTargetMachine &TM,
                                    CodeGenOptLevel OptLevel);
@@ -111,6 +118,7 @@ FunctionPass *createHexagonVectorCombineLegacyPass();
 FunctionPass *createHexagonVectorPrint();
 FunctionPass *createHexagonVExtract();
 FunctionPass *createHexagonExpandCondsets();
+FunctionPass *createHexagonQFPOptimizer();
 
 } // end namespace llvm;
 

@@ -243,26 +243,18 @@ define <8 x double> @sitofp_v8i8_double(<8 x i8> %a) {
 ; CHECK-LABEL: sitofp_v8i8_double:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    // kill: def $d0 killed $d0 def $q0
-; CHECK-NEXT:    umov w8, v0.b[0]
-; CHECK-NEXT:    umov w9, v0.b[2]
-; CHECK-NEXT:    umov w11, v0.b[4]
-; CHECK-NEXT:    umov w12, v0.b[6]
-; CHECK-NEXT:    umov w10, v0.b[1]
-; CHECK-NEXT:    umov w13, v0.b[3]
-; CHECK-NEXT:    umov w14, v0.b[5]
-; CHECK-NEXT:    umov w15, v0.b[7]
-; CHECK-NEXT:    fmov s0, w8
-; CHECK-NEXT:    fmov s1, w9
-; CHECK-NEXT:    fmov s2, w11
-; CHECK-NEXT:    fmov s3, w12
-; CHECK-NEXT:    mov v0.s[1], w10
-; CHECK-NEXT:    mov v1.s[1], w13
-; CHECK-NEXT:    mov v2.s[1], w14
-; CHECK-NEXT:    mov v3.s[1], w15
-; CHECK-NEXT:    shl v0.2s, v0.2s, #24
-; CHECK-NEXT:    shl v1.2s, v1.2s, #24
-; CHECK-NEXT:    shl v2.2s, v2.2s, #24
-; CHECK-NEXT:    shl v3.2s, v3.2s, #24
+; CHECK-NEXT:    mov b1, v0.b[0]
+; CHECK-NEXT:    mov b2, v0.b[2]
+; CHECK-NEXT:    mov b3, v0.b[4]
+; CHECK-NEXT:    mov b4, v0.b[6]
+; CHECK-NEXT:    mov v1.b[4], v0.b[1]
+; CHECK-NEXT:    mov v2.b[4], v0.b[3]
+; CHECK-NEXT:    mov v3.b[4], v0.b[5]
+; CHECK-NEXT:    mov v4.b[4], v0.b[7]
+; CHECK-NEXT:    shl v0.2s, v1.2s, #24
+; CHECK-NEXT:    shl v1.2s, v2.2s, #24
+; CHECK-NEXT:    shl v2.2s, v3.2s, #24
+; CHECK-NEXT:    shl v3.2s, v4.2s, #24
 ; CHECK-NEXT:    sshr v0.2s, v0.2s, #24
 ; CHECK-NEXT:    sshr v1.2s, v1.2s, #24
 ; CHECK-NEXT:    sshr v2.2s, v2.2s, #24
@@ -283,68 +275,52 @@ define <8 x double> @sitofp_v8i8_double(<8 x i8> %a) {
 define <16 x double> @sitofp_v16i8_double(<16 x i8> %a) {
 ; CHECK-LABEL: sitofp_v16i8_double:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    umov w8, v0.b[0]
 ; CHECK-NEXT:    ext v1.16b, v0.16b, v0.16b, #8
-; CHECK-NEXT:    umov w9, v0.b[1]
-; CHECK-NEXT:    umov w10, v0.b[2]
-; CHECK-NEXT:    umov w12, v0.b[4]
-; CHECK-NEXT:    umov w14, v0.b[6]
-; CHECK-NEXT:    umov w11, v0.b[3]
-; CHECK-NEXT:    umov w13, v0.b[5]
-; CHECK-NEXT:    fmov s2, w8
-; CHECK-NEXT:    umov w15, v1.b[0]
-; CHECK-NEXT:    umov w17, v1.b[2]
-; CHECK-NEXT:    umov w0, v1.b[4]
-; CHECK-NEXT:    umov w16, v1.b[1]
-; CHECK-NEXT:    umov w18, v1.b[3]
-; CHECK-NEXT:    umov w8, v0.b[7]
-; CHECK-NEXT:    fmov s0, w10
-; CHECK-NEXT:    umov w10, v1.b[5]
-; CHECK-NEXT:    mov v2.s[1], w9
-; CHECK-NEXT:    umov w9, v1.b[6]
-; CHECK-NEXT:    fmov s3, w12
-; CHECK-NEXT:    umov w12, v1.b[7]
-; CHECK-NEXT:    fmov s1, w14
-; CHECK-NEXT:    fmov s4, w15
-; CHECK-NEXT:    fmov s5, w17
-; CHECK-NEXT:    fmov s6, w0
-; CHECK-NEXT:    mov v0.s[1], w11
-; CHECK-NEXT:    mov v3.s[1], w13
-; CHECK-NEXT:    fmov s7, w9
-; CHECK-NEXT:    mov v1.s[1], w8
-; CHECK-NEXT:    mov v4.s[1], w16
-; CHECK-NEXT:    mov v5.s[1], w18
-; CHECK-NEXT:    mov v6.s[1], w10
-; CHECK-NEXT:    shl v2.2s, v2.2s, #24
-; CHECK-NEXT:    shl v0.2s, v0.2s, #24
-; CHECK-NEXT:    mov v7.s[1], w12
-; CHECK-NEXT:    shl v3.2s, v3.2s, #24
-; CHECK-NEXT:    shl v1.2s, v1.2s, #24
-; CHECK-NEXT:    shl v4.2s, v4.2s, #24
-; CHECK-NEXT:    sshr v2.2s, v2.2s, #24
-; CHECK-NEXT:    shl v5.2s, v5.2s, #24
-; CHECK-NEXT:    shl v6.2s, v6.2s, #24
+; CHECK-NEXT:    mov b2, v0.b[0]
+; CHECK-NEXT:    mov b3, v0.b[2]
+; CHECK-NEXT:    mov b4, v0.b[4]
+; CHECK-NEXT:    mov b5, v0.b[6]
+; CHECK-NEXT:    mov b6, v1.b[0]
+; CHECK-NEXT:    mov b7, v1.b[2]
+; CHECK-NEXT:    mov b16, v1.b[4]
+; CHECK-NEXT:    mov b17, v1.b[6]
+; CHECK-NEXT:    mov v2.b[4], v0.b[1]
+; CHECK-NEXT:    mov v3.b[4], v0.b[3]
+; CHECK-NEXT:    mov v4.b[4], v0.b[5]
+; CHECK-NEXT:    mov v5.b[4], v0.b[7]
+; CHECK-NEXT:    mov v6.b[4], v1.b[1]
+; CHECK-NEXT:    mov v7.b[4], v1.b[3]
+; CHECK-NEXT:    mov v16.b[4], v1.b[5]
+; CHECK-NEXT:    mov v17.b[4], v1.b[7]
+; CHECK-NEXT:    shl v0.2s, v2.2s, #24
+; CHECK-NEXT:    shl v1.2s, v3.2s, #24
+; CHECK-NEXT:    shl v2.2s, v4.2s, #24
+; CHECK-NEXT:    shl v3.2s, v5.2s, #24
+; CHECK-NEXT:    shl v4.2s, v6.2s, #24
+; CHECK-NEXT:    shl v5.2s, v7.2s, #24
+; CHECK-NEXT:    shl v6.2s, v16.2s, #24
+; CHECK-NEXT:    shl v7.2s, v17.2s, #24
 ; CHECK-NEXT:    sshr v0.2s, v0.2s, #24
-; CHECK-NEXT:    sshr v3.2s, v3.2s, #24
-; CHECK-NEXT:    shl v7.2s, v7.2s, #24
-; CHECK-NEXT:    sshr v4.2s, v4.2s, #24
 ; CHECK-NEXT:    sshr v1.2s, v1.2s, #24
+; CHECK-NEXT:    sshr v2.2s, v2.2s, #24
+; CHECK-NEXT:    sshr v3.2s, v3.2s, #24
+; CHECK-NEXT:    sshr v4.2s, v4.2s, #24
 ; CHECK-NEXT:    sshr v5.2s, v5.2s, #24
 ; CHECK-NEXT:    sshr v6.2s, v6.2s, #24
-; CHECK-NEXT:    sshll v2.2d, v2.2s, #0
-; CHECK-NEXT:    sshll v16.2d, v0.2s, #0
-; CHECK-NEXT:    sshll v3.2d, v3.2s, #0
 ; CHECK-NEXT:    sshr v7.2s, v7.2s, #24
+; CHECK-NEXT:    sshll v0.2d, v0.2s, #0
+; CHECK-NEXT:    sshll v1.2d, v1.2s, #0
+; CHECK-NEXT:    sshll v2.2d, v2.2s, #0
+; CHECK-NEXT:    sshll v3.2d, v3.2s, #0
 ; CHECK-NEXT:    sshll v4.2d, v4.2s, #0
-; CHECK-NEXT:    sshll v17.2d, v1.2s, #0
 ; CHECK-NEXT:    sshll v5.2d, v5.2s, #0
 ; CHECK-NEXT:    sshll v6.2d, v6.2s, #0
-; CHECK-NEXT:    scvtf v0.2d, v2.2d
-; CHECK-NEXT:    scvtf v1.2d, v16.2d
-; CHECK-NEXT:    scvtf v2.2d, v3.2d
 ; CHECK-NEXT:    sshll v7.2d, v7.2s, #0
+; CHECK-NEXT:    scvtf v0.2d, v0.2d
+; CHECK-NEXT:    scvtf v1.2d, v1.2d
+; CHECK-NEXT:    scvtf v2.2d, v2.2d
+; CHECK-NEXT:    scvtf v3.2d, v3.2d
 ; CHECK-NEXT:    scvtf v4.2d, v4.2d
-; CHECK-NEXT:    scvtf v3.2d, v17.2d
 ; CHECK-NEXT:    scvtf v5.2d, v5.2d
 ; CHECK-NEXT:    scvtf v6.2d, v6.2d
 ; CHECK-NEXT:    scvtf v7.2d, v7.2d
@@ -420,27 +396,19 @@ define <8 x double> @uitofp_v8i8_double(<8 x i8> %a) {
 ; CHECK-LABEL: uitofp_v8i8_double:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    // kill: def $d0 killed $d0 def $q0
-; CHECK-NEXT:    umov w8, v0.b[0]
-; CHECK-NEXT:    umov w9, v0.b[2]
-; CHECK-NEXT:    umov w11, v0.b[4]
-; CHECK-NEXT:    umov w12, v0.b[6]
-; CHECK-NEXT:    umov w10, v0.b[1]
-; CHECK-NEXT:    umov w13, v0.b[3]
-; CHECK-NEXT:    umov w14, v0.b[5]
-; CHECK-NEXT:    umov w15, v0.b[7]
+; CHECK-NEXT:    mov b2, v0.b[0]
+; CHECK-NEXT:    mov b3, v0.b[2]
+; CHECK-NEXT:    mov b4, v0.b[4]
+; CHECK-NEXT:    mov b5, v0.b[6]
 ; CHECK-NEXT:    movi d1, #0x0000ff000000ff
-; CHECK-NEXT:    fmov s0, w8
-; CHECK-NEXT:    fmov s2, w9
-; CHECK-NEXT:    fmov s3, w11
-; CHECK-NEXT:    fmov s4, w12
-; CHECK-NEXT:    mov v0.s[1], w10
-; CHECK-NEXT:    mov v2.s[1], w13
-; CHECK-NEXT:    mov v3.s[1], w14
-; CHECK-NEXT:    mov v4.s[1], w15
-; CHECK-NEXT:    and v0.8b, v0.8b, v1.8b
-; CHECK-NEXT:    and v2.8b, v2.8b, v1.8b
-; CHECK-NEXT:    and v3.8b, v3.8b, v1.8b
-; CHECK-NEXT:    and v1.8b, v4.8b, v1.8b
+; CHECK-NEXT:    mov v2.b[4], v0.b[1]
+; CHECK-NEXT:    mov v3.b[4], v0.b[3]
+; CHECK-NEXT:    mov v4.b[4], v0.b[5]
+; CHECK-NEXT:    mov v5.b[4], v0.b[7]
+; CHECK-NEXT:    and v0.8b, v2.8b, v1.8b
+; CHECK-NEXT:    and v2.8b, v3.8b, v1.8b
+; CHECK-NEXT:    and v3.8b, v4.8b, v1.8b
+; CHECK-NEXT:    and v1.8b, v5.8b, v1.8b
 ; CHECK-NEXT:    ushll v0.2d, v0.2s, #0
 ; CHECK-NEXT:    ushll v2.2d, v2.2s, #0
 ; CHECK-NEXT:    ushll v3.2d, v3.2s, #0
@@ -458,63 +426,47 @@ define <16 x double> @uitofp_v16i8_double(<16 x i8> %a) {
 ; CHECK-LABEL: uitofp_v16i8_double:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    ext v2.16b, v0.16b, v0.16b, #8
-; CHECK-NEXT:    umov w8, v0.b[0]
-; CHECK-NEXT:    umov w10, v0.b[2]
-; CHECK-NEXT:    umov w9, v0.b[1]
-; CHECK-NEXT:    umov w12, v0.b[4]
-; CHECK-NEXT:    umov w11, v0.b[3]
-; CHECK-NEXT:    umov w13, v0.b[5]
-; CHECK-NEXT:    umov w18, v0.b[6]
+; CHECK-NEXT:    mov b3, v0.b[0]
+; CHECK-NEXT:    mov b4, v0.b[2]
+; CHECK-NEXT:    mov b5, v0.b[4]
+; CHECK-NEXT:    mov b6, v0.b[6]
 ; CHECK-NEXT:    movi d1, #0x0000ff000000ff
-; CHECK-NEXT:    umov w14, v2.b[0]
-; CHECK-NEXT:    umov w16, v2.b[2]
-; CHECK-NEXT:    umov w0, v2.b[4]
-; CHECK-NEXT:    fmov s3, w8
-; CHECK-NEXT:    umov w8, v0.b[7]
-; CHECK-NEXT:    fmov s0, w10
-; CHECK-NEXT:    umov w10, v2.b[6]
-; CHECK-NEXT:    umov w15, v2.b[1]
-; CHECK-NEXT:    umov w17, v2.b[3]
-; CHECK-NEXT:    fmov s4, w12
-; CHECK-NEXT:    umov w12, v2.b[5]
-; CHECK-NEXT:    fmov s7, w18
-; CHECK-NEXT:    mov v3.s[1], w9
-; CHECK-NEXT:    umov w9, v2.b[7]
-; CHECK-NEXT:    fmov s2, w14
-; CHECK-NEXT:    fmov s5, w16
-; CHECK-NEXT:    fmov s6, w0
-; CHECK-NEXT:    mov v0.s[1], w11
-; CHECK-NEXT:    fmov s16, w10
-; CHECK-NEXT:    mov v4.s[1], w13
-; CHECK-NEXT:    mov v7.s[1], w8
-; CHECK-NEXT:    mov v2.s[1], w15
-; CHECK-NEXT:    mov v5.s[1], w17
-; CHECK-NEXT:    mov v6.s[1], w12
-; CHECK-NEXT:    and v3.8b, v3.8b, v1.8b
-; CHECK-NEXT:    mov v16.s[1], w9
-; CHECK-NEXT:    and v0.8b, v0.8b, v1.8b
-; CHECK-NEXT:    and v4.8b, v4.8b, v1.8b
-; CHECK-NEXT:    and v7.8b, v7.8b, v1.8b
-; CHECK-NEXT:    and v2.8b, v2.8b, v1.8b
-; CHECK-NEXT:    ushll v3.2d, v3.2s, #0
-; CHECK-NEXT:    and v5.8b, v5.8b, v1.8b
-; CHECK-NEXT:    and v6.8b, v6.8b, v1.8b
-; CHECK-NEXT:    and v1.8b, v16.8b, v1.8b
-; CHECK-NEXT:    ushll v16.2d, v0.2s, #0
-; CHECK-NEXT:    ushll v17.2d, v4.2s, #0
+; CHECK-NEXT:    mov b7, v2.b[0]
+; CHECK-NEXT:    mov b16, v2.b[2]
+; CHECK-NEXT:    mov b17, v2.b[4]
+; CHECK-NEXT:    mov b18, v2.b[6]
+; CHECK-NEXT:    mov v3.b[4], v0.b[1]
+; CHECK-NEXT:    mov v4.b[4], v0.b[3]
+; CHECK-NEXT:    mov v5.b[4], v0.b[5]
+; CHECK-NEXT:    mov v6.b[4], v0.b[7]
+; CHECK-NEXT:    mov v7.b[4], v2.b[1]
+; CHECK-NEXT:    mov v16.b[4], v2.b[3]
+; CHECK-NEXT:    mov v17.b[4], v2.b[5]
+; CHECK-NEXT:    mov v18.b[4], v2.b[7]
+; CHECK-NEXT:    and v0.8b, v3.8b, v1.8b
+; CHECK-NEXT:    and v2.8b, v4.8b, v1.8b
+; CHECK-NEXT:    and v3.8b, v5.8b, v1.8b
+; CHECK-NEXT:    and v4.8b, v6.8b, v1.8b
+; CHECK-NEXT:    and v5.8b, v7.8b, v1.8b
+; CHECK-NEXT:    and v6.8b, v16.8b, v1.8b
+; CHECK-NEXT:    and v7.8b, v17.8b, v1.8b
+; CHECK-NEXT:    and v1.8b, v18.8b, v1.8b
+; CHECK-NEXT:    ushll v0.2d, v0.2s, #0
 ; CHECK-NEXT:    ushll v2.2d, v2.2s, #0
-; CHECK-NEXT:    ushll v7.2d, v7.2s, #0
-; CHECK-NEXT:    ucvtf v0.2d, v3.2d
+; CHECK-NEXT:    ushll v3.2d, v3.2s, #0
+; CHECK-NEXT:    ushll v4.2d, v4.2s, #0
 ; CHECK-NEXT:    ushll v5.2d, v5.2s, #0
 ; CHECK-NEXT:    ushll v6.2d, v6.2s, #0
-; CHECK-NEXT:    ushll v18.2d, v1.2s, #0
-; CHECK-NEXT:    ucvtf v1.2d, v16.2d
-; CHECK-NEXT:    ucvtf v4.2d, v2.2d
-; CHECK-NEXT:    ucvtf v2.2d, v17.2d
-; CHECK-NEXT:    ucvtf v3.2d, v7.2d
-; CHECK-NEXT:    ucvtf v5.2d, v5.2d
-; CHECK-NEXT:    ucvtf v6.2d, v6.2d
-; CHECK-NEXT:    ucvtf v7.2d, v18.2d
+; CHECK-NEXT:    ushll v7.2d, v7.2s, #0
+; CHECK-NEXT:    ushll v16.2d, v1.2s, #0
+; CHECK-NEXT:    ucvtf v0.2d, v0.2d
+; CHECK-NEXT:    ucvtf v1.2d, v2.2d
+; CHECK-NEXT:    ucvtf v2.2d, v3.2d
+; CHECK-NEXT:    ucvtf v3.2d, v4.2d
+; CHECK-NEXT:    ucvtf v4.2d, v5.2d
+; CHECK-NEXT:    ucvtf v5.2d, v6.2d
+; CHECK-NEXT:    ucvtf v6.2d, v7.2d
+; CHECK-NEXT:    ucvtf v7.2d, v16.2d
 ; CHECK-NEXT:    ret
   %1 = uitofp <16 x i8> %a to <16 x double>
   ret <16 x double> %1

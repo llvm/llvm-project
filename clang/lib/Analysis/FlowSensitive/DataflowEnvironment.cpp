@@ -16,7 +16,6 @@
 #include "clang/AST/Decl.h"
 #include "clang/AST/DeclCXX.h"
 #include "clang/AST/ExprCXX.h"
-#include "clang/AST/RecursiveASTVisitor.h"
 #include "clang/AST/Stmt.h"
 #include "clang/AST/Type.h"
 #include "clang/Analysis/FlowSensitive/ASTOps.h"
@@ -26,11 +25,9 @@
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/DenseSet.h"
 #include "llvm/ADT/MapVector.h"
-#include "llvm/ADT/PointerUnion.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/ScopeExit.h"
 #include "llvm/Support/ErrorHandling.h"
-#include <algorithm>
 #include <cassert>
 #include <memory>
 #include <utility>
@@ -422,7 +419,12 @@ public:
         // We treat `BuiltinBitCastExpr` as an "original initializer" too as
         // it may not even be casting from a record type -- and even if it is,
         // the two objects are in general of unrelated type.
-        isa<BuiltinBitCastExpr>(E)) {
+        isa<BuiltinBitCastExpr>(E) ||
+        // This covers both co_await and co_yield.
+        // The result object of co_await is <op>.await_resume(), but there is
+        // no expression for that to propagate to.
+        // co_yield is equivalent to `co_await promise.yield_value(expr)`.
+        isa<CoroutineSuspendExpr>(E)) {
       return;
     }
     if (auto *Op = dyn_cast<BinaryOperator>(E);
@@ -535,9 +537,11 @@ void Environment::initialize() {
           } else if (auto *FieldBeingInitialized =
                          dyn_cast<FieldDecl>(Parent->getLambdaContextDecl())) {
             // This is in a field initializer, rather than a method.
+            const RecordDecl *RD = FieldBeingInitialized->getParent();
+            const ASTContext &Ctx = RD->getASTContext();
+            CanQualType T = Ctx.getCanonicalTagType(RD);
             setThisPointeeStorageLocation(
-                cast<RecordStorageLocation>(createObject(QualType(
-                    FieldBeingInitialized->getParent()->getTypeForDecl(), 0))));
+                cast<RecordStorageLocation>(createObject(T)));
           } else {
             assert(false && "Unexpected this-capturing lambda context.");
           }
@@ -1019,7 +1023,7 @@ Environment::createLocAndMaybeValue(QualType Ty,
                                     int Depth, int &CreatedValuesCount) {
   if (!Visited.insert(Ty.getCanonicalType()).second)
     return createStorageLocation(Ty.getNonReferenceType());
-  auto EraseVisited = llvm::make_scope_exit(
+  llvm::scope_exit EraseVisited(
       [&Visited, Ty] { Visited.erase(Ty.getCanonicalType()); });
 
   Ty = Ty.getNonReferenceType();

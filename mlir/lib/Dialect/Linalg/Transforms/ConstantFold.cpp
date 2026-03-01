@@ -10,13 +10,12 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "mlir/Dialect/Affine/IR/AffineOps.h"
 #include "mlir/Dialect/Linalg/IR/Linalg.h"
 #include "mlir/Dialect/Linalg/Transforms/Transforms.h"
 #include "mlir/IR/Matchers.h"
 #include "mlir/IR/PatternMatch.h"
 #include "mlir/Support/LLVM.h"
-#include "mlir/Transforms/GreedyPatternRewriteDriver.h"
+#include "llvm/ADT/SmallVectorExtras.h"
 #include <optional>
 
 using namespace mlir;
@@ -172,10 +171,10 @@ public:
     // here as they will be overwritten later.
     APIntOrFloatArray computeFnInputs;
 
-    auto inputShapes = llvm::to_vector<4>(
-        llvm::map_range(linalgOp.getDpsInputs(), [](Value value) {
+    auto inputShapes =
+        llvm::map_to_vector<4>(linalgOp.getDpsInputs(), [](Value value) {
           return cast<ShapedType>(value.getType()).getShape();
-        }));
+        });
 
     // Given a `linearIndex`, remap it to a linear index to access linalg op
     // inputs/ouputs. This mutates `indices`, `srcIndices`, `dstIndices`,

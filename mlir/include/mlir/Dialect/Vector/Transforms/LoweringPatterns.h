@@ -42,7 +42,7 @@ namespace vector {
 ///
 /// [ContractionOpToDotLowering]
 /// Progressively lower a `vector.contract` with row-major matmul semantics to
-/// linearized `vector.extract` + `vector.reduce` + `vector.insert`.
+/// linearized `vector.extract` + `vector.reduction` + `vector.insert`.
 ///
 /// [ContractionOpToOuterProductOpLowering]
 /// Progressively lower a `vector.contract` with row-major matmul semantics to
@@ -60,19 +60,34 @@ void populateVectorContractLoweringPatterns(
 void populateVectorOuterProductLoweringPatterns(RewritePatternSet &patterns,
                                                 PatternBenefit benefit = 1);
 
-/// Collect a set of patterns to convert vector.multi_reduction op into
-/// a sequence of vector.reduction ops. The patterns comprise:
+/// Populate the pattern set with the following patterns:
 ///
 /// [InnerOuterDimReductionConversion]
 /// Rewrites vector.multi_reduction such that all reduction dimensions are
 /// either innermost or outermost, by adding the proper vector.transpose
 /// operations.
 ///
+/// [OneDimMultiReductionToTwoDim]
+/// For cases that reduce to 1-D vector<k> reduction (and are thus missing
+/// either a parallel or a reduction), we lift them back up to 2-D with a simple
+/// vector.shape_cast to vector<1xk> so that the other patterns can kick in,
+/// thus fully exiting out of the vector.multi_reduction abstraction.
+void populateVectorMultiReductionReorderAndExpandPatterns(
+    RewritePatternSet &patterns, VectorMultiReductionLowering options,
+    PatternBenefit benefit = 1);
+
+/// Populate the pattern set with the following patterns:
+///
 /// [ReduceMultiDimReductionRank]
 /// Once in innermost or outermost reduction
 /// form, rewrites n-D vector.multi_reduction into 2-D vector.multi_reduction,
 /// by introducing vector.shape_cast ops to collapse + multi-reduce + expand
 /// back.
+void populateVectorMultiReductionFlatteningPatterns(
+    RewritePatternSet &patterns, VectorMultiReductionLowering options,
+    PatternBenefit benefit = 1);
+
+/// Populate the pattern set with the following patterns:
 ///
 /// [TwoDimMultiReductionToElementWise]
 /// Once in 2-D vector.multi_reduction form, with an **outermost** reduction
@@ -84,13 +99,7 @@ void populateVectorOuterProductLoweringPatterns(RewritePatternSet &patterns,
 /// dimension, unroll the outer dimension to obtain a sequence of extract +
 /// vector.reduction + insert. This can further lower to horizontal reduction
 /// ops.
-///
-/// [OneDimMultiReductionToTwoDim]
-/// For cases that reduce to 1-D vector<k> reduction (and are thus missing
-/// either a parallel or a reduction), we lift them back up to 2-D with a simple
-/// vector.shape_cast to vector<1xk> so that the other patterns can kick in,
-/// thus fully exiting out of the vector.multi_reduction abstraction.
-void populateVectorMultiReductionLoweringPatterns(
+void populateVectorMultiReductionUnrollingPatterns(
     RewritePatternSet &patterns, VectorMultiReductionLowering options,
     PatternBenefit benefit = 1);
 
@@ -293,10 +302,42 @@ void populateVectorBitCastLoweringPatterns(RewritePatternSet &patterns,
                                            int64_t targetRank = 1,
                                            PatternBenefit benefit = 1);
 
+void populateVectorShuffleLoweringPatterns(RewritePatternSet &patterns,
+                                           PatternBenefit benefit = 1);
+
 /// Populates a pattern that rank-reduces n-D FMAs into (n-1)-D FMAs where
 /// n > 1.
 void populateVectorRankReducingFMAPattern(RewritePatternSet &patterns);
 
+/// Populate patterns to rewrite sequences of `vector.to_elements` +
+/// `vector.from_elements` operations into a tree of `vector.shuffle`
+/// operations.
+void populateVectorToFromElementsToShuffleTreePatterns(
+    RewritePatternSet &patterns, PatternBenefit benefit = 1);
+
+/// Populate the pattern set with the following patterns:
+///
+/// [ContractionOpToMatmulOpLowering]
+/// Lowers `vector.contract` to `llvm.intr.matrix.multiply`.
+///
+/// Given the high benefit, this will be prioriotised over other
+/// contract-lowering patterns. As such, the convert-vector-to-llvm pass will
+/// only run this registration conditionally.
+void populateVectorContractToMatrixMultiply(RewritePatternSet &patterns,
+                                            PatternBenefit benefit = 100);
+
+/// Populate the pattern set with the following patterns:
+///
+/// [TransposeOpLowering]
+/// Lowers `vector.transpose` to `llvm.intr.matrix.flat_transpose`.
+///
+/// Given the high benefit, this will be prioriotised over other
+/// transpose-lowering patterns. As such, the convert-vector-to-llvm pass will
+/// only run this registration conditionally.
+void populateVectorTransposeToFlatTranspose(RewritePatternSet &patterns,
+                                            PatternBenefit benefit = 100);
+
 } // namespace vector
 } // namespace mlir
+
 #endif // MLIR_DIALECT_VECTOR_TRANSFORMS_LOWERINGPATTERNS_H

@@ -8,11 +8,11 @@
 
 #include "InputFiles.h"
 #include "OutputSections.h"
+#include "RelocScan.h"
 #include "SymbolTable.h"
 #include "Symbols.h"
 #include "SyntheticSections.h"
 #include "Target.h"
-#include "lld/Common/ErrorHandler.h"
 #include "lld/Common/Filesystem.h"
 #include "llvm/BinaryFormat/ELF.h"
 #include "llvm/Support/Endian.h"
@@ -48,6 +48,14 @@ public:
   bool inBranchRange(RelType type, uint64_t src, uint64_t dst) const override;
   void relocate(uint8_t *loc, const Relocation &rel,
                 uint64_t val) const override;
+  template <class ELFT, class RelTy>
+  void scanSectionImpl(InputSectionBase &sec, Relocs<RelTy> rels);
+  void scanSection(InputSectionBase &sec) override {
+    if (ctx.arg.ekind == ELF32BEKind)
+      elf::scanSection1<ARM, ELF32BE>(*this, sec);
+    else
+      elf::scanSection1<ARM, ELF32LE>(*this, sec);
+  }
 
   DenseMap<InputSection *, SmallVector<const Defined *, 0>> sectionMap;
 
@@ -100,104 +108,170 @@ uint32_t ARM::calcEFlags() const {
   return EF_ARM_EABI_VER5 | abiFloatType | armBE8;
 }
 
+// Only needed to support relocations used by relocateNonAlloc and
+// preprocessRelocs.
 RelExpr ARM::getRelExpr(RelType type, const Symbol &s,
                         const uint8_t *loc) const {
   switch (type) {
   case R_ARM_ABS32:
-  case R_ARM_MOVW_ABS_NC:
-  case R_ARM_MOVT_ABS:
-  case R_ARM_THM_MOVW_ABS_NC:
-  case R_ARM_THM_MOVT_ABS:
-  case R_ARM_THM_ALU_ABS_G0_NC:
-  case R_ARM_THM_ALU_ABS_G1_NC:
-  case R_ARM_THM_ALU_ABS_G2_NC:
-  case R_ARM_THM_ALU_ABS_G3:
     return R_ABS;
-  case R_ARM_THM_JUMP8:
-  case R_ARM_THM_JUMP11:
+  case R_ARM_REL32:
     return R_PC;
-  case R_ARM_CALL:
-  case R_ARM_JUMP24:
-  case R_ARM_PC24:
-  case R_ARM_PLT32:
-  case R_ARM_PREL31:
-  case R_ARM_THM_JUMP19:
-  case R_ARM_THM_JUMP24:
-  case R_ARM_THM_CALL:
-    return R_PLT_PC;
-  case R_ARM_GOTOFF32:
-    // (S + A) - GOT_ORG
-    return R_GOTREL;
-  case R_ARM_GOT_BREL:
-    // GOT(S) + A - GOT_ORG
-    return R_GOT_OFF;
-  case R_ARM_GOT_PREL:
-  case R_ARM_TLS_IE32:
-    // GOT(S) + A - P
-    return R_GOT_PC;
   case R_ARM_SBREL32:
     return RE_ARM_SBREL;
-  case R_ARM_TARGET1:
-    return ctx.arg.target1Rel ? R_PC : R_ABS;
-  case R_ARM_TARGET2:
-    if (ctx.arg.target2 == Target2Policy::Rel)
-      return R_PC;
-    if (ctx.arg.target2 == Target2Policy::Abs)
-      return R_ABS;
-    return R_GOT_PC;
-  case R_ARM_TLS_GD32:
-    return R_TLSGD_PC;
-  case R_ARM_TLS_LDM32:
-    return R_TLSLD_PC;
   case R_ARM_TLS_LDO32:
     return R_DTPREL;
-  case R_ARM_BASE_PREL:
-    // B(S) + A - P
-    // FIXME: currently B(S) assumed to be .got, this may not hold for all
-    // platforms.
-    return R_GOTONLY_PC;
-  case R_ARM_MOVW_PREL_NC:
-  case R_ARM_MOVT_PREL:
-  case R_ARM_REL32:
-  case R_ARM_THM_MOVW_PREL_NC:
-  case R_ARM_THM_MOVT_PREL:
-    return R_PC;
-  case R_ARM_ALU_PC_G0:
-  case R_ARM_ALU_PC_G0_NC:
-  case R_ARM_ALU_PC_G1:
-  case R_ARM_ALU_PC_G1_NC:
-  case R_ARM_ALU_PC_G2:
-  case R_ARM_LDR_PC_G0:
-  case R_ARM_LDR_PC_G1:
-  case R_ARM_LDR_PC_G2:
-  case R_ARM_LDRS_PC_G0:
-  case R_ARM_LDRS_PC_G1:
-  case R_ARM_LDRS_PC_G2:
-  case R_ARM_THM_ALU_PREL_11_0:
-  case R_ARM_THM_PC8:
-  case R_ARM_THM_PC12:
-    return RE_ARM_PCA;
-  case R_ARM_MOVW_BREL_NC:
-  case R_ARM_MOVW_BREL:
-  case R_ARM_MOVT_BREL:
-  case R_ARM_THM_MOVW_BREL_NC:
-  case R_ARM_THM_MOVW_BREL:
-  case R_ARM_THM_MOVT_BREL:
-    return RE_ARM_SBREL;
   case R_ARM_NONE:
-    return R_NONE;
-  case R_ARM_TLS_LE32:
-    return R_TPREL;
-  case R_ARM_V4BX:
-    // V4BX is just a marker to indicate there's a "bx rN" instruction at the
-    // given address. It can be used to implement a special linker mode which
-    // rewrites ARMv4T inputs to ARMv4. Since we support only ARMv4 input and
-    // not ARMv4 output, we can just ignore it.
     return R_NONE;
   default:
     Err(ctx) << getErrorLoc(ctx, loc) << "unknown relocation (" << type.v
              << ") against symbol " << &s;
     return R_NONE;
+  }
+}
+
+template <class ELFT, class RelTy>
+void ARM::scanSectionImpl(InputSectionBase &sec, Relocs<RelTy> rels) {
+  RelocScan rs(ctx, &sec);
+  sec.relocations.reserve(rels.size());
+  for (auto it = rels.begin(); it != rels.end(); ++it) {
+    const RelTy &rel = *it;
+    uint32_t symIdx = rel.getSymbol(false);
+    Symbol &sym = sec.getFile<ELFT>()->getSymbol(symIdx);
+    uint64_t offset = rel.r_offset;
+    RelType type = rel.getType(false);
+    if (type == R_ARM_NONE)
+      continue;
+    if (sym.isUndefined() && symIdx != 0 &&
+        rs.maybeReportUndefined(cast<Undefined>(sym), offset))
+      continue;
+    int64_t addend = rs.getAddend<ELFT>(rel, type);
+    RelExpr expr;
+    switch (type) {
+    case R_ARM_V4BX:
+      continue;
+
+    // Absolute relocations:
+    case R_ARM_ABS32:
+    case R_ARM_MOVW_ABS_NC:
+    case R_ARM_MOVT_ABS:
+    case R_ARM_THM_MOVW_ABS_NC:
+    case R_ARM_THM_MOVT_ABS:
+    case R_ARM_THM_ALU_ABS_G0_NC:
+    case R_ARM_THM_ALU_ABS_G1_NC:
+    case R_ARM_THM_ALU_ABS_G2_NC:
+    case R_ARM_THM_ALU_ABS_G3:
+      expr = R_ABS;
+      break;
+
+    // PC-relative relocations:
+    case R_ARM_THM_JUMP8:
+    case R_ARM_THM_JUMP11:
+    case R_ARM_MOVW_PREL_NC:
+    case R_ARM_MOVT_PREL:
+    case R_ARM_REL32:
+    case R_ARM_THM_MOVW_PREL_NC:
+    case R_ARM_THM_MOVT_PREL:
+      rs.processR_PC(type, offset, addend, sym);
+      continue;
+    // R_PC variant (place aligned down to 4-byte boundary):
+    case R_ARM_ALU_PC_G0:
+    case R_ARM_ALU_PC_G0_NC:
+    case R_ARM_ALU_PC_G1:
+    case R_ARM_ALU_PC_G1_NC:
+    case R_ARM_ALU_PC_G2:
+    case R_ARM_LDR_PC_G0:
+    case R_ARM_LDR_PC_G1:
+    case R_ARM_LDR_PC_G2:
+    case R_ARM_LDRS_PC_G0:
+    case R_ARM_LDRS_PC_G1:
+    case R_ARM_LDRS_PC_G2:
+    case R_ARM_THM_ALU_PREL_11_0:
+    case R_ARM_THM_PC8:
+    case R_ARM_THM_PC12:
+      expr = RE_ARM_PCA;
+      break;
+
+    // PLT-generating relocations:
+    case R_ARM_CALL:
+    case R_ARM_JUMP24:
+    case R_ARM_PC24:
+    case R_ARM_PLT32:
+    case R_ARM_PREL31:
+    case R_ARM_THM_JUMP19:
+    case R_ARM_THM_JUMP24:
+    case R_ARM_THM_CALL:
+      rs.processR_PLT_PC(type, offset, addend, sym);
+      continue;
+
+    // GOT relocations:
+    case R_ARM_GOT_BREL:
+      expr = R_GOT_OFF;
+      break;
+    case R_ARM_GOT_PREL:
+      expr = R_GOT_PC;
+      break;
+    case R_ARM_GOTOFF32:
+      ctx.in.got->hasGotOffRel.store(true, std::memory_order_relaxed);
+      expr = R_GOTREL;
+      break;
+    case R_ARM_BASE_PREL:
+      ctx.in.got->hasGotOffRel.store(true, std::memory_order_relaxed);
+      expr = R_GOTONLY_PC;
+      break;
+
+    // RE_ARM_SBREL relocations:
+    case R_ARM_SBREL32:
+    case R_ARM_MOVW_BREL_NC:
+    case R_ARM_MOVW_BREL:
+    case R_ARM_MOVT_BREL:
+    case R_ARM_THM_MOVW_BREL_NC:
+    case R_ARM_THM_MOVW_BREL:
+    case R_ARM_THM_MOVT_BREL:
+      expr = RE_ARM_SBREL;
+      break;
+
+    // Platform-specific relocations:
+    case R_ARM_TARGET1:
+      expr = ctx.arg.target1Rel ? R_PC : R_ABS;
+      break;
+    case R_ARM_TARGET2:
+      if (ctx.arg.target2 == Target2Policy::Rel)
+        expr = R_PC;
+      else if (ctx.arg.target2 == Target2Policy::Abs)
+        expr = R_ABS;
+      else
+        expr = R_GOT_PC;
+      break;
+
+    // TLS relocations (no optimization):
+    case R_ARM_TLS_LE32:
+      if (rs.checkTlsLe(offset, sym, type))
+        continue;
+      expr = R_TPREL;
+      break;
+    case R_ARM_TLS_IE32:
+      rs.handleTlsIe<false>(R_GOT_PC, type, offset, addend, sym);
+      continue;
+    case R_ARM_TLS_GD32:
+      sym.setFlags(NEEDS_TLSGD);
+      sec.addReloc({R_TLSGD_PC, type, offset, addend, &sym});
+      continue;
+    case R_ARM_TLS_LDM32:
+      ctx.needsTlsLd.store(true, std::memory_order_relaxed);
+      sec.addReloc({R_TLSLD_PC, type, offset, addend, &sym});
+      continue;
+    case R_ARM_TLS_LDO32:
+      expr = R_DTPREL;
+      break;
+
+    default:
+      Err(ctx) << getErrorLoc(ctx, sec.content().data() + offset)
+               << "unknown relocation (" << type.v << ") against symbol "
+               << &sym;
+      continue;
+    }
+    rs.process(expr, type, offset, sym, addend);
   }
 }
 
@@ -473,7 +547,7 @@ bool ARM::inBranchRange(RelType type, uint64_t src, uint64_t dst) const {
     // Bit 0 == 1 denotes Thumb state, it is not part of the range.
     dst &= ~0x1;
 
-  int64_t offset = dst - src;
+  int64_t offset = llvm::SignExtend64<32>(dst - src);
   switch (type) {
   case R_ARM_PC24:
   case R_ARM_PLT32:
@@ -1230,7 +1304,7 @@ template <class ELFT> void ObjFile<ELFT>::importCmseSymbols() {
       continue;
     }
 
-    if (ctx.symtab->cmseImportLib.count(sym->getName())) {
+    if (ctx.symtab->cmseImportLib.contains(sym->getName())) {
       Err(ctx) << "CMSE symbol '" << sym->getName()
                << "' is multiply defined in import library '" << this << "'";
       continue;
@@ -1318,11 +1392,11 @@ void elf::processArmCmseSymbols(Ctx &ctx) {
   // with its corresponding special symbol __acle_se_<sym>.
   parallelForEach(ctx.objectFiles, [&](InputFile *file) {
     MutableArrayRef<Symbol *> syms = file->getMutableSymbols();
-    for (size_t i = 0, e = syms.size(); i != e; ++i) {
-      StringRef symName = syms[i]->getName();
+    for (Symbol *&sym : syms) {
+      StringRef symName = sym->getName();
       auto it = ctx.symtab->cmseSymMap.find(symName);
       if (it != ctx.symtab->cmseSymMap.end())
-        syms[i] = it->second.acleSeSym;
+        sym = it->second.acleSeSym;
     }
   });
 }
@@ -1344,7 +1418,7 @@ ArmCmseSGSection::ArmCmseSGSection(Ctx &ctx)
     addSGVeneer(cast<Defined>(entryFunc.acleSeSym),
                 cast<Defined>(entryFunc.sym));
   for (auto &[_, sym] : ctx.symtab->cmseImportLib) {
-    if (!ctx.symtab->inCMSEOutImpLib.count(sym->getName()))
+    if (!ctx.symtab->inCMSEOutImpLib.contains(sym->getName()))
       Warn(ctx)
           << "entry function '" << sym->getName()
           << "' from CMSE import library is not present in secure application";
@@ -1353,7 +1427,7 @@ ArmCmseSGSection::ArmCmseSGSection(Ctx &ctx)
   if (!ctx.symtab->cmseImportLib.empty() && ctx.arg.cmseOutputLib.empty()) {
     for (auto &[_, entryFunc] : ctx.symtab->cmseSymMap) {
       Symbol *sym = entryFunc.sym;
-      if (!ctx.symtab->inCMSEOutImpLib.count(sym->getName()))
+      if (!ctx.symtab->inCMSEOutImpLib.contains(sym->getName()))
         Warn(ctx) << "new entry function '" << sym->getName()
                   << "' introduced but no output import library specified";
     }
@@ -1362,7 +1436,7 @@ ArmCmseSGSection::ArmCmseSGSection(Ctx &ctx)
 
 void ArmCmseSGSection::addSGVeneer(Symbol *acleSeSym, Symbol *sym) {
   entries.emplace_back(acleSeSym, sym);
-  if (ctx.symtab->cmseImportLib.count(sym->getName()))
+  if (ctx.symtab->cmseImportLib.contains(sym->getName()))
     ctx.symtab->inCMSEOutImpLib[sym->getName()] = true;
   // Symbol addresses different, nothing to do.
   if (acleSeSym->file != sym->file ||
@@ -1489,7 +1563,7 @@ template <typename ELFT> void elf::writeARMCmseImportLib(Ctx &ctx) {
   const uint64_t fileSize =
       sectionHeaderOff + shnum * sizeof(typename ELFT::Shdr);
   const unsigned flags =
-      ctx.arg.mmapOutputFile ? 0 : (unsigned)FileOutputBuffer::F_no_mmap;
+      ctx.arg.mmapOutputFile ? (unsigned)FileOutputBuffer::F_mmap : 0;
   unlinkAsync(ctx.arg.cmseOutputLib);
   Expected<std::unique_ptr<FileOutputBuffer>> bufferOrErr =
       FileOutputBuffer::create(ctx.arg.cmseOutputLib, fileSize, flags);

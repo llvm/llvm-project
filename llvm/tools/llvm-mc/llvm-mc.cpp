@@ -12,12 +12,16 @@
 //===----------------------------------------------------------------------===//
 
 #include "Disassembler.h"
+#include "llvm/ADT/ScopeExit.h"
+#include "llvm/DWARFCFIChecker/DWARFCFIFunctionFrameAnalyzer.h"
+#include "llvm/DWARFCFIChecker/DWARFCFIFunctionFrameStreamer.h"
 #include "llvm/MC/MCAsmBackend.h"
 #include "llvm/MC/MCAsmInfo.h"
 #include "llvm/MC/MCCodeEmitter.h"
 #include "llvm/MC/MCContext.h"
 #include "llvm/MC/MCInstPrinter.h"
 #include "llvm/MC/MCInstrInfo.h"
+#include "llvm/MC/MCLFI.h"
 #include "llvm/MC/MCObjectFileInfo.h"
 #include "llvm/MC/MCObjectWriter.h"
 #include "llvm/MC/MCParser/AsmLexer.h"
@@ -35,9 +39,12 @@
 #include "llvm/Support/MemoryBuffer.h"
 #include "llvm/Support/SourceMgr.h"
 #include "llvm/Support/TargetSelect.h"
+#include "llvm/Support/TimeProfiler.h"
 #include "llvm/Support/ToolOutputFile.h"
+#include "llvm/Support/VirtualFileSystem.h"
 #include "llvm/Support/WithColor.h"
 #include "llvm/TargetParser/Host.h"
+#include <memory>
 
 using namespace llvm;
 
@@ -212,6 +219,10 @@ static cl::opt<bool> NoExecStack("no-exec-stack",
                                  cl::desc("File doesn't need an exec stack"),
                                  cl::cat(MCCategory));
 
+static cl::opt<bool> ValidateCFI("validate-cfi",
+                                 cl::desc("Validate the CFI directives"),
+                                 cl::cat(MCCategory));
+
 enum ActionType {
   AC_AsLex,
   AC_Assemble,
@@ -232,6 +243,23 @@ static cl::opt<ActionType> Action(
                clEnumValN(AC_CDisassemble, "cdis",
                           "Colored disassembly of strings of hex bytes")),
     cl::cat(MCCategory));
+
+static cl::opt<unsigned>
+    NumBenchmarkRuns("runs", cl::desc("Number of runs for benchmarking"),
+                     cl::cat(MCCategory));
+
+static cl::opt<bool> TimeTrace("time-trace", cl::desc("Record time trace"));
+
+static cl::opt<unsigned> TimeTraceGranularity(
+    "time-trace-granularity",
+    cl::desc(
+        "Minimum time granularity (in microseconds) traced by time profiler"),
+    cl::init(500), cl::Hidden);
+
+static cl::opt<std::string>
+    TimeTraceFile("time-trace-file",
+                  cl::desc("Specify time trace file destination"),
+                  cl::value_desc("filename"));
 
 static const Target *GetTarget(const char *ProgName) {
   // Figure out the target triple.
@@ -364,6 +392,20 @@ int main(int argc, char **argv) {
 
   cl::HideUnrelatedOptions({&MCCategory, &getColorCategory()});
   cl::ParseCommandLineOptions(argc, argv, "llvm machine code playground\n");
+
+  if (TimeTrace)
+    timeTraceProfilerInitialize(TimeTraceGranularity, argv[0]);
+
+  llvm::scope_exit TimeTraceScopeExit([]() {
+    if (!TimeTrace)
+      return;
+    if (auto E = timeTraceProfilerWrite(TimeTraceFile, OutputFilename)) {
+      logAllUnhandledErrors(std::move(E), errs());
+      return;
+    }
+    timeTraceProfilerCleanup();
+  });
+
   MCTargetOptions MCOptions = mc::InitMCTargetOptionsFromFlags();
   MCOptions.CompressDebugSections = CompressDebugSections.getValue();
   MCOptions.ShowMCInst = ShowInst;
@@ -399,12 +441,13 @@ int main(int argc, char **argv) {
   // Record the location of the include directories so that the lexer can find
   // it later.
   SrcMgr.setIncludeDirs(IncludeDirs);
+  SrcMgr.setVirtualFileSystem(vfs::getRealFileSystem());
 
-  std::unique_ptr<MCRegisterInfo> MRI(TheTarget->createMCRegInfo(TripleName));
+  std::unique_ptr<MCRegisterInfo> MRI(TheTarget->createMCRegInfo(TheTriple));
   assert(MRI && "Unable to create target register info!");
 
   std::unique_ptr<MCAsmInfo> MAI(
-      TheTarget->createMCAsmInfo(*MRI, TripleName, MCOptions));
+      TheTarget->createMCAsmInfo(*MRI, TheTriple, MCOptions));
   assert(MAI && "Unable to create target asm info!");
 
   if (CompressDebugSections != DebugCompressionType::None) {
@@ -419,17 +462,29 @@ int main(int argc, char **argv) {
   MAI->setCommentColumn(CommentColumn);
 
   // Package up features to be passed to target/subtarget
+  SubtargetFeatures Features;
   std::string FeaturesStr;
-  if (MAttrs.size()) {
-    SubtargetFeatures Features;
-    for (unsigned i = 0; i != MAttrs.size(); ++i)
-      Features.AddFeature(MAttrs[i]);
-    FeaturesStr = Features.getString();
+
+  // Replace -mcpu=native with Host CPU and features.
+  if (MCPU == "native") {
+    MCPU = std::string(llvm::sys::getHostCPUName());
+
+    llvm::StringMap<bool> TargetFeatures = llvm::sys::getHostCPUFeatures();
+    for (auto const &[FeatureName, IsSupported] : TargetFeatures)
+      Features.AddFeature(FeatureName, IsSupported);
   }
 
+  // Handle features passed to target/subtarget.
+  for (unsigned i = 0; i != MAttrs.size(); ++i)
+    Features.AddFeature(MAttrs[i]);
+  FeaturesStr = Features.getString();
+
   std::unique_ptr<MCSubtargetInfo> STI(
-      TheTarget->createMCSubtargetInfo(TripleName, MCPU, FeaturesStr));
-  assert(STI && "Unable to create subtarget info!");
+      TheTarget->createMCSubtargetInfo(TheTriple, MCPU, FeaturesStr));
+  if (!STI) {
+    WithColor::error(errs(), ProgName) << "unable to create subtarget info\n";
+    return 1;
+  }
 
   // FIXME: This is not pretty. MCContext has a ptr to MCObjectFileInfo and
   // MCObjectFileInfo needs a MCContext reference in order to initialize itself.
@@ -442,7 +497,7 @@ int main(int argc, char **argv) {
   Ctx.setGenDwarfForAssembly(GenDwarfForAssembly);
   // Default to 4 for dwarf version.
   unsigned DwarfVersion = MCOptions.DwarfVersion ? MCOptions.DwarfVersion : 4;
-  if (DwarfVersion < 2 || DwarfVersion > 5) {
+  if (DwarfVersion < 2 || DwarfVersion > 6) {
     errs() << ProgName << ": Dwarf version " << DwarfVersion
            << " is not supported." << '\n';
     return 1;
@@ -520,7 +575,16 @@ int main(int argc, char **argv) {
   assert(MCII && "Unable to create instruction info!");
 
   std::unique_ptr<MCInstPrinter> IP;
-  if (FileType == OFT_AssemblyFile) {
+  if (ValidateCFI) {
+    // TODO: The DWARF CFI checker support for emitting anything other than
+    // errors and warnings has not been implemented yet. Because of this, it is
+    // assert-checked that the filetype output is null.
+    assert(FileType == OFT_Null);
+    auto FFA = std::make_unique<CFIFunctionFrameAnalyzer>(Ctx, *MCII);
+    auto FFS = std::make_unique<CFIFunctionFrameStreamer>(Ctx, std::move(FFA));
+    TheTarget->createNullTargetStreamer(*FFS);
+    Str = std::move(FFS);
+  } else if (FileType == OFT_AssemblyFile) {
     IP.reset(TheTarget->createMCInstPrinter(
         Triple(TripleName), OutputAsmVariant, *MAI, *MCII, *MRI));
 
@@ -563,6 +627,11 @@ int main(int argc, char **argv) {
     Str.reset(TheTarget->createAsmStreamer(Ctx, std::move(FOut), std::move(IP),
                                            std::move(CE), std::move(MAB)));
 
+    Triple T(TripleName);
+    if (T.isLFI()) {
+      Str->initSections(NoExecStack, *STI);
+      initializeLFIMCStreamer(*Str.get(), Ctx, T);
+    }
   } else if (FileType == OFT_Null) {
     Str.reset(TheTarget->createNullStreamer(Ctx));
   } else {
@@ -581,7 +650,8 @@ int main(int argc, char **argv) {
                : MAB->createObjectWriter(*OS),
         std::unique_ptr<MCCodeEmitter>(CE), *STI));
     if (NoExecStack)
-      Str->switchSection(Ctx.getAsmInfo()->getNonexecutableStackSection(Ctx));
+      Str->switchSection(
+          Ctx.getAsmInfo()->getStackSection(Ctx, /*Exec=*/false));
     Str->emitVersionForTarget(TheTriple, VersionTuple(), nullptr,
                               VersionTuple());
   }
@@ -603,8 +673,8 @@ int main(int argc, char **argv) {
     break;
   }
   if (disassemble)
-    Res = Disassembler::disassemble(*TheTarget, TripleName, *STI, *Str, *Buffer,
-                                    SrcMgr, Ctx, MCOptions, HexBytes);
+    Res = Disassembler::disassemble(*TheTarget, *STI, *Str, *Buffer, SrcMgr,
+                                    Ctx, MCOptions, HexBytes, NumBenchmarkRuns);
 
   // Keep output if no errors.
   if (Res == 0) {
@@ -612,5 +682,6 @@ int main(int argc, char **argv) {
     if (DwoOut)
       DwoOut->keep();
   }
+
   return Res;
 }

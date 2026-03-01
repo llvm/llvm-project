@@ -7,6 +7,7 @@ They can also be useful for general purpose lldb scripting.
 # System modules
 import errno
 import io
+import json
 import os
 import re
 import sys
@@ -318,20 +319,33 @@ def sort_stopped_threads(
 # Utility functions for setting breakpoints
 # ==================================================
 
+g_use_break_add = True
+
+
+def set_use_break_add(use_it):
+    global g_use_break_add
+    g_use_break_add = use_it
+
+
+def get_use_break_add():
+    global g_use_break_add
+    return g_use_break_add
 
 def run_break_set_by_script(
     test, class_name, extra_options=None, num_expected_locations=1
 ):
     """Set a scripted breakpoint.  Check that it got the right number of locations."""
     test.assertTrue(class_name is not None, "Must pass in a class name.")
-    command = "breakpoint set -P " + class_name
+    if get_use_break_add():
+        command = f"breakpoint add scripted -P {class_name}"
+    else:
+        command = "breakpoint set -P " + class_name
     if extra_options is not None:
         command += " " + extra_options
 
     break_results = run_break_set_command(test, command)
     check_breakpoint_result(test, break_results, num_locations=num_expected_locations)
     return get_bpno_from_match(break_results)
-
 
 def run_break_set_by_file_and_line(
     test,
@@ -352,10 +366,16 @@ def run_break_set_by_file_and_line(
     If loc_exact is true, we check that there is one location, and that location must be at the input file and line number.
     """
 
-    if file_name is None:
-        command = "breakpoint set -l %d" % (line_number)
+    if get_use_break_add():
+        if file_name is None:
+            command = f"breakpoint add file {line_number} "
+        else:
+            command = f"breakpoint add file -f {file_name} -l {line_number} "
     else:
-        command = 'breakpoint set -f "%s" -l %d' % (file_name, line_number)
+        if file_name is None:
+            command = "breakpoint set -l %d" % (line_number)
+        else:
+            command = 'breakpoint set -f "%s" -l %d' % (file_name, line_number)
 
     if module_name:
         command += " --shlib '%s'" % (module_name)
@@ -394,13 +414,19 @@ def run_break_set_by_symbol(
 
     If sym_exact is true, then the output symbol must match the input exactly, otherwise we do a substring match.
     """
-    command = 'breakpoint set -n "%s"' % (symbol)
+    if get_use_break_add():
+        command = f"breakpoint add name"
+    else:
+        command = 'breakpoint set -n "%s"' % (symbol)
 
     if module_name:
         command += " --shlib '%s'" % (module_name)
 
     if extra_options:
         command += " " + extra_options
+
+    if get_use_break_add():
+        command += f" -- '{symbol}'"
 
     break_results = run_break_set_command(test, command)
 
@@ -425,7 +451,10 @@ def run_break_set_by_selector(
 ):
     """Set a breakpoint by selector.  Common options are the same as run_break_set_by_file_and_line."""
 
-    command = 'breakpoint set -S "%s"' % (selector)
+    if get_use_break_add():
+        command = f"breakpoint add name --match-style selector '{selector}'"
+    else:
+        command = 'breakpoint set -S "%s"' % (selector)
 
     if module_name:
         command += ' --shlib "%s"' % (module_name)
@@ -457,7 +486,10 @@ def run_break_set_by_regexp(
 ):
     """Set a breakpoint by regular expression match on symbol name.  Common options are the same as run_break_set_by_file_and_line."""
 
-    command = 'breakpoint set -r "%s"' % (regexp)
+    if get_use_break_add():
+        command = f"breakpoint add name --match-style regex '{regexp}'"
+    else:
+        command = 'breakpoint set -r "%s"' % (regexp)
     if extra_options:
         command += " " + extra_options
 
@@ -472,9 +504,15 @@ def run_break_set_by_source_regexp(
     test, regexp, extra_options=None, num_expected_locations=-1
 ):
     """Set a breakpoint by source regular expression.  Common options are the same as run_break_set_by_file_and_line."""
-    command = 'breakpoint set -p "%s"' % (regexp)
+    if get_use_break_add():
+        command = "breakpoint add pattern"
+    else:
+        command = 'breakpoint set -p "%s"' % (regexp)
     if extra_options:
         command += " " + extra_options
+
+    if get_use_break_add():
+        command += f" -- {regexp}"
 
     break_results = run_break_set_command(test, command)
 
@@ -492,7 +530,11 @@ def run_break_set_by_file_colon_line(
     extra_options=None,
     num_expected_locations=-1,
 ):
-    command = 'breakpoint set -y "%s"' % (specifier)
+    if get_use_break_add():
+        command = f"breakpoint add file '{specifier}'"
+    else:
+        command = 'breakpoint set -y "%s"' % (specifier)
+
     if extra_options:
         command += " " + extra_options
 
@@ -1463,8 +1505,8 @@ class ChildVisitingFormatter(BasicFormatter):
         return output.getvalue()
 
 
-class RecursiveDecentFormatter(BasicFormatter):
-    """The recursive decent formatter prints the value and the decendents.
+class RecursiveDescentFormatter(BasicFormatter):
+    """The recursive descent formatter prints the value and the descendents.
 
     The constructor takes two keyword args: indent_level, which defaults to 0,
     and indent_child, which defaults to 2.  The current indentation level is
@@ -1481,7 +1523,6 @@ class RecursiveDecentFormatter(BasicFormatter):
             output = io.StringIO()
         else:
             output = buffer
-
         BasicFormatter.format(self, value, buffer=output, indent=self.lindent)
         new_indent = self.lindent + self.cindent
         for child in value:
@@ -1489,7 +1530,7 @@ class RecursiveDecentFormatter(BasicFormatter):
                 BasicFormatter.format(self, child, buffer=output, indent=new_indent)
             else:
                 if child.GetNumChildren() > 0:
-                    rdf = RecursiveDecentFormatter(indent_level=new_indent)
+                    rdf = RecursiveDescentFormatter(indent_level=new_indent)
                     rdf.format(child, buffer=output)
                 else:
                     BasicFormatter.format(self, child, buffer=output, indent=new_indent)
@@ -1704,3 +1745,89 @@ def packetlog_get_dylib_info(log):
                 expect_dylib_info_response = True
 
     return dylib_info
+
+
+# ========================
+# Utilities for simulators
+# ========================
+
+
+def get_latest_apple_simulator(platform_name, log=None):
+    # Run simctl to list all simulators
+    cmd = ["xcrun", "simctl", "list", "-j", "devices"]
+    cmd_str = " ".join(cmd)
+    if log:
+        log(cmd_str)
+    sim_devices_str = subprocess.check_output(cmd).decode("utf-8")
+    sim_devices = json.loads(sim_devices_str)["devices"]
+
+    # Find an available simulator for the requested platform
+    device_uuid = None
+    device_runtime = None
+    for simulator in sim_devices:
+        if isinstance(simulator, dict):
+            runtime = simulator["name"]
+            devices = simulator["devices"]
+        else:
+            runtime = simulator
+            devices = sim_devices[simulator]
+        if not platform_name in runtime.lower():
+            continue
+        for device in devices:
+            if "availability" in device and device["availability"] != "(available)":
+                continue
+            if "isAvailable" in device and not device["isAvailable"]:
+                continue
+            if device_runtime and runtime < device_runtime:
+                continue
+            device_uuid = device["udid"]
+            device_runtime = runtime
+            # Stop searching in this runtime
+            break
+
+    return device_uuid
+
+
+def launch_exe_in_apple_simulator(
+    device_uuid,
+    exe_path,
+    exe_args=[],
+    stderr_lines_to_read=0,
+    stderr_patterns=[],
+    log=None,
+):
+    exe_path = os.path.realpath(exe_path)
+    cmd = [
+        "xcrun",
+        "simctl",
+        "spawn",
+        "-s",
+        device_uuid,
+        exe_path,
+    ] + exe_args
+    if log:
+        log(" ".join(cmd))
+    sim_launcher = subprocess.Popen(cmd, stderr=subprocess.PIPE)
+
+    # Read stderr to try to find matches.
+    # Each pattern will return the value of group[1] of the first match in the stderr.
+    # Will read at most stderr_lines_to_read lines.
+    # Will early terminate when all matches have been found.
+    total_patterns = len(stderr_patterns)
+    matches_found = 0
+    matched_strings = [None] * total_patterns
+    for _ in range(0, stderr_lines_to_read):
+        stderr = sim_launcher.stderr.readline().decode("utf-8")
+        if not stderr:
+            continue
+        for i, pattern in enumerate(stderr_patterns):
+            if matched_strings[i] is not None:
+                continue
+            match = re.match(pattern, stderr)
+            if match:
+                matched_strings[i] = str(match.group(1))
+                matches_found += 1
+        if matches_found == total_patterns:
+            break
+
+    return exe_path, matched_strings

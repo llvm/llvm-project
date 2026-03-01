@@ -12,12 +12,11 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/CodeGen/MachineDominators.h"
-#include "llvm/ADT/SmallBitVector.h"
 #include "llvm/CodeGen/Passes.h"
 #include "llvm/InitializePasses.h"
 #include "llvm/Pass.h"
-#include "llvm/PassRegistry.h"
 #include "llvm/Support/CommandLine.h"
+#include "llvm/Support/Compiler.h"
 #include "llvm/Support/GenericDomTreeConstruction.h"
 
 using namespace llvm;
@@ -36,24 +35,29 @@ static cl::opt<bool, true> VerifyMachineDomInfoX(
     cl::desc("Verify machine dominator info (time consuming)"));
 
 namespace llvm {
-template class DomTreeNodeBase<MachineBasicBlock>;
-template class DominatorTreeBase<MachineBasicBlock, false>; // DomTreeBase
+template class LLVM_EXPORT_TEMPLATE DomTreeNodeBase<MachineBasicBlock>;
+template class LLVM_EXPORT_TEMPLATE
+    DominatorTreeBase<MachineBasicBlock, false>; // DomTreeBase
 
 namespace DomTreeBuilder {
-template void Calculate<MBBDomTree>(MBBDomTree &DT);
-template void CalculateWithUpdates<MBBDomTree>(MBBDomTree &DT, MBBUpdates U);
+template LLVM_EXPORT_TEMPLATE void Calculate<MBBDomTree>(MBBDomTree &DT);
+template LLVM_EXPORT_TEMPLATE void
+CalculateWithUpdates<MBBDomTree>(MBBDomTree &DT, MBBUpdates U);
 
-template void InsertEdge<MBBDomTree>(MBBDomTree &DT, MachineBasicBlock *From,
-                                     MachineBasicBlock *To);
+template LLVM_EXPORT_TEMPLATE void
+InsertEdge<MBBDomTree>(MBBDomTree &DT, MachineBasicBlock *From,
+                       MachineBasicBlock *To);
 
-template void DeleteEdge<MBBDomTree>(MBBDomTree &DT, MachineBasicBlock *From,
-                                     MachineBasicBlock *To);
+template LLVM_EXPORT_TEMPLATE void
+DeleteEdge<MBBDomTree>(MBBDomTree &DT, MachineBasicBlock *From,
+                       MachineBasicBlock *To);
 
-template void ApplyUpdates<MBBDomTree>(MBBDomTree &DT, MBBDomTreeGraphDiff &,
-                                       MBBDomTreeGraphDiff *);
+template LLVM_EXPORT_TEMPLATE void
+ApplyUpdates<MBBDomTree>(MBBDomTree &DT, MBBDomTreeGraphDiff &,
+                         MBBDomTreeGraphDiff *);
 
-template bool Verify<MBBDomTree>(const MBBDomTree &DT,
-                                 MBBDomTree::VerificationLevel VL);
+template LLVM_EXPORT_TEMPLATE bool
+Verify<MBBDomTree>(const MBBDomTree &DT, MBBDomTree::VerificationLevel VL);
 } // namespace DomTreeBuilder
 }
 
@@ -90,14 +94,17 @@ INITIALIZE_PASS(MachineDominatorTreeWrapperPass, "machinedomtree",
                 "MachineDominator Tree Construction", true, true)
 
 MachineDominatorTreeWrapperPass::MachineDominatorTreeWrapperPass()
-    : MachineFunctionPass(ID) {
-  initializeMachineDominatorTreeWrapperPassPass(
-      *PassRegistry::getPassRegistry());
-}
+    : MachineFunctionPass(ID) {}
 
 char &llvm::MachineDominatorsID = MachineDominatorTreeWrapperPass::ID;
 
 bool MachineDominatorTreeWrapperPass::runOnMachineFunction(MachineFunction &F) {
+  if (F.empty()) {
+    assert(F.getProperties().hasFailedISel() &&
+           "Machine function should not be empty unless ISel failed.");
+    return false;
+  }
+
   DT = MachineDominatorTree(F);
   return false;
 }

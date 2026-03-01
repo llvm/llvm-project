@@ -17,7 +17,9 @@
 
 namespace lld::elf {
 struct Ctx;
+struct ELFSyncStream;
 class Defined;
+class Undefined;
 class Symbol;
 class InputSection;
 class InputSectionBase;
@@ -40,6 +42,7 @@ using JumpModType = uint32_t;
 enum RelExpr {
   R_ABS,
   R_ADDEND,
+  R_ADDEND_NEG,
   R_DTPREL,
   R_GOT,
   R_GOT_OFF,
@@ -68,7 +71,6 @@ enum RelExpr {
   R_RELAX_TLS_GD_TO_LE_NEG,
   R_RELAX_TLS_IE_TO_LE,
   R_RELAX_TLS_LD_TO_LE,
-  R_RELAX_TLS_LD_TO_LE_ABS,
   R_SIZE,
   R_TPREL,
   R_TPREL_NEG,
@@ -92,15 +94,9 @@ enum RelExpr {
   // of a relocation type, there are some relocations whose semantics are
   // unique to a target. Such relocation are marked with RE_<TARGET_NAME>.
   RE_AARCH64_GOT_PAGE_PC,
-  RE_AARCH64_AUTH_GOT_PAGE_PC,
   RE_AARCH64_GOT_PAGE,
-  RE_AARCH64_AUTH_GOT,
-  RE_AARCH64_AUTH_GOT_PC,
   RE_AARCH64_PAGE_PC,
-  RE_AARCH64_RELAX_TLS_GD_TO_IE_PAGE_PC,
   RE_AARCH64_TLSDESC_PAGE,
-  RE_AARCH64_AUTH_TLSDESC_PAGE,
-  RE_AARCH64_AUTH_TLSDESC,
   RE_AARCH64_AUTH,
   RE_ARM_PCA,
   RE_ARM_SBREL,
@@ -110,14 +106,13 @@ enum RelExpr {
   RE_MIPS_GOT_LOCAL_PAGE,
   RE_MIPS_GOT_OFF,
   RE_MIPS_GOT_OFF32,
+  RE_MIPS_OSEC_LOCAL_PAGE,
   RE_MIPS_TLSGD,
   RE_MIPS_TLSLD,
   RE_PPC32_PLTREL,
   RE_PPC64_CALL,
   RE_PPC64_CALL_PLT,
-  RE_PPC64_RELAX_TOC,
   RE_PPC64_TOCBASE,
-  RE_PPC64_RELAX_GOT_PC,
   RE_RISCV_ADD,
   RE_RISCV_LEB128,
   RE_RISCV_PC_INDIRECT,
@@ -129,8 +124,10 @@ enum RelExpr {
   // also reused for TLS, making the semantics differ from other architectures.
   RE_LOONGARCH_GOT,
   RE_LOONGARCH_GOT_PAGE_PC,
+  RE_LOONGARCH_PC_INDIRECT,
   RE_LOONGARCH_TLSGD_PAGE_PC,
   RE_LOONGARCH_TLSDESC_PAGE_PC,
+  RE_LOONGARCH_RELAX_TLS_GD_TO_IE_PAGE_PC,
 };
 
 // Architecture-neutral representation of relocation.
@@ -151,17 +148,24 @@ struct JumpInstrMod {
   unsigned size;
 };
 
+void printLocation(ELFSyncStream &s, InputSectionBase &sec, const Symbol &sym,
+                   uint64_t off);
+
 // This function writes undefined symbol diagnostics to an internal buffer.
 // Call reportUndefinedSymbols() after calling scanRelocations() to emit
 // the diagnostics.
 template <class ELFT> void scanRelocations(Ctx &ctx);
 template <class ELFT> void checkNoCrossRefs(Ctx &ctx);
 void reportUndefinedSymbols(Ctx &);
+bool maybeReportUndefined(Ctx &, Undefined &sym, InputSectionBase &sec,
+                          uint64_t offset);
 void postScanRelocations(Ctx &ctx);
 void addGotEntry(Ctx &ctx, Symbol &sym);
 
 void hexagonTLSSymbolUpdate(Ctx &ctx);
 bool hexagonNeedsTLSSymbol(ArrayRef<OutputSection *> outputSections);
+
+bool isAbsolute(const Symbol &sym);
 
 class ThunkSection;
 class Thunk;
@@ -192,7 +196,7 @@ private:
   std::pair<Thunk *, bool> getSyntheticLandingPad(Defined &d, int64_t a);
 
   ThunkSection *addThunkSection(OutputSection *os, InputSectionDescription *,
-                                uint64_t off);
+                                uint64_t off, bool isPrefix = false);
 
   bool normalizeExistingThunk(Relocation &rel, uint64_t src);
 
@@ -299,7 +303,7 @@ template <bool is64> struct RelocsCrel {
         step();
       return *this;
     }
-    // For RelocationScanner::scanOne.
+    // For RelocScan::scan when TLS relocations consume multiple entries.
     void operator+=(size_t n) {
       for (; n; --n)
         operator++();
@@ -339,27 +343,6 @@ static inline int64_t getAddend(const typename ELFT::Rela &rel) {
 template <class ELFT>
 static inline int64_t getAddend(const typename ELFT::Crel &rel) {
   return rel.r_addend;
-}
-
-template <typename RelTy>
-inline Relocs<RelTy> sortRels(Relocs<RelTy> rels,
-                              SmallVector<RelTy, 0> &storage) {
-  auto cmp = [](const RelTy &a, const RelTy &b) {
-    return a.r_offset < b.r_offset;
-  };
-  if (!llvm::is_sorted(rels, cmp)) {
-    storage.assign(rels.begin(), rels.end());
-    llvm::stable_sort(storage, cmp);
-    rels = Relocs<RelTy>(storage);
-  }
-  return rels;
-}
-
-template <bool is64>
-inline Relocs<llvm::object::Elf_Crel_Impl<is64>>
-sortRels(Relocs<llvm::object::Elf_Crel_Impl<is64>> rels,
-         SmallVector<llvm::object::Elf_Crel_Impl<is64>, 0> &storage) {
-  return {};
 }
 
 RelocationBaseSection &getIRelativeSection(Ctx &ctx);

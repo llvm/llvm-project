@@ -42,13 +42,11 @@ public:
                    StringRef Suffix)
       : TheRange(R), Separator(Separator), Prefix(Prefix), Suffix(Suffix) {}
 
-  friend raw_ostream &operator<<(raw_ostream &OS,
-                                 const InterleavedRange &Interleaved) {
-    if (!Interleaved.Prefix.empty())
-      OS << Interleaved.Prefix;
+  template <typename OStream>
+  friend OStream &operator<<(OStream &OS, const InterleavedRange &Interleaved) {
+    OS << Interleaved.Prefix;
     llvm::interleave(Interleaved.TheRange, OS, Interleaved.Separator);
-    if (!Interleaved.Suffix.empty())
-      OS << Interleaved.Suffix;
+    OS << Interleaved.Suffix;
     return OS;
   }
 
@@ -56,7 +54,6 @@ public:
     std::string Result;
     raw_string_ostream Stream(Result);
     Stream << *this;
-    Stream.flush();
     return Result;
   }
 

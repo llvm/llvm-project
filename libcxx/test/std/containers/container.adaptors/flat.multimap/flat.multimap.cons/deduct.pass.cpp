@@ -11,6 +11,7 @@
 // <flat_map>
 
 #include <algorithm>
+#include <array>
 #include <cassert>
 #include <climits>
 #include <deque>
@@ -31,19 +32,19 @@ using PC = std::pair<const int, long>;
 
 void test_copy() {
   {
-    std::flat_multimap<long, short> source = {{1, 2}, {1, 3}};
+    std::flat_multimap<long, int> source = {{1, 2}, {1, 3}};
     std::flat_multimap s(source);
     ASSERT_SAME_TYPE(decltype(s), decltype(source));
     assert(s == source);
   }
   {
-    std::flat_multimap<long, short, std::greater<long>> source = {{1, 2}, {1, 3}};
+    std::flat_multimap<long, int, std::greater<long>> source = {{1, 2}, {1, 3}};
     std::flat_multimap s{source}; // braces instead of parens
     ASSERT_SAME_TYPE(decltype(s), decltype(source));
     assert(s == source);
   }
   {
-    std::flat_multimap<long, short, std::greater<long>> source = {{1, 2}, {1, 3}};
+    std::flat_multimap<long, int, std::greater<long>> source = {{1, 2}, {1, 3}};
     std::flat_multimap s(source, std::allocator<int>());
     ASSERT_SAME_TYPE(decltype(s), decltype(source));
     assert(s == source);
@@ -52,14 +53,14 @@ void test_copy() {
 
 void test_containers() {
   std::deque<int, test_allocator<int>> ks({1, 2, 1, 2, 2, INT_MAX, 3}, test_allocator<int>(0, 42));
-  std::deque<short, test_allocator<short>> vs({1, 2, 3, 4, 5, 3, 4}, test_allocator<int>(0, 43));
+  std::deque<long, test_allocator<long>> vs({1, 2, 3, 4, 5, 3, 4}, test_allocator<int>(0, 43));
   std::deque<int, test_allocator<int>> sorted_ks({1, 1, 2, 2, 2, 3, INT_MAX}, test_allocator<int>(0, 42));
-  std::deque<short, test_allocator<short>> sorted_vs({1, 3, 2, 4, 5, 4, 3}, test_allocator<int>(0, 43));
-  const std::pair<int, short> expected[] = {{1, 1}, {1, 3}, {2, 2}, {2, 4}, {2, 5}, {3, 4}, {INT_MAX, 3}};
+  std::deque<long, test_allocator<long>> sorted_vs({1, 3, 2, 4, 5, 4, 3}, test_allocator<int>(0, 43));
+  const std::pair<int, long> expected[] = {{1, 1}, {1, 3}, {2, 2}, {2, 4}, {2, 5}, {3, 4}, {INT_MAX, 3}};
   {
     std::flat_multimap s(ks, vs);
 
-    ASSERT_SAME_TYPE(decltype(s), std::flat_multimap<int, short, std::less<int>, decltype(ks), decltype(vs)>);
+    ASSERT_SAME_TYPE(decltype(s), std::flat_multimap<int, long, std::less<int>, decltype(ks), decltype(vs)>);
     assert(std::ranges::equal(s, expected));
     assert(s.keys().get_allocator().get_id() == 42);
     assert(s.values().get_allocator().get_id() == 43);
@@ -67,7 +68,7 @@ void test_containers() {
   {
     std::flat_multimap s(std::sorted_equivalent, sorted_ks, sorted_vs);
 
-    ASSERT_SAME_TYPE(decltype(s), std::flat_multimap<int, short, std::less<int>, decltype(ks), decltype(vs)>);
+    ASSERT_SAME_TYPE(decltype(s), std::flat_multimap<int, long, std::less<int>, decltype(ks), decltype(vs)>);
     assert(std::ranges::equal(s, expected));
     assert(s.keys().get_allocator().get_id() == 42);
     assert(s.values().get_allocator().get_id() == 43);
@@ -75,7 +76,7 @@ void test_containers() {
   {
     std::flat_multimap s(ks, vs, test_allocator<long>(0, 44));
 
-    ASSERT_SAME_TYPE(decltype(s), std::flat_multimap<int, short, std::less<int>, decltype(ks), decltype(vs)>);
+    ASSERT_SAME_TYPE(decltype(s), std::flat_multimap<int, long, std::less<int>, decltype(ks), decltype(vs)>);
     assert(std::ranges::equal(s, expected));
     assert(s.keys().get_allocator().get_id() == 44);
     assert(s.values().get_allocator().get_id() == 44);
@@ -83,7 +84,7 @@ void test_containers() {
   {
     std::flat_multimap s(std::sorted_equivalent, sorted_ks, sorted_vs, test_allocator<long>(0, 44));
 
-    ASSERT_SAME_TYPE(decltype(s), std::flat_multimap<int, short, std::less<int>, decltype(ks), decltype(vs)>);
+    ASSERT_SAME_TYPE(decltype(s), std::flat_multimap<int, long, std::less<int>, decltype(ks), decltype(vs)>);
     assert(std::ranges::equal(s, expected));
     assert(s.keys().get_allocator().get_id() == 44);
     assert(s.values().get_allocator().get_id() == 44);
@@ -92,14 +93,14 @@ void test_containers() {
 
 void test_containers_compare() {
   std::deque<int, test_allocator<int>> ks({1, 2, 1, 2, 2, INT_MAX, 3}, test_allocator<int>(0, 42));
-  std::deque<short, test_allocator<short>> vs({1, 2, 3, 4, 5, 3, 4}, test_allocator<int>(0, 43));
+  std::deque<long, test_allocator<long>> vs({1, 2, 3, 4, 5, 3, 4}, test_allocator<int>(0, 43));
   std::deque<int, test_allocator<int>> sorted_ks({INT_MAX, 3, 2, 2, 2, 1, 1}, test_allocator<int>(0, 42));
-  std::deque<short, test_allocator<short>> sorted_vs({3, 4, 2, 4, 5, 1, 3}, test_allocator<int>(0, 43));
-  const std::pair<int, short> expected[] = {{INT_MAX, 3}, {3, 4}, {2, 2}, {2, 4}, {2, 5}, {1, 1}, {1, 3}};
+  std::deque<long, test_allocator<long>> sorted_vs({3, 4, 2, 4, 5, 1, 3}, test_allocator<int>(0, 43));
+  const std::pair<int, long> expected[] = {{INT_MAX, 3}, {3, 4}, {2, 2}, {2, 4}, {2, 5}, {1, 1}, {1, 3}};
   {
     std::flat_multimap s(ks, vs, std::greater<int>());
 
-    ASSERT_SAME_TYPE(decltype(s), std::flat_multimap<int, short, std::greater<int>, decltype(ks), decltype(vs)>);
+    ASSERT_SAME_TYPE(decltype(s), std::flat_multimap<int, long, std::greater<int>, decltype(ks), decltype(vs)>);
     assert(std::ranges::equal(s, expected));
     assert(s.keys().get_allocator().get_id() == 42);
     assert(s.values().get_allocator().get_id() == 43);
@@ -107,7 +108,7 @@ void test_containers_compare() {
   {
     std::flat_multimap s(std::sorted_equivalent, sorted_ks, sorted_vs, std::greater<int>());
 
-    ASSERT_SAME_TYPE(decltype(s), std::flat_multimap<int, short, std::greater<int>, decltype(ks), decltype(vs)>);
+    ASSERT_SAME_TYPE(decltype(s), std::flat_multimap<int, long, std::greater<int>, decltype(ks), decltype(vs)>);
     assert(std::ranges::equal(s, expected));
     assert(s.keys().get_allocator().get_id() == 42);
     assert(s.values().get_allocator().get_id() == 43);
@@ -115,7 +116,7 @@ void test_containers_compare() {
   {
     std::flat_multimap s(ks, vs, std::greater<int>(), test_allocator<long>(0, 44));
 
-    ASSERT_SAME_TYPE(decltype(s), std::flat_multimap<int, short, std::greater<int>, decltype(ks), decltype(vs)>);
+    ASSERT_SAME_TYPE(decltype(s), std::flat_multimap<int, long, std::greater<int>, decltype(ks), decltype(vs)>);
     assert(std::ranges::equal(s, expected));
     assert(s.keys().get_allocator().get_id() == 44);
     assert(s.values().get_allocator().get_id() == 44);
@@ -124,7 +125,7 @@ void test_containers_compare() {
     std::flat_multimap s(
         std::sorted_equivalent, sorted_ks, sorted_vs, std::greater<int>(), test_allocator<long>(0, 44));
 
-    ASSERT_SAME_TYPE(decltype(s), std::flat_multimap<int, short, std::greater<int>, decltype(ks), decltype(vs)>);
+    ASSERT_SAME_TYPE(decltype(s), std::flat_multimap<int, long, std::greater<int>, decltype(ks), decltype(vs)>);
     assert(std::ranges::equal(s, expected));
     assert(s.keys().get_allocator().get_id() == 44);
     assert(s.values().get_allocator().get_id() == 44);
@@ -280,11 +281,11 @@ void test_initializer_list_compare() {
 }
 
 void test_from_range() {
-  std::list<std::pair<int, short>> r     = {{1, 1}, {2, 2}, {1, 1}, {INT_MAX, 4}, {3, 5}};
-  const std::pair<int, short> expected[] = {{1, 1}, {1, 1}, {2, 2}, {3, 5}, {INT_MAX, 4}};
+  std::list<std::pair<int, long>> r     = {{1, 1}, {2, 2}, {1, 1}, {INT_MAX, 4}, {3, 5}};
+  const std::pair<int, long> expected[] = {{1, 1}, {1, 1}, {2, 2}, {3, 5}, {INT_MAX, 4}};
   {
     std::flat_multimap s(std::from_range, r);
-    ASSERT_SAME_TYPE(decltype(s), std::flat_multimap<int, short, std::less<int>>);
+    ASSERT_SAME_TYPE(decltype(s), std::flat_multimap<int, long, std::less<int>>);
     assert(std::ranges::equal(s, expected));
   }
   {
@@ -292,10 +293,10 @@ void test_from_range() {
     ASSERT_SAME_TYPE(
         decltype(s),
         std::flat_multimap<int,
-                           short,
+                           long,
                            std::less<int>,
                            std::vector<int, test_allocator<int>>,
-                           std::vector<short, test_allocator<short>>>);
+                           std::vector<long, test_allocator<long>>>);
     assert(std::ranges::equal(s, expected));
     assert(s.keys().get_allocator().get_id() == 42);
     assert(s.values().get_allocator().get_id() == 42);
@@ -303,11 +304,11 @@ void test_from_range() {
 }
 
 void test_from_range_compare() {
-  std::list<std::pair<int, short>> r     = {{1, 1}, {2, 2}, {1, 1}, {INT_MAX, 4}, {3, 5}};
-  const std::pair<int, short> expected[] = {{INT_MAX, 4}, {3, 5}, {2, 2}, {1, 1}, {1, 1}};
+  std::list<std::pair<int, long>> r     = {{1, 1}, {2, 2}, {1, 1}, {INT_MAX, 4}, {3, 5}};
+  const std::pair<int, long> expected[] = {{INT_MAX, 4}, {3, 5}, {2, 2}, {1, 1}, {1, 1}};
   {
     std::flat_multimap s(std::from_range, r, std::greater<int>());
-    ASSERT_SAME_TYPE(decltype(s), std::flat_multimap<int, short, std::greater<int>>);
+    ASSERT_SAME_TYPE(decltype(s), std::flat_multimap<int, long, std::greater<int>>);
     assert(std::ranges::equal(s, expected));
   }
   {
@@ -315,14 +316,32 @@ void test_from_range_compare() {
     ASSERT_SAME_TYPE(
         decltype(s),
         std::flat_multimap<int,
-                           short,
+                           long,
                            std::greater<int>,
                            std::vector<int, test_allocator<int>>,
-                           std::vector<short, test_allocator<short>>>);
+                           std::vector<long, test_allocator<long>>>);
     assert(std::ranges::equal(s, expected));
     assert(s.keys().get_allocator().get_id() == 42);
     assert(s.values().get_allocator().get_id() == 42);
   }
+}
+
+void test_tuple_like_deduction() {
+  std::vector<std::pair<const int, float>> pair_vec = {{1, 1.1f}, {2, 2.2f}, {3, 3.3f}};
+  std::flat_multimap fmm1(pair_vec.begin(), pair_vec.end());
+  ASSERT_SAME_TYPE(decltype(fmm1), std::flat_multimap<int, float>);
+
+  std::vector<std::tuple<int, double>> tuple_vec = {{10, 1.1}, {20, 2.2}, {30, 3.3}};
+  std::flat_multimap fmm2(tuple_vec.begin(), tuple_vec.end());
+  ASSERT_SAME_TYPE(decltype(fmm2), std::flat_multimap<int, double>);
+
+  std::vector<std::array<long, 2>> array_vec = {{100L, 101L}, {200L, 201L}, {300L, 301L}};
+  std::flat_multimap fmm3(array_vec.begin(), array_vec.end());
+  ASSERT_SAME_TYPE(decltype(fmm3), std::flat_multimap<long, long>);
+
+  std::vector<std::pair<int, char>> non_const_key_pair_vec = {{5, 'a'}, {6, 'b'}};
+  std::flat_multimap fmm4(non_const_key_pair_vec.begin(), non_const_key_pair_vec.end());
+  ASSERT_SAME_TYPE(decltype(fmm4), std::flat_multimap<int, char>);
 }
 
 int main(int, char**) {
@@ -336,6 +355,7 @@ int main(int, char**) {
   test_initializer_list_compare();
   test_from_range();
   test_from_range_compare();
+  test_tuple_like_deduction();
 
   AssociativeContainerDeductionGuidesSfinaeAway<std::flat_multimap, std::flat_multimap<int, short>>();
 

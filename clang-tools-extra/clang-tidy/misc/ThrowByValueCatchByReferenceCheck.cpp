@@ -1,4 +1,4 @@
-//===--- ThrowByValueCatchByReferenceCheck.cpp - clang-tidy----------------===//
+//===----------------------------------------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -8,7 +8,6 @@
 
 #include "ThrowByValueCatchByReferenceCheck.h"
 #include "clang/AST/ASTContext.h"
-#include "clang/AST/OperationKinds.h"
 #include "clang/ASTMatchers/ASTMatchFinder.h"
 
 using namespace clang::ast_matchers;
@@ -78,9 +77,8 @@ void ThrowByValueCatchByReferenceCheck::diagnoseThrowLocations(
       return;
     // If it's a variable from a catch statement, we return as well.
     auto *DeclRef = dyn_cast<DeclRefExpr>(Inner);
-    if (DeclRef && isCatchVariable(DeclRef)) {
+    if (DeclRef && isCatchVariable(DeclRef))
       return;
-    }
     diag(SubExpr->getBeginLoc(), "throw expression throws a pointer; it should "
                                  "throw a non-pointer value instead");
   }
@@ -105,10 +103,10 @@ void ThrowByValueCatchByReferenceCheck::diagnoseThrowLocations(
     // If we have a DeclRefExpr, we flag for emitting a diagnosis message in
     // case the referenced variable is neither a function parameter nor a
     // variable declared in the catch statement.
-    if (VariableReference)
+    if (VariableReference) {
       Emit = !isFunctionOrCatchVar(VariableReference);
-    else if (ConstructorCall &&
-             ConstructorCall->getConstructor()->isCopyOrMoveConstructor()) {
+    } else if (ConstructorCall &&
+               ConstructorCall->getConstructor()->isCopyOrMoveConstructor()) {
       // If we have a copy / move construction, we emit a diagnosis message if
       // the object that we copy construct from is neither a function parameter
       // nor a variable declared in a catch statement

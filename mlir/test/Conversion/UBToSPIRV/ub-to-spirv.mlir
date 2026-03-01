@@ -1,4 +1,4 @@
-// RUN: mlir-opt -split-input-file -convert-ub-to-spirv -verify-diagnostics %s | FileCheck %s
+// RUN: mlir-opt -split-input-file -convert-ub-to-spirv %s | FileCheck %s
 
 module attributes {
   spirv.target_env = #spirv.target_env<
@@ -18,4 +18,21 @@ func.func @check_poison() {
   return
 }
 
+}
+
+// -----
+
+module attributes {
+  spirv.target_env = #spirv.target_env<
+    #spirv.vce<v1.0, [Int8, Int16, Int64, Float16, Float64, Shader], []>, #spirv.resource_limits<>>
+} {
+// CHECK-LABEL: @check_unrechable
+func.func @check_unrechable(%c: i1) {
+  cf.cond_br %c, ^bb1, ^bb2
+^bb1:
+// CHECK: spirv.Unreachable
+  ub.unreachable
+^bb2:
+  return
+}
 }

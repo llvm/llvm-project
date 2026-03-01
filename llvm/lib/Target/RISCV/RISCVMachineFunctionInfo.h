@@ -31,7 +31,7 @@ struct RISCVMachineFunctionInfo final : public yaml::MachineFunctionInfo {
   RISCVMachineFunctionInfo(const llvm::RISCVMachineFunctionInfo &MFI);
 
   void mappingImpl(yaml::IO &YamlIO) override;
-  ~RISCVMachineFunctionInfo() = default;
+  ~RISCVMachineFunctionInfo() override = default;
 };
 
 template <> struct MappingTraits<RISCVMachineFunctionInfo> {
@@ -65,6 +65,14 @@ private:
   uint64_t RVVPadding = 0;
   /// Size of stack frame to save callee saved registers
   unsigned CalleeSavedStackSize = 0;
+
+  /// amount of bytes on stack consumed by the arguments being passed on the
+  /// stack
+  unsigned ArgumentStackSize = 0;
+
+  /// Incoming ByVal arguments
+  SmallVector<SDValue, 8> IncomingByValArgs;
+
   /// Is there any vector argument or return?
   bool IsVectorCall = false;
 
@@ -77,6 +85,9 @@ private:
 
   /// Size of any opaque stack adjustment due to QCI Interrupt instructions.
   unsigned QCIInterruptStackSize = 0;
+
+  /// Store Frame Indexes for Interrupt-Related CSR Spills.
+  SmallVector<int, 2> InterruptCSRFrameIndexes;
 
   int64_t StackProbeSize = 0;
 
@@ -139,6 +150,13 @@ public:
   unsigned getCalleeSavedStackSize() const { return CalleeSavedStackSize; }
   void setCalleeSavedStackSize(unsigned Size) { CalleeSavedStackSize = Size; }
 
+  unsigned getArgumentStackSize() const { return ArgumentStackSize; }
+  void setArgumentStackSize(unsigned size) { ArgumentStackSize = size; }
+
+  void addIncomingByValArgs(SDValue Val) { IncomingByValArgs.push_back(Val); }
+  SDValue getIncomingByValArgs(unsigned Idx) { return IncomingByValArgs[Idx]; }
+  unsigned getIncomingByValArgsSize() const { return IncomingByValArgs.size(); }
+
   enum class PushPopKind { None = 0, StdExtZcmp, VendorXqccmp };
 
   PushPopKind getPushPopKind(const MachineFunction &MF) const;
@@ -153,7 +171,14 @@ public:
   unsigned getRVPushStackSize() const { return RVPushStackSize; }
   void setRVPushStackSize(unsigned Size) { RVPushStackSize = Size; }
 
-  enum class InterruptStackKind { None = 0, QCINest, QCINoNest };
+  enum class InterruptStackKind {
+    None = 0,
+    QCINest,
+    QCINoNest,
+    SiFiveCLICPreemptible,
+    SiFiveCLICStackSwap,
+    SiFiveCLICPreemptibleStackSwap
+  };
 
   InterruptStackKind getInterruptStackKind(const MachineFunction &MF) const;
 
@@ -165,6 +190,32 @@ public:
 
   unsigned getQCIInterruptStackSize() const { return QCIInterruptStackSize; }
   void setQCIInterruptStackSize(unsigned Size) { QCIInterruptStackSize = Size; }
+
+  bool useSiFiveInterrupt(const MachineFunction &MF) const {
+    InterruptStackKind Kind = getInterruptStackKind(MF);
+    return Kind == InterruptStackKind::SiFiveCLICPreemptible ||
+           Kind == InterruptStackKind::SiFiveCLICStackSwap ||
+           Kind == InterruptStackKind::SiFiveCLICPreemptibleStackSwap;
+  }
+
+  bool isSiFivePreemptibleInterrupt(const MachineFunction &MF) const {
+    InterruptStackKind Kind = getInterruptStackKind(MF);
+    return Kind == InterruptStackKind::SiFiveCLICPreemptible ||
+           Kind == InterruptStackKind::SiFiveCLICPreemptibleStackSwap;
+  }
+
+  bool isSiFiveStackSwapInterrupt(const MachineFunction &MF) const {
+    InterruptStackKind Kind = getInterruptStackKind(MF);
+    return Kind == InterruptStackKind::SiFiveCLICStackSwap ||
+           Kind == InterruptStackKind::SiFiveCLICPreemptibleStackSwap;
+  }
+
+  void pushInterruptCSRFrameIndex(int FI) {
+    InterruptCSRFrameIndexes.push_back(FI);
+  }
+  int getInterruptCSRFrameIndex(size_t Idx) const {
+    return InterruptCSRFrameIndexes[Idx];
+  }
 
   // Some Stack Management Variants automatically update FP in a frame-pointer
   // convention compatible way - which means we don't need to manually update

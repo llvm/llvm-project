@@ -148,8 +148,8 @@ define <2 x i64> @v_sub_v2i64_nonsplat_const_low_bits_known0_0(<2 x i64> %reg) {
 define amdgpu_ps <2 x i64> @s_sub_v2i64_splat_const_low_bits_known0_0(<2 x i64> inreg %reg) {
 ; GFX9-LABEL: s_sub_v2i64_splat_const_low_bits_known0_0:
 ; GFX9:       ; %bb.0:
-; GFX9-NEXT:    s_add_i32 s1, s1, -1
 ; GFX9-NEXT:    s_add_i32 s3, s3, -1
+; GFX9-NEXT:    s_add_i32 s1, s1, -1
 ; GFX9-NEXT:    ; return to shader part epilog
   %sub = sub <2 x i64> %reg, <i64 4294967296, i64 4294967296> ; (1 << 32)
   ret <2 x i64> %sub
@@ -158,8 +158,8 @@ define amdgpu_ps <2 x i64> @s_sub_v2i64_splat_const_low_bits_known0_0(<2 x i64> 
 define amdgpu_ps <2 x i64> @s_sub_v2i64_nonsplat_const_low_bits_known0_0(<2 x i64> inreg %reg) {
 ; GFX9-LABEL: s_sub_v2i64_nonsplat_const_low_bits_known0_0:
 ; GFX9:       ; %bb.0:
-; GFX9-NEXT:    s_add_i32 s1, s1, -1
 ; GFX9-NEXT:    s_add_i32 s3, s3, -2
+; GFX9-NEXT:    s_add_i32 s1, s1, -1
 ; GFX9-NEXT:    ; return to shader part epilog
   %sub = sub <2 x i64> %reg, <i64 4294967296, i64 8589934592> ; (1 << 32), (1 << 33)
   ret <2 x i64> %sub

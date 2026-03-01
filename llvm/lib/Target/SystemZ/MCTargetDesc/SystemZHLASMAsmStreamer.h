@@ -10,6 +10,9 @@
 //
 //===----------------------------------------------------------------------===//
 
+#ifndef LLVM_LIB_TARGET_SYSTEMZ_MCTARGETDESC_SYSTEMZHLASMASMSTREAMER_H
+#define LLVM_LIB_TARGET_SYSTEMZ_MCTARGETDESC_SYSTEMZHLASMASMSTREAMER_H
+
 #include "llvm/ADT/SmallString.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/MC/MCAsmBackend.h"
@@ -24,7 +27,8 @@
 #include "llvm/MC/MCTargetOptions.h"
 #include "llvm/Support/FormattedStream.h"
 
-using namespace llvm;
+namespace llvm {
+class MCSymbolGOFF;
 
 class SystemZHLASMAsmStreamer final : public MCStreamer {
   constexpr static size_t InstLimit = 80;
@@ -83,9 +87,8 @@ public:
 
   void emitAlignmentDS(uint64_t ByteAlignment, std::optional<int64_t> Value,
                        unsigned ValueSize, unsigned MaxBytesToEmit);
-  void emitValueToAlignment(Align Alignment, int64_t Value = 0,
-                            unsigned ValueSize = 1,
-                            unsigned MaxBytesToEmit = 0) override;
+  void emitValueToAlignment(Align Alignment, int64_t Fill, uint8_t FillLen,
+                            unsigned MaxBytesToEmit) override;
 
   void emitCodeAlignment(Align Alignment, const MCSubtargetInfo *STI,
                          unsigned MaxBytesToEmit = 0) override;
@@ -98,14 +101,13 @@ public:
 
   /// @name MCStreamer Interface
   /// @{
+  void visitUsedSymbol(const MCSymbol &Sym) override;
 
   void changeSection(MCSection *Section, uint32_t Subsection) override;
 
   void emitInstruction(const MCInst &Inst, const MCSubtargetInfo &STI) override;
   void emitLabel(MCSymbol *Symbol, SMLoc Loc) override;
-  bool emitSymbolAttribute(MCSymbol *Symbol, MCSymbolAttr Attribute) override {
-    return false;
-  }
+  bool emitSymbolAttribute(MCSymbol *Symbol, MCSymbolAttr Attribute) override;
 
   void emitCommonSymbol(MCSymbol *Symbol, uint64_t Size,
                         Align ByteAlignment) override {}
@@ -119,4 +121,9 @@ public:
   void emitHLASMValueImpl(const MCExpr *Value, unsigned Size,
                           bool Parens = false);
   /// @}
+
+  void finishImpl() override;
 };
+} // namespace llvm
+
+#endif // LLVM_LIB_TARGET_SYSTEMZ_MCTARGETDESC_SYSTEMZHLASMASMSTREAMER_H

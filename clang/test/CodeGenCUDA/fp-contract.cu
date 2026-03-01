@@ -179,26 +179,26 @@
 __host__ __device__ float func(float a, float b, float c) { return a + b * c; }
 // COMMON-LABEL: _Z4funcfff
 // NV-ON:       fma.rn.f32
-// NV-ON-NEXT:  st.param.f32
+// NV-ON-NEXT:  st.param.b32
 // AMD-ON:       v_fmac_f32_e64
 // AMD-ON-NEXT:  s_setpc_b64
 
 // NV-OFF:      mul.rn.f32
 // NV-OFF-NEXT: add.rn.f32
-// NV-OFF-NEXT: st.param.f32
+// NV-OFF-NEXT: st.param.b32
 // AMD-OFF:      v_mul_f32_e64
 // AMD-OFF-NEXT: v_add_f32_e64
 // AMD-OFF-NEXT: s_setpc_b64
 
 // NV-OPT-FAST: fma.rn.f32
-// NV-OPT-FAST-NEXT: st.param.f32
+// NV-OPT-FAST-NEXT: st.param.b32
 // NV-OPT-FASTSTD: fma.rn.f32
-// NV-OPT-FASTSTD-NEXT: st.param.f32
+// NV-OPT-FASTSTD-NEXT: st.param.b32
 // NV-OPT-ON: fma.rn.f32
-// NV-OPT-ON-NEXT: st.param.f32
+// NV-OPT-ON-NEXT: st.param.b32
 // NV-OPT-OFF: mul.rn.f32
 // NV-OPT-OFF-NEXT: add.rn.f32
-// NV-OPT-OFF-NEXT: st.param.f32
+// NV-OPT-OFF-NEXT: st.param.b32
 
 // AMD-OPT-FAST-IR: fmul contract float
 // AMD-OPT-FAST-IR: fadd contract float
@@ -224,15 +224,15 @@ __host__ __device__ float func2(float a, float b, float c) {
 }
 // COMMON-LABEL: _Z5func2fff
 // NV-OPT-FAST: fma.rn.f32
-// NV-OPT-FAST-NEXT: st.param.f32
+// NV-OPT-FAST-NEXT: st.param.b32
 // NV-OPT-FASTSTD: fma.rn.f32
-// NV-OPT-FASTSTD-NEXT: st.param.f32
+// NV-OPT-FASTSTD-NEXT: st.param.b32
 // NV-OPT-ON: mul.rn.f32
 // NV-OPT-ON: add.rn.f32
-// NV-OPT-ON-NEXT: st.param.f32
+// NV-OPT-ON-NEXT: st.param.b32
 // NV-OPT-OFF: mul.rn.f32
 // NV-OPT-OFF: add.rn.f32
-// NV-OPT-OFF-NEXT: st.param.f32
+// NV-OPT-OFF-NEXT: st.param.b32
 
 // AMD-OPT-FAST-IR: fmul contract float
 // AMD-OPT-FAST-IR: fadd contract float
@@ -267,16 +267,16 @@ __host__ __device__ float func2(float a, float b, float c) {
 }
 // COMMON-LABEL: _Z5func3fff
 // NV-OPT-FAST: fma.rn.f32
-// NV-OPT-FAST-NEXT: st.param.f32
+// NV-OPT-FAST-NEXT: st.param.b32
 // NV-OPT-FASTSTD: mul.rn.f32
 // NV-OPT-FASTSTD: add.rn.f32
-// NV-OPT-FASTSTD-NEXT: st.param.f32
+// NV-OPT-FASTSTD-NEXT: st.param.b32
 // NV-OPT-ON: mul.rn.f32
 // NV-OPT-ON: add.rn.f32
-// NV-OPT-ON-NEXT: st.param.f32
+// NV-OPT-ON-NEXT: st.param.b32
 // NV-OPT-OFF: mul.rn.f32
 // NV-OPT-OFF: add.rn.f32
-// NV-OPT-OFF-NEXT: st.param.f32
+// NV-OPT-OFF-NEXT: st.param.b32
 
 // AMD-OPT-FAST-IR: fmul float
 // AMD-OPT-FAST-IR: fadd float

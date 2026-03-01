@@ -7,12 +7,20 @@
 //===----------------------------------------------------------------------===//
 
 #include "InputFiles.h"
+#include "OutputSections.h"
+#include "RelocScan.h"
 #include "Symbols.h"
 #include "SyntheticSections.h"
 #include "Target.h"
+#include "Thunks.h"
 #include "lld/Common/ErrorHandler.h"
+#include "llvm/ADT/SmallVector.h"
 #include "llvm/BinaryFormat/ELF.h"
+#include "llvm/Support/ELFAttributes.h"
 #include "llvm/Support/Endian.h"
+#include "llvm/Support/HexagonAttributeParser.h"
+#include "llvm/Support/HexagonAttributes.h"
+#include "llvm/Support/LEB128.h"
 
 using namespace llvm;
 using namespace llvm::object;
@@ -30,6 +38,15 @@ public:
                      const uint8_t *loc) const override;
   RelType getDynRel(RelType type) const override;
   int64_t getImplicitAddend(const uint8_t *buf, RelType type) const override;
+  template <class ELFT, class RelTy>
+  void scanSectionImpl(InputSectionBase &sec, Relocs<RelTy> rels);
+  void scanSection(InputSectionBase &sec) override {
+    elf::scanSection1<Hexagon, ELF32LE>(*this, sec);
+  }
+  bool needsThunk(RelExpr expr, RelType type, const InputFile *file,
+                  uint64_t branchAddr, const Symbol &s,
+                  int64_t a) const override;
+  bool inBranchRange(RelType type, uint64_t src, uint64_t dst) const override;
   void relocate(uint8_t *loc, const Relocation &rel,
                 uint64_t val) const override;
   void writePltHeader(uint8_t *buf) const override;
@@ -57,6 +74,8 @@ Hexagon::Hexagon(Ctx &ctx) : TargetInfo(ctx) {
   tlsGotRel = R_HEX_TPREL_32;
   tlsModuleIndexRel = R_HEX_DTPMOD_32;
   tlsOffsetRel = R_HEX_DTPREL_32;
+
+  needsThunks = true;
 }
 
 uint32_t Hexagon::calcEFlags() const {
@@ -86,76 +105,146 @@ static uint32_t applyMask(uint32_t mask, uint32_t data) {
   return result;
 }
 
+// Only needed to support relocations used by relocateNonAlloc and
+// preprocessRelocs.
 RelExpr Hexagon::getRelExpr(RelType type, const Symbol &s,
                             const uint8_t *loc) const {
   switch (type) {
   case R_HEX_NONE:
     return R_NONE;
-  case R_HEX_6_X:
-  case R_HEX_8_X:
-  case R_HEX_9_X:
-  case R_HEX_10_X:
-  case R_HEX_11_X:
-  case R_HEX_12_X:
-  case R_HEX_16_X:
   case R_HEX_32:
-  case R_HEX_32_6_X:
-  case R_HEX_HI16:
-  case R_HEX_LO16:
-  case R_HEX_DTPREL_32:
     return R_ABS;
-  case R_HEX_B9_PCREL:
-  case R_HEX_B13_PCREL:
-  case R_HEX_B15_PCREL:
-  case R_HEX_6_PCREL_X:
   case R_HEX_32_PCREL:
     return R_PC;
-  case R_HEX_B9_PCREL_X:
-  case R_HEX_B15_PCREL_X:
-  case R_HEX_B22_PCREL:
-  case R_HEX_PLT_B22_PCREL:
-  case R_HEX_B22_PCREL_X:
-  case R_HEX_B32_PCREL_X:
-  case R_HEX_GD_PLT_B22_PCREL:
-  case R_HEX_GD_PLT_B22_PCREL_X:
-  case R_HEX_GD_PLT_B32_PCREL_X:
-    return R_PLT_PC;
-  case R_HEX_IE_32_6_X:
-  case R_HEX_IE_16_X:
-  case R_HEX_IE_HI16:
-  case R_HEX_IE_LO16:
-    return R_GOT;
-  case R_HEX_GD_GOT_11_X:
-  case R_HEX_GD_GOT_16_X:
-  case R_HEX_GD_GOT_32_6_X:
-    return R_TLSGD_GOTPLT;
-  case R_HEX_GOTREL_11_X:
-  case R_HEX_GOTREL_16_X:
-  case R_HEX_GOTREL_32_6_X:
-  case R_HEX_GOTREL_HI16:
-  case R_HEX_GOTREL_LO16:
-    return R_GOTPLTREL;
-  case R_HEX_GOT_11_X:
-  case R_HEX_GOT_16_X:
-  case R_HEX_GOT_32_6_X:
-    return R_GOTPLT;
-  case R_HEX_IE_GOT_11_X:
-  case R_HEX_IE_GOT_16_X:
-  case R_HEX_IE_GOT_32_6_X:
-  case R_HEX_IE_GOT_HI16:
-  case R_HEX_IE_GOT_LO16:
-    return R_GOTPLT;
-  case R_HEX_TPREL_11_X:
-  case R_HEX_TPREL_16:
-  case R_HEX_TPREL_16_X:
-  case R_HEX_TPREL_32_6_X:
-  case R_HEX_TPREL_HI16:
-  case R_HEX_TPREL_LO16:
-    return R_TPREL;
   default:
     Err(ctx) << getErrorLoc(ctx, loc) << "unknown relocation (" << type.v
              << ") against symbol " << &s;
     return R_NONE;
+  }
+}
+
+template <class ELFT, class RelTy>
+void Hexagon::scanSectionImpl(InputSectionBase &sec, Relocs<RelTy> rels) {
+  RelocScan rs(ctx, &sec);
+  sec.relocations.reserve(rels.size());
+  for (auto it = rels.begin(); it != rels.end(); ++it) {
+    const RelTy &rel = *it;
+    uint32_t symIdx = rel.getSymbol(false);
+    Symbol &sym = sec.getFile<ELFT>()->getSymbol(symIdx);
+    uint64_t offset = rel.r_offset;
+    RelType type = rel.getType(false);
+    if (sym.isUndefined() && symIdx != 0 &&
+        rs.maybeReportUndefined(cast<Undefined>(sym), offset))
+      continue;
+    int64_t addend = rs.getAddend<ELFT>(rel, type);
+    RelExpr expr;
+    // Relocation types that only need a RelExpr set `expr` and break out of
+    // the switch to reach rs.process(). Types that need special handling
+    // (fast-path helpers, TLS) call a handler and use `continue`.
+    switch (type) {
+    case R_HEX_NONE:
+      continue;
+
+    // Absolute relocations:
+    case R_HEX_6_X:
+    case R_HEX_8_X:
+    case R_HEX_9_X:
+    case R_HEX_10_X:
+    case R_HEX_11_X:
+    case R_HEX_12_X:
+    case R_HEX_16_X:
+    case R_HEX_32:
+    case R_HEX_32_6_X:
+    case R_HEX_HI16:
+    case R_HEX_LO16:
+    case R_HEX_DTPREL_32:
+      expr = R_ABS;
+      break;
+
+    // PC-relative relocations:
+    case R_HEX_B9_PCREL:
+    case R_HEX_B13_PCREL:
+    case R_HEX_B15_PCREL:
+    case R_HEX_6_PCREL_X:
+    case R_HEX_32_PCREL:
+      rs.processR_PC(type, offset, addend, sym);
+      continue;
+
+    // PLT-generating relocations:
+    case R_HEX_B9_PCREL_X:
+    case R_HEX_B15_PCREL_X:
+    case R_HEX_B22_PCREL:
+    case R_HEX_PLT_B22_PCREL:
+    case R_HEX_B22_PCREL_X:
+    case R_HEX_B32_PCREL_X:
+      rs.processR_PLT_PC(type, offset, addend, sym);
+      continue;
+    case R_HEX_GD_PLT_B22_PCREL:
+    case R_HEX_GD_PLT_B22_PCREL_X:
+    case R_HEX_GD_PLT_B32_PCREL_X:
+      sym.setFlags(NEEDS_PLT);
+      sec.addReloc({R_PLT_PC, type, offset, addend, &sym});
+      continue;
+
+    // GOT-generating relocations:
+    case R_HEX_GOT_11_X:
+    case R_HEX_GOT_16_X:
+    case R_HEX_GOT_32_6_X:
+      ctx.in.gotPlt->hasGotPltOffRel.store(true, std::memory_order_relaxed);
+      expr = R_GOTPLT;
+      break;
+
+    // GOTREL relocations:
+    case R_HEX_GOTREL_11_X:
+    case R_HEX_GOTREL_16_X:
+    case R_HEX_GOTREL_32_6_X:
+    case R_HEX_GOTREL_HI16:
+    case R_HEX_GOTREL_LO16:
+      ctx.in.gotPlt->hasGotPltOffRel.store(true, std::memory_order_relaxed);
+      expr = R_GOTPLTREL;
+      break;
+
+    // TLS relocations:
+    case R_HEX_TPREL_11_X:
+    case R_HEX_TPREL_16:
+    case R_HEX_TPREL_16_X:
+    case R_HEX_TPREL_32_6_X:
+    case R_HEX_TPREL_HI16:
+    case R_HEX_TPREL_LO16:
+      if (rs.checkTlsLe(offset, sym, type))
+        continue;
+      expr = R_TPREL;
+      break;
+    case R_HEX_IE_32_6_X:
+    case R_HEX_IE_16_X:
+    case R_HEX_IE_HI16:
+    case R_HEX_IE_LO16:
+      // There is no IE to LE optimization.
+      rs.handleTlsIe<false>(R_GOT, type, offset, addend, sym);
+      continue;
+    case R_HEX_IE_GOT_11_X:
+    case R_HEX_IE_GOT_16_X:
+    case R_HEX_IE_GOT_32_6_X:
+    case R_HEX_IE_GOT_HI16:
+    case R_HEX_IE_GOT_LO16:
+      ctx.in.gotPlt->hasGotPltOffRel.store(true, std::memory_order_relaxed);
+      rs.handleTlsIe<false>(R_GOTPLT, type, offset, addend, sym);
+      continue;
+    case R_HEX_GD_GOT_11_X:
+    case R_HEX_GD_GOT_16_X:
+    case R_HEX_GD_GOT_32_6_X:
+      sym.setFlags(NEEDS_TLSGD);
+      ctx.in.gotPlt->hasGotPltOffRel.store(true, std::memory_order_relaxed);
+      sec.addReloc({R_TLSGD_GOTPLT, type, offset, addend, &sym});
+      continue;
+
+    default:
+      Err(ctx) << getErrorLoc(ctx, sec.content().data() + offset)
+               << "unknown relocation (" << type.v << ") against symbol "
+               << &sym;
+      continue;
+    }
+    rs.process(expr, type, offset, sym, addend);
   }
 }
 
@@ -212,6 +301,8 @@ static uint32_t findMaskR8(uint32_t insn) {
 }
 
 static uint32_t findMaskR11(uint32_t insn) {
+  if (isDuplex(insn))
+    return 0x03f00000;
   if ((0xff000000 & insn) == 0xa1000000)
     return 0x060020ff;
   return 0x06003fe0;
@@ -251,6 +342,46 @@ static uint32_t findMaskR16(Ctx &ctx, uint32_t insn) {
 }
 
 static void or32le(uint8_t *p, int32_t v) { write32le(p, read32le(p) | v); }
+
+bool Hexagon::inBranchRange(RelType type, uint64_t src, uint64_t dst) const {
+  int64_t offset = dst - src;
+  switch (type) {
+  case llvm::ELF::R_HEX_B22_PCREL:
+  case llvm::ELF::R_HEX_PLT_B22_PCREL:
+  case llvm::ELF::R_HEX_GD_PLT_B22_PCREL:
+  case llvm::ELF::R_HEX_LD_PLT_B22_PCREL:
+    return llvm::isInt<22>(offset >> 2);
+  case llvm::ELF::R_HEX_B15_PCREL:
+    return llvm::isInt<15>(offset >> 2);
+    break;
+  case llvm::ELF::R_HEX_B13_PCREL:
+    return llvm::isInt<13>(offset >> 2);
+    break;
+  case llvm::ELF::R_HEX_B9_PCREL:
+    return llvm::isInt<9>(offset >> 2);
+  default:
+    return true;
+  }
+  llvm_unreachable("unsupported relocation");
+}
+
+bool Hexagon::needsThunk(RelExpr expr, RelType type, const InputFile *file,
+                         uint64_t branchAddr, const Symbol &s,
+                         int64_t a) const {
+  // Only check branch range for supported branch relocation types
+  switch (type) {
+  case R_HEX_B22_PCREL:
+  case R_HEX_PLT_B22_PCREL:
+  case R_HEX_GD_PLT_B22_PCREL:
+  case R_HEX_LD_PLT_B22_PCREL:
+  case R_HEX_B15_PCREL:
+  case R_HEX_B13_PCREL:
+  case R_HEX_B9_PCREL:
+    return !ctx.target->inBranchRange(type, branchAddr, s.getVA(ctx, a));
+  default:
+    return false;
+  }
+}
 
 void Hexagon::relocate(uint8_t *loc, const Relocation &rel,
                        uint64_t val) const {
@@ -414,6 +545,118 @@ int64_t Hexagon::getImplicitAddend(const uint8_t *buf, RelType type) const {
     InternalErr(ctx, buf) << "cannot read addend for relocation " << type;
     return 0;
   }
+}
+
+namespace {
+class HexagonAttributesSection final : public SyntheticSection {
+public:
+  HexagonAttributesSection(Ctx &ctx)
+      : SyntheticSection(ctx, ".hexagon.attributes", SHT_HEXAGON_ATTRIBUTES, 0,
+                         1) {}
+
+  size_t getSize() const override { return size; }
+  void writeTo(uint8_t *buf) override;
+
+  static constexpr StringRef vendor = "hexagon";
+  DenseMap<unsigned, unsigned> intAttr;
+  size_t size = 0;
+};
+} // namespace
+
+static HexagonAttributesSection *
+mergeAttributesSection(Ctx &ctx,
+                       const SmallVector<InputSectionBase *, 0> &sections) {
+  ctx.in.hexagonAttributes = std::make_unique<HexagonAttributesSection>(ctx);
+  auto &merged =
+      static_cast<HexagonAttributesSection &>(*ctx.in.hexagonAttributes);
+
+  // Collect all tags values from attributes section.
+  const auto &attributesTags = HexagonAttrs::getHexagonAttributeTags();
+  for (const InputSectionBase *sec : sections) {
+    HexagonAttributeParser parser;
+    if (Error e = parser.parse(sec->content(), llvm::endianness::little))
+      Warn(ctx) << sec << ": " << std::move(e);
+    for (const auto &tag : attributesTags) {
+      switch (HexagonAttrs::AttrType(tag.attr)) {
+      case HexagonAttrs::ARCH:
+      case HexagonAttrs::HVXARCH:
+        if (auto i = parser.getAttributeValue(tag.attr)) {
+          auto r = merged.intAttr.try_emplace(tag.attr, *i);
+          if (!r.second)
+            if (r.first->second < *i)
+              r.first->second = *i;
+        }
+        continue;
+
+      case HexagonAttrs::HVXIEEEFP:
+      case HexagonAttrs::HVXQFLOAT:
+      case HexagonAttrs::ZREG:
+      case HexagonAttrs::AUDIO:
+      case HexagonAttrs::CABAC:
+        if (auto i = parser.getAttributeValue(tag.attr)) {
+          auto r = merged.intAttr.try_emplace(tag.attr, *i);
+          if (!r.second && r.first->second != *i) {
+            r.first->second |= *i;
+          }
+        }
+        continue;
+      }
+    }
+  }
+
+  // The total size of headers: format-version [ <section-length> "vendor-name"
+  // [ <file-tag> <size>.
+  size_t size = 5 + merged.vendor.size() + 1 + 5;
+  for (auto &attr : merged.intAttr)
+    if (attr.second != 0)
+      size += getULEB128Size(attr.first) + getULEB128Size(attr.second);
+  merged.size = size;
+  return &merged;
+}
+
+void HexagonAttributesSection::writeTo(uint8_t *buf) {
+  const size_t size = getSize();
+  uint8_t *const end = buf + size;
+  *buf = ELFAttrs::Format_Version;
+  write32(ctx, buf + 1, size - 1);
+  buf += 5;
+
+  memcpy(buf, vendor.data(), vendor.size());
+  buf += vendor.size() + 1;
+
+  *buf = ELFAttrs::File;
+  write32(ctx, buf + 1, end - buf);
+  buf += 5;
+
+  for (auto &attr : intAttr) {
+    if (attr.second == 0)
+      continue;
+    buf += encodeULEB128(attr.first, buf);
+    buf += encodeULEB128(attr.second, buf);
+  }
+}
+
+void elf::mergeHexagonAttributesSections(Ctx &ctx) {
+  // Find the first input SHT_HEXAGON_ATTRIBUTES; return if not found.
+  size_t place =
+      llvm::find_if(ctx.inputSections,
+                    [](auto *s) { return s->type == SHT_HEXAGON_ATTRIBUTES; }) -
+      ctx.inputSections.begin();
+  if (place == ctx.inputSections.size())
+    return;
+
+  // Extract all SHT_HEXAGON_ATTRIBUTES sections into `sections`.
+  SmallVector<InputSectionBase *, 0> sections;
+  llvm::erase_if(ctx.inputSections, [&](InputSectionBase *s) {
+    if (s->type != SHT_HEXAGON_ATTRIBUTES)
+      return false;
+    sections.push_back(s);
+    return true;
+  });
+
+  // Add the merged section.
+  ctx.inputSections.insert(ctx.inputSections.begin() + place,
+                           mergeAttributesSection(ctx, sections));
 }
 
 void elf::setHexagonTargetInfo(Ctx &ctx) { ctx.target.reset(new Hexagon(ctx)); }

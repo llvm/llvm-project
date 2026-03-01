@@ -689,6 +689,13 @@ TEST_F(FormatTestCSharp, CSharpNewOperator) {
                Style);
 }
 
+TEST_F(FormatTestCSharp, NewModifier) {
+  verifyFormat("public new class NestedC {\n"
+               "  public int x = 100;\n"
+               "}",
+               getLLVMStyle(FormatStyle::LK_CSharp));
+}
+
 TEST_F(FormatTestCSharp, CSharpLambdas) {
   FormatStyle GoogleStyle = getGoogleStyle(FormatStyle::LK_CSharp);
   FormatStyle MicrosoftStyle = getMicrosoftStyle(FormatStyle::LK_CSharp);
@@ -874,7 +881,7 @@ public class Test
     private static void ComplexLambda(BuildReport protoReport)
     {
         allSelectedScenes =
-            veryVeryLongCollectionNameThatPutsTheLineLenghtAboveTheThresholds.Where(scene => scene.enabled)
+            veryVeryLongCollectionNameThatPutsTheLineLengthAboveTheThresholds.Where(scene => scene.enabled)
                 .Select(scene => scene.path)
                 .ToArray();
         if (allSelectedScenes.Count == 0)
@@ -892,7 +899,7 @@ public class Test
   verifyFormat(R"(//
 public class Test {
   private static void ComplexLambda(BuildReport protoReport) {
-    allSelectedScenes = veryVeryLongCollectionNameThatPutsTheLineLenghtAboveTheThresholds
+    allSelectedScenes = veryVeryLongCollectionNameThatPutsTheLineLengthAboveTheThresholds
                             .Where(scene => scene.enabled)
                             .Select(scene => scene.path)
                             .ToArray();
@@ -918,7 +925,7 @@ public class Test
     private static void MultipleLambdas(BuildReport protoReport)
     {
         allSelectedScenes =
-            veryVeryLongCollectionNameThatPutsTheLineLenghtAboveTheThresholds.Where(scene => scene.enabled)
+            veryVeryLongCollectionNameThatPutsTheLineLengthAboveTheThresholds.Where(scene => scene.enabled)
                 .Select(scene => scene.path)
                 .ToArray();
         preBindEnumerators.RemoveAll(enumerator => !enumerator.MoveNext());
@@ -937,7 +944,7 @@ public class Test
   verifyFormat(R"(//
 public class Test {
   private static void MultipleLambdas(BuildReport protoReport) {
-    allSelectedScenes = veryVeryLongCollectionNameThatPutsTheLineLenghtAboveTheThresholds
+    allSelectedScenes = veryVeryLongCollectionNameThatPutsTheLineLengthAboveTheThresholds
                             .Where(scene => scene.enabled)
                             .Select(scene => scene.path)
                             .ToArray();
@@ -1187,7 +1194,7 @@ TEST_F(FormatTestCSharp, CSharpSpaces) {
   Style.SpaceBeforeSquareBrackets = false;
   Style.SpacesInSquareBrackets = false;
   Style.SpaceBeforeCpp11BracedList = true;
-  Style.Cpp11BracedListStyle = false;
+  Style.Cpp11BracedListStyle = FormatStyle::BLS_Block;
   Style.SpacesInContainerLiterals = false;
   Style.SpaceAfterCStyleCast = false;
 
@@ -1312,6 +1319,12 @@ TEST_F(FormatTestCSharp, CSharpGenericTypeConstraints) {
 
   verifyFormat("class ItemFactory<T>\n"
                "    where T : new() {\n"
+               "}",
+               Style);
+
+  verifyFormat("namespace A {\n"
+               "  delegate T MyDelegate<T>()\n"
+               "      where T : new();\n"
                "}",
                Style);
 

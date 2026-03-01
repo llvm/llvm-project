@@ -554,6 +554,40 @@ void applyExtMulToMULL(MachineInstr &MI, MachineRegisterInfo &MRI,
   MI.eraseFromParent();
 }
 
+static bool matchSubAddMulReassoc(Register Mul1, Register Mul2, Register Sub,
+                                  Register Src, MachineRegisterInfo &MRI) {
+  if (!MRI.hasOneUse(Sub))
+    return false;
+  if (getIConstantVRegValWithLookThrough(Src, MRI))
+    return false;
+  MachineInstr *M1 = getDefIgnoringCopies(Mul1, MRI);
+  if (M1->getOpcode() != AArch64::G_MUL &&
+      M1->getOpcode() != AArch64::G_SMULL &&
+      M1->getOpcode() != AArch64::G_UMULL)
+    return false;
+  MachineInstr *M2 = getDefIgnoringCopies(Mul2, MRI);
+  if (M2->getOpcode() != AArch64::G_MUL &&
+      M2->getOpcode() != AArch64::G_SMULL &&
+      M2->getOpcode() != AArch64::G_UMULL)
+    return false;
+  return true;
+}
+
+static void applySubAddMulReassoc(MachineInstr &MI, MachineInstr &Sub,
+                                  MachineRegisterInfo &MRI, MachineIRBuilder &B,
+                                  GISelChangeObserver &Observer) {
+  Register Src = MI.getOperand(1).getReg();
+  Register Tmp = MI.getOperand(2).getReg();
+  Register Mul1 = Sub.getOperand(1).getReg();
+  Register Mul2 = Sub.getOperand(2).getReg();
+  Observer.changingInstr(MI);
+  B.buildInstr(AArch64::G_SUB, {Tmp}, {Src, Mul1});
+  MI.getOperand(1).setReg(Tmp);
+  MI.getOperand(2).setReg(Mul2);
+  Sub.eraseFromParent();
+  Observer.changingInstr(MI);
+}
+
 class AArch64PostLegalizerCombinerImpl : public Combiner {
 protected:
   const CombinerHelper Helper;
@@ -636,8 +670,8 @@ void AArch64PostLegalizerCombiner::getAnalysisUsage(AnalysisUsage &AU) const {
   AU.addRequired<TargetPassConfig>();
   AU.setPreservesCFG();
   getSelectionDAGFallbackAnalysisUsage(AU);
-  AU.addRequired<GISelValueTrackingAnalysis>();
-  AU.addPreserved<GISelValueTrackingAnalysis>();
+  AU.addRequired<GISelValueTrackingAnalysisLegacy>();
+  AU.addPreserved<GISelValueTrackingAnalysisLegacy>();
   if (!IsOptNone) {
     AU.addRequired<MachineDominatorTreeWrapperPass>();
     AU.addPreserved<MachineDominatorTreeWrapperPass>();
@@ -654,12 +688,9 @@ AArch64PostLegalizerCombiner::AArch64PostLegalizerCombiner(bool IsOptNone)
 }
 
 bool AArch64PostLegalizerCombiner::runOnMachineFunction(MachineFunction &MF) {
-  if (MF.getProperties().hasProperty(
-          MachineFunctionProperties::Property::FailedISel))
+  if (MF.getProperties().hasFailedISel())
     return false;
-  assert(MF.getProperties().hasProperty(
-             MachineFunctionProperties::Property::Legalized) &&
-         "Expected a legalized function?");
+  assert(MF.getProperties().hasLegalized() && "Expected a legalized function?");
   auto *TPC = &getAnalysis<TargetPassConfig>();
   const Function &F = MF.getFunction();
   bool EnableOpt =
@@ -668,7 +699,8 @@ bool AArch64PostLegalizerCombiner::runOnMachineFunction(MachineFunction &MF) {
   const AArch64Subtarget &ST = MF.getSubtarget<AArch64Subtarget>();
   const auto *LI = ST.getLegalizerInfo();
 
-  GISelValueTracking *VT = &getAnalysis<GISelValueTrackingAnalysis>().get(MF);
+  GISelValueTracking *VT =
+      &getAnalysis<GISelValueTrackingAnalysisLegacy>().get(MF);
   MachineDominatorTree *MDT =
       IsOptNone ? nullptr
                 : &getAnalysis<MachineDominatorTreeWrapperPass>().getDomTree();
@@ -883,7 +915,7 @@ INITIALIZE_PASS_BEGIN(AArch64PostLegalizerCombiner, DEBUG_TYPE,
                       "Combine AArch64 MachineInstrs after legalization", false,
                       false)
 INITIALIZE_PASS_DEPENDENCY(TargetPassConfig)
-INITIALIZE_PASS_DEPENDENCY(GISelValueTrackingAnalysis)
+INITIALIZE_PASS_DEPENDENCY(GISelValueTrackingAnalysisLegacy)
 INITIALIZE_PASS_END(AArch64PostLegalizerCombiner, DEBUG_TYPE,
                     "Combine AArch64 MachineInstrs after legalization", false,
                     false)

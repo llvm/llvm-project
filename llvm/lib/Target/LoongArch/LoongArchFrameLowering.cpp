@@ -158,7 +158,12 @@ void LoongArchFrameLowering::processFunctionBeforeFrameFinalized(
   // estimateStackSize has been observed to under-estimate the final stack
   // size, so give ourselves wiggle-room by checking for stack size
   // representable an 11-bit signed field rather than 12-bits.
-  if (!isInt<11>(MFI.estimateStackSize(MF)))
+  // For [x]vstelm.{b/h/w/d} memory instructions with 8 imm offset, 7-bit
+  // signed field is fine.
+  unsigned EstimateStackSize = MFI.estimateStackSize(MF);
+  if (!isInt<11>(EstimateStackSize) ||
+      (MF.getSubtarget<LoongArchSubtarget>().hasExtLSX() &&
+       !isInt<7>(EstimateStackSize)))
     ScavSlotsNum = std::max(ScavSlotsNum, 1u);
 
   // For CFR spill.
@@ -444,7 +449,7 @@ bool LoongArchFrameLowering::spillCalleeSavedRegisters(
     bool IsKill =
         !(Reg == LoongArch::R1 && MF->getFrameInfo().isReturnAddressTaken());
     const TargetRegisterClass *RC = TRI->getMinimalPhysRegClass(Reg);
-    TII.storeRegToStackSlot(MBB, MI, Reg, IsKill, CS.getFrameIdx(), RC, TRI,
+    TII.storeRegToStackSlot(MBB, MI, Reg, IsKill, CS.getFrameIdx(), RC,
                             Register());
   }
 
