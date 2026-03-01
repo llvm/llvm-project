@@ -6175,7 +6175,7 @@ bool SelectionDAG::isKnownNeverZero(SDValue Op, const APInt &DemandedElts,
   switch (Op.getOpcode()) {
   default:
     break;
-      
+
   case ISD::EXTRACT_VECTOR_ELT: {
     SDValue InVec = Op.getOperand(0);
     SDValue EltNo = Op.getOperand(1);
