@@ -1771,6 +1771,54 @@ OpFoldResult SliceOp::fold(FoldAdaptor adaptor) {
   if (inputTy == outputTy && inputTy.hasStaticShape())
     return getInput1();
 
+  // Check if this is a no-op slice (starts at 0 and size matches input)
+
+  DenseElementsAttr startElems;
+  if (!matchPattern(getStart(), m_Constant(&startElems)))
+    return {};
+
+  // Check if all start values are zero
+  bool startIsZeros =
+      llvm::all_of(startElems.getValues<APInt>(),
+                   [](const APInt &val) { return val.isZero(); });
+
+  if (startIsZeros) {
+
+    // Check if size matches input shape
+    DenseElementsAttr sizeElems;
+    if (!matchPattern(getSize(), m_Constant(&sizeElems)))
+      return {};
+
+    auto inputShape = inputTy.getShape();
+    auto sizeValues = sizeElems.getValues<APInt>();
+
+    if (sizeValues.size() != inputShape.size())
+      return {};
+
+    bool sizeMatchesInput = true;
+    for (const auto &[i, sizeVal] : llvm::enumerate(sizeValues)) {
+      int64_t size = sizeVal.getSExtValue();
+
+      if (inputTy.isDynamicDim(i)) {
+        // For dynamic dimensions, check for -1 indicating full dimension is sliced
+        if (size != -1) {
+          sizeMatchesInput = false;
+          break;
+        }
+      } else {
+        // For static dimensions, check that size must match exactly or be -1 indicating full dimension is sliced
+        if (size != -1 && size != inputShape[i]) {
+          sizeMatchesInput = false;
+          break;
+        }
+      }
+    }
+
+    if (sizeMatchesInput)
+      return getInput1();
+  }
+
+  // The following checks require the input to be a constant
   if (!adaptor.getInput1())
     return {};
 
@@ -1785,11 +1833,7 @@ OpFoldResult SliceOp::fold(FoldAdaptor adaptor) {
   }
 
   if (inputTy.hasStaticShape() && outputTy.hasStaticShape() &&
-      outputTy.getNumElements() == 1) {
-    DenseElementsAttr startElems;
-    if (!matchPattern(getStart(), m_Constant(&startElems)))
-      return {};
-
+      outputTy.getNumElements() == 1) {    
     llvm::SmallVector<uint64_t> indices =
         llvm::to_vector(startElems.getValues<uint64_t>());
     auto value = operand.getValues<Attribute>()[indices];
