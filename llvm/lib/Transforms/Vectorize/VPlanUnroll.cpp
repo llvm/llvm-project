@@ -148,7 +148,7 @@ static void addStartIndexForScalarSteps(VPScalarIVStepsRecipe *Steps,
     StartIndex = Builder.createScalarCast(Instruction::SIToFP, StartIndex,
                                           BaseIVTy, Steps->getDebugLoc());
 
-  Steps->addOperand(StartIndex);
+  Steps->resetStartIndex(StartIndex);
 }
 
 void UnrollState::unrollReplicateRegionByUF(VPRegionBlock *VPR) {
@@ -600,20 +600,22 @@ cloneForLane(VPlan &Plan, VPBuilder &Builder, Type *IdxTy,
       New->setOperand(Idx, Op);
     }
     if (auto *Steps = dyn_cast<VPScalarIVStepsRecipe>(New)) {
-      if (Lane.getKnownLane() != 0) {
+      // Skip lane 0: a missing start index is implicitly zero.
+      unsigned KnownLane = Lane.getKnownLane();
+      if (KnownLane != 0) {
         VPTypeAnalysis TypeInfo(Plan);
         Type *BaseIVTy = TypeInfo.inferScalarType(DefR->getOperand(0));
         VPValue *LaneOffset = Plan.getConstantInt(
-            APInt(IdxTy->getScalarSizeInBits(), Lane.getKnownLane())
+            APInt(IdxTy->getScalarSizeInBits(), KnownLane)
                 .sextOrTrunc(BaseIVTy->getScalarSizeInBits()));
 
         if (VPValue *StartIndex = Steps->getStartIndex()) {
           // Add lane offset to the existing start index.
           VPBuilder Builder(DefR);
-          Steps->setOperand(3, Builder.createAdd(StartIndex, LaneOffset));
+          Steps->resetStartIndex(Builder.createAdd(StartIndex, LaneOffset));
         } else {
           // No start index yet, add lane offset as the start index.
-          Steps->addOperand(LaneOffset);
+          Steps->resetStartIndex(LaneOffset);
         }
       }
     }

@@ -4024,7 +4024,7 @@ public:
                                            getOperand(2), InductionOpcode,
                                            getFastMathFlags(), getDebugLoc());
     if (VPValue *StartIndex = getStartIndex())
-      NewR->addOperand(StartIndex);
+      NewR->resetStartIndex(StartIndex);
     return NewR;
   }
 
@@ -4052,10 +4052,12 @@ public:
     return getNumOperands() == 4 ? getOperand(3) : nullptr;
   }
 
-  /// Set the StartIndex.
-  void setStartIndex(VPValue *StartIndex) {
-    assert(getNumOperands() == 4 && "must have a StartIndex operand");
-    setOperand(3, StartIndex);
+  /// Set or add the StartIndex operand.
+  void resetStartIndex(VPValue *StartIndex) {
+    if (getNumOperands() == 4)
+      setOperand(3, StartIndex);
+    else
+      addOperand(StartIndex);
   }
 
   /// Returns true if the recipe only uses the first lane of operand \p Op.

@@ -43,9 +43,8 @@ define void @example() {
 ; FORCED-NEXT:    [[TMP7:%.*]] = icmp eq i64 [[INDEX_NEXT]], 1024
 ; FORCED-NEXT:    br i1 [[TMP7]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP0:![0-9]+]]
 ; FORCED:       [[MIDDLE_BLOCK]]:
-; FORCED-NEXT:    br label %[[EXIT:.*]]
-; FORCED:       [[EXIT]]:
-; FORCED-NEXT:    ret void
+; FORCED-NEXT:    br [[EXIT:label %.*]]
+; FORCED:       [[SCALAR_PH:.*:]]
 ;
 entry:
   br label %loop
