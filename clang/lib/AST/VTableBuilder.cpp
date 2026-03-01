@@ -3317,7 +3317,7 @@ void VFTableBuilder::dumpLayout(raw_ostream &Out) {
       DiagnosticsEngine &Diags = Context.getDiagnostics();
       Diags.Report(MostDerivedClass->getLocation(),
                    diag::err_unexpected_vftable_component)
-          << I << Component.getKind();
+          << Component.getKind() << I;
     }
 
     Out << '\n';

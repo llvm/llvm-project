@@ -9225,7 +9225,7 @@ static char getObjCEncodingForPrimitiveType(const ASTContext *C,
       {
         DiagnosticsEngine &Diags = C->getDiagnostics();
         Diags.Report(diag::err_unsupported_objc_primitive_encoding)
-            << BT->getName(C->getPrintingPolicy());
+            << QualType(BT, 0);
         return ' ';
       }
 
