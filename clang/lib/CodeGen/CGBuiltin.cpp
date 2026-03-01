@@ -2753,7 +2753,12 @@ private:
     }
 
     if (auto *Record = D.Ty->getAsCXXRecordDecl()) {
-      VisitStruct(Record, D.StartBitOffset, D.VisitVirtualBase);
+      VisitCXXStruct(Record, D.StartBitOffset, D.VisitVirtualBase);
+      return;
+    }
+
+    if (auto *Record = D.Ty->getAsRecordDecl()) {
+      VisitCStruct(Record, D.StartBitOffset);
       return;
     }
 
@@ -2793,7 +2798,7 @@ private:
     }
   }
 
-  void VisitStruct(const CXXRecordDecl *R, uint64_t StartBitOffset,
+  void VisitCXXStruct(const CXXRecordDecl *R, uint64_t StartBitOffset,
                    bool VisitVirtualBase) {
     const auto &DL = CGF.CGM.getModule().getDataLayout();
 
@@ -2837,6 +2842,22 @@ private:
       } else {
         Stack.push_back(Data{StartBitOffset + FieldOffset, Field->getType(),
                              /*VisitVirtualBase*/ true});
+      }
+    }
+  }
+
+  void VisitCStruct(const RecordDecl *R, uint64_t StartBitOffset) {
+    const ASTRecordLayout &ASTLayout = CGF.getContext().getASTRecordLayout(R);
+
+    for (auto *Field : R->fields()) {
+      auto FieldOffset = ASTLayout.getFieldOffset(Field->getFieldIndex());
+      if (Field->isBitField()) {
+        OccuppiedIntervals.push_back(BitInterval{
+            StartBitOffset + FieldOffset,
+            StartBitOffset + FieldOffset + Field->getBitWidthValue()});
+      } else {
+        Stack.push_back(Data{StartBitOffset + FieldOffset, Field->getType(),
+                             /*VisitVirtualBase*/ false});
       }
     }
   }
