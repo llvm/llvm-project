@@ -1800,13 +1800,15 @@ OpFoldResult SliceOp::fold(FoldAdaptor adaptor) {
       int64_t size = sizeVal.getSExtValue();
 
       if (inputTy.isDynamicDim(i)) {
-        // For dynamic dimensions, check for -1 indicating full dimension is sliced
+        // For dynamic dimensions, check for -1 indicating full dimension is
+        // sliced
         if (size != -1) {
           sizeMatchesInput = false;
           break;
         }
       } else {
-        // For static dimensions, check that size must match exactly or be -1 indicating full dimension is sliced
+        // For static dimensions, check that size must match exactly or be -1
+        // indicating full dimension is sliced
         if (size != -1 && size != inputShape[i]) {
           sizeMatchesInput = false;
           break;
@@ -1833,7 +1835,7 @@ OpFoldResult SliceOp::fold(FoldAdaptor adaptor) {
   }
 
   if (inputTy.hasStaticShape() && outputTy.hasStaticShape() &&
-      outputTy.getNumElements() == 1) {    
+      outputTy.getNumElements() == 1) {
     llvm::SmallVector<uint64_t> indices =
         llvm::to_vector(startElems.getValues<uint64_t>());
     auto value = operand.getValues<Attribute>()[indices];
