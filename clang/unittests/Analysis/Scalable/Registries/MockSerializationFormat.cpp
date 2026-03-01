@@ -9,7 +9,6 @@
 #include "Registries/MockSerializationFormat.h"
 #include "clang/Analysis/Scalable/EntityLinker/LUSummary.h"
 #include "clang/Analysis/Scalable/EntityLinker/LUSummaryEncoding.h"
-#include "clang/Analysis/Scalable/EntityLinker/TUSummary.h"
 #include "clang/Analysis/Scalable/EntityLinker/TUSummaryEncoding.h"
 #include "clang/Analysis/Scalable/Model/BuildNamespace.h"
 #include "clang/Analysis/Scalable/Model/EntityName.h"
