@@ -1713,8 +1713,7 @@ void SemaObjC::handleBlocksAttr(Decl *D, const ParsedAttr &AL) {
 
   VarDecl *VD = dyn_cast<VarDecl>(D);
   if (!VD || !VD->hasLocalStorage()) {
-    Diag(AL.getLoc(), diag::err_block_on_nonlocal) 
-        << AL;
+    Diag(AL.getLoc(), diag::err_block_on_nonlocal) << AL;
     D->setInvalidDecl();
     return;
   }
