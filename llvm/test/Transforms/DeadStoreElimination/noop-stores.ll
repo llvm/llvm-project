@@ -325,7 +325,7 @@ define ptr @zero_memset_after_malloc(i64 %size) {
 ; based on pr25892_lite
 define ptr @zero_memset_after_malloc_with_intermediate_clobbering(i64 %size) {
 ; CHECK-LABEL: @zero_memset_after_malloc_with_intermediate_clobbering(
-; CHECK-NEXT:    [[CALL:%.*]] = call ptr @malloc(i64 [[SIZE:%.*]]) #[[ATTR7:[0-9]+]]
+; CHECK-NEXT:    [[CALL:%.*]] = call ptr @malloc(i64 [[SIZE:%.*]]) #[[ATTR11:[0-9]+]]
 ; CHECK-NEXT:    call void @clobber_memory(ptr [[CALL]])
 ; CHECK-NEXT:    call void @llvm.memset.p0.i64(ptr [[CALL]], i8 0, i64 [[SIZE]], i1 false)
 ; CHECK-NEXT:    ret ptr [[CALL]]
@@ -339,7 +339,7 @@ define ptr @zero_memset_after_malloc_with_intermediate_clobbering(i64 %size) {
 ; based on pr25892_lite
 define ptr @zero_memset_after_malloc_with_different_sizes(i64 %size) {
 ; CHECK-LABEL: @zero_memset_after_malloc_with_different_sizes(
-; CHECK-NEXT:    [[CALL:%.*]] = call ptr @malloc(i64 [[SIZE:%.*]]) #[[ATTR7]]
+; CHECK-NEXT:    [[CALL:%.*]] = call ptr @malloc(i64 [[SIZE:%.*]]) #[[ATTR11]]
 ; CHECK-NEXT:    [[SIZE2:%.*]] = add nsw i64 [[SIZE]], -1
 ; CHECK-NEXT:    call void @llvm.memset.p0.i64(ptr [[CALL]], i8 0, i64 [[SIZE2]], i1 false)
 ; CHECK-NEXT:    ret ptr [[CALL]]
@@ -376,9 +376,10 @@ define ptr @notmalloc_memset(i64 %size, ptr %notmalloc) {
 
 ; This should create a customalloc_zeroed call and eliminate the memset
 define ptr @customalloc_memset(i64 %size, i64 %align) {
-; CHECK-LABEL: @customalloc_memset
-; CHECK-NEXT:  [[CALL:%.*]] = call ptr @customalloc_zeroed(i64 [[SIZE:%.*]], i64 [[ALIGN:%.*]])
-; CHECK-NEXT:  ret ptr [[CALL]]
+; CHECK-LABEL: @customalloc_memset(
+; CHECK-NEXT:    [[CUSTOMALLOC_ZEROED:%.*]] = call ptr @customalloc_zeroed(i64 [[SIZE:%.*]], i64 [[ALIGN:%.*]])
+; CHECK-NEXT:    ret ptr [[CUSTOMALLOC_ZEROED]]
+;
   %call = call ptr @customalloc(i64 %size, i64 %align)
   call void @llvm.memset.p0.i64(ptr %call, i8 0, i64 %size, i1 false)
   ret ptr %call
@@ -390,9 +391,10 @@ declare ptr @customalloc_zeroed(i64, i64) allockind("alloc,zeroed") "alloc-famil
 ; This should create a customalloc_zeroed_custom_cc call and eliminate the memset while
 ; respecting the custom calling convention of the zeroed variant.
 define cc99 ptr @customalloc_memset_custom_cc(i64 %size, i64 %align) {
-; CHECK-LABEL: @customalloc_memset_custom_cc
-; CHECK-NEXT:  [[CALL:%.*]] = call cc99 ptr @customalloc_zeroed_custom_cc(i64 [[SIZE:%.*]], i64 [[ALIGN:%.*]])
-; CHECK-NEXT:  ret ptr [[CALL]]
+; CHECK-LABEL: @customalloc_memset_custom_cc(
+; CHECK-NEXT:    [[CUSTOMALLOC_ZEROED_CUSTOM_CC:%.*]] = call cc99 ptr @customalloc_zeroed_custom_cc(i64 [[SIZE:%.*]], i64 [[ALIGN:%.*]])
+; CHECK-NEXT:    ret ptr [[CUSTOMALLOC_ZEROED_CUSTOM_CC]]
+;
   %call = call cc99 ptr @customalloc_custom_cc(i64 %size, i64 %align)
   call void @llvm.memset.p0.i64(ptr %call, i8 0, i64 %size, i1 false)
   ret ptr %call
@@ -482,7 +484,7 @@ cleanup:
 define ptr @malloc_with_no_nointer_null_check(i64 %0, i32 %1) {
 ; CHECK-LABEL: @malloc_with_no_nointer_null_check(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[CALL:%.*]] = call ptr @malloc(i64 [[TMP0:%.*]]) #[[ATTR7]]
+; CHECK-NEXT:    [[CALL:%.*]] = call ptr @malloc(i64 [[TMP0:%.*]]) #[[ATTR11]]
 ; CHECK-NEXT:    [[A:%.*]] = and i32 [[TMP1:%.*]], 32
 ; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i32 [[A]], 0
 ; CHECK-NEXT:    br i1 [[CMP]], label [[CLEANUP:%.*]], label [[IF_END:%.*]]
@@ -507,7 +509,7 @@ cleanup:
 ; PR50143
 define ptr @store_zero_after_calloc_inaccessiblememonly() {
 ; CHECK-LABEL: @store_zero_after_calloc_inaccessiblememonly(
-; CHECK-NEXT:    [[CALL:%.*]] = tail call ptr @calloc(i64 1, i64 10) #[[ATTR7]]
+; CHECK-NEXT:    [[CALL:%.*]] = tail call ptr @calloc(i64 1, i64 10) #[[ATTR11]]
 ; CHECK-NEXT:    ret ptr [[CALL]]
 ;
   %call = tail call ptr @calloc(i64 1, i64 10)  inaccessiblememonly
@@ -600,7 +602,7 @@ define ptr @partial_zero_memset_and_store_with_dyn_index_after_calloc(i8 %v, i64
 
 define ptr @zero_memset_after_calloc_inaccessiblememonly()  {
 ; CHECK-LABEL: @zero_memset_after_calloc_inaccessiblememonly(
-; CHECK-NEXT:    [[CALL:%.*]] = tail call ptr @calloc(i64 10000, i64 4) #[[ATTR7]]
+; CHECK-NEXT:    [[CALL:%.*]] = tail call ptr @calloc(i64 10000, i64 4) #[[ATTR11]]
 ; CHECK-NEXT:    ret ptr [[CALL]]
 ;
   %call = tail call ptr @calloc(i64 10000, i64 4) inaccessiblememonly
@@ -696,7 +698,7 @@ if.end:
 
 define ptr @readnone_malloc() {
 ; CHECK-LABEL: @readnone_malloc(
-; CHECK-NEXT:    [[ALLOC:%.*]] = call ptr @malloc(i64 16) #[[ATTR8:[0-9]+]]
+; CHECK-NEXT:    [[ALLOC:%.*]] = call ptr @malloc(i64 16) #[[ATTR12:[0-9]+]]
 ; CHECK-NEXT:    call void @llvm.memset.p0.i64(ptr [[ALLOC]], i8 0, i64 16, i1 false)
 ; CHECK-NEXT:    ret ptr [[ALLOC]]
 ;
@@ -1177,5 +1179,280 @@ if.else:
   br label %if.eq
 
 end:
+  ret void
+}
+
+; There exists a dominating condition in the entry block, not the immediate
+; dominator for `inner` block, the edge entry->if.eq always dominates the store,
+; no clobber in between, the store is redundant.
+define void @remove_tautological_store_block_not_idom(ptr %x, i1 %c) {
+; CHECK-LABEL: @remove_tautological_store_block_not_idom(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[VAL:%.*]] = load i32, ptr [[X:%.*]], align 4
+; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i32 [[VAL]], 0
+; CHECK-NEXT:    br i1 [[CMP]], label [[THEN:%.*]], label [[END:%.*]]
+; CHECK:       then:
+; CHECK-NEXT:    br i1 [[C:%.*]], label [[IF_EQ:%.*]], label [[IF_ELSE:%.*]]
+; CHECK:       if.eq:
+; CHECK-NEXT:    br label [[JOIN:%.*]]
+; CHECK:       if.else:
+; CHECK-NEXT:    br label [[JOIN]]
+; CHECK:       join:
+; CHECK-NEXT:    br label [[INNER:%.*]]
+; CHECK:       inner:
+; CHECK-NEXT:    br label [[END]]
+; CHECK:       end:
+; CHECK-NEXT:    ret void
+;
+entry:
+  %val = load i32, ptr %x, align 4
+  %cmp = icmp eq i32 %val, 0
+  br i1 %cmp, label %then, label %end
+
+then:
+  br i1 %c, label %if.eq, label %if.else
+
+if.eq:
+  br label %join
+
+if.else:
+  br label %join
+
+join:
+  br label %inner
+
+inner:
+  store i32 0, ptr %x, align 4
+  br label %end
+
+end:
+  ret void
+}
+
+; There exists a dominating condition in the entry block, however,
+; the edge entry->if.eq does not dominate the store.
+define void @remove_tautological_store_not_idom_no_edge_domination(ptr %x) {
+; CHECK-LABEL: @remove_tautological_store_not_idom_no_edge_domination(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[VAL:%.*]] = load i32, ptr [[X:%.*]], align 4
+; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i32 [[VAL]], 0
+; CHECK-NEXT:    br i1 [[CMP]], label [[IF_EQ:%.*]], label [[IF_ELSE:%.*]]
+; CHECK:       if.eq:
+; CHECK-NEXT:    br label [[JOIN:%.*]]
+; CHECK:       if.else:
+; CHECK-NEXT:    br label [[JOIN]]
+; CHECK:       join:
+; CHECK-NEXT:    br label [[INNER:%.*]]
+; CHECK:       inner:
+; CHECK-NEXT:    store i32 0, ptr [[X]], align 4
+; CHECK-NEXT:    br label [[END:%.*]]
+; CHECK:       end:
+; CHECK-NEXT:    ret void
+;
+entry:
+  %val = load i32, ptr %x, align 4
+  %cmp = icmp eq i32 %val, 0
+  br i1 %cmp, label %if.eq, label %if.else
+
+if.eq:
+  br label %join
+
+if.else:
+  br label %join
+
+join:
+  br label %inner
+
+inner:
+  store i32 0, ptr %x, align 4
+  br label %end
+
+end:
+  ret void
+}
+
+; There exists a dominating condition in the entry block, however,
+; the pointer whose value is implied is clobbered in between.
+define void @remove_tautological_store_block_not_idom_clobber_between(ptr %x, i1 %c) {
+; CHECK-LABEL: @remove_tautological_store_block_not_idom_clobber_between(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[VAL:%.*]] = load i32, ptr [[X:%.*]], align 4
+; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i32 [[VAL]], 0
+; CHECK-NEXT:    br i1 [[CMP]], label [[IF_EQ:%.*]], label [[END:%.*]]
+; CHECK:       if.eq:
+; CHECK-NEXT:    br label [[NEXT:%.*]]
+; CHECK:       next:
+; CHECK-NEXT:    call void @unkown_write(ptr [[X]])
+; CHECK-NEXT:    br i1 [[C:%.*]], label [[INNER:%.*]], label [[END]]
+; CHECK:       inner:
+; CHECK-NEXT:    store i32 0, ptr [[X]], align 4
+; CHECK-NEXT:    br label [[END]]
+; CHECK:       end:
+; CHECK-NEXT:    ret void
+;
+entry:
+  %val = load i32, ptr %x, align 4
+  %cmp = icmp eq i32 %val, 0
+  br i1 %cmp, label %if.eq, label %end
+
+if.eq:
+  br label %next
+
+next:
+  call void @unkown_write(ptr %x)
+  br i1 %c, label %inner, label %end
+
+inner:
+  store i32 0, ptr %x, align 4
+  br label %end
+
+end:
+  ret void
+}
+
+; Multiple predecessors w/ dom conditions implying the stored value.
+define void @remove_tautological_store_multi_preds(ptr %p) {
+; CHECK-LABEL: @remove_tautological_store_multi_preds(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[L1:%.*]] = load i32, ptr [[P:%.*]], align 4
+; CHECK-NEXT:    [[CMP1:%.*]] = icmp eq i32 [[L1]], 0
+; CHECK-NEXT:    br i1 [[CMP1]], label [[THEN:%.*]], label [[ELSE:%.*]]
+; CHECK:       else:
+; CHECK-NEXT:    call void @unkown_write(ptr null)
+; CHECK-NEXT:    [[L2:%.*]] = load i32, ptr [[P]], align 4
+; CHECK-NEXT:    [[CMP2:%.*]] = icmp eq i32 [[L2]], 0
+; CHECK-NEXT:    br i1 [[CMP2]], label [[THEN]], label [[EXIT:%.*]]
+; CHECK:       then:
+; CHECK-NEXT:    br label [[EXIT]]
+; CHECK:       exit:
+; CHECK-NEXT:    ret void
+;
+entry:
+  %l1 = load i32, ptr %p, align 4
+  %cmp1 = icmp eq i32 %l1, 0
+  br i1 %cmp1, label %then, label %else
+
+else:
+  call void @unkown_write(ptr null)
+  %l2 = load i32, ptr %p, align 4
+  %cmp2 = icmp eq i32 %l2, 0
+  br i1 %cmp2, label %then, label %exit
+
+then:
+  store i32 0, ptr %p, align 4
+  br label %exit
+
+exit:
+  ret void
+}
+
+; Negative tests.
+
+; Store in between, %p being clobbered.
+define void @remove_tautological_store_multi_preds_clobbering_between(ptr %p) {
+; CHECK-LABEL: @remove_tautological_store_multi_preds_clobbering_between(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[L1:%.*]] = load i32, ptr [[P:%.*]], align 4
+; CHECK-NEXT:    store i32 1, ptr [[P]], align 4
+; CHECK-NEXT:    [[CMP1:%.*]] = icmp eq i32 [[L1]], 0
+; CHECK-NEXT:    br i1 [[CMP1]], label [[THEN:%.*]], label [[ELSE:%.*]]
+; CHECK:       else:
+; CHECK-NEXT:    [[L2:%.*]] = load i32, ptr [[P]], align 4
+; CHECK-NEXT:    [[CMP2:%.*]] = icmp eq i32 [[L2]], 0
+; CHECK-NEXT:    br i1 [[CMP2]], label [[THEN]], label [[EXIT:%.*]]
+; CHECK:       then:
+; CHECK-NEXT:    store i32 0, ptr [[P]], align 4
+; CHECK-NEXT:    br label [[EXIT]]
+; CHECK:       exit:
+; CHECK-NEXT:    ret void
+;
+entry:
+  %l1 = load i32, ptr %p, align 4
+  store i32 1, ptr %p, align 4
+  %cmp1 = icmp eq i32 %l1, 0
+  br i1 %cmp1, label %then, label %else
+
+else:
+  %l2 = load i32, ptr %p, align 4
+  %cmp2 = icmp eq i32 %l2, 0
+  br i1 %cmp2, label %then, label %exit
+
+then:
+  store i32 0, ptr %p, align 4
+  br label %exit
+
+exit:
+  ret void
+}
+
+; Not a MemoryPhi as defining access for the store, %p being clobbered.
+define void @remove_tautological_store_multi_preds_clobbering_between_2(ptr %p) {
+; CHECK-LABEL: @remove_tautological_store_multi_preds_clobbering_between_2(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[L1:%.*]] = load i32, ptr [[P:%.*]], align 4
+; CHECK-NEXT:    [[CMP1:%.*]] = icmp eq i32 [[L1]], 0
+; CHECK-NEXT:    br i1 [[CMP1]], label [[THEN:%.*]], label [[ELSE:%.*]]
+; CHECK:       else:
+; CHECK-NEXT:    [[L2:%.*]] = load i32, ptr [[P]], align 4
+; CHECK-NEXT:    [[CMP2:%.*]] = icmp eq i32 [[L2]], 0
+; CHECK-NEXT:    br i1 [[CMP2]], label [[THEN]], label [[EXIT:%.*]]
+; CHECK:       then:
+; CHECK-NEXT:    call void @unkown_write(ptr [[P]])
+; CHECK-NEXT:    store i32 0, ptr [[P]], align 4
+; CHECK-NEXT:    br label [[EXIT]]
+; CHECK:       exit:
+; CHECK-NEXT:    ret void
+;
+entry:
+  %l1 = load i32, ptr %p, align 4
+  %cmp1 = icmp eq i32 %l1, 0
+  br i1 %cmp1, label %then, label %else
+
+else:
+  %l2 = load i32, ptr %p, align 4
+  %cmp2 = icmp eq i32 %l2, 0
+  br i1 %cmp2, label %then, label %exit
+
+then:
+  call void @unkown_write(ptr %p)
+  store i32 0, ptr %p, align 4
+  br label %exit
+
+exit:
+  ret void
+}
+
+; Different implying successor via icmp ne.
+define void @remove_tautological_store_multi_preds_cond_mixed(ptr %p) {
+; CHECK-LABEL: @remove_tautological_store_multi_preds_cond_mixed(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[L1:%.*]] = load i32, ptr [[P:%.*]], align 4
+; CHECK-NEXT:    [[CMP1:%.*]] = icmp eq i32 [[L1]], 0
+; CHECK-NEXT:    br i1 [[CMP1]], label [[THEN:%.*]], label [[ELSE:%.*]]
+; CHECK:       else:
+; CHECK-NEXT:    [[L2:%.*]] = load i32, ptr [[P]], align 4
+; CHECK-NEXT:    [[CMP2:%.*]] = icmp ne i32 [[L2]], 0
+; CHECK-NEXT:    br i1 [[CMP2]], label [[THEN]], label [[EXIT:%.*]]
+; CHECK:       then:
+; CHECK-NEXT:    store i32 0, ptr [[P]], align 4
+; CHECK-NEXT:    br label [[EXIT]]
+; CHECK:       exit:
+; CHECK-NEXT:    ret void
+;
+entry:
+  %l1 = load i32, ptr %p, align 4
+  %cmp1 = icmp eq i32 %l1, 0
+  br i1 %cmp1, label %then, label %else
+
+else:
+  %l2 = load i32, ptr %p, align 4
+  %cmp2 = icmp ne i32 %l2, 0
+  br i1 %cmp2, label %then, label %exit
+
+then:
+  store i32 0, ptr %p, align 4
+  br label %exit
+
+exit:
   ret void
 }
