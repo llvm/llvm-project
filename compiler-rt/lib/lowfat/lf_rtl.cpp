@@ -18,8 +18,6 @@
 #include "lf_interface.h"
 #include "lf_config.h"
 #include "sanitizer_common/sanitizer_common.h"
-#include "sanitizer_common/sanitizer_flags.h"
-#include "sanitizer_common/sanitizer_stacktrace.h"
 
 using namespace __sanitizer;
 
@@ -144,35 +142,23 @@ void Deallocate(void *ptr) {
   free_lists[region] = block;
 }
 
-static void PrintErrorAndDie(uptr ptr, uptr base, uptr bound) {
-  Printf("=================================================================\n");
-  Printf("==ERROR: LowFat: out-of-bounds access detected\n");
+static void PrintOobHeader(const char *level, uptr ptr, uptr base, uptr bound) {
+  Printf("%s: LowFat: out-of-bounds access detected\n", level);
   Printf("  pointer: 0x%zx\n", ptr);
   Printf("  base:    0x%zx\n", base);
   Printf("  bound:   %zu bytes\n", bound);
-  Printf("=================================================================\n");
+}
 
-  // Print stack trace
-  BufferedStackTrace stack;
-  stack.Unwind(StackTrace::GetCurrentPc(), GET_CURRENT_FRAME(), nullptr,
-               common_flags()->fast_unwind_on_fatal);
-  stack.Print();
-
+static void PrintErrorAndDie(uptr ptr, uptr base, uptr bound) {
+  PrintOobHeader("ERROR", ptr, base, bound);
   Die();
 }
 
-}  // namespace __lowfat
-
-namespace __sanitizer {
-void BufferedStackTrace::UnwindImpl(uptr pc, uptr bp, void *context,
-                                    bool request_fast, u32 max_depth) {
-  uptr top = 0;
-  uptr bottom = 0;
-  GetThreadStackTopAndBottom(false, &top, &bottom);
-  bool fast = StackTrace::WillUseFastUnwind(request_fast);
-  Unwind(max_depth, pc, bp, context, top, bottom, fast);
+static void PrintWarning(uptr ptr, uptr base, uptr bound) {
+  PrintOobHeader("WARNING", ptr, base, bound);
 }
-}  // namespace __sanitizer
+
+}  // namespace __lowfat
 
 // ---------------------- Interface Functions ----------------------
 
@@ -202,6 +188,11 @@ void __lf_init() {
 SANITIZER_INTERFACE_ATTRIBUTE
 void __lf_report_oob(uptr ptr, uptr base, uptr bound) {
   __lowfat::PrintErrorAndDie(ptr, base, bound);
+}
+
+SANITIZER_INTERFACE_ATTRIBUTE
+void __lf_warn_oob(uptr ptr, uptr base, uptr bound) {
+  __lowfat::PrintWarning(ptr, base, bound);
 }
 
 SANITIZER_INTERFACE_ATTRIBUTE

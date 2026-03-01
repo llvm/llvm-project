@@ -30,6 +30,13 @@ SANITIZER_INTERFACE_ATTRIBUTE void __lf_init();
 SANITIZER_INTERFACE_ATTRIBUTE void __lf_report_oob(uptr ptr, uptr base,
                                                     uptr bound);
 
+// Warn about an out-of-bounds error without terminating.
+// ptr: The pointer that caused the violation
+// base: The base address of the allocation
+// bound: The size of the allocation
+SANITIZER_INTERFACE_ATTRIBUTE void __lf_warn_oob(uptr ptr, uptr base,
+                                                  uptr bound);
+
 // Get the base address of an allocation from a pointer.
 // Returns the base address, or 0 if the pointer is not within a LowFat region.
 SANITIZER_INTERFACE_ATTRIBUTE uptr __lf_get_base(uptr ptr);

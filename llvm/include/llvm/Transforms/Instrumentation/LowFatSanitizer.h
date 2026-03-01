@@ -14,7 +14,7 @@ namespace llvm {
 class Module;
 
 struct LowFatSanitizerOptions {
-  // LowFat currently does not support any options.
+  bool Recover = false;
 };
 
 class LowFatSanitizerPass : public PassInfoMixin<LowFatSanitizerPass> {

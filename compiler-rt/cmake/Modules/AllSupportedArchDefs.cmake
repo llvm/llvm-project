@@ -122,7 +122,12 @@ set(ALL_XRAY_SUPPORTED_ARCH ${X86_64} ${ARM32} ${ARM64} ${MIPS32} ${MIPS64}
 endif()
 set(ALL_XRAY_DSO_SUPPORTED_ARCH ${X86_64} ${ARM64})
 set(ALL_SHADOWCALLSTACK_SUPPORTED_ARCH ${ARM64})
-set(ALL_LOWFAT_SUPPORTED_ARCH ${X86_64} ${ARM64})
+if(APPLE)
+  # Exclude x86_64h: lipo cannot combine x86_64 and x86_64h into one fat binary.
+  set(ALL_LOWFAT_SUPPORTED_ARCH x86_64 ${ARM64})
+else()
+  set(ALL_LOWFAT_SUPPORTED_ARCH ${X86_64} ${ARM64})
+endif()
 
 if (UNIX)
   if (OS_NAME MATCHES "Linux")

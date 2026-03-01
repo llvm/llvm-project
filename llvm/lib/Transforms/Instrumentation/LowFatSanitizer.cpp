@@ -46,8 +46,11 @@ public:
   bool run();
 
 private:
-  /// Get or create the declaration for __lf_report_oob.
+  /// Get or create the declaration for __lf_report_oob (fatal).
   FunctionCallee getReportOobFn();
+
+  /// Get or create the declaration for __lf_warn_oob (non-fatal).
+  FunctionCallee getWarnOobFn();
 
   /// Instrument a single function.
   bool instrumentFunction(Function &F);
@@ -57,10 +60,11 @@ private:
   bool instrumentMemoryAccess(Instruction *I, Value *Ptr, Type *AccessTy);
 
   Module &M;
-  const LowFatSanitizerOptions &Options; // TODO: impelement options
+  const LowFatSanitizerOptions &Options;
   const DataLayout &DL;
   Type *IntptrTy;
   FunctionCallee ReportOobFn;
+  FunctionCallee WarnOobFn;
 };
 
 // LowFat Constants (must match lf_config.h)
@@ -76,8 +80,23 @@ FunctionCallee LowFatSanitizer::getReportOobFn() {
     ReportOobFn = M.getOrInsertFunction(
         "__lf_report_oob",
         FunctionType::get(VoidTy, {IntptrTy, IntptrTy, IntptrTy}, false));
+    if (auto *F = dyn_cast<Function>(ReportOobFn.getCallee()))
+      F->addFnAttr(Attribute::NoReturn);
   }
   return ReportOobFn;
+}
+
+FunctionCallee LowFatSanitizer::getWarnOobFn() {
+  if (!WarnOobFn) {
+    // void __lf_warn_oob(uptr ptr, uptr base, uptr size)
+    Type *VoidTy = Type::getVoidTy(M.getContext());
+    WarnOobFn = M.getOrInsertFunction(
+        "__lf_warn_oob",
+        FunctionType::get(VoidTy, {IntptrTy, IntptrTy, IntptrTy}, false));
+    if (auto *F = dyn_cast<Function>(WarnOobFn.getCallee()))
+      F->addFnAttr(Attribute::NoUnwind);
+  }
+  return WarnOobFn;
 }
 
 bool LowFatSanitizer::instrumentMemoryAccess(Instruction *I, Value *Ptr,
@@ -134,10 +153,13 @@ bool LowFatSanitizer::instrumentMemoryAccess(Instruction *I, Value *Ptr,
   Instruction *OobTerm = SplitBlockAndInsertIfThen(IsOOB, ThenTerm, false);
   IRBuilder<> OobIRB(OobTerm);
   
-  // 5. Report error (slow path)
-  OobIRB.CreateCall(getReportOobFn(), {PtrInt, Base, AllocSize});
+  // 5. Report OOB (slow path)
+  FunctionCallee OobFn = Options.Recover ? getWarnOobFn() : getReportOobFn();
+  OobIRB.CreateCall(OobFn, {PtrInt, Base, AllocSize});
 
-  LLVM_DEBUG(dbgs() << "[LowFat] Instrumented (inline): " << *I << "\n");
+  LLVM_DEBUG(dbgs() << "[LowFat] Instrumented (inline, "
+                    << (Options.Recover ? "recover" : "fatal")
+                    << "): " << *I << "\n");
   return true;
 }
 

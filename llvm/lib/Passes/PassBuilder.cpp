@@ -983,9 +983,14 @@ Expected<HWAddressSanitizerOptions> parseHWASanPassOptions(StringRef Params) {
 Expected<LowFatSanitizerOptions> parseLowFatPassOptions(StringRef Params) {
   LowFatSanitizerOptions Result;
   if (!Params.empty()) {
-    return make_error<StringError>(
-        formatv("invalid LowFatSanitizer pass parameter '{}'", Params).str(),
-        inconvertibleErrorCode());
+    for (StringRef Param : llvm::split(Params, ';')) {
+      if (Param == "recover")
+        Result.Recover = true;
+      else
+        return make_error<StringError>(
+            formatv("invalid LowFatSanitizer pass parameter '{}'", Param).str(),
+            inconvertibleErrorCode());
+    }
   }
   return Result;
 }

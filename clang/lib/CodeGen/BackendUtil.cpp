@@ -771,6 +771,7 @@ static void addSanitizers(const Triple &TargetTriple,
 
     if (LangOpts.Sanitize.has(SanitizerKind::LowFat)) {
       LowFatSanitizerOptions Opts;
+      Opts.Recover = CodeGenOpts.SanitizeRecover.has(SanitizerKind::LowFat);
       MPM.addPass(LowFatSanitizerPass(Opts));
     }
   };
