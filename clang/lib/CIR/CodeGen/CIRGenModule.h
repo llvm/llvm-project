@@ -273,6 +273,9 @@ public:
   getAddrOfGlobalVar(const VarDecl *d, mlir::Type ty = {},
                      ForDefinition_t isForDefinition = NotForDefinition);
 
+  /// Get or create a thunk function with the given name and type.
+  cir::FuncOp getAddrOfThunk(StringRef name, mlir::Type fnTy, GlobalDecl gd);
+
   /// Return the mlir::GlobalViewAttr for the address of the given global.
   cir::GlobalViewAttr getAddrOfGlobalVarAttr(const VarDecl *d);
 
