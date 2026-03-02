@@ -1206,13 +1206,13 @@ public:
       assert(e->getOpcode() == BO_EQ || e->getOpcode() == BO_NE);
       BinOpInfo boInfo = emitBinOps(e);
       mlir::Value lhs = boInfo.lhs;
-      if (!mlir::isa<cir::ComplexType>(lhs.getType())) {
+      if (!lhsTy->isAnyComplexType()) {
         lhs = builder.createComplexCreate(
             loc, lhs, builder.getNullValue(lhs.getType(), loc));
       }
 
       mlir::Value rhs = boInfo.rhs;
-      if (!mlir::isa<cir::ComplexType>(rhs.getType())) {
+      if (!rhsTy->isAnyComplexType()) {
         rhs = builder.createComplexCreate(
             loc, rhs, builder.getNullValue(rhs.getType(), loc));
       }
