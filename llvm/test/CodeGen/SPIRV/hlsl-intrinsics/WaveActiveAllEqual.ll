@@ -35,13 +35,13 @@ entry:
 define <4 x i1> @test_vhalf(<4 x half> %vbexpr) {
 entry:
 ; CHECK: %[[#param:]] = OpFunctionParameter %[[#v4float:]]
-; CHECK: %[[#ext1:]] = OpCompositeExtract %[[#bool]] %[[#param]] 0
+; CHECK: %[[#ext1:]] = OpCompositeExtract %[[#f16]] %[[#param]] 0
 ; CHECK-NEXT: %[[#res1:]] = OpGroupNonUniformAllEqual %[[#bool]] %[[#scope]] %[[#ext1]]
-; CHECK-NEXT: %[[#ext2:]] = OpCompositeExtract %[[#bool]] %[[#param]] 1
+; CHECK-NEXT: %[[#ext2:]] = OpCompositeExtract %[[#f16]] %[[#param]] 1
 ; CHECK-NEXT: %[[#res2:]] = OpGroupNonUniformAllEqual %[[#bool]] %[[#scope]] %[[#ext2]]
-; CHECK-NEXT: %[[#ext3:]] = OpCompositeExtract %[[#bool]] %[[#param]] 2
+; CHECK-NEXT: %[[#ext3:]] = OpCompositeExtract %[[#f16]] %[[#param]] 2
 ; CHECK-NEXT: %[[#res3:]] = OpGroupNonUniformAllEqual %[[#bool]] %[[#scope]] %[[#ext3]]
-; CHECK-NEXT: %[[#ext4:]] = OpCompositeExtract %[[#bool]] %[[#param]] 3
+; CHECK-NEXT: %[[#ext4:]] = OpCompositeExtract %[[#f16]] %[[#param]] 3
 ; CHECK-NEXT: %[[#res4:]] = OpGroupNonUniformAllEqual %[[#bool]] %[[#scope]] %[[#ext4]]
 ; CHECK-NEXT: %[[#ret:]] = OpCompositeConstruct %[[#bool4]] %[[#res1:]] %[[#res2:]] %[[#res3:]] %[[#res4:]]
 ; CHECK-NEXT: OpReturnValue %[[#ret]]

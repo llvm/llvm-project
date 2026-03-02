@@ -2845,57 +2845,63 @@ unsigned getVectorSizeOrOne(SPIRVTypeInst Type) {
 bool SPIRVInstructionSelector::selectWaveActiveAllEqual(Register ResVReg,
                                                         SPIRVTypeInst ResType,
                                                         MachineInstr &I) const {
-
   MachineBasicBlock &BB = *I.getParent();
   const DebugLoc &DL = I.getDebugLoc();
 
-  SPIRVTypeInst SpvTy = GR.getSPIRVTypeForVReg(ResVReg);
-  unsigned NumElems = getVectorSizeOrOne(SpvTy);
+  // Input to the intrinsic
+  Register InputReg = I.getOperand(2).getReg();
+  SPIRVTypeInst InputType = GR.getSPIRVTypeForVReg(InputReg);
+
+  // Determine if input is vector
+  unsigned NumElems = getVectorSizeOrOne(InputType);
   bool IsVector = NumElems > 1;
+
+  // Determine element types
+  SPIRVTypeInst ElemInputType = InputType;
+  SPIRVTypeInst ElemBoolType = ResType;
+  if (IsVector) {
+    ElemInputType = GR.getSPIRVTypeForVReg(InputType->getOperand(1).getReg());
+    ElemBoolType = GR.getSPIRVTypeForVReg(ResType->getOperand(1).getReg());
+  }
 
   // Subgroup scope constant
   SPIRVTypeInst IntTy = GR.getOrCreateSPIRVIntegerType(32, I, TII);
-
   Register ScopeConst = GR.getOrCreateConstInt(SPIRV::Scope::Subgroup, I, IntTy,
                                                TII, !STI.isShader());
 
-  Register InputReg = I.getOperand(2).getReg();
-
-  SmallVector<Register, 4> ElementResults;
-
-  // If vector, determine element type once
-  SPIRVTypeInst ElemInputType = SpvTy;
-  SPIRVTypeInst ElemBoolType = ResType;
-
-  if (IsVector) {
-    Register ElemTypeReg = SpvTy->getOperand(1).getReg();
-    ElemInputType = GR.getSPIRVTypeForVReg(ElemTypeReg);
-
-    Register BoolElemReg = ResType->getOperand(1).getReg();
-    ElemBoolType = GR.getSPIRVTypeForVReg(BoolElemReg);
+  // === Scalar case ===
+  if (!IsVector) {
+    BuildMI(BB, I, DL, TII.get(SPIRV::OpGroupNonUniformAllEqual))
+        .addDef(ResVReg)
+        .addUse(GR.getSPIRVTypeID(ElemBoolType))
+        .addUse(ScopeConst)
+        .addUse(InputReg)
+        .constrainAllUses(TII, TRI, RBI);
+    return true;
   }
 
+  // === Vector case ===
+  SmallVector<Register, 4> ElementResults;
+  ElementResults.reserve(NumElems);
+
   for (unsigned Idx = 0; Idx < NumElems; ++Idx) {
-
+    // Extract element
     Register ElemInput = InputReg;
+    Register Extracted =
+        MRI->createVirtualRegister(GR.getRegClass(ElemInputType));
 
-    if (IsVector) {
-      Register Extracted =
-          MRI->createVirtualRegister(GR.getRegClass(ElemInputType));
+    BuildMI(BB, I, DL, TII.get(SPIRV::OpCompositeExtract))
+        .addDef(Extracted)
+        .addUse(GR.getSPIRVTypeID(ElemInputType))
+        .addUse(InputReg)
+        .addImm(Idx)
+        .constrainAllUses(TII, TRI, RBI);
 
-      BuildMI(BB, I, DL, TII.get(SPIRV::OpCompositeExtract))
-          .addDef(Extracted)
-          .addUse(GR.getSPIRVTypeID(ElemInputType))
-          .addUse(InputReg)
-          .addImm(Idx)
-          .constrainAllUses(TII, TRI, RBI);
+    ElemInput = Extracted;
 
-      ElemInput = Extracted;
-    }
-
+    // Emit per-element AllEqual
     Register ElemResult =
-        IsVector ? MRI->createVirtualRegister(GR.getRegClass(ElemBoolType))
-                 : ResVReg;
+        MRI->createVirtualRegister(GR.getRegClass(ElemBoolType));
 
     BuildMI(BB, I, DL, TII.get(SPIRV::OpGroupNonUniformAllEqual))
         .addDef(ElemResult)
@@ -2907,13 +2913,10 @@ bool SPIRVInstructionSelector::selectWaveActiveAllEqual(Register ResVReg,
     ElementResults.push_back(ElemResult);
   }
 
-  if (!IsVector)
-    return true;
-
+  // Reconstruct vector<bool>
   auto MIB = BuildMI(BB, I, DL, TII.get(SPIRV::OpCompositeConstruct))
                  .addDef(ResVReg)
                  .addUse(GR.getSPIRVTypeID(ResType));
-
   for (Register R : ElementResults)
     MIB.addUse(R);
 
