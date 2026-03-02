@@ -247,10 +247,10 @@ smulh x0, x0, x0
 # CHECK:      Iterations:        100
 # CHECK-NEXT: Instructions:      400
 # CHECK-NEXT: Total Cycles:      1703
-# CHECK-NEXT: Total uOps:        500
+# CHECK-NEXT: Total uOps:        800
 
 # CHECK:      Dispatch Width:    3
-# CHECK-NEXT: uOps Per Cycle:    0.29
+# CHECK-NEXT: uOps Per Cycle:    0.47
 # CHECK-NEXT: IPC:               0.23
 # CHECK-NEXT: Block RThroughput: 8.0
 
@@ -259,13 +259,13 @@ smulh x0, x0, x0
 # CHECK-NEXT: Index     0123456789          0123456789
 
 # CHECK:      [0,0]     DeeeeeER  .    .    .    .    .    ..   mul	v0.4s, v0.4s, v0.4s
-# CHECK-NEXT: [0,1]     D=====eeeeeER  .    .    .    .    ..   mla	v0.4s, v1.4s, v2.4s
-# CHECK-NEXT: [0,2]     .D======eeeeeER.    .    .    .    ..   mla	v0.4s, v1.4s, v2.4s
-# CHECK-NEXT: [0,3]     .D===========eeeeeER.    .    .    ..   mla	v0.4s, v0.4s, v1.4s
-# CHECK-NEXT: [1,0]     . D===============eeeeeER.    .    ..   mul	v0.4s, v0.4s, v0.4s
-# CHECK-NEXT: [1,1]     . D====================eeeeeER.    ..   mla	v0.4s, v1.4s, v2.4s
-# CHECK-NEXT: [1,2]     .  D=====================eeeeeER   ..   mla	v0.4s, v1.4s, v2.4s
-# CHECK-NEXT: [1,3]     .  D==========================eeeeeER   mla	v0.4s, v0.4s, v1.4s
+# CHECK-NEXT: [0,1]     .D====eeeeeER  .    .    .    .    ..   mla	v0.4s, v1.4s, v2.4s
+# CHECK-NEXT: [0,2]     . D=====eeeeeER.    .    .    .    ..   mla	v0.4s, v1.4s, v2.4s
+# CHECK-NEXT: [0,3]     .  D=========eeeeeER.    .    .    ..   mla	v0.4s, v0.4s, v1.4s
+# CHECK-NEXT: [1,0]     .   D=============eeeeeER.    .    ..   mul	v0.4s, v0.4s, v0.4s
+# CHECK-NEXT: [1,1]     .    D=================eeeeeER.    ..   mla	v0.4s, v1.4s, v2.4s
+# CHECK-NEXT: [1,2]     .    .D==================eeeeeER   ..   mla	v0.4s, v1.4s, v2.4s
+# CHECK-NEXT: [1,3]     .    . D======================eeeeeER   mla	v0.4s, v0.4s, v1.4s
 
 # CHECK:      Average Wait times (based on the timeline view):
 # CHECK-NEXT: [0]: Executions
@@ -274,11 +274,11 @@ smulh x0, x0, x0
 # CHECK-NEXT: [3]: Average time elapsed from WB until retire stage
 
 # CHECK:            [0]    [1]    [2]    [3]
-# CHECK-NEXT: 0.     2     8.5    0.5    0.0       mul	v0.4s, v0.4s, v0.4s
-# CHECK-NEXT: 1.     2     13.5   0.0    0.0       mla	v0.4s, v1.4s, v2.4s
-# CHECK-NEXT: 2.     2     14.5   0.0    0.0       mla	v0.4s, v1.4s, v2.4s
-# CHECK-NEXT: 3.     2     19.5   0.0    0.0       mla	v0.4s, v0.4s, v1.4s
-# CHECK-NEXT:        2     14.0   0.1    0.0       <total>
+# CHECK-NEXT: 0.     2     7.5    0.5    0.0       mul	v0.4s, v0.4s, v0.4s
+# CHECK-NEXT: 1.     2     11.5   0.0    0.0       mla	v0.4s, v1.4s, v2.4s
+# CHECK-NEXT: 2.     2     12.5   0.0    0.0       mla	v0.4s, v1.4s, v2.4s
+# CHECK-NEXT: 3.     2     16.5   0.0    0.0       mla	v0.4s, v0.4s, v1.4s
+# CHECK-NEXT:        2     12.0   0.1    0.0       <total>
 
 # CHECK:      [5] Code Region - sadalp
 

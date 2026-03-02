@@ -616,7 +616,7 @@
 # CHECK-NEXT:  1      4     1.00                        mls	v0.4h, v0.4h, v0.4h
 # CHECK-NEXT:  1      2     0.50                        mls	v25.8h, v29.8h, v0.h[4]
 # CHECK-NEXT:  1      2     0.50                        mls	v22.2s, v29.2s, v0.s[3]
-# CHECK-NEXT:  1      5     2.00                        mls	v26.4s, v5.4s, v28.4s
+# CHECK-NEXT:  2      5     2.00                        mls	v26.4s, v5.4s, v28.4s
 # CHECK-NEXT:  1      2     0.50                        mov	b0, v0.b[15]
 # CHECK-NEXT:  1      2     0.50                        mov	d6, v0.d[1]
 # CHECK-NEXT:  1      2     0.50                        mov	h2, v0.h[5]
