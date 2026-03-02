@@ -4,6 +4,7 @@
 // For size_t
 #include "string.h"
 #include "memory"
+#include "initializer_list"
 
 typedef unsigned __INT16_TYPE__ char16;
 typedef unsigned __INT32_TYPE__ char32;
@@ -26,6 +27,7 @@ struct basic_string {
   basic_string(const C *p, size_type count);
   basic_string(const C *b, const C *e);
   basic_string(size_t, C);
+  basic_string(std::initializer_list<C>);
   operator basic_string_view<C, T>() const;
 
   ~basic_string();
@@ -181,14 +183,16 @@ bool operator!=(const char*, const std::string_view&);
 
 size_t strlen(const char* str);
 
-namespace literals {
-namespace string_literals {
+#if __cplusplus >= 201402L
+inline namespace literals {
+inline namespace string_literals {
   string operator""s(const char *, size_t);
 }
-namespace string_view_literals {
+inline namespace string_view_literals {
   string_view operator""sv(const char *, size_t);
 }
 }
+#endif
 }
 
 #endif // _STRING_

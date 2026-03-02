@@ -34,6 +34,7 @@
 #include "UnusedParametersCheck.h"
 #include "UnusedUsingDeclsCheck.h"
 #include "UseAnonymousNamespaceCheck.h"
+#include "UseBracedInitializationCheck.h"
 #include "UseInternalLinkageCheck.h"
 
 namespace clang::tidy {
@@ -90,6 +91,8 @@ public:
         "misc-unused-using-decls");
     CheckFactories.registerCheck<UseAnonymousNamespaceCheck>(
         "misc-use-anonymous-namespace");
+    CheckFactories.registerCheck<UseBracedInitializationCheck>(
+        "misc-use-braced-initialization");
     CheckFactories.registerCheck<UseInternalLinkageCheck>(
         "misc-use-internal-linkage");
   }
