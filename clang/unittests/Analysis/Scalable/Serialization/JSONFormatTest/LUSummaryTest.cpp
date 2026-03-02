@@ -1665,9 +1665,9 @@ TEST_F(JSONFormatLUSummaryTest, ReadEntitySummaryMismatchedSummaryName) {
           HasSubstr("reading EntitySummary entries from field 'summary_data'"),
           HasSubstr("reading EntitySummary entry from index '0'"),
           HasSubstr("failed to deserialize EntitySummary"),
-          HasSubstr("EntitySummary data for"
+          HasSubstr("EntitySummary data for "
                     "'SummaryName(MismatchedEntitySummaryForJSONFormatTest)'"
-                    " reports mismatched"
+                    " reports mismatched "
                     "'SummaryName(MismatchedEntitySummaryForJSONFormatTest_"
                     "WrongName)'"))));
 }
