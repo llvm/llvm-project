@@ -1371,6 +1371,19 @@ func.func @bitcast_i8_to_i32() -> (vector<4xi32>, vector<4xi32>) {
 
 // -----
 
+// Verify that bitcast with index source element type does not crash (the fold
+// must not call getIntOrFloatBitWidth on a non-integer/float type).
+// CHECK-LABEL: func @bitcast_index_no_fold
+//       CHECK: %[[CST:.+]] = arith.constant dense<0> : vector<16xindex>
+//       CHECK: vector.bitcast %[[CST]] : vector<16xindex> to vector<16xi64>
+func.func @bitcast_index_no_fold() -> vector<16xi64> {
+  %cst = arith.constant dense<0> : vector<16xindex>
+  %0 = vector.bitcast %cst : vector<16xindex> to vector<16xi64>
+  return %0 : vector<16xi64>
+}
+
+// -----
+
 // CHECK-LABEL: broadcast_poison
 //       CHECK:  %[[POISON:.*]] = ub.poison : vector<4x6xi8>
 //       CHECK:  return %[[POISON]] : vector<4x6xi8>
@@ -4068,4 +4081,37 @@ func.func @extract_strided_slice_outer_shorter(%arg0: vector<4x8x16xf32>) -> vec
   %0 = vector.extract_strided_slice %arg0 {offsets = [1, 2], sizes = [3, 4], strides = [1, 1]} : vector<4x8x16xf32> to vector<3x4x16xf32>
   %1 = vector.extract_strided_slice %0 {offsets = [0], sizes = [2], strides = [1]} : vector<3x4x16xf32> to vector<2x4x16xf32>
   return %1 : vector<2x4x16xf32>
+}
+
+// -----
+
+// Regression test for https://github.com/llvm/llvm-project/issues/177833:
+// CanonializeEmptyMaskOp must not create arith.select with a vector condition
+// and scalar value types (incompatible with arith.select semantics). The
+// vector.mask op should remain unchanged.
+//
+// CHECK-LABEL: func @no_fold_empty_mask_scalar_result_with_passthru
+//  CHECK-SAME:     %[[MASK:.*]]: vector<1xi1>, %[[PASSTHRU:.*]]: i32, %[[VAL:.*]]: i32
+//       CHECK:   vector.mask %[[MASK]], %[[PASSTHRU]] { vector.yield %[[VAL]] : i32 } : vector<1xi1> -> i32
+//   CHECK-NOT:   arith.select
+func.func @no_fold_empty_mask_scalar_result_with_passthru(
+    %mask : vector<1xi1>, %passthru : i32, %val : i32) -> i32 {
+  %result = vector.mask %mask, %passthru { vector.yield %val : i32 } : vector<1xi1> -> i32
+  return %result : i32
+}
+
+// -----
+
+// Regression test for https://github.com/llvm/llvm-project/issues/177833:
+// MaskOp::fold must not crash with a null pointer dereference when the mask
+// is all-true and the mask body has no maskable op (only a yield).
+//
+// CHECK-LABEL: func @no_fold_alltrue_mask_empty_body_scalar_result
+//  CHECK-SAME:     %[[PASSTHRU:.*]]: i32, %[[VAL:.*]]: i32
+//       CHECK:   vector.mask
+func.func @no_fold_alltrue_mask_empty_body_scalar_result(
+    %passthru : i32, %val : i32) -> i32 {
+  %all_true = vector.constant_mask [1] : vector<1xi1>
+  %result = vector.mask %all_true, %passthru { vector.yield %val : i32 } : vector<1xi1> -> i32
+  return %result : i32
 }
