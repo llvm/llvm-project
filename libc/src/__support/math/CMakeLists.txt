@@ -1768,7 +1768,6 @@ add_header_library(
     libc.src.errno.errno
 )
 
-
 add_header_library(
   powf16
   HDRS
