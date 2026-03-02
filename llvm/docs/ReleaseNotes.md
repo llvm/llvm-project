@@ -230,7 +230,6 @@ Changes to LLDB
   `plugin.process.freebsd-kernel-core.read-only` must be set to `false`. This setting is available when
   using `/dev/mem` or a kernel dump. However, since `kvm_write()` does not support writing to kernel dumps,
   writes to a kernel dump will still fail when the setting is false.
-* Zombie processes are now shown in the thread list as well.
 
 ### Linux
 
