@@ -66,12 +66,6 @@ void populateVectorOuterProductLoweringPatterns(RewritePatternSet &patterns,
 /// Rewrites vector.multi_reduction such that all reduction dimensions are
 /// either innermost or outermost, by adding the proper vector.transpose
 /// operations.
-///
-/// [OneDimMultiReductionToTwoDim]
-/// For cases that reduce to 1-D vector<k> reduction (and are thus missing
-/// either a parallel or a reduction), we lift them back up to 2-D with a simple
-/// vector.shape_cast to vector<1xk> so that the other patterns can kick in,
-/// thus fully exiting out of the vector.multi_reduction abstraction.
 void populateVectorMultiReductionReorderAndExpandPatterns(
     RewritePatternSet &patterns, VectorMultiReductionLowering options,
     PatternBenefit benefit = 2);

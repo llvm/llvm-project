@@ -234,7 +234,6 @@ def ApplyReorderAndExpandMultiReductionPatternsOp: Op<Transform_Dialect,
     This populates the patterns from
     `populateVectorMultiReductionReorderAndExpandPatterns`, i.e.:
     * `InnerOuterDimReductionConversion`
-    * `OneDimMultiReductionToTwoDim`
   }];
 
   let arguments = (ins DefaultValuedAttr<VectorMultiReductionLoweringAttr,
