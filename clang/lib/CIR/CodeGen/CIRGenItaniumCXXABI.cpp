@@ -562,6 +562,10 @@ class CIRGenItaniumRTTIBuilder {
   /// to the Itanium C++ ABI, 2.9.4p7.
   void buildPointerTypeInfo(mlir::Location loc, QualType ty);
 
+  /// Build an abi::__pointer_to_member_type_info, used for pointer to member
+  /// types, according to the Itanium C++ ABI, 2.9.4p9.
+  void buildPointerToMemberTypeInfo(mlir::Location loc, const MemberPointerType *ty);
+
 public:
   CIRGenItaniumRTTIBuilder(const CIRGenItaniumCXXABI &abi, CIRGenModule &cgm)
       : cgm(cgm), cxxABI(abi) {}
@@ -1041,7 +1045,7 @@ const char *vTableClassNameForType(const CIRGenModule &cgm, const Type *ty) {
     return "_ZTVN10__cxxabiv119__pointer_type_infoE";
 
   case Type::MemberPointer:
-    cgm.errorNYI("VTableClassNameForType: __pointer_to_member_type_info");
+    return "_ZTVN10__cxxabiv129__pointer_to_member_type_infoE";
     break;
 
   case Type::HLSLAttributedResource:
@@ -1337,6 +1341,37 @@ void CIRGenItaniumRTTIBuilder::buildPointerTypeInfo(mlir::Location loc,
   fields.push_back(pointeeTypeInfo);
 }
 
+void CIRGenItaniumRTTIBuilder::buildPointerToMemberTypeInfo(
+    mlir::Location loc, const MemberPointerType *ty) {
+
+  //  The abi::__pointer_to_member_type_info type adds one field to abi::__pbase_type_info:
+  //
+  //    class __pointer_to_member_type_info : public __pbase_type_info {
+  //      public:
+  //        const abi::__class_type_info *__context;
+  //    };
+  QualType pointeeTy = ty->getPointeeType();
+
+  unsigned flags = extractPBaseFlags(cgm.getASTContext(), pointeeTy);
+
+  const auto *rd = ty->getMostRecentCXXRecordDecl();
+  if (!rd->hasDefinition())
+    flags |= PTI_ContainingClassIncomplete;
+
+  auto unsignedIntTy = cgm.convertType(cgm.getASTContext().UnsignedIntTy);
+  mlir::Attribute flagsAttr = cir::IntAttr::get(unsignedIntTy, flags);
+  fields.push_back(flagsAttr);
+
+  mlir::Attribute pointeeTypeInfo =
+      CIRGenItaniumRTTIBuilder(cxxABI, cgm).buildTypeInfo(loc, pointeeTy);
+  fields.push_back(pointeeTypeInfo);
+
+  CanQualType contextTy = cgm.getASTContext().getCanonicalTagType(rd);
+  mlir::Attribute classTypeInfo =
+      CIRGenItaniumRTTIBuilder(cxxABI, cgm).buildTypeInfo(loc, contextTy);
+  fields.push_back(classTypeInfo);
+}
+
 mlir::Attribute CIRGenItaniumRTTIBuilder::buildTypeInfo(mlir::Location loc,
                                                         QualType ty) {
   // We want to operate on the canonical type.
@@ -1503,7 +1538,7 @@ mlir::Attribute CIRGenItaniumRTTIBuilder::buildTypeInfo(
     break;
 
   case Type::MemberPointer:
-    cgm.errorNYI("buildTypeInfo: MemberPointer");
+    buildPointerToMemberTypeInfo(loc, cast<MemberPointerType>(ty));
     break;
 
   case Type::Atomic:
