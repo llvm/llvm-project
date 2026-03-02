@@ -13188,9 +13188,8 @@ bool AArch64TargetLowering::isOffsetFoldingLegal(
   return false;
 }
 
-bool AArch64TargetLowering::isFPImmLegal(const APFloat &Imm, EVT VT,
-                                         bool OptForSize) const {
-  bool IsLegal = false;
+bool AArch64TargetLowering::isFPImmLegalAsFMov(const APFloat &Imm,
+                                               EVT VT) const {
   // We can materialize #0.0 as fmov $Rd, XZR for 64-bit, 32-bit cases, and
   // 16-bit case when target has full fp16 support.
   // We encode bf16 bit patterns as if they were fp16. This results in very
@@ -13200,14 +13199,24 @@ bool AArch64TargetLowering::isFPImmLegal(const APFloat &Imm, EVT VT,
   // FP16 1.9375 which shares the same bit pattern as BF16 1.5.
   // FIXME: We should be able to handle f128 as well with a clever lowering.
   const APInt ImmInt = Imm.bitcastToAPInt();
+
   if (VT == MVT::f64)
-    IsLegal = AArch64_AM::getFP64Imm(ImmInt) != -1 || Imm.isPosZero();
-  else if (VT == MVT::f32)
-    IsLegal = AArch64_AM::getFP32Imm(ImmInt) != -1 || Imm.isPosZero();
-  else if (VT == MVT::f16 || VT == MVT::bf16)
-    IsLegal =
-        (Subtarget->hasFullFP16() && AArch64_AM::getFP16Imm(ImmInt) != -1) ||
-        Imm.isPosZero();
+    return AArch64_AM::getFP64Imm(ImmInt) != -1 || Imm.isPosZero();
+
+  if (VT == MVT::f32)
+    return AArch64_AM::getFP32Imm(ImmInt) != -1 || Imm.isPosZero();
+
+  if (VT == MVT::f16 || VT == MVT::bf16)
+    return (Subtarget->hasFullFP16() && AArch64_AM::getFP16Imm(ImmInt) != -1) ||
+           Imm.isPosZero();
+
+  return false;
+}
+
+bool AArch64TargetLowering::isFPImmLegal(const APFloat &Imm, EVT VT,
+                                         bool OptForSize) const {
+  bool IsLegal = isFPImmLegalAsFMov(Imm, VT);
+  const APInt ImmInt = Imm.bitcastToAPInt();
 
   // If we can not materialize in immediate field for fmov, check if the
   // value can be encoded as the immediate operand of a logical instruction.
@@ -13219,7 +13228,8 @@ bool AArch64TargetLowering::isFPImmLegal(const APFloat &Imm, EVT VT,
     // however the mov+fmov sequence is always better because of the reduced
     // cache pressure. The timings are still the same if you consider
     // movw+movk+fmov vs. adrp+ldr (it's one instruction longer, but the
-    // movw+movk is fused). So we limit up to 2 instrdduction at most.
+    // movw+movk is fused). So by default we limit up to 2 instructions
+    // or 4 with hasFuseLiterals.
     SmallVector<AArch64_IMM::ImmInsnModel, 4> Insn;
     AArch64_IMM::expandMOVImm(ImmInt.getZExtValue(), VT.getSizeInBits(), Insn);
     assert(Insn.size() <= 4 &&
