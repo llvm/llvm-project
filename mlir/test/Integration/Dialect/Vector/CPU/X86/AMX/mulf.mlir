@@ -1,4 +1,4 @@
-// RUN: mlir-opt %s -convert-vector-to-scf -lower-affine -convert-scf-to-cf -convert-vector-to-llvm="enable-amx" -finalize-memref-to-llvm -convert-func-to-llvm -reconcile-unrealized-casts | \
+// RUN: mlir-opt %s -convert-vector-to-scf -lower-affine -convert-scf-to-cf -convert-vector-to-llvm="enable-x86" -finalize-memref-to-llvm -convert-func-to-llvm -reconcile-unrealized-casts | \
 // RUN: mlir-translate -mlir-to-llvmir | \
 // RUN: %lli --entry-function=entry --mattr="+amx-tile,+amx-int8,+amx-bf16" --dlopen=%mlir_c_runner_utils | \
 // RUN: FileCheck %s
@@ -10,11 +10,11 @@ func.func @kernel1(%arg0: memref<2x4xbf16>,
               %arg1: memref<2x4xbf16>,
               %arg2: memref<2x2xf32>) {
   %0 = arith.constant 0 : index
-  %1 = amx.tile_load %arg0[%0, %0] : memref<2x4xbf16>  into vector<2x4xbf16>
-  %2 = amx.tile_load %arg1[%0, %0] : memref<2x4xbf16>  into vector<2x4xbf16>
-  %3 = amx.tile_zero : vector<2x2xf32>
-  %4 = amx.tile_mulf %1, %2, %3 : vector<2x4xbf16>, vector<2x4xbf16>, vector<2x2xf32>
-  amx.tile_store %arg2[%0, %0], %4 : memref<2x2xf32>, vector<2x2xf32>
+  %1 = x86.amx.tile_load %arg0[%0, %0] : memref<2x4xbf16>  into vector<2x4xbf16>
+  %2 = x86.amx.tile_load %arg1[%0, %0] : memref<2x4xbf16>  into vector<2x4xbf16>
+  %3 = x86.amx.tile_zero : vector<2x2xf32>
+  %4 = x86.amx.tile_mulf %1, %2, %3 : vector<2x4xbf16>, vector<2x4xbf16>, vector<2x2xf32>
+  x86.amx.tile_store %arg2[%0, %0], %4 : memref<2x2xf32>, vector<2x2xf32>
   return
 }
 
@@ -23,11 +23,11 @@ func.func @kernel2(%arg0: memref<2x4xbf16>,
               %arg1: memref<2x4xbf16>,
               %arg2: memref<2x2xf32>) {
   %0 = arith.constant 0 : index
-  %1 = amx.tile_load %arg0[%0, %0] : memref<2x4xbf16>  into vector<2x4xbf16>
-  %2 = amx.tile_load %arg1[%0, %0] : memref<2x4xbf16>  into vector<2x4xbf16>
-  %3 = amx.tile_load %arg2[%0, %0] : memref<2x2xf32> into vector<2x2xf32>
-  %4 = amx.tile_mulf %1, %2, %3 : vector<2x4xbf16>, vector<2x4xbf16>, vector<2x2xf32>
-  amx.tile_store %arg2[%0, %0], %4 : memref<2x2xf32>, vector<2x2xf32>
+  %1 = x86.amx.tile_load %arg0[%0, %0] : memref<2x4xbf16>  into vector<2x4xbf16>
+  %2 = x86.amx.tile_load %arg1[%0, %0] : memref<2x4xbf16>  into vector<2x4xbf16>
+  %3 = x86.amx.tile_load %arg2[%0, %0] : memref<2x2xf32> into vector<2x2xf32>
+  %4 = x86.amx.tile_mulf %1, %2, %3 : vector<2x4xbf16>, vector<2x4xbf16>, vector<2x2xf32>
+  x86.amx.tile_store %arg2[%0, %0], %4 : memref<2x2xf32>, vector<2x2xf32>
   return
 }
 
