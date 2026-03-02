@@ -33,6 +33,7 @@
 #include "llvm/IR/Constant.h"
 #include "llvm/IR/Constants.h"
 #include "llvm/IR/DataLayout.h"
+#include "llvm/IR/FMF.h"
 #include "llvm/IR/InstrTypes.h"
 #include "llvm/IR/Instruction.h"
 #include "llvm/IR/Instructions.h"
@@ -75,19 +76,55 @@ template <typename T> inline OneUse_match<T> m_OneUse(const T &SubPattern) {
   return SubPattern;
 }
 
-template <typename SubPattern_t> struct AllowReassoc_match {
+template <typename SubPattern_t, int Flag> struct AllowFmf_match {
   SubPattern_t SubPattern;
+  FastMathFlags FMF;
 
-  AllowReassoc_match(const SubPattern_t &SP) : SubPattern(SP) {}
+  AllowFmf_match(const SubPattern_t &SP) : SubPattern(SP), FMF(Flag) {}
 
   template <typename OpTy> bool match(OpTy *V) const {
     auto *I = dyn_cast<FPMathOperator>(V);
-    return I && I->hasAllowReassoc() && SubPattern.match(I);
+    return I && ((I->getFastMathFlags() & FMF) == FMF) && SubPattern.match(I);
   }
 };
 
 template <typename T>
-inline AllowReassoc_match<T> m_AllowReassoc(const T &SubPattern) {
+inline AllowFmf_match<T, FastMathFlags::AllowReassoc>
+m_AllowReassoc(const T &SubPattern) {
+  return SubPattern;
+}
+
+template <typename T>
+inline AllowFmf_match<T, FastMathFlags::AllowReciprocal>
+m_AllowReciprocal(const T &SubPattern) {
+  return SubPattern;
+}
+
+template <typename T>
+inline AllowFmf_match<T, FastMathFlags::AllowContract>
+m_AllowContract(const T &SubPattern) {
+  return SubPattern;
+}
+
+template <typename T>
+inline AllowFmf_match<T, FastMathFlags::ApproxFunc>
+m_ApproxFunc(const T &SubPattern) {
+  return SubPattern;
+}
+
+template <typename T>
+inline AllowFmf_match<T, FastMathFlags::NoNaNs> m_NoNaNs(const T &SubPattern) {
+  return SubPattern;
+}
+
+template <typename T>
+inline AllowFmf_match<T, FastMathFlags::NoInfs> m_NoInfs(const T &SubPattern) {
+  return SubPattern;
+}
+
+template <typename T>
+inline AllowFmf_match<T, FastMathFlags::NoSignedZeros>
+m_NoSignedZeros(const T &SubPattern) {
   return SubPattern;
 }
 
@@ -110,6 +147,11 @@ inline class_match<BinaryOperator> m_BinOp() {
 
 /// Matches any compare instruction and ignore it.
 inline class_match<CmpInst> m_Cmp() { return class_match<CmpInst>(); }
+
+/// Matches any intrinsic call and ignore it.
+inline class_match<IntrinsicInst> m_AnyIntrinsic() {
+  return class_match<IntrinsicInst>();
+}
 
 struct undef_match {
   static bool check(const Value *V) {
@@ -899,6 +941,11 @@ inline bind_ty<const UnaryOperator> m_UnOp(const UnaryOperator *&I) {
 /// Match a binary operator, capturing it if we match.
 inline bind_ty<BinaryOperator> m_BinOp(BinaryOperator *&I) { return I; }
 inline bind_ty<const BinaryOperator> m_BinOp(const BinaryOperator *&I) {
+  return I;
+}
+/// Match any intrinsic call, capturing it if we match.
+inline bind_ty<IntrinsicInst> m_AnyIntrinsic(IntrinsicInst *&I) { return I; }
+inline bind_ty<const IntrinsicInst> m_AnyIntrinsic(const IntrinsicInst *&I) {
   return I;
 }
 /// Match a with overflow intrinsic, capturing it if we match.
