@@ -26,6 +26,8 @@
 #include "llvm/Support/SMLoc.h"
 
 #define DEBUG_TYPE "bolt"
+#include "llvm/Support/Debug.h"
+#include "llvm/Support/raw_ostream.h"
 
 using namespace llvm;
 using namespace bolt;
@@ -467,9 +469,23 @@ void BinaryEmitter::emitFunctionBody(BinaryFunction &BF, FunctionFragment &FF,
         Streamer.emitLabel(EntrySymbol);
     }
 
+    bool LastWasCall = false;
     SMLoc LastLocSeen;
     for (auto I = BB->begin(), E = BB->end(); I != E; ++I) {
       MCInst &Instr = *I;
+
+      // PPC64 ELFv2: JITLink expects a NOP at call+4 and will rewrite it to
+      // 'ld r2,24(r1)'. The static linker already emits the  LD and then
+      // JITLink asserts that it expects NOP at call+4. Normalise here so
+      // JITLink doesn't assert.
+      if (BC.isPPC64() && LastWasCall && BC.MIB->isTOCRestoreAfterCall(Instr)) {
+        LLVM_DEBUG(dbgs() << "PPC emit: normalizing TOC-restore after call\n");
+        MCInst Nop;
+        BC.MIB->createNoop(Nop); // ori r0,r0,0
+        Streamer.emitInstruction(Nop, *BC.STI);
+        LastWasCall = false;
+        continue;
+      }
 
       if (EmitCodeOnly && BC.MIB->isPseudo(Instr))
         continue;
@@ -515,7 +531,49 @@ void BinaryEmitter::emitFunctionBody(BinaryFunction &BF, FunctionFragment &FF,
         }
       }
 
+      LLVM_DEBUG(dbgs() << "EMIT " << BC.MII->getName(Instr.getOpcode())
+                        << "\n");
+
       Streamer.emitInstruction(Instr, *BC.STI);
+      LastWasCall = BC.MIB->isCall(Instr);
+
+      if (BC.isPPC64() && BC.MIB->isTOCRestoreAfterCall(Instr))
+        LLVM_DEBUG(dbgs() << "EMIT is TOC-restore\n");
+
+      // --- PPC64 ELFv2: guarantee a post-call NOP (call slot)
+      if (BC.isPPC64() && BC.MIB->isCall(Instr)) {
+        bool NeedSlot = true;
+        LLVM_DEBUG(dbgs() << "PPC emit: call, considering slot after\n");
+
+        // If the next IR instruction exists and is already a NOP or TOC-restore
+        // , don't inject.
+        auto NextI = std::next(I);
+        LLVM_DEBUG({
+          dbgs() << "PPC emit: CALL seen: next=";
+          if (NextI == E)
+            dbgs() << "<end>\n";
+          else
+            dbgs() << BC.MII->getName(NextI->getOpcode())
+                   << (BC.MIB->isTOCRestoreAfterCall(*NextI)
+                           ? " (TOC restore)\n"
+                           : "\n");
+        });
+        if (NextI != E &&
+            (BC.MIB->isNoop(*NextI) || BC.MIB->isTOCRestoreAfterCall(*NextI))) {
+          NeedSlot = false;
+        }
+
+        if (NeedSlot) {
+          LLVM_DEBUG(dbgs() << "PPC emit: inserting post-call NOP\n");
+          MCInst N;
+          BC.MIB->createNoop(N);
+          Streamer.emitInstruction(N, *BC.STI);
+          LLVM_DEBUG(dbgs() << "PPC: inserted NOP after call at "
+                            << BF.getPrintName() << "\n");
+        } else {
+          LLVM_DEBUG(dbgs() << "PPC emit: post-call NOP not needed\n");
+        }
+      }
     }
   }
 
@@ -1226,8 +1284,26 @@ void BinaryEmitter::emitDataSections(StringRef OrgSecPrefix) {
       continue;
 
     StringRef Prefix = Section.hasSectionRef() ? OrgSecPrefix : "";
-    Section.emitAsData(Streamer, Prefix + Section.getName());
-    Section.clearRelocations();
+    std::string OutName = (Prefix + Section.getName()).str();
+
+    // If emitting to an org-prefixed name, ensure zero relocations.
+    if (StringRef(OutName).starts_with(OrgSecPrefix)) {
+
+DEBUG_WITH_TYPE("bolt-sections", {
+  const auto Range = Section.relocations();
+  const size_t RCount = std::distance(Range.begin(), Range.end());
+  dbgs() << "[emit] " << Section.getName()
+         << " flags=0x" << llvm::format_hex(Section.getELFFlags(), 8)
+         << " count=" << RCount << "\n";
+});
+      Section.clearRelocations();   // <-- drop BEFORE emission
+    }
+
+    Section.emitAsData(Streamer, OutName);
+
+    // For non-org sections we can clear after emission as before.
+    if (!StringRef(OutName).starts_with(OrgSecPrefix))
+      Section.clearRelocations();
   }
 }
 
