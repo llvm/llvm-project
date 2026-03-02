@@ -21024,6 +21024,25 @@ static SDValue tryCombineToREV(SDNode *N, SelectionDAG &DAG,
                      DAG.getNode(RevOp, DL, HalfVT, N0->getOperand(0)));
 }
 
+// (and/or X, (splat (not Y))) -> (and/or X, (not (splat Y)))
+// so that it gets selected as (bic/orn X, (dup Y))
+static SDValue performANDORDUPNOTCombine(SDNode *N, SelectionDAG &DAG) {
+  unsigned Opc = N->getOpcode();
+  assert(Opc == ISD::AND || Opc == ISD::OR);
+  using namespace llvm::SDPatternMatch;
+  SDValue X, Y;
+  if (!sd_match(N, m_c_BinOp(Opc, m_Value(X),
+                             m_Shuffle(m_InsertElt(m_Poison(),
+                                                   m_Not(m_Value(Y)), m_Zero()),
+                                       m_Poison()))))
+    return SDValue();
+
+  EVT VT = N->getValueType(0);
+  SDLoc DL(N);
+  SDValue Not = DAG.getNOT(DL, DAG.getSplat(VT, DL, Y), VT);
+  return DAG.getNode(Opc, DL, VT, X, Not);
+}
+
 static SDValue performORCombine(SDNode *N, TargetLowering::DAGCombinerInfo &DCI,
                                 const AArch64Subtarget *Subtarget,
                                 const AArch64TargetLowering &TLI) {
@@ -21033,6 +21052,9 @@ static SDValue performORCombine(SDNode *N, TargetLowering::DAGCombinerInfo &DCI,
     return R;
 
   if (SDValue R = tryCombineToREV(N, DAG, DCI))
+    return R;
+
+  if (SDValue R = performANDORDUPNOTCombine(N, DAG))
     return R;
 
   return SDValue();
@@ -21239,6 +21261,9 @@ static SDValue performANDCombine(SDNode *N,
     return R;
 
   if (SDValue R = performANDSETCCCombine(N,DCI))
+    return R;
+
+  if (SDValue R = performANDORDUPNOTCombine(N, DAG))
     return R;
 
   if (!DAG.getTargetLoweringInfo().isTypeLegal(VT))
