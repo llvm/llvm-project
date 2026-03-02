@@ -108,9 +108,14 @@ bool tryToFindPtrOrigin(
         if (auto *decl = memberCall->getMethodDecl()) {
           std::optional<bool> IsGetterOfRefCt = isGetterOfSafePtr(decl);
           if (IsGetterOfRefCt && *IsGetterOfRefCt) {
-            E = memberCall->getImplicitObjectArgument();
-            if (StopAtFirstRefCountedObj) {
-              return callback(E, true);
+            E = memberCall->getImplicitObjectArgument()->IgnoreParenCasts();
+            if (auto *DRE = dyn_cast<DeclRefExpr>(E)) {
+              if (auto *Decl = dyn_cast_or_null<VarDecl>(DRE->getDecl())) {
+                if (isa<ParmVarDecl>(Decl) || Decl->isLocalVarDecl()) {
+                  if (StopAtFirstRefCountedObj)
+                    return callback(E, true);
+                }
+              }
             }
             continue;
           }
