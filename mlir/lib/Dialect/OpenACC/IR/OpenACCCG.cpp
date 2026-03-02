@@ -257,7 +257,6 @@ void ReductionInitOp::getSuccessorRegions(
                                     regions);
 }
 
-
 void ReductionInitOp::getRegionInvocationBounds(
     ArrayRef<Attribute> operands,
     SmallVectorImpl<InvocationBounds> &invocationBounds) {
