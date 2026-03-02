@@ -17,7 +17,7 @@ __attribute__((visibility("protected"), used)) int x;
 // RUN:   --image=file=%t.elf.o,kind=openmp,triple=amdgcn-amd-amdhsa,arch=gfx908
 // RUN: %clang -cc1 %s -triple x86_64-unknown-linux-gnu -emit-obj -o %t.o -fembed-offload-object=%t.out
 // RUN: %t.test_dir/clang-linker-wrapper --host-triple=x86_64-unknown-linux-gnu --dry-run \
-// RUN:   --linker-path=/usr/bin/ld %t.o -o a.out -no-canonical-prefixes 2>&1 | FileCheck %s
+// RUN:   --linker-path=/usr/bin/ld %t.o -o a.out --no-canonical-prefixes 2>&1 | FileCheck %s
 
 // Check that we resolve clang to the symlink rather than the bin/ directory
 // and that the sub-clang invocation was passed -no-canonical-prefixes.
