@@ -559,7 +559,7 @@ class CIRGenItaniumRTTIBuilder {
   void buildVMIClassTypeInfo(mlir::Location loc, const CXXRecordDecl *rd);
 
   /// Build an abi::__pointer_type_info, used for pointer types, according
-  /// to the Itanium API, 2.9.4p7.
+  /// to the Itanium C++ ABI, 2.9.4p7.
   void buildPointerTypeInfo(mlir::Location loc, QualType ty);
 
 public:
