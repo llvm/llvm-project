@@ -128,7 +128,7 @@ LIBC_INLINE constexpr bfloat16 asinbf16(bfloat16 x) {
   // asin(x) = pi/2 - 2 * asin(sqrt((1-x)/2)) ; ---------------------------[2]
 
   //[Note: check for inf rec (i.e should not output the same invalid interval
-  //which could not be calculated precisely by taylor series)];
+  // which could not be calculated precisely by taylor series)]
   // Here we choose an input interval where the values have less precision and
   // use the formula to fold into the valid interval where we could generate
   // precise values from taylor eg :- input (0,5,1] -> gets interval [0,1)
