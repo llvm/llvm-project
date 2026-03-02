@@ -835,7 +835,8 @@ bool isPointerToCharArray(const QualType &QT) {
   if (!QT->isPointerType())
     return false;
   QualType PointeeType = QT->getPointeeType();
-  return PointeeType->isPointerType() && PointeeType->getPointeeType()->isCharType();
+  return PointeeType->isPointerType() &&
+         PointeeType->getPointeeType()->isCharType();
 }
 
 // The incoming parameters of the main function get tainted
