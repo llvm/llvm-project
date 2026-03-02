@@ -3004,17 +3004,17 @@ define amdgpu_kernel void @test_mfma_i32_32x32x32_i8(<4 x i32> %arg0, <4 x i32> 
 ; HEURRC-NEXT:    v_accvgpr_write_b32 a16, s8
 ; HEURRC-NEXT:    s_nop 1
 ; HEURRC-NEXT:    v_mfma_i32_32x32x32_i8 a[0:15], v[4:7], v[8:11], a[16:31]
+; HEURRC-NEXT:    s_nop 11
+; HEURRC-NEXT:    global_store_dwordx4 v[0:1], a[12:15], off sc0 sc1
+; HEURRC-NEXT:    s_waitcnt vmcnt(0)
+; HEURRC-NEXT:    global_store_dwordx4 v[2:3], a[8:11], off sc0 sc1
+; HEURRC-NEXT:    s_waitcnt vmcnt(0)
 ; HEURRC-NEXT:    v_mov_b64_e32 v[4:5], 16
 ; HEURRC-NEXT:    v_mov_b64_e32 v[6:7], 0
 ; HEURRC-NEXT:    v_mov_b32_e32 v8, s16
 ; HEURRC-NEXT:    v_mov_b32_e32 v9, s17
 ; HEURRC-NEXT:    v_mov_b32_e32 v10, s18
 ; HEURRC-NEXT:    v_mov_b32_e32 v11, s19
-; HEURRC-NEXT:    s_nop 5
-; HEURRC-NEXT:    global_store_dwordx4 v[0:1], a[12:15], off sc0 sc1
-; HEURRC-NEXT:    s_waitcnt vmcnt(0)
-; HEURRC-NEXT:    global_store_dwordx4 v[2:3], a[8:11], off sc0 sc1
-; HEURRC-NEXT:    s_waitcnt vmcnt(0)
 ; HEURRC-NEXT:    global_store_dwordx4 v[4:5], a[4:7], off sc0 sc1
 ; HEURRC-NEXT:    s_waitcnt vmcnt(0)
 ; HEURRC-NEXT:    global_store_dwordx4 v[6:7], a[0:3], off sc0 sc1
@@ -3405,17 +3405,17 @@ define amdgpu_kernel void @test_mfma_i32_32x32x32_i8__flags(<4 x i32> %arg0, <4 
 ; HEURRC-NEXT:    v_accvgpr_write_b32 a16, s8
 ; HEURRC-NEXT:    s_nop 1
 ; HEURRC-NEXT:    v_mfma_i32_32x32x32_i8 a[0:15], v[4:7], v[8:11], a[16:31] cbsz:2 abid:3 blgp:1
+; HEURRC-NEXT:    s_nop 11
+; HEURRC-NEXT:    global_store_dwordx4 v[0:1], a[12:15], off sc0 sc1
+; HEURRC-NEXT:    s_waitcnt vmcnt(0)
+; HEURRC-NEXT:    global_store_dwordx4 v[2:3], a[8:11], off sc0 sc1
+; HEURRC-NEXT:    s_waitcnt vmcnt(0)
 ; HEURRC-NEXT:    v_mov_b64_e32 v[4:5], 16
 ; HEURRC-NEXT:    v_mov_b64_e32 v[6:7], 0
 ; HEURRC-NEXT:    v_mov_b32_e32 v8, s16
 ; HEURRC-NEXT:    v_mov_b32_e32 v9, s17
 ; HEURRC-NEXT:    v_mov_b32_e32 v10, s18
 ; HEURRC-NEXT:    v_mov_b32_e32 v11, s19
-; HEURRC-NEXT:    s_nop 5
-; HEURRC-NEXT:    global_store_dwordx4 v[0:1], a[12:15], off sc0 sc1
-; HEURRC-NEXT:    s_waitcnt vmcnt(0)
-; HEURRC-NEXT:    global_store_dwordx4 v[2:3], a[8:11], off sc0 sc1
-; HEURRC-NEXT:    s_waitcnt vmcnt(0)
 ; HEURRC-NEXT:    global_store_dwordx4 v[4:5], a[4:7], off sc0 sc1
 ; HEURRC-NEXT:    s_waitcnt vmcnt(0)
 ; HEURRC-NEXT:    global_store_dwordx4 v[6:7], a[0:3], off sc0 sc1
