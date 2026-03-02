@@ -82,8 +82,9 @@ static std::string genRawText(const std::vector<CommentInfo> &Comments) {
     {
       if (!First)
         OS << "<br>";
+      else 
+        First = false;
       OS << Comment->Text;
-      First = false;
     }
     for (const auto &CI : Comment->Children)
       Q.push(CI.get());
