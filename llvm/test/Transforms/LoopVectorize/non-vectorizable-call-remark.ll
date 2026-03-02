@@ -1,6 +1,4 @@
-; RUN: opt < %s -passes=loop-vectorize -S -pass-remarks-analysis='loop-vectorize' -disable-output 2>&1 | FileCheck %s
-; RUN: opt < %s -passes=loop-vectorize -o /dev/null -pass-remarks-output=%t.yaml
-; RUN: cat %t.yaml | FileCheck -check-prefix=YAML %s
+; RUN: opt < %s -passes=loop-vectorize -disable-output -pass-remarks-output=- 2>&1 | FileCheck %s
 
 ; Verify that when a call instruction in a loop cannot be vectorized,
 ; the optimization remark points to the call instruction's debug location
@@ -29,27 +27,23 @@
 ; 19:
 ; 20: }
 
-; File, line, and column should match those specified in the metadata.
 ; The remark should point at the call instruction, not the loop header.
-; CHECK: remark: source.c:7:10: loop not vectorized: instruction cannot be vectorized
-; CHECK: remark: source.c:17:5: loop not vectorized: instruction cannot be vectorized
-
-; YAML:      --- !Analysis
-; YAML:      Pass:            loop-vectorize
-; YAML:      Name:            CantVectorizeInstruction
-; YAML-NEXT: DebugLoc:        { File: source.c, Line: 7, Column: 10 }
-; YAML-NEXT: Function:        call_reads_memory
-; YAML-NEXT: Args:
-; YAML-NEXT:   - String:          'loop not vectorized: '
-; YAML-NEXT:   - String:          instruction cannot be vectorized
-; YAML:      --- !Analysis
-; YAML:      Pass:            loop-vectorize
-; YAML:      Name:            CantVectorizeInstruction
-; YAML-NEXT: DebugLoc:        { File: source.c, Line: 17, Column: 5 }
-; YAML-NEXT: Function:        call_writes_memory
-; YAML-NEXT: Args:
-; YAML-NEXT:   - String:          'loop not vectorized: '
-; YAML-NEXT:   - String:          instruction cannot be vectorized
+; CHECK:      --- !Analysis
+; CHECK:      Pass:            loop-vectorize
+; CHECK:      Name:            CantVectorizeInstruction
+; CHECK-NEXT: DebugLoc:        { File: source.c, Line: 7, Column: 10 }
+; CHECK-NEXT: Function:        call_reads_memory
+; CHECK-NEXT: Args:
+; CHECK-NEXT:   - String:          'loop not vectorized: '
+; CHECK-NEXT:   - String:          instruction cannot be vectorized
+; CHECK:      --- !Analysis
+; CHECK:      Pass:            loop-vectorize
+; CHECK:      Name:            CantVectorizeInstruction
+; CHECK-NEXT: DebugLoc:        { File: source.c, Line: 17, Column: 5 }
+; CHECK-NEXT: Function:        call_writes_memory
+; CHECK-NEXT: Args:
+; CHECK-NEXT:   - String:          'loop not vectorized: '
+; CHECK-NEXT:   - String:          instruction cannot be vectorized
 
 define void @call_reads_memory(ptr %p, i64 %n) !dbg !4 {
 entry:
