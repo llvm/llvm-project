@@ -24,6 +24,7 @@
 #include "llvm/CodeGen/StackMaps.h"
 #include "llvm/CodeGen/TargetInstrInfo.h"
 #include "llvm/CodeGen/TargetLowering.h"
+#include "llvm/CodeGen/TargetRegisterInfo.h"
 #include "llvm/CodeGen/TargetSubtargetInfo.h"
 #include "llvm/IR/DebugInfoMetadata.h"
 #include "llvm/IR/PseudoProbe.h"
@@ -149,12 +150,16 @@ void InstrEmitter::EmitCopyFromReg(SDValue Op, bool IsClone, Register SrcReg,
       break;
   }
 
+  const TargetRegisterClass *RegClassForVT = nullptr;
+  // The check is to be removed in other pending PR, it is kept to make System Z happy.
+  if (TLI->isTypeLegal(VT)) {
+      RegClassForVT = TLI->getRegClassFor(VT, Op->isDivergent());
+  }
 
   if (UseRC == nullptr || !UseRC->isAllocatable()) {
-    // The check is to be removed in other pending PR, it is kept to make System Z happy.
-    if (TLI->isTypeLegal(VT)) {
-      UseRC = TLI->getRegClassFor(VT, Op->isDivergent());
-    }
+      UseRC = RegClassForVT;
+  } else if (auto CommonSubClass = TRI->getCommonSubClass(UseRC, RegClassForVT)) {
+      UseRC = CommonSubClass;
   }
 
   const TargetRegisterClass *SrcRC = nullptr, *DstRC = nullptr;
