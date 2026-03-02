@@ -1,6 +1,6 @@
 // RUN: mlir-opt %s -convert-vector-to-scf -lower-affine \
 // RUN: -one-shot-bufferize="bufferize-function-boundaries" \
-// RUN: -convert-scf-to-cf -convert-vector-to-llvm="enable-amx" \
+// RUN: -convert-scf-to-cf -convert-vector-to-llvm="enable-x86" \
 // RUN:  -finalize-memref-to-llvm -convert-func-to-llvm -reconcile-unrealized-casts | \
 // RUN: mlir-translate -mlir-to-llvmir | \
 // RUN: %lli --entry-function=entry --mattr="+amx-tile,+amx-int8,+amx-bf16" \
@@ -14,11 +14,11 @@ func.func @kernel(%arg0: memref<16x32xbf16>,
              %arg1: memref<16x32xbf16>,
              %arg2: memref<16x16xf32>) {
   %0 = arith.constant 0 : index
-  %1 = amx.tile_load %arg0[%0, %0] : memref<16x32xbf16>  into vector<16x32xbf16>
-  %2 = amx.tile_load %arg1[%0, %0] : memref<16x32xbf16>  into vector<16x32xbf16>
-  %3 = amx.tile_zero : vector<16x16xf32>
-  %4 = amx.tile_mulf %1, %2, %3 : vector<16x32xbf16>, vector<16x32xbf16>, vector<16x16xf32>
-  amx.tile_store %arg2[%0, %0], %4 : memref<16x16xf32>, vector<16x16xf32>
+  %1 = x86.amx.tile_load %arg0[%0, %0] : memref<16x32xbf16>  into vector<16x32xbf16>
+  %2 = x86.amx.tile_load %arg1[%0, %0] : memref<16x32xbf16>  into vector<16x32xbf16>
+  %3 = x86.amx.tile_zero : vector<16x16xf32>
+  %4 = x86.amx.tile_mulf %1, %2, %3 : vector<16x32xbf16>, vector<16x32xbf16>, vector<16x16xf32>
+  x86.amx.tile_store %arg2[%0, %0], %4 : memref<16x16xf32>, vector<16x16xf32>
   return
 }
 
