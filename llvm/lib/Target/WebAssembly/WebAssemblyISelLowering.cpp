@@ -2848,7 +2848,7 @@ static SDValue foldShiftByConstantToExtMul(SDValue Op, SelectionDAG &DAG) {
   unsigned SrcVecEltNum = SrcVecTy.getVectorNumElements();
   unsigned ConstVecEltNum = SrcVecEltNum / 2;
   SmallVector<SDValue, 16> MulConsts(SrcVecEltNum,
-                                     DAG.getUNDEF(SrcVecTy.getScalarType()));
+                                     DAG.getPOISON(SrcVecTy.getScalarType()));
   unsigned StartIdx = IsLow ? 0 : ConstVecEltNum;
   for (unsigned I = 0; I < ConstVecEltNum; ++I) {
     auto *C = cast<ConstantSDNode>(RHS.getOperand(I));
