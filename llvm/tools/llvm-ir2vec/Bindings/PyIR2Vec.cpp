@@ -150,6 +150,41 @@ public:
 
     return NbBBEmbMap;
   }
+
+  nb::dict getInstEmbMap(const std::string &FuncName) {
+    const Function *F = M->getFunction(FuncName);
+
+    if (!F)
+      throw nb::value_error(
+          ("Function '" + FuncName + "' not found in module").c_str());
+
+    auto ToolInstEmbMap = Tool->getInstEmbeddingsMap(*F, OutputEmbeddingMode);
+
+    if (!ToolInstEmbMap)
+      throw nb::value_error(toString(ToolInstEmbMap.takeError()).c_str());
+
+    nb::dict NbInstEmbMap;
+
+    for (const auto &[InstPtr, InstEmb] : *ToolInstEmbMap) {
+      auto InstEmbVec = InstEmb.getData();
+      double *NbInstEmbVec = new double[InstEmbVec.size()];
+      std::copy(InstEmbVec.begin(), InstEmbVec.end(), NbInstEmbVec);
+
+      auto NbArray = nb::ndarray<nb::numpy, double>(
+          NbInstEmbVec, {InstEmbVec.size()},
+          nb::capsule(NbInstEmbVec, [](void *P) noexcept {
+            delete[] static_cast<double *>(P);
+          }));
+
+      std::string InstStr;
+      raw_string_ostream OS(InstStr);
+      InstPtr->print(OS);
+
+      NbInstEmbMap[nb::str(OS.str().c_str())] = NbArray;
+    }
+
+    return NbInstEmbMap;
+  }
 };
 
 } // namespace
@@ -173,7 +208,13 @@ NB_MODULE(ir2vec, m) {
            "Generate embeddings for all basic blocks in a function\n"
            "Args: funcName (str) - IR-Name of the function\n"
            "Returns: dict[str, ndarray[float64]] - "
-           "{basic_block_name: embedding vector}");
+           "{basic_block_name: embedding vector}")
+      .def("getInstEmbMap", &PyIR2VecTool::getInstEmbMap, nb::arg("funcName"),
+           "Generate embeddings for all instructions in a function\n"
+           "Args: funcName (str) - IR-Name of the function\n"
+           "Returns: dict[str, ndarray[float64]] - "
+           "{instruction_string: embedding_vector}");
+
   m.def(
       "initEmbedding",
       [](const std::string &filename, const std::string &mode,

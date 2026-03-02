@@ -10,6 +10,11 @@ add_custom_target(libc-long-running-tests)
 add_custom_target(libc-unit-tests-build)
 add_custom_target(libc-hermetic-tests-build)
 
+# Resolve the GPU loader executable path for the lit site config.
+if(TARGET libc.utils.gpu.loader)
+  get_target_property(LIBC_GPU_LOADER_EXECUTABLE libc.utils.gpu.loader "EXECUTABLE")
+endif()
+
 # Configure the site config file for lit
 configure_lit_site_cfg(
   ${LIBC_SOURCE_DIR}/test/lit.site.cfg.py.in
@@ -23,6 +28,7 @@ configure_lit_site_cfg(
   "LLVM_LIBS_DIR"
   "LIBC_SOURCE_DIR"
   "LIBC_BUILD_DIR"
+  "LIBC_GPU_LOADER_EXECUTABLE"
 )
 
 add_lit_testsuite(check-libc-lit

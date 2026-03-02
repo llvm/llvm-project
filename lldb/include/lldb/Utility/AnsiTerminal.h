@@ -74,6 +74,8 @@
 
 // Cursor Position, set cursor to position [l, c] (default = [1, 1]).
 #define ANSI_CSI_CUP(...) ANSI_ESC_START #__VA_ARGS__ "H"
+// Cursor Position, move cursor forward N columns.
+#define ANSI_CSI_CUF(N) (ANSI_ESC_START + N + "C")
 // Reset cursor to position.
 #define ANSI_CSI_RESET_CURSOR ANSI_CSI_CUP()
 // Erase In Display.
@@ -405,11 +407,9 @@ inline std::string TrimAndPad(llvm::StringRef str, size_t visible_length,
 // Output text that may contain ANSI codes, word wrapped (wrapped at whitespace)
 // to the given stream. The indent level of the stream is counted towards the
 // output line length.
-// FIXME: If an ANSI code is applied to multiple words and those words are split
-//        across lines, the code will apply to the indentation as well as the
-//        text.
 inline void OutputWordWrappedLines(Stream &strm, llvm::StringRef text,
-                                   uint32_t output_max_columns) {
+                                   uint32_t output_max_columns,
+                                   bool use_color) {
   // We will indent using the stream, so leading whitespace is not significant.
   text = text.ltrim();
   if (text.empty())
@@ -419,13 +419,24 @@ inline void OutputWordWrappedLines(Stream &strm, llvm::StringRef text,
   const uint32_t max_text_width =
       output_max_columns - strm.GetIndentLevel() - 1;
   bool first_line = true;
+  const std::string ansi_indent =
+      ANSI_CSI_CUF(std::to_string(strm.GetIndentLevel()));
 
   while (!text.empty()) {
     std::string split = TrimAtWordBoundary(text, max_text_width);
     if (!first_line)
       strm.EOL();
     first_line = false;
-    strm.Indent(split);
+
+    if (use_color) {
+      // If we are allowed to use colour (aka ANSI codes), we can indent using
+      // ANSI cursor movement. This means that if an ANSI formatted range of
+      // text is split across two lines, the indentation is not also formatted.
+      // Which it would be if we just emitted spaces.
+      strm << ansi_indent << split;
+    } else {
+      strm.Indent(split);
+    }
 
     text = text.drop_front(split.size()).ltrim();
   }

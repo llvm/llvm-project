@@ -1590,6 +1590,21 @@ private:
   void ParseLineTable(ModuleFile &F, const RecordData &Record);
   llvm::Error ReadSourceManagerBlock(ModuleFile &F);
   SourceLocation getImportLocation(ModuleFile *F);
+
+  /// The first element is `std::nullopt` if relocation check should be skipped.
+  /// Otherwise, the optional holds a pointer to the discovered module.
+  /// The pointer can be `nullptr` if the discovery was unsuccessful.
+  /// The second element determines whether to emit related errors.
+  using RelocationResult = std::pair<std::optional<Module *>, bool>;
+
+  /// Determine whether a relocation check for a module should be performed
+  /// by attempting to resolve the same module via lookup.
+  /// If so, also determine whether to emit errors for the relocation.
+  /// A relocated module is defined as a module that is either no longer
+  /// resolvable from the modulemap or search path it originally compiled it's
+  /// definition from.
+  RelocationResult getModuleForRelocationChecks(ModuleFile &F,
+                                                bool DirectoryCheck = false);
   ASTReadResult ReadModuleMapFileBlock(RecordData &Record, ModuleFile &F,
                                        const ModuleFile *ImportedBy,
                                        unsigned ClientLoadCapabilities);

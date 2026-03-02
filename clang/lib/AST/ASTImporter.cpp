@@ -3444,12 +3444,14 @@ ExpectedDecl ASTNodeImporter::VisitRecordDecl(RecordDecl *D) {
               DC, *TInfoOrErr, Loc, DCXX->getLambdaDependencyKind(),
               DCXX->isGenericLambda(), DCXX->getLambdaCaptureDefault()))
         return D2CXX;
-      CXXRecordDecl::LambdaNumbering Numbering = DCXX->getLambdaNumbering();
-      ExpectedDecl CDeclOrErr = import(Numbering.ContextDecl);
+      Decl *ContextDecl = DCXX->getLambdaContextDecl();
+      ExpectedDecl CDeclOrErr = import(ContextDecl);
       if (!CDeclOrErr)
         return CDeclOrErr.takeError();
-      Numbering.ContextDecl = *CDeclOrErr;
-      D2CXX->setLambdaNumbering(Numbering);
+      if (ContextDecl != nullptr) {
+        D2CXX->setLambdaContextDecl(*CDeclOrErr);
+      }
+      D2CXX->setLambdaNumbering(DCXX->getLambdaNumbering());
     } else {
       if (GetImportedOrCreateDecl(D2CXX, D, Importer.getToContext(),
                                   D->getTagKind(), DC, *BeginLocOrErr, Loc,
