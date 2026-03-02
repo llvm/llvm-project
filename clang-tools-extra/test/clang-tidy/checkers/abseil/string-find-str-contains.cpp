@@ -1,5 +1,10 @@
 // RUN: %check_clang_tidy %s abseil-string-find-str-contains %t --
 
+// FIXME: Mocks use by-value find(basic_string s, ...) instead of the real
+// find(const basic_string&, ...) signature. The checker's hasType(StringType)
+// matcher doesn't match reference types, so find(const string&) overloads are
+// never caught.
+
 using size_t = decltype(sizeof(int));
 
 namespace std {

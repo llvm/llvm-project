@@ -239,11 +239,6 @@ struct VPlanTransforms {
                                  unsigned BestUF,
                                  PredicatedScalarEvolution &PSE);
 
-  /// Try to simplify VPInstruction::ExplicitVectorLength recipes when the AVL
-  /// is known to be <= VF, replacing them with the AVL directly.
-  static bool simplifyKnownEVL(VPlan &Plan, ElementCount VF,
-                               PredicatedScalarEvolution &PSE);
-
   /// Apply VPlan-to-VPlan optimizations to \p Plan, including induction recipe
   /// optimizations, dead recipe removal, replicate region optimizations and
   /// block merging.
@@ -258,14 +253,9 @@ struct VPlanTransforms {
   /// Replace (ICMP_ULE, wide canonical IV, backedge-taken-count) checks with an
   /// (active-lane-mask recipe, wide canonical IV, trip-count). If \p
   /// UseActiveLaneMaskForControlFlow is true, introduce an
-  /// VPActiveLaneMaskPHIRecipe. If \p DataAndControlFlowWithoutRuntimeCheck is
-  /// true, no minimum-iteration runtime check will be created (during skeleton
-  /// creation) and instead it is handled using active-lane-mask. \p
-  /// DataAndControlFlowWithoutRuntimeCheck implies \p
-  /// UseActiveLaneMaskForControlFlow.
+  /// VPActiveLaneMaskPHIRecipe.
   static void addActiveLaneMask(VPlan &Plan,
-                                bool UseActiveLaneMaskForControlFlow,
-                                bool DataAndControlFlowWithoutRuntimeCheck);
+                                bool UseActiveLaneMaskForControlFlow);
 
   /// Insert truncates and extends for any truncated recipe. Redundant casts
   /// will be folded later.
