@@ -1516,10 +1516,18 @@ int openProfile() {
 /// Where 0xdeadbeef is this function address and PROCESSNAME your binary file
 /// name.
 extern "C" void __bolt_instr_clear_counters() {
-  memset(reinterpret_cast<char *>(__bolt_instr_locations), 0,
-         __bolt_num_counters * 8);
+  while (!GlobalWriteProfileMutex->acquire()) {
+  }
+
+  // Use atomic stores instead of memset to avoid torn writes that could be
+  // observed by other threads concurrently incrementing counters.
+  for (uint32_t I = 0; I < __bolt_num_counters; ++I)
+    __atomic_store_n(&__bolt_instr_locations[I], 0ULL, __ATOMIC_RELAXED);
+
   for (int I = 0; I < __bolt_instr_num_ind_calls; ++I)
     GlobalIndCallCounters[I].resetCounters();
+
+  GlobalWriteProfileMutex->release();
 }
 
 /// This is the entry point for profile writing.
