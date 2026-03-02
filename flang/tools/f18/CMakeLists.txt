@@ -142,8 +142,10 @@ if (NOT CMAKE_CROSSCOMPILING)
   else()
     message(WARNING "Not building omp_lib.mod, no OpenMP runtime in either LLVM_ENABLE_PROJECTS or LLVM_ENABLE_RUNTIMES")
   endif()
+  add_custom_target(flang-module-interfaces ALL DEPENDS module_files)
   add_llvm_install_targets(install-flang-module-interfaces
     COMPONENT flang-module-interfaces)
+  add_dependencies(install-flang-module-interfaces flang-module-interfaces)
 endif()
 
 add_custom_target(module_files ALL DEPENDS ${MODULE_FILES})
