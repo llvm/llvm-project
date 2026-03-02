@@ -189,7 +189,7 @@ else()
   set(LIBOMP_LINKER_LANGUAGE CXX)
 endif()
 if(LIBOMP_USE_HWLOC)
-  # Since we are using an object, the PRIVATE and INTERFACE options are split
+  # Since we are using an OBJECT library, the PRIVATE and INTERFACE options are split
   # (instead of using PUBLIC): obj.omp for compiling itself, omp for propagating
   # the options to other libraries that depend on it, e.g. libompd.
   target_include_directories(obj.omp
