@@ -179,8 +179,8 @@ bool AlwaysInlineImpl(
   }
 
   if (!InlinedComdatFunctions.empty()) {
-    // Now we just have the comdat functions. Filter out the ones whose
-    // comdats are not actually dead.
+    // Now we just have the comdat functions. Filter out the ones whose comdats
+    // are not actually dead.
     filterDeadComdatFunctions(InlinedComdatFunctions);
     // The remaining functions are actually dead.
     for (Function *F : InlinedComdatFunctions) {
