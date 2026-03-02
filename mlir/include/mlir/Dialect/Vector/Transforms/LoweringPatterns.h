@@ -66,7 +66,7 @@ void populateVectorOuterProductLoweringPatterns(RewritePatternSet &patterns,
 /// Rewrites vector.multi_reduction such that all reduction dimensions are
 /// either innermost or outermost, by adding the proper vector.transpose
 /// operations.
-void populateVectorMultiReductionReorderAndExpandPatterns(
+void populateVectorMultiReductionReorderPatterns(
     RewritePatternSet &patterns, VectorMultiReductionLowering options,
     PatternBenefit benefit = 2);
 

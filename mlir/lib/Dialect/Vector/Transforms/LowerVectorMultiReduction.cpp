@@ -496,7 +496,7 @@ struct LowerVectorMultiReductionPass
     MLIRContext *context = op->getContext();
 
     RewritePatternSet patterns(context);
-    mlir::vector::populateVectorMultiReductionReorderAndExpandPatterns(
+    mlir::vector::populateVectorMultiReductionReorderPatterns(
         patterns, this->loweringStrategy);
     if (failed(applyPatternsGreedily(op, std::move(patterns))))
       signalPassFailure();
@@ -521,7 +521,7 @@ struct LowerVectorMultiReductionPass
 
 } // namespace
 
-void mlir::vector::populateVectorMultiReductionReorderAndExpandPatterns(
+void mlir::vector::populateVectorMultiReductionReorderPatterns(
     RewritePatternSet &patterns, VectorMultiReductionLowering options,
     PatternBenefit benefit) {
   patterns.add<InnerOuterDimReductionConversion>(patterns.getContext(), options,
