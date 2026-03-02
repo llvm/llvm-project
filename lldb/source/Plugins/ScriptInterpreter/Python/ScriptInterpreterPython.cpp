@@ -290,6 +290,8 @@ llvm::StringRef ScriptInterpreterPython::GetPluginDescriptionStatic() {
 }
 
 void ScriptInterpreterPython::Initialize() {
+  HostInfo::SetSharedLibraryDirectoryHelper(
+      ScriptInterpreterPython::SharedLibraryDirectoryHelper);
   static llvm::once_flag g_once_flag;
   llvm::call_once(g_once_flag, []() {
     PluginManager::RegisterPlugin(GetPluginNameStatic(),
