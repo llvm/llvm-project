@@ -299,15 +299,23 @@ LLVM_ABI std::error_code create_directory(const Twine &path,
                                           bool IgnoreExisting = true,
                                           perms Perms = owner_all | group_all);
 
+/// Create a symbolic link from \a from to \a to.
+///
+/// This will fail on Windows if run without create symbolic link permissions.
+///
+/// @param to The path to the symlink target.
+/// @param from The path of the symlink to create.
+/// @returns errc::success if the link was created, otherwise a platform
+/// specific error_code.
+LLVM_ABI std::error_code create_symlink(const Twine &to, const Twine &from);
+
 /// Create a link from \a from to \a to.
 ///
-/// The link may be a soft or a hard link, depending on the platform. The caller
-/// may not assume which one. Currently on windows it creates a hard link since
-/// soft links require extra privileges. On unix, it creates a soft link since
-/// hard links don't work on SMB file systems.
+/// Tries to create a symbolic link first, and falls back to a hard link if
+/// that fails. The caller may not assume which type of link is created.
 ///
-/// @param to The path to hard link to.
-/// @param from The path to hard link from. This is created.
+/// @param to The path to link to.
+/// @param from The path to link from. This is created.
 /// @returns errc::success if the link was created, otherwise a platform
 /// specific error_code.
 LLVM_ABI std::error_code create_link(const Twine &to, const Twine &from);
@@ -330,6 +338,15 @@ LLVM_ABI std::error_code create_hard_link(const Twine &to, const Twine &from);
 LLVM_ABI std::error_code real_path(const Twine &path,
                                    SmallVectorImpl<char> &output,
                                    bool expand_tilde = false);
+
+/// Read the target of a symbolic link.
+///
+/// @param path The path of the symlink.
+/// @param output The location to store the symlink target.
+/// @returns errc::success if the symlink target has been stored in output,
+///          otherwise a platform-specific error_code.
+LLVM_ABI std::error_code readlink(const Twine &path,
+                                  SmallVectorImpl<char> &output);
 
 /// Expands ~ expressions to the user's home directory. On Unix ~user
 /// directories are resolved as well.

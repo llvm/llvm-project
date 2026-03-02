@@ -241,7 +241,7 @@ std::string getMainExecutable(const char *argv0, void *MainAddr) {
   const char *curproc = "/proc/curproc/file";
   char exe_path[PATH_MAX];
   if (sys::fs::exists(curproc)) {
-    ssize_t len = readlink(curproc, exe_path, sizeof(exe_path));
+    ssize_t len = ::readlink(curproc, exe_path, sizeof(exe_path));
     if (len > 0) {
       // Null terminate the string for realpath. readlink never null
       // terminates its output.
@@ -259,7 +259,7 @@ std::string getMainExecutable(const char *argv0, void *MainAddr) {
   const char *aPath = "/proc/self/exe";
   if (sys::fs::exists(aPath)) {
     // /proc is not always mounted under Linux (chroot for example).
-    ssize_t len = readlink(aPath, exe_path, sizeof(exe_path));
+    ssize_t len = ::readlink(aPath, exe_path, sizeof(exe_path));
     if (len < 0)
       return "";
 
@@ -430,9 +430,7 @@ std::error_code create_directory(const Twine &path, bool IgnoreExisting,
   return std::error_code();
 }
 
-// Note that we are using symbolic link because hard links are not supported by
-// all filesystems (SMB doesn't).
-std::error_code create_link(const Twine &to, const Twine &from) {
+std::error_code create_symlink(const Twine &to, const Twine &from) {
   // Get arguments.
   SmallString<128> from_storage;
   SmallString<128> to_storage;
@@ -443,6 +441,13 @@ std::error_code create_link(const Twine &to, const Twine &from) {
     return errnoAsErrorCode();
 
   return std::error_code();
+}
+
+std::error_code create_link(const Twine &to, const Twine &from) {
+  std::error_code EC = create_symlink(to, from);
+  if (EC)
+    EC = create_hard_link(to, from);
+  return EC;
 }
 
 std::error_code create_hard_link(const Twine &to, const Twine &from) {
@@ -1420,6 +1425,31 @@ std::error_code real_path(const Twine &path, SmallVectorImpl<char> &dest,
     return errnoAsErrorCode();
   dest.append(Buffer, Buffer + strlen(Buffer));
   return std::error_code();
+}
+
+std::error_code readlink(const Twine &path, SmallVectorImpl<char> &dest) {
+  dest.clear();
+
+  SmallString<128> Storage;
+  StringRef P = path.toNullTerminatedStringRef(Storage);
+
+  // Call ::readlink in a loop, growing the buffer until the result fits. We
+  // can't use lstat to get the size ahead of time because it's racy (the
+  // symlink can be replaced between lstat and readlink), and some filesystems
+  // (e.g. /proc on Linux) report st_size == 0 for symlinks.
+  size_t BufSize = 128;
+  for (;;) {
+    dest.resize_for_overwrite(BufSize);
+    ssize_t Len = ::readlink(P.begin(), dest.data(), dest.size());
+    if (Len < 0)
+      return errnoAsErrorCode();
+    if (static_cast<size_t>(Len) < BufSize) {
+      dest.truncate(Len);
+      return std::error_code();
+    }
+    // Result may have been truncated. Grow and retry.
+    BufSize *= 2;
+  }
 }
 
 std::error_code changeFileOwnership(int FD, uint32_t Owner, uint32_t Group) {
