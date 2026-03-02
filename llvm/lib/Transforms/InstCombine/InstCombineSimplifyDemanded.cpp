@@ -2384,7 +2384,7 @@ Value *InstCombinerImpl::SimplifyDemandedUseFPClass(Instruction *I,
     // fadd x, x can be handled more aggressively.
     if (I->getOperand(0) == I->getOperand(1) &&
         I->getOpcode() == Instruction::FAdd &&
-        isGuaranteedNotToBeUndef(I->getOperand(0), SQ.AC, I, SQ.DT,
+        isGuaranteedNotToBeUndef(I->getOperand(0), SQ.AC, SQ.CxtI, SQ.DT,
                                  Depth + 1)) {
       Type *EltTy = VTy->getScalarType();
       DenormalMode Mode = F.getDenormalMode(EltTy->getFltSemantics());
