@@ -115,11 +115,6 @@ public:
 
 using SUnitsToCandidateSGsMap = DenseMap<SUnit *, SmallVector<int, 4>>;
 
-/// Try to add and edge from SU \p A to SU \p B to the \p DAG.
-static bool tryAddEdge(ScheduleDAGInstrs *DAG, SUnit *A, SUnit *B) {
-  return A != B && DAG->addEdge(B, SDep(A, SDep::Artificial));
-}
-
 // Classify instructions into groups to enable fine tuned control over the
 // scheduler. These groups may be more specific than current SchedModel
 // instruction classes.
@@ -146,9 +141,6 @@ private:
   // Count of the number of created SchedGroups, used to initialize SGID.
   static unsigned NumSchedGroups;
 
-  // Try to add and edge from SU A to SU B.
-  bool tryAddEdge(SUnit *A, SUnit *B);
-
   // Use SGMask to determine whether we can classify MI as a member of this
   // SchedGroup object.
   bool canAddMI(const MachineInstr &MI) const;
@@ -159,6 +151,9 @@ public:
 
   ScheduleDAGInstrs *DAG;
   const SIInstrInfo *TII;
+
+  // Try to add and edge from SU A to SU B.
+  bool tryAddEdge(SUnit *A, SUnit *B);
 
   // Returns true if SU can be added to this SchedGroup.
   bool canAddSU(SUnit &SU) const;
@@ -746,8 +741,6 @@ void PipelineSolver::greedyFind(
 
       if (BestNodeCost == 0)
         break;
-
-      removeEdges(BestEdges);
     }
 
     removeEdges(TempEdges);
@@ -760,8 +753,8 @@ void PipelineSolver::greedyFind(
     else
       AddedEdges.splice(std::prev(AddedEdges.cend()), BestEdges);
     std::for_each(BestEdges.begin(), BestEdges.end(),
-                  [this](std::pair<SUnit *, SUnit *> E) {
-                    if (!tryAddEdge(DAG, E.first, E.second))
+                  [BestGroup](std::pair<SUnit *, SUnit *> E) {
+                    if (!BestGroup->tryAddEdge(E.first, E.second))
                       llvm_unreachable("Edges known to be insertable.");
                   });
 
@@ -2402,7 +2395,7 @@ public:
 unsigned SchedGroup::NumSchedGroups = 0;
 
 bool SchedGroup::tryAddEdge(SUnit *A, SUnit *B) {
-  return ::tryAddEdge(DAG, A, B);
+  return A != B && DAG->addEdge(B, SDep(A, SDep::Artificial));
 }
 
 bool SchedGroup::canAddMI(const MachineInstr &MI) const {
