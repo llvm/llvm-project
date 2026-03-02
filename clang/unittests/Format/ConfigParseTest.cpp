@@ -1750,6 +1750,63 @@ TEST(ConfigParseTest, GetStyleOutput) {
   ASSERT_TRUE(Output.empty());
 }
 
+TEST(ConfigParseTest, RedirectInheritance) {
+  llvm::vfs::InMemoryFileSystem FS;
+  constexpr StringRef Config("BasedOnStyle: InheritParentConfig\n"
+                             "ColumnLimit: 20");
+  constexpr StringRef Code("int *f(int i, int j);");
+
+  ASSERT_TRUE(
+      FS.addFile("/a/.clang-format", 0,
+                 llvm::MemoryBuffer::getMemBuffer("BasedOnStyle: GNU")));
+  ASSERT_TRUE(FS.addFile("/a/proj/.clang-format", 0,
+                         llvm::MemoryBuffer::getMemBuffer(
+                             "BasedOnStyle: InheritParentConfig=/a/config")));
+  ASSERT_TRUE(
+      FS.addFile("/a/proj/test.cc", 0, llvm::MemoryBuffer::getMemBuffer(Code)));
+  auto Style = getStyle("file", "/a/proj/test.cc", "none", "", &FS);
+  ASSERT_FALSE(static_cast<bool>(Style));
+  ASSERT_EQ(toString(Style.takeError()),
+            "Failed to inherit configuration directory /a/config");
+
+  ASSERT_TRUE(FS.addFile("/a/config/.clang-format", 0,
+                         llvm::MemoryBuffer::getMemBuffer(Config)));
+  Style = getStyle("file", "/a/proj/test.cc", "none", "", &FS);
+  ASSERT_TRUE(static_cast<bool>(Style));
+  ASSERT_EQ(*Style, [] {
+    auto Style = getGNUStyle();
+    Style.ColumnLimit = 20;
+    return Style;
+  }());
+
+  ASSERT_TRUE(FS.addFile(
+      "/a/proj/src/.clang-format", 0,
+      llvm::MemoryBuffer::getMemBuffer("BasedOnStyle: InheritParentConfig\n"
+                                       "PointerAlignment: Left")));
+  ASSERT_TRUE(FS.addFile("/a/proj/src/test.cc", 0,
+                         llvm::MemoryBuffer::getMemBuffer(Code)));
+  Style = getStyle("file", "/a/proj/src/test.cc", "none", "", &FS);
+  ASSERT_TRUE(static_cast<bool>(Style));
+  ASSERT_EQ(*Style, [] {
+    auto Style = getGNUStyle();
+    Style.ColumnLimit = 20;
+    Style.PointerAlignment = FormatStyle::PAS_Left;
+    return Style;
+  }());
+
+  ASSERT_TRUE(FS.addFile("/a/loop/.clang-format", 0,
+                         llvm::MemoryBuffer::getMemBuffer(
+                             "BasedOnStyle: InheritParentConfig=config/")));
+  ASSERT_TRUE(
+      FS.addFile("/a/loop/test.cc", 0, llvm::MemoryBuffer::getMemBuffer(Code)));
+  ASSERT_TRUE(FS.addFile("/a/loop/config/_clang-format", 0,
+                         llvm::MemoryBuffer::getMemBuffer(Config)));
+  Style = getStyle("file", "/a/loop/test.cc", "none", "", &FS);
+  ASSERT_FALSE(static_cast<bool>(Style));
+  ASSERT_EQ(toString(Style.takeError()),
+            "Loop detected when inheriting configuration file in /a/loop");
+}
+
 } // namespace
 } // namespace format
 } // namespace clang

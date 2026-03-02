@@ -330,6 +330,9 @@ public:
   /// or any kind of vector registers when \p LMul is zero.
   bool isVRegCopy(const MachineInstr *MI, unsigned LMul = 0) const;
 
+  /// Return true if the instruction requires an NTL hint to be emitted.
+  bool requiresNTLHint(const MachineInstr &MI) const;
+
   /// Return true if pairing the given load or store may be paired with another.
   static bool isPairableLdStInstOpc(unsigned Opc);
 

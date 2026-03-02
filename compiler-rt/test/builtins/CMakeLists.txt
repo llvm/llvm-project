@@ -79,13 +79,21 @@ foreach(arch ${BUILTIN_TEST_ARCH})
       # implementations are present in this library, and therefore, can be
       # expected to behave in the way expected by the extra-strict tests of NaN
       # and error handling.
-      list(APPEND BUILTINS_TEST_TARGET_CFLAGS -DCOMPILER_RT_ARM_OPTIMIZED_FP_THUMB1)
-    else()
+      list(APPEND BUILTINS_TEST_TARGET_CFLAGS
+        -DCOMPILER_RT_ARM_OPTIMIZED_FP_THUMB1)
+    elseif(NOT arch MATCHES "armv[456]")
       # For AArch32 targets that are not just Thumb-1, set a more general flag
       # _and_ the previous one too, so that tests can check
       # COMPILER_RT_ARM_OPTIMIZED_FP_THUMB1 by itself to test for an optimized
       # function available on all AArch32 platforms.
-      list(APPEND BUILTINS_TEST_TARGET_CFLAGS -DCOMPILER_RT_ARM_OPTIMIZED_FP)
+      #
+      # We exclude armv[456] because those architecture versions are too old
+      # for the optimized functions to support them at all. (And we test
+      # against the fixed set of too-old versions rather than the open-ended
+      # set of newer ones, for future-proofing.)
+      list(APPEND BUILTINS_TEST_TARGET_CFLAGS
+        -DCOMPILER_RT_ARM_OPTIMIZED_FP
+        -DCOMPILER_RT_ARM_OPTIMIZED_FP_THUMB1)
     endif()
     string(REPLACE ";" " " BUILTINS_TEST_TARGET_CFLAGS "${BUILTINS_TEST_TARGET_CFLAGS}")
   endif()

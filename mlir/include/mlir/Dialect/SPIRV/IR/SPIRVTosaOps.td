@@ -83,6 +83,40 @@ class SPIRV_TosaElementwiseBinaryOp<string mnemonic, int opcode, list<Trait> tra
     AllElementTypesMatch<["input1", "output"]>])> {
 }
 
+class SPIRV_TosaConvolutionOp<string mnemonic, int opcode, list<Trait> traits = []> :
+  SPIRV_TosaOpWithResult<mnemonic, opcode, !listconcat(traits, [Pure,
+    TypeConstraintImplicationOn<"input", I8, "output", [I32]>,
+    TypeConstraintImplicationOn<"input", I16, "output", [I64]>,
+    TypeConstraintImplicationOn<"input", BF16, "output", [BF16]>,
+    TypeConstraintImplicationOn<"input", F16, "output", [F16]>,
+    TypeConstraintImplicationOn<"input", F32, "output", [F32]>,
+    TypeConstraintImplicationOn<"input", BF16, "weight", [BF16]>,
+    TypeConstraintImplicationOn<"input", F16, "weight", [F16]>,
+    TypeConstraintImplicationOn<"input", F32, "weight", [F32]>,
+    TypeConstraintImplicationOn<"input", AnyInteger, "input", [I8, I16]>,
+    TypeConstraintImplicationOn<"weight", AnyInteger, "weight", [I8]>,
+    TypeImpliesAccType<"input", I8, ["INT32"]>,
+    TypeImpliesAccType<"input", I16, ["INT48"]>,
+    TypeImpliesAccType<"input", F16, ["FP16", "FP32"]>,
+    TypeImpliesAccType<"input", BF16, ["FP32"]>,
+    TypeImpliesAccType<"input", F32, ["FP32"]>,
+    AllElementTypesMatch<["bias", "output"]>,
+    AllElementTypesMatch<["input", "input_zp"]>,
+    AllElementTypesMatch<["weight", "weight_zp"]>])> {
+
+  let extraClassDeclaration = extraBaseClassDeclaration#[{
+    ::mlir::spirv::TensorArmType getInputType() {
+      return cast<::mlir::spirv::TensorArmType>(getInput().getType());
+    }
+    ::mlir::spirv::TensorArmType getWeightType() {
+      return cast<::mlir::spirv::TensorArmType>(getWeight().getType());
+    }
+    ::mlir::spirv::TensorArmType getBiasType() {
+      return cast<::mlir::spirv::TensorArmType>(getBias().getType());
+    }
+  }];
+}
+
 
 def SPIRV_TosaArgMaxOp : SPIRV_TosaOpWithResult<"ArgMax", 0, [Pure,
   OutputRankIsInputRankMinusOne<"input", "output">,
@@ -190,22 +224,7 @@ def SPIRV_TosaAvgPool2DOp : SPIRV_TosaOpWithResult<"AvgPool2D", 1, [Pure,
 }
 
 
-def SPIRV_TosaConv2DOp : SPIRV_TosaOpWithResult<"Conv2D", 2, [Pure,
-  TypeConstraintImplicationOn<"input", I8, "output", [I32]>,
-  TypeConstraintImplicationOn<"input", I16, "output", [I64]>,
-  TypeConstraintImplicationOn<"input", BF16, "output", [BF16]>,
-  TypeConstraintImplicationOn<"input", F16, "output", [F16]>,
-  TypeConstraintImplicationOn<"input", F32, "output", [F32]>,
-  TypeConstraintImplicationOn<"input", AnyInteger, "input", [I8, I16]>,
-  TypeConstraintImplicationOn<"weight", AnyInteger, "weight", [I8]>,
-  TypeImpliesAccType<"input", I8, ["INT32"]>,
-  TypeImpliesAccType<"input", I16, ["INT48"]>,
-  TypeImpliesAccType<"input", F16, ["FP16", "FP32"]>,
-  TypeImpliesAccType<"input", BF16, ["FP32"]>,
-  TypeImpliesAccType<"input", F32, ["FP32"]>,
-  AllElementTypesMatch<["bias", "output"]>,
-  AllElementTypesMatch<["input", "input_zp"]>,
-  AllElementTypesMatch<["weight", "weight_zp"]>]> {
+def SPIRV_TosaConv2DOp : SPIRV_TosaConvolutionOp<"Conv2D", 2> {
   let summary = "2D Convolution operator.";
 
   let description = [{
@@ -257,36 +276,10 @@ def SPIRV_TosaConv2DOp : SPIRV_TosaOpWithResult<"Conv2D", 2, [Pure,
     attr-dict `:` type(operands) `->` type(results)
   }];
 
-  let extraClassDeclaration = extraBaseClassDeclaration#[{
-    ::mlir::spirv::TensorArmType getInputType() {
-      return cast<::mlir::spirv::TensorArmType>(getInput().getType());
-    }
-    ::mlir::spirv::TensorArmType getWeightType() {
-      return cast<::mlir::spirv::TensorArmType>(getWeight().getType());
-    }
-    ::mlir::spirv::TensorArmType getBiasType() {
-      return cast<::mlir::spirv::TensorArmType>(getBias().getType());
-    }
-  }];
 }
 
 
-def SPIRV_TosaConv3DOp : SPIRV_TosaOpWithResult<"Conv3D", 3, [Pure,
-  TypeConstraintImplicationOn<"input", I8, "output", [I32]>,
-  TypeConstraintImplicationOn<"input", I16, "output", [I64]>,
-  TypeConstraintImplicationOn<"input", BF16, "output", [BF16]>,
-  TypeConstraintImplicationOn<"input", F16, "output", [F16]>,
-  TypeConstraintImplicationOn<"input", F32, "output", [F32]>,
-  TypeConstraintImplicationOn<"input", AnyInteger, "input", [I8, I16]>,
-  TypeConstraintImplicationOn<"weight", AnyInteger, "weight", [I8]>,
-  TypeImpliesAccType<"input", I8, ["INT32"]>,
-  TypeImpliesAccType<"input", I16, ["INT48"]>,
-  TypeImpliesAccType<"input", F16, ["FP16", "FP32"]>,
-  TypeImpliesAccType<"input", BF16, ["FP32"]>,
-  TypeImpliesAccType<"input", F32, ["FP32"]>,
-  AllElementTypesMatch<["bias", "output"]>,
-  AllElementTypesMatch<["input", "input_zp"]>,
-  AllElementTypesMatch<["weight", "weight_zp"]>]> {
+def SPIRV_TosaConv3DOp : SPIRV_TosaConvolutionOp<"Conv3D", 3> {
   let summary = "3D Convolution operator.";
 
   let description = [{
@@ -337,36 +330,10 @@ def SPIRV_TosaConv3DOp : SPIRV_TosaOpWithResult<"Conv3D", 3, [Pure,
     attr-dict `:` type(operands) `->` type(results)
   }];
 
-  let extraClassDeclaration = extraBaseClassDeclaration#[{
-    ::mlir::spirv::TensorArmType getInputType() {
-      return cast<::mlir::spirv::TensorArmType>(getInput().getType());
-    }
-    ::mlir::spirv::TensorArmType getWeightType() {
-      return cast<::mlir::spirv::TensorArmType>(getWeight().getType());
-    }
-    ::mlir::spirv::TensorArmType getBiasType() {
-      return cast<::mlir::spirv::TensorArmType>(getBias().getType());
-    }
-  }];
 }
 
 
-def SPIRV_TosaDepthwiseConv2DOp : SPIRV_TosaOpWithResult<"DepthwiseConv2D", 4, [Pure,
-  TypeConstraintImplicationOn<"input", I8, "output", [I32]>,
-  TypeConstraintImplicationOn<"input", I16, "output", [I64]>,
-  TypeConstraintImplicationOn<"input", BF16, "output", [BF16]>,
-  TypeConstraintImplicationOn<"input", F16, "output", [F16]>,
-  TypeConstraintImplicationOn<"input", F32, "output", [F32]>,
-  TypeConstraintImplicationOn<"input", AnyInteger, "input", [I8, I16]>,
-  TypeConstraintImplicationOn<"weight", AnyInteger, "weight", [I8]>,
-  TypeImpliesAccType<"input", I8, ["INT32"]>,
-  TypeImpliesAccType<"input", I16, ["INT48"]>,
-  TypeImpliesAccType<"input", F16, ["FP16", "FP32"]>,
-  TypeImpliesAccType<"input", BF16, ["FP32"]>,
-  TypeImpliesAccType<"input", F32, ["FP32"]>,
-  AllElementTypesMatch<["bias", "output"]>,
-  AllElementTypesMatch<["input", "input_zp"]>,
-  AllElementTypesMatch<["weight", "weight_zp"]>]> {
+def SPIRV_TosaDepthwiseConv2DOp : SPIRV_TosaConvolutionOp<"DepthwiseConv2D", 4> {
   let summary = "Depthwise 2D Convolution operator.";
 
   let description = [{
@@ -418,17 +385,6 @@ def SPIRV_TosaDepthwiseConv2DOp : SPIRV_TosaOpWithResult<"DepthwiseConv2D", 4, [
     attr-dict `:` type(operands) `->` type(results)
   }];
 
-  let extraClassDeclaration = extraBaseClassDeclaration#[{
-    ::mlir::spirv::TensorArmType getInputType() {
-      return cast<::mlir::spirv::TensorArmType>(getInput().getType());
-    }
-    ::mlir::spirv::TensorArmType getWeightType() {
-      return cast<::mlir::spirv::TensorArmType>(getWeight().getType());
-    }
-    ::mlir::spirv::TensorArmType getBiasType() {
-      return cast<::mlir::spirv::TensorArmType>(getBias().getType());
-    }
-  }];
 }
 
 
@@ -635,22 +591,7 @@ def SPIRV_TosaRFFT2DOp : SPIRV_TosaOpWithComplexResult<"RFFT2D", 8, [Pure]> {
 }
 
 
-def SPIRV_TosaTransposeConv2DOp : SPIRV_TosaOpWithResult<"TransposeConv2D", 9, [Pure,
-  TypeConstraintImplicationOn<"input", I8, "output", [I32]>,
-  TypeConstraintImplicationOn<"input", I16, "output", [I64]>,
-  TypeConstraintImplicationOn<"input", BF16, "output", [BF16]>,
-  TypeConstraintImplicationOn<"input", F16, "output", [F16]>,
-  TypeConstraintImplicationOn<"input", F32, "output", [F32]>,
-  TypeConstraintImplicationOn<"input", AnyInteger, "input", [I8, I16]>,
-  TypeConstraintImplicationOn<"weight", AnyInteger, "weight", [I8]>,
-  TypeImpliesAccType<"input", I8, ["INT32"]>,
-  TypeImpliesAccType<"input", I16, ["INT48"]>,
-  TypeImpliesAccType<"input", F16, ["FP16", "FP32"]>,
-  TypeImpliesAccType<"input", BF16, ["FP32"]>,
-  TypeImpliesAccType<"input", F32, ["FP32"]>,
-  AllElementTypesMatch<["bias", "output"]>,
-  AllElementTypesMatch<["input", "input_zp"]>,
-  AllElementTypesMatch<["weight", "weight_zp"]>]> {
+def SPIRV_TosaTransposeConv2DOp : SPIRV_TosaConvolutionOp<"TransposeConv2D", 9> {
   let summary = "Transpose 2D Convolution operator.";
 
   let description = [{
@@ -700,17 +641,6 @@ def SPIRV_TosaTransposeConv2DOp : SPIRV_TosaOpWithResult<"TransposeConv2D", 9, [
     attr-dict `:` type(operands) `->` type(results)
   }];
 
-  let extraClassDeclaration = extraBaseClassDeclaration#[{
-    ::mlir::spirv::TensorArmType getInputType() {
-      return cast<::mlir::spirv::TensorArmType>(getInput().getType());
-    }
-    ::mlir::spirv::TensorArmType getWeightType() {
-      return cast<::mlir::spirv::TensorArmType>(getWeight().getType());
-    }
-    ::mlir::spirv::TensorArmType getBiasType() {
-      return cast<::mlir::spirv::TensorArmType>(getBias().getType());
-    }
-  }];
 }
 
 
@@ -1100,5 +1030,178 @@ def SPIRV_TosaIntDivOp : SPIRV_TosaElementwiseBinaryOp<"IntDiv", 19, [NoMemoryEf
   }];
 }
 
+
+def SPIRV_TosaLogicalAndOp : SPIRV_TosaElementwiseBinaryOp<"LogicalAnd", 20, [Pure]> {
+  let summary = "Logical AND operator.";
+
+  let description = [{
+    Elementwise Logical AND of input1 and input2. Axis of size 1 will be
+    broadcast, as necessary. Rank of input tensors must match.
+
+    References:
+      * https://github.khronos.org/SPIRV-Registry/extended/TOSA.001000.1.html#_logical_and
+      * https://www.mlplatform.org/tosa/tosa_spec_1_0_1.html#_logical_and
+
+    #### Example:
+    ```mlir
+    %0 = spirv.Tosa.LogicalAnd %arg0, %arg1 : !spirv.arm.tensor<2x1x7x11xi1>, !spirv.arm.tensor<2x4x7x11xi1> -> !spirv.arm.tensor<2x4x7x11xi1>
+    ```
+  }];
+
+  let arguments = (ins
+    SPIRV_Bool_TensorArm: $input1,
+    SPIRV_Bool_TensorArm: $input2
+  );
+
+  let results = (outs
+    SPIRV_Bool_TensorArm: $output
+  );
+
+  let assemblyFormat = [{
+    $input1 `,`
+    $input2
+    attr-dict `:` type(operands) `->` type(results)
+  }];
+}
+
+
+def SPIRV_TosaLogicalLeftShiftOp : SPIRV_TosaElementwiseBinaryOp<"LogicalLeftShift", 21, [NoMemoryEffect]> {
+  let summary = "Logical Left Shift operator.";
+
+  let description = [{
+    Elementwise Logical Left Shift of input1 by the amount specified in input2.
+    Axis of size 1 will be broadcast, as necessary. Rank of input tensors
+    must match. The behavior is undefined if the shift value is negative or
+    greater or equal to the bit-width of the element type.
+
+    References:
+      * https://github.khronos.org/SPIRV-Registry/extended/TOSA.001000.1.html#_logical_left_shift
+      * https://www.mlplatform.org/tosa/tosa_spec_1_0_1.html#_logical_left_shift
+
+    #### Example:
+    ```mlir
+    %0 = spirv.Tosa.LogicalLeftShift %arg0, %arg1 : !spirv.arm.tensor<7x1x11x4xi8>, !spirv.arm.tensor<7x8x11x4xi8> -> !spirv.arm.tensor<7x8x11x4xi8>
+    ```
+  }];
+
+  let arguments = (ins
+    SPIRV_TosaInteger_TensorArm: $input1,
+    SPIRV_TosaInteger_TensorArm: $input2
+  );
+
+  let results = (outs
+    SPIRV_TosaInteger_TensorArm: $output
+  );
+
+  let assemblyFormat = [{
+    $input1 `,`
+    $input2
+    attr-dict `:` type(operands) `->` type(results)
+  }];
+}
+
+
+def SPIRV_TosaLogicalRightShiftOp : SPIRV_TosaElementwiseBinaryOp<"LogicalRightShift", 22, [NoMemoryEffect]> {
+  let summary = "Logical Right Shift operator.";
+
+  let description = [{
+    Elementwise Logical Right Shift of input1 by the amount specified in input2.
+    Axis of size 1 will be broadcast, as necessary. Rank of input tensors must
+    match. The behavior is undefined if the shift value is negative or
+    greater or equal to the bit-width of the element type.
+
+    References:
+      * https://github.khronos.org/SPIRV-Registry/extended/TOSA.001000.1.html#_logical_right_shift
+      * https://www.mlplatform.org/tosa/tosa_spec_1_0_1.html#_logical_right_shift
+
+    #### Example:
+    ```mlir
+    %0 = spirv.Tosa.LogicalRightShift %arg0, %arg1 : !spirv.arm.tensor<6x13x1x19xi8>, !spirv.arm.tensor<6x13x6x19xi8> -> !spirv.arm.tensor<6x13x6x19xi8>
+    ```
+  }];
+
+  let arguments = (ins
+    SPIRV_TosaInteger_TensorArm: $input1,
+    SPIRV_TosaInteger_TensorArm: $input2
+  );
+
+  let results = (outs
+    SPIRV_TosaInteger_TensorArm: $output
+  );
+
+  let assemblyFormat = [{
+    $input1 `,`
+    $input2
+    attr-dict `:` type(operands) `->` type(results)
+  }];
+}
+
+
+def SPIRV_TosaLogicalOrOp : SPIRV_TosaElementwiseBinaryOp<"LogicalOr", 23, [Pure]> {
+  let summary = "Logical OR operator.";
+
+  let description = [{
+    Elementwise logical OR of input1 and input2. Axis of size 1 will be
+    broadcast as necessary. Rank of input tensors must match.
+
+    References:
+      * https://github.khronos.org/SPIRV-Registry/extended/TOSA.001000.1.html#_logical_or
+      * https://www.mlplatform.org/tosa/tosa_spec_1_0_1.html#_logical_or
+
+    #### Example:
+    ```mlir
+    %0 = spirv.Tosa.LogicalOr %arg0, %arg1 : !spirv.arm.tensor<3x6x12x5xi1>, !spirv.arm.tensor<3x6x1x5xi1> -> !spirv.arm.tensor<3x6x12x5xi1>
+    ```
+  }];
+
+  let arguments = (ins
+    SPIRV_Bool_TensorArm: $input1,
+    SPIRV_Bool_TensorArm: $input2
+  );
+
+  let results = (outs
+    SPIRV_Bool_TensorArm: $output
+  );
+
+  let assemblyFormat = [{
+    $input1 `,`
+    $input2
+    attr-dict `:` type(operands) `->` type(results)
+  }];
+}
+
+
+def SPIRV_TosaLogicalXorOp : SPIRV_TosaElementwiseBinaryOp<"LogicalXor", 24, [Pure]> {
+  let summary = "Logical XOR operator.";
+
+  let description = [{
+    Elementwise logical XOR of input1 and input2. Axis of size 1 will be
+    broadcast as necessary. Rank of input tensors must match.
+
+    References:
+      * https://github.khronos.org/SPIRV-Registry/extended/TOSA.001000.1.html#_logical_xor
+      * https://www.mlplatform.org/tosa/tosa_spec_1_0_1.html#_logical_xor
+
+    #### Example:
+    ```mlir
+    %0 = spirv.Tosa.LogicalXor %arg0, %arg1 : !spirv.arm.tensor<11x4x9x12xi1>, !spirv.arm.tensor<11x4x9x1xi1> -> !spirv.arm.tensor<11x4x9x12xi1>
+    ```
+  }];
+
+  let arguments = (ins
+    SPIRV_Bool_TensorArm: $input1,
+    SPIRV_Bool_TensorArm: $input2
+  );
+
+  let results = (outs
+    SPIRV_Bool_TensorArm: $output
+  );
+
+  let assemblyFormat = [{
+    $input1 `,`
+    $input2
+    attr-dict `:` type(operands) `->` type(results)
+  }];
+}
 
 #endif // MLIR_DIALECT_SPIRV_IR_TOSA_OPS
