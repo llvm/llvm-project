@@ -9441,7 +9441,7 @@ void LinkerWrapper::ConstructJob(Compilation &C, const JobAction &JA,
 
   if (const llvm::Triple *AuxTriple = getToolChain().getAuxTriple())
     CmdArgs.push_back(
-        Args.MakeArgString("--host-triple=" + AuxTriple->normalize()));
+        Args.MakeArgString("--host-triple=" + AuxTriple->getTriple()));
   else
     CmdArgs.push_back(Args.MakeArgString("--host-triple=" +
                                          getToolChain().getTripleString()));
