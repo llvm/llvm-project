@@ -5179,6 +5179,33 @@ static FixedVectorType *tryCanonicalizeStructToVector(StructType *STy,
   return FixedVectorType::get(EltTy, NumElts);
 }
 
+/// Returns true if this partition has PHI/select related users that can
+/// benefit from canonicalizing homogeneous struct partitions to vectors.
+static bool hasPhiOrSelectUsersInPartition(Partition &P) {
+  auto IsPhiOrSelectRelated = [](const Slice &S) {
+    const auto *I = dyn_cast<Instruction>(S.getUse()->getUser());
+    if (!I)
+      return false;
+
+    if (isa<PHINode>(I) || isa<SelectInst>(I))
+      return true;
+
+    if (const auto *MI = dyn_cast<MemTransferInst>(I))
+      return isa<PHINode>(MI->getRawSource()) ||
+             isa<SelectInst>(MI->getRawSource()) ||
+             isa<PHINode>(MI->getRawDest()) ||
+             isa<SelectInst>(MI->getRawDest());
+
+    return false;
+  };
+
+  if (any_of(P, IsPhiOrSelectRelated))
+    return true;
+
+  return any_of(P.splitSliceTails(),
+                [&](const Slice *S) { return IsPhiOrSelectRelated(*S); });
+}
+
 /// Select a partition type for an alloca partition.
 ///
 /// Try to compute a friendly type for this partition of the alloca. This
@@ -5265,17 +5292,8 @@ selectPartitionType(Partition &P, const DataLayout &DL, AllocaInst &AI,
       bool HasNonSplittable =
           any_of(P, [](const Slice &S) { return !S.isSplittable(); });
       bool ShouldConvert = HasNonSplittable;
-      if (!ShouldConvert) {
-        ShouldConvert = any_of(AI.users(), [&AI](const User *U) {
-          if (isa<PHINode>(U) || isa<SelectInst>(U))
-            return true;
-          if (const auto *MI = dyn_cast<MemTransferInst>(U))
-            for (const Value *Op : {MI->getRawSource(), MI->getRawDest()})
-              if (Op != &AI && (isa<PHINode>(Op) || isa<SelectInst>(Op)))
-                return true;
-          return false;
-        });
-      }
+      if (!ShouldConvert)
+        ShouldConvert = hasPhiOrSelectUsersInPartition(P);
       if (ShouldConvert)
         if (auto *STy = dyn_cast<StructType>(TypePartitionTy))
           if (auto *VTy = tryCanonicalizeStructToVector(STy, DL))
