@@ -1044,9 +1044,7 @@ void VPlanTransforms::foldTailByMasking(VPlan &Plan) {
 
   VPValue *V;
   for (VPRecipeBase &R : *Plan.getMiddleBlock())
-    if (match(&R, m_CombineOr(m_VPInstruction<VPInstruction::ExitingIVValue>(
-                                  m_VPValue(V)),
-                              m_ExtractLastPart(m_VPValue(V)))))
+    if (match(&R, m_ExtractLastPart(m_VPValue(V))))
       NeedsPhi[V].push_back(&R);
 
   // Insert phis with a poison incoming value for past the end of the tail.
@@ -1071,7 +1069,7 @@ void VPlanTransforms::foldTailByMasking(VPlan &Plan) {
   Builder.setInsertPoint(Plan.getMiddleBlock()->getTerminator());
   for (VPRecipeBase &R : *Plan.getMiddleBlock()) {
     VPValue *Op;
-    if (!match(&R, m_ExtractLastLane(m_ExtractLastPart(m_VPValue(Op)))))
+    if (!match(&R, m_ExtractLastLaneOfLastPart(m_VPValue(Op))))
       continue;
 
     // Compute the index of the last active lane.
