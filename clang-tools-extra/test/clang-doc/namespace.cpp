@@ -147,7 +147,7 @@ class ClassInNestedNamespace {};
 // HTML-NESTED-INDEX:         <pre><code class="language-cpp code-clang-doc">void functionInNestedNamespace ()</code></pre>
 // HTML-NESTED-INDEX:         <div class="doc-card">
 // HTML-NESTED-INDEX:             <div class="nested-delimiter-container">
-// HTML-NESTED-INDEX:                 <p> Function in NestedNamespace</p>
+// HTML-NESTED-INDEX:                 <p>Function in NestedNamespace</p>
 // HTML-NESTED-INDEX:             </div>
 // HTML-NESTED-INDEX:         </div>
 // HTML-NESTED-INDEX:         <p>Defined at line 105 of file {{.*}}namespace.cpp</p>
@@ -182,7 +182,7 @@ class ClassInNestedNamespace {};
 // HTML-PRIMARY-INDEX:          <pre><code class="language-cpp code-clang-doc">void functionInPrimaryNamespace ()</code></pre>
 // HTML-PRIMARY-INDEX:          <div class="doc-card">
 // HTML-PRIMARY-INDEX:              <div class="nested-delimiter-container">
-// HTML-PRIMARY-INDEX:                  <p> Function in PrimaryNamespace</p>
+// HTML-PRIMARY-INDEX:                  <p>Function in PrimaryNamespace</p>
 // HTML-PRIMARY-INDEX:              </div>
 // HTML-PRIMARY-INDEX:          </div>
 // HTML-PRIMARY-INDEX:          <p>Defined at line 84 of file {{.*}}clang-tools-extra{{[\/]}}test{{[\/]}}clang-doc{{[\/]}}namespace.cpp</p>
@@ -234,7 +234,7 @@ class ClassInAnotherNamespace {};
 // HTML-ANOTHER-INDEX:         <pre><code class="language-cpp code-clang-doc">void functionInAnotherNamespace ()</code></pre>
 // HTML-ANOTHER-INDEX:         <div class="doc-card">
 // HTML-ANOTHER-INDEX:             <div class="nested-delimiter-container">
-// HTML-ANOTHER-INDEX:                 <p> Function in AnotherNamespace</p>
+// HTML-ANOTHER-INDEX:                 <p>Function in AnotherNamespace</p>
 // HTML-ANOTHER-INDEX:             </div>
 // HTML-ANOTHER-INDEX:         </div>
 // HTML-ANOTHER-INDEX:         <p>Defined at line 193 of file {{.*}}clang-tools-extra{{[\/]}}test{{[\/]}}clang-doc{{[\/]}}namespace.cpp</p>

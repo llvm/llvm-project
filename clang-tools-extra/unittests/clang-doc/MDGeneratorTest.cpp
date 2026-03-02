@@ -292,7 +292,7 @@ TEST_F(MDGeneratorTest, emitCommentMD) {
       std::make_unique<CommentInfo>());
   ParamOut->Children.back()->Children.back()->Kind =
       CommentKind::CK_TextComment;
-  ParamOut->Children.back()->Children.back()->Text = " is a parameter.";
+  ParamOut->Children.back()->Children.back()->Text = "is a parameter.";
 
   Top.Children.emplace_back(std::make_unique<CommentInfo>());
   CommentInfo *ParamIn = Top.Children.back().get();
@@ -304,7 +304,7 @@ TEST_F(MDGeneratorTest, emitCommentMD) {
   ParamIn->Children.back()->Children.emplace_back(
       std::make_unique<CommentInfo>());
   ParamIn->Children.back()->Children.back()->Kind = CommentKind::CK_TextComment;
-  ParamIn->Children.back()->Children.back()->Text = " is a parameter.";
+  ParamIn->Children.back()->Children.back()->Text = "is a parameter.";
   ParamIn->Children.back()->Children.emplace_back(
       std::make_unique<CommentInfo>());
   ParamIn->Children.back()->Children.back()->Kind = CommentKind::CK_TextComment;
@@ -356,7 +356,7 @@ TEST_F(MDGeneratorTest, emitCommentMD) {
 
 **J** is a parameter.
 
-**return**void
+**return** void
 
 )raw";
 

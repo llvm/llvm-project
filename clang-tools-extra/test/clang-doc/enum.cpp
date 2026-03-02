@@ -38,7 +38,7 @@ enum Color {
 // MD-INDEX: | Red |
 // MD-INDEX: | Green |
 // MD-INDEX: | Blue |
-// MD-INDEX: **brief**For specifying RGB colors
+// MD-INDEX: **brief** For specifying RGB colors
 
 // HTML-INDEX-LABEL:  <div id="{{([0-9A-F]{40})}}" class="delimiter-container">
 // HTML-INDEX-NEXT:     <div>
@@ -106,7 +106,7 @@ enum class Shapes {
 // MD-INDEX: | Circle |
 // MD-INDEX: | Rectangle |
 // MD-INDEX: | Triangle |
-// MD-INDEX: **brief**Shape Types
+// MD-INDEX: **brief** Shape Types
 
 // HTML-INDEX-LABEL:  <div id="{{([0-9A-F]{40})}}" class="delimiter-container">
 // HTML-INDEX-NEXT:     <div>
@@ -179,7 +179,7 @@ enum Size : uint8_t {
 // MD-INDEX: | Small |
 // MD-INDEX: | Medium |
 // MD-INDEX: | Large |
-// MD-INDEX: **brief**Specify the size
+// MD-INDEX: **brief** Specify the size
 
 // HTML-INDEX-LABEL:   <div id="{{([0-9A-F]{40})}}" class="delimiter-container">
 // HTML-INDEX-NEXT:     <div>
@@ -242,7 +242,7 @@ enum : long long {
 // MD-INDEX: | enum (unnamed) : long long |
 // MD-INDEX: --
 // MD-INDEX: | BigVal |
-// MD-INDEX: **brief**Very long number
+// MD-INDEX: **brief** Very long number
 
 // HTML-INDEX-LABEL:  <div id="{{([0-9A-F]{40})}}" class="delimiter-container">
 // HTML-INDEX-NEXT:     <div>
@@ -294,7 +294,7 @@ public:
 // MD-PERM: | Read |
 // MD-PERM: | Write |
 // MD-PERM: | Execute |
-// MD-PERM: **brief**File permission flags
+// MD-PERM: **brief** File permission flags
 
 // HTML-PERM-LABEL:  <section id="Enums" class="section-container">
 // HTML-PERM-NEXT:     <h2>Enumerations</h2>
@@ -416,7 +416,7 @@ public:
 // MD-ANIMAL: | Dog |
 // MD-ANIMAL: | Cat |
 // MD-ANIMAL: | Iguana |
-// MD-ANIMAL: **brief**specify what animal the class is
+// MD-ANIMAL: **brief** specify what animal the class is
 
 namespace Vehicles {
 /**
@@ -441,7 +441,7 @@ enum Car {
 // MD-VEHICLES: | SUV |
 // MD-VEHICLES: | Pickup |
 // MD-VEHICLES: | Hatchback |
-// MD-VEHICLES: **brief**specify type of car
+// MD-VEHICLES: **brief** specify type of car
 
 // HTML-VEHICLES-LABEL:   <div id="{{([0-9A-F]{40})}}" class="delimiter-container">
 // HTML-VEHICLES-NEXT:      <div>
