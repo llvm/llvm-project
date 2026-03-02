@@ -24,7 +24,7 @@ struct HypotTestTemplate : public LIBC_NAMESPACE::testing::Test {
     // Pythagorean triples.
     constexpr T PYT[N][3] = {{T(3), T(4), T(5)},
                              {T(5), T(12), T(13)},
-                             {T(8), T(15), 17},
+                             {T(8), T(15), T(17)},
                              {T(7), T(24), T(25)}};
 
 #ifndef LIBC_TARGET_ARCH_IS_NVPTX
