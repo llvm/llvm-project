@@ -6795,7 +6795,7 @@ static void sumOffsets(llvm::APSInt &Offset, llvm::APSInt Addend,
     return;
   }
 
-  Offset = ResOffset;
+  Offset = std::move(ResOffset);
 }
 
 namespace {

@@ -501,7 +501,7 @@ bool FileManager::fixupRelativePath(const FileSystemOptions &FileSystemOpts,
 
   SmallString<128> NewPath(FileSystemOpts.WorkingDir);
   llvm::sys::path::append(NewPath, pathRef);
-  Path = NewPath;
+  Path = std::move(NewPath);
   return true;
 }
 

@@ -3742,7 +3742,7 @@ static bool handleScalarCast(EvalInfo &Info, const FPOptions FPO, const Expr *E,
                                 Info.Ctx.getIntTypeForBitwidth(64, false),
                                 Result.getInt(), DestTy, Result2.getFloat()))
         return false;
-      Result = Result2;
+      Result = std::move(Result2);
     }
     return true;
   }
@@ -21603,7 +21603,7 @@ bool Expr::isCXX11ConstantExpr(const ASTContext &Ctx, APValue *Result) const {
   APValue Scratch;
   if (FastEvaluateAsRValue(this, Scratch, Ctx, IsConst) && Scratch.hasValue()) {
     if (Result)
-      *Result = Scratch;
+      *Result = std::move(Scratch);
     return true;
   }
 
