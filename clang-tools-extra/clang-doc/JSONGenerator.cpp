@@ -1,6 +1,5 @@
 #include "Generators.h"
 #include "clang/Basic/Specifiers.h"
-#include "llvm/ADT/StringRef.h"
 #include "llvm/Support/JSON.h"
 
 using namespace llvm;
