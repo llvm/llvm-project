@@ -1138,7 +1138,8 @@ static bool CheckAArch64AtomicStoreWithStshhCall(SemaARM &S,
   // Check arg 0 is a pointer type, err out if not
   const PointerType *PointerTy = PtrType->getAs<PointerType>();
   if (!PointerTy) {
-    SemaRef.Diag(PointerArg->getBeginLoc(), diag::err_atomic_builtin_must_be_pointer)
+    SemaRef.Diag(PointerArg->getBeginLoc(),
+                 diag::err_atomic_builtin_must_be_pointer)
         << PtrType << 0 << PointerArg->getSourceRange();
     return true;
   }
@@ -1146,7 +1147,8 @@ static bool CheckAArch64AtomicStoreWithStshhCall(SemaARM &S,
   // Reject const-qualified pointee types
   QualType ValType = PointerTy->getPointeeType();
   if (ValType.isConstQualified()) {
-    SemaRef.Diag(PointerArg->getBeginLoc(), diag::err_atomic_builtin_cannot_be_const)
+    SemaRef.Diag(PointerArg->getBeginLoc(),
+                 diag::err_atomic_builtin_cannot_be_const)
         << PtrType << PointerArg->getSourceRange();
     return true;
   }
@@ -1155,7 +1157,8 @@ static bool CheckAArch64AtomicStoreWithStshhCall(SemaARM &S,
   unsigned Bits = Context.getTypeSize(ValType);
   if (!ValType->isIntegerType() ||
       (Bits != 8 && Bits != 16 && Bits != 32 && Bits != 64)) {
-    SemaRef.Diag(PointerArg->getBeginLoc(), diag::err_arm_atomic_store_with_stshh_bad_type)
+    SemaRef.Diag(PointerArg->getBeginLoc(),
+                 diag::err_arm_atomic_store_with_stshh_bad_type)
         << PtrType << PointerArg->getSourceRange();
     return true;
   }
@@ -1165,7 +1168,8 @@ static bool CheckAArch64AtomicStoreWithStshhCall(SemaARM &S,
 
   // Check value type and width
   if (!Context.hasSameType(ValArgType, ValType)) {
-    SemaRef.Diag(ValArg->getBeginLoc(), diag::err_arm_atomic_store_with_stshh_bad_value_type)
+    SemaRef.Diag(ValArg->getBeginLoc(),
+                 diag::err_arm_atomic_store_with_stshh_bad_value_type)
         << ValType << ValArg->getType() << ValArg->getSourceRange();
     return true;
   }
@@ -1174,7 +1178,8 @@ static bool CheckAArch64AtomicStoreWithStshhCall(SemaARM &S,
   std::optional<llvm::APSInt> OrderValOpt =
       OrderArg->getIntegerConstantExpr(Context);
   if (!OrderValOpt) {
-    SemaRef.Diag(OrderArg->getBeginLoc(), diag::err_arm_atomic_store_with_stshh_bad_order)
+    SemaRef.Diag(OrderArg->getBeginLoc(),
+                 diag::err_arm_atomic_store_with_stshh_bad_order)
         << OrderArg->getSourceRange();
     return true;
   }
@@ -1182,7 +1187,8 @@ static bool CheckAArch64AtomicStoreWithStshhCall(SemaARM &S,
   // __ATOMIC_RELAXED=0, __ATOMIC_RELEASE=3, __ATOMIC_SEQ_CST=5.
   int64_t Order = OrderValOpt->getSExtValue();
   if (Order != 0 && Order != 3 && Order != 5) {
-    SemaRef.Diag(OrderArg->getBeginLoc(), diag::err_arm_atomic_store_with_stshh_bad_order)
+    SemaRef.Diag(OrderArg->getBeginLoc(),
+                 diag::err_arm_atomic_store_with_stshh_bad_order)
         << OrderArg->getSourceRange();
     return true;
   }

@@ -5283,17 +5283,6 @@ Value *CodeGenFunction::EmitAArch64BuiltinExpr(unsigned BuiltinID,
     auto *OrderC = cast<llvm::ConstantInt>(Order);
     auto *PolicyC = cast<llvm::ConstantInt>(Policy);
 
-    // Validate ordering argument; bail out if invalid
-    switch (OrderC->getZExtValue()) {
-    case 0: // __ATOMIC_RELAXED
-    case 3: // __ATOMIC_RELEASE
-    case 5: // __ATOMIC_SEQ_CST
-      break;
-    default:
-      llvm_unreachable(
-          "unexpected memory order for __arm_atomic_store_with_stshh");
-    }
-
     // Compute pointee bit-width from arg0 and create as i32 constant
     QualType ValQT =
         E->getArg(0)->getType()->castAs<PointerType>()->getPointeeType();

@@ -17837,10 +17837,8 @@ void AArch64TargetLowering::getTgtMemIntrinsic(
     return;
   }
   case Intrinsic::aarch64_stshh_atomic_store: {
-    const auto *OrderC = dyn_cast<ConstantInt>(I.getArgOperand(2));
-    const auto *SizeC = dyn_cast<ConstantInt>(I.getArgOperand(4));
-    if (!OrderC || !SizeC)
-      return;
+    const auto *OrderC = cast<ConstantInt>(I.getArgOperand(2));
+    const auto *SizeC = cast<ConstantInt>(I.getArgOperand(4));
 
     switch (static_cast<AtomicOrderingCABI>(OrderC->getZExtValue())) {
     case AtomicOrderingCABI::relaxed:
