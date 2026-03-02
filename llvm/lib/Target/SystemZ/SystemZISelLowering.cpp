@@ -11,12 +11,9 @@
 //===----------------------------------------------------------------------===//
 
 #include "SystemZISelLowering.h"
-#include "MCTargetDesc/SystemZMCTargetDesc.h"
 #include "SystemZCallingConv.h"
 #include "SystemZConstantPoolValue.h"
 #include "SystemZMachineFunctionInfo.h"
-#include "SystemZRegisterInfo.h"
-#include "SystemZTargetMachine.h"
 #include "llvm/ADT/SmallSet.h"
 #include "llvm/CodeGen/CallingConvLower.h"
 #include "llvm/CodeGen/ISDOpcodes.h"
@@ -31,6 +28,7 @@
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/KnownBits.h"
+#include "llvm/Target/TargetMachine.h"
 #include <cctype>
 #include <optional>
 

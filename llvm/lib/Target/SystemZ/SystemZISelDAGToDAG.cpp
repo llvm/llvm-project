@@ -10,8 +10,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "SystemZISelLowering.h"
 #include "SystemZTargetMachine.h"
+#include "SystemZISelLowering.h"
 #include "llvm/Analysis/AliasAnalysis.h"
 #include "llvm/CodeGen/SelectionDAGISel.h"
 #include "llvm/IR/Module.h"
