@@ -383,13 +383,8 @@ DependencyScanningTool::getModuleDependencies(
           initializeCompilerInstanceWithContextOrError(CWD, CommandLine))
     return Error;
 
-  auto Result = computeDependenciesByNameWithContextOrError(
-      ModuleName, AlreadySeen, LookupModuleOutput);
-
-  if (auto Error = finalizeCompilerInstanceWithContextOrError())
-    return Error;
-
-  return Result;
+  return computeDependenciesByNameWithContextOrError(ModuleName, AlreadySeen,
+                                                     LookupModuleOutput);
 }
 
 static std::optional<SmallVector<std::string, 0>> getFirstCC1CommandLine(
@@ -467,13 +462,6 @@ DependencyScanningTool::computeDependenciesByNameWithContextOrError(
   if (Worker.computeDependenciesByNameWithContext(ModuleName, Consumer,
                                                   *Controller))
     return Consumer.takeTranslationUnitDeps();
-  return makeErrorFromDiagnosticsOS(*DiagPrinterWithOS);
-}
-
-llvm::Error
-DependencyScanningTool::finalizeCompilerInstanceWithContextOrError() {
-  if (Worker.finalizeCompilerInstanceWithContext())
-    return llvm::Error::success();
   return makeErrorFromDiagnosticsOS(*DiagPrinterWithOS);
 }
 

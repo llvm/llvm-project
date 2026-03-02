@@ -360,17 +360,10 @@ enum CXErrorCode clang_experimental_DependencyScannerWorker_getDepGraph(
         DependencyScanningTool::initializeWorkerCIWithContextFromCommandline(
             *Worker, WorkingDirectory, Compilation, *SerialDiagConsumer);
 
-    if (!Result) {
-      Worker->finalizeCompilerInstanceWithContext();
+    if (!Result)
       return CXError_Failure;
-    }
     Result = Worker->computeDependenciesByNameWithContext(
         StringRef(ModuleName), DepConsumer, *Controller);
-    if (!Result) {
-      Worker->finalizeCompilerInstanceWithContext();
-      return CXError_Failure;
-    }
-    Result = Worker->finalizeCompilerInstanceWithContext();
     if (!Result)
       return CXError_Failure;
   } else {
