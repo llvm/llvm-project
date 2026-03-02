@@ -2322,8 +2322,8 @@ Instruction *InstCombinerImpl::foldBinOpIntoSelectOrPhi(BinaryOperator &I) {
     return static_cast<Instruction *>(nullptr);
   };
 
-  if (Instruction *NewI = TryFoldOperand(/*OpIdx=*/0,
-                                         isa<Constant>(I.getOperand(1))))
+  if (Instruction *NewI =
+          TryFoldOperand(/*OpIdx=*/0, isa<Constant>(I.getOperand(1))))
     return NewI;
   if (I.isCommutative())
     return TryFoldOperand(/*OpIdx=*/1, isa<Constant>(I.getOperand(0)));
