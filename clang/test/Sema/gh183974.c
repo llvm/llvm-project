@@ -2,4 +2,4 @@
 
 __block int x; // expected-error {{__block attribute not allowed, only allowed on local variables}}
 
-int x[0];
+int x;
