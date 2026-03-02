@@ -1,9 +1,6 @@
 // RUN: %check_clang_tidy -std=c++14-or-later %s modernize-use-trailing-return-type %t -- -- -fno-delayed-template-parsing -isystem %clang_tidy_headers
+#include <string>
 #include <vector>
-
-namespace std {
-    class string {};
-} // namespace std
 
 void test_lambda_positive() {
   auto l1 = [](auto x) { return x; };
