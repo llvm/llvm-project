@@ -1126,8 +1126,8 @@ zip2	v0.8h, v0.8h, v0.8h
 # CHECK-NEXT:  1      3     0.50                        cmle	v0.2d, v0.2d, #0
 # CHECK-NEXT:  1      3     0.50                        cmlt	d20, d21, #0
 # CHECK-NEXT:  1      3     0.50                        cmlt	v0.8h, v0.8h, #0
-# CHECK-NEXT:  1      4     0.50                        cmtst	d20, d21, d22
-# CHECK-NEXT:  1      4     0.50                        cmtst	v0.2s, v0.2s, v0.2s
+# CHECK-NEXT:  1      3     0.50                        cmtst	d20, d21, d22
+# CHECK-NEXT:  1      3     0.50                        cmtst	v0.2s, v0.2s, v0.2s
 # CHECK-NEXT:  1      4     0.50                        cnt	v0.16b, v0.16b
 # CHECK-NEXT:  1      4     0.50                        cnt	v0.8b, v0.8b
 # CHECK-NEXT:  1      3     0.50                        dup	v0.16b, w28
@@ -1453,16 +1453,16 @@ zip2	v0.8h, v0.8h, v0.8h
 # CHECK-NEXT:  1      3     0.50                        orn	v0.16b, v0.16b, v0.16b
 # CHECK-NEXT:  1      3     0.50                        mov	v0.16b, v0.16b
 # CHECK-NEXT:  1      3     0.50                        orr	v0.8h, #31
-# CHECK-NEXT:  1      4     0.50                        pmul	v0.16b, v0.16b, v0.16b
-# CHECK-NEXT:  1      4     0.50                        pmul	v0.8b, v0.8b, v0.8b
+# CHECK-NEXT:  1      3     0.50                        pmul	v0.16b, v0.16b, v0.16b
+# CHECK-NEXT:  1      3     0.50                        pmul	v0.8b, v0.8b, v0.8b
 # CHECK-NEXT:  1      4     0.50                        pmull	v0.8h, v0.8b, v0.8b
 # CHECK-NEXT:  1      4     0.50                        pmull2	v0.8h, v0.16b, v0.16b
-# CHECK-NEXT:  1      8     0.50                        raddhn	v0.2s, v0.2d, v0.2d
-# CHECK-NEXT:  1      8     0.50                        raddhn	v0.4h, v0.4s, v0.4s
-# CHECK-NEXT:  1      8     0.50                        raddhn	v0.8b, v0.8h, v0.8h
-# CHECK-NEXT:  1      8     0.50                        raddhn2	v0.16b, v0.8h, v0.8h
-# CHECK-NEXT:  1      8     0.50                        raddhn2	v0.4s, v0.2d, v0.2d
-# CHECK-NEXT:  1      8     0.50                        raddhn2	v0.8h, v0.4s, v0.4s
+# CHECK-NEXT:  1      6     1.50                        raddhn	v0.2s, v0.2d, v0.2d
+# CHECK-NEXT:  1      6     1.50                        raddhn	v0.4h, v0.4s, v0.4s
+# CHECK-NEXT:  1      6     1.50                        raddhn	v0.8b, v0.8h, v0.8h
+# CHECK-NEXT:  1      6     1.50                        raddhn2	v0.16b, v0.8h, v0.8h
+# CHECK-NEXT:  1      6     1.50                        raddhn2	v0.4s, v0.2d, v0.2d
+# CHECK-NEXT:  1      6     1.50                        raddhn2	v0.8h, v0.4s, v0.4s
 # CHECK-NEXT:  1      4     0.50                        rbit	v0.16b, v0.16b
 # CHECK-NEXT:  1      4     0.50                        rbit	v0.8b, v0.8b
 # CHECK-NEXT:  1      4     0.50                        rev16	v21.8b, v1.8b
@@ -1483,19 +1483,19 @@ zip2	v0.8h, v0.8h, v0.8h
 # CHECK-NEXT:  1      4     0.50                        rshrn2	v0.16b, v0.8h, #3
 # CHECK-NEXT:  1      4     0.50                        rshrn2	v0.4s, v0.2d, #3
 # CHECK-NEXT:  1      4     0.50                        rshrn2	v0.8h, v0.4s, #3
-# CHECK-NEXT:  1      8     0.50                        rsubhn	v0.2s, v0.2d, v0.2d
-# CHECK-NEXT:  1      8     0.50                        rsubhn	v0.4h, v0.4s, v0.4s
-# CHECK-NEXT:  1      8     0.50                        rsubhn	v0.8b, v0.8h, v0.8h
-# CHECK-NEXT:  1      8     0.50                        rsubhn2	v0.16b, v0.8h, v0.8h
-# CHECK-NEXT:  1      8     0.50                        rsubhn2	v0.4s, v0.2d, v0.2d
-# CHECK-NEXT:  1      8     0.50                        rsubhn2	v0.8h, v0.4s, v0.4s
-# CHECK-NEXT:  1      6     0.50                        saba	v0.16b, v0.16b, v0.16b
-# CHECK-NEXT:  1      6     0.50                        sabal	v0.2d, v0.2s, v0.2s
-# CHECK-NEXT:  1      6     0.50                        sabal	v0.4s, v0.4h, v0.4h
-# CHECK-NEXT:  1      6     0.50                        sabal	v0.8h, v0.8b, v0.8b
-# CHECK-NEXT:  1      6     0.50                        sabal2	v0.2d, v0.4s, v0.4s
-# CHECK-NEXT:  1      6     0.50                        sabal2	v0.4s, v0.8h, v0.8h
-# CHECK-NEXT:  1      6     0.50                        sabal2	v0.8h, v0.16b, v0.16b
+# CHECK-NEXT:  1      6     1.50                        rsubhn	v0.2s, v0.2d, v0.2d
+# CHECK-NEXT:  1      6     1.50                        rsubhn	v0.4h, v0.4s, v0.4s
+# CHECK-NEXT:  1      6     1.50                        rsubhn	v0.8b, v0.8h, v0.8h
+# CHECK-NEXT:  1      6     1.50                        rsubhn2	v0.16b, v0.8h, v0.8h
+# CHECK-NEXT:  1      6     1.50                        rsubhn2	v0.4s, v0.2d, v0.2d
+# CHECK-NEXT:  1      6     1.50                        rsubhn2	v0.8h, v0.4s, v0.4s
+# CHECK-NEXT:  1      5     1.50                        saba	v0.16b, v0.16b, v0.16b
+# CHECK-NEXT:  1      5     1.50                        sabal	v0.2d, v0.2s, v0.2s
+# CHECK-NEXT:  1      5     1.50                        sabal	v0.4s, v0.4h, v0.4h
+# CHECK-NEXT:  1      5     1.50                        sabal	v0.8h, v0.8b, v0.8b
+# CHECK-NEXT:  1      5     1.50                        sabal2	v0.2d, v0.4s, v0.4s
+# CHECK-NEXT:  1      5     1.50                        sabal2	v0.4s, v0.8h, v0.8h
+# CHECK-NEXT:  1      5     1.50                        sabal2	v0.8h, v0.16b, v0.16b
 # CHECK-NEXT:  1      3     0.50                        sabd	v0.4h, v0.4h, v0.4h
 # CHECK-NEXT:  1      3     0.50                        sabdl	v0.2d, v0.2s, v0.2s
 # CHECK-NEXT:  1      3     0.50                        sabdl	v0.4s, v0.4h, v0.4h
@@ -1503,12 +1503,12 @@ zip2	v0.8h, v0.8h, v0.8h
 # CHECK-NEXT:  1      3     0.50                        sabdl2	v0.2d, v0.4s, v0.4s
 # CHECK-NEXT:  1      3     0.50                        sabdl2	v0.4s, v0.8h, v0.8h
 # CHECK-NEXT:  1      3     0.50                        sabdl2	v0.8h, v0.16b, v0.16b
-# CHECK-NEXT:  1      7     1.00                        sadalp	v0.1d, v0.2s
-# CHECK-NEXT:  1      7     1.00                        sadalp	v0.2d, v0.4s
-# CHECK-NEXT:  1      7     1.00                        sadalp	v0.2s, v0.4h
-# CHECK-NEXT:  1      7     1.00                        sadalp	v0.4h, v0.8b
-# CHECK-NEXT:  1      7     1.00                        sadalp	v0.4s, v0.8h
-# CHECK-NEXT:  1      7     1.00                        sadalp	v0.8h, v0.16b
+# CHECK-NEXT:  1      5     1.50                        sadalp	v0.1d, v0.2s
+# CHECK-NEXT:  1      5     1.50                        sadalp	v0.2d, v0.4s
+# CHECK-NEXT:  1      5     1.50                        sadalp	v0.2s, v0.4h
+# CHECK-NEXT:  1      5     1.50                        sadalp	v0.4h, v0.8b
+# CHECK-NEXT:  1      5     1.50                        sadalp	v0.4s, v0.8h
+# CHECK-NEXT:  1      5     1.50                        sadalp	v0.8h, v0.16b
 # CHECK-NEXT:  1      3     0.50                        saddl	v0.2d, v0.2s, v0.2s
 # CHECK-NEXT:  1      3     0.50                        saddl	v0.4s, v0.4h, v0.4h
 # CHECK-NEXT:  1      3     0.50                        saddl	v0.8h, v0.8b, v0.8b
@@ -1754,9 +1754,9 @@ zip2	v0.8h, v0.8h, v0.8h
 # CHECK-NEXT:  1      4     0.50                        sqxtun2	v0.16b, v0.8h
 # CHECK-NEXT:  1      4     0.50                        sqxtun2	v0.4s, v0.2d
 # CHECK-NEXT:  1      4     0.50                        sqxtun2	v0.8h, v0.4s
-# CHECK-NEXT:  1      3     0.50                        srhadd	v0.2s, v0.2s, v0.2s
-# CHECK-NEXT:  1      3     0.50                        srhadd	v0.4h, v0.4h, v0.4h
-# CHECK-NEXT:  1      3     0.50                        srhadd	v0.8b, v0.8b, v0.8b
+# CHECK-NEXT:  1      2     0.50                        srhadd	v0.2s, v0.2s, v0.2s
+# CHECK-NEXT:  1      2     0.50                        srhadd	v0.4h, v0.4h, v0.4h
+# CHECK-NEXT:  1      2     0.50                        srhadd	v0.8b, v0.8b, v0.8b
 # CHECK-NEXT:  1      3     0.50                        sri	d10, d12, #14
 # CHECK-NEXT:  1      4     0.50                        sri	v0.16b, v0.16b, #3
 # CHECK-NEXT:  1      4     0.50                        sri	v0.2d, v0.2d, #3
@@ -1777,14 +1777,14 @@ zip2	v0.8h, v0.8h, v0.8h
 # CHECK-NEXT:  1      3     0.50                        srshr	v0.4s, v0.4s, #3
 # CHECK-NEXT:  1      3     0.50                        srshr	v0.8b, v0.8b, #3
 # CHECK-NEXT:  1      3     0.50                        srshr	v0.8h, v0.8h, #3
-# CHECK-NEXT:  1      7     1.00                        srsra	d15, d11, #19
-# CHECK-NEXT:  1      7     1.00                        srsra	v0.16b, v0.16b, #3
-# CHECK-NEXT:  1      7     1.00                        srsra	v0.2d, v0.2d, #3
-# CHECK-NEXT:  1      7     1.00                        srsra	v0.2s, v0.2s, #3
-# CHECK-NEXT:  1      7     1.00                        srsra	v0.4h, v0.4h, #3
-# CHECK-NEXT:  1      7     1.00                        srsra	v0.4s, v0.4s, #3
-# CHECK-NEXT:  1      7     1.00                        srsra	v0.8b, v0.8b, #3
-# CHECK-NEXT:  1      7     1.00                        srsra	v0.8h, v0.8h, #3
+# CHECK-NEXT:  1      5     1.50                        srsra	d15, d11, #19
+# CHECK-NEXT:  1      5     1.50                        srsra	v0.16b, v0.16b, #3
+# CHECK-NEXT:  1      5     1.50                        srsra	v0.2d, v0.2d, #3
+# CHECK-NEXT:  1      5     1.50                        srsra	v0.2s, v0.2s, #3
+# CHECK-NEXT:  1      5     1.50                        srsra	v0.4h, v0.4h, #3
+# CHECK-NEXT:  1      5     1.50                        srsra	v0.4s, v0.4s, #3
+# CHECK-NEXT:  1      5     1.50                        srsra	v0.8b, v0.8b, #3
+# CHECK-NEXT:  1      5     1.50                        srsra	v0.8h, v0.8h, #3
 # CHECK-NEXT:  1      3     0.50                        sshl	d31, d31, d31
 # CHECK-NEXT:  1      3     0.50                        sshl	v0.2d, v0.2d, v0.2d
 # CHECK-NEXT:  1      3     0.50                        sshl	v0.2s, v0.2s, v0.2s
@@ -1885,13 +1885,13 @@ zip2	v0.8h, v0.8h, v0.8h
 # CHECK-NEXT:  1      4     0.50                        trn2	v0.4s, v0.4s, v0.4s
 # CHECK-NEXT:  1      4     0.50                        trn2	v0.8b, v0.8b, v0.8b
 # CHECK-NEXT:  1      4     0.50                        trn2	v0.8h, v0.8h, v0.8h
-# CHECK-NEXT:  1      6     0.50                        uaba	v0.8b, v0.8b, v0.8b
-# CHECK-NEXT:  1      6     0.50                        uabal	v0.2d, v0.2s, v0.2s
-# CHECK-NEXT:  1      6     0.50                        uabal	v0.4s, v0.4h, v0.4h
-# CHECK-NEXT:  1      6     0.50                        uabal	v0.8h, v0.8b, v0.8b
-# CHECK-NEXT:  1      6     0.50                        uabal2	v0.2d, v0.4s, v0.4s
-# CHECK-NEXT:  1      6     0.50                        uabal2	v0.4s, v0.8h, v0.8h
-# CHECK-NEXT:  1      6     0.50                        uabal2	v0.8h, v0.16b, v0.16b
+# CHECK-NEXT:  1      5     1.50                        uaba	v0.8b, v0.8b, v0.8b
+# CHECK-NEXT:  1      5     1.50                        uabal	v0.2d, v0.2s, v0.2s
+# CHECK-NEXT:  1      5     1.50                        uabal	v0.4s, v0.4h, v0.4h
+# CHECK-NEXT:  1      5     1.50                        uabal	v0.8h, v0.8b, v0.8b
+# CHECK-NEXT:  1      5     1.50                        uabal2	v0.2d, v0.4s, v0.4s
+# CHECK-NEXT:  1      5     1.50                        uabal2	v0.4s, v0.8h, v0.8h
+# CHECK-NEXT:  1      5     1.50                        uabal2	v0.8h, v0.16b, v0.16b
 # CHECK-NEXT:  1      3     0.50                        uabd	v0.4h, v0.4h, v0.4h
 # CHECK-NEXT:  1      3     0.50                        uabdl	v0.2d, v0.2s, v0.2s
 # CHECK-NEXT:  1      3     0.50                        uabdl	v0.4s, v0.4h, v0.4h
@@ -1899,12 +1899,12 @@ zip2	v0.8h, v0.8h, v0.8h
 # CHECK-NEXT:  1      3     0.50                        uabdl2	v0.2d, v0.4s, v0.4s
 # CHECK-NEXT:  1      3     0.50                        uabdl2	v0.4s, v0.8h, v0.8h
 # CHECK-NEXT:  1      3     0.50                        uabdl2	v0.8h, v0.16b, v0.16b
-# CHECK-NEXT:  1      7     1.00                        uadalp	v0.1d, v0.2s
-# CHECK-NEXT:  1      7     1.00                        uadalp	v0.2d, v0.4s
-# CHECK-NEXT:  1      7     1.00                        uadalp	v0.2s, v0.4h
-# CHECK-NEXT:  1      7     1.00                        uadalp	v0.4h, v0.8b
-# CHECK-NEXT:  1      7     1.00                        uadalp	v0.4s, v0.8h
-# CHECK-NEXT:  1      7     1.00                        uadalp	v0.8h, v0.16b
+# CHECK-NEXT:  1      5     1.50                        uadalp	v0.1d, v0.2s
+# CHECK-NEXT:  1      5     1.50                        uadalp	v0.2d, v0.4s
+# CHECK-NEXT:  1      5     1.50                        uadalp	v0.2s, v0.4h
+# CHECK-NEXT:  1      5     1.50                        uadalp	v0.4h, v0.8b
+# CHECK-NEXT:  1      5     1.50                        uadalp	v0.4s, v0.8h
+# CHECK-NEXT:  1      5     1.50                        uadalp	v0.8h, v0.16b
 # CHECK-NEXT:  1      3     0.50                        uaddl	v0.2d, v0.2s, v0.2s
 # CHECK-NEXT:  1      3     0.50                        uaddl	v0.4s, v0.4h, v0.4h
 # CHECK-NEXT:  1      3     0.50                        uaddl	v0.8h, v0.8b, v0.8b
@@ -2024,9 +2024,9 @@ zip2	v0.8h, v0.8h, v0.8h
 # CHECK-NEXT:  1      4     0.50                        uqxtn2	v0.8h, v0.4s
 # CHECK-NEXT:  1      4     0.50                        urecpe	v0.2s, v0.2s
 # CHECK-NEXT:  1      4     0.50                        urecpe	v0.4s, v0.4s
-# CHECK-NEXT:  1      3     0.50                        urhadd	v0.16b, v0.16b, v0.16b
-# CHECK-NEXT:  1      3     0.50                        urhadd	v0.4s, v0.4s, v0.4s
-# CHECK-NEXT:  1      3     0.50                        urhadd	v0.8h, v0.8h, v0.8h
+# CHECK-NEXT:  1      2     0.50                        urhadd	v0.16b, v0.16b, v0.16b
+# CHECK-NEXT:  1      2     0.50                        urhadd	v0.4s, v0.4s, v0.4s
+# CHECK-NEXT:  1      2     0.50                        urhadd	v0.8h, v0.8h, v0.8h
 # CHECK-NEXT:  1      3     0.50                        urshl	d8, d7, d4
 # CHECK-NEXT:  1      3     0.50                        urshl	v0.16b, v0.16b, v0.16b
 # CHECK-NEXT:  1      3     0.50                        urshl	v0.2d, v0.2d, v0.2d
@@ -2042,14 +2042,14 @@ zip2	v0.8h, v0.8h, v0.8h
 # CHECK-NEXT:  1      3     0.50                        urshr	v0.8h, v0.8h, #3
 # CHECK-NEXT:  1      12    9.00                        ursqrte	v0.2s, v0.2s
 # CHECK-NEXT:  1      12    9.00                        ursqrte	v0.4s, v0.4s
-# CHECK-NEXT:  1      7     1.00                        ursra	d18, d10, #13
-# CHECK-NEXT:  1      7     1.00                        ursra	v0.16b, v0.16b, #3
-# CHECK-NEXT:  1      7     1.00                        ursra	v0.2d, v0.2d, #3
-# CHECK-NEXT:  1      7     1.00                        ursra	v0.2s, v0.2s, #3
-# CHECK-NEXT:  1      7     1.00                        ursra	v0.4h, v0.4h, #3
-# CHECK-NEXT:  1      7     1.00                        ursra	v0.4s, v0.4s, #3
-# CHECK-NEXT:  1      7     1.00                        ursra	v0.8b, v0.8b, #3
-# CHECK-NEXT:  1      7     1.00                        ursra	v0.8h, v0.8h, #3
+# CHECK-NEXT:  1      5     1.50                        ursra	d18, d10, #13
+# CHECK-NEXT:  1      5     1.50                        ursra	v0.16b, v0.16b, #3
+# CHECK-NEXT:  1      5     1.50                        ursra	v0.2d, v0.2d, #3
+# CHECK-NEXT:  1      5     1.50                        ursra	v0.2s, v0.2s, #3
+# CHECK-NEXT:  1      5     1.50                        ursra	v0.4h, v0.4h, #3
+# CHECK-NEXT:  1      5     1.50                        ursra	v0.4s, v0.4s, #3
+# CHECK-NEXT:  1      5     1.50                        ursra	v0.8b, v0.8b, #3
+# CHECK-NEXT:  1      5     1.50                        ursra	v0.8h, v0.8h, #3
 # CHECK-NEXT:  1      3     0.50                        ushl	d0, d0, d0
 # CHECK-NEXT:  1      3     0.50                        ushl	v0.16b, v0.16b, v0.16b
 # CHECK-NEXT:  1      3     0.50                        ushl	v0.4s, v0.4s, v0.4s
@@ -2147,7 +2147,7 @@ zip2	v0.8h, v0.8h, v0.8h
 
 # CHECK:      Resource pressure per iteration:
 # CHECK-NEXT: [0]    [1]    [2]    [3]    [4]    [5]    [6]    [7]    [8]    [9]    [10.0] [10.1] [11]
-# CHECK-NEXT:  -      -      -      -      -     145.00  -      -     501.00 501.00 3.00   3.00   197.00
+# CHECK-NEXT:  -      -      -      -      -     145.00  -      -     541.00 541.00 3.00   3.00   197.00
 
 # CHECK:      Resource pressure by instruction:
 # CHECK-NEXT: [0]    [1]    [2]    [3]    [4]    [5]    [6]    [7]    [8]    [9]    [10.0] [10.1] [11]   Instructions:
@@ -2538,12 +2538,12 @@ zip2	v0.8h, v0.8h, v0.8h
 # CHECK-NEXT:  -      -      -      -      -      -      -      -     0.50   0.50    -      -      -     pmul	v0.8b, v0.8b, v0.8b
 # CHECK-NEXT:  -      -      -      -      -      -      -      -     0.50   0.50    -      -      -     pmull	v0.8h, v0.8b, v0.8b
 # CHECK-NEXT:  -      -      -      -      -      -      -      -     0.50   0.50    -      -      -     pmull2	v0.8h, v0.16b, v0.16b
-# CHECK-NEXT:  -      -      -      -      -      -      -      -     0.50   0.50    -      -      -     raddhn	v0.2s, v0.2d, v0.2d
-# CHECK-NEXT:  -      -      -      -      -      -      -      -     0.50   0.50    -      -      -     raddhn	v0.4h, v0.4s, v0.4s
-# CHECK-NEXT:  -      -      -      -      -      -      -      -     0.50   0.50    -      -      -     raddhn	v0.8b, v0.8h, v0.8h
-# CHECK-NEXT:  -      -      -      -      -      -      -      -     0.50   0.50    -      -      -     raddhn2	v0.16b, v0.8h, v0.8h
-# CHECK-NEXT:  -      -      -      -      -      -      -      -     0.50   0.50    -      -      -     raddhn2	v0.4s, v0.2d, v0.2d
-# CHECK-NEXT:  -      -      -      -      -      -      -      -     0.50   0.50    -      -      -     raddhn2	v0.8h, v0.4s, v0.4s
+# CHECK-NEXT:  -      -      -      -      -      -      -      -     1.50   1.50    -      -      -     raddhn	v0.2s, v0.2d, v0.2d
+# CHECK-NEXT:  -      -      -      -      -      -      -      -     1.50   1.50    -      -      -     raddhn	v0.4h, v0.4s, v0.4s
+# CHECK-NEXT:  -      -      -      -      -      -      -      -     1.50   1.50    -      -      -     raddhn	v0.8b, v0.8h, v0.8h
+# CHECK-NEXT:  -      -      -      -      -      -      -      -     1.50   1.50    -      -      -     raddhn2	v0.16b, v0.8h, v0.8h
+# CHECK-NEXT:  -      -      -      -      -      -      -      -     1.50   1.50    -      -      -     raddhn2	v0.4s, v0.2d, v0.2d
+# CHECK-NEXT:  -      -      -      -      -      -      -      -     1.50   1.50    -      -      -     raddhn2	v0.8h, v0.4s, v0.4s
 # CHECK-NEXT:  -      -      -      -      -      -      -      -     0.50   0.50    -      -      -     rbit	v0.16b, v0.16b
 # CHECK-NEXT:  -      -      -      -      -      -      -      -     0.50   0.50    -      -      -     rbit	v0.8b, v0.8b
 # CHECK-NEXT:  -      -      -      -      -      -      -      -     0.50   0.50    -      -      -     rev16	v21.8b, v1.8b
@@ -2564,19 +2564,19 @@ zip2	v0.8h, v0.8h, v0.8h
 # CHECK-NEXT:  -      -      -      -      -      -      -      -     0.50   0.50    -      -      -     rshrn2	v0.16b, v0.8h, #3
 # CHECK-NEXT:  -      -      -      -      -      -      -      -     0.50   0.50    -      -      -     rshrn2	v0.4s, v0.2d, #3
 # CHECK-NEXT:  -      -      -      -      -      -      -      -     0.50   0.50    -      -      -     rshrn2	v0.8h, v0.4s, #3
-# CHECK-NEXT:  -      -      -      -      -      -      -      -     0.50   0.50    -      -      -     rsubhn	v0.2s, v0.2d, v0.2d
-# CHECK-NEXT:  -      -      -      -      -      -      -      -     0.50   0.50    -      -      -     rsubhn	v0.4h, v0.4s, v0.4s
-# CHECK-NEXT:  -      -      -      -      -      -      -      -     0.50   0.50    -      -      -     rsubhn	v0.8b, v0.8h, v0.8h
-# CHECK-NEXT:  -      -      -      -      -      -      -      -     0.50   0.50    -      -      -     rsubhn2	v0.16b, v0.8h, v0.8h
-# CHECK-NEXT:  -      -      -      -      -      -      -      -     0.50   0.50    -      -      -     rsubhn2	v0.4s, v0.2d, v0.2d
-# CHECK-NEXT:  -      -      -      -      -      -      -      -     0.50   0.50    -      -      -     rsubhn2	v0.8h, v0.4s, v0.4s
-# CHECK-NEXT:  -      -      -      -      -      -      -      -     0.50   0.50    -      -      -     saba	v0.16b, v0.16b, v0.16b
-# CHECK-NEXT:  -      -      -      -      -      -      -      -     0.50   0.50    -      -      -     sabal	v0.2d, v0.2s, v0.2s
-# CHECK-NEXT:  -      -      -      -      -      -      -      -     0.50   0.50    -      -      -     sabal	v0.4s, v0.4h, v0.4h
-# CHECK-NEXT:  -      -      -      -      -      -      -      -     0.50   0.50    -      -      -     sabal	v0.8h, v0.8b, v0.8b
-# CHECK-NEXT:  -      -      -      -      -      -      -      -     0.50   0.50    -      -      -     sabal2	v0.2d, v0.4s, v0.4s
-# CHECK-NEXT:  -      -      -      -      -      -      -      -     0.50   0.50    -      -      -     sabal2	v0.4s, v0.8h, v0.8h
-# CHECK-NEXT:  -      -      -      -      -      -      -      -     0.50   0.50    -      -      -     sabal2	v0.8h, v0.16b, v0.16b
+# CHECK-NEXT:  -      -      -      -      -      -      -      -     1.50   1.50    -      -      -     rsubhn	v0.2s, v0.2d, v0.2d
+# CHECK-NEXT:  -      -      -      -      -      -      -      -     1.50   1.50    -      -      -     rsubhn	v0.4h, v0.4s, v0.4s
+# CHECK-NEXT:  -      -      -      -      -      -      -      -     1.50   1.50    -      -      -     rsubhn	v0.8b, v0.8h, v0.8h
+# CHECK-NEXT:  -      -      -      -      -      -      -      -     1.50   1.50    -      -      -     rsubhn2	v0.16b, v0.8h, v0.8h
+# CHECK-NEXT:  -      -      -      -      -      -      -      -     1.50   1.50    -      -      -     rsubhn2	v0.4s, v0.2d, v0.2d
+# CHECK-NEXT:  -      -      -      -      -      -      -      -     1.50   1.50    -      -      -     rsubhn2	v0.8h, v0.4s, v0.4s
+# CHECK-NEXT:  -      -      -      -      -      -      -      -     1.50   1.50    -      -      -     saba	v0.16b, v0.16b, v0.16b
+# CHECK-NEXT:  -      -      -      -      -      -      -      -     1.50   1.50    -      -      -     sabal	v0.2d, v0.2s, v0.2s
+# CHECK-NEXT:  -      -      -      -      -      -      -      -     1.50   1.50    -      -      -     sabal	v0.4s, v0.4h, v0.4h
+# CHECK-NEXT:  -      -      -      -      -      -      -      -     1.50   1.50    -      -      -     sabal	v0.8h, v0.8b, v0.8b
+# CHECK-NEXT:  -      -      -      -      -      -      -      -     1.50   1.50    -      -      -     sabal2	v0.2d, v0.4s, v0.4s
+# CHECK-NEXT:  -      -      -      -      -      -      -      -     1.50   1.50    -      -      -     sabal2	v0.4s, v0.8h, v0.8h
+# CHECK-NEXT:  -      -      -      -      -      -      -      -     1.50   1.50    -      -      -     sabal2	v0.8h, v0.16b, v0.16b
 # CHECK-NEXT:  -      -      -      -      -      -      -      -     0.50   0.50    -      -      -     sabd	v0.4h, v0.4h, v0.4h
 # CHECK-NEXT:  -      -      -      -      -      -      -      -     0.50   0.50    -      -      -     sabdl	v0.2d, v0.2s, v0.2s
 # CHECK-NEXT:  -      -      -      -      -      -      -      -     0.50   0.50    -      -      -     sabdl	v0.4s, v0.4h, v0.4h
@@ -2584,12 +2584,12 @@ zip2	v0.8h, v0.8h, v0.8h
 # CHECK-NEXT:  -      -      -      -      -      -      -      -     0.50   0.50    -      -      -     sabdl2	v0.2d, v0.4s, v0.4s
 # CHECK-NEXT:  -      -      -      -      -      -      -      -     0.50   0.50    -      -      -     sabdl2	v0.4s, v0.8h, v0.8h
 # CHECK-NEXT:  -      -      -      -      -      -      -      -     0.50   0.50    -      -      -     sabdl2	v0.8h, v0.16b, v0.16b
-# CHECK-NEXT:  -      -      -      -      -      -      -      -     1.00   1.00    -      -      -     sadalp	v0.1d, v0.2s
-# CHECK-NEXT:  -      -      -      -      -      -      -      -     1.00   1.00    -      -      -     sadalp	v0.2d, v0.4s
-# CHECK-NEXT:  -      -      -      -      -      -      -      -     1.00   1.00    -      -      -     sadalp	v0.2s, v0.4h
-# CHECK-NEXT:  -      -      -      -      -      -      -      -     1.00   1.00    -      -      -     sadalp	v0.4h, v0.8b
-# CHECK-NEXT:  -      -      -      -      -      -      -      -     1.00   1.00    -      -      -     sadalp	v0.4s, v0.8h
-# CHECK-NEXT:  -      -      -      -      -      -      -      -     1.00   1.00    -      -      -     sadalp	v0.8h, v0.16b
+# CHECK-NEXT:  -      -      -      -      -      -      -      -     1.50   1.50    -      -      -     sadalp	v0.1d, v0.2s
+# CHECK-NEXT:  -      -      -      -      -      -      -      -     1.50   1.50    -      -      -     sadalp	v0.2d, v0.4s
+# CHECK-NEXT:  -      -      -      -      -      -      -      -     1.50   1.50    -      -      -     sadalp	v0.2s, v0.4h
+# CHECK-NEXT:  -      -      -      -      -      -      -      -     1.50   1.50    -      -      -     sadalp	v0.4h, v0.8b
+# CHECK-NEXT:  -      -      -      -      -      -      -      -     1.50   1.50    -      -      -     sadalp	v0.4s, v0.8h
+# CHECK-NEXT:  -      -      -      -      -      -      -      -     1.50   1.50    -      -      -     sadalp	v0.8h, v0.16b
 # CHECK-NEXT:  -      -      -      -      -      -      -      -     0.50   0.50    -      -      -     saddl	v0.2d, v0.2s, v0.2s
 # CHECK-NEXT:  -      -      -      -      -      -      -      -     0.50   0.50    -      -      -     saddl	v0.4s, v0.4h, v0.4h
 # CHECK-NEXT:  -      -      -      -      -      -      -      -     0.50   0.50    -      -      -     saddl	v0.8h, v0.8b, v0.8b
@@ -2858,14 +2858,14 @@ zip2	v0.8h, v0.8h, v0.8h
 # CHECK-NEXT:  -      -      -      -      -      -      -      -     0.50   0.50    -      -      -     srshr	v0.4s, v0.4s, #3
 # CHECK-NEXT:  -      -      -      -      -      -      -      -     0.50   0.50    -      -      -     srshr	v0.8b, v0.8b, #3
 # CHECK-NEXT:  -      -      -      -      -      -      -      -     0.50   0.50    -      -      -     srshr	v0.8h, v0.8h, #3
-# CHECK-NEXT:  -      -      -      -      -      -      -      -     1.00   1.00    -      -      -     srsra	d15, d11, #19
-# CHECK-NEXT:  -      -      -      -      -      -      -      -     1.00   1.00    -      -      -     srsra	v0.16b, v0.16b, #3
-# CHECK-NEXT:  -      -      -      -      -      -      -      -     1.00   1.00    -      -      -     srsra	v0.2d, v0.2d, #3
-# CHECK-NEXT:  -      -      -      -      -      -      -      -     1.00   1.00    -      -      -     srsra	v0.2s, v0.2s, #3
-# CHECK-NEXT:  -      -      -      -      -      -      -      -     1.00   1.00    -      -      -     srsra	v0.4h, v0.4h, #3
-# CHECK-NEXT:  -      -      -      -      -      -      -      -     1.00   1.00    -      -      -     srsra	v0.4s, v0.4s, #3
-# CHECK-NEXT:  -      -      -      -      -      -      -      -     1.00   1.00    -      -      -     srsra	v0.8b, v0.8b, #3
-# CHECK-NEXT:  -      -      -      -      -      -      -      -     1.00   1.00    -      -      -     srsra	v0.8h, v0.8h, #3
+# CHECK-NEXT:  -      -      -      -      -      -      -      -     1.50   1.50    -      -      -     srsra	d15, d11, #19
+# CHECK-NEXT:  -      -      -      -      -      -      -      -     1.50   1.50    -      -      -     srsra	v0.16b, v0.16b, #3
+# CHECK-NEXT:  -      -      -      -      -      -      -      -     1.50   1.50    -      -      -     srsra	v0.2d, v0.2d, #3
+# CHECK-NEXT:  -      -      -      -      -      -      -      -     1.50   1.50    -      -      -     srsra	v0.2s, v0.2s, #3
+# CHECK-NEXT:  -      -      -      -      -      -      -      -     1.50   1.50    -      -      -     srsra	v0.4h, v0.4h, #3
+# CHECK-NEXT:  -      -      -      -      -      -      -      -     1.50   1.50    -      -      -     srsra	v0.4s, v0.4s, #3
+# CHECK-NEXT:  -      -      -      -      -      -      -      -     1.50   1.50    -      -      -     srsra	v0.8b, v0.8b, #3
+# CHECK-NEXT:  -      -      -      -      -      -      -      -     1.50   1.50    -      -      -     srsra	v0.8h, v0.8h, #3
 # CHECK-NEXT:  -      -      -      -      -      -      -      -     0.50   0.50    -      -      -     sshl	d31, d31, d31
 # CHECK-NEXT:  -      -      -      -      -      -      -      -     0.50   0.50    -      -      -     sshl	v0.2d, v0.2d, v0.2d
 # CHECK-NEXT:  -      -      -      -      -      -      -      -     0.50   0.50    -      -      -     sshl	v0.2s, v0.2s, v0.2s
@@ -2966,13 +2966,13 @@ zip2	v0.8h, v0.8h, v0.8h
 # CHECK-NEXT:  -      -      -      -      -      -      -      -     0.50   0.50    -      -      -     trn2	v0.4s, v0.4s, v0.4s
 # CHECK-NEXT:  -      -      -      -      -      -      -      -     0.50   0.50    -      -      -     trn2	v0.8b, v0.8b, v0.8b
 # CHECK-NEXT:  -      -      -      -      -      -      -      -     0.50   0.50    -      -      -     trn2	v0.8h, v0.8h, v0.8h
-# CHECK-NEXT:  -      -      -      -      -      -      -      -     0.50   0.50    -      -      -     uaba	v0.8b, v0.8b, v0.8b
-# CHECK-NEXT:  -      -      -      -      -      -      -      -     0.50   0.50    -      -      -     uabal	v0.2d, v0.2s, v0.2s
-# CHECK-NEXT:  -      -      -      -      -      -      -      -     0.50   0.50    -      -      -     uabal	v0.4s, v0.4h, v0.4h
-# CHECK-NEXT:  -      -      -      -      -      -      -      -     0.50   0.50    -      -      -     uabal	v0.8h, v0.8b, v0.8b
-# CHECK-NEXT:  -      -      -      -      -      -      -      -     0.50   0.50    -      -      -     uabal2	v0.2d, v0.4s, v0.4s
-# CHECK-NEXT:  -      -      -      -      -      -      -      -     0.50   0.50    -      -      -     uabal2	v0.4s, v0.8h, v0.8h
-# CHECK-NEXT:  -      -      -      -      -      -      -      -     0.50   0.50    -      -      -     uabal2	v0.8h, v0.16b, v0.16b
+# CHECK-NEXT:  -      -      -      -      -      -      -      -     1.50   1.50    -      -      -     uaba	v0.8b, v0.8b, v0.8b
+# CHECK-NEXT:  -      -      -      -      -      -      -      -     1.50   1.50    -      -      -     uabal	v0.2d, v0.2s, v0.2s
+# CHECK-NEXT:  -      -      -      -      -      -      -      -     1.50   1.50    -      -      -     uabal	v0.4s, v0.4h, v0.4h
+# CHECK-NEXT:  -      -      -      -      -      -      -      -     1.50   1.50    -      -      -     uabal	v0.8h, v0.8b, v0.8b
+# CHECK-NEXT:  -      -      -      -      -      -      -      -     1.50   1.50    -      -      -     uabal2	v0.2d, v0.4s, v0.4s
+# CHECK-NEXT:  -      -      -      -      -      -      -      -     1.50   1.50    -      -      -     uabal2	v0.4s, v0.8h, v0.8h
+# CHECK-NEXT:  -      -      -      -      -      -      -      -     1.50   1.50    -      -      -     uabal2	v0.8h, v0.16b, v0.16b
 # CHECK-NEXT:  -      -      -      -      -      -      -      -     0.50   0.50    -      -      -     uabd	v0.4h, v0.4h, v0.4h
 # CHECK-NEXT:  -      -      -      -      -      -      -      -     0.50   0.50    -      -      -     uabdl	v0.2d, v0.2s, v0.2s
 # CHECK-NEXT:  -      -      -      -      -      -      -      -     0.50   0.50    -      -      -     uabdl	v0.4s, v0.4h, v0.4h
@@ -2980,12 +2980,12 @@ zip2	v0.8h, v0.8h, v0.8h
 # CHECK-NEXT:  -      -      -      -      -      -      -      -     0.50   0.50    -      -      -     uabdl2	v0.2d, v0.4s, v0.4s
 # CHECK-NEXT:  -      -      -      -      -      -      -      -     0.50   0.50    -      -      -     uabdl2	v0.4s, v0.8h, v0.8h
 # CHECK-NEXT:  -      -      -      -      -      -      -      -     0.50   0.50    -      -      -     uabdl2	v0.8h, v0.16b, v0.16b
-# CHECK-NEXT:  -      -      -      -      -      -      -      -     1.00   1.00    -      -      -     uadalp	v0.1d, v0.2s
-# CHECK-NEXT:  -      -      -      -      -      -      -      -     1.00   1.00    -      -      -     uadalp	v0.2d, v0.4s
-# CHECK-NEXT:  -      -      -      -      -      -      -      -     1.00   1.00    -      -      -     uadalp	v0.2s, v0.4h
-# CHECK-NEXT:  -      -      -      -      -      -      -      -     1.00   1.00    -      -      -     uadalp	v0.4h, v0.8b
-# CHECK-NEXT:  -      -      -      -      -      -      -      -     1.00   1.00    -      -      -     uadalp	v0.4s, v0.8h
-# CHECK-NEXT:  -      -      -      -      -      -      -      -     1.00   1.00    -      -      -     uadalp	v0.8h, v0.16b
+# CHECK-NEXT:  -      -      -      -      -      -      -      -     1.50   1.50    -      -      -     uadalp	v0.1d, v0.2s
+# CHECK-NEXT:  -      -      -      -      -      -      -      -     1.50   1.50    -      -      -     uadalp	v0.2d, v0.4s
+# CHECK-NEXT:  -      -      -      -      -      -      -      -     1.50   1.50    -      -      -     uadalp	v0.2s, v0.4h
+# CHECK-NEXT:  -      -      -      -      -      -      -      -     1.50   1.50    -      -      -     uadalp	v0.4h, v0.8b
+# CHECK-NEXT:  -      -      -      -      -      -      -      -     1.50   1.50    -      -      -     uadalp	v0.4s, v0.8h
+# CHECK-NEXT:  -      -      -      -      -      -      -      -     1.50   1.50    -      -      -     uadalp	v0.8h, v0.16b
 # CHECK-NEXT:  -      -      -      -      -      -      -      -     0.50   0.50    -      -      -     uaddl	v0.2d, v0.2s, v0.2s
 # CHECK-NEXT:  -      -      -      -      -      -      -      -     0.50   0.50    -      -      -     uaddl	v0.4s, v0.4h, v0.4h
 # CHECK-NEXT:  -      -      -      -      -      -      -      -     0.50   0.50    -      -      -     uaddl	v0.8h, v0.8b, v0.8b
@@ -3123,14 +3123,14 @@ zip2	v0.8h, v0.8h, v0.8h
 # CHECK-NEXT:  -      -      -      -      -      -      -      -     0.50   0.50    -      -      -     urshr	v0.8h, v0.8h, #3
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -     9.00   ursqrte	v0.2s, v0.2s
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -     9.00   ursqrte	v0.4s, v0.4s
-# CHECK-NEXT:  -      -      -      -      -      -      -      -     1.00   1.00    -      -      -     ursra	d18, d10, #13
-# CHECK-NEXT:  -      -      -      -      -      -      -      -     1.00   1.00    -      -      -     ursra	v0.16b, v0.16b, #3
-# CHECK-NEXT:  -      -      -      -      -      -      -      -     1.00   1.00    -      -      -     ursra	v0.2d, v0.2d, #3
-# CHECK-NEXT:  -      -      -      -      -      -      -      -     1.00   1.00    -      -      -     ursra	v0.2s, v0.2s, #3
-# CHECK-NEXT:  -      -      -      -      -      -      -      -     1.00   1.00    -      -      -     ursra	v0.4h, v0.4h, #3
-# CHECK-NEXT:  -      -      -      -      -      -      -      -     1.00   1.00    -      -      -     ursra	v0.4s, v0.4s, #3
-# CHECK-NEXT:  -      -      -      -      -      -      -      -     1.00   1.00    -      -      -     ursra	v0.8b, v0.8b, #3
-# CHECK-NEXT:  -      -      -      -      -      -      -      -     1.00   1.00    -      -      -     ursra	v0.8h, v0.8h, #3
+# CHECK-NEXT:  -      -      -      -      -      -      -      -     1.50   1.50    -      -      -     ursra	d18, d10, #13
+# CHECK-NEXT:  -      -      -      -      -      -      -      -     1.50   1.50    -      -      -     ursra	v0.16b, v0.16b, #3
+# CHECK-NEXT:  -      -      -      -      -      -      -      -     1.50   1.50    -      -      -     ursra	v0.2d, v0.2d, #3
+# CHECK-NEXT:  -      -      -      -      -      -      -      -     1.50   1.50    -      -      -     ursra	v0.2s, v0.2s, #3
+# CHECK-NEXT:  -      -      -      -      -      -      -      -     1.50   1.50    -      -      -     ursra	v0.4h, v0.4h, #3
+# CHECK-NEXT:  -      -      -      -      -      -      -      -     1.50   1.50    -      -      -     ursra	v0.4s, v0.4s, #3
+# CHECK-NEXT:  -      -      -      -      -      -      -      -     1.50   1.50    -      -      -     ursra	v0.8b, v0.8b, #3
+# CHECK-NEXT:  -      -      -      -      -      -      -      -     1.50   1.50    -      -      -     ursra	v0.8h, v0.8h, #3
 # CHECK-NEXT:  -      -      -      -      -      -      -      -     0.50   0.50    -      -      -     ushl	d0, d0, d0
 # CHECK-NEXT:  -      -      -      -      -      -      -      -     0.50   0.50    -      -      -     ushl	v0.16b, v0.16b, v0.16b
 # CHECK-NEXT:  -      -      -      -      -      -      -      -     0.50   0.50    -      -      -     ushl	v0.4s, v0.4s, v0.4s
