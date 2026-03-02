@@ -206,6 +206,13 @@ private:
       }
     }
   }
+
+  template <typename IRBuilderTy>
+  bool matchAssociativeReduction(
+      Instruction &I, Instruction::BinaryOps BinOpOpc,
+      Intrinsic::ID ReductionIID, IRBuilderTy &Builder, BinaryOperator *Op0,
+      Value *ScalarReduceC, bool ScalarReduceCIsLeft,
+      function_ref<void(Instruction &, Value &)> ReplaceValue);
 };
 } // namespace
 
@@ -1750,7 +1757,7 @@ static Value *checkIntrinsicAndGetItsArgument(Value *V, Intrinsic::ID IID) {
 }
 
 template <typename IRBuilderTy>
-static bool matchAssociativeReduction(
+bool VectorCombine::matchAssociativeReduction(
     Instruction &I, Instruction::BinaryOps BinOpOpc, Intrinsic::ID ReductionIID,
     IRBuilderTy &Builder, BinaryOperator *Op0, Value *ScalarReduceC,
     bool ScalarReduceCIsLeft,
@@ -1813,7 +1820,7 @@ static bool matchAssociativeReduction(
         RHS_Bin = nullptr;
       }
     }
-  } else { // Outer == Sub
+  } else {                      // Outer == Sub
     if (!ScalarReduceCIsLeft) { // (Op0 - C)
       if (InnerOp == Instruction::Add) {
         // (X + Y) - C -> (X - C) + Y
@@ -1873,8 +1880,7 @@ static bool matchAssociativeReduction(
     }
   }
 
-  Value *CombineNode =
-      Builder.CreateBinOp(NewReduceOp, LHS_Reduce, RHS_Reduce);
+  Value *CombineNode = Builder.CreateBinOp(NewReduceOp, LHS_Reduce, RHS_Reduce);
 
   Value *NewBinNode;
   if (LHS_Bin == nullptr)
@@ -1910,8 +1916,8 @@ bool VectorCombine::foldBinopOfReductions(Instruction &I) {
   //   Reduce(Z) - (Reduce(X) + Y)  -> Reduce(Z - X) - Y
   if (auto *Op0 = dyn_cast<BinaryOperator>(I.getOperand(0))) {
     if (matchAssociativeReduction(I, BinOpOpc, ReductionIID, Builder, Op0,
-                                  I.getOperand(1), /*ScalarReduceCIsLeft=*/false,
-                                  ReplaceValue))
+                                  I.getOperand(1),
+                                  /*ScalarReduceCIsLeft=*/false, ReplaceValue))
       return true;
   }
 
@@ -1921,8 +1927,6 @@ bool VectorCombine::foldBinopOfReductions(Instruction &I) {
                                   ReplaceValue))
       return true;
   }
-
-
 
   Value *V0 = checkIntrinsicAndGetItsArgument(I.getOperand(0), ReductionIID);
   if (!V0)
