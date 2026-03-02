@@ -184,6 +184,11 @@ int printf_uses_return_value(int choice) {
   // CHECK-MESSAGES-NOT: [[@LINE-1]]:6: warning: use 'std::println' instead of 'printf' [modernize-use-std-print]
   // CHECK-FIXES-NOT: std::println("GCC statement expression with unused result {}", i);
 
+label:
+  printf("Label target %d\n", i);
+  // CHECK-MESSAGES: [[@LINE-1]]:3: warning: use 'std::println' instead of 'printf' [modernize-use-std-print]
+  // CHECK-FIXES: std::println("Label target {}", i);
+
   return printf("Return value used in return\n");
 }
 
