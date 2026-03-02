@@ -819,7 +819,7 @@ whether a Unix linker would succeed at linking the program if all inline
 functions were defined out-of-line. (& for all valid orderings of dependencies
 - since linking resolution is linear, it's possible that some implicit
 dependencies can sneak through: A depends on B and C, so valid orderings are
-"C B A" or "B C A", in both cases the explicit dependencies come before their
+"A B C" or "A C B", in both cases the explicit dependencies come before their
 use. But in the first case, B could still link successfully if it implicitly
 depended on C, or the opposite in the second case)
 
