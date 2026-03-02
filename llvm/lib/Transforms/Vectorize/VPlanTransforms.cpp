@@ -1060,9 +1060,8 @@ static VPValue *optimizeLatchExitInductionUser(
   return nullptr;
 }
 
-void VPlanTransforms::optimizeInductionLiveOutUsers(VPlan &Plan,
-                                                 PredicatedScalarEvolution &PSE,
-                                                 bool FoldTail) {
+void VPlanTransforms::optimizeInductionLiveOutUsers(
+    VPlan &Plan, PredicatedScalarEvolution &PSE, bool FoldTail) {
   // Compute end values for all inductions.
   VPTypeAnalysis TypeInfo(Plan);
   VPRegionBlock *VectorRegion = Plan.getVectorLoopRegion();

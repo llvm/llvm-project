@@ -374,8 +374,8 @@ struct VPlanTransforms {
   /// IV values by feeding them precomputed end values instead, possibly taken
   /// one step backwards.
   static void optimizeInductionLiveOutUsers(VPlan &Plan,
-                                         PredicatedScalarEvolution &PSE,
-                                         bool FoldTail);
+                                            PredicatedScalarEvolution &PSE,
+                                            bool FoldTail);
 
   /// Add explicit broadcasts for live-ins and VPValues defined in \p Plan's entry block if they are used as vectors.
   static void materializeBroadcasts(VPlan &Plan);

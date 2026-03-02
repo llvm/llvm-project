@@ -8354,7 +8354,7 @@ VPlanPtr LoopVectorizationPlanner::tryToBuildVPlanWithVPRecipes(
   RUN_VPLAN_PASS(VPlanTransforms::optimizeFindIVReductions, *Plan, PSE,
                  *OrigLoop);
   VPlanTransforms::optimizeInductionLiveOutUsers(*Plan, PSE,
-                                              CM.foldTailByMasking());
+                                                 CM.foldTailByMasking());
 
   // Apply mandatory transformation to handle reductions with multiple in-loop
   // uses if possible, bail out otherwise.
@@ -8455,7 +8455,8 @@ VPlanPtr LoopVectorizationPlanner::tryToBuildVPlan(VFRange &Range) {
     return nullptr;
 
   // Optimize induction live-out users to use precomputed end values.
-  VPlanTransforms::optimizeInductionLiveOutUsers(*Plan, PSE, /*FoldTail=*/false);
+  VPlanTransforms::optimizeInductionLiveOutUsers(*Plan, PSE,
+                                                 /*FoldTail=*/false);
 
   assert(verifyVPlanIsValid(*Plan) && "VPlan is invalid");
   return Plan;
