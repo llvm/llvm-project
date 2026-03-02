@@ -2,9 +2,6 @@
 Kaleidoscope: Adding Debug Information
 ======================================
 
-.. contents::
-   :local:
-
 Chapter 9 Introduction
 ======================
 

@@ -2,9 +2,6 @@
 How To Use Attributes
 =====================
 
-.. contents::
-  :local:
-
 Introduction
 ============
 

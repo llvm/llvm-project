@@ -4,9 +4,6 @@
 LLVM Loop Terminology (and Canonical Forms)
 ===========================================
 
-.. contents::
-   :local:
-
 Loop Definition
 ===============
 

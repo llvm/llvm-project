@@ -4,9 +4,6 @@
 LLVM Cycle Terminology
 ======================
 
-.. contents::
-   :local:
-
 .. _cycle-definition:
 
 Cycles

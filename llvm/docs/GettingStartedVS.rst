@@ -3,10 +3,6 @@ Getting Started with the LLVM System using Microsoft Visual Studio
 ==================================================================
 
 
-.. contents::
-   :local:
-
-
 Overview
 ========
 Welcome to LLVM on Windows! This document only covers LLVM on Windows using

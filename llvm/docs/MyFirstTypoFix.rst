@@ -2,9 +2,6 @@
 MyFirstTypoFix
 ==============
 
-.. contents::
-   :local:
-
 Introduction
 ============
 

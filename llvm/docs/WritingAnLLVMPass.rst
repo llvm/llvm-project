@@ -4,9 +4,6 @@ Writing an LLVM Pass (legacy PM version)
 
 .. program:: opt
 
-.. contents::
-    :local:
-
 Introduction --- What is a pass?
 ================================
 

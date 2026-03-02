@@ -2,9 +2,6 @@
 User Guide for AMDGPU Backend
 =============================
 
-.. contents::
-   :local:
-
 .. toctree::
    :hidden:
 

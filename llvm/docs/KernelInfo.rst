@@ -2,9 +2,6 @@
 KernelInfo
 ==========
 
-.. contents::
-   :local:
-
 Introduction
 ============
 
