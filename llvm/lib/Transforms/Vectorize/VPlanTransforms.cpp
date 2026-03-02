@@ -1060,7 +1060,7 @@ static VPValue *optimizeLatchExitInductionUser(
   return nullptr;
 }
 
-void VPlanTransforms::optimizeInductionExitUsers(VPlan &Plan,
+void VPlanTransforms::optimizeInductionLiveOutUsers(VPlan &Plan,
                                                  PredicatedScalarEvolution &PSE,
                                                  bool FoldTail) {
   // Compute end values for all inductions.

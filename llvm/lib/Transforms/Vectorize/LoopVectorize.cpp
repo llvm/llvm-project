@@ -8353,7 +8353,7 @@ VPlanPtr LoopVectorizationPlanner::tryToBuildVPlanWithVPRecipes(
   // Optimize FindIV reductions to use sentinel-based approach when possible.
   RUN_VPLAN_PASS(VPlanTransforms::optimizeFindIVReductions, *Plan, PSE,
                  *OrigLoop);
-  VPlanTransforms::optimizeInductionExitUsers(*Plan, PSE,
+  VPlanTransforms::optimizeInductionLiveOutUsers(*Plan, PSE,
                                               CM.foldTailByMasking());
 
   // Apply mandatory transformation to handle reductions with multiple in-loop
@@ -8454,8 +8454,8 @@ VPlanPtr LoopVectorizationPlanner::tryToBuildVPlan(VFRange &Range) {
   if (!VPlanTransforms::tryToConvertVPInstructionsToVPRecipes(*Plan, *TLI))
     return nullptr;
 
-  // Optimize induction exit users to use precomputed end values.
-  VPlanTransforms::optimizeInductionExitUsers(*Plan, PSE, /*FoldTail=*/false);
+  // Optimize induction live-out users to use precomputed end values.
+  VPlanTransforms::optimizeInductionLiveOutUsers(*Plan, PSE, /*FoldTail=*/false);
 
   assert(verifyVPlanIsValid(*Plan) && "VPlan is invalid");
   return Plan;

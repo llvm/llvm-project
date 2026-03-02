@@ -635,7 +635,7 @@ createWidenInductionRecipe(PHINode *Phi, VPPhi *PhiR, VPIRValue *Start,
 
   VPValue *BackedgeVal = PhiR->getOperand(1);
   // Replace live-out extracts of WideIV's backedge value by ExitingIVValue
-  // recipes. optimizeInductionExitUsers will later compute the proper
+  // recipes. optimizeInductionLiveOutUsers will later compute the proper
   // DerivedIV.
   auto ReplaceExtractsWithExitingIVValue = [&](VPHeaderPHIRecipe *WideIV) {
     for (VPUser *U : to_vector(BackedgeVal->users())) {
