@@ -16,7 +16,6 @@
 #define LLVM_CLANG_APINOTES_READER_H
 
 #include "clang/APINotes/Types.h"
-#include "llvm/Support/Error.h"
 #include "llvm/Support/MemoryBuffer.h"
 #include "llvm/Support/VersionTuple.h"
 #include <memory>
@@ -31,14 +30,14 @@ class APINotesReader {
   std::unique_ptr<Implementation> Implementation;
 
   APINotesReader(llvm::MemoryBuffer *InputBuffer,
-                 llvm::VersionTuple SwiftVersion, llvm::Error &Err);
+                 llvm::VersionTuple SwiftVersion, bool &Failed);
 
 public:
   /// Create a new API notes reader from the given member buffer, which
   /// contains the contents of a binary API notes file.
   ///
-  /// \returns the new API notes reader, or an error if one occurred.
-  static llvm::Expected<std::unique_ptr<APINotesReader>>
+  /// \returns the new API notes reader, or null if an error occurred.
+  static std::unique_ptr<APINotesReader>
   Create(std::unique_ptr<llvm::MemoryBuffer> InputBuffer,
          llvm::VersionTuple SwiftVersion);
 
