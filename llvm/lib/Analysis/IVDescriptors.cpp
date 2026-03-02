@@ -502,14 +502,19 @@ bool RecurrenceDescriptor::AddReductionVar(
   // to evaluate the reduction in the narrower width.
   // Check the scalar type to handle both scalar and vector types.
   Type *ScalarTy = RecurrenceType->getScalarType();
-  if (ScalarTy->isFloatingPointTy()) {
-    if (Kind != RecurKind::FindLast && !isFloatingPointRecurrenceKind(Kind))
+  if (Kind == RecurKind::FindLast) {
+    // FindLast supports all types can otherwise be used in recurrences.
+    if (!ScalarTy->isFloatingPointTy() && !ScalarTy->isIntegerTy() &&
+        !ScalarTy->isPointerTy())
+      return false;
+  } else if (ScalarTy->isFloatingPointTy()) {
+    if (!isFloatingPointRecurrenceKind(Kind))
       return false;
   } else if (ScalarTy->isIntegerTy()) {
     if (!isIntegerRecurrenceKind(Kind))
       return false;
     Start = lookThroughAnd(Phi, RecurrenceType, VisitedInsts, CastInsts);
-  } else if (!ScalarTy->isPointerTy() || Kind != RecurKind::FindLast) {
+  } else {
     // Pointer min/max may exist, but it is not supported as a reduction op.
     return false;
   }
@@ -648,7 +653,7 @@ bool RecurrenceDescriptor::AddReductionVar(
         // "FindLast-like" phis are not supported see:
         // IVDescriptorsTest.UnsupportedFindLastPhi.
         FoundFindLastLikePhi =
-            isFindLastRecurrenceKind(Kind) && !FoundFindLastLikePhi &&
+            Kind == RecurKind::FindLast && !FoundFindLastLikePhi &&
             isFindLastLikePhi(cast<PHINode>(Cur), Phi, VisitedInsts);
         if (!FoundFindLastLikePhi)
           return false;
@@ -733,7 +738,7 @@ bool RecurrenceDescriptor::AddReductionVar(
   // We only expect to match a single "find-last-like" phi per find-last
   // reduction, with no non-phi operations in the reduction use chain.
   assert((!FoundFindLastLikePhi ||
-          (isFindLastRecurrenceKind(Kind) && NumNonPHIUsers == 0)) &&
+          (Kind == RecurKind::FindLast && NumNonPHIUsers == 0)) &&
          "Unexpectedly matched a 'find-last-like' phi");
 
   if (isAnyOfRecurrenceKind(Kind) && NumCmpSelectPatternInst != 1)
