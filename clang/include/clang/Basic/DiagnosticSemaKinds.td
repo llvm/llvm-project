@@ -6159,7 +6159,7 @@ def note_template_declared_here : Note<
   "%1 declared here">;
 def err_template_expansion_into_fixed_list : Error<
   "pack expansion used as argument for non-pack parameter of %select{alias "
-  "template|concept}0">;
+  "template|concept|builtin template}0">;
 def note_parameter_type : Note<
   "parameter of type %0 is declared here">;
 

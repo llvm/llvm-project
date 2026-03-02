@@ -363,11 +363,7 @@ struct AAUniformWorkGroupSizeFunction : public AAUniformWorkGroupSize {
     if (CC != CallingConv::AMDGPU_KERNEL)
       return;
 
-    bool InitialValue = false;
-    if (F->hasFnAttribute("uniform-work-group-size"))
-      InitialValue =
-          F->getFnAttribute("uniform-work-group-size").getValueAsString() ==
-          "true";
+    bool InitialValue = F->hasFnAttribute("uniform-work-group-size");
 
     if (InitialValue)
       indicateOptimisticFixpoint();
@@ -406,10 +402,9 @@ struct AAUniformWorkGroupSizeFunction : public AAUniformWorkGroupSize {
       return ChangeStatus::UNCHANGED;
 
     LLVMContext &Ctx = getAssociatedFunction()->getContext();
-    return A.manifestAttrs(
-        getIRPosition(),
-        {Attribute::get(Ctx, "uniform-work-group-size", "true")},
-        /*ForceReplace=*/true);
+    return A.manifestAttrs(getIRPosition(),
+                           {Attribute::get(Ctx, "uniform-work-group-size")},
+                           /*ForceReplace=*/true);
   }
 
   bool isValidState() const override {
