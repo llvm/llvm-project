@@ -3912,8 +3912,7 @@ bool CursorVisitor::RunVisitorWorkList(VisitorWorkList &WL) {
               return true;
           } else
             // Non init capture is a VariableRef
-            if (Visit(MakeCursorVariableRef(CV, C->getLocation(),
-                                            TU)))
+            if (Visit(MakeCursorVariableRef(CV, C->getLocation(), TU)))
               return true;
         }
       }
