@@ -1367,7 +1367,15 @@ TEST(ValueTracking, canCreatePoisonOrUndef) {
       {{false, false},
        "call i32 @llvm.vector.reduce.umax.v4i32(<4 x i32> %vx)"},
       {{false, false},
-       "call i32 @llvm.vector.reduce.umin.v4i32(<4 x i32> %vx)"}};
+       "call i32 @llvm.vector.reduce.umin.v4i32(<4 x i32> %vx)"},
+      {{false, false},
+       "call i32 @llvm.vector.reduce.fmax.v4i32(<4 x i32> %vx)"},
+      {{false, false},
+       "call i32 @llvm.vector.reduce.fmin.v4i32(<4 x i32> %vx)"},
+      {{false, false},
+       "call i32 @llvm.vector.reduce.fmaximum.v4i32(<4 x i32> %vx)"},
+      {{false, false},
+       "call i32 @llvm.vector.reduce.fmaximum.v4i32(<4 x i32> %vx)"}};
 
   std::string AssemblyStr = AsmHead;
   for (auto &Itm : Data)
