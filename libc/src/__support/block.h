@@ -23,18 +23,6 @@
 
 namespace LIBC_NAMESPACE_DECL {
 
-/// Returns the value rounded down to the nearest multiple of alignment.
-LIBC_INLINE constexpr size_t align_down(size_t value, size_t alignment) {
-  // Note this shouldn't overflow since the result will always be <= value.
-  return (value / alignment) * alignment;
-}
-
-/// Returns the value rounded up to the nearest multiple of alignment. May wrap
-/// around.
-LIBC_INLINE constexpr size_t align_up(size_t value, size_t alignment) {
-  return align_down(value + alignment - 1, alignment);
-}
-
 using ByteSpan = cpp::span<LIBC_NAMESPACE::cpp::byte>;
 using cpp::optional;
 
@@ -313,13 +301,13 @@ public:
   LIBC_INLINE static uintptr_t
   next_possible_block_start(uintptr_t ptr,
                             size_t usable_space_alignment = MIN_ALIGN) {
-    return align_up(ptr + sizeof(Block), usable_space_alignment) -
+    return align_to(ptr + sizeof(Block), usable_space_alignment) -
            sizeof(Block);
   }
   LIBC_INLINE static uintptr_t
   prev_possible_block_start(uintptr_t ptr,
                             size_t usable_space_alignment = MIN_ALIGN) {
-    return align_down(ptr, usable_space_alignment) - sizeof(Block);
+    return align_to_down(ptr, usable_space_alignment) - sizeof(Block);
   }
 
 private:

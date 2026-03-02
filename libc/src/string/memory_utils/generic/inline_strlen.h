@@ -12,6 +12,7 @@
 #include "src/__support/CPP/bit.h"
 #include "src/__support/CPP/simd.h"
 #include "src/__support/common.h"
+#include "src/__support/math_extras.h"
 
 namespace LIBC_NAMESPACE_DECL {
 namespace clang_vector {
@@ -29,8 +30,8 @@ LIBC_NO_SANITIZE_OOB_ACCESS LIBC_INLINE size_t string_length(const char *src) {
   constexpr cpp::simd<char> null_byte = cpp::splat('\0');
 
   size_t alignment = alignof(cpp::simd<char>);
-  const cpp::simd<char> *aligned = reinterpret_cast<const cpp::simd<char> *>(
-      __builtin_align_down(src, alignment));
+  const cpp::simd<char> *aligned =
+      reinterpret_cast<const cpp::simd<char> *>(align_down(src, alignment));
 
   cpp::simd<char> chars = cpp::load<cpp::simd<char>>(aligned, /*aligned=*/true);
   cpp::simd_mask<char> mask = chars == null_byte;
@@ -64,7 +65,7 @@ find_first_character(const unsigned char *s, unsigned char c, size_t n) {
 
   size_t alignment = alignof(Vector);
   const Vector *aligned =
-      reinterpret_cast<const Vector *>(__builtin_align_down(s, alignment));
+      reinterpret_cast<const Vector *>(align_down(s, alignment));
 
   Vector chars = cpp::load<Vector>(aligned, /*aligned=*/true);
   Mask cmp_v = chars == c_byte;

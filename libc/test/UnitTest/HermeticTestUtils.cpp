@@ -9,6 +9,7 @@
 #include "hdr/stdint_proxy.h"
 #include "src/__support/common.h"
 #include "src/__support/macros/config.h"
+#include "src/__support/math_extras.h"
 #include <stddef.h>
 
 #ifdef LIBC_TARGET_ARCH_IS_AARCH64
@@ -80,9 +81,8 @@ int atexit(void (*func)(void)) { return LIBC_NAMESPACE::atexit(func); }
 
 void *malloc(size_t s) {
   // Keep the bump pointer aligned on an eight byte boundary.
-  s = ((s + ALIGNMENT - 1) / ALIGNMENT) * ALIGNMENT;
   void *mem = ptr;
-  ptr += s;
+  ptr += LIBC_NAMESPACE::align_up(s, ALIGNMENT);
   return static_cast<uint64_t>(ptr - memory) >= MEMORY_SIZE ? nullptr : mem;
 }
 
