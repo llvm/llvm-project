@@ -999,6 +999,9 @@ void VPlanTransforms::foldTailByMasking(VPlan &Plan) {
          "the exit block must have middle block as single predecessor");
 
   VPRegionBlock *LoopRegion = Plan.getVectorLoopRegion();
+  assert(LoopRegion->getSingleSuccessor() == Plan.getMiddleBlock() &&
+         "The vector loop region must have the middle block as its single "
+         "successor for now");
   VPBasicBlock *Header = LoopRegion->getEntryBasicBlock();
 
   Header->splitAt(Header->getFirstNonPhi());
@@ -1028,15 +1031,12 @@ void VPlanTransforms::foldTailByMasking(VPlan &Plan) {
   // Split the latch at the IV update, and branch to it from the header mask.
   VPBasicBlock *Latch =
       OrigLatch->splitAt(IVInc->getDefiningRecipe()->getIterator());
-  Latch->setName("latch");
+  Latch->setName("vector.latch");
   VPBlockUtils::connectBlocks(Header, Latch);
 
-  // Collect any values defined in the loop that need a phi. Currently this is
-  // header phi backedges and live outs extracted in the middle block.
+  // Collect any values defined in the loop that need a phi. Currently this
+  // includes header phi backedges and live-outs extracted in the middle block.
   // TODO: Handle early exits via Plan.getExitBlocks()
-  assert(LoopRegion->getSingleSuccessor() == Plan.getMiddleBlock() &&
-         "The vector loop region must have the middle block as its single "
-         "successor for now");
   MapVector<VPValue *, SmallVector<VPUser *>> NeedsPhi;
   for (VPRecipeBase &R : Header->phis())
     if (!isa<VPCanonicalIVPHIRecipe, VPWidenInductionRecipe>(R))
@@ -1052,7 +1052,7 @@ void VPlanTransforms::foldTailByMasking(VPlan &Plan) {
   // Insert phis with a poison incoming value for past the end of the tail.
   Builder.setInsertPoint(Latch, Latch->begin());
   VPTypeAnalysis TypeInfo(Plan);
-  for (auto [V, Users] : NeedsPhi) {
+  for (const auto &[V, Users] : NeedsPhi) {
     if (isa<VPIRValue>(V))
       continue;
     // TODO: For reduction phis, use phi value instead of poison so we can
