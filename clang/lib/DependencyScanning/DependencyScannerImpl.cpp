@@ -285,8 +285,9 @@ static std::optional<StringRef> getSimpleMacroName(StringRef Macro) {
   }
   return FinishName();
 }
+} // namespace
 
-static void canonicalizeDefines(PreprocessorOptions &PPOpts) {
+void dependencies::canonicalizeDefines(PreprocessorOptions &PPOpts) {
   using MacroOpt = std::pair<StringRef, std::size_t>;
   std::vector<MacroOpt> SimpleNames;
   SimpleNames.reserve(PPOpts.Macros.size());
@@ -318,6 +319,7 @@ static void canonicalizeDefines(PreprocessorOptions &PPOpts) {
   std::swap(PPOpts.Macros, NewMacros);
 }
 
+namespace {
 class ScanningDependencyDirectivesGetter : public DependencyDirectivesGetter {
   DependencyScanningWorkerFilesystem *DepFS;
 
@@ -430,10 +432,9 @@ void dependencies::initializeScanCompilerInstance(
   }
 }
 
-/// Creates a CompilerInvocation suitable for the dependency scanner.
-static std::shared_ptr<CompilerInvocation>
-createScanCompilerInvocation(const CompilerInvocation &Invocation,
-                             const DependencyScanningService &Service) {
+std::shared_ptr<CompilerInvocation> dependencies::createScanCompilerInvocation(
+    const CompilerInvocation &Invocation,
+    const DependencyScanningService &Service) {
   auto ScanInvocation = std::make_shared<CompilerInvocation>(Invocation);
 
   sanitizeDiagOpts(ScanInvocation->getDiagnosticOpts());
@@ -508,10 +509,9 @@ dependencies::computePrebuiltModulesASTMap(
   return PrebuiltModulesASTMap;
 }
 
-/// Creates dependency output options to be reported to the dependency consumer,
-/// deducing missing information if necessary.
-static std::unique_ptr<DependencyOutputOptions>
-createDependencyOutputOptions(const CompilerInvocation &Invocation) {
+std::unique_ptr<DependencyOutputOptions>
+dependencies::createDependencyOutputOptions(
+    const CompilerInvocation &Invocation) {
   auto Opts = std::make_unique<DependencyOutputOptions>(
       Invocation.getDependencyOutputOpts());
   // We need at least one -MT equivalent for the generator of make dependency

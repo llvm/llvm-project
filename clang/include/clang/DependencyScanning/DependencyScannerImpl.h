@@ -91,6 +91,19 @@ std::unique_ptr<CompilerInvocation>
 createCompilerInvocation(ArrayRef<std::string> CommandLine,
                          DiagnosticsEngine &Diags);
 
+/// Canonicalizes command-line macro defines (e.g. removing "-DX -UX").
+void canonicalizeDefines(PreprocessorOptions &PPOpts);
+
+/// Creates a CompilerInvocation suitable for the dependency scanner.
+std::shared_ptr<CompilerInvocation>
+createScanCompilerInvocation(const CompilerInvocation &Invocation,
+                             const DependencyScanningService &Service);
+
+/// Creates dependency output options to be reported to the dependency consumer,
+/// deducing missing information if necessary.
+std::unique_ptr<DependencyOutputOptions>
+createDependencyOutputOptions(const CompilerInvocation &Invocation);
+
 void initializeScanCompilerInstance(
     CompilerInstance &ScanInstance,
     IntrusiveRefCntPtr<llvm::vfs::FileSystem> FS,
