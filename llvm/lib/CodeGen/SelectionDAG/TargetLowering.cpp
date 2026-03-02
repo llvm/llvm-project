@@ -8225,8 +8225,8 @@ bool TargetLowering::expandDIVREMByConstant(SDNode *N,
     // Then 2^W ≡ 1 (mod Divisor), so a value written in base 2^W can be
     // reduced modulo Divisor by summing its W-bit chunks.
     for (unsigned i = MaxChunk; i > MaxChunk / 2; --i) {
-      APInt ChunkMaxPlus1 = APInt::getOneBitSet(BitWidth, i);
-      if (ChunkMaxPlus1.urem(Divisor).isOne()) {
+      APInt Pow2 = APInt::getOneBitSet(BitWidth, i);
+      if (Pow2.urem(Divisor).isOne()) {
         BestChunkWidth = i;
         break;
       }
