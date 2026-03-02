@@ -939,14 +939,16 @@ shouldPartialUnroll(const unsigned LoopSize, const unsigned TripCount,
 // FIXME: This function is used by LoopUnroll and LoopUnrollAndJam, but consumes
 // many LoopUnroll-specific options. The shared functionality should be
 // refactored into it own function.
-void llvm::computeUnrollCount(
-    Loop *L, const TargetTransformInfo &TTI, DominatorTree &DT, LoopInfo *LI,
-    AssumptionCache *AC, ScalarEvolution &SE,
-    const SmallPtrSetImpl<const Value *> &EphValues,
-    OptimizationRemarkEmitter *ORE, unsigned TripCount, unsigned MaxTripCount,
-    bool MaxOrZero, unsigned TripMultiple, const UnrollCostEstimator &UCE,
-    TargetTransformInfo::UnrollingPreferences &UP,
-    TargetTransformInfo::PeelingPreferences &PP) {
+void llvm::computeUnrollCount(Loop *L, const TargetTransformInfo &TTI,
+                              DominatorTree &DT, LoopInfo *LI,
+                              AssumptionCache *AC, ScalarEvolution &SE,
+                              const SmallPtrSetImpl<const Value *> &EphValues,
+                              OptimizationRemarkEmitter *ORE,
+                              unsigned TripCount, unsigned MaxTripCount,
+                              bool MaxOrZero, unsigned TripMultiple,
+                              const UnrollCostEstimator &UCE,
+                              TargetTransformInfo::UnrollingPreferences &UP,
+                              TargetTransformInfo::PeelingPreferences &PP) {
 
   unsigned LoopSize = UCE.getRolledLoopSize();
 

@@ -160,10 +160,9 @@ static bool computeUnrollAndJamCount(
   // Use computeUnrollCount from the loop unroller to get a count for
   // unrolling the outer loop. We have already checked that the loop has no
   // unroll.* pragmas, so this is purely heuristic-driven.
-  computeUnrollCount(
-    L, TTI, DT, LI, AC, SE, EphValues, ORE, OuterTripCount,
-      /*MaxTripCount*/ 0, /*MaxOrZero*/ false, OuterTripMultiple, OuterUCE,
-      UP, PP);
+  computeUnrollCount(L, TTI, DT, LI, AC, SE, EphValues, ORE, OuterTripCount,
+                     /*MaxTripCount*/ 0, /*MaxOrZero*/ false, OuterTripMultiple,
+                     OuterUCE, UP, PP);
 
   // Override with any explicit Count from the "unroll-and-jam-count" option.
   bool UserUnrollCount = UnrollAndJamCount.getNumOccurrences() > 0;
