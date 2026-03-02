@@ -111,6 +111,10 @@ static Value getOriginalValue(Value val) {
   Value prev;
   while (val && val != prev) {
     prev = val;
+    // Stop tracing if the op is a rematerialization candidate itself.
+    if (isa_and_nonnull<acc::OutlineRematerializationOpInterface>(
+            val.getDefiningOp()))
+      break;
     if (auto viewLikeOp = val.getDefiningOp<ViewLikeOpInterface>())
       val = viewLikeOp.getViewSource();
     if (auto partialAccess =
@@ -132,20 +136,11 @@ static Value getOriginalValue(Value val) {
 /// to find the original defining operation before making the determination.
 static bool isRematerializationCandidate(Value val,
                                          acc::OpenACCSupport &accSupport) {
-  // Check before tracing through view-like ops: an op may implement both
-  // ViewLikeOpInterface and OutlineRematerializationOpInterface.
-  if (Operation *directDefOp = val.getDefiningOp()) {
-    if (isa<acc::OutlineRematerializationOpInterface>(directDefOp)) {
-      LLVM_DEBUG(llvm::dbgs()
-                 << "\tDirect OutlineRematerializationOpInterface: "
-                 << *directDefOp << "\n");
-      return true;
-    }
-  }
-
   // Trace through view-like operations to find the original value.
   Value origVal = getOriginalValue(val);
   Operation *definingOp = origVal.getDefiningOp();
+  if (!definingOp)
+    definingOp = val.getDefiningOp();
   if (!definingOp)
     return false;
 
@@ -154,6 +149,12 @@ static bool isRematerializationCandidate(Value val,
   // Constants are trivial and useful to rematerialize.
   if (matchPattern(definingOp, m_Constant())) {
     LLVM_DEBUG(llvm::dbgs() << "\t\t-> constant pattern matched\n");
+    return true;
+  }
+
+  // Operations implementing OutlineRematerializationOpInterface are candidates.
+  if (isa<acc::OutlineRematerializationOpInterface>(definingOp)) {
+    LLVM_DEBUG(llvm::dbgs() << "\t\t-> OutlineRematerializationOpInterface\n");
     return true;
   }
 
