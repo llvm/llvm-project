@@ -87,8 +87,8 @@ cc_library(
     copts = llvm_copts,
     deps = [
         ":gmock",
-        "//llvm:Support",
         ":gtest",
+        "//llvm:Support",
     ],
 )
 
