@@ -99,7 +99,7 @@ bool xegpu::recoverTemporaryLayouts(Operation *rootOp) {
             << operand.getOperandNumber() << " of operation " << op->getName();
         continue;
       }
-      xegpu::setDistributeLayoutAttr(operand, layout);
+      xegpu::setTemporaryLayout(operand, layout);
     }
     return WalkResult::advance();
   });
@@ -681,7 +681,7 @@ xegpu::DistributeLayoutAttr xegpu::setupInsertStridedSliceResultLayout(
 static xegpu::DistributeLayoutAttr setupGenericLoadAnchorLayout(
     xegpu::LayoutKind layoutKind, mlir::MLIRContext *context,
     xegpu::DistributeLayoutAttr consumerLayout, bool isChunkedLoad,
-    int maxChunkSize, int valShapeSize, int subgroupSize) {
+    int maxChunkSize, ArrayRef<int64_t> resShape, int subgroupSize) {
 
   if (layoutKind == xegpu::LayoutKind::Subgroup)
     return consumerLayout;
@@ -691,24 +691,24 @@ static xegpu::DistributeLayoutAttr setupGenericLoadAnchorLayout(
   SmallVector<int64_t> consumerLaneData =
       consumerLayout.getEffectiveLaneDataAsInt();
 
-  SmallVector<int> instData(valShapeSize, 1);
-  SmallVector<int> laneLayout(valShapeSize, 1);
-  SmallVector<int> laneData(valShapeSize, 1);
+  SmallVector<int> instData(resShape.size(), 1);
+  SmallVector<int> laneLayout(resShape.size(), 1);
+  SmallVector<int> laneData(resShape.size(), 1);
 
   if (!isChunkedLoad) {
     if (layoutKind == xegpu::LayoutKind::InstData) {
-      instData[valShapeSize - 1] =
-          std::min(static_cast<int>(consumerInstData[valShapeSize - 1]),
-                   maxChunkSize * subgroupSize);
+      instData.back() = std::min(static_cast<int>(consumerInstData.back()),
+                                 maxChunkSize * subgroupSize);
       return xegpu::LayoutAttr::get(context, instData);
     } else if (layoutKind == xegpu::LayoutKind::Lane) {
-      laneLayout.back() = subgroupSize;
       laneData.back() =
           std::min(static_cast<int>(consumerLaneData.back()), maxChunkSize);
+      laneLayout.back() = std::min(static_cast<int64_t>(subgroupSize),
+                                   resShape.back() / laneData.back());
       return xegpu::LayoutAttr::get(context, laneLayout, laneData);
     }
   } else {
-    assert(valShapeSize == 2 && "Chunked Store must access 2D tensor tile.");
+    assert(resShape.size() == 2 && "Chunked Store must access 2D tensor tile.");
     if (layoutKind == xegpu::LayoutKind::InstData) {
       instData[0] = subgroupSize;
       instData[1] =
@@ -730,7 +730,7 @@ xegpu::DistributeLayoutAttr xegpu::setupLoadGatherAnchorLayout(
     xegpu::DistributeLayoutAttr consumerLayout, const uArch::uArch *uArch) {
 
   const int subgroupSize = uArch->getSubgroupSize();
-  int resShapeSize = resVecTy.getShape().size();
+  ArrayRef<int64_t> resShape = resVecTy.getShape();
   auto context = resVecTy.getContext();
   auto elemBitWidth = resVecTy.getElementType().getIntOrFloatBitWidth();
 
@@ -740,8 +740,8 @@ xegpu::DistributeLayoutAttr xegpu::setupLoadGatherAnchorLayout(
   int maxChunkSize = uArchInstruction->getMaxLaneLoadSize(elemBitWidth);
 
   return setupGenericLoadAnchorLayout(layoutKind, context, consumerLayout,
-                                      (chunkSize > 1), maxChunkSize,
-                                      resShapeSize, subgroupSize);
+                                      (chunkSize > 1), maxChunkSize, resShape,
+                                      subgroupSize);
 }
 
 /// Sets up the anchor layout for load matrix operation.
@@ -753,7 +753,7 @@ xegpu::setupLoadMatrixAnchorLayout(xegpu::LayoutKind layoutKind,
                                    const xegpu::uArch::uArch *uArch) {
 
   const int subgroupSize = uArch->getSubgroupSize();
-  int resShapeSize = resVecTy.getShape().size();
+  ArrayRef<int64_t> resShape = resVecTy.getShape();
   auto context = resVecTy.getContext();
   auto elemBitWidth = resVecTy.getElementType().getIntOrFloatBitWidth();
 
@@ -762,7 +762,7 @@ xegpu::setupLoadMatrixAnchorLayout(xegpu::LayoutKind layoutKind,
           uArch->getInstruction(xegpu::uArch::InstructionKind::LoadGather));
   int maxChunkSize = uArchInstruction->getMaxLaneLoadSize(elemBitWidth);
   return setupGenericLoadAnchorLayout(layoutKind, context, consumerLayout,
-                                      false, maxChunkSize, resShapeSize,
+                                      false, maxChunkSize, resShape,
                                       subgroupSize);
 }
 
@@ -796,10 +796,12 @@ setupGenericStoreAnchorLayout(xegpu::LayoutKind layoutKind,
 
   if (!isChunkedStore) {
     if (layoutKind == xegpu::LayoutKind::InstData) {
-      instData[srcShapeSize - 1] = subgroupSize;
+      instData[srcShapeSize - 1] =
+          std::min(subgroupSize, static_cast<int>(srcShape.back()));
       return xegpu::LayoutAttr::get(context, instData);
     } else if (layoutKind == xegpu::LayoutKind::Lane) {
-      laneLayout[srcShapeSize - 1] = subgroupSize;
+      laneLayout[srcShapeSize - 1] =
+          std::min(subgroupSize, static_cast<int>(srcShape.back()));
       return xegpu::LayoutAttr::get(context, laneLayout, laneData);
     }
   } else {
@@ -1072,4 +1074,85 @@ xegpu::setupDpasLayout(xegpu::LayoutKind layoutKind, VectorType aTy,
     return std::make_tuple(aLayout, bLayout, cdLayout);
   }
   return std::nullopt;
+}
+
+xegpu::DistributeLayoutAttr xegpu::getConsumerLayoutAt(OpOperand &operand) {
+  Operation *op = operand.getOwner();
+  unsigned idx = operand.getOperandNumber();
+  xegpu::DistributeLayoutAttr resLayout;
+  if (op->getNumResults() == 1 && isa<VectorType>(op->getResult(0).getType()))
+    resLayout = xegpu::getDistributeLayoutAttr(op->getResult(0));
+
+  // For vector::BroadcastOp, infer the source layout from the result layout.
+  if (auto broadcast = dyn_cast<vector::BroadcastOp>(op)) {
+    if (!resLayout)
+      return xegpu::DistributeLayoutAttr();
+    auto srcTy = dyn_cast<VectorType>(broadcast.getSourceType());
+    if (!srcTy)
+      return xegpu::DistributeLayoutAttr();
+    return xegpu::inferBroadcastSourceLayout(
+        resLayout, broadcast.getResultVectorType().getShape(),
+        srcTy.getShape());
+  }
+
+  // For vector::MultiDimReductionOp, infer source layout from result layout
+  // using reduction dims. Acc operand is expected to have the same layout as
+  // the result.
+  if (auto reduction = dyn_cast<vector::MultiDimReductionOp>(op)) {
+    if (!resLayout)
+      return xegpu::DistributeLayoutAttr();
+    if (idx == 0) {
+      SmallVector<int64_t> reductionDims(reduction.getReductionDims());
+      return xegpu::inferMultiReductionSourceLayout(resLayout, reductionDims);
+    }
+    if (idx == 1)
+      return resLayout;
+  }
+
+  // For vector::BitCastOp, infer source layout from result layout using
+  // element type bitwidths.
+  if (auto bitcast = dyn_cast<vector::BitCastOp>(op)) {
+    if (!resLayout)
+      return xegpu::DistributeLayoutAttr();
+    int resElemBitWidth =
+        bitcast.getResultVectorType().getElementType().getIntOrFloatBitWidth();
+    int srcElemBitWidth =
+        bitcast.getSourceVectorType().getElementType().getIntOrFloatBitWidth();
+    return xegpu::inferBitCastSourceLayout(resLayout, resElemBitWidth,
+                                           srcElemBitWidth);
+  }
+
+  // For vector::ShapeCastOp, infer source layout from result layout using
+  // shapes.
+  if (auto shapeCast = dyn_cast<vector::ShapeCastOp>(op)) {
+    if (!resLayout)
+      return xegpu::DistributeLayoutAttr();
+    return xegpu::inferShapeCastSourceLayout(
+        resLayout, shapeCast.getResultVectorType().getShape(),
+        shapeCast.getSourceVectorType().getShape());
+  }
+
+  // For vector::InsertStridedSliceOp, infer source layout from result layout.
+  // Dest vector must have the same layout as the result.
+  if (auto insertSlice = dyn_cast<vector::InsertStridedSliceOp>(op)) {
+    if (!resLayout)
+      return xegpu::DistributeLayoutAttr();
+    if (idx == 0)
+      return xegpu::inferInsertStridedSliceSourceLayout(
+          resLayout, insertSlice.getDestVectorType().getShape(),
+          insertSlice.getSourceVectorType().getShape());
+    if (idx == 1)
+      return resLayout;
+  }
+  // For elementwise operations, all operands must have the same layout as the
+  // result.
+  if (OpTrait::hasElementwiseMappableTraits(op) && op->getNumResults() == 1) {
+    if (!resLayout)
+      return xegpu::DistributeLayoutAttr();
+    return resLayout;
+  }
+  // TODO: Handle more cases as needed here.
+  // By default, assume no layout conflict and return the current layout of the
+  // operand.
+  return xegpu::getDistributeLayoutAttr(operand.get());
 }

@@ -1028,12 +1028,14 @@ RocmInstallationDetector::getCommonBitcodeLibs(
 
   auto AddBCLib = [&](ToolChain::BitCodeLibraryInfo BCLib,
                       bool Internalize = true) {
-    BCLib.ShouldInternalize = Internalize;
-    BCLibs.emplace_back(BCLib);
+    if (!BCLib.Path.empty()) {
+      BCLib.ShouldInternalize = Internalize;
+      BCLibs.emplace_back(BCLib);
+    }
   };
   auto AddSanBCLibs = [&]() {
     if (Pref.GPUSan)
-      AddBCLib(getAsanRTLPath(), false);
+      AddBCLib(getAsanRTLPath());
   };
 
   AddSanBCLibs();
@@ -1041,7 +1043,7 @@ RocmInstallationDetector::getCommonBitcodeLibs(
   if (!Pref.IsOpenMP)
     AddBCLib(getOCKLPath());
   else if (Pref.GPUSan && Pref.IsOpenMP)
-    AddBCLib(getOCKLPath(), false);
+    AddBCLib(getOCKLPath());
   AddBCLib(getUnsafeMathPath(Pref.UnsafeMathOpt || Pref.FastRelaxedMath));
   AddBCLib(getFiniteOnlyPath(Pref.FiniteOnly || Pref.FastRelaxedMath));
   AddBCLib(getWavefrontSize64Path(Pref.Wave64));
