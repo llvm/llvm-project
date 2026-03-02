@@ -5030,6 +5030,9 @@ void Sema::handleTagNumbering(const TagDecl *Tag, Scope *TagScope) {
     return;
   }
 
+  // TODO: why doesn't this work for anon.cpp?
+  // Can we re-use getMSManglingNumber (which accounts for scoping when numbering), to set anon tag decl IDs? Instead of doing it in ItaniumMangle.cpp
+
   // If this tag isn't a direct child of a class, number it if it is local.
   MangleNumberingContext *MCtx;
   Decl *ManglingContextDecl;

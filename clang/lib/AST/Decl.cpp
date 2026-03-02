@@ -13,6 +13,7 @@
 #include "clang/AST/Decl.h"
 #include "Linkage.h"
 #include "clang/AST/ASTContext.h"
+#include "clang/AST/MangleNumberingContext.h"
 #include "clang/AST/ASTDiagnostic.h"
 #include "clang/AST/ASTLambda.h"
 #include "clang/AST/ASTMutationListener.h"
@@ -5031,7 +5032,12 @@ void TagDecl::printAnonymousTagDecl(llvm::raw_ostream &OS,
           Param->print(OS, Policy);
       OS << ')';
     } else {
-      OS << getASTContext().getManglingNumber(this);
+      if (CXX->isExternallyVisible()) {
+        OS << getASTContext().getManglingNumber(this);
+      } else {
+        // TODO: ItaniumCXXABI tracks ID via getAnonymousStructId
+        // TODO: should we re-use MSCurManglingNumber to get mangling number for internal linkage?
+      }
     }
   }
 

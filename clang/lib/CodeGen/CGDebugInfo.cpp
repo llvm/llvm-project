@@ -485,6 +485,9 @@ StringRef CGDebugInfo::getClassName(const RecordDecl *RD,
   if (const IdentifierInfo *II = RD->getIdentifier())
     return II->getName();
 
+  // TODO: could we use this for simple template names reconstitution of lambdas?
+  // See https://github.com/llvm/llvm-project/pull/168533#issuecomment-3947288211
+
   // The CodeView printer in LLVM wants to see the names of unnamed types
   // because they need to have a unique identifier.
   // These names are used to reconstruct the fully qualified type names.
