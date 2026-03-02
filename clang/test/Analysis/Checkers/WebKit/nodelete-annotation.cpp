@@ -315,7 +315,7 @@ struct SubData : Data {
 
   void doSomething() override { }
 
-  void [[clang::annotate_type("webkit.nodelete")]] virtualWork() override {
+  void virtualWork() override {
     someFunction();
     // expected-warning@-1{{A function 'virtualWork' has [[clang::annotate_type("webkit.nodelete")]] but it contains code that could destruct an object}}
   }
