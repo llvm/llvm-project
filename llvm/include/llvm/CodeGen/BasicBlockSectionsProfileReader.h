@@ -71,14 +71,6 @@ struct CFGProfile {
   }
 };
 
-// The prefetch symbol is emitted immediately after the call of the given index,
-// in block `BBID` (First call has an index of 1). Zero callsite index means the
-// start of the block.
-struct CallsiteID {
-  UniqueBBID BBID;
-  unsigned CallsiteIndex;
-};
-
 // This struct represents the raw optimization profile for a function,
 // including CFG data (block and edge counts) and layout directives (clustering
 // and cloning paths).
