@@ -62,6 +62,8 @@ runs:
 
     - name: Attest Build Provenance
       id: provenance
+      # TODO(boomanaiden154): This is now a thin wrapper around actions/attest.
+      # We should eventually move over to that.
       uses: actions/attest-build-provenance@a2bbfa25375fe432b6a289bc6b6cd05ecd0c4c32 # v4.1.0
       with:
         subject-path: ${{ steps.download-artifact.outputs.download-path }}/*
