@@ -6,11 +6,11 @@ declare <vscale x 2 x i1> @llvm.aarch64.sve.ptrue.nxv2i1(i32 immarg)
 declare <vscale x 4 x i1> @llvm.aarch64.sve.ptrue.nxv4i1(i32 immarg)
 declare <vscale x 8 x i1> @llvm.aarch64.sve.ptrue.nxv8i1(i32 immarg)
 
-declare <vscale x 16 x i32> @llvm.aarch64.sve.ld1.nxv16i32(<vscale x 16 x i1>, ptr)
-declare <vscale x 2 x i32> @llvm.aarch64.sve.ld1.nxv2i32(<vscale x 2 x i1>, ptr)
-declare <vscale x 4 x i32> @llvm.aarch64.sve.ld1.nxv4i32(<vscale x 4 x i1>, ptr)
-declare <vscale x 8 x i16> @llvm.aarch64.sve.ld1.nxv8i16(<vscale x 8 x i1>, ptr)
-declare <vscale x 8 x i32> @llvm.aarch64.sve.ld1.nxv8i32(<vscale x 8 x i1>, ptr)
+declare <vscale x 16 x i32> @llvm.aarch64.sve.ld1.nxv16i32.p0(<vscale x 16 x i1>, ptr)
+declare <vscale x 2 x i32> @llvm.aarch64.sve.ld1.nxv2i32.p0(<vscale x 2 x i1>, ptr)
+declare <vscale x 4 x i32> @llvm.aarch64.sve.ld1.nxv4i32.p0(<vscale x 4 x i1>, ptr)
+declare <vscale x 8 x i16> @llvm.aarch64.sve.ld1.nxv8i16.p0(<vscale x 8 x i1>, ptr)
+declare <vscale x 8 x i32> @llvm.aarch64.sve.ld1.nxv8i32.p0(<vscale x 8 x i1>, ptr)
 
 declare <vscale x 16 x i1> @llvm.aarch64.sve.convert.to.svbool.nxv4i1(<vscale x 4 x i1>)
 declare <vscale x 8 x i1> @llvm.aarch64.sve.convert.from.svbool.nxv4i1(<vscale x 16 x i1>)
@@ -22,14 +22,14 @@ define <vscale x 8 x i32> @coalesce_test_basic(ptr %addr) {
 ; CHECK-NEXT:    [[TMP1:%.*]] = call <vscale x 8 x i1> @llvm.aarch64.sve.ptrue.nxv8i1(i32 31)
 ; CHECK-NEXT:    [[TMP2:%.*]] = call <vscale x 16 x i1> @llvm.aarch64.sve.convert.to.svbool.nxv8i1(<vscale x 8 x i1> [[TMP1]])
 ; CHECK-NEXT:    [[TMP3:%.*]] = call <vscale x 4 x i1> @llvm.aarch64.sve.convert.from.svbool.nxv4i1(<vscale x 16 x i1> [[TMP2]])
-; CHECK-NEXT:    [[TMP4:%.*]] = call <vscale x 4 x i32> @llvm.aarch64.sve.ld1.nxv4i32(<vscale x 4 x i1> [[TMP3]], ptr [[ADDR:%.*]])
-; CHECK-NEXT:    [[TMP5:%.*]] = call <vscale x 8 x i32> @llvm.aarch64.sve.ld1.nxv8i32(<vscale x 8 x i1> [[TMP1]], ptr [[ADDR]])
+; CHECK-NEXT:    [[TMP4:%.*]] = call <vscale x 4 x i32> @llvm.aarch64.sve.ld1.nxv4i32.p0(<vscale x 4 x i1> [[TMP3]], ptr [[ADDR:%.*]])
+; CHECK-NEXT:    [[TMP5:%.*]] = call <vscale x 8 x i32> @llvm.aarch64.sve.ld1.nxv8i32.p0(<vscale x 8 x i1> [[TMP1]], ptr [[ADDR]])
 ; CHECK-NEXT:    ret <vscale x 8 x i32> [[TMP5]]
 ;
   %1 = call <vscale x 4 x i1> @llvm.aarch64.sve.ptrue.nxv4i1(i32 31)
-  %2 = call <vscale x 4 x i32> @llvm.aarch64.sve.ld1.nxv4i32(<vscale x 4 x i1> %1, ptr %addr)
+  %2 = call <vscale x 4 x i32> @llvm.aarch64.sve.ld1.nxv4i32.p0(<vscale x 4 x i1> %1, ptr %addr)
   %3 = call <vscale x 8 x i1> @llvm.aarch64.sve.ptrue.nxv8i1(i32 31)
-  %4 = call <vscale x 8 x i32> @llvm.aarch64.sve.ld1.nxv8i32(<vscale x 8 x i1> %3, ptr %addr)
+  %4 = call <vscale x 8 x i32> @llvm.aarch64.sve.ld1.nxv8i32.p0(<vscale x 8 x i1> %3, ptr %addr)
   ret <vscale x 8 x i32> %4
 }
 
@@ -40,14 +40,14 @@ define <vscale x 8 x i32> @coalesce_test_pow2(ptr %addr) {
 ; CHECK-NEXT:    [[TMP1:%.*]] = call <vscale x 8 x i1> @llvm.aarch64.sve.ptrue.nxv8i1(i32 0)
 ; CHECK-NEXT:    [[TMP2:%.*]] = call <vscale x 16 x i1> @llvm.aarch64.sve.convert.to.svbool.nxv8i1(<vscale x 8 x i1> [[TMP1]])
 ; CHECK-NEXT:    [[TMP3:%.*]] = call <vscale x 4 x i1> @llvm.aarch64.sve.convert.from.svbool.nxv4i1(<vscale x 16 x i1> [[TMP2]])
-; CHECK-NEXT:    [[TMP4:%.*]] = call <vscale x 4 x i32> @llvm.aarch64.sve.ld1.nxv4i32(<vscale x 4 x i1> [[TMP3]], ptr [[ADDR:%.*]])
-; CHECK-NEXT:    [[TMP5:%.*]] = call <vscale x 8 x i32> @llvm.aarch64.sve.ld1.nxv8i32(<vscale x 8 x i1> [[TMP1]], ptr [[ADDR]])
+; CHECK-NEXT:    [[TMP4:%.*]] = call <vscale x 4 x i32> @llvm.aarch64.sve.ld1.nxv4i32.p0(<vscale x 4 x i1> [[TMP3]], ptr [[ADDR:%.*]])
+; CHECK-NEXT:    [[TMP5:%.*]] = call <vscale x 8 x i32> @llvm.aarch64.sve.ld1.nxv8i32.p0(<vscale x 8 x i1> [[TMP1]], ptr [[ADDR]])
 ; CHECK-NEXT:    ret <vscale x 8 x i32> [[TMP5]]
 ;
   %1 = call <vscale x 4 x i1> @llvm.aarch64.sve.ptrue.nxv4i1(i32 0)
-  %2 = call <vscale x 4 x i32> @llvm.aarch64.sve.ld1.nxv4i32(<vscale x 4 x i1> %1, ptr %addr)
+  %2 = call <vscale x 4 x i32> @llvm.aarch64.sve.ld1.nxv4i32.p0(<vscale x 4 x i1> %1, ptr %addr)
   %3 = call <vscale x 8 x i1> @llvm.aarch64.sve.ptrue.nxv8i1(i32 0)
-  %4 = call <vscale x 8 x i32> @llvm.aarch64.sve.ld1.nxv8i32(<vscale x 8 x i1> %3, ptr %addr)
+  %4 = call <vscale x 8 x i32> @llvm.aarch64.sve.ld1.nxv8i32.p0(<vscale x 8 x i1> %3, ptr %addr)
   ret <vscale x 8 x i32> %4
 }
 
@@ -61,10 +61,10 @@ define <vscale x 8 x i32> @coalesce_test_all_and_pow2(ptr %addr) {
 ; CHECK-NEXT:    [[TMP4:%.*]] = call <vscale x 8 x i1> @llvm.aarch64.sve.ptrue.nxv8i1(i32 31)
 ; CHECK-NEXT:    [[TMP5:%.*]] = call <vscale x 16 x i1> @llvm.aarch64.sve.convert.to.svbool.nxv8i1(<vscale x 8 x i1> [[TMP4]])
 ; CHECK-NEXT:    [[TMP6:%.*]] = call <vscale x 4 x i1> @llvm.aarch64.sve.convert.from.svbool.nxv4i1(<vscale x 16 x i1> [[TMP5]])
-; CHECK-NEXT:    [[TMP7:%.*]] = call <vscale x 4 x i32> @llvm.aarch64.sve.ld1.nxv4i32(<vscale x 4 x i1> [[TMP3]], ptr [[ADDR:%.*]])
-; CHECK-NEXT:    [[TMP8:%.*]] = call <vscale x 8 x i32> @llvm.aarch64.sve.ld1.nxv8i32(<vscale x 8 x i1> [[TMP1]], ptr [[ADDR]])
-; CHECK-NEXT:    [[TMP9:%.*]] = call <vscale x 4 x i32> @llvm.aarch64.sve.ld1.nxv4i32(<vscale x 4 x i1> [[TMP6]], ptr [[ADDR]])
-; CHECK-NEXT:    [[TMP10:%.*]] = call <vscale x 8 x i32> @llvm.aarch64.sve.ld1.nxv8i32(<vscale x 8 x i1> [[TMP4]], ptr [[ADDR]])
+; CHECK-NEXT:    [[TMP7:%.*]] = call <vscale x 4 x i32> @llvm.aarch64.sve.ld1.nxv4i32.p0(<vscale x 4 x i1> [[TMP3]], ptr [[ADDR:%.*]])
+; CHECK-NEXT:    [[TMP8:%.*]] = call <vscale x 8 x i32> @llvm.aarch64.sve.ld1.nxv8i32.p0(<vscale x 8 x i1> [[TMP1]], ptr [[ADDR]])
+; CHECK-NEXT:    [[TMP9:%.*]] = call <vscale x 4 x i32> @llvm.aarch64.sve.ld1.nxv4i32.p0(<vscale x 4 x i1> [[TMP6]], ptr [[ADDR]])
+; CHECK-NEXT:    [[TMP10:%.*]] = call <vscale x 8 x i32> @llvm.aarch64.sve.ld1.nxv8i32.p0(<vscale x 8 x i1> [[TMP4]], ptr [[ADDR]])
 ; CHECK-NEXT:    ret <vscale x 8 x i32> [[TMP10]]
 ;
   %1 = call <vscale x 4 x i1> @llvm.aarch64.sve.ptrue.nxv4i1(i32 0)
@@ -72,10 +72,10 @@ define <vscale x 8 x i32> @coalesce_test_all_and_pow2(ptr %addr) {
   %3 = call <vscale x 4 x i1> @llvm.aarch64.sve.ptrue.nxv4i1(i32 31)
   %4 = call <vscale x 8 x i1> @llvm.aarch64.sve.ptrue.nxv8i1(i32 31)
 
-  %5 = call <vscale x 4 x i32> @llvm.aarch64.sve.ld1.nxv4i32(<vscale x 4 x i1> %1, ptr %addr)
-  %6 = call <vscale x 8 x i32> @llvm.aarch64.sve.ld1.nxv8i32(<vscale x 8 x i1> %2, ptr %addr)
-  %7 = call <vscale x 4 x i32> @llvm.aarch64.sve.ld1.nxv4i32(<vscale x 4 x i1> %3, ptr %addr)
-  %8 = call <vscale x 8 x i32> @llvm.aarch64.sve.ld1.nxv8i32(<vscale x 8 x i1> %4, ptr %addr)
+  %5 = call <vscale x 4 x i32> @llvm.aarch64.sve.ld1.nxv4i32.p0(<vscale x 4 x i1> %1, ptr %addr)
+  %6 = call <vscale x 8 x i32> @llvm.aarch64.sve.ld1.nxv8i32.p0(<vscale x 8 x i1> %2, ptr %addr)
+  %7 = call <vscale x 4 x i32> @llvm.aarch64.sve.ld1.nxv4i32.p0(<vscale x 4 x i1> %3, ptr %addr)
+  %8 = call <vscale x 8 x i32> @llvm.aarch64.sve.ld1.nxv8i32.p0(<vscale x 8 x i1> %4, ptr %addr)
   ret <vscale x 8 x i32> %8
 }
 
@@ -85,15 +85,15 @@ define <vscale x 8 x i32> @coalesce_test_all_and_pow2(ptr %addr) {
 define <vscale x 8 x i32> @coalesce_test_pattern_mismatch2(ptr %addr) {
 ; CHECK-LABEL: @coalesce_test_pattern_mismatch2(
 ; CHECK-NEXT:    [[TMP1:%.*]] = call <vscale x 4 x i1> @llvm.aarch64.sve.ptrue.nxv4i1(i32 0)
-; CHECK-NEXT:    [[TMP2:%.*]] = call <vscale x 4 x i32> @llvm.aarch64.sve.ld1.nxv4i32(<vscale x 4 x i1> [[TMP1]], ptr [[ADDR:%.*]])
+; CHECK-NEXT:    [[TMP2:%.*]] = call <vscale x 4 x i32> @llvm.aarch64.sve.ld1.nxv4i32.p0(<vscale x 4 x i1> [[TMP1]], ptr [[ADDR:%.*]])
 ; CHECK-NEXT:    [[TMP3:%.*]] = call <vscale x 8 x i1> @llvm.aarch64.sve.ptrue.nxv8i1(i32 31)
-; CHECK-NEXT:    [[TMP4:%.*]] = call <vscale x 8 x i32> @llvm.aarch64.sve.ld1.nxv8i32(<vscale x 8 x i1> [[TMP3]], ptr [[ADDR]])
+; CHECK-NEXT:    [[TMP4:%.*]] = call <vscale x 8 x i32> @llvm.aarch64.sve.ld1.nxv8i32.p0(<vscale x 8 x i1> [[TMP3]], ptr [[ADDR]])
 ; CHECK-NEXT:    ret <vscale x 8 x i32> [[TMP4]]
 ;
   %1 = call <vscale x 4 x i1> @llvm.aarch64.sve.ptrue.nxv4i1(i32 0)
-  %2 = call <vscale x 4 x i32> @llvm.aarch64.sve.ld1.nxv4i32(<vscale x 4 x i1> %1, ptr %addr)
+  %2 = call <vscale x 4 x i32> @llvm.aarch64.sve.ld1.nxv4i32.p0(<vscale x 4 x i1> %1, ptr %addr)
   %3 = call <vscale x 8 x i1> @llvm.aarch64.sve.ptrue.nxv8i1(i32 31)
-  %4 = call <vscale x 8 x i32> @llvm.aarch64.sve.ld1.nxv8i32(<vscale x 8 x i1> %3, ptr %addr)
+  %4 = call <vscale x 8 x i32> @llvm.aarch64.sve.ld1.nxv8i32.p0(<vscale x 8 x i1> %3, ptr %addr)
   ret <vscale x 8 x i32> %4
 }
 
@@ -102,15 +102,15 @@ define <vscale x 8 x i32> @coalesce_test_pattern_mismatch2(ptr %addr) {
 define <vscale x 8 x i32> @coalesce_test_bad_pattern(ptr %addr) {
 ; CHECK-LABEL: @coalesce_test_bad_pattern(
 ; CHECK-NEXT:    [[TMP1:%.*]] = call <vscale x 4 x i1> @llvm.aarch64.sve.ptrue.nxv4i1(i32 1)
-; CHECK-NEXT:    [[TMP2:%.*]] = call <vscale x 4 x i32> @llvm.aarch64.sve.ld1.nxv4i32(<vscale x 4 x i1> [[TMP1]], ptr [[ADDR:%.*]])
+; CHECK-NEXT:    [[TMP2:%.*]] = call <vscale x 4 x i32> @llvm.aarch64.sve.ld1.nxv4i32.p0(<vscale x 4 x i1> [[TMP1]], ptr [[ADDR:%.*]])
 ; CHECK-NEXT:    [[TMP3:%.*]] = call <vscale x 8 x i1> @llvm.aarch64.sve.ptrue.nxv8i1(i32 1)
-; CHECK-NEXT:    [[TMP4:%.*]] = call <vscale x 8 x i32> @llvm.aarch64.sve.ld1.nxv8i32(<vscale x 8 x i1> [[TMP3]], ptr [[ADDR]])
+; CHECK-NEXT:    [[TMP4:%.*]] = call <vscale x 8 x i32> @llvm.aarch64.sve.ld1.nxv8i32.p0(<vscale x 8 x i1> [[TMP3]], ptr [[ADDR]])
 ; CHECK-NEXT:    ret <vscale x 8 x i32> [[TMP4]]
 ;
   %1 = call <vscale x 4 x i1> @llvm.aarch64.sve.ptrue.nxv4i1(i32 1)
-  %2 = call <vscale x 4 x i32> @llvm.aarch64.sve.ld1.nxv4i32(<vscale x 4 x i1> %1, ptr %addr)
+  %2 = call <vscale x 4 x i32> @llvm.aarch64.sve.ld1.nxv4i32.p0(<vscale x 4 x i1> %1, ptr %addr)
   %3 = call <vscale x 8 x i1> @llvm.aarch64.sve.ptrue.nxv8i1(i32 1)
-  %4 = call <vscale x 8 x i32> @llvm.aarch64.sve.ld1.nxv8i32(<vscale x 8 x i1> %3, ptr %addr)
+  %4 = call <vscale x 8 x i32> @llvm.aarch64.sve.ld1.nxv8i32.p0(<vscale x 8 x i1> %3, ptr %addr)
   ret <vscale x 8 x i32> %4
 }
 
@@ -123,20 +123,20 @@ define <vscale x 16 x i32> @coalesce_test_multiple(ptr %addr) {
 ; CHECK-NEXT:    [[TMP3:%.*]] = call <vscale x 8 x i1> @llvm.aarch64.sve.convert.from.svbool.nxv8i1(<vscale x 16 x i1> [[TMP2]])
 ; CHECK-NEXT:    [[TMP4:%.*]] = call <vscale x 4 x i1> @llvm.aarch64.sve.convert.from.svbool.nxv4i1(<vscale x 16 x i1> [[TMP2]])
 ; CHECK-NEXT:    [[TMP5:%.*]] = call <vscale x 2 x i1> @llvm.aarch64.sve.convert.from.svbool.nxv2i1(<vscale x 16 x i1> [[TMP2]])
-; CHECK-NEXT:    [[TMP6:%.*]] = call <vscale x 2 x i32> @llvm.aarch64.sve.ld1.nxv2i32(<vscale x 2 x i1> [[TMP5]], ptr [[ADDR:%.*]])
-; CHECK-NEXT:    [[TMP7:%.*]] = call <vscale x 4 x i32> @llvm.aarch64.sve.ld1.nxv4i32(<vscale x 4 x i1> [[TMP4]], ptr [[ADDR]])
-; CHECK-NEXT:    [[TMP8:%.*]] = call <vscale x 8 x i32> @llvm.aarch64.sve.ld1.nxv8i32(<vscale x 8 x i1> [[TMP3]], ptr [[ADDR]])
-; CHECK-NEXT:    [[TMP9:%.*]] = call <vscale x 16 x i32> @llvm.aarch64.sve.ld1.nxv16i32(<vscale x 16 x i1> [[TMP1]], ptr [[ADDR]])
+; CHECK-NEXT:    [[TMP6:%.*]] = call <vscale x 2 x i32> @llvm.aarch64.sve.ld1.nxv2i32.p0(<vscale x 2 x i1> [[TMP5]], ptr [[ADDR:%.*]])
+; CHECK-NEXT:    [[TMP7:%.*]] = call <vscale x 4 x i32> @llvm.aarch64.sve.ld1.nxv4i32.p0(<vscale x 4 x i1> [[TMP4]], ptr [[ADDR]])
+; CHECK-NEXT:    [[TMP8:%.*]] = call <vscale x 8 x i32> @llvm.aarch64.sve.ld1.nxv8i32.p0(<vscale x 8 x i1> [[TMP3]], ptr [[ADDR]])
+; CHECK-NEXT:    [[TMP9:%.*]] = call <vscale x 16 x i32> @llvm.aarch64.sve.ld1.nxv16i32.p0(<vscale x 16 x i1> [[TMP1]], ptr [[ADDR]])
 ; CHECK-NEXT:    ret <vscale x 16 x i32> [[TMP9]]
 ;
   %1 = tail call <vscale x 2 x i1> @llvm.aarch64.sve.ptrue.nxv2i1(i32 31)
-  %2 = call <vscale x 2 x i32> @llvm.aarch64.sve.ld1.nxv2i32(<vscale x 2 x i1> %1, ptr %addr)
+  %2 = call <vscale x 2 x i32> @llvm.aarch64.sve.ld1.nxv2i32.p0(<vscale x 2 x i1> %1, ptr %addr)
   %3 = tail call <vscale x 4 x i1> @llvm.aarch64.sve.ptrue.nxv4i1(i32 31)
-  %4 = call <vscale x 4 x i32> @llvm.aarch64.sve.ld1.nxv4i32(<vscale x 4 x i1> %3, ptr %addr)
+  %4 = call <vscale x 4 x i32> @llvm.aarch64.sve.ld1.nxv4i32.p0(<vscale x 4 x i1> %3, ptr %addr)
   %5 = tail call <vscale x 8 x i1> @llvm.aarch64.sve.ptrue.nxv8i1(i32 31)
-  %6 = call <vscale x 8 x i32> @llvm.aarch64.sve.ld1.nxv8i32(<vscale x 8 x i1> %5, ptr %addr)
+  %6 = call <vscale x 8 x i32> @llvm.aarch64.sve.ld1.nxv8i32.p0(<vscale x 8 x i1> %5, ptr %addr)
   %7 = tail call <vscale x 16 x i1> @llvm.aarch64.sve.ptrue.nxv16i1(i32 31)
-  %8 = call <vscale x 16 x i32> @llvm.aarch64.sve.ld1.nxv16i32(<vscale x 16 x i1> %7, ptr %addr)
+  %8 = call <vscale x 16 x i32> @llvm.aarch64.sve.ld1.nxv16i32.p0(<vscale x 16 x i1> %7, ptr %addr)
   ret <vscale x 16 x i32> %8
 }
 
@@ -146,14 +146,14 @@ define <vscale x 16 x i32> @coalesce_test_multiple(ptr %addr) {
 define <vscale x 4 x i32> @coalesce_test_same_size(ptr %addr) {
 ; CHECK-LABEL: @coalesce_test_same_size(
 ; CHECK-NEXT:    [[TMP1:%.*]] = tail call <vscale x 4 x i1> @llvm.aarch64.sve.ptrue.nxv4i1(i32 31)
-; CHECK-NEXT:    [[TMP2:%.*]] = call <vscale x 4 x i32> @llvm.aarch64.sve.ld1.nxv4i32(<vscale x 4 x i1> [[TMP1]], ptr [[ADDR:%.*]])
-; CHECK-NEXT:    [[TMP3:%.*]] = call <vscale x 4 x i32> @llvm.aarch64.sve.ld1.nxv4i32(<vscale x 4 x i1> [[TMP1]], ptr [[ADDR]])
+; CHECK-NEXT:    [[TMP2:%.*]] = call <vscale x 4 x i32> @llvm.aarch64.sve.ld1.nxv4i32.p0(<vscale x 4 x i1> [[TMP1]], ptr [[ADDR:%.*]])
+; CHECK-NEXT:    [[TMP3:%.*]] = call <vscale x 4 x i32> @llvm.aarch64.sve.ld1.nxv4i32.p0(<vscale x 4 x i1> [[TMP1]], ptr [[ADDR]])
 ; CHECK-NEXT:    ret <vscale x 4 x i32> [[TMP3]]
 ;
   %1 = tail call <vscale x 4 x i1> @llvm.aarch64.sve.ptrue.nxv4i1(i32 31)
-  %2 = call <vscale x 4 x i32> @llvm.aarch64.sve.ld1.nxv4i32(<vscale x 4 x i1> %1, ptr %addr)
+  %2 = call <vscale x 4 x i32> @llvm.aarch64.sve.ld1.nxv4i32.p0(<vscale x 4 x i1> %1, ptr %addr)
   %3 = tail call <vscale x 4 x i1> @llvm.aarch64.sve.ptrue.nxv4i1(i32 31)
-  %4 = call <vscale x 4 x i32> @llvm.aarch64.sve.ld1.nxv4i32(<vscale x 4 x i1> %3, ptr %addr)
+  %4 = call <vscale x 4 x i32> @llvm.aarch64.sve.ld1.nxv4i32.p0(<vscale x 4 x i1> %3, ptr %addr)
   ret <vscale x 4 x i32> %4
 }
 
@@ -166,19 +166,19 @@ define <vscale x 8 x i16> @coalesce_test_promoted_ptrue(ptr %addr1, ptr %addr2) 
 ; CHECK-NEXT:    [[TMP2:%.*]] = call <vscale x 4 x i1> @llvm.aarch64.sve.ptrue.nxv4i1(i32 31)
 ; CHECK-NEXT:    [[TMP3:%.*]] = call <vscale x 16 x i1> @llvm.aarch64.sve.convert.to.svbool.nxv4i1(<vscale x 4 x i1> [[TMP2]])
 ; CHECK-NEXT:    [[TMP4:%.*]] = call <vscale x 8 x i1> @llvm.aarch64.sve.convert.from.svbool.nxv8i1(<vscale x 16 x i1> [[TMP3]])
-; CHECK-NEXT:    [[TMP5:%.*]] = call <vscale x 4 x i32> @llvm.aarch64.sve.ld1.nxv4i32(<vscale x 4 x i1> [[TMP2]], ptr [[ADDR1:%.*]])
-; CHECK-NEXT:    [[TMP6:%.*]] = call <vscale x 8 x i16> @llvm.aarch64.sve.ld1.nxv8i16(<vscale x 8 x i1> [[TMP4]], ptr [[ADDR2:%.*]])
-; CHECK-NEXT:    [[TMP7:%.*]] = call <vscale x 8 x i16> @llvm.aarch64.sve.ld1.nxv8i16(<vscale x 8 x i1> [[TMP1]], ptr [[ADDR2]])
+; CHECK-NEXT:    [[TMP5:%.*]] = call <vscale x 4 x i32> @llvm.aarch64.sve.ld1.nxv4i32.p0(<vscale x 4 x i1> [[TMP2]], ptr [[ADDR1:%.*]])
+; CHECK-NEXT:    [[TMP6:%.*]] = call <vscale x 8 x i16> @llvm.aarch64.sve.ld1.nxv8i16.p0(<vscale x 8 x i1> [[TMP4]], ptr [[ADDR2:%.*]])
+; CHECK-NEXT:    [[TMP7:%.*]] = call <vscale x 8 x i16> @llvm.aarch64.sve.ld1.nxv8i16.p0(<vscale x 8 x i1> [[TMP1]], ptr [[ADDR2]])
 ; CHECK-NEXT:    ret <vscale x 8 x i16> [[TMP7]]
 ;
   %1 = call <vscale x 4 x i1> @llvm.aarch64.sve.ptrue.nxv4i1(i32 31)
   %2 = call <vscale x 16 x i1> @llvm.aarch64.sve.convert.to.svbool.nxv4i1(<vscale x 4 x i1> %1)
   %3 = call <vscale x 8 x i1> @llvm.aarch64.sve.convert.from.svbool.nxv4i1(<vscale x 16 x i1> %2)
 
-  %4 = call <vscale x 4 x i32> @llvm.aarch64.sve.ld1.nxv4i32(<vscale x 4 x i1> %1, ptr %addr1)
-  %5 = call <vscale x 8 x i16> @llvm.aarch64.sve.ld1.nxv8i16(<vscale x 8 x i1> %3, ptr %addr2)
+  %4 = call <vscale x 4 x i32> @llvm.aarch64.sve.ld1.nxv4i32.p0(<vscale x 4 x i1> %1, ptr %addr1)
+  %5 = call <vscale x 8 x i16> @llvm.aarch64.sve.ld1.nxv8i16.p0(<vscale x 8 x i1> %3, ptr %addr2)
 
   %6 = call <vscale x 8 x i1> @llvm.aarch64.sve.ptrue.nxv8i1(i32 31)
-  %7 = call <vscale x 8 x i16> @llvm.aarch64.sve.ld1.nxv8i16(<vscale x 8 x i1> %6, ptr %addr2)
+  %7 = call <vscale x 8 x i16> @llvm.aarch64.sve.ld1.nxv8i16.p0(<vscale x 8 x i1> %6, ptr %addr2)
   ret <vscale x 8 x i16> %7
 }
