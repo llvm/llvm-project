@@ -152,8 +152,8 @@ void IR2VecTool::writeEntitiesToStream(raw_ostream &OS) {
     OS << Entities[EntityID] << '\t' << EntityID << '\n';
 }
 
-Expected<std::unique_ptr<Embedder>>
-IR2VecTool::createIR2VecEmbedder(const Function &F, IR2VecKind Kind) const {
+Expected<Embedding> IR2VecTool::getFunctionEmbedding(const Function &F,
+                                                     IR2VecKind Kind) const {
   if (!Vocab || !Vocab->isValid())
     return createStringError(
         errc::invalid_argument,
@@ -169,20 +169,16 @@ IR2VecTool::createIR2VecEmbedder(const Function &F, IR2VecKind Kind) const {
                              "Failed to create embedder for function '%s'.",
                              F.getName().str().c_str());
 
-  return Emb;
-}
-
-Expected<Embedding> IR2VecTool::getFunctionEmbedding(const Function &F,
-                                                     IR2VecKind Kind) const {
-  auto Emb = createIR2VecEmbedder(F, Kind);
-  if (!Emb)
-    return Emb.takeError();
-
-  return (*Emb)->getFunctionVector();
+  return Emb->getFunctionVector();
 }
 
 Expected<FuncEmbMap>
 IR2VecTool::getFunctionEmbeddingsMap(IR2VecKind Kind) const {
+  if (!Vocab || !Vocab->isValid())
+    return createStringError(
+        errc::invalid_argument,
+        "Vocabulary is not valid. IR2VecTool not initialized.");
+
   FuncEmbMap Result;
 
   for (const Function &F : M.getFunctionDefs()) {
@@ -197,47 +193,61 @@ IR2VecTool::getFunctionEmbeddingsMap(IR2VecKind Kind) const {
 
 Expected<BBEmbeddingsMap>
 IR2VecTool::getBBEmbeddingsMap(const Function &F, IR2VecKind Kind) const {
-  auto Emb = createIR2VecEmbedder(F, Kind);
-  if (!Emb)
-    return Emb.takeError();
+  if (!Vocab || !Vocab->isValid())
+    return createStringError(
+        errc::invalid_argument,
+        "Vocabulary is not valid. IR2VecTool not initialized.");
 
   BBEmbeddingsMap Result;
 
-  for (const BasicBlock &BB : F)
-    Result.try_emplace(&BB, (*Emb)->getBBVector(BB));
+  if (F.isDeclaration())
+    return createStringError(errc::invalid_argument,
+                             "Function is a declaration.");
 
-  return Result;
-}
-
-Expected<InstEmbeddingsMap>
-IR2VecTool::getInstEmbeddingsMap(const Function &F, IR2VecKind Kind) const {
-  auto Emb = createIR2VecEmbedder(F, Kind);
+  auto Emb = Embedder::create(Kind, F, *Vocab);
   if (!Emb)
-    return Emb.takeError();
+    return createStringError(errc::invalid_argument,
+                             "Failed to create embedder for function '%s'.",
+                             F.getName().str().c_str());
 
-  InstEmbeddingsMap Result;
-
-  for (const Instruction &I : instructions(F))
-    Result.try_emplace(&I, (*Emb)->getInstVector(I));
+  for (const BasicBlock &BB : F)
+    Result.try_emplace(&BB, Emb->getBBVector(BB));
 
   return Result;
 }
 
 void IR2VecTool::writeEmbeddingsToStream(raw_ostream &OS,
                                          EmbeddingLevel Level) const {
+  if (!Vocab || !Vocab->isValid()) {
+    WithColor::error(errs(), ToolName)
+        << "Vocabulary is not valid. IR2VecTool not initialized.\n";
+    return;
+  }
+
   for (const Function &F : M.getFunctionDefs())
     writeEmbeddingsToStream(F, OS, Level);
 }
 
 void IR2VecTool::writeEmbeddingsToStream(const Function &F, raw_ostream &OS,
                                          EmbeddingLevel Level) const {
-  auto IR2VecEmbedderObj = createIR2VecEmbedder(F, IR2VecEmbeddingKind);
-  if (!IR2VecEmbedderObj) {
+  if (!Vocab || !Vocab->isValid()) {
     WithColor::error(errs(), ToolName)
-        << toString(IR2VecEmbedderObj.takeError()) << "\n";
+        << "Vocabulary is not valid. IR2VecTool not initialized.\n";
     return;
   }
-  auto Emb = std::move(*IR2VecEmbedderObj);
+
+  if (F.isDeclaration()) {
+    OS << "Function " << F.getName() << " is a declaration, skipping.\n";
+    return;
+  }
+
+  // Create embedder for this function
+  auto Emb = Embedder::create(IR2VecEmbeddingKind, F, *Vocab);
+  if (!Emb) {
+    WithColor::error(errs(), ToolName)
+        << "Failed to create embedder for function " << F.getName() << "\n";
+    return;
+  }
 
   OS << "Function: " << F.getName() << "\n";
 
