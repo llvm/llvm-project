@@ -20,7 +20,6 @@
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/Sequence.h"
 #include "llvm/ADT/SetVector.h"
-#include "llvm/ADT/SmallSet.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/ADT/iterator_range.h"
@@ -2095,7 +2094,7 @@ static void relocationViaAlloca(
       // slightly easier to debug SEGVs.  Note that on large IR files with
       // lots of gc.statepoints this is extremely costly both memory and time
       // wise.
-      SmallVector<AllocaInst *, 64> ToClobber;
+      SmallVector<std::pair<Type *, AllocaInst *>, 64> ToClobber;
       for (auto Pair : AllocaMap) {
         Value *Def = Pair.first;
         AllocaInst *Alloca = Pair.second;
@@ -2104,17 +2103,17 @@ static void relocationViaAlloca(
         if (VisitedLiveValues.count(Def)) {
           continue;
         }
-        ToClobber.push_back(Alloca);
+        // Track Def's type since the alloca was created with that type.
+        ToClobber.push_back({Def->getType(), Alloca});
       }
 
       auto InsertClobbersAt = [&](BasicBlock::iterator IP) {
-        for (auto *AI : ToClobber) {
-          auto AT = AI->getAllocatedType();
+        for (auto &[Ty, AI] : ToClobber) {
           Constant *CPN;
-          if (AT->isVectorTy())
-            CPN = ConstantAggregateZero::get(AT);
+          if (Ty->isVectorTy())
+            CPN = ConstantAggregateZero::get(Ty);
           else
-            CPN = ConstantPointerNull::get(cast<PointerType>(AT));
+            CPN = ConstantPointerNull::get(cast<PointerType>(Ty));
           new StoreInst(CPN, AI, IP);
         }
       };
@@ -2162,15 +2161,17 @@ static void relocationViaAlloca(
         PHINode *Phi = cast<PHINode>(Use);
         for (unsigned i = 0; i < Phi->getNumIncomingValues(); i++) {
           if (Def == Phi->getIncomingValue(i)) {
+            // Use Def's type since the alloca was created with that type.
             LoadInst *Load = new LoadInst(
-                Alloca->getAllocatedType(), Alloca, "",
+                Def->getType(), Alloca, "",
                 Phi->getIncomingBlock(i)->getTerminator()->getIterator());
             Phi->setIncomingValue(i, Load);
           }
         }
       } else {
-        LoadInst *Load = new LoadInst(Alloca->getAllocatedType(), Alloca, "",
-                                      Use->getIterator());
+        // Use Def's type since the alloca was created with that type.
+        LoadInst *Load =
+            new LoadInst(Def->getType(), Alloca, "", Use->getIterator());
         Use->replaceUsesOfWith(Def, Load);
       }
     }
@@ -2212,14 +2213,6 @@ static void relocationViaAlloca(
       InitialAllocaNum--;
   assert(InitialAllocaNum == 0 && "We must not introduce any extra allocas");
 #endif
-}
-
-/// Implement a unique function which doesn't require we sort the input
-/// vector.  Doing so has the effect of changing the output of a couple of
-/// tests in ways which make them less useful in testing fused safepoints.
-template <typename T> static void unique_unsorted(SmallVectorImpl<T> &Vec) {
-  SmallSet<T, 8> Seen;
-  erase_if(Vec, [&](const T &V) { return !Seen.insert(V).second; });
 }
 
 /// Insert holders so that each Value is obviously live through the entire
@@ -2309,8 +2302,9 @@ chainToBasePointerCost(SmallVectorImpl<Instruction *> &Chain,
 
     } else if (GetElementPtrInst *GEP = dyn_cast<GetElementPtrInst>(Instr)) {
       // Cost of the address calculation
-      Type *ValTy = GEP->getSourceElementType();
-      Cost += TTI.getAddressComputationCost(ValTy);
+      Cost += TTI.getAddressComputationCost(
+          GEP->getType(), nullptr, nullptr,
+          TargetTransformInfo::TCK_SizeAndLatency);
 
       // And cost of the GEP itself
       // TODO: Use TTI->getGEPCost here (it exists, but appears to be not
@@ -2838,15 +2832,17 @@ static bool insertParsePoints(Function &F, DominatorTree &DT,
   }
   PointerToBase.clear();
 
-  // Do all the fixups of the original live variables to their relocated selves
-  SmallVector<Value *, 128> Live;
+  // Do all the fixups of the original live variables to their relocated selves.
+  // A SmallSetVector is used to collect live variables while retaining the
+  // order in which we add them, which is important for reproducible tests.
+  SmallSetVector<Value *, 16> Live;
   for (const PartiallyConstructedSafepointRecord &Info : Records) {
     // We can't simply save the live set from the original insertion.  One of
     // the live values might be the result of a call which needs a safepoint.
     // That Value* no longer exists and we need to use the new gc_result.
     // Thankfully, the live set is embedded in the statepoint (and updated), so
     // we just grab that.
-    llvm::append_range(Live, Info.StatepointToken->gc_live());
+    Live.insert_range(Info.StatepointToken->gc_live());
 #ifndef NDEBUG
     // Do some basic validation checking on our liveness results before
     // performing relocation.  Relocation can and will turn mistakes in liveness
@@ -2866,7 +2862,6 @@ static bool insertParsePoints(Function &F, DominatorTree &DT,
     }
 #endif
   }
-  unique_unsorted(Live);
 
 #ifndef NDEBUG
   // Validation check
@@ -2875,7 +2870,7 @@ static bool insertParsePoints(Function &F, DominatorTree &DT,
            "must be a gc pointer type");
 #endif
 
-  relocationViaAlloca(F, DT, Live, Records);
+  relocationViaAlloca(F, DT, Live.getArrayRef(), Records);
   return !Records.empty();
 }
 

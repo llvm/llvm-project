@@ -31,7 +31,7 @@ struct WrapFuncInClassPass
     Operation *rootOp = getOperation();
 
     RewritePatternSet patterns(&getContext());
-    populateFuncPatterns(patterns);
+    populateWrapFuncInClass(patterns, funcName);
 
     walkAndApplyPatterns(rootOp, std::move(patterns));
   }
@@ -43,8 +43,8 @@ struct WrapFuncInClassPass
 
 class WrapFuncInClass : public OpRewritePattern<emitc::FuncOp> {
 public:
-  WrapFuncInClass(MLIRContext *context)
-      : OpRewritePattern<emitc::FuncOp>(context) {}
+  WrapFuncInClass(MLIRContext *context, StringRef funcName)
+      : OpRewritePattern<emitc::FuncOp>(context), funcName(funcName) {}
 
   LogicalResult matchAndRewrite(emitc::FuncOp funcOp,
                                 PatternRewriter &rewriter) const override {
@@ -58,24 +58,25 @@ public:
 
     auto argAttrs = funcOp.getArgAttrs();
     for (auto [idx, val] : llvm::enumerate(funcOp.getArguments())) {
-      StringAttr fieldName;
-      Attribute argAttr = nullptr;
-
-      fieldName = rewriter.getStringAttr("fieldName" + std::to_string(idx));
-      if (argAttrs && idx < argAttrs->size())
-        argAttr = (*argAttrs)[idx];
+      StringAttr fieldName =
+          rewriter.getStringAttr("fieldName" + std::to_string(idx));
 
       TypeAttr typeAttr = TypeAttr::get(val.getType());
       fields.push_back({fieldName, typeAttr});
-      emitc::FieldOp::create(rewriter, funcOp.getLoc(), fieldName, typeAttr,
-                             argAttr);
+
+      FieldOp fieldop = emitc::FieldOp::create(rewriter, funcOp->getLoc(),
+                                               fieldName, typeAttr, nullptr);
+
+      if (argAttrs && idx < argAttrs->size()) {
+        fieldop->setDiscardableAttrs(funcOp.getArgAttrDict(idx));
+      }
     }
 
     rewriter.setInsertionPointToEnd(&newClassOp.getBody().front());
     FunctionType funcType = funcOp.getFunctionType();
     Location loc = funcOp.getLoc();
     FuncOp newFuncOp =
-        emitc::FuncOp::create(rewriter, loc, ("execute"), funcType);
+        emitc::FuncOp::create(rewriter, loc, (funcName), funcType);
 
     rewriter.createBlock(&newFuncOp.getBody());
     newFuncOp.getBody().takeBody(funcOp.getBody());
@@ -101,8 +102,14 @@ public:
     rewriter.replaceOp(funcOp, newClassOp);
     return success();
   }
+
+private:
+  /// Name of the newly generated member function with body matching the input
+  /// function.
+  std::string funcName;
 };
 
-void mlir::emitc::populateFuncPatterns(RewritePatternSet &patterns) {
-  patterns.add<WrapFuncInClass>(patterns.getContext());
+void mlir::emitc::populateWrapFuncInClass(RewritePatternSet &patterns,
+                                          StringRef funcName) {
+  patterns.add<WrapFuncInClass>(patterns.getContext(), funcName);
 }

@@ -14,7 +14,6 @@ from pathlib import Path
 
 from hdrgen.enumeration import Enumeration
 from hdrgen.function import Function
-from hdrgen.gpu_headers import GpuHeaderFile as GpuHeader
 from hdrgen.header import HeaderFile
 from hdrgen.macro import Macro
 from hdrgen.object import Object
@@ -37,6 +36,8 @@ def yaml_to_classes(yaml_data, header_class, entry_points=None):
     header = header_class(header_name)
     header.template_file = yaml_data.get("header_template")
     header.standards = yaml_data.get("standards", [])
+    header.extra_standards = yaml_data.get("extra_standards", {})
+    header.license_text = yaml_data.get("license_text", [])
     header.merge_yaml_files = yaml_data.get("merge_yaml_files", [])
 
     for macro_data in yaml_data.get("macros", []):
@@ -121,7 +122,7 @@ def load_yaml_file(yaml_file, header_class, entry_points):
 
     Args:
         yaml_file: Path to the YAML file.
-        header_class: The class to use for creating the header (HeaderFile or GpuHeader).
+        header_class: The class to use for creating the HeaderFile.
         entry_points: A list of specific function names to include in the header.
 
     Returns:
@@ -254,17 +255,12 @@ def main():
         help="Entry point to include",
         dest="entry_points",
     )
-    parser.add_argument(
-        "--export-decls",
-        action="store_true",
-        help="Flag to use GpuHeader for exporting declarations",
-    )
     args = parser.parse_args()
 
     if args.add_function:
         add_function_to_yaml(args.yaml_file, args.add_function)
 
-    header_class = GpuHeader if args.export_decls else HeaderFile
+    header_class = HeaderFile
     header = load_yaml_file(Path(args.yaml_file), header_class, args.entry_points)
 
     header_str = str(header)

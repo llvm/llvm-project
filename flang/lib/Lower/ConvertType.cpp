@@ -387,6 +387,12 @@ struct TypeBuilderImpl {
       return ty;
 
     auto rec = fir::RecordType::get(context, converter.mangleName(tySpec));
+    // Mark SEQUENCE derived types.
+    if (const auto *details =
+            typeSymbol.detailsIf<Fortran::semantics::DerivedTypeDetails>())
+      if (details->sequence())
+        rec.setSequence(true);
+
     // Maintain the stack of types for recursive references and to speed-up
     // the derived type constructions that can be expensive for derived type
     // with dozens of components/parents (modern Fortran).
@@ -667,6 +673,18 @@ Fortran::lower::ComponentReverseIterator::advanceToParentType() {
   assert(parentComp != scope->cend() && "failed to get parent component");
   setCurrentType(parentComp->second->GetType()->derivedTypeSpec());
   return *currentParentType;
+}
+
+const Fortran::semantics::Symbol *
+Fortran::lower::ComponentReverseIterator::getParentComponent() const {
+  if (!currentTypeDetails->GetParentComponentName())
+    return nullptr;
+  const Fortran::semantics::Scope *scope = currentParentType->GetScope();
+  auto parentComp =
+      DEREF(scope).find(currentTypeDetails->GetParentComponentName().value());
+  if (parentComp == scope->cend())
+    return nullptr;
+  return &*parentComp->second;
 }
 
 void Fortran::lower::ComponentReverseIterator::setCurrentType(

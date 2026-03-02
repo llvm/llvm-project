@@ -789,7 +789,7 @@ struct ShuffleMask {
   }
 };
 
-LLVM_ATTRIBUTE_UNUSED
+[[maybe_unused]]
 raw_ostream &operator<<(raw_ostream &OS, const ShuffleMask &SM) {
   SM.print(OS);
   return OS;
@@ -811,8 +811,8 @@ ArrayRef<int> hi(ArrayRef<int> Vuu) { return Vuu.take_back(Vuu.size() / 2); }
 MaskT vshuffvdd(ArrayRef<int> Vu, ArrayRef<int> Vv, unsigned Rt) {
   int Len = Vu.size();
   MaskT Vdd(2 * Len);
-  std::copy(Vv.begin(), Vv.end(), Vdd.begin());
-  std::copy(Vu.begin(), Vu.end(), Vdd.begin() + Len);
+  llvm::copy(Vv, Vdd.begin());
+  llvm::copy(Vu, Vdd.begin() + Len);
 
   auto Vd0 = MutableArrayRef<int>(Vdd).take_front(Len);
   auto Vd1 = MutableArrayRef<int>(Vdd).take_back(Len);
@@ -831,8 +831,8 @@ MaskT vshuffvdd(ArrayRef<int> Vu, ArrayRef<int> Vv, unsigned Rt) {
 MaskT vdealvdd(ArrayRef<int> Vu, ArrayRef<int> Vv, unsigned Rt) {
   int Len = Vu.size();
   MaskT Vdd(2 * Len);
-  std::copy(Vv.begin(), Vv.end(), Vdd.begin());
-  std::copy(Vu.begin(), Vu.end(), Vdd.begin() + Len);
+  llvm::copy(Vv, Vdd.begin());
+  llvm::copy(Vu, Vdd.begin() + Len);
 
   auto Vd0 = MutableArrayRef<int>(Vdd).take_front(Len);
   auto Vd1 = MutableArrayRef<int>(Vdd).take_back(Len);
@@ -958,7 +958,8 @@ namespace llvm {
     void select(SDNode *ISelN);
     void materialize(const ResultStack &Results);
 
-    SDValue getConst32(int Val, const SDLoc &dl);
+    SDValue getConst32(unsigned Val, const SDLoc &dl);
+    SDValue getSignedConst32(int Val, const SDLoc &dl);
     SDValue getVectorConstant(ArrayRef<uint8_t> Data, const SDLoc &dl);
 
     enum : unsigned {
@@ -1987,7 +1988,7 @@ SmallVector<uint32_t, 8> HvxSelector::getPerfectCompletions(ShuffleMask SM,
   // times). In such cases it will be impossible to complete this to a
   // perfect shuffle.
   SmallVector<uint32_t, 8> Sorted(Worklist);
-  llvm::sort(Sorted.begin(), Sorted.end());
+  llvm::sort(Sorted);
 
   for (unsigned I = 0, E = Sorted.size(); I != E;) {
     unsigned P = Sorted[I], Count = 1;
@@ -2145,7 +2146,8 @@ OpRef HvxSelector::contracting(ShuffleMask SM, OpRef Va, OpRef Vb,
     for (int i = 0, e = std::size(Opcodes); i != e; ++i) {
       auto [Size, Odd] = Packs[i];
       if (same(SM.Mask, shuffles::mask(shuffles::vdeal, HwLen, Size, Odd))) {
-        Results.push(Hexagon::A2_tfrsi, MVT::i32, {getConst32(-2 * Size, dl)});
+        Results.push(Hexagon::A2_tfrsi, MVT::i32,
+                     {getSignedConst32(-2 * Size, dl)});
         Results.push(Hexagon::V6_vdealvdd, PairTy, {Vb, Va, OpRef::res(-1)});
         auto vdeal = OpRef::res(Results.top());
         Results.push(Opcodes[i], SingleTy,
@@ -2481,8 +2483,15 @@ OpRef HvxSelector::perfect(ShuffleMask SM, OpRef Va, ResultStack &Results) {
     }
     ++I;
 
+    // Upper bits of the vdeal/vshuff parameter that do not cover any byte in
+    // the vector are ignored. Technically, A2_tfrsi takes a signed value, which
+    // is sign-extended to 32 bit if there is no extender. The practical
+    // advantages are that signed values are smaller in common use cases and are
+    // not sensitive to the vector size.
+    int SS = SignExtend32(S, HwLog);
+
     NodeTemplate Res;
-    Results.push(Hexagon::A2_tfrsi, MVT::i32, {getConst32(S, dl)});
+    Results.push(Hexagon::A2_tfrsi, MVT::i32, {getSignedConst32(SS, dl)});
     Res.Opc = IsInc ? Hexagon::V6_vshuffvdd : Hexagon::V6_vdealvdd;
     Res.Ty = PairTy;
     Res.Ops = {OpRef::hi(Arg), OpRef::lo(Arg), OpRef::res(-1)};
@@ -2545,8 +2554,12 @@ OpRef HvxSelector::butterfly(ShuffleMask SM, OpRef Va, ResultStack &Results) {
   return OpRef::fail();
 }
 
-SDValue HvxSelector::getConst32(int Val, const SDLoc &dl) {
+SDValue HvxSelector::getConst32(unsigned Val, const SDLoc &dl) {
   return DAG.getTargetConstant(Val, dl, MVT::i32);
+}
+
+SDValue HvxSelector::getSignedConst32(int Val, const SDLoc &dl) {
+  return DAG.getSignedTargetConstant(Val, dl, MVT::i32);
 }
 
 SDValue HvxSelector::getVectorConstant(ArrayRef<uint8_t> Data,
@@ -2939,6 +2952,10 @@ void HexagonDAGToDAGISel::SelectV65Gather(SDNode *N) {
   case Intrinsic::hexagon_V6_vgathermhw:
   case Intrinsic::hexagon_V6_vgathermhw_128B:
     Opcode = Hexagon::V6_vgathermhw_pseudo;
+    break;
+  case Intrinsic::hexagon_V6_vgather_vscattermh:
+  case Intrinsic::hexagon_V6_vgather_vscattermh_128B:
+    Opcode = Hexagon::V6_vgather_vscatter_mh_pseudo;
     break;
   }
 

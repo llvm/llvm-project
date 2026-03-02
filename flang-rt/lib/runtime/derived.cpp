@@ -13,6 +13,7 @@
 #include "flang-rt/runtime/tools.h"
 #include "flang-rt/runtime/type-info.h"
 #include "flang-rt/runtime/work-queue.h"
+#include "flang/Runtime/CUDA/memmove-function.h"
 
 namespace Fortran::runtime {
 
@@ -32,9 +33,9 @@ static RT_API_ATTRS void GetComponentExtents(SubscriptValue (&extents)[maxRank],
 
 RT_API_ATTRS int Initialize(const Descriptor &instance,
     const typeInfo::DerivedType &derived, Terminator &terminator, bool,
-    const Descriptor *) {
+    const Descriptor *, MemcpyFct memcpyFct) {
   WorkQueue workQueue{terminator};
-  int status{workQueue.BeginInitialize(instance, derived)};
+  int status{workQueue.BeginInitialize(instance, derived, memcpyFct)};
   return status == StatContinue ? workQueue.Run() : status;
 }
 
@@ -71,7 +72,11 @@ RT_API_ATTRS int InitializeTicket::Continue(WorkQueue &workQueue) {
       // Explicit initialization of data pointers and
       // non-allocatable non-automatic components
       std::size_t bytes{component_->SizeInBytes(instance_)};
-      std::memcpy(rawComponent, init, bytes);
+      if (memcpyFct_) {
+        memcpyFct_(rawComponent, init, bytes);
+      } else {
+        Fortran::runtime::memcpy(rawComponent, init, bytes);
+      }
     } else if (component_->genre() == typeInfo::Component::Genre::Pointer) {
       // Data pointers without explicit initialization are established
       // so that they are valid right-hand side targets of pointer
@@ -108,20 +113,33 @@ RT_API_ATTRS int InitializeTicket::Continue(WorkQueue &workQueue) {
             chunk = done;
           }
           char *uninitialized{rawInstance + done * *stride};
-          std::memcpy(uninitialized, rawInstance, chunk * *stride);
+          if (memcpyFct_) {
+            memcpyFct_(uninitialized, rawInstance, chunk * *stride);
+          } else {
+            Fortran::runtime::memcpy(
+                uninitialized, rawInstance, chunk * *stride);
+          }
           done += chunk;
         }
       } else {
         for (std::size_t done{1}; done < elements_; ++done) {
           char *uninitialized{rawInstance + done * *stride};
-          std::memcpy(uninitialized, rawInstance, elementBytes);
+          if (memcpyFct_) {
+            memcpyFct_(uninitialized, rawInstance, elementBytes);
+          } else {
+            Fortran::runtime::memcpy(uninitialized, rawInstance, elementBytes);
+          }
         }
       }
     } else { // one at a time with subscription
       for (Elementwise::Advance(); !Elementwise::IsComplete();
           Elementwise::Advance()) {
         char *element{instance_.Element<char>(subscripts_)};
-        std::memcpy(element, rawInstance, elementBytes);
+        if (memcpyFct_) {
+          memcpyFct_(element, rawInstance, elementBytes);
+        } else {
+          Fortran::runtime::memcpy(element, rawInstance, elementBytes);
+        }
       }
     }
   }
@@ -360,6 +378,8 @@ RT_API_ATTRS int FinalizeTicket::Continue(WorkQueue &workQueue) {
     } else if (component_->genre() == typeInfo::Component::Genre::Data &&
         component_->derivedType() &&
         !component_->derivedType()->noFinalizationNeeded()) {
+      // todo: calculate and use fixedStride_ here as in DestroyTicket to
+      // avoid subscripts and repeated descriptor establishment.
       SubscriptValue extents[maxRank];
       GetComponentExtents(extents, *component_, instance_);
       Descriptor &compDesc{componentDescriptor_.descriptor()};
@@ -452,6 +472,24 @@ RT_API_ATTRS int DestroyTicket::Continue(WorkQueue &workQueue) {
     } else if (component_->genre() == typeInfo::Component::Genre::Data) {
       if (!componentDerived || componentDerived->noDestructionNeeded()) {
         SkipToNextComponent();
+      } else if (fixedStride_) {
+        // faster path, no need for subscripts, can reuse descriptor
+        char *p{instance_.OffsetElement<char>(
+            elementAt_ * *fixedStride_ + component_->offset())};
+        Descriptor &compDesc{componentDescriptor_.descriptor()};
+        const typeInfo::DerivedType &compType{*componentDerived};
+        compDesc.UncheckedScalarEstablish(compType, p);
+        for (std::size_t j{elementAt_}; j < elements_;
+            ++j, p += *fixedStride_) {
+          compDesc.set_base_addr(p);
+          ++elementAt_;
+          if (int status{workQueue.BeginDestroy(
+                  compDesc, compType, /*finalize=*/false)};
+              status != StatOk) {
+            return status;
+          }
+        }
+        SkipToNextComponent();
       } else {
         SubscriptValue extents[maxRank];
         GetComponentExtents(extents, *component_, instance_);
@@ -461,8 +499,8 @@ RT_API_ATTRS int DestroyTicket::Continue(WorkQueue &workQueue) {
             instance_.ElementComponent<char>(subscripts_, component_->offset()),
             component_->rank(), extents);
         Advance();
-        if (int status{workQueue.BeginDestroy(
-                compDesc, *componentDerived, /*finalize=*/false)};
+        if (int status{
+                workQueue.BeginDestroy(compDesc, compType, /*finalize=*/false)};
             status != StatOk) {
           return status;
         }

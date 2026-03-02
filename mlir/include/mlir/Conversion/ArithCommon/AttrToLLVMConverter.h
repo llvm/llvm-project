@@ -65,11 +65,8 @@ public:
                         convertArithFastMathAttrToLLVM(arithFMFAttr));
     }
   }
-
   ArrayRef<NamedAttribute> getAttrs() const { return convertedAttr.getAttrs(); }
-  LLVM::IntegerOverflowFlags getOverflowFlags() const {
-    return LLVM::IntegerOverflowFlags::none;
-  }
+  Attribute getPropAttr() const { return {}; }
 
 private:
   NamedAttrList convertedAttr;
@@ -82,23 +79,59 @@ template <typename SourceOp, typename TargetOp>
 class AttrConvertOverflowToLLVM {
 public:
   AttrConvertOverflowToLLVM(SourceOp srcOp) {
+    using IntegerOverflowFlagsAttr = LLVM::IntegerOverflowFlagsAttr;
+
     // Copy the source attributes.
     convertedAttr = NamedAttrList{srcOp->getAttrs()};
     // Get the name of the arith overflow attribute.
     StringRef arithAttrName = SourceOp::getIntegerOverflowAttrName();
-    // Remove the source overflow attribute.
+    // Remove the source overflow attribute from the set that will be present
+    // in the target.
     if (auto arithAttr = dyn_cast_if_present<arith::IntegerOverflowFlagsAttr>(
             convertedAttr.erase(arithAttrName))) {
-      overflowFlags = convertArithOverflowFlagsToLLVM(arithAttr.getValue());
+      auto llvmFlag = convertArithOverflowFlagsToLLVM(arithAttr.getValue());
+      // Create a dictionary attribute holding the overflow flags property.
+      // (In the LLVM dialect, the overflow flags are a property, not an
+      // attribute.)
+      MLIRContext *ctx = srcOp.getOperation()->getContext();
+      Builder b(ctx);
+      auto llvmFlagAttr = IntegerOverflowFlagsAttr::get(ctx, llvmFlag);
+      StringRef llvmAttrName = TargetOp::getOverflowFlagsAttrName();
+      NamedAttribute attr{llvmAttrName, llvmFlagAttr};
+      // Set the properties attribute of the operation state so that the
+      // property can be updated when the operation is created.
+      propertiesAttr = b.getDictionaryAttr(ArrayRef(attr));
     }
   }
-
   ArrayRef<NamedAttribute> getAttrs() const { return convertedAttr.getAttrs(); }
-  LLVM::IntegerOverflowFlags getOverflowFlags() const { return overflowFlags; }
+  Attribute getPropAttr() const { return propertiesAttr; }
 
 private:
   NamedAttrList convertedAttr;
-  LLVM::IntegerOverflowFlags overflowFlags = LLVM::IntegerOverflowFlags::none;
+  DictionaryAttr propertiesAttr;
+};
+
+// Attribute converter that populates a NamedAttrList by removing the nonNeg
+// attribute from the source operation attributes, and setting it as a property
+// on the target LLVM operation.
+template <typename SourceOp, typename TargetOp>
+class AttrConvertNonNegToLLVM {
+public:
+  AttrConvertNonNegToLLVM(SourceOp srcOp) {
+    convertedAttr = NamedAttrList{srcOp->getAttrs()};
+    if (!convertedAttr.erase("nonNeg"))
+      return;
+    MLIRContext *ctx = srcOp.getOperation()->getContext();
+    Builder b(ctx);
+    NamedAttribute attr{"nonNeg", b.getUnitAttr()};
+    propertiesAttr = b.getDictionaryAttr(ArrayRef(attr));
+  }
+  ArrayRef<NamedAttribute> getAttrs() const { return convertedAttr.getAttrs(); }
+  Attribute getPropAttr() const { return propertiesAttr; }
+
+private:
+  NamedAttrList convertedAttr;
+  DictionaryAttr propertiesAttr;
 };
 
 template <typename SourceOp, typename TargetOp>
@@ -129,9 +162,7 @@ public:
   }
 
   ArrayRef<NamedAttribute> getAttrs() const { return convertedAttr.getAttrs(); }
-  LLVM::IntegerOverflowFlags getOverflowFlags() const {
-    return LLVM::IntegerOverflowFlags::none;
-  }
+  Attribute getPropAttr() const { return {}; }
 
 private:
   NamedAttrList convertedAttr;

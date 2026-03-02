@@ -151,6 +151,12 @@ func.func @test_divui(%arg0 : i64, %arg1 : i64) -> i64 {
   return %0 : i64
 }
 
+// CHECK-LABEL: test_divui_exact
+func.func @test_divui_exact(%arg0 : i64, %arg1 : i64) -> i64 {
+  %0 = arith.divui %arg0, %arg1 exact : i64
+  return %0 : i64
+}
+
 // CHECK-LABEL: test_divui_tensor
 func.func @test_divui_tensor(%arg0 : tensor<8x8xi64>, %arg1 : tensor<8x8xi64>) -> tensor<8x8xi64> {
   %0 = arith.divui %arg0, %arg1 : tensor<8x8xi64>
@@ -172,6 +178,12 @@ func.func @test_divui_scalable_vector(%arg0 : vector<[8]xi64>, %arg1 : vector<[8
 // CHECK-LABEL: test_divsi
 func.func @test_divsi(%arg0 : i64, %arg1 : i64) -> i64 {
   %0 = arith.divsi %arg0, %arg1 : i64
+  return %0 : i64
+}
+
+// CHECK-LABEL: test_divsi_exact
+func.func @test_divsi_exact(%arg0 : i64, %arg1 : i64) -> i64 {
+  %0 = arith.divsi %arg0, %arg1 exact : i64
   return %0 : i64
 }
 
@@ -391,6 +403,12 @@ func.func @test_shrui(%arg0 : i64, %arg1 : i64) -> i64 {
   return %0 : i64
 }
 
+// CHECK-LABEL: test_shrui_exact
+func.func @test_shrui_exact(%arg0 : i64, %arg1 : i64) -> i64 {
+  %0 = arith.shrui %arg0, %arg1 exact : i64
+  return %0 : i64
+}
+
 // CHECK-LABEL: test_shrui_tensor
 func.func @test_shrui_tensor(%arg0 : tensor<8x8xi64>, %arg1 : tensor<8x8xi64>) -> tensor<8x8xi64> {
   %0 = arith.shrui %arg0, %arg1 : tensor<8x8xi64>
@@ -412,6 +430,12 @@ func.func @test_shrui_scalable_vector(%arg0 : vector<[8]xi64>, %arg1 : vector<[8
 // CHECK-LABEL: test_shrsi
 func.func @test_shrsi(%arg0 : i64, %arg1 : i64) -> i64 {
   %0 = arith.shrsi %arg0, %arg1 : i64
+  return %0 : i64
+}
+
+// CHECK-LABEL: test_shrsi_exact
+func.func @test_shrsi_exact(%arg0 : i64, %arg1 : i64) -> i64 {
+  %0 = arith.shrsi %arg0, %arg1 exact : i64
   return %0 : i64
 }
 
@@ -601,6 +625,20 @@ func.func @test_extui_scalable_vector(%arg0 : vector<[8]xi32>) -> vector<[8]xi64
   return %0 : vector<[8]xi64>
 }
 
+// CHECK-LABEL: test_extui_nneg
+// CHECK: arith.extui %{{.*}} nneg : i32 to i64
+func.func @test_extui_nneg(%arg0 : i32) -> i64 {
+  %0 = arith.extui %arg0 nneg : i32 to i64
+  return %0 : i64
+}
+
+// CHECK-LABEL: test_extui_nneg_vector
+// CHECK: arith.extui %{{.*}} nneg : vector<8xi32> to vector<8xi64>
+func.func @test_extui_nneg_vector(%arg0 : vector<8xi32>) -> vector<8xi64> {
+  %0 = arith.extui %arg0 nneg : vector<8xi32> to vector<8xi64>
+  return %0 : vector<8xi64>
+}
+
 // CHECK-LABEL: test_extsi
 func.func @test_extsi(%arg0 : i32) -> i64 {
   %0 = arith.extsi %arg0 : i32 to i64
@@ -735,6 +773,20 @@ func.func @test_uitofp_vector(%arg0 : vector<8xi32>) -> vector<8xf32> {
 func.func @test_uitofp_scalable_vector(%arg0 : vector<[8]xi32>) -> vector<[8]xf32> {
   %0 = arith.uitofp %arg0 : vector<[8]xi32> to vector<[8]xf32>
   return %0 : vector<[8]xf32>
+}
+
+// CHECK-LABEL: test_uitofp_nneg
+// CHECK: arith.uitofp %{{.*}} nneg : i32 to f32
+func.func @test_uitofp_nneg(%arg0 : i32) -> f32 {
+  %0 = arith.uitofp %arg0 nneg : i32 to f32
+  return %0 : f32
+}
+
+// CHECK-LABEL: test_uitofp_nneg_vector
+// CHECK: arith.uitofp %{{.*}} nneg : vector<8xi32> to vector<8xf32>
+func.func @test_uitofp_nneg_vector(%arg0 : vector<8xi32>) -> vector<8xf32> {
+  %0 = arith.uitofp %arg0 nneg : vector<8xi32> to vector<8xf32>
+  return %0 : vector<8xf32>
 }
 
 // CHECK-LABEL: test_sitofp

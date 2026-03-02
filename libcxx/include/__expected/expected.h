@@ -30,7 +30,6 @@
 #include <__type_traits/is_nothrow_assignable.h>
 #include <__type_traits/is_nothrow_constructible.h>
 #include <__type_traits/is_reference.h>
-#include <__type_traits/is_replaceable.h>
 #include <__type_traits/is_same.h>
 #include <__type_traits/is_swappable.h>
 #include <__type_traits/is_trivially_constructible.h>
@@ -472,8 +471,6 @@ public:
       __conditional_t<__libcpp_is_trivially_relocatable<_Tp>::value && __libcpp_is_trivially_relocatable<_Err>::value,
                       expected,
                       void>;
-  using __replaceable _LIBCPP_NODEBUG =
-      __conditional_t<__is_replaceable_v<_Tp> && __is_replaceable_v<_Err>, expected, void>;
 
   template <class _Up>
   using rebind = expected<_Up, error_type>;
@@ -555,9 +552,10 @@ public:
           is_nothrow_constructible_v<_Tp, _Up> && is_nothrow_constructible_v<_Err, _OtherErr>) // strengthened
       : __base(__other.__has_val(), std::move(__other.__union())) {}
 
-  template <class _Up = _Tp>
+  template <class _Up = remove_cv_t<_Tp>>
     requires(!is_same_v<remove_cvref_t<_Up>, in_place_t> && !is_same_v<expected, remove_cvref_t<_Up>> &&
-             is_constructible_v<_Tp, _Up> && !__is_std_unexpected<remove_cvref_t<_Up>>::value &&
+             !is_same_v<remove_cvref_t<_Up>, unexpect_t> && is_constructible_v<_Tp, _Up> &&
+             !__is_std_unexpected<remove_cvref_t<_Up>>::value &&
              (!is_same_v<remove_cv_t<_Tp>, bool> || !__is_std_expected<remove_cvref_t<_Up>>::value))
   _LIBCPP_HIDE_FROM_ABI constexpr explicit(!is_convertible_v<_Up, _Tp>)
       expected(_Up&& __u) noexcept(is_nothrow_constructible_v<_Tp, _Up>) // strengthened
@@ -668,7 +666,7 @@ public:
     return *this;
   }
 
-  template <class _Up = _Tp>
+  template <class _Up = remove_cv_t<_Tp>>
   _LIBCPP_HIDE_FROM_ABI constexpr expected& operator=(_Up&& __v)
     requires(!is_same_v<expected, remove_cvref_t<_Up>> && !__is_std_unexpected<remove_cvref_t<_Up>>::value &&
              is_constructible_v<_Tp, _Up> && is_assignable_v<_Tp&, _Up> &&
@@ -800,25 +798,25 @@ public:
     return std::addressof(this->__val());
   }
 
-  _LIBCPP_HIDE_FROM_ABI constexpr const _Tp& operator*() const& noexcept {
+  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI constexpr const _Tp& operator*() const& noexcept {
     _LIBCPP_ASSERT_VALID_ELEMENT_ACCESS(
         this->__has_val(), "expected::operator* requires the expected to contain a value");
     return this->__val();
   }
 
-  _LIBCPP_HIDE_FROM_ABI constexpr _Tp& operator*() & noexcept {
+  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI constexpr _Tp& operator*() & noexcept {
     _LIBCPP_ASSERT_VALID_ELEMENT_ACCESS(
         this->__has_val(), "expected::operator* requires the expected to contain a value");
     return this->__val();
   }
 
-  _LIBCPP_HIDE_FROM_ABI constexpr const _Tp&& operator*() const&& noexcept {
+  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI constexpr const _Tp&& operator*() const&& noexcept {
     _LIBCPP_ASSERT_VALID_ELEMENT_ACCESS(
         this->__has_val(), "expected::operator* requires the expected to contain a value");
     return std::move(this->__val());
   }
 
-  _LIBCPP_HIDE_FROM_ABI constexpr _Tp&& operator*() && noexcept {
+  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI constexpr _Tp&& operator*() && noexcept {
     _LIBCPP_ASSERT_VALID_ELEMENT_ACCESS(
         this->__has_val(), "expected::operator* requires the expected to contain a value");
     return std::move(this->__val());
@@ -826,9 +824,9 @@ public:
 
   _LIBCPP_HIDE_FROM_ABI constexpr explicit operator bool() const noexcept { return this->__has_val(); }
 
-  _LIBCPP_HIDE_FROM_ABI constexpr bool has_value() const noexcept { return this->__has_val(); }
+  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI constexpr bool has_value() const noexcept { return this->__has_val(); }
 
-  _LIBCPP_HIDE_FROM_ABI constexpr const _Tp& value() const& {
+  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI constexpr const _Tp& value() const& {
     static_assert(is_copy_constructible_v<_Err>, "error_type has to be copy constructible");
     if (!this->__has_val()) {
       std::__throw_bad_expected_access<_Err>(std::as_const(error()));
@@ -836,7 +834,7 @@ public:
     return this->__val();
   }
 
-  _LIBCPP_HIDE_FROM_ABI constexpr _Tp& value() & {
+  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI constexpr _Tp& value() & {
     static_assert(is_copy_constructible_v<_Err>, "error_type has to be copy constructible");
     if (!this->__has_val()) {
       std::__throw_bad_expected_access<_Err>(std::as_const(error()));
@@ -844,7 +842,7 @@ public:
     return this->__val();
   }
 
-  _LIBCPP_HIDE_FROM_ABI constexpr const _Tp&& value() const&& {
+  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI constexpr const _Tp&& value() const&& {
     static_assert(is_copy_constructible_v<_Err> && is_constructible_v<_Err, decltype(std::move(error()))>,
                   "error_type has to be both copy constructible and constructible from decltype(std::move(error()))");
     if (!this->__has_val()) {
@@ -853,7 +851,7 @@ public:
     return std::move(this->__val());
   }
 
-  _LIBCPP_HIDE_FROM_ABI constexpr _Tp&& value() && {
+  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI constexpr _Tp&& value() && {
     static_assert(is_copy_constructible_v<_Err> && is_constructible_v<_Err, decltype(std::move(error()))>,
                   "error_type has to be both copy constructible and constructible from decltype(std::move(error()))");
     if (!this->__has_val()) {
@@ -862,46 +860,46 @@ public:
     return std::move(this->__val());
   }
 
-  _LIBCPP_HIDE_FROM_ABI constexpr const _Err& error() const& noexcept {
+  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI constexpr const _Err& error() const& noexcept {
     _LIBCPP_ASSERT_VALID_ELEMENT_ACCESS(
         !this->__has_val(), "expected::error requires the expected to contain an error");
     return this->__unex();
   }
 
-  _LIBCPP_HIDE_FROM_ABI constexpr _Err& error() & noexcept {
+  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI constexpr _Err& error() & noexcept {
     _LIBCPP_ASSERT_VALID_ELEMENT_ACCESS(
         !this->__has_val(), "expected::error requires the expected to contain an error");
     return this->__unex();
   }
 
-  _LIBCPP_HIDE_FROM_ABI constexpr const _Err&& error() const&& noexcept {
+  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI constexpr const _Err&& error() const&& noexcept {
     _LIBCPP_ASSERT_VALID_ELEMENT_ACCESS(
         !this->__has_val(), "expected::error requires the expected to contain an error");
     return std::move(this->__unex());
   }
 
-  _LIBCPP_HIDE_FROM_ABI constexpr _Err&& error() && noexcept {
+  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI constexpr _Err&& error() && noexcept {
     _LIBCPP_ASSERT_VALID_ELEMENT_ACCESS(
         !this->__has_val(), "expected::error requires the expected to contain an error");
     return std::move(this->__unex());
   }
 
-  template <class _Up>
-  _LIBCPP_HIDE_FROM_ABI constexpr _Tp value_or(_Up&& __v) const& {
+  template <class _Up = remove_cv_t<_Tp>>
+  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI constexpr _Tp value_or(_Up&& __v) const& {
     static_assert(is_copy_constructible_v<_Tp>, "value_type has to be copy constructible");
     static_assert(is_convertible_v<_Up, _Tp>, "argument has to be convertible to value_type");
     return this->__has_val() ? this->__val() : static_cast<_Tp>(std::forward<_Up>(__v));
   }
 
-  template <class _Up>
-  _LIBCPP_HIDE_FROM_ABI constexpr _Tp value_or(_Up&& __v) && {
+  template <class _Up = remove_cv_t<_Tp>>
+  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI constexpr _Tp value_or(_Up&& __v) && {
     static_assert(is_move_constructible_v<_Tp>, "value_type has to be move constructible");
     static_assert(is_convertible_v<_Up, _Tp>, "argument has to be convertible to value_type");
     return this->__has_val() ? std::move(this->__val()) : static_cast<_Tp>(std::forward<_Up>(__v));
   }
 
   template <class _Up = _Err>
-  _LIBCPP_HIDE_FROM_ABI constexpr _Err error_or(_Up&& __error) const& {
+  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI constexpr _Err error_or(_Up&& __error) const& {
     static_assert(is_copy_constructible_v<_Err>, "error_type has to be copy constructible");
     static_assert(is_convertible_v<_Up, _Err>, "argument has to be convertible to error_type");
     if (has_value())
@@ -910,7 +908,7 @@ public:
   }
 
   template <class _Up = _Err>
-  _LIBCPP_HIDE_FROM_ABI constexpr _Err error_or(_Up&& __error) && {
+  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI constexpr _Err error_or(_Up&& __error) && {
     static_assert(is_move_constructible_v<_Err>, "error_type has to be move constructible");
     static_assert(is_convertible_v<_Up, _Err>, "argument has to be convertible to error_type");
     if (has_value())
@@ -921,7 +919,7 @@ public:
   // [expected.void.monadic], monadic
   template <class _Func>
     requires is_constructible_v<_Err, _Err&>
-  _LIBCPP_HIDE_FROM_ABI constexpr auto and_then(_Func&& __f) & {
+  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI constexpr auto and_then(_Func&& __f) & {
     using _Up = remove_cvref_t<invoke_result_t<_Func, _Tp&>>;
     static_assert(__is_std_expected<_Up>::value, "The result of f(value()) must be a specialization of std::expected");
     static_assert(is_same_v<typename _Up::error_type, _Err>,
@@ -934,7 +932,7 @@ public:
 
   template <class _Func>
     requires is_constructible_v<_Err, const _Err&>
-  _LIBCPP_HIDE_FROM_ABI constexpr auto and_then(_Func&& __f) const& {
+  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI constexpr auto and_then(_Func&& __f) const& {
     using _Up = remove_cvref_t<invoke_result_t<_Func, const _Tp&>>;
     static_assert(__is_std_expected<_Up>::value, "The result of f(value()) must be a specialization of std::expected");
     static_assert(is_same_v<typename _Up::error_type, _Err>,
@@ -947,7 +945,7 @@ public:
 
   template <class _Func>
     requires is_constructible_v<_Err, _Err&&>
-  _LIBCPP_HIDE_FROM_ABI constexpr auto and_then(_Func&& __f) && {
+  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI constexpr auto and_then(_Func&& __f) && {
     using _Up = remove_cvref_t<invoke_result_t<_Func, _Tp&&>>;
     static_assert(
         __is_std_expected<_Up>::value, "The result of f(std::move(value())) must be a specialization of std::expected");
@@ -961,7 +959,7 @@ public:
 
   template <class _Func>
     requires is_constructible_v<_Err, const _Err&&>
-  _LIBCPP_HIDE_FROM_ABI constexpr auto and_then(_Func&& __f) const&& {
+  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI constexpr auto and_then(_Func&& __f) const&& {
     using _Up = remove_cvref_t<invoke_result_t<_Func, const _Tp&&>>;
     static_assert(
         __is_std_expected<_Up>::value, "The result of f(std::move(value())) must be a specialization of std::expected");
@@ -975,7 +973,7 @@ public:
 
   template <class _Func>
     requires is_constructible_v<_Tp, _Tp&>
-  _LIBCPP_HIDE_FROM_ABI constexpr auto or_else(_Func&& __f) & {
+  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI constexpr auto or_else(_Func&& __f) & {
     using _Gp = remove_cvref_t<invoke_result_t<_Func, _Err&>>;
     static_assert(__is_std_expected<_Gp>::value, "The result of f(error()) must be a specialization of std::expected");
     static_assert(is_same_v<typename _Gp::value_type, _Tp>,
@@ -988,7 +986,7 @@ public:
 
   template <class _Func>
     requires is_constructible_v<_Tp, const _Tp&>
-  _LIBCPP_HIDE_FROM_ABI constexpr auto or_else(_Func&& __f) const& {
+  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI constexpr auto or_else(_Func&& __f) const& {
     using _Gp = remove_cvref_t<invoke_result_t<_Func, const _Err&>>;
     static_assert(__is_std_expected<_Gp>::value, "The result of f(error()) must be a specialization of std::expected");
     static_assert(is_same_v<typename _Gp::value_type, _Tp>,
@@ -1001,7 +999,7 @@ public:
 
   template <class _Func>
     requires is_constructible_v<_Tp, _Tp&&>
-  _LIBCPP_HIDE_FROM_ABI constexpr auto or_else(_Func&& __f) && {
+  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI constexpr auto or_else(_Func&& __f) && {
     using _Gp = remove_cvref_t<invoke_result_t<_Func, _Err&&>>;
     static_assert(
         __is_std_expected<_Gp>::value, "The result of f(std::move(error())) must be a specialization of std::expected");
@@ -1015,7 +1013,7 @@ public:
 
   template <class _Func>
     requires is_constructible_v<_Tp, const _Tp&&>
-  _LIBCPP_HIDE_FROM_ABI constexpr auto or_else(_Func&& __f) const&& {
+  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI constexpr auto or_else(_Func&& __f) const&& {
     using _Gp = remove_cvref_t<invoke_result_t<_Func, const _Err&&>>;
     static_assert(
         __is_std_expected<_Gp>::value, "The result of f(std::move(error())) must be a specialization of std::expected");
@@ -1029,7 +1027,7 @@ public:
 
   template <class _Func>
     requires is_constructible_v<_Err, _Err&>
-  _LIBCPP_HIDE_FROM_ABI constexpr auto transform(_Func&& __f) & {
+  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI constexpr auto transform(_Func&& __f) & {
     using _Up = remove_cv_t<invoke_result_t<_Func, _Tp&>>;
     if (!has_value()) {
       return expected<_Up, _Err>(unexpect, error());
@@ -1045,7 +1043,7 @@ public:
 
   template <class _Func>
     requires is_constructible_v<_Err, const _Err&>
-  _LIBCPP_HIDE_FROM_ABI constexpr auto transform(_Func&& __f) const& {
+  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI constexpr auto transform(_Func&& __f) const& {
     using _Up = remove_cv_t<invoke_result_t<_Func, const _Tp&>>;
     if (!has_value()) {
       return expected<_Up, _Err>(unexpect, error());
@@ -1061,7 +1059,7 @@ public:
 
   template <class _Func>
     requires is_constructible_v<_Err, _Err&&>
-  _LIBCPP_HIDE_FROM_ABI constexpr auto transform(_Func&& __f) && {
+  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI constexpr auto transform(_Func&& __f) && {
     using _Up = remove_cv_t<invoke_result_t<_Func, _Tp&&>>;
     if (!has_value()) {
       return expected<_Up, _Err>(unexpect, std::move(error()));
@@ -1077,7 +1075,7 @@ public:
 
   template <class _Func>
     requires is_constructible_v<_Err, const _Err&&>
-  _LIBCPP_HIDE_FROM_ABI constexpr auto transform(_Func&& __f) const&& {
+  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI constexpr auto transform(_Func&& __f) const&& {
     using _Up = remove_cv_t<invoke_result_t<_Func, const _Tp&&>>;
     if (!has_value()) {
       return expected<_Up, _Err>(unexpect, std::move(error()));
@@ -1093,7 +1091,7 @@ public:
 
   template <class _Func>
     requires is_constructible_v<_Tp, _Tp&>
-  _LIBCPP_HIDE_FROM_ABI constexpr auto transform_error(_Func&& __f) & {
+  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI constexpr auto transform_error(_Func&& __f) & {
     using _Gp = remove_cv_t<invoke_result_t<_Func, _Err&>>;
     static_assert(__valid_std_unexpected<_Gp>::value,
                   "The result of f(error()) must be a valid template argument for unexpected");
@@ -1105,7 +1103,7 @@ public:
 
   template <class _Func>
     requires is_constructible_v<_Tp, const _Tp&>
-  _LIBCPP_HIDE_FROM_ABI constexpr auto transform_error(_Func&& __f) const& {
+  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI constexpr auto transform_error(_Func&& __f) const& {
     using _Gp = remove_cv_t<invoke_result_t<_Func, const _Err&>>;
     static_assert(__valid_std_unexpected<_Gp>::value,
                   "The result of f(error()) must be a valid template argument for unexpected");
@@ -1117,7 +1115,7 @@ public:
 
   template <class _Func>
     requires is_constructible_v<_Tp, _Tp&&>
-  _LIBCPP_HIDE_FROM_ABI constexpr auto transform_error(_Func&& __f) && {
+  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI constexpr auto transform_error(_Func&& __f) && {
     using _Gp = remove_cv_t<invoke_result_t<_Func, _Err&&>>;
     static_assert(__valid_std_unexpected<_Gp>::value,
                   "The result of f(std::move(error())) must be a valid template argument for unexpected");
@@ -1130,7 +1128,7 @@ public:
 
   template <class _Func>
     requires is_constructible_v<_Tp, const _Tp&&>
-  _LIBCPP_HIDE_FROM_ABI constexpr auto transform_error(_Func&& __f) const&& {
+  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI constexpr auto transform_error(_Func&& __f) const&& {
     using _Gp = remove_cv_t<invoke_result_t<_Func, const _Err&&>>;
     static_assert(__valid_std_unexpected<_Gp>::value,
                   "The result of f(std::move(error())) must be a valid template argument for unexpected");
@@ -1597,7 +1595,7 @@ public:
   // [expected.void.obs], observers
   _LIBCPP_HIDE_FROM_ABI constexpr explicit operator bool() const noexcept { return this->__has_val(); }
 
-  _LIBCPP_HIDE_FROM_ABI constexpr bool has_value() const noexcept { return this->__has_val(); }
+  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI constexpr bool has_value() const noexcept { return this->__has_val(); }
 
   _LIBCPP_HIDE_FROM_ABI constexpr void operator*() const noexcept {
     _LIBCPP_ASSERT_VALID_ELEMENT_ACCESS(
@@ -1618,32 +1616,32 @@ public:
     }
   }
 
-  _LIBCPP_HIDE_FROM_ABI constexpr const _Err& error() const& noexcept {
+  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI constexpr const _Err& error() const& noexcept {
     _LIBCPP_ASSERT_VALID_ELEMENT_ACCESS(
         !this->__has_val(), "expected::error requires the expected to contain an error");
     return this->__unex();
   }
 
-  _LIBCPP_HIDE_FROM_ABI constexpr _Err& error() & noexcept {
+  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI constexpr _Err& error() & noexcept {
     _LIBCPP_ASSERT_VALID_ELEMENT_ACCESS(
         !this->__has_val(), "expected::error requires the expected to contain an error");
     return this->__unex();
   }
 
-  _LIBCPP_HIDE_FROM_ABI constexpr const _Err&& error() const&& noexcept {
+  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI constexpr const _Err&& error() const&& noexcept {
     _LIBCPP_ASSERT_VALID_ELEMENT_ACCESS(
         !this->__has_val(), "expected::error requires the expected to contain an error");
     return std::move(this->__unex());
   }
 
-  _LIBCPP_HIDE_FROM_ABI constexpr _Err&& error() && noexcept {
+  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI constexpr _Err&& error() && noexcept {
     _LIBCPP_ASSERT_VALID_ELEMENT_ACCESS(
         !this->__has_val(), "expected::error requires the expected to contain an error");
     return std::move(this->__unex());
   }
 
   template <class _Up = _Err>
-  _LIBCPP_HIDE_FROM_ABI constexpr _Err error_or(_Up&& __error) const& {
+  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI constexpr _Err error_or(_Up&& __error) const& {
     static_assert(is_copy_constructible_v<_Err>, "error_type has to be copy constructible");
     static_assert(is_convertible_v<_Up, _Err>, "argument has to be convertible to error_type");
     if (has_value()) {
@@ -1653,7 +1651,7 @@ public:
   }
 
   template <class _Up = _Err>
-  _LIBCPP_HIDE_FROM_ABI constexpr _Err error_or(_Up&& __error) && {
+  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI constexpr _Err error_or(_Up&& __error) && {
     static_assert(is_move_constructible_v<_Err>, "error_type has to be move constructible");
     static_assert(is_convertible_v<_Up, _Err>, "argument has to be convertible to error_type");
     if (has_value()) {
@@ -1665,7 +1663,7 @@ public:
   // [expected.void.monadic], monadic
   template <class _Func>
     requires is_constructible_v<_Err, _Err&>
-  _LIBCPP_HIDE_FROM_ABI constexpr auto and_then(_Func&& __f) & {
+  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI constexpr auto and_then(_Func&& __f) & {
     using _Up = remove_cvref_t<invoke_result_t<_Func>>;
     static_assert(__is_std_expected<_Up>::value, "The result of f() must be a specialization of std::expected");
     static_assert(
@@ -1678,7 +1676,7 @@ public:
 
   template <class _Func>
     requires is_constructible_v<_Err, const _Err&>
-  _LIBCPP_HIDE_FROM_ABI constexpr auto and_then(_Func&& __f) const& {
+  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI constexpr auto and_then(_Func&& __f) const& {
     using _Up = remove_cvref_t<invoke_result_t<_Func>>;
     static_assert(__is_std_expected<_Up>::value, "The result of f() must be a specialization of std::expected");
     static_assert(
@@ -1691,7 +1689,7 @@ public:
 
   template <class _Func>
     requires is_constructible_v<_Err, _Err&&>
-  _LIBCPP_HIDE_FROM_ABI constexpr auto and_then(_Func&& __f) && {
+  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI constexpr auto and_then(_Func&& __f) && {
     using _Up = remove_cvref_t<invoke_result_t<_Func>>;
     static_assert(__is_std_expected<_Up>::value, "The result of f() must be a specialization of std::expected");
     static_assert(
@@ -1704,7 +1702,7 @@ public:
 
   template <class _Func>
     requires is_constructible_v<_Err, const _Err&&>
-  _LIBCPP_HIDE_FROM_ABI constexpr auto and_then(_Func&& __f) const&& {
+  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI constexpr auto and_then(_Func&& __f) const&& {
     using _Up = remove_cvref_t<invoke_result_t<_Func>>;
     static_assert(__is_std_expected<_Up>::value, "The result of f() must be a specialization of std::expected");
     static_assert(
@@ -1716,7 +1714,7 @@ public:
   }
 
   template <class _Func>
-  _LIBCPP_HIDE_FROM_ABI constexpr auto or_else(_Func&& __f) & {
+  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI constexpr auto or_else(_Func&& __f) & {
     using _Gp = remove_cvref_t<invoke_result_t<_Func, _Err&>>;
     static_assert(__is_std_expected<_Gp>::value, "The result of f(error()) must be a specialization of std::expected");
     static_assert(is_same_v<typename _Gp::value_type, _Tp>,
@@ -1728,7 +1726,7 @@ public:
   }
 
   template <class _Func>
-  _LIBCPP_HIDE_FROM_ABI constexpr auto or_else(_Func&& __f) const& {
+  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI constexpr auto or_else(_Func&& __f) const& {
     using _Gp = remove_cvref_t<invoke_result_t<_Func, const _Err&>>;
     static_assert(__is_std_expected<_Gp>::value, "The result of f(error()) must be a specialization of std::expected");
     static_assert(is_same_v<typename _Gp::value_type, _Tp>,
@@ -1740,7 +1738,7 @@ public:
   }
 
   template <class _Func>
-  _LIBCPP_HIDE_FROM_ABI constexpr auto or_else(_Func&& __f) && {
+  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI constexpr auto or_else(_Func&& __f) && {
     using _Gp = remove_cvref_t<invoke_result_t<_Func, _Err&&>>;
     static_assert(
         __is_std_expected<_Gp>::value, "The result of f(std::move(error())) must be a specialization of std::expected");
@@ -1753,7 +1751,7 @@ public:
   }
 
   template <class _Func>
-  _LIBCPP_HIDE_FROM_ABI constexpr auto or_else(_Func&& __f) const&& {
+  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI constexpr auto or_else(_Func&& __f) const&& {
     using _Gp = remove_cvref_t<invoke_result_t<_Func, const _Err&&>>;
     static_assert(
         __is_std_expected<_Gp>::value, "The result of f(std::move(error())) must be a specialization of std::expected");
@@ -1767,7 +1765,7 @@ public:
 
   template <class _Func>
     requires is_constructible_v<_Err, _Err&>
-  _LIBCPP_HIDE_FROM_ABI constexpr auto transform(_Func&& __f) & {
+  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI constexpr auto transform(_Func&& __f) & {
     using _Up = remove_cv_t<invoke_result_t<_Func>>;
     if (!has_value()) {
       return expected<_Up, _Err>(unexpect, error());
@@ -1782,7 +1780,7 @@ public:
 
   template <class _Func>
     requires is_constructible_v<_Err, const _Err&>
-  _LIBCPP_HIDE_FROM_ABI constexpr auto transform(_Func&& __f) const& {
+  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI constexpr auto transform(_Func&& __f) const& {
     using _Up = remove_cv_t<invoke_result_t<_Func>>;
     if (!has_value()) {
       return expected<_Up, _Err>(unexpect, error());
@@ -1797,7 +1795,7 @@ public:
 
   template <class _Func>
     requires is_constructible_v<_Err, _Err&&>
-  _LIBCPP_HIDE_FROM_ABI constexpr auto transform(_Func&& __f) && {
+  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI constexpr auto transform(_Func&& __f) && {
     using _Up = remove_cv_t<invoke_result_t<_Func>>;
     if (!has_value()) {
       return expected<_Up, _Err>(unexpect, std::move(error()));
@@ -1812,7 +1810,7 @@ public:
 
   template <class _Func>
     requires is_constructible_v<_Err, const _Err&&>
-  _LIBCPP_HIDE_FROM_ABI constexpr auto transform(_Func&& __f) const&& {
+  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI constexpr auto transform(_Func&& __f) const&& {
     using _Up = remove_cv_t<invoke_result_t<_Func>>;
     if (!has_value()) {
       return expected<_Up, _Err>(unexpect, std::move(error()));
@@ -1826,7 +1824,7 @@ public:
   }
 
   template <class _Func>
-  _LIBCPP_HIDE_FROM_ABI constexpr auto transform_error(_Func&& __f) & {
+  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI constexpr auto transform_error(_Func&& __f) & {
     using _Gp = remove_cv_t<invoke_result_t<_Func, _Err&>>;
     static_assert(__valid_std_unexpected<_Gp>::value,
                   "The result of f(error()) must be a valid template argument for unexpected");
@@ -1837,7 +1835,7 @@ public:
   }
 
   template <class _Func>
-  _LIBCPP_HIDE_FROM_ABI constexpr auto transform_error(_Func&& __f) const& {
+  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI constexpr auto transform_error(_Func&& __f) const& {
     using _Gp = remove_cv_t<invoke_result_t<_Func, const _Err&>>;
     static_assert(__valid_std_unexpected<_Gp>::value,
                   "The result of f(error()) must be a valid template argument for unexpected");
@@ -1848,7 +1846,7 @@ public:
   }
 
   template <class _Func>
-  _LIBCPP_HIDE_FROM_ABI constexpr auto transform_error(_Func&& __f) && {
+  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI constexpr auto transform_error(_Func&& __f) && {
     using _Gp = remove_cv_t<invoke_result_t<_Func, _Err&&>>;
     static_assert(__valid_std_unexpected<_Gp>::value,
                   "The result of f(std::move(error())) must be a valid template argument for unexpected");
@@ -1860,7 +1858,7 @@ public:
   }
 
   template <class _Func>
-  _LIBCPP_HIDE_FROM_ABI constexpr auto transform_error(_Func&& __f) const&& {
+  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI constexpr auto transform_error(_Func&& __f) const&& {
     using _Gp = remove_cv_t<invoke_result_t<_Func, const _Err&&>>;
     static_assert(__valid_std_unexpected<_Gp>::value,
                   "The result of f(std::move(error())) must be a valid template argument for unexpected");

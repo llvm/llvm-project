@@ -72,6 +72,7 @@ static constexpr FormatInfo g_format_infos[] = {
     {eFormatInstruction, 'i', "instruction"},
     {eFormatVoid, 'v', "void"},
     {eFormatUnicode8, 'u', "unicode8"},
+    {eFormatFloat128, '\0', "float128"},
 };
 
 static_assert((sizeof(g_format_infos) / sizeof(g_format_infos[0])) ==
@@ -719,7 +720,7 @@ void FormatManager::LoadSystemFormatters() {
   TypeSummaryImpl::Flags string_flags;
   string_flags.SetCascades(true)
       .SetSkipPointers(true)
-      .SetSkipReferences(false)
+      .SetSkipReferences(true)
       .SetDontShowChildren(true)
       .SetDontShowValue(false)
       .SetShowMembersOneLiner(false)

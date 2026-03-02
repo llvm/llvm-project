@@ -182,8 +182,8 @@ define void @shuffle1(ptr %explicit_0, ptr %explicit_1) vscale_range(2,2) {
 ; CHECK-LABEL: shuffle1:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    addi a0, a0, 252
-; CHECK-NEXT:    vsetivli zero, 3, e32, m1, ta, ma
-; CHECK-NEXT:    vle32.v v10, (a0)
+; CHECK-NEXT:    vsetivli zero, 12, e8, m1, ta, ma
+; CHECK-NEXT:    vle8.v v10, (a0)
 ; CHECK-NEXT:    vmv.v.i v0, 1
 ; CHECK-NEXT:    vsetivli zero, 4, e32, m1, ta, mu
 ; CHECK-NEXT:    vslidedown.vi v10, v10, 1, v0.t
@@ -197,9 +197,9 @@ define void @shuffle1(ptr %explicit_0, ptr %explicit_1) vscale_range(2,2) {
 ; CHECK-NEXT:    ret
   %1 = getelementptr i32, ptr %explicit_0, i64 63
   %2 = load <3 x i32>, ptr %1, align 1
-  %3 = shufflevector <3 x i32> %2, <3 x i32> undef, <2 x i32> <i32 1, i32 2>
-  %4 = shufflevector <2 x i32> %3, <2 x i32> undef, <8 x i32> <i32 0, i32 1, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef>
-  %5 = shufflevector <8 x i32> <i32 0, i32 0, i32 0, i32 0, i32 undef, i32 0, i32 undef, i32 0>, <8 x i32> %4, <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 8, i32 5, i32 9, i32 7>
+  %3 = shufflevector <3 x i32> %2, <3 x i32> poison, <2 x i32> <i32 1, i32 2>
+  %4 = shufflevector <2 x i32> %3, <2 x i32> poison, <8 x i32> <i32 0, i32 1, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison>
+  %5 = shufflevector <8 x i32> <i32 0, i32 0, i32 0, i32 0, i32 poison, i32 0, i32 poison, i32 0>, <8 x i32> %4, <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 8, i32 5, i32 9, i32 7>
   %6 = getelementptr inbounds <8 x i32>, ptr %explicit_1, i64 21
   store <8 x i32> %5, ptr %6, align 32
   ret void
@@ -218,7 +218,7 @@ define <16 x float> @shuffle2(<4 x float> %a) vscale_range(2,2) {
 ; CHECK-NEXT:    vmerge.vvm v9, v9, v12, v0
 ; CHECK-NEXT:    ret
   %b = extractelement <4 x float> %a, i32 2
-  %c = insertelement <16 x float> <float 0.000000e+00, float 0.000000e+00, float 0.000000e+00, float 0.000000e+00, float 0.000000e+00, float undef, float 0.000000e+00, float 0.000000e+00, float 0.000000e+00, float 0.000000e+00, float 0.000000e+00, float 0.000000e+00, float 0.000000e+00, float 0.000000e+00, float 0.000000e+00, float 0.000000e+00>, float %b, i32 5
+  %c = insertelement <16 x float> <float 0.000000e+00, float 0.000000e+00, float 0.000000e+00, float 0.000000e+00, float 0.000000e+00, float poison, float 0.000000e+00, float 0.000000e+00, float 0.000000e+00, float 0.000000e+00, float 0.000000e+00, float 0.000000e+00, float 0.000000e+00, float 0.000000e+00, float 0.000000e+00, float 0.000000e+00>, float %b, i32 5
   %b1 = extractelement <4 x float> %a, i32 0
   %c1 = insertelement <16 x float> %c, float %b1, i32 6
   ret <16 x float>%c1
@@ -246,10 +246,10 @@ define i64 @extract_any_extend_vector_inreg_v16i64(<16 x i64> %a0, i32 %a1) vsca
 ; RV64-NEXT:    .cfi_def_cfa_offset 256
 ; RV64-NEXT:    sd ra, 248(sp) # 8-byte Folded Spill
 ; RV64-NEXT:    sd s0, 240(sp) # 8-byte Folded Spill
-; RV64-NEXT:    sd s2, 232(sp) # 8-byte Folded Spill
+; RV64-NEXT:    sd s1, 232(sp) # 8-byte Folded Spill
 ; RV64-NEXT:    .cfi_offset ra, -8
 ; RV64-NEXT:    .cfi_offset s0, -16
-; RV64-NEXT:    .cfi_offset s2, -24
+; RV64-NEXT:    .cfi_offset s1, -24
 ; RV64-NEXT:    addi s0, sp, 256
 ; RV64-NEXT:    .cfi_def_cfa s0, 0
 ; RV64-NEXT:    andi sp, sp, -128
@@ -259,21 +259,21 @@ define i64 @extract_any_extend_vector_inreg_v16i64(<16 x i64> %a0, i32 %a1) vsca
 ; RV64-NEXT:    vmv.v.i v16, 0
 ; RV64-NEXT:    vsetivli zero, 2, e64, m1, ta, mu
 ; RV64-NEXT:    vslidedown.vi v18, v15, 1, v0.t
-; RV64-NEXT:    mv s2, sp
-; RV64-NEXT:    vs8r.v v16, (s2)
+; RV64-NEXT:    mv s1, sp
+; RV64-NEXT:    vs8r.v v16, (s1)
 ; RV64-NEXT:    andi a0, a0, 15
 ; RV64-NEXT:    li a1, 8
 ; RV64-NEXT:    call __muldi3
-; RV64-NEXT:    add a0, s2, a0
+; RV64-NEXT:    add a0, s1, a0
 ; RV64-NEXT:    ld a0, 0(a0)
 ; RV64-NEXT:    addi sp, s0, -256
 ; RV64-NEXT:    .cfi_def_cfa sp, 256
 ; RV64-NEXT:    ld ra, 248(sp) # 8-byte Folded Reload
 ; RV64-NEXT:    ld s0, 240(sp) # 8-byte Folded Reload
-; RV64-NEXT:    ld s2, 232(sp) # 8-byte Folded Reload
+; RV64-NEXT:    ld s1, 232(sp) # 8-byte Folded Reload
 ; RV64-NEXT:    .cfi_restore ra
 ; RV64-NEXT:    .cfi_restore s0
-; RV64-NEXT:    .cfi_restore s2
+; RV64-NEXT:    .cfi_restore s1
 ; RV64-NEXT:    addi sp, sp, 256
 ; RV64-NEXT:    .cfi_def_cfa_offset 0
 ; RV64-NEXT:    ret
@@ -296,8 +296,8 @@ define <4 x double> @shuffles_add(<4 x double> %0, <4 x double> %1) vscale_range
 ; CHECK-NEXT:    vsetivli zero, 4, e64, m2, ta, ma
 ; CHECK-NEXT:    vfadd.vv v8, v12, v10
 ; CHECK-NEXT:    ret
-  %3 = shufflevector <4 x double> %0, <4 x double> %1, <4 x i32> <i32 undef, i32 2, i32 4, i32 6>
-  %4 = shufflevector <4 x double> %0, <4 x double> %1, <4 x i32> <i32 undef, i32 3, i32 5, i32 7>
+  %3 = shufflevector <4 x double> %0, <4 x double> %1, <4 x i32> <i32 poison, i32 2, i32 4, i32 6>
+  %4 = shufflevector <4 x double> %0, <4 x double> %1, <4 x i32> <i32 poison, i32 3, i32 5, i32 7>
   %5 = fadd <4 x double> %3, %4
   ret <4 x double> %5
 }

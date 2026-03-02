@@ -37,6 +37,11 @@ PythonObject SWIGBridge::ToSWIGWrapper(lldb::ThreadPlanSP thread_plan_sp) {
                       SWIGTYPE_p_lldb__SBThreadPlan);
 }
 
+PythonObject SWIGBridge::ToSWIGWrapper(lldb::StackFrameListSP frames_sp) {
+  return ToSWIGHelper(new lldb::SBFrameList(std::move(frames_sp)),
+                      SWIGTYPE_p_lldb__SBFrameList);
+}
+
 PythonObject SWIGBridge::ToSWIGWrapper(lldb::BreakpointSP breakpoint_sp) {
   return ToSWIGHelper(new lldb::SBBreakpoint(std::move(breakpoint_sp)),
                       SWIGTYPE_p_lldb__SBBreakpoint);
@@ -140,6 +145,10 @@ PythonObject SWIGBridge::ToSWIGWrapper(
 PythonObject SWIGBridge::ToSWIGWrapper(
     std::unique_ptr<lldb::SBModuleSpec> module_spec_sb) {
   return ToSWIGHelper(module_spec_sb.release(), SWIGTYPE_p_lldb__SBModuleSpec);
+}
+
+PythonObject SWIGBridge::ToSWIGWrapper(lldb::DescriptionLevel level) {
+  return PythonInteger((int64_t) level);
 }
 
 } // namespace python

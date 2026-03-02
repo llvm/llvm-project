@@ -835,7 +835,7 @@ def : Pat<(MxSub 0, i8 :$src), (NEG8d  MxDRD8 :$src)>;
 def : Pat<(MxSub 0, i16:$src), (NEG16d MxDRD16:$src)>;
 def : Pat<(MxSub 0, i32:$src), (NEG32d MxDRD32:$src)>;
 // SExt of i1 values.
-// Although we specify `ZeroOrOneBooleanContent` for boolean content,
+// Although we specify `ZeroOrNegativeOneBooleanContent` for boolean content,
 // we're still adding an AND here as we don't know the origin of the i1 value.
 def : Pat<(sext_inreg i8:$src,  i1), (NEG8d  (AND8di  MxDRD8:$src,  1))>;
 def : Pat<(sext_inreg i16:$src, i1), (NEG16d (AND16di MxDRD16:$src, 1))>;

@@ -78,7 +78,6 @@ private:
   friend class ProgramStateManager;
   friend class ExplodedGraph;
   friend class ExplodedNode;
-  friend class NodeBuilder;
 
   ProgramStateManager *stateMgr;
   Environment Env;           // Maps a Stmt to its current SVal.
@@ -116,6 +115,11 @@ private:
   // overconstrained-related functions. We want to keep this API inaccessible
   // for Checkers.
   friend class ConstraintManager;
+  // The CoreEngine also needs to be a friend to mark nodes as sinks if they
+  // are generated with a PosteriorlyOverconstrained state.
+  // FIXME: Perform this check in the relevant methods of `ExplodedGraph` and
+  // remove this `friend` declaration.
+  friend class CoreEngine;
   bool isPosteriorlyOverconstrained() const {
     return PosteriorlyOverconstrained;
   }
@@ -572,7 +576,11 @@ public:
   CallEventManager &getCallEventManager() { return *CallEventMgr; }
 
   StoreManager &getStoreManager() { return *StoreMgr; }
+  const StoreManager &getStoreManager() const { return *StoreMgr; }
   ConstraintManager &getConstraintManager() { return *ConstraintMgr; }
+  const ConstraintManager &getConstraintManager() const {
+    return *ConstraintMgr;
+  }
   ExprEngine &getOwningEngine() { return *Eng; }
 
   ProgramStateRef

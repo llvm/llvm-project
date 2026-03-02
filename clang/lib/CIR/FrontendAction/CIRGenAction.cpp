@@ -84,6 +84,15 @@ public:
     return true;
   }
 
+  void HandleCXXStaticMemberVarInstantiation(clang::VarDecl *VD) override {
+    Gen->HandleCXXStaticMemberVarInstantiation(VD);
+  }
+
+  void HandleOpenACCRoutineReference(const FunctionDecl *FD,
+                                     const OpenACCRoutineDecl *RD) override {
+    Gen->HandleOpenACCRoutineReference(FD, RD);
+  }
+
   void HandleInlineFunctionDefinition(FunctionDecl *D) override {
     Gen->HandleInlineFunctionDefinition(D);
   }
@@ -106,9 +115,9 @@ public:
 
     if (!FEOptions.ClangIRDisablePasses) {
       // Setup and run CIR pipeline.
-      if (runCIRToCIRPasses(MlirModule, MlirCtx, C,
-                            !FEOptions.ClangIRDisableCIRVerifier,
-                            CGO.OptimizationLevel > 0)
+      if (runCIRToCIRPasses(
+              MlirModule, MlirCtx, C, !FEOptions.ClangIRDisableCIRVerifier,
+              FEOptions.ClangIREnableIdiomRecognizer, CGO.OptimizationLevel > 0)
               .failed()) {
         CI.getDiagnostics().Report(diag::err_cir_to_cir_transform_failed);
         return;
@@ -147,9 +156,15 @@ public:
     Gen->HandleTagDeclDefinition(D);
   }
 
+  void HandleTagDeclRequiredDefinition(const TagDecl *D) override {
+    Gen->HandleTagDeclRequiredDefinition(D);
+  }
+
   void CompleteTentativeDefinition(VarDecl *D) override {
     Gen->CompleteTentativeDefinition(D);
   }
+
+  void HandleVTable(CXXRecordDecl *RD) override { Gen->HandleVTable(RD); }
 };
 } // namespace cir
 

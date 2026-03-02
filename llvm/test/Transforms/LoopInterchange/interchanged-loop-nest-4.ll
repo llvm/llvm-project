@@ -36,7 +36,8 @@ for.body10.i.i.i:                                 ; preds = %for.body10.i.i.i, %
   %arrayidx.i.i.i = getelementptr [6 x ptr], ptr @g_78, i16 0, i16 %storemerge56.i.i.i
   store ptr @g_75, ptr %arrayidx.i.i.i, align 1
   %sub.i.i.i = add nsw i16 %storemerge56.i.i.i, -1
-  br i1 true, label %for.inc14.i.i.i, label %for.body10.i.i.i
+  %cmp = icmp sgt i16 %sub.i.i.i, 0
+  br i1 %cmp, label %for.body10.i.i.i, label %for.inc14.i.i.i
 
 for.inc14.i.i.i:                                  ; preds = %for.body10.i.i.i
   %add15.i.i.i = add nuw nsw i16 %l_105.18.i.i.i, 1

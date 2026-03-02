@@ -85,16 +85,11 @@ template <> struct llvm::DenseMapInfo<VariableID> {
 
 using VarLocInsertPt = PointerUnion<const Instruction *, const DbgRecord *>;
 
-namespace std {
-template <> struct hash<VarLocInsertPt> {
-  using argument_type = VarLocInsertPt;
-  using result_type = std::size_t;
-
-  result_type operator()(const argument_type &Arg) const {
+template <> struct std::hash<VarLocInsertPt> {
+  std::size_t operator()(const VarLocInsertPt &Arg) const {
     return std::hash<void *>()(Arg.getOpaqueValue());
   }
 };
-} // namespace std
 
 /// Helper class to build FunctionVarLocs, since that class isn't easy to
 /// modify. TODO: There's not a great deal of value in the split, it could be
@@ -141,7 +136,7 @@ public:
     VarLocInfo VarLoc;
     VarLoc.VariableID = insertVariable(Var);
     VarLoc.Expr = Expr;
-    VarLoc.DL = DL;
+    VarLoc.DL = std::move(DL);
     VarLoc.Values = R;
     SingleLocVars.emplace_back(VarLoc);
   }
@@ -152,7 +147,7 @@ public:
     VarLocInfo VarLoc;
     VarLoc.VariableID = insertVariable(Var);
     VarLoc.Expr = Expr;
-    VarLoc.DL = DL;
+    VarLoc.DL = std::move(DL);
     VarLoc.Values = R;
     VarLocsBeforeInst[Before].emplace_back(VarLoc);
   }
@@ -1403,7 +1398,7 @@ void AssignmentTrackingLowering::addMemDef(BlockInfo *LiveSet, VariableID Var,
                                            const Assignment &AV) {
   LiveSet->setAssignment(BlockInfo::Stack, Var, AV);
 
-  // Use this assigment for all fragments contained within Var, but do not
+  // Use this assignment for all fragments contained within Var, but do not
   // provide a Source because we cannot convert Var's value to a value for the
   // fragment.
   Assignment FragAV = AV;
@@ -1416,7 +1411,7 @@ void AssignmentTrackingLowering::addDbgDef(BlockInfo *LiveSet, VariableID Var,
                                            const Assignment &AV) {
   LiveSet->setAssignment(BlockInfo::Debug, Var, AV);
 
-  // Use this assigment for all fragments contained within Var, but do not
+  // Use this assignment for all fragments contained within Var, but do not
   // provide a Source because we cannot convert Var's value to a value for the
   // fragment.
   Assignment FragAV = AV;
