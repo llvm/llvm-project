@@ -18,9 +18,8 @@ define i32 @anyset_two_bit_mask(i32 %x) {
 
 define i1 @anyset_two_bit_mask_trunc(i32 %x) {
 ; CHECK-LABEL: @anyset_two_bit_mask_trunc(
-; CHECK-NEXT:    [[S:%.*]] = lshr i32 [[X:%.*]], 3
-; CHECK-NEXT:    [[O:%.*]] = or i32 [[S]], [[X]]
-; CHECK-NEXT:    [[R:%.*]] = trunc i32 [[O]] to i1
+; CHECK-NEXT:    [[TMP1:%.*]] = and i32 [[X:%.*]], 9
+; CHECK-NEXT:    [[R:%.*]] = icmp ne i32 [[TMP1]], 0
 ; CHECK-NEXT:    ret i1 [[R]]
 ;
   %s = lshr i32 %x, 3
@@ -78,13 +77,8 @@ define <2 x i32> @anyset_four_bit_mask_uniform(<2 x i32> %x) {
 
 define <2 x i1> @anyset_four_bit_mask_uniform_trunc(<2 x i32> %x) {
 ; CHECK-LABEL: @anyset_four_bit_mask_uniform_trunc(
-; CHECK-NEXT:    [[T1:%.*]] = lshr <2 x i32> [[X:%.*]], splat (i32 3)
-; CHECK-NEXT:    [[T2:%.*]] = lshr <2 x i32> [[X]], splat (i32 5)
-; CHECK-NEXT:    [[T3:%.*]] = lshr <2 x i32> [[X]], splat (i32 8)
-; CHECK-NEXT:    [[O1:%.*]] = or <2 x i32> [[T1]], [[X]]
-; CHECK-NEXT:    [[O2:%.*]] = or <2 x i32> [[T2]], [[T3]]
-; CHECK-NEXT:    [[O3:%.*]] = or <2 x i32> [[O1]], [[O2]]
-; CHECK-NEXT:    [[R:%.*]] = trunc <2 x i32> [[O3]] to <2 x i1>
+; CHECK-NEXT:    [[TMP1:%.*]] = and <2 x i32> [[X:%.*]], splat (i32 297)
+; CHECK-NEXT:    [[R:%.*]] = icmp ne <2 x i32> [[TMP1]], zeroinitializer
 ; CHECK-NEXT:    ret <2 x i1> [[R]]
 ;
   %t1 = lshr <2 x i32> %x, <i32 3, i32 3>
@@ -148,9 +142,8 @@ define i32 @allset_two_bit_mask(i32 %x) {
 
 define i1 @allset_two_bit_mask_trunc(i32 %x) {
 ; CHECK-LABEL: @allset_two_bit_mask_trunc(
-; CHECK-NEXT:    [[S:%.*]] = lshr i32 [[X:%.*]], 7
-; CHECK-NEXT:    [[O:%.*]] = and i32 [[S]], [[X]]
-; CHECK-NEXT:    [[R:%.*]] = trunc i32 [[O]] to i1
+; CHECK-NEXT:    [[TMP1:%.*]] = and i32 [[X:%.*]], 129
+; CHECK-NEXT:    [[R:%.*]] = icmp eq i32 [[TMP1]], 129
 ; CHECK-NEXT:    ret i1 [[R]]
 ;
   %s = lshr i32 %x, 7
@@ -174,9 +167,8 @@ define <2 x i32> @allset_two_bit_mask_uniform(<2 x i32> %x) {
 
 define <2 x i1> @allset_two_bit_mask_uniform_trunc(<2 x i32> %x) {
 ; CHECK-LABEL: @allset_two_bit_mask_uniform_trunc(
-; CHECK-NEXT:    [[S:%.*]] = lshr <2 x i32> [[X:%.*]], splat (i32 7)
-; CHECK-NEXT:    [[O:%.*]] = and <2 x i32> [[S]], [[X]]
-; CHECK-NEXT:    [[R:%.*]] = trunc <2 x i32> [[O]] to <2 x i1>
+; CHECK-NEXT:    [[TMP1:%.*]] = and <2 x i32> [[X:%.*]], splat (i32 129)
+; CHECK-NEXT:    [[R:%.*]] = icmp eq <2 x i32> [[TMP1]], splat (i32 129)
 ; CHECK-NEXT:    ret <2 x i1> [[R]]
 ;
   %s = lshr <2 x i32> %x, <i32 7, i32 7>

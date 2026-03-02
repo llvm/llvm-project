@@ -288,6 +288,35 @@ static bool foldAnyOrAllBitsSet(Instruction &I) {
   return true;
 }
 
+static bool foldAnyOrAllBitsSetTrunc(Instruction &I) {
+  if (!I.getType()->isIntOrIntVectorTy(1))
+    return false;
+
+  bool MatchAllBitsSet;
+  if (match(&I, m_Trunc(m_OneUse(m_And(m_Value(), m_Value())))))
+    MatchAllBitsSet = true;
+  else if (match(&I, m_Trunc(m_OneUse(m_Or(m_Value(), m_Value())))))
+    MatchAllBitsSet = false;
+  else
+    return false;
+  Value *X = I.getOperand(0);
+
+  MaskOps MOps(X->getType()->getScalarSizeInBits(), MatchAllBitsSet);
+  if (!matchAndOrChain(X, MOps))
+    return false;
+
+  // The pattern was found. Create a masked compare that replaces all of the
+  // shift and logic ops.
+  IRBuilder<> Builder(&I);
+  Constant *Mask = ConstantInt::get(X->getType(), MOps.Mask);
+  Value *And = Builder.CreateAnd(MOps.Root, Mask);
+  Value *Cmp = MatchAllBitsSet ? Builder.CreateICmpEQ(And, Mask)
+                               : Builder.CreateIsNotNull(And);
+  I.replaceAllUsesWith(Cmp);
+  ++NumAnyOrAllBitsSet;
+  return true;
+}
+
 // Try to recognize below function as popcount intrinsic.
 // This is the "best" algorithm from
 // http://graphics.stanford.edu/~seander/bithacks.html#CountBitsSetParallel
@@ -1824,6 +1853,7 @@ static bool foldUnusualPatterns(Function &F, DominatorTree &DT,
     // iteratively in this loop rather than waiting until the end.
     for (Instruction &I : make_early_inc_range(llvm::reverse(BB))) {
       MadeChange |= foldAnyOrAllBitsSet(I);
+      MadeChange |= foldAnyOrAllBitsSetTrunc(I);
       MadeChange |= foldGuardedFunnelShift(I, DT);
       MadeChange |= tryToRecognizePopCount(I);
       MadeChange |= tryToFPToSat(I, TTI);
