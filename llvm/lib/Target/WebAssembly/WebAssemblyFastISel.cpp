@@ -1306,6 +1306,7 @@ bool WebAssemblyFastISel::tryToFoldLoadIntoMI(MachineInstr *MI, unsigned OpNo,
   if (!computeAddress(LI->getPointerOperand(), Addr))
     return false;
 
+  materializeLoadStoreOperands(Addr);
   Register ResultReg = MI->getOperand(0).getReg();
   MachineInstrBuilder MIB = BuildMI(*FuncInfo.MBB, FuncInfo.InsertPt, MIMD,
                                     TII.get(NewOpc), ResultReg);
