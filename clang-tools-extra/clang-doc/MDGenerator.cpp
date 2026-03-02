@@ -78,8 +78,7 @@ static std::string genRawText(const std::vector<CommentInfo> &Comments) {
   while (Q.size()) {
     Comment = Q.front();
     Q.pop();
-    if (!Comment->Text.empty())
-    {
+    if (!Comment->Text.empty()) {
       if (!First)
         OS << "<br>";
       else
@@ -212,7 +211,8 @@ static void genMarkdown(const ClangDocContext &CDCtx, const EnumInfo &I,
       if (!N.Value.empty())
         Members << "| " << N.Value << " ";
       if (HasComments) {
-        std::string RawComment = StringRef(genRawText(N.Description)).trim().str();
+        std::string RawComment =
+            StringRef(genRawText(N.Description)).trim().str();
         Members << "| " << (RawComment.empty() ? "--" : RawComment) << " ";
       }
       Members << "|\n";
