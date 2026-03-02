@@ -8238,13 +8238,8 @@ bool TargetLowering::expandDIVREMByConstant(SDNode *N,
 
     EVT ChunkVT = EVT::getIntegerVT(*DAG.getContext(), BestChunkWidth);
 
-    SDValue In;
-
-    if (LL) {
-      In = DAG.getNode(ISD::BUILD_PAIR, dl, VT, LL, LH);
-    } else {
-      In = N->getOperand(0);
-    }
+    SDValue In =
+        LL ? DAG.getNode(ISD::BUILD_PAIR, dl, VT, LL, LH) : N->getOperand(0);
 
     SmallVector<SDValue, 8> Parts;
     // Split into fixed-size chunks
