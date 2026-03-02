@@ -8212,24 +8212,40 @@ bool TargetLowering::expandDIVREMByConstant(SDNode *N,
     // for chunk operations.
     unsigned MaxChunk;
     EVT LegalVT = EVT(getRegisterType(*DAG.getContext(), VT));
-    if (LegalVT.isInteger())
-      MaxChunk = LegalVT.getSizeInBits();
-    else
+    if (!LegalVT.isInteger())
       return false;
 
     // Clamp to the original bit width.
-    MaxChunk = std::min(MaxChunk, BitWidth);
+    MaxChunk = std::min<unsigned>(LegalVT.getScalarSizeInBits(), BitWidth);
 
-    // Find the largest chunk width W in (MaxChunk/2, MaxChunk] satisfying
-    //   (1 << W) % Divisor == 1.
-    // Then 2^W ≡ 1 (mod Divisor), so a value written in base 2^W can be
-    // reduced modulo Divisor by summing its W-bit chunks.
+    // Find the largest W in (MaxChunk/2, MaxChunk] such that
+    // 2^W ≡ 1 (mod Divisor).  If this holds, the value can be
+    // reduced modulo Divisor by summing W-bit chunks.
+    //
+    // Instead of constructing 2^W for each candidate, compute
+    // 2^MaxChunk mod Divisor once and walk downward, maintaining:
+    //
+    //   Mod == 2^i mod Divisor
+    //
+    // For each decrement of i, update Mod by multiplying with
+    // the modular inverse of 2 (Divisor is known to be odd here).
+    // Compute 2^MaxChunk mod Divisor
+    APInt Mod(Divisor.getBitWidth(), 1);
+    for (unsigned k = 0; k < MaxChunk; ++k)
+      Mod = (Mod.shl(1)).urem(Divisor);
+
+    // Since Divisor is odd, inverse of 2 mod D is (D+1)/2
+    APInt Inv2 = (Divisor + 1).lshr(1);
+
+    // Walk downward to find largest valid W
     for (unsigned i = MaxChunk; i > MaxChunk / 2; --i) {
-      APInt Pow2 = APInt::getOneBitSet(BitWidth, i);
-      if (Pow2.urem(Divisor).isOne()) {
+      if (Mod.isOne()) {
         BestChunkWidth = i;
         break;
       }
+
+      // Move from 2^i to 2^(i-1)
+      Mod = (Mod * Inv2).urem(Divisor);
     }
 
     // If we found a good chunk width, slice the number and sum the pieces.
@@ -8249,8 +8265,7 @@ bool TargetLowering::expandDIVREMByConstant(SDNode *N,
       Chunk = DAG.getNode(ISD::TRUNCATE, dl, ChunkVT, Chunk);
       Parts.push_back(Chunk);
     }
-    if (Parts.empty())
-      return false;
+    assert(!Parts.empty() && "Failed to split divisor into chunks");
     Sum = Parts[0];
 
     // Use uaddo_carry if we can, otherwise use a compare to detect overflow.
