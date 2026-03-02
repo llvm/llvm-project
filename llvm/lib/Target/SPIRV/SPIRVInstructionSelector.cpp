@@ -266,8 +266,8 @@ private:
 
   bool selectSelect(Register ResVReg, SPIRVTypeInst ResType,
                     MachineInstr &I) const;
-  bool selectSelectDefaultArgs(Register ResVReg, SPIRVTypeInst ResType,
-                               MachineInstr &I, bool IsSigned) const;
+  bool selectExtendBool(Register ResVReg, SPIRVTypeInst ResType,
+                        MachineInstr &I, bool IsSigned) const;
   bool selectIToF(Register ResVReg, SPIRVTypeInst ResType, MachineInstr &I,
                   bool IsSigned, unsigned Opcode) const;
   bool selectExt(Register ResVReg, SPIRVTypeInst ResType, MachineInstr &I,
@@ -3382,10 +3382,12 @@ bool SPIRVInstructionSelector::selectSelect(Register ResVReg,
   return true;
 }
 
-bool SPIRVInstructionSelector::selectSelectDefaultArgs(Register ResVReg,
-                                                       SPIRVTypeInst ResType,
-                                                       MachineInstr &I,
-                                                       bool IsSigned) const {
+// This function is used to extend a bool or a vector of bools into an integer
+// or vector of integers.
+bool SPIRVInstructionSelector::selectExtendBool(Register ResVReg,
+                                                SPIRVTypeInst ResType,
+                                                MachineInstr &I,
+                                                bool IsSigned) const {
   // To extend a bool, we need to use OpSelect between constants.
   Register ZeroReg = buildZerosVal(ResType, I);
   Register OneReg = buildOnesVal(IsSigned, ResType, I);
@@ -3418,7 +3420,7 @@ bool SPIRVInstructionSelector::selectIToF(Register ResVReg,
       TmpType = GR.getOrCreateSPIRVVectorType(TmpType, NumElts, I, TII);
     }
     SrcReg = createVirtualRegister(TmpType, &GR, MRI, MRI->getMF());
-    selectSelectDefaultArgs(SrcReg, TmpType, I, false);
+    selectExtendBool(SrcReg, TmpType, I, false);
   }
   return selectOpWithSrcs(ResVReg, ResType, I, {SrcReg}, Opcode);
 }
@@ -3428,7 +3430,7 @@ bool SPIRVInstructionSelector::selectExt(Register ResVReg,
                                          bool IsSigned) const {
   Register SrcReg = I.getOperand(1).getReg();
   if (GR.isScalarOrVectorOfType(SrcReg, SPIRV::OpTypeBool))
-    return selectSelectDefaultArgs(ResVReg, ResType, I, IsSigned);
+    return selectExtendBool(ResVReg, ResType, I, IsSigned);
 
   SPIRVTypeInst SrcType = GR.getSPIRVTypeForVReg(SrcReg);
   if (ResType == SrcType)
