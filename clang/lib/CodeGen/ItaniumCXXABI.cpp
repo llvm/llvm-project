@@ -531,6 +531,14 @@ public:
   explicit FuchsiaCXXABI(CodeGen::CodeGenModule &CGM)
       : ItaniumCXXABI(CGM) {}
 
+  // Rather than using the defaul [__cxa_]atexit, instead use llvm.global_dtors
+  // which will result in .fini_array being used.
+  void registerGlobalDtor(CodeGenFunction &CGF, const VarDecl &D,
+                          llvm::FunctionCallee dtor,
+                          llvm::Constant *addr) override {
+    return CGM.AddCXXDtorEntry(dtor, addr);
+  }
+
 private:
   bool constructorsAndDestructorsReturnThis() const override { return true; }
 };
