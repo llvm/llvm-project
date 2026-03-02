@@ -129,6 +129,7 @@ void LangOptions::setLangDefaults(LangOptions &Opts, Language Lang,
   Opts.WChar = Std.isCPlusPlus();
   Opts.Digraphs = Std.hasDigraphs();
   Opts.RawStringLiterals = Std.hasRawStringLiterals();
+  Opts.AllowLiteralDigitSeparator = Std.allowLiteralDigitSeparator();
   Opts.NamedLoops = Std.isC2y();
 
   Opts.HLSL = Lang == Language::HLSL;
