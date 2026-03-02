@@ -1,4 +1,4 @@
-//===- TUSummaryEncoding.cpp ----------------------------------------------===//
+//===- LUSummaryEncoding.cpp ----------------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -8,55 +8,55 @@
 
 #include "JSONFormatImpl.h"
 
-#include "clang/Analysis/Scalable/EntityLinker/TUSummaryEncoding.h"
+#include "clang/Analysis/Scalable/EntityLinker/LUSummaryEncoding.h"
 
 #include <set>
 
 namespace clang::ssaf {
 
 //----------------------------------------------------------------------------
-// TUSummaryEncoding
+// LUSummaryEncoding
 //----------------------------------------------------------------------------
 
-llvm::Expected<TUSummaryEncoding>
-JSONFormat::readTUSummaryEncoding(llvm::StringRef Path) {
+llvm::Expected<LUSummaryEncoding>
+JSONFormat::readLUSummaryEncoding(llvm::StringRef Path) {
   auto ExpectedJSON = readJSON(Path);
   if (!ExpectedJSON) {
     return ErrorBuilder::wrap(ExpectedJSON.takeError())
-        .context(ErrorMessages::ReadingFromFile, "TUSummary", Path)
+        .context(ErrorMessages::ReadingFromFile, "LUSummary", Path)
         .build();
   }
 
   Object *RootObjectPtr = ExpectedJSON->getAsObject();
   if (!RootObjectPtr) {
     return ErrorBuilder::create(std::errc::invalid_argument,
-                                ErrorMessages::FailedToReadObject, "TUSummary",
+                                ErrorMessages::FailedToReadObject, "LUSummary",
                                 "object")
-        .context(ErrorMessages::ReadingFromFile, "TUSummary", Path)
+        .context(ErrorMessages::ReadingFromFile, "LUSummary", Path)
         .build();
   }
 
   const Object &RootObject = *RootObjectPtr;
 
-  const Object *TUNamespaceObject = RootObject.getObject("tu_namespace");
-  if (!TUNamespaceObject) {
+  const Array *LUNamespaceArray = RootObject.getArray("lu_namespace");
+  if (!LUNamespaceArray) {
     return ErrorBuilder::create(std::errc::invalid_argument,
                                 ErrorMessages::FailedToReadObjectAtField,
-                                "BuildNamespace", "tu_namespace", "object")
-        .context(ErrorMessages::ReadingFromFile, "TUSummary", Path)
+                                "NestedBuildNamespace", "lu_namespace", "array")
+        .context(ErrorMessages::ReadingFromFile, "LUSummary", Path)
         .build();
   }
 
-  auto ExpectedTUNamespace = buildNamespaceFromJSON(*TUNamespaceObject);
-  if (!ExpectedTUNamespace) {
-    return ErrorBuilder::wrap(ExpectedTUNamespace.takeError())
-        .context(ErrorMessages::ReadingFromField, "BuildNamespace",
-                 "tu_namespace")
-        .context(ErrorMessages::ReadingFromFile, "TUSummary", Path)
+  auto ExpectedLUNamespace = nestedBuildNamespaceFromJSON(*LUNamespaceArray);
+  if (!ExpectedLUNamespace) {
+    return ErrorBuilder::wrap(ExpectedLUNamespace.takeError())
+        .context(ErrorMessages::ReadingFromField, "NestedBuildNamespace",
+                 "lu_namespace")
+        .context(ErrorMessages::ReadingFromFile, "LUSummary", Path)
         .build();
   }
 
-  TUSummaryEncoding Encoding(std::move(*ExpectedTUNamespace));
+  LUSummaryEncoding Encoding(std::move(*ExpectedLUNamespace));
 
   {
     const Array *IdTableArray = RootObject.getArray("id_table");
@@ -64,7 +64,7 @@ JSONFormat::readTUSummaryEncoding(llvm::StringRef Path) {
       return ErrorBuilder::create(std::errc::invalid_argument,
                                   ErrorMessages::FailedToReadObjectAtField,
                                   "IdTable", "id_table", "array")
-          .context(ErrorMessages::ReadingFromFile, "TUSummary", Path)
+          .context(ErrorMessages::ReadingFromFile, "LUSummary", Path)
           .build();
     }
 
@@ -72,7 +72,7 @@ JSONFormat::readTUSummaryEncoding(llvm::StringRef Path) {
     if (!ExpectedIdTable) {
       return ErrorBuilder::wrap(ExpectedIdTable.takeError())
           .context(ErrorMessages::ReadingFromField, "IdTable", "id_table")
-          .context(ErrorMessages::ReadingFromFile, "TUSummary", Path)
+          .context(ErrorMessages::ReadingFromFile, "LUSummary", Path)
           .build();
     }
 
@@ -85,7 +85,7 @@ JSONFormat::readTUSummaryEncoding(llvm::StringRef Path) {
       return ErrorBuilder::create(std::errc::invalid_argument,
                                   ErrorMessages::FailedToReadObjectAtField,
                                   "LinkageTable", "linkage_table", "array")
-          .context(ErrorMessages::ReadingFromFile, "TUSummary", Path)
+          .context(ErrorMessages::ReadingFromFile, "LUSummary", Path)
           .build();
     }
 
@@ -102,7 +102,7 @@ JSONFormat::readTUSummaryEncoding(llvm::StringRef Path) {
       return ErrorBuilder::wrap(ExpectedLinkageTable.takeError())
           .context(ErrorMessages::ReadingFromField, "LinkageTable",
                    "linkage_table")
-          .context(ErrorMessages::ReadingFromFile, "TUSummary", Path)
+          .context(ErrorMessages::ReadingFromFile, "LUSummary", Path)
           .build();
     }
 
@@ -115,7 +115,7 @@ JSONFormat::readTUSummaryEncoding(llvm::StringRef Path) {
       return ErrorBuilder::create(std::errc::invalid_argument,
                                   ErrorMessages::FailedToReadObjectAtField,
                                   "SummaryData entries", "data", "array")
-          .context(ErrorMessages::ReadingFromFile, "TUSummary", Path)
+          .context(ErrorMessages::ReadingFromFile, "LUSummary", Path)
           .build();
     }
 
@@ -125,7 +125,7 @@ JSONFormat::readTUSummaryEncoding(llvm::StringRef Path) {
       return ErrorBuilder::wrap(ExpectedEncodingSummaryDataMap.takeError())
           .context(ErrorMessages::ReadingFromField, "SummaryData entries",
                    "data")
-          .context(ErrorMessages::ReadingFromFile, "TUSummary", Path)
+          .context(ErrorMessages::ReadingFromFile, "LUSummary", Path)
           .build();
     }
 
@@ -136,12 +136,12 @@ JSONFormat::readTUSummaryEncoding(llvm::StringRef Path) {
 }
 
 llvm::Error
-JSONFormat::writeTUSummaryEncoding(const TUSummaryEncoding &SummaryEncoding,
+JSONFormat::writeLUSummaryEncoding(const LUSummaryEncoding &SummaryEncoding,
                                    llvm::StringRef Path) {
   Object RootObject;
 
-  RootObject["tu_namespace"] =
-      buildNamespaceToJSON(getTUNamespace(SummaryEncoding));
+  RootObject["lu_namespace"] =
+      nestedBuildNamespaceToJSON(getLUNamespace(SummaryEncoding));
 
   RootObject["id_table"] = entityIdTableToJSON(getIdTable(SummaryEncoding));
 
@@ -152,7 +152,7 @@ JSONFormat::writeTUSummaryEncoding(const TUSummaryEncoding &SummaryEncoding,
 
   if (auto Error = writeJSON(std::move(RootObject), Path)) {
     return ErrorBuilder::wrap(std::move(Error))
-        .context(ErrorMessages::WritingToFile, "TUSummary", Path)
+        .context(ErrorMessages::WritingToFile, "LUSummary", Path)
         .build();
   }
 
