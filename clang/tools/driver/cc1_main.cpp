@@ -293,19 +293,6 @@ int cc1_main(ArrayRef<const char *> Argv, const char *Argv0, void *MainAddr) {
                                   static_cast<void*>(&Clang->getDiagnostics()));
 
   DiagsBuffer->FlushDiagnostics(Clang->getDiagnostics());
-
-  auto FinishDiagnosticClient = [&]() {
-    // Notify the diagnostic client that all files were processed.
-    Clang->getDiagnosticClient().finish();
-
-    // Our error handler depends on the Diagnostics object, which we're
-    // potentially about to delete. Uninstall the handler now so that any
-    // later errors use the default handling behavior instead.
-    llvm::remove_fatal_error_handler();
-  };
-  llvm::scope_exit FinishDiagnosticClientScope(
-      [&]() { FinishDiagnosticClient(); });
-
   if (!Success)
     return 1;
 
@@ -363,12 +350,10 @@ int cc1_main(ArrayRef<const char *> Argv, const char *Argv0, void *MainAddr) {
     }
   }
 
-  // Call this before the Clang pointer is moved below.
-  FinishDiagnosticClient();
-  FinishDiagnosticClientScope.release();
-
   // When running with -disable-free, don't do any destruction or shutdown.
   if (Clang->getFrontendOpts().DisableFree) {
+    // DiagnosticConsumer must be always destroyed.
+    Clang->getDiagnosticClient().~DiagnosticConsumer();
     llvm::BuryPointer(std::move(Clang));
     return !Success;
   }

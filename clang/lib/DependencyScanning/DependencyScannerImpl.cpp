@@ -956,7 +956,6 @@ bool DependencyScanningAction::runInvocation(
   if (VerboseOS)
     ScanInstance.setVerboseOutputStream(*VerboseOS);
 
-  assert(!DiagConsumerFinished && "attempt to reuse finished consumer");
   initializeScanCompilerInstance(ScanInstance, FS, DiagConsumer, Service,
                                  DepFS);
 
@@ -993,9 +992,6 @@ bool DependencyScanningAction::runInvocation(
 
   if (ScanInstance.getDiagnostics().hasErrorOccurred())
     return false;
-
-  // ExecuteAction is responsible for calling finish.
-  DiagConsumerFinished = true;
 
   const bool Result = ScanInstance.ExecuteAction(Action);
 
@@ -1203,7 +1199,4 @@ bool CompilerInstanceWithContext::computeDependencies(
   return true;
 }
 
-bool CompilerInstanceWithContext::finalize() {
-  DiagConsumer->finish();
-  return true;
-}
+bool CompilerInstanceWithContext::finalize() { return true; }
