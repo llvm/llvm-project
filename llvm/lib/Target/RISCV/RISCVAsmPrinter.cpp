@@ -19,7 +19,6 @@
 #include "MCTargetDesc/RISCVTargetStreamer.h"
 #include "RISCV.h"
 #include "RISCVConstantPoolValue.h"
-#include "RISCVInstrInfo.h"
 #include "RISCVMachineFunctionInfo.h"
 #include "RISCVRegisterInfo.h"
 #include "TargetInfo/RISCVTargetInfo.h"
@@ -279,9 +278,7 @@ bool RISCVAsmPrinter::EmitToStreamer(MCStreamer &S, const MCInst &Inst,
 // HINT encodings that are guaranteed not to trap
 // (riscv-non-isa/riscv-elf-psabi-doc#474).
 void RISCVAsmPrinter::emitNTLHint(const MachineInstr *MI) {
-  const auto *TII = static_cast<const RISCVInstrInfo *>(STI->getInstrInfo());
-
-  if (!TII->requireNTLHint(*MI))
+  if (!STI->getInstrInfo()->requiresNTLHint(*MI))
     return;
 
   assert(!MI->memoperands_empty());

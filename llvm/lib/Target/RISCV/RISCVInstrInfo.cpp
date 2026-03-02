@@ -1994,7 +1994,7 @@ unsigned RISCVInstrInfo::getInstSizeInBytes(const MachineInstr &MI) const {
                               *MF.getTarget().getMCAsmInfo());
   }
 
-  if (requireNTLHint(MI)) {
+  if (requiresNTLHint(MI)) {
     if (STI.hasStdExtZca()) {
       if (isCompressibleInst(MI, STI))
         return 4; // c.ntl.all + c.load/c.store
@@ -5324,7 +5324,7 @@ bool RISCVInstrInfo::isVRegCopy(const MachineInstr *MI, unsigned LMul) const {
   return (!RCFractional && LMul == RCLMul) || (RCFractional && LMul == 1);
 }
 
-bool RISCVInstrInfo::requireNTLHint(const MachineInstr &MI) const {
+bool RISCVInstrInfo::requiresNTLHint(const MachineInstr &MI) const {
   if (MI.memoperands_empty())
     return false;
 
