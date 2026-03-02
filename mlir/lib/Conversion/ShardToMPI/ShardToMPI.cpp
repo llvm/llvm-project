@@ -641,8 +641,8 @@ struct ConvertReduceScatterOp : public CommOpPattern<ReduceScatterOp> {
     ImplicitLocOpBuilder ib(op.getLoc(), rewriter);
     Value rawInput = adaptor.getInput();
     auto inShapedType = cast<ShapedType>(rawInput.getType());
-    auto elemType = inShapedType.getElementType();
     MemRefType outType = getMemrefType(cast<ShapedType>(op.getType()));
+    auto elemType = outType.getElementType();
     auto inputShape = inShapedType.getShape();
     auto outputShape = outType.getShape();
     int64_t inputDimOnAxis = inputShape[scatterDim];
