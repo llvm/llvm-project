@@ -4,7 +4,7 @@
 
 void clang_analyzer_dump(float);
 
-int foo(int x) 
+int foo(int x)
 {
   int *z = 0;
   if ((x & 1) && ((x & 1) ^ 1))
