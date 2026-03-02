@@ -3,10 +3,10 @@
 // RUN:             {modernize-make-unique.IgnoreDefaultInitialization: \
 // RUN:              'false'}} \
 // RUN:             }" \
-// RUN:   -- -I %S/Inputs/smart-ptr
+// RUN:   -- -I %S/Inputs/smart-ptr -isystem %clang_tidy_headers
 
-#include "initializer_list.h"
 #include "unique_ptr.h"
+#include <vector>
 // CHECK-FIXES: #include <memory>
 
 void basic() {

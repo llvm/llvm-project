@@ -759,9 +759,9 @@ define i32 @g(i64 %n) {
 ; CHECK-NEXT:    [[VEC_PHI2:%.*]] = phi <8 x i32> [ zeroinitializer, %[[VECTOR_PH]] ], [ [[TMP16:%.*]], %[[VECTOR_BODY]] ]
 ; CHECK-NEXT:    [[VEC_PHI3:%.*]] = phi <8 x i32> [ zeroinitializer, %[[VECTOR_PH]] ], [ [[TMP17:%.*]], %[[VECTOR_BODY]] ]
 ; CHECK-NEXT:    [[VEC_PHI5:%.*]] = phi <8 x i32> [ zeroinitializer, %[[VECTOR_PH]] ], [ [[TMP22:%.*]], %[[VECTOR_BODY]] ]
-; CHECK-NEXT:    [[STEP_ADD:%.*]] = add <8 x i32> [[VEC_IND]], splat (i32 8)
-; CHECK-NEXT:    [[STEP_ADD_2:%.*]] = add <8 x i32> [[STEP_ADD]], splat (i32 8)
-; CHECK-NEXT:    [[STEP_ADD_4:%.*]] = add <8 x i32> [[STEP_ADD_2]], splat (i32 8)
+; CHECK-NEXT:    [[STEP_ADD:%.*]] = add nuw <8 x i32> [[VEC_IND]], splat (i32 8)
+; CHECK-NEXT:    [[STEP_ADD_2:%.*]] = add nuw <8 x i32> [[STEP_ADD]], splat (i32 8)
+; CHECK-NEXT:    [[STEP_ADD_4:%.*]] = add nuw <8 x i32> [[STEP_ADD_2]], splat (i32 8)
 ; CHECK-NEXT:    [[TMP3:%.*]] = zext <8 x i32> [[VEC_IND]] to <8 x i64>
 ; CHECK-NEXT:    [[TMP4:%.*]] = zext <8 x i32> [[STEP_ADD]] to <8 x i64>
 ; CHECK-NEXT:    [[TMP5:%.*]] = zext <8 x i32> [[STEP_ADD_2]] to <8 x i64>
@@ -940,7 +940,7 @@ define void @known_deref_load_tail_folding() #4 {
 ; CHECK:       [[PRED_STORE_CONTINUE6]]:
 ; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 4
 ; CHECK-NEXT:    [[TMP18:%.*]] = icmp eq i64 [[INDEX_NEXT]], 12
-; CHECK-NEXT:    br i1 [[TMP18]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP28:![0-9]+]]
+; CHECK-NEXT:    br i1 [[TMP18]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP29:![0-9]+]]
 ; CHECK:       [[MIDDLE_BLOCK]]:
 ; CHECK-NEXT:    br label %[[EXIT:.*]]
 ; CHECK:       [[EXIT]]:

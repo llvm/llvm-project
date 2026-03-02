@@ -44,9 +44,10 @@ class GFXGen<Predicate pred, string dn, string suffix, int sub> {
 def GFX13Gen         : GFXGen<isGFX13Only, "GFX13", "_gfx13", SIEncodingFamily.GFX13>;
 def GFX1250Gen       : GFXGen<isGFX125xOnly, "GFX1250", "_gfx1250", SIEncodingFamily.GFX1250>;
 def GFX12Not12_50Gen : GFXGen<isGFX12Not12_50, "GFX12", "_gfx12", SIEncodingFamily.GFX12>;
-def GFX12Gen : GFXGen<isGFX12Only, "GFX12", "_gfx12", SIEncodingFamily.GFX12>;
-def GFX11Gen : GFXGen<isGFX11Only, "GFX11", "_gfx11", SIEncodingFamily.GFX11>;
-def GFX10Gen : GFXGen<isGFX10Only, "GFX10", "_gfx10", SIEncodingFamily.GFX10>;
+def GFX12Gen         : GFXGen<isGFX12Only, "GFX12", "_gfx12", SIEncodingFamily.GFX12>;
+def GFX1170Gen       : GFXGen<isGFX11Only, "GFX1170", "_gfx1170", SIEncodingFamily.GFX11>;
+def GFX11Gen         : GFXGen<isGFX11Only, "GFX11", "_gfx11", SIEncodingFamily.GFX11>;
+def GFX10Gen         : GFXGen<isGFX10Only, "GFX10", "_gfx10", SIEncodingFamily.GFX10>;
 
 //===----------------------------------------------------------------------===//
 // SI DAG Nodes
@@ -899,10 +900,13 @@ def as_hw_round_mode : SDNodeXForm<timm, [{
 }]>;
 
 def SupportedRoundMode : TImmLeaf<i32, [{
-  return Imm == (int)RoundingMode::TowardZero ||
-         Imm == (int)RoundingMode::NearestTiesToEven ||
+  return Imm == (int)RoundingMode::NearestTiesToEven ||
          Imm == (int)RoundingMode::TowardPositive ||
          Imm == (int)RoundingMode::TowardNegative;
+}]>;
+
+def RtzRoundMode : TImmLeaf<i32, [{
+  return Imm == (int)RoundingMode::TowardZero;
 }]>;
 
 def VOP3PModsNeg : SDNodeXForm<timm, [{

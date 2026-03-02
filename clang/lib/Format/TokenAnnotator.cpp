@@ -3276,14 +3276,19 @@ public:
       parse(Precedence + 1);
 
       int CurrentPrecedence = getCurrentPrecedence();
-      if (Style.BreakBinaryOperations == FormatStyle::BBO_OnePerLine &&
-          CurrentPrecedence > prec::Conditional &&
+      if (CurrentPrecedence > prec::Conditional &&
           CurrentPrecedence < prec::PointerToMember) {
-        // When BreakBinaryOperations is set to BreakAll,
-        // all operations will be on the same line or on individual lines.
-        // Override precedence to avoid adding fake parenthesis which could
-        // group operations of a different precedence level on the same line
-        CurrentPrecedence = prec::Additive;
+        // When BreakBinaryOperations is globally OnePerLine (no per-operator
+        // rules), flatten all precedence levels so that every operator is
+        // treated equally for line-breaking purposes. With per-operator rules
+        // we must preserve natural precedence so that higher-precedence
+        // sub-expressions (e.g. `x << 8` inside a `|` chain) stay grouped;
+        // mustBreakBinaryOperation() handles the forced breaks instead.
+        if (Style.BreakBinaryOperations.PerOperator.empty() &&
+            Style.BreakBinaryOperations.Default ==
+                FormatStyle::BBO_OnePerLine) {
+          CurrentPrecedence = prec::Additive;
+        }
       }
 
       if (Precedence == CurrentPrecedence && Current &&
@@ -4908,6 +4913,15 @@ bool TokenAnnotator::spaceRequiredBetween(const AnnotatedLine &Line,
     return true;
   // Space before parentheses common for all languages
   if (Right.is(tok::l_paren)) {
+    // Function declaration or definition
+    if (Line.MightBeFunctionDecl && Right.is(TT_FunctionDeclarationLParen)) {
+      if (spaceRequiredBeforeParens(Right))
+        return true;
+      const auto &Options = Style.SpaceBeforeParensOptions;
+      return Line.mightBeFunctionDefinition()
+                 ? Options.AfterFunctionDefinitionName
+                 : Options.AfterFunctionDeclarationName;
+    }
     if (Left.is(TT_TemplateCloser) && Right.isNot(TT_FunctionTypeLParen))
       return spaceRequiredBeforeParens(Right);
     if (Left.isOneOf(TT_RequiresClause,
@@ -4953,15 +4967,7 @@ bool TokenAnnotator::spaceRequiredBetween(const AnnotatedLine &Line,
     // SpaceBeforeParensOptions
     if (Right.is(TT_OverloadedOperatorLParen))
       return spaceRequiredBeforeParens(Right);
-    // Function declaration or definition
-    if (Line.MightBeFunctionDecl && Right.is(TT_FunctionDeclarationLParen)) {
-      if (spaceRequiredBeforeParens(Right))
-        return true;
-      const auto &Options = Style.SpaceBeforeParensOptions;
-      return Line.mightBeFunctionDefinition()
-                 ? Options.AfterFunctionDefinitionName
-                 : Options.AfterFunctionDeclarationName;
-    }
+
     // Lambda
     if (Line.Type != LT_PreprocessorDirective && Left.is(tok::r_square) &&
         Left.MatchingParen && Left.MatchingParen->is(TT_LambdaLSquare)) {
