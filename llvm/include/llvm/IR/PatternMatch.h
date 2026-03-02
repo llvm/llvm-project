@@ -148,6 +148,11 @@ inline class_match<BinaryOperator> m_BinOp() {
 /// Matches any compare instruction and ignore it.
 inline class_match<CmpInst> m_Cmp() { return class_match<CmpInst>(); }
 
+/// Matches any intrinsic call and ignore it.
+inline class_match<IntrinsicInst> m_AnyIntrinsic() {
+  return class_match<IntrinsicInst>();
+}
+
 struct undef_match {
   static bool check(const Value *V) {
     if (isa<UndefValue>(V))
@@ -936,6 +941,11 @@ inline bind_ty<const UnaryOperator> m_UnOp(const UnaryOperator *&I) {
 /// Match a binary operator, capturing it if we match.
 inline bind_ty<BinaryOperator> m_BinOp(BinaryOperator *&I) { return I; }
 inline bind_ty<const BinaryOperator> m_BinOp(const BinaryOperator *&I) {
+  return I;
+}
+/// Match any intrinsic call, capturing it if we match.
+inline bind_ty<IntrinsicInst> m_AnyIntrinsic(IntrinsicInst *&I) { return I; }
+inline bind_ty<const IntrinsicInst> m_AnyIntrinsic(const IntrinsicInst *&I) {
   return I;
 }
 /// Match a with overflow intrinsic, capturing it if we match.

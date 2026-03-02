@@ -46,6 +46,53 @@ define <4 x i32> @pow2_non_splat_vec_fail0(<4 x i32> %x) {
   ret <4 x i32> %r
 }
 
+define i32 @pow2_extractelt_vec(<4 x i32> %a0, ptr %p1, i32 %a2) {
+; CHECK-LABEL: pow2_extractelt_vec:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    pxor %xmm1, %xmm1
+; CHECK-NEXT:    pcmpgtd %xmm0, %xmm1
+; CHECK-NEXT:    movdqa %xmm1, %xmm0
+; CHECK-NEXT:    pandn {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
+; CHECK-NEXT:    pand {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm1
+; CHECK-NEXT:    por %xmm0, %xmm1
+; CHECK-NEXT:    movdqa %xmm1, (%rdi)
+; CHECK-NEXT:    movd %xmm1, %eax
+; CHECK-NEXT:    decl %eax
+; CHECK-NEXT:    andl %esi, %eax
+; CHECK-NEXT:    retq
+  %cmp = icmp sgt <4 x i32> zeroinitializer, %a0
+  %sel = select <4 x i1> %cmp, <4 x i32> <i32 4, i32 2, i32 1, i32 0>, <4 x i32> <i32 8, i32 4, i32 2, i32 -1>
+  store <4 x i32> %sel, ptr %p1
+  %elt = extractelement <4 x i32> %sel, i32 0
+  %res = urem i32 %a2, %elt
+  ret i32 %res
+}
+
+define i32 @pow2_extractelt_vec_fail0(<4 x i32> %a0, ptr %p1, i32 %a2, i32 %a3) {
+; CHECK-LABEL: pow2_extractelt_vec_fail0:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    movl %edx, %ecx
+; CHECK-NEXT:    movl %esi, %eax
+; CHECK-NEXT:    pxor %xmm1, %xmm1
+; CHECK-NEXT:    pcmpgtd %xmm0, %xmm1
+; CHECK-NEXT:    movdqa %xmm1, %xmm0
+; CHECK-NEXT:    pandn {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
+; CHECK-NEXT:    pand {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm1
+; CHECK-NEXT:    por %xmm0, %xmm1
+; CHECK-NEXT:    movdqa %xmm1, (%rdi)
+; CHECK-NEXT:    andl $3, %ecx
+; CHECK-NEXT:    xorl %edx, %edx
+; CHECK-NEXT:    divl (%rdi,%rcx,4)
+; CHECK-NEXT:    movl %edx, %eax
+; CHECK-NEXT:    retq
+  %cmp = icmp sgt <4 x i32> zeroinitializer, %a0
+  %sel = select <4 x i1> %cmp, <4 x i32> <i32 4, i32 2, i32 1, i32 0>, <4 x i32> <i32 8, i32 4, i32 2, i32 -1>
+  store <4 x i32> %sel, ptr %p1
+  %elt = extractelement <4 x i32> %sel, i32 %a3
+  %res = urem i32 %a2, %elt
+  ret i32 %res
+}
+
 define i1 @pow2_shl(i32 %x, i32 %y) {
 ; CHECK-LABEL: pow2_shl:
 ; CHECK:       # %bb.0:

@@ -2598,6 +2598,22 @@ libc_support_library(
 )
 
 libc_support_library(
+    name = "__support_math_acospif",
+    hdrs = ["src/__support/math/acospif.h"],
+    deps = [
+        ":__support_fputil_cast",
+        ":__support_fputil_fenv_impl",
+        ":__support_fputil_fp_bits",
+        ":__support_fputil_multiply_add",
+        ":__support_fputil_polyeval",
+        ":__support_fputil_sqrt",
+        ":__support_macros_config",
+        ":__support_macros_optimization",
+        ":__support_math_inv_trigf_utils",
+    ],
+)
+
+libc_support_library(
     name = "__support_math_acospif16",
     hdrs = ["src/__support/math/acospif16.h"],
     deps = [
@@ -2847,6 +2863,7 @@ libc_support_library(
         ":__support_fputil_sqrt",
         ":__support_macros_config",
         ":__support_macros_optimization",
+        ":__support_math_inv_trigf_utils",
     ],
 )
 
@@ -3146,6 +3163,37 @@ libc_support_library(
         ":__support_fputil_basic_operations",
         ":__support_fputil_bfloat16",
         ":__support_macros_config",
+    ],
+)
+
+libc_support_library(
+    name = "__support_math_bf16sub",
+    hdrs = ["src/__support/math/bf16sub.h"],
+    deps = [
+        ":__support_fputil_basic_operations",
+        ":__support_fputil_bfloat16",
+        ":__support_macros_config",
+    ],
+)
+
+libc_support_library(
+    name = "__support_math_bf16subf",
+    hdrs = ["src/__support/math/bf16subf.h"],
+    deps = [
+        ":__support_fputil_basic_operations",
+        ":__support_fputil_bfloat16",
+        ":__support_macros_config",
+    ],
+)
+
+libc_support_library(
+    name = "__support_math_bf16subf128",
+    hdrs = ["src/__support/math/bf16subf128.h"],
+    deps = [
+        ":__support_fputil_basic_operations",
+        ":__support_fputil_bfloat16",
+        ":__support_macros_config",
+        ":llvm_libc_types_float128",
     ],
 )
 
@@ -3861,6 +3909,64 @@ libc_support_library(
 )
 
 libc_support_library(
+    name = "__support_math_floor",
+    hdrs = ["src/__support/math/floor.h"],
+    deps = [
+        ":__support_fputil_nearest_integer_operations",
+        ":__support_macros_config",
+    ],
+)
+
+libc_support_library(
+    name = "__support_math_floorbf16",
+    hdrs = ["src/__support/math/floorbf16.h"],
+    deps = [
+        ":__support_fputil_bfloat16",
+        ":__support_fputil_nearest_integer_operations",
+        ":__support_macros_config",
+    ],
+)
+
+libc_support_library(
+    name = "__support_math_floorf",
+    hdrs = ["src/__support/math/floorf.h"],
+    deps = [
+        ":__support_fputil_nearest_integer_operations",
+        ":__support_macros_config",
+    ],
+)
+
+libc_support_library(
+    name = "__support_math_floorf128",
+    hdrs = ["src/__support/math/floorf128.h"],
+    deps = [
+        ":__support_fputil_nearest_integer_operations",
+        ":__support_macros_config",
+        ":llvm_libc_types_float128",
+    ],
+)
+
+libc_support_library(
+    name = "__support_math_floorf16",
+    hdrs = ["src/__support/math/floorf16.h"],
+    deps = [
+        ":__support_fputil_cast",
+        ":__support_fputil_nearest_integer_operations",
+        ":__support_macros_config",
+        ":llvm_libc_macros_float16_macros",
+    ],
+)
+
+libc_support_library(
+    name = "__support_math_floorl",
+    hdrs = ["src/__support/math/floorl.h"],
+    deps = [
+        ":__support_fputil_nearest_integer_operations",
+        ":__support_macros_config",
+    ],
+)
+
+libc_support_library(
     name = "__support_math_fmax",
     hdrs = ["src/__support/math/fmax.h"],
     deps = [
@@ -4104,6 +4210,63 @@ libc_support_library(
     deps = [
         ":__support_common",
         ":__support_fputil_manipulation_functions",
+    ],
+)
+
+libc_support_library(
+    name = "__support_math_nextafter",
+    hdrs = ["src/__support/math/nextafter.h"],
+    deps = [
+        ":__support_fputil_manipulation_functions",
+        ":__support_macros_config",
+    ],
+)
+
+libc_support_library(
+    name = "__support_math_nextafterbf16",
+    hdrs = ["src/__support/math/nextafterbf16.h"],
+    deps = [
+        ":__support_fputil_bfloat16",
+        ":__support_fputil_manipulation_functions",
+        ":__support_macros_config",
+    ],
+)
+
+libc_support_library(
+    name = "__support_math_nextafterf",
+    hdrs = ["src/__support/math/nextafterf.h"],
+    deps = [
+        ":__support_fputil_manipulation_functions",
+        ":__support_macros_config",
+    ],
+)
+
+libc_support_library(
+    name = "__support_math_nextafterf128",
+    hdrs = ["src/__support/math/nextafterf128.h"],
+    deps = [
+        ":__support_fputil_manipulation_functions",
+        ":__support_macros_config",
+        ":llvm_libc_types_float128",
+    ],
+)
+
+libc_support_library(
+    name = "__support_math_nextafterf16",
+    hdrs = ["src/__support/math/nextafterf16.h"],
+    deps = [
+        ":__support_fputil_manipulation_functions",
+        ":__support_macros_config",
+        ":llvm_libc_macros_float16_macros",
+    ],
+)
+
+libc_support_library(
+    name = "__support_math_nextafterl",
+    hdrs = ["src/__support/math/nextafterl.h"],
+    deps = [
+        ":__support_fputil_manipulation_functions",
+        ":__support_macros_config",
     ],
 )
 
@@ -5733,6 +5896,13 @@ libc_math_function(
 )
 
 libc_math_function(
+    name = "acospif",
+    additional_deps = [
+        ":__support_math_acospif",
+    ],
+)
+
+libc_math_function(
     name = "acospif16",
     additional_deps = [
         ":__support_math_acospif16",
@@ -5845,6 +6015,21 @@ libc_math_function(
 libc_math_function(
     name = "bf16divl",
     additional_deps = [":__support_math_bf16divl"],
+)
+
+libc_math_function(
+    name = "bf16sub",
+    additional_deps = [":__support_math_bf16sub"],
+)
+
+libc_math_function(
+    name = "bf16subf",
+    additional_deps = [":__support_math_bf16subf"],
+)
+
+libc_math_function(
+    name = "bf16subf128",
+    additional_deps = [":__support_math_bf16subf128"],
 )
 
 libc_math_function(
@@ -6496,21 +6681,45 @@ libc_math_function(
     ],
 )
 
-libc_math_function(name = "floor")
+libc_math_function(
+    name = "floor",
+    additional_deps = [
+        ":__support_math_floor",
+    ],
+)
 
-libc_math_function(name = "floorf")
+libc_math_function(
+    name = "floorbf16",
+    additional_deps = [
+        ":__support_math_floorbf16",
+    ],
+)
 
-libc_math_function(name = "floorl")
+libc_math_function(
+    name = "floorf",
+    additional_deps = [
+        ":__support_math_floorf",
+    ],
+)
+
+libc_math_function(
+    name = "floorl",
+    additional_deps = [
+        ":__support_math_floorl",
+    ],
+)
 
 libc_math_function(
     name = "floorf128",
+    additional_deps = [
+        ":__support_math_floorf128",
+    ],
 )
 
 libc_math_function(
     name = "floorf16",
     additional_deps = [
-        ":__support_fputil_cast",
-        ":__support_macros_properties_cpu_features",
+        ":__support_math_floorf16",
     ],
 )
 
@@ -7196,18 +7405,46 @@ libc_math_function(
     name = "nearbyintf16",
 )
 
-libc_math_function(name = "nextafter")
+libc_math_function(
+    name = "nextafter",
+    additional_deps = [
+        ":__support_math_nextafter",
+    ],
+)
 
-libc_math_function(name = "nextafterf")
+libc_math_function(
+    name = "nextafterbf16",
+    additional_deps = [
+        ":__support_math_nextafterbf16",
+    ],
+)
 
-libc_math_function(name = "nextafterl")
+libc_math_function(
+    name = "nextafterf",
+    additional_deps = [
+        ":__support_math_nextafterf",
+    ],
+)
+
+libc_math_function(
+    name = "nextafterl",
+    additional_deps = [
+        ":__support_math_nextafterl",
+    ],
+)
 
 libc_math_function(
     name = "nextafterf128",
+    additional_deps = [
+        ":__support_math_nextafterf128",
+    ],
 )
 
 libc_math_function(
     name = "nextafterf16",
+    additional_deps = [
+        ":__support_math_nextafterf16",
+    ],
 )
 
 libc_math_function(

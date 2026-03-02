@@ -2944,8 +2944,7 @@ void VPlanTransforms::addActiveLaneMask(
       cast<VPWidenCanonicalIVRecipe>(*FoundWidenCanonicalIVUser);
   VPSingleDefRecipe *LaneMask;
   if (UseActiveLaneMaskForControlFlow) {
-    LaneMask = addVPLaneMaskPhiAndUpdateExitBranch(
-        Plan, DataAndControlFlowWithoutRuntimeCheck);
+    LaneMask = addVPLaneMaskPhiAndUpdateExitBranch(Plan, false);
   } else {
     VPBuilder B = VPBuilder::getToInsertAfter(WideCanonicalIV);
     VPValue *ALMMultiplier =
@@ -4112,10 +4111,27 @@ void VPlanTransforms::handleUncountableEarlyExits(VPlan &Plan,
   }
 
   assert(!Exits.empty() && "must have at least one early exit");
-  // Sort exits by dominance to get the correct program order.
-  llvm::sort(Exits, [&VPDT](const EarlyExitInfo &A, const EarlyExitInfo &B) {
-    return VPDT.properlyDominates(A.EarlyExitingVPBB, B.EarlyExitingVPBB);
+  // Sort exits by RPO order to get correct program order. RPO gives a
+  // topological ordering of the CFG, ensuring upstream exits are checked
+  // before downstream exits in the dispatch chain.
+  ReversePostOrderTraversal<VPBlockShallowTraversalWrapper<VPBlockBase *>> RPOT(
+      HeaderVPBB);
+  DenseMap<VPBlockBase *, unsigned> RPOIdx;
+  for (const auto &[Num, VPB] : enumerate(RPOT))
+    RPOIdx[VPB] = Num;
+  llvm::sort(Exits, [&RPOIdx](const EarlyExitInfo &A, const EarlyExitInfo &B) {
+    return RPOIdx[A.EarlyExitingVPBB] < RPOIdx[B.EarlyExitingVPBB];
   });
+#ifndef NDEBUG
+  // After RPO sorting, verify that for any pair where one exit dominates
+  // another, the dominating exit comes first. This is guaranteed by RPO
+  // (topological order) and is required for the dispatch chain correctness.
+  for (unsigned I = 0; I + 1 < Exits.size(); ++I)
+    for (unsigned J = I + 1; J < Exits.size(); ++J)
+      assert(!VPDT.properlyDominates(Exits[J].EarlyExitingVPBB,
+                                     Exits[I].EarlyExitingVPBB) &&
+             "RPO sort must place dominating exits before dominated ones");
+#endif
 
   // Build the AnyOf condition for the latch terminator using logical OR
   // to avoid poison propagation from later exit conditions when an earlier
@@ -4441,10 +4457,11 @@ tryToMatchAndCreateMulAccumulateReduction(VPReductionRecipe *Red,
   // creates two uniform extends that can more easily be matched by the rest of
   // the bundling code. The ExtB reference, ValB and operand 1 of Mul are all
   // replaced with the new extend of the constant.
-  auto ExtendAndReplaceConstantOp = [&Ctx](VPWidenCastRecipe *ExtA,
-                                           VPWidenCastRecipe *&ExtB,
-                                           VPValue *&ValB, VPWidenRecipe *Mul) {
-    if (!ExtA || ExtB || !isa<VPIRValue>(ValB))
+  auto ExtendAndReplaceConstantOp = [&Ctx, &Red](VPWidenCastRecipe *ExtA,
+                                                 VPWidenCastRecipe *&ExtB,
+                                                 VPValue *&ValB,
+                                                 VPWidenRecipe *Mul) {
+    if (!ExtA || ExtB || !isa<VPIRValue>(ValB) || Red->isPartialReduction())
       return;
     Type *NarrowTy = Ctx.Types.inferScalarType(ExtA->getOperand(0));
     Instruction::CastOps ExtOpc = ExtA->getOpcode();
@@ -4494,7 +4511,8 @@ tryToMatchAndCreateMulAccumulateReduction(VPReductionRecipe *Red,
     return nullptr;
 
   // Match reduce.add(ext(mul(A, B))).
-  if (match(VecOp, m_ZExtOrSExt(m_Mul(m_VPValue(A), m_VPValue(B))))) {
+  if (!Red->isPartialReduction() &&
+      match(VecOp, m_ZExtOrSExt(m_Mul(m_VPValue(A), m_VPValue(B))))) {
     auto *Ext = cast<VPWidenCastRecipe>(VecOp);
     auto *Mul = cast<VPWidenRecipe>(Ext->getOperand(0));
     auto *Ext0 = dyn_cast_if_present<VPWidenCastRecipe>(A);
@@ -5029,8 +5047,6 @@ void VPlanTransforms::materializeVectorTripCount(VPlan &Plan,
   // overflows: the vector induction variable will eventually wrap to zero given
   // that it starts at zero and its Step is a power of two; the loop will then
   // exit, with the last early-exit vector comparison also producing all-true.
-  // For scalable vectors the VF is not guaranteed to be a power of 2, but this
-  // is accounted for in emitIterationCountCheck that adds an overflow check.
   if (TailByMasking) {
     TC = Builder.createAdd(
         TC, Builder.createSub(Step, Plan.getConstantInt(TCTy, 1)),
@@ -5075,10 +5091,6 @@ void VPlanTransforms::materializeFactors(VPlan &Plan, VPBasicBlock *VectorPH,
   // Plan.getVFxUF should be added.
   // TODO: Add assertions for this.
 
-  VPValue *UF =
-      Plan.getOrAddLiveIn(ConstantInt::get(TCTy, Plan.getConcreteUF()));
-  Plan.getUF().replaceAllUsesWith(UF);
-
   // If there are no users of the runtime VF, compute VFxUF by constant folding
   // the multiplication of VF and UF.
   if (VF.getNumUsers() == 0) {
@@ -5099,7 +5111,9 @@ void VPlanTransforms::materializeFactors(VPlan &Plan, VPBasicBlock *VectorPH,
   VF.replaceAllUsesWith(RuntimeVF);
 
   VPValue *MulByUF = Builder.createOverflowingOp(
-      Instruction::Mul, {RuntimeVF, UF}, {true, false});
+      Instruction::Mul,
+      {RuntimeVF, Plan.getConstantInt(TCTy, Plan.getConcreteUF())},
+      {true, false});
   VFxUF.replaceAllUsesWith(MulByUF);
 }
 
@@ -5849,6 +5863,56 @@ struct VPPartialReductionChain {
   RecurKind RK;
 };
 
+static VPSingleDefRecipe *
+optimizeExtendsForPartialReduction(VPSingleDefRecipe *BinOp,
+                                   VPTypeAnalysis &TypeInfo) {
+  // reduce.add(mul(ext(A), C))
+  // -> reduce.add(mul(ext(A), ext(trunc(C))))
+  const APInt *Const;
+  if (match(BinOp, m_Mul(m_ZExtOrSExt(m_VPValue()), m_APInt(Const)))) {
+    auto *ExtA = cast<VPWidenCastRecipe>(BinOp->getOperand(0));
+    Instruction::CastOps ExtOpc = ExtA->getOpcode();
+    Type *NarrowTy = TypeInfo.inferScalarType(ExtA->getOperand(0));
+    if (!BinOp->hasOneUse() ||
+        !llvm::canConstantBeExtended(
+            Const, NarrowTy, TTI::getPartialReductionExtendKind(ExtOpc)))
+      return BinOp;
+
+    VPBuilder Builder(BinOp);
+    auto *Trunc = Builder.createWidenCast(Instruction::CastOps::Trunc,
+                                          BinOp->getOperand(1), NarrowTy);
+    Type *WideTy = TypeInfo.inferScalarType(ExtA);
+    BinOp->setOperand(1, Builder.createWidenCast(ExtOpc, Trunc, WideTy));
+    return BinOp;
+  }
+
+  // reduce.add(ext(mul(ext(A), ext(B))))
+  // -> reduce.add(mul(wider_ext(A), wider_ext(B)))
+  if (match(BinOp, m_ZExtOrSExt(m_Mul(m_ZExtOrSExt(m_VPValue()),
+                                      m_ZExtOrSExt(m_VPValue()))))) {
+    auto *Ext = cast<VPWidenCastRecipe>(BinOp);
+    auto *Mul = cast<VPWidenRecipe>(Ext->getOperand(0));
+    auto *MulLHS = cast<VPWidenCastRecipe>(Mul->getOperand(0));
+    auto *MulRHS = cast<VPWidenCastRecipe>(Mul->getOperand(1));
+    if (!Mul->hasOneUse() ||
+        (Ext->getOpcode() != MulLHS->getOpcode() && MulLHS != MulRHS) ||
+        MulLHS->getOpcode() != MulRHS->getOpcode())
+      return BinOp;
+    VPBuilder Builder(Mul);
+    Mul->setOperand(0, Builder.createWidenCast(MulLHS->getOpcode(),
+                                               MulLHS->getOperand(0),
+                                               Ext->getResultType()));
+    Mul->setOperand(1, MulLHS == MulRHS
+                           ? Mul->getOperand(0)
+                           : Builder.createWidenCast(MulRHS->getOpcode(),
+                                                     MulRHS->getOperand(0),
+                                                     Ext->getResultType()));
+    return Mul;
+  }
+
+  return BinOp;
+}
+
 // Helper to transform a partial reduction chain into a partial reduction
 // recipe. Assumes profitability has been checked.
 static void transformToPartialReduction(const VPPartialReductionChain &Chain,
@@ -5857,12 +5921,14 @@ static void transformToPartialReduction(const VPPartialReductionChain &Chain,
   VPWidenRecipe *WidenRecipe = Chain.ReductionBinOp;
   assert(WidenRecipe->getNumOperands() == 2 && "Expected binary operation");
 
-  VPValue *BinOp = WidenRecipe->getOperand(0);
+  VPValue *BinOpVal = WidenRecipe->getOperand(0);
   VPValue *Accumulator = WidenRecipe->getOperand(1);
 
   // Swap if needed to ensure Accumulator is the PHI or partial reduction.
-  if (isa_and_present<VPReductionPHIRecipe, VPReductionRecipe>(BinOp))
-    std::swap(BinOp, Accumulator);
+  if (isa<VPReductionPHIRecipe, VPReductionRecipe>(BinOpVal) ||
+      isa<VPExpressionRecipe>(BinOpVal))
+    std::swap(BinOpVal, Accumulator);
+  auto *BinOp = cast<VPSingleDefRecipe>(BinOpVal->getDefiningRecipe());
 
   // Sub-reductions can be implemented in two ways:
   // (1) negate the operand in the vector loop (the default way).
@@ -5891,6 +5957,9 @@ static void transformToPartialReduction(const VPPartialReductionChain &Chain,
     Builder.insert(NegRecipe);
     BinOp = NegRecipe;
   }
+
+  // FIXME: Do these transforms before invoking the cost-model.
+  BinOp = optimizeExtendsForPartialReduction(BinOp, TypeInfo);
 
   // Check if WidenRecipe is the final result of the reduction. If so look
   // through selects for predicated reductions.

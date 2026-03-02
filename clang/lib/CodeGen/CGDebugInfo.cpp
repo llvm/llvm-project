@@ -2798,7 +2798,7 @@ StringRef CGDebugInfo::getVTableName(const CXXRecordDecl *RD) {
 }
 
 // Emit symbol for the debugger that points to the vtable address for
-// the given class. The symbol is named as '_vtable$'.
+// the given class. The symbol is named as '__clang_vtable'.
 // The debugger does not need to know any details about the contents of the
 // vtable as it can work this out using its knowledge of the ABI and the
 // existing information in the DWARF. The type is assumed to be 'void *'.
@@ -2821,7 +2821,7 @@ void CGDebugInfo::emitVTableSymbol(llvm::GlobalVariable *VTable,
     return;
 
   ASTContext &Context = CGM.getContext();
-  StringRef SymbolName = "_vtable$";
+  StringRef SymbolName = "__clang_vtable";
   SourceLocation Loc;
   QualType VoidPtr = Context.getPointerType(Context.VoidTy);
 
