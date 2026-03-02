@@ -1,7 +1,5 @@
-add_custom_target(check-libc)
 add_custom_target(libc-unit-tests)
 add_custom_target(libc-hermetic-tests)
-add_dependencies(check-libc libc-unit-tests libc-hermetic-tests)
 
 add_custom_target(exhaustive-check-libc)
 add_custom_target(libc-long-running-tests)
@@ -31,7 +29,7 @@ configure_lit_site_cfg(
   "LIBC_GPU_LOADER_EXECUTABLE"
 )
 
-add_lit_testsuite(check-libc-lit
+add_lit_testsuite(check-libc
   "Running libc tests via lit"
   ${LIBC_BUILD_DIR}/test
   DEPENDS libc-unit-tests-build libc-hermetic-tests-build
