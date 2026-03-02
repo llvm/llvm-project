@@ -3088,6 +3088,7 @@ define i32 @testoverflowcheck() {
 ; IND-NEXT:    [[TMP4:%.*]] = insertelement <2 x i32> <i32 poison, i32 -1>, i32 [[C_PROMOTED_I]], i64 0
 ; IND-NEXT:    [[BROADCAST_SPLATINSERT:%.*]] = insertelement <2 x i32> poison, i32 [[TMP0]], i64 0
 ; IND-NEXT:    [[BROADCAST_SPLAT:%.*]] = shufflevector <2 x i32> [[BROADCAST_SPLATINSERT]], <2 x i32> poison, <2 x i32> zeroinitializer
+; IND-NEXT:    [[TMP6:%.*]] = and <2 x i32> [[BROADCAST_SPLAT]], [[TMP4]]
 ; IND-NEXT:    br label [[VECTOR_BODY:%.*]]
 ; IND:       vector.body:
 ; IND-NEXT:    [[INDEX:%.*]] = phi i32 [ 0, [[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], [[VECTOR_BODY]] ]
@@ -3095,17 +3096,16 @@ define i32 @testoverflowcheck() {
 ; IND-NEXT:    [[TMP5:%.*]] = icmp eq i32 [[INDEX_NEXT]], [[N_VEC]]
 ; IND-NEXT:    br i1 [[TMP5]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP30:![0-9]+]]
 ; IND:       middle.block:
-; IND-NEXT:    [[TMP6:%.*]] = and <2 x i32> [[TMP4]], [[BROADCAST_SPLAT]]
 ; IND-NEXT:    [[TMP7:%.*]] = call i32 @llvm.vector.reduce.and.v2i32(<2 x i32> [[TMP6]])
 ; IND-NEXT:    [[CMP_N:%.*]] = icmp eq i32 [[TMP3]], [[N_VEC]]
 ; IND-NEXT:    br i1 [[CMP_N]], label [[LOOPEXIT:%.*]], label [[SCALAR_PH]]
 ; IND:       scalar.ph:
 ; IND-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i8 [ [[IND_END]], [[MIDDLE_BLOCK]] ], [ [[DOTPR_I]], [[ENTRY:%.*]] ]
 ; IND-NEXT:    [[BC_MERGE_RDX:%.*]] = phi i32 [ [[TMP7]], [[MIDDLE_BLOCK]] ], [ [[C_PROMOTED_I]], [[ENTRY]] ]
+; IND-NEXT:    [[AND_I:%.*]] = and i32 [[TMP0]], [[BC_MERGE_RDX]]
 ; IND-NEXT:    br label [[COND_END_I:%.*]]
 ; IND:       cond.end.i:
 ; IND-NEXT:    [[INC4_I:%.*]] = phi i8 [ [[BC_RESUME_VAL]], [[SCALAR_PH]] ], [ [[INC_I:%.*]], [[COND_END_I]] ]
-; IND-NEXT:    [[AND_I:%.*]] = and i32 [[BC_MERGE_RDX]], [[TMP0]]
 ; IND-NEXT:    [[INC_I]] = add i8 [[INC4_I]], 1
 ; IND-NEXT:    [[TOBOOL_I:%.*]] = icmp eq i8 [[INC_I]], 0
 ; IND-NEXT:    br i1 [[TOBOOL_I]], label [[LOOPEXIT]], label [[COND_END_I]], !llvm.loop [[LOOP31:![0-9]+]]
@@ -3130,6 +3130,7 @@ define i32 @testoverflowcheck() {
 ; UNROLL-NEXT:    [[TMP4:%.*]] = insertelement <2 x i32> <i32 poison, i32 -1>, i32 [[C_PROMOTED_I]], i64 0
 ; UNROLL-NEXT:    [[BROADCAST_SPLATINSERT:%.*]] = insertelement <2 x i32> poison, i32 [[TMP0]], i64 0
 ; UNROLL-NEXT:    [[BROADCAST_SPLAT:%.*]] = shufflevector <2 x i32> [[BROADCAST_SPLATINSERT]], <2 x i32> poison, <2 x i32> zeroinitializer
+; UNROLL-NEXT:    [[TMP6:%.*]] = and <2 x i32> [[BROADCAST_SPLAT]], [[TMP4]]
 ; UNROLL-NEXT:    br label [[VECTOR_BODY:%.*]]
 ; UNROLL:       vector.body:
 ; UNROLL-NEXT:    [[INDEX:%.*]] = phi i32 [ 0, [[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], [[VECTOR_BODY]] ]
@@ -3137,17 +3138,16 @@ define i32 @testoverflowcheck() {
 ; UNROLL-NEXT:    [[TMP5:%.*]] = icmp eq i32 [[INDEX_NEXT]], [[N_VEC]]
 ; UNROLL-NEXT:    br i1 [[TMP5]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP30:![0-9]+]]
 ; UNROLL:       middle.block:
-; UNROLL-NEXT:    [[TMP6:%.*]] = and <2 x i32> [[TMP4]], [[BROADCAST_SPLAT]]
 ; UNROLL-NEXT:    [[TMP7:%.*]] = call i32 @llvm.vector.reduce.and.v2i32(<2 x i32> [[TMP6]])
 ; UNROLL-NEXT:    [[CMP_N:%.*]] = icmp eq i32 [[TMP3]], [[N_VEC]]
 ; UNROLL-NEXT:    br i1 [[CMP_N]], label [[LOOPEXIT:%.*]], label [[SCALAR_PH]]
 ; UNROLL:       scalar.ph:
 ; UNROLL-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i8 [ [[IND_END]], [[MIDDLE_BLOCK]] ], [ [[DOTPR_I]], [[ENTRY:%.*]] ]
 ; UNROLL-NEXT:    [[BC_MERGE_RDX:%.*]] = phi i32 [ [[TMP7]], [[MIDDLE_BLOCK]] ], [ [[C_PROMOTED_I]], [[ENTRY]] ]
+; UNROLL-NEXT:    [[AND_I:%.*]] = and i32 [[TMP0]], [[BC_MERGE_RDX]]
 ; UNROLL-NEXT:    br label [[COND_END_I:%.*]]
 ; UNROLL:       cond.end.i:
 ; UNROLL-NEXT:    [[INC4_I:%.*]] = phi i8 [ [[BC_RESUME_VAL]], [[SCALAR_PH]] ], [ [[INC_I:%.*]], [[COND_END_I]] ]
-; UNROLL-NEXT:    [[AND_I:%.*]] = and i32 [[BC_MERGE_RDX]], [[TMP0]]
 ; UNROLL-NEXT:    [[INC_I]] = add i8 [[INC4_I]], 1
 ; UNROLL-NEXT:    [[TOBOOL_I:%.*]] = icmp eq i8 [[INC_I]], 0
 ; UNROLL-NEXT:    br i1 [[TOBOOL_I]], label [[LOOPEXIT]], label [[COND_END_I]], !llvm.loop [[LOOP31:![0-9]+]]
@@ -3220,6 +3220,7 @@ define i32 @testoverflowcheck() {
 ; INTERLEAVE-NEXT:    [[TMP4:%.*]] = insertelement <4 x i32> <i32 poison, i32 -1, i32 -1, i32 -1>, i32 [[C_PROMOTED_I]], i64 0
 ; INTERLEAVE-NEXT:    [[BROADCAST_SPLATINSERT:%.*]] = insertelement <4 x i32> poison, i32 [[TMP0]], i64 0
 ; INTERLEAVE-NEXT:    [[BROADCAST_SPLAT:%.*]] = shufflevector <4 x i32> [[BROADCAST_SPLATINSERT]], <4 x i32> poison, <4 x i32> zeroinitializer
+; INTERLEAVE-NEXT:    [[TMP6:%.*]] = and <4 x i32> [[BROADCAST_SPLAT]], [[TMP4]]
 ; INTERLEAVE-NEXT:    br label [[VECTOR_BODY:%.*]]
 ; INTERLEAVE:       vector.body:
 ; INTERLEAVE-NEXT:    [[INDEX:%.*]] = phi i32 [ 0, [[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], [[VECTOR_BODY]] ]
@@ -3227,17 +3228,16 @@ define i32 @testoverflowcheck() {
 ; INTERLEAVE-NEXT:    [[TMP5:%.*]] = icmp eq i32 [[INDEX_NEXT]], [[N_VEC]]
 ; INTERLEAVE-NEXT:    br i1 [[TMP5]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP30:![0-9]+]]
 ; INTERLEAVE:       middle.block:
-; INTERLEAVE-NEXT:    [[TMP6:%.*]] = and <4 x i32> [[TMP4]], [[BROADCAST_SPLAT]]
 ; INTERLEAVE-NEXT:    [[TMP7:%.*]] = call i32 @llvm.vector.reduce.and.v4i32(<4 x i32> [[TMP6]])
 ; INTERLEAVE-NEXT:    [[CMP_N:%.*]] = icmp eq i32 [[TMP3]], [[N_VEC]]
 ; INTERLEAVE-NEXT:    br i1 [[CMP_N]], label [[LOOPEXIT:%.*]], label [[SCALAR_PH]]
 ; INTERLEAVE:       scalar.ph:
 ; INTERLEAVE-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i8 [ [[IND_END]], [[MIDDLE_BLOCK]] ], [ [[DOTPR_I]], [[ENTRY:%.*]] ]
 ; INTERLEAVE-NEXT:    [[BC_MERGE_RDX:%.*]] = phi i32 [ [[TMP7]], [[MIDDLE_BLOCK]] ], [ [[C_PROMOTED_I]], [[ENTRY]] ]
+; INTERLEAVE-NEXT:    [[AND_I:%.*]] = and i32 [[TMP0]], [[BC_MERGE_RDX]]
 ; INTERLEAVE-NEXT:    br label [[COND_END_I:%.*]]
 ; INTERLEAVE:       cond.end.i:
 ; INTERLEAVE-NEXT:    [[INC4_I:%.*]] = phi i8 [ [[BC_RESUME_VAL]], [[SCALAR_PH]] ], [ [[INC_I:%.*]], [[COND_END_I]] ]
-; INTERLEAVE-NEXT:    [[AND_I:%.*]] = and i32 [[BC_MERGE_RDX]], [[TMP0]]
 ; INTERLEAVE-NEXT:    [[INC_I]] = add i8 [[INC4_I]], 1
 ; INTERLEAVE-NEXT:    [[TOBOOL_I:%.*]] = icmp eq i8 [[INC_I]], 0
 ; INTERLEAVE-NEXT:    br i1 [[TOBOOL_I]], label [[LOOPEXIT]], label [[COND_END_I]], !llvm.loop [[LOOP31:![0-9]+]]
@@ -5235,22 +5235,22 @@ define i32 @PR32419(i32 %a, i16 %b) {
 ; INTERLEAVE-NEXT:    br label [[FOR_BODY:%.*]]
 ; INTERLEAVE:       for.body:
 ; INTERLEAVE-NEXT:    [[I:%.*]] = phi i32 [ -4, [[SCALAR_PH]] ], [ [[I_NEXT:%.*]], [[FOR_INC:%.*]] ]
-; INTERLEAVE-NEXT:    [[VAR0:%.*]] = phi i32 [ [[BC_MERGE_RDX]], [[SCALAR_PH]] ], [ [[VAR6:%.*]], [[FOR_INC]] ]
+; INTERLEAVE-NEXT:    [[VAR0:%.*]] = phi i32 [ [[BC_MERGE_RDX]], [[SCALAR_PH]] ], [ [[VAR4:%.*]], [[FOR_INC]] ]
 ; INTERLEAVE-NEXT:    [[VAR1:%.*]] = trunc i32 [[I]] to i16
 ; INTERLEAVE-NEXT:    [[VAR2:%.*]] = icmp eq i16 [[VAR1]], 0
 ; INTERLEAVE-NEXT:    br i1 [[VAR2]], label [[FOR_INC]], label [[FOR_COND:%.*]]
 ; INTERLEAVE:       for.cond:
 ; INTERLEAVE-NEXT:    [[VAR3:%.*]] = urem i16 [[B]], [[VAR1]]
 ; INTERLEAVE-NEXT:    [[TMP50:%.*]] = sext i16 [[VAR3]] to i32
+; INTERLEAVE-NEXT:    [[TMP51:%.*]] = or i32 [[VAR0]], [[TMP50]]
 ; INTERLEAVE-NEXT:    br label [[FOR_INC]]
 ; INTERLEAVE:       for.inc:
-; INTERLEAVE-NEXT:    [[VAR4:%.*]] = phi i32 [ [[TMP50]], [[FOR_COND]] ], [ 0, [[FOR_BODY]] ]
-; INTERLEAVE-NEXT:    [[VAR6]] = or i32 [[VAR0]], [[VAR4]]
+; INTERLEAVE-NEXT:    [[VAR4]] = phi i32 [ [[TMP51]], [[FOR_COND]] ], [ [[VAR0]], [[FOR_BODY]] ]
 ; INTERLEAVE-NEXT:    [[I_NEXT]] = add nsw i32 [[I]], 1
 ; INTERLEAVE-NEXT:    [[COND:%.*]] = icmp eq i32 [[I_NEXT]], 0
 ; INTERLEAVE-NEXT:    br i1 [[COND]], label [[FOR_END:%.*]], label [[FOR_BODY]], !llvm.loop [[LOOP45:![0-9]+]]
 ; INTERLEAVE:       for.end:
-; INTERLEAVE-NEXT:    ret i32 [[VAR6]]
+; INTERLEAVE-NEXT:    ret i32 [[VAR4]]
 ;
 entry:
   br label %for.body
