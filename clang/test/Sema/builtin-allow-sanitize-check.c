@@ -1,6 +1,9 @@
 // RUN: %clang_cc1 -fsyntax-only -verify %s
 
 void test_builtin_allow_sanitize_check() {
+  // Test with no arguments.
+  (void)__builtin_allow_sanitize_check(); // expected-error {{too few arguments to function call, expected 1, have 0}}
+
   // Test with non-string literal argument.
   char str[] = "address";
   (void)__builtin_allow_sanitize_check(str); // expected-error {{expression is not a string literal}}
