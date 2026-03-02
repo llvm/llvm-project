@@ -608,49 +608,16 @@ false:
 }
 
 define void @test7(<8 x i1> %mask)  {
-; KNL-LABEL: test7:
-; KNL:       ## %bb.0: ## %allocas
-; KNL-NEXT:    vpmovsxwq %xmm0, %zmm0
-; KNL-NEXT:    vpsllq $63, %zmm0, %zmm0
-; KNL-NEXT:    vptestmq %zmm0, %zmm0, %k0
-; KNL-NEXT:    kmovw %k0, %eax
-; KNL-NEXT:    orb $85, %al
-; KNL-NEXT:    vzeroupper
-; KNL-NEXT:    retq
-;
-; SKX-LABEL: test7:
-; SKX:       ## %bb.0: ## %allocas
-; SKX-NEXT:    vpsllw $15, %xmm0, %xmm0
-; SKX-NEXT:    vpmovw2m %xmm0, %k0
-; SKX-NEXT:    kmovd %k0, %eax
-; SKX-NEXT:    orb $85, %al
-; SKX-NEXT:    retq
-;
-; AVX512BW-LABEL: test7:
-; AVX512BW:       ## %bb.0: ## %allocas
-; AVX512BW-NEXT:    vpsllw $15, %xmm0, %xmm0
-; AVX512BW-NEXT:    vpmovw2m %zmm0, %k0
-; AVX512BW-NEXT:    kmovd %k0, %eax
-; AVX512BW-NEXT:    orb $85, %al
-; AVX512BW-NEXT:    vzeroupper
-; AVX512BW-NEXT:    retq
-;
-; AVX512DQ-LABEL: test7:
-; AVX512DQ:       ## %bb.0: ## %allocas
-; AVX512DQ-NEXT:    vpmovsxwq %xmm0, %zmm0
-; AVX512DQ-NEXT:    vpsllq $63, %zmm0, %zmm0
-; AVX512DQ-NEXT:    vpmovq2m %zmm0, %k0
-; AVX512DQ-NEXT:    kmovw %k0, %eax
-; AVX512DQ-NEXT:    orb $85, %al
-; AVX512DQ-NEXT:    vzeroupper
-; AVX512DQ-NEXT:    retq
+; CHECK-LABEL: test7:
+; CHECK:       ## %bb.0: ## %allocas
+; CHECK-NEXT:    movb $1, %al
+; CHECK-NEXT:    testb %al, %al
+; CHECK-NEXT:    retq
 ;
 ; X86-LABEL: test7:
 ; X86:       ## %bb.0: ## %allocas
-; X86-NEXT:    vpsllw $15, %xmm0, %xmm0
-; X86-NEXT:    vpmovw2m %xmm0, %k0
-; X86-NEXT:    kmovd %k0, %eax
-; X86-NEXT:    orb $85, %al
+; X86-NEXT:    movb $1, %al
+; X86-NEXT:    testb %al, %al
 ; X86-NEXT:    retl
 allocas:
   %a= or <8 x i1> %mask, <i1 true, i1 false, i1 true, i1 false, i1 true, i1 false, i1 true, i1 false>
