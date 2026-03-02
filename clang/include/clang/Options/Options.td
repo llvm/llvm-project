@@ -7995,6 +7995,12 @@ def massembler_fatal_warnings : Flag<["-"], "massembler-fatal-warnings">,
 def crel : Flag<["--"], "crel">,
   HelpText<"Enable CREL relocation format (ELF only)">,
   MarshallingInfoFlag<CodeGenOpts<"Crel">>;
+def reloc_section_sym : Joined<["--"], "reloc-section-sym=">,
+  HelpText<"Section symbol conversion for relocations: all, internal, none (ELF only)">,
+  Values<"all,internal,none">,
+  NormalizedValuesScope<"llvm::RelocSectionSymType">,
+  NormalizedValues<["All", "Internal", "None"]>,
+  MarshallingInfoEnum<CodeGenOpts<"RelocSectionSym">, "All">;
 // The leading 'g' is misleading. This is an unwind tables option, not
 // a debug option. But uses this name for gnu compatibility.
 def gsframe : Flag<["--"], "gsframe">,
@@ -8583,6 +8589,9 @@ def ftest_module_file_extension_EQ :
   Joined<["-"], "ftest-module-file-extension=">,
   HelpText<"introduce a module file extension for testing purposes. "
            "The argument is parsed as blockname:major:minor:hashed:user info">;
+def fmodules_lazy_load_module_maps : Flag<["-"], "fmodules-lazy-load-module-maps">,
+  HelpText<"Load modules from module maps only when needed">,
+  MarshallingInfoFlag<HeaderSearchOpts<"LazyLoadModuleMaps">>;
 
 defm recovery_ast : BoolOption<"f", "recovery-ast",
   LangOpts<"RecoveryAST">, DefaultTrue,
@@ -9803,8 +9812,6 @@ def dxc_no_stdinc : DXCFlag<"hlsl-no-stdinc">,
   HelpText<"HLSL only. Disables all standard includes containing non-native compiler types and functions.">;
 def dxc_Fo : DXCJoinedOrSeparate<"Fo">,
   HelpText<"Output object file">;
-def dxc_Fre : DXCJoinedOrSeparate<"Fre">,
-              HelpText<"Set output file name for reflection files">;
 def dxc_Fc : DXCJoinedOrSeparate<"Fc">,
   HelpText<"Output assembly listing file">;
 def dxc_Frs : DXCJoinedOrSeparate<"Frs">,

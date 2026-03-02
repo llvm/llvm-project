@@ -10,6 +10,7 @@
 #ifndef _LIBCPP___ALGORITHM_FIND_H
 #define _LIBCPP___ALGORITHM_FIND_H
 
+#include <__algorithm/find_if.h>
 #include <__algorithm/find_segment_if.h>
 #include <__algorithm/min.h>
 #include <__algorithm/simd_utils.h>
@@ -47,17 +48,18 @@ _LIBCPP_BEGIN_NAMESPACE_STD
 // generic implementation
 template <class _Iter, class _Sent, class _Tp, class _Proj>
 _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX14 _Iter
-__find_loop(_Iter __first, _Sent __last, const _Tp& __value, _Proj& __proj) {
-  for (; __first != __last; ++__first)
-    if (std::__invoke(__proj, *__first) == __value)
-      break;
-  return __first;
+__find_generic(_Iter __first, _Sent __last, const _Tp& __value, _Proj& __proj) {
+  return std::__find_if(
+      std::move(__first),
+      std::move(__last),
+      [&]<class _ValT>(_ValT&& __val) -> bool { return __val == __value; },
+      __proj);
 }
 
 template <class _Iter, class _Sent, class _Tp, class _Proj>
 _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX14 _Iter
 __find(_Iter __first, _Sent __last, const _Tp& __value, _Proj& __proj) {
-  return std::__find_loop(std::move(__first), std::move(__last), __value, __proj);
+  return std::__find_generic(std::move(__first), std::move(__last), __value, __proj);
 }
 
 #if _LIBCPP_VECTORIZE_ALGORITHMS
@@ -108,7 +110,7 @@ _LIBCPP_CONSTEXPR_SINCE_CXX14 _Tp* __find_vectorized(_Tp* __first, _Tp* __last, 
   }
 
   __identity __proj;
-  return std::__find_loop(__first, __last, __value, __proj);
+  return std::__find_generic(__first, __last, __value, __proj);
 }
 #endif
 
@@ -138,7 +140,7 @@ _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX14 _Tp* __find(_Tp* __first, _T
 #  endif
   else {
     __identity __proj;
-    return std::__find_loop(__first, __last, __value, __proj);
+    return std::__find_generic(__first, __last, __value, __proj);
   }
 }
 #endif
