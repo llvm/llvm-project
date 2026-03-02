@@ -3006,7 +3006,7 @@ void AMDGPUDAGToDAGISel::SelectDSBvhStackIntrinsic(SDNode *N, unsigned IntrID) {
 void AMDGPUDAGToDAGISel::SelectTensorLoadStore(SDNode *N, unsigned IntrID) {
   bool IsLoad = IntrID == Intrinsic::amdgcn_tensor_load_to_lds;
   unsigned Opc =
-      IsLoad ? AMDGPU::TENSOR_LOAD_TO_LDS : AMDGPU::TENSOR_STORE_FROM_LDS;
+      IsLoad ? AMDGPU::TENSOR_LOAD_TO_LDS_D4 : AMDGPU::TENSOR_STORE_FROM_LDS_D4;
 
   SmallVector<SDValue, 7> TensorOps;
   // First two groups
