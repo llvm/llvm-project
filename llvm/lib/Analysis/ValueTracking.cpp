@@ -7532,6 +7532,18 @@ static bool canCreateUndefOrPoison(const Operator *Op, UndefPoisonKind Kind,
             shiftAmountKnownInRange(II->getArgOperand(1)))
           return false;
         break;
+      case Intrinsic::vector_reduce_or:
+      case Intrinsic::vector_reduce_and:
+      case Intrinsic::vector_reduce_xor:
+      case Intrinsic::vector_reduce_add:
+      case Intrinsic::vector_reduce_mul:
+      case Intrinsic::vector_reduce_smax:
+      case Intrinsic::vector_reduce_smin:
+      case Intrinsic::vector_reduce_umax:
+      case Intrinsic::vector_reduce_umin:
+        // Integer reductions cannot introduce
+        // poison or undef.
+        return false;
       }
     }
     [[fallthrough]];
