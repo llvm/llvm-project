@@ -17,7 +17,6 @@
 #include "mlir/Reducer/Passes.h"
 #include "mlir/Reducer/Tester.h"
 
-#include "llvm/Support/Debug.h"
 #include "llvm/Support/DebugLog.h"
 
 namespace mlir {
