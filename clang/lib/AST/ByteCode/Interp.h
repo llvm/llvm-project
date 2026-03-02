@@ -1083,7 +1083,7 @@ inline bool CmpHelper<Pointer>(InterpState &S, CodePtr OpPC, CompareFn Fn) {
   }
 
   // Diagnose comparisons between fields with different access specifiers.
-  if (std::optional<std::pair<Pointer, Pointer>> Split =
+  if (std::optional<std::pair<PtrView, PtrView>> Split =
           Pointer::computeSplitPoint(LHS, RHS)) {
     const FieldDecl *LF = Split->first.getField();
     const FieldDecl *RF = Split->second.getField();
