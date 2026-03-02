@@ -12,6 +12,9 @@
 #include "src/__support/FPUtil/Hypot.h"
 #include "src/__support/FPUtil/bfloat16.h"
 #include "src/__support/common.h"
+#include "src/__support/macros/config.h"
+
+
 namespace LIBC_NAMESPACE_DECL {
 namespace math {
 
