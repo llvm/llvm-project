@@ -30,20 +30,7 @@ struct SomeClass {
   SomeClass(int value);
 };
 
-namespace std {
-
-class string {
-public:
-  string() = default;
-  string(const char *) {}
-};
-
-namespace string_literals {
-string operator""s(const char *, decltype(sizeof(int))) {
-  return string();
-}
-} // namespace string_literals
-} // namespace std
+#include <string>
 
 namespace Types {
 typedef int MyType;
