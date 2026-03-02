@@ -1294,7 +1294,7 @@ static void simplifyRecipe(VPSingleDefRecipe *Def, VPTypeAnalysis &TypeInfo) {
   // x & 0 -> 0
   if (match(Def, m_c_BinaryAnd(m_VPValue(X), m_ZeroInt())))
     return Def->replaceAllUsesWith(
-        Plan->getNullValue(TypeInfo.inferScalarType(Def)));
+        Plan->getZero(TypeInfo.inferScalarType(Def)));
 
   // x & AllOnes -> x
   if (match(Def, m_c_BinaryAnd(m_VPValue(X), m_AllOnes())))
@@ -1348,7 +1348,7 @@ static void simplifyRecipe(VPSingleDefRecipe *Def, VPTypeAnalysis &TypeInfo) {
 
   if (match(Def, m_c_Mul(m_VPValue(A), m_ZeroInt())))
     return Def->replaceAllUsesWith(
-        Plan->getNullValue(TypeInfo.inferScalarType(Def)));
+        Plan->getZero(TypeInfo.inferScalarType(Def)));
 
   const APInt *APC;
   if (CanCreateNewRecipe && match(Def, m_c_Mul(m_VPValue(A), m_APInt(APC))) &&

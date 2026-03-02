@@ -4775,7 +4775,7 @@ public:
   VPIRValue *getFalse() { return getConstantInt(1, 0); }
 
   /// Return a VPIRValue wrapping the null value of type \p Ty.
-  VPIRValue *getNullValue(Type *Ty) { return getConstantInt(Ty, 0); }
+  VPIRValue *getZero(Type *Ty) { return getConstantInt(Ty, 0); }
 
   /// Return a VPIRValue wrapping the AllOnes value of type \p Ty.
   VPIRValue *getAllOnesValue(Type *Ty) {
