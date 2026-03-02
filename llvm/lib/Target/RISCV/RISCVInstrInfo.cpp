@@ -1994,16 +1994,13 @@ unsigned RISCVInstrInfo::getInstSizeInBytes(const MachineInstr &MI) const {
                               *MF.getTarget().getMCAsmInfo());
   }
 
-  if (!MI.memoperands_empty()) {
-    MachineMemOperand *MMO = *(MI.memoperands_begin());
-    if (STI.hasStdExtZihintntl() && MMO->isNonTemporal()) {
-      if (STI.hasStdExtZca()) {
-        if (isCompressibleInst(MI, STI))
-          return 4; // c.ntl.all + c.load/c.store
-        return 6;   // c.ntl.all + load/store
-      }
-      return 8; // ntl.all + load/store
+  if (requiresNTLHint(MI)) {
+    if (STI.hasStdExtZca()) {
+      if (isCompressibleInst(MI, STI))
+        return 4; // c.ntl.all + c.load/c.store
+      return 6;   // c.ntl.all + load/store
     }
+    return 8; // ntl.all + load/store
   }
 
   if (Opcode == TargetOpcode::BUNDLE)
@@ -5325,4 +5322,15 @@ bool RISCVInstrInfo::isVRegCopy(const MachineInstr *MI, unsigned LMul) const {
   auto [RCLMul, RCFractional] =
       RISCVVType::decodeVLMUL(RISCVRI::getLMul(RC->TSFlags));
   return (!RCFractional && LMul == RCLMul) || (RCFractional && LMul == 1);
+}
+
+bool RISCVInstrInfo::requiresNTLHint(const MachineInstr &MI) const {
+  if (MI.memoperands_empty())
+    return false;
+
+  MachineMemOperand *MMO = *(MI.memoperands_begin());
+  if (!MMO->isNonTemporal())
+    return false;
+
+  return true;
 }
