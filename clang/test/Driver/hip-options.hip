@@ -88,6 +88,15 @@
 // HIPTHINLTO-NOT: "-cc1"{{.*}} "-triple" "x86_64-unknown-linux-gnu" {{.*}} "-flto-unit"
 // HIPTHINLTO: clang-linker-wrapper{{.*}} "--device-compiler=amdgcn-amd-amdhsa=-flto=thin"
 
+// Check -no-canonical-prefixes is propagated correctly.
+
+// RUN: %clang -### --target=x86_64-unknown-linux-gnu -nogpuinc -nogpulib \
+// RUN:   --cuda-gpu-arch=gfx906 -foffload-lto=thin -fwhole-program-vtables -no-canonical-prefixes %s 2>&1 \
+// RUN:   | FileCheck -check-prefix=HIPTHINLTO-NO-CANON-PREFIXES %s
+
+// Ensure that we invoke clang-linker-wrapper with --no-canonical-prefixes
+// HIPTHINLTO-NO-CANON-PREFIXES: clang-linker-wrapper{{.*}} "--no-canonical-prefixes"
+
 // Check that -flto=thin is handled correctly, particularly with -fwhole-program-vtables.
 //
 // RUN: %clang -### --target=x86_64-unknown-linux-gnu -nogpuinc -nogpulib \
