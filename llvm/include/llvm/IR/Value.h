@@ -310,7 +310,8 @@ public:
   /// to "V" if the callback ShouldReplace returns true for the given Use.
   /// Unlike replaceAllUsesWith() this function does not support basic block
   /// values.
-  LLVM_ABI void
+  /// Returns whether any uses have been replaced.
+  LLVM_ABI bool
   replaceUsesWithIf(Value *New, llvm::function_ref<bool(Use &U)> ShouldReplace);
 
   /// replaceUsesOutsideBlock - Go through the uses list for this definition and

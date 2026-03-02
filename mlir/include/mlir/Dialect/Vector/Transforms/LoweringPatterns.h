@@ -72,7 +72,7 @@ void populateVectorOuterProductLoweringPatterns(RewritePatternSet &patterns,
 /// either a parallel or a reduction), we lift them back up to 2-D with a simple
 /// vector.shape_cast to vector<1xk> so that the other patterns can kick in,
 /// thus fully exiting out of the vector.multi_reduction abstraction.
-void populateVectorMultiReductionTransformationPatterns(
+void populateVectorMultiReductionReorderAndExpandPatterns(
     RewritePatternSet &patterns, VectorMultiReductionLowering options,
     PatternBenefit benefit = 1);
 
@@ -100,21 +100,6 @@ void populateVectorMultiReductionFlatteningPatterns(
 /// vector.reduction + insert. This can further lower to horizontal reduction
 /// ops.
 void populateVectorMultiReductionUnrollingPatterns(
-    RewritePatternSet &patterns, VectorMultiReductionLowering options,
-    PatternBenefit benefit = 1);
-
-/// Collect a set of patterns to convert vector.multi_reduction op into
-/// a sequence of vector.reduction ops. These patterns are the ones
-/// populated by:
-///
-/// * populateVectorMultiReductionTransformationPatterns
-/// * populateVectorMultiReductionFlatteningPatterns
-/// * populateVectorMultiReductionUnrollingPatterns
-///
-/// This is just a convenience wrapper that we use in testing and is effectively
-/// deprecated.
-/// TODO: Delete.
-void populateVectorMultiReductionLoweringPatterns(
     RewritePatternSet &patterns, VectorMultiReductionLowering options,
     PatternBenefit benefit = 1);
 

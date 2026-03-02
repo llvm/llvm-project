@@ -40,3 +40,30 @@ void test_pause(void) {
   // OGCG: call void @llvm.x86.sse2.pause()
   __builtin_ia32_pause();
 }
+
+void test_clflush(void* a){
+  // CIR-LABEL: test_clflush
+  // CIR: cir.call_llvm_intrinsic "x86.sse2.clflush" %{{.*}} : (!cir.ptr<!void, target_address_space(0)>) -> !void
+  
+  // LLVM-LABEL: @test_clflush
+  // LLVM: call void @llvm.x86.sse2.clflush(ptr {{.*}})
+
+  // OGCG-LABEL: @test_clflush
+  // OGCG: call void @llvm.x86.sse2.clflush(ptr {{.*}})
+  __builtin_ia32_clflush(a);
+}
+
+typedef float v4f __attribute__((vector_size(16)));
+typedef int   v4i __attribute__((vector_size(16)));
+
+v4i test_convertvector(v4f a) {
+  // CIR-LABEL: test_convertvector
+  // CIR: cir.cast float_to_int %{{.*}} : !cir.vector<4 x !cir.float> -> !cir.vector<4 x !s32i>
+
+  // LLVM-LABEL: @test_convertvector
+  // LLVM: fptosi <4 x float> %{{.*}} to <4 x i32>
+
+  // OGCG-LABEL: @test_convertvector
+  // OGCG: fptosi <4 x float> %{{.*}} to <4 x i32>
+  return __builtin_convertvector(a, v4i);
+}

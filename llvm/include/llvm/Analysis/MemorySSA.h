@@ -755,18 +755,16 @@ public:
       simple_ilist<MemoryAccess, ilist_tag<MSSAHelpers::DefsOnlyTag>>;
 
   /// Return the list of MemoryAccess's for a given basic block.
-  ///
-  /// This list is not modifiable by the user.
-  const AccessList *getBlockAccesses(const BasicBlock *BB) const {
-    return getWritableBlockAccesses(BB);
+  AccessList *getBlockAccesses(const BasicBlock *BB) const {
+    auto It = PerBlockAccesses.find(BB);
+    return It == PerBlockAccesses.end() ? nullptr : It->second.get();
   }
 
   /// Return the list of MemoryDef's and MemoryPhi's for a given basic
   /// block.
-  ///
-  /// This list is not modifiable by the user.
-  const DefsList *getBlockDefs(const BasicBlock *BB) const {
-    return getWritableBlockDefs(BB);
+  DefsList *getBlockDefs(const BasicBlock *BB) const {
+    auto It = PerBlockDefs.find(BB);
+    return It == PerBlockDefs.end() ? nullptr : It->second.get();
   }
 
   /// Given two memory accesses in the same basic block, determine
@@ -810,18 +808,6 @@ protected:
       IterT Blocks, VerificationLevel = VerificationLevel::Fast) const;
   template <typename IterT> void verifyDominationNumbers(IterT Blocks) const;
   template <typename IterT> void verifyPrevDefInPhis(IterT Blocks) const;
-
-  // This is used by the use optimizer and updater.
-  AccessList *getWritableBlockAccesses(const BasicBlock *BB) const {
-    auto It = PerBlockAccesses.find(BB);
-    return It == PerBlockAccesses.end() ? nullptr : It->second.get();
-  }
-
-  // This is used by the use optimizer and updater.
-  DefsList *getWritableBlockDefs(const BasicBlock *BB) const {
-    auto It = PerBlockDefs.find(BB);
-    return It == PerBlockDefs.end() ? nullptr : It->second.get();
-  }
 
   // These is used by the updater to perform various internal MemorySSA
   // machinsations.  They do not always leave the IR in a correct state, and
