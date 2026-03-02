@@ -9,6 +9,7 @@
 // RUN:             {bugprone-dangling-handle.HandleClasses: \
 // RUN:               'std::basic_string_view; ::llvm::StringRef;'}}" \
 // RUN:   -- -isystem %clang_tidy_headers
+#include <string>
 #include <vector>
 
 namespace std {
@@ -35,28 +36,6 @@ class map {
   value_type& operator[](const Key& key);
   value_type& operator[](Key&& key);
 };
-
-class basic_string_view;
-
-class basic_string {
- public:
-  basic_string();
-  basic_string(const char*);
-
-  typedef basic_string_view str_view;
-  operator str_view() const noexcept;
-
-  ~basic_string();
-};
-
-typedef basic_string string;
-
-class basic_string_view {
- public:
-  basic_string_view(const char*);
-};
-
-typedef basic_string_view string_view;
 
 }  // namespace std
 

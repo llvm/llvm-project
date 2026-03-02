@@ -7,11 +7,9 @@
 // RUN:     bugprone-easily-swappable-parameters.ModelImplicitConversions: 0, \
 // RUN:     bugprone-easily-swappable-parameters.SuppressParametersUsedTogether: 0, \
 // RUN:     bugprone-easily-swappable-parameters.NamePrefixSuffixSilenceDissimilarityThreshold: 1 \
-// RUN:  }}' --
+// RUN:  }}' -- -isystem %clang_tidy_headers
+#include <string>
 
-namespace std {
-struct string {};
-} // namespace std
 class Matrix {};
 
 void test1(int Foo, int Bar) {}
