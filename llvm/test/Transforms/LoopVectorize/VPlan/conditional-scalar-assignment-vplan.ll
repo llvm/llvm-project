@@ -29,8 +29,9 @@ define i32 @simple_csa_int_select(i64 %N, ptr %data, i32 %a) {
 ; CHECK-NEXT:  Successor(s): vector loop
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  <x1> vector loop: {
+; CHECK-NEXT:  vp<[[VP3:%[0-9]+]]> = CANONICAL-IV
+; CHECK-EMPTY:
 ; CHECK-NEXT:    vector.body:
-; CHECK-NEXT:      EMIT vp<[[VP3:%[0-9]+]]> = CANONICAL-INDUCTION ir<0>, vp<%index.next>
 ; CHECK-NEXT:      WIDEN-REDUCTION-PHI ir<%data.phi> = phi ir<-1>, vp<[[VP9:%[0-9]+]]>
 ; CHECK-NEXT:      WIDEN-PHI vp<[[VP4:%[0-9]+]]> = phi [ ir<false>, vector.ph ], [ vp<[[VP8:%[0-9]+]]>, vector.body ]
 ; CHECK-NEXT:      vp<[[VP5:%[0-9]+]]> = SCALAR-STEPS vp<[[VP3]]>, ir<1>, vp<[[VP0]]>
@@ -89,8 +90,9 @@ define i32 @simple_csa_int_select(i64 %N, ptr %data, i32 %a) {
 ; CHECK-TF-NEXT:  Successor(s): vector loop
 ; CHECK-TF-EMPTY:
 ; CHECK-TF-NEXT:  <x1> vector loop: {
+; CHECK-TF-NEXT:  vp<[[VP4:%[0-9]+]]> = CANONICAL-IV
+; CHECK-TF-EMPTY:
 ; CHECK-TF-NEXT:    vector.body:
-; CHECK-TF-NEXT:      EMIT vp<[[VP4:%[0-9]+]]> = CANONICAL-INDUCTION ir<0>, vp<%index.next>
 ; CHECK-TF-NEXT:      ir<%iv> = WIDEN-INDUCTION ir<0>, ir<1>, vp<[[VP0]]>
 ; CHECK-TF-NEXT:      WIDEN-REDUCTION-PHI ir<%data.phi> = phi ir<-1>, vp<[[VP12:%[0-9]+]]>
 ; CHECK-TF-NEXT:      WIDEN-PHI vp<[[VP5:%[0-9]+]]> = phi [ ir<false>, vector.ph ], [ vp<[[VP11:%[0-9]+]]>, loop.0 ]
@@ -192,8 +194,9 @@ define i32 @simple_csa_int_load(ptr noalias %a, ptr noalias %b, i32 %default_val
 ; CHECK-NEXT:  Successor(s): vector loop
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  <x1> vector loop: {
+; CHECK-NEXT:  vp<[[VP3:%[0-9]+]]> = CANONICAL-IV
+; CHECK-EMPTY:
 ; CHECK-NEXT:    vector.body:
-; CHECK-NEXT:      EMIT vp<[[VP3:%[0-9]+]]> = CANONICAL-INDUCTION ir<0>, vp<%index.next>
 ; CHECK-NEXT:      WIDEN-REDUCTION-PHI ir<%data.phi> = phi ir<%default_val>, vp<[[VP11:%[0-9]+]]>
 ; CHECK-NEXT:      WIDEN-PHI vp<[[VP4:%[0-9]+]]> = phi [ ir<false>, vector.ph ], [ vp<[[VP10:%[0-9]+]]>, if.then.0 ]
 ; CHECK-NEXT:      vp<[[VP5:%[0-9]+]]> = SCALAR-STEPS vp<[[VP3]]>, ir<1>, vp<[[VP0]]>
@@ -269,8 +272,9 @@ define i32 @simple_csa_int_load(ptr noalias %a, ptr noalias %b, i32 %default_val
 ; CHECK-TF-NEXT:  Successor(s): vector loop
 ; CHECK-TF-EMPTY:
 ; CHECK-TF-NEXT:  <x1> vector loop: {
+; CHECK-TF-NEXT:  vp<[[VP4:%[0-9]+]]> = CANONICAL-IV
+; CHECK-TF-EMPTY:
 ; CHECK-TF-NEXT:    vector.body:
-; CHECK-TF-NEXT:      EMIT vp<[[VP4:%[0-9]+]]> = CANONICAL-INDUCTION ir<0>, vp<%index.next>
 ; CHECK-TF-NEXT:      ir<%iv> = WIDEN-INDUCTION ir<0>, ir<1>, vp<[[VP0]]>
 ; CHECK-TF-NEXT:      WIDEN-REDUCTION-PHI ir<%data.phi> = phi ir<%default_val>, vp<[[VP14:%[0-9]+]]>
 ; CHECK-TF-NEXT:      WIDEN-PHI vp<[[VP5:%[0-9]+]]> = phi [ ir<false>, vector.ph ], [ vp<[[VP13:%[0-9]+]]>, if.then.1 ]

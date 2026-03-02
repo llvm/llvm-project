@@ -25,16 +25,6 @@ using namespace VPlanPatternMatch;
 #define DEBUG_TYPE "vplan"
 
 VPTypeAnalysis::VPTypeAnalysis(const VPlan &Plan) : Ctx(Plan.getContext()) {
-  if (auto LoopRegion = Plan.getVectorLoopRegion()) {
-    if (const auto *CanIV = dyn_cast<VPCanonicalIVPHIRecipe>(
-            &LoopRegion->getEntryBasicBlock()->front())) {
-      CanonicalIVTy = CanIV->getScalarType();
-      return;
-    }
-  }
-
-  // If there's no canonical IV, retrieve the type from the trip count
-  // expression.
   auto *TC = Plan.getTripCount();
   if (auto *TCIRV = dyn_cast<VPIRValue>(TC)) {
     CanonicalIVTy = TCIRV->getType();
@@ -285,18 +275,20 @@ Type *VPTypeAnalysis::inferScalarType(const VPValue *V) {
     return CanonicalIVTy;
   }
 
+  if (auto *RegionV = dyn_cast<VPRegionValue>(V))
+    return RegionV->getType();
+
   Type *ResultTy =
       TypeSwitch<const VPRecipeBase *, Type *>(V->getDefiningRecipe())
-          .Case<VPActiveLaneMaskPHIRecipe, VPCanonicalIVPHIRecipe,
-                VPFirstOrderRecurrencePHIRecipe, VPReductionPHIRecipe,
-                VPWidenPointerInductionRecipe, VPCurrentIterationPHIRecipe>(
-              [this](const auto *R) {
-                // Handle header phi recipes, except VPWidenIntOrFpInduction
-                // which needs special handling due it being possibly truncated.
-                // TODO: consider inferring/caching type of siblings, e.g.,
-                // backedge value, here and in cases below.
-                return inferScalarType(R->getStartValue());
-              })
+          .Case<VPActiveLaneMaskPHIRecipe, VPFirstOrderRecurrencePHIRecipe,
+                VPReductionPHIRecipe, VPWidenPointerInductionRecipe,
+                VPCurrentIterationPHIRecipe>([this](const auto *R) {
+            // Handle header phi recipes, except VPWidenIntOrFpInduction
+            // which needs special handling due it being possibly truncated.
+            // TODO: consider inferring/caching type of siblings, e.g.,
+            // backedge value, here and in cases below.
+            return inferScalarType(R->getStartValue());
+          })
           .Case<VPWidenIntOrFpInductionRecipe, VPDerivedIVRecipe>(
               [](const auto *R) { return R->getScalarType(); })
           .Case<VPReductionRecipe, VPPredInstPHIRecipe, VPWidenPHIRecipe,
@@ -456,17 +448,16 @@ SmallVector<VPRegisterUsage, 8> llvm::calculateRegisterUsageForPlan(
       for (VPValue *U : R.operands()) {
         auto *DefR = U->getDefiningRecipe();
 
-        // Ignore non-recipe values such as arguments, constants, etc.
+        // Ignore VPRegionValues and VPSymbolicValues, record invariant
+        // VPIRValues wrapping IR instructions, but skipping other values, like
+        // constants and arguments.
         // FIXME: Might need some motivation why these values are ignored. If
         // for example an argument is used inside the loop it will increase the
         // register pressure (so shouldn't we add it to LoopInvariants).
-        auto *IRV = dyn_cast<VPIRValue>(U);
-        if (!DefR && (!IRV || !isa<Instruction>(IRV->getValue())))
-          continue;
-
-        // If this recipe is outside the loop then record it and continue.
         if (!DefR) {
-          LoopInvariants.insert(U);
+          auto *IRV = dyn_cast<VPIRValue>(U);
+          if (IRV && isa<Instruction>(IRV->getValue()))
+            LoopInvariants.insert(U);
           continue;
         }
 
@@ -512,6 +503,11 @@ SmallVector<VPRegisterUsage, 8> llvm::calculateRegisterUsageForPlan(
       return 0;
     return TTICapture.getRegUsageForType(VectorType::get(Ty, VF));
   };
+
+  VPValue *CanIV = LoopRegion->getCanonicalIV();
+  // Note: canonical IV's are retained even if they have no users.
+  if (CanIV->getNumUsers() != 0)
+    OpenIntervals.insert(CanIV);
 
   // We scan the instructions linearly and record each time that a new interval
   // starts, by placing it in a set. If we find this value in TransposEnds then
@@ -561,7 +557,7 @@ SmallVector<VPRegisterUsage, 8> llvm::calculateRegisterUsageForPlan(
           continue;
 
         if (VFs[J].isScalar() ||
-            isa<VPCanonicalIVPHIRecipe, VPReplicateRecipe, VPDerivedIVRecipe,
+            isa<VPRegionValue, VPReplicateRecipe, VPDerivedIVRecipe,
                 VPCurrentIterationPHIRecipe, VPScalarIVStepsRecipe>(VPV) ||
             (isa<VPInstruction>(VPV) && vputils::onlyScalarValuesUsed(VPV)) ||
             (isa<VPReductionPHIRecipe>(VPV) &&

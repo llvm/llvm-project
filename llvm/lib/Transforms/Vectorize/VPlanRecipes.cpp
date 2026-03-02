@@ -74,7 +74,6 @@ bool VPRecipeBase::mayWriteToMemory() const {
   case VPWidenIntrinsicSC:
     return cast<VPWidenIntrinsicRecipe>(this)->mayWriteToMemory();
   case VPActiveLaneMaskPHISC:
-  case VPCanonicalIVPHISC:
   case VPCurrentIterationPHISC:
   case VPBranchOnMaskSC:
   case VPDerivedIVSC:
@@ -4467,16 +4466,6 @@ InstructionCost VPInterleaveBase::computeCost(ElementCount VF,
                                            VectorTy, VectorTy, {}, Ctx.CostKind,
                                            0);
 }
-
-#if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
-void VPCanonicalIVPHIRecipe::printRecipe(raw_ostream &O, const Twine &Indent,
-                                         VPSlotTracker &SlotTracker) const {
-  O << Indent << "EMIT ";
-  printAsOperand(O, SlotTracker);
-  O << " = CANONICAL-INDUCTION ";
-  printOperands(O, SlotTracker);
-}
-#endif
 
 bool VPWidenPointerInductionRecipe::onlyScalarsGenerated(bool IsScalable) {
   return vputils::onlyScalarValuesUsed(this) &&

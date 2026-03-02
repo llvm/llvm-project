@@ -97,8 +97,8 @@ bool VPlanVerifier::verifyPhiRecipes(const VPBasicBlock *VPBB) {
     }
 
     if (isa<VPCurrentIterationPHIRecipe>(RecipeI) &&
-        !isa_and_nonnull<VPCanonicalIVPHIRecipe>(std::prev(RecipeI))) {
-      errs() << "CurrentIteration PHI is not immediately after canonical IV\n";
+        RecipeI->getIterator() != VPBB->begin()) {
+      errs() << "CurrentIteration PHI is not the first phi\n";
       return false;
     }
 
@@ -443,12 +443,6 @@ bool VPlanVerifier::verify(const VPlan &Plan) {
   const VPBasicBlock *Entry = dyn_cast<VPBasicBlock>(TopRegion->getEntry());
   if (!Entry) {
     errs() << "VPlan entry block is not a VPBasicBlock\n";
-    return false;
-  }
-
-  if (!isa<VPCanonicalIVPHIRecipe>(&*Entry->begin())) {
-    errs() << "VPlan vector loop header does not start with a "
-              "VPCanonicalIVPHIRecipe\n";
     return false;
   }
 

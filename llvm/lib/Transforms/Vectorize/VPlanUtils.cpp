@@ -148,6 +148,15 @@ const SCEV *vputils::getSCEVExprForVPValue(const VPValue *V,
     return SE.getCouldNotCompute();
   }
 
+  if (auto *RV = dyn_cast<VPRegionValue>(V)) {
+    assert(RV == RV->getDefiningRegion()->getCanonicalIV() &&
+           "RegionValue must be canonical IV");
+    if (!L)
+      return SE.getCouldNotCompute();
+    return SE.getAddRecExpr(SE.getZero(RV->getType()), SE.getOne(RV->getType()),
+                            L, SCEV::FlagAnyWrap);
+  }
+
   // Helper to create SCEVs for binary and unary operations.
   auto CreateSCEV =
       [&](ArrayRef<VPValue *> Ops,
@@ -264,13 +273,6 @@ const SCEV *vputils::getSCEVExprForVPValue(const VPValue *V,
   const SCEV *Expr =
       TypeSwitch<const VPRecipeBase *, const SCEV *>(DefR)
           .Case([](const VPExpandSCEVRecipe *R) { return R->getSCEV(); })
-          .Case([&SE, &PSE, L](const VPCanonicalIVPHIRecipe *R) {
-            if (!L)
-              return SE.getCouldNotCompute();
-            const SCEV *Start = getSCEVExprForVPValue(R->getOperand(0), PSE, L);
-            return SE.getAddRecExpr(Start, SE.getOne(Start->getType()), L,
-                                    SCEV::FlagAnyWrap);
-          })
           .Case([&SE, &PSE, L](const VPWidenIntOrFpInductionRecipe *R) {
             const SCEV *Step = getSCEVExprForVPValue(R->getStepValue(), PSE, L);
             if (!L || isa<SCEVCouldNotCompute>(Step))
@@ -358,8 +360,8 @@ static bool preservesUniformity(unsigned Opcode) {
 }
 
 bool vputils::isSingleScalar(const VPValue *VPV) {
-  // A live-in must be uniform across the scope of VPlan.
-  if (isa<VPIRValue, VPSymbolicValue>(VPV))
+  // Live-in, symbolic and region-values must be uniform across the their scope.
+  if (isa<VPIRValue, VPSymbolicValue, VPRegionValue>(VPV))
     return true;
 
   if (auto *Rep = dyn_cast<VPReplicateRecipe>(VPV)) {
@@ -384,7 +386,7 @@ bool vputils::isSingleScalar(const VPValue *VPV) {
             all_of(VPI->operands(), isSingleScalar));
   if (auto *RR = dyn_cast<VPReductionRecipe>(VPV))
     return !RR->isPartialReduction();
-  if (isa<VPCanonicalIVPHIRecipe, VPVectorPointerRecipe,
+  if (isa<VPVectorPointerRecipe,
           VPVectorEndPointerRecipe>(VPV))
     return true;
   if (auto *Expr = dyn_cast<VPExpressionRecipe>(VPV))
@@ -410,12 +412,8 @@ bool vputils::isUniformAcrossVFsAndUFs(VPValue *V) {
     return all_of(R->operands(), isUniformAcrossVFsAndUFs);
   }
 
-  if (VPRegionBlock *EnclosingRegion = VPBB->getEnclosingLoopRegion()) {
-    auto *CanonicalIV = EnclosingRegion->getCanonicalIV();
-    // Canonical IV chain is uniform.
-    if (V == CanonicalIV || V == CanonicalIV->getBackedgeValue())
-      return true;
-  }
+  if (isa<VPRegionValue>(V))
+    return true;
 
   return TypeSwitch<const VPRecipeBase *, bool>(R)
       .Case([](const VPDerivedIVRecipe *R) { return true; })

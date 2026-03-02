@@ -4132,7 +4132,6 @@ static bool willGenerateVectors(VPlan &Plan, ElementCount VF,
       case VPRecipeBase::VPScalarIVStepsSC:
       case VPRecipeBase::VPReplicateSC:
       case VPRecipeBase::VPInstructionSC:
-      case VPRecipeBase::VPCanonicalIVPHISC:
       case VPRecipeBase::VPCurrentIterationPHISC:
       case VPRecipeBase::VPVectorPointerSC:
       case VPRecipeBase::VPVectorEndPointerSC:
@@ -8218,6 +8217,7 @@ VPlanPtr LoopVectorizationPlanner::tryToBuildVPlanWithVPRecipes(
                      m_Specific(LoopRegion->getCanonicalIV()), m_VPValue())) &&
            "Did not find the canonical IV increment");
     cast<VPRecipeWithIRFlags>(IVInc)->dropPoisonGeneratingFlags();
+    LoopRegion->clearCanonicalIVNUW();
   }
 
   // ---------------------------------------------------------------------------
@@ -9017,8 +9017,6 @@ static void preparePlanForMainVectorLoop(VPlan &MainPlan, VPlan &EpiPlan) {
   SmallPtrSet<PHINode *, 2> EpiWidenedPhis;
   for (VPRecipeBase &R :
        EpiPlan.getVectorLoopRegion()->getEntryBasicBlock()->phis()) {
-    if (isa<VPCanonicalIVPHIRecipe>(&R))
-      continue;
     EpiWidenedPhis.insert(
         cast<PHINode>(R.getVPSingleValue()->getUnderlyingValue()));
   }
@@ -9087,10 +9085,10 @@ static void preparePlanForMainVectorLoop(VPlan &MainPlan, VPlan &EpiPlan) {
   VPPhi *ResumePhi = nullptr;
   if (ResumePhiIter == MainScalarPH->phis().end()) {
     VPBuilder ScalarPHBuilder(MainScalarPH, MainScalarPH->begin());
+    Type *Ty = VPTypeAnalysis(MainPlan).inferScalarType(VectorTC);
     ResumePhi = ScalarPHBuilder.createScalarPhi(
-        {VectorTC,
-         MainPlan.getVectorLoopRegion()->getCanonicalIV()->getStartValue()},
-        {}, "vec.epilog.resume.val");
+        {VectorTC, MainPlan.getConstantInt(Ty, 0)}, {},
+        "vec.epilog.resume.val");
   } else {
     ResumePhi = cast<VPPhi>(&*ResumePhiIter);
     if (MainScalarPH->begin() == MainScalarPH->end())
@@ -9117,14 +9115,10 @@ static SmallVector<Instruction *> preparePlanForEpilogueVectorLoop(
   VPBasicBlock *Header = VectorLoop->getEntryBasicBlock();
   Header->setName("vec.epilog.vector.body");
 
-  VPCanonicalIVPHIRecipe *IV = VectorLoop->getCanonicalIV();
-  // When vectorizing the epilogue loop, the canonical induction needs to be
-  // adjusted by the value after the main vector loop. Find the resume value
+  // When vectorizing the epilogue loop, the canonical induction needs to start
+  // at the resume value from the main vector loop. Find the resume value
   // created during execution of the main VPlan. It must be the first phi in the
-  // loop preheader. Use the value to increment the canonical IV, and update all
-  // users in the loop region to use the adjusted value.
-  // FIXME: Improve modeling for canonical IV start values in the epilogue
-  // loop.
+  // loop preheader. Set it as the start value for the canonical IV.
   using namespace llvm::PatternMatch;
   PHINode *EPResumeVal = &*L->getLoopPreheader()->phis().begin();
   for (Value *Inc : EPResumeVal->incoming_values()) {
@@ -9147,13 +9141,14 @@ static SmallVector<Instruction *> preparePlanForEpilogueVectorLoop(
     EPI.VectorTripCount = EPResumeVal->getOperand(0);
   }
   VPValue *VPV = Plan.getOrAddLiveIn(EPResumeVal);
+  VPValue *IV = VectorLoop->getCanonicalIV();
   assert(all_of(IV->users(),
                 [](const VPUser *U) {
-                  return isa<VPScalarIVStepsRecipe>(U) ||
-                         isa<VPDerivedIVRecipe>(U) ||
-                         cast<VPRecipeBase>(U)->isScalarCast() ||
-                         cast<VPInstruction>(U)->getOpcode() ==
-                             Instruction::Add;
+                  if (isa<VPScalarIVStepsRecipe>(U) || isa<VPDerivedIVRecipe>(U))
+                    return true;
+                  auto *R = cast<VPRecipeBase>(U);
+                  return R->isScalarCast() ||
+                         cast<VPInstruction>(R)->getOpcode() == Instruction::Add;
                 }) &&
          "the canonical IV should only be used by its increment or "
          "ScalarIVSteps when resetting the start value");
@@ -9165,9 +9160,8 @@ static SmallVector<Instruction *> preparePlanForEpilogueVectorLoop(
   DenseMap<Value *, Value *> ToFrozen;
   SmallVector<Instruction *> InstsToMove;
   // Ensure that the start values for all header phi recipes are updated before
-  // vectorizing the epilogue loop. Skip the canonical IV, which has been
-  // handled above.
-  for (VPRecipeBase &R : drop_begin(Header->phis())) {
+  // vectorizing the epilogue loop.
+  for (VPRecipeBase &R : Header->phis()) {
     Value *ResumeV = nullptr;
     // TODO: Move setting of resume values to prepareToExecute.
     if (auto *ReductionPhi = dyn_cast<VPReductionPHIRecipe>(&R)) {

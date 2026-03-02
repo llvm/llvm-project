@@ -19,12 +19,13 @@ target triple = "aarch64-unknown-linux-gnu"
 ; VPLANS-EMPTY:
 ; VPLANS-NEXT: vector.ph:
 ; VPLANS-NEXT:   EMIT vp<[[VF_PER_PART:%.+]]> = VF * Part + ir<0>
-; VPLANS-NEXT:   EMIT vp<[[LANEMASK_ENTRY:%.+]]> = active lane mask vp<[[VF_PER_PART]]>, vp<[[TC]]>
+; VPLANS-NEXT:   EMIT vp<[[LANEMASK_ENTRY:%.+]]> = active lane mask vp<[[VF_PER_PART]]>, vp<[[TC]]>, ir<1>
 ; VPLANS-NEXT: Successor(s): vector loop
 ; VPLANS-EMPTY:
 ; VPLANS-NEXT: <x1> vector loop: {
+; VPLANS-NEXT:   vp<[[INDV:%[0-9]+]]> = CANONICAL-IV
+; VPLANS-EMPTY:
 ; VPLANS-NEXT:   vector.body:
-; VPLANS-NEXT:     EMIT vp<[[INDV:%[0-9]+]]> = CANONICAL-INDUCTION
 ; VPLANS-NEXT:     ACTIVE-LANE-MASK-PHI vp<[[LANEMASK_PHI:%[0-9]+]]> = phi vp<[[LANEMASK_ENTRY]]>, vp<[[LANEMASK_LOOP:%.+]]>
 ; VPLANS-NEXT:     vp<[[STEP:%[0-9]+]]>    = SCALAR-STEPS vp<[[INDV]]>, ir<1>, vp<[[VF]]>
 ; VPLANS-NEXT:     CLONE ir<%gep> = getelementptr ir<%ptr>, vp<[[STEP]]>

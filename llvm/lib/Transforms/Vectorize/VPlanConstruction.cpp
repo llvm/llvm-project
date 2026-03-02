@@ -433,6 +433,10 @@ static bool canonicalHeaderAndLatch(VPBlockBase *HeaderVPB,
 
 /// Create a new VPRegionBlock for the loop starting at \p HeaderVPB.
 static void createLoopRegion(VPlan &Plan, VPBlockBase *HeaderVPB) {
+  // Get type info and debug location from the scalar phi corresponding to the
+  // canonical IV for outermost loops.
+  auto *OutermostHeaderVPBB = cast<VPBasicBlock>(
+      Plan.getEntry()->getSuccessors()[1]->getSingleSuccessor());
   auto *PreheaderVPBB = HeaderVPB->getPredecessors()[0];
   auto *LatchVPBB = HeaderVPB->getPredecessors()[1];
 
@@ -440,11 +444,14 @@ static void createLoopRegion(VPlan &Plan, VPBlockBase *HeaderVPB) {
   VPBlockUtils::disconnectBlocks(LatchVPBB, HeaderVPB);
 
   // Create an empty region first and insert it between PreheaderVPBB and
-  // the exit blocks, taking care to preserve the original predecessor &
-  // successor order of blocks. Set region entry and exiting after both
-  // HeaderVPB and LatchVPBB have been disconnected from their
-  // predecessors/successors.
-  auto *R = Plan.createLoopRegion();
+  // exit blocks, taking care to preserve the original predecessor & successor
+  // order of blocks. Set region entry and exiting after both HeaderVPB and
+  // LatchVPBB have been disconnected from their predecessors/successors.
+  auto *ScalarCanIV = cast<VPPhi>(&OutermostHeaderVPBB->front());
+  Type *CanIVTy = ScalarCanIV->getOperand(0)->getLiveInIRValue()->getType();
+  DebugLoc DL = ScalarCanIV->getDebugLoc();
+
+  auto *R = Plan.createLoopRegion(CanIVTy, DL);
 
   // Transfer latch's successors to the region.
   VPBlockUtils::transferSuccessors(LatchVPBB, R);
@@ -452,6 +459,12 @@ static void createLoopRegion(VPlan &Plan, VPBlockBase *HeaderVPB) {
   VPBlockUtils::connectBlocks(PreheaderVPBB, R);
   R->setEntry(HeaderVPB);
   R->setExiting(LatchVPBB);
+
+  // Update canonical IV users for the top-level region only.
+  if (Plan.getEntry() == PreheaderVPBB->getSinglePredecessor()) {
+    ScalarCanIV->replaceAllUsesWith(R->getCanonicalIV());
+    ScalarCanIV->eraseFromParent();
+  }
 
   // All VPBB's reachable shallowly from HeaderVPB belong to the current region.
   for (VPBlockBase *VPBB : vp_depth_first_shallow(HeaderVPB))
@@ -463,10 +476,7 @@ static void createLoopRegion(VPlan &Plan, VPBlockBase *HeaderVPB) {
 static void addCanonicalIVRecipes(VPlan &Plan, VPBasicBlock *HeaderVPBB,
                                   VPBasicBlock *LatchVPBB, Type *IdxTy,
                                   DebugLoc DL) {
-  auto *StartV = Plan.getConstantInt(IdxTy, 0);
-
-  // Add a VPCanonicalIVPHIRecipe starting at 0 to the header.
-  auto *CanonicalIVPHI = new VPCanonicalIVPHIRecipe(StartV, DL);
+  auto *CanonicalIVPHI = new VPPhi(Plan.getConstantInt(IdxTy, 0), {}, DL);
   HeaderVPBB->insert(CanonicalIVPHI, HeaderVPBB->begin());
 
   // We are about to replace the branch to exit the region. Remove the original
@@ -734,9 +744,11 @@ void VPlanTransforms::createHeaderPhiRecipes(
   };
 
   for (VPRecipeBase &R : make_early_inc_range(HeaderVPBB->phis())) {
-    if (isa<VPCanonicalIVPHIRecipe>(&R))
-      continue;
     auto *PhiR = cast<VPPhi>(&R);
+    // Skip phis without underlying instructions (e.g., the canonical IV created
+    // by addCanonicalIVRecipes).
+    if (!PhiR->getUnderlyingValue())
+      continue;
     VPHeaderPHIRecipe *HeaderPhiR = CreateHeaderPhiRecipe(PhiR);
     HeaderPhiR->insertBefore(PhiR);
     PhiR->replaceAllUsesWith(HeaderPhiR);
@@ -1019,7 +1031,7 @@ static constexpr uint32_t CheckBypassWeights[] = {1, 127};
 /// branch weights.
 static void addBypassBranch(VPlan &Plan, VPBasicBlock *CheckBlockVPBB,
                             VPValue *Cond, bool AddBranchWeights) {
-  DebugLoc DL = Plan.getVectorLoopRegion()->getCanonicalIV()->getDebugLoc();
+  DebugLoc DL = Plan.getVectorLoopRegion()->getCanonicalIVDebugLoc();
   auto *Term = VPBuilder(CheckBlockVPBB)
                    .createNaryOp(VPInstruction::BranchOnCond, {Cond}, DL);
   if (AddBranchWeights) {
@@ -1180,7 +1192,7 @@ bool VPlanTransforms::handleMaxMinNumReductions(VPlan &Plan) {
       MinOrMaxNumReductionsToHandle;
   bool HasUnsupportedPhi = false;
   for (auto &R : LoopRegion->getEntryBasicBlock()->phis()) {
-    if (isa<VPCanonicalIVPHIRecipe, VPWidenIntOrFpInductionRecipe>(&R))
+    if (isa<VPWidenIntOrFpInductionRecipe>(&R))
       continue;
     auto *Cur = dyn_cast<VPReductionPHIRecipe>(&R);
     if (!Cur) {
