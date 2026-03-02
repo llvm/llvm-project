@@ -1046,7 +1046,6 @@ const char *vTableClassNameForType(const CIRGenModule &cgm, const Type *ty) {
 
   case Type::MemberPointer:
     return "_ZTVN10__cxxabiv129__pointer_to_member_type_infoE";
-    break;
 
   case Type::HLSLAttributedResource:
   case Type::HLSLInlineSpirv:
