@@ -31,8 +31,8 @@ enum Color {
 // MD-INDEX: | enum Color |
 // MD-INDEX: --
 // MD-INDEX: | Red | 0 | Comment 1 |
-// MD-INDEX: | Green | Comment 2 |
-// MD-INDEX: | Blue | Comment 3 |
+// MD-INDEX: | Green | 1 | Comment 2 |
+// MD-INDEX: | Blue | 2 | Comment 3 |
 // MD-INDEX: **brief** For specifying RGB colors
 
 // HTML-INDEX:     <div>
