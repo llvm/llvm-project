@@ -11,8 +11,6 @@ declare i32 @llvm.smin.i32(i32, i32)
 declare i32 @llvm.smax.i32(i32, i32)
 declare i32 @llvm.fshl.i32(i32, i32, i32)
 declare i32 @llvm.fshr.i32(i32, i32, i32)
-declare <2 x i32> @llvm.fshl.v2i32(<2 x i32>, <2 x i32>, <2 x i32>)
-declare <2 x i32> @llvm.fshr.v2i32(<2 x i32>, <2 x i32>, <2 x i32>)
 
 define <4 x i32> @pow2_non_splat_vec(<4 x i32> %x) {
 ; CHECK-LABEL: pow2_non_splat_vec:
@@ -1009,31 +1007,74 @@ define i32 @pow2_blsi_sub(i32 %x, i32 %a) {
   ret i32 %r
 }
 
-define <2 x i32> @pow2_rotl_vec() {
-; CHECK-LABEL: pow2_rotl_vec:
-; CHECK:       # %bb.0:
-; CHECK:       xmm0 = [32,0,0,0]
-; CHECK:       retq
+define i1 @pow2_rotl_extract_vec(<2 x i32> %a0, i32 %rotamt, i32 %x) {
+; CHECK-LABEL: pow2_rotl_extract_vec:
+; CHECK:       # %bb.0: # %entry
+; CHECK-NEXT:    movl %edi, %ecx
+; CHECK-NEXT:    pxor %xmm1, %xmm1
+; CHECK-NEXT:    pcmpgtd %xmm0, %xmm1
+; CHECK-NEXT:    movdqa %xmm1, %xmm0
+; CHECK-NEXT:    pandn {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
+; CHECK-NEXT:    pand {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm1
+; CHECK-NEXT:    por %xmm0, %xmm1
+; CHECK-NEXT:    movd %xmm1, %eax
+; CHECK-NEXT:    # kill: def $cl killed $cl killed $ecx
+; CHECK-NEXT:    roll %cl, %eax
+; CHECK-NEXT:    notl %esi
+; CHECK-NEXT:    testl %esi, %eax
+; CHECK-NEXT:    sete %al
+; CHECK-NEXT:    retq
 entry:
-  ; build vector <4,0>
-  %v0 = insertelement <2 x i32> zeroinitializer, i32 4, i32 0
-  %v1 = insertelement <2 x i32> %v0, i32 0, i32 1
-  %amt0 = insertelement <2 x i32> zeroinitializer, i32 3, i32 0
-  %amt1 = insertelement <2 x i32> %amt0, i32 3, i32 1
-  %r = call <2 x i32> @llvm.fshl.v2i32(<2 x i32> %v1, <2 x i32> %v1, <2 x i32> %amt1)
-  ret <2 x i32> %r
+  %cmp = icmp sgt <2 x i32> zeroinitializer, %a0
+
+  %powvec = select <2 x i1> %cmp,
+                     <2 x i32> <i32 1024, i32 1024>,
+                     <2 x i32> <i32 4096, i32 4096>
+
+  %base = extractelement <2 x i32> %powvec, i32 0
+
+  %d = call i32 @llvm.fshl.i32(i32 %base,
+                               i32 %base,
+                               i32 %rotamt)
+
+  %and = and i32 %x, %d
+  %r = icmp eq i32 %and, %d
+
+  ret i1 %r
 }
 
-define <2 x i32> @pow2_rotr_vec() {
-; CHECK-LABEL: pow2_rotr_vec:
-; CHECK:       # %bb.0:
-; CHECK:       xmm0 = [2147483648,0,0,0]
-; CHECK:       retq
+define i1 @pow2_rotr_extract_vec(<2 x i32> %a0, i32 %rotamt, i32 %x) {
+; CHECK-LABEL: pow2_rotr_extract_vec:
+; CHECK:       # %bb.0: # %entry
+; CHECK-NEXT:    movl %edi, %ecx
+; CHECK-NEXT:    pxor %xmm1, %xmm1
+; CHECK-NEXT:    pcmpgtd %xmm0, %xmm1
+; CHECK-NEXT:    movdqa %xmm1, %xmm0
+; CHECK-NEXT:    pandn {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
+; CHECK-NEXT:    pand {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm1
+; CHECK-NEXT:    por %xmm0, %xmm1
+; CHECK-NEXT:    movd %xmm1, %eax
+; CHECK-NEXT:    # kill: def $cl killed $cl killed $ecx
+; CHECK-NEXT:    rorl %cl, %eax
+; CHECK-NEXT:    notl %esi
+; CHECK-NEXT:    testl %esi, %eax
+; CHECK-NEXT:    sete %al
+; CHECK-NEXT:    retq
 entry:
-  %v0 = insertelement <2 x i32> zeroinitializer, i32 16, i32 0
-  %v1 = insertelement <2 x i32> %v0, i32 0, i32 1
-  %amt0 = insertelement <2 x i32> zeroinitializer, i32 5, i32 0
-  %amt1 = insertelement <2 x i32> %amt0, i32 5, i32 1
-  %r = call <2 x i32> @llvm.fshr.v2i32(<2 x i32> %v1, <2 x i32> %v1, <2 x i32> %amt1)
-  ret <2 x i32> %r
+
+  %cmp = icmp sgt <2 x i32> zeroinitializer, %a0
+  %powvec = select <2 x i1> %cmp,
+                     <2 x i32> <i32 1024, i32 1024>,
+                     <2 x i32> <i32 4096, i32 4096>
+
+  %base = extractelement <2 x i32> %powvec, i32 0
+
+  %d = call i32 @llvm.fshr.i32(i32 %base,
+                               i32 %base,
+                               i32 %rotamt)
+
+  %and = and i32 %x, %d
+  %r = icmp eq i32 %and, %d
+
+  ret i1 %r
 }
