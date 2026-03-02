@@ -5452,3 +5452,28 @@ bool SemaHLSL::handleInitialization(VarDecl *VDecl, Expr *&Init) {
   Init = C;
   return true;
 }
+
+QualType SemaHLSL::ActOnTemplateShorthand(TemplateDecl *Template,
+                                          SourceLocation NameLoc) {
+  if (!Template)
+    return QualType();
+
+  DeclContext *DC = Template->getDeclContext();
+  if (!DC->isNamespace() || !cast<NamespaceDecl>(DC)->getIdentifier() ||
+      cast<NamespaceDecl>(DC)->getName() != "hlsl")
+    return QualType();
+
+  if (Template->getName() != "Texture2D")
+    return QualType();
+
+  // The template arg will always be a single template parameter: float4.
+  TemplateArgumentListInfo TemplateArgs(NameLoc, NameLoc);
+  ASTContext &AST = getASTContext();
+  QualType Float4Ty = AST.getExtVectorType(AST.FloatTy, 4);
+  TemplateArgs.addArgument(SemaRef.getTrivialTemplateArgumentLoc(
+      TemplateArgument(Float4Ty), QualType(), NameLoc));
+
+  return SemaRef.CheckTemplateIdType(
+      ElaboratedTypeKeyword::None, TemplateName(Template), NameLoc,
+      TemplateArgs, nullptr, /*ForNestedNameSpecifier=*/false);
+}

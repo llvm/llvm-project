@@ -792,6 +792,14 @@ void Sema::DiagnoseUnknownTypeName(IdentifierInfo *&II,
     if (isTemplateName(S, SS ? *SS : EmptySS, /*hasTemplateKeyword=*/false,
                        Name, nullptr, true, TemplateResult,
                        MemberOfUnknownSpecialization) == TNK_Type_template) {
+      if (getLangOpts().HLSL) {
+        QualType ShorthandTy = HLSL().ActOnTemplateShorthand(
+            TemplateResult.get().getAsTemplateDecl(), IILoc);
+        if (!ShorthandTy.isNull()) {
+          SuggestedType = ParsedType::make(ShorthandTy);
+          return;
+        }
+      }
       diagnoseMissingTemplateArguments(TemplateResult.get(), IILoc);
       return;
     }
