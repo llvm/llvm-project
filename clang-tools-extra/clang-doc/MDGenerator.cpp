@@ -82,7 +82,7 @@ static std::string genRawText(const std::vector<CommentInfo> &Comments) {
     {
       if (!First)
         OS << "<br>";
-      else 
+      else
         First = false;
       OS << Comment->Text;
     }
