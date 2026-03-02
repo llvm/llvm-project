@@ -588,6 +588,15 @@ func.func @indexCastOfSignExtend(%arg0: i8) -> index {
   return %idx : index
 }
 
+// CHECK-LABEL: @indexCastOfSignExtend_exact
+//       CHECK:   %[[res:.+]] = arith.index_cast %arg0 exact : i8 to index
+//       CHECK:   return %[[res]]
+func.func @indexCastOfSignExtend_exact(%arg0: i8) -> index {
+  %ext = arith.extsi %arg0 : i8 to i16
+  %idx = arith.index_cast %ext exact : i16 to index
+  return %idx : index
+}
+
 // CHECK-LABEL: @indexCastUIOfUnsignedExtend
 //       CHECK:   %[[res:.+]] = arith.index_castui %arg0 : i8 to index
 //       CHECK:   return %[[res]]
@@ -614,6 +623,61 @@ func.func @indexCastUIOfUnsignedExtend_nneg_on_castui(%arg0: i8) -> index {
   %ext = arith.extui %arg0 : i8 to i16
   %idx = arith.index_castui %ext nneg : i16 to index
   return %idx : index
+}
+
+// CHECK-LABEL: @indexCastUIOfUnsignedExtend_exact
+//       CHECK:   %[[res:.+]] = arith.index_castui %arg0 exact : i8 to index
+//       CHECK:   return %[[res]]
+func.func @indexCastUIOfUnsignedExtend_exact(%arg0: i8) -> index {
+  %ext = arith.extui %arg0 : i8 to i16
+  %idx = arith.index_castui %ext exact : i16 to index
+  return %idx : index
+}
+
+// CHECK-LABEL: @indexCastUIOfUnsignedExtend_nneg_exact
+//       CHECK:   %[[res:.+]] = arith.index_castui %arg0 exact nneg : i8 to index
+//       CHECK:   return %[[res]]
+func.func @indexCastUIOfUnsignedExtend_nneg_exact(%arg0: i8) -> index {
+  %ext = arith.extui %arg0 nneg : i8 to i16
+  %idx = arith.index_castui %ext exact : i16 to index
+  return %idx : index
+}
+
+// index_castui(index_castui(x)) -> x only when exact is on the inner cast.
+// CHECK-LABEL: @indexCastUIOfIndexCastUI_no_exact
+//       CHECK:   arith.index_castui
+//       CHECK:   arith.index_castui
+func.func @indexCastUIOfIndexCastUI_no_exact(%arg0: i32) -> i32 {
+  %idx = arith.index_castui %arg0 : i32 to index
+  %res = arith.index_castui %idx : index to i32
+  return %res : i32
+}
+
+// CHECK-LABEL: @indexCastUIOfIndexCastUI_exact_inner
+//       CHECK:   return %arg0 : i32
+func.func @indexCastUIOfIndexCastUI_exact_inner(%arg0: i32) -> i32 {
+  %idx = arith.index_castui %arg0 exact : i32 to index
+  %res = arith.index_castui %idx : index to i32
+  return %res : i32
+}
+
+// exact on outer only does NOT trigger the fold (outer exact on widening
+// is vacuously true and does not guarantee the inner truncation is lossless).
+// CHECK-LABEL: @indexCastUIOfIndexCastUI_exact_outer
+//       CHECK:   arith.index_castui
+//       CHECK:   arith.index_castui
+func.func @indexCastUIOfIndexCastUI_exact_outer(%arg0: i32) -> i32 {
+  %idx = arith.index_castui %arg0 : i32 to index
+  %res = arith.index_castui %idx exact : index to i32
+  return %res : i32
+}
+
+// CHECK-LABEL: @indexCastUIOfIndexCastUI_exact_both
+//       CHECK:   return %arg0 : i32
+func.func @indexCastUIOfIndexCastUI_exact_both(%arg0: i32) -> i32 {
+  %idx = arith.index_castui %arg0 exact : i32 to index
+  %res = arith.index_castui %idx exact : index to i32
+  return %res : i32
 }
 
 // CHECK-LABEL: @indexCastFold
@@ -1583,6 +1647,28 @@ func.func @adduiExtendedConstantsSplatVector() -> (vector<4xi32>, vector<4xi1>) 
   %v2 = arith.constant dense<2> : vector<4xi32>
   %sum, %overflow = arith.addui_extended %v1, %v2 : vector<4xi32>, vector<4xi1>
   return %sum, %overflow : vector<4xi32>, vector<4xi1>
+}
+
+// CHECK-LABEL: @adduiExtendedPoisonLhs
+//  CHECK-NEXT:   %[[P0:.+]] = ub.poison : i32
+//  CHECK-NEXT:   %[[P1:.+]] = ub.poison : i1
+//  CHECK-NEXT:   return %[[P0]], %[[P1]]
+func.func @adduiExtendedPoisonLhs() -> (i32, i1) {
+  %poison = ub.poison : i32
+  %c5 = arith.constant 5 : i32
+  %sum, %overflow = arith.addui_extended %poison, %c5 : i32, i1
+  return %sum, %overflow : i32, i1
+}
+
+// CHECK-LABEL: @adduiExtendedPoisonRhs
+//  CHECK-NEXT:   %[[P0:.+]] = ub.poison : i32
+//  CHECK-NEXT:   %[[P1:.+]] = ub.poison : i1
+//  CHECK-NEXT:   return %[[P0]], %[[P1]]
+func.func @adduiExtendedPoisonRhs() -> (i32, i1) {
+  %c5 = arith.constant 5 : i32
+  %poison = ub.poison : i32
+  %sum, %overflow = arith.addui_extended %c5, %poison : i32, i1
+  return %sum, %overflow : i32, i1
 }
 
 // CHECK-LABEL: @mulsiExtendedZeroRhs
