@@ -1702,6 +1702,29 @@ RISCVTTIImpl::getIntrinsicInstrCost(const IntrinsicCostAttributes &ICA,
                                CmpInst::FCMP_UNO, CostKind);
     return Cost;
   }
+  case Intrinsic::experimental_vector_extract_last_active: {
+    Type *ValTy = ICA.getArgTypes()[0];
+    Type *MaskTy = ICA.getArgTypes()[1];
+
+    auto ValLT = getTypeLegalizationCost(ValTy);
+    auto MaskLT = getTypeLegalizationCost(MaskTy);
+
+    if (!ValLT.first.isValid() || !MaskLT.first.isValid())
+      return InstructionCost::getInvalid();
+
+    // TODO: Return free when the entire lane is inactive.
+    // The expected asm sequence is:
+    // vid v10, v0.t
+    // vredmaxu.vs v10, v10, v10
+    // vmv.x.s a0, v10
+    // zext.b a0, a0
+    // vslidedown v8, v8, a0
+    // vmv.x.s a0, v8
+    unsigned Opcodes[] = {RISCV::VID_V, RISCV::VREDMAXU_VS, RISCV::VMV_X_S,
+                          RISCV::VSLIDEDOWN_VI, RISCV::VMV_X_S};
+    return ValLT.first *
+           getRISCVInstructionCost(Opcodes, ValLT.second, CostKind);
+  }
   }
 
   if (ST->hasVInstructions() && RetTy->isVectorTy()) {
