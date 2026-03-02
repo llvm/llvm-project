@@ -58,7 +58,8 @@ gpu.module @test {
 // -----
 
 module {
-  llvm.func @test() -> !llvm.ptr {
+  // CHECK-LABEL: llvm.func @test_with_default_addr_space()
+  llvm.func @test_with_default_addr_space() -> !llvm.ptr {
     %0 = llvm.mlir.constant(10 : i32) : i32
     // CHECK: %[[VAR1:.*]] = llvm.alloca %0 x i32 {alignment = 8 : i64} : (i32) -> !llvm.ptr
     // CHECK: %[[VAR2:.*]] = llvm.alloca %0 x i32 {alignment = 8 : i64} : (i32) -> !llvm.ptr
