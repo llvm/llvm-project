@@ -5127,6 +5127,7 @@ add_fp_unittest(
     libc.src.math.powf16
     libc.src.__support.FPUtil.fp_bits
 )
+
 add_fp_unittest(
   totalorder_test
   SUITE

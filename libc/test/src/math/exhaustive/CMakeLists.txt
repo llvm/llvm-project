@@ -372,6 +372,7 @@ add_fp_unittest(
   LINK_LIBRARIES
     -lpthread
 )
+
 add_fp_unittest(
   hypotf_test
   NO_RUN_POSTBUILD
