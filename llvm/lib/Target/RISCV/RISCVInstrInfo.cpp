@@ -986,14 +986,14 @@ MachineInstr *RISCVInstrInfo::foldMemoryOperandImpl(
     NewMI.add(LoadMI.getOperand(i));
 
   // Add branch opcode, inverting if necessary.
-  auto BCC = MI.getOperand(MI.getNumOperands() - 3).getImm();
+  unsigned BCC = MI.getOperand(MI.getNumExplicitOperands() - 3).getImm();
   if (!Invert)
     BCC = RISCVCC::getInverseBranchOpcode(BCC);
   NewMI.addImm(BCC);
 
   // Copy condition portion
-  NewMI.add({MI.getOperand(MI.getNumOperands() - 2),
-             MI.getOperand(MI.getNumOperands() - 1)});
+  NewMI.add({MI.getOperand(MI.getNumExplicitOperands() - 2),
+             MI.getOperand(MI.getNumExplicitOperands() - 1)});
   NewMI.cloneMemRefs(LoadMI);
   return NewMI;
 }
@@ -2002,14 +2002,14 @@ RISCVInstrInfo::optimizeSelect(MachineInstr &MI,
     NewMI.add(DefMI->getOperand(i));
 
   // Add branch opcode, inverting if necessary.
-  unsigned BCCOpcode = MI.getOperand(MI.getNumOperands() - 3).getImm();
+  unsigned BCCOpcode = MI.getOperand(MI.getNumExplicitOperands() - 3).getImm();
   if (Invert)
     BCCOpcode = RISCVCC::getInverseBranchOpcode(BCCOpcode);
   NewMI.addImm(BCCOpcode);
 
   // Copy the condition portion.
-  NewMI.add(MI.getOperand(MI.getNumOperands() - 2));
-  NewMI.add(MI.getOperand(MI.getNumOperands() - 1));
+  NewMI.add(MI.getOperand(MI.getNumExplicitOperands() - 2));
+  NewMI.add(MI.getOperand(MI.getNumExplicitOperands() - 1));
 
   // Update SeenMIs set: register newly created MI and erase removed DefMI.
   SeenMIs.insert(NewMI);
@@ -2067,7 +2067,9 @@ unsigned RISCVInstrInfo::getInstSizeInBytes(const MachineInstr &MI) const {
     return STI.hasStdExtZca() ? 2 : 4;
   // Below cases are for short forward branch pseudos
   case RISCV::PseudoCCMOVGPRNoX0:
-    return get(MI.getOperand(MI.getNumOperands() - 3).getImm()).getSize() + 2;
+    return get(MI.getOperand(MI.getNumExplicitOperands() - 3).getImm())
+               .getSize() +
+           2;
   case RISCV::PseudoCCMOVGPR:
   case RISCV::PseudoCCADD:
   case RISCV::PseudoCCSUB:
@@ -2110,14 +2112,18 @@ unsigned RISCVInstrInfo::getInstSizeInBytes(const MachineInstr &MI) const {
   case RISCV::PseudoCCLWU:
   case RISCV::PseudoCCLD:
   case RISCV::PseudoCCQC_LI:
-    return get(MI.getOperand(MI.getNumOperands() - 3).getImm()).getSize() + 4;
+    return get(MI.getOperand(MI.getNumExplicitOperands() - 3).getImm())
+               .getSize() +
+           4;
   case RISCV::PseudoCCQC_E_LI:
   case RISCV::PseudoCCQC_E_LB:
   case RISCV::PseudoCCQC_E_LH:
   case RISCV::PseudoCCQC_E_LW:
   case RISCV::PseudoCCQC_E_LHU:
   case RISCV::PseudoCCQC_E_LBU:
-    return get(MI.getOperand(MI.getNumOperands() - 3).getImm()).getSize() + 6;
+    return get(MI.getOperand(MI.getNumExplicitOperands() - 3).getImm())
+               .getSize() +
+           6;
   case TargetOpcode::STACKMAP:
     // The upper bound for a stackmap intrinsic is the full length of its shadow
     return StackMapOpers(&MI).getNumPatchBytes();
@@ -4377,10 +4383,10 @@ MachineInstr *RISCVInstrInfo::commuteInstructionImpl(MachineInstr &MI,
   case RISCV::PseudoCCMOVGPRNoX0:
   case RISCV::PseudoCCMOVGPR: {
     // CCMOV can be commuted by inverting the condition.
-    auto BCC = MI.getOperand(MI.getNumOperands() - 3).getImm();
+    unsigned BCC = MI.getOperand(MI.getNumExplicitOperands() - 3).getImm();
     BCC = RISCVCC::getInverseBranchOpcode(BCC);
     auto &WorkingMI = cloneIfNew(MI);
-    WorkingMI.getOperand(MI.getNumOperands() - 3).setImm(BCC);
+    WorkingMI.getOperand(MI.getNumExplicitOperands() - 3).setImm(BCC);
     return TargetInstrInfo::commuteInstructionImpl(WorkingMI, /*NewMI*/ false,
                                                    OpIdx1, OpIdx2);
   }

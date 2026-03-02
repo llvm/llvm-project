@@ -216,12 +216,13 @@ bool RISCVExpandPseudo::expandCCOp(MachineBasicBlock &MBB,
 
   // We want to copy the "true" value only when the branch is executed.
   // The SDNodeXform is responsible for the inversion.
-  unsigned BranchOpCode = MI.getOperand(MI.getNumOperands() - 3).getImm();
+  unsigned BranchOpCode =
+      MI.getOperand(MI.getNumExplicitOperands() - 3).getImm();
 
   // Insert branch instruction.
   BuildMI(MBB, MBBI, DL, TII->get(BranchOpCode))
-      .add(MI.getOperand(MI.getNumOperands() - 2))
-      .add(MI.getOperand(MI.getNumOperands() - 1))
+      .add(MI.getOperand(MI.getNumExplicitOperands() - 2))
+      .add(MI.getOperand(MI.getNumExplicitOperands() - 1))
       .addMBB(MergeBB);
 
   Register DestReg = MI.getOperand(0).getReg();
@@ -338,13 +339,13 @@ bool RISCVExpandPseudo::expandCCOpToCMov(MachineBasicBlock &MBB,
     return false;
 
   // FIXME: Would be wonderful to support LHS=X0, but not very easy.
-  if (MI.getOperand(MI.getNumOperands() - 2).getReg() == RISCV::X0 ||
+  if (MI.getOperand(MI.getNumExplicitOperands() - 2).getReg() == RISCV::X0 ||
       MI.getOperand(1).getReg() == RISCV::X0 ||
       MI.getOperand(2).getReg() == RISCV::X0)
     return false;
 
   // Use branch opcode to select appropriate Xqcicm instruction
-  auto BCC = MI.getOperand(MI.getNumOperands() - 3).getImm();
+  unsigned BCC = MI.getOperand(MI.getNumExplicitOperands() - 3).getImm();
   unsigned CMovOpcode, CMovIOpcode;
   switch (BCC) {
   default:
@@ -375,7 +376,7 @@ bool RISCVExpandPseudo::expandCCOpToCMov(MachineBasicBlock &MBB,
     break;
   }
 
-  if (MI.getOperand(MI.getNumOperands() - 1).getReg() == RISCV::X0) {
+  if (MI.getOperand(MI.getNumExplicitOperands() - 1).getReg() == RISCV::X0) {
     // $dst = PseudoCCMOVGPR $lhs, X0, $cc, $falsev (=$dst), $truev
     // $dst = PseudoCCMOVGPRNoX0 $lhs, X0, $cc, $falsev (=$dst), $truev
     // =>
@@ -383,7 +384,7 @@ bool RISCVExpandPseudo::expandCCOpToCMov(MachineBasicBlock &MBB,
     BuildMI(MBB, MBBI, DL, TII->get(CMovIOpcode))
         .addDef(MI.getOperand(0).getReg())
         .addReg(MI.getOperand(1).getReg())
-        .addReg(MI.getOperand(MI.getNumOperands() - 2).getReg())
+        .addReg(MI.getOperand(MI.getNumExplicitOperands() - 2).getReg())
         .addImm(0)
         .addReg(MI.getOperand(2).getReg());
 
@@ -398,8 +399,8 @@ bool RISCVExpandPseudo::expandCCOpToCMov(MachineBasicBlock &MBB,
   BuildMI(MBB, MBBI, DL, TII->get(CMovOpcode))
       .addDef(MI.getOperand(0).getReg())
       .addReg(MI.getOperand(1).getReg())
-      .addReg(MI.getOperand(MI.getNumOperands() - 2).getReg())
-      .addReg(MI.getOperand(MI.getNumOperands() - 1).getReg())
+      .addReg(MI.getOperand(MI.getNumExplicitOperands() - 2).getReg())
+      .addReg(MI.getOperand(MI.getNumExplicitOperands() - 1).getReg())
       .addReg(MI.getOperand(2).getReg());
   MI.eraseFromParent();
   return true;
