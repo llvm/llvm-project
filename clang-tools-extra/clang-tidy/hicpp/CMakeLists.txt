@@ -8,7 +8,6 @@ add_clang_library(clangTidyHICPPModule STATIC
   HICPPTidyModule.cpp
   IgnoredRemoveResultCheck.cpp
   MultiwayPathsCoveredCheck.cpp
-  NoAssemblerCheck.cpp
   SignedBitwiseCheck.cpp
 
   LINK_LIBS
