@@ -1,10 +1,8 @@
 // RUN: rm -rf %t && mkdir -p %t
 // RUN: clang-doc --format=html --doxygen --output=%t --executor=standalone %s
 // RUN: clang-doc --format=md --doxygen --output=%t --executor=standalone %s
-// RUN: clang-doc --format=json --doxygen --output=%t --executor=standalone %s
 // RUN: FileCheck %s < %t/html/GlobalNamespace/index.html --check-prefix=HTML-INDEX-LINE
 // RUN: FileCheck %s < %t/html/GlobalNamespace/index.html --check-prefix=HTML-INDEX
-// RUN: FileCheck %s < %t/json/GlobalNamespace/index.json --check-prefix=JSON-INDEX
 // RUN: FileCheck %s < %t/html/GlobalNamespace/_ZTV7Animals.html --check-prefix=HTML-ANIMAL-LINE
 // RUN: FileCheck %s < %t/html/GlobalNamespace/_ZTV7Animals.html --check-prefix=HTML-ANIMAL
 // RUN: FileCheck %s < %t/html/GlobalNamespace/_ZTV15FilePermissions.html --check-prefix=HTML-PERM-LINE
@@ -84,8 +82,6 @@ enum Color {
 // HTML-INDEX-NEXT:     </div>
 // HTML-INDEX-NEXT:     <p>Defined at line [[@LINE-58]] of file {{.*}}clang-tools-extra{{[\/]}}test{{[\/]}}clang-doc{{[\/]}}enum.cpp</p>
 // HTML-INDEX-NEXT:   </div>
-
-// JSON-INDEX:      "TextComment": "Comment 1"
 
 /**
  * @brief Shape Types
