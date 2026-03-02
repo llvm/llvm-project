@@ -5295,7 +5295,7 @@ define i1 @zext_bool_and_ne0_use(i1 %x, i64 %y) {
 ; CHECK-NEXT:    [[TMP1:%.*]] = and i64 [[Y]], 1
 ; CHECK-NEXT:    [[A:%.*]] = select i1 [[X]], i64 [[TMP1]], i64 0
 ; CHECK-NEXT:    call void @use_i64(i64 [[A]])
-; CHECK-NEXT:    [[R:%.*]] = icmp ne i64 [[A]], 0
+; CHECK-NEXT:    [[R:%.*]] = trunc nuw i64 [[A]] to i1
 ; CHECK-NEXT:    ret i1 [[R]]
 ;
   %zx = zext i1 %x to i64
