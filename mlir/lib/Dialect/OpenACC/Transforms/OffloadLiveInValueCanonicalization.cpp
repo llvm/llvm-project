@@ -157,12 +157,6 @@ static bool isRematerializationCandidate(Value val,
     return true;
   }
 
-  // Operations implementing OutlineRematerializationOpInterface are candidates.
-  if (isa<acc::OutlineRematerializationOpInterface>(definingOp)) {
-    LLVM_DEBUG(llvm::dbgs() << "\t\t-> OutlineRematerializationOpInterface\n");
-    return true;
-  }
-
   // Address-of operations referencing globals that are valid in GPU regions
   // or referencing constant globals should be rematerialized.
   if (auto addrOfOp = dyn_cast<acc::AddressOfGlobalOpInterface>(definingOp)) {
