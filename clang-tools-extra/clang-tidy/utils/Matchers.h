@@ -111,13 +111,13 @@ AST_MATCHER(Expr, isDiscarded) {
   if (const auto *Switch = Parent.get<SwitchStmt>())
     return IsCurrentNode(Switch->getBody());
 
-  if (const auto *Case = Parent.get<SwitchCase>())
+  if (Parent.get<SwitchCase>())
     return true;
 
-  if (const auto *Label = Parent.get<LabelStmt>())
+  if (Parent.get<LabelStmt>())
     return true;
 
-  if (const auto *AttrStmt = Parent.get<AttributedStmt>())
+  if (Parent.get<AttributedStmt>())
     return true;
 
   if (const auto *Compound = Parent.get<CompoundStmt>()) {
