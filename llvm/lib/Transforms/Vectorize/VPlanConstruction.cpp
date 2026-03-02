@@ -1408,7 +1408,7 @@ bool VPlanTransforms::handleFindLastReductions(VPlan &Plan) {
     assert(Op2 == PhiR && "data value must be selected if Cond is true");
 
     if (HeaderMask)
-      Cond = Builder.createLogicalAnd(HeaderMask, Cond);
+      Cond = Builder.createSelect(HeaderMask, Cond, Plan.getFalse());
 
     VPValue *AnyOf = Builder.createNaryOp(VPInstruction::AnyOf, {Cond});
     VPValue *MaskSelect = Builder.createSelect(AnyOf, Cond, MaskPHI);
