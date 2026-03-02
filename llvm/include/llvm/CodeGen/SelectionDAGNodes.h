@@ -3457,9 +3457,9 @@ namespace ISD {
   }
 
   /// Attempt to match a unary predicate against a scalar/splat constant or
-  /// every element of a constant BUILD_VECTOR.
-  /// The DemandedElts argument allows us to only collect the  known bits that
-  /// are shared by the requested vector elements.
+  /// every element of a constant BUILD_VECTOR. The DemandedElts argument
+  /// allows us to only collect the known bits that are shared by the requested
+  /// vector elements.
   /// If AllowUndef is true, then UNDEF elements will pass nullptr to Match.
   template <typename ConstNodeType>
   bool matchUnaryPredicateImpl(SDValue Op, const APInt &DemandedElts,
