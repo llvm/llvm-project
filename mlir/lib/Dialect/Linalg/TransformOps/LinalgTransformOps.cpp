@@ -272,6 +272,15 @@ void transform::ApplyFoldPackUnpackIntoEmptyPatternsOp::populatePatterns(
   linalg::populateFoldPackUnpackIntoTensorEmptyPatterns(patterns);
 }
 
+void transform::ApplyDataLayoutPropagationPatternsOp::populatePatterns(
+    RewritePatternSet &patterns) {
+  ControlPropagationFn defaultControlFn = [](OpOperand *operand) {
+    return true;
+  };
+  linalg::populateDataLayoutPropagationPatterns(patterns, defaultControlFn,
+                                                getPoisonPadding());
+}
+
 //===----------------------------------------------------------------------===//
 // BufferizeToAllocationOp
 //===----------------------------------------------------------------------===//
