@@ -110,8 +110,7 @@ std::map<SummaryName, JSONFormat::FormatInfo> JSONFormat::initFormatInfos() {
   std::map<SummaryName, FormatInfo> FormatInfos;
   for (const auto &FormatInfoEntry : llvm::Registry<FormatInfo>::entries()) {
     std::unique_ptr<FormatInfo> Info = FormatInfoEntry.instantiate();
-    bool Inserted =
-        FormatInfos.try_emplace(Info->ForSummary, std::move(*Info)).second;
+    bool Inserted = FormatInfos.try_emplace(Info->ForSummary, *Info).second;
     if (!Inserted) {
       llvm::report_fatal_error(
           "FormatInfo is already registered for summary: " +
