@@ -88,7 +88,7 @@ void SymbolLocatorSymStore::Terminate() {
 }
 
 llvm::StringRef SymbolLocatorSymStore::GetPluginDescriptionStatic() {
-  return "Symbol locator for PDB in SymStore SymStore";
+  return "Symbol locator for PDB in SymStore";
 }
 
 SymbolLocator *SymbolLocatorSymStore::CreateInstance() {
