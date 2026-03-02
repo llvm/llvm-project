@@ -958,5 +958,3 @@ bool CompilerInstanceWithContext::computeDependencies(
 
   return true;
 }
-
-bool CompilerInstanceWithContext::finalize() { return true; }
