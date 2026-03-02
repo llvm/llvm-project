@@ -125,45 +125,6 @@ public:
       llvm::IntrusiveRefCntPtr<llvm::vfs::OverlayFileSystem> OverlayFS =
           nullptr);
 
-  /// The two method below implements a new interface for by name
-  /// dependency scanning. They together enable the dependency scanning worker
-  /// to more effectively perform scanning for a sequence of modules
-  /// by name when the CWD and CommandLine do not change across the queries.
-  /// The initialization function asks the client for a DiagnosticsConsumer
-  /// that it direct the diagnostics to.
-
-  /// @brief Initializing the context and the compiler instance.
-  /// @param CWD The current working directory used during the scan.
-  /// @param CommandLine The commandline used for the scan.
-  /// @return False if the initializaiton fails.
-  bool initializeCompilerInstanceWithContext(StringRef CWD,
-                                             ArrayRef<std::string> CommandLine,
-                                             DiagnosticConsumer &DC);
-
-  /// @brief Initializing the context and the compiler instance.
-  /// @param CWD The current working directory used during the scan.
-  /// @param CommandLine The commandline used for the scan.
-  /// @param DiagEngineWithCmdAndOpts Preconfigured diagnostics engine and
-  /// options associated with the cc1 command line.
-  /// @param FS The overlay file system to use for this compiler instance.
-  /// @return False if the initializaiton fails.
-  bool initializeCompilerInstanceWithContext(
-      StringRef CWD, ArrayRef<std::string> CommandLine,
-      std::unique_ptr<DiagnosticsEngineWithDiagOpts> DiagEngineWithCmdAndOpts,
-      IntrusiveRefCntPtr<llvm::vfs::OverlayFileSystem> OverlayFS);
-
-  /// @brief Performaces dependency scanning for the module whose name is
-  ///        specified.
-  /// @param ModuleName  The name of the module whose dependency will be
-  ///                    scanned.
-  /// @param Consumer The dependency consumer that stores the results.
-  /// @param Controller The controller for the dependency scanning action.
-  /// @return False if the scanner incurs errors.
-  bool
-  computeDependenciesByNameWithContext(StringRef ModuleName,
-                                       DependencyConsumer &Consumer,
-                                       DependencyActionController &Controller);
-
   llvm::vfs::FileSystem &getVFS() const { return *DepFS; }
 
 private:
@@ -175,7 +136,6 @@ private:
   IntrusiveRefCntPtr<DependencyScanningWorkerFilesystem> DepFS;
 
   friend CompilerInstanceWithContext;
-  std::unique_ptr<CompilerInstanceWithContext> CIWithContext;
 };
 
 std::pair<IntrusiveRefCntPtr<llvm::vfs::OverlayFileSystem>,

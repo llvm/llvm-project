@@ -313,30 +313,37 @@ static std::optional<SmallVector<std::string, 0>> getFirstCC1CommandLine(
 }
 
 bool DependencyScanningTool::initializeWorkerCIWithContextFromCommandline(
-    DependencyScanningWorker &Worker, StringRef CWD,
+    DependencyScanningTool &Tool, StringRef CWD,
     ArrayRef<std::string> CommandLine, DiagnosticConsumer &DC) {
+  auto [OverlayFS, ModifiedCommandLine] = initVFSForByNameScanning(
+      &Tool.Worker.getVFS(), CommandLine, CWD, "ScanningByName");
+  auto DiagEngineWithCmdAndOpts =
+      std::make_unique<DiagnosticsEngineWithDiagOpts>(ModifiedCommandLine,
+                                                      OverlayFS, DC);
+
   if (CommandLine.size() >= 2 && CommandLine[1] == "-cc1") {
     // The input command line is already a -cc1 invocation; initialize the
     // compiler instance directly from it.
-    return Worker.initializeCompilerInstanceWithContext(CWD, CommandLine, DC);
+    Tool.CIWithContext = std::make_unique<CompilerInstanceWithContext>(
+        Tool.Worker, CWD, CommandLine);
+    return Tool.CIWithContext->initialize(std::move(DiagEngineWithCmdAndOpts),
+                                          OverlayFS);
   }
 
   // The input command line is either a driver-style command line, or
   // ill-formed. In this case, we will first call the Driver to build a -cc1
   // command line for this compilation or diagnose any ill-formed input.
-  auto [OverlayFS, ModifiedCommandLine] = initVFSForByNameScanning(
-      &Worker.getVFS(), CommandLine, CWD, "ScanningByName");
-  auto DiagEngineWithCmdAndOpts =
-      std::make_unique<DiagnosticsEngineWithDiagOpts>(ModifiedCommandLine,
-                                                      OverlayFS, DC);
-
   const auto MaybeFirstCC1 = getFirstCC1CommandLine(
       ModifiedCommandLine, *DiagEngineWithCmdAndOpts->DiagEngine, OverlayFS);
   if (!MaybeFirstCC1)
     return false;
 
-  return Worker.initializeCompilerInstanceWithContext(
-      CWD, *MaybeFirstCC1, std::move(DiagEngineWithCmdAndOpts), OverlayFS);
+  std::vector<std::string> CC1CommandLine(MaybeFirstCC1->begin(),
+                                          MaybeFirstCC1->end());
+  Tool.CIWithContext = std::make_unique<CompilerInstanceWithContext>(
+      Tool.Worker, CWD, std::move(CC1CommandLine));
+  return Tool.CIWithContext->initialize(std::move(DiagEngineWithCmdAndOpts),
+                                        OverlayFS);
 }
 
 llvm::Error
@@ -346,7 +353,7 @@ DependencyScanningTool::initializeCompilerInstanceWithContextOrError(
       std::make_unique<TextDiagnosticsPrinterWithOutput>(CommandLine);
 
   bool Result = initializeWorkerCIWithContextFromCommandline(
-      Worker, CWD, CommandLine, DiagPrinterWithOS->DiagPrinter);
+      *this, CWD, CommandLine, DiagPrinterWithOS->DiagPrinter);
 
   if (Result)
     return llvm::Error::success();
@@ -362,8 +369,8 @@ DependencyScanningTool::computeDependenciesByNameWithContextOrError(
   // We need to clear the DiagnosticOutput so that each by-name lookup
   // has a clean diagnostics buffer.
   DiagPrinterWithOS->DiagnosticOutput.clear();
-  if (Worker.computeDependenciesByNameWithContext(ModuleName, Consumer,
-                                                  Controller))
+  assert(CIWithContext && "CompilerInstance with context required!");
+  if (CIWithContext->computeDependencies(ModuleName, Consumer, Controller))
     return Consumer.takeTranslationUnitDeps();
   return makeErrorFromDiagnosticsOS(*DiagPrinterWithOS);
 }
