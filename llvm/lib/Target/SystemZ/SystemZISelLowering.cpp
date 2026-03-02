@@ -26,6 +26,7 @@
 #include "llvm/IR/IntrinsicInst.h"
 #include "llvm/IR/Intrinsics.h"
 #include "llvm/IR/IntrinsicsS390.h"
+#include "llvm/IR/Module.h"
 #include "llvm/IR/PatternMatch.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/ErrorHandling.h"
@@ -11482,4 +11483,15 @@ bool SystemZTargetLowering::verifyNarrowIntegerArgs(
   }
 
   return true;
+}
+
+void SystemZTargetLowering::insertSSPDeclarations(Module &M, const LibcallLoweringInfo &Libcalls) const {
+  StringRef GuardMode = M.getStackProtectorGuard();
+
+  // In the TLS case, no symbol needs to be inserted.
+  if (GuardMode == "tls" || GuardMode.empty())
+    return;
+
+  // Otherwise (in the global case), insert the appropriate global variable.
+  TargetLowering::insertSSPDeclarations(M, Libcalls);
 }
