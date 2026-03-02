@@ -61,6 +61,8 @@ private:
   void relaxTlsIeToLe(uint8_t *loc, const Relocation &rel, uint64_t val) const;
 };
 
+// Used to compute outSecOff of .got2 in each object file. This is needed to
+// synthesize PLT entries for PPC32 Secure PLT ABI.
 struct Got2Section : SyntheticSection {
   Got2Section(Ctx &ctx)
       : SyntheticSection(ctx, ".got2", SHT_PROGBITS, SHF_ALLOC | SHF_WRITE, 4) {

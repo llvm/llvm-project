@@ -44,6 +44,10 @@ public:
   bool usesOnlyLowPageBits(RelType type) const override;
 };
 
+// This is a MIPS specific section to hold a space within the data segment
+// of executable file which is pointed to by the DT_MIPS_RLD_MAP entry.
+// See "Dynamic section" in Chapter 5 in the following document:
+// ftp://www.linux-mips.org/pub/linux/mips/doc/ABI/mipsabi.pdf
 struct RldMapSection : SyntheticSection {
   RldMapSection(Ctx &ctx)
       : SyntheticSection(ctx, ".rld_map", SHT_PROGBITS, SHF_ALLOC | SHF_WRITE,
