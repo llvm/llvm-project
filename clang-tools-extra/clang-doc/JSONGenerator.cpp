@@ -648,16 +648,15 @@ void JSONGenerator::serializeInfo(const EnumInfo &I, json::Object &Obj) {
     Obj["BaseType"] = BaseTypeVal;
   }
 
-  if (!I.Members.empty())
-    serializeArray(I.Members, Obj, "Members", SerializeInfoLambda, "End",
-                   [&I](Object &JsonObj) {
-                     for (const auto &Member : I.Members) {
-                       if (!Member.Description.empty()) {
-                         JsonObj["HasComments"] = true;
-                         break;
-                       }
-                     }
-                   });
+  if (!I.Members.empty()) {
+    for (const auto &Member : I.Members) {
+      if (!Member.Description.empty()) {
+        Obj["HasComments"] = true;
+        break;
+      }
+    }
+    serializeArray(I.Members, Obj, "Members", SerializeInfoLambda);
+  }
 }
 
 void JSONGenerator::serializeInfo(const TypedefInfo &I, json::Object &Obj) {
