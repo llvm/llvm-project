@@ -14,6 +14,20 @@ void f(bool b) {
     return;
   // CHECK-MESSAGES: :[[@LINE-2]]:9: warning: statement should have braces [readability-inconsistent-ifelse-braces]
   // CHECK-FIXES: } else { {{[[][[]}}unlikely{{[]][]]}}
+
+  if (b) [[likely]] {
+  } else [[unlikely]]
+    return;
+  // CHECK-MESSAGES: :[[@LINE-2]]:9: warning: statement should have braces [readability-inconsistent-ifelse-braces]
+  // CHECK-FIXES: } else { {{[[][[]}}unlikely{{[]][]]}}
+
+  if (b) [[likely]]
+    return;
+  else [[unlikely]] {
+  }
+  // CHECK-MESSAGES: :[[@LINE-4]]:9: warning: statement should have braces [readability-inconsistent-ifelse-braces]
+  // CHECK-FIXES: if (b) { {{[[][[]}}likely{{[]][]]}}
+  // CHECK-FIXES: } else {{[[][[]}}unlikely{{[]][]]}} {
 }
 
 // Negative tests.
@@ -39,4 +53,36 @@ void g(bool b) {
     return;
   else [[likely]]
     return;
+
+  if (b) [[likely]] {
+    return;
+  } else {
+    return;
+  }
+
+  if (b) {
+    return;
+  } else [[unlikely]] {
+    return;
+  }
+
+  if (b) [[likely]] {
+    return;
+  } else [[unlikely]] {
+    return;
+  }
+
+  if (b) [[likely]] {
+    return;
+  } else if (b) [[unlikely]] {
+    return;
+  } else {
+    return;
+  }
+
+  if (b) [[likely]] [[likely]] {
+    return;
+  } else [[unlikely]] [[unlikely]] {
+    return;
+  }
 }
