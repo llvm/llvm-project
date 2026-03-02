@@ -1112,8 +1112,13 @@ std::optional<FileSpec> ObjectFilePECOFF::GetPDBPath() {
   llvm::StringRef pdb_file;
   const llvm::codeview::DebugInfo *pdb_info = nullptr;
   if (llvm::Error Err = m_binary->getDebugPDBInfo(pdb_info, pdb_file)) {
-    // Ignore corrupt DebugInfo sections.
-    llvm::consumeError(std::move(Err));
+    // DebugInfo section is corrupt.
+    Log *log = GetLog(LLDBLog::Object);
+    llvm::StringRef file = m_binary->getFileName();
+    LLDB_LOG_ERROR(
+        log, std::move(Err),
+        "Failed to read Codeview record for PDB debug info file ({1}): {0}",
+        file);
     return std::nullopt;
   }
   if (pdb_file.empty()) {
