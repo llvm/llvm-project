@@ -33,10 +33,6 @@ struct AllocaInfo {
   struct BBInfo {
     Intrinsic::ID First = Intrinsic::not_intrinsic;
     Intrinsic::ID Last = Intrinsic::not_intrinsic;
-    // This BB calls lifetime.end twice without a start inbetween.
-    // TODO: handle this case smarter than just throwing out lifetime
-    // annotations completely.
-    bool DoubleEnd = false;
   };
   AllocaInst *AI;
   SmallVector<IntrinsicInst *, 2> LifetimeStart;
