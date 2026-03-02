@@ -21,6 +21,7 @@
 #include "llvm/IR/IRBuilder.h"
 #include "llvm/IR/InstIterator.h"
 #include "llvm/IR/Instructions.h"
+#include "llvm/IR/IntrinsicInst.h"
 #include "llvm/IR/Module.h"
 #include "llvm/IR/Type.h"
 #include "llvm/Support/Debug.h"
@@ -33,6 +34,7 @@ using namespace llvm;
 STATISTIC(NumInstrumentedLoads, "Number of loads instrumented");
 STATISTIC(NumInstrumentedStores, "Number of stores instrumented");
 STATISTIC(NumInstrumentedAtomics, "Number of atomic operations instrumented");
+STATISTIC(NumInstrumentedMemIntrinsics, "Number of mem intrinsics instrumented");
 
 namespace {
 
@@ -55,9 +57,15 @@ private:
   /// Instrument a single function.
   bool instrumentFunction(Function &F);
 
-  /// Instrument a memory access instruction.
+  /// Instrument a load/store/atomic with a compile-time-known access size.
   /// Returns true if instrumentation was inserted.
   bool instrumentMemoryAccess(Instruction *I, Value *Ptr, Type *AccessTy);
+
+  /// Instrument a mem intrinsic (memcpy/memset/memmove) with a runtime size.
+  /// Ptr is the pointer to check, SizeVal is the runtime length, IsWrite
+  /// indicates the direction. Returns true if instrumentation was inserted.
+  bool instrumentMemoryRange(Instruction *I, Value *Ptr, Value *SizeVal,
+                             bool IsWrite);
 
   Module &M;
   const LowFatSanitizerOptions &Options;
@@ -171,6 +179,64 @@ bool LowFatSanitizer::instrumentMemoryAccess(Instruction *I, Value *Ptr,
   return true;
 }
 
+bool LowFatSanitizer::instrumentMemoryRange(Instruction *I, Value *Ptr,
+                                            Value *SizeVal, bool IsWrite) {
+  // Same bounds-checking logic as instrumentMemoryAccess, but uses a runtime
+  // SizeVal instead of a compile-time constant AccessSize.
+  IRBuilder<> IRB(I);
+
+  // Cast pointer and size to intptr
+  Value *PtrInt = IRB.CreatePtrToInt(Ptr, IntptrTy);
+  // Zero-extend SizeVal to IntptrTy if needed (len may be i32 or i64)
+  Value *Size = IRB.CreateZExtOrTrunc(SizeVal, IntptrTy);
+
+  // 1. Get region index: (Ptr - RegionBase) >> RegionSizeLog
+  Value *RegionBaseVal = ConstantInt::get(IntptrTy, RegionBase);
+  Value *RegionOffset = IRB.CreateSub(PtrInt, RegionBaseVal);
+  Value *RegionIndex = IRB.CreateLShr(RegionOffset, RegionSizeLog);
+
+  // 2. Check if LowFat pointer: Region < NumSizeClasses
+  Value *MaxRegion = ConstantInt::get(IntptrTy, NumSizeClasses);
+  Value *IsLowFat = IRB.CreateICmpULT(RegionIndex, MaxRegion);
+
+  // Split block for the LowFat slow path
+  Instruction *ThenTerm = SplitBlockAndInsertIfThen(IsLowFat, I, false);
+  IRBuilder<> ThenIRB(ThenTerm);
+
+  // 3. Compute allocation size from region index: 1 << (region + MinSizeLog)
+  Value *MinSizeLogVal = ConstantInt::get(IntptrTy, MinSizeLog);
+  Value *ShiftAmount = ThenIRB.CreateAdd(RegionIndex, MinSizeLogVal);
+  Value *SizeOne = ConstantInt::get(IntptrTy, 1);
+  Value *AllocSize = ThenIRB.CreateShl(SizeOne, ShiftAmount);
+
+  // 4. Compute base: Ptr & ~(AllocSize - 1)
+  Value *SizeMinusOne = ThenIRB.CreateSub(AllocSize, SizeOne);
+  Value *Mask = ThenIRB.CreateNot(SizeMinusOne);
+  Value *Base = ThenIRB.CreateAnd(PtrInt, Mask);
+
+  // 5. Compute end of allocation and end of access range
+  Value *AllocEnd = ThenIRB.CreateAdd(Base, AllocSize);
+  Value *AccessEnd = ThenIRB.CreateAdd(PtrInt, Size);
+
+  // 6. OOB if access end exceeds allocation end
+  Value *IsOOB = ThenIRB.CreateICmpUGT(AccessEnd, AllocEnd);
+
+  // 7. Report OOB
+  Instruction *OobTerm = SplitBlockAndInsertIfThen(IsOOB, ThenTerm, false);
+  IRBuilder<> OobIRB(OobTerm);
+
+  FunctionCallee OobFn = Options.Recover ? getWarnOobFn() : getReportOobFn();
+  Type *I8Ty = Type::getInt8Ty(M.getContext());
+  Value *IsWriteVal = ConstantInt::get(I8Ty, IsWrite ? 1 : 0);
+  OobIRB.CreateCall(OobFn, {PtrInt, Base, AllocSize, IsWriteVal});
+
+  LLVM_DEBUG(dbgs() << "[LowFat] Instrumented mem intrinsic ("
+                    << (Options.Recover ? "recover" : "fatal")
+                    << ", " << (IsWrite ? "write" : "read")
+                    << "): " << *I << "\n");
+  return true;
+}
+
 bool LowFatSanitizer::instrumentFunction(Function &F) {
   // Skip functions that shouldn't be instrumented
   if (F.isDeclaration())
@@ -188,8 +254,14 @@ bool LowFatSanitizer::instrumentFunction(Function &F) {
 
   bool Modified = false;
 
-  // Collect instructions to instrument first to avoid iterator invalidation
+  // Track two kinds of instrumentation targets:
+  //   1. Load/store/atomic: compile-time access size, from instruction type
+  //   2. Mem intrinsics: runtime access size (the 'len' argument)
   SmallVector<std::pair<Instruction *, std::pair<Value *, Type *>>, 16> ToInstrument;
+
+  // Each MemRange entry is {I, Ptr, SizeVal, IsWrite}
+  struct MemRange { Instruction *I; Value *Ptr; Value *Size; bool IsWrite; };
+  SmallVector<MemRange, 8> MemRanges;
 
   for (Instruction &I : instructions(F)) {
     Value *Ptr = nullptr;
@@ -215,14 +287,23 @@ bool LowFatSanitizer::instrumentFunction(Function &F) {
         Ptr = AI->getPointerOperand();
         AccessTy = AI->getCompareOperand()->getType();
       }
+    } else if (auto *MI = dyn_cast<MemSetInst>(&I)) {
+      // memset(dst, val, len) — write-range check on dst
+      if (!MI->isVolatile())
+        MemRanges.push_back({&I, MI->getDest(), MI->getLength(), /*IsWrite=*/true});
+    } else if (auto *MI = dyn_cast<MemTransferInst>(&I)) {
+      // memcpy/memmove(dst, src, len) — write dst, read src
+      if (!MI->isVolatile()) {
+        MemRanges.push_back({&I, MI->getDest(), MI->getLength(), /*IsWrite=*/true});
+        MemRanges.push_back({&I, MI->getSource(), MI->getLength(), /*IsWrite=*/false});
+      }
     }
 
-    if (Ptr && AccessTy) {
+    if (Ptr && AccessTy)
       ToInstrument.push_back({&I, {Ptr, AccessTy}});
-    }
   }
 
-  // Now instrument collected instructions
+  // Instrument load/store/atomics
   for (auto &Entry : ToInstrument) {
     Instruction *I = Entry.first;
     Value *Ptr = Entry.second.first;
@@ -236,6 +317,14 @@ bool LowFatSanitizer::instrumentFunction(Function &F) {
         ++NumInstrumentedStores;
       else
         ++NumInstrumentedAtomics;
+    }
+  }
+
+  // Instrument mem intrinsics
+  for (auto &MR : MemRanges) {
+    if (instrumentMemoryRange(MR.I, MR.Ptr, MR.Size, MR.IsWrite)) {
+      Modified = true;
+      ++NumInstrumentedMemIntrinsics;
     }
   }
 
