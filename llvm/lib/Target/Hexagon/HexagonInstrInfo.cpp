@@ -4783,6 +4783,58 @@ bool HexagonInstrInfo::isQFPMul(const MachineInstr *MI) const {
           MI->getOpcode() == Hexagon::V6_vmpy_qf32);
 }
 
+bool HexagonInstrInfo::usesQF32Operand(MachineInstr *MI, unsigned Index) const {
+  auto Info = HexagonII::getRegTypeInfo(MI->getOpcode());
+  switch (Index) {
+  case 1:
+    return Info.Input1 == HexagonII::RegType::QF32;
+  case 2:
+    return Info.Input2 == HexagonII::RegType::QF32;
+  case 3:
+    return Info.Input3 == HexagonII::RegType::QF32;
+  case 0:
+    return Info.Input1 == HexagonII::RegType::QF32 ||
+           Info.Input2 == HexagonII::RegType::QF32 ||
+           Info.Input3 == HexagonII::RegType::QF32;
+  default:
+    llvm_unreachable("Incorrect input machine operand index encountered!");
+  }
+}
+
+bool HexagonInstrInfo::usesQF16Operand(MachineInstr *MI, unsigned Index) const {
+  auto Info = HexagonII::getRegTypeInfo(MI->getOpcode());
+  switch (Index) {
+  case 1:
+    return Info.Input1 == HexagonII::RegType::QF16;
+  case 2:
+    return Info.Input2 == HexagonII::RegType::QF16;
+  case 3:
+    return Info.Input3 == HexagonII::RegType::QF16;
+  case 0:
+    return Info.Input1 == HexagonII::RegType::QF16 ||
+           Info.Input2 == HexagonII::RegType::QF16 ||
+           Info.Input3 == HexagonII::RegType::QF16;
+  default:
+    llvm_unreachable("Incorrect input machine operand index encountered!");
+  }
+}
+
+bool HexagonInstrInfo::usesQFOperand(MachineInstr *MI, unsigned Index) const {
+  return usesQF32Operand(MI, Index) || usesQF16Operand(MI, Index);
+}
+
+bool HexagonInstrInfo::isQFP32Instr(MachineInstr *MI) const {
+  return HexagonII::getOpRegType(MI->getOpcode()) == HexagonII::RegType::QF32;
+}
+
+bool HexagonInstrInfo::isQFP16Instr(MachineInstr *MI) const {
+  return HexagonII::getOpRegType(MI->getOpcode()) == HexagonII::RegType::QF16;
+}
+
+bool HexagonInstrInfo::isQFPInstr(MachineInstr *MI) const {
+  return isQFP32Instr(MI) || isQFP16Instr(MI);
+}
+
 // Addressing mode relations.
 short HexagonInstrInfo::changeAddrMode_abs_io(short Opc) const {
   return Opc >= 0 ? Hexagon::changeAddrMode_abs_io(Opc) : Opc;
