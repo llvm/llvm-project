@@ -132,7 +132,9 @@ bool AlwaysInlineImpl(
     }
 
     while (!Worklist.empty()) {
-      auto [CB, InlineHistoryID] = Worklist.pop_back_val();
+      auto Item = Worklist.pop_back_val();
+      CallBase *CB = Item.first;
+      int InlineHistoryID = Item.second;
       Function *Callee = CB->getCalledFunction();
       if (!Callee)
         continue;
