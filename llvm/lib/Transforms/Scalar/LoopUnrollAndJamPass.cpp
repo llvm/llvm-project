@@ -157,22 +157,18 @@ static bool computeUnrollAndJamCount(
     TargetTransformInfo::UnrollingPreferences &UP,
     TargetTransformInfo::PeelingPreferences &PP) {
   unsigned OuterLoopSize = OuterUCE.getRolledLoopSize();
-  // First up use computeUnrollCount from the loop unroller to get a count
-  // for unrolling the outer loop, plus any loops requiring explicit
-  // unrolling we leave to the unroller. This uses UP.Threshold /
-  // UP.PartialThreshold / UP.MaxCount to come up with sensible loop values.
-  // We have already checked that the loop has no unroll.* pragmas.
+  // Use computeUnrollCount from the loop unroller to get a count for
+  // unrolling the outer loop. We have already checked that the loop has no
+  // unroll.* pragmas, so this is purely heuristic-driven.
   unsigned MaxTripCount = 0;
   bool UseUpperBound = false;
-  bool ExplicitUnroll = computeUnrollCount(
+  computeUnrollCount(
     L, TTI, DT, LI, AC, SE, EphValues, ORE, OuterTripCount, MaxTripCount,
       /*MaxOrZero*/ false, OuterTripMultiple, OuterUCE, UP, PP,
       UseUpperBound);
-  if (ExplicitUnroll || UseUpperBound) {
-    // If the user explicitly set the loop as unrolled, dont UnJ it. Leave it
-    // for the unroller instead.
-    LLVM_DEBUG(dbgs() << "Won't unroll-and-jam; explicit count set by "
-                         "computeUnrollCount\n");
+  if (UseUpperBound) {
+    LLVM_DEBUG(dbgs() << "Won't unroll-and-jam; computeUnrollCount wants to "
+                         "use an upper bound\n");
     UP.Count = 0;
     return false;
   }
