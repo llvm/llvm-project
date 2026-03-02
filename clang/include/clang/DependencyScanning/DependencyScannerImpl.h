@@ -46,7 +46,6 @@ public:
                      DiagnosticConsumer *DiagConsumer);
 
   bool hasScanned() const { return Scanned; }
-  bool hasDiagConsumerFinished() const { return DiagConsumerFinished; }
 
 private:
   DependencyScanningService &Service;
@@ -57,7 +56,6 @@ private:
   std::optional<CompilerInstance> ScanInstanceStorage;
   std::shared_ptr<ModuleDepCollector> MDC;
   bool Scanned = false;
-  bool DiagConsumerFinished = false;
 };
 
 // Helper functions and data types.
