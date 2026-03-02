@@ -108,10 +108,11 @@ void UseStdMoveCheck::check(const MatchFinder::MatchResult &Result) {
   while (!ToVisit.empty()) {
     const CFGBlock *B = ToVisit.back();
     ToVisit.pop_back();
-    if (!CFGState.find(B)->second.Ready)
+    const BlockState &BS = CFGState.find(B)->second;
+    if (!BS.Ready)
       continue;
 
-    assert(CFGState.find(B)->second.RemainingSuccessors == 0 &&
+    assert(BS.RemainingSuccessors == 0 &&
            "All successors have been processed.");
     bool ReferencesAssignedValue = false;
     for (const CFGElement &Elt : llvm::reverse(*B)) {
