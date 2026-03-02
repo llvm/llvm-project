@@ -5231,15 +5231,6 @@ Action *Driver::ConstructPhaseAction(
     return C.MakeAction<CompileJobAction>(Input, types::TY_LLVM_BC);
   }
   case phases::Backend: {
-    // Skip a redundant Backend phase for HIP device code when using the new
-    // offload driver, where mid-end is done in linker wrapper.
-    if (TargetDeviceOffloadKind == Action::OFK_HIP &&
-        Args.hasFlag(options::OPT_offload_new_driver,
-                     options::OPT_no_offload_new_driver,
-                     C.getActiveOffloadKinds() != Action::OFK_None) &&
-        !offloadDeviceOnly())
-      return Input;
-
     if (isUsingLTO() && TargetDeviceOffloadKind == Action::OFK_None) {
       types::ID Output;
       if (Args.hasArg(options::OPT_ffat_lto_objects) &&
@@ -5285,21 +5276,18 @@ Action *Driver::ConstructPhaseAction(
     if (Args.hasArg(options::OPT_emit_llvm) ||
         EmitBitcodeForNonOffloadAMDSPIRV ||
         TargetDeviceOffloadKind == Action::OFK_SYCL ||
+        (OffloadingToolChain && OffloadingToolChain->getTriple().isSPIRV() &&
+         TargetDeviceOffloadKind != Action::OFK_None &&
+         !UseSPIRVBackendForHipDeviceOnlyNoRDC) ||
         (((Input->getOffloadingToolChain() &&
            Input->getOffloadingToolChain()->getTriple().isAMDGPU() &&
            TargetDeviceOffloadKind != Action::OFK_None) ||
           TargetDeviceOffloadKind == Action::OFK_HIP) &&
          !UseSPIRVBackendForHipDeviceOnlyNoRDC &&
-         ((Args.hasFlag(options::OPT_fgpu_rdc, options::OPT_fno_gpu_rdc,
-                        false) ||
-           (Args.hasFlag(options::OPT_offload_new_driver,
-                         options::OPT_no_offload_new_driver,
-                         C.getActiveOffloadKinds() != Action::OFK_None) &&
-            (!offloadDeviceOnly() ||
-             (Input->getOffloadingToolChain() &&
-              TargetDeviceOffloadKind == Action::OFK_HIP &&
-              Input->getOffloadingToolChain()->getTriple().isSPIRV())))) ||
-          TargetDeviceOffloadKind == Action::OFK_OpenMP))) {
+         Args.hasFlag(options::OPT_fgpu_rdc, options::OPT_fno_gpu_rdc, false) &&
+         !Args.hasFlag(options::OPT_offload_new_driver,
+                       options::OPT_no_offload_new_driver,
+                       C.getActiveOffloadKinds() != Action::OFK_None))) {
       types::ID Output =
           Args.hasArg(options::OPT_S) &&
                   (TargetDeviceOffloadKind == Action::OFK_None ||

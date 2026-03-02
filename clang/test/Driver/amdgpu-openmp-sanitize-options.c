@@ -104,10 +104,10 @@
 // HOSTSANCOMBINATION: {{"[^"]*clang[^"]*" "-cc1" "-triple" "x86_64-unknown-linux-gnu".* "-fopenmp".* "-fsanitize=address,fuzzer,fuzzer-no-link".* "--offload-targets=amdgcn-amd-amdhsa".* "-x" "c".*}}
 // HOSTSANCOMBINATION2: {{"[^"]*clang[^"]*" "-cc1" "-triple" "x86_64-unknown-linux-gnu".* "-fopenmp".* "-fsanitize=address,fuzzer,fuzzer-no-link,leak".* "--offload-targets=amdgcn-amd-amdhsa".* "-x" "c".*}}
 
-// GPUSAN: {{"[^"]*clang[^"]*" "-cc1" "-triple" "amdgcn-amd-amdhsa" "-aux-triple" "x86_64-unknown-linux-gnu".* "-emit-llvm-bc".* "-mlink-builtin-bitcode" "[^"]*asanrtl.bc".* "-mlink-builtin-bitcode" "[^"]*ockl.bc".* "-target-cpu" "(gfx908|gfx900|gfx1250|gfx1251)".* "-fopenmp".* "-fsanitize=address".* "-x" "c".*}}
-// NOGPUSAN: {{"[^"]*clang[^"]*" "-cc1" "-triple" "amdgcn-amd-amdhsa" "-aux-triple" "x86_64-unknown-linux-gnu".* "-emit-llvm-bc".* "-target-cpu" "(gfx908|gfx900)".* "-fopenmp".* "-x" "c".*}}
+// GPUSAN: {{"[^"]*clang[^"]*" "-cc1" "-triple" "amdgcn-amd-amdhsa" "-aux-triple" "x86_64-unknown-linux-gnu".* "-emit-obj".* "-mlink-builtin-bitcode" "[^"]*asanrtl.bc".* "-mlink-builtin-bitcode" "[^"]*ockl.bc".* "-target-cpu" "(gfx908|gfx900|gfx1250|gfx1251)".* "-fopenmp".* "-fsanitize=address".* "-x" "c".*}}
+// NOGPUSAN: {{"[^"]*clang[^"]*" "-cc1" "-triple" "amdgcn-amd-amdhsa" "-aux-triple" "x86_64-unknown-linux-gnu".* "-emit-obj".* "-target-cpu" "(gfx908|gfx900)".* "-fopenmp".* "-x" "c".*}}
 
-// SAN: {{"[^"]*llvm-offload-binary[^"]*" "-o".* "--image=file=.*.bc,triple=amdgcn-amd-amdhsa,arch=(gfx908|gfx1250|gfx1251)(:xnack\-|:xnack\+)?,kind=openmp(,feature=(\-xnack|\+xnack))?"}}
+// SAN: {{"[^"]*llvm-offload-binary[^"]*" "-o".* "--image=file=.*.o,triple=amdgcn-amd-amdhsa,arch=(gfx908|gfx1250|gfx1251)(:xnack\-|:xnack\+)?,kind=openmp(,feature=(\-xnack|\+xnack))?"}}
 // SAN: {{"[^"]*clang[^"]*" "-cc1" "-triple" "x86_64-unknown-linux-gnu".* "-fopenmp".* "-fsanitize=address".* "--offload-targets=amdgcn-amd-amdhsa".* "-x" "ir".*}}
 // SAN: {{"[^"]*clang-linker-wrapper[^"]*".* "--host-triple=x86_64-unknown-linux-gnu".* "--linker-path=[^"]*".* "--whole-archive" "[^"]*(libclang_rt.asan_static.a|libclang_rt.asan_static-x86_64.a)".* "--whole-archive" "[^"]*(libclang_rt.asan.a|libclang_rt.asan-x86_64.a)".*}}
 
