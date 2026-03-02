@@ -844,7 +844,8 @@ def _executeShCmd(cmd, shenv, results, timeoutHelper):
                     if len(cmd.commands) == 1:
                         # Single command: return environment variables in-process.
                         env_str = "\n".join(
-                            f"{key}={value}" for key, value in sorted(cmd_shenv.env.items())
+                            f"{key}={value}"
+                            for key, value in sorted(cmd_shenv.env.items())
                         )
                         results.append(
                             ShellCommandResult(
