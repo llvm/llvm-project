@@ -28,3 +28,24 @@ void testNumArgs(int* i) {
 void testFunctionPointer(void(*f)()) {
   __builtin_clear_padding(f); // expected-error {{argument to __builtin_clear_padding must be a pointer to a trivially-copyable type ('void (*)()' invalid)}}
 }
+
+struct WithVLA {
+  int i;
+  char c[];
+};
+
+struct WithVLA2 {
+  int i2;
+  struct WithVLA w;
+};
+
+struct WithVLA3 {
+  struct WithVLA2 w2;
+};
+
+void testVLA(struct WithVLA* w1, struct WithVLA2* w2, struct WithVLA3* w3) {
+  __builtin_clear_padding(w1); // expected-error {{'struct WithVLA' has flexible array member, which is unsupported by __builtin_clear_padding}}
+  __builtin_clear_padding(w2); // expected-error {{'struct WithVLA2' has flexible array member, which is unsupported by __builtin_clear_padding}}
+  __builtin_clear_padding(w3); // expected-error {{'struct WithVLA3' has flexible array member, which is unsupported by __builtin_clear_padding}}
+}
+

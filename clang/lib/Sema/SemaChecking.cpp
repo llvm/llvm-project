@@ -3129,6 +3129,13 @@ Sema::CheckBuiltinFunctionCall(FunctionDecl *FDecl, unsigned BuiltinID,
       return ExprError();
     }
 
+    if (auto *Record = PointeeType->getAsRecordDecl();
+        Record && Record->hasFlexibleArrayMember()) {
+      Diag(PtrArg->getBeginLoc(), diag::err_clear_padding_no_flexible_array)
+          << PointeeType << PtrArg->getSourceRange();
+      return ExprError();
+    }
+
     break;
   }
   case Builtin::BI__sync_fetch_and_add:

@@ -2695,13 +2695,8 @@ private:
       return;
     }
 
-    if (auto *Record = D.Ty->getAsCXXRecordDecl()) {
-      VisitCXXStruct(Record, D.StartBitOffset, D.VisitVirtualBase);
-      return;
-    }
-
     if (auto *Record = D.Ty->getAsRecordDecl()) {
-      VisitCStruct(Record, D.StartBitOffset);
+      VisitStruct(Record, D.StartBitOffset, D.VisitVirtualBase);
       return;
     }
 
@@ -2741,38 +2736,42 @@ private:
     }
   }
 
-  void VisitCXXStruct(const CXXRecordDecl *R, uint64_t StartBitOffset,
+  void VisitStruct(const RecordDecl *R, uint64_t StartBitOffset,
                    bool VisitVirtualBase) {
     const auto &DL = CGF.CGM.getModule().getDataLayout();
-
     const ASTRecordLayout &ASTLayout = CGF.getContext().getASTRecordLayout(R);
-    if (ASTLayout.hasOwnVFPtr()) {
-      OccuppiedIntervals.push_back(BitInterval{
-          StartBitOffset, StartBitOffset + DL.getPointerSizeInBits()});
-    }
 
-    const auto VisitBase = [&ASTLayout, StartBitOffset, this](
-                               const CXXBaseSpecifier &Base, auto GetOffset) {
-      auto *BaseRecord = Base.getType()->getAsCXXRecordDecl();
-      if (!BaseRecord) {
-        return;
+    auto *CXXRecord = dyn_cast<CXXRecordDecl>(R);
+
+    if (CXXRecord) {
+      if (ASTLayout.hasOwnVFPtr()) {
+        OccuppiedIntervals.push_back(BitInterval{
+            StartBitOffset, StartBitOffset + DL.getPointerSizeInBits()});
       }
-      auto BaseOffset =
-          std::invoke(GetOffset, ASTLayout, BaseRecord).getQuantity();
 
-      Stack.push_back(Data{StartBitOffset + BaseOffset * CharWidth,
-                           Base.getType(), /*VisitVirtualBase*/ false});
-    };
+      const auto VisitBase = [&ASTLayout, StartBitOffset, this](
+                                 const CXXBaseSpecifier &Base, auto GetOffset) {
+        auto *BaseRecord = Base.getType()->getAsCXXRecordDecl();
+        if (!BaseRecord) {
+          return;
+        }
+        auto BaseOffset =
+            std::invoke(GetOffset, ASTLayout, BaseRecord).getQuantity();
 
-    for (auto Base : R->bases()) {
-      if (!Base.isVirtual()) {
-        VisitBase(Base, &ASTRecordLayout::getBaseClassOffset);
+        Stack.push_back(Data{StartBitOffset + BaseOffset * CharWidth,
+                             Base.getType(), /*VisitVirtualBase*/ false});
+      };
+
+      for (auto Base : CXXRecord->bases()) {
+        if (!Base.isVirtual()) {
+          VisitBase(Base, &ASTRecordLayout::getBaseClassOffset);
+        }
       }
-    }
 
-    if (VisitVirtualBase) {
-      for (auto VBase : R->vbases()) {
-        VisitBase(VBase, &ASTRecordLayout::getVBaseClassOffset);
+      if (VisitVirtualBase) {
+        for (auto VBase : CXXRecord->vbases()) {
+          VisitBase(VBase, &ASTRecordLayout::getVBaseClassOffset);
+        }
       }
     }
 
@@ -2785,22 +2784,6 @@ private:
       } else {
         Stack.push_back(Data{StartBitOffset + FieldOffset, Field->getType(),
                              /*VisitVirtualBase*/ true});
-      }
-    }
-  }
-
-  void VisitCStruct(const RecordDecl *R, uint64_t StartBitOffset) {
-    const ASTRecordLayout &ASTLayout = CGF.getContext().getASTRecordLayout(R);
-
-    for (auto *Field : R->fields()) {
-      auto FieldOffset = ASTLayout.getFieldOffset(Field->getFieldIndex());
-      if (Field->isBitField()) {
-        OccuppiedIntervals.push_back(BitInterval{
-            StartBitOffset + FieldOffset,
-            StartBitOffset + FieldOffset + Field->getBitWidthValue()});
-      } else {
-        Stack.push_back(Data{StartBitOffset + FieldOffset, Field->getType(),
-                             /*VisitVirtualBase*/ false});
       }
     }
   }
