@@ -63,41 +63,10 @@ private:
   /// is where the next operations will be introduced.
   CIRGenBuilderTy &builder;
 
-  /// A jump destination is an abstract label, branching to which may
-  /// require a jump out through normal cleanups.
-  struct JumpDest {
-    JumpDest() = default;
-    JumpDest(mlir::Block *block, EHScopeStack::stable_iterator depth = {},
-             unsigned index = 0)
-        : block(block) {}
-
-    bool isValid() const { return block != nullptr; }
-    mlir::Block *getBlock() const { return block; }
-    EHScopeStack::stable_iterator getScopeDepth() const { return scopeDepth; }
-    unsigned getDestIndex() const { return index; }
-
-    // This should be used cautiously.
-    void setScopeDepth(EHScopeStack::stable_iterator depth) {
-      scopeDepth = depth;
-    }
-
-  private:
-    mlir::Block *block = nullptr;
-    EHScopeStack::stable_iterator scopeDepth;
-    unsigned index;
-  };
-
 public:
   /// The GlobalDecl for the current function being compiled or the global
   /// variable currently being initialized.
   clang::GlobalDecl curGD;
-
-  /// Unified return block.
-  /// In CIR this is a function because each scope might have
-  /// its associated return block.
-  JumpDest returnBlock(mlir::Block *retBlock) {
-    return getJumpDestInCurrentScope(retBlock);
-  }
 
   unsigned nextCleanupDestIndex = 1;
 
@@ -665,15 +634,6 @@ public:
     }
   };
 
-  /// The given basic block lies in the current EH scope, but may be a
-  /// target of a potentially scope-crossing jump; get a stable handle
-  /// to which we can perform this jump later.
-  /// CIRGen: this mostly tracks state for figuring out the proper scope
-  /// information, no actual branches are emitted.
-  JumpDest getJumpDestInCurrentScope(mlir::Block *target) {
-    return JumpDest(target, ehStack.getInnermostNormalCleanup(),
-                    nextCleanupDestIndex++);
-  }
   /// IndirectBranch - The first time an indirect goto is seen we create a block
   /// reserved for the indirect branch. Unlike before,the actual 'indirectbr'
   /// is emitted at the end of the function, once all block destinations have
@@ -1001,7 +961,8 @@ public:
 
   /// Takes the old cleanup stack size and emits the cleanup blocks
   /// that have been added.
-  void popCleanupBlocks(EHScopeStack::stable_iterator oldCleanupStackDepth);
+  void popCleanupBlocks(EHScopeStack::stable_iterator oldCleanupStackDepth,
+                        ArrayRef<mlir::Value *> valuesToReload = {});
   void popCleanupBlock();
 
   /// Push a cleanup to be run at the end of the current full-expression.  Safe
@@ -1052,10 +1013,10 @@ public:
 
     /// Force the emission of cleanups now, instead of waiting
     /// until this object is destroyed.
-    void forceCleanup() {
+    void forceCleanup(ArrayRef<mlir::Value *> valuesToReload = {}) {
       assert(performCleanup && "Already forced cleanup");
       cgf.didCallStackSave = oldDidCallStackSave;
-      cgf.popCleanupBlocks(cleanupStackDepth);
+      cgf.popCleanupBlocks(cleanupStackDepth, valuesToReload);
       performCleanup = false;
       cgf.currentCleanupStackDepth = oldCleanupStackDepth;
     }
@@ -1417,8 +1378,6 @@ public:
                            CXXCtorInitializer *baseInit);
 
   LValue emitBinaryOperatorLValue(const BinaryOperator *e);
-
-  cir::BrOp emitBranchThroughCleanup(mlir::Location loc, JumpDest dest);
 
   mlir::LogicalResult emitBreakStmt(const clang::BreakStmt &s);
 
@@ -2072,6 +2031,8 @@ public:
                                       const Twine &name = "tmp",
                                       mlir::Value arraySize = nullptr,
                                       mlir::OpBuilder::InsertPoint ip = {});
+  Address createDefaultAlignTempAlloca(mlir::Type ty, mlir::Location loc,
+                                       const Twine &name);
 
   /// Create a temporary memory object of the given type, with
   /// appropriate alignmen and cast it to the default address space. Returns

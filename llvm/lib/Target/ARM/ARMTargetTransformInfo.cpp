@@ -2670,8 +2670,7 @@ bool ARMTTIImpl::preferPredicateOverEpilogue(TailFoldingInfo *TFI) const {
                               *LVL->getDominatorTree());
 }
 
-TailFoldingStyle
-ARMTTIImpl::getPreferredTailFoldingStyle(bool IVUpdateMayOverflow) const {
+TailFoldingStyle ARMTTIImpl::getPreferredTailFoldingStyle() const {
   if (!ST->hasMVEIntegerOps() || !EnableTailPredication)
     return TailFoldingStyle::DataWithoutLaneMask;
 

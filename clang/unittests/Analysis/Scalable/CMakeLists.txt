@@ -8,12 +8,15 @@ add_distinct_clang_unittest(ClangScalableAnalysisTests
   EntityLinkerTest.cpp
   EntityNameTest.cpp
   ErrorBuilderTest.cpp
+  ModelStringConversionsTest.cpp
   Registries/FancyAnalysisData.cpp
   Registries/MockSerializationFormat.cpp
   Registries/MockSummaryExtractor1.cpp
   Registries/MockSummaryExtractor2.cpp
   Registries/SerializationFormatRegistryTest.cpp
   Registries/SummaryExtractorRegistryTest.cpp
+  Serialization/JSONFormatTest/JSONFormatTest.cpp
+  Serialization/JSONFormatTest/LUSummaryTest.cpp
   Serialization/JSONFormatTest/TUSummaryTest.cpp
   SummaryNameTest.cpp
   TestFixture.cpp
