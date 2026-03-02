@@ -17231,6 +17231,9 @@ static SDValue combineSELECT_CCBitFloor(SDNode *N, SelectionDAG &DAG) {
     return SDValue();
 
   // Check if FalseVal is (srl MinSignedValue, ShiftAmt)
+  // We check for ISD::SRL here (not PPCISD::SRL) because this runs during
+  // DAGCombine before instruction selection. PowerPC's SRD/SRW instructions
+  // guarantee that a shift by bitwidth returns 0, which matches our needs.
   if (FalseVal.getOpcode() != ISD::SRL)
     return SDValue();
 
