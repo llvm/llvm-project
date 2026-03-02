@@ -263,6 +263,104 @@ def PromotableOpInterface : OpInterface<"PromotableOpInterface"> {
   ];
 }
 
+def PromotableRegionOpInterface
+    : OpInterface<"PromotableRegionOpInterface"> {
+  let description = [{
+    Describes an operation for which memory slots can be promoted to SSA values
+    within the operation's regions.
+  }];
+  let cppNamespace = "::mlir";
+
+  let methods = [
+    InterfaceMethod<[{
+        Returns true when the provided region of the operation can be analyzed
+        for promotion. The provided region must be a child of the operation's
+        region.
+        The `hasValueStores` flag indicates whether the region contains
+        store-like operations that write to the memory slot.
+      }], "bool", "isRegionPromotable",
+      (ins
+        "const ::mlir::MemorySlot &":$slot,
+        "::mlir::Region *":$region,
+        "bool":$hasValueStores
+      )
+    >,
+    InterfaceMethod<[{
+        Specifies which operations should be marked as live-in with respect to
+        the value of the provided slot assuming the provided region is live-in.
+
+        In other words, specifies which operation immediately passes control to
+        the region without storing to the value of the slot.
+      }], "void", "propagateLiveIn",
+      (ins
+        "const ::mlir::MemorySlot &":$slot,
+        "::mlir::Region *":$regionLiveIn,
+        "::mlir::SmallPtrSetImpl<::mlir::Operation *> &":$operationsLiveIn
+      )
+    >,
+    InterfaceMethod<[{
+        Called before processing the nested regions in the operation.
+
+        Based on the `reachingDef` value representing the value in the memory
+        slot at the entry into the operation, `setupPromotion` fills in the
+        `regionsToProcess` with the the reaching definition at the entry of
+        all its promotable regions.
+
+        `setupPromotion` is allowed to mutate
+        the operation in place, including its nested regions, but cannot
+        delete existing operations or modify successor-bearing terminators.
+        Other mutations are not allowed.
+
+        The `hasValueStores` flag indicates whether the regions contain
+        `store`-like operations that write to the memory slot. This field can be
+        used to reduce the amount of book-keeping required to track the reaching
+        definitions, but is correct to consider it always true.
+      }], "void", "setupPromotion",
+      (ins
+        "const ::mlir::MemorySlot &":$slot,
+        "::mlir::Value":$reachingDef,
+        "bool":$hasValueStores,
+        "::llvm::SmallMapVector<::mlir::Region *, ::mlir::Value, 2> &":$regionsToProcess
+      )
+    >,
+    InterfaceMethod<[{
+        Called after promotion has been completed in all the relevant regions.
+
+        Returns the new reaching definition at the exit of the operation. For
+        this purpose, it is allowed to mutate the operation using the provided
+        `builder`, along with its region contents. However, all blocks within
+        the existing regions must remain valid and no new blocks may be added.
+        As a result, the operation is allowed to be cloned and replaced only
+        if its region content is moved from the original operation and not
+        copied. Operations with an effect on the value of the slot must not
+        change said effect (for example, new control flow that could change
+        reaching definitions for a block is not allowed).
+
+        The `entryReachingDef` is the reaching definition at the entry of the
+        region operation.
+
+        The `reachingAtBlockEnd` map contains the reaching definitions after all
+        the terminators within the regions of the operation. If a block of the
+        region is not present in the map, it is either dead code or within a
+        region that does not interact with the value of the slot.
+
+        The `hasValueStores` flag indicates whether the regions contain
+        `store`-like operations that write to the memory slot. This field can be
+        used to reduce the amount of book-keeping required to track the reaching
+        definitions, but is correct to consider it always true.
+      }],
+      "::mlir::Value", "finalizePromotion",
+      (ins
+        "const ::mlir::MemorySlot &":$slot,
+        "::mlir::Value":$entryReachingDef,
+        "bool":$hasValueStores,
+        "::llvm::DenseMap<::mlir::Block *, ::mlir::Value> &":$reachingAtBlockEnd,
+        "::mlir::OpBuilder &":$builder
+      )
+    >,
+  ];
+}
+
 def DestructurableAllocationOpInterface
   : OpInterface<"DestructurableAllocationOpInterface"> {
   let description = [{
