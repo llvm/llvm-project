@@ -338,7 +338,7 @@ private:
                                  MachineInstr &I) const;
 
   bool selectWaveActiveAllEqual(Register ResVReg, SPIRVTypeInst ResType,
-                                 MachineInstr &I) const;
+                                MachineInstr &I) const;
 
   bool selectUnmergeValues(MachineInstr &I) const;
 
@@ -2921,7 +2921,6 @@ bool SPIRVInstructionSelector::selectWaveActiveAllEqual(Register ResVReg,
 
   return true;
 }
-
 
 bool SPIRVInstructionSelector::selectWavePrefixBitCount(Register ResVReg,
                                                         SPIRVTypeInst ResType,
