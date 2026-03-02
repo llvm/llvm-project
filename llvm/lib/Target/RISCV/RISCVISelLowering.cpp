@@ -1116,8 +1116,18 @@ RISCVTargetLowering::RISCVTargetLowering(const TargetMachine &TM,
         }
       }
 
-      if (Subtarget.hasStdExtZvbc() && VT.getVectorElementType() == MVT::i64)
-        setOperationAction({ISD::CLMUL, ISD::CLMULH}, VT, Legal);
+      if (Subtarget.hasStdExtZvbc() && Subtarget.hasVInstructionsI64()) {
+        if (VT.getVectorElementType() == MVT::i64)
+          setOperationAction({ISD::CLMUL, ISD::CLMULH}, VT, Legal);
+        else {
+          // Promote to i64 if the lmul is small enough.
+          // FIXME: Split if necessary to widen.
+          // FIXME: Promote clmulh directly without legalizing to clmul first.
+          MVT I64VecVT = MVT::getVectorVT(MVT::i64, VT.getVectorElementCount());
+          if (isTypeLegal(I64VecVT))
+            setOperationAction(ISD::CLMUL, VT, Custom);
+        }
+      }
 
       setOperationAction(ISD::VECTOR_COMPRESS, VT, Custom);
     }
@@ -8920,6 +8930,18 @@ SDValue RISCVTargetLowering::LowerOperation(SDValue Op,
       return lowerToScalableOp(Op, DAG);
     assert(Op.getOpcode() != ISD::CTTZ);
     return lowerCTLZ_CTTZ_ZERO_UNDEF(Op, DAG);
+  case ISD::CLMUL: {
+    assert(Op.getValueType().isScalableVector() && Subtarget.hasStdExtZvbc() &&
+           "Unexpected custom legalisation");
+    // Promote to i64 vector.
+    MVT VT = Op.getSimpleValueType();
+    MVT I64VecVT = MVT::getVectorVT(MVT::i64, VT.getVectorElementCount());
+    SDLoc DL(Op);
+    SDValue Op0 = DAG.getNode(ISD::ZERO_EXTEND, DL, I64VecVT, Op.getOperand(0));
+    SDValue Op1 = DAG.getNode(ISD::ZERO_EXTEND, DL, I64VecVT, Op.getOperand(1));
+    SDValue CLMUL = DAG.getNode(ISD::CLMUL, DL, I64VecVT, Op0, Op1);
+    return DAG.getNode(ISD::TRUNCATE, DL, VT, CLMUL);
+  }
   case ISD::FCOPYSIGN:
     if (Op.getValueType() == MVT::f16 || Op.getValueType() == MVT::bf16)
       return lowerFCOPYSIGN(Op, DAG, Subtarget);
