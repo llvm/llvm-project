@@ -106,10 +106,6 @@ bool DependencyScanningWorker::computeDependencies(
     return createAndRunToolInvocation(Cmd, Action, FS, PCHContainerOps, Diags);
   });
 
-  // Ensure finish() is called even if we never reached ExecuteAction().
-  if (!Action.hasDiagConsumerFinished())
-    DiagConsumer.finish();
-
   return Success && Action.hasScanned();
 }
 
