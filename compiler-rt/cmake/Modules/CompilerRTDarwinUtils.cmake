@@ -144,6 +144,13 @@ function(darwin_test_archs os valid_archs)
     endif()
   endif()
 
+  # x86_64h maps to the same lipo architecture tag as x86_64, causing fat
+  # binary creation to fail when both are present. Sanitizer runtimes gain
+  # no benefit from Haswell-specific codegen, so drop it for macOS as well.
+  if(${os} STREQUAL "osx")
+    list(REMOVE_ITEM archs "x86_64h")
+  endif()
+
   if(${os} MATCHES "^ios$")
     message(STATUS "Disabling sanitizers armv7* slice for ios")
     list(FILTER archs EXCLUDE REGEX "armv7.*")
