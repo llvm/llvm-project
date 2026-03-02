@@ -86,6 +86,7 @@ private:
     }
 };
 
+// check that g is instantiated here.
 constexpr int x = X().f( 1 );
 }
 
@@ -125,7 +126,7 @@ constexpr int func(F f) {
 
 int test() {
     auto predicate = [](auto v) constexpr -> bool  { return v == 1; };
-    return func(predicate);
+    return func(predicate); // check that "predicate" is instantiated.
 }
 
 
@@ -141,7 +142,7 @@ struct foo {
 };
 
 struct bar {
-    foo x;
+    foo x; // check that the lambda gets instantiated.
 };
 
 }  // namespace GH115118
@@ -159,7 +160,7 @@ constexpr auto foo() noexcept {
     return result;
 }
 
-void test() { foo<void>(); }
+void test() { foo<void>(); } // check that the lambda gets instantiated.
 
 }  // namespace GH100897
 
