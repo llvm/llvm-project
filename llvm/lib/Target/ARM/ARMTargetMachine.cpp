@@ -246,6 +246,12 @@ ARMBaseTargetMachine::getSubtargetImpl(const Function &F) const {
     if (!I->isThumb() && !I->hasARMOps())
       F.getContext().emitError("Function '" + F.getName() + "' uses ARM "
           "instructions, but the target does not support ARM mode execution.");
+
+    if (I->isTargetHardFloat() && !I->hasFPRegs())
+      F.getContext().emitError(
+          "Function '" + F.getName() +
+          "' uses the hard-float ABI, but the target lacks floating-point "
+          "registers.");
   }
 
   return I.get();
