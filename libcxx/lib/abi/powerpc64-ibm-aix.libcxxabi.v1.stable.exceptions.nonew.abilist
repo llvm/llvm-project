@@ -1423,6 +1423,7 @@
 {'import_export': 'wEXP', 'is_defined': True, 'name': '_ZNSt3__112basic_stringIwNS_11char_traitsIwEENS_9allocatorIwEEED2Ev', 'storage_mapping_class': 'DS', 'type': 'FUNC'}
 {'import_export': 'wEXP', 'is_defined': True, 'name': '_ZNSt3__112basic_stringIwNS_11char_traitsIwEENS_9allocatorIwEEEaSERKS5_', 'storage_mapping_class': 'DS', 'type': 'FUNC'}
 {'import_export': 'wEXP', 'is_defined': True, 'name': '_ZNSt3__112basic_stringIwNS_11char_traitsIwEENS_9allocatorIwEEEaSEw', 'storage_mapping_class': 'DS', 'type': 'FUNC'}
+{'import_export': 'wEXP', 'is_defined': True, 'name': '_ZNSt3__113__hash_memoryEPKvm', 'storage_mapping_class': 'DS', 'type': 'FUNC'}
 {'import_export': 'wEXP', 'is_defined': True, 'name': '_ZNSt3__113basic_filebufIcNS_11char_traitsIcEEE11__read_modeEv', 'storage_mapping_class': 'DS', 'type': 'FUNC'}
 {'import_export': 'wEXP', 'is_defined': True, 'name': '_ZNSt3__113basic_filebufIcNS_11char_traitsIcEEE12__write_modeEv', 'storage_mapping_class': 'DS', 'type': 'FUNC'}
 {'import_export': 'wEXP', 'is_defined': True, 'name': '_ZNSt3__113basic_filebufIcNS_11char_traitsIcEEE4openEPKcj', 'storage_mapping_class': 'DS', 'type': 'FUNC'}
