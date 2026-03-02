@@ -11223,6 +11223,12 @@ static QualType GetExprType(const Expr *E) {
   return Ty;
 }
 
+static bool isUnsignedScalarType(QualType T) {
+  if (const auto *VT = T->getAs<VectorType>())
+    T = VT->getElementType();
+  return T->isUnsignedIntegerType();
+}
+
 /// Attempts to estimate an approximate range for the given integer expression.
 /// Returns a range if successful, otherwise it returns \c std::nullopt if a
 /// reliable estimation cannot be determined.
@@ -11495,18 +11501,9 @@ static std::optional<IntRange> TryGetExprRange(ASTContext &C, const Expr *E,
       return IntRange::forValueOfType(C, GetExprType(E));
 
     case UO_Minus: {
-      if (E->getType()->isUnsignedIntegerType()) {
+      if (isUnsignedScalarType(E->getType())) {
         return TryGetExprRange(C, UO->getSubExpr(), MaxWidth, InConstantContext,
                                Approximate);
-      }
-
-      QualType T = E->getType();
-      if (const auto *VT = T->getAs<VectorType>()) {
-        QualType ElemTy = VT->getElementType();
-        if (ElemTy->isUnsignedIntegerType()) {
-          return TryGetExprRange(C, UO->getSubExpr(), MaxWidth,
-                                 InConstantContext, Approximate);
-        }
       }
 
       std::optional<IntRange> SubRange = TryGetExprRange(
@@ -11522,20 +11519,11 @@ static std::optional<IntRange> TryGetExprRange(ASTContext &C, const Expr *E,
     }
 
     case UO_Not: {
-      if (E->getType()->isUnsignedIntegerType()) {
+      if (isUnsignedScalarType(E->getType())) {
         return TryGetExprRange(C, UO->getSubExpr(), MaxWidth, InConstantContext,
                                Approximate);
       }
 
-      QualType T = E->getType();
-
-      if (const auto *VT = T->getAs<VectorType>()) {
-        QualType ElemTy = VT->getElementType();
-        if (ElemTy->isUnsignedIntegerType()) {
-          return TryGetExprRange(C, UO->getSubExpr(), MaxWidth,
-                                 InConstantContext, Approximate);
-        }
-      }
       std::optional<IntRange> SubRange = TryGetExprRange(
           C, UO->getSubExpr(), MaxWidth, InConstantContext, Approximate);
 

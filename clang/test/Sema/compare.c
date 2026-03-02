@@ -487,12 +487,6 @@ void test27(void) {
   int i;
   W g;
   // We expect no assertion failures here.
-  W w = i == (-g); // expected-warning {{}}
-}
-
-void test28(void) {
-  int i;
-  W g;
-  // We expect no assertion failures here.
-  W w = i == (~g); // expected-warning {{}}
+  W w1 = i == (-g); // expected-warning {{}}
+  W w2 = i == (~g); // expected-warning {{}}
 }
