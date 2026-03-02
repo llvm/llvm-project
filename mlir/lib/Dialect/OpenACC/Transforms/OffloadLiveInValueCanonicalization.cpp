@@ -111,10 +111,6 @@ static Value getOriginalValue(Value val) {
   Value prev;
   while (val && val != prev) {
     prev = val;
-    // Stop tracing if the op is a rematerialization candidate itself.
-    if (isa_and_nonnull<acc::OutlineRematerializationOpInterface>(
-            val.getDefiningOp()))
-      break;
     if (auto viewLikeOp = val.getDefiningOp<ViewLikeOpInterface>())
       val = viewLikeOp.getViewSource();
     if (auto partialAccess =
