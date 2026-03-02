@@ -147,14 +147,13 @@ public:
                               const std::vector<std::string> &CMD)
       : Worker(Worker), CWD(CWD), CommandLine(CMD) {};
 
-  // The three methods below returns false when they fail, with the detail
+  // The two methods below returns false when they fail, with the detail
   // accumulated in \c DiagEngineWithDiagOpts's diagnostic consumer.
   bool initialize(
       std::unique_ptr<DiagnosticsEngineWithDiagOpts> DiagEngineWithDiagOpts,
       IntrusiveRefCntPtr<llvm::vfs::OverlayFileSystem> OverlayFS);
   bool computeDependencies(StringRef ModuleName, DependencyConsumer &Consumer,
                            DependencyActionController &Controller);
-  bool finalize();
 };
 } // namespace dependencies
 } // namespace clang

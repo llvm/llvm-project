@@ -137,10 +137,6 @@ bool DependencyScanningWorker::computeDependenciesByNameWithContext(
   return CIWithContext->computeDependencies(ModuleName, Consumer, Controller);
 }
 
-bool DependencyScanningWorker::finalizeCompilerInstanceWithContext() {
-  return CIWithContext->finalize();
-}
-
 std::pair<IntrusiveRefCntPtr<llvm::vfs::OverlayFileSystem>,
           std::vector<std::string>>
 dependencies::initVFSForTUBufferScanning(
