@@ -313,8 +313,8 @@ public:
   InstructionUniformity getInstructionUniformity(const Value *V) const override;
 
   InstructionCost getScalingFactorCost(Type *Ty, GlobalValue *BaseGV,
-                                       StackOffset BaseOffset,
-                                       bool HasBaseReg, int64_t Scale,
+                                       StackOffset BaseOffset, bool HasBaseReg,
+                                       int64_t Scale,
                                        unsigned AddrSpace) const override;
 
   bool isLSRCostLess(const TTI::LSRCost &A,

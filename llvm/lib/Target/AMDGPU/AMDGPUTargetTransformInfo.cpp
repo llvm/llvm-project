@@ -15,8 +15,8 @@
 //===----------------------------------------------------------------------===//
 
 #include "AMDGPUTargetTransformInfo.h"
-#include "AMDGPUTargetMachine.h"
 #include "AMDGPUSubtarget.h"
+#include "AMDGPUTargetMachine.h"
 #include "MCTargetDesc/AMDGPUMCTargetDesc.h"
 #include "SIModeRegisterDefaults.h"
 #include "llvm/Analysis/InlineCost.h"
@@ -1706,9 +1706,9 @@ GCNTTIImpl::getInstructionUniformity(const Value *V) const {
 }
 
 InstructionCost GCNTTIImpl::getScalingFactorCost(Type *Ty, GlobalValue *BaseGV,
-                                                  StackOffset BaseOffset,
-                                                  bool HasBaseReg, int64_t Scale,
-                                                  unsigned AddrSpace) const {
+                                                 StackOffset BaseOffset,
+                                                 bool HasBaseReg, int64_t Scale,
+                                                 unsigned AddrSpace) const {
   // AMDGPU has limited addressing modes. base+scale*index requires an extra
   // ADD instruction, unlike architectures with rich addressing modes.
   if (HasBaseReg && Scale != 0)
