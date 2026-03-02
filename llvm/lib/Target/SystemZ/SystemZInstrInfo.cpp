@@ -54,7 +54,8 @@ using namespace llvm;
 
 #define DEBUG_TYPE "systemz-II"
 
-STATISTIC(NumRSWorkaround, "The # of times the RegScavenger workaround for the FIE bug was triggered.");
+STATISTIC(NumRSWorkaround, "The # of times the RegScavenger workaround for the "
+                           "FIE bug was triggered.");
 
 // Return a mask with Count low bits set.
 static uint64_t allOnes(unsigned int Count) {
@@ -1839,7 +1840,7 @@ void SystemZInstrInfo::expandStackGuardPseudo(MachineInstr &MI,
   Register OpReg = MI.getOperand(1).getReg();
   // If we can't use AddrReg, scavenge a new one.
   if (AddrReg == OpReg)
-  AddrReg = scavengeAddrReg(MI, &MBB);
+    AddrReg = scavengeAddrReg(MI, &MBB);
   // At this point, AddrReg should be set to a usable scratch register.
 
   // Emit an appropriate pseudo for the guard type, which loads the address of

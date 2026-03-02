@@ -8174,10 +8174,8 @@ SDValue SystemZTargetLowering::combineSTORE(
     // Obtain the frame index the store was targeting.
     int FI = cast<FrameIndexSDNode>(SN->getOperand(2))->getIndex();
     // Prepare operands of the MOV_STACKGUARD ISD Node - Chain and FrameIndex.
-    SDValue Ops[] = {SN->getChain(),
-                     DAG.getTargetFrameIndex(FI, MVT::i64)};
-    return DAG.getNode(SystemZISD::MOV_STACKGUARD,
-                               SDLoc(SN), MVT::Other, Ops);
+    SDValue Ops[] = {SN->getChain(), DAG.getTargetFrameIndex(FI, MVT::i64)};
+    return DAG.getNode(SystemZISD::MOV_STACKGUARD, SDLoc(SN), MVT::Other, Ops);
   }
 
   // Combine STORE (BSWAP) into STRVH/STRV/STRVG/VSTBR
@@ -11470,7 +11468,8 @@ bool SystemZTargetLowering::verifyNarrowIntegerArgs(
   return true;
 }
 
-void SystemZTargetLowering::insertSSPDeclarations(Module &M, const LibcallLoweringInfo &Libcalls) const {
+void SystemZTargetLowering::insertSSPDeclarations(
+    Module &M, const LibcallLoweringInfo &Libcalls) const {
   StringRef GuardMode = M.getStackProtectorGuard();
 
   // In the TLS case, no symbol needs to be inserted.
