@@ -342,6 +342,28 @@ func.func @extract_from_constant_mask_dynamic_position_not_all_true(%index: inde
 
 // -----
 
+// CHECK-LABEL: extract_scalar_from_constant_mask_within_bounds
+func.func @extract_scalar_from_constant_mask_within_bounds() -> i1 {
+  %mask = vector.constant_mask [2, 3] : vector<4x4xi1>
+  // CHECK: %[[RES:.*]] = arith.constant true
+  // CHECK-NEXT: return %[[RES]]
+  %extract = vector.extract %mask[0, 1] : i1 from vector<4x4xi1>
+  return %extract : i1
+}
+
+// -----
+
+// CHECK-LABEL: extract_scalar_from_constant_mask_outside_bounds
+func.func @extract_scalar_from_constant_mask_outside_bounds() -> i1 {
+  %mask = vector.constant_mask [2, 3] : vector<4x4xi1>
+  // CHECK: %[[RES:.*]] = arith.constant false
+  // CHECK-NEXT: return %[[RES]]
+  %extract = vector.extract %mask[0, 3] : i1 from vector<4x4xi1>
+  return %extract : i1
+}
+
+// -----
+
 // CHECK-LABEL: constant_mask_to_true_splat
 func.func @constant_mask_to_true_splat() -> vector<2x4xi1> {
   // CHECK: arith.constant dense<true>

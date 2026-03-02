@@ -2310,10 +2310,8 @@ public:
     if (!constantMaskOp)
       return failure();
 
-    auto extractedMaskType =
-        dyn_cast<VectorType>(extractOp.getResult().getType());
-    if (!extractedMaskType)
-      return failure();
+    Type resultType = extractOp.getResult().getType();
+    auto extractedMaskType = dyn_cast<VectorType>(resultType);
 
     ArrayRef<int64_t> extractOpPos = extractOp.getStaticPosition();
     ArrayRef<int64_t> maskDimSizes = constantMaskOp.getMaskDimSizes();
@@ -2336,17 +2334,30 @@ public:
       // If the position is statically outside of the masked area, the result
       // will be all-false.
       if (pos >= maskDimSizes[dimIdx]) {
-        rewriter.replaceOpWithNewOp<arith::ConstantOp>(
-            extractOp, DenseElementsAttr::get(extractedMaskType, false));
+        if (extractedMaskType) {
+          rewriter.replaceOpWithNewOp<arith::ConstantOp>(
+              extractOp, DenseElementsAttr::get(extractedMaskType, false));
+        } else {
+          rewriter.replaceOpWithNewOp<arith::ConstantOp>(
+              extractOp, rewriter.getIntegerAttr(resultType, false));
+        }
         return success();
       }
     }
 
-    // All positions are within the mask bounds. The result is a constant_mask
-    // with the remaining dimensions.
-    rewriter.replaceOpWithNewOp<vector::ConstantMaskOp>(
-        extractOp, extractedMaskType,
-        maskDimSizes.drop_front(extractOpPos.size()));
+    // All positions are within the mask bounds.
+    if (extractedMaskType) {
+      // Vector result: the result is a constant_mask with the remaining
+      // dimensions.
+      rewriter.replaceOpWithNewOp<vector::ConstantMaskOp>(
+          extractOp, extractedMaskType,
+          maskDimSizes.drop_front(extractOpPos.size()));
+    } else {
+      // Scalar result: all positions are within the masked region, so the
+      // result is true.
+      rewriter.replaceOpWithNewOp<arith::ConstantOp>(
+          extractOp, rewriter.getIntegerAttr(resultType, true));
+    }
     return success();
   }
 };
