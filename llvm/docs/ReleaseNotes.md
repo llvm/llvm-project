@@ -83,7 +83,7 @@ Changes to LLVM infrastructure
 * Removed `bugpoint`. Usage has been replaced by `llvm-reduce` and
   `llvm/utils/reduce_pipeline.py`.
 
-* The ``Br`` opcode got split into two opcodes separating unconditional
+* The ``Br`` opcode was split into two opcodes separating unconditional
   (``UncondBr``) and conditional (``CondBr``) branches.
 
 Changes to building LLVM
