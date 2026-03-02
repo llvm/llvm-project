@@ -14,7 +14,6 @@ __attribute__((visibility("protected"), used)) int x;
 // RUN: %clang -cc1 %s -triple amdgcn-amd-amdhsa -emit-llvm-bc -o %t.amdgpu.bc
 
 // RUN: llvm-offload-binary -o %t.out \
-// RUN:   --image=file=%t.elf.o,kind=openmp,triple=amdgcn-amd-amdhsa,arch=gfx908 \
 // RUN:   --image=file=%t.elf.o,kind=openmp,triple=amdgcn-amd-amdhsa,arch=gfx908
 // RUN: %clang -cc1 %s -triple x86_64-unknown-linux-gnu -emit-obj -o %t.o -fembed-offload-object=%t.out
 // RUN: %t.test_dir/clang-linker-wrapper --host-triple=x86_64-unknown-linux-gnu --dry-run \
