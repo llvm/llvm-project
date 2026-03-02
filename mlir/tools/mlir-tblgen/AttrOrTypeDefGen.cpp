@@ -1039,6 +1039,34 @@ static const char *const dialectDynamicTypePrinterDispatch = R"(
     return;
 )";
 
+/// Check whether a declarative assembly format string needs a leading space
+/// between the mnemonic and the format body in the generated printer.
+///
+/// Returns false for formats starting with punctuation or a space-eraser
+/// directive that should attach directly to the mnemonic (e.g. `<`, `(`, ``
+/// ``).
+///
+// TODO: Query the parsed DefFormat structure instead of inspecting the raw
+/// format string to handle this case properly.
+///
+static bool needsLeadingSpace(StringRef fmtStr) {
+  if (fmtStr.empty())
+    return false;
+
+  // '(' starts an optional group (see note above).
+  if (fmtStr[0] == '(')
+    return false;
+
+  if (fmtStr.front() != '`' || fmtStr.size() < 2)
+    return true;
+
+  // Note: bare '<', '{', '[' cannot appear at position 0 of a valid format
+  // string (the format lexer rejects them); they must be backtick-quoted
+  // (e.g. `<`), which is handled by the '`' case below.
+  // Backtick-quoted literal (e.g. `<`, `{`, `[`) or space-eraser (``).
+  return !StringRef("<{([`").contains(fmtStr[1]);
+}
+
 /// Emit the dialect printer/parser dispatcher. User's code should call these
 /// functions from their dialect's print/parse methods.
 void DefGenerator::emitParsePrintDispatch(ArrayRef<AttrOrTypeDef> defs) {
@@ -1083,9 +1111,10 @@ void DefGenerator::emitParsePrintDispatch(ArrayRef<AttrOrTypeDef> defs) {
       return ::mlir::success();
     })
 )";
-  for (auto &def : defs) {
+  for (const AttrOrTypeDef &def : defs) {
     if (!def.getMnemonic())
       continue;
+
     bool hasParserPrinterDecl =
         def.hasCustomAssemblyFormat() || def.getAssemblyFormat();
     std::string defClass = strfmt(
@@ -1099,44 +1128,24 @@ void DefGenerator::emitParsePrintDispatch(ArrayRef<AttrOrTypeDef> defs) {
     parse.body() << llvm::formatv(getValueForMnemonic, defClass, parseOrGet);
 
     // If the def has no parameters and no printer, just print the mnemonic.
-    std::string printDef;
-    if (def.hasCustomAssemblyFormat()) {
-      // Custom format: the user's print() controls its own spacing.
-      printDef = "\nt.print(printer);";
-    } else if (auto fmt = def.getAssemblyFormat()) {
-      // Declarative format: since print() no longer emits a leading space,
-      // add one here unless the format starts with punctuation or a
-      // space-eraser directive that should attach directly to the mnemonic.
-      //
-      // '(' starts an optional group, not a literal paren. Treating it as
-      // "no space needed" is correct when the first printed element inside
-      // the group is punctuation (the only in-tree case today, e.g.
-      // TBAARootAttr: `(`<` struct(params)^ `>`)?`). If a future attr/type
-      // has an optional group whose first element is a variable or keyword,
-      // this heuristic will incorrectly suppress the space.
-      // TODO: Query the parsed DefFormat structure instead of inspecting the
-      // raw format string to handle this case properly.
-      //
-      // Note: bare '<', '{', '[' cannot appear at position 0 of a valid
-      // format string (the format lexer rejects them); they must be
-      // backtick-quoted (e.g. `<`), which is handled by the '`' case below.
-      StringRef fmtStr = fmt->trim();
-      bool needsSpace = !fmtStr.empty();
-      if (needsSpace) {
-        char first = fmtStr[0];
-        // '(' starts an optional group (see NOTE above).
-        if (first == '(')
-          needsSpace = false;
-        // Backtick-quoted literal (e.g. `<`, `{`, `[`) or space-eraser (``)
-        else if (first == '`' && fmtStr.size() >= 2 &&
-                 StringRef("<{([`").contains(fmtStr[1]))
-          needsSpace = false;
-      }
-      if (needsSpace)
-        printDef = "\nprinter << ' ';\nt.print(printer);";
-      else
-        printDef = "\nt.print(printer);";
+    if (!hasParserPrinterDecl) {
+      printer.body() << llvm::formatv(printValue, defClass, "");
+      continue;
     }
+
+    // Custom format: user's `print()` controls its own spacing.
+    if (def.hasCustomAssemblyFormat()) {
+      printer.body() << llvm::formatv(printValue, defClass,
+                                      "\nt.print(printer);");
+      continue;
+    }
+
+    // Declarative format: because `print()` doesn't emit a leading space,
+    // add one here unless the format starts with punctuation or a
+    // space-eraser directive that should attach directly to the mnemonic.
+    StringRef printDef = needsLeadingSpace(def.getAssemblyFormat()->trim())
+                             ? "\nprinter << ' ';\nt.print(printer);"
+                             : "\nt.print(printer);";
     printer.body() << llvm::formatv(printValue, defClass, printDef);
   }
   parse.body() << "    .Default([&](llvm::StringRef keyword, llvm::SMLoc) {\n"
