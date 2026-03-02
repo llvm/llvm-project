@@ -186,7 +186,7 @@ class Andes45GetReductionCyclesWidening<string mx, int sew> {
   defvar w = !mul(Andes45GetCyclesDefault<mx>.c, 2);
   int c = !add(w,
                !add(!mul(!logtwo(!div(Andes45DLEN, 64)), 2),
-                    !logtwo(!div(64, sew))));
+                    !logtwo(!div(32, sew))));
 }
 
 // (VLEN/DLEN)*LMUL+LOG2(DLEN/SEW)
