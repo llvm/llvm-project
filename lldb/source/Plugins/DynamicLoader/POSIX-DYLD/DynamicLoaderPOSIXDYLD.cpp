@@ -856,7 +856,8 @@ DynamicLoaderPOSIXDYLD::GetThreadLocalData(const lldb::ModuleSP module_sp,
   }
 
   // Find the module's modid.
-  int modid_size = 4; // FIXME(spucci): This isn't right for big-endian 64-bit
+  const ArchSpec &arch = m_process->GetTarget().GetArchitecture();
+  int modid_size = arch.GetAddressByteSize();
   int64_t modid = ReadUnsignedIntWithSizeInBytes(
       link_map + metadata.modid_offset, modid_size);
   if (modid == -1) {
@@ -865,15 +866,24 @@ DynamicLoaderPOSIXDYLD::GetThreadLocalData(const lldb::ModuleSP module_sp,
   }
 
   // Lookup the DTV structure for this thread.
-  // On Linux AArch64, TPIDR_EL0 already points directly to struct pthread
-  // and the DTV pointer is stored at offset 0 while for X86 DTV pointer is
-  // located at an offset inside struct pthread.
-  const ArchSpec &arch = m_process->GetTarget().GetArchitecture();
   const llvm::Triple &triple = arch.GetTriple();
-  addr_t dtv_ptr =
-      (triple.isOSLinux() && triple.getArch() == llvm::Triple::aarch64)
-          ? tp
-          : tp + metadata.dtv_offset;
+  addr_t dtv_ptr;
+
+  switch (triple.getArch()) {
+  case llvm::Triple::arm:
+  case llvm::Triple::armeb:
+  case llvm::Triple::aarch64:
+  case llvm::Triple::aarch64_be:
+  case llvm::Triple::riscv32:
+  case llvm::Triple::riscv64:
+    // Variant I, TP points to start of TCB
+    dtv_ptr = tp;
+    break;
+
+  default:
+    // Variant II or legacy behavior
+    dtv_ptr = tp + metadata.dtv_offset;
+  }
 
   addr_t dtv = ReadPointer(dtv_ptr);
   if (dtv == LLDB_INVALID_ADDRESS) {
