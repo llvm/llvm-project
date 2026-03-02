@@ -30,10 +30,21 @@ entry:
 }
 
 ; CHECK-LABEL: Begin function test_vhalf
-; CHECK:   %[[#vbexpr:]] = OpFunctionParameter %[[#v4_half]]
+; Here there's a vector, so we scalarize and then recombine the
+; result back into one vector
 define <4 x i1> @test_vhalf(<4 x half> %vbexpr) {
 entry:
-; CHECK:   %[[#vhalfret:]] = OpGroupNonUniformAllEqual %[[#bool4]] %[[#scope]] %[[#vbexpr]]
+; CHECK: %[[#param:]] = OpFunctionParameter %[[#v4float:]]
+; CHECK: %[[#ext1:]] = OpCompositeExtract %[[#bool]] %[[#param]] 0
+; CHECK-NEXT: %[[#res1:]] = OpGroupNonUniformAllEqual %[[#bool]] %[[#scope]] %[[#ext1]]
+; CHECK-NEXT: %[[#ext2:]] = OpCompositeExtract %[[#bool]] %[[#param]] 1
+; CHECK-NEXT: %[[#res2:]] = OpGroupNonUniformAllEqual %[[#bool]] %[[#scope]] %[[#ext2]]
+; CHECK-NEXT: %[[#ext3:]] = OpCompositeExtract %[[#bool]] %[[#param]] 2
+; CHECK-NEXT: %[[#res3:]] = OpGroupNonUniformAllEqual %[[#bool]] %[[#scope]] %[[#ext3]]
+; CHECK-NEXT: %[[#ext4:]] = OpCompositeExtract %[[#bool]] %[[#param]] 3
+; CHECK-NEXT: %[[#res4:]] = OpGroupNonUniformAllEqual %[[#bool]] %[[#scope]] %[[#ext4]]
+; CHECK-NEXT: %[[#ret:]] = OpCompositeConstruct %[[#bool4]] %[[#res1:]] %[[#res2:]] %[[#res3:]] %[[#res4:]]
+; CHECK-NEXT: OpReturnValue %[[#ret]]
   %0 = call <4 x i1> @llvm.spv.subgroup.all.equal.v4half(<4 x half> %vbexpr)
   ret <4 x i1> %0
 }

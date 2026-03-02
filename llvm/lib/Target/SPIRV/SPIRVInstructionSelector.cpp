@@ -337,6 +337,9 @@ private:
   bool selectWaveActiveCountBits(Register ResVReg, SPIRVTypeInst ResType,
                                  MachineInstr &I) const;
 
+  bool selectWaveActiveAllEqual(Register ResVReg, SPIRVTypeInst ResType,
+                                 MachineInstr &I) const;
+
   bool selectUnmergeValues(MachineInstr &I) const;
 
   bool selectHandleFromBinding(Register &ResVReg, SPIRVTypeInst ResType,
@@ -2830,6 +2833,96 @@ bool SPIRVInstructionSelector::selectWaveActiveCountBits(
   return true;
 }
 
+unsigned getVectorSizeOrOne(SPIRVTypeInst Type) {
+
+  if (Type->getOpcode() != SPIRV::OpTypeVector)
+    return 1;
+
+  // Operand(2) is the vector size
+  return Type->getOperand(2).getImm();
+}
+
+bool SPIRVInstructionSelector::selectWaveActiveAllEqual(Register ResVReg,
+                                                        SPIRVTypeInst ResType,
+                                                        MachineInstr &I) const {
+
+  MachineBasicBlock &BB = *I.getParent();
+  const DebugLoc &DL = I.getDebugLoc();
+
+  SPIRVTypeInst SpvTy = GR.getSPIRVTypeForVReg(ResVReg);
+  unsigned NumElems = getVectorSizeOrOne(SpvTy);
+  bool IsVector = NumElems > 1;
+
+  // Subgroup scope constant
+  SPIRVTypeInst IntTy = GR.getOrCreateSPIRVIntegerType(32, I, TII);
+
+  Register ScopeConst = GR.getOrCreateConstInt(SPIRV::Scope::Subgroup, I, IntTy,
+                                               TII, !STI.isShader());
+
+  Register InputReg = I.getOperand(2).getReg();
+
+  SmallVector<Register, 4> ElementResults;
+
+  // If vector, determine element type once
+  SPIRVTypeInst ElemInputType = SpvTy;
+  SPIRVTypeInst ElemBoolType = ResType;
+
+  if (IsVector) {
+    Register ElemTypeReg = SpvTy->getOperand(1).getReg();
+    ElemInputType = GR.getSPIRVTypeForVReg(ElemTypeReg);
+
+    Register BoolElemReg = ResType->getOperand(1).getReg();
+    ElemBoolType = GR.getSPIRVTypeForVReg(BoolElemReg);
+  }
+
+  for (unsigned Idx = 0; Idx < NumElems; ++Idx) {
+
+    Register ElemInput = InputReg;
+
+    if (IsVector) {
+      Register Extracted =
+          MRI->createVirtualRegister(GR.getRegClass(ElemInputType));
+
+      BuildMI(BB, I, DL, TII.get(SPIRV::OpCompositeExtract))
+          .addDef(Extracted)
+          .addUse(GR.getSPIRVTypeID(ElemInputType))
+          .addUse(InputReg)
+          .addImm(Idx)
+          .constrainAllUses(TII, TRI, RBI);
+
+      ElemInput = Extracted;
+    }
+
+    Register ElemResult =
+        IsVector ? MRI->createVirtualRegister(GR.getRegClass(ElemBoolType))
+                 : ResVReg;
+
+    BuildMI(BB, I, DL, TII.get(SPIRV::OpGroupNonUniformAllEqual))
+        .addDef(ElemResult)
+        .addUse(GR.getSPIRVTypeID(ElemBoolType))
+        .addUse(ScopeConst)
+        .addUse(ElemInput)
+        .constrainAllUses(TII, TRI, RBI);
+
+    ElementResults.push_back(ElemResult);
+  }
+
+  if (!IsVector)
+    return true;
+
+  auto MIB = BuildMI(BB, I, DL, TII.get(SPIRV::OpCompositeConstruct))
+                 .addDef(ResVReg)
+                 .addUse(GR.getSPIRVTypeID(ResType));
+
+  for (Register R : ElementResults)
+    MIB.addUse(R);
+
+  MIB.constrainAllUses(TII, TRI, RBI);
+
+  return true;
+}
+
+
 bool SPIRVInstructionSelector::selectWavePrefixBitCount(Register ResVReg,
                                                         SPIRVTypeInst ResType,
                                                         MachineInstr &I) const {
@@ -4085,8 +4178,7 @@ bool SPIRVInstructionSelector::selectIntrinsic(Register ResVReg,
   case Intrinsic::spv_wave_active_countbits:
     return selectWaveActiveCountBits(ResVReg, ResType, I);
   case Intrinsic::spv_subgroup_all_equal:
-    return selectWaveOpInst(ResVReg, ResType, I,
-                            SPIRV::OpGroupNonUniformAllEqual);
+    return selectWaveActiveAllEqual(ResVReg, ResType, I);
   case Intrinsic::spv_wave_all:
     return selectWaveOpInst(ResVReg, ResType, I, SPIRV::OpGroupNonUniformAll);
   case Intrinsic::spv_wave_any:
