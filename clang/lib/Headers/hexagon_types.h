@@ -11,6 +11,11 @@
 
 #include <hexagon_protos.h>
 
+// Save and undefine B0 to avoid conflicts with POSIX termios.h which
+// defines B0 as a macro for baud rate 0.
+#pragma push_macro("B0")
+#undef B0
+
 /* Hexagon names */
 #define HEXAGON_Vect HEXAGON_Vect64
 #define HEXAGON_V_GET_D HEXAGON_V64_GET_D
@@ -2621,5 +2626,7 @@ typedef struct hexagon_udma_descriptor_type1_s
     unsigned int srcwidthoffset:16;
     unsigned int dstwidthoffset:16;
 } hexagon_udma_descriptor_type1_t;
+
+#pragma pop_macro("B0")
 
 #endif /* !HEXAGON_TYPES_H */
