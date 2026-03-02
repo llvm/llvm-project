@@ -95,6 +95,17 @@ struct GridShapeFolder
 // AllReduceOp performs an element-wise reduction across all devices in the
 // group, and AllSliceOp then slices (scatters) the result along a tensor
 // dimension. This is exactly what ReduceScatterOp does in a single collective.
+//
+// With a ring algorithm over N ranks and M elements:
+//   AllReduce:      2*(N-1) steps of M/N each  =>  ~2M total data transferred
+//   AllSlice:       local slice, no communication
+//   ReduceScatter:  (N-1) steps of M/N each    =>  ~M total data transferred
+// So this fusion roughly halves the communication volume.
+//
+// Memory-wise, AllReduce produces a full-sized M-element result that the
+// subsequent AllSlice must keep alive until the slice is taken. ReduceScatter
+// only materializes the M/N-element local slice, reducing peak memory by
+// a factor of N.
 struct AllReduceAllSliceSimplification : OpRewritePattern<AllSliceOp> {
   using OpRewritePattern::OpRewritePattern;
 
