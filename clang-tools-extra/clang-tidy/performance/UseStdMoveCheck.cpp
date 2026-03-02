@@ -99,6 +99,21 @@ void UseStdMoveCheck::check(const MatchFinder::MatchResult &Result) {
   if (!TheCFG)
     return;
 
+  // The algorithm to look for a convertible move-assign operator is the
+  // following: each node starts in the `Ready` state, with a number of
+  // `RemainingSuccessors` equal to its number of successors.
+  //
+  // Starting from the exit node, we walk the CFG backward. Whenever
+  // we meet a new block, we check if it either:
+  // 1. touches the `AssignValue`, in which case we stop the search, and mark
+  // each
+  //    predecessor as not `Ready`. No predecessor walk.
+  // 2. contains a convertible copy-assign operator, in which case we generate a
+  //    fix, and mark each predecessor as not Ready. No predecessor walk.
+  // 3. does not interact with `AssignValue`, in which case we decrement the
+  //    `RemainingSuccessors` of each predecessor. And if it happens to turn to
+  //    0 while still being `Ready`, we add it to the `WorkList`.
+
   struct BlockState {
     bool Ready;
     unsigned RemainingSuccessors;
@@ -108,12 +123,11 @@ void UseStdMoveCheck::check(const MatchFinder::MatchResult &Result) {
     CFGState.emplace(B, BlockState{true, B->succ_size()});
 
   const CFGBlock &TheExit = TheCFG->getExit();
-  std::vector<const CFGBlock *> ToVisit = {&TheExit};
+  std::vector<const CFGBlock *> WorkList = {&TheExit};
 
-  // Walk the CFG bottom-up, starting with the exit node.
-  while (!ToVisit.empty()) {
-    const CFGBlock *B = ToVisit.back();
-    ToVisit.pop_back();
+  while (!WorkList.empty()) {
+    const CFGBlock *B = WorkList.back();
+    WorkList.pop_back();
     const BlockState &BS = CFGState.find(B)->second;
     if (!BS.Ready)
       continue;
@@ -160,7 +174,7 @@ void UseStdMoveCheck::check(const MatchFinder::MatchResult &Result) {
         auto &W = CFGState.find(&*S)->second;
         if (W.Ready) {
           if (--W.RemainingSuccessors == 0 && S.isReachable())
-            ToVisit.push_back(&*S);
+            WorkList.push_back(&*S);
         }
       }
     }
