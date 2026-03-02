@@ -53,7 +53,7 @@ llvm::Expected<Value> readJSON(llvm::StringRef Path) {
   return llvm::json::parse(BufferOrError.get()->getBuffer());
 }
 
-llvm::Error writeJSON(Value &&Val, llvm::StringRef Path) {
+llvm::Error writeJSON(Value &&V, llvm::StringRef Path) {
   if (llvm::sys::fs::exists(Path)) {
     return ErrorBuilder::create(std::errc::file_exists,
                                 ErrorMessages::FailedToWriteFile, Path,
@@ -86,7 +86,7 @@ llvm::Error writeJSON(Value &&Val, llvm::StringRef Path) {
         .build();
   }
 
-  OutStream << llvm::formatv("{0:2}\n", Val);
+  OutStream << llvm::formatv("{0:2}\n", V);
   OutStream.flush();
 
   // This path handles post-write stream errors (e.g. ENOSPC after buffered

@@ -81,7 +81,7 @@ class TUSummaryTest : public SummaryTest {};
 INSTANTIATE_TEST_SUITE_P(JSONFormat, TUSummaryTest,
                          ::testing::Values(TUSummaryOps, TUSummaryEncodingOps),
                          [](const ::testing::TestParamInfo<SummaryOps> &Info) {
-                           return Info.param.Name;
+                           return Info.param.GTestInstantiationSuffix;
                          });
 
 // ============================================================================

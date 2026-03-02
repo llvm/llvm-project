@@ -84,7 +84,7 @@ class LUSummaryTest : public SummaryTest {};
 INSTANTIATE_TEST_SUITE_P(JSONFormat, LUSummaryTest,
                          ::testing::Values(LUSummaryOps, LUSummaryEncodingOps),
                          [](const ::testing::TestParamInfo<SummaryOps> &Info) {
-                           return Info.param.Name;
+                           return Info.param.GTestInstantiationSuffix;
                          });
 
 // ============================================================================
@@ -1665,12 +1665,11 @@ TEST_F(JSONFormatLUSummaryTest, ReadEntitySummaryMismatchedSummaryName) {
           HasSubstr("reading EntitySummary entries from field 'summary_data'"),
           HasSubstr("reading EntitySummary entry from index '0'"),
           HasSubstr("failed to deserialize EntitySummary"),
-          HasSubstr(
-              "EntitySummary data for "
-              "'SummaryName(MismatchedEntitySummaryForJSONFormatTest)' reports "
-              "mismatched "
-              "'SummaryName(MismatchedEntitySummaryForJSONFormatTest_WrongName)"
-              "'"))));
+          HasSubstr("EntitySummary data for"
+                    "'SummaryName(MismatchedEntitySummaryForJSONFormatTest)'"
+                    " reports mismatched"
+                    "'SummaryName(MismatchedEntitySummaryForJSONFormatTest_"
+                    "WrongName)'"))));
 }
 
 // ============================================================================

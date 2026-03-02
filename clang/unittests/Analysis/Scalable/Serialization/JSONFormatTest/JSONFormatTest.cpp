@@ -183,7 +183,7 @@ JSONFormatTest::writeJSON(llvm::StringRef JSON,
 namespace {
 
 llvm::Error normalizeIDTable(json::Array &IDTable,
-                             llvm::StringRef SummaryTypeName) {
+                             llvm::StringRef SummaryClassName) {
   for (const auto &[Index, Entry] : llvm::enumerate(IDTable)) {
     const auto *EntryObj = Entry.getAsObject();
     if (!EntryObj) {
@@ -191,7 +191,7 @@ llvm::Error normalizeIDTable(json::Array &IDTable,
           inconvertibleErrorCode(),
           "Cannot normalize %s JSON: id_table entry at index %zu "
           "is not an object",
-          SummaryTypeName.data(), Index);
+          SummaryClassName.data(), Index);
     }
 
     const auto *IDValue = EntryObj->get("id");
@@ -200,7 +200,7 @@ llvm::Error normalizeIDTable(json::Array &IDTable,
           inconvertibleErrorCode(),
           "Cannot normalize %s JSON: id_table entry at index %zu "
           "does not contain an 'id' field",
-          SummaryTypeName.data(), Index);
+          SummaryClassName.data(), Index);
     }
 
     if (!IDValue->getAsUINT64()) {
@@ -208,7 +208,7 @@ llvm::Error normalizeIDTable(json::Array &IDTable,
           inconvertibleErrorCode(),
           "Cannot normalize %s JSON: id_table entry at index %zu "
           "does not contain a valid 'id' uint64_t field",
-          SummaryTypeName.data(), Index);
+          SummaryClassName.data(), Index);
     }
   }
 
@@ -222,7 +222,7 @@ llvm::Error normalizeIDTable(json::Array &IDTable,
 }
 
 llvm::Error normalizeLinkageTable(json::Array &LinkageTable,
-                                  llvm::StringRef SummaryTypeName) {
+                                  llvm::StringRef SummaryClassName) {
   for (const auto &[Index, Entry] : llvm::enumerate(LinkageTable)) {
     const auto *EntryObj = Entry.getAsObject();
     if (!EntryObj) {
@@ -230,7 +230,7 @@ llvm::Error normalizeLinkageTable(json::Array &LinkageTable,
           inconvertibleErrorCode(),
           "Cannot normalize %s JSON: linkage_table entry at index "
           "%zu is not an object",
-          SummaryTypeName.data(), Index);
+          SummaryClassName.data(), Index);
     }
 
     const auto *IDValue = EntryObj->get("id");
@@ -239,7 +239,7 @@ llvm::Error normalizeLinkageTable(json::Array &LinkageTable,
           inconvertibleErrorCode(),
           "Cannot normalize %s JSON: linkage_table entry at index "
           "%zu does not contain an 'id' field",
-          SummaryTypeName.data(), Index);
+          SummaryClassName.data(), Index);
     }
 
     if (!IDValue->getAsUINT64()) {
@@ -247,7 +247,7 @@ llvm::Error normalizeLinkageTable(json::Array &LinkageTable,
           inconvertibleErrorCode(),
           "Cannot normalize %s JSON: linkage_table entry at index "
           "%zu does not contain a valid 'id' uint64_t field",
-          SummaryTypeName.data(), Index);
+          SummaryClassName.data(), Index);
     }
   }
 
@@ -261,7 +261,7 @@ llvm::Error normalizeLinkageTable(json::Array &LinkageTable,
 }
 
 llvm::Error normalizeSummaryData(json::Array &SummaryData, size_t DataIndex,
-                                 llvm::StringRef SummaryTypeName) {
+                                 llvm::StringRef SummaryClassName) {
   for (const auto &[SummaryIndex, SummaryEntry] :
        llvm::enumerate(SummaryData)) {
     const auto *SummaryEntryObj = SummaryEntry.getAsObject();
@@ -270,7 +270,7 @@ llvm::Error normalizeSummaryData(json::Array &SummaryData, size_t DataIndex,
           inconvertibleErrorCode(),
           "Cannot normalize %s JSON: data entry at index %zu, "
           "summary_data entry at index %zu is not an object",
-          SummaryTypeName.data(), DataIndex, SummaryIndex);
+          SummaryClassName.data(), DataIndex, SummaryIndex);
     }
 
     const auto *EntityIDValue = SummaryEntryObj->get("entity_id");
@@ -280,7 +280,7 @@ llvm::Error normalizeSummaryData(json::Array &SummaryData, size_t DataIndex,
           "Cannot normalize %s JSON: data entry at index %zu, "
           "summary_data entry at index %zu does not contain an "
           "'entity_id' field",
-          SummaryTypeName.data(), DataIndex, SummaryIndex);
+          SummaryClassName.data(), DataIndex, SummaryIndex);
     }
 
     if (!EntityIDValue->getAsUINT64()) {
@@ -289,7 +289,7 @@ llvm::Error normalizeSummaryData(json::Array &SummaryData, size_t DataIndex,
           "Cannot normalize %s JSON: data entry at index %zu, "
           "summary_data entry at index %zu does not contain a valid "
           "'entity_id' uint64_t field",
-          SummaryTypeName.data(), DataIndex, SummaryIndex);
+          SummaryClassName.data(), DataIndex, SummaryIndex);
     }
   }
 
@@ -302,7 +302,7 @@ llvm::Error normalizeSummaryData(json::Array &SummaryData, size_t DataIndex,
   return llvm::Error::success();
 }
 
-llvm::Error normalizeData(json::Array &Data, llvm::StringRef SummaryTypeName) {
+llvm::Error normalizeData(json::Array &Data, llvm::StringRef SummaryClassName) {
   for (const auto &[DataIndex, DataEntry] : llvm::enumerate(Data)) {
     auto *DataEntryObj = DataEntry.getAsObject();
     if (!DataEntryObj) {
@@ -310,7 +310,7 @@ llvm::Error normalizeData(json::Array &Data, llvm::StringRef SummaryTypeName) {
           inconvertibleErrorCode(),
           "Cannot normalize %s JSON: data entry at index %zu "
           "is not an object",
-          SummaryTypeName.data(), DataIndex);
+          SummaryClassName.data(), DataIndex);
     }
 
     if (!DataEntryObj->getString("summary_name")) {
@@ -318,7 +318,7 @@ llvm::Error normalizeData(json::Array &Data, llvm::StringRef SummaryTypeName) {
           inconvertibleErrorCode(),
           "Cannot normalize %s JSON: data entry at index %zu "
           "does not contain a 'summary_name' string field",
-          SummaryTypeName.data(), DataIndex);
+          SummaryClassName.data(), DataIndex);
     }
 
     auto *SummaryData = DataEntryObj->getArray("summary_data");
@@ -327,11 +327,11 @@ llvm::Error normalizeData(json::Array &Data, llvm::StringRef SummaryTypeName) {
           inconvertibleErrorCode(),
           "Cannot normalize %s JSON: data entry at index %zu "
           "does not contain a 'summary_data' array field",
-          SummaryTypeName.data(), DataIndex);
+          SummaryClassName.data(), DataIndex);
     }
 
     if (auto Err =
-            normalizeSummaryData(*SummaryData, DataIndex, SummaryTypeName)) {
+            normalizeSummaryData(*SummaryData, DataIndex, SummaryClassName)) {
       return Err;
     }
   }
@@ -346,12 +346,12 @@ llvm::Error normalizeData(json::Array &Data, llvm::StringRef SummaryTypeName) {
 }
 
 Expected<json::Value> normalizeSummaryJSON(json::Value Val,
-                                           llvm::StringRef SummaryTypeName) {
+                                           llvm::StringRef SummaryClassName) {
   auto *Obj = Val.getAsObject();
   if (!Obj) {
     return createStringError(inconvertibleErrorCode(),
                              "Cannot normalize %s JSON: expected an object",
-                             SummaryTypeName.data());
+                             SummaryClassName.data());
   }
 
   auto *IDTable = Obj->getArray("id_table");
@@ -359,9 +359,9 @@ Expected<json::Value> normalizeSummaryJSON(json::Value Val,
     return createStringError(inconvertibleErrorCode(),
                              "Cannot normalize %s JSON: 'id_table' "
                              "field is either missing or has the wrong type",
-                             SummaryTypeName.data());
+                             SummaryClassName.data());
   }
-  if (auto Err = normalizeIDTable(*IDTable, SummaryTypeName)) {
+  if (auto Err = normalizeIDTable(*IDTable, SummaryClassName)) {
     return std::move(Err);
   }
 
@@ -370,9 +370,9 @@ Expected<json::Value> normalizeSummaryJSON(json::Value Val,
     return createStringError(inconvertibleErrorCode(),
                              "Cannot normalize %s JSON: 'linkage_table' "
                              "field is either missing or has the wrong type",
-                             SummaryTypeName.data());
+                             SummaryClassName.data());
   }
-  if (auto Err = normalizeLinkageTable(*LinkageTable, SummaryTypeName)) {
+  if (auto Err = normalizeLinkageTable(*LinkageTable, SummaryClassName)) {
     return std::move(Err);
   }
 
@@ -381,9 +381,9 @@ Expected<json::Value> normalizeSummaryJSON(json::Value Val,
     return createStringError(inconvertibleErrorCode(),
                              "Cannot normalize %s JSON: 'data' "
                              "field is either missing or has the wrong type",
-                             SummaryTypeName.data());
+                             SummaryClassName.data());
   }
-  if (auto Err = normalizeData(*Data, SummaryTypeName)) {
+  if (auto Err = normalizeData(*Data, SummaryClassName)) {
     return std::move(Err);
   }
 
@@ -436,11 +436,11 @@ void SummaryTest::readWriteCompare(StringRef JSON) const {
   ASSERT_THAT_EXPECTED(ExpectedOutputJSON, Succeeded());
 
   auto ExpectedNormalizedInputJSON =
-      normalizeSummaryJSON(*ExpectedInputJSON, GetParam().SummaryTypeName);
+      normalizeSummaryJSON(*ExpectedInputJSON, GetParam().SummaryClassName);
   ASSERT_THAT_EXPECTED(ExpectedNormalizedInputJSON, Succeeded());
 
   auto ExpectedNormalizedOutputJSON =
-      normalizeSummaryJSON(*ExpectedOutputJSON, GetParam().SummaryTypeName);
+      normalizeSummaryJSON(*ExpectedOutputJSON, GetParam().SummaryClassName);
   ASSERT_THAT_EXPECTED(ExpectedNormalizedOutputJSON, Succeeded());
 
   ASSERT_EQ(*ExpectedNormalizedInputJSON, *ExpectedNormalizedOutputJSON)

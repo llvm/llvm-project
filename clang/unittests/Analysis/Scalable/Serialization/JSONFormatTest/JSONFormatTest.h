@@ -74,8 +74,14 @@ protected:
 // ============================================================================
 
 struct SummaryOps {
-  std::string Name;
-  std::string SummaryTypeName;
+  // Suffix appended to the test name by GTest to identify this parameter
+  // instantiation (e.g. "Resolved", "Encoding").
+  std::string GTestInstantiationSuffix;
+
+  // Human-readable name of the summary class under test (e.g. "TUSummary").
+  // Used in diagnostic messages to identify which summary type an error
+  // originated from.
+  std::string SummaryClassName;
 
   std::function<llvm::Error(llvm::StringRef FilePath)> ReadFromFile;
 
