@@ -1,6 +1,5 @@
 // RUN: %clang_analyze_cc1 -analyzer-checker=optin.taint,core,security.ArrayBound -analyzer-config \
-// RUN: assume-controlled-environment=false -analyzer-output=text -verify %s
-// no warning expected
+// RUN:   assume-controlled-environment=false -analyzer-output=text -verify %s
 
 // This file is for testing enhanced diagnostics produced by the
 // GenericTaintChecker

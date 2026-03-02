@@ -1,5 +1,5 @@
 // RUN: %clang_analyze_cc1 -analyzer-checker=optin.taint,core,security.ArrayBound -analyzer-config \
-// RUN: assume-controlled-environment=false -analyzer-output=text -verify %s
+// RUN:   assume-controlled-environment=false -analyzer-output=text -verify %s
 // expected-no-diagnostics
 
 // This file is for testing enhanced
