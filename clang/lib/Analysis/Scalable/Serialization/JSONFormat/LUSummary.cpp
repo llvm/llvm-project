@@ -1,4 +1,4 @@
-//===- TUSummaryEncoding.cpp ----------------------------------------------===//
+//===- LUSummary.cpp ------------------------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -8,55 +8,54 @@
 
 #include "JSONFormatImpl.h"
 
-#include "clang/Analysis/Scalable/EntityLinker/TUSummaryEncoding.h"
+#include "clang/Analysis/Scalable/EntityLinker/LUSummary.h"
 
 #include <set>
 
 namespace clang::ssaf {
 
 //----------------------------------------------------------------------------
-// TUSummaryEncoding
+// LUSummary
 //----------------------------------------------------------------------------
 
-llvm::Expected<TUSummaryEncoding>
-JSONFormat::readTUSummaryEncoding(llvm::StringRef Path) {
+llvm::Expected<LUSummary> JSONFormat::readLUSummary(llvm::StringRef Path) {
   auto ExpectedJSON = readJSON(Path);
   if (!ExpectedJSON) {
     return ErrorBuilder::wrap(ExpectedJSON.takeError())
-        .context(ErrorMessages::ReadingFromFile, "TUSummary", Path)
+        .context(ErrorMessages::ReadingFromFile, "LUSummary", Path)
         .build();
   }
 
   Object *RootObjectPtr = ExpectedJSON->getAsObject();
   if (!RootObjectPtr) {
     return ErrorBuilder::create(std::errc::invalid_argument,
-                                ErrorMessages::FailedToReadObject, "TUSummary",
+                                ErrorMessages::FailedToReadObject, "LUSummary",
                                 "object")
-        .context(ErrorMessages::ReadingFromFile, "TUSummary", Path)
+        .context(ErrorMessages::ReadingFromFile, "LUSummary", Path)
         .build();
   }
 
   const Object &RootObject = *RootObjectPtr;
 
-  const Object *TUNamespaceObject = RootObject.getObject("tu_namespace");
-  if (!TUNamespaceObject) {
+  const Array *LUNamespaceArray = RootObject.getArray("lu_namespace");
+  if (!LUNamespaceArray) {
     return ErrorBuilder::create(std::errc::invalid_argument,
                                 ErrorMessages::FailedToReadObjectAtField,
-                                "BuildNamespace", "tu_namespace", "object")
-        .context(ErrorMessages::ReadingFromFile, "TUSummary", Path)
+                                "NestedBuildNamespace", "lu_namespace", "array")
+        .context(ErrorMessages::ReadingFromFile, "LUSummary", Path)
         .build();
   }
 
-  auto ExpectedTUNamespace = buildNamespaceFromJSON(*TUNamespaceObject);
-  if (!ExpectedTUNamespace) {
-    return ErrorBuilder::wrap(ExpectedTUNamespace.takeError())
-        .context(ErrorMessages::ReadingFromField, "BuildNamespace",
-                 "tu_namespace")
-        .context(ErrorMessages::ReadingFromFile, "TUSummary", Path)
+  auto ExpectedLUNamespace = nestedBuildNamespaceFromJSON(*LUNamespaceArray);
+  if (!ExpectedLUNamespace) {
+    return ErrorBuilder::wrap(ExpectedLUNamespace.takeError())
+        .context(ErrorMessages::ReadingFromField, "NestedBuildNamespace",
+                 "lu_namespace")
+        .context(ErrorMessages::ReadingFromFile, "LUSummary", Path)
         .build();
   }
 
-  TUSummaryEncoding Encoding(std::move(*ExpectedTUNamespace));
+  LUSummary Summary(std::move(*ExpectedLUNamespace));
 
   {
     const Array *IdTableArray = RootObject.getArray("id_table");
@@ -64,7 +63,7 @@ JSONFormat::readTUSummaryEncoding(llvm::StringRef Path) {
       return ErrorBuilder::create(std::errc::invalid_argument,
                                   ErrorMessages::FailedToReadObjectAtField,
                                   "IdTable", "id_table", "array")
-          .context(ErrorMessages::ReadingFromFile, "TUSummary", Path)
+          .context(ErrorMessages::ReadingFromFile, "LUSummary", Path)
           .build();
     }
 
@@ -72,11 +71,11 @@ JSONFormat::readTUSummaryEncoding(llvm::StringRef Path) {
     if (!ExpectedIdTable) {
       return ErrorBuilder::wrap(ExpectedIdTable.takeError())
           .context(ErrorMessages::ReadingFromField, "IdTable", "id_table")
-          .context(ErrorMessages::ReadingFromFile, "TUSummary", Path)
+          .context(ErrorMessages::ReadingFromFile, "LUSummary", Path)
           .build();
     }
 
-    getIdTable(Encoding) = std::move(*ExpectedIdTable);
+    getIdTable(Summary) = std::move(*ExpectedIdTable);
   }
 
   {
@@ -85,12 +84,12 @@ JSONFormat::readTUSummaryEncoding(llvm::StringRef Path) {
       return ErrorBuilder::create(std::errc::invalid_argument,
                                   ErrorMessages::FailedToReadObjectAtField,
                                   "LinkageTable", "linkage_table", "array")
-          .context(ErrorMessages::ReadingFromFile, "TUSummary", Path)
+          .context(ErrorMessages::ReadingFromFile, "LUSummary", Path)
           .build();
     }
 
     auto ExpectedIdRange =
-        llvm::make_second_range(getEntities(getIdTable(Encoding)));
+        llvm::make_second_range(getEntities(getIdTable(Summary)));
     std::set<EntityId> ExpectedIds(ExpectedIdRange.begin(),
                                    ExpectedIdRange.end());
 
@@ -102,11 +101,11 @@ JSONFormat::readTUSummaryEncoding(llvm::StringRef Path) {
       return ErrorBuilder::wrap(ExpectedLinkageTable.takeError())
           .context(ErrorMessages::ReadingFromField, "LinkageTable",
                    "linkage_table")
-          .context(ErrorMessages::ReadingFromFile, "TUSummary", Path)
+          .context(ErrorMessages::ReadingFromFile, "LUSummary", Path)
           .build();
     }
 
-    getLinkageTable(Encoding) = std::move(*ExpectedLinkageTable);
+    getLinkageTable(Summary) = std::move(*ExpectedLinkageTable);
   }
 
   {
@@ -115,44 +114,48 @@ JSONFormat::readTUSummaryEncoding(llvm::StringRef Path) {
       return ErrorBuilder::create(std::errc::invalid_argument,
                                   ErrorMessages::FailedToReadObjectAtField,
                                   "SummaryData entries", "data", "array")
-          .context(ErrorMessages::ReadingFromFile, "TUSummary", Path)
+          .context(ErrorMessages::ReadingFromFile, "LUSummary", Path)
           .build();
     }
 
-    auto ExpectedEncodingSummaryDataMap =
-        encodingSummaryDataMapFromJSON(*SummaryDataArray);
-    if (!ExpectedEncodingSummaryDataMap) {
-      return ErrorBuilder::wrap(ExpectedEncodingSummaryDataMap.takeError())
+    auto ExpectedSummaryDataMap =
+        summaryDataMapFromJSON(*SummaryDataArray, getIdTable(Summary));
+    if (!ExpectedSummaryDataMap) {
+      return ErrorBuilder::wrap(ExpectedSummaryDataMap.takeError())
           .context(ErrorMessages::ReadingFromField, "SummaryData entries",
                    "data")
-          .context(ErrorMessages::ReadingFromFile, "TUSummary", Path)
+          .context(ErrorMessages::ReadingFromFile, "LUSummary", Path)
           .build();
     }
 
-    getData(Encoding) = std::move(*ExpectedEncodingSummaryDataMap);
+    getData(Summary) = std::move(*ExpectedSummaryDataMap);
   }
 
-  return std::move(Encoding);
+  return std::move(Summary);
 }
 
-llvm::Error
-JSONFormat::writeTUSummaryEncoding(const TUSummaryEncoding &SummaryEncoding,
-                                   llvm::StringRef Path) {
+llvm::Error JSONFormat::writeLUSummary(const LUSummary &S,
+                                       llvm::StringRef Path) {
   Object RootObject;
 
-  RootObject["tu_namespace"] =
-      buildNamespaceToJSON(getTUNamespace(SummaryEncoding));
+  RootObject["lu_namespace"] = nestedBuildNamespaceToJSON(getLUNamespace(S));
 
-  RootObject["id_table"] = entityIdTableToJSON(getIdTable(SummaryEncoding));
+  RootObject["id_table"] = entityIdTableToJSON(getIdTable(S));
 
-  RootObject["linkage_table"] =
-      linkageTableToJSON(getLinkageTable(SummaryEncoding));
+  RootObject["linkage_table"] = linkageTableToJSON(getLinkageTable(S));
 
-  RootObject["data"] = encodingSummaryDataMapToJSON(getData(SummaryEncoding));
+  auto ExpectedDataObject = summaryDataMapToJSON(getData(S));
+  if (!ExpectedDataObject) {
+    return ErrorBuilder::wrap(ExpectedDataObject.takeError())
+        .context(ErrorMessages::WritingToFile, "LUSummary", Path)
+        .build();
+  }
+
+  RootObject["data"] = std::move(*ExpectedDataObject);
 
   if (auto Error = writeJSON(std::move(RootObject), Path)) {
     return ErrorBuilder::wrap(std::move(Error))
-        .context(ErrorMessages::WritingToFile, "TUSummary", Path)
+        .context(ErrorMessages::WritingToFile, "LUSummary", Path)
         .build();
   }
 
