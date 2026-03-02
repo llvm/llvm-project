@@ -1039,32 +1039,35 @@ static const char *const dialectDynamicTypePrinterDispatch = R"(
     return;
 )";
 
-/// Check whether a declarative assembly format string needs a leading space
+/// Checks whether a declarative assembly format string needs a leading space
 /// between the mnemonic and the format body in the generated printer.
 ///
 /// Returns false for formats starting with punctuation or a space-eraser
-/// directive that should attach directly to the mnemonic (e.g. `<`, `(`, ``
+/// directive that should attach directly to the mnemonic (e.g., `<`, `(`,
 /// ``).
 ///
-// TODO: Query the parsed DefFormat structure instead of inspecting the raw
-/// format string to handle this case properly.
-///
+/// This inspects the raw format string rather than parsing it into a DefFormat.
+/// Parsing would require access to the format element types (which are local to
+/// `AttrOrTypeFormatGen.cpp`) and would re-parse every format string just to
+/// check its first token -- an overkill for a simple spacing heuristic.
+/// The only case this cannot distinguish structurally is an optional group
+/// whose then-branch starts with punctuation, but parsing has the same
+/// limitation since the group's anchor is not known at codegen time.
 static bool needsLeadingSpace(StringRef fmtStr) {
   if (fmtStr.empty())
     return false;
 
-  // '(' starts an optional group (see note above).
+  // '(' starts an optional group.
   if (fmtStr[0] == '(')
     return false;
 
   if (fmtStr.front() != '`' || fmtStr.size() < 2)
     return true;
 
-  // Note: bare '<', '{', '[' cannot appear at position 0 of a valid format
-  // string (the format lexer rejects them); they must be backtick-quoted
-  // (e.g. `<`), which is handled by the '`' case below.
-  // Backtick-quoted literal (e.g. `<`, `{`, `[`) or space-eraser (``).
-  return !StringRef("<{([`").contains(fmtStr[1]);
+  // Backtick-quoted literals (e.g., `<`, `{`, `[`) or space-eraser (``) -- no
+  // leading space. Bare '<', '{', '[' cannot appear at position 0 of a valid
+  // format.
+  return !llvm::is_contained("<{([`", fmtStr[1]);
 }
 
 /// Emit the dialect printer/parser dispatcher. User's code should call these
@@ -1133,7 +1136,7 @@ void DefGenerator::emitParsePrintDispatch(ArrayRef<AttrOrTypeDef> defs) {
       continue;
     }
 
-    // Custom format: user's `print()` controls its own spacing.
+    // Custom format: `print()` controls its own spacing.
     if (def.hasCustomAssemblyFormat()) {
       printer.body() << llvm::formatv(printValue, defClass,
                                       "\nt.print(printer);");
