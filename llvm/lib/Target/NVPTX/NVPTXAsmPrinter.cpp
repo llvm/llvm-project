@@ -259,8 +259,8 @@ void NVPTXAsmPrinter::printReturnValStr(const Function *F, raw_ostream &O) {
   };
   if (shouldPassAsArray(Ty)) {
     const unsigned TotalSize = DL.getTypeAllocSize(Ty);
-    const Align RetAlignment = TLI->getFunctionArgumentAlignment(
-        F, Ty, AttributeList::ReturnIndex, DL);
+    const Align RetAlignment =
+        getFunctionArgumentAlignment(F, Ty, AttributeList::ReturnIndex, DL);
     O << ".param .align " << RetAlignment.value() << " .b8 func_retval0["
       << TotalSize << "]";
   } else if (Ty->isFloatingPointTy()) {
@@ -1360,12 +1360,12 @@ void NVPTXAsmPrinter::emitFunctionParamList(const Function *F, raw_ostream &O) {
       }
     }
 
-    auto GetOptimalAlignForParam = [TLI, &DL, F, &Arg](Type *Ty) -> Align {
+    auto GetOptimalAlignForParam = [&DL, F, &Arg](Type *Ty) -> Align {
       if (MaybeAlign StackAlign =
               getAlign(*F, Arg.getArgNo() + AttributeList::FirstArgIndex))
         return StackAlign.value();
 
-      Align TypeAlign = TLI->getFunctionParamOptimizedAlign(F, Ty, DL);
+      Align TypeAlign = getFunctionParamOptimizedAlign(F, Ty, DL);
       MaybeAlign ParamAlign =
           Arg.hasByValAttr() ? Arg.getParamAlign() : MaybeAlign();
       return std::max(TypeAlign, ParamAlign.valueOrOne());
@@ -1382,7 +1382,7 @@ void NVPTXAsmPrinter::emitFunctionParamList(const Function *F, raw_ostream &O) {
       // size = typeallocsize of element type
       const Align OptimalAlign =
           IsKernelFunc ? GetOptimalAlignForParam(ETy)
-                       : TLI->getFunctionByValParamAlign(
+                       : getFunctionByValParamAlign(
                              F, ETy, Arg.getParamAlign().valueOrOne(), DL);
 
       O << "\t.param .align " << OptimalAlign.value() << " .b8 " << ParamSym
