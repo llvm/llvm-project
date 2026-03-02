@@ -70,6 +70,16 @@ void [[clang::annotate_type("webkit.nodelete")]] callsUnsafe() {
   someFunction(); // expected-warning{{A function 'callsUnsafe' has [[clang::annotate_type("webkit.nodelete")]] but it contains code that could destruct an object}}
 }
 
+void [[clang::annotate_type("webkit.nodelete")]] callsUnsafeWithSuppress();
+
+[[clang::suppress]] void callsUnsafeWithSuppress() {
+  someFunction();
+}
+
+void [[clang::annotate_type("webkit.nodelete")]] callsNoDeleteFunction() {
+  callsUnsafeWithSuppress();
+}
+
 #define EXPORT_IMPORT __attribute__((visibility("default")))
 EXPORT_IMPORT unsigned [[clang::annotate_type("webkit.nodelete")]] safeFunctionWithAttr();
 
@@ -297,6 +307,8 @@ struct Data {
 
   virtual void doSomething() { }
 
+  virtual void [[clang::annotate_type("webkit.nodelete")]] virtualWork() { }
+
   int a[3] { 0 };
   
 protected:
@@ -312,6 +324,11 @@ struct SubData : Data {
   }
 
   void doSomething() override { }
+
+  void virtualWork() override {
+    someFunction();
+    // expected-warning@-1{{A function 'virtualWork' has [[clang::annotate_type("webkit.nodelete")]] but it contains code that could destruct an object}}
+  }
 
 private:
   SubData() = default;

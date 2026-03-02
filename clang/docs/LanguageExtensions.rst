@@ -839,13 +839,13 @@ of different sizes and signs is forbidden in binary and ternary builtins.
  T __builtin_elementwise_copysign(T x, T y)     return the magnitude of x with the sign of y.                          floating point types
  T __builtin_elementwise_fmod(T x, T y)         return the floating-point remainder of (x/y) whose sign                floating point types
                                                 matches the sign of x.
- T __builtin_elementwise_max(T x, T y)          return x or y, whichever is larger                                     integer and floating point types
-                                                For floating point types, follows semantics of maxNum
+ T __builtin_elementwise_max(T x, T y)          return x or y, whichever is larger                                     integer
+                                                For floating point types, follows semantics of maxNum                  floating point types (deprecated)
                                                 in IEEE 754-2008. See `LangRef
                                                 <http://llvm.org/docs/LangRef.html#i-fminmax-family>`_
                                                 for the comparison.
- T __builtin_elementwise_min(T x, T y)          return x or y, whichever is smaller                                    integer and floating point types
-                                                For floating point types, follows semantics of minNum
+ T __builtin_elementwise_min(T x, T y)          return x or y, whichever is smaller                                    integer
+                                                For floating point types, follows semantics of minNum                  floating point types (deprecated)
                                                 in IEEE 754-2008. See `LangRef
                                                 <http://llvm.org/docs/LangRef.html#i-fminmax-family>`_
                                                 for the comparison.

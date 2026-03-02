@@ -1107,6 +1107,13 @@ AArch64TTIImpl::getIntrinsicInstrCost(const IntrinsicCostAttributes &ICA,
       return LegalCost;
     }
     break;
+  case Intrinsic::pow: {
+    EVT VT = getTLI()->getValueType(DL, RetTy);
+    RTLIB::Libcall LC = RTLIB::getPOW(VT);
+    if (getTLI()->getLibcallImpl(LC) != RTLIB::Unsupported)
+      return getCallInstrCost(nullptr, RetTy, ICA.getArgTypes(), CostKind);
+    break;
+  }
   default:
     break;
   }

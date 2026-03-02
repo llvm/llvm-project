@@ -4631,8 +4631,10 @@ uint64_t BinaryFunction::translateInputToOutputAddress(uint64_t Address) const {
 
   // Check if the address is associated with an instruction that is tracked
   // by address translation.
-  if (auto OutputAddress = BC.getIOAddressMap().lookup(Address))
-    return *OutputAddress;
+  if (BC.hasIOAddressMap()) {
+    if (auto OutputAddress = BC.getIOAddressMap().lookup(Address))
+      return *OutputAddress;
+  }
 
   // FIXME: #18950828 - we rely on relative offsets inside basic blocks to stay
   //        intact. Instead we can use pseudo instructions and/or annotations.

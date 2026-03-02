@@ -7995,6 +7995,12 @@ def massembler_fatal_warnings : Flag<["-"], "massembler-fatal-warnings">,
 def crel : Flag<["--"], "crel">,
   HelpText<"Enable CREL relocation format (ELF only)">,
   MarshallingInfoFlag<CodeGenOpts<"Crel">>;
+def reloc_section_sym : Joined<["--"], "reloc-section-sym=">,
+  HelpText<"Section symbol conversion for relocations: all, internal, none (ELF only)">,
+  Values<"all,internal,none">,
+  NormalizedValuesScope<"llvm::RelocSectionSymType">,
+  NormalizedValues<["All", "Internal", "None"]>,
+  MarshallingInfoEnum<CodeGenOpts<"RelocSectionSym">, "All">;
 // The leading 'g' is misleading. This is an unwind tables option, not
 // a debug option. But uses this name for gnu compatibility.
 def gsframe : Flag<["--"], "gsframe">,

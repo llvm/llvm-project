@@ -99,7 +99,7 @@ bool xegpu::recoverTemporaryLayouts(Operation *rootOp) {
             << operand.getOperandNumber() << " of operation " << op->getName();
         continue;
       }
-      xegpu::setDistributeLayoutAttr(operand, layout);
+      xegpu::setTemporaryLayout(operand, layout);
     }
     return WalkResult::advance();
   });
