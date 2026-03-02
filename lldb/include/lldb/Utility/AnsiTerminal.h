@@ -434,8 +434,9 @@ inline void OutputWordWrappedLines(Stream &strm, llvm::StringRef text,
       // text is split across two lines, the indentation is not also formatted.
       // Which it would be if we just emitted spaces.
       strm << ansi_indent << split;
-    } else
+    } else {
       strm.Indent(split);
+    }
 
     text = text.drop_front(split.size()).ltrim();
   }
