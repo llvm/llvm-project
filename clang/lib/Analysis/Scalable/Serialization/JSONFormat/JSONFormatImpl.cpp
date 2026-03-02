@@ -1,4 +1,4 @@
-//===- JSONFormatImpl.cpp -----------------------------------------------===//
+//===- JSONFormatImpl.cpp -------------------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -34,7 +34,7 @@ llvm::Expected<Value> readJSON(llvm::StringRef Path) {
         .build();
   }
 
-  if (!Path.ends_with_insensitive(JSONFormatFileExtension)) {
+  if (!Path.ends_with(JSONFormatFileExtension)) {
     return ErrorBuilder::create(std::errc::invalid_argument,
                                 ErrorMessages::FailedToReadFile, Path,
                                 llvm::formatv(ErrorMessages::FileIsNotJSON,
@@ -53,7 +53,7 @@ llvm::Expected<Value> readJSON(llvm::StringRef Path) {
   return llvm::json::parse(BufferOrError.get()->getBuffer());
 }
 
-llvm::Error writeJSON(Value &&Value, llvm::StringRef Path) {
+llvm::Error writeJSON(Value &&Val, llvm::StringRef Path) {
   if (llvm::sys::fs::exists(Path)) {
     return ErrorBuilder::create(std::errc::file_exists,
                                 ErrorMessages::FailedToWriteFile, Path,
@@ -69,7 +69,7 @@ llvm::Error writeJSON(Value &&Value, llvm::StringRef Path) {
         .build();
   }
 
-  if (!Path.ends_with_insensitive(JSONFormatFileExtension)) {
+  if (!Path.ends_with(JSONFormatFileExtension)) {
     return ErrorBuilder::create(std::errc::invalid_argument,
                                 ErrorMessages::FailedToWriteFile, Path,
                                 llvm::formatv(ErrorMessages::FileIsNotJSON,
@@ -86,7 +86,7 @@ llvm::Error writeJSON(Value &&Value, llvm::StringRef Path) {
         .build();
   }
 
-  OutStream << llvm::formatv("{0:2}\n", Value);
+  OutStream << llvm::formatv("{0:2}\n", Val);
   OutStream.flush();
 
   // This path handles post-write stream errors (e.g. ENOSPC after buffered
@@ -110,7 +110,8 @@ std::map<SummaryName, JSONFormat::FormatInfo> JSONFormat::initFormatInfos() {
   std::map<SummaryName, FormatInfo> FormatInfos;
   for (const auto &FormatInfoEntry : llvm::Registry<FormatInfo>::entries()) {
     std::unique_ptr<FormatInfo> Info = FormatInfoEntry.instantiate();
-    bool Inserted = FormatInfos.try_emplace(Info->ForSummary, *Info).second;
+    bool Inserted =
+        FormatInfos.try_emplace(Info->ForSummary, std::move(*Info)).second;
     if (!Inserted) {
       llvm::report_fatal_error(
           "FormatInfo is already registered for summary: " +
@@ -216,7 +217,6 @@ llvm::Expected<NestedBuildNamespace> JSONFormat::nestedBuildNamespaceFromJSON(
 
   for (const auto &[Index, BuildNamespaceValue] :
        llvm::enumerate(NestedBuildNamespaceArray)) {
-
     const Object *BuildNamespaceObject = BuildNamespaceValue.getAsObject();
     if (!BuildNamespaceObject) {
       return ErrorBuilder::create(std::errc::invalid_argument,
@@ -418,7 +418,6 @@ JSONFormat::entityIdTableFromJSON(const Array &EntityIdTableArray) const {
 
   for (const auto &[Index, EntityIdTableEntryValue] :
        llvm::enumerate(EntityIdTableArray)) {
-
     const Object *OptEntityIdTableEntryObject =
         EntityIdTableEntryValue.getAsObject();
     if (!OptEntityIdTableEntryObject) {
@@ -430,11 +429,12 @@ JSONFormat::entityIdTableFromJSON(const Array &EntityIdTableArray) const {
 
     auto ExpectedEntityIdTableEntry =
         entityIdTableEntryFromJSON(*OptEntityIdTableEntryObject);
-    if (!ExpectedEntityIdTableEntry)
+    if (!ExpectedEntityIdTableEntry) {
       return ErrorBuilder::wrap(ExpectedEntityIdTableEntry.takeError())
           .context(ErrorMessages::ReadingFromIndex, "EntityIdTable entry",
                    Index)
           .build();
+    }
 
     auto [EntityIt, EntityInserted] =
         Entities.emplace(std::move(*ExpectedEntityIdTableEntry));
@@ -746,7 +746,6 @@ JSONFormat::entityDataMapFromJSON(const SummaryName &SN,
 
   for (const auto &[Index, EntityDataMapEntryValue] :
        llvm::enumerate(EntityDataArray)) {
-
     const Object *OptEntityDataMapEntryObject =
         EntityDataMapEntryValue.getAsObject();
     if (!OptEntityDataMapEntryObject) {
@@ -836,11 +835,12 @@ JSONFormat::summaryDataMapEntryFromJSON(const Object &SummaryDataMapEntryObject,
 
   auto ExpectedEntityDataMap =
       entityDataMapFromJSON(SN, *OptEntityDataArray, IdTable);
-  if (!ExpectedEntityDataMap)
+  if (!ExpectedEntityDataMap) {
     return ErrorBuilder::wrap(ExpectedEntityDataMap.takeError())
         .context(ErrorMessages::ReadingFromField, "EntitySummary entries",
                  "summary_data")
         .build();
+  }
 
   return std::make_pair(std::move(SN), std::move(*ExpectedEntityDataMap));
 }
@@ -878,7 +878,6 @@ JSONFormat::summaryDataMapFromJSON(const Array &SummaryDataArray,
 
   for (const auto &[Index, SummaryDataMapEntryValue] :
        llvm::enumerate(SummaryDataArray)) {
-
     const Object *OptSummaryDataMapEntryObject =
         SummaryDataMapEntryValue.getAsObject();
     if (!OptSummaryDataMapEntryObject) {
@@ -1002,7 +1001,6 @@ JSONFormat::encodingDataMapFromJSON(const Array &EntityDataArray) const {
 
   for (const auto &[Index, EntityDataMapEntryValue] :
        llvm::enumerate(EntityDataArray)) {
-
     const Object *OptEntityDataMapEntryObject =
         EntityDataMapEntryValue.getAsObject();
     if (!OptEntityDataMapEntryObject) {
@@ -1077,11 +1075,12 @@ JSONFormat::encodingSummaryDataMapEntryFromJSON(
   }
 
   auto ExpectedEncodingDataMap = encodingDataMapFromJSON(*OptEntityDataArray);
-  if (!ExpectedEncodingDataMap)
+  if (!ExpectedEncodingDataMap) {
     return ErrorBuilder::wrap(ExpectedEncodingDataMap.takeError())
         .context(ErrorMessages::ReadingFromField, "EntitySummary entries",
                  "summary_data")
         .build();
+  }
 
   return std::make_pair(std::move(SN), std::move(*ExpectedEncodingDataMap));
 }
@@ -1112,7 +1111,6 @@ JSONFormat::encodingSummaryDataMapFromJSON(
 
   for (const auto &[Index, SummaryDataMapEntryValue] :
        llvm::enumerate(SummaryDataArray)) {
-
     const Object *OptSummaryDataMapEntryObject =
         SummaryDataMapEntryValue.getAsObject();
     if (!OptSummaryDataMapEntryObject) {

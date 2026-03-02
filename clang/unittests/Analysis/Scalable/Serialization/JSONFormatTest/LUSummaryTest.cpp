@@ -163,12 +163,14 @@ TEST_P(LUSummaryTest, BrokenSymlink) {
   GTEST_SKIP() << "Symlink model differs on Windows";
 #endif
 
+  const PathString SymlinkFileName("broken_symlink.json");
+
   // Create a symlink pointing to a non-existent file
   auto ExpectedSymlinkPath =
       makeSymlink("nonexistent_target.json", "broken_symlink.json");
   ASSERT_THAT_EXPECTED(ExpectedSymlinkPath, Succeeded());
 
-  auto Result = readFromFile(*ExpectedSymlinkPath);
+  auto Result = readFromFile(SymlinkFileName);
 
   EXPECT_THAT_ERROR(std::move(Result),
                     FailedWithMessage(AllOf(HasSubstr("reading LUSummary from"),
@@ -1869,7 +1871,7 @@ TEST_P(LUSummaryTest, DataEntryMissingData) {
 }
 
 // ============================================================================
-// JSONFormat::summaryDataMapFromJSON() Error Tests
+// JSONFormat::summaryDataMapFromJSON() Error Tests (array-level)
 // ============================================================================
 
 TEST_P(LUSummaryTest, DataNotArray) {
