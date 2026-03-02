@@ -273,7 +273,7 @@ void createHLFIRToFIRPassPipeline(mlir::PassManager &pm,
       pm, hlfir::createInlineElementals);
   if (optLevel.isOptimizingForSpeed()) {
     addCanonicalizerPassWithoutRegionSimplification(pm);
-    mlir::CSEOptions options;
+    mlir::CSEPassOptions options;
     options.hoistPureOps = false;
     pm.addPass(mlir::createCSEPass(options));
     // Run SimplifyHLFIRIntrinsics pass late after CSE,
