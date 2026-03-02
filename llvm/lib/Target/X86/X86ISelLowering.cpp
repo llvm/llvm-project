@@ -38961,33 +38961,33 @@ X86TargetLowering::EmitInstrWithCustomInserter(MachineInstr &MI,
     MI.eraseFromParent(); // The pseudo is gone now.
     return BB;
   }
-  case X86::PTCVTROWPS2BF16Hrri:
-  case X86::PTCVTROWPS2BF16Lrri:
-  case X86::PTCVTROWPS2PHHrri:
-  case X86::PTCVTROWPS2PHLrri:
-  case X86::PTCVTROWD2PSrri:
-  case X86::PTILEMOVROWrri: {
+  case X86::PTCVTROWPS2BF16Hrti:
+  case X86::PTCVTROWPS2BF16Lrti:
+  case X86::PTCVTROWPS2PHHrti:
+  case X86::PTCVTROWPS2PHLrti:
+  case X86::PTCVTROWD2PSrti:
+  case X86::PTILEMOVROWrti: {
     const DebugLoc &DL = MI.getDebugLoc();
     unsigned Opc;
     switch (MI.getOpcode()) {
     default:
       llvm_unreachable("Unexpected instruction!");
-    case X86::PTCVTROWD2PSrri:
+    case X86::PTCVTROWD2PSrti:
       Opc = X86::TCVTROWD2PSrti;
       break;
-    case X86::PTCVTROWPS2BF16Hrri:
+    case X86::PTCVTROWPS2BF16Hrti:
       Opc = X86::TCVTROWPS2BF16Hrti;
       break;
-    case X86::PTCVTROWPS2PHHrri:
+    case X86::PTCVTROWPS2PHHrti:
       Opc = X86::TCVTROWPS2PHHrti;
       break;
-    case X86::PTCVTROWPS2BF16Lrri:
+    case X86::PTCVTROWPS2BF16Lrti:
       Opc = X86::TCVTROWPS2BF16Lrti;
       break;
-    case X86::PTCVTROWPS2PHLrri:
+    case X86::PTCVTROWPS2PHLrti:
       Opc = X86::TCVTROWPS2PHLrti;
       break;
-    case X86::PTILEMOVROWrri:
+    case X86::PTILEMOVROWrti:
       Opc = X86::TILEMOVROWrti;
       break;
     }
@@ -38999,33 +38999,33 @@ X86TargetLowering::EmitInstrWithCustomInserter(MachineInstr &MI,
     MI.eraseFromParent(); // The pseudo is gone now.
     return BB;
   }
-  case X86::PTCVTROWPS2BF16Hrre:
-  case X86::PTCVTROWPS2BF16Lrre:
-  case X86::PTCVTROWPS2PHHrre:
-  case X86::PTCVTROWPS2PHLrre:
-  case X86::PTCVTROWD2PSrre:
-  case X86::PTILEMOVROWrre: {
+  case X86::PTCVTROWPS2BF16Hrte:
+  case X86::PTCVTROWPS2BF16Lrte:
+  case X86::PTCVTROWPS2PHHrte:
+  case X86::PTCVTROWPS2PHLrte:
+  case X86::PTCVTROWD2PSrte:
+  case X86::PTILEMOVROWrte: {
     const DebugLoc &DL = MI.getDebugLoc();
     unsigned Opc;
     switch (MI.getOpcode()) {
     default:
       llvm_unreachable("Unexpected instruction!");
-    case X86::PTCVTROWD2PSrre:
+    case X86::PTCVTROWD2PSrte:
       Opc = X86::TCVTROWD2PSrte;
       break;
-    case X86::PTCVTROWPS2BF16Hrre:
+    case X86::PTCVTROWPS2BF16Hrte:
       Opc = X86::TCVTROWPS2BF16Hrte;
       break;
-    case X86::PTCVTROWPS2BF16Lrre:
+    case X86::PTCVTROWPS2BF16Lrte:
       Opc = X86::TCVTROWPS2BF16Lrte;
       break;
-    case X86::PTCVTROWPS2PHHrre:
+    case X86::PTCVTROWPS2PHHrte:
       Opc = X86::TCVTROWPS2PHHrte;
       break;
-    case X86::PTCVTROWPS2PHLrre:
+    case X86::PTCVTROWPS2PHLrte:
       Opc = X86::TCVTROWPS2PHLrte;
       break;
-    case X86::PTILEMOVROWrre:
+    case X86::PTILEMOVROWrte:
       Opc = X86::TILEMOVROWrte;
       break;
     }
@@ -56140,6 +56140,37 @@ static SDValue combineXorWithGF2P8AFFINEQB(SDNode *N, const SDLoc &DL,
                      DAG.getTargetConstant(NewImm, DL, MVT::i8));
 }
 
+// Fold: vgf2p8affineqb(x, m1, i1) ^ vgf2p8affineqb(x, m2, i2)
+//   =>  vgf2p8affineqb(x, m1 ^ m2, i1 ^ i2)
+// The matrix in vgf2p8affineqb determines which bits of the input are XORed
+// together. XORing two affine transformations of the same input can be folded
+// by XORing both their matrices and immediates together.
+static SDValue combineXorWithTwoGF2P8AFFINEQB(SDNode *N, const SDLoc &DL,
+                                              SelectionDAG &DAG, EVT VT) {
+  using namespace SDPatternMatch;
+
+  SDValue X0, Y0, Y1;
+  APInt Imm0, Imm1;
+  // Use sd_match for structure matching - m_Xor handles commutation
+  // Match: GF2P8AFFINEQB(x, m1, i1) ^ GF2P8AFFINEQB(x, m2, i2)
+  if (!sd_match(
+          N, m_Xor(m_OneUse(m_TernaryOp(X86ISD::GF2P8AFFINEQB, m_Value(X0),
+                                        m_Value(Y0), m_ConstInt(Imm0))),
+                   m_OneUse(m_TernaryOp(X86ISD::GF2P8AFFINEQB, m_Deferred(X0),
+                                        m_Value(Y1), m_ConstInt(Imm1))))))
+    return SDValue();
+
+  assert((VT == MVT::v16i8 || VT == MVT::v32i8 || VT == MVT::v64i8) &&
+         "Unsupported GFNI type");
+
+  uint64_t NewImm = Imm0.getZExtValue() ^ Imm1.getZExtValue();
+
+  SDValue NewMatrix = DAG.getNode(ISD::XOR, DL, VT, Y0, Y1);
+
+  return DAG.getNode(X86ISD::GF2P8AFFINEQB, DL, VT, X0, NewMatrix,
+                     DAG.getTargetConstant(NewImm, DL, MVT::i8));
+}
+
 static SDValue combineXorSubCTLZ(SDNode *N, const SDLoc &DL, SelectionDAG &DAG,
                                  const X86Subtarget &Subtarget) {
   assert((N->getOpcode() == ISD::XOR || N->getOpcode() == ISD::SUB) &&
@@ -56243,6 +56274,9 @@ static SDValue combineXor(SDNode *N, SelectionDAG &DAG,
   if (SDValue RV = foldXorTruncShiftIntoCmp(N, DL, DAG))
     return RV;
   if (SDValue R = combineXorWithGF2P8AFFINEQB(N, DL, DAG, VT))
+    return R;
+
+  if (SDValue R = combineXorWithTwoGF2P8AFFINEQB(N, DL, DAG, VT))
     return R;
 
   // Fold not(iX bitcast(vXi1)) -> (iX bitcast(not(vec))) for legal boolvecs.

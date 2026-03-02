@@ -12,6 +12,7 @@
 #include "mlir/Dialect/LLVMIR/LLVMTypes.h"
 #include "mlir/IR/AffineMap.h"
 #include "mlir/IR/BuiltinAttributes.h"
+#include "llvm/Support/MathExtras.h"
 
 using namespace mlir;
 
@@ -384,23 +385,68 @@ static unsigned getBitWidth(Type type) {
   return vec.getNumElements() * getBitWidth(vec.getElementType());
 }
 
+/// Returns true if every leaf in `type` (recursing through LLVM arrays and
+/// structs) is either equal to `dstType` or has a fixed bit width.
+static bool isFixedSizeAggregate(Type type, Type dstType) {
+  if (type == dstType)
+    return true;
+  if (auto arrayType = dyn_cast<LLVM::LLVMArrayType>(type))
+    return isFixedSizeAggregate(arrayType.getElementType(), dstType);
+  if (auto structType = dyn_cast<LLVM::LLVMStructType>(type))
+    return llvm::all_of(structType.getBody(), [&](Type fieldType) {
+      return isFixedSizeAggregate(fieldType, dstType);
+    });
+  if (auto vecTy = dyn_cast<VectorType>(type))
+    return !vecTy.isScalable();
+  return type.isIntOrFloat();
+}
+
 static Value createI32Constant(OpBuilder &builder, Location loc,
                                int32_t value) {
   Type i32 = builder.getI32Type();
   return LLVM::ConstantOp::create(builder, loc, i32, value);
 }
 
-SmallVector<Value> mlir::LLVM::decomposeValue(OpBuilder &builder, Location loc,
-                                              Value src, Type dstType) {
+/// Recursive implementation of decomposeValue. When
+/// `permitVariablySizedScalars` is false, callers must ensure
+/// isFixedSizeAggregate() holds before calling this.
+static void decomposeValueImpl(OpBuilder &builder, Location loc, Value src,
+                               Type dstType, SmallVectorImpl<Value> &result) {
   Type srcType = src.getType();
-  if (srcType == dstType)
-    return {src};
+  if (srcType == dstType) {
+    result.push_back(src);
+    return;
+  }
+
+  if (auto arrayType = dyn_cast<LLVM::LLVMArrayType>(srcType)) {
+    for (auto i : llvm::seq(arrayType.getNumElements())) {
+      Value elem = LLVM::ExtractValueOp::create(builder, loc, src, i);
+      decomposeValueImpl(builder, loc, elem, dstType, result);
+    }
+    return;
+  }
+
+  if (auto structType = dyn_cast<LLVM::LLVMStructType>(srcType)) {
+    for (auto [i, fieldType] : llvm::enumerate(structType.getBody())) {
+      Value field = LLVM::ExtractValueOp::create(builder, loc, src,
+                                                 static_cast<int64_t>(i));
+      decomposeValueImpl(builder, loc, field, dstType, result);
+    }
+    return;
+  }
+
+  // Variably sized leaf types (e.g., ptr) — pass through as-is.
+  if (!srcType.isIntOrFloat() && !isa<VectorType>(srcType)) {
+    result.push_back(src);
+    return;
+  }
 
   unsigned srcBitWidth = getBitWidth(srcType);
   unsigned dstBitWidth = getBitWidth(dstType);
   if (srcBitWidth == dstBitWidth) {
     Value cast = LLVM::BitcastOp::create(builder, loc, dstType, src);
-    return {cast};
+    result.push_back(cast);
+    return;
   }
 
   if (dstBitWidth > srcBitWidth) {
@@ -410,20 +456,125 @@ SmallVector<Value> mlir::LLVM::decomposeValue(OpBuilder &builder, Location loc,
 
     auto largerInt = builder.getIntegerType(dstBitWidth);
     Value res = LLVM::ZExtOp::create(builder, loc, largerInt, src);
-    return {res};
+    result.push_back(res);
+    return;
   }
-  assert(srcBitWidth % dstBitWidth == 0 &&
-         "src bit width must be a multiple of dst bit width");
-  int64_t numElements = srcBitWidth / dstBitWidth;
-  auto vecType = VectorType::get(numElements, dstType);
+  int64_t numElements = llvm::divideCeil(srcBitWidth, dstBitWidth);
+  int64_t roundedBitWidth = numElements * dstBitWidth;
 
+  // Pad out values that don't decompose evenly before creating a vector.
+  if (roundedBitWidth != srcBitWidth) {
+    auto srcInt = builder.getIntegerType(srcBitWidth);
+    if (srcType != srcInt)
+      src = LLVM::BitcastOp::create(builder, loc, srcInt, src);
+    auto roundedInt = builder.getIntegerType(roundedBitWidth);
+    src = LLVM::ZExtOp::create(builder, loc, roundedInt, src);
+  }
+
+  auto vecType = VectorType::get(numElements, dstType);
   src = LLVM::BitcastOp::create(builder, loc, vecType, src);
 
-  SmallVector<Value> res;
   for (auto i : llvm::seq(numElements)) {
     Value idx = createI32Constant(builder, loc, i);
     Value elem = LLVM::ExtractElementOp::create(builder, loc, src, idx);
-    res.emplace_back(elem);
+    result.push_back(elem);
+  }
+}
+
+LogicalResult mlir::LLVM::decomposeValue(OpBuilder &builder, Location loc,
+                                         Value src, Type dstType,
+                                         SmallVectorImpl<Value> &result,
+                                         bool permitVariablySizedScalars) {
+  // Check the type tree before emitting any IR, so that a failing pattern
+  // leaves the IR unmodified.
+  if (!permitVariablySizedScalars &&
+      !isFixedSizeAggregate(src.getType(), dstType))
+    return failure();
+
+  decomposeValueImpl(builder, loc, src, dstType, result);
+  return success();
+}
+
+/// Recursive implementation of composeValue. Consumes elements from `src`
+/// starting at `offset`, advancing it past the consumed elements.
+static Value composeValueImpl(OpBuilder &builder, Location loc, ValueRange src,
+                              size_t &offset, Type dstType) {
+  if (auto arrayType = dyn_cast<LLVM::LLVMArrayType>(dstType)) {
+    Value result = LLVM::PoisonOp::create(builder, loc, arrayType);
+    Type elemType = arrayType.getElementType();
+    for (auto i : llvm::seq(arrayType.getNumElements())) {
+      Value elem = composeValueImpl(builder, loc, src, offset, elemType);
+      result = LLVM::InsertValueOp::create(builder, loc, result, elem, i);
+    }
+    return result;
+  }
+
+  if (auto structType = dyn_cast<LLVM::LLVMStructType>(dstType)) {
+    Value result = LLVM::PoisonOp::create(builder, loc, structType);
+    for (auto [i, fieldType] : llvm::enumerate(structType.getBody())) {
+      Value field = composeValueImpl(builder, loc, src, offset, fieldType);
+      result = LLVM::InsertValueOp::create(builder, loc, result, field,
+                                           static_cast<int64_t>(i));
+    }
+    return result;
+  }
+
+  // Variably sized leaf types (e.g., ptr) — consume and return as-is.
+  if (!dstType.isIntOrFloat() && !isa<VectorType>(dstType))
+    return src[offset++];
+
+  unsigned dstBitWidth = getBitWidth(dstType);
+
+  Value front = src[offset];
+  if (front.getType() == dstType) {
+    ++offset;
+    return front;
+  }
+
+  // Single element wider than or equal to dst: bitcast/trunc.
+  if (front.getType().isIntOrFloat() || isa<VectorType>(front.getType())) {
+    unsigned srcBitWidth = getBitWidth(front.getType());
+    if (srcBitWidth >= dstBitWidth) {
+      ++offset;
+      Value res = front;
+      if (dstBitWidth < srcBitWidth) {
+        auto largerInt = builder.getIntegerType(srcBitWidth);
+        if (res.getType() != largerInt)
+          res = LLVM::BitcastOp::create(builder, loc, largerInt, res);
+
+        auto smallerInt = builder.getIntegerType(dstBitWidth);
+        res = LLVM::TruncOp::create(builder, loc, smallerInt, res);
+      }
+      if (res.getType() != dstType)
+        res = LLVM::BitcastOp::create(builder, loc, dstType, res);
+      return res;
+    }
+  }
+
+  // Multiple elements narrower than dst: gather into a vector and bitcast.
+  unsigned elemBitWidth = getBitWidth(front.getType());
+  int64_t numElements = llvm::divideCeil(dstBitWidth, elemBitWidth);
+  int64_t roundedBitWidth = numElements * elemBitWidth;
+
+  auto vecType = VectorType::get(numElements, front.getType());
+  Value res = LLVM::PoisonOp::create(builder, loc, vecType);
+  for (auto i : llvm::seq(numElements)) {
+    Value idx = createI32Constant(builder, loc, i);
+    res = LLVM::InsertElementOp::create(builder, loc, vecType, res,
+                                        src[offset++], idx);
+  }
+
+  // Undo any padding decomposition might have introduced.
+  if (roundedBitWidth != dstBitWidth) {
+    auto roundedInt = builder.getIntegerType(roundedBitWidth);
+    res = LLVM::BitcastOp::create(builder, loc, roundedInt, res);
+    auto dstInt = builder.getIntegerType(dstBitWidth);
+    res = LLVM::TruncOp::create(builder, loc, dstInt, res);
+    if (dstType != dstInt)
+      res = LLVM::BitcastOp::create(builder, loc, dstType, res);
+  } else {
+    if (res.getType() != dstType)
+      res = LLVM::BitcastOp::create(builder, loc, dstType, res);
   }
 
   return res;
@@ -432,40 +583,10 @@ SmallVector<Value> mlir::LLVM::decomposeValue(OpBuilder &builder, Location loc,
 Value mlir::LLVM::composeValue(OpBuilder &builder, Location loc, ValueRange src,
                                Type dstType) {
   assert(!src.empty() && "src range must not be empty");
-  if (src.size() == 1) {
-    Value res = src.front();
-    if (res.getType() == dstType)
-      return res;
-
-    unsigned srcBitWidth = getBitWidth(res.getType());
-    unsigned dstBitWidth = getBitWidth(dstType);
-    if (dstBitWidth < srcBitWidth) {
-      auto largerInt = builder.getIntegerType(srcBitWidth);
-      if (res.getType() != largerInt)
-        res = LLVM::BitcastOp::create(builder, loc, largerInt, res);
-
-      auto smallerInt = builder.getIntegerType(dstBitWidth);
-      res = LLVM::TruncOp::create(builder, loc, smallerInt, res);
-    }
-
-    if (res.getType() != dstType)
-      res = LLVM::BitcastOp::create(builder, loc, dstType, res);
-
-    return res;
-  }
-
-  int64_t numElements = src.size();
-  auto srcType = VectorType::get(numElements, src.front().getType());
-  Value res = LLVM::PoisonOp::create(builder, loc, srcType);
-  for (auto &&[i, elem] : llvm::enumerate(src)) {
-    Value idx = createI32Constant(builder, loc, i);
-    res = LLVM::InsertElementOp::create(builder, loc, srcType, res, elem, idx);
-  }
-
-  if (res.getType() != dstType)
-    res = LLVM::BitcastOp::create(builder, loc, dstType, res);
-
-  return res;
+  size_t offset = 0;
+  Value result = composeValueImpl(builder, loc, src, offset, dstType);
+  assert(offset == src.size() && "not all decomposed values were consumed");
+  return result;
 }
 
 Value mlir::LLVM::getStridedElementPtr(OpBuilder &builder, Location loc,

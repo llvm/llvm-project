@@ -160,6 +160,58 @@ func.func @index_castui_nneg_not_set(%arg0: i1) {
 
 // -----
 
+// index_cast exact on truncation lowers to trunc nsw (signed semantics).
+// CHECK-LABEL: @index_cast_exact_trunc
+func.func @index_cast_exact_trunc(%arg0: index) {
+// CHECK: llvm.trunc %{{.*}} overflow<nsw> : i{{.*}} to i1
+  %0 = arith.index_cast %arg0 exact : index to i1
+  return
+}
+
+// -----
+
+// index_cast exact on widening: exact is vacuously true, sext has no flag.
+// CHECK-LABEL: @index_cast_exact_ext
+func.func @index_cast_exact_ext(%arg0: i1) {
+// CHECK: llvm.sext %{{.*}} : i1 to i{{.*}}
+// CHECK-NOT: nsw
+  %0 = arith.index_cast %arg0 exact : i1 to index
+  return
+}
+
+// -----
+
+// index_castui exact on truncation lowers to trunc nuw (unsigned semantics).
+// CHECK-LABEL: @index_castui_exact_trunc
+func.func @index_castui_exact_trunc(%arg0: index) {
+// CHECK: llvm.trunc %{{.*}} overflow<nuw> : i{{.*}} to i1
+  %0 = arith.index_castui %arg0 exact : index to i1
+  return
+}
+
+// -----
+
+// index_castui nneg exact on truncation lowers to trunc nuw nsw.
+// CHECK-LABEL: @index_castui_nneg_exact_trunc
+func.func @index_castui_nneg_exact_trunc(%arg0: index) {
+// CHECK: llvm.trunc %{{.*}} overflow<nsw, nuw> : i{{.*}} to i1
+  %0 = arith.index_castui %arg0 nneg exact : index to i1
+  return
+}
+
+// -----
+
+// index_castui exact on widening: exact is vacuously true, zext has no flag.
+// CHECK-LABEL: @index_castui_exact_ext
+func.func @index_castui_exact_ext(%arg0: i1) {
+// CHECK: llvm.zext %{{.*}} : i1 to i{{.*}}
+// CHECK-NOT: nuw
+  %0 = arith.index_castui %arg0 exact : i1 to index
+  return
+}
+
+// -----
+
 // Checking conversion of signed integer types to floating point.
 // CHECK-LABEL: @sitofp
 func.func @sitofp(%arg0 : i32, %arg1 : i64) {
