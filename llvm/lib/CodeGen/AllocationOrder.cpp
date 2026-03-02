@@ -59,59 +59,23 @@ AllocationOrder AllocationOrder::create(Register VirtReg, const VirtRegMap &VRM,
     }
   });
 
-  // Create allocation order object
-  AllocationOrder AO(std::move(Hints), Order, HardHints);
+  // Storage for filtered order (used if anti-hints cause reordering)
+  SmallVector<MCPhysReg, 16> ShuffledOrder;
 
-  // Apply anti-hints filtering if needed
   if (!AntiHintedPhysRegs.empty()) {
-    AO.applyAntiHints(AntiHintedPhysRegs, TRI);
-
-    LLVM_DEBUG({
-      if (!AO.Hints.empty()) {
-        dbgs() << "filtered hints:";
-        for (MCPhysReg Hint : AO.Hints)
-          dbgs() << ' ' << printReg(Hint, TRI);
-        dbgs() << '\n';
-      }
-    });
+    TRI->applyRegAllocationAntiHints(VirtReg, Order, ShuffledOrder,
+                                     AntiHintedPhysRegs, MF, &VRM, Matrix);
   }
+  // Use ShuffledOrder as the order if it was populated by anti-hints
+  // processing
+  ArrayRef<MCPhysReg> FinalOrder =
+      ShuffledOrder.empty() ? Order : ShuffledOrder;
+  // Create allocation order object
+  AllocationOrder AO(std::move(Hints), FinalOrder, HardHints,
+                     std::move(ShuffledOrder));
 
   assert(all_of(AO.Hints,
                 [&](MCPhysReg Hint) { return is_contained(AO.Order, Hint); }) &&
          "Target hint is outside allocation order.");
   return AO;
-}
-
-void AllocationOrder::applyAntiHints(ArrayRef<MCPhysReg> AntiHintedPhysRegs,
-                                     const TargetRegisterInfo *TRI) {
-  // Helper to check if a register overlaps with any anti-hint
-  auto isAntiHinted = [&](MCPhysReg Reg) {
-    return std::any_of(
-        AntiHintedPhysRegs.begin(), AntiHintedPhysRegs.end(),
-        [&](MCPhysReg AntiHint) { return TRI->regsOverlap(Reg, AntiHint); });
-  };
-
-  // Create filtered order
-  FilteredOrderStorage.clear();
-  FilteredOrderStorage.assign(Order.begin(), Order.end());
-
-  // Partition: non-anti-hinted registers go first
-  auto PartitionPoint = std::stable_partition(
-      FilteredOrderStorage.begin(), FilteredOrderStorage.end(),
-      [&](MCPhysReg Reg) { return !isAntiHinted(Reg); });
-
-  // Update Order
-  Order = FilteredOrderStorage;
-
-  LLVM_DEBUG({
-    size_t NonAntiHintedCount =
-        std::distance(FilteredOrderStorage.begin(), PartitionPoint);
-    size_t AntiHintedCount =
-        std::distance(PartitionPoint, FilteredOrderStorage.end());
-    dbgs() << "    Added " << NonAntiHintedCount
-           << " non-anti-hinted registers first\n"
-           << "    Added " << AntiHintedCount
-           << " anti-hinted registers at the end\n"
-           << "  Anti-hint filtering complete\n";
-  });
 }

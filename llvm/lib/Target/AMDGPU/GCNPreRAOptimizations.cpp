@@ -38,6 +38,7 @@
 #include "llvm/CodeGen/LiveIntervals.h"
 #include "llvm/CodeGen/MachineFunctionPass.h"
 #include "llvm/CodeGen/Register.h"
+#include "llvm/CodeGen/TargetSchedule.h"
 #include "llvm/InitializePasses.h"
 
 using namespace llvm;
@@ -58,6 +59,7 @@ private:
   const SIRegisterInfo *TRI;
   MachineRegisterInfo *MRI;
   LiveIntervals *LIS;
+  TargetSchedModel SchedModel;
 
   bool processReg(Register Reg);
 
@@ -250,17 +252,33 @@ bool GCNPreRAOptimizationsImpl::run(MachineFunction &MF) {
   TII = ST.getInstrInfo();
   MRI = &MF.getRegInfo();
   TRI = ST.getRegisterInfo();
+  SchedModel.init(&ST);
 
   bool Changed = false;
   // Add RA anti-hints to reduce MFMA hazard NOPs
   if (EnableAntiHintsForMFMARegs && ST.hasMAIInsts()) {
-    // Max lookback window for RAW or WAW hazard
+    // Max lookback window for RAW or WAW hazard (in instructions)
     constexpr unsigned MaxLookbackWindow = 19;
+
+    // Per-MFMA tracking to determine anti-hint eligibility for subsequent
+    // instructions within the max lookback window.
+    struct MFMAInfo {
+      SmallVector<Register, 4> Regs;
+      unsigned InstrCount;
+      unsigned MFMALatency;
+      unsigned CumulativeLatencySinceThisMFMA;
+    };
+
     for (const MachineBasicBlock &MBB : MF) {
-      SmallVector<SmallVector<Register, 4>, 16> RecentMFMAs;
+      SmallVector<MFMAInfo, 16> RecentMFMAs;
+      unsigned InstrCount = 0;
+
       for (const MachineInstr &MI : MBB) {
         if (MI.isDebugInstr())
           continue;
+
+        ++InstrCount;
+        const unsigned InstrLatency = SchedModel.computeInstrLatency(&MI);
 
         // Handle MFMA instructions
         if (SIInstrInfo::isMFMA(MI)) {
@@ -285,28 +303,40 @@ bool GCNPreRAOptimizationsImpl::run(MachineFunction &MF) {
             }
           };
 
-          // Collect destination and source C registers
-          collectNamedOperand(AMDGPU::OpName::vdst, "vdst"); // Destination
-          collectNamedOperand(AMDGPU::OpName::src2,
-                              "src2"); // Matrix C (accumulator)
+          // Collect destination and source C (accumulator) registers
+          collectNamedOperand(AMDGPU::OpName::vdst, "vdst");
+          collectNamedOperand(AMDGPU::OpName::src2, "src2");
           if (!MFMARegisters.empty()) {
-            RecentMFMAs.emplace_back(std::move(MFMARegisters));
-            // Maintain window
-            if (RecentMFMAs.size() > MaxLookbackWindow)
+            RecentMFMAs.push_back(
+                {std::move(MFMARegisters), InstrCount, InstrLatency, 0u});
+            // Maintain the lookback window
+            while (!RecentMFMAs.empty() &&
+                   (InstrCount - RecentMFMAs.front().InstrCount) >
+                       MaxLookbackWindow)
               RecentMFMAs.erase(RecentMFMAs.begin());
           }
           continue;
         }
+
         bool ShouldCheckReuse = MI.mayLoad() || MI.mayStore() || MI.isCopy() ||
                                 SIInstrInfo::isVALU(MI);
+
         // Skip non-relevant instructions, or skip until at least one MFMA is
         // encountered
-        if (!ShouldCheckReuse || RecentMFMAs.empty())
+        if (!ShouldCheckReuse || RecentMFMAs.empty()) {
+          for (MFMAInfo &M : RecentMFMAs)
+            M.CumulativeLatencySinceThisMFMA += InstrLatency;
           continue;
+        }
 
         // Process operands that might reuse MFMA registers
+        const SlotIndex CurrentSlot = LIS->getInstructionIndex(MI).getRegSlot();
+
         for (const MachineOperand &MO : MI.operands()) {
           if (!MO.isReg() || !MO.getReg().isVirtual())
+            continue;
+
+          if (!MO.isDef())
             continue;
 
           const Register CandidateReg = MO.getReg();
@@ -316,21 +346,39 @@ bool GCNPreRAOptimizationsImpl::run(MachineFunction &MF) {
           // Only process VGPR registers
           if (!TRI->isVGPRClass(CandidateRC))
             continue;
-          for (auto It = RecentMFMAs.rbegin(); It != RecentMFMAs.rend(); ++It) {
-            const SmallVector<Register, 4> &MFMARegs = *It;
-            for (Register MFMAReg : MFMARegs) {
+          LLVM_DEBUG(dbgs() << "\nAdding antihints for instruction: ";
+                     MI.dump(); dbgs() << "\n");
+
+          for (MFMAInfo &MFMA : reverse(RecentMFMAs)) {
+            // To minimize anti-hint pressure we only add anti-hints if the
+            // cumulative latency since this MFMA is less than the MFMA latency
+            if (MFMA.CumulativeLatencySinceThisMFMA >= MFMA.MFMALatency)
+              continue;
+
+            // If the previous check has not triggered (e.g., consecutive
+            // MFMAs), ignore instructions beyond the lookback window.
+            unsigned InstrDistance = InstrCount - MFMA.InstrCount;
+            if (InstrDistance > MaxLookbackWindow)
+              continue;
+
+            for (Register MFMAReg : MFMA.Regs) {
               // Check if MFMA register is dead at current instruction
               const LiveInterval &MFMAInterval = LIS->getInterval(MFMAReg);
-              const SlotIndex CurrentSlot =
-                  LIS->getInstructionIndex(MI).getRegSlot();
               if (!MFMAInterval.liveAt(CurrentSlot)) {
-                // Add bi-directional anti-hints
                 MRI->addRegAllocationAntiHints(CandidateReg, MFMAReg);
-                MRI->addRegAllocationAntiHints(MFMAReg, CandidateReg);
+                LLVM_DEBUG(dbgs() << "  Anti-hint added: "
+                                  << printReg(CandidateReg, TRI) << " <--> "
+                                  << printReg(MFMAReg, TRI)
+                                  << (SIInstrInfo::isVALU(MI) ? " (VALU)"
+                                                              : " (non-VALU)")
+                                  << "\n");
               }
             }
           }
         }
+        // Update cumulative latency
+        for (MFMAInfo &M : RecentMFMAs)
+          M.CumulativeLatencySinceThisMFMA += InstrLatency;
       }
     }
   }

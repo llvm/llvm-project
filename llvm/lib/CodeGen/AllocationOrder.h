@@ -96,6 +96,13 @@ public:
       : Hints(std::move(Hints)), Order(Order),
         IterationLimit(HardHints ? 0 : static_cast<int>(Order.size())) {}
 
+  /// Create an AllocationOrder with pre-computed FilteredOrderStorage.
+  AllocationOrder(SmallVector<MCPhysReg, 16> &&Hints, ArrayRef<MCPhysReg> Order,
+                  bool HardHints, SmallVector<MCPhysReg, 16> &&Storage)
+      : Hints(std::move(Hints)), FilteredOrderStorage(std::move(Storage)),
+        Order(FilteredOrderStorage.empty() ? Order : FilteredOrderStorage),
+        IterationLimit(HardHints ? 0 : static_cast<int>(this->Order.size())) {}
+
   Iterator begin() const {
     return Iterator(*this, -(static_cast<int>(Hints.size())));
   }
@@ -121,10 +128,6 @@ public:
                static_cast<uint32_t>(std::numeric_limits<MCPhysReg>::max()));
     return Reg.isPhysical() && is_contained(Hints, Reg.id());
   }
-
-  /// Apply anti-hints to the allocation order.
-  void applyAntiHints(ArrayRef<MCPhysReg> AntiHintedPhysRegs,
-                      const TargetRegisterInfo *TRI);
 };
 
 } // end namespace llvm

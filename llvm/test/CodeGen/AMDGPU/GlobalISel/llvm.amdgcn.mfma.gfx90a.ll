@@ -108,14 +108,14 @@ define amdgpu_kernel void @test_mfma_f32_4x4x4bf16_1k(ptr addrspace(1) %arg) #0 
 ; GCN-NEXT:    v_pk_mov_b32 v[6:7], s[4:5], s[4:5] op_sel:[0,1]
 ; GCN-NEXT:    s_waitcnt lgkmcnt(0)
 ; GCN-NEXT:    s_load_dwordx4 s[0:3], s[6:7], 0x0
-; GCN-NEXT:    v_mov_b32_e32 v8, 0
 ; GCN-NEXT:    s_waitcnt lgkmcnt(0)
 ; GCN-NEXT:    v_pk_mov_b32 v[0:1], s[0:1], s[0:1] op_sel:[0,1]
 ; GCN-NEXT:    v_pk_mov_b32 v[2:3], s[2:3], s[2:3] op_sel:[0,1]
 ; GCN-NEXT:    s_nop 1
-; GCN-NEXT:    v_mfma_f32_4x4x4bf16_1k v[4:7], v[4:5], v[6:7], v[0:3] cbsz:1 abid:2 blgp:3
-; GCN-NEXT:    s_nop 4
-; GCN-NEXT:    global_store_dwordx4 v8, v[4:7], s[6:7]
+; GCN-NEXT:    v_mfma_f32_4x4x4bf16_1k v[0:3], v[4:5], v[6:7], v[0:3] cbsz:1 abid:2 blgp:3
+; GCN-NEXT:    v_mov_b32_e32 v4, 0
+; GCN-NEXT:    s_nop 3
+; GCN-NEXT:    global_store_dwordx4 v4, v[0:3], s[6:7]
 ; GCN-NEXT:    s_endpgm
 bb:
   %in.1 = load <4 x float>, ptr addrspace(1) %arg
@@ -174,14 +174,14 @@ define amdgpu_kernel void @test_mfma_f32_16x16x16bf16_1k(ptr addrspace(1) %arg) 
 ; GCN-NEXT:    v_pk_mov_b32 v[6:7], s[4:5], s[4:5] op_sel:[0,1]
 ; GCN-NEXT:    s_waitcnt lgkmcnt(0)
 ; GCN-NEXT:    s_load_dwordx4 s[0:3], s[6:7], 0x0
-; GCN-NEXT:    v_mov_b32_e32 v8, 0
 ; GCN-NEXT:    s_waitcnt lgkmcnt(0)
 ; GCN-NEXT:    v_pk_mov_b32 v[0:1], s[0:1], s[0:1] op_sel:[0,1]
 ; GCN-NEXT:    v_pk_mov_b32 v[2:3], s[2:3], s[2:3] op_sel:[0,1]
 ; GCN-NEXT:    s_nop 1
-; GCN-NEXT:    v_mfma_f32_16x16x16bf16_1k v[4:7], v[4:5], v[6:7], v[0:3] cbsz:1 abid:2 blgp:3
-; GCN-NEXT:    s_nop 10
-; GCN-NEXT:    global_store_dwordx4 v8, v[4:7], s[6:7]
+; GCN-NEXT:    v_mfma_f32_16x16x16bf16_1k v[0:3], v[4:5], v[6:7], v[0:3] cbsz:1 abid:2 blgp:3
+; GCN-NEXT:    v_mov_b32_e32 v4, 0
+; GCN-NEXT:    s_nop 9
+; GCN-NEXT:    global_store_dwordx4 v4, v[0:3], s[6:7]
 ; GCN-NEXT:    s_endpgm
 bb:
   %in.1 = load <4 x float>, ptr addrspace(1) %arg

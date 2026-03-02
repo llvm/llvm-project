@@ -9,20 +9,20 @@ define amdgpu_kernel void @test_mfma_f32_16x16x8xf32(ptr addrspace(1) %arg) #0 {
 ; GFX942-SDAG-LABEL: test_mfma_f32_16x16x8xf32:
 ; GFX942-SDAG:       ; %bb.0: ; %bb
 ; GFX942-SDAG-NEXT:    s_load_dwordx2 s[6:7], s[4:5], 0x24
-; GFX942-SDAG-NEXT:    v_mov_b32_e32 v6, 1.0
-; GFX942-SDAG-NEXT:    v_mov_b32_e32 v7, 2.0
+; GFX942-SDAG-NEXT:    v_mov_b32_e32 v8, 1.0
+; GFX942-SDAG-NEXT:    v_mov_b32_e32 v9, 2.0
 ; GFX942-SDAG-NEXT:    v_mov_b32_e32 v4, 0x40400000
 ; GFX942-SDAG-NEXT:    v_mov_b32_e32 v5, 4.0
 ; GFX942-SDAG-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX942-SDAG-NEXT:    s_load_dwordx4 s[0:3], s[6:7], 0x0
-; GFX942-SDAG-NEXT:    v_mov_b32_e32 v8, 0
+; GFX942-SDAG-NEXT:    v_mov_b32_e32 v6, 0
 ; GFX942-SDAG-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX942-SDAG-NEXT:    v_mov_b64_e32 v[0:1], s[0:1]
 ; GFX942-SDAG-NEXT:    v_mov_b64_e32 v[2:3], s[2:3]
 ; GFX942-SDAG-NEXT:    s_nop 1
-; GFX942-SDAG-NEXT:    v_mfma_f32_16x16x8_xf32 v[4:7], v[6:7], v[4:5], v[0:3] cbsz:1 abid:2 blgp:3
+; GFX942-SDAG-NEXT:    v_mfma_f32_16x16x8_xf32 v[0:3], v[8:9], v[4:5], v[0:3] cbsz:1 abid:2 blgp:3
 ; GFX942-SDAG-NEXT:    s_nop 6
-; GFX942-SDAG-NEXT:    global_store_dwordx4 v8, v[4:7], s[6:7]
+; GFX942-SDAG-NEXT:    global_store_dwordx4 v6, v[0:3], s[6:7]
 ; GFX942-SDAG-NEXT:    s_endpgm
 ;
 ; GFX942-GISEL-LABEL: test_mfma_f32_16x16x8xf32:
@@ -36,14 +36,14 @@ define amdgpu_kernel void @test_mfma_f32_16x16x8xf32(ptr addrspace(1) %arg) #0 {
 ; GFX942-GISEL-NEXT:    s_load_dwordx4 s[0:3], s[6:7], 0x0
 ; GFX942-GISEL-NEXT:    s_mov_b32 s5, 4.0
 ; GFX942-GISEL-NEXT:    v_mov_b64_e32 v[6:7], s[4:5]
-; GFX942-GISEL-NEXT:    v_mov_b32_e32 v8, 0
 ; GFX942-GISEL-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX942-GISEL-NEXT:    v_mov_b64_e32 v[0:1], s[0:1]
 ; GFX942-GISEL-NEXT:    v_mov_b64_e32 v[2:3], s[2:3]
 ; GFX942-GISEL-NEXT:    s_nop 1
-; GFX942-GISEL-NEXT:    v_mfma_f32_16x16x8_xf32 v[4:7], v[4:5], v[6:7], v[0:3] cbsz:1 abid:2 blgp:3
-; GFX942-GISEL-NEXT:    s_nop 6
-; GFX942-GISEL-NEXT:    global_store_dwordx4 v8, v[4:7], s[6:7]
+; GFX942-GISEL-NEXT:    v_mfma_f32_16x16x8_xf32 v[0:3], v[4:5], v[6:7], v[0:3] cbsz:1 abid:2 blgp:3
+; GFX942-GISEL-NEXT:    v_mov_b32_e32 v4, 0
+; GFX942-GISEL-NEXT:    s_nop 5
+; GFX942-GISEL-NEXT:    global_store_dwordx4 v4, v[0:3], s[6:7]
 ; GFX942-GISEL-NEXT:    s_endpgm
 bb:
   %in.1 = load <4 x float>, ptr addrspace(1) %arg
@@ -67,9 +67,9 @@ define amdgpu_kernel void @test_mfma_f32_16x16x8xf32_vgprcd(ptr addrspace(1) %ar
 ; GFX942-SDAG-NEXT:    v_mov_b64_e32 v[0:1], s[0:1]
 ; GFX942-SDAG-NEXT:    v_mov_b64_e32 v[2:3], s[2:3]
 ; GFX942-SDAG-NEXT:    s_nop 1
-; GFX942-SDAG-NEXT:    v_mfma_f32_16x16x8_xf32 v[4:7], v[4:5], v[6:7], v[0:3] cbsz:1 abid:2 blgp:3
+; GFX942-SDAG-NEXT:    v_mfma_f32_16x16x8_xf32 v[0:3], v[4:5], v[6:7], v[0:3] cbsz:1 abid:2 blgp:3
 ; GFX942-SDAG-NEXT:    s_nop 6
-; GFX942-SDAG-NEXT:    global_store_dwordx4 v8, v[4:7], s[6:7]
+; GFX942-SDAG-NEXT:    global_store_dwordx4 v8, v[0:3], s[6:7]
 ; GFX942-SDAG-NEXT:    s_endpgm
 ;
 ; GFX942-GISEL-LABEL: test_mfma_f32_16x16x8xf32_vgprcd:
@@ -83,14 +83,14 @@ define amdgpu_kernel void @test_mfma_f32_16x16x8xf32_vgprcd(ptr addrspace(1) %ar
 ; GFX942-GISEL-NEXT:    s_load_dwordx4 s[0:3], s[6:7], 0x0
 ; GFX942-GISEL-NEXT:    s_mov_b32 s5, 4.0
 ; GFX942-GISEL-NEXT:    v_mov_b64_e32 v[6:7], s[4:5]
-; GFX942-GISEL-NEXT:    v_mov_b32_e32 v8, 0
 ; GFX942-GISEL-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX942-GISEL-NEXT:    v_mov_b64_e32 v[0:1], s[0:1]
 ; GFX942-GISEL-NEXT:    v_mov_b64_e32 v[2:3], s[2:3]
 ; GFX942-GISEL-NEXT:    s_nop 1
-; GFX942-GISEL-NEXT:    v_mfma_f32_16x16x8_xf32 v[4:7], v[4:5], v[6:7], v[0:3] cbsz:1 abid:2 blgp:3
-; GFX942-GISEL-NEXT:    s_nop 6
-; GFX942-GISEL-NEXT:    global_store_dwordx4 v8, v[4:7], s[6:7]
+; GFX942-GISEL-NEXT:    v_mfma_f32_16x16x8_xf32 v[0:3], v[4:5], v[6:7], v[0:3] cbsz:1 abid:2 blgp:3
+; GFX942-GISEL-NEXT:    v_mov_b32_e32 v4, 0
+; GFX942-GISEL-NEXT:    s_nop 5
+; GFX942-GISEL-NEXT:    global_store_dwordx4 v4, v[0:3], s[6:7]
 ; GFX942-GISEL-NEXT:    s_endpgm
 bb:
   %in.1 = load <4 x float>, ptr addrspace(1) %arg
