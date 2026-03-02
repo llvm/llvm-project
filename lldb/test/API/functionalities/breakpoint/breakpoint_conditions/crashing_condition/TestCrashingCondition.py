@@ -25,20 +25,16 @@ class TestCrashingCondition(TestBase):
         # It optionally takes an SBLaunchOption argument if you want to pass
         # arguments or environment variables.
         (target, process, thread, bkpt) = lldbutil.run_to_source_breakpoint(
-            self,
-            "Set a start breakpoint here",
-            self.main_source_file
+            self, "Set a start breakpoint here", self.main_source_file
         )
 
         # Set a breakpoint with a condition that crashes on the next line:
         bad_bkpt = target.BreakpointCreateBySourceRegex(
-            "Set the test breakpoint here",
-            self.main_source_file
+            "Set the test breakpoint here", self.main_source_file
         )
         self.assertGreater(
-            bad_bkpt.GetNumLocations(),
-            0,
-            "Found locations for our breakpoint")
+            bad_bkpt.GetNumLocations(), 0, "Found locations for our breakpoint"
+        )
         bad_bkpt.SetCondition("do_crash()")
 
         self.runCmd("continue")
@@ -49,9 +45,7 @@ class TestCrashingCondition(TestBase):
         # Now we should be able to continue to the real crash:
         error = lldb.SBError()
         self.runCmd("continue")
-        
+
         # We should have crashed.
         self.assertState(process.state, lldb.eStateStopped)
         self.assertStopReason(thread.stop_reason, lldb.eStopReasonException)
-
-
