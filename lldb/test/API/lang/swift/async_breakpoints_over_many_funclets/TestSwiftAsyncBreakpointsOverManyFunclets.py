@@ -16,14 +16,14 @@ class TestSwiftAsyncBreakpoints(lldbtest.TestBase):
             self, "breakpoint_start", filespec
         )
         breakpoint = target.BreakpointCreateBySourceRegex("breakhere", filespec)
-        self.assertEquals(breakpoint.GetNumLocations(), 2)
+        self.assertEqual(breakpoint.GetNumLocations(), 2)
 
         process.Continue()
         self.assertStopReason(thread.GetStopReason(), lldb.eStopReasonBreakpoint)
-        self.assertEquals(thread.GetStopDescription(128), "breakpoint 2.1")
+        self.assertEqual(thread.GetStopDescription(128), "breakpoint 2.1")
         self.expect("expr argument", substrs=["1"])
 
         process.Continue()
         self.assertStopReason(thread.GetStopReason(), lldb.eStopReasonBreakpoint)
-        self.assertEquals(thread.GetStopDescription(128), "breakpoint 2.2")
+        self.assertEqual(thread.GetStopDescription(128), "breakpoint 2.2")
         self.expect("expr argument", substrs=["2"])
