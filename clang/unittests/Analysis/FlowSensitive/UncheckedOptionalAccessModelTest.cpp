@@ -106,6 +106,7 @@ protected:
       #include "std_optional.h"
       #include "std_string.h"
       #include "std_utility.h"
+      #include "testing_defs.h"
 
       template <typename T>
       T Make();
@@ -2895,6 +2896,27 @@ TEST_P(UncheckedOptionalAccessTest, DiagnosticsHaveRanges) {
     }
   )cc");
 }
+
+TEST_P(UncheckedOptionalAccessTest, AssertTrueGtestMacro) {
+  ExpectDiagnosticsFor(R"cc(
+    #include "unchecked_optional_access_test.h"
+
+    void target() {
+	$ns::$optional<int> opt;
+	ASSERT_TRUE(opt.has_value());
+	EXPECT_EQ(opt.value(), 42);
+
+	$ns::$optional<int> opt1;
+	ASSERT_TRUE(opt1);
+	EXPECT_EQ(*opt1, 42);
+
+	$ns::$optional<int> opt2;
+	EXPECT_TRUE(opt2.has_value());
+	EXPECT_EQ(opt2.value(), 42); // [[unsafe]]
+    }
+  )cc");
+}
+
 
 // FIXME: Add support for:
 // - constructors (copy, move)
