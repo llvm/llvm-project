@@ -8,6 +8,7 @@
 
 #include "HypotTest.h"
 
+#include "src/__support/FPUtil/bfloat16.h"
 #include "src/math/hypotbf16.h"
 
 using LlvmLibcHypotBf16Test = HypotTestTemplate<bfloat16>;
