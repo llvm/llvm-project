@@ -1165,7 +1165,8 @@ Instruction *InstCombinerImpl::foldIntrinsicIsFPClass(IntrinsicInst &II) {
     return replaceInstUsesWith(II, FCmp);
   }
 
-  KnownFPClass Known = computeKnownFPClass(Src0, Mask, &II);
+  KnownFPClass Known =
+      computeKnownFPClass(Src0, Mask, SQ.getWithInstruction(&II));
 
   // Clear test bits we know must be false from the source value.
   // fp_class (nnan x), qnan|snan|other -> fp_class (nnan x), other
