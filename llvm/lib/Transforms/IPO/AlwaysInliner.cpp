@@ -118,8 +118,8 @@ bool AlwaysInlineImpl(
     OptimizationRemarkEmitter ORE(F);
 
     // Collect initial calls.
-    for (BasicBlock &BB : *F)
-      for (Instruction &I : BB)
+    for (BasicBlock &BB : *F) {
+      for (Instruction &I : BB) {
         if (auto *CB = dyn_cast<CallBase>(&I)) {
           if (CB->getAttributes().hasFnAttr(Attribute::NoInline))
             continue;
@@ -128,6 +128,8 @@ bool AlwaysInlineImpl(
             continue;
           Worklist.push_back({CB, -1});
         }
+      }
+    }
 
     while (!Worklist.empty()) {
       auto Item = Worklist.pop_back_val();
@@ -151,8 +153,7 @@ bool AlwaysInlineImpl(
         continue;
       }
 
-      if (Callee->isPresplitCoroutine() || Callee->isDeclaration() ||
-          !isInlineViable(*Callee).isSuccess())
+      if (Callee->isPresplitCoroutine() || !isInlineViable(*Callee).isSuccess())
         continue;
 
       // Check TTI for target-specific inlining restrictions (e.g., SME ABI).
