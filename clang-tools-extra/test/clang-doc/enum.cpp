@@ -33,31 +33,54 @@ enum Color {
 // MD-INDEX: | Red |
 // MD-INDEX: | Green |
 // MD-INDEX: | Blue |
-// MD-INDEX: **brief** For specifying RGB colors
+// MD-INDEX: **brief**For specifying RGB colors
 
-// HTML-INDEX:     <div>
-// HTML-INDEX:         <pre><code class="language-cpp code-clang-doc">enum Color</code></pre>
-// HTML-INDEX:     </div>
-// HTML-INDEX:     <table class="table-wrapper">
-// HTML-INDEX:         <tbody>
-// HTML-INDEX:             <tr>
-// HTML-INDEX:                 <th>Name</th>
-// HTML-INDEX:                 <th>Value</th>
-// HTML-INDEX:             </tr>
-// HTML-INDEX:             <tr>
-// HTML-INDEX:                 <td>Red</td>
-// HTML-INDEX:                 <td>0</td>
-// HTML-INDEX:             </tr>
-// HTML-INDEX:             <tr>
-// HTML-INDEX:                 <td>Green</td>
-// HTML-INDEX:                 <td>1</td>
-// HTML-INDEX:             </tr>
-// HTML-INDEX:             <tr>
-// HTML-INDEX:                 <td>Blue</td>
-// HTML-INDEX:                 <td>2</td>
-// HTML-INDEX:             </tr>
-// HTML-INDEX:         </tbody>
-// HTML-INDEX:     </table>
+// HTML-INDEX-LABEL:  <div id="{{([0-9A-F]{40})}}" class="delimiter-container">
+// HTML-INDEX-NEXT:     <div>
+// HTML-INDEX-NEXT:       <pre><code class="language-cpp code-clang-doc">enum Color</code></pre>
+// HTML-INDEX-NEXT:     </div>
+// HTML-INDEX-NEXT:     <table class="table-wrapper">
+// HTML-INDEX-NEXT:         <tbody>
+// HTML-INDEX-NEXT:             <tr>
+// HTML-INDEX-NEXT:                 <th>Name</th>
+// HTML-INDEX-NEXT:                 <th>Value</th>
+// HTML-INDEX-NEXT:                 <th>Comments</th>
+// HTML-INDEX-NEXT:             </tr>
+// HTML-INDEX-NEXT:             <tr>
+// HTML-INDEX-NEXT:                 <td>Red</td>
+// HTML-INDEX-NEXT:                 <td>0</td>
+// HTML-INDEX-NEXT:                 <td><div class="nested-delimiter-container">
+// HTML-INDEX-NEXT:                       <p>Comment 1</p>
+// HTML-INDEX-NEXT:                     </div>
+// HTML-INDEX-NEXT:                 </td>
+// HTML-INDEX-NEXT:             </tr>
+// HTML-INDEX-NEXT:             <tr>
+// HTML-INDEX-NEXT:                 <td>Green</td>
+// HTML-INDEX-NEXT:                 <td>1</td>
+// HTML-INDEX-NEXT:                 <td><div class="nested-delimiter-container">
+// HTML-INDEX-NEXT:                       <p>Comment 2</p>
+// HTML-INDEX-NEXT:                     </div>
+// HTML-INDEX-NEXT:                 </td>
+// HTML-INDEX-NEXT:             </tr>
+// HTML-INDEX-NEXT:             <tr>
+// HTML-INDEX-NEXT:                 <td>Blue</td>
+// HTML-INDEX-NEXT:                 <td>2</td>
+// HTML-INDEX-NEXT:                 <td><div class="nested-delimiter-container">
+// HTML-INDEX-NEXT:                       <p>Comment 3</p>
+// HTML-INDEX-NEXT:                     </div>
+// HTML-INDEX-NEXT:                 </td>
+// HTML-INDEX-NEXT:             </tr>
+// HTML-INDEX-NEXT:         </tbody>
+// HTML-INDEX-NEXT:     </table>
+// HTML-INDEX-NEXT:     <div class="doc-card">
+// HTML-INDEX-NEXT:       <div class="nested-delimiter-container">
+// HTML-INDEX-NEXT:           <p>For specifying RGB colors</p>
+// HTML-INDEX-NEXT:       </div>
+// HTML-INDEX-NEXT:     </div>
+// HTML-INDEX-NEXT:     <p>Defined at line [[@LINE-58]] of file {{.*}}clang-tools-extra{{[\/]}}test{{[\/]}}clang-doc{{[\/]}}enum.cpp</p>
+// HTML-INDEX-NEXT:   </div>
+
+// JSON-INDEX:      "TextComment": "Comment 1"
 
 /**
  * @brief Shape Types
@@ -78,32 +101,243 @@ enum class Shapes {
 // MD-INDEX: | Circle |
 // MD-INDEX: | Rectangle |
 // MD-INDEX: | Triangle |
-// MD-INDEX: **brief** Shape Types
+// MD-INDEX: **brief**Shape Types
 
-// COM: FIXME: Serialize "enum class" in template
-// HTML-INDEX:     <div>
-// HTML-INDEX:         <pre><code class="language-cpp code-clang-doc">enum Shapes</code></pre>
-// HTML-INDEX:     </div>
-// HTML-INDEX:     <table class="table-wrapper">
-// HTML-INDEX:         <tbody>
-// HTML-INDEX:             <tr>
-// HTML-INDEX:                 <th>Name</th>
-// HTML-INDEX:                 <th>Value</th>
-// HTML-INDEX:             </tr>
-// HTML-INDEX:             <tr>
-// HTML-INDEX:                 <td>Circle</td>
-// HTML-INDEX:                 <td>0</td>
-// HTML-INDEX:             </tr>
-// HTML-INDEX:             <tr>
-// HTML-INDEX:                 <td>Rectangle</td>
-// HTML-INDEX:                 <td>1</td>
-// HTML-INDEX:             </tr>
-// HTML-INDEX:             <tr>
-// HTML-INDEX:                 <td>Triangle</td>
-// HTML-INDEX:                 <td>2</td>
-// HTML-INDEX:             </tr>
-// HTML-INDEX:         </tbody>
-// HTML-INDEX:     </table>
+// HTML-INDEX-LABEL:  <div id="{{([0-9A-F]{40})}}" class="delimiter-container">
+// HTML-INDEX-NEXT:     <div>
+// HTML-INDEX-NEXT:       <pre><code class="language-cpp code-clang-doc">enum class Shapes</code></pre>
+// HTML-INDEX-NEXT:     </div>
+// HTML-INDEX-NEXT:     <table class="table-wrapper">
+// HTML-INDEX-NEXT:         <tbody>
+// HTML-INDEX-NEXT:             <tr>
+// HTML-INDEX-NEXT:                 <th>Name</th>
+// HTML-INDEX-NEXT:                 <th>Value</th>
+// HTML-INDEX-NEXT:                 <th>Comments</th>
+// HTML-INDEX-NEXT:             </tr>
+// HTML-INDEX-NEXT:             <tr>
+// HTML-INDEX-NEXT:                 <td>Circle</td>
+// HTML-INDEX-NEXT:                 <td>0</td>
+// HTML-INDEX-NEXT:                 <td><div class="nested-delimiter-container">
+// HTML-INDEX-NEXT:                       <p>Comment 1</p>
+// HTML-INDEX-NEXT:                     </div>
+// HTML-INDEX-NEXT:                 </td>
+// HTML-INDEX-NEXT:             </tr>
+// HTML-INDEX-NEXT:             <tr>
+// HTML-INDEX-NEXT:                 <td>Rectangle</td>
+// HTML-INDEX-NEXT:                 <td>1</td>
+// HTML-INDEX-NEXT:                 <td><div class="nested-delimiter-container">
+// HTML-INDEX-NEXT:                       <p>Comment 2</p>
+// HTML-INDEX-NEXT:                     </div>
+// HTML-INDEX-NEXT:                 </td>
+// HTML-INDEX-NEXT:             </tr>
+// HTML-INDEX-NEXT:             <tr>
+// HTML-INDEX-NEXT:                 <td>Triangle</td>
+// HTML-INDEX-NEXT:                 <td>2</td>
+// HTML-INDEX-NEXT:                 <td><div class="nested-delimiter-container">
+// HTML-INDEX-NEXT:                       <p>Comment 3</p>
+// HTML-INDEX-NEXT:                     </div>
+// HTML-INDEX-NEXT:                 </td>
+// HTML-INDEX-NEXT:             </tr>
+// HTML-INDEX-NEXT:         </tbody>
+// HTML-INDEX-NEXT:     </table>
+// HTML-INDEX-NEXT:     <div class="doc-card">
+// HTML-INDEX-NEXT:       <div class="nested-delimiter-container">
+// HTML-INDEX-NEXT:           <p>Shape Types</p>
+// HTML-INDEX-NEXT:       </div>
+// HTML-INDEX-NEXT:     </div>
+// HTML-INDEX-NEXT:     <p>Defined at line [[@LINE-60]] of file {{.*}}clang-tools-extra{{[\/]}}test{{[\/]}}clang-doc{{[\/]}}enum.cpp</p>
+// HTML-INDEX-NEXT:   </div>
+
+typedef unsigned char uint8_t;
+/**
+ * @brief Specify the size
+ */
+enum Size : uint8_t {
+  // MD-INDEX-LINE: *Defined at {{.*}}clang-tools-extra{{[\/]}}test{{[\/]}}clang-doc{{[\/]}}enum.cpp#[[@LINE-1]]*
+  // HTML-INDEX-LINE: <p>Defined at line [[@LINE-2]] of file {{.*}}clang-tools-extra{{[\/]}}test{{[\/]}}clang-doc{{[\/]}}enum.cpp</p>
+
+  /// A pearl.
+  /// Pearls are quite small.
+  ///
+  /// Pearls are used in jewelry.
+  Small,
+
+  /// @brief A tennis ball.
+  Medium,
+
+  /// A football.
+  Large
+};
+
+// MD-INDEX: | enum Size : uint8_t |
+// MD-INDEX: --
+// MD-INDEX: | Small |
+// MD-INDEX: | Medium |
+// MD-INDEX: | Large |
+// MD-INDEX: **brief**Specify the size
+
+// HTML-INDEX-LABEL:   <div id="{{([0-9A-F]{40})}}" class="delimiter-container">
+// HTML-INDEX-NEXT:     <div>
+// HTML-INDEX-NEXT:       <pre><code class="language-cpp code-clang-doc">enum Size : uint8_t</code></pre>
+// HTML-INDEX-NEXT:     </div>
+// HTML-INDEX-NEXT:     <table class="table-wrapper">
+// HTML-INDEX-NEXT:         <tbody>
+// HTML-INDEX-NEXT:             <tr>
+// HTML-INDEX-NEXT:                 <th>Name</th>
+// HTML-INDEX-NEXT:                 <th>Value</th>
+// HTML-INDEX-NEXT:                 <th>Comments</th>
+// HTML-INDEX-NEXT:             </tr>
+// HTML-INDEX-NEXT:             <tr>
+// HTML-INDEX-NEXT:                 <td>Small</td>
+// HTML-INDEX-NEXT:                 <td>0</td>
+// HTML-INDEX-NEXT:                 <td><div class="nested-delimiter-container">
+// HTML-INDEX-NEXT:                       <p>A pearl.</p>
+// HTML-INDEX-NEXT:                       <p>Pearls are quite small.</p>
+// HTML-INDEX-NEXT:                     </div>
+// HTML-INDEX-NEXT:                     <div class="nested-delimiter-container">
+// HTML-INDEX-NEXT:                       <p>Pearls are used in jewelry.</p>
+// HTML-INDEX-NEXT:                     </div>
+// HTML-INDEX-NEXT:                 </td>
+// HTML-INDEX-NEXT:             </tr>
+// HTML-INDEX-NEXT:             <tr>
+// HTML-INDEX-NEXT:                 <td>Medium</td>
+// HTML-INDEX-NEXT:                 <td>1</td>
+// HTML-INDEX-NEXT:                 <td><div class="nested-delimiter-container">
+// HTML-INDEX-NEXT:                       <p>A tennis ball.</p>
+// HTML-INDEX-NEXT:                     </div>
+// HTML-INDEX-NEXT:                 </td>
+// HTML-INDEX-NEXT:             </tr>
+// HTML-INDEX-NEXT:             <tr>
+// HTML-INDEX-NEXT:                 <td>Large</td>
+// HTML-INDEX-NEXT:                 <td>2</td>
+// HTML-INDEX-NEXT:                 <td><div class="nested-delimiter-container">
+// HTML-INDEX-NEXT:                       <p>A football.</p>
+// HTML-INDEX-NEXT:                     </div>
+// HTML-INDEX-NEXT:                 </td>
+// HTML-INDEX-NEXT:             </tr>
+// HTML-INDEX-NEXT:         </tbody>
+// HTML-INDEX-NEXT:     </table>
+// HTML-INDEX-NEXT:     <div class="doc-card">
+// HTML-INDEX-NEXT:       <div class="nested-delimiter-container">
+// HTML-INDEX-NEXT:           <p>Specify the size</p>
+// HTML-INDEX-NEXT:       </div>
+// HTML-INDEX-NEXT:     </div>
+// HTML-INDEX-NEXT:     <p>Defined at line [[@LINE-70]] of file {{.*}}clang-tools-extra{{[\/]}}test{{[\/]}}clang-doc{{[\/]}}enum.cpp</p>
+// HTML-INDEX-NEXT:   </div>
+
+/**
+ * @brief Very long number
+ */
+enum : long long {
+  // MD-INDEX-LINE: *Defined at {{.*}}clang-tools-extra{{[\/]}}test{{[\/]}}clang-doc{{[\/]}}enum.cpp#[[@LINE-1]]*
+  // HTML-INDEX-LINE: <p>Defined at line [[@LINE-2]] of file {{.*}}clang-tools-extra{{[\/]}}test{{[\/]}}clang-doc{{[\/]}}enum.cpp</p>
+  BigVal = 999999999999   ///< A very large value
+};
+
+// MD-INDEX: | enum (unnamed) : long long |
+// MD-INDEX: --
+// MD-INDEX: | BigVal |
+// MD-INDEX: **brief**Very long number
+
+// HTML-INDEX-LABEL:  <div id="{{([0-9A-F]{40})}}" class="delimiter-container">
+// HTML-INDEX-NEXT:     <div>
+// HTML-INDEX-NEXT:       <pre><code class="language-cpp code-clang-doc">enum (unnamed) : long long</code></pre>
+// HTML-INDEX-NEXT:     </div>
+// HTML-INDEX-NEXT:     <table class="table-wrapper">
+// HTML-INDEX-NEXT:         <tbody>
+// HTML-INDEX-NEXT:             <tr>
+// HTML-INDEX-NEXT:                 <th>Name</th>
+// HTML-INDEX-NEXT:                 <th>Value</th>
+// HTML-INDEX-NEXT:                 <th>Comments</th>
+// HTML-INDEX-NEXT:             </tr>
+// HTML-INDEX-NEXT:             <tr>
+// HTML-INDEX-NEXT:                 <td>BigVal</td>
+// HTML-INDEX-NEXT:                 <td>999999999999</td>
+// HTML-INDEX-NEXT:                 <td><div class="nested-delimiter-container">
+// HTML-INDEX-NEXT:                       <p>A very large value</p>
+// HTML-INDEX-NEXT:                     </div>
+// HTML-INDEX-NEXT:                 </td>
+// HTML-INDEX-NEXT:             </tr>
+// HTML-INDEX-NEXT:         </tbody>
+// HTML-INDEX-NEXT:     </table>
+// HTML-INDEX-NEXT:     <div class="doc-card">
+// HTML-INDEX-NEXT:       <div class="nested-delimiter-container">
+// HTML-INDEX-NEXT:           <p>Very long number</p>
+// HTML-INDEX-NEXT:       </div>
+// HTML-INDEX-NEXT:     </div>
+// HTML-INDEX-NEXT:     <p>Defined at line [[@LINE-37]] of file {{.*}}clang-tools-extra{{[\/]}}test{{[\/]}}clang-doc{{[\/]}}enum.cpp</p>
+// HTML-INDEX-NEXT:   </div>
+
+class FilePermissions {
+// MD-PERM-LINE: *Defined at {{.*}}clang-tools-extra{{[\/]}}test{{[\/]}}clang-doc{{[\/]}}enum.cpp#[[@LINE-1]]*
+// HTML-PERM-LINE: <p>Defined at line [[@LINE-2]] of file {{.*}}clang-tools-extra{{[\/]}}test{{[\/]}}clang-doc{{[\/]}}enum.cpp</p>
+public:
+  /**
+   * @brief File permission flags
+   */
+  enum {
+  // MD-PERM-LINE: *Defined at {{.*}}clang-tools-extra{{[\/]}}test{{[\/]}}clang-doc{{[\/]}}enum.cpp#[[@LINE-1]]*
+  // HTML-PERM-LINE: <p>Defined at line [[@LINE-2]] of file {{.*}}clang-tools-extra{{[\/]}}test{{[\/]}}clang-doc{{[\/]}}enum.cpp</p>
+    Read    = 1,     ///< Permission to READ r
+    Write   = 2,     ///< Permission to WRITE w
+    Execute = 4      ///< Permission to EXECUTE x
+  };
+};
+
+// MD-PERM: | enum (unnamed) |
+// MD-PERM: --
+// MD-PERM: | Read |
+// MD-PERM: | Write |
+// MD-PERM: | Execute |
+// MD-PERM: **brief**File permission flags
+
+// HTML-PERM-LABEL:  <section id="Enums" class="section-container">
+// HTML-PERM-NEXT:     <h2>Enumerations</h2>
+// HTML-PERM-NEXT:     <div id="{{([0-9A-F]{40})}}" class="delimiter-container">
+// HTML-PERM-NEXT:       <div>
+// HTML-PERM-NEXT:         <pre><code class="language-cpp code-clang-doc">enum (unnamed)</code></pre>
+// HTML-PERM-NEXT:       </div>
+// HTML-PERM-NEXT:       <table class="table-wrapper">
+// HTML-PERM-NEXT:           <tbody>
+// HTML-PERM-NEXT:               <tr>
+// HTML-PERM-NEXT:                   <th>Name</th>
+// HTML-PERM-NEXT:                   <th>Value</th>
+// HTML-PERM-NEXT:                   <th>Comments</th>
+// HTML-PERM-NEXT:               </tr>
+// HTML-PERM-NEXT:               <tr>
+// HTML-PERM-NEXT:                   <td>Read</td>
+// HTML-PERM-NEXT:                   <td>1</td>
+// HTML-PERM-NEXT:                   <td><div class="nested-delimiter-container">
+// HTML-PERM-NEXT:                         <p>Permission to READ r</p>
+// HTML-PERM-NEXT:                       </div>
+// HTML-PERM-NEXT:                   </td>
+// HTML-PERM-NEXT:               </tr>
+// HTML-PERM-NEXT:               <tr>
+// HTML-PERM-NEXT:                   <td>Write</td>
+// HTML-PERM-NEXT:                   <td>2</td>
+// HTML-PERM-NEXT:                   <td><div class="nested-delimiter-container">
+// HTML-PERM-NEXT:                         <p>Permission to WRITE w</p>
+// HTML-PERM-NEXT:                       </div>
+// HTML-PERM-NEXT:                   </td>
+// HTML-PERM-NEXT:               </tr>
+// HTML-PERM-NEXT:               <tr>
+// HTML-PERM-NEXT:                   <td>Execute</td>
+// HTML-PERM-NEXT:                   <td>4</td>
+// HTML-PERM-NEXT:                   <td><div class="nested-delimiter-container">
+// HTML-PERM-NEXT:                         <p>Permission to EXECUTE x</p>
+// HTML-PERM-NEXT:                       </div>
+// HTML-PERM-NEXT:                   </td>
+// HTML-PERM-NEXT:               </tr>
+// HTML-PERM-NEXT:           </tbody>
+// HTML-PERM-NEXT:       </table>
+// HTML-PERM-NEXT:       <div class="doc-card">
+// HTML-PERM-NEXT:         <div class="nested-delimiter-container">
+// HTML-PERM-NEXT:             <p>File permission flags</p>
+// HTML-PERM-NEXT:         </div>
+// HTML-PERM-NEXT:       </div>
+// HTML-PERM-NEXT:         <p>Defined at line [[@LINE-60]] of file {{.*}}clang-tools-extra{{[\/]}}test{{[\/]}}clang-doc{{[\/]}}enum.cpp</p>
+// HTML-PERM-NEXT:     </div>
+// HTML-PERM-NEXT:   </section>
 
 // COM: FIXME: Add enums declared inside of classes to class template
 class Animals {
@@ -137,20 +371,32 @@ public:
 // HTML-ANIMAL-NEXT:                 <tr>
 // HTML-ANIMAL-NEXT:                     <td>Dog</td>
 // HTML-ANIMAL-NEXT:                     <td>0</td>
+// HTML-ANIMAL-NEXT:                     <td><div class="nested-delimiter-container">
+// HTML-ANIMAL-NEXT:                           <p>Man&#39;s best friend</p>
+// HTML-ANIMAL-NEXT:                         </div>
+// HTML-ANIMAL-NEXT:                     </td>
 // HTML-ANIMAL-NEXT:                 </tr>
 // HTML-ANIMAL-NEXT:                 <tr>
 // HTML-ANIMAL-NEXT:                     <td>Cat</td>
 // HTML-ANIMAL-NEXT:                     <td>1</td>
+// HTML-ANIMAL-NEXT:                     <td><div class="nested-delimiter-container">
+// HTML-ANIMAL-NEXT:                           <p>Man&#39;s other best friend</p>
+// HTML-ANIMAL-NEXT:                         </div>
+// HTML-ANIMAL-NEXT:                     </td>
 // HTML-ANIMAL-NEXT:                 </tr>
 // HTML-ANIMAL-NEXT:                 <tr>
 // HTML-ANIMAL-NEXT:                     <td>Iguana</td>
 // HTML-ANIMAL-NEXT:                     <td>2</td>
+// HTML-ANIMAL-NEXT:                     <td><div class="nested-delimiter-container">
+// HTML-ANIMAL-NEXT:                           <p>A lizard</p>
+// HTML-ANIMAL-NEXT:                         </div>
+// HTML-ANIMAL-NEXT:                     </td>
 // HTML-ANIMAL-NEXT:                 </tr>
 // HTML-ANIMAL-NEXT:             </tbody>
 // HTML-ANIMAL-NEXT:         </table>
 // HTML-ANIMAL-NEXT:         <div class="doc-card">
 // HTML-ANIMAL-NEXT:             <div class="nested-delimiter-container">
-// HTML-ANIMAL-NEXT:                 <p> specify what animal the class is</p>
+// HTML-ANIMAL-NEXT:                 <p>specify what animal the class is</p>
 // HTML-ANIMAL-NEXT:             </div>
 // HTML-ANIMAL-NEXT:         </div>
 // HTML-ANIMAL-NEXT:         <p>Defined at line 116 of file {{.*}}enum.cpp</p>
@@ -164,7 +410,7 @@ public:
 // MD-ANIMAL: | Dog |
 // MD-ANIMAL: | Cat |
 // MD-ANIMAL: | Iguana |
-// MD-ANIMAL: **brief** specify what animal the class is
+// MD-ANIMAL: **brief**specify what animal the class is
 
 namespace Vehicles {
 /**
@@ -189,35 +435,60 @@ enum Car {
 // MD-VEHICLES: | SUV |
 // MD-VEHICLES: | Pickup |
 // MD-VEHICLES: | Hatchback |
-// MD-VEHICLES: **brief** specify type of car
+// MD-VEHICLES: **brief**specify type of car
 
-// HTML-VEHICLES:     <div>
-// HTML-VEHICLES:         <pre><code class="language-cpp code-clang-doc">enum Car</code></pre>
-// HTML-VEHICLES:      </div>
-// HTML-VEHICLES:      <table class="table-wrapper">
-// HTML-VEHICLES:          <tbody>
-// HTML-VEHICLES:              <tr>
-// HTML-VEHICLES:                  <th>Name</th>
-// HTML-VEHICLES:                  <th>Value</th>
-// HTML-VEHICLES:              </tr>
-// HTML-VEHICLES:              <tr>
-// HTML-VEHICLES:                  <td>Sedan</td>
-// HTML-VEHICLES:                  <td>0</td>
-// HTML-VEHICLES:              </tr>
-// HTML-VEHICLES:              <tr>
-// HTML-VEHICLES:                  <td>SUV</td>
-// HTML-VEHICLES:                  <td>1</td>
-// HTML-VEHICLES:              </tr>
-// HTML-VEHICLES:              <tr>
-// HTML-VEHICLES:                  <td>Pickup</td>
-// HTML-VEHICLES:                  <td>2</td>
-// HTML-VEHICLES:              </tr>
-// HTML-VEHICLES:              <tr>
-// HTML-VEHICLES:                  <td>Hatchback</td>
-// HTML-VEHICLES:                  <td>3</td>
-// HTML-VEHICLES:              </tr>
-// HTML-VEHICLES:          </tbody>
-// HTML-VEHICLES:      </table>
+// HTML-VEHICLES-LABEL:   <div id="{{([0-9A-F]{40})}}" class="delimiter-container">
+// HTML-VEHICLES-NEXT:      <div>
+// HTML-VEHICLES-NEXT:       <pre><code class="language-cpp code-clang-doc">enum Car</code></pre>
+// HTML-VEHICLES-NEXT:      </div>
+// HTML-VEHICLES-NEXT:      <table class="table-wrapper">
+// HTML-VEHICLES-NEXT:          <tbody>
+// HTML-VEHICLES-NEXT:              <tr>
+// HTML-VEHICLES-NEXT:                  <th>Name</th>
+// HTML-VEHICLES-NEXT:                  <th>Value</th>
+// HTML-VEHICLES-NEXT:                  <th>Comments</th>
+// HTML-VEHICLES-NEXT:              </tr>
+// HTML-VEHICLES-NEXT:              <tr>
+// HTML-VEHICLES-NEXT:                  <td>Sedan</td>
+// HTML-VEHICLES-NEXT:                  <td>0</td>
+// HTML-VEHICLES-NEXT:                  <td><div class="nested-delimiter-container">
+// HTML-VEHICLES-NEXT:                        <p>Comment 1</p>
+// HTML-VEHICLES-NEXT:                      </div>
+// HTML-VEHICLES-NEXT:                  </td>
+// HTML-VEHICLES-NEXT:              </tr>
+// HTML-VEHICLES-NEXT:              <tr>
+// HTML-VEHICLES-NEXT:                  <td>SUV</td>
+// HTML-VEHICLES-NEXT:                  <td>1</td>
+// HTML-VEHICLES-NEXT:                  <td><div class="nested-delimiter-container">
+// HTML-VEHICLES-NEXT:                        <p>Comment 2</p>
+// HTML-VEHICLES-NEXT:                      </div>
+// HTML-VEHICLES-NEXT:                  </td>
+// HTML-VEHICLES-NEXT:              </tr>
+// HTML-VEHICLES-NEXT:              <tr>
+// HTML-VEHICLES-NEXT:                  <td>Pickup</td>
+// HTML-VEHICLES-NEXT:                  <td>2</td>
+// HTML-VEHICLES-NEXT:                  <td><div class="nested-delimiter-container">
+// HTML-VEHICLES-NEXT:                        <p>Comment 3</p>
+// HTML-VEHICLES-NEXT:                      </div>
+// HTML-VEHICLES-NEXT:                  </td>
+// HTML-VEHICLES-NEXT:              </tr>
+// HTML-VEHICLES-NEXT:              <tr>
+// HTML-VEHICLES-NEXT:                  <td>Hatchback</td>
+// HTML-VEHICLES-NEXT:                  <td>3</td>
+// HTML-VEHICLES-NEXT:                  <td><div class="nested-delimiter-container">
+// HTML-VEHICLES-NEXT:                        <p>Comment 4</p>
+// HTML-VEHICLES-NEXT:                      </div>
+// HTML-VEHICLES-NEXT:                  </td>
+// HTML-VEHICLES-NEXT:              </tr>
+// HTML-VEHICLES-NEXT:          </tbody>
+// HTML-VEHICLES-NEXT:      </table>
+// HTML-VEHICLES-NEXT:      <div class="doc-card">
+// HTML-VEHICLES-NEXT:        <div class="nested-delimiter-container">
+// HTML-VEHICLES-NEXT:           <p>specify type of car</p>
+// HTML-VEHICLES-NEXT:        </div>
+// HTML-VEHICLES-NEXT:      </div>
+// HTML-VEHICLES-NEXT:      <p>Defined at line [[@LINE-71]] of file {{.*}}clang-tools-extra{{[\/]}}test{{[\/]}}clang-doc{{[\/]}}enum.cpp</p>
+// HTML-VEHICLES-NEXT:    </div>
 
 enum ColorUserSpecified {
   RedUserSpecified = 'A',
