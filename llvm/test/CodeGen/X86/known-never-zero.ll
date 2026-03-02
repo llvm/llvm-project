@@ -5,21 +5,6 @@
 ;; Use cttz to test if we properly prove never-zero. There is a very
 ;; simple transform from cttz -> cttz_zero_undef if its operand is
 ;; known never zero.
-declare i32 @llvm.cttz.i32(i32, i1)
-declare i32 @llvm.uadd.sat.i32(i32, i32)
-declare i32 @llvm.umax.i32(i32, i32)
-declare i32 @llvm.umin.i32(i32, i32)
-declare i32 @llvm.smin.i32(i32, i32)
-declare <4 x i32> @llvm.smin.v4i32(<4 x i32>, <4 x i32>)
-declare i32 @llvm.smax.i32(i32, i32)
-declare <4 x i32> @llvm.smax.v4i32(<4 x i32>, <4 x i32>)
-declare i32 @llvm.bswap.i32(i32)
-declare i32 @llvm.bitreverse.i32(i32)
-declare i32 @llvm.ctpop.i32(i32)
-declare <4 x i32> @llvm.ctpop.v4i32(<4 x i32>)
-declare i32 @llvm.abs.i32(i32, i1)
-declare i32 @llvm.fshl.i32(i32, i32, i32)
-declare i32 @llvm.fshr.i32(i32, i32, i32)
 
 define i32 @or_known_nonzero(i32 %x) {
 ; X86-LABEL: or_known_nonzero:
