@@ -1060,7 +1060,6 @@ void SystemZAsmPrinter::lowerLOAD_TLS_BLOCK_ADDR(const MachineInstr &MI,
   // ear <reg>, %a1
   EmitToStreamer(*OutStreamer,
                  MCInstBuilder(SystemZ::EAR).addReg(Reg32).addReg(SystemZ::A1));
-  return;
 }
 
 void SystemZAsmPrinter::lowerLOAD_GLOBAL_STACKGUARD_ADDR(
@@ -1097,7 +1096,6 @@ void SystemZAsmPrinter::lowerLOAD_GLOBAL_STACKGUARD_ADDR(
                        .addExpr(MCSymbolRefExpr::create(
                            getSymbol(GV), SystemZ::S_GOTENT, OutContext)));
   }
-  return;
 }
 
 // The *alignment* of 128-bit vector types is different between the software

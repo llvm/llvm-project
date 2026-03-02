@@ -3040,9 +3040,9 @@ static bool isNaturalMemoryOperand(SDValue Op, unsigned ICmpType) {
 
 // Return true if it is better to swap the operands of C.
 static bool shouldSwapCmpOperands(const Comparison &C) {
-  // swap operands of COMPARE_STACK_GUARD if loading the reference value
+  // swap operands of CMP_STACKGUARD_GUARD if loading the reference value
   // is Op0.
-  if ((C.Opcode == SystemZISD::COMPARE_STACKGUARD) && C.Op0.isMachineOpcode() &&
+  if ((C.Opcode == SystemZISD::CMP_STACKGUARD) && C.Op0.isMachineOpcode() &&
       (C.Op0.getMachineOpcode() == SystemZ::LOAD_STACK_GUARD))
     return true;
 
@@ -3229,7 +3229,7 @@ static void adjustForStackGuardCompare(SelectionDAG &DAG, const SDLoc &DL,
 
   // At this point we are sure that this is a proper compare_stack_guard
   // case, update the opcode to reflect this.
-  C.Opcode = SystemZISD::COMPARE_STACKGUARD;
+  C.Opcode = SystemZISD::CMP_STACKGUARD;
   C.CCValid = SystemZ::CCMASK_ICMP;
 }
 
@@ -3676,8 +3676,8 @@ static SDValue emitCmp(SelectionDAG &DAG, const SDLoc &DL, Comparison &C) {
   if (C.Opcode == SystemZISD::ICMP)
     return DAG.getNode(SystemZISD::ICMP, DL, MVT::i32, C.Op0, C.Op1,
                        DAG.getTargetConstant(C.ICmpType, DL, MVT::i32));
-  if (C.Opcode == SystemZISD::COMPARE_STACKGUARD)
-    return DAG.getNode(SystemZISD::COMPARE_STACKGUARD, DL, MVT::i32, C.Op0);
+  if (C.Opcode == SystemZISD::CMP_STACKGUARD)
+    return DAG.getNode(SystemZISD::CMP_STACKGUARD, DL, MVT::i32, C.Op0);
   if (C.Opcode == SystemZISD::TM) {
     bool RegisterOnly = (bool(C.CCMask & SystemZ::CCMASK_TM_MIXED_MSB_0) !=
                          bool(C.CCMask & SystemZ::CCMASK_TM_MIXED_MSB_1));
@@ -8179,7 +8179,7 @@ SDValue SystemZTargetLowering::combineSTORE(
     }
   }
 
-  // combine STORE (LOAD_STACK_GUARD) into MOVE_STACKGUARD_DAG
+  // combine STORE (LOAD_STACK_GUARD) into MOV_STACKGUARD_DAG
   if (Op1->isMachineOpcode() &&
       (Op1->getMachineOpcode() == SystemZ::LOAD_STACK_GUARD)) {
     // Obtain the frame index the store was targeting.
@@ -8188,7 +8188,7 @@ SDValue SystemZTargetLowering::combineSTORE(
     SDValue Ops[] = {DAG.getTargetFrameIndex(FI, MVT::i64),
                      DAG.getTargetConstant(0, SDLoc(SN), MVT::i64),
                      SN->getChain()};
-    MachineSDNode *Move = DAG.getMachineNode(SystemZ::MOVE_STACKGUARD_DAG,
+    MachineSDNode *Move = DAG.getMachineNode(SystemZ::MOV_STACKGUARD_DAG,
                                              SDLoc(SN), MVT::Other, Ops);
 
     return SDValue(Move, 0);
@@ -11291,11 +11291,11 @@ MachineBasicBlock *SystemZTargetLowering::EmitInstrWithCustomInserter(
   case TargetOpcode::PATCHPOINT:
     return emitPatchPoint(MI, MBB);
 
-  case SystemZ::MOVE_STACKGUARD_DAG:
-    return emitStackGuardPseudo(MI, MBB, SystemZ::MOVE_STACKGUARD);
+  case SystemZ::MOV_STACKGUARD_DAG:
+    return emitStackGuardPseudo(MI, MBB, SystemZ::MOV_STACKGUARD);
 
-  case SystemZ::COMPARE_STACKGUARD_DAG:
-    return emitStackGuardPseudo(MI, MBB, SystemZ::COMPARE_STACKGUARD);
+  case SystemZ::CMP_STACKGUARD_DAG:
+    return emitStackGuardPseudo(MI, MBB, SystemZ::CMP_STACKGUARD);
 
   default:
     llvm_unreachable("Unexpected instr type to insert");

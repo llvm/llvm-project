@@ -535,10 +535,10 @@ let hasNoSchedulingInfo = 1, hasSideEffects = 1, mayLoad = 1 in {
     // (via LOAD_[TLS|GLOBAL]_STACKGUARD_ADDR),
     // and move the stack guard to the stack.
     let usesCustomInserter = 1 in
-      def MOVE_STACKGUARD_DAG : Pseudo<(outs),
+      def MOV_STACKGUARD_DAG : Pseudo<(outs),
                                         (ins bdaddr12only:$grdloc), []>;
     let Constraints = "@earlyclobber $grdaddr" in
-      def MOVE_STACKGUARD : Pseudo<(outs ADDR64:$grdaddr),
+      def MOV_STACKGUARD : Pseudo<(outs ADDR64:$grdaddr),
                                     (ins bdaddr12only:$grdloc), []>;
   }
   let Defs = [CC] in {
@@ -546,15 +546,15 @@ let hasNoSchedulingInfo = 1, hasSideEffects = 1, mayLoad = 1 in {
     // (via LOAD_[TLS|GLOBAL]_STACKGUARD_ADDR),
     // and compare the stack guard against the one on the stack.
     let usesCustomInserter = 1 in
-      def COMPARE_STACKGUARD_DAG : Pseudo<(outs),
+      def CMP_STACKGUARD_DAG : Pseudo<(outs),
                                            (ins bdaddr12only:$grdloc), 
                                            [(set CC, 
-                                             (z_csg
+                                             (z_cmp_stackguard
                                               (load bdaddr12only:$grdloc)
                                              )
                                             )]>;
     let Constraints = "@earlyclobber $grdaddr" in
-      def COMPARE_STACKGUARD : Pseudo<(outs ADDR64:$grdaddr),
+      def CMP_STACKGUARD : Pseudo<(outs ADDR64:$grdaddr),
                                        (ins bdaddr12only:$grdloc), []>;
   }
 }
