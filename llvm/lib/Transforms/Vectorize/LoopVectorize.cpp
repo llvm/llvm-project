@@ -1325,13 +1325,10 @@ public:
 
   /// Returns the TailFoldingStyle that is best for the current loop.
   TailFoldingStyle getTailFoldingStyle() const {
-    if (!ChosenTailFoldingStyle)
-      return TailFoldingStyle::None;
-    return *ChosenTailFoldingStyle;
+    return ChosenTailFoldingStyle ? *ChosenTailFoldingStyle : TailFoldingStyle::None;
   }
 
-  /// Selects and saves TailFoldingStyle for 2 options - if IV update may
-  /// overflow or not.
+  /// Selects and saves TailFoldingStyle.
   /// \param IsScalableVF true if scalable vector factors enabled.
   /// \param UserIC User specific interleave count.
   void setTailFoldingStyles(bool IsScalableVF, unsigned UserIC) {
@@ -1381,8 +1378,7 @@ public:
     if (!EnableWideActiveLaneMask)
       return false;
 
-    TailFoldingStyle TF = getTailFoldingStyle();
-    return TF == TailFoldingStyle::DataAndControlFlow;
+    return getTailFoldingStyle() == TailFoldingStyle::DataAndControlFlow;
   }
 
   /// Return maximum safe number of elements to be processed per vector
@@ -1594,8 +1590,7 @@ private:
   /// iterations to execute in the scalar loop.
   ScalarEpilogueLowering ScalarEpilogueStatus = CM_ScalarEpilogueAllowed;
 
-  /// Control finally chosen tail folding style. The first element is used if
-  /// the IV update may overflow, the second element - if it does not.
+  /// Control finally chosen tail folding style.
   std::optional<TailFoldingStyle> ChosenTailFoldingStyle;
 
   /// true if scalable vectorization is supported and enabled.
