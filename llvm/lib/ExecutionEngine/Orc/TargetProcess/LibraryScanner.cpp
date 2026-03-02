@@ -274,7 +274,7 @@ void DylibSubstitutor::configure(StringRef LoaderPath) {
 
   SmallString<512> LoaderDir;
   if (LoaderPath.empty()) {
-    LoaderDir = ExecPath;
+    LoaderDir = std::move(ExecPath);
   } else {
     LoaderDir = LoaderPath.str();
     if (!sys::fs::is_directory(LoaderPath))

@@ -208,7 +208,7 @@ public:
 
   void addDirectiveHandler(StringRef Directive,
                            ExtensionDirectiveHandler Handler) override {
-    ExtensionDirectiveMap[Directive] = Handler;
+    ExtensionDirectiveMap[Directive] = std::move(Handler);
   }
 
   void addAliasForDirective(StringRef Directive, StringRef Alias) override {
