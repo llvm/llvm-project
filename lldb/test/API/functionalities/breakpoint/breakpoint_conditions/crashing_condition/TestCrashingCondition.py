@@ -12,25 +12,33 @@ class TestCrashingCondition(TestBase):
     NO_DEBUG_INFO_TESTCASE = True
 
     def test_crashing_condition(self):
-        """There can be many tests in a test case - describe this test here."""
+        """Test that if a condition crashes we stop and recover cleanly"""
         self.build()
         self.main_source_file = lldb.SBFileSpec("main.c")
         self.do_crash_condition()
 
     def do_crash_condition(self):
-        """You might use the test implementation in several ways, say so here."""
+        """Test that if a condition crashes we stop and recover cleanly"""
 
         # This function starts a process, "a.out" by default, sets a source
         # breakpoint, runs to it, and returns the thread, process & target.
         # It optionally takes an SBLaunchOption argument if you want to pass
         # arguments or environment variables.
         (target, process, thread, bkpt) = lldbutil.run_to_source_breakpoint(
-            self, "Set a start breakpoint here", self.main_source_file
+            self,
+            "Set a start breakpoint here",
+            self.main_source_file
         )
 
         # Set a breakpoint with a condition that crashes on the next line:
-        bad_bkpt = target.BreakpointCreateBySourceRegex("Set the test breakpoint here", self.main_source_file)
-        self.assertGreater(bad_bkpt.GetNumLocations(), 0, "Found locations for our breakpoint")
+        bad_bkpt = target.BreakpointCreateBySourceRegex(
+            "Set the test breakpoint here",
+            self.main_source_file
+        )
+        self.assertGreater(
+            bad_bkpt.GetNumLocations(),
+            0,
+            "Found locations for our breakpoint")
         bad_bkpt.SetCondition("do_crash()")
 
         self.runCmd("continue")
