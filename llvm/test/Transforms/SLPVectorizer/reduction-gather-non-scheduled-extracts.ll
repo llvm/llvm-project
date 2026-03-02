@@ -10,8 +10,7 @@ define void @tes() {
 ; X86:       1:
 ; X86-NEXT:    [[TMP2:%.*]] = shufflevector <2 x i1> zeroinitializer, <2 x i1> [[TMP0]], <4 x i32> <i32 0, i32 0, i32 0, i32 2>
 ; X86-NEXT:    [[TMP3:%.*]] = call i1 @llvm.vector.reduce.and.v4i1(<4 x i1> [[TMP2]])
-; X86-NEXT:    [[OP_RDX:%.*]] = select i1 false, i1 [[TMP3]], i1 false
-; X86-NEXT:    [[OP_RDX1:%.*]] = select i1 false, i1 [[OP_RDX]], i1 false
+; X86-NEXT:    [[OP_RDX1:%.*]] = select i1 false, i1 [[TMP3]], i1 false
 ; X86-NEXT:    br i1 [[OP_RDX1]], label [[TMP4:%.*]], label [[TMP5:%.*]]
 ; X86:       4:
 ; X86-NEXT:    ret void
@@ -20,23 +19,16 @@ define void @tes() {
 ;
 ; AARCH64-LABEL: define void @tes() {
 ; AARCH64-NEXT:  entry:
-; AARCH64-NEXT:    [[TMP0:%.*]] = extractelement <2 x i1> zeroinitializer, i64 0
-; AARCH64-NEXT:    [[TMP1:%.*]] = extractelement <2 x i1> zeroinitializer, i64 0
 ; AARCH64-NEXT:    [[TMP2:%.*]] = fcmp ole <2 x double> zeroinitializer, zeroinitializer
-; AARCH64-NEXT:    [[TMP3:%.*]] = extractelement <2 x i1> [[TMP2]], i64 0
-; AARCH64-NEXT:    [[TMP4:%.*]] = extractelement <2 x i1> zeroinitializer, i64 0
 ; AARCH64-NEXT:    br label [[TMP5:%.*]]
-; AARCH64:       5:
-; AARCH64-NEXT:    [[TMP6:%.*]] = select i1 false, i1 false, i1 false
-; AARCH64-NEXT:    [[TMP7:%.*]] = select i1 [[TMP6]], i1 [[TMP0]], i1 false
-; AARCH64-NEXT:    [[TMP8:%.*]] = select i1 [[TMP7]], i1 [[TMP1]], i1 false
-; AARCH64-NEXT:    [[TMP9:%.*]] = select i1 [[TMP8]], i1 false, i1 false
-; AARCH64-NEXT:    [[TMP10:%.*]] = select i1 [[TMP9]], i1 [[TMP3]], i1 false
-; AARCH64-NEXT:    [[TMP11:%.*]] = select i1 [[TMP10]], i1 [[TMP4]], i1 false
+; AARCH64:       1:
+; AARCH64-NEXT:    [[TMP4:%.*]] = shufflevector <2 x i1> zeroinitializer, <2 x i1> [[TMP2]], <4 x i32> <i32 0, i32 0, i32 0, i32 2>
+; AARCH64-NEXT:    [[TMP3:%.*]] = call i1 @llvm.vector.reduce.and.v4i1(<4 x i1> [[TMP4]])
+; AARCH64-NEXT:    [[TMP11:%.*]] = select i1 false, i1 [[TMP3]], i1 false
 ; AARCH64-NEXT:    br i1 [[TMP11]], label [[TMP12:%.*]], label [[TMP13:%.*]]
-; AARCH64:       12:
+; AARCH64:       4:
 ; AARCH64-NEXT:    ret void
-; AARCH64:       13:
+; AARCH64:       5:
 ; AARCH64-NEXT:    ret void
 ;
 entry:
