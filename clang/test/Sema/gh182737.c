@@ -1,8 +1,5 @@
 // RUN: %clang_cc1 -fsyntax-only -Wdocumentation -ast-dump -verify %s
 
-#include <stdint.h>
-#include <stdbool.h>
-
 // expected-warning@+3 2 {{empty paragraph passed to '@param' command}}
 // expected-warning@+2 2 {{'@param' command used in a comment that is not attached to a function declaration}}
 /**
@@ -18,4 +15,4 @@ typedef int my_int;
  *      - true: ok
  *      - false: failure
  */
-typedef bool (*func_t)(uint8_t a);
+typedef int (*func_t)(int a);
