@@ -107,13 +107,14 @@ static void normalizeIVUses(OpBuilder &b, Location loc, Value iv, Value origLB,
   iv.replaceAllUsesExcept(denormalized, exceptions);
 }
 
-/// Helper used by loop conversion: clone region and return insertion point only.
+/// Helper used by loop conversion: clone region and return insertion point
+/// only.
 static Block::iterator cloneACCRegionIntoForLoop(Region *src, Block *dest,
-                                                Block::iterator insertionPoint,
-                                                IRMapping &mapping,
-                                                RewriterBase &rewriter) {
-  auto [replacements, ip] = acc::cloneACCRegionInto(src, dest, insertionPoint,
-                                                    mapping, ValueRange{});
+                                                 Block::iterator insertionPoint,
+                                                 IRMapping &mapping,
+                                                 RewriterBase &rewriter) {
+  auto [replacements, ip] =
+      acc::cloneACCRegionInto(src, dest, insertionPoint, mapping, ValueRange{});
   (void)replacements;
   return ip;
 }

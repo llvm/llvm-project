@@ -257,6 +257,7 @@ void ReductionInitOp::getSuccessorRegions(
                                     regions);
 }
 
+
 void ReductionInitOp::getRegionInvocationBounds(
     ArrayRef<Attribute> operands,
     SmallVectorImpl<InvocationBounds> &invocationBounds) {
@@ -271,7 +272,8 @@ LogicalResult ReductionInitOp::verify() {
   Block &block = getRegion().front();
   if (auto yieldOp = dyn_cast<acc::YieldOp>(block.getTerminator())) {
     if (yieldOp.getNumOperands() != 1)
-      return emitOpError("region must yield exactly one value (private storage)");
+      return emitOpError(
+          "region must yield exactly one value (private storage)");
     if (yieldOp.getOperand(0).getType() != getVar().getType())
       return emitOpError("yielded value type must match var type");
   }

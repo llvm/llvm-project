@@ -46,8 +46,8 @@ mlir::Value ReductionInitOpFortranObjectViewModel::getViewSource(
 }
 
 std::optional<std::int64_t>
-ReductionInitOpFortranObjectViewModel::getViewOffset(mlir::Operation *op,
-                                                    mlir::OpResult resultView) const {
+ReductionInitOpFortranObjectViewModel::getViewOffset(
+    mlir::Operation *op, mlir::OpResult resultView) const {
   assert(resultView.getOwner() == op && "result value must be the op's result");
   return 0;
 }
