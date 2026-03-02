@@ -80,8 +80,6 @@ enum Color {
 // HTML-INDEX-NEXT:     <p>Defined at line [[@LINE-58]] of file {{.*}}clang-tools-extra{{[\/]}}test{{[\/]}}clang-doc{{[\/]}}enum.cpp</p>
 // HTML-INDEX-NEXT:   </div>
 
-// JSON-INDEX:      "TextComment": "Comment 1"
-
 /**
  * @brief Shape Types
  */
