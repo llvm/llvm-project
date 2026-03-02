@@ -1325,15 +1325,15 @@ public:
 
   /// Returns the TailFoldingStyle that is best for the current loop.
   TailFoldingStyle getTailFoldingStyle() const {
-    return ChosenTailFoldingStyle ? *ChosenTailFoldingStyle
-                                  : TailFoldingStyle::None;
+    return ChosenTailFoldingStyle;
   }
 
   /// Selects and saves TailFoldingStyle.
   /// \param IsScalableVF true if scalable vector factors enabled.
   /// \param UserIC User specific interleave count.
   void setTailFoldingStyle(bool IsScalableVF, unsigned UserIC) {
-    assert(!ChosenTailFoldingStyle && "Tail folding must not be selected yet.");
+    assert(ChosenTailFoldingStyle == TailFoldingStyle::None &&
+           "Tail folding must not be selected yet.");
     if (!Legal->canFoldTailByMasking()) {
       ChosenTailFoldingStyle = TailFoldingStyle::None;
       return;
@@ -1592,7 +1592,7 @@ private:
   ScalarEpilogueLowering ScalarEpilogueStatus = CM_ScalarEpilogueAllowed;
 
   /// Control finally chosen tail folding style.
-  std::optional<TailFoldingStyle> ChosenTailFoldingStyle;
+  TailFoldingStyle ChosenTailFoldingStyle = TailFoldingStyle::None;
 
   /// true if scalable vectorization is supported and enabled.
   std::optional<bool> IsScalableVectorizationAllowed;
