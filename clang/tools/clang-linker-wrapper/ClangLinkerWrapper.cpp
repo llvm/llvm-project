@@ -537,9 +537,6 @@ Expected<StringRef> clang(ArrayRef<StringRef> InputFiles, const ArgList &Args,
       Args.MakeArgString("--target=" + Triple.getTriple()),
   };
 
-  if (!CanonicalPrefixes)
-    CmdArgs.push_back("-no-canonical-prefixes");
-
   if (!Arch.empty())
     Triple.isAMDGPU() ? CmdArgs.push_back(Args.MakeArgString("-mcpu=" + Arch))
                       : CmdArgs.push_back(Args.MakeArgString("-march=" + Arch));

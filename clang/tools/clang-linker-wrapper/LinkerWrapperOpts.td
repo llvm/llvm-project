@@ -69,7 +69,7 @@ def emit_fatbin_only
       Flags<[WrapperOnlyOption]>,
       HelpText<"Emit fat binary directly without wrapping or host linking">;
 
-def no_canonical_prefixes : Flag<["--"], "no-canonical-prefixes">,
+def no_canonical_prefixes : Flag<["-"], "no-canonical-prefixes">,
   Flags<[WrapperOnlyOption]>,
   HelpText<"Do not resolve symbolic links, turn relative paths into absolute ones, or do anything else to identify the executable">;
 
