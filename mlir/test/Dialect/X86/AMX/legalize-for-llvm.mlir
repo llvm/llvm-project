@@ -1,4 +1,4 @@
-// RUN: mlir-opt %s -convert-vector-to-llvm="enable-amx" | mlir-opt | FileCheck %s
+// RUN: mlir-opt %s -convert-vector-to-llvm="enable-x86" | mlir-opt | FileCheck %s
 
 // CHECK-LABEL: muli(
 // CHECK: llvm.call_intrinsic "llvm.x86.tilezero.internal"
@@ -14,17 +14,17 @@
 // CHECK: llvm.call_intrinsic "llvm.x86.tilestored64.internal"
 func.func @muli(%arg0: memref<?x?xi8>, %arg1: memref<?x?xi32>) {
   %0 = arith.constant 0 : index
-  %1 = amx.tile_zero : !amx.tile<16x64xi8>
-  %2 = amx.tile_load %arg0[%0, %0] : memref<?x?xi8> into !amx.tile<16x64xi8>
-  %3 = amx.tile_load %arg1[%0, %0] : memref<?x?xi32> into !amx.tile<16x16xi32>
-  %4 = amx.tile_muli %1 zext, %2 zext, %3 : !amx.tile<16x64xi8>, !amx.tile<16x64xi8>, !amx.tile<16x16xi32>
-  amx.tile_store %arg1[%0, %0], %4 : memref<?x?xi32>, !amx.tile<16x16xi32>
-  %5 = amx.tile_muli %1, %2, %3 : !amx.tile<16x64xi8>, !amx.tile<16x64xi8>, !amx.tile<16x16xi32>
-  amx.tile_store %arg1[%0, %0], %5 : memref<?x?xi32>, !amx.tile<16x16xi32>
-  %6 = amx.tile_muli %1 zext, %2, %3 : !amx.tile<16x64xi8>, !amx.tile<16x64xi8>, !amx.tile<16x16xi32>
-  amx.tile_store %arg1[%0, %0], %6 : memref<?x?xi32>, !amx.tile<16x16xi32>
-  %7 = amx.tile_muli %1, %2 zext, %3 : !amx.tile<16x64xi8>, !amx.tile<16x64xi8>, !amx.tile<16x16xi32>
-  amx.tile_store %arg1[%0, %0], %7  : memref<?x?xi32>, !amx.tile<16x16xi32>
+  %1 = x86.amx.tile_zero : !x86.amx.tile<16x64xi8>
+  %2 = x86.amx.tile_load %arg0[%0, %0] : memref<?x?xi8> into !x86.amx.tile<16x64xi8>
+  %3 = x86.amx.tile_load %arg1[%0, %0] : memref<?x?xi32> into !x86.amx.tile<16x16xi32>
+  %4 = x86.amx.tile_muli %1 zext, %2 zext, %3 : !x86.amx.tile<16x64xi8>, !x86.amx.tile<16x64xi8>, !x86.amx.tile<16x16xi32>
+  x86.amx.tile_store %arg1[%0, %0], %4 : memref<?x?xi32>, !x86.amx.tile<16x16xi32>
+  %5 = x86.amx.tile_muli %1, %2, %3 : !x86.amx.tile<16x64xi8>, !x86.amx.tile<16x64xi8>, !x86.amx.tile<16x16xi32>
+  x86.amx.tile_store %arg1[%0, %0], %5 : memref<?x?xi32>, !x86.amx.tile<16x16xi32>
+  %6 = x86.amx.tile_muli %1 zext, %2, %3 : !x86.amx.tile<16x64xi8>, !x86.amx.tile<16x64xi8>, !x86.amx.tile<16x16xi32>
+  x86.amx.tile_store %arg1[%0, %0], %6 : memref<?x?xi32>, !x86.amx.tile<16x16xi32>
+  %7 = x86.amx.tile_muli %1, %2 zext, %3 : !x86.amx.tile<16x64xi8>, !x86.amx.tile<16x64xi8>, !x86.amx.tile<16x16xi32>
+  x86.amx.tile_store %arg1[%0, %0], %7  : memref<?x?xi32>, !x86.amx.tile<16x16xi32>
   return
 }
 
@@ -36,11 +36,11 @@ func.func @muli(%arg0: memref<?x?xi8>, %arg1: memref<?x?xi32>) {
 // CHECK: llvm.call_intrinsic "llvm.x86.tilestored64.internal"
 func.func @mulbf16(%arg0: memref<?x?xbf16>, %arg1: memref<?x?xf32>) {
   %0 = arith.constant 0 : index
-  %1 = amx.tile_zero : !amx.tile<16x32xbf16>
-  %2 = amx.tile_load %arg0[%0, %0] : memref<?x?xbf16> into !amx.tile<16x32xbf16>
-  %3 = amx.tile_load %arg1[%0, %0] : memref<?x?xf32> into !amx.tile<16x16xf32>
-  %4 = amx.tile_mulf %1, %2, %3 : !amx.tile<16x32xbf16>, !amx.tile<16x32xbf16>, !amx.tile<16x16xf32>
-  amx.tile_store %arg1[%0, %0], %4 : memref<?x?xf32>, !amx.tile<16x16xf32>
+  %1 = x86.amx.tile_zero : !x86.amx.tile<16x32xbf16>
+  %2 = x86.amx.tile_load %arg0[%0, %0] : memref<?x?xbf16> into !x86.amx.tile<16x32xbf16>
+  %3 = x86.amx.tile_load %arg1[%0, %0] : memref<?x?xf32> into !x86.amx.tile<16x16xf32>
+  %4 = x86.amx.tile_mulf %1, %2, %3 : !x86.amx.tile<16x32xbf16>, !x86.amx.tile<16x32xbf16>, !x86.amx.tile<16x16xf32>
+  x86.amx.tile_store %arg1[%0, %0], %4 : memref<?x?xf32>, !x86.amx.tile<16x16xf32>
   return
 }
 
@@ -52,11 +52,11 @@ func.func @mulbf16(%arg0: memref<?x?xbf16>, %arg1: memref<?x?xf32>) {
 // CHECK: llvm.call_intrinsic "llvm.x86.tilestored64.internal"
 func.func @mulfp16(%arg0: memref<?x?xf16>, %arg1: memref<?x?xf32>) {
   %0 = arith.constant 0 : index
-  %1 = amx.tile_zero : !amx.tile<16x32xf16>
-  %2 = amx.tile_load %arg0[%0, %0] : memref<?x?xf16> into !amx.tile<16x32xf16>
-  %3 = amx.tile_load %arg1[%0, %0] : memref<?x?xf32> into !amx.tile<16x16xf32>
-  %4 = amx.tile_mulf %1, %2, %3 : !amx.tile<16x32xf16>, !amx.tile<16x32xf16>, !amx.tile<16x16xf32>
-  amx.tile_store %arg1[%0, %0], %4 : memref<?x?xf32>, !amx.tile<16x16xf32>
+  %1 = x86.amx.tile_zero : !x86.amx.tile<16x32xf16>
+  %2 = x86.amx.tile_load %arg0[%0, %0] : memref<?x?xf16> into !x86.amx.tile<16x32xf16>
+  %3 = x86.amx.tile_load %arg1[%0, %0] : memref<?x?xf32> into !x86.amx.tile<16x16xf32>
+  %4 = x86.amx.tile_mulf %1, %2, %3 : !x86.amx.tile<16x32xf16>, !x86.amx.tile<16x32xf16>, !x86.amx.tile<16x16xf32>
+  x86.amx.tile_store %arg1[%0, %0], %4 : memref<?x?xf32>, !x86.amx.tile<16x16xf32>
   return
 }
 
@@ -84,12 +84,12 @@ func.func @strides_implicit(%arg0: memref<16x32xi8>,
     %arg1: memref<32x32xbf16, strided<[64, 1]>>,
     %arg2: memref<16x32xf32, strided<[?, 1]>>) {
   %0 = arith.constant 0 : index
-  %1 = amx.tile_load %arg0[%0, %0] : memref<16x32xi8> into !amx.tile<16x32xi8>
-  %2 = amx.tile_load %arg1[%0, %0] : memref<32x32xbf16, strided<[64, 1]>> into !amx.tile<16x32xbf16>
-  %3 = amx.tile_load %arg2[%0, %0] : memref<16x32xf32, strided<[?, 1]>> into !amx.tile<16x16xf32>
-  amx.tile_store %arg0[%0, %0], %1 : memref<16x32xi8>, !amx.tile<16x32xi8>
-  amx.tile_store %arg1[%0, %0], %2 : memref<32x32xbf16, strided<[64, 1]>>, !amx.tile<16x32xbf16>
-  amx.tile_store %arg2[%0, %0], %3 : memref<16x32xf32, strided<[?, 1]>>, !amx.tile<16x16xf32>
+  %1 = x86.amx.tile_load %arg0[%0, %0] : memref<16x32xi8> into !x86.amx.tile<16x32xi8>
+  %2 = x86.amx.tile_load %arg1[%0, %0] : memref<32x32xbf16, strided<[64, 1]>> into !x86.amx.tile<16x32xbf16>
+  %3 = x86.amx.tile_load %arg2[%0, %0] : memref<16x32xf32, strided<[?, 1]>> into !x86.amx.tile<16x16xf32>
+  x86.amx.tile_store %arg0[%0, %0], %1 : memref<16x32xi8>, !x86.amx.tile<16x32xi8>
+  x86.amx.tile_store %arg1[%0, %0], %2 : memref<32x32xbf16, strided<[64, 1]>>, !x86.amx.tile<16x32xbf16>
+  x86.amx.tile_store %arg2[%0, %0], %3 : memref<16x32xf32, strided<[?, 1]>>, !x86.amx.tile<16x16xf32>
   return
 }
 
@@ -123,11 +123,11 @@ func.func @strides_explicit(%stride: index,
     %arg2: memref<32x32xf32, strided<[64, 1]>>) {
   %0 = arith.constant 0 : index
   %c64 = arith.constant 64 : index
-  %1 = amx.tile_load %arg0[%0], %stride : memref<?xi8> into !amx.tile<16x32xi8>
-  %2 = amx.tile_load %arg1[%0, %0], %stride : memref<16x32xbf16> into !amx.tile<16x32xbf16>
-  %3 = amx.tile_load %arg2[%0, %0], %c64 : memref<32x32xf32, strided<[64, 1]>> into !amx.tile<16x16xf32>
-  amx.tile_store %arg0[%0], %1, %stride : memref<?xi8>, !amx.tile<16x32xi8>
-  amx.tile_store %arg1[%0, %0], %2, %stride : memref<16x32xbf16>, !amx.tile<16x32xbf16>
-  amx.tile_store %arg2[%0, %0], %3, %c64 : memref<32x32xf32, strided<[64, 1]>>, !amx.tile<16x16xf32>
+  %1 = x86.amx.tile_load %arg0[%0], %stride : memref<?xi8> into !x86.amx.tile<16x32xi8>
+  %2 = x86.amx.tile_load %arg1[%0, %0], %stride : memref<16x32xbf16> into !x86.amx.tile<16x32xbf16>
+  %3 = x86.amx.tile_load %arg2[%0, %0], %c64 : memref<32x32xf32, strided<[64, 1]>> into !x86.amx.tile<16x16xf32>
+  x86.amx.tile_store %arg0[%0], %1, %stride : memref<?xi8>, !x86.amx.tile<16x32xi8>
+  x86.amx.tile_store %arg1[%0, %0], %2, %stride : memref<16x32xbf16>, !x86.amx.tile<16x32xbf16>
+  x86.amx.tile_store %arg2[%0, %0], %3, %c64 : memref<32x32xf32, strided<[64, 1]>>, !x86.amx.tile<16x16xf32>
   return
 }

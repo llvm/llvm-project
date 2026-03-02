@@ -1,4 +1,4 @@
-// RUN: mlir-opt %s -convert-vector-to-scf -lower-affine -convert-scf-to-cf -convert-vector-to-llvm="enable-amx" -finalize-memref-to-llvm -convert-func-to-llvm -reconcile-unrealized-casts | \
+// RUN: mlir-opt %s -convert-vector-to-scf -lower-affine -convert-scf-to-cf -convert-vector-to-llvm="enable-x86" -finalize-memref-to-llvm -convert-func-to-llvm -reconcile-unrealized-casts | \
 // RUN: mlir-translate -mlir-to-llvmir | \
 // RUN: %lli --entry-function=entry --mattr="+amx-tile,+amx-int8,+amx-bf16" --dlopen=%mlir_c_runner_utils | \
 // RUN: FileCheck %s
@@ -25,8 +25,8 @@ func.func @kernel(%arg0: memref<4x32xf32>) {
   %c32 = arith.constant 32 : index
   scf.for %i = %c0 to %c4 step %c2 {
     scf.for %j = %c0 to %c32 step %c16 {
-      %0 = amx.tile_zero : vector<2x16xf32>
-      amx.tile_store %arg0[%i, %j], %0 : memref<4x32xf32>, vector<2x16xf32>
+      %0 = x86.amx.tile_zero : vector<2x16xf32>
+      x86.amx.tile_store %arg0[%i, %j], %0 : memref<4x32xf32>, vector<2x16xf32>
       func.call @print(%arg0) : (memref<4x32xf32>) -> ()
     }
   }
