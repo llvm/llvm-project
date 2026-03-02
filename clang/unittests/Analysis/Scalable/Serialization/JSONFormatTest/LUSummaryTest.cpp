@@ -879,10 +879,6 @@ TEST_P(LUSummaryTest, EntityNameMissingSuffix) {
           "usr": "c:@F@foo",
           "namespace": [
             {
-              "kind": "CompilationUnit",
-              "name": "test.cpp"
-            },
-            {
               "kind": "LinkUnit",
               "name": "test.exe"
             }
@@ -893,7 +889,7 @@ TEST_P(LUSummaryTest, EntityNameMissingSuffix) {
     "linkage_table": [
       {
         "id": 0,
-        "linkage": { "type": "None" }
+        "linkage": { "type": "External" }
       }
     ],
     "data": []
@@ -1682,7 +1678,9 @@ TEST_F(JSONFormatLUSummaryTest, ReadEntitySummaryMismatchedSummaryName) {
 // ============================================================================
 
 TEST_F(JSONFormatLUSummaryTest, WriteEntitySummaryMissingData) {
-  LUSummary Summary(NestedBuildNamespace(std::vector<BuildNamespace>{}));
+  NestedBuildNamespace NBN(
+      BuildNamespace(BuildNamespaceKind::LinkUnit, "test.exe"));
+  LUSummary Summary(std::move(NBN));
 
   NestedBuildNamespace Namespace =
       NestedBuildNamespace::makeCompilationUnit("test.cpp");
@@ -1699,25 +1697,31 @@ TEST_F(JSONFormatLUSummaryTest, WriteEntitySummaryMissingData) {
 }
 
 TEST_F(JSONFormatLUSummaryTest, WriteEntitySummaryMismatchedSummaryName) {
-  LUSummary Summary(NestedBuildNamespace(std::vector<BuildNamespace>{}));
+  NestedBuildNamespace NBN(
+      BuildNamespace(BuildNamespaceKind::LinkUnit, "test.exe"));
+  LUSummary Summary(std::move(NBN));
 
   NestedBuildNamespace Namespace =
       NestedBuildNamespace::makeCompilationUnit("test.cpp");
   EntityId EI = getIdTable(Summary).getId(
       EntityName{"c:@F@foo", "", std::move(Namespace)});
 
-  SummaryName SN("MismatchedEntitySummaryForJSONFormatSummaryTest");
+  SummaryName SN("MismatchedEntitySummaryForJSONFormatTest");
   getData(Summary)[SN][EI] =
       std::make_unique<MismatchedEntitySummaryForJSONFormatTest>();
 
   EXPECT_DEATH(
       { (void)writeLUSummary(Summary, "output.json"); },
       "JSONFormat - EntitySummary data for "
-      "'SummaryName\\(MismatchedEntitySummaryForJSONFormatSummaryTest\\)' "
+      "'SummaryName\\(MismatchedEntitySummaryForJSONFormatTest\\)' "
       "reports "
       "mismatched "
       "'SummaryName\\(MismatchedEntitySummaryForJSONFormatTest_WrongName\\)'");
 }
+
+// ============================================================================
+// JSONFormat::entityDataMapFromJSON() Error Tests
+// ============================================================================
 
 TEST_P(LUSummaryTest, EntityDataElementNotObject) {
   auto Result = readFromString(R"({
@@ -1871,7 +1875,7 @@ TEST_P(LUSummaryTest, DataEntryMissingData) {
 }
 
 // ============================================================================
-// JSONFormat::summaryDataMapFromJSON() Error Tests (array-level)
+// JSONFormat::summaryDataMapFromJSON() / encodingSummaryDataMapFromJSON() Tests
 // ============================================================================
 
 TEST_P(LUSummaryTest, DataNotArray) {
@@ -1950,7 +1954,7 @@ TEST_P(LUSummaryTest, DuplicateSummaryName) {
 }
 
 // ============================================================================
-// JSONFormat::readLUSummary() / readLUSummaryEncoding() Missing Field Tests
+// JSONFormat::readLUSummary() / readLUSummaryEncoding() Error Tests
 // ============================================================================
 
 TEST_P(LUSummaryTest, MissingLUNamespace) {
@@ -1977,7 +1981,6 @@ TEST_P(LUSummaryTest, MissingIDTable) {
         "name": "test.exe"
       }
     ],
-    "linkage_table": [],
     "data": []
   })");
 
@@ -2105,7 +2108,9 @@ TEST_P(LUSummaryTest, WriteStreamOpenFailure) {
 // ============================================================================
 
 TEST_F(JSONFormatLUSummaryTest, WriteEntitySummaryNoFormatInfo) {
-  LUSummary Summary(NestedBuildNamespace(std::vector<BuildNamespace>{}));
+  NestedBuildNamespace NBN(
+      BuildNamespace(BuildNamespaceKind::LinkUnit, "test.exe"));
+  LUSummary Summary(std::move(NBN));
 
   NestedBuildNamespace Namespace =
       NestedBuildNamespace::makeCompilationUnit("test.cpp");

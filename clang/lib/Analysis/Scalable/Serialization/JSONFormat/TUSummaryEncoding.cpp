@@ -10,6 +10,8 @@
 
 #include "clang/Analysis/Scalable/EntityLinker/TUSummaryEncoding.h"
 
+#include <set>
+
 namespace clang::ssaf {
 
 //----------------------------------------------------------------------------

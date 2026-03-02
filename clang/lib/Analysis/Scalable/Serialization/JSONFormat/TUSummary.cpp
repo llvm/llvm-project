@@ -10,6 +10,8 @@
 
 #include "clang/Analysis/Scalable/TUSummary/TUSummary.h"
 
+#include <set>
+
 namespace clang::ssaf {
 
 //----------------------------------------------------------------------------
