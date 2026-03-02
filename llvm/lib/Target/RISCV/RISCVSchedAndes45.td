@@ -219,16 +219,7 @@ class Andes45GetFWReductionCycles<string mx, int sew> {
 
 // (VLEN*LMUL)/SEW
 class Andes45GetOrderedFWReductionCycles<string mx, int sew> {
-  defvar b = !cond(
-    !eq(mx, "M1")  : !mul(Andes45VLEN, 1),
-    !eq(mx, "M2")  : !mul(Andes45VLEN, 2),
-    !eq(mx, "M4")  : !mul(Andes45VLEN, 4),
-    !eq(mx, "M8")  : !mul(Andes45VLEN, 8),
-    !eq(mx, "MF2") : !mul(Andes45VLEN, 1),
-    !eq(mx, "MF4") : !mul(Andes45VLEN, 1),
-    !eq(mx, "MF8") : !mul(Andes45VLEN, 1)
-  );
-
+  defvar b = !mul(Andes45GetCyclesDefault<mx>.c, Andes45DLEN);
   int c = !div(b, sew);
 }
 
