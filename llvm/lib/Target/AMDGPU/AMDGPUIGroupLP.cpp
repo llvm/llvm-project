@@ -209,6 +209,10 @@ public:
   // Remove last element in the SchedGroup
   void pop() { Collection.pop_back(); }
 
+  template <class T>
+  void findCandidateSUnits(T Begin, T End,
+                           SUnitsToCandidateSGsMap &SyncedInstrs);
+
   // Identify and add all relevant SUs from the DAG to this SchedGroup
   // which represents a SCHED_BARRIER.
   void initSchedBarrier();
@@ -2591,24 +2595,21 @@ void SchedGroup::initSchedGroupBarrier(
   assert((MaxSize == 0 || !isFull()) && "Nothing added to Collection");
   add(*RIter);
   (*MaxSize)++;
-  
-  for (auto E = DAG->SUnits.rend(); RIter != E; ++RIter) {
-    auto &SU = *RIter;
 
+  findCandidateSUnits(RIter, DAG->SUnits.rend(), SyncedInstrs);
+}
+
+template <class T>
+void SchedGroup::findCandidateSUnits(T Begin, T End,
+                                     SUnitsToCandidateSGsMap &SyncedInstrs) {
+  std::for_each(Begin, End, [this, &SyncedInstrs](SUnit &SU) {
     if (canAddSU(SU))
       SyncedInstrs[&SU].push_back(SGID);
-  }
+  });
 }
 
 void SchedGroup::initSchedGroup(SUnitsToCandidateSGsMap &SyncedInstrs) {
-  auto I = DAG->SUnits.rbegin();
-  auto E = DAG->SUnits.rend();
-  for (; I != E; ++I) {
-    auto &SU = *I;
-
-    if (canAddSU(SU))
-      SyncedInstrs[&SU].push_back(SGID);
-  }
+  findCandidateSUnits(DAG->SUnits.rbegin(), DAG->SUnits.rend(), SyncedInstrs);
 }
 
 void IGroupLPDAGMutation::apply(ScheduleDAGInstrs *DAGInstrs) {
