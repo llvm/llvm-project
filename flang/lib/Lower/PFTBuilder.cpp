@@ -28,10 +28,6 @@ static llvm::cl::opt<bool> clDisableStructuredFir(
 using namespace Fortran;
 
 namespace {
-static llvm::cl::opt<bool> lowerDoWhileToSCFWhile(
-    "lower-do-while-to-scf-while", llvm::cl::init(false),
-    llvm::cl::desc("lower structured DO WHILE loops to scf.while"),
-    llvm::cl::Hidden);
 /// Helpers to unveil parser node inside Fortran::parser::Statement<>,
 /// Fortran::parser::UnlabeledStatement, and Fortran::common::Indirection<>
 template <typename A>
@@ -1062,12 +1058,6 @@ private:
               if (bounds->Name().thing.symbol->GetType()->IsNumeric(
                       common::TypeCategory::Real))
                 eval.isUnstructured = true; // real-valued loop control
-            } else if (std::get_if<parser::ScalarLogicalExpr>(
-                           &loopControl->u)) {
-              // Leave DO WHILE structured when -lower-do-while-to-scf-while is
-              // enabled; branch analysis will mark unstructured cases.
-              if (!lowerDoWhileToSCFWhile)
-                eval.isUnstructured = true; // while loop
             }
           },
           [&](const parser::EndDoStmt &) {
