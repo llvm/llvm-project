@@ -595,6 +595,9 @@ Improvements to Clang's diagnostics
 - Clang now rejects inline asm constraints and clobbers that contain an
   embedded null character, instead of silently truncating them. (#GH173900)
 
+- Added ``-Wstringop-overread`` to warn when ``memcpy``, ``memmove``, ``memcmp``,
+  and related builtins read more bytes than the source buffer size (#GH83728).
+
 Improvements to Clang's time-trace
 ----------------------------------
 
