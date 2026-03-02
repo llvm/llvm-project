@@ -90,7 +90,6 @@ std::optional<llvm::APFloat>
 EvalScalarMinMaxFp(const llvm::APFloat &A, const llvm::APFloat &B,
                    std::optional<llvm::APSInt> RoundingMode, bool IsMin);
 
-
 /// Whether we can instantiate FD during constant evaluation
 bool FunctionDefinitionCanBeLazilyInstantiated(const FunctionDecl *FD);
 

@@ -225,7 +225,6 @@ struct SemaProxy {
   virtual void
   instantiateFunctionDefinition(SourceLocation PointOfInstantiation,
                                 FunctionDecl *Function) = 0;
-
 };
 struct PFPField {
   CharUnits Offset;
