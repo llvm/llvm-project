@@ -2,6 +2,63 @@
 
 #include "mock-types.h"
 
+void *memcpy(void *dst, const void *src, unsigned int size);
+void *malloc(unsigned int size);
+void free(void *);
+
+namespace WTF {
+
+  template <typename T>
+  class Vector {
+  public:
+    ~Vector() { destory(); }
+
+    void append(const T& v)
+    {
+      if (m_size >= m_capacity)
+        grow(m_capacity * 2);
+      new (m_buffer + m_size) T();
+      m_buffer[m_size] = v;
+      m_size++;
+    }
+
+    void shrink(unsigned newSize)
+    {
+      unsigned currentSize = m_size;
+      while (currentSize > newSize) {
+        --currentSize;
+        m_buffer[currentSize].~T();
+      }
+      m_size = currentSize;
+    }
+
+  private:
+    void grow(unsigned newCapacity) {
+      T* newBuffer = static_cast<T*>(malloc(sizeof(T) * newCapacity));
+      memcpy(newBuffer, m_buffer, sizeof(T) * m_size);
+      destory();
+      m_buffer = newBuffer;
+      m_capacity = newCapacity;
+    }
+
+    void destory() {
+      if (!m_buffer)
+        return;
+      for (unsigned i = 0; i < m_size; ++i)
+        m_buffer[i]->~T();
+      free(m_buffer);
+      m_buffer = nullptr;
+    }
+
+    T* m_buffer { nullptr };
+    unsigned m_size { 0 };
+    unsigned m_capacity { 0 };
+  };
+
+} // namespace WTF
+
+using WTF::Vector;
+
 void someFunction();
 RefCountable* [[clang::annotate_type("webkit.nodelete")]] safeFunction();
 
@@ -150,6 +207,8 @@ public:
     m_obj.swap(obj);
   }
 
+  void [[clang::annotate_type("webkit.nodelete")]] assignObj(Ref<RefCountable>&& obj);
+
   void [[clang::annotate_type("webkit.nodelete")]] clearObj(RefCountable* obj) {
     m_obj = nullptr; // expected-warning{{A function 'clearObj' has [[clang::annotate_type("webkit.nodelete")]] but it contains code that could destruct an object}}
   }
@@ -183,8 +242,8 @@ public:
   }
 
   WeakRefCountable* [[clang::annotate_type("webkit.nodelete")]] useWeakPtr() {
-    WeakPtr localWeak = m_weakObj.get();
-    return localWeak.get();
+    auto* localWeak = m_weakObj.get();
+    return localWeak;
   }
 
 private:
@@ -192,6 +251,12 @@ private:
   Ref<RefCountable> m_ref;
   WeakPtr<WeakRefCountable> m_weakObj;
 };
+
+
+void SomeClass::assignObj(Ref<RefCountable>&& obj) {
+  m_obj = std::move(obj);
+   // expected-warning@-1{{A function 'assignObj' has [[clang::annotate_type("webkit.nodelete")]] but it contains code that could destruct an object}}
+}
 
 class IntermediateClass : public SomeClass {
   void anotherVirtualMethod() override;
@@ -284,3 +349,86 @@ void [[clang::annotate_type("webkit.nodelete")]] makeObjectWithConstructor() {
   ObjectWithConstructor obj5(ptrs);
   ObjectWithConstructor obj6(ObjectWithConstructor::E::V1);
 }
+
+struct ObjectWithNonTrivialDestructor {
+  ~ObjectWithNonTrivialDestructor();
+};
+
+struct Container {
+  Ref<Container> create() { return adoptRef(*new Container); }
+  void ref() const { refCount++; }
+  void deref() const {
+    refCount--;
+    if (!refCount)
+      delete this;
+  }
+
+  ObjectWithNonTrivialDestructor obj;
+
+private:
+  mutable unsigned refCount { 0 };
+
+  Container() = default;
+};
+
+struct SubContainer : public Container {
+};
+
+struct OtherContainerBase {
+  ObjectWithNonTrivialDestructor obj;
+};
+
+struct OtherContainer : public OtherContainerBase {
+  Ref<OtherContainer> create() { return adoptRef(*new OtherContainer); }
+  void ref() const { refCount++; }
+  void deref() const {
+    refCount--;
+    if (!refCount)
+      delete this;
+  }
+
+private:
+  mutable unsigned refCount { 0 };
+
+  OtherContainer() = default;
+};
+
+struct ObjectWithContainers {
+  RefPtr<Container> container;
+  RefPtr<SubContainer> subContainer;
+  RefPtr<OtherContainer> otherContainer;
+
+  void [[clang::annotate_type("webkit.nodelete")]] setContainer(Ref<Container>&& newContainer) {
+    container = std::move(newContainer);
+    // expected-warning@-1{{A function 'setContainer' has [[clang::annotate_type("webkit.nodelete")]] but it contains code that could destruct an object}}
+  }
+
+  void [[clang::annotate_type("webkit.nodelete")]] setSubContainer(Ref<SubContainer>&& newContainer) {
+    subContainer = std::move(newContainer);
+    // expected-warning@-1{{A function 'setSubContainer' has [[clang::annotate_type("webkit.nodelete")]] but it contains code that could destruct an object}}
+  }
+
+  void [[clang::annotate_type("webkit.nodelete")]] setOtherContainer(Ref<OtherContainer>&& newContainer) {
+    otherContainer = std::move(newContainer);
+    // expected-warning@-1{{A function 'setOtherContainer' has [[clang::annotate_type("webkit.nodelete")]] but it contains code that could destruct an object}}
+  }
+
+  Vector<Container> containerList;
+  Vector<SubContainer> subContainerList;
+  Vector<OtherContainer> otherContainerList;
+
+  void [[clang::annotate_type("webkit.nodelete")]] shrinkVector1() {
+    containerList.shrink(0);
+    // expected-warning@-1{{A function 'shrinkVector1' has [[clang::annotate_type("webkit.nodelete")]] but it contains code that could destruct an object}}
+  }
+
+  void [[clang::annotate_type("webkit.nodelete")]] shrinkVector2() {
+    subContainerList.shrink(0);
+    // expected-warning@-1{{A function 'shrinkVector2' has [[clang::annotate_type("webkit.nodelete")]] but it contains code that could destruct an object}}
+  }
+
+  void [[clang::annotate_type("webkit.nodelete")]] shrinkVector3() {
+    otherContainerList.shrink(0);
+    // expected-warning@-1{{A function 'shrinkVector3' has [[clang::annotate_type("webkit.nodelete")]] but it contains code that could destruct an object}}
+  }
+};
