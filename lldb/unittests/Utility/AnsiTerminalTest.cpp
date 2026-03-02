@@ -260,7 +260,8 @@ static void TestLines(const std::string &input, int indent,
                       const llvm::StringRef &expected) {
   StreamString strm;
   strm.SetIndentLevel(indent);
-  ansi::OutputWordWrappedLines(strm, input, output_max_columns);
+  ansi::OutputWordWrappedLines(strm, input, output_max_columns,
+                               /*use_color=*/false);
   EXPECT_EQ(expected, strm.GetString());
 }
 
@@ -300,9 +301,23 @@ TEST(AnsiTerminal, OutputWordWrappedLines) {
   // Must remove the spaces from the end of the first line.
   TestLines("The quick       brown fox.", 0, 15, "The quick\nbrown fox.\n");
 
-  // FIXME: ANSI codes applied to > 1 word end up applying to all those words
-  // and the indent if those words are split up. We should use cursor
-  // positioning to do the indentation instead.
-  TestLines("\x1B[4mabc def\x1B[0m ghi", 2, 6,
-            "  \x1B[4mabc\n  def\x1B[0m\n  ghi\n");
+  // If ANSI formatting is applied to multiple words, that range of words may
+  // be split over multiple lines.
+  StreamString indented_strm;
+  indented_strm.SetIndentLevel(2);
+  ansi::OutputWordWrappedLines(indented_strm, "\x1B[4mabc def\x1B[0m ghi", 6,
+                               /*use_color=*/false);
+  // The two spaces before "def" would have the previous ANSI code applied to
+  // them.
+  EXPECT_EQ("  \x1B[4mabc\n  def\x1B[0m\n  ghi\n", indented_strm.GetString());
+
+  // If we can emit ANSI, we can use cursor positions to skip forward,
+  // which leaves the indent unformatted.
+  // (in normal use the inputs are command descriptions, which already have
+  // ANSI removed if the terminal does not support it)
+  indented_strm.Clear();
+  ansi::OutputWordWrappedLines(indented_strm, "\x1B[4mabc def\x1B[0m ghi", 6,
+                               /*use_color=*/true);
+  EXPECT_EQ("\x1B[2C\x1B[4mabc\n\x1B[2Cdef\x1B[0m\n\x1B[2Cghi\n",
+            indented_strm.GetString());
 }
