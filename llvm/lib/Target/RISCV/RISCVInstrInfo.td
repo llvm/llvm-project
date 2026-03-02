@@ -2316,8 +2316,8 @@ def : Pat<(i64 (add GPR:$rs1, negImm:$rs2)), (SUB GPR:$rs1, negImm:$rs2)>;
 // Zihintpause
 //===----------------------------------------------------------------------===//
 
-// Zihintpause
-let Predicates = [HasStdExtZihintpause] in
+// int_riscv_pause is always available since pause is a HINT encoding that is
+// guaranteed not to trap (riscv-non-isa/riscv-elf-psabi-doc#474).
 def : Pat<(int_riscv_pause), (FENCE 0x1, 0x0)>;
 
 //===----------------------------------------------------------------------===//
