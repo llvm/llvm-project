@@ -253,14 +253,9 @@ struct VPlanTransforms {
   /// Replace (ICMP_ULE, wide canonical IV, backedge-taken-count) checks with an
   /// (active-lane-mask recipe, wide canonical IV, trip-count). If \p
   /// UseActiveLaneMaskForControlFlow is true, introduce an
-  /// VPActiveLaneMaskPHIRecipe. If \p DataAndControlFlowWithoutRuntimeCheck is
-  /// true, no minimum-iteration runtime check will be created (during skeleton
-  /// creation) and instead it is handled using active-lane-mask. \p
-  /// DataAndControlFlowWithoutRuntimeCheck implies \p
-  /// UseActiveLaneMaskForControlFlow.
+  /// VPActiveLaneMaskPHIRecipe.
   static void addActiveLaneMask(VPlan &Plan,
-                                bool UseActiveLaneMaskForControlFlow,
-                                bool DataAndControlFlowWithoutRuntimeCheck);
+                                bool UseActiveLaneMaskForControlFlow);
 
   /// Insert truncates and extends for any truncated recipe. Redundant casts
   /// will be folded later.
@@ -463,9 +458,8 @@ struct VPlanTransforms {
   /// Update the resume phis in the scalar preheader after creating wide recipes
   /// for first-order recurrences, reductions and inductions. End values for
   /// inductions are added to \p IVEndValues.
-  static void
-  updateScalarResumePhis(VPlan &Plan,
-                         DenseMap<VPValue *, VPValue *> &IVEndValues);
+  static void updateScalarResumePhis(
+      VPlan &Plan, DenseMap<VPValue *, VPValue *> &IVEndValues, bool FoldTail);
 
   /// Handle users in the exit block for first order reductions in the original
   /// exit block. The penultimate value of recurrences is fed to their LCSSA phi
