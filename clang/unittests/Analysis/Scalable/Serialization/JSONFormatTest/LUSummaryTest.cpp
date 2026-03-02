@@ -1,4 +1,4 @@
-//===- TUSummaryTest.cpp --------------------------------------------------===//
+//===- LUSummaryTest.cpp --------------------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -7,19 +7,20 @@
 //===----------------------------------------------------------------------===//
 //
 // Unit tests for SSAF JSON serialization format reading and writing of
-// TUSummary and TUSummaryEncoding.
+// LUSummary and LUSummaryEncoding.
 //
 //===----------------------------------------------------------------------===//
 
 #include "JSONFormatTest.h"
 
-#include "clang/Analysis/Scalable/EntityLinker/TUSummaryEncoding.h"
+#include "clang/Analysis/Scalable/EntityLinker/LUSummary.h"
+#include "clang/Analysis/Scalable/EntityLinker/LUSummaryEncoding.h"
 #include "clang/Analysis/Scalable/Serialization/JSONFormat.h"
-#include "clang/Analysis/Scalable/TUSummary/TUSummary.h"
 #include "llvm/Testing/Support/Error.h"
 #include "gmock/gmock.h"
 
 #include <memory>
+#include <vector>
 
 using namespace clang::ssaf;
 using namespace llvm;
@@ -29,87 +30,89 @@ using ::testing::HasSubstr;
 namespace {
 
 // ============================================================================
-// TUSummaryOps - Parameterization for TUSummary/TUSummaryEncoding tests
+// LUSummaryOps - Parameterization for LUSummary/LUSummaryEncoding tests
 // ============================================================================
 
-SummaryOps TUSummaryOps{
-    "Resolved", "TUSummary",
+SummaryOps LUSummaryOps{
+    "Resolved", "LUSummary",
     [](llvm::StringRef FilePath) -> llvm::Error {
-      auto Result = JSONFormat().readTUSummary(FilePath);
+      auto Result = JSONFormat().readLUSummary(FilePath);
       return Result ? llvm::Error::success() : Result.takeError();
     },
     [](llvm::StringRef FilePath) -> llvm::Error {
       BuildNamespace BN(BuildNamespaceKind::CompilationUnit, "test.cpp");
-      TUSummary S(std::move(BN));
-      return JSONFormat().writeTUSummary(S, FilePath);
+      NestedBuildNamespace NBN(std::move(BN));
+      LUSummary S(std::move(NBN));
+      return JSONFormat().writeLUSummary(S, FilePath);
     },
     [](llvm::StringRef InputFilePath,
        llvm::StringRef OutputFilePath) -> llvm::Error {
-      auto ExpectedS = JSONFormat().readTUSummary(InputFilePath);
+      auto ExpectedS = JSONFormat().readLUSummary(InputFilePath);
       if (!ExpectedS) {
         return ExpectedS.takeError();
       }
-      return JSONFormat().writeTUSummary(*ExpectedS, OutputFilePath);
+      return JSONFormat().writeLUSummary(*ExpectedS, OutputFilePath);
     }};
 
-SummaryOps TUSummaryEncodingOps{
-    "Encoding", "TUSummary",
+SummaryOps LUSummaryEncodingOps{
+    "Encoding", "LUSummary",
     [](llvm::StringRef FilePath) -> llvm::Error {
-      auto Result = JSONFormat().readTUSummaryEncoding(FilePath);
+      auto Result = JSONFormat().readLUSummaryEncoding(FilePath);
       return Result ? llvm::Error::success() : Result.takeError();
     },
     [](llvm::StringRef FilePath) -> llvm::Error {
       BuildNamespace BN(BuildNamespaceKind::CompilationUnit, "test.cpp");
-      TUSummaryEncoding E(std::move(BN));
-      return JSONFormat().writeTUSummaryEncoding(E, FilePath);
+      NestedBuildNamespace NBN(std::move(BN));
+      LUSummaryEncoding E(std::move(NBN));
+      return JSONFormat().writeLUSummaryEncoding(E, FilePath);
     },
     [](llvm::StringRef InputFilePath,
        llvm::StringRef OutputFilePath) -> llvm::Error {
-      auto ExpectedE = JSONFormat().readTUSummaryEncoding(InputFilePath);
+      auto ExpectedE = JSONFormat().readLUSummaryEncoding(InputFilePath);
       if (!ExpectedE) {
         return ExpectedE.takeError();
       }
-      return JSONFormat().writeTUSummaryEncoding(*ExpectedE, OutputFilePath);
+      return JSONFormat().writeLUSummaryEncoding(*ExpectedE, OutputFilePath);
     }};
 
 // ============================================================================
 // LUSummaryTest Test Fixture
 // ============================================================================
 
-class TUSummaryTest : public SummaryTest {};
+class LUSummaryTest : public SummaryTest {};
 
-INSTANTIATE_TEST_SUITE_P(JSONFormat, TUSummaryTest,
-                         ::testing::Values(TUSummaryOps, TUSummaryEncodingOps),
+INSTANTIATE_TEST_SUITE_P(JSONFormat, LUSummaryTest,
+                         ::testing::Values(LUSummaryOps, LUSummaryEncodingOps),
                          [](const ::testing::TestParamInfo<SummaryOps> &Info) {
                            return Info.param.GTestInstantiationSuffix;
                          });
 
 // ============================================================================
-// JSONFormatTUSummaryTest Test Fixture
+// JSONFormatLUSummaryTest Test Fixture
 // ============================================================================
 
-class JSONFormatTUSummaryTest : public JSONFormatTest {
+class JSONFormatLUSummaryTest : public JSONFormatTest {
 protected:
-  llvm::Expected<TUSummary> readTUSummaryFromFile(StringRef FileName) const {
+  llvm::Expected<LUSummary> readLUSummaryFromFile(StringRef FileName) const {
     PathString FilePath = makePath(FileName);
-    return JSONFormat().readTUSummary(FilePath);
+    return JSONFormat().readLUSummary(FilePath);
   }
 
-  llvm::Expected<TUSummary>
-  readTUSummaryFromString(StringRef JSON,
+  llvm::Expected<LUSummary>
+  readLUSummaryFromString(StringRef JSON,
                           StringRef FileName = "test.json") const {
     auto ExpectedFilePath = writeJSON(JSON, FileName);
     if (!ExpectedFilePath) {
       return ExpectedFilePath.takeError();
     }
 
-    return readTUSummaryFromFile(FileName);
+    return readLUSummaryFromFile(FileName);
   }
 
-  llvm::Error writeTUSummary(const TUSummary &Summary,
+  llvm::Error writeLUSummary(const LUSummary &Summary,
                              StringRef FileName) const {
     PathString FilePath = makePath(FileName);
-    return JSONFormat().writeTUSummary(Summary, FilePath);
+    return JSONFormat().writeLUSummary(Summary, FilePath);
   }
 };
 
@@ -117,15 +120,15 @@ protected:
 // readJSON() Error Tests
 // ============================================================================
 
-TEST_P(TUSummaryTest, NonexistentFile) {
+TEST_P(LUSummaryTest, NonexistentFile) {
   auto Result = readFromFile("nonexistent.json");
 
   EXPECT_THAT_ERROR(std::move(Result),
-                    FailedWithMessage(AllOf(HasSubstr("reading TUSummary from"),
+                    FailedWithMessage(AllOf(HasSubstr("reading LUSummary from"),
                                             HasSubstr("file does not exist"))));
 }
 
-TEST_P(TUSummaryTest, PathIsDirectory) {
+TEST_P(LUSummaryTest, PathIsDirectory) {
   PathString DirName("test_directory.json");
 
   auto ExpectedDirPath = makeDirectory(DirName);
@@ -135,11 +138,11 @@ TEST_P(TUSummaryTest, PathIsDirectory) {
 
   EXPECT_THAT_ERROR(
       std::move(Result),
-      FailedWithMessage(AllOf(HasSubstr("reading TUSummary from"),
+      FailedWithMessage(AllOf(HasSubstr("reading LUSummary from"),
                               HasSubstr("path is a directory, not a file"))));
 }
 
-TEST_P(TUSummaryTest, NotJsonExtension) {
+TEST_P(LUSummaryTest, NotJsonExtension) {
   PathString FileName("test.txt");
 
   auto ExpectedFilePath = writeJSON("{}", FileName);
@@ -150,12 +153,12 @@ TEST_P(TUSummaryTest, NotJsonExtension) {
   EXPECT_THAT_ERROR(
       std::move(Result),
       FailedWithMessage(
-          AllOf(HasSubstr("reading TUSummary from file"),
+          AllOf(HasSubstr("reading LUSummary from file"),
                 HasSubstr("failed to read file"),
                 HasSubstr("file does not end with '.json' extension"))));
 }
 
-TEST_P(TUSummaryTest, BrokenSymlink) {
+TEST_P(LUSummaryTest, BrokenSymlink) {
 #ifdef _WIN32
   GTEST_SKIP() << "Symlink model differs on Windows";
 #endif
@@ -164,17 +167,17 @@ TEST_P(TUSummaryTest, BrokenSymlink) {
 
   // Create a symlink pointing to a non-existent file
   auto ExpectedSymlinkPath =
-      makeSymlink("nonexistent_target.json", SymlinkFileName);
+      makeSymlink("nonexistent_target.json", "broken_symlink.json");
   ASSERT_THAT_EXPECTED(ExpectedSymlinkPath, Succeeded());
 
   auto Result = readFromFile(SymlinkFileName);
 
   EXPECT_THAT_ERROR(std::move(Result),
-                    FailedWithMessage(AllOf(HasSubstr("reading TUSummary from"),
+                    FailedWithMessage(AllOf(HasSubstr("reading LUSummary from"),
                                             HasSubstr("failed to read file"))));
 }
 
-TEST_P(TUSummaryTest, NoReadPermission) {
+TEST_P(LUSummaryTest, NoReadPermission) {
   if (!permissionsAreEnforced()) {
     GTEST_SKIP() << "File permission checks are not enforced in this "
                     "environment";
@@ -183,10 +186,12 @@ TEST_P(TUSummaryTest, NoReadPermission) {
   PathString FileName("no-read-permission.json");
 
   auto ExpectedFilePath = writeJSON(R"({
-    "tu_namespace": {
-      "kind": "CompilationUnit",
-      "name": "test.cpp"
-    },
+    "lu_namespace": [
+      {
+        "kind": "LinkUnit",
+        "name": "test.exe"
+      }
+    ],
     "id_table": [],
     "linkage_table": [],
     "data": []
@@ -201,7 +206,7 @@ TEST_P(TUSummaryTest, NoReadPermission) {
   auto Result = readFromFile(FileName);
 
   EXPECT_THAT_ERROR(std::move(Result),
-                    FailedWithMessage(AllOf(HasSubstr("reading TUSummary from"),
+                    FailedWithMessage(AllOf(HasSubstr("reading LUSummary from"),
                                             HasSubstr("failed to read file"))));
 
   // Restore permissions for cleanup
@@ -209,22 +214,22 @@ TEST_P(TUSummaryTest, NoReadPermission) {
   EXPECT_THAT_ERROR(std::move(RestoreError), Succeeded());
 }
 
-TEST_P(TUSummaryTest, InvalidSyntax) {
+TEST_P(LUSummaryTest, InvalidSyntax) {
   auto Result = readFromString("{ invalid json }");
 
   EXPECT_THAT_ERROR(
       std::move(Result),
-      FailedWithMessage(AllOf(HasSubstr("reading TUSummary from file"),
+      FailedWithMessage(AllOf(HasSubstr("reading LUSummary from file"),
                               HasSubstr("Expected object key"))));
 }
 
-TEST_P(TUSummaryTest, NotObject) {
+TEST_P(LUSummaryTest, NotObject) {
   auto Result = readFromString("[]");
 
   EXPECT_THAT_ERROR(
       std::move(Result),
-      FailedWithMessage(AllOf(HasSubstr("reading TUSummary from file"),
-                              HasSubstr("failed to read TUSummary"),
+      FailedWithMessage(AllOf(HasSubstr("reading LUSummary from file"),
+                              HasSubstr("failed to read LUSummary"),
                               HasSubstr("expected JSON object"))));
 }
 
@@ -232,12 +237,14 @@ TEST_P(TUSummaryTest, NotObject) {
 // JSONFormat::entityLinkageFromJSON() Error Tests
 // ============================================================================
 
-TEST_P(TUSummaryTest, LinkageTableEntryLinkageMissingType) {
+TEST_P(LUSummaryTest, LinkageTableEntryLinkageMissingType) {
   auto Result = readFromString(R"({
-    "tu_namespace": {
-      "kind": "CompilationUnit",
-      "name": "test.cpp"
-    },
+    "lu_namespace": [
+      {
+        "kind": "LinkUnit",
+        "name": "test.exe"
+      }
+    ],
     "id_table": [],
     "linkage_table": [
       {
@@ -251,7 +258,7 @@ TEST_P(TUSummaryTest, LinkageTableEntryLinkageMissingType) {
   EXPECT_THAT_ERROR(
       std::move(Result),
       FailedWithMessage(
-          AllOf(HasSubstr("reading TUSummary from file"),
+          AllOf(HasSubstr("reading LUSummary from file"),
                 HasSubstr("reading LinkageTable from field 'linkage_table'"),
                 HasSubstr("reading LinkageTable entry from index '0'"),
                 HasSubstr("reading EntityLinkage from field 'linkage'"),
@@ -259,12 +266,14 @@ TEST_P(TUSummaryTest, LinkageTableEntryLinkageMissingType) {
                 HasSubstr("expected JSON string"))));
 }
 
-TEST_P(TUSummaryTest, LinkageTableEntryLinkageInvalidType) {
+TEST_P(LUSummaryTest, LinkageTableEntryLinkageInvalidType) {
   auto Result = readFromString(R"({
-    "tu_namespace": {
-      "kind": "CompilationUnit",
-      "name": "test.cpp"
-    },
+    "lu_namespace": [
+      {
+        "kind": "LinkUnit",
+        "name": "test.exe"
+      }
+    ],
     "id_table": [],
     "linkage_table": [
       {
@@ -278,7 +287,7 @@ TEST_P(TUSummaryTest, LinkageTableEntryLinkageInvalidType) {
   EXPECT_THAT_ERROR(
       std::move(Result),
       FailedWithMessage(
-          AllOf(HasSubstr("reading TUSummary from file"),
+          AllOf(HasSubstr("reading LUSummary from file"),
                 HasSubstr("reading LinkageTable from field 'linkage_table'"),
                 HasSubstr("reading LinkageTable entry from index '0'"),
                 HasSubstr("reading EntityLinkage from field 'linkage'"),
@@ -290,12 +299,14 @@ TEST_P(TUSummaryTest, LinkageTableEntryLinkageInvalidType) {
 // JSONFormat::linkageTableEntryFromJSON() Error Tests
 // ============================================================================
 
-TEST_P(TUSummaryTest, LinkageTableEntryMissingId) {
+TEST_P(LUSummaryTest, LinkageTableEntryMissingId) {
   auto Result = readFromString(R"({
-    "tu_namespace": {
-      "kind": "CompilationUnit",
-      "name": "test.cpp"
-    },
+    "lu_namespace": [
+      {
+        "kind": "LinkUnit",
+        "name": "test.exe"
+      }
+    ],
     "id_table": [],
     "linkage_table": [
       {
@@ -308,19 +319,21 @@ TEST_P(TUSummaryTest, LinkageTableEntryMissingId) {
   EXPECT_THAT_ERROR(
       std::move(Result),
       FailedWithMessage(
-          AllOf(HasSubstr("reading TUSummary from file"),
+          AllOf(HasSubstr("reading LUSummary from file"),
                 HasSubstr("reading LinkageTable from field 'linkage_table'"),
                 HasSubstr("reading LinkageTable entry from index '0'"),
                 HasSubstr("failed to read EntityId from field 'id'"),
                 HasSubstr("expected JSON number (unsigned 64-bit integer)"))));
 }
 
-TEST_P(TUSummaryTest, LinkageTableEntryIdNotUInt64) {
+TEST_P(LUSummaryTest, LinkageTableEntryIdNotUInt64) {
   auto Result = readFromString(R"({
-    "tu_namespace": {
-      "kind": "CompilationUnit",
-      "name": "test.cpp"
-    },
+    "lu_namespace": [
+      {
+        "kind": "LinkUnit",
+        "name": "test.exe"
+      }
+    ],
     "id_table": [],
     "linkage_table": [
       {
@@ -334,19 +347,21 @@ TEST_P(TUSummaryTest, LinkageTableEntryIdNotUInt64) {
   EXPECT_THAT_ERROR(
       std::move(Result),
       FailedWithMessage(
-          AllOf(HasSubstr("reading TUSummary from file"),
+          AllOf(HasSubstr("reading LUSummary from file"),
                 HasSubstr("reading LinkageTable from field 'linkage_table'"),
                 HasSubstr("reading LinkageTable entry from index '0'"),
                 HasSubstr("failed to read EntityId from field 'id'"),
                 HasSubstr("expected JSON number (unsigned 64-bit integer)"))));
 }
 
-TEST_P(TUSummaryTest, LinkageTableEntryMissingLinkage) {
+TEST_P(LUSummaryTest, LinkageTableEntryMissingLinkage) {
   auto Result = readFromString(R"({
-    "tu_namespace": {
-      "kind": "CompilationUnit",
-      "name": "test.cpp"
-    },
+    "lu_namespace": [
+      {
+        "kind": "LinkUnit",
+        "name": "test.exe"
+      }
+    ],
     "id_table": [],
     "linkage_table": [
       {
@@ -359,7 +374,7 @@ TEST_P(TUSummaryTest, LinkageTableEntryMissingLinkage) {
   EXPECT_THAT_ERROR(
       std::move(Result),
       FailedWithMessage(
-          AllOf(HasSubstr("reading TUSummary from file"),
+          AllOf(HasSubstr("reading LUSummary from file"),
                 HasSubstr("reading LinkageTable from field 'linkage_table'"),
                 HasSubstr("reading LinkageTable entry from index '0'"),
                 HasSubstr("failed to read EntityLinkage from field 'linkage'"),
@@ -370,12 +385,14 @@ TEST_P(TUSummaryTest, LinkageTableEntryMissingLinkage) {
 // JSONFormat::linkageTableFromJSON() Error Tests
 // ============================================================================
 
-TEST_P(TUSummaryTest, LinkageTableNotArray) {
+TEST_P(LUSummaryTest, LinkageTableNotArray) {
   auto Result = readFromString(R"({
-    "tu_namespace": {
-      "kind": "CompilationUnit",
-      "name": "test.cpp"
-    },
+    "lu_namespace": [
+      {
+        "kind": "LinkUnit",
+        "name": "test.exe"
+      }
+    ],
     "id_table": [],
     "linkage_table": {},
     "data": []
@@ -384,17 +401,19 @@ TEST_P(TUSummaryTest, LinkageTableNotArray) {
   EXPECT_THAT_ERROR(
       std::move(Result),
       FailedWithMessage(AllOf(
-          HasSubstr("reading TUSummary from file"),
+          HasSubstr("reading LUSummary from file"),
           HasSubstr("failed to read LinkageTable from field 'linkage_table'"),
           HasSubstr("expected JSON array"))));
 }
 
-TEST_P(TUSummaryTest, LinkageTableElementNotObject) {
+TEST_P(LUSummaryTest, LinkageTableElementNotObject) {
   auto Result = readFromString(R"({
-    "tu_namespace": {
-      "kind": "CompilationUnit",
-      "name": "test.cpp"
-    },
+    "lu_namespace": [
+      {
+        "kind": "LinkUnit",
+        "name": "test.exe"
+      }
+    ],
     "id_table": [],
     "linkage_table": ["invalid"],
     "data": []
@@ -403,18 +422,20 @@ TEST_P(TUSummaryTest, LinkageTableElementNotObject) {
   EXPECT_THAT_ERROR(
       std::move(Result),
       FailedWithMessage(
-          AllOf(HasSubstr("reading TUSummary from file"),
+          AllOf(HasSubstr("reading LUSummary from file"),
                 HasSubstr("reading LinkageTable from field 'linkage_table'"),
                 HasSubstr("failed to read LinkageTable entry from index '0'"),
                 HasSubstr("expected JSON object"))));
 }
 
-TEST_P(TUSummaryTest, LinkageTableExtraId) {
+TEST_P(LUSummaryTest, LinkageTableExtraId) {
   auto Result = readFromString(R"({
-    "tu_namespace": {
-      "kind": "CompilationUnit",
-      "name": "test.cpp"
-    },
+    "lu_namespace": [
+      {
+        "kind": "LinkUnit",
+        "name": "test.exe"
+      }
+    ],
     "id_table": [],
     "linkage_table": [
       {
@@ -428,19 +449,21 @@ TEST_P(TUSummaryTest, LinkageTableExtraId) {
   EXPECT_THAT_ERROR(
       std::move(Result),
       FailedWithMessage(
-          AllOf(HasSubstr("reading TUSummary from file"),
+          AllOf(HasSubstr("reading LUSummary from file"),
                 HasSubstr("reading LinkageTable from field 'linkage_table'"),
                 HasSubstr("reading LinkageTable entry from index '0'"),
                 HasSubstr("failed to deserialize LinkageTable"),
                 HasSubstr("extra 'EntityId(0)' not present in IdTable"))));
 }
 
-TEST_P(TUSummaryTest, LinkageTableMissingId) {
+TEST_P(LUSummaryTest, LinkageTableMissingId) {
   auto Result = readFromString(R"({
-    "tu_namespace": {
-      "kind": "CompilationUnit",
-      "name": "test.cpp"
-    },
+    "lu_namespace": [
+      {
+        "kind": "LinkUnit",
+        "name": "test.exe"
+      }
+    ],
     "id_table": [
       {
         "id": 0,
@@ -451,6 +474,10 @@ TEST_P(TUSummaryTest, LinkageTableMissingId) {
             {
               "kind": "CompilationUnit",
               "name": "test.cpp"
+            },
+            {
+              "kind": "LinkUnit",
+              "name": "test.exe"
             }
           ]
         }
@@ -463,18 +490,20 @@ TEST_P(TUSummaryTest, LinkageTableMissingId) {
   EXPECT_THAT_ERROR(
       std::move(Result),
       FailedWithMessage(
-          AllOf(HasSubstr("reading TUSummary from file"),
+          AllOf(HasSubstr("reading LUSummary from file"),
                 HasSubstr("reading LinkageTable from field 'linkage_table'"),
                 HasSubstr("failed to deserialize LinkageTable"),
                 HasSubstr("missing 'EntityId(0)' present in IdTable"))));
 }
 
-TEST_P(TUSummaryTest, LinkageTableDuplicateId) {
+TEST_P(LUSummaryTest, LinkageTableDuplicateId) {
   auto Result = readFromString(R"({
-    "tu_namespace": {
-      "kind": "CompilationUnit",
-      "name": "test.cpp"
-    },
+    "lu_namespace": [
+      {
+        "kind": "LinkUnit",
+        "name": "test.exe"
+      }
+    ],
     "id_table": [
       {
         "id": 0,
@@ -485,6 +514,10 @@ TEST_P(TUSummaryTest, LinkageTableDuplicateId) {
             {
               "kind": "CompilationUnit",
               "name": "test.cpp"
+            },
+            {
+              "kind": "LinkUnit",
+              "name": "test.exe"
             }
           ]
         }
@@ -506,46 +539,19 @@ TEST_P(TUSummaryTest, LinkageTableDuplicateId) {
   EXPECT_THAT_ERROR(
       std::move(Result),
       FailedWithMessage(
-          AllOf(HasSubstr("reading TUSummary from file"),
+          AllOf(HasSubstr("reading LUSummary from file"),
                 HasSubstr("reading LinkageTable from field 'linkage_table'"),
                 HasSubstr("failed to insert LinkageTable entry at index '1'"),
                 HasSubstr("encountered duplicate 'EntityId(0)'"))));
 }
 
 // ============================================================================
-// JSONFormat::buildNamespaceKindFromJSON() Error Tests
+// JSONFormat::nestedBuildNamespaceFromJSON() Error Tests (lu_namespace field)
 // ============================================================================
 
-TEST_P(TUSummaryTest, InvalidKind) {
+TEST_P(LUSummaryTest, LUNamespaceNotArray) {
   auto Result = readFromString(R"({
-    "tu_namespace": {
-      "kind": "invalid_kind",
-      "name": "test.cpp"
-    },
-    "id_table": [],
-    "linkage_table": [],
-    "data": []
-  })");
-
-  EXPECT_THAT_ERROR(
-      std::move(Result),
-      FailedWithMessage(
-          AllOf(HasSubstr("reading TUSummary from file"),
-                HasSubstr("reading BuildNamespace from field 'tu_namespace'"),
-                HasSubstr("reading BuildNamespaceKind from field 'kind'"),
-                HasSubstr("invalid BuildNamespaceKind value 'invalid_kind' for "
-                          "field 'kind'"))));
-}
-
-// ============================================================================
-// JSONFormat::buildNamespaceFromJSON() Error Tests
-// ============================================================================
-
-TEST_P(TUSummaryTest, MissingKind) {
-  auto Result = readFromString(R"({
-    "tu_namespace": {
-      "name": "test.cpp"
-    },
+    "lu_namespace": { "kind": "CompilationUnit", "name": "test.cpp" },
     "id_table": [],
     "linkage_table": [],
     "data": []
@@ -554,17 +560,50 @@ TEST_P(TUSummaryTest, MissingKind) {
   EXPECT_THAT_ERROR(
       std::move(Result),
       FailedWithMessage(AllOf(
-          HasSubstr("reading TUSummary from file"),
-          HasSubstr("reading BuildNamespace from field 'tu_namespace'"),
+          HasSubstr("reading LUSummary from file"),
+          HasSubstr(
+              "failed to read NestedBuildNamespace from field 'lu_namespace'"),
+          HasSubstr("expected JSON array"))));
+}
+
+TEST_P(LUSummaryTest, LUNamespaceElementNotObject) {
+  auto Result = readFromString(R"({
+    "lu_namespace": ["invalid"],
+    "id_table": [],
+    "linkage_table": [],
+    "data": []
+  })");
+
+  EXPECT_THAT_ERROR(
+      std::move(Result),
+      FailedWithMessage(AllOf(
+          HasSubstr("reading LUSummary from file"),
+          HasSubstr("reading NestedBuildNamespace from field 'lu_namespace'"),
+          HasSubstr("failed to read BuildNamespace from index '0'"),
+          HasSubstr("expected JSON object"))));
+}
+
+TEST_P(LUSummaryTest, LUNamespaceElementMissingKind) {
+  auto Result = readFromString(R"({
+    "lu_namespace": [{ "name": "test.cpp" }],
+    "id_table": [],
+    "linkage_table": [],
+    "data": []
+  })");
+
+  EXPECT_THAT_ERROR(
+      std::move(Result),
+      FailedWithMessage(AllOf(
+          HasSubstr("reading LUSummary from file"),
+          HasSubstr("reading NestedBuildNamespace from field 'lu_namespace'"),
+          HasSubstr("reading BuildNamespace from index '0'"),
           HasSubstr("failed to read BuildNamespaceKind from field 'kind'"),
           HasSubstr("expected JSON string"))));
 }
 
-TEST_P(TUSummaryTest, MissingName) {
+TEST_P(LUSummaryTest, LUNamespaceElementInvalidKind) {
   auto Result = readFromString(R"({
-    "tu_namespace": {
-      "kind": "CompilationUnit"
-    },
+    "lu_namespace": [{ "kind": "invalid_kind", "name": "test.cpp" }],
     "id_table": [],
     "linkage_table": [],
     "data": []
@@ -573,22 +612,44 @@ TEST_P(TUSummaryTest, MissingName) {
   EXPECT_THAT_ERROR(
       std::move(Result),
       FailedWithMessage(AllOf(
-          HasSubstr("reading TUSummary from file"),
-          HasSubstr("reading BuildNamespace from field 'tu_namespace'"),
+          HasSubstr("reading LUSummary from file"),
+          HasSubstr("reading NestedBuildNamespace from field 'lu_namespace'"),
+          HasSubstr("reading BuildNamespace from index '0'"),
+          HasSubstr("reading BuildNamespaceKind from field 'kind'"),
+          HasSubstr("invalid BuildNamespaceKind value 'invalid_kind' for "
+                    "field 'kind'"))));
+}
+
+TEST_P(LUSummaryTest, LUNamespaceElementMissingName) {
+  auto Result = readFromString(R"({
+    "lu_namespace": [{ "kind": "CompilationUnit" }],
+    "id_table": [],
+    "linkage_table": [],
+    "data": []
+  })");
+
+  EXPECT_THAT_ERROR(
+      std::move(Result),
+      FailedWithMessage(AllOf(
+          HasSubstr("reading LUSummary from file"),
+          HasSubstr("reading NestedBuildNamespace from field 'lu_namespace'"),
+          HasSubstr("reading BuildNamespace from index '0'"),
           HasSubstr("failed to read BuildNamespaceName from field 'name'"),
           HasSubstr("expected JSON string"))));
 }
 
 // ============================================================================
-// JSONFormat::nestedBuildNamespaceFromJSON() Error Tests
+// JSONFormat::nestedBuildNamespaceFromJSON() Error Tests (EntityName namespace)
 // ============================================================================
 
-TEST_P(TUSummaryTest, NamespaceElementNotObject) {
+TEST_P(LUSummaryTest, NamespaceElementNotObject) {
   auto Result = readFromString(R"({
-    "tu_namespace": {
-      "kind": "CompilationUnit",
-      "name": "test.cpp"
-    },
+    "lu_namespace": [
+      {
+        "kind": "LinkUnit",
+        "name": "test.exe"
+      }
+    ],
     "id_table": [
       {
         "id": 0,
@@ -611,7 +672,7 @@ TEST_P(TUSummaryTest, NamespaceElementNotObject) {
   EXPECT_THAT_ERROR(
       std::move(Result),
       FailedWithMessage(AllOf(
-          HasSubstr("reading TUSummary from file"),
+          HasSubstr("reading LUSummary from file"),
           HasSubstr("reading IdTable from field 'id_table'"),
           HasSubstr("reading EntityIdTable entry from index '0'"),
           HasSubstr("reading EntityName from field 'name'"),
@@ -620,12 +681,14 @@ TEST_P(TUSummaryTest, NamespaceElementNotObject) {
           HasSubstr("expected JSON object"))));
 }
 
-TEST_P(TUSummaryTest, NamespaceElementMissingKind) {
+TEST_P(LUSummaryTest, NamespaceElementMissingKind) {
   auto Result = readFromString(R"({
-    "tu_namespace": {
-      "kind": "CompilationUnit",
-      "name": "test.cpp"
-    },
+    "lu_namespace": [
+      {
+        "kind": "LinkUnit",
+        "name": "test.exe"
+      }
+    ],
     "id_table": [
       {
         "id": 0,
@@ -652,7 +715,7 @@ TEST_P(TUSummaryTest, NamespaceElementMissingKind) {
   EXPECT_THAT_ERROR(
       std::move(Result),
       FailedWithMessage(AllOf(
-          HasSubstr("reading TUSummary from file"),
+          HasSubstr("reading LUSummary from file"),
           HasSubstr("reading IdTable from field 'id_table'"),
           HasSubstr("reading EntityIdTable entry from index '0'"),
           HasSubstr("reading EntityName from field 'name'"),
@@ -662,12 +725,14 @@ TEST_P(TUSummaryTest, NamespaceElementMissingKind) {
           HasSubstr("expected JSON string"))));
 }
 
-TEST_P(TUSummaryTest, NamespaceElementInvalidKind) {
+TEST_P(LUSummaryTest, NamespaceElementInvalidKind) {
   auto Result = readFromString(R"({
-    "tu_namespace": {
-      "kind": "CompilationUnit",
-      "name": "test.cpp"
-    },
+    "lu_namespace": [
+      {
+        "kind": "LinkUnit",
+        "name": "test.exe"
+      }
+    ],
     "id_table": [
       {
         "id": 0,
@@ -695,23 +760,25 @@ TEST_P(TUSummaryTest, NamespaceElementInvalidKind) {
   EXPECT_THAT_ERROR(
       std::move(Result),
       FailedWithMessage(AllOf(
-          HasSubstr("reading TUSummary from file"),
+          HasSubstr("reading LUSummary from file"),
           HasSubstr("reading IdTable from field 'id_table'"),
           HasSubstr("reading EntityIdTable entry from index '0'"),
           HasSubstr("reading EntityName from field 'name'"),
           HasSubstr("reading NestedBuildNamespace from field 'namespace'"),
           HasSubstr("reading BuildNamespace from index '0'"),
           HasSubstr("reading BuildNamespaceKind from field 'kind'"),
-          HasSubstr("invalid BuildNamespaceKind value 'invalid_kind' for field "
-                    "'kind'"))));
+          HasSubstr("invalid BuildNamespaceKind value 'invalid_kind' for "
+                    "field 'kind'"))));
 }
 
-TEST_P(TUSummaryTest, NamespaceElementMissingName) {
+TEST_P(LUSummaryTest, NamespaceElementMissingName) {
   auto Result = readFromString(R"({
-    "tu_namespace": {
-      "kind": "CompilationUnit",
-      "name": "test.cpp"
-    },
+    "lu_namespace": [
+      {
+        "kind": "LinkUnit",
+        "name": "test.exe"
+      }
+    ],
     "id_table": [
       {
         "id": 0,
@@ -738,7 +805,7 @@ TEST_P(TUSummaryTest, NamespaceElementMissingName) {
   EXPECT_THAT_ERROR(
       std::move(Result),
       FailedWithMessage(AllOf(
-          HasSubstr("reading TUSummary from file"),
+          HasSubstr("reading LUSummary from file"),
           HasSubstr("reading IdTable from field 'id_table'"),
           HasSubstr("reading EntityIdTable entry from index '0'"),
           HasSubstr("reading EntityName from field 'name'"),
@@ -752,25 +819,36 @@ TEST_P(TUSummaryTest, NamespaceElementMissingName) {
 // JSONFormat::entityNameFromJSON() Error Tests
 // ============================================================================
 
-TEST_P(TUSummaryTest, EntityNameMissingUSR) {
+TEST_P(LUSummaryTest, EntityNameMissingUSR) {
   auto Result = readFromString(R"({
-    "tu_namespace": {
-      "kind": "CompilationUnit",
-      "name": "test.cpp"
-    },
+    "lu_namespace": [
+      {
+        "kind": "LinkUnit",
+        "name": "test.exe"
+      }
+    ],
     "id_table": [
       {
         "id": 0,
         "name": {
           "suffix": "",
-          "namespace": []
+          "namespace": [
+            {
+              "kind": "CompilationUnit",
+              "name": "test.cpp"
+            },
+            {
+              "kind": "LinkUnit",
+              "name": "test.exe"
+            }
+          ]
         }
       }
     ],
     "linkage_table": [
       {
         "id": 0,
-        "linkage": { "type": "Internal" }
+        "linkage": { "type": "None" }
       }
     ],
     "data": []
@@ -778,7 +856,7 @@ TEST_P(TUSummaryTest, EntityNameMissingUSR) {
 
   EXPECT_THAT_ERROR(std::move(Result),
                     FailedWithMessage(AllOf(
-                        HasSubstr("reading TUSummary from file"),
+                        HasSubstr("reading LUSummary from file"),
                         HasSubstr("reading IdTable from field 'id_table'"),
                         HasSubstr("reading EntityIdTable entry from index '0'"),
                         HasSubstr("reading EntityName from field 'name'"),
@@ -786,18 +864,25 @@ TEST_P(TUSummaryTest, EntityNameMissingUSR) {
                         HasSubstr("expected JSON string"))));
 }
 
-TEST_P(TUSummaryTest, EntityNameMissingSuffix) {
+TEST_P(LUSummaryTest, EntityNameMissingSuffix) {
   auto Result = readFromString(R"({
-    "tu_namespace": {
-      "kind": "CompilationUnit",
-      "name": "test.cpp"
-    },
+    "lu_namespace": [
+      {
+        "kind": "LinkUnit",
+        "name": "test.exe"
+      }
+    ],
     "id_table": [
       {
         "id": 0,
         "name": {
           "usr": "c:@F@foo",
-          "namespace": []
+          "namespace": [
+            {
+              "kind": "LinkUnit",
+              "name": "test.exe"
+            }
+          ]
         }
       }
     ],
@@ -812,7 +897,7 @@ TEST_P(TUSummaryTest, EntityNameMissingSuffix) {
 
   EXPECT_THAT_ERROR(std::move(Result),
                     FailedWithMessage(AllOf(
-                        HasSubstr("reading TUSummary from file"),
+                        HasSubstr("reading LUSummary from file"),
                         HasSubstr("reading IdTable from field 'id_table'"),
                         HasSubstr("reading EntityIdTable entry from index '0'"),
                         HasSubstr("reading EntityName from field 'name'"),
@@ -820,12 +905,14 @@ TEST_P(TUSummaryTest, EntityNameMissingSuffix) {
                         HasSubstr("expected JSON string"))));
 }
 
-TEST_P(TUSummaryTest, EntityNameMissingNamespace) {
+TEST_P(LUSummaryTest, EntityNameMissingNamespace) {
   auto Result = readFromString(R"({
-    "tu_namespace": {
-      "kind": "CompilationUnit",
-      "name": "test.cpp"
-    },
+    "lu_namespace": [
+      {
+        "kind": "LinkUnit",
+        "name": "test.exe"
+      }
+    ],
     "id_table": [
       {
         "id": 0,
@@ -846,32 +933,43 @@ TEST_P(TUSummaryTest, EntityNameMissingNamespace) {
 
   EXPECT_THAT_ERROR(
       std::move(Result),
-      FailedWithMessage(AllOf(
-          HasSubstr("reading TUSummary from file"),
-          HasSubstr("reading IdTable from field 'id_table'"),
-          HasSubstr("reading EntityIdTable entry from index '0'"),
-          HasSubstr("reading EntityName from field 'name'"),
-          HasSubstr(
-              "failed to read NestedBuildNamespace from field 'namespace'"),
-          HasSubstr("expected JSON array"))));
+      FailedWithMessage(
+          AllOf(HasSubstr("reading LUSummary from file"),
+                HasSubstr("reading IdTable from field 'id_table'"),
+                HasSubstr("reading EntityIdTable entry from index '0'"),
+                HasSubstr("reading EntityName from field 'name'"),
+                HasSubstr("failed to read NestedBuildNamespace from field "
+                          "'namespace'"),
+                HasSubstr("expected JSON array"))));
 }
 
 // ============================================================================
 // JSONFormat::entityIdTableEntryFromJSON() Error Tests
 // ============================================================================
 
-TEST_P(TUSummaryTest, IDTableEntryMissingID) {
+TEST_P(LUSummaryTest, IDTableEntryMissingID) {
   auto Result = readFromString(R"({
-    "tu_namespace": {
-      "kind": "CompilationUnit",
-      "name": "test.cpp"
-    },
+    "lu_namespace": [
+      {
+        "kind": "LinkUnit",
+        "name": "test.exe"
+      }
+    ],
     "id_table": [
       {
         "name": {
           "usr": "c:@F@foo",
           "suffix": "",
-          "namespace": []
+          "namespace": [
+            {
+              "kind": "CompilationUnit",
+              "name": "test.cpp"
+            },
+            {
+              "kind": "LinkUnit",
+              "name": "test.exe"
+            }
+          ]
         }
       }
     ],
@@ -882,56 +980,64 @@ TEST_P(TUSummaryTest, IDTableEntryMissingID) {
   EXPECT_THAT_ERROR(
       std::move(Result),
       FailedWithMessage(
-          AllOf(HasSubstr("reading TUSummary from file"),
+          AllOf(HasSubstr("reading LUSummary from file"),
                 HasSubstr("reading IdTable from field 'id_table'"),
                 HasSubstr("reading EntityIdTable entry from index '0'"),
                 HasSubstr("failed to read EntityId from field 'id'"),
                 HasSubstr("expected JSON number (unsigned 64-bit integer)"))));
 }
 
-TEST_P(TUSummaryTest, IDTableEntryMissingName) {
+TEST_P(LUSummaryTest, IDTableEntryMissingName) {
   auto Result = readFromString(R"({
-    "tu_namespace": {
-      "kind": "CompilationUnit",
-      "name": "test.cpp"
-    },
+    "lu_namespace": [
+      {
+        "kind": "LinkUnit",
+        "name": "test.exe"
+      }
+    ],
     "id_table": [
       {
         "id": 0
       }
     ],
-    "linkage_table": [
-      {
-        "id": 0,
-        "linkage": { "type": "None" }
-      }
-    ],
+    "linkage_table": [],
     "data": []
   })");
 
   EXPECT_THAT_ERROR(
       std::move(Result),
       FailedWithMessage(
-          AllOf(HasSubstr("reading TUSummary from file"),
+          AllOf(HasSubstr("reading LUSummary from file"),
                 HasSubstr("reading IdTable from field 'id_table'"),
                 HasSubstr("reading EntityIdTable entry from index '0'"),
                 HasSubstr("failed to read EntityName from field 'name'"),
                 HasSubstr("expected JSON object"))));
 }
 
-TEST_P(TUSummaryTest, IDTableEntryIDNotUInt64) {
+TEST_P(LUSummaryTest, IDTableEntryIDNotUInt64) {
   auto Result = readFromString(R"({
-    "tu_namespace": {
-      "kind": "CompilationUnit",
-      "name": "test.cpp"
-    },
+    "lu_namespace": [
+      {
+        "kind": "LinkUnit",
+        "name": "test.exe"
+      }
+    ],
     "id_table": [
       {
         "id": "not_a_number",
         "name": {
           "usr": "c:@F@foo",
           "suffix": "",
-          "namespace": []
+          "namespace": [
+            {
+              "kind": "CompilationUnit",
+              "name": "test.cpp"
+            },
+            {
+              "kind": "LinkUnit",
+              "name": "test.exe"
+            }
+          ]
         }
       }
     ],
@@ -942,7 +1048,7 @@ TEST_P(TUSummaryTest, IDTableEntryIDNotUInt64) {
   EXPECT_THAT_ERROR(
       std::move(Result),
       FailedWithMessage(
-          AllOf(HasSubstr("reading TUSummary from file"),
+          AllOf(HasSubstr("reading LUSummary from file"),
                 HasSubstr("reading IdTable from field 'id_table'"),
                 HasSubstr("reading EntityIdTable entry from index '0'"),
                 HasSubstr("failed to read EntityId from field 'id'"),
@@ -953,12 +1059,14 @@ TEST_P(TUSummaryTest, IDTableEntryIDNotUInt64) {
 // JSONFormat::entityIdTableFromJSON() Error Tests
 // ============================================================================
 
-TEST_P(TUSummaryTest, IDTableNotArray) {
+TEST_P(LUSummaryTest, IDTableNotArray) {
   auto Result = readFromString(R"({
-    "tu_namespace": {
-      "kind": "CompilationUnit",
-      "name": "test.cpp"
-    },
+    "lu_namespace": [
+      {
+        "kind": "LinkUnit",
+        "name": "test.exe"
+      }
+    ],
     "id_table": {},
     "linkage_table": [],
     "data": []
@@ -967,18 +1075,20 @@ TEST_P(TUSummaryTest, IDTableNotArray) {
   EXPECT_THAT_ERROR(
       std::move(Result),
       FailedWithMessage(
-          AllOf(HasSubstr("reading TUSummary from file"),
+          AllOf(HasSubstr("reading LUSummary from file"),
                 HasSubstr("failed to read IdTable from field 'id_table'"),
                 HasSubstr("expected JSON array"))));
 }
 
-TEST_P(TUSummaryTest, IDTableElementNotObject) {
+TEST_P(LUSummaryTest, IDTableElementNotObject) {
   auto Result = readFromString(R"({
-    "tu_namespace": {
-      "kind": "CompilationUnit",
-      "name": "test.cpp"
-    },
-    "id_table": [123],
+    "lu_namespace": [
+      {
+        "kind": "LinkUnit",
+        "name": "test.exe"
+      }
+    ],
+    "id_table": ["invalid"],
     "linkage_table": [],
     "data": []
   })");
@@ -986,18 +1096,20 @@ TEST_P(TUSummaryTest, IDTableElementNotObject) {
   EXPECT_THAT_ERROR(
       std::move(Result),
       FailedWithMessage(
-          AllOf(HasSubstr("reading TUSummary from file"),
+          AllOf(HasSubstr("reading LUSummary from file"),
                 HasSubstr("reading IdTable from field 'id_table'"),
                 HasSubstr("failed to read EntityIdTable entry from index '0'"),
                 HasSubstr("expected JSON object"))));
 }
 
-TEST_P(TUSummaryTest, DuplicateEntity) {
+TEST_P(LUSummaryTest, DuplicateEntity) {
   auto Result = readFromString(R"({
-    "tu_namespace": {
-      "kind": "CompilationUnit",
-      "name": "test.cpp"
-    },
+    "lu_namespace": [
+      {
+        "kind": "LinkUnit",
+        "name": "test.exe"
+      }
+    ],
     "id_table": [
       {
         "id": 0,
@@ -1008,6 +1120,10 @@ TEST_P(TUSummaryTest, DuplicateEntity) {
             {
               "kind": "CompilationUnit",
               "name": "test.cpp"
+            },
+            {
+              "kind": "LinkUnit",
+              "name": "test.exe"
             }
           ]
         }
@@ -1021,20 +1137,18 @@ TEST_P(TUSummaryTest, DuplicateEntity) {
             {
               "kind": "CompilationUnit",
               "name": "test.cpp"
+            },
+            {
+              "kind": "LinkUnit",
+              "name": "test.exe"
             }
           ]
         }
       }
     ],
     "linkage_table": [
-      {
-        "id": 0,
-        "linkage": { "type": "Internal" }
-      },
-      {
-        "id": 1,
-        "linkage": { "type": "External" }
-      }
+      { "id": 0, "linkage": { "type": "None" } },
+      { "id": 1, "linkage": { "type": "None" } }
     ],
     "data": []
   })");
@@ -1042,22 +1156,24 @@ TEST_P(TUSummaryTest, DuplicateEntity) {
   EXPECT_THAT_ERROR(
       std::move(Result),
       FailedWithMessage(
-          AllOf(HasSubstr("reading TUSummary from file"),
+          AllOf(HasSubstr("reading LUSummary from file"),
                 HasSubstr("reading IdTable from field 'id_table'"),
                 HasSubstr("failed to insert EntityIdTable entry at index '1'"),
                 HasSubstr("encountered duplicate 'EntityId(0)'"))));
 }
 
 // ============================================================================
-// JSONFormat::entitySummaryFromJSON() / encodingDataMapEntryFromJSON() Tests
+// JSONFormat::readLUSummary() Error Tests (LUSummary-only)
 // ============================================================================
 
-TEST_F(JSONFormatTUSummaryTest, ReadEntitySummaryNoFormatInfo) {
-  auto Result = readTUSummaryFromString(R"({
-    "tu_namespace": {
-      "kind": "CompilationUnit",
-      "name": "test.cpp"
-    },
+TEST_F(JSONFormatLUSummaryTest, ReadEntitySummaryNoFormatInfo) {
+  auto Result = readLUSummaryFromString(R"({
+    "lu_namespace": [
+      {
+        "kind": "LinkUnit",
+        "name": "test.exe"
+      }
+    ],
     "id_table": [],
     "linkage_table": [],
     "data": [
@@ -1076,7 +1192,7 @@ TEST_F(JSONFormatTUSummaryTest, ReadEntitySummaryNoFormatInfo) {
   EXPECT_THAT_EXPECTED(
       Result,
       FailedWithMessage(AllOf(
-          HasSubstr("reading TUSummary from file"),
+          HasSubstr("reading LUSummary from file"),
           HasSubstr("reading SummaryData entries from field 'data'"),
           HasSubstr("reading SummaryData entry from index '0'"),
           HasSubstr("reading EntitySummary entries from field 'summary_data'"),
@@ -1092,13 +1208,15 @@ TEST_F(JSONFormatTUSummaryTest, ReadEntitySummaryNoFormatInfo) {
 // PairsEntitySummaryForJSONFormatTest Deserialization Error Tests
 // ============================================================================
 
-TEST_F(JSONFormatTUSummaryTest,
+TEST_F(JSONFormatLUSummaryTest,
        PairsEntitySummaryForJSONFormatTestMissingPairsField) {
-  auto Result = readTUSummaryFromString(R"({
-    "tu_namespace": {
-      "kind": "CompilationUnit",
-      "name": "test.cpp"
-    },
+  auto Result = readLUSummaryFromString(R"({
+    "lu_namespace": [
+      {
+        "kind": "LinkUnit",
+        "name": "test.exe"
+      }
+    ],
     "id_table": [],
     "linkage_table": [],
     "data": [
@@ -1117,7 +1235,7 @@ TEST_F(JSONFormatTUSummaryTest,
   EXPECT_THAT_EXPECTED(
       Result,
       FailedWithMessage(AllOf(
-          HasSubstr("reading TUSummary from file"),
+          HasSubstr("reading LUSummary from file"),
           HasSubstr("reading SummaryData entries from field 'data'"),
           HasSubstr("reading SummaryData entry from index '0'"),
           HasSubstr("reading EntitySummary entries from field 'summary_data'"),
@@ -1126,13 +1244,15 @@ TEST_F(JSONFormatTUSummaryTest,
           HasSubstr("missing or invalid field 'pairs'"))));
 }
 
-TEST_F(JSONFormatTUSummaryTest,
+TEST_F(JSONFormatLUSummaryTest,
        PairsEntitySummaryForJSONFormatTestInvalidPairsFieldType) {
-  auto Result = readTUSummaryFromString(R"({
-    "tu_namespace": {
-      "kind": "CompilationUnit",
-      "name": "test.cpp"
-    },
+  auto Result = readLUSummaryFromString(R"({
+    "lu_namespace": [
+      {
+        "kind": "LinkUnit",
+        "name": "test.exe"
+      }
+    ],
     "id_table": [],
     "linkage_table": [],
     "data": [
@@ -1153,7 +1273,7 @@ TEST_F(JSONFormatTUSummaryTest,
   EXPECT_THAT_EXPECTED(
       Result,
       FailedWithMessage(AllOf(
-          HasSubstr("reading TUSummary from file"),
+          HasSubstr("reading LUSummary from file"),
           HasSubstr("reading SummaryData entries from field 'data'"),
           HasSubstr("reading SummaryData entry from index '0'"),
           HasSubstr("reading EntitySummary entries from field 'summary_data'"),
@@ -1162,13 +1282,15 @@ TEST_F(JSONFormatTUSummaryTest,
           HasSubstr("missing or invalid field 'pairs'"))));
 }
 
-TEST_F(JSONFormatTUSummaryTest,
+TEST_F(JSONFormatLUSummaryTest,
        PairsEntitySummaryForJSONFormatTestPairsElementNotObject) {
-  auto Result = readTUSummaryFromString(R"({
-    "tu_namespace": {
-      "kind": "CompilationUnit",
-      "name": "test.cpp"
-    },
+  auto Result = readLUSummaryFromString(R"({
+    "lu_namespace": [
+      {
+        "kind": "LinkUnit",
+        "name": "test.exe"
+      }
+    ],
     "id_table": [],
     "linkage_table": [],
     "data": [
@@ -1189,7 +1311,7 @@ TEST_F(JSONFormatTUSummaryTest,
   EXPECT_THAT_EXPECTED(
       Result,
       FailedWithMessage(AllOf(
-          HasSubstr("reading TUSummary from file"),
+          HasSubstr("reading LUSummary from file"),
           HasSubstr("reading SummaryData entries from field 'data'"),
           HasSubstr("reading SummaryData entry from index '0'"),
           HasSubstr("reading EntitySummary entries from field 'summary_data'"),
@@ -1198,13 +1320,15 @@ TEST_F(JSONFormatTUSummaryTest,
           HasSubstr("pairs element at index 0 is not a JSON object"))));
 }
 
-TEST_F(JSONFormatTUSummaryTest,
+TEST_F(JSONFormatLUSummaryTest,
        PairsEntitySummaryForJSONFormatTestMissingFirstField) {
-  auto Result = readTUSummaryFromString(R"({
-    "tu_namespace": {
-      "kind": "CompilationUnit",
-      "name": "test.cpp"
-    },
+  auto Result = readLUSummaryFromString(R"({
+    "lu_namespace": [
+      {
+        "kind": "LinkUnit",
+        "name": "test.exe"
+      }
+    ],
     "id_table": [],
     "linkage_table": [],
     "data": [
@@ -1229,7 +1353,7 @@ TEST_F(JSONFormatTUSummaryTest,
   EXPECT_THAT_EXPECTED(
       Result,
       FailedWithMessage(AllOf(
-          HasSubstr("reading TUSummary from file"),
+          HasSubstr("reading LUSummary from file"),
           HasSubstr("reading SummaryData entries from field 'data'"),
           HasSubstr("reading SummaryData entry from index '0'"),
           HasSubstr("reading EntitySummary entries from field 'summary_data'"),
@@ -1238,13 +1362,15 @@ TEST_F(JSONFormatTUSummaryTest,
           HasSubstr("missing or invalid 'first' field at index '0'"))));
 }
 
-TEST_F(JSONFormatTUSummaryTest,
+TEST_F(JSONFormatLUSummaryTest,
        PairsEntitySummaryForJSONFormatTestInvalidFirstField) {
-  auto Result = readTUSummaryFromString(R"({
-    "tu_namespace": {
-      "kind": "CompilationUnit",
-      "name": "test.cpp"
-    },
+  auto Result = readLUSummaryFromString(R"({
+    "lu_namespace": [
+      {
+        "kind": "LinkUnit",
+        "name": "test.exe"
+      }
+    ],
     "id_table": [],
     "linkage_table": [],
     "data": [
@@ -1270,7 +1396,7 @@ TEST_F(JSONFormatTUSummaryTest,
   EXPECT_THAT_EXPECTED(
       Result,
       FailedWithMessage(AllOf(
-          HasSubstr("reading TUSummary from file"),
+          HasSubstr("reading LUSummary from file"),
           HasSubstr("reading SummaryData entries from field 'data'"),
           HasSubstr("reading SummaryData entry from index '0'"),
           HasSubstr("reading EntitySummary entries from field 'summary_data'"),
@@ -1279,13 +1405,15 @@ TEST_F(JSONFormatTUSummaryTest,
           HasSubstr("missing or invalid 'first' field at index '0'"))));
 }
 
-TEST_F(JSONFormatTUSummaryTest,
+TEST_F(JSONFormatLUSummaryTest,
        PairsEntitySummaryForJSONFormatTestMissingSecondField) {
-  auto Result = readTUSummaryFromString(R"({
-    "tu_namespace": {
-      "kind": "CompilationUnit",
-      "name": "test.cpp"
-    },
+  auto Result = readLUSummaryFromString(R"({
+    "lu_namespace": [
+      {
+        "kind": "LinkUnit",
+        "name": "test.exe"
+      }
+    ],
     "id_table": [],
     "linkage_table": [],
     "data": [
@@ -1310,7 +1438,7 @@ TEST_F(JSONFormatTUSummaryTest,
   EXPECT_THAT_EXPECTED(
       Result,
       FailedWithMessage(AllOf(
-          HasSubstr("reading TUSummary from file"),
+          HasSubstr("reading LUSummary from file"),
           HasSubstr("reading SummaryData entries from field 'data'"),
           HasSubstr("reading SummaryData entry from index '0'"),
           HasSubstr("reading EntitySummary entries from field 'summary_data'"),
@@ -1319,13 +1447,15 @@ TEST_F(JSONFormatTUSummaryTest,
           HasSubstr("missing or invalid 'second' field at index '0'"))));
 }
 
-TEST_F(JSONFormatTUSummaryTest,
+TEST_F(JSONFormatLUSummaryTest,
        PairsEntitySummaryForJSONFormatTestInvalidSecondField) {
-  auto Result = readTUSummaryFromString(R"({
-    "tu_namespace": {
-      "kind": "CompilationUnit",
-      "name": "test.cpp"
-    },
+  auto Result = readLUSummaryFromString(R"({
+    "lu_namespace": [
+      {
+        "kind": "LinkUnit",
+        "name": "test.exe"
+      }
+    ],
     "id_table": [],
     "linkage_table": [],
     "data": [
@@ -1351,7 +1481,7 @@ TEST_F(JSONFormatTUSummaryTest,
   EXPECT_THAT_EXPECTED(
       Result,
       FailedWithMessage(AllOf(
-          HasSubstr("reading TUSummary from file"),
+          HasSubstr("reading LUSummary from file"),
           HasSubstr("reading SummaryData entries from field 'data'"),
           HasSubstr("reading SummaryData entry from index '0'"),
           HasSubstr("reading EntitySummary entries from field 'summary_data'"),
@@ -1361,15 +1491,17 @@ TEST_F(JSONFormatTUSummaryTest,
 }
 
 // ============================================================================
-// JSONFormat::entityDataMapEntryFromJSON() Error Tests
+// JSONFormat::entityDataMapFromJSON() Error Tests
 // ============================================================================
 
-TEST_P(TUSummaryTest, EntityDataMissingEntityID) {
+TEST_P(LUSummaryTest, EntityDataMissingEntityID) {
   auto Result = readFromString(R"({
-    "tu_namespace": {
-      "kind": "CompilationUnit",
-      "name": "test.cpp"
-    },
+    "lu_namespace": [
+      {
+        "kind": "LinkUnit",
+        "name": "test.exe"
+      }
+    ],
     "id_table": [],
     "linkage_table": [],
     "data": [
@@ -1387,7 +1519,7 @@ TEST_P(TUSummaryTest, EntityDataMissingEntityID) {
   EXPECT_THAT_ERROR(
       std::move(Result),
       FailedWithMessage(AllOf(
-          HasSubstr("reading TUSummary from file"),
+          HasSubstr("reading LUSummary from file"),
           HasSubstr("reading SummaryData entries from field 'data'"),
           HasSubstr("reading SummaryData entry from index '0'"),
           HasSubstr("reading EntitySummary entries from field 'summary_data'"),
@@ -1396,12 +1528,14 @@ TEST_P(TUSummaryTest, EntityDataMissingEntityID) {
           HasSubstr("expected JSON number (unsigned 64-bit integer)"))));
 }
 
-TEST_P(TUSummaryTest, EntityDataMissingEntitySummary) {
+TEST_P(LUSummaryTest, EntityDataMissingEntitySummary) {
   auto Result = readFromString(R"({
-    "tu_namespace": {
-      "kind": "CompilationUnit",
-      "name": "test.cpp"
-    },
+    "lu_namespace": [
+      {
+        "kind": "LinkUnit",
+        "name": "test.exe"
+      }
+    ],
     "id_table": [],
     "linkage_table": [],
     "data": [
@@ -1419,7 +1553,7 @@ TEST_P(TUSummaryTest, EntityDataMissingEntitySummary) {
   EXPECT_THAT_ERROR(
       std::move(Result),
       FailedWithMessage(AllOf(
-          HasSubstr("reading TUSummary from file"),
+          HasSubstr("reading LUSummary from file"),
           HasSubstr("reading SummaryData entries from field 'data'"),
           HasSubstr("reading SummaryData entry from index '0'"),
           HasSubstr("reading EntitySummary entries from field 'summary_data'"),
@@ -1428,12 +1562,14 @@ TEST_P(TUSummaryTest, EntityDataMissingEntitySummary) {
           HasSubstr("expected JSON object"))));
 }
 
-TEST_P(TUSummaryTest, EntityIDNotUInt64) {
+TEST_P(LUSummaryTest, EntityIDNotUInt64) {
   auto Result = readFromString(R"({
-    "tu_namespace": {
-      "kind": "CompilationUnit",
-      "name": "test.cpp"
-    },
+    "lu_namespace": [
+      {
+        "kind": "LinkUnit",
+        "name": "test.exe"
+      }
+    ],
     "id_table": [],
     "linkage_table": [],
     "data": [
@@ -1452,7 +1588,7 @@ TEST_P(TUSummaryTest, EntityIDNotUInt64) {
   EXPECT_THAT_ERROR(
       std::move(Result),
       FailedWithMessage(AllOf(
-          HasSubstr("reading TUSummary from file"),
+          HasSubstr("reading LUSummary from file"),
           HasSubstr("reading SummaryData entries from field 'data'"),
           HasSubstr("reading SummaryData entry from index '0'"),
           HasSubstr("reading EntitySummary entries from field 'summary_data'"),
@@ -1461,12 +1597,14 @@ TEST_P(TUSummaryTest, EntityIDNotUInt64) {
           HasSubstr("expected JSON number (unsigned 64-bit integer)"))));
 }
 
-TEST_F(JSONFormatTUSummaryTest, ReadEntitySummaryMissingData) {
-  auto Result = readTUSummaryFromString(R"({
-    "tu_namespace": {
-      "kind": "CompilationUnit",
-      "name": "test.cpp"
-    },
+TEST_F(JSONFormatLUSummaryTest, ReadEntitySummaryMissingData) {
+  auto Result = readLUSummaryFromString(R"({
+    "lu_namespace": [
+      {
+        "kind": "LinkUnit",
+        "name": "test.exe"
+      }
+    ],
     "id_table": [],
     "linkage_table": [],
     "data": [
@@ -1485,7 +1623,7 @@ TEST_F(JSONFormatTUSummaryTest, ReadEntitySummaryMissingData) {
   EXPECT_THAT_EXPECTED(
       Result,
       FailedWithMessage(AllOf(
-          HasSubstr("reading TUSummary from file"),
+          HasSubstr("reading LUSummary from file"),
           HasSubstr("reading SummaryData entries from field 'data'"),
           HasSubstr("reading SummaryData entry from index '0'"),
           HasSubstr("reading EntitySummary entries from field 'summary_data'"),
@@ -1495,12 +1633,14 @@ TEST_F(JSONFormatTUSummaryTest, ReadEntitySummaryMissingData) {
                     "'SummaryName(NullEntitySummaryForJSONFormatTest)'"))));
 }
 
-TEST_F(JSONFormatTUSummaryTest, ReadEntitySummaryMismatchedSummaryName) {
-  auto Result = readTUSummaryFromString(R"({
-    "tu_namespace": {
-      "kind": "CompilationUnit",
-      "name": "test.cpp"
-    },
+TEST_F(JSONFormatLUSummaryTest, ReadEntitySummaryMismatchedSummaryName) {
+  auto Result = readLUSummaryFromString(R"({
+    "lu_namespace": [
+      {
+        "kind": "LinkUnit",
+        "name": "test.exe"
+      }
+    ],
     "id_table": [],
     "linkage_table": [],
     "data": [
@@ -1519,27 +1659,27 @@ TEST_F(JSONFormatTUSummaryTest, ReadEntitySummaryMismatchedSummaryName) {
   EXPECT_THAT_EXPECTED(
       Result,
       FailedWithMessage(AllOf(
-          HasSubstr("reading TUSummary from file"),
+          HasSubstr("reading LUSummary from file"),
           HasSubstr("reading SummaryData entries from field 'data'"),
           HasSubstr("reading SummaryData entry from index '0'"),
           HasSubstr("reading EntitySummary entries from field 'summary_data'"),
           HasSubstr("reading EntitySummary entry from index '0'"),
           HasSubstr("failed to deserialize EntitySummary"),
-          HasSubstr(
-              "EntitySummary data for "
-              "'SummaryName(MismatchedEntitySummaryForJSONFormatTest)' reports "
-              "mismatched "
-              "'SummaryName(MismatchedEntitySummaryForJSONFormatTest_WrongName)"
-              "'"))));
+          HasSubstr("EntitySummary data for "
+                    "'SummaryName(MismatchedEntitySummaryForJSONFormatTest)'"
+                    " reports mismatched "
+                    "'SummaryName(MismatchedEntitySummaryForJSONFormatTest_"
+                    "WrongName)'"))));
 }
 
 // ============================================================================
 // JSONFormat::entityDataMapEntryToJSON() Fatal Tests
 // ============================================================================
 
-TEST_F(JSONFormatTUSummaryTest, WriteEntitySummaryMissingData) {
-  TUSummary Summary(
-      BuildNamespace(BuildNamespaceKind::CompilationUnit, "test.cpp"));
+TEST_F(JSONFormatLUSummaryTest, WriteEntitySummaryMissingData) {
+  NestedBuildNamespace NBN(
+      BuildNamespace(BuildNamespaceKind::LinkUnit, "test.exe"));
+  LUSummary Summary(std::move(NBN));
 
   NestedBuildNamespace Namespace =
       NestedBuildNamespace::makeCompilationUnit("test.cpp");
@@ -1550,14 +1690,15 @@ TEST_F(JSONFormatTUSummaryTest, WriteEntitySummaryMissingData) {
   getData(Summary)[SN][EI] = nullptr;
 
   EXPECT_DEATH(
-      { (void)writeTUSummary(Summary, "output.json"); },
+      { (void)writeLUSummary(Summary, "output.json"); },
       "JSONFormat - null EntitySummary data for "
       "'SummaryName\\(NullEntitySummaryForJSONFormatTest\\)'");
 }
 
-TEST_F(JSONFormatTUSummaryTest, WriteEntitySummaryMismatchedSummaryName) {
-  TUSummary Summary(
-      BuildNamespace(BuildNamespaceKind::CompilationUnit, "test.cpp"));
+TEST_F(JSONFormatLUSummaryTest, WriteEntitySummaryMismatchedSummaryName) {
+  NestedBuildNamespace NBN(
+      BuildNamespace(BuildNamespaceKind::LinkUnit, "test.exe"));
+  LUSummary Summary(std::move(NBN));
 
   NestedBuildNamespace Namespace =
       NestedBuildNamespace::makeCompilationUnit("test.cpp");
@@ -1569,9 +1710,10 @@ TEST_F(JSONFormatTUSummaryTest, WriteEntitySummaryMismatchedSummaryName) {
       std::make_unique<MismatchedEntitySummaryForJSONFormatTest>();
 
   EXPECT_DEATH(
-      { (void)writeTUSummary(Summary, "output.json"); },
+      { (void)writeLUSummary(Summary, "output.json"); },
       "JSONFormat - EntitySummary data for "
-      "'SummaryName\\(MismatchedEntitySummaryForJSONFormatTest\\)' reports "
+      "'SummaryName\\(MismatchedEntitySummaryForJSONFormatTest\\)' "
+      "reports "
       "mismatched "
       "'SummaryName\\(MismatchedEntitySummaryForJSONFormatTest_WrongName\\)'");
 }
@@ -1580,12 +1722,14 @@ TEST_F(JSONFormatTUSummaryTest, WriteEntitySummaryMismatchedSummaryName) {
 // JSONFormat::entityDataMapFromJSON() Error Tests
 // ============================================================================
 
-TEST_P(TUSummaryTest, EntityDataElementNotObject) {
+TEST_P(LUSummaryTest, EntityDataElementNotObject) {
   auto Result = readFromString(R"({
-    "tu_namespace": {
-      "kind": "CompilationUnit",
-      "name": "test.cpp"
-    },
+    "lu_namespace": [
+      {
+        "kind": "LinkUnit",
+        "name": "test.exe"
+      }
+    ],
     "id_table": [],
     "linkage_table": [],
     "data": [
@@ -1599,7 +1743,7 @@ TEST_P(TUSummaryTest, EntityDataElementNotObject) {
   EXPECT_THAT_ERROR(
       std::move(Result),
       FailedWithMessage(AllOf(
-          HasSubstr("reading TUSummary from file"),
+          HasSubstr("reading LUSummary from file"),
           HasSubstr("reading SummaryData entries from field 'data'"),
           HasSubstr("reading SummaryData entry from index '0'"),
           HasSubstr("reading EntitySummary entries from field 'summary_data'"),
@@ -1607,19 +1751,30 @@ TEST_P(TUSummaryTest, EntityDataElementNotObject) {
           HasSubstr("expected JSON object"))));
 }
 
-TEST_P(TUSummaryTest, DuplicateEntityIdInDataMap) {
+TEST_P(LUSummaryTest, DuplicateEntityIdInDataMap) {
   auto Result = readFromString(R"({
-    "tu_namespace": {
-      "kind": "CompilationUnit",
-      "name": "test.cpp"
-    },
+    "lu_namespace": [
+      {
+        "kind": "LinkUnit",
+        "name": "test.exe"
+      }
+    ],
     "id_table": [
       {
         "id": 0,
         "name": {
           "usr": "c:@F@foo",
           "suffix": "",
-          "namespace": []
+          "namespace": [
+            {
+              "kind": "CompilationUnit",
+              "name": "test.cpp"
+            },
+            {
+              "kind": "LinkUnit",
+              "name": "test.exe"
+            }
+          ]
         }
       }
     ],
@@ -1637,15 +1792,11 @@ TEST_P(TUSummaryTest, DuplicateEntityIdInDataMap) {
         "summary_data": [
           {
             "entity_id": 0,
-            "entity_summary": {
-              "pairs": []
-            }
+            "entity_summary": { "pairs": [] }
           },
           {
             "entity_id": 0,
-            "entity_summary": {
-              "pairs": []
-            }
+            "entity_summary": { "pairs": [] }
           }
         ]
       }
@@ -1655,7 +1806,7 @@ TEST_P(TUSummaryTest, DuplicateEntityIdInDataMap) {
   EXPECT_THAT_ERROR(
       std::move(Result),
       FailedWithMessage(AllOf(
-          HasSubstr("reading TUSummary from file"),
+          HasSubstr("reading LUSummary from file"),
           HasSubstr("reading SummaryData entries from field 'data'"),
           HasSubstr("reading SummaryData entry from index '0'"),
           HasSubstr("reading EntitySummary entries from field 'summary_data'"),
@@ -1664,15 +1815,17 @@ TEST_P(TUSummaryTest, DuplicateEntityIdInDataMap) {
 }
 
 // ============================================================================
-// JSONFormat::summaryDataMapEntryFromJSON() Error Tests
+// JSONFormat::summaryDataMapFromJSON() Error Tests
 // ============================================================================
 
-TEST_P(TUSummaryTest, DataEntryMissingSummaryName) {
+TEST_P(LUSummaryTest, DataEntryMissingSummaryName) {
   auto Result = readFromString(R"({
-    "tu_namespace": {
-      "kind": "CompilationUnit",
-      "name": "test.cpp"
-    },
+    "lu_namespace": [
+      {
+        "kind": "LinkUnit",
+        "name": "test.exe"
+      }
+    ],
     "id_table": [],
     "linkage_table": [],
     "data": [
@@ -1685,19 +1838,21 @@ TEST_P(TUSummaryTest, DataEntryMissingSummaryName) {
   EXPECT_THAT_ERROR(
       std::move(Result),
       FailedWithMessage(AllOf(
-          HasSubstr("reading TUSummary from file"),
+          HasSubstr("reading LUSummary from file"),
           HasSubstr("reading SummaryData entries from field 'data'"),
           HasSubstr("reading SummaryData entry from index '0'"),
           HasSubstr("failed to read SummaryName from field 'summary_name'"),
           HasSubstr("expected JSON string"))));
 }
 
-TEST_P(TUSummaryTest, DataEntryMissingData) {
+TEST_P(LUSummaryTest, DataEntryMissingData) {
   auto Result = readFromString(R"({
-    "tu_namespace": {
-      "kind": "CompilationUnit",
-      "name": "test.cpp"
-    },
+    "lu_namespace": [
+      {
+        "kind": "LinkUnit",
+        "name": "test.exe"
+      }
+    ],
     "id_table": [],
     "linkage_table": [],
     "data": [
@@ -1709,25 +1864,27 @@ TEST_P(TUSummaryTest, DataEntryMissingData) {
 
   EXPECT_THAT_ERROR(
       std::move(Result),
-      FailedWithMessage(AllOf(
-          HasSubstr("reading TUSummary from file"),
-          HasSubstr("reading SummaryData entries from field 'data'"),
-          HasSubstr("reading SummaryData entry from index '0'"),
-          HasSubstr(
-              "failed to read EntitySummary entries from field 'summary_data'"),
-          HasSubstr("expected JSON array"))));
+      FailedWithMessage(
+          AllOf(HasSubstr("reading LUSummary from file"),
+                HasSubstr("reading SummaryData entries from field 'data'"),
+                HasSubstr("reading SummaryData entry from index '0'"),
+                HasSubstr("failed to read EntitySummary entries from field "
+                          "'summary_data'"),
+                HasSubstr("expected JSON array"))));
 }
 
 // ============================================================================
 // JSONFormat::summaryDataMapFromJSON() / encodingSummaryDataMapFromJSON() Tests
 // ============================================================================
 
-TEST_P(TUSummaryTest, DataNotArray) {
+TEST_P(LUSummaryTest, DataNotArray) {
   auto Result = readFromString(R"({
-    "tu_namespace": {
-      "kind": "CompilationUnit",
-      "name": "test.cpp"
-    },
+    "lu_namespace": [
+      {
+        "kind": "LinkUnit",
+        "name": "test.exe"
+      }
+    ],
     "id_table": [],
     "linkage_table": [],
     "data": {}
@@ -1736,17 +1893,19 @@ TEST_P(TUSummaryTest, DataNotArray) {
   EXPECT_THAT_ERROR(
       std::move(Result),
       FailedWithMessage(AllOf(
-          HasSubstr("reading TUSummary from file"),
+          HasSubstr("reading LUSummary from file"),
           HasSubstr("failed to read SummaryData entries from field 'data'"),
           HasSubstr("expected JSON array"))));
 }
 
-TEST_P(TUSummaryTest, DataElementNotObject) {
+TEST_P(LUSummaryTest, DataElementNotObject) {
   auto Result = readFromString(R"({
-    "tu_namespace": {
-      "kind": "CompilationUnit",
-      "name": "test.cpp"
-    },
+    "lu_namespace": [
+      {
+        "kind": "LinkUnit",
+        "name": "test.exe"
+      }
+    ],
     "id_table": [],
     "linkage_table": [],
     "data": ["invalid"]
@@ -1755,18 +1914,20 @@ TEST_P(TUSummaryTest, DataElementNotObject) {
   EXPECT_THAT_ERROR(
       std::move(Result),
       FailedWithMessage(
-          AllOf(HasSubstr("reading TUSummary from file"),
+          AllOf(HasSubstr("reading LUSummary from file"),
                 HasSubstr("reading SummaryData entries from field 'data'"),
                 HasSubstr("failed to read SummaryData entry from index '0'"),
                 HasSubstr("expected JSON object"))));
 }
 
-TEST_P(TUSummaryTest, DuplicateSummaryName) {
+TEST_P(LUSummaryTest, DuplicateSummaryName) {
   auto Result = readFromString(R"({
-    "tu_namespace": {
-      "kind": "CompilationUnit",
-      "name": "test.cpp"
-    },
+    "lu_namespace": [
+      {
+        "kind": "LinkUnit",
+        "name": "test.exe"
+      }
+    ],
     "id_table": [],
     "linkage_table": [],
     "data": [
@@ -1784,7 +1945,7 @@ TEST_P(TUSummaryTest, DuplicateSummaryName) {
   EXPECT_THAT_ERROR(
       std::move(Result),
       FailedWithMessage(AllOf(
-          HasSubstr("reading TUSummary from file"),
+          HasSubstr("reading LUSummary from file"),
           HasSubstr("reading SummaryData entries from field 'data'"),
           HasSubstr("failed to insert SummaryData entry at index '1'"),
           HasSubstr("encountered duplicate "
@@ -1792,10 +1953,10 @@ TEST_P(TUSummaryTest, DuplicateSummaryName) {
 }
 
 // ============================================================================
-// JSONFormat::readTUSummary() / readTUSummaryEncoding() Error Tests
+// JSONFormat::readLUSummary() / readLUSummaryEncoding() Error Tests
 // ============================================================================
 
-TEST_P(TUSummaryTest, MissingTUNamespace) {
+TEST_P(LUSummaryTest, MissingLUNamespace) {
   auto Result = readFromString(R"({
     "id_table": [],
     "linkage_table": [],
@@ -1805,34 +1966,39 @@ TEST_P(TUSummaryTest, MissingTUNamespace) {
   EXPECT_THAT_ERROR(
       std::move(Result),
       FailedWithMessage(AllOf(
-          HasSubstr("reading TUSummary from file"),
-          HasSubstr("failed to read BuildNamespace from field 'tu_namespace'"),
-          HasSubstr("expected JSON object"))));
+          HasSubstr("reading LUSummary from file"),
+          HasSubstr(
+              "failed to read NestedBuildNamespace from field 'lu_namespace'"),
+          HasSubstr("expected JSON array"))));
 }
 
-TEST_P(TUSummaryTest, MissingIDTable) {
+TEST_P(LUSummaryTest, MissingIDTable) {
   auto Result = readFromString(R"({
-    "tu_namespace": {
-      "kind": "CompilationUnit",
-      "name": "test.cpp"
-    },
+    "lu_namespace": [
+      {
+        "kind": "LinkUnit",
+        "name": "test.exe"
+      }
+    ],
     "data": []
   })");
 
   EXPECT_THAT_ERROR(
       std::move(Result),
       FailedWithMessage(
-          AllOf(HasSubstr("reading TUSummary from file"),
+          AllOf(HasSubstr("reading LUSummary from file"),
                 HasSubstr("failed to read IdTable from field 'id_table'"),
                 HasSubstr("expected JSON array"))));
 }
 
-TEST_P(TUSummaryTest, MissingLinkageTable) {
+TEST_P(LUSummaryTest, MissingLinkageTable) {
   auto Result = readFromString(R"({
-    "tu_namespace": {
-      "kind": "CompilationUnit",
-      "name": "test.cpp"
-    },
+    "lu_namespace": [
+      {
+        "kind": "LinkUnit",
+        "name": "test.exe"
+      }
+    ],
     "id_table": [],
     "data": []
   })");
@@ -1840,17 +2006,19 @@ TEST_P(TUSummaryTest, MissingLinkageTable) {
   EXPECT_THAT_ERROR(
       std::move(Result),
       FailedWithMessage(AllOf(
-          HasSubstr("reading TUSummary from file"),
+          HasSubstr("reading LUSummary from file"),
           HasSubstr("failed to read LinkageTable from field 'linkage_table'"),
           HasSubstr("expected JSON array"))));
 }
 
-TEST_P(TUSummaryTest, MissingData) {
+TEST_P(LUSummaryTest, MissingData) {
   auto Result = readFromString(R"({
-    "tu_namespace": {
-      "kind": "CompilationUnit",
-      "name": "test.cpp"
-    },
+    "lu_namespace": [
+      {
+        "kind": "LinkUnit",
+        "name": "test.exe"
+      }
+    ],
     "id_table": [],
     "linkage_table": []
   })");
@@ -1858,7 +2026,7 @@ TEST_P(TUSummaryTest, MissingData) {
   EXPECT_THAT_ERROR(
       std::move(Result),
       FailedWithMessage(AllOf(
-          HasSubstr("reading TUSummary from file"),
+          HasSubstr("reading LUSummary from file"),
           HasSubstr("failed to read SummaryData entries from field 'data'"),
           HasSubstr("expected JSON array"))));
 }
@@ -1867,7 +2035,7 @@ TEST_P(TUSummaryTest, MissingData) {
 // JSONFormat::writeJSON() Error Tests
 // ============================================================================
 
-TEST_P(TUSummaryTest, WriteFileAlreadyExists) {
+TEST_P(LUSummaryTest, WriteFileAlreadyExists) {
   PathString FileName("existing.json");
 
   auto ExpectedFilePath = writeJSON("{}", FileName);
@@ -1877,35 +2045,35 @@ TEST_P(TUSummaryTest, WriteFileAlreadyExists) {
 
   EXPECT_THAT_ERROR(
       std::move(Result),
-      FailedWithMessage(AllOf(HasSubstr("writing TUSummary to file"),
+      FailedWithMessage(AllOf(HasSubstr("writing LUSummary to file"),
                               HasSubstr("failed to write file"),
                               HasSubstr("file already exists"))));
 }
 
-TEST_P(TUSummaryTest, WriteParentDirectoryNotFound) {
+TEST_P(LUSummaryTest, WriteParentDirectoryNotFound) {
   PathString FilePath = makePath("nonexistent-dir", "test.json");
 
   auto Result = GetParam().WriteEmpty(FilePath);
 
   EXPECT_THAT_ERROR(
       std::move(Result),
-      FailedWithMessage(AllOf(HasSubstr("writing TUSummary to file"),
+      FailedWithMessage(AllOf(HasSubstr("writing LUSummary to file"),
                               HasSubstr("failed to write file"),
                               HasSubstr("parent directory does not exist"))));
 }
 
-TEST_P(TUSummaryTest, WriteNotJsonExtension) {
+TEST_P(LUSummaryTest, WriteNotJsonExtension) {
   auto Result = writeEmpty("test.txt");
 
   EXPECT_THAT_ERROR(
       std::move(Result),
       FailedWithMessage(
-          AllOf(HasSubstr("writing TUSummary to file"),
+          AllOf(HasSubstr("writing LUSummary to file"),
                 HasSubstr("failed to write file"),
                 HasSubstr("file does not end with '.json' extension"))));
 }
 
-TEST_P(TUSummaryTest, WriteStreamOpenFailure) {
+TEST_P(LUSummaryTest, WriteStreamOpenFailure) {
   if (!permissionsAreEnforced()) {
     GTEST_SKIP() << "File permission checks are not enforced in this "
                     "environment";
@@ -1926,7 +2094,7 @@ TEST_P(TUSummaryTest, WriteStreamOpenFailure) {
 
   EXPECT_THAT_ERROR(
       std::move(Result),
-      FailedWithMessage(AllOf(HasSubstr("writing TUSummary to file"),
+      FailedWithMessage(AllOf(HasSubstr("writing LUSummary to file"),
                               HasSubstr("failed to write file"))));
 
   // Restore permissions for cleanup
@@ -1935,12 +2103,13 @@ TEST_P(TUSummaryTest, WriteStreamOpenFailure) {
 }
 
 // ============================================================================
-// JSONFormat::writeTUSummary() Error Tests (TUSummary-only)
+// JSONFormat::writeLUSummary() Error Tests (LUSummary-only)
 // ============================================================================
 
-TEST_F(JSONFormatTUSummaryTest, WriteEntitySummaryNoFormatInfo) {
-  TUSummary Summary(
-      BuildNamespace(BuildNamespaceKind::CompilationUnit, "test.cpp"));
+TEST_F(JSONFormatLUSummaryTest, WriteEntitySummaryNoFormatInfo) {
+  NestedBuildNamespace NBN(
+      BuildNamespace(BuildNamespaceKind::LinkUnit, "test.exe"));
+  LUSummary Summary(std::move(NBN));
 
   NestedBuildNamespace Namespace =
       NestedBuildNamespace::makeCompilationUnit("test.cpp");
@@ -1951,12 +2120,12 @@ TEST_F(JSONFormatTUSummaryTest, WriteEntitySummaryNoFormatInfo) {
   getData(Summary)[UnknownSN][EI] =
       std::make_unique<UnregisteredEntitySummaryForJSONFormatTest>();
 
-  auto Result = writeTUSummary(Summary, "output.json");
+  auto Result = writeLUSummary(Summary, "output.json");
 
   EXPECT_THAT_ERROR(
       std::move(Result),
       FailedWithMessage(AllOf(
-          HasSubstr("writing TUSummary to file"),
+          HasSubstr("writing LUSummary to file"),
           HasSubstr("writing SummaryData entry to index '0'"),
           HasSubstr("writing EntitySummary entries to field "
                     "'summary_data'"),
@@ -1972,24 +2141,52 @@ TEST_F(JSONFormatTUSummaryTest, WriteEntitySummaryNoFormatInfo) {
 // Round-Trip Tests - Serialization Verification
 // ============================================================================
 
-TEST_P(TUSummaryTest, RoundTripEmpty) {
+TEST_P(LUSummaryTest, RoundTripEmptyNamespace) {
   readWriteCompare(R"({
-    "tu_namespace": {
-      "kind": "CompilationUnit",
-      "name": "test.cpp"
-    },
+    "lu_namespace": [
+      {
+        "kind": "CompilationUnit",
+        "name": "test.cpp"
+      }
+    ],
     "id_table": [],
     "linkage_table": [],
     "data": []
   })");
 }
 
-TEST_P(TUSummaryTest, RoundTripWithTwoSummaryTypes) {
+TEST_P(LUSummaryTest, RoundTripSingleNamespaceElement) {
   readWriteCompare(R"({
-    "tu_namespace": {
-      "kind": "CompilationUnit",
-      "name": "test.cpp"
-    },
+    "lu_namespace": [
+      { "kind": "CompilationUnit", "name": "test.cpp" }
+    ],
+    "id_table": [],
+    "linkage_table": [],
+    "data": []
+  })");
+}
+
+TEST_P(LUSummaryTest, RoundTripMultipleNamespaceElements) {
+  readWriteCompare(R"({
+    "lu_namespace": [
+      { "kind": "CompilationUnit", "name": "a.cpp" },
+      { "kind": "CompilationUnit", "name": "b.cpp" },
+      { "kind": "LinkUnit", "name": "libtest.so" }
+    ],
+    "id_table": [],
+    "linkage_table": [],
+    "data": []
+  })");
+}
+
+TEST_P(LUSummaryTest, RoundTripWithTwoSummaryTypes) {
+  readWriteCompare(R"({
+    "lu_namespace": [
+      {
+        "kind": "CompilationUnit",
+        "name": "test.cpp"
+      }
+    ],
     "id_table": [
       {
         "id": 3,
@@ -2154,24 +2351,11 @@ TEST_P(TUSummaryTest, RoundTripWithTwoSummaryTypes) {
   })");
 }
 
-TEST_P(TUSummaryTest, RoundTripLinkUnit) {
+TEST_P(LUSummaryTest, RoundTripWithEmptyDataEntry) {
   readWriteCompare(R"({
-    "tu_namespace": {
-      "kind": "LinkUnit",
-      "name": "libtest.so"
-    },
-    "id_table": [],
-    "linkage_table": [],
-    "data": []
-  })");
-}
-
-TEST_P(TUSummaryTest, RoundTripWithEmptyDataEntry) {
-  readWriteCompare(R"({
-    "tu_namespace": {
-      "kind": "CompilationUnit",
-      "name": "test.cpp"
-    },
+    "lu_namespace": [
+      { "kind": "CompilationUnit", "name": "test.cpp" }
+    ],
     "id_table": [],
     "linkage_table": [],
     "data": [
@@ -2183,12 +2367,11 @@ TEST_P(TUSummaryTest, RoundTripWithEmptyDataEntry) {
   })");
 }
 
-TEST_P(TUSummaryTest, RoundTripLinkageTableWithNoneLinkage) {
+TEST_P(LUSummaryTest, RoundTripLinkageTableWithNoneLinkage) {
   readWriteCompare(R"({
-    "tu_namespace": {
-      "kind": "CompilationUnit",
-      "name": "test.cpp"
-    },
+    "lu_namespace": [
+      { "kind": "CompilationUnit", "name": "test.cpp" }
+    ],
     "id_table": [
       {
         "id": 0,
@@ -2214,12 +2397,11 @@ TEST_P(TUSummaryTest, RoundTripLinkageTableWithNoneLinkage) {
   })");
 }
 
-TEST_P(TUSummaryTest, RoundTripLinkageTableWithInternalLinkage) {
+TEST_P(LUSummaryTest, RoundTripLinkageTableWithInternalLinkage) {
   readWriteCompare(R"({
-    "tu_namespace": {
-      "kind": "CompilationUnit",
-      "name": "test.cpp"
-    },
+    "lu_namespace": [
+      { "kind": "CompilationUnit", "name": "test.cpp" }
+    ],
     "id_table": [
       {
         "id": 0,
@@ -2245,12 +2427,11 @@ TEST_P(TUSummaryTest, RoundTripLinkageTableWithInternalLinkage) {
   })");
 }
 
-TEST_P(TUSummaryTest, RoundTripLinkageTableWithExternalLinkage) {
+TEST_P(LUSummaryTest, RoundTripLinkageTableWithExternalLinkage) {
   readWriteCompare(R"({
-    "tu_namespace": {
-      "kind": "CompilationUnit",
-      "name": "test.cpp"
-    },
+    "lu_namespace": [
+      { "kind": "CompilationUnit", "name": "test.cpp" }
+    ],
     "id_table": [
       {
         "id": 0,
@@ -2276,12 +2457,11 @@ TEST_P(TUSummaryTest, RoundTripLinkageTableWithExternalLinkage) {
   })");
 }
 
-TEST_P(TUSummaryTest, RoundTripLinkageTableWithMultipleEntries) {
+TEST_P(LUSummaryTest, RoundTripLinkageTableWithMultipleEntries) {
   readWriteCompare(R"({
-    "tu_namespace": {
-      "kind": "CompilationUnit",
-      "name": "test.cpp"
-    },
+    "lu_namespace": [
+      { "kind": "CompilationUnit", "name": "test.cpp" }
+    ],
     "id_table": [
       {
         "id": 0,

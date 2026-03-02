@@ -42,6 +42,18 @@ public:
   writeTUSummaryEncoding(const TUSummaryEncoding &SummaryEncoding,
                          llvm::StringRef Path) = 0;
 
+  virtual llvm::Expected<LUSummary> readLUSummary(llvm::StringRef Path) = 0;
+
+  virtual llvm::Error writeLUSummary(const LUSummary &Summary,
+                                     llvm::StringRef Path) = 0;
+
+  virtual llvm::Expected<LUSummaryEncoding>
+  readLUSummaryEncoding(llvm::StringRef Path) = 0;
+
+  virtual llvm::Error
+  writeLUSummaryEncoding(const LUSummaryEncoding &SummaryEncoding,
+                         llvm::StringRef Path) = 0;
+
 protected:
   // Helpers providing access to implementation details of basic data structures
   // for efficient serialization/deserialization.
