@@ -98,11 +98,8 @@ APINotesManager::loadAPINotes(FileEntryRef APINotesFile) {
 
   // Load the binary form we just compiled.
   auto Reader = APINotesReader::Create(std::move(CompiledBuffer), SwiftVersion);
-  if (!Reader) {
-    llvm::consumeError(Reader.takeError());
-    return nullptr;
-  }
-  return std::move(Reader.get());
+  assert(Reader && "Could not load the API notes we just generated?");
+  return Reader;
 }
 
 std::unique_ptr<APINotesReader>
@@ -121,13 +118,9 @@ APINotesManager::loadAPINotes(StringRef Buffer) {
 
   CompiledBuffer = llvm::MemoryBuffer::getMemBufferCopy(
       StringRef(APINotesBuffer.data(), APINotesBuffer.size()));
-
   auto Reader = APINotesReader::Create(std::move(CompiledBuffer), SwiftVersion);
-  if (!Reader) {
-    llvm::consumeError(Reader.takeError());
-    return nullptr;
-  }
-  return std::move(Reader.get());
+  assert(Reader && "Could not load the API notes we just generated?");
+  return Reader;
 }
 
 bool APINotesManager::loadAPINotes(const DirectoryEntry *HeaderDir,
