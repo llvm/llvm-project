@@ -3457,7 +3457,10 @@ namespace ISD {
   }
 
   /// Attempt to match a unary predicate against a scalar/splat constant or
-  /// every element of a constant BUILD_VECTOR.
+  /// every element of a constant BUILD_VECTOR. 
+  /// The DemandedElts argument 
+  /// allows us to only collect the  known bits that are shared by the requested 
+  /// vector elements.
   /// If AllowUndef is true, then UNDEF elements will pass nullptr to Match.
   template <typename ConstNodeType>
   bool matchUnaryPredicateImpl(SDValue Op, const APInt &DemandedElts,
@@ -3508,6 +3511,8 @@ namespace ISD {
 
   /// Attempt to match a binary predicate against a pair of scalar/splat
   /// constants or every element of a pair of constant BUILD_VECTORs.
+  /// The DemandedElts argument allows us to only collect the
+  /// known bits that are shared by the requested vector elements.
   /// If AllowUndef is true, then UNDEF elements will pass nullptr to Match.
   /// If AllowTypeMismatch is true then RetType + ArgTypes don't need to match.
   LLVM_ABI bool matchBinaryPredicate(
