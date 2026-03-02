@@ -383,7 +383,7 @@ clang-format
 
 libclang
 --------
-- visit identifier initializers in lambda capture as VarDecl
+- visit identifier initializers in lambda capture as VarDecl instead of VariableRef. Warning: this changes behaviour.
 
 Code Completion
 ---------------
