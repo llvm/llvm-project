@@ -76,3 +76,23 @@ void testMemberPointer(Foo* Bar::*mp) {
 void testFunctionPointer(void(*f)()) {
   __builtin_clear_padding(f); // expected-error {{argument to __builtin_clear_padding must be a pointer to a trivially-copyable type ('void (*)()' invalid)}}
 }
+
+struct WithVLA {
+  int i;
+  char c[];
+};
+
+struct WithVLA2 {
+  int i2;
+  WithVLA w;
+};
+
+struct WithVLA3 {
+  WithVLA2 w2;
+};
+
+void testVLA(WithVLA* w1, WithVLA2* w2, WithVLA3* w3) {
+  __builtin_clear_padding(w1); // expected-error {{'WithVLA' has flexible array member, which is unsupported by __builtin_clear_padding}}
+  __builtin_clear_padding(w2); // expected-error {{'WithVLA2' has flexible array member, which is unsupported by __builtin_clear_padding}}
+  __builtin_clear_padding(w3); // expected-error {{'WithVLA3' has flexible array member, which is unsupported by __builtin_clear_padding}}
+}

@@ -1329,3 +1329,41 @@ struct NonTriviallyCopyable {
 void testNonTriviallyCopyable(NonTriviallyCopyable ntc) {
   __builtin_clear_padding(&ntc);
 }
+
+typedef float Float3Vec __attribute__((ext_vector_type(3)));
+
+// LINUX-LABEL: define dso_local void @_Z18testAttributedTypePDv3_f(
+// LINUX-SAME: ptr noundef [[V:%.*]]) #[[ATTR0]] {
+// LINUX-NEXT:  [[ENTRY:.*:]]
+// LINUX-NEXT:    [[V_ADDR:%.*]] = alloca ptr, align 8
+// LINUX-NEXT:    store ptr [[V]], ptr [[V_ADDR]], align 8
+// LINUX-NEXT:    [[TMP0:%.*]] = load ptr, ptr [[V_ADDR]], align 8
+// LINUX-NEXT:    [[TMP1:%.*]] = getelementptr i8, ptr [[TMP0]], i32 12
+// LINUX-NEXT:    store i8 0, ptr [[TMP1]], align 1
+// LINUX-NEXT:    [[TMP2:%.*]] = getelementptr i8, ptr [[TMP0]], i32 13
+// LINUX-NEXT:    store i8 0, ptr [[TMP2]], align 1
+// LINUX-NEXT:    [[TMP3:%.*]] = getelementptr i8, ptr [[TMP0]], i32 14
+// LINUX-NEXT:    store i8 0, ptr [[TMP3]], align 1
+// LINUX-NEXT:    [[TMP4:%.*]] = getelementptr i8, ptr [[TMP0]], i32 15
+// LINUX-NEXT:    store i8 0, ptr [[TMP4]], align 1
+// LINUX-NEXT:    ret void
+//
+// WINDOWS-LABEL: define dso_local void @_Z18testAttributedTypePDv3_f(
+// WINDOWS-SAME: ptr noundef [[V:%.*]]) #[[ATTR0]] {
+// WINDOWS-NEXT:  [[ENTRY:.*:]]
+// WINDOWS-NEXT:    [[V_ADDR:%.*]] = alloca ptr, align 8
+// WINDOWS-NEXT:    store ptr [[V]], ptr [[V_ADDR]], align 8
+// WINDOWS-NEXT:    [[TMP0:%.*]] = load ptr, ptr [[V_ADDR]], align 8
+// WINDOWS-NEXT:    [[TMP1:%.*]] = getelementptr i8, ptr [[TMP0]], i32 12
+// WINDOWS-NEXT:    store i8 0, ptr [[TMP1]], align 1
+// WINDOWS-NEXT:    [[TMP2:%.*]] = getelementptr i8, ptr [[TMP0]], i32 13
+// WINDOWS-NEXT:    store i8 0, ptr [[TMP2]], align 1
+// WINDOWS-NEXT:    [[TMP3:%.*]] = getelementptr i8, ptr [[TMP0]], i32 14
+// WINDOWS-NEXT:    store i8 0, ptr [[TMP3]], align 1
+// WINDOWS-NEXT:    [[TMP4:%.*]] = getelementptr i8, ptr [[TMP0]], i32 15
+// WINDOWS-NEXT:    store i8 0, ptr [[TMP4]], align 1
+// WINDOWS-NEXT:    ret void
+//
+void testAttributedType(Float3Vec* v) {
+  __builtin_clear_padding(v);
+}
