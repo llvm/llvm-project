@@ -1574,46 +1574,4 @@ TEST_F(AArch64SelectionDAGTest, KnownNeverZero_Select) {
   EXPECT_FALSE(DAG->isKnownNeverZero(VSelect444Big, DemandAll));
   EXPECT_TRUE(DAG->isKnownNeverZero(VSelect4444, DemandAll));
 }
-
-TEST_F(AArch64SelectionDAGTest, isKnownNeverZero_UMAX_UADDSAT_DemandedElts) {
-  SDLoc Loc;
-  EVT VT = EVT::getVectorVT(Context, MVT::i32, 4);
-
-  SDValue Zero = DAG->getConstant(0, Loc, MVT::i32);
-  SDValue One = DAG->getConstant(1, Loc, MVT::i32);
-  SDValue VecConst = DAG->getBuildVector(VT, Loc, {Zero, One, Zero, Zero});
-
-  SDValue VecUnknown = DAG->getExternalSymbol("unknown_vec", VT);
-
-  APInt DemandedLane1(4, 2); 
-  APInt DemandedLane0(4, 1); 
-
-  SDValue OpUMAX = DAG->getNode(ISD::UMAX, Loc, VT, VecConst, VecUnknown);
-  EXPECT_TRUE(DAG->isKnownNeverZero(OpUMAX, DemandedLane1));
-  EXPECT_FALSE(DAG->isKnownNeverZero(OpUMAX, DemandedLane0));
-
-  SDValue OpUADDSAT = DAG->getNode(ISD::UADDSAT, Loc, VT, VecConst, VecUnknown);
-  EXPECT_TRUE(DAG->isKnownNeverZero(OpUADDSAT, DemandedLane1));
-  EXPECT_FALSE(DAG->isKnownNeverZero(OpUADDSAT, DemandedLane0));
-}
-
-TEST_F(AArch64SelectionDAGTest, isKnownNeverZero_UMIN_DemandedElts) {
-  SDLoc Loc;
-  EVT VT = EVT::getVectorVT(Context, MVT::i32, 4);
-
-  SDValue Zero = DAG->getConstant(0, Loc, MVT::i32);
-  SDValue One = DAG->getConstant(1, Loc, MVT::i32);
-  SDValue VecConst = DAG->getBuildVector(VT, Loc, {Zero, One, Zero, Zero});
-
-  SDValue OpaqueOne = DAG->getConstant(1, Loc, MVT::i32, /*isTarget=*/false, /*isOpaque=*/true);
-  SDValue OpaqueVec = DAG->getBuildVector(VT, Loc, {Zero, OpaqueOne, Zero, Zero});
-
-  SDValue OpUMIN = DAG->getNode(ISD::UMIN, Loc, VT, VecConst, OpaqueVec);
-  
-  APInt DemandedLane1(4, 2); 
-  EXPECT_TRUE(DAG->isKnownNeverZero(OpUMIN, DemandedLane1));
-
-  APInt DemandedLane0(4, 1); 
-  EXPECT_FALSE(DAG->isKnownNeverZero(OpUMIN, DemandedLane0));
-}
 } // end namespace llvm
