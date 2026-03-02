@@ -49,58 +49,77 @@ constexpr void compareOperatorTest(const auto& iter1, const auto& iter2) {
   assert(!(iter2 != iter2));
 }
 
+template <typename Iter>
+constexpr void testBase_with_CommonRange() {
+  using CommonRange = MinimalRange<Iter, Iter>;
+  static_assert(std::ranges::range<CommonRange>);
+  static_assert(std::ranges::common_range<CommonRange>);
+
+  int arr[] = {94, 1, 2, 82};
+
+  CommonRange range{Iter{arr}, Iter{arr + 4}};
+
+  auto ev = range | std::views::enumerate;
+
+  const auto it1 = ev.begin();
+  assert(*it1 == std::make_tuple(0, 94));
+  const auto it2 = ++ev.begin();
+  assert(*it2 == std::make_tuple(1, 1));
+
+  std::same_as<std::strong_ordering> decltype(auto) result = it1 <=> it2;
+  static_assert(noexcept(operator<=>(it1, it2)));
+
+  assert(result == std::strong_ordering::less);
+  assert((it1 <=> it1) == std::strong_ordering::equal);
+  assert((it2 <=> it2) == std::strong_ordering::equal);
+  assert((it2 <=> it1) == std::strong_ordering::greater);
+
+  compareOperatorTest(it1, it2);
+}
+
+template <typename Iter>
+constexpr void testBase_with_NonCommonRange() {
+  using Sent           = sentinel_wrapper<Iter>;
+  using NonCommonRange = MinimalRange<Iter, Sent>;
+  static_assert(!std::ranges::common_range<NonCommonRange>);
+
+  int arr[] = {94, 1, 2, 82};
+
+  NonCommonRange range{Iter{arr}, Sent{Iter{arr + 4}}};
+
+  auto ev = range | std::views::enumerate;
+
+  const auto it1 = ev.begin();
+  assert(*it1 == std::make_tuple(0, 94));
+  const auto it2 = ++ev.begin();
+  assert(*it2 == std::make_tuple(1, 1));
+
+  std::same_as<std::strong_ordering> decltype(auto) result = it1 <=> it2;
+  static_assert(noexcept(operator<=>(it1, it2)));
+
+  assert(result == std::strong_ordering::less);
+  assert((it1 <=> it1) == std::strong_ordering::equal);
+  assert((it2 <=> it2) == std::strong_ordering::equal);
+  assert((it2 <=> it1) == std::strong_ordering::greater);
+
+  compareOperatorTest(it1, it2);
+}
+
 constexpr bool test() {
-  int buff[] = {0, 1, 2, 3};
-  {
-    using View = std::ranges::enumerate_view<RangeView>;
+  testBase_with_CommonRange<forward_iterator<int*>>();
+  testBase_with_CommonRange<bidirectional_iterator<int*>>();
+  testBase_with_CommonRange<random_access_iterator<int*>>();
+  testBase_with_CommonRange<contiguous_iterator<int*>>();
+  testBase_with_CommonRange<int*>();
+  testBase_with_CommonRange<int const*>();
 
-    using Iterator = std::ranges::iterator_t<View>;
-    static_assert(std::three_way_comparable<Iterator>);
-    using Subrange = std::ranges::subrange<Iterator>;
-    static_assert(std::three_way_comparable<std::ranges::iterator_t<Subrange>>);
-    using EnumerateView = std::ranges::enumerate_view<Subrange>;
-    static_assert(std::three_way_comparable<std::ranges::iterator_t<EnumerateView>>);
-
-    const RangeView range(buff, buff + 4);
-
-    std::same_as<View> decltype(auto) ev = std::views::enumerate(range);
-
-    const auto it1 = ev.begin();
-    const auto it2 = it1 + 1;
-
-    compareOperatorTest(it1, it2);
-
-    assert((it1 <=> it2) == std::strong_ordering::less);
-    assert((it1 <=> it1) == std::strong_ordering::equal);
-    assert((it2 <=> it2) == std::strong_ordering::equal);
-    assert((it2 <=> it1) == std::strong_ordering::greater);
-
-    static_assert(noexcept(operator<=>(it1, it2)));
-  }
-
-  // Test an old-school iterator with no operator<=>
-  {
-    using Iterator = random_access_iterator<int*>;
-    static_assert(!std::three_way_comparable<Iterator>);
-    using Subrange = std::ranges::subrange<Iterator>;
-    static_assert(!std::three_way_comparable<std::ranges::iterator_t<Subrange>>);
-    using EnumerateView = std::ranges::enumerate_view<Subrange>;
-    static_assert(std::three_way_comparable<std::ranges::iterator_t<EnumerateView>>);
-
-    auto subrange  = Subrange{Iterator{buff}, Iterator{buff + 3}};
-    auto ev        = subrange | std::views::enumerate;
-    const auto it1 = ev.begin();
-    const auto it2 = it1 + 1;
-
-    compareOperatorTest(it1, it2);
-
-    assert((it1 <=> it2) == std::strong_ordering::less);
-    assert((it1 <=> it1) == std::strong_ordering::equal);
-    assert((it2 <=> it2) == std::strong_ordering::equal);
-    assert((it2 <=> it1) == std::strong_ordering::greater);
-
-    static_assert(noexcept(operator<=>(it1, it2)));
-  }
+  testBase_with_NonCommonRange<cpp17_input_iterator<int*>>();
+  testBase_with_NonCommonRange<forward_iterator<int*>>();
+  testBase_with_NonCommonRange<bidirectional_iterator<int*>>();
+  testBase_with_NonCommonRange<random_access_iterator<int*>>();
+  testBase_with_NonCommonRange<contiguous_iterator<int*>>();
+  testBase_with_NonCommonRange<int*>();
+  testBase_with_NonCommonRange<int const*>();
 
   return true;
 }
