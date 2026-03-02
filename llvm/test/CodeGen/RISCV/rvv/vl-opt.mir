@@ -833,7 +833,7 @@ body: |
     ; CHECK-LABEL: name: vabs_v
     ; CHECK: liveins: $x8
     ; CHECK-NEXT: {{  $}}
-    ; CHECK-NEXT: %x:vr = PseudoVABS_V_M1 $noreg, $noreg, -1 /* vl=VLMAX */, 5 /* e32 */, 0 /* tu, mu */
+    ; CHECK-NEXT: %x:vr = PseudoVABS_V_M1 $noreg, $noreg, 1 /* vl */, 5 /* e32 */, 0 /* tu, mu */
     ; CHECK-NEXT: %y:vr = PseudoVADD_VV_M1 $noreg, %x, $noreg, 1 /* vl */, 5 /* e32 */, 0 /* tu, mu */
     ; CHECK-NEXT: $v8 = COPY %y
     %x:vr = PseudoVABS_V_M1 $noreg, $noreg, -1, 5 /* e32 */, 0 /* tu, mu */
