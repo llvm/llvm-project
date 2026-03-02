@@ -1074,7 +1074,8 @@ void DXILResourceBindingInfo::populate(Module &M, DXILResourceTypeMap &DRTM) {
           // UINT32_MAX (-1) size means unbounded resource array;
           // upper bound register overflow should be detected in Sema
           assert((Size == UINT32_MAX ||
-                  (unsigned)LowerBound + Size - 1 <= UINT32_MAX) &&
+                  (uint64_t)LowerBound + (uint64_t)Size - 1ULL <=
+                      (uint64_t)UINT32_MAX) &&
                  "upper bound register overflow");
           uint32_t UpperBound =
               Size == UINT32_MAX ? UINT32_MAX : LowerBound + Size - 1;
