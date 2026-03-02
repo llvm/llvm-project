@@ -228,7 +228,7 @@ bool LowFatSanitizer::instrumentMemoryRange(Instruction *I, Value *Ptr,
   FunctionCallee OobFn = Options.Recover ? getWarnOobFn() : getReportOobFn();
   Type *I8Ty = Type::getInt8Ty(M.getContext());
   Value *IsWriteVal = ConstantInt::get(I8Ty, IsWrite ? 1 : 0);
-  OobIRB.CreateCall(OobFn, {PtrInt, Base, AllocSize, IsWriteVal});
+  OobIRB.CreateCall(OobFn, {AccessEnd, Base, AllocSize, IsWriteVal});
 
   LLVM_DEBUG(dbgs() << "[LowFat] Instrumented mem intrinsic ("
                     << (Options.Recover ? "recover" : "fatal")
