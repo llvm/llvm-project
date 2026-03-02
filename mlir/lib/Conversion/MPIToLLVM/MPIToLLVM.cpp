@@ -954,9 +954,10 @@ struct ReduceScatterBlockOpLowering
 
     Value nRanks =
         createOrFoldCommSize(rewriter, loc, op.getComm(), adaptor.getComm());
-    Value expected = LLVM::UDivOp::create(rewriter, loc, i32, sendSize, nRanks);
+    Value totalExpected =
+        LLVM::MulOp::create(rewriter, loc, i32, recvSize, nRanks);
     Value sizeIsValid = LLVM::ICmpOp::create(
-        rewriter, loc, LLVM::ICmpPredicate::eq, expected, recvSize);
+        rewriter, loc, LLVM::ICmpPredicate::eq, sendSize, totalExpected);
     cf::AssertOp::create(rewriter, loc, sizeIsValid,
                          "Send buffer's size must be the receive buffer's size "
                          "times the number of ranks");
