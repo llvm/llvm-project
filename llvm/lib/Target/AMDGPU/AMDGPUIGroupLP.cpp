@@ -209,16 +209,15 @@ public:
   // Remove last element in the SchedGroup
   void pop() { Collection.pop_back(); }
 
-  // Identify and add all relevant SUs from the DAG to this SchedGroup.
-  void initSchedGroup();
+  // Identify and add all relevant SUs from the DAG to this SchedGroup
+  // which represents a SCHED_BARRIER.
+  void initSchedBarrier();
 
-  // Add instructions to the SchedGroup bottom up starting from RIter.
-  // PipelineInstrs is a set of instructions that should not be added to the
-  // SchedGroup even when the other conditions for adding it are satisfied.
-  // RIter will be added to the SchedGroup as well, and dependencies will be
-  // added so that RIter will always be scheduled at the end of the group.
-  void initSchedGroup(std::vector<SUnit>::reverse_iterator RIter,
-                      SUnitsToCandidateSGsMap &SyncedInstrs);
+  // Add the SCHED_GROUP_BARRIER instruction to the SchedGroup and for
+  // each SU starting at RIter, add the SchedGroup's SGID to the
+  // collection of potential SchedGroups for SU in SyncedInstrs.
+  void initSchedGroupBarrier(std::vector<SUnit>::reverse_iterator RIter,
+                             SUnitsToCandidateSGsMap &SyncedInstrs);
 
   void initSchedGroup(SUnitsToCandidateSGsMap &SyncedInstrs);
 
@@ -2572,33 +2571,33 @@ bool SchedGroup::canAddSU(SUnit &SU) const {
   return std::all_of(B, E, [this](MachineInstr &MI) { return canAddMI(MI); });
 }
 
-void SchedGroup::initSchedGroup() {
-  assert (!MaxSize && "Only called for SCHED_BARRIERs which don't have a size." );
+void SchedGroup::initSchedBarrier() {
+  assert(!MaxSize && "SCHED_BARRIERs don't have a size.");
+  assert(Collection.empty());
+  
   for (auto &SU : DAG->SUnits) {
     if (canAddSU(SU))
       add(SU);
   }
 }
 
-void SchedGroup::initSchedGroup(std::vector<SUnit>::reverse_iterator RIter,
-                                SUnitsToCandidateSGsMap &SyncedInstrs) {
-  // This function is only used for SCHED_GROUP_BARRIER which always
-  // have a size.
-  assert(MaxSize);
+void SchedGroup::initSchedGroupBarrier(
+    std::vector<SUnit>::reverse_iterator RIter,
+    SUnitsToCandidateSGsMap &SyncedInstrs) {
+  assert(MaxSize && "SCHED_GROUP_BARRIER always has size.");
   assert(Collection.empty());
 
-  SUnit &InitSU = *RIter;
+  // TODO Do not create SchedGroups with MaxSize 0?
+  assert((MaxSize == 0 || !isFull()) && "Nothing added to Collection");
+  add(*RIter);
+  (*MaxSize)++;
+  
   for (auto E = DAG->SUnits.rend(); RIter != E; ++RIter) {
     auto &SU = *RIter;
 
     if (canAddSU(SU))
       SyncedInstrs[&SU].push_back(SGID);
   }
-
-  // TODO Do not create SchedGroups with MaxSize 0?
-  assert((MaxSize == 0 || !isFull()) && "Nothing added to Collection");
-  add(InitSU);
-  (*MaxSize)++;
 }
 
 void SchedGroup::initSchedGroup(SUnitsToCandidateSGsMap &SyncedInstrs) {
@@ -2660,7 +2659,7 @@ void IGroupLPDAGMutation::addSchedBarrierEdges(SUnit &SchedBarrier) {
   auto InvertedMask =
       invertSchedBarrierMask((SchedGroupMask)MI.getOperand(0).getImm());
   SchedGroup SG(InvertedMask, std::nullopt, DAG, TII);
-  SG.initSchedGroup();
+  SG.initSchedBarrier();
 
   // Preserve original instruction ordering relative to the SCHED_BARRIER.
   SG.link(
@@ -2719,7 +2718,7 @@ void IGroupLPDAGMutation::initSchedGroupBarrierPipelineStage(
   auto &SG = SyncedSchedGroups[SyncID].emplace_back((SchedGroupMask)SGMask,
                                                     Size, SyncID, DAG, TII);
 
-  SG.initSchedGroup(RIter, SyncedInstrs[SG.getSyncID()]);
+  SG.initSchedGroupBarrier(RIter, SyncedInstrs[SG.getSyncID()]);
 }
 
 bool IGroupLPDAGMutation::initIGLPOpt(SUnit &SU) {
