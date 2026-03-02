@@ -5,8 +5,8 @@
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
-#ifndef LLVM_CLANG_ANALYSIS_SCALABLE_ANALYSES_UNSAFEBUFFERUSAGE_EXTRACTOR_H
-#define LLVM_CLANG_ANALYSIS_SCALABLE_ANALYSES_UNSAFEBUFFERUSAGE_EXTRACTOR_H
+#ifndef LLVM_CLANG_ANALYSIS_SCALABLE_ANALYSES_UNSAFEBUFFERUSAGE_UNSAFEBUFFERUSAGEEXTRACTOR_H
+#define LLVM_CLANG_ANALYSIS_SCALABLE_ANALYSES_UNSAFEBUFFERUSAGE_UNSAFEBUFFERUSAGEEXTRACTOR_H
 
 #include "clang/Analysis/Scalable/Analyses/UnsafeBufferUsage/UnsafeBufferUsage.h"
 #include "clang/Analysis/Scalable/Model/EntityId.h"
@@ -33,8 +33,8 @@ public:
   extractEntitySummary(const Decl *Contributor, ASTContext &Ctx,
                        llvm::Error &Error);
 
-  virtual void HandleTranslationUnit(ASTContext &Ctx) override;
+  void HandleTranslationUnit(ASTContext &Ctx) override;
 };
 } // namespace clang::ssaf
 
-#endif // LLVM_CLANG_ANALYSIS_SCALABLE_ANALYSES_UNSAFEBUFFERUSAGE_EXTRACTOR_H
+#endif // LLVM_CLANG_ANALYSIS_SCALABLE_ANALYSES_UNSAFEBUFFERUSAGE_UNSAFEBUFFERUSAGEEXTRACTOR_H
