@@ -3902,14 +3902,17 @@ bool CursorVisitor::RunVisitorWorkList(VisitorWorkList &WL) {
                                         CEnd = E->explicit_capture_end();
            C != CEnd; ++C) {
 
-        if (const auto *CV = C->getCapturedVar(); CV && isa<VarDecl>(CV)) {
+        if (!C->capturesVariable())
+          continue;
+
+        if (const auto *CV = dyn_cast_or_null<VarDecl>(C->getCapturedVar())) {
           if (CV->isInitCapture()) {
             // Init capture is a declaration, create VarDecl cursor
-            if (Visit(MakeCXCursor(cast<VarDecl>(CV), TU, RegionOfInterest)))
+            if (Visit(MakeCXCursor(CV, TU, RegionOfInterest)))
               return true;
           } else
             // Non init capture is a VariableRef
-            if (Visit(MakeCursorVariableRef(cast<VarDecl>(CV), C->getLocation(),
+            if (Visit(MakeCursorVariableRef(CV, C->getLocation(),
                                             TU)))
               return true;
         }
