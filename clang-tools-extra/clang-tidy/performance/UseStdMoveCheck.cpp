@@ -22,8 +22,13 @@ using namespace clang::ast_matchers;
 namespace clang::tidy::performance {
 
 namespace {
-AST_MATCHER(CXXRecordDecl, hasNonTrivialMoveAssignment) {
-  return Node.hasNonTrivialMoveAssignment();
+AST_MATCHER(CXXRecordDecl, hasAccessibleNonTrivialMoveAssignment) {
+  if (!Node.hasNonTrivialMoveAssignment())
+    return false;
+  for (const auto *CM : Node.methods())
+    if (CM->isMoveAssignmentOperator())
+      return !CM->isDeleted() && CM->getAccess() == AS_public;
+  llvm_unreachable("Move Assignment Operaotr Not Found");
 }
 
 AST_MATCHER(QualType, isLValueReferenceType) {
@@ -53,7 +58,8 @@ void UseStdMoveCheck::registerMatchers(MatchFinder *Finder) {
   auto AssignOperatorExpr =
       cxxOperatorCallExpr(
           isCopyAssignmentOperator(),
-          hasArgument(0, hasType(cxxRecordDecl(hasNonTrivialMoveAssignment()))),
+          hasArgument(0, hasType(cxxRecordDecl(
+                             hasAccessibleNonTrivialMoveAssignment()))),
           hasArgument(
               1, declRefExpr(
                      to(varDecl(
@@ -141,11 +147,16 @@ void UseStdMoveCheck::check(const MatchFinder::MatchResult &Result) {
     }
     if (ReferencesAssignedValue) {
       // Cancel all predecessors.
-      for (const auto &S : B->preds())
+      for (const auto &S : B->preds()) {
+        if (!S.isReachable())
+          continue;
         CFGState.find(&*S)->second.Ready = false;
+      }
     } else {
       // Or process the ready ones.
       for (const auto &S : B->preds()) {
+        if (!S.isReachable())
+          continue;
         auto &W = CFGState.find(&*S)->second;
         if (W.Ready) {
           if (--W.RemainingSuccessors == 0 && S.isReachable())

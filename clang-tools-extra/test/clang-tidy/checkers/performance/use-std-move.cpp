@@ -33,6 +33,18 @@ struct NoMoveAssign {
   NoMoveAssign& operator=(NoMoveAssign&&) = delete;
 };
 
+struct NoDefaultedMoveAssign {
+  NoDefaultedMoveAssign& operator=(const NoDefaultedMoveAssign&);
+  NoDefaultedMoveAssign& operator=(NoDefaultedMoveAssign&&) = default;
+  NoMoveAssign Field;
+};
+
+struct PrivateMoveAssign {
+  PrivateMoveAssign& operator=(const PrivateMoveAssign&);
+  private:
+  PrivateMoveAssign& operator=(PrivateMoveAssign&&);
+};
+
 template<class T>
 void use(T&) {}
 
@@ -298,6 +310,16 @@ void NonProfitableTrivialTypeAssign(int& target, int source) {
 
 void InvalidMoveAssign(NoMoveAssign& target, NoMoveAssign source) {
   // No message expected, moving is deleted.
+  target = source;
+}
+
+void InvalidPrivateMoveAssign(PrivateMoveAssign& target, PrivateMoveAssign source) {
+  // No message expected, moving is private.
+  target = source;
+}
+
+void DeletedDefaultMoveAssign(NoDefaultedMoveAssign& target, NoDefaultedMoveAssign source) {
+  // No message expected, default move is invalid.
   target = source;
 }
 
