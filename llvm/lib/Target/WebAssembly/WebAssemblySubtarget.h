@@ -115,14 +115,14 @@ public:
   bool hasExceptionHandling() const { return HasExceptionHandling; }
   bool hasExtendedConst() const { return HasExtendedConst; }
   bool hasFP16() const { return HasFP16; }
+  bool hasGC() const { return HasGC; }
   bool hasMultiMemory() const { return HasMultiMemory; }
   bool hasMultivalue() const { return HasMultivalue; }
   bool hasMutableGlobals() const { return HasMutableGlobals; }
   bool hasNontrappingFPToInt() const { return HasNontrappingFPToInt; }
   bool hasReferenceTypes() const { return HasReferenceTypes; }
-  bool hasSharedEverything() const { return HasSharedEverything; }
-  bool hasGC() const { return HasGC; }
   bool hasRelaxedSIMD() const { return SIMDLevel >= RelaxedSIMD; }
+  bool hasSharedEverything() const { return HasSharedEverything; }
   bool hasSignExt() const { return HasSignExt; }
   bool hasSIMD128() const { return SIMDLevel >= SIMD128; }
   bool hasTailCall() const { return HasTailCall; }
