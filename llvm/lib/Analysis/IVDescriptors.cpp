@@ -503,7 +503,7 @@ bool RecurrenceDescriptor::AddReductionVar(
   // Check the scalar type to handle both scalar and vector types.
   Type *ScalarTy = RecurrenceType->getScalarType();
   if (Kind == RecurKind::FindLast) {
-    // FindLast supports all types can otherwise be used in recurrences.
+    // FindLast supports all primitive scalar types.
     if (!ScalarTy->isFloatingPointTy() && !ScalarTy->isIntegerTy() &&
         !ScalarTy->isPointerTy())
       return false;
