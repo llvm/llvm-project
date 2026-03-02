@@ -2573,10 +2573,8 @@ bool SchedGroup::canAddSU(SUnit &SU) const {
 }
 
 void SchedGroup::initSchedGroup() {
+  assert (!MaxSize && "Only called for SCHED_BARRIERs which don't have a size." );
   for (auto &SU : DAG->SUnits) {
-    if (isFull())
-      break;
-
     if (canAddSU(SU))
       add(SU);
   }
@@ -2584,18 +2582,22 @@ void SchedGroup::initSchedGroup() {
 
 void SchedGroup::initSchedGroup(std::vector<SUnit>::reverse_iterator RIter,
                                 SUnitsToCandidateSGsMap &SyncedInstrs) {
+  // This function is only used for SCHED_GROUP_BARRIER which always
+  // have a size.
+  assert(MaxSize);
+  assert(Collection.empty());
+
   SUnit &InitSU = *RIter;
   for (auto E = DAG->SUnits.rend(); RIter != E; ++RIter) {
     auto &SU = *RIter;
-    if (isFull())
-      break;
 
     if (canAddSU(SU))
       SyncedInstrs[&SU].push_back(SGID);
   }
 
+  // TODO Do not create SchedGroups with MaxSize 0?
+  assert((MaxSize == 0 || !isFull()) && "Nothing added to Collection");
   add(InitSU);
-  assert(MaxSize);
   (*MaxSize)++;
 }
 
@@ -2604,8 +2606,7 @@ void SchedGroup::initSchedGroup(SUnitsToCandidateSGsMap &SyncedInstrs) {
   auto E = DAG->SUnits.rend();
   for (; I != E; ++I) {
     auto &SU = *I;
-    if (isFull())
-      break;
+
     if (canAddSU(SU))
       SyncedInstrs[&SU].push_back(SGID);
   }
