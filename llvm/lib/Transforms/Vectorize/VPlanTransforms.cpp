@@ -5458,14 +5458,12 @@ VPlanTransforms::narrowInterleaveGroups(VPlan &Plan,
   if (StoreGroups.empty())
     return nullptr;
 
-  // Determine if a scalar epilogue is required. The middle block has exactly 2
-  // successors in the normal case, and 1 successor when a scalar epilogue must
-  // execute (unconditional branch to scalar preheader).
+  VPBasicBlock *MiddleVPBB = Plan.getMiddleBlock();
   bool RequiresScalarEpilogue =
-      Plan.getMiddleBlock()->getNumSuccessors() == 1 &&
-      Plan.getMiddleBlock()->getSingleSuccessor() == Plan.getScalarPreheader();
+      MiddleVPBB->getNumSuccessors() == 1 &&
+      MiddleVPBB->getSingleSuccessor() == Plan.getScalarPreheader();
   // Bail out for tail-folding (middle block with a single successor to exit).
-  if (Plan.getMiddleBlock()->getNumSuccessors() != 2 && !RequiresScalarEpilogue)
+  if (MiddleVPBB->getNumSuccessors() != 2 && !RequiresScalarEpilogue)
     return nullptr;
 
   // All interleave groups in Plan can be narrowed for VFToOptimize. Split the
@@ -5514,7 +5512,6 @@ VPlanTransforms::narrowInterleaveGroups(VPlan &Plan,
     Plan.getVF().replaceAllUsesWith(
         Plan.getConstantInt(CanIV->getScalarType(), 1));
   }
-
   // Materialize vector trip count with the narrowed step.
   materializeVectorTripCount(Plan, VectorPH, /*TailByMasking=*/false,
                              RequiresScalarEpilogue, Step);

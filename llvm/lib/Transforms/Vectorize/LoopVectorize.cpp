@@ -9350,7 +9350,8 @@ static void fixScalarResumeValuesFromBypass(BasicBlock *BypassBlock, Loop *L,
         LVL.getPrimaryInduction());
     // TODO: Directly add as extra operand to the VPResumePHI recipe.
     if (auto *Inc = dyn_cast<PHINode>(IVPhi->getIncomingValueForBlock(PH))) {
-      Inc->setIncomingValueForBlock(BypassBlock, V);
+      if (Inc->getBasicBlockIndex(BypassBlock) != -1)
+        Inc->setIncomingValueForBlock(BypassBlock, V);
     } else {
       // If the resume value in the scalar preheader was simplified (e.g., when
       // narrowInterleaveGroups optimized away the resume PHIs), create a new

@@ -125,10 +125,9 @@ define void @interleave_group_with_countable_early_exit(i64 %n, ptr %dst) {
 ; CHECK-NEXT:    br i1 [[TMP9]], label %[[SCALAR_PH]], label %[[VECTOR_PH:.*]]
 ; CHECK:       [[VECTOR_PH]]:
 ; CHECK-NEXT:    [[TMP10:%.*]] = call i64 @llvm.vscale.i64()
-; CHECK-NEXT:    [[TMP11:%.*]] = shl nuw i64 [[TMP10]], 1
-; CHECK-NEXT:    [[N_MOD_VF:%.*]] = urem i64 [[TMP0]], [[TMP11]]
+; CHECK-NEXT:    [[N_MOD_VF:%.*]] = urem i64 [[TMP0]], [[TMP10]]
 ; CHECK-NEXT:    [[TMP12:%.*]] = icmp eq i64 [[N_MOD_VF]], 0
-; CHECK-NEXT:    [[TMP13:%.*]] = select i1 [[TMP12]], i64 [[TMP11]], i64 [[N_MOD_VF]]
+; CHECK-NEXT:    [[TMP13:%.*]] = select i1 [[TMP12]], i64 [[TMP10]], i64 [[N_MOD_VF]]
 ; CHECK-NEXT:    [[N_VEC:%.*]] = sub i64 [[TMP0]], [[TMP13]]
 ; CHECK-NEXT:    br label %[[VECTOR_BODY:.*]]
 ; CHECK:       [[VECTOR_BODY]]:
@@ -187,10 +186,9 @@ define void @interleave_group_with_countable_early_exit(i64 %n, ptr %dst) {
 ; EPILOGUE-NEXT:    br i1 [[TMP9]], label %[[SCALAR_PH]], label %[[VECTOR_PH:.*]]
 ; EPILOGUE:       [[VECTOR_PH]]:
 ; EPILOGUE-NEXT:    [[TMP10:%.*]] = call i64 @llvm.vscale.i64()
-; EPILOGUE-NEXT:    [[TMP11:%.*]] = shl nuw i64 [[TMP10]], 1
-; EPILOGUE-NEXT:    [[N_MOD_VF:%.*]] = urem i64 [[TMP0]], [[TMP11]]
+; EPILOGUE-NEXT:    [[N_MOD_VF:%.*]] = urem i64 [[TMP0]], [[TMP10]]
 ; EPILOGUE-NEXT:    [[TMP12:%.*]] = icmp eq i64 [[N_MOD_VF]], 0
-; EPILOGUE-NEXT:    [[TMP13:%.*]] = select i1 [[TMP12]], i64 [[TMP11]], i64 [[N_MOD_VF]]
+; EPILOGUE-NEXT:    [[TMP13:%.*]] = select i1 [[TMP12]], i64 [[TMP10]], i64 [[N_MOD_VF]]
 ; EPILOGUE-NEXT:    [[N_VEC:%.*]] = sub i64 [[TMP0]], [[TMP13]]
 ; EPILOGUE-NEXT:    br label %[[VECTOR_BODY:.*]]
 ; EPILOGUE:       [[VECTOR_BODY]]:
