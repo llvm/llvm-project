@@ -1770,6 +1770,17 @@ bool EarlyCSE::processNode(DomTreeNode *Node) {
           LastStore = nullptr;
       }
     }
+
+    // If the ret insn returns an undefined (but not a poinson) value,
+    // change it to unreachable.
+    if (Inst.getOpcode() == Instruction::Ret) {
+      auto *RI = cast<ReturnInst>(&Inst);
+      auto *RetVal = RI->getReturnValue();
+      if (isa<UndefValue>(RetVal) && !isa<PoisonValue>(RetVal)) {
+        changeToUnreachable(&Inst, false, NULL, &*MSSAUpdater);
+        Changed = true;
+      }
+    }
   }
 
   return Changed;
