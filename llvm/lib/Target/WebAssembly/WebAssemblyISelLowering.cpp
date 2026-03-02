@@ -2834,12 +2834,10 @@ static SDValue foldShiftByConstantToExtMul(SDValue Op, SelectionDAG &DAG) {
   unsigned ExtOpc = LHS.getOpcode();
   bool IsLow = false;
   if (ExtOpc == WebAssemblyISD::EXTEND_LOW_S ||
-      ExtOpc == WebAssemblyISD::EXTEND_HIGH_S) {
-    IsLow = (ExtOpc == WebAssemblyISD::EXTEND_LOW_S);
-  } else if (ExtOpc == WebAssemblyISD::EXTEND_LOW_U ||
-             ExtOpc == WebAssemblyISD::EXTEND_HIGH_U) {
-    IsLow = (ExtOpc == WebAssemblyISD::EXTEND_LOW_U);
-  } else {
+      ExtOpc == WebAssemblyISD::EXTEND_LOW_U) {
+    IsLow = true;
+  } else if (ExtOpc != WebAssemblyISD::EXTEND_HIGH_S &&
+             ExtOpc != WebAssemblyISD::EXTEND_HIGH_U) {
     return SDValue();
   }
 
