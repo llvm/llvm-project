@@ -11,6 +11,7 @@
 ! RUN: %flang_fc1 -emit-hlfir -fopenmp -fopenmp-version=50 -J %t %t/omp-declare-mapper-7.use.f90 -o - | FileCheck %t/omp-declare-mapper-7.use.f90
 ! RUN: %flang_fc1 -emit-hlfir -fopenmp -fopenmp-version=50 -module-dir %t %t/omp-declare-mapper-8.mod.f90 -o - >/dev/null
 ! RUN: %flang_fc1 -emit-hlfir -fopenmp -fopenmp-version=50 -J %t %t/omp-declare-mapper-8.use.f90 -o - | FileCheck %t/omp-declare-mapper-8.use.f90
+! RUN: %flang_fc1 -emit-hlfir -fopenmp -fopenmp-version=50 -J %t %t/omp-declare-mapper-9.implicit.f90 -o - | FileCheck %t/omp-declare-mapper-9.implicit.f90
 
 !--- omp-declare-mapper-1.f90
 subroutine declare_mapper_1
@@ -360,3 +361,31 @@ program use_module_default_mapper
     a%x = 8
   !$omp end target
 end program use_module_default_mapper
+
+!--- omp-declare-mapper-9.implicit.f90
+! Verify that we emit declare mapper ops for arrays of records that are mapped
+! implicitly.
+
+! CHECK: omp.declare_mapper @[[MAPPER_NAME:.*record_with_alloc_modrecord_with_alloc_omp_default_mapper]] : !fir.type
+
+! CHECK: func.func @{{.*}}random_inputs()
+! CHECK:   %[[ARR_DECL:.*]]:2 = hlfir.declare {{.*}} {{{.*}}, uniq_name = "{{.*}}inputs"}
+! CHECK:   omp.map.info var_ptr(%[[ARR_DECL]]#1 : {{.*}}) {{.*}} mapper(@[[MAPPER_NAME]])
+! CHECK-NOT: omp.map.info
+module record_with_alloc_mod
+  implicit none
+  public :: record_with_alloc
+
+  type record_with_alloc
+    real, allocatable :: values_(:)
+  end type
+end module record_with_alloc_mod
+
+subroutine random_inputs()
+  use record_with_alloc_mod, only : record_with_alloc
+  type(record_with_alloc), target :: inputs(2)
+
+  !$omp target
+    inputs(1)%values_ = [1,2,3,4]
+  !$omp end target
+end subroutine
