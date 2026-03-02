@@ -48,8 +48,6 @@ namespace HexagonII {
     HVXVectorAccess
   };
 
-  // Represents additional operand/result register type constraints attached to
-  // specific instructions (e.g. QF register types).
   enum class RegType : uint8_t {
     Unknown = 0,
     QF32,
@@ -63,7 +61,7 @@ namespace HexagonII {
     RegType Input3 = RegType::Unknown;
   };
 
-  inline RegTypeInfo getRegTypeInfo(unsigned /*Opcode*/) { return {}; }
+  RegTypeInfo getRegTypeInfo(unsigned Opcode);
 
   inline RegType getOpRegType(unsigned Opcode) {
     return getRegTypeInfo(Opcode).Output;

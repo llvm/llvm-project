@@ -4783,6 +4783,119 @@ bool HexagonInstrInfo::isQFPMul(const MachineInstr *MI) const {
           MI->getOpcode() == Hexagon::V6_vmpy_qf32);
 }
 
+namespace llvm::HexagonII {
+
+static constexpr RegTypeInfo make(RegType Out, RegType In1 = RegType::Unknown,
+                                  RegType In2 = RegType::Unknown,
+                                  RegType In3 = RegType::Unknown) {
+  RegTypeInfo I;
+  I.Output = Out;
+  I.Input1 = In1;
+  I.Input2 = In2;
+  I.Input3 = In3;
+  return I;
+}
+
+RegTypeInfo getRegTypeInfo(unsigned Opcode) {
+  switch (Opcode) {
+  default:
+    return {};
+
+  case Hexagon::V6_vabs_qf16_hf:
+    return make(RegType::QF16);
+  case Hexagon::V6_vabs_qf16_qf16:
+    return make(RegType::QF16, RegType::QF16);
+  case Hexagon::V6_vabs_qf32_qf32:
+    return make(RegType::QF32, RegType::QF32);
+  case Hexagon::V6_vabs_qf32_sf:
+    return make(RegType::QF32);
+  case Hexagon::V6_vadd_hf:
+    return make(RegType::QF16);
+  case Hexagon::V6_vadd_qf16:
+    return make(RegType::QF16, RegType::QF16, RegType::QF16);
+  case Hexagon::V6_vadd_qf16_mix:
+    return make(RegType::QF16, RegType::QF16);
+  case Hexagon::V6_vadd_qf32:
+    return make(RegType::QF32, RegType::QF32, RegType::QF32);
+  case Hexagon::V6_vadd_qf32_mix:
+    return make(RegType::QF32, RegType::QF32);
+  case Hexagon::V6_vadd_sf:
+    return make(RegType::QF32);
+  case Hexagon::V6_vconv_bf_qf32:
+    return make(RegType::Unknown, RegType::QF32);
+  case Hexagon::V6_vconv_f8_qf16:
+    return make(RegType::Unknown, RegType::QF16);
+  case Hexagon::V6_vconv_hf_qf16:
+    return make(RegType::Unknown, RegType::QF16);
+  case Hexagon::V6_vconv_hf_qf32:
+    return make(RegType::Unknown, RegType::QF32);
+  case Hexagon::V6_vconv_qf16_f8:
+    return make(RegType::QF16);
+  case Hexagon::V6_vconv_qf16_hf:
+    return make(RegType::QF16);
+  case Hexagon::V6_vconv_qf16_qf16:
+    return make(RegType::QF16, RegType::QF16);
+  case Hexagon::V6_vconv_qf32_qf32:
+    return make(RegType::QF32, RegType::QF32);
+  case Hexagon::V6_vconv_qf32_sf:
+    return make(RegType::QF32);
+  case Hexagon::V6_vconv_sf_qf32:
+    return make(RegType::Unknown, RegType::QF32);
+  case Hexagon::V6_vilog2_qf16:
+    return make(RegType::Unknown, RegType::QF16);
+  case Hexagon::V6_vilog2_qf32:
+    return make(RegType::Unknown, RegType::QF32);
+  case Hexagon::V6_vmpy_qf16:
+    return make(RegType::QF16, RegType::QF16, RegType::QF16);
+  case Hexagon::V6_vmpy_qf16_hf:
+    return make(RegType::QF16);
+  case Hexagon::V6_vmpy_qf16_mix_hf:
+    return make(RegType::QF16, RegType::QF16);
+  case Hexagon::V6_vmpy_qf32:
+    return make(RegType::QF32, RegType::QF32, RegType::QF32);
+  case Hexagon::V6_vmpy_qf32_hf:
+    return make(RegType::QF32);
+  case Hexagon::V6_vmpy_qf32_mix_hf:
+    return make(RegType::QF32, RegType::QF16);
+  case Hexagon::V6_vmpy_qf32_qf16:
+    return make(RegType::QF32, RegType::QF16, RegType::QF16);
+  case Hexagon::V6_vmpy_qf32_sf:
+    return make(RegType::QF32);
+  case Hexagon::V6_vmpy_rt_hf:
+    return make(RegType::QF16);
+  case Hexagon::V6_vmpy_rt_qf16:
+    return make(RegType::QF16, RegType::QF16);
+  case Hexagon::V6_vmpy_rt_sf:
+    return make(RegType::QF32);
+  case Hexagon::V6_vneg_qf16_hf:
+    return make(RegType::QF16);
+  case Hexagon::V6_vneg_qf16_qf16:
+    return make(RegType::QF16, RegType::QF16);
+  case Hexagon::V6_vneg_qf32_qf32:
+    return make(RegType::QF32, RegType::QF32);
+  case Hexagon::V6_vneg_qf32_sf:
+    return make(RegType::QF32);
+  case Hexagon::V6_vsub_hf:
+    return make(RegType::QF16);
+  case Hexagon::V6_vsub_qf16:
+    return make(RegType::QF16, RegType::QF16, RegType::QF16);
+  case Hexagon::V6_vsub_qf16_mix:
+    return make(RegType::QF16, RegType::QF16);
+  case Hexagon::V6_vsub_qf32:
+    return make(RegType::QF32, RegType::QF32, RegType::QF32);
+  case Hexagon::V6_vsub_qf32_mix:
+    return make(RegType::QF32, RegType::QF32);
+  case Hexagon::V6_vsub_sf:
+    return make(RegType::QF32);
+  case Hexagon::V6_vsub_sf_mix:
+    return make(RegType::QF32, RegType::Unknown, RegType::QF32);
+  case Hexagon::V6_vsub_hf_mix:
+    return make(RegType::QF16, RegType::Unknown, RegType::QF16);
+  }
+}
+
+} // namespace llvm::HexagonII
+
 bool HexagonInstrInfo::usesQF32Operand(MachineInstr *MI, unsigned Index) const {
   auto Info = HexagonII::getRegTypeInfo(MI->getOpcode());
   switch (Index) {
