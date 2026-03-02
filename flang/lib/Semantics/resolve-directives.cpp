@@ -3148,6 +3148,12 @@ void OmpAttributeVisitor::ResolveOmpDesignator(
         AddAllocateName(name);
       }
     }
+    // Save the original symbol. For privatizing clauses, ensure enclosing
+    // constructs properly capture the variable.
+    const Symbol *origSymbol{name->symbol};
+    if (origSymbol && privateDataSharingAttributeFlags.test(ompFlag)) {
+      CreateImplicitSymbols(origSymbol);
+    }
     if (ompFlag == Symbol::Flag::OmpReduction) {
       // Using variables inside of a namelist in OpenMP reductions
       // is allowed by the standard, but is not allowed for
