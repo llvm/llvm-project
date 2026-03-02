@@ -3,30 +3,9 @@
 // RUN:     bugprone-string-constructor.WarnOnLargeLength: true, \
 // RUN:     bugprone-string-constructor.LargeLengthThreshold: 10, \
 // RUN:     bugprone-string-constructor.StringNames: '::std::basic_string;::std::basic_string_view;::custom::String' \
-// RUN:   }}"
+// RUN:   }}" -- -isystem %clang_tidy_headers
 
-namespace std {
-template <typename T>
-class allocator {};
-template <typename T>
-class char_traits {};
-template <typename C, typename T = std::char_traits<C>, typename A = std::allocator<C>>
-struct basic_string {
-  basic_string();
-  basic_string(const C *, unsigned int size, const A &a = A());
-  basic_string(const C *, const A &allocator = A());
-  basic_string(unsigned int size, C c, const A &a = A());
-};
-typedef basic_string<char> string;
-
-template <typename C, typename T = std::char_traits<C>>
-struct basic_string_view {
-  basic_string_view();
-  basic_string_view(const C *, unsigned int size);
-  basic_string_view(const C *);
-};
-typedef basic_string_view<char> string_view;
-} // namespace std
+#include <string>
 
 namespace custom {
 struct String {
