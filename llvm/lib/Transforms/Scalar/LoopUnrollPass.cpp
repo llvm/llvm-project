@@ -946,7 +946,7 @@ void llvm::computeUnrollCount(
     OptimizationRemarkEmitter *ORE, unsigned TripCount, unsigned MaxTripCount,
     bool MaxOrZero, unsigned TripMultiple, const UnrollCostEstimator &UCE,
     TargetTransformInfo::UnrollingPreferences &UP,
-    TargetTransformInfo::PeelingPreferences &PP, bool &UseUpperBound) {
+    TargetTransformInfo::PeelingPreferences &PP) {
 
   unsigned LoopSize = UCE.getRolledLoopSize();
 
@@ -994,7 +994,6 @@ void llvm::computeUnrollCount(
     if (auto UnrollFactor = shouldFullUnroll(L, TTI, DT, SE, EphValues,
                                              TripCount, UCE, UP)) {
       UP.Count = *UnrollFactor;
-      UseUpperBound = false;
       return;
     }
   }
@@ -1017,7 +1016,6 @@ void llvm::computeUnrollCount(
     if (auto UnrollFactor = shouldFullUnroll(L, TTI, DT, SE, EphValues,
                                              MaxTripCount, UCE, UP)) {
       UP.Count = *UnrollFactor;
-      UseUpperBound = true;
       return;
     }
   }
@@ -1299,12 +1297,8 @@ tryToUnrollLoop(Loop *L, DominatorTree &DT, LoopInfo *LI, ScalarEvolution &SE,
     MaxOrZero = SE.isBackedgeTakenCountMaxOrZero(L);
   }
 
-  // computeUnrollCount() decides whether it is beneficial to use upper bound to
-  // fully unroll the loop.
-  bool UseUpperBound = false;
   computeUnrollCount(L, TTI, DT, LI, &AC, SE, EphValues, &ORE, TripCount,
-                     MaxTripCount, MaxOrZero, TripMultiple, UCE, UP, PP,
-                     UseUpperBound);
+                     MaxTripCount, MaxOrZero, TripMultiple, UCE, UP, PP);
   if (!UP.Count)
     return LoopUnrollResult::Unmodified;
 

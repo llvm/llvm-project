@@ -164,7 +164,7 @@ LLVM_ABI void computeUnrollCount(
     OptimizationRemarkEmitter *ORE, unsigned TripCount, unsigned MaxTripCount,
     bool MaxOrZero, unsigned TripMultiple, const UnrollCostEstimator &UCE,
     TargetTransformInfo::UnrollingPreferences &UP,
-    TargetTransformInfo::PeelingPreferences &PP, bool &UseUpperBound);
+    TargetTransformInfo::PeelingPreferences &PP);
 
 LLVM_ABI std::optional<RecurrenceDescriptor>
 canParallelizeReductionWhenUnrolling(PHINode &Phi, Loop *L,
