@@ -180,6 +180,7 @@ static void writeNameLink(const StringRef &CurrentPath, const Reference &R,
 
 static void genMarkdown(const ClangDocContext &CDCtx, const EnumInfo &I,
                         llvm::raw_ostream &OS) {
+  OS << "| enum ";
   if (I.Scoped)
     OS << "class ";
   OS << (I.Name.empty() ? "(unnamed)" : StringRef(I.Name)) << " ";

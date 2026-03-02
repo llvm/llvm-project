@@ -283,10 +283,11 @@ void GPUDialect::initialize() {
   addInterfaces<GPUInlinerInterface>();
   declarePromisedInterface<bufferization::BufferDeallocationOpInterface,
                            TerminatorOp>();
-  declarePromisedInterfaces<
-      ValueBoundsOpInterface, ClusterDimOp, ClusterDimBlocksOp, ClusterIdOp,
-      ClusterBlockIdOp, BlockDimOp, BlockIdOp, GridDimOp, ThreadIdOp, LaneIdOp,
-      SubgroupIdOp, GlobalIdOp, NumSubgroupsOp, SubgroupSizeOp, LaunchOp>();
+  declarePromisedInterfaces<ValueBoundsOpInterface, ClusterDimOp,
+                            ClusterDimBlocksOp, ClusterIdOp, ClusterBlockIdOp,
+                            BlockDimOp, BlockIdOp, GridDimOp, ThreadIdOp,
+                            LaneIdOp, SubgroupIdOp, GlobalIdOp, NumSubgroupsOp,
+                            SubgroupSizeOp, LaunchOp, SubgroupBroadcastOp>();
 }
 
 static std::string getSparseHandleKeyword(SparseHandleKind kind) {
@@ -892,10 +893,12 @@ LogicalResult LaunchOp::verifyRegions() {
   // Kernel launch takes kNumConfigOperands leading operands for grid/block
   // sizes and transforms them into kNumConfigRegionAttributes region arguments
   // for block/thread identifiers and grid/block sizes.
-  if (!getBody().empty()) {
-    if (getBody().getNumArguments() <
-        kNumConfigRegionAttributes + getNumWorkgroupAttributions())
-      return emitOpError("unexpected number of region arguments");
+  if (getBody().empty()) {
+    return emitOpError("body region is empty");
+  }
+  if (getBody().getNumArguments() <
+      kNumConfigRegionAttributes + getNumWorkgroupAttributions()) {
+    return emitOpError("unexpected number of region arguments");
   }
 
   // Verify Attributions Address Spaces.
@@ -2532,7 +2535,9 @@ LogicalResult WarpExecuteOnLane0Op::verify() {
   if (getArgs().size() != getWarpRegion().getNumArguments())
     return emitOpError(
         "expected same number op arguments and block arguments.");
-  gpu::YieldOp yield = getTerminator();
+  auto yield = dyn_cast<gpu::YieldOp>(getBody()->getTerminator());
+  if (!yield)
+    return emitOpError("expected body to be terminated with 'gpu.yield'");
   if (yield.getNumOperands() != getNumResults())
     return emitOpError(
         "expected same number of yield operands and return values.");

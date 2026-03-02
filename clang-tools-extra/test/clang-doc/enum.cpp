@@ -5,12 +5,16 @@
 // RUN: FileCheck %s < %t/html/GlobalNamespace/index.html --check-prefix=HTML-INDEX
 // RUN: FileCheck %s < %t/html/GlobalNamespace/_ZTV7Animals.html --check-prefix=HTML-ANIMAL-LINE
 // RUN: FileCheck %s < %t/html/GlobalNamespace/_ZTV7Animals.html --check-prefix=HTML-ANIMAL
+// RUN: FileCheck %s < %t/html/GlobalNamespace/_ZTV15FilePermissions.html --check-prefix=HTML-PERM-LINE
+// RUN: FileCheck %s < %t/html/GlobalNamespace/_ZTV15FilePermissions.html --check-prefix=HTML-PERM
 // RUN: FileCheck %s < %t/html/Vehicles/index.html --check-prefix=HTML-VEHICLES-LINE
 // RUN: FileCheck %s < %t/html/Vehicles/index.html --check-prefix=HTML-VEHICLES
 // RUN: FileCheck %s < %t/GlobalNamespace/index.md --check-prefix=MD-INDEX-LINE
 // RUN: FileCheck %s < %t/GlobalNamespace/index.md --check-prefix=MD-INDEX
 // RUN: FileCheck %s < %t/GlobalNamespace/Animals.md --check-prefix=MD-ANIMAL-LINE
 // RUN: FileCheck %s < %t/GlobalNamespace/Animals.md --check-prefix=MD-ANIMAL
+// RUN: FileCheck %s < %t/GlobalNamespace/FilePermissions.md --check-prefix=MD-PERM-LINE
+// RUN: FileCheck %s < %t/GlobalNamespace/FilePermissions.md --check-prefix=MD-PERM
 // RUN: FileCheck %s < %t/Vehicles/index.md --check-prefix=MD-VEHICLES-LINE
 // RUN: FileCheck %s < %t/Vehicles/index.md --check-prefix=MD-VEHICLES
 
@@ -35,29 +39,37 @@ enum Color {
 // MD-INDEX: | Blue | 2 | Comment 3 |
 // MD-INDEX: **brief** For specifying RGB colors
 
-// HTML-INDEX:     <div>
-// HTML-INDEX:         <pre><code class="language-cpp code-clang-doc">enum Color</code></pre>
-// HTML-INDEX:     </div>
-// HTML-INDEX:     <table class="table-wrapper">
-// HTML-INDEX:         <tbody>
-// HTML-INDEX:             <tr>
-// HTML-INDEX:                 <th>Name</th>
-// HTML-INDEX:                 <th>Value</th>
-// HTML-INDEX:             </tr>
-// HTML-INDEX:             <tr>
-// HTML-INDEX:                 <td>Red</td>
-// HTML-INDEX:                 <td>0</td>
-// HTML-INDEX:             </tr>
-// HTML-INDEX:             <tr>
-// HTML-INDEX:                 <td>Green</td>
-// HTML-INDEX:                 <td>1</td>
-// HTML-INDEX:             </tr>
-// HTML-INDEX:             <tr>
-// HTML-INDEX:                 <td>Blue</td>
-// HTML-INDEX:                 <td>2</td>
-// HTML-INDEX:             </tr>
-// HTML-INDEX:         </tbody>
-// HTML-INDEX:     </table>
+// HTML-INDEX-LABEL:  <div id="{{([0-9A-F]{40})}}" class="delimiter-container">
+// HTML-INDEX-NEXT:     <div>
+// HTML-INDEX-NEXT:       <pre><code class="language-cpp code-clang-doc">enum Color</code></pre>
+// HTML-INDEX-NEXT:     </div>
+// HTML-INDEX-NEXT:     <table class="table-wrapper">
+// HTML-INDEX-NEXT:         <tbody>
+// HTML-INDEX-NEXT:             <tr>
+// HTML-INDEX-NEXT:                 <th>Name</th>
+// HTML-INDEX-NEXT:                 <th>Value</th>
+// HTML-INDEX-NEXT:             </tr>
+// HTML-INDEX-NEXT:             <tr>
+// HTML-INDEX-NEXT:                 <td>Red</td>
+// HTML-INDEX-NEXT:                 <td>0</td>
+// HTML-INDEX-NEXT:             </tr>
+// HTML-INDEX-NEXT:             <tr>
+// HTML-INDEX-NEXT:                 <td>Green</td>
+// HTML-INDEX-NEXT:                 <td>1</td>
+// HTML-INDEX-NEXT:             </tr>
+// HTML-INDEX-NEXT:             <tr>
+// HTML-INDEX-NEXT:                 <td>Blue</td>
+// HTML-INDEX-NEXT:                 <td>2</td>
+// HTML-INDEX-NEXT:             </tr>
+// HTML-INDEX-NEXT:         </tbody>
+// HTML-INDEX-NEXT:     </table>
+// HTML-INDEX-NEXT:     <div class="doc-card">
+// HTML-INDEX-NEXT:       <div class="nested-delimiter-container">
+// HTML-INDEX-NEXT:           <p> For specifying RGB colors</p>
+// HTML-INDEX-NEXT:       </div>
+// HTML-INDEX-NEXT:     </div>
+// HTML-INDEX-NEXT:     <p>Defined at line [[@LINE-45]] of file {{.*}}clang-tools-extra{{[\/]}}test{{[\/]}}clang-doc{{[\/]}}enum.cpp</p>
+// HTML-INDEX-NEXT:   </div>
 
 /**
  * @brief Shape Types
@@ -277,11 +289,11 @@ public:
   };
 };
 
-// HTML-ANIMAL:      <section id="Enums" class="section-container">
-// HTML-ANIMAL-NEXT:     <h2>Enumerations</h2>
-// HTML-ANIMAL-NEXT:     <div id="{{([0-9A-F]{40})}}" class="delimiter-container">
+// HTML-ANIMAL-LABEL:   <section id="Enums" class="section-container">
+// HTML-ANIMAL-NEXT:      <h2>Enumerations</h2>
+// HTML-ANIMAL-NEXT:      <div id="{{([0-9A-F]{40})}}" class="delimiter-container">
 // HTML-ANIMAL-NEXT:         <div>
-// HTML-ANIMAL-NEXT:             <pre><code class="language-cpp code-clang-doc">enum AnimalType</code></pre>
+// HTML-ANIMAL-NEXT:           <pre><code class="language-cpp code-clang-doc">enum AnimalType</code></pre>
 // HTML-ANIMAL-NEXT:         </div>
 // HTML-ANIMAL-NEXT:         <table class="table-wrapper">
 // HTML-ANIMAL-NEXT:             <tbody>
@@ -308,9 +320,9 @@ public:
 // HTML-ANIMAL-NEXT:                 <p> specify what animal the class is</p>
 // HTML-ANIMAL-NEXT:             </div>
 // HTML-ANIMAL-NEXT:         </div>
-// HTML-ANIMAL-NEXT:         <p>Defined at line 116 of file {{.*}}enum.cpp</p>
-// HTML-ANIMAL-NEXT:     </div>
-// HTML-ANIMAL-NEXT: </section>
+// HTML-ANIMAL-NEXT:         <p>Defined at line [[@LINE-40]] of file {{.*}}enum.cpp</p>
+// HTML-ANIMAL-NEXT:      </div>
+// HTML-ANIMAL-NEXT:    </section>
 
 // MD-ANIMAL: # class Animals
 // MD-ANIMAL: ## Enums
@@ -346,33 +358,41 @@ enum Car {
 // MD-VEHICLES: | Hatchback | 3 | Comment 4 |
 // MD-VEHICLES: **brief** specify type of car
 
-// HTML-VEHICLES:     <div>
-// HTML-VEHICLES:         <pre><code class="language-cpp code-clang-doc">enum Car</code></pre>
-// HTML-VEHICLES:      </div>
-// HTML-VEHICLES:      <table class="table-wrapper">
-// HTML-VEHICLES:          <tbody>
-// HTML-VEHICLES:              <tr>
-// HTML-VEHICLES:                  <th>Name</th>
-// HTML-VEHICLES:                  <th>Value</th>
-// HTML-VEHICLES:              </tr>
-// HTML-VEHICLES:              <tr>
-// HTML-VEHICLES:                  <td>Sedan</td>
-// HTML-VEHICLES:                  <td>0</td>
-// HTML-VEHICLES:              </tr>
-// HTML-VEHICLES:              <tr>
-// HTML-VEHICLES:                  <td>SUV</td>
-// HTML-VEHICLES:                  <td>1</td>
-// HTML-VEHICLES:              </tr>
-// HTML-VEHICLES:              <tr>
-// HTML-VEHICLES:                  <td>Pickup</td>
-// HTML-VEHICLES:                  <td>2</td>
-// HTML-VEHICLES:              </tr>
-// HTML-VEHICLES:              <tr>
-// HTML-VEHICLES:                  <td>Hatchback</td>
-// HTML-VEHICLES:                  <td>3</td>
-// HTML-VEHICLES:              </tr>
-// HTML-VEHICLES:          </tbody>
-// HTML-VEHICLES:      </table>
+// HTML-VEHICLES-LABEL:   <div id="{{([0-9A-F]{40})}}" class="delimiter-container">
+// HTML-VEHICLES-NEXT:      <div>
+// HTML-VEHICLES-NEXT:       <pre><code class="language-cpp code-clang-doc">enum Car</code></pre>
+// HTML-VEHICLES-NEXT:      </div>
+// HTML-VEHICLES-NEXT:      <table class="table-wrapper">
+// HTML-VEHICLES-NEXT:          <tbody>
+// HTML-VEHICLES-NEXT:              <tr>
+// HTML-VEHICLES-NEXT:                  <th>Name</th>
+// HTML-VEHICLES-NEXT:                  <th>Value</th>
+// HTML-VEHICLES-NEXT:              </tr>
+// HTML-VEHICLES-NEXT:              <tr>
+// HTML-VEHICLES-NEXT:                  <td>Sedan</td>
+// HTML-VEHICLES-NEXT:                  <td>0</td>
+// HTML-VEHICLES-NEXT:              </tr>
+// HTML-VEHICLES-NEXT:              <tr>
+// HTML-VEHICLES-NEXT:                  <td>SUV</td>
+// HTML-VEHICLES-NEXT:                  <td>1</td>
+// HTML-VEHICLES-NEXT:              </tr>
+// HTML-VEHICLES-NEXT:              <tr>
+// HTML-VEHICLES-NEXT:                  <td>Pickup</td>
+// HTML-VEHICLES-NEXT:                  <td>2</td>
+// HTML-VEHICLES-NEXT:              </tr>
+// HTML-VEHICLES-NEXT:              <tr>
+// HTML-VEHICLES-NEXT:                  <td>Hatchback</td>
+// HTML-VEHICLES-NEXT:                  <td>3</td>
+// HTML-VEHICLES-NEXT:              </tr>
+// HTML-VEHICLES-NEXT:          </tbody>
+// HTML-VEHICLES-NEXT:      </table>
+// HTML-VEHICLES-NEXT:      <div class="doc-card">
+// HTML-VEHICLES-NEXT:        <div class="nested-delimiter-container">
+// HTML-VEHICLES-NEXT:           <p> specify type of car</p>
+// HTML-VEHICLES-NEXT:        </div>
+// HTML-VEHICLES-NEXT:      </div>
+// HTML-VEHICLES-NEXT:      <p>Defined at line [[@LINE-54]] of file {{.*}}clang-tools-extra{{[\/]}}test{{[\/]}}clang-doc{{[\/]}}enum.cpp</p>
+// HTML-VEHICLES-NEXT:    </div>
 
 enum ColorUserSpecified {
   RedUserSpecified = 'A',

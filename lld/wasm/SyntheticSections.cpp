@@ -662,6 +662,13 @@ void DataCountSection::writeBody() {
 }
 
 bool DataCountSection::isNeeded() const {
+  // The datacount section is only required under certain circumstance.
+  // Specifically, when the module includes bulk memory instructions that deal
+  // with passive data segments. i.e. memory.init/data.drop.
+  // LLVM does not yet have relocation types for data segments so these
+  // instructions are not yet supported in input files.  However, in the case
+  // of shared memory, lld itself will generate these instructions as part of
+  // `__wasm_init_memory`. See Writer::createInitMemoryFunction.
   return numSegments && ctx.arg.sharedMemory;
 }
 
