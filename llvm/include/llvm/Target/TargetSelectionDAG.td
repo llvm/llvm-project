@@ -565,6 +565,10 @@ def partial_reduce_umla : SDNode<"ISD::PARTIAL_REDUCE_UMLA",
                                  SDTPartialReduceMLA>;
 def partial_reduce_smla : SDNode<"ISD::PARTIAL_REDUCE_SMLA",
                                  SDTPartialReduceMLA>;
+def partial_reduce_umls : SDNode<"ISD::PARTIAL_REDUCE_UMLS",
+                                 SDTPartialReduceMLA>;
+def partial_reduce_smls : SDNode<"ISD::PARTIAL_REDUCE_SMLS",
+                                 SDTPartialReduceMLA>;
 def partial_reduce_sumla : SDNode<"ISD::PARTIAL_REDUCE_SUMLA",
                                  SDTPartialReduceMLA>;
 def partial_reduce_fmla : SDNode<"ISD::PARTIAL_REDUCE_FMLA",

@@ -2076,6 +2076,8 @@ SDValue DAGCombiner::visit(SDNode *N) {
   case ISD::EXPERIMENTAL_VECTOR_HISTOGRAM: return visitMHISTOGRAM(N);
   case ISD::PARTIAL_REDUCE_SMLA:
   case ISD::PARTIAL_REDUCE_UMLA:
+  case ISD::PARTIAL_REDUCE_SMLS:
+  case ISD::PARTIAL_REDUCE_UMLS:
   case ISD::PARTIAL_REDUCE_SUMLA:
   case ISD::PARTIAL_REDUCE_FMLA:
                                 return visitPARTIAL_REDUCE_MLA(N);
@@ -13477,6 +13479,14 @@ SDValue DAGCombiner::foldPartialReduceMLAMulOp(SDNode *N) {
     Opc = Op1->getOpcode();
   }
 
+  bool IsMLS = false;
+  if (Opc == ISD::SUB &&
+      ISD::isConstantSplatVectorAllZeros(Op1->getOperand(0).getNode())) {
+    Op1 = Op1->getOperand(1);
+    Opc = Op1->getOpcode();
+    IsMLS = true;
+  }
+
   if (Opc != ISD::MUL && Opc != ISD::FMUL && Opc != ISD::SHL)
     return SDValue();
 
@@ -13538,6 +13548,10 @@ SDValue DAGCombiner::foldPartialReduceMLAMulOp(SDNode *N) {
     unsigned NewOpcode = LHSOpcode == ISD::SIGN_EXTEND
                              ? ISD::PARTIAL_REDUCE_SMLA
                              : ISD::PARTIAL_REDUCE_UMLA;
+    if (IsMLS)
+      NewOpcode = NewOpcode == ISD::PARTIAL_REDUCE_SMLA
+                      ? ISD::PARTIAL_REDUCE_SMLS
+                      : ISD::PARTIAL_REDUCE_UMLS;
 
     // Only perform these combines if the target supports folding
     // the extends into the operation.
@@ -13561,18 +13575,22 @@ SDValue DAGCombiner::foldPartialReduceMLAMulOp(SDNode *N) {
 
   unsigned NewOpc;
   if (LHSOpcode == ISD::SIGN_EXTEND && RHSOpcode == ISD::SIGN_EXTEND)
-    NewOpc = ISD::PARTIAL_REDUCE_SMLA;
+    NewOpc = IsMLS ? ISD::PARTIAL_REDUCE_SMLS : ISD::PARTIAL_REDUCE_SMLA;
   else if (LHSOpcode == ISD::ZERO_EXTEND && RHSOpcode == ISD::ZERO_EXTEND)
-    NewOpc = ISD::PARTIAL_REDUCE_UMLA;
-  else if (LHSOpcode == ISD::SIGN_EXTEND && RHSOpcode == ISD::ZERO_EXTEND)
+    NewOpc = IsMLS ? ISD::PARTIAL_REDUCE_UMLS : ISD::PARTIAL_REDUCE_UMLA;
+  else if (!IsMLS && LHSOpcode == ISD::SIGN_EXTEND &&
+           RHSOpcode == ISD::ZERO_EXTEND)
     NewOpc = ISD::PARTIAL_REDUCE_SUMLA;
-  else if (LHSOpcode == ISD::ZERO_EXTEND && RHSOpcode == ISD::SIGN_EXTEND) {
+  else if (!IsMLS && LHSOpcode == ISD::ZERO_EXTEND &&
+           RHSOpcode == ISD::SIGN_EXTEND) {
     NewOpc = ISD::PARTIAL_REDUCE_SUMLA;
     std::swap(LHSExtOp, RHSExtOp);
-  } else if (LHSOpcode == ISD::FP_EXTEND && RHSOpcode == ISD::FP_EXTEND) {
+  } else if (!IsMLS && LHSOpcode == ISD::FP_EXTEND &&
+             RHSOpcode == ISD::FP_EXTEND) {
     NewOpc = ISD::PARTIAL_REDUCE_FMLA;
   } else
     return SDValue();
+
   // For a 2-stage extend the signedness of both of the extends must match
   // If the mul has the same type, there is no outer extend, and thus we
   // can simply use the inner extends to pick the result node.
@@ -13618,6 +13636,14 @@ SDValue DAGCombiner::foldPartialReduceAdd(SDNode *N) {
     Op1Opcode = Op1->getOpcode();
   }
 
+  bool IsMLS = false;
+  if (Op1Opcode == ISD::SUB &&
+      ISD::isConstantSplatVectorAllZeros(Op1->getOperand(0).getNode())) {
+    Op1 = Op1->getOperand(1);
+    Op1Opcode = Op1->getOpcode();
+    IsMLS = true;
+  }
+
   if (!ISD::isExtOpcode(Op1Opcode) && Op1Opcode != ISD::FP_EXTEND)
     return SDValue();
 
@@ -13629,10 +13655,11 @@ SDValue DAGCombiner::foldPartialReduceAdd(SDNode *N) {
       Op1.getValueType().getVectorElementType() != AccElemVT)
     return SDValue();
 
-  unsigned NewOpcode = N->getOpcode() == ISD::PARTIAL_REDUCE_FMLA
-                           ? ISD::PARTIAL_REDUCE_FMLA
-                       : Op1IsSigned ? ISD::PARTIAL_REDUCE_SMLA
-                                     : ISD::PARTIAL_REDUCE_UMLA;
+  unsigned NewOpcode =
+      N->getOpcode() == ISD::PARTIAL_REDUCE_FMLA ? ISD::PARTIAL_REDUCE_FMLA
+      : Op1IsSigned
+          ? (IsMLS ? ISD::PARTIAL_REDUCE_SMLS : ISD::PARTIAL_REDUCE_SMLA)
+          : (IsMLS ? ISD::PARTIAL_REDUCE_UMLS : ISD::PARTIAL_REDUCE_UMLA);
 
   SDValue UnextOp1 = Op1.getOperand(0);
   EVT UnextOp1VT = UnextOp1.getValueType();
