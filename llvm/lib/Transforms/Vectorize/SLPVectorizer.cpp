@@ -13591,6 +13591,8 @@ bool BoUpSLP::matchesInversedZExtSelect(
       continue;
     if (!CmpPredicate::getMatching(InversedPred, Pred))
       return false;
+    if (!V->hasOneUse())
+      return false;
     InversedCmpsIndices.push_back(Idx);
   }
 

@@ -285,9 +285,8 @@ public:
   //== FT_PrefAlign functions
   // Initialize an FT_PrefAlign fragment. The region starts at this fragment and
   // ends at \p End. ComputedAlign is set during relaxation:
-  //   body_size == 0             => ComputedAlign = 1
-  //   0 < body_size < PrefAlign  => ComputedAlign = NextPowerOf2(body_size-1)
-  //   body_size >= PrefAlign     => ComputedAlign = PrefAlign
+  //   body_size < PrefAlign  => ComputedAlign = std::bit_ceil(body_size)
+  //   body_size >= PrefAlign => ComputedAlign = PrefAlign
   void makePrefAlign(Align PrefAlign, const MCSymbol &End, bool EmitNops,
                      uint8_t Fill) {
     Kind = FT_PrefAlign;
