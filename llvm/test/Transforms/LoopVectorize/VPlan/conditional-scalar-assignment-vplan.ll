@@ -112,7 +112,7 @@ define i32 @simple_csa_int_select(i64 %N, ptr %data, i32 %a) {
 ; CHECK-TF-NEXT:  Successor(s): middle.block
 ; CHECK-TF-EMPTY:
 ; CHECK-TF-NEXT:  middle.block:
-; CHECK-TF-NEXT:    EMIT vp<[[VP14:%[0-9]+]]> = extract-last-active ir<-1>, vp<[[VP12]]>, vp<[[VP11]]>
+; CHECK-TF-NEXT:    EMIT vp<[[VP15:%[0-9]+]]> = extract-last-active ir<-1>, vp<[[VP13]]>, vp<[[VP12]]>
 ; CHECK-TF-NEXT:  Successor(s): ir-bb<exit>
 ; CHECK-TF-EMPTY:
 ; CHECK-TF-NEXT:  ir-bb<exit>:
@@ -280,7 +280,7 @@ define i32 @simple_csa_int_load(ptr noalias %a, ptr noalias %b, i32 %default_val
 ; CHECK-TF-NEXT:  Successor(s): middle.block
 ; CHECK-TF-EMPTY:
 ; CHECK-TF-NEXT:  middle.block:
-; CHECK-TF-NEXT:    EMIT vp<[[VP16:%[0-9]+]]> = extract-last-active ir<%default_val>, vp<[[VP14]]>, vp<[[VP13]]>
+; CHECK-TF-NEXT:    EMIT vp<[[VP17:%[0-9]+]]> = extract-last-active ir<%default_val>, vp<[[VP15]]>, vp<[[VP14]]>
 ; CHECK-TF-NEXT:  Successor(s): ir-bb<exit>
 ; CHECK-TF-EMPTY:
 ; CHECK-TF-NEXT:  ir-bb<exit>:
