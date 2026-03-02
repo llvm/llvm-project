@@ -1,6 +1,9 @@
 ! RUN: %python %S/test_errors.py %s %flang_fc1
 ! Test error messages for repeat specifier before control edit descriptors
-! in FORMAT statements (not just in inline format strings).
+! in FORMAT statements, WRITE format strings, named constant formats,
+! and FMT= specifier.
+
+  character(*), parameter :: fmt1 = "(2SS, F10.3)"
 
   ! Repeat specifier before sign-edit-desc in WRITE format strings
   !ERROR: Repeat specifier before 'SS' edit descriptor
@@ -15,6 +18,14 @@
   write(*,'(2BN, F10.3)') 0.5
   !ERROR: Repeat specifier before 'BZ' edit descriptor
   write(*,'(2BZ, F10.3)') 0.5
+
+  ! Repeat specifier in named constant format
+  !ERROR: Repeat specifier before 'SS' edit descriptor
+  write(*,fmt1) 0.5
+
+  ! Repeat specifier in FMT= specifier
+  !ERROR: Repeat specifier before 'SS' edit descriptor
+  write(*,fmt="(2SS, F10.3)") 0.5
 
   ! Repeat specifier before sign-edit-desc in FORMAT statements
   !ERROR: Repeat specifier before 'SS' edit descriptor
