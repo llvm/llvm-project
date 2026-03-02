@@ -797,6 +797,22 @@ CIRGenModule::getOrCreateCIRGlobal(StringRef mangledName, mlir::Type ty,
                "external const declaration with initializer");
   }
 
+  // TODO(cir): if this method is used to handle functions we must have
+  // something closer to GlobalValue::isDeclaration instead of checking for
+  // initializer.
+  if (gv.isDeclaration()) {
+    // TODO(cir): set target attributes
+
+    // External HIP managed variables needed to be recorded for transformation
+    // in both device and host compilations.
+    // External HIP managed variables needed to be recorded for transformation
+    // in both device and host compilations.
+    if (getLangOpts().CUDA && d && d->hasAttr<HIPManagedAttr>() &&
+        d->hasExternalStorage())
+      llvm_unreachable("NYI");
+  }
+
+  // TODO(cir): address space cast when needed for DAddrSpace.
   return gv;
 }
 
@@ -945,10 +961,6 @@ void CIRGenModule::emitGlobalVarDefinition(const clang::VarDecl *vd,
 
   if (vd->hasAttr<AnnotateAttr>()) {
     errorNYI(vd->getSourceRange(), "annotate global variable");
-  }
-
-  if (langOpts.CUDA) {
-    errorNYI(vd->getSourceRange(), "CUDA global variable");
   }
 
   // Set initializer and finalize emission
@@ -1561,6 +1573,39 @@ CIRGenModule::getAddrOfConstantStringFromLiteral(const StringLiteral *s,
   cir::PointerType ptrTy = getBuilder().getPointerTo(arrayTy.getElementType());
 
   return builder.getGlobalViewAttr(ptrTy, gv);
+}
+
+LangAS CIRGenModule::getGlobalVarAddressSpace(const VarDecl *d) {
+  if (langOpts.OpenCL) {
+    LangAS as = d ? d->getType().getAddressSpace() : LangAS::opencl_global;
+    assert(as == LangAS::opencl_global || as == LangAS::opencl_global_device ||
+           as == LangAS::opencl_global_host || as == LangAS::opencl_constant ||
+           as == LangAS::opencl_local || as >= LangAS::FirstTargetAddressSpace);
+    return as;
+  }
+
+  if (langOpts.SYCLIsDevice &&
+      (!d || d->getType().getAddressSpace() == LangAS::Default))
+    llvm_unreachable("NYI");
+
+  if (langOpts.CUDA && langOpts.CUDAIsDevice) {
+    if (d) {
+      if (d->hasAttr<CUDAConstantAttr>())
+        return LangAS::cuda_constant;
+      if (d->hasAttr<CUDASharedAttr>())
+        return LangAS::cuda_shared;
+      if (d->hasAttr<CUDADeviceAttr>())
+        return LangAS::cuda_device;
+      if (d->getType().isConstQualified())
+        return LangAS::cuda_constant;
+    }
+    return LangAS::cuda_device;
+  }
+
+  if (langOpts.OpenMP)
+    llvm_unreachable("NYI");
+
+  return getTargetCIRGenInfo().getGlobalVarAddressSpace(*this, d);
 }
 
 // TODO(cir): this could be a common AST helper for both CIR and LLVM codegen.

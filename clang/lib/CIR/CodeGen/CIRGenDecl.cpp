@@ -433,12 +433,15 @@ CIRGenModule::getOrCreateStaticVarDecl(const VarDecl &d,
   mlir::Type lty = getTypes().convertTypeForMem(ty);
   assert(!cir::MissingFeatures::addressSpace());
 
-  if (d.hasAttr<LoaderUninitializedAttr>() || d.hasAttr<CUDASharedAttr>())
+  mlir::Attribute init = nullptr;
+  if (d.hasAttr<LoaderUninitializedAttr>())
     errorNYI(d.getSourceRange(),
              "getOrCreateStaticVarDecl: LoaderUninitializedAttr");
-  assert(!cir::MissingFeatures::addressSpace());
+  else if (ty.getAddressSpace() != LangAS::opencl_local &&
+           !d.hasAttr<CUDASharedAttr>())
+    init = builder.getZeroInitAttr(convertType(ty));
 
-  mlir::Attribute init = builder.getZeroInitAttr(convertType(ty));
+  assert(!cir::MissingFeatures::addressSpace());
 
   cir::GlobalOp gv = builder.createVersionedGlobal(
       getModule(), getLoc(d.getLocation()), name, lty, false, linkage);
@@ -664,11 +667,6 @@ void CIRGenFunction::emitStaticVarDecl(const VarDecl &d,
     var = addInitializerToStaticVarDecl(d, var, getAddrOp);
 
   var.setAlignment(alignment.getAsAlign().value());
-
-  // There are a lot of attributes that need to be handled here. Until
-  // we start to support them, we just report an error if there are any.
-  if (d.hasAttrs())
-    cgm.errorNYI(d.getSourceRange(), "static var with attrs");
 
   if (cgm.getCodeGenOpts().KeepPersistentStorageVariables)
     cgm.errorNYI(d.getSourceRange(), "static var keep persistent storage");
