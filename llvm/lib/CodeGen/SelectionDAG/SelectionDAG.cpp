@@ -6264,10 +6264,17 @@ bool SelectionDAG::isKnownNeverZero(SDValue Op, const APInt &DemandedElts,
       return true;
     break;
   }
+
   case ISD::UADDSAT:
   case ISD::UMAX:
-    return isKnownNeverZero(Op.getOperand(1), DemandedElts, Depth + 1) ||
+  case ISD::UMIN: {
+    bool KnownOp1 = isKnownNeverZero(Op.getOperand(1), DemandedElts, Depth + 1);
+    if (Op.getOpcode() == ISD::UMIN)
+      return KnownOp1 &&
+             isKnownNeverZero(Op.getOperand(0), DemandedElts, Depth + 1);
+    return KnownOp1 ||
            isKnownNeverZero(Op.getOperand(0), DemandedElts, Depth + 1);
+  }
 
     // For smin/smax: If either operand is known negative/positive
     // respectively we don't need the other to be known at all.
@@ -6301,9 +6308,6 @@ bool SelectionDAG::isKnownNeverZero(SDValue Op, const APInt &DemandedElts,
     return isKnownNeverZero(Op.getOperand(1), DemandedElts, Depth + 1) &&
            isKnownNeverZero(Op.getOperand(0), DemandedElts, Depth + 1);
   }
-  case ISD::UMIN:
-    return isKnownNeverZero(Op.getOperand(1), DemandedElts, Depth + 1) &&
-           isKnownNeverZero(Op.getOperand(0), DemandedElts, Depth + 1);
 
   case ISD::ROTL:
   case ISD::ROTR:
