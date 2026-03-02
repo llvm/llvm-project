@@ -15585,15 +15585,16 @@ void RISCVTargetLowering::ReplaceNodeResults(SDNode *N,
     if (Subtarget.hasStdExtP()) {
       // On RV64, map scalar i32 saturating add/sub through lane 0 of a packed
       // v2i32 operation so we can select ps*.w instructions.
-      SDValue LHS =
-          DAG.getBitcast(MVT::v2i32, DAG.getNode(ISD::ZERO_EXTEND, DL, MVT::i64,
-                                                 N->getOperand(0)));
-      SDValue RHS =
-          DAG.getBitcast(MVT::v2i32, DAG.getNode(ISD::ZERO_EXTEND, DL, MVT::i64,
-                                                 N->getOperand(1)));
+      SDValue LHS = DAG.getNode(
+          ISD::SCALAR_TO_VECTOR, DL, MVT::v2i32,
+          DAG.getNode(ISD::ANY_EXTEND, DL, MVT::i64, N->getOperand(0)));
+      SDValue RHS = DAG.getNode(
+          ISD::SCALAR_TO_VECTOR, DL, MVT::v2i32,
+          DAG.getNode(ISD::ANY_EXTEND, DL, MVT::i64, N->getOperand(1)));
       SDValue VecRes = DAG.getNode(N->getOpcode(), DL, MVT::v2i32, LHS, RHS);
-      SDValue Res64 = DAG.getBitcast(MVT::i64, VecRes);
-      Results.push_back(DAG.getNode(ISD::TRUNCATE, DL, MVT::i32, Res64));
+      SDValue Zero = DAG.getConstant(0, DL, Subtarget.getXLenVT());
+      Results.push_back(
+          DAG.getNode(ISD::EXTRACT_VECTOR_ELT, DL, MVT::i32, VecRes, Zero));
       return;
     }
 
