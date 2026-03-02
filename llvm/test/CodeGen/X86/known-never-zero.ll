@@ -434,18 +434,15 @@ define i32 @uaddsat_known_nonzero_vec(<16 x i8> %x, ptr %p) {
 ; X86-NEXT:    paddusb {{\.?LCPI[0-9]+_[0-9]+}}, %xmm0
 ; X86-NEXT:    movdqa %xmm0, (%eax)
 ; X86-NEXT:    movzbl (%eax), %eax
-; X86-NEXT:    bsfl %eax, %ecx
-; X86-NEXT:    movl $32, %eax
-; X86-NEXT:    cmovnel %ecx, %eax
+; X86-NEXT:    rep bsfl %eax, %eax
 ; X86-NEXT:    retl
 ;
 ; X64-LABEL: uaddsat_known_nonzero_vec:
 ; X64:       # %bb.0:
 ; X64-NEXT:    vpaddusb {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm0
 ; X64-NEXT:    vmovdqa %xmm0, (%rdi)
-; X64-NEXT:    vpextrb $0, %xmm0, %ecx
-; X64-NEXT:    movl $32, %eax
-; X64-NEXT:    rep bsfl %ecx, %eax
+; X64-NEXT:    vpextrb $0, %xmm0, %eax
+; X64-NEXT:    rep bsfl %eax, %eax
 ; X64-NEXT:    retq
   %z = call <16 x i8> @llvm.uadd.sat.v16i8(<16 x i8> %x, <16 x i8> <i8 1, i8 0, i8 0, i8 0, i8 0, i8 0, i8 0, i8 0, i8 0, i8 0, i8 0, i8 0, i8 0, i8 0, i8 0, i8 0>)
   store <16 x i8> %z, ptr %p
@@ -1227,7 +1224,9 @@ define i32 @sra_known_nonzero_sign_bit_set_vec(<4 x i32> %x, ptr %p) {
 ; X86-NEXT:    psrad %xmm1, %xmm0
 ; X86-NEXT:    movdqa %xmm0, (%eax)
 ; X86-NEXT:    movd %xmm0, %eax
-; X86-NEXT:    rep bsfl %eax, %eax
+; X86-NEXT:    bsfl %eax, %ecx
+; X86-NEXT:    movl $32, %eax
+; X86-NEXT:    cmovnel %ecx, %eax
 ; X86-NEXT:    retl
 ;
 ; X64-LABEL: sra_known_nonzero_sign_bit_set_vec:
@@ -1236,8 +1235,9 @@ define i32 @sra_known_nonzero_sign_bit_set_vec(<4 x i32> %x, ptr %p) {
 ; X64-NEXT:    vmovdqa {{.*#+}} xmm1 = [2147606891,65535,1,0]
 ; X64-NEXT:    vpsrad %xmm0, %xmm1, %xmm0
 ; X64-NEXT:    vmovdqa %xmm0, (%rdi)
-; X64-NEXT:    vmovd %xmm0, %eax
-; X64-NEXT:    rep bsfl %eax, %eax
+; X64-NEXT:    vmovd %xmm0, %ecx
+; X64-NEXT:    movl $32, %eax
+; X64-NEXT:    rep bsfl %ecx, %eax
 ; X64-NEXT:    retq
   %xx = shufflevector <4 x i32> %x, <4 x i32> poison, <4 x i32> zeroinitializer
   %z = ashr <4 x i32> <i32 2147606891, i32 65535, i32 1, i32 0>, %xx
@@ -1363,7 +1363,9 @@ define i32 @srl_known_nonzero_sign_bit_set_vec(<4 x i32> %x, ptr %p) {
 ; X86-NEXT:    movdqa %xmm0, (%eax)
 ; X86-NEXT:    pshufd {{.*#+}} xmm0 = xmm0[2,3,2,3]
 ; X86-NEXT:    movd %xmm0, %eax
-; X86-NEXT:    rep bsfl %eax, %eax
+; X86-NEXT:    bsfl %eax, %ecx
+; X86-NEXT:    movl $32, %eax
+; X86-NEXT:    cmovnel %ecx, %eax
 ; X86-NEXT:    retl
 ;
 ; X64-LABEL: srl_known_nonzero_sign_bit_set_vec:
@@ -1372,8 +1374,9 @@ define i32 @srl_known_nonzero_sign_bit_set_vec(<4 x i32> %x, ptr %p) {
 ; X64-NEXT:    vmovdqa {{.*#+}} xmm1 = [0,65535,2147606891,0]
 ; X64-NEXT:    vpsrld %xmm0, %xmm1, %xmm0
 ; X64-NEXT:    vmovdqa %xmm0, (%rdi)
-; X64-NEXT:    vpextrd $2, %xmm0, %eax
-; X64-NEXT:    rep bsfl %eax, %eax
+; X64-NEXT:    vpextrd $2, %xmm0, %ecx
+; X64-NEXT:    movl $32, %eax
+; X64-NEXT:    rep bsfl %ecx, %eax
 ; X64-NEXT:    retq
   %x.splat = shufflevector <4 x i32> %x, <4 x i32> poison, <4 x i32> zeroinitializer
   %z = lshr <4 x i32> <i32 0, i32 65535, i32 2147606891, i32 0>, %x.splat
