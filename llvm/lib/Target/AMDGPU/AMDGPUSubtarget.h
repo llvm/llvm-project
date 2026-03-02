@@ -236,8 +236,6 @@ public:
     return AddressableLocalMemorySize;
   }
 
-  unsigned getFlatOffsetBitWidth() const { return FlatOffsetBitWidth; }
-
   /// Number of SIMDs/EUs (execution units) per "CU" ("compute unit"), where the
   /// "CU" is the unit onto which workgroups are mapped. This takes WGP mode vs.
   /// CU mode into account.
