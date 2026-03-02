@@ -453,16 +453,6 @@ if(LLVM_ENABLE_PIC)
     if(NOT LevelZeroRuntime_FOUND)
       message(FATAL_ERROR "LevelZero not found. Please set LEVEL_ZERO_DIR.")
     endif()
-
-    # Check if compiler support RTTI and exceptions, which are required by the SYCL and LevelZero runtimes.
-    check_cxx_compiler_flag("-frtti" CXX_HAS_FRTTI_FLAG)
-    if(NOT CXX_HAS_FRTTI_FLAG)
-      message(FATAL_ERROR "CXX compiler does not accept flag -frtti")
-    endif()
-    check_cxx_compiler_flag("-fexceptions" CXX_HAS_FEXCEPTIONS_FLAG)
-    if(NOT CXX_HAS_FEXCEPTIONS_FLAG)
-      message(FATAL_ERROR "CXX compiler does not accept flag -fexceptions")
-    endif()
   endif()
 
   if(MLIR_ENABLE_SYCL_RUNNER)
@@ -472,6 +462,8 @@ if(LLVM_ENABLE_PIC)
       message(FATAL_ERROR "syclRuntime not found. Please set check oneapi installation and run setvars.sh.")
     endif()
 
+    set(LLVM_REQUIRES_RTTI ON)
+    set(LLVM_REQUIRES_EH ON)
     add_mlir_library(mlir_sycl_runtime
       SHARED
       SyclRuntimeWrappers.cpp
@@ -480,8 +472,9 @@ if(LLVM_ENABLE_PIC)
 
       STANDALONE
     )
+    unset(LLVM_REQUIRES_RTTI)
+    unset(LLVM_REQUIRES_EH)
 
-    target_compile_options (mlir_sycl_runtime PUBLIC -fexceptions -frtti)
 
     target_include_directories(mlir_sycl_runtime PRIVATE
       ${MLIR_INCLUDE_DIRS}
@@ -493,6 +486,8 @@ if(LLVM_ENABLE_PIC)
   endif()
 
   if(MLIR_ENABLE_LEVELZERO_RUNNER)
+    set(LLVM_REQUIRES_RTTI ON)
+    set(LLVM_REQUIRES_EH ON)
     add_mlir_library(mlir_levelzero_runtime
       SHARED
       LevelZeroRuntimeWrappers.cpp
@@ -501,8 +496,8 @@ if(LLVM_ENABLE_PIC)
 
       STANDALONE
     )
-
-    target_compile_options (mlir_levelzero_runtime PUBLIC -fexceptions -frtti)
+    unset(LLVM_REQUIRES_RTTI)
+    unset(LLVM_REQUIRES_EH)
 
     target_include_directories(mlir_levelzero_runtime PRIVATE
       ${MLIR_INCLUDE_DIRS}
