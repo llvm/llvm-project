@@ -499,8 +499,6 @@ int clang_main(int Argc, char **Argv, const llvm::ToolContext &ToolContext) {
                                                   *C, *FailingCommand))
     Res = 1;
 
-  Diags.getClient()->finish();
-
   if (!UseNewCC1Process && IsCrash) {
     // When crashing in -fintegrated-cc1 mode, bury the timer pointers, because
     // the internal linked list might point to already released stack frames.
@@ -528,6 +526,8 @@ int clang_main(int Argc, char **Argv, const llvm::ToolContext &ToolContext) {
   // llvm-ifs, exit with code 255 (-1) on failure.
   if (CommandRes > 128 && CommandRes != 255) {
     llvm::sys::unregisterHandlers();
+    // DiagnosticConsumer must be always destroyed.
+    Diags.getClient()->~DiagnosticConsumer();
     raise(CommandRes - 128);
   }
   // When cc1 runs out-of-process (CLANG_SPAWN_CC1), ExecuteAndWait returns -2
@@ -535,6 +535,8 @@ int clang_main(int Argc, char **Argv, const llvm::ToolContext &ToolContext) {
   // so resignal with SIGABRT to ensure the driver exits via signal.
   if (CommandRes == -2) {
     llvm::sys::unregisterHandlers();
+    // DiagnosticConsumer must be always destroyed.
+    Diags.getClient()->~DiagnosticConsumer();
     raise(SIGABRT);
   }
 #endif
