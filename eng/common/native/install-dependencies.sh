@@ -33,7 +33,7 @@ case "$os" in
         elif [ "$ID" = "amzn" ]; then
             dnf install -y cmake llvm lld lldb clang python libicu-devel openssl-devel krb5-devel lttng-ust-devel pigz cpio ninja-build
         elif [ "$ID" = "alpine" ]; then
-            apk add build-base cmake bash curl clang llvm-dev lld lldb krb5-dev lttng-ust-dev icu-dev openssl-dev pigz cpio ninja
+            apk add build-base cmake bash curl clang llvm llvm-dev lld lldb-dev krb5-dev lttng-ust-dev icu-dev openssl-dev pigz cpio ninja
         else
             echo "Unsupported distro. distro: $ID"
             exit 1

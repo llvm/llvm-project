@@ -1,0 +1,86 @@
+# --------------------------------------------------------------------------------------
+# Renovate Pipeline Template
+# --------------------------------------------------------------------------------------
+# This template provides a complete reusable pipeline definition for running Renovate
+# in a 1ES Official pipeline. Pipelines can extend from this template and only need
+# to pass the Renovate job parameters.
+#
+# For more info, see https://github.com/dotnet/arcade/blob/main/Documentation/Renovate.md
+# --------------------------------------------------------------------------------------
+
+parameters:
+
+# Path to the Renovate configuration file within the repository.
+- name: renovateConfigPath
+  type: string
+  default: 'eng/renovate.json'
+
+# GitHub repository to run Renovate against, in the format 'owner/repo'.
+- name: gitHubRepo
+  type: string
+
+# List of base branches to target for Renovate PRs.
+- name: baseBranches
+  type: object
+  default:
+  - main
+
+# When true, Renovate will run in dry run mode.
+- name: dryRun
+  type: boolean
+  default: false
+
+# When true, Renovate will recreate PRs even if they were previously closed.
+- name: forceRecreatePR
+  type: boolean
+  default: false
+
+# Pool configuration for the pipeline.
+- name: pool
+  type: object
+  default:
+    name: NetCore1ESPool-Internal
+    image: build.azurelinux.3.amd64
+    os: linux
+
+# Renovate version used in the container image tag.
+- name: renovateVersion
+  default: 43
+  type: number
+
+# Pool configuration for SDL analysis.
+- name: sdlPool
+  type: object
+  default:
+    name: NetCore1ESPool-Internal
+    image: 1es-windows-2022
+    os: windows
+
+resources:
+  repositories:
+  - repository: 1ESPipelineTemplates
+    type: git
+    name: 1ESPipelineTemplates/1ESPipelineTemplates
+    ref: refs/tags/release
+
+extends:
+  template: v1/1ES.Official.PipelineTemplate.yml@1ESPipelineTemplates
+  parameters:
+    pool: ${{ parameters.pool }}
+    sdl:
+      sourceAnalysisPool: ${{ parameters.sdlPool }}
+    containers:
+      RenovateContainer:
+        image: mcr.microsoft.com/dotnet-buildtools/prereqs:azurelinux-3.0-renovate-${{ parameters.renovateVersion }}-amd64
+    stages:
+    - stage: Renovate
+      displayName: Run Renovate
+      jobs:
+      - template: /eng/common/core-templates/job/renovate.yml@self
+        parameters:
+          renovateConfigPath: ${{ parameters.renovateConfigPath }}
+          gitHubRepo: ${{ parameters.gitHubRepo }}
+          baseBranches: ${{ parameters.baseBranches }}
+          dryRun: ${{ parameters.dryRun }}
+          forceRecreatePR: ${{ parameters.forceRecreatePR }}
+          pool: ${{ parameters.pool }}
