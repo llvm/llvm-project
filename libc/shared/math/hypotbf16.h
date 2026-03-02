@@ -7,20 +7,15 @@
 //===----------------------------------------------------------------------===//
 
 #ifndef LLVM_LIBC_SHARED_MATH_HYPOTBF16_H
-#define LLVM_LIBC_SHARED_MATH_HYPOTBF16_H
-
 #include "shared/libc_common.h"
-
 #include "src/__support/math/hypotbf16.h"
 
 namespace LIBC_NAMESPACE_DECL {
-
 namespace shared {
 
 using math::hypotbf16;
 
 } // namespace shared
-
 } // namespace LIBC_NAMESPACE_DECL
 
 #endif // LLVM_LIBC_SHARED_MATH_HYPOTBF16_H
