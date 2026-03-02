@@ -10,6 +10,7 @@
 #include "../ClangTidyModule.h"
 #include "AmbiguousSmartptrResetCallCheck.h"
 #include "AvoidConstParamsInDeclsCheck.h"
+#include "AvoidDefaultLambdaCaptureCheck.h"
 #include "AvoidNestedConditionalOperatorCheck.h"
 #include "AvoidReturnWithVoidValueCheck.h"
 #include "AvoidUnconditionalPreprocessorIfCheck.h"
@@ -78,6 +79,8 @@ public:
         "readability-ambiguous-smartptr-reset-call");
     CheckFactories.registerCheck<AvoidConstParamsInDeclsCheck>(
         "readability-avoid-const-params-in-decls");
+    CheckFactories.registerCheck<AvoidDefaultLambdaCaptureCheck>(
+        "readability-avoid-default-lambda-capture");
     CheckFactories.registerCheck<AvoidNestedConditionalOperatorCheck>(
         "readability-avoid-nested-conditional-operator");
     CheckFactories.registerCheck<AvoidReturnWithVoidValueCheck>(
