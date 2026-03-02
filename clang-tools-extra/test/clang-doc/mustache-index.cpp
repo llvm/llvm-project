@@ -39,7 +39,7 @@ class Foo;
 // CHECK-NEXT:                      <tr>
 // CHECK-NEXT:                          <th>Name</th>
 // CHECK-NEXT:                          <th>Value</th>
-// CHECK:                           </tr>
+// CHECK-NEXT:                      </tr>
 // CHECK-NEXT:                      <tr>
 // CHECK-NEXT:                          <td>RED</td>
 // CHECK-NEXT:                          <td>0</td>
