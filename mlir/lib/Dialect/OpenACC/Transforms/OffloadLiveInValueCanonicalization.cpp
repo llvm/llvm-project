@@ -132,6 +132,17 @@ static Value getOriginalValue(Value val) {
 /// to find the original defining operation before making the determination.
 static bool isRematerializationCandidate(Value val,
                                          acc::OpenACCSupport &accSupport) {
+  // Check before tracing through view-like ops: an op may implement both
+  // ViewLikeOpInterface and OutlineRematerializationOpInterface.
+  if (Operation *directDefOp = val.getDefiningOp()) {
+    if (isa<acc::OutlineRematerializationOpInterface>(directDefOp)) {
+      LLVM_DEBUG(llvm::dbgs()
+                 << "\tDirect OutlineRematerializationOpInterface: "
+                 << *directDefOp << "\n");
+      return true;
+    }
+  }
+
   // Trace through view-like operations to find the original value.
   Value origVal = getOriginalValue(val);
   Operation *definingOp = origVal.getDefiningOp();

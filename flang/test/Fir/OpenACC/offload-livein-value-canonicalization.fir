@@ -253,3 +253,45 @@ func.func @test_accbounds_rematerialize_fir() {
 // CHECK: acc.bounds
 // CHECK: acc.serial {
 // CHECK:   acc.bounds
+
+// -----
+
+// Test fir.convert rematerialization (ViewLikeOpInterface +
+// OutlineRematerializationOpInterface).
+func.func private @use_i64(i64) -> ()
+
+func.func @test_convert_rematerialize(%arg0: !fir.ref<i32>) {
+  %0 = fir.convert %arg0 : (!fir.ref<i32>) -> i64
+  fir.call @use_i64(%0) : (i64) -> ()
+  acc.parallel {
+    fir.call @use_i64(%0) : (i64) -> ()
+    acc.yield
+  }
+  return
+}
+
+// CHECK-LABEL: @test_convert_rematerialize
+// CHECK: %[[CVT_OUTER:.*]] = fir.convert
+// CHECK: fir.call @use_i64(%[[CVT_OUTER]])
+// CHECK: acc.parallel {
+// CHECK:   %[[CVT_INNER:.*]] = fir.convert
+// CHECK:   fir.call @use_i64(%[[CVT_INNER]])
+
+// -----
+
+// Test fir.convert sinking (only used inside region).
+func.func private @use_i64(i64) -> ()
+
+func.func @test_convert_sink(%arg0: !fir.ref<i32>) {
+  %0 = fir.convert %arg0 : (!fir.ref<i32>) -> i64
+  acc.parallel {
+    fir.call @use_i64(%0) : (i64) -> ()
+    acc.yield
+  }
+  return
+}
+
+// CHECK-LABEL: @test_convert_sink
+// CHECK: acc.parallel {
+// CHECK:   %[[CVT:.*]] = fir.convert
+// CHECK:   fir.call @use_i64(%[[CVT]])
