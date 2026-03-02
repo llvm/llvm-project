@@ -360,7 +360,7 @@ TEST(OperationCloneTest, CloneWithDifferentResults) {
   MLIRContext context;
   Builder builder(&context);
 
-  Operation *useOp = createOp(&context, std::nullopt, builder.getI32Type());
+  Operation *useOp = createOp(&context, {}, builder.getI32Type());
   IRMapping map;
   Operation *cloneOp = useOp->clone(
       map, Operation::CloneOptions::all().withResultTypes(
