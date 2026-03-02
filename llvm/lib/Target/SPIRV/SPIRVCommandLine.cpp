@@ -28,6 +28,8 @@
 
 using namespace llvm;
 
+std::set<SPIRV::Extension::Extension> SPIRVExtensionsParser::DisabledExtensions;
+
 static const std::map<StringRef, SPIRV::Extension::Extension>
     SPIRVExtensionMap = {
         {"SPV_EXT_shader_atomic_float_add",
@@ -64,6 +66,9 @@ static const std::map<StringRef, SPIRV::Extension::Extension>
          SPIRV::Extension::Extension::SPV_GOOGLE_user_type},
         {"SPV_ALTERA_arbitrary_precision_integers",
          SPIRV::Extension::Extension::SPV_ALTERA_arbitrary_precision_integers},
+        {"SPV_ALTERA_arbitrary_precision_floating_point",
+         SPIRV::Extension::Extension::
+             SPV_ALTERA_arbitrary_precision_floating_point},
         {"SPV_INTEL_cache_controls",
          SPIRV::Extension::Extension::SPV_INTEL_cache_controls},
         {"SPV_INTEL_float_controls2",
@@ -114,6 +119,7 @@ static const std::map<StringRef, SPIRV::Extension::Extension>
          SPIRV::Extension::Extension::SPV_KHR_integer_dot_product},
         {"SPV_KHR_linkonce_odr",
          SPIRV::Extension::Extension::SPV_KHR_linkonce_odr},
+        {"SPV_KHR_fma", SPIRV::Extension::Extension::SPV_KHR_fma},
         {"SPV_INTEL_inline_assembly",
          SPIRV::Extension::Extension::SPV_INTEL_inline_assembly},
         {"SPV_INTEL_bindless_images",
@@ -178,7 +184,9 @@ static const std::map<StringRef, SPIRV::Extension::Extension>
          SPIRV::Extension::Extension::
              SPV_ALTERA_arbitrary_precision_fixed_point},
         {"SPV_EXT_image_raw10_raw12",
-         SPIRV::Extension::Extension::SPV_EXT_image_raw10_raw12}};
+         SPIRV::Extension::Extension::SPV_EXT_image_raw10_raw12},
+        {"SPV_INTEL_unstructured_loop_controls",
+         SPIRV::Extension::Extension::SPV_INTEL_unstructured_loop_controls}};
 
 bool SPIRVExtensionsParser::parse(cl::Option &O, StringRef ArgName,
                                   StringRef ArgValue,
@@ -190,7 +198,7 @@ bool SPIRVExtensionsParser::parse(cl::Option &O, StringRef ArgName,
 
   auto M = partition(Tokens, [](auto &&T) { return T.starts_with('+'); });
 
-  if (std::any_of(M, Tokens.end(), [](auto &&T) { return T == "all"; }))
+  if (std::any_of(M, Tokens.end(), equal_to("all")))
     copy(make_second_range(SPIRVExtensionMap), std::inserter(Vals, Vals.end()));
 
   for (auto &&Token : make_range(Tokens.begin(), M)) {
@@ -225,7 +233,7 @@ bool SPIRVExtensionsParser::parse(cl::Option &O, StringRef ArgName,
       return O.error(
           "Extension cannot be allowed and disallowed at the same time: " +
           NameValuePair->first);
-
+    DisabledExtensions.insert(NameValuePair->second);
     Vals.erase(NameValuePair->second);
   }
 
@@ -264,14 +272,9 @@ SPIRVExtensionsParser::getValidExtensions(const Triple &TT) {
         SPIRV::OperandCategory::OperandCategory::ExtensionOperand,
         ExtensionEnum);
 
-    if (llvm::is_contained(AllowedEnv, CurrentEnvironment))
+    if (llvm::is_contained(AllowedEnv, CurrentEnvironment) &&
+        !llvm::is_contained(DisabledExtensions, ExtensionEnum))
       R.insert(ExtensionEnum);
-  }
-
-  if (TT.getVendor() == Triple::AMD) {
-    // AMD uses the translator to recover LLVM-IR from SPIRV. Currently, the
-    // translator doesn't implement the SPV_KHR_float_controls2 extension.
-    R.erase(SPIRV::Extension::SPV_KHR_float_controls2);
   }
 
   return R;

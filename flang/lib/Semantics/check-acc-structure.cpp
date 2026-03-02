@@ -422,6 +422,7 @@ void AccStructureChecker::Enter(const parser::OpenACCRoutineConstruct &x) {
           "part of a subroutine or function definition, or within an interface "
           "body for a subroutine or function in an interface block"_err_en_US);
     }
+    hasAccRoutineDirective = true;
   }
 }
 void AccStructureChecker::Leave(const parser::OpenACCRoutineConstruct &) {
@@ -668,9 +669,55 @@ void AccStructureChecker::Enter(const parser::OpenACCCacheConstruct &x) {
   const auto &verbatim = std::get<parser::Verbatim>(x.t);
   PushContextAndClauseSets(verbatim.source, llvm::acc::Directive::ACCD_cache);
   SetContextDirectiveSource(verbatim.source);
-  if (loopNestLevel == 0) {
+  if (loopNestLevel == 0 && !hasAccRoutineDirective) {
     context_.Say(verbatim.source,
-          "The CACHE directive must be inside a loop"_err_en_US);
+        "The CACHE directive must be inside a loop or an ACC ROUTINE subprogram"_err_en_US);
+  }
+
+  // Check cache directive array section constraints
+  const auto &objectListWithModifier =
+      std::get<parser::AccObjectListWithModifier>(x.t);
+  const auto &objectList =
+      std::get<parser::AccObjectList>(objectListWithModifier.t);
+
+  for (const auto &accObject : objectList.v) {
+    common::visit(
+        common::visitors{
+            [&](const parser::Designator &designator) {
+              if (const auto *dataRef =
+                      std::get_if<parser::DataRef>(&designator.u)) {
+                if (const auto *arrayElem =
+                        std::get_if<common::Indirection<parser::ArrayElement>>(
+                            &dataRef->u)) {
+                  for (const auto &subscript :
+                      arrayElem->value().Subscripts()) {
+                    if (const auto *triplet =
+                            std::get_if<parser::SubscriptTriplet>(
+                                &subscript.u)) {
+                      const auto &lower{std::get<0>(triplet->t)};
+                      const auto &upper{std::get<1>(triplet->t)};
+                      const auto &stride{std::get<2>(triplet->t)};
+                      if (!lower && !upper) {
+                        context_.Say(designator.source,
+                            "The CACHE directive requires at least one of the bounds in the array section subscript triplet to be specified"_err_en_US);
+                      }
+                      if (stride) {
+                        if (auto strideVal{GetIntValue(*stride)}) {
+                          if (*strideVal != 1) {
+                            context_.Say(designator.source,
+                                "The CACHE directive does not support strided array sections"_err_en_US);
+                          }
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            },
+            [&](const parser::Name &) {
+              // Common block names are not expected in cache directive
+            }},
+        accObject.u);
   }
 }
 void AccStructureChecker::Leave(const parser::OpenACCCacheConstruct &x) {
@@ -1109,18 +1156,22 @@ void AccStructureChecker::Enter(const parser::OpenACCEndConstruct &x) {
 
 void AccStructureChecker::Enter(const parser::Module &) {
   declareSymbols.clear();
+  hasAccRoutineDirective = false;
 }
 
 void AccStructureChecker::Enter(const parser::FunctionSubprogram &x) {
   declareSymbols.clear();
+  hasAccRoutineDirective = false;
 }
 
 void AccStructureChecker::Enter(const parser::SubroutineSubprogram &) {
   declareSymbols.clear();
+  hasAccRoutineDirective = false;
 }
 
 void AccStructureChecker::Enter(const parser::SeparateModuleSubprogram &) {
   declareSymbols.clear();
+  hasAccRoutineDirective = false;
 }
 
 void AccStructureChecker::Enter(const parser::DoConstruct &) {

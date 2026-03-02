@@ -1,23 +1,32 @@
-! RUN: bbc -hlfir=false -o - %s | FileCheck %s
+! RUN: bbc -emit-hlfir -o - %s | FileCheck %s
 
 ! CHECK-LABEL: fir.global @block_
-! CHECK-DAG: %[[VAL_1:.*]] = arith.constant 1.000000e+00 : f32
-! CHECK-DAG: %[[VAL_2:.*]] = arith.constant 2.400000e+00 : f32
-! CHECK-DAG: %[[VAL_3:.*]] = arith.constant 0.000000e+00 : f32
 ! CHECK: %[[VAL_4:.*]] = fir.zero_bits tuple<!fir.array<5x5xf32>>
 ! CHECK: %[[VAL_5:.*]] = fir.undefined !fir.array<5x5xf32>
-! CHECK: %[[VAL_6:.*]] = fir.insert_on_range %[[VAL_5]], %[[VAL_1]] from (0, 0) to (1, 0) : (!fir.array<5x5xf32>, f32) -> !fir.array<5x5xf32>
-! CHECK: %[[VAL_7:.*]] = fir.insert_on_range %[[VAL_6]], %[[VAL_3]] from (2, 0) to (4, 0) : (!fir.array<5x5xf32>, f32) -> !fir.array<5x5xf32>
-! CHECK: %[[VAL_8:.*]] = fir.insert_on_range %[[VAL_7]], %[[VAL_1]] from (0, 1) to (1, 1) : (!fir.array<5x5xf32>, f32) -> !fir.array<5x5xf32>
-! CHECK: %[[VAL_9:.*]] = fir.insert_value %[[VAL_8]], %[[VAL_3]], [2 : index, 1 : index] : (!fir.array<5x5xf32>, f32) -> !fir.array<5x5xf32>
-! CHECK: %[[VAL_10:.*]] = fir.insert_value %[[VAL_9]], %[[VAL_2]], [3 : index, 1 : index] : (!fir.array<5x5xf32>, f32) -> !fir.array<5x5xf32>
-! CHECK: %[[VAL_11:.*]] = fir.insert_value %[[VAL_10]], %[[VAL_3]], [4 : index, 1 : index] : (!fir.array<5x5xf32>, f32) -> !fir.array<5x5xf32>
-! CHECK: %[[VAL_12:.*]] = fir.insert_on_range %[[VAL_11]], %[[VAL_1]] from (0, 2) to (1, 2) : (!fir.array<5x5xf32>, f32) -> !fir.array<5x5xf32>
-! CHECK: %[[VAL_13:.*]] = fir.insert_value %[[VAL_12]], %[[VAL_3]], [2 : index, 2 : index] : (!fir.array<5x5xf32>, f32) -> !fir.array<5x5xf32>
-! CHECK: %[[VAL_14:.*]] = fir.insert_value %[[VAL_13]], %[[VAL_2]], [3 : index, 2 : index] : (!fir.array<5x5xf32>, f32) -> !fir.array<5x5xf32>
-! CHECK: %[[VAL_15:.*]] = fir.insert_on_range %[[VAL_14]], %[[VAL_3]] from (4, 2) to (2, 3) : (!fir.array<5x5xf32>, f32) -> !fir.array<5x5xf32>
-! CHECK: %[[VAL_16:.*]] = fir.insert_value %[[VAL_15]], %[[VAL_2]], [3 : index, 3 : index] : (!fir.array<5x5xf32>, f32) -> !fir.array<5x5xf32>
-! CHECK: %[[VAL_17:.*]] = fir.insert_on_range %[[VAL_16]], %[[VAL_3]] from (4, 3) to (4, 4) : (!fir.array<5x5xf32>, f32) -> !fir.array<5x5xf32>
+! CHECK: %[[C1:.*]] = arith.constant 1.000000e+00 : f32
+! CHECK: %[[VAL_6:.*]] = fir.insert_on_range %[[VAL_5]], %[[C1]] from (0, 0) to (1, 0) : (!fir.array<5x5xf32>, f32) -> !fir.array<5x5xf32>
+! CHECK: %[[C0:.*]] = arith.constant 0.000000e+00 : f32
+! CHECK: %[[VAL_7:.*]] = fir.insert_on_range %[[VAL_6]], %[[C0]] from (2, 0) to (4, 0) : (!fir.array<5x5xf32>, f32) -> !fir.array<5x5xf32>
+! CHECK: %[[C1_2:.*]] = arith.constant 1.000000e+00 : f32
+! CHECK: %[[VAL_8:.*]] = fir.insert_on_range %[[VAL_7]], %[[C1_2]] from (0, 1) to (1, 1) : (!fir.array<5x5xf32>, f32) -> !fir.array<5x5xf32>
+! CHECK: %[[C0_2:.*]] = arith.constant 0.000000e+00 : f32
+! CHECK: %[[VAL_9:.*]] = fir.insert_value %[[VAL_8]], %[[C0_2]], [2 : index, 1 : index] : (!fir.array<5x5xf32>, f32) -> !fir.array<5x5xf32>
+! CHECK: %[[C24:.*]] = arith.constant 2.400000e+00 : f32
+! CHECK: %[[VAL_10:.*]] = fir.insert_value %[[VAL_9]], %[[C24]], [3 : index, 1 : index] : (!fir.array<5x5xf32>, f32) -> !fir.array<5x5xf32>
+! CHECK: %[[C0_3:.*]] = arith.constant 0.000000e+00 : f32
+! CHECK: %[[VAL_11:.*]] = fir.insert_value %[[VAL_10]], %[[C0_3]], [4 : index, 1 : index] : (!fir.array<5x5xf32>, f32) -> !fir.array<5x5xf32>
+! CHECK: %[[C1_3:.*]] = arith.constant 1.000000e+00 : f32
+! CHECK: %[[VAL_12:.*]] = fir.insert_on_range %[[VAL_11]], %[[C1_3]] from (0, 2) to (1, 2) : (!fir.array<5x5xf32>, f32) -> !fir.array<5x5xf32>
+! CHECK: %[[C0_4:.*]] = arith.constant 0.000000e+00 : f32
+! CHECK: %[[VAL_13:.*]] = fir.insert_value %[[VAL_12]], %[[C0_4]], [2 : index, 2 : index] : (!fir.array<5x5xf32>, f32) -> !fir.array<5x5xf32>
+! CHECK: %[[C24_2:.*]] = arith.constant 2.400000e+00 : f32
+! CHECK: %[[VAL_14:.*]] = fir.insert_value %[[VAL_13]], %[[C24_2]], [3 : index, 2 : index] : (!fir.array<5x5xf32>, f32) -> !fir.array<5x5xf32>
+! CHECK: %[[C0_5:.*]] = arith.constant 0.000000e+00 : f32
+! CHECK: %[[VAL_15:.*]] = fir.insert_on_range %[[VAL_14]], %[[C0_5]] from (4, 2) to (2, 3) : (!fir.array<5x5xf32>, f32) -> !fir.array<5x5xf32>
+! CHECK: %[[C24_3:.*]] = arith.constant 2.400000e+00 : f32
+! CHECK: %[[VAL_16:.*]] = fir.insert_value %[[VAL_15]], %[[C24_3]], [3 : index, 3 : index] : (!fir.array<5x5xf32>, f32) -> !fir.array<5x5xf32>
+! CHECK: %[[C0_6:.*]] = arith.constant 0.000000e+00 : f32
+! CHECK: %[[VAL_17:.*]] = fir.insert_on_range %[[VAL_16]], %[[C0_6]] from (4, 3) to (4, 4) : (!fir.array<5x5xf32>, f32) -> !fir.array<5x5xf32>
 ! CHECK: %[[VAL_18:.*]] = fir.insert_value %[[VAL_4]], %[[VAL_17]], [0 : index] : (tuple<!fir.array<5x5xf32>>, !fir.array<5x5xf32>) -> tuple<!fir.array<5x5xf32>>
 ! CHECK: fir.has_value %[[VAL_18]] : tuple<!fir.array<5x5xf32>>
 
@@ -35,63 +44,67 @@ subroutine s(i,j,k,ii,jj,kk,a1,a2,a3,a4,a5,a6,a7)
   integer a6(6:i,j:*)
   real a7(i:70,7:j,k:80)
 
-  ! CHECK-LABEL: BeginExternalListOutput
-  ! CHECK-DAG: fir.load %arg3 :
-  ! CHECK-DAG: %[[i1:.*]] = arith.subi %{{.*}}, %[[one:c1.*]] :
-  ! CHECK: fir.load %arg4 :
-  ! CHECK: %[[j1:.*]] = arith.subi %{{.*}}, %[[one]] :
-  ! CHECK: fir.coordinate_of %arg6, %[[i1]], %[[j1]] :
-  ! CHECK-LABEL: EndIoStatement
+  ! CHECK-LABEL: @_QPs
+  ! CHECK: %[[a1:.*]]:2 = hlfir.declare %{{.*}} {uniq_name = "_QFsEa1"}
+  ! CHECK: %[[a2:.*]]:2 = hlfir.declare %{{.*}} {uniq_name = "_QFsEa2"}
+  ! CHECK: %[[a3:.*]]:2 = hlfir.declare %{{.*}} {uniq_name = "_QFsEa3"}
+  ! CHECK: %[[a4:.*]]:2 = hlfir.declare %{{.*}} {uniq_name = "_QFsEa4"}
+  ! CHECK: %[[ii:.*]]:2 = hlfir.declare %{{.*}} {uniq_name = "_QFsEii"}
+  ! CHECK: %[[jj:.*]]:2 = hlfir.declare %{{.*}} {uniq_name = "_QFsEjj"}
+  ! CHECK: %[[kk:.*]]:2 = hlfir.declare %{{.*}} {uniq_name = "_QFsEkk"}
+  ! CHECK: %[[a5:.*]]:2 = hlfir.declare %{{.*}} {uniq_name = "_QFsEa5"}
+  ! CHECK: %[[a6:.*]]:2 = hlfir.declare %{{.*}} {uniq_name = "_QFsEa6"}
+  ! CHECK: %[[a7:.*]]:2 = hlfir.declare %{{.*}} {uniq_name = "_QFsEa7"}
+
+  ! CHECK: fir.call @_FortranAioBeginExternalListOutput
+  ! CHECK: %[[ii_val:.*]] = fir.load %[[ii]]#0
+  ! CHECK: %[[jj_val:.*]] = fir.load %[[jj]]#0
+  ! CHECK: %[[addr:.*]] = hlfir.designate %[[a1]]#0 ({{.*}}, {{.*}})
+  ! CHECK: %[[val:.*]] = fir.load %[[addr]]
+  ! CHECK: fir.call @_FortranAioOutputReal32({{.*}}, %[[val]])
+  ! CHECK: fir.call @_FortranAioEndIoStatement
   print *, a1(ii,jj)
-  ! CHECK-LABEL: BeginExternalListOutput
-  ! CHECK: fir.coordinate_of %{{[0-9]+}}, %{{[0-9]+}} : {{.*}} -> !fir.ref<i32>
-  ! CHECK-LABEL: EndIoStatement
+
+  ! CHECK: fir.call @_FortranAioBeginExternalListOutput
+  ! CHECK: %[[addr:.*]] = hlfir.designate %[[a2]]#0 ({{.*}}, {{.*}})
+  ! CHECK: %[[val:.*]] = fir.load %[[addr]]
+  ! CHECK: fir.call @_FortranAioOutputInteger32({{.*}}, %[[val]])
+  ! CHECK: fir.call @_FortranAioEndIoStatement
   print *, a2(ii,jj)
-  ! CHECK-LABEL: BeginExternalListOutput
-  ! CHECK-DAG: fir.load %arg3 :
-  ! CHECK-DAG: %[[cc2:.*]] = fir.convert %c2{{.*}} :
-  ! CHECK: %[[i2:.*]] = arith.subi %{{.*}}, %[[cc2]] :
-  ! CHECK-DAG: fir.load %arg4 :
-  ! CHECK-DAG: %[[cc3:.*]] = fir.convert %c3{{.*}} :
-  ! CHECK: %[[j2:.*]] = arith.subi %{{.*}}, %[[cc3]] :
-  ! CHECK: fir.coordinate_of %arg8, %[[i2]], %[[j2]] :
-  ! CHECK-LABEL: EndIoStatement
+
+  ! CHECK: fir.call @_FortranAioBeginExternalListOutput
+  ! CHECK: %[[addr:.*]] = hlfir.designate %[[a3]]#0 ({{.*}}, {{.*}})
+  ! CHECK: %[[val:.*]] = fir.load %[[addr]]
+  ! CHECK: fir.call @_FortranAioOutputReal32({{.*}}, %[[val]])
+  ! CHECK: fir.call @_FortranAioEndIoStatement
   print *, a3(ii,jj)
-  ! CHECK-LABEL: BeginExternalListOutput
-  ! CHECK-LABEL: EndIoStatement
+
+  ! CHECK: fir.call @_FortranAioBeginExternalListOutput
+  ! CHECK: %[[addr:.*]] = hlfir.designate %[[a4]]#0 ({{.*}}, {{.*}})
+  ! CHECK: %[[val:.*]] = fir.load %[[addr]]
+  ! CHECK: fir.call @_FortranAioOutputInteger32({{.*}}, %[[val]])
+  ! CHECK: fir.call @_FortranAioEndIoStatement
   print *, a4(ii,jj)
-  ! CHECK-LABEL: BeginExternalListOutput
-  ! CHECK: fir.load %arg5 :
-  ! CHECK: %[[x5:.*]] = arith.subi %{{.*}}, %{{.*}} :
-  ! CHECK: fir.coordinate_of %arg10, %[[x5]] :
-  ! CHECK-LABEL: EndIoStatement
+
+  ! CHECK: fir.call @_FortranAioBeginExternalListOutput
+  ! CHECK: %[[addr:.*]] = hlfir.designate %[[a5]]#0 ({{.*}})
+  ! CHECK: %[[val:.*]] = fir.load %[[addr]]
+  ! CHECK: fir.call @_FortranAioOutputReal32({{.*}}, %[[val]])
+  ! CHECK: fir.call @_FortranAioEndIoStatement
   print *, a5(kk)
-  ! CHECK-LABEL: BeginExternalListOutput
-  ! CHECK: %[[a6:.*]] = fir.convert %arg11 : {{.*}} -> !fir.ref<!fir.array<?xi32>>
-  ! CHECK: fir.load %arg3 :
-  ! CHECK-DAG: %[[x6:.*]] = arith.subi %{{.*}}, %{{.*}} :
-  ! CHECK-DAG: fir.load %arg4 :
-  ! CHECK: %[[y6:.*]] = arith.subi %{{.*}}, %{{.*}} :
-  ! CHECK: %[[z6:.*]] = arith.muli %{{.}}, %[[y6]] :
-  ! CHECK: %[[w6:.*]] = arith.addi %[[z6]], %[[x6]] :
-  ! CHECK: fir.coordinate_of %[[a6]], %[[w6]] :
-  ! CHECK-LABEL: EndIoStatement
+
+  ! CHECK: fir.call @_FortranAioBeginExternalListOutput
+  ! CHECK: %[[addr:.*]] = hlfir.designate %[[a6]]#0 ({{.*}}, {{.*}})
+  ! CHECK: %[[val:.*]] = fir.load %[[addr]]
+  ! CHECK: fir.call @_FortranAioOutputInteger32({{.*}}, %[[val]])
+  ! CHECK: fir.call @_FortranAioEndIoStatement
   print *, a6(ii, jj)
-  ! CHECK-LABEL: BeginExternalListOutput
-  ! CHECK: %[[a7:.*]] = fir.convert %arg12 : {{.*}} -> !fir.ref<!fir.array<?xf32>>
-  ! CHECK: fir.load %arg5 :
-  ! CHECK-DAG: %[[x7:.*]] = arith.subi %{{.*}}, %{{.*}} :
-  ! CHECK-DAG: fir.load %arg4 :
-  ! CHECK: %[[y7:.*]] = arith.subi %{{.*}}, %{{.*}} :
-  ! CHECK: %[[z7:.*]] = arith.muli %[[u7:.*]], %[[y7]] :
-  ! CHECK: %[[w7:.*]] = arith.addi %[[z7]], %[[x7]] :
-  ! CHECK-DAG: %[[v7:.*]] = arith.muli %[[u7]], %{{.*}} :
-  ! CHECK-DAG: fir.load %arg3 :
-  ! CHECK: %[[r7:.*]] = arith.subi %{{.*}}, %{{.*}} :
-  ! CHECK: %[[s7:.*]] = arith.muli %[[v7]], %[[r7]] :
-  ! CHECK: %[[t7:.*]] = arith.addi %[[s7]], %[[w7]] :
-  ! CHECK: fir.coordinate_of %[[a7]], %[[t7]] :
-  ! CHECK-LABEL: EndIoStatement
+
+  ! CHECK: fir.call @_FortranAioBeginExternalListOutput
+  ! CHECK: %[[addr:.*]] = hlfir.designate %[[a7]]#0 ({{.*}}, {{.*}}, {{.*}})
+  ! CHECK: %[[val:.*]] = fir.load %[[addr]]
+  ! CHECK: fir.call @_FortranAioOutputReal32({{.*}}, %[[val]])
+  ! CHECK: fir.call @_FortranAioEndIoStatement
   print *, a7(kk, jj, ii)
 
 end subroutine s

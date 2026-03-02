@@ -86,3 +86,23 @@ vector.body:                                      ; preds = %vector.body, %vecto
 end:
   ret i32 %and255
 }
+
+define <4 x i32> @backsmith_pure_4(<4 x i32> %0, <4 x i16> %conv.i) {
+; CHECK-LABEL: backsmith_pure_4:
+; CHECK:       // %bb.0: // %entry
+; CHECK-NEXT:    // kill: def $d1 killed $d1 def $q1
+; CHECK-NEXT:    shl v2.4s, v0.4s, #16
+; CHECK-NEXT:    dup v1.4h, v1.h[2]
+; CHECK-NEXT:    sshr v2.4s, v2.4s, #16
+; CHECK-NEXT:    sshll v1.4s, v1.4h, #0
+; CHECK-NEXT:    trn2 v1.4s, v1.4s, v2.4s
+; CHECK-NEXT:    mul v0.4s, v0.4s, v1.4s
+; CHECK-NEXT:    ret
+entry:
+  %conv.i19 = trunc <4 x i32> %0 to <4 x i16>
+  %shuffle11 = shufflevector <4 x i16> %conv.i19, <4 x i16> %conv.i, <32 x i32> <i32 5, i32 2, i32 5, i32 3, i32 1, i32 6, i32 5, i32 6, i32 5, i32 6, i32 4, i32 6, i32 0, i32 3, i32 5, i32 1, i32 6, i32 7, i32 2, i32 6, i32 3, i32 1, i32 0, i32 4, i32 4, i32 1, i32 2, i32 7, i32 2, i32 2, i32 1, i32 2>
+  %conv12 = sext <32 x i16> %shuffle11 to <32 x i32>
+  %shuffle14 = shufflevector <32 x i32> %conv12, <32 x i32> zeroinitializer, <4 x i32> <i32 9, i32 25, i32 poison, i32 poison>
+  %mul = mul <4 x i32> %0, %shuffle14
+  ret <4 x i32> %mul
+}

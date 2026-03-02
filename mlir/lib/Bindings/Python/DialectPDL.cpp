@@ -13,7 +13,6 @@
 #include "mlir/Bindings/Python/NanobindAdaptors.h"
 
 namespace nb = nanobind;
-using namespace llvm;
 using namespace mlir::python::nanobind_adaptors;
 
 namespace mlir {
@@ -39,7 +38,10 @@ struct PDLType : PyConcreteType<PDLType> {
 
 struct AttributeType : PyConcreteType<AttributeType> {
   static constexpr IsAFunctionTy isaFunction = mlirTypeIsAPDLAttributeType;
+  static constexpr GetTypeIDFunctionTy getTypeIdFunction =
+      mlirPDLAttributeTypeGetTypeID;
   static constexpr const char *pyClassName = "AttributeType";
+  static inline const MlirStringRef name = mlirPDLAttributeTypeGetName();
   using Base::Base;
 
   static void bindDerived(ClassTy &c) {
@@ -60,7 +62,10 @@ struct AttributeType : PyConcreteType<AttributeType> {
 
 struct OperationType : PyConcreteType<OperationType> {
   static constexpr IsAFunctionTy isaFunction = mlirTypeIsAPDLOperationType;
+  static constexpr GetTypeIDFunctionTy getTypeIdFunction =
+      mlirPDLOperationTypeGetTypeID;
   static constexpr const char *pyClassName = "OperationType";
+  static inline const MlirStringRef name = mlirPDLOperationTypeGetName();
   using Base::Base;
 
   static void bindDerived(ClassTy &c) {
@@ -81,7 +86,10 @@ struct OperationType : PyConcreteType<OperationType> {
 
 struct RangeType : PyConcreteType<RangeType> {
   static constexpr IsAFunctionTy isaFunction = mlirTypeIsAPDLRangeType;
+  static constexpr GetTypeIDFunctionTy getTypeIdFunction =
+      mlirPDLRangeTypeGetTypeID;
   static constexpr const char *pyClassName = "RangeType";
+  static inline const MlirStringRef name = mlirPDLRangeTypeGetName();
   using Base::Base;
 
   static void bindDerived(ClassTy &c) {
@@ -96,8 +104,8 @@ struct RangeType : PyConcreteType<RangeType> {
     c.def_prop_ro(
         "element_type",
         [](RangeType &type) {
-          return PyType(type.getContext(),
-                        mlirPDLRangeTypeGetElementType(type));
+          return PyType(type.getContext(), mlirPDLRangeTypeGetElementType(type))
+              .maybeDownCast();
         },
         "Get the element type.");
   }
@@ -109,7 +117,10 @@ struct RangeType : PyConcreteType<RangeType> {
 
 struct TypeType : PyConcreteType<TypeType> {
   static constexpr IsAFunctionTy isaFunction = mlirTypeIsAPDLTypeType;
+  static constexpr GetTypeIDFunctionTy getTypeIdFunction =
+      mlirPDLTypeTypeGetTypeID;
   static constexpr const char *pyClassName = "TypeType";
+  static inline const MlirStringRef name = mlirPDLTypeTypeGetName();
   using Base::Base;
 
   static void bindDerived(ClassTy &c) {
@@ -130,7 +141,10 @@ struct TypeType : PyConcreteType<TypeType> {
 
 struct ValueType : PyConcreteType<ValueType> {
   static constexpr IsAFunctionTy isaFunction = mlirTypeIsAPDLValueType;
+  static constexpr GetTypeIDFunctionTy getTypeIdFunction =
+      mlirPDLValueTypeGetTypeID;
   static constexpr const char *pyClassName = "ValueType";
+  static inline const MlirStringRef name = mlirPDLValueTypeGetName();
   using Base::Base;
 
   static void bindDerived(ClassTy &c) {

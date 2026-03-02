@@ -1669,8 +1669,7 @@ define i32 @test_insertelement_variable_v32i1(<32 x i8> %a, i8 %b, i32 %index) n
 ; SKX-NEXT:    vpmovm2b %k0, %ymm0
 ; SKX-NEXT:    vpbroadcastb %eax, %ymm0 {%k1}
 ; SKX-NEXT:    vpsllw $7, %ymm0, %ymm0
-; SKX-NEXT:    vpmovb2m %ymm0, %k0
-; SKX-NEXT:    kmovd %k0, %eax
+; SKX-NEXT:    vpmovmskb %ymm0, %eax
 ; SKX-NEXT:    vzeroupper
 ; SKX-NEXT:    retq
   %t1 = icmp ugt <32 x i8> %a, zeroinitializer

@@ -25,22 +25,26 @@ void RedundantTypenameCheck::registerMatchers(MatchFinder *Finder) {
   if (!getLangOpts().CPlusPlus20)
     return;
 
-  const auto InImplicitTypenameContext = anyOf(
-      hasParent(decl(anyOf(
-          typedefNameDecl(), templateTypeParmDecl(), nonTypeTemplateParmDecl(),
-          friendDecl(), fieldDecl(),
-          varDecl(hasDeclContext(anyOf(namespaceDecl(), translationUnitDecl())),
-                  unless(parmVarDecl())),
-          parmVarDecl(hasParent(expr(requiresExpr()))),
-          parmVarDecl(hasParent(typeLoc(hasParent(decl(
-              anyOf(cxxMethodDecl(), hasParent(friendDecl()),
+  const auto InImplicitTypenameContext =
+      anyOf(hasParent(decl(anyOf(
+                typedefNameDecl(), templateTypeParmDecl(),
+                nonTypeTemplateParmDecl(), friendDecl(), fieldDecl(),
+                parmVarDecl(hasParent(expr(requiresExpr()))),
+                parmVarDecl(hasParent(typeLoc(hasParent(decl(anyOf(
+                    cxxMethodDecl(), hasParent(friendDecl()),
                     functionDecl(has(nestedNameSpecifier())),
                     cxxDeductionGuideDecl(hasDeclContext(recordDecl())))))))),
-          // Match return types.
-          functionDecl(unless(cxxConversionDecl()))))),
-      hasParent(expr(anyOf(cxxNamedCastExpr(), cxxNewExpr()))));
+                // Match return types.
+                functionDecl(unless(cxxConversionDecl()))))),
+            hasParent(expr(anyOf(cxxNamedCastExpr(), cxxNewExpr()))));
   Finder->addMatcher(
       typeLoc(InImplicitTypenameContext).bind("dependentTypeLoc"), this);
+  Finder->addMatcher(
+      varDecl(hasDeclContext(anyOf(namespaceDecl(), translationUnitDecl(),
+                                   cxxRecordDecl())),
+              unless(parmVarDecl()),
+              hasTypeLoc(typeLoc().bind("dependentTypeLoc"))),
+      this);
 }
 
 void RedundantTypenameCheck::check(const MatchFinder::MatchResult &Result) {

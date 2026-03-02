@@ -36,10 +36,8 @@ public:
   /// Construct a dependency scanning tool.
   ///
   /// @param Service  The parent service. Must outlive the tool.
-  /// @param FS The filesystem for the tool to use. Defaults to the physical FS.
-  DependencyScanningTool(dependencies::DependencyScanningService &Service,
-                         llvm::IntrusiveRefCntPtr<llvm::vfs::FileSystem> FS =
-                             llvm::vfs::createPhysicalFileSystem());
+  DependencyScanningTool(dependencies::DependencyScanningService &Service)
+      : Worker(Service) {}
 
   /// Print out the dependency information into a string using the dependency
   /// file format that is specified in the options (-MD is the default) and
@@ -113,7 +111,7 @@ public:
       const llvm::DenseSet<dependencies::ModuleID> &AlreadySeen,
       dependencies::LookupModuleOutputCallback LookupModuleOutput);
 
-  /// The following three methods provide a new interface to perform
+  /// The following two methods provide a new interface to perform
   /// by name dependency scan. The new interface's intention is to improve
   /// dependency scanning performance when a sequence of name is looked up
   /// with the same current working directory and the command line.
@@ -147,12 +145,6 @@ public:
       const llvm::DenseSet<dependencies::ModuleID> &AlreadySeen,
       dependencies::LookupModuleOutputCallback LookupModuleOutput);
 
-  /// @brief This method finializes the compiler instance. It finalizes the
-  ///        diagnostics and deletes the compiler instance. Call this method
-  ///        once all names for a same commandline are scanned.
-  /// @return Error if an error occured during finalization.
-  llvm::Error finalizeCompilerInstanceWithContextOrError();
-
   llvm::vfs::FileSystem &getWorkerVFS() const { return Worker.getVFS(); }
 
   /// @brief Initialize the worker's compiler instance from the commandline.
@@ -174,6 +166,25 @@ private:
   std::unique_ptr<dependencies::TextDiagnosticsPrinterWithOutput>
       DiagPrinterWithOS;
 };
+
+/// Run the dependency scanning worker for the given driver or frontend
+/// command-line, and report the discovered dependencies to the provided
+/// consumer.
+///
+/// OverlayFS should be based on the Worker's dependency scanning file-system
+/// and can be used to provide any input specified on the command-line as
+/// in-memory file. If no overlay file-system is provided, the Worker's
+/// dependency scanning file-system is used instead.
+///
+/// \returns false if any errors occurred (with diagnostics reported to
+/// \c DiagConsumer), true otherwise.
+bool computeDependencies(
+    dependencies::DependencyScanningWorker &Worker, StringRef WorkingDirectory,
+    ArrayRef<std::string> CommandLine,
+    dependencies::DependencyConsumer &Consumer,
+    dependencies::DependencyActionController &Controller,
+    DiagnosticConsumer &DiagConsumer,
+    llvm::IntrusiveRefCntPtr<llvm::vfs::OverlayFileSystem> OverlayFS = nullptr);
 
 } // end namespace tooling
 } // end namespace clang

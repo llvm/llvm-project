@@ -3605,6 +3605,8 @@ foldCondBranchOnValueKnownInPredecessorImpl(BranchInst *BI, DomTreeUpdater *DTU,
     // Split the predecessors we are threading into a new edge block. We'll
     // clone the instructions into this block, and then redirect it to RealDest.
     BasicBlock *EdgeBB = SplitBlockPredecessors(BB, PredBBs, ".critedge", DTU);
+    if (!EdgeBB)
+      continue;
 
     // TODO: These just exist to reduce test diff, we can drop them if we like.
     EdgeBB->setName(RealDest->getName() + ".critedge");
@@ -6317,9 +6319,12 @@ static bool validLookupTableConstant(Constant *C, const TargetTransformInfo &TTI
   if (C->isDLLImportDependent())
     return false;
 
-  if (!isa<ConstantFP>(C) && !isa<ConstantInt>(C) &&
-      !isa<ConstantPointerNull>(C) && !isa<GlobalValue>(C) &&
-      !isa<UndefValue>(C) && !isa<ConstantExpr>(C))
+  if (!isa<ConstantDataVector, ConstantExpr, ConstantFP, ConstantInt,
+           ConstantPointerNull, GlobalValue, UndefValue>(C))
+    return false;
+
+  // Globals cannot contain scalable types.
+  if (C->getType()->isScalableTy())
     return false;
 
   if (ConstantExpr *CE = dyn_cast<ConstantExpr>(C)) {
@@ -7722,7 +7727,7 @@ static bool simplifySwitchWhenUMin(SwitchInst *SI, DomTreeUpdater *DTU) {
     BasicBlock *DeadCaseBB = I->getCaseSuccessor();
     DeadCaseBB->removePredecessor(BB);
     Updates.push_back({DominatorTree::Delete, BB, DeadCaseBB});
-    I = SIW->removeCase(I);
+    I = SIW.removeCase(I);
     E = SIW->case_end();
   }
 
@@ -7817,7 +7822,7 @@ static bool simplifySwitchOfPowersOfTwo(SwitchInst *SI, IRBuilder<> &Builder,
     auto HasWeights =
         !ProfcheckDisableMetadataFixes && extractBranchWeights(*SI, Weights);
     auto *BI = BranchInst::Create(SplitBB, DefaultCaseBB, IsPow2, It);
-    if (HasWeights && any_of(Weights, [](const auto &V) { return V != 0; })) {
+    if (HasWeights && any_of(Weights, not_equal_to(0))) {
       // IsPow2 covers a subset of the cases in which we'd go to the default
       // label. The other is those powers of 2 that don't appear in the case
       // statement. We don't know the distribution of the values coming in, so

@@ -354,34 +354,6 @@ CacheCostTy IndexedReference::computeRefCost(const Loop &L,
   return CacheCostTy::getInvalid();
 }
 
-bool IndexedReference::tryDelinearizeFixedSize(
-    const SCEV *AccessFn, SmallVectorImpl<const SCEV *> &Subscripts,
-    const SCEV *ElementSize) {
-  const SCEV *Offset = SE.removePointerBase(AccessFn);
-  if (!delinearizeFixedSizeArray(SE, Offset, Subscripts, Sizes, ElementSize)) {
-    Sizes.clear();
-    return false;
-  }
-
-  // We expect Sizes and Subscipts have the same number of elements, and the
-  // last element of Sizes is ElementSize. It is for ensuring consistency with
-  // the load/store instruction being analyzed. It is not needed for further
-  // analysis.
-  // TODO: Maybe this property should be enforced in delinearizeFixedSizeArray.
-#ifndef NDEBUG
-  assert(!Sizes.empty() && Subscripts.size() == Sizes.size() &&
-         "Inconsistent length of Sizes and Subscripts");
-  Type *WideTy =
-      SE.getWiderType(ElementSize->getType(), Sizes.back()->getType());
-  const SCEV *ElemSizeExt = SE.getNoopOrZeroExtend(ElementSize, WideTy);
-  const SCEV *LastSizeExt = SE.getNoopOrZeroExtend(Sizes.back(), WideTy);
-  assert(ElemSizeExt == LastSizeExt && "Unexpected last element of Sizes");
-#endif
-
-  Sizes.pop_back();
-  return true;
-}
-
 bool IndexedReference::delinearize(const LoopInfo &LI) {
   assert(Subscripts.empty() && "Subscripts should be empty");
   assert(Sizes.empty() && "Sizes should be empty");
@@ -404,21 +376,20 @@ bool IndexedReference::delinearize(const LoopInfo &LI) {
     }
 
     bool IsFixedSize = false;
+    AccessFn = SE.getMinusSCEV(AccessFn, BasePointer);
+
     // Try to delinearize fixed-size arrays.
-    if (tryDelinearizeFixedSize(AccessFn, Subscripts, ElemSize)) {
+    if (delinearizeFixedSizeArray(SE, AccessFn, Subscripts, Sizes, ElemSize)) {
       IsFixedSize = true;
-      // The last element of Sizes is the element size.
-      Sizes.push_back(ElemSize);
       LLVM_DEBUG(dbgs().indent(2) << "In Loop '" << L->getName()
                                   << "', AccessFn: " << *AccessFn << "\n");
     }
-
-    AccessFn = SE.getMinusSCEV(AccessFn, BasePointer);
 
     // Try to delinearize parametric-size arrays.
     if (!IsFixedSize) {
       LLVM_DEBUG(dbgs().indent(2) << "In Loop '" << L->getName()
                                   << "', AccessFn: " << *AccessFn << "\n");
+      Sizes.clear();
       llvm::delinearize(SE, AccessFn, Subscripts, Sizes,
                         SE.getElementSize(&StoreOrLoadInst));
     }
