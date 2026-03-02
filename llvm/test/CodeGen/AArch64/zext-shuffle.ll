@@ -701,6 +701,7 @@ entry:
   ret <4 x i32> %1
 }
 
+; Negative test for performZExtUZPCombine().
 ; Similar as above. Scalable vectors are introduced due to the custom
 ; legalisation of the wide shufflevector into a scalable AArch64ISD::UZP2
 ; (because vscale is known to be 2).
@@ -714,8 +715,27 @@ entry:
   %v.fixed = call <16 x i16> @llvm.vector.extract.v16i16.nxv8i16(<vscale x 8 x i16> %v, i64 0)
   %v.odd = shufflevector <16 x i16> %v.fixed, <16 x i16> %v.fixed, <16 x i32> <i32 1, i32 3, i32 5, i32 7, i32 9, i32 11, i32 13, i32 15,
                                                                                i32 17, i32 19, i32 21, i32 23, i32 25, i32 27, i32 29, i32 31>
-  %0 = call <4 x i16> @llvm.vector.extract.v4i16.nxv8i16(<16 x i16> %v.odd, i64 0)
+  %0 = call <4 x i16> @llvm.vector.extract.v4i16.v16i16(<16 x i16> %v.odd, i64 0)
   %1 = zext <4 x i16> %0 to <4 x i32>
+  ret <4 x i32> %1
+}
+
+; Negative test for performZExtUZPCombine().
+; The latter can also handle and/lsr in between the vector_extract and zext, so
+; make sure vector_extract from scalable vectors are also rejected there.
+define <4 x i32> @prevent_scalable_nvcast_mask(<vscale x 8 x i16> %v) #0 {
+; CHECK-LABEL: prevent_scalable_nvcast_mask:
+; CHECK:       // %bb.0: // %entry
+; CHECK-NEXT:    uzp1 z0.h, z0.h, z0.h
+; CHECK-NEXT:    bic v0.4h, #255, lsl #8
+; CHECK-NEXT:    ushll v0.4s, v0.4h, #0
+; CHECK-NEXT:    ret
+entry:
+  %v.even = call <vscale x 8 x i16> @llvm.aarch64.sve.uzp1.nxv8i16(<vscale x 8 x i16> %v,
+                                                                   <vscale x 8 x i16> %v)
+  %0 = call <4 x i16> @llvm.vector.extract.v4i16.nxv8i16(<vscale x 8 x i16> %v.even, i64 0)
+  %masked = and <4 x i16> %0, splat (i16 255)
+  %1 = zext <4 x i16> %masked to <4 x i32>
   ret <4 x i32> %1
 }
 
