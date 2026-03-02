@@ -153,6 +153,53 @@ def ArithNonNegFlagInterface : OpInterface<"ArithNonNegFlagInterface"> {
   ];
 }
 
+def ArithExactFlagInterface : OpInterface<"ArithExactFlagInterface"> {
+  let description = [{
+    Access to op exact flag.
+  }];
+
+  let cppNamespace = "::mlir::arith";
+
+  let methods = [
+    InterfaceMethod<
+      /*desc=*/        "Returns whether the operation has the exact flag set",
+      /*returnType=*/  "bool",
+      /*methodName=*/  "getExact",
+      /*args=*/        (ins),
+      /*methodBody=*/  [{}],
+      /*defaultImpl=*/ [{
+        auto op = cast<ConcreteOp>(this->getOperation());
+        return op.getIsExactAttr() != nullptr;
+      }]
+      >,
+    InterfaceMethod<
+      /*desc=*/        "Set the exact flag for the operation",
+      /*returnType=*/  "void",
+      /*methodName=*/  "setExact",
+      /*args=*/        (ins "bool":$isExact),
+      /*methodBody=*/  [{}],
+      /*defaultImpl=*/ [{
+        auto op = cast<ConcreteOp>(this->getOperation());
+        if (isExact)
+          op.setIsExactAttr(UnitAttr::get(op->getContext()));
+        else
+          op.removeIsExactAttr();
+      }]
+      >,
+    StaticInterfaceMethod<
+      /*desc=*/        [{Returns the name of the exact flag attribute for
+                         the operation}],
+      /*returnType=*/  "StringRef",
+      /*methodName=*/  "getExactFlagAttrName",
+      /*args=*/        (ins),
+      /*methodBody=*/  [{}],
+      /*defaultImpl=*/ [{
+        return "isExact";
+      }]
+      >
+  ];
+}
+
 def ArithRoundingModeInterface : OpInterface<"ArithRoundingModeInterface"> {
   let description = [{
     Access to op rounding mode.
