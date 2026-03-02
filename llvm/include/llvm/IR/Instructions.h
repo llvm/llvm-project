@@ -3159,8 +3159,10 @@ DEFINE_TRANSPARENT_OPERAND_ACCESSORS(BranchInst, Value)
 /// Unconditional Branch instruction.
 ///
 class UncondBrInst : public BranchInst {
-  UncondBrInst(const UncondBrInst &BI, AllocInfo AllocInfo);
-  LLVM_ABI explicit UncondBrInst(BasicBlock *IfTrue, AllocInfo AllocInfo,
+  constexpr static IntrusiveOperandsAllocMarker AllocMarker{1};
+
+  UncondBrInst(const UncondBrInst &BI);
+  LLVM_ABI explicit UncondBrInst(BasicBlock *IfTrue,
                                  InsertPosition InsertBefore);
 
 protected:
@@ -3172,8 +3174,7 @@ protected:
 public:
   static UncondBrInst *Create(BasicBlock *IfTrue,
                               InsertPosition InsertBefore = nullptr) {
-    IntrusiveOperandsAllocMarker AllocMarker{1};
-    return new (AllocMarker) UncondBrInst(IfTrue, AllocMarker, InsertBefore);
+    return new (AllocMarker) UncondBrInst(IfTrue, InsertBefore);
   }
 
   /// Transparently provide more efficient getOperand methods.
@@ -3231,12 +3232,14 @@ DEFINE_TRANSPARENT_OPERAND_ACCESSORS(UncondBrInst, Value)
 //===----------------------------------------------------------------------===//
 
 //===---------------------------------------------------------------------------
-/// Conditional or Unconditional Branch instruction.
+/// Conditional Branch instruction.
 ///
 class CondBrInst : public BranchInst {
-  CondBrInst(const CondBrInst &BI, AllocInfo AllocInfo);
+  constexpr static IntrusiveOperandsAllocMarker AllocMarker{3};
+
+  CondBrInst(const CondBrInst &BI);
   LLVM_ABI CondBrInst(BasicBlock *IfTrue, BasicBlock *IfFalse, Value *Cond,
-                      AllocInfo AllocInfo, InsertPosition InsertBefore);
+                      InsertPosition InsertBefore);
 
   void AssertOK();
 
@@ -3255,9 +3258,7 @@ public:
   static CondBrInst *Create(BasicBlock *IfTrue, BasicBlock *IfFalse,
                             Value *Cond,
                             InsertPosition InsertBefore = nullptr) {
-    IntrusiveOperandsAllocMarker AllocMarker{3};
-    return new (AllocMarker)
-        CondBrInst(IfTrue, IfFalse, Cond, AllocMarker, InsertBefore);
+    return new (AllocMarker) CondBrInst(IfTrue, IfFalse, Cond, InsertBefore);
   }
 
   /// Transparently provide more efficient getOperand methods.

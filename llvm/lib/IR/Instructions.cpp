@@ -1189,19 +1189,16 @@ UnreachableInst::UnreachableInst(LLVMContext &Context,
 //                        UncondBrInst Implementation
 //===----------------------------------------------------------------------===//
 
-UncondBrInst::UncondBrInst(BasicBlock *IfTrue, AllocInfo AllocInfo,
-                           InsertPosition InsertBefore)
+UncondBrInst::UncondBrInst(BasicBlock *IfTrue, InsertPosition InsertBefore)
     : BranchInst(Type::getVoidTy(IfTrue->getContext()), Instruction::UncondBr,
-                 AllocInfo, InsertBefore) {
+                 AllocMarker, InsertBefore) {
   assert(IfTrue && "Branch destination may not be null!");
   Op<-1>() = IfTrue;
 }
 
-UncondBrInst::UncondBrInst(const UncondBrInst &BI, AllocInfo AllocInfo)
+UncondBrInst::UncondBrInst(const UncondBrInst &BI)
     : BranchInst(Type::getVoidTy(BI.getContext()), Instruction::UncondBr,
-                 AllocInfo) {
-  assert(getNumOperands() == BI.getNumOperands() &&
-         "Wrong number of operands allocated");
+                 AllocMarker) {
   Op<-1>() = BI.Op<-1>();
   SubclassOptionalData = BI.SubclassOptionalData;
 }
@@ -1216,9 +1213,9 @@ void CondBrInst::AssertOK() {
 }
 
 CondBrInst::CondBrInst(BasicBlock *IfTrue, BasicBlock *IfFalse, Value *Cond,
-                       AllocInfo AllocInfo, InsertPosition InsertBefore)
+                       InsertPosition InsertBefore)
     : BranchInst(Type::getVoidTy(IfTrue->getContext()), Instruction::CondBr,
-                 AllocInfo, InsertBefore) {
+                 AllocMarker, InsertBefore) {
   // Assign in order of operand index to make use-list order predictable.
   Op<-3>() = Cond;
   Op<-2>() = IfFalse;
@@ -1228,11 +1225,9 @@ CondBrInst::CondBrInst(BasicBlock *IfTrue, BasicBlock *IfFalse, Value *Cond,
 #endif
 }
 
-CondBrInst::CondBrInst(const CondBrInst &BI, AllocInfo AllocInfo)
+CondBrInst::CondBrInst(const CondBrInst &BI)
     : BranchInst(Type::getVoidTy(BI.getContext()), Instruction::CondBr,
-                 AllocInfo) {
-  assert(getNumOperands() == BI.getNumOperands() &&
-         "Wrong number of operands allocated");
+                 AllocMarker) {
   // Assign in order of operand index to make use-list order predictable.
   Op<-3>() = BI.Op<-3>();
   Op<-2>() = BI.Op<-2>();
@@ -4507,13 +4502,11 @@ ReturnInst *ReturnInst::cloneImpl() const {
 }
 
 UncondBrInst *UncondBrInst::cloneImpl() const {
-  IntrusiveOperandsAllocMarker AllocMarker{getNumOperands()};
-  return new (AllocMarker) UncondBrInst(*this, AllocMarker);
+  return new (AllocMarker) UncondBrInst(*this);
 }
 
 CondBrInst *CondBrInst::cloneImpl() const {
-  IntrusiveOperandsAllocMarker AllocMarker{getNumOperands()};
-  return new (AllocMarker) CondBrInst(*this, AllocMarker);
+  return new (AllocMarker) CondBrInst(*this);
 }
 
 SwitchInst *SwitchInst::cloneImpl() const { return new SwitchInst(*this); }

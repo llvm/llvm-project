@@ -295,8 +295,8 @@ class SimplifyCFGOpt {
   bool simplifySwitch(SwitchInst *SI, IRBuilder<> &Builder);
   bool simplifyDuplicateSwitchArms(SwitchInst *SI, DomTreeUpdater *DTU);
   bool simplifyIndirectBr(IndirectBrInst *IBI);
-  bool simplifyUncondBranch(BranchInst *BI, IRBuilder<> &Builder);
-  bool simplifyCondBranch(BranchInst *BI, IRBuilder<> &Builder);
+  bool simplifyUncondBranch(UncondBrInst *BI, IRBuilder<> &Builder);
+  bool simplifyCondBranch(CondBrInst *BI, IRBuilder<> &Builder);
   bool foldCondBranchOnValueKnownInPredecessor(BranchInst *BI);
 
   bool tryToSimplifyUncondBranchWithICmpInIt(ICmpInst *ICI,
@@ -8369,7 +8369,7 @@ static bool tryToMergeLandingPad(LandingPadInst *LPad, BranchInst *BI,
   return false;
 }
 
-bool SimplifyCFGOpt::simplifyUncondBranch(BranchInst *BI,
+bool SimplifyCFGOpt::simplifyUncondBranch(UncondBrInst *BI,
                                           IRBuilder<> &Builder) {
   BasicBlock *BB = BI->getParent();
   BasicBlock *Succ = BI->getSuccessor(0);
@@ -8524,7 +8524,7 @@ static bool mergeNestedCondBranch(BranchInst *BI, DomTreeUpdater *DTU) {
   return true;
 }
 
-bool SimplifyCFGOpt::simplifyCondBranch(BranchInst *BI, IRBuilder<> &Builder) {
+bool SimplifyCFGOpt::simplifyCondBranch(CondBrInst *BI, IRBuilder<> &Builder) {
   assert(
       !isa<ConstantInt>(BI->getCondition()) &&
       BI->getSuccessor(0) != BI->getSuccessor(1) &&
