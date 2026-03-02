@@ -189,6 +189,14 @@ else()
   set(LIBOMP_LINKER_LANGUAGE CXX)
 endif()
 if(LIBOMP_USE_HWLOC)
+  target_include_directories(obj.omp
+                             PUBLIC
+			     "$<BUILD_INTERFACE:${LIBOMP_HWLOC_INCLUDE_DIR}>"
+			     "$<INSTALL_INTERFACE:${LIBOMP_HWLOC_INCLUDE_DIR}>"
+  )
+  # omp itself uses obj.omp and thus doesn't need to include hwloc headers
+  # itself. However, we want to propagate the include to consumers of omp (e.g.
+  # libompd).
   target_include_directories(omp
                              PUBLIC
 			     "$<BUILD_INTERFACE:${LIBOMP_HWLOC_INCLUDE_DIR}>"
