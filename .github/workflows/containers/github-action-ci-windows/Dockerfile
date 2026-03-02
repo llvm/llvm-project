@@ -2,8 +2,6 @@
 # .net 4.8 is required by chocolately package manager.
 FROM mcr.microsoft.com/dotnet/framework/sdk:4.8-windowsservercore-ltsc2022
 
-# FORCE BUILD 1/23/26
-
 # Restore the default Windows shell for correct batch processing.
 SHELL ["cmd", "/S", "/C"]
 
@@ -88,6 +86,11 @@ RUN powershell -Command \
 # support long file names during git checkout
 RUN git config --system core.longpaths true & \
     git config --global core.autocrlf false
+
+# Enable long paths so that ninja can work with paths longer than 260 characters.
+RUN powershell -Command \
+    New-ItemProperty -Path "HKLM:\SYSTEM\CurrentControlSet\Control\FileSystem" \
+    -Name "LongPathsEnabled" -Value 1 -PropertyType DWORD -Force
 
 ARG RUNNER_VERSION=2.331.0
 ENV RUNNER_VERSION=$RUNNER_VERSION
