@@ -1,6 +1,5 @@
 ;; This test checks processing of DIImportedEntity with elements field.
 ; REQUIRES: x86_64-linux
-
 ; RUN: llc %s -filetype=obj -o - | llvm-dwarfdump - | FileCheck %s
 
 ; CHECK: DW_TAG_subprogram
@@ -8,9 +7,9 @@
 ; CHECK:   DW_TAG_subprogram
 ; CHECK:     DW_AT_name      ("use_renamed")
 ; CHECK:     DW_TAG_imported_module
-; CHECK:       DW_AT_import ([[MYMOD]] "mymod")
+; CHECK:       DW_AT_import ([[MYMOD:0x[0-9a-f]+]] "mymod")
 ; CHECK:       DW_TAG_imported_declaration
-; CHECK:         DW_AT_import ([[VAR1]] "var1")
+; CHECK:         DW_AT_import ([[VAR1:0x[0-9a-f]+]] "var1")
 ; CHECK:         DW_AT_name        ("var4")
 
 ; CHECK: [[MYMOD]]: DW_TAG_module
