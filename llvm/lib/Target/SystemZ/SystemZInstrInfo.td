@@ -536,7 +536,11 @@ let hasNoSchedulingInfo = 1, hasSideEffects = 1, mayLoad = 1 in {
     // and move the stack guard to the stack.
     let usesCustomInserter = 1 in
       def MOV_STACKGUARD_DAG : Pseudo<(outs),
-                                        (ins bdaddr12only:$grdloc), []>;
+                                        (ins bdaddr12only:$grdloc), [
+                                          (z_mov_stackguard 
+                                            bdaddr12only:$grdloc
+                                          )
+                                     ]>;
     let Constraints = "@earlyclobber $grdaddr" in
       def MOV_STACKGUARD : Pseudo<(outs ADDR64:$grdaddr),
                                     (ins bdaddr12only:$grdloc), []>;

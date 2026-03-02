@@ -8176,13 +8176,10 @@ SDValue SystemZTargetLowering::combineSTORE(
     // Obtain the frame index the store was targeting.
     int FI = cast<FrameIndexSDNode>(SN->getOperand(2))->getIndex();
     // Prepare operands of MSGD - FrameIndex, Dummy Displacement.
-    SDValue Ops[] = {DAG.getTargetFrameIndex(FI, MVT::i64),
-                     DAG.getTargetConstant(0, SDLoc(SN), MVT::i64),
-                     SN->getChain()};
-    MachineSDNode *Move = DAG.getMachineNode(SystemZ::MOV_STACKGUARD_DAG,
-                                             SDLoc(SN), MVT::Other, Ops);
-
-    return SDValue(Move, 0);
+    SDValue Ops[] = {SN->getChain(),
+                     DAG.getTargetFrameIndex(FI, MVT::i64)};
+    return DAG.getNode(SystemZISD::MOV_STACKGUARD,
+                               SDLoc(SN), MVT::Other, Ops);
   }
 
   // Combine STORE (BSWAP) into STRVH/STRV/STRVG/VSTBR
