@@ -21053,9 +21053,8 @@ static SDValue performANDORDUPNOTCombine(SDNode *N, SelectionDAG &DAG) {
   return DAG.getNode(Opc, DL, VT, X, Not);
 }
 
-static SDValue performORCombine(SDNode *N, TargetLowering::DAGCombinerInfo &DCI,
-                                const AArch64Subtarget *Subtarget,
-                                const AArch64TargetLowering &TLI) {
+static SDValue performORCombine(SDNode *N,
+                                TargetLowering::DAGCombinerInfo &DCI) {
   SelectionDAG &DAG = DCI.DAG;
 
   if (SDValue R = performANDORCSELCombine(N, DAG))
@@ -29322,7 +29321,7 @@ SDValue AArch64TargetLowering::PerformDAGCombine(SDNode *N,
   case ISD::FP_TO_UINT_SAT:
     return performFpToIntCombine(N, DAG, DCI, Subtarget);
   case ISD::OR:
-    return performORCombine(N, DCI, Subtarget, *this);
+    return performORCombine(N, DCI);
   case ISD::AND:
     return performANDCombine(N, DCI);
   case ISD::FADD:
