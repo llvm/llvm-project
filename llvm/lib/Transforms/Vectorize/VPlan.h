@@ -4024,7 +4024,7 @@ public:
                                            getOperand(2), InductionOpcode,
                                            getFastMathFlags(), getDebugLoc());
     if (VPValue *StartIndex = getStartIndex())
-      NewR->resetStartIndex(StartIndex);
+      NewR->setStartIndex(StartIndex);
     return NewR;
   }
 
@@ -4053,7 +4053,7 @@ public:
   }
 
   /// Set or add the StartIndex operand.
-  void resetStartIndex(VPValue *StartIndex) {
+  void setStartIndex(VPValue *StartIndex) {
     if (getNumOperands() == 4)
       setOperand(3, StartIndex);
     else

@@ -148,7 +148,7 @@ static void addStartIndexForScalarSteps(VPScalarIVStepsRecipe *Steps,
     StartIndex = Builder.createScalarCast(Instruction::SIToFP, StartIndex,
                                           BaseIVTy, Steps->getDebugLoc());
 
-  Steps->resetStartIndex(StartIndex);
+  Steps->setStartIndex(StartIndex);
 }
 
 void UnrollState::unrollReplicateRegionByUF(VPRegionBlock *VPR) {
@@ -536,6 +536,9 @@ static VPValue *
 cloneForLane(VPlan &Plan, VPBuilder &Builder, Type *IdxTy,
              VPSingleDefRecipe *DefR, VPLane Lane,
              const DenseMap<VPValue *, SmallVector<VPValue *>> &Def2LaneDefs) {
+  assert((isa<VPInstruction, VPReplicateRecipe, VPScalarIVStepsRecipe>(DefR)) &&
+         "DefR must be a VPReplicateRecipe, VPInstruction or "
+         "VPScalarIVStepsRecipe");
   VPValue *Op;
   if (match(DefR, m_VPInstruction<VPInstruction::Unpack>(m_VPValue(Op)))) {
     auto LaneDefs = Def2LaneDefs.find(Op);
@@ -592,31 +595,26 @@ cloneForLane(VPlan &Plan, VPBuilder &Builder, Type *IdxTy,
                                 /*IsSingleScalar=*/true, /*Mask=*/nullptr,
                                 *RepR, *RepR, RepR->getDebugLoc());
   } else {
-    assert((isa<VPInstruction, VPScalarIVStepsRecipe>(DefR)) &&
-           "DefR must be a VPReplicateRecipe, VPInstruction or "
-           "VPScalarIVStepsRecipe");
     New = DefR->clone();
     for (const auto &[Idx, Op] : enumerate(NewOps)) {
       New->setOperand(Idx, Op);
     }
     if (auto *Steps = dyn_cast<VPScalarIVStepsRecipe>(New)) {
-      // Skip lane 0: a missing start index is implicitly zero.
+      // Skip lane 0: an absent start index is implicitly zero.
       unsigned KnownLane = Lane.getKnownLane();
       if (KnownLane != 0) {
         VPTypeAnalysis TypeInfo(Plan);
         Type *BaseIVTy = TypeInfo.inferScalarType(DefR->getOperand(0));
         VPValue *LaneOffset = Plan.getConstantInt(
             APInt(IdxTy->getScalarSizeInBits(), KnownLane)
-                .sextOrTrunc(BaseIVTy->getScalarSizeInBits()));
+                .zextOrTrunc(BaseIVTy->getScalarSizeInBits()));
 
         if (VPValue *StartIndex = Steps->getStartIndex()) {
           // Add lane offset to the existing start index.
           VPBuilder Builder(DefR);
-          Steps->resetStartIndex(Builder.createAdd(StartIndex, LaneOffset));
-        } else {
-          // No start index yet, add lane offset as the start index.
-          Steps->resetStartIndex(LaneOffset);
+          LaneOffset = Builder.createAdd(StartIndex, LaneOffset);
         }
+        Steps->setStartIndex(LaneOffset);
       }
     }
   }
