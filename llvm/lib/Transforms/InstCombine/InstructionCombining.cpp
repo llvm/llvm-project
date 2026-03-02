@@ -2314,25 +2314,19 @@ Instruction *InstCombinerImpl::foldBinopWithPhiOperands(BinaryOperator &BO) {
 }
 
 Instruction *InstCombinerImpl::foldBinOpIntoSelectOrPhi(BinaryOperator &I) {
-  bool IsOtherParamConst = isa<Constant>(I.getOperand(1));
+  auto TryFoldOperand = [&](unsigned OpIdx, bool IsOtherParamConst) {
+    if (auto *Sel = dyn_cast<SelectInst>(I.getOperand(OpIdx)))
+      return FoldOpIntoSelect(I, Sel, false, !IsOtherParamConst);
+    if (auto *PN = dyn_cast<PHINode>(I.getOperand(OpIdx)))
+      return foldOpIntoPhi(I, PN);
+    return static_cast<Instruction *>(nullptr);
+  };
 
-  if (auto *Sel = dyn_cast<SelectInst>(I.getOperand(0))) {
-    if (Instruction *NewSel =
-            FoldOpIntoSelect(I, Sel, false, !IsOtherParamConst))
-      return NewSel;
-  } else if (auto *PN = dyn_cast<PHINode>(I.getOperand(0))) {
-    if (Instruction *NewPhi = foldOpIntoPhi(I, PN))
-      return NewPhi;
-  }
-
-  if (I.isCommutative()) {
-    bool IsOtherParamConst = isa<Constant>(I.getOperand(0));
-    if (auto *Sel = dyn_cast<SelectInst>(I.getOperand(1))) {
-      if (Instruction *NewSel =
-              FoldOpIntoSelect(I, Sel, false, !IsOtherParamConst))
-        return NewSel;
-    }
-  }
+  if (Instruction *NewI = TryFoldOperand(/*OpIdx=*/0,
+                                         isa<Constant>(I.getOperand(1))))
+    return NewI;
+  if (I.isCommutative())
+    return TryFoldOperand(/*OpIdx=*/1, isa<Constant>(I.getOperand(0)));
   return nullptr;
 }
 
