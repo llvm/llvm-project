@@ -752,6 +752,9 @@ MachineInstr *SIShrinkInstructions::matchSwap(MachineInstr &MovT) const {
         MovX = &*Iter;
         Y = MovX->getOperand(1).getReg();
         Ysub = MovX->getOperand(1).getSubReg();
+      } else if (instModifiesReg(&*Iter, X, Xsub)) {
+        // Writes to x are not allowed until mov x, y has been found
+        return nullptr;
       }
     } else {
       // mov x, y has been found.
