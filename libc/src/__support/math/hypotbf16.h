@@ -12,10 +12,7 @@
 #include "src/__support/FPUtil/Hypot.h"
 #include "src/__support/FPUtil/bfloat16.h"
 #include "src/__support/common.h"
-#include "src/__support/macros/config.h"
-
 namespace LIBC_NAMESPACE_DECL {
-
 namespace math {
 
 LIBC_INLINE bfloat16 hypotbf16(bfloat16 x, bfloat16 y) {
@@ -23,7 +20,6 @@ LIBC_INLINE bfloat16 hypotbf16(bfloat16 x, bfloat16 y) {
 }
 
 } // namespace math
-
 } // namespace LIBC_NAMESPACE_DECL
 
 #endif // LLVM_LIBC_SRC___SUPPORT_MATH_HYPOTBF16_H
