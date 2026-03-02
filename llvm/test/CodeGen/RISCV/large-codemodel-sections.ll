@@ -1,11 +1,11 @@
 ; RUN: llc -mtriple=riscv64 -mattr=+f,+zfh -target-abi=lp64f -code-model=large -verify-machineinstrs < %s \
-; RUN:   -filetype=obj -o - | llvm-readobj -r - \
+; RUN:   -riscv-lower-fpimm-cost=0 -filetype=obj -o - | llvm-readobj -r - \
 ; RUN:   | FileCheck %s 
 ; RUN: llc -mtriple=riscv64 -mattr=+zfinx,+zhinx -target-abi=lp64 -code-model=large -verify-machineinstrs < %s \
-; RUN:   -filetype=obj -o - | llvm-readobj -r - \
+; RUN:   -riscv-lower-fpimm-cost=0 -filetype=obj -o - | llvm-readobj -r - \
 ; RUN:   | FileCheck %s 
 ; RUN: llc -mtriple=riscv64 -mattr=+f,+zfh -target-abi=lp64f -code-model=large -verify-machineinstrs --function-sections < %s \
-; RUN:   -filetype=obj -o - | llvm-readobj -r - \
+; RUN:   -riscv-lower-fpimm-cost=0 -filetype=obj -o - | llvm-readobj -r - \
 ; RUN:   | FileCheck %s --check-prefix=FUNCSEC
 
 
@@ -101,4 +101,9 @@ define half @lower_global_half(half %a) nounwind {
   %b = load half, ptr @X
   %1 = fadd half %a, %b
   ret half %1
+}
+
+define half @lower_cp_half(half %a) nounwind {
+  %b = fadd half %a, 0xH3D17
+  ret half %b
 }
