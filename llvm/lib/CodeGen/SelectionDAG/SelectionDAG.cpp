@@ -6316,12 +6316,14 @@ bool SelectionDAG::isKnownNeverZero(SDValue Op, const APInt &DemandedElts,
   case ISD::SRA:
   case ISD::SRL: {
     if (Op->getFlags().hasExact())
-      return isKnownNeverZero(Op.getOperand(0), Depth + 1);
-    KnownBits ValKnown = computeKnownBits(Op.getOperand(0), Depth + 1);
+      return isKnownNeverZero(Op.getOperand(0), DemandedElts, Depth + 1);
+    KnownBits ValKnown =
+        computeKnownBits(Op.getOperand(0), DemandedElts, Depth + 1);
     if (ValKnown.isNegative())
       return true;
     // If max shift cnt of known ones is non-zero, result is non-zero.
-    APInt MaxCnt = computeKnownBits(Op.getOperand(1), Depth + 1).getMaxValue();
+    APInt MaxCnt = computeKnownBits(Op.getOperand(1), DemandedElts, Depth + 1)
+                       .getMaxValue();
     if (MaxCnt.ult(ValKnown.getBitWidth()) &&
         !ValKnown.One.lshr(MaxCnt).isZero())
       return true;
