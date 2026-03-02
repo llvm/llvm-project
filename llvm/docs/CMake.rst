@@ -644,6 +644,11 @@ its enabled sub-projects. Nearly all of these variable names begin with
 **LLVM_ENABLE_WARNINGS**:BOOL
   Enable all compiler warnings. Defaults to ON.
 
+**LLVM_ENABLE_WARNING_SUPPRESSIONS**:BOOL
+  Suppress specific compiler warnings. When disabled, this
+  prevents suppressing warnings with flags such as MSVC's ``-wd`` or GCC/Clang's ``-Wno-...``.
+  Defaults to ON.
+
 **LLVM_ENABLE_WERROR**:BOOL
   Stop and fail the build, if a compiler warning is triggered. Defaults to OFF.
 

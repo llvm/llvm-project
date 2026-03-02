@@ -1,4 +1,4 @@
-// RUN: not %clang_cc1 -triple x86_64-unknown-linux-gnu -fclangir -emit-cir %s -o - 2>&1 | FileCheck %s
+// RUN: %clang_cc1 -triple x86_64-unknown-linux-gnu -fclangir -emit-cir %s -o - -verify
 
 struct Other {
     int x;
@@ -16,4 +16,5 @@ Trivial t;
 // Since the case above isn't handled yet, we want a test that verifies that
 // we're failing for the right reason.
 
-// CHECK: error: ClangIR code gen Not Yet Implemented: tryEmitPrivateForVarInit: non-zero-initializable cxx record
+// expected-error@*:* {{ClangIR code gen Not Yet Implemented: isZeroInitializable for MemberPointerType}}
+// expected-error@*:* {{ClangIR code gen Not Yet Implemented: tryEmitPrivateForVarInit: non-zero-initializable cxx record}}
