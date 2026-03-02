@@ -39,6 +39,7 @@
 #include "llvm/MC/MCSectionMachO.h"
 #include "llvm/MC/MCStreamer.h"
 #include "llvm/MC/MCSymbol.h"
+#include "llvm/MC/MCTargetOptions.h"
 #include "llvm/MC/TargetRegistry.h"
 #include "llvm/Support/ErrorOr.h"
 #include "llvm/Support/RWMutex.h"
@@ -677,6 +678,8 @@ public:
   std::unique_ptr<MCCodeEmitter> MCE;
 
   std::unique_ptr<MCObjectFileInfo> MOFI;
+
+  MCTargetOptions MCOptions;
 
   std::unique_ptr<const MCAsmInfo> AsmInfo;
 
@@ -1557,6 +1560,7 @@ public:
     return Streamer;
   }
 
+  bool hasIOAddressMap() const { return IOAddressMap.has_value(); }
   void setIOAddressMap(AddressMap Map) { IOAddressMap = std::move(Map); }
   const AddressMap &getIOAddressMap() const {
     assert(IOAddressMap && "Address map not set yet");

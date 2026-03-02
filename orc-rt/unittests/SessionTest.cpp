@@ -38,12 +38,12 @@ public:
       : DetachOpIdx(DetachOpIdx), ShutdownOpIdx(ShutdownOpIdx), OpIdx(OpIdx),
         GenResult(std::move(GenResult)) {}
 
-  void detach(OnCompleteFn OnComplete) override {
+  void onDetach(OnCompleteFn OnComplete) override {
     DetachOpIdx = OpIdx++;
     OnComplete(GenResult(Op::Detach));
   }
 
-  void shutdown(OnCompleteFn OnComplete) override {
+  void onShutdown(OnCompleteFn OnComplete) override {
     ShutdownOpIdx = OpIdx++;
     OnComplete(GenResult(Op::Shutdown));
   }

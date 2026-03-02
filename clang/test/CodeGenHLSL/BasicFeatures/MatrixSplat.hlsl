@@ -153,3 +153,40 @@ void ExplicitFloatToBoolCastThenSplat(float2 Value) {
 void ExplicitBoolToFloatCastThenSplat(bool Value) {
     float3x2 M = (float) Value;
 }
+
+// CHECK-LABEL: define hidden void @_Z32ImplicitFloatToBoolCastThenSplatf(
+// CHECK-SAME: float noundef nofpclass(nan inf) [[VALUE:%.*]]) #[[ATTR0]] {
+// CHECK-NEXT:  [[ENTRY:.*:]]
+// CHECK-NEXT:    [[VALUE_ADDR:%.*]] = alloca float, align 4
+// CHECK-NEXT:    [[M:%.*]] = alloca [3 x <2 x i32>], align 4
+// CHECK-NEXT:    store float [[VALUE]], ptr [[VALUE_ADDR]], align 4
+// CHECK-NEXT:    [[TMP0:%.*]] = load float, ptr [[VALUE_ADDR]], align 4
+// CHECK-NEXT:    [[TOBOOL:%.*]] = fcmp reassoc nnan ninf nsz arcp afn une float [[TMP0]], 0.000000e+00
+// CHECK-NEXT:    [[SPLAT_SPLATINSERT:%.*]] = insertelement <6 x i1> poison, i1 [[TOBOOL]], i64 0
+// CHECK-NEXT:    [[SPLAT_SPLAT:%.*]] = shufflevector <6 x i1> [[SPLAT_SPLATINSERT]], <6 x i1> poison, <6 x i32> zeroinitializer
+// CHECK-NEXT:    [[TMP1:%.*]] = zext <6 x i1> [[SPLAT_SPLAT]] to <6 x i32>
+// CHECK-NEXT:    store <6 x i32> [[TMP1]], ptr [[M]], align 4
+// CHECK-NEXT:    ret void
+//
+void ImplicitFloatToBoolCastThenSplat(float Value) {
+    bool2x3 M = Value;
+}
+
+// CHECK-LABEL: define hidden void @_Z32ImplicitBoolToFloatCastThenSplatb(
+// CHECK-SAME: i1 noundef [[VALUE:%.*]]) #[[ATTR0]] {
+// CHECK-NEXT:  [[ENTRY:.*:]]
+// CHECK-NEXT:    [[VALUE_ADDR:%.*]] = alloca i32, align 4
+// CHECK-NEXT:    [[M:%.*]] = alloca [2 x <3 x float>], align 4
+// CHECK-NEXT:    [[STOREDV:%.*]] = zext i1 [[VALUE]] to i32
+// CHECK-NEXT:    store i32 [[STOREDV]], ptr [[VALUE_ADDR]], align 4
+// CHECK-NEXT:    [[TMP0:%.*]] = load i32, ptr [[VALUE_ADDR]], align 4
+// CHECK-NEXT:    [[LOADEDV:%.*]] = trunc i32 [[TMP0]] to i1
+// CHECK-NEXT:    [[CONV:%.*]] = uitofp i1 [[LOADEDV]] to float
+// CHECK-NEXT:    [[SPLAT_SPLATINSERT:%.*]] = insertelement <6 x float> poison, float [[CONV]], i64 0
+// CHECK-NEXT:    [[SPLAT_SPLAT:%.*]] = shufflevector <6 x float> [[SPLAT_SPLATINSERT]], <6 x float> poison, <6 x i32> zeroinitializer
+// CHECK-NEXT:    store <6 x float> [[SPLAT_SPLAT]], ptr [[M]], align 4
+// CHECK-NEXT:    ret void
+//
+void ImplicitBoolToFloatCastThenSplat(bool Value) {
+    float3x2 M = Value;
+}
