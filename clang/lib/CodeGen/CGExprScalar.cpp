@@ -3118,14 +3118,15 @@ Value *ScalarExprEmitter::VisitCastExpr(CastExpr *CE) {
       SmallVector<int> Mask;
       unsigned NumCols = MatTy->getNumColumns();
       unsigned NumRows = MatTy->getNumRows();
-      unsigned ColOffset = NumCols;
-      if (auto *SrcMatTy = E->getType()->getAs<ConstantMatrixType>())
-        ColOffset = SrcMatTy->getNumColumns();
-      for (unsigned R = 0; R < NumRows; R++) {
-        for (unsigned C = 0; C < NumCols; C++) {
-          unsigned I = R * ColOffset + C;
-          Mask.push_back(I);
-        }
+      auto *SrcMatTy = E->getType()->getAs<ConstantMatrixType>();
+      assert(SrcMatTy && "Source type must be a matrix type.");
+      assert(NumRows <= SrcMatTy->getNumRows());
+      assert(NumCols <= SrcMatTy->getNumColumns());
+      bool IsRowMajor = CGF.getLangOpts().getDefaultMatrixMemoryLayout() ==
+                        LangOptions::MatrixMemoryLayout::MatrixRowMajor;
+      for (unsigned I = 0, E = MatTy->getNumElementsFlattened(); I < E; I++) {
+        auto [Row, Col] = MatTy->getRowAndColumn(I, IsRowMajor);
+        Mask.push_back(SrcMatTy->getFlattenedIndex(Row, Col, IsRowMajor));
       }
 
       return Builder.CreateShuffleVector(Mat, Mask, "trunc");
