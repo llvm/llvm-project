@@ -120,8 +120,15 @@ module attributes {dlti.map = #dlti.map<"MPI:Implementation" = "MPICH">} {
     // CHECK: [[v72:%.*]] = llvm.call @MPI_Allreduce([[ipp]], [[v66]], [[v63]], [[v69]], [[v70]], [[v71]]) : (!llvm.ptr, !llvm.ptr, i32, i32, i32, i32) -> i32
     mpi.allreduce(%arg0, %arg0, MPI_SUM, %comm) : memref<100xf32>, memref<100xf32>
 
-    // CHECK: [[v73:%.*]] = llvm.inttoptr {{.*}} : i64 to !llvm.ptr
-    // CHECK: llvm.call @MPI_Reduce_scatter_block([[v73]], {{.*}} : (!llvm.ptr, !llvm.ptr, i32, i32, i32, i32) -> i32
+    // CHECK: llvm.mul
+    // CHECK: [[rsb_cst:%.*]] = llvm.mlir.constant(1 : index) : i32
+    // CHECK: [[rsb_dim:%.*]] = llvm.extractvalue [[v5]][3, 0] : !llvm.struct<(ptr, ptr, i64, array<1 x i64>, array<1 x i64>)>
+    // CHECK: [[rsb_trunc:%.*]] = llvm.trunc [[rsb_dim]] : i64 to i32
+    // CHECK: [[rsb_recvcount:%.*]] = llvm.mul [[rsb_trunc]], [[rsb_cst]] : i32
+    // CHECK: [[rsb_ipp:%.*]] = llvm.inttoptr {{.*}} : i64 to !llvm.ptr
+    // CHECK: llvm.cond_br {{.*}}, ^[[rsb_bb1:.*]], ^{{.*}}
+    // CHECK: ^[[rsb_bb1]]:
+    // CHECK: llvm.call @MPI_Reduce_scatter_block([[rsb_ipp]], {{.*}}, [[rsb_recvcount]], {{.*}}) : (!llvm.ptr, !llvm.ptr, i32, i32, i32, i32) -> i32
     mpi.reduce_scatter_block(%arg0, %arg0, MPI_SUM, %comm) : memref<100xf32>, memref<100xf32>
 
     // CHECK: llvm.call @MPI_Finalize() : () -> i32
@@ -246,8 +253,15 @@ module attributes { dlti.map = #dlti.map<"MPI:Implementation" = "OpenMPI"> } {
     // CHECK: [[v62:%.*]] = llvm.call @MPI_Allreduce([[ipp]], [[v56]], [[v53]], [[v59]], [[v60]], [[v61]]) : (!llvm.ptr, !llvm.ptr, i32, !llvm.ptr, !llvm.ptr, !llvm.ptr) -> i32
     mpi.allreduce(%arg0, %arg0, MPI_SUM, %comm) : memref<100xf32>, memref<100xf32>
 
-    // CHECK: [[v63:%.*]] = llvm.inttoptr {{.*}} : i64 to !llvm.ptr
-    // CHECK: llvm.call @MPI_Reduce_scatter_block([[v63]], {{.*}}) : (!llvm.ptr, !llvm.ptr, i32, !llvm.ptr, !llvm.ptr, !llvm.ptr) -> i32
+    // CHECK: llvm.mul
+    // CHECK: [[rsb_cst:%.*]] = llvm.mlir.constant(1 : index) : i32
+    // CHECK: [[rsb_dim:%.*]] = llvm.extractvalue [[v5]][3, 0] : !llvm.struct<(ptr, ptr, i64, array<1 x i64>, array<1 x i64>)>
+    // CHECK: [[rsb_trunc:%.*]] = llvm.trunc [[rsb_dim]] : i64 to i32
+    // CHECK: [[rsb_recvcount:%.*]] = llvm.mul [[rsb_trunc]], [[rsb_cst]] : i32
+    // CHECK: [[rsb_ipp:%.*]] = llvm.inttoptr {{.*}} : i64 to !llvm.ptr
+    // CHECK: llvm.cond_br {{.*}}, ^[[rsb_bb1:.*]], ^{{.*}}
+    // CHECK: ^[[rsb_bb1]]:
+    // CHECK: llvm.call @MPI_Reduce_scatter_block([[rsb_ipp]], {{.*}}, [[rsb_recvcount]], {{.*}}) : (!llvm.ptr, !llvm.ptr, i32, !llvm.ptr, !llvm.ptr, !llvm.ptr) -> i32
     mpi.reduce_scatter_block(%arg0, %arg0, MPI_SUM, %comm) : memref<100xf32>, memref<100xf32>
 
     // CHECK: [[v71:%.*]] = llvm.mlir.constant(10 : i32) : i32

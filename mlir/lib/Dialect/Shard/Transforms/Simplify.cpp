@@ -102,7 +102,7 @@ struct AllReduceAllSliceSimplification : OpRewritePattern<AllSliceOp> {
                                 PatternRewriter &rewriter) const override {
     // Check if the input to AllSliceOp is produced by an AllReduceOp.
     auto reduceOp = sliceOp.getInput().getDefiningOp<AllReduceOp>();
-    if (!reduceOp)
+    if (!reduceOp || !reduceOp->hasOneUse())
       return failure();
 
     // Both ops must operate on the same grid and grid axes.

@@ -649,7 +649,8 @@ struct ConvertReduceScatterOp : public CommOpPattern<ReduceScatterOp> {
     int64_t outputDimOnAxis = outputShape[scatterDim];
 
     for (size_t i = 0; i < outputShape.size(); ++i)
-      if (outputShape[i] != inputShape[i] && i != (size_t)scatterDim)
+      if (outputShape[i] != inputShape[i] &&
+          i != static_cast<size_t>(scatterDim))
         return op.emitError(
             "Result and input shapes must match along non-scatter axes.");
     if (outputDimOnAxis == 0)
@@ -706,7 +707,7 @@ struct ConvertReduceScatterOp : public CommOpPattern<ReduceScatterOp> {
       SmallVector<int64_t> expandedShape;
       SmallVector<ReassociationIndices> expandReassociation;
       int64_t expandedIdx = 0;
-      for (int64_t i = 0; i < (int64_t)inputShape.size(); ++i) {
+      for (int64_t i = 0; i < static_cast<int64_t>(inputShape.size()); ++i) {
         if (i == scatterDim) {
           expandedShape.push_back(nRanks);
           expandedShape.push_back(outputDimOnAxis);

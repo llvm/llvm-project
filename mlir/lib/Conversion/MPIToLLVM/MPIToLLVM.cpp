@@ -952,15 +952,14 @@ struct ReduceScatterBlockOpLowering
     Value mpiOp = mpiTraits->getMPIOp(loc, rewriter, op.getOp());
     Value comm = mpiTraits->castComm(loc, rewriter, adaptor.getComm());
 
-    // recvCnt should be the size of the block -> we need to divide by the
-    // number of ranks to get the count argument for the function call.
-    Value nRanks = createOrFoldCommSize(rewriter, loc, op.getComm(), adaptor.getComm());
-    Value recvCnt = LLVM::UDivOp::create(rewriter, loc, i32, recvSize, nRanks);
-
-    // Check that recvSize is a multiple of the number of ranks
-    Value checkSize = LLVM::MulOp::create(rewriter, loc, i32, recvCnt, nRanks);
-    Value sizeIsValid = LLVM::ICmpOp::create(rewriter, loc, LLVM::ICmpPredicate::eq, checkSize, recvSize);
-    cf::AssertOp::create(rewriter, loc, sizeIsValid, "Output buffer's size must be a multiple of the number of ranks");
+    Value nRanks =
+        createOrFoldCommSize(rewriter, loc, op.getComm(), adaptor.getComm());
+    Value expected = LLVM::UDivOp::create(rewriter, loc, i32, sendSize, nRanks);
+    Value sizeIsValid = LLVM::ICmpOp::create(
+        rewriter, loc, LLVM::ICmpPredicate::eq, expected, recvSize);
+    cf::AssertOp::create(rewriter, loc, sizeIsValid,
+                         "Send buffer's size must be the receive buffer's size "
+                         "times the number of ranks");
 
     // 'int MPI_Reduce_scatter_block(const void *sendbuf, void *recvbuf,
     //     int recvcount, MPI_Datatype datatype, MPI_Op op, MPI_Comm comm)'
@@ -974,7 +973,7 @@ struct ReduceScatterBlockOpLowering
     // replace op with function call
     auto funcCall = LLVM::CallOp::create(
         rewriter, loc, funcDecl,
-        ValueRange{sendPtr, recvPtr, recvCnt, dataType, mpiOp, comm});
+        ValueRange{sendPtr, recvPtr, recvSize, dataType, mpiOp, comm});
 
     if (op.getRetval())
       rewriter.replaceOp(op, funcCall.getResult());

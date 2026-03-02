@@ -354,8 +354,8 @@ def MPI_ReduceScatterBlockOp : MPI_Op<"reduce_scatter_block", []> {
   }];
 
   let arguments = (
-    ins AnyMemRef : $sendbuf,
-    AnyMemRef : $recvbuf,
+    ins AnyNon0RankedMemRef : $sendbuf,
+    AnyNon0RankedMemRef : $recvbuf,
     MPI_ReductionOpEnum : $op,
     MPI_Comm : $comm
   );
