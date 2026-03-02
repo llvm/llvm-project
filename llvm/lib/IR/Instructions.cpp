@@ -1887,6 +1887,7 @@ void ShuffleVectorInst::getShuffleMask(const Constant *Mask,
 void ShuffleVectorInst::setShuffleMask(ArrayRef<int> Mask) {
   ShuffleMask.assign(Mask.begin(), Mask.end());
   ShuffleMaskForBitcode = convertShuffleMaskForBitcode(Mask, getType());
+  computeShuffleAttrs();
 }
 
 Constant *ShuffleVectorInst::convertShuffleMaskForBitcode(ArrayRef<int> Mask,
