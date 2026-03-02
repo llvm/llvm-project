@@ -132,9 +132,7 @@ bool AlwaysInlineImpl(
     }
 
     while (!Worklist.empty()) {
-      auto Item = Worklist.pop_back_val();
-      CallBase *CB = Item.first;
-      int InlineHistoryID = Item.second;
+      auto [CB, InlineHistoryID] = Worklist.pop_back_val();
       Function *Callee = CB->getCalledFunction();
       if (!Callee)
         continue;
@@ -181,7 +179,10 @@ bool AlwaysInlineImpl(
   }
 
   if (!InlinedComdatFunctions.empty()) {
+    // Now we just have the comdat functions. Filter out the ones whose
+    // comdats are not actually dead.
     filterDeadComdatFunctions(InlinedComdatFunctions);
+    // The remaining functions are actually dead.
     for (Function *F : InlinedComdatFunctions) {
       if (FAM)
         FAM->clear(*F, F->getName());

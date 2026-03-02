@@ -3446,7 +3446,7 @@ llvm::InlineResult llvm::InlineFunction(CallBase &CB, InlineFunctionInfo &IFI,
 
 bool llvm::inlineHistoryIncludes(
     Function *F, int InlineHistoryID,
-    const SmallVectorImpl<std::pair<Function *, int>> &InlineHistory) {
+    ArrayRef<std::pair<Function *, int>> InlineHistory) {
   while (InlineHistoryID != -1) {
     assert(unsigned(InlineHistoryID) < InlineHistory.size() &&
            "Invalid inline history ID");
