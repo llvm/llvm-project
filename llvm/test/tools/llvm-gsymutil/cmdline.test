@@ -11,6 +11,8 @@ HELP: --help
 HELP: --num-threads=<value>
 HELP: --out-file=<value>
 HELP: --quiet
+HELP: --segment-size=<value>
+HELP: --symtab-file=<value>
 HELP: --verbose
 HELP: --verify
 HELP: --version

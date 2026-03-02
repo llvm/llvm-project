@@ -88,6 +88,7 @@ public:
 static bool Verbose;
 static std::vector<std::string> InputFilenames;
 static std::string ConvertFilename;
+static std::string SymtabFilename;
 static std::vector<std::string> ArchFilters;
 static std::string OutputFilename;
 static std::string JsonSummaryFile;
@@ -139,6 +140,9 @@ static void parseArgs(int argc, char **argv) {
 
   if (const llvm::opt::Arg *A = Args.getLastArg(OPT_convert_EQ))
     ConvertFilename = A->getValue();
+
+  if (const llvm::opt::Arg *A = Args.getLastArg(OPT_symtab_file_EQ))
+    SymtabFilename = A->getValue();
 
   for (const llvm::opt::Arg *A : Args.filtered(OPT_arch_EQ))
     ArchFilters.emplace_back(A->getValue());
@@ -404,7 +408,41 @@ static llvm::Error handleObjectFile(ObjectFile &Obj, const std::string &OutFile,
     Gsym.prepareMergedFunctions(Out);
 
   // Get the UUID and convert symbol table to GSYM.
-  if (auto Err = ObjectFileTransformer::convert(Obj, Out, Gsym))
+  // Keep symtab file buffers alive at function scope because GsymCreator
+  // stores StringRef references into the object file's string table data.
+  std::unique_ptr<MemoryBuffer> SymtabBuf;
+  std::unique_ptr<Binary> SymtabBin;
+  if (!SymtabFilename.empty()) {
+    Out << "Using symbol table file: " << SymtabFilename << "\n";
+    auto SymtabBufOrErr = MemoryBuffer::getFile(SymtabFilename);
+    if (!SymtabBufOrErr)
+      return createStringError(SymtabBufOrErr.getError(),
+                               "failed to open symbol table file '%s'",
+                               SymtabFilename.c_str());
+    SymtabBuf = std::move(*SymtabBufOrErr);
+    auto SymtabBinOrErr = object::createBinary(*SymtabBuf);
+    if (!SymtabBinOrErr)
+      return SymtabBinOrErr.takeError();
+    SymtabBin = std::move(*SymtabBinOrErr);
+    if (auto *SymtabObj = dyn_cast<ObjectFile>(SymtabBin.get())) {
+      Triple ObjTriple(Obj.makeTriple());
+      Triple SymtabTriple(SymtabObj->makeTriple());
+      if (ObjTriple.getArchName() != SymtabTriple.getArchName())
+        return createStringError(
+            std::errc::invalid_argument,
+            "architecture mismatch: input file is %s but "
+            "symbol table file '%s' is %s",
+            ObjTriple.getArchName().str().c_str(), SymtabFilename.c_str(),
+            SymtabTriple.getArchName().str().c_str());
+      if (auto Err = ObjectFileTransformer::convert(*SymtabObj, Out, Gsym))
+        return Err;
+    } else {
+      return createStringError(
+          std::errc::invalid_argument,
+          "symbol table file '%s' is not a valid object file",
+          SymtabFilename.c_str());
+    }
+  } else if (auto Err = ObjectFileTransformer::convert(Obj, Out, Gsym))
     return Err;
 
   // If any call site YAML files were specified, load them now.
@@ -452,6 +490,10 @@ static llvm::Error handleBuffer(StringRef Filename, MemoryBufferRef Buffer,
     if (auto Err = handleObjectFile(*Obj, OutFile, Out))
       return Err;
   } else if (auto *Fat = dyn_cast<MachOUniversalBinary>(BinOrErr->get())) {
+    if (!SymtabFilename.empty())
+      return createStringError(std::errc::invalid_argument,
+                               "--symtab-file is not supported for "
+                               "universal binary conversion");
     // Iterate over all contained architectures and filter out any that were
     // not specified with the "--arch <arch>" option. If the --arch option was
     // not specified on the command line, we will process all architectures.
