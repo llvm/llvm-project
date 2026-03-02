@@ -1969,8 +1969,9 @@ define i32 @test_zext_demanded_elts(<4 x i32> %a0, ptr %p) {
 ; X64-NEXT:    vunpckhps {{.*#+}} xmm2 = xmm0[2],xmm2[2],xmm0[3],xmm2[3]
 ; X64-NEXT:    vmovaps %xmm2, 16(%rdi)
 ; X64-NEXT:    vmovdqa %xmm1, (%rdi)
-; X64-NEXT:    vmovd %xmm0, %eax
-; X64-NEXT:    rep bsfq %rax, %rax
+; X64-NEXT:    vmovd %xmm0, %ecx
+; X64-NEXT:    movl $64, %eax
+; X64-NEXT:    rep bsfq %rcx, %rax
 ; X64-NEXT:    # kill: def $eax killed $eax killed $rax
 ; X64-NEXT:    retq
   %cmp = icmp sgt <4 x i32> zeroinitializer, %a0
@@ -2003,11 +2004,12 @@ define i32 @test_sext_demanded_elts(<4 x i32> %a0, ptr %p) {
 ; X86-NEXT:    movdqa %xmm0, 16(%eax)
 ; X86-NEXT:    movdqa %xmm2, (%eax)
 ; X86-NEXT:    movd %xmm1, %eax
-; X86-NEXT:    rep bsfl %ecx, %edx
-; X86-NEXT:    rep bsfl %eax, %eax
-; X86-NEXT:    addl $32, %eax
-; X86-NEXT:    testl %ecx, %ecx
-; X86-NEXT:    cmovnel %edx, %eax
+; X86-NEXT:    bsfl %eax, %eax
+; X86-NEXT:    movl $32, %edx
+; X86-NEXT:    cmovnel %eax, %edx
+; X86-NEXT:    addl $32, %edx
+; X86-NEXT:    bsfl %ecx, %eax
+; X86-NEXT:    cmovel %edx, %eax
 ; X86-NEXT:    retl
 ;
 ; X64-LABEL: test_sext_demanded_elts:
@@ -2019,8 +2021,9 @@ define i32 @test_sext_demanded_elts(<4 x i32> %a0, ptr %p) {
 ; X64-NEXT:    vpmovsxdq %xmm0, %xmm0
 ; X64-NEXT:    vmovdqa %xmm0, (%rdi)
 ; X64-NEXT:    vmovdqa %xmm1, 16(%rdi)
-; X64-NEXT:    vmovq %xmm0, %rax
-; X64-NEXT:    rep bsfq %rax, %rax
+; X64-NEXT:    vmovq %xmm0, %rcx
+; X64-NEXT:    movl $64, %eax
+; X64-NEXT:    rep bsfq %rcx, %rax
 ; X64-NEXT:    # kill: def $eax killed $eax killed $rax
 ; X64-NEXT:    retq
   %cmp = icmp sgt <4 x i32> zeroinitializer, %a0
