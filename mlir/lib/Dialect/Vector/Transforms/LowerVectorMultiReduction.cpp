@@ -474,8 +474,8 @@ struct OneDimMultiReductionToReduction
     Value mask = maskingOp ? maskingOp.getMask() : Value();
 
     Operation *reductionOp = vector::ReductionOp::create(
-        rewriter, loc, multiReductionOp.getKind(),
-        multiReductionOp.getSource(), multiReductionOp.getAcc());
+        rewriter, loc, multiReductionOp.getKind(), multiReductionOp.getSource(),
+        multiReductionOp.getAcc());
 
     if (mask)
       reductionOp = mlir::vector::maskOperation(rewriter, reductionOp, mask);
