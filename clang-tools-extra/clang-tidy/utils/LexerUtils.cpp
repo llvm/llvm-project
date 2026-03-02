@@ -100,9 +100,14 @@ bool rangeContainsExpansionsOrDirectives(SourceRange Range,
   return false;
 }
 
-std::vector<CommentToken>
-getTrailingCommentsInRange(CharSourceRange Range, const SourceManager &SM,
-                           const LangOptions &LangOpts) {
+namespace {
+enum class CommentCollectionMode { AllComments, TrailingComments };
+} // namespace
+
+static std::vector<CommentToken>
+collectCommentsInRange(CharSourceRange Range, const SourceManager &SM,
+                       const LangOptions &LangOpts,
+                       CommentCollectionMode Mode) {
   std::vector<CommentToken> Comments;
   if (Range.isInvalid())
     return Comments;
@@ -149,7 +154,7 @@ getTrailingCommentsInRange(CharSourceRange Range, const SourceManager &SM,
           Tok.getLocation(),
           StringRef(Buffer.begin() + CommentLoc.second, Tok.getLength()),
       });
-    } else {
+    } else if (Mode == CommentCollectionMode::TrailingComments) {
       // Clear comments found before the different token, e.g. comma. Callers
       // use this to retrieve only the contiguous comment block that directly
       // precedes a token of interest.
@@ -158,6 +163,20 @@ getTrailingCommentsInRange(CharSourceRange Range, const SourceManager &SM,
   }
 
   return Comments;
+}
+
+std::vector<CommentToken> getCommentsInRange(CharSourceRange Range,
+                                             const SourceManager &SM,
+                                             const LangOptions &LangOpts) {
+  return collectCommentsInRange(Range, SM, LangOpts,
+                                CommentCollectionMode::AllComments);
+}
+
+std::vector<CommentToken>
+getTrailingCommentsInRange(CharSourceRange Range, const SourceManager &SM,
+                           const LangOptions &LangOpts) {
+  return collectCommentsInRange(Range, SM, LangOpts,
+                                CommentCollectionMode::TrailingComments);
 }
 
 std::optional<Token> getQualifyingToken(tok::TokenKind TK,

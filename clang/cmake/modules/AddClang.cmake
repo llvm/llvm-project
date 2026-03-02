@@ -108,7 +108,7 @@ macro(add_clang_library name)
   endif()
   llvm_add_library(${name} ${LIBTYPE} ${ARG_UNPARSED_ARGUMENTS} ${srcs})
 
-  if(MSVC AND NOT CLANG_LINK_CLANG_DYLIB)
+  if((WIN32 AND NOT MINGW) AND NOT CLANG_LINK_CLANG_DYLIB)
     # Make sure all consumers also turn off visibility macros so they're not
     # trying to dllimport symbols.
     target_compile_definitions(${name} PUBLIC CLANG_BUILD_STATIC)

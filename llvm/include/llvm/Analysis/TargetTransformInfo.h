@@ -188,13 +188,12 @@ class IntrinsicCostAttributes {
   // If ScalarizationCost is UINT_MAX, the cost of scalarizing the
   // arguments and the return value will be computed based on types.
   InstructionCost ScalarizationCost = InstructionCost::getInvalid();
-  TargetLibraryInfo const *LibInfo = nullptr;
 
 public:
   LLVM_ABI IntrinsicCostAttributes(
       Intrinsic::ID Id, const CallBase &CI,
       InstructionCost ScalarCost = InstructionCost::getInvalid(),
-      bool TypeBasedOnly = false, TargetLibraryInfo const *LibInfo = nullptr);
+      bool TypeBasedOnly = false);
 
   LLVM_ABI IntrinsicCostAttributes(
       Intrinsic::ID Id, Type *RTy, ArrayRef<Type *> Tys,
@@ -208,8 +207,7 @@ public:
       Intrinsic::ID Id, Type *RTy, ArrayRef<const Value *> Args,
       ArrayRef<Type *> Tys, FastMathFlags Flags = FastMathFlags(),
       const IntrinsicInst *I = nullptr,
-      InstructionCost ScalarCost = InstructionCost::getInvalid(),
-      TargetLibraryInfo const *LibInfo = nullptr);
+      InstructionCost ScalarCost = InstructionCost::getInvalid());
 
   Intrinsic::ID getID() const { return IID; }
   const IntrinsicInst *getInst() const { return II; }
@@ -218,7 +216,6 @@ public:
   InstructionCost getScalarizationCost() const { return ScalarizationCost; }
   const SmallVectorImpl<const Value *> &getArgs() const { return Arguments; }
   const SmallVectorImpl<Type *> &getArgTypes() const { return ParamTys; }
-  const TargetLibraryInfo *getLibInfo() const { return LibInfo; }
 
   bool isTypeBasedOnly() const {
     return Arguments.empty();
@@ -251,10 +248,6 @@ enum class TailFoldingStyle {
   /// active.lane.mask to calculate the mask for the next iteration. If the
   /// increment overflows, the mask is no longer correct.
   DataAndControlFlow,
-  /// Use predicate to control both data and control flow, but modify
-  /// the trip count so that a runtime overflow check can be avoided
-  /// and such that the scalar epilogue loop can always be removed.
-  DataAndControlFlowWithoutRuntimeCheck,
   /// Use predicated EVL instructions for tail-folding.
   /// Indicates that VP intrinsics should be used.
   DataWithEVL,
@@ -757,13 +750,7 @@ public:
   LLVM_ABI bool preferPredicateOverEpilogue(TailFoldingInfo *TFI) const;
 
   /// Query the target what the preferred style of tail folding is.
-  /// \param IVUpdateMayOverflow Tells whether it is known if the IV update
-  /// may (or will never) overflow for the suggested VF/UF in the given loop.
-  /// Targets can use this information to select a more optimal tail folding
-  /// style. The value conservatively defaults to true, such that no assumptions
-  /// are made on overflow.
-  LLVM_ABI TailFoldingStyle
-  getPreferredTailFoldingStyle(bool IVUpdateMayOverflow = true) const;
+  LLVM_ABI TailFoldingStyle getPreferredTailFoldingStyle() const;
 
   // Parameters that control the loop peeling transformation
   struct PeelingPreferences {
@@ -1357,9 +1344,6 @@ public:
 
   /// \return the value of vscale to tune the cost model for.
   LLVM_ABI std::optional<unsigned> getVScaleForTuning() const;
-
-  /// \return true if vscale is known to be a power of 2
-  LLVM_ABI bool isVScaleKnownToBeAPowerOfTwo() const;
 
   /// \return True if the vectorization factor should be chosen to
   /// make the vector of the smallest element type match the size of a
