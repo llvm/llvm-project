@@ -7,18 +7,18 @@
 
 define void @loop(ptr noalias %src, ptr noalias %dst, i64 %n) {
 entry:
-  br label %for.body
+  br label %loop
 
-for.body:
-  %i = phi i64 [ 0, %entry ], [ %i.next, %for.body ]
-  %p = getelementptr i32, ptr %src, i64 %i
+loop:
+  %iv = phi i64 [ 0, %entry ], [ %iv.next, %loop ]
+  %p = getelementptr i32, ptr %src, i64 %iv
   %v = load i32, ptr %p, align 4
-  %q = getelementptr i32, ptr %dst, i64 %i
+  %q = getelementptr i32, ptr %dst, i64 %iv
   store i32 %v, ptr %q, align 4
-  %i.next = add nuw nsw i64 %i, 1
-  %cond = icmp ne i64 %i.next, %n
-  br i1 %cond, label %for.body, label %for.end
+  %iv.next = add nuw nsw i64 %iv, 1
+  %cond = icmp ne i64 %iv.next, %n
+  br i1 %cond, label %loop, label %exit
 
-for.end:
+exit:
   ret void
 }
