@@ -11223,7 +11223,7 @@ static QualType GetExprType(const Expr *E) {
   return Ty;
 }
 
-static bool isUnsignedScalarType(QualType T) {
+static bool isUnsignedIntegerOrVectorElementType(QualType T) {
   if (const auto *VT = T->getAs<VectorType>())
     T = VT->getElementType();
   return T->isUnsignedIntegerType();
@@ -11501,7 +11501,7 @@ static std::optional<IntRange> TryGetExprRange(ASTContext &C, const Expr *E,
       return IntRange::forValueOfType(C, GetExprType(E));
 
     case UO_Minus: {
-      if (isUnsignedScalarType(E->getType())) {
+      if (isUnsignedIntegerOrVectorElementType(E->getType())) {
         return TryGetExprRange(C, UO->getSubExpr(), MaxWidth, InConstantContext,
                                Approximate);
       }
@@ -11519,7 +11519,7 @@ static std::optional<IntRange> TryGetExprRange(ASTContext &C, const Expr *E,
     }
 
     case UO_Not: {
-      if (isUnsignedScalarType(E->getType())) {
+      if (isUnsignedIntegerOrVectorElementType(E->getType())) {
         return TryGetExprRange(C, UO->getSubExpr(), MaxWidth, InConstantContext,
                                Approximate);
       }
