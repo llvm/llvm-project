@@ -1220,15 +1220,16 @@ LogicalResult checkErrorIfReshape(Operation *op) {
   if (!reshapeOp)
     return success();
 
-  constexpr int64_t kInferableDim = -1;
   SmallVector<int64_t> shapeValues;
   if (!tosa::getConstShapeValues(reshapeOp.getShape().getDefiningOp(),
                                  shapeValues))
     return success();
 
-  if (llvm::is_contained(shapeValues, kInferableDim))
-    return op->emitOpError("shape input contains inferable dimension (-1) "
-                           "which does not conform to the TOSA specification");
+  if (llvm::is_contained(shapeValues, kInferableDimSize))
+    return op->emitOpError("shape input contains inferable dimension (")
+           << kInferableDimSize
+           << ") "
+              "which does not conform to the TOSA specification";
 
   return success();
 }
@@ -1238,7 +1239,6 @@ LogicalResult checkErrorIfSlice(Operation *op) {
   if (!sliceOp)
     return success();
 
-  constexpr int64_t kInferableDim = -1;
   SmallVector<int64_t> startValues;
   SmallVector<int64_t> sizeValues;
   const bool hasStartValues = tosa::getConstShapeValues(
@@ -1246,12 +1246,15 @@ LogicalResult checkErrorIfSlice(Operation *op) {
   const bool hasSizeValues =
       tosa::getConstShapeValues(sliceOp.getSize().getDefiningOp(), sizeValues);
 
-  if (hasStartValues && llvm::is_contained(startValues, kInferableDim))
-    return op->emitOpError("start input contains inferable dimension (-1) "
-                           "which does not conform to the TOSA specification");
-  if (hasSizeValues && llvm::is_contained(sizeValues, kInferableDim))
-    return op->emitOpError("size input contains inferable dimension (-1) which "
-                           "does not conform to the TOSA specification");
+  if (hasStartValues && llvm::is_contained(startValues, kInferableDimSize))
+    return op->emitOpError("start input contains inferable dimension (")
+           << kInferableDimSize
+           << ") which does not conform to the TOSA specification";
+  if (hasSizeValues && llvm::is_contained(sizeValues, kInferableDimSize))
+    return op->emitOpError("size input contains inferable dimension (")
+           << kInferableDimSize
+           << ") which "
+              "does not conform to the TOSA specification";
 
   return success();
 }
