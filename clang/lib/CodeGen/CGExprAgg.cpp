@@ -293,7 +293,8 @@ void AggExprEmitter::withReturnValueSlot(
       Dest.isPotentiallyAliased() || Dest.requiresGCollection() ||
       (RequiresDestruction && Dest.isIgnored()) ||
       (!Dest.isIgnored() && Dest.getAddress().getAddressSpace() !=
-                                CGF.CGM.getDataLayout().getAllocaAddrSpace());
+                                CGF.getContext().getTargetAddressSpace(
+                                    CGF.CGM.getASTAllocaAddressSpace()));
 
   Address RetAddr = Address::invalid();
 
