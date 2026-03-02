@@ -533,10 +533,10 @@ func.func @op_matmul_transposed_output(%A: tensor<?x?xf32>, %B: tensor<?x?xf32>,
 
 // -----
 
-// Matmul with non-conventional loop ordering (d0=m, d1=k, d2=n).
-#map_nc_a = affine_map<(d0, d1, d2) -> (d0, d1)>
-#map_nc_b = affine_map<(d0, d1, d2) -> (d1, d2)>
-#map_nc_c = affine_map<(d0, d1, d2) -> (d0, d2)>
+// Matmul with non-canonical loop ordering.
+#map_nc_a = affine_map<(m, k, n) -> (m, k)>
+#map_nc_b = affine_map<(m, k, n) -> (k, n)>
+#map_nc_c = affine_map<(m, k, n) -> (m, n)>
 func.func @op_matmul_non_conventional_dims(%A: tensor<?x?xf32>, %B: tensor<?x?xf32>,
                                             %Out: tensor<?x?xf32>) -> tensor<?x?xf32> {
   %0 = linalg.generic
@@ -558,10 +558,10 @@ func.func @op_matmul_non_conventional_dims(%A: tensor<?x?xf32>, %B: tensor<?x?xf
 
 // -----
 
-// Batch matmul with non-conventional loop ordering (d0=batch, d1=m, d2=k, d3=n).
-#map_bnc_a = affine_map<(d0, d1, d2, d3) -> (d0, d1, d2)>
-#map_bnc_b = affine_map<(d0, d1, d2, d3) -> (d0, d2, d3)>
-#map_bnc_c = affine_map<(d0, d1, d2, d3) -> (d0, d1, d3)>
+// Batch matmul with non-canonical loop ordering.
+#map_bnc_a = affine_map<(batch, m, k, n) -> (batch, m, k)>
+#map_bnc_b = affine_map<(batch, m, k, n) -> (batch, k, n)>
+#map_bnc_c = affine_map<(batch, m, k, n) -> (batch, m, n)>
 func.func @op_batch_matmul_non_conventional_dims(%A: tensor<2x16x8xf32>, %B: tensor<2x8x16xf32>,
                                                   %Out: tensor<2x16x16xf32>) -> tensor<2x16x16xf32> {
   %0 = linalg.generic
