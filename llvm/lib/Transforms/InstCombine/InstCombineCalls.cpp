@@ -1165,7 +1165,8 @@ Instruction *InstCombinerImpl::foldIntrinsicIsFPClass(IntrinsicInst &II) {
     return replaceInstUsesWith(II, FCmp);
   }
 
-  KnownFPClass Known = computeKnownFPClass(Src0, Mask, &II);
+  KnownFPClass Known =
+      computeKnownFPClass(Src0, Mask, SQ.getWithInstruction(&II));
 
   // Clear test bits we know must be false from the source value.
   // fp_class (nnan x), qnan|snan|other -> fp_class (nnan x), other
@@ -1755,6 +1756,24 @@ static bool leftDistributesOverRight(Instruction::BinaryOps LOp, bool HasNUW,
   }
 }
 
+/// Return whether "(X ROp Y) LOp Z" is always equal to
+/// "(X LOp Z) ROp (Y LOp Z)".
+static bool rightDistributesOverLeft(Instruction::BinaryOps LOp, bool HasNUW,
+                                     bool HasNSW, Intrinsic::ID ROp) {
+  if (Instruction::isCommutative(LOp) || LOp == Instruction::Shl)
+    return leftDistributesOverRight(LOp, HasNUW, HasNSW, ROp);
+  switch (ROp) {
+  case Intrinsic::umax:
+  case Intrinsic::umin:
+    return HasNUW && LOp == Instruction::Sub;
+  case Intrinsic::smax:
+  case Intrinsic::smin:
+    return HasNSW && LOp == Instruction::Sub;
+  default:
+    return false;
+  }
+}
+
 // Attempts to factorise a common term
 // in an instruction that has the form "(A op' B) op (C op' D)
 // where op is an intrinsic and op' is a binop
@@ -1781,9 +1800,6 @@ foldIntrinsicUsingDistributiveLaws(IntrinsicInst *II,
   bool HasNUW = Op0->hasNoUnsignedWrap() && Op1->hasNoUnsignedWrap();
   bool HasNSW = Op0->hasNoSignedWrap() && Op1->hasNoSignedWrap();
 
-  if (!leftDistributesOverRight(InnerOpcode, HasNUW, HasNSW, TopLevelOpcode))
-    return nullptr;
-
   Value *A = Op0->getOperand(0);
   Value *B = Op0->getOperand(1);
   Value *C = Op1->getOperand(0);
@@ -1799,11 +1815,13 @@ foldIntrinsicUsingDistributiveLaws(IntrinsicInst *II,
   }
 
   BinaryOperator *NewBinop;
-  if (A == C) {
+  if (A == C &&
+      leftDistributesOverRight(InnerOpcode, HasNUW, HasNSW, TopLevelOpcode)) {
     Value *NewIntrinsic = Builder.CreateBinaryIntrinsic(TopLevelOpcode, B, D);
     NewBinop =
         cast<BinaryOperator>(Builder.CreateBinOp(InnerOpcode, A, NewIntrinsic));
-  } else if (B == D) {
+  } else if (B == D && rightDistributesOverLeft(InnerOpcode, HasNUW, HasNSW,
+                                                TopLevelOpcode)) {
     Value *NewIntrinsic = Builder.CreateBinaryIntrinsic(TopLevelOpcode, A, C);
     NewBinop =
         cast<BinaryOperator>(Builder.CreateBinOp(InnerOpcode, NewIntrinsic, B));
@@ -3109,10 +3127,11 @@ Instruction *InstCombinerImpl::visitCallInst(CallInst &CI) {
         CallInst *AbsT = Builder.CreateCall(II->getCalledFunction(), {TVal});
         CallInst *AbsF = Builder.CreateCall(II->getCalledFunction(), {FVal});
         SelectInst *SI = SelectInst::Create(Cond, AbsT, AbsF);
-        FastMathFlags FMF1 = II->getFastMathFlags();
-        FastMathFlags FMF2 = cast<SelectInst>(Arg)->getFastMathFlags();
-        FMF2.setNoSignedZeros(false);
-        SI->setFastMathFlags(FMF1 | FMF2);
+        SI->setFastMathFlags(II->getFastMathFlags() |
+                             cast<SelectInst>(Arg)->getFastMathFlags());
+        // Can't copy nsz to select, as even with the nsz flag the fabs result
+        // always has the sign bit unset.
+        SI->setHasNoSignedZeros(false);
         return SI;
       }
       // fabs (select Cond, -FVal, FVal) --> fabs FVal
@@ -3908,6 +3927,16 @@ Instruction *InstCombinerImpl::visitCallInst(CallInst &CI) {
       // --> extract.vector(InsertTuple, ExtractIndex)
       else
         return replaceOperand(CI, 0, InsertTuple);
+    }
+
+    ConstantInt *ALMUpperBound;
+    if (match(Vec, m_Intrinsic<Intrinsic::get_active_lane_mask>(
+                       m_Value(), m_ConstantInt(ALMUpperBound)))) {
+      const auto &Attrs = II->getFunction()->getAttributes().getFnAttrs();
+      unsigned VScaleMin = Attrs.getVScaleRangeMin();
+      if (ExtractIdx * VScaleMin >= ALMUpperBound->getZExtValue())
+        return replaceInstUsesWith(CI,
+                                   ConstantVector::getNullValue(ReturnType));
     }
 
     auto *DstTy = dyn_cast<VectorType>(ReturnType);
