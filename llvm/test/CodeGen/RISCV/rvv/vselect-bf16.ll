@@ -126,6 +126,7 @@ define <vscale x 8 x bfloat> @vmerge_truelhs_nxv8bf16_0(<vscale x 8 x bfloat> %v
 define <vscale x 8 x bfloat> @vmerge_falselhs_nxv8bf16_0(<vscale x 8 x bfloat> %va, <vscale x 8 x bfloat> %vb) {
 ; CHECK-LABEL: vmerge_falselhs_nxv8bf16_0:
 ; CHECK:       # %bb.0:
+; CHECK-NEXT:    vsetivli zero, 1, e8, m1, ta, ma
 ; CHECK-NEXT:    vmv2r.v v8, v10
 ; CHECK-NEXT:    ret
   %vc = select <vscale x 8 x i1> zeroinitializer, <vscale x 8 x bfloat> %va, <vscale x 8 x bfloat> %vb

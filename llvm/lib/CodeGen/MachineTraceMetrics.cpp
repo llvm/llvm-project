@@ -23,7 +23,6 @@
 #include "llvm/CodeGen/TargetSchedule.h"
 #include "llvm/CodeGen/TargetSubtargetInfo.h"
 #include "llvm/InitializePasses.h"
-#include "llvm/MC/MCRegisterInfo.h"
 #include "llvm/Pass.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/ErrorHandling.h"
@@ -31,9 +30,7 @@
 #include "llvm/Support/raw_ostream.h"
 #include <algorithm>
 #include <cassert>
-#include <iterator>
 #include <tuple>
-#include <utility>
 
 using namespace llvm;
 
@@ -487,10 +484,7 @@ struct LoopBounds {
 
 // Specialize po_iterator_storage in order to prune the post-order traversal so
 // it is limited to the current loop and doesn't traverse the loop back edges.
-namespace llvm {
-
-template<>
-class po_iterator_storage<LoopBounds, true> {
+template <> class llvm::po_iterator_storage<LoopBounds, true> {
   LoopBounds &LB;
 
 public:
@@ -520,8 +514,6 @@ public:
     return LB.Visited.insert(To).second;
   }
 };
-
-} // end namespace llvm
 
 /// Compute the trace through MBB.
 void MachineTraceMetrics::Ensemble::computeTrace(const MachineBasicBlock *MBB) {
@@ -682,14 +674,13 @@ struct DataDep {
     : DefMI(DefMI), DefOp(DefOp), UseOp(UseOp) {}
 
   /// Create a DataDep from an SSA form virtual register.
-  DataDep(const MachineRegisterInfo *MRI, unsigned VirtReg, unsigned UseOp)
-    : UseOp(UseOp) {
-    assert(Register::isVirtualRegister(VirtReg));
-    MachineRegisterInfo::def_iterator DefI = MRI->def_begin(VirtReg);
-    assert(!DefI.atEnd() && "Register has no defs");
-    DefMI = DefI->getParent();
-    DefOp = DefI.getOperandNo();
-    assert((++DefI).atEnd() && "Register has multiple defs");
+  DataDep(const MachineRegisterInfo *MRI, Register VirtReg, unsigned UseOp)
+      : UseOp(UseOp) {
+    assert(VirtReg.isVirtual());
+    MachineOperand *DefMO = MRI->getOneDef(VirtReg);
+    assert(DefMO && "Register does not have unique def");
+    DefMI = DefMO->getParent();
+    DefOp = DefMO->getOperandNo();
   }
 };
 
@@ -746,7 +737,7 @@ static void getPHIDeps(const MachineInstr &UseMI,
 // tracking set when scanning instructions downwards.
 static void updatePhysDepsDownwards(const MachineInstr *UseMI,
                                     SmallVectorImpl<DataDep> &Deps,
-                                    SparseSet<LiveRegUnit> &RegUnits,
+                                    LiveRegUnitSet &RegUnits,
                                     const TargetRegisterInfo *TRI) {
   SmallVector<MCRegister, 8> Kills;
   SmallVector<unsigned, 8> LiveDefOps;
@@ -767,7 +758,7 @@ static void updatePhysDepsDownwards(const MachineInstr *UseMI,
     if (!MO.readsReg())
       continue;
     for (MCRegUnit Unit : TRI->regunits(Reg)) {
-      SparseSet<LiveRegUnit>::iterator I = RegUnits.find(Unit);
+      LiveRegUnitSet::iterator I = RegUnits.find(Unit);
       if (I == RegUnits.end())
         continue;
       Deps.push_back(DataDep(I->MI, I->Op, MO.getOperandNo()));
@@ -809,9 +800,10 @@ computeCrossBlockCriticalPath(const TraceBlockInfo &TBI) {
   assert(TBI.HasValidInstrHeights && "Missing height info");
   unsigned MaxLen = 0;
   for (const LiveInReg &LIR : TBI.LiveIns) {
-    if (!LIR.Reg.isVirtual())
+    if (!LIR.VRegOrUnit.isVirtualReg())
       continue;
-    const MachineInstr *DefMI = MTM.MRI->getVRegDef(LIR.Reg);
+    const MachineInstr *DefMI =
+        MTM.MRI->getVRegDef(LIR.VRegOrUnit.asVirtualReg());
     // Ignore dependencies outside the current trace.
     const TraceBlockInfo &DefTBI = BlockInfo[DefMI->getParent()->getNumber()];
     if (!DefTBI.isUsefulDominator(TBI))
@@ -822,9 +814,9 @@ computeCrossBlockCriticalPath(const TraceBlockInfo &TBI) {
   return MaxLen;
 }
 
-void MachineTraceMetrics::Ensemble::
-updateDepth(MachineTraceMetrics::TraceBlockInfo &TBI, const MachineInstr &UseMI,
-            SparseSet<LiveRegUnit> &RegUnits) {
+void MachineTraceMetrics::Ensemble::updateDepth(TraceBlockInfo &TBI,
+                                                const MachineInstr &UseMI,
+                                                LiveRegUnitSet &RegUnits) {
   SmallVector<DataDep, 8> Deps;
   // Collect all data dependencies.
   if (UseMI.isPHI())
@@ -861,18 +853,17 @@ updateDepth(MachineTraceMetrics::TraceBlockInfo &TBI, const MachineInstr &UseMI,
   }
 }
 
-void MachineTraceMetrics::Ensemble::
-updateDepth(const MachineBasicBlock *MBB, const MachineInstr &UseMI,
-            SparseSet<LiveRegUnit> &RegUnits) {
+void MachineTraceMetrics::Ensemble::updateDepth(const MachineBasicBlock *MBB,
+                                                const MachineInstr &UseMI,
+                                                LiveRegUnitSet &RegUnits) {
   updateDepth(BlockInfo[MBB->getNumber()], UseMI, RegUnits);
 }
 
-void MachineTraceMetrics::Ensemble::
-updateDepths(MachineBasicBlock::iterator Start,
-             MachineBasicBlock::iterator End,
-             SparseSet<LiveRegUnit> &RegUnits) {
-    for (; Start != End; Start++)
-      updateDepth(Start->getParent(), *Start, RegUnits);
+void MachineTraceMetrics::Ensemble::updateDepths(
+    MachineBasicBlock::iterator Start, MachineBasicBlock::iterator End,
+    LiveRegUnitSet &RegUnits) {
+  for (; Start != End; Start++)
+    updateDepth(Start->getParent(), *Start, RegUnits);
 }
 
 /// Compute instruction depths for all instructions above or in MBB in its
@@ -896,7 +887,7 @@ computeInstrDepths(const MachineBasicBlock *MBB) {
   // in the trace. We should track any live-out physregs that were defined in
   // the trace. This is quite rare in SSA form, typically created by CSE
   // hoisting a compare.
-  SparseSet<LiveRegUnit> RegUnits;
+  LiveRegUnitSet RegUnits;
   RegUnits.setUniverse(MTM.TRI->getNumRegUnits());
 
   // Go through trace blocks in top-down order, stopping after the center block.
@@ -934,7 +925,7 @@ computeInstrDepths(const MachineBasicBlock *MBB) {
 // Return the issue height of MI after considering any live regunits.
 // Height is the issue height computed from virtual register dependencies alone.
 static unsigned updatePhysDepsUpwards(const MachineInstr &MI, unsigned Height,
-                                      SparseSet<LiveRegUnit> &RegUnits,
+                                      LiveRegUnitSet &RegUnits,
                                       const TargetSchedModel &SchedModel,
                                       const TargetInstrInfo *TII,
                                       const TargetRegisterInfo *TRI) {
@@ -953,7 +944,7 @@ static unsigned updatePhysDepsUpwards(const MachineInstr &MI, unsigned Height,
     // This is a def of Reg. Remove corresponding entries from RegUnits, and
     // update MI Height to consider the physreg dependencies.
     for (MCRegUnit Unit : TRI->regunits(Reg.asMCReg())) {
-      SparseSet<LiveRegUnit>::iterator I = RegUnits.find(Unit);
+      LiveRegUnitSet::iterator I = RegUnits.find(Unit);
       if (I == RegUnits.end())
         continue;
       unsigned DepHeight = I->Cycle;
@@ -1029,7 +1020,7 @@ addLiveIns(const MachineInstr *DefMI, unsigned DefOp,
       return;
     TraceBlockInfo &TBI = BlockInfo[MBB->getNumber()];
     // Just add the register. The height will be updated later.
-    TBI.LiveIns.push_back(Reg);
+    TBI.LiveIns.emplace_back(VirtRegOrUnit(Reg));
   }
 }
 
@@ -1057,7 +1048,7 @@ computeInstrHeights(const MachineBasicBlock *MBB) {
 
   // For physregs, the def isn't known when we see the use.
   // Instead, keep track of the highest use of each regunit.
-  SparseSet<LiveRegUnit> RegUnits;
+  LiveRegUnitSet RegUnits;
   RegUnits.setUniverse(MTM.TRI->getNumRegUnits());
 
   // If the bottom of the trace was already precomputed, initialize heights
@@ -1066,15 +1057,16 @@ computeInstrHeights(const MachineBasicBlock *MBB) {
   if (MBB) {
     TraceBlockInfo &TBI = BlockInfo[MBB->getNumber()];
     for (LiveInReg &LI : TBI.LiveIns) {
-      if (LI.Reg.isVirtual()) {
+      if (LI.VRegOrUnit.isVirtualReg()) {
         // For virtual registers, the def latency is included.
-        unsigned &Height = Heights[MTM.MRI->getVRegDef(LI.Reg)];
+        unsigned &Height =
+            Heights[MTM.MRI->getVRegDef(LI.VRegOrUnit.asVirtualReg())];
         if (Height < LI.Height)
           Height = LI.Height;
       } else {
         // For register units, the def latency is not included because we don't
         // know the def yet.
-        RegUnits[LI.Reg].Cycle = LI.Height;
+        RegUnits[LI.VRegOrUnit.asMCRegUnit()].Cycle = LI.Height;
       }
     }
   }
@@ -1169,14 +1161,15 @@ computeInstrHeights(const MachineBasicBlock *MBB) {
     // height because the final height isn't known until now.
     LLVM_DEBUG(dbgs() << printMBBReference(*MBB) << " Live-ins:");
     for (LiveInReg &LIR : TBI.LiveIns) {
-      const MachineInstr *DefMI = MTM.MRI->getVRegDef(LIR.Reg);
+      Register Reg = LIR.VRegOrUnit.asVirtualReg();
+      const MachineInstr *DefMI = MTM.MRI->getVRegDef(Reg);
       LIR.Height = Heights.lookup(DefMI);
-      LLVM_DEBUG(dbgs() << ' ' << printReg(LIR.Reg) << '@' << LIR.Height);
+      LLVM_DEBUG(dbgs() << ' ' << printReg(Reg) << '@' << LIR.Height);
     }
 
     // Transfer the live regunits to the live-in list.
     for (const LiveRegUnit &RU : RegUnits) {
-      TBI.LiveIns.push_back(LiveInReg(RU.RegUnit, RU.Cycle));
+      TBI.LiveIns.emplace_back(VirtRegOrUnit(RU.RegUnit), RU.Cycle);
       LLVM_DEBUG(dbgs() << ' ' << printRegUnit(RU.RegUnit, MTM.TRI) << '@'
                         << RU.Cycle);
     }

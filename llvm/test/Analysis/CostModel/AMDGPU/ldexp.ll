@@ -13,45 +13,45 @@ define void @ldexp_f16_i32() {
 ; GFX7-LABEL: 'ldexp_f16_i32'
 ; GFX7-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %f16 = call half @llvm.ldexp.f16.i32(half undef, i32 undef)
 ; GFX7-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %v2f16 = call <2 x half> @llvm.ldexp.v2f16.v2i32(<2 x half> undef, <2 x i32> undef)
-; GFX7-NEXT:  Cost Model: Found an estimated cost of 6 for instruction: %v3f16 = call <3 x half> @llvm.ldexp.v3f16.v3i32(<3 x half> undef, <3 x i32> undef)
+; GFX7-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: %v3f16 = call <3 x half> @llvm.ldexp.v3f16.v3i32(<3 x half> undef, <3 x i32> undef)
 ; GFX7-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: %v4f16 = call <4 x half> @llvm.ldexp.v4f16.v4i32(<4 x half> undef, <4 x i32> undef)
-; GFX7-NEXT:  Cost Model: Found an estimated cost of 10 for instruction: %v5f16 = call <5 x half> @llvm.ldexp.v5f16.v5i32(<5 x half> undef, <5 x i32> undef)
+; GFX7-NEXT:  Cost Model: Found an estimated cost of 16 for instruction: %v5f16 = call <5 x half> @llvm.ldexp.v5f16.v5i32(<5 x half> undef, <5 x i32> undef)
 ; GFX7-NEXT:  Cost Model: Found an estimated cost of 16 for instruction: %v8f16 = call <8 x half> @llvm.ldexp.v8f16.v8i32(<8 x half> undef, <8 x i32> undef)
 ; GFX7-NEXT:  Cost Model: Found an estimated cost of 32 for instruction: %v16f16 = call <16 x half> @llvm.ldexp.v16f16.v16i32(<16 x half> undef, <16 x i32> undef)
-; GFX7-NEXT:  Cost Model: Found an estimated cost of 34 for instruction: %v17f16 = call <17 x half> @llvm.ldexp.v17f16.v17i32(<17 x half> undef, <17 x i32> undef)
+; GFX7-NEXT:  Cost Model: Found an estimated cost of 64 for instruction: %v17f16 = call <17 x half> @llvm.ldexp.v17f16.v17i32(<17 x half> undef, <17 x i32> undef)
 ; GFX7-NEXT:  Cost Model: Found an estimated cost of 10 for instruction: ret void
 ;
 ; GFX8PLUS-LABEL: 'ldexp_f16_i32'
-; GFX8PLUS-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %f16 = call half @llvm.ldexp.f16.i32(half undef, i32 undef)
-; GFX8PLUS-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: %v2f16 = call <2 x half> @llvm.ldexp.v2f16.v2i32(<2 x half> undef, <2 x i32> undef)
-; GFX8PLUS-NEXT:  Cost Model: Found an estimated cost of 5 for instruction: %v3f16 = call <3 x half> @llvm.ldexp.v3f16.v3i32(<3 x half> undef, <3 x i32> undef)
-; GFX8PLUS-NEXT:  Cost Model: Found an estimated cost of 7 for instruction: %v4f16 = call <4 x half> @llvm.ldexp.v4f16.v4i32(<4 x half> undef, <4 x i32> undef)
-; GFX8PLUS-NEXT:  Cost Model: Found an estimated cost of 9 for instruction: %v5f16 = call <5 x half> @llvm.ldexp.v5f16.v5i32(<5 x half> undef, <5 x i32> undef)
-; GFX8PLUS-NEXT:  Cost Model: Found an estimated cost of 15 for instruction: %v8f16 = call <8 x half> @llvm.ldexp.v8f16.v8i32(<8 x half> undef, <8 x i32> undef)
-; GFX8PLUS-NEXT:  Cost Model: Found an estimated cost of 31 for instruction: %v16f16 = call <16 x half> @llvm.ldexp.v16f16.v16i32(<16 x half> undef, <16 x i32> undef)
-; GFX8PLUS-NEXT:  Cost Model: Found an estimated cost of 33 for instruction: %v17f16 = call <17 x half> @llvm.ldexp.v17f16.v17i32(<17 x half> undef, <17 x i32> undef)
+; GFX8PLUS-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %f16 = call half @llvm.ldexp.f16.i32(half undef, i32 undef)
+; GFX8PLUS-NEXT:  Cost Model: Found an estimated cost of 5 for instruction: %v2f16 = call <2 x half> @llvm.ldexp.v2f16.v2i32(<2 x half> undef, <2 x i32> undef)
+; GFX8PLUS-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: %v3f16 = call <3 x half> @llvm.ldexp.v3f16.v3i32(<3 x half> undef, <3 x i32> undef)
+; GFX8PLUS-NEXT:  Cost Model: Found an estimated cost of 11 for instruction: %v4f16 = call <4 x half> @llvm.ldexp.v4f16.v4i32(<4 x half> undef, <4 x i32> undef)
+; GFX8PLUS-NEXT:  Cost Model: Found an estimated cost of 14 for instruction: %v5f16 = call <5 x half> @llvm.ldexp.v5f16.v5i32(<5 x half> undef, <5 x i32> undef)
+; GFX8PLUS-NEXT:  Cost Model: Found an estimated cost of 23 for instruction: %v8f16 = call <8 x half> @llvm.ldexp.v8f16.v8i32(<8 x half> undef, <8 x i32> undef)
+; GFX8PLUS-NEXT:  Cost Model: Found an estimated cost of 47 for instruction: %v16f16 = call <16 x half> @llvm.ldexp.v16f16.v16i32(<16 x half> undef, <16 x i32> undef)
+; GFX8PLUS-NEXT:  Cost Model: Found an estimated cost of 50 for instruction: %v17f16 = call <17 x half> @llvm.ldexp.v17f16.v17i32(<17 x half> undef, <17 x i32> undef)
 ; GFX8PLUS-NEXT:  Cost Model: Found an estimated cost of 10 for instruction: ret void
 ;
 ; GFX7-SIZE-LABEL: 'ldexp_f16_i32'
 ; GFX7-SIZE-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %f16 = call half @llvm.ldexp.f16.i32(half undef, i32 undef)
 ; GFX7-SIZE-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %v2f16 = call <2 x half> @llvm.ldexp.v2f16.v2i32(<2 x half> undef, <2 x i32> undef)
-; GFX7-SIZE-NEXT:  Cost Model: Found an estimated cost of 6 for instruction: %v3f16 = call <3 x half> @llvm.ldexp.v3f16.v3i32(<3 x half> undef, <3 x i32> undef)
+; GFX7-SIZE-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: %v3f16 = call <3 x half> @llvm.ldexp.v3f16.v3i32(<3 x half> undef, <3 x i32> undef)
 ; GFX7-SIZE-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: %v4f16 = call <4 x half> @llvm.ldexp.v4f16.v4i32(<4 x half> undef, <4 x i32> undef)
-; GFX7-SIZE-NEXT:  Cost Model: Found an estimated cost of 10 for instruction: %v5f16 = call <5 x half> @llvm.ldexp.v5f16.v5i32(<5 x half> undef, <5 x i32> undef)
+; GFX7-SIZE-NEXT:  Cost Model: Found an estimated cost of 16 for instruction: %v5f16 = call <5 x half> @llvm.ldexp.v5f16.v5i32(<5 x half> undef, <5 x i32> undef)
 ; GFX7-SIZE-NEXT:  Cost Model: Found an estimated cost of 16 for instruction: %v8f16 = call <8 x half> @llvm.ldexp.v8f16.v8i32(<8 x half> undef, <8 x i32> undef)
 ; GFX7-SIZE-NEXT:  Cost Model: Found an estimated cost of 32 for instruction: %v16f16 = call <16 x half> @llvm.ldexp.v16f16.v16i32(<16 x half> undef, <16 x i32> undef)
-; GFX7-SIZE-NEXT:  Cost Model: Found an estimated cost of 34 for instruction: %v17f16 = call <17 x half> @llvm.ldexp.v17f16.v17i32(<17 x half> undef, <17 x i32> undef)
+; GFX7-SIZE-NEXT:  Cost Model: Found an estimated cost of 64 for instruction: %v17f16 = call <17 x half> @llvm.ldexp.v17f16.v17i32(<17 x half> undef, <17 x i32> undef)
 ; GFX7-SIZE-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: ret void
 ;
 ; GFX8PLUS-SIZE-LABEL: 'ldexp_f16_i32'
-; GFX8PLUS-SIZE-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %f16 = call half @llvm.ldexp.f16.i32(half undef, i32 undef)
-; GFX8PLUS-SIZE-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: %v2f16 = call <2 x half> @llvm.ldexp.v2f16.v2i32(<2 x half> undef, <2 x i32> undef)
-; GFX8PLUS-SIZE-NEXT:  Cost Model: Found an estimated cost of 5 for instruction: %v3f16 = call <3 x half> @llvm.ldexp.v3f16.v3i32(<3 x half> undef, <3 x i32> undef)
-; GFX8PLUS-SIZE-NEXT:  Cost Model: Found an estimated cost of 7 for instruction: %v4f16 = call <4 x half> @llvm.ldexp.v4f16.v4i32(<4 x half> undef, <4 x i32> undef)
-; GFX8PLUS-SIZE-NEXT:  Cost Model: Found an estimated cost of 9 for instruction: %v5f16 = call <5 x half> @llvm.ldexp.v5f16.v5i32(<5 x half> undef, <5 x i32> undef)
-; GFX8PLUS-SIZE-NEXT:  Cost Model: Found an estimated cost of 15 for instruction: %v8f16 = call <8 x half> @llvm.ldexp.v8f16.v8i32(<8 x half> undef, <8 x i32> undef)
-; GFX8PLUS-SIZE-NEXT:  Cost Model: Found an estimated cost of 31 for instruction: %v16f16 = call <16 x half> @llvm.ldexp.v16f16.v16i32(<16 x half> undef, <16 x i32> undef)
-; GFX8PLUS-SIZE-NEXT:  Cost Model: Found an estimated cost of 33 for instruction: %v17f16 = call <17 x half> @llvm.ldexp.v17f16.v17i32(<17 x half> undef, <17 x i32> undef)
+; GFX8PLUS-SIZE-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %f16 = call half @llvm.ldexp.f16.i32(half undef, i32 undef)
+; GFX8PLUS-SIZE-NEXT:  Cost Model: Found an estimated cost of 5 for instruction: %v2f16 = call <2 x half> @llvm.ldexp.v2f16.v2i32(<2 x half> undef, <2 x i32> undef)
+; GFX8PLUS-SIZE-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: %v3f16 = call <3 x half> @llvm.ldexp.v3f16.v3i32(<3 x half> undef, <3 x i32> undef)
+; GFX8PLUS-SIZE-NEXT:  Cost Model: Found an estimated cost of 11 for instruction: %v4f16 = call <4 x half> @llvm.ldexp.v4f16.v4i32(<4 x half> undef, <4 x i32> undef)
+; GFX8PLUS-SIZE-NEXT:  Cost Model: Found an estimated cost of 14 for instruction: %v5f16 = call <5 x half> @llvm.ldexp.v5f16.v5i32(<5 x half> undef, <5 x i32> undef)
+; GFX8PLUS-SIZE-NEXT:  Cost Model: Found an estimated cost of 23 for instruction: %v8f16 = call <8 x half> @llvm.ldexp.v8f16.v8i32(<8 x half> undef, <8 x i32> undef)
+; GFX8PLUS-SIZE-NEXT:  Cost Model: Found an estimated cost of 47 for instruction: %v16f16 = call <16 x half> @llvm.ldexp.v16f16.v16i32(<16 x half> undef, <16 x i32> undef)
+; GFX8PLUS-SIZE-NEXT:  Cost Model: Found an estimated cost of 50 for instruction: %v17f16 = call <17 x half> @llvm.ldexp.v17f16.v17i32(<17 x half> undef, <17 x i32> undef)
 ; GFX8PLUS-SIZE-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: ret void
 ;
   %f16 = call half @llvm.ldexp.f16.i32(half undef, i32 undef)
@@ -69,45 +69,45 @@ define void @ldexp_f16_i16() {
 ; GFX7-LABEL: 'ldexp_f16_i16'
 ; GFX7-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %f16 = call half @llvm.ldexp.f16.i16(half undef, i16 undef)
 ; GFX7-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %v2f16 = call <2 x half> @llvm.ldexp.v2f16.v2i16(<2 x half> undef, <2 x i16> undef)
-; GFX7-NEXT:  Cost Model: Found an estimated cost of 6 for instruction: %v3f16 = call <3 x half> @llvm.ldexp.v3f16.v3i16(<3 x half> undef, <3 x i16> undef)
+; GFX7-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: %v3f16 = call <3 x half> @llvm.ldexp.v3f16.v3i16(<3 x half> undef, <3 x i16> undef)
 ; GFX7-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: %v4f16 = call <4 x half> @llvm.ldexp.v4f16.v4i16(<4 x half> undef, <4 x i16> undef)
-; GFX7-NEXT:  Cost Model: Found an estimated cost of 10 for instruction: %v5f16 = call <5 x half> @llvm.ldexp.v5f16.v5i16(<5 x half> undef, <5 x i16> undef)
+; GFX7-NEXT:  Cost Model: Found an estimated cost of 16 for instruction: %v5f16 = call <5 x half> @llvm.ldexp.v5f16.v5i16(<5 x half> undef, <5 x i16> undef)
 ; GFX7-NEXT:  Cost Model: Found an estimated cost of 16 for instruction: %v8f16 = call <8 x half> @llvm.ldexp.v8f16.v8i16(<8 x half> undef, <8 x i16> undef)
 ; GFX7-NEXT:  Cost Model: Found an estimated cost of 32 for instruction: %v16f16 = call <16 x half> @llvm.ldexp.v16f16.v16i16(<16 x half> undef, <16 x i16> undef)
-; GFX7-NEXT:  Cost Model: Found an estimated cost of 34 for instruction: %v17f16 = call <17 x half> @llvm.ldexp.v17f16.v17i16(<17 x half> undef, <17 x i16> undef)
+; GFX7-NEXT:  Cost Model: Found an estimated cost of 64 for instruction: %v17f16 = call <17 x half> @llvm.ldexp.v17f16.v17i16(<17 x half> undef, <17 x i16> undef)
 ; GFX7-NEXT:  Cost Model: Found an estimated cost of 10 for instruction: ret void
 ;
 ; GFX8PLUS-LABEL: 'ldexp_f16_i16'
-; GFX8PLUS-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %f16 = call half @llvm.ldexp.f16.i16(half undef, i16 undef)
-; GFX8PLUS-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: %v2f16 = call <2 x half> @llvm.ldexp.v2f16.v2i16(<2 x half> undef, <2 x i16> undef)
-; GFX8PLUS-NEXT:  Cost Model: Found an estimated cost of 5 for instruction: %v3f16 = call <3 x half> @llvm.ldexp.v3f16.v3i16(<3 x half> undef, <3 x i16> undef)
-; GFX8PLUS-NEXT:  Cost Model: Found an estimated cost of 7 for instruction: %v4f16 = call <4 x half> @llvm.ldexp.v4f16.v4i16(<4 x half> undef, <4 x i16> undef)
-; GFX8PLUS-NEXT:  Cost Model: Found an estimated cost of 9 for instruction: %v5f16 = call <5 x half> @llvm.ldexp.v5f16.v5i16(<5 x half> undef, <5 x i16> undef)
-; GFX8PLUS-NEXT:  Cost Model: Found an estimated cost of 15 for instruction: %v8f16 = call <8 x half> @llvm.ldexp.v8f16.v8i16(<8 x half> undef, <8 x i16> undef)
-; GFX8PLUS-NEXT:  Cost Model: Found an estimated cost of 31 for instruction: %v16f16 = call <16 x half> @llvm.ldexp.v16f16.v16i16(<16 x half> undef, <16 x i16> undef)
-; GFX8PLUS-NEXT:  Cost Model: Found an estimated cost of 33 for instruction: %v17f16 = call <17 x half> @llvm.ldexp.v17f16.v17i16(<17 x half> undef, <17 x i16> undef)
+; GFX8PLUS-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %f16 = call half @llvm.ldexp.f16.i16(half undef, i16 undef)
+; GFX8PLUS-NEXT:  Cost Model: Found an estimated cost of 5 for instruction: %v2f16 = call <2 x half> @llvm.ldexp.v2f16.v2i16(<2 x half> undef, <2 x i16> undef)
+; GFX8PLUS-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: %v3f16 = call <3 x half> @llvm.ldexp.v3f16.v3i16(<3 x half> undef, <3 x i16> undef)
+; GFX8PLUS-NEXT:  Cost Model: Found an estimated cost of 11 for instruction: %v4f16 = call <4 x half> @llvm.ldexp.v4f16.v4i16(<4 x half> undef, <4 x i16> undef)
+; GFX8PLUS-NEXT:  Cost Model: Found an estimated cost of 14 for instruction: %v5f16 = call <5 x half> @llvm.ldexp.v5f16.v5i16(<5 x half> undef, <5 x i16> undef)
+; GFX8PLUS-NEXT:  Cost Model: Found an estimated cost of 23 for instruction: %v8f16 = call <8 x half> @llvm.ldexp.v8f16.v8i16(<8 x half> undef, <8 x i16> undef)
+; GFX8PLUS-NEXT:  Cost Model: Found an estimated cost of 47 for instruction: %v16f16 = call <16 x half> @llvm.ldexp.v16f16.v16i16(<16 x half> undef, <16 x i16> undef)
+; GFX8PLUS-NEXT:  Cost Model: Found an estimated cost of 50 for instruction: %v17f16 = call <17 x half> @llvm.ldexp.v17f16.v17i16(<17 x half> undef, <17 x i16> undef)
 ; GFX8PLUS-NEXT:  Cost Model: Found an estimated cost of 10 for instruction: ret void
 ;
 ; GFX7-SIZE-LABEL: 'ldexp_f16_i16'
 ; GFX7-SIZE-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %f16 = call half @llvm.ldexp.f16.i16(half undef, i16 undef)
 ; GFX7-SIZE-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %v2f16 = call <2 x half> @llvm.ldexp.v2f16.v2i16(<2 x half> undef, <2 x i16> undef)
-; GFX7-SIZE-NEXT:  Cost Model: Found an estimated cost of 6 for instruction: %v3f16 = call <3 x half> @llvm.ldexp.v3f16.v3i16(<3 x half> undef, <3 x i16> undef)
+; GFX7-SIZE-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: %v3f16 = call <3 x half> @llvm.ldexp.v3f16.v3i16(<3 x half> undef, <3 x i16> undef)
 ; GFX7-SIZE-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: %v4f16 = call <4 x half> @llvm.ldexp.v4f16.v4i16(<4 x half> undef, <4 x i16> undef)
-; GFX7-SIZE-NEXT:  Cost Model: Found an estimated cost of 10 for instruction: %v5f16 = call <5 x half> @llvm.ldexp.v5f16.v5i16(<5 x half> undef, <5 x i16> undef)
+; GFX7-SIZE-NEXT:  Cost Model: Found an estimated cost of 16 for instruction: %v5f16 = call <5 x half> @llvm.ldexp.v5f16.v5i16(<5 x half> undef, <5 x i16> undef)
 ; GFX7-SIZE-NEXT:  Cost Model: Found an estimated cost of 16 for instruction: %v8f16 = call <8 x half> @llvm.ldexp.v8f16.v8i16(<8 x half> undef, <8 x i16> undef)
 ; GFX7-SIZE-NEXT:  Cost Model: Found an estimated cost of 32 for instruction: %v16f16 = call <16 x half> @llvm.ldexp.v16f16.v16i16(<16 x half> undef, <16 x i16> undef)
-; GFX7-SIZE-NEXT:  Cost Model: Found an estimated cost of 34 for instruction: %v17f16 = call <17 x half> @llvm.ldexp.v17f16.v17i16(<17 x half> undef, <17 x i16> undef)
+; GFX7-SIZE-NEXT:  Cost Model: Found an estimated cost of 64 for instruction: %v17f16 = call <17 x half> @llvm.ldexp.v17f16.v17i16(<17 x half> undef, <17 x i16> undef)
 ; GFX7-SIZE-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: ret void
 ;
 ; GFX8PLUS-SIZE-LABEL: 'ldexp_f16_i16'
-; GFX8PLUS-SIZE-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %f16 = call half @llvm.ldexp.f16.i16(half undef, i16 undef)
-; GFX8PLUS-SIZE-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: %v2f16 = call <2 x half> @llvm.ldexp.v2f16.v2i16(<2 x half> undef, <2 x i16> undef)
-; GFX8PLUS-SIZE-NEXT:  Cost Model: Found an estimated cost of 5 for instruction: %v3f16 = call <3 x half> @llvm.ldexp.v3f16.v3i16(<3 x half> undef, <3 x i16> undef)
-; GFX8PLUS-SIZE-NEXT:  Cost Model: Found an estimated cost of 7 for instruction: %v4f16 = call <4 x half> @llvm.ldexp.v4f16.v4i16(<4 x half> undef, <4 x i16> undef)
-; GFX8PLUS-SIZE-NEXT:  Cost Model: Found an estimated cost of 9 for instruction: %v5f16 = call <5 x half> @llvm.ldexp.v5f16.v5i16(<5 x half> undef, <5 x i16> undef)
-; GFX8PLUS-SIZE-NEXT:  Cost Model: Found an estimated cost of 15 for instruction: %v8f16 = call <8 x half> @llvm.ldexp.v8f16.v8i16(<8 x half> undef, <8 x i16> undef)
-; GFX8PLUS-SIZE-NEXT:  Cost Model: Found an estimated cost of 31 for instruction: %v16f16 = call <16 x half> @llvm.ldexp.v16f16.v16i16(<16 x half> undef, <16 x i16> undef)
-; GFX8PLUS-SIZE-NEXT:  Cost Model: Found an estimated cost of 33 for instruction: %v17f16 = call <17 x half> @llvm.ldexp.v17f16.v17i16(<17 x half> undef, <17 x i16> undef)
+; GFX8PLUS-SIZE-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %f16 = call half @llvm.ldexp.f16.i16(half undef, i16 undef)
+; GFX8PLUS-SIZE-NEXT:  Cost Model: Found an estimated cost of 5 for instruction: %v2f16 = call <2 x half> @llvm.ldexp.v2f16.v2i16(<2 x half> undef, <2 x i16> undef)
+; GFX8PLUS-SIZE-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: %v3f16 = call <3 x half> @llvm.ldexp.v3f16.v3i16(<3 x half> undef, <3 x i16> undef)
+; GFX8PLUS-SIZE-NEXT:  Cost Model: Found an estimated cost of 11 for instruction: %v4f16 = call <4 x half> @llvm.ldexp.v4f16.v4i16(<4 x half> undef, <4 x i16> undef)
+; GFX8PLUS-SIZE-NEXT:  Cost Model: Found an estimated cost of 14 for instruction: %v5f16 = call <5 x half> @llvm.ldexp.v5f16.v5i16(<5 x half> undef, <5 x i16> undef)
+; GFX8PLUS-SIZE-NEXT:  Cost Model: Found an estimated cost of 23 for instruction: %v8f16 = call <8 x half> @llvm.ldexp.v8f16.v8i16(<8 x half> undef, <8 x i16> undef)
+; GFX8PLUS-SIZE-NEXT:  Cost Model: Found an estimated cost of 47 for instruction: %v16f16 = call <16 x half> @llvm.ldexp.v16f16.v16i16(<16 x half> undef, <16 x i16> undef)
+; GFX8PLUS-SIZE-NEXT:  Cost Model: Found an estimated cost of 50 for instruction: %v17f16 = call <17 x half> @llvm.ldexp.v17f16.v17i16(<17 x half> undef, <17 x i16> undef)
 ; GFX8PLUS-SIZE-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: ret void
 ;
   %f16 = call half @llvm.ldexp.f16.i16(half undef, i16 undef)
@@ -125,12 +125,12 @@ define void @ldexp_bf16() {
 ; GFX7-LABEL: 'ldexp_bf16'
 ; GFX7-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %bf16 = call bfloat @llvm.ldexp.bf16.i32(bfloat undef, i32 undef)
 ; GFX7-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %v2bf16 = call <2 x bfloat> @llvm.ldexp.v2bf16.v2i32(<2 x bfloat> undef, <2 x i32> undef)
-; GFX7-NEXT:  Cost Model: Found an estimated cost of 6 for instruction: %v3bf16 = call <3 x bfloat> @llvm.ldexp.v3bf16.v3i32(<3 x bfloat> undef, <3 x i32> undef)
+; GFX7-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: %v3bf16 = call <3 x bfloat> @llvm.ldexp.v3bf16.v3i32(<3 x bfloat> undef, <3 x i32> undef)
 ; GFX7-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: %v4bf16 = call <4 x bfloat> @llvm.ldexp.v4bf16.v4i32(<4 x bfloat> undef, <4 x i32> undef)
-; GFX7-NEXT:  Cost Model: Found an estimated cost of 10 for instruction: %v5bf16 = call <5 x bfloat> @llvm.ldexp.v5bf16.v5i32(<5 x bfloat> undef, <5 x i32> undef)
+; GFX7-NEXT:  Cost Model: Found an estimated cost of 16 for instruction: %v5bf16 = call <5 x bfloat> @llvm.ldexp.v5bf16.v5i32(<5 x bfloat> undef, <5 x i32> undef)
 ; GFX7-NEXT:  Cost Model: Found an estimated cost of 16 for instruction: %v8bf16 = call <8 x bfloat> @llvm.ldexp.v8bf16.v8i32(<8 x bfloat> undef, <8 x i32> undef)
 ; GFX7-NEXT:  Cost Model: Found an estimated cost of 32 for instruction: %v16bf16 = call <16 x bfloat> @llvm.ldexp.v16bf16.v16i32(<16 x bfloat> undef, <16 x i32> undef)
-; GFX7-NEXT:  Cost Model: Found an estimated cost of 34 for instruction: %v17bf16 = call <17 x bfloat> @llvm.ldexp.v17bf16.v17i32(<17 x bfloat> undef, <17 x i32> undef)
+; GFX7-NEXT:  Cost Model: Found an estimated cost of 64 for instruction: %v17bf16 = call <17 x bfloat> @llvm.ldexp.v17bf16.v17i32(<17 x bfloat> undef, <17 x i32> undef)
 ; GFX7-NEXT:  Cost Model: Found an estimated cost of 10 for instruction: ret void
 ;
 ; GFX8PLUS-LABEL: 'ldexp_bf16'
@@ -147,12 +147,12 @@ define void @ldexp_bf16() {
 ; GFX7-SIZE-LABEL: 'ldexp_bf16'
 ; GFX7-SIZE-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %bf16 = call bfloat @llvm.ldexp.bf16.i32(bfloat undef, i32 undef)
 ; GFX7-SIZE-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %v2bf16 = call <2 x bfloat> @llvm.ldexp.v2bf16.v2i32(<2 x bfloat> undef, <2 x i32> undef)
-; GFX7-SIZE-NEXT:  Cost Model: Found an estimated cost of 6 for instruction: %v3bf16 = call <3 x bfloat> @llvm.ldexp.v3bf16.v3i32(<3 x bfloat> undef, <3 x i32> undef)
+; GFX7-SIZE-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: %v3bf16 = call <3 x bfloat> @llvm.ldexp.v3bf16.v3i32(<3 x bfloat> undef, <3 x i32> undef)
 ; GFX7-SIZE-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: %v4bf16 = call <4 x bfloat> @llvm.ldexp.v4bf16.v4i32(<4 x bfloat> undef, <4 x i32> undef)
-; GFX7-SIZE-NEXT:  Cost Model: Found an estimated cost of 10 for instruction: %v5bf16 = call <5 x bfloat> @llvm.ldexp.v5bf16.v5i32(<5 x bfloat> undef, <5 x i32> undef)
+; GFX7-SIZE-NEXT:  Cost Model: Found an estimated cost of 16 for instruction: %v5bf16 = call <5 x bfloat> @llvm.ldexp.v5bf16.v5i32(<5 x bfloat> undef, <5 x i32> undef)
 ; GFX7-SIZE-NEXT:  Cost Model: Found an estimated cost of 16 for instruction: %v8bf16 = call <8 x bfloat> @llvm.ldexp.v8bf16.v8i32(<8 x bfloat> undef, <8 x i32> undef)
 ; GFX7-SIZE-NEXT:  Cost Model: Found an estimated cost of 32 for instruction: %v16bf16 = call <16 x bfloat> @llvm.ldexp.v16bf16.v16i32(<16 x bfloat> undef, <16 x i32> undef)
-; GFX7-SIZE-NEXT:  Cost Model: Found an estimated cost of 34 for instruction: %v17bf16 = call <17 x bfloat> @llvm.ldexp.v17bf16.v17i32(<17 x bfloat> undef, <17 x i32> undef)
+; GFX7-SIZE-NEXT:  Cost Model: Found an estimated cost of 64 for instruction: %v17bf16 = call <17 x bfloat> @llvm.ldexp.v17bf16.v17i32(<17 x bfloat> undef, <17 x i32> undef)
 ; GFX7-SIZE-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: ret void
 ;
 ; GFX8PLUS-SIZE-LABEL: 'ldexp_bf16'

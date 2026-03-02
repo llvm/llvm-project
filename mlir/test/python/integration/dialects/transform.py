@@ -99,26 +99,28 @@ def test_named_sequence(module_):
 # CHECK-LABEL: TEST: test_apply_patterns
 @construct_and_print_in_module
 def test_apply_patterns(module_):
-    M, N, K = 3, 5, 3
+    b, M, N, K = 1, 3, 5, 3
 
-    # CHECK-LABEL:   func.func @matmul(
-    # CHECK-SAME:                      %[[VAL_0:.*]]: tensor<3x5xf32>, %[[VAL_1:.*]]: tensor<5x3xf32>, %[[VAL_2:.*]]: tensor<3x3xf32>) -> tensor<3x3xf32> {
+    # CHECK-LABEL:   func.func @batch_reduce_matmul(
+    # CHECK-SAME:                      %[[VAL_0:.*]]: tensor<1x3x5xf32>,
+    # CHECK-SAME:                      %[[VAL_1:.*]]: tensor<1x5x3xf32>,
+    # CHECK-SAME:                      %[[VAL_2:.*]]: tensor<3x3xf32>) -> tensor<3x3xf32> {
     # CHECK:           %[[VAL_3:.*]] = arith.constant 1 : i32
     # CHECK:           %[[VAL_4:.*]] = arith.addi %[[VAL_3]], %[[VAL_3]] : i32
-    # CHECK:           %[[VAL_5:.*]] = linalg.matmul {cast = #linalg.type_fn<cast_signed>} ins(%[[VAL_0]], %[[VAL_1]] : tensor<3x5xf32>, tensor<5x3xf32>) outs(%[[VAL_2]] : tensor<3x3xf32>) -> tensor<3x3xf32>
+    # CHECK:           %[[VAL_5:.*]] = linalg.batch_reduce_matmul ins(%[[VAL_0]], %[[VAL_1]] : tensor<1x3x5xf32>, tensor<1x5x3xf32>) outs(%[[VAL_2]] : tensor<3x3xf32>) -> tensor<3x3xf32>
     # CHECK:           return %[[VAL_5]] : tensor<3x3xf32>
     # CHECK:         }
     @func.func(
-        T.tensor(M, N, T.f32()), T.tensor(N, K, T.f32()), T.tensor(M, K, T.f32())
+        T.tensor(b, M, N, T.f32()), T.tensor(b, N, K, T.f32()), T.tensor(M, K, T.f32())
     )
-    def matmul(A, B, C):
+    def batch_reduce_matmul(A, B, C):
         i = arith.constant(T.i32(), 1)
         v = arith.addi(i, i)
-        return linalg.matmul(A, B, outs=[C])
+        return linalg.batch_reduce_matmul(A, B, outs=[C])
 
     # CHECK-LABEL:   module attributes {transform.with_named_sequence} {
     # CHECK:           transform.named_sequence @__transform_main(%[[VAL_0:.*]]: !transform.any_op) {
-    # CHECK:             %[[VAL_1:.*]] = transform.structured.match ops{["linalg.matmul"]} in %[[VAL_0]] : (!transform.any_op) -> !transform.any_op
+    # CHECK:             %[[VAL_1:.*]] = transform.structured.match ops{["linalg.batch_reduce_matmul"]} in %[[VAL_0]] : (!transform.any_op) -> !transform.any_op
     # CHECK:             %[[VAL_2:.*]] = transform.get_parent_op %[[VAL_1]] {op_name = "func.func"} : (!transform.any_op) -> !pdl.operation
     # CHECK:             transform.apply_patterns to %[[VAL_2]] {
     # CHECK:               transform.apply_patterns.canonicalization
@@ -132,7 +134,9 @@ def test_apply_patterns(module_):
     def mod():
         @named_sequence("__transform_main", [any_op_t()], [])
         def basic(variant_op: any_op_t()):
-            matmul = structured_match(any_op_t(), variant_op, ops=["linalg.matmul"])
+            matmul = structured_match(
+                any_op_t(), variant_op, ops=["linalg.batch_reduce_matmul"]
+            )
             top_func = get_parent_op(pdl.op_t(), matmul, op_name="func.func")
 
             @apply_patterns(top_func)
@@ -147,9 +151,9 @@ def test_apply_patterns(module_):
     pm = PassManager.parse("builtin.module(transform-interpreter)")
     pm.run(module_.operation)
 
-    # CHECK-LABEL:   func.func @matmul(
-    # CHECK-SAME:                      %[[VAL_0:.*]]: tensor<3x5xf32>, %[[VAL_1:.*]]: tensor<5x3xf32>, %[[VAL_2:.*]]: tensor<3x3xf32>) -> tensor<3x3xf32> {
-    # CHECK:           %[[VAL_3:.*]] = linalg.matmul {cast = #linalg.type_fn<cast_signed>} ins(%[[VAL_0]], %[[VAL_1]] : tensor<3x5xf32>, tensor<5x3xf32>) outs(%[[VAL_2]] : tensor<3x3xf32>) -> tensor<3x3xf32>
+    # CHECK-LABEL:   func.func @batch_reduce_matmul(
+    # CHECK-SAME:                      %[[VAL_0:.*]]: tensor<1x3x5xf32>, %[[VAL_1:.*]]: tensor<1x5x3xf32>, %[[VAL_2:.*]]: tensor<3x3xf32>) -> tensor<3x3xf32> {
+    # CHECK:           %[[VAL_3:.*]] = linalg.batch_reduce_matmul ins(%[[VAL_0]], %[[VAL_1]] : tensor<1x3x5xf32>, tensor<1x5x3xf32>) outs(%[[VAL_2]] : tensor<3x3xf32>) -> tensor<3x3xf32>
     # CHECK:           return %[[VAL_3]] : tensor<3x3xf32>
     # CHECK:         }
     print(module_)

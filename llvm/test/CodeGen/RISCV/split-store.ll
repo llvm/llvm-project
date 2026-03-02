@@ -94,14 +94,14 @@ define void @int16_float_pair(i16 signext %tmp1, float %tmp2, ptr %ref.tmp) {
 define void @int8_float_pair(i8 signext %tmp1, float %tmp2, ptr %ref.tmp) {
 ; RV32-RV64-LABEL: int8_float_pair:
 ; RV32-RV64:       # %bb.0:
-; RV32-RV64-NEXT:    andi a0, a0, 255
+; RV32-RV64-NEXT:    zext.b a0, a0
 ; RV32-RV64-NEXT:    sw a0, 0(a2)
 ; RV32-RV64-NEXT:    sw a1, 4(a2)
 ; RV32-RV64-NEXT:    ret
 ;
 ; RV32D-RV64D-LABEL: int8_float_pair:
 ; RV32D-RV64D:       # %bb.0:
-; RV32D-RV64D-NEXT:    andi a0, a0, 255
+; RV32D-RV64D-NEXT:    zext.b a0, a0
 ; RV32D-RV64D-NEXT:    sw a0, 0(a1)
 ; RV32D-RV64D-NEXT:    fsw fa0, 4(a1)
 ; RV32D-RV64D-NEXT:    ret

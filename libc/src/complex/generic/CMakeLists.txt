@@ -1,0 +1,225 @@
+add_entrypoint_object(
+  cproj
+  SRCS
+    cproj.cpp
+  HDRS
+    ../cproj.h
+  DEPENDS
+    libc.src.__support.complex_basic_ops
+)
+
+add_entrypoint_object(
+  cprojf
+  SRCS
+    cprojf.cpp
+  HDRS
+    ../cprojf.h
+  DEPENDS
+    libc.src.__support.complex_basic_ops
+)
+
+add_entrypoint_object(
+  cprojl
+  SRCS
+    cprojl.cpp
+  HDRS
+    ../cprojl.h
+  DEPENDS
+    libc.src.__support.complex_basic_ops
+)
+
+add_entrypoint_object(
+  cprojf16
+  SRCS
+    cprojf16.cpp
+  HDRS
+    ../cprojf16.h
+  DEPENDS
+    libc.src.__support.complex_basic_ops
+    libc.src.__support.macros.properties.types
+    libc.src.__support.macros.properties.complex_types
+)
+
+add_entrypoint_object(
+  cprojf128
+  SRCS
+    cprojf128.cpp
+  HDRS
+    ../cprojf128.h
+  DEPENDS
+    libc.src.__support.complex_basic_ops
+    libc.src.__support.macros.properties.types
+    libc.src.__support.macros.properties.complex_types
+)
+
+add_entrypoint_object(
+  conj
+  SRCS
+    conj.cpp
+  HDRS
+    ../conj.h
+  DEPENDS
+    libc.src.__support.complex_basic_ops
+)
+
+add_entrypoint_object(
+  conjf
+  SRCS
+    conjf.cpp
+  HDRS
+    ../conjf.h
+  DEPENDS
+    libc.src.__support.complex_basic_ops
+)
+
+add_entrypoint_object(
+  conjl
+  SRCS
+    conjl.cpp
+  HDRS
+    ../conjl.h
+  DEPENDS
+    libc.src.__support.complex_basic_ops
+)
+
+add_entrypoint_object(
+  conjf16
+  SRCS
+    conjf16.cpp
+  HDRS
+    ../conjf16.h
+  DEPENDS
+    libc.src.__support.complex_basic_ops
+    libc.src.__support.macros.properties.types
+    libc.src.__support.macros.properties.complex_types
+)
+
+add_entrypoint_object(
+  conjf128
+  SRCS
+    conjf128.cpp
+  HDRS
+    ../conjf128.h
+  DEPENDS
+    libc.src.__support.complex_basic_ops
+    libc.src.__support.macros.properties.types
+    libc.src.__support.macros.properties.complex_types
+)
+
+add_entrypoint_object(
+  creal
+  SRCS
+    creal.cpp
+  HDRS
+    ../creal.h
+  DEPENDS
+    libc.src.__support.CPP.bit
+    libc.src.__support.complex_type
+)
+
+add_entrypoint_object(
+  crealf
+  SRCS
+    crealf.cpp
+  HDRS
+    ../crealf.h
+  DEPENDS
+    libc.src.__support.CPP.bit
+    libc.src.__support.complex_type
+)
+
+add_entrypoint_object(
+  creall
+  SRCS
+    creall.cpp
+  HDRS
+    ../creall.h
+  DEPENDS
+    libc.src.__support.CPP.bit
+    libc.src.__support.complex_type
+)
+
+add_entrypoint_object(
+  crealf16
+  SRCS
+    crealf16.cpp
+  HDRS
+    ../crealf16.h
+  DEPENDS
+    libc.src.__support.CPP.bit
+    libc.src.__support.complex_type
+    libc.src.__support.macros.properties.types
+    libc.src.__support.macros.properties.complex_types
+)
+
+add_entrypoint_object(
+  crealf128
+  SRCS
+    crealf128.cpp
+  HDRS
+    ../crealf128.h
+  DEPENDS
+    libc.src.__support.CPP.bit
+    libc.src.__support.complex_type
+    libc.src.__support.macros.properties.types
+    libc.src.__support.macros.properties.complex_types
+)
+
+add_entrypoint_object(
+  cimag
+  SRCS
+    cimag.cpp
+  HDRS
+    ../cimag.h
+  DEPENDS
+    libc.src.__support.CPP.bit
+    libc.src.__support.complex_type
+)
+
+add_entrypoint_object(
+  cimagf
+  SRCS
+    cimagf.cpp
+  HDRS
+    ../cimagf.h
+  DEPENDS
+    libc.src.__support.CPP.bit
+    libc.src.__support.complex_type
+)
+
+add_entrypoint_object(
+  cimagl
+  SRCS
+    cimagl.cpp
+  HDRS
+    ../cimagl.h
+  DEPENDS
+    libc.src.__support.CPP.bit
+    libc.src.__support.complex_type
+)
+
+add_entrypoint_object(
+  cimagf16
+  SRCS
+    cimagf16.cpp
+  HDRS
+    ../cimagf16.h
+  DEPENDS
+    libc.src.__support.CPP.bit
+    libc.src.__support.complex_type
+    libc.src.__support.macros.properties.types
+    libc.src.__support.macros.properties.complex_types
+)
+
+add_entrypoint_object(
+  cimagf128
+  SRCS
+    cimagf128.cpp
+  HDRS
+    ../cimagf128.h
+  DEPENDS
+    libc.src.__support.CPP.bit
+    libc.src.__support.complex_type
+    libc.src.__support.macros.properties.types
+    libc.src.__support.macros.properties.complex_types
+)

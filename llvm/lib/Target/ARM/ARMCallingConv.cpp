@@ -11,10 +11,9 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "ARM.h"
 #include "ARMCallingConv.h"
+#include "ARM.h"
 #include "ARMSubtarget.h"
-#include "ARMRegisterInfo.h"
 using namespace llvm;
 
 // APCS f64 is in register pairs, possibly split to stack
@@ -187,9 +186,10 @@ static bool CC_ARM_AAPCS_Custom_Aggregate(unsigned ValNo, MVT ValVT,
   if (!ArgFlags.isInConsecutiveRegsLast())
     return true;
 
+  const MachineFunction &MF = State.getMachineFunction();
   // Try to allocate a contiguous block of registers, each of the correct
   // size to hold one member.
-  auto &DL = State.getMachineFunction().getDataLayout();
+  auto &DL = MF.getDataLayout();
   const MaybeAlign StackAlign = DL.getStackAlignment();
   assert(StackAlign && "data layout string is missing stack alignment");
   const Align FirstMemberAlign(PendingMembers[0].getExtraInfo());
@@ -229,12 +229,12 @@ static bool CC_ARM_AAPCS_Custom_Aggregate(unsigned ValNo, MVT ValVT,
     break;
   }
 
-  unsigned RegResult = State.AllocateRegBlock(RegList, PendingMembers.size());
-  if (RegResult) {
-    for (CCValAssign &PendingMember : PendingMembers) {
-      PendingMember.convertToReg(RegResult);
+  ArrayRef<MCPhysReg> RegResult =
+      State.AllocateRegBlock(RegList, PendingMembers.size());
+  if (!RegResult.empty()) {
+    for (const auto &[PendingMember, Reg] : zip(PendingMembers, RegResult)) {
+      PendingMember.convertToReg(Reg);
       State.addLoc(PendingMember);
-      ++RegResult;
     }
     PendingMembers.clear();
     return true;
@@ -266,7 +266,7 @@ static bool CC_ARM_AAPCS_Custom_Aggregate(unsigned ValNo, MVT ValVT,
     State.AllocateReg(Reg);
 
   // Clamp the alignment between 4 and 8.
-  if (State.getMachineFunction().getSubtarget<ARMSubtarget>().isTargetAEABI())
+  if (MF.getTarget().getTargetTriple().isTargetAEABI())
     Alignment = ArgFlags.getNonZeroMemAlign() <= 4 ? Align(4) : Align(8);
 
   // After the first item has been allocated, the rest are packed as tightly as
@@ -299,7 +299,8 @@ static bool CustomAssignInRegList(unsigned ValNo, MVT ValVT, MVT LocVT,
 static bool CC_ARM_AAPCS_Custom_f16(unsigned ValNo, MVT ValVT, MVT LocVT,
                                     CCValAssign::LocInfo LocInfo,
                                     ISD::ArgFlagsTy ArgFlags, CCState &State) {
-  // f16 arguments are extended to i32 and assigned to a register in [r0, r3]
+  // f16 and bf16 arguments are extended to i32 and assigned to a register in
+  // [r0, r3].
   return CustomAssignInRegList(ValNo, ValVT, MVT::i32, LocInfo, State,
                                RRegList);
 }
@@ -308,9 +309,24 @@ static bool CC_ARM_AAPCS_VFP_Custom_f16(unsigned ValNo, MVT ValVT, MVT LocVT,
                                         CCValAssign::LocInfo LocInfo,
                                         ISD::ArgFlagsTy ArgFlags,
                                         CCState &State) {
-  // f16 arguments are extended to f32 and assigned to a register in [s0, s15]
+  // f16 and bf16 arguments are extended to f32 and assigned to a register in
+  // [s0, s15].
   return CustomAssignInRegList(ValNo, ValVT, MVT::f32, LocInfo, State,
                                SRegList);
+}
+
+static bool CC_ARM_AAPCS_Common_Custom_f16_Stack(unsigned ValNo, MVT ValVT,
+                                                 MVT LocVT,
+                                                 CCValAssign::LocInfo LocInfo,
+                                                 ISD::ArgFlagsTy ArgFlags,
+                                                 CCState &State) {
+  // f16 and bf16 (if not passed in a register) are assigned to a 32-bit stack
+  // slot, with the most-significant 16 bits unspecified. The 32-bit slot is
+  // important to make sure that the byte ordering is correct for big endian
+  // targets.
+  State.addLoc(CCValAssign::getCustomMem(
+      ValNo, ValVT, State.AllocateStack(4, Align(4)), MVT::i32, LocInfo));
+  return true;
 }
 
 // Include the table generated calling convention implementations.

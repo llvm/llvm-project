@@ -56,8 +56,6 @@ define float @fneg(float %a) nounwind {
   ret float %1
 }
 
-declare float @llvm.fabs.f32(float)
-
 define float @fabs(float %a) nounwind {
 ; RV32I-LABEL: fabs:
 ; RV32I:       # %bb.0:
@@ -96,8 +94,6 @@ define float @fabs(float %a) nounwind {
   ret float %1
 }
 
-declare float @llvm.copysign.f32(float, float)
-
 ; DAGTypeLegalizer::SoftenFloatRes_FCOPYSIGN will convert to bitwise
 ; operations if floating point isn't supported. A combine could be written to
 ; do the same even when f32 is legal.
@@ -107,8 +103,8 @@ define float @fcopysign_fneg(float %a, float %b) nounwind {
 ; RV32I:       # %bb.0:
 ; RV32I-NEXT:    not a1, a1
 ; RV32I-NEXT:    lui a2, 524288
-; RV32I-NEXT:    and a1, a1, a2
 ; RV32I-NEXT:    slli a0, a0, 1
+; RV32I-NEXT:    and a1, a1, a2
 ; RV32I-NEXT:    srli a0, a0, 1
 ; RV32I-NEXT:    or a0, a0, a1
 ; RV32I-NEXT:    ret
@@ -131,8 +127,8 @@ define float @fcopysign_fneg(float %a, float %b) nounwind {
 ; RV64I:       # %bb.0:
 ; RV64I-NEXT:    not a1, a1
 ; RV64I-NEXT:    lui a2, 524288
-; RV64I-NEXT:    and a1, a1, a2
 ; RV64I-NEXT:    slli a0, a0, 33
+; RV64I-NEXT:    and a1, a1, a2
 ; RV64I-NEXT:    srli a0, a0, 33
 ; RV64I-NEXT:    or a0, a0, a1
 ; RV64I-NEXT:    ret

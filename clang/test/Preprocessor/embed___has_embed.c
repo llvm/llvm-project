@@ -58,3 +58,22 @@ unsigned char buffer[] = {
 #else
 #error 17
 #endif
+
+#if __has_embed(__FILE__\
+)
+#else
+#error 18
+#endif
+
+#define F __FI\
+LE__
+#if __has_embed(F)
+#else
+#error 19
+#endif
+
+#if __has_embed(F\
+)
+#else 
+#error 20
+#endif

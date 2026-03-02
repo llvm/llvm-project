@@ -81,7 +81,7 @@ end subroutine s6
 
 subroutine s7()
 ! Cannot have a coarray
-  integer, codimension[*] :: coarray_var
+  integer, codimension[*], save :: coarray_var
 !ERROR: Coarray 'coarray_var' not allowed in a LOCAL locality-spec
   do concurrent(i=1:5) local(coarray_var)
   end do
@@ -94,3 +94,23 @@ subroutine s8(arg)
   do concurrent(i=1:5) local(arg)
   end do
 end subroutine s8
+
+subroutine s9()
+  type l3
+    integer, allocatable :: a
+  end type
+  type l2
+    type(l3) :: l2_3
+  end type
+  type l1
+    type(l2) :: l1_2
+  end type
+  type(l1) :: v
+  integer sum
+
+  sum = 0
+!ERROR: Derived type variable 'v' with ultimate ALLOCATABLE component '%l1_2%l2_3%a' not allowed in a LOCAL_INIT locality-spec
+  do concurrent (i = 1:10) local_init(v)
+    sum = sum + i
+  end do
+end subroutine s9

@@ -30,7 +30,7 @@ namespace bolt {
 /// 64-bit range, we guarantee it can reach any code location.
 ///
 class LongJmpPass : public BinaryFunctionPass {
-  /// Used to implement stub grouping (re-using a stub from one function into
+  /// Used to implement stub grouping (reusing a stub from one function into
   /// another)
   using StubTy = std::pair<uint64_t, BinaryBasicBlock *>;
   using StubGroupTy = SmallVector<StubTy, 4>;
@@ -63,21 +63,32 @@ class LongJmpPass : public BinaryFunctionPass {
   uint32_t NumColdStubs{0};
   uint32_t NumSharedStubs{0};
 
+  /// The shortest distance for any branch instruction on AArch64.
+  static constexpr size_t ShortestJumpBits = 16;
+  static constexpr size_t ShortestJumpSpan = 1ULL << (ShortestJumpBits - 1);
+
+  /// The longest single-instruction branch.
+  static constexpr size_t LongestJumpBits = 28;
+  static constexpr size_t LongestJumpSpan = 1ULL << (LongestJumpBits - 1);
+
+  /// Relax all internal function branches including those between fragments.
+  /// Assume that fragments are placed in different sections but are within
+  /// 128MB of each other.
+  void relaxLocalBranches(BinaryFunction &BF);
+
   ///                 -- Layout estimation methods --
   /// Try to do layout before running the emitter, by looking at BinaryFunctions
   /// and MCInsts -- this is an estimation. To be correct for longjmp inserter
   /// purposes, we need to do a size worst-case estimation. Real layout is done
   /// by RewriteInstance::mapFileSections()
   void tentativeLayout(const BinaryContext &BC,
-                       std::vector<BinaryFunction *> &SortedFunctions);
-  uint64_t
-  tentativeLayoutRelocMode(const BinaryContext &BC,
-                           std::vector<BinaryFunction *> &SortedFunctions,
-                           uint64_t DotAddress);
-  uint64_t
-  tentativeLayoutRelocColdPart(const BinaryContext &BC,
-                               std::vector<BinaryFunction *> &SortedFunctions,
-                               uint64_t DotAddress);
+                       BinaryFunctionListType &SortedFunctions);
+  uint64_t tentativeLayoutRelocMode(const BinaryContext &BC,
+                                    BinaryFunctionListType &SortedFunctions,
+                                    uint64_t DotAddress);
+  uint64_t tentativeLayoutRelocColdPart(const BinaryContext &BC,
+                                        BinaryFunctionListType &SortedFunctions,
+                                        uint64_t DotAddress);
   void tentativeBBLayout(const BinaryFunction &Func);
 
   /// Update stubs addresses with their exact address after a round of stub

@@ -50,7 +50,8 @@ void DwarfCFIException::endModule() {
   // Emit indirect reference table for all used personality functions
   for (const GlobalValue *Personality : Personalities) {
     MCSymbol *Sym = Asm->getSymbol(Personality);
-    TLOF.emitPersonalityValue(*Asm->OutStreamer, Asm->getDataLayout(), Sym);
+    TLOF.emitPersonalityValue(*Asm->OutStreamer, Asm->getDataLayout(), Sym,
+                              Asm->MMI);
   }
   Personalities.clear();
 }
@@ -108,9 +109,11 @@ void DwarfCFIException::beginBasicBlockSection(const MachineBasicBlock &MBB) {
     // chose not to be verbose in that case. And with `ForceDwarfFrameSection`,
     // we should always emit .debug_frame.
     if (CFISecType == AsmPrinter::CFISection::Debug ||
-        Asm->TM.Options.ForceDwarfFrameSection)
+        Asm->TM.Options.ForceDwarfFrameSection ||
+        Asm->TM.Options.MCOptions.EmitSFrameUnwind)
       Asm->OutStreamer->emitCFISections(
-          CFISecType == AsmPrinter::CFISection::EH, true);
+          CFISecType == AsmPrinter::CFISection::EH, true,
+          Asm->TM.Options.MCOptions.EmitSFrameUnwind);
     hasEmittedCFISections = true;
   }
 

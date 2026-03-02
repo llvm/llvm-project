@@ -1,0 +1,15 @@
+<head>
+    <meta charset="utf-8"/>
+    <title>{{Name}}</title>
+    {{#Stylesheets}}
+        <link rel="stylesheet" type="text/css" href="{{.}}"/>
+    {{/Stylesheets}}
+    {{#Scripts}}
+        <script src="{{.}}"></script>
+    {{/Scripts}}
+    {{! Highlight.js dependency for syntax highlighting }}
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/styles/default.min.css" media="(prefers-color-scheme: light)">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/styles/dark.min.css" media="(prefers-color-scheme: dark)">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/highlight.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/languages/cpp.min.js"></script>
+</head>

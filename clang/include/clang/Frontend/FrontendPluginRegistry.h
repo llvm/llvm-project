@@ -14,6 +14,7 @@
 #define LLVM_CLANG_FRONTEND_FRONTENDPLUGINREGISTRY_H
 
 #include "clang/Frontend/FrontendAction.h"
+#include "clang/Support/Compiler.h"
 #include "llvm/Support/Registry.h"
 
 namespace clang {
@@ -22,5 +23,9 @@ namespace clang {
 using FrontendPluginRegistry = llvm::Registry<PluginASTAction>;
 
 } // namespace clang
+
+namespace llvm {
+extern template class CLANG_TEMPLATE_ABI Registry<clang::PluginASTAction>;
+} // namespace llvm
 
 #endif // LLVM_CLANG_FRONTEND_FRONTENDPLUGINREGISTRY_H

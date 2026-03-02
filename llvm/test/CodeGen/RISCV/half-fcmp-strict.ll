@@ -48,7 +48,6 @@ define i32 @fcmp_oeq(half %a, half %b) nounwind strictfp {
   %2 = zext i1 %1 to i32
   ret i32 %2
 }
-declare i1 @llvm.experimental.constrained.fcmp.f16(half, half, metadata, metadata)
 
 define i32 @fcmp_ogt(half %a, half %b) nounwind strictfp {
 ; CHECK-LABEL: fcmp_ogt:
@@ -297,8 +296,8 @@ define i32 @fcmp_ord(half %a, half %b) nounwind strictfp {
 ; CHECKIZHINXMIN-LABEL: fcmp_ord:
 ; CHECKIZHINXMIN:       # %bb.0:
 ; CHECKIZHINXMIN-NEXT:    fcvt.s.h a1, a1
-; CHECKIZHINXMIN-NEXT:    feq.s a1, a1, a1
 ; CHECKIZHINXMIN-NEXT:    fcvt.s.h a0, a0
+; CHECKIZHINXMIN-NEXT:    feq.s a1, a1, a1
 ; CHECKIZHINXMIN-NEXT:    feq.s a0, a0, a0
 ; CHECKIZHINXMIN-NEXT:    and a0, a0, a1
 ; CHECKIZHINXMIN-NEXT:    ret
@@ -608,8 +607,8 @@ define i32 @fcmp_uno(half %a, half %b) nounwind strictfp {
 ; CHECKIZHINXMIN-LABEL: fcmp_uno:
 ; CHECKIZHINXMIN:       # %bb.0:
 ; CHECKIZHINXMIN-NEXT:    fcvt.s.h a1, a1
-; CHECKIZHINXMIN-NEXT:    feq.s a1, a1, a1
 ; CHECKIZHINXMIN-NEXT:    fcvt.s.h a0, a0
+; CHECKIZHINXMIN-NEXT:    feq.s a1, a1, a1
 ; CHECKIZHINXMIN-NEXT:    feq.s a0, a0, a0
 ; CHECKIZHINXMIN-NEXT:    and a0, a0, a1
 ; CHECKIZHINXMIN-NEXT:    xori a0, a0, 1
@@ -653,7 +652,6 @@ define i32 @fcmps_oeq(half %a, half %b) nounwind strictfp {
   %2 = zext i1 %1 to i32
   ret i32 %2
 }
-declare i1 @llvm.experimental.constrained.fcmps.f16(half, half, metadata, metadata)
 
 define i32 @fcmps_ogt(half %a, half %b) nounwind strictfp {
 ; CHECK-LABEL: fcmps_ogt:
@@ -823,8 +821,8 @@ define i32 @fcmps_ord(half %a, half %b) nounwind strictfp {
 ; CHECKIZHINXMIN-LABEL: fcmps_ord:
 ; CHECKIZHINXMIN:       # %bb.0:
 ; CHECKIZHINXMIN-NEXT:    fcvt.s.h a1, a1
-; CHECKIZHINXMIN-NEXT:    fle.s a1, a1, a1
 ; CHECKIZHINXMIN-NEXT:    fcvt.s.h a0, a0
+; CHECKIZHINXMIN-NEXT:    fle.s a1, a1, a1
 ; CHECKIZHINXMIN-NEXT:    fle.s a0, a0, a0
 ; CHECKIZHINXMIN-NEXT:    and a0, a0, a1
 ; CHECKIZHINXMIN-NEXT:    ret
@@ -1063,8 +1061,8 @@ define i32 @fcmps_uno(half %a, half %b) nounwind strictfp {
 ; CHECKIZHINXMIN-LABEL: fcmps_uno:
 ; CHECKIZHINXMIN:       # %bb.0:
 ; CHECKIZHINXMIN-NEXT:    fcvt.s.h a1, a1
-; CHECKIZHINXMIN-NEXT:    fle.s a1, a1, a1
 ; CHECKIZHINXMIN-NEXT:    fcvt.s.h a0, a0
+; CHECKIZHINXMIN-NEXT:    fle.s a1, a1, a1
 ; CHECKIZHINXMIN-NEXT:    fle.s a0, a0, a0
 ; CHECKIZHINXMIN-NEXT:    and a0, a0, a1
 ; CHECKIZHINXMIN-NEXT:    xori a0, a0, 1

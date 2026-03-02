@@ -8,6 +8,7 @@
 
 #include "clang/AST/Mangle.h"
 #include "clang/Basic/LangOptions.h"
+#include "clang/Driver/CreateInvocationFromArgs.h"
 #include "clang/Frontend/ASTUnit.h"
 #include "clang/Frontend/CompilerInstance.h"
 #include "clang/Frontend/CompilerInvocation.h"
@@ -25,6 +26,7 @@
 #include "llvm/Support/Program.h"
 #include "llvm/Support/Signals.h"
 #include "llvm/Support/StringSaver.h"
+#include "llvm/Support/VirtualFileSystem.h"
 #include "llvm/Support/raw_ostream.h"
 
 using namespace clang;
@@ -204,12 +206,17 @@ public:
 static void dumpModuleFileInputs(serialization::ModuleFile &Mod,
                                  ASTReader &Reader,
                                  raw_ostream &OS) {
+  SmallString<0> PathBuf;
+  PathBuf.reserve(256);
   OS << "---- Module Inputs ----\n";
-  Reader.visitInputFiles(Mod, /*IncludeSystem=*/true, /*Complain=*/false,
-                        [&](const serialization::InputFile &IF, bool isSystem) {
-    OS << (isSystem ? "system" : "user") << " | ";
-    OS << IF.getFile()->getName() << '\n';
-  });
+  Reader.visitInputFileInfos(
+      Mod, /*IncludeSystem=*/true,
+      [&](const serialization::InputFileInfo &IFI, bool isSystem) {
+        OS << (isSystem ? "system" : "user") << " | ";
+        auto Filename = ASTReader::ResolveImportedPath(
+            PathBuf, IFI.UnresolvedImportedFilenameAsRequested, Mod);
+        OS << *Filename << '\n';
+      });
 }
 
 static bool printSourceSymbols(const char *Executable,
@@ -219,8 +226,10 @@ static bool printSourceSymbols(const char *Executable,
   SmallVector<const char *, 4> ArgsWithProgName;
   ArgsWithProgName.push_back(Executable);
   ArgsWithProgName.append(Args.begin(), Args.end());
-  IntrusiveRefCntPtr<DiagnosticsEngine>
-    Diags(CompilerInstance::createDiagnostics(new DiagnosticOptions));
+  auto DiagOpts = std::make_shared<DiagnosticOptions>();
+  IntrusiveRefCntPtr<DiagnosticsEngine> Diags(
+      CompilerInstance::createDiagnostics(*llvm::vfs::getRealFileSystem(),
+                                          *DiagOpts));
   CreateInvocationOptions CIOpts;
   CIOpts.Diags = Diags;
   CIOpts.ProbePrecompiled = true; // FIXME: historical default. Needed?
@@ -239,7 +248,7 @@ static bool printSourceSymbols(const char *Executable,
 
   auto PCHContainerOps = std::make_shared<PCHContainerOperations>();
   std::unique_ptr<ASTUnit> Unit(ASTUnit::LoadFromCompilerInvocationAction(
-      std::move(CInvok), PCHContainerOps, Diags, IndexAction.get()));
+      std::move(CInvok), PCHContainerOps, DiagOpts, Diags, IndexAction.get()));
 
   if (!Unit)
     return true;
@@ -270,16 +279,19 @@ static bool printSourceSymbolsFromModule(StringRef modulePath,
     return true;
   }
 
-  auto HSOpts = std::make_shared<HeaderSearchOptions>();
+  HeaderSearchOptions HSOpts;
 
+  auto VFS = llvm::vfs::getRealFileSystem();
+
+  auto DiagOpts = std::make_shared<DiagnosticOptions>();
   IntrusiveRefCntPtr<DiagnosticsEngine> Diags =
-      CompilerInstance::createDiagnostics(new DiagnosticOptions());
-  std::unique_ptr<ASTUnit> AU =
-      ASTUnit::LoadFromASTFile(modulePath, *pchRdr, ASTUnit::LoadASTOnly, Diags,
-                               FileSystemOpts, HSOpts, /*LangOpts=*/nullptr,
-                               /*OnlyLocalDecls=*/true, CaptureDiagsKind::None,
-                               /*AllowASTWithCompilerErrors=*/true,
-                               /*UserFilesAreVolatile=*/false);
+      CompilerInstance::createDiagnostics(*VFS, *DiagOpts);
+  std::unique_ptr<ASTUnit> AU = ASTUnit::LoadFromASTFile(
+      modulePath, *pchRdr, ASTUnit::LoadASTOnly, VFS, DiagOpts, Diags,
+      FileSystemOpts, HSOpts, /*LangOpts=*/nullptr,
+      /*OnlyLocalDecls=*/true, CaptureDiagsKind::None,
+      /*AllowASTWithCompilerErrors=*/true,
+      /*UserFilesAreVolatile=*/false);
   if (!AU) {
     errs() << "failed to create TU for: " << modulePath << '\n';
     return true;

@@ -1,4 +1,4 @@
-; RUN: opt %loadNPMPolly '-passes=print<polly-function-scops>' -disable-output < %s
+; RUN: opt %loadNPMPolly '-passes=polly-custom<scops>' -polly-print-scops -disable-output < %s
 
 ; Bug description: Alias Analysis thinks IntToPtrInst aliases with alloca instructions created by IndependentBlocks Pass.
 ;                  This will trigger the assertion when we are verifying the SCoP after IndependentBlocks.

@@ -1,6 +1,6 @@
 // RUN: not llvm-mc -triple aarch64 \
 // RUN: -mattr=+crc,+sm4,+sha3,+sha2,+aes,+fp,+neon,+ras,+lse,+predres,+ccdp,+mte,+tlb-rmi,+pan-rwv,+ccpp,+rcpc,+ls64,+flagm,+hbc,+mops \
-// RUN: -mattr=+rcpc3,+lse128,+d128,+the,+rasv2,+ite,+cssc,+specres2,+gcs \
+// RUN: -mattr=+rcpc3,+lse128,+d128,+the,+rasv2,+ite,+cssc,+specres2,+gcs,+cmpbr \
 // RUN: -filetype asm -o - %s 2>&1 | FileCheck %s
 
 .arch_extension axp64
@@ -180,17 +180,12 @@ cpyfp [x0]!, [x1]!, x2!
 // nolse128 implied nod128, so reinstate it
 .arch_extension d128
 // This needs to come before `.arch_extension nothe` as it uses an instruction
-// that requires both the and d128
-sysp #0, c2, c0, #0, x0, x1
+// that requires the extension. `.arch_extension d128` is needed for rcwcasp.
 rcwcasp   x0, x1, x6, x7, [x4]
-// CHECK-NOT: [[@LINE-2]]:1: error: instruction requires: d128
-// CHECK-NOT: [[@LINE-2]]:1: error: instruction requires: d128
+// CHECK-NOT: [[@LINE-1]]:1: error: instruction requires: d128
 .arch_extension nod128
-sysp #0, c2, c0, #0, x0, x1
 rcwcasp   x0, x1, x6, x7, [x4]
-// CHECK: [[@LINE-2]]:1: error: instruction requires: d128
-// CHECK-NEXT: sysp #0, c2, c0, #0, x0, x1
-// CHECK: [[@LINE-3]]:1: error: instruction requires: d128
+// CHECK: [[@LINE-1]]:1: error: instruction requires: d128
 // CHECK-NEXT: rcwcasp   x0, x1, x6, x7, [x4]
 
 rcwswp x0, x1, [x2]
@@ -229,3 +224,29 @@ gcspushm x0
 gcspushm x0
 // CHECK: [[@LINE-1]]:1: error: instruction requires: gcs
 // CHECK-NEXT: gcspushm x0
+
+cbhi x5, x5, #1020
+// CHECK-NOT: [[@LINE-1]]:1: error: instruction requires: cmpbr
+.arch_extension nocmpbr
+cbhi x5, x5, #1020
+// CHECK: [[@LINE-1]]:1: error: instruction requires: cmpbr
+// CHECK-NEXT: cbhi x5, x5, #1020
+
+
+.arch_extension fprcvt
+.arch_extension nofprcvt
+fcvtmu s0, d1
+// CHECK: [[@LINE-1]]:1: error: instruction requires: fprcvt
+// CHECK-NEXT: fcvtmu s0, d1
+
+.arch_extension f8f16mm
+.arch_extension nof8f16mm
+fmmla v2.8h, v1.16b, v0.16b
+// CHECK: [[@LINE-1]]:1: error: instruction requires: f8f16mm
+// CHECK-NEXT: fmmla v2.8h, v1.16b, v0.16b
+
+.arch_extension f8f32mm
+.arch_extension nof8f32mm
+fmmla v2.4s, v1.16b, v0.16b
+// CHECK: [[@LINE-1]]:1: error: instruction requires: f8f32mm
+// CHECK-NEXT: fmmla v2.4s, v1.16b, v0.16b

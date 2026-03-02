@@ -1,0 +1,21 @@
+REQUIRES: mips-registered-target
+
+RUN: rm -rf %t && mkdir -p %t
+
+RUN: llc -mtriple=i386-windows-coff -filetype=obj -o %t/i386.obj %S/Inputs/i386.ll
+RUN: llvm-as %S/Inputs/i386.ll -o %t/i386.bc
+RUN: llvm-lib %t/i386.obj %t/i386.bc /out:%t/i386.lib
+RUN: llvm-objdump -h %t/i386.lib | FileCheck %s --check-prefix=I386
+I386: file format coff-i386
+
+RUN: llc -mtriple=x86_64-windows-coff -filetype=obj -o %t/x86_64.obj %S/Inputs/x86_64.ll
+RUN: llvm-as %S/Inputs/x86_64.ll -o %t/x86_64.bc
+RUN: llvm-lib %t/x86_64.obj %t/x86_64.bc /out:%t/x86_64.lib
+RUN: llvm-objdump -h %t/x86_64.lib | FileCheck %s --check-prefix=X86_64
+X86_64: file format coff-x86-64
+
+RUN: llc -mtriple=mipsel-windows-coff -filetype=obj -o %t/mips.obj %S/Inputs/mips.ll
+RUN: llvm-as %S/Inputs/mips.ll -o %t/mips.bc
+RUN: llvm-lib %t/mips.obj %t/mips.bc /out:%t/mips.lib
+RUN: llvm-objdump -h %t/mips.lib | FileCheck %s --check-prefix=MIPS
+MIPS: file format coff-mips

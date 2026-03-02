@@ -15,6 +15,7 @@
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/DenseSet.h"
 #include "llvm/Analysis/BlockFrequencyInfoImpl.h"
+#include "llvm/CodeGen/MIRFSDiscriminatorOptions.h"
 #include "llvm/CodeGen/MachineBlockFrequencyInfo.h"
 #include "llvm/CodeGen/MachineBranchProbabilityInfo.h"
 #include "llvm/CodeGen/MachineDominators.h"
@@ -46,8 +47,9 @@ static cl::opt<bool> ShowFSBranchProb(
     cl::desc("Print setting flow sensitive branch probabilities"));
 static cl::opt<unsigned> FSProfileDebugProbDiffThreshold(
     "fs-profile-debug-prob-diff-threshold", cl::init(10),
-    cl::desc("Only show debug message if the branch probility is greater than "
-             "this value (in percentage)."));
+    cl::desc(
+        "Only show debug message if the branch probability is greater than "
+        "this value (in percentage)."));
 
 static cl::opt<unsigned> FSProfileDebugBWThreshold(
     "fs-profile-debug-bw-threshold", cl::init(10000),
@@ -61,9 +63,6 @@ static cl::opt<bool> ViewBFIAfter("fs-viewbfi-after", cl::Hidden,
                                   cl::init(false),
                                   cl::desc("View BFI after MIR loader"));
 
-namespace llvm {
-extern cl::opt<bool> ImprovedFSDiscriminator;
-}
 char MIRProfileLoaderPass::ID = 0;
 
 INITIALIZE_PASS_BEGIN(MIRProfileLoaderPass, DEBUG_TYPE,

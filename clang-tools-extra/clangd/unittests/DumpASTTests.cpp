@@ -49,6 +49,40 @@ declaration: Function - root
       )"},
       {R"cpp(
 namespace root {
+struct S { static const int x = 0; ~S(); };
+int y = S::x + root::S().x;
+}
+      )cpp",
+       R"(
+declaration: Namespace - root
+  declaration: CXXRecord - S
+    declaration: Var - x
+      type: Qualified - const
+        type: Builtin - int
+      expression: IntegerLiteral - 0
+    declaration: CXXDestructor
+      type: Record - S
+      type: FunctionProto
+        type: Builtin - void
+    declaration: CXXConstructor
+    declaration: CXXConstructor
+  declaration: Var - y
+    type: Builtin - int
+    expression: ExprWithCleanups
+      expression: BinaryOperator - +
+        expression: ImplicitCast - LValueToRValue
+          expression: DeclRef - x
+            specifier: Type
+              type: Record - S
+        expression: ImplicitCast - LValueToRValue
+          expression: Member - x
+            expression: CXXBindTemporary
+              expression: CXXTemporaryObject - S
+                type: Record - S
+                  specifier: Namespace - root::
+      )"},
+      {R"cpp(
+namespace root {
 struct S { static const int x = 0; };
 int y = S::x + root::S().x;
 }
@@ -66,19 +100,16 @@ declaration: Namespace - root
     declaration: CXXDestructor
   declaration: Var - y
     type: Builtin - int
-    expression: ExprWithCleanups
-      expression: BinaryOperator - +
-        expression: ImplicitCast - LValueToRValue
-          expression: DeclRef - x
-            specifier: TypeSpec
-              type: Record - S
-        expression: ImplicitCast - LValueToRValue
-          expression: Member - x
-            expression: MaterializeTemporary - rvalue
-              expression: CXXTemporaryObject - S
-                type: Elaborated
-                  specifier: Namespace - root::
-                  type: Record - S
+    expression: BinaryOperator - +
+      expression: ImplicitCast - LValueToRValue
+        expression: DeclRef - x
+          specifier: Type
+            type: Record - S
+      expression: ImplicitCast - LValueToRValue
+        expression: Member - x
+          expression: CXXTemporaryObject - S
+            type: Record - S
+              specifier: Namespace - root::
       )"},
       {R"cpp(
 namespace root {
@@ -105,7 +136,7 @@ declaration: Namespace - root
                   type: Builtin - unsigned int
         statement: Return
           expression: DependentScopeDeclRef - value
-            specifier: TypeSpec
+            specifier: Type
               type: TemplateTypeParm - T
       )"},
       {R"cpp(
@@ -121,8 +152,7 @@ declaration: Var - root
         expression: DeclRef - operator+
       expression: MaterializeTemporary - lvalue
         expression: CXXTemporaryObject - Foo
-          type: Elaborated
-            type: Record - Foo
+          type: Record - Foo
       expression: IntegerLiteral - 42
       )"},
       {R"cpp(
@@ -195,6 +225,35 @@ TEST(DumpASTTests, UnbalancedBraces) {
   auto Node = dumpAST(DynTypedNode::create(findDecl(AST, "main")),
                       AST.getTokens(), AST.getASTContext());
   ASSERT_EQ(Node.range, Case.range("func"));
+}
+
+TEST(DumpASTTests, NestedTemplates) {
+  // Test that we don't crash while trying to dump AST of a template function
+  // with nested template names such as Foo<V>::template Bar<W>::Value.
+  const char *Code = R"cpp(
+template <typename T>
+struct TypeA {
+  template <typename U>
+  struct TypeB {
+    static U Value;
+  };
+};
+
+template <typename V, typename W>
+auto func() {
+  return TypeA<V>::template TypeB<W>::Value;
+}
+  )cpp";
+
+  ParsedAST AST = TestTU::withCode(Code).build();
+  const NamedDecl &Func = findDecl(AST, [](const NamedDecl &D) {
+    return isa<FunctionDecl>(D) && D.getNameAsString() == "func";
+  });
+
+  const ASTNode Node =
+      dumpAST(DynTypedNode::create(Func), AST.getTokens(), AST.getASTContext());
+
+  EXPECT_EQ(Node.kind, "Function");
 }
 
 } // namespace

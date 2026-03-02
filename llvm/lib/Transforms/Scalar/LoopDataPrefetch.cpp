@@ -24,7 +24,6 @@
 #include "llvm/Analysis/TargetTransformInfo.h"
 #include "llvm/IR/Dominators.h"
 #include "llvm/IR/Function.h"
-#include "llvm/IR/Module.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Transforms/Scalar.h"
@@ -305,7 +304,7 @@ bool LoopDataPrefetch::runOnLoop(Loop *L) {
   if (!Metrics.NumInsts.isValid())
     return MadeChange;
 
-  unsigned LoopSize = *Metrics.NumInsts.getValue();
+  unsigned LoopSize = Metrics.NumInsts.getValue();
   if (!LoopSize)
     LoopSize = 1;
 
@@ -391,7 +390,7 @@ bool LoopDataPrefetch::runOnLoop(Loop *L) {
       continue;
 
     BasicBlock *BB = P.InsertPt->getParent();
-    SCEVExpander SCEVE(*SE, BB->getDataLayout(), "prefaddr");
+    SCEVExpander SCEVE(*SE, "prefaddr");
     const SCEV *NextLSCEV = SE->getAddExpr(P.LSCEVAddRec, SE->getMulExpr(
       SE->getConstant(P.LSCEVAddRec->getType(), ItersAhead),
       P.LSCEVAddRec->getStepRecurrence(*SE)));

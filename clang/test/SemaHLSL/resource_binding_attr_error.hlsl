@@ -22,14 +22,32 @@ cbuffer c : register(bf, s2) {
 // expected-error@+1 {{expected identifier}}
 cbuffer A : register() {}
 
-// expected-error@+1 {{register number should be an integer}}
-cbuffer B : register(space1) {}
+// expected-error@+1 {{invalid space specifier 'space' used; expected 'space' followed by an integer, like space1}}
+cbuffer B : register(space) {}
 
 // expected-error@+1 {{wrong argument format for hlsl attribute, use b2 instead}}
 cbuffer C : register(b 2) {}
 
 // expected-error@+1 {{wrong argument format for hlsl attribute, use b2 instead}}
 cbuffer D : register(b 2, space3) {}
+
+// expected-error@+1 {{expected <numeric_constant>}}
+cbuffer E : register(u-1) {};
+
+// expected-error@+1 {{expected <numeric_constant>}}
+cbuffer F : register(u) {}; 
+
+// expected-error@+1 {{binding type 'u' only applies to UAV resources}}
+cbuffer G : register(u13) {}; 
+
+// expected-error@+1 {{binding type 'c' only applies to numeric variables in the global scope}}
+cbuffer H : register(c0) {};
+
+// expected-error@+1  {{binding type 't' only applies to SRV resources}}
+cbuffer I : register(t0) {}
+
+// expected-error@+1  {{binding type 'b' only applies to constant buffer resources}}
+tbuffer J : register(b0) {};
 
 // expected-error@+1 {{'register' attribute only applies to cbuffer/tbuffer and external global variables}}
 static MyTemplatedSRV<float> U : register(u5);
@@ -58,7 +76,7 @@ void bar(MyTemplatedSRV<float> U : register(u3)) {
 
 }
 
-struct S {  
+struct S {
   // expected-error@+1 {{'register' attribute only applies to cbuffer/tbuffer and external global variables}}
   MyTemplatedSRV<float> U : register(u3);
 };

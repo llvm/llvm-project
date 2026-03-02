@@ -10,6 +10,7 @@
 #define LLD_ELF_DWARF_H
 
 #include "InputFiles.h"
+#include "InputSection.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/STLFunctionalExtras.h"
 #include "llvm/DebugInfo/DWARF/DWARFContext.h"

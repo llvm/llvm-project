@@ -21,7 +21,7 @@ llvm.func @_QQmain() {
     %9 = llvm.getelementptr %4[0, 1] : (!llvm.ptr) -> !llvm.ptr, !llvm.struct<(f32, array<10 x i32>, struct<(f32, i32)>, i32)>
     %10 = omp.map.bounds lower_bound(%2 : i64) upper_bound(%1 : i64) extent(%0 : i64) stride(%2 : i64) start_idx(%2 : i64)
     %11 = omp.map.info var_ptr(%9 : !llvm.ptr, !llvm.array<10 x i32>) map_clauses(tofrom) capture(ByRef) bounds(%10) -> !llvm.ptr
-    %12 = omp.map.info var_ptr(%4 : !llvm.ptr, !llvm.struct<(f32, array<10 x i32>, struct<(f32, i32)>, i32)>) map_clauses(tofrom) capture(ByRef) members(%6, %8, %11 : [3, -1], [2, 1], [1, -1] : !llvm.ptr, !llvm.ptr, !llvm.ptr) -> !llvm.ptr {partial_map = true}
+    %12 = omp.map.info var_ptr(%4 : !llvm.ptr, !llvm.struct<(f32, array<10 x i32>, struct<(f32, i32)>, i32)>) map_clauses(tofrom) capture(ByRef) members(%6, %8, %11 : [3], [2, 1], [1] : !llvm.ptr, !llvm.ptr, !llvm.ptr) -> !llvm.ptr {partial_map = true}
     omp.target map_entries(%6 -> %arg0, %8 -> %arg1, %11 -> %arg2, %12 -> %arg3 : !llvm.ptr, !llvm.ptr, !llvm.ptr, !llvm.ptr) {
       omp.terminator
     }
@@ -40,10 +40,9 @@ llvm.func @_QQmain() {
 
 // CHECK: %[[LAST_MEMBER:.*]] = getelementptr inbounds [10 x i32], ptr %[[MEMBER_ACCESS_3]], i64 0, i64 1
 // CHECK: %[[FIRST_MEMBER:.*]] = getelementptr i32, ptr %[[MEMBER_ACCESS_1]], i64 1
-// CHECK: %[[FIRST_MEMBER_OFF:.*]] = ptrtoint ptr %[[FIRST_MEMBER]] to i64
-// CHECK: %[[SECOND_MEMBER_OFF:.*]] = ptrtoint ptr %[[LAST_MEMBER]] to i64
-// CHECK: %[[MEMBER_DIFF:.*]] = sub i64 %[[FIRST_MEMBER_OFF]], %[[SECOND_MEMBER_OFF]]
-// CHECK: %[[OFFLOAD_SIZE:.*]] = sdiv exact i64 %[[MEMBER_DIFF]], ptrtoint (ptr getelementptr (i8, ptr null, i32 1) to i64)
+// CHECK: %[[FIRST_MEMBER_OFF:.*]] = ptrtoaddr ptr %[[FIRST_MEMBER]] to i64
+// CHECK: %[[SECOND_MEMBER_OFF:.*]] = ptrtoaddr ptr %[[LAST_MEMBER]] to i64
+// CHECK: %[[OFFLOAD_SIZE:.*]] = sub i64 %[[FIRST_MEMBER_OFF]], %[[SECOND_MEMBER_OFF]]
 
 // CHECK: %[[BASE_PTR_ARR:.*]] = getelementptr inbounds [4 x ptr], ptr %.offload_baseptrs, i32 0, i32 0
 // CHECK: store ptr %[[ALLOCA]], ptr %[[BASE_PTR_ARR]], align 8

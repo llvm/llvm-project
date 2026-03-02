@@ -14,21 +14,16 @@ namespace {
 
 // Check to ensure that InitListExpr is visited twice, once each for the
 // syntactic and semantic form.
-class InitListExprPreOrderVisitor
-    : public ExpectedLocationVisitor<InitListExprPreOrderVisitor> {
+class InitListExprPreOrderVisitor : public ExpectedLocationVisitor {
 public:
-  InitListExprPreOrderVisitor(bool VisitImplicitCode)
-      : VisitImplicitCode(VisitImplicitCode) {}
+  InitListExprPreOrderVisitor(bool VisitImplicitCode) {
+    ShouldVisitImplicitCode = VisitImplicitCode;
+  }
 
-  bool shouldVisitImplicitCode() const { return VisitImplicitCode; }
-
-  bool VisitInitListExpr(InitListExpr *ILE) {
+  bool VisitInitListExpr(InitListExpr *ILE) override {
     Match(ILE->isSemanticForm() ? "semantic" : "syntactic", ILE->getBeginLoc());
     return true;
   }
-
-private:
-  bool VisitImplicitCode;
 };
 
 TEST(RecursiveASTVisitor, InitListExprIsPreOrderVisitedTwice) {

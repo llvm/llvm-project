@@ -10,9 +10,9 @@
 #define _LIBCPP___MEMORY_RESOURCE_UNSYNCHRONIZED_POOL_RESOURCE_H
 
 #include <__config>
+#include <__cstddef/size_t.h>
 #include <__memory_resource/memory_resource.h>
 #include <__memory_resource/pool_options.h>
-#include <cstddef>
 #include <cstdint>
 
 #if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
@@ -76,7 +76,7 @@ public:
 
   void release();
 
-  _LIBCPP_HIDE_FROM_ABI memory_resource* upstream_resource() const { return __res_; }
+  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI memory_resource* upstream_resource() const { return __res_; }
 
   [[__gnu__::__pure__]] pool_options options() const;
 

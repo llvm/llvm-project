@@ -7,6 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/MC/MCAssembler.h"
+#include "llvm/MC/MCContext.h"
 #include "llvm/MC/MCSPIRVObjectWriter.h"
 #include "llvm/MC/MCSection.h"
 #include "llvm/MC/MCValue.h"
@@ -17,8 +18,10 @@ using namespace llvm;
 void SPIRVObjectWriter::writeHeader(const MCAssembler &Asm) {
   constexpr uint32_t MagicNumber = 0x07230203;
   constexpr uint32_t GeneratorID = 43;
-  constexpr uint32_t GeneratorMagicNumber =
-      (GeneratorID << 16) | (LLVM_VERSION_MAJOR);
+  const uint32_t GeneratorMagicNumber =
+      Asm.getContext().getTargetTriple().getVendor() == Triple::AMD
+          ? UINT16_MAX
+          : ((GeneratorID << 16) | (LLVM_VERSION_MAJOR));
   constexpr uint32_t Schema = 0;
 
   W.write<uint32_t>(MagicNumber);
@@ -35,11 +38,11 @@ void SPIRVObjectWriter::setBuildVersion(unsigned Major, unsigned Minor,
   VersionInfo.Bound = Bound;
 }
 
-uint64_t SPIRVObjectWriter::writeObject(MCAssembler &Asm) {
+uint64_t SPIRVObjectWriter::writeObject() {
   uint64_t StartOffset = W.OS.tell();
-  writeHeader(Asm);
-  for (const MCSection &S : Asm)
-    Asm.writeSectionData(W.OS, &S);
+  writeHeader(*Asm);
+  for (const MCSection &S : *Asm)
+    Asm->writeSectionData(W.OS, &S);
   return W.OS.tell() - StartOffset;
 }
 

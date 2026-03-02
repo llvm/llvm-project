@@ -12,18 +12,19 @@
 
 #include "mlir-c/Dialect/IRDL.h"
 #include "mlir-c/IR.h"
+#include "mlir-c/Support.h"
 
 const char irdlDialect[] = "\
   irdl.dialect @foo {\
     irdl.operation @op {\
       %i32 = irdl.is i32\
-      irdl.results(%i32)\
+      irdl.results(baz: %i32)\
     }\
   }\
   irdl.dialect @bar {\
     irdl.operation @op {\
       %i32 = irdl.is i32\
-      irdl.operands(%i32)\
+      irdl.operands(baz: %i32)\
     }\
   }";
 
@@ -37,10 +38,39 @@ const char newDialectUsage[] = "\
     \"bar.op\"(%res) : (i32) -> ()\
   }";
 
+void testVariadicityAttributes(MlirContext ctx) {
+  MlirAttribute variadicitySingle =
+      mlirIRDLVariadicityAttrGet(ctx, mlirStringRefCreateFromCString("single"));
+
+  // CHECK: #irdl<variadicity single>
+  mlirAttributeDump(variadicitySingle);
+
+  MlirAttribute variadicityOptional = mlirIRDLVariadicityAttrGet(
+      ctx, mlirStringRefCreateFromCString("optional"));
+
+  // CHECK: #irdl<variadicity optional>
+  mlirAttributeDump(variadicityOptional);
+
+  MlirAttribute variadicityVariadic = mlirIRDLVariadicityAttrGet(
+      ctx, mlirStringRefCreateFromCString("variadic"));
+
+  // CHECK: #irdl<variadicity variadic>
+  mlirAttributeDump(variadicityVariadic);
+
+  MlirAttribute variadicities[] = {variadicitySingle, variadicityOptional,
+                                   variadicityVariadic};
+  MlirAttribute variadicityArray =
+      mlirIRDLVariadicityArrayAttrGet(ctx, 3, variadicities);
+
+  // CHECK: #irdl<variadicity_array[ single, optional,  variadic]>
+  mlirAttributeDump(variadicityArray);
+}
+
 int main(void) {
   MlirContext ctx = mlirContextCreate();
   mlirDialectHandleLoadDialect(mlirGetDialectHandle__irdl__(), ctx);
 
+  // Test loading an IRDL dialect and using it.
   MlirModule dialectDecl =
       mlirModuleCreateParse(ctx, mlirStringRefCreateFromCString(irdlDialect));
 
@@ -53,6 +83,10 @@ int main(void) {
   mlirOperationDump(mlirModuleGetOperation(usingModule));
 
   mlirModuleDestroy(usingModule);
+
+  // Test variadicity attributes.
+  testVariadicityAttributes(ctx);
+
   mlirContextDestroy(ctx);
   return 0;
 }

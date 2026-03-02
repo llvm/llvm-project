@@ -91,8 +91,15 @@ public:
   bool legalizeFlogUnsafe(MachineIRBuilder &B, Register Dst, Register Src,
                           bool IsLog10, unsigned Flags) const;
   bool legalizeFExp2(MachineInstr &MI, MachineIRBuilder &B) const;
+  bool legalizeFExpUnsafeImpl(MachineIRBuilder &B, Register Dst, Register Src,
+                              unsigned Flags, bool IsExp10) const;
   bool legalizeFExpUnsafe(MachineIRBuilder &B, Register Dst, Register Src,
                           unsigned Flags) const;
+  bool legalizeFExp10Unsafe(MachineIRBuilder &B, Register Dst, Register Src,
+                            unsigned Flags) const;
+
+  bool legalizeFEXPF64(MachineInstr &MI, MachineIRBuilder &B) const;
+
   bool legalizeFExp(MachineInstr &MI, MachineIRBuilder &B) const;
   bool legalizeFPow(MachineInstr &MI, MachineIRBuilder &B) const;
   bool legalizeFFloor(MachineInstr &MI, MachineRegisterInfo &MRI,
@@ -111,9 +118,14 @@ public:
   bool legalizeCTLZ_ZERO_UNDEF(MachineInstr &MI, MachineRegisterInfo &MRI,
                                MachineIRBuilder &B) const;
 
-  bool loadInputValue(Register DstReg, MachineIRBuilder &B,
-                      const ArgDescriptor *Arg,
-                      const TargetRegisterClass *ArgRC, LLT ArgTy) const;
+  void buildLoadInputValue(Register DstReg, MachineIRBuilder &B,
+                           const ArgDescriptor *Arg,
+                           const TargetRegisterClass *ArgRC, LLT ArgTy) const;
+  bool legalizeWorkGroupId(
+      MachineInstr &MI, MachineIRBuilder &B,
+      AMDGPUFunctionArgInfo::PreloadedValue ClusterIdPV,
+      AMDGPUFunctionArgInfo::PreloadedValue ClusterMaxIdPV,
+      AMDGPUFunctionArgInfo::PreloadedValue ClusterWorkGroupIdPV) const;
   bool loadInputValue(Register DstReg, MachineIRBuilder &B,
                       AMDGPUFunctionArgInfo::PreloadedValue ArgType) const;
 
@@ -127,6 +139,7 @@ public:
       MachineInstr &MI, MachineRegisterInfo &MRI, MachineIRBuilder &B,
       unsigned Dim, AMDGPUFunctionArgInfo::PreloadedValue ArgType) const;
 
+  MachinePointerInfo getKernargSegmentPtrInfo(MachineFunction &MF) const;
   Register getKernargParameterPtr(MachineIRBuilder &B, int64_t Offset) const;
   bool legalizeKernargMemParameter(MachineInstr &MI, MachineIRBuilder &B,
                                    uint64_t Offset,
@@ -195,17 +208,21 @@ public:
 
   Register handleD16VData(MachineIRBuilder &B, MachineRegisterInfo &MRI,
                           Register Reg, bool ImageStore = false) const;
-  Register fixStoreSourceType(MachineIRBuilder &B, Register VData,
+  Register fixStoreSourceType(MachineIRBuilder &B, Register VData, LLT MemTy,
                               bool IsFormat) const;
 
-  bool legalizeBufferStore(MachineInstr &MI, MachineRegisterInfo &MRI,
-                           MachineIRBuilder &B, bool IsTyped,
-                           bool IsFormat) const;
-  bool legalizeBufferLoad(MachineInstr &MI, MachineRegisterInfo &MRI,
-                          MachineIRBuilder &B, bool IsFormat,
-                          bool IsTyped) const;
+  bool legalizeBufferStore(MachineInstr &MI, LegalizerHelper &Helper,
+                           bool IsTyped, bool IsFormat) const;
+  bool legalizeBufferLoad(MachineInstr &MI, LegalizerHelper &Helper,
+                          bool IsFormat, bool IsTyped) const;
   bool legalizeBufferAtomic(MachineInstr &MI, MachineIRBuilder &B,
                             Intrinsic::ID IID) const;
+
+  bool legalizeBVHIntersectRayIntrinsic(MachineInstr &MI,
+                                        MachineIRBuilder &B) const;
+
+  bool legalizeBVHDualOrBVH8IntersectRayIntrinsic(MachineInstr &MI,
+                                                  MachineIRBuilder &B) const;
 
   bool legalizeLaneOp(LegalizerHelper &Helper, MachineInstr &MI,
                       Intrinsic::ID IID) const;
@@ -214,6 +231,9 @@ public:
 
   bool legalizeStackSave(MachineInstr &MI, MachineIRBuilder &B) const;
   bool legalizeWaveID(MachineInstr &MI, MachineIRBuilder &B) const;
+  bool legalizeConstHwRegRead(MachineInstr &MI, MachineIRBuilder &B,
+                              AMDGPU::Hwreg::Id HwReg, unsigned LowBit,
+                              unsigned Width) const;
 
   bool legalizeGetFPEnv(MachineInstr &MI, MachineRegisterInfo &MRI,
                         MachineIRBuilder &B) const;

@@ -6,9 +6,6 @@
 //
 //===----------------------------------------------------------------------===//
 
-// Requires 396145d in the built library.
-// XFAIL: using-built-library-before-llvm-9
-
 // <istream>
 
 // template <class charT, class traits = char_traits<charT> >
@@ -18,6 +15,7 @@
 
 #include <istream>
 #include <cassert>
+#include <streambuf>
 
 #include "test_macros.h"
 

@@ -17,6 +17,20 @@ using namespace mlir;
 using namespace mlir::math;
 
 //===----------------------------------------------------------------------===//
+// Common helpers
+//===----------------------------------------------------------------------===//
+
+/// Return the type of the same shape (scalar, vector or tensor) containing i1.
+static Type getI1SameShape(Type type) {
+  auto i1Type = IntegerType::get(type.getContext(), 1);
+  if (auto shapedType = llvm::dyn_cast<ShapedType>(type))
+    return shapedType.cloneWith(std::nullopt, i1Type);
+  if (llvm::isa<UnrankedTensorType>(type))
+    return UnrankedTensorType::get(i1Type);
+  return i1Type;
+}
+
+//===----------------------------------------------------------------------===//
 // TableGen'd op method definitions
 //===----------------------------------------------------------------------===//
 
@@ -271,6 +285,16 @@ OpFoldResult math::SinhOp::fold(FoldAdaptor adaptor) {
 }
 
 //===----------------------------------------------------------------------===//
+// SinCosOp getShapeForUnroll
+//===----------------------------------------------------------------------===//
+
+std::optional<SmallVector<int64_t, 4>> math::SincosOp::getShapeForUnroll() {
+  if (auto vt = mlir::dyn_cast<VectorType>(getOperand().getType()))
+    return llvm::to_vector<4>(vt.getShape());
+  return std::nullopt;
+}
+
+//===----------------------------------------------------------------------===//
 // CountLeadingZerosOp folder
 //===----------------------------------------------------------------------===//
 
@@ -319,6 +343,24 @@ OpFoldResult math::ErfOp::fold(FoldAdaptor adaptor) {
 }
 
 //===----------------------------------------------------------------------===//
+// ErfcOp folder
+//===----------------------------------------------------------------------===//
+
+OpFoldResult math::ErfcOp::fold(FoldAdaptor adaptor) {
+  return constFoldUnaryOpConditional<FloatAttr>(
+      adaptor.getOperands(), [](const APFloat &a) -> std::optional<APFloat> {
+        switch (APFloat::SemanticsToEnum(a.getSemantics())) {
+        case APFloat::Semantics::S_IEEEdouble:
+          return APFloat(erfc(a.convertToDouble()));
+        case APFloat::Semantics::S_IEEEsingle:
+          return APFloat(erfcf(a.convertToFloat()));
+        default:
+          return {};
+        }
+      });
+}
+
+//===----------------------------------------------------------------------===//
 // IPowIOp folder
 //===----------------------------------------------------------------------===//
 
@@ -328,6 +370,9 @@ OpFoldResult math::IPowIOp::fold(FoldAdaptor adaptor) {
       [](const APInt &base, const APInt &power) -> std::optional<APInt> {
         unsigned width = base.getBitWidth();
         auto zeroValue = APInt::getZero(width);
+        // i1 folding is ambiguous with signed semantics, don't fold.
+        if (width == 1)
+          return {};
         APInt oneValue{width, 1ULL, /*isSigned=*/true};
         APInt minusOneValue{width, -1ULL, /*isSigned=*/true};
 
@@ -338,7 +383,7 @@ OpFoldResult math::IPowIOp::fold(FoldAdaptor adaptor) {
           // Leave 0 raised to negative power not folded.
           if (base.isZero())
             return {};
-          if (base.eq(oneValue))
+          if (base.isOne())
             return oneValue;
           // If abs(base) > 1, then the result is zero.
           if (base.ne(minusOneValue))
@@ -548,6 +593,70 @@ OpFoldResult math::ExpM1Op::fold(FoldAdaptor adaptor) {
 }
 
 //===----------------------------------------------------------------------===//
+// IsFiniteOp folder
+//===----------------------------------------------------------------------===//
+
+OpFoldResult math::IsFiniteOp::fold(FoldAdaptor adaptor) {
+  if (auto val = dyn_cast_or_null<FloatAttr>(adaptor.getOperand())) {
+    return BoolAttr::get(val.getContext(), val.getValue().isFinite());
+  }
+  if (auto splat = dyn_cast_or_null<SplatElementsAttr>(adaptor.getOperand())) {
+    return DenseElementsAttr::get(
+        cast<ShapedType>(getType()),
+        APInt(1, splat.getSplatValue<APFloat>().isFinite()));
+  }
+  return {};
+}
+
+//===----------------------------------------------------------------------===//
+// IsInfOp folder
+//===----------------------------------------------------------------------===//
+
+OpFoldResult math::IsInfOp::fold(FoldAdaptor adaptor) {
+  if (auto val = dyn_cast_or_null<FloatAttr>(adaptor.getOperand())) {
+    return BoolAttr::get(val.getContext(), val.getValue().isInfinity());
+  }
+  if (auto splat = dyn_cast_or_null<SplatElementsAttr>(adaptor.getOperand())) {
+    return DenseElementsAttr::get(
+        cast<ShapedType>(getType()),
+        APInt(1, splat.getSplatValue<APFloat>().isInfinity()));
+  }
+  return {};
+}
+
+//===----------------------------------------------------------------------===//
+// IsNaNOp folder
+//===----------------------------------------------------------------------===//
+
+OpFoldResult math::IsNaNOp::fold(FoldAdaptor adaptor) {
+  if (auto val = dyn_cast_or_null<FloatAttr>(adaptor.getOperand())) {
+    return BoolAttr::get(val.getContext(), val.getValue().isNaN());
+  }
+  if (auto splat = dyn_cast_or_null<SplatElementsAttr>(adaptor.getOperand())) {
+    return DenseElementsAttr::get(
+        cast<ShapedType>(getType()),
+        APInt(1, splat.getSplatValue<APFloat>().isNaN()));
+  }
+  return {};
+}
+
+//===----------------------------------------------------------------------===//
+// IsNormalOp folder
+//===----------------------------------------------------------------------===//
+
+OpFoldResult math::IsNormalOp::fold(FoldAdaptor adaptor) {
+  if (auto val = dyn_cast_or_null<FloatAttr>(adaptor.getOperand())) {
+    return BoolAttr::get(val.getContext(), val.getValue().isNormal());
+  }
+  if (auto splat = dyn_cast_or_null<SplatElementsAttr>(adaptor.getOperand())) {
+    return DenseElementsAttr::get(
+        cast<ShapedType>(getType()),
+        APInt(1, splat.getSplatValue<APFloat>().isNormal()));
+  }
+  return {};
+}
+
+//===----------------------------------------------------------------------===//
 // TanOp folder
 //===----------------------------------------------------------------------===//
 
@@ -650,7 +759,7 @@ Operation *math::MathDialect::materializeConstant(OpBuilder &builder,
                                                   Attribute value, Type type,
                                                   Location loc) {
   if (auto poison = dyn_cast<ub::PoisonAttr>(value))
-    return builder.create<ub::PoisonOp>(loc, type, poison);
+    return ub::PoisonOp::create(builder, loc, type, poison);
 
   return arith::ConstantOp::materialize(builder, value, type, loc);
 }

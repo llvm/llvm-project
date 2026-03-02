@@ -123,6 +123,89 @@ void RTDECL(ReduceInteger16DimValue)(Descriptor &result,
     const common::int128_t *identity = nullptr, bool ordered = true);
 #endif
 
+std::uint8_t RTDECL(ReduceUnsigned1Ref)(const Descriptor &,
+    ReferenceReductionOperation<std::uint8_t>, const char *source, int line,
+    int dim = 0, const Descriptor *mask = nullptr,
+    const std::uint8_t *identity = nullptr, bool ordered = true);
+std::uint8_t RTDECL(ReduceUnsigned1Value)(const Descriptor &,
+    ValueReductionOperation<std::uint8_t>, const char *source, int line,
+    int dim = 0, const Descriptor *mask = nullptr,
+    const std::uint8_t *identity = nullptr, bool ordered = true);
+void RTDECL(ReduceUnsigned1DimRef)(Descriptor &result, const Descriptor &array,
+    ReferenceReductionOperation<std::uint8_t>, const char *source, int line,
+    int dim, const Descriptor *mask = nullptr,
+    const std::uint8_t *identity = nullptr, bool ordered = true);
+void RTDECL(ReduceUnsigned1DimValue)(Descriptor &result,
+    const Descriptor &array, ValueReductionOperation<std::uint8_t>,
+    const char *source, int line, int dim, const Descriptor *mask = nullptr,
+    const std::uint8_t *identity = nullptr, bool ordered = true);
+std::uint16_t RTDECL(ReduceUnsigned2Ref)(const Descriptor &,
+    ReferenceReductionOperation<std::uint16_t>, const char *source, int line,
+    int dim = 0, const Descriptor *mask = nullptr,
+    const std::uint16_t *identity = nullptr, bool ordered = true);
+std::uint16_t RTDECL(ReduceUnsigned2Value)(const Descriptor &,
+    ValueReductionOperation<std::uint16_t>, const char *source, int line,
+    int dim = 0, const Descriptor *mask = nullptr,
+    const std::uint16_t *identity = nullptr, bool ordered = true);
+void RTDECL(ReduceUnsigned2DimRef)(Descriptor &result, const Descriptor &array,
+    ReferenceReductionOperation<std::uint16_t>, const char *source, int line,
+    int dim, const Descriptor *mask = nullptr,
+    const std::uint16_t *identity = nullptr, bool ordered = true);
+void RTDECL(ReduceUnsigned2DimValue)(Descriptor &result,
+    const Descriptor &array, ValueReductionOperation<std::uint16_t>,
+    const char *source, int line, int dim, const Descriptor *mask = nullptr,
+    const std::uint16_t *identity = nullptr, bool ordered = true);
+std::uint32_t RTDECL(ReduceUnsigned4Ref)(const Descriptor &,
+    ReferenceReductionOperation<std::uint32_t>, const char *source, int line,
+    int dim = 0, const Descriptor *mask = nullptr,
+    const std::uint32_t *identity = nullptr, bool ordered = true);
+std::uint32_t RTDECL(ReduceUnsigned4Value)(const Descriptor &,
+    ValueReductionOperation<std::uint32_t>, const char *source, int line,
+    int dim = 0, const Descriptor *mask = nullptr,
+    const std::uint32_t *identity = nullptr, bool ordered = true);
+void RTDECL(ReduceUnsigned4DimRef)(Descriptor &result, const Descriptor &array,
+    ReferenceReductionOperation<std::uint32_t>, const char *source, int line,
+    int dim, const Descriptor *mask = nullptr,
+    const std::uint32_t *identity = nullptr, bool ordered = true);
+void RTDECL(ReduceUnsigned4DimValue)(Descriptor &result,
+    const Descriptor &array, ValueReductionOperation<std::uint32_t>,
+    const char *source, int line, int dim, const Descriptor *mask = nullptr,
+    const std::uint32_t *identity = nullptr, bool ordered = true);
+std::uint64_t RTDECL(ReduceUnsigned8Ref)(const Descriptor &,
+    ReferenceReductionOperation<std::uint64_t>, const char *source, int line,
+    int dim = 0, const Descriptor *mask = nullptr,
+    const std::uint64_t *identity = nullptr, bool ordered = true);
+std::uint64_t RTDECL(ReduceUnsigned8Value)(const Descriptor &,
+    ValueReductionOperation<std::uint64_t>, const char *source, int line,
+    int dim = 0, const Descriptor *mask = nullptr,
+    const std::uint64_t *identity = nullptr, bool ordered = true);
+void RTDECL(ReduceUnsigned8DimRef)(Descriptor &result, const Descriptor &array,
+    ReferenceReductionOperation<std::uint64_t>, const char *source, int line,
+    int dim, const Descriptor *mask = nullptr,
+    const std::uint64_t *identity = nullptr, bool ordered = true);
+void RTDECL(ReduceUnsigned8DimValue)(Descriptor &result,
+    const Descriptor &array, ValueReductionOperation<std::uint64_t>,
+    const char *source, int line, int dim, const Descriptor *mask = nullptr,
+    const std::uint64_t *identity = nullptr, bool ordered = true);
+#ifdef __SIZEOF_INT128__
+common::uint128_t RTDECL(ReduceUnsigned16Ref)(const Descriptor &,
+    ReferenceReductionOperation<common::uint128_t>, const char *source,
+    int line, int dim = 0, const Descriptor *mask = nullptr,
+    const common::uint128_t *identity = nullptr, bool ordered = true);
+common::uint128_t RTDECL(ReduceUnsigned16Value)(const Descriptor &,
+    ValueReductionOperation<common::uint128_t>, const char *source, int line,
+    int dim = 0, const Descriptor *mask = nullptr,
+    const common::uint128_t *identity = nullptr, bool ordered = true);
+void RTDECL(ReduceUnsigned16DimRef)(Descriptor &result, const Descriptor &array,
+    ReferenceReductionOperation<common::uint128_t>, const char *source,
+    int line, int dim, const Descriptor *mask = nullptr,
+    const common::uint128_t *identity = nullptr, bool ordered = true);
+void RTDECL(ReduceUnsigned16DimValue)(Descriptor &result,
+    const Descriptor &array, ValueReductionOperation<common::uint128_t>,
+    const char *source, int line, int dim, const Descriptor *mask = nullptr,
+    const common::uint128_t *identity = nullptr, bool ordered = true);
+#endif
+
 // REAL/COMPLEX(2 & 3) return 32-bit float results for the caller to downconvert
 float RTDECL(ReduceReal2Ref)(const Descriptor &,
     ReferenceReductionOperation<float>, const char *source, int line,

@@ -11,21 +11,21 @@ export namespace std {
   // [format.context], class template basic_format_context
   using std::basic_format_context;
   using std::format_context;
-#ifndef _LIBCPP_HAS_NO_WIDE_CHARACTERS
+#if _LIBCPP_HAS_WIDE_CHARACTERS
   using std::wformat_context;
 #endif
 
   // [format.args], class template basic_format_args
   using std::basic_format_args;
   using std::format_args;
-#ifndef _LIBCPP_HAS_NO_WIDE_CHARACTERS
+#if _LIBCPP_HAS_WIDE_CHARACTERS
   using std::wformat_args;
 #endif
 
   // [format.fmt.string], class template basic_format_string
   using std::basic_format_string;
   using std::format_string;
-#ifndef _LIBCPP_HAS_NO_WIDE_CHARACTERS
+#if _LIBCPP_HAS_WIDE_CHARACTERS
   using std::wformat_string;
 #endif
 #if _LIBCPP_STD_VER >= 26
@@ -55,7 +55,7 @@ export namespace std {
   // [format.parse.ctx], class template basic_format_parse_context
   using std::basic_format_parse_context;
   using std::format_parse_context;
-#ifndef _LIBCPP_HAS_NO_WIDE_CHARACTERS
+#if _LIBCPP_HAS_WIDE_CHARACTERS
   using std::wformat_parse_context;
 #endif
 
@@ -75,7 +75,7 @@ export namespace std {
 
   // [format.arg.store], class template format-arg-store
   using std::make_format_args;
-#ifndef _LIBCPP_HAS_NO_WIDE_CHARACTERS
+#if _LIBCPP_HAS_WIDE_CHARACTERS
   using std::make_wformat_args;
 #endif
 

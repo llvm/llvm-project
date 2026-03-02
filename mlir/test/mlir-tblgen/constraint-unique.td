@@ -4,7 +4,6 @@ include "mlir/IR/OpBase.td"
 
 def Test_Dialect : Dialect {
   let name = "test";
-  let usePropertiesForAttributes = 0;
 }
 
 class NS_Op<string mnemonic, list<Trait> traits = []> :
@@ -17,7 +16,7 @@ def AType : Type<ATypePred, "a type">;
 def OtherType : Type<ATypePred, "another type">;
 
 def AnAttrPred : CPred<"attrPred($_self, $_op)">;
-def AnAttr : Attr<AnAttrPred, "an attribute">;
+def AnAttr : Attr<AnAttrPred, "an attribute (got {{reformat($_self)}})">;
 def OtherAttr : Attr<AnAttrPred, "another attribute">;
 
 def ASuccessorPred : CPred<"successorPred($_self, $_op)">;
@@ -25,7 +24,7 @@ def ASuccessor : Successor<ASuccessorPred, "a successor">;
 def OtherSuccessor : Successor<ASuccessorPred, "another successor">;
 
 def ARegionPred : CPred<"regionPred($_self, $_op)">;
-def ARegion : Region<ARegionPred, "a region">;
+def ARegion : Region<ARegionPred, "a region ({{find(foo)}})">;
 def OtherRegion : Region<ARegionPred, "another region">;
 
 // OpA and OpB have the same type, attribute, successor, and region constraints.
@@ -72,10 +71,10 @@ def OpC : NS_Op<"op_c"> {
 // CHECK:    static ::llvm::LogicalResult [[$A_ATTR_CONSTRAINT:__mlir_ods_local_attr_constraint.*]](
 // CHECK:      if (attr && !((attrPred(attr, *op))))
 // CHECK-NEXT:   return emitError() << "attribute '" << attrName
-// CHECK-NEXT:       << "' failed to satisfy constraint: an attribute";
+// CHECK-NEXT:       << "' failed to satisfy constraint: an attribute (got " << reformat(attr) << ")";
 
 /// Test that duplicate attribute constraint was not generated.
-// CHECK-NOT:        << "' failed to satisfy constraint: an attribute";
+// CHECK-NOT:        << "' failed to satisfy constraint: an attribute
 
 /// Test that a attribute constraint with a different description was generated.
 // CHECK:    static ::llvm::LogicalResult [[$O_ATTR_CONSTRAINT:__mlir_ods_local_attr_constraint.*]](
@@ -104,7 +103,7 @@ def OpC : NS_Op<"op_c"> {
 // CHECK:      if (!((regionPred(region, *op)))) {
 // CHECK-NEXT:   return op->emitOpError("region #") << regionIndex
 // CHECK-NEXT:       << (regionName.empty() ? " " : " ('" + regionName + "') ")
-// CHECK-NEXT:       << "failed to verify constraint: a region";
+// CHECK-NEXT:       << "failed to verify constraint: a region (" << find(foo) << ")";
 
 /// Test that duplicate region constraint was not generated.
 // CHECK-NOT:        << "failed to verify constraint: a region";
@@ -117,8 +116,8 @@ def OpC : NS_Op<"op_c"> {
 // CHECK-NEXT:       << "failed to verify constraint: another region";
 
 /// Test that the uniqued constraints are being used.
-// CHECK-LABEL: OpA::verify
-// CHECK:         ::mlir::Attribute [[$B_ATTR:.*b]];
+// CHECK-LABEL: OpA::verifyInvariantsImpl
+// CHECK:         auto [[$B_ATTR:.*b]] = getProperties().b;
 // CHECK:         if (::mlir::failed([[$A_ATTR_CONSTRAINT]](*this, [[$B_ATTR]], "b")))
 // CHECK-NEXT:      return ::mlir::failure();
 // CHECK:         auto [[$A_VALUE_GROUP:.*]] = getODSOperands(0);
@@ -138,8 +137,8 @@ def OpC : NS_Op<"op_c"> {
 
 /// Test that the op with the same predicates but different with descriptions
 /// uses the different constraints.
-// CHECK-LABEL: OpC::verify
-// CHECK:         ::mlir::Attribute [[$B_ATTR:.*b]];
+// CHECK-LABEL: OpC::verifyInvariantsImpl
+// CHECK:         auto [[$B_ATTR:.*b]] = getProperties().b;
 // CHECK:         if (::mlir::failed([[$O_ATTR_CONSTRAINT]](*this, [[$B_ATTR]], "b")))
 // CHECK-NEXT:      return ::mlir::failure();
 // CHECK:         auto [[$A_VALUE_GROUP:.*]] = getODSOperands(0);

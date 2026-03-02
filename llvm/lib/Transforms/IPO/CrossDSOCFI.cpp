@@ -23,7 +23,6 @@
 #include "llvm/IR/MDBuilder.h"
 #include "llvm/IR/Module.h"
 #include "llvm/TargetParser/Triple.h"
-#include "llvm/Transforms/IPO.h"
 
 using namespace llvm;
 
@@ -127,7 +126,7 @@ void CrossDSOCFI::buildCFICheck(Module &M) {
     IRBuilder<> IRBTest(TestBB);
 
     Value *Test = IRBTest.CreateIntrinsic(
-        Intrinsic::type_test, {},
+        Intrinsic::type_test,
         {&Addr,
          MetadataAsValue::get(Ctx, ConstantAsMetadata::get(CaseTypeId))});
     BranchInst *BI = IRBTest.CreateCondBr(Test, ExitBB, TrapBB);

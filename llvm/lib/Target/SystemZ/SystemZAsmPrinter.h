@@ -9,9 +9,9 @@
 #ifndef LLVM_LIB_TARGET_SYSTEMZ_SYSTEMZASMPRINTER_H
 #define LLVM_LIB_TARGET_SYSTEMZ_SYSTEMZASMPRINTER_H
 
+#include "MCTargetDesc/SystemZTargetStreamer.h"
 #include "SystemZMCInstLower.h"
 #include "SystemZTargetMachine.h"
-#include "SystemZTargetStreamer.h"
 #include "llvm/CodeGen/AsmPrinter.h"
 #include "llvm/CodeGen/StackMaps.h"
 #include "llvm/MC/MCInstBuilder.h"
@@ -24,6 +24,9 @@ class Module;
 class raw_ostream;
 
 class LLVM_LIBRARY_VISIBILITY SystemZAsmPrinter : public AsmPrinter {
+public:
+  static char ID;
+
 private:
   MCSymbol *CurrentFnPPA1Sym;     // PPA1 Symbol.
   MCSymbol *CurrentFnEPMarkerSym; // Entry Point Marker.
@@ -90,6 +93,12 @@ private:
 
   AssociatedDataAreaTable ADATable;
 
+  // Record a list of GlobalAlias associated with a GlobalObject.
+  // This is used for z/OS's extra-label-at-definition aliasing strategy.
+  // This is similar to what is done for AIX.
+  DenseMap<const GlobalObject *, SmallVector<const GlobalAlias *, 1>>
+      GOAliasMap;
+
   void emitPPA1(MCSymbol *FnEndSym);
   void emitPPA2(Module &M);
   void emitADASection();
@@ -97,7 +106,7 @@ private:
 
 public:
   SystemZAsmPrinter(TargetMachine &TM, std::unique_ptr<MCStreamer> Streamer)
-      : AsmPrinter(TM, std::move(Streamer)), CurrentFnPPA1Sym(nullptr),
+      : AsmPrinter(TM, std::move(Streamer), ID), CurrentFnPPA1Sym(nullptr),
         CurrentFnEPMarkerSym(nullptr), PPA2Sym(nullptr),
         ADATable(TM.getPointerSize(0)) {}
 
@@ -105,25 +114,40 @@ public:
   StringRef getPassName() const override { return "SystemZ Assembly Printer"; }
   void emitInstruction(const MachineInstr *MI) override;
   void emitMachineConstantPoolValue(MachineConstantPoolValue *MCPV) override;
+  void emitXXStructorList(const DataLayout &DL, const Constant *List,
+                          bool IsCtor) override;
   void emitEndOfAsmFile(Module &M) override;
   bool PrintAsmOperand(const MachineInstr *MI, unsigned OpNo,
                        const char *ExtraCode, raw_ostream &OS) override;
   bool PrintAsmMemoryOperand(const MachineInstr *MI, unsigned OpNo,
                              const char *ExtraCode, raw_ostream &OS) override;
 
-  bool doInitialization(Module &M) override {
-    SM.reset();
-    return AsmPrinter::doInitialization(M);
+  bool runOnMachineFunction(MachineFunction &MF) override {
+    AsmPrinter::runOnMachineFunction(MF);
+
+    // Emit the XRay table for this function.
+    emitXRayTable();
+
+    return false;
   }
+
+  bool doInitialization(Module &M) override;
   void emitFunctionEntryLabel() override;
   void emitFunctionBodyEnd() override;
   void emitStartOfAsmFile(Module &M) override;
+  void emitGlobalAlias(const Module &M, const GlobalAlias &GA) override;
+  const MCExpr *lowerConstant(const Constant *CV,
+                              const Constant *BaseCV = nullptr,
+                              uint64_t Offset = 0) override;
 
 private:
   void emitCallInformation(CallType CT);
   void LowerFENTRY_CALL(const MachineInstr &MI, SystemZMCInstLower &MCIL);
   void LowerSTACKMAP(const MachineInstr &MI);
   void LowerPATCHPOINT(const MachineInstr &MI, SystemZMCInstLower &Lower);
+  void LowerPATCHABLE_FUNCTION_ENTER(const MachineInstr &MI,
+                                     SystemZMCInstLower &Lower);
+  void LowerPATCHABLE_RET(const MachineInstr &MI, SystemZMCInstLower &Lower);
   void emitAttributes(Module &M);
 };
 } // end namespace llvm

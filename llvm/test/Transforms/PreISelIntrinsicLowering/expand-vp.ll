@@ -68,6 +68,8 @@ define void @test_vp_int_v8(<8 x i32> %i0, <8 x i32> %i1, <8 x i32> %i2, <8 x i3
   %rE = call <8 x i32> @llvm.vp.ashr.v8i32(<8 x i32> %i0, <8 x i32> %i1, <8 x i1> %m, i32 %n)
   %rF = call <8 x i32> @llvm.vp.lshr.v8i32(<8 x i32> %i0, <8 x i32> %i1, <8 x i1> %m, i32 %n)
   %r10 = call <8 x i32> @llvm.vp.shl.v8i32(<8 x i32> %i0, <8 x i32> %i1, <8 x i1> %m, i32 %n)
+  %r11 = call <8 x i32> @llvm.vp.merge.v8i32(<8 x i1> %m, <8 x i32> %i0, <8 x i32> %i1, i32 %n)
+  %r12 = call <8 x i32> @llvm.vp.select.v8i32(<8 x i1> %m, <8 x i32> %i0, <8 x i32> %i1, i32 %n)
   ret void
 }
 
@@ -111,6 +113,8 @@ define void @test_vp_int_vscale(<vscale x 4 x i32> %i0, <vscale x 4 x i32> %i1, 
   %rE = call <vscale x 4 x i32> @llvm.vp.ashr.nxv4i32(<vscale x 4 x i32> %i0, <vscale x 4 x i32> %i1, <vscale x 4 x i1> %m, i32 %n)
   %rF = call <vscale x 4 x i32> @llvm.vp.lshr.nxv4i32(<vscale x 4 x i32> %i0, <vscale x 4 x i32> %i1, <vscale x 4 x i1> %m, i32 %n)
   %r10 = call <vscale x 4 x i32> @llvm.vp.shl.nxv4i32(<vscale x 4 x i32> %i0, <vscale x 4 x i32> %i1, <vscale x 4 x i1> %m, i32 %n)
+  %r11 = call <vscale x 4 x i32> @llvm.vp.merge.nxv4i32(<vscale x 4 x i1> %m, <vscale x 4 x i32> %i0, <vscale x 4 x i32> %i1, i32 %n)
+  %r12 = call <vscale x 4 x i32> @llvm.vp.select.nxv4i32(<vscale x 4 x i1> %m, <vscale x 4 x i32> %i0, <vscale x 4 x i32> %i1, i32 %n)
   ret void
 }
 
@@ -182,7 +186,7 @@ define void @test_vp_cmp_v8(<8 x i32> %i0, <8 x i32> %i1, <8 x float> %f0, <8 x 
 ; ALL-CONVERT-NEXT:  [[NSPLAT:%.+]] = shufflevector <8 x i32> [[NINS]], <8 x i32> poison, <8 x i32> zeroinitializer
 ; ALL-CONVERT-NEXT:  [[EVLM:%.+]] = icmp ult <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7>, [[NSPLAT]]
 ; ALL-CONVERT-NEXT:  [[NEWM:%.+]] = and <8 x i1> [[EVLM]], %m
-; ALL-CONVERT-NEXT:  [[SELONE:%.+]] = select <8 x i1> [[NEWM]], <8 x i32> %i1, <8 x i32> <i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1>
+; ALL-CONVERT-NEXT:  [[SELONE:%.+]] = select <8 x i1> [[NEWM]], <8 x i32> %i1, <8 x i32> splat (i32 1)
 ; ALL-CONVERT-NEXT:  %{{.+}} = sdiv <8 x i32> %i0, [[SELONE]]
 ; ALL-CONVERT-NOT:   %{{.+}} = srem <8 x i32> %i0, %i1
 ; ALL-CONVERT:       %{{.+}} = srem <8 x i32> %i0, %{{.+}}
@@ -200,8 +204,49 @@ define void @test_vp_cmp_v8(<8 x i32> %i0, <8 x i32> %i1, <8 x float> %f0, <8 x 
 ; ALL-CONVERT-NEXT:  %{{.+}} = ashr <8 x i32> %i0, %i1
 ; ALL-CONVERT-NEXT:  %{{.+}} = lshr <8 x i32> %i0, %i1
 ; ALL-CONVERT-NEXT:  %{{.+}} = shl <8 x i32> %i0, %i1
-; ALL-CONVERT:       ret void
+; ALL-CONVERT-NEXT:  [[NINS2:%.+]] = insertelement <8 x i32> poison, i32 %n, i64 0
+; ALL-CONVERT-NEXT:  [[NSPLAT2:%.+]] = shufflevector <8 x i32> [[NINS2]], <8 x i32> poison, <8 x i32> zeroinitializer
+; ALL-CONVERT-NEXT:  [[EVLM2:%.+]] = icmp ult <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7>, [[NSPLAT2]]
+; ALL-CONVERT-NEXT:  [[NEWM2:%.+]] = and <8 x i1> [[EVLM2]], %m
+; ALL-CONVERT-NEXT:  %{{.+}} = select <8 x i1> [[NEWM2]], <8 x i32> %i0, <8 x i32> %i1
+; ALL-CONVERT:       %{{.+}} = select <8 x i1> %m, <8 x i32> %i0, <8 x i32> %i1
+; ALL-CONVERT-NEXT:  ret void
 
+; ALL-CONVERT: define void @test_vp_int_vscale(<vscale x 4 x i32> %i0, <vscale x 4 x i32> %i1, <vscale x 4 x i32> %i2, <vscale x 4 x i32> %f3, <vscale x 4 x i1> %m, i32 %n) {
+; ALL-CONVERT:       %{{.*}} = add <vscale x 4 x i32> %i0, %i1
+; ALL-CONVERT:       %{{.*}} = sub <vscale x 4 x i32> %i0, %i1
+; ALL-CONVERT:       %{{.*}} = mul <vscale x 4 x i32> %i0, %i1
+; ALL-CONVERT:       [[EVLM:%.+]] = call <vscale x 4 x i1> @llvm.get.active.lane.mask.nxv4i1.i32(i32 0, i32 %n)
+; ALL-CONVERT:       [[NEWM:%.+]] = and <vscale x 4 x i1> [[EVLM]], %m
+; ALL-CONVERT:       [[SELONE:%.+]] = select <vscale x 4 x i1> [[NEWM]], <vscale x 4 x i32> %i1, <vscale x 4 x i32> splat (i32 1)
+; ALL-CONVERT:       %{{.*}} = sdiv <vscale x 4 x i32> %i0, [[SELONE]]
+; ALL-CONVERT:       [[EVLM2:%.+]] = call <vscale x 4 x i1> @llvm.get.active.lane.mask.nxv4i1.i32(i32 0, i32 %n)
+; ALL-CONVERT:       [[NEWM2:%.+]] = and <vscale x 4 x i1> [[EVLM2]], %m
+; ALL-CONVERT:       [[SELONE2:%.+]] = select <vscale x 4 x i1> [[NEWM2]], <vscale x 4 x i32> %i1, <vscale x 4 x i32> splat (i32 1)
+; ALL-CONVERT:       %{{.*}} = srem <vscale x 4 x i32> %i0, [[SELONE2]]
+; ALL-CONVERT:       [[EVLM3:%.+]] = call <vscale x 4 x i1> @llvm.get.active.lane.mask.nxv4i1.i32(i32 0, i32 %n)
+; ALL-CONVERT:       [[NEWM3:%.+]] = and <vscale x 4 x i1> [[EVLM3]], %m
+; ALL-CONVERT:       [[SELONE3:%.+]] = select <vscale x 4 x i1> [[NEWM3]], <vscale x 4 x i32> %i1, <vscale x 4 x i32> splat (i32 1)
+; ALL-CONVERT:       %{{.*}} = udiv <vscale x 4 x i32> %i0, [[SELONE3]]
+; ALL-CONVERT:       [[EVLM4:%.+]] = call <vscale x 4 x i1> @llvm.get.active.lane.mask.nxv4i1.i32(i32 0, i32 %n)
+; ALL-CONVERT:       [[NEWM4:%.+]] = and <vscale x 4 x i1> [[EVLM4]], %m
+; ALL-CONVERT:       [[SELONE4:%.+]] = select <vscale x 4 x i1> [[NEWM4]], <vscale x 4 x i32> %i1, <vscale x 4 x i32> splat (i32 1)
+; ALL-CONVERT:       %{{.*}} = urem <vscale x 4 x i32> %i0, [[SELONE4]]
+; ALL-CONVERT:       %{{.+}} = call <vscale x 4 x i32> @llvm.smax.nxv4i32(<vscale x 4 x i32> %i0, <vscale x 4 x i32> %i1)
+; ALL-CONVERT:       %{{.+}} = call <vscale x 4 x i32> @llvm.smin.nxv4i32(<vscale x 4 x i32> %i0, <vscale x 4 x i32> %i1)
+; ALL-CONVERT:       %{{.+}} = call <vscale x 4 x i32> @llvm.umax.nxv4i32(<vscale x 4 x i32> %i0, <vscale x 4 x i32> %i1)
+; ALL-CONVERT:       %{{.+}} = call <vscale x 4 x i32> @llvm.umin.nxv4i32(<vscale x 4 x i32> %i0, <vscale x 4 x i32> %i1)
+; ALL-CONVERT:       %{{.*}} = and <vscale x 4 x i32> %i0, %i1
+; ALL-CONVERT:       %{{.*}} = or <vscale x 4 x i32> %i0, %i1
+; ALL-CONVERT:       %{{.*}} = xor <vscale x 4 x i32> %i0, %i1
+; ALL-CONVERT:       %{{.*}} = ashr <vscale x 4 x i32> %i0, %i1
+; ALL-CONVERT:       %{{.*}} = lshr <vscale x 4 x i32> %i0, %i1
+; ALL-CONVERT:       %{{.*}} = shl <vscale x 4 x i32> %i0, %i1
+; ALL-CONVERT:       [[EVLM5:%.+]] = call <vscale x 4 x i1> @llvm.get.active.lane.mask.nxv4i1.i32(i32 0, i32 %n)
+; ALL-CONVERT:       [[NEWM5:%.+]] = and <vscale x 4 x i1> [[EVLM5]], %m
+; ALL-CONVERT:       %{{.*}} = select <vscale x 4 x i1> [[NEWM5]], <vscale x 4 x i32> %i0, <vscale x 4 x i32> %i1
+; ALL-CONVERT:       %{{.*}} = select <vscale x 4 x i1> %m, <vscale x 4 x i32> %i0, <vscale x 4 x i32> %i1
+; ALL-CONVERT-NEXT:  ret void
 
 ; Check that reductions use the correct neutral element for masked-off elements
 ; ALL-CONVERT: define void @test_vp_reduce_int_v4(i32 %start, <4 x i32> %vi, <4 x i1> %m, i32 %n) {
@@ -212,10 +257,10 @@ define void @test_vp_cmp_v8(<8 x i32> %i0, <8 x i32> %i1, <8 x float> %f0, <8 x 
 ; ALL-CONVERT-NEXT:  [[ADD:%.+]] = select <4 x i1> [[NEWM]], <4 x i32> %vi, <4 x i32> zeroinitializer
 ; ALL-CONVERT-NEXT:  [[RED:%.+]] = call i32 @llvm.vector.reduce.add.v4i32(<4 x i32> [[ADD]])
 ; ALL-CONVERT-NEXT:  %{{.+}} = add i32 [[RED]], %start
-; ALL-CONVERT:       [[MUL:%.+]] = select <4 x i1> %{{.+}}, <4 x i32> %vi, <4 x i32> <i32 1, i32 1, i32 1, i32 1>
+; ALL-CONVERT:       [[MUL:%.+]] = select <4 x i1> %{{.+}}, <4 x i32> %vi, <4 x i32> splat (i32 1)
 ; ALL-CONVERT-NEXT:  [[RED:%.+]] = call i32 @llvm.vector.reduce.mul.v4i32(<4 x i32> [[MUL]])
 ; ALL-CONVERT-NEXT:  %{{.+}} = mul i32 [[RED]], %start
-; ALL-CONVERT:       [[AND:%.+]] = select <4 x i1> %{{.+}}, <4 x i32> %vi, <4 x i32> <i32 -1, i32 -1, i32 -1, i32 -1>
+; ALL-CONVERT:       [[AND:%.+]] = select <4 x i1> %{{.+}}, <4 x i32> %vi, <4 x i32> splat (i32 -1)
 ; ALL-CONVERT-NEXT:  [[RED:%.+]] = call i32 @llvm.vector.reduce.and.v4i32(<4 x i32> [[AND]])
 ; ALL-CONVERT-NEXT:  %{{.+}} = and i32 [[RED]], %start
 ; ALL-CONVERT:       [[OR:%.+]] = select <4 x i1> %{{.+}}, <4 x i32> %vi, <4 x i32> zeroinitializer
@@ -224,13 +269,13 @@ define void @test_vp_cmp_v8(<8 x i32> %i0, <8 x i32> %i1, <8 x float> %f0, <8 x 
 ; ALL-CONVERT:       [[XOR:%.+]] = select <4 x i1> %{{.+}}, <4 x i32> %vi, <4 x i32> zeroinitializer
 ; ALL-CONVERT-NEXT:  [[RED:%.+]] = call i32 @llvm.vector.reduce.xor.v4i32(<4 x i32> [[XOR]])
 ; ALL-CONVERT-NEXT:  %{{.+}} = xor i32 [[RED]], %start
-; ALL-CONVERT:       [[SMIN:%.+]] = select <4 x i1> %{{.+}}, <4 x i32> %vi, <4 x i32> <i32 2147483647, i32 2147483647, i32 2147483647, i32 2147483647>
+; ALL-CONVERT:       [[SMIN:%.+]] = select <4 x i1> %{{.+}}, <4 x i32> %vi, <4 x i32> splat (i32 2147483647)
 ; ALL-CONVERT-NEXT:  [[RED:%.+]] = call i32 @llvm.vector.reduce.smin.v4i32(<4 x i32> [[SMIN]])
 ; ALL-CONVERT-NEXT:  %{{.+}} = call i32 @llvm.smin.i32(i32 [[RED]], i32 %start)
-; ALL-CONVERT:       [[SMAX:%.+]] = select <4 x i1> %{{.+}}, <4 x i32> %vi, <4 x i32> <i32 -2147483648, i32 -2147483648, i32 -2147483648, i32 -2147483648>
+; ALL-CONVERT:       [[SMAX:%.+]] = select <4 x i1> %{{.+}}, <4 x i32> %vi, <4 x i32> splat (i32 -2147483648)
 ; ALL-CONVERT-NEXT:  [[RED:%.+]] = call i32 @llvm.vector.reduce.smax.v4i32(<4 x i32> [[SMAX]])
 ; ALL-CONVERT-NEXT:  %{{.+}} = call i32 @llvm.smax.i32(i32 [[RED]], i32 %start)
-; ALL-CONVERT:       [[UMIN:%.+]] = select <4 x i1> %{{.+}}, <4 x i32> %vi, <4 x i32> <i32 -1, i32 -1, i32 -1, i32 -1>
+; ALL-CONVERT:       [[UMIN:%.+]] = select <4 x i1> %{{.+}}, <4 x i32> %vi, <4 x i32> splat (i32 -1)
 ; ALL-CONVERT-NEXT:  [[RED:%.+]] = call i32 @llvm.vector.reduce.umin.v4i32(<4 x i32> [[UMIN]])
 ; ALL-CONVERT-NEXT:  %{{.+}} = call i32 @llvm.umin.i32(i32 [[RED]], i32 %start)
 ; ALL-CONVERT:       [[UMAX:%.+]] = select <4 x i1> %{{.+}}, <4 x i32> %vi, <4 x i32> zeroinitializer
@@ -244,52 +289,52 @@ define void @test_vp_cmp_v8(<8 x i32> %i0, <8 x i32> %i1, <8 x float> %f0, <8 x 
 ; ALL-CONVERT-NEXT:  [[NSPLAT:%.+]] = shufflevector <4 x i32> [[NINS]], <4 x i32> poison, <4 x i32> zeroinitializer
 ; ALL-CONVERT-NEXT:  [[EVLM:%.+]] = icmp ult <4 x i32> <i32 0, i32 1, i32 2, i32 3>, [[NSPLAT]]
 ; ALL-CONVERT-NEXT:  [[NEWM:%.+]] = and <4 x i1> [[EVLM]], %m
-; ALL-CONVERT-NEXT:  [[FMIN:%.+]] = select <4 x i1> [[NEWM]], <4 x float> %vf, <4 x float> <float 0x7FF8000000000000, float 0x7FF8000000000000, float 0x7FF8000000000000, float 0x7FF8000000000000>
+; ALL-CONVERT-NEXT:  [[FMIN:%.+]] = select <4 x i1> [[NEWM]], <4 x float> %vf, <4 x float> splat (float 0x7FF8000000000000)
 ; ALL-CONVERT-NEXT:  [[RED:%.+]] = call float @llvm.vector.reduce.fmin.v4f32(<4 x float> [[FMIN]])
 ; ALL-CONVERT-NEXT:  %{{.+}} = call float @llvm.minnum.f32(float [[RED]], float %f)
-; ALL-CONVERT:       [[FMIN_NNAN:%.+]] = select <4 x i1> %{{.+}}, <4 x float> %vf, <4 x float> <float 0x7FF0000000000000, float 0x7FF0000000000000, float 0x7FF0000000000000, float 0x7FF0000000000000>
+; ALL-CONVERT:       [[FMIN_NNAN:%.+]] = select <4 x i1> %{{.+}}, <4 x float> %vf, <4 x float> splat (float 0x7FF0000000000000)
 ; ALL-CONVERT-NEXT:  [[RED:%.+]] = call nnan float @llvm.vector.reduce.fmin.v4f32(<4 x float> [[FMIN_NNAN]])
 ; ALL-CONVERT-NEXT:  %{{.+}} = call nnan float @llvm.minnum.f32(float [[RED]], float %f)
-; ALL-CONVERT:       [[FMIN_NNAN_NINF:%.+]] = select <4 x i1> %{{.+}}, <4 x float> %vf, <4 x float> <float 0x47EFFFFFE0000000, float 0x47EFFFFFE0000000, float 0x47EFFFFFE0000000, float 0x47EFFFFFE0000000>
+; ALL-CONVERT:       [[FMIN_NNAN_NINF:%.+]] = select <4 x i1> %{{.+}}, <4 x float> %vf, <4 x float> splat (float 0x47EFFFFFE0000000)
 ; ALL-CONVERT-NEXT:  [[RED:%.+]] = call nnan ninf float @llvm.vector.reduce.fmin.v4f32(<4 x float> [[FMIN_NNAN_NINF]])
 ; ALL-CONVERT-NEXT:  %{{.+}} = call nnan ninf float @llvm.minnum.f32(float [[RED]], float %f)
-; ALL-CONVERT:  [[FMAX:%.+]] = select <4 x i1> %{{.+}}, <4 x float> %vf, <4 x float> <float 0xFFF8000000000000, float 0xFFF8000000000000, float 0xFFF8000000000000, float 0xFFF8000000000000>
+; ALL-CONVERT:  [[FMAX:%.+]] = select <4 x i1> %{{.+}}, <4 x float> %vf, <4 x float> splat (float 0xFFF8000000000000)
 ; ALL-CONVERT-NEXT:  [[RED:%.+]] = call float @llvm.vector.reduce.fmax.v4f32(<4 x float> [[FMAX]])
 ; ALL-CONVERT-NEXT:  %{{.+}} = call float @llvm.maxnum.f32(float [[RED]], float %f)
-; ALL-CONVERT:  [[FMAX_NNAN:%.+]] = select <4 x i1> %{{.+}}, <4 x float> %vf, <4 x float> <float 0xFFF0000000000000, float 0xFFF0000000000000, float 0xFFF0000000000000, float 0xFFF0000000000000>
+; ALL-CONVERT:  [[FMAX_NNAN:%.+]] = select <4 x i1> %{{.+}}, <4 x float> %vf, <4 x float> splat (float 0xFFF0000000000000)
 ; ALL-CONVERT-NEXT:  [[RED:%.+]] = call nnan float @llvm.vector.reduce.fmax.v4f32(<4 x float> [[FMAX_NNAN]])
 ; ALL-CONVERT-NEXT:  %{{.+}} = call nnan float @llvm.maxnum.f32(float [[RED]], float %f)
-; ALL-CONVERT:  [[FMAX_NNAN_NINF:%.+]] = select <4 x i1> %{{.+}}, <4 x float> %vf, <4 x float> <float 0xC7EFFFFFE0000000, float 0xC7EFFFFFE0000000, float 0xC7EFFFFFE0000000, float 0xC7EFFFFFE0000000>
+; ALL-CONVERT:  [[FMAX_NNAN_NINF:%.+]] = select <4 x i1> %{{.+}}, <4 x float> %vf, <4 x float> splat (float 0xC7EFFFFFE0000000)
 ; ALL-CONVERT-NEXT:  [[RED:%.+]] = call nnan ninf float @llvm.vector.reduce.fmax.v4f32(<4 x float> [[FMAX_NNAN_NINF]])
 ; ALL-CONVERT-NEXT:  %{{.+}} = call nnan ninf float @llvm.maxnum.f32(float [[RED]], float %f)
 
-; ALL-CONVERT:       [[FMINIMUM:%.+]] = select <4 x i1> %{{.+}}, <4 x float> %vf, <4 x float> <float 0x7FF0000000000000, float 0x7FF0000000000000, float 0x7FF0000000000000, float 0x7FF0000000000000>
+; ALL-CONVERT:       [[FMINIMUM:%.+]] = select <4 x i1> %{{.+}}, <4 x float> %vf, <4 x float> splat (float 0x7FF0000000000000)
 ; ALL-CONVERT-NEXT:  [[RED:%.+]] = call float @llvm.vector.reduce.fminimum.v4f32(<4 x float> [[FMINIMUM]])
 ; ALL-CONVERT-NEXT:  %{{.+}} = call float @llvm.minimum.f32(float [[RED]], float %f)
-; ALL-CONVERT:       [[FMINIMUM_NNAN:%.+]] = select <4 x i1> %{{.+}}, <4 x float> %vf, <4 x float> <float 0x7FF0000000000000, float 0x7FF0000000000000, float 0x7FF0000000000000, float 0x7FF0000000000000>
+; ALL-CONVERT:       [[FMINIMUM_NNAN:%.+]] = select <4 x i1> %{{.+}}, <4 x float> %vf, <4 x float> splat (float 0x7FF0000000000000)
 ; ALL-CONVERT-NEXT:  [[RED:%.+]] = call nnan float @llvm.vector.reduce.fminimum.v4f32(<4 x float> [[FMINIMUM_NNAN]])
 ; ALL-CONVERT-NEXT:  %{{.+}} = call nnan float @llvm.minimum.f32(float [[RED]], float %f)
-; ALL-CONVERT:       [[FMINIMUM_NNAN_NINF:%.+]] = select <4 x i1> %{{.+}}, <4 x float> %vf, <4 x float> <float 0x47EFFFFFE0000000, float 0x47EFFFFFE0000000, float 0x47EFFFFFE0000000, float 0x47EFFFFFE0000000>
+; ALL-CONVERT:       [[FMINIMUM_NNAN_NINF:%.+]] = select <4 x i1> %{{.+}}, <4 x float> %vf, <4 x float> splat (float 0x47EFFFFFE0000000)
 ; ALL-CONVERT-NEXT:  [[RED:%.+]] = call nnan ninf float @llvm.vector.reduce.fminimum.v4f32(<4 x float> [[FMINIMUM_NNAN_NINF]])
 ; ALL-CONVERT-NEXT:  %{{.+}} = call nnan ninf float @llvm.minimum.f32(float [[RED]], float %f)
 
-; ALL-CONVERT:  [[FMAXIMUM:%.+]] = select <4 x i1> %{{.+}}, <4 x float> %vf, <4 x float> <float 0xFFF0000000000000, float 0xFFF0000000000000, float 0xFFF0000000000000, float 0xFFF0000000000000>
+; ALL-CONVERT:  [[FMAXIMUM:%.+]] = select <4 x i1> %{{.+}}, <4 x float> %vf, <4 x float> splat (float 0xFFF0000000000000)
 ; ALL-CONVERT-NEXT:  [[RED:%.+]] = call float @llvm.vector.reduce.fmaximum.v4f32(<4 x float> [[FMAXIMUM]])
 ; ALL-CONVERT-NEXT:  %{{.+}} = call float @llvm.maximum.f32(float [[RED]], float %f)
-; ALL-CONVERT:  [[FMAXIMUM_NNAN:%.+]] = select <4 x i1> %{{.+}}, <4 x float> %vf, <4 x float> <float 0xFFF0000000000000, float 0xFFF0000000000000, float 0xFFF0000000000000, float 0xFFF0000000000000>
+; ALL-CONVERT:  [[FMAXIMUM_NNAN:%.+]] = select <4 x i1> %{{.+}}, <4 x float> %vf, <4 x float> splat (float 0xFFF0000000000000)
 ; ALL-CONVERT-NEXT:  [[RED:%.+]] = call nnan float @llvm.vector.reduce.fmaximum.v4f32(<4 x float> [[FMAXIMUM_NNAN]])
 ; ALL-CONVERT-NEXT:  %{{.+}} = call nnan float @llvm.maximum.f32(float [[RED]], float %f)
-; ALL-CONVERT:  [[FMAXIMUM_NNAN_NINF:%.+]] = select <4 x i1> %{{.+}}, <4 x float> %vf, <4 x float> <float 0xC7EFFFFFE0000000, float 0xC7EFFFFFE0000000, float 0xC7EFFFFFE0000000, float 0xC7EFFFFFE0000000>
+; ALL-CONVERT:  [[FMAXIMUM_NNAN_NINF:%.+]] = select <4 x i1> %{{.+}}, <4 x float> %vf, <4 x float> splat (float 0xC7EFFFFFE0000000)
 ; ALL-CONVERT-NEXT:  [[RED:%.+]] = call nnan ninf float @llvm.vector.reduce.fmaximum.v4f32(<4 x float> [[FMAXIMUM_NNAN_NINF]])
 ; ALL-CONVERT-NEXT:  %{{.+}} = call nnan ninf float @llvm.maximum.f32(float [[RED]], float %f)
 
-; ALL-CONVERT:  [[FADD:%.+]] = select <4 x i1> %{{.+}}, <4 x float> %vf, <4 x float> <float -0.000000e+00, float -0.000000e+00, float -0.000000e+00, float -0.000000e+00>
+; ALL-CONVERT:  [[FADD:%.+]] = select <4 x i1> %{{.+}}, <4 x float> %vf, <4 x float> splat (float -0.000000e+00)
 ; ALL-CONVERT-NEXT:  %{{.+}} = call float @llvm.vector.reduce.fadd.v4f32(float %f, <4 x float> [[FADD]])
-; ALL-CONVERT:  [[FADD:%.+]] = select <4 x i1> %{{.+}}, <4 x float> %vf, <4 x float> <float -0.000000e+00, float -0.000000e+00, float -0.000000e+00, float -0.000000e+00>
+; ALL-CONVERT:  [[FADD:%.+]] = select <4 x i1> %{{.+}}, <4 x float> %vf, <4 x float> splat (float -0.000000e+00)
 ; ALL-CONVERT-NEXT:  %{{.+}} = call reassoc float @llvm.vector.reduce.fadd.v4f32(float %f, <4 x float> [[FADD]])
-; ALL-CONVERT:  [[FMUL:%.+]] = select <4 x i1> %{{.+}}, <4 x float> %vf, <4 x float> <float 1.000000e+00, float 1.000000e+00, float 1.000000e+00, float 1.000000e+00>
+; ALL-CONVERT:  [[FMUL:%.+]] = select <4 x i1> %{{.+}}, <4 x float> %vf, <4 x float> splat (float 1.000000e+00)
 ; ALL-CONVERT-NEXT:  %{{.+}} = call float @llvm.vector.reduce.fmul.v4f32(float %f, <4 x float> [[FMUL]])
-; ALL-CONVERT:  [[FMUL:%.+]] = select <4 x i1> %{{.+}}, <4 x float> %vf, <4 x float> <float 1.000000e+00, float 1.000000e+00, float 1.000000e+00, float 1.000000e+00>
+; ALL-CONVERT:  [[FMUL:%.+]] = select <4 x i1> %{{.+}}, <4 x float> %vf, <4 x float> splat (float 1.000000e+00)
 ; ALL-CONVERT-NEXT:  %{{.+}} = call reassoc float @llvm.vector.reduce.fmul.v4f32(float %f, <4 x float> [[FMUL]])
 ; ALL-CONVERT-NEXT:  ret void
 
@@ -322,6 +367,8 @@ define void @test_vp_cmp_v8(<8 x i32> %i0, <8 x i32> %i1, <8 x float> %f0, <8 x 
 ; LEGAL_LEGAL-NEXT:   %rE = call <8 x i32> @llvm.vp.ashr.v8i32(<8 x i32> %i0, <8 x i32> %i1, <8 x i1> %m, i32 %n)
 ; LEGAL_LEGAL-NEXT:   %rF = call <8 x i32> @llvm.vp.lshr.v8i32(<8 x i32> %i0, <8 x i32> %i1, <8 x i1> %m, i32 %n)
 ; LEGAL_LEGAL-NEXT:   %r10 = call <8 x i32> @llvm.vp.shl.v8i32(<8 x i32> %i0, <8 x i32> %i1, <8 x i1> %m, i32 %n)
+; LEGAL_LEGAL-NEXT:   %r11 = call <8 x i32> @llvm.vp.merge.v8i32(<8 x i1> %m, <8 x i32> %i0, <8 x i32> %i1, i32 %n)
+; LEGAL_LEGAL-NEXT:   %r12 = call <8 x i32> @llvm.vp.select.v8i32(<8 x i1> %m, <8 x i32> %i0, <8 x i32> %i1, i32 %n)
 ; LEGAL_LEGAL-NEXT:   ret void
 
 ; LEGAL_LEGAL:define void @test_vp_int_vscale(<vscale x 4 x i32> %i0, <vscale x 4 x i32> %i1, <vscale x 4 x i32> %i2, <vscale x 4 x i32> %f3, <vscale x 4 x i1> %m, i32 %n) {
@@ -342,6 +389,8 @@ define void @test_vp_cmp_v8(<8 x i32> %i0, <8 x i32> %i1, <8 x float> %f0, <8 x 
 ; LEGAL_LEGAL-NEXT:  %rE = call <vscale x 4 x i32> @llvm.vp.ashr.nxv4i32(<vscale x 4 x i32> %i0, <vscale x 4 x i32> %i1, <vscale x 4 x i1> %m, i32 %n)
 ; LEGAL_LEGAL-NEXT:  %rF = call <vscale x 4 x i32> @llvm.vp.lshr.nxv4i32(<vscale x 4 x i32> %i0, <vscale x 4 x i32> %i1, <vscale x 4 x i1> %m, i32 %n)
 ; LEGAL_LEGAL-NEXT:  %r10 = call <vscale x 4 x i32> @llvm.vp.shl.nxv4i32(<vscale x 4 x i32> %i0, <vscale x 4 x i32> %i1, <vscale x 4 x i1> %m, i32 %n)
+; LEGAL_LEGAL-NEXT:  %r11 = call <vscale x 4 x i32> @llvm.vp.merge.nxv4i32(<vscale x 4 x i1> %m, <vscale x 4 x i32> %i0, <vscale x 4 x i32> %i1, i32 %n)
+; LEGAL_LEGAL-NEXT:  %r12 = call <vscale x 4 x i32> @llvm.vp.select.nxv4i32(<vscale x 4 x i1> %m, <vscale x 4 x i32> %i0, <vscale x 4 x i32> %i1, i32 %n)
 ; LEGAL_LEGAL-NEXT:  ret void
 
 ; LEGAL_LEGAL: define void @test_vp_reduce_int_v4(i32 %start, <4 x i32> %vi, <4 x i1> %m, i32 %n) {
@@ -415,6 +464,12 @@ define void @test_vp_cmp_v8(<8 x i32> %i0, <8 x i32> %i1, <8 x float> %f0, <8 x 
 ; DISCARD_LEGAL-NEXT:   %rE = call <8 x i32> @llvm.vp.ashr.v8i32(<8 x i32> %i0, <8 x i32> %i1, <8 x i1> %m, i32 8)
 ; DISCARD_LEGAL-NEXT:   %rF = call <8 x i32> @llvm.vp.lshr.v8i32(<8 x i32> %i0, <8 x i32> %i1, <8 x i1> %m, i32 8)
 ; DISCARD_LEGAL-NEXT:   %r10 = call <8 x i32> @llvm.vp.shl.v8i32(<8 x i32> %i0, <8 x i32> %i1, <8 x i1> %m, i32 8)
+; DISCARD_LEGAL-NEXT:   [[NSPLATINS2:%.+]] = insertelement <8 x i32> poison, i32 %n, i64 0
+; DISCARD_LEGAL-NEXT:   [[NSPLAT2:%.+]] = shufflevector <8 x i32> [[NSPLATINS2]], <8 x i32> poison, <8 x i32> zeroinitializer
+; DISCARD_LEGAL-NEXT:   [[EVLMASK2:%.+]] = icmp ult <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7>, [[NSPLAT2]]
+; DISCARD_LEGAL-NEXT:   [[NEWMASK2:%.+]] = and <8 x i1> [[EVLMASK2]], %m
+; DISCARD_LEGAL-NEXT:   %r11 = call <8 x i32> @llvm.vp.merge.v8i32(<8 x i1> [[NEWMASK2]], <8 x i32> %i0, <8 x i32> %i1, i32 8)
+; DISCARD_LEGAL-NEXT:   %r12 = call <8 x i32> @llvm.vp.select.v8i32(<8 x i1> %m, <8 x i32> %i0, <8 x i32> %i1, i32 8)
 ; DISCARD_LEGAL-NEXT:   ret void
 
 ; TODO compute vscale only once and use caching.
@@ -431,7 +486,9 @@ define void @test_vp_cmp_v8(<8 x i32> %i0, <8 x i32> %i1, <8 x float> %f0, <8 x 
 ; DISCARD_LEGAL:      [[NEWM:%.+]] = and <vscale x 4 x i1> [[EVLM]], %m
 ; DISCARD_LEGAL:      %r3 = call <vscale x 4 x i32> @llvm.vp.sdiv.nxv4i32(<vscale x 4 x i32> %i0, <vscale x 4 x i32> %i1, <vscale x 4 x i1> [[NEWM]], i32 %scalable_size{{.*}})
 ; DISCARD_LEGAL-NOT:  %{{.+}} = call <vscale x 4 x i32> @llvm.vp.{{.*}}, i32 %n)
-; DISCARD_LEGAL:      ret void
+; DISCARD_LEGAL:      %r11 = call <vscale x 4 x i32> @llvm.vp.merge.nxv4i32(<vscale x 4 x i1> %{{.*}}, <vscale x 4 x i32> %i0, <vscale x 4 x i32> %i1, i32 %scalable_size{{.*}})
+; DISCARD_LEGAL:      %r12 = call <vscale x 4 x i32> @llvm.vp.select.nxv4i32(<vscale x 4 x i1> %m, <vscale x 4 x i32> %i0, <vscale x 4 x i32> %i1, i32 %scalable_size{{.*}})
+; DISCARD_LEGAL-NEXT: ret void
 
 ; DISCARD_LEGAL: define void @test_vp_reduce_int_v4(i32 %start, <4 x i32> %vi, <4 x i1> %m, i32 %n) {
 ; DISCARD_LEGAL-NEXT:  [[NSPLATINS:%.+]] = insertelement <4 x i32> poison, i32 %n, i64 0
@@ -503,6 +560,8 @@ define void @test_vp_cmp_v8(<8 x i32> %i0, <8 x i32> %i1, <8 x float> %f0, <8 x 
 ; CONVERT_LEGAL-NOT:   %{{.+}} = call <8 x i32> @llvm.vp.ashr.v8i32(<8 x i32> %i0, <8 x i32> %i1, <8 x i1> %m, i32 8)
 ; CONVERT_LEGAL-NOT:   %{{.+}} = call <8 x i32> @llvm.vp.lshr.v8i32(<8 x i32> %i0, <8 x i32> %i1, <8 x i1> %m, i32 8)
 ; CONVERT_LEGAL-NOT:   %{{.+}} = call <8 x i32> @llvm.vp.shl.v8i32(<8 x i32> %i0, <8 x i32> %i1, <8 x i1> %m, i32 8)
+; CONVERT_LEGAL:        %r11 = call <8 x i32> @llvm.vp.merge.v8i32(<8 x i1> %{{.*}}, <8 x i32> %i0, <8 x i32> %i1, i32 8)
+; CONVERT_LEGAL:        %r12 = call <8 x i32> @llvm.vp.select.v8i32(<8 x i1> %{{.*}}, <8 x i32> %i0, <8 x i32> %i1, i32 8)
 ; CONVERT_LEGAL:       ret void
 
 ; Similar to %evl discard, %mask legal but make sure the first VP intrinsic has a legal expansion
@@ -513,6 +572,8 @@ define void @test_vp_cmp_v8(<8 x i32> %i0, <8 x i32> %i1, <8 x float> %f0, <8 x 
 ; CONVERT_LEGAL-NEXT:   %scalable_size = mul nuw i32 %vscale, 4
 ; CONVERT_LEGAL-NEXT:   %r0 = call <vscale x 4 x i32> @llvm.vp.add.nxv4i32(<vscale x 4 x i32> %i0, <vscale x 4 x i32> %i1, <vscale x 4 x i1> [[NEWM]], i32 %scalable_size)
 ; CONVERT_LEGAL-NOT:    %{{.*}} = call <vscale x 4 x i32> @llvm.vp.{{.*}}, i32 %n)
+; CONVERT_LEGAL:        %r11 = call <vscale x 4 x i32> @llvm.vp.merge.nxv4i32(<vscale x 4 x i1> %{{.*}}, <vscale x 4 x i32> %i0, <vscale x 4 x i32> %i1, i32 %scalable_size{{.*}})
+; CONVERT_LEGAL:        %r12 = call <vscale x 4 x i32> @llvm.vp.select.nxv4i32(<vscale x 4 x i1> %{{.*}}, <vscale x 4 x i32> %i0, <vscale x 4 x i32> %i1, i32 %scalable_size{{.*}})
 ; CONVERT_LEGAL:        ret void
 
 ; CONVERT_LEGAL: define void @test_vp_reduce_int_v4(i32 %start, <4 x i32> %vi, <4 x i1> %m, i32 %n) {

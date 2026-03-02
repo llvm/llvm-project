@@ -312,7 +312,7 @@ instructionClobbersQuery(const MemoryDef *MD, const MemoryLocation &UseLoc,
 
   if (auto *CB = dyn_cast_or_null<CallBase>(UseInst)) {
     ModRefInfo I = AA.getModRefInfo(DefInst, CB);
-    return isModOrRefSet(I);
+    return isModSet(I);
   }
 
   if (auto *DefLoad = dyn_cast<LoadInst>(DefInst))
@@ -393,7 +393,7 @@ static bool isUseTriviallyOptimizableToLiveOnEntry(AliasAnalysisType &AA,
 /// \param AA        The AliasAnalysis we used for our search.
 /// \param AllowImpreciseClobber Always false, unless we do relaxed verify.
 
-LLVM_ATTRIBUTE_UNUSED static void
+[[maybe_unused]] static void
 checkClobberSanity(const MemoryAccess *Start, MemoryAccess *ClobberAt,
                    const MemoryLocation &StartLoc, const MemorySSA &MSSA,
                    const UpwardsMemoryQuery &Query, BatchAAResults &AA,
@@ -1180,7 +1180,7 @@ void MemorySSA::renamePass(DomTreeNode *Root, MemoryAccess *IncomingVal,
         // which is the last def.
         // Incoming value can only change if there is a block def, and in that
         // case, it's the last block def in the list.
-        if (auto *BlockDefs = getWritableBlockDefs(BB))
+        if (auto *BlockDefs = getBlockDefs(BB))
           IncomingVal = &*BlockDefs->rbegin();
       } else
         IncomingVal = renameBlock(BB, IncomingVal, RenameAllUses);
@@ -1277,7 +1277,7 @@ MemorySSA::~MemorySSA() {
 }
 
 MemorySSA::AccessList *MemorySSA::getOrCreateAccessList(const BasicBlock *BB) {
-  auto Res = PerBlockAccesses.insert(std::make_pair(BB, nullptr));
+  auto Res = PerBlockAccesses.try_emplace(BB);
 
   if (Res.second)
     Res.first->second = std::make_unique<AccessList>();
@@ -1285,7 +1285,7 @@ MemorySSA::AccessList *MemorySSA::getOrCreateAccessList(const BasicBlock *BB) {
 }
 
 MemorySSA::DefsList *MemorySSA::getOrCreateDefsList(const BasicBlock *BB) {
-  auto Res = PerBlockDefs.insert(std::make_pair(BB, nullptr));
+  auto Res = PerBlockDefs.try_emplace(BB);
 
   if (Res.second)
     Res.first->second = std::make_unique<DefsList>();
@@ -1357,7 +1357,7 @@ void MemorySSA::OptimizeUses::optimizeUsesInBlock(
     DenseMap<MemoryLocOrCall, MemlocStackInfo> &LocStackInfo) {
 
   /// If no accesses, nothing to do.
-  MemorySSA::AccessList *Accesses = MSSA->getWritableBlockAccesses(BB);
+  MemorySSA::AccessList *Accesses = MSSA->getBlockAccesses(BB);
   if (Accesses == nullptr)
     return;
 
@@ -1573,7 +1573,7 @@ void MemorySSA::buildMemorySSA(BatchAAResults &BAA, IterT Blocks) {
     // the loop, to limit the scope of the renaming.
     SmallVector<BasicBlock *> ExitBlocks;
     L->getExitBlocks(ExitBlocks);
-    Visited.insert(ExitBlocks.begin(), ExitBlocks.end());
+    Visited.insert_range(ExitBlocks);
     renamePass(DT->getNode(L->getLoopPreheader()), LiveOnEntryDef.get(),
                Visited);
   } else {
@@ -1649,7 +1649,7 @@ void MemorySSA::insertIntoListsForBlock(MemoryAccess *NewAccess,
 
 void MemorySSA::insertIntoListsBefore(MemoryAccess *What, const BasicBlock *BB,
                                       AccessList::iterator InsertPt) {
-  auto *Accesses = getWritableBlockAccesses(BB);
+  auto *Accesses = getBlockAccesses(BB);
   bool WasEnd = InsertPt == Accesses->end();
   Accesses->insert(AccessList::iterator(InsertPt), What);
   if (!isa<MemoryUse>(What)) {
@@ -2414,9 +2414,7 @@ PreservedAnalyses MemorySSAVerifierPass::run(Function &F,
 
 char MemorySSAWrapperPass::ID = 0;
 
-MemorySSAWrapperPass::MemorySSAWrapperPass() : FunctionPass(ID) {
-  initializeMemorySSAWrapperPassPass(*PassRegistry::getPassRegistry());
-}
+MemorySSAWrapperPass::MemorySSAWrapperPass() : FunctionPass(ID) {}
 
 void MemorySSAWrapperPass::releaseMemory() { MSSA.reset(); }
 

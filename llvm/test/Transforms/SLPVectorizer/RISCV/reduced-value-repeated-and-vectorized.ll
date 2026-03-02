@@ -5,12 +5,12 @@ define void @test() {
 ; CHECK-LABEL: define void @test(
 ; CHECK-SAME: ) #[[ATTR0:[0-9]+]] {
 ; CHECK-NEXT:  [[ENTRY:.*:]]
-; CHECK-NEXT:    [[TMP0:%.*]] = call <4 x i16> @llvm.experimental.vp.strided.load.v4i16.p0.i64(ptr align 2 null, i64 6, <4 x i1> <i1 true, i1 true, i1 true, i1 true>, i32 4)
+; CHECK-NEXT:    [[TMP0:%.*]] = call <4 x i16> @llvm.experimental.vp.strided.load.v4i16.p0.i64(ptr align 2 null, i64 6, <4 x i1> splat (i1 true), i32 4)
 ; CHECK-NEXT:    [[TMP1:%.*]] = load i16, ptr null, align 2
 ; CHECK-NEXT:    [[TMP2:%.*]] = xor <4 x i16> [[TMP0]], zeroinitializer
 ; CHECK-NEXT:    [[TMP3:%.*]] = call i16 @llvm.vector.reduce.smax.v4i16(<4 x i16> [[TMP2]])
-; CHECK-NEXT:    [[TMP4:%.*]] = call i16 @llvm.smax.i16(i16 [[TMP1]], i16 [[TMP3]])
-; CHECK-NEXT:    [[TMP5:%.*]] = call i16 @llvm.smax.i16(i16 [[TMP4]], i16 0)
+; CHECK-NEXT:    [[TMP4:%.*]] = call i16 @llvm.smax.i16(i16 [[TMP1]], i16 0)
+; CHECK-NEXT:    [[TMP5:%.*]] = call i16 @llvm.smax.i16(i16 [[TMP4]], i16 [[TMP3]])
 ; CHECK-NEXT:    [[TMP6:%.*]] = tail call i16 @llvm.smax.i16(i16 [[TMP5]], i16 0)
 ; CHECK-NEXT:    ret void
 ;

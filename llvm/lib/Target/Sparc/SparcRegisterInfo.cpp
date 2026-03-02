@@ -31,7 +31,8 @@ static cl::opt<bool>
 ReserveAppRegisters("sparc-reserve-app-registers", cl::Hidden, cl::init(false),
                     cl::desc("Reserve application registers (%g2-%g4)"));
 
-SparcRegisterInfo::SparcRegisterInfo() : SparcGenRegisterInfo(SP::O7) {}
+SparcRegisterInfo::SparcRegisterInfo(const SparcSubtarget &STI)
+    : SparcGenRegisterInfo(SP::O7), Is64Bit(STI.is64Bit()) {}
 
 const MCPhysReg*
 SparcRegisterInfo::getCalleeSavedRegs(const MachineFunction *MF) const {
@@ -111,11 +112,10 @@ bool SparcRegisterInfo::isReservedReg(const MachineFunction &MF,
   return getReservedRegs(MF)[Reg];
 }
 
-const TargetRegisterClass*
-SparcRegisterInfo::getPointerRegClass(const MachineFunction &MF,
-                                      unsigned Kind) const {
-  const SparcSubtarget &Subtarget = MF.getSubtarget<SparcSubtarget>();
-  return Subtarget.is64Bit() ? &SP::I64RegsRegClass : &SP::IntRegsRegClass;
+const TargetRegisterClass *
+SparcRegisterInfo::getPointerRegClass(unsigned Kind) const {
+  assert(Kind == 0 && "this should only be used for default cases");
+  return Is64Bit ? &SP::I64RegsRegClass : &SP::IntRegsRegClass;
 }
 
 static void replaceFI(MachineFunction &MF, MachineBasicBlock::iterator II,
@@ -225,27 +225,4 @@ SparcRegisterInfo::eliminateFrameIndex(MachineBasicBlock::iterator II,
 
 Register SparcRegisterInfo::getFrameRegister(const MachineFunction &MF) const {
   return SP::I6;
-}
-
-// Sparc has no architectural need for stack realignment support,
-// except that LLVM unfortunately currently implements overaligned
-// stack objects by depending upon stack realignment support.
-// If that ever changes, this can probably be deleted.
-bool SparcRegisterInfo::canRealignStack(const MachineFunction &MF) const {
-  if (!TargetRegisterInfo::canRealignStack(MF))
-    return false;
-
-  // Sparc always has a fixed frame pointer register, so don't need to
-  // worry about needing to reserve it. [even if we don't have a frame
-  // pointer for our frame, it still cannot be used for other things,
-  // or register window traps will be SADNESS.]
-
-  // If there's a reserved call frame, we can use SP to access locals.
-  if (getFrameLowering(MF)->hasReservedCallFrame(MF))
-    return true;
-
-  // Otherwise, we'd need a base pointer, but those aren't implemented
-  // for SPARC at the moment.
-
-  return false;
 }

@@ -55,7 +55,6 @@ TYPE("c++",                      CXX,          PP_CXX,          "cpp",    phases
 TYPE("objective-c++-cpp-output", PP_ObjCXX,    INVALID,         "mii",    phases::Compile, phases::Backend, phases::Assemble, phases::Link)
 TYPE("objc++-cpp-output",        PP_ObjCXX_Alias, INVALID,      "mii",    phases::Compile, phases::Backend, phases::Assemble, phases::Link)
 TYPE("objective-c++",            ObjCXX,       PP_ObjCXX,       "mm",     phases::Preprocess, phases::Compile, phases::Backend, phases::Assemble, phases::Link)
-TYPE("renderscript",             RenderScript, PP_C,            "rs",     phases::Preprocess, phases::Compile, phases::Backend, phases::Assemble, phases::Link)
 TYPE("hlsl",                     HLSL,         PP_CXX,          "hlsl",   phases::Preprocess, phases::Compile, phases::Backend, phases::Assemble)
 
 // C family input files to precompile.
@@ -89,8 +88,8 @@ TYPE("assembler-with-cpp",       Asm,          PP_Asm,          "S",      phases
 // modules when Flang needs to emit pre-processed files. Therefore, the
 // `PP_TYPE` is set to `PP_Fortran` so that the driver is fine with
 // "pre-processing a pre-processed file".
-TYPE("f95",                      PP_Fortran,   PP_Fortran,      "i",      phases::Preprocess, phases::Compile, phases::Backend, phases::Assemble, phases::Link)
-TYPE("f95-cpp-input",            Fortran,      PP_Fortran,      nullptr,  phases::Preprocess, phases::Compile, phases::Backend, phases::Assemble, phases::Link)
+TYPE("f95",                      Fortran,      PP_Fortran,      nullptr,  phases::Preprocess, phases::Compile, phases::Backend, phases::Assemble, phases::Link)
+TYPE("f95-cpp-input",            PP_Fortran,   PP_Fortran,      "i",      phases::Preprocess, phases::Compile, phases::Backend, phases::Assemble, phases::Link)
 TYPE("java",                     Java,         INVALID,         nullptr,  phases::Compile, phases::Backend, phases::Assemble, phases::Link)
 
 // LLVM IR/LTO types. We define separate types for IR and LTO because LTO

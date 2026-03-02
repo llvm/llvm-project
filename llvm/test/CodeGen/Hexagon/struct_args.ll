@@ -1,4 +1,4 @@
-; RUN: llc -march=hexagon -disable-hsdr < %s | FileCheck %s
+; RUN: llc -mtriple=hexagon -disable-hsdr < %s | FileCheck %s
 ; CHECK-DAG: r0 = memw
 ; CHECK-DAG: r1 = memw
 

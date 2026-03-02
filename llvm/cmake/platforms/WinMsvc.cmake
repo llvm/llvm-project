@@ -277,7 +277,7 @@ set(CROSS_TOOLCHAIN_FLAGS_NATIVE "${_CTF_NATIVE_DEFAULT}" CACHE STRING "")
 set(COMPILE_FLAGS
     -D_CRT_SECURE_NO_WARNINGS
     --target=${TRIPLE_ARCH}-windows-msvc
-    -fms-compatibility-version=19.27
+    -fms-compatibility-version=19.28
     -vctoolsversion ${MSVC_VER}
     -winsdkversion ${WINSDK_VER}
     -winsysroot ${LLVM_WINSYSROOT})
@@ -322,6 +322,10 @@ if(case_sensitive_filesystem)
   endif()
   list(APPEND LINK_FLAGS
        -libpath:"${msvc_lib_symlinks_dir}")
+endif()
+
+if(CMAKE_VERSION VERSION_GREATER_EQUAL "3.25")
+  list(TRANSFORM LINK_FLAGS PREPEND "${CMAKE_CXX_LINKER_WRAPPER_FLAG}")
 endif()
 
 string(REPLACE ";" " " LINK_FLAGS "${LINK_FLAGS}")

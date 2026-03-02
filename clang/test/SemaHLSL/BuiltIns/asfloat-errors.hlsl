@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -finclude-default-header -triple dxil-pc-shadermodel6.6-library %s -fnative-half-type -verify
+// RUN: %clang_cc1 -finclude-default-header -triple dxil-pc-shadermodel6.6-library %s -fnative-half-type -fnative-int16-type -verify
 
 
 float4 test_float_too_many_arg(float p0, float p1) {
@@ -23,13 +23,4 @@ float test_float_half(half p1) {
     // expected-note@-2 {{in instantiation of function template specialization 'hlsl::asfloat<half>'}}
     // expected-note@hlsl/hlsl_detail.h:* {{candidate template ignored: could not match 'vector<half, N>' against 'half'}}
     // expected-note@hlsl/hlsl_detail.h:* {{candidate template ignored: substitution failure [with U = float, T = half]: no type named 'Type'}}
-}
-
-
-float test_float_half(bool p1) {
-    return asfloat(p1);
-    // expected-error@hlsl/hlsl_intrinsics.h:* {{no matching function for call to 'bit_cast'}}
-    // expected-note@-2 {{in instantiation of function template specialization 'hlsl::asfloat<bool>'}}
-    // expected-note@hlsl/hlsl_detail.h:* {{candidate template ignored: could not match 'vector<bool, N>' against 'bool'}}
-    // expected-note@hlsl/hlsl_detail.h:* {{candidate template ignored: substitution failure [with U = float, T = bool]: no type named 'Type'}}
 }

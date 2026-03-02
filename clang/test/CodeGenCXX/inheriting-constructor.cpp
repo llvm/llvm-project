@@ -113,7 +113,7 @@ namespace noninline_virt {
   // constructor, which takes no arguments other than the this pointer and VTT.
   // ITANIUM-LABEL: define linkonce_odr void @_ZN14noninline_virt1CCI1NS_1AEEiO1QPvU17pass_object_size0(
   // ITANIUM: call void @_ZN14noninline_virt1AC2EiO1QPvU17pass_object_size0({{.*}} %{{.*}}, i32 %{{.*}}, ptr {{.*}}, ptr %{{.*}}, i{{32|64}} %{{.*}})
-  // ITANIUM: call void @_ZN14noninline_virt1BCI2NS_1AEEiO1QPvU17pass_object_size0(ptr {{[^,]*}} %{{.*}}, ptr getelementptr inbounds ([2 x ptr], ptr @_ZTTN14noninline_virt1CE, i64 0, i64 1))
+  // ITANIUM: call void @_ZN14noninline_virt1BCI2NS_1AEEiO1QPvU17pass_object_size0(ptr {{[^,]*}} %{{.*}}, ptr getelementptr inbounds (ptr, ptr @_ZTTN14noninline_virt1CE, i64 1))
   // ITANIUM: store {{.*}} @_ZTVN14noninline_virt1CE
 
   // C constructor forwards to B constructor and A constructor. We pass the args
@@ -166,7 +166,7 @@ namespace inalloca_nonvirt {
   // WIN64: call {{.*}} @"??0Q@@QEAA@H@Z"(ptr {{[^,]*}} %[[ARG3]], i32 3)
   // WIN64: call {{.*}} @"??0Q@@QEAA@H@Z"(ptr {{[^,]*}} %[[ARG1]], i32 1)
   // WIN64: call {{.*}} @"??0Z@@QEAA@XZ"(
-  // WIN64: call {{.*}} @"??0A@inalloca_nonvirt@@QEAA@UQ@@H0$$QEAU2@@Z"(ptr{{.*}}, ptr %[[ARG1]], i32 2, ptr %[[ARG3]], ptr{{.*}} %[[TMP]])
+  // WIN64: call {{.*}} @"??0A@inalloca_nonvirt@@QEAA@UQ@@H0$$QEAU2@@Z"(ptr{{.*}}, ptr dead_on_return %[[ARG1]], i32 2, ptr dead_on_return %[[ARG3]], ptr{{.*}} %[[TMP]])
   // WIN64: call {{.*}} @"??0Z@@QEAA@XZ"(
   // WIN64: call void @"??1Q@@QEAA@XZ"(ptr {{[^,]*}} %[[TMP]])
 
@@ -202,7 +202,7 @@ namespace inalloca_nonvirt {
   // WIN64: call {{.*}} @"??0Q@@QEAA@H@Z"(ptr {{[^,]*}} %[[ARG3]], i32 3)
   // WIN64: call {{.*}} @"??0Q@@QEAA@H@Z"(ptr {{[^,]*}} %[[ARG1]], i32 1)
   // WIN64: call {{.*}} @"??0Z@@QEAA@XZ"(
-  // WIN64: call {{.*}} @"??0A@inalloca_nonvirt@@QEAA@UQ@@H0$$QEAU2@@Z"(ptr{{.*}}, ptr %[[ARG1]], i32 2, ptr %[[ARG3]], ptr{{.*}} %[[TMP]])
+  // WIN64: call {{.*}} @"??0A@inalloca_nonvirt@@QEAA@UQ@@H0$$QEAU2@@Z"(ptr{{.*}}, ptr dead_on_return %[[ARG1]], i32 2, ptr dead_on_return %[[ARG3]], ptr{{.*}} %[[TMP]])
   // WIN64: call {{.*}} @"??0Z@@QEAA@XZ"(
   // WIN64: call void @"??1Q@@QEAA@XZ"(ptr {{[^,]*}} %[[TMP]])
 }
@@ -253,7 +253,7 @@ namespace inalloca_virt {
   // WIN64: call {{.*}} @"??0Q@@QEAA@H@Z"(ptr {{[^,]*}} %[[ARG3]], i32 3)
   // WIN64: call {{.*}} @"??0Q@@QEAA@H@Z"(ptr {{[^,]*}} %[[ARG1]], i32 1)
   // WIN64: br i1
-  // WIN64: call {{.*}} @"??0A@inalloca_virt@@QEAA@UQ@@H0$$QEAU2@@Z"(ptr{{.*}}, ptr %[[ARG1]], i32 2, ptr %[[ARG3]], ptr{{.*}} %[[TMP]])
+  // WIN64: call {{.*}} @"??0A@inalloca_virt@@QEAA@UQ@@H0$$QEAU2@@Z"(ptr{{.*}}, ptr dead_on_return %[[ARG1]], i32 2, ptr dead_on_return %[[ARG3]], ptr{{.*}} %[[TMP]])
   // WIN64: br
   // WIN64: call {{.*}} @"??0Z@@QEAA@XZ"(
   // WIN64: call {{.*}} @"??0Z@@QEAA@XZ"(
@@ -302,7 +302,7 @@ namespace inalloca_virt {
   // WIN64: call {{.*}} @"??0Q@@QEAA@H@Z"(ptr {{[^,]*}} %[[ARG1]], i32 1)
   // WIN64: br i1
   // WIN64: store {{.*}} @"??_8C@inalloca_virt@@7B@"
-  // WIN64: call {{.*}} @"??0A@inalloca_virt@@QEAA@UQ@@H0$$QEAU2@@Z"(ptr{{.*}}, ptr %[[ARG1]], i32 2, ptr %[[ARG3]], ptr{{.*}} %[[TMP]])
+  // WIN64: call {{.*}} @"??0A@inalloca_virt@@QEAA@UQ@@H0$$QEAU2@@Z"(ptr{{.*}}, ptr dead_on_return %[[ARG1]], i32 2, ptr dead_on_return %[[ARG3]], ptr{{.*}} %[[TMP]])
   // WIN64: call {{.*}} @"??0Z@@QEAA@XZ"(
   // WIN64: call {{.*}} @"??0Z@@QEAA@XZ"(
   // WIN64: call void @"??1Q@@QEAA@XZ"(ptr {{[^,]*}} %[[TMP]])
@@ -371,7 +371,7 @@ namespace inline_virt {
   // ITANIUM: call void @_ZN1QC1Ei({{.*}}, i32 4)
   // ITANIUM: %[[A:.*]] = getelementptr {{.*}}, i{{32|64}} {{12|16}}
   // ITANIUM: call void ({{.*}}, ...) @_ZN11inline_virt1AC2E1QiS1_OS1_z(ptr {{[^,]*}} %[[A]], {{.*}}, i32 2, {{.*}}, {{.*}}, i32 5, i32 6)
-  // ITANIUM: call void @_ZN11inline_virt1BCI2NS_1AEE1QiS1_OS1_z({{[^,]*}}, ptr getelementptr inbounds ([2 x ptr], ptr @_ZTTN11inline_virt1CE, i64 0, i64 1))
+  // ITANIUM: call void @_ZN11inline_virt1BCI2NS_1AEE1QiS1_OS1_z({{[^,]*}}, ptr getelementptr inbounds (ptr, ptr @_ZTTN11inline_virt1CE, i64 1))
   // ITANIUM: store {{.*}} @_ZTVN11inline_virt1CE
   // ITANIUM: call void @_ZN1QD1Ev(
   // ITANIUM: call void @_ZN1QD1Ev(

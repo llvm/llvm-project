@@ -15,9 +15,10 @@ file at compile-time.
 Goal and usage
 ==============
 
-Users of sanitizer tools, such as :doc:`AddressSanitizer`, :doc:`ThreadSanitizer`
-or :doc:`MemorySanitizer` may want to disable or alter some checks for
-certain source-level entities to:
+Users of sanitizer tools, such as :doc:`AddressSanitizer`,
+:doc:`HardwareAssistedAddressSanitizerDesign`, :doc:`ThreadSanitizer`,
+:doc:`MemorySanitizer` or :doc:`UndefinedBehaviorSanitizer` may want to disable
+or alter some checks for certain source-level entities to:
 
 * speedup hot function, which is known to be correct;
 * ignore a function that does some low-level magic (e.g. walks through the
@@ -38,6 +39,7 @@ Example
   void bad_foo() {
     int *a = (int*)malloc(40);
     a[10] = 1;
+    free(a);
   }
   int main() { bad_foo(); }
   $ cat ignorelist.txt
@@ -47,6 +49,124 @@ Example
   # AddressSanitizer prints an error report.
   $ clang -fsanitize=address -fsanitize-ignorelist=ignorelist.txt foo.c ; ./a.out
   # No error report here.
+
+Usage with UndefinedBehaviorSanitizer
+=====================================
+
+``unsigned-integer-overflow``, ``signed-integer-overflow``,
+``implicit-signed-integer-truncation``,
+``implicit-unsigned-integer-truncation``, and ``enum`` sanitizers support the
+ability to adjust instrumentation based on type.
+
+By default, supported sanitizers will have their instrumentation disabled for
+entries specified within an ignorelist.
+
+.. code-block:: bash
+
+  $ cat foo.c
+  void foo() {
+    int a = 2147483647; // INT_MAX
+    ++a;                // Normally, an overflow with -fsanitize=signed-integer-overflow
+  }
+  $ cat ignorelist.txt
+  [signed-integer-overflow]
+  type:int
+  $ clang -fsanitize=signed-integer-overflow -fsanitize-ignorelist=ignorelist.txt foo.c ; ./a.out
+  # no signed-integer-overflow error
+
+For example, supplying the above ``ignorelist.txt`` to
+``-fsanitize-ignorelist=ignorelist.txt`` disables overflow sanitizer
+instrumentation for arithmetic operations containing values of type ``int``.
+
+The ``=sanitize`` category is also supported. Any ``=sanitize`` category
+entries enable sanitizer instrumentation, even if it was ignored by entries
+before. Entries can be ``src``, ``type``, ``global``, ``fun``, and
+``mainfile``.
+
+With this, one may disable instrumentation for some or all types and
+specifically allow instrumentation for one or many types -- including types
+created via ``typedef``. This is a way to achieve a sort of "allowlist" for
+supported sanitizers.
+
+.. code-block:: bash
+
+  $ cat ignorelist.txt
+  [implicit-signed-integer-truncation]
+  type:*
+  type:T=sanitize
+
+  $ cat foo.c
+  typedef char T;
+  typedef char U;
+  void foo(int toobig) {
+    T a = toobig;    // instrumented
+    U b = toobig;    // not instrumented
+    char c = toobig; // also not instrumented
+  }
+
+If multiple entries match the source, then the latest entry takes the
+precedence. Here are a few examples.
+
+.. code-block:: bash
+
+  $ cat ignorelist1.txt
+  # test.cc will not be instrumented.
+  src:*
+  src:*/mylib/*=sanitize
+  src:*/mylib/test.cc
+
+  $ cat ignorelist2.txt
+  # test.cc will be instrumented.
+  src:*
+  src:*/mylib/test.cc
+  src:*/mylib/*=sanitize
+
+  $ cat ignorelist3.txt
+  # Type T will not be instrumented.
+  type:*
+  type:T=sanitize
+  type:T
+
+  $ cat ignorelist4.txt
+  # Function `bad_bar` will be instrumented.
+  # Function `good_bar` will not be instrumented.
+  fun:*
+  fun:*bar
+  fun:bad_bar=sanitize
+
+Interaction with Overflow Behavior Types
+----------------------------------------
+
+The ``overflow_behavior`` attribute provides a more granular, source-level
+control that takes precedence over the Sanitizer Special Case List. If a type
+is given an ``overflow_behavior`` attribute, it will override any matching
+``type:`` entry in a special case list.
+
+This allows developers to enforce a specific overflow behavior for a critical
+type, even if a broader rule in the special case list would otherwise disable
+instrumentation for it.
+
+.. code-block:: bash
+
+  $ cat ignorelist.txt
+  # Disable signed overflow checks for all types by default.
+  [signed-integer-overflow]
+  type:*
+
+  $ cat foo.c
+  // Force 'critical_type' to always have overflow checks,
+  // overriding the ignorelist.
+  typedef int __attribute__((overflow_behavior(trap))) critical_type;
+
+  void foo(int x) {
+    critical_type a = x;
+    a++; // Overflow is checked here due to the 'trap' attribute.
+
+    int b = x;
+    b++; // Overflow is NOT checked here due to the ignorelist.
+  }
+
+For more details on overflow behavior types, see :doc:`OverflowBehaviorTypes`.
 
 Format
 ======
@@ -85,7 +205,6 @@ tool-specific docs.
 
 .. code-block:: bash
 
-    # The line above is explained in the note above
     # Lines starting with # are ignored.
     # Turn off checks for the source file
     # Entries without sections are placed into [*] and apply to all sanitizers

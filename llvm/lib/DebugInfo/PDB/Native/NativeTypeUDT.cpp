@@ -8,7 +8,6 @@
 
 #include "llvm/DebugInfo/PDB/Native/NativeTypeUDT.h"
 #include "llvm/DebugInfo/CodeView/CodeView.h"
-#include "llvm/DebugInfo/PDB/IPDBEnumChildren.h"
 #include "llvm/DebugInfo/PDB/Native/NativeSession.h"
 #include "llvm/DebugInfo/PDB/Native/SymbolCache.h"
 #include "llvm/DebugInfo/PDB/PDBExtras.h"

@@ -70,6 +70,7 @@ private:
   // The primitive representing the integral.
   using ReprT = typename Repr<Bits, Signed>::Type;
   ReprT V;
+  static_assert(std::is_trivially_copyable_v<ReprT>);
 
   /// Primitive representing limits.
   static const auto Min = std::numeric_limits<ReprT>::min();
@@ -98,6 +99,9 @@ public:
   bool operator>=(Integral RHS) const { return V >= RHS.V; }
   bool operator==(Integral RHS) const { return V == RHS.V; }
   bool operator!=(Integral RHS) const { return V != RHS.V; }
+  bool operator>=(unsigned RHS) const {
+    return static_cast<unsigned>(V) >= RHS;
+  }
 
   bool operator>(unsigned RHS) const {
     return V >= 0 && static_cast<unsigned>(V) > RHS;
@@ -122,7 +126,9 @@ public:
   APSInt toAPSInt() const {
     return APSInt(APInt(Bits, static_cast<uint64_t>(V), Signed), !Signed);
   }
-  APSInt toAPSInt(unsigned BitWidth) const { return APSInt(toAPInt(BitWidth)); }
+  APSInt toAPSInt(unsigned BitWidth) const {
+    return APSInt(toAPInt(BitWidth), !Signed);
+  }
   APInt toAPInt(unsigned BitWidth) const {
     if constexpr (Signed)
       return APInt(Bits, static_cast<uint64_t>(V), Signed)
@@ -154,6 +160,18 @@ public:
     return Compare(V, RHS.V);
   }
 
+  void bitcastToMemory(std::byte *Dest) const {
+    std::memcpy(Dest, &V, sizeof(V));
+  }
+
+  static Integral bitcastFromMemory(const std::byte *Src, unsigned BitWidth) {
+    assert(BitWidth == sizeof(ReprT) * 8);
+    ReprT V;
+
+    std::memcpy(&V, Src, sizeof(ReprT));
+    return Integral(V);
+  }
+
   std::string toDiagnosticString(const ASTContext &Ctx) const {
     std::string NameStr;
     llvm::raw_string_ostream OS(NameStr);
@@ -164,10 +182,14 @@ public:
   unsigned countLeadingZeros() const {
     if constexpr (!Signed)
       return llvm::countl_zero<ReprT>(V);
-    llvm_unreachable("Don't call countLeadingZeros() on signed types.");
+    if (isPositive())
+      return llvm::countl_zero<typename AsUnsigned::ReprT>(
+          static_cast<typename AsUnsigned::ReprT>(V));
+    llvm_unreachable("Don't call countLeadingZeros() on negative values.");
   }
 
   Integral truncate(unsigned TruncBits) const {
+    assert(TruncBits >= 1);
     if (TruncBits >= Bits)
       return *this;
     const ReprT BitMask = (ReprT(1) << ReprT(TruncBits)) - 1;
@@ -180,28 +202,19 @@ public:
 
   static Integral min(unsigned NumBits) { return Integral(Min); }
   static Integral max(unsigned NumBits) { return Integral(Max); }
+  static Integral zero(unsigned BitWidth = 0) { return from(0); }
 
-  template <typename ValT> static Integral from(ValT Value) {
-    if constexpr (std::is_integral<ValT>::value)
+  template <typename ValT>
+  static Integral from(ValT Value, unsigned NumBits = 0) {
+    if constexpr (std::is_integral_v<ValT>)
       return Integral(Value);
     else
-      return Integral::from(static_cast<Integral::ReprT>(Value));
+      return Integral(static_cast<Integral::ReprT>(Value));
   }
 
   template <unsigned SrcBits, bool SrcSign>
-  static std::enable_if_t<SrcBits != 0, Integral>
-  from(Integral<SrcBits, SrcSign> Value) {
+  static Integral from(Integral<SrcBits, SrcSign> Value) {
     return Integral(Value.V);
-  }
-
-  static Integral zero() { return from(0); }
-
-  template <typename T> static Integral from(T Value, unsigned NumBits) {
-    return Integral(Value);
-  }
-
-  static bool inRange(int64_t Value, unsigned NumBits) {
-    return CheckRange<ReprT, Min, Max>(Value);
   }
 
   static bool increment(Integral A, Integral *R) {
@@ -296,16 +309,14 @@ private:
   template <typename T> static bool CheckMulUB(T A, T B, T &R) {
     if constexpr (std::is_signed_v<T>) {
       return llvm::MulOverflow<T>(A, B, R);
+    } else if constexpr (sizeof(T) < sizeof(int)) {
+      // Silly integer promotion rules will convert both A and B to int,
+      // even it T is unsigned. Prevent that by manually casting to uint first.
+      R = static_cast<T>(static_cast<unsigned>(A) * static_cast<unsigned>(B));
+      return false;
     } else {
       R = A * B;
       return false;
-    }
-  }
-  template <typename T, T Min, T Max> static bool CheckRange(int64_t V) {
-    if constexpr (std::is_signed_v<T>) {
-      return Min <= V && V <= Max;
-    } else {
-      return V >= 0 && static_cast<uint64_t>(V) <= Max;
     }
   }
 };

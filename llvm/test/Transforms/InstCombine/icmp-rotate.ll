@@ -161,7 +161,7 @@ define i1 @ror_ne_cst(i8 %x) {
 
 define <2 x i1> @rol_eq_cst_vec(<2 x i5> %x) {
 ; CHECK-LABEL: @rol_eq_cst_vec(
-; CHECK-NEXT:    [[R:%.*]] = icmp eq <2 x i5> [[X:%.*]], <i5 8, i5 8>
+; CHECK-NEXT:    [[R:%.*]] = icmp eq <2 x i5> [[X:%.*]], splat (i5 8)
 ; CHECK-NEXT:    ret <2 x i1> [[R]]
 ;
   %f = tail call <2 x i5> @llvm.fshl.v2i5(<2 x i5> %x, <2 x i5> %x, <2 x i5> <i5 3, i5 3>)
@@ -171,7 +171,7 @@ define <2 x i1> @rol_eq_cst_vec(<2 x i5> %x) {
 
 define <2 x i1> @rol_eq_cst_undef(<2 x i5> %x) {
 ; CHECK-LABEL: @rol_eq_cst_undef(
-; CHECK-NEXT:    [[F:%.*]] = tail call <2 x i5> @llvm.fshl.v2i5(<2 x i5> [[X:%.*]], <2 x i5> [[X]], <2 x i5> <i5 3, i5 3>)
+; CHECK-NEXT:    [[F:%.*]] = tail call <2 x i5> @llvm.fshl.v2i5(<2 x i5> [[X:%.*]], <2 x i5> [[X]], <2 x i5> splat (i5 3))
 ; CHECK-NEXT:    [[R:%.*]] = icmp eq <2 x i5> [[F]], <i5 2, i5 undef>
 ; CHECK-NEXT:    ret <2 x i1> [[R]]
 ;

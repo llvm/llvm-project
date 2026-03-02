@@ -1352,7 +1352,7 @@ define <vscale x 16 x i8> @asr_i8_all_active(<vscale x 16 x i8> %a) {
 define <vscale x 16 x i8> @asr_i8_too_small(<vscale x 16 x i1> %pg, <vscale x 16 x i8> %a) {
 ; CHECK-LABEL: asr_i8_too_small:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    mov z1.b, #0 // =0x0
+; CHECK-NEXT:    movi v1.2d, #0000000000000000
 ; CHECK-NEXT:    asr z0.b, p0/m, z0.b, z1.b
 ; CHECK-NEXT:    ret
   %out = call <vscale x 16 x i8> @llvm.aarch64.sve.asr.nxv16i8(<vscale x 16 x i1> %pg,
@@ -1388,7 +1388,7 @@ define <vscale x 8 x i16> @asr_i16_all_active(<vscale x 8 x i16> %a) {
 define <vscale x 8 x i16> @asr_i16_too_small(<vscale x 8 x i1> %pg, <vscale x 8 x i16> %a) {
 ; CHECK-LABEL: asr_i16_too_small:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    mov z1.h, #0 // =0x0
+; CHECK-NEXT:    movi v1.2d, #0000000000000000
 ; CHECK-NEXT:    asr z0.h, p0/m, z0.h, z1.h
 ; CHECK-NEXT:    ret
   %out = call <vscale x 8 x i16> @llvm.aarch64.sve.asr.nxv8i16(<vscale x 8 x i1> %pg,
@@ -1424,7 +1424,7 @@ define <vscale x 4 x i32> @asr_i32_all_active(<vscale x 4 x i32> %a) {
 define <vscale x 4 x i32> @asr_i32_too_small(<vscale x 4 x i1> %pg, <vscale x 4 x i32> %a) {
 ; CHECK-LABEL: asr_i32_too_small:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    mov z1.s, #0 // =0x0
+; CHECK-NEXT:    movi v1.2d, #0000000000000000
 ; CHECK-NEXT:    asr z0.s, p0/m, z0.s, z1.s
 ; CHECK-NEXT:    ret
   %out = call <vscale x 4 x i32> @llvm.aarch64.sve.asr.nxv4i32(<vscale x 4 x i1> %pg,
@@ -1460,7 +1460,7 @@ define <vscale x 2 x i64> @asr_i64_all_active(<vscale x 2 x i64> %a) {
 define <vscale x 2 x i64> @asr_i64_too_small(<vscale x 2 x i1> %pg, <vscale x 2 x i64> %a) {
 ; CHECK-LABEL: asr_i64_too_small:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    mov z1.d, #0 // =0x0
+; CHECK-NEXT:    movi v1.2d, #0000000000000000
 ; CHECK-NEXT:    asr z0.d, p0/m, z0.d, z1.d
 ; CHECK-NEXT:    ret
   %out = call <vscale x 2 x i64> @llvm.aarch64.sve.asr.nxv2i64(<vscale x 2 x i1> %pg,
@@ -1688,7 +1688,7 @@ define <vscale x 16 x i8> @lsr_i8_all_active(<vscale x 16 x i8> %a) {
 define <vscale x 16 x i8> @lsr_i8_too_small(<vscale x 16 x i1> %pg, <vscale x 16 x i8> %a) {
 ; CHECK-LABEL: lsr_i8_too_small:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    mov z1.b, #0 // =0x0
+; CHECK-NEXT:    movi v1.2d, #0000000000000000
 ; CHECK-NEXT:    lsr z0.b, p0/m, z0.b, z1.b
 ; CHECK-NEXT:    ret
   %out = call <vscale x 16 x i8> @llvm.aarch64.sve.lsr.nxv16i8(<vscale x 16 x i1> %pg,
@@ -1724,7 +1724,7 @@ define <vscale x 8 x i16> @lsr_i16_all_active(<vscale x 8 x i16> %a) {
 define <vscale x 8 x i16> @lsr_i16_too_small(<vscale x 8 x i1> %pg, <vscale x 8 x i16> %a) {
 ; CHECK-LABEL: lsr_i16_too_small:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    mov z1.h, #0 // =0x0
+; CHECK-NEXT:    movi v1.2d, #0000000000000000
 ; CHECK-NEXT:    lsr z0.h, p0/m, z0.h, z1.h
 ; CHECK-NEXT:    ret
   %out = call <vscale x 8 x i16> @llvm.aarch64.sve.lsr.nxv8i16(<vscale x 8 x i1> %pg,
@@ -1760,7 +1760,7 @@ define <vscale x 4 x i32> @lsr_i32_all_active(<vscale x 4 x i32> %a) {
 define <vscale x 4 x i32> @lsr_i32_too_small(<vscale x 4 x i1> %pg, <vscale x 4 x i32> %a) {
 ; CHECK-LABEL: lsr_i32_too_small:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    mov z1.s, #0 // =0x0
+; CHECK-NEXT:    movi v1.2d, #0000000000000000
 ; CHECK-NEXT:    lsr z0.s, p0/m, z0.s, z1.s
 ; CHECK-NEXT:    ret
   %out = call <vscale x 4 x i32> @llvm.aarch64.sve.lsr.nxv4i32(<vscale x 4 x i1> %pg,
@@ -1796,7 +1796,7 @@ define <vscale x 2 x i64> @lsr_i64_all_active(<vscale x 2 x i64> %a) {
 define <vscale x 2 x i64> @lsr_i64_too_small(<vscale x 2 x i1> %pg, <vscale x 2 x i64> %a) {
 ; CHECK-LABEL: lsr_i64_too_small:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    mov z1.d, #0 // =0x0
+; CHECK-NEXT:    movi v1.2d, #0000000000000000
 ; CHECK-NEXT:    lsr z0.d, p0/m, z0.d, z1.d
 ; CHECK-NEXT:    ret
   %out = call <vscale x 2 x i64> @llvm.aarch64.sve.lsr.nxv2i64(<vscale x 2 x i1> %pg,

@@ -1,0 +1,27 @@
+# RUN: llc -o - %s -mtriple=s390x-linux-gnu -mcpu=z16 -verify-machineinstrs \
+# RUN:   -start-before=greedy | FileCheck %s
+
+# Test spilling / reloading of an vr16bit virtual register.
+
+---
+name: fun0
+tracksRegLiveness: true
+body:             |
+  bb.0:
+    liveins: $r2d, $r3d
+
+    ; CHECK-LABEL: fun0:
+    ; CHECK:       vlreph %v0, 0(%r2)
+    ; CHECK-NEXT:  vsteh %v0, 166(%r15), 0        # 2-byte Spill
+    ; CHECK-NEXT:  #APP
+    ; CHECK-NEXT:  #NO_APP
+    ; CHECK-NEXT:  vlreph %v0, 166(%r15)          # 2-byte Reload
+    ; CHECK-NEXT:  vsteh %v0, 0(%r3), 0
+
+    %1:addr64bit = COPY $r3d
+    %0:addr64bit = COPY $r2d
+    %2:vr16bit = VL16 %0, 0, $noreg
+    INLINEASM &"", 1, 12, implicit-def dead early-clobber $f0d, 12, implicit-def dead early-clobber $f1d, 12, implicit-def dead early-clobber $f2d, 12, implicit-def dead early-clobber $f3d, 12, implicit-def dead early-clobber $f4d, 12, implicit-def dead early-clobber $f5d, 12, implicit-def dead early-clobber $f6d, 12, implicit-def dead early-clobber $f7d, 12, implicit-def dead early-clobber $f8d, 12, implicit-def dead early-clobber $f9d, 12, implicit-def dead early-clobber $f10d, 12, implicit-def dead early-clobber $f11d, 12, implicit-def dead early-clobber $f12d, 12, implicit-def dead early-clobber $f13d, 12, implicit-def dead early-clobber $f14d, 12, implicit-def dead early-clobber $f14d, 12, implicit-def dead early-clobber $f15d, 12, implicit-def dead early-clobber $f16d, 12, implicit-def dead early-clobber $f17d, 12, implicit-def dead early-clobber $f18d, 12, implicit-def dead early-clobber $f19d, 12, implicit-def dead early-clobber $f20d, 12, implicit-def dead early-clobber $f21d, 12, implicit-def dead early-clobber $f22d, 12, implicit-def dead early-clobber $f23d, 12, implicit-def dead early-clobber $f24d, 12, implicit-def dead early-clobber $f25d, 12, implicit-def dead early-clobber $f26d, 12, implicit-def dead early-clobber $f27d, 12, implicit-def dead early-clobber $f28d, 12, implicit-def dead early-clobber $f29d, 12, implicit-def dead early-clobber $f30d, 12, implicit-def dead early-clobber $f31d
+    VST16 %2, %1, 0, $noreg
+    Return
+...

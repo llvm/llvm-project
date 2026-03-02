@@ -36,8 +36,7 @@ define double @fneg(double %a) nounwind {
 ;
 ; RV32IZFINXZDINX-LABEL: fneg:
 ; RV32IZFINXZDINX:       # %bb.0:
-; RV32IZFINXZDINX-NEXT:    lui a2, 524288
-; RV32IZFINXZDINX-NEXT:    xor a1, a1, a2
+; RV32IZFINXZDINX-NEXT:    fneg.d a0, a0
 ; RV32IZFINXZDINX-NEXT:    ret
 ;
 ; RV64I-LABEL: fneg:
@@ -62,8 +61,6 @@ define double @fneg(double %a) nounwind {
   ret double %1
 }
 
-declare double @llvm.fabs.f64(double)
-
 define double @fabs(double %a) nounwind {
 ; RV32I-LABEL: fabs:
 ; RV32I:       # %bb.0:
@@ -79,8 +76,7 @@ define double @fabs(double %a) nounwind {
 ;
 ; RV32IZFINXZDINX-LABEL: fabs:
 ; RV32IZFINXZDINX:       # %bb.0:
-; RV32IZFINXZDINX-NEXT:    slli a1, a1, 1
-; RV32IZFINXZDINX-NEXT:    srli a1, a1, 1
+; RV32IZFINXZDINX-NEXT:    fabs.d a0, a0
 ; RV32IZFINXZDINX-NEXT:    ret
 ;
 ; RV64I-LABEL: fabs:
@@ -103,8 +99,6 @@ define double @fabs(double %a) nounwind {
   ret double %1
 }
 
-declare double @llvm.copysign.f64(double, double)
-
 ; DAGTypeLegalizer::SoftenFloatRes_FCOPYSIGN will convert to bitwise
 ; operations if floating point isn't supported. A combine could be written to
 ; do the same even when f64 is legal.
@@ -114,8 +108,8 @@ define double @fcopysign_fneg(double %a, double %b) nounwind {
 ; RV32I:       # %bb.0:
 ; RV32I-NEXT:    not a2, a3
 ; RV32I-NEXT:    lui a3, 524288
-; RV32I-NEXT:    and a2, a2, a3
 ; RV32I-NEXT:    slli a1, a1, 1
+; RV32I-NEXT:    and a2, a2, a3
 ; RV32I-NEXT:    srli a1, a1, 1
 ; RV32I-NEXT:    or a1, a1, a2
 ; RV32I-NEXT:    ret

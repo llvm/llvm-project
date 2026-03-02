@@ -65,7 +65,7 @@ define void @update(ptr %dst, ptr %src, i32 %n) nounwind {
 ; SSE41-NEXT:    psubw %xmm0, %xmm1
 ; SSE41-NEXT:    movdqa %xmm1, %xmm2
 ; SSE41-NEXT:    psllw $2, %xmm2
-; SSE41-NEXT:    psllw $1, %xmm1
+; SSE41-NEXT:    paddw %xmm1, %xmm1
 ; SSE41-NEXT:    pblendw {{.*#+}} xmm2 = xmm1[0],xmm2[1],xmm1[2,3,4,5,6,7]
 ; SSE41-NEXT:    pextrw $4, %xmm1, 8(%rcx,%rax)
 ; SSE41-NEXT:    movq %xmm2, (%rcx,%rax)

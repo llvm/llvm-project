@@ -5,7 +5,7 @@
 
 ; RUN: opt %s -o %t.o
 ; RUN: not llvm-lto2 run -load-pass-plugin=%t/nonexistent.so %t.o -o %t \
-; RUN:     -r %t.o,test 2>&1 | \
+; RUN:     -r %t.o,test,plx 2>&1 | \
 ; RUN:   FileCheck %s
 
 ; CHECK: Could not load library {{.*}}nonexistent.so

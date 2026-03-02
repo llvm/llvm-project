@@ -1,4 +1,4 @@
-// RUN: mlir-opt --split-input-file --transform-interpreter="debug-payload-root-tag=payload" %s | FileCheck %s
+// RUN: mlir-opt --split-input-file --transform-interpreter %s | FileCheck %s
 
 // CHECK-LABEL: func @matmul_divisible
 //       CHECK:   scf.forall
@@ -7,38 +7,36 @@
 //       CHECK:     scf.for
 //       CHECK:       memref.alloc() : memref<128x16xf32, 3>
 //       CHECK:       scf.forall
-//       CHECK:         vector.create_mask
+//       CHECK:         vector.constant_mask [16, 4] : vector<128x4xi1>
 //       CHECK:         vector.transfer_read
 //       CHECK:         vector.transfer_write
 //       CHECK:       memref.alloc() : memref<16x128xf32, 3>
 //       CHECK:       scf.forall
-//       CHECK:         vector.create_mask
+//       CHECK:         vector.constant_mask [16, 4] : vector<128x4xi1>
 //       CHECK:         vector.transfer_read
 //       CHECK:         vector.transfer_write
 //       CHECK:       memref.alloc() : memref<128x128xf32, 3>
 //       CHECK:       scf.forall
-//       CHECK:         vector.create_mask
+//   CHECK-NOT:         mask
 //       CHECK:         vector.transfer_read
 //       CHECK:         vector.transfer_write
 //       CHECK:       linalg.matmul
 //       CHECK:       scf.forall
 //       CHECK:         vector.transfer_read
 //       CHECK:         vector.transfer_write
-module @payload attributes { transform.target_tag = "payload" } {
-  func.func @matmul_divisible(%A: tensor<1024x1024xf32>,
-                              %B: tensor<1024x1024xf32>,
-                              %C: tensor<1024x1024xf32>)
+func.func @matmul_divisible(%A: tensor<1024x1024xf32>,
+                            %B: tensor<1024x1024xf32>,
+                            %C: tensor<1024x1024xf32>)
+    -> tensor<1024x1024xf32>
+{
+  %cst = arith.constant 0.000000e+00 : f32
+  %0 = linalg.fill ins(%cst : f32)
+                   outs(%C : tensor<1024x1024xf32>)
       -> tensor<1024x1024xf32>
-  {
-    %cst = arith.constant 0.000000e+00 : f32
-    %0 = linalg.fill ins(%cst : f32)
-                     outs(%C : tensor<1024x1024xf32>)
-        -> tensor<1024x1024xf32>
-    %1 = linalg.matmul ins(%A, %B : tensor<1024x1024xf32>, tensor<1024x1024xf32>)
-                       outs(%0 : tensor<1024x1024xf32>)
-        -> tensor<1024x1024xf32>
-    return %1 : tensor<1024x1024xf32>
-  }
+  %1 = linalg.matmul ins(%A, %B : tensor<1024x1024xf32>, tensor<1024x1024xf32>)
+                     outs(%0 : tensor<1024x1024xf32>)
+      -> tensor<1024x1024xf32>
+  return %1 : tensor<1024x1024xf32>
 }
 
 module attributes {transform.with_named_sequence} {
@@ -145,21 +143,19 @@ module attributes {transform.with_named_sequence} {
 //       CHECK:       linalg.matmul
 //       CHECK:       vector.transfer_read
 //       CHECK:       vector.transfer_write
-module @payload attributes { transform.target_tag = "payload" } {
 func.func @matmul_not_divisible(%A: tensor<1023x1023xf32>,
-                                  %B: tensor<1023x1023xf32>,
-                                  %C: tensor<1023x1023xf32>)
+                                %B: tensor<1023x1023xf32>,
+                                %C: tensor<1023x1023xf32>)
+    -> tensor<1023x1023xf32>
+{
+  %cst = arith.constant 0.000000e+00 : f32
+  %0 = linalg.fill ins(%cst : f32)
+                   outs(%C : tensor<1023x1023xf32>)
       -> tensor<1023x1023xf32>
-  {
-    %cst = arith.constant 0.000000e+00 : f32
-    %0 = linalg.fill ins(%cst : f32)
-                     outs(%C : tensor<1023x1023xf32>)
-        -> tensor<1023x1023xf32>
-    %1 = linalg.matmul ins(%A, %B : tensor<1023x1023xf32>, tensor<1023x1023xf32>)
-                       outs(%0 : tensor<1023x1023xf32>)
-        -> tensor<1023x1023xf32>
-    return %1 : tensor<1023x1023xf32>
-  }
+  %1 = linalg.matmul ins(%A, %B : tensor<1023x1023xf32>, tensor<1023x1023xf32>)
+                     outs(%0 : tensor<1023x1023xf32>)
+      -> tensor<1023x1023xf32>
+  return %1 : tensor<1023x1023xf32>
 }
 
 module attributes {transform.with_named_sequence} {

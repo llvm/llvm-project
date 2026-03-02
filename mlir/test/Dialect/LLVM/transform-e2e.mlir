@@ -1,17 +1,15 @@
-// RUN: mlir-opt %s --transform-interpreter="debug-payload-root-tag=payload" -test-transform-dialect-erase-schedule --test-lower-to-llvm --split-input-file | FileCheck %s
+// RUN: mlir-opt %s --transform-interpreter -test-transform-dialect-erase-schedule --test-lower-to-llvm --split-input-file | FileCheck %s
 
 // CHECK-LABEL: llvm.func @matmul_tensors
-module @payload attributes { transform.target_tag = "payload" } {
-  func.func @matmul_tensors(
-    %arg0: tensor<2x4xf32>, %arg1: tensor<4x6xf32>, %arg2: tensor<2x6xf32>)
-      -> tensor<2x6xf32> {
-  // CHECK-NOT: linalg
-  // CHECK: llvm.intr.fmuladd{{.*}}
-    %0 = linalg.matmul  ins(%arg0, %arg1: tensor<2x4xf32>, tensor<4x6xf32>)
-                       outs(%arg2: tensor<2x6xf32>)
-      -> tensor<2x6xf32>
-    return %0 : tensor<2x6xf32>
-  }
+func.func @matmul_tensors(
+  %arg0: tensor<2x4xf32>, %arg1: tensor<4x6xf32>, %arg2: tensor<2x6xf32>)
+    -> tensor<2x6xf32> {
+// CHECK-NOT: linalg
+// CHECK: llvm.intr.fmuladd{{.*}}
+  %0 = linalg.matmul  ins(%arg0, %arg1: tensor<2x4xf32>, tensor<4x6xf32>)
+                     outs(%arg2: tensor<2x6xf32>)
+    -> tensor<2x6xf32>
+  return %0 : tensor<2x6xf32>
 }
 
 module attributes {transform.with_named_sequence} {
@@ -32,7 +30,9 @@ module attributes {transform.with_named_sequence} {
     transform.apply_patterns to %f {
       transform.apply_patterns.vector.lower_contraction lowering_strategy = "outerproduct"
       transform.apply_patterns.vector.transfer_permutation_patterns
-      transform.apply_patterns.vector.lower_multi_reduction lowering_strategy = "innerparallel"
+      transform.apply_patterns.vector.reorder_and_expand_multi_reduction_dims lowering_strategy = "innerparallel"
+      transform.apply_patterns.vector.multi_reduction_flattening lowering_strategy = "innerparallel"
+      transform.apply_patterns.vector.multi_reduction_unrolling lowering_strategy = "innerparallel"
       transform.apply_patterns.vector.split_transfer_full_partial split_transfer_strategy = "linalg-copy"
       transform.apply_patterns.vector.transfer_to_scf max_transfer_rank = 1 full_unroll = true
       transform.apply_patterns.vector.lower_transfer max_transfer_rank = 1

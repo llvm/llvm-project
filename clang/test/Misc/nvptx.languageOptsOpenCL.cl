@@ -28,6 +28,11 @@
 #endif
 #pragma OPENCL EXTENSION __cl_clang_variadic_functions : enable
 
+#ifndef __cl_clang_function_scope_local_variables
+#error "Missing __cl_clang_function_scope_local_variables define"
+#endif
+#pragma OPENCL EXTENSION __cl_clang_function_scope_local_variables : enable
+
 #ifndef __cl_clang_non_portable_kernel_param_types
 #error "Missing __cl_clang_non_portable_kernel_param_types define"
 #endif
@@ -132,3 +137,11 @@
 #pragma OPENCL EXTENSION cl_khr_subgroups: enable
 // expected-warning@-1{{unsupported OpenCL extension 'cl_khr_subgroups' - ignoring}}
 
+#if (__OPENCL_C_VERSION__ >= 300)
+#ifndef __opencl_c_generic_address_space
+#error "Missing __opencl_c_generic_address_space define"
+#else
+#error "Incorrect __opencl_c_generic_address_space define"
+#endif
+#pragma OPENCL EXTENSION __opencl_c_generic_address_space: enable
+#endif

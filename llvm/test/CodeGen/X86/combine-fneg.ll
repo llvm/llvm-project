@@ -205,4 +205,113 @@ define <4 x float> @fneg(<4 x float> %Q) nounwind {
   ret <4 x float> %tmp
 }
 
+; store(fneg(load())) - convert scalar to integer
+define void @fneg_int_rmw_half(ptr %ptr) nounwind {
+; X86-SSE-LABEL: fneg_int_rmw_half:
+; X86-SSE:       # %bb.0:
+; X86-SSE-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; X86-SSE-NEXT:    xorb $-128, 1(%eax)
+; X86-SSE-NEXT:    retl
+;
+; X64-SSE-LABEL: fneg_int_rmw_half:
+; X64-SSE:       # %bb.0:
+; X64-SSE-NEXT:    xorb $-128, 1(%rdi)
+; X64-SSE-NEXT:    retq
+  %1 = load half, ptr %ptr
+  %2 = fneg half %1
+  store half %2, ptr %ptr
+  ret void
+}
 
+define void @fneg_int_bfloat(ptr %src, ptr %dst) nounwind {
+; X86-SSE-LABEL: fneg_int_bfloat:
+; X86-SSE:       # %bb.0:
+; X86-SSE-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; X86-SSE-NEXT:    movl {{[0-9]+}}(%esp), %ecx
+; X86-SSE-NEXT:    movzwl (%ecx), %ecx
+; X86-SSE-NEXT:    xorl $32768, %ecx # imm = 0x8000
+; X86-SSE-NEXT:    movw %cx, (%eax)
+; X86-SSE-NEXT:    retl
+;
+; X64-SSE-LABEL: fneg_int_bfloat:
+; X64-SSE:       # %bb.0:
+; X64-SSE-NEXT:    movzwl (%rdi), %eax
+; X64-SSE-NEXT:    xorl $32768, %eax # imm = 0x8000
+; X64-SSE-NEXT:    movw %ax, (%rsi)
+; X64-SSE-NEXT:    retq
+  %1 = load bfloat, ptr %src
+  %2 = fneg bfloat %1
+  store bfloat %2, ptr %dst
+  ret void
+}
+
+define void @fneg_int_rmw_f32(ptr %ptr) {
+; X86-SSE-LABEL: fneg_int_rmw_f32:
+; X86-SSE:       # %bb.0:
+; X86-SSE-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; X86-SSE-NEXT:    xorb $-128, 3(%eax)
+; X86-SSE-NEXT:    retl
+;
+; X64-SSE-LABEL: fneg_int_rmw_f32:
+; X64-SSE:       # %bb.0:
+; X64-SSE-NEXT:    xorb $-128, 3(%rdi)
+; X64-SSE-NEXT:    retq
+  %1 = load float, ptr %ptr
+  %2 = fneg float %1
+  store float %2, ptr %ptr
+  ret void
+}
+
+define void @fneg_int_f64(ptr %src, ptr %dst) {
+; X86-SSE1-LABEL: fneg_int_f64:
+; X86-SSE1:       # %bb.0:
+; X86-SSE1-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; X86-SSE1-NEXT:    movl {{[0-9]+}}(%esp), %ecx
+; X86-SSE1-NEXT:    fldl (%ecx)
+; X86-SSE1-NEXT:    fchs
+; X86-SSE1-NEXT:    fstpl (%eax)
+; X86-SSE1-NEXT:    retl
+;
+; X86-SSE2-LABEL: fneg_int_f64:
+; X86-SSE2:       # %bb.0:
+; X86-SSE2-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; X86-SSE2-NEXT:    movl {{[0-9]+}}(%esp), %ecx
+; X86-SSE2-NEXT:    movsd {{.*#+}} xmm0 = mem[0],zero
+; X86-SSE2-NEXT:    xorps {{\.?LCPI[0-9]+_[0-9]+}}, %xmm0
+; X86-SSE2-NEXT:    movlps %xmm0, (%eax)
+; X86-SSE2-NEXT:    retl
+;
+; X64-SSE-LABEL: fneg_int_f64:
+; X64-SSE:       # %bb.0:
+; X64-SSE-NEXT:    movabsq $-9223372036854775808, %rax # imm = 0x8000000000000000
+; X64-SSE-NEXT:    xorq (%rdi), %rax
+; X64-SSE-NEXT:    movq %rax, (%rsi)
+; X64-SSE-NEXT:    retq
+  %1 = load double, ptr %src
+  %2 = fneg double %1
+  store double %2, ptr %dst
+  ret void
+}
+
+; don't convert vector to scalar
+define void @fneg_int_v4f32(ptr %src, ptr %dst) {
+; X86-SSE-LABEL: fneg_int_v4f32:
+; X86-SSE:       # %bb.0:
+; X86-SSE-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; X86-SSE-NEXT:    movl {{[0-9]+}}(%esp), %ecx
+; X86-SSE-NEXT:    movaps (%ecx), %xmm0
+; X86-SSE-NEXT:    xorps {{\.?LCPI[0-9]+_[0-9]+}}, %xmm0
+; X86-SSE-NEXT:    movaps %xmm0, (%eax)
+; X86-SSE-NEXT:    retl
+;
+; X64-SSE-LABEL: fneg_int_v4f32:
+; X64-SSE:       # %bb.0:
+; X64-SSE-NEXT:    movaps (%rdi), %xmm0
+; X64-SSE-NEXT:    xorps {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
+; X64-SSE-NEXT:    movaps %xmm0, (%rsi)
+; X64-SSE-NEXT:    retq
+  %1 = load <4 x float>, ptr %src
+  %2 = fneg <4 x float> %1
+  store <4 x float> %2, ptr %dst
+  ret void
+}

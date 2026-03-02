@@ -492,3 +492,98 @@ func.func @abs_poison() -> f32 {
   %1 = math.absf %0 : f32
   return %1 : f32
 }
+
+// CHECK-LABEL: @isfinite_fold
+// CHECK: %[[cst:.+]] = arith.constant true
+// CHECK: return %[[cst]]
+func.func @isfinite_fold() -> i1 {
+  %c = arith.constant 2.0 : f32
+  %r = math.isfinite %c : f32
+  return %r : i1
+}
+
+// CHECK-LABEL: @isfinite_fold_vec
+// CHECK: %[[cst:.+]] = arith.constant dense<true> : vector<4xi1>
+// CHECK: return %[[cst]]
+func.func @isfinite_fold_vec() -> (vector<4xi1>) {
+  %v1 = arith.constant dense<2.0> : vector<4xf32>
+  %0 = math.isfinite %v1 : vector<4xf32>
+  return %0 : vector<4xi1>
+}
+
+// CHECK-LABEL: @isinf_fold
+// CHECK: %[[cst:.+]] = arith.constant false
+// CHECK: return %[[cst]]
+func.func @isinf_fold() -> i1 {
+  %c = arith.constant 2.0 : f32
+  %r = math.isinf %c : f32
+  return %r : i1
+}
+
+// CHECK-LABEL: @isinf_fold_vec
+// CHECK: %[[cst:.+]] = arith.constant dense<false> : vector<4xi1>
+// CHECK: return %[[cst]]
+func.func @isinf_fold_vec() -> (vector<4xi1>) {
+  %v1 = arith.constant dense<2.0> : vector<4xf32>
+  %0 = math.isinf %v1 : vector<4xf32>
+  return %0 : vector<4xi1>
+}
+
+// CHECK-LABEL: @isnan_fold
+// CHECK: %[[cst:.+]] = arith.constant false
+// CHECK: return %[[cst]]
+func.func @isnan_fold() -> i1 {
+  %c = arith.constant 2.0 : f32
+  %r = math.isnan %c : f32
+  return %r : i1
+}
+
+// CHECK-LABEL: @isnan_fold_vec
+// CHECK: %[[cst:.+]] = arith.constant dense<false> : vector<4xi1>
+// CHECK: return %[[cst]]
+func.func @isnan_fold_vec() -> (vector<4xi1>) {
+  %v1 = arith.constant dense<2.0> : vector<4xf32>
+  %0 = math.isnan %v1 : vector<4xf32>
+  return %0 : vector<4xi1>
+}
+
+// CHECK-LABEL: @isnormal_fold
+// CHECK: %[[cst:.+]] = arith.constant true
+// CHECK: return %[[cst]]
+func.func @isnormal_fold() -> i1 {
+  %c = arith.constant 2.0 : f32
+  %r = math.isnormal %c : f32
+  return %r : i1
+}
+
+// CHECK-LABEL: @isnormal_fold_vec
+// CHECK: %[[cst:.+]] = arith.constant dense<true> : vector<4xi1>
+// CHECK: return %[[cst]]
+func.func @isnormal_fold_vec() -> (vector<4xi1>) {
+  %v1 = arith.constant dense<2.0> : vector<4xf32>
+  %0 = math.isnormal %v1 : vector<4xf32>
+  return %0 : vector<4xi1>
+}
+
+// CHECK-LABEL: func.func @ipowi_i1_const_pos_exp
+// CHECK: %[[T:.+]] = arith.constant true
+// CHECK: %[[F:.+]] = arith.constant false
+// CHECK: %[[R:.+]] = math.ipowi %[[T]], %[[F]] : i1
+// CHECK: return %[[R]] : i1
+func.func @ipowi_i1_const_pos_exp() -> i1 {
+  %b = arith.constant true    
+  %e = arith.constant false   
+  %r = math.ipowi %b, %e : i1
+  return %r : i1
+}
+
+// CHECK-LABEL: func.func @ipowi_i1_const_neg_exp
+// CHECK: %[[T:.+]] = arith.constant true
+// CHECK: %[[R:.+]] = math.ipowi %[[T]], %[[T]] : i1
+// CHECK: return %[[R]] : i1
+func.func @ipowi_i1_const_neg_exp() -> i1 {
+  %b = arith.constant true    
+  %e = arith.constant true    
+  %r = math.ipowi %b, %e : i1
+  return %r : i1
+}

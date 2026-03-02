@@ -4,7 +4,8 @@ import subprocess
 import sys
 
 dotest_path = '@LLDB_SOURCE_DIR_CONFIGURED@/test/API/dotest.py'
-dotest_args_str = '@LLDB_DOTEST_ARGS_CONFIGURED@'
+dotest_common_args_str = '@LLDB_TEST_COMMON_ARGS_CONFIGURED@'
+dotest_user_args_str = '@LLDB_TEST_USER_ARGS_CONFIGURED@'
 arch = '@LLDB_TEST_ARCH@'
 executable = '@LLDB_TEST_EXECUTABLE_CONFIGURED@'
 compiler = '@LLDB_TEST_COMPILER_CONFIGURED@'
@@ -20,14 +21,17 @@ has_libcxx = @LLDB_HAS_LIBCXX@
 libcxx_libs_dir = "@LIBCXX_LIBRARY_DIR@"
 libcxx_include_dir = "@LIBCXX_GENERATED_INCLUDE_DIR@"
 libcxx_include_target_dir = "@LIBCXX_GENERATED_INCLUDE_TARGET_DIR@"
+cmake_build_type = "@CMAKE_BUILD_TYPE@"
 
 if __name__ == '__main__':
     wrapper_args = sys.argv[1:]
     dotest_args = []
     # split on an empty string will produce [''] and if you
     # add that to the command, it will be treated as a directory...
-    if len(dotest_args_str) > 0:
-        dotest_args = dotest_args_str.split(';')
+    if dotest_common_args_str:
+        dotest_args.extend(dotest_common_args_str.split(';'))
+    if dotest_user_args_str:
+        dotest_args.extend(dotest_user_args_str.split(';'))
     # Build dotest.py command.
     cmd = [sys.executable, dotest_path]
     cmd.extend(['--arch', arch])
@@ -49,6 +53,7 @@ if __name__ == '__main__':
     if lldb_build_intel_pt == "1":
         cmd.extend(['--enable-plugin', 'intel-pt'])
     cmd.extend(['--lldb-obj-root', lldb_obj_root])
+    cmd.extend(['--cmake-build-type', cmake_build_type])
     cmd.extend(wrapper_args)
     # Invoke dotest.py and return exit code.
     print(' '.join(cmd))

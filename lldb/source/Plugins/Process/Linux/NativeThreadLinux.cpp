@@ -82,6 +82,9 @@ void LogThreadStopInfo(Log &log, const ThreadStopInfo &stop_info,
   case eStopReasonProcessorTrace:
     log.Printf("%s: %s processor trace", __FUNCTION__, header);
     return;
+  case eStopReasonHistoryBoundary:
+    log.Printf("%s: %s history boundary", __FUNCTION__, header);
+    return;
   default:
     log.Printf("%s: %s invalid stop reason %" PRIu32, __FUNCTION__, header,
                static_cast<uint32_t>(stop_info.reason));
@@ -326,14 +329,14 @@ void NativeThreadLinux::AnnotateSyncTagCheckFault(lldb::addr_t fault_addr) {
   }
 
   // We assume that the stop description is currently:
-  // signal SIGSEGV: sync tag check fault (fault address: <addr>)
+  // signal SIGSEGV: sync tag check fault (fault address=<addr>)
   // Remove the closing )
   m_stop_description.pop_back();
 
   std::stringstream ss;
   std::unique_ptr<MemoryTagManager> manager(std::move(details->manager));
 
-  ss << " logical tag: 0x" << std::hex << manager->GetLogicalTag(fault_addr);
+  ss << " logical tag=0x" << std::hex << manager->GetLogicalTag(fault_addr);
 
   std::vector<uint8_t> allocation_tag_data;
   // The fault address may not be granule aligned. ReadMemoryTags will granule
@@ -347,7 +350,7 @@ void NativeThreadLinux::AnnotateSyncTagCheckFault(lldb::addr_t fault_addr) {
     llvm::Expected<std::vector<lldb::addr_t>> allocation_tag =
         manager->UnpackTagsData(allocation_tag_data, 1);
     if (allocation_tag) {
-      ss << " allocation tag: 0x" << std::hex << allocation_tag->front() << ")";
+      ss << " allocation tag=0x" << std::hex << allocation_tag->front() << ")";
     } else {
       llvm::consumeError(allocation_tag.takeError());
       ss << ")";

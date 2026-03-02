@@ -18,6 +18,7 @@
 #include <cassert>
 #include <memory>
 #include <ranges>
+#include <type_traits>
 
 #include "../buffer.h"
 #include "../counted.h"

@@ -9,26 +9,32 @@
 #ifndef FORTRAN_RUNTIME_CUDA_ALLOCATOR_H_
 #define FORTRAN_RUNTIME_CUDA_ALLOCATOR_H_
 
-#include "flang/Runtime/descriptor.h"
+#include "common.h"
+#include "flang/Runtime/descriptor-consts.h"
 #include "flang/Runtime/entry-names.h"
+
+#include "cuda_runtime.h"
 
 namespace Fortran::runtime::cuda {
 
 extern "C" {
-
+cudaStream_t RTDECL(CUFGetAssociatedStream)(void *);
+int RTDECL(CUFSetAssociatedStream)(void *, cudaStream_t);
 void RTDECL(CUFRegisterAllocator)();
 }
 
-void *CUFAllocPinned(std::size_t);
+void CUFResetStream(cudaStream_t stream);
+
+void *CUFAllocPinned(std::size_t, std::int64_t *);
 void CUFFreePinned(void *);
 
-void *CUFAllocDevice(std::size_t);
+void *CUFAllocDevice(std::size_t, std::int64_t *);
 void CUFFreeDevice(void *);
 
-void *CUFAllocManaged(std::size_t);
+void *CUFAllocManaged(std::size_t, std::int64_t *);
 void CUFFreeManaged(void *);
 
-void *CUFAllocUnified(std::size_t);
+void *CUFAllocUnified(std::size_t, std::int64_t *);
 void CUFFreeUnified(void *);
 
 } // namespace Fortran::runtime::cuda

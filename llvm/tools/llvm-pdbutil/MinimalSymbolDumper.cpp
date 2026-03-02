@@ -396,12 +396,21 @@ Error MinimalSymbolDumper::visitSymbolBegin(codeview::CVSymbol &Record,
 }
 
 Error MinimalSymbolDumper::visitSymbolEnd(CVSymbol &Record) {
-  if (RecordBytes) {
-    AutoIndent Indent(P, 7);
-    P.formatBinary("bytes", Record.content(), 0);
-  }
+  if (RecordBytes)
+    printSymbolBytes(Record);
   P.Unindent();
   return Error::success();
+}
+
+Error MinimalSymbolDumper::visitUnknownSymbol(CVSymbol &Record) {
+  if (!RecordBytes)
+    printSymbolBytes(Record);
+  return Error::success();
+}
+
+void MinimalSymbolDumper::printSymbolBytes(CVSymbol &Record) const {
+  AutoIndent Indent(P, 7);
+  P.formatBinary("bytes", Record.content(), 0);
 }
 
 std::string MinimalSymbolDumper::typeOrIdIndex(codeview::TypeIndex TI,
@@ -773,7 +782,7 @@ Error MinimalSymbolDumper::visitKnownRecord(CVSymbol &CVR, InlineSiteSym &IS) {
         else
           return MaybeFile.takeError();
       }
-      P.format(" setfile {0} 0x{1}", utohexstr(FileOffset));
+      P.format(" setfile {0} 0x{1}", Filename, utohexstr(FileOffset));
       break;
     }
 
@@ -953,5 +962,13 @@ Error MinimalSymbolDumper::visitKnownRecord(CVSymbol &CVR,
       formatSegmentOffset(JumpTable.BranchSegment, JumpTable.BranchOffset),
       formatSegmentOffset(JumpTable.TableSegment, JumpTable.TableOffset),
       JumpTable.EntriesCount);
+  return Error::success();
+}
+
+Error MinimalSymbolDumper::visitKnownRecord(CVSymbol &CVR,
+                                            HotPatchFuncSym &JumpTable) {
+  AutoIndent Indent(P, 7);
+  P.formatLine("function = {0}, name = {1}", typeIndex(JumpTable.Function),
+               JumpTable.Name);
   return Error::success();
 }

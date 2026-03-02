@@ -1,7 +1,7 @@
 ; RUN: opt < %s -disable-output "-passes=print<scalar-evolution>" 2>&1 | FileCheck %s
 
 ; PR13228
-define void @f() nounwind uwtable readnone {
+define void @f(i1 %arg) nounwind uwtable readnone {
 entry:
   br label %for.cond
 
@@ -14,7 +14,7 @@ for.cond:                                         ; preds = %for.cond, %entry
 
 while.cond:                                       ; preds = %while.body, %for.cond
   %b.2 = phi i8 [ %add, %while.body ], [ 0, %for.cond ]
-  br i1 undef, label %while.end, label %while.body
+  br i1 %arg, label %while.end, label %while.body
 
 while.body:                                       ; preds = %while.cond
   %add = add i8 %b.2, %c.0

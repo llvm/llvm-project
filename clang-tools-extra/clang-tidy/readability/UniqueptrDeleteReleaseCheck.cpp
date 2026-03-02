@@ -1,4 +1,4 @@
-//===--- UniqueptrDeleteReleaseCheck.cpp - clang-tidy----------------------===//
+//===----------------------------------------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -28,7 +28,6 @@ UniqueptrDeleteReleaseCheck::UniqueptrDeleteReleaseCheck(
       PreferResetCall(Options.get("PreferResetCall", false)) {}
 
 void UniqueptrDeleteReleaseCheck::registerMatchers(MatchFinder *Finder) {
-
   auto UniquePtrWithDefaultDelete = classTemplateSpecializationDecl(
       hasName("::std::unique_ptr"),
       hasTemplateArgument(1, refersToType(hasDeclaration(cxxRecordDecl(

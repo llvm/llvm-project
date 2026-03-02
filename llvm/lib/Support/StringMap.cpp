@@ -45,23 +45,15 @@ static inline unsigned *getHashTable(StringMapEntryBase **TheTable,
 
 uint32_t StringMapImpl::hash(StringRef Key) { return xxh3_64bits(Key); }
 
-StringMapImpl::StringMapImpl(unsigned InitSize, unsigned itemSize) {
-  ItemSize = itemSize;
-
+StringMapImpl::StringMapImpl(unsigned InitSize, unsigned itemSize)
+    : ItemSize(itemSize) {
   // If a size is specified, initialize the table with that many buckets.
   if (InitSize) {
     // The table will grow when the number of entries reach 3/4 of the number of
     // buckets. To guarantee that "InitSize" number of entries can be inserted
     // in the table without growing, we allocate just what is needed here.
     init(getMinBucketToReserveForEntries(InitSize));
-    return;
   }
-
-  // Otherwise, initialize it with zero buckets to avoid the allocation.
-  TheTable = nullptr;
-  NumBuckets = 0;
-  NumItems = 0;
-  NumTombstones = 0;
 }
 
 void StringMapImpl::init(unsigned InitSize) {
@@ -91,7 +83,7 @@ unsigned StringMapImpl::LookupBucketFor(StringRef Name,
   // Hash table unallocated so far?
   if (NumBuckets == 0)
     init(16);
-  if (shouldReverseIterate())
+  if constexpr (shouldReverseIterate())
     FullHashValue = ~FullHashValue;
   unsigned BucketNo = FullHashValue & (NumBuckets - 1);
   unsigned *HashTable = getHashTable(TheTable, NumBuckets);
@@ -150,7 +142,7 @@ int StringMapImpl::FindKey(StringRef Key, uint32_t FullHashValue) const {
 #ifdef EXPENSIVE_CHECKS
   assert(FullHashValue == hash(Key));
 #endif
-  if (shouldReverseIterate())
+  if constexpr (shouldReverseIterate())
     FullHashValue = ~FullHashValue;
   unsigned BucketNo = FullHashValue & (NumBuckets - 1);
   unsigned *HashTable = getHashTable(TheTable, NumBuckets);

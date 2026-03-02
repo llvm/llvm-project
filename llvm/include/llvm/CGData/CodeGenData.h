@@ -19,9 +19,11 @@
 #include "llvm/Bitcode/BitcodeReader.h"
 #include "llvm/CGData/OutlinedHashTree.h"
 #include "llvm/CGData/OutlinedHashTreeRecord.h"
+#include "llvm/CGData/StableFunctionMapRecord.h"
 #include "llvm/IR/Module.h"
 #include "llvm/Object/ObjectFile.h"
 #include "llvm/Support/Caching.h"
+#include "llvm/Support/Compiler.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/TargetParser/Triple.h"
 #include <mutex>
@@ -33,18 +35,20 @@ enum CGDataSectKind {
 #include "llvm/CGData/CodeGenData.inc"
 };
 
-std::string getCodeGenDataSectionName(CGDataSectKind CGSK,
-                                      Triple::ObjectFormatType OF,
-                                      bool AddSegmentInfo = true);
+LLVM_ABI std::string getCodeGenDataSectionName(CGDataSectKind CGSK,
+                                               Triple::ObjectFormatType OF,
+                                               bool AddSegmentInfo = true);
 
 enum class CGDataKind {
   Unknown = 0x0,
   // A function outlining info.
   FunctionOutlinedHashTree = 0x1,
-  LLVM_MARK_AS_BITMASK_ENUM(/*LargestValue=*/FunctionOutlinedHashTree)
+  // A function merging info.
+  StableFunctionMergingMap = 0x2,
+  LLVM_MARK_AS_BITMASK_ENUM(/*LargestValue=*/StableFunctionMergingMap)
 };
 
-const std::error_category &cgdata_category();
+LLVM_ABI const std::error_category &cgdata_category();
 
 enum class cgdata_error {
   success = 0,
@@ -60,7 +64,7 @@ inline std::error_code make_error_code(cgdata_error E) {
   return std::error_code(static_cast<int>(E), cgdata_category());
 }
 
-class CGDataError : public ErrorInfo<CGDataError> {
+class LLVM_ABI CGDataError : public ErrorInfo<CGDataError> {
 public:
   CGDataError(cgdata_error Err, const Twine &ErrStr = Twine())
       : Err(Err), Msg(ErrStr.str()) {
@@ -108,6 +112,8 @@ enum CGDataMode {
 class CodeGenData {
   /// Global outlined hash tree that has oulined hash sequences across modules.
   std::unique_ptr<OutlinedHashTree> PublishedHashTree;
+  /// Global stable function map that has stable function info across modules.
+  std::unique_ptr<StableFunctionMap> PublishedStableFunctionMap;
 
   /// This flag is set when -fcodegen-data-generate is passed.
   /// Or, it can be mutated with -fcodegen-data-thinlto-two-rounds.
@@ -125,17 +131,23 @@ class CodeGenData {
 public:
   ~CodeGenData() = default;
 
-  static CodeGenData &getInstance();
+  LLVM_ABI static CodeGenData &getInstance();
 
   /// Returns true if we have a valid outlined hash tree.
   bool hasOutlinedHashTree() {
     return PublishedHashTree && !PublishedHashTree->empty();
+  }
+  bool hasStableFunctionMap() {
+    return PublishedStableFunctionMap && !PublishedStableFunctionMap->empty();
   }
 
   /// Returns the outlined hash tree. This can be globally used in a read-only
   /// manner.
   const OutlinedHashTree *getOutlinedHashTree() {
     return PublishedHashTree.get();
+  }
+  const StableFunctionMap *getStableFunctionMap() {
+    return PublishedStableFunctionMap.get();
   }
 
   /// Returns true if we should write codegen data.
@@ -147,6 +159,12 @@ public:
     // Ensure we disable emitCGData as we do not want to read and write both.
     EmitCGData = false;
   }
+  void
+  publishStableFunctionMap(std::unique_ptr<StableFunctionMap> FunctionMap) {
+    PublishedStableFunctionMap = std::move(FunctionMap);
+    // Ensure we disable emitCGData as we do not want to read and write both.
+    EmitCGData = false;
+  }
 };
 
 namespace cgdata {
@@ -155,8 +173,16 @@ inline bool hasOutlinedHashTree() {
   return CodeGenData::getInstance().hasOutlinedHashTree();
 }
 
+inline bool hasStableFunctionMap() {
+  return CodeGenData::getInstance().hasStableFunctionMap();
+}
+
 inline const OutlinedHashTree *getOutlinedHashTree() {
   return CodeGenData::getInstance().getOutlinedHashTree();
+}
+
+inline const StableFunctionMap *getStableFunctionMap() {
+  return CodeGenData::getInstance().getStableFunctionMap();
 }
 
 inline bool emitCGData() { return CodeGenData::getInstance().emitCGData(); }
@@ -164,6 +190,11 @@ inline bool emitCGData() { return CodeGenData::getInstance().emitCGData(); }
 inline void
 publishOutlinedHashTree(std::unique_ptr<OutlinedHashTree> HashTree) {
   CodeGenData::getInstance().publishOutlinedHashTree(std::move(HashTree));
+}
+
+inline void
+publishStableFunctionMap(std::unique_ptr<StableFunctionMap> FunctionMap) {
+  CodeGenData::getInstance().publishStableFunctionMap(std::move(FunctionMap));
 }
 
 struct StreamCacheData {
@@ -215,8 +246,8 @@ struct StreamCacheData {
 /// \p Task represents the partition number in the parallel code generation
 /// process. \p AddStream is the callback used to add the serialized module to
 /// the stream.
-void saveModuleForTwoRounds(const Module &TheModule, unsigned Task,
-                            AddStreamFn AddStream);
+LLVM_ABI void saveModuleForTwoRounds(const Module &TheModule, unsigned Task,
+                                     AddStreamFn AddStream);
 
 /// Load the optimized bitcode module for the second codegen round.
 /// \p OrigModule is the original bitcode module.
@@ -224,18 +255,18 @@ void saveModuleForTwoRounds(const Module &TheModule, unsigned Task,
 /// process. \p Context provides the environment settings for module operations.
 /// \p IRFiles contains optimized bitcode module files needed for loading.
 /// \return A unique_ptr to the loaded Module, or nullptr if loading fails.
-std::unique_ptr<Module> loadModuleForTwoRounds(BitcodeModule &OrigModule,
-                                               unsigned Task,
-                                               LLVMContext &Context,
-                                               ArrayRef<StringRef> IRFiles);
+LLVM_ABI std::unique_ptr<Module>
+loadModuleForTwoRounds(BitcodeModule &OrigModule, unsigned Task,
+                       LLVMContext &Context, ArrayRef<StringRef> IRFiles);
 
 /// Merge the codegen data from the scratch objects \p ObjectFiles from the
 /// first codegen round.
 /// \return the combined hash of the merged codegen data.
-Expected<stable_hash> mergeCodeGenData(ArrayRef<StringRef> ObjectFiles);
+LLVM_ABI Expected<stable_hash>
+mergeCodeGenData(ArrayRef<StringRef> ObjectFiles);
 
-void warn(Error E, StringRef Whence = "");
-void warn(Twine Message, std::string Whence = "", std::string Hint = "");
+LLVM_ABI void warn(Error E, StringRef Whence = "");
+LLVM_ABI void warn(Twine Message, StringRef Whence = "", StringRef Hint = "");
 
 } // end namespace cgdata
 
@@ -249,6 +280,14 @@ enum CGDataVersion {
   // Version 1 is the first version. This version supports the outlined
   // hash tree.
   Version1 = 1,
+  // Version 2 supports the stable function merging map.
+  Version2 = 2,
+  // Version 3 adds the total size of the Names in the stable function map so
+  // we can skip reading them into the memory for non-assertion builds.
+  Version3 = 3,
+  // Version 4 adjusts the structure of stable function merging map for
+  // efficient lazy loading support.
+  Version4 = 4,
   CurrentVersion = CG_DATA_INDEX_VERSION
 };
 const uint64_t Version = CGDataVersion::CurrentVersion;
@@ -258,13 +297,14 @@ struct Header {
   uint32_t Version;
   uint32_t DataKind;
   uint64_t OutlinedHashTreeOffset;
+  uint64_t StableFunctionMapOffset;
 
   // New fields should only be added at the end to ensure that the size
   // computation is correct. The methods below need to be updated to ensure that
   // the new field is read correctly.
 
   // Reads a header struct from the buffer.
-  static Expected<Header> readFromBuffer(const unsigned char *Curr);
+  LLVM_ABI static Expected<Header> readFromBuffer(const unsigned char *Curr);
 };
 
 } // end namespace IndexedCGData

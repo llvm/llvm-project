@@ -1,6 +1,6 @@
 ; RUN: llc -mtriple=r600 -mcpu=redwood < %s | FileCheck -check-prefix=EG -check-prefix=FUNC %s
 
-@local_memory.local_mem = internal unnamed_addr addrspace(3) global [128 x i32] undef, align 4
+@local_memory.local_mem = internal unnamed_addr addrspace(3) global [128 x i32] poison, align 4
 
 ; Check that the LDS size emitted correctly
 ; EG: .long 166120
@@ -31,8 +31,8 @@ entry:
   ret void
 }
 
-@local_memory_two_objects.local_mem0 = internal unnamed_addr addrspace(3) global [4 x i32] undef, align 4
-@local_memory_two_objects.local_mem1 = internal unnamed_addr addrspace(3) global [4 x i32] undef, align 4
+@local_memory_two_objects.local_mem0 = internal unnamed_addr addrspace(3) global [4 x i32] poison, align 4
+@local_memory_two_objects.local_mem1 = internal unnamed_addr addrspace(3) global [4 x i32] poison, align 4
 
 ; Check that the LDS size emitted correctly
 ; EG: .long 166120

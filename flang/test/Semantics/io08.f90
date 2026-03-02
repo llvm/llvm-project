@@ -40,6 +40,7 @@
   write(*,'($)')
   write(*,'(\)')
   write(*,'(RZ,RU,RP,RN,RD,RC,SS,SP,S,3G15.3e2)')
+  write(*, "()")
   write(*, '(' // achar( 9) // ')') ! horizontal tab
   write(*, '(' // achar(11) // ')') ! vertical tab
   write(*, '(' // achar(32) // ')') ! space
@@ -192,8 +193,7 @@
   !ERROR: 'A' edit descriptor 'w' value must be positive
   write(*,'(A0)')
 
-  !ERROR: 'L' edit descriptor 'w' value must be positive
-  write(*,'(L0)')
+  write(*,'(L0)') ! warning, not error
 
   !ERROR: Expected 'G' edit descriptor '.d' value
   write(*,'(G4)')
@@ -321,4 +321,8 @@
 
   !ERROR: Negative scale factor k (from kP) and width d in a 'E' edit descriptor must satisfy '-d < k'
   write(*, '(-4P,E20.5,E15.2)')
+
+  !ERROR: Nested parenthesized format item list is empty
+  write(*, "(I6.3, ( ))")
+
 end

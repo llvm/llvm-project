@@ -168,7 +168,7 @@ end subroutine
 ! CHECK:  %[[VAL_5:.*]]:2 = hlfir.declare %{{.*}}z"} : (!fir.ref<complex<f32>>, !fir.dscope) -> (!fir.ref<complex<f32>>, !fir.ref<complex<f32>>)
 ! CHECK:  %[[VAL_6:.*]] = fir.load %[[VAL_4]]#0 : !fir.ref<complex<f32>>
 ! CHECK:  %[[VAL_7:.*]] = fir.load %[[VAL_5]]#0 : !fir.ref<complex<f32>>
-! CHECK:  %[[VAL_8:.*]] = fir.call @cpowf(%[[VAL_6]], %[[VAL_7]]) fastmath<contract> : (complex<f32>, complex<f32>) -> complex<f32>
+! CHECK:  %[[VAL_8:.*]] = complex.pow %[[VAL_6]], %[[VAL_7]] fastmath<contract> : complex<f32>
 
 
 subroutine real_to_int_power(x, y, z)
@@ -193,7 +193,7 @@ end subroutine
 ! CHECK:  %[[VAL_5:.*]]:2 = hlfir.declare %{{.*}}z"} : (!fir.ref<i32>, !fir.dscope) -> (!fir.ref<i32>, !fir.ref<i32>)
 ! CHECK:  %[[VAL_6:.*]] = fir.load %[[VAL_4]]#0 : !fir.ref<complex<f32>>
 ! CHECK:  %[[VAL_7:.*]] = fir.load %[[VAL_5]]#0 : !fir.ref<i32>
-! CHECK:  %[[VAL_8:.*]] = fir.call @_FortranAcpowi(%[[VAL_6]], %[[VAL_7]]) fastmath<contract> : (complex<f32>, i32) -> complex<f32>
+! CHECK:  %[[VAL_8:.*]] = complex.powi %[[VAL_6]], %[[VAL_7]] fastmath<contract> : complex<f32>, i32
 
 subroutine extremum(c, n, l)
   integer(8), intent(in) :: l
@@ -281,15 +281,10 @@ subroutine cmp_char(l, x, y)
   l = x .eq. y
 end subroutine
 ! CHECK-LABEL: func.func @_QPcmp_char(
-! CHECK:  %[[VAL_5:.*]]:2 = hlfir.declare %{{.*}} typeparams %[[VAL_4:.*]]#1 dummy_scope %{{[0-9]+}} {uniq_name = "_QFcmp_charEx"} : (!fir.ref<!fir.char<1,?>>, index, !fir.dscope) -> (!fir.boxchar<1>, !fir.ref<!fir.char<1,?>>)
-! CHECK:  %[[VAL_7:.*]]:2 = hlfir.declare %{{.*}} typeparams %[[VAL_6:.*]]#1 dummy_scope %{{[0-9]+}} {uniq_name = "_QFcmp_charEy"} : (!fir.ref<!fir.char<1,?>>, index, !fir.dscope) -> (!fir.boxchar<1>, !fir.ref<!fir.char<1,?>>)
-! CHECK:  %[[VAL_8:.*]] = fir.convert %[[VAL_5]]#1 : (!fir.ref<!fir.char<1,?>>) -> !fir.ref<i8>
-! CHECK:  %[[VAL_9:.*]] = fir.convert %[[VAL_7]]#1 : (!fir.ref<!fir.char<1,?>>) -> !fir.ref<i8>
-! CHECK:  %[[VAL_10:.*]] = fir.convert %[[VAL_4]]#1 : (index) -> i64
-! CHECK:  %[[VAL_11:.*]] = fir.convert %[[VAL_6]]#1 : (index) -> i64
-! CHECK:  %[[VAL_12:.*]] = fir.call @_FortranACharacterCompareScalar1(%[[VAL_8]], %[[VAL_9]], %[[VAL_10]], %[[VAL_11]]) fastmath<contract> : (!fir.ref<i8>, !fir.ref<i8>, i64, i64) -> i32
-! CHECK:  %[[VAL_13:.*]] = arith.constant 0 : i32
-! CHECK:  %[[VAL_14:.*]] = arith.cmpi eq, %[[VAL_12]], %[[VAL_13]] : i32
+! CHECK:  %[[VAL_5:.*]]:2 = hlfir.declare %{{.*}} typeparams %[[VAL_4:.*]]#1 dummy_scope %{{[0-9]+}} arg {{[0-9]+}} {uniq_name = "_QFcmp_charEx"} : (!fir.ref<!fir.char<1,?>>, index, !fir.dscope) -> (!fir.boxchar<1>, !fir.ref<!fir.char<1,?>>)
+! CHECK:  %[[VAL_7:.*]]:2 = hlfir.declare %{{.*}} typeparams %[[VAL_6:.*]]#1 dummy_scope %{{[0-9]+}} arg {{[0-9]+}} {uniq_name = "_QFcmp_charEy"} : (!fir.ref<!fir.char<1,?>>, index, !fir.dscope) -> (!fir.boxchar<1>, !fir.ref<!fir.char<1,?>>)
+! CHECK:  %[[VAL_8:.*]] = hlfir.cmpchar eq %[[VAL_5]]#0 %[[VAL_7]]#0 : (!fir.boxchar<1>, !fir.boxchar<1>) -> i1
+! CHECK:  %[[VAL_9:.*]] = fir.convert %[[VAL_8]] : (i1) -> !fir.logical<4>
 
 subroutine logical_and(x, y, z)
   logical :: x, y, z

@@ -1,4 +1,4 @@
-// RUN: fir-opt --cuf-convert %s | FileCheck %s
+// RUN: fir-opt --cuf-convert --cuf-allocation-convert %s | FileCheck %s
 
 module attributes {dlti.dl_spec = #dlti.dl_spec<#dlti.dl_entry<f80, dense<128> : vector<2xi64>>, #dlti.dl_entry<i128, dense<128> : vector<2xi64>>, #dlti.dl_entry<i64, dense<64> : vector<2xi64>>, #dlti.dl_entry<!llvm.ptr<272>, dense<64> : vector<4xi64>>, #dlti.dl_entry<!llvm.ptr<271>, dense<32> : vector<4xi64>>, #dlti.dl_entry<!llvm.ptr<270>, dense<32> : vector<4xi64>>, #dlti.dl_entry<f128, dense<128> : vector<2xi64>>, #dlti.dl_entry<f64, dense<64> : vector<2xi64>>, #dlti.dl_entry<f16, dense<16> : vector<2xi64>>, #dlti.dl_entry<i32, dense<32> : vector<2xi64>>, #dlti.dl_entry<i16, dense<16> : vector<2xi64>>, #dlti.dl_entry<i8, dense<8> : vector<2xi64>>, #dlti.dl_entry<i1, dense<8> : vector<2xi64>>, #dlti.dl_entry<!llvm.ptr, dense<64> : vector<4xi64>>, #dlti.dl_entry<"dlti.endianness", "little">, #dlti.dl_entry<"dlti.stack_alignment", 128 : i64>>} {
 
@@ -11,11 +11,11 @@ func.func @_QPsub1() {
 
 // CHECK-LABEL: func.func @_QPsub1()
 // CHECK: %[[BYTES:.*]] = fir.convert %c4{{.*}} : (index) -> i64
-// CHECK: %[[ALLOC:.*]] = fir.call @_FortranACUFMemAlloc(%[[BYTES]], %c0{{.*}}, %{{.*}}, %{{.*}}) : (i64, i32, !fir.ref<i8>, i32) -> !fir.llvm_ptr<i8>
+// CHECK: %[[ALLOC:.*]] = fir.call @_FortranACUFMemAlloc(%[[BYTES]], %c0{{.*}}, %{{.*}}, %{{.*}}) {cuf.data_attr = #cuf.cuda<device>} : (i64, i32, !fir.ref<i8>, i32) -> !fir.llvm_ptr<i8>
 // CHECK: %[[CONV:.*]] = fir.convert %3 : (!fir.llvm_ptr<i8>) -> !fir.ref<i32>
 // CHECK: %[[DECL:.*]]:2 = hlfir.declare %[[CONV]] {data_attr = #cuf.cuda<device>, uniq_name = "_QFsub1Eidev"} : (!fir.ref<i32>) -> (!fir.ref<i32>, !fir.ref<i32>)
 // CHECK: %[[DEVPTR:.*]] = fir.convert %[[DECL]]#1 : (!fir.ref<i32>) -> !fir.llvm_ptr<i8>
-// CHECK: fir.call @_FortranACUFMemFree(%[[DEVPTR]], %c0{{.*}}, %{{.*}}, %{{.*}}) : (!fir.llvm_ptr<i8>, i32, !fir.ref<i8>, i32) -> none
+// CHECK: fir.call @_FortranACUFMemFree(%[[DEVPTR]], %c0{{.*}}, %{{.*}}, %{{.*}}) : (!fir.llvm_ptr<i8>, i32, !fir.ref<i8>, i32) -> ()
 
 func.func @_QPsub2() {
   %0 = cuf.alloc !fir.array<10xf32> {bindc_name = "a", data_attr = #cuf.cuda<device>, uniq_name = "_QMcuda_varFcuda_alloc_freeEa"} -> !fir.ref<!fir.array<10xf32>>
@@ -26,7 +26,7 @@ func.func @_QPsub2() {
 // CHECK-LABEL: func.func @_QPsub2()
 // CHECK: %[[BYTES:.*]] = arith.muli %c10{{.*}}, %c4{{.*}} : index
 // CHECK: %[[CONV_BYTES:.*]] = fir.convert %[[BYTES]] : (index) -> i64 
-// CHECK: %{{.*}} = fir.call @_FortranACUFMemAlloc(%[[CONV_BYTES]], %c0{{.*}}, %{{.*}}, %{{.*}}) : (i64, i32, !fir.ref<i8>, i32) -> !fir.llvm_ptr<i8>
+// CHECK: %{{.*}} = fir.call @_FortranACUFMemAlloc(%[[CONV_BYTES]], %c0{{.*}}, %{{.*}}, %{{.*}}) {cuf.data_attr = #cuf.cuda<device>} : (i64, i32, !fir.ref<i8>, i32) -> !fir.llvm_ptr<i8>
 // CHECK: fir.call @_FortranACUFMemFree
 
 func.func @_QPsub3(%arg0: !fir.ref<i32> {fir.bindc_name = "n"}, %arg1: !fir.ref<i32> {fir.bindc_name = "m"}) {
@@ -58,7 +58,60 @@ func.func @_QPsub3(%arg0: !fir.ref<i32> {fir.bindc_name = "n"}, %arg1: !fir.ref<
 // CHECK: %[[NBELEM:.*]] = arith.muli %[[N]], %[[M]] : index
 // CHECK: %[[BYTES:.*]] = arith.muli %[[NBELEM]], %c4{{.*}} : index
 // CHECK: %[[CONV_BYTES:.*]] = fir.convert %[[BYTES]] : (index) -> i64
-// CHECK: %{{.*}} = fir.call @_FortranACUFMemAlloc(%[[CONV_BYTES]], %c0{{.*}}, %{{.*}}, %{{.*}}) : (i64, i32, !fir.ref<i8>, i32) -> !fir.llvm_ptr<i8>
+// CHECK: %{{.*}} = fir.call @_FortranACUFMemAlloc(%[[CONV_BYTES]], %c0{{.*}}, %{{.*}}, %{{.*}}) {cuf.data_attr = #cuf.cuda<device>} : (i64, i32, !fir.ref<i8>, i32) -> !fir.llvm_ptr<i8>
 // CHECK: fir.call @_FortranACUFMemFree
+
+func.func @_QPtest_type() {
+  %0 = cuf.alloc !fir.type<_QMbarTcmplx{id:i32,c:complex<f32>}> {bindc_name = "a", data_attr = #cuf.cuda<device>, uniq_name = "_QFtest_typeEa"} -> !fir.ref<!fir.type<_QMbarTcmplx{id:i32,c:complex<f32>}>>
+  %1 = fir.declare %0 {data_attr = #cuf.cuda<device>, uniq_name = "_QFtest_typeEa"} : (!fir.ref<!fir.type<_QMbarTcmplx{id:i32,c:complex<f32>}>>) -> !fir.ref<!fir.type<_QMbarTcmplx{id:i32,c:complex<f32>}>>
+  cuf.free %1 : !fir.ref<!fir.type<_QMbarTcmplx{id:i32,c:complex<f32>}>> {data_attr = #cuf.cuda<device>}
+  return
+}
+
+// CHECK-LABEL: func.func @_QPtest_type()
+// CHECK: %[[BYTES:.*]] = arith.constant 12 : index
+// CHECK: %[[CONV_BYTES:.*]] = fir.convert %[[BYTES]] : (index) -> i64
+// CHECK: fir.call @_FortranACUFMemAlloc(%[[CONV_BYTES]], %c0{{.*}}, %{{.*}}, %{{.*}}) {cuf.data_attr = #cuf.cuda<device>} : (i64, i32, !fir.ref<i8>, i32) -> !fir.llvm_ptr<i8>
+
+gpu.module @cuda_device_mod {
+  gpu.func @_QMalloc() kernel {
+    %0 = cuf.alloc !fir.box<!fir.heap<!fir.array<?xf32>>> {bindc_name = "a", data_attr = #cuf.cuda<device>, uniq_name = "_QMallocEa"} -> !fir.ref<!fir.box<!fir.heap<!fir.array<?xf32>>>>
+    gpu.return 
+  }
+}
+
+// CHECK-LABEL: gpu.func @_QMalloc() kernel
+// CHECK: fir.alloca !fir.box<!fir.heap<!fir.array<?xf32>>> {bindc_name = "a", cuf.data_attr = #cuf.cuda<device>, uniq_name = "_QMallocEa"}
+
+func.func @_QQalloc_char() attributes {fir.bindc_name = "alloc_char"} {
+  %c1 = arith.constant 1 : index
+  %0 = cuf.alloc !fir.array<10x!fir.char<1>>(%c1 : index) {bindc_name = "a", data_attr = #cuf.cuda<device>, uniq_name = "_QFEa"} -> !fir.ref<!fir.array<10x!fir.char<1>>>
+  return
+}
+
+// CHECK-LABEL: func.func @_QQalloc_char()
+// CHECK: %[[BYTES:.*]] = arith.muli %c10{{.*}}, %c1{{.*}} : index
+// CHECK: %[[BYTES_CONV:.*]] = fir.convert %[[BYTES]] : (index) -> i64
+// CHECK: fir.call @_FortranACUFMemAlloc(%[[BYTES_CONV]], %c0{{.*}}, %{{.*}}, %{{.*}}) {cuf.data_attr = #cuf.cuda<device>} : (i64, i32, !fir.ref<i8>, i32) -> !fir.llvm_ptr<i8>
+
+
+func.func @_QQalloc_char2() {
+  %c4 = arith.constant 4 : index
+  %1 = cuf.alloc !fir.char<1,4>(%c4 : index) {bindc_name = "b", data_attr = #cuf.cuda<device>, uniq_name = "_QFsub1Eb"} -> !fir.ref<!fir.char<1,4>>
+  %2 = cuf.alloc !fir.char<2,4>(%c4 : index) {bindc_name = "c", data_attr = #cuf.cuda<device>, uniq_name = "_QFsub1Ec"} -> !fir.ref<!fir.char<2,4>>
+  %c10 = arith.constant 4 : index
+  %3 = cuf.alloc !fir.char<4,10>(%c10 : index) {bindc_name = "d", data_attr = #cuf.cuda<device>, uniq_name = "_QFsub1Ed"} -> !fir.ref<!fir.char<4,10>>
+  return
+}
+
+// CHECK-LABEL: func.func @_QQalloc_char2()
+// CHECK: %[[BYTES_4:.*]] = fir.convert %c4{{.*}} : (index) -> i64
+// CHECK: %{{.*}} = fir.call @_FortranACUFMemAlloc(%[[BYTES_4]], %{{.*}}, %{{.*}}, %{{.*}}) {cuf.data_attr = #cuf.cuda<device>} : (i64, i32, !fir.ref<i8>, i32) -> !fir.llvm_ptr<i8>
+
+// CHECK: %[[BYTES_8:.*]] = fir.convert %c8{{.*}} : (index) -> i64
+// CHECK: %{{.*}} = fir.call @_FortranACUFMemAlloc(%[[BYTES_8]], %{{.*}}, %{{.*}}, %{{.*}}) {cuf.data_attr = #cuf.cuda<device>} : (i64, i32, !fir.ref<i8>, i32) -> !fir.llvm_ptr<i8>
+
+// CHECK: %[[BYTES_40:.*]] = fir.convert %c40{{.*}} : (index) -> i64
+// CHECK: %{{.*}} = fir.call @_FortranACUFMemAlloc(%[[BYTES_40]], %{{.*}}, %{{.*}}, %{{.*}}) {cuf.data_attr = #cuf.cuda<device>} : (i64, i32, !fir.ref<i8>, i32) -> !fir.llvm_ptr<i8>
 
 } // end module

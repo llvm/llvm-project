@@ -89,10 +89,10 @@ entry:
 %struct.gnode.0.1.3.6.9.18.20.79 = type { i32, i32, i32, i32, i32, i32, i32, ptr }
 @gnodeArray = external global ptr, align 8
 
-define void @test4_shortest() {
+define void @test4_shortest(i1 %arg) {
 entry:
   %exl.i = alloca [5 x i32], align 16
-  br i1 undef, label %if.then274, label %for.cond404
+  br i1 %arg, label %if.then274, label %for.cond404
 
 if.then274:                                       ; preds = %if.end256
   %arrayidx.i = getelementptr inbounds [5 x i32], ptr %exl.i, i64 0, i64 1
@@ -118,7 +118,7 @@ for.cond404:                                      ; preds = %if.end256
   %arrayidx6.i968 = getelementptr inbounds ptr, ptr %0, i64 undef
   ; MemoryUse(1) MayAlias
   %1 = load ptr, ptr %arrayidx6.i968, align 8
-  br i1 undef, label %for.cond26.preheader.i974, label %if.then20.for.body_crit_edge.i999
+  br i1 %arg, label %for.cond26.preheader.i974, label %if.then20.for.body_crit_edge.i999
 
 for.cond26.preheader.i974:                        ; preds = %if.then20.i996
   %arrayidx.i924 = getelementptr inbounds [5 x i32], ptr %exl.i, i64 0, i64 1

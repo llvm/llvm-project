@@ -166,7 +166,7 @@ define void @v3_load_f32_fadd_fadd_by_constant_store(ptr %src, ptr %dst) {
 ; NON-POW2-NEXT:  entry:
 ; NON-POW2-NEXT:    [[GEP_SRC_0:%.*]] = getelementptr inbounds float, ptr [[SRC:%.*]], i32 0
 ; NON-POW2-NEXT:    [[TMP0:%.*]] = load <3 x float>, ptr [[GEP_SRC_0]], align 4
-; NON-POW2-NEXT:    [[TMP1:%.*]] = fadd <3 x float> [[TMP0]], <float 1.000000e+01, float 1.000000e+01, float 1.000000e+01>
+; NON-POW2-NEXT:    [[TMP1:%.*]] = fadd <3 x float> [[TMP0]], splat (float 1.000000e+01)
 ; NON-POW2-NEXT:    store <3 x float> [[TMP1]], ptr [[DST:%.*]], align 4
 ; NON-POW2-NEXT:    ret void
 ;
@@ -177,7 +177,7 @@ define void @v3_load_f32_fadd_fadd_by_constant_store(ptr %src, ptr %dst) {
 ; POW2-ONLY-NEXT:    [[L_SRC_2:%.*]] = load float, ptr [[GEP_SRC_2]], align 4
 ; POW2-ONLY-NEXT:    [[FADD_2:%.*]] = fadd float [[L_SRC_2]], 1.000000e+01
 ; POW2-ONLY-NEXT:    [[TMP0:%.*]] = load <2 x float>, ptr [[GEP_SRC_0]], align 4
-; POW2-ONLY-NEXT:    [[TMP1:%.*]] = fadd <2 x float> [[TMP0]], <float 1.000000e+01, float 1.000000e+01>
+; POW2-ONLY-NEXT:    [[TMP1:%.*]] = fadd <2 x float> [[TMP0]], splat (float 1.000000e+01)
 ; POW2-ONLY-NEXT:    store <2 x float> [[TMP1]], ptr [[DST:%.*]], align 4
 ; POW2-ONLY-NEXT:    [[DST_2:%.*]] = getelementptr float, ptr [[DST]], i32 2
 ; POW2-ONLY-NEXT:    store float [[FADD_2]], ptr [[DST_2]], align 4
@@ -242,13 +242,18 @@ exit:
 }
 
 define void @store_try_reorder(ptr %dst) {
-; CHECK-LABEL: @store_try_reorder(
-; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[ADD:%.*]] = add i32 0, 0
-; CHECK-NEXT:    store i32 [[ADD]], ptr [[DST:%.*]], align 4
-; CHECK-NEXT:    [[ARRAYIDX_I1887:%.*]] = getelementptr i32, ptr [[DST]], i64 1
-; CHECK-NEXT:    store <2 x i32> zeroinitializer, ptr [[ARRAYIDX_I1887]], align 4
-; CHECK-NEXT:    ret void
+; NON-POW2-LABEL: @store_try_reorder(
+; NON-POW2-NEXT:  entry:
+; NON-POW2-NEXT:    store <3 x i32> zeroinitializer, ptr [[DST:%.*]], align 4
+; NON-POW2-NEXT:    ret void
+;
+; POW2-ONLY-LABEL: @store_try_reorder(
+; POW2-ONLY-NEXT:  entry:
+; POW2-ONLY-NEXT:    store <2 x i32> zeroinitializer, ptr [[DST:%.*]], align 4
+; POW2-ONLY-NEXT:    [[ADD216:%.*]] = sub i32 0, 0
+; POW2-ONLY-NEXT:    [[ARRAYIDX_I1891:%.*]] = getelementptr i32, ptr [[DST]], i64 2
+; POW2-ONLY-NEXT:    store i32 [[ADD216]], ptr [[ARRAYIDX_I1891]], align 4
+; POW2-ONLY-NEXT:    ret void
 ;
 entry:
   %add = add i32 0, 0
