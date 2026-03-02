@@ -1813,10 +1813,6 @@ Instruction *InstCombinerImpl::foldICmpAndConstConst(ICmpInst &Cmp,
                                                      const APInt &C1) {
   bool isICMP_NE = Cmp.getPredicate() == ICmpInst::ICMP_NE;
 
-  // icmp ne (and X, 1), 0 --> trunc X to i1
-  if (isICMP_NE && C1.isZero() && match(And->getOperand(1), m_One()))
-    return new TruncInst(And->getOperand(0), Cmp.getType());
-
   const APInt *C2;
   Value *X;
   if (!match(And, m_And(m_Value(X), m_APInt(C2))))
@@ -7232,6 +7228,30 @@ Instruction *InstCombinerImpl::foldICmpUsingKnownBits(ICmpInst &I) {
     break;
   case ICmpInst::ICMP_EQ:
   case ICmpInst::ICMP_NE: {
+    if (Ty->isIntOrIntVectorTy() && Op0Known.getMaxValue() == 1 &&
+        Op1Known.isConstant()) {
+      // If Op0 is 'and LHS, 1', look through it since the and is redundant.
+      Value *LHS;
+      bool IsNUW = false;
+      if (!match(Op0, m_And(m_Value(LHS), m_One()))) {
+        LHS = Op0;
+        IsNUW = true;
+      }
+      APInt Op1C = Op1Known.getConstant();
+      if ((Pred == CmpInst::ICMP_NE && Op1C.isZero()) ||
+          (Pred == CmpInst::ICMP_EQ && Op1C.isOne()))
+        return replaceInstUsesWith(
+            I, Builder.CreateTrunc(LHS, I.getType(), "", IsNUW));
+      if (((Pred == CmpInst::ICMP_NE && Op1C.isOne()) ||
+           (Pred == CmpInst::ICMP_EQ && Op1C.isZero())) &&
+          InstCombiner::canFreelyInvertAllUsersOf(&I,
+                                                  /*IgnoredUser=*/nullptr)) {
+        freelyInvertAllUsersOf(&I);
+
+        return replaceInstUsesWith(
+            I, Builder.CreateTrunc(LHS, I.getType(), "", IsNUW));
+      }
+    }
     // If all bits are known zero except for one, then we know at most one bit
     // is set. If the comparison is against zero, then this is a check to see if
     // *that* bit is set.

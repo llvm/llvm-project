@@ -259,7 +259,7 @@ define i1 @icmp_eq_multiuse_negative(i8 %arg) {
 ; CHECK-LABEL: define i1 @icmp_eq_multiuse_negative
 ; CHECK-SAME: (i8 [[ARG:%.*]]) {
 ; CHECK-NEXT:    [[SUB:%.*]] = call i8 @llvm.usub.sat.i8(i8 [[ARG]], i8 -2)
-; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i8 [[ARG]], -1
+; CHECK-NEXT:    [[CMP:%.*]] = trunc nuw i8 [[SUB]] to i1
 ; CHECK-NEXT:    call void @use.i8(i8 [[SUB]])
 ; CHECK-NEXT:    ret i1 [[CMP]]
 ;
