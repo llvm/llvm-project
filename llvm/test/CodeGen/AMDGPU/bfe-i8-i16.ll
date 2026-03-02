@@ -85,62 +85,34 @@ define i16 @no_bfe_i16_multi_use(i16 %a) {
 }
 
 ; Pure uniform (SGPR) case.
-define amdgpu_kernel void @bfe_i16_uniform(i16 %a, ptr addrspace(1) %out) {
+define amdgpu_ps i16 @bfe_i16_uniform(i16 inreg %a) {
 ; GFX9-LABEL: bfe_i16_uniform:
 ; GFX9:       ; %bb.0:
-; GFX9-NEXT:    s_load_dword s2, s[4:5], 0x24
-; GFX9-NEXT:    s_load_dwordx2 s[0:1], s[4:5], 0x2c
-; GFX9-NEXT:    v_mov_b32_e32 v0, 0
-; GFX9-NEXT:    s_waitcnt lgkmcnt(0)
-; GFX9-NEXT:    s_bfe_u32 s2, s2, 0x40004
-; GFX9-NEXT:    v_mov_b32_e32 v1, s2
-; GFX9-NEXT:    global_store_short v0, v1, s[0:1]
-; GFX9-NEXT:    s_endpgm
+; GFX9-NEXT:    s_bfe_u32 s0, s0, 0x40004
+; GFX9-NEXT:    ; return to shader part epilog
 ;
 ; GFX12-TRUE16-LABEL: bfe_i16_uniform:
 ; GFX12-TRUE16:       ; %bb.0:
-; GFX12-TRUE16-NEXT:    s_clause 0x1
-; GFX12-TRUE16-NEXT:    s_load_b32 s2, s[4:5], 0x24
-; GFX12-TRUE16-NEXT:    s_load_b64 s[0:1], s[4:5], 0x2c
-; GFX12-TRUE16-NEXT:    s_wait_kmcnt 0x0
-; GFX12-TRUE16-NEXT:    s_bfe_u32 s2, s2, 0x40004
-; GFX12-TRUE16-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
-; GFX12-TRUE16-NEXT:    v_dual_mov_b32 v0, 0 :: v_dual_mov_b32 v1, s2
-; GFX12-TRUE16-NEXT:    global_store_b16 v0, v1, s[0:1]
-; GFX12-TRUE16-NEXT:    s_endpgm
+; GFX12-TRUE16-NEXT:    s_bfe_u32 s0, s0, 0x40004
+; GFX12-TRUE16-NEXT:    ; return to shader part epilog
   %shr = lshr i16 %a, 4
   %and = and i16 %shr, 15
-  store i16 %and, ptr addrspace(1) %out
-  ret void
+  ret i16 %and
 }
 
-define amdgpu_kernel void @bfe_i8_uniform(i8 %a, ptr addrspace(1) %out) {
+define amdgpu_ps i8 @bfe_i8_uniform(i8 inreg %a) {
 ; GFX9-LABEL: bfe_i8_uniform:
 ; GFX9:       ; %bb.0:
-; GFX9-NEXT:    s_load_dword s2, s[4:5], 0x24
-; GFX9-NEXT:    s_load_dwordx2 s[0:1], s[4:5], 0x2c
-; GFX9-NEXT:    v_mov_b32_e32 v0, 0
-; GFX9-NEXT:    s_waitcnt lgkmcnt(0)
-; GFX9-NEXT:    s_bfe_u32 s2, s2, 0x40004
-; GFX9-NEXT:    v_mov_b32_e32 v1, s2
-; GFX9-NEXT:    global_store_byte v0, v1, s[0:1]
-; GFX9-NEXT:    s_endpgm
+; GFX9-NEXT:    s_bfe_u32 s0, s0, 0x40004
+; GFX9-NEXT:    ; return to shader part epilog
 ;
 ; GFX12-TRUE16-LABEL: bfe_i8_uniform:
 ; GFX12-TRUE16:       ; %bb.0:
-; GFX12-TRUE16-NEXT:    s_clause 0x1
-; GFX12-TRUE16-NEXT:    s_load_b32 s2, s[4:5], 0x24
-; GFX12-TRUE16-NEXT:    s_load_b64 s[0:1], s[4:5], 0x2c
-; GFX12-TRUE16-NEXT:    s_wait_kmcnt 0x0
-; GFX12-TRUE16-NEXT:    s_bfe_u32 s2, s2, 0x40004
-; GFX12-TRUE16-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
-; GFX12-TRUE16-NEXT:    v_dual_mov_b32 v0, 0 :: v_dual_mov_b32 v1, s2
-; GFX12-TRUE16-NEXT:    global_store_b8 v0, v1, s[0:1]
-; GFX12-TRUE16-NEXT:    s_endpgm
+; GFX12-TRUE16-NEXT:    s_bfe_u32 s0, s0, 0x40004
+; GFX12-TRUE16-NEXT:    ; return to shader part epilog
   %shr = lshr i8 %a, 4
   %and = and i8 %shr, 15
-  store i8 %and, ptr addrspace(1) %out
-  ret void
+  ret i8 %and
 }
 
 ; Vector case: keep the packed shift/and lowering.

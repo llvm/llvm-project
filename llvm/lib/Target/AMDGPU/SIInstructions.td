@@ -4148,10 +4148,6 @@ def IMMZeroBasedBitfieldMask16 : ImmLeaf <i16, [{
   return isUInt<16>(Imm) && isMask_32(Imm);
 }]>;
 
-def ShiftAmt16Imm : ImmLeaf <i16, [{
-  return Imm < 16;
-}]>;
-
 def IMMPopCount : SDNodeXForm<imm, [{
   return CurDAG->getTargetConstant(llvm::popcount(N->getZExtValue()), SDLoc(N),
                                    MVT::i32);
@@ -4169,7 +4165,7 @@ def : AMDGPUPat <
 
 let True16Predicate = NotUseRealTrue16Insts in
 def : AMDGPUPat <
-  (i16 (DivergentBinFrag<and> (srl_oneuse i16:$src, (i16 ShiftAmt16Imm:$rshift)),
+  (i16 (DivergentBinFrag<and> (srl_oneuse i16:$src, (i16 imm:$rshift)),
                               IMMZeroBasedBitfieldMask16:$mask)),
   (V_BFE_U32_e64 $src, (i32 (IMMAsI32 $rshift)), (i32 (IMMPopCount $mask)))
 >;
