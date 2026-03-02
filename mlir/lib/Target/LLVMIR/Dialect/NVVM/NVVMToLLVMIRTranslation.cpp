@@ -523,20 +523,21 @@ void NVVM::AddFOp::lowerAddFToLLVMIR(Operation &op, LLVM::ModuleTranslation &mt,
     }
 
     return createAddIntrinsicCall(IID, argLHS, argRHS);
-  };
+  }; // addIntrinsic end
 
   // f16 + f16 -> f16 / vector<2xf16> + vector<2xf16> -> vector<2xf16>
   // FIXME: Allow lowering to add.rn.ftz.f16x2 and add.rn.ftz.f16 here when the
   // intrinsics are available.
   if (opTypeLLVM->getScalarType()->isHalfTy()) {
+    llvm::Value *result;
     if (isSat) {
       unsigned index = (isVectorAdd << 1) | isFTZ;
-      mt.mapValue(thisOp.getRes(), addIntrinsic(f16IDs[index]));
-      return;
+      result = addIntrinsic(f16IDs[index]);
     } else {
-      mt.mapValue(thisOp.getRes(), builder.CreateFAdd(argLHS, argRHS));
-      return;
+      result = builder.CreateFAdd(argLHS, argRHS);
     }
+    mt.mapValue(thisOp.getRes(), result);
+    return;
   }
 
   // bf16 + bf16 -> bf16 / vector<2xbf16> + vector<2xbf16> -> vector<2xbf16>
