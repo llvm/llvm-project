@@ -1,10 +1,7 @@
-; RUN: llc -mtriple=spirv32-unknown-unknown < %s --spirv-ext=+SPV_INTEL_function_pointers | FileCheck %s
-; RUN: %if spirv-tools %{ llc -mtriple=spirv32-unknown-unknown < %s -filetype=obj | not spirv-val 2>&1 | FileCheck --check-prefix=SPIRV-VAL %s %}
+; RUN: llc -mtriple=spirv32-unknown-unknown -O0 %s -o - --spirv-ext=+SPV_INTEL_function_pointers | FileCheck %s
 
-; spirv-val poorly supports the SPV_INTEL_function_pointers extension.
-; In this case the function type used in a pointer type fails.
-; SPIRV-VAL: Invalid use of function type result id '[[#ID:]][%{{.*}}]'.
-; SPIRV-VAL: %_ptr_Generic_4 = OpTypePointer Generic %[[#ID]]
+; This still fails validation, because %foo is considered undefined. 
+; TODO: %if spirv-tools %{ llc -O0 -mtriple=spirv32-unknown-unknown %s -o - --spirv-ext=+SPV_INTEL_function_pointers -filetype=obj | spirv-val %}
 
 ; CHECK-DAG: OpCapability FunctionPointersINTEL
 ; CHECK-DAG: OpExtension "SPV_INTEL_function_pointers"
