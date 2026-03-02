@@ -957,124 +957,105 @@ define i1 @pow2_and_i128(i128 %num, i128 %shift) {
   ret i1 %bool
 }
 
-define i1 @pow2_bswap(i32 %x,i1 %c){
+define i32 @pow2_bswap(i32 %a0, i32 %a1) {
 ; CHECK-LABEL: pow2_bswap:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    # kill: def $esi killed $esi def $rsi
-; CHECK-NEXT:    andl $1, %esi
-; CHECK-NEXT:    leal 2(%rsi,%rsi), %eax
+; CHECK-NEXT:    # kill: def $edi killed $edi def $rdi
+; CHECK-NEXT:    notl %edi
+; CHECK-NEXT:    shrl $31, %edi
+; CHECK-NEXT:    leal 4(,%rdi,4), %eax
 ; CHECK-NEXT:    bswapl %eax
-; CHECK-NEXT:    testl %eax, %edi
-; CHECK-NEXT:    setne %al
+; CHECK-NEXT:    decl %eax
+; CHECK-NEXT:    andl %esi, %eax
 ; CHECK-NEXT:    retq
-  %y = select i1 %c, i32 4, i32 2
-  %d = call i32 @llvm.bswap.i32(i32 %y)
-  %and = and i32 %x, %d
-  %r = icmp eq i32 %and, %d
-  ret i1 %r
+  %cmp = icmp sgt i32 0, %a0
+  %sel = select i1 %cmp, i32 4, i32 8
+  %swap = call i32 @llvm.bswap.i32(i32 %sel)
+  %res = urem i32 %a1, %swap
+  ret i32 %res
 }
 
-define i1 @pow2_bswap_extractelt(i32 %x,i1 %c){
-; CHECK-LABEL: pow2_bswap_extractelt:
+define i32 @pow2_bswap_vec(<4 x i32> %a0, i32 %a1, ptr %p2) {
+; CHECK-LABEL: pow2_bswap_vec:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    testb $1, %sil
-; CHECK-NEXT:    jne .LBB45_1
-; CHECK-NEXT:  # %bb.2:
-; CHECK-NEXT:    movq {{.*#+}} xmm0 = [4,3,0,0]
-; CHECK-NEXT:    jmp .LBB45_3
-; CHECK-NEXT:  .LBB45_1:
-; CHECK-NEXT:    movq {{.*#+}} xmm0 = [2,3,0,0]
-; CHECK-NEXT:  .LBB45_3:
 ; CHECK-NEXT:    pxor %xmm1, %xmm1
-; CHECK-NEXT:    punpcklbw {{.*#+}} xmm0 = xmm0[0],xmm1[0],xmm0[1],xmm1[1],xmm0[2],xmm1[2],xmm0[3],xmm1[3],xmm0[4],xmm1[4],xmm0[5],xmm1[5],xmm0[6],xmm1[6],xmm0[7],xmm1[7]
-; CHECK-NEXT:    pshuflw {{.*#+}} xmm0 = xmm0[3,2,1,0,4,5,6,7]
-; CHECK-NEXT:    packuswb %xmm0, %xmm0
-; CHECK-NEXT:    movd %xmm0, %eax
-; CHECK-NEXT:    testl %eax, %edi
-; CHECK-NEXT:    setne %al
-; CHECK-NEXT:    retq
-  %y_sel = select i1 %c, <2 x i32> <i32 2, i32 3>, <2 x i32> <i32 4, i32 3>
-  %y_bswap = call <2 x i32> @llvm.bswap.v2i32(<2 x i32> %y_sel)
-  %y_elt = extractelement <2 x i32> %y_bswap, i32 0
-  %and = and i32 %x, %y_elt
-  %r = icmp eq i32 %and, %y_elt
-  ret i1 %r
-}
-
-define i1 @pow2_bitreverse(i32 %x,i1 %c){
-; CHECK-LABEL: pow2_bitreverse:
-; CHECK:       # %bb.0:
-; CHECK-NEXT:    # kill: def $esi killed $esi def $rsi
-; CHECK-NEXT:    andl $1, %esi
-; CHECK-NEXT:    leal 2(%rsi,%rsi), %eax
-; CHECK-NEXT:    bswapl %eax
-; CHECK-NEXT:    movl %eax, %ecx
-; CHECK-NEXT:    shll $6, %eax
-; CHECK-NEXT:    leal (%rax,%rcx,4), %ecx
-; CHECK-NEXT:    andl $268435456, %ecx # imm = 0x10000000
-; CHECK-NEXT:    shrl %eax
-; CHECK-NEXT:    leal (%rax,%rcx,2), %eax
-; CHECK-NEXT:    testl %eax, %edi
-; CHECK-NEXT:    setne %al
-; CHECK-NEXT:    retq
-  %y = select i1 %c, i32 4, i32 2
-  %d = call i32 @llvm.bitreverse.i32(i32 %y)
-  %and = and i32 %x, %d
-  %r = icmp eq i32 %and, %d
-  ret i1 %r
-}
-
-define i1 @pow2_bitreverse_extractelt(i32 %x,i1 %c){
-; CHECK-LABEL: pow2_bitreverse_extractelt:
-; CHECK:       # %bb.0:
-; CHECK-NEXT:    testb $1, %sil
-; CHECK-NEXT:    jne .LBB47_1
-; CHECK-NEXT:  # %bb.2:
-; CHECK-NEXT:    movq {{.*#+}} xmm0 = [4,3,0,0]
-; CHECK-NEXT:    jmp .LBB47_3
-; CHECK-NEXT:  .LBB47_1:
-; CHECK-NEXT:    movq {{.*#+}} xmm0 = [2,3,0,0]
-; CHECK-NEXT:  .LBB47_3:
-; CHECK-NEXT:    pxor %xmm1, %xmm1
-; CHECK-NEXT:    movdqa %xmm0, %xmm2
-; CHECK-NEXT:    punpckhbw {{.*#+}} xmm2 = xmm2[8],xmm1[8],xmm2[9],xmm1[9],xmm2[10],xmm1[10],xmm2[11],xmm1[11],xmm2[12],xmm1[12],xmm2[13],xmm1[13],xmm2[14],xmm1[14],xmm2[15],xmm1[15]
-; CHECK-NEXT:    pshuflw {{.*#+}} xmm2 = xmm2[3,2,1,0,4,5,6,7]
-; CHECK-NEXT:    pshufhw {{.*#+}} xmm2 = xmm2[0,1,2,3,7,6,5,4]
-; CHECK-NEXT:    punpcklbw {{.*#+}} xmm0 = xmm0[0],xmm1[0],xmm0[1],xmm1[1],xmm0[2],xmm1[2],xmm0[3],xmm1[3],xmm0[4],xmm1[4],xmm0[5],xmm1[5],xmm0[6],xmm1[6],xmm0[7],xmm1[7]
+; CHECK-NEXT:    pxor %xmm2, %xmm2
+; CHECK-NEXT:    pcmpgtd %xmm0, %xmm2
+; CHECK-NEXT:    movdqa %xmm2, %xmm0
+; CHECK-NEXT:    pandn {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
+; CHECK-NEXT:    pand {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm2
+; CHECK-NEXT:    por %xmm0, %xmm2
+; CHECK-NEXT:    movdqa %xmm2, %xmm0
+; CHECK-NEXT:    punpckhbw {{.*#+}} xmm0 = xmm0[8],xmm1[8],xmm0[9],xmm1[9],xmm0[10],xmm1[10],xmm0[11],xmm1[11],xmm0[12],xmm1[12],xmm0[13],xmm1[13],xmm0[14],xmm1[14],xmm0[15],xmm1[15]
 ; CHECK-NEXT:    pshuflw {{.*#+}} xmm0 = xmm0[3,2,1,0,4,5,6,7]
 ; CHECK-NEXT:    pshufhw {{.*#+}} xmm0 = xmm0[0,1,2,3,7,6,5,4]
-; CHECK-NEXT:    packuswb %xmm2, %xmm0
-; CHECK-NEXT:    movdqa %xmm0, %xmm1
-; CHECK-NEXT:    psrlw $4, %xmm1
-; CHECK-NEXT:    movdqa {{.*#+}} xmm2 = [15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15]
-; CHECK-NEXT:    pand %xmm2, %xmm1
-; CHECK-NEXT:    pand %xmm2, %xmm0
-; CHECK-NEXT:    psllw $4, %xmm0
-; CHECK-NEXT:    por %xmm1, %xmm0
-; CHECK-NEXT:    movdqa %xmm0, %xmm1
-; CHECK-NEXT:    psrlw $2, %xmm1
-; CHECK-NEXT:    movdqa {{.*#+}} xmm2 = [51,51,51,51,51,51,51,51,51,51,51,51,51,51,51,51]
-; CHECK-NEXT:    pand %xmm2, %xmm1
-; CHECK-NEXT:    pand %xmm2, %xmm0
-; CHECK-NEXT:    psllw $2, %xmm0
-; CHECK-NEXT:    por %xmm1, %xmm0
-; CHECK-NEXT:    movdqa %xmm0, %xmm1
-; CHECK-NEXT:    psrlw $1, %xmm1
-; CHECK-NEXT:    movdqa {{.*#+}} xmm2 = [85,85,85,85,85,85,85,85,85,85,85,85,85,85,85,85]
-; CHECK-NEXT:    pand %xmm2, %xmm1
-; CHECK-NEXT:    pand %xmm2, %xmm0
-; CHECK-NEXT:    paddb %xmm0, %xmm0
-; CHECK-NEXT:    por %xmm1, %xmm0
-; CHECK-NEXT:    movd %xmm0, %eax
-; CHECK-NEXT:    testl %eax, %edi
-; CHECK-NEXT:    setne %al
+; CHECK-NEXT:    punpcklbw {{.*#+}} xmm2 = xmm2[0],xmm1[0],xmm2[1],xmm1[1],xmm2[2],xmm1[2],xmm2[3],xmm1[3],xmm2[4],xmm1[4],xmm2[5],xmm1[5],xmm2[6],xmm1[6],xmm2[7],xmm1[7]
+; CHECK-NEXT:    pshuflw {{.*#+}} xmm1 = xmm2[3,2,1,0,4,5,6,7]
+; CHECK-NEXT:    pshufhw {{.*#+}} xmm1 = xmm1[0,1,2,3,7,6,5,4]
+; CHECK-NEXT:    packuswb %xmm0, %xmm1
+; CHECK-NEXT:    movdqa %xmm1, (%rsi)
+; CHECK-NEXT:    movd %xmm1, %eax
+; CHECK-NEXT:    decl %eax
+; CHECK-NEXT:    andl %edi, %eax
 ; CHECK-NEXT:    retq
-  %y_sel = select i1 %c, <2 x i32> <i32 2, i32 3>, <2 x i32> <i32 4, i32 3>
-  %y_rev = call <2 x i32> @llvm.bitreverse.v2i32(<2 x i32> %y_sel)
-  %y_elt = extractelement <2 x i32> %y_rev, i32 0
-  %and = and i32 %x, %y_elt
-  %r = icmp eq i32 %and, %y_elt
-  ret i1 %r
+  %cmp = icmp sgt <4 x i32> zeroinitializer, %a0
+  %sel = select <4 x i1> %cmp, <4 x i32> <i32 4, i32 2, i32 1, i32 0>, <4 x i32> <i32 8, i32 4, i32 2, i32 -1>
+  %swap = call <4 x i32> @llvm.bswap.v4i32(<4 x i32> %sel)
+  store <4 x i32> %swap, ptr %p2
+  %elt = extractelement <4 x i32> %swap, i32 0
+  %res = urem i32 %a1, %elt
+  ret i32 %res
+}
+
+define i32 @pow2_bitreverse(i32 %a0, i32 %a1) {
+; CHECK-LABEL: pow2_bitreverse:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    # kill: def $edi killed $edi def $rdi
+; CHECK-NEXT:    notl %edi
+; CHECK-NEXT:    shrl $31, %edi
+; CHECK-NEXT:    leal 4(,%rdi,4), %eax
+; CHECK-NEXT:    bswapl %eax
+; CHECK-NEXT:    decl %eax
+; CHECK-NEXT:    andl %esi, %eax
+; CHECK-NEXT:    retq
+  %cmp = icmp sgt i32 0, %a0
+  %sel = select i1 %cmp, i32 4, i32 8
+  %swap = call i32 @llvm.bswap.i32(i32 %sel)
+  %rev = call i32 @llvm.bitreverse.i32(i32 %sel)
+  %res = urem i32 %a1, %swap
+  ret i32 %res
+}
+
+define i32 @pow2_bitreverse_vec(<4 x i32> %a0, i32 %a1, ptr %p2) {
+; CHECK-LABEL: pow2_bitreverse_vec:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    pxor %xmm1, %xmm1
+; CHECK-NEXT:    pxor %xmm2, %xmm2
+; CHECK-NEXT:    pcmpgtd %xmm0, %xmm2
+; CHECK-NEXT:    movdqa %xmm2, %xmm0
+; CHECK-NEXT:    pandn {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
+; CHECK-NEXT:    pand {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm2
+; CHECK-NEXT:    por %xmm0, %xmm2
+; CHECK-NEXT:    movdqa %xmm2, %xmm0
+; CHECK-NEXT:    punpckhbw {{.*#+}} xmm0 = xmm0[8],xmm1[8],xmm0[9],xmm1[9],xmm0[10],xmm1[10],xmm0[11],xmm1[11],xmm0[12],xmm1[12],xmm0[13],xmm1[13],xmm0[14],xmm1[14],xmm0[15],xmm1[15]
+; CHECK-NEXT:    pshuflw {{.*#+}} xmm0 = xmm0[3,2,1,0,4,5,6,7]
+; CHECK-NEXT:    pshufhw {{.*#+}} xmm0 = xmm0[0,1,2,3,7,6,5,4]
+; CHECK-NEXT:    punpcklbw {{.*#+}} xmm2 = xmm2[0],xmm1[0],xmm2[1],xmm1[1],xmm2[2],xmm1[2],xmm2[3],xmm1[3],xmm2[4],xmm1[4],xmm2[5],xmm1[5],xmm2[6],xmm1[6],xmm2[7],xmm1[7]
+; CHECK-NEXT:    pshuflw {{.*#+}} xmm1 = xmm2[3,2,1,0,4,5,6,7]
+; CHECK-NEXT:    pshufhw {{.*#+}} xmm1 = xmm1[0,1,2,3,7,6,5,4]
+; CHECK-NEXT:    packuswb %xmm0, %xmm1
+; CHECK-NEXT:    movdqa %xmm1, (%rsi)
+; CHECK-NEXT:    movd %xmm1, %eax
+; CHECK-NEXT:    decl %eax
+; CHECK-NEXT:    andl %edi, %eax
+; CHECK-NEXT:    retq
+  %cmp = icmp sgt <4 x i32> zeroinitializer, %a0
+  %sel = select <4 x i1> %cmp, <4 x i32> <i32 4, i32 2, i32 1, i32 0>, <4 x i32> <i32 8, i32 4, i32 2, i32 -1>
+  %swap = call <4 x i32> @llvm.bswap.v4i32(<4 x i32> %sel)
+  store <4 x i32> %swap, ptr %p2
+  %elt = extractelement <4 x i32> %swap, i32 0
+  %res = urem i32 %a1, %elt
+  ret i32 %res
 }
 
 ; Negative test: Y = a | 1 is always odd/non-zero but not pow2, fold should not trigger.
@@ -1115,14 +1096,15 @@ define i32 @pow2_blsi_add(i32 %x, i32 %a) {
 define i32 @pow2_rotl_orzero(i32 %x, i1 %c) {
 ; CHECK-LABEL: pow2_rotl_orzero:
 ; CHECK:       # %bb.0:
+; CHECK-NEXT:    # kill: def $edi killed $edi def $rdi
 ; CHECK-NEXT:    notb %sil
-; CHECK-NEXT:    movzbl %sil, %eax
-; CHECK-NEXT:    andl $1, %eax
-; CHECK-NEXT:    addl %eax, %eax
-; CHECK-NEXT:    bswapl %eax
-; CHECK-NEXT:    roll $3, %eax
-; CHECK-NEXT:    notl %edi
-; CHECK-NEXT:    andl %edi, %eax
+; CHECK-NEXT:    movzbl %sil, %ecx
+; CHECK-NEXT:    andl $1, %ecx
+; CHECK-NEXT:    addl %ecx, %ecx
+; CHECK-NEXT:    bswapl %ecx
+; CHECK-NEXT:    roll $3, %ecx
+; CHECK-NEXT:    leal (%rdi,%rcx), %eax
+; CHECK-NEXT:    andl %ecx, %eax
 ; CHECK-NEXT:    retq
   %y = select i1 %c, i32 0, i32 2
   %d = call i32 @llvm.bswap.i32(i32 %y)
@@ -1137,14 +1119,15 @@ define i32 @pow2_rotl_orzero(i32 %x, i1 %c) {
 define i32 @pow2_rotr_orzero(i32 %x, i1 %c) {
 ; CHECK-LABEL: pow2_rotr_orzero:
 ; CHECK:       # %bb.0:
+; CHECK-NEXT:    # kill: def $edi killed $edi def $rdi
 ; CHECK-NEXT:    notb %sil
-; CHECK-NEXT:    movzbl %sil, %eax
-; CHECK-NEXT:    andl $1, %eax
-; CHECK-NEXT:    addl %eax, %eax
-; CHECK-NEXT:    bswapl %eax
-; CHECK-NEXT:    rorl $3, %eax
-; CHECK-NEXT:    notl %edi
-; CHECK-NEXT:    andl %edi, %eax
+; CHECK-NEXT:    movzbl %sil, %ecx
+; CHECK-NEXT:    andl $1, %ecx
+; CHECK-NEXT:    addl %ecx, %ecx
+; CHECK-NEXT:    bswapl %ecx
+; CHECK-NEXT:    rorl $3, %ecx
+; CHECK-NEXT:    leal (%rdi,%rcx), %eax
+; CHECK-NEXT:    andl %ecx, %eax
 ; CHECK-NEXT:    retq
   %y = select i1 %c, i32 0, i32 2
   %d = call i32 @llvm.bswap.i32(i32 %y)
