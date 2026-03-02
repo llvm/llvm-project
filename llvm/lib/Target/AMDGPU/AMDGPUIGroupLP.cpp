@@ -2692,7 +2692,8 @@ void IGroupLPDAGMutation::initSchedGroupBarrierPipelineStage(
   auto &SG = SyncedSchedGroups[SyncID].emplace_back((SchedGroupMask)SGMask,
                                                     Size, SyncID, DAG, TII);
   SG.add(*RIter);
-  SG.findCandidateSUnits(RIter, SG.DAG->SUnits.rend(), SyncedInstrs[SG.getSyncID()]);
+  SG.findCandidateSUnits(RIter, SG.DAG->SUnits.rend(),
+                         SyncedInstrs[SG.getSyncID()]);
 }
 
 bool IGroupLPDAGMutation::initIGLPOpt(SUnit &SU) {
