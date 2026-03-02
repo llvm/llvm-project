@@ -725,6 +725,84 @@ TEST_F(OpenACCUtilsLoopTest,
   EXPECT_EQ(mulCount, 1u);
 }
 
+TEST_F(OpenACCUtilsLoopTest,
+       WrapMultiBlockRegionWithSCFExecuteRegionConvertFuncReturn) {
+  auto [module, funcOp] = createModuleWithFunc();
+
+  // Build a multi-block region that uses func.return (function body).
+  // wrapMultiBlockRegionWithSCFExecuteRegion(..., true) should replace
+  // func.return with scf.yield.
+  Region &region = funcOp.getBody();
+  Block *entry = &region.front();
+  Block *thenBlock = b.createBlock(&region, region.end());
+  Block *elseBlock = b.createBlock(&region, region.end());
+  Block *exitBlock = b.createBlock(&region, region.end());
+  Block *tailBlock = b.createBlock(&region, region.end());
+
+  b.setInsertionPointToEnd(entry);
+  Value cond =
+      arith::ConstantOp::create(b, loc, b.getI1Type(), b.getBoolAttr(true));
+  cf::CondBranchOp::create(b, loc, cond, thenBlock, elseBlock);
+
+  b.setInsertionPointToEnd(thenBlock);
+  Value c1 =
+      arith::ConstantOp::create(b, loc, b.getIndexType(), b.getIndexAttr(1));
+  Value c2 =
+      arith::ConstantOp::create(b, loc, b.getIndexType(), b.getIndexAttr(2));
+  arith::AddIOp::create(b, loc, c1, c2);
+  cf::BranchOp::create(b, loc, exitBlock);
+
+  b.setInsertionPointToEnd(elseBlock);
+  Value c3 =
+      arith::ConstantOp::create(b, loc, b.getIndexType(), b.getIndexAttr(3));
+  Value c4 =
+      arith::ConstantOp::create(b, loc, b.getIndexType(), b.getIndexAttr(4));
+  arith::MulIOp::create(b, loc, c3, c4);
+  cf::BranchOp::create(b, loc, exitBlock);
+
+  b.setInsertionPointToEnd(exitBlock);
+  func::ReturnOp::create(b, loc, ValueRange{});
+
+  b.setInsertionPointToEnd(tailBlock);
+  cf::BranchOp::create(b, loc, exitBlock);
+
+  EXPECT_EQ(region.getBlocks().size(), 5u);
+
+  b.setInsertionPointAfter(funcOp);
+  IRMapping mapping;
+  scf::ExecuteRegionOp exeRegionOp = wrapMultiBlockRegionWithSCFExecuteRegion(
+      region, mapping, loc, b, /*convertFuncReturn=*/true);
+
+  ASSERT_TRUE(exeRegionOp);
+
+  EXPECT_EQ(exeRegionOp.getRegion().getBlocks().size(), 5u);
+
+  // Only the block that had func.return is replaced with scf.yield; other
+  // blocks keep their cf.cond_br / cf.br terminators.
+  unsigned exeBlockIndex = 0;
+  Block *exeExitBlock = nullptr;
+  for (Block &block : exeRegionOp.getRegion().getBlocks()) {
+    if (exeBlockIndex ==
+        3) // exitBlock (entry=0, then=1, else=2, exit=3, tail=4)
+      exeExitBlock = &block;
+    exeBlockIndex++;
+  }
+  ASSERT_TRUE(exeExitBlock);
+  EXPECT_TRUE(isa<scf::YieldOp>(exeExitBlock->getTerminator()))
+      << "block that had func.return should now have scf.yield";
+
+  // Control flow and body ops preserved
+  Block &exeEntry = exeRegionOp.getRegion().front();
+  EXPECT_TRUE(isa<cf::CondBranchOp>(exeEntry.getTerminator()));
+
+  unsigned addCount = 0;
+  unsigned mulCount = 0;
+  exeRegionOp.getRegion().walk([&](arith::AddIOp) { ++addCount; });
+  exeRegionOp.getRegion().walk([&](arith::MulIOp) { ++mulCount; });
+  EXPECT_EQ(addCount, 1u);
+  EXPECT_EQ(mulCount, 1u);
+}
+
 //===----------------------------------------------------------------------===//
 // Error Case Tests
 //===----------------------------------------------------------------------===//
