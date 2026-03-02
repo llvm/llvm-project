@@ -112,6 +112,8 @@ public:
   struct KV;
   explicit Object(std::initializer_list<KV> Properties);
 
+  template <typename T> explicit Object(const std::map<std::string, T> &Map);
+
   iterator begin() { return M.begin(); }
   const_iterator begin() const { return M.begin(); }
   iterator end() { return M.end(); }
@@ -649,6 +651,15 @@ inline Object::Object(std::initializer_list<KV> Properties) {
       R.first->getSecond().moveFrom(std::move(P.V));
   }
 }
+
+template <typename T> Object::Object(const std::map<std::string, T> &Map) {
+  for (const auto &P : Map) {
+    auto R = try_emplace(ObjectKey(P.first), nullptr);
+    if (R.second)
+      R.first->getSecond().moveFrom(Value(P.second));
+  }
+}
+
 inline std::pair<Object::iterator, bool> Object::insert(KV E) {
   return try_emplace(std::move(E.K), std::move(E.V));
 }
