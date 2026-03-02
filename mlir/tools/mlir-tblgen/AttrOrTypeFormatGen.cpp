@@ -751,9 +751,14 @@ void DefFormat::genPrinter(MethodBody &os) {
   os.indent();
   os << "::mlir::Builder odsBuilder(getContext());\n";
 
-  // Generate printers.
-  shouldEmitSpace = true;
-  lastWasPunctuation = false;
+  // Start with no leading space: the generated dispatcher
+  // (generatedAttributePrinter/generatedTypePrinter in AttrOrTypeDefGen.cpp)
+  // is responsible for emitting any space between the mnemonic and the first
+  // printed element. Set lastWasPunctuation = true so that the
+  // `!lastWasPunctuation` term in genVariablePrinter/genCustomPrinter also
+  // evaluates to false, fully suppressing any leading space from those paths.
+  shouldEmitSpace = false;
+  lastWasPunctuation = true;
   for (FormatElement *el : elements)
     genElementPrinter(el, ctx, os);
 }
