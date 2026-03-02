@@ -87,6 +87,11 @@ RUN powershell -Command \
 RUN git config --system core.longpaths true & \
     git config --global core.autocrlf false
 
+# Enable long paths so that ninja can work with paths longer than 260 characters.
+RUN powershell -Command \
+    New-ItemProperty -Path "HKLM:\SYSTEM\CurrentControlSet\Control\FileSystem" \
+    -Name "LongPathsEnabled" -Value 1 -PropertyType DWORD -Force
+
 ARG RUNNER_VERSION=2.331.0
 ENV RUNNER_VERSION=$RUNNER_VERSION
 
