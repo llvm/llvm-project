@@ -272,6 +272,12 @@ let isPseudo = 1, isMeta = 1, SchedRW = [WriteSystem] in {
                             "#SEH_UnwindV2Start", []>;
 }
 
+// Chain instructions:
+let isPseudo = 1, isMeta = 1, SchedRW = [WriteSystem] in {
+  def SEH_SplitChainedAtEndOfBlock : I<0, Pseudo, (outs), (ins),
+                            "#SEH_SplitChainedAtEndOfBlock", []>;
+}
+
 //===----------------------------------------------------------------------===//
 // Pseudo instructions used by KCFI.
 //===----------------------------------------------------------------------===//
@@ -324,7 +330,7 @@ def MOV32r0  : I<0, Pseudo, (outs GR32:$dst), (ins), "",
 let AddedComplexity = 10 in {
 def : Pat<(i8 0), (EXTRACT_SUBREG (MOV32r0), sub_8bit)>;
 def : Pat<(i16 0), (EXTRACT_SUBREG (MOV32r0), sub_16bit)>;
-def : Pat<(i64 0), (SUBREG_TO_REG (i64 0), (MOV32r0), sub_32bit)>;
+def : Pat<(i64 0), (SUBREG_TO_REG (MOV32r0), sub_32bit)>;
 }
 
 let Predicates = [OptForSize, Not64BitMode],
@@ -1204,6 +1210,22 @@ def : Pat<(i16 (atomic_load_nonext_16 addr:$src)), (MOV16rm addr:$src)>;
 def : Pat<(i32 (atomic_load_nonext_32 addr:$src)), (MOV32rm addr:$src)>;
 def : Pat<(i64 (atomic_load_nonext_64 addr:$src)), (MOV64rm addr:$src)>;
 
+// load atomic <2 x i16>
+def : Pat<(v4i32 (scalar_to_vector (i32 (atomic_load_32 addr:$src)))),
+  (MOVDI2PDIrm addr:$src)>, Requires<[UseSSE2]>;
+def : Pat<(v4i32 (scalar_to_vector (i32 (atomic_load_32 addr:$src)))),
+  (VMOVSSrm addr:$src)>, Requires<[UseAVX]>;
+def : Pat<(v4i32 (scalar_to_vector (i32 (atomic_load_32 addr:$src)))),
+  (VMOVSSZrm addr:$src)>, Requires<[HasAVX512]>;
+
+// load atomic <2 x i32,float>
+def : Pat<(v2i64 (scalar_to_vector (i64 (atomic_load_64 addr:$src)))),
+  (MOV64toPQIrm addr:$src)>, Requires<[UseSSE2]>;
+def : Pat<(v2i64 (scalar_to_vector (i64 (atomic_load_64 addr:$src)))),
+  (VMOV64toPQIrm addr:$src)>, Requires<[UseAVX]>;
+def : Pat<(v2i64 (scalar_to_vector (i64 (atomic_load_64 addr:$src)))),
+  (VMOV64toPQIZrm addr:$src)>, Requires<[HasAVX512]>;
+
 // Floating point loads/stores.
 def : Pat<(atomic_store_32 (i32 (bitconvert (f32 FR32:$src))), addr:$dst),
           (MOVSSmr addr:$dst, FR32:$src)>, Requires<[UseSSE1]>;
@@ -1327,7 +1349,8 @@ def : Pat<(X86imp_call (i64 tglobaladdr:$dst)),
 
 // Tailcall stuff. The TCRETURN instructions execute after the epilog, so they
 // can never use callee-saved registers. That is the purpose of the GR64_TC
-// register classes.
+// register classes. These (GR32_TC, GR64_TC, ..) need to stay in sync with
+// checkTCRetEnoughRegs.
 //
 // The only volatile register that is never used by the calling convention is
 // %r11. This happens when calling a vararg function with 6 arguments.
@@ -1344,8 +1367,7 @@ def : Pat<(X86tcret GR32:$dst, timm:$off),
 // FIXME: This is disabled for 32-bit PIC mode because the global base
 // register which is part of the address mode may be assigned a
 // callee-saved register.
-// Similar to X86tcret_6regs, here we only have 1 register left
-def : Pat<(X86tcret_1reg (load addr:$dst), timm:$off),
+def : Pat<(X86tcret_enough_regs (load addr:$dst), timm:$off),
           (TCRETURNmi addr:$dst, timm:$off)>,
           Requires<[Not64BitMode, IsNotPIC, NotUseIndirectThunkCalls]>;
 
@@ -1369,15 +1391,23 @@ def : Pat<(X86tcret ptr_rc_tailcall:$dst, timm:$off),
           (TCRETURNri64_ImpCall ptr_rc_tailcall:$dst, timm:$off)>,
           Requires<[In64BitMode, NotUseIndirectThunkCalls, ImportCallOptimizationEnabled]>;
 
-// Don't fold loads into X86tcret requiring more than 6 regs.
+// Don't fold loads into X86tcret requiring too many regs.
 // There wouldn't be enough scratch registers for base+index.
-def : Pat<(X86tcret_6regs (load addr:$dst), timm:$off),
+def : Pat<(X86tcret_enough_regs (load addr:$dst), timm:$off),
           (TCRETURNmi64 addr:$dst, timm:$off)>,
           Requires<[In64BitMode, IsNotWin64CCFunc, NotUseIndirectThunkCalls]>;
 
-def : Pat<(X86tcret_6regs (load addr:$dst), timm:$off),
+def : Pat<(X86tcret_enough_regs (load addr:$dst), timm:$off),
           (TCRETURN_WINmi64 addr:$dst, timm:$off)>,
           Requires<[IsWin64CCFunc, NotUseIndirectThunkCalls]>;
+
+def : Pat<(X86tcret_globaladdr tglobaladdr:$dst, timm:$off),
+          (TCRETURNmi64 RIP, 1, zero_reg, tglobaladdr:$dst, zero_reg, timm:$off)>,
+          Requires<[In64BitMode, IsNotWin64CCFunc]>;
+
+def : Pat<(X86tcret_globaladdr tglobaladdr:$dst, timm:$off),
+          (TCRETURN_WINmi64 RIP, 1, zero_reg, tglobaladdr:$dst, zero_reg, timm:$off)>,
+          Requires<[IsWin64CCFunc]>;
 
 def : Pat<(X86tcret ptr_rc_tailcall:$dst, timm:$off),
           (INDIRECT_THUNK_TCRETURN64 ptr_rc_tailcall:$dst, timm:$off)>,
@@ -1403,6 +1433,9 @@ def : Pat<(X86call (i32 texternalsym:$dst)),
 def : Pat<(X86call (i32 imm:$dst)),
           (CALLpcrel32 imm:$dst)>, Requires<[CallImmAddr]>;
 
+def : Pat<(X86call_globaladdr tglobaladdr:$dst),
+          (CALL64m RIP, 1, zero_reg, tglobaladdr:$dst, zero_reg)>;
+
 // Comparisons.
 
 // TEST R,R is smaller than CMP R,0
@@ -1423,7 +1456,7 @@ def : Pat<(zextloadi16i1 addr:$src),
           (EXTRACT_SUBREG (MOVZX32rm8 addr:$src), sub_16bit)>;
 def : Pat<(zextloadi32i1 addr:$src), (MOVZX32rm8 addr:$src)>;
 def : Pat<(zextloadi64i1 addr:$src),
-          (SUBREG_TO_REG (i64 0), (MOVZX32rm8 addr:$src), sub_32bit)>;
+          (SUBREG_TO_REG (MOVZX32rm8 addr:$src), sub_32bit)>;
 
 // extload bool -> extload byte
 // When extloading from 16-bit and smaller memory locations into 64-bit
@@ -1444,13 +1477,13 @@ def : Pat<(extloadi32i16 addr:$src), (MOVZX32rm16 addr:$src)>;
 // NOTE: The extloadi64i32 pattern needs to be first as it will try to form
 // 32-bit loads for 4 byte aligned i8/i16 loads.
 def : Pat<(extloadi64i32 addr:$src),
-          (SUBREG_TO_REG (i64 0), (MOV32rm addr:$src), sub_32bit)>;
+          (SUBREG_TO_REG (MOV32rm addr:$src), sub_32bit)>;
 def : Pat<(extloadi64i1 addr:$src),
-          (SUBREG_TO_REG (i64 0), (MOVZX32rm8 addr:$src), sub_32bit)>;
+          (SUBREG_TO_REG (MOVZX32rm8 addr:$src), sub_32bit)>;
 def : Pat<(extloadi64i8 addr:$src),
-          (SUBREG_TO_REG (i64 0), (MOVZX32rm8 addr:$src), sub_32bit)>;
+          (SUBREG_TO_REG (MOVZX32rm8 addr:$src), sub_32bit)>;
 def : Pat<(extloadi64i16 addr:$src),
-          (SUBREG_TO_REG (i64 0), (MOVZX32rm16 addr:$src), sub_32bit)>;
+          (SUBREG_TO_REG (MOVZX32rm16 addr:$src), sub_32bit)>;
 
 // anyext. Define these to do an explicit zero-extend to
 // avoid partial-register updates.
@@ -1463,9 +1496,9 @@ def : Pat<(i32 (anyext GR16:$src)),
           (INSERT_SUBREG (i32 (IMPLICIT_DEF)), GR16:$src, sub_16bit)>;
 
 def : Pat<(i64 (anyext GR8 :$src)),
-          (SUBREG_TO_REG (i64 0), (MOVZX32rr8  GR8  :$src), sub_32bit)>;
+          (SUBREG_TO_REG (MOVZX32rr8  GR8  :$src), sub_32bit)>;
 def : Pat<(i64 (anyext GR16:$src)),
-          (SUBREG_TO_REG (i64 0), (MOVZX32rr16 GR16 :$src), sub_32bit)>;
+          (SUBREG_TO_REG (MOVZX32rr16 GR16 :$src), sub_32bit)>;
 def : Pat<(i64 (anyext GR32:$src)),
           (INSERT_SUBREG (i64 (IMPLICIT_DEF)), GR32:$src, sub_32bit)>;
 
@@ -1474,9 +1507,9 @@ def : Pat<(i32 (anyext_sdiv GR8:$src)), (MOVSX32rr8 GR8:$src)>;
 // In the case of a 32-bit def that is known to implicitly zero-extend,
 // we can use a SUBREG_TO_REG.
 def : Pat<(i64 (zext def32:$src)),
-          (SUBREG_TO_REG (i64 0), GR32:$src, sub_32bit)>;
+          (SUBREG_TO_REG GR32:$src, sub_32bit)>;
 def : Pat<(i64 (and (anyext def32:$src), 0x00000000FFFFFFFF)),
-          (SUBREG_TO_REG (i64 0), GR32:$src, sub_32bit)>;
+          (SUBREG_TO_REG GR32:$src, sub_32bit)>;
 
 //===----------------------------------------------------------------------===//
 // Pattern match OR as ADD
@@ -1643,7 +1676,6 @@ let AddedComplexity = 1 in {
   let Predicates = [NoNDD] in {
     def : Pat<(and GR64:$src, i64immZExt32:$imm),
               (SUBREG_TO_REG
-                (i64 0),
                 (AND32ri
                   (EXTRACT_SUBREG GR64:$src, sub_32bit),
                   (i32 (GetLo32XForm imm:$imm))),
@@ -1652,7 +1684,6 @@ let AddedComplexity = 1 in {
   let Predicates = [HasNDD] in {
     def : Pat<(and GR64:$src, i64immZExt32:$imm),
               (SUBREG_TO_REG
-                (i64 0),
                 (AND32ri_ND
                   (EXTRACT_SUBREG GR64:$src, sub_32bit),
                   (i32 (GetLo32XForm imm:$imm))),
@@ -1678,18 +1709,15 @@ def : Pat<(and GR16:$src1, 0xff),
 
 // r & (2^32-1) ==> movz
 def : Pat<(and GR64:$src, 0x00000000FFFFFFFF),
-          (SUBREG_TO_REG (i64 0),
-                         (MOV32rr (EXTRACT_SUBREG GR64:$src, sub_32bit)),
+          (SUBREG_TO_REG (MOV32rr (EXTRACT_SUBREG GR64:$src, sub_32bit)),
                          sub_32bit)>;
 // r & (2^16-1) ==> movz
 def : Pat<(and GR64:$src, 0xffff),
-          (SUBREG_TO_REG (i64 0),
-                      (MOVZX32rr16 (i16 (EXTRACT_SUBREG GR64:$src, sub_16bit))),
-                      sub_32bit)>;
+          (SUBREG_TO_REG (MOVZX32rr16 (i16 (EXTRACT_SUBREG GR64:$src, sub_16bit))),
+                         sub_32bit)>;
 // r & (2^8-1) ==> movz
 def : Pat<(and GR64:$src, 0xff),
-          (SUBREG_TO_REG (i64 0),
-                         (MOVZX32rr8 (i8 (EXTRACT_SUBREG GR64:$src, sub_8bit))),
+          (SUBREG_TO_REG (MOVZX32rr8 (i8 (EXTRACT_SUBREG GR64:$src, sub_8bit))),
                          sub_32bit)>;
 } // AddedComplexity = 1
 
@@ -1813,19 +1841,16 @@ def : Pat<(srl (and_su GR32:$src, immff00_ffff), (i8 8)),
 // h-register extract and zero-extend.
 def : Pat<(and (srl_su GR64:$src, (i8 8)), (i64 255)),
           (SUBREG_TO_REG
-            (i64 0),
             (MOVZX32rr8_NOREX
               (EXTRACT_SUBREG GR64:$src, sub_8bit_hi)),
             sub_32bit)>;
 def : Pat<(i64 (zext (srl_su GR16:$src, (i8 8)))),
           (SUBREG_TO_REG
-            (i64 0),
             (MOVZX32rr8_NOREX
               (EXTRACT_SUBREG GR16:$src, sub_8bit_hi)),
             sub_32bit)>;
 def : Pat<(i64 (anyext (srl_su GR16:$src, (i8 8)))),
           (SUBREG_TO_REG
-            (i64 0),
             (MOVZX32rr8_NOREX
               (EXTRACT_SUBREG GR16:$src, sub_8bit_hi)),
             sub_32bit)>;
@@ -2220,13 +2245,13 @@ defm : EFLAGSDefiningPats<"_ND", HasNDD>;
 let Predicates = [HasZU] in {
   // zext (mul reg/mem, imm) -> imulzu
   def : Pat<(i32 (zext (i16 (mul GR16:$src1, imm:$src2)))),
-            (SUBREG_TO_REG (i32 0), (IMULZU16rri GR16:$src1, imm:$src2), sub_16bit)>;
+            (SUBREG_TO_REG (IMULZU16rri GR16:$src1, imm:$src2), sub_16bit)>;
   def : Pat<(i32 (zext (i16 (mul (loadi16 addr:$src1), imm:$src2)))),
-            (SUBREG_TO_REG (i32 0), (IMULZU16rmi addr:$src1, imm:$src2), sub_16bit)>;
+            (SUBREG_TO_REG (IMULZU16rmi addr:$src1, imm:$src2), sub_16bit)>;
   def : Pat<(i64 (zext (i16 (mul GR16:$src1, imm:$src2)))),
-            (SUBREG_TO_REG (i64 0), (IMULZU16rri GR16:$src1, imm:$src2), sub_16bit)>;
+            (SUBREG_TO_REG (IMULZU16rri GR16:$src1, imm:$src2), sub_16bit)>;
   def : Pat<(i64 (zext (i16 (mul (loadi16 addr:$src1), imm:$src2)))),
-            (SUBREG_TO_REG (i64 0), (IMULZU16rmi addr:$src1, imm:$src2), sub_16bit)>;
+            (SUBREG_TO_REG (IMULZU16rmi addr:$src1, imm:$src2), sub_16bit)>;
 }
 
 // mul reg, imm

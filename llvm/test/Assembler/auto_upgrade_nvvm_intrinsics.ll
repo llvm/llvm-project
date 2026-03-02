@@ -118,7 +118,8 @@ define void @simple_upgrade(i32 %a, i64 %b, i16 %c) {
 ; CHECK: trunc i64 [[popc]] to i32
   %r6 = call i32 @llvm.nvvm.popc.ll(i64 %b)
 
-; CHECK: call float @llvm.convert.from.fp16.f32(i16 %c)
+; CHECK: [[BITCAST_C:%.+]] = bitcast i16 %c to half
+; CHECK-NEXT: = fpext half [[BITCAST_C]] to float
   %r7 = call float @llvm.nvvm.h2f(i16 %c)
   ret void
 }

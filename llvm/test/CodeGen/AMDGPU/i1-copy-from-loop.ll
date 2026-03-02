@@ -50,7 +50,7 @@ define amdgpu_ps void @i1_copy_from_loop(ptr addrspace(8) inreg %rsrc, i32 %tid)
 ; SI-NEXT:    s_and_saveexec_b64 s[0:1], s[6:7]
 ; SI-NEXT:    s_cbranch_execz .LBB0_9
 ; SI-NEXT:  ; %bb.8: ; %if
-; SI-NEXT:    exp mrt0 v0, v0, v0, v0 done vm
+; SI-NEXT:    exp mrt0, v0, v0, v0, v0 done vm
 ; SI-NEXT:  .LBB0_9: ; %end
 ; SI-NEXT:    s_endpgm
 entry:

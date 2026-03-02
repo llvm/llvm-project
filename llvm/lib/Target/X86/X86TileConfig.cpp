@@ -201,7 +201,7 @@ static bool tileConfig(MachineFunction &MF,
                       BuildMI(MBB, ++Iter, DL,
                               TII->get(IsRow ? X86::MOV8mr : X86::MOV16mr)),
                       SS, Offset)
-                      .addReg(R, 0, SubIdx);
+                      .addReg(R, {}, SubIdx);
           SlotIndex SIdx = LIS.InsertMachineInstrInMaps(*NewMI);
           LIS.extendToIndices(LIS.getInterval(R), {SIdx.getRegSlot()});
         }

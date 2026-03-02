@@ -49,6 +49,7 @@ add_llvm_target(SPIRVCodeGen
   SPIRVSubtarget.cpp
   SPIRVTargetMachine.cpp
   SPIRVTargetTransformInfo.cpp
+  SPIRVTypeInst.cpp
   SPIRVUtils.cpp
   SPIRVEmitNonSemanticDI.cpp
   SPIRVCBufferAccess.cpp
@@ -63,6 +64,7 @@ add_llvm_target(SPIRVCodeGen
   Demangle
   GlobalISel
   FrontendHLSL
+  IPO
   MC
   SPIRVAnalysis
   SPIRVDesc

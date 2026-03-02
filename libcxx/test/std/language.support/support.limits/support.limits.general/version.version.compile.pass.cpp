@@ -5088,8 +5088,8 @@
 #  ifndef __cpp_lib_flat_set
 #    error "__cpp_lib_flat_set should be defined in c++23"
 #  endif
-#  if __cpp_lib_flat_set != 202207L
-#    error "__cpp_lib_flat_set should have the value 202207L in c++23"
+#  if __cpp_lib_flat_set != 202511L
+#    error "__cpp_lib_flat_set should have the value 202511L in c++23"
 #  endif
 
 #  if !defined(_LIBCPP_VERSION) || _LIBCPP_AVAILABILITY_HAS_TO_CHARS_FLOATING_POINT
@@ -5772,17 +5772,11 @@
 #    error "__cpp_lib_ranges_to_container should have the value 202202L in c++23"
 #  endif
 
-#  if !defined(_LIBCPP_VERSION)
-#    ifndef __cpp_lib_ranges_zip
-#      error "__cpp_lib_ranges_zip should be defined in c++23"
-#    endif
-#    if __cpp_lib_ranges_zip != 202110L
-#      error "__cpp_lib_ranges_zip should have the value 202110L in c++23"
-#    endif
-#  else
-#    ifdef __cpp_lib_ranges_zip
-#      error "__cpp_lib_ranges_zip should not be defined because it is unimplemented in libc++!"
-#    endif
+#  ifndef __cpp_lib_ranges_zip
+#    error "__cpp_lib_ranges_zip should be defined in c++23"
+#  endif
+#  if __cpp_lib_ranges_zip != 202110L
+#    error "__cpp_lib_ranges_zip should have the value 202110L in c++23"
 #  endif
 
 #  ifdef __cpp_lib_ratio
@@ -5922,8 +5916,8 @@
 #  ifndef __cpp_lib_shift
 #    error "__cpp_lib_shift should be defined in c++23"
 #  endif
-#  if __cpp_lib_shift != 201806L
-#    error "__cpp_lib_shift should have the value 201806L in c++23"
+#  if __cpp_lib_shift != 202202L
+#    error "__cpp_lib_shift should have the value 202202L in c++23"
 #  endif
 
 #  ifndef __cpp_lib_smart_ptr_for_overwrite
@@ -6833,8 +6827,8 @@
 #  ifndef __cpp_lib_flat_set
 #    error "__cpp_lib_flat_set should be defined in c++26"
 #  endif
-#  if __cpp_lib_flat_set != 202207L
-#    error "__cpp_lib_flat_set should have the value 202207L in c++26"
+#  if __cpp_lib_flat_set != 202511L
+#    error "__cpp_lib_flat_set should have the value 202511L in c++26"
 #  endif
 
 #  if !defined(_LIBCPP_VERSION) || _LIBCPP_AVAILABILITY_HAS_TO_CHARS_FLOATING_POINT
@@ -7703,17 +7697,11 @@
 #    error "__cpp_lib_ranges_to_container should have the value 202202L in c++26"
 #  endif
 
-#  if !defined(_LIBCPP_VERSION)
-#    ifndef __cpp_lib_ranges_zip
-#      error "__cpp_lib_ranges_zip should be defined in c++26"
-#    endif
-#    if __cpp_lib_ranges_zip != 202110L
-#      error "__cpp_lib_ranges_zip should have the value 202110L in c++26"
-#    endif
-#  else
-#    ifdef __cpp_lib_ranges_zip
-#      error "__cpp_lib_ranges_zip should not be defined because it is unimplemented in libc++!"
-#    endif
+#  ifndef __cpp_lib_ranges_zip
+#    error "__cpp_lib_ranges_zip should be defined in c++26"
+#  endif
+#  if __cpp_lib_ranges_zip != 202110L
+#    error "__cpp_lib_ranges_zip should have the value 202110L in c++26"
 #  endif
 
 #  ifndef __cpp_lib_ratio
@@ -7880,8 +7868,8 @@
 #  ifndef __cpp_lib_shift
 #    error "__cpp_lib_shift should be defined in c++26"
 #  endif
-#  if __cpp_lib_shift != 201806L
-#    error "__cpp_lib_shift should have the value 201806L in c++26"
+#  if __cpp_lib_shift != 202202L
+#    error "__cpp_lib_shift should have the value 202202L in c++26"
 #  endif
 
 #  ifndef __cpp_lib_smart_ptr_for_overwrite
