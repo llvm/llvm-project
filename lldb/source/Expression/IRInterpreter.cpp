@@ -996,7 +996,7 @@ bool IRInterpreter::Interpret(llvm::Module &module, llvm::Function &function,
         LLDB_LOGF(log, "Interpreted an UncondBrInst");
       }
       continue;
-    case Instruction::CondBr:
+    case Instruction::CondBr: {
       const CondBrInst *br_inst = cast<CondBrInst>(inst);
 
       Value *condition = br_inst->getCondition();
