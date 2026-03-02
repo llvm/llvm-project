@@ -1232,13 +1232,23 @@ AArch64BtiPac::AArch64BtiPac(Ctx &ctx) : AArch64(ctx) {
 
 void AArch64BtiPac::writePltHeader(uint8_t *buf) const {
   const uint8_t btiData[] = { 0x5f, 0x24, 0x03, 0xd5 }; // bti c
+  const uint8_t signLR[] = {0x7f, 0x23, 0x03, 0xd5};    // pacibsp
   const uint8_t pltData[] = {
       0xf0, 0x7b, 0xbf, 0xa9, // stp    x16, x30, [sp,#-16]!
       0x10, 0x00, 0x00, 0x90, // adrp   x16, Page(&(.got.plt[2]))
       0x11, 0x02, 0x40, 0xf9, // ldr    x17, [x16, Offset(&(.got.plt[2]))]
       0x10, 0x02, 0x00, 0x91, // add    x16, x16, Offset(&(.got.plt[2]))
-      0x20, 0x02, 0x1f, 0xd6, // br     x17
-      0x1f, 0x20, 0x03, 0xd5, // nop
+  };
+  const uint8_t pacHintBr[] = {
+      0x9f, 0x21, 0x03, 0xd5, // autia1716
+      0x20, 0x02, 0x1f, 0xd6  // br   x17
+  };
+  const uint8_t pacBr[] = {
+      0x30, 0x0a, 0x1f, 0xd7, // braa x17, x16
+      0x1f, 0x20, 0x03, 0xd5  // nop
+  };
+  const uint8_t stdBr[] = {
+      0x20, 0x02, 0x1f, 0xd6, // br   x17
       0x1f, 0x20, 0x03, 0xd5  // nop
   };
   const uint8_t nopData[] = { 0x1f, 0x20, 0x03, 0xd5 }; // nop
@@ -1253,15 +1263,30 @@ void AArch64BtiPac::writePltHeader(uint8_t *buf) const {
     buf += sizeof(btiData);
     plt += sizeof(btiData);
   }
+  if (pacEntryKind != PEK_NoAuth) {
+    memcpy(buf, signLR, sizeof(signLR));
+    buf += sizeof(signLR);
+    plt += sizeof(signLR);
+  }
   memcpy(buf, pltData, sizeof(pltData));
 
   relocateNoSym(buf + 4, R_AARCH64_ADR_PREL_PG_HI21,
                 getAArch64Page(got + 16) - getAArch64Page(plt + 4));
   relocateNoSym(buf + 8, R_AARCH64_LDST64_ABS_LO12_NC, got + 16);
   relocateNoSym(buf + 12, R_AARCH64_ADD_ABS_LO12_NC, got + 16);
+
+  if (pacEntryKind != PEK_NoAuth)
+    memcpy(buf + sizeof(pltData),
+           (pacEntryKind == PEK_AuthHint ? pacHintBr : pacBr),
+           sizeof(pacEntryKind == PEK_AuthHint ? pacHintBr : pacBr));
+  else
+    memcpy(buf + sizeof(pltData), stdBr, sizeof(stdBr));
   if (!btiHeader)
     // We didn't add the BTI c instruction so round out size with NOP.
-    memcpy(buf + sizeof(pltData), nopData, sizeof(nopData));
+    memcpy(buf + sizeof(pltData) + sizeof(stdBr), nopData, sizeof(nopData));
+  if (pacEntryKind == PEK_NoAuth)
+    // We didn't add the PACIBSP instruction so round out size with NOP.
+    memcpy(buf + sizeof(pltData) + sizeof(stdBr), nopData, sizeof(nopData));
 }
 
 void AArch64BtiPac::writePlt(uint8_t *buf, const Symbol &sym,
