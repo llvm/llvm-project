@@ -1800,9 +1800,9 @@ namespace {
 // and should be removed once that issue is resolved.
 Register scavengeAddrReg(MachineInstr &MI, MachineBasicBlock *MBB) {
   NumRSWorkaround++;
-  // create fresh RegScavanger instance.
+  // Create fresh RegScavenger instance.
   RegScavenger RS;
-  // initialize RegScavenger to correct location
+  // Initialize RegScavenger to correct location.
   RS.enterBasicBlockEnd(*MBB);
   RS.backward(MI);
 
@@ -1836,12 +1836,12 @@ void SystemZInstrInfo::expandStackGuardPseudo(MachineInstr &MI,
   // return that register. If not, scavenge a new register and return that.
   // This is a workaround for https://github.com/llvm/llvm-project/issues/172511
   // and should be removed once that issue is resolved.
-  // After this, AddrReg is set to a usable scratch register.
   Register AddrReg = MI.getOperand(0).getReg();
   Register OpReg = MI.getOperand(1).getReg();
-  // if we can't use AddrReg, scavenge a new one.
+  // If we can't use AddrReg, scavenge a new one.
   if (AddrReg == OpReg)
-    AddrReg = scavengeAddrReg(MI, &MBB);
+  AddrReg = scavengeAddrReg(MI, &MBB);
+  // At this point, AddrReg should be set to a usable scratch register.
 
   // Emit an appropriate pseudo for the guard type, which loads the address of
   // said guard into the scratch register AddrReg.

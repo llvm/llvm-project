@@ -8175,7 +8175,7 @@ SDValue SystemZTargetLowering::combineSTORE(
       (Op1->getMachineOpcode() == SystemZ::LOAD_STACK_GUARD)) {
     // Obtain the frame index the store was targeting.
     int FI = cast<FrameIndexSDNode>(SN->getOperand(2))->getIndex();
-    // Prepare operands of MSGD - FrameIndex, Dummy Displacement.
+    // Prepare operands of the MOV_STACKGUARD ISD Node - Chain and FrameIndex.
     SDValue Ops[] = {SN->getChain(),
                      DAG.getTargetFrameIndex(FI, MVT::i64)};
     return DAG.getNode(SystemZISD::MOV_STACKGUARD,
@@ -11106,9 +11106,9 @@ getBackchainAddress(SDValue SP, SelectionDAG &DAG) const {
                      DAG.getIntPtrConstant(TFL->getBackchainOffset(MF), DL));
 }
 
-// Replace a _STACKGUARD_DAG pseudo with a _SG pseudo, adding
-// a dead early-clobber def reg that will be used as a
-// scratch register when the pseudo is expanded.
+// Replace a _STACKGUARD_DAG pseudo with a _STACKGUARD pseudo, adding
+// a dead early-clobber def reg that will be used as a scratch register
+// when the pseudo is expanded.
 MachineBasicBlock *SystemZTargetLowering::emitStackGuardPseudo(
     MachineInstr &MI, MachineBasicBlock *MBB, unsigned PseudoOp) const {
   MachineRegisterInfo *MRI = &MBB->getParent()->getRegInfo();

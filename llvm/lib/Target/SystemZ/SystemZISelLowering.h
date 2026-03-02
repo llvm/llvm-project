@@ -228,7 +228,7 @@ public:
 
   /// Override to support customized stack guard loading.
   bool useLoadStackGuardNode(const Module &M) const override { return true; }
-  // Insert SSP declaration if global stack protector is used.
+  /// Insert SSP declaration if global stack protector is used.
   void
   insertSSPDeclarations(Module &M,
                         const LibcallLoweringInfo &Libcalls) const override;

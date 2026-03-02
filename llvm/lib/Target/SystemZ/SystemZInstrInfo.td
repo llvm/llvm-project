@@ -524,16 +524,15 @@ let SimpleBDXStore = 1, mayStore = 1 in {
 }
 
 let hasNoSchedulingInfo = 1, hasSideEffects = 1, mayLoad = 1 in {
-  // load the stack guard's address
+  // Load the TLS block's address for the purpose of loading the stack guard.
   def LOAD_TLS_BLOCK_ADDR : Pseudo<(outs ADDR64:$grdaddr),
                                             (ins), []>;
+  // Load the address of a global variable holding the stack guard.
   def LOAD_GLOBAL_STACKGUARD_ADDR : Pseudo<(outs ADDR64:$grdaddr),
                                                (ins), []>;
 
   let mayStore = 1 in {
-    // load the stack guard's address
-    // (via LOAD_[TLS|GLOBAL]_STACKGUARD_ADDR),
-    // and move the stack guard to the stack.
+    // Move the stack guard to the stack.
     let usesCustomInserter = 1 in
       def MOV_STACKGUARD_DAG : Pseudo<(outs),
                                         (ins bdaddr12only:$grdloc), [
@@ -546,9 +545,7 @@ let hasNoSchedulingInfo = 1, hasSideEffects = 1, mayLoad = 1 in {
                                     (ins bdaddr12only:$grdloc), []>;
   }
   let Defs = [CC] in {
-    // load the stack guard's address
-    // (via LOAD_[TLS|GLOBAL]_STACKGUARD_ADDR),
-    // and compare the stack guard against the one on the stack.
+    // Compare the stack guard against the one on the stack.
     let usesCustomInserter = 1 in
       def CMP_STACKGUARD_DAG : Pseudo<(outs),
                                            (ins bdaddr12only:$grdloc), 
