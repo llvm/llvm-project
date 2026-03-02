@@ -666,6 +666,51 @@ define <2 x i32> @test_pssubu_w(<2 x i32> %a, <2 x i32> %b) {
   ret <2 x i32> %res
 }
 
+; Test scalar saturating add/sub operations for i32 (RV64 only)
+define i32 @test_scalar_psadd_w(i32 %a, i32 %b) {
+; CHECK-LABEL: test_scalar_psadd_w:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    zext.w a1, a1
+; CHECK-NEXT:    zext.w a0, a0
+; CHECK-NEXT:    psadd.w a0, a0, a1
+; CHECK-NEXT:    ret
+  %res = call i32 @llvm.sadd.sat.i32(i32 %a, i32 %b)
+  ret i32 %res
+}
+
+define i32 @test_scalar_psaddu_w(i32 %a, i32 %b) {
+; CHECK-LABEL: test_scalar_psaddu_w:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    zext.w a1, a1
+; CHECK-NEXT:    zext.w a0, a0
+; CHECK-NEXT:    psaddu.w a0, a0, a1
+; CHECK-NEXT:    ret
+  %res = call i32 @llvm.uadd.sat.i32(i32 %a, i32 %b)
+  ret i32 %res
+}
+
+define i32 @test_scalar_pssub_w(i32 %a, i32 %b) {
+; CHECK-LABEL: test_scalar_pssub_w:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    zext.w a1, a1
+; CHECK-NEXT:    zext.w a0, a0
+; CHECK-NEXT:    pssub.w a0, a0, a1
+; CHECK-NEXT:    ret
+  %res = call i32 @llvm.ssub.sat.i32(i32 %a, i32 %b)
+  ret i32 %res
+}
+
+define i32 @test_scalar_pssubu_w(i32 %a, i32 %b) {
+; CHECK-LABEL: test_scalar_pssubu_w:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    zext.w a1, a1
+; CHECK-NEXT:    zext.w a0, a0
+; CHECK-NEXT:    pssubu.w a0, a0, a1
+; CHECK-NEXT:    ret
+  %res = call i32 @llvm.usub.sat.i32(i32 %a, i32 %b)
+  ret i32 %res
+}
+
 ; Test averaging floor signed operations for v2i32 (RV64 only)
 ; avgfloors pattern: (a + b) arithmetic shift right 1
 define <2 x i32> @test_paadd_w(<2 x i32> %a, <2 x i32> %b) {
@@ -2005,10 +2050,10 @@ define <4 x i16> @test_select_v4i16(i1 %cond, <4 x i16> %a, <4 x i16> %b) {
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    andi a3, a0, 1
 ; CHECK-NEXT:    mv a0, a1
-; CHECK-NEXT:    bnez a3, .LBB161_2
+; CHECK-NEXT:    bnez a3, .LBB165_2
 ; CHECK-NEXT:  # %bb.1:
 ; CHECK-NEXT:    mv a0, a2
-; CHECK-NEXT:  .LBB161_2:
+; CHECK-NEXT:  .LBB165_2:
 ; CHECK-NEXT:    ret
   %res = select i1 %cond, <4 x i16> %a, <4 x i16> %b
   ret <4 x i16> %res
@@ -2019,10 +2064,10 @@ define <8 x i8> @test_select_v8i8(i1 %cond, <8 x i8> %a, <8 x i8> %b) {
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    andi a3, a0, 1
 ; CHECK-NEXT:    mv a0, a1
-; CHECK-NEXT:    bnez a3, .LBB162_2
+; CHECK-NEXT:    bnez a3, .LBB166_2
 ; CHECK-NEXT:  # %bb.1:
 ; CHECK-NEXT:    mv a0, a2
-; CHECK-NEXT:  .LBB162_2:
+; CHECK-NEXT:  .LBB166_2:
 ; CHECK-NEXT:    ret
   %res = select i1 %cond, <8 x i8> %a, <8 x i8> %b
   ret <8 x i8> %res
@@ -2033,10 +2078,10 @@ define <2 x i32> @test_select_v2i32(i1 %cond, <2 x i32> %a, <2 x i32> %b) {
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    andi a3, a0, 1
 ; CHECK-NEXT:    mv a0, a1
-; CHECK-NEXT:    bnez a3, .LBB163_2
+; CHECK-NEXT:    bnez a3, .LBB167_2
 ; CHECK-NEXT:  # %bb.1:
 ; CHECK-NEXT:    mv a0, a2
-; CHECK-NEXT:  .LBB163_2:
+; CHECK-NEXT:  .LBB167_2:
 ; CHECK-NEXT:    ret
   %res = select i1 %cond, <2 x i32> %a, <2 x i32> %b
   ret <2 x i32> %res

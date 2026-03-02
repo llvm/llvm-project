@@ -478,10 +478,11 @@ RISCVTargetLowering::RISCVTargetLowering(const TargetMachine &TM,
 
   if ((Subtarget.hasStdExtP() || Subtarget.hasVendorXqcia()) &&
       !Subtarget.is64Bit()) {
-    // FIXME: Support i32 on RV64+P by inserting into a v2i32 vector, doing
-    // the vector operation and extracting.
     setOperationAction({ISD::SADDSAT, ISD::SSUBSAT, ISD::UADDSAT, ISD::USUBSAT},
                        MVT::i32, Legal);
+  } else if (Subtarget.hasStdExtP() && Subtarget.is64Bit()) {
+    setOperationAction({ISD::SADDSAT, ISD::SSUBSAT, ISD::UADDSAT, ISD::USUBSAT},
+                       MVT::i32, Custom);
   } else if (!Subtarget.hasStdExtZbb() && Subtarget.is64Bit()) {
     setOperationAction({ISD::SADDSAT, ISD::SSUBSAT, ISD::UADDSAT, ISD::USUBSAT},
                        MVT::i32, Custom);
@@ -15587,6 +15588,22 @@ void RISCVTargetLowering::ReplaceNodeResults(SDNode *N,
   case ISD::SSUBSAT: {
     assert(N->getValueType(0) == MVT::i32 && Subtarget.is64Bit() &&
            "Unexpected custom legalisation");
+
+    if (Subtarget.hasStdExtP()) {
+      // On RV64, map scalar i32 saturating add/sub through lane 0 of a packed
+      // v2i32 operation so we can select ps*.w instructions.
+      SDValue LHS =
+          DAG.getBitcast(MVT::v2i32, DAG.getNode(ISD::ZERO_EXTEND, DL, MVT::i64,
+                                                 N->getOperand(0)));
+      SDValue RHS =
+          DAG.getBitcast(MVT::v2i32, DAG.getNode(ISD::ZERO_EXTEND, DL, MVT::i64,
+                                                 N->getOperand(1)));
+      SDValue VecRes = DAG.getNode(N->getOpcode(), DL, MVT::v2i32, LHS, RHS);
+      SDValue Res64 = DAG.getBitcast(MVT::i64, VecRes);
+      Results.push_back(DAG.getNode(ISD::TRUNCATE, DL, MVT::i32, Res64));
+      return;
+    }
+
     Results.push_back(expandAddSubSat(N, DAG));
     return;
   }
