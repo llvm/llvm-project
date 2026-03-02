@@ -35,11 +35,14 @@ public:
       : PyRewriterBase(mlirPatternRewriterAsBase(rewriter)) {}
 };
 
-class PyConversionPatternRewriter : PyPatternRewriter {
+class PyConversionPatternRewriter : public PyPatternRewriter {
 public:
   PyConversionPatternRewriter(MlirConversionPatternRewriter rewriter)
       : PyPatternRewriter(
-            mlirConversionPatternRewriterAsPatternRewriter(rewriter)) {}
+            mlirConversionPatternRewriterAsPatternRewriter(rewriter)),
+        rewriter(rewriter) {}
+
+  MlirConversionPatternRewriter rewriter;
 };
 
 class PyConversionTarget {
@@ -577,7 +580,13 @@ void populateRewriteSubmodule(nb::module_ &m) {
            "Freeze the pattern set into a frozen one.");
 
   nb::class_<PyConversionPatternRewriter, PyPatternRewriter>(
-      m, "ConversionPatternRewriter");
+      m, "ConversionPatternRewriter")
+      .def("convert_region_types",
+           [](PyConversionPatternRewriter &self, PyRegion &region,
+              PyTypeConverter &typeConverter) {
+             mlirConversionPatternRewriterConvertRegionTypes(
+                 self.rewriter, region.get(), typeConverter.get());
+           });
 
   nb::class_<PyConversionTarget>(m, "ConversionTarget")
       .def(
