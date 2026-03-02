@@ -93,14 +93,28 @@ void UseStdMoveCheck::check(const MatchFinder::MatchResult &Result) {
   if (!TheCFG)
     return;
 
-  // Walk the CFG bottom-up, starting with the exit node.
-  // TODO: traverse the whole CFG instead of only considering terminator
-  // nodes.
+  struct BlockState {
+    bool Ready;
+    unsigned RemainingSuccessors;
+  };
+  std::unordered_map<const CFGBlock *, BlockState> CFGState;
+  for (const auto *B : *TheCFG)
+    CFGState.emplace(B, BlockState{true, B->succ_size()});
+
   const CFGBlock &TheExit = TheCFG->getExit();
-  for (auto &Pred : TheExit.preds()) {
-    if (!Pred.isReachable())
+  std::vector<const CFGBlock *> ToVisit = {&TheExit};
+
+  // Walk the CFG bottom-up, starting with the exit node.
+  while (!ToVisit.empty()) {
+    const CFGBlock *B = ToVisit.back();
+    ToVisit.pop_back();
+    if (!CFGState.find(B)->second.Ready)
       continue;
-    for (const CFGElement &Elt : llvm::reverse(*Pred)) {
+
+    assert(CFGState.find(B)->second.RemainingSuccessors == 0 &&
+           "All successors have been processed.");
+    bool ReferencesAssignedValue = false;
+    for (const CFGElement &Elt : llvm::reverse(*B)) {
       if (Elt.getKind() != CFGElement::Kind::Statement)
         continue;
 
@@ -112,13 +126,31 @@ void UseStdMoveCheck::check(const MatchFinder::MatchResult &Result) {
             << FixItHint::CreateReplacement(
                    AssignValue->getLocation(),
                    ("std::move(" + AssignValueName + ")").str());
+        ReferencesAssignedValue = true;
         break;
       }
-      // The reference is being referenced after the assignment, bail out.
+
+      // The reference is being referenced after the assignment.
       if (!allDeclRefExprs(*cast<VarDecl>(AssignValue->getDecl()), *EltStmt,
                            *Result.Context)
-               .empty())
+               .empty()) {
+        ReferencesAssignedValue = true;
         break;
+      }
+    }
+    if (ReferencesAssignedValue) {
+      // Cancel all predecessors.
+      for (const auto &S : B->preds())
+        CFGState.find(&*S)->second.Ready = false;
+    } else {
+      // Or process the ready ones.
+      for (const auto &S : B->preds()) {
+        auto &W = CFGState.find(&*S)->second;
+        if (W.Ready) {
+          if (--W.RemainingSuccessors == 0 && S.isReachable())
+            ToVisit.push_back(&*S);
+        }
+      }
     }
   }
 }

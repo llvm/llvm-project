@@ -300,3 +300,68 @@ void InvalidMoveAssign(NoMoveAssign& target, NoMoveAssign source) {
   // No message expected, moving is deleted.
   target = source;
 }
+
+// Check moving within control-flow
+// --------------------------------
+
+void ConvertibleNonTrivialMoveAssignWithinTestPred(bool pred, NonTrivialMoveAssign& target, NonTrivialMoveAssign source) {
+  // CHECK-MESSAGES: [[@LINE+1]]:12: warning: 'source' could be moved here [performance-use-std-move]
+  target = source;
+  // CHECK-FIXES: target = std::move(source);
+  if (pred)
+    target = target;
+}
+
+void NonConvertibleNonTrivialMoveAssignWithinTestPred(bool pred, NonTrivialMoveAssign& target, NonTrivialMoveAssign source) {
+  target = source;
+  if (pred)
+    source.stuff();
+}
+
+void ConvertibleNonTrivialMoveAssignWithinTestBothPred(bool pred, NonTrivialMoveAssign& target, NonTrivialMoveAssign source) {
+  // CHECK-MESSAGES: [[@LINE+1]]:12: warning: 'source' could be moved here [performance-use-std-move]
+  target = source;
+  // CHECK-FIXES: target = std::move(source);
+  if (pred)
+    target = target;
+  else
+    target.stuff();
+}
+
+void NonConvertibleNonTrivialMoveAssignWithinLoop(unsigned count, NonTrivialMoveAssign& target, NonTrivialMoveAssign source) {
+  while(--count)
+    target = source;
+}
+
+void ConvertibleNonTrivialMoveAssignWithinTestMultiplePred(bool pred0, bool pred1, NonTrivialMoveAssign& target, NonTrivialMoveAssign source) {
+  if(pred0) {
+    // CHECK-MESSAGES: [[@LINE+1]]:14: warning: 'source' could be moved here [performance-use-std-move]
+    target = source;
+    // CHECK-FIXES: target = std::move(source);
+  }
+  else {
+    if (pred1) {
+      // CHECK-MESSAGES: [[@LINE+1]]:16: warning: 'source' could be moved here [performance-use-std-move]
+      target = source;
+      // CHECK-FIXES: target = std::move(source);
+    }
+    else {
+      target.stuff();
+    }
+  }
+}
+
+void NonConvertibleNonTrivialMoveAssignWithinTestMultiplePred(bool pred0, bool pred1, NonTrivialMoveAssign& target, NonTrivialMoveAssign source) {
+  target = source;
+  if(pred0) {
+    target.stuff();
+  }
+  else {
+    // CHECK-MESSAGES: [[@LINE+1]]:14: warning: 'source' could be moved here [performance-use-std-move]
+    target = source;
+    // CHECK-FIXES: target = std::move(source);
+    if (pred1) {
+      target.stuff();
+    }
+  }
+}
