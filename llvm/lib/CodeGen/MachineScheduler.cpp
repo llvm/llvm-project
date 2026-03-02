@@ -2120,10 +2120,9 @@ void BaseMemOpClusterMutation::clusterNeighboringMemOps(
 
     SUnit *SUa = MemOpa.SU;
     SUnit *SUb = MemOpb.SU;
-    bool CanReorder = false;
-    if (ReorderWhileClustering)
-      CanReorder = TII->areMemAccessesTriviallyDisjoint(*SUa->getInstr(),
-                                                        *SUb->getInstr());
+    bool CanReorder = ReorderWhileClustering &&
+                      TII->areMemAccessesTriviallyDisjoint(*SUa->getInstr(),
+                                                           *SUb->getInstr());
     if (SUa->NodeNum > SUb->NodeNum && !CanReorder)
       std::swap(SUa, SUb);
 

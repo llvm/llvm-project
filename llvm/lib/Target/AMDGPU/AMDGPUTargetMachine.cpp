@@ -708,21 +708,13 @@ static ScheduleDAGInstrs *createSIMachineScheduler(MachineSchedContext *C) {
   return new SIScheduleDAGMI(C);
 }
 
-static bool getReorderWhileClustering(const MachineFunction *MF) {
-  if (!ReorderWhileClustering)
-    return false;
-  Attribute FnAttr =
-      MF->getFunction().getFnAttribute("amdgpu-reorder-while-clustering");
-  return !FnAttr.isValid() || FnAttr.getValueAsBool();
-}
-
 static ScheduleDAGInstrs *
 createGCNMaxOccupancyMachineScheduler(MachineSchedContext *C) {
   const GCNSubtarget &ST = C->MF->getSubtarget<GCNSubtarget>();
   ScheduleDAGMILive *DAG =
     new GCNScheduleDAGMILive(C, std::make_unique<GCNMaxOccupancySchedStrategy>(C));
-  DAG->addMutation(createLoadClusterDAGMutation(
-      DAG->TII, DAG->TRI, getReorderWhileClustering(C->MF)));
+  DAG->addMutation(
+      createLoadClusterDAGMutation(DAG->TII, DAG->TRI, ReorderWhileClustering));
   if (ST.shouldClusterStores())
     DAG->addMutation(createStoreClusterDAGMutation(DAG->TII, DAG->TRI));
   DAG->addMutation(createIGroupLPDAGMutation(AMDGPU::SchedulingPhase::Initial));
@@ -746,8 +738,8 @@ createGCNMaxMemoryClauseMachineScheduler(MachineSchedContext *C) {
   const GCNSubtarget &ST = C->MF->getSubtarget<GCNSubtarget>();
   ScheduleDAGMILive *DAG = new GCNScheduleDAGMILive(
       C, std::make_unique<GCNMaxMemoryClauseSchedStrategy>(C));
-  DAG->addMutation(createLoadClusterDAGMutation(
-      DAG->TII, DAG->TRI, getReorderWhileClustering(C->MF)));
+  DAG->addMutation(
+      createLoadClusterDAGMutation(DAG->TII, DAG->TRI, ReorderWhileClustering));
   if (ST.shouldClusterStores())
     DAG->addMutation(createStoreClusterDAGMutation(DAG->TII, DAG->TRI));
   DAG->addMutation(createAMDGPUExportClusteringDAGMutation());
@@ -761,8 +753,8 @@ createIterativeGCNMaxOccupancyMachineScheduler(MachineSchedContext *C) {
   const GCNSubtarget &ST = C->MF->getSubtarget<GCNSubtarget>();
   auto *DAG = new GCNIterativeScheduler(
       C, GCNIterativeScheduler::SCHEDULE_LEGACYMAXOCCUPANCY);
-  DAG->addMutation(createLoadClusterDAGMutation(
-      DAG->TII, DAG->TRI, getReorderWhileClustering(C->MF)));
+  DAG->addMutation(
+      createLoadClusterDAGMutation(DAG->TII, DAG->TRI, ReorderWhileClustering));
   if (ST.shouldClusterStores())
     DAG->addMutation(createStoreClusterDAGMutation(DAG->TII, DAG->TRI));
   DAG->addMutation(createIGroupLPDAGMutation(AMDGPU::SchedulingPhase::Initial));
@@ -780,8 +772,8 @@ static ScheduleDAGInstrs *
 createIterativeILPMachineScheduler(MachineSchedContext *C) {
   const GCNSubtarget &ST = C->MF->getSubtarget<GCNSubtarget>();
   auto *DAG = new GCNIterativeScheduler(C, GCNIterativeScheduler::SCHEDULE_ILP);
-  DAG->addMutation(createLoadClusterDAGMutation(
-      DAG->TII, DAG->TRI, getReorderWhileClustering(C->MF)));
+  DAG->addMutation(
+      createLoadClusterDAGMutation(DAG->TII, DAG->TRI, ReorderWhileClustering));
   if (ST.shouldClusterStores())
     DAG->addMutation(createStoreClusterDAGMutation(DAG->TII, DAG->TRI));
   DAG->addMutation(createAMDGPUMacroFusionDAGMutation());
@@ -880,8 +872,8 @@ llvm::ScheduleDAGInstrs *
 AMDGPUTargetMachine::createMachineScheduler(MachineSchedContext *C) const {
   const GCNSubtarget &ST = C->MF->getSubtarget<GCNSubtarget>();
   ScheduleDAGMILive *DAG = createSchedLive(C);
-  DAG->addMutation(createLoadClusterDAGMutation(
-      DAG->TII, DAG->TRI, getReorderWhileClustering(C->MF)));
+  DAG->addMutation(
+      createLoadClusterDAGMutation(DAG->TII, DAG->TRI, ReorderWhileClustering));
   if (ST.shouldClusterStores())
     DAG->addMutation(createStoreClusterDAGMutation(DAG->TII, DAG->TRI));
   return DAG;
