@@ -179,6 +179,31 @@ bool X86TargetInfo::initFeatureMap(
       continue;
     }
 
+    // Expand apxf to the individual APX features
+    if (Feature == "+apxf") {
+      UpdatedFeaturesVec.push_back("+egpr");
+      UpdatedFeaturesVec.push_back("+ndd");
+      UpdatedFeaturesVec.push_back("+ccmp");
+      UpdatedFeaturesVec.push_back("+nf");
+      UpdatedFeaturesVec.push_back("+zu");
+      if (!getTriple().isOSWindows()) {
+        UpdatedFeaturesVec.push_back("+push2pop2");
+        UpdatedFeaturesVec.push_back("+ppx");
+      }
+      continue;
+    }
+
+    if (Feature == "-apxf") {
+      UpdatedFeaturesVec.push_back("-egpr");
+      UpdatedFeaturesVec.push_back("-ndd");
+      UpdatedFeaturesVec.push_back("-ccmp");
+      UpdatedFeaturesVec.push_back("-nf");
+      UpdatedFeaturesVec.push_back("-zu");
+      UpdatedFeaturesVec.push_back("-push2pop2");
+      UpdatedFeaturesVec.push_back("-ppx");
+      continue;
+    }
+
     UpdatedFeaturesVec.push_back(Feature);
   }
 
@@ -1169,14 +1194,7 @@ bool X86TargetInfo::isValidFeatureName(StringRef Name) const {
       .Case("xsavec", true)
       .Case("xsaves", true)
       .Case("xsaveopt", true)
-      .Case("egpr", true)
-      .Case("push2pop2", true)
-      .Case("ppx", true)
-      .Case("ndd", true)
-      .Case("ccmp", true)
-      .Case("nf", true)
-      .Case("cf", true)
-      .Case("zu", true)
+      .Case("apxf", true)
       .Default(false);
 }
 

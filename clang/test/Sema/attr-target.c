@@ -35,6 +35,27 @@ void __attribute__((target("x86-64-v2"))) v2(void) {}
 
 int __attribute__((target("sha"))) good_target_but_not_for_fmv() { return 5; }
 
+int __attribute__((target("apxf"))) apx_supported(void) { return 6; }
+int __attribute__((target("no-apxf"))) no_apx_supported(void) { return 7; }
+
+// APXF sub-features should NOT be supported directly in target attribute
+//expected-warning@+1 {{unsupported 'egpr' in the 'target' attribute string; 'target' attribute ignored}}
+int __attribute__((target("egpr"))) egpr_not_supported(void) { return 8; }
+//expected-warning@+1 {{unsupported 'ndd' in the 'target' attribute string; 'target' attribute ignored}}
+int __attribute__((target("ndd"))) ndd_not_supported(void) { return 9; }
+//expected-warning@+1 {{unsupported 'ccmp' in the 'target' attribute string; 'target' attribute ignored}}
+int __attribute__((target("ccmp"))) ccmp_not_supported(void) { return 10; }
+//expected-warning@+1 {{unsupported 'nf' in the 'target' attribute string; 'target' attribute ignored}}
+int __attribute__((target("nf"))) nf_not_supported(void) { return 11; }
+//expected-warning@+1 {{unsupported 'cf' in the 'target' attribute string; 'target' attribute ignored}}
+int __attribute__((target("cf"))) cf_not_supported(void) { return 12; }
+//expected-warning@+1 {{unsupported 'zu' in the 'target' attribute string; 'target' attribute ignored}}
+int __attribute__((target("zu"))) zu_not_supported(void) { return 13; }
+//expected-warning@+1 {{unsupported 'push2pop2' in the 'target' attribute string; 'target' attribute ignored}}
+int __attribute__((target("push2pop2"))) push2pop2_not_supported(void) { return 14; }
+//expected-warning@+1 {{unsupported 'ppx' in the 'target' attribute string; 'target' attribute ignored}}
+int __attribute__((target("ppx"))) ppx_not_supported(void) { return 15; }
+
 #elifdef __aarch64__
 
 int __attribute__((target("sve,arch=armv8-a"))) foo(void) { return 4; }
