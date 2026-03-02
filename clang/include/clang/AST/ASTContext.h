@@ -1444,7 +1444,7 @@ public:
   /// This will return null, unless setSemaProxy has been called.
   /// As Sema is only available during parsing, getSemaProxy will return null
   /// during CodeGen and when using the AST from tooling.
-  SemaProxy *getSemaProxy();
+  SemaProxy *getSemaProxy() { return SemaProxyPtr.get(); }
 
   /// Set the SemaProxy instance
   /// This function is called from Sema during the initial parsing of a TU.
