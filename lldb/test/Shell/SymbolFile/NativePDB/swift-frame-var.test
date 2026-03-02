@@ -1,0 +1,51 @@
+# Test that frame variable works for Swift types with NativePDB debug info.
+
+# Won't pass until https://github.com/swiftlang/llvm-project/issues/12289 is resolved.
+# XFAIL: system-windows
+# REQUIRES: swift, system-windows
+
+# RUN: split-file %s %t
+# RUN: %target-swiftc -v -g -debug-info-format=codeview %t/main.swift -o %t.exe -Xlinker -debug -use-ld=lld
+# RUN: %lldb -x -b -s %t/commands.input %t.exe -o exit 2>&1 | FileCheck %s
+
+#--- main.swift
+struct Point {
+    var x: Int32
+    var y: Int32
+}
+
+enum Direction {
+    case north
+    case south
+}
+
+func main() {
+    var myInt32: Int32 = 42
+    var myBool: Bool = true
+    var myUInt64: UInt64 = 123456789
+    var myFloat: Float = 3.14
+    var myDouble: Double = 2.718
+    var myString: String = "hello"
+    var myPoint: Point = Point(x: 10, y: 20)
+    var myDirection: Direction = .north
+    print(myInt32, myBool, myUInt64, myFloat, myDouble,
+          myString, myPoint, myDirection)
+}
+
+main()
+
+#--- commands.input
+b main.swift:20
+run
+frame variable
+
+# Basic scalar types
+# CHECK: (Int32) myInt32 = 42
+# CHECK: (Bool) myBool = true
+# CHECK: (UInt64) myUInt64 = 123456789
+# CHECK: (Float) myFloat = 3.1400001
+# CHECK: (Double) myDouble = 2.718
+# Compound types
+# CHECK: (String) myString = "hello"
+# CHECK: (main.Point) myPoint = (x = 10, y = 20)
+# CHECK: (main.Direction) myDirection = north

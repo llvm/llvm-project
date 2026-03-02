@@ -59,6 +59,10 @@
 #include <optional>
 #include <string_view>
 
+// BEGIN SWIFT
+#include "swift/Demangling/Demangle.h"
+// END SWIFT
+
 using namespace lldb;
 using namespace lldb_private;
 using namespace npdb;
@@ -350,6 +354,30 @@ GetNestedTagDefinition(const NestedTypeRecord &Record,
 
   return std::move(child);
 }
+
+// BEGIN SWIFT
+// Uses a heuristic based on the mangled name to identify
+// Swift types. Needed since types are commingled in the type stream.
+static bool IsSwiftType(PdbTypeSymId type_id, PdbIndex& index) {
+  TypeIndex ti = type_id.index;
+  if (ti.isSimple())
+    return false;
+  CVType cvt = index.tpi().getType(ti);
+  // Follow LF_MODIFIER to the underlying type.
+  if (cvt.kind() == LF_MODIFIER) {
+    ModifierRecord mfr;
+    llvm::cantFail(
+        TypeDeserializer::deserializeAs<ModifierRecord>(cvt, mfr));
+    return IsSwiftType(PdbTypeSymId(mfr.ModifiedType, false), index);
+  }
+  if (!llvm::is_contained({LF_STRUCTURE, LF_CLASS}, cvt.kind()))
+    return false;
+  ClassRecord cr;
+  llvm::cantFail(TypeDeserializer::deserializeAs<ClassRecord>(cvt, cr));
+  return cr.hasUniqueName() && swift::Demangle::isSwiftSymbol(cr.UniqueName);
+}
+// END SWIFT
+
 
 void SymbolFileNativePDB::Initialize() {
   PluginManager::RegisterPlugin(GetPluginNameStatic(),
@@ -918,7 +946,9 @@ TypeSP SymbolFileNativePDB::CreateAndCacheType(PdbTypeSymId type_id) {
   }
 
   PdbTypeSymId best_decl_id = full_decl_uid ? *full_decl_uid : type_id;
-  auto ts_or_err = GetTypeSystemForLanguage(lldb::eLanguageTypeC_plus_plus);
+  // BEGIN SWIFT
+  auto ts_or_err = GetTypeSystemForLanguage(IsSwiftType(best_decl_id, *m_index) ? lldb::eLanguageTypeSwift : lldb::eLanguageTypeC_plus_plus);
+  // END SWIFT
   if (auto err = ts_or_err.takeError())
     return nullptr;
   auto ts = *ts_or_err;
