@@ -495,8 +495,8 @@ static hlsl::Binding getHandleIntrinsicBinding(IntrinsicInst *Handle,
   uint32_t Space = cast<ConstantInt>(Handle->getArgOperand(0))->getZExtValue();
   uint32_t LowerBound =
       cast<ConstantInt>(Handle->getArgOperand(1))->getZExtValue();
-  int32_t Size = cast<ConstantInt>(Handle->getArgOperand(2))->getZExtValue();
-  uint32_t UpperBound = Size < 0 ? UINT32_MAX : LowerBound + Size - 1;
+  uint32_t Size = cast<ConstantInt>(Handle->getArgOperand(2))->getZExtValue();
+  uint32_t UpperBound = Size == UINT32_MAX ? UINT32_MAX : LowerBound + Size - 1;
 
   return hlsl::Binding(Class, Space, LowerBound, UpperBound, nullptr);
 }
