@@ -28,6 +28,7 @@ namespace {
 class X86_64 : public TargetInfo {
 public:
   X86_64(Ctx &);
+  void initTargetSections() override;
   RelExpr getRelExpr(RelType type, const Symbol &s,
                      const uint8_t *loc) const override;
   RelType getDynRel(RelType type) const override;
@@ -60,6 +61,19 @@ private:
   void relaxTlsGdToIe(uint8_t *loc, const Relocation &rel, uint64_t val) const;
   void relaxTlsLdToLe(uint8_t *loc, const Relocation &rel, uint64_t val) const;
   void relaxTlsIeToLe(uint8_t *loc, const Relocation &rel, uint64_t val) const;
+};
+
+struct IBTPltSection : SyntheticSection {
+  IBTPltSection(Ctx &ctx)
+      : SyntheticSection(ctx, ".plt", SHT_PROGBITS, SHF_ALLOC | SHF_EXECINSTR,
+                         16) {}
+  bool isNeeded() const override { return ctx.in.plt->getNumEntries() > 0; }
+  size_t getSize() const override {
+    return 16 + ctx.in.plt->getNumEntries() * ctx.target->pltEntrySize;
+  }
+  void writeTo(uint8_t *buf) override {
+    ctx.target->writeIBTPlt(buf, ctx.in.plt->getNumEntries());
+  }
 };
 } // namespace
 
@@ -353,6 +367,13 @@ bool X86_64::relaxOnce(int pass) const {
     }
   }
   return changed;
+}
+
+void X86_64::initTargetSections() {
+  if (ctx.arg.andFeatures & GNU_PROPERTY_X86_FEATURE_1_IBT) {
+    ctx.in.ibtPlt = std::make_unique<IBTPltSection>(ctx);
+    ctx.inputSections.push_back(ctx.in.ibtPlt.get());
+  }
 }
 
 // Only needed to support relocations used by relocateNonAlloc and relocateEh.
