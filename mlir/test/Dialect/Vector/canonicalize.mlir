@@ -272,6 +272,98 @@ func.func @extract_from_non_constant_create_mask(%dim0: index) -> vector<[2]xi1>
 
 // -----
 
+// CHECK-LABEL: extract_from_constant_mask
+func.func @extract_from_constant_mask() -> vector<4xi1> {
+  %mask = vector.constant_mask [2, 3] : vector<4x4xi1>
+  // CHECK: %[[RES:.*]] = vector.constant_mask [3] : vector<4xi1>
+  // CHECK-NEXT: return %[[RES]]
+  %extract = vector.extract %mask[1] : vector<4xi1> from vector<4x4xi1>
+  return %extract : vector<4xi1>
+}
+
+// -----
+
+// CHECK-LABEL: extract_from_constant_mask_all_false
+func.func @extract_from_constant_mask_all_false() -> vector<4xi1> {
+  %mask = vector.constant_mask [2, 3] : vector<4x4xi1>
+  // CHECK: %[[RES:.*]] = arith.constant dense<false> : vector<4xi1>
+  // CHECK-NEXT: return %[[RES]]
+  %extract = vector.extract %mask[3] : vector<4xi1> from vector<4x4xi1>
+  return %extract : vector<4xi1>
+}
+
+// -----
+
+// CHECK-LABEL: extract_from_constant_mask_at_boundary
+func.func @extract_from_constant_mask_at_boundary() -> vector<4xi1> {
+  %mask = vector.constant_mask [2, 3] : vector<4x4xi1>
+  // CHECK: %[[RES:.*]] = arith.constant dense<false> : vector<4xi1>
+  // CHECK-NEXT: return %[[RES]]
+  %extract = vector.extract %mask[2] : vector<4xi1> from vector<4x4xi1>
+  return %extract : vector<4xi1>
+}
+
+// -----
+
+// CHECK-LABEL: extract_from_constant_mask_multiple_indices
+func.func @extract_from_constant_mask_multiple_indices() -> vector<4xi1> {
+  %mask = vector.constant_mask [2, 3, 3] : vector<4x4x4xi1>
+  // CHECK: %[[RES:.*]] = vector.constant_mask [3] : vector<4xi1>
+  // CHECK-NEXT: return %[[RES]]
+  %extract = vector.extract %mask[1, 2] : vector<4xi1> from vector<4x4x4xi1>
+  return %extract : vector<4xi1>
+}
+
+// -----
+
+// CHECK-LABEL: extract_from_constant_mask_dynamic_position_all_true
+//  CHECK-SAME: %[[INDEX:.*]]: index
+func.func @extract_from_constant_mask_dynamic_position_all_true(%index: index) -> vector<4xi1> {
+  // The mask covers the entire first dimension, so a dynamic index is fine.
+  %mask = vector.constant_mask [4, 3] : vector<4x4xi1>
+  // CHECK: %[[RES:.*]] = vector.constant_mask [3] : vector<4xi1>
+  // CHECK-NEXT: return %[[RES]]
+  %extract = vector.extract %mask[%index] : vector<4xi1> from vector<4x4xi1>
+  return %extract : vector<4xi1>
+}
+
+// -----
+
+// CHECK-LABEL: extract_from_constant_mask_dynamic_position_not_all_true
+//  CHECK-SAME: %[[INDEX:.*]]: index
+func.func @extract_from_constant_mask_dynamic_position_not_all_true(%index: index) -> vector<4xi1> {
+  %mask = vector.constant_mask [2, 3] : vector<4x4xi1>
+  // CHECK: %[[MASK:.*]] = vector.constant_mask [2, 3] : vector<4x4xi1>
+  // CHECK-NEXT: %[[RES:.*]] = vector.extract %[[MASK]][%[[INDEX]]] : vector<4xi1> from vector<4x4xi1>
+  // CHECK-NEXT: return %[[RES]]
+  %extract = vector.extract %mask[%index] : vector<4xi1> from vector<4x4xi1>
+  return %extract : vector<4xi1>
+}
+
+// -----
+
+// CHECK-LABEL: extract_scalar_from_constant_mask_within_bounds
+func.func @extract_scalar_from_constant_mask_within_bounds() -> i1 {
+  %mask = vector.constant_mask [2, 3] : vector<4x4xi1>
+  // CHECK: %[[RES:.*]] = arith.constant true
+  // CHECK-NEXT: return %[[RES]]
+  %extract = vector.extract %mask[0, 1] : i1 from vector<4x4xi1>
+  return %extract : i1
+}
+
+// -----
+
+// CHECK-LABEL: extract_scalar_from_constant_mask_outside_bounds
+func.func @extract_scalar_from_constant_mask_outside_bounds() -> i1 {
+  %mask = vector.constant_mask [2, 3] : vector<4x4xi1>
+  // CHECK: %[[RES:.*]] = arith.constant false
+  // CHECK-NEXT: return %[[RES]]
+  %extract = vector.extract %mask[0, 3] : i1 from vector<4x4xi1>
+  return %extract : i1
+}
+
+// -----
+
 // CHECK-LABEL: constant_mask_to_true_splat
 func.func @constant_mask_to_true_splat() -> vector<2x4xi1> {
   // CHECK: arith.constant dense<true>
