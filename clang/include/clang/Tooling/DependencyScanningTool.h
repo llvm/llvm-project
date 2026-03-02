@@ -140,7 +140,7 @@ public:
       const llvm::DenseSet<dependencies::ModuleID> &AlreadySeen,
       dependencies::LookupModuleOutputCallback LookupModuleOutput);
 
-  /// The following three methods provide a new interface to perform
+  /// The following two methods provide a new interface to perform
   /// by name dependency scan. The new interface's intention is to improve
   /// dependency scanning performance when a sequence of name is looked up
   /// with the same current working directory and the command line.
@@ -173,12 +173,6 @@ public:
       StringRef ModuleName,
       const llvm::DenseSet<dependencies::ModuleID> &AlreadySeen,
       dependencies::LookupModuleOutputCallback LookupModuleOutput);
-
-  /// @brief This method finializes the compiler instance. It finalizes the
-  ///        diagnostics and deletes the compiler instance. Call this method
-  ///        once all names for a same commandline are scanned.
-  /// @return Error if an error occured during finalization.
-  llvm::Error finalizeCompilerInstanceWithContextOrError();
 
   llvm::vfs::FileSystem &getWorkerVFS() const { return Worker.getVFS(); }
 
