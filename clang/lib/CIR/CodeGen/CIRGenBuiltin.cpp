@@ -1557,12 +1557,13 @@ RValue CIRGenFunction::emitBuiltinExpr(const GlobalDecl &gd, unsigned builtinID,
     mlir::Value isInf =
         builder.createIsFPClass(loc, absArg, cir::FPClassTest::Infinity);
     mlir::Value isNeg = emitSignBit(loc, *this, arg);
-    auto intTy = convertType(e->getType());
-    auto zero = builder.getNullValue(intTy, loc);
-    auto one = builder.getConstant(loc, cir::IntAttr::get(intTy, 1));
-    auto negativeOne = builder.getConstant(loc, cir::IntAttr::get(intTy, -1));
-    auto signResult = builder.createSelect(loc, isNeg, negativeOne, one);
-    auto result = builder.createSelect(loc, isInf, signResult, zero);
+    mlir::Type intTy = convertType(e->getType());
+    cir::ConstantOp zero = builder.getNullValue(intTy, loc);
+    cir::ConstantOp one = builder.getConstant(loc, cir::IntAttr::get(intTy, 1));
+    cir::ConstantOp negativeOne =
+        builder.getConstant(loc, cir::IntAttr::get(intTy, -1));
+    mlir::Value signResult = builder.createSelect(loc, isNeg, negativeOne, one);
+    mlir::Value result = builder.createSelect(loc, isInf, signResult, zero);
     return RValue::get(result);
   }
   case Builtin::BI__builtin_flt_rounds:

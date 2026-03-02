@@ -545,7 +545,7 @@ public:
   }
 
   cir::SignBitOp createSignBit(mlir::Location loc, mlir::Value val) {
-    mlir::Type resTy = cir::BoolType::get(getContext());
+    auto resTy = cir::BoolType::get(getContext());
     return cir::SignBitOp::create(*this, loc, resTy, val);
   }
 
