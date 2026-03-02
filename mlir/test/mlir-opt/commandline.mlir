@@ -41,7 +41,7 @@
 // CHECK-SAME: tosa
 // CHECK-SAME: transform
 // CHECK-SAME: vector
-// CHECK-SAME: x86vector
+// CHECK-SAME: x86
 
 // RUN: mlir-opt --help-hidden | FileCheck %s -check-prefix=CHECK-HELP
 // CHECK-HELP: -p - Alias for --pass-pipeline

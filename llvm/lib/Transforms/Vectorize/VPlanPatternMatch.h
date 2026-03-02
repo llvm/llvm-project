@@ -542,10 +542,10 @@ inline VPInstruction_match<VPInstruction::StepVector> m_StepVector() {
   return m_VPInstruction<VPInstruction::StepVector>();
 }
 
-template <typename Op0_t, typename Op1_t>
-inline VPInstruction_match<VPInstruction::ExitingIVValue, Op0_t, Op1_t>
-m_ExitingIVValue(const Op0_t &Op0, const Op1_t &Op1) {
-  return m_VPInstruction<VPInstruction::ExitingIVValue>(Op0, Op1);
+template <typename Op0_t>
+inline VPInstruction_match<VPInstruction::ExitingIVValue, Op0_t>
+m_ExitingIVValue(const Op0_t &Op0) {
+  return m_VPInstruction<VPInstruction::ExitingIVValue>(Op0);
 }
 
 template <unsigned Opcode, typename Op0_t>
@@ -858,6 +858,8 @@ template <typename Op0_t, typename Op1_t>
 inline auto m_c_LogicalOr(const Op0_t &Op0, const Op1_t &Op1) {
   return m_c_Select(Op0, m_True(), Op1);
 }
+
+inline auto m_CanonicalIV() { return class_match<VPCanonicalIVPHIRecipe>(); }
 
 template <typename Op0_t, typename Op1_t, typename Op2_t>
 using VPScalarIVSteps_match = Recipe_match<std::tuple<Op0_t, Op1_t, Op2_t>, 0,

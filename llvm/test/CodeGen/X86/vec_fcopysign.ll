@@ -33,7 +33,7 @@ define <2 x double> @fcopysign_v2f64(<2 x double> %a0, <2 x double> %a1) nounwin
 ;
 ; X86-AVX512-LABEL: fcopysign_v2f64:
 ; X86-AVX512:       # %bb.0:
-; X86-AVX512-NEXT:    vpternlogq $228, {{\.?LCPI[0-9]+_[0-9]+}}{1to2}, %xmm1, %xmm0
+; X86-AVX512-NEXT:    vpternlogq {{.*#+}} xmm0 = xmm1 ^ (m64bcst & (xmm0 ^ xmm1))
 ; X86-AVX512-NEXT:    retl
 ;
 ; X64-SSE-LABEL: fcopysign_v2f64:
@@ -52,7 +52,7 @@ define <2 x double> @fcopysign_v2f64(<2 x double> %a0, <2 x double> %a1) nounwin
 ;
 ; X64-AVX512-LABEL: fcopysign_v2f64:
 ; X64-AVX512:       # %bb.0:
-; X64-AVX512-NEXT:    vpternlogq $228, {{\.?LCPI[0-9]+_[0-9]+}}(%rip){1to2}, %xmm1, %xmm0
+; X64-AVX512-NEXT:    vpternlogq {{.*#+}} xmm0 = xmm1 ^ (m64bcst & (xmm0 ^ xmm1))
 ; X64-AVX512-NEXT:    retq
   %t = call <2 x double> @llvm.copysign.v2f64(<2 x double> %a0, <2 x double> %a1)
   ret <2 x double> %t
@@ -85,7 +85,7 @@ define <4 x float> @fcopysign_v4f32(<4 x float> %a0, <4 x float> %a1) nounwind {
 ;
 ; X86-AVX512-LABEL: fcopysign_v4f32:
 ; X86-AVX512:       # %bb.0:
-; X86-AVX512-NEXT:    vpternlogd $228, {{\.?LCPI[0-9]+_[0-9]+}}{1to4}, %xmm1, %xmm0
+; X86-AVX512-NEXT:    vpternlogd {{.*#+}} xmm0 = xmm1 ^ (m32bcst & (xmm0 ^ xmm1))
 ; X86-AVX512-NEXT:    retl
 ;
 ; X64-SSE-LABEL: fcopysign_v4f32:
@@ -113,7 +113,7 @@ define <4 x float> @fcopysign_v4f32(<4 x float> %a0, <4 x float> %a1) nounwind {
 ;
 ; X64-AVX512-LABEL: fcopysign_v4f32:
 ; X64-AVX512:       # %bb.0:
-; X64-AVX512-NEXT:    vpternlogd $228, {{\.?LCPI[0-9]+_[0-9]+}}(%rip){1to4}, %xmm1, %xmm0
+; X64-AVX512-NEXT:    vpternlogd {{.*#+}} xmm0 = xmm1 ^ (m32bcst & (xmm0 ^ xmm1))
 ; X64-AVX512-NEXT:    retq
   %t = call <4 x float> @llvm.copysign.v4f32(<4 x float> %a0, <4 x float> %a1)
   ret <4 x float> %t
@@ -160,7 +160,7 @@ define <8 x half> @fcopysign_v8f16(ptr %p0, ptr %p1) nounwind {
 ; X86-AVX512-NEXT:    movl {{[0-9]+}}(%esp), %ecx
 ; X86-AVX512-NEXT:    vmovdqa (%ecx), %xmm1
 ; X86-AVX512-NEXT:    vpbroadcastd {{.*#+}} xmm0 = [2147450879,2147450879,2147450879,2147450879]
-; X86-AVX512-NEXT:    vpternlogd $202, (%eax), %xmm1, %xmm0
+; X86-AVX512-NEXT:    vpternlogd {{.*#+}} xmm0 = mem ^ (xmm0 & (xmm1 ^ mem))
 ; X86-AVX512-NEXT:    retl
 ;
 ; X64-SSE-LABEL: fcopysign_v8f16:
@@ -194,7 +194,7 @@ define <8 x half> @fcopysign_v8f16(ptr %p0, ptr %p1) nounwind {
 ; X64-AVX512:       # %bb.0:
 ; X64-AVX512-NEXT:    vmovdqa (%rdi), %xmm1
 ; X64-AVX512-NEXT:    vpbroadcastd {{.*#+}} xmm0 = [2147450879,2147450879,2147450879,2147450879]
-; X64-AVX512-NEXT:    vpternlogd $202, (%rsi), %xmm1, %xmm0
+; X64-AVX512-NEXT:    vpternlogd {{.*#+}} xmm0 = mem ^ (xmm0 & (xmm1 ^ mem))
 ; X64-AVX512-NEXT:    retq
   %a0 = load <8 x half>, ptr %p0, align 16
   %a1 = load <8 x half>, ptr %p1, align 16
@@ -244,7 +244,7 @@ define <4 x double> @fcopysign_v4f64(<4 x double> %a0, <4 x double> %a1) nounwin
 ;
 ; X86-AVX512-LABEL: fcopysign_v4f64:
 ; X86-AVX512:       # %bb.0:
-; X86-AVX512-NEXT:    vpternlogq $228, {{\.?LCPI[0-9]+_[0-9]+}}{1to4}, %ymm1, %ymm0
+; X86-AVX512-NEXT:    vpternlogq {{.*#+}} ymm0 = ymm1 ^ (m64bcst & (ymm0 ^ ymm1))
 ; X86-AVX512-NEXT:    retl
 ;
 ; X64-SSE-LABEL: fcopysign_v4f64:
@@ -277,7 +277,7 @@ define <4 x double> @fcopysign_v4f64(<4 x double> %a0, <4 x double> %a1) nounwin
 ;
 ; X64-AVX512-LABEL: fcopysign_v4f64:
 ; X64-AVX512:       # %bb.0:
-; X64-AVX512-NEXT:    vpternlogq $228, {{\.?LCPI[0-9]+_[0-9]+}}(%rip){1to4}, %ymm1, %ymm0
+; X64-AVX512-NEXT:    vpternlogq {{.*#+}} ymm0 = ymm1 ^ (m64bcst & (ymm0 ^ ymm1))
 ; X64-AVX512-NEXT:    retq
   %t = call <4 x double> @llvm.copysign.v4f64(<4 x double> %a0, <4 x double> %a1)
   ret <4 x double> %t
@@ -321,7 +321,7 @@ define <8 x float> @fcopysign_v8f32(<8 x float> %a0, <8 x float> %a1) nounwind {
 ;
 ; X86-AVX512-LABEL: fcopysign_v8f32:
 ; X86-AVX512:       # %bb.0:
-; X86-AVX512-NEXT:    vpternlogd $228, {{\.?LCPI[0-9]+_[0-9]+}}{1to8}, %ymm1, %ymm0
+; X86-AVX512-NEXT:    vpternlogd {{.*#+}} ymm0 = ymm1 ^ (m32bcst & (ymm0 ^ ymm1))
 ; X86-AVX512-NEXT:    retl
 ;
 ; X64-SSE-LABEL: fcopysign_v8f32:
@@ -354,7 +354,7 @@ define <8 x float> @fcopysign_v8f32(<8 x float> %a0, <8 x float> %a1) nounwind {
 ;
 ; X64-AVX512-LABEL: fcopysign_v8f32:
 ; X64-AVX512:       # %bb.0:
-; X64-AVX512-NEXT:    vpternlogd $228, {{\.?LCPI[0-9]+_[0-9]+}}(%rip){1to8}, %ymm1, %ymm0
+; X64-AVX512-NEXT:    vpternlogd {{.*#+}} ymm0 = ymm1 ^ (m32bcst & (ymm0 ^ ymm1))
 ; X64-AVX512-NEXT:    retq
   %t = call <8 x float> @llvm.copysign.v8f32(<8 x float> %a0, <8 x float> %a1)
   ret <8 x float> %t
@@ -406,7 +406,7 @@ define <16 x half> @fcopysign_v16f16(ptr %p0, ptr %p1) nounwind {
 ; X86-AVX512-NEXT:    movl {{[0-9]+}}(%esp), %ecx
 ; X86-AVX512-NEXT:    vmovdqu (%ecx), %ymm1
 ; X86-AVX512-NEXT:    vpbroadcastd {{.*#+}} ymm0 = [2147450879,2147450879,2147450879,2147450879,2147450879,2147450879,2147450879,2147450879]
-; X86-AVX512-NEXT:    vpternlogd $202, (%eax), %ymm1, %ymm0
+; X86-AVX512-NEXT:    vpternlogd {{.*#+}} ymm0 = mem ^ (ymm0 & (ymm1 ^ mem))
 ; X86-AVX512-NEXT:    retl
 ;
 ; X64-SSE-LABEL: fcopysign_v16f16:
@@ -445,7 +445,7 @@ define <16 x half> @fcopysign_v16f16(ptr %p0, ptr %p1) nounwind {
 ; X64-AVX512:       # %bb.0:
 ; X64-AVX512-NEXT:    vmovdqu (%rdi), %ymm1
 ; X64-AVX512-NEXT:    vpbroadcastd {{.*#+}} ymm0 = [2147450879,2147450879,2147450879,2147450879,2147450879,2147450879,2147450879,2147450879]
-; X64-AVX512-NEXT:    vpternlogd $202, (%rsi), %ymm1, %ymm0
+; X64-AVX512-NEXT:    vpternlogd {{.*#+}} ymm0 = mem ^ (ymm0 & (ymm1 ^ mem))
 ; X64-AVX512-NEXT:    retq
   %a0 = load <16 x half>, ptr %p0, align 16
   %a1 = load <16 x half>, ptr %p1, align 16
@@ -505,7 +505,7 @@ define <8 x double> @fcopysign_v8f64(<8 x double> %a0, <8 x double> %a1) nounwin
 ;
 ; X86-AVX512-LABEL: fcopysign_v8f64:
 ; X86-AVX512:       # %bb.0:
-; X86-AVX512-NEXT:    vpternlogq $228, {{\.?LCPI[0-9]+_[0-9]+}}{1to8}, %zmm1, %zmm0
+; X86-AVX512-NEXT:    vpternlogq {{.*#+}} zmm0 = zmm1 ^ (m64bcst & (zmm0 ^ zmm1))
 ; X86-AVX512-NEXT:    retl
 ;
 ; X64-SSE-LABEL: fcopysign_v8f64:
@@ -541,7 +541,7 @@ define <8 x double> @fcopysign_v8f64(<8 x double> %a0, <8 x double> %a1) nounwin
 ;
 ; X64-AVX512-LABEL: fcopysign_v8f64:
 ; X64-AVX512:       # %bb.0:
-; X64-AVX512-NEXT:    vpternlogq $228, {{\.?LCPI[0-9]+_[0-9]+}}(%rip){1to8}, %zmm1, %zmm0
+; X64-AVX512-NEXT:    vpternlogq {{.*#+}} zmm0 = zmm1 ^ (m64bcst & (zmm0 ^ zmm1))
 ; X64-AVX512-NEXT:    retq
   %t = call <8 x double> @llvm.copysign.v8f64(<8 x double> %a0, <8 x double> %a1)
   ret <8 x double> %t
@@ -595,7 +595,7 @@ define <16 x float> @fcopysign_v16f32(<16 x float> %a0, <16 x float> %a1) nounwi
 ;
 ; X86-AVX512-LABEL: fcopysign_v16f32:
 ; X86-AVX512:       # %bb.0:
-; X86-AVX512-NEXT:    vpternlogd $228, {{\.?LCPI[0-9]+_[0-9]+}}{1to16}, %zmm1, %zmm0
+; X86-AVX512-NEXT:    vpternlogd {{.*#+}} zmm0 = zmm1 ^ (m32bcst & (zmm0 ^ zmm1))
 ; X86-AVX512-NEXT:    retl
 ;
 ; X64-SSE-LABEL: fcopysign_v16f32:
@@ -631,7 +631,7 @@ define <16 x float> @fcopysign_v16f32(<16 x float> %a0, <16 x float> %a1) nounwi
 ;
 ; X64-AVX512-LABEL: fcopysign_v16f32:
 ; X64-AVX512:       # %bb.0:
-; X64-AVX512-NEXT:    vpternlogd $228, {{\.?LCPI[0-9]+_[0-9]+}}(%rip){1to16}, %zmm1, %zmm0
+; X64-AVX512-NEXT:    vpternlogd {{.*#+}} zmm0 = zmm1 ^ (m32bcst & (zmm0 ^ zmm1))
 ; X64-AVX512-NEXT:    retq
   %t = call <16 x float> @llvm.copysign.v16f32(<16 x float> %a0, <16 x float> %a1)
   ret <16 x float> %t
@@ -697,7 +697,7 @@ define <32 x half> @fcopysign_v32f16(ptr %p0, ptr %p1) nounwind {
 ; X86-AVX512-NEXT:    movl {{[0-9]+}}(%esp), %ecx
 ; X86-AVX512-NEXT:    vmovdqu64 (%ecx), %zmm1
 ; X86-AVX512-NEXT:    vpbroadcastd {{.*#+}} zmm0 = [2147450879,2147450879,2147450879,2147450879,2147450879,2147450879,2147450879,2147450879,2147450879,2147450879,2147450879,2147450879,2147450879,2147450879,2147450879,2147450879]
-; X86-AVX512-NEXT:    vpternlogd $202, (%eax), %zmm1, %zmm0
+; X86-AVX512-NEXT:    vpternlogd {{.*#+}} zmm0 = mem ^ (zmm0 & (zmm1 ^ mem))
 ; X86-AVX512-NEXT:    retl
 ;
 ; X64-SSE-LABEL: fcopysign_v32f16:
@@ -750,7 +750,7 @@ define <32 x half> @fcopysign_v32f16(ptr %p0, ptr %p1) nounwind {
 ; X64-AVX512:       # %bb.0:
 ; X64-AVX512-NEXT:    vmovdqu64 (%rdi), %zmm1
 ; X64-AVX512-NEXT:    vpbroadcastd {{.*#+}} zmm0 = [2147450879,2147450879,2147450879,2147450879,2147450879,2147450879,2147450879,2147450879,2147450879,2147450879,2147450879,2147450879,2147450879,2147450879,2147450879,2147450879]
-; X64-AVX512-NEXT:    vpternlogd $202, (%rsi), %zmm1, %zmm0
+; X64-AVX512-NEXT:    vpternlogd {{.*#+}} zmm0 = mem ^ (zmm0 & (zmm1 ^ mem))
 ; X64-AVX512-NEXT:    retq
   %a0 = load <32 x half>, ptr %p0, align 16
   %a1 = load <32 x half>, ptr %p1, align 16

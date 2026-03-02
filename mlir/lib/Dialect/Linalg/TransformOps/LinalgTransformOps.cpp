@@ -177,7 +177,8 @@ static DiagnosedSilenceableFailure reifyMixedParamAndHandleResults(
       reified.push_back(cast<IntegerAttr>(attr).getInt());
       continue;
     }
-    if (isa<ParamType>(cast<Value>(paramOrHandle).getType())) {
+    if (isa<TransformParamTypeInterface>(
+            cast<Value>(paramOrHandle).getType())) {
       ArrayRef<Attribute> params = state.getParams(cast<Value>(paramOrHandle));
       if (params.size() != 1)
         return transformOp.emitSilenceableError() << "expected a single param";
@@ -3526,7 +3527,7 @@ transform::TileUsingForOp::apply(transform::TransformRewriter &rewriter,
   dynamicSizeProducers.reserve(getDynamicSizes().size());
   paramSizes.reserve(getDynamicSizes().size());
   for (Value transformValue : getDynamicSizes()) {
-    if (isa<ParamType>(transformValue.getType())) {
+    if (isa<TransformParamTypeInterface>(transformValue.getType())) {
       dynamicSizeProducers.push_back({});
       ArrayRef<Attribute> params = state.getParams(transformValue);
       paramSizes.push_back(llvm::map_to_vector(params, [](Attribute attr) {
