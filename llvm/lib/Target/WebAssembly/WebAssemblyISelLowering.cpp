@@ -2832,10 +2832,11 @@ static SDValue foldShiftByConstantToExtMul(SDValue Op, SelectionDAG &DAG) {
   SDLoc DL(Op);
   SDValue LHS = Op.getOperand(0);
   unsigned ExtOpc = LHS.getOpcode();
-  bool IsLow = false;
+  bool IsLow = false, IsSigned = false;
   if (ExtOpc == WebAssemblyISD::EXTEND_LOW_S ||
       ExtOpc == WebAssemblyISD::EXTEND_HIGH_S) {
     IsLow = (ExtOpc == WebAssemblyISD::EXTEND_LOW_S);
+    IsSigned = true;
   } else if (ExtOpc == WebAssemblyISD::EXTEND_LOW_U ||
              ExtOpc == WebAssemblyISD::EXTEND_HIGH_U) {
     IsLow = (ExtOpc == WebAssemblyISD::EXTEND_LOW_U);
@@ -2847,13 +2848,17 @@ static SDValue foldShiftByConstantToExtMul(SDValue Op, SelectionDAG &DAG) {
   EVT SrcVecTy = SrcVec.getValueType();
   unsigned SrcVecEltNum = SrcVecTy.getVectorNumElements();
   unsigned ConstVecEltNum = SrcVecEltNum / 2;
+  // Cap shift amount to prevent the multiplier from hitting the sign bit
+  // and becoming negative during signed extension (e.g., 1 << 15 for i16).
+  unsigned ScalarBits = SrcVecTy.getScalarSizeInBits();
+  unsigned MaxShiftAmt = IsSigned ? (ScalarBits - 1) : ScalarBits;
   SmallVector<SDValue, 16> MulConsts(SrcVecEltNum,
                                      DAG.getPOISON(SrcVecTy.getScalarType()));
   unsigned StartIdx = IsLow ? 0 : ConstVecEltNum;
   for (unsigned I = 0; I < ConstVecEltNum; ++I) {
     auto *C = cast<ConstantSDNode>(RHS.getOperand(I));
     uint64_t ShiftAmt = C->getZExtValue();
-    if (ShiftAmt >= SrcVecTy.getScalarSizeInBits())
+    if (ShiftAmt >= MaxShiftAmt)
       return SDValue();
 
     uint64_t MulAmt = 1ULL << ShiftAmt;
