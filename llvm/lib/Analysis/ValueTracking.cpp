@@ -5051,6 +5051,13 @@ void computeKnownFPClass(const Value *V, const APInt &DemandedElts,
     return;
   }
 
+  if (const auto *CDS = dyn_cast<ConstantDataSequential>(V)) {
+    Known.KnownFPClasses = fcNone;
+    for (size_t I = 0, E = CDS->getNumElements(); I != E; ++I)
+      Known |= CDS->getElementAsAPFloat(I).classify();
+    return;
+  }
+
   FPClassTest KnownNotFromFlags = fcNone;
   if (const auto *CB = dyn_cast<CallBase>(V))
     KnownNotFromFlags |= CB->getRetNoFPClass();
