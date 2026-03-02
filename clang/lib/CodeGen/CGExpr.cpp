@@ -6884,13 +6884,9 @@ RValue CodeGenFunction::EmitCall(QualType CalleeType,
       // might be passed function pointers of both types.
       llvm::Value *AlignedCalleePtr;
       if (CGM.getTriple().isARM() || CGM.getTriple().isThumb()) {
-        llvm::Value *CalleeAddress =
-            Builder.CreatePtrToInt(CalleePtr, IntPtrTy);
-        llvm::Value *Mask = llvm::ConstantInt::getSigned(IntPtrTy, ~1);
-        llvm::Value *AlignedCalleeAddress =
-            Builder.CreateAnd(CalleeAddress, Mask);
-        AlignedCalleePtr =
-            Builder.CreateIntToPtr(AlignedCalleeAddress, CalleePtr->getType());
+        AlignedCalleePtr = Builder.CreateIntrinsic(
+            CalleePtr->getType(), llvm::Intrinsic::ptrmask,
+            {CalleePtr, llvm::ConstantInt::getSigned(IntPtrTy, ~1)});
       } else {
         AlignedCalleePtr = CalleePtr;
       }
