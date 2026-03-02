@@ -4,8 +4,8 @@ module {
   // CHECK: llvm.mlir.global internal @__global_alloca_[[G2:.*]]() {addr_space = 3 : i32, alignment = 8 : i64} : !llvm.array<10 x i32>
   // CHECK: llvm.mlir.global internal @__global_alloca_[[G1:.*]]() {addr_space = 3 : i32, alignment = 8 : i64} : !llvm.array<10 x i32>
   // CHECK: llvm.mlir.global internal @__global_alloca_[[G0:.*]]() {addr_space = 3 : i32, alignment = 8 : i64} : !llvm.array<10 x i32>
-  // CHECK: llvm.func @test()
-  llvm.func @test() -> !llvm.ptr<3> {
+  // CHECK: llvm.func @test_with_parent_module()
+  llvm.func @test_with_parent_module() -> !llvm.ptr<3> {
     %0 = llvm.mlir.constant(10 : i32) : i32
     // CHECK: %[[VAR0:.*]] = llvm.mlir.addressof @__global_alloca_[[G0]] : !llvm.ptr<3>
     // CHECK: %[[VAR1:.*]] = llvm.mlir.addressof @__global_alloca_[[G1]] : !llvm.ptr<3>
@@ -33,8 +33,8 @@ gpu.module @test {
   // CHECK: llvm.mlir.global internal @__global_alloca_[[G2:.*]]() {addr_space = 3 : i32, alignment = 8 : i64} : !llvm.array<10 x i32>
   // CHECK: llvm.mlir.global internal @__global_alloca_[[G1:.*]]() {addr_space = 3 : i32, alignment = 8 : i64} : !llvm.array<10 x i32>
   // CHECK: llvm.mlir.global internal @__global_alloca_[[G0:.*]]() {addr_space = 3 : i32, alignment = 8 : i64} : !llvm.array<10 x i32>
-  // CHECK: llvm.func @test()
-  llvm.func @test() -> !llvm.ptr<3> {
+  // CHECK: llvm.func @test_with_parent_gpu_module()
+  llvm.func @test_with_parent_gpu_module() -> !llvm.ptr<3> {
     %0 = llvm.mlir.constant(10 : i32) : i32
     // CHECK: %[[VAR0:.*]] = llvm.mlir.addressof @__global_alloca_[[G0]] : !llvm.ptr<3>
     // CHECK: %[[VAR1:.*]] = llvm.mlir.addressof @__global_alloca_[[G1]] : !llvm.ptr<3>
