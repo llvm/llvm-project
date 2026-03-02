@@ -24,7 +24,7 @@ template <class ELFT> class MIPS final : public TargetInfo {
 public:
   MIPS(Ctx &);
   uint32_t calcEFlags() const override;
-  void initTargetSections() override;
+  void initTargetSpecificSections() override;
   RelExpr getRelExpr(RelType type, const Symbol &s,
                      const uint8_t *loc) const override;
   int64_t getImplicitAddend(const uint8_t *buf, RelType type) const override;
@@ -125,7 +125,7 @@ template <class ELFT> uint32_t MIPS<ELFT>::calcEFlags() const {
   return calcMipsEFlags<ELFT>(ctx);
 }
 
-template <class ELFT> void MIPS<ELFT>::initTargetSections() {
+template <class ELFT> void MIPS<ELFT>::initTargetSpecificSections() {
   if (!ctx.arg.shared && ctx.hasDynsym) {
     ctx.in.mipsRldMap = std::make_unique<RldMapSection>(ctx);
     ctx.inputSections.push_back(ctx.in.mipsRldMap.get());

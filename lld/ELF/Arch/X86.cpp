@@ -23,7 +23,7 @@ namespace {
 class X86 : public TargetInfo {
 public:
   X86(Ctx &);
-  void initTargetSections() override;
+  void initTargetSpecificSections() override;
   RelExpr getRelExpr(RelType type, const Symbol &s,
                      const uint8_t *loc) const override;
   int64_t getImplicitAddend(const uint8_t *buf, RelType type) const override;
@@ -84,7 +84,7 @@ X86::X86(Ctx &ctx) : TargetInfo(ctx) {
   defaultImageBase = 0x400000;
 }
 
-void X86::initTargetSections() {
+void X86::initTargetSpecificSections() {
   if (ctx.arg.andFeatures & GNU_PROPERTY_X86_FEATURE_1_IBT) {
     ctx.in.ibtPlt = std::make_unique<IBTPltSection>(ctx);
     ctx.inputSections.push_back(ctx.in.ibtPlt.get());

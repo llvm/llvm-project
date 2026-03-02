@@ -27,7 +27,7 @@ namespace {
 class PPC final : public TargetInfo {
 public:
   PPC(Ctx &);
-  void initTargetSections() override;
+  void initTargetSpecificSections() override;
   RelExpr getRelExpr(RelType type, const Symbol &s,
                      const uint8_t *loc) const override;
   RelType getDynRel(RelType type) const override;
@@ -194,7 +194,7 @@ PPC::PPC(Ctx &ctx) : TargetInfo(ctx) {
   write32(ctx, trapInstr.data(), 0x7fe00008);
 }
 
-void PPC::initTargetSections() {
+void PPC::initTargetSpecificSections() {
   ctx.in.ppc32Got2 = std::make_unique<Got2Section>(ctx);
   ctx.inputSections.push_back(ctx.in.ppc32Got2.get());
 }

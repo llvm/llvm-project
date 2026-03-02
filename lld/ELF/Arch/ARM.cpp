@@ -35,7 +35,7 @@ class ARM final : public TargetInfo {
 public:
   ARM(Ctx &);
   uint32_t calcEFlags() const override;
-  void initTargetSections() override;
+  void initTargetSpecificSections() override;
   RelExpr getRelExpr(RelType type, const Symbol &s,
                      const uint8_t *loc) const override;
   RelType getDynRel(RelType type) const override;
@@ -141,7 +141,7 @@ uint32_t ARM::calcEFlags() const {
   return EF_ARM_EABI_VER5 | abiFloatType | armBE8;
 }
 
-void ARM::initTargetSections() {
+void ARM::initTargetSpecificSections() {
   ctx.in.armCmseSGSection = std::make_unique<ArmCmseSGSection>(ctx);
   ctx.inputSections.push_back(ctx.in.armCmseSGSection.get());
 }
