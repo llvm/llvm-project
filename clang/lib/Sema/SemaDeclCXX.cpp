@@ -6637,8 +6637,10 @@ void Sema::checkClassLevelDLLAttribute(CXXRecordDecl *Class) {
                     .areArgsDestroyedLeftToRightInCallee()) {
               bool HasCalleeCleanupParam = false;
               for (const auto *P : CD->parameters())
-                if (P->needsDestruction(Context))
+                if (P->needsDestruction(Context)) {
                   HasCalleeCleanupParam = true;
+                  break;
+                }
               if (HasCalleeCleanupParam) {
                 Diag(CD->getLocation(),
                      diag::warn_dllexport_inherited_ctor_unsupported)
@@ -6696,9 +6698,8 @@ void Sema::checkClassLevelDLLAttribute(CXXRecordDecl *Class) {
       // Inherited constructors are marked inline but must still be exported
       // to match MSVC behavior, so exclude them from this override.
       bool IsInheritedCtor = false;
-      if (MD)
-        if (auto *CD = dyn_cast<CXXConstructorDecl>(MD))
-          IsInheritedCtor = (bool)CD->getInheritedConstructor();
+      if (auto *CD = dyn_cast_or_null<CXXConstructorDecl>(MD))
+        IsInheritedCtor = (bool)CD->getInheritedConstructor();
       if (!getLangOpts().DllExportInlines && MD && MD->isInlined() &&
           !IsInheritedCtor && TSK != TSK_ExplicitInstantiationDeclaration &&
           TSK != TSK_ExplicitInstantiationDefinition) {

@@ -264,14 +264,13 @@ namespace {
       // Emit dllexport inherited constructors. These are synthesized during
       // Sema (in checkClassLevelDLLAttribute) but have no written definition,
       // so they must be emitted now while visiting the class definition.
-      if (auto *RD = dyn_cast<CXXRecordDecl>(D)) {
-        if (RD->hasAttr<DLLExportAttr>()) {
-          for (Decl *Member : RD->decls()) {
-            if (auto *CD = dyn_cast<CXXConstructorDecl>(Member)) {
-              if (CD->getInheritedConstructor() &&
-                  CD->hasAttr<DLLExportAttr>() && !CD->isDeleted())
-                Builder->EmitTopLevelDecl(CD);
-            }
+      if (auto *RD = dyn_cast<CXXRecordDecl>(D);
+          RD && RD->hasAttr<DLLExportAttr>()) {
+        for (Decl *Member : RD->decls()) {
+          if (auto *CD = dyn_cast<CXXConstructorDecl>(Member)) {
+            if (CD->getInheritedConstructor() && CD->hasAttr<DLLExportAttr>() &&
+                !CD->isDeleted())
+              Builder->EmitTopLevelDecl(CD);
           }
         }
       }

@@ -13014,7 +13014,7 @@ static GVALinkage basicGVALinkageForFunction(const ASTContext &Context,
   if (Context.getTargetInfo().getCXXABI().isMicrosoft() &&
       isa<CXXConstructorDecl>(FD) &&
       cast<CXXConstructorDecl>(FD)->isInheritingConstructor() &&
-      !FD->hasAttr<DLLExportAttr>())
+      !FD->hasAttr<DLLExportAttr>()) {
     // Both Clang and MSVC implement inherited constructors as forwarding
     // thunks that delegate to the base constructor. Keep non-dllexport
     // inheriting constructor thunks internal since they are not needed
@@ -13026,6 +13026,7 @@ static GVALinkage basicGVALinkageForFunction(const ASTContext &Context,
     // cleanup types) are excluded from export in Sema to avoid silent
     // runtime mismatches.
     return GVA_Internal;
+  }
 
   return GVA_DiscardableODR;
 }
