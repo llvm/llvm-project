@@ -18,6 +18,7 @@
 #include "comgr-device-libs.h"
 #include "comgr-diagnostic-handler.h"
 #include "comgr-env.h"
+#include "comgr-resource-directory.h"
 #include "comgr-spirv-command.h"
 #include "comgr-unbundle-command.h"
 #include "lld/Common/CommonLinkerContext.h"
@@ -1122,14 +1123,46 @@ amd_comgr_status_t AMDGPUCompiler::addCompilationFlags() {
   return AMD_COMGR_STATUS_SUCCESS;
 }
 
+amd_comgr_status_t AMDGPUCompiler::outputResource(llvm::StringRef Path,
+                                                  llvm::StringRef FileContent) {
+  // TODO: We should abstract the logic of deciding whether to use the VFS
+  // or the real file system within inputFromFile and outputToFile.
+  if (UseVFS) {
+    if (!InMemoryFS->addFile(Path, /* ModificationTime */ 0,
+                             llvm::MemoryBuffer::getMemBuffer(FileContent))) {
+      return AMD_COMGR_STATUS_ERROR;
+    }
+  } else {
+    if (auto Status = outputToFile(FileContent, Path)) {
+      return Status;
+    }
+  }
+
+  return AMD_COMGR_STATUS_SUCCESS;
+}
+
 amd_comgr_status_t AMDGPUCompiler::addDeviceLibraries() {
-
-  NoGpuLib = false;
-
   SmallString<256> ClangBinaryPath(env::getLLVMPath());
   sys::path::append(ClangBinaryPath, "bin", "clang");
 
   std::string ClangResourceDir = GetResourcesPath(ClangBinaryPath);
+
+  NoGpuLib = false;
+
+  for (ResourceDirResource ResourceDirEntry : getResourceDirectoryFiles()) {
+    llvm::SmallString<128> ResourcePath(ClangResourceDir);
+    path::append(ResourcePath, ResourceDirEntry.RelativePath);
+
+    amd_comgr_status_t Status =
+        outputResource(ResourcePath, ResourceDirEntry.FileContent);
+    if (Status != AMD_COMGR_STATUS_SUCCESS) {
+      return Status;
+    }
+  }
+
+  // TODO: This manual handling of device libs is redundant. Remove it in the
+  // future when device-libs is converted to using the runtimes build to the
+  // resource directory.
 
   SmallString<256> DeviceLibPath(ClangResourceDir);
   sys::path::append(DeviceLibPath, "lib");
@@ -1152,19 +1185,11 @@ amd_comgr_status_t AMDGPUCompiler::addDeviceLibraries() {
     for (auto DeviceLib : getDeviceLibraries()) {
       llvm::SmallString<128> DeviceLibPath = DeviceLibsDir;
       path::append(DeviceLibPath, std::get<0>(DeviceLib));
-      // TODO: We should abstract the logic of deciding whether to use the VFS
-      // or the real file system within inputFromFile and outputToFile.
-      if (UseVFS) {
-        if (!InMemoryFS->addFile(
-                DeviceLibPath, /* ModificationTime */ 0,
-                llvm::MemoryBuffer::getMemBuffer(std::get<1>(DeviceLib)))) {
-          return AMD_COMGR_STATUS_ERROR;
-        }
-      } else {
-        if (auto Status = outputToFile(std::get<1>(DeviceLib), DeviceLibPath)) {
-          return Status;
-        }
-      }
+
+      amd_comgr_status_t Status =
+          outputResource(DeviceLibPath, std::get<1>(DeviceLib));
+      if (Status != AMD_COMGR_STATUS_SUCCESS)
+        return Status;
     }
   }
 

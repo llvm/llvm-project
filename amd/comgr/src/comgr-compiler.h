@@ -55,6 +55,8 @@ class AMDGPUCompiler {
   amd_comgr_status_t addTargetIdentifierFlags(llvm::StringRef IdentStr,
                                               bool CompilingSrc);
   amd_comgr_status_t addCompilationFlags();
+  amd_comgr_status_t outputResource(llvm::StringRef Path,
+                                    llvm::StringRef FileContent);
   amd_comgr_status_t addDeviceLibraries();
   amd_comgr_status_t extractSpirvFlags(DataSet *BcSet);
 

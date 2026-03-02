@@ -203,6 +203,18 @@ message("----COMGR_GIT_COMMIT: ${AMD_COMGR_GIT_COMMIT}")
 message("----COMGR_GIT_BRANCH: ${AMD_COMGR_GIT_BRANCH}")
 message("")
 
+include(CheckEmbed)
+option(COMGR_USE_EMBED "Use the C++26 #embed directive"
+       ${HAVE_EMBED_SUPPORT})
+
+if(NOT ${COMGR_USE_EMBED} AND HAVE_INCBIN_SUPPORT)
+  set(default_use_incbin ON)
+else()
+  set(default_use_incbin OFF)
+endif()
+
+option(COMGR_USE_INCBIN "Use the gnu .incbin assembler directive" ${default_use_incbin})
+
 option(COMGR_DISABLE_SPIRV "To disable SPIRV in Comgr" OFF)
 
 if (NOT COMGR_DISABLE_SPIRV)
@@ -503,6 +515,10 @@ target_link_libraries(amd_comgr
     ${LLD_LIBS}
     ${LLVM_LIBS}
     ${CLANG_LIBS})
+
+if(TARGET embedded-resource-dir)
+  target_link_libraries(amd_comgr PRIVATE embedded-resource-dir)
+endif()
 
 if (NOT UNIX)
   target_link_libraries(amd_comgr
