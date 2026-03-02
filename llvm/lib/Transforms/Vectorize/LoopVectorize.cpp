@@ -1325,13 +1325,14 @@ public:
 
   /// Returns the TailFoldingStyle that is best for the current loop.
   TailFoldingStyle getTailFoldingStyle() const {
-    return ChosenTailFoldingStyle ? *ChosenTailFoldingStyle : TailFoldingStyle::None;
+    return ChosenTailFoldingStyle ? *ChosenTailFoldingStyle
+                                  : TailFoldingStyle::None;
   }
 
   /// Selects and saves TailFoldingStyle.
   /// \param IsScalableVF true if scalable vector factors enabled.
   /// \param UserIC User specific interleave count.
-  void setTailFoldingStyles(bool IsScalableVF, unsigned UserIC) {
+  void setTailFoldingStyle(bool IsScalableVF, unsigned UserIC) {
     assert(!ChosenTailFoldingStyle && "Tail folding must not be selected yet.");
     if (!Legal->canFoldTailByMasking()) {
       ChosenTailFoldingStyle = TailFoldingStyle::None;
@@ -3707,7 +3708,7 @@ LoopVectorizationCostModel::computeMaxVF(ElementCount UserVF, unsigned UserIC) {
   // by masking.
   // FIXME: look for a smaller MaxVF that does divide TC rather than masking.
   bool ContainsScalableVF = MaxFactors.ScalableVF.isNonZero();
-  setTailFoldingStyles(ContainsScalableVF, UserIC);
+  setTailFoldingStyle(ContainsScalableVF, UserIC);
   if (foldTailByMasking()) {
     if (foldTailWithEVL()) {
       LLVM_DEBUG(
