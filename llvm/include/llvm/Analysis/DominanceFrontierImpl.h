@@ -96,7 +96,8 @@ void DominanceFrontierBase<BlockT, IsPostDom>::analyze(const DomTreeT &DT) {
     const DomTreeNodeT *currentNode = currentW->Node;
     const DomTreeNodeT *parentNode = currentW->parentNode;
     assert(currentNode && "Invalid work object. Missing current Node");
-    assert((currentBB || DT.isVirtualRoot(CurrentNode)) && "Invalid work object. Missing current Basic Block");
+    assert((currentBB || DT.isVirtualRoot(CurrentNode)) &&
+           "Invalid work object. Missing current Basic Block");
 
     // Note that for `IsPostDom == true`, the virtual root node (null currentBB)
     // is an immediate post-dominator for all the exit nodes (which are
