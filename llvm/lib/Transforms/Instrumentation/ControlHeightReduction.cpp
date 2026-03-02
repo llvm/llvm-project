@@ -744,10 +744,29 @@ CHRScope * CHR::findScope(Region *R) {
     // FIXME: This could lead to less optimal codegen, because the region is
     // excluded, it can prevent CHR from merging adjacent regions into bigger
     // scope and hoisting more branches.
-    for (Instruction &I : *BB)
+    for (Instruction &I : *BB) {
       if (auto *II = dyn_cast<IntrinsicInst>(&I))
         if (II->getIntrinsicID() == Intrinsic::coro_id)
           return nullptr;
+      // Can't clone regions containing convergent or noduplicate calls.
+      //
+      // CHR clones a region into hot/cold paths guarded by a merged
+      // speculative branch. On GPU targets, this branch may be divergent
+      // (different threads evaluate it differently), splitting the set of
+      // threads that reach each copy. A convergent call (e.g. a cross-lane
+      // operation like ds_bpermute on AMDGPU) requires a specific set of
+      // threads to be active; when CHR places a copy on the hot path, only
+      // the threads that took the hot branch are active, so the operation
+      // reads stale values from threads that went to the cold path.
+      //
+      // Similarly, noduplicate calls must not be duplicated by definition.
+      //
+      // This matches SimplifyCFG's block-duplication guard.
+      if (auto *CB = dyn_cast<CallBase>(&I)) {
+        if (CB->cannotDuplicate() || CB->isConvergent())
+          return nullptr;
+      }
+    }
   }
 
   if (Exit) {

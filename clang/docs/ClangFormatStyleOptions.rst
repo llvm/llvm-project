@@ -182,11 +182,13 @@ the configuration (without a prefix: ``Auto``).
     Not a real style, but allows to use the ``.clang-format`` file from the
     parent directory (or its parent if there is none). If there is no parent
     file found it falls back to the ``fallback`` style, and applies the changes
-    to that.
-
-    With this option you can overwrite some parts of your main style for your
-    subdirectories. This is also possible through the command line, e.g.:
+    to that. With this option you can overwrite some parts of your main style
+    for your subdirectories. This is also possible through the command line,
+    e.g.:
     ``--style={BasedOnStyle: InheritParentConfig, ColumnLimit: 20}``
+  * ``InheritParentConfig=<directory-path>``
+    Same as the above except that the inheritance is redirected to
+    ``<directory-path>``. This is only supported in configuration files.
 
 .. START_FORMAT_STYLE_OPTIONS
 
@@ -4819,7 +4821,7 @@ the configuration (without a prefix: ``Auto``).
 .. _IntegerLiteralSeparator:
 
 **IntegerLiteralSeparator** (``IntegerLiteralSeparatorStyle``) :versionbadge:`clang-format 16` :ref:`¶ <IntegerLiteralSeparator>`
-  Format integer literal separators (``'`` for C++ and ``_`` for C#, Java,
+  Format integer literal separators (``'`` for C/C++ and ``_`` for C#, Java,
   and JavaScript).
 
   Nested configuration flags:

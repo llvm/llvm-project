@@ -183,3 +183,106 @@ func.func @test_async_flag_preserved(%offset_i: index, %offset_j: index) {
     : vector<8xf16>, memref<32x64xf16, strided<[128, 1]>>, memref<64x64xf16, #gpu_lds_addrspace>
   func.return
 }
+
+// -----
+
+#gpu_wg = #gpu.address_space<workgroup>
+
+// CHECK: func @test_transpose_load_subview
+// CHECK-SAME: %[[ARG0:.*]]: index, %[[ARG1:.*]]: index
+func.func @test_transpose_load_subview(%offset_i: index, %offset_j: index) -> vector<4xf16> {
+  // CHECK: %[[ALLOC:.*]] = memref.alloc() : memref<64x128xf16, #gpu.address_space<workgroup>>
+  // CHECK: amdgpu.transpose_load %[[ALLOC]][%[[ARG0]], %[[ARG1]]]
+  // CHECK-SAME: memref<64x128xf16, #gpu.address_space<workgroup>> -> vector<4xf16>
+
+  %alloc = memref.alloc() : memref<64x128xf16, #gpu_wg>
+  %subview = memref.subview %alloc[0, 0][32, 64][1, 1]
+    : memref<64x128xf16, #gpu_wg> to memref<32x64xf16, strided<[128, 1]>, #gpu_wg>
+  %result = amdgpu.transpose_load %subview[%offset_i, %offset_j]
+    : memref<32x64xf16, strided<[128, 1]>, #gpu_wg> -> vector<4xf16>
+  return %result : vector<4xf16>
+}
+
+// -----
+
+#gpu_wg = #gpu.address_space<workgroup>
+
+// CHECK: #[[MAP:.*]] = affine_map<()[s0] -> (s0 + 32)>
+// CHECK: #[[MAP1:.*]] = affine_map<()[s0] -> (s0 + 64)>
+
+// CHECK: func @test_transpose_load_subview_offset
+// CHECK-SAME: %[[ARG0:.*]]: index, %[[ARG1:.*]]: index
+func.func @test_transpose_load_subview_offset(%offset_i: index, %offset_j: index) -> vector<4xf16> {
+  // CHECK: %[[ALLOC:.*]] = memref.alloc() : memref<64x128xf16, #gpu.address_space<workgroup>>
+  // CHECK: %[[IDX0:.*]] = affine.apply #[[MAP]]()[%[[ARG0]]]
+  // CHECK: %[[IDX1:.*]] = affine.apply #[[MAP1]]()[%[[ARG1]]]
+  // CHECK: amdgpu.transpose_load %[[ALLOC]][%[[IDX0]], %[[IDX1]]]
+  // CHECK-SAME: memref<64x128xf16, #gpu.address_space<workgroup>> -> vector<4xf16>
+
+  %alloc = memref.alloc() : memref<64x128xf16, #gpu_wg>
+  %subview = memref.subview %alloc[32, 64][32, 64][1, 1]
+    : memref<64x128xf16, #gpu_wg>
+    to memref<32x64xf16, strided<[128, 1], offset: 4160>, #gpu_wg>
+  %result = amdgpu.transpose_load %subview[%offset_i, %offset_j]
+    : memref<32x64xf16, strided<[128, 1], offset: 4160>, #gpu_wg> -> vector<4xf16>
+  return %result : vector<4xf16>
+}
+
+// -----
+
+#gpu_wg = #gpu.address_space<workgroup>
+
+// CHECK: func @test_transpose_load_expand_shape
+// CHECK-SAME: %[[ARG0:.*]]: index, %[[ARG1:.*]]: index
+func.func @test_transpose_load_expand_shape(%offset_i: index, %offset_j: index) -> vector<4xf16> {
+  // CHECK: %[[ALLOC:.*]] = memref.alloc() : memref<4096xf16, #gpu.address_space<workgroup>>
+  // CHECK: %[[IDX:.*]] = affine.linearize_index [%[[ARG0]], %[[ARG1]]] by (32, 128) : index
+  // CHECK: amdgpu.transpose_load %[[ALLOC]][%[[IDX]]]
+  // CHECK-SAME: memref<4096xf16, #gpu.address_space<workgroup>> -> vector<4xf16>
+
+  %alloc = memref.alloc() : memref<4096xf16, #gpu_wg>
+  %expand = memref.expand_shape %alloc [[0, 1]] output_shape [32, 128]
+    : memref<4096xf16, #gpu_wg> into memref<32x128xf16, #gpu_wg>
+  %result = amdgpu.transpose_load %expand[%offset_i, %offset_j]
+    : memref<32x128xf16, #gpu_wg> -> vector<4xf16>
+  return %result : vector<4xf16>
+}
+
+// -----
+
+#gpu_wg = #gpu.address_space<workgroup>
+
+// CHECK: func @test_transpose_load_collapse_shape
+// CHECK-SAME: %[[ARG0:.*]]: index
+func.func @test_transpose_load_collapse_shape(%offset_i: index) -> vector<4xf16> {
+  // CHECK: %[[ALLOC:.*]] = memref.alloc() : memref<32x128xf16, #gpu.address_space<workgroup>>
+  // CHECK: %[[INDICES:.*]]:2 = affine.delinearize_index %[[ARG0]] into (32, 128) : index, index
+  // CHECK: amdgpu.transpose_load %[[ALLOC]][%[[INDICES]]#0, %[[INDICES]]#1]
+  // CHECK-SAME: memref<32x128xf16, #gpu.address_space<workgroup>> -> vector<4xf16>
+
+  %alloc = memref.alloc() : memref<32x128xf16, #gpu_wg>
+  %collapse = memref.collapse_shape %alloc [[0, 1]]
+    : memref<32x128xf16, #gpu_wg> into memref<4096xf16, #gpu_wg>
+  %result = amdgpu.transpose_load %collapse[%offset_i]
+    : memref<4096xf16, #gpu_wg> -> vector<4xf16>
+  return %result : vector<4xf16>
+}
+
+// -----
+
+#gpu_wg = #gpu.address_space<workgroup>
+
+// CHECK: func @test_transpose_load_nop
+// CHECK-SAME: %[[ARG0:.*]]: index, %[[ARG1:.*]]: index
+func.func @test_transpose_load_nop(%offset_i: index, %offset_j: index) -> vector<4xf16> {
+  // CHECK: %[[ALLOC:.*]] = memref.alloc() : memref<32x128xf16, #gpu.address_space<workgroup>>
+  // CHECK: amdgpu.transpose_load %[[ALLOC]][%[[ARG0]], %[[ARG1]]]
+  // CHECK-SAME: memref<32x128xf16, #gpu.address_space<workgroup>> -> vector<4xf16>
+  // CHECK-NOT: subview
+  // CHECK-NOT: expand_shape
+
+  %alloc = memref.alloc() : memref<32x128xf16, #gpu_wg>
+  %result = amdgpu.transpose_load %alloc[%offset_i, %offset_j]
+    : memref<32x128xf16, #gpu_wg> -> vector<4xf16>
+  return %result : vector<4xf16>
+}

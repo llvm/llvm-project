@@ -3777,10 +3777,10 @@ private:
   getCastContextHint(const TreeEntry &TE) const;
 
   /// \returns the scale of the given tree entry to the loop iteration.
-  /// \p Scalar is the scalar value from entry, if using the parent for the
+  /// \p Scalar is the scalar value from the entry, if using the parent for the
   /// external use.
-  /// \p U is the user of the vectorized value from entry, if using the parent
-  /// for the external use.
+  /// \p U is the user of the vectorized value from the entry, if using the
+  /// parent for the external use.
   unsigned getScaleToLoopIterations(const TreeEntry &TE,
                                     Value *Scalar = nullptr,
                                     Instruction *U = nullptr) const;
@@ -4732,8 +4732,8 @@ private:
                 std::tuple<SmallVector<int>, VectorType *, unsigned, bool>>
       CompressEntryToData;
 
-  /// The loop nest, used to check if only single loop nest is vectorized, not
-  /// multiple, to avoid side-effects from loop-aware cost model.
+  /// The loop nest, used to check if only a single loop nest is vectorized, not
+  /// multiple, to avoid side-effects from the loop-aware cost model.
   SmallVector<const Loop *> LoopNest;
 
   /// This POD struct describes one external user in the vectorized tree.
@@ -10437,8 +10437,8 @@ getVectorCallCosts(CallInst *CI, FixedVectorType *VecTy,
   return {IntrinsicCost, LibCost};
 }
 
-/// Find the innermost loop starting from \p L, for which at least single value
-/// in \p VL is not invariant.
+/// Find the innermost loop starting from \p L, for which at least a single
+/// value in \p VL is not invariant.
 static const Loop *findInnermostNonInvariantLoop(const Loop *L,
                                                  ArrayRef<Value *> VL) {
   assert(L && "Expected valid loop");
@@ -10471,7 +10471,7 @@ BoUpSLP::TreeEntry::EntryState BoUpSLP::getScalarsVectorizationState(
   assert(S.getMainOp() &&
          "Expected instructions with same/alternate opcodes only.");
 
-  // Check the loop nest. Need to be sure, we handle single loop nest at the
+  // Check the loop nest. We need to be sure we handle a single loop nest at a
   // time to avoid incorrect cost estimation because of the loop aware cost
   // model.
   if (VectorizableTree.empty()) {
@@ -10491,19 +10491,15 @@ BoUpSLP::TreeEntry::EntryState BoUpSLP::getScalarsVectorizationState(
       L = findInnermostNonInvariantLoop(L, VL);
       if (L) {
         SmallVector<const Loop *> NewLoopNest = getLoopNest(L);
-        for (const auto [L1, L2] : zip_longest(LoopNest, NewLoopNest)) {
-          if (L1 && L2) {
-            if (*L1 != *L2) {
-              LLVM_DEBUG(dbgs() << "SLP: Different loop nest.\n");
-              return TreeEntry::NeedToGather;
-            }
-            continue;
+        for (const auto [L1, L2] : zip(LoopNest, NewLoopNest)) {
+          if (L1 != L2) {
+            LLVM_DEBUG(dbgs() << "SLP: Different loop nest.\n");
+            return TreeEntry::NeedToGather;
           }
-          if (!L2)
-            break;
-          assert(!L1 && "L1 is expected to be null");
-          LoopNest.push_back(*L2);
         }
+        if (NewLoopNest.size() > LoopNest.size())
+          LoopNest.append(std::next(NewLoopNest.begin(), LoopNest.size()),
+                          NewLoopNest.end());
       }
     }
   }
@@ -10696,6 +10692,23 @@ BoUpSLP::TreeEntry::EntryState BoUpSLP::getScalarsVectorizationState(
     return TreeEntry::Vectorize;
   }
   case Instruction::Select:
+    if (SLPReVec) {
+      SmallPtrSet<Type *, 4> CondTypes;
+      for (Value *V : VL) {
+        Value *Cond;
+        if (!match(V, m_Select(m_Value(Cond), m_Value(), m_Value())) &&
+            !match(V, m_ZExt(m_Value(Cond))))
+          continue;
+        CondTypes.insert(Cond->getType());
+      }
+      if (CondTypes.size() > 1) {
+        LLVM_DEBUG(
+            dbgs()
+            << "SLP: Gathering select with different condition types.\n");
+        return TreeEntry::NeedToGather;
+      }
+    }
+    [[fallthrough]];
   case Instruction::FNeg:
   case Instruction::Add:
   case Instruction::FAdd:
@@ -11704,15 +11717,16 @@ public:
     // Check profitability if number of copyables > VL.size() / 2.
     // 1. Reorder operands for better matching.
     if (isCommutative(MainOp)) {
-      for (auto &Ops : Operands) {
+      for (auto [OpL, OpR] : zip(Operands.front(), Operands.back())) {
         // Make instructions the first operands.
-        if (!isa<Instruction>(Ops.front()) && isa<Instruction>(Ops.back())) {
-          std::swap(Ops.front(), Ops.back());
+        if (!isa<Instruction>(OpL) && isa<Instruction>(OpR)) {
+          std::swap(OpL, OpR);
           continue;
         }
         // Make constants the second operands.
-        if (isa<Constant>(Ops.front())) {
-          std::swap(Ops.front(), Ops.back());
+        if ((isa<Constant>(OpL) && !match(OpR, m_Zero())) ||
+            match(OpL, m_Zero())) {
+          std::swap(OpL, OpR);
           continue;
         }
       }
@@ -13503,6 +13517,8 @@ bool BoUpSLP::matchesShlZExt(const TreeEntry &TE, OrdersType &Order,
   } else {
     const unsigned VF = RhsTE->getVectorFactor();
     Order.assign(VF, VF);
+    // Track which logical positions we've seen; reject duplicate shift amounts.
+    SmallBitVector SeenPositions(VF);
     // Check if need to reorder Rhs to make it in form (0, Stride, 2 * Stride,
     // ..., Sz-Stride).
     if (VF * Stride != Sz)
@@ -13520,6 +13536,9 @@ bool BoUpSLP::matchesShlZExt(const TreeEntry &TE, OrdersType &Order,
       // TODO: Support Pos >= VF, in this case need to shift the final value.
       if (Order[Idx] != VF || Pos >= VF)
         return false;
+      if (SeenPositions.test(Pos))
+        return false;
+      SeenPositions.set(Pos);
       Order[Idx] = Pos;
     }
     // One of the indices not set - exit.
@@ -13651,6 +13670,8 @@ bool BoUpSLP::matchesInversedZExtSelect(
       continue;
     if (!CmpPredicate::getMatching(InversedPred, Pred))
       return false;
+    if (!V->hasOneUse())
+      return false;
     InversedCmpsIndices.push_back(Idx);
   }
 
@@ -13686,6 +13707,8 @@ bool BoUpSLP::matchesSelectOfBits(const TreeEntry &SelectTE) const {
   if (!SelectTE.ReorderIndices.empty() || !SelectTE.ReuseShuffleIndices.empty())
     return false;
   if (!UserIgnoreList)
+    return false;
+  if (any_of(SelectTE.Scalars, [](Value *V) { return !V->hasOneUse(); }))
     return false;
   // Check that all reduction operands are or instructions.
   if (any_of(*UserIgnoreList,
@@ -23623,13 +23646,13 @@ void BoUpSLP::scheduleBlock(const BoUpSLP &R, BlockScheduling *BS) {
               doesNotNeedToBeScheduled(I)) &&
              "scheduler and vectorizer bundle mismatch");
       SD->setSchedulingPriority(Idx++);
-      if (!SD->hasValidDependencies() &&
-          (!CopyableData.empty() ||
-           any_of(R.ValueToGatherNodes.lookup(I), [&](const TreeEntry *TE) {
-             assert(TE->isGather() && "expected gather node");
-             return TE->hasState() && TE->hasCopyableElements() &&
-                    TE->isCopyableElement(I);
-           }))) {
+      if (!CopyableData.empty() ||
+          any_of(R.ValueToGatherNodes.lookup(I), [&](const TreeEntry *TE) {
+            assert(TE->isGather() && "expected gather node");
+            return TE->hasState() && TE->hasCopyableElements() &&
+                   TE->isCopyableElement(I);
+          })) {
+        SD->clearDirectDependencies();
         // Need to calculate deps for these nodes to correctly handle copyable
         // dependencies, even if they were cancelled.
         // If copyables bundle was cancelled, the deps are cleared and need to
@@ -27124,13 +27147,22 @@ private:
           VecRes = Builder.CreateShuffleVector(VecRes, Vec, Mask, "rdx.op");
           return;
         }
-        if (VecRes->getType()->getScalarType() != DestTy->getScalarType())
+        if (VecRes->getType()->getScalarType() != DestTy->getScalarType()) {
+          assert(getNumElements(VecRes->getType()) % getNumElements(DestTy) ==
+                     0 &&
+                 "Expected the number of elements in VecRes to be a multiple "
+                 "of the number of elements in DestTy");
           VecRes = Builder.CreateIntCast(
-              VecRes, getWidenedType(DestTy, getNumElements(VecRes->getType())),
+              VecRes,
+              getWidenedType(DestTy->getScalarType(),
+                             getNumElements(VecRes->getType())),
               VecResSignedness);
+        }
         if (ScalarTy != DestTy->getScalarType())
           Vec = Builder.CreateIntCast(
-              Vec, getWidenedType(DestTy, getNumElements(Vec->getType())),
+              Vec,
+              getWidenedType(DestTy->getScalarType(),
+                             getNumElements(Vec->getType())),
               IsSigned);
         unsigned VecResVF = getNumElements(VecRes->getType());
         unsigned VecVF = getNumElements(Vec->getType());
