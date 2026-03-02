@@ -1741,9 +1741,8 @@ QualType BuiltinTypeDeclBuilder::getHandleElementType() {
   if (Template)
     return getFirstTemplateTypeParam();
 
-  if (auto *PartialSpec =
-          dyn_cast<ClassTemplatePartialSpecializationDecl>(Record)) {
-    const auto &Args = PartialSpec->getTemplateArgs();
+  if (auto *Spec = dyn_cast<ClassTemplateSpecializationDecl>(Record)) {
+    const auto &Args = Spec->getTemplateArgs();
     if (Args.size() > 0 && Args[0].getKind() == TemplateArgument::Type)
       return Args[0].getAsType();
   }
@@ -1784,6 +1783,12 @@ Expr *BuiltinTypeDeclBuilder::getConstantUnsignedIntExpr(unsigned value) {
 BuiltinTypeDeclBuilder &
 BuiltinTypeDeclBuilder::addSimpleTemplateParams(ArrayRef<StringRef> Names,
                                                 ConceptDecl *CD = nullptr) {
+  return addSimpleTemplateParams(Names, {}, CD);
+}
+
+BuiltinTypeDeclBuilder &BuiltinTypeDeclBuilder::addSimpleTemplateParams(
+    ArrayRef<StringRef> Names, ArrayRef<QualType> DefaultValues,
+    ConceptDecl *CD) {
   if (Record->isCompleteDefinition()) {
     assert(Template && "existing record it not a template");
     assert(Template->getTemplateParameters()->size() == Names.size() &&
@@ -1791,9 +1796,14 @@ BuiltinTypeDeclBuilder::addSimpleTemplateParams(ArrayRef<StringRef> Names,
     return *this;
   }
 
+  assert((DefaultValues.empty() || DefaultValues.size() == Names.size()) &&
+         "template default argument count mismatch");
+
   TemplateParameterListBuilder Builder = TemplateParameterListBuilder(*this);
-  for (StringRef Name : Names)
-    Builder.addTypeParameter(Name);
+  for (unsigned i = 0; i < Names.size(); ++i) {
+    QualType DefaultTy = DefaultValues.empty() ? QualType() : DefaultValues[i];
+    Builder.addTypeParameter(Names[i], DefaultTy);
+  }
   return Builder.finalizeTemplateArgs(CD);
 }
 
