@@ -162,11 +162,12 @@ public:
 };
 
 // Helper function to negate an operand - used by both PPCOperand and
-// PPCAsmParser Adds the negation of \p Op as an operand to \p Inst.
+// PPCAsmParser to add the negation of \p Op as an operand to \p Inst.
 //
-// This helper is used to lower pseudo-subtraction mnemonics (e.g. SUBI,
-// SUBIS, SUBIC, SUBIC_rec, PSUBI) into their real ADD-family equivalents by
-// negating the immediate or expression operand before appending it.
+// Originally this helper is only used to lower pseudo-subtraction mnemonics
+// (e.g. SUBI, SUBIS, SUBIC, SUBIC_rec, PSUBI) into their real ADD-family
+// equivalents by negating the immediate or expression operand before
+// appending it.  Now it's also used by PPCOperand for PSUBIS.
 //
 // The negation is performed as follows:
 // - If \p Op is an immediate, the negated integer value is added directly.
@@ -690,8 +691,8 @@ public:
       return;
     }
 
-    // Create an MCOperand and use the static helper
-    assert(Ctx && "MCContext is required for addNegImmOperands");
+    // Create an MCOperand using the static helper function.
+    assert(Ctx && "MCContext is required for for non immediates");
     MCOperand Op = MCOperand::createExpr(getExpr());
     addNegOperand(Inst, Op, *Ctx);
   }
