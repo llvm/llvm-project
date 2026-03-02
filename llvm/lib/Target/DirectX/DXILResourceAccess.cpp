@@ -597,8 +597,7 @@ replaceHandleWithIndices(Instruction *Ptr, IntrinsicInst *OldHandle,
                          SmallSetVector<Instruction *, 16> &DeadInsts) {
   auto AccessIdx = getAccessIndices(Ptr, DeadInsts);
   assert(AccessIdx.hasGetPtrIdx() && AccessIdx.hasHandleIdx() &&
-         "Couldn't retrieve indices. This should be guaranteed by "
-         "collectUsedHandles");
+         "Couldn't retrieve indices. This is guaranteed by getAccessIndices");
 
   IRBuilder<> Builder(Ptr);
   IntrinsicInst *Handle = cast<IntrinsicInst>(OldHandle->clone());
@@ -619,8 +618,8 @@ replaceHandleWithIndices(Instruction *Ptr, IntrinsicInst *OldHandle,
 //
 // If it can't be transformed to be legal then:
 //
-// Reports an error if a resource access is not guaranteed to be into a unique
-// global resource.
+// Reports an error if a resource access is not guaranteed into a unique global
+// resource.
 //
 // Returns true if any changes are made.
 static bool legalizeResourceHandles(Function &F, DXILResourceTypeMap &DRTM) {
@@ -649,11 +648,13 @@ static bool legalizeResourceHandles(Function &F, DXILResourceTypeMap &DRTM) {
     }
   }
 
-  bool MadeChanges = DeadInsts.size() > 0;
+  bool MadeChanges = false;
 
   for (auto *I : llvm::reverse(DeadInsts))
-    if (I->hasNUses(0)) // Handle maybe used elsewhere aside from replaced path
+    if (I->hasNUses(0)) { // Handle can still be used outside of replaced path
       I->eraseFromParent();
+      MadeChanges = true;
+    }
 
   return MadeChanges;
 }

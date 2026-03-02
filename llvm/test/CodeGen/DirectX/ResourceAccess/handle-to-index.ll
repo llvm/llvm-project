@@ -126,11 +126,6 @@ main:
 ; CHECK-LABEL: multiple_use_handle
 ; CHECK-SAME:   i32 %[[X:.*]], i1 %[[COND:.*]], i32 %[[A:.*]], i32 %[[B:.*]])
 define void @multiple_use_handle(i32 %x, i1 %cond, i32 %a, i32 %b) {
-;   %3 = call { i32, i1 } @llvm.dx.resource.load.typedbuffer.i32.tdx.TypedBuffer_i32_1_0_1t(target("dx.TypedBuffer", i32, 1, 0, 1) %2, i32 %1)
-;   %4 = extractvalue { i32, i1 } %3, 0
-;   %add = add i32 %4, %x
-;   call void @llvm.dx.resource.store.typedbuffer.tdx.TypedBuffer_i32_1_0_1t.i32(target("dx.TypedBuffer", i32, 1, 0, 1) %handle0, i32 %a, i32 %add)
-;   ret void
 ; CHECK:     entry:
 ; CHECK-NEXT:  %[[HANDLE0:.*]] = tail call target("dx.TypedBuffer", i32, 1, 0, 1) @llvm.dx.resource.handlefrombinding.tdx.TypedBuffer_i32_1_0_1t(i32 2, i32 0, i32 1, i32 0, ptr nonnull @OutArr.str)
 ; CHECK:     main:
