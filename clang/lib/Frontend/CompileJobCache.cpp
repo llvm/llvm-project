@@ -633,9 +633,6 @@ Expected<std::optional<int>> CompileJobCache::replayCachedResult(
   // the cached diagnostics. Currently we rely on the invocation having a
   // matching -fcas-include-tree option.
 
-  llvm::scope_exit FinishDiagnosticClient(
-      [&]() { Clang.getDiagnosticClient().finish(); });
-
   llvm::PrefixMapper PrefixMapper;
   llvm::SmallVector<llvm::MappedPrefix> Split;
   llvm::MappedPrefix::transformPairs(

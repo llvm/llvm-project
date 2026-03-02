@@ -751,8 +751,6 @@ struct CachingDiagnosticsProcessor::DiagnosticsConsumer
 
   void EndSourceFile() override { return OrigConsumer->EndSourceFile(); }
 
-  void finish() override { return OrigConsumer->finish(); }
-
   void HandleDiagnostic(DiagnosticsEngine::Level Level,
                         const Diagnostic &Info) override {
     if (shouldCacheDiagnostic(Level, Info)) {
