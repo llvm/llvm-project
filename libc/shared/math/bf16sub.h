@@ -9,6 +9,7 @@
 #ifndef LLVM_LIBC_SHARED_MATH_BF16SUB_H
 #define LLVM_LIBC_SHARED_MATH_BF16SUB_H
 
+#include "shared/libc_common.h"
 #include "src/__support/math/bf16sub.h"
 
 namespace LIBC_NAMESPACE_DECL {
