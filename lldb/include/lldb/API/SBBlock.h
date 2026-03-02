@@ -15,6 +15,7 @@
 #include "lldb/API/SBFrame.h"
 #include "lldb/API/SBTarget.h"
 #include "lldb/API/SBValueList.h"
+#include "lldb/lldb-types.h"
 
 namespace lldb {
 
@@ -32,7 +33,13 @@ public:
 
   explicit operator bool() const;
 
+  bool operator==(const lldb::SBBlock &rhs) const;
+
+  bool operator!=(const lldb::SBBlock &rhs) const;
+
   bool IsValid() const;
+
+  lldb::user_id_t GetID() const;
 
   const char *GetInlinedName() const;
 
