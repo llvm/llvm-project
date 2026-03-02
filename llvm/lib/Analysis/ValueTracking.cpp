@@ -2265,6 +2265,16 @@ static void computeKnownBitsFromOperator(const Operator *I,
           Known.Zero.setBitsFrom(KnownZeroFirstBit);
         break;
       }
+      case Intrinsic::amdgcn_mbcnt_hi:
+      case Intrinsic::amdgcn_mbcnt_lo: {
+        // Wave64 mbcnt_lo returns at most 32 + src1. Otherwise these return at
+        // most 31 + src1.
+        Known.Zero.setBitsFrom(
+            II->getIntrinsicID() == Intrinsic::amdgcn_mbcnt_lo ? 6 : 5);
+        computeKnownBits(I->getOperand(1), Known2, Q, Depth + 1);
+        Known = KnownBits::add(Known, Known2);
+        break;
+      }
       case Intrinsic::vscale: {
         if (!II->getParent() || !II->getFunction())
           break;
