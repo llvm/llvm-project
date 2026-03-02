@@ -4820,6 +4820,18 @@ add_fp_unittest(
 )
 
 add_fp_unittest(
+  acospif_test
+  SUITE
+    libc-math-smoke-tests
+  SRCS
+    acospif_test.cpp
+  DEPENDS
+    libc.hdr.errno_macros
+    libc.src.math.acospif
+    libc.src.__support.FPUtil.fp_bits
+)
+
+add_fp_unittest(
   acospif16_test
   SUITE
     libc-math-smoke-tests

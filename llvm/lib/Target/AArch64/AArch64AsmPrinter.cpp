@@ -2671,8 +2671,9 @@ const MCExpr *AArch64AsmPrinter::emitPAuthRelocationAsIRelative(
         MCInstBuilder(AArch64::RET).addReg(AArch64::LR), *STI);
   OutStreamer->popSection();
 
-  return MCSymbolRefExpr::create(IRelativeSym, AArch64::S_FUNCINIT,
-                                 OutStreamer->getContext());
+  return MCSpecifierExpr::create(
+      MCSymbolRefExpr::create(IRelativeSym, OutStreamer->getContext()),
+      AArch64::S_FUNCINIT, OutStreamer->getContext());
 }
 
 const MCExpr *
