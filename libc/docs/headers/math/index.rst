@@ -18,10 +18,6 @@ math.h
   log.rst
 
 
-.. contents:: Table of Contents
-  :depth: 4
-  :local:
-
 Source Locations
 ================
 
