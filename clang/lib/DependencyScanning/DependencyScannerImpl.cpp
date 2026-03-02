@@ -470,9 +470,6 @@ createScanCompilerInvocation(const CompilerInvocation &Invocation,
       true;
   ScanInvocation->getHeaderSearchOpts().ModulesForceValidateUserHeaders = false;
 
-  // Avoid some checks and module map parsing when loading PCM files.
-  ScanInvocation->getPreprocessorOpts().ModulesCheckRelocated = false;
-
   // Ensure that the scanner does not create new dependency collectors,
   // and thus won't write out the extra '.d' files to disk.
   ScanInvocation->getDependencyOutputOpts() = {};

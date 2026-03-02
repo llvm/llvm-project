@@ -30,6 +30,9 @@ clang-tidy
 | Victor Baranov
 | bar.victor.2002@gmail.com (email), vbvictor (GitHub), vbvictor (Discourse), vbvictor  (Discord)
 
+| Victor Chernyakin
+| chernyakin.victor.j@outlook.com (email), localspook (GitHub), LocalSpook (Discourse), localspook (Discord)
+
 
 clang-query
 -----------
