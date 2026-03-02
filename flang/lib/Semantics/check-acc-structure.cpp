@@ -670,8 +670,8 @@ void AccStructureChecker::Enter(const parser::OpenACCCacheConstruct &x) {
   PushContextAndClauseSets(verbatim.source, llvm::acc::Directive::ACCD_cache);
   SetContextDirectiveSource(verbatim.source);
   if (loopNestLevel == 0 && !hasAccRoutineDirective) {
-    context_.Say(
-        verbatim.source, "The CACHE directive must be inside a loop"_err_en_US);
+    context_.Say(verbatim.source,
+        "The CACHE directive must be inside a loop or an ACC ROUTINE subprogram"_err_en_US);
   }
 
   // Check cache directive array section constraints

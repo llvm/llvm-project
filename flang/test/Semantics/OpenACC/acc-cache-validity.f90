@@ -52,7 +52,7 @@ program openacc_cache_validity
 
   end do
 
-  !ERROR: The CACHE directive must be inside a loop
+  !ERROR: The CACHE directive must be inside a loop or an ACC ROUTINE subprogram
   !$acc cache(a)
 
   call routine_with_cache()
