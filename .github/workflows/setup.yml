@@ -44,7 +44,7 @@ jobs:
     outputs:
       enable_build_jobs: true
       linux_variants: >
-        [ {"test-runs-on": "", "family": "gfx110X-all", "bypass_tests_for_releases": true, "sanity_check_only_for_family": true, "build_variant_label": "release", "build_variant_suffix": "", "build_variant_cmake_preset": "", "artifact_group": "gfx110X-all"}, {"test-runs-on": "linux-mi325-1gpu-ossci-rocm-frac", "test-runs-on-multi-gpu": "linux-mi325-4gpu-ossci-rocm", "benchmark-runs-on": "linux-mi325-1gpu-ossci-rocm-frac", "family": "gfx94X-dcgpu", "build_variant_label": "release", "build_variant_suffix": "", "build_variant_cmake_preset": "", "artifact_group": "gfx94X-dcgpu"}]
+        [ {"test-runs-on": "", "family": "gfx110X-all", "bypass_tests_for_releases": true, "sanity_check_only_for_family": true, "build_variant_label": "release", "build_variant_suffix": "", "build_variant_cmake_preset": "", "artifact_group": "gfx110X-all"}, {"test-runs-on": "linux-mi325-1gpu-ossci-rocm", "test-runs-on-multi-gpu": "linux-mi325-4gpu-ossci-rocm", "benchmark-runs-on": "linux-mi325-1gpu-ossci-rocm", "family": "gfx94X-dcgpu", "build_variant_label": "release", "build_variant_suffix": "", "build_variant_cmake_preset": "", "artifact_group": "gfx94X-dcgpu"}]
       linux_test_labels: ${{ steps.configure.outputs.linux_test_labels }}
       windows_variants: >
             [{"test-runs-on": "windows-gfx1151-gpu-rocm", "benchmark-runs-on": "windows-gfx1151-gpu-rocm", "family": "gfx1151", "build_variant_label": "release", "build_variant_suffix": "", "build_variant_cmake_preset": "windows-release", "artifact_group": "gfx1151"}]

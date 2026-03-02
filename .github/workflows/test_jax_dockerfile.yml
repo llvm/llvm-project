@@ -6,7 +6,7 @@ on:
       test_runs_on:
         required: true
         type: string
-        default: "linux-mi325-1gpu-ossci-rocm-frac"
+        default: "linux-mi325-1gpu-ossci-rocm"
       image_name:
         required: true
         description: JAX docker image to run tests with
