@@ -287,6 +287,10 @@ Changes in existing checks
   <clang-tidy/checks/readability/suspicious-call-argument>` check by avoiding a
   crash from invalid ``Abbreviations`` option.
 
+- Renamed `hicpp-no-assembler` to :doc:`portability-no-assembler
+  <clang-tidy/checks/portability/no-assembler>`. The ``hicpp-no-assembler``
+  name is kept as an alias.
+
 Removed checks
 ^^^^^^^^^^^^^^
 

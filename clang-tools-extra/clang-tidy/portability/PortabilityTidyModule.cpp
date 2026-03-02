@@ -24,8 +24,7 @@ public:
   void addCheckFactories(ClangTidyCheckFactories &CheckFactories) override {
     CheckFactories.registerCheck<AvoidPragmaOnceCheck>(
         "portability-avoid-pragma-once");
-    CheckFactories.registerCheck<NoAssemblerCheck>(
-        "portability-no-assembler");
+    CheckFactories.registerCheck<NoAssemblerCheck>("portability-no-assembler");
     CheckFactories.registerCheck<RestrictSystemIncludesCheck>(
         "portability-restrict-system-includes");
     CheckFactories.registerCheck<SIMDIntrinsicsCheck>(
