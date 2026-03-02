@@ -375,7 +375,7 @@ struct TwoDimMultiReductionToElementWise
   }
 };
 
-/// Lowers 2D vector.multi_reduction to a squence of vector.reduction Ops
+/// Lowers 2D vector.multi_reduction to a sequence of vector.reduction ops.
 ///
 /// The reduction dimension must be the inner-most dimension.
 ///
@@ -440,6 +440,47 @@ struct TwoDimMultiReductionToReduction
     }
 
     return result;
+  }
+};
+
+/// Converts 1-D vector.multi_reduction directly to vector.reduction.
+/// This is the terminal case for unrolling - once we reach rank 1,
+/// we convert to vector.reduction which backends can optimize.
+///
+/// Example:
+/// ```mlir
+/// // Before
+/// %r = vector.multi_reduction <add>, %v, %acc [0] : vector<Nxf32> to f32
+///
+/// // After
+/// %r = vector.reduction <add>, %v, %acc : vector<Nxf32> into f32
+/// ```
+struct OneDimMultiReductionToReduction
+    : public vector::MaskableOpRewritePattern<vector::MultiDimReductionOp> {
+  using MaskableOpRewritePattern::MaskableOpRewritePattern;
+
+  FailureOr<Value>
+  matchAndRewriteMaskableOp(vector::MultiDimReductionOp multiReductionOp,
+                            vector::MaskingOpInterface maskingOp,
+                            PatternRewriter &rewriter) const override {
+    auto srcRank = multiReductionOp.getSourceVectorType().getRank();
+    if (srcRank != 1)
+      return failure();
+
+    if (!multiReductionOp.isReducedDim(0))
+      return failure();
+
+    auto loc = multiReductionOp.getLoc();
+    Value mask = maskingOp ? maskingOp.getMask() : Value();
+
+    Operation *reductionOp = vector::ReductionOp::create(
+        rewriter, loc, multiReductionOp.getKind(),
+        multiReductionOp.getSource(), multiReductionOp.getAcc());
+
+    if (mask)
+      reductionOp = mlir::vector::maskOperation(rewriter, reductionOp, mask);
+
+    return reductionOp->getResult(0);
   }
 };
 
@@ -569,6 +610,7 @@ void mlir::vector::populateVectorMultiReductionFlatteningPatterns(
 void mlir::vector::populateVectorMultiReductionUnrollingPatterns(
     RewritePatternSet &patterns, VectorMultiReductionLowering options,
     PatternBenefit benefit) {
+  patterns.add<OneDimMultiReductionToReduction>(patterns.getContext(), benefit);
   if (options == VectorMultiReductionLowering ::InnerReduction)
     patterns.add<TwoDimMultiReductionToReduction>(patterns.getContext(),
                                                   benefit);

@@ -74,7 +74,7 @@ void populateVectorOuterProductLoweringPatterns(RewritePatternSet &patterns,
 /// thus fully exiting out of the vector.multi_reduction abstraction.
 void populateVectorMultiReductionReorderAndExpandPatterns(
     RewritePatternSet &patterns, VectorMultiReductionLowering options,
-    PatternBenefit benefit = 1);
+    PatternBenefit benefit = 2);
 
 /// Populate the pattern set with the following patterns:
 ///
@@ -88,6 +88,10 @@ void populateVectorMultiReductionFlatteningPatterns(
     PatternBenefit benefit = 1);
 
 /// Populate the pattern set with the following patterns:
+///
+/// [OneDimMultiReductionToReduction]
+/// Converts 1-D vector.multi_reduction directly to vector.reduction.
+/// This is the terminal case for unrolling.
 ///
 /// [TwoDimMultiReductionToElementWise]
 /// Once in 2-D vector.multi_reduction form, with an **outermost** reduction
