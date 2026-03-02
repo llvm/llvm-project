@@ -51,7 +51,7 @@ typedef llvm::Registry<Generator> GeneratorRegistry;
 llvm::Expected<std::unique_ptr<Generator>>
 findGeneratorByName(llvm::StringRef Format);
 
-std::string getTagType(TagTypeKind AS);
+llvm::StringRef getTagType(TagTypeKind AS);
 
 llvm::Error createFileOpenError(StringRef FileName, std::error_code EC);
 

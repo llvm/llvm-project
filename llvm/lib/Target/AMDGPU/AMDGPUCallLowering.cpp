@@ -421,7 +421,7 @@ void AMDGPUCallLowering::lowerParameter(MachineIRBuilder &B, ArgInfo &OrigArg,
   LLT PtrTy = LLT::pointer(AMDGPUAS::CONSTANT_ADDRESS, 64);
 
   SmallVector<ArgInfo, 32> SplitArgs;
-  SmallVector<uint64_t> FieldOffsets;
+  SmallVector<TypeSize> FieldOffsets;
   splitToValueTypes(OrigArg, SplitArgs, DL, F.getCallingConv(), &FieldOffsets);
 
   unsigned Idx = 0;
@@ -790,8 +790,8 @@ bool AMDGPUCallLowering::passSpecialInputs(MachineIRBuilder &MIRBuilder,
   if (!Info.CB)
     return true;
 
-  const AMDGPUFunctionArgInfo *CalleeArgInfo
-    = &AMDGPUArgumentUsageInfo::FixedABIFunctionInfo;
+  const AMDGPUFunctionArgInfo &CalleeArgInfo =
+      AMDGPUFunctionArgInfo::FixedABIFunctionInfo;
 
   const SIMachineFunctionInfo *MFI = MF.getInfo<SIMachineFunctionInfo>();
   const AMDGPUFunctionArgInfo &CallerArgInfo = MFI->getArgInfo();
@@ -841,7 +841,7 @@ bool AMDGPUCallLowering::passSpecialInputs(MachineIRBuilder &MIRBuilder,
       continue;
 
     std::tie(OutgoingArg, ArgRC, ArgTy) =
-        CalleeArgInfo->getPreloadedValue(InputID);
+        CalleeArgInfo.getPreloadedValue(InputID);
     if (!OutgoingArg)
       continue;
 
@@ -888,13 +888,13 @@ bool AMDGPUCallLowering::passSpecialInputs(MachineIRBuilder &MIRBuilder,
   LLT ArgTy;
 
   std::tie(OutgoingArg, ArgRC, ArgTy) =
-      CalleeArgInfo->getPreloadedValue(AMDGPUFunctionArgInfo::WORKITEM_ID_X);
+      CalleeArgInfo.getPreloadedValue(AMDGPUFunctionArgInfo::WORKITEM_ID_X);
   if (!OutgoingArg)
     std::tie(OutgoingArg, ArgRC, ArgTy) =
-        CalleeArgInfo->getPreloadedValue(AMDGPUFunctionArgInfo::WORKITEM_ID_Y);
+        CalleeArgInfo.getPreloadedValue(AMDGPUFunctionArgInfo::WORKITEM_ID_Y);
   if (!OutgoingArg)
     std::tie(OutgoingArg, ArgRC, ArgTy) =
-        CalleeArgInfo->getPreloadedValue(AMDGPUFunctionArgInfo::WORKITEM_ID_Z);
+        CalleeArgInfo.getPreloadedValue(AMDGPUFunctionArgInfo::WORKITEM_ID_Z);
   if (!OutgoingArg)
     return false;
 
@@ -917,7 +917,7 @@ bool AMDGPUCallLowering::passSpecialInputs(MachineIRBuilder &MIRBuilder,
   // If incoming ids are not packed we need to pack them.
   // FIXME: Should consider known workgroup size to eliminate known 0 cases.
   Register InputReg;
-  if (IncomingArgX && !IncomingArgX->isMasked() && CalleeArgInfo->WorkItemIDX &&
+  if (IncomingArgX && !IncomingArgX->isMasked() && CalleeArgInfo.WorkItemIDX &&
       NeedWorkItemIDX) {
     if (ST.getMaxWorkitemID(MF.getFunction(), 0) != 0) {
       InputReg = MRI.createGenericVirtualRegister(S32);
@@ -929,7 +929,7 @@ bool AMDGPUCallLowering::passSpecialInputs(MachineIRBuilder &MIRBuilder,
     }
   }
 
-  if (IncomingArgY && !IncomingArgY->isMasked() && CalleeArgInfo->WorkItemIDY &&
+  if (IncomingArgY && !IncomingArgY->isMasked() && CalleeArgInfo.WorkItemIDY &&
       NeedWorkItemIDY && ST.getMaxWorkitemID(MF.getFunction(), 1) != 0) {
     Register Y = MRI.createGenericVirtualRegister(S32);
     LI->buildLoadInputValue(Y, MIRBuilder, IncomingArgY,
@@ -939,7 +939,7 @@ bool AMDGPUCallLowering::passSpecialInputs(MachineIRBuilder &MIRBuilder,
     InputReg = InputReg ? MIRBuilder.buildOr(S32, InputReg, Y).getReg(0) : Y;
   }
 
-  if (IncomingArgZ && !IncomingArgZ->isMasked() && CalleeArgInfo->WorkItemIDZ &&
+  if (IncomingArgZ && !IncomingArgZ->isMasked() && CalleeArgInfo.WorkItemIDZ &&
       NeedWorkItemIDZ && ST.getMaxWorkitemID(MF.getFunction(), 2) != 0) {
     Register Z = MRI.createGenericVirtualRegister(S32);
     LI->buildLoadInputValue(Z, MIRBuilder, IncomingArgZ,
@@ -1399,6 +1399,11 @@ bool AMDGPUCallLowering::lowerTailCall(
       return false;
   }
 
+  // Mark the scratch resource descriptor as allocated so the CC analysis
+  // does not assign user arguments to these registers, matching the callee.
+  if (!ST.hasFlatScratchEnabled())
+    CCInfo.AllocateReg(FuncInfo->getScratchRSrcReg());
+
   OutgoingValueAssigner Assigner(AssignFnFixed, AssignFnVarArg);
 
   if (!determineAssignments(Assigner, OutArgs, CCInfo))
@@ -1596,6 +1601,13 @@ bool AMDGPUCallLowering::lowerCall(MachineIRBuilder &MIRBuilder,
     // With a fixed ABI, allocate fixed registers before user arguments.
     if (!passSpecialInputs(MIRBuilder, CCInfo, ImplicitArgRegs, Info))
       return false;
+  }
+
+  // Mark the scratch resource descriptor as allocated so the CC analysis
+  // does not assign user arguments to these registers, matching the callee.
+  if (!ST.hasFlatScratchEnabled()) {
+    const SIMachineFunctionInfo *FuncInfo = MF.getInfo<SIMachineFunctionInfo>();
+    CCInfo.AllocateReg(FuncInfo->getScratchRSrcReg());
   }
 
   // Do the actual argument marshalling.

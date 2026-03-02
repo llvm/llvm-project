@@ -223,17 +223,21 @@ bool llvm::ConstantFoldTerminator(BasicBlock *BB, bool DeleteDeadConditions,
         // left, unless the metadata doesn't match the switch.
         if (NCases > 1 && MD) {
           // Collect branch weights into a vector.
-          SmallVector<uint32_t, 8> Weights;
-          extractBranchWeights(MD, Weights);
+          SmallVector<uint64_t, 8> Weights;
+          extractFromBranchWeightMD64(MD, Weights);
 
           // Merge weight of this case to the default weight.
           unsigned Idx = It->getCaseIndex();
-          // TODO: Add overflow check.
+
+          // Check for and prevent uint64_t overflow by reducing branch weights.
+          if (Weights[0] > UINT64_MAX - Weights[Idx + 1])
+            fitWeights(Weights);
+
           Weights[0] += Weights[Idx + 1];
           // Remove weight for this case.
           std::swap(Weights[Idx + 1], Weights.back());
           Weights.pop_back();
-          setBranchWeights(*SI, Weights, hasBranchWeightOrigin(MD));
+          setFittedBranchWeights(*SI, Weights, hasBranchWeightOrigin(MD));
         }
         // Remove this entry.
         BasicBlock *ParentBB = SI->getParent();
@@ -457,6 +461,7 @@ bool llvm::wouldInstructionBeTriviallyDead(const Instruction *I,
     case Intrinsic::wasm_trunc_unsigned:
     case Intrinsic::ptrauth_auth:
     case Intrinsic::ptrauth_resign:
+    case Intrinsic::ptrauth_resign_load_relative:
       return true;
     default:
       return false;

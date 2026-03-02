@@ -22,6 +22,7 @@ Using Clang as a Compiler
    ClangCommandLineReference
    AttributeReference
    DiagnosticsReference
+   AMDGPUBuiltinReference
    WarningSuppressionMappings
    CrossCompilation
    ClangStaticAnalyzer
@@ -42,6 +43,7 @@ Using Clang as a Compiler
    SanitizerStats
    SanitizerSpecialCaseList
    AllocToken
+   OverflowBehaviorTypes
    BoundsSafety
    BoundsSafetyAdoptionGuide
    BoundsSafetyImplPlans
@@ -50,6 +52,7 @@ Using Clang as a Compiler
    PointerAuthentication
    SafeStack
    ShadowCallStack
+   StructureProtection
    SourceBasedCodeCoverage
    StandardCPlusPlusModules
    Modules
@@ -124,6 +127,7 @@ Design Documents
    ConstantInterpreter
    LLVMExceptionHandlingCodeGen
    ClangIRCodeDuplication
+   ClangIRCleanupAndEHDesign
 
 Indices and tables
 ==================

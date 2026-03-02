@@ -12,6 +12,7 @@
 #include <sycl/__impl/backend.hpp>
 #include <sycl/__impl/detail/config.hpp>
 #include <sycl/__impl/exception.hpp>
+#include <sycl/__impl/info/device_type.hpp>
 
 #include <OffloadAPI.h>
 
@@ -36,6 +37,8 @@ inline std::string formatCodeString(ol_result_t Result) {
          std::string(stringifyErrorCode(Result->Code)) + ") " + Result->Details;
 }
 
+inline bool isFailed(const ol_result_t &Result) { return Result != OL_SUCCESS; }
+
 /// Checks liboffload API call result.
 ///
 /// Used after calling the API without check.
@@ -47,7 +50,7 @@ inline std::string formatCodeString(ol_result_t Result) {
 /// \throw sycl::runtime_exception if the call was not successful.
 template <sycl::errc errc = sycl::errc::runtime>
 void checkAndThrow(ol_result_t Result) {
-  if (Result != OL_SUCCESS) {
+  if (isFailed(Result)) {
     throw sycl::exception(sycl::make_error_code(errc),
                           detail::formatCodeString(Result));
   }
@@ -84,6 +87,20 @@ void callAndThrow(FunctionType &Function, ArgsT &&...Args) {
 ///
 /// \returns sycl::backend matching specified liboffload backend.
 backend convertBackend(ol_platform_backend_t Backend);
+
+/// Converts SYCL device type to liboffload type.
+///
+/// \param DeviceType SYCL device type.
+///
+/// \returns ol_device_type_t matching specified SYCL device type.
+ol_device_type_t convertDeviceTypeToOL(info::device_type DeviceType);
+
+/// Converts liboffload device type to SYCL type.
+///
+/// \param DeviceType liboffload device type.
+///
+/// \returns SYCL device type matching specified liboffload device type.
+info::device_type convertDeviceTypeToSYCL(ol_device_type_t DeviceType);
 
 /// Helper to map SYCL information descriptors to OL_<HANDLE>_INFO_<SMTH>.
 ///

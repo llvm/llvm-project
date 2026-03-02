@@ -495,13 +495,13 @@ In ``AArch64RegisterInfo.td``:
 
   def sub_32 : SubRegIndex<32>;
 
-If the third operand is an immediate with the value ``15`` (a target-dependent
+If the second operand is an immediate with the value ``15`` (a target-dependent
 value), based on the instruction's opcode and the operand's index the operand
 will be printed as ``%subreg.sub_32``:
 
 .. code-block:: text
 
-    %1:gpr64 = SUBREG_TO_REG 0, %0, %subreg.sub_32
+    %1:gpr64 = SUBREG_TO_REG %0, %subreg.sub_32
 
 For integers larger than 64 bits, we use a special machine operand, ``MO_CImmediate``,
 which stores the immediate in a ``ConstantInt`` using an ``APInt`` (LLVM's
@@ -523,7 +523,7 @@ The full syntax of a register operand is shown below:
 
 .. code-block:: text
 
-    [<flags>] <register> [ :<subregister-idx-name> ] [ (tied-def <tied-op>) ]
+    [<flags>] <register> [ .<subregister-idx-name> ] [ :<register-class> ] [ (tied-def <tied-op>) ] [ (<type>) ]
 
 This example shows an instance of the X86 ``XOR32rr`` instruction that has
 5 register operands with different register flags:
@@ -531,6 +531,9 @@ This example shows an instance of the X86 ``XOR32rr`` instruction that has
 .. code-block:: text
 
   dead $eax = XOR32rr undef $eax, undef $eax, implicit-def dead $eflags, implicit-def $al
+
+Note that subregister-index, register-class and type cannot be specified for
+physical registers. Additionally, tied-def can only be specified for a use.
 
 .. _register-flags:
 
@@ -602,7 +605,7 @@ lower bits from the 32-bit virtual register 0 to the 8-bit virtual register 1:
 
 .. code-block:: text
 
-    %1 = COPY %0:sub_8bit
+    %1 = COPY %0.sub_8bit
 
 The names of the subregister indices are target specific, and are typically
 defined in the target's ``*RegisterInfo.td`` file.

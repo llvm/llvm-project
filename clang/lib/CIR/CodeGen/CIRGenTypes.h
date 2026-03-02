@@ -197,7 +197,7 @@ public:
                                                     const FunctionType *fnType);
 
   const CIRGenFunctionInfo &
-  arrangeCIRFunctionInfo(CanQualType returnType,
+  arrangeCIRFunctionInfo(CanQualType returnType, bool isInstanceMethod,
                          llvm::ArrayRef<CanQualType> argTypes,
                          FunctionType::ExtInfo info, RequiredArgs required);
 
@@ -205,6 +205,8 @@ public:
   arrangeFreeFunctionType(CanQual<FunctionProtoType> fpt);
   const CIRGenFunctionInfo &
   arrangeFreeFunctionType(CanQual<FunctionNoProtoType> fnpt);
+
+  unsigned getTargetAddressSpace(QualType ty) const;
 };
 
 } // namespace clang::CIRGen
