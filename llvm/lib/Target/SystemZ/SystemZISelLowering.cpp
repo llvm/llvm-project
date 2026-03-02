@@ -3041,9 +3041,9 @@ static bool isNaturalMemoryOperand(SDValue Op, unsigned ICmpType) {
 
 // Return true if it is better to swap the operands of C.
 static bool shouldSwapCmpOperands(const Comparison &C) {
-  // swap operands of CMP_STACKGUARD_GUARD if loading the reference value
-  // is Op0.
-  if ((C.Opcode == SystemZISD::CMP_STACKGUARD) && C.Op0.isMachineOpcode() &&
+  // If one side of the compare is a load of the stackguard reference value,
+  // then that load should be Op1.
+  if (C.Op0.isMachineOpcode() &&
       (C.Op0.getMachineOpcode() == SystemZ::LOAD_STACK_GUARD))
     return true;
 
@@ -3198,37 +3198,27 @@ static void adjustICmpTruncate(SelectionDAG &DAG, const SDLoc &DL,
 // Adjust if a given Compare is a check of the stack guard against a stack
 // guard instance on the stack. Specifically, this checks if:
 // - The operands are a load of the stack guard, and a load from a stack slot
-// - Those operand values are not used elsewhere <-- asserts if this is not
-//   true!
+// - The original opcode is ICMP
+// - ICMPType is compatible with unsigned comparison.
 static void adjustForStackGuardCompare(SelectionDAG &DAG, const SDLoc &DL,
                                        Comparison &C) {
-  SDValue StackGuardLoad;
-  LoadSDNode *FILoad;
 
-  if (C.Op0.isMachineOpcode() &&
-      C.Op0.getMachineOpcode() == SystemZ::LOAD_STACK_GUARD &&
-      ISD::isNormalLoad(C.Op1.getNode()) &&
-      dyn_cast<FrameIndexSDNode>(C.Op1.getOperand(1))) {
-    StackGuardLoad = C.Op0;
-    FILoad = cast<LoadSDNode>(C.Op1);
-  } else if ((C.Op1.isMachineOpcode() &&
-              C.Op1.getMachineOpcode() == SystemZ::LOAD_STACK_GUARD &&
-              ISD::isNormalLoad(C.Op0.getNode()) &&
-              dyn_cast<FrameIndexSDNode>(C.Op0.getOperand(1)))) {
-    StackGuardLoad = C.Op1;
-    FILoad = cast<LoadSDNode>(C.Op0);
-  } else {
+  // Opcode must be ICMP.
+  if (C.Opcode != SystemZISD::ICMP)
     return;
-  }
-  // Assert that the values of the loads are not used elsewhere.
-  // Bail for now. TODO: What is the proper response here?
-  assert(
-      SDValue(FILoad, 0).hasOneUse() &&
-      "Value of stackguard loaded from stack must be used for compare only!");
-  assert(StackGuardLoad.hasOneUse() &&
-         "Value of reference stackguard must be used for compare only!");
+  // ICmpType must be Unsigned or Any.
+  if (C.ICmpType == SystemZICMP::SignedOnly)
+    return;
+  // Op0 must be FrameIndex Load.
+  if (!(ISD::isNormalLoad(C.Op0.getNode()) &&
+        dyn_cast<FrameIndexSDNode>(C.Op0.getOperand(1))))
+    return;
+  // Op1 must be LOAD_STACK_GUARD.
+  if (!C.Op1.isMachineOpcode() ||
+      C.Op1.getMachineOpcode() != SystemZ::LOAD_STACK_GUARD)
+    return;
 
-  // At this point we are sure that this is a proper compare_stack_guard
+  // At this point we are sure that this is a proper CMP_STACKGUARD
   // case, update the opcode to reflect this.
   C.Opcode = SystemZISD::CMP_STACKGUARD;
   C.CCValid = SystemZ::CCMASK_ICMP;
@@ -3640,7 +3630,6 @@ static Comparison getCmp(SelectionDAG &DAG, SDValue CmpOp0, SDValue CmpOp1,
     else
       C.ICmpType = SystemZICMP::SignedOnly;
     C.CCMask &= ~SystemZ::CCMASK_CMP_UO;
-    adjustForStackGuardCompare(DAG, DL, C);
     adjustForRedundantAnd(DAG, DL, C);
     adjustZeroCmp(DAG, DL, C);
     adjustSubwordCmp(DAG, DL, C);
@@ -3654,6 +3643,7 @@ static Comparison getCmp(SelectionDAG &DAG, SDValue CmpOp0, SDValue CmpOp1,
     C.CCMask = SystemZ::reverseCCMask(C.CCMask);
   }
 
+  adjustForStackGuardCompare(DAG, DL, C);
   adjustForTestUnderMask(DAG, DL, C);
   adjustICmp128(DAG, DL, C);
   return C;
