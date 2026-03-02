@@ -31,6 +31,12 @@
 ;   RWStructuredBuffer<int> Out = cond ? OutArr[0] : OutArr[1];
 ;   Out[GI] = WaveActiveMax(In[GI]);
 ;
+; This will ensure that the index is propogated through phi branching
+; correctly. We see that two different handles are generated in the different
+; branches, so we will ensure that the handle generation is removed from
+; the branches and that the `phi i32` node is used to distinguish the index.
+; Then that index is used to generate the handle.
+;
 ; CHECK-LABEL: @select_global_resource_array()
 define void @select_global_resource_array() {
 entry:
@@ -78,6 +84,10 @@ cond.end.i:
 ;
 ;   RWStructuredBuffer<int> Outs[2] = {OutArr[0], OutArr[1]};
 ;   Outs[cond ? 0 : 1][GI] = In[GI];
+;
+; This will ensure that the index is propogated through the select of two
+; resources. So we want to check that the `select i1` is based on the handle
+; indices, and that this index is used to generate the handle.
 ;
 ; CHECK-LABEL: @local_array_of_global_resources()
 define void @local_array_of_global_resources() {
