@@ -99,9 +99,9 @@ public:
            unsigned benefit);
 
   /// Add a new conversion pattern to the pattern set.
-  void addConversion(nanobind::handle root, unsigned benefit,
+  void addConversion(nanobind::handle root,
                      const nanobind::callable &matchAndRewrite,
-                     PyTypeConverter &typeConverter);
+                     PyTypeConverter &typeConverter, unsigned benefit);
 
   static void bind(nanobind::module_ &m);
 

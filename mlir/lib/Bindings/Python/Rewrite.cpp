@@ -27,6 +27,18 @@ namespace mlir {
 namespace python {
 namespace MLIR_BINDINGS_PYTHON_DOMAIN {
 
+// Convert the Python object to a boolean.
+// If it evaluates to False, treat it as success;
+// otherwise, treat it as failure.
+// Note that None is considered success.
+static MlirLogicalResult logicalResultFromObject(const nb::object &obj) {
+  if (obj.is_none())
+    return mlirLogicalResultSuccess();
+
+  return nb::cast<bool>(obj) ? mlirLogicalResultFailure()
+                             : mlirLogicalResultSuccess();
+}
+
 class PyPatternRewriter : public PyRewriterBase<PyPatternRewriter> {
 public:
   static constexpr const char *pyClassName = "PatternRewriter";
@@ -65,6 +77,7 @@ void PyRewritePatternSet::add(nb::handle root,
   } else {
     throw nb::type_error("the root argument must be a type or a string");
   }
+  MlirStringRef rootName = mlirStringRefCreate(opName.data(), opName.size());
 
   MlirRewritePatternCallbacks callbacks;
   callbacks.construct = [](void *userData) {
@@ -83,17 +96,11 @@ void PyRewritePatternSet::add(nb::handle root,
     nb::object opView = PyOperation::forOperation(context, op)->createOpView();
 
     nb::object res = f(opView, PyPatternRewriter(rewriter));
-
-    // The match is considered successful iff the callable returns
-    // a value where `bool(value)` is `False` (e.g. `None`).
-    if (res.is_none() || !nb::cast<bool>(res))
-      return mlirLogicalResultSuccess();
-    return mlirLogicalResultFailure();
+    return logicalResultFromObject(res);
   };
 
   MlirRewritePattern pattern = mlirOpRewritePatternCreate(
-      mlirStringRefCreate(opName.data(), opName.size()), benefit,
-      mlirRewritePatternSetGetContext(patterns), callbacks,
+      rootName, benefit, mlirRewritePatternSetGetContext(patterns), callbacks,
       matchAndRewrite.ptr(),
       /* nGeneratedNames */ 0,
       /* generatedNames */ nullptr);
@@ -201,21 +208,10 @@ private:
   MlirConversionPattern pattern;
 };
 
-// Convert the Python object to a boolean.
-// If it evaluates to False, treat it as success;
-// otherwise, treat it as failure.
-// Note that None is considered success.
-static MlirLogicalResult logicalResultFromObject(const nb::object &obj) {
-  if (obj.is_none())
-    return mlirLogicalResultSuccess();
-
-  return nb::cast<bool>(obj) ? mlirLogicalResultFailure()
-                             : mlirLogicalResultSuccess();
-}
-
-void PyRewritePatternSet::addConversion(nb::handle root, unsigned benefit,
+void PyRewritePatternSet::addConversion(nb::handle root,
                                         const nb::callable &matchAndRewrite,
-                                        PyTypeConverter &typeConverter) {
+                                        PyTypeConverter &typeConverter,
+                                        unsigned benefit) {
   std::string opName;
   if (root.is_type()) {
     opName = nb::cast<std::string>(root.attr("OPERATION_NAME"));
@@ -392,14 +388,10 @@ void PyRewritePatternSet::bind(nb::module_ &m) {
                     an operation and a pattern rewriter. The match is considered
                     successful iff the callable returns a falsy value.
                 benefit: The benefit of the pattern, defaulting to 1.)")
-      .def(
-          "add_conversion",
-          [](PyRewritePatternSet &self, nb::handle root, const nb::callable &fn,
-             PyTypeConverter &typeConverter, unsigned benefit) {
-            self.addConversion(root, benefit, fn, typeConverter);
-          },
-          "root"_a, "fn"_a, "type_converter"_a, "benefit"_a = 1,
-          R"(
+      .def("add_conversion", &PyRewritePatternSet::addConversion,
+           nb::arg("root"), nb::arg("fn"), nb::arg("type_converter"),
+           nb::arg("benefit") = 1,
+           R"(
             Add a new conversion pattern on the specified root operation,
             using the provided callable for matching and rewriting,
             and assign it the given benefit.
