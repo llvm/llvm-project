@@ -48,7 +48,8 @@ static bool isZeroConstant(Value val) {
 }
 
 static LogicalResult storeLoadPreconditions(PatternRewriter &rewriter,
-                                            Operation *op, VectorType vecTy) {
+                                            Operation *op, VectorType vecTy,
+                                            MemRefType memTy) {
   // Validate only vector as the basic vector store and load ops guarantee
   // XeGPU-compatible memref source.
   unsigned vecRank = vecTy.getRank();
@@ -58,6 +59,14 @@ static LogicalResult storeLoadPreconditions(PatternRewriter &rewriter,
   if (!vecTy.getElementType().isIntOrFloat())
     return rewriter.notifyMatchFailure(
         op, "Expected scalar type with known bitwidth");
+
+  // XeGPU requires the memref to have a scalar integer or float element type.
+  // Memrefs with vector element types (e.g. memref<?xvector<4xf32>>) are not
+  // supported because createNdDescriptor computes byte offsets using
+  // getElementTypeBitWidth(), which asserts on non-integer/float types.
+  if (!memTy.getElementType().isIntOrFloat())
+    return rewriter.notifyMatchFailure(
+        op, "Unsupported memref element type: expected integer or float");
 
   return success();
 }
@@ -556,7 +565,8 @@ struct TransferReadLowering : public OpRewritePattern<vector::TransferReadOp> {
       return lowerToScatteredLoadOp(readOp, rewriter);
 
     // Perform common data transfer checks.
-    if (failed(storeLoadPreconditions(rewriter, readOp, loadedVecTy)))
+    auto readMemTy = cast<MemRefType>(readOp.getShapedType());
+    if (failed(storeLoadPreconditions(rewriter, readOp, loadedVecTy, readMemTy)))
       return failure();
 
     bool isOutOfBounds = readOp.hasOutOfBoundsDim();
@@ -654,7 +664,8 @@ struct TransferWriteLowering
 
     // Perform common data transfer checks.
     VectorType vecTy = writeOp.getVectorType();
-    if (failed(storeLoadPreconditions(rewriter, writeOp, vecTy)))
+    auto writeMemTy = cast<MemRefType>(writeOp.getShapedType());
+    if (failed(storeLoadPreconditions(rewriter, writeOp, vecTy, writeMemTy)))
       return failure();
 
     AffineMap map = writeOp.getPermutationMap();
@@ -760,7 +771,8 @@ struct LoadLowering : public OpRewritePattern<vector::LoadOp> {
     Location loc = loadOp.getLoc();
 
     VectorType vecTy = loadOp.getResult().getType();
-    if (failed(storeLoadPreconditions(rewriter, loadOp, vecTy)))
+    MemRefType memTy = loadOp.getBase().getType();
+    if (failed(storeLoadPreconditions(rewriter, loadOp, vecTy, memTy)))
       return failure();
 
     // Boundary check is available only for block instructions.
@@ -799,7 +811,8 @@ struct StoreLowering : public OpRewritePattern<vector::StoreOp> {
 
     TypedValue<VectorType> vector = storeOp.getValueToStore();
     VectorType vecTy = vector.getType();
-    if (failed(storeLoadPreconditions(rewriter, storeOp, vecTy)))
+    MemRefType memTy = storeOp.getBase().getType();
+    if (failed(storeLoadPreconditions(rewriter, storeOp, vecTy, memTy)))
       return failure();
 
     // Boundary check is available only for block instructions.
