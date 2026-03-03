@@ -1330,7 +1330,7 @@ void Process::SetPublicState(StateType new_state, bool restarted) {
     } else {
       const bool old_state_is_stopped = StateIsStoppedState(old_state, false);
       if ((old_state_is_stopped != new_state_is_stopped) ||
-          new_state_is_stopped && GetRunLock().IsRunning()) {
+          (new_state_is_stopped && GetRunLock().IsRunning())) {
         if (new_state_is_stopped && !restarted) {
           LLDB_LOGF(log, "(plugin = %s, state = %s) -- unlocking run lock",
                    GetPluginName().data(), StateAsCString(new_state));
