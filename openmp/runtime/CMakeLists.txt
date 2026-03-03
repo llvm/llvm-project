@@ -440,6 +440,5 @@ set(LIBOMP_OMPD_SUPPORT ${LIBOMP_OMPD_SUPPORT} PARENT_SCOPE)
 
 # Set up the targets we want to build arm64x libs for
 if(LIBOMP_ENABLE_ARM64X)
-  set(ARM64X_TARGETS omp ompimp)
-  handle_arm64x()
+  handle_arm64x(omp ompimp)
 endif()
