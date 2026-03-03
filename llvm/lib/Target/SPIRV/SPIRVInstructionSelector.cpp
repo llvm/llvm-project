@@ -4179,7 +4179,7 @@ bool SPIRVInstructionSelector::selectIntrinsic(Register ResVReg,
     return selectWavePrefixBitCount(ResVReg, ResType, I);
   case Intrinsic::spv_wave_active_countbits:
     return selectWaveActiveCountBits(ResVReg, ResType, I);
-  case Intrinsic::spv_subgroup_all_equal:
+  case Intrinsic::spv_wave_all_equal:
     return selectWaveActiveAllEqual(ResVReg, ResType, I);
   case Intrinsic::spv_wave_all:
     return selectWaveOpInst(ResVReg, ResType, I, SPIRV::OpGroupNonUniformAll);

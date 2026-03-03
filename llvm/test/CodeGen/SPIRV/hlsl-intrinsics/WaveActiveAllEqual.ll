@@ -16,7 +16,7 @@
 define i1 @test_float(float %fexpr) {
 entry:
 ; CHECK:   %[[#fret:]] = OpGroupNonUniformAllEqual %[[#bool]] %[[#scope]] %[[#fexpr]]
-  %0 = call i1 @llvm.spv.subgroup.all.equal.f32(float %fexpr)
+  %0 = call i1 @llvm.spv.wave.all.equal.f32(float %fexpr)
   ret i1 %0
 }
 
@@ -25,7 +25,7 @@ entry:
 define i1 @test_int(i32 %iexpr) {
 entry:
 ; CHECK:   %[[#iret:]] = OpGroupNonUniformAllEqual %[[#bool]] %[[#scope]] %[[#iexpr]]
-  %0 = call i1 @llvm.spv.subgroup.all.equal.i32(i32 %iexpr)
+  %0 = call i1 @llvm.spv.wave.all.equal.i32(i32 %iexpr)
   ret i1 %0
 }
 
@@ -45,10 +45,10 @@ entry:
 ; CHECK-NEXT: %[[#res4:]] = OpGroupNonUniformAllEqual %[[#bool]] %[[#scope]] %[[#ext4]]
 ; CHECK-NEXT: %[[#ret:]] = OpCompositeConstruct %[[#bool4]] %[[#res1:]] %[[#res2:]] %[[#res3:]] %[[#res4:]]
 ; CHECK-NEXT: OpReturnValue %[[#ret]]
-  %0 = call <4 x i1> @llvm.spv.subgroup.all.equal.v4half(<4 x half> %vbexpr)
+  %0 = call <4 x i1> @llvm.spv.wave.all.equal.v4half(<4 x half> %vbexpr)
   ret <4 x i1> %0
 }
 
-declare i1 @llvm.spv.subgroup.all.equal.f32(float)
-declare i1 @llvm.spv.subgroup.all.equal.i32(i32)
-declare <4 x i1> @llvm.spv.subgroup.all.equal.v4half(<4 x half>)
+declare i1 @llvm.spv.wave.all.equal.f32(float)
+declare i1 @llvm.spv.wave.all.equal.i32(i32)
+declare <4 x i1> @llvm.spv.wave.all.equal.v4half(<4 x half>)
