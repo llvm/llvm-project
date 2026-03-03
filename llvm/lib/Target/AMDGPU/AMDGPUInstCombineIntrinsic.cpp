@@ -723,9 +723,6 @@ GCNTTIImpl::instCombineIntrinsic(InstCombiner &IC, IntrinsicInst &II) const {
   Intrinsic::ID IID = II.getIntrinsicID();
   switch (IID) {
   case Intrinsic::amdgcn_implicitarg_ptr: {
-    // Not checking calling function's "amdgpu-no-implicitarg-ptr" attribute
-    // under the assumption that a call to this intrinsic is not present with
-    // that attribute.
     uint64_t ImplicitArgBytes = ST->getImplicitArgNumBytes(*II.getFunction());
 
     uint64_t CurrentOrNullBytes =
