@@ -59,20 +59,6 @@ static void logFailure(llvm::ScopedPrinter &os, StringRef fmt, Args &&...args) {
   });
 }
 
-/// Format a conversion pattern as "root-op -> (generated-op, ...)".
-static std::string formatPatternForDiagnostics(const Pattern &pattern) {
-  std::string patternStr;
-  llvm::raw_string_ostream os(patternStr);
-  if (std::optional<OperationName> root = pattern.getRootKind())
-    os << root->getStringRef();
-  else
-    os << "*";
-  os << " -> (";
-  llvm::interleaveComma(pattern.getGeneratedOps(), os);
-  os << ")";
-  return patternStr;
-}
-
 /// Helper function that computes an insertion point where the given value is
 /// defined and can be used without a dominance violation.
 static OpBuilder::InsertPoint computeInsertPoint(Value value) {
@@ -2450,10 +2436,6 @@ public:
   /// was legalized, failure otherwise.
   LogicalResult legalize(Operation *op);
 
-  /// Returns the most recently attempted conversion pattern on this operation
-  /// that failed to match.
-  const Pattern *getLastFailurePattern(Operation *op) const;
-
   /// Returns the conversion target in use by the legalizer.
   const ConversionTarget &getTarget() { return target; }
 
@@ -2530,9 +2512,6 @@ private:
 
   /// The pattern applicator to use for conversions.
   PatternApplicator applicator;
-
-  /// The last conversion pattern that failed to match for a given op.
-  DenseMap<Operation *, const Pattern *> failedPatternByOp;
 };
 } // namespace
 
@@ -2549,16 +2528,7 @@ OperationLegalizer::OperationLegalizer(ConversionPatternRewriter &rewriter,
   computeLegalizationGraphBenefit(anyOpLegalizerPatterns, legalizerPatterns);
 }
 
-bool OperationLegalizer::isIllegal(Operation *op) const {
-  return target.isIllegal(op);
-}
-
-const Pattern *OperationLegalizer::getLastFailurePattern(Operation *op) const {
-  auto it = failedPatternByOp.find(op);
-  if (it == failedPatternByOp.end())
-    return nullptr;
-  return it->second;
-}
+bool OperationLegalizer::isIllegal(Operation *op) const { return target.isIllegal(op); }
 
 LogicalResult OperationLegalizer::legalize(Operation *op) {
 #ifndef NDEBUG
@@ -2570,7 +2540,6 @@ LogicalResult OperationLegalizer::legalize(Operation *op) {
 
   // Check to see if the operation is ignored and doesn't need to be converted.
   bool isIgnored = rewriter.getImpl().isOpIgnored(op);
-  failedPatternByOp.erase(op);
 
   LLVM_DEBUG({
     logger.getOStream() << "\n";
@@ -2792,7 +2761,6 @@ LogicalResult OperationLegalizer::legalizeWithPattern(Operation *op) {
   RewriterState curState = rewriterImpl.getCurrentState();
   auto onFailure = [&](const Pattern &pattern) {
     assert(rewriterImpl.pendingRootUpdates.empty() && "dangling root updates");
-    failedPatternByOp[op] = &pattern;
     if (!rewriterImpl.config.allowPatternRollback) {
       // Erase all unresolved materializations.
       for (auto op : rewriterImpl.patternMaterializations) {
@@ -2856,8 +2824,6 @@ LogicalResult OperationLegalizer::legalizeWithPattern(Operation *op) {
     }
     if (config.listener)
       config.listener->notifyPatternEnd(pattern, result);
-    if (succeeded(result))
-      failedPatternByOp.erase(op);
     return result;
   };
 
@@ -3339,20 +3305,10 @@ LogicalResult OperationConverter::convert(Operation *op,
                                           bool isRecursiveLegalization) {
   const ConversionConfig &config = rewriter.getConfig();
   auto emitFailedToLegalizeDiag = [&](bool wasExplicitlyIllegal) {
-    InFlightDiagnostic diag = op->emitError()
-                              << "failed to legalize operation '"
-                              << op->getName() << "'";
+    InFlightDiagnostic diag = op->emitError() << "failed to legalize operation";
     if (wasExplicitlyIllegal)
       diag << " that was explicitly marked illegal";
-
-    diag << "; operands (" << op->getOperandTypes() << "), results ("
-         << op->getResultTypes() << ")";
-    if (const Pattern *pattern = opLegalizer.getLastFailurePattern(op)) {
-      diag << "; rejected by conversion pattern '"
-           << formatPatternForDiagnostics(*pattern) << "'";
-    } else {
-      diag << "; no conversion pattern matched";
-    }
+    diag << ": " << OpWithFlags(op, OpPrintingFlags().skipRegions());
   };
 
   // Legalize the given operation.
