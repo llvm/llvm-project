@@ -27720,8 +27720,8 @@ object's lifetime.
 Arguments:
 """"""""""
 
-The argument is either a pointer to an ``alloca`` instruction or a ``poison``
-value.
+The argument is either a ``poison`` value or an SSA variable whose defining
+instruction is ``alloca``. Otherwise, the IR is considered ill-formed.
 
 Semantics:
 """"""""""
@@ -27763,8 +27763,8 @@ The '``llvm.lifetime.end``' intrinsic specifies the end of a
 Arguments:
 """"""""""
 
-The argument is either a pointer to an ``alloca`` instruction or a ``poison``
-value.
+The argument is either a ``poison`` value or an SSA variable whose defining
+instruction is ``alloca``. Otherwise, the IR is considered ill-formed.
 
 Semantics:
 """"""""""
