@@ -1235,13 +1235,6 @@ bool RISCVVLOptimizer::tryReduceVL(MachineInstr &MI,
   unsigned VLOpNum = RISCVII::getVLOpNum(MI.getDesc());
   MachineOperand &VLOp = MI.getOperand(VLOpNum);
 
-  // If the VL is 1, then there is no need to reduce it. This is an
-  // optimization, not needed to preserve correctness.
-  if (VLOp.isImm() && VLOp.getImm() == 1) {
-    LLVM_DEBUG(dbgs() << "  Abort due to VL == 1, no point in reducing.\n");
-    return false;
-  }
-
   assert((CommonVL.isImm() || CommonVL.getReg().isVirtual()) &&
          "Expected VL to be an Imm or virtual Reg");
 
