@@ -156,6 +156,207 @@ that are not possible with a library-only SYCL implementation.
    https://registry.khronos.org/SYCL/specs/sycl-2020/html/sycl-2020.html#_library_only_implementation
 
 
+.. _sect-sycl-address-spaces:
+
+Address Space Attributes
+------------------------
+These attributes are intended for use in the implementation of SYCL run-time
+libraries and should not be used in any other context.
+
+The SYCL address space attributes listed below correspond to the five address
+spaces described by
+`SYCL 2020 section 3.8.2, "SYCL device memory model" <SYCL-2020-3.8.2_>`_ and
+`SYCL 2020 section 4.7.7, "Address space classes" <SYCL-2020-4.7.7_>`_.
+
+.. list-table::
+   :header-rows: 1
+
+   * - Address space attribute
+     - SYCL address space
+     - Description
+   * - ``[[clang::sycl_global]]``
+     - global
+     - A memory region accessible by all work-items executing on a device.
+   * - ``[[clang::sycl_local]]``
+     - local
+     - A memory region accessible by all work-items of a single work-group.
+   * - ``[[clang::sycl_private]]``
+     - private
+     - A memory region that is private to a single work-item.
+   * - ``[[clang::sycl_generic]]``
+     - generic
+     - A virtual memory region from which the global, local, and private memory
+       regions may all be accessed.
+   * - ``[[clang::sycl_constant]]``
+     - constant
+     - (*deprecated*) A memory region that holds constant data for an executing
+       kernel.
+
+These attributes are intended to be used in the implementation of the following
+SYCL features.
+Specifically, they are intended to provide the implementation dependent
+decorated pointer and reference types described in the SYCL 2020 sections
+referenced above.
+
+- The ``sycl::buffer``, ``sycl::accessor``, and ``sycl::local_accessor``
+  classes.
+
+- The ``sycl::remove_decoration`` and ``sycl::remove_decoration_t`` type traits.
+
+- The ``sycl::multi_ptr`` class template and its explicit specializations.
+
+- The ``sycl::address_space_cast()`` function.
+
+- The ``sycl::static_addrspace_cast`` extension.
+
+- The ``sycl::dynamic_addrspace_cast`` extension.
+
+The SYCL address space attributes are type attributes that, when present in a
+type specifier, specify a distinct type from the otherwise unattributed type.
+For example, ``int *`` and ``int [[clang::sycl_global]] *`` designate distinct
+pointer types that participate in overload resolution and template
+specialization.
+
+Conversions between address space attributed types are permitted as follows.
+These conversions are consistent with the conversions permitted for the
+corresponding OpenCL address spaces as described in
+`OpenCL 3.0 section 3.3.1, "Fundamental Memory Regions" <OpenCL-3.0-3.3.1_>`_.
+
+- Types attributed with the global, local, or private address space attributes
+  are implicitly convertible to matching types with the generic address space
+  attribute.
+
+- Types attributed with the generic address space attribute may be converted
+  to a matching type with the global, local, or private address space attribute
+  by ``static_cast``.
+
+- All other conversions between matched types with either different address
+  space attributes or where one type lacks an address space attribute may be
+  performed by ``reinterpret_cast``.
+
+For OpenCL device targets, the SYCL address space attributes are synonymous
+with the `OpenCL address space attributes <attr-opencl-addrspace_>`_; e.g.,
+``int [[clang::sycl_global]]*`` and ``int [[clang::opencl_global]]*`` specify
+the same type.
+
+.. list-table::
+   :header-rows: 1
+
+   * - SYCL Address space attribute
+     - OpenCL address space attribute
+   * - ``[[clang::sycl_global]]``
+     - ``[[clang::opencl_global]]``
+   * - ``[[clang::sycl_local]]``
+     - ``[[clang::opencl_local]]``
+   * - ``[[clang::sycl_private]]``
+     - ``[[clang::opencl_private]]``
+   * - ``[[clang::sycl_generic]]``
+     - ``[[clang::opencl_generic]]``
+   * - ``[[clang::sycl_constant]]``
+     - ``[[clang::opencl_constant]]``
+
+Per `SYCL 2020 section 5.9, "Address-space deduction" <SYCL-2020-5.9_>`_,
+programmer use of address space annotated pointer and reference types is not
+required.
+The SYCL implementation is instead required to deduce which address space is
+accessed based on variable declaration context, storage duration, initializing
+expression, and data flow analysis; particularly for devices that do not
+support the generic address space.
+Use of the address space attributes in the SYCL run-time library implementation
+is intended to aid address space inference.
+Consider the following example assuming a call to ``foo()`` from a SYCL kernel.
+
+.. code-block:: C++
+
+   int& foo(sycl::decorated_local_ptr<int> ptr) {
+     int i;                   // i is in the private address space.
+     int *raw_ptr = &i;       // raw_ptr points to the private address space.
+     raw_ptr = ptr.get();     // raw_ptr now points to the local address space.
+     int &raw_ref = *raw_ptr; // raw_ref references the local address space.
+     return raw_ref;          // returns a reference to the local address space.
+   }
+
+Raw pointers and references are permitted in SYCL kernel arguments (e.g., as a
+direct or indirect capture or data member of a SYCL kernel object) when Unified
+Shared Memory (USM) is supported.
+As described in
+`SYCL 2020 section 3.13, "Language restrictions in kernels" <SYCL-2020-3.13_>`_,
+these are treated as referencing the global address space.
+
+The following demonstrates use of these attributes in hypothetical partial
+implementations of a few SYCL library features.
+
+.. code-block:: C++
+
+   namespace sycl {
+
+   // remove_decoration requires a pointer or reference type.
+   template <typename T>
+   struct remove_decoration;
+   template <typename T>
+   struct remove_decoration<T [[clang::sycl_global]]*> {
+     using type = T*;
+   };
+   template <typename T>
+   struct remove_decoration<T [[clang::sycl_global]]&> {
+     using type = T&;
+   };
+   template <typename T>
+   struct remove_decoration<T [[clang::sycl_global]]&&> {
+     using type = T&&;
+   };
+   // ... additional partial specializations for the other address spaces ...
+   template <typename T>
+   using remove_decoration_t = typename remove_decoration<T>::type;
+
+   namespace detail {
+   template <typename T, access::address_space Space>
+   struct add_address_space;
+   template <typename T>
+   struct add_address_space<T, access::address_space::global_space> {
+     using type = T [[clang::sycl_global]];
+   };
+   // ... additional partial specializations for the other address spaces ...
+   }
+
+   template <typename ElementType, access::address_space Space,
+           access::decorated DecorateAddress = access::decorated::legacy>
+   class multi_ptr {
+    public:
+     static constexpr bool is_decorated =
+         DecorateAddress == access::decorated::yes;
+
+     using value_type = ElementType;
+     using pointer = std::conditional_t<
+                         is_decorated,
+                         detail::add_address_space<value_type, Space>*,
+                         std::add_pointer_t<value_type>>;
+     using reference = std::conditional_t<
+                         is_decorated,
+                         detail::add_address_space<value_type, Space>&,
+                         std::add_lvalue_reference_t<value_type>>;
+
+     detail::add_address_space<value_type, Space>* get_decorated() const;
+
+     // ... remaining implementation ...
+   };
+
+  } // namespace sycl
+
+.. _attr-opencl-addrspace:
+   https://clang.llvm.org/docs/AttributeReference.html#opencl-address-spaces
+.. _OpenCL-3.0-3.3.1:
+   https://registry.khronos.org/OpenCL/specs/3.0-unified/html/OpenCL_API.html#_fundamental_memory_regions
+.. _SYCL-2020-3.8.2:
+   https://registry.khronos.org/SYCL/specs/sycl-2020/html/sycl-2020.html#_sycl_device_memory_model
+.. _SYCL-2020-3.13:
+   https://registry.khronos.org/SYCL/specs/sycl-2020/html/sycl-2020.html#_language_restrictions_in_kernels
+.. _SYCL-2020-4.7.7:
+   https://registry.khronos.org/SYCL/specs/sycl-2020/html/sycl-2020.html#_address_space_classes
+.. _SYCL-2020-5.9:
+   https://registry.khronos.org/SYCL/specs/sycl-2020/html/sycl-2020.html#_address_space_deduction
+
+
 .. _sect-sycl_kernel_entry_point:
 
 The ``[[clang::sycl_kernel_entry_point]]`` Attribute
