@@ -1164,6 +1164,13 @@ void AccStructureChecker::Enter(const parser::SeparateModuleSubprogram &) {
   declareSymbols.clear();
 }
 
+void AccStructureChecker::Enter(const parser::DoConstruct &) {
+  ++loopNestLevel;
+}
+
+void AccStructureChecker::Leave(const parser::DoConstruct &) {
+  --loopNestLevel;
+}
 
 llvm::StringRef AccStructureChecker::getDirectiveName(
     llvm::acc::Directive directive) {
