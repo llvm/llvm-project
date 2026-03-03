@@ -9434,7 +9434,6 @@ std::pair<SDValue, SDValue> SelectionDAG::getStrlen(SDValue Chain,
       {Src, PointerType::getUnqual(*getContext())}};
   return getRuntimeCallSDValueHelper(Chain, dl, std::move(Args), CI,
                                      RTLIB::STRLEN, this, TLI);
-  TargetLowering::CallLoweringInfo CLI(*this);
 }
 
 SDValue SelectionDAG::getMemcpy(
