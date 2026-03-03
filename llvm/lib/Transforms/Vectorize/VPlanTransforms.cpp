@@ -5716,10 +5716,12 @@ void VPlanTransforms::optimizeFindIVReductions(VPlan &Plan,
     assert(is_contained(CondSelect->getDefiningRecipe()->operands(), PhiR));
     VPValue *IV = TrueVal == PhiR ? FalseVal : TrueVal;
 
+    if (!isa<VPWidenIntOrFpInductionRecipe>(IV))
+      continue;
     const SCEV *IVSCEV = vputils::getSCEVExprForVPValue(IV, PSE, &L);
     const SCEV *Step;
-    if (!match(IVSCEV, m_scev_AffineAddRec(m_SCEV(), m_SCEV(Step))))
-      continue;
+    bool Matched = match(IVSCEV, m_scev_AffineAddRec(m_SCEV(), m_SCEV(Step)));
+    assert(Matched && "Wide IV must be SCEV-able");
 
     // Determine direction from SCEV step.
     if (!SE.isKnownNonZero(Step))
