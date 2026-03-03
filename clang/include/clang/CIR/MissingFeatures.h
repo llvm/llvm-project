@@ -114,8 +114,6 @@ struct MissingFeatures {
   static bool opCallExtParameterInfo() { return false; }
   static bool opCallCIRGenFuncInfoParamInfo() { return false; }
   static bool opCallCIRGenFuncInfoExtParamInfo() { return false; }
-  static bool opCallLandingPad() { return false; }
-  static bool opCallContinueBlock() { return false; }
   static bool opCallChain() { return false; }
   static bool opCallExceptionAttr() { return false; }
 
@@ -329,6 +327,7 @@ struct MissingFeatures {
   static bool pointerOverflowSanitizer() { return false; }
   static bool preservedAccessIndexRegion() { return false; }
   static bool requiresCleanups() { return false; }
+  static bool returnValueSlotFeatures() { return false; }
   static bool runCleanupsScope() { return false; }
   static bool sanitizers() { return false; }
   static bool setDLLStorageClass() { return false; }

@@ -37,6 +37,7 @@ int main() {
     // DEBUG: omptarget --> Moving [[#SIZE]] bytes (tgt:0x{{.*}}) -> (hst:0x{{0*}}[[#HOST_ADDR]])
     // clang-format on
 
-    printf("%d\n", x[1]); // CHECK: 222
+    // CHECK: After tgt exit data: 222
+    printf("After tgt exit data: %d\n", x[1]);
   }
 }

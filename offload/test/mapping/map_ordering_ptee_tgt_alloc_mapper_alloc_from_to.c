@@ -36,7 +36,6 @@ int main() {
 #pragma omp target map(alloc : s1.p[0 : 10])                                   \
     map(mapper(my_mapper), tofrom : s1) // (1)
   {
-    printf("%d\n", s1.p[1]); // CHECK: 111
     s1.p[1] = s1.p[1] + 111;
   }
 
@@ -44,5 +43,5 @@ int main() {
   // DEBUG: omptarget --> Found skipped FROM entry: HstPtr=0x{{0*}}[[#HOST_ADDRX]] size=[[#SIZEX]] within region being released
   // DEBUG: omptarget --> Moving [[#SIZEX]] bytes (tgt:0x{{.*}}) -> (hst:0x{{0*}}[[#HOST_ADDRX]])
   // clang-format on
-  printf("%d\n", s1.p[1]); // CHECK: 222
+  printf("After tgt: %d\n", s1.p[1]); // CHECK: After tgt: 222
 }

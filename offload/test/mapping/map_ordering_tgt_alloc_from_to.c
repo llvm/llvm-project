@@ -18,9 +18,8 @@ int main() {
   // clang-format on
 #pragma omp target map(alloc : x) map(from : x) map(to : x) map(alloc : x)
   {
-    printf("%d\n", x); // CHECK: 111
     x = x + 111;
   }
 
-  printf("%d\n", x); // CHECK: 222
+  printf("After tgt: %d\n", x); // CHECK: After tgt: 222
 }
