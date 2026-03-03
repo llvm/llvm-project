@@ -635,13 +635,13 @@ generate the offload kernel entry point function.
 The entry point function generated for the earlier example would look something
 like the following (again, the use of ``kernelFunc.sout`` to access the captured
 variable stored in ``kernelFunc`` is not valid C++ since captured variables
-don't have names, but the intent should be clear; ``kernel-entry-point`` and
-``lambda-from-f`` are exposition only names).
+don't have names, but the intent should be clear; ``kernel-entry-point``,
+``lambda-from-f``, and ``kernel-name-type`` are exposition only names).
 
 .. code-block:: C++
 
    void kernel-entry-point(lambda-from-f kernelFunc, buffer_t* X, int Y) {
-     sycl_handle_special_kernel_parameters(kernelFunc.sout)(X, Y);
+     sycl_handle_special_kernel_parameters<kernel-name-type>(kernelFunc.sout)(X, Y);
      kernelFunc();
    }
 
