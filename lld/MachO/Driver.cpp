@@ -951,6 +951,10 @@ static TargetInfo *createTargetInfo(InputArgList &args) {
   case CPU_TYPE_X86_64:
     return createX86_64TargetInfo();
   case CPU_TYPE_ARM64:
+    if (cpuSubtype == CPU_SUBTYPE_ARM64E ||
+        cpuSubtype == CPU_SUBTYPE_ARM64E_VERSIONED_PTRAUTH_ABI_MASK ||
+        cpuSubtype == CPU_SUBTYPE_ARM64E_WITH_PTRAUTH_VERSION(0, 0))
+      return createARM64eTargetInfo();
     return createARM64TargetInfo();
   case CPU_TYPE_ARM64_32:
     return createARM64_32TargetInfo();
@@ -1254,7 +1258,8 @@ static bool shouldEmitChainedFixups(const InputArgList &args) {
     return false;
   }
 
-  if (!is_contained({AK_x86_64, AK_x86_64h, AK_arm64}, config->arch())) {
+  if (!is_contained({AK_x86_64, AK_x86_64h, AK_arm64, AK_arm64e},
+                    config->arch())) {
     if (requested)
       error("-fixup_chains is only supported on x86_64 and arm64 targets");
 

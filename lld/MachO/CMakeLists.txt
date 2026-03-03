@@ -6,6 +6,7 @@ include_directories(${LLVM_MAIN_SRC_DIR}/../libunwind/include)
 
 add_lld_library(lldMachO
   Arch/ARM64.cpp
+  Arch/ARM64e.cpp
   Arch/ARM64Common.cpp
   Arch/ARM64_32.cpp
   Arch/X86_64.cpp
