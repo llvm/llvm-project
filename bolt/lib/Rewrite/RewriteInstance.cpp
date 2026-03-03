@@ -5354,15 +5354,15 @@ void RewriteInstance::updateELFSymbolTable(
       // it marks a secondary entry point.
       // Also look up local NOTYPE symbols inside functions so we can
       // update their addresses to reflect the output layout.
-      // Skip AArch64 marker symbols ($d, $x) inside functions —
+      // Skip AArch64/RISC-V marker symbols ($d, $x) inside functions —
       // BOLT generates its own via addExtraSymbols.
-      auto IsAArch64MarkerSymbol = [&]() {
-        return BC->isAArch64() &&
-               (SymbolName->starts_with("$d") || SymbolName->starts_with("$x"));
+      auto IsMarkerSymbol = [&]() {
+        return BC->getMarkerType(Symbol.getType(), Symbol.st_size,
+                                 *SymbolName) != MarkerSymType::NONE;
       };
       const bool IsLocalLabel = Symbol.getType() == ELF::STT_NOTYPE &&
                                 Symbol.getBinding() == ELF::STB_LOCAL &&
-                                Symbol.st_size == 0 && !IsAArch64MarkerSymbol();
+                                Symbol.st_size == 0 && !IsMarkerSymbol();
       Function =
           (Symbol.getType() == ELF::STT_FUNC || IsLocalLabel)
               ? BC->getBinaryFunctionContainingAddress(Symbol.st_value,
@@ -5434,9 +5434,9 @@ void RewriteInstance::updateELFSymbolTable(
             NewSymbol.st_shndx = getNewSectionIndex(Symbol.st_shndx);
         }
 
-        // Drop AArch64 marker symbols ($d, $x) inside functions —
+        // Drop AArch64/RISC-V marker symbols ($d, $x) inside functions —
         // BOLT generates its own via addExtraSymbols.
-        if (IsAArch64MarkerSymbol() &&
+        if (IsMarkerSymbol() &&
             BC->getBinaryFunctionContainingAddress(Symbol.st_value,
                                                    /*CheckPastEnd=*/false,
                                                    /*UseMaxSize=*/true)) {

@@ -15,7 +15,8 @@
 /// Check .word is still present in output
 // CHECK-OBJDUMP: <_start>:
 // CHECK-OBJDUMP-NEXT: nop
-// CHECK-OBJDUMP-NEXT: .word 0x00000000
+// CHECK-OBJDUMP-NEXT: unimp
+// CHECK-OBJDUMP-NEXT: unimp
 // CHECK-OBJDUMP-NEXT: ret
     .text
     .globl _start
