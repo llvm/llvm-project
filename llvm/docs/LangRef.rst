@@ -27731,10 +27731,12 @@ If ``ptr`` is a ``poison`` value, the intrinsic has no effect.
 Otherwise, the stack-allocated object that ``ptr`` points to is initially
 marked as dead. After '``llvm.lifetime.start``', the stack object is marked as
 alive and has an uninitialized value.
-The stack object is marked as dead when either
+Calling ``llvm.lifetime.start`` when the stack object is already alive just
+resets its contents to be uninitialized.
+
+The stack object is marked as dead again when either
 :ref:`llvm.lifetime.end <int_lifeend>` to the alloca is executed or the
 function returns.
-
 After :ref:`llvm.lifetime.end <int_lifeend>` is called,
 '``llvm.lifetime.start``' on the stack object can be called again.
 The second '``llvm.lifetime.start``' call marks the object as alive, but it
