@@ -254,8 +254,8 @@ static bool evaluatePtrAddRecAtMaxBTCWillNotWrap(
     // Ensure both operands have the same type
     Type *CommonTy =
         SE.getWiderType(DerefBytesSCEV->getType(), DerefRKSCEV->getType());
-    DerefBytesSCEV = SE.getNoopOrAnyExtend(DerefBytesSCEV, CommonTy);
-    DerefRKSCEV = SE.getNoopOrAnyExtend(DerefRKSCEV, CommonTy);
+    DerefBytesSCEV = SE.getNoopOrZeroExtend(DerefBytesSCEV, CommonTy);
+    DerefRKSCEV = SE.getNoopOrZeroExtend(DerefRKSCEV, CommonTy);
     DerefBytesSCEV = SE.getUMaxExpr(DerefBytesSCEV, DerefRKSCEV);
   }
 
