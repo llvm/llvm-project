@@ -20,26 +20,26 @@ void f3(A, A);
 void f4(A, A);
 // expected-error@-1 1-2 {{unknown type name 'A'}}
 
-// CHECK-NEXT:   Line 21: diagnostic verification mode disallows use of diagnostic quantifier
+// CHECK-NEXT:   Line 21: diagnostic verification mode disallows use of a diagnostic quantifier
 
 void f5(A);
 // expected-error@-1 0-2 {{unknown type name 'A'}}
 
-// CHECK-NEXT:   Line 26: diagnostic verification mode disallows use of diagnostic quantifier
+// CHECK-NEXT:   Line 26: diagnostic verification mode disallows use of a diagnostic quantifier
 
 void f6(A, A);
 // expected-error@-1 + {{unknown type name 'A'}}
 
-// CHECK-NEXT:   Line 31: diagnostic verification mode disallows use of diagnostic quantifier
+// CHECK-NEXT:   Line 31: diagnostic verification mode disallows use of a diagnostic quantifier
 
 void f7(A, A);
 // expected-error@-1 0+ {{unknown type name 'A'}}
 
-// CHECK-NEXT:   Line 36: diagnostic verification mode disallows use of diagnostic quantifier
+// CHECK-NEXT:   Line 36: diagnostic verification mode disallows use of a diagnostic quantifier
 
 void f8(A, A);
 // expected-error@-1 1+ {{unknown type name 'A'}}
 
-// CHECK-NEXT:   Line 41: diagnostic verification mode disallows use of diagnostic quantifier
+// CHECK-NEXT:   Line 41: diagnostic verification mode disallows use of a diagnostic quantifier
 
 // CHECK-NEXT: 8 errors generated.
