@@ -1438,6 +1438,11 @@ class Base(unittest.TestCase):
         """Returns true if the architecture is RISCV64 or RISCV32."""
         return self.getArchitecture() in ["riscv64", "riscv32"]
 
+    def isRISCVRVV(self):
+        riscv_std_extensions_pattern = r"rv([0-9a-z]+)(_|\b)"
+        riscv_std_extensions = re.search(riscv_std_extensions_pattern, self.getCPUInfo()).group(1)
+        return self.isRISCV() and "v" in riscv_std_extensions
+
     def getArchitecture(self):
         """Returns the architecture in effect the test suite is running with."""
         return lldbplatformutil.getArchitecture()
