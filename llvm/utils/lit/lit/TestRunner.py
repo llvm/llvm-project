@@ -1,4 +1,4 @@
-from __future__ import absolute_import
+from __future__ import absolute_import, annotations
 import errno
 import io
 import itertools
@@ -12,9 +12,7 @@ import shlex
 import shutil
 import tempfile
 import threading
-import typing
 import traceback
-from typing import Optional, Tuple
 from io import StringIO
 
 from lit.ShCommands import GlobItem, Command
@@ -1190,7 +1188,7 @@ def formatOutput(title, data, limit=None):
 # from the script, and there is no execution trace.
 def executeScriptInternal(
     test, litConfig, tmpBase, commands, cwd, debug=True
-) -> Tuple[str, str, int, Optional[str], Optional[str]]:
+) -> tuple[str, str, int, str | None, str | None]:
     cmds = []
     update_output = None
     for i, ln in enumerate(commands):
@@ -1334,7 +1332,7 @@ def executeScriptInternal(
 
 def executeScript(
     test, litConfig, tmpBase, commands, cwd
-) -> Tuple[str, str, int, Optional[str], Optional[str]]:
+) -> tuple[str, str, int, str | None, str | None]:
     bashPath = litConfig.getBashPath()
     isWin32CMDEXE = litConfig.isWindows and not bashPath
     script = tmpBase + ".script"
@@ -2339,7 +2337,7 @@ def _runShTest(test, litConfig, useExternalSh, script, tmpBase) -> lit.Test.Resu
     # Always returns the tuple (out, err, exitCode, timeoutInfo, status).
     def runOnce(
         execdir,
-    ) -> Tuple[str, str, int, Optional[str], Test.ResultCode, Optional[str]]:
+    ) -> tuple[str, str, int, str | None, Test.ResultCode, str | None]:
         # script is modified below (for litConfig.per_test_coverage, and for
         # %dbg expansions).  runOnce can be called multiple times, but applying
         # the modifications multiple times can corrupt script, so always modify
