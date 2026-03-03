@@ -15,10 +15,16 @@ void call_function_inside_try_catch_all() {
 // CIR: cir.func {{.*}} @_Z34call_function_inside_try_catch_allv() personality(@__gxx_personality_v0)
 // CIR: cir.scope {
 // CIR:   cir.try {
-// CIR:       %[[CALL:.*]] = cir.call @_Z8divisionv() : () -> !s32i
+// CIR:       %[[CALL:.*]] = cir.call @_Z8divisionv()
 // CIR:       cir.yield
-// CIR:   } catch all {
-// CIR:       %[[CATCH_PARAM:.*]] = cir.catch_param : !cir.ptr<!void>
+// CIR:   } catch all (%[[EH_TOKEN:.*]]: !cir.eh_token{{.*}}) {
+// CIR:       %[[CATCH_TOKEN:.*]], %[[EXN_PTR:.*]] = cir.begin_catch %[[EH_TOKEN]] : !cir.eh_token -> (!cir.catch_token, !cir.ptr<!void>)
+// CIR:       cir.cleanup.scope {
+// CIR:         cir.yield
+// CIR:       } cleanup {{.*}} {
+// CIR:         cir.end_catch %[[CATCH_TOKEN]] : !cir.catch_token
+// CIR:         cir.yield
+// CIR:       }
 // CIR:       cir.yield
 // CIR:   }
 // CIR: }
@@ -58,15 +64,21 @@ void call_function_inside_try_catch_with_exception_type() {
 // CIR: cir.scope {
 // CIR:   %[[EXCEPTION_ADDR:.*]] = cir.alloca !s32i, !cir.ptr<!s32i>, ["e"]
 // CIR:   cir.try {
-// CIR:     %[[CALL:.*]] = cir.call @_Z8divisionv() : () -> !s32i
+// CIR:     %[[CALL:.*]] = cir.call @_Z8divisionv()
 // CIR:     cir.yield
-// CIR:   } catch [type #cir.global_view<@_ZTIi> : !cir.ptr<!u8i>] {
-// CIR:     %[[CATCH_PARAM:.*]] = cir.catch_param : !cir.ptr<!s32i>
-// CIR      %[[TMP_CATCH_PARAM:.*]] = cir.load {{.*}} %[[CATCH_PRAM]] : !cir.ptr<!s32i>, !s32i
-// CIR      cir.store {{.*}} %[[TMP_CATCH_PARAM]], %[[EXCEPTION_ADDR]] : !s32i, !cir.ptr<!s32i>
+// CIR:   } catch [type #cir.global_view<@_ZTIi> : !cir.ptr<!u8i>] (%[[EH_TOKEN:.*]]: !cir.eh_token{{.*}}) {
+// CIR:     %[[CATCH_TOKEN:.*]], %[[EXN_PTR:.*]] = cir.begin_catch %[[EH_TOKEN]] : !cir.eh_token -> (!cir.catch_token, !cir.ptr<!s32i>)
+// CIR:     cir.cleanup.scope {
+// CIR:       %[[TMP:.*]] = cir.load {{.*}} %[[EXN_PTR]] : !cir.ptr<!s32i>, !s32i
+// CIR:       cir.store {{.*}} %[[TMP]], %[[EXCEPTION_ADDR]] : !s32i, !cir.ptr<!s32i>
+// CIR:       cir.yield
+// CIR:     } cleanup {{.*}} {
+// CIR:       cir.end_catch %[[CATCH_TOKEN]] : !cir.catch_token
+// CIR:       cir.yield
+// CIR:     }
 // CIR:     cir.yield
-// CIR:   } unwind {
-// CIR:     cir.resume
+// CIR:   } unwind (%{{.*}}: !cir.eh_token{{.*}}) {
+// CIR:     cir.resume %{{.*}} : !cir.eh_token
 // CIR:   }
 // CIR: }
 
@@ -118,15 +130,21 @@ void call_function_inside_try_catch_with_complex_exception_type() {
 // CIR: cir.scope {
 // CIR:   %[[EXCEPTION_ADDR:.*]] = cir.alloca !cir.complex<!s32i>, !cir.ptr<!cir.complex<!s32i>>, ["e"]
 // CIR:   cir.try {
-// CIR:     %[[CALL:.*]] = cir.call @_Z8divisionv() : () -> !s32i
+// CIR:     %[[CALL:.*]] = cir.call @_Z8divisionv()
 // CIR:     cir.yield
-// CIR:   } catch [type #cir.global_view<@_ZTICi> : !cir.ptr<!u8i>] {
-// CIR:     %[[CATCH_PARAM:.*]] = cir.catch_param : !cir.ptr<!cir.complex<!s32i>>
-// CIR:     %[[TMP_CATCH_PARAM:.*]] = cir.load {{.*}} %[[CATCH_PARAM]] : !cir.ptr<!cir.complex<!s32i>>, !cir.complex<!s32i>
-// CIR:     cir.store {{.*}} %[[TMP_CATCH_PARAM]], %[[EXCEPTION_ADDR]] : !cir.complex<!s32i>, !cir.ptr<!cir.complex<!s32i>>
+// CIR:   } catch [type #cir.global_view<@_ZTICi> : !cir.ptr<!u8i>] (%[[EH_TOKEN:.*]]: !cir.eh_token{{.*}}) {
+// CIR:     %[[CATCH_TOKEN:.*]], %[[EXN_PTR:.*]] = cir.begin_catch %[[EH_TOKEN]] : !cir.eh_token -> (!cir.catch_token, !cir.ptr<!cir.complex<!s32i>>)
+// CIR:     cir.cleanup.scope {
+// CIR:       %[[TMP:.*]] = cir.load {{.*}} %[[EXN_PTR]] : !cir.ptr<!cir.complex<!s32i>>, !cir.complex<!s32i>
+// CIR:       cir.store {{.*}} %[[TMP]], %[[EXCEPTION_ADDR]] : !cir.complex<!s32i>, !cir.ptr<!cir.complex<!s32i>>
+// CIR:       cir.yield
+// CIR:     } cleanup {{.*}} {
+// CIR:       cir.end_catch %[[CATCH_TOKEN]] : !cir.catch_token
+// CIR:       cir.yield
+// CIR:     }
 // CIR:     cir.yield
-// CIR:   } unwind {
-// CIR:     cir.resume
+// CIR:   } unwind (%{{.*}}: !cir.eh_token{{.*}}) {
+// CIR:     cir.resume %{{.*}} : !cir.eh_token
 // CIR:   }
 // CIR: }
 
@@ -173,6 +191,70 @@ void call_function_inside_try_catch_with_complex_exception_type() {
 // OGCG:   %[[EXCEPTION_INFO:.*]] = insertvalue { ptr, i32 } %[[TMP_EXCEPTION_INFO]], i32 %[[TMP_EH_TYPE_ID]], 1
 // OGCG:   resume { ptr, i32 } %[[EXCEPTION_INFO]]
 
+void call_function_inside_try_catch_with_array_exception_type() {
+  try {
+    division();
+  } catch (int e[]) {
+  }
+}
+
+// CIR: cir.func {{.*}} @_Z56call_function_inside_try_catch_with_array_exception_typev() personality(@__gxx_personality_v0)
+// CIR: cir.scope {
+// CIR:   %[[E_ADDR:.*]] = cir.alloca !cir.ptr<!s32i>, !cir.ptr<!cir.ptr<!s32i>>, ["e"]
+// CIR:   cir.try {
+// CIR:     %[[CALL:.*]] = cir.call @_Z8divisionv()
+// CIR:     cir.yield
+// CIR:   } catch [type #cir.global_view<@_ZTIPi> : !cir.ptr<!u8i>] (%[[EH_TOKEN:.*]]: !cir.eh_token{{.*}}) {
+// CIR:     %[[CATCH_TOKEN:.*]], %[[EXN_PTR:.*]] = cir.begin_catch %[[EH_TOKEN]] : !cir.eh_token -> (!cir.catch_token, !cir.ptr<!s32i>)
+// CIR:     cir.cleanup.scope {
+// CIR:       cir.store {{.*}} %[[EXN_PTR]], %[[E_ADDR]] : !cir.ptr<!s32i>, !cir.ptr<!cir.ptr<!s32i>>
+// CIR:       cir.yield
+// CIR:     } cleanup {{.*}} {
+// CIR:       cir.end_catch %[[CATCH_TOKEN]] : !cir.catch_token
+// CIR:       cir.yield
+// CIR:     }
+// CIR:     cir.yield
+// CIR:   } unwind (%{{.*}}: !cir.eh_token{{.*}}) {
+// CIR:     cir.resume %{{.*}} : !cir.eh_token
+// CIR:   }
+// CIR: }
+
+// OGCG: define {{.*}} void @_Z56call_function_inside_try_catch_with_array_exception_typev() #0 personality ptr @__gxx_personality_v0
+// OGCG:   %[[EXCEPTION_ADDR:.*]] = alloca ptr, align 8
+// OGCG:   %[[EH_TYPE_ID_ADDR:.*]] = alloca i32, align 4
+// OGCG:   %[[E_ADDR:.*]] = alloca ptr, align 8
+// OGCG:   %[[CALL:.*]] = invoke noundef i32 @_Z8divisionv()
+// OGCG:          to label %[[INVOKE_NORMAL:.*]] unwind label %[[INVOKE_UNWIND:.*]]
+// OGCG: [[INVOKE_NORMAL]]:
+// OGCG:   br label %[[TRY_CONT:.*]]
+// OGCG: [[INVOKE_UNWIND]]:
+// OGCG:   %[[LANDING_PAD:.*]] = landingpad { ptr, i32 }
+// OGCG:           catch ptr @_ZTIPi
+// OGCG:   %[[EXCEPTION:.*]] = extractvalue { ptr, i32 } %[[LANDING_PAD]], 0
+// OGCG:   store ptr %[[EXCEPTION]], ptr %[[EXCEPTION_ADDR]], align 8
+// OGCG:   %[[EH_TYPE_ID:.*]] = extractvalue { ptr, i32 } %[[LANDING_PAD]], 1
+// OGCG:   store i32 %[[EH_TYPE_ID]], ptr %[[EH_TYPE_ID_ADDR]], align 4
+// OGCG:   br label %[[CATCH_DISPATCH:.*]]
+// OGCG: [[CATCH_DISPATCH]]:
+// OGCG:   %[[TMP_EH_TYPE_ID:.*]] = load i32, ptr %ehselector.slot, align 4
+// OGCG:   %[[EH_TYPE_ID:.*]] = call i32 @llvm.eh.typeid.for.p0(ptr @_ZTIPi)
+// OGCG:   %[[TYPE_ID_EQ:.*]] = icmp eq i32 %[[TMP_EH_TYPE_ID]], %[[EH_TYPE_ID]]
+// OGCG:   br i1 %[[TYPE_ID_EQ]], label %[[CATCH_EXCEPTION:.*]], label %[[EH_RESUME:.*]]
+// OGCG: [[CATCH_EXCEPTION]]:
+// OGCG:   %[[TMP_EXCEPTION:.*]] = load ptr, ptr %[[EXCEPTION_ADDR]], align 8
+// OGCG:   %[[BEGIN_CATCH:.*]] = call ptr @__cxa_begin_catch(ptr %[[TMP_EXCEPTION]])
+// OGCG:   store ptr %[[BEGIN_CATCH]], ptr %[[E_ADDR]], align 8
+// OGCG:   call void @__cxa_end_catch()
+// OGCG:   br label %[[TRY_CONT]]
+// OGCG: [[TRY_CONT]]:
+// OGCG:   ret void
+// OGCG: [[EH_RESUME]]:
+// OGCG:   %[[TMP_EXCEPTION:.*]] = load ptr, ptr %[[EXCEPTION_ADDR]], align 8
+// OGCG:   %[[TMP_EH_TYPE_ID:.*]] = load i32, ptr %[[EH_TYPE_ID_ADDR]], align 4
+// OGCG:   %[[TMP_EXCEPTION_INFO:.*]] = insertvalue { ptr, i32 } poison, ptr %[[TMP_EXCEPTION]], 0
+// OGCG:   %[[EXCEPTION_INFO:.*]] = insertvalue { ptr, i32 } %[[TMP_EXCEPTION_INFO]], i32 %[[TMP_EH_TYPE_ID]], 1
+// OGCG:   resume { ptr, i32 } %[[EXCEPTION_INFO]]
+
 void call_function_inside_try_catch_with_exception_type_and_catch_all() {
   try {
     division();
@@ -185,15 +267,27 @@ void call_function_inside_try_catch_with_exception_type_and_catch_all() {
 // CIR: cir.scope {
 // CIR:   %[[EXCEPTION_ADDR:.*]] = cir.alloca !s32i, !cir.ptr<!s32i>, ["e"]
 // CIR:   cir.try {
-// CIR:     %[[CALL:.*]] = cir.call @_Z8divisionv() : () -> !s32i
+// CIR:     %[[CALL:.*]] = cir.call @_Z8divisionv()
 // CIR:     cir.yield
-// CIR:   } catch [type #cir.global_view<@_ZTIi> : !cir.ptr<!u8i>] {
-// CIR:     %[[CATCH_PARAM:.*]] = cir.catch_param : !cir.ptr<!s32i>
-// CIR      %[[TMP_CATCH_PARAM:.*]] = cir.load {{.*}} %[[CATCH_PRAM]] : !cir.ptr<!s32i>, !s32i
-// CIR      cir.store {{.*}} %[[TMP_CATCH_PARAM]], %[[EXCEPTION_ADDR]] : !s32i, !cir.ptr<!s32i>
+// CIR:   } catch [type #cir.global_view<@_ZTIi> : !cir.ptr<!u8i>] (%[[EH_TOKEN:.*]]: !cir.eh_token{{.*}}) {
+// CIR:     %[[CATCH_TOKEN:.*]], %[[EXN_PTR:.*]] = cir.begin_catch %[[EH_TOKEN]] : !cir.eh_token -> (!cir.catch_token, !cir.ptr<!s32i>)
+// CIR:     cir.cleanup.scope {
+// CIR:       %[[TMP:.*]] = cir.load {{.*}} %[[EXN_PTR]] : !cir.ptr<!s32i>, !s32i
+// CIR:       cir.store {{.*}} %[[TMP]], %[[EXCEPTION_ADDR]] : !s32i, !cir.ptr<!s32i>
+// CIR:       cir.yield
+// CIR:     } cleanup {{.*}} {
+// CIR:       cir.end_catch %[[CATCH_TOKEN]] : !cir.catch_token
+// CIR:       cir.yield
+// CIR:     }
 // CIR:     cir.yield
-// CIR:   } catch all {
-// CIR:     %[[CATCH_PARAM]] = cir.catch_param : !cir.ptr<!void>
+// CIR:   } catch all (%[[EH_TOKEN2:.*]]: !cir.eh_token{{.*}}) {
+// CIR:     %[[CATCH_TOKEN2:.*]], %{{.*}} = cir.begin_catch %[[EH_TOKEN2]] : !cir.eh_token -> (!cir.catch_token, !cir.ptr<!void>)
+// CIR:     cir.cleanup.scope {
+// CIR:       cir.yield
+// CIR:     } cleanup {{.*}} {
+// CIR:       cir.end_catch %[[CATCH_TOKEN2]] : !cir.catch_token
+// CIR:       cir.yield
+// CIR:     }
 // CIR:     cir.yield
 // CIR:   }
 // CIR: }
@@ -231,5 +325,65 @@ void call_function_inside_try_catch_with_exception_type_and_catch_all() {
 // OGCG: [[CATCH_ALL]]:
 // OGCG:   %[[TMP_EXCEPTION:.*]] = load ptr, ptr %[[EXCEPTION_ADDR]], align 8
 // OGCG:   %[[BEGIN_CATCH:.*]] = call ptr @__cxa_begin_catch(ptr %[[TMP_EXCEPTION]])
+// OGCG:   call void @__cxa_end_catch()
+// OGCG:   br label %[[TRY_CONT]]
+
+struct S {
+  ~S();
+};
+
+void cleanup_inside_try_body() {
+  try {
+    S s;
+    division();
+  } catch (...) {
+  }
+}
+
+// CIR: cir.func {{.*}} @_Z23cleanup_inside_try_bodyv(){{.*}} personality(@__gxx_personality_v0) {
+// CIR: cir.scope {
+// CIR:   %[[S:.*]] = cir.alloca !rec_S, !cir.ptr<!rec_S>, ["s"]
+// CIR:   cir.try {
+// CIR:     cir.cleanup.scope {
+// CIR:       cir.call @_Z8divisionv()
+// CIR:       cir.yield
+// CIR:     } cleanup  all {
+// CIR:       cir.call @_ZN1SD1Ev(%[[S]])
+// CIR:       cir.yield
+// CIR:     }
+// CIR:     cir.yield
+// CIR:   } catch all (%[[TOKEN:.*]]: !cir.eh_token {{.*}}) {
+// CIR:     %[[CATCH_TOKEN:.*]], %[[EXN_PTR:.*]] = cir.begin_catch %[[TOKEN]] : !cir.eh_token -> (!cir.catch_token, !cir.ptr<!void>)
+// CIR:     cir.cleanup.scope {
+// CIR:       cir.yield
+// CIR:     } cleanup  all {
+// CIR:       cir.end_catch %[[CATCH_TOKEN]] : !cir.catch_token
+// CIR:       cir.yield
+// CIR:     }
+// CIR:     cir.yield
+// CIR:   }
+// CIR: }
+
+// OGCG: define {{.*}} void @_Z23cleanup_inside_try_bodyv() {{.*}} personality ptr @__gxx_personality_v0 {
+// OGCG:   %[[S:.*]] = alloca %struct.S
+// OGCG:   %[[EXN_SLOT:.*]] = alloca ptr
+// OGCG:   %[[EHSELECTOR_SLOT:.*]] = alloca i32
+// OGCG:   %[[CALL:.*]] = invoke {{.*}} i32 @_Z8divisionv()
+// OGCG:           to label %[[INVOKE_CONT:.*]] unwind label %[[LANDING_PAD:.*]]
+// OGCG: [[INVOKE_CONT]]:
+// OGCG:   call void @_ZN1SD1Ev(ptr noundef nonnull align 1 dereferenceable(1) %[[S]])
+// OGCG:   br label %[[TRY_CONT:.*]]
+// OGCG: [[LANDING_PAD]]:
+// OGCG:   %[[LANDING_PAD:.*]] = landingpad { ptr, i32 }
+// OGCG:           catch ptr null
+// OGCG:   %[[EXCEPTION:.*]] = extractvalue { ptr, i32 } %[[LANDING_PAD]], 0
+// OGCG:   store ptr %[[EXCEPTION]], ptr %[[EXN_SLOT]]
+// OGCG:   %[[EH_TYPE_ID:.*]] = extractvalue { ptr, i32 } %[[LANDING_PAD]], 1
+// OGCG:   store i32 %[[EH_TYPE_ID]], ptr %[[EHSELECTOR_SLOT]]
+// OGCG:   call void @_ZN1SD1Ev(ptr noundef nonnull align 1 dereferenceable(1) %[[S]])
+// OGCG:   br label %[[CATCH:.*]]
+// OGCG: [[CATCH]]:
+// OGCG:   %[[EXCEPTION:.*]] = load ptr, ptr %[[EXN_SLOT]]
+// OGCG:   %[[BEGIN_CATCH:.*]] = call ptr @__cxa_begin_catch(ptr %[[EXCEPTION]])
 // OGCG:   call void @__cxa_end_catch()
 // OGCG:   br label %[[TRY_CONT]]

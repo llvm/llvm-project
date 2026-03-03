@@ -559,7 +559,7 @@ void native(SmallVectorImpl<char> &Path, Style style) {
       SmallString<128> PathHome;
       home_directory(PathHome);
       PathHome.append(Path.begin() + 1, Path.end());
-      Path = PathHome;
+      Path = std::move(PathHome);
     }
   } else {
     llvm::replace(Path, '\\', '/');
@@ -760,8 +760,6 @@ StringRef remove_leading_dotslash(StringRef Path, Style style) {
   return Path;
 }
 
-// Remove path traversal components ("." and "..") when possible, and
-// canonicalize slashes.
 bool remove_dots(SmallVectorImpl<char> &the_path, bool remove_dot_dot,
                  Style style) {
   style = real_style(style);
@@ -894,6 +892,10 @@ static std::error_code
 createTemporaryFile(const Twine &Model, int &ResultFD,
                     llvm::SmallVectorImpl<char> &ResultPath, FSEntity Type,
                     sys::fs::OpenFlags Flags = sys::fs::OF_None) {
+  // Any *temporary* file is assumed to be a compiler-internal output, not
+  // a formal one.
+  auto BypassSandbox = sys::sandbox::scopedDisable();
+
   SmallString<128> Storage;
   StringRef P = Model.toNullTerminatedStringRef(Storage);
   assert(P.find_first_of(separators(Style::native)) == StringRef::npos &&

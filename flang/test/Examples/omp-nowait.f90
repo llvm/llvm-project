@@ -1,4 +1,5 @@
 ! REQUIRES: plugins, examples
+! XFAIL: system-aix
 
 ! RUN: %flang_fc1 -load %llvmshlibdir/flangOmpReport%pluginext -plugin flang-omp-report -fopenmp %s -o - | FileCheck %s
 

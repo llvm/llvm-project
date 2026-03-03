@@ -444,3 +444,21 @@ func.func @inner_loop_has_iter_args(%alloc : memref<?xi64>) {
 // CHECK:   %[[INDEX_CAST_0:.*]] = arith.index_cast %[[APPLY_3]] : index to i64
 // CHECK:   memref.store %[[INDEX_CAST_0]], %[[ALLOC]]{{\[}}%[[REMUI_0]]] : memref<?xi64>
 // CHECK: }
+
+// -----
+
+// Verify that coalescing is not attempted when a loop has a zero step,
+// which would cause a division by zero during normalization.
+
+// CHECK-LABEL: @no_coalesce_zero_step
+func.func @no_coalesce_zero_step(%lb: index, %ub: index) {
+  %c0 = arith.constant 0 : index
+  // CHECK: scf.for
+  // CHECK: scf.for
+  scf.for %i = %lb to %ub step %c0 {
+    scf.for %j = %lb to %ub step %c0 {
+      "use"(%i,%j) : (index, index) -> ()
+    }
+  }
+  return
+}

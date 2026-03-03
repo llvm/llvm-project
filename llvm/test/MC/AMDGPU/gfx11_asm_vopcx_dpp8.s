@@ -806,11 +806,11 @@ v_cmpx_t_u32 v255, v255 dpp8:[0,0,0,0,0,0,0,0] fi:0
 v_cmpx_tru_f16 v1.l, v2.l dpp8:[7,6,5,4,3,2,1,0]
 // GFX11: v_cmpx_t_f16 v1.l, v2.l dpp8:[7,6,5,4,3,2,1,0] ; encoding: [0xe9,0x04,0x1e,0x7d,0x01,0x77,0x39,0x05]
 
-v_cmpx_tru_f16 v1, v2 dpp8:[7,6,5,4,3,2,1,0] fi:1
-// GFX11: v_cmpx_t_f16 v1, v2 dpp8:[7,6,5,4,3,2,1,0] fi:1 ; encoding: [0xea,0x04,0x1e,0x7d,0x01,0x77,0x39,0x05]
+v_cmpx_tru_f16 v1.l, v2.l dpp8:[7,6,5,4,3,2,1,0] fi:1
+// GFX11: v_cmpx_t_f16 v1.l, v2.l dpp8:[7,6,5,4,3,2,1,0] fi:1 ; encoding: [0xea,0x04,0x1e,0x7d,0x01,0x77,0x39,0x05]
 
-v_cmpx_tru_f16 v127, v127 dpp8:[0,0,0,0,0,0,0,0] fi:0
-// GFX11: v_cmpx_t_f16 v127, v127 dpp8:[0,0,0,0,0,0,0,0] ; encoding: [0xe9,0xfe,0x1e,0x7d,0x7f,0x00,0x00,0x00]
+v_cmpx_tru_f16 v127.l, v127.l dpp8:[0,0,0,0,0,0,0,0] fi:0
+// GFX11: v_cmpx_t_f16 v127.l, v127.l dpp8:[0,0,0,0,0,0,0,0] ; encoding: [0xe9,0xfe,0x1e,0x7d,0x7f,0x00,0x00,0x00]
 
 v_cmpx_tru_f32 v1, v2 dpp8:[7,6,5,4,3,2,1,0]
 // GFX11: v_cmpx_t_f32 v1, v2 dpp8:[7,6,5,4,3,2,1,0] ; encoding: [0xe9,0x04,0x3e,0x7d,0x01,0x77,0x39,0x05]

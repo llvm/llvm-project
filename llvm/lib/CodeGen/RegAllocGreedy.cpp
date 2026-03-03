@@ -107,11 +107,17 @@ static cl::opt<bool> ExhaustiveSearch(
              "and interference cutoffs of last chance recoloring"),
     cl::Hidden);
 
+// This option should be deprecated!
 // FIXME: Find a good default for this flag and remove the flag.
 static cl::opt<unsigned>
 CSRFirstTimeCost("regalloc-csr-first-time-cost",
               cl::desc("Cost for first time use of callee-saved register."),
               cl::init(0), cl::Hidden);
+
+static cl::opt<unsigned> CSRCostScale(
+    "regalloc-csr-cost-scale",
+    cl::desc("Scale for the callee-saved register cost, in percentage."),
+    cl::init(80), cl::Hidden);
 
 static cl::opt<unsigned long> GrowRegionComplexityBudget(
     "grow-region-complexity-budget",
@@ -169,9 +175,7 @@ public:
 } // end anonymous namespace
 
 RAGreedyLegacy::RAGreedyLegacy(const RegAllocFilterFunc F)
-    : MachineFunctionPass(ID), F(std::move(F)) {
-  initializeRAGreedyLegacyPass(*PassRegistry::getPassRegistry());
-}
+    : MachineFunctionPass(ID), F(std::move(F)) {}
 
 struct RAGreedy::RequiredAnalyses {
   VirtRegMap *VRM = nullptr;
@@ -979,9 +983,9 @@ bool RAGreedy::calcCompactRegion(GlobalSplitCandidate &Cand) {
   return true;
 }
 
-/// calcSpillCost - Compute how expensive it would be to split the live range in
-/// SA around all use blocks instead of forming bundle regions.
-BlockFrequency RAGreedy::calcSpillCost() {
+/// calcBlockSplitCost - Compute how expensive it would be to split the live
+/// range in SA around all use blocks instead of forming bundle regions.
+BlockFrequency RAGreedy::calcBlockSplitCost() {
   BlockFrequency Cost = BlockFrequency(0);
   ArrayRef<SplitAnalysis::BlockInfo> UseBlocks = SA->getUseBlocks();
   for (const SplitAnalysis::BlockInfo &BI : UseBlocks) {
@@ -1199,7 +1203,7 @@ MCRegister RAGreedy::tryRegionSplit(const LiveInterval &VirtReg,
   if (!TRI->shouldRegionSplitForVirtReg(*MF, VirtReg))
     return MCRegister::NoRegister;
   unsigned NumCands = 0;
-  BlockFrequency SpillCost = calcSpillCost();
+  BlockFrequency SpillCost = calcBlockSplitCost();
   BlockFrequency BestCost;
 
   // Check if we can split this live range around a compact region.
@@ -2341,6 +2345,30 @@ MCRegister RAGreedy::selectOrSplit(const LiveInterval &VirtReg,
   return Reg;
 }
 
+/// calcSpillCost - Compute how expensive it would be to spill the live range in
+/// LI into memory.
+BlockFrequency RAGreedy::calcSpillCost(const LiveInterval &LI) {
+  uint64_t SpillCost = 0;
+  SmallPtrSet<MachineInstr *, 8> Visited;
+
+  for (MachineRegisterInfo::reg_instr_nodbg_iterator
+           I = MRI->reg_instr_nodbg_begin(LI.reg()),
+           E = MRI->reg_instr_nodbg_end();
+       I != E;) {
+    MachineInstr *MI = &*(I++);
+    if (MI->isMetaInstruction())
+      continue;
+    if (!Visited.insert(MI).second)
+      continue;
+
+    auto [Reads, Writes] = MI->readsWritesVirtualRegister(LI.reg());
+    auto MBBFreq = SpillPlacer->getBlockFrequency(MI->getParent()->getNumber());
+    SpillCost += (Reads + Writes) * MBBFreq.getFrequency();
+  }
+
+  return BlockFrequency(SpillCost);
+}
+
 /// Using a CSR for the first time has a cost because it causes push|pop
 /// to be added to prologue|epilogue. Splitting a cold section of the live
 /// range can have lower cost than using the CSR for the first time;
@@ -2354,7 +2382,7 @@ MCRegister RAGreedy::tryAssignCSRFirstTime(
     // We choose spill over using the CSR for the first time if the spill cost
     // is lower than CSRCost.
     SA->analyze(&VirtReg);
-    if (calcSpillCost() >= CSRCost)
+    if (calcSpillCost(VirtReg) >= CSRCost)
       return PhysReg;
 
     // We are going to spill, set CostPerUseLimit to 1 to make sure that
@@ -2387,31 +2415,43 @@ void RAGreedy::aboutToRemoveInterval(const LiveInterval &LI) {
 }
 
 void RAGreedy::initializeCSRCost() {
-  // We use the command-line option if it is explicitly set, otherwise use the
-  // larger one out of the command-line option and the value reported by TRI.
-  CSRCost = BlockFrequency(
-      CSRFirstTimeCost.getNumOccurrences()
-          ? CSRFirstTimeCost
-          : std::max((unsigned)CSRFirstTimeCost, TRI->getCSRFirstUseCost()));
-  if (!CSRCost.getFrequency())
-    return;
+  if (!CSRCostScale.getNumOccurrences() &&
+      (CSRFirstTimeCost.getNumOccurrences() || TRI->getCSRCost())) {
+    // We should deprecate the usage of CSRFirstTimeCost!
+    // We use the command-line option if it is explicitly set, otherwise use the
+    // larger one out of the command-line option and the value reported by TRI.
+    CSRCost = BlockFrequency(
+        CSRFirstTimeCost.getNumOccurrences()
+            ? CSRFirstTimeCost
+            : std::max((unsigned)CSRFirstTimeCost, TRI->getCSRCost()));
+    if (!CSRCost.getFrequency())
+      return;
 
-  // Raw cost is relative to Entry == 2^14; scale it appropriately.
-  uint64_t ActualEntry = MBFI->getEntryFreq().getFrequency();
-  if (!ActualEntry) {
-    CSRCost = BlockFrequency(0);
-    return;
+    // Raw cost is relative to Entry == 2^14; scale it appropriately.
+    uint64_t ActualEntry = MBFI->getEntryFreq().getFrequency();
+    if (!ActualEntry) {
+      CSRCost = BlockFrequency(0);
+      return;
+    }
+    uint64_t FixedEntry = 1 << 14;
+    if (ActualEntry < FixedEntry) {
+      CSRCost *= BranchProbability(ActualEntry, FixedEntry);
+    } else if (ActualEntry <= UINT32_MAX) {
+      // Invert the fraction and divide.
+      CSRCost /= BranchProbability(FixedEntry, ActualEntry);
+    } else {
+      // Can't use BranchProbability in general, since it takes 32-bit numbers.
+      CSRCost =
+          BlockFrequency(CSRCost.getFrequency() * (ActualEntry / FixedEntry));
+    }
+  } else {
+    uint64_t EntryFreq = MBFI->getEntryFreq().getFrequency();
+    CSRCost = BlockFrequency(TRI->getCSRFirstUseCost() * EntryFreq);
+    if (CSRCostScale < 100)
+      CSRCost *= BranchProbability(CSRCostScale, 100);
+    else
+      CSRCost /= BranchProbability(100, CSRCostScale);
   }
-  uint64_t FixedEntry = 1 << 14;
-  if (ActualEntry < FixedEntry)
-    CSRCost *= BranchProbability(ActualEntry, FixedEntry);
-  else if (ActualEntry <= UINT32_MAX)
-    // Invert the fraction and divide.
-    CSRCost /= BranchProbability(FixedEntry, ActualEntry);
-  else
-    // Can't use BranchProbability in general, since it takes 32-bit numbers.
-    CSRCost =
-        BlockFrequency(CSRCost.getFrequency() * (ActualEntry / FixedEntry));
 }
 
 /// Collect the hint info for \p Reg.

@@ -242,14 +242,21 @@ public:
     AMDPAL,     // AMD PAL Runtime
     HermitCore, // HermitCore Unikernel/Multikernel
     Hurd,       // GNU/Hurd
-    WASI,       // Experimental WebAssembly OS
+    WASI,       // Deprecated alias of WASI 0.1; in the future will be WASI 1.0.
+    WASIp1,     // WASI 0.1
+    WASIp2,     // WASI 0.2
+    WASIp3,     // WASI 0.3
     Emscripten,
     ShaderModel, // DirectX ShaderModel
     LiteOS,
     Serenity,
     Vulkan, // Vulkan SPIR-V
     CheriotRTOS,
-    LastOSType = CheriotRTOS
+    OpenCL,
+    ChipStar,
+    Firmware,
+    QURT,
+    LastOSType = QURT
   };
   enum EnvironmentType {
     UnknownEnvironment,
@@ -309,7 +316,6 @@ public:
     Mesh,
     Amplification,
     RootSignature,
-    OpenCL,
     OpenHOS,
     Mlibc,
 
@@ -623,11 +629,18 @@ public:
     return (getVendor() == Triple::Apple) && isOSBinFormatMachO();
   }
 
+  /// Is this an Apple firmware triple.
+  bool isAppleFirmware() const {
+    return (getVendor() == Triple::Apple) && isOSFirmware();
+  }
+
   /// Is this a "Darwin" OS (macOS, iOS, tvOS, watchOS, DriverKit, XROS, or
   /// bridgeOS).
   bool isOSDarwin() const {
     return isMacOSX() || isiOS() || isWatchOS() || isDriverKit() || isXROS() ||
-           isBridgeOS();
+           isBridgeOS() || isAppleFirmware();
+    // Apple firmware isn't necessarily a Darwin based OS, but for most intents
+    // and purposes it can be treated like a Darwin OS in the compiler.
   }
 
   bool isSimulatorEnvironment() const {
@@ -758,7 +771,8 @@ public:
 
   /// Tests whether the OS is WASI.
   bool isOSWASI() const {
-    return getOS() == Triple::WASI;
+    return getOS() == Triple::WASI || getOS() == Triple::WASIp1 ||
+           getOS() == Triple::WASIp2 || getOS() == Triple::WASIp3;
   }
 
   /// Tests whether the OS is Emscripten.
@@ -781,6 +795,9 @@ public:
   bool isOSSerenity() const {
     return getOS() == Triple::Serenity;
   }
+
+  /// Tests whether the OS is QURT.
+  bool isOSQurt() const { return getOS() == Triple::QURT; }
 
   /// Tests whether the OS uses the ELF binary format.
   bool isOSBinFormatELF() const {
@@ -887,6 +904,8 @@ public:
   bool isVulkanOS() const { return getOS() == Triple::Vulkan; }
 
   bool isOSManagarm() const { return getOS() == Triple::Managarm; }
+
+  bool isOSFirmware() const { return getOS() == Triple::Firmware; }
 
   bool isShaderStageEnvironment() const {
     EnvironmentType Env = getEnvironment();
@@ -1042,6 +1061,8 @@ public:
                ? PointerWidth == 32
                : PointerWidth == 64;
   }
+
+  bool isAVR() const { return getArch() == Triple::avr; }
 
   /// Tests whether the target is 32-bit LoongArch.
   bool isLoongArch32() const { return getArch() == Triple::loongarch32; }

@@ -21,6 +21,8 @@ BASE_BRANCH = "main"
 GITHUB_REMOTE_NAME = "origin"
 UPSTREAM_REMOTE_NAME = "upstream"
 
+DEFAULT_LABEL = "skip-precommit-approval"
+
 LLVM_GITHUB_TOKEN_VAR = "LLVM_GITHUB_TOKEN"
 LLVM_REPO = "llvm/llvm-project"
 GITHUB_API = "https://api.github.com"
@@ -44,6 +46,7 @@ class PRAutomatorConfig:
     upstream_remote: str
     prefix: str
     draft: bool
+    labels: List[str]
     no_merge: bool
     auto_merge: bool
 
@@ -169,6 +172,17 @@ class GitHubAPI:
             # operation was successful but there is no body.
             self._log_unexpected_status([204], response.status)
 
+    def _request_graphql(self, query: str, variables: dict):
+        output = self._request_and_parse_json(
+            "POST", "/graphql", {"query": query, "variables": variables}
+        )
+        if "errors" in output:
+            error_str = f"Error: GraphQL API returned errors: {', '.join([str(error) for error in output['errors']])}"
+            self.runner.print(
+                error_str,
+                file=sys.stderr,
+            )
+
     def _log_unexpected_status(
         self, expected_statuses: List[int], actual_status: int
     ) -> None:
@@ -188,7 +202,11 @@ class GitHubAPI:
         title: str,
         body: str,
         draft: bool,
-    ) -> Optional[str]:
+    ) -> tuple:
+        if self.runner.dry_run:
+            self.runner.print(f"[Dry Run] Would create pull request for '{head_branch}'...")
+            return 0
+
         self.runner.print(f"Creating pull request for '{head_branch}'...")
         data = {
             "title": title,
@@ -200,10 +218,8 @@ class GitHubAPI:
         response_data = self._request_and_parse_json(
             "POST", f"/repos/{LLVM_REPO}/pulls", json_payload=data
         )
-        pr_url = response_data.get("html_url")
-        if not self.runner.dry_run:
-            self.runner.print(f"Pull request created: {pr_url}")
-        return pr_url
+        self.runner.print(f"Pull request created: {response_data.get("html_url")}")
+        return (response_data.get("node_id"), response_data.get("number"))
 
     def get_repo_settings(self) -> dict:
         return self._request_and_parse_json("GET", f"/repos/{LLVM_REPO}")
@@ -212,6 +228,22 @@ class GitHubAPI:
         """Fetches the JSON details for a given pull request number."""
         return self._request_and_parse_json(
             "GET", f"/repos/{LLVM_REPO}/pulls/{pr_number}"
+        )
+
+    def add_labels(
+        self,
+        pr_number: int,
+        labels: List[str],
+    ) -> None:
+        if self.runner.dry_run:
+            self.runner.print(f"[Dry Run] Would set labels for #{pr_number}: {' '.join(labels)}")
+            return None
+
+        self.runner.print(f"Setting labels for #{pr_number}: {' '.join(labels)}")
+
+        self._request_and_parse_json(
+            "POST", f"/repos/{LLVM_REPO}/issues/{pr_number}/labels",
+            json_payload={"labels": labels},
         )
 
     def _attempt_squash_merge(self, pr_number: str) -> bool:
@@ -230,22 +262,14 @@ class GitHubAPI:
             # Re-raise other HTTP errors.
             raise e
 
-    def merge_pr(self, pr_url: str) -> Optional[str]:
-        if not pr_url:
-            return None
-
+    def merge_pr(self, pr_number: int) -> Optional[str]:
         if self.runner.dry_run:
-            self.runner.print(f"[Dry Run] Would merge {pr_url}")
+            self.runner.print(f"[Dry Run] Would merge #{pr_number}")
             return None
-
-        pr_number_match = re.search(r"/pull/(\d+)", pr_url)
-        if not pr_number_match:
-            raise LlvmPrError(f"Could not extract PR number from URL: {pr_url}")
-        pr_number = pr_number_match.group(1)
 
         for i in range(MERGE_MAX_RETRIES):
             self.runner.print(
-                f"Attempting to merge {pr_url} (attempt {i + 1}/{MERGE_MAX_RETRIES})..."
+                f"Attempting to merge #{pr_number} (attempt {i + 1}/{MERGE_MAX_RETRIES})..."
             )
 
             pr_data = self._get_pr_details(pr_number)
@@ -267,29 +291,25 @@ class GitHubAPI:
 
         raise LlvmPrError(f"PR was not mergeable after {MERGE_MAX_RETRIES} attempts.")
 
-    def enable_auto_merge(self, pr_url: str) -> None:
-        if not pr_url:
-            return
-
+    def enable_auto_merge(self, pr_number: int, node_id: str) -> None:
         if self.runner.dry_run:
-            self.runner.print(f"[Dry Run] Would enable auto-merge for {pr_url}")
+            self.runner.print(f"[Dry Run] Would enable auto-merge for #{pr_number}")
             return
 
-        pr_number_match = re.search(r"/pull/(\d+)", pr_url)
-        if not pr_number_match:
-            raise LlvmPrError(f"Could not extract PR number from URL: {pr_url}")
-        pr_number = pr_number_match.group(1)
-
-        self.runner.print(f"Enabling auto-merge for {pr_url}...")
-        data = {
-            "enabled": True,
-            "merge_method": "squash",
+        self.runner.print(f"Enabling auto-merge for #{pr_number}...")
+        # Use the enablePullRequestAutoMerge mutation to enable auto merge
+        # through the GraphQL API as this cannot be done through the REST
+        # API. Documented in
+        # https://docs.github.com/en/graphql/reference/mutations#enablepullrequestautomerge
+        graphql_mutation = """
+        mutation EnableAutomergeMutation($pr_id: ID!) {
+            enablePullRequestAutoMerge(input: {pullRequestId: $pr_id, mergeMethod: SQUASH}) {
+                clientMutationId
+            }
         }
-        self._request_no_content(
-            "PUT",
-            f"/repos/{LLVM_REPO}/pulls/{pr_number}/auto-merge",
-            json_payload=data,
-        )
+        """
+        graphql_variables = {"pr_id": node_id}
+        self._request_graphql(graphql_mutation, graphql_variables)
         self.runner.print("Auto-merge enabled.")
 
     def delete_branch(
@@ -360,10 +380,11 @@ class LLVMPRAutomator:
             text=True,
             read_only=True,
         )
-        if result.stdout.strip():
-            raise LlvmPrError(
-                "Your working tree is dirty. Please stash or commit your changes."
-            )
+        for file_path in [line.strip() for line in result.stdout.split("\n")[:-1]]:
+            if not file_path.startswith("?"):
+                raise LlvmPrError(
+                    "Your working tree is dirty. Please stash or commit your changes."
+                )
 
     def _rebase_current_branch(self) -> None:
         self._check_work_tree()
@@ -481,7 +502,7 @@ class LLVMPRAutomator:
         temp_branch = self._create_and_push_branch_for_commit(
             commit_hash, base_branch_name, index
         )
-        pr_url = self.github_api.create_pr(
+        pr_nodeid, pr_number = self.github_api.create_pr(
             head_branch=f"{self.config.user_login}:{temp_branch}",
             base_branch=self.config.base_branch,
             title=commit_title,
@@ -489,13 +510,20 @@ class LLVMPRAutomator:
             draft=self.config.draft,
         )
 
+        # TODO: There's a possibility of a race with PR labelers workflow.
+        # To avoid it, we could create the PR as a draft, set the labels
+        # and change the status, but that requires the use of GraphQL API.
+
+        if self.config.labels:
+            self.github_api.add_labels(pr_number, self.config.labels)
+
         if self.config.no_merge:
             return
 
         if self.config.auto_merge:
-            self.github_api.enable_auto_merge(pr_url)
+            self.github_api.enable_auto_merge(pr_number, pr_nodeid)
         else:
-            merged_branch = self.github_api.merge_pr(pr_url)
+            merged_branch = self.github_api.merge_pr(pr_number)
             if merged_branch and not self.repo_settings.get("delete_branch_on_merge"):
                 # After a merge, the branch should be deleted.
                 self.github_api.delete_branch(merged_branch)
@@ -600,6 +628,12 @@ def main() -> None:
     parser.add_argument(
         "--draft", action="store_true", help="Create pull requests as drafts."
     )
+    parser.add_argument(
+        "--labels",
+        nargs='*',
+        default=[DEFAULT_LABEL],
+        help=f"Set the PR labels (default: {DEFAULT_LABEL})."
+    )
     merging = parser.add_mutually_exclusive_group()
     merging.add_argument(
         "--no-merge", action="store_true", help="Create PRs but do not merge them."
@@ -651,6 +685,7 @@ def main() -> None:
             upstream_remote=args.upstream_remote,
             prefix=args.prefix,
             draft=args.draft,
+            labels=args.labels,
             no_merge=args.no_merge,
             auto_merge=args.auto_merge,
         )

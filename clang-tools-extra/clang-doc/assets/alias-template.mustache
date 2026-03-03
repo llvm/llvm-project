@@ -2,11 +2,11 @@
     {{#Template}}
     <pre><code class="language-cpp code-clang-doc">template &lt;{{#Parameters}}{{Param}}{{^End}}, {{/End}}{{/Parameters}}&gt;</code></pre>
     {{/Template}}
-    <pre><code class="language-cpp code-clang-doc">{{#IsUsing}}using{{/IsUsing}}{{^IsUsing}}typedef{{/IsUsing}} {{Name}}{{#IsUsing}} ={{/Isusing}} {{#Underlying}}{{Name}}{{/Underlying}}</code></pre>
+    <pre><code class="language-cpp code-clang-doc">{{#IsUsing}}using{{/IsUsing}}{{^IsUsing}}typedef{{/IsUsing}} {{Name}}{{#IsUsing}} ={{/IsUsing}}{{#Underlying}} {{Name}}{{/Underlying}}</code></pre>
     {{#Description}}
     {{>Comments}}
     {{/Description}}
     {{#Location}}
-    <p>Defined at line {{LineNumber}} of file {{Filename}}</p>
+    <p>Defined at line {{LineNumber}} of file {{^FileURL}}{{Filename}}{{/FileURL}}{{#FileURL}}<a href="{{FileURL}}">{{Filename}}</a>{{/FileURL}}</p>
     {{/Location}}
 </div>

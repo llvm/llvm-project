@@ -15,6 +15,7 @@
 
 #include "OSTargets.h"
 #include "clang/Basic/TargetBuiltins.h"
+#include "llvm/ADT/DenseSet.h"
 #include "llvm/TargetParser/AArch64TargetParser.h"
 #include <optional>
 
@@ -53,6 +54,8 @@ static const unsigned ARM64AddrSpaceMap[] = {
     // as it is only enabled for Wasm targets.
     20, // wasm_funcref
 };
+
+using AArch64FeatureSet = llvm::SmallDenseSet<StringRef, 32>;
 
 class LLVM_LIBRARY_VISIBILITY AArch64TargetInfo : public TargetInfo {
   static const TargetInfo::GCCRegAlias GCCRegAliases[];
@@ -131,8 +134,21 @@ class LLVM_LIBRARY_VISIBILITY AArch64TargetInfo : public TargetInfo {
   bool HasRCPC3 = false;
   bool HasSMEFA64 = false;
   bool HasPAuthLR = false;
+  bool HasFPRCVT = false;
+  bool HasF8F16MM = false;
+  bool HasF8F32MM = false;
+  bool HasSVE_F16F32MM = false;
+  bool HasSVE_BFSCALE = false;
+  bool HasSVE_AES2 = false;
+  bool HasSSVE_AES = false;
+  bool HasSVE2p2 = false;
+  bool HasSME2p2 = false;
 
   const llvm::AArch64::ArchInfo *ArchInfo = &llvm::AArch64::ARMV8A;
+
+  AArch64FeatureSet HasFeatureLookup;
+
+  void computeFeatureLookup();
 
 protected:
   std::string ABI;

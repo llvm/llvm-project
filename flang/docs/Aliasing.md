@@ -289,7 +289,7 @@ In order to disable optimizations that assume that there is no aliasing between
 Cray pointer targets and entities they alias with, add the TARGET attribute to
 variables aliasing with a Cray pointer (the `target` variable in this example).
 
-There is also a flag `-mmlir -funsafe-cray-pointers` which causes the compiler
+There is also a flag, `-funsafe-cray-pointers`, which causes the compiler
 to assume that cray pointers alias with all data whether or not it has the
 TARGET attribute.
 
