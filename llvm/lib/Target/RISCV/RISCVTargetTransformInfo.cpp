@@ -1279,18 +1279,17 @@ RISCVTTIImpl::getStridedMemoryOpCost(const MemIntrinsicCostAttributes &MICA,
   uint64_t CacheLineBytes = ST->getCacheLineSize();
   if (!CacheLineBytes) // If no value, use default value of 64
     CacheLineBytes = 64;
-  unsigned EltsPerCL = (CacheLineBytes * 8) / DataTy->getScalarSizeInBits();
   if (const ConstantInt *StrideCI =
           dyn_cast_or_null<ConstantInt>(MICA.getStrideVal())) {
     uint64_t AbsStride = (uint64_t)std::abs(StrideCI->getSExtValue());
-    if (AbsStride < EltsPerCL) {
+    if (AbsStride < CacheLineBytes) {
       uint64_t MaxCombines = ST->getMaxVectorCoalesceElts();
-      if ((EltsPerCL / AbsStride) >= MaxCombines)
+      if ((CacheLineBytes / AbsStride) >= MaxCombines)
         NumLoads = divideCeil(NumLoads, MaxCombines);
       else
-        // If we were to calculate EltsPerCL / AbsStride first, would lose
+        // If we were to calculate CacheLineBytes / AbsStride first, would lose
         // accuracy
-        NumLoads = divideCeil((NumLoads * AbsStride), EltsPerCL);
+        NumLoads = divideCeil((NumLoads * AbsStride), CacheLineBytes);
     }
   }
   return NumLoads * MemOpCost;
