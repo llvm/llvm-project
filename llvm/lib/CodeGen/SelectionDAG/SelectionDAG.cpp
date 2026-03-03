@@ -4751,6 +4751,13 @@ bool SelectionDAG::isKnownToBeAPowerOfTwo(SDValue Val,
            isKnownNeverZero(Val, Depth);
   }
 
+  case ISD::TRUNCATE: {
+    if (OrZero)
+      return isKnownToBeAPowerOfTwo(Val.getOperand(0), OrZero, Depth + 1);
+    return isKnownToBeAPowerOfTwo(Val.getOperand(0), OrZero, Depth + 1) &&
+           isKnownNeverZero(Val, Depth);
+  }
+
   case ISD::ROTL:
   case ISD::ROTR:
     return isKnownToBeAPowerOfTwo(Val.getOperand(0), /*OrZero=*/false,

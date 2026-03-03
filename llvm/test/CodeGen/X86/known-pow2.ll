@@ -1006,3 +1006,38 @@ define i32 @pow2_blsi_sub(i32 %x, i32 %a) {
   %r = and i32 %x_sub_y, %y
   ret i32 %r
 }
+
+define i8 @pow2_trunc_fail(i32 %x, i32 %a){
+; CHECK-LABEL: pow2_trunc_fail:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    movl %edi, %eax
+; CHECK-NEXT:    subb %sil, %al
+; CHECK-NEXT:    andb %sil, %al
+; CHECK-NEXT:    # kill: def $al killed $al killed $eax
+; CHECK-NEXT:    retq
+  %y = and i32 %a, 255
+  %x8 = trunc i32 %x to i8
+  %y8 = trunc i32 %y to i8
+  %x_sub_y = sub i8 %x8, %y8
+  %r = and i8 %x_sub_y, %y8
+  ret i8 %r
+}
+
+define i8 @pow2_trunc(i32 %x, i32 %a){
+; CHECK-LABEL: pow2_trunc:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    movl %esi, %eax
+; CHECK-NEXT:    negl %eax
+; CHECK-NEXT:    andl %esi, %eax
+; CHECK-NEXT:    notb %dil
+; CHECK-NEXT:    andb %dil, %al
+; CHECK-NEXT:    # kill: def $al killed $al killed $eax
+; CHECK-NEXT:    retq
+  %neg_a = sub i32 0, %a
+  %y = and i32 %a, %neg_a
+  %x8 = trunc i32 %x to i8
+  %y8 = trunc i32 %y to i8
+  %x_sub_y = sub i8 %x8, %y8
+  %r = and i8 %x_sub_y, %y8
+  ret i8 %r
+}
