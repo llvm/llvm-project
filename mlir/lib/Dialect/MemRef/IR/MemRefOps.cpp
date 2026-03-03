@@ -1019,17 +1019,6 @@ computeMemRefRankReductionMask(MemRefType originalType, MemRefType reducedType,
       originalType.getRank())
     return unusedDims;
 
-  // Stride-based logic can be wrong when multiple dims share the same size
-  // (e.g. 1x1x384 -> 1x384) or when strides are dynamic. Try position-based
-  // matching first; it is deterministic and matches subview semantics.
-  if (unusedDims.count() > 1) {
-    FailureOr<llvm::SmallBitVector> positionBased =
-        computeMemRefRankReductionMaskByPosition(originalType, reducedType,
-                                                 sizes);
-    if (succeeded(positionBased))
-      return *positionBased;
-  }
-
   SmallVector<int64_t> originalStrides, candidateStrides;
   int64_t originalOffset, candidateOffset;
   if (failed(
@@ -1037,6 +1026,18 @@ computeMemRefRankReductionMask(MemRefType originalType, MemRefType reducedType,
       failed(
           reducedType.getStridesAndOffset(candidateStrides, candidateOffset)))
     return failure();
+
+  // When strides are dynamic and multiple dimensions need to be dropped, we use
+  // position-based matching instead.
+  if (unusedDims.count() > 1 &&
+      (llvm::any_of(originalStrides, ShapedType::isDynamic) ||
+       llvm::any_of(candidateStrides, ShapedType::isDynamic))) {
+    FailureOr<llvm::SmallBitVector> positionBased =
+        computeMemRefRankReductionMaskByPosition(originalType, reducedType,
+                                                 sizes);
+    if (succeeded(positionBased))
+      return *positionBased;
+  }
 
   // For memrefs, a dimension is truly dropped if its corresponding stride is
   // also dropped. This is particularly important when more than one of the dims
