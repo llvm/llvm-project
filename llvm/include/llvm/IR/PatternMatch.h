@@ -2333,6 +2333,50 @@ m_ZExtOrTruncOrSelf(const OpTy &Op) {
   return m_CombineOr(m_CombineOr(m_ZExt(Op), m_Trunc(Op)), Op);
 }
 
+struct BooleanMap_match {
+  Value *&Cond;
+  Constant *&TrueC;
+  Constant *&FalseC;
+
+  BooleanMap_match(Value *&C, Constant *&TC, Constant *&FC)
+      : Cond(C), TrueC(TC), FalseC(FC) {}
+
+  template <typename OpTy> bool match(OpTy *V) const {
+    // select(Cond, TrueC, FalseC) — captures both constants directly
+    if (PatternMatch::match(
+            V, m_Select(m_Value(Cond), m_Constant(TrueC), m_Constant(FalseC))))
+      return true;
+
+    Type *Ty = V->getType();
+    Value *CondV;
+
+    // zext(i1 Cond) is equivalent to select(Cond, 1, 0)
+    if (PatternMatch::match(V, m_ZExt(m_Value(CondV))) &&
+        CondV->getType()->isIntOrIntVectorTy(1)) {
+      Cond = CondV;
+      TrueC = ConstantInt::get(Ty, 1);
+      FalseC = ConstantInt::get(Ty, 0);
+      return true;
+    }
+
+    // sext(i1 Cond) is equivalent to select(Cond, -1, 0)
+    if (PatternMatch::match(V, m_SExt(m_Value(CondV))) &&
+        CondV->getType()->isIntOrIntVectorTy(1)) {
+      Cond = CondV;
+      TrueC = Constant::getAllOnesValue(Ty);
+      FalseC = ConstantInt::get(Ty, 0);
+      return true;
+    }
+
+    return false;
+  }
+};
+
+inline BooleanMap_match m_BooleanMap(Value *&C, Constant *&TrueC,
+                                     Constant *&FalseC) {
+  return BooleanMap_match(C, TrueC, FalseC);
+}
+
 template <typename OpTy>
 inline CastInst_match<OpTy, UIToFPInst> m_UIToFP(const OpTy &Op) {
   return CastInst_match<OpTy, UIToFPInst>(Op);
