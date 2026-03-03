@@ -17230,10 +17230,8 @@ static SDValue combineSELECT_CCBitFloor(SDNode *N, SelectionDAG &DAG) {
   if (!isNullConstant(TrueVal))
     return SDValue();
 
-  // DAGCombine before instruction selection. We also require hasOneUse() to
-  // ensure we can safely replace ISD::SRL with PPCISD::SRL without affecting
-  // other users. PowerPC's SRD/SRW instructions guarantee that a shift by
-  // bitwidth returns 0, which matches our needs for the bitfloor(0) case.
+  // We also require hasOneUse()  to ensure that we can safely replace ISD::SRL
+  // with PPCISD::SRL without affecting other users later.
   if (FalseVal.getOpcode() != ISD::SRL || !FalseVal.hasOneUse())
     return SDValue();
 
