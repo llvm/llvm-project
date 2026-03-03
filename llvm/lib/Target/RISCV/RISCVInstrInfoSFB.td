@@ -20,7 +20,7 @@ def sfb_rhs : RegisterOperand<GPR> {
   let OperandType = "OPERAND_SFB_RHS";
 }
 
-// cond -> bcc_opcode
+// cond -> bcc_opcode for reg, reg branches
 def CCtoRISCVBCC : SDNodeXForm<cond, [{
   ISD::CondCode CC = N->get();
   RISCVCC::CondCode RvCC = getRISCVCCForIntCC(CC);
@@ -174,7 +174,7 @@ def PseudoCCORN  : SFBALU_rr;
 def PseudoCCXNOR : SFBALU_rr;
 }
 
-// imm -> bcc_opcode
+// imm -> bcc_opcode for reg, reg  branches
 def RISCVCCtoRISCVBCC : SDNodeXForm<imm, [{
   auto CCImm = cast<ConstantSDNode>(N)->getZExtValue();
   auto RvCC = static_cast<RISCVCC::CondCode>(CCImm);
