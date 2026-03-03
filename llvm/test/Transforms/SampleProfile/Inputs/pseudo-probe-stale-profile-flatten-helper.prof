@@ -1,0 +1,12 @@
+foo_old:100:100
+ 1: 50
+ 2: 50
+ 3: bar_old:50
+  1: 50
+  !CFGChecksum: 333333
+ !CFGChecksum: 222222
+main:200:0
+ 1: 0
+ 2: 100
+ 5: 100 foo_old:100
+ !CFGChecksum: 111111
