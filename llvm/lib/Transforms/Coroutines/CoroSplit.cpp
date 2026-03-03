@@ -1913,6 +1913,48 @@ void coro::AnyRetconABI::splitCoroutine(Function &F, coro::Shape &Shape,
       auto *CastedContinuation =
           Builder.CreateBitCast(ContinuationPhi, CastedContinuationTy);
 
+      // Sign the resume function pointer if !ptrauth.resume metadata is present.
+      if (Id) {
+        if (auto *MD = Id->getMetadata("ptrauth.resume")) {
+          auto *KeyMD = cast<ConstantAsMetadata>(MD->getOperand(0));
+          auto *DiscMD = cast<ConstantAsMetadata>(MD->getOperand(1));
+          auto *AddrDivMD = cast<ConstantAsMetadata>(MD->getOperand(2));
+          unsigned Key =
+              cast<ConstantInt>(KeyMD->getValue())->getZExtValue();
+          uint64_t Disc =
+              cast<ConstantInt>(DiscMD->getValue())->getZExtValue();
+          bool AddrDiv =
+              cast<ConstantInt>(AddrDivMD->getValue())->getZExtValue();
+
+          auto &Ctx = F.getContext();
+          auto *Int64Ty = Type::getInt64Ty(Ctx);
+          auto *Int32Ty = Type::getInt32Ty(Ctx);
+
+          auto *ContInt =
+              Builder.CreatePtrToInt(CastedContinuation, Int64Ty);
+
+          Value *Modifier;
+          if (AddrDiv) {
+            auto *BufAddr = Builder.CreatePtrToInt(
+                Id->getStorage(), Int64Ty);
+            auto *BlendFn = Intrinsic::getOrInsertDeclaration(
+                F.getParent(), Intrinsic::ptrauth_blend);
+            Modifier = Builder.CreateCall(
+                BlendFn, {BufAddr, ConstantInt::get(Int64Ty, Disc)});
+          } else {
+            Modifier = ConstantInt::get(Int64Ty, Disc);
+          }
+
+          auto *SignFn = Intrinsic::getOrInsertDeclaration(
+              F.getParent(), Intrinsic::ptrauth_sign);
+          auto *Signed = Builder.CreateCall(
+              SignFn,
+              {ContInt, ConstantInt::get(Int32Ty, Key), Modifier});
+          CastedContinuation =
+              Builder.CreateIntToPtr(Signed, CastedContinuationTy);
+        }
+      }
+
       Value *RetV = CastedContinuation;
       if (!ReturnPHIs.empty()) {
         auto ValueIdx = 0;

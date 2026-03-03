@@ -311,6 +311,34 @@ derived from the parent function's name, using the SipHash stable discriminator:
 ```
 
 
+### Coroutine Resume Pointer Signing
+
+The ``!ptrauth.resume`` metadata can be attached to ``@llvm.coro.id.retcon``
+and ``@llvm.coro.id.retcon.once`` intrinsic calls to request that the resume
+function pointer stored in the continuation be signed using pointer
+authentication.
+
+The metadata takes three operands:
+
+```
+!ptrauth.resume !{i32 <key>, i64 <discriminator>, i1 <addr_discriminated>}
+```
+
+- **key**: The ptrauth key to use for signing (e.g., 0 for IA).
+- **discriminator**: A constant discriminator value.
+- **addr_discriminated**: If true, the discriminator is blended with the
+  address of the continuation buffer using ``llvm.ptrauth.blend`` before
+  signing, providing address diversity.
+
+When this metadata is present, ``CoroSplit`` emits ``llvm.ptrauth.sign``
+(and optionally ``llvm.ptrauth.blend``) calls in the ramp function to sign
+the resume pointer before returning it to the caller.
+
+This is used by Swift IRGen to sign resume pointers for modify accessors
+(yield-once coroutines) on arm64e, where the runtime authenticates them
+with ``blraa`` before calling.
+
+
 ## AArch64 Support
 
 AArch64 is currently the only architecture with full support of the pointer
