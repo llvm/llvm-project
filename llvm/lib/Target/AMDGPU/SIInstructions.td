@@ -2452,6 +2452,7 @@ def : GCNPat <
   (V_MOV_B32_e32 (bf16 (bitcast_fpimm_to_i32 $imm)))
 >;
 
+
 def : GCNPat <
   (bf16 fpimm:$imm),
   (S_MOV_B32 (i32 (bitcast_fpimm_to_i32 $imm)))
