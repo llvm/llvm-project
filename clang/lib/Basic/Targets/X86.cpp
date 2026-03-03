@@ -179,8 +179,12 @@ bool X86TargetInfo::initFeatureMap(
       continue;
     }
 
-    if (llvm::X86::expandAPXFeatures(Feature, getTriple(), UpdatedFeaturesVec))
+    if (Feature == "+apxf" || Feature == "-apxf") {
+      llvm::X86::expandAPXFeatures(Feature == "-apxf" ? true : false,
+                                   getTriple().isOSWindows(),
+                                   UpdatedFeaturesVec);
       continue;
+    }
 
     UpdatedFeaturesVec.push_back(Feature);
   }

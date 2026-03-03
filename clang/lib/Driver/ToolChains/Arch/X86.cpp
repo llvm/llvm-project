@@ -258,8 +258,7 @@ void x86::getX86TargetFeatures(const Driver &D, const llvm::Triple &Triple,
 
     if (A->getOption().matches(options::OPT_mapxf) ||
         A->getOption().matches(options::OPT_mno_apxf)) {
-      llvm::X86::expandAPXFeatures(IsNegative ? "-apxf" : "+apxf", Triple,
-                                   Features);
+      llvm::X86::expandAPXFeatures(IsNegative, Triple.isOSWindows(), Features);
       if (!IsNegative && Not64Bit)
         D.Diag(diag::err_drv_unsupported_opt_for_target)
             << StringRef("-mapxf") << Triple.getTriple();

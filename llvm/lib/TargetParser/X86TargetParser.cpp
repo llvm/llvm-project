@@ -778,20 +778,17 @@ llvm::X86::getCpuSupportsMask(ArrayRef<StringRef> FeatureStrs) {
   return FeatureMask;
 }
 
-bool llvm::X86::expandAPXFeatures(StringRef Name, const llvm::Triple &Triple,
+void llvm::X86::expandAPXFeatures(bool Negative, const bool IsOsWindows,
                                   std::vector<StringRef> &Features) {
-  if (Name == "+apxf") {
+  if (Negative) {
+    Features.insert(Features.end(), {"-egpr", "-ndd", "-ccmp", "-nf", "-zu",
+                                     "-push2pop2", "-ppx", "-cf"});
+  } else {
     Features.insert(Features.end(), {"+egpr", "+ndd", "+ccmp", "+nf", "+zu"});
-    if (!Triple.isOSWindows()) {
+    if (!IsOsWindows) {
       Features.insert(Features.end(), {"+push2pop2", "+ppx"});
     }
-  } else if (Name == "-apxf") {
-    Features.insert(Features.end(), {"-egpr", "-ndd", "-ccmp", "-nf", "-zu",
-                                     "-push2pop2", "-ppx"});
-  } else {
-    return false;
   }
-  return true;
 }
 
 unsigned llvm::X86::getFeaturePriority(ProcessorFeatures Feat) {

@@ -188,7 +188,7 @@ LLVM_ABI std::array<uint32_t, 4>
 getCpuSupportsMask(ArrayRef<StringRef> FeatureStrs);
 LLVM_ABI unsigned getFeaturePriority(ProcessorFeatures Feat);
 
-LLVM_ABI bool expandAPXFeatures(StringRef Name, const llvm::Triple &Triple,
+LLVM_ABI void expandAPXFeatures(bool Negative, bool IsOSWindows,
                                 std::vector<StringRef> &Features);
 
 } // namespace X86
