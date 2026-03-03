@@ -7208,7 +7208,7 @@ static bool planContainsDifferentCompares(VPlan &Plan, VPCostContext &CostCtx,
   // Count how many compare instructions there are in the VPlan.
   unsigned NumVPlanScalarCompares = 0, NumVPlanVectorCompares = 0;
   VPRegionBlock *VectorRegion = Plan.getVectorLoopRegion();
-  auto Iter = vp_depth_first_deep(VectorRegion->getEntry());
+  auto Iter = vp_depth_first_shallow(VectorRegion->getEntry());
   for (VPBasicBlock *VPBB : VPBlockUtils::blocksOnly<VPBasicBlock>(Iter)) {
     // Only the blocks in the vector region are relevant.
     if (VPBB->getEnclosingLoopRegion() != VectorRegion)
