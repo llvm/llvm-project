@@ -1768,17 +1768,19 @@ void unconditional_assignment_in_loop() {
   }
 }
 
+// FIXME: False positive. Requires modeling flow-sensitive aliased origins
+// to properly expire pp's inner origin when p's lifetime ends.
 void multi_level_pointer_in_loop() {
   for (int i = 0; i < 10; ++i) {
     MyObj obj;
     MyObj* p;
     MyObj** pp;
     if (i > 5) {
-      p = &obj;
+      p = &obj; // expected-warning {{object whose reference is captured does not live long enough}}
       pp = &p;
     }
-    (void)**pp;
-  }
+    (void)**pp; // expected-note {{later used here}}
+  }             // expected-note {{destroyed here}}
 }
 
 void outer_pointer_outlives_inner_pointee() {
