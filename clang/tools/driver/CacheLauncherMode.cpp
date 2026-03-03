@@ -46,7 +46,7 @@ static bool isSameProgram(StringRef clangCachePath, StringRef compilerPath) {
 
 static bool shouldCacheInvocation(ArrayRef<const char *> Args,
                                   IntrusiveRefCntPtr<DiagnosticsEngine> Diags,
-                                  bool &SupportsMCCAS) {
+                                  bool &SupportsMCCAS, bool &IsCOFF) {
   SmallVector<const char *, 128> CheckArgs(Args.begin(), Args.end());
   // Make sure "-###" is not present otherwise we won't get an object back.
   CheckArgs.erase(
@@ -83,6 +83,7 @@ static bool shouldCacheInvocation(ArrayRef<const char *> Args,
 
   llvm::Triple T(CInvok->getTargetOpts().Triple);
   SupportsMCCAS = T.isOSBinFormatMachO();
+  IsCOFF = T.isOSBinFormatCOFF();
 
   return true;
 }
@@ -137,7 +138,8 @@ static void addCommonArgs(bool ForDriver, SmallVectorImpl<const char *> &Args,
 
 /// Arguments specific to \p clang-cache compiler launcher functionality.
 static void addLauncherArgs(SmallVectorImpl<const char *> &AllArgs,
-                            llvm::StringSaver &Saver, bool SupportsMCCAS, bool IsCLMode) {
+                            llvm::StringSaver &Saver, bool SupportsMCCAS,
+                            bool IsCLMode, bool IsCOFF) {
   // Split the args at the end of option (EOO) marker "--", if any.
   auto InsertPoint =
       llvm::find_if(AllArgs, [](const char *Elem) { return StringRef(Elem) == "--"; });
@@ -213,6 +215,10 @@ static void addLauncherArgs(SmallVectorImpl<const char *> &AllArgs,
   if (ServicePath) {
     AppendArgs({"-Xclang", "-fcompilation-caching-service-path", "-Xclang",
         ServicePath});
+  }
+  if (IsCOFF) {
+    // Suppress timestamp non-determism in COFF object files.
+    AppendArgs({"-mno-incremental-linker-compatible"});
   }
   AppendArgs({"-greproducible"});
 
@@ -304,14 +310,14 @@ clang::handleClangCacheInvocation(SmallVectorImpl<const char *> &Args,
     Args[0] = Saver.save(compilerPath).data();
 
   if (isSameProgram(clangCachePath, compilerPath)) {
-    bool SupportsMCCAS = false;
-    if (!shouldCacheInvocation(Args, DiagsPtr, SupportsMCCAS)) {
+    bool SupportsMCCAS = false, IsCOFF = false;
+    if (!shouldCacheInvocation(Args, DiagsPtr, SupportsMCCAS, IsCOFF)) {
       if (Diags.hasErrorOccurred())
         return 1;
       return std::nullopt;
     }
     bool IsCLMode = driver::getDriverMode(compilerPath, ArrayRef(Args)) == "cl";
-    addLauncherArgs(Args, Saver, SupportsMCCAS, IsCLMode);
+    addLauncherArgs(Args, Saver, SupportsMCCAS, IsCLMode, IsCOFF);
     return std::nullopt;
   }
 
