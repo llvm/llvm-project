@@ -1,0 +1,68 @@
+"""
+Use lldb Python SBBlock API to access specific scopes within a frame.
+"""
+
+import lldb
+from lldbsuite.test.decorators import *
+from lldbsuite.test.lldbtest import *
+from lldbsuite.test import lldbutil
+
+
+class BlockAPITestCase(TestBase):
+    def test_block_equality(self):
+        """Exercise SBBlock equality checks."""
+        self.build()
+        exe = self.getBuildArtifact("a.out")
+
+        # Create a target by the debugger.
+        target = self.dbg.CreateTarget(exe)
+        self.assertTrue(target, VALID_TARGET)
+
+        source = "main.c"
+        line1 = line_number(source, "// breakpoint 1")
+        line2 = line_number(source, "// breakpoint 2")
+        breakpoint1 = target.BreakpointCreateByLocation(source, line1)
+        breakpoint2 = target.BreakpointCreateByLocation(source, line2)
+        self.assertGreaterEqual(breakpoint1.GetNumLocations(), 1, PROCESS_IS_VALID)
+        self.assertGreaterEqual(breakpoint2.GetNumLocations(), 1, PROCESS_IS_VALID)
+
+        # Now launch the process, and do not stop at the entry point.
+        process = target.LaunchSimple(None, None, self.get_process_working_directory())
+        self.assertState(process.GetState(), lldb.eStateStopped, PROCESS_STOPPED)
+
+        threads = lldbutil.get_threads_stopped_at_breakpoint(process, breakpoint1)
+        self.assertEqual(
+            len(threads), 1, "There should be a thread stopped at breakpoint 1"
+        )
+
+        thread = threads[0]
+        self.assertTrue(thread.IsValid(), "Thread must be valid")
+        frame = thread.GetFrameAtIndex(0)
+        self.assertTrue(frame.IsValid(), "Frame must be valid")
+
+        main_frame_block = frame.GetFrameBlock()
+        self.assertNotEqual(main_frame_block.GetID(), 0, "Invalid block id")
+
+        # Continue to breakpoint 2
+        process.Continue()
+
+        threads = lldbutil.get_threads_stopped_at_breakpoint(process, breakpoint2)
+        self.assertEqual(
+            len(threads), 1, "There should be a thread stopped at breakpoint 2"
+        )
+
+        thread = threads[0]
+        self.assertTrue(thread.IsValid(), "Thread must be valid")
+        frame = thread.GetFrameAtIndex(0)
+        self.assertTrue(frame.IsValid(), "Frame must be valid")
+
+        fn_frame_block = frame.GetFrameBlock()
+        self.assertNotEqual(fn_frame_block.GetID(), 0, "Invalid block id")
+
+        fn_inner_block = frame.GetBlock()
+        self.assertNotEqual(fn_inner_block.GetID(), 0, "Invalid block id")
+
+        # Check __eq__ / __ne__
+        self.assertNotEqual(fn_inner_block, fn_frame_block)
+        self.assertNotEqual(main_frame_block, fn_frame_block)
+        self.assertEqual(fn_inner_block.GetParent(), fn_frame_block)

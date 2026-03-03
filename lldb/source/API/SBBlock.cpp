@@ -56,13 +56,14 @@ SBBlock::operator bool() const {
 bool SBBlock::operator==(const SBBlock &rhs) const {
   LLDB_INSTRUMENT_VA(this, rhs);
 
-  return *m_opaque_ptr == *rhs.m_opaque_ptr;
+  return m_opaque_ptr != nullptr && rhs.m_opaque_ptr != nullptr &&
+         *m_opaque_ptr == *rhs.m_opaque_ptr;
 }
 
 bool SBBlock::operator!=(const SBBlock &rhs) const {
   LLDB_INSTRUMENT_VA(this, rhs);
 
-  return *m_opaque_ptr != *rhs.m_opaque_ptr;
+  return !(*this == rhs);
 }
 
 user_id_t SBBlock::GetID() const {
