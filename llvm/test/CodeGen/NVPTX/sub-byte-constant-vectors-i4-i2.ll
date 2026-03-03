@@ -1,3 +1,6 @@
+; Test to verify that NVPTX backend correctly handles constant global vectors
+; containing sub-byte sized elements.
+
 ; RUN: llc < %s -mtriple=nvptx64 | FileCheck %s
 ; RUN: %if ptxas %{ llc < %s -mtriple=nvptx64 | %ptxas-verify %}
 

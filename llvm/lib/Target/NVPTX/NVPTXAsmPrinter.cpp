@@ -1756,7 +1756,9 @@ void NVPTXAsmPrinter::bufferAggregateConstVec(const ConstantVector *CV,
   }
 
   // We have more elements than allocated buffer space, this implies sub-byte
-  // datatype in the vector. Merge consecutive elements to form a full byte.
+  // datatype in the vector. Merge consecutive elements to form a full byte. We
+  // expect that 8 % sub-byte-elem-size should be 0 and current expected usage
+  // is for i4 (for e2m1-fp4 types).
   Type *ElemTy = CV->getType()->getElementType();
   assert(ElemTy->isIntegerTy() && "Expected integer data type.");
   unsigned ElemTySize = ElemTy->getPrimitiveSizeInBits();
