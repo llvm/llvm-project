@@ -20,13 +20,14 @@
 // CHECK-PHASES: 4: preprocessor, {3}, cpp-output, (device-openmp, gfx906)
 // CHECK-PHASES: 5: compiler, {4}, ir, (device-openmp, gfx906)
 // CHECK-PHASES: 6: offload, "host-openmp (x86_64-unknown-linux-gnu)" {2}, "device-openmp (amdgcn-amd-amdhsa:gfx906)" {5}, ir
-// CHECK-PHASES: 7: backend, {6}, ir, (device-openmp, gfx906)
-// CHECK-PHASES: 8: offload, "device-openmp (amdgcn-amd-amdhsa:gfx906)" {7}, ir
-// CHECK-PHASES: 9: llvm-offload-binary, {8}, image, (device-openmp)
-// CHECK-PHASES: 10: offload, "host-openmp (x86_64-unknown-linux-gnu)" {2}, "device-openmp (x86_64-unknown-linux-gnu)" {9}, ir
-// CHECK-PHASES: 11: backend, {10}, assembler, (host-openmp)
-// CHECK-PHASES: 12: assembler, {11}, object, (host-openmp)
-// CHECK-PHASES: 13: clang-linker-wrapper, {12}, image, (host-openmp)
+// CHECK-PHASES: 7: backend, {6}, assembler, (device-openmp, gfx906)
+// CHECK-PHASES: 8: assembler, {7}, object, (device-openmp, gfx906)
+// CHECK-PHASES: 9: offload, "device-openmp (amdgcn-amd-amdhsa:gfx906)" {8}, object
+// CHECK-PHASES: 10: llvm-offload-binary, {9}, image, (device-openmp)
+// CHECK-PHASES: 11: offload, "host-openmp (x86_64-unknown-linux-gnu)" {2}, "device-openmp (x86_64-unknown-linux-gnu)" {10}, ir
+// CHECK-PHASES: 12: backend, {11}, assembler, (host-openmp)
+// CHECK-PHASES: 13: assembler, {12}, object, (host-openmp)
+// CHECK-PHASES: 14: clang-linker-wrapper, {13}, image, (host-openmp)
 
 // RUN:   %clang -### --target=x86_64-unknown-linux-gnu -ccc-print-bindings -fopenmp -fopenmp-targets=amdgcn-amd-amdhsa -Xopenmp-target=amdgcn-amd-amdhsa -march=gfx803 -nogpulib %s 2>&1 | FileCheck %s --check-prefix=CHECK-BINDINGS
 // RUN:   %clang -### --target=x86_64-unknown-linux-gnu -ccc-print-bindings -fopenmp -fopenmp-targets=amdgcn-amd-amdhsa --offload-arch=gfx803 -nogpulib %s 2>&1 | FileCheck %s --check-prefix=CHECK-BINDINGS
@@ -42,8 +43,9 @@
 // CHECK-BINDINGS-TEMPS: "x86_64-unknown-linux-gnu" - "clang", inputs: ["[[HOST_PP]]"], output: "[[HOST_BC:.+]]"
 // CHECK-BINDINGS-TEMPS: "amdgcn-amd-amdhsa" - "clang", inputs: ["[[INPUT]]"], output: "[[DEVICE_PP:.+]]"
 // CHECK-BINDINGS-TEMPS: "amdgcn-amd-amdhsa" - "clang", inputs: ["[[DEVICE_PP]]", "[[HOST_BC]]"], output: "[[DEVICE_TEMP_BC:.+]]"
-// CHECK-BINDINGS-TEMPS: "amdgcn-amd-amdhsa" - "clang", inputs: ["[[DEVICE_TEMP_BC]]"], output: "[[DEVICE_BC:.+]]"
-// CHECK-BINDINGS-TEMPS: "x86_64-unknown-linux-gnu" - "Offload::Packager", inputs: ["[[DEVICE_BC]]"], output: "[[DEVICE_IMAGE:.+]]"
+// CHECK-BINDINGS-TEMPS: "amdgcn-amd-amdhsa" - "clang", inputs: ["[[DEVICE_TEMP_BC]]"], output: "[[DEVICE_ASM:.+]]"
+// CHECK-BINDINGS-TEMPS: "amdgcn-amd-amdhsa" - "clang::as", inputs: ["[[DEVICE_ASM]]"], output: "[[DEVICE_OBJ:.+]]"
+// CHECK-BINDINGS-TEMPS: "x86_64-unknown-linux-gnu" - "Offload::Packager", inputs: ["[[DEVICE_OBJ]]"], output: "[[DEVICE_IMAGE:.+]]"
 // CHECK-BINDINGS-TEMPS: "x86_64-unknown-linux-gnu" - "clang", inputs: ["[[HOST_BC]]", "[[DEVICE_IMAGE]]"], output: "[[HOST_ASM:.+]]"
 // CHECK-BINDINGS-TEMPS: "x86_64-unknown-linux-gnu" - "clang::as", inputs: ["[[HOST_ASM]]"], output: "[[HOST_OBJ:.+]]"
 // CHECK-BINDINGS-TEMPS: "x86_64-unknown-linux-gnu" - "Offload::Linker", inputs: ["[[HOST_OBJ]]"], output: "a.out"
