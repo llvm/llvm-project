@@ -1,0 +1,57 @@
+import lit.formats
+import os
+
+# Setup config name.
+config.name = "LowFatSanitizer" + getattr(config, "name_suffix", "")
+
+# Setup source root.
+config.test_source_root = os.path.dirname(__file__)
+config.suffixes = [".c", ".cpp"]
+
+# Teach lit that these are shell tests (// RUN: ... lines).
+# When loaded via the build-dir site config, lit.common.configured sets this;
+# when invoked directly against the source dir, we must set it ourselves.
+if not hasattr(config, "test_format"):
+    config.test_format = lit.formats.ShTest(execute_external=True)
+
+
+# Find clang++:
+#   1. config.clang is set by lit.common.configured (when run via build-dir site config)
+#   2. config.llvm_tools_dir is set by lit.common.configured
+#   3. Fall back to bare "clang++" on PATH for direct source-dir invocations
+def _find_clang():
+    clang = getattr(config, "clang", None)
+    if clang:
+        return clang
+    tools_dir = getattr(config, "llvm_tools_dir", None)
+    if tools_dir:
+        candidate = os.path.join(tools_dir, "clang++")
+        if os.path.isfile(candidate):
+            return candidate
+    return "clang++"
+
+
+clang = _find_clang()
+
+
+def build_invocation(flags):
+    return " " + " ".join([clang] + flags) + " "
+
+
+# Fatal mode  : terminate on first OOB
+lowfat_flags = ["-fsanitize=lowfat", "-O1"]
+# Recover mode: warn + continue
+lowfat_recover_flags = lowfat_flags + ["-fsanitize-recover=lowfat"]
+
+config.substitutions.append(("%clangxx_lowfat ", build_invocation(lowfat_flags)))
+config.substitutions.append(
+    ("%clangxx_lowfat_recover ", build_invocation(lowfat_recover_flags))
+)
+
+# Only Darwin and Linux are supported.
+if getattr(config, "target_os", "Unknown") not in ["Darwin", "Linux"]:
+    # When running directly (no site config), target_os may be unset; don't
+    # mark unsupported in that case — let the tests fail naturally if the
+    # platform truly isn't supported.
+    if hasattr(config, "target_os"):
+        config.unsupported = True
