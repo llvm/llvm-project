@@ -2528,7 +2528,9 @@ OperationLegalizer::OperationLegalizer(ConversionPatternRewriter &rewriter,
   computeLegalizationGraphBenefit(anyOpLegalizerPatterns, legalizerPatterns);
 }
 
-bool OperationLegalizer::isIllegal(Operation *op) const { return target.isIllegal(op); }
+bool OperationLegalizer::isIllegal(Operation *op) const {
+  return target.isIllegal(op);
+}
 
 LogicalResult OperationLegalizer::legalize(Operation *op) {
 #ifndef NDEBUG
@@ -3305,7 +3307,9 @@ LogicalResult OperationConverter::convert(Operation *op,
                                           bool isRecursiveLegalization) {
   const ConversionConfig &config = rewriter.getConfig();
   auto emitFailedToLegalizeDiag = [&](bool wasExplicitlyIllegal) {
-    InFlightDiagnostic diag = op->emitError() << "failed to legalize operation";
+    InFlightDiagnostic diag = op->emitError()
+                              << "failed to legalize operation '"
+                              << op->getName() << "'";
     if (wasExplicitlyIllegal)
       diag << " that was explicitly marked illegal";
     diag << ": " << OpWithFlags(op, OpPrintingFlags().skipRegions());
