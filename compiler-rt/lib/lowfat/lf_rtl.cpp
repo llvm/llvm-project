@@ -163,7 +163,7 @@ static void PrintOobHeader(const char *level, uptr ptr, uptr base, uptr bound,
 
 static void PrintErrorAndDie(uptr ptr, uptr base, uptr bound, int is_write) {
   PrintOobHeader("ERROR", ptr, base, bound, is_write);
-  Die();
+  internal__exit(1);
 }
 
 static void PrintWarning(uptr ptr, uptr base, uptr bound, int is_write) {
