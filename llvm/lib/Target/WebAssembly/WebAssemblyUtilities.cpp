@@ -212,7 +212,8 @@ MachineSDNode *WebAssembly::getTLSBase(SelectionDAG &DAG, const SDLoc &DL,
   } else {
     SDValue TLSBaseSym = DAG.getTargetExternalSymbol("__tls_base", PtrVT);
     if (Chain.getNode())
-      return DAG.getMachineNode(GlobalGetIns, DL, PtrVT, MVT::Other, TLSBaseSym, Chain);
+      return DAG.getMachineNode(GlobalGetIns, DL, PtrVT, MVT::Other, TLSBaseSym,
+                                Chain);
     return DAG.getMachineNode(GlobalGetIns, DL, PtrVT, TLSBaseSym);
   }
 }
