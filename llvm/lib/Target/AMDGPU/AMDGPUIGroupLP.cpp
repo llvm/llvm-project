@@ -2571,10 +2571,10 @@ bool SchedGroup::canAddSU(SUnit &SU) const {
 template <class T>
 void SchedGroup::findCandidateSUnits(T Begin, T End,
                                      SUnitsToCandidateSGsMap &SyncedInstrs) {
-  std::for_each(Begin, End, [this, &SyncedInstrs](SUnit &SU) {
+  for (SUnit &SU : make_range(Begin, End)) {
     if (canAddSU(SU))
       SyncedInstrs[&SU].push_back(SGID);
-  });
+  }
 }
 
 void SchedGroup::findCandidateSUnits(SUnitsToCandidateSGsMap &SyncedInstrs) {
