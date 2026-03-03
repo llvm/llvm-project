@@ -1053,12 +1053,13 @@ static const char *const dialectDynamicTypePrinterDispatch = R"(
 /// The only case this cannot distinguish structurally is an optional group
 /// whose then-branch starts with punctuation, but parsing has the same
 /// limitation since the group's anchor is not known at codegen time.
-static bool needsLeadingSpace(StringRef fmtStr) {
+static bool needsLeadingSpace(const AttrOrTypeDef &def) {
+  StringRef fmtStr = def.getAssemblyFormat()->trim();
   if (fmtStr.empty())
     return false;
 
   // '(' starts an optional group.
-  if (fmtStr[0] == '(')
+  if (fmtStr.front() == '(')
     return false;
 
   if (fmtStr.front() != '`' || fmtStr.size() < 2)
@@ -1146,7 +1147,7 @@ void DefGenerator::emitParsePrintDispatch(ArrayRef<AttrOrTypeDef> defs) {
     // Declarative format: because `print()` doesn't emit a leading space,
     // add one here unless the format starts with punctuation or a
     // space-eraser directive that should attach directly to the mnemonic.
-    StringRef printDef = needsLeadingSpace(def.getAssemblyFormat()->trim())
+    StringRef printDef = needsLeadingSpace(def)
                              ? "\nprinter << ' ';\nt.print(printer);"
                              : "\nt.print(printer);";
     printer.body() << llvm::formatv(printValue, defClass, printDef);
