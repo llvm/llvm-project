@@ -7,6 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "mlir/Dialect/SCF/IR/SCF.h"
+#include "mlir/Dialect/Utils/StructuredOpsUtils.h"
 
 using namespace mlir;
 using namespace mlir::scf;
@@ -15,19 +16,42 @@ using namespace mlir::scf;
 // Helper functions
 //===----------------------------------------------------------------------===//
 
+/// Adds the corresponding reaching definition to the terminator of the block if
+/// the terminator is of the provided type.
+template <typename TermTy>
+static void
+updateTerminator(Block *block, Value reachingDef,
+                 llvm::DenseMap<Block *, Value> &reachingAtBlockEnd) {
+  Operation *terminator = block->getTerminator();
+  if (!isa<TermTy>(terminator))
+    return;
+  Value blockReachingDef = reachingAtBlockEnd[block];
+  if (!blockReachingDef) {
+    // Block is dead code or the region is not using the slot, so the reaching
+    // definition is the entry reaching definition.
+    blockReachingDef = reachingDef;
+  }
+  terminator->insertOperands(terminator->getNumOperands(), {blockReachingDef});
+}
+
 /// Creates a shallow copy of an operation with new result types moving the
 /// regions out of the original operation, then deletes the original operation.
-template <typename OpTy>
-static OpTy replaceWithNewResults(OpBuilder &builder, Operation *op,
-                                  TypeRange resultTypes) {
-  OpBuilder::InsertionGuard guard(builder);
-  builder.setInsertionPoint(op);
-  builder.
-  auto newOp = OpTy::create(builder, op->getLoc(), resultTypes,
-                            op->getOperands(), op->getProperties(),
-                            op->getSuccessors(), op->getNumRegions());
-                            builder.create()
-  op.erase();
+static Operation *replaceWithNewResults(RewriterBase &rewriter, Operation *op,
+                                        TypeRange resultTypes) {
+  RewriterBase::InsertionGuard guard(rewriter);
+  rewriter.setInsertionPoint(op);
+  Operation *newOp =
+      mlir::cloneWithoutRegions(rewriter, op, resultTypes, op->getOperands());
+  rewriter.startOpModification(newOp);
+  rewriter.startOpModification(op);
+  for (unsigned int i : llvm::seq(op->getNumRegions()))
+    newOp->getRegion(i).takeBody(op->getRegion(i));
+  rewriter.finalizeOpModification(op);
+  rewriter.finalizeOpModification(newOp);
+
+  SmallVector<Value> replacementValues(newOp->getResults().drop_back());
+  rewriter.replaceAllOpUsesWith(op, replacementValues);
+  rewriter.eraseOp(op);
   return newOp;
 }
 
@@ -44,7 +68,7 @@ void ExecuteRegionOp::propagateLiveIn(
     const MemorySlot &slot, Region *regionLiveIn,
     SmallPtrSetImpl<Operation *> &operationsLiveIn) {
   assert(regionLiveIn == &getRegion() &&
-         "regionLiveIn must be the region of the ExecuteRegionOp");
+         "regionLiveIn can only be the region of the ExecuteRegionOp");
   operationsLiveIn.insert(getOperation());
 }
 
@@ -62,25 +86,350 @@ Value ExecuteRegionOp::finalizePromotion(
 
   // Update the yield terminators to return the newly defined reaching
   // definition.
-  for (Block &block : getRegion().getBlocks()) {
-    Operation *terminator = block.getTerminator();
-    if (!isa<YieldOp>(terminator))
-      continue;
-    Value blockReachingDef = reachingAtBlockEnd[block];
-    if (!blockReachingDef) {
-      // Block is dead code or the region is not using the slot, so the reaching
-      // definition is the entry reaching definition.
-      blockReachingDef = reachingDef;
-    }
-    terminator->insertOperands(terminator->getNumOperands(),
-                               {blockReachingDef});
+  for (Block &block : getRegion().getBlocks())
+    updateTerminator<YieldOp>(&block, reachingDef, reachingAtBlockEnd);
+
+  SmallVector<Type> resultTypes(getResultTypes());
+  resultTypes.push_back(slot.elemType);
+
+  IRRewriter rewriter(builder);
+  Operation *newOp =
+      replaceWithNewResults(rewriter, getOperation(), resultTypes);
+  return newOp->getResults().back();
+}
+
+//===----------------------------------------------------------------------===//
+// ForOp
+//===----------------------------------------------------------------------===//
+
+bool ForOp::isRegionPromotable(const MemorySlot &slot, Region *region,
+                               bool hasValueStores) {
+  return true;
+}
+
+void ForOp::propagateLiveIn(const MemorySlot &slot, Region *regionLiveIn,
+                            SmallPtrSetImpl<Operation *> &operationsLiveIn) {
+  assert(regionLiveIn == &getBodyRegion() &&
+         "regionLiveIn can only be the region of the ForOp");
+  operationsLiveIn.insert(getOperation());
+  operationsLiveIn.insert(getBody()->getTerminator());
+}
+
+void ForOp::setupPromotion(
+    const MemorySlot &slot, Value reachingDef, bool hasValueStores,
+    llvm::SmallMapVector<Region *, Value, 2> &regionsToProcess) {
+  Region &bodyRegion = getBodyRegion();
+  if (!hasValueStores)
+    regionsToProcess.insert({&bodyRegion, reachingDef});
+
+  bodyRegion.addArgument(slot.elemType, slot.ptr.getLoc());
+  regionsToProcess.insert({&bodyRegion, bodyRegion.getArguments().back()});
+}
+
+Value ForOp::finalizePromotion(
+    const MemorySlot &slot, Value reachingDef, bool hasValueStores,
+    llvm::DenseMap<Block *, Value> &reachingAtBlockEnd, OpBuilder &builder) {
+  if (!hasValueStores)
+    return reachingDef;
+
+  // Update the yield terminator to return the newly defined reaching
+  // definition.
+  updateTerminator<YieldOp>(getBody(), reachingDef, reachingAtBlockEnd);
+
+  SmallVector<Type> resultTypes(getResultTypes());
+  resultTypes.push_back(slot.elemType);
+
+  IRRewriter rewriter(builder);
+  Operation *newOp =
+      replaceWithNewResults(rewriter, getOperation(), resultTypes);
+  return newOp->getResults().back();
+}
+
+//===----------------------------------------------------------------------===//
+// ForallOp
+//===----------------------------------------------------------------------===//
+
+bool ForallOp::isRegionPromotable(const MemorySlot &slot, Region *region,
+                                  bool hasValueStores) {
+  // The ForallOp body can be ran in parallel, thus does not support sequenced
+  // value passing. Therefore only loads can be handled.
+  return !hasValueStores;
+}
+
+void ForallOp::propagateLiveIn(const MemorySlot &slot, Region *regionLiveIn,
+                               SmallPtrSetImpl<Operation *> &operationsLiveIn) {
+  assert(regionLiveIn == &getBodyRegion() &&
+         "regionLiveIn can only be the region of the ForallOp");
+  // Due to the parallel semantics of ForallOp, there is no liveness dependency
+  // on the body region as liveness cannot be influenced by neighboring
+  // iterations.
+  operationsLiveIn.insert(getOperation());
+}
+
+void ForallOp::setupPromotion(
+    const MemorySlot &slot, Value reachingDef, bool hasValueStores,
+    llvm::SmallMapVector<Region *, Value, 2> &regionsToProcess) {
+  assert(!hasValueStores && "ForallOp does not support stores");
+  regionsToProcess.insert({&getBodyRegion(), reachingDef});
+}
+
+Value ForallOp::finalizePromotion(
+    const MemorySlot &slot, Value reachingDef, bool hasValueStores,
+    llvm::DenseMap<Block *, Value> &reachingAtBlockEnd, OpBuilder &builder) {
+  assert(!hasValueStores && "ForallOp does not support stores");
+  return reachingDef;
+}
+
+//===----------------------------------------------------------------------===//
+// IfOp
+//===----------------------------------------------------------------------===//
+
+bool IfOp::isRegionPromotable(const MemorySlot &slot, Region *region,
+                              bool hasValueStores) {
+  return true;
+}
+
+void IfOp::propagateLiveIn(const MemorySlot &slot, Region *regionLiveIn,
+                           SmallPtrSetImpl<Operation *> &operationsLiveIn) {
+  assert(regionLiveIn == &getThenRegion() || regionLiveIn == &getElseRegion());
+  operationsLiveIn.insert(getOperation());
+}
+
+void IfOp::setupPromotion(
+    const MemorySlot &slot, Value reachingDef, bool hasValueStores,
+    llvm::SmallMapVector<Region *, Value, 2> &regionsToProcess) {
+  regionsToProcess.insert({&getThenRegion(), reachingDef});
+  regionsToProcess.insert({&getElseRegion(), reachingDef});
+}
+
+Value IfOp::finalizePromotion(
+    const MemorySlot &slot, Value reachingDef, bool hasValueStores,
+    llvm::DenseMap<Block *, Value> &reachingAtBlockEnd, OpBuilder &builder) {
+  if (!hasValueStores)
+    return reachingDef;
+
+  IRRewriter rewriter(builder);
+
+  // Update the yield terminators to return the newly defined reaching
+  // definition.
+  updateTerminator<YieldOp>(&getThenRegion().back(), reachingDef,
+                            reachingAtBlockEnd);
+  if (getElseRegion().hasOneBlock()) {
+    updateTerminator<YieldOp>(&getElseRegion().back(), reachingDef,
+                              reachingAtBlockEnd);
+  } else {
+    OpBuilder::InsertionGuard guard(rewriter);
+    rewriter.createBlock(&getElseRegion());
+    YieldOp::create(rewriter, getOperation()->getLoc(), reachingDef);
   }
 
   SmallVector<Type> resultTypes(getResultTypes());
   resultTypes.push_back(slot.elemType);
 
-  auto newOp = replaceWithNewResults<ExecuteRegionOp>(builder, getOperation(),
-                                                      resultTypes);
+  Operation *newOp =
+      replaceWithNewResults(rewriter, getOperation(), resultTypes);
+  return newOp->getResults().back();
+}
 
+//===----------------------------------------------------------------------===//
+// IndexSwitchOp
+//===----------------------------------------------------------------------===//
+
+bool IndexSwitchOp::isRegionPromotable(const MemorySlot &slot, Region *region,
+                                       bool hasValueStores) {
+  return true;
+}
+
+void IndexSwitchOp::propagateLiveIn(
+    const MemorySlot &slot, Region *regionLiveIn,
+    SmallPtrSetImpl<Operation *> &operationsLiveIn) {
+#ifndef NDEBUG
+  auto checkRegionValid = [&](IndexSwitchOp op) {
+    if (regionLiveIn == &op.getDefaultRegion())
+      return;
+
+    for (Region &caseRegion : op.getCaseRegions())
+      if (regionLiveIn == &caseRegion)
+        return;
+
+    assert(false && "regionLiveIn can only be the default region or a case "
+                    "region of the IndexSwitchOp");
+  };
+
+  checkRegionValid(*this);
+#endif
+
+  operationsLiveIn.insert(getOperation());
+}
+
+void IndexSwitchOp::setupPromotion(
+    const MemorySlot &slot, Value reachingDef, bool hasValueStores,
+    llvm::SmallMapVector<Region *, Value, 2> &regionsToProcess) {
+  regionsToProcess.insert({&getDefaultRegion(), reachingDef});
+  for (Region &caseRegion : getCaseRegions())
+    regionsToProcess.insert({&caseRegion, reachingDef});
+}
+
+Value IndexSwitchOp::finalizePromotion(
+    const MemorySlot &slot, Value reachingDef, bool hasValueStores,
+    llvm::DenseMap<Block *, Value> &reachingAtBlockEnd, OpBuilder &builder) {
+  if (!hasValueStores)
+    return reachingDef;
+
+  IRRewriter rewriter(builder);
+
+  // Update the yield terminators to return the newly defined reaching
+  // definition.
+  updateTerminator<YieldOp>(&getDefaultRegion().back(), reachingDef,
+                            reachingAtBlockEnd);
+  for (Region &caseRegion : getCaseRegions())
+    updateTerminator<YieldOp>(&caseRegion.back(), reachingDef,
+                              reachingAtBlockEnd);
+
+  SmallVector<Type> resultTypes(getResultTypes());
+  resultTypes.push_back(slot.elemType);
+
+  Operation *newOp =
+      replaceWithNewResults(rewriter, getOperation(), resultTypes);
+  return newOp->getResults().back();
+}
+
+//===----------------------------------------------------------------------===//
+// ParallelOp
+//===----------------------------------------------------------------------===//
+
+bool ParallelOp::isRegionPromotable(const MemorySlot &slot, Region *region,
+                                    bool hasValueStores) {
+  // The ParallelOp body can be ran in parallel, thus does not support sequenced
+  // value passing. Therefore only loads can be handled.
+  return !hasValueStores;
+}
+
+void ParallelOp::propagateLiveIn(
+    const MemorySlot &slot, Region *regionLiveIn,
+    SmallPtrSetImpl<Operation *> &operationsLiveIn) {
+  assert(regionLiveIn == &getBodyRegion() &&
+         "regionLiveIn can only be the region of the ParallelOp");
+  // Due to the parallel semantics of ParallelOp, there is no liveness
+  // dependency on the body region as liveness cannot be influenced by
+  // neighboring iterations.
+  operationsLiveIn.insert(getOperation());
+}
+
+void ParallelOp::setupPromotion(
+    const MemorySlot &slot, Value reachingDef, bool hasValueStores,
+    llvm::SmallMapVector<Region *, Value, 2> &regionsToProcess) {
+  assert(!hasValueStores && "ParallelOp does not support stores");
+  regionsToProcess.insert({&getBodyRegion(), reachingDef});
+}
+
+Value ParallelOp::finalizePromotion(
+    const MemorySlot &slot, Value reachingDef, bool hasValueStores,
+    llvm::DenseMap<Block *, Value> &reachingAtBlockEnd, OpBuilder &builder) {
+  assert(!hasValueStores && "ParallelOp does not support stores");
   return reachingDef;
+}
+
+//===----------------------------------------------------------------------===//
+// ReduceOp
+//===----------------------------------------------------------------------===//
+
+bool ReduceOp::isRegionPromotable(const MemorySlot &slot, Region *region,
+                                  bool hasValueStores) {
+  // The ReduceOp body can be ran in parallel, thus does not support sequenced
+  // value passing. Therefore only loads can be handled.
+  return !hasValueStores;
+}
+
+void ReduceOp::propagateLiveIn(const MemorySlot &slot, Region *regionLiveIn,
+                               SmallPtrSetImpl<Operation *> &operationsLiveIn) {
+#ifndef NDEBUG
+  auto checkRegionValid = [&](ReduceOp op) {
+    for (Region &reduction : op.getReductions())
+      if (regionLiveIn == &reduction)
+        return;
+
+    assert(false &&
+           "regionLiveIn can only be a reduction region of the ReduceOp");
+  };
+
+  checkRegionValid(*this);
+#endif
+
+  operationsLiveIn.insert(getOperation());
+}
+
+void ReduceOp::setupPromotion(
+    const MemorySlot &slot, Value reachingDef, bool hasValueStores,
+    llvm::SmallMapVector<Region *, Value, 2> &regionsToProcess) {
+  assert(!hasValueStores && "ReduceOp does not support stores");
+  for (Region &reduction : getReductions())
+    regionsToProcess.insert({&reduction, reachingDef});
+}
+
+Value ReduceOp::finalizePromotion(
+    const MemorySlot &slot, Value reachingDef, bool hasValueStores,
+    llvm::DenseMap<Block *, Value> &reachingAtBlockEnd, OpBuilder &builder) {
+  assert(!hasValueStores && "ReduceOp does not support stores");
+  return reachingDef;
+}
+
+//===----------------------------------------------------------------------===//
+// WhileOp
+//===----------------------------------------------------------------------===//
+
+bool WhileOp::isRegionPromotable(const MemorySlot &slot, Region *region,
+                                 bool hasValueStores) {
+  return true;
+}
+
+void WhileOp::propagateLiveIn(const MemorySlot &slot, Region *regionLiveIn,
+                              SmallPtrSetImpl<Operation *> &operationsLiveIn) {
+  if (regionLiveIn == &getBefore()) {
+    operationsLiveIn.insert(getOperation());
+    operationsLiveIn.insert(getAfterBody()->getTerminator());
+  }
+
+  assert(regionLiveIn == &getAfter());
+  operationsLiveIn.insert(getBeforeBody()->getTerminator());
+}
+
+void WhileOp::setupPromotion(
+    const MemorySlot &slot, Value reachingDef, bool hasValueStores,
+    llvm::SmallMapVector<Region *, Value, 2> &regionsToProcess) {
+  Region &beforeRegion = getBefore();
+  Region &afterRegion = getAfter();
+  if (!hasValueStores) {
+    regionsToProcess.insert({&beforeRegion, reachingDef});
+    regionsToProcess.insert({&afterRegion, reachingDef});
+    return;
+  }
+
+  beforeRegion.addArgument(slot.elemType, slot.ptr.getLoc());
+  regionsToProcess.insert({&beforeRegion, beforeRegion.getArguments().back()});
+
+  afterRegion.addArgument(slot.elemType, slot.ptr.getLoc());
+  regionsToProcess.insert({&afterRegion, afterRegion.getArguments().back()});
+}
+
+Value WhileOp::finalizePromotion(
+    const MemorySlot &slot, Value reachingDef, bool hasValueStores,
+    llvm::DenseMap<Block *, Value> &reachingAtBlockEnd, OpBuilder &builder) {
+  if (!hasValueStores)
+    return reachingDef;
+
+  // Update the yield terminators to return the newly defined reaching
+  // definition.
+  updateTerminator<ConditionOp>(&getBefore().back(), reachingDef,
+                                reachingAtBlockEnd);
+  updateTerminator<YieldOp>(&getAfter().back(), reachingDef,
+                            reachingAtBlockEnd);
+
+  SmallVector<Type> resultTypes(getResultTypes());
+  resultTypes.push_back(slot.elemType);
+
+  IRRewriter rewriter(builder);
+  Operation *newOp =
+      replaceWithNewResults(rewriter, getOperation(), resultTypes);
+  return newOp->getResults().back();
 }
