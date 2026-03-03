@@ -798,19 +798,7 @@ mangledTypenameForTasksTuple(size_t count,
 class TaskSyntheticFrontEnd : public SyntheticChildrenFrontEnd {
 public:
   TaskSyntheticFrontEnd(lldb::ValueObjectSP valobj_sp)
-      : SyntheticChildrenFrontEnd(*valobj_sp.get()) {
-    auto target_sp = m_backend.GetTargetSP();
-    auto ts_or_err =
-        target_sp->GetScratchTypeSystemForLanguage(eLanguageTypeSwift);
-    if (auto err = ts_or_err.takeError()) {
-      LLDB_LOG_ERROR(GetLog(LLDBLog::DataFormatters | LLDBLog::Types),
-                     std::move(err),
-                     "could not get Swift type system for Task synthetic "
-                     "provider: {0}");
-      return;
-    }
-    m_ts = llvm::dyn_cast_or_null<TypeSystemSwiftTypeRef>(ts_or_err->get());
-  }
+      : SyntheticChildrenFrontEnd(*valobj_sp.get()) {}
 
   constexpr static StringLiteral TaskChildren[] = {
       // clang-format off
@@ -842,7 +830,15 @@ public:
   }
 
   lldb::ValueObjectSP GetChildAtIndex(uint32_t idx) override {
-    auto target_sp = m_backend.GetTargetSP();
+    CompilerType type = m_backend.GetCompilerType();
+    auto ts = type.GetTypeSystem().dyn_cast_or_null<TypeSystemSwift>();
+    if (!ts) {
+      LLDB_LOG(
+          GetLog(LLDBLog::DataFormatters | LLDBLog::Types),
+          "could not get Swift type system for Task synthetic provider: {0}",
+          type.GetMangledTypeName());
+      return {};
+    }
 
     auto flavor =
         SwiftLanguageRuntime::GetManglingFlavor(type.GetMangledTypeName());
@@ -933,7 +929,7 @@ public:
         std::string mangled_typename =
             mangledTypenameForTasksTuple(tasks.size(), flavor);
         CompilerType tasks_tuple_type =
-            m_ts->GetTypeFromMangledTypename(ConstString(mangled_typename));
+            ts->GetTypeFromMangledTypename(ConstString(mangled_typename));
         DataExtractor data{tasks.data(), tasks.size() * sizeof(task_type),
                            endian::InlHostByteOrder(), sizeof(void *)};
         m_child_tasks_sp = ValueObject::CreateValueObjectFromData(
@@ -1022,7 +1018,6 @@ private:
     return {};
   }
 
-  TypeSystemSwiftTypeRef *m_ts = nullptr;
   addr_t m_task_ptr = LLDB_INVALID_ADDRESS;
   ReflectionContextInterface::AsyncTaskInfo m_task_info;
   ValueObjectSP m_address_sp;
@@ -1420,20 +1415,6 @@ public:
           SwiftLanguageRuntime::FindConcurrencyDebugVersion(*process_sp);
 
     m_is_supported_target = is_64bit && concurrency_version.value_or(0) == 1;
-    if (!m_is_supported_target)
-      return;
-
-    auto target_sp = m_backend.GetTargetSP();
-    auto ts_or_err =
-        target_sp->GetScratchTypeSystemForLanguage(eLanguageTypeSwift);
-    if (auto err = ts_or_err.takeError()) {
-      LLDB_LOG_ERROR(GetLog(LLDBLog::DataFormatters | LLDBLog::Types),
-                     std::move(err),
-                     "could not get Swift type system for Task synthetic "
-                     "provider: {0}");
-      return;
-    }
-    m_ts = llvm::dyn_cast_or_null<TypeSystemSwiftTypeRef>(ts_or_err->get());
   }
 
   llvm::Expected<uint32_t> CalculateNumChildren() override {
@@ -1444,13 +1425,23 @@ public:
     if (!m_is_supported_target || idx != 0)
       return {};
 
+    CompilerType type = m_backend.GetCompilerType();
+    auto ts = type.GetTypeSystem().dyn_cast_or_null<TypeSystemSwift>();
+    if (!ts) {
+      LLDB_LOG(
+          GetLog(LLDBLog::DataFormatters | LLDBLog::Types),
+          "could not get Swift type system for Actor synthetic provider: {0}",
+          type.GetMangledTypeName());
+      return {};
+    }
+
     if (!m_unprioritised_jobs_sp) {
       auto flavor =
           SwiftLanguageRuntime::GetManglingFlavor(type.GetMangledTypeName());
       std::string mangled_typename =
           mangledTypenameForTasksTuple(m_job_addrs.size(), flavor);
       CompilerType tasks_tuple_type =
-          m_ts->GetTypeFromMangledTypename(ConstString(mangled_typename));
+          ts->GetTypeFromMangledTypename(ConstString(mangled_typename));
       DataExtractor data{m_job_addrs.data(),
                          m_job_addrs.size() * sizeof(addr_t),
                          endian::InlHostByteOrder(), sizeof(void *)};
@@ -1562,7 +1553,6 @@ private:
 
 private:
   bool m_is_supported_target = false;
-  TypeSystemSwiftTypeRef *m_ts = nullptr;
   std::vector<addr_t> m_job_addrs;
   CompilerType m_task_type;
   ValueObjectSP m_unprioritised_jobs_sp;
