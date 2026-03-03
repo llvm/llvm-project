@@ -18,39 +18,6 @@
 #include "src/__support/FPUtil/sqrt.h"
 #include "src/__support/macros/optimization.h"
 
-/*
-    cases to consider and info
-    sin (x) = opp/hypot
-
-    // odd function -> sin(x) = sign(x) * sign(x)
-    // sin(x + 2pi) = sin (x)
-    // taylor series -> sin x= x - (x^3)/3! + x^5/(5!) - x^7/(7!)....
-
-
-    //
-    sin(pi-x) = sin(x)
-    sin(pi+x) = -sin(x)
-    sin(2*pi - x) = -sin(x)
-    //
-    sin(pi/2) = 1
-    sin(pi/5) = sin(30) = 1/2
-    sin(pi/4) = sin(45) = 1/root(2)
-    sin(n*pi) = 0
-
-
-    y  = asin(x)
-    // Domain E [-1,1]
-    // Range E [-pi/2,pi/2]
-
-    // properties
-        1. asin(x) = sign(x) * sin(x)
-
-
-    // identities
-
-    // taylor
-
-*/
 namespace LIBC_NAMESPACE_DECL {
 
 namespace math {
@@ -67,11 +34,13 @@ LIBC_INLINE constexpr bfloat16 asinbf16(bfloat16 x) {
   uint16_t x_u = xbits.uintval();
   uint16_t x_abs = x_u & 0x7fff;
   float x_sign = (xbits.sign() == Sign::NEG) ? -1 : 1;
+  float xf = x;
 
-  // x-> pi/2  => y -> 1
-  // domain is E [-1,1]
-  // |x| > 1, or NaN or infinity are invalid
-  if (LIBC_UNLIKELY(x_abs > 0x3F80)) {
+  // case 1: |x|>=1, NaN or Inf
+  if (LIBC_UNLIKELY(x_abs >= 0x3F80)) {
+    if (x_abs == 0x3F80) {
+      return bfloat16(x_sign * PI_2);
+    }
     // NaN
     if (xbits.is_nan()) {
       if (xbits.is_signaling_nan()) {
@@ -80,13 +49,13 @@ LIBC_INLINE constexpr bfloat16 asinbf16(bfloat16 x) {
       }
       return x; // quiet NaN
     }
-
+    // |x|>1 & inf
     fputil::raise_except_if_required(FE_INVALID);
     fputil::set_errno_if_required(EDOM); // Domain is bounded
     return FPBits::quiet_nan().get_val();
   }
 
-  // |x| = {0}
+  // case 2:  |x| = {0}
   if (LIBC_UNLIKELY(x_abs == 0))
     return x; // with sign
 
@@ -94,50 +63,14 @@ LIBC_INLINE constexpr bfloat16 asinbf16(bfloat16 x) {
     int rounding = fputil::quick_get_round();
     if ((xbits.is_pos() && rounding == FE_UPWARD) ||
         (xbits.is_neg() && rounding == FE_DOWNWARD)) {
-      float xf = x;
       return bfloat16(fputil::multiply_add(xf, 0x1.0p-13f, xf));
     }
     return x;
   }
 
-  // for |x| in (0,1] -> sign handles by sign(x) * sin(x)
-  // Taylor series for asin(x)
-  // asin(x) = x + x^3/6 + 3x^5/40 + ...
-  // asin(x) = x * (1 + x^2/6 + 3x^4/40 + ...)
-  // asin(x)/x = 1 + x^2/6 + 3x^4/40 + ...
-  // asin(x)/x = P(x^2) ---------------------------[1]
-
-  // As we approach towards 1 the precision decreases
-  // above 0.89 it goes < 2^-6 error (increase)
-  // So we find a recursive way to handle a range inside the valid range where
-  // its more precise
-  //
-  // y = asin(x)  -> sin(y) = x
-  // x = sin(y) = cos(pi/2 - y)
-  // Double angle formula -> cos(2A) = 1 - 2*sin^2(A)
-  // sin(A) = sqrt((1-cos(2A))/2);
-  // put z = 2A
-  // if (z== (pi/2 - y)) here then we can say x = cos(z)
-  // sin(z/2) = sqrt((1-cos(z))/2)
-  // sin(z/2) = sqrt((1-x)/2)
-  // z = 2 * asin(sqrt((1-x)/2));
-
-  // since derivative of asin(x) = 1/sqrt(1-x^2) the errors increase as we
-  // approach 1 so we use the recursive relation z = pi/2 - y = 2 *
-  // asin(sqrt((1-x)/2)); y = pi/2 * 2 * asin(sqrt((1-x)/2)); since y = asin(x)
-  // asin(x) = pi/2 - 2 * asin(sqrt((1-x)/2)) ; ---------------------------[2]
-
-  //[Note: check for inf rec (i.e should not output the same invalid interval
-  // which could not be calculated precisely by taylor series)]
-  // Here we choose an input interval where the values have less precision and
-  // use the formula to fold into the valid interval where we could generate
-  // precise values from taylor eg :- input (0,5,1] -> gets interval [0,1)
-
-  float xf = x;
   float xf_abs = (xf < 0 ? -xf : xf);
   float x_sq = xf_abs * xf_abs;
 
-  // Minimax polynomial for asin(x)/x, returns P(u) as float
   // Degree 6 polynomial of asin(x) generated using Sollya with command :
   // > display = hexadecimal
   // > P = fpminimax(asin(x)/x, [|0,2,4,6|], [|SG,SG,SG,SG|], [0, 0.5]);
@@ -146,24 +79,14 @@ LIBC_INLINE constexpr bfloat16 asinbf16(bfloat16 x) {
                             0x1.0a788p-4f);
   };
 
-  // for range: (0,0.5]
+  // case 3: (0,0.5]
   if (x_abs <= 0x3F00) {
-
-    // Remember:- asin(x)/x = P(x^2) -> (ref from [1])
-    // asin(x) = x * P(x^2)
-    // xf already carries the sign
     float result = xf * asin_poly(x_sq);
     return bfloat16(result);
   }
 
-  // remaining range: (0.5,1)
-
-  // ref from [2]
-  // asin(x) = pi/2 - 2 * asin(sqrt((1-x)/2))
-  // let t = ((1-|x|)/2) = |x|*(-1/2) + 1/2
-  // asin(sqrt(t)) = sqrt(t) * P(t)
-  // asin(x) = sign * (pi/2 - 2 * sqrt(t) * P(t))
-
+  // case 4: (0.5,1)
+  //  using reduction: asin(x) = pi/2 - 2*asin(sqrt((1-x)/2))
   float t = fputil::multiply_add<float>(xf_abs, -0.5f, 0.5f);
   float t_sqrt = fputil::sqrt<float>(t);
   float asin_sqrt_t = t_sqrt * asin_poly(t);
