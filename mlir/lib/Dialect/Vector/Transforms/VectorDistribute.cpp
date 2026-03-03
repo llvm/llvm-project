@@ -275,7 +275,7 @@ struct WarpOpToScfIfPattern : public WarpDistributionPattern {
     // Step 3. Insert sync after all the stores and before all the loads.
     if (!warpOp.getArgs().empty()) {
       rewriter.setInsertionPoint(ifOp);
-      options.warpSyncronizationFn(loc, rewriter, warpOp);
+      options.warpSynchronizationFn(loc, rewriter, warpOp);
     }
 
     // Step 4. Move body of warpOp to ifOp.
@@ -320,7 +320,7 @@ struct WarpOpToScfIfPattern : public WarpDistributionPattern {
     // Step 6. Insert sync after all the stores and before all the loads.
     if (!yieldOp.getOperands().empty()) {
       rewriter.setInsertionPointAfter(ifOp);
-      options.warpSyncronizationFn(loc, rewriter, warpOp);
+      options.warpSynchronizationFn(loc, rewriter, warpOp);
     }
 
     // Step 7. Delete terminator and add empty scf.yield.

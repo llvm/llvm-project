@@ -106,10 +106,6 @@ bool DependencyScanningWorker::computeDependencies(
     return createAndRunToolInvocation(Cmd, Action, FS, PCHContainerOps, Diags);
   });
 
-  // Ensure finish() is called even if we never reached ExecuteAction().
-  if (!Action.hasDiagConsumerFinished())
-    DiagConsumer.finish();
-
   return Success && Action.hasScanned();
 }
 
@@ -139,10 +135,6 @@ bool DependencyScanningWorker::computeDependenciesByNameWithContext(
     DependencyActionController &Controller) {
   assert(CIWithContext && "CompilerInstance with context required!");
   return CIWithContext->computeDependencies(ModuleName, Consumer, Controller);
-}
-
-bool DependencyScanningWorker::finalizeCompilerInstanceWithContext() {
-  return CIWithContext->finalize();
 }
 
 std::pair<IntrusiveRefCntPtr<llvm::vfs::OverlayFileSystem>,
