@@ -223,9 +223,9 @@ static cl::opt<bool> VectorizeCopyableElements(
     cl::desc("Try to replace values with the idempotent instructions for "
              "better vectorization."));
 
-static cl::opt<unsigned> LoopAwareMinTripCount(
+static cl::opt<unsigned> LoopAwareTripCount(
     "slp-cost-loop-min-trip-count", cl::init(2), cl::Hidden,
-    cl::desc("Minimum loop trip count, considered by the cost model during "
+    cl::desc("Loop trip count, considered by the cost model during "
              "modeling (0=loops are ignored and considered flat code)"));
 
 // Limit the number of alias checks. The limit is chosen so that
@@ -10454,7 +10454,7 @@ static const Loop *findInnermostNonInvariantLoop(const Loop *L,
 static SmallVector<const Loop *> getLoopNest(const Loop *L) {
   assert(L && "Expected valid loop");
   SmallVector<const Loop *> LoopNest;
-  if (LoopAwareMinTripCount == 0)
+  if (LoopAwareTripCount == 0)
     return LoopNest;
   while (L) {
     LoopNest.push_back(L);
@@ -15291,16 +15291,18 @@ TTI::CastContextHint BoUpSLP::getCastContextHint(const TreeEntry &TE) const {
 }
 
 /// Get the minimum loop trip count for the loop \p L.
-static unsigned getLoopMinTripCount(const Loop *L, ScalarEvolution &SE) {
-  if (LoopAwareMinTripCount == 0)
+static unsigned getLoopTripCount(const Loop *L, ScalarEvolution &SE) {
+  if (LoopAwareTripCount == 0)
     return 1;
   if (unsigned Scale = SE.getSmallConstantTripCount(L)) {
-    // Multiple exiting blocks - skip.
+    // Multiple exiting blocks - choose the minimum between trip count (scale)
+    // and LoopAwareTripCount, since the multiple exit loops can be terminated
+    // early.
     if (!L->getExitingBlock())
-      return std::min<unsigned>(LoopAwareMinTripCount, Scale);
+      return std::min<unsigned>(LoopAwareTripCount, Scale);
     return Scale;
   }
-  return LoopAwareMinTripCount;
+  return LoopAwareTripCount;
 }
 
 unsigned BoUpSLP::getScaleToLoopIterations(const TreeEntry &TE, Value *Scalar,
@@ -15338,7 +15340,7 @@ unsigned BoUpSLP::getScaleToLoopIterations(const TreeEntry &TE, Value *Scalar,
     if (L) {
       SmallVector<const Loop *> Nest = getLoopNest(L);
       for (const Loop *L : reverse(Nest))
-        Scale *= getLoopMinTripCount(L, *SE);
+        Scale *= getLoopTripCount(L, *SE);
     }
   }
   return Scale;

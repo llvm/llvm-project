@@ -1556,6 +1556,7 @@ DiagnosedSilenceableFailure transform::LowerUnPackOp::applyToOne(
   transformResults.push_back(res->transposeOp);
   transformResults.push_back(res->collapseShapeOp);
   transformResults.push_back(res->extractSliceOp);
+  transformResults.push_back(res->copyOp);
   return DiagnosedSilenceableFailure::success();
 }
 
