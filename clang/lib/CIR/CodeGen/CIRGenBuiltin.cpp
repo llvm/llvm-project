@@ -162,18 +162,17 @@ static mlir::Value makeBinaryAtomicValue(
   return rmwi->getResult(0);
 }
 
+template <typename BinOp>
 static RValue emitBinaryAtomicPost(CIRGenFunction &cgf,
                                    cir::AtomicFetchKind atomicOpkind,
-                                   const CallExpr *e, cir::BinOpKind binopKind,
-                                   bool invert = false) {
+                                   const CallExpr *e, bool invert = false) {
   mlir::Value emittedArgValue;
   mlir::Type originalArgType;
   clang::QualType typ = e->getType();
   mlir::Value result = makeBinaryAtomicValue(
       cgf, atomicOpkind, e, &originalArgType, &emittedArgValue);
   clang::CIRGen::CIRGenBuilderTy &builder = cgf.getBuilder();
-  result = cir::BinOp::create(builder, result.getLoc(), binopKind, result,
-                              emittedArgValue);
+  result = BinOp::create(builder, result.getLoc(), result, emittedArgValue);
 
   if (invert)
     result = cir::UnaryOp::create(builder, result.getLoc(),
@@ -1719,43 +1718,42 @@ RValue CIRGenFunction::emitBuiltinExpr(const GlobalDecl &gd, unsigned builtinID,
   case Builtin::BI__sync_add_and_fetch_4:
   case Builtin::BI__sync_add_and_fetch_8:
   case Builtin::BI__sync_add_and_fetch_16:
-    return emitBinaryAtomicPost(*this, cir::AtomicFetchKind::Add, e,
-                                cir::BinOpKind::Add);
+    return emitBinaryAtomicPost<cir::AddOp>(*this, cir::AtomicFetchKind::Add,
+                                            e);
   case Builtin::BI__sync_sub_and_fetch_1:
   case Builtin::BI__sync_sub_and_fetch_2:
   case Builtin::BI__sync_sub_and_fetch_4:
   case Builtin::BI__sync_sub_and_fetch_8:
   case Builtin::BI__sync_sub_and_fetch_16:
-    return emitBinaryAtomicPost(*this, cir::AtomicFetchKind::Sub, e,
-                                cir::BinOpKind::Sub);
+    return emitBinaryAtomicPost<cir::SubOp>(*this, cir::AtomicFetchKind::Sub,
+                                            e);
   case Builtin::BI__sync_and_and_fetch_1:
   case Builtin::BI__sync_and_and_fetch_2:
   case Builtin::BI__sync_and_and_fetch_4:
   case Builtin::BI__sync_and_and_fetch_8:
   case Builtin::BI__sync_and_and_fetch_16:
-    return emitBinaryAtomicPost(*this, cir::AtomicFetchKind::And, e,
-                                cir::BinOpKind::And);
+    return emitBinaryAtomicPost<cir::AndOp>(*this, cir::AtomicFetchKind::And,
+                                            e);
   case Builtin::BI__sync_or_and_fetch_1:
   case Builtin::BI__sync_or_and_fetch_2:
   case Builtin::BI__sync_or_and_fetch_4:
   case Builtin::BI__sync_or_and_fetch_8:
   case Builtin::BI__sync_or_and_fetch_16:
-    return emitBinaryAtomicPost(*this, cir::AtomicFetchKind::Or, e,
-                                cir::BinOpKind::Or);
+    return emitBinaryAtomicPost<cir::OrOp>(*this, cir::AtomicFetchKind::Or, e);
   case Builtin::BI__sync_xor_and_fetch_1:
   case Builtin::BI__sync_xor_and_fetch_2:
   case Builtin::BI__sync_xor_and_fetch_4:
   case Builtin::BI__sync_xor_and_fetch_8:
   case Builtin::BI__sync_xor_and_fetch_16:
-    return emitBinaryAtomicPost(*this, cir::AtomicFetchKind::Xor, e,
-                                cir::BinOpKind::Xor);
+    return emitBinaryAtomicPost<cir::XorOp>(*this, cir::AtomicFetchKind::Xor,
+                                            e);
   case Builtin::BI__sync_nand_and_fetch_1:
   case Builtin::BI__sync_nand_and_fetch_2:
   case Builtin::BI__sync_nand_and_fetch_4:
   case Builtin::BI__sync_nand_and_fetch_8:
   case Builtin::BI__sync_nand_and_fetch_16:
-    return emitBinaryAtomicPost(*this, cir::AtomicFetchKind::Nand, e,
-                                cir::BinOpKind::And, true);
+    return emitBinaryAtomicPost<cir::AndOp>(*this, cir::AtomicFetchKind::Nand,
+                                            e, /*invert=*/true);
   case Builtin::BI__sync_val_compare_and_swap_1:
   case Builtin::BI__sync_val_compare_and_swap_2:
   case Builtin::BI__sync_val_compare_and_swap_4:
