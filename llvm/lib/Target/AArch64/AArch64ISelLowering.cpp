@@ -17836,38 +17836,6 @@ void AArch64TargetLowering::getTgtMemIntrinsic(
     Infos.push_back(Info);
     return;
   }
-  case Intrinsic::aarch64_stshh_atomic_store: {
-    const auto *OrderC = cast<ConstantInt>(I.getArgOperand(2));
-    const auto *SizeC = cast<ConstantInt>(I.getArgOperand(4));
-
-    switch (static_cast<AtomicOrderingCABI>(OrderC->getZExtValue())) {
-    case AtomicOrderingCABI::relaxed:
-      Info.order = AtomicOrdering::Monotonic;
-      break;
-    case AtomicOrderingCABI::release:
-      Info.order = AtomicOrdering::Release;
-      break;
-    case AtomicOrderingCABI::seq_cst:
-      Info.order = AtomicOrdering::SequentiallyConsistent;
-      break;
-    default:
-      return;
-    }
-
-    // Fill IntrinsicInfo so SelectionDAG builds correctly
-    // typed/aligned atomic store MachineMemOperand.
-    LLVMContext &Ctx = I.getContext();
-    unsigned SizeBits = SizeC->getZExtValue();
-    Type *MemTy = IntegerType::get(Ctx, SizeBits);
-    Info.opc = ISD::INTRINSIC_VOID;
-    Info.memVT = EVT::getIntegerVT(Ctx, SizeBits);
-    Info.ptrVal = I.getArgOperand(0);
-    Info.offset = 0;
-    Info.align = DL.getABITypeAlign(MemTy);
-    Info.flags = MachineMemOperand::MOStore;
-    Infos.push_back(Info);
-    return;
-  }
   case Intrinsic::aarch64_ldaxp:
   case Intrinsic::aarch64_ldxp:
     Info.opc = ISD::INTRINSIC_W_CHAIN;
