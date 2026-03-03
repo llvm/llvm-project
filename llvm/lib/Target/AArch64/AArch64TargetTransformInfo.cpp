@@ -696,6 +696,13 @@ AArch64TTIImpl::getIntrinsicInstrCost(const IntrinsicCostAttributes &ICA,
     break;
   }
   case Intrinsic::abs: {
+    if (isa<ScalableVectorType>(RetTy) && ST->isSVEorStreamingSVEAvailable()) {
+      auto LT = getTypeLegalizationCost(RetTy);
+      return LT.first;
+    }
+
+    // TODO: Why can't we just always return
+    // getTypeLegalizationCost(RetTy).first for all types?
     static const auto ValidAbsTys = {MVT::v8i8,  MVT::v16i8, MVT::v4i16,
                                      MVT::v8i16, MVT::v2i32, MVT::v4i32,
                                      MVT::v2i64};
@@ -1112,6 +1119,27 @@ AArch64TTIImpl::getIntrinsicInstrCost(const IntrinsicCostAttributes &ICA,
     RTLIB::Libcall LC = RTLIB::getPOW(VT);
     if (getTLI()->getLibcallImpl(LC) != RTLIB::Unsupported)
       return getCallInstrCost(nullptr, RetTy, ICA.getArgTypes(), CostKind);
+    break;
+  }
+  case Intrinsic::sqrt:
+  case Intrinsic::fabs:
+  case Intrinsic::ceil:
+  case Intrinsic::floor:
+  case Intrinsic::nearbyint:
+  case Intrinsic::round:
+  case Intrinsic::rint:
+  case Intrinsic::roundeven:
+  case Intrinsic::trunc:
+  case Intrinsic::minnum:
+  case Intrinsic::maxnum:
+  case Intrinsic::minimum:
+  case Intrinsic::maximum:
+  case Intrinsic::minimumnum:
+  case Intrinsic::maximumnum: {
+    if (isa<ScalableVectorType>(RetTy) && ST->isSVEorStreamingSVEAvailable()) {
+      auto LT = getTypeLegalizationCost(RetTy);
+      return LT.first;
+    }
     break;
   }
   default:
