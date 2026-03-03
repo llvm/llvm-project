@@ -24,13 +24,53 @@
 // System includes - They have to be included after framework includes because
 // they define some macros which collide with variable names in other modules
 #include <sys/ptrace.h>
+#include <sys/syscall.h>
 #include <sys/uio.h>
+#include <unistd.h>
 // NT_PRSTATUS and NT_FPREGSET definition
 #include <elf.h>
+
+#ifndef NT_RISCV_VECTOR
+#define NT_RISCV_VECTOR 0x901
+#endif
+#ifndef __NR_riscv_hwprobe
+#define __NR_riscv_hwprobe 258
+#endif
+#ifndef RISCV_HWPROBE_KEY_IMA_EXT_0
+#define RISCV_HWPROBE_KEY_IMA_EXT_0 4
+#endif
+#ifndef RISCV_HWPROBE_IMA_V
+#define RISCV_HWPROBE_IMA_V (1 << 2)
+#endif
+
+struct HWProbeRISCV {
+  int64_t key;
+  uint64_t value;
+};
 
 using namespace lldb;
 using namespace lldb_private;
 using namespace lldb_private::process_linux;
+
+static uint64_t GetVLENB() {
+  struct HWProbeRISCV query = {RISCV_HWPROBE_KEY_IMA_EXT_0, 0};
+  if (syscall(__NR_riscv_hwprobe, &query, 1, 0, NULL, 0) != 0)
+    return 0;
+
+  if ((query.value & RISCV_HWPROBE_IMA_V) == 0)
+    return 0;
+
+  uint64_t vlenb = 0;
+  asm volatile("csrr %[vlenb], vlenb" : [vlenb] "=r"(vlenb));
+  return vlenb;
+}
+
+static RegisterInfoPOSIX_riscv64::VPR CreateVPRBuffer() {
+  uint64_t vlenb = GetVLENB();
+  if (vlenb > 0)
+    return RegisterInfoPOSIX_riscv64::VPR(vlenb);
+  return RegisterInfoPOSIX_riscv64::VPR();
+}
 
 std::unique_ptr<NativeRegisterContextLinux>
 NativeRegisterContextLinux::CreateHostNativeRegisterContextLinux(
@@ -52,8 +92,10 @@ NativeRegisterContextLinux::CreateHostNativeRegisterContextLinux(
       opt_regsets.Set(RegisterInfoPOSIX_riscv64::eRegsetMaskFP);
     }
 
-    auto register_info_up =
-        std::make_unique<RegisterInfoPOSIX_riscv64>(target_arch, opt_regsets);
+    uint64_t vlenb = GetVLENB();
+
+    auto register_info_up = std::make_unique<RegisterInfoPOSIX_riscv64>(
+        target_arch, opt_regsets, vlenb);
     return std::make_unique<NativeRegisterContextLinux_riscv64>(
         target_arch, native_thread, std::move(register_info_up));
   }
@@ -72,12 +114,13 @@ NativeRegisterContextLinux_riscv64::NativeRegisterContextLinux_riscv64(
     std::unique_ptr<RegisterInfoPOSIX_riscv64> register_info_up)
     : NativeRegisterContextRegisterInfo(native_thread,
                                         register_info_up.release()),
-      NativeRegisterContextLinux(native_thread) {
+      NativeRegisterContextLinux(native_thread), m_vpr(CreateVPRBuffer()) {
   ::memset(&m_fpr, 0, sizeof(m_fpr));
   ::memset(&m_gpr, 0, sizeof(m_gpr));
 
   m_gpr_is_valid = false;
   m_fpu_is_valid = false;
+  m_vpr_is_valid = false;
 }
 
 const RegisterInfoPOSIX_riscv64 &
@@ -144,6 +187,13 @@ NativeRegisterContextLinux_riscv64::ReadRegister(const RegisterInfo *reg_info,
     offset = CalculateFprOffset(reg_info);
     assert(offset < GetFPRSize());
     src = (uint8_t *)GetFPRBuffer() + offset;
+  } else if (IsVPR(reg)) {
+    error = ReadVPR();
+    if (error.Fail())
+      return error;
+
+    offset = reg_info->byte_offset;
+    src = static_cast<uint8_t *>(GetVPRBuffer()) + offset;
   } else
     return Status::FromErrorString(
         "failed - register wasn't recognized to be a GPR or an FPR, "
@@ -198,6 +248,16 @@ Status NativeRegisterContextLinux_riscv64::WriteRegister(
     ::memcpy(dst, reg_value.GetBytes(), reg_info->byte_size);
 
     return WriteFPR();
+  } else if (IsVPR(reg)) {
+    error = ReadVPR();
+    if (error.Fail())
+      return error;
+
+    offset = reg_info->byte_offset;
+    dst = static_cast<uint8_t *>(GetVPRBuffer()) + offset;
+    ::memcpy(dst, reg_value.GetBytes(), reg_info->byte_size);
+
+    return WriteVPR();
   }
 
   return Status::FromErrorString("Failed to write register value");
@@ -219,11 +279,21 @@ Status NativeRegisterContextLinux_riscv64::ReadAllRegisterValues(
       return error;
   }
 
+  if (GetRegisterInfo().IsVPPresent()) {
+    error = ReadVPR();
+    if (error.Fail())
+      return error;
+  }
+
   uint8_t *dst = const_cast<uint8_t *>(data_sp->GetBytes());
   ::memcpy(dst, GetGPRBuffer(), GetGPRSize());
   dst += GetGPRSize();
-  if (GetRegisterInfo().IsFPPresent())
+  if (GetRegisterInfo().IsFPPresent()) {
     ::memcpy(dst, GetFPRBuffer(), GetFPRSize());
+    dst += GetFPRSize();
+  }
+  if (GetRegisterInfo().IsVPPresent())
+    ::memcpy(dst, GetVPRBuffer(), GetVPRSize());
 
   return error;
 }
@@ -270,6 +340,16 @@ Status NativeRegisterContextLinux_riscv64::WriteAllRegisterValues(
     error = WriteFPR();
     if (error.Fail())
       return error;
+
+    src += GetFPRSize();
+  }
+
+  if (GetRegisterInfo().IsVPPresent()) {
+    ::memcpy(GetVPRBuffer(), src, GetVPRSize());
+
+    error = WriteVPR();
+    if (error.Fail())
+      return error;
   }
 
   return error;
@@ -279,6 +359,8 @@ size_t NativeRegisterContextLinux_riscv64::GetRegContextSize() {
   size_t size = GetGPRSize();
   if (GetRegisterInfo().IsFPPresent())
     size += GetFPRSize();
+  if (GetRegisterInfo().IsVPPresent())
+    size += GetVPRSize();
   return size;
 }
 
@@ -289,6 +371,10 @@ bool NativeRegisterContextLinux_riscv64::IsGPR(unsigned reg) const {
 
 bool NativeRegisterContextLinux_riscv64::IsFPR(unsigned reg) const {
   return GetRegisterInfo().IsFPReg(reg);
+}
+
+bool NativeRegisterContextLinux_riscv64::IsVPR(unsigned reg) const {
+  return GetRegisterInfo().IsVPReg(reg);
 }
 
 Status NativeRegisterContextLinux_riscv64::ReadGPR() {
@@ -355,9 +441,50 @@ Status NativeRegisterContextLinux_riscv64::WriteFPR() {
   return WriteRegisterSet(&ioVec, GetFPRSize(), NT_FPREGSET);
 }
 
+Status NativeRegisterContextLinux_riscv64::ReadVPR() {
+  if (m_vpr_is_valid)
+    return Status();
+
+  struct iovec ioVec;
+  ioVec.iov_base = GetVPRBuffer();
+  ioVec.iov_len = GetVPRSize();
+
+  Status error = ReadRegisterSet(&ioVec, GetVPRSize(), NT_RISCV_VECTOR);
+  if (error.Fail())
+    return error;
+
+  // Additionally check the vlenb value. Due to bugs in early versions of
+  // RVV support in the Linux kernel, it was possible to obtain an invalid
+  // vector register context even if the PTRACE_GETREGSET call succeeded.
+  bool is_valid_ctx =
+      GetVPRBuffer() &&
+      static_cast<RegisterInfoPOSIX_riscv64::VPR::RawVPR *>(GetVPRBuffer())
+              ->vlenb > 0;
+  if (!is_valid_ctx)
+    return Status::FromErrorString("Invalid vector register context");
+
+  m_vpr_is_valid = true;
+  return Status();
+}
+
+Status NativeRegisterContextLinux_riscv64::WriteVPR() {
+  Status error = ReadVPR();
+  if (error.Fail())
+    return error;
+
+  struct iovec ioVec;
+  ioVec.iov_base = GetVPRBuffer();
+  ioVec.iov_len = GetVPRSize();
+
+  m_vpr_is_valid = false;
+
+  return WriteRegisterSet(&ioVec, GetVPRSize(), NT_RISCV_VECTOR);
+}
+
 void NativeRegisterContextLinux_riscv64::InvalidateAllRegisters() {
   m_gpr_is_valid = false;
   m_fpu_is_valid = false;
+  m_vpr_is_valid = false;
 }
 
 uint32_t NativeRegisterContextLinux_riscv64::CalculateFprOffset(

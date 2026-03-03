@@ -50,6 +50,8 @@ protected:
 
   bool IsFPR(unsigned reg);
 
+  bool IsVPR(unsigned reg);
+
   size_t GetFPRSize() { return sizeof(RegisterInfoPOSIX_riscv64::FPR); }
 
   uint32_t GetRegNumFCSR() const { return fpr_fcsr_riscv; }

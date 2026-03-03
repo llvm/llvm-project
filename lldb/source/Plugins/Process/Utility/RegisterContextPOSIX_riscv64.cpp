@@ -79,3 +79,7 @@ bool RegisterContextPOSIX_riscv64::IsGPR(unsigned int reg) {
 bool RegisterContextPOSIX_riscv64::IsFPR(unsigned int reg) {
   return m_register_info_up->IsFPReg(reg);
 }
+
+bool RegisterContextPOSIX_riscv64::IsVPR(unsigned int reg) {
+  return m_register_info_up->IsVPReg(reg);
+}

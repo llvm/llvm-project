@@ -24,6 +24,7 @@ public:
   enum {
     eRegsetMaskDefault = 0,
     eRegsetMaskFP = 1,
+    eRegsetMaskVP = 2,
     eRegsetMaskAll = -1,
   };
 
@@ -37,17 +38,41 @@ public:
     uint32_t fcsr;
   };
 
-  struct VPR {
-    // The size should be VLEN*32 in bits, but we don't have VLEN here.
-    void *vpr;
+  class VPR {
+  public:
+    // __riscv_v_regset_state from Linux ptrace API
+    struct RawVPR {
+      uint64_t vstart;
+      uint64_t vl;
+      uint64_t vtype;
+      uint64_t vcsr;
+      uint64_t vlenb;
+      uint8_t v_regs[];
+    };
+
+    VPR() = default;
+
+    VPR(uint64_t vlenb) : m_vpr(sizeof(RawVPR) + 32 * vlenb) {
+      assert(vlenb && "Target doesn't support V extension!");
+    }
+
+    void *GetVPR() { return static_cast<void *>(m_vpr.data()); }
+
+    size_t GetSize() const { return m_vpr.size(); }
+
+  private:
+    std::vector<uint8_t> m_vpr;
   };
 
   RegisterInfoPOSIX_riscv64(const lldb_private::ArchSpec &target_arch,
-                            lldb_private::Flags opt_regsets);
+                            lldb_private::Flags opt_regsets,
+                            uint64_t vlenb = 0);
 
   void AddRegSetGP();
 
   void AddRegSetFP();
+
+  void AddRegSetVPR(uint64_t vlenb);
 
   size_t GetGPRSize() const override;
 
@@ -66,7 +91,11 @@ public:
 
   bool IsFPPresent() const { return m_opt_regsets.AnySet(eRegsetMaskFP); }
 
+  bool IsVPPresent() const { return m_opt_regsets.AnySet(eRegsetMaskVP); }
+
   bool IsFPReg(unsigned reg) const;
+
+  bool IsVPReg(unsigned reg) const;
 
 private:
   std::vector<lldb_private::RegisterInfo> m_register_infos;
@@ -79,6 +108,7 @@ private:
 
   // Register collections to be stored as reference for m_register_sets items
   std::vector<uint32_t> m_fp_regnum_collection;
+  std::vector<uint32_t> m_vp_regnum_collection;
 
   lldb_private::Flags m_opt_regsets;
 };
