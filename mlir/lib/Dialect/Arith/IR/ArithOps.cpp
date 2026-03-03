@@ -1880,6 +1880,12 @@ bool arith::IndexCastUIOp::areCastCompatible(TypeRange inputs,
 }
 
 OpFoldResult arith::IndexCastUIOp::fold(FoldAdaptor adaptor) {
+  // index_castui(index_castui(x, exact)) -> x
+  if (auto innerCast = getIn().getDefiningOp<IndexCastUIOp>()) {
+    if (innerCast.getIn().getType() == getType() && innerCast.getIsExact())
+      return innerCast.getIn();
+  }
+
   // index_castui(constant) -> constant
   unsigned resultBitwidth = 64; // Default for index integer attributes.
   if (auto intTy = dyn_cast<IntegerType>(getElementTypeOrSelf(getType())))
@@ -1894,7 +1900,7 @@ OpFoldResult arith::IndexCastUIOp::fold(FoldAdaptor adaptor) {
 
 void arith::IndexCastUIOp::getCanonicalizationPatterns(
     RewritePatternSet &patterns, MLIRContext *context) {
-  patterns.add<IndexCastUIOfIndexCastUI, IndexCastUIOfExtUI>(context);
+  patterns.add<IndexCastUIOfExtUI>(context);
 }
 
 //===----------------------------------------------------------------------===//
