@@ -143,8 +143,7 @@ void VPPredicator::createBlockInMask(VPBasicBlock *VPBB) {
            VPBB->getPredecessors().begin(), VPBB->getPredecessors().end()))
     createEdgeMask(cast<VPBasicBlock>(Predecessor), VPBB);
 
-  // Reuse the mask of header block if VPBB is control-flow equivalent to
-  // header.
+  // Reuse the mask of the header if VPBB is post-dominated by the header.
   // TODO: Generalize to reuse mask of immediate dominator.
   VPBasicBlock *Header =
       VPBB->getPlan()->getVectorLoopRegion()->getEntryBasicBlock();
