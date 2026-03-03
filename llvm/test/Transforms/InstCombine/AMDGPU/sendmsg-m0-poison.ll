@@ -34,7 +34,7 @@ define void @test_sendmsg_gs_emit(i32 %val) {
 ; GFX10-NEXT:    ret void
 ;
 ; GFX11-LABEL: @test_sendmsg_gs_emit(
-; GFX11-NEXT:    call void @llvm.amdgcn.s.sendmsg(i32 34, i32 poison)
+; GFX11-NEXT:    call void @llvm.amdgcn.s.sendmsg(i32 34, i32 [[VAL:%.*]])
 ; GFX11-NEXT:    ret void
 ;
   call void @llvm.amdgcn.s.sendmsg(i32 34, i32 %val)
