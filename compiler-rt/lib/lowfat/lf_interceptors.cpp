@@ -14,6 +14,7 @@
 #include "interception/interception.h"
 #include "lf_allocator.h"
 #include "lf_config.h"
+#include "lf_interface.h"
 #include "sanitizer_common/sanitizer_allocator_dlsym.h"
 
 using namespace __sanitizer;
@@ -143,6 +144,35 @@ INTERCEPTOR(int, posix_memalign, void **memptr, uptr alignment, uptr size) {
   return REAL(posix_memalign)(memptr, alignment, size);
 }
 
+static inline void check_bounds(const void *ptr, uptr access_size, int is_write) {
+  if (!ptr || access_size == 0) return;
+  if (!__lowfat::CheckBounds((uptr)ptr, access_size)) {
+    uptr start = (uptr)ptr;
+    uptr size = __lowfat::GetSize(start);
+    uptr base = __lowfat::GetBase(start);
+    __lf_report_oob(start + access_size, base, size, is_write);
+  }
+}
+
+// The compiler pass instruments direct memory accesses inline, but cannot 
+// instrument external libc calls. We intercept them here to check bounds.
+INTERCEPTOR(void *, memset, void *dst, int v, uptr size) {
+  check_bounds(dst, size, 1 /* write */);
+  return REAL(memset)(dst, v, size);
+}
+
+INTERCEPTOR(void *, memcpy, void *dst, const void *src, uptr size) {
+  check_bounds(dst, size, 1 /* write */);
+  check_bounds(src, size, 0 /* read */);
+  return REAL(memcpy)(dst, src, size);
+}
+
+INTERCEPTOR(void *, memmove, void *dst, const void *src, uptr size) {
+  check_bounds(dst, size, 1 /* write */);
+  check_bounds(src, size, 0 /* read */);
+  return REAL(memmove)(dst, src, size);
+}
+
 #if SANITIZER_APPLE
 INTERCEPTOR(uptr, malloc_size, void *ptr) {
   if (DlsymAlloc::PointerIsMine(ptr))
@@ -152,10 +182,6 @@ INTERCEPTOR(uptr, malloc_size, void *ptr) {
   return REAL(malloc_size)(ptr);
 }
 #endif
-
-//===----------------------------------------------------------------------===//
-// Initialization
-//===----------------------------------------------------------------------===//
 
 namespace __lowfat {
 void InitializeInterceptors() {
@@ -168,10 +194,12 @@ void InitializeInterceptors() {
   INTERCEPT_FUNCTION(realloc);
   INTERCEPT_FUNCTION(valloc);
   INTERCEPT_FUNCTION(posix_memalign);
+  INTERCEPT_FUNCTION(memset);
+  INTERCEPT_FUNCTION(memcpy);
+  INTERCEPT_FUNCTION(memmove);
 #if SANITIZER_APPLE
   INTERCEPT_FUNCTION(malloc_size);
 #endif
-
   inited = 1;
 }
 } // namespace __lowfat
