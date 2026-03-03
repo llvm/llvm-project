@@ -270,10 +270,12 @@ std::string lookupBuiltinNameHelper(StringRef DemangledCall,
 /// signyfying the type of the first argument.
 ///
 /// \returns Wrapper around the demangled call and found builtin definition.
-static std::unique_ptr<const SPIRV::IncomingCall> lookupBuiltin(
-    StringRef DemangledCall, SPIRV::InstructionSet::InstructionSet Set,
-    Register ReturnRegister, SPIRVTypeInst ReturnType,
-    const SmallVectorImpl<Register> &Arguments, bool ValidateArgCount = true) {
+static std::unique_ptr<const SPIRV::IncomingCall>
+lookupBuiltin(StringRef DemangledCall,
+              SPIRV::InstructionSet::InstructionSet Set,
+              Register ReturnRegister, SPIRVTypeInst ReturnType,
+              const SmallVectorImpl<Register> &Arguments,
+              bool ValidateArgCount = true) {
   std::string BuiltinName = SPIRV::lookupBuiltinNameHelper(DemangledCall);
 
   SmallVector<StringRef, 10> BuiltinArgumentTypes;
