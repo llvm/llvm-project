@@ -2914,7 +2914,7 @@ bool SPIRVInstructionSelector::selectWaveReduceSum(Register ResVReg,
 }
 
 bool SPIRVInstructionSelector::selectWaveReduceProduct(Register ResVReg,
-                                                       const SPIRVType *ResType,
+                                                       SPIRVTypeInst ResType,
                                                        MachineInstr &I) const {
   return selectWaveReduce(ResVReg, ResType, I, /*IsUnsigned*/ false,
                           [&](Register InputRegister, bool IsUnsigned) {
