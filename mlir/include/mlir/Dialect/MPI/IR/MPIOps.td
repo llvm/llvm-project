@@ -365,6 +365,7 @@ def MPI_ReduceScatterBlockOp : MPI_Op<"reduce_scatter_block", []> {
   let assemblyFormat = "`(` $sendbuf `,` $recvbuf `,` $op `,` $comm `)` "
                        "attr-dict `:` type($sendbuf) `,` type($recvbuf) "
                        "(`->` type($retval)^)?";
+  let hasVerifier = 1;
 }
 
 //===----------------------------------------------------------------------===//
