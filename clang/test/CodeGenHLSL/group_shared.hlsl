@@ -8,12 +8,23 @@
 // RUN:   -emit-llvm -disable-llvm-passes -o - | FileCheck %s
 
 // Make sure groupshared translated into address space 3.
-// CHECK:@a = hidden addrspace(3) global [10 x float]
+// CHECK:@a = external hidden addrspace(3) global [10 x float], align 4
 
  groupshared float a[10];
+
+// CHECK:@b = external hidden addrspace(3) global [10 x float], align 4
+ groupshared float b[10] = {1,2,3,4,5,6,7,8,9,10};
+
+ struct S {
+   uint4 x;
+ };
+
+// CHECK:@c = external hidden addrspace(3) global %struct.S, align 1
+extern groupshared S c;
 
  [numthreads(8,8,1)]
  void main() {
    a[0] = 1;
+   b[0] = 1;
+   uint d = c.x[0];
  }
-
