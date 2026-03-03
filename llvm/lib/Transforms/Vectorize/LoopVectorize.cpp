@@ -198,6 +198,8 @@ static cl::opt<unsigned> VectorizeMemoryCheckThreshold(
     "vectorize-memory-check-threshold", cl::init(128), cl::Hidden,
     cl::desc("The maximum allowed number of runtime memory checks"));
 
+/// Note: This currently only applies to `llvm.masked.load` and
+/// `llvm.masked.store`. TODO: Extend this to cover other operations as needed.
 static cl::opt<bool> ForceTargetSupportsMaskedMemoryOps(
     "force-target-supports-masked-memory-ops", cl::init(false), cl::Hidden,
     cl::desc("Assume the target supports masked memory operations (used for "
