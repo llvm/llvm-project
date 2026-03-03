@@ -1310,9 +1310,12 @@ ResolveLayoutConflicts::resolveVectorConsumer(OpOperand &operand) {
   Operation *consumerOp = operand.getOwner();
   // Get the current layout of the vector value.
   auto producerLayout = xegpu::getDistributeLayoutAttr(vectorValue);
-  if (!producerLayout)
-    return consumerOp->emitError("Vector operand has no layout assigned.");
-
+  if (!producerLayout) {
+    if (auto vectorTy = dyn_cast<VectorType>(vectorValue.getType());
+        vectorTy && vectorTy.getRank() > 1)
+      consumerOp->emitWarning("Expected layout for non-1D vectors.");
+    return success(); // uniform non-tensor-data vector does not require layout
+  }
   // Get the consumer expected layout at this operand.
   auto consumerLayout = xegpu::getConsumerLayoutAt(operand);
   if (!consumerLayout)
