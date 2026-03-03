@@ -207,7 +207,7 @@ MachineSDNode *WebAssembly::getTLSBase(SelectionDAG &DAG, const SDLoc &DL,
     SymName = "__wasm_component_model_builtin_context_get_1";
   } else {
     Opcode = PtrVT == MVT::i64 ? WebAssembly::GLOBAL_GET_I64
-                                : WebAssembly::GLOBAL_GET_I32;
+                               : WebAssembly::GLOBAL_GET_I32;
     SymName = "__tls_base";
   }
 
