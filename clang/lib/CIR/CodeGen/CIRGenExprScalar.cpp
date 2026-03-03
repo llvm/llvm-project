@@ -676,11 +676,6 @@ public:
         // VLA types don't have constant size.
         cgf.cgm.errorNYI(e->getSourceRange(), "Pointer arithmetic on VLA");
         return {};
-      } else if (type->isFunctionType()) {
-        // Arithmetic on function pointers (!) is just +-1.
-        cgf.cgm.errorNYI(e->getSourceRange(),
-                         "Pointer arithmetic on function pointer");
-        return {};
       } else {
         // For everything else, we can just do a simple increment.
         mlir::Location loc = cgf.getLoc(e->getSourceRange());
@@ -1811,11 +1806,6 @@ static mlir::Value emitPointerArithmetic(CIRGenFunction &cgf,
   QualType elementType = pointerType->getPointeeType();
   if (cgf.getContext().getAsVariableArrayType(elementType)) {
     cgf.cgm.errorNYI("variable array type");
-    return nullptr;
-  }
-
-  if (elementType->isVoidType() || elementType->isFunctionType()) {
-    cgf.cgm.errorNYI("void* or function pointer arithmetic");
     return nullptr;
   }
 
