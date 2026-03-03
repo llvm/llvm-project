@@ -147,6 +147,7 @@ ConstantIntRanges mlir::intrange::truncRange(const ConstantIntRanges &range,
   // the range of the resulting value is not contiguous ind includes 0.
   // Ex. If you truncate [256, 258] from i16 to i8, you validly get [0, 2],
   // but you can't truncate [255, 257] similarly.
+  // NOTE: Issue ends here, in the trunc call when destwidth = 0
   bool hasUnsignedRollover =
       range.umin().lshr(destWidth) != range.umax().lshr(destWidth);
   APInt umin = hasUnsignedRollover ? APInt::getZero(destWidth)
