@@ -69,7 +69,7 @@ class TestCase(lldbtest.TestBase):
 
         log = self.getBuildArtifact("types.log")
         self.runCmd(f"log enable lldb types -f '{log}'")
-        self.expect("settings set target.experimental.swift-allow-implicit-modules true")
+        self.expect("settings set target.experimental.swift-allow-implicit-module-loader true")
 
         self.expect("expression c")
 

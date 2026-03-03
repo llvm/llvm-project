@@ -47,6 +47,7 @@ public:
          std::unique_ptr<swift::ExplicitSwiftModuleMap> ExplicitSwiftModuleMap,
          std::unique_ptr<swift::ExplicitClangModuleMap> ExplicitClangModuleMap);
 
+  bool enabled() const;
   void collectVisibleTopLevelModuleNames(
       llvm::SmallVectorImpl<swift::Identifier> &names) const override;
   std::error_code findModuleFilesInDirectory(

@@ -3964,7 +3964,7 @@ public:
     if (!m_swift_ast_ctx.HasExplicitModules())
       return;
     // This setting is off by default and allows to return to the old behavior.
-    if (Target::GetGlobalProperties().GetSwiftAllowImplicitModules())
+    if (Target::GetGlobalProperties().GetSwiftAllowImplicitModuleLoader())
       return;
     m_swift_ast_ctx.SetImplicitModulesDisabled(true);
     LOG_PRINTF(GetLog(LLDBLog::Types), "Turning off implicit modules");

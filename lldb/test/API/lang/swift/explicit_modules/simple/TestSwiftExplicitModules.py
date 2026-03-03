@@ -25,6 +25,7 @@ class TestSwiftExplicitModules(lldbtest.TestBase):
         """Test disabling the explicit Swift module loader"""
         self.build()
         self.expect("settings set symbols.use-swift-explicit-module-loader false")
+        self.expect("settings set target.experimental.swift-allow-implicit-module-loader true")
 
         target, process, thread, bkpt = lldbutil.run_to_source_breakpoint(
             self, 'Set breakpoint here', lldb.SBFileSpec('main.swift'))
