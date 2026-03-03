@@ -3053,47 +3053,7 @@ def : GCNPat <
   )
 >;
 
-let WaveSizePredicate = isWave64 in {
-def : GCNPat <
-  (i1 (and i1:$src0, i1:$src1)),
-  (S_AND_B64 $src0, $src1)
->;
-
-
-def : GCNPat <
-  (i1 (or i1:$src0, i1:$src1)),
-  (S_OR_B64 $src0, $src1)
->;
-
-def : GCNPat <
-  (i1 (xor i1:$src0, i1:$src1)),
-  (S_XOR_B64 $src0, $src1)
->;
-
-def : GCNPat <
-  (i1 (add i1:$src0, i1:$src1)),
-  (S_XOR_B64 $src0, $src1)
->;
-
-def : GCNPat <
-  (i1 (sub i1:$src0, i1:$src1)),
-  (S_XOR_B64 $src0, $src1)
->;
-
-let AddedComplexity = 1 in {
-def : GCNPat <
-  (i1 (add i1:$src0, (i1 -1))),
-  (S_NOT_B64 $src0)
->;
-
-def : GCNPat <
-  (i1 (sub i1:$src0, (i1 -1))),
-  (S_NOT_B64 $src0)
->;
-}
-} // end isWave64
-
-let WaveSizePredicate = isWave32 in {
+// let WaveSizePredicate = isWave32 in {
 def : GCNPat <
   (i1 (and i1:$src0, i1:$src1)),
   (S_AND_B32 $src0, $src1)
@@ -3130,7 +3090,7 @@ def : GCNPat <
   (S_NOT_B32 $src0)
 >;
 }
-} // end isWave32
+// } // end isWave32
 
 def : GCNPat <
   (i32 (DivergentBinFrag<xor> i32:$src0, (i32 -1))),
