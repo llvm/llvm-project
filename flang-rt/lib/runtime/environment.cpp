@@ -8,7 +8,7 @@
 
 #include "flang-rt/runtime/environment.h"
 #include "environment-default-list.h"
-#include "memory.h"
+#include "flang-rt/runtime/memory.h"
 #include "flang-rt/runtime/tools.h"
 #include <cstdio>
 #include <cstdlib>
@@ -19,10 +19,11 @@
 #ifdef _MSC_VER
 extern char **_environ;
 #endif
-#elif defined(__FreeBSD__)
+#elif defined(__FreeBSD__) || RT_GPU_TARGET
 // FreeBSD has environ in crt rather than libc. Using "extern char** environ"
 // in the code of a shared library makes it fail to link with -Wl,--no-undefined
 // See https://reviews.freebsd.org/D30842#840642
+// GPU targets do not provide environ.
 #else
 extern char **environ;
 #endif
@@ -51,6 +52,8 @@ static void (*PostConfigEnvCallback[ExecutionEnvironment::nConfigEnvCallback])(
     int, const char *[], const char *[], const EnvironmentDefaultList *){
     nullptr};
 
+// No environment support on the GPU.
+#if !RT_GPU_TARGET
 static void SetEnvironmentDefaults(const EnvironmentDefaultList *envDefaults) {
   if (!envDefaults) {
     return;
@@ -314,6 +317,7 @@ std::int32_t ExecutionEnvironment::UnsetEnv(
 
   return status;
 }
+#endif
 
 extern "C" {
 

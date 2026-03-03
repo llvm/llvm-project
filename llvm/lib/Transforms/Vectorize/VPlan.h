@@ -1473,6 +1473,7 @@ public:
     case VPInstruction::WideIVStep:
     case VPInstruction::StepVector:
     case VPInstruction::VScale:
+    case Instruction::Load:
       return true;
     default:
       return false;
@@ -4772,6 +4773,14 @@ public:
 
   /// Return a VPIRValue wrapping i1 false.
   VPIRValue *getFalse() { return getConstantInt(1, 0); }
+
+  /// Return a VPIRValue wrapping the null value of type \p Ty.
+  VPIRValue *getZero(Type *Ty) { return getConstantInt(Ty, 0); }
+
+  /// Return a VPIRValue wrapping the AllOnes value of type \p Ty.
+  VPIRValue *getAllOnesValue(Type *Ty) {
+    return getConstantInt(APInt::getAllOnes(Ty->getIntegerBitWidth()));
+  }
 
   /// Return a VPIRValue wrapping a ConstantInt with the given type and value.
   VPIRValue *getConstantInt(Type *Ty, uint64_t Val, bool IsSigned = false) {
