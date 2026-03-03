@@ -286,24 +286,19 @@ DependencyScanningTool::getModuleDependencies(
           initializeCompilerInstanceWithContextOrError(CWD, CommandLine))
     return Error;
 
-  auto Result = computeDependenciesByNameWithContextOrError(
-      ModuleName, AlreadySeen, LookupModuleOutput);
-
-  if (auto Error = finalizeCompilerInstanceWithContextOrError())
-    return Error;
-
-  return Result;
+  return computeDependenciesByNameWithContextOrError(ModuleName, AlreadySeen,
+                                                     LookupModuleOutput);
 }
 
 static std::optional<SmallVector<std::string, 0>> getFirstCC1CommandLine(
     ArrayRef<std::string> CommandLine, DiagnosticsEngine &Diags,
-    llvm::IntrusiveRefCntPtr<llvm::vfs::OverlayFileSystem> ScanFS) {
+    llvm::IntrusiveRefCntPtr<llvm::vfs::OverlayFileSystem> OverlayFS) {
   // Compilation holds a non-owning a reference to the Driver, hence we need to
   // keep the Driver alive when we use Compilation. Arguments to commands may be
   // owned by Alloc when expanded from response files.
   llvm::BumpPtrAllocator Alloc;
   const auto [Driver, Compilation] =
-      buildCompilation(CommandLine, Diags, ScanFS, Alloc);
+      buildCompilation(CommandLine, Diags, OverlayFS, Alloc);
   if (!Compilation)
     return std::nullopt;
 
@@ -370,12 +365,5 @@ DependencyScanningTool::computeDependenciesByNameWithContextOrError(
   if (Worker.computeDependenciesByNameWithContext(ModuleName, Consumer,
                                                   Controller))
     return Consumer.takeTranslationUnitDeps();
-  return makeErrorFromDiagnosticsOS(*DiagPrinterWithOS);
-}
-
-llvm::Error
-DependencyScanningTool::finalizeCompilerInstanceWithContextOrError() {
-  if (Worker.finalizeCompilerInstanceWithContext())
-    return llvm::Error::success();
   return makeErrorFromDiagnosticsOS(*DiagPrinterWithOS);
 }

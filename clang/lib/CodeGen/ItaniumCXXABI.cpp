@@ -1258,6 +1258,7 @@ llvm::Constant *ItaniumCXXABI::EmitMemberPointer(const APValue &MP,
     return pointerAuthResignMemberFunctionPointer(Src, MPType, SrcType, CGM);
   }
 
+  getContext().recordMemberDataPointerEvaluation(MPD);
   CharUnits FieldOffset =
     getContext().toCharUnitsFromBits(getContext().getFieldOffset(MPD));
   return EmitMemberDataPointer(MPT, ThisAdjustment + FieldOffset);
@@ -3480,6 +3481,10 @@ ItaniumCXXABI::getOrCreateVirtualFunctionPointerThunk(const CXXMethodDecl *MD) {
 
   CGF.StartFunction(GlobalDecl(), FnInfo.getReturnType(), ThunkFn, FnInfo,
                     FunctionArgs, MD->getLocation(), SourceLocation());
+
+  // Emit an artificial location for this function.
+  auto AL = ApplyDebugLocation::CreateArtificial(CGF);
+
   llvm::Value *ThisVal = loadIncomingCXXThis(CGF);
   setCXXABIThisValue(CGF, ThisVal);
 
@@ -3972,6 +3977,7 @@ void ItaniumRTTIBuilder::BuildVTablePointer(const Type *Ty,
 
   case Type::Builtin:
   case Type::BitInt:
+  case Type::OverflowBehavior:
   // GCC treats vector and complex types as fundamental types.
   case Type::Vector:
   case Type::ExtVector:
@@ -4323,6 +4329,9 @@ llvm::Constant *ItaniumRTTIBuilder::BuildTypeInfo(
 
   case Type::Atomic:
     // No fields, at least for the moment.
+    break;
+
+  case Type::OverflowBehavior:
     break;
 
   case Type::HLSLAttributedResource:

@@ -368,8 +368,11 @@ void VPIRFlags::intersectFlags(const VPIRFlags &Other) {
 
 FastMathFlags VPIRFlags::getFastMathFlags() const {
   assert((OpType == OperationType::FPMathOp || OpType == OperationType::FCmp ||
-          OpType == OperationType::ReductionOp) &&
+          OpType == OperationType::ReductionOp ||
+          OpType == OperationType::Other) &&
          "recipe doesn't have fast math flags");
+  if (OpType == OperationType::Other)
+    return FastMathFlags();
   const FastMathFlagsTy &F = getFMFsRef();
   FastMathFlags Res;
   Res.setAllowReassoc(F.AllowReassoc);
@@ -429,7 +432,8 @@ VPInstruction::VPInstruction(unsigned Opcode, ArrayRef<VPValue *> Operands,
   assert(hasRequiredFlagsForOpcode(getOpcode()) &&
          "Opcode requires specific flags to be set");
   assert((getNumOperandsForOpcode() == -1u ||
-          getNumOperandsForOpcode() == getNumOperands()) &&
+          getNumOperandsForOpcode() == getNumOperands() ||
+          (isMasked() && getNumOperandsForOpcode() + 1 == getNumOperands())) &&
          "number of operands does not match opcode");
 }
 
@@ -450,10 +454,12 @@ unsigned VPInstruction::getNumOperandsForOpcode() const {
   case Instruction::Load:
   case VPInstruction::BranchOnCond:
   case VPInstruction::Broadcast:
+  case VPInstruction::ExitingIVValue:
   case VPInstruction::ExplicitVectorLength:
   case VPInstruction::ExtractLastLane:
   case VPInstruction::ExtractLastPart:
   case VPInstruction::ExtractPenultimateElement:
+  case VPInstruction::MaskedCond:
   case VPInstruction::Not:
   case VPInstruction::ResumeForEpilogue:
   case VPInstruction::Reverse:
@@ -465,7 +471,6 @@ unsigned VPInstruction::getNumOperandsForOpcode() const {
   case Instruction::Store:
   case VPInstruction::BranchOnCount:
   case VPInstruction::BranchOnTwoConds:
-  case VPInstruction::ExitingIVValue:
   case VPInstruction::FirstOrderRecurrenceSplice:
   case VPInstruction::LogicalAnd:
   case VPInstruction::LogicalOr:
@@ -585,9 +590,7 @@ Value *VPInstruction::generate(VPTransformState &State) {
                   OnlyFirstLaneUsed || vputils::isSingleScalar(getOperand(0)));
     Value *Op1 = State.get(getOperand(1), OnlyFirstLaneUsed);
     Value *Op2 = State.get(getOperand(2), OnlyFirstLaneUsed);
-    FastMathFlags FMFs =
-        hasFastMathFlags() ? getFastMathFlags() : FastMathFlags();
-    return Builder.CreateSelectFMF(Cond, Op1, Op2, FMFs, Name);
+    return Builder.CreateSelectFMF(Cond, Op1, Op2, getFastMathFlags(), Name);
   }
   case VPInstruction::ActiveLaneMask: {
     // Get first lane of vector induction variable.
@@ -752,8 +755,7 @@ Value *VPInstruction::generate(VPTransformState &State) {
       RdxParts[Part] = State.get(getOperand(Part), IsInLoop);
 
     IRBuilderBase::FastMathFlagGuard FMFG(Builder);
-    if (hasFastMathFlags())
-      Builder.setFastMathFlags(getFastMathFlags());
+    Builder.setFastMathFlags(getFastMathFlags());
 
     // Reduce multiple operands into one.
     Value *ReducedPartRdx = RdxParts[0];
@@ -1276,6 +1278,7 @@ bool VPInstruction::isVectorToScalar() const {
 
 bool VPInstruction::isSingleScalar() const {
   switch (getOpcode()) {
+  case Instruction::Load:
   case Instruction::PHI:
   case VPInstruction::ExplicitVectorLength:
   case VPInstruction::ResumeForEpilogue:
@@ -1345,6 +1348,7 @@ bool VPInstruction::opcodeMayReadOrWriteFromMemory() const {
   case VPInstruction::FirstOrderRecurrenceSplice:
   case VPInstruction::LogicalAnd:
   case VPInstruction::LogicalOr:
+  case VPInstruction::MaskedCond:
   case VPInstruction::Not:
   case VPInstruction::PtrAdd:
   case VPInstruction::WideIVStep:
@@ -1380,6 +1384,7 @@ bool VPInstruction::usesFirstLaneOnly(const VPValue *Op) const {
   case VPInstruction::Not:
     // TODO: Cover additional opcodes.
     return vputils::onlyFirstLaneUsed(this);
+  case Instruction::Load:
   case VPInstruction::ActiveLaneMask:
   case VPInstruction::ExplicitVectorLength:
   case VPInstruction::CalculateTripCountMinusVF:
@@ -1491,6 +1496,9 @@ void VPInstruction::printRecipe(raw_ostream &O, const Twine &Indent,
   case VPInstruction::ExitingIVValue:
     O << "exiting-iv-value";
     break;
+  case VPInstruction::MaskedCond:
+    O << "masked-cond";
+    break;
   case VPInstruction::ExtractLane:
     O << "extract-lane";
     break;
@@ -1599,6 +1607,10 @@ void VPInstructionWithType::printRecipe(raw_ostream &O, const Twine &Indent,
   case VPInstruction::VScale:
     O << "vscale " << *ResultTy;
     break;
+  case Instruction::Load:
+    O << "load ";
+    printOperands(O, SlotTracker);
+    break;
   default:
     assert(Instruction::isCast(getOpcode()) && "unhandled opcode");
     O << Instruction::getOpcodeName(getOpcode()) << " ";
@@ -1658,20 +1670,6 @@ InstructionCost VPIRInstruction::computeCost(ElementCount VF,
   return 0;
 }
 
-void VPIRInstruction::extractLastLaneOfLastPartOfFirstOperand(
-    VPBuilder &Builder) {
-  assert(isa<PHINode>(getInstruction()) &&
-         "can only update exiting operands to phi nodes");
-  assert(getNumOperands() > 0 && "must have at least one operand");
-  VPValue *Exiting = getOperand(0);
-  if (isa<VPIRValue>(Exiting))
-    return;
-
-  Exiting = Builder.createNaryOp(VPInstruction::ExtractLastPart, Exiting);
-  Exiting = Builder.createNaryOp(VPInstruction::ExtractLastLane, Exiting);
-  setOperand(0, Exiting);
-}
-
 #if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
 void VPIRInstruction::printRecipe(raw_ostream &O, const Twine &Indent,
                                   VPSlotTracker &SlotTracker) const {
@@ -1716,10 +1714,14 @@ void VPPhiAccessors::removeIncomingValueFor(VPBlockBase *IncomingBlock) const {
 
 VPValue *
 VPPhiAccessors::getIncomingValueForBlock(const VPBasicBlock *VPBB) const {
-  for (unsigned Idx = 0; Idx != getNumIncoming(); ++Idx)
-    if (getIncomingBlock(Idx) == VPBB)
-      return getIncomingValue(Idx);
-  llvm_unreachable("VPBB is not an incoming block");
+  VPRecipeBase *R = const_cast<VPRecipeBase *>(getAsRecipe());
+  return getIncomingValue(R->getParent()->getIndexForPredecessor(VPBB));
+}
+
+void VPPhiAccessors::setIncomingValueForBlock(const VPBasicBlock *VPBB,
+                                              VPValue *V) const {
+  VPRecipeBase *R = const_cast<VPRecipeBase *>(getAsRecipe());
+  R->setOperand(R->getParent()->getIndexForPredecessor(VPBB), V);
 }
 
 #if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
@@ -1946,12 +1948,10 @@ static InstructionCost getCostForIntrinsics(Intrinsic::ID ID,
   }
 
   // TODO: Rework TTI interface to avoid reliance on underlying IntrinsicInst.
-  FastMathFlags FMF =
-      R.hasFastMathFlags() ? R.getFastMathFlags() : FastMathFlags();
   IntrinsicCostAttributes CostAttrs(
-      ID, RetTy, Arguments, ParamTys, FMF,
+      ID, RetTy, Arguments, ParamTys, R.getFastMathFlags(),
       dyn_cast_or_null<IntrinsicInst>(R.getUnderlyingValue()),
-      InstructionCost::getInvalid(), &Ctx.TLI);
+      InstructionCost::getInvalid());
   return Ctx.TTI.getIntrinsicInstrCost(CostAttrs, Ctx.CostKind);
 }
 
@@ -2543,8 +2543,7 @@ void VPDerivedIVRecipe::printRecipe(raw_ostream &O, const Twine &Indent,
 void VPScalarIVStepsRecipe::execute(VPTransformState &State) {
   // Fast-math-flags propagate from the original induction instruction.
   IRBuilder<>::FastMathFlagGuard FMFG(State.Builder);
-  if (hasFastMathFlags())
-    State.Builder.setFastMathFlags(getFastMathFlags());
+  State.Builder.setFastMathFlags(getFastMathFlags());
 
   /// Compute scalar induction steps. \p ScalarIV is the scalar induction
   /// variable on which to base the steps, \p Step is the size of the step.
@@ -4622,7 +4621,8 @@ void VPReductionPHIRecipe::printRecipe(raw_ostream &O, const Twine &Indent,
   O << Indent << "WIDEN-REDUCTION-PHI ";
 
   printAsOperand(O, SlotTracker);
-  O << " = phi ";
+  O << " = phi";
+  printFlags(O);
   printOperands(O, SlotTracker);
   if (getVFScaleFactor() > 1)
     O << " (VF scaled by 1/" << getVFScaleFactor() << ")";

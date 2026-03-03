@@ -641,6 +641,11 @@ public:
     llvm_unreachable("Unhandled VPRecipeID");
   }
 
+  static inline bool classof(const VPValue *V) {
+    auto *R = V->getDefiningRecipe();
+    return R && classof(R);
+  }
+
   static inline bool classof(const VPUser *U) {
     auto *R = dyn_cast<VPRecipeBase>(U);
     return R && classof(R);
@@ -1281,10 +1286,10 @@ public:
     VScale,
     /// Compute the exiting value of a wide induction after vectorization, that
     /// is the value of the last lane of the induction increment (i.e. its
-    /// backedge value). Takes the wide induction recipe and the original
-    /// backedge value as operands.
+    /// backedge value). Has the wide induction recipe as operand.
     ExitingIVValue,
-    OpsEnd = ExitingIVValue,
+    MaskedCond,
+    OpsEnd = MaskedCond,
   };
 
   /// Returns true if this VPInstruction generates scalar values for all lanes.
@@ -1318,6 +1323,9 @@ private:
 
   /// Returns true if the VPInstruction does not need masking.
   bool alwaysUnmasked() const {
+    if (Opcode == VPInstruction::MaskedCond)
+      return false;
+
     // For now only VPInstructions with underlying values use masks.
     // TODO: provide masks to VPInstructions w/o underlying values.
     if (!getUnderlyingValue())
@@ -1479,6 +1487,7 @@ public:
     case VPInstruction::WideIVStep:
     case VPInstruction::StepVector:
     case VPInstruction::VScale:
+    case Instruction::Load:
       return true;
     default:
       return false;
@@ -1536,6 +1545,10 @@ public:
 
   /// Returns the incoming value for \p VPBB. \p VPBB must be an incoming block.
   VPValue *getIncomingValueForBlock(const VPBasicBlock *VPBB) const;
+
+  /// Sets the incoming value for \p VPBB to \p V. \p VPBB must be an incoming
+  /// block.
+  void setIncomingValueForBlock(const VPBasicBlock *VPBB, VPValue *V) const;
 
   /// Returns the number of incoming values, also number of incoming blocks.
   virtual unsigned getNumIncoming() const {
@@ -1668,11 +1681,6 @@ public:
            "Op must be an operand of the recipe");
     return true;
   }
-
-  /// Update the recipe's first operand to the last lane of the last part of the
-  /// operand using \p Builder. Must only be used for VPIRInstructions with at
-  /// least one operand wrapping a PHINode.
-  void extractLastLaneOfLastPartOfFirstOperand(VPBuilder &Builder);
 
 protected:
 #if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
@@ -2347,7 +2355,10 @@ public:
   /// incoming value, its start value.
   unsigned getNumIncoming() const override { return 1; }
 
-  PHINode *getPHINode() const { return cast<PHINode>(getUnderlyingValue()); }
+  /// Returns the underlying PHINode if one exists, or null otherwise.
+  PHINode *getPHINode() const {
+    return cast_if_present<PHINode>(getUnderlyingValue());
+  }
 
   /// Returns the induction descriptor for the recipe.
   const InductionDescriptor &getInductionDescriptor() const { return IndDesc; }
@@ -2626,7 +2637,7 @@ inline ReductionStyle getReductionStyle(bool InLoop, bool Ordered,
 /// A recipe for handling reduction phis. The start value is the first operand
 /// of the recipe and the incoming value from the backedge is the second
 /// operand.
-class VPReductionPHIRecipe : public VPHeaderPHIRecipe {
+class VPReductionPHIRecipe : public VPHeaderPHIRecipe, public VPIRFlags {
   /// The recurrence kind of the reduction.
   const RecurKind Kind;
 
@@ -2642,9 +2653,10 @@ public:
   /// Create a new VPReductionPHIRecipe for the reduction \p Phi.
   VPReductionPHIRecipe(PHINode *Phi, RecurKind Kind, VPValue &Start,
                        VPValue &BackedgeValue, ReductionStyle Style,
+                       const VPIRFlags &Flags,
                        bool HasUsesOutsideReductionChain = false)
       : VPHeaderPHIRecipe(VPRecipeBase::VPReductionPHISC, Phi, &Start),
-        Kind(Kind), Style(Style),
+        VPIRFlags(Flags), Kind(Kind), Style(Style),
         HasUsesOutsideReductionChain(HasUsesOutsideReductionChain) {
     addOperand(&BackedgeValue);
   }
@@ -2654,7 +2666,7 @@ public:
   VPReductionPHIRecipe *clone() override {
     return new VPReductionPHIRecipe(
         dyn_cast_or_null<PHINode>(getUnderlyingValue()), getRecurrenceKind(),
-        *getOperand(0), *getBackedgeValue(), Style,
+        *getOperand(0), *getBackedgeValue(), Style, *this,
         HasUsesOutsideReductionChain);
   }
 
@@ -4022,10 +4034,9 @@ public:
   ~VPScalarIVStepsRecipe() override = default;
 
   VPScalarIVStepsRecipe *clone() override {
-    return new VPScalarIVStepsRecipe(
-        getOperand(0), getOperand(1), getOperand(2), InductionOpcode,
-        hasFastMathFlags() ? getFastMathFlags() : FastMathFlags(),
-        getDebugLoc());
+    return new VPScalarIVStepsRecipe(getOperand(0), getOperand(1),
+                                     getOperand(2), InductionOpcode,
+                                     getFastMathFlags(), getDebugLoc());
   }
 
   VP_CLASSOF_IMPL(VPRecipeBase::VPScalarIVStepsSC)
@@ -4776,6 +4787,14 @@ public:
 
   /// Return a VPIRValue wrapping i1 false.
   VPIRValue *getFalse() { return getConstantInt(1, 0); }
+
+  /// Return a VPIRValue wrapping the null value of type \p Ty.
+  VPIRValue *getZero(Type *Ty) { return getConstantInt(Ty, 0); }
+
+  /// Return a VPIRValue wrapping the AllOnes value of type \p Ty.
+  VPIRValue *getAllOnesValue(Type *Ty) {
+    return getConstantInt(APInt::getAllOnes(Ty->getIntegerBitWidth()));
+  }
 
   /// Return a VPIRValue wrapping a ConstantInt with the given type and value.
   VPIRValue *getConstantInt(Type *Ty, uint64_t Val, bool IsSigned = false) {

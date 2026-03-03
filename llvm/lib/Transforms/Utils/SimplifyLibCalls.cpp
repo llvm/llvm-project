@@ -2407,7 +2407,7 @@ Value *LibCallSimplifier::optimizePow(CallInst *Pow, IRBuilderBase &B) {
     return Base;
 
   // pow(x, 2.0) -> x * x
-  if (match(Expo, m_SpecificFP(2.0)))
+  if (match(Expo, m_SpecificFP(2.0)) && Pow->doesNotAccessMemory())
     return B.CreateFMul(Base, Base, "square");
 
   if (Value *Sqrt = replacePowWithSqrt(Pow, B))
@@ -3509,7 +3509,7 @@ Value *LibCallSimplifier::optimizeSPrintFString(CallInst *CI,
       return ConstantInt::get(CI->getType(), SrcLen - 1);
     } else if (Value *V = emitStpCpy(Dest, CI->getArgOperand(2), B, TLI)) {
       // sprintf(dest, "%s", str) -> stpcpy(dest, str) - dest
-      Value *PtrDiff = B.CreatePtrDiff(B.getInt8Ty(), V, Dest);
+      Value *PtrDiff = B.CreatePtrDiff(V, Dest);
       return B.CreateIntCast(PtrDiff, CI->getType(), false);
     }
 

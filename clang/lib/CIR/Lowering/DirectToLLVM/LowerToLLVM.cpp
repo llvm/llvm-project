@@ -21,12 +21,14 @@
 #include "mlir/Dialect/Func/IR/FuncOps.h"
 #include "mlir/Dialect/LLVMIR/LLVMDialect.h"
 #include "mlir/Dialect/LLVMIR/LLVMTypes.h"
+#include "mlir/Dialect/Ptr/IR/MemorySpaceInterfaces.h"
 #include "mlir/IR/BuiltinAttributes.h"
 #include "mlir/IR/BuiltinDialect.h"
 #include "mlir/IR/BuiltinOps.h"
 #include "mlir/IR/Types.h"
 #include "mlir/Pass/Pass.h"
 #include "mlir/Pass/PassManager.h"
+#include "mlir/Support/LLVM.h"
 #include "mlir/Target/LLVMIR/Dialect/Builtin/BuiltinToLLVMIRTranslation.h"
 #include "mlir/Target/LLVMIR/Dialect/LLVMIR/LLVMToLLVMIRTranslation.h"
 #include "mlir/Target/LLVMIR/Dialect/OpenMP/OpenMPToLLVMIRTranslation.h"
@@ -41,6 +43,7 @@
 #include "clang/CIR/Passes.h"
 #include "llvm/ADT/TypeSwitch.h"
 #include "llvm/IR/Module.h"
+#include "llvm/Support/Casting.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/TimeProfiler.h"
 
@@ -152,6 +155,8 @@ mlir::LLVM::Linkage convertLinkage(cir::GlobalLinkageKind linkage) {
   using LLVM = mlir::LLVM::Linkage;
 
   switch (linkage) {
+  case CIR::AppendingLinkage:
+    return LLVM::Appending;
   case CIR::AvailableExternallyLinkage:
     return LLVM::AvailableExternally;
   case CIR::CommonLinkage:
@@ -2278,6 +2283,17 @@ mlir::LogicalResult CIRToLLVMFAbsOpLowering::matchAndRewrite(
   return mlir::success();
 }
 
+mlir::LogicalResult CIRToLLVMAbsOpLowering::matchAndRewrite(
+    cir::AbsOp op, OpAdaptor adaptor,
+    mlir::ConversionPatternRewriter &rewriter) const {
+  mlir::Type resTy = typeConverter->convertType(op.getType());
+  auto absOp = mlir::LLVM::AbsOp::create(rewriter, op.getLoc(), resTy,
+                                         adaptor.getOperands()[0],
+                                         adaptor.getMinIsPoison());
+  rewriter.replaceOp(op, absOp);
+  return mlir::success();
+}
+
 /// Convert the `cir.func` attributes to `llvm.func` attributes.
 /// Only retain those attributes that are not constructed by
 /// `LLVMFuncOp::build`. If `filterArgAttrs` is set, also filter out
@@ -3241,9 +3257,17 @@ mlir::LogicalResult CIRToLLVMSelectOpLowering::matchAndRewrite(
 static void prepareTypeConverter(mlir::LLVMTypeConverter &converter,
                                  mlir::DataLayout &dataLayout) {
   converter.addConversion([&](cir::PointerType type) -> mlir::Type {
-    unsigned addrSpace =
-        type.getAddrSpace() ? type.getAddrSpace().getValue().getUInt() : 0;
-    return mlir::LLVM::LLVMPointerType::get(type.getContext(), addrSpace);
+    mlir::ptr::MemorySpaceAttrInterface addrSpaceAttr = type.getAddrSpace();
+    unsigned numericAS = 0;
+
+    if (auto langAsAttr =
+            mlir::dyn_cast_if_present<cir::LangAddressSpaceAttr>(addrSpaceAttr))
+      llvm_unreachable("lowering LangAddressSpaceAttr NYI");
+    else if (auto targetAsAttr =
+                 mlir::dyn_cast_if_present<cir::TargetAddressSpaceAttr>(
+                     addrSpaceAttr))
+      numericAS = targetAsAttr.getValue();
+    return mlir::LLVM::LLVMPointerType::get(type.getContext(), numericAS);
   });
   converter.addConversion([&](cir::VPtrType type) -> mlir::Type {
     assert(!cir::MissingFeatures::addressSpace());
