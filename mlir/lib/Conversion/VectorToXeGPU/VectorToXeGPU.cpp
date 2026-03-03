@@ -786,8 +786,8 @@ struct StoreLowering : public OpRewritePattern<vector::StoreOp> {
 
     TypedValue<VectorType> vector = storeOp.getValueToStore();
     VectorType vecTy = vector.getType();
-    auto storeMemTy = cast<MemRefType>(storeOp.getBase().getType());
-    if (failed(storeLoadPreconditions(rewriter, storeOp, vecTy, storeMemTy)))
+    MemRefType memTy = storeOp.getBase().getType();
+    if (failed(storeLoadPreconditions(rewriter, storeOp, vecTy, memTy)))
       return failure();
 
     // Boundary check is available only for block instructions.
