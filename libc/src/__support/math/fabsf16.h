@@ -14,6 +14,7 @@
 #ifdef LIBC_TYPES_HAS_FLOAT16
 
 #include "src/__support/FPUtil/BasicOperations.h"
+#include "src/__support/FPUtil/Float16.h"
 #include "src/__support/macros/config.h"
 #include "src/__support/macros/properties/architectures.h"
 #include "src/__support/macros/properties/compiler.h"
@@ -27,7 +28,8 @@ LIBC_INLINE constexpr float16 fabsf16(float16 x) {
   // For x86, GCC generates better code from the generic implementation.
   // https://godbolt.org/z/K9orM4hTa
 #if defined(__LIBC_MISC_MATH_BASIC_OPS_OPT) &&                                 \
-    !(defined(LIBC_TARGET_ARCH_IS_X86) && defined(LIBC_COMPILER_IS_GCC))
+    !(defined(LIBC_TARGET_ARCH_IS_X86) && defined(LIBC_COMPILER_IS_GCC)) &&    \
+    !defined(LIBC_USE_SOFT_FLOAT16)
   return __builtin_fabsf16(x);
 #else
   return fputil::abs(x);
