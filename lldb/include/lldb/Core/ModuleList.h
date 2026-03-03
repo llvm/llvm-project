@@ -384,6 +384,15 @@ public:
   /// Finds the first module whose file specification matches \a module_spec.
   lldb::ModuleSP FindFirstModule(const ModuleSpec &module_spec) const;
 
+  /// Find the first symbol that matches \a name and \a symbol_type.
+  /// \param[in] name
+  ///     The name of the symbol we are looking for.
+  /// \param[in] symbol_type
+  ///     The type of symbol we are looking for.
+  const Symbol *
+  FindFirstSymbolWithNameAndType(ConstString name,
+                                 lldb::SymbolType symbol_type) const;
+
   void FindSymbolsWithNameAndType(ConstString name,
                                   lldb::SymbolType symbol_type,
                                   SymbolContextList &sc_list) const;
