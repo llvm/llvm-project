@@ -47,6 +47,9 @@ namespace {
 // deepest directory and going up to root. Stops whenever action succeeds.
 void actOnAllParentDirectories(PathRef FileName,
                                llvm::function_ref<bool(PathRef)> Action) {
+  // Skip non-native paths which we cannot traverse or otherwise use.
+  if (!llvm::sys::path::is_absolute(FileName, llvm::sys::path::Style::native))
+    return;
   for (auto Path = absoluteParent(FileName); !Path.empty() && !Action(Path);
        Path = absoluteParent(Path))
     ;
@@ -698,6 +701,9 @@ public:
         SearchPaths[I].setPointer(&Dirs[*Parent.Opts.CompileCommandsDir]);
         continue;
       }
+      // Skip non-native paths which we cannot traverse or otherwise use.
+      if (!llvm::sys::path::is_absolute(AllFiles[I], llvm::sys::path::Style::native))
+        continue;
       if (ExitEarly()) // loading config may be slow
         return Filtered;
       WithContext WithProvidedContent(Parent.Opts.ContextProvider(AllFiles[I]));
