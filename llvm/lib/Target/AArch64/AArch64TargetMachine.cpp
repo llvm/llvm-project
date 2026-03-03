@@ -245,6 +245,7 @@ LLVMInitializeAArch64Target() {
   initializeGlobalISel(PR);
   initializeAArch64A53Fix835769Pass(PR);
   initializeAArch64A57FPLoadBalancingPass(PR);
+  initializeAArch64CodeLayoutOptPass(PR);
   initializeAArch64AdvSIMDScalarPass(PR);
   initializeAArch64AsmPrinterPass(PR);
   initializeAArch64BranchTargetsPass(PR);
@@ -869,6 +870,8 @@ void AArch64PassConfig::addPostRegAlloc() {
 }
 
 void AArch64PassConfig::addPreSched2() {
+  // Apply code layout optimizations for instruction pairs.
+  addPass(createAArch64CodeLayoutOptPass());
   // Lower homogeneous frame instructions
   if (EnableHomogeneousPrologEpilog)
     addPass(createAArch64LowerHomogeneousPrologEpilogPass());

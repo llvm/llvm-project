@@ -55,6 +55,7 @@ FunctionPass *createFalkorHWPFFixPass();
 FunctionPass *createFalkorMarkStridedAccessesPass();
 FunctionPass *createAArch64PointerAuthPass();
 FunctionPass *createAArch64BranchTargetsPass();
+FunctionPass *createAArch64CodeLayoutOptPass();
 FunctionPass *createAArch64MIPeepholeOptPass();
 FunctionPass *createAArch64PostCoalescerPass();
 
@@ -96,6 +97,7 @@ void initializeAArch64DeadRegisterDefinitionsPass(PassRegistry&);
 void initializeAArch64ExpandPseudoPass(PassRegistry &);
 void initializeAArch64LoadStoreOptPass(PassRegistry&);
 void initializeAArch64LowerHomogeneousPrologEpilogPass(PassRegistry &);
+void initializeAArch64CodeLayoutOptPass(PassRegistry &);
 void initializeAArch64MIPeepholeOptPass(PassRegistry &);
 void initializeAArch64O0PreLegalizerCombinerPass(PassRegistry &);
 void initializeAArch64PostCoalescerPass(PassRegistry &);
