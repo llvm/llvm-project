@@ -273,6 +273,13 @@ static void addVisualCDefines(const LangOptions &Opts, MacroBuilder &Builder) {
   //
   // Clang currently only supports UTF-8, so we'll use 65001
   Builder.defineMacro("_MSVC_EXECUTION_CHARACTER_SET", "65001");
+
+  // As of version 19.15 (VS 2017 15.8), MSVC predefines this macro to indicate
+  // whether the traditional or standards-conforming preprocessor is in use.
+  // In MSVC compatibility mode, Clang attempts to be compatible with the
+  // traditional preprocessor, so this is always 1.
+  if (Opts.isCompatibleWithMSVC(LangOptions::MSVC2017_8))
+    Builder.defineMacro("_MSVC_TRADITIONAL", "1");
 }
 
 void addWindowsDefines(const llvm::Triple &Triple, const LangOptions &Opts,
