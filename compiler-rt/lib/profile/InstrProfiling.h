@@ -101,9 +101,22 @@ void __llvm_profile_set_page_size(unsigned PageSize);
 uint8_t __llvm_profile_get_num_padding_bytes(uint64_t SizeInBytes);
 
 /*!
+ * \brief Get all required size for profile buffer.
+ */
+uint64_t __llvm_profile_get_all_size_for_buffer(void);
+
+/*!
  * \brief Get required size for profile buffer.
  */
 uint64_t __llvm_profile_get_size_for_buffer(void);
+
+/*!
+ * \brief Write all instrumentation data to the given buffer.
+ *
+ * \pre \c Buffer is the start of a buffer at least as big as \a
+ * __llvm_profile_get_all_size_for_buffer().
+ */
+int __llvm_profile_write_all_buffer(char *Buffer);
 
 /*!
  * \brief Write instrumentation data to the given buffer.
