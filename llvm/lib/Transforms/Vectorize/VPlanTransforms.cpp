@@ -4836,7 +4836,7 @@ void VPlanTransforms::sinkPredicatedStores(VPlan &Plan,
     bool IsSingleScalar = Group[0]->isSingleScalar();
     for (unsigned I = 1; I < Group.size(); ++I) {
       assert(IsSingleScalar == Group[I]->isSingleScalar() &&
-             "all members in group must agree on IsSinglescalar");
+             "all members in group must agree on IsSingleScalar");
       VPValue *Mask = Group[I]->getMask();
       VPValue *Value = Group[I]->getOperand(0);
       SelectedValue = Builder.createSelect(Mask, Value, SelectedValue,
