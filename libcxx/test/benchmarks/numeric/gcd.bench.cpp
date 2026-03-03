@@ -51,6 +51,6 @@ static void bm_gcd_complex(benchmark::State& state) {
     benchmark::DoNotOptimize(std::gcd(lhs, rhs));
   }
 }
-BENCHMARK(bm_gcd_complex)->Name("std::gcd() (adversary inputs)");
+BENCHMARK(bm_gcd_complex)->Name("std::gcd() (adversarial inputs)");
 
 BENCHMARK_MAIN();
