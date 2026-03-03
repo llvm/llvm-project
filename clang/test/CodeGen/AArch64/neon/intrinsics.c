@@ -319,7 +319,7 @@ float64x2_t test_vabdq_f64(float64x2_t v1, float64x2_t v2) {
 // CIR-LABEL: @vaba_u8(
 uint8x8_t test_vaba_u8(uint8x8_t v1, uint8x8_t v2, uint8x8_t v3) {
 // CIR: [[ABD:%.*]] = cir.call @vabd_u8
-// CIR: [[RES:%.*]] = cir.binop(add, {{.*}}, [[ABD]])
+// CIR: [[RES:%.*]] = cir.add {{.*}}, [[ABD]]
 
 // LLVM-SAME: <8 x i8> noundef [[V1:%.*]], <8 x i8> noundef [[V2:%.*]], <8 x i8> noundef [[V3:%.*]])
 // LLVM:         [[VABD_I:%.*]] = call <8 x i8> @llvm.aarch64.neon.uabd.v8i8(<8 x i8> [[V2]], <8 x i8> [[V3]])
@@ -332,7 +332,7 @@ uint8x8_t test_vaba_u8(uint8x8_t v1, uint8x8_t v2, uint8x8_t v3) {
 // CIR-LABEL: @vaba_u16(
 uint16x4_t test_vaba_u16(uint16x4_t v1, uint16x4_t v2, uint16x4_t v3) {
 // CIR: [[ABD:%.*]] = cir.call @vabd_u16
-// CIR: [[RES:%.*]] = cir.binop(add, {{.*}}, [[ABD]])
+// CIR: [[RES:%.*]] = cir.add {{.*}}, [[ABD]]
 
 // LLVM-SAME: <4 x i16> noundef [[V1:%.*]], <4 x i16> noundef [[V2:%.*]], <4 x i16> noundef [[V3:%.*]])
 // LLVM:         [[TMP0:%.*]] = bitcast <4 x i16> [[V2]] to <8 x i8>
@@ -349,7 +349,7 @@ uint16x4_t test_vaba_u16(uint16x4_t v1, uint16x4_t v2, uint16x4_t v3) {
 // CIR-LABEL: @vaba_u32(
 uint32x2_t test_vaba_u32(uint32x2_t v1, uint32x2_t v2, uint32x2_t v3) {
 // CIR: [[ABD:%.*]] = cir.call @vabd_u32
-// CIR: [[RES:%.*]] = cir.binop(add, {{.*}}, [[ABD]])
+// CIR: [[RES:%.*]] = cir.add {{.*}}, [[ABD]]
 
 // LLVM-SAME: <2 x i32> noundef [[V1:%.*]], <2 x i32> noundef [[V2:%.*]], <2 x i32> noundef [[V3:%.*]]) 
 // LLVM:         [[TMP0:%.*]] = bitcast <2 x i32> [[V2]] to <8 x i8>
@@ -366,7 +366,7 @@ uint32x2_t test_vaba_u32(uint32x2_t v1, uint32x2_t v2, uint32x2_t v3) {
 // CIR-LABEL: @vaba_s8(
 int8x8_t test_vaba_s8(int8x8_t v1, int8x8_t v2, int8x8_t v3) {
 // CIR: [[ABD:%.*]] = cir.call @vabd_s8
-// CIR: [[RES:%.*]] = cir.binop(add, {{.*}}, [[ABD]])
+// CIR: [[RES:%.*]] = cir.add {{.*}}, [[ABD]]
 
 // LLVM-SAME: <8 x i8> noundef [[V1:%.*]], <8 x i8> noundef [[V2:%.*]], <8 x i8> noundef [[V3:%.*]]) 
 // LLVM:         [[VABD_I:%.*]] = call <8 x i8> @llvm.aarch64.neon.sabd.v8i8(<8 x i8> [[V2]], <8 x i8> [[V3]])
@@ -379,7 +379,7 @@ int8x8_t test_vaba_s8(int8x8_t v1, int8x8_t v2, int8x8_t v3) {
 // CIR-LABEL: @vaba_s16(
 int16x4_t test_vaba_s16(int16x4_t v1, int16x4_t v2, int16x4_t v3) {
 // CIR: [[ABD:%.*]] = cir.call @vabd_s16
-// CIR: [[RES:%.*]] = cir.binop(add, {{.*}}, [[ABD]])
+// CIR: [[RES:%.*]] = cir.add {{.*}}, [[ABD]]
 
 // LLVM-SAME: <4 x i16> noundef [[V1:%.*]], <4 x i16> noundef [[V2:%.*]], <4 x i16> noundef [[V3:%.*]]) 
 // LLVM:         [[TMP0:%.*]] = bitcast <4 x i16> [[V2]] to <8 x i8>
@@ -396,7 +396,7 @@ int16x4_t test_vaba_s16(int16x4_t v1, int16x4_t v2, int16x4_t v3) {
 // CIR-LABEL: @vaba_s32(
 int32x2_t test_vaba_s32(int32x2_t v1, int32x2_t v2, int32x2_t v3) {
 // CIR: [[ABD:%.*]] = cir.call @vabd_s32
-// CIR: [[RES:%.*]] = cir.binop(add, {{.*}}, [[ABD]])
+// CIR: [[RES:%.*]] = cir.add {{.*}}, [[ABD]]
 
 // LLVM-SAME: <2 x i32> noundef [[V1:%.*]], <2 x i32> noundef [[V2:%.*]], <2 x i32> noundef [[V3:%.*]])
 // LLVM:         [[TMP0:%.*]] = bitcast <2 x i32> [[V2]] to <8 x i8>
@@ -413,7 +413,7 @@ int32x2_t test_vaba_s32(int32x2_t v1, int32x2_t v2, int32x2_t v3) {
 // CIR-LABEL: @vabaq_s8(
 int8x16_t test_vabaq_s8(int8x16_t v1, int8x16_t v2, int8x16_t v3) {
 // CIR: [[ABD:%.*]] = cir.call @vabdq_s8
-// CIR: [[RES:%.*]] = cir.binop(add, {{.*}}, [[ABD]])
+// CIR: [[RES:%.*]] = cir.add {{.*}}, [[ABD]]
 
 // LLVM-SAME: <16 x i8> noundef [[V1:%.*]], <16 x i8> noundef [[V2:%.*]], <16 x i8> noundef [[V3:%.*]]) 
 // LLVM:         [[VABD_I:%.*]] = call <16 x i8> @llvm.aarch64.neon.sabd.v16i8(<16 x i8> [[V2]], <16 x i8> [[V3]])
@@ -426,7 +426,7 @@ int8x16_t test_vabaq_s8(int8x16_t v1, int8x16_t v2, int8x16_t v3) {
 // CIR-LABEL: @vabaq_s16(
 int16x8_t test_vabaq_s16(int16x8_t v1, int16x8_t v2, int16x8_t v3) {
 // CIR: [[ABD:%.*]] = cir.call @vabdq_s16
-// CIR: [[RES:%.*]] = cir.binop(add, {{.*}}, [[ABD]])
+// CIR: [[RES:%.*]] = cir.add {{.*}}, [[ABD]]
 
 // LLVM-SAME: <8 x i16> noundef [[V1:%.*]], <8 x i16> noundef [[V2:%.*]], <8 x i16> noundef [[V3:%.*]]) 
 // LLVM:         [[TMP0:%.*]] = bitcast <8 x i16> [[V2]] to <16 x i8>
@@ -443,7 +443,7 @@ int16x8_t test_vabaq_s16(int16x8_t v1, int16x8_t v2, int16x8_t v3) {
 // CIR-LABEL: @vabaq_s32(
 int32x4_t test_vabaq_s32(int32x4_t v1, int32x4_t v2, int32x4_t v3) {
 // CIR: [[ABD:%.*]] = cir.call @vabdq_s32
-// CIR: [[RES:%.*]] = cir.binop(add, {{.*}}, [[ABD]])
+// CIR: [[RES:%.*]] = cir.add {{.*}}, [[ABD]]
 
 // LLVM-SAME: <4 x i32> noundef [[V1:%.*]], <4 x i32> noundef [[V2:%.*]], <4 x i32> noundef [[V3:%.*]]) 
 // LLVM:         [[TMP0:%.*]] = bitcast <4 x i32> [[V2]] to <16 x i8>
@@ -460,7 +460,7 @@ int32x4_t test_vabaq_s32(int32x4_t v1, int32x4_t v2, int32x4_t v3) {
 // CIR-LABEL: @vabaq_u8(
 uint8x16_t test_vabaq_u8(uint8x16_t v1, uint8x16_t v2, uint8x16_t v3) {
 // CIR: [[ABD:%.*]] = cir.call @vabdq_u8
-// CIR: [[RES:%.*]] = cir.binop(add, {{.*}}, [[ABD]])
+// CIR: [[RES:%.*]] = cir.add {{.*}}, [[ABD]]
 
 // LLVM-SAME: <16 x i8> noundef [[V1:%.*]], <16 x i8> noundef [[V2:%.*]], <16 x i8> noundef [[V3:%.*]]) 
 // LLVM:         [[VABD_I:%.*]] = call <16 x i8> @llvm.aarch64.neon.uabd.v16i8(<16 x i8> [[V2]], <16 x i8> [[V3]])
@@ -473,7 +473,7 @@ uint8x16_t test_vabaq_u8(uint8x16_t v1, uint8x16_t v2, uint8x16_t v3) {
 // CIR-LABEL: @vabaq_u16(
 uint16x8_t test_vabaq_u16(uint16x8_t v1, uint16x8_t v2, uint16x8_t v3) {
 // CIR: [[ABD:%.*]] = cir.call @vabdq_u16
-// CIR: [[RES:%.*]] = cir.binop(add, {{.*}}, [[ABD]])
+// CIR: [[RES:%.*]] = cir.add {{.*}}, [[ABD]]
 
 // LLVM-SAME: <8 x i16> noundef [[V1:%.*]], <8 x i16> noundef [[V2:%.*]], <8 x i16> noundef [[V3:%.*]]) 
 // LLVM:         [[TMP0:%.*]] = bitcast <8 x i16> [[V2]] to <16 x i8>
@@ -490,7 +490,7 @@ uint16x8_t test_vabaq_u16(uint16x8_t v1, uint16x8_t v2, uint16x8_t v3) {
 // CIR-LABEL: @vabaq_u32(
 uint32x4_t test_vabaq_u32(uint32x4_t v1, uint32x4_t v2, uint32x4_t v3) {
 // CIR: [[ABD:%.*]] = cir.call @vabdq_u32
-// CIR: [[RES:%.*]] = cir.binop(add, {{.*}}, [[ABD]])
+// CIR: [[RES:%.*]] = cir.add {{.*}}, [[ABD]]
 
 // LLVM-SAME: <4 x i32> noundef [[V1:%.*]], <4 x i32> noundef [[V2:%.*]], <4 x i32> noundef [[V3:%.*]]) 
 // LLVM:         [[TMP0:%.*]] = bitcast <4 x i32> [[V2]] to <16 x i8>

@@ -105,12 +105,12 @@ using namespace lldb_private;
 static lldb::user_id_t g_unique_id = 1;
 static size_t g_debugger_event_thread_stack_bytes = 8 * 1024 * 1024;
 
-#pragma mark Static Functions
+static std::mutex &GetDebuggerListMutex() {
+  static std::mutex g_mutex;
+  return g_mutex;
+}
 
-static std::recursive_mutex *g_debugger_list_mutex_ptr =
-    nullptr; // NOTE: intentional leak to avoid issues with C++ destructor chain
-static Debugger::DebuggerList *g_debugger_list_ptr =
-    nullptr; // NOTE: intentional leak to avoid issues with C++ destructor chain
+static Debugger::DebuggerList *g_debugger_list_ptr = nullptr;
 static llvm::DefaultThreadPool *g_thread_pool = nullptr;
 
 static constexpr OptionEnumValueElement g_show_disassembly_enum_values[] = {
@@ -751,7 +751,7 @@ bool Debugger::SetShowInlineDiagnostics(bool b) {
 void Debugger::Initialize(LoadPluginCallbackType load_plugin_callback) {
   assert(g_debugger_list_ptr == nullptr &&
          "Debugger::Initialize called more than once!");
-  g_debugger_list_mutex_ptr = new std::recursive_mutex();
+  std::lock_guard<std::mutex> guard(GetDebuggerListMutex());
   g_debugger_list_ptr = new DebuggerList();
   g_thread_pool = new llvm::DefaultThreadPool(llvm::optimal_concurrency());
   g_load_plugin_callback = load_plugin_callback;
@@ -761,10 +761,11 @@ void Debugger::Terminate() {
   assert(g_debugger_list_ptr &&
          "Debugger::Terminate called without a matching Debugger::Initialize!");
 
-  if (g_debugger_list_ptr && g_debugger_list_mutex_ptr) {
-    std::lock_guard<std::recursive_mutex> guard(*g_debugger_list_mutex_ptr);
-    for (const auto &debugger : *g_debugger_list_ptr)
-      debugger->HandleDestroyCallback();
+  {
+    std::lock_guard<std::mutex> guard(GetDebuggerListMutex());
+    if (g_debugger_list_ptr)
+      for (const auto &debugger : *g_debugger_list_ptr)
+        debugger->HandleDestroyCallback();
   }
 
   if (g_thread_pool) {
@@ -772,13 +773,15 @@ void Debugger::Terminate() {
     delete g_thread_pool;
   }
 
-  if (g_debugger_list_ptr && g_debugger_list_mutex_ptr) {
-    // Clear our global list of debugger objects
-    {
-      std::lock_guard<std::recursive_mutex> guard(*g_debugger_list_mutex_ptr);
-      for (const auto &debugger : *g_debugger_list_ptr)
+  {
+    std::lock_guard<std::mutex> guard(GetDebuggerListMutex());
+    if (g_debugger_list_ptr) {
+      for (const DebuggerSP &debugger : *g_debugger_list_ptr)
         debugger->Clear();
       g_debugger_list_ptr->clear();
+
+      delete g_debugger_list_ptr;
+      g_debugger_list_ptr = nullptr;
     }
   }
 }
@@ -884,10 +887,10 @@ DebuggerSP Debugger::CreateInstance(lldb::LogOutputCallback log_callback,
       });
   DebuggerSP debugger_sp(new Debugger(log_callback, baton));
   helper.SetDebugger(debugger_sp.get());
-
-  if (g_debugger_list_ptr && g_debugger_list_mutex_ptr) {
-    std::lock_guard<std::recursive_mutex> guard(*g_debugger_list_mutex_ptr);
-    g_debugger_list_ptr->push_back(debugger_sp);
+  {
+    std::lock_guard<std::mutex> guard(GetDebuggerListMutex());
+    if (g_debugger_list_ptr)
+      g_debugger_list_ptr->push_back(debugger_sp);
   }
   debugger_sp->InstanceInitialize();
   return debugger_sp;
@@ -938,8 +941,8 @@ void Debugger::Destroy(DebuggerSP &debugger_sp) {
 
   debugger_sp->Clear();
 
-  if (g_debugger_list_ptr && g_debugger_list_mutex_ptr) {
-    std::lock_guard<std::recursive_mutex> guard(*g_debugger_list_mutex_ptr);
+  std::lock_guard<std::mutex> guard(GetDebuggerListMutex());
+  if (g_debugger_list_ptr) {
     DebuggerList::iterator pos, end = g_debugger_list_ptr->end();
     for (pos = g_debugger_list_ptr->begin(); pos != end; ++pos) {
       if ((*pos).get() == debugger_sp.get()) {
@@ -952,46 +955,44 @@ void Debugger::Destroy(DebuggerSP &debugger_sp) {
 
 DebuggerSP
 Debugger::FindDebuggerWithInstanceName(llvm::StringRef instance_name) {
-  if (!g_debugger_list_ptr || !g_debugger_list_mutex_ptr)
-    return DebuggerSP();
+  std::lock_guard<std::mutex> guard(GetDebuggerListMutex());
+  if (!g_debugger_list_ptr)
+    return nullptr;
 
-  std::lock_guard<std::recursive_mutex> guard(*g_debugger_list_mutex_ptr);
   for (const DebuggerSP &debugger_sp : *g_debugger_list_ptr) {
-    if (!debugger_sp)
-      continue;
-
     if (llvm::StringRef(debugger_sp->GetInstanceName()) == instance_name)
       return debugger_sp;
   }
-  return DebuggerSP();
+
+  return nullptr;
 }
 
 TargetSP Debugger::FindTargetWithProcessID(lldb::pid_t pid) {
-  TargetSP target_sp;
-  if (g_debugger_list_ptr && g_debugger_list_mutex_ptr) {
-    std::lock_guard<std::recursive_mutex> guard(*g_debugger_list_mutex_ptr);
-    DebuggerList::iterator pos, end = g_debugger_list_ptr->end();
-    for (pos = g_debugger_list_ptr->begin(); pos != end; ++pos) {
-      target_sp = (*pos)->GetTargetList().FindTargetWithProcessID(pid);
-      if (target_sp)
-        break;
-    }
+  std::lock_guard<std::mutex> guard(GetDebuggerListMutex());
+  if (!g_debugger_list_ptr)
+    return nullptr;
+
+  for (const DebuggerSP &debugger_sp : *g_debugger_list_ptr) {
+    if (TargetSP target_sp =
+            debugger_sp->GetTargetList().FindTargetWithProcessID(pid))
+      return target_sp;
   }
-  return target_sp;
+
+  return nullptr;
 }
 
 TargetSP Debugger::FindTargetWithProcess(Process *process) {
-  TargetSP target_sp;
-  if (g_debugger_list_ptr && g_debugger_list_mutex_ptr) {
-    std::lock_guard<std::recursive_mutex> guard(*g_debugger_list_mutex_ptr);
-    DebuggerList::iterator pos, end = g_debugger_list_ptr->end();
-    for (pos = g_debugger_list_ptr->begin(); pos != end; ++pos) {
-      target_sp = (*pos)->GetTargetList().FindTargetWithProcess(process);
-      if (target_sp)
-        break;
-    }
+  std::lock_guard<std::mutex> guard(GetDebuggerListMutex());
+  if (!g_debugger_list_ptr)
+    return nullptr;
+
+  for (const DebuggerSP &debugger_sp : *g_debugger_list_ptr) {
+    if (TargetSP target_sp =
+            debugger_sp->GetTargetList().FindTargetWithProcess(process))
+      return target_sp;
   }
-  return target_sp;
+
+  return nullptr;
 }
 
 llvm::StringRef Debugger::GetStaticBroadcasterClass() {
@@ -1555,8 +1556,8 @@ void Debugger::ReportInterruption(const InterruptionReport &report) {
 
 Debugger::DebuggerList Debugger::DebuggersRequestingInterruption() {
   DebuggerList result;
-  if (g_debugger_list_ptr && g_debugger_list_mutex_ptr) {
-    std::lock_guard<std::recursive_mutex> guard(*g_debugger_list_mutex_ptr);
+  std::lock_guard<std::mutex> guard(GetDebuggerListMutex());
+  if (g_debugger_list_ptr) {
     for (auto debugger_sp : *g_debugger_list_ptr) {
       if (debugger_sp->InterruptRequested())
         result.push_back(debugger_sp);
@@ -1566,39 +1567,35 @@ Debugger::DebuggerList Debugger::DebuggersRequestingInterruption() {
 }
 
 size_t Debugger::GetNumDebuggers() {
-  if (g_debugger_list_ptr && g_debugger_list_mutex_ptr) {
-    std::lock_guard<std::recursive_mutex> guard(*g_debugger_list_mutex_ptr);
-    return g_debugger_list_ptr->size();
-  }
-  return 0;
+  std::lock_guard<std::mutex> guard(GetDebuggerListMutex());
+  if (!g_debugger_list_ptr)
+    return 0;
+
+  return g_debugger_list_ptr->size();
 }
 
 lldb::DebuggerSP Debugger::GetDebuggerAtIndex(size_t index) {
-  DebuggerSP debugger_sp;
+  std::lock_guard<std::mutex> guard(GetDebuggerListMutex());
+  if (!g_debugger_list_ptr)
+    return nullptr;
 
-  if (g_debugger_list_ptr && g_debugger_list_mutex_ptr) {
-    std::lock_guard<std::recursive_mutex> guard(*g_debugger_list_mutex_ptr);
-    if (index < g_debugger_list_ptr->size())
-      debugger_sp = g_debugger_list_ptr->at(index);
-  }
+  if (index < g_debugger_list_ptr->size())
+    return g_debugger_list_ptr->at(index);
 
-  return debugger_sp;
+  return nullptr;
 }
 
 DebuggerSP Debugger::FindDebuggerWithID(lldb::user_id_t id) {
-  DebuggerSP debugger_sp;
+  std::lock_guard<std::mutex> guard(GetDebuggerListMutex());
+  if (!g_debugger_list_ptr)
+    return nullptr;
 
-  if (g_debugger_list_ptr && g_debugger_list_mutex_ptr) {
-    std::lock_guard<std::recursive_mutex> guard(*g_debugger_list_mutex_ptr);
-    DebuggerList::iterator pos, end = g_debugger_list_ptr->end();
-    for (pos = g_debugger_list_ptr->begin(); pos != end; ++pos) {
-      if ((*pos)->GetID() == id) {
-        debugger_sp = *pos;
-        break;
-      }
-    }
+  for (const DebuggerSP &debugger_sp : *g_debugger_list_ptr) {
+    if (debugger_sp->GetID() == id)
+      return debugger_sp;
   }
-  return debugger_sp;
+
+  return nullptr;
 }
 
 bool Debugger::FormatDisassemblerAddress(const FormatEntity::Entry *format,
@@ -1727,8 +1724,8 @@ void Debugger::ReportProgress(uint64_t progress_id, std::string title,
   }
   // The progress event is not debugger specific, iterate over all debuggers
   // and deliver a progress event to each one.
-  if (g_debugger_list_ptr && g_debugger_list_mutex_ptr) {
-    std::lock_guard<std::recursive_mutex> guard(*g_debugger_list_mutex_ptr);
+  std::lock_guard<std::mutex> guard(GetDebuggerListMutex());
+  if (g_debugger_list_ptr) {
     DebuggerList::iterator pos, end = g_debugger_list_ptr->end();
     for (pos = g_debugger_list_ptr->begin(); pos != end; ++pos)
       PrivateReportProgress(*(*pos), progress_id, title, details, completed,
@@ -1796,8 +1793,8 @@ void Debugger::ReportDiagnosticImpl(Severity severity, std::string message,
     }
     // The diagnostic event is not debugger specific, iterate over all debuggers
     // and deliver a diagnostic event to each one.
-    if (g_debugger_list_ptr && g_debugger_list_mutex_ptr) {
-      std::lock_guard<std::recursive_mutex> guard(*g_debugger_list_mutex_ptr);
+    std::lock_guard<std::mutex> guard(GetDebuggerListMutex());
+    if (g_debugger_list_ptr) {
       for (const auto &debugger : *g_debugger_list_ptr)
         PrivateReportDiagnostic(*debugger, severity, message, false);
     }
@@ -1828,14 +1825,15 @@ void Debugger::ReportInfo(std::string message,
 }
 
 void Debugger::ReportSymbolChange(const ModuleSpec &module_spec) {
-  if (g_debugger_list_ptr && g_debugger_list_mutex_ptr) {
-    std::lock_guard<std::recursive_mutex> guard(*g_debugger_list_mutex_ptr);
-    for (DebuggerSP debugger_sp : *g_debugger_list_ptr) {
-      EventSP event_sp = std::make_shared<Event>(
-          lldb::eBroadcastSymbolChange,
-          new SymbolChangeEventData(debugger_sp, module_spec));
-      debugger_sp->GetBroadcaster().BroadcastEvent(event_sp);
-    }
+  std::lock_guard<std::mutex> guard(GetDebuggerListMutex());
+  if (!g_debugger_list_ptr)
+    return;
+
+  for (DebuggerSP debugger_sp : *g_debugger_list_ptr) {
+    EventSP event_sp = std::make_shared<Event>(
+        lldb::eBroadcastSymbolChange,
+        new SymbolChangeEventData(debugger_sp, module_spec));
+    debugger_sp->GetBroadcaster().BroadcastEvent(event_sp);
   }
 }
 
