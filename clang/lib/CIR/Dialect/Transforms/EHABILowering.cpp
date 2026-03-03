@@ -59,8 +59,7 @@ static cir::FuncOp getOrCreateRuntimeFuncDecl(mlir::ModuleOp mod,
   mlir::OpBuilder builder(mod.getContext());
   builder.setInsertionPointToEnd(mod.getBody());
   auto funcOp = cir::FuncOp::create(builder, loc, name, funcTy);
-  funcOp.setLinkageAttr(cir::GlobalLinkageKindAttr::get(
-      builder.getContext(), cir::GlobalLinkageKind::ExternalLinkage));
+  funcOp.setLinkage(cir::GlobalLinkageKind::ExternalLinkage);
   funcOp.setPrivate();
   return funcOp;
 }
@@ -118,13 +117,15 @@ private:
   cir::FuncOp beginCatchFunc;
   cir::FuncOp endCatchFunc;
 
+  constexpr const static ::llvm::StringLiteral kGxxPersonality =
+      "__gxx_personality_v0";
+
   void ensureRuntimeDecls(mlir::Location loc);
   mlir::LogicalResult lowerFunc(cir::FuncOp funcOp);
-  void lowerEhInitiate(cir::EhInitiateOp initiateOp, cir::FuncOp funcOp,
-                       EhTokenMap &ehTokenMap,
+  void lowerEhInitiate(cir::EhInitiateOp initiateOp, EhTokenMap &ehTokenMap,
                        SmallVectorImpl<mlir::Operation *> &deadOps);
   void lowerDispatch(cir::EhDispatchOp dispatch, mlir::Value exnPtr,
-                     mlir::Value typeId, cir::FuncOp funcOp,
+                     mlir::Value typeId,
                      SmallVectorImpl<mlir::Operation *> &deadOps);
 };
 
@@ -153,8 +154,8 @@ void ItaniumEHLowering::ensureRuntimeDecls(mlir::Location loc) {
   if (!personalityFunc) {
     auto s32Type = cir::IntType::get(ctx, 32, /*isSigned=*/true);
     auto personalityFuncTy = cir::FuncType::get({}, s32Type, /*isVarArg=*/true);
-    personalityFunc = getOrCreateRuntimeFuncDecl(
-        mod, loc, "__gxx_personality_v0", personalityFuncTy);
+    personalityFunc = getOrCreateRuntimeFuncDecl(mod, loc, kGxxPersonality,
+                                                 personalityFuncTy);
   }
 
   if (!beginCatchFunc) {
@@ -193,7 +194,7 @@ mlir::LogicalResult ItaniumEHLowering::lowerFunc(cir::FuncOp funcOp) {
   // emitCXXTryStmt. If we only have cleanups, it may not have been set. We
   // need to fix that in CodeGen. This is a placeholder until that is done.
   if (!funcOp.getPersonality())
-    funcOp.setPersonality("__gxx_personality_v0");
+    funcOp.setPersonality(kGxxPersonality);
 
   // Lower each initiate and all EH ops connected to it. The token map is
   // shared across all initiate operations. Multiple initiates may flow into the
@@ -203,7 +204,7 @@ mlir::LogicalResult ItaniumEHLowering::lowerFunc(cir::FuncOp funcOp) {
   EhTokenMap ehTokenMap;
   SmallVector<mlir::Operation *> deadOps;
   for (cir::EhInitiateOp initiateOp : initiateOps)
-    lowerEhInitiate(initiateOp, funcOp, ehTokenMap, deadOps);
+    lowerEhInitiate(initiateOp, ehTokenMap, deadOps);
 
   // Erase operations that were deferred during per-initiate processing
   // (dispatch ops whose catch types were read by multiple initiates).
@@ -249,7 +250,7 @@ mlir::LogicalResult ItaniumEHLowering::lowerFunc(cir::FuncOp funcOp) {
 /// \p ehTokenMap is shared across all initiates in the function so that block
 /// arguments reachable from multiple sibling initiates are registered once.
 void ItaniumEHLowering::lowerEhInitiate(
-    cir::EhInitiateOp initiateOp, cir::FuncOp funcOp, EhTokenMap &ehTokenMap,
+    cir::EhInitiateOp initiateOp, EhTokenMap &ehTokenMap,
     SmallVectorImpl<mlir::Operation *> &deadOps) {
   mlir::Value rootToken = initiateOp.getEhToken();
 
@@ -267,7 +268,7 @@ void ItaniumEHLowering::lowerEhInitiate(
   // or a block argument that carries it), we snapshot its users, register
   // (ptr, u32) replacement arguments on successor blocks, then process every
   // user inline. This avoids collecting ops into separate vectors.
-  SmallVector<mlir::Value, 4> worklist;
+  SmallVector<mlir::Value> worklist;
   SmallPtrSet<mlir::Value, 8> visited;
   worklist.push_back(rootToken);
 
@@ -278,7 +279,7 @@ void ItaniumEHLowering::lowerEhInitiate(
 
     // Snapshot users before modifying any of them (erasing ops during
     // iteration would invalidate the use-list iterator).
-    SmallVector<mlir::Operation *, 4> users;
+    SmallVector<mlir::Operation *> users;
     for (mlir::OpOperand &use : current.getUses())
       users.push_back(use.getOwner());
 
@@ -357,7 +358,7 @@ void ItaniumEHLowering::lowerEhInitiate(
         // chain and branch replacement are only created the first time.
         if (!llvm::is_contained(deadOps, op.getOperation())) {
           auto [exnPtr, typeId] = ehTokenMap.lookup(op.getEhToken());
-          lowerDispatch(op, exnPtr, typeId, funcOp, deadOps);
+          lowerDispatch(op, exnPtr, typeId, deadOps);
         }
       } else if (auto op = mlir::dyn_cast<cir::ResumeOp>(user)) {
         auto [exnPtr, typeId] = ehTokenMap.lookup(op.getEhToken());
@@ -395,7 +396,7 @@ void ItaniumEHLowering::lowerEhInitiate(
 /// block and added to deadOps for deferred removal.
 void ItaniumEHLowering::lowerDispatch(
     cir::EhDispatchOp dispatch, mlir::Value exnPtr, mlir::Value typeId,
-    cir::FuncOp funcOp, SmallVectorImpl<mlir::Operation *> &deadOps) {
+    SmallVectorImpl<mlir::Operation *> &deadOps) {
   mlir::Location dispLoc = dispatch.getLoc();
   mlir::Block *defaultDest = dispatch.getDefaultDestination();
   mlir::ArrayAttr catchTypes = dispatch.getCatchTypesAttr();
