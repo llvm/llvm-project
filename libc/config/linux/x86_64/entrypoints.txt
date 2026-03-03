@@ -251,6 +251,9 @@ set(TARGET_LIBC_ENTRYPOINTS
     # sys/ioctl.h entrypoints
     libc.src.sys.ioctl.ioctl
 
+    # sys/ipc.h entrypoints
+    libc.src.sys.ipc.ftok
+
     # sys/mman.h entrypoints
     libc.src.sys.mman.madvise
     libc.src.sys.mman.mincore
