@@ -162,7 +162,7 @@ define i16 @select_decreasing_induction_icmp_table_i16(i16 noundef %val) {
 ; IC1VF4-NEXT:    br label %[[VECTOR_BODY:.*]]
 ; IC1VF4:       [[VECTOR_BODY]]:
 ; IC1VF4-NEXT:    [[INDEX:%.*]] = phi i32 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[VECTOR_BODY]] ]
-; IC1VF4-NEXT:    [[TMP4:%.*]] = phi <4 x i16> [ <i16 12, i16 11, i16 10, i16 9>, %[[VECTOR_PH]] ], [ [[VEC_IND_NEXT:%.*]], %[[VECTOR_BODY]] ]
+; IC1VF4-NEXT:    [[VEC_IND:%.*]] = phi <4 x i16> [ <i16 12, i16 11, i16 10, i16 9>, %[[VECTOR_PH]] ], [ [[VEC_IND_NEXT:%.*]], %[[VECTOR_BODY]] ]
 ; IC1VF4-NEXT:    [[VEC_PHI:%.*]] = phi <4 x i16> [ splat (i16 32767), %[[VECTOR_PH]] ], [ [[TMP5:%.*]], %[[VECTOR_BODY]] ]
 ; IC1VF4-NEXT:    [[DOTCAST:%.*]] = trunc i32 [[INDEX]] to i16
 ; IC1VF4-NEXT:    [[OFFSET_IDX:%.*]] = sub i16 12, [[DOTCAST]]
@@ -171,15 +171,15 @@ define i16 @select_decreasing_induction_icmp_table_i16(i16 noundef %val) {
 ; IC1VF4-NEXT:    [[WIDE_LOAD:%.*]] = load <4 x i16>, ptr [[TMP2]], align 1
 ; IC1VF4-NEXT:    [[REVERSE:%.*]] = shufflevector <4 x i16> [[WIDE_LOAD]], <4 x i16> poison, <4 x i32> <i32 3, i32 2, i32 1, i32 0>
 ; IC1VF4-NEXT:    [[TMP3:%.*]] = icmp ugt <4 x i16> [[REVERSE]], [[BROADCAST_SPLAT]]
-; IC1VF4-NEXT:    [[TMP5]] = select <4 x i1> [[TMP3]], <4 x i16> [[TMP4]], <4 x i16> [[VEC_PHI]]
+; IC1VF4-NEXT:    [[TMP5]] = select <4 x i1> [[TMP3]], <4 x i16> [[VEC_IND]], <4 x i16> [[VEC_PHI]]
 ; IC1VF4-NEXT:    [[INDEX_NEXT]] = add nuw i32 [[INDEX]], 4
-; IC1VF4-NEXT:    [[VEC_IND_NEXT]] = add nsw <4 x i16> [[TMP4]], splat (i16 -4)
+; IC1VF4-NEXT:    [[VEC_IND_NEXT]] = add nsw <4 x i16> [[VEC_IND]], splat (i16 -4)
 ; IC1VF4-NEXT:    [[TMP6:%.*]] = icmp eq i32 [[INDEX_NEXT]], 12
 ; IC1VF4-NEXT:    br i1 [[TMP6]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP3:![0-9]+]]
 ; IC1VF4:       [[MIDDLE_BLOCK]]:
 ; IC1VF4-NEXT:    [[TMP7:%.*]] = call i16 @llvm.vector.reduce.smin.v4i16(<4 x i16> [[TMP5]])
-; IC1VF4-NEXT:    [[RDX_SELECT_CMP:%.*]] = icmp ne i16 [[TMP7]], 32767
 ; IC1VF4-NEXT:    [[TMP8:%.*]] = add nsw i16 [[TMP7]], -1
+; IC1VF4-NEXT:    [[RDX_SELECT_CMP:%.*]] = icmp ne i16 [[TMP7]], 32767
 ; IC1VF4-NEXT:    [[RDX_SELECT:%.*]] = select i1 [[RDX_SELECT_CMP]], i16 [[TMP8]], i16 0
 ; IC1VF4-NEXT:    br label %[[EXIT:.*]]
 ; IC1VF4:       [[EXIT]]:
@@ -196,10 +196,10 @@ define i16 @select_decreasing_induction_icmp_table_i16(i16 noundef %val) {
 ; IC4VF4:       [[VECTOR_BODY]]:
 ; IC4VF4-NEXT:    [[INDEX:%.*]] = phi i32 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[PRED_LOAD_CONTINUE44:.*]] ]
 ; IC4VF4-NEXT:    [[VEC_IND:%.*]] = phi <4 x i16> [ <i16 12, i16 11, i16 10, i16 9>, %[[VECTOR_PH]] ], [ [[VEC_IND_NEXT:%.*]], %[[PRED_LOAD_CONTINUE44]] ]
-; IC4VF4-NEXT:    [[VEC_PHI:%.*]] = phi <4 x i16> [ splat (i16 32767), %[[VECTOR_PH]] ], [ [[TMP108:%.*]], %[[PRED_LOAD_CONTINUE44]] ]
-; IC4VF4-NEXT:    [[VEC_PHI1:%.*]] = phi <4 x i16> [ splat (i16 32767), %[[VECTOR_PH]] ], [ [[TMP109:%.*]], %[[PRED_LOAD_CONTINUE44]] ]
-; IC4VF4-NEXT:    [[VEC_PHI2:%.*]] = phi <4 x i16> [ splat (i16 32767), %[[VECTOR_PH]] ], [ [[TMP110:%.*]], %[[PRED_LOAD_CONTINUE44]] ]
-; IC4VF4-NEXT:    [[VEC_PHI3:%.*]] = phi <4 x i16> [ splat (i16 32767), %[[VECTOR_PH]] ], [ [[TMP111:%.*]], %[[PRED_LOAD_CONTINUE44]] ]
+; IC4VF4-NEXT:    [[VEC_PHI:%.*]] = phi <4 x i16> [ splat (i16 32767), %[[VECTOR_PH]] ], [ [[TMP112:%.*]], %[[PRED_LOAD_CONTINUE44]] ]
+; IC4VF4-NEXT:    [[VEC_PHI1:%.*]] = phi <4 x i16> [ splat (i16 32767), %[[VECTOR_PH]] ], [ [[TMP113:%.*]], %[[PRED_LOAD_CONTINUE44]] ]
+; IC4VF4-NEXT:    [[VEC_PHI2:%.*]] = phi <4 x i16> [ splat (i16 32767), %[[VECTOR_PH]] ], [ [[TMP114:%.*]], %[[PRED_LOAD_CONTINUE44]] ]
+; IC4VF4-NEXT:    [[VEC_PHI3:%.*]] = phi <4 x i16> [ splat (i16 32767), %[[VECTOR_PH]] ], [ [[TMP115:%.*]], %[[PRED_LOAD_CONTINUE44]] ]
 ; IC4VF4-NEXT:    [[STEP_ADD:%.*]] = add <4 x i16> [[VEC_IND]], splat (i16 -4)
 ; IC4VF4-NEXT:    [[STEP_ADD_2:%.*]] = add <4 x i16> [[STEP_ADD]], splat (i16 -4)
 ; IC4VF4-NEXT:    [[STEP_ADD_3:%.*]] = add <4 x i16> [[STEP_ADD_2]], splat (i16 -4)
@@ -379,21 +379,21 @@ define i16 @select_decreasing_induction_icmp_table_i16(i16 noundef %val) {
 ; IC4VF4-NEXT:    [[TMP101:%.*]] = icmp ugt <4 x i16> [[TMP51]], [[BROADCAST_SPLAT]]
 ; IC4VF4-NEXT:    [[TMP102:%.*]] = icmp ugt <4 x i16> [[TMP75]], [[BROADCAST_SPLAT]]
 ; IC4VF4-NEXT:    [[TMP103:%.*]] = icmp ugt <4 x i16> [[TMP99]], [[BROADCAST_SPLAT]]
-; IC4VF4-NEXT:    [[TMP108]] = select <4 x i1> [[TMP100]], <4 x i16> [[VEC_IND]], <4 x i16> [[VEC_PHI]]
-; IC4VF4-NEXT:    [[TMP109]] = select <4 x i1> [[TMP101]], <4 x i16> [[STEP_ADD]], <4 x i16> [[VEC_PHI1]]
-; IC4VF4-NEXT:    [[TMP110]] = select <4 x i1> [[TMP102]], <4 x i16> [[STEP_ADD_2]], <4 x i16> [[VEC_PHI2]]
-; IC4VF4-NEXT:    [[TMP111]] = select <4 x i1> [[TMP103]], <4 x i16> [[STEP_ADD_3]], <4 x i16> [[VEC_PHI3]]
+; IC4VF4-NEXT:    [[TMP112]] = select <4 x i1> [[TMP100]], <4 x i16> [[VEC_IND]], <4 x i16> [[VEC_PHI]]
+; IC4VF4-NEXT:    [[TMP113]] = select <4 x i1> [[TMP101]], <4 x i16> [[STEP_ADD]], <4 x i16> [[VEC_PHI1]]
+; IC4VF4-NEXT:    [[TMP114]] = select <4 x i1> [[TMP102]], <4 x i16> [[STEP_ADD_2]], <4 x i16> [[VEC_PHI2]]
+; IC4VF4-NEXT:    [[TMP115]] = select <4 x i1> [[TMP103]], <4 x i16> [[STEP_ADD_3]], <4 x i16> [[VEC_PHI3]]
 ; IC4VF4-NEXT:    [[INDEX_NEXT]] = add nuw i32 [[INDEX]], 16
 ; IC4VF4-NEXT:    [[VEC_IND_NEXT]] = add nsw <4 x i16> [[STEP_ADD_3]], splat (i16 -4)
 ; IC4VF4-NEXT:    br i1 true, label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP3:![0-9]+]]
 ; IC4VF4:       [[MIDDLE_BLOCK]]:
-; IC4VF4-NEXT:    [[RDX_MINMAX:%.*]] = call <4 x i16> @llvm.smin.v4i16(<4 x i16> [[TMP108]], <4 x i16> [[TMP109]])
-; IC4VF4-NEXT:    [[RDX_MINMAX45:%.*]] = call <4 x i16> @llvm.smin.v4i16(<4 x i16> [[RDX_MINMAX]], <4 x i16> [[TMP110]])
-; IC4VF4-NEXT:    [[RDX_MINMAX46:%.*]] = call <4 x i16> @llvm.smin.v4i16(<4 x i16> [[RDX_MINMAX45]], <4 x i16> [[TMP111]])
+; IC4VF4-NEXT:    [[RDX_MINMAX:%.*]] = call <4 x i16> @llvm.smin.v4i16(<4 x i16> [[TMP112]], <4 x i16> [[TMP113]])
+; IC4VF4-NEXT:    [[RDX_MINMAX45:%.*]] = call <4 x i16> @llvm.smin.v4i16(<4 x i16> [[RDX_MINMAX]], <4 x i16> [[TMP114]])
+; IC4VF4-NEXT:    [[RDX_MINMAX46:%.*]] = call <4 x i16> @llvm.smin.v4i16(<4 x i16> [[RDX_MINMAX45]], <4 x i16> [[TMP115]])
 ; IC4VF4-NEXT:    [[TMP116:%.*]] = call i16 @llvm.vector.reduce.smin.v4i16(<4 x i16> [[RDX_MINMAX46]])
+; IC4VF4-NEXT:    [[TMP109:%.*]] = add nsw i16 [[TMP116]], -1
 ; IC4VF4-NEXT:    [[RDX_SELECT_CMP:%.*]] = icmp ne i16 [[TMP116]], 32767
-; IC4VF4-NEXT:    [[TMP112:%.*]] = add nsw i16 [[TMP116]], -1
-; IC4VF4-NEXT:    [[RDX_SELECT:%.*]] = select i1 [[RDX_SELECT_CMP]], i16 [[TMP112]], i16 0
+; IC4VF4-NEXT:    [[RDX_SELECT:%.*]] = select i1 [[RDX_SELECT_CMP]], i16 [[TMP109]], i16 0
 ; IC4VF4-NEXT:    br label %[[EXIT:.*]]
 ; IC4VF4:       [[EXIT]]:
 ; IC4VF4-NEXT:    ret i16 [[RDX_SELECT]]
@@ -480,7 +480,7 @@ define i16 @select_decreasing_induction_icmp_table_half(half noundef %val) {
 ; IC1VF4-NEXT:    br label %[[VECTOR_BODY:.*]]
 ; IC1VF4:       [[VECTOR_BODY]]:
 ; IC1VF4-NEXT:    [[INDEX:%.*]] = phi i32 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[VECTOR_BODY]] ]
-; IC1VF4-NEXT:    [[TMP4:%.*]] = phi <4 x i16> [ <i16 12, i16 11, i16 10, i16 9>, %[[VECTOR_PH]] ], [ [[VEC_IND_NEXT:%.*]], %[[VECTOR_BODY]] ]
+; IC1VF4-NEXT:    [[VEC_IND:%.*]] = phi <4 x i16> [ <i16 12, i16 11, i16 10, i16 9>, %[[VECTOR_PH]] ], [ [[VEC_IND_NEXT:%.*]], %[[VECTOR_BODY]] ]
 ; IC1VF4-NEXT:    [[VEC_PHI:%.*]] = phi <4 x i16> [ splat (i16 32767), %[[VECTOR_PH]] ], [ [[TMP5:%.*]], %[[VECTOR_BODY]] ]
 ; IC1VF4-NEXT:    [[DOTCAST:%.*]] = trunc i32 [[INDEX]] to i16
 ; IC1VF4-NEXT:    [[OFFSET_IDX:%.*]] = sub i16 12, [[DOTCAST]]
@@ -489,15 +489,15 @@ define i16 @select_decreasing_induction_icmp_table_half(half noundef %val) {
 ; IC1VF4-NEXT:    [[WIDE_LOAD:%.*]] = load <4 x half>, ptr [[TMP2]], align 1
 ; IC1VF4-NEXT:    [[REVERSE:%.*]] = shufflevector <4 x half> [[WIDE_LOAD]], <4 x half> poison, <4 x i32> <i32 3, i32 2, i32 1, i32 0>
 ; IC1VF4-NEXT:    [[TMP3:%.*]] = fcmp ugt <4 x half> [[REVERSE]], [[BROADCAST_SPLAT]]
-; IC1VF4-NEXT:    [[TMP5]] = select <4 x i1> [[TMP3]], <4 x i16> [[TMP4]], <4 x i16> [[VEC_PHI]]
+; IC1VF4-NEXT:    [[TMP5]] = select <4 x i1> [[TMP3]], <4 x i16> [[VEC_IND]], <4 x i16> [[VEC_PHI]]
 ; IC1VF4-NEXT:    [[INDEX_NEXT]] = add nuw i32 [[INDEX]], 4
-; IC1VF4-NEXT:    [[VEC_IND_NEXT]] = add nsw <4 x i16> [[TMP4]], splat (i16 -4)
+; IC1VF4-NEXT:    [[VEC_IND_NEXT]] = add nsw <4 x i16> [[VEC_IND]], splat (i16 -4)
 ; IC1VF4-NEXT:    [[TMP6:%.*]] = icmp eq i32 [[INDEX_NEXT]], 12
 ; IC1VF4-NEXT:    br i1 [[TMP6]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP4:![0-9]+]]
 ; IC1VF4:       [[MIDDLE_BLOCK]]:
 ; IC1VF4-NEXT:    [[TMP7:%.*]] = call i16 @llvm.vector.reduce.smin.v4i16(<4 x i16> [[TMP5]])
-; IC1VF4-NEXT:    [[RDX_SELECT_CMP:%.*]] = icmp ne i16 [[TMP7]], 32767
 ; IC1VF4-NEXT:    [[TMP8:%.*]] = add nsw i16 [[TMP7]], -1
+; IC1VF4-NEXT:    [[RDX_SELECT_CMP:%.*]] = icmp ne i16 [[TMP7]], 32767
 ; IC1VF4-NEXT:    [[RDX_SELECT:%.*]] = select i1 [[RDX_SELECT_CMP]], i16 [[TMP8]], i16 0
 ; IC1VF4-NEXT:    br label %[[EXIT:.*]]
 ; IC1VF4:       [[EXIT]]:
@@ -514,10 +514,10 @@ define i16 @select_decreasing_induction_icmp_table_half(half noundef %val) {
 ; IC4VF4:       [[VECTOR_BODY]]:
 ; IC4VF4-NEXT:    [[INDEX:%.*]] = phi i32 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[PRED_LOAD_CONTINUE44:.*]] ]
 ; IC4VF4-NEXT:    [[VEC_IND:%.*]] = phi <4 x i16> [ <i16 12, i16 11, i16 10, i16 9>, %[[VECTOR_PH]] ], [ [[VEC_IND_NEXT:%.*]], %[[PRED_LOAD_CONTINUE44]] ]
-; IC4VF4-NEXT:    [[VEC_PHI:%.*]] = phi <4 x i16> [ splat (i16 32767), %[[VECTOR_PH]] ], [ [[TMP108:%.*]], %[[PRED_LOAD_CONTINUE44]] ]
-; IC4VF4-NEXT:    [[VEC_PHI1:%.*]] = phi <4 x i16> [ splat (i16 32767), %[[VECTOR_PH]] ], [ [[TMP109:%.*]], %[[PRED_LOAD_CONTINUE44]] ]
-; IC4VF4-NEXT:    [[VEC_PHI2:%.*]] = phi <4 x i16> [ splat (i16 32767), %[[VECTOR_PH]] ], [ [[TMP110:%.*]], %[[PRED_LOAD_CONTINUE44]] ]
-; IC4VF4-NEXT:    [[VEC_PHI3:%.*]] = phi <4 x i16> [ splat (i16 32767), %[[VECTOR_PH]] ], [ [[TMP111:%.*]], %[[PRED_LOAD_CONTINUE44]] ]
+; IC4VF4-NEXT:    [[VEC_PHI:%.*]] = phi <4 x i16> [ splat (i16 32767), %[[VECTOR_PH]] ], [ [[TMP112:%.*]], %[[PRED_LOAD_CONTINUE44]] ]
+; IC4VF4-NEXT:    [[VEC_PHI1:%.*]] = phi <4 x i16> [ splat (i16 32767), %[[VECTOR_PH]] ], [ [[TMP113:%.*]], %[[PRED_LOAD_CONTINUE44]] ]
+; IC4VF4-NEXT:    [[VEC_PHI2:%.*]] = phi <4 x i16> [ splat (i16 32767), %[[VECTOR_PH]] ], [ [[TMP114:%.*]], %[[PRED_LOAD_CONTINUE44]] ]
+; IC4VF4-NEXT:    [[VEC_PHI3:%.*]] = phi <4 x i16> [ splat (i16 32767), %[[VECTOR_PH]] ], [ [[TMP115:%.*]], %[[PRED_LOAD_CONTINUE44]] ]
 ; IC4VF4-NEXT:    [[STEP_ADD:%.*]] = add <4 x i16> [[VEC_IND]], splat (i16 -4)
 ; IC4VF4-NEXT:    [[STEP_ADD_2:%.*]] = add <4 x i16> [[STEP_ADD]], splat (i16 -4)
 ; IC4VF4-NEXT:    [[STEP_ADD_3:%.*]] = add <4 x i16> [[STEP_ADD_2]], splat (i16 -4)
@@ -697,21 +697,21 @@ define i16 @select_decreasing_induction_icmp_table_half(half noundef %val) {
 ; IC4VF4-NEXT:    [[TMP101:%.*]] = fcmp ugt <4 x half> [[TMP51]], [[BROADCAST_SPLAT]]
 ; IC4VF4-NEXT:    [[TMP102:%.*]] = fcmp ugt <4 x half> [[TMP75]], [[BROADCAST_SPLAT]]
 ; IC4VF4-NEXT:    [[TMP103:%.*]] = fcmp ugt <4 x half> [[TMP99]], [[BROADCAST_SPLAT]]
-; IC4VF4-NEXT:    [[TMP108]] = select <4 x i1> [[TMP100]], <4 x i16> [[VEC_IND]], <4 x i16> [[VEC_PHI]]
-; IC4VF4-NEXT:    [[TMP109]] = select <4 x i1> [[TMP101]], <4 x i16> [[STEP_ADD]], <4 x i16> [[VEC_PHI1]]
-; IC4VF4-NEXT:    [[TMP110]] = select <4 x i1> [[TMP102]], <4 x i16> [[STEP_ADD_2]], <4 x i16> [[VEC_PHI2]]
-; IC4VF4-NEXT:    [[TMP111]] = select <4 x i1> [[TMP103]], <4 x i16> [[STEP_ADD_3]], <4 x i16> [[VEC_PHI3]]
+; IC4VF4-NEXT:    [[TMP112]] = select <4 x i1> [[TMP100]], <4 x i16> [[VEC_IND]], <4 x i16> [[VEC_PHI]]
+; IC4VF4-NEXT:    [[TMP113]] = select <4 x i1> [[TMP101]], <4 x i16> [[STEP_ADD]], <4 x i16> [[VEC_PHI1]]
+; IC4VF4-NEXT:    [[TMP114]] = select <4 x i1> [[TMP102]], <4 x i16> [[STEP_ADD_2]], <4 x i16> [[VEC_PHI2]]
+; IC4VF4-NEXT:    [[TMP115]] = select <4 x i1> [[TMP103]], <4 x i16> [[STEP_ADD_3]], <4 x i16> [[VEC_PHI3]]
 ; IC4VF4-NEXT:    [[INDEX_NEXT]] = add nuw i32 [[INDEX]], 16
 ; IC4VF4-NEXT:    [[VEC_IND_NEXT]] = add nsw <4 x i16> [[STEP_ADD_3]], splat (i16 -4)
 ; IC4VF4-NEXT:    br i1 true, label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP4:![0-9]+]]
 ; IC4VF4:       [[MIDDLE_BLOCK]]:
-; IC4VF4-NEXT:    [[RDX_MINMAX:%.*]] = call <4 x i16> @llvm.smin.v4i16(<4 x i16> [[TMP108]], <4 x i16> [[TMP109]])
-; IC4VF4-NEXT:    [[RDX_MINMAX45:%.*]] = call <4 x i16> @llvm.smin.v4i16(<4 x i16> [[RDX_MINMAX]], <4 x i16> [[TMP110]])
-; IC4VF4-NEXT:    [[RDX_MINMAX46:%.*]] = call <4 x i16> @llvm.smin.v4i16(<4 x i16> [[RDX_MINMAX45]], <4 x i16> [[TMP111]])
+; IC4VF4-NEXT:    [[RDX_MINMAX:%.*]] = call <4 x i16> @llvm.smin.v4i16(<4 x i16> [[TMP112]], <4 x i16> [[TMP113]])
+; IC4VF4-NEXT:    [[RDX_MINMAX45:%.*]] = call <4 x i16> @llvm.smin.v4i16(<4 x i16> [[RDX_MINMAX]], <4 x i16> [[TMP114]])
+; IC4VF4-NEXT:    [[RDX_MINMAX46:%.*]] = call <4 x i16> @llvm.smin.v4i16(<4 x i16> [[RDX_MINMAX45]], <4 x i16> [[TMP115]])
 ; IC4VF4-NEXT:    [[TMP116:%.*]] = call i16 @llvm.vector.reduce.smin.v4i16(<4 x i16> [[RDX_MINMAX46]])
+; IC4VF4-NEXT:    [[TMP109:%.*]] = add nsw i16 [[TMP116]], -1
 ; IC4VF4-NEXT:    [[RDX_SELECT_CMP:%.*]] = icmp ne i16 [[TMP116]], 32767
-; IC4VF4-NEXT:    [[TMP112:%.*]] = add nsw i16 [[TMP116]], -1
-; IC4VF4-NEXT:    [[RDX_SELECT:%.*]] = select i1 [[RDX_SELECT_CMP]], i16 [[TMP112]], i16 0
+; IC4VF4-NEXT:    [[RDX_SELECT:%.*]] = select i1 [[RDX_SELECT_CMP]], i16 [[TMP109]], i16 0
 ; IC4VF4-NEXT:    br label %[[EXIT:.*]]
 ; IC4VF4:       [[EXIT]]:
 ; IC4VF4-NEXT:    ret i16 [[RDX_SELECT]]
@@ -986,16 +986,13 @@ define i64 @select_decreasing_induction_icmp_iv_just_within_bounds(ptr %a, ptr %
 ; IC1VF4-NEXT:  [[ENTRY:.*:]]
 ; IC1VF4-NEXT:    br label %[[VECTOR_PH:.*]]
 ; IC1VF4:       [[VECTOR_PH]]:
-; IC1VF4-NEXT:    [[BROADCAST_SPLATINSERT:%.*]] = insertelement <4 x i64> poison, i64 [[RDX_START]], i64 0
-; IC1VF4-NEXT:    [[BROADCAST_SPLAT:%.*]] = shufflevector <4 x i64> [[BROADCAST_SPLATINSERT]], <4 x i64> poison, <4 x i32> zeroinitializer
 ; IC1VF4-NEXT:    br label %[[VECTOR_BODY:.*]]
 ; IC1VF4:       [[VECTOR_BODY]]:
 ; IC1VF4-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[VECTOR_BODY]] ]
 ; IC1VF4-NEXT:    [[VEC_IND:%.*]] = phi <4 x i64> [ <i64 -1, i64 -2, i64 -3, i64 -4>, %[[VECTOR_PH]] ], [ [[VEC_IND_NEXT:%.*]], %[[VECTOR_BODY]] ]
-; IC1VF4-NEXT:    [[VEC_PHI:%.*]] = phi <4 x i64> [ [[BROADCAST_SPLAT]], %[[VECTOR_PH]] ], [ [[TMP13:%.*]], %[[VECTOR_BODY]] ]
-; IC1VF4-NEXT:    [[TMP9:%.*]] = phi <4 x i1> [ zeroinitializer, %[[VECTOR_PH]] ], [ [[TMP12:%.*]], %[[VECTOR_BODY]] ]
-; IC1VF4-NEXT:    [[TMP0:%.*]] = add <4 x i64> [[VEC_IND]], splat (i64 -1)
-; IC1VF4-NEXT:    [[TMP1:%.*]] = extractelement <4 x i64> [[TMP0]], i32 0
+; IC1VF4-NEXT:    [[VEC_PHI:%.*]] = phi <4 x i64> [ splat (i64 -1), %[[VECTOR_PH]] ], [ [[TMP6:%.*]], %[[VECTOR_BODY]] ]
+; IC1VF4-NEXT:    [[OFFSET_IDX:%.*]] = sub i64 -1, [[INDEX]]
+; IC1VF4-NEXT:    [[TMP1:%.*]] = add i64 [[OFFSET_IDX]], -1
 ; IC1VF4-NEXT:    [[TMP2:%.*]] = getelementptr inbounds i8, ptr [[A]], i64 [[TMP1]]
 ; IC1VF4-NEXT:    [[TMP4:%.*]] = getelementptr inbounds i8, ptr [[TMP2]], i64 -3
 ; IC1VF4-NEXT:    [[WIDE_LOAD:%.*]] = load <4 x i8>, ptr [[TMP4]], align 1
@@ -1005,23 +1002,22 @@ define i64 @select_decreasing_induction_icmp_iv_just_within_bounds(ptr %a, ptr %
 ; IC1VF4-NEXT:    [[WIDE_LOAD1:%.*]] = load <4 x i8>, ptr [[TMP7]], align 1
 ; IC1VF4-NEXT:    [[REVERSE2:%.*]] = shufflevector <4 x i8> [[WIDE_LOAD1]], <4 x i8> poison, <4 x i32> <i32 3, i32 2, i32 1, i32 0>
 ; IC1VF4-NEXT:    [[TMP8:%.*]] = icmp sgt <4 x i8> [[REVERSE]], [[REVERSE2]]
-; IC1VF4-NEXT:    [[TMP14:%.*]] = freeze <4 x i1> [[TMP8]]
-; IC1VF4-NEXT:    [[TMP11:%.*]] = call i1 @llvm.vector.reduce.or.v4i1(<4 x i1> [[TMP14]])
-; IC1VF4-NEXT:    [[TMP12]] = select i1 [[TMP11]], <4 x i1> [[TMP8]], <4 x i1> [[TMP9]]
-; IC1VF4-NEXT:    [[TMP13]] = select i1 [[TMP11]], <4 x i64> [[TMP0]], <4 x i64> [[VEC_PHI]]
+; IC1VF4-NEXT:    [[TMP6]] = select <4 x i1> [[TMP8]], <4 x i64> [[VEC_IND]], <4 x i64> [[VEC_PHI]]
 ; IC1VF4-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 4
 ; IC1VF4-NEXT:    [[VEC_IND_NEXT]] = add <4 x i64> [[VEC_IND]], splat (i64 -4)
 ; IC1VF4-NEXT:    [[TMP10:%.*]] = icmp eq i64 [[INDEX_NEXT]], -4
 ; IC1VF4-NEXT:    br i1 [[TMP10]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP6:![0-9]+]]
 ; IC1VF4:       [[MIDDLE_BLOCK]]:
-; IC1VF4-NEXT:    [[TMP15:%.*]] = extractelement <4 x i64> [[BROADCAST_SPLAT]], i32 0
-; IC1VF4-NEXT:    [[TMP16:%.*]] = call i64 @llvm.experimental.vector.extract.last.active.v4i64(<4 x i64> [[TMP13]], <4 x i1> [[TMP12]], i64 [[TMP15]])
+; IC1VF4-NEXT:    [[TMP12:%.*]] = call i64 @llvm.vector.reduce.umin.v4i64(<4 x i64> [[TMP6]])
+; IC1VF4-NEXT:    [[TMP9:%.*]] = add i64 [[TMP12]], -1
+; IC1VF4-NEXT:    [[TMP13:%.*]] = icmp ne i64 [[TMP12]], -1
+; IC1VF4-NEXT:    [[TMP11:%.*]] = select i1 [[TMP13]], i64 [[TMP9]], i64 [[RDX_START]]
 ; IC1VF4-NEXT:    br label %[[SCALAR_PH:.*]]
 ; IC1VF4:       [[SCALAR_PH]]:
 ; IC1VF4-NEXT:    br label %[[LOOP:.*]]
 ; IC1VF4:       [[LOOP]]:
 ; IC1VF4-NEXT:    [[IV:%.*]] = phi i64 [ 3, %[[SCALAR_PH]] ], [ [[IV_NEXT:%.*]], %[[LOOP]] ]
-; IC1VF4-NEXT:    [[RDX:%.*]] = phi i64 [ [[TMP16]], %[[SCALAR_PH]] ], [ [[COND:%.*]], %[[LOOP]] ]
+; IC1VF4-NEXT:    [[RDX:%.*]] = phi i64 [ [[TMP11]], %[[SCALAR_PH]] ], [ [[COND:%.*]], %[[LOOP]] ]
 ; IC1VF4-NEXT:    [[IV_NEXT]] = add i64 [[IV]], -1
 ; IC1VF4-NEXT:    [[GEP_A_IV:%.*]] = getelementptr inbounds i8, ptr [[A]], i64 [[IV_NEXT]]
 ; IC1VF4-NEXT:    [[LD_A:%.*]] = load i8, ptr [[GEP_A_IV]], align 1
@@ -1040,42 +1036,71 @@ define i64 @select_decreasing_induction_icmp_iv_just_within_bounds(ptr %a, ptr %
 ; IC4VF4-NEXT:  [[ENTRY:.*:]]
 ; IC4VF4-NEXT:    br label %[[VECTOR_PH:.*]]
 ; IC4VF4:       [[VECTOR_PH]]:
-; IC4VF4-NEXT:    [[BROADCAST_SPLATINSERT:%.*]] = insertelement <4 x i64> poison, i64 [[RDX_START]], i64 0
-; IC4VF4-NEXT:    [[BROADCAST_SPLAT:%.*]] = shufflevector <4 x i64> [[BROADCAST_SPLATINSERT]], <4 x i64> poison, <4 x i32> zeroinitializer
 ; IC4VF4-NEXT:    br label %[[VECTOR_BODY:.*]]
 ; IC4VF4:       [[VECTOR_BODY]]:
 ; IC4VF4-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[VECTOR_BODY]] ]
 ; IC4VF4-NEXT:    [[VEC_IND:%.*]] = phi <4 x i64> [ <i64 -1, i64 -2, i64 -3, i64 -4>, %[[VECTOR_PH]] ], [ [[VEC_IND_NEXT:%.*]], %[[VECTOR_BODY]] ]
-; IC4VF4-NEXT:    [[VEC_PHI:%.*]] = phi <4 x i64> [ [[BROADCAST_SPLAT]], %[[VECTOR_PH]] ], [ [[TMP17:%.*]], %[[VECTOR_BODY]] ]
-; IC4VF4-NEXT:    [[TMP2:%.*]] = phi <4 x i1> [ zeroinitializer, %[[VECTOR_PH]] ], [ [[TMP12:%.*]], %[[VECTOR_BODY]] ]
-; IC4VF4-NEXT:    [[TMP0:%.*]] = add <4 x i64> [[VEC_IND]], splat (i64 -1)
-; IC4VF4-NEXT:    [[TMP1:%.*]] = extractelement <4 x i64> [[TMP0]], i32 0
+; IC4VF4-NEXT:    [[VEC_PHI:%.*]] = phi <4 x i64> [ splat (i64 -1), %[[VECTOR_PH]] ], [ [[TMP27:%.*]], %[[VECTOR_BODY]] ]
+; IC4VF4-NEXT:    [[VEC_PHI1:%.*]] = phi <4 x i64> [ splat (i64 -1), %[[VECTOR_PH]] ], [ [[TMP28:%.*]], %[[VECTOR_BODY]] ]
+; IC4VF4-NEXT:    [[VEC_PHI2:%.*]] = phi <4 x i64> [ splat (i64 -1), %[[VECTOR_PH]] ], [ [[TMP29:%.*]], %[[VECTOR_BODY]] ]
+; IC4VF4-NEXT:    [[VEC_PHI3:%.*]] = phi <4 x i64> [ splat (i64 -1), %[[VECTOR_PH]] ], [ [[TMP30:%.*]], %[[VECTOR_BODY]] ]
+; IC4VF4-NEXT:    [[STEP_ADD:%.*]] = add <4 x i64> [[VEC_IND]], splat (i64 -4)
+; IC4VF4-NEXT:    [[STEP_ADD_2:%.*]] = add <4 x i64> [[STEP_ADD]], splat (i64 -4)
+; IC4VF4-NEXT:    [[STEP_ADD_3:%.*]] = add <4 x i64> [[STEP_ADD_2]], splat (i64 -4)
+; IC4VF4-NEXT:    [[OFFSET_IDX:%.*]] = sub i64 -1, [[INDEX]]
+; IC4VF4-NEXT:    [[TMP1:%.*]] = add i64 [[OFFSET_IDX]], -1
 ; IC4VF4-NEXT:    [[TMP5:%.*]] = getelementptr inbounds i8, ptr [[A]], i64 [[TMP1]]
-; IC4VF4-NEXT:    [[TMP22:%.*]] = getelementptr inbounds i8, ptr [[TMP5]], i64 -3
+; IC4VF4-NEXT:    [[TMP7:%.*]] = getelementptr inbounds i8, ptr [[TMP5]], i64 -3
+; IC4VF4-NEXT:    [[TMP9:%.*]] = getelementptr inbounds i8, ptr [[TMP5]], i64 -7
+; IC4VF4-NEXT:    [[TMP11:%.*]] = getelementptr inbounds i8, ptr [[TMP5]], i64 -11
+; IC4VF4-NEXT:    [[TMP13:%.*]] = getelementptr inbounds i8, ptr [[TMP5]], i64 -15
+; IC4VF4-NEXT:    [[WIDE_LOAD:%.*]] = load <4 x i8>, ptr [[TMP7]], align 1
+; IC4VF4-NEXT:    [[WIDE_LOAD4:%.*]] = load <4 x i8>, ptr [[TMP9]], align 1
+; IC4VF4-NEXT:    [[WIDE_LOAD5:%.*]] = load <4 x i8>, ptr [[TMP11]], align 1
+; IC4VF4-NEXT:    [[WIDE_LOAD6:%.*]] = load <4 x i8>, ptr [[TMP13]], align 1
+; IC4VF4-NEXT:    [[REVERSE:%.*]] = shufflevector <4 x i8> [[WIDE_LOAD]], <4 x i8> poison, <4 x i32> <i32 3, i32 2, i32 1, i32 0>
+; IC4VF4-NEXT:    [[REVERSE7:%.*]] = shufflevector <4 x i8> [[WIDE_LOAD4]], <4 x i8> poison, <4 x i32> <i32 3, i32 2, i32 1, i32 0>
+; IC4VF4-NEXT:    [[REVERSE8:%.*]] = shufflevector <4 x i8> [[WIDE_LOAD5]], <4 x i8> poison, <4 x i32> <i32 3, i32 2, i32 1, i32 0>
+; IC4VF4-NEXT:    [[REVERSE9:%.*]] = shufflevector <4 x i8> [[WIDE_LOAD6]], <4 x i8> poison, <4 x i32> <i32 3, i32 2, i32 1, i32 0>
+; IC4VF4-NEXT:    [[TMP14:%.*]] = getelementptr inbounds i8, ptr [[B]], i64 [[TMP1]]
+; IC4VF4-NEXT:    [[TMP16:%.*]] = getelementptr inbounds i8, ptr [[TMP14]], i64 -3
+; IC4VF4-NEXT:    [[TMP18:%.*]] = getelementptr inbounds i8, ptr [[TMP14]], i64 -7
+; IC4VF4-NEXT:    [[TMP20:%.*]] = getelementptr inbounds i8, ptr [[TMP14]], i64 -11
+; IC4VF4-NEXT:    [[TMP22:%.*]] = getelementptr inbounds i8, ptr [[TMP14]], i64 -15
+; IC4VF4-NEXT:    [[WIDE_LOAD10:%.*]] = load <4 x i8>, ptr [[TMP16]], align 1
+; IC4VF4-NEXT:    [[WIDE_LOAD11:%.*]] = load <4 x i8>, ptr [[TMP18]], align 1
+; IC4VF4-NEXT:    [[WIDE_LOAD12:%.*]] = load <4 x i8>, ptr [[TMP20]], align 1
 ; IC4VF4-NEXT:    [[WIDE_LOAD13:%.*]] = load <4 x i8>, ptr [[TMP22]], align 1
+; IC4VF4-NEXT:    [[REVERSE14:%.*]] = shufflevector <4 x i8> [[WIDE_LOAD10]], <4 x i8> poison, <4 x i32> <i32 3, i32 2, i32 1, i32 0>
+; IC4VF4-NEXT:    [[REVERSE15:%.*]] = shufflevector <4 x i8> [[WIDE_LOAD11]], <4 x i8> poison, <4 x i32> <i32 3, i32 2, i32 1, i32 0>
+; IC4VF4-NEXT:    [[REVERSE16:%.*]] = shufflevector <4 x i8> [[WIDE_LOAD12]], <4 x i8> poison, <4 x i32> <i32 3, i32 2, i32 1, i32 0>
 ; IC4VF4-NEXT:    [[REVERSE17:%.*]] = shufflevector <4 x i8> [[WIDE_LOAD13]], <4 x i8> poison, <4 x i32> <i32 3, i32 2, i32 1, i32 0>
-; IC4VF4-NEXT:    [[TMP7:%.*]] = getelementptr inbounds i8, ptr [[B]], i64 [[TMP1]]
-; IC4VF4-NEXT:    [[TMP6:%.*]] = getelementptr inbounds i8, ptr [[TMP7]], i64 -3
-; IC4VF4-NEXT:    [[WIDE_LOAD1:%.*]] = load <4 x i8>, ptr [[TMP6]], align 1
-; IC4VF4-NEXT:    [[REVERSE2:%.*]] = shufflevector <4 x i8> [[WIDE_LOAD1]], <4 x i8> poison, <4 x i32> <i32 3, i32 2, i32 1, i32 0>
-; IC4VF4-NEXT:    [[TMP26:%.*]] = icmp sgt <4 x i8> [[REVERSE17]], [[REVERSE2]]
-; IC4VF4-NEXT:    [[TMP10:%.*]] = freeze <4 x i1> [[TMP26]]
-; IC4VF4-NEXT:    [[TMP11:%.*]] = call i1 @llvm.vector.reduce.or.v4i1(<4 x i1> [[TMP10]])
-; IC4VF4-NEXT:    [[TMP12]] = select i1 [[TMP11]], <4 x i1> [[TMP26]], <4 x i1> [[TMP2]]
-; IC4VF4-NEXT:    [[TMP17]] = select i1 [[TMP11]], <4 x i64> [[TMP0]], <4 x i64> [[VEC_PHI]]
-; IC4VF4-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 4
-; IC4VF4-NEXT:    [[VEC_IND_NEXT]] = add <4 x i64> [[VEC_IND]], splat (i64 -4)
-; IC4VF4-NEXT:    [[TMP18:%.*]] = icmp eq i64 [[INDEX_NEXT]], -4
-; IC4VF4-NEXT:    br i1 [[TMP18]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP6:![0-9]+]]
+; IC4VF4-NEXT:    [[TMP23:%.*]] = icmp sgt <4 x i8> [[REVERSE]], [[REVERSE14]]
+; IC4VF4-NEXT:    [[TMP24:%.*]] = icmp sgt <4 x i8> [[REVERSE7]], [[REVERSE15]]
+; IC4VF4-NEXT:    [[TMP25:%.*]] = icmp sgt <4 x i8> [[REVERSE8]], [[REVERSE16]]
+; IC4VF4-NEXT:    [[TMP26:%.*]] = icmp sgt <4 x i8> [[REVERSE9]], [[REVERSE17]]
+; IC4VF4-NEXT:    [[TMP27]] = select <4 x i1> [[TMP23]], <4 x i64> [[VEC_IND]], <4 x i64> [[VEC_PHI]]
+; IC4VF4-NEXT:    [[TMP28]] = select <4 x i1> [[TMP24]], <4 x i64> [[STEP_ADD]], <4 x i64> [[VEC_PHI1]]
+; IC4VF4-NEXT:    [[TMP29]] = select <4 x i1> [[TMP25]], <4 x i64> [[STEP_ADD_2]], <4 x i64> [[VEC_PHI2]]
+; IC4VF4-NEXT:    [[TMP30]] = select <4 x i1> [[TMP26]], <4 x i64> [[STEP_ADD_3]], <4 x i64> [[VEC_PHI3]]
+; IC4VF4-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 16
+; IC4VF4-NEXT:    [[VEC_IND_NEXT]] = add <4 x i64> [[STEP_ADD_3]], splat (i64 -4)
+; IC4VF4-NEXT:    [[TMP31:%.*]] = icmp eq i64 [[INDEX_NEXT]], -16
+; IC4VF4-NEXT:    br i1 [[TMP31]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP6:![0-9]+]]
 ; IC4VF4:       [[MIDDLE_BLOCK]]:
-; IC4VF4-NEXT:    [[TMP19:%.*]] = extractelement <4 x i64> [[BROADCAST_SPLAT]], i32 0
-; IC4VF4-NEXT:    [[TMP16:%.*]] = call i64 @llvm.experimental.vector.extract.last.active.v4i64(<4 x i64> [[TMP17]], <4 x i1> [[TMP12]], i64 [[TMP19]])
+; IC4VF4-NEXT:    [[RDX_MINMAX:%.*]] = call <4 x i64> @llvm.umin.v4i64(<4 x i64> [[TMP27]], <4 x i64> [[TMP28]])
+; IC4VF4-NEXT:    [[RDX_MINMAX18:%.*]] = call <4 x i64> @llvm.umin.v4i64(<4 x i64> [[RDX_MINMAX]], <4 x i64> [[TMP29]])
+; IC4VF4-NEXT:    [[RDX_MINMAX19:%.*]] = call <4 x i64> @llvm.umin.v4i64(<4 x i64> [[RDX_MINMAX18]], <4 x i64> [[TMP30]])
+; IC4VF4-NEXT:    [[TMP32:%.*]] = call i64 @llvm.vector.reduce.umin.v4i64(<4 x i64> [[RDX_MINMAX19]])
+; IC4VF4-NEXT:    [[SUB:%.+]] = add i64 [[TMP32]], -1
+; IC4VF4-NEXT:    [[RDX_SELECT_CMP:%.*]] = icmp ne i64 [[TMP32]], -1
+; IC4VF4-NEXT:    [[RDX_SELECT:%.*]] = select i1 [[RDX_SELECT_CMP]], i64 [[SUB]], i64 [[RDX_START]]
 ; IC4VF4-NEXT:    br label %[[SCALAR_PH:.*]]
 ; IC4VF4:       [[SCALAR_PH]]:
 ; IC4VF4-NEXT:    br label %[[LOOP:.*]]
 ; IC4VF4:       [[LOOP]]:
-; IC4VF4-NEXT:    [[IV:%.*]] = phi i64 [ 3, %[[SCALAR_PH]] ], [ [[IV_NEXT:%.*]], %[[LOOP]] ]
-; IC4VF4-NEXT:    [[RDX:%.*]] = phi i64 [ [[TMP16]], %[[SCALAR_PH]] ], [ [[COND:%.*]], %[[LOOP]] ]
+; IC4VF4-NEXT:    [[IV:%.*]] = phi i64 [ 15, %[[SCALAR_PH]] ], [ [[IV_NEXT:%.*]], %[[LOOP]] ]
+; IC4VF4-NEXT:    [[RDX:%.*]] = phi i64 [ [[RDX_SELECT]], %[[SCALAR_PH]] ], [ [[COND:%.*]], %[[LOOP]] ]
 ; IC4VF4-NEXT:    [[IV_NEXT]] = add i64 [[IV]], -1
 ; IC4VF4-NEXT:    [[GEP_A_IV:%.*]] = getelementptr inbounds i8, ptr [[A]], i64 [[IV_NEXT]]
 ; IC4VF4-NEXT:    [[LD_A:%.*]] = load i8, ptr [[GEP_A_IV]], align 1
@@ -1088,7 +1113,7 @@ define i64 @select_decreasing_induction_icmp_iv_just_within_bounds(ptr %a, ptr %
 ; IC4VF4:       [[EXIT]]:
 ; IC4VF4-NEXT:    [[COND_LCSSA:%.*]] = phi i64 [ [[COND]], %[[LOOP]] ]
 ; IC4VF4-NEXT:    ret i64 [[COND_LCSSA]]
-;
+;;
 ; IC4VF1-LABEL: define i64 @select_decreasing_induction_icmp_iv_just_within_bounds(
 ; IC4VF1-SAME: ptr [[A:%.*]], ptr [[B:%.*]], i64 [[RDX_START:%.*]]) {
 ; IC4VF1-NEXT:  [[ENTRY:.*:]]
@@ -1200,9 +1225,9 @@ define i64 @select_decreasing_induction_icmp_non_const_start(ptr %a, ptr %b, i64
 ; IC1VF4-NEXT:    br label %[[VECTOR_BODY:.*]]
 ; IC1VF4:       [[VECTOR_BODY]]:
 ; IC1VF4-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[VECTOR_BODY]] ]
-; IC1VF4-NEXT:    [[TMP6:%.*]] = phi <4 x i64> [ [[INDUCTION]], %[[VECTOR_PH]] ], [ [[VEC_IND_NEXT:%.*]], %[[VECTOR_BODY]] ]
-; IC1VF4-NEXT:    [[VEC_PHI:%.*]] = phi <4 x i64> [ splat (i64 9223372036854775807), %[[VECTOR_PH]] ], [ [[TMP14:%.*]], %[[VECTOR_BODY]] ]
-; IC1VF4-NEXT:    [[VEC_PHI1:%.*]] = phi <4 x i1> [ zeroinitializer, %[[VECTOR_PH]] ], [ [[TMP12:%.*]], %[[VECTOR_BODY]] ]
+; IC1VF4-NEXT:    [[VEC_IND:%.*]] = phi <4 x i64> [ [[INDUCTION]], %[[VECTOR_PH]] ], [ [[VEC_IND_NEXT:%.*]], %[[VECTOR_BODY]] ]
+; IC1VF4-NEXT:    [[VEC_PHI:%.*]] = phi <4 x i64> [ splat (i64 9223372036854775807), %[[VECTOR_PH]] ], [ [[TMP12:%.*]], %[[VECTOR_BODY]] ]
+; IC1VF4-NEXT:    [[VEC_PHI1:%.*]] = phi <4 x i1> [ zeroinitializer, %[[VECTOR_PH]] ], [ [[TMP17:%.*]], %[[VECTOR_BODY]] ]
 ; IC1VF4-NEXT:    [[OFFSET_IDX:%.*]] = sub i64 [[N]], [[INDEX]]
 ; IC1VF4-NEXT:    [[TMP4:%.*]] = add nsw i64 [[OFFSET_IDX]], -1
 ; IC1VF4-NEXT:    [[TMP5:%.*]] = getelementptr inbounds i64, ptr [[A]], i64 [[TMP4]]
@@ -1214,17 +1239,18 @@ define i64 @select_decreasing_induction_icmp_non_const_start(ptr %a, ptr %b, i64
 ; IC1VF4-NEXT:    [[WIDE_LOAD3:%.*]] = load <4 x i64>, ptr [[TMP10]], align 8
 ; IC1VF4-NEXT:    [[REVERSE4:%.*]] = shufflevector <4 x i64> [[WIDE_LOAD3]], <4 x i64> poison, <4 x i32> <i32 3, i32 2, i32 1, i32 0>
 ; IC1VF4-NEXT:    [[TMP11:%.*]] = icmp sgt <4 x i64> [[REVERSE]], [[REVERSE4]]
-; IC1VF4-NEXT:    [[TMP14]] = select <4 x i1> [[TMP11]], <4 x i64> [[TMP6]], <4 x i64> [[VEC_PHI]]
-; IC1VF4-NEXT:    [[TMP12]] = or <4 x i1> [[VEC_PHI1]], [[TMP11]]
+; IC1VF4-NEXT:    [[TMP12]] = select <4 x i1> [[TMP11]], <4 x i64> [[VEC_IND]], <4 x i64> [[VEC_PHI]]
+; IC1VF4-NEXT:    [[TMP17]] = or <4 x i1> [[VEC_PHI1]], [[TMP11]]
 ; IC1VF4-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 4
-; IC1VF4-NEXT:    [[VEC_IND_NEXT]] = add nsw <4 x i64> [[TMP6]], splat (i64 -4)
+; IC1VF4-NEXT:    [[VEC_IND_NEXT]] = add nsw <4 x i64> [[VEC_IND]], splat (i64 -4)
 ; IC1VF4-NEXT:    [[TMP16:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[N_VEC]]
 ; IC1VF4-NEXT:    br i1 [[TMP16]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP8:![0-9]+]]
 ; IC1VF4:       [[MIDDLE_BLOCK]]:
-; IC1VF4-NEXT:    [[TMP15:%.*]] = call i64 @llvm.vector.reduce.smin.v4i64(<4 x i64> [[TMP14]])
-; IC1VF4-NEXT:    [[TMP17:%.*]] = call i1 @llvm.vector.reduce.or.v4i1(<4 x i1> [[TMP12]])
-; IC1VF4-NEXT:    [[RDX_SELECT_CMP:%.*]] = freeze i1 [[TMP17]]
-; IC1VF4-NEXT:    [[RDX_SELECT:%.*]] = select i1 [[RDX_SELECT_CMP]], i64 [[TMP15]], i64 [[RDX_START]]
+; IC1VF4-NEXT:    [[TMP13:%.*]] = call i64 @llvm.vector.reduce.smin.v4i64(<4 x i64> [[TMP12]])
+; IC1VF4-NEXT:    [[TMP18:%.*]] = add nsw i64 [[TMP13]], -1
+; IC1VF4-NEXT:    [[TMP14:%.*]] = call i1 @llvm.vector.reduce.or.v4i1(<4 x i1> [[TMP17]])
+; IC1VF4-NEXT:    [[TMP15:%.*]] = freeze i1 [[TMP14]]
+; IC1VF4-NEXT:    [[RDX_SELECT:%.*]] = select i1 [[TMP15]], i64 [[TMP18]], i64 [[RDX_START]]
 ; IC1VF4-NEXT:    [[CMP_N:%.*]] = icmp eq i64 [[TMP1]], [[N_VEC]]
 ; IC1VF4-NEXT:    br i1 [[CMP_N]], label %[[EXIT:.*]], label %[[SCALAR_PH]]
 ; IC1VF4:       [[SCALAR_PH]]:
@@ -1326,12 +1352,13 @@ define i64 @select_decreasing_induction_icmp_non_const_start(ptr %a, ptr %b, i64
 ; IC4VF4-NEXT:    [[RDX_MINMAX23:%.*]] = call <4 x i64> @llvm.smin.v4i64(<4 x i64> [[RDX_MINMAX]], <4 x i64> [[TMP36]])
 ; IC4VF4-NEXT:    [[RDX_MINMAX25:%.*]] = call <4 x i64> @llvm.smin.v4i64(<4 x i64> [[RDX_MINMAX23]], <4 x i64> [[TMP37]])
 ; IC4VF4-NEXT:    [[TMP39:%.*]] = call i64 @llvm.vector.reduce.smin.v4i64(<4 x i64> [[RDX_MINMAX25]])
+; IC4VF4-NEXT:    [[SUB:%.*]] = add nsw i64 [[TMP39]], -1
 ; IC4VF4-NEXT:    [[BIN_RDX:%.*]] = or <4 x i1> [[TMP31]], [[TMP30]]
 ; IC4VF4-NEXT:    [[BIN_RDX25:%.*]] = or <4 x i1> [[TMP32]], [[BIN_RDX]]
 ; IC4VF4-NEXT:    [[BIN_RDX24:%.*]] = or <4 x i1> [[TMP33]], [[BIN_RDX25]]
 ; IC4VF4-NEXT:    [[TMP40:%.*]] = call i1 @llvm.vector.reduce.or.v4i1(<4 x i1> [[BIN_RDX24]])
 ; IC4VF4-NEXT:    [[TMP41:%.*]] = freeze i1 [[TMP40]]
-; IC4VF4-NEXT:    [[RDX_SELECT:%.*]] = select i1 [[TMP41]], i64 [[TMP39]], i64 [[RDX_START]]
+; IC4VF4-NEXT:    [[RDX_SELECT:%.*]] = select i1 [[TMP41]], i64 [[SUB]], i64 [[RDX_START]]
 ; IC4VF4-NEXT:    [[CMP_N:%.*]] = icmp eq i64 [[TMP1]], [[N_VEC]]
 ; IC4VF4-NEXT:    br i1 [[CMP_N]], label %[[EXIT:.*]], label %[[SCALAR_PH]]
 ; IC4VF4:       [[SCALAR_PH]]:
