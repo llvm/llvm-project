@@ -1141,67 +1141,6 @@ private:
   size_t shardOffsets[numShards];
 };
 
-// .MIPS.abiflags section.
-template <class ELFT>
-class MipsAbiFlagsSection final : public SyntheticSection {
-  using Elf_Mips_ABIFlags = llvm::object::Elf_Mips_ABIFlags<ELFT>;
-
-public:
-  static std::unique_ptr<MipsAbiFlagsSection> create(Ctx &);
-
-  MipsAbiFlagsSection(Ctx &, Elf_Mips_ABIFlags flags);
-  size_t getSize() const override { return sizeof(Elf_Mips_ABIFlags); }
-  void writeTo(uint8_t *buf) override;
-
-private:
-  Elf_Mips_ABIFlags flags;
-};
-
-// .MIPS.options section.
-template <class ELFT> class MipsOptionsSection final : public SyntheticSection {
-  using Elf_Mips_Options = llvm::object::Elf_Mips_Options<ELFT>;
-  using Elf_Mips_RegInfo = llvm::object::Elf_Mips_RegInfo<ELFT>;
-
-public:
-  static std::unique_ptr<MipsOptionsSection<ELFT>> create(Ctx &);
-
-  MipsOptionsSection(Ctx &, Elf_Mips_RegInfo reginfo);
-  void writeTo(uint8_t *buf) override;
-
-  size_t getSize() const override {
-    return sizeof(Elf_Mips_Options) + sizeof(Elf_Mips_RegInfo);
-  }
-
-private:
-  Elf_Mips_RegInfo reginfo;
-};
-
-// MIPS .reginfo section.
-template <class ELFT> class MipsReginfoSection final : public SyntheticSection {
-  using Elf_Mips_RegInfo = llvm::object::Elf_Mips_RegInfo<ELFT>;
-
-public:
-  static std::unique_ptr<MipsReginfoSection> create(Ctx &);
-
-  MipsReginfoSection(Ctx &, Elf_Mips_RegInfo reginfo);
-  size_t getSize() const override { return sizeof(Elf_Mips_RegInfo); }
-  void writeTo(uint8_t *buf) override;
-
-private:
-  Elf_Mips_RegInfo reginfo;
-};
-
-// This is a MIPS specific section to hold a space within the data segment
-// of executable file which is pointed to by the DT_MIPS_RLD_MAP entry.
-// See "Dynamic section" in Chapter 5 in the following document:
-// ftp://www.linux-mips.org/pub/linux/mips/doc/ABI/mipsabi.pdf
-class MipsRldMapSection final : public SyntheticSection {
-public:
-  MipsRldMapSection(Ctx &);
-  size_t getSize() const override { return ctx.arg.wordsize; }
-  void writeTo(uint8_t *buf) override {}
-};
-
 // Representation of the combined .ARM.Exidx input sections. We process these
 // as a SyntheticSection like .eh_frame as we need to merge duplicate entries
 // and add terminating sentinel entries.
