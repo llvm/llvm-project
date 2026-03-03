@@ -7021,42 +7021,6 @@ RValue CodeGenFunction::EmitCall(QualType CalleeType,
         Address(Handle, Handle->getType(), CGM.getPointerAlign()));
     Callee.setFunctionPointer(Stub);
   }
-
-  // Insert function pointer lookup if this is a target call
-  //
-  // This is used for the indirect function case, virtual function case is
-  // handled in ItaniumCXXABI.cpp
-  if (getLangOpts().OpenMPIsTargetDevice &&
-      (!TargetDecl || !isa<FunctionDecl>(TargetDecl))) {
-    const Expr *CalleeExpr = E->getCallee()->IgnoreParenImpCasts();
-    const DeclRefExpr *DRE = nullptr;
-    while (CalleeExpr) {
-      if ((DRE = dyn_cast<DeclRefExpr>(CalleeExpr)))
-        break;
-      if (const auto *ME = dyn_cast<MemberExpr>(CalleeExpr))
-        CalleeExpr = ME->getBase()->IgnoreParenImpCasts();
-      else if (const auto *ASE = dyn_cast<ArraySubscriptExpr>(CalleeExpr))
-        CalleeExpr = ASE->getBase()->IgnoreParenImpCasts();
-      else
-        break;
-    }
-
-    const auto *VD = DRE ? dyn_cast<VarDecl>(DRE->getDecl()) : nullptr;
-    if (VD && VD->hasAttr<OMPTargetIndirectCallAttr>()) {
-      auto *PtrTy = CGM.VoidPtrTy;
-      llvm::Type *RtlFnArgs[] = {PtrTy};
-      llvm::FunctionCallee DeviceRtlFn = CGM.CreateRuntimeFunction(
-          llvm::FunctionType::get(PtrTy, RtlFnArgs, false),
-          "__llvm_omp_indirect_call_lookup");
-      llvm::Value *Func = Callee.getFunctionPointer();
-      llvm::Type *BackupTy = Func->getType();
-      Func = Builder.CreatePointerBitCastOrAddrSpaceCast(Func, PtrTy);
-      Func = EmitRuntimeCall(DeviceRtlFn, {Func});
-      Func = Builder.CreatePointerBitCastOrAddrSpaceCast(Func, BackupTy);
-      Callee.setFunctionPointer(Func);
-    }
-  }
-
   llvm::CallBase *LocalCallOrInvoke = nullptr;
   RValue Call = EmitCall(FnInfo, Callee, ReturnValue, Args, &LocalCallOrInvoke,
                          E == MustTailCall, E->getExprLoc());
