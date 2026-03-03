@@ -125,7 +125,7 @@ define void @test_overaligned_vec(i8 %B) {
 
 define ptr @test_overaligned_vec_dyn(ptr %p, i64 %idx) {
 ; CHECK-LABEL: @test_overaligned_vec_dyn(
-; CHECK-NEXT:    [[GEP:%.*]] = getelementptr half, ptr [[P:%.*]], i64 [[IDX:%.*]]
+; CHECK-NEXT:    [[GEP:%.*]] = getelementptr <2 x half>, ptr [[P:%.*]], i64 0, i64 [[IDX:%.*]]
 ; CHECK-NEXT:    ret ptr [[GEP]]
 ;
   %gep = getelementptr <2 x half>, ptr %p, i64 0, i64 %idx
