@@ -1370,18 +1370,13 @@ ARMTargetLowering::ARMTargetLowering(const TargetMachine &TM_,
       setOperationAction(ISD::FMINIMUM, MVT::v8f16, Legal);
       setOperationAction(ISD::FMAXIMUM, MVT::v8f16, Legal);
 
-      setOperationAction(ISD::FFLOOR, MVT::v4f16, Legal);
-      setOperationAction(ISD::FFLOOR, MVT::v8f16, Legal);
-      setOperationAction(ISD::FROUND, MVT::v4f16, Legal);
-      setOperationAction(ISD::FROUND, MVT::v8f16, Legal);
-      setOperationAction(ISD::FROUNDEVEN, MVT::v4f16, Legal);
-      setOperationAction(ISD::FROUNDEVEN, MVT::v8f16, Legal);
-      setOperationAction(ISD::FCEIL, MVT::v4f16, Legal);
-      setOperationAction(ISD::FCEIL, MVT::v8f16, Legal);
-      setOperationAction(ISD::FTRUNC, MVT::v4f16, Legal);
-      setOperationAction(ISD::FTRUNC, MVT::v8f16, Legal);
-      setOperationAction(ISD::FRINT, MVT::v4f16, Legal);
-      setOperationAction(ISD::FRINT, MVT::v8f16, Legal);
+      for (auto Op : {ISD::FROUND, ISD::STRICT_FROUND, ISD::FROUNDEVEN,
+                      ISD::STRICT_FROUNDEVEN, ISD::FTRUNC, ISD::STRICT_FTRUNC,
+                      ISD::FRINT, ISD::STRICT_FRINT, ISD::FFLOOR,
+                      ISD::STRICT_FFLOOR, ISD::FCEIL, ISD::STRICT_FCEIL}) {
+        setOperationAction(Op, MVT::v4f16, Legal);
+        setOperationAction(Op, MVT::v8f16, Legal);
+      }
     }
   }
 
@@ -3957,6 +3952,12 @@ ARMTargetLowering::LowerINTRINSIC_WO_CHAIN(SDValue Op, SelectionDAG &DAG,
                        Op.getOperand(1), Op.getOperand(2), Op.getOperand(3));
   case Intrinsic::arm_mve_asrl:
     return DAG.getNode(ARMISD::ASRL, SDLoc(Op), Op->getVTList(),
+                       Op.getOperand(1), Op.getOperand(2), Op.getOperand(3));
+  case Intrinsic::arm_mve_vsli:
+    return DAG.getNode(ARMISD::VSLIIMM, SDLoc(Op), Op->getVTList(),
+                       Op.getOperand(1), Op.getOperand(2), Op.getOperand(3));
+  case Intrinsic::arm_mve_vsri:
+    return DAG.getNode(ARMISD::VSRIIMM, SDLoc(Op), Op->getVTList(),
                        Op.getOperand(1), Op.getOperand(2), Op.getOperand(3));
   }
 }
@@ -14692,8 +14693,10 @@ static SDValue PerformORCombine(SDNode *N, TargetLowering::DAGCombinerInfo &DCI,
 
   // (or (and X, C1), (srl Y, C2)) -> VSRI X, Y, #C2
   // (or (and X, C1), (shl Y, C2)) -> VSLI X, Y, #C2
-  if (Subtarget->hasNEON() && VT.isVector() &&
-      DAG.getTargetLoweringInfo().isTypeLegal(VT)) {
+  if (VT.isVector() &&
+      ((Subtarget->hasNEON() && DAG.getTargetLoweringInfo().isTypeLegal(VT)) ||
+       (Subtarget->hasMVEIntegerOps() &&
+        (VT == MVT::v16i8 || VT == MVT::v8i16 || VT == MVT::v4i32)))) {
     if (SDValue ShiftInsert =
             PerformORCombineToShiftInsert(DAG, N0, N1, VT, dl))
       return ShiftInsert;

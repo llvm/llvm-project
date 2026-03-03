@@ -11962,6 +11962,18 @@ SDValue DAGCombiner::visitCLMUL(SDNode *N) {
   if (isNullConstant(N1) || ISD::isConstantSplatVectorAllZeros(N1.getNode()))
     return DAG.getConstant(0, DL, VT);
 
+  // fold (clmul x, c_pow2) -> (shl x, log2(c_pow2))
+  // This also handles (clmul x, 1) -> x since (shl x, 0) simplifies to x.
+  if (Opcode == ISD::CLMUL) {
+    if (ConstantSDNode *C = isConstOrConstSplat(N1)) {
+      APInt CV = C->getAPIntValue().trunc(VT.getScalarSizeInBits());
+      if (CV.isPowerOf2() &&
+          (!LegalOperations || TLI.isOperationLegal(ISD::SHL, VT)))
+        return DAG.getNode(ISD::SHL, DL, VT, N0,
+                           DAG.getShiftAmountConstant(CV.logBase2(), VT, DL));
+    }
+  }
+
   return SDValue();
 }
 
