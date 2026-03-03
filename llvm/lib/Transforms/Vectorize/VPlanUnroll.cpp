@@ -605,14 +605,22 @@ cloneForLane(VPlan &Plan, VPBuilder &Builder, Type *IdxTy,
       if (KnownLane != 0) {
         VPTypeAnalysis TypeInfo(Plan);
         Type *BaseIVTy = TypeInfo.inferScalarType(DefR->getOperand(0));
-        VPValue *LaneOffset = Plan.getConstantInt(
-            APInt(IdxTy->getScalarSizeInBits(), KnownLane)
-                .zextOrTrunc(BaseIVTy->getScalarSizeInBits()));
+        unsigned BaseIVBits = BaseIVTy->getScalarSizeInBits();
+        VPBuilder LaneBuilder(DefR);
+        VPValue *LaneOffset =
+            Plan.getConstantInt(APInt(IdxTy->getScalarSizeInBits(), KnownLane)
+                                    .zextOrTrunc(BaseIVBits));
+
+        if (BaseIVTy->isFloatingPointTy())
+          LaneOffset = LaneBuilder.createScalarCast(
+              Instruction::SIToFP, LaneOffset, BaseIVTy, Steps->getDebugLoc());
 
         if (VPValue *StartIndex = Steps->getStartIndex()) {
-          // Add lane offset to the existing start index.
-          VPBuilder Builder(DefR);
-          LaneOffset = Builder.createAdd(StartIndex, LaneOffset);
+          LaneOffset = BaseIVTy->isFloatingPointTy()
+                           ? LaneBuilder.createNaryOp(Instruction::FAdd,
+                                                      {StartIndex, LaneOffset},
+                                                      FastMathFlags())
+                           : LaneBuilder.createAdd(StartIndex, LaneOffset);
         }
         Steps->setStartIndex(LaneOffset);
       }
