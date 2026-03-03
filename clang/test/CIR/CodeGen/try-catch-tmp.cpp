@@ -78,7 +78,7 @@ void call_function_inside_try_catch_with_exception_type() {
 // CIR:     }
 // CIR:     cir.yield
 // CIR:   } unwind (%{{.*}}: !cir.eh_token{{.*}}) {
-// CIR:     cir.resume
+// CIR:     cir.resume %{{.*}} : !cir.eh_token
 // CIR:   }
 // CIR: }
 
@@ -144,7 +144,7 @@ void call_function_inside_try_catch_with_complex_exception_type() {
 // CIR:     }
 // CIR:     cir.yield
 // CIR:   } unwind (%{{.*}}: !cir.eh_token{{.*}}) {
-// CIR:     cir.resume
+// CIR:     cir.resume %{{.*}} : !cir.eh_token
 // CIR:   }
 // CIR: }
 
@@ -215,7 +215,7 @@ void call_function_inside_try_catch_with_array_exception_type() {
 // CIR:     }
 // CIR:     cir.yield
 // CIR:   } unwind (%{{.*}}: !cir.eh_token{{.*}}) {
-// CIR:     cir.resume
+// CIR:     cir.resume %{{.*}} : !cir.eh_token
 // CIR:   }
 // CIR: }
 
@@ -325,5 +325,65 @@ void call_function_inside_try_catch_with_exception_type_and_catch_all() {
 // OGCG: [[CATCH_ALL]]:
 // OGCG:   %[[TMP_EXCEPTION:.*]] = load ptr, ptr %[[EXCEPTION_ADDR]], align 8
 // OGCG:   %[[BEGIN_CATCH:.*]] = call ptr @__cxa_begin_catch(ptr %[[TMP_EXCEPTION]])
+// OGCG:   call void @__cxa_end_catch()
+// OGCG:   br label %[[TRY_CONT]]
+
+struct S {
+  ~S();
+};
+
+void cleanup_inside_try_body() {
+  try {
+    S s;
+    division();
+  } catch (...) {
+  }
+}
+
+// CIR: cir.func {{.*}} @_Z23cleanup_inside_try_bodyv(){{.*}} personality(@__gxx_personality_v0) {
+// CIR: cir.scope {
+// CIR:   %[[S:.*]] = cir.alloca !rec_S, !cir.ptr<!rec_S>, ["s"]
+// CIR:   cir.try {
+// CIR:     cir.cleanup.scope {
+// CIR:       cir.call @_Z8divisionv()
+// CIR:       cir.yield
+// CIR:     } cleanup  all {
+// CIR:       cir.call @_ZN1SD1Ev(%[[S]])
+// CIR:       cir.yield
+// CIR:     }
+// CIR:     cir.yield
+// CIR:   } catch all (%[[TOKEN:.*]]: !cir.eh_token {{.*}}) {
+// CIR:     %[[CATCH_TOKEN:.*]], %[[EXN_PTR:.*]] = cir.begin_catch %[[TOKEN]] : !cir.eh_token -> (!cir.catch_token, !cir.ptr<!void>)
+// CIR:     cir.cleanup.scope {
+// CIR:       cir.yield
+// CIR:     } cleanup  all {
+// CIR:       cir.end_catch %[[CATCH_TOKEN]] : !cir.catch_token
+// CIR:       cir.yield
+// CIR:     }
+// CIR:     cir.yield
+// CIR:   }
+// CIR: }
+
+// OGCG: define {{.*}} void @_Z23cleanup_inside_try_bodyv() {{.*}} personality ptr @__gxx_personality_v0 {
+// OGCG:   %[[S:.*]] = alloca %struct.S
+// OGCG:   %[[EXN_SLOT:.*]] = alloca ptr
+// OGCG:   %[[EHSELECTOR_SLOT:.*]] = alloca i32
+// OGCG:   %[[CALL:.*]] = invoke {{.*}} i32 @_Z8divisionv()
+// OGCG:           to label %[[INVOKE_CONT:.*]] unwind label %[[LANDING_PAD:.*]]
+// OGCG: [[INVOKE_CONT]]:
+// OGCG:   call void @_ZN1SD1Ev(ptr noundef nonnull align 1 dereferenceable(1) %[[S]])
+// OGCG:   br label %[[TRY_CONT:.*]]
+// OGCG: [[LANDING_PAD]]:
+// OGCG:   %[[LANDING_PAD:.*]] = landingpad { ptr, i32 }
+// OGCG:           catch ptr null
+// OGCG:   %[[EXCEPTION:.*]] = extractvalue { ptr, i32 } %[[LANDING_PAD]], 0
+// OGCG:   store ptr %[[EXCEPTION]], ptr %[[EXN_SLOT]]
+// OGCG:   %[[EH_TYPE_ID:.*]] = extractvalue { ptr, i32 } %[[LANDING_PAD]], 1
+// OGCG:   store i32 %[[EH_TYPE_ID]], ptr %[[EHSELECTOR_SLOT]]
+// OGCG:   call void @_ZN1SD1Ev(ptr noundef nonnull align 1 dereferenceable(1) %[[S]])
+// OGCG:   br label %[[CATCH:.*]]
+// OGCG: [[CATCH]]:
+// OGCG:   %[[EXCEPTION:.*]] = load ptr, ptr %[[EXN_SLOT]]
+// OGCG:   %[[BEGIN_CATCH:.*]] = call ptr @__cxa_begin_catch(ptr %[[EXCEPTION]])
 // OGCG:   call void @__cxa_end_catch()
 // OGCG:   br label %[[TRY_CONT]]

@@ -103,7 +103,7 @@ static bool processUse(CallInst *CI, bool IsV5OrAbove) {
   const bool HasReqdWorkGroupSize = MD && MD->getNumOperands() == 3;
 
   const bool HasUniformWorkGroupSize =
-      F->getFnAttribute("uniform-work-group-size").getValueAsBool();
+      F->hasFnAttribute("uniform-work-group-size");
 
   SmallVector<unsigned> MaxNumWorkgroups =
       AMDGPU::getIntegerVecAttribute(*F, "amdgpu-max-num-workgroups",

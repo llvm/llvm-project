@@ -19,6 +19,9 @@ macro(mlir_configure_python_dev_packages)
     # Development.Module.
     # See https://pybind11.readthedocs.io/en/stable/compiling.html#findpython-mode
     set(_python_development_component Development.Module)
+    if(MLIR_ENABLE_PYTHON_STABLE_ABI)
+      list(APPEND _python_development_component Development.SABIModule)
+    endif()
 
     find_package(Python3 ${MLIR_MINIMUM_PYTHON_VERSION}
       COMPONENTS Interpreter ${_python_development_component} REQUIRED)
@@ -44,6 +47,9 @@ macro(mlir_configure_python_dev_packages)
       COMPONENTS Interpreter ${_python_development_component} REQUIRED)
 
     unset(_python_development_component)
+    if(MLIR_ENABLE_PYTHON_STABLE_ABI)
+      message(STATUS "MLIR Python stable ABI (abi3) enabled")
+    endif()
     message(STATUS "Found python include dirs: ${Python3_INCLUDE_DIRS}")
     message(STATUS "Found python libraries: ${Python3_LIBRARIES}")
     message(STATUS "Found numpy v${Python3_NumPy_VERSION}: ${Python3_NumPy_INCLUDE_DIRS}")

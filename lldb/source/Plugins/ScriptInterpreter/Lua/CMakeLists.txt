@@ -8,5 +8,5 @@ add_lldb_library(lldbPluginScriptInterpreterLua PLUGIN
     ${LUA_LIBRARIES}
   )
 
-  target_include_directories(lldbPluginScriptInterpreterLua
-    PUBLIC ${LUA_INCLUDE_DIR})
+target_include_directories(lldbPluginScriptInterpreterLua
+  PUBLIC ${LUA_INCLUDE_DIR})

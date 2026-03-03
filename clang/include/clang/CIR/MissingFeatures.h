@@ -262,13 +262,9 @@ struct MissingFeatures {
   static bool devirtualizeMemberFunction() { return false; }
   static bool dtorCleanups() { return false; }
   static bool ehCleanupActiveFlag() { return false; }
-  static bool ehCleanupHasPrebranchedFallthrough() { return false; }
   static bool ehCleanupScope() { return false; }
   static bool ehCleanupScopeRequiresEHCleanup() { return false; }
-  static bool ehCleanupBranchFixups() { return false; }
   static bool ehScopeFilter() { return false; }
-  static bool ehstackBranches() { return false; }
-  static bool emitBranchThroughCleanup() { return false; }
   static bool emitCheckedInBoundsGEP() { return false; }
   static bool emitCondLikelihoodViaExpectIntrinsic() { return false; }
   static bool emitConstrainedFPCall() { return false; }
@@ -333,6 +329,7 @@ struct MissingFeatures {
   static bool pointerOverflowSanitizer() { return false; }
   static bool preservedAccessIndexRegion() { return false; }
   static bool requiresCleanups() { return false; }
+  static bool returnValueSlotFeatures() { return false; }
   static bool runCleanupsScope() { return false; }
   static bool sanitizers() { return false; }
   static bool setDLLStorageClass() { return false; }
