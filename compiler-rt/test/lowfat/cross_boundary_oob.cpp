@@ -19,7 +19,7 @@ int main() {
 
   // Cross-boundary OOB: write 8 bytes at offset 12
   // ptr + 8 = buf+20 > buf+16 → out of bounds
-  // CHECK: ERROR: LowFat: out-of-bounds access detected
+  // CHECK: LOWFAT ERROR: out-of-bounds error detected!
   double *cross = (double *)(buf + 12);
   *cross = 3.14;
 
