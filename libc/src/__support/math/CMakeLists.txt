@@ -345,6 +345,7 @@ add_header_library(
     libc.src.__support.FPUtil.sqrt
     libc.src.__support.macros.optimization
     libc.src.__support.FPUtil.bfloat16
+    libc.src.__support.math.inv_trigf_utils
 )
 
 add_header_library(

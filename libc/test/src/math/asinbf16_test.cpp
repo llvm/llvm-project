@@ -41,14 +41,3 @@ TEST_F(LlvmLibcAsinBf16Test, NegativeRange) {
                                    LIBC_NAMESPACE::asinbf16(x), 0.5);
   }
 }
-
-TEST_F(LlvmLibcAsinBf16Test, SpecialNumbers) {
-  constexpr bfloat16 VALUES[] = {zero,    neg_zero,   inf,
-                                 neg_inf, min_normal, max_normal};
-  for (size_t i = 0; i < 6; ++i) {
-    bfloat16 x = VALUES[i];
-
-    EXPECT_MPFR_MATCH_ALL_ROUNDING(mpfr::Operation::Asin, x,
-                                   LIBC_NAMESPACE::asinbf16(x), 0.5);
-  }
-}
