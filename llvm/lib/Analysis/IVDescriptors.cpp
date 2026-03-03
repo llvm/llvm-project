@@ -1087,7 +1087,7 @@ bool RecurrenceDescriptor::isReductionPHI(PHINode *Phi, Loop *TheLoop,
         RecurrenceDescriptor::isMinMaxRecurrenceKind(RD.getRecurrenceKind()) &&
         "Expected a min/max recurrence kind");
     LLVM_DEBUG(dbgs() << "Found a min/max reduction PHI." << *Phi << "\n");
-    RedDes = RD;
+    RedDes = std::move(RD);
     return true;
   }
   if (AddReductionVar(Phi, RecurKind::AnyOf, TheLoop, RedDes, DB, AC, DT, SE)) {

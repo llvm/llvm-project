@@ -112,15 +112,6 @@ public:
 
   VPHierarchicalChildrenIterator(BlockPtrTy Block, size_t Idx = 0)
       : Block(Block), EdgeIdx(Idx) {}
-  VPHierarchicalChildrenIterator(const VPHierarchicalChildrenIterator &Other)
-      : Block(Other.Block), EdgeIdx(Other.EdgeIdx) {}
-
-  VPHierarchicalChildrenIterator &
-  operator=(const VPHierarchicalChildrenIterator &R) {
-    Block = R.Block;
-    EdgeIdx = R.EdgeIdx;
-    return *this;
-  }
 
   static VPHierarchicalChildrenIterator end(BlockPtrTy Block) {
     if (auto *R = dyn_cast<VPRegionBlock>(Block)) {

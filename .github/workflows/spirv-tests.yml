@@ -33,7 +33,6 @@ jobs:
           variant: sccache
       - name: Build and Test
         run: |
-          mkdir build
           cmake -GNinja \
             -S llvm \
             -B build \

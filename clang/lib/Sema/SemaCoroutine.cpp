@@ -1872,7 +1872,8 @@ bool CoroutineStmtBuilder::makeGroDeclAndReturnStmt() {
   } else {
     GroDecl = VarDecl::Create(
         S.Context, &FD, FD.getLocation(), FD.getLocation(),
-        &S.PP.getIdentifierTable().get("__coro_gro"), GroType,
+        &S.PP.getIdentifierTable().get("__coro_gro"),
+        S.BuildDecltypeType(ReturnValue).getCanonicalType(),
         S.Context.getTrivialTypeSourceInfo(GroType, Loc), SC_None);
     GroDecl->setImplicit();
 

@@ -165,13 +165,13 @@ _Bool fi4d(_Atomic(int) *i, int _AS1 *ptr2) {
 
 float ff1(_Atomic(float) *d) {
   // CHECK-LABEL: @ff1
-  // CHECK: load atomic i32, ptr {{.*}} monotonic, align 4
+  // CHECK: load atomic float, ptr {{.*}} monotonic, align 4
   return __c11_atomic_load(d, memory_order_relaxed);
 }
 
 void ff2(_Atomic(float) *d) {
   // CHECK-LABEL: @ff2
-  // CHECK: store atomic i32 {{.*}} release, align 4
+  // CHECK: store atomic float {{.*}} release, align 4
   __c11_atomic_store(d, 1, memory_order_release);
 }
 
@@ -269,7 +269,7 @@ int ud1(int* p) {
 
 int* fp1(_Atomic(int*) *p) {
   // CHECK-LABEL: @fp1
-  // CHECK: load atomic i32, ptr {{.*}} seq_cst, align 4
+  // CHECK: load atomic ptr, ptr {{.*}} seq_cst, align 4
   return __c11_atomic_load(p, memory_order_seq_cst);
 }
 

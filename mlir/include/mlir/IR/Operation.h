@@ -242,6 +242,14 @@ public:
         return parentOp;
     return OpTy();
   }
+  template <typename... OpTy>
+  std::enable_if_t<(sizeof...(OpTy) > 1), Operation *> getParentOfType() {
+    auto *op = this;
+    while ((op = op->getParentOp()))
+      if (isa<OpTy...>(op))
+        return op;
+    return nullptr;
+  }
 
   /// Returns the closest surrounding parent operation with trait `Trait`.
   template <template <typename T> class Trait>

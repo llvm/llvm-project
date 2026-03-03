@@ -1604,6 +1604,74 @@ func.func @warp_propagate_shape_cast(%laneid: index, %src: memref<32x4x32xf32>) 
 
 // -----
 
+func.func @warp_propagate_shape_cast_rank_extending(
+    %laneid: index, %src: memref<4096xf32>) -> vector<1x1x4xf32> {
+  %c0 = arith.constant 0 : index
+  %cst = arith.constant 0.000000e+00 : f32
+  %r = gpu.warp_execute_on_lane_0(%laneid)[1024] -> (vector<1x1x4xf32>) {
+    %1 = vector.transfer_read %src[%c0], %cst : memref<4096xf32>, vector<4096xf32>
+    %2 = vector.shape_cast %1 : vector<4096xf32> to vector<32x4x32xf32>
+    gpu.yield %2 : vector<32x4x32xf32>
+  }
+  return %r : vector<1x1x4xf32>
+}
+
+// CHECK-PROP-LABEL: func.func @warp_propagate_shape_cast_rank_extending
+//  CHECK-PROP-NOT:    gpu.warp_execute_on_lane_0
+//      CHECK-PROP:    %[[READ:.+]] = vector.transfer_read {{.+}} : memref<4096xf32>, vector<4xf32>
+//      CHECK-PROP:    %[[CAST:.+]] = vector.shape_cast %[[READ]] : vector<4xf32> to vector<1x1x4xf32>
+//      CHECK-PROP:    return %[[CAST]] : vector<1x1x4xf32>
+
+// -----
+
+// Shape cast from a single-rank source.
+// The per-lane source type is expected to be obtained by flattening the distributed result dims
+// (here, 1x2x4 = 8).
+func.func @warp_propagate_shape_cast_rank_extending_flat(
+    %laneid: index, %src: memref<128xf32>) -> vector<1x2x4xf32> {
+  %c0 = arith.constant 0 : index
+  %cst = arith.constant 0.000000e+00 : f32
+  %r = gpu.warp_execute_on_lane_0(%laneid)[16] -> (vector<1x2x4xf32>) {
+    %1 = vector.transfer_read %src[%c0], %cst : memref<128xf32>, vector<128xf32>
+    %2 = vector.shape_cast %1 : vector<128xf32> to vector<4x4x8xf32>
+    gpu.yield %2 : vector<4x4x8xf32>
+  }
+  return %r : vector<1x2x4xf32>
+}
+
+// CHECK-PROP-LABEL: func.func @warp_propagate_shape_cast_rank_extending_flat
+//  CHECK-PROP-NOT:    gpu.warp_execute_on_lane_0
+//      CHECK-PROP:    %[[READ:.+]] = vector.transfer_read {{.+}} : memref<128xf32>, vector<8xf32>
+//      CHECK-PROP:    %[[CAST:.+]] = vector.shape_cast %[[READ]] : vector<8xf32> to vector<1x2x4xf32>
+//      CHECK-PROP:    return %[[CAST]] : vector<1x2x4xf32>
+
+// -----
+
+// Negative test: rank-2 source with a non-unit dimension.
+// The per-lane distribution across source dimensions is ambiguous, so the pattern under
+// test isn't expected to handle it.
+func.func @warp_do_not_propagate_shape_cast_rank_extending_ambiguous(
+    %laneid: index, %src: memref<32x4xf32>) -> vector<2x4x8xf32> {
+  %c0 = arith.constant 0 : index
+  %cst = arith.constant 0.000000e+00 : f32
+  %r = gpu.warp_execute_on_lane_0(%laneid)[2] -> (vector<2x4x8xf32>) {
+    %1 = vector.transfer_read %src[%c0, %c0], %cst : memref<32x4xf32>, vector<32x4xf32>
+    %2 = vector.shape_cast %1 : vector<32x4xf32> to vector<4x4x8xf32>
+    gpu.yield %2 : vector<4x4x8xf32>
+  }
+  return %r : vector<2x4x8xf32>
+}
+
+// CHECK-PROP-LABEL: func.func @warp_do_not_propagate_shape_cast_rank_extending_ambiguous
+//      CHECK-PROP:    gpu.warp_execute_on_lane_0
+//      CHECK-PROP:      vector.transfer_read {{.+}} : memref<32x4xf32>, vector<32x4xf32>
+//      CHECK-PROP:      vector.shape_cast {{.+}} : vector<32x4xf32> to vector<4x4x8xf32>
+//      CHECK-PROP:      gpu.yield {{.+}} : vector<4x4x8xf32>
+//      CHECK-PROP:    }
+//  CHECK-PROP-NOT:    vector.shape_cast
+
+// -----
+
 func.func @warp_propagate_uniform_transfer_read(%laneid: index, %src: memref<4096xf32>, %index: index) -> vector<1xf32> {
   %f0 = arith.constant 0.000000e+00 : f32
   %r = gpu.warp_execute_on_lane_0(%laneid)[64] -> (vector<1xf32>) {
