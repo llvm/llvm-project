@@ -1071,7 +1071,7 @@ void DXILResourceBindingInfo::populate(Module &M, DXILResourceTypeMap &DRTM) {
               cast<ConstantInt>(CI->getArgOperand(2))->getZExtValue();
           Value *Name = CI->getArgOperand(4);
 
-          // UINT32_MAX (-1) size means unbounded resource array;
+          // UINT32_MAX (~0U) size means unbounded resource array;
           // upper bound register overflow should be detected in Sema
           assert((Size == UINT32_MAX ||
                   (uint64_t)LowerBound + (uint64_t)Size - 1ULL <=
