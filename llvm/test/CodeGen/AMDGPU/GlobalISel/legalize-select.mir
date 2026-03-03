@@ -180,13 +180,11 @@ body: |
     ; CHECK-NEXT: [[UV:%[0-9]+]]:_(s32), [[UV1:%[0-9]+]]:_(s32), [[UV2:%[0-9]+]]:_(s32) = G_UNMERGE_VALUES [[COPY]](s96)
     ; CHECK-NEXT: [[MV:%[0-9]+]]:_(s64) = G_MERGE_VALUES [[UV]](s32), [[UV1]](s32)
     ; CHECK-NEXT: [[UV3:%[0-9]+]]:_(s32), [[UV4:%[0-9]+]]:_(s32), [[UV5:%[0-9]+]]:_(s32) = G_UNMERGE_VALUES [[COPY]](s96)
-    ; CHECK-NEXT: [[COPY3:%[0-9]+]]:_(s32) = COPY [[UV5]](s32)
     ; CHECK-NEXT: [[UV6:%[0-9]+]]:_(s32), [[UV7:%[0-9]+]]:_(s32), [[UV8:%[0-9]+]]:_(s32) = G_UNMERGE_VALUES [[COPY1]](s96)
     ; CHECK-NEXT: [[MV1:%[0-9]+]]:_(s64) = G_MERGE_VALUES [[UV6]](s32), [[UV7]](s32)
     ; CHECK-NEXT: [[UV9:%[0-9]+]]:_(s32), [[UV10:%[0-9]+]]:_(s32), [[UV11:%[0-9]+]]:_(s32) = G_UNMERGE_VALUES [[COPY1]](s96)
-    ; CHECK-NEXT: [[COPY4:%[0-9]+]]:_(s32) = COPY [[UV11]](s32)
     ; CHECK-NEXT: [[SELECT:%[0-9]+]]:_(s64) = G_SELECT [[ICMP]](s1), [[MV]], [[MV1]]
-    ; CHECK-NEXT: [[SELECT1:%[0-9]+]]:_(s32) = G_SELECT [[ICMP]](s1), [[COPY3]], [[COPY4]]
+    ; CHECK-NEXT: [[SELECT1:%[0-9]+]]:_(s32) = G_SELECT [[ICMP]](s1), [[UV5]], [[UV11]]
     ; CHECK-NEXT: [[UV12:%[0-9]+]]:_(s32), [[UV13:%[0-9]+]]:_(s32) = G_UNMERGE_VALUES [[SELECT]](s64)
     ; CHECK-NEXT: [[MV2:%[0-9]+]]:_(s96) = G_MERGE_VALUES [[UV12]](s32), [[UV13]](s32), [[SELECT1]](s32)
     ; CHECK-NEXT: $vgpr0_vgpr1_vgpr2 = COPY [[MV2]](s96)

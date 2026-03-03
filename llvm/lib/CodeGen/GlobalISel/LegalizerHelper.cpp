@@ -9436,22 +9436,39 @@ LegalizerHelper::lowerExtract(MachineInstr &MI) {
     }
   }
 
-  if (DstTy.isScalar() &&
-      (SrcTy.isScalar() ||
+  const DataLayout &DL = MIRBuilder.getDataLayout();
+  if ((SrcTy.isPointer() &&
+       DL.isNonIntegralAddressSpace(SrcTy.getAddressSpace())) ||
+      (DstTy.isPointer() &&
+       DL.isNonIntegralAddressSpace(DstTy.getAddressSpace()))) {
+    LLVM_DEBUG(dbgs() << "Not casting non-integral address space integer\n");
+    return UnableToLegalize;
+  }
+
+  if ((DstTy.isScalar() || DstTy.isPointer()) &&
+      (SrcTy.isScalar() || SrcTy.isPointer() ||
        (SrcTy.isVector() && DstTy == SrcTy.getElementType()))) {
     LLT SrcIntTy = SrcTy;
     if (!SrcTy.isScalar()) {
       SrcIntTy = LLT::scalar(SrcTy.getSizeInBits());
-      SrcReg = MIRBuilder.buildBitcast(SrcIntTy, SrcReg).getReg(0);
+      SrcReg = MIRBuilder.buildCast(SrcIntTy, SrcReg).getReg(0);
     }
 
+    Register ResultReg = DstReg;
+    if (DstTy.isPointer())
+      ResultReg =
+          MRI.createGenericVirtualRegister(LLT::scalar(DstTy.getSizeInBits()));
+
     if (Offset == 0)
-      MIRBuilder.buildTrunc(DstReg, SrcReg);
+      MIRBuilder.buildTrunc(ResultReg, SrcReg);
     else {
       auto ShiftAmt = MIRBuilder.buildConstant(SrcIntTy, Offset);
       auto Shr = MIRBuilder.buildLShr(SrcIntTy, SrcReg, ShiftAmt);
-      MIRBuilder.buildTrunc(DstReg, Shr);
+      MIRBuilder.buildTrunc(ResultReg, Shr);
     }
+
+    if (DstTy.isPointer())
+      MIRBuilder.buildIntToPtr(DstReg, ResultReg);
 
     MI.eraseFromParent();
     return Legalized;

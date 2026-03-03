@@ -1938,24 +1938,13 @@ AMDGPULegalizerInfo::AMDGPULegalizerInfo(const GCNSubtarget &ST_,
         return Query.Types[0] != EltTy;
       });
 
-  {
-    const unsigned BigTyIdx = 0; // destination / result
-    const unsigned LitTyIdx = 1; // inserted value
-    getActionDefinitionsBuilder(G_INSERT)
-        .lowerIf(all(typeIs(LitTyIdx, S16), sizeIs(BigTyIdx, 32)))
+  for (unsigned Op : {G_INSERT, G_EXTRACT}) {
+    unsigned BigTyIdx = Op == G_INSERT ? 0 : 1;
+    unsigned LitTyIdx = Op == G_INSERT ? 1 : 0;
+    getActionDefinitionsBuilder(Op)
         .lowerIf([=](const LegalityQuery &Query) {
-          // Sub-vector(or single element) insert.
-          // TODO: verify immediate offset here since lower only works with
-          // whole elements.
           const LLT BigTy = Query.Types[BigTyIdx];
           return BigTy.isVector();
-        })
-        // FIXME: Multiples of 16 should not be legal.
-        .legalIf([=](const LegalityQuery &Query) {
-          const LLT BigTy = Query.Types[BigTyIdx];
-          const LLT LitTy = Query.Types[LitTyIdx];
-          return (BigTy.getSizeInBits() % 32 == 0) &&
-                 (LitTy.getSizeInBits() % 16 == 0);
         })
         .widenScalarIf(
             [=](const LegalityQuery &Query) {
@@ -1970,39 +1959,8 @@ AMDGPULegalizerInfo::AMDGPULegalizerInfo(const GCNSubtarget &ST_,
             },
             LegalizeMutations::widenScalarOrEltToNextPow2(LitTyIdx, 16))
         .moreElementsIf(isSmallOddVector(BigTyIdx), oneMoreElement(BigTyIdx))
-        .widenScalarToNextPow2(BigTyIdx, 32);
-  }
-
-  {
-    const unsigned BigTyIdx = 1; // source
-    const unsigned LitTyIdx = 0; // destination
-    getActionDefinitionsBuilder(G_EXTRACT)
-        .lowerIf([=](const LegalityQuery &Query) {
-          // Sub-vector(or single element) extract.
-          // TODO: verify immediate offset here since lower only works with
-          // whole elements.
-          const LLT BigTy = Query.Types[BigTyIdx];
-          return BigTy.isVector();
-        })
-        .customIf([=](const LegalityQuery &Query) {
-          const LLT BigTy = Query.Types[BigTyIdx];
-          const LLT LitTy = Query.Types[LitTyIdx];
-          return !LitTy.isVector() && BigTy.getSizeInBits() % 32 == 0;
-        })
-        .widenScalarIf(
-            [=](const LegalityQuery &Query) {
-              const LLT BigTy = Query.Types[BigTyIdx];
-              return (BigTy.getScalarSizeInBits() < 16);
-            },
-            LegalizeMutations::widenScalarOrEltToNextPow2(BigTyIdx, 16))
-        .widenScalarIf(
-            [=](const LegalityQuery &Query) {
-              const LLT LitTy = Query.Types[LitTyIdx];
-              return (LitTy.getScalarSizeInBits() < 16);
-            },
-            LegalizeMutations::widenScalarOrEltToNextPow2(LitTyIdx, 16))
-        .moreElementsIf(isSmallOddVector(BigTyIdx), oneMoreElement(BigTyIdx))
-        .widenScalarToNextPow2(BigTyIdx, 32);
+        .widenScalarToNextPow2(BigTyIdx, 32)
+        .lower();
   }
 
   auto &BuildVector =
@@ -2279,8 +2237,6 @@ bool AMDGPULegalizerInfo::legalizeCustom(
   case TargetOpcode::G_FMINIMUMNUM:
   case TargetOpcode::G_FMAXIMUMNUM:
     return legalizeMinNumMaxNum(Helper, MI);
-  case TargetOpcode::G_EXTRACT:
-    return legalizeExtract(MI, MRI, B);
   case TargetOpcode::G_EXTRACT_VECTOR_ELT:
     return legalizeExtractVectorElt(MI, MRI, B);
   case TargetOpcode::G_INSERT_VECTOR_ELT:
@@ -2914,59 +2870,6 @@ bool AMDGPULegalizerInfo::legalizeMinNumMaxNum(LegalizerHelper &Helper,
     return true;
 
   return Helper.lowerFMinNumMaxNum(MI) == LegalizerHelper::Legalized;
-}
-
-bool AMDGPULegalizerInfo::legalizeExtract(MachineInstr &MI,
-                                          MachineRegisterInfo &MRI,
-                                          MachineIRBuilder &B) const {
-  auto [DstReg, DstTy, SrcReg, SrcTy] = MI.getFirst2RegLLTs();
-
-  assert(!SrcTy.isVector() && !DstTy.isVector());
-  assert(SrcTy.getSizeInBits() % 32 == 0);
-
-  unsigned Offset = MI.getOperand(2).getImm();
-  unsigned DstSize = DstTy.getSizeInBits();
-  const LLT S32 = LLT::scalar(32);
-
-  // For pointer types, work on the integer representation.
-  LLT ScalarSrcTy = LLT::scalar(SrcTy.getSizeInBits());
-  Register ScalarSrc = SrcReg;
-  if (SrcTy.isPointer())
-    ScalarSrc = B.buildPtrToInt(ScalarSrcTy, SrcReg).getReg(0);
-
-  Register ScalarDst = DstReg;
-  if (DstTy.isPointer())
-    ScalarDst = MRI.createGenericVirtualRegister(LLT::scalar(DstSize));
-
-  // Simple case where Dst and Offset are multiples of 32-bit, we can unmerge
-  // and get the subreg(s).
-  if (DstSize % 32 == 0 && Offset % 32 == 0) {
-    unsigned StartIdx = Offset / 32;
-    unsigned DstCount = DstSize / 32;
-    auto Unmerge = B.buildUnmerge(S32, ScalarSrc);
-    if (DstCount == 1) {
-      B.buildCopy(ScalarDst, Unmerge.getReg(StartIdx));
-    } else {
-      SmallVector<Register, 4> Pieces;
-      for (unsigned I = 0; I < DstCount; ++I)
-        Pieces.push_back(Unmerge.getReg(StartIdx + I));
-      B.buildMergeLikeInstr(ScalarDst, Pieces);
-    }
-  } else {
-    // Let Trunc handle non-trivial cases.
-    Register ShiftedSrc = ScalarSrc;
-    if (Offset != 0) {
-      auto ShiftAmt = B.buildConstant(S32, Offset);
-      ShiftedSrc = B.buildLShr(ScalarSrcTy, ScalarSrc, ShiftAmt).getReg(0);
-    }
-    B.buildTrunc(ScalarDst, ShiftedSrc);
-  }
-
-  if (DstTy.isPointer())
-    B.buildIntToPtr(DstReg, ScalarDst);
-
-  MI.eraseFromParent();
-  return true;
 }
 
 bool AMDGPULegalizerInfo::legalizeExtractVectorElt(
