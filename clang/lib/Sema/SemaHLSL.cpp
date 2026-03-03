@@ -4448,6 +4448,9 @@ void SemaHLSL::deduceAddressSpace(VarDecl *Decl) {
 
 namespace {
 
+// Creates a global variable declaration for a resource field embedded in a
+// struct, assigns it a binding, initializes it, and associates it with the
+// struct declaration via an HLSLAssociatedResourceDeclAttr.
 static void createGlobalResourceDeclForStruct(Sema &S, VarDecl *ParentVD,
                                               SourceLocation Loc,
                                               IdentifierInfo *Id,
@@ -4499,11 +4502,14 @@ handleArrayOfStructWithResources(Sema &S, VarDecl *ParentVD,
                                  const ConstantArrayType *CAT,
                                  EmbeddedResourceNameBuilder &NameBuilder);
 
+// Scans base and all fields of a struct/class type to find all embedded
+// resources or resource arrays,. Creates a global variable for each resource
+// found.
 static void
 handleStructWithResources(Sema &S, VarDecl *ParentVD, const CXXRecordDecl *RD,
                           EmbeddedResourceNameBuilder &NameBuilder) {
 
-  // scan the base classes
+  // Scan the base classes.
   assert(RD->getNumBases() <= 1 && "HLSL doesn't support multiple inheritance");
   const auto *BasesIt = RD->bases_begin();
   if (BasesIt != RD->bases_end()) {
@@ -4515,7 +4521,7 @@ handleStructWithResources(Sema &S, VarDecl *ParentVD, const CXXRecordDecl *RD,
       NameBuilder.pop();
     }
   }
-  // process this class fields
+  // Process this class fields.
   for (const FieldDecl *FD : RD->fields()) {
     QualType FDTy = FD->getType().getCanonicalType();
     if (!FDTy->isHLSLIntangibleType())
@@ -4539,6 +4545,7 @@ handleStructWithResources(Sema &S, VarDecl *ParentVD, const CXXRecordDecl *RD,
   }
 }
 
+// Processes array of structs with resources.
 static void
 handleArrayOfStructWithResources(Sema &S, VarDecl *ParentVD,
                                  const ConstantArrayType *CAT,
@@ -4549,8 +4556,9 @@ handleArrayOfStructWithResources(Sema &S, VarDecl *ParentVD,
 
   const ConstantArrayType *SubCAT = dyn_cast<ConstantArrayType>(ElementTy);
   const CXXRecordDecl *ElementRD = ElementTy->getAsCXXRecordDecl();
-  assert((SubCAT || ElementRD) &&
-         "Expected struct type or an constant array of structs");
+
+  if (!SubCAT && !ElementRD)
+    return;
 
   for (unsigned I = 0, E = CAT->getSize().getZExtValue(); I < E; ++I) {
     NameBuilder.pushArrayIndex(I);
@@ -4564,10 +4572,18 @@ handleArrayOfStructWithResources(Sema &S, VarDecl *ParentVD,
 
 } // namespace
 
+// Scans all fields of a user-defined struct (or array of structs)
+// to find all embedded resources or resource arrays. For each resource
+// a global variable of the resource type is created and associated
+// with the parent declaration (VD) through a HLSLAssociatedResourceDeclAttr
+// attribute.
 void SemaHLSL::handleGlobalStructOrArrayOfWithResources(VarDecl *VD) {
   EmbeddedResourceNameBuilder NameBuilder(VD->getName());
 
   const Type *VDTy = VD->getType().getTypePtr();
+  assert(VDTy->isHLSLIntangibleType() && !isResourceRecordTypeOrArrayOf(VD) &&
+         "Expected non-resource struct or array type");
+
   const CXXRecordDecl *RD = VDTy->getAsCXXRecordDecl();
   if (RD) {
     handleStructWithResources(SemaRef, VD, RD, NameBuilder);
