@@ -129,6 +129,8 @@ initializeRecordStreamer(const Module &M,
   // AsmPrinter::doInitialization()).
   Parser->setAssemblerDialect(InlineAsm::AD_ATT);
 
+  Parser->setSymbolScanningMode(true);
+
   Parser->setTargetParser(*TAP);
   if (Parser->Run(false))
     return;

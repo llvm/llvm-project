@@ -1310,9 +1310,12 @@ ResolveLayoutConflicts::resolveVectorConsumer(OpOperand &operand) {
   Operation *consumerOp = operand.getOwner();
   // Get the current layout of the vector value.
   auto producerLayout = xegpu::getDistributeLayoutAttr(vectorValue);
-  if (!producerLayout)
-    return consumerOp->emitError("Vector operand has no layout assigned.");
-
+  if (!producerLayout) {
+    if (auto vectorTy = dyn_cast<VectorType>(vectorValue.getType());
+        vectorTy && vectorTy.getRank() > 1)
+      consumerOp->emitWarning("Expected layout for non-1D vectors.");
+    return success(); // uniform non-tensor-data vector does not require layout
+  }
   // Get the consumer expected layout at this operand.
   auto consumerLayout = xegpu::getConsumerLayoutAt(operand);
   if (!consumerLayout)
@@ -1500,6 +1503,12 @@ updateControlFlowOps(mlir::OpBuilder &builder,
 static LogicalResult updateFunctionOpInterface(mlir::OpBuilder &builder,
                                                mlir::FunctionOpInterface funcOp,
                                                GetLayoutFnTy getLayoutOfValue) {
+  // Only process functions whose type is a standard MLIR FunctionType.
+  // Functions using a different type representation (e.g. llvm.func with
+  // LLVMFunctionType) are not targets for XeGPU layout propagation, and
+  // calling setType(FunctionType{}) on them would corrupt their type.
+  if (!isa<FunctionType>(funcOp.getFunctionType()))
+    return success();
   SmallVector<Type> newArgTypes;
   // Update the function arguments.
   for (BlockArgument arg : funcOp.getArguments()) {

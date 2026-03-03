@@ -106,7 +106,8 @@ public:
   ///
   /// Return true if an error occurred.
   bool parseMachineFunction(Module &M, MachineModuleInfo &MMI,
-                            ModuleAnalysisManager *FAM);
+                            ModuleAnalysisManager *FAM,
+                            Module::iterator &FirstUnvisitedFunction);
 
   /// Initialize the machine function to the state that's described in the MIR
   /// file.
@@ -296,8 +297,9 @@ bool MIRParserImpl::parseMachineFunctions(Module &M, MachineModuleInfo &MMI,
     return false;
 
   // Parse the machine functions.
+  auto FirstUnvisitedFunction = M.begin();
   do {
-    if (parseMachineFunction(M, MMI, MAM))
+    if (parseMachineFunction(M, MMI, MAM, FirstUnvisitedFunction))
       return true;
     In.nextDocument();
   } while (In.setCurrentDocument());
@@ -319,8 +321,19 @@ Function *MIRParserImpl::createDummyFunction(StringRef Name, Module &M) {
   return F;
 }
 
-bool MIRParserImpl::parseMachineFunction(Module &M, MachineModuleInfo &MMI,
-                                         ModuleAnalysisManager *MAM) {
+static Function *
+getNextUnusedUnnamedFunction(const Module &M,
+                             Module::iterator &FirstUnvisitedFunction) {
+  for (; FirstUnvisitedFunction != M.end(); ++FirstUnvisitedFunction)
+    if (!FirstUnvisitedFunction->hasName())
+      return &*FirstUnvisitedFunction++;
+
+  return nullptr;
+}
+
+bool MIRParserImpl::parseMachineFunction(
+    Module &M, MachineModuleInfo &MMI, ModuleAnalysisManager *MAM,
+    Module::iterator &FirstUnvisitedFunction) {
   // Parse the yaml.
   yaml::MachineFunction YamlMF;
   yaml::EmptyContext Ctx;
@@ -339,7 +352,8 @@ bool MIRParserImpl::parseMachineFunction(Module &M, MachineModuleInfo &MMI,
   if (!F) {
     if (NoLLVMIR) {
       F = createDummyFunction(FunctionName, M);
-    } else {
+    } else if (!FunctionName.empty() ||
+               !(F = getNextUnusedUnnamedFunction(M, FirstUnvisitedFunction))) {
       return error(Twine("function '") + FunctionName +
                    "' isn't defined in the provided LLVM IR");
     }

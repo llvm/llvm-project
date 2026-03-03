@@ -54,7 +54,7 @@ define <4 x float> @test_pow_v4f32_025(<4 x float> %x) nounwind {
 ; ARMPL-NEXT:    fsqrt v0.4s, v0.4s
 ; ARMPL-NEXT:    fsqrt v0.4s, v0.4s
 ; ARMPL-NEXT:    ret
-  %result = call fast <4 x float> @llvm.pow.v4f32(<4 x float> %x, <4 x float> splat (float 2.5e-01))
+  %result = call nsz ninf afn <4 x float> @llvm.pow.v4f32(<4 x float> %x, <4 x float> splat (float 2.5e-01))
   ret <4 x float> %result
 }
 
@@ -67,6 +67,43 @@ define <vscale x 2 x double> @test_pow_nxv2f64_075(<vscale x 2 x double> %x) nou
 ; ARMPL-NEXT:    fsqrt z1.d, p0/m, z0.d
 ; ARMPL-NEXT:    fmul z0.d, z0.d, z1.d
 ; ARMPL-NEXT:    ret
-  %result = call fast <vscale x 2 x double> @llvm.pow.nxv2f64(<vscale x 2 x double> %x, <vscale x 2 x double> splat (double 7.5e-01))
+  %result = call ninf afn <vscale x 2 x double> @llvm.pow.nxv2f64(<vscale x 2 x double> %x, <vscale x 2 x double> splat (double 7.5e-01))
   ret <vscale x 2 x double> %result
+}
+
+define <4 x float> @test_pow_one_third_v4f32(<4 x float> %x) nounwind {
+; ARMPL-LABEL: test_pow_one_third_v4f32:
+; ARMPL:       // %bb.0:
+; ARMPL-NEXT:    str x30, [sp, #-16]! // 8-byte Folded Spill
+; ARMPL-NEXT:    bl armpl_vcbrtq_f32
+; ARMPL-NEXT:    ldr x30, [sp], #16 // 8-byte Folded Reload
+; ARMPL-NEXT:    ret
+  %r = call nsz ninf nnan afn <4 x float> @llvm.pow.v4f32(<4 x float> %x, <4 x float> splat (float 0x3FD5555560000000))
+  ret <4 x float> %r
+}
+
+define <vscale x 2 x double> @test_pow_one_third_nxv2f64(<vscale x 2 x double> %x) nounwind {
+; ARMPL-LABEL: test_pow_one_third_nxv2f64:
+; ARMPL:       // %bb.0:
+; ARMPL-NEXT:    str x30, [sp, #-16]! // 8-byte Folded Spill
+; ARMPL-NEXT:    ptrue p0.d
+; ARMPL-NEXT:    bl armpl_svcbrt_f64_x
+; ARMPL-NEXT:    ldr x30, [sp], #16 // 8-byte Folded Reload
+; ARMPL-NEXT:    ret
+  %r = call nsz ninf nnan afn <vscale x 2 x double> @llvm.pow.nxv2f64(<vscale x 2 x double> %x, <vscale x 2 x double> splat (double 0x3FD5555555555555))
+  ret <vscale x 2 x double> %r
+}
+
+define <4 x float> @test_pow_one_third_v4f32_bad_fmf(<4 x float> %x) nounwind {
+; ARMPL-LABEL: test_pow_one_third_v4f32_bad_fmf:
+; ARMPL:       // %bb.0:
+; ARMPL-NEXT:    str x30, [sp, #-16]! // 8-byte Folded Spill
+; ARMPL-NEXT:    mov w8, #43691 // =0xaaab
+; ARMPL-NEXT:    movk w8, #16042, lsl #16
+; ARMPL-NEXT:    dup v1.4s, w8
+; ARMPL-NEXT:    bl armpl_vpowq_f32
+; ARMPL-NEXT:    ldr x30, [sp], #16 // 8-byte Folded Reload
+; ARMPL-NEXT:    ret
+  %r = call nsz ninf nnan <4 x float> @llvm.pow.v4f32(<4 x float> %x, <4 x float> splat (float 0x3FD5555560000000))
+  ret <4 x float> %r
 }
