@@ -345,6 +345,9 @@ public:
                            mlir::IntegerAttr align = {},
                            cir::SyncScopeKindAttr scope = {},
                            cir::MemOrderAttr order = {}) {
+    if (mlir::cast<cir::PointerType>(dst.getType()).getPointee() !=
+        val.getType())
+      dst = createPtrBitcast(dst, val.getType());
     return cir::StoreOp::create(*this, loc, val, dst, isVolatile, align, scope,
                                 order);
   }
