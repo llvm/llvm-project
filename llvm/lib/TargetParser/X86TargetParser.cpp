@@ -778,6 +778,19 @@ llvm::X86::getCpuSupportsMask(ArrayRef<StringRef> FeatureStrs) {
   return FeatureMask;
 }
 
+void llvm::X86::expandAPXFeatures(bool Negative, const bool IsOsWindows,
+                                  std::vector<StringRef> &Features) {
+  if (Negative) {
+    Features.insert(Features.end(), {"-egpr", "-ndd", "-ccmp", "-nf", "-zu",
+                                     "-push2pop2", "-ppx", "-cf"});
+  } else {
+    Features.insert(Features.end(), {"+egpr", "+ndd", "+ccmp", "+nf", "+zu"});
+    if (!IsOsWindows) {
+      Features.insert(Features.end(), {"+push2pop2", "+ppx"});
+    }
+  }
+}
+
 unsigned llvm::X86::getFeaturePriority(ProcessorFeatures Feat) {
 #ifndef NDEBUG
   // Check that priorities are set properly in the .def file. We expect that

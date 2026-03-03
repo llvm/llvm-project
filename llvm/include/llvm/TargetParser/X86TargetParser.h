@@ -16,6 +16,7 @@
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/StringMap.h"
 #include "llvm/Support/Compiler.h"
+#include "llvm/TargetParser/Triple.h"
 #include <array>
 
 namespace llvm {
@@ -186,6 +187,9 @@ LLVM_ABI bool validateCPUSpecificCPUDispatch(StringRef Name);
 LLVM_ABI std::array<uint32_t, 4>
 getCpuSupportsMask(ArrayRef<StringRef> FeatureStrs);
 LLVM_ABI unsigned getFeaturePriority(ProcessorFeatures Feat);
+
+LLVM_ABI void expandAPXFeatures(bool Negative, bool IsOSWindows,
+                                std::vector<StringRef> &Features);
 
 } // namespace X86
 } // namespace llvm

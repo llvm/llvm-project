@@ -169,7 +169,7 @@ bool X86TargetInfo::initFeatureMap(
     setFeatureEnabled(Features, "ppx", false);
   }
 
-  std::vector<std::string> UpdatedFeaturesVec;
+  std::vector<StringRef> UpdatedFeaturesVec;
   for (const auto &Feature : FeaturesVec) {
     // Expand general-regs-only to -x86, -mmx and -sse
     if (Feature == "+general-regs-only") {
@@ -179,10 +179,19 @@ bool X86TargetInfo::initFeatureMap(
       continue;
     }
 
+    if (Feature == "+apxf" || Feature == "-apxf") {
+      llvm::X86::expandAPXFeatures(Feature == "-apxf" ? true : false,
+                                   getTriple().isOSWindows(),
+                                   UpdatedFeaturesVec);
+      continue;
+    }
+
     UpdatedFeaturesVec.push_back(Feature);
   }
 
-  if (!TargetInfo::initFeatureMap(Features, Diags, CPU, UpdatedFeaturesVec))
+  if (!TargetInfo::initFeatureMap(
+          Features, Diags, CPU,
+          {UpdatedFeaturesVec.begin(), UpdatedFeaturesVec.end()}))
     return false;
 
   // Can't do this earlier because we need to be able to explicitly enable
@@ -1169,14 +1178,7 @@ bool X86TargetInfo::isValidFeatureName(StringRef Name) const {
       .Case("xsavec", true)
       .Case("xsaves", true)
       .Case("xsaveopt", true)
-      .Case("egpr", true)
-      .Case("push2pop2", true)
-      .Case("ppx", true)
-      .Case("ndd", true)
-      .Case("ccmp", true)
-      .Case("nf", true)
-      .Case("cf", true)
-      .Case("zu", true)
+      .Case("apxf", true)
       .Default(false);
 }
 

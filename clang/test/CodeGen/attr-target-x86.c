@@ -19,6 +19,8 @@
 // CHECK: define {{.*}}@f_avx10_1{{.*}} [[f_avx10_1:#[0-9]+]]
 // CHECK: define {{.*}}@f_prefer_256_bit({{.*}} [[f_prefer_256_bit:#[0-9]+]]
 // CHECK: define {{.*}}@f_no_prefer_256_bit({{.*}} [[f_no_prefer_256_bit:#[0-9]+]]
+// CHECK: define {{.*}}@f_apxf({{.*}} [[f_apxf:#[0-9]+]]
+// CHECK: define {{.*}}@f_no_apxf({{.*}} [[f_no_apxf:#[0-9]+]]
 
 // CHECK: [[f_default]] = {{.*}}"target-cpu"="i686" "target-features"="+cmov,+cx8,+x87" "tune-cpu"="i686"
 void f_default(void) {}
@@ -108,3 +110,11 @@ void f_prefer_256_bit(void) {}
 // CHECK: [[f_no_prefer_256_bit]] = {{.*}}"target-features"="{{.*}}-prefer-256-bit
 __attribute__((target("no-prefer-256-bit")))
 void f_no_prefer_256_bit(void) {}
+
+// CHECK: [[f_apxf]] = {{.*}}"target-features"="{{.*}}+ccmp{{.*}}+egpr{{.*}}+ndd{{.*}}+nf{{.*}}+ppx{{.*}}+push2pop2{{.*}}+zu
+__attribute__((target("apxf")))
+void f_apxf(void) {}
+
+// CHECK: [[f_no_apxf]] = {{.*}}"target-features"="{{.*}}-ccmp{{.*}}-cf{{.*}}-egpr{{.*}}-ndd{{.*}}-nf{{.*}}-ppx{{.*}}-push2pop2{{.*}}-zu
+__attribute__((target("no-apxf")))
+void f_no_apxf(void) {}

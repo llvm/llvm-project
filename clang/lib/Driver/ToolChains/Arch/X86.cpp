@@ -13,6 +13,7 @@
 #include "llvm/ADT/StringMap.h"
 #include "llvm/Option/ArgList.h"
 #include "llvm/TargetParser/Host.h"
+#include "llvm/TargetParser/X86TargetParser.h"
 
 using namespace clang::driver;
 using namespace clang::driver::tools;
@@ -257,21 +258,10 @@ void x86::getX86TargetFeatures(const Driver &D, const llvm::Triple &Triple,
 
     if (A->getOption().matches(options::OPT_mapxf) ||
         A->getOption().matches(options::OPT_mno_apxf)) {
-      if (IsNegative) {
-        Features.insert(Features.end(),
-                        {"-egpr", "-ndd", "-ccmp", "-nf", "-zu"});
-        if (!Triple.isOSWindows())
-          Features.insert(Features.end(), {"-push2pop2", "-ppx"});
-      } else {
-        Features.insert(Features.end(),
-                        {"+egpr", "+ndd", "+ccmp", "+nf", "+zu"});
-        if (!Triple.isOSWindows())
-          Features.insert(Features.end(), {"+push2pop2", "+ppx"});
-
-        if (Not64Bit)
-          D.Diag(diag::err_drv_unsupported_opt_for_target)
-              << StringRef("-mapxf") << Triple.getTriple();
-      }
+      llvm::X86::expandAPXFeatures(IsNegative, Triple.isOSWindows(), Features);
+      if (!IsNegative && Not64Bit)
+        D.Diag(diag::err_drv_unsupported_opt_for_target)
+            << StringRef("-mapxf") << Triple.getTriple();
       continue;
     }
 
