@@ -304,8 +304,7 @@ static cir::VectorType getNeonType(CIRGenFunction *cgf, NeonTypeFlags typeFlags,
                                                        : cgf->sInt8Ty,
                                 v1Ty ? 1 : (8 << isQuad));
   case NeonTypeFlags::MFloat8:
-    cgf->getCIRGenModule().errorNYI(
-        loc, std::string("unimplemented NEON type: MFloat8"));
+    cgf->getCIRGenModule().errorNYI(loc, std::string("NEON type: MFloat8"));
     [[fallthrough]];
   case NeonTypeFlags::Int16:
   case NeonTypeFlags::Poly16:
@@ -314,19 +313,15 @@ static cir::VectorType getNeonType(CIRGenFunction *cgf, NeonTypeFlags typeFlags,
                                 v1Ty ? 1 : (4 << isQuad));
   case NeonTypeFlags::BFloat16:
     if (allowBFloatArgsAndRet)
-      cgf->getCIRGenModule().errorNYI(
-          loc, std::string("unimplemented NEON type: BFloat16"));
+      cgf->getCIRGenModule().errorNYI(loc, std::string("NEON type: BFloat16"));
     else
-      cgf->getCIRGenModule().errorNYI(
-          loc, std::string("unimplemented NEON type: BFloat16"));
+      cgf->getCIRGenModule().errorNYI(loc, std::string("NEON type: BFloat16"));
     [[fallthrough]];
   case NeonTypeFlags::Float16:
     if (hasLegalHalfType)
-      cgf->getCIRGenModule().errorNYI(
-          loc, std::string("unimplemented NEON type: Float16"));
+      cgf->getCIRGenModule().errorNYI(loc, std::string("NEON type: Float16"));
     else
-      cgf->getCIRGenModule().errorNYI(
-          loc, std::string("unimplemented NEON type: Float16"));
+      cgf->getCIRGenModule().errorNYI(loc, std::string("NEON type: Float16"));
     [[fallthrough]];
   case NeonTypeFlags::Int32:
     return cir::VectorType::get(typeFlags.isUnsigned() ? cgf->uInt32Ty
@@ -341,8 +336,7 @@ static cir::VectorType getNeonType(CIRGenFunction *cgf, NeonTypeFlags typeFlags,
     // FIXME: i128 and f128 doesn't get fully support in Clang and llvm.
     // There is a lot of i128 and f128 API missing.
     // so we use v16i8 to represent poly128 and get pattern matched.
-    cgf->getCIRGenModule().errorNYI(
-        loc, std::string("unimplemented NEON type: Poly128"));
+    cgf->getCIRGenModule().errorNYI(loc, std::string("NEON type: Poly128"));
     [[fallthrough]];
   case NeonTypeFlags::Float32:
     return cir::VectorType::get(cgf->getCIRGenModule().floatTy,
@@ -368,15 +362,14 @@ emitNeonCallToOp(CIRGenModule &cgm, CIRGenBuilderTy &builder,
   // emitConstrainedFPCall feature implemented
   assert(!cir::MissingFeatures::emitConstrainedFPCall());
   if (isConstrainedFPIntrinsic)
-    cgm.errorNYI(loc, std::string("unimplemented constrained FP intrinsic"));
+    cgm.errorNYI(loc, std::string("constrained FP intrinsic"));
 
   for (unsigned j = 0; j < argTypes.size(); ++j) {
     if (isConstrainedFPIntrinsic) {
       assert(!cir::MissingFeatures::emitConstrainedFPCall());
     }
     if (shift > 0 && shift == j) {
-      cgm.errorNYI(loc,
-                   std::string("unimplemented intrinsic requiring a shift Op"));
+      cgm.errorNYI(loc, std::string("intrinsic requiring a shift Op"));
     } else {
       args[j] = builder.createBitcast(args[j], argTypes[j]);
     }
