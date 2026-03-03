@@ -673,6 +673,8 @@ class ReleaseWorkflow:
                 for review in pull.get_reviews():
                     if review.state != "APPROVED":
                         continue
+                    # Ensure the reviewer list contains only unique entries, as
+                    # reviewers may have submitted more than one round of review.
                     if review.user.login not in reviewers:
                         reviewers.append(review.user.login)
         if len(reviewers):
