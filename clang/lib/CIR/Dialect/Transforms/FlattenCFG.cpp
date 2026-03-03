@@ -1559,6 +1559,15 @@ public:
       return mlir::success();
     }
 
+    // If there are no throwing calls and no resume ops from inner cleanup
+    // scopes, exceptions cannot reach the catch handlers. Skip handler and
+    // dispatch block creation — the handler regions will be dropped when
+    // the try op is erased.
+    if (callsToRewrite.empty() && resumeOpsToChain.empty()) {
+      rewriter.eraseOp(tryOp);
+      return mlir::success();
+    }
+
     // Build the catch handler blocks.
 
     // First, flatten all handler regions and collect the entry blocks.
