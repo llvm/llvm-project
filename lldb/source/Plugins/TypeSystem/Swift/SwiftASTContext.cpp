@@ -2323,6 +2323,12 @@ static std::string GetSDKPath(std::string m_description, XcodeSDK sdk) {
   }
   LOG_PRINTF(GetLog(LLDBLog::Types), "Host SDK path: \"%s\" (XcodeSDK: %s)",
              sdk_path.c_str(), sdk.GetString().str().c_str());
+
+#if not defined(__APPLE__)
+  // FXIME: The Swift compiler seems to be happier with an empty SDK path.
+  if (sdk_path == "/")
+    return {};
+#endif          
   return sdk_path;
 }
 
@@ -3964,7 +3970,7 @@ public:
     if (!m_swift_ast_ctx.HasExplicitModules())
       return;
     // This setting is off by default and allows to return to the old behavior.
-    if (Target::GetGlobalProperties().GetSwiftAllowImplicitModules())
+    if (Target::GetGlobalProperties().GetSwiftAllowImplicitModuleLoader())
       return;
     m_swift_ast_ctx.SetImplicitModulesDisabled(true);
     LOG_PRINTF(GetLog(LLDBLog::Types), "Turning off implicit modules");
@@ -4180,6 +4186,9 @@ ThreadSafeASTContext SwiftASTContext::GetASTContext() {
   if (!m_ast_context_up->SearchPathOpts.getSDKPath().empty() ||
       TargetHasNoSDK()) {
     auto importer_diags = getScopedDiagnosticConsumer();
+    // Since swift::ClangImporter::create() may kick off the import of
+    // the bridging header, we need to switch to explicit mode if
+    // applicable.
     DisableImplicitImportsRAII(*this);
     clang_importer_up = swift::ClangImporter::create(
         *m_ast_context_up, &GetCompilerInvocation().getIRGenOptions(), "",

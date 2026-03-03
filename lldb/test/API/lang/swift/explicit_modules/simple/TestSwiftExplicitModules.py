@@ -7,7 +7,7 @@ import lldbsuite.test.lldbutil as lldbutil
 class TestSwiftExplicitModules(lldbtest.TestBase):
 
     @swiftTest
-    def XXXXtest(self):
+    def test(self):
         """Test explicit Swift modules"""
         self.build()
         target, process, thread, bkpt = lldbutil.run_to_source_breakpoint(
@@ -21,10 +21,11 @@ class TestSwiftExplicitModules(lldbtest.TestBase):
         # CHECK: SwiftASTContextForExpressions(module: "a", cu: "main.swift"){{.*}} Module import remark: loaded module 'a'; source: '{{.*}}a.swiftmodule', loaded: '{{.*}}a.swiftmodule'
 
     @swiftTest
-    def XXXXXtest_disable_esml(self):
+    def test_disable_esml(self):
         """Test disabling the explicit Swift module loader"""
         self.build()
         self.expect("settings set symbols.use-swift-explicit-module-loader false")
+        self.expect("settings set target.experimental.swift-allow-implicit-module-loader true")
 
         target, process, thread, bkpt = lldbutil.run_to_source_breakpoint(
             self, 'Set breakpoint here', lldb.SBFileSpec('main.swift'))

@@ -11,6 +11,7 @@
 //===---------------------------------------------------------------------===//
 
 #include "LLDBExplicitModuleLoader.h"
+#include "lldb/Target/Target.h"
 #include "lldb/Utility/LLDBLog.h"
 #include "lldb/Utility/Log.h"
 
@@ -65,6 +66,10 @@ LLDBExplicitSwiftModuleLoader::create(
       std::move(casml), std::move(esml));
 }
 
+bool LLDBExplicitSwiftModuleLoader::enabled() const {
+  return Target::GetGlobalProperties().GetSwiftAllowExplicitModules();
+}
+
 void LLDBExplicitSwiftModuleLoader::collectVisibleTopLevelModuleNames(
     llvm::SmallVectorImpl<swift::Identifier> &names) const {
   if (m_casml)
@@ -87,6 +92,9 @@ std::error_code LLDBExplicitSwiftModuleLoader::findModuleFilesInDirectory(
 bool LLDBExplicitSwiftModuleLoader::canImportModule(
     swift::ImportPath::Module named, swift::SourceLoc loc,
     ModuleVersionInfo *versionInfo, bool isTestableImport) {
+  if (!enabled())
+    return false;
+
   if (m_casml &&
       llvm::cast<swift::SerializedModuleLoaderBase>(m_casml.get())
           ->canImportModule(named, loc, versionInfo, isTestableImport))
@@ -99,6 +107,9 @@ swift::ModuleDecl *
 LLDBExplicitSwiftModuleLoader::loadModule(swift::SourceLoc importLoc,
                                           swift::ImportPath::Module path,
                                           bool AllowMemoryCache) {
+  if (!enabled())
+    return nullptr;
+
   if (m_casml)
     if (swift::ModuleDecl *decl =
             m_casml->loadModule(importLoc, path, AllowMemoryCache))
@@ -108,6 +119,9 @@ LLDBExplicitSwiftModuleLoader::loadModule(swift::SourceLoc importLoc,
 
 void LLDBExplicitSwiftModuleLoader::loadExtensions(
     swift::NominalTypeDecl *nominal, unsigned previousGeneration) {
+  if (!enabled())
+    return;
+
   if (m_casml)
     m_casml->loadExtensions(nominal, previousGeneration);
   m_esml->loadExtensions(nominal, previousGeneration);
@@ -117,6 +131,9 @@ void LLDBExplicitSwiftModuleLoader::loadObjCMethods(
     swift::NominalTypeDecl *typeDecl, swift::ObjCSelector selector,
     bool isInstanceMethod, unsigned previousGeneration,
     llvm::TinyPtrVector<swift::AbstractFunctionDecl *> &methods) {
+  if (!enabled())
+    return;
+
   if (m_casml)
     m_casml->loadObjCMethods(typeDecl, selector, isInstanceMethod,
                              previousGeneration, methods);
@@ -127,6 +144,9 @@ void LLDBExplicitSwiftModuleLoader::loadObjCMethods(
 void LLDBExplicitSwiftModuleLoader::loadDerivativeFunctionConfigurations(
     swift::AbstractFunctionDecl *originalAFD, unsigned previousGeneration,
     llvm::SetVector<swift::AutoDiffConfig> &results) {
+  if (!enabled())
+    return;
+
   if (m_casml)
     m_casml->loadDerivativeFunctionConfigurations(originalAFD,
                                                   previousGeneration, results);
@@ -135,6 +155,9 @@ void LLDBExplicitSwiftModuleLoader::loadDerivativeFunctionConfigurations(
 }
 
 void LLDBExplicitSwiftModuleLoader::verifyAllModules() {
+  if (!enabled())
+    return;
+
   if (m_casml)
     m_casml->verifyAllModules();
   m_esml->verifyAllModules();
@@ -142,6 +165,9 @@ void LLDBExplicitSwiftModuleLoader::verifyAllModules() {
 
 swift::ExplicitSwiftModuleMap *
 LLDBExplicitSwiftModuleLoader::getExplicitSwiftModuleMap() {
+  if (!enabled())
+    return nullptr;
+
   if (m_casml)
     return m_casml->getExplicitSwiftModuleMap();
   return m_esml->getExplicitSwiftModuleMap();
@@ -149,6 +175,9 @@ LLDBExplicitSwiftModuleLoader::getExplicitSwiftModuleMap() {
 
 swift::ExplicitClangModuleMap *
 LLDBExplicitSwiftModuleLoader::getExplicitClangModuleMap() {
+  if (!enabled())
+    return nullptr;
+
   if (m_casml)
     return m_casml->getExplicitClangModuleMap();
   return m_esml->getExplicitClangModuleMap();
