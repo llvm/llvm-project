@@ -2299,10 +2299,12 @@ static llvm::Value *emitObjCValueOperation(CodeGenFunction &CGF,
       llvm::FunctionType::get(CGF.Int8PtrTy, CGF.Int8PtrTy, false);
     fn = CGF.CGM.CreateRuntimeFunction(fnType, fnName);
 
-    // We have Native ARC, so set nonlazybind attribute for performance
-    if (llvm::Function *f = dyn_cast<llvm::Function>(fn.getCallee()))
-      if (fnName == "objc_retain")
-        f->addFnAttr(llvm::Attribute::NonLazyBind);
+    // We have Native ARC, so set nonlazybind attribute for performance.
+    // Suppress when ptrauth is enabled (inline GOT loads bypass auth stubs).
+    if (!CGF.CGM.getCodeGenOpts().PointerAuth.FunctionPointers.isEnabled())
+      if (llvm::Function *f = dyn_cast<llvm::Function>(fn.getCallee()))
+        if (fnName == "objc_retain")
+          f->addFnAttr(llvm::Attribute::NonLazyBind);
   }
 
   // Cast the argument to 'id'.
@@ -2875,9 +2877,11 @@ void CodeGenFunction::EmitObjCRelease(llvm::Value *value,
         llvm::FunctionType::get(Builder.getVoidTy(), Int8PtrTy, false);
     fn = CGM.CreateRuntimeFunction(fnType, "objc_release");
     setARCRuntimeFunctionLinkage(CGM, fn);
-    // We have Native ARC, so set nonlazybind attribute for performance
-    if (llvm::Function *f = dyn_cast<llvm::Function>(fn.getCallee()))
-      f->addFnAttr(llvm::Attribute::NonLazyBind);
+    // We have Native ARC, so set nonlazybind attribute for performance.
+    // Suppress when ptrauth is enabled (inline GOT loads bypass auth stubs).
+    if (!CGM.getCodeGenOpts().PointerAuth.FunctionPointers.isEnabled())
+      if (llvm::Function *f = dyn_cast<llvm::Function>(fn.getCallee()))
+        f->addFnAttr(llvm::Attribute::NonLazyBind);
   }
 
   // Cast the argument to 'id'.

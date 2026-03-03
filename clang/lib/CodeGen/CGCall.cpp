@@ -2687,7 +2687,10 @@ void CodeGenModule::ConstructAttributeList(StringRef Name,
     // is used.
     // FIXME: what if we just haven't processed the function definition
     // yet, or if it's an external definition like C99 inline?
-    if (CodeGenOpts.NoPLT) {
+    // Suppress NonLazyBind when ptrauth is enabled: inline GOT loads
+    // bypass authentication stubs.
+    if (CodeGenOpts.NoPLT &&
+        !CodeGenOpts.PointerAuth.FunctionPointers.isEnabled()) {
       if (auto *Fn = dyn_cast<FunctionDecl>(TargetDecl)) {
         if (!Fn->isDefined() && !AttrOnCallSite) {
           FuncAttrs.addAttribute(llvm::Attribute::NonLazyBind);
