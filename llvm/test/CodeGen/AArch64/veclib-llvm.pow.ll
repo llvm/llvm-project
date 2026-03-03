@@ -93,3 +93,17 @@ define <vscale x 2 x double> @test_pow_one_third_nxv2f64(<vscale x 2 x double> %
   %r = call nsz ninf nnan afn <vscale x 2 x double> @llvm.pow.nxv2f64(<vscale x 2 x double> %x, <vscale x 2 x double> splat (double 0x3FD5555555555555))
   ret <vscale x 2 x double> %r
 }
+
+define <4 x float> @test_pow_one_third_v4f32_bad_fmf(<4 x float> %x) nounwind {
+; ARMPL-LABEL: test_pow_one_third_v4f32_bad_fmf:
+; ARMPL:       // %bb.0:
+; ARMPL-NEXT:    str x30, [sp, #-16]! // 8-byte Folded Spill
+; ARMPL-NEXT:    mov w8, #43691 // =0xaaab
+; ARMPL-NEXT:    movk w8, #16042, lsl #16
+; ARMPL-NEXT:    dup v1.4s, w8
+; ARMPL-NEXT:    bl armpl_vpowq_f32
+; ARMPL-NEXT:    ldr x30, [sp], #16 // 8-byte Folded Reload
+; ARMPL-NEXT:    ret
+  %r = call nsz ninf nnan <4 x float> @llvm.pow.v4f32(<4 x float> %x, <4 x float> splat (float 0x3FD5555560000000))
+  ret <4 x float> %r
+}
