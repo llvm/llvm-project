@@ -19784,15 +19784,13 @@ struct RebuildTypeWithLateParsedAttr
     const LateParsedAttrType *LPA = TL.getTypePtr();
     auto *LTA = LPA->getLateParsedAttribute();
 
-    // The LateParsedTypeAttribute contains a pointer to the Parser that
-    // created it, along with the cached tokens. Call ParseAndConsume to parse
-    // those tokens now and get the resulting attribute.
     assert(LTA && "LateParsedAttrType must have a LateParsedTypeAttribute");
 
     AttributeFactory AF{};
     ParsedAttributes Attrs(AF);
 
-    // Parse the cached attribute tokens and delete the LateParsedTypeAttribute
+    // Invoke the parser callback to parse and consume the cached tokens.
+    // ParseCallback is also responsible for deleting LTA.
     assert(!!ParseCallback);
     ParseCallback(LTA, &Attrs);
 
@@ -20083,25 +20081,14 @@ void Sema::ActOnFields(Scope *S, SourceLocation RecLoc, Decl *EnclosingDecl,
     }
   }
 
-  // Transform types with late-parsed type attributes.
-  // Late-parsed type attributes are stored as placeholder LateParsedAttrType
-  // nodes. We need to transform them into proper attributed types now that
-  // all fields are visible and can be referenced.
-  // This is only enabled when -fexperimental-late-parse-attributes is set
-  // If late parsing here only if it's top-level record type. Otherwise, wait
-  // until struct declaration is.
-  // if (getLangOpts().ExperimentalLateParseAttributes &&
-  //     !EnclosingDecl->getDeclContext()->isRecord()) {
-  //   ProcessLateParsedTypeAttributes(Fields);
-  // }
-
-  // Perform FieldDecl-dependent validation for counted_by family attributes
-  for (ArrayRef<Decl *>::iterator i = Fields.begin(), end = Fields.end();
-       i != end; ++i) {
-    FieldDecl *FD = cast<FieldDecl>(*i);
-    if (auto *CAT = FD->getType()->getAs<CountAttributedType>()) {
-      CheckCountedByAttrOnFieldDecl(FD, CAT->getCountExpr(),
-                                    CAT->isCountInBytes(), CAT->isOrNull());
+  if (!getLangOpts().ExperimentalLateParseAttributes) {
+    // Perform FieldDecl-dependent validation for counted_by family attributes
+    for (auto *D : Fields) {
+      FieldDecl *FD = cast<FieldDecl>(D);
+      if (auto *CAT = FD->getType()->getAs<CountAttributedType>()) {
+        CheckCountedByAttrOnFieldDecl(FD, CAT->getCountExpr(),
+                                      CAT->isCountInBytes(), CAT->isOrNull());
+      }
     }
   }
 

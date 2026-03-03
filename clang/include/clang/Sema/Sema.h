@@ -4454,6 +4454,9 @@ public:
                    SourceLocation RBrac, const ParsedAttributesView &AttrList);
 
   /// Transform field types that contain late-parsed type attributes.
+  /// Called from two sites: once immediately after parsing a nested
+  /// non-anonymous record body, and once after ActOnFields for the outermost
+  /// record.
   void ProcessLateParsedTypeAttributes(RecordDecl *EnclosingDecl,
                                        ParseLateParsedTypeAttributeCB *ParseCB);
 

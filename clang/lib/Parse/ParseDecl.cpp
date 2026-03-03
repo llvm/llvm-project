@@ -4924,15 +4924,17 @@ void Parser::ParseLateParsedTypeAttributeCallback(LateParsedTypeAttribute *LTA,
 
 SourceLocation Parser::GetLateParsedAttributeLocationCallback(
     const LateParsedTypeAttribute *LTA) {
-  return LTA ? LTA->AttrNameLoc : SourceLocation();
+  assert(LTA);
+  return LTA->AttrNameLoc;
 }
 
 bool Parser::ProcessLateParsedTypeAttrCallback(LateParsedAttribute *LA,
                                                QualType &type,
                                                unsigned pointerNestLevel) {
-  if (!LA || !isa<LateParsedTypeAttribute>(LA))
+  auto *LTA = dyn_cast_if_present<LateParsedTypeAttribute>(LA);
+  if (!LTA)
     return true;
-  auto *LTA = cast<LateParsedTypeAttribute>(LA);
+
   ParsedAttr::Kind AttrKind = ParsedAttr::getParsedKind(
       &LTA->AttrName, nullptr, ParsedAttr::Form::GNU().getSyntax());
   return LTA->Self->Actions.ActOnLateParsedTypeAttr(
@@ -5077,6 +5079,9 @@ void Parser::ParseStructUnionBody(SourceLocation RecordLoc,
 
         if (getLangOpts().ExperimentalLateParseAttributes) {
           auto *RD = dyn_cast<RecordDecl>(DS.getRepAsDecl());
+          // The field contains a nested record definition. Trigger late
+          // parsing now for non-anonymous records; anonymous struct/union
+          // fields are handled as part of the enclosing record instead.
           if (RD && !RD->isAnonymousStructOrUnion()) {
             Actions.ProcessLateParsedTypeAttributes(
                 RD, ParseLateParsedTypeAttributeCallback);
@@ -5131,14 +5136,13 @@ void Parser::ParseStructUnionBody(SourceLocation RecordLoc,
   ParseLexedCAttributeList(LateFieldAttrs, /*EnterScope=*/false);
   SmallVector<Decl *, 32> FieldDecls(TagDecl->fields());
 
-  // ActOnFields will transform any LateParsedAttrType placeholders into
-  // proper attributed types. The LateParsedTypeAttribute objects embedded
-  // in those placeholder types already contain everything needed (Parser
-  // pointer and cached tokens) to parse themselves.
   Actions.ActOnFields(getCurScope(), RecordLoc, TagDecl, FieldDecls,
                       T.getOpenLocation(), T.getCloseLocation(), attrs);
   Scope *ParentScope = getCurScope()->getParent();
   assert(ParentScope);
+  // Process late-parsed type attributes for the outermost record. Nested
+  // non-anonymous records are handled immediately after their declaration is
+  // parsed, which is when it is known whether the record is anonymous.
   if (getLangOpts().ExperimentalLateParseAttributes &&
       !ParentScope->getEntity()->isRecord())
     Actions.ProcessLateParsedTypeAttributes(
