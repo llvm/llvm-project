@@ -2399,7 +2399,7 @@ public:
     UID = itostr(sys::Process::getProcessId());
     Jobs.resize((size_t)ThinLTONumTasks);
     this->ThinLTOTaskOffset = ThinLTOTaskOffset;
-    this->Triple = Triple;
+    this->Triple = std::move(Triple);
     this->Conf.Dtlto = 1;
   }
 
