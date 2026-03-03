@@ -3115,7 +3115,7 @@ Value *ScalarExprEmitter::VisitCastExpr(CastExpr *CE) {
            "Destination type must be a matrix or builtin type.");
     Value *Mat = Visit(E);
     if (auto *MatTy = DestTy->getAs<ConstantMatrixType>()) {
-      SmallVector<int> Mask;
+      SmallVector<int> Mask(MatTy->getNumElementsFlattened());
       unsigned NumCols = MatTy->getNumColumns();
       unsigned NumRows = MatTy->getNumRows();
       auto *SrcMatTy = E->getType()->getAs<ConstantMatrixType>();
@@ -3124,10 +3124,10 @@ Value *ScalarExprEmitter::VisitCastExpr(CastExpr *CE) {
       assert(NumCols <= SrcMatTy->getNumColumns());
       bool IsRowMajor = CGF.getLangOpts().getDefaultMatrixMemoryLayout() ==
                         LangOptions::MatrixMemoryLayout::MatrixRowMajor;
-      for (unsigned I = 0, E = MatTy->getNumElementsFlattened(); I < E; I++) {
-        auto [Row, Col] = MatTy->getRowAndColumn(I, IsRowMajor);
-        Mask.push_back(SrcMatTy->getFlattenedIndex(Row, Col, IsRowMajor));
-      }
+      for (unsigned R = 0; R < NumRows; R++)
+        for (unsigned C = 0; C < NumCols; C++)
+          Mask[MatTy->getFlattenedIndex(R, C, IsRowMajor)] =
+              SrcMatTy->getFlattenedIndex(R, C, IsRowMajor);
 
       return Builder.CreateShuffleVector(Mat, Mask, "trunc");
     }
