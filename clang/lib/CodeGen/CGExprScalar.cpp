@@ -224,6 +224,7 @@ getOverflowBehaviorConsideringType(const CodeGenFunction &CGF,
   case LangOptions::SignedOverflowBehaviorTy::SOB_Trapping:
     return LangOptions::OverflowBehaviorKind::OB_Trap;
   }
+  llvm_unreachable("Unknown SignedOverflowBehaviorTy");
 }
 
 /// Check if we can skip the overflow check for \p Op.
@@ -2449,6 +2450,20 @@ Value *ScalarExprEmitter::VisitInitListExpr(InitListExpr *E) {
     llvm::Value *Init = llvm::Constant::getNullValue(EltTy);
     V = Builder.CreateInsertElement(V, Init, Idx, "vecinit");
   }
+
+  // Matrix initializer lists are in row-major order but the memory layout for
+  // codegen is determined by the -fmatrix-memory-layout flag (default:
+  // column-major). When the memory layout is column-major, we need to shuffle
+  // the elements from row-major to column-major order.
+  if (const auto *MT = E->getType()->getAs<ConstantMatrixType>();
+      MT && CGF.getLangOpts().getDefaultMatrixMemoryLayout() ==
+                LangOptions::MatrixMemoryLayout::MatrixColMajor) {
+    SmallVector<int, 16> Mask;
+    for (unsigned I = 0, N = MT->getNumElementsFlattened(); I < N; ++I)
+      Mask.push_back(MT->mapColumnMajorToRowMajorFlattenedIndex(I));
+    V = Builder.CreateShuffleVector(V, Mask, "matrix.rowmajor2colmajor");
+  }
+
   return V;
 }
 

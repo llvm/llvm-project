@@ -6,14 +6,14 @@ include(DetermineGCCCompatible)
 
 # get_subproject_title(titlevar)
 #   Set ${outvar} to the title of the current LLVM subproject (Clang, MLIR ...)
-# 
+#
 # The title is set in the subproject's top-level using the variable
 # LLVM_SUBPROJECT_TITLE. If it does not exist, it is assumed it is LLVM itself.
 # The title is not semantically significant, but use to create folders in
 # CMake-generated IDE projects (Visual Studio/XCode).
 function(get_subproject_title outvar)
   if (LLVM_SUBPROJECT_TITLE)
-    set(${outvar} "${LLVM_SUBPROJECT_TITLE}" PARENT_SCOPE) 
+    set(${outvar} "${LLVM_SUBPROJECT_TITLE}" PARENT_SCOPE)
   else ()
     set(${outvar} "LLVM" PARENT_SCOPE)
   endif ()
@@ -85,20 +85,26 @@ function(llvm_update_pch name)
     set(ARG_DISABLE_PCH_REUSE ON)
   endif()
 
-  if(NOT ARG_PRECOMPILE_HEADERS)
+  get_property(srcs TARGET ${name} PROPERTY SOURCES)
+  foreach(src ${srcs})
+    get_filename_component(extension ${src} EXT)
+    if(extension STREQUAL ".c")
+      set(HAS_C_SRC ON)
+    elseif(extension STREQUAL ".mm")
+      set(HAS_MM_SRC ON)
+    endif()
+  endforeach()
+
+  if(HAS_C_SRC AND NOT ARG_PRECOMPILE_HEADERS)
     # We only use PCH for C++. For targets with C source files that re-use a
     # precompiled headers from another target, CMake complains that there is no
     # PCH for C. There doesn't seem to be a disable PCH reuse for C files only,
     # so disable PCH reuse for targets that contain C sources.
-    get_property(srcs TARGET ${name} PROPERTY SOURCES)
-    foreach(src ${srcs})
-      get_filename_component(extension ${src} EXT)
-      if(extension STREQUAL ".c")
-        message(DEBUG "Disable PCH for ${name} due to C file ${src}")
-        set(ARG_DISABLE_PCH_REUSE ON)
-        break()
-      endif()
-    endforeach()
+    set(ARG_DISABLE_PCH_REUSE ON)
+  endif()
+  if(HAS_MM_SRC)
+    # Disable for Objective-C as well to avoid errors due to mixed languages.
+    set(ARG_DISABLE_PCH_REUSE ON)
   endif()
 
   # Find PCH with highest priority from dependencies. We reuse the first PCH
@@ -114,7 +120,10 @@ function(llvm_update_pch name)
   foreach(lib ${libs})
     if(TARGET ${lib})
       get_target_property(lib_pch_priority ${lib} LLVM_PCH_PRIORITY)
-      if(${lib_pch_priority} GREATER ${pch_priority})
+      # Recent CMake versions warn if PCH is disabled but REUSE_FROM is set.
+      # Ensure that the PCH actually exists before considering reuse.
+      get_target_property(lib_disable_pch ${lib} DISABLE_PRECOMPILE_HEADERS)
+      if(${lib_pch_priority} GREATER ${pch_priority} AND NOT ${lib_disable_pch})
         set(pch_priority ${lib_pch_priority})
         set(pch_reuse ${lib})
       endif()
@@ -627,7 +636,12 @@ function(llvm_add_library name)
     # Do add_dependencies(obj) later due to CMake issue 14747.
     list(APPEND objlibs ${obj_name})
 
-    # Bring in the target include directories from our original target.
+    # Bring in the target include directories and link info from our original
+    # target. target_link_libraries propagates transitive dependencies with
+    # proper SYSTEM include handling from IMPORTED targets.
+    # target_include_directories propagates include directories set directly on
+    # the target.
+    target_link_libraries(${obj_name} PRIVATE $<TARGET_PROPERTY:${name},LINK_LIBRARIES>)
     target_include_directories(${obj_name} PRIVATE $<TARGET_PROPERTY:${name},INCLUDE_DIRECTORIES>)
 
     set_target_properties(${obj_name} PROPERTIES FOLDER "${subproject_title}/Object Libraries")
@@ -693,11 +707,11 @@ function(llvm_add_library name)
   endif()
   set_target_properties(${name} PROPERTIES FOLDER "${subproject_title}/Libraries")
 
-  ## If were compiling with clang-cl use /Zc:dllexportInlines- to exclude inline 
+  ## If were compiling with clang-cl use /Zc:dllexportInlines- to exclude inline
   ## class members from being dllexport'ed to reduce compile time.
   ## This will also keep us below the 64k exported symbol limit
   ## https://blog.llvm.org/2018/11/30-faster-windows-builds-with-clang-cl_14.html
-  if(LLVM_BUILD_LLVM_DYLIB AND NOT LLVM_DYLIB_EXPORT_INLINES AND 
+  if(LLVM_BUILD_LLVM_DYLIB AND NOT LLVM_DYLIB_EXPORT_INLINES AND
      MSVC AND CMAKE_CXX_COMPILER_ID MATCHES Clang)
     target_compile_options(${name} PUBLIC /Zc:dllexportInlines-)
     if(TARGET ${obj_name})
@@ -745,9 +759,12 @@ function(llvm_add_library name)
     llvm_update_compile_flags(${name})
     llvm_update_pch(${name})
   else()
-    target_precompile_headers(${name} REUSE_FROM ${obj_name})
-    get_target_property(pch_priority ${obj_name} LLVM_PCH_PRIORITY)
-    set_target_properties(${name} PROPERTIES LLVM_PCH_PRIORITY ${pch_priority})
+    get_target_property(lib_disable_pch ${obj_name} DISABLE_PRECOMPILE_HEADERS)
+    if(NOT ${lib_disable_pch})
+      target_precompile_headers(${name} REUSE_FROM ${obj_name})
+      get_target_property(pch_priority ${obj_name} LLVM_PCH_PRIORITY)
+      set_target_properties(${name} PROPERTIES LLVM_PCH_PRIORITY ${pch_priority})
+    endif()
   endif()
   add_link_opts( ${name} )
   if(ARG_OUTPUT_NAME)
@@ -1079,6 +1096,8 @@ macro(generate_llvm_objects name)
 
     set(INITLLVM_ARGS "")
 
+    # When Clang is invoked as an OS utility (e.g., c17), it needs to follow the POSIX specification
+    # for how utilities respond to signals.
     if(${name} STREQUAL "clang")
       set(INITLLVM_ARGS ", /*InstallPipeSignalExitHandler=*/true, /*NeedsPOSIXUtilitySignalHandling=*/true")
     endif()
@@ -1103,7 +1122,7 @@ macro(generate_llvm_objects name)
 
       set_property(GLOBAL APPEND PROPERTY LLVM_DRIVER_TOOLS ${name})
       set_property(GLOBAL APPEND PROPERTY LLVM_DRIVER_TOOL_ALIASES_${name} ${name})
-      target_link_libraries(${obj_name} ${LLVM_PTHREAD_LIB})
+      target_link_libraries(${obj_name} PUBLIC ${LLVM_PTHREAD_LIB})
       llvm_config(${obj_name} ${USE_SHARED} ${LLVM_LINK_COMPONENTS} )
     endif()
   endif()
@@ -1163,9 +1182,12 @@ macro(add_llvm_executable name)
     llvm_update_compile_flags(${name})
     llvm_update_pch(${name})
   elseif(NOT ARG_DISABLE_PCH_REUSE)
-    target_precompile_headers(${name} REUSE_FROM ${obj_name})
-    get_target_property(pch_priority ${obj_name} LLVM_PCH_PRIORITY)
-    set_target_properties(${name} PROPERTIES LLVM_PCH_PRIORITY ${pch_priority})
+    get_target_property(lib_disable_pch ${obj_name} DISABLE_PRECOMPILE_HEADERS)
+    if(NOT ${lib_disable_pch})
+      target_precompile_headers(${name} REUSE_FROM ${obj_name})
+      get_target_property(pch_priority ${obj_name} LLVM_PCH_PRIORITY)
+      set_target_properties(${name} PROPERTIES LLVM_PCH_PRIORITY ${pch_priority})
+    endif()
   endif()
 
   if (ARG_SUPPORT_PLUGINS AND NOT "${CMAKE_SYSTEM_NAME}" MATCHES "AIX")
@@ -1582,8 +1604,8 @@ macro(llvm_add_tool project name)
                 RUNTIME DESTINATION ${${project}_TOOLS_INSTALL_DIR}
                 COMPONENT ${name})
         if (LLVM_ENABLE_PDB)
-          install(FILES $<TARGET_PDB_FILE:${name}> 
-                DESTINATION "${${project}_TOOLS_INSTALL_DIR}" COMPONENT ${name} 
+          install(FILES $<TARGET_PDB_FILE:${name}>
+                DESTINATION "${${project}_TOOLS_INSTALL_DIR}" COMPONENT ${name}
                 OPTIONAL)
         endif()
 
@@ -1617,8 +1639,8 @@ macro(add_llvm_example name)
   if( LLVM_BUILD_EXAMPLES )
     install(TARGETS ${name} RUNTIME DESTINATION "${LLVM_EXAMPLES_INSTALL_DIR}")
     if (LLVM_ENABLE_PDB)
-      install(FILES $<TARGET_PDB_FILE:${name}> 
-              DESTINATION "${LLVM_EXAMPLES_INSTALL_DIR}" COMPONENT ${name} 
+      install(FILES $<TARGET_PDB_FILE:${name}>
+              DESTINATION "${LLVM_EXAMPLES_INSTALL_DIR}" COMPONENT ${name}
               OPTIONAL)
     endif()
   endif()
@@ -1656,8 +1678,8 @@ macro(add_llvm_utility name)
               RUNTIME DESTINATION ${LLVM_UTILS_INSTALL_DIR}
               COMPONENT ${name})
       if (LLVM_ENABLE_PDB)
-        install(FILES $<TARGET_PDB_FILE:${name}> 
-                DESTINATION "${LLVM_UTILS_INSTALL_DIR}" COMPONENT ${name} 
+        install(FILES $<TARGET_PDB_FILE:${name}>
+                DESTINATION "${LLVM_UTILS_INSTALL_DIR}" COMPONENT ${name}
                 OPTIONAL)
       endif()
 

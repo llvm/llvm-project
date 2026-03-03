@@ -735,6 +735,12 @@ Depend makeDepend(const parser::OmpDependClause::TaskDep &inp,
 
 // Depobj: empty
 
+Depth make(const parser::OmpClause::Depth &inp,
+           semantics::SemanticsContext &semaCtx) {
+  // inp.v -> parser::ScalarIntConstantExpr
+  return Depth{/*DepthExpr=*/makeExpr(inp.v, semaCtx)};
+}
+
 Destroy make(const parser::OmpClause::Destroy &inp,
              semantics::SemanticsContext &semaCtx) {
   // inp.v -> std::optional<OmpDestroyClause>
