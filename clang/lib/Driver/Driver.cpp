@@ -5859,7 +5859,7 @@ static void handleTimeTrace(Compilation &C, const ArgList &Args,
   if (!A)
     return;
 
-  std::string OffloadingPrefix;
+  SmallString<64> OffloadingPrefix;
   if (JA->getOffloadingDeviceKind() != Action::OFK_None) {
     const ToolChain *TC = JA->getOffloadingToolChain();
     OffloadingPrefix = Action::GetOffloadingFileNamePrefix(
@@ -5880,16 +5880,10 @@ static void handleTimeTrace(Compilation &C, const ArgList &Args,
   if (A->getOption().matches(options::OPT_ftime_trace_EQ)) {
     Path = A->getValue();
     if (llvm::sys::fs::is_directory(Path)) {
-      // When -ftime-trace=<dir> and it's a directory:
-      // - For host/non-offload: use the output filename stem
-      // - For offload: use input filename stem + offloading prefix
-      SmallString<128> Tmp;
-      if (OffloadingPrefix.empty()) {
-        Tmp = llvm::sys::path::stem(Result.getFilename());
-      } else {
-        Tmp = llvm::sys::path::stem(BaseInput);
-        Tmp += OffloadingPrefix;
-      }
+      SmallString<128> Tmp(OffloadingPrefix.empty()
+                               ? llvm::sys::path::stem(Result.getFilename())
+                               : llvm::sys::path::stem(BaseInput));
+      Tmp += OffloadingPrefix;
       Tmp += ".json";
       llvm::sys::path::append(Path, Tmp);
     }
