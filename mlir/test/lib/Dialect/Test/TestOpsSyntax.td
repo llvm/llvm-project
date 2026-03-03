@@ -689,7 +689,7 @@ def FormatInferTypeOp : TEST_Op<"format_infer_type", [InferTypeOpInterface]> {
   let extraClassDeclaration = [{
     static ::llvm::LogicalResult inferReturnTypes(::mlir::MLIRContext *context,
           ::std::optional<::mlir::Location> location, ::mlir::ValueRange operands,
-          ::mlir::DictionaryAttr attributes, mlir::OpaqueProperties properties, ::mlir::RegionRange regions,
+          ::mlir::DictionaryAttr attributes, mlir::PropertyRef properties, ::mlir::RegionRange regions,
           ::llvm::SmallVectorImpl<::mlir::Type> &inferredReturnTypes) {
       inferredReturnTypes.assign({::mlir::IntegerType::get(context, 16)});
       return ::mlir::success();
@@ -712,7 +712,7 @@ class FormatInferAllTypesBaseOp<string mnemonic, list<Trait> traits = []>
   let extraClassDeclaration = [{
     static ::llvm::LogicalResult inferReturnTypes(::mlir::MLIRContext *context,
           ::std::optional<::mlir::Location> location, ::mlir::ValueRange operands,
-          ::mlir::DictionaryAttr attributes, mlir::OpaqueProperties properties, ::mlir::RegionRange regions,
+          ::mlir::DictionaryAttr attributes, mlir::PropertyRef properties, ::mlir::RegionRange regions,
           ::llvm::SmallVectorImpl<::mlir::Type> &inferredReturnTypes) {
       ::mlir::TypeRange operandTypes = operands.getTypes();
       inferredReturnTypes.assign(operandTypes.begin(), operandTypes.end());
@@ -759,7 +759,7 @@ def FormatInferTypeRegionsOp
   let extraClassDeclaration = [{
     static ::llvm::LogicalResult inferReturnTypes(::mlir::MLIRContext *context,
           ::std::optional<::mlir::Location> location, ::mlir::ValueRange operands,
-          ::mlir::DictionaryAttr attributes, mlir::OpaqueProperties properties, ::mlir::RegionRange regions,
+          ::mlir::DictionaryAttr attributes, mlir::PropertyRef properties, ::mlir::RegionRange regions,
           ::llvm::SmallVectorImpl<::mlir::Type> &inferredReturnTypes) {
       if (regions.empty())
         return ::mlir::failure();
@@ -780,7 +780,7 @@ def FormatInferTypeVariadicOperandsOp
   let extraClassDeclaration = [{
     static ::llvm::LogicalResult inferReturnTypes(::mlir::MLIRContext *context,
           ::std::optional<::mlir::Location> location, ::mlir::ValueRange operands,
-          ::mlir::DictionaryAttr attributes, mlir::OpaqueProperties properties, ::mlir::RegionRange regions,
+          ::mlir::DictionaryAttr attributes, mlir::PropertyRef properties, ::mlir::RegionRange regions,
           ::llvm::SmallVectorImpl<::mlir::Type> &inferredReturnTypes) {
       FormatInferTypeVariadicOperandsOpAdaptor adaptor(
           operands, attributes, *properties.as<Properties *>(), {});

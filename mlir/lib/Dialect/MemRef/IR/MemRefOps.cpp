@@ -634,7 +634,7 @@ LogicalResult DistinctObjectsOp::verify() {
 LogicalResult DistinctObjectsOp::inferReturnTypes(
     MLIRContext * /*context*/, std::optional<Location> /*location*/,
     ValueRange operands, DictionaryAttr /*attributes*/,
-    OpaqueProperties /*properties*/, RegionRange /*regions*/,
+    PropertyRef /*properties*/, RegionRange /*regions*/,
     SmallVectorImpl<Type> &inferredReturnTypes) {
   llvm::copy(operands.getTypes(), std::back_inserter(inferredReturnTypes));
   return success();
