@@ -123,6 +123,15 @@ define void @test_overaligned_vec(i8 %B) {
   ret void
 }
 
+define ptr @test_overaligned_vec_dyn(ptr %p, i64 %idx) {
+; CHECK-LABEL: @test_overaligned_vec_dyn(
+; CHECK-NEXT:    [[GEP:%.*]] = getelementptr half, ptr [[P:%.*]], i64 [[IDX:%.*]]
+; CHECK-NEXT:    ret ptr [[GEP]]
+;
+  %gep = getelementptr <2 x half>, ptr %p, i64 0, i64 %idx
+  ret ptr %gep
+}
+
 define ptr @test7(ptr %I, i64 %C, i64 %D) {
 ; CHECK-LABEL: @test7(
 ; CHECK-NEXT:    [[A:%.*]] = getelementptr i32, ptr [[I:%.*]], i64 [[C:%.*]]
@@ -680,7 +689,7 @@ entry:
 define i32 @test28() nounwind  {
 ; CHECK-LABEL: @test28(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[ORIENTATIONS:%.*]] = alloca [1 x [1 x %struct.x]], align 8
+; CHECK-NEXT:    [[ORIENTATIONS:%.*]] = alloca [1 x [1 x [[STRUCT_X:%.*]]]], align 8
 ; CHECK-NEXT:    [[T3:%.*]] = call i32 @puts(ptr noundef nonnull dereferenceable(1) @.str) #[[ATTR0]]
 ; CHECK-NEXT:    br label [[BB10:%.*]]
 ; CHECK:       bb10:
