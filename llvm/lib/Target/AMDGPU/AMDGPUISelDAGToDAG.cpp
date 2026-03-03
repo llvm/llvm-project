@@ -736,7 +736,8 @@ void AMDGPUDAGToDAGISel::Select(SDNode *N) {
     unsigned EltSize = VET.getSizeInBits();
     const TargetRegisterClass *RegClass =
         N->isDivergent()
-            ? TRI->getDefaultVectorSuperClassForBitWidth(NumVectorElts * EltSize)
+            ? TRI->getDefaultVectorSuperClassForBitWidth(NumVectorElts *
+                                                         EltSize)
             : SIRegisterInfo::getSGPRClassForBitWidth(NumVectorElts * EltSize);
 
     SelectBuildVector(N, RegClass->getID());
