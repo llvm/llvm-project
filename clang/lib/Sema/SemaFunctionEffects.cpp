@@ -1256,15 +1256,10 @@ private:
     }
 
     bool VisitCXXDeleteExpr(CXXDeleteExpr *Delete) override {
-      // At one time it appeared that RecursiveASTVisitor would traverse the
-      // call to the destructor but that is not true now.
-      QualType DestroyedTy = Delete->getDestroyedType();
-      const Type *T = DestroyedTy.getCanonicalType().getTypePtr();
-      llvm::outs() << DestroyedTy << " " << T->getAsCXXRecordDecl() << "\n";
-
-      if (const auto *RD = T->getAsCXXRecordDecl()) {
+      // RecursiveASTVisitor does not visit the called destructor.
+      const Type* DestroyedType = Delete->getDestroyedType().getTypePtr();
+      if (const auto *RD = DestroyedType->getAsCXXRecordDecl()) {
         CXXDestructorDecl *Dtor = RD->getDestructor();
-        // Dtor may be null if the class has no destructor at all
         if (Dtor) {
           CallableInfo CI(*Dtor, SpecialFuncType::None);
           followCall(CI, Delete->getBeginLoc());
