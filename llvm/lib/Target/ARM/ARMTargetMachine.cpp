@@ -39,6 +39,7 @@
 #include "llvm/IR/Function.h"
 #include "llvm/MC/TargetRegistry.h"
 #include "llvm/Pass.h"
+#include "llvm/Passes/PassBuilder.h"
 #include "llvm/Support/CodeGen.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/Compiler.h"
@@ -93,8 +94,8 @@ extern "C" LLVM_ABI LLVM_EXTERNAL_VISIBILITY void LLVMInitializeARMTarget() {
   PassRegistry &Registry = *PassRegistry::getPassRegistry();
   initializeGlobalISel(Registry);
   initializeARMAsmPrinterPass(Registry);
-  initializeARMLoadStoreOptPass(Registry);
-  initializeARMPreAllocLoadStoreOptPass(Registry);
+  initializeARMLoadStoreOptLegacyPass(Registry);
+  initializeARMPreAllocLoadStoreOptLegacyPass(Registry);
   initializeARMParallelDSPPass(Registry);
   initializeARMBranchTargetsPass(Registry);
   initializeARMConstantIslandsPass(Registry);
@@ -335,10 +336,16 @@ char ARMExecutionDomainFix::ID;
 } // end anonymous namespace
 
 INITIALIZE_PASS_BEGIN(ARMExecutionDomainFix, "arm-execution-domain-fix",
-  "ARM Execution Domain Fix", false, false)
+                      "ARM Execution Domain Fix", false, false)
 INITIALIZE_PASS_DEPENDENCY(ReachingDefInfoWrapperPass)
 INITIALIZE_PASS_END(ARMExecutionDomainFix, "arm-execution-domain-fix",
-  "ARM Execution Domain Fix", false, false)
+                    "ARM Execution Domain Fix", false, false)
+
+void ARMBaseTargetMachine::registerPassBuilderCallbacks(PassBuilder &PB){
+
+#define GET_PASS_REGISTRY "ARMPassRegistry.def"
+#include "llvm/Passes/TargetPassRegistry.inc"
+}
 
 TargetPassConfig *ARMBaseTargetMachine::createPassConfig(PassManagerBase &PM) {
   return new ARMPassConfig(*this, PM);
@@ -468,7 +475,7 @@ void ARMPassConfig::addPreRegAlloc() {
     addPass(createMLxExpansionPass());
 
     if (EnableARMLoadStoreOpt)
-      addPass(createARMLoadStoreOptimizationPass(/* pre-register alloc */ true));
+      addPass(createARMLoadStoreOptLegacyPass(/* pre-register alloc */ true));
 
     if (!DisableA15SDOptimization)
       addPass(createA15SDOptimizerPass());
@@ -478,7 +485,7 @@ void ARMPassConfig::addPreRegAlloc() {
 void ARMPassConfig::addPreSched2() {
   if (getOptLevel() != CodeGenOptLevel::None) {
     if (EnableARMLoadStoreOpt)
-      addPass(createARMLoadStoreOptimizationPass());
+      addPass(createARMLoadStoreOptLegacyPass());
 
     addPass(new ARMExecutionDomainFix());
     addPass(createBreakFalseDeps());
