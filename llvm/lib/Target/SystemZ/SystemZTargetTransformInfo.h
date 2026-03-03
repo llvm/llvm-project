@@ -82,6 +82,8 @@ public:
                                 bool HasCall) const override;
   bool enableWritePrefetching() const override { return true; }
 
+  unsigned getMaxInterleaveFactor(ElementCount VF) const override;
+
   bool hasDivRemOp(Type *DataType, bool IsSigned) const override;
   bool prefersVectorizedAddressing() const override { return false; }
   bool LSRWithInstrQueries() const override { return true; }
@@ -114,6 +116,8 @@ public:
   getCastInstrCost(unsigned Opcode, Type *Dst, Type *Src,
                    TTI::CastContextHint CCH, TTI::TargetCostKind CostKind,
                    const Instruction *I = nullptr) const override;
+  InstructionCost getCFInstrCost(unsigned Opcode, TTI::TargetCostKind CostKind,
+                                 const Instruction *I = nullptr) const override;
   InstructionCost getCmpSelInstrCost(
       unsigned Opcode, Type *ValTy, Type *CondTy, CmpInst::Predicate VecPred,
       TTI::TargetCostKind CostKind,
