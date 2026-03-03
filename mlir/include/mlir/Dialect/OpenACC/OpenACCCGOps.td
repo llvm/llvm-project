@@ -72,15 +72,15 @@ def OpenACC_ReductionCombineRegionOp
     value(s) in the original/shared reduction variable. The region is
     terminated by `acc.yield` with no operands.
 
-    The sharedMemref operand is the original/shared reduction variable.
-    The privateMemref operand is typically the result of acc.reduction_init.
+    The destVar operand is the original/shared reduction variable.
+    The srcVar operand is typically the result of acc.reduction_init.
   }];
-  let arguments = (ins OpenACC_AnyPointerOrMappableType:$sharedMemref,
-                       OpenACC_AnyPointerOrMappableType:$privateMemref);
+  let arguments = (ins OpenACC_AnyPointerOrMappableType:$destVar,
+                       OpenACC_AnyPointerOrMappableType:$srcVar);
   let results = (outs);
   let regions = (region AnyRegion:$region);
   let assemblyFormat = [{
-    $privateMemref `into` $sharedMemref `:` type($privateMemref) $region
+    $srcVar `into` $destVar `:` type($srcVar) $region
     attr-dict
   }];
   let hasVerifier = 1;
