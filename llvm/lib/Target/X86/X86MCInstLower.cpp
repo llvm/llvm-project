@@ -26,6 +26,7 @@
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SmallString.h"
 #include "llvm/ADT/StringExtras.h"
+#include "llvm/BinaryFormat/ELF.h"
 #include "llvm/CodeGen/MachineBranchProbabilityInfo.h"
 #include "llvm/CodeGen/MachineConstantPool.h"
 #include "llvm/CodeGen/MachineFunction.h"
@@ -44,6 +45,7 @@
 #include "llvm/MC/MCInst.h"
 #include "llvm/MC/MCInstBuilder.h"
 #include "llvm/MC/MCSection.h"
+#include "llvm/MC/MCSectionELF.h"
 #include "llvm/MC/MCStreamer.h"
 #include "llvm/MC/MCSymbol.h"
 #include "llvm/MC/TargetRegistry.h"
@@ -885,6 +887,22 @@ void X86AsmPrinter::LowerFENTRY_CALL(const MachineInstr &MI,
                                      X86MCInstLower &MCIL) {
   bool Is64Bits = Subtarget->is64Bit();
   MCContext &Ctx = OutStreamer->getContext();
+
+  if (MF->getFunction().hasFnAttribute("mrecord-mcount")) {
+    MCSymbol *DotSym = OutContext.createTempSymbol();
+    OutStreamer->pushSection();
+    OutStreamer->switchSection(
+        Ctx.getELFSection("__mcount_loc", ELF::SHT_PROGBITS, ELF::SHF_ALLOC));
+    OutStreamer->emitSymbolValue(DotSym, Is64Bits ? 8 : 4);
+    OutStreamer->popSection();
+    OutStreamer->emitLabel(DotSym);
+  }
+
+  if (MF->getFunction().hasFnAttribute("mnop-mcount")) {
+    emitX86Nops(*OutStreamer, 5, Subtarget);
+    return;
+  }
+
   MCSymbol *fentry = Ctx.getOrCreateSymbol("__fentry__");
   const MCSymbolRefExpr *Op = MCSymbolRefExpr::create(fentry, Ctx);
 

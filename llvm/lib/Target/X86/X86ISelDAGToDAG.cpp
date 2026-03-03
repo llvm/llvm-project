@@ -179,11 +179,19 @@ namespace {
     bool runOnMachineFunction(MachineFunction &MF) override {
       // Reset the subtarget each time through.
       Subtarget = &MF.getSubtarget<X86Subtarget>();
-      IndirectTlsSegRefs = MF.getFunction().hasFnAttribute(
-                             "indirect-tls-seg-refs");
+      const Function &F = MF.getFunction();
+
+      IndirectTlsSegRefs = F.hasFnAttribute("indirect-tls-seg-refs");
+
+      if (F.getFnAttribute("fentry-call").getValueAsString() != "true") {
+        if (F.hasFnAttribute("mnop-mcount"))
+          report_fatal_error("mnop-mcount only supported with fentry-call");
+        if (F.hasFnAttribute("mrecord-mcount"))
+          report_fatal_error("mrecord-mcount only supported with fentry-call");
+      }
 
       // OptFor[Min]Size are used in pattern predicates that isel is matching.
-      OptForMinSize = MF.getFunction().hasMinSize();
+      OptForMinSize = F.hasMinSize();
       return SelectionDAGISel::runOnMachineFunction(MF);
     }
 
