@@ -8547,8 +8547,7 @@ void IntrinsicLibrary::genTokenize(llvm::ArrayRef<fir::ExtendedValue> args) {
   // TOKENS is CHARACTER.  For form 2, FIRST is INTEGER.
   mlir::Type thirdArgEleTy = fir::getElementTypeOf(args[2]);
   bool isForm1 = fir::isa_char(thirdArgEleTy);
-  bool isForm2 = fir::isa_integer(thirdArgEleTy);
-  assert((isForm1 || isForm2) &&
+  assert((isForm1 || fir::isa_integer(thirdArgEleTy)) &&
          "TOKENIZE third argument must be CHARACTER or INTEGER");
 
   mlir::Value stringBox = builder.createBox(loc, string);
