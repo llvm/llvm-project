@@ -14,7 +14,7 @@
 //===----------------------------------------------------------------------===//
 
 def C1UltraModel : SchedMachineModel {
-  let IssueWidth            =  11;
+  let IssueWidth            =  10;
   let MicroOpBufferSize     = 320; // Entries in micro-op re-order buffer. NOTE: Copied from Neoverse-V3
   let LoadLatency           =   4; // Optimistic load latency. NOTE: Copied from Neoverse-V3
   let MispredictPenalty     =  10; // Extra cycles for mispredicted branch.  NOTE: Copied from N3.
