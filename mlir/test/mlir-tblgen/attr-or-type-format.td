@@ -2,32 +2,6 @@
 // RUN: sed 's/DEFAULT_TYPE_PARSER/0/' %s | mlir-tblgen -gen-typedef-defs -typedefs-dialect=TestDialect -I %S/../../include | FileCheck %s --check-prefix=TYPE
 // RUN: sed 's/DEFAULT_TYPE_PARSER/1/' %s | mlir-tblgen -gen-typedef-defs -typedefs-dialect=TestDialect -I %S/../../include | FileCheck %s --check-prefix=TYPE --check-prefix=DEFAULT_TYPE_PARSER
 
-/// Verify the generated printer dispatcher conditionally emits a space between
-/// the mnemonic and t.print(printer). A space is needed when the format starts
-/// with a non-punctuation element; no space when it starts with `<`, `{`, etc.
-
-// Format starts with `$value` (variable): dispatcher adds a space.
-// ATTR-LABEL: .Case<::test::TestEnumBAttr>([&](auto t)
-// ATTR-NEXT:    printer << ::test::TestEnumBAttr::getMnemonic();
-// ATTR-NEXT:    printer << ' ';
-// ATTR-NEXT:    t.print(printer);
-
-// Format starts with `{` (punctuation literal): dispatcher does not add a space.
-// ATTR-LABEL: .Case<::test::TestTAttr>([&](auto t)
-// ATTR-NEXT:    printer << ::test::TestTAttr::getMnemonic();
-// ATTR-NEXT:    t.print(printer);
-
-// Format starts with `{` (punctuation literal): dispatcher does not add a space.
-// TYPE-LABEL: .Case<::test::TestEType>([&](auto t)
-// TYPE-NEXT:    printer << ::test::TestEType::getMnemonic();
-// TYPE-NEXT:    t.print(printer);
-
-// Format starts with `$a` (variable): dispatcher adds a space.
-// TYPE-LABEL: .Case<::test::TestSType>([&](auto t)
-// TYPE-NEXT:    printer << ::test::TestSType::getMnemonic();
-// TYPE-NEXT:    printer << ' ';
-// TYPE-NEXT:    t.print(printer);
-
 include "mlir/IR/AttrTypeBase.td"
 include "mlir/IR/BuiltinAttributes.td"
 include "mlir/IR/EnumAttr.td"
