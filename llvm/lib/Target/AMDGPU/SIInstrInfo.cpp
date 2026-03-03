@@ -7728,7 +7728,7 @@ bool SIInstrWorklist::isDeferred(MachineInstr *MI) {
 }
 
 // Legalize size mismatches between 16bit and 32bit registers in v2s copy
-// lowering (change spgr to vgpr).
+// lowering (change sgpr to vgpr).
 // This is mainly caused by 16bit SALU and 16bit VALU using reg with different
 // size. Need to legalize the size of the operands during the vgpr lowering
 // chain. This can be removed after we have sgpr16 in place
