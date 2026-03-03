@@ -54,11 +54,11 @@ declare void @free(ptr)
 ; CHECK-NEXT:    [[ALLOC:%.*]] = call ptr @myAlloc(i64 [[THIS_ARG]], i32 32)
 ; CHECK-NEXT:    [[HDL:%.*]] = call noalias nonnull ptr @llvm.coro.begin(token [[ID]], ptr [[ALLOC]])
 ; CHECK-NEXT:    store ptr @f_copy.resume, ptr [[HDL]], align 8
-; CHECK-NEXT:    [[DESTROY_ADDR:%.*]] = getelementptr inbounds nuw [[F_COPY_FRAME:%.*]], ptr [[HDL]], i32 0, i32 1
+; CHECK-NEXT:    [[DESTROY_ADDR:%.*]] = getelementptr inbounds i8, ptr [[HDL]], i64 8
 ; CHECK-NEXT:    store ptr @f_copy.destroy, ptr [[DESTROY_ADDR]], align 8
-; CHECK-NEXT:    [[THIS_SPILL_ADDR:%.*]] = getelementptr inbounds [[F_COPY_FRAME]], ptr [[HDL]], i32 0, i32 2
+; CHECK-NEXT:    [[THIS_SPILL_ADDR:%.*]] = getelementptr inbounds i8, ptr [[HDL]], i64 16
 ; CHECK-NEXT:    store i64 [[THIS_ARG]], ptr [[THIS_SPILL_ADDR]], align 4
-; CHECK-NEXT:    [[INDEX_ADDR1:%.*]] = getelementptr inbounds nuw [[F_COPY_FRAME]], ptr [[HDL]], i32 0, i32 3
+; CHECK-NEXT:    [[INDEX_ADDR1:%.*]] = getelementptr inbounds i8, ptr [[HDL]], i64 24
 ; CHECK-NEXT:    store i1 false, ptr [[INDEX_ADDR1]], align 1
 ; CHECK-NEXT:    ret ptr [[HDL]]
 ;
@@ -66,7 +66,7 @@ declare void @free(ptr)
 ; CHECK-LABEL: define internal fastcc void @f_copy.resume(
 ; CHECK-SAME: ptr noundef nonnull align 8 dereferenceable(32) [[HDL:%.*]]) {
 ; CHECK-NEXT:  [[ENTRY_RESUME:.*:]]
-; CHECK-NEXT:    [[THIS_RELOAD_ADDR:%.*]] = getelementptr inbounds [[F_COPY_FRAME:%.*]], ptr [[HDL]], i32 0, i32 2
+; CHECK-NEXT:    [[THIS_RELOAD_ADDR:%.*]] = getelementptr inbounds i8, ptr [[HDL]], i64 16
 ; CHECK-NEXT:    [[THIS_RELOAD:%.*]] = load i64, ptr [[THIS_RELOAD_ADDR]], align 4
 ; CHECK-NEXT:    call void @print2(i64 [[THIS_RELOAD]])
 ; CHECK-NEXT:    call void @free(ptr [[HDL]])

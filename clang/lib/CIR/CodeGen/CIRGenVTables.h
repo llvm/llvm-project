@@ -95,6 +95,11 @@ public:
   /// Emit the associated thunks for the given global decl.
   void emitThunks(GlobalDecl gd);
 
+  /// Emit a thunk for the given global decl if needed, or return an existing
+  /// thunk.
+  cir::FuncOp maybeEmitThunk(GlobalDecl gd, const ThunkInfo &thunkAdjustments,
+                             bool forVTable);
+
   /// Generate all the class data required to be generated upon definition of a
   /// KeyFunction. This includes the vtable, the RTTI data structure (if RTTI
   /// is enabled) and the VTT (if the class has virtual bases).

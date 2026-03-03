@@ -42,11 +42,69 @@ def VectorElementTypeInterface : TypeInterface<"VectorElementTypeInterface"> {
 }
 
 //===----------------------------------------------------------------------===//
+// DenseElementTypeInterface
+//===----------------------------------------------------------------------===//
+
+def DenseElementTypeInterface : TypeInterface<"DenseElementType"> {
+  let cppNamespace = "::mlir";
+  let description = [{
+    This interface allows custom types to be used as element types in
+    DenseElementsAttr. Types implementing this interface define:
+
+    1. The bit size for element storage.
+    2. Helper methods for converting from/to Attribute. This assumes that there
+       is a corresponding attribute for each type that implements this
+       interface.
+
+    The helper methods for converting from/to Attribute are utilized when
+    parsing/printing IR or iterating over the elements via Attribute.
+  }];
+
+  let methods = [
+    InterfaceMethod<
+      /*desc=*/[{
+        Return the number of bits required to store one element in dense
+        storage.
+        
+        Note: The DenseElementsAttr infrastructure will automatically align
+        every element to a full byte in storage. This limitation could be lifted
+        in the future to support dense packing of non-byte-sized elements.
+      }],
+      /*retTy=*/"size_t",
+      /*methodName=*/"getDenseElementBitSize",
+      /*args=*/(ins)
+    >,
+    InterfaceMethod<
+      /*desc=*/[{
+        Attribute deserialization / attribute factory: Convert raw storage bytes
+        into an MLIR attribute. The size of `rawData` is
+        "ceilDiv(getDenseElementBitSize(), 8)".
+      }],
+      /*retTy=*/"::mlir::Attribute",
+      /*methodName=*/"convertToAttribute",
+      /*args=*/(ins "::llvm::ArrayRef<char>":$rawData)
+    >,
+    InterfaceMethod<
+      /*desc=*/[{
+        Attribute serialization: Convert an MLIR attribute into raw bytes.
+        Implementations must append "getDenseElementBitSize() / 8" values to
+        `result`. Return "failure" if the attribute is incompatible with this
+        element type.
+      }],
+      /*retTy=*/"::llvm::LogicalResult",
+      /*methodName=*/"convertFromAttribute",
+      /*args=*/(ins "::mlir::Attribute":$attr,
+                    "::llvm::SmallVectorImpl<char>&":$result)
+    >,
+  ];
+}
+
+//===----------------------------------------------------------------------===//
 // FloatTypeInterface
 //===----------------------------------------------------------------------===//
 
 def FloatTypeInterface : TypeInterface<"FloatType",
-    [VectorElementTypeInterface]> {
+    [DenseElementTypeInterface, VectorElementTypeInterface]> {
   let cppNamespace = "::mlir";
   let description = [{
     This type interface should be implemented by all floating-point types. It
@@ -82,6 +140,21 @@ def FloatTypeInterface : TypeInterface<"FloatType",
     /// Return the width of the mantissa of this type.
     /// The width includes the integer bit.
     unsigned getFPMantissaWidth();
+  }];
+
+  let extraTraitClassDeclaration = [{
+    /// DenseElementTypeInterface implementations for float types.
+    size_t getDenseElementBitSize() const {
+      return ::mlir::detail::getFloatTypeDenseElementBitSize($_type);
+    }
+    ::mlir::Attribute convertToAttribute(::llvm::ArrayRef<char> rawData) const {
+      return ::mlir::detail::convertFloatTypeToAttribute($_type, rawData);
+    }
+    ::llvm::LogicalResult
+    convertFromAttribute(::mlir::Attribute attr,
+                         ::llvm::SmallVectorImpl<char> &result) const {
+      return ::mlir::detail::convertFloatTypeFromAttribute($_type, attr, result);
+    }
   }];
 }
 

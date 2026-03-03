@@ -49161,20 +49161,20 @@ static SDValue combineSetCCAtomicArith(SDValue Cmp, X86::CondCode &CC,
     APInt IncComparison = Comparison + 1;
     if (IncComparison == NegAddend) {
       if (CC == X86::COND_A && !Comparison.isMaxValue()) {
-        Comparison = IncComparison;
+        Comparison = std::move(IncComparison);
         CC = X86::COND_AE;
       } else if (CC == X86::COND_LE && !Comparison.isMaxSignedValue()) {
-        Comparison = IncComparison;
+        Comparison = std::move(IncComparison);
         CC = X86::COND_L;
       }
     }
     APInt DecComparison = Comparison - 1;
     if (DecComparison == NegAddend) {
       if (CC == X86::COND_AE && !Comparison.isMinValue()) {
-        Comparison = DecComparison;
+        Comparison = std::move(DecComparison);
         CC = X86::COND_A;
       } else if (CC == X86::COND_L && !Comparison.isMinSignedValue()) {
-        Comparison = DecComparison;
+        Comparison = std::move(DecComparison);
         CC = X86::COND_LE;
       }
     }
