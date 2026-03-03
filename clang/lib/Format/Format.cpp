@@ -4327,6 +4327,7 @@ LangOptions getFormattingLangOpts(const FormatStyle &Style) {
   }
 
   LangOpts.Char8 = SinceCpp20;
+  LangOpts.AllowLiteralDigitSeparator = LangOpts.CPlusPlus14 || LangOpts.C23;
   // Turning on digraphs in standards before C++0x is error-prone, because e.g.
   // the sequence "<::" will be unconditionally treated as "[:".
   // Cf. Lexer::LexTokenInternal.
