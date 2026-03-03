@@ -744,13 +744,6 @@ void ReassociatePass::RewriteExprTree(BinaryOperator *I,
       if (ExpressionChangedStart == I)
         break;
 
-      // Discard any debug info related to the expressions that has changed (we
-      // can leave debug info related to the root and any operation that didn't
-      // change, since the result of the expression tree should be the same
-      // even after reassociation).
-      if (ClearFlags)
-        replaceDbgUsesWithUndef(ExpressionChangedStart);
-
       ExpressionChangedStart->moveBefore(I->getIterator());
       ExpressionChangedStart =
           cast<BinaryOperator>(*ExpressionChangedStart->user_begin());

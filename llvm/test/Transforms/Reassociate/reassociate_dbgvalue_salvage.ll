@@ -2,7 +2,8 @@
 ; RUN: opt < %s -passes=reassociate -S -o - | FileCheck %s
 
 ; After reassociation m1 and m2 aren't calculated as m1=c*a and m2=c*b any longer.
-; So let's verify that the dbg.value nodes for m1 and m3 are invalidated.
+; So let's verify that the dbg.value nodes for m1 and m2 are salvaged
+; using DIArgList expressions that reference the original operands.
 
 source_filename = "reassociate_dbgvalue_discard.c"
 target datalayout = "e-m:e-i64:64-f80:128-n8:16:32:64-S128"
