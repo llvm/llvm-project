@@ -93,7 +93,7 @@ private:
                  MachineInstr &MI) const;
   bool selectUnmergeValues(MachineInstr &MI) const;
   void addVectorLoadStoreOperands(MachineInstr &I,
-                                  SmallVectorImpl<SrcOp> &SrcOps,
+                                  SmallVectorImpl<Register> &SrcOps,
                                   unsigned &CurOp, bool IsMasked,
                                   bool IsStridedOrIndexed,
                                   LLT *IndexVT = nullptr) const;
@@ -723,7 +723,7 @@ static unsigned selectRegImmLoadStoreOp(unsigned GenericOpc, unsigned OpSize) {
 }
 
 void RISCVInstructionSelector::addVectorLoadStoreOperands(
-    MachineInstr &I, SmallVectorImpl<SrcOp> &SrcOps, unsigned &CurOp,
+    MachineInstr &I, SmallVectorImpl<Register> &SrcOps, unsigned &CurOp,
     bool IsMasked, bool IsStridedOrIndexed, LLT *IndexVT) const {
   // Base Pointer
   auto PtrReg = I.getOperand(CurOp++).getReg();
@@ -770,7 +770,7 @@ bool RISCVInstructionSelector::selectIntrinsicWithSideEffects(
     // Sources
     bool HasPassthruOperand = IntrinID != Intrinsic::riscv_vlm;
     unsigned CurOp = 2;
-    SmallVector<SrcOp, 4> SrcOps; // Source registers.
+    SmallVector<Register, 4> SrcOps; // Source registers.
 
     // Passthru
     if (HasPassthruOperand) {
@@ -789,8 +789,8 @@ bool RISCVInstructionSelector::selectIntrinsicWithSideEffects(
 
     MachineInstrBuilder PseudoMI =
         BuildMI(*I.getParent(), I, I.getDebugLoc(), TII.get(P->Pseudo), DstReg);
-    for (const auto &SrcOp : SrcOps)
-      SrcOp.addSrcToMIB(PseudoMI);
+    for (Register Reg : SrcOps)
+      PseudoMI.addReg(Reg);
 
     // Select VL
     auto VLOpFn = renderVLOp(I.getOperand(CurOp++));
@@ -830,7 +830,7 @@ bool RISCVInstructionSelector::selectIntrinsicWithSideEffects(
     // Sources
     bool HasPassthruOperand = IntrinID != Intrinsic::riscv_vlm;
     unsigned CurOp = 2;
-    SmallVector<SrcOp, 4> SrcOps; // Source registers.
+    SmallVector<Register, 4> SrcOps; // Source registers.
 
     // Passthru
     if (HasPassthruOperand) {
@@ -857,8 +857,8 @@ bool RISCVInstructionSelector::selectIntrinsicWithSideEffects(
 
     MachineInstrBuilder PseudoMI =
         BuildMI(*I.getParent(), I, I.getDebugLoc(), TII.get(P->Pseudo), DstReg);
-    for (const auto &SrcOp : SrcOps)
-      SrcOp.addSrcToMIB(PseudoMI);
+    for (Register Reg : SrcOps)
+      PseudoMI.addReg(Reg);
 
     // Select VL
     auto VLOpFn = renderVLOp(I.getOperand(CurOp++));
@@ -895,7 +895,7 @@ bool RISCVInstructionSelector::selectIntrinsicWithSideEffects(
 
     // Sources
     unsigned CurOp = 1;
-    SmallVector<SrcOp, 4> SrcOps; // Source registers.
+    SmallVector<Register, 4> SrcOps; // Source registers.
 
     // Store value
     auto PassthruReg = I.getOperand(CurOp++).getReg();
@@ -909,8 +909,8 @@ bool RISCVInstructionSelector::selectIntrinsicWithSideEffects(
 
     MachineInstrBuilder PseudoMI =
         BuildMI(*I.getParent(), I, I.getDebugLoc(), TII.get(P->Pseudo));
-    for (const auto &SrcOp : SrcOps)
-      SrcOp.addSrcToMIB(PseudoMI);
+    for (Register Reg : SrcOps)
+      PseudoMI.addReg(Reg);
 
     // Select VL
     auto VLOpFn = renderVLOp(I.getOperand(CurOp++));
@@ -940,7 +940,7 @@ bool RISCVInstructionSelector::selectIntrinsicWithSideEffects(
 
     // Sources
     unsigned CurOp = 1;
-    SmallVector<SrcOp, 4> SrcOps; // Source registers.
+    SmallVector<Register, 4> SrcOps; // Source registers.
 
     // Store value
     auto PassthruReg = I.getOperand(CurOp++).getReg();
@@ -963,8 +963,8 @@ bool RISCVInstructionSelector::selectIntrinsicWithSideEffects(
 
     MachineInstrBuilder PseudoMI =
         BuildMI(*I.getParent(), I, I.getDebugLoc(), TII.get(P->Pseudo));
-    for (const auto &SrcOp : SrcOps)
-      SrcOp.addSrcToMIB(PseudoMI);
+    for (Register Reg : SrcOps)
+      PseudoMI.addReg(Reg);
 
     // Select VL
     auto VLOpFn = renderVLOp(I.getOperand(CurOp++));
