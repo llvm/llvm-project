@@ -717,3 +717,184 @@ loop.latch:
 exit:
   ret void
 }
+
+define void @sinkable_predicated_store(ptr %A, ptr %B) {
+; UNROLL-LABEL: @sinkable_predicated_store(
+; UNROLL-NEXT:  entry:
+; UNROLL-NEXT:    [[SCEVGEP:%.*]] = getelementptr i8, ptr [[A:%.*]], i64 404
+; UNROLL-NEXT:    [[SCEVGEP1:%.*]] = getelementptr i8, ptr [[B:%.*]], i64 404
+; UNROLL-NEXT:    [[BOUND0:%.*]] = icmp ult ptr [[A]], [[SCEVGEP1]]
+; UNROLL-NEXT:    [[BOUND1:%.*]] = icmp ult ptr [[B]], [[SCEVGEP]]
+; UNROLL-NEXT:    [[FOUND_CONFLICT:%.*]] = and i1 [[BOUND0]], [[BOUND1]]
+; UNROLL-NEXT:    br i1 [[FOUND_CONFLICT]], label [[SCALAR_PH:%.*]], label [[VECTOR_BODY:%.*]]
+; UNROLL:       vector.body:
+; UNROLL-NEXT:    [[INDEX:%.*]] = phi i64 [ [[INDEX_NEXT:%.*]], [[VECTOR_BODY]] ], [ 0, [[ENTRY:%.*]] ]
+; UNROLL-NEXT:    [[TMP0:%.*]] = add i64 [[INDEX]], 1
+; UNROLL-NEXT:    [[TMP1:%.*]] = getelementptr i32, ptr [[A]], i64 [[INDEX]]
+; UNROLL-NEXT:    [[TMP2:%.*]] = getelementptr i32, ptr [[A]], i64 [[TMP0]]
+; UNROLL-NEXT:    [[TMP3:%.*]] = getelementptr i32, ptr [[B]], i64 [[INDEX]]
+; UNROLL-NEXT:    [[TMP4:%.*]] = getelementptr i32, ptr [[B]], i64 [[TMP0]]
+; UNROLL-NEXT:    [[TMP5:%.*]] = load i32, ptr [[TMP3]], align 4, !alias.scope [[META8:![0-9]+]]
+; UNROLL-NEXT:    [[TMP6:%.*]] = load i32, ptr [[TMP4]], align 4, !alias.scope [[META8]]
+; UNROLL-NEXT:    [[TMP7:%.*]] = icmp eq i32 [[TMP5]], 0
+; UNROLL-NEXT:    [[TMP8:%.*]] = icmp eq i32 [[TMP6]], 0
+; UNROLL-NEXT:    [[TMP9:%.*]] = select i1 [[TMP7]], i32 0, i32 1
+; UNROLL-NEXT:    [[TMP10:%.*]] = select i1 [[TMP8]], i32 0, i32 1
+; UNROLL-NEXT:    store i32 [[TMP9]], ptr [[TMP1]], align 4, !alias.scope [[META11:![0-9]+]], !noalias [[META8]]
+; UNROLL-NEXT:    store i32 [[TMP10]], ptr [[TMP2]], align 4, !alias.scope [[META11]], !noalias [[META8]]
+; UNROLL-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 2
+; UNROLL-NEXT:    [[TMP11:%.*]] = icmp eq i64 [[INDEX_NEXT]], 100
+; UNROLL-NEXT:    br i1 [[TMP11]], label [[SCALAR_PH]], label [[VECTOR_BODY]], !llvm.loop [[LOOP13:![0-9]+]]
+; UNROLL:       scalar.ph:
+; UNROLL-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i64 [ 0, [[ENTRY]] ], [ 100, [[VECTOR_BODY]] ]
+; UNROLL-NEXT:    br label [[LOOP:%.*]]
+; UNROLL:       loop:
+; UNROLL-NEXT:    [[IV:%.*]] = phi i64 [ [[BC_RESUME_VAL]], [[SCALAR_PH]] ], [ [[IV_NEXT:%.*]], [[LOOP_LATCH:%.*]] ]
+; UNROLL-NEXT:    [[GEP_A:%.*]] = getelementptr i32, ptr [[A]], i64 [[IV]]
+; UNROLL-NEXT:    [[GEP_B:%.*]] = getelementptr i32, ptr [[B]], i64 [[IV]]
+; UNROLL-NEXT:    [[L:%.*]] = load i32, ptr [[GEP_B]], align 4
+; UNROLL-NEXT:    [[C:%.*]] = icmp eq i32 [[L]], 0
+; UNROLL-NEXT:    br i1 [[C]], label [[IF_THEN:%.*]], label [[IF_ELSE:%.*]]
+; UNROLL:       if.then:
+; UNROLL-NEXT:    store i32 0, ptr [[GEP_A]], align 4
+; UNROLL-NEXT:    br label [[LOOP_LATCH]]
+; UNROLL:       if.else:
+; UNROLL-NEXT:    store i32 1, ptr [[GEP_A]], align 4
+; UNROLL-NEXT:    br label [[LOOP_LATCH]]
+; UNROLL:       loop.latch:
+; UNROLL-NEXT:    [[IV_NEXT]] = add i64 [[IV]], 1
+; UNROLL-NEXT:    [[EC:%.*]] = icmp eq i64 [[IV]], 100
+; UNROLL-NEXT:    br i1 [[EC]], label [[FOR_END:%.*]], label [[LOOP]], !llvm.loop [[LOOP14:![0-9]+]]
+; UNROLL:       for.end:
+; UNROLL-NEXT:    ret void
+;
+; UNROLL-NOSIMPLIFY-LABEL: @sinkable_predicated_store(
+; UNROLL-NOSIMPLIFY-NEXT:  entry:
+; UNROLL-NOSIMPLIFY-NEXT:    br label [[VECTOR_MEMCHECK:%.*]]
+; UNROLL-NOSIMPLIFY:       vector.memcheck:
+; UNROLL-NOSIMPLIFY-NEXT:    [[SCEVGEP:%.*]] = getelementptr i8, ptr [[A:%.*]], i64 404
+; UNROLL-NOSIMPLIFY-NEXT:    [[SCEVGEP1:%.*]] = getelementptr i8, ptr [[B:%.*]], i64 404
+; UNROLL-NOSIMPLIFY-NEXT:    [[BOUND0:%.*]] = icmp ult ptr [[A]], [[SCEVGEP1]]
+; UNROLL-NOSIMPLIFY-NEXT:    [[BOUND1:%.*]] = icmp ult ptr [[B]], [[SCEVGEP]]
+; UNROLL-NOSIMPLIFY-NEXT:    [[FOUND_CONFLICT:%.*]] = and i1 [[BOUND0]], [[BOUND1]]
+; UNROLL-NOSIMPLIFY-NEXT:    br i1 [[FOUND_CONFLICT]], label [[SCALAR_PH:%.*]], label [[VECTOR_PH:%.*]]
+; UNROLL-NOSIMPLIFY:       vector.ph:
+; UNROLL-NOSIMPLIFY-NEXT:    br label [[VECTOR_BODY:%.*]]
+; UNROLL-NOSIMPLIFY:       vector.body:
+; UNROLL-NOSIMPLIFY-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, [[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], [[VECTOR_BODY]] ]
+; UNROLL-NOSIMPLIFY-NEXT:    [[TMP0:%.*]] = add i64 [[INDEX]], 1
+; UNROLL-NOSIMPLIFY-NEXT:    [[TMP1:%.*]] = getelementptr i32, ptr [[A]], i64 [[INDEX]]
+; UNROLL-NOSIMPLIFY-NEXT:    [[TMP2:%.*]] = getelementptr i32, ptr [[A]], i64 [[TMP0]]
+; UNROLL-NOSIMPLIFY-NEXT:    [[TMP3:%.*]] = getelementptr i32, ptr [[B]], i64 [[INDEX]]
+; UNROLL-NOSIMPLIFY-NEXT:    [[TMP4:%.*]] = getelementptr i32, ptr [[B]], i64 [[TMP0]]
+; UNROLL-NOSIMPLIFY-NEXT:    [[TMP5:%.*]] = load i32, ptr [[TMP3]], align 4, !alias.scope [[META9:![0-9]+]]
+; UNROLL-NOSIMPLIFY-NEXT:    [[TMP6:%.*]] = load i32, ptr [[TMP4]], align 4, !alias.scope [[META9]]
+; UNROLL-NOSIMPLIFY-NEXT:    [[TMP7:%.*]] = icmp eq i32 [[TMP5]], 0
+; UNROLL-NOSIMPLIFY-NEXT:    [[TMP8:%.*]] = icmp eq i32 [[TMP6]], 0
+; UNROLL-NOSIMPLIFY-NEXT:    [[TMP9:%.*]] = select i1 [[TMP7]], i32 0, i32 1
+; UNROLL-NOSIMPLIFY-NEXT:    [[TMP10:%.*]] = select i1 [[TMP8]], i32 0, i32 1
+; UNROLL-NOSIMPLIFY-NEXT:    store i32 [[TMP9]], ptr [[TMP1]], align 4, !alias.scope [[META12:![0-9]+]], !noalias [[META9]]
+; UNROLL-NOSIMPLIFY-NEXT:    store i32 [[TMP10]], ptr [[TMP2]], align 4, !alias.scope [[META12]], !noalias [[META9]]
+; UNROLL-NOSIMPLIFY-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 2
+; UNROLL-NOSIMPLIFY-NEXT:    [[TMP11:%.*]] = icmp eq i64 [[INDEX_NEXT]], 100
+; UNROLL-NOSIMPLIFY-NEXT:    br i1 [[TMP11]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP14:![0-9]+]]
+; UNROLL-NOSIMPLIFY:       middle.block:
+; UNROLL-NOSIMPLIFY-NEXT:    br label [[SCALAR_PH]]
+; UNROLL-NOSIMPLIFY:       scalar.ph:
+; UNROLL-NOSIMPLIFY-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i64 [ 100, [[MIDDLE_BLOCK]] ], [ 0, [[VECTOR_MEMCHECK]] ]
+; UNROLL-NOSIMPLIFY-NEXT:    br label [[LOOP:%.*]]
+; UNROLL-NOSIMPLIFY:       loop:
+; UNROLL-NOSIMPLIFY-NEXT:    [[IV:%.*]] = phi i64 [ [[BC_RESUME_VAL]], [[SCALAR_PH]] ], [ [[IV_NEXT:%.*]], [[LOOP_LATCH:%.*]] ]
+; UNROLL-NOSIMPLIFY-NEXT:    [[GEP_A:%.*]] = getelementptr i32, ptr [[A]], i64 [[IV]]
+; UNROLL-NOSIMPLIFY-NEXT:    [[GEP_B:%.*]] = getelementptr i32, ptr [[B]], i64 [[IV]]
+; UNROLL-NOSIMPLIFY-NEXT:    [[L:%.*]] = load i32, ptr [[GEP_B]], align 4
+; UNROLL-NOSIMPLIFY-NEXT:    [[C:%.*]] = icmp eq i32 [[L]], 0
+; UNROLL-NOSIMPLIFY-NEXT:    br i1 [[C]], label [[IF_THEN:%.*]], label [[IF_ELSE:%.*]]
+; UNROLL-NOSIMPLIFY:       if.then:
+; UNROLL-NOSIMPLIFY-NEXT:    store i32 0, ptr [[GEP_A]], align 4
+; UNROLL-NOSIMPLIFY-NEXT:    br label [[LOOP_LATCH]]
+; UNROLL-NOSIMPLIFY:       if.else:
+; UNROLL-NOSIMPLIFY-NEXT:    store i32 1, ptr [[GEP_A]], align 4
+; UNROLL-NOSIMPLIFY-NEXT:    br label [[LOOP_LATCH]]
+; UNROLL-NOSIMPLIFY:       loop.latch:
+; UNROLL-NOSIMPLIFY-NEXT:    [[IV_NEXT]] = add i64 [[IV]], 1
+; UNROLL-NOSIMPLIFY-NEXT:    [[EC:%.*]] = icmp eq i64 [[IV]], 100
+; UNROLL-NOSIMPLIFY-NEXT:    br i1 [[EC]], label [[FOR_END:%.*]], label [[LOOP]], !llvm.loop [[LOOP15:![0-9]+]]
+; UNROLL-NOSIMPLIFY:       for.end:
+; UNROLL-NOSIMPLIFY-NEXT:    ret void
+;
+; VEC-LABEL: @sinkable_predicated_store(
+; VEC-NEXT:  entry:
+; VEC-NEXT:    [[SCEVGEP:%.*]] = getelementptr i8, ptr [[A:%.*]], i64 404
+; VEC-NEXT:    [[SCEVGEP1:%.*]] = getelementptr i8, ptr [[B:%.*]], i64 404
+; VEC-NEXT:    [[BOUND0:%.*]] = icmp ult ptr [[A]], [[SCEVGEP1]]
+; VEC-NEXT:    [[BOUND1:%.*]] = icmp ult ptr [[B]], [[SCEVGEP]]
+; VEC-NEXT:    [[FOUND_CONFLICT:%.*]] = and i1 [[BOUND0]], [[BOUND1]]
+; VEC-NEXT:    br i1 [[FOUND_CONFLICT]], label [[SCALAR_PH:%.*]], label [[VECTOR_BODY:%.*]]
+; VEC:       vector.body:
+; VEC-NEXT:    [[INDEX:%.*]] = phi i64 [ [[INDEX_NEXT:%.*]], [[VECTOR_BODY]] ], [ 0, [[ENTRY:%.*]] ]
+; VEC-NEXT:    [[TMP0:%.*]] = add i64 [[INDEX]], 0
+; VEC-NEXT:    [[TMP1:%.*]] = add i64 [[INDEX]], 1
+; VEC-NEXT:    [[TMP2:%.*]] = getelementptr i32, ptr [[A]], i64 [[TMP0]]
+; VEC-NEXT:    [[TMP3:%.*]] = getelementptr i32, ptr [[A]], i64 [[TMP1]]
+; VEC-NEXT:    [[TMP4:%.*]] = getelementptr i32, ptr [[B]], i64 [[TMP0]]
+; VEC-NEXT:    [[WIDE_LOAD:%.*]] = load <2 x i32>, ptr [[TMP4]], align 4, !alias.scope [[META8:![0-9]+]]
+; VEC-NEXT:    [[TMP5:%.*]] = icmp eq <2 x i32> [[WIDE_LOAD]], zeroinitializer
+; VEC-NEXT:    [[TMP6:%.*]] = select <2 x i1> [[TMP5]], <2 x i32> zeroinitializer, <2 x i32> splat (i32 1)
+; VEC-NEXT:    [[TMP7:%.*]] = extractelement <2 x i32> [[TMP6]], i32 0
+; VEC-NEXT:    store i32 [[TMP7]], ptr [[TMP2]], align 4, !alias.scope [[META11:![0-9]+]], !noalias [[META8]]
+; VEC-NEXT:    [[TMP8:%.*]] = extractelement <2 x i32> [[TMP6]], i32 1
+; VEC-NEXT:    store i32 [[TMP8]], ptr [[TMP3]], align 4, !alias.scope [[META11]], !noalias [[META8]]
+; VEC-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 2
+; VEC-NEXT:    [[TMP9:%.*]] = icmp eq i64 [[INDEX_NEXT]], 100
+; VEC-NEXT:    br i1 [[TMP9]], label [[SCALAR_PH]], label [[VECTOR_BODY]], !llvm.loop [[LOOP13:![0-9]+]]
+; VEC:       scalar.ph:
+; VEC-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i64 [ 0, [[ENTRY]] ], [ 100, [[VECTOR_BODY]] ]
+; VEC-NEXT:    br label [[LOOP:%.*]]
+; VEC:       loop:
+; VEC-NEXT:    [[IV:%.*]] = phi i64 [ [[BC_RESUME_VAL]], [[SCALAR_PH]] ], [ [[IV_NEXT:%.*]], [[LOOP_LATCH:%.*]] ]
+; VEC-NEXT:    [[GEP_A:%.*]] = getelementptr i32, ptr [[A]], i64 [[IV]]
+; VEC-NEXT:    [[GEP_B:%.*]] = getelementptr i32, ptr [[B]], i64 [[IV]]
+; VEC-NEXT:    [[L:%.*]] = load i32, ptr [[GEP_B]], align 4
+; VEC-NEXT:    [[C:%.*]] = icmp eq i32 [[L]], 0
+; VEC-NEXT:    br i1 [[C]], label [[IF_THEN:%.*]], label [[IF_ELSE:%.*]]
+; VEC:       if.then:
+; VEC-NEXT:    store i32 0, ptr [[GEP_A]], align 4
+; VEC-NEXT:    br label [[LOOP_LATCH]]
+; VEC:       if.else:
+; VEC-NEXT:    store i32 1, ptr [[GEP_A]], align 4
+; VEC-NEXT:    br label [[LOOP_LATCH]]
+; VEC:       loop.latch:
+; VEC-NEXT:    [[IV_NEXT]] = add i64 [[IV]], 1
+; VEC-NEXT:    [[EC:%.*]] = icmp eq i64 [[IV]], 100
+; VEC-NEXT:    br i1 [[EC]], label [[FOR_END:%.*]], label [[LOOP]], !llvm.loop [[LOOP14:![0-9]+]]
+; VEC:       for.end:
+; VEC-NEXT:    ret void
+;
+entry:
+  br label %loop
+
+loop:
+  %iv = phi i64 [ 0, %entry ], [ %iv.next, %loop.latch ]
+  %gep.A = getelementptr i32, ptr %A, i64 %iv
+  %gep.B = getelementptr i32, ptr %B, i64 %iv
+  %l = load i32, ptr %gep.B
+  %c = icmp eq i32 %l, 0
+  br i1 %c, label %if.then, label %if.else
+
+if.then:
+  store i32 0, ptr %gep.A, align 4
+  br label %loop.latch
+
+if.else:
+  store i32 1, ptr %gep.A, align 4
+  br label %loop.latch
+
+loop.latch:
+  %iv.next = add i64 %iv, 1
+  %ec = icmp eq i64 %iv, 100
+  br i1 %ec, label %for.end, label %loop
+
+for.end:
+  ret void
+}
