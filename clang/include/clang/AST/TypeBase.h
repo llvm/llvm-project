@@ -4459,8 +4459,7 @@ public:
 
   /// Given a row-major flattened index \p Index, return the corresponding
   /// {row, column} position.
-  std::pair<unsigned, unsigned>
-  getRowMajorRowAndColumn(unsigned Index) const {
+  std::pair<unsigned, unsigned> getRowMajorRowAndColumn(unsigned Index) const {
     return {Index / NumColumns, Index % NumColumns};
   }
 
