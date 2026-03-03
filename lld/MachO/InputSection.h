@@ -363,6 +363,7 @@ constexpr const char staticInit[] = "__StaticInit";
 constexpr const char stringTable[] = "__string_table";
 constexpr const char stubHelper[] = "__stub_helper";
 constexpr const char stubs[] = "__stubs";
+constexpr const char authStubs[] = "__auth_stubs";
 constexpr const char swift[] = "__swift";
 constexpr const char symbolTable[] = "__symbol_table";
 constexpr const char textCoalNt[] = "__textcoal_nt";

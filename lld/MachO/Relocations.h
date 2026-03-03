@@ -41,7 +41,8 @@ enum class RelocAttrBits {
   LOAD = 1 << 13,      // Relaxable indirect load
   POINTER = 1 << 14,   // Non-relaxable indirect load (pointer is taken)
   UNSIGNED = 1 << 15,  // *_UNSIGNED relocs
-  LLVM_MARK_AS_BITMASK_ENUM(/*LargestValue*/ (1 << 16) - 1),
+  AUTH = 1 << 16,      // ARM64e ptrauth relocs
+  LLVM_MARK_AS_BITMASK_ENUM(/*LargestValue*/ (1 << 17) - 1),
 };
 // Note: SUBTRACTOR always pairs with UNSIGNED (a delta between two symbols).
 
@@ -51,16 +52,33 @@ struct RelocAttrs {
   bool hasAttr(RelocAttrBits b) const { return (bits & b) == b; }
 };
 
+// ARM64e ptrauth metadata. Stored as uint8_t/uint16_t to keep AuthReloc
+// the same size as int64_t.
+struct AuthInfo {
+  uint16_t diversity;
+  uint8_t key; // 0-3 (IA/IB/DA/DB)
+  uint8_t addrDiv;
+};
+
+struct AuthReloc {
+  int32_t addend;
+  AuthInfo info;
+};
+
 struct Relocation {
   uint8_t type = llvm::MachO::GENERIC_RELOC_INVALID;
   bool pcrel = false;
   uint8_t length = 0;
+  bool hasAuth = false; // ARM64e AUTH reloc; selects union member below.
   // The offset from the start of the subsection that this relocation belongs
   // to.
   uint32_t offset = 0;
   // Adding this offset to the address of the referent symbol or subsection
   // gives the destination that this relocation refers to.
-  int64_t addend = 0;
+  union {
+    int64_t addend = 0;
+    AuthReloc authData; // when hasAuth: 32-bit addend + auth fields
+  };
   llvm::PointerUnion<Symbol *, InputSection *> referent = nullptr;
 
   Relocation() = default;
@@ -70,6 +88,15 @@ struct Relocation {
              llvm::PointerUnion<Symbol *, InputSection *> referent)
       : type(type), pcrel(pcrel), length(length), offset(offset),
         addend(addend), referent(referent) {}
+
+  // Convenience accessors for auth metadata.
+  AuthInfo getAuthInfo() const {
+    assert(hasAuth);
+    return authData.info;
+  }
+  int64_t getAddend() const {
+    return hasAuth ? static_cast<int64_t>(authData.addend) : addend;
+  }
 
   InputSection *getReferentInputSection() const;
 
