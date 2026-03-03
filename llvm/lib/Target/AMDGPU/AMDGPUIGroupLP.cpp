@@ -752,11 +752,11 @@ void PipelineSolver::greedyFind(
       AddedEdges = BestEdges;
     else
       AddedEdges.splice(std::prev(AddedEdges.cend()), BestEdges);
-    std::for_each(BestEdges.begin(), BestEdges.end(),
-                  [BestGroup](std::pair<SUnit *, SUnit *> E) {
-                    if (!BestGroup->tryAddEdge(E.first, E.second))
-                      llvm_unreachable("Edges known to be insertable.");
-                  });
+
+    for (const std::pair<SUnit *, SUnit *> &E : BestEdges) {
+      if (!BestGroup->tryAddEdge(E.first, E.second))
+        llvm_unreachable("Edges known to be insertable.");
+    }
 
     LLVM_DEBUG(dbgs() << "Best Group has ID: " << BestGroupID << " and Mask"
                       << (int)BestGroup->getMask() << "\n");
