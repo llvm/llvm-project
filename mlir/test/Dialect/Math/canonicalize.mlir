@@ -102,6 +102,24 @@ func.func @powf_fold_vec() -> (vector<4xf32>) {
   return %0 : vector<4xf32>
 }
 
+// CHECK-LABEL: @rsqrt_fold
+// CHECK: %[[cst:.+]] = arith.constant 5.000000e-01 : f32
+// CHECK: return %[[cst]]
+func.func @rsqrt_fold() -> f32 {
+  %c = arith.constant 4.0 : f32
+  %r = math.rsqrt %c : f32
+  return %r : f32
+}
+
+// CHECK-LABEL: @rsqrt_fold_vec
+// CHECK: %[[cst:.+]] = arith.constant dense<[1.000000e+00, 5.000000e-01]> : vector<2xf32>
+// CHECK: return %[[cst]]
+func.func @rsqrt_fold_vec() -> (vector<2xf32>) {
+  %v1 = arith.constant dense<[1.0, 4.0]> : vector<2xf32>
+  %0 = math.rsqrt %v1 : vector<2xf32>
+  return %0 : vector<2xf32>
+}
+
 // CHECK-LABEL: @sqrt_fold
 // CHECK: %[[cst:.+]] = arith.constant 2.000000e+00 : f32
 // CHECK: return %[[cst]]
