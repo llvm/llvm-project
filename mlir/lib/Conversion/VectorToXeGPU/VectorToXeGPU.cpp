@@ -746,7 +746,7 @@ struct LoadLowering : public OpRewritePattern<vector::LoadOp> {
     Location loc = loadOp.getLoc();
 
     VectorType vecTy = loadOp.getResult().getType();
-    auto memTy = cast<MemRefType>(loadOp.getBase().getType());
+    MemRefType memTy = loadOp.getBase().getType();
     if (failed(storeLoadPreconditions(rewriter, loadOp, vecTy, memTy)))
       return failure();
 
