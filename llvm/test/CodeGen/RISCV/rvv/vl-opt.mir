@@ -970,6 +970,7 @@ body: |
 ---
 # Although %vl doesn't dominate all uses of %x, we only need it to dominate the uses of %x in %bb.1 in order to sink it.
 name: vl_doesnt_dominate_sink_use_in_other_block
+tracksRegLiveness: true
 body: |
   ; CHECK-LABEL: name: vl_doesnt_dominate_sink_use_in_other_block
   ; CHECK: bb.0:
@@ -981,8 +982,9 @@ body: |
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT: bb.1:
   ; CHECK-NEXT:   successors: %bb.3(0x80000000)
+  ; CHECK-NEXT:   liveins: $x2
   ; CHECK-NEXT: {{  $}}
-  ; CHECK-NEXT:   %vl:gprnox0 = COPY $x1
+  ; CHECK-NEXT:   %vl:gprnox0 = COPY $x2
   ; CHECK-NEXT:   %x:vr = PseudoVLE32_V_M1 $noreg, $noreg, %vl /* vl */, 5 /* e32 */, 0 /* tu, mu */ :: (load unknown-size, align 1)
   ; CHECK-NEXT:   %y:vr = PseudoVADD_VV_M1 $noreg, %x, $noreg, %vl /* vl */, 5 /* e32 */, 0 /* tu, mu */
   ; CHECK-NEXT:   $v8 = COPY %y
@@ -991,22 +993,25 @@ body: |
   ; CHECK-NEXT: bb.2:
   ; CHECK-NEXT:   successors: %bb.3(0x80000000)
   ; CHECK-NEXT: {{  $}}
+  ; CHECK-NEXT:   %z:vr = COPY $noreg
   ; CHECK-NEXT:   PseudoBR %bb.3
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT: bb.3:
-  ; CHECK-NEXT:   %z:vr = PseudoVADD_VV_M1 $noreg, %x, $noreg, 0 /* vl */, 5 /* e32 */, 0 /* tu, mu */
+  ; CHECK-NEXT:   %phi:vr = PHI %x, %bb.1, %z, %bb.2
   bb.0:
     liveins: $x1
     BEQ $x1, $x0, %bb.1
     PseudoBR %bb.2
   bb.1:
+    liveins: $x2
     %x:vr = PseudoVLE32_V_M1 $noreg, $noreg, -1, 5 /* e32 */, 0 /* tu, mu */ :: (load unknown-size)
-    %vl:gprnox0 = COPY $x1
+    %vl:gprnox0 = COPY $x2
     %y:vr = PseudoVADD_VV_M1 $noreg, %x, $noreg, %vl, 5 /* e32 */, 0
     $v8 = COPY %y
     PseudoBR %bb.3
   bb.2:
+    %z:vr = COPY $noreg
     PseudoBR %bb.3
   bb.3:
-    %z:vr = PseudoVADD_VV_M1 $noreg, %x, $noreg, 0, 5 /* e32 */, 0
+    %phi:vr = PHI %x, %bb.1, %z, %bb.2
 ...
