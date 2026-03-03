@@ -139,7 +139,7 @@ exit:
 }
 
 ;; Possibly vectorizeable, but would require some runtime checks.
-define void @loop_contains_store_unsafe_dependency(ptr dereferenceable(40) noalias %array, ptr align 2 dereferenceable(80) readonly %pred) {
+define void @loop_contains_store_unsafe_dependency(ptr dereferenceable(40) noalias %array, ptr align 2 dereferenceable(80) %pred) {
 ; CHECK-LABEL: LV: Checking a loop in 'loop_contains_store_unsafe_dependency'
 ; CHECK:       LV: Not vectorizing: Loop may fault.
 entry:

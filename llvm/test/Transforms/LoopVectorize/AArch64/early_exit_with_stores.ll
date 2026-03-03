@@ -190,9 +190,9 @@ exit:
   ret void
 }
 
-define void @loop_contains_store_unsafe_dependency(ptr dereferenceable(40) noalias %array, ptr align 2 dereferenceable(80) readonly %pred) {
+define void @loop_contains_store_unsafe_dependency(ptr dereferenceable(40) noalias %array, ptr align 2 dereferenceable(80) %pred) {
 ; CHECK-LABEL: define void @loop_contains_store_unsafe_dependency(
-; CHECK-SAME: ptr noalias dereferenceable(40) [[ARRAY:%.*]], ptr readonly align 2 dereferenceable(80) [[PRED:%.*]]) #[[ATTR0]] {
+; CHECK-SAME: ptr noalias dereferenceable(40) [[ARRAY:%.*]], ptr align 2 dereferenceable(80) [[PRED:%.*]]) #[[ATTR0]] {
 ; CHECK-NEXT:  [[ENTRY:.*]]:
 ; CHECK-NEXT:    [[UNKNOWN_OFFSET:%.*]] = call i64 @get_an_unknown_offset()
 ; CHECK-NEXT:    [[UNKNOWN_CMP:%.*]] = icmp ult i64 [[UNKNOWN_OFFSET]], 20
@@ -382,51 +382,6 @@ for.body:
 for.inc:
   %iv.next = add nuw nsw i64 %iv, 1
   %counted.cond = icmp eq i64 %iv.next, %n
-  br i1 %counted.cond, label %exit, label %for.body
-
-exit:
-  ret void
-}
-
-define void @loop_contains_store_to_invariant_location(ptr dereferenceable(40) readonly %array, ptr align 2 dereferenceable(40) readonly %pred, ptr noalias %store_addr) {
-; CHECK-LABEL: define void @loop_contains_store_to_invariant_location(
-; CHECK-SAME: ptr readonly dereferenceable(40) [[ARRAY:%.*]], ptr readonly align 2 dereferenceable(40) [[PRED:%.*]], ptr noalias [[STORE_ADDR:%.*]]) #[[ATTR0]] {
-; CHECK-NEXT:  [[SCALAR_PH:.*]]:
-; CHECK-NEXT:    br label %[[FOR_BODY:.*]]
-; CHECK:       [[FOR_BODY]]:
-; CHECK-NEXT:    [[IV:%.*]] = phi i64 [ 0, %[[SCALAR_PH]] ], [ [[IV_NEXT:%.*]], %[[FOR_INC:.*]] ]
-; CHECK-NEXT:    [[ADDR:%.*]] = getelementptr inbounds nuw i16, ptr [[ARRAY]], i64 [[IV]]
-; CHECK-NEXT:    [[DATA:%.*]] = load i16, ptr [[ADDR]], align 2
-; CHECK-NEXT:    [[INC:%.*]] = add nsw i16 [[DATA]], 1
-; CHECK-NEXT:    store i16 [[INC]], ptr [[STORE_ADDR]], align 2
-; CHECK-NEXT:    [[EE_ADDR:%.*]] = getelementptr inbounds nuw i16, ptr [[PRED]], i64 [[IV]]
-; CHECK-NEXT:    [[EE_VAL:%.*]] = load i16, ptr [[EE_ADDR]], align 2
-; CHECK-NEXT:    [[EE_COND:%.*]] = icmp sgt i16 [[EE_VAL]], 500
-; CHECK-NEXT:    br i1 [[EE_COND]], label %[[EXIT:.*]], label %[[FOR_INC]]
-; CHECK:       [[FOR_INC]]:
-; CHECK-NEXT:    [[IV_NEXT]] = add nuw nsw i64 [[IV]], 1
-; CHECK-NEXT:    [[COUNTED_COND:%.*]] = icmp eq i64 [[IV_NEXT]], 20
-; CHECK-NEXT:    br i1 [[COUNTED_COND]], label %[[EXIT]], label %[[FOR_BODY]]
-; CHECK:       [[EXIT]]:
-; CHECK-NEXT:    ret void
-;
-entry:
-  br label %for.body
-
-for.body:
-  %iv = phi i64 [ 0, %entry ], [ %iv.next, %for.inc ]
-  %addr = getelementptr inbounds nuw i16, ptr %array, i64 %iv
-  %data = load i16, ptr %addr, align 2
-  %inc = add nsw i16 %data, 1
-  store i16 %inc, ptr %store_addr, align 2
-  %ee.addr = getelementptr inbounds nuw i16, ptr %pred, i64 %iv
-  %ee.val = load i16, ptr %ee.addr, align 2
-  %ee.cond = icmp sgt i16 %ee.val, 500
-  br i1 %ee.cond, label %exit, label %for.inc
-
-for.inc:
-  %iv.next = add nuw nsw i64 %iv, 1
-  %counted.cond = icmp eq i64 %iv.next, 20
   br i1 %counted.cond, label %exit, label %for.body
 
 exit:
