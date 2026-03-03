@@ -189,6 +189,29 @@ define float @copysign_simplify_demanded_bits_sign_multiple_use_cast_src(float %
   ret float %result
 }
 
+; Cannot simplify due to second use of %cast.sign
+define i32 @issue178245(i32 %i.0.i.i) {
+; CHECK-LABEL: @issue178245(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[TOBOOL104_I_I_NOT:%.*]] = icmp eq i32 [[I_0_I_I:%.*]], -1177359834
+; CHECK-NEXT:    [[CAST_SIGN:%.*]] = select i1 [[TOBOOL104_I_I_NOT]], float 0.000000e+00, float 0xFFFFFFFF60000000
+; CHECK-NEXT:    [[FCMP:%.*]] = fcmp uno float [[CAST_SIGN]], 0.000000e+00
+; CHECK-NEXT:    [[COPYSIGN:%.*]] = call float @llvm.copysign.f32(float 0.000000e+00, float [[CAST_SIGN]])
+; CHECK-NEXT:    [[TMP0:%.*]] = bitcast float [[COPYSIGN]] to i32
+; CHECK-NEXT:    [[RESULT:%.*]] = select i1 [[FCMP]], i32 0, i32 [[TMP0]]
+; CHECK-NEXT:    ret i32 [[RESULT]]
+;
+entry:
+  %tobool104.i.i.not = icmp eq i32 %i.0.i.i, -1177359834
+  %conv111.i.i = select i1 %tobool104.i.i.not, i32 0, i32 -5
+  %cast.sign = bitcast i32 %conv111.i.i to float
+  %fcmp = fcmp uno float %cast.sign, 0.000000e+00
+  %copysign = call float @llvm.copysign.f32(float 0.000000e+00, float %cast.sign)
+  %select = select i1 %fcmp, float 0.000000e+00, float %copysign
+  %result = bitcast float %select to i32
+  ret i32 %result
+}
+
 define float @copysign_simplify_demanded_bits_sign_constexpr(float %mag, float %sign) {
 ; CHECK-LABEL: @copysign_simplify_demanded_bits_sign_constexpr(
 ; CHECK-NEXT:    [[RESULT:%.*]] = call float @llvm.copysign.f32(float [[MAG:%.*]], float bitcast (i32 ptrtoint (ptr @copysign_simplify_demanded_bits_sign_constexpr to i32) to float))

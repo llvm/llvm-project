@@ -45,6 +45,8 @@ void registerOpenACCExtensions(mlir::DialectRegistry &registry) {
     fir::LLVMPointerType::attachInterface<
         OpenACCPointerLikeModel<fir::LLVMPointerType>>(*ctx);
 
+    fir::LogicalType::attachInterface<OpenACCReducibleLogicalModel>(*ctx);
+
     fir::ArrayCoorOp::attachInterface<
         PartialEntityAccessModel<fir::ArrayCoorOp>>(*ctx);
     fir::CoordinateOp::attachInterface<
@@ -96,6 +98,8 @@ void registerOpenACCExtensions(mlir::DialectRegistry &registry) {
                             mlir::acc::OpenACCDialect *dialect) {
     mlir::acc::LoopOp::attachInterface<OperationMoveModel<mlir::acc::LoopOp>>(
         *ctx);
+    mlir::acc::ReductionInitOp::attachInterface<
+        fir::acc::ReductionInitOpFortranObjectViewModel>(*ctx);
   });
 
   registerAttrsExtensions(registry);

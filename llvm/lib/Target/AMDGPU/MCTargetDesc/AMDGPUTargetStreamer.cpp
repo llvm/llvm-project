@@ -114,6 +114,7 @@ StringRef AMDGPUTargetStreamer::getArchNameFromElfMach(unsigned ElfMach) {
   case ELF::EF_AMDGPU_MACH_AMDGCN_GFX1151: AK = GK_GFX1151; break;
   case ELF::EF_AMDGPU_MACH_AMDGCN_GFX1152: AK = GK_GFX1152; break;
   case ELF::EF_AMDGPU_MACH_AMDGCN_GFX1153: AK = GK_GFX1153; break;
+  case ELF::EF_AMDGPU_MACH_AMDGCN_GFX1170: AK = GK_GFX1170; break;
   case ELF::EF_AMDGPU_MACH_AMDGCN_GFX1200: AK = GK_GFX1200; break;
   case ELF::EF_AMDGPU_MACH_AMDGCN_GFX1201: AK = GK_GFX1201; break;
   case ELF::EF_AMDGPU_MACH_AMDGCN_GFX1250: AK = GK_GFX1250; break;
@@ -125,6 +126,7 @@ StringRef AMDGPUTargetStreamer::getArchNameFromElfMach(unsigned ElfMach) {
   case ELF::EF_AMDGPU_MACH_AMDGCN_GFX10_3_GENERIC:  AK = GK_GFX10_3_GENERIC; break;
   case ELF::EF_AMDGPU_MACH_AMDGCN_GFX11_GENERIC:    AK = GK_GFX11_GENERIC; break;
   case ELF::EF_AMDGPU_MACH_AMDGCN_GFX12_GENERIC:    AK = GK_GFX12_GENERIC; break;
+  case ELF::EF_AMDGPU_MACH_AMDGCN_GFX12_5_GENERIC:  AK = GK_GFX12_5_GENERIC; break;
   case ELF::EF_AMDGPU_MACH_NONE:           AK = GK_NONE;    break;
   default:                                 AK = GK_NONE;    break;
   }
@@ -202,6 +204,7 @@ unsigned AMDGPUTargetStreamer::getElfMach(StringRef GPU) {
   case GK_GFX1151: return ELF::EF_AMDGPU_MACH_AMDGCN_GFX1151;
   case GK_GFX1152: return ELF::EF_AMDGPU_MACH_AMDGCN_GFX1152;
   case GK_GFX1153: return ELF::EF_AMDGPU_MACH_AMDGCN_GFX1153;
+  case GK_GFX1170: return ELF::EF_AMDGPU_MACH_AMDGCN_GFX1170;
   case GK_GFX1200: return ELF::EF_AMDGPU_MACH_AMDGCN_GFX1200;
   case GK_GFX1201: return ELF::EF_AMDGPU_MACH_AMDGCN_GFX1201;
   case GK_GFX1250: return ELF::EF_AMDGPU_MACH_AMDGCN_GFX1250;
@@ -213,6 +216,7 @@ unsigned AMDGPUTargetStreamer::getElfMach(StringRef GPU) {
   case GK_GFX10_3_GENERIC:  return ELF::EF_AMDGPU_MACH_AMDGCN_GFX10_3_GENERIC;
   case GK_GFX11_GENERIC:    return ELF::EF_AMDGPU_MACH_AMDGCN_GFX11_GENERIC;
   case GK_GFX12_GENERIC:    return ELF::EF_AMDGPU_MACH_AMDGCN_GFX12_GENERIC;
+  case GK_GFX12_5_GENERIC:  return ELF::EF_AMDGPU_MACH_AMDGCN_GFX12_5_GENERIC;
   case GK_NONE:    return ELF::EF_AMDGPU_MACH_NONE;
   }
   // clang-format on
@@ -858,6 +862,9 @@ unsigned AMDGPUTargetELFStreamer::getEFlagsV6() {
       break;
     case AMDGPU::GK_GFX12_GENERIC:
       Version = GenericVersion::GFX12;
+      break;
+    case AMDGPU::GK_GFX12_5_GENERIC:
+      Version = GenericVersion::GFX12_5;
       break;
     default:
       break;

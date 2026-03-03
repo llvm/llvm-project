@@ -17,9 +17,40 @@
 #include "flang/Optimizer/HLFIR/HLFIROps.h"
 #include "flang/Optimizer/Support/InternalNames.h"
 #include "mlir/IR/SymbolTable.h"
+#include "mlir/Interfaces/ControlFlowInterfaces.h"
 #include "llvm/ADT/SmallSet.h"
 
 namespace fir::acc {
+
+mlir::Value ReductionInitOpFortranObjectViewModel::getViewSource(
+    mlir::Operation *op, mlir::OpResult resultView) const {
+  assert(resultView.getOwner() == op && "result value must be the op's result");
+  assert(op->getNumResults() == 1 &&
+         "definition of acc.reduction_init changed");
+  auto iface = mlir::cast<mlir::RegionBranchOpInterface>(op);
+  llvm::SmallVector<mlir::Value, 1> resultValues;
+  iface.getPredecessorValues(mlir::RegionSuccessor::parent(), /*index=*/0,
+                             resultValues);
+  assert(!resultValues.empty() &&
+         "acc.reduction_init's result must have at least one possible value");
+  mlir::Value passThroughValue;
+  for (mlir::Value v : resultValues) {
+    if (!passThroughValue) {
+      passThroughValue = v;
+      continue;
+    }
+    assert(passThroughValue == v &&
+           "acc.reduction_init must return the same allocation");
+  }
+  return passThroughValue;
+}
+
+std::optional<std::int64_t>
+ReductionInitOpFortranObjectViewModel::getViewOffset(
+    mlir::Operation *op, mlir::OpResult resultView) const {
+  assert(resultView.getOwner() == op && "result value must be the op's result");
+  return 0;
+}
 
 template <>
 mlir::Value PartialEntityAccessModel<fir::ArrayCoorOp>::getBaseEntity(
@@ -215,10 +246,11 @@ bool OperationMoveModel<mlir::acc::LoopOp>::canMoveOutOf(
   unsigned numDataOperands = loopOp.getNumDataOperands();
   for (unsigned i = 0; i < numDataOperands; ++i) {
     mlir::Value dataOperand = loopOp.getDataOperand(i);
-    return !llvm::any_of(candidate->getOperands(),
-                         [&](mlir::Value candidateOperand) {
-                           return dataOperand == candidateOperand;
-                         });
+    if (llvm::any_of(candidate->getOperands(),
+                     [&](mlir::Value candidateOperand) {
+                       return dataOperand == candidateOperand;
+                     }))
+      return false;
   }
   return true;
 }

@@ -16,6 +16,10 @@ endif()
 if(APPLE OR WIN32 OR WASM)
   message(WARNING "libomptarget cannot be built on Windows and MacOS X!")
   return()
+elseif("${LLVM_DEFAULT_TARGET_TRIPLE}" MATCHES "^(amdgcn|nvptx|spirv)" OR
+       "${CMAKE_CXX_COMPILER_TARGET}" MATCHES "^(amdgcn|nvptx|spirv)")
+  message(WARNING "offload cannot be built on GPU targets yet.")
+  return()
 elseif(NOT "cxx_std_17" IN_LIST CMAKE_CXX_COMPILE_FEATURES)
   message(WARNING "Host compiler must support C++17 to build libomptarget!")
   return()
@@ -150,19 +154,20 @@ if(DEFINED LIBOMPTARGET_BUILD_CUDA_PLUGIN OR
   message(WARNING "Option removed, use 'LIBOMPTARGET_PLUGINS_TO_BUILD' instead")
 endif()
 
-set(LIBOMPTARGET_ALL_PLUGIN_TARGETS amdgpu cuda host)
+set(LIBOMPTARGET_ALL_PLUGIN_TARGETS amdgpu cuda)
 set(LIBOMPTARGET_PLUGINS_TO_BUILD "all" CACHE STRING
-    "Semicolon-separated list of plugins to use: cuda, amdgpu, level_zero, host or \"all\".")
+    "Semicolon-separated list of plugins to use: cuda, amdgpu, level_zero, or \"all\".")
 
 if(LIBOMPTARGET_PLUGINS_TO_BUILD STREQUAL "all")
   set(LIBOMPTARGET_PLUGINS_TO_BUILD ${LIBOMPTARGET_ALL_PLUGIN_TARGETS})
 endif()
 
-if(NOT CMAKE_SYSTEM_NAME MATCHES "Linux" AND
-   "host" IN_LIST LIBOMPTARGET_PLUGINS_TO_BUILD)
-  message(STATUS "Not building host plugin: only Linux systems are supported")
-  list(REMOVE_ITEM LIBOMPTARGET_PLUGINS_TO_BUILD "host")
+# Add host if not already in LIBOMPTARGET_PLUGINS_TO_BUILD
+list(FIND LIBOMPTARGET_PLUGINS_TO_BUILD "host" FOUND_HOST)
+if(FOUND_HOST EQUAL -1)
+  list(APPEND LIBOMPTARGET_PLUGINS_TO_BUILD "host")
 endif()
+
 if(NOT (CMAKE_SYSTEM_PROCESSOR MATCHES "(x86_64)|(ppc64le)|(aarch64)$"
         AND CMAKE_SYSTEM_NAME MATCHES "Linux"))
   if("amdgpu" IN_LIST LIBOMPTARGET_PLUGINS_TO_BUILD)

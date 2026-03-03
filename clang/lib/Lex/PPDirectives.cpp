@@ -641,14 +641,13 @@ void Preprocessor::SkipExcludedConditionalBlock(SourceLocation HashTokenLoc,
             Tok.is(tok::raw_identifier) &&
             (Tok.getRawIdentifier() == "export" ||
              Tok.getRawIdentifier() == "module")) {
-          llvm::SaveAndRestore ModuleDirectiveSkipping(
-              LastTokenWasExportKeyword);
-          LastTokenWasExportKeyword.reset();
+          llvm::SaveAndRestore ModuleDirectiveSkipping(LastExportKeyword);
+          LastExportKeyword.startToken();
           LookUpIdentifierInfo(Tok);
           IdentifierInfo *II = Tok.getIdentifierInfo();
 
           if (II->getName()[0] == 'e') { // export
-            HandleModuleContextualKeyword(Tok, Tok.isAtStartOfLine());
+            HandleModuleContextualKeyword(Tok);
             CurLexer->Lex(Tok);
             if (Tok.is(tok::raw_identifier)) {
               LookUpIdentifierInfo(Tok);
@@ -661,7 +660,7 @@ void Preprocessor::SkipExcludedConditionalBlock(SourceLocation HashTokenLoc,
             // to save RawLexingMode
             llvm::SaveAndRestore RestoreLexingRawMode(CurPPLexer->LexingRawMode,
                                                       false);
-            if (HandleModuleContextualKeyword(Tok, Tok.isAtStartOfLine())) {
+            if (HandleModuleContextualKeyword(Tok)) {
               // We just parsed a # character at the start of a line, so we're
               // in directive mode.  Tell the lexer this so any newlines we see
               // will be converted into an EOD token (this terminates the
@@ -1187,9 +1186,9 @@ OptionalFileEntryRef Preprocessor::LookupFile(
   return std::nullopt;
 }
 
-OptionalFileEntryRef
-Preprocessor::LookupEmbedFile(StringRef Filename, bool isAngled, bool OpenFile,
-                              const FileEntry *LookupFromFile) {
+OptionalFileEntryRef Preprocessor::LookupEmbedFile(StringRef Filename,
+                                                   bool isAngled,
+                                                   bool OpenFile) {
   FileManager &FM = this->getFileManager();
   if (llvm::sys::path::is_absolute(Filename)) {
     // lookup path or immediately fail
@@ -1215,13 +1214,15 @@ Preprocessor::LookupEmbedFile(StringRef Filename, bool isAngled, bool OpenFile,
   SmallString<512> LookupPath;
   // Non-angled lookup
   if (!isAngled) {
+    OptionalFileEntryRef LookupFromFile = getCurrentFileLexer()->getFileEntry();
     if (LookupFromFile) {
       // Use file-based lookup.
-      StringRef FullFileDir = LookupFromFile->tryGetRealPathName();
-      if (!FullFileDir.empty()) {
-        SeparateComponents(LookupPath, FullFileDir, Filename, true);
+      SmallString<1024> TmpDir;
+      TmpDir = LookupFromFile->getDir().getName();
+      llvm::sys::path::append(TmpDir, Filename);
+      if (!TmpDir.empty()) {
         llvm::Expected<FileEntryRef> ShouldBeEntry = FM.getFileRef(
-            LookupPath, OpenFile, /*CacheFailure=*/true, /*IsText=*/false);
+            TmpDir, OpenFile, /*CacheFailure=*/true, /*IsText=*/false);
         if (ShouldBeEntry)
           return llvm::expectedToOptional(std::move(ShouldBeEntry));
         llvm::consumeError(ShouldBeEntry.takeError());
@@ -1487,12 +1488,8 @@ void Preprocessor::HandleDirective(Token &Result) {
       return HandleIdentSCCSDirective(Result);
     case tok::pp_sccs:
       return HandleIdentSCCSDirective(Result);
-    case tok::pp_embed: {
-      if (PreprocessorLexer *CurrentFileLexer = getCurrentFileLexer())
-        if (OptionalFileEntryRef FERef = CurrentFileLexer->getFileEntry())
-          return HandleEmbedDirective(Introducer.getLocation(), Result, *FERef);
-      return HandleEmbedDirective(Introducer.getLocation(), Result, nullptr);
-    }
+    case tok::pp_embed:
+      return HandleEmbedDirective(Introducer.getLocation(), Result);
     case tok::pp_assert:
       //isExtension = true;  // FIXME: implement #assert
       break;
@@ -2496,15 +2493,10 @@ Preprocessor::ImportAction Preprocessor::HandleHeaderIncludeOrImport(
       (getLangOpts().CPlusPlusModules || getLangOpts().Modules) &&
       ModuleToImport && !ModuleToImport->isHeaderUnit();
 
-  if (MaybeTranslateInclude && (UsableHeaderUnit || UsableClangHeaderModule) &&
-      PPOpts.SingleModuleParseMode) {
-    Action = IncludeLimitReached;
-  }
   // Determine whether we should try to import the module for this #include, if
   // there is one. Don't do so if precompiled module support is disabled or we
   // are processing this module textually (because we're building the module).
-  else if (MaybeTranslateInclude &&
-           (UsableHeaderUnit || UsableClangHeaderModule)) {
+  if (MaybeTranslateInclude && (UsableHeaderUnit || UsableClangHeaderModule)) {
     // If this include corresponds to a module but that module is
     // unavailable, diagnose the situation and bail out.
     // FIXME: Remove this; loadModule does the same check (but produces
@@ -4076,8 +4068,8 @@ void Preprocessor::HandleEmbedDirectiveImpl(
   EnterTokenStream(std::move(Toks), TotalNumToks, true, true);
 }
 
-void Preprocessor::HandleEmbedDirective(SourceLocation HashLoc, Token &EmbedTok,
-                                        const FileEntry *LookupFromFile) {
+void Preprocessor::HandleEmbedDirective(SourceLocation HashLoc,
+                                        Token &EmbedTok) {
   // Give the usual extension/compatibility warnings.
   if (LangOpts.C23)
     Diag(EmbedTok, diag::warn_compat_pp_embed_directive);
@@ -4126,7 +4118,7 @@ void Preprocessor::HandleEmbedDirective(SourceLocation HashLoc, Token &EmbedTok,
     return;
 
   OptionalFileEntryRef MaybeFileRef =
-      this->LookupEmbedFile(Filename, isAngled, true, LookupFromFile);
+      this->LookupEmbedFile(Filename, isAngled, /*OpenFile=*/true);
   if (!MaybeFileRef) {
     // could not find file
     if (Callbacks && Callbacks->EmbedFileNotFound(Filename)) {
@@ -4200,8 +4192,8 @@ void Preprocessor::HandleCXXImportDirective(Token ImportTok) {
   llvm::SaveAndRestore<bool> SaveImportingCXXModules(
       this->ImportingCXXNamedModules, true);
 
-  if (LastTokenWasExportKeyword.isValid())
-    LastTokenWasExportKeyword.reset();
+  if (LastExportKeyword.is(tok::kw_export))
+    LastExportKeyword.startToken();
 
   Token Tok;
   if (LexHeaderName(Tok)) {
@@ -4359,9 +4351,9 @@ void Preprocessor::HandleCXXImportDirective(Token ImportTok) {
 void Preprocessor::HandleCXXModuleDirective(Token ModuleTok) {
   assert(getLangOpts().CPlusPlusModules && ModuleTok.is(tok::kw_module));
   Token Introducer = ModuleTok;
-  if (LastTokenWasExportKeyword.isValid()) {
-    Introducer = LastTokenWasExportKeyword.getExportTok();
-    LastTokenWasExportKeyword.reset();
+  if (LastExportKeyword.is(tok::kw_export)) {
+    Introducer = LastExportKeyword;
+    LastExportKeyword.startToken();
   }
 
   SourceLocation StartLoc = Introducer.getLocation();

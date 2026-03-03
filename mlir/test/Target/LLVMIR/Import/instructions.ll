@@ -701,6 +701,237 @@ define void @call_will_return() {
 ; CHECK: llvm.func @f()
 declare void @f()
 
+; CHECK-LABEL: @call_noreturn
+define void @call_noreturn() {
+; CHECK: llvm.call @f() {noreturn}
+  call void @f() noreturn
+  ret void
+}
+
+; // -----
+
+; CHECK: llvm.func @f()
+declare void @f()
+
+; CHECK-LABEL: @call_returnstwice
+define void @call_returnstwice() {
+; CHECK: llvm.call @f() {returns_twice}
+  call void @f() returns_twice
+  ret void
+}
+
+; // -----
+
+; CHECK: llvm.func @f()
+declare void @f()
+
+; CHECK-LABEL: @call_hot
+define void @call_hot() {
+; CHECK: llvm.call @f() {hot}
+  call void @f() hot
+  ret void
+}
+
+; // -----
+
+; CHECK: llvm.func @f()
+declare void @f()
+
+; CHECK-LABEL: @call_cold
+define void @call_cold() {
+; CHECK: llvm.call @f() {cold}
+  call void @f() cold
+  ret void
+}
+
+; // -----
+
+; CHECK: llvm.func @f()
+declare void @f()
+
+; CHECK-LABEL: @call_noduplicate
+define void @call_noduplicate() {
+; CHECK: llvm.call @f() {noduplicate}
+  call void @f() noduplicate
+  ret void
+}
+
+; // -----
+
+; CHECK: llvm.func @f()
+declare void @f()
+
+; CHECK-LABEL: @call_no_caller_saved_registers
+define void @call_no_caller_saved_registers() {
+; CHECK: llvm.call @f() {no_caller_saved_registers}
+  call void @f() "no_caller_saved_registers"
+  ret void
+}
+
+; // -----
+
+; CHECK: llvm.func @f()
+declare void @f()
+
+; CHECK-LABEL: @call_nocallback
+define void @call_nocallback() {
+; CHECK: llvm.call @f() {nocallback}
+  call void @f() nocallback
+  ret void
+}
+
+; // -----
+
+; CHECK: llvm.func @f(i32)
+declare void @f(i32)
+
+; CHECK-LABEL: @call_modular_format
+define void @call_modular_format() {
+; CHECK: llvm.call @f({{.*}}) {modular_format = "ident,1,1,foo,bar"}
+  %arg = alloca i32
+  call void @f(i32 0) "modular-format" = "ident,1,1,foo,bar"
+  ret void
+}
+
+; // -----
+
+; CHECK: llvm.func @f()
+declare void @f()
+
+; CHECK-LABEL: @call_nobuiltins_all
+define void @call_nobuiltins_all() {
+; CHECK: llvm.call @f() {nobuiltins = []}
+  call void @f() "no-builtins"
+  ret void
+}
+
+; // -----
+
+; CHECK: llvm.func @f()
+declare void @f()
+
+; CHECK-LABEL: @call_nobuiltins_2
+define void @call_nobuiltins_2() {
+; CHECK: llvm.call @f() {nobuiltins = ["asdf", "ghij"]}
+  call void @f() "no-builtin-asdf" "no-builtin-ghij"
+  ret void
+}
+
+
+; // -----
+
+; CHECK: llvm.func @f(i32, i32)
+declare void @f(i32, i32)
+
+; CHECK-LABEL: @call_alloc_size_1
+define void @call_alloc_size_1() {
+; CHECK: llvm.call @f({{.*}}) {allocsize = array<i32: 0>}
+  call void @f(i32 0, i32 0) allocsize(0)
+  ret void
+}
+; // -----
+
+; CHECK: llvm.func @f(i32, i32)
+declare void @f(i32, i32)
+
+; CHECK-LABEL: @call_alloc_size_2
+define void @call_alloc_size_2() {
+; CHECK: llvm.call @f({{.*}}) {allocsize = array<i32: 1, 0>}
+  call void @f(i32 0, i32 0) allocsize(1, 0)
+  ret void
+}
+; // -----
+
+; CHECK: llvm.func @f()
+declare void @f()
+
+; CHECK-LABEL: @call_minsize
+define void @call_minsize() {
+; CHECK: llvm.call @f() {minsize}
+  call void @f() minsize
+  ret void
+}
+
+; // -----
+
+; CHECK: llvm.func @f()
+declare void @f()
+
+; CHECK-LABEL: @call_optsize
+define void @call_optsize() {
+; CHECK: llvm.call @f() {optsize}
+  call void @f() optsize
+  ret void
+}
+
+; // -----
+
+; CHECK: llvm.func @f()
+declare void @f()
+
+; CHECK-LABEL: @call_save_reg_params
+define void @call_save_reg_params() {
+; CHECK: llvm.call @f() {save_reg_params}
+  call void @f() "save-reg-params"
+  ret void
+}
+
+; // -----
+
+; CHECK: llvm.func @f()
+declare void @f()
+
+; CHECK-LABEL: @call_zero_call_used_regs
+define void @call_zero_call_used_regs() {
+; CHECK: llvm.call @f() {zero_call_used_regs = "used"}
+  call void @f() "zero-call-used-regs"="used"
+  ret void
+}
+
+; // -----
+
+; CHECK: llvm.func @f()
+declare void @f()
+
+; CHECK-LABEL: @call_trap_func_name
+define void @call_trap_func_name() {
+; CHECK: llvm.call @f() {trap_func_name = "something"}
+  call void @f() "trap-func-name"="something"
+  ret void
+}
+
+; // -----
+
+; CHECK: llvm.func @f()
+declare void @f()
+
+; Note: the 'default-func-attrs' aren't recoverable due to the way they lower
+; to LLVM-IR, and 'call' operations don't have passthrough, so these would be
+; lost in translation.
+; CHECK-LABEL: @call_default_func_attrs
+define void @call_default_func_attrs() {
+; CHECK: llvm.call @f() : () -> ()
+  call void @f() "key"="value" "key"
+  ret void
+}
+
+; // -----
+
+; CHECK: llvm.func @f()
+declare void @f()
+
+; CHECK-LABEL: @call_nobuiltin
+define void @call_nobuiltin() {
+; CHECK: llvm.call @f() {nobuiltin}
+  call void @f() nobuiltin
+  ret void
+}
+
+; // -----
+
+; CHECK: llvm.func @f()
+declare void @f()
+
 ; CHECK-LABEL: @call_memory_effects
 define void @call_memory_effects() {
 ; CHECK: llvm.call @f() {memory_effects = #llvm.memory_effects<other = none, argMem = none, inaccessibleMem = none, errnoMem = none, targetMem0 = none, targetMem1 = none>}

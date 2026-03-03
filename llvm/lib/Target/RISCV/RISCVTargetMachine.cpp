@@ -109,6 +109,11 @@ static cl::opt<bool> EnableCFIInstrInserter(
     cl::desc("Enable CFI Instruction Inserter for RISC-V"), cl::init(false),
     cl::Hidden);
 
+static cl::opt<bool>
+    EnableSelectOpt("riscv-select-opt", cl::Hidden,
+                    cl::desc("Enable select to branch optimizations"),
+                    cl::init(true));
+
 extern "C" LLVM_ABI LLVM_EXTERNAL_VISIBILITY void LLVMInitializeRISCVTarget() {
   RegisterTargetMachine<RISCVTargetMachine> X(getTheRISCV32Target());
   RegisterTargetMachine<RISCVTargetMachine> Y(getTheRISCV64Target());
@@ -477,6 +482,9 @@ void RISCVPassConfig::addIRPasses() {
   }
 
   TargetPassConfig::addIRPasses();
+
+  if (getOptLevel() == CodeGenOptLevel::Aggressive && EnableSelectOpt)
+    addPass(createSelectOptimizePass());
 }
 
 bool RISCVPassConfig::addPreISel() {
@@ -601,6 +609,11 @@ void RISCVPassConfig::addPreEmitPass2() {
 }
 
 void RISCVPassConfig::addMachineSSAOptimization() {
+  // It's beneficial to reduce the VL to enable more
+  // Machine SSA optimizations.
+  if (TM->getOptLevel() != CodeGenOptLevel::None)
+    addPass(createRISCVVLOptimizerPass());
+
   addPass(createRISCVVectorPeepholePass());
   addPass(createRISCVFoldMemOffsetPass());
 
@@ -615,7 +628,6 @@ void RISCVPassConfig::addPreRegAlloc() {
   addPass(createRISCVPreRAExpandPseudoPass());
   if (TM->getOptLevel() != CodeGenOptLevel::None) {
     addPass(createRISCVMergeBaseOffsetOptPass());
-    addPass(createRISCVVLOptimizerPass());
     // Add Zilsd pre-allocation load/store optimization
     addPass(createRISCVPreAllocZilsdOptPass());
   }

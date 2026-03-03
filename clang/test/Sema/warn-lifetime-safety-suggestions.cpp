@@ -1,6 +1,8 @@
 // RUN: rm -rf %t
 // RUN: split-file %s %t
 // RUN: %clang_cc1 -fsyntax-only -flifetime-safety-inference -fexperimental-lifetime-safety-tu-analysis -Wlifetime-safety-suggestions -Wlifetime-safety -Wno-dangling -I%t -verify %t/test_source.cpp
+// RUN: %clang_cc1 -flifetime-safety-inference -fexperimental-lifetime-safety-tu-analysis -Wlifetime-safety-suggestions -Wlifetime-safety -Wno-dangling -I%t -fixit %t/test_source.cpp
+// RUN: %clang_cc1 -fsyntax-only -flifetime-safety-inference -fexperimental-lifetime-safety-tu-analysis -Wlifetime-safety-suggestions -Wno-dangling -I%t -Werror=lifetime-safety-suggestions %t/test_source.cpp
 
 View definition_before_header(View a);
 
@@ -48,6 +50,9 @@ inline View redeclared_in_header(View a) {  // expected-warning {{parameter in i
   return a;                                 // expected-note {{param returned here}}
 }
 
+View return_unnamed_view(View);                // expected-warning {{parameter in cross-TU function should be marked [[clang::lifetimebound]]}}
+MyObj& return_unnamed_ref(MyObj&, bool);       // expected-warning {{parameter in cross-TU function should be marked [[clang::lifetimebound]]}}
+
 struct ReturnThis {
   const ReturnThis& get() const;           // expected-warning {{implicit this in cross-TU function should be marked [[clang::lifetimebound]]}}.
 };
@@ -86,6 +91,14 @@ int* return_pointer_directly(int* a) {
 
 MyObj* return_pointer_object(MyObj* a) {
   return a;                                // expected-note {{param returned here}} 
+}
+
+View return_unnamed_view(View a) {
+  return a;                               // expected-note {{param returned here}}
+}
+
+MyObj& return_unnamed_ref(MyObj& a, bool c) {
+  return a;                               // expected-note {{param returned here}}
 }
 
 MyObj& return_reference(MyObj& a, // expected-warning {{parameter in intra-TU function should be marked [[clang::lifetimebound]]}}
@@ -342,6 +355,26 @@ MyObj* test_template_inference_with_stack() {
 }
 } // namespace inference_with_templates
 
+namespace trailing_return {
+struct TrailingReturn {
+  TrailingReturn() {}
+  ~TrailingReturn() {}
+  MyObj data;
+
+  auto get_view() -> View {                   // expected-warning {{implicit this in intra-TU function should be marked [[clang::lifetimebound]]}}
+    return data;                              // expected-note {{param returned here}}
+  }
+
+  auto get_view_const() const -> View {       // expected-warning {{implicit this in intra-TU function should be marked [[clang::lifetimebound]]}}
+    return data;                              // expected-note {{param returned here}}
+  }
+
+  auto get_ref() const -> const MyObj& {      // expected-warning {{implicit this in intra-TU function should be marked [[clang::lifetimebound]]}}
+    return data;                              // expected-note {{param returned here}}
+  }
+};
+} // namespace trailing_return
+
 //===----------------------------------------------------------------------===//
 // Negative Test Cases
 //===----------------------------------------------------------------------===//
@@ -360,3 +393,13 @@ View Reassigned(View a) {
   a = Global;
   return a;
 }
+
+struct NoSuggestionForThisCapturedByLambda {
+  MyObj s;
+  bool cond;
+  void foo() {
+    auto x = [&]() { 
+      return cond > 0 ?  &this->s : &s;
+    };
+  }
+};

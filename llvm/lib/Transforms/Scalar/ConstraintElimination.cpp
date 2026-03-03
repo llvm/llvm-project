@@ -728,11 +728,11 @@ ConstraintInfo::getConstraint(CmpInst::Predicate Pred, Value *Op0, Value *Op1,
     auto V2I = Value2Index.find(V);
     if (V2I != Value2Index.end())
       return V2I->second;
-    auto Insert =
-        NewIndexMap.insert({V, Value2Index.size() + NewVariables.size() + 1});
-    if (Insert.second)
+    auto [It, Inserted] = NewIndexMap.try_emplace(
+        V, Value2Index.size() + NewVariables.size() + 1);
+    if (Inserted)
       NewVariables.push_back(V);
-    return Insert.first->second;
+    return It->second;
   };
 
   // Make sure all variables have entries in Value2Index or NewVariables.
@@ -1223,6 +1223,16 @@ void State::addInfoFor(BasicBlock &BB) {
       break;
     }
 
+    // Add facts from unsigned division and remainder.
+    //   urem x, n: result < n  and  result <= x
+    //   udiv x, n: result <= x
+    if (auto *BO = dyn_cast<BinaryOperator>(&I)) {
+      if ((BO->getOpcode() == Instruction::URem ||
+           BO->getOpcode() == Instruction::UDiv) &&
+          isGuaranteedNotToBePoison(BO))
+        WorkList.push_back(FactOrCheck::getInstFact(DT.getNode(&BB), BO));
+    }
+
     GuaranteedToExecute &= isGuaranteedToTransferExecutionToSuccessor(&I);
   }
 
@@ -1502,9 +1512,7 @@ static bool checkAndReplaceCondition(
     generateReproducer(Cmp, ReproducerModule, ReproducerCondStack, Info, DT);
     Constant *ConstantC = ConstantInt::getBool(
         CmpInst::makeCmpResultType(Cmp->getType()), IsTrue);
-    bool Changed = false;
-    Cmp->replaceUsesWithIf(ConstantC, [&DT, NumIn, NumOut, ContextInst,
-                                       &Changed](Use &U) {
+    bool Changed = Cmp->replaceUsesWithIf(ConstantC, [&](Use &U) {
       auto *UserI = getContextInstForUse(U);
       auto *DTN = DT.getNode(UserI->getParent());
       if (!DTN || DTN->getDFSNumIn() < NumIn || DTN->getDFSNumOut() > NumOut)
@@ -1516,9 +1524,7 @@ static bool checkAndReplaceCondition(
       // Conditions in an assume trivially simplify to true. Skip uses
       // in assume calls to not destroy the available information.
       auto *II = dyn_cast<IntrinsicInst>(U.getUser());
-      bool ShouldReplace = !II || II->getIntrinsicID() != Intrinsic::assume;
-      Changed |= ShouldReplace;
-      return ShouldReplace;
+      return !II || II->getIntrinsicID() != Intrinsic::assume;
     });
     NumCondsRemoved++;
 
@@ -1726,7 +1732,7 @@ void ConstraintInfo::addFactImpl(CmpInst::Predicate Pred, Value *A, Value *B,
   SmallVector<Value *, 2> ValuesToRelease;
   auto &Value2Index = getValue2Index(R.IsSigned);
   for (Value *V : NewVariables) {
-    Value2Index.insert({V, Value2Index.size() + 1});
+    Value2Index.try_emplace(V, Value2Index.size() + 1);
     ValuesToRelease.push_back(V);
   }
 
@@ -1998,6 +2004,21 @@ static bool eliminateConstraints(Function &F, DominatorTree &DT, LoopInfo &LI,
           break;
         }
         continue;
+      }
+
+      if (auto *BO = dyn_cast<BinaryOperator>(CB.Inst)) {
+        if (BO->getOpcode() == Instruction::URem) {
+          // urem x, n: result < n (remainder is always less than divisor)
+          AddFact(CmpInst::ICMP_ULT, BO, BO->getOperand(1));
+          // urem x, n: result <= x (remainder is at most the dividend)
+          AddFact(CmpInst::ICMP_ULE, BO, BO->getOperand(0));
+          continue;
+        }
+        if (BO->getOpcode() == Instruction::UDiv) {
+          // udiv x, n: result <= x (quotient is at most the dividend)
+          AddFact(CmpInst::ICMP_ULE, BO, BO->getOperand(0));
+          continue;
+        }
       }
 
       auto &DL = F.getDataLayout();

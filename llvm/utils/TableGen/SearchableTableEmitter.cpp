@@ -55,6 +55,7 @@ struct GenericEnum {
   const Record *Class = nullptr;
   std::string PreprocessorGuard;
   MapVector<const Record *, Entry> Entries;
+  std::string UnderlyingType;
 
   const Entry *getEntry(const Record *Def) const {
     auto II = Entries.find(Def);
@@ -336,7 +337,10 @@ void SearchableTableEmitter::emitGenericEnum(const GenericEnum &Enum,
                                              raw_ostream &OS) {
   emitIfdef((Twine("GET_") + Enum.PreprocessorGuard + "_DECL").str(), OS);
 
-  OS << "enum " << Enum.Name << " {\n";
+  OS << "enum " << Enum.Name;
+  if (!Enum.UnderlyingType.empty())
+    OS << " : " << Enum.UnderlyingType;
+  OS << " {\n";
   for (const auto &[Name, Value] :
        make_second_range(Enum.Entries.getArrayRef()))
     OS << "  " << Name << " = " << Value << ",\n";
@@ -430,10 +434,9 @@ void SearchableTableEmitter::emitLookupFunction(const GenericTable &Table,
     std::string LastRepr = primaryRepresentation(
         Index.Loc, Field, IndexRows.back()->getValueInit(Field.Name));
     std::string TS =
-        '(' + searchableFieldType(Table, Index, Field, TypeInStaticStruct) +
-        ')';
-    OS << "  if (" << TS << Field.Name << " != std::clamp(" << TS << Field.Name
-       << ", " << TS << FirstRepr << ", " << TS << LastRepr << "))\n";
+        searchableFieldType(Table, Index, Field, TypeInStaticStruct);
+    OS << "  if ((" << TS << ")" << Field.Name << " != std::clamp<" << TS
+       << ">(" << Field.Name << ", " << FirstRepr << ", " << LastRepr << "))\n";
     OS << "    return nullptr;\n\n";
 
     if (IsContiguous && !Index.EarlyOut) {
@@ -763,6 +766,9 @@ void SearchableTableEmitter::run(raw_ostream &OS) {
       PrintFatalError(EnumRec->getValue("FilterClass"),
                       Twine("Enum FilterClass '") + FilterClass +
                           "' does not exist");
+
+    if (!EnumRec->isValueUnset("UnderlyingType"))
+      Enum->UnderlyingType = EnumRec->getValueAsString("UnderlyingType");
 
     collectEnumEntries(*Enum, NameField, ValueField,
                        Records.getAllDerivedDefinitions(FilterClass));

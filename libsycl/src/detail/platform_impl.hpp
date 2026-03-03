@@ -13,10 +13,12 @@
 #include <sycl/__impl/detail/config.hpp>
 #include <sycl/__impl/platform.hpp>
 
+#include <detail/device_impl.hpp>
 #include <detail/offload/offload_utils.hpp>
 
 #include <OffloadAPI.h>
 
+#include <functional>
 #include <memory>
 #include <string>
 #include <type_traits>
@@ -26,9 +28,16 @@ _LIBSYCL_BEGIN_NAMESPACE_SYCL
 
 namespace detail {
 
+class DeviceImpl;
+class ContextImpl;
+
 using PlatformImplUPtr = std::unique_ptr<PlatformImpl>;
+using DeviceImplUPtr = std::unique_ptr<DeviceImpl>;
 
 class PlatformImpl {
+  // Helper to limit PlatformImpl creation. It must be created in getPlatforms
+  // only. Using tag instead of private ctor + friend class to allow make_unique
+  // usage and to align with classes which impl is shared_ptr<>.
   struct PrivateTag {
     explicit PrivateTag() = default;
   };
@@ -44,8 +53,6 @@ public:
 
   ~PlatformImpl() = default;
 
-  /// Returns the backend associated with this platform.
-  ///
   /// \returns sycl::backend associated with this platform.
   backend getBackend() const noexcept { return MBackend; }
 
@@ -73,7 +80,16 @@ public:
   /// \return the PlatformImpl representing the offloading RT platform.
   static PlatformImpl &getPlatformImpl(ol_platform_handle_t Platform);
 
-  /// Queries this platform for info.
+  /// Indicates if all of the SYCL devices on this platform have the
+  /// given aspect.
+  ///
+  /// \param Aspect is one of the values defined in SYCL 2020 Section 4.6.4.5.
+  ///
+  /// \return true all of the SYCL devices on this platform have the
+  /// given aspect.
+  bool has(aspect Aspect) const;
+
+  /// Queries this SYCL platform for info.
   ///
   /// The return type depends on information being queried.
   template <typename Param> typename Param::return_type getInfo() const {
@@ -99,11 +115,30 @@ public:
     return Result;
   }
 
+  /// Calls "callback" with every root device of type == DeviceType associated
+  /// with this platform
+  void iterateDevices(info::device_type DeviceType,
+                      std::function<void(DeviceImpl *)> callback) const;
+
+  // TODO: liboffload doesn't support context now, l0 plugin creates default
+  // context for all devices on its level. This method should be removed or
+  // reimplemented once native context support is added to liboffload.
+  /// \return the default context that represents all devices in platform.
+  ContextImpl &getDefaultContext();
+
 private:
-  ol_platform_handle_t MOffloadPlatform{};
-  size_t MOffloadPlatformIndex{};
+  /// \return reference to collection of root devices for platform
+  const std::vector<DeviceImplUPtr> &getRootDevices() const;
+
+  const ol_platform_handle_t MOffloadPlatform{};
+  const size_t MOffloadPlatformIndex{};
+
   ol_platform_backend_t MOffloadBackend{OL_PLATFORM_BACKEND_UNKNOWN};
   backend MBackend{};
+
+  std::vector<DeviceImplUPtr> MRootDevices;
+
+  std::shared_ptr<ContextImpl> MDefaultContext;
 };
 
 } // namespace detail

@@ -53,8 +53,8 @@ elseif("${LLVM_DEFAULT_TARGET_TRIPLE}" MATCHES "^nvptx" OR
        "${CMAKE_CXX_COMPILER_TARGET}" MATCHES "^nvptx")
   set(target_name "nvptx")
   list(APPEND compile_options --cuda-feature=+ptx63)
-elseif("${LLVM_DEFAULT_TARGET_TRIPLE}" MATCHES "^spirv64" OR
-       "${CMAKE_CXX_COMPILER_TARGET}" MATCHES "^spirv64")
+elseif("${LLVM_DEFAULT_TARGET_TRIPLE}" MATCHES "^spirv" OR
+       "${CMAKE_CXX_COMPILER_TARGET}" MATCHES "^spirv")
   set(target_name "spirv") 
 endif()
 
