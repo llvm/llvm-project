@@ -12,11 +12,9 @@ int main() {
   char *guard = (char *)malloc(16);
   if (!dst || !guard) return 1;
 
-  // FIXME: memset with a compile-time constant ensures clang emits the llvm.memset
-  // intrinsic, which the LowFat pass instruments. A runtime size would become
-  // a plain libc call that the pass cannot see.
+  // memset of 32 bytes into a 16-byte allocation — overflows by 16 bytes.
   // CHECK: LOWFAT WARNING: out-of-bounds error detected!
-  memset(dst, 0, 32); // 32 bytes into a 16-byte allocation → OOB
+  memset(dst, 0, 32);
 
   // CHECK: after memset
   printf("after memset\n");
