@@ -15,6 +15,9 @@
 #include "AMDGPUHSAMetadataStreamer.h"
 #include "AMDGPU.h"
 #include "GCNSubtarget.h"
+#include "llvm/Support/Debug.h"
+
+#define DEBUG_TYPE "amdgpu-hsa-metadata"
 #include "MCTargetDesc/AMDGPUTargetStreamer.h"
 #include "SIMachineFunctionInfo.h"
 #include "SIProgramInfo.h"
@@ -286,7 +289,21 @@ void MetadataStreamerMsgPackV4::emitKernelArgs(const MachineFunction &MF,
   auto &Func = MF.getFunction();
   unsigned Offset = 0;
   auto Args = HSAMetadataDoc->getArrayNode();
-  for (auto &Arg : Func.args()) {
+
+  // Check if there's a backup declaration for the original kernel signature.
+  // If so, use the backup's args for metadata (layout-preserving split mode).
+  const Function *MetadataFunc = &Func;
+  Attribute OrigKernelAttr = Func.getFnAttribute("amdgpu-original-kernel");
+  if (OrigKernelAttr.isValid()) {
+    StringRef BackupName = OrigKernelAttr.getValueAsString();
+    if (const Function *BackupF = Func.getParent()->getFunction(BackupName)) {
+      MetadataFunc = BackupF;
+      LLVM_DEBUG(dbgs() << "Using backup declaration for metadata: "
+                        << BackupName << '\n');
+    }
+  }
+
+  for (auto &Arg : MetadataFunc->args()) {
     if (Arg.hasAttribute("amdgpu-hidden-argument"))
       continue;
 
@@ -357,17 +374,39 @@ void MetadataStreamerMsgPackV4::emitKernelArg(const Argument &Arg,
   Align ArgAlign;
   std::tie(ArgTy, ArgAlign) = getArgumentTypeAlign(Arg, DL);
 
+  // Check if the argument was split from a struct-type argument.
+  // The "amdgpu-original-arg" attribute encodes original index and offset.
+  unsigned OriginalArgIndex = ~0U;
+  uint64_t OriginalArgOffset = 0;
+  Attribute Attr =
+      Func->getAttributes().getParamAttr(ArgNo, "amdgpu-original-arg");
+  if (Attr.isValid()) {
+    StringRef MappingStr = Attr.getValueAsString();
+    SmallVector<StringRef, 2> Elements;
+    MappingStr.split(Elements, ':');
+    bool Valid = Elements.size() == 2 &&
+                 !Elements[0].getAsInteger(10, OriginalArgIndex) &&
+                 !Elements[1].getAsInteger(10, OriginalArgOffset);
+    assert(Valid && "Invalid amdgpu-original-arg attribute format");
+    if (!Valid) {
+      // Invalid format, ignore the attribute.
+      OriginalArgIndex = ~0U;
+      OriginalArgOffset = 0;
+    }
+  }
+
   emitKernelArg(DL, ArgTy, ArgAlign,
                 getValueKind(ArgTy, TypeQual, BaseTypeName), Offset, Args,
-                PointeeAlign, Name, TypeName, BaseTypeName, ActAccQual,
-                AccQual, TypeQual);
+                PointeeAlign, Name, TypeName, BaseTypeName, ActAccQual, AccQual,
+                TypeQual, OriginalArgIndex, OriginalArgOffset);
 }
 
 void MetadataStreamerMsgPackV4::emitKernelArg(
     const DataLayout &DL, Type *Ty, Align Alignment, StringRef ValueKind,
     unsigned &Offset, msgpack::ArrayDocNode Args, MaybeAlign PointeeAlign,
     StringRef Name, StringRef TypeName, StringRef BaseTypeName,
-    StringRef ActAccQual, StringRef AccQual, StringRef TypeQual) {
+    StringRef ActAccQual, StringRef AccQual, StringRef TypeQual,
+    unsigned OriginalArgIndex, uint64_t OriginalArgOffset) {
   auto Arg = Args.getDocument()->getMapNode();
 
   if (!Name.empty())
@@ -407,6 +446,12 @@ void MetadataStreamerMsgPackV4::emitKernelArg(
       Arg[".is_volatile"] = Arg.getDocument()->getNode(true);
     else if (Key == "pipe")
       Arg[".is_pipe"] = Arg.getDocument()->getNode(true);
+  }
+
+  // Add original argument index and offset to the metadata
+  if (OriginalArgIndex != ~0U) {
+    Arg[".original_arg_index"] = Arg.getDocument()->getNode(OriginalArgIndex);
+    Arg[".original_arg_offset"] = Arg.getDocument()->getNode(OriginalArgOffset);
   }
 
   Args.push_back(Arg);
