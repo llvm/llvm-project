@@ -56,6 +56,20 @@ class BlockAPITestCase(TestBase):
         fn_inner_block = frame.GetBlock()
 
         # Check __eq__ / __ne__
+        self.assertNotEqual(lldb.SBBlock(), lldb.SBBlock())
         self.assertNotEqual(fn_inner_block, fn_frame_block)
         self.assertNotEqual(main_frame_block, fn_frame_block)
         self.assertEqual(fn_inner_block.GetParent(), fn_frame_block)
+        self.assertEqual(fn_frame_block.GetFirstChild(), fn_inner_block)
+
+        # Load the main function with a different API to ensure we have two
+        # distinct SBBlock objects.
+        main_func_list = target.FindModule(target.GetExecutable()).FindFunctions("main")
+        self.assertEqual(main_func_list.GetSize(), 1)
+        main_func = main_func_list.GetContextAtIndex(0).GetFunction()
+        self.assertIsNotNone(main_func)
+
+        # Ensure they we have two distinct objects that represent the same block
+        main_func_block = main_func.GetBlock()
+        self.assertIsNot(main_func_block, main_frame_block)
+        self.assertEqual(main_func_block, main_frame_block)
