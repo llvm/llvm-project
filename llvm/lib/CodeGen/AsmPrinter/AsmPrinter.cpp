@@ -4250,6 +4250,9 @@ static void emitGlobalConstantLargeInt(const ConstantInt *CI, AsmPrinter &AP) {
 static void handleIndirectSymViaGOTPCRel(AsmPrinter &AP, const MCExpr **ME,
                                          const Constant *BaseCst,
                                          uint64_t Offset) {
+  // GOT PC-relative optimization doesn't apply to ptrauth (Target) MCExprs.
+  if (!*ME || (*ME)->getKind() == MCExpr::Target)
+    return;
   // The global @foo below illustrates a global that uses a got equivalent.
   //
   //  @bar = global i32 42
@@ -4318,7 +4321,11 @@ static void handleIndirectSymViaGOTPCRel(AsmPrinter &AP, const MCExpr **ME,
   AsmPrinter::GOTEquivUsePair Result = AP.GlobalGOTEquivs[GOTEquivSym];
   const GlobalVariable *GV = Result.first;
   int NumUses = (int)Result.second;
+  if (!GV || !GV->hasInitializer())
+    return;
   const GlobalValue *FinalGV = dyn_cast<GlobalValue>(GV->getOperand(0));
+  if (!FinalGV)
+    return;
   const MCSymbol *FinalSym = AP.getSymbol(FinalGV);
   *ME = AP.getObjFileLowering().getIndirectSymViaGOTPCRel(
       FinalGV, FinalSym, MV, Offset, AP.MMI, *AP.OutStreamer);
@@ -4432,6 +4439,12 @@ static void emitGlobalConstantImpl(const DataLayout &DL, const Constant *CV,
   // Otherwise, it must be a ConstantExpr.  Lower it to an MCExpr, then emit it
   // thread the streamer with EmitValue.
   const MCExpr *ME = AP.lowerConstant(CV, BaseCV, Offset);
+
+  // Emit zeros if lowerConstant returned null to preserve struct layout.
+  if (!ME) {
+    AP.OutStreamer->emitZeros(Size);
+    return;
+  }
 
   // Since lowerConstant already folded and got rid of all IR pointer and
   // integer casts, detect GOT equivalent accesses by looking into the MCExpr
