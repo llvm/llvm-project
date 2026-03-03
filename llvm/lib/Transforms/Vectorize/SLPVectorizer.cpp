@@ -11698,13 +11698,14 @@ class InstructionsCompatibilityAnalysis {
       if (!BestOp && !SecondBestOp)
         return false;
       // Original better in both ops combinations.
-      if (IsOriginalBetter && static_cast<unsigned>(SecondBestOp.value_or(
-                                  SecondOpSize)) >= SecondOpSize)
+      const bool IsSecondOriginalBetter =
+          static_cast<unsigned>(SecondBestOp.value_or(SecondOpSize)) >=
+          SecondOpSize;
+      if (IsOriginalBetter && IsSecondOriginalBetter)
         return false;
       // Original is better in second combination, but in the first combination
       // no best candidates.
-      if (!BestOp && static_cast<unsigned>(
-                         SecondBestOp.value_or(SecondOpSize)) >= SecondOpSize)
+      if (!BestOp && IsSecondOriginalBetter)
         return false;
       // Original is better in first combination, but in the second combination
       // no best candidates.
@@ -11712,25 +11713,20 @@ class InstructionsCompatibilityAnalysis {
         return false;
       // Copyable is best in the first combination, but it is constant, but
       // original is better in second non-constant combination.
-      if (!IsOriginalBetter && IsBestConst &&
-          static_cast<unsigned>(SecondBestOp.value_or(SecondOpSize)) >=
-              SecondOpSize &&
+      if (!IsOriginalBetter && IsBestConst && IsSecondOriginalBetter &&
           !IsSecondBestConst)
         return false;
       // Copyable is best in the second combination, but it is constant, but
       // original is better in the first non-constant combination.
       if (BestOp && IsOriginalBetter && !IsBestConst &&
-          static_cast<unsigned>(SecondBestOp.value_or(SecondOpSize)) <
-              SecondOpSize &&
-          IsSecondBestConst)
+          !IsSecondOriginalBetter && IsSecondBestConst)
         return false;
       // Original combination score is better.
       if (((Score > SecondScore ||
             (Score <= BoUpSLP::LookAheadHeuristics::ScoreAltOpcodes &&
              Score == SecondScore)) &&
            IsOriginalBetter) ||
-          (static_cast<unsigned>(SecondBestOp.value_or(SecondOpSize)) >=
-               SecondOpSize &&
+          (IsSecondOriginalBetter &&
            (SecondScore > Score ||
             (Score <= BoUpSLP::LookAheadHeuristics::ScoreAltOpcodes &&
              Score == SecondScore))))
