@@ -73,11 +73,11 @@ void InconsistentIfElseBracesCheck::checkIfStmt(
     emitDiagnostic(Result, If->getThen(), If->getRParenLoc(), If->getElseLoc());
   }
 
-  if (const Stmt *const Else = If->getElse()) {
-    const Stmt *UnwrappedElse = ignoreAttributed(Else);
-    if (const auto *NestedIf = dyn_cast<const IfStmt>(UnwrappedElse))
+  if (const Stmt *Else = If->getElse()) {
+    Else = ignoreAttributed(Else);
+    if (const auto *NestedIf = dyn_cast<const IfStmt>(Else))
       checkIfStmt(Result, NestedIf);
-    else if (!isa<CompoundStmt>(UnwrappedElse))
+    else if (!isa<CompoundStmt>(Else))
       emitDiagnostic(Result, If->getElse(), If->getElseLoc());
   }
 }
