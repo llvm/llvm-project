@@ -195,7 +195,7 @@ def err_verify_directive_out_of_order : Error<
 def err_verify_non_singular_match : Error<
   "diagnostic verification mode disallows use of a diagnostic quantifier">;
 def err_verify_wildcard_loc : Error<
-  "diagnostic verification mode disallows use of wildcard for diagnostic "
+  "diagnostic verification mode disallows use of a wildcard for diagnostic "
   "location">;
 
 def note_fixit_applied : Note<"FIX-IT applied suggested code changes">;
