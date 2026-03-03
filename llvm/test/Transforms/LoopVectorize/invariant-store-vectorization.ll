@@ -22,7 +22,7 @@ define i32 @inv_val_store_to_inv_address_with_reduction(ptr %a, i64 %n, ptr %b) 
 ; CHECK-NEXT:    [[NTRUNC:%.*]] = trunc i64 [[N:%.*]] to i32
 ; CHECK-NEXT:    [[SMAX2:%.*]] = call i64 @llvm.smax.i64(i64 [[N]], i64 1)
 ; CHECK-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp slt i64 [[N]], 4
-; CHECK-NEXT:    br i1 [[MIN_ITERS_CHECK]], label [[SCALAR_PH:%.*]], label [[VECTOR_MEMCHECK:%.*]]
+; CHECK-NEXT:    br i1 [[MIN_ITERS_CHECK]], label [[SCALAR_PH:%.*]], label [[VECTOR_PH:%.*]]
 ; CHECK:       vector.memcheck:
 ; CHECK-NEXT:    [[SCEVGEP:%.*]] = getelementptr i8, ptr [[A:%.*]], i64 4
 ; CHECK-NEXT:    [[TMP0:%.*]] = shl i64 [[N]], 2
@@ -30,13 +30,13 @@ define i32 @inv_val_store_to_inv_address_with_reduction(ptr %a, i64 %n, ptr %b) 
 ; CHECK-NEXT:    [[BOUND0:%.*]] = icmp ult ptr [[A]], [[SCEVGEP1]]
 ; CHECK-NEXT:    [[BOUND1:%.*]] = icmp ult ptr [[B]], [[SCEVGEP]]
 ; CHECK-NEXT:    [[FOUND_CONFLICT:%.*]] = and i1 [[BOUND0]], [[BOUND1]]
-; CHECK-NEXT:    br i1 [[FOUND_CONFLICT]], label [[SCALAR_PH]], label [[VECTOR_PH:%.*]]
+; CHECK-NEXT:    br i1 [[FOUND_CONFLICT]], label [[SCALAR_PH]], label [[VECTOR_PH1:%.*]]
 ; CHECK:       vector.ph:
 ; CHECK-NEXT:    [[N_VEC:%.*]] = and i64 [[SMAX2]], 9223372036854775804
 ; CHECK-NEXT:    br label [[VECTOR_BODY:%.*]]
 ; CHECK:       vector.body:
-; CHECK-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, [[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], [[VECTOR_BODY]] ]
-; CHECK-NEXT:    [[VEC_PHI:%.*]] = phi <4 x i32> [ zeroinitializer, [[VECTOR_PH]] ], [ [[TMP2:%.*]], [[VECTOR_BODY]] ]
+; CHECK-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, [[VECTOR_PH1]] ], [ [[INDEX_NEXT:%.*]], [[VECTOR_BODY]] ]
+; CHECK-NEXT:    [[VEC_PHI:%.*]] = phi <4 x i32> [ zeroinitializer, [[VECTOR_PH1]] ], [ [[TMP2:%.*]], [[VECTOR_BODY]] ]
 ; CHECK-NEXT:    [[TMP1:%.*]] = getelementptr inbounds [4 x i8], ptr [[B]], i64 [[INDEX]]
 ; CHECK-NEXT:    [[WIDE_LOAD:%.*]] = load <4 x i32>, ptr [[TMP1]], align 8, !alias.scope [[META0:![0-9]+]]
 ; CHECK-NEXT:    [[TMP2]] = add <4 x i32> [[VEC_PHI]], [[WIDE_LOAD]]
@@ -50,8 +50,8 @@ define i32 @inv_val_store_to_inv_address_with_reduction(ptr %a, i64 %n, ptr %b) 
 ; CHECK-NEXT:    [[CMP_N:%.*]] = icmp eq i64 [[SMAX2]], [[N_VEC]]
 ; CHECK-NEXT:    br i1 [[CMP_N]], label [[FOR_END:%.*]], label [[SCALAR_PH]]
 ; CHECK:       scalar.ph:
-; CHECK-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i64 [ [[N_VEC]], [[MIDDLE_BLOCK]] ], [ 0, [[ENTRY:%.*]] ], [ 0, [[VECTOR_MEMCHECK]] ]
-; CHECK-NEXT:    [[BC_MERGE_RDX:%.*]] = phi i32 [ [[TMP4]], [[MIDDLE_BLOCK]] ], [ 0, [[ENTRY]] ], [ 0, [[VECTOR_MEMCHECK]] ]
+; CHECK-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i64 [ [[N_VEC]], [[MIDDLE_BLOCK]] ], [ 0, [[ENTRY:%.*]] ], [ 0, [[VECTOR_PH]] ]
+; CHECK-NEXT:    [[BC_MERGE_RDX:%.*]] = phi i32 [ [[TMP4]], [[MIDDLE_BLOCK]] ], [ 0, [[ENTRY]] ], [ 0, [[VECTOR_PH]] ]
 ; CHECK-NEXT:    br label [[FOR_BODY:%.*]]
 ; CHECK:       for.body:
 ; CHECK-NEXT:    [[I:%.*]] = phi i64 [ [[I_NEXT:%.*]], [[FOR_BODY]] ], [ [[BC_RESUME_VAL]], [[SCALAR_PH]] ]

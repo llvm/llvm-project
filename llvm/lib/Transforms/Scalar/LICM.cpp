@@ -2315,15 +2315,6 @@ static bool noConflictingReadWrites(Instruction *I, MemorySSA *MSSA,
   auto *IMD = MSSA->getMemoryAccess(I);
   BatchAAResults BAA(*AA);
   auto *Source = getClobberingMemoryAccess(*MSSA, BAA, Flags, IMD);
-  auto *CallI = dyn_cast<CallBase>(I);
-  auto doesItReadILoc = [&](Instruction *UserI) -> bool {
-    // Blocks if call reads the location I.
-    if (auto *OtherCB = dyn_cast_or_null<CallBase>(UserI)) {
-      ModRefInfo MRI = AA->getModRefInfo(CallI, OtherCB);
-      return isRefSet(MRI);
-    }
-    return true;
-  };
   // Make sure there are no clobbers inside the loop.
   if (!MSSA->isLiveOnEntryDef(Source) && CurLoop->contains(Source->getBlock()))
     return false;
@@ -2337,15 +2328,19 @@ static bool noConflictingReadWrites(Instruction *I, MemorySSA *MSSA,
     auto *Accesses = MSSA->getBlockAccesses(BB);
     if (!Accesses)
       continue;
-    bool FoundI = false;
     for (const auto &MA : *Accesses)
       if (const auto *MU = dyn_cast<MemoryUse>(&MA)) {
         auto *MD = getClobberingMemoryAccess(*MSSA, BAA, Flags,
                                              const_cast<MemoryUse *>(MU));
-        // Check clobbering only for Uses that happens before I
-        if (!MSSA->isLiveOnEntryDef(MD) && CurLoop->contains(MD->getBlock()) &&
-            !FoundI)
-          return false;
+        if (!MSSA->isLiveOnEntryDef(MD) && CurLoop->contains(MD->getBlock())) {
+          auto *MDI = dyn_cast_or_null<MemoryDef>(MD);
+          // It checks only if I is clobbering.
+          // If IMD is not the same as I (that it wants to hoist), assumes they
+          // clobber
+          // Sync store is not allowed, but store hoist is allowed
+          if (!Flags.getIsSink() && (!MDI || MDI->getMemoryInst() != I))
+            return false;
+        }
       } else if (const auto *MD = dyn_cast<MemoryDef>(&MA)) {
         if (auto *LI = dyn_cast<LoadInst>(MD->getMemoryInst())) {
           (void)LI; // Silence warning.
@@ -2365,10 +2360,8 @@ static bool noConflictingReadWrites(Instruction *I, MemorySSA *MSSA,
             auto *SCI = cast<CallInst>(I);
             // If the instruction we are wanting to hoist is also a call
             // instruction then we need not check mod/ref info with itself
-            if (SCI == CI) {
-              FoundI = true;
+            if (SCI == CI)
               continue;
-            }
             ModRefInfo MRI = BAA.getModRefInfo(CI, SCI);
             if (isModOrRefSet(MRI))
               return false;
