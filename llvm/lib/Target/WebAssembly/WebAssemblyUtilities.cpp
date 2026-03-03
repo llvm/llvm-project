@@ -204,16 +204,15 @@ MachineSDNode *WebAssembly::getTLSBase(SelectionDAG &DAG, const SDLoc &DL,
   ArrayRef<SDValue> Ops =
       Chain ? ArrayRef<SDValue>(*Chain) : ArrayRef<SDValue>();
   if (Subtarget->hasComponentModelThreadContext()) {
-if (Chain.getNode())
-      return DAG.getMachineNode(WebAssembly::CALL, DL, {PtrVT, MVT::Other},
-                                {CallTarget, Chain});
+    if (Chain.getNode())
+      return DAG.getMachineNode(WebAssembly::CALL, DL, PtrVT, MVT::Other,
+                                CallTarget, Chain);
     return DAG.getMachineNode(WebAssembly::CALL, DL, PtrVT, CallTarget);
 
   } else {
     SDValue TLSBaseSym = DAG.getTargetExternalSymbol("__tls_base", PtrVT);
     if (Chain.getNode())
-      return DAG.getMachineNode(GlobalGetIns, DL, PtrVT, {TLSBaseSym, Chain});
+      return DAG.getMachineNode(GlobalGetIns, DL, PtrVT, MVT::Other, TLSBaseSym, Chain);
     return DAG.getMachineNode(GlobalGetIns, DL, PtrVT, TLSBaseSym);
-  
   }
 }
