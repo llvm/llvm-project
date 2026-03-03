@@ -201,7 +201,8 @@ MachineSDNode *WebAssembly::getTLSBase(SelectionDAG &DAG, const SDLoc &DL,
   MVT PtrVT = Subtarget->hasAddr64() ? MVT::i64 : MVT::i32;
   auto GlobalGetIns = PtrVT == MVT::i64 ? WebAssembly::GLOBAL_GET_I64
                                         : WebAssembly::GLOBAL_GET_I32;
-  ArrayRef<SDValue> Ops = Chain ? ArrayRef<SDValue>(*Chain) : ArrayRef<SDValue>();
+  ArrayRef<SDValue> Ops =
+      Chain ? ArrayRef<SDValue>(*Chain) : ArrayRef<SDValue>();
   if (Subtarget->hasComponentModelThreadContext()) {
     return DAG.getMachineNode(
         WebAssembly::CALL, DL, PtrVT, MVT::Other,
