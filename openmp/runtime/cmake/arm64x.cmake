@@ -28,10 +28,10 @@ function(set_arm64ec_dll_dependencies target)
   get_target_property(libs "${target}" LINK_FLAGS)
   set(non_def "")
 
-  # Separate out the /def flag from the other link flags, so we can replcae it with /defArm64Native.
-  foreach(lib ${libs})
+  # Separate out the /def flag from the other link flags, so we can replace it with /defArm64Native.
+  foreach(lib IN LISTS libs)
     if(lib MATCHES ".*\.def")
-      string(REPLACE "/DEF:" "" def ${lib})
+      string(REPLACE "/DEF:" "" "def" "${lib}")
     else()
       list(APPEND non_def "${lib}")
     endif()
@@ -75,17 +75,17 @@ function(handle_arm64ec_target target)
 endfunction()
 
 # Handle the targets we have requested arm64x builds for.
-function(handle_arm64x)
+function(handle_arm64x targets)
   # During the arm64ec build, create rsp files that containes the absolute path to the inputs passed to the linker (objs, libs).
-  if("${LIBOMP_ARCH}" STREQUAL "arm64ec")
+  if(LIBOMP_ARCH STREQUAL "arm64ec")
     file(MAKE_DIRECTORY ${arm64ReproDir})
-    foreach (target ${ARM64X_TARGETS})
+    foreach (target IN LISTS targets)
       handle_arm64ec_target("${target}")
     endforeach()
 
   # During the ARM64 build, modify the link step appropriately to produce an arm64x binary
-  elseif("${LIBOMP_ARCH}" STREQUAL "aarch64")
-    foreach (target ${ARM64X_TARGETS})
+  elseif(LIBOMP_ARCH STREQUAL "aarch64")
+    foreach (target IN LISTS targets)
       get_target_property(type ${target} TYPE)
       if(type STREQUAL "SHARED_LIBRARY")
         set_arm64ec_dll_dependencies("${target}")
