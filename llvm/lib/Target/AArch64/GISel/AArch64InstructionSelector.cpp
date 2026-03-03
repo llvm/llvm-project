@@ -7188,17 +7188,6 @@ bool AArch64InstructionSelector::isWorthFoldingIntoExtendedReg(
                 [](MachineInstr &Use) { return Use.mayLoadOrStore(); });
 }
 
-static bool isSignExtendShiftType(AArch64_AM::ShiftExtendType Type) {
-  switch (Type) {
-  case AArch64_AM::SXTB:
-  case AArch64_AM::SXTH:
-  case AArch64_AM::SXTW:
-    return true;
-  default:
-    return false;
-  }
-}
-
 InstructionSelector::ComplexRendererFns
 AArch64InstructionSelector::selectExtendedSHL(
     MachineOperand &Root, MachineOperand &Base, MachineOperand &Offset,
@@ -7281,7 +7270,7 @@ AArch64InstructionSelector::selectExtendedSHL(
       if (Ext == AArch64_AM::InvalidShiftExtend)
         return std::nullopt;
 
-      SignExtend = isSignExtendShiftType(Ext) ? 1 : 0;
+      SignExtend = AArch64_AM::isSignExtendShiftType(Ext) ? 1 : 0;
       // We only support SXTW for signed extension here.
       if (SignExtend && Ext != AArch64_AM::SXTW)
         return std::nullopt;

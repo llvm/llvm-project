@@ -28135,6 +28135,9 @@ static SDValue performGatherLoadCombine(SDNode *N, SelectionDAG &DAG,
   return DAG.getMergeValues({Load, LoadChain}, DL);
 }
 
+/// Attempts to fold SEXT_IN_REG(VECREDUCE_ADD(SETcc)) to SADDLV(SETcc).
+/// Note: With legal types a VECREDUCE_ADD of SETcc won't overflow so is
+/// equivalent to SADDLV(SETcc).
 static SDValue performVecReduceAddToSADDLVCombine(
     SDNode *N, TargetLowering::DAGCombinerInfo &DCI, SelectionDAG &DAG) {
   if (DCI.isBeforeLegalize())
@@ -28170,7 +28173,7 @@ static SDValue performVecReduceAddToSADDLVCombine(
   SDValue SADDLV = DAG.getNode(AArch64ISD::SADDLV, DL, MVT::v4i32, Vec);
   SADDLV = DAG.getNode(AArch64ISD::NVCAST, DL, WideVecVT, SADDLV);
   SDValue Result = DAG.getNode(ISD::EXTRACT_VECTOR_ELT, DL, MVT::i32, SADDLV,
-                               DAG.getConstant(0, DL, MVT::i64));
+                               DAG.getVectorIdxConstant(0, DL));
   Result = DAG.getNode(ISD::ANY_EXTEND, DL, VT, Result);
   return DAG.getNode(ISD::SIGN_EXTEND_INREG, DL, VT, Result,
                      DAG.getValueType(WideEltVT));

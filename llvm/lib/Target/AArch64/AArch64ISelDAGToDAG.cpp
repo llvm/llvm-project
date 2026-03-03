@@ -990,9 +990,9 @@ bool AArch64DAGToDAGISel::SelectArithExtendedRegister(SDValue N, SDValue &Reg,
       return false;
 
     // Don't match sext of vector extracts. These can use SMOV, but if we match
-    // this an extended register, we'll always fold the extend into an ALU op
+    // this as an extended register, we'll always fold the extend into an ALU op
     // user of the extend (which results in a UMOV).
-    if (Ext >= AArch64_AM::SXTB) {
+    if (AArch64_AM::isSignExtendShiftType(Ext)) {
       SDValue Op = N.getOperand(0);
       if (Op->getOpcode() == ISD::ANY_EXTEND)
         Op = Op->getOperand(0);
