@@ -719,7 +719,7 @@ exit:
 ; Vectorizeable, requires improvements in dereferenceability checks
 define void @uncountable_exit_with_invariant_but_unknown_stride(ptr dereferenceable(4000) noalias %array, ptr align 2 dereferenceable(4000) readonly %pred, i64 %stride) {
 ; CHECK-LABEL: LV: Checking a loop in 'uncountable_exit_with_invariant_but_unknown_stride'
-; CHECK:       LV: Not vectorizing: Last early exiting block in the chain is not the latch predecessor.
+; CHECK:       LV: Not vectorizing: Cannot determine exact exit count for latch block.
 entry:
   br label %for.body
 
