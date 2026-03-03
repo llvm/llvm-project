@@ -743,6 +743,35 @@ exit:
   ret void
 }
 
+define i32 @uncountable_exit_with_separate_exit_block(ptr dereferenceable(40) noalias %array, ptr align 2 dereferenceable(40) readonly %pred) {
+; CHECK-LABEL: LV: Checking a loop in 'uncountable_exit_with_separate_exit_block'
+; CHECK:       LV: Not vectorizing: Writes to memory unsupported in early exit loops.
+entry:
+  br label %for.body
+
+for.body:
+  %iv = phi i64 [ 0, %entry ], [ %iv.next, %for.inc ]
+  %st.addr = getelementptr inbounds nuw i16, ptr %array, i64 %iv
+  %data = load i16, ptr %st.addr, align 2
+  %inc = add nsw i16 %data, 1
+  store i16 %inc, ptr %st.addr, align 2
+  %ee.addr = getelementptr inbounds nuw i16, ptr %pred, i64 %iv
+  %ee.val = load i16, ptr %ee.addr, align 2
+  %ee.cond = icmp sgt i16 %ee.val, 500
+  br i1 %ee.cond, label %exit.uncountable, label %for.inc
+
+for.inc:
+  %iv.next = add nuw nsw i64 %iv, 1
+  %counted.cond = icmp eq i64 %iv.next, 20
+  br i1 %counted.cond, label %exit.countable, label %for.body
+
+exit.countable:
+  ret i32 0
+
+exit.uncountable:
+  ret i32 1
+}
+
 ;; Avoid vectorization; similar to another invariant test above, we would either
 ;; exit immediately on the first lane or never take the early exit. Should be
 ;; versioned before reaching LV.
