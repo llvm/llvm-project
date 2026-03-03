@@ -59,13 +59,11 @@ class BssSection;
 class GdbIndexSection;
 class GotPltSection;
 class GotSection;
-class IBTPltSection;
 class IgotPltSection;
 class InputSection;
 class IpltSection;
 class MipsGotSection;
 class MipsRldMapSection;
-class PPC32Got2Section;
 class PPC64LongBranchTargetSection;
 class PltSection;
 class RelocationBaseSection;
@@ -586,8 +584,8 @@ struct InStruct {
   std::unique_ptr<SyntheticSection> partIndex;
   std::unique_ptr<PltSection> plt;
   std::unique_ptr<IpltSection> iplt;
-  std::unique_ptr<PPC32Got2Section> ppc32Got2;
-  std::unique_ptr<IBTPltSection> ibtPlt;
+  std::unique_ptr<SyntheticSection> ppc32Got2;
+  std::unique_ptr<SyntheticSection> ibtPlt;
   std::unique_ptr<RelocationBaseSection> relaPlt;
   // Non-SHF_ALLOC sections
   std::unique_ptr<SyntheticSection> debugNames;
