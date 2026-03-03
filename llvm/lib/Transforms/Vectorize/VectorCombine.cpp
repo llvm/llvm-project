@@ -5478,7 +5478,8 @@ bool VectorCombine::foldEqualShuffleAnd(Instruction &I) {
                                       m_ZeroInt()))) ||
       !match(Shuffle, m_Shuffle(m_SExtOrSelf(m_Specific(Equal)), m_Poison(),
                                 m_SpecificMask(Mask))) ||
-      !match(Equal, m_ICmp(Pred, m_Value(L), m_Value(R))))
+      !match(Equal, m_ICmp(Pred, m_Value(L), m_Value(R))) ||
+      !CmpInst::isEquality(Pred))
     return false;
 
   // Check argument type

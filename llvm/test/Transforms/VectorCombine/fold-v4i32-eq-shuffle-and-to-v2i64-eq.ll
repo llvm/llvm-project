@@ -108,3 +108,67 @@ define <4 x i32> @cmpeq_epi64_multi_use_shuffle(<4 x i32> noundef %a, <4 x i32> 
   %and = and <4 x i32> %shuffle, %sext
   ret <4 x i32> %and
 }
+
+define <4 x i32> @cmpeq_epi64_select_neg_0(<4 x i32> noundef %a, <4 x i32> noundef %b) {
+; CHECK-LABEL: define <4 x i32> @cmpeq_epi64_select_neg_0(
+; CHECK-SAME: <4 x i32> noundef [[A:%.*]], <4 x i32> noundef [[B:%.*]]) {
+; CHECK-NEXT:    [[CMP:%.*]] = icmp sgt <4 x i32> [[A]], [[B]]
+; CHECK-NEXT:    [[TMP1:%.*]] = shufflevector <4 x i1> [[CMP]], <4 x i1> poison, <4 x i32> <i32 1, i32 0, i32 3, i32 2>
+; CHECK-NEXT:    [[SHUFFLE:%.*]] = sext <4 x i1> [[TMP1]] to <4 x i32>
+; CHECK-NEXT:    [[SELECT:%.*]] = select <4 x i1> [[CMP]], <4 x i32> [[SHUFFLE]], <4 x i32> zeroinitializer
+; CHECK-NEXT:    ret <4 x i32> [[SELECT]]
+;
+  %cmp = icmp sgt <4 x i32> %a, %b
+  %sext = sext <4 x i1> %cmp to <4 x i32>
+  %shuffle = shufflevector <4 x i32> %sext, <4 x i32> poison, <4 x i32> <i32 1, i32 0, i32 3, i32 2>
+  %select = select <4 x i1> %cmp, <4 x i32> %shuffle, <4 x i32> zeroinitializer
+  ret <4 x i32> %select
+}
+
+define <4 x i32> @cmpeq_epi64_and_neg_1(<4 x i32> noundef %a, <4 x i32> noundef %b) {
+; CHECK-LABEL: define <4 x i32> @cmpeq_epi64_and_neg_1(
+; CHECK-SAME: <4 x i32> noundef [[A:%.*]], <4 x i32> noundef [[B:%.*]]) {
+; CHECK-NEXT:    [[CMP:%.*]] = icmp eq <4 x i32> [[A]], [[B]]
+; CHECK-NEXT:    [[SEXT:%.*]] = zext <4 x i1> [[CMP]] to <4 x i32>
+; CHECK-NEXT:    [[SHUFFLE:%.*]] = shufflevector <4 x i32> [[SEXT]], <4 x i32> poison, <4 x i32> <i32 1, i32 0, i32 3, i32 2>
+; CHECK-NEXT:    [[AND:%.*]] = and <4 x i32> [[SEXT]], [[SHUFFLE]]
+; CHECK-NEXT:    ret <4 x i32> [[AND]]
+;
+  %cmp = icmp eq <4 x i32> %a, %b
+  %sext = zext <4 x i1> %cmp to <4 x i32>
+  %shuffle = shufflevector <4 x i32> %sext, <4 x i32> poison, <4 x i32> <i32 1, i32 0, i32 3, i32 2>
+  %and = and <4 x i32> %sext, %shuffle
+  ret <4 x i32> %and
+}
+
+define <4 x i32> @cmpeq_epi64_select_neg_2(<4 x i32> noundef %a, <4 x i32> noundef %b) {
+; CHECK-LABEL: define <4 x i32> @cmpeq_epi64_select_neg_2(
+; CHECK-SAME: <4 x i32> noundef [[A:%.*]], <4 x i32> noundef [[B:%.*]]) {
+; CHECK-NEXT:    [[CMP:%.*]] = icmp eq <4 x i32> [[A]], [[B]]
+; CHECK-NEXT:    [[TMP1:%.*]] = shufflevector <4 x i1> [[CMP]], <4 x i1> poison, <4 x i32> <i32 3, i32 2, i32 1, i32 0>
+; CHECK-NEXT:    [[SHUFFLE:%.*]] = sext <4 x i1> [[TMP1]] to <4 x i32>
+; CHECK-NEXT:    [[SELECT:%.*]] = select <4 x i1> [[CMP]], <4 x i32> [[SHUFFLE]], <4 x i32> zeroinitializer
+; CHECK-NEXT:    ret <4 x i32> [[SELECT]]
+;
+  %cmp = icmp eq <4 x i32> %a, %b
+  %sext = sext <4 x i1> %cmp to <4 x i32>
+  %shuffle = shufflevector <4 x i32> %sext, <4 x i32> poison, <4 x i32> <i32 3, i32 2, i32 1, i32 0>
+  %select = select <4 x i1> %cmp, <4 x i32> %shuffle, <4 x i32> zeroinitializer
+  ret <4 x i32> %select
+}
+
+define <4 x i32> @cmpeq_epi64_select_neg_3(<4 x i32> noundef %a, <4 x i32> noundef %b) {
+; CHECK-LABEL: define <4 x i32> @cmpeq_epi64_select_neg_3(
+; CHECK-SAME: <4 x i32> noundef [[A:%.*]], <4 x i32> noundef [[B:%.*]]) {
+; CHECK-NEXT:    [[CMP:%.*]] = icmp eq <4 x i32> [[A]], [[B]]
+; CHECK-NEXT:    [[SEXT:%.*]] = sext <4 x i1> [[CMP]] to <4 x i32>
+; CHECK-NEXT:    [[SHUFFLE:%.*]] = shufflevector <4 x i32> [[SEXT]], <4 x i32> poison, <4 x i32> <i32 1, i32 0, i32 3, i32 2>
+; CHECK-NEXT:    [[SELECT:%.*]] = select <4 x i1> [[CMP]], <4 x i32> [[SHUFFLE]], <4 x i32> [[SEXT]]
+; CHECK-NEXT:    ret <4 x i32> [[SELECT]]
+;
+  %cmp = icmp eq <4 x i32> %a, %b
+  %sext = sext <4 x i1> %cmp to <4 x i32>
+  %shuffle = shufflevector <4 x i32> %sext, <4 x i32> poison, <4 x i32> <i32 1, i32 0, i32 3, i32 2>
+  %select = select <4 x i1> %cmp, <4 x i32> %shuffle, <4 x i32> %sext
+  ret <4 x i32> %select
+}
