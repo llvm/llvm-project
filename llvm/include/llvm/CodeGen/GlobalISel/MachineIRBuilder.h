@@ -1083,6 +1083,19 @@ public:
   MachineInstrBuilder buildStore(const SrcOp &Val, const SrcOp &Addr,
                                  MachineMemOperand &MMO);
 
+  /// Build and insert `<opcode> Val, Addr, MMO`.
+  ///
+  /// Stores the value \p Val to \p Addr.
+  ///
+  /// \pre setBasicBlock or setMI must have been called.
+  /// \pre \p Val must be a generic virtual register.
+  /// \pre \p Addr must be a generic virtual register with pointer type.
+  ///
+  /// \return a MachineInstrBuilder for the newly created instruction.
+  MachineInstrBuilder buildStoreInstr(unsigned Opcode, const SrcOp &Val,
+                                      const SrcOp &Addr,
+                                      MachineMemOperand &MMO);
+
   /// Build and insert a G_STORE instruction, while constructing the
   /// MachineMemOperand.
   MachineInstrBuilder

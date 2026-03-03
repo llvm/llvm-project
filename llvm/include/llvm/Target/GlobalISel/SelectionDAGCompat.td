@@ -35,6 +35,11 @@ class GINodeEquiv<Instruction i, SDNode node> {
   // depending on the predicates on the node.
   Instruction IfSignExtend = ?;
   Instruction IfZeroExtend = ?;
+  // In contrast to SelectionDAG we would like not to overload an anyext load
+  // for floating point truncation and extending stores and loads. Instead we
+  // assign separate opcodes for it.
+  Instruction IfFPExtend = ?;
+  Instruction IfFPTrunc = ?;
 
   // SelectionDAG has one setcc for all compares. This differentiates
   // for G_ICMP and G_FCMP.
@@ -236,6 +241,7 @@ def : GINodeEquiv<G_LOAD, ld> {
   let CheckMMOIsNonAtomic = true;
   let IfSignExtend = G_SEXTLOAD;
   let IfZeroExtend = G_ZEXTLOAD;
+  let IfFPExtend = G_FPEXTLOAD;
 }
 
 def : GINodeEquiv<G_ICMP, setcc> {
@@ -249,7 +255,11 @@ def : GINodeEquiv<G_ICMP, setcc> {
 // G_STORE handles both atomic and non-atomic stores where as SelectionDAG had
 // separate nodes for them. This GINodeEquiv maps the non-atomic stores to
 // G_STORE with a non-atomic MachineMemOperand.
-def : GINodeEquiv<G_STORE, st> { let CheckMMOIsNonAtomic = true; }
+def : GINodeEquiv<G_STORE, st> {
+  let CheckMMOIsNonAtomic = true;
+  let IfFPTrunc = G_FPTRUNCSTORE;
+}
+
 def : GINodeEquiv<G_STORE, atomic_store> {
   let CheckMMOIsNonAtomic = false;
   let CheckMMOIsAtomic = true;

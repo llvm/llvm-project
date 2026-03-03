@@ -1252,7 +1252,9 @@ void MachineVerifier::verifyPreISelGenericInstruction(const MachineInstr *MI) {
   case TargetOpcode::G_LOAD:
   case TargetOpcode::G_STORE:
   case TargetOpcode::G_ZEXTLOAD:
-  case TargetOpcode::G_SEXTLOAD: {
+  case TargetOpcode::G_SEXTLOAD:
+  case TargetOpcode::G_FPEXTLOAD:
+  case TargetOpcode::G_FPTRUNCSTORE: {
     LLT ValTy = MRI->getType(MI->getOperand(0).getReg());
     LLT PtrTy = MRI->getType(MI->getOperand(1).getReg());
     if (!PtrTy.isPointer())
@@ -1265,11 +1267,14 @@ void MachineVerifier::verifyPreISelGenericInstruction(const MachineInstr *MI) {
              MI);
     } else {
       const MachineMemOperand &MMO = **MI->memoperands_begin();
-      if (MI->getOpcode() == TargetOpcode::G_ZEXTLOAD ||
-          MI->getOpcode() == TargetOpcode::G_SEXTLOAD) {
+      if (isa<GExtLoad>(*MI)) {
         if (TypeSize::isKnownGE(MMO.getSizeInBits().getValue(),
                                 ValTy.getSizeInBits()))
           report("Generic extload must have a narrower memory type", MI);
+      } else if (isa<GFPTruncStore>(*MI)) {
+        if (TypeSize::isKnownGE(MMO.getSizeInBits().getValue(),
+                                ValTy.getSizeInBits()))
+          report("Generic truncstore must have a narrower memory type", MI);
       } else if (MI->getOpcode() == TargetOpcode::G_LOAD) {
         if (TypeSize::isKnownGT(MMO.getSize().getValue(),
                                 ValTy.getSizeInBytes()))
@@ -1294,7 +1299,7 @@ void MachineVerifier::verifyPreISelGenericInstruction(const MachineInstr *MI) {
       }
 
       const AtomicOrdering Order = MMO.getSuccessOrdering();
-      if (Opc == TargetOpcode::G_STORE) {
+      if (isa<GAnyStore>(*MI)) {
         if (Order == AtomicOrdering::Acquire ||
             Order == AtomicOrdering::AcquireRelease)
           report("atomic store cannot use acquire ordering", MI);

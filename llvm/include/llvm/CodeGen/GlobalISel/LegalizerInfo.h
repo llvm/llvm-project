@@ -680,6 +680,15 @@ public:
                     LegalityPredicates::typePairAndMemDescInSet(
                         typeIdx(0), typeIdx(1), /*MMOIdx*/ 0, TypesAndMemDesc));
   }
+  LegalizeRuleSet &legalForTypesWithMemDesc(
+      bool Pred, std::initializer_list<LegalityPredicates::TypePairAndMemDesc>
+                     TypesAndMemDesc) {
+    if (!Pred)
+      return *this;
+    return actionIf(LegalizeAction::Legal,
+                    LegalityPredicates::typePairAndMemDescInSet(
+                        typeIdx(0), typeIdx(1), /*MMOIdx*/ 0, TypesAndMemDesc));
+  }
   /// The instruction is legal when type indexes 0 and 1 are both in the given
   /// list. That is, the type pair is in the cartesian product of the list.
   LegalizeRuleSet &legalForCartesianProduct(std::initializer_list<LLT> Types) {
