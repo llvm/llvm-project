@@ -7,9 +7,8 @@
 //=============================================================================
 // NOTES
 //
-// Minor differences between RUNs (e.g. presence of `noundef` attached to
-// argumens, `align` attribute attached to pointers), are matched using
-// catch-alls like {{.*}}.
+// ACLE section headings based on v2025Q2 of the ACLE specification:
+//  * https://arm-software.github.io/acle/neon_intrinsics/advsimd.html#bitwise-equal-to-zero
 //
 // Different labels for CIR stem from an additional function call that is
 // present at the AST and CIR levels, but is inlined at the LLVM IR level.
@@ -25,7 +24,7 @@ uint64_t test_vceqzd_s64(int64_t a) {
 // CIR:   [[RES:%.*]] = cir.cast bool_to_int [[CMP]] : !cir.bool -> !cir.int<s, 1>
 // CIR:   cir.cast integral [[RES]] : !cir.int<s, 1> -> !u64i
 
-// LLVM-SAME: i64{{.*}} [[A:%.*]])
+// LLVM-SAME: i64 noundef [[A:%.*]])
 // LLVM:          [[TMP0:%.*]] = icmp eq i64 [[A]], 0
 // LLVM-NEXT:    [[VCEQZ_I:%.*]] = sext i1 [[TMP0]] to i64
 // LLVM-NEXT:    ret i64 [[VCEQZ_I]]
@@ -37,7 +36,7 @@ uint64_t test_vceqzd_s64(int64_t a) {
 int64_t test_vnegd_s64(int64_t a) {
 // CIR: cir.unary(minus, {{.*}}) : !s64
 
-// LLVM-SAME: i64{{.*}} [[A:%.*]])
+// LLVM-SAME: i64 noundef [[A:%.*]])
 // LLVM:          [[VNEGD_I:%.*]] = sub i64 0, [[A]]
 // LLVM-NEXT:     ret i64 [[VNEGD_I]]
   return (int64_t)vnegd_s64(a);

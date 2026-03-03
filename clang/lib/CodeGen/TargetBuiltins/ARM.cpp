@@ -534,6 +534,11 @@ Value *CodeGenFunction::EmitNeonRShiftImm(Value *Vec, Value *Shift,
   return Builder.CreateAShr(Vec, Shift, name);
 }
 
+//===----------------------------------------------------------------------===//
+//  Intrinsics maps
+//
+//  Maps that help automate code-generation.
+//===----------------------------------------------------------------------===//
 enum {
   AddRetType = (1 << 0),
   Add1ArgType = (1 << 1),
@@ -1654,6 +1659,8 @@ static bool AArch64SISDIntrinsicsProvenSorted = false;
 static bool AArch64SVEIntrinsicsProvenSorted = false;
 static bool AArch64SMEIntrinsicsProvenSorted = false;
 
+// Check if Builtin `BuiltinId` is present in `IntrinsicMap`. If yes, returns
+// the corresponding info struct.
 static const ARMVectorIntrinsicInfo *
 findARMVectorIntrinsicInMap(ArrayRef<ARMVectorIntrinsicInfo> IntrinsicMap,
                             unsigned BuiltinID, bool &MapProvenSorted) {
@@ -1783,7 +1790,10 @@ Value *CodeGenFunction::EmitCommonNeonBuiltinExpr(
     const char *NameHint, unsigned Modifier, const CallExpr *E,
     SmallVectorImpl<llvm::Value *> &Ops, Address PtrOp0, Address PtrOp1,
     llvm::Triple::ArchType Arch) {
-  // Get the last argument, which specifies the vector type.
+
+  // Extract the trailing immediate argument that encodes the type discriminator
+  // for this overloaded intrinsic.
+  // TODO: Move to the parent code that takes care of argument processing.
   const Expr *Arg = E->getArg(E->getNumArgs() - 1);
   std::optional<llvm::APSInt> NeonTypeConst =
       Arg->getIntegerConstantExpr(getContext());
