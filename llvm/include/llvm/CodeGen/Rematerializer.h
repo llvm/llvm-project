@@ -240,8 +240,8 @@ public:
 
   /// Adds a listener to the rematerializer.
   void addListener(Listener *Listen) { Listeners.push_back(Listen); }
-  /// Removes all listeners from the rematerializers.
-  void clearListeners(Listener *Listen) { Listeners.clear(); }
+  /// Removes all listeners from the rematerializer.
+  void clearListeners() { Listeners.clear(); }
 
   inline const Reg &getReg(RegisterIdx RegIdx) const {
     assert(RegIdx < Regs.size() && "out of bounds");
