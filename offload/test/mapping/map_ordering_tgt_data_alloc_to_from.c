@@ -9,10 +9,9 @@ int main() {
   {
 #pragma omp target map(present, alloc : x)
     {
-      printf("%d\n", x); // CHECK: 111
       x = x + 111;
     }
   }
 
-  printf("%d\n", x); // CHECK: 222
+  printf("After tgt data: %d\n", x); // CHECK: After tgt data: 222
 }
