@@ -197,23 +197,23 @@ bool WebAssembly::canLowerReturn(size_t ResultSize,
 
 MachineSDNode *WebAssembly::getTLSBase(SelectionDAG &DAG, const SDLoc &DL,
                                        const WebAssemblySubtarget *Subtarget,
-                                       const SDValue Chain) {
+                                       SDValue Chain) {
   MVT PtrVT = Subtarget->hasAddr64() ? MVT::i64 : MVT::i32;
-  auto GlobalGetIns = PtrVT == MVT::i64 ? WebAssembly::GLOBAL_GET_I64
-                                        : WebAssembly::GLOBAL_GET_I32;
-  ArrayRef<SDValue> Ops =
-      Chain ? ArrayRef<SDValue>(*Chain) : ArrayRef<SDValue>();
-  if (Subtarget->hasComponentModelThreadContext()) {
-    if (Chain.getNode())
-      return DAG.getMachineNode(WebAssembly::CALL, DL, PtrVT, MVT::Other,
-                                CallTarget, Chain);
-    return DAG.getMachineNode(WebAssembly::CALL, DL, PtrVT, CallTarget);
 
+  unsigned Opcode;
+  const char *SymName;
+  if (Subtarget->hasComponentModelThreadContext()) {
+    Opcode = WebAssembly::CALL;
+    SymName = "__wasm_component_model_builtin_context_get_1";
   } else {
-    SDValue TLSBaseSym = DAG.getTargetExternalSymbol("__tls_base", PtrVT);
-    if (Chain.getNode())
-      return DAG.getMachineNode(GlobalGetIns, DL, PtrVT, MVT::Other, TLSBaseSym,
-                                Chain);
-    return DAG.getMachineNode(GlobalGetIns, DL, PtrVT, TLSBaseSym);
+    Opcode = PtrVT == MVT::i64 ? WebAssembly::GLOBAL_GET_I64
+                                : WebAssembly::GLOBAL_GET_I32;
+    SymName = "__tls_base";
   }
+
+  SDValue Sym = DAG.getTargetExternalSymbol(SymName, PtrVT);
+
+  if (Chain.getNode())
+    return DAG.getMachineNode(Opcode, DL, {PtrVT, MVT::Other}, {Sym, Chain});
+  return DAG.getMachineNode(Opcode, DL, PtrVT, Sym);
 }
