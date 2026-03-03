@@ -2597,6 +2597,7 @@ cc_library(
     includes = ["include"],
     deps = [
         ":ArithDialect",
+        ":ControlFlowDialect",
         ":ConvertToLLVMInterface",
         ":IR",
         ":LLVMCommonConversion",
@@ -3346,6 +3347,7 @@ cc_library(
         ":ShardingInterface",
         ":Support",
         ":TensorDialect",
+        ":TransformUtils",
         ":Transforms",
         "//llvm:Support",
     ],
@@ -13555,6 +13557,7 @@ cc_library(
     includes = ["include"],
     deps = [
         ":ArithDialect",
+        ":ControlFlowDialect",
         ":ConvertToLLVMInterface",
         ":DLTIDialect",
         ":IR",
