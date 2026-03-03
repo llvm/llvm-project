@@ -1503,6 +1503,12 @@ updateControlFlowOps(mlir::OpBuilder &builder,
 static LogicalResult updateFunctionOpInterface(mlir::OpBuilder &builder,
                                                mlir::FunctionOpInterface funcOp,
                                                GetLayoutFnTy getLayoutOfValue) {
+  // Only process functions whose type is a standard MLIR FunctionType.
+  // Functions using a different type representation (e.g. llvm.func with
+  // LLVMFunctionType) are not targets for XeGPU layout propagation, and
+  // calling setType(FunctionType{}) on them would corrupt their type.
+  if (!isa<FunctionType>(funcOp.getFunctionType()))
+    return success();
   SmallVector<Type> newArgTypes;
   // Update the function arguments.
   for (BlockArgument arg : funcOp.getArguments()) {
