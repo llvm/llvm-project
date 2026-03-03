@@ -15,5 +15,4 @@ entry:
   %b = extractelement <8 x i16> %a, i32 0
   %c = bitcast i16 %b to half
   ret half %c
-
 }
