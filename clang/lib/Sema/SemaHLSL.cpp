@@ -4448,56 +4448,10 @@ void SemaHLSL::deduceAddressSpace(VarDecl *Decl) {
 
 namespace {
 
-static void handleResourceFieldsInStruct(
-    Sema &S, VarDecl *ParentVD, const CXXRecordDecl *RD,
-    EmbeddedResourceNameBuilder &NameBuilder);
-
-static void handleStructWithResources(Sema &S, VarDecl *ParentVD,
-                                      const CXXRecordDecl *RD,
-                                      EmbeddedResourceNameBuilder &NameBuilder) {
-
-  // scan the base classes
-  assert(RD->getNumBases() <= 1 && "HLSL doesn't support multiple inheritance");
-  const auto *BasesIt = RD->bases_begin();
-  if (BasesIt != RD->bases_end()) {
-    QualType QT = BasesIt->getType();
-    if (QT->isHLSLIntangibleType()) {
-      CXXRecordDecl *BaseRD = QT->getAsCXXRecordDecl();
-      NameBuilder.pushBaseName(BaseRD->getName());
-      handleStructWithResources(S, ParentVD, BaseRD, NameBuilder);
-      NameBuilder.pop();
-    }
-  }
-  // process this class fields
-  handleResourceFieldsInStruct(S, ParentVD, RD, NameBuilder);
-}
-
-static void
-handleArrayOfStructWithResources(Sema &S, VarDecl *ParentVD,
-                                 const ConstantArrayType *CAT,
-                                 EmbeddedResourceNameBuilder &NameBuilder) {
-
-  QualType ElementTy = CAT->getElementType().getCanonicalType();
-  assert(ElementTy->isHLSLIntangibleType() && "Expected HLSL intangible type");
-
-  const ConstantArrayType *SubCAT = dyn_cast<ConstantArrayType>(ElementTy);
-  const CXXRecordDecl *ElementRD = ElementTy->getAsCXXRecordDecl();
-  assert((SubCAT || ElementRD) &&
-         "Expected struct type or an constant array of structs");
-
-  for (unsigned I = 0, E = CAT->getSize().getZExtValue(); I < E; ++I) {
-    NameBuilder.pushArrayIndex(I);
-    if (ElementRD)
-      handleStructWithResources(S, ParentVD, ElementRD, NameBuilder);
-    else
-      handleArrayOfStructWithResources(S, ParentVD, SubCAT, NameBuilder);
-    NameBuilder.pop();
-  }
-}
-
-static void createGlobalResourceDeclForStruct(
-    Sema &S, VarDecl *ParentVD, SourceLocation Loc, IdentifierInfo *Id,
-    QualType ResTy) {
+static void createGlobalResourceDeclForStruct(Sema &S, VarDecl *ParentVD,
+                                              SourceLocation Loc,
+                                              IdentifierInfo *Id,
+                                              QualType ResTy) {
   assert(isResourceRecordTypeOrArrayOf(ResTy) &&
          "expected resource type or array of resources");
 
@@ -4541,10 +4495,27 @@ static void createGlobalResourceDeclForStruct(
 }
 
 static void
-handleResourceFieldsInStruct(Sema &S, VarDecl *ParentVD,
-                             const CXXRecordDecl *RD,
-                             EmbeddedResourceNameBuilder &NameBuilder) {
+handleArrayOfStructWithResources(Sema &S, VarDecl *ParentVD,
+                                 const ConstantArrayType *CAT,
+                                 EmbeddedResourceNameBuilder &NameBuilder);
 
+static void
+handleStructWithResources(Sema &S, VarDecl *ParentVD, const CXXRecordDecl *RD,
+                          EmbeddedResourceNameBuilder &NameBuilder) {
+
+  // scan the base classes
+  assert(RD->getNumBases() <= 1 && "HLSL doesn't support multiple inheritance");
+  const auto *BasesIt = RD->bases_begin();
+  if (BasesIt != RD->bases_end()) {
+    QualType QT = BasesIt->getType();
+    if (QT->isHLSLIntangibleType()) {
+      CXXRecordDecl *BaseRD = QT->getAsCXXRecordDecl();
+      NameBuilder.pushBaseName(BaseRD->getName());
+      handleStructWithResources(S, ParentVD, BaseRD, NameBuilder);
+      NameBuilder.pop();
+    }
+  }
+  // process this class fields
   for (const FieldDecl *FD : RD->fields()) {
     QualType FDTy = FD->getType().getCanonicalType();
     if (!FDTy->isHLSLIntangibleType())
@@ -4564,6 +4535,29 @@ handleResourceFieldsInStruct(Sema &S, VarDecl *ParentVD,
              "resource arrays should have been already handled");
       handleArrayOfStructWithResources(S, ParentVD, ArrayTy, NameBuilder);
     }
+    NameBuilder.pop();
+  }
+}
+
+static void
+handleArrayOfStructWithResources(Sema &S, VarDecl *ParentVD,
+                                 const ConstantArrayType *CAT,
+                                 EmbeddedResourceNameBuilder &NameBuilder) {
+
+  QualType ElementTy = CAT->getElementType().getCanonicalType();
+  assert(ElementTy->isHLSLIntangibleType() && "Expected HLSL intangible type");
+
+  const ConstantArrayType *SubCAT = dyn_cast<ConstantArrayType>(ElementTy);
+  const CXXRecordDecl *ElementRD = ElementTy->getAsCXXRecordDecl();
+  assert((SubCAT || ElementRD) &&
+         "Expected struct type or an constant array of structs");
+
+  for (unsigned I = 0, E = CAT->getSize().getZExtValue(); I < E; ++I) {
+    NameBuilder.pushArrayIndex(I);
+    if (ElementRD)
+      handleStructWithResources(S, ParentVD, ElementRD, NameBuilder);
+    else
+      handleArrayOfStructWithResources(S, ParentVD, SubCAT, NameBuilder);
     NameBuilder.pop();
   }
 }
