@@ -4652,12 +4652,13 @@ void VPlanTransforms::hoistInvariantLoads(VPlan &Plan,
   for (auto Group : Groups) {
     VPReplicateRecipe *EarliestLoad = Group[0];
     VPBasicBlock *EntryBB = Plan.getVectorLoopRegion()->getEntryBasicBlock();
-    VPBasicBlock *LastBB = Group.back()->getParent();
+    VPBasicBlock *ExitBB = Plan.getVectorLoopRegion()->getExitingBasicBlock();
 
-    // Check that the load doesn't alias with stores between EntryBB and
-    // LastBB.
+    // Check that the load doesn't alias with stores in the vector loop: if the
+    // load is before a store in the loop, we would need to re-load the value on
+    // each iteration.
     auto LoadLoc = vputils::getMemoryLocation(*EarliestLoad);
-    if (!LoadLoc || !canHoistOrSinkWithNoAliasCheck(*LoadLoc, EntryBB, LastBB))
+    if (!LoadLoc || !canHoistOrSinkWithNoAliasCheck(*LoadLoc, EntryBB, ExitBB))
       continue;
 
     for (VPReplicateRecipe *Load : Group)
