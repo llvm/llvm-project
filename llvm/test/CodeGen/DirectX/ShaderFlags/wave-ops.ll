@@ -139,3 +139,10 @@ entry:
   %ret = call i32 @llvm.dx.wave.prefix.uproduct.i32(i32 %x)
   ret i32 %ret
 }
+
+define noundef i32 @quad_read_across_x_i32(i32 noundef %expr) {
+entry:
+  ; CHECK: Function quad_read_across_x_i32 : [[WAVE_FLAG]]
+  %ret = call i32 @llvm.dx.quad.read.across.x.i32(i32 %expr)
+  ret i32 %ret
+}

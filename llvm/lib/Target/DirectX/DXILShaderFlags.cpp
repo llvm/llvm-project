@@ -71,7 +71,6 @@ static bool checkWaveOps(Intrinsic::ID IID) {
   // case Intrinsic::dx_wave_reduce.xor:
   // case Intrinsic::dx_wave_prefixop:
   // case Intrinsic::dx_quad.readat:
-  // case Intrinsic::dx_quad.readacrossx:
   // case Intrinsic::dx_quad.readacrossy:
   // case Intrinsic::dx_quad.readacrossdiagonal:
   // case Intrinsic::dx_wave_prefixballot:
@@ -102,6 +101,8 @@ static bool checkWaveOps(Intrinsic::ID IID) {
   case Intrinsic::dx_wave_prefix_usum:
   case Intrinsic::dx_wave_prefix_product:
   case Intrinsic::dx_wave_prefix_uproduct:
+    // Quad Op Variants
+  case Intrinsic::dx_quad_read_across_x:
     return true;
   }
 }
