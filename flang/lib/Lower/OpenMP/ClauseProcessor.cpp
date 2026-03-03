@@ -1485,9 +1485,21 @@ void ClauseProcessor::processMapObjects(
         mapperId = mlir::FlatSymbolRefAttr();
       } else if (objectTypeSpec) {
         std::string mapperIdName = getDefaultMapperID(objectTypeSpec);
+        bool isAllocOrPointer =
+            semantics::IsAllocatableOrObjectPointer(object.sym());
+        bool isPointer = semantics::IsPointer(*object.sym());
+        bool isImplicitMap =
+            (mapTypeBits & mlir::omp::ClauseMapFlags::implicit) ==
+            mlir::omp::ClauseMapFlags::implicit;
         bool needsDefaultMapper =
-            semantics::IsAllocatableOrObjectPointer(object.sym()) ||
+            isAllocOrPointer ||
             requiresImplicitDefaultDeclareMapper(*objectTypeSpec);
+        // For implicit captures, avoid synthesizing default mappers for pointer
+        // entities (which can over-map pointer payloads) and for plain
+        // non-allocatable/non-pointer entities. Keep implicit mapper support
+        // for allocatables.
+        if (isImplicitMap && (isPointer || !isAllocOrPointer))
+          needsDefaultMapper = false;
         if (!mapperIdName.empty())
           mapperId = addImplicitMapper(object, mapperIdName,
                                        /*allowGenerate=*/needsDefaultMapper);
@@ -1542,7 +1554,14 @@ bool ClauseProcessor::processMap(
     if (attachMod)
       TODO(currentLocation, "ATTACH modifier is not implemented yet");
     mlir::omp::ClauseMapFlags mapTypeBits = mlir::omp::ClauseMapFlags::none;
+    // For data-motion directives we avoid auto-attaching implicit default
+    // mappers. Deep recursive mapping there can conflict with explicit
+    // component enter/exit maps users commonly spell out.
     std::string mapperIdName = "__implicit_mapper";
+    if (directive == llvm::omp::Directive::OMPD_target_enter_data ||
+        directive == llvm::omp::Directive::OMPD_target_exit_data ||
+        directive == llvm::omp::Directive::OMPD_target_update)
+      mapperIdName.clear();
     // If the map type is specified, then process it else set the appropriate
     // default value
     Map::MapType type;
