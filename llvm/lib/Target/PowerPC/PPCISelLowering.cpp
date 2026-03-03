@@ -17230,11 +17230,11 @@ static SDValue combineSELECT_CCBitFloor(SDNode *N, SelectionDAG &DAG) {
   if (!isNullConstant(TrueVal))
     return SDValue();
 
-  // Check if FalseVal is (srl MinSignedValue, ShiftAmt)
-  // We check for ISD::SRL here (not PPCISD::SRL) because this runs during
-  // DAGCombine before instruction selection. PowerPC's SRD/SRW instructions
-  // guarantee that a shift by bitwidth returns 0, which matches our needs.
-  if (FalseVal.getOpcode() != ISD::SRL)
+  // DAGCombine before instruction selection. We also require hasOneUse() to
+  // ensure we can safely replace ISD::SRL with PPCISD::SRL without affecting
+  // other users. PowerPC's SRD/SRW instructions guarantee that a shift by
+  // bitwidth returns 0, which matches our needs for the bitfloor(0) case.
+  if (FalseVal.getOpcode() != ISD::SRL || !FalseVal.hasOneUse())
     return SDValue();
 
   SDValue ShiftVal = FalseVal.getOperand(0);
@@ -17266,7 +17266,13 @@ static SDValue combineSELECT_CCBitFloor(SDNode *N, SelectionDAG &DAG) {
   if (CtlzArg != CmpLHS)
     return SDValue();
 
-  return FalseVal;
+  // Replace ISD::SRL with PPCISD::SRL to ensure well-defined behavior.
+  // On PowerPC, PPCISD::SRL guarantees that shift by bitwidth returns 0,
+  // which is exactly what we need for the bitfloor(0) case.
+  SDLoc DL(N);
+  SDValue PPCSrl = DAG.getNode(PPCISD::SRL, DL, FalseVal.getValueType(),
+                               ShiftVal, ShiftAmt);
+  return PPCSrl; 
 }
 
 // Optimize zero-extension of setcc when the compared value is known to be 0
