@@ -24,6 +24,7 @@
 
 #include "lld/Common/Arrays.h"
 #include "lld/Common/CommonLinkerContext.h"
+#include "llvm/ADT/DenseSet.h"
 #include "llvm/BinaryFormat/MachO.h"
 #include "llvm/Config/llvm-config.h"
 #include "llvm/Support/Parallel.h"
@@ -681,8 +682,19 @@ static void prepareSymbolRelocation(Symbol *sym, const InputSection *isec,
     if (needsBinding(sym))
       in.stubs->addEntry(sym);
   } else if (relocAttrs.hasAttr(RelocAttrBits::GOT)) {
-    if (relocAttrs.hasAttr(RelocAttrBits::POINTER) || needsBinding(sym))
-      in.got->addEntry(sym);
+    if (relocAttrs.hasAttr(RelocAttrBits::POINTER) || needsBinding(sym)) {
+      // GOT_LOAD consumers apply their own signing (paciza) and need a
+      // raw pointer from regular __got. Stubs independently add to
+      // __auth_got via StubsSection::addEntry(). AUTH relocations or
+      // eh_frame personality pointers go to authgot.
+      bool needsAuthGot =
+          relocAttrs.hasAttr(RelocAttrBits::AUTH) ||
+          (config->arch() == AK_arm64e && isEhFrameSection(isec));
+      if (needsAuthGot)
+        in.authgot->addEntry(sym);
+      else
+        in.got->addEntry(sym);
+    }
   } else if (relocAttrs.hasAttr(RelocAttrBits::TLV)) {
     if (needsBinding(sym))
       in.tlvPointers->addEntry(sym);
@@ -690,8 +702,10 @@ static void prepareSymbolRelocation(Symbol *sym, const InputSection *isec,
     // References from thread-local variable sections are treated as offsets
     // relative to the start of the referent section, and therefore have no
     // need of rebase opcodes.
-    if (!(isThreadLocalVariables(isec->getFlags()) && isa<Defined>(sym)))
-      addNonLazyBindingEntries(sym, isec, r.offset, r.addend);
+    if (!(isThreadLocalVariables(isec->getFlags()) && isa<Defined>(sym))) {
+      bool forceOutline = relocAttrs.hasAttr(RelocAttrBits::AUTH);
+      addNonLazyBindingEntries(sym, isec, r.offset, r.addend, forceOutline);
+    }
   }
 }
 
@@ -1284,8 +1298,14 @@ void Writer::buildFixupChains() {
             " is not a multiple of the stride). Re-link with -no_fixup_chains");
 
       // The "next" field is in the same location for bind and rebase entries.
-      reinterpret_cast<dyld_chained_ptr_64_bind *>(buf + loc[i - 1].offset)
-          ->next = offset / stride;
+      if (config->arch() == AK_arm64e) {
+        reinterpret_cast<dyld_chained_ptr_arm64e_auth_bind *>(buf +
+                                                              loc[i - 1].offset)
+            ->next = offset / 8;
+      } else {
+        reinterpret_cast<dyld_chained_ptr_64_bind *>(buf + loc[i - 1].offset)
+            ->next = offset / stride;
+      }
       ++i;
     }
   }
@@ -1395,6 +1415,7 @@ void macho::createSyntheticSections() {
   }
   in.exports = make<ExportSection>();
   in.got = make<GotSection>();
+  in.authgot = make<AuthGotSection>();
   in.tlvPointers = make<TlvPointerSection>();
   in.stubs = make<StubsSection>();
   in.objcStubs = make<ObjCStubsSection>();

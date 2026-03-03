@@ -280,7 +280,11 @@ void UnwindInfoSectionImpl::prepareRelocations(ConcatInputSection *isec) {
             personalityTable[{defined->isec(), defined->value}];
         if (personality == nullptr) {
           personality = defined;
-          in.got->addEntry(defined);
+          // For arm64e, personality pointers go in the authenticated GOT
+          if (config->arch() == AK_arm64e)
+            in.authgot->addEntry(defined);
+          else
+            in.got->addEntry(defined);
         } else if (personality != defined) {
           r.referent = personality;
         }
@@ -288,7 +292,11 @@ void UnwindInfoSectionImpl::prepareRelocations(ConcatInputSection *isec) {
       }
 
       assert(isa<DylibSymbol>(s));
-      in.got->addEntry(s);
+      // For arm64e, personality pointers go in the authenticated GOT
+      if (config->arch() == AK_arm64e)
+        in.authgot->addEntry(s);
+      else
+        in.got->addEntry(s);
       continue;
     }
 
@@ -319,7 +327,11 @@ void UnwindInfoSectionImpl::prepareRelocations(ConcatInputSection *isec) {
                             /*isReferencedDynamically=*/false,
                             /*noDeadStrip=*/false);
           s->used = true;
-          in.got->addEntry(s);
+          // For arm64e, personality pointers go in the authenticated GOT
+          if (config->arch() == AK_arm64e)
+            in.authgot->addEntry(s);
+          else
+            in.got->addEntry(s);
         }
       }
       r.referent = s;
@@ -637,9 +649,13 @@ void UnwindInfoSectionImpl::writeTo(uint8_t *buf) const {
   for (const auto &encoding : commonEncodings)
     *i32p++ = encoding.first;
 
-  // Personalities
-  for (const Symbol *personality : personalities)
-    *i32p++ = personality->getGotVA() - in.header->addr;
+  // Personalities - for arm64e, use authgot instead of got
+  for (const Symbol *personality : personalities) {
+    uint64_t personalityVA = config->arch() == AK_arm64e
+                                 ? in.authgot->getVA(personality->gotIndex)
+                                 : personality->getGotVA();
+    *i32p++ = personalityVA - in.header->addr;
+  }
 
   // FIXME: LD64 checks and warns aboutgaps or overlapse in cuEntries address
   // ranges. We should do the same too

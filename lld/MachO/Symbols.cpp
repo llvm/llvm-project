@@ -49,7 +49,13 @@ uint64_t Symbol::getStubVA() const { return in.stubs->getVA(stubsIndex); }
 uint64_t Symbol::getLazyPtrVA() const {
   return in.lazyPointers->getVA(stubsIndex);
 }
-uint64_t Symbol::getGotVA() const { return in.got->getVA(gotIndex); }
+uint64_t Symbol::getGotVA() const {
+  // For arm64e, symbols may be in authgot instead of regular got.
+  // Check which section contains this symbol.
+  if (in.authgot && in.authgot->getEntries().contains(this))
+    return in.authgot->getVA(gotIndex);
+  return in.got->getVA(gotIndex);
+}
 uint64_t Symbol::getTlvVA() const { return in.tlvPointers->getVA(gotIndex); }
 
 Defined::Defined(StringRef name, InputFile *file, InputSection *isec,

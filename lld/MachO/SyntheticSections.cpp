@@ -299,17 +299,18 @@ void RebaseSection::writeTo(uint8_t *buf) const {
 }
 
 NonLazyPointerSectionBase::NonLazyPointerSectionBase(const char *segname,
-                                                     const char *name)
-    : SyntheticSection(segname, name) {
+                                                     const char *name,
+                                                     bool isAuth)
+    : SyntheticSection(segname, name), isAuth(isAuth) {
   align = target->wordSize;
 }
 
 void macho::addNonLazyBindingEntries(const Symbol *sym,
                                      const InputSection *isec, uint64_t offset,
-                                     int64_t addend) {
+                                     int64_t addend, bool forceOutlineAuth) {
   if (config->emitChainedFixups) {
     if (needsBinding(sym))
-      in.chainedFixups->addBinding(sym, isec, offset, addend);
+      in.chainedFixups->addBinding(sym, isec, offset, addend, forceOutlineAuth);
     else if (isa<Defined>(sym))
       in.chainedFixups->addRebase(isec, offset);
     else
@@ -393,6 +394,12 @@ void NonLazyPointerSectionBase::writeTo(uint8_t *buf) const {
 
 GotSection::GotSection()
     : NonLazyPointerSectionBase(segment_names::data, section_names::got) {
+  flags = S_NON_LAZY_SYMBOL_POINTERS;
+}
+
+AuthGotSection::AuthGotSection()
+    : NonLazyPointerSectionBase(segment_names::data, section_names::authGot,
+                                /*isAuth=*/true) {
   flags = S_NON_LAZY_SYMBOL_POINTERS;
 }
 
@@ -2357,9 +2364,10 @@ bool ChainedFixupsSection::isNeeded() const {
 
 void ChainedFixupsSection::addBinding(const Symbol *sym,
                                       const InputSection *isec, uint64_t offset,
-                                      int64_t addend) {
+                                      int64_t addend, bool forceOutline) {
   locations.emplace_back(isec, offset);
-  int64_t outlineAddend = (addend < 0 || addend > 0xFF) ? addend : 0;
+  int64_t outlineAddend =
+      (forceOutline || addend < 0 || addend > 0xFF) ? addend : 0;
   auto [it, inserted] = bindings.insert(
       {{sym, outlineAddend}, static_cast<uint32_t>(bindings.size())});
 
@@ -2374,8 +2382,10 @@ void ChainedFixupsSection::addBinding(const Symbol *sym,
 }
 
 std::pair<uint32_t, uint8_t>
-ChainedFixupsSection::getBinding(const Symbol *sym, int64_t addend) const {
-  int64_t outlineAddend = (addend < 0 || addend > 0xFF) ? addend : 0;
+ChainedFixupsSection::getBinding(const Symbol *sym, int64_t addend,
+                                 bool forceOutline) const {
+  int64_t outlineAddend =
+      (forceOutline || addend < 0 || addend > 0xFF) ? addend : 0;
   auto it = bindings.find({sym, outlineAddend});
   assert(it != bindings.end() && "binding not found in the imports table");
   if (outlineAddend == 0)
