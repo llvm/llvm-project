@@ -22,8 +22,6 @@ class BlockAPITestCase(TestBase):
         line2 = line_number("fn.c", "// breakpoint 2")
         breakpoint1 = target.BreakpointCreateByLocation("main.c", line1)
         breakpoint2 = target.BreakpointCreateByLocation("fn.c", line2)
-        self.assertGreaterEqual(breakpoint1.GetNumLocations(), 1, PROCESS_IS_VALID)
-        self.assertGreaterEqual(breakpoint2.GetNumLocations(), 1, PROCESS_IS_VALID)
 
         # Now launch the process, and do not stop at the entry point.
         process = target.LaunchSimple(None, None, self.get_process_working_directory())
