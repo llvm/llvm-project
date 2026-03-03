@@ -1166,8 +1166,7 @@ template <class BT> void BlockFrequencyInfoImpl<BT>::initializeRPOT() {
   LLVM_DEBUG(dbgs() << "reverse-post-order-traversal\n");
   for (auto [Idx, Block] : enumerate(RPOT)) {
     BlockNode Node = BlockNode(Idx);
-    LLVM_DEBUG(dbgs() << " - " << Idx << ": " << getBlockName(Node)
-                      << "\n");
+    LLVM_DEBUG(dbgs() << " - " << Idx << ": " << getBlockName(Node) << "\n");
     Nodes[Block] = Node;
   }
 
