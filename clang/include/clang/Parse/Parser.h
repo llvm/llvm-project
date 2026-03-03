@@ -8045,11 +8045,28 @@ private:
 
   static void LateTemplateParserCallback(void *P, LateParsedTemplate &LPT);
 
-  /// Callbacks for Sema to interact with late-parsed type attributes.
+  /// Parse the cached tokens stored in \p LTA into \p OutAttrs.
+  ///
+  /// This callback takes ownership of \p LTA and deletes it. Ideally
+  /// \c LateParsedAttrType would own the object, but \c LateParsedTypeAttribute
+  /// is intentionally forward-declared in the AST layer to avoid a dependency
+  /// on Parser/Sema headers.
   static void ParseLateParsedTypeAttributeCallback(LateParsedTypeAttribute *LTA,
                                                    ParsedAttributes *OutAttrs);
+
+  /// Return the source location of the attribute name stored in \p LTA.
   static SourceLocation
   GetLateParsedAttributeLocationCallback(const LateParsedTypeAttribute *LTA);
+
+  /// Validate \p LA as a late-parsed type attribute and, if valid, wrap
+  /// \p type in a \c LateParsedAttrType placeholder in-place.
+  ///
+  /// \p LA is downcast to \c LateParsedTypeAttribute; if the cast fails the
+  /// attribute is not applicable here and the function returns \c true to skip.
+  /// \p pointerNestLevel is the number of pointer/array/function declarator
+  /// chunks that precede the current chunk (see \c getPointerNestLevel).
+  /// Returns \c true on success and \c false if the attribute is invalid for
+  /// \p type.
   static bool ProcessLateParsedTypeAttrCallback(LateParsedAttribute *LA,
                                                 QualType &type,
                                                 unsigned pointerNestLevel);
