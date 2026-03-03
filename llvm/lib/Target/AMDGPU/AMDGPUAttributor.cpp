@@ -1668,12 +1668,9 @@ PreservedAnalyses llvm::AMDGPUAttributorPass::run(Module &M,
       Functions.insert(&F);
   }
 
-  if (Functions.empty())
-    return PreservedAnalyses::all();
-
   // TODO: Probably preserves CFG
-  return runImpl(Functions, true /*IsModulePass*/, true /*DeleteFns*/, M, AG,
-                 TM, Options, LTOPhase)
+  return runImpl(Functions, /*IsModulePass=*/true, /*DeleteFns=*/true, M, AG,
+                 TM, Options, ThinOrFullLTOPhase::None)
              ? PreservedAnalyses::none()
              : PreservedAnalyses::all();
 }
@@ -1694,14 +1691,11 @@ PreservedAnalyses llvm::AMDGPUAttributorCGSCCPass::run(LazyCallGraph::SCC &C,
       Functions.insert(F);
   }
 
-  if (Functions.empty())
-    return PreservedAnalyses::all();
-
   AMDGPUAttributorOptions Options;
   Module *M = C.begin()->getFunction().getParent();
   // In the CGSCC pipeline, avoid untracked call graph modifications by
   // disabling function deletion, mirroring the generic AttributorCGSCCPass.
-  return runImpl(Functions, false /*IsModulePass*/, false /*DeleteFns*/, *M, AG,
+  return runImpl(Functions, /*IsModulePass=*/false, /*DeleteFns=*/false, *M, AG,
                  TM, Options, ThinOrFullLTOPhase::None)
              ? PreservedAnalyses::none()
              : PreservedAnalyses::all();
