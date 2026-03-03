@@ -1,4 +1,7 @@
-// RUN: %clangxx_lowfat -fno-builtin-memcpy %s -o %t
+// RUN: %clangxx_lowfat -fno-builtin-memcpy -O0 %s -o %t
+// RUN: %clangxx_lowfat -fno-builtin-memcpy -O1 %s -o %t
+// RUN: %clangxx_lowfat -fno-builtin-memcpy -O2 %s -o %t
+// RUN: %clangxx_lowfat -fno-builtin-memcpy -O3 %s -o %t
 // RUN: not %run %t 2>&1 | FileCheck %s
 
 // Verify that memcpy writing past the end of a LowFat allocation is detected

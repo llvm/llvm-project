@@ -1,4 +1,7 @@
-// RUN: %clangxx_lowfat_recover %s -o %t
+// RUN: %clangxx_lowfat_recover -O0 %s -o %t
+// RUN: %clangxx_lowfat_recover -O1 %s -o %t
+// RUN: %clangxx_lowfat_recover -O2 %s -o %t
+// RUN: %clangxx_lowfat_recover -O3 %s -o %t
 // RUN: %run %t 2>&1 | FileCheck %s
 
 // Verify that memset OOB in recover mode warns and continues.

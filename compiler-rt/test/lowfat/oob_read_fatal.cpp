@@ -1,4 +1,7 @@
-// RUN: %clangxx_lowfat %s -o %t
+// RUN: %clangxx_lowfat -O0 %s -o %t
+// RUN: %clangxx_lowfat -O1 %s -o %t
+// RUN: %clangxx_lowfat -O2 %s -o %t
+// RUN: %clangxx_lowfat -O3 %s -o %t
 // RUN: not %run %t 2>&1 | FileCheck %s
 
 // Verify that an OOB load (scalar read across allocation boundary) is detected

@@ -1,4 +1,7 @@
-// RUN: %clangxx_lowfat -fno-builtin-memset %s -o %t
+// RUN: %clangxx_lowfat -fno-builtin-memset -O0 %s -o %t
+// RUN: %clangxx_lowfat -fno-builtin-memset -O1 %s -o %t
+// RUN: %clangxx_lowfat -fno-builtin-memset -O2 %s -o %t
+// RUN: %clangxx_lowfat -fno-builtin-memset -O3 %s -o %t
 // RUN: not %run %t 2>&1 | FileCheck %s
 
 // Verify that memset writing past the end of a LowFat allocation is detected

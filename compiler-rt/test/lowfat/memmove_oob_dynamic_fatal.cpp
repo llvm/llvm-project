@@ -1,4 +1,7 @@
-// RUN: %clangxx_lowfat -fno-builtin-memmove %s -o %t
+// RUN: %clangxx_lowfat -fno-builtin-memmove -O0 %s -o %t
+// RUN: %clangxx_lowfat -fno-builtin-memmove -O1 %s -o %t
+// RUN: %clangxx_lowfat -fno-builtin-memmove -O2 %s -o %t
+// RUN: %clangxx_lowfat -fno-builtin-memmove -O3 %s -o %t
 // RUN: not %run %t 2>&1 | FileCheck %s
 
 // Verify that memmove writing past the end of a LowFat allocation is detected
