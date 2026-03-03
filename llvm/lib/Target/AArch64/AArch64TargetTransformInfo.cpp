@@ -5931,22 +5931,26 @@ InstructionCost AArch64TTIImpl::getPartialReductionCost(
   std::pair<InstructionCost, MVT> InputLT =
       getTypeLegalizationCost(InputVectorType);
 
+  // Returns cost of expanding the partial reduction in ISel.
+  auto GetExpandCost = [&]() -> InstructionCost {
+    unsigned ExtOpc = AccumVectorType->getElementType()->isFloatingPointTy()
+                          ? Instruction::FPExt
+                          : Instruction::ZExt;
+
+    Type *ExtVectorType =
+        VectorType::get(AccumVectorType->getElementType(), VF);
+    return (BinOp ? 2 : 1) *
+               getCastInstrCost(ExtOpc, ExtVectorType, InputVectorType,
+                                TTI::CastContextHint::None, CostKind) +
+           (BinOp ? getArithmeticInstrCost(*BinOp, ExtVectorType, CostKind)
+                  : InstructionCost()) +
+           Ratio * getArithmeticInstrCost(Opcode, AccumVectorType, CostKind);
+  };
+
+  bool IsSub = Opcode == Instruction::Sub;
   InstructionCost Cost = InputLT.first * TTI::TCC_Basic;
 
-  // The sub/negation cannot be folded into the operands of
-  // ISD::PARTIAL_REDUCE_*MLA, so make the cost more expensive.
-  if (Opcode == Instruction::Sub)
-    Cost += 8;
-
-  // Prefer using full types by costing half-full input types as more expensive.
-  if (TypeSize::isKnownLT(InputVectorType->getPrimitiveSizeInBits(),
-                          TypeSize::getScalable(128)))
-    // FIXME: This can be removed after the cost of the extends are folded into
-    // the dot-product expression in VPlan, after landing:
-    //  https://github.com/llvm/llvm-project/pull/147302
-    Cost *= 2;
-
-  if (ST->isSVEorStreamingSVEAvailable() && !IsUSDot) {
+  if (ST->isSVEorStreamingSVEAvailable() && !IsUSDot && !IsSub) {
     // i16 -> i64 is natively supported for udot/sdot
     if (AccumLT.second.getScalarType() == MVT::i64 &&
         InputLT.second.getScalarType() == MVT::i16)
@@ -5967,29 +5971,38 @@ InstructionCost AArch64TTIImpl::getPartialReductionCost(
       return Cost;
   }
 
+  // For a ratio of 2, we can use 2 [u|s|f|bf]mlalb/t instructions.
+  if (Ratio == 2 && !IsSub &&
+      llvm::is_contained({MVT::i16, MVT::i32, MVT::f16, MVT::bf16},
+                         InputLT.second.getScalarType().SimpleTy))
+    return Cost * 2;
+
   // i8 -> i32 is natively supported for udot/sdot/usdot, both for NEON and SVE.
   if (ST->isSVEorStreamingSVEAvailable() ||
       (AccumLT.second.isFixedLengthVector() && ST->isNeonAvailable() &&
        ST->hasDotProd())) {
     if (AccumLT.second.getScalarType() == MVT::i32 &&
-        InputLT.second.getScalarType() == MVT::i8)
+        InputLT.second.getScalarType() == MVT::i8 && !IsSub)
       return Cost;
   }
 
   // f16 -> f32 is natively supported for fdot
-  if (Opcode == Instruction::FAdd && (ST->hasSME2() || ST->hasSVE2p1())) {
-    if (AccumLT.second.getScalarType() == MVT::f32 &&
-        InputLT.second.getScalarType() == MVT::f16 &&
-        AccumLT.second.getVectorMinNumElements() == 4 &&
-        InputLT.second.getVectorMinNumElements() == 8)
-      return Cost;
-    // Floating-point types aren't promoted, so expanding the partial reduction
-    // is more expensive.
-    return Cost + 20;
+  if (Opcode == Instruction::FAdd && (ST->hasSME2() || ST->hasSVE2p1()) &&
+      AccumLT.second.getScalarType() == MVT::f32 &&
+      InputLT.second.getScalarType() == MVT::f16 &&
+      AccumLT.second.getVectorMinNumElements() == 4 &&
+      InputLT.second.getVectorMinNumElements() == 8)
+    return Cost;
+
+  if (IsSub) {
+    // Slightly lower the cost of a sub reduction so that it can be considered
+    // as candidate for 'cdot' operations. This is a somewhat arbitrary number,
+    // because we don't yet model these operations directly.
+    return (8 * GetExpandCost()) / 10;
   }
 
-  // Add additional cost for the extends that would need to be inserted.
-  return Cost + 2;
+  // By default, assume the operation is expanded.
+  return GetExpandCost();
 }
 
 InstructionCost
