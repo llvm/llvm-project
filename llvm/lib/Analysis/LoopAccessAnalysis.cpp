@@ -2581,8 +2581,8 @@ bool LoopAccessInfo::analyzeLoop(AAResults *AA, const LoopInfo *LI,
 
         auto *Ld = dyn_cast<LoadInst>(&I);
         if (!Ld) {
-          recordAnalysis("CantVectorizeInstruction", Ld)
-            << "instruction cannot be vectorized";
+          recordAnalysis("CantVectorizeInstruction", &I)
+              << "instruction cannot be vectorized";
           HasComplexMemInst = true;
           continue;
         }
@@ -2605,7 +2605,7 @@ bool LoopAccessInfo::analyzeLoop(AAResults *AA, const LoopInfo *LI,
       if (I.mayWriteToMemory()) {
         auto *St = dyn_cast<StoreInst>(&I);
         if (!St) {
-          recordAnalysis("CantVectorizeInstruction", St)
+          recordAnalysis("CantVectorizeInstruction", &I)
               << "instruction cannot be vectorized";
           HasComplexMemInst = true;
           continue;
