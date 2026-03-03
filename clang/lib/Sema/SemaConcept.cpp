@@ -477,6 +477,8 @@ class ConstraintSatisfactionChecker {
   ConstraintSatisfaction &Satisfaction;
   bool BuildExpression;
 
+  const ConceptReference *ParentConcept = nullptr;
+
 private:
   ExprResult
   EvaluateAtomicConstraint(const Expr *AtomicExpr,
@@ -693,7 +695,8 @@ ConstraintSatisfactionChecker::SubstitutionInTemplateArguments(
 ExprResult ConstraintSatisfactionChecker::EvaluateSlow(
     const AtomicConstraint &Constraint,
     const MultiLevelTemplateArgumentList &MLTAL) {
-  EnterExpressionEvaluationContext ConstantEvaluated(
+  std::optional<EnterExpressionEvaluationContext> EvaluationContext;
+  EvaluationContext.emplace(
       S, Sema::ExpressionEvaluationContext::ConstantEvaluated,
       Sema::ReuseLambdaContextDecl);
 
@@ -703,6 +706,21 @@ ExprResult ConstraintSatisfactionChecker::EvaluateSlow(
   if (!SubstitutedArgs) {
     Satisfaction.IsSatisfied = false;
     return ExprEmpty();
+  }
+
+  // This is dumb: generic lambdas inside requires body require a lambda context
+  // decl from which to fetch correct template arguments. But we don't have any
+  // proper decls because the constraints are already normalized.
+  if (ParentConcept && SubstitutedArgs->getNumSubstitutedLevels()) {
+    auto *CD = ParentConcept->getNamedConcept();
+    // FIXME: the evaluation context should learn to track template arguments
+    // separately from a Decl.
+    EvaluationContext.emplace(
+        S, Sema::ExpressionEvaluationContext::ConstantEvaluated,
+        /*LambdaContextDecl=*/
+        ImplicitConceptSpecializationDecl::Create(
+            S.Context, CD->getDeclContext(), CD->getBeginLoc(),
+            SubstitutedArgs->getOutermost()));
   }
 
   Sema::ArgPackSubstIndexRAII SubstIndex(S, PackSubstitutionIndex);
@@ -1026,6 +1044,8 @@ ExprResult ConstraintSatisfactionChecker::Evaluate(
       Constraint.getSourceRange());
   if (InstTemplate.isInvalid())
     return ExprError();
+
+  llvm::SaveAndRestore PushConceptDecl(ParentConcept, ConceptId);
 
   unsigned Size = Satisfaction.Details.size();
 
