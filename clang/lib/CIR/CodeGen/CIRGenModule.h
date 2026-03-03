@@ -100,6 +100,8 @@ private:
 
   llvm::SmallVector<mlir::Attribute> globalScopeAsm;
 
+  llvm::DenseSet<clang::GlobalDecl> diagnosedConflictingDefinitions;
+
   void createCUDARuntime();
 
   /// A helper for constructAttributeList that handles return attributes.
@@ -598,6 +600,9 @@ public:
   // apply any ABI rules about which other constructors/destructors are needed
   // or if they are alias to each other.
   cir::FuncOp codegenCXXStructor(clang::GlobalDecl gd);
+
+  bool lookupRepresentativeDecl(llvm::StringRef mangledName,
+                                clang::GlobalDecl &gd) const;
 
   bool supportsCOMDAT() const;
   void maybeSetTrivialComdat(const clang::Decl &d, mlir::Operation *op);
