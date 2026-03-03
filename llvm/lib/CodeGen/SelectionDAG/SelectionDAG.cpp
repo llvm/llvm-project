@@ -4695,6 +4695,27 @@ bool SelectionDAG::isKnownToBeAPowerOfTwo(SDValue Val,
         return true;
     break;
 
+  case ISD::EXTRACT_VECTOR_ELT: {
+    SDValue InVec = Val.getOperand(0);
+    SDValue EltNo = Val.getOperand(1);
+    EVT VecVT = InVec.getValueType();
+
+    // Skip scalable vectors or implicit extensions.
+    if (VecVT.isScalableVector() ||
+        OpVT.getScalarSizeInBits() != VecVT.getScalarSizeInBits())
+      break;
+
+    // If we know the element index, just demand that vector element, else for
+    // an unknown element index, ignore DemandedElts and demand them all.
+    const unsigned NumSrcElts = VecVT.getVectorNumElements();
+    auto *ConstEltNo = dyn_cast<ConstantSDNode>(EltNo);
+    APInt DemandedSrcElts =
+        ConstEltNo && ConstEltNo->getAPIntValue().ult(NumSrcElts)
+            ? APInt::getOneBitSet(NumSrcElts, ConstEltNo->getZExtValue())
+            : APInt::getAllOnes(NumSrcElts);
+    return isKnownToBeAPowerOfTwo(InVec, DemandedSrcElts, OrZero, Depth + 1);
+  }
+
   case ISD::AND: {
     // Looking for `x & -x` pattern:
     // If x == 0:
@@ -6198,9 +6219,31 @@ bool SelectionDAG::isKnownNeverZero(SDValue Op, const APInt &DemandedElts,
         return true;
     break;
 
+  case ISD::EXTRACT_VECTOR_ELT: {
+    SDValue InVec = Op.getOperand(0);
+    SDValue EltNo = Op.getOperand(1);
+    EVT VecVT = InVec.getValueType();
+
+    // Skip scalable vectors or implicit extensions.
+    if (VecVT.isScalableVector() ||
+        OpVT.getScalarSizeInBits() != VecVT.getScalarSizeInBits())
+      break;
+
+    // If we know the element index, just demand that vector element, else for
+    // an unknown element index, ignore DemandedElts and demand them all.
+    const unsigned NumSrcElts = VecVT.getVectorNumElements();
+    APInt DemandedSrcElts = APInt::getAllOnes(NumSrcElts);
+    auto *ConstEltNo = dyn_cast<ConstantSDNode>(EltNo);
+    if (ConstEltNo && ConstEltNo->getAPIntValue().ult(NumSrcElts))
+      DemandedSrcElts =
+          APInt::getOneBitSet(NumSrcElts, ConstEltNo->getZExtValue());
+
+    return isKnownNeverZero(InVec, DemandedSrcElts, Depth + 1);
+  }
+
   case ISD::OR:
-    return isKnownNeverZero(Op.getOperand(1), Depth + 1) ||
-           isKnownNeverZero(Op.getOperand(0), Depth + 1);
+    return isKnownNeverZero(Op.getOperand(1), DemandedElts, Depth + 1) ||
+           isKnownNeverZero(Op.getOperand(0), DemandedElts, Depth + 1);
 
   case ISD::VSELECT:
   case ISD::SELECT:
@@ -6221,46 +6264,48 @@ bool SelectionDAG::isKnownNeverZero(SDValue Op, const APInt &DemandedElts,
       return true;
     break;
   }
+
   case ISD::UADDSAT:
   case ISD::UMAX:
-    return isKnownNeverZero(Op.getOperand(1), Depth + 1) ||
-           isKnownNeverZero(Op.getOperand(0), Depth + 1);
+    return isKnownNeverZero(Op.getOperand(1), DemandedElts, Depth + 1) ||
+           isKnownNeverZero(Op.getOperand(0), DemandedElts, Depth + 1);
+
+  case ISD::UMIN:
+    return isKnownNeverZero(Op.getOperand(1), DemandedElts, Depth + 1) &&
+           isKnownNeverZero(Op.getOperand(0), DemandedElts, Depth + 1);
 
     // For smin/smax: If either operand is known negative/positive
     // respectively we don't need the other to be known at all.
   case ISD::SMAX: {
-    KnownBits Op1 = computeKnownBits(Op.getOperand(1), Depth + 1);
+    KnownBits Op1 = computeKnownBits(Op.getOperand(1), DemandedElts, Depth + 1);
     if (Op1.isStrictlyPositive())
       return true;
 
-    KnownBits Op0 = computeKnownBits(Op.getOperand(0), Depth + 1);
+    KnownBits Op0 = computeKnownBits(Op.getOperand(0), DemandedElts, Depth + 1);
     if (Op0.isStrictlyPositive())
       return true;
 
     if (Op1.isNonZero() && Op0.isNonZero())
       return true;
 
-    return isKnownNeverZero(Op.getOperand(1), Depth + 1) &&
-           isKnownNeverZero(Op.getOperand(0), Depth + 1);
+    return isKnownNeverZero(Op.getOperand(1), DemandedElts, Depth + 1) &&
+           isKnownNeverZero(Op.getOperand(0), DemandedElts, Depth + 1);
   }
   case ISD::SMIN: {
-    KnownBits Op1 = computeKnownBits(Op.getOperand(1), Depth + 1);
+    KnownBits Op1 = computeKnownBits(Op.getOperand(1), DemandedElts, Depth + 1);
     if (Op1.isNegative())
       return true;
 
-    KnownBits Op0 = computeKnownBits(Op.getOperand(0), Depth + 1);
+    KnownBits Op0 = computeKnownBits(Op.getOperand(0), DemandedElts, Depth + 1);
     if (Op0.isNegative())
       return true;
 
     if (Op1.isNonZero() && Op0.isNonZero())
       return true;
 
-    return isKnownNeverZero(Op.getOperand(1), Depth + 1) &&
-           isKnownNeverZero(Op.getOperand(0), Depth + 1);
+    return isKnownNeverZero(Op.getOperand(1), DemandedElts, Depth + 1) &&
+           isKnownNeverZero(Op.getOperand(0), DemandedElts, Depth + 1);
   }
-  case ISD::UMIN:
-    return isKnownNeverZero(Op.getOperand(1), Depth + 1) &&
-           isKnownNeverZero(Op.getOperand(0), Depth + 1);
 
   case ISD::ROTL:
   case ISD::ROTR:
@@ -6273,12 +6318,14 @@ bool SelectionDAG::isKnownNeverZero(SDValue Op, const APInt &DemandedElts,
   case ISD::SRA:
   case ISD::SRL: {
     if (Op->getFlags().hasExact())
-      return isKnownNeverZero(Op.getOperand(0), Depth + 1);
-    KnownBits ValKnown = computeKnownBits(Op.getOperand(0), Depth + 1);
+      return isKnownNeverZero(Op.getOperand(0), DemandedElts, Depth + 1);
+    KnownBits ValKnown =
+        computeKnownBits(Op.getOperand(0), DemandedElts, Depth + 1);
     if (ValKnown.isNegative())
       return true;
     // If max shift cnt of known ones is non-zero, result is non-zero.
-    APInt MaxCnt = computeKnownBits(Op.getOperand(1), Depth + 1).getMaxValue();
+    APInt MaxCnt = computeKnownBits(Op.getOperand(1), DemandedElts, Depth + 1)
+                       .getMaxValue();
     if (MaxCnt.ult(ValKnown.getBitWidth()) &&
         !ValKnown.One.lshr(MaxCnt).isZero())
       return true;
@@ -6319,7 +6366,7 @@ bool SelectionDAG::isKnownNeverZero(SDValue Op, const APInt &DemandedElts,
 
   case ISD::ZERO_EXTEND:
   case ISD::SIGN_EXTEND:
-    return isKnownNeverZero(Op.getOperand(0), Depth + 1);
+    return isKnownNeverZero(Op.getOperand(0), DemandedElts, Depth + 1);
   case ISD::VSCALE: {
     const Function &F = getMachineFunction().getFunction();
     const APInt &Multiplier = Op.getConstantOperandAPInt(0);
@@ -7646,12 +7693,8 @@ SDValue SelectionDAG::foldConstantFPMath(unsigned Opcode, const SDLoc &DL,
       C1.copySign(C2);
       return getConstantFP(C1, DL, VT);
     case ISD::FMINNUM:
-      if (C1.isSignaling() || C2.isSignaling())
-        return SDValue();
       return getConstantFP(minnum(C1, C2), DL, VT);
     case ISD::FMAXNUM:
-      if (C1.isSignaling() || C2.isSignaling())
-        return SDValue();
       return getConstantFP(maxnum(C1, C2), DL, VT);
     case ISD::FMINIMUM:
       return getConstantFP(minimum(C1, C2), DL, VT);
