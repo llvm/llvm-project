@@ -1345,17 +1345,6 @@ private:
   uint64_t newEntries = 0;
 };
 
-// Used to compute outSecOff of .got2 in each object file. This is needed to
-// synthesize PLT entries for PPC32 Secure PLT ABI.
-class PPC32Got2Section final : public SyntheticSection {
-public:
-  PPC32Got2Section(Ctx &);
-  size_t getSize() const override { return 0; }
-  bool isNeeded() const override;
-  void finalizeContents() override;
-  void writeTo(uint8_t *buf) override {}
-};
-
 // This section is used to store the addresses of functions that are called
 // in range-extending thunks on PowerPC64. When producing position dependent
 // code the addresses are link-time constants and the table is written out to
