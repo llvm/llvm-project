@@ -208,9 +208,8 @@ public:
 
     cir::ConstantOp lowerBoundValue = cir::ConstantOp::create(
         rewriter, op.getLoc(), cir::IntAttr::get(sIntType, lowerBound));
-    cir::BinOp diffValue =
-        cir::BinOp::create(rewriter, op.getLoc(), sIntType, cir::BinOpKind::Sub,
-                           op.getCondition(), lowerBoundValue);
+    mlir::Value diffValue = cir::SubOp::create(
+        rewriter, op.getLoc(), op.getCondition(), lowerBoundValue);
 
     // Use unsigned comparison to check if the condition is in the range.
     cir::CastOp uDiffValue = cir::CastOp::create(
