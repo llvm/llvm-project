@@ -312,6 +312,12 @@ static Value doCast(OpBuilder &builder, Location loc, Value src, Type dstType,
     }
     auto cast = arith::IndexCastUIOp::create(builder, loc, dstType, src);
     cast.setExact(true);
+    // Narrowing (index -> iN): the unsigned range fits in N < index width
+    // bits, so the top bits including the MSB are all zero.
+    // Widening (iN -> index): the MSB is zero only when the iN value fits
+    // in both signed and unsigned (Both).
+    if (isa<IndexType>(srcElemType) || castKind == CastKind::Both)
+      cast.setNonNeg(true);
     return cast;
   }
 
@@ -322,7 +328,10 @@ static Value doCast(OpBuilder &builder, Location loc, Value src, Type dstType,
 
   if (castKind == CastKind::Signed)
     return arith::ExtSIOp::create(builder, loc, dstType, src);
-  return arith::ExtUIOp::create(builder, loc, dstType, src);
+  auto ext = arith::ExtUIOp::create(builder, loc, dstType, src);
+  if (castKind == CastKind::Both)
+    ext.setNonNeg(true);
+  return ext;
 }
 
 struct NarrowElementwise final : OpTraitRewritePattern<OpTrait::Elementwise> {
