@@ -59,6 +59,18 @@ private:
   void relaxTlsLdToLe(uint8_t *loc, const Relocation &rel, uint64_t val) const;
   void relaxTlsIeToLe(uint8_t *loc, const Relocation &rel, uint64_t val) const;
 };
+
+// Used to compute outSecOff of .got2 in each object file. This is needed to
+// synthesize PLT entries for PPC32 Secure PLT ABI.
+struct Got2Section : SyntheticSection {
+  Got2Section(Ctx &ctx)
+      : SyntheticSection(ctx, ".got2", SHT_PROGBITS, SHF_ALLOC | SHF_WRITE, 4) {
+  }
+  bool isNeeded() const override;
+  size_t getSize() const override { return 0; }
+  void writeTo(uint8_t *buf) override {}
+  void finalizeContents() override;
+};
 } // namespace
 
 static uint16_t lo(uint32_t v) { return v; }
@@ -181,6 +193,11 @@ PPC::PPC(Ctx &ctx) : TargetInfo(ctx) {
   write32(ctx, trapInstr.data(), 0x7fe00008);
 }
 
+void PPC::initTargetSpecificSections() {
+  ctx.in.ppc32Got2 = std::make_unique<Got2Section>(ctx);
+  ctx.inputSections.push_back(ctx.in.ppc32Got2.get());
+}
+
 void PPC::writeIplt(uint8_t *buf, const Symbol &sym,
                     uint64_t /*pltEntryAddr*/) const {
   // In -pie or -shared mode, assume r30 points to .got2+0x8000, and use a
@@ -219,11 +236,6 @@ bool PPC::inBranchRange(RelType type, uint64_t src, uint64_t dst) const {
   if (type == R_PPC_LOCAL24PC || type == R_PPC_REL24 || type == R_PPC_PLTREL24)
     return isInt<26>(offset);
   llvm_unreachable("unsupported relocation type used in branch");
-}
-
-void PPC::initTargetSpecificSections() {
-  ctx.in.ppc32Got2 = std::make_unique<PPC32Got2Section>(ctx);
-  ctx.inputSections.push_back(ctx.in.ppc32Got2.get());
 }
 
 // Only needed to support relocations used by relocateNonAlloc and
@@ -607,3 +619,27 @@ void PPC::relaxTlsIeToLe(uint8_t *loc, const Relocation &rel,
 }
 
 void elf::setPPCTargetInfo(Ctx &ctx) { ctx.target.reset(new PPC(ctx)); }
+
+bool Got2Section::isNeeded() const {
+  for (SectionCommand *cmd : getParent()->commands)
+    if (auto *isd = dyn_cast<InputSectionDescription>(cmd))
+      for (InputSection *isec : isd->sections)
+        if (isec != this)
+          return true;
+  return false;
+}
+
+void Got2Section::finalizeContents() {
+  // PPC32 may create multiple GOT sections for -fPIC/-fPIE, one per file in
+  // .got2 . This function computes outSecOff of each .got2 to be used in
+  // PPC32PltCallStub::writeTo(). The purpose of this empty synthetic section is
+  // to collect input sections named ".got2".
+  for (SectionCommand *cmd : getParent()->commands)
+    if (auto *isd = dyn_cast<InputSectionDescription>(cmd)) {
+      for (InputSection *isec : isd->sections) {
+        // isec->file may be nullptr for MergeSyntheticSection.
+        if (isec != this && isec->file)
+          isec->file->ppc32Got2 = isec;
+      }
+    }
+}
