@@ -8,14 +8,14 @@ void f2(A, A);
 // expected-error@-1 2 {{unknown type name 'A'}}
 
 // CHECK:      error: 'expected-error' diagnostics seen but not expected:
-// CHECK-NEXT:   Line 8: diagnostic verification mode disallows use of diagnostic quantifier
+// CHECK-NEXT:   Line 8: diagnostic verification mode disallows use of a diagnostic quantifier
 
 void f3(A, A);
 // expected-error@-1 0-1 {{unknown type name 'A'}}
 // expected-error@-2 0-1 {{unknown type name 'A'}}
 
-// CHECK-NEXT:   Line 14: diagnostic verification mode disallows use of diagnostic quantifier
-// CHECK-NEXT:   Line 15: diagnostic verification mode disallows use of diagnostic quantifier
+// CHECK-NEXT:   Line 14: diagnostic verification mode disallows use of a diagnostic quantifier
+// CHECK-NEXT:   Line 15: diagnostic verification mode disallows use of a diagnostic quantifier
 
 void f4(A, A);
 // expected-error@-1 1-2 {{unknown type name 'A'}}
