@@ -679,11 +679,13 @@ static bool retrieveRelationalIntegerConstantExpr(
           if (!Arg->isValueDependent() &&
               !Arg->isIntegerConstantExpr(*Result.Context))
             return false;
-        } else
+        } else {
           return false;
+        }
       }
-    } else
+    } else {
       return false;
+    }
 
     Symbol = OverloadedOperatorExpr->getArg(IntegerConstantIsFirstArg ? 1 : 0);
     OperandExpr = OverloadedOperatorExpr;

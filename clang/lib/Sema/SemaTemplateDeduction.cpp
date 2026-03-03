@@ -1003,16 +1003,6 @@ private:
       if (PartialPackDepthIndex ==
             std::make_pair(Info.getDeducedDepth(), Pack.Index)) {
         Pack.New.append(PartialPackArgs, PartialPackArgs + NumPartialPackArgs);
-        // We pre-populate the deduced value of the partially-substituted
-        // pack with the specified value. This is not entirely correct: the
-        // value is supposed to have been substituted, not deduced, but the
-        // cases where this is observable require an exact type match anyway.
-        //
-        // FIXME: If we could represent a "depth i, index j, pack elem k"
-        // parameter, we could substitute the partially-substituted pack
-        // everywhere and avoid this.
-        if (!FinishingDeduction && !IsPartiallyExpanded)
-          Deduced[Pack.Index] = Pack.New[PackElements];
       }
     }
   }
@@ -6501,6 +6491,8 @@ bool Sema::isTemplateTemplateParameterAtLeastAsSpecializedAs(
       SourceRange(P->getTemplateLoc(), P->getRAngleLoc()));
   if (Inst.isInvalid())
     return false;
+
+  LocalInstantiationScope Scope(*this);
 
   //   Given an invented class template X with the template parameter list of
   //   A (including default arguments):
