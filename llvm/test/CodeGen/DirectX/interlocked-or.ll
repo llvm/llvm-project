@@ -9,7 +9,7 @@ entry:
   ; CHECK: [[BIND:%.*]] = call %dx.types.Handle @dx.op.createHandleFromBinding(i32 217
   ; CHECK: [[HANDLE:%.*]] = call %dx.types.Handle @dx.op.annotateHandle(i32 216, %dx.types.Handle [[BIND]]
   %buffer = call target("dx.RawBuffer", i8, 1, 0) @llvm.dx.resource.handlefrombinding.tdx.RawBuffer_i8_1_0t(i32 0, i32 0, i32 1, i32 0, ptr null)
-  ; CHECK: [[INTERLOCKED:%.*]] = call i32 @dx.op.atomicBinOp.i32(i32 78, %dx.types.Handle [[HANDLE]], i32 2, i32 1, i32 undef, i32 undef, i32 0)
+  ; CHECK: [[INTERLOCKED:%.*]] = call i32 @dx.op.atomicBinOp.i32(i32 78, %dx.types.Handle [[HANDLE]], i32 2, i32 0, i32 poison, i32 poison, i32 0)
   %hlsl.interlocked.or = tail call i32 @llvm.dx.interlocked.or.i32.tdx.RawBuffer_i8_1_0t.i32(target("dx.RawBuffer", i8, 1, 0) %buffer, i32 0, i32 poison, i32 poison, i32 0)
   ; CHECK: store i32 [[INTERLOCKED]], ptr [[RETURN]]
   store i32 %hlsl.interlocked.or, ptr %returnVal, align 4
@@ -24,7 +24,7 @@ entry:
   ; CHECK: [[BIND:%.*]] = call %dx.types.Handle @dx.op.createHandleFromBinding(i32 217
   ; CHECK: [[HANDLE:%.*]] = call %dx.types.Handle @dx.op.annotateHandle(i32 216, %dx.types.Handle [[BIND]]
   %buffer = call target("dx.RawBuffer", i8, 1, 0) @llvm.dx.resource.handlefrombinding.tdx.RawBuffer_i8_1_0t(i32 0, i32 0, i32 1, i32 0, ptr null)
-  ; CHECK: [[INTERLOCKED:%.*]] = call i32 @dx.op.atomicBinOp.i32(i32 78, %dx.types.Handle [[HANDLE]], i32 2, i32 1, i32 undef, i32 undef, i32 0)
+  ; CHECK: [[INTERLOCKED:%.*]] = call i32 @dx.op.atomicBinOp.i32(i32 78, %dx.types.Handle [[HANDLE]], i32 2, i32 1, i32 poison, i32 poison, i32 0)
   %hlsl.interlocked.or = call i32 @llvm.dx.interlocked.or.i32.tdx.RawBuffer_i8_1_0t.i32(target("dx.RawBuffer", i8, 1, 0) %buffer, i32 1, i32 poison, i32 poison, i32 0)
   ; CHECK: ret void
   ret void
@@ -39,7 +39,7 @@ entry:
   ; CHECK: [[BIND:%.*]] = call %dx.types.Handle @dx.op.createHandleFromBinding(i32 217
   ; CHECK: [[HANDLE:%.*]] = call %dx.types.Handle @dx.op.annotateHandle(i32 216, %dx.types.Handle [[BIND]]
   %buffer = call target("dx.RawBuffer", %struct.TestStruct, 1, 0) @llvm.dx.resource.handlefrombinding.tdx.RawBuffer_s_struct.TestStructs_1_0t(i32 0, i32 0, i32 1, i32 0, ptr null)
-  ; CHECK: [[INTERLOCKED:%.*]] = call i32 @dx.op.atomicBinOp.i32(i32 78, %dx.types.Handle [[HANDLE]], i32 2, i32 1, i32 4, i32 undef, i32 0)
+  ; CHECK: [[INTERLOCKED:%.*]] = call i32 @dx.op.atomicBinOp.i32(i32 78, %dx.types.Handle [[HANDLE]], i32 2, i32 1, i32 4, i32 poison, i32 0)
   %hlsl.interlocked.or = call i32 @llvm.dx.interlocked.or.i32.tdx.RawBuffer_s_struct.TestStructs_1_0t.i32(target("dx.RawBuffer", %struct.TestStruct, 1, 0) %buffer, i32 1, i32 4, i32 poison, i32 0)
   ; CHECK: store i32 [[INTERLOCKED]], ptr [[RETURN]]
   store i32 %hlsl.interlocked.or, ptr %returnVal, align 4
@@ -54,7 +54,7 @@ entry:
   ; CHECK: [[BIND:%.*]] = call %dx.types.Handle @dx.op.createHandleFromBinding(i32 217
   ; CHECK: [[HANDLE:%.*]] = call %dx.types.Handle @dx.op.annotateHandle(i32 216, %dx.types.Handle [[BIND]]
   %buffer = call target("dx.RawBuffer", %struct.TestStruct, 1, 0) @llvm.dx.resource.handlefrombinding.tdx.RawBuffer_s_struct.TestStructs_1_0t(i32 0, i32 0, i32 1, i32 0, ptr null)
-  ; CHECK: [[INTERLOCKED:%.*]] = call i32 @dx.op.atomicBinOp.i32(i32 78, %dx.types.Handle [[HANDLE]], i32 2, i32 1, i32 4, i32 undef, i32 0)
+  ; CHECK: [[INTERLOCKED:%.*]] = call i32 @dx.op.atomicBinOp.i32(i32 78, %dx.types.Handle [[HANDLE]], i32 2, i32 1, i32 4, i32 poison, i32 0)
   %hlsl.interlocked.or = call i32 @llvm.dx.interlocked.or.i32.tdx.RawBuffer_s_struct.TestStructs_1_0t.i32(target("dx.RawBuffer", %struct.TestStruct, 1, 0) %buffer,  i32 1, i32 4, i32 poison, i32 0)
   ; CHECK: ret void
   ret void
@@ -67,7 +67,7 @@ entry:
   ; CHECK: [[BIND:%.*]] = call %dx.types.Handle @dx.op.createHandleFromBinding(i32 217
   ; CHECK: [[HANDLE:%.*]] = call %dx.types.Handle @dx.op.annotateHandle(i32 216, %dx.types.Handle [[BIND]]
   %buffer = call target("dx.TypedBuffer", i32, 1, 0, 1) @llvm.dx.resource.handlefrombinding.tdx.TypedBuffer_i32_1_0t(i32 0, i32 0, i32 1, i32 0, ptr null)
-  ; CHECK: [[INTERLOCKED:%.*]] = call i32 @dx.op.atomicBinOp.i32(i32 78, %dx.types.Handle [[HANDLE]], i32 2, i32 1, i32 undef, i32 undef, i32 0)
+  ; CHECK: [[INTERLOCKED:%.*]] = call i32 @dx.op.atomicBinOp.i32(i32 78, %dx.types.Handle [[HANDLE]], i32 2, i32 1, i32 poison, i32 poison, i32 0)
   %hlsl.interlocked.or = call i32 @llvm.dx.interlocked.or.i32.tdx.TypedBuffer_i32_1_0_1t.i32(target("dx.TypedBuffer", i32, 1, 0, 1) %buffer,  i32 1, i32 poison, i32 poison, i32 0)
   ; CHECK: store i32 [[INTERLOCKED]], ptr [[RETURN]]
   store i32 %hlsl.interlocked.or, ptr %returnVal, align 4
@@ -82,7 +82,7 @@ entry:
   ; CHECK: [[BIND:%.*]] = call %dx.types.Handle @dx.op.createHandleFromBinding(i32 217
   ; CHECK: [[HANDLE:%.*]] = call %dx.types.Handle @dx.op.annotateHandle(i32 216, %dx.types.Handle [[BIND]]
   %buffer = call target("dx.TypedBuffer", i32, 1, 0, 1) @llvm.dx.resource.handlefrombinding.tdx.TypedBuffer_i32_1_0t(i32 0, i32 0, i32 1, i32 0, ptr null)
-  ; CHECK: [[INTERLOCKED:%.*]] = call i32 @dx.op.atomicBinOp.i32(i32 78, %dx.types.Handle [[HANDLE]], i32 2, i32 1, i32 undef, i32 undef, i32 0)
+  ; CHECK: [[INTERLOCKED:%.*]] = call i32 @dx.op.atomicBinOp.i32(i32 78, %dx.types.Handle [[HANDLE]], i32 2, i32 1, i32 poison, i32 poison, i32 0)
   %hlsl.interlocked.or = call i32 @llvm.dx.interlocked.or.i32.tdx.TypedBuffer_i32_1_0_1t.i32(target("dx.TypedBuffer", i32, 1, 0, 1) %buffer, i32 1, i32 poison, i32 poison, i32 0)
   ; CHECK: ret void
   ret void
@@ -95,7 +95,7 @@ entry:
   ; CHECK: [[BIND:%.*]] = call %dx.types.Handle @dx.op.createHandleFromBinding(i32 217
   ; CHECK: [[HANDLE:%.*]] = call %dx.types.Handle @dx.op.annotateHandle(i32 216, %dx.types.Handle [[BIND]]
   %buffer = call target("dx.TypedBuffer", i32, 1, 0, 0) @llvm.dx.resource.handlefrombinding.tdx.TypedBuffer_i32_1_0t(i32 0, i32 0, i32 1, i32 0, ptr null)
-  ; CHECK: [[INTERLOCKED:%.*]] = call i32 @dx.op.atomicBinOp.i32(i32 78, %dx.types.Handle [[HANDLE]], i32 2, i32 1, i32 undef, i32 undef, i32 0)
+  ; CHECK: [[INTERLOCKED:%.*]] = call i32 @dx.op.atomicBinOp.i32(i32 78, %dx.types.Handle [[HANDLE]], i32 2, i32 1, i32 poison, i32 poison, i32 0)
   %hlsl.interlocked.or = call i32 @llvm.dx.interlocked.or.i32.tdx.TypedBuffer_i32_1_0_0t.i32(target("dx.TypedBuffer", i32, 1, 0, 0) %buffer, i32 1, i32 poison, i32 poison, i32 0)
   ; CHECK: store i32 [[INTERLOCKED]], ptr [[RETURN]]
   store i32 %hlsl.interlocked.or, ptr %returnVal, align 4
@@ -110,7 +110,7 @@ entry:
   ; CHECK: [[BIND:%.*]] = call %dx.types.Handle @dx.op.createHandleFromBinding(i32 217
   ; CHECK: [[HANDLE:%.*]] = call %dx.types.Handle @dx.op.annotateHandle(i32 216, %dx.types.Handle [[BIND]]
   %buffer = call target("dx.TypedBuffer", i32, 1, 0, 0) @llvm.dx.resource.handlefrombinding.tdx.TypedBuffer_i32_1_0t(i32 0, i32 0, i32 1, i32 0, ptr null)
-  ; CHECK: [[INTERLOCKED:%.*]] = call i32 @dx.op.atomicBinOp.i32(i32 78, %dx.types.Handle [[HANDLE]], i32 2, i32 1, i32 undef, i32 undef, i32 0)
+  ; CHECK: [[INTERLOCKED:%.*]] = call i32 @dx.op.atomicBinOp.i32(i32 78, %dx.types.Handle [[HANDLE]], i32 2, i32 1, i32 poison, i32 poison, i32 0)
   %hlsl.interlocked.or = call i32 @llvm.dx.interlocked.or.i32.tdx.TypedBuffer_i32_1_0_0t.i32(target("dx.TypedBuffer", i32, 1, 0, 0) %buffer, i32 1, i32 poison, i32 poison, i32 0)
   ; CHECK: ret void
   ret void
@@ -123,7 +123,7 @@ entry:
   ; CHECK: [[BIND:%.*]] = call %dx.types.Handle @dx.op.createHandleFromBinding(i32 217
   ; CHECK: [[HANDLE:%.*]] = call %dx.types.Handle @dx.op.annotateHandle(i32 216, %dx.types.Handle [[BIND]]
   %buffer = call target("dx.RawBuffer", i8, 1, 0) @llvm.dx.resource.handlefrombinding.tdx.RawBuffer_i8_1_0t(i32 0, i32 0, i32 1, i32 0, ptr null)
-  ; CHECK: [[INTERLOCKED:%.*]] = call i64 @dx.op.atomicBinOp.i64(i32 78, %dx.types.Handle [[HANDLE]], i32 2, i32 1, i32 undef, i32 undef, i64 0)
+  ; CHECK: [[INTERLOCKED:%.*]] = call i64 @dx.op.atomicBinOp.i64(i32 78, %dx.types.Handle [[HANDLE]], i32 2, i32 1, i32 poison, i32 poison, i64 0)
   %hlsl.interlocked.or = call i64 @llvm.dx.interlocked.or.i64.tdx.RawBuffer_i8_1_0t(target("dx.RawBuffer", i8, 1, 0) %buffer, i32 1, i32 poison, i32 poison, i64 0)
   ; CHECK: store i64 [[INTERLOCKED]], ptr [[RETURN]]
   store i64 %hlsl.interlocked.or, ptr %returnVal, align 8
@@ -138,7 +138,7 @@ entry:
   ; CHECK: [[BIND:%.*]] = call %dx.types.Handle @dx.op.createHandleFromBinding(i32 217
   ; CHECK: [[HANDLE:%.*]] = call %dx.types.Handle @dx.op.annotateHandle(i32 216, %dx.types.Handle [[BIND]]
   %buffer = call target("dx.RawBuffer", i8, 1, 0) @llvm.dx.resource.handlefrombinding.tdx.RawBuffer_i8_1_0t(i32 0, i32 0, i32 1, i32 0, ptr null)
-  ; CHECK: [[INTERLOCKED:%.*]] = call i64 @dx.op.atomicBinOp.i64(i32 78, %dx.types.Handle [[HANDLE]], i32 2, i32 1, i32 undef, i32 undef, i64 0)
+  ; CHECK: [[INTERLOCKED:%.*]] = call i64 @dx.op.atomicBinOp.i64(i32 78, %dx.types.Handle [[HANDLE]], i32 2, i32 1, i32 poison, i32 poison, i64 0)
   %hlsl.interlocked.or = call i64 @llvm.dx.interlocked.or.i64.tdx.RawBuffer_i8_1_0t(target("dx.RawBuffer", i8, 1, 0) %buffer, i32 1, i32 poison, i32 poison, i64 0)
   ; CHECK: ret void
   ret void
@@ -153,7 +153,7 @@ entry:
   ; CHECK: [[BIND:%.*]] = call %dx.types.Handle @dx.op.createHandleFromBinding(i32 217
   ; CHECK: [[HANDLE:%.*]] = call %dx.types.Handle @dx.op.annotateHandle(i32 216, %dx.types.Handle [[BIND]]
   %buffer = call target("dx.RawBuffer", %struct.TestStruct64, 1, 0) @llvm.dx.resource.handlefrombinding.tdx.RawBuffer_s_struct.TestStruct64s_1_0t(i32 0, i32 0, i32 1, i32 0, ptr null)
-  ; CHECK: [[INTERLOCKED:%.*]] = call i64 @dx.op.atomicBinOp.i64(i32 78, %dx.types.Handle [[HANDLE]], i32 2, i32 1, i32 8, i32 undef, i64 0)
+  ; CHECK: [[INTERLOCKED:%.*]] = call i64 @dx.op.atomicBinOp.i64(i32 78, %dx.types.Handle [[HANDLE]], i32 2, i32 1, i32 8, i32 poison, i64 0)
   %hlsl.interlocked.or = call i64 @llvm.dx.interlocked.or.i64.tdx.RawBuffer_s_struct.TestStruct64s_1_0t(target("dx.RawBuffer", %struct.TestStruct64, 1, 0) %buffer, i32 1, i32 8, i32 poison, i64 0)
   ; CHECK: store i64 [[INTERLOCKED]], ptr [[RETURN]]
   store i64 %hlsl.interlocked.or, ptr %returnVal, align 8
@@ -168,7 +168,7 @@ entry:
   ; CHECK: [[BIND:%.*]] = call %dx.types.Handle @dx.op.createHandleFromBinding(i32 217
   ; CHECK: [[HANDLE:%.*]] = call %dx.types.Handle @dx.op.annotateHandle(i32 216, %dx.types.Handle [[BIND]]
   %buffer = call target("dx.RawBuffer", %struct.TestStruct64, 1, 0) @llvm.dx.resource.handlefrombinding.tdx.RawBuffer_s_struct.TestStruct64s_1_0t(i32 0, i32 0, i32 1, i32 0, ptr null)
-  ; CHECK: [[INTERLOCKED:%.*]] = call i64 @dx.op.atomicBinOp.i64(i32 78, %dx.types.Handle [[HANDLE]], i32 2, i32 1, i32 8, i32 undef, i64 0)
+  ; CHECK: [[INTERLOCKED:%.*]] = call i64 @dx.op.atomicBinOp.i64(i32 78, %dx.types.Handle [[HANDLE]], i32 2, i32 1, i32 8, i32 poison, i64 0)
   %hlsl.interlocked.or = call i64 @llvm.dx.interlocked.or.i64.tdx.RawBuffer_s_struct.TestStruct64s_1_0t(target("dx.RawBuffer", %struct.TestStruct64, 1, 0) %buffer, i32 1, i32 8, i32 poison, i64 0)
   ; CHECK: ret void
   ret void
@@ -181,7 +181,7 @@ entry:
   ; CHECK: [[BIND:%.*]] = call %dx.types.Handle @dx.op.createHandleFromBinding(i32 217
   ; CHECK: [[HANDLE:%.*]] = call %dx.types.Handle @dx.op.annotateHandle(i32 216, %dx.types.Handle [[BIND]]
   %buffer = call target("dx.TypedBuffer", i64, 1, 0, 1) @llvm.dx.resource.handlefrombinding.tdx.TypedBuffer_i64_1_0t(i32 0, i32 0, i32 1, i32 0, ptr null)
-  ; CHECK: [[INTERLOCKED:%.*]] = call i64 @dx.op.atomicBinOp.i64(i32 78, %dx.types.Handle [[HANDLE]], i32 2, i32 1, i32 undef, i32 undef, i64 0)
+  ; CHECK: [[INTERLOCKED:%.*]] = call i64 @dx.op.atomicBinOp.i64(i32 78, %dx.types.Handle [[HANDLE]], i32 2, i32 1, i32 poison, i32 poison, i64 0)
   %hlsl.interlocked.or = call i64 @llvm.dx.interlocked.or.i64.tdx.TypedBuffer_i64_1_0_1t(target("dx.TypedBuffer", i64, 1, 0, 1) %buffer, i32 1, i32 poison, i32 poison, i64 0)
   ; CHECK: store i64 [[INTERLOCKED]], ptr [[RETURN]]
   store i64 %hlsl.interlocked.or, ptr %returnVal, align 8
@@ -196,7 +196,7 @@ entry:
   ; CHECK: [[BIND:%.*]] = call %dx.types.Handle @dx.op.createHandleFromBinding(i32 217
   ; CHECK: [[HANDLE:%.*]] = call %dx.types.Handle @dx.op.annotateHandle(i32 216, %dx.types.Handle [[BIND]]
   %buffer = call target("dx.TypedBuffer", i64, 1, 0, 1) @llvm.dx.resource.handlefrombinding.tdx.TypedBuffer_i64_1_0t(i32 0, i32 0, i32 1, i32 0, ptr null)
-  ; CHECK: [[INTERLOCKED:%.*]] = call i64 @dx.op.atomicBinOp.i64(i32 78, %dx.types.Handle [[HANDLE]], i32 2, i32 1, i32 undef, i32 undef, i64 0)
+  ; CHECK: [[INTERLOCKED:%.*]] = call i64 @dx.op.atomicBinOp.i64(i32 78, %dx.types.Handle [[HANDLE]], i32 2, i32 1, i32 poison, i32 poison, i64 0)
   %hlsl.interlocked.or = call i64 @llvm.dx.interlocked.or.i64.tdx.TypedBuffer_i64_1_0_1t(target("dx.TypedBuffer", i64, 1, 0, 1) %buffer, i32 1, i32 poison, i32 poison, i64 0)
   ; CHECK: ret void
   ret void
@@ -209,7 +209,7 @@ entry:
   ; CHECK: [[BIND:%.*]] = call %dx.types.Handle @dx.op.createHandleFromBinding(i32 217
   ; CHECK: [[HANDLE:%.*]] = call %dx.types.Handle @dx.op.annotateHandle(i32 216, %dx.types.Handle [[BIND]]
   %buffer = call target("dx.TypedBuffer", i64, 1, 0, 0) @llvm.dx.resource.handlefrombinding.tdx.TypedBuffer_i64_1_0t(i32 0, i32 0, i32 1, i32 0, ptr null)
-  ; CHECK: [[INTERLOCKED:%.*]] = call i64 @dx.op.atomicBinOp.i64(i32 78, %dx.types.Handle [[HANDLE]], i32 2, i32 1, i32 undef, i32 undef, i64 0)
+  ; CHECK: [[INTERLOCKED:%.*]] = call i64 @dx.op.atomicBinOp.i64(i32 78, %dx.types.Handle [[HANDLE]], i32 2, i32 1, i32 poison, i32 poison, i64 0)
   %hlsl.interlocked.or = call i64 @llvm.dx.interlocked.or.i64.tdx.TypedBuffer_i64_1_0_0t(target("dx.TypedBuffer", i64, 1, 0, 0) %buffer, i32 1, i32 poison, i32 poison, i64 0)
   ; CHECK: store i64 [[INTERLOCKED]], ptr [[RETURN]]
   store i64 %hlsl.interlocked.or, ptr %returnVal, align 8
@@ -224,7 +224,7 @@ entry:
   ; CHECK: [[BIND:%.*]] = call %dx.types.Handle @dx.op.createHandleFromBinding(i32 217
   ; CHECK: [[HANDLE:%.*]] = call %dx.types.Handle @dx.op.annotateHandle(i32 216, %dx.types.Handle [[BIND]]
   %buffer = call target("dx.TypedBuffer", i64, 1, 0, 0) @llvm.dx.resource.handlefrombinding.tdx.TypedBuffer_i64_1_0t(i32 0, i32 0, i32 1, i32 0, ptr null)
-  ; CHECK: [[INTERLOCKED:%.*]] = call i64 @dx.op.atomicBinOp.i64(i32 78, %dx.types.Handle [[HANDLE]], i32 2, i32 1, i32 undef, i32 undef, i64 0)
+  ; CHECK: [[INTERLOCKED:%.*]] = call i64 @dx.op.atomicBinOp.i64(i32 78, %dx.types.Handle [[HANDLE]], i32 2, i32 1, i32 poison, i32 poison, i64 0)
   %hlsl.interlocked.or = call i64 @llvm.dx.interlocked.or.i64.tdx.TypedBuffer_i64_1_0_0t(target("dx.TypedBuffer", i64, 1, 0, 0) %buffer, i32 1, i32 poison, i32 poison, i64 0)
   ; CHECK: ret void
   ret void
