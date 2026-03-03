@@ -4973,11 +4973,6 @@ void ASTDeclReader::UpdateDecl(Decl *D) {
       break;
     }
 
-    case DeclUpdateKind::DeclMarkedOpenMPIndirectCall:
-      D->addAttr(OMPTargetIndirectCallAttr::CreateImplicit(Reader.getContext(),
-                                                           readSourceRange()));
-      break;
-
     case DeclUpdateKind::DeclExported: {
       unsigned SubmoduleID = readSubmoduleID();
       auto *Exported = cast<NamedDecl>(D);
