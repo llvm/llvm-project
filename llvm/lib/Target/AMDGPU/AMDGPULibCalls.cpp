@@ -835,10 +835,9 @@ bool AMDGPULibCalls::TDOFold(CallInst *CI, const FuncInfo &FInfo) {
       for (int eltNo = 0; eltNo < vecSize; ++eltNo) {
         ConstantFP *eltval =
             cast<ConstantFP>(CV->getAggregateElement((unsigned)eltNo));
-        auto MatchingRow = std::find_if(
-            tr.begin(), tr.end(), [eltval](const TableEntry &entry) {
-              return eltval->isExactlyValue(entry.input);
-            });
+        auto MatchingRow = llvm::find_if(tr, [eltval](const TableEntry &entry) {
+          return eltval->isExactlyValue(entry.input);
+        });
         if (MatchingRow == tr.end())
           return false;
         Values.push_back(APFloat(MatchingRow->result));
