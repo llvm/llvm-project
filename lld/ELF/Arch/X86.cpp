@@ -23,6 +23,7 @@ namespace {
 class X86 : public TargetInfo {
 public:
   X86(Ctx &);
+  void initTargetSpecificSections() override;
   RelExpr getRelExpr(RelType type, const Symbol &s,
                      const uint8_t *loc) const override;
   int64_t getImplicitAddend(const uint8_t *buf, RelType type) const override;
@@ -46,6 +47,19 @@ private:
   void relaxTlsLdToLe(uint8_t *loc, const Relocation &rel, uint64_t val) const;
   void relaxTlsIeToLe(uint8_t *loc, const Relocation &rel, uint64_t val) const;
 };
+
+struct IBTPltSection : SyntheticSection {
+  IBTPltSection(Ctx &ctx)
+      : SyntheticSection(ctx, ".plt", SHT_PROGBITS, SHF_ALLOC | SHF_EXECINSTR,
+                         16) {}
+  bool isNeeded() const override { return ctx.in.plt->getNumEntries() > 0; }
+  size_t getSize() const override {
+    return 16 + ctx.in.plt->getNumEntries() * ctx.target->pltEntrySize;
+  }
+  void writeTo(uint8_t *buf) override {
+    ctx.target->writeIBTPlt(buf, ctx.in.plt->getNumEntries());
+  }
+};
 } // namespace
 
 X86::X86(Ctx &ctx) : TargetInfo(ctx) {
@@ -68,6 +82,13 @@ X86::X86(Ctx &ctx) : TargetInfo(ctx) {
   // Align to the non-PAE large page size (known as a superpage or huge page).
   // FreeBSD automatically promotes large, superpage-aligned allocations.
   defaultImageBase = 0x400000;
+}
+
+void X86::initTargetSpecificSections() {
+  if (ctx.arg.andFeatures & GNU_PROPERTY_X86_FEATURE_1_IBT) {
+    ctx.in.ibtPlt = std::make_unique<IBTPltSection>(ctx);
+    ctx.inputSections.push_back(ctx.in.ibtPlt.get());
+  }
 }
 
 // Only needed to support relocations used by relocateNonAlloc and relocateEh.
