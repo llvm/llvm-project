@@ -18,11 +18,10 @@ class BlockAPITestCase(TestBase):
         target = self.dbg.CreateTarget(exe)
         self.assertTrue(target, VALID_TARGET)
 
-        source = "main.c"
-        line1 = line_number(source, "// breakpoint 1")
-        line2 = line_number(source, "// breakpoint 2")
-        breakpoint1 = target.BreakpointCreateByLocation(source, line1)
-        breakpoint2 = target.BreakpointCreateByLocation(source, line2)
+        line1 = line_number("main.c", "// breakpoint 1")
+        line2 = line_number("fn.c", "// breakpoint 2")
+        breakpoint1 = target.BreakpointCreateByLocation("main.c", line1)
+        breakpoint2 = target.BreakpointCreateByLocation("fn.c", line2)
         self.assertGreaterEqual(breakpoint1.GetNumLocations(), 1, PROCESS_IS_VALID)
         self.assertGreaterEqual(breakpoint2.GetNumLocations(), 1, PROCESS_IS_VALID)
 
@@ -41,7 +40,6 @@ class BlockAPITestCase(TestBase):
         self.assertTrue(frame.IsValid(), "Frame must be valid")
 
         main_frame_block = frame.GetFrameBlock()
-        self.assertNotEqual(main_frame_block.GetID(), 0, "Invalid block id")
 
         # Continue to breakpoint 2
         process.Continue()
@@ -57,10 +55,7 @@ class BlockAPITestCase(TestBase):
         self.assertTrue(frame.IsValid(), "Frame must be valid")
 
         fn_frame_block = frame.GetFrameBlock()
-        self.assertNotEqual(fn_frame_block.GetID(), 0, "Invalid block id")
-
         fn_inner_block = frame.GetBlock()
-        self.assertNotEqual(fn_inner_block.GetID(), 0, "Invalid block id")
 
         # Check __eq__ / __ne__
         self.assertNotEqual(fn_inner_block, fn_frame_block)

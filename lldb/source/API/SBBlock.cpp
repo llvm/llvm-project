@@ -57,6 +57,9 @@ bool SBBlock::operator==(const SBBlock &rhs) const {
   LLDB_INSTRUMENT_VA(this, rhs);
 
   return m_opaque_ptr != nullptr && rhs.m_opaque_ptr != nullptr &&
+         m_opaque_ptr->GetFunction() == rhs.m_opaque_ptr->GetFunction() &&
+         m_opaque_ptr->GetFunction().GetCompileUnit() ==
+             rhs.m_opaque_ptr->GetFunction().GetCompileUnit() &&
          *m_opaque_ptr == *rhs.m_opaque_ptr;
 }
 
@@ -64,13 +67,6 @@ bool SBBlock::operator!=(const SBBlock &rhs) const {
   LLDB_INSTRUMENT_VA(this, rhs);
 
   return !(*this == rhs);
-}
-
-user_id_t SBBlock::GetID() const {
-  LLDB_INSTRUMENT_VA(this);
-  if (m_opaque_ptr)
-    return m_opaque_ptr->GetID();
-  return LLDB_INVALID_UID;
 }
 
 bool SBBlock::IsInlined() const {

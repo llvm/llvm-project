@@ -39,8 +39,6 @@ public:
 
   bool IsValid() const;
 
-  lldb::user_id_t GetID() const;
-
   const char *GetInlinedName() const;
 
   lldb::SBFileSpec GetInlinedCallSiteFile() const;
