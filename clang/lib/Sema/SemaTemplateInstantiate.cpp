@@ -4484,7 +4484,36 @@ ExprResult Sema::SubstConceptTemplateArguments(
       if (!E->isConceptReference())
         return E;
 
-      return SemaRef.SubstExpr(E, MLTAL);
+      NamedDecl *D = *E->decls_begin();
+      ConceptDecl *ResolvedConcept = nullptr;
+
+      if (const auto * const TTP = dyn_cast<TemplateTemplateParmDecl>(D)) {
+        const auto Depth = TTP->getDepth();
+        const auto Pos = TTP->getPosition();
+        if (Depth < MLTAL.getNumLevels() &&
+            MLTAL.hasTemplateArgument(Depth, Pos)) {
+          TemplateArgument Arg = MLTAL(Depth, Pos);
+          if (Arg.getKind() == TemplateArgument::Template)
+            ResolvedConcept = dyn_cast_or_null<ConceptDecl>(
+                Arg.getAsTemplate().getAsTemplateDecl());
+        }
+      } else
+        ResolvedConcept = dyn_cast<ConceptDecl>(D);
+
+      if (ResolvedConcept == nullptr)
+        return E;
+
+      TemplateArgumentListInfo TransArgs(E->getLAngleLoc(), E->getRAngleLoc());
+      if (TransformTemplateArguments(E->getTemplateArgs(),
+                                     E->getNumTemplateArgs(), TransArgs))
+        return ExprError();
+
+      CXXScopeSpec SS;
+      DeclarationNameInfo NameInfo(ResolvedConcept->getDeclName(),
+                                   E->getNameLoc());
+      return SemaRef.CheckConceptTemplateId(SS, SourceLocation(), NameInfo,
+                                            ResolvedConcept, ResolvedConcept,
+                                            &TransArgs, false);
     }
   };
 
