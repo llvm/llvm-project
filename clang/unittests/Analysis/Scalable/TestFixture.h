@@ -9,7 +9,6 @@
 #ifndef LLVM_CLANG_UNITTESTS_ANALYSIS_SCALABLE_TESTFIXTURE_H
 #define LLVM_CLANG_UNITTESTS_ANALYSIS_SCALABLE_TESTFIXTURE_H
 
-#include "clang/Analysis/Scalable/Analyses/UnsafeBufferUsage/UnsafeBufferUsage.h"
 #include "clang/Analysis/Scalable/Model/BuildNamespace.h"
 #include "clang/Analysis/Scalable/Model/EntityId.h"
 #include "clang/Analysis/Scalable/Model/EntityIdTable.h"

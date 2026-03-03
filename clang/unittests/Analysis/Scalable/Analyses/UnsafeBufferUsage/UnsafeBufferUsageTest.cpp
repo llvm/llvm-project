@@ -7,7 +7,6 @@
 //===----------------------------------------------------------------------===//
 
 #include "clang/Analysis/Scalable/Analyses/UnsafeBufferUsage/UnsafeBufferUsage.h"
-#include "TestFixture.h"
 #include "clang/AST/DynamicRecursiveASTVisitor.h"
 #include "clang/Analysis/Scalable/ASTEntityMapping.h"
 #include "clang/Analysis/Scalable/Analyses/UnsafeBufferUsage/UnsafeBufferUsageExtractor.h"
@@ -17,7 +16,6 @@
 #include "clang/Analysis/Scalable/TUSummary/TUSummaryBuilder.h"
 #include "clang/Frontend/ASTUnit.h"
 #include "clang/Tooling/Tooling.h"
-#include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/iterator_range.h"
 #include "llvm/Support/Error.h"
 #include "gmock/gmock.h"
@@ -64,7 +62,7 @@ const FunctionDecl *findFnByName(StringRef Name, ASTContext &Ctx) {
 constexpr inline auto buildEntityPointerLevel =
     UnsafeBufferUsageTUSummaryExtractor::buildEntityPointerLevel;
 
-class UnsafeBufferUsageTest : public TestFixture {
+class UnsafeBufferUsageTest : public ::testing::Test {
 protected:
   TUSummary TUSummary;
   TUSummaryBuilder TUSummaryBuilder;
@@ -113,8 +111,9 @@ protected:
     return std::nullopt;
   }
 
-  // Same as std::pair<StringRef, unsigned> for the raw pair of EPLs except with
-  // the extra 'isFunRet' flag:
+  // Same as `std::pair<StringName, unsigned>` for a pair of entity declaration
+  // name and a pointer level with an extra optional flag for whether the entity
+  // represents a function return value:
   struct EPLPair {
     EPLPair(StringRef Name, unsigned Lv, bool isFunRet = false)
         : Name(Name), Lv(Lv), isFunRet(isFunRet) {}
@@ -198,7 +197,7 @@ TEST_F(UnsafeBufferUsageTest, SimpleFunctionWithUnsafePointer) {
                        "foo");
 
   EXPECT_NE(Sum, nullptr);
-  EXPECT_EQ(getUnsafeBuffers(*Sum), makeSet(__LINE__, {{"p", 1U}}));
+  EXPECT_EQ(*Sum, makeSet(__LINE__, {{"p", 1U}}));
 }
 
 TEST_F(UnsafeBufferUsageTest, PointerArithmetic) {
@@ -211,7 +210,7 @@ TEST_F(UnsafeBufferUsageTest, PointerArithmetic) {
                        "foo");
 
   EXPECT_NE(Sum, nullptr);
-  EXPECT_EQ(getUnsafeBuffers(*Sum), makeSet(__LINE__, {{"p", 1U}, {"q", 1U}}));
+  EXPECT_EQ(*Sum, makeSet(__LINE__, {{"p", 1U}, {"q", 1U}}));
 }
 
 TEST_F(UnsafeBufferUsageTest, PointerIncrementDecrement) {
@@ -226,7 +225,7 @@ TEST_F(UnsafeBufferUsageTest, PointerIncrementDecrement) {
                        "foo");
 
   EXPECT_NE(Sum, nullptr);
-  EXPECT_EQ(getUnsafeBuffers(*Sum),
+  EXPECT_EQ(*Sum,
             makeSet(__LINE__, {{"p", 1U}, {"q", 1U}, {"r", 1U}, {"s", 1U}}));
 }
 
@@ -239,7 +238,7 @@ TEST_F(UnsafeBufferUsageTest, PointerAssignment) {
                        "foo");
 
   EXPECT_NE(Sum, nullptr);
-  EXPECT_EQ(getUnsafeBuffers(*Sum), makeSet(__LINE__, {{"p", 1U}, {"q", 1U}}));
+  EXPECT_EQ(*Sum, makeSet(__LINE__, {{"p", 1U}, {"q", 1U}}));
 }
 
 TEST_F(UnsafeBufferUsageTest, CompoundAssignment) {
@@ -252,7 +251,7 @@ TEST_F(UnsafeBufferUsageTest, CompoundAssignment) {
                        "foo");
 
   EXPECT_NE(Sum, nullptr);
-  EXPECT_EQ(getUnsafeBuffers(*Sum), makeSet(__LINE__, {{"p", 1U}, {"q", 1U}}));
+  EXPECT_EQ(*Sum, makeSet(__LINE__, {{"p", 1U}, {"q", 1U}}));
 }
 
 TEST_F(UnsafeBufferUsageTest, MultiLevelPointer) {
@@ -267,7 +266,7 @@ TEST_F(UnsafeBufferUsageTest, MultiLevelPointer) {
                        "foo");
 
   EXPECT_NE(Sum, nullptr);
-  EXPECT_EQ(getUnsafeBuffers(*Sum),
+  EXPECT_EQ(*Sum,
             makeSet(__LINE__, {{"p", 2U}, {"q", 1U}, {"r", 1U}, {"r", 2U}}));
 }
 
@@ -281,7 +280,7 @@ TEST_F(UnsafeBufferUsageTest, ConditionalOperator) {
                        "foo");
 
   EXPECT_NE(Sum, nullptr);
-  EXPECT_EQ(getUnsafeBuffers(*Sum),
+  EXPECT_EQ(*Sum,
             makeSet(__LINE__, {{"p", 1U}, {"q", 1U}, {"p", 2U}, {"q", 2U}}));
 }
 
@@ -295,7 +294,7 @@ TEST_F(UnsafeBufferUsageTest, CastExpression) {
                        "foo");
 
   EXPECT_NE(Sum, nullptr);
-  EXPECT_EQ(getUnsafeBuffers(*Sum), makeSet(__LINE__, {{"p", 1U}}));
+  EXPECT_EQ(*Sum, makeSet(__LINE__, {{"p", 1U}}));
 }
 
 TEST_F(UnsafeBufferUsageTest, CommaOperator) {
@@ -307,7 +306,7 @@ TEST_F(UnsafeBufferUsageTest, CommaOperator) {
                        "foo");
 
   EXPECT_NE(Sum, nullptr);
-  EXPECT_EQ(getUnsafeBuffers(*Sum), makeSet(__LINE__, {{"p", 1U}}));
+  EXPECT_EQ(*Sum, makeSet(__LINE__, {{"p", 1U}}));
 }
 
 TEST_F(UnsafeBufferUsageTest, ParenthesizedExpression) {
@@ -319,7 +318,7 @@ TEST_F(UnsafeBufferUsageTest, ParenthesizedExpression) {
                        "foo");
 
   EXPECT_NE(Sum, nullptr);
-  EXPECT_EQ(getUnsafeBuffers(*Sum), makeSet(__LINE__, {{"p", 1U}}));
+  EXPECT_EQ(*Sum, makeSet(__LINE__, {{"p", 1U}}));
 }
 
 TEST_F(UnsafeBufferUsageTest, ArrayParameter) {
@@ -333,8 +332,7 @@ TEST_F(UnsafeBufferUsageTest, ArrayParameter) {
                        "foo");
 
   EXPECT_NE(Sum, nullptr);
-  EXPECT_EQ(getUnsafeBuffers(*Sum),
-            makeSet(__LINE__, {{"arr", 1U}, {"arr2", 1U}, {"arr2", 2U}}));
+  EXPECT_EQ(*Sum, makeSet(__LINE__, {{"arr", 1U}, {"arr2", 1U}, {"arr2", 2U}}));
 }
 
 TEST_F(UnsafeBufferUsageTest, FunctionCall) {
@@ -350,7 +348,7 @@ TEST_F(UnsafeBufferUsageTest, FunctionCall) {
 
   EXPECT_NE(Sum, nullptr);
   // No (foo, 2) becasue indirect calls are ignored.
-  EXPECT_EQ(getUnsafeBuffers(*Sum), makeSet(__LINE__, {{"foo", 1U, true}}));
+  EXPECT_EQ(*Sum, makeSet(__LINE__, {{"foo", 1U, true}}));
 }
 
 TEST_F(UnsafeBufferUsageTest, StructMemberAccess) {
@@ -368,8 +366,7 @@ TEST_F(UnsafeBufferUsageTest, StructMemberAccess) {
                        "foo");
 
   EXPECT_NE(Sum, nullptr);
-  EXPECT_EQ(getUnsafeBuffers(*Sum),
-            makeSet(__LINE__, {{"ptr", 1U}, {"ptr_to_arr", 2U}}));
+  EXPECT_EQ(*Sum, makeSet(__LINE__, {{"ptr", 1U}, {"ptr_to_arr", 2U}}));
 }
 
 TEST_F(UnsafeBufferUsageTest, StringLiteralSubscript) {
@@ -382,7 +379,7 @@ TEST_F(UnsafeBufferUsageTest, StringLiteralSubscript) {
 
   EXPECT_NE(Sum, nullptr);
   // String literals should not generate pointer kind variables
-  EXPECT_EQ(getUnsafeBuffers(*Sum), makeSet(__LINE__, {}));
+  EXPECT_EQ(*Sum, makeSet(__LINE__, {}));
 }
 
 TEST_F(UnsafeBufferUsageTest, OpaqueValueExpr) {
@@ -394,7 +391,7 @@ TEST_F(UnsafeBufferUsageTest, OpaqueValueExpr) {
                        "foo");
 
   EXPECT_NE(Sum, nullptr);
-  EXPECT_EQ(getUnsafeBuffers(*Sum), makeSet(__LINE__, {{"p", 1U}, {"q", 1U}}));
+  EXPECT_EQ(*Sum, makeSet(__LINE__, {{"p", 1U}, {"q", 1U}}));
 }
 
 TEST_F(UnsafeBufferUsageTest, AddressOfOperator) {
@@ -407,7 +404,7 @@ TEST_F(UnsafeBufferUsageTest, AddressOfOperator) {
 
   EXPECT_NE(Sum, nullptr);
   // Address-of should not generate pointer kind variables for 'x'
-  EXPECT_EQ(getUnsafeBuffers(*Sum), makeSet(__LINE__, {}));
+  EXPECT_EQ(*Sum, makeSet(__LINE__, {}));
 }
 
 TEST_F(UnsafeBufferUsageTest, AddressOfThenDereference) {
@@ -420,7 +417,7 @@ TEST_F(UnsafeBufferUsageTest, AddressOfThenDereference) {
                        "foo");
 
   EXPECT_NE(Sum, nullptr);
-  EXPECT_EQ(getUnsafeBuffers(*Sum), makeSet(__LINE__, {{"p", 1}, {"q", 1}}));
+  EXPECT_EQ(*Sum, makeSet(__LINE__, {{"p", 1}, {"q", 1}}));
 }
 
 TEST_F(UnsafeBufferUsageTest, PointerToArrayOfPointers) {
@@ -436,6 +433,6 @@ TEST_F(UnsafeBufferUsageTest, PointerToArrayOfPointers) {
                        "foo");
 
   EXPECT_NE(Sum, nullptr);
-  EXPECT_EQ(getUnsafeBuffers(*Sum), makeSet(__LINE__, {{"p", 3}}));
+  EXPECT_EQ(*Sum, makeSet(__LINE__, {{"p", 3}}));
 }
 } // namespace

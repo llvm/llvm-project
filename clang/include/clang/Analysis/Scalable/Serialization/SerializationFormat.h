@@ -14,7 +14,6 @@
 #ifndef CLANG_ANALYSIS_SCALABLE_SERIALIZATION_SERIALIZATION_FORMAT_H
 #define CLANG_ANALYSIS_SCALABLE_SERIALIZATION_SERIALIZATION_FORMAT_H
 
-#include "clang/Analysis/Scalable/Analyses/UnsafeBufferUsage/UnsafeBufferUsage.h"
 #include "clang/Analysis/Scalable/Model/BuildNamespace.h"
 #include "clang/Analysis/Scalable/Model/SummaryName.h"
 #include "clang/Analysis/Scalable/TUSummary/TUSummary.h"

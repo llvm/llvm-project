@@ -85,8 +85,6 @@ using EntityPointerLevelSet =
 class UnsafeBufferUsageEntitySummary final : public EntitySummary {
   const EntityPointerLevelSet UnsafeBuffers;
 
-  friend class TestFixture;
-  friend class SerializationFormat;
   friend class UnsafeBufferUsageTUSummaryExtractor;
 
   UnsafeBufferUsageEntitySummary(EntityPointerLevelSet UnsafeBuffers)
@@ -96,6 +94,10 @@ public:
   SummaryName getSummaryName() const override {
     return SummaryName{"UnsafeBufferUsage"};
   };
+
+  bool operator==(const EntityPointerLevelSet &Other) const {
+    return UnsafeBuffers == Other;
+  }
 };
 } // namespace clang::ssaf
 
