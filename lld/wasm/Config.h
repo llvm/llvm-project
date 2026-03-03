@@ -280,12 +280,15 @@ struct Ctx {
                     0>
       whyExtractRecords;
 
-  // Whether to use component model thread context intrinsics for the stack pointer and TLS base.
+  // Whether to use component model thread context intrinsics for the stack
+  // pointer and TLS base.
   bool componentModelThreadContext = false;
 
   Ctx();
   void reset();
-  bool isMultithreaded() const { return componentModelThreadContext || arg.sharedMemory; }
+  bool isMultithreaded() const {
+    return componentModelThreadContext || arg.sharedMemory;
+  }
 };
 
 extern Ctx ctx;

@@ -651,10 +651,12 @@ void Writer::populateTargetFeatures() {
 
   if (tlsUsed) {
     if (!allowed.contains("bulk-memory")) {
-      error("bulk-memory feature must be used in order to use thread-local storage");
+      error("bulk-memory feature must be used in order to use thread-local "
+            "storage");
     }
     if (!ctx.componentModelThreadContext && !allowed.contains("atomics")) {
-      error("atomics feature must be used in order to use thread-local storage");
+      error(
+          "atomics feature must be used in order to use thread-local storage");
     }
   }
 
@@ -1033,11 +1035,13 @@ static StringRef getOutputDataSegmentName(const InputChunk &seg) {
 OutputSegment *Writer::createOutputSegment(StringRef name) {
   LLVM_DEBUG(dbgs() << "new segment: " << name << "\n");
   OutputSegment *s = make<OutputSegment>(name);
-  // In the shared memory case, all data segments must be passive since they will be initialized once
-  // by the main thread and then shared with other threads. In the non-shared memory case, we use
-  // passive segments only for TLS segments, so that they can be reused, and for .bss segments, which
-  // don't need to be included in the binary at all. 
-  bool passiveForCMTC = ctx.componentModelThreadContext && (s->isTLS() || s->name.starts_with(".bss"));
+  // In the shared memory case, all data segments must be passive since they
+  // will be initialized once by the main thread and then shared with other
+  // threads. In the non-shared memory case, we use passive segments only for
+  // TLS segments, so that they can be reused, and for .bss segments, which
+  // don't need to be included in the binary at all.
+  bool passiveForCMTC = ctx.componentModelThreadContext &&
+                        (s->isTLS() || s->name.starts_with(".bss"));
   if (ctx.arg.sharedMemory || passiveForCMTC)
     s->initFlags = WASM_DATA_SEGMENT_IS_PASSIVE;
   if (!ctx.arg.relocatable && name.starts_with(".bss"))
@@ -1163,10 +1167,10 @@ void Writer::createSyntheticInitFunctions() {
   createApplyDataRelocationsFunction();
 
   // Passive segments are used to avoid memory being reinitialized on each
-  // thread's instantiation for wasi-threads, and for TLS when using cooperative threads. 
-  // These passive segments are initialized and dropped in __wasm_init_memory, which is 
-  // registered as the start function.
-  // We also initialize bss segments (using memory.fill) as part of this function.
+  // thread's instantiation for wasi-threads, and for TLS when using cooperative
+  // threads. These passive segments are initialized and dropped in
+  // __wasm_init_memory, which is registered as the start function. We also
+  // initialize bss segments (using memory.fill) as part of this function.
   if (hasPassiveInitializedSegments()) {
     ctx.sym.initMemory = symtab->addSyntheticFunction(
         "__wasm_init_memory", WASM_SYMBOL_VISIBILITY_HIDDEN,
@@ -1359,7 +1363,7 @@ void Writer::createInitMemoryFunction() {
         }
 
         // When we initialize the TLS segment we also set the `__tls_base`
-        // global/thread.context[1]. This allows the runtime to use this 
+        // global/thread.context[1]. This allows the runtime to use this
         // static copy of the TLS data for the first/main thread.
         if (ctx.isMultithreaded() && s->isTLS()) {
           if (ctx.isPic) {
@@ -1639,8 +1643,10 @@ void Writer::createInitTLSFunction() {
 
     writeUleb128(os, 0, "num locals");
     if (tlsSeg) {
-      // When using component model thread context intrinsics, we don't set the TLS base
-      //inside __init_tls; this should be done as part of the thread startup stub.
+      // When using component model thread context intrinsics, we don't set the
+      // TLS base
+      // inside __init_tls; this should be done as part of the thread startup
+      // stub.
       if (!ctx.componentModelThreadContext) {
         writeU8(os, WASM_OPCODE_LOCAL_GET, "local.get");
         writeUleb128(os, 0, "local index");

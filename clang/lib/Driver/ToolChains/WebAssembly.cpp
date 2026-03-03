@@ -79,17 +79,19 @@ static bool WantsPthread(const llvm::Triple &Triple, const ArgList &Args) {
   return WantsPthread;
 }
 
-static bool WantsComponentModelThreadContext(const llvm::Triple &Triple, const ArgList &Args) {
+static bool WantsComponentModelThreadContext(const llvm::Triple &Triple,
+                                             const ArgList &Args) {
   // If the target is WASIP3, then enable the
   // component-model-thread-context feature by default, unless explicitly
   // disabled.
   return Triple.getOS() == llvm::Triple::WASIp3 &&
          Args.hasFlag(options::OPT_mcomponent_model_thread_context,
-                     options::OPT_mno_component_model_thread_context, true);
+                      options::OPT_mno_component_model_thread_context, true);
 }
 
 static bool WantsSharedMemory(const llvm::Triple &Triple, const ArgList &Args) {
-  return WantsPthread(Triple, Args) && !WantsComponentModelThreadContext(Triple, Args);
+  return WantsPthread(Triple, Args) &&
+         !WantsComponentModelThreadContext(Triple, Args);
 }
 
 void wasm::Linker::ConstructJob(Compilation &C, const JobAction &JA,

@@ -377,8 +377,8 @@ bool WebAssemblyLateEHPrepare::removeUnnecessaryUnreachables(
 }
 
 // After the stack is unwound due to a thrown exception, the __stack_pointer
-// global/context[0] can point to an invalid address. This inserts instructions that
-// restore the stack pointer state..
+// global/context[0] can point to an invalid address. This inserts instructions
+// that restore the stack pointer state..
 bool WebAssemblyLateEHPrepare::restoreStackPointer(MachineFunction &MF) {
   const auto *FrameLowering = static_cast<const WebAssemblyFrameLowering *>(
       MF.getSubtarget().getFrameLowering());
@@ -393,8 +393,8 @@ bool WebAssemblyLateEHPrepare::restoreStackPointer(MachineFunction &MF) {
 
     // Insert stack pointer restoring instructions at the beginning of each EH
     // pad, after the catch instruction. Here it is safe to assume that SP32
-    // holds the latest value of the stack pointer, because the only exception for
-    // this case is when a function uses the red zone, but that only happens
+    // holds the latest value of the stack pointer, because the only exception
+    // for this case is when a function uses the red zone, but that only happens
     // with leaf functions, and we don't restore the stack pointer in leaf
     // functions anyway.
     auto InsertPos = MBB.begin();
@@ -405,8 +405,8 @@ bool WebAssemblyLateEHPrepare::restoreStackPointer(MachineFunction &MF) {
            WebAssembly::isCatch(InsertPos->getOpcode()) &&
            "catch/catch_all should be present in every EH pad at this point");
     ++InsertPos; // Skip the catch instruction
-    FrameLowering->writeBackSP(FrameLowering->getSPReg(MF), MF, MBB,
-                                   InsertPos, MBB.begin()->getDebugLoc());
+    FrameLowering->writeBackSP(FrameLowering->getSPReg(MF), MF, MBB, InsertPos,
+                               MBB.begin()->getDebugLoc());
   }
   return Changed;
 }

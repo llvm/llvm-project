@@ -48,10 +48,9 @@ public:
   bool needsPrologForEH(const MachineFunction &MF) const;
 
   /// Write SP back to __stack_pointer global or context.set.
-  void writeBackSP(unsigned SrcReg, MachineFunction &MF,
-                       MachineBasicBlock &MBB,
-                       MachineBasicBlock::iterator &InsertStore,
-                       const DebugLoc &DL) const;
+  void writeBackSP(unsigned SrcReg, MachineFunction &MF, MachineBasicBlock &MBB,
+                   MachineBasicBlock::iterator &InsertStore,
+                   const DebugLoc &DL) const;
 
   // Returns the index of the WebAssembly local to which the stack object
   // FrameIndex in MF should be allocated, or std::nullopt.

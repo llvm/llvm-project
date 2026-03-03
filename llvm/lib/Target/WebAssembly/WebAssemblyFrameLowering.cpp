@@ -137,11 +137,9 @@ bool WebAssemblyFrameLowering::needsSPForLocalFrame(
 
   // With component model thread context, we need SP in the prolog when debug
   // info is present so we can allocate a local for DWARF to reference.
-  bool NeedsSPForDebug = MF.getFunction().getSubprogram() &&
-                         MF.getSubtarget<WebAssemblySubtarget>()
-                             .hasComponentModelThreadContext();
-
-  
+  bool NeedsSPForDebug =
+      MF.getFunction().getSubprogram() &&
+      MF.getSubtarget<WebAssemblySubtarget>().hasComponentModelThreadContext();
 
   return MFI.getStackSize() || MFI.adjustsStack() || hasFP(MF) ||
          HasExplicitSPUse || NeedsSPForDebug;
@@ -159,16 +157,16 @@ bool WebAssemblyFrameLowering::needsPrologForEH(
 
 /// Returns true if this function needs a local user-space stack pointer.
 /// Unlike a machine stack pointer, the wasm user stack pointer is a global
-/// variable or stored in the component model thread context, so it is loaded 
+/// variable or stored in the component model thread context, so it is loaded
 /// into a register in the prolog.
 bool WebAssemblyFrameLowering::needsSP(const MachineFunction &MF) const {
   return needsSPForLocalFrame(MF) || needsPrologForEH(MF);
 }
 
 /// Returns true if the local user-space stack pointer needs to be written back
-/// to the stack pointer global/thread context by this function (this is not meaningful if
-/// needsSP is false). If false, the stack red zone can be used and only a local
-/// SP is needed.
+/// to the stack pointer global/thread context by this function (this is not
+/// meaningful if needsSP is false). If false, the stack red zone can be used
+/// and only a local SP is needed.
 bool WebAssemblyFrameLowering::needsSPWriteback(
     const MachineFunction &MF) const {
   auto &MFI = MF.getFrameInfo();
@@ -241,7 +239,8 @@ void WebAssemblyFrameLowering::writeBackSP(
     MachineBasicBlock::iterator &InsertStore, const DebugLoc &DL) const {
   const auto *TII = MF.getSubtarget<WebAssemblySubtarget>().getInstrInfo();
 
-  if (MF.getSubtarget<WebAssemblySubtarget>().hasComponentModelThreadContext()) {
+  if (MF.getSubtarget<WebAssemblySubtarget>()
+          .hasComponentModelThreadContext()) {
     const char *ES = "__wasm_component_model_builtin_context_set_0";
     auto *SPSymbol = MF.createExternalSymbolName(ES);
     BuildMI(MBB, InsertStore, DL, TII->get(WebAssembly::CALL))
@@ -303,8 +302,8 @@ void WebAssemblyFrameLowering::emitPrologue(MachineFunction &MF,
   if (ST.hasComponentModelThreadContext()) {
     const char *ES = "__wasm_component_model_builtin_context_get_0";
     auto *SPSymbol = MF.createExternalSymbolName(ES);
-      BuildMI(MBB, InsertPt, DL, TII->get(WebAssembly::CALL), SPReg)
-          .addExternalSymbol(SPSymbol);
+    BuildMI(MBB, InsertPt, DL, TII->get(WebAssembly::CALL), SPReg)
+        .addExternalSymbol(SPSymbol);
   } else {
     const char *ES = "__stack_pointer";
     auto *SPSymbol = MF.createExternalSymbolName(ES);

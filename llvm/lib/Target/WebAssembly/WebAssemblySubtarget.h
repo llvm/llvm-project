@@ -112,7 +112,9 @@ public:
   bool hasBulkMemoryOpt() const { return HasBulkMemoryOpt; }
   bool hasCallIndirectOverlong() const { return HasCallIndirectOverlong; }
   bool hasCompactImports() const { return HasCompactImports; }
-  bool hasComponentModelThreadContext() const { return HasComponentModelThreadContext; }
+  bool hasComponentModelThreadContext() const {
+    return HasComponentModelThreadContext;
+  }
   bool hasExceptionHandling() const { return HasExceptionHandling; }
   bool hasExtendedConst() const { return HasExtendedConst; }
   bool hasFP16() const { return HasFP16; }

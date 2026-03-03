@@ -966,8 +966,9 @@ static void createPostLTOSymbols() {
 
   bool is64 = ctx.arg.is64.value_or(false);
 
-  auto stack_pointer_name =
-      ctx.componentModelThreadContext ? "__init_stack_pointer" : "__stack_pointer";
+  auto stack_pointer_name = ctx.componentModelThreadContext
+                                ? "__init_stack_pointer"
+                                : "__stack_pointer";
   if (ctx.isPic) {
     ctx.sym.stackPointer =
         createUndefinedGlobal(stack_pointer_name, ctx.arg.is64.value_or(false)
@@ -985,15 +986,18 @@ static void createPostLTOSymbols() {
     ctx.sym.tableBase->markLive();
   } else {
     // For non-PIC code
-    ctx.sym.stackPointer = createGlobalVariable(stack_pointer_name, !ctx.componentModelThreadContext);
+    ctx.sym.stackPointer = createGlobalVariable(
+        stack_pointer_name, !ctx.componentModelThreadContext);
     ctx.sym.stackPointer->markLive();
   }
 
   if (ctx.isMultithreaded()) {
     // TLS symbols are all hidden/dso-local
-    auto tls_base_name = ctx.componentModelThreadContext ? "__init_tls_base" : "__tls_base";
-    ctx.sym.tlsBase = createGlobalVariable(tls_base_name, !ctx.componentModelThreadContext,
-                                           WASM_SYMBOL_VISIBILITY_HIDDEN);
+    auto tls_base_name =
+        ctx.componentModelThreadContext ? "__init_tls_base" : "__tls_base";
+    ctx.sym.tlsBase =
+        createGlobalVariable(tls_base_name, !ctx.componentModelThreadContext,
+                             WASM_SYMBOL_VISIBILITY_HIDDEN);
     ctx.sym.tlsSize = createGlobalVariable("__tls_size", false,
                                            WASM_SYMBOL_VISIBILITY_HIDDEN);
     ctx.sym.tlsAlign = createGlobalVariable("__tls_align", false,
@@ -1316,68 +1320,73 @@ static void determineThreadContextABI(ArrayRef<ObjFile *> files) {
   // A complication is that a user may attempt to link together object files
   // compiled with different versions of LLVM, where one does not specifiy
   // -component-model-thread-context when using the global thread context ABI.
-  // They may also attempt to link object files with the global ABI compiled with
-  // older LLVM versions, but link them with a newer wasm-ld. To ensure the correct behavior
-  // in both of these cases, we treat the import of a __stack_pointer global from the env module
-  // as an indication that the global thread context ABI is being used.
+  // They may also attempt to link object files with the global ABI compiled
+  // with older LLVM versions, but link them with a newer wasm-ld. To ensure the
+  // correct behavior in both of these cases, we treat the import of a
+  // __stack_pointer global from the env module as an indication that the global
+  // thread context ABI is being used.
 
-  enum class ThreadContextABI {
-    Undetermined,
-    ComponentModelBuiltins,
-    Globals
-  };
+  enum class ThreadContextABI { Undetermined, ComponentModelBuiltins, Globals };
 
   ThreadContextABI threadContextABI = ThreadContextABI::Undetermined;
 
   for (ObjFile *obj : files) {
     auto targetFeatures = obj->getWasmObj()->getTargetFeatures();
-    auto threadContextFeature = llvm::find_if(targetFeatures,
-                              [](const auto &f) {
-                                return f.Name == "component-model-thread-context";
-                              });
+    auto threadContextFeature =
+        llvm::find_if(targetFeatures, [](const auto &f) {
+          return f.Name == "component-model-thread-context";
+        });
 
-    bool usesComponentModelThreadContext = threadContextFeature != targetFeatures.end() &&
-                                    threadContextFeature->Prefix == WASM_FEATURE_PREFIX_USED;
+    bool usesComponentModelThreadContext =
+        threadContextFeature != targetFeatures.end() &&
+        threadContextFeature->Prefix == WASM_FEATURE_PREFIX_USED;
 
     if (threadContextFeature == targetFeatures.end()) {
-      // If the feature is not explicitly used or disallowed, check for the presence of a __stack_pointer
-      // import in this specific file to determine if the global thread context ABI is being used.
-      bool hasStackPointerImport = llvm::any_of(obj->getSymbols(), [](const auto &sym) {
-        return sym && sym->getName() == "__stack_pointer" && 
-               sym->kind() == Symbol::UndefinedGlobalKind &&
-               sym->importModule && sym->importModule == "env";
-      });
+      // If the feature is not explicitly used or disallowed, check for the
+      // presence of a __stack_pointer import in this specific file to determine
+      // if the global thread context ABI is being used.
+      bool hasStackPointerImport =
+          llvm::any_of(obj->getSymbols(), [](const auto &sym) {
+            return sym && sym->getName() == "__stack_pointer" &&
+                   sym->kind() == Symbol::UndefinedGlobalKind &&
+                   sym->importModule && sym->importModule == "env";
+          });
       if (!hasStackPointerImport) {
-        // No __stack_pointer import, so this is probably an object file compiled from assembly or
-        // some other source that doesn't care about the thread context ABI. As such, we let it pass.
+        // No __stack_pointer import, so this is probably an object file
+        // compiled from assembly or some other source that doesn't care about
+        // the thread context ABI. As such, we let it pass.
         continue;
       }
       // Treat this as using the globals ABI
       usesComponentModelThreadContext = false;
-    }     
+    }
 
     if (usesComponentModelThreadContext) {
       if (threadContextABI == ThreadContextABI::Undetermined) {
         threadContextABI = ThreadContextABI::ComponentModelBuiltins;
       } else if (threadContextABI != ThreadContextABI::ComponentModelBuiltins) {
-        error("thread context ABI mismatch: " + obj->getName() +
-              " uses component-model-thread-context but other files disallow it");
+        error(
+            "thread context ABI mismatch: " + obj->getName() +
+            " uses component-model-thread-context but other files disallow it");
       }
     } else {
       if (threadContextABI == ThreadContextABI::Undetermined) {
         threadContextABI = ThreadContextABI::Globals;
       } else if (threadContextABI != ThreadContextABI::Globals) {
-        error("thread context ABI mismatch: " + obj->getName() +
-              " disallows component-model-thread-context but other files use it"); 
+        error(
+            "thread context ABI mismatch: " + obj->getName() +
+            " disallows component-model-thread-context but other files use it");
       }
     }
   }
- 
+
   // If the ABI is undetermined at this point, default to the globals ABI
-  ctx.componentModelThreadContext = (threadContextABI == ThreadContextABI::ComponentModelBuiltins);
+  ctx.componentModelThreadContext =
+      (threadContextABI == ThreadContextABI::ComponentModelBuiltins);
 
   if (ctx.arg.sharedMemory && ctx.componentModelThreadContext) {
-    error("--shared-memory is currently incompatible with component model thread context intrinsics");
+    error("--shared-memory is currently incompatible with component model "
+          "thread context intrinsics");
   }
 }
 
@@ -1555,9 +1564,9 @@ void LinkerDriver::linkerMain(ArrayRef<const char *> argsArr) {
   if (errorCount())
     return;
 
-  // Now that LTO is complete and all object files are available, determine the 
-  // thread context ABI and create symbols (__stack_pointer, __tls_base, etc.) based
-  // on the determined ABI.
+  // Now that LTO is complete and all object files are available, determine the
+  // thread context ABI and create symbols (__stack_pointer, __tls_base, etc.)
+  // based on the determined ABI.
   determineThreadContextABI(ctx.objectFiles);
   createPostLTOSymbols();
 

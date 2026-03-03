@@ -268,8 +268,8 @@ class CoalesceFeaturesAndStripAtomics final : public ModulePass {
   // function individually, since having multiple feature sets in one module
   // currently does not make sense for WebAssembly. If atomics are not enabled,
   // also strip atomic operations and thread local storage, unless the target
-  // is using component model threading intrinsics which allow thread local storage 
-  // without atomics, in which case only strip atomics.
+  // is using component model threading intrinsics which allow thread local
+  // storage without atomics, in which case only strip atomics.
   static char ID;
   WebAssemblyTargetMachine *WasmTM;
 
@@ -289,7 +289,7 @@ public:
     bool StrippedTLS = false;
 
     if (Features[WebAssembly::FeatureComponentModelThreadContext]) {
-      // Using component model threading intrinsics allows TLS without 
+      // Using component model threading intrinsics allows TLS without
       // atomics, so don't strip TLS even if atomics are disabled.
       if (!Features[WebAssembly::FeatureAtomics]) {
         StrippedAtomics = stripAtomics(M);
@@ -432,7 +432,7 @@ private:
       M.addModuleFlag(Module::ModFlagBehavior::Error, "wasm-feature-shared-mem",
                       wasm::WASM_FEATURE_PREFIX_DISALLOWED);
     }
-    
+
     // Mark component-model-thread-context as disallowed when not in use to
     // prevent linking object files with incompatible threading ABIs.
     if (!Features[WebAssembly::FeatureComponentModelThreadContext]) {

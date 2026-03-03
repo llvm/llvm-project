@@ -418,11 +418,11 @@ WebAssemblyTargetInfo::getTargetBuiltins() const {
 void WebAssemblyTargetInfo::adjust(DiagnosticsEngine &Diags, LangOptions &Opts,
                                    const TargetInfo *Aux) {
   TargetInfo::adjust(Diags, Opts, Aux);
-  // If not using component model threading intrinsics, turn off POSIXThreads 
-  // and ThreadModel so that we don't predefine _REENTRANT or __STDCPP_THREADS__ 
-  // if we will eventually end up stripping atomics because they are unsupported.
-  if (!HasComponentModelThreadContext &&
-      (!HasAtomics || !HasBulkMemory)) {
+  // If not using component model threading intrinsics, turn off POSIXThreads
+  // and ThreadModel so that we don't predefine _REENTRANT or __STDCPP_THREADS__
+  // if we will eventually end up stripping atomics because they are
+  // unsupported.
+  if (!HasComponentModelThreadContext && (!HasAtomics || !HasBulkMemory)) {
     Opts.POSIXThreads = false;
     Opts.setThreadModel(LangOptions::ThreadModelKind::Single);
     Opts.ThreadsafeStatics = false;
