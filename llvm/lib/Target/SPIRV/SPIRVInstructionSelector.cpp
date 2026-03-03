@@ -5348,14 +5348,14 @@ bool SPIRVInstructionSelector::selectGlobalValue(
       }
       MachineInstrBuilder MIB3 =
           BuildMI(BB, I, I.getDebugLoc(), TII.get(SPIRV::OpConstantNull))
-              .addDef(NewReg)
+              .addDef(ResVReg)
               .addUse(GR.getSPIRVTypeID(ResType));
       GR.add(ConstVal, MIB3);
       MIB3.constrainAllUses(TII, TRI, RBI);
       return true;
     }
-    assert(NewReg != ResVReg);
-    return BuildCOPY(ResVReg, NewReg, I);
+    assert(ResVReg != ResVReg);
+    return BuildCOPY(ResVReg, ResVReg, I);
   }
   auto GlobalVar = cast<GlobalVariable>(GV);
   assert(GlobalVar->getName() != "llvm.global.annotations");
