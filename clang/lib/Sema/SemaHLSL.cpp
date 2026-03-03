@@ -452,6 +452,31 @@ static IdentifierInfo *getHostLayoutStructName(Sema &S, NamedDecl *BaseDecl,
   };
 }
 
+static const Type *createHostLayoutType(Sema &S, const Type *Ty) {
+  ASTContext &AST = S.getASTContext();
+  if (auto *RD = Ty->getAsCXXRecordDecl()) {
+    if (!requiresImplicitBufferLayoutStructure(RD))
+      return Ty;
+    RD = createHostLayoutStruct(S, RD);
+    if (!RD)
+      return nullptr;
+    return AST.getCanonicalTagType(RD)->getTypePtr();
+  }
+
+  if (const auto *CAT = dyn_cast<ConstantArrayType>(Ty)) {
+    const Type *ElementTy = createHostLayoutType(
+        S, CAT->getElementType()->getUnqualifiedDesugaredType());
+    if (!ElementTy)
+      return nullptr;
+    return AST
+        .getConstantArrayType(QualType(ElementTy, 0), CAT->getSize(), nullptr,
+                              CAT->getSizeModifier(),
+                              CAT->getIndexTypeCVRQualifiers())
+        .getTypePtr();
+  }
+  return Ty;
+}
+
 // Creates a field declaration of given name and type for HLSL buffer layout
 // struct. Returns nullptr if the type cannot be use in HLSL Buffer layout.
 static FieldDecl *createFieldForHostLayoutStruct(Sema &S, const Type *Ty,
@@ -460,14 +485,9 @@ static FieldDecl *createFieldForHostLayoutStruct(Sema &S, const Type *Ty,
   if (isInvalidConstantBufferLeafElementType(Ty))
     return nullptr;
 
-  if (auto *RD = Ty->getAsCXXRecordDecl()) {
-    if (requiresImplicitBufferLayoutStructure(RD)) {
-      RD = createHostLayoutStruct(S, RD);
-      if (!RD)
-        return nullptr;
-      Ty = S.Context.getCanonicalTagType(RD)->getTypePtr();
-    }
-  }
+  Ty = createHostLayoutType(S, Ty);
+  if (!Ty)
+    return nullptr;
 
   QualType QT = QualType(Ty, 0);
   ASTContext &AST = S.getASTContext();
@@ -568,15 +588,21 @@ void createHostLayoutStructForBuffer(Sema &S, HLSLBufferDecl *BufDecl) {
         VD->getType().getAddressSpace() == LangAS::hlsl_groupshared)
       continue;
     const Type *Ty = VD->getType()->getUnqualifiedDesugaredType();
+
+    QualType NewTy;
     if (FieldDecl *FD =
             createFieldForHostLayoutStruct(S, Ty, VD->getIdentifier(), LS)) {
       // add the field decl to the layout struct
       LS->addDecl(FD);
       // update address space of the original decl to hlsl_constant
-      QualType NewTy =
-          AST.getAddrSpaceQualType(VD->getType(), LangAS::hlsl_constant);
-      VD->setType(NewTy);
+      NewTy = AST.getAddrSpaceQualType(VD->getType(), LangAS::hlsl_constant);
+    } else {
+      // Declarations in default cbuffer $Globals had the address space set to
+      // hlsl_constant earlier. It needs to be removed now since it does not
+      // have a representable cbuffer layout.
+      NewTy = AST.removeAddrSpaceQualType(VD->getType());
     }
+    VD->setType(NewTy);
   }
   LS->completeDefinition();
   BufDecl->addLayoutStruct(LS);
