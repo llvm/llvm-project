@@ -5526,8 +5526,8 @@ def mrestrict_it: Flag<["-"], "mrestrict-it">, Group<m_arm_Features_Group>,
 def mno_restrict_it: Flag<["-"], "mno-restrict-it">, Group<m_arm_Features_Group>,
   HelpText<"Allow generation of complex IT blocks.">;
 def marm : Flag<["-"], "marm">, Alias<mno_thumb>;
-def ffixed_r9 : Flag<["-"], "ffixed-r9">, Group<m_arm_Features_Group>,
-  HelpText<"Reserve the r9 register (ARM only)">;
+def ffixed_r9 : Flag<["-"], "ffixed-r9">, Group<m_Group>,
+  HelpText<"Reserve the r9 register (ARM/x86_64 only)">;
 def mno_movt : Flag<["-"], "mno-movt">, Group<m_arm_Features_Group>,
   HelpText<"Disallow use of movt/movw pairs (ARM only)">;
 def mcrc : Flag<["-"], "mcrc">, Group<m_Group>,
@@ -6844,7 +6844,7 @@ def mno_hexagon_hvx_ieee_fp : Flag<["-"], "mno-hvx-ieee-fp">,
   Group<m_hexagon_Features_Group>,
   HelpText<"Disable Hexagon HVX IEEE floating-point">;
 def ffixed_r19: Flag<["-"], "ffixed-r19">, Group<f_Group>,
-  HelpText<"Reserve register r19 (Hexagon only)">;
+  HelpText<"Reserve register r19 (Hexagon/x86_64 only; x86_64 requires APX EGPR)">;
 } // let Flags = [TargetSpecific]
 def mmemops : Flag<["-"], "mmemops">, Group<m_hexagon_Features_Group>,
   Visibility<[ClangOption, CC1Option]>,
@@ -7168,6 +7168,13 @@ def mapxf : Flag<["-"], "mapxf">, Group<m_x86_Features_Group>;
 def mno_apxf : Flag<["-"], "mno-apxf">, Group<m_x86_Features_Group>;
 def mapx_inline_asm_use_gpr32 : Flag<["-"], "mapx-inline-asm-use-gpr32">, Group<m_Group>,
                                 HelpText<"Enable use of GPR32 in inline assembly for APX">;
+foreach i = {8, 10-15} in
+    def ffixed_r#i : Flag<["-"], "ffixed-r"#i>, Group<m_Group>,
+    HelpText<"Reserve the r"#i#" register (x86_64 only)">;
+foreach i = {16-18,20-31} in
+    def ffixed_r#i : Flag<["-"], "ffixed-r"#i>, Group<m_Group>,
+    HelpText<"Reserve the r"#i#" register (x86_64 with APX EGPR only)">;
+
 } // let Flags = [TargetSpecific]
 
 // VE feature flags
@@ -7995,6 +8002,12 @@ def massembler_fatal_warnings : Flag<["-"], "massembler-fatal-warnings">,
 def crel : Flag<["--"], "crel">,
   HelpText<"Enable CREL relocation format (ELF only)">,
   MarshallingInfoFlag<CodeGenOpts<"Crel">>;
+def reloc_section_sym : Joined<["--"], "reloc-section-sym=">,
+  HelpText<"Section symbol conversion for relocations: all, internal, none (ELF only)">,
+  Values<"all,internal,none">,
+  NormalizedValuesScope<"llvm::RelocSectionSymType">,
+  NormalizedValues<["All", "Internal", "None"]>,
+  MarshallingInfoEnum<CodeGenOpts<"RelocSectionSym">, "All">;
 // The leading 'g' is misleading. This is an unwind tables option, not
 // a debug option. But uses this name for gnu compatibility.
 def gsframe : Flag<["--"], "gsframe">,

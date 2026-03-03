@@ -142,6 +142,7 @@ struct GlobalValueSummaryYaml {
   unsigned Linkage, Visibility;
   bool NotEligibleToImport, Live, IsLocal, CanAutoHide;
   unsigned ImportType;
+  bool NoRenameOnPromotion;
   // Fields for AliasSummary
   std::optional<uint64_t> Aliasee;
   // Fields for FunctionSummary
@@ -191,6 +192,7 @@ template <> struct MappingTraits<GlobalValueSummaryYaml> {
     io.mapOptional("Local", summary.IsLocal);
     io.mapOptional("CanAutoHide", summary.CanAutoHide);
     io.mapOptional("ImportType", summary.ImportType);
+    io.mapOptional("NoRenameOnPromotion", summary.NoRenameOnPromotion);
     io.mapOptional("Aliasee", summary.Aliasee);
     io.mapOptional("Refs", summary.Refs);
     io.mapOptional("TypeTests", summary.TypeTests);
@@ -228,7 +230,8 @@ template <> struct CustomMappingTraits<GlobalValueSummaryMapTy> {
           static_cast<GlobalValue::VisibilityTypes>(GVSum.Visibility),
           GVSum.NotEligibleToImport, GVSum.Live, GVSum.IsLocal,
           GVSum.CanAutoHide,
-          static_cast<GlobalValueSummary::ImportKind>(GVSum.ImportType));
+          static_cast<GlobalValueSummary::ImportKind>(GVSum.ImportType),
+          GVSum.NoRenameOnPromotion);
       if (GVSum.Aliasee) {
         auto ASum = std::make_unique<AliasSummary>(GVFlags);
         V.try_emplace(*GVSum.Aliasee, /*IsAnalysis=*/false);
@@ -272,9 +275,10 @@ template <> struct CustomMappingTraits<GlobalValueSummaryMapTy> {
               static_cast<bool>(FSum->flags().Live),
               static_cast<bool>(FSum->flags().DSOLocal),
               static_cast<bool>(FSum->flags().CanAutoHide),
-              FSum->flags().ImportType, /*Aliasee=*/std::nullopt, Refs,
-              FSum->type_tests(), FSum->type_test_assume_vcalls(),
-              FSum->type_checked_load_vcalls(),
+              FSum->flags().ImportType,
+              static_cast<bool>(FSum->flags().NoRenameOnPromotion),
+              /*Aliasee=*/std::nullopt, Refs, FSum->type_tests(),
+              FSum->type_test_assume_vcalls(), FSum->type_checked_load_vcalls(),
               FSum->type_test_assume_const_vcalls(),
               FSum->type_checked_load_const_vcalls()});
         } else if (auto *ASum = dyn_cast<AliasSummary>(Sum.get());
@@ -286,6 +290,7 @@ template <> struct CustomMappingTraits<GlobalValueSummaryMapTy> {
               static_cast<bool>(ASum->flags().DSOLocal),
               static_cast<bool>(ASum->flags().CanAutoHide),
               ASum->flags().ImportType,
+              static_cast<bool>(ASum->flags().NoRenameOnPromotion),
               /*Aliasee=*/ASum->getAliaseeGUID()});
         }
       }

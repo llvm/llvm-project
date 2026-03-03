@@ -349,18 +349,21 @@ cc_library(
     includes = ["include"],
     linkopts = select({
         ":is_windows_clang_mingw": [
+            "-Wl,--stack,16777216",
             "-lole32",
             "-luuid",
             "-lws2_32",
             "-lntdll",
         ],
         ":is_windows_clang_cl": [
+            "/STACK:10000000",
             "ole32.lib",
             "uuid.lib",
             "ws2_32.lib",
             "ntdll.lib",
         ],
         ":is_windows_msvc": [
+            "/STACK:10000000",
             "ole32.lib",
             "uuid.lib",
             "ws2_32.lib",
