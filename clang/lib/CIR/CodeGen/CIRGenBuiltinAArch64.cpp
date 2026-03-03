@@ -290,7 +290,7 @@ static bool hasExtraNeonArgument(unsigned builtinID) {
   return mask != 0;
 }
 
-// TODO: Remove `loc` from the list of arguments once all NYIs are gone.
+// TODO(cir): Remove `loc` from the list of arguments once all NYIs are gone.
 static cir::VectorType getNeonType(CIRGenFunction *cgf, NeonTypeFlags typeFlags,
                                    mlir::Location loc,
                                    bool hasLegalHalfType = true,
@@ -354,25 +354,29 @@ static cir::VectorType getNeonType(CIRGenFunction *cgf, NeonTypeFlags typeFlags,
   llvm_unreachable("Unknown vector element type!");
 }
 
+// TODO(cir): Remove `cgm` from the list of arguments once all NYI(s) are gone.
 template <typename Operation>
-static mlir::Value emitNeonCallToOp(
-    CIRGenBuilderTy &builder, llvm::SmallVector<mlir::Type> argTypes,
-    llvm::SmallVectorImpl<mlir::Value> &args,
-    std::optional<llvm::StringRef> intrinsicName, mlir::Type funcResTy,
-    mlir::Location loc, bool isConstrainedFPIntrinsic = false,
-    unsigned shift = 0, bool rightshift = false) {
-  // TODO: Consider removing the following unreachable when we have
+static mlir::Value
+emitNeonCallToOp(CIRGenModule &cgm, CIRGenBuilderTy &builder,
+                 llvm::SmallVector<mlir::Type> argTypes,
+                 llvm::SmallVectorImpl<mlir::Value> &args,
+                 std::optional<llvm::StringRef> intrinsicName,
+                 mlir::Type funcResTy, mlir::Location loc,
+                 bool isConstrainedFPIntrinsic = false, unsigned shift = 0,
+                 bool rightshift = false) {
+  // TODO(cir): Consider removing the following unreachable when we have
   // emitConstrainedFPCall feature implemented
   assert(!cir::MissingFeatures::emitConstrainedFPCall());
   if (isConstrainedFPIntrinsic)
-    llvm_unreachable("isConstrainedFPIntrinsic NYI");
+    cgm.errorNYI(loc, std::string("unimplemented constrained FP intrinsic"));
 
   for (unsigned j = 0; j < argTypes.size(); ++j) {
     if (isConstrainedFPIntrinsic) {
       assert(!cir::MissingFeatures::emitConstrainedFPCall());
     }
     if (shift > 0 && shift == j) {
-      llvm_unreachable("shift NYI");
+      cgm.errorNYI(loc,
+                   std::string("unimplemented intrinsic requiring a shift Op"));
     } else {
       args[j] = builder.createBitcast(args[j], argTypes[j]);
     }
@@ -391,7 +395,8 @@ static mlir::Value emitNeonCallToOp(
   }
 }
 
-static mlir::Value emitNeonCall(CIRGenBuilderTy &builder,
+// TODO(cir): Remove `cgm` from the list of arguments once all NYI(s) are gone.
+static mlir::Value emitNeonCall(CIRGenModule &cgm, CIRGenBuilderTy &builder,
                                 llvm::SmallVector<mlir::Type> argTypes,
                                 llvm::SmallVectorImpl<mlir::Value> &args,
                                 llvm::StringRef intrinsicName,
@@ -399,7 +404,7 @@ static mlir::Value emitNeonCall(CIRGenBuilderTy &builder,
                                 bool isConstrainedFPIntrinsic = false,
                                 unsigned shift = 0, bool rightshift = false) {
   return emitNeonCallToOp<cir::LLVMIntrinsicCallOp>(
-      builder, std::move(argTypes), args, intrinsicName, funcResTy, loc,
+      cgm, builder, std::move(argTypes), args, intrinsicName, funcResTy, loc,
       isConstrainedFPIntrinsic, shift, rightshift);
 }
 
@@ -1838,7 +1843,7 @@ CIRGenFunction::emitAArch64BuiltinExpr(unsigned builtinID, const CallExpr *expr,
     intrName = usgn ? "aarch64.neon.uabd" : "aarch64.neon.sabd";
     if (cir::isFPOrVectorOfFPType(ty))
       intrName = "aarch64.neon.fabd";
-    return emitNeonCall(builder, {ty, ty}, ops, intrName, ty, loc);
+    return emitNeonCall(cgm, builder, {ty, ty}, ops, intrName, ty, loc);
   case NEON::BI__builtin_neon_vpadal_v:
   case NEON::BI__builtin_neon_vpadalq_v:
   case NEON::BI__builtin_neon_vpmin_v:
