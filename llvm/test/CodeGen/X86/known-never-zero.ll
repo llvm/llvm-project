@@ -31,18 +31,15 @@ define i32 @or_known_nonzero_vec(<4 x i32> %x, ptr %p) {
 ; X86-NEXT:    por {{\.?LCPI[0-9]+_[0-9]+}}, %xmm0
 ; X86-NEXT:    movdqa %xmm0, (%eax)
 ; X86-NEXT:    movd %xmm0, %eax
-; X86-NEXT:    bsfl %eax, %ecx
-; X86-NEXT:    movl $32, %eax
-; X86-NEXT:    cmovnel %ecx, %eax
+; X86-NEXT:    rep bsfl %eax, %eax
 ; X86-NEXT:    retl
 ;
 ; X64-LABEL: or_known_nonzero_vec:
 ; X64:       # %bb.0:
 ; X64-NEXT:    vpor {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm0
 ; X64-NEXT:    vmovdqa %xmm0, (%rdi)
-; X64-NEXT:    vmovd %xmm0, %ecx
-; X64-NEXT:    movl $32, %eax
-; X64-NEXT:    rep bsfl %ecx, %eax
+; X64-NEXT:    vmovd %xmm0, %eax
+; X64-NEXT:    rep bsfl %eax, %eax
 ; X64-NEXT:    retq
   %z = or <4 x i32> %x, <i32 1, i32 0, i32 0, i32 0>
   store <4 x i32> %z, ptr %p
@@ -1279,9 +1276,7 @@ define i32 @sra_known_nonzero_exact_vec(<4 x i32> %x, <4 x i32> %yy, ptr %p) {
 ; X86-NEXT:    movdqa %xmm1, (%eax)
 ; X86-NEXT:    pshufd {{.*#+}} xmm0 = xmm1[1,1,1,1]
 ; X86-NEXT:    movd %xmm0, %eax
-; X86-NEXT:    bsfl %eax, %ecx
-; X86-NEXT:    movl $32, %eax
-; X86-NEXT:    cmovnel %ecx, %eax
+; X86-NEXT:    rep bsfl %eax, %eax
 ; X86-NEXT:    retl
 ;
 ; X64-LABEL: sra_known_nonzero_exact_vec:
@@ -1290,9 +1285,8 @@ define i32 @sra_known_nonzero_exact_vec(<4 x i32> %x, <4 x i32> %yy, ptr %p) {
 ; X64-NEXT:    vpor {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm1, %xmm1
 ; X64-NEXT:    vpsrad %xmm0, %xmm1, %xmm0
 ; X64-NEXT:    vmovdqa %xmm0, (%rdi)
-; X64-NEXT:    vpextrd $1, %xmm0, %ecx
-; X64-NEXT:    movl $32, %eax
-; X64-NEXT:    rep bsfl %ecx, %eax
+; X64-NEXT:    vpextrd $1, %xmm0, %eax
+; X64-NEXT:    rep bsfl %eax, %eax
 ; X64-NEXT:    retq
   %x.splat = shufflevector <4 x i32> %x, <4 x i32> poison, <4 x i32> zeroinitializer
   %y = or <4 x i32> %yy, <i32 0, i32 256, i32 0, i32 0>
@@ -1415,9 +1409,7 @@ define i32 @srl_known_nonzero_exact_vec(<4 x i32> %x, <4 x i32> %yy, ptr %p) {
 ; X86-NEXT:    movdqa %xmm1, (%eax)
 ; X86-NEXT:    pshufd {{.*#+}} xmm0 = xmm1[3,3,3,3]
 ; X86-NEXT:    movd %xmm0, %eax
-; X86-NEXT:    bsfl %eax, %ecx
-; X86-NEXT:    movl $32, %eax
-; X86-NEXT:    cmovnel %ecx, %eax
+; X86-NEXT:    rep bsfl %eax, %eax
 ; X86-NEXT:    retl
 ;
 ; X64-LABEL: srl_known_nonzero_exact_vec:
@@ -1426,9 +1418,8 @@ define i32 @srl_known_nonzero_exact_vec(<4 x i32> %x, <4 x i32> %yy, ptr %p) {
 ; X64-NEXT:    vpor {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm1, %xmm1
 ; X64-NEXT:    vpsrld %xmm0, %xmm1, %xmm0
 ; X64-NEXT:    vmovdqa %xmm0, (%rdi)
-; X64-NEXT:    vpextrd $3, %xmm0, %ecx
-; X64-NEXT:    movl $32, %eax
-; X64-NEXT:    rep bsfl %ecx, %eax
+; X64-NEXT:    vpextrd $3, %xmm0, %eax
+; X64-NEXT:    rep bsfl %eax, %eax
 ; X64-NEXT:    retq
   %x.splat = shufflevector <4 x i32> %x, <4 x i32> poison, <4 x i32> zeroinitializer
   %y = or <4 x i32> %yy, <i32 0, i32 0, i32 0, i32 256>
