@@ -80,7 +80,8 @@ bool canLowerReturn(size_t ResultSize, const WebAssemblySubtarget *Subtarget);
 // If using component model threading intrinsics: calls
 // __wasm_component_model_builtin_context_get_1 Otherwise: global.get __tls_base
 MachineSDNode *getTLSBase(SelectionDAG &DAG, const SDLoc &DL,
-                          const WebAssemblySubtarget *Subtarget);
+                          const WebAssemblySubtarget *Subtarget,
+                          const SDValue *Chain = nullptr);
 
 } // end namespace WebAssembly
 
