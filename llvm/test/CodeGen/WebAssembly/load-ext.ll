@@ -10,8 +10,8 @@
 
 ; Test that extending loads are assembled properly.
 
-@gv8 = hidden global i8 0, align 1
-@gv16 = hidden global i16 0, align 1
+@gv8 = global i8 0
+@gv16 = global i16 0
 
 define i32 @global_sext_i8_i32() {
 ; WASM32-DAG-LABEL: global_sext_i8_i32:
@@ -87,28 +87,28 @@ define i32 @global_sext_i16_i32() {
 ; WASM32-DAG:         .functype global_sext_i16_i32 () -> (i32)
 ; WASM32-DAG-NEXT:  # %bb.0:
 ; WASM32-DAG-NEXT:    i32.const $push0=, 0
-; WASM32-DAG-NEXT:    i32.load16_s $push1=, gv16($pop0):p2align=0
+; WASM32-DAG-NEXT:    i32.load16_s $push1=, gv16($pop0)
 ; WASM32-DAG-NEXT:    return $pop1
 ;
 ; WASM32-DAG-MVP-LABEL: global_sext_i16_i32:
 ; WASM32-DAG-MVP:         .functype global_sext_i16_i32 () -> (i32)
 ; WASM32-DAG-MVP-NEXT:  # %bb.0:
 ; WASM32-DAG-MVP-NEXT:    i32.const $push0=, 0
-; WASM32-DAG-MVP-NEXT:    i32.load16_s $push1=, gv16($pop0):p2align=0
+; WASM32-DAG-MVP-NEXT:    i32.load16_s $push1=, gv16($pop0)
 ; WASM32-DAG-MVP-NEXT:    return $pop1
 ;
 ; WASM32-FAST-LABEL: global_sext_i16_i32:
 ; WASM32-FAST:         .functype global_sext_i16_i32 () -> (i32)
 ; WASM32-FAST-NEXT:  # %bb.0:
 ; WASM32-FAST-NEXT:    i32.const $push1=, 0
-; WASM32-FAST-NEXT:    i32.load16_s $push0=, gv16($pop1):p2align=0
+; WASM32-FAST-NEXT:    i32.load16_s $push0=, gv16($pop1)
 ; WASM32-FAST-NEXT:    return $pop0
 ;
 ; WASM32-FAST-MVP-LABEL: global_sext_i16_i32:
 ; WASM32-FAST-MVP:         .functype global_sext_i16_i32 () -> (i32)
 ; WASM32-FAST-MVP-NEXT:  # %bb.0:
 ; WASM32-FAST-MVP-NEXT:    i32.const $push[[P0:[0-9]+]]=, 0
-; WASM32-FAST-MVP-NEXT:    i32.load16_u $push[[P1:[0-9]+]]=, gv16($pop[[P0]]):p2align=0
+; WASM32-FAST-MVP-NEXT:    i32.load16_u $push[[P1:[0-9]+]]=, gv16($pop[[P0]])
 ; WASM32-FAST-MVP-NEXT:    i32.const $push[[P2:[0-9]+]]=, 16
 ; WASM32-FAST-MVP-NEXT:    i32.shl $push[[P3:[0-9]+]]=, $pop[[P1]], $pop[[P2]]
 ; WASM32-FAST-MVP-NEXT:    i32.const $push[[P4:[0-9]+]]=, 16
@@ -119,28 +119,28 @@ define i32 @global_sext_i16_i32() {
 ; WASM64-DAG:         .functype global_sext_i16_i32 () -> (i32)
 ; WASM64-DAG-NEXT:  # %bb.0:
 ; WASM64-DAG-NEXT:    i64.const $push0=, 0
-; WASM64-DAG-NEXT:    i32.load16_s $push1=, gv16($pop0):p2align=0
+; WASM64-DAG-NEXT:    i32.load16_s $push1=, gv16($pop0)
 ; WASM64-DAG-NEXT:    return $pop1
 ;
 ; WASM64-DAG-MVP-LABEL: global_sext_i16_i32:
 ; WASM64-DAG-MVP:         .functype global_sext_i16_i32 () -> (i32)
 ; WASM64-DAG-MVP-NEXT:  # %bb.0:
 ; WASM64-DAG-MVP-NEXT:    i64.const $push0=, 0
-; WASM64-DAG-MVP-NEXT:    i32.load16_s $push1=, gv16($pop0):p2align=0
+; WASM64-DAG-MVP-NEXT:    i32.load16_s $push1=, gv16($pop0)
 ; WASM64-DAG-MVP-NEXT:    return $pop1
 ;
 ; WASM64-FAST-LABEL: global_sext_i16_i32:
 ; WASM64-FAST:         .functype global_sext_i16_i32 () -> (i32)
 ; WASM64-FAST-NEXT:  # %bb.0:
 ; WASM64-FAST-NEXT:    i64.const $push1=, 0
-; WASM64-FAST-NEXT:    i32.load16_s $push0=, gv16($pop1):p2align=0
+; WASM64-FAST-NEXT:    i32.load16_s $push0=, gv16($pop1)
 ; WASM64-FAST-NEXT:    return $pop0
 ;
 ; WASM64-FAST-MVP-LABEL: global_sext_i16_i32:
 ; WASM64-FAST-MVP:         .functype global_sext_i16_i32 () -> (i32)
 ; WASM64-FAST-MVP-NEXT:  # %bb.0:
 ; WASM64-FAST-MVP-NEXT:    i64.const $push[[P0:[0-9]+]]=, 0
-; WASM64-FAST-MVP-NEXT:    i32.load16_u $push[[P1:[0-9]+]]=, gv16($pop[[P0]]):p2align=0
+; WASM64-FAST-MVP-NEXT:    i32.load16_u $push[[P1:[0-9]+]]=, gv16($pop[[P0]])
 ; WASM64-FAST-MVP-NEXT:    i32.const $push[[P2:[0-9]+]]=, 16
 ; WASM64-FAST-MVP-NEXT:    i32.shl $push[[P3:[0-9]+]]=, $pop[[P1]], $pop[[P2]]
 ; WASM64-FAST-MVP-NEXT:    i32.const $push[[P4:[0-9]+]]=, 16
@@ -231,14 +231,14 @@ define i64 @global_sext_i16_i64() {
 ; WASM32-DAG:         .functype global_sext_i16_i64 () -> (i64)
 ; WASM32-DAG-NEXT:  # %bb.0:
 ; WASM32-DAG-NEXT:    i32.const $push0=, 0
-; WASM32-DAG-NEXT:    i64.load16_s $push1=, gv16($pop0):p2align=0
+; WASM32-DAG-NEXT:    i64.load16_s $push1=, gv16($pop0)
 ; WASM32-DAG-NEXT:    return $pop1
 ;
 ; WASM32-DAG-MVP-LABEL: global_sext_i16_i64:
 ; WASM32-DAG-MVP:         .functype global_sext_i16_i64 () -> (i64)
 ; WASM32-DAG-MVP-NEXT:  # %bb.0:
 ; WASM32-DAG-MVP-NEXT:    i32.const $push0=, 0
-; WASM32-DAG-MVP-NEXT:    i64.load16_s $push1=, gv16($pop0):p2align=0
+; WASM32-DAG-MVP-NEXT:    i64.load16_s $push1=, gv16($pop0)
 ; WASM32-DAG-MVP-NEXT:    return $pop1
 ;
 ; WASM32-FAST-LABEL: global_sext_i16_i64:
@@ -254,7 +254,7 @@ define i64 @global_sext_i16_i64() {
 ; WASM32-FAST-MVP:         .functype global_sext_i16_i64 () -> (i64)
 ; WASM32-FAST-MVP-NEXT:  # %bb.0:
 ; WASM32-FAST-MVP-NEXT:    i32.const $push[[P0:[0-9]+]]=, 0
-; WASM32-FAST-MVP-NEXT:    i32.load16_u $push[[P1:[0-9]+]]=, gv16($pop[[P0]]):p2align=0
+; WASM32-FAST-MVP-NEXT:    i32.load16_u $push[[P1:[0-9]+]]=, gv16($pop[[P0]])
 ; WASM32-FAST-MVP-NEXT:    i32.const $push[[P2:[0-9]+]]=, 16
 ; WASM32-FAST-MVP-NEXT:    i32.shl $push[[P3:[0-9]+]]=, $pop[[P1]], $pop[[P2]]
 ; WASM32-FAST-MVP-NEXT:    i32.const $push[[P4:[0-9]+]]=, 16
@@ -266,21 +266,21 @@ define i64 @global_sext_i16_i64() {
 ; WASM64-DAG:         .functype global_sext_i16_i64 () -> (i64)
 ; WASM64-DAG-NEXT:  # %bb.0:
 ; WASM64-DAG-NEXT:    i64.const $push0=, 0
-; WASM64-DAG-NEXT:    i64.load16_s $push1=, gv16($pop0):p2align=0
+; WASM64-DAG-NEXT:    i64.load16_s $push1=, gv16($pop0)
 ; WASM64-DAG-NEXT:    return $pop1
 ;
 ; WASM64-DAG-MVP-LABEL: global_sext_i16_i64:
 ; WASM64-DAG-MVP:         .functype global_sext_i16_i64 () -> (i64)
 ; WASM64-DAG-MVP-NEXT:  # %bb.0:
 ; WASM64-DAG-MVP-NEXT:    i64.const $push0=, 0
-; WASM64-DAG-MVP-NEXT:    i64.load16_s $push1=, gv16($pop0):p2align=0
+; WASM64-DAG-MVP-NEXT:    i64.load16_s $push1=, gv16($pop0)
 ; WASM64-DAG-MVP-NEXT:    return $pop1
 ;
 ; WASM64-FAST-LABEL: global_sext_i16_i64:
 ; WASM64-FAST:         .functype global_sext_i16_i64 () -> (i64)
 ; WASM64-FAST-NEXT:  # %bb.0:
 ; WASM64-FAST-NEXT:    i64.const $push[[P0:[0-9]+]]=, 0
-; WASM64-FAST-NEXT:    i32.load16_u $push[[P1:[0-9]+]]=, gv16($pop[[P0]]):p2align=0
+; WASM64-FAST-NEXT:    i32.load16_u $push[[P1:[0-9]+]]=, gv16($pop[[P0]])
 ; WASM64-FAST-NEXT:    i64.extend_i32_u $push[[P2:[0-9]+]]=, $pop[[P1]]
 ; WASM64-FAST-NEXT:    i64.extend16_s $push[[P3:[0-9]+]]=, $pop[[P2]]
 ; WASM64-FAST-NEXT:    return $pop[[P3]]
@@ -289,7 +289,7 @@ define i64 @global_sext_i16_i64() {
 ; WASM64-FAST-MVP:         .functype global_sext_i16_i64 () -> (i64)
 ; WASM64-FAST-MVP-NEXT:  # %bb.0:
 ; WASM64-FAST-MVP-NEXT:    i64.const $push[[P0:[0-9]+]]=, 0
-; WASM64-FAST-MVP-NEXT:    i32.load16_u $push[[P1:[0-9]+]]=, gv16($pop[[P0]]):p2align=0
+; WASM64-FAST-MVP-NEXT:    i32.load16_u $push[[P1:[0-9]+]]=, gv16($pop[[P0]])
 ; WASM64-FAST-MVP-NEXT:    i32.const $push[[P2:[0-9]+]]=, 16
 ; WASM64-FAST-MVP-NEXT:    i32.shl $push[[P3:[0-9]+]]=, $pop[[P1]], $pop[[P2]]
 ; WASM64-FAST-MVP-NEXT:    i32.const $push[[P4:[0-9]+]]=, 16
