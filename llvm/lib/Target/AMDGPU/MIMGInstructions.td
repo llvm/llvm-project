@@ -2052,7 +2052,7 @@ def : MIMGG16Mapping<IMAGE_SAMPLE_C_CD_CL_O_nortn, IMAGE_SAMPLE_C_CD_CL_O_G16_no
 
 class VIMAGE_TENSOR_Pseudo<string opName, bit _UpTo2D = 0> :
   InstSI<(outs ), (ins ), "", []>,
-  SIMCInstr<opName#!if(_UpTo2D, "_D2", "_D4"), SIEncodingFamily.NONE> {
+  SIMCInstr<opName#!if(_UpTo2D, "_d2", "_d4"), SIEncodingFamily.NONE> {
 
   let isPseudo = 1;
   let isCodeGenOnly = 1;
@@ -2077,10 +2077,10 @@ class VIMAGE_TENSOR_Pseudo<string opName, bit _UpTo2D = 0> :
 }
 
 let SubtargetPredicate = isGFX125xOnly in {
-def TENSOR_LOAD_TO_LDS_D4    : VIMAGE_TENSOR_Pseudo<"tensor_load_to_lds">;
-def TENSOR_STORE_FROM_LDS_D4 : VIMAGE_TENSOR_Pseudo<"tensor_store_from_lds">;
-def TENSOR_LOAD_TO_LDS_D2    : VIMAGE_TENSOR_Pseudo<"tensor_load_to_lds", 1>;
-def TENSOR_STORE_FROM_LDS_D2 : VIMAGE_TENSOR_Pseudo<"tensor_store_from_lds", 1>;
+def TENSOR_LOAD_TO_LDS_d4    : VIMAGE_TENSOR_Pseudo<"tensor_load_to_lds">;
+def TENSOR_STORE_FROM_LDS_d4 : VIMAGE_TENSOR_Pseudo<"tensor_store_from_lds">;
+def TENSOR_LOAD_TO_LDS_d2    : VIMAGE_TENSOR_Pseudo<"tensor_load_to_lds", 1>;
+def TENSOR_STORE_FROM_LDS_d2 : VIMAGE_TENSOR_Pseudo<"tensor_store_from_lds", 1>;
 } // End SubtargetPredicate = isGFX125xOnly.
 
 class VIMAGE_TENSOR_Real <bits<8> op, VIMAGE_TENSOR_Pseudo ps, string opName = ps.Mnemonic> :
@@ -2114,7 +2114,7 @@ class VIMAGE_TENSOR_Real <bits<8> op, VIMAGE_TENSOR_Pseudo ps, string opName = p
 
 multiclass VIMAGE_TENSOR_Real_gfx1250<bits<8> op> {
   let AssemblerPredicate = isGFX125xOnly, DecoderNamespace = "GFX1250" in {
-    foreach DSuffix = ["_D2", "_D4"] in {
+    foreach DSuffix = ["_d2", "_d4"] in {
       defvar ps = !cast<VIMAGE_TENSOR_Pseudo>(NAME # DSuffix);
       def DSuffix # _gfx1250 : VIMAGE_TENSOR_Real<op, ps, ps.Mnemonic>,
                 SIMCInstr<ps.PseudoInstr, SIEncodingFamily.GFX1250>;

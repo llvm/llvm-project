@@ -3794,7 +3794,7 @@ bool AMDGPUInstructionSelector::selectTensorLoadStore(MachineInstr &MI,
                                                       Intrinsic::ID IID) const {
   bool IsLoad = IID == Intrinsic::amdgcn_tensor_load_to_lds;
   unsigned Opc =
-      IsLoad ? AMDGPU::TENSOR_LOAD_TO_LDS_D4 : AMDGPU::TENSOR_STORE_FROM_LDS_D4;
+      IsLoad ? AMDGPU::TENSOR_LOAD_TO_LDS_d4 : AMDGPU::TENSOR_STORE_FROM_LDS_d4;
   int NumGroups = 4;
 
   // A lamda function to check whether an operand is a vector of all 0s.
@@ -3808,8 +3808,8 @@ bool AMDGPUInstructionSelector::selectTensorLoadStore(MachineInstr &MI,
   // Use _D2 version if both group 2 and 3 are zero-initialized.
   if (isAllZeros(MI.getOperand(3)) && isAllZeros(MI.getOperand(4))) {
     NumGroups = 2;
-    Opc = IsLoad ? AMDGPU::TENSOR_LOAD_TO_LDS_D2
-                 : AMDGPU::TENSOR_STORE_FROM_LDS_D2;
+    Opc = IsLoad ? AMDGPU::TENSOR_LOAD_TO_LDS_d2
+                 : AMDGPU::TENSOR_STORE_FROM_LDS_d2;
   }
 
   // TODO: Handle the fifth group: MI.getOpetand(5), which is silently ignored
