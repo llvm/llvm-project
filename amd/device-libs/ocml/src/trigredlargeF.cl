@@ -69,12 +69,12 @@ MATH_PRIVATE(trigredlarge)(float x)
     p4 = c ? p3 : p4;
     shift -= (-c) & 32;
 
-    // BUILTIN_BITALIGN_B32 cannot handle a shift of 32
+    // BUILTIN_FSHR_B32 cannot handle a shift of 32
     c = shift > 0;
     shift = 32 - shift;
-    uint t7 = BUILTIN_BITALIGN_B32(p7, p6, shift);
-    uint t6 = BUILTIN_BITALIGN_B32(p6, p5, shift);
-    uint t5 = BUILTIN_BITALIGN_B32(p5, p4, shift);
+    uint t7 = BUILTIN_FSHR_B32(p7, p6, shift);
+    uint t6 = BUILTIN_FSHR_B32(p6, p5, shift);
+    uint t5 = BUILTIN_FSHR_B32(p5, p4, shift);
     p7 = c ? t7 : p7;
     p6 = c ? t6 : p6;
     p5 = c ? t5 : p5;
@@ -83,9 +83,9 @@ MATH_PRIVATE(trigredlarge)(float x)
     int i = p7 >> 29;
 
     // Scoot up 2 more bits so only fraction remains
-    p7 = BUILTIN_BITALIGN_B32(p7, p6, 30);
-    p6 = BUILTIN_BITALIGN_B32(p6, p5, 30);
-    p5 = BUILTIN_BITALIGN_B32(p5, p4, 30);
+    p7 = BUILTIN_FSHR_B32(p7, p6, 30u);
+    p6 = BUILTIN_FSHR_B32(p6, p5, 30u);
+    p5 = BUILTIN_FSHR_B32(p5, p4, 30u);
 
     // Subtract 1 if msb of fraction is 1, i.e. fraction >= 0.5
     uint flip = i & 1 ? 0xffffffffU : 0U;
@@ -97,18 +97,18 @@ MATH_PRIVATE(trigredlarge)(float x)
     // Find exponent and shift away leading zeroes and hidden bit
     xe = BUILTIN_CLZ_U32(p7) + 1;
     shift = 32 - xe;
-    p7 = BUILTIN_BITALIGN_B32(p7, p6, shift);
-    p6 = BUILTIN_BITALIGN_B32(p6, p5, shift);
+    p7 = BUILTIN_FSHR_B32(p7, p6, shift);
+    p6 = BUILTIN_FSHR_B32(p6, p5, shift);
 
     // Most significant part of fraction
     float q1 = AS_FLOAT(sign | ((127 - xe) << 23) | (p7 >> 9));
 
     // Shift out bits we captured on q1
-    p7 = BUILTIN_BITALIGN_B32(p7, p6, 32-23);
+    p7 = BUILTIN_FSHR_B32(p7, p6, 32u - 23u);
 
     // Get 24 more bits of fraction in another float, there are not long strings of zeroes here
     int xxe = BUILTIN_CLZ_U32(p7) + 1;
-    p7 = BUILTIN_BITALIGN_B32(p7, p6, 32-xxe);
+    p7 = BUILTIN_FSHR_B32(p7, p6, 32u - xxe);
     float q0 = AS_FLOAT(sign | ((127 - (xe + 23 + xxe)) << 23) | (p7 >> 9));
 
     // At this point, the fraction q1 + q0 is correct to at least 48 bits

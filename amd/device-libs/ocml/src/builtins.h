@@ -41,7 +41,7 @@
 #define BUILTIN_ABS_F16 __builtin_fabsf16
 #define BUILTIN_ABS_2F16 __builtin_elementwise_abs
 
-#define BUILTIN_BITALIGN_B32 __builtin_amdgcn_alignbit
+#define BUILTIN_FSHR_B32(x, y, z) __builtin_elementwise_fshr(x, y, z)
 
 #define BUILTIN_CEIL_F32 __builtin_ceilf
 #define BUILTIN_CEIL_F64 __builtin_ceil
