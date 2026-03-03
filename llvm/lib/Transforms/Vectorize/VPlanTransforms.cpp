@@ -4833,7 +4833,10 @@ void VPlanTransforms::sinkPredicatedStores(VPlan &Plan,
     VPValue *SelectedValue = Group[0]->getOperand(0);
     VPBuilder Builder(InsertBB, LastStore->getIterator());
 
+    bool IsSingleScalar = Group[0]->isSingleScalar();
     for (unsigned I = 1; I < Group.size(); ++I) {
+      assert(IsSingleScalar == Group[I]->isSingleScalar() &&
+             "all members in group must agree on IsSingleScalar");
       VPValue *Mask = Group[I]->getMask();
       VPValue *Value = Group[I]->getOperand(0);
       SelectedValue = Builder.createSelect(Mask, Value, SelectedValue,
@@ -4844,11 +4847,10 @@ void VPlanTransforms::sinkPredicatedStores(VPlan &Plan,
     auto *StoreWithMinAlign = findRecipeWithMinAlign<StoreInst>(Group);
 
     // Create unconditional store with selected value and common metadata.
-    auto *UnpredicatedStore =
-        new VPReplicateRecipe(StoreWithMinAlign->getUnderlyingInstr(),
-                              {SelectedValue, LastStore->getOperand(1)},
-                              /*IsSingleScalar=*/false,
-                              /*Mask=*/nullptr, *LastStore, CommonMetadata);
+    auto *UnpredicatedStore = new VPReplicateRecipe(
+        StoreWithMinAlign->getUnderlyingInstr(),
+        {SelectedValue, LastStore->getOperand(1)}, IsSingleScalar,
+        /*Mask=*/nullptr, *LastStore, CommonMetadata);
     UnpredicatedStore->insertBefore(*InsertBB, LastStore->getIterator());
 
     // Remove all predicated stores from the group.
