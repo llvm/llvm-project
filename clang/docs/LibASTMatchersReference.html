@@ -5738,6 +5738,20 @@ unless(stmt(isInTemplateInstantiation()))
 </pre></td></tr>
 
 
+<tr><td>Matcher&lt;<a href="https://clang.llvm.org/doxygen/classclang_1_1StringLiteral.html">StringLiteral</a>&gt;</td><td class="name" onclick="toggle('matchesString0')"><a name="matchesString0A">matchesString</a></td><td>StringRef RegExp, Regex::RegexFlags Flags = NoFlags</td></tr>
+<tr><td colspan="4" class="doc" id="matchesString0"><pre>Matches string literals that contain a substring matched by the given RegExp
+
+Example matches "foo" and "foobar" but not "bar"
+  (matcher = stringLiteral(matchesString("foo.*")))
+  const char* a = "foo";
+  const char* b = "foobar";
+  const char* c = "bar";
+
+Usable as: Matcher<StringLiteral>
+</pre></td></tr>
+
+
+
 <tr><td>Matcher&lt;<a href="https://clang.llvm.org/doxygen/classclang_1_1StringLiteral.html">StringLiteral</a>&gt;</td><td class="name" onclick="toggle('hasSize1')"><a name="hasSize1Anchor">hasSize</a></td><td>unsigned N</td></tr>
 <tr><td colspan="4" class="doc" id="hasSize1"><pre>Matches nodes that have the specified size.
 
