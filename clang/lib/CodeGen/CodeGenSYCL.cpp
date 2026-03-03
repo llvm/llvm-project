@@ -18,19 +18,14 @@ using namespace clang;
 using namespace CodeGen;
 
 void CodeGenFunction::EmitSYCLKernelCallStmt(const SYCLKernelCallStmt &S) {
-  if (getLangOpts().SYCLIsDevice) {
-    // A definition for a sycl_kernel_entry_point attributed function should
-    // never be emitted during device compilation; a diagnostic should be
-    // issued for any such ODR-use.
-    assert(false && "Attempt to emit a sycl_kernel_entry_point function during "
-                    "device compilation");
-    // However, if a definition is somehow emitted, emit an unreachable
-    // instruction to thwart any attempted execution.
-    EmitUnreachable(S.getBeginLoc());
-  } else {
-    assert(getLangOpts().SYCLIsHost);
-    EmitStmt(S.getKernelLaunchStmt());
-  }
+  // SYCLKernelCallStmt instances are only injected in the definitions of
+  // functions declared with the sycl_kernel_entry_point attribute. ODR-use of
+  // such a function in code emitted during device compilation should be
+  // diagnosed. Thus, any attempt to emit a SYCLKernelCallStmt during device
+  // compilation indicates a missing diagnostic.
+  assert(!getLangOpts().SYCLIsDevice, "Attempt to emit a SYCL kernel call "
+                                      "statement during device compilation");
+  EmitStmt(S.getKernelLaunchStmt());
 }
 
 static void SetSYCLKernelAttributes(llvm::Function *Fn, CodeGenFunction &CGF) {
