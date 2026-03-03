@@ -1314,7 +1314,8 @@ void Process::SetPublicState(StateType new_state, bool restarted) {
            GetPluginName().data(), StateAsCString(new_state), restarted);
   // This is one instance where we don't want to obey the "who sees what state"
   // decisions, we just want to see what's in the public state field.
-  const StateType old_state = m_current_private_state_thread->m_public_state.GetValue();
+  const StateType old_state =
+      m_current_private_state_thread->m_public_state.GetValue();
   m_current_private_state_thread->SetPublicState(new_state);
 
   // On the transition from Run to Stopped, we unlock the writer end of the run
@@ -1328,7 +1329,8 @@ void Process::SetPublicState(StateType new_state, bool restarted) {
       SetPublicRunLockToStopped();
     } else {
       const bool old_state_is_stopped = StateIsStoppedState(old_state, false);
-      if ((old_state_is_stopped != new_state_is_stopped) || new_state_is_stopped && GetRunLock().IsRunning()) {
+      if ((old_state_is_stopped != new_state_is_stopped) ||
+          new_state_is_stopped && GetRunLock().IsRunning()) {
         if (new_state_is_stopped && !restarted) {
           LLDB_LOGF(log, "(plugin = %s, state = %s) -- unlocking run lock",
                    GetPluginName().data(), StateAsCString(new_state));
@@ -4426,7 +4428,8 @@ bool Process::ProcessEventData::ShouldStop(Event *event_ptr,
         // PerformAction can call arbitrary Python code but we're still in
         // ShouldStop so we haven't switched the public state yet.  So we need
         // to let this thread see the private state:
-        process_sp->m_current_private_state_thread->PushUsePrivateState(Host::GetCurrentThread());
+        process_sp->m_current_private_state_thread->PushUsePrivateState(
+            Host::GetCurrentThread());
         stop_info_sp->PerformAction(event_ptr);
         process_sp->m_current_private_state_thread->PopUsePrivateState();
 
@@ -4494,7 +4497,7 @@ void Process::ProcessEventData::DoOnRemoval(Event *event_ptr) {
     return;
 
   bool restarted = Process::ProcessEventData::GetRestartedFromEvent(event_ptr);
-  
+
   if (m_state == eStateStopped && !m_restarted) {
     // Let process subclasses know we are about to do a public stop and do
     // anything they might need to in order to speed up register and memory
@@ -4514,7 +4517,7 @@ void Process::ProcessEventData::DoOnRemoval(Event *event_ptr) {
 
   bool does_anybody_have_an_opinion = false;
   bool still_should_stop = ShouldStop(event_ptr, does_anybody_have_an_opinion);
-  
+
   // And now tell the world about the new state:
   process_sp->SetPublicState(
       m_state, Process::ProcessEventData::GetRestartedFromEvent(event_ptr));
