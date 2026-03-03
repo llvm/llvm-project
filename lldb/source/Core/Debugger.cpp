@@ -1584,10 +1584,8 @@ lldb::DebuggerSP Debugger::GetDebuggerAtIndex(size_t index) {
   if (!g_debugger_list_ptr)
     return nullptr;
 
-  if (g_debugger_list_ptr) {
-    if (index < g_debugger_list_ptr->size())
-      return g_debugger_list_ptr->at(index);
-  }
+  if (index < g_debugger_list_ptr->size())
+    return g_debugger_list_ptr->at(index);
 
   return nullptr;
 }
@@ -1597,12 +1595,9 @@ DebuggerSP Debugger::FindDebuggerWithID(lldb::user_id_t id) {
   if (!g_debugger_list_ptr)
     return nullptr;
 
-  if (g_debugger_list_ptr) {
-    DebuggerList::iterator pos, end = g_debugger_list_ptr->end();
-    for (pos = g_debugger_list_ptr->begin(); pos != end; ++pos) {
-      if ((*pos)->GetID() == id)
-        return *pos;
-    }
+  for (const DebuggerSP &debugger_sp : *g_debugger_list_ptr) {
+    if (debugger_sp->GetID() == id)
+      return debugger_sp;
   }
 
   return nullptr;
