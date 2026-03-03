@@ -183,10 +183,8 @@ dependencies::initVFSForByNameScanning(
       llvm::makeIntrusiveRefCnt<llvm::vfs::OverlayFileSystem>(BaseFS);
   auto InMemoryFS = llvm::makeIntrusiveRefCnt<llvm::vfs::InMemoryFileSystem>();
   InMemoryFS->setCurrentWorkingDirectory(WorkingDirectory);
-  SmallString<128> FakeInputPath;
+  std::string FakeInputPath("module-include.input");
   // TODO: We should retry the creation if the path already exists.
-  llvm::sys::fs::createUniquePath("module-import-%%%%.input", FakeInputPath,
-                                  /*MakeAbsolute=*/false);
   InMemoryFS->addFile(FakeInputPath, 0,
                       llvm::MemoryBuffer::getMemBuffer(FakeInput));
   IntrusiveRefCntPtr<llvm::vfs::FileSystem> InMemoryOverlay = InMemoryFS;
