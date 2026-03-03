@@ -250,8 +250,7 @@ bool XeGPUBlockingPass::needsUnroll(Operation *op) const {
       });
   // ConvertLayoutOp must be processed to drop the inst_data in the layout
   bool isConvertLayoutWithInstData = false;
-  if (isa<xegpu::ConvertLayoutOp>(op)) {
-    xegpu::ConvertLayoutOp convertLayoutOp = cast<xegpu::ConvertLayoutOp>(op);
+  if (auto convertLayoutOp = dyn_cast<xegpu::ConvertLayoutOp>(op)) {
     auto targettLayout = convertLayoutOp.getTargetLayout();
     if (targettLayout && !targettLayout.getEffectiveInstDataAsInt().empty()) {
       isConvertLayoutWithInstData = true;

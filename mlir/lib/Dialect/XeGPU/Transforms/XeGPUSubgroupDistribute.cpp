@@ -2073,10 +2073,8 @@ struct ConvertLayoutDistribution
       return rewriter.notifyMatchFailure(op, "missing layout attributes");
 
     if (!inputLayout.isCompatibleWith(targetLayout, xegpu::LayoutKind::Lane)) {
-      op.emitError()
-          << "incompatible convert_layout not supported: input_layout="
-          << inputLayout << ", target_layout=" << targetLayout;
-      return failure();
+      return rewriter.notifyMatchFailure(
+          op, "lowering incompatible convert_layout not yet supported");
     }
     rewriter.replaceOp(op, op.getSource());
     return success();

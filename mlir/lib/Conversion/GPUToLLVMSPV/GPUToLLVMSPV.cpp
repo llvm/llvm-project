@@ -345,7 +345,7 @@ struct GPUShuffleConversion final : ConvertOpToLLVMPattern<gpu::ShuffleOp> {
   LogicalResult
   matchAndRewrite(gpu::ShuffleOp op, OpAdaptor adaptor,
                   ConversionPatternRewriter &rewriter) const final {
-    if (getSubgroupSize(op) && !hasValidWidth(op))
+    if (!hasValidWidth(op))
       return rewriter.notifyMatchFailure(
           op, "shuffle width and subgroup size mismatch");
 

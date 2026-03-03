@@ -195,7 +195,7 @@ xegpu::getDistributeLayoutAttr(const OpOperand &opr) {
       }
     }
     if (auto convertOp = dyn_cast<xegpu::ConvertLayoutOp>(op)) {
-      return convertOp.getTargetLayoutAttr();
+      return convertOp.getInputLayoutAttr();
     }
     auto layout = anchorOp.getAnchorLayout();
 
