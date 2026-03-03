@@ -79,6 +79,63 @@ class AArch64LinuxPOE(TestBase):
         self.expect("expression expr_function()", substrs=["$0 = 1"])
         self.expect("register read por", substrs=[self.EXPECTED_POR])
 
+        # Unmapped region has no key (not even default).
+        self.expect("memory region 0", substrs=["protection key:"], matching=False)
+
+        # The region has base permissions r-x, and overlay is r--. The result
+        # is that execution is disabled.
+        self.expect(
+            "memory region read_only_page",
+            substrs=["rw-", "protection key: 6 (r--, effective: r--)"],
+        )
+        # A region not assigned to a protection key has the default key 0. This
+        # key is rwx, but overlays cannot add permissions not already in the
+        # page table. So the execute permission is not enabled.
+        self.expect(
+            "memory region key_zero_page",
+            substrs=["rw-", "protection key: 0 (rwx, effective: rw-)"],
+        )
+
+        # Overlay permissions are on their own line.
+        self.expect(
+            "memory region --all",
+            patterns=["\nprotection key: [0-9]+ \([rwx-]{3}, effective: [rwx-]{3}\)\n"],
+        )
+
+        # Protection keys are also in SBMemoryRegionInfo.
+        process = self.dbg.GetSelectedTarget().GetProcess()
+        info = lldb.SBMemoryRegionInfo()
+
+        frame = (
+            self.dbg.GetSelectedTarget()
+            .GetProcess()
+            .GetSelectedThread()
+            .GetSelectedFrame()
+        )
+
+        err = lldb.SBError()
+        read_only_addr = frame.GetValueForVariablePath(
+            "read_only_page"
+        ).GetValueAsUnsigned(err)
+        self.assertTrue(err.Success())
+        key_zero_addr = frame.GetValueForVariablePath(
+            "key_zero_page"
+        ).GetValueAsUnsigned(err)
+        self.assertTrue(err.Success())
+
+        region_api_info = [
+            # An unmapped region will have no key at all.
+            # The getter returns 0 as a default, but should not be trusted.
+            (0, False, 0),
+            (read_only_addr, True, 6),
+            (key_zero_addr, True, 0),
+        ]
+        for addr, valid, key in region_api_info:
+            err = process.GetMemoryRegionInfo(addr, info)
+            self.assertTrue(err.Success())
+            self.assertEqual(info.HasProtectionKey(), valid)
+            self.assertEqual(info.GetProtectionKey(), key)
+
         # Not passing this to the application allows us to fix the permissions
         # using lldb, then continue to a normal exit.
         self.runCmd("process handle SIGSEGV --pass false")
@@ -127,3 +184,13 @@ class AArch64LinuxPOE(TestBase):
                 "register read por",
                 substrs=[f"     {self.EXPECTED_POR}\n" + self.EXPECTED_POR_FIELDS],
             )
+
+        # Protection keys are listed in /proc/<pid>/smaps, which is not included
+        # in core files.
+        self.expect("memory region --all", substrs=["protection key:"], matching=False)
+
+        # No region should have a key at all, not even a default.
+        process = self.dbg.GetSelectedTarget().GetProcess()
+        for region in self.dbg.GetSelectedTarget().GetProcess().GetMemoryRegions():
+            self.assertEqual(region.HasProtectionKey(), False)
+            self.assertEqual(region.GetProtectionKey(), 0)

@@ -160,6 +160,18 @@ int SBMemoryRegionInfo::GetPageSize() {
   return m_opaque_up->GetPageSize();
 }
 
+bool SBMemoryRegionInfo::HasProtectionKey() {
+  LLDB_INSTRUMENT_VA(this);
+
+  return m_opaque_up->GetProtectionKey() != std::nullopt;
+}
+
+uint32_t SBMemoryRegionInfo::GetProtectionKey() {
+  LLDB_INSTRUMENT_VA(this);
+
+  return m_opaque_up->GetProtectionKey().value_or(0);
+}
+
 bool SBMemoryRegionInfo::GetDescription(SBStream &description) {
   LLDB_INSTRUMENT_VA(this, description);
 
