@@ -8,7 +8,7 @@
 ///
 /// \file
 /// This file contains the declaration of the SYCL async_handler type, which
-/// is a callable such as a function class or lambda, with an exception_list as
+/// is a callable, such as a function class or lambda, with an exception_list as
 /// a parameter. Invocation of an async_handler may be triggered by the queue
 /// member functions queue::wait_and_throw or queue::throw_asynchronous, by the
 /// event member function event::wait_and_throw, or automatically on destruction
