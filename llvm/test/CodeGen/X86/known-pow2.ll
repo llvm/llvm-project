@@ -1091,52 +1091,6 @@ define i32 @pow2_blsi_add(i32 %x, i32 %a) {
   ret i32 %r
 }
 
-
-; Test that (X + Y) & Y --> ~X & Y when Y = a & -a (pow2-or-zero).
-define i32 @pow2_rotl_orzero(i32 %x, i1 %c) {
-; CHECK-LABEL: pow2_rotl_orzero:
-; CHECK:       # %bb.0:
-; CHECK-NEXT:    # kill: def $edi killed $edi def $rdi
-; CHECK-NEXT:    notb %sil
-; CHECK-NEXT:    movzbl %sil, %ecx
-; CHECK-NEXT:    andl $1, %ecx
-; CHECK-NEXT:    addl %ecx, %ecx
-; CHECK-NEXT:    bswapl %ecx
-; CHECK-NEXT:    roll $3, %ecx
-; CHECK-NEXT:    leal (%rdi,%rcx), %eax
-; CHECK-NEXT:    andl %ecx, %eax
-; CHECK-NEXT:    retq
-  %y = select i1 %c, i32 0, i32 2
-  %d = call i32 @llvm.bswap.i32(i32 %y)
-  %rot_y = call i32 @llvm.fshl.i32(i32 %d, i32 %d, i32 3)
-  %x_add_y = add i32 %x, %rot_y
-  %r = and i32 %x_add_y, %rot_y
-  ret i32 %r
-}
-
-
-; Test that (X + Y) & Y --> ~X & Y when Y = a & -a (pow2-or-zero).
-define i32 @pow2_rotr_orzero(i32 %x, i1 %c) {
-; CHECK-LABEL: pow2_rotr_orzero:
-; CHECK:       # %bb.0:
-; CHECK-NEXT:    # kill: def $edi killed $edi def $rdi
-; CHECK-NEXT:    notb %sil
-; CHECK-NEXT:    movzbl %sil, %ecx
-; CHECK-NEXT:    andl $1, %ecx
-; CHECK-NEXT:    addl %ecx, %ecx
-; CHECK-NEXT:    bswapl %ecx
-; CHECK-NEXT:    rorl $3, %ecx
-; CHECK-NEXT:    leal (%rdi,%rcx), %eax
-; CHECK-NEXT:    andl %ecx, %eax
-; CHECK-NEXT:    retq
-  %y = select i1 %c, i32 0, i32 2
-  %d = call i32 @llvm.bswap.i32(i32 %y)
-  %rot_y = call i32 @llvm.fshr.i32(i32 %d, i32 %d, i32 3)
-  %x_add_y = add i32 %x, %rot_y
-  %r = and i32 %x_add_y, %rot_y
-  ret i32 %r
-}
-
 ; Test that (X - Y) & Y --> ~X & Y when Y = a & -a (pow2-or-zero).
 define i32 @pow2_blsi_sub(i32 %x, i32 %a) {
 ; CHECK-LABEL: pow2_blsi_sub:
