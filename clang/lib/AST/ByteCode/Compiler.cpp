@@ -269,34 +269,61 @@ bool Compiler<Emitter>::VisitCastExpr(const CastExpr *CE) {
   }
 
   case CK_DerivedToBaseMemberPointer: {
-    assert(classifyPrim(CE->getType()) == PT_MemberPtr);
-    assert(classifyPrim(SubExpr->getType()) == PT_MemberPtr);
-    const auto *FromMP = SubExpr->getType()->castAs<MemberPointerType>();
-    const auto *ToMP = CE->getType()->castAs<MemberPointerType>();
-
-    unsigned DerivedOffset =
-        Ctx.collectBaseOffset(ToMP->getMostRecentCXXRecordDecl(),
-                              FromMP->getMostRecentCXXRecordDecl());
+    assert(classifyPrim(CE) == PT_MemberPtr);
+    assert(classifyPrim(SubExpr) == PT_MemberPtr);
 
     if (!this->delegate(SubExpr))
       return false;
 
-    return this->emitGetMemberPtrBasePop(DerivedOffset, CE);
+    const CXXRecordDecl *CurDecl = SubExpr->getType()
+                                       ->castAs<MemberPointerType>()
+                                       ->getMostRecentCXXRecordDecl();
+    for (const CXXBaseSpecifier *B : CE->path()) {
+      const CXXRecordDecl *ToDecl = B->getType()->getAsCXXRecordDecl();
+      unsigned DerivedOffset = Ctx.collectBaseOffset(ToDecl, CurDecl);
+
+      if (!this->emitCastMemberPtrBasePop(DerivedOffset, ToDecl, CE))
+        return false;
+      CurDecl = ToDecl;
+    }
+
+    return true;
   }
 
   case CK_BaseToDerivedMemberPointer: {
     assert(classifyPrim(CE) == PT_MemberPtr);
     assert(classifyPrim(SubExpr) == PT_MemberPtr);
-    const auto *FromMP = SubExpr->getType()->castAs<MemberPointerType>();
-    const auto *ToMP = CE->getType()->castAs<MemberPointerType>();
-
-    unsigned DerivedOffset =
-        Ctx.collectBaseOffset(FromMP->getMostRecentCXXRecordDecl(),
-                              ToMP->getMostRecentCXXRecordDecl());
 
     if (!this->delegate(SubExpr))
       return false;
-    return this->emitGetMemberPtrBasePop(-DerivedOffset, CE);
+
+    const CXXRecordDecl *CurDecl = SubExpr->getType()
+                                       ->castAs<MemberPointerType>()
+                                       ->getMostRecentCXXRecordDecl();
+    // Base-to-derived member pointer casts store the path in derived-to-base
+    // order, so iterate backwards. The CXXBaseSpecifier also provides us with
+    // the wrong end of the derived->base arc, so stagger the path by one class.
+    typedef std::reverse_iterator<CastExpr::path_const_iterator> ReverseIter;
+    for (ReverseIter PathI(CE->path_end() - 1), PathE(CE->path_begin());
+         PathI != PathE; ++PathI) {
+      const CXXRecordDecl *ToDecl = (*PathI)->getType()->getAsCXXRecordDecl();
+      unsigned DerivedOffset = Ctx.collectBaseOffset(CurDecl, ToDecl);
+
+      if (!this->emitCastMemberPtrDerivedPop(-DerivedOffset, ToDecl, CE))
+        return false;
+      CurDecl = ToDecl;
+    }
+
+    const CXXRecordDecl *ToDecl = CE->getType()
+                                      ->castAs<MemberPointerType>()
+                                      ->getMostRecentCXXRecordDecl();
+    assert(ToDecl != CurDecl);
+    unsigned DerivedOffset = Ctx.collectBaseOffset(CurDecl, ToDecl);
+
+    if (!this->emitCastMemberPtrDerivedPop(-DerivedOffset, ToDecl, CE))
+      return false;
+
+    return true;
   }
 
   case CK_UncheckedDerivedToBase:
@@ -5245,6 +5272,8 @@ bool Compiler<Emitter>::VisitBuiltinCallExpr(const CallExpr *E,
 
 template <class Emitter>
 bool Compiler<Emitter>::VisitCallExpr(const CallExpr *E) {
+  if (E->containsErrors())
+    return false;
   const FunctionDecl *FuncDecl = E->getDirectCallee();
 
   if (FuncDecl) {
@@ -6971,7 +7000,7 @@ bool Compiler<Emitter>::VisitComplexUnaryOperator(const UnaryOperator *E) {
   };
 
   switch (E->getOpcode()) {
-  case UO_Minus:
+  case UO_Minus: // -x
     if (!prepareResult())
       return false;
     if (!createTemp())
@@ -7020,7 +7049,7 @@ bool Compiler<Emitter>::VisitComplexUnaryOperator(const UnaryOperator *E) {
     return this->emitArrayElemPop(classifyPrim(E->getType()), 1, E);
 
   case UO_Not: // ~x
-    if (!this->visit(SubExpr))
+    if (!this->delegate(SubExpr))
       return false;
     // Negate the imaginary component.
     if (!this->emitArrayElem(ElemT, 1, E))
@@ -7179,14 +7208,15 @@ bool Compiler<Emitter>::visitDeclRef(const ValueDecl *D, const Expr *E) {
   // pointing to a reference, we need to get its value directly (i.e. the
   // pointer to the actual value) instead of a pointer to the pointer to the
   // value.
-  bool IsReference = D->getType()->isReferenceType();
+  QualType DeclType = D->getType();
+  bool IsReference = DeclType->isReferenceType();
 
   // Function parameters.
   // Note that it's important to check them first since we might have a local
   // variable created for a ParmVarDecl as well.
   if (const auto *PVD = dyn_cast<ParmVarDecl>(D)) {
     if (Ctx.getLangOpts().CPlusPlus && !Ctx.getLangOpts().CPlusPlus11 &&
-        !D->getType()->isIntegralOrEnumerationType()) {
+        !DeclType->isIntegralOrEnumerationType()) {
       return this->emitInvalidDeclRef(cast<DeclRefExpr>(E),
                                       /*InitializerFailed=*/false, E);
     }
@@ -7261,20 +7291,19 @@ bool Compiler<Emitter>::visitDeclRef(const ValueDecl *D, const Expr *E) {
 
   // Try to lazily visit (or emit dummy pointers for) declarations
   // we haven't seen yet.
+  const auto *VD = dyn_cast<VarDecl>(D);
+  if (!VD)
+    return this->emitError(E);
+
   // For C.
   if (!Ctx.getLangOpts().CPlusPlus) {
-    if (const auto *VD = dyn_cast<VarDecl>(D);
-        VD && VD->getAnyInitializer() &&
-        VD->getType().isConstant(Ctx.getASTContext()) && !VD->isWeak())
+    if (VD->getAnyInitializer() && DeclType.isConstant(Ctx.getASTContext()) &&
+        !VD->isWeak())
       return revisit(VD);
     return this->emitDummyPtr(D, E);
   }
 
   // ... and C++.
-  const auto *VD = dyn_cast<VarDecl>(D);
-  if (!VD)
-    return this->emitDummyPtr(D, E);
-
   const auto typeShouldBeVisited = [&](QualType T) -> bool {
     if (T.isConstant(Ctx.getASTContext()))
       return true;
@@ -7282,7 +7311,7 @@ bool Compiler<Emitter>::visitDeclRef(const ValueDecl *D, const Expr *E) {
   };
 
   if ((VD->hasGlobalStorage() || VD->isStaticDataMember()) &&
-      typeShouldBeVisited(VD->getType())) {
+      typeShouldBeVisited(DeclType)) {
     if (const Expr *Init = VD->getAnyInitializer();
         Init && !Init->isValueDependent()) {
       // Whether or not the evaluation is successul doesn't really matter
@@ -7301,17 +7330,18 @@ bool Compiler<Emitter>::visitDeclRef(const ValueDecl *D, const Expr *E) {
   // it will ultimately call into Context::evaluateAsInitializer(). In
   // other words, we're evaluating the initializer, just to know if we can
   // evaluate the initializer.
-  if (VD->isLocalVarDecl() && typeShouldBeVisited(VD->getType()) &&
-      VD->getInit() && !VD->getInit()->isValueDependent()) {
-
-    if (VD->evaluateValue())
+  if (VD->isLocalVarDecl() && typeShouldBeVisited(DeclType) && VD->getInit() &&
+      !VD->getInit()->isValueDependent()) {
+    if (VD->evaluateValue()) {
+      // Revisit the variable declaration, but make sure it's associated with a
+      // different evaluation, so e.g. mutable reads don't work on it.
+      EvalIDScope _(Ctx);
       return revisit(VD);
+    }
 
-    if (!IsReference)
-      return this->emitDummyPtr(D, E);
-
-    return this->emitInvalidDeclRef(cast<DeclRefExpr>(E),
-                                    /*InitializerFailed=*/true, E);
+    if (IsReference)
+      return this->emitInvalidDeclRef(cast<DeclRefExpr>(E),
+                                      /*InitializerFailed=*/true, E);
   }
 
   return this->emitDummyPtr(D, E);
@@ -7624,7 +7654,6 @@ bool Compiler<Emitter>::emitDestructionPop(const Descriptor *Desc,
 template <class Emitter>
 bool Compiler<Emitter>::emitDummyPtr(const DeclTy &D, const Expr *E) {
   assert(!DiscardResult && "Should've been checked before");
-
   unsigned DummyID = P.getOrCreateDummy(D);
 
   if (!this->emitGetPtrGlobal(DummyID, E))

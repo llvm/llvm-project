@@ -10,9 +10,9 @@ define void @cross_bbs(ptr %ptr) {
 ; CHECK-NEXT:    [[L1:%.*]] = load i8, ptr [[PTR1]], align 1
 ; CHECK-NEXT:    br label %[[BB:.*]]
 ; CHECK:       [[BB]]:
-; CHECK-NEXT:    [[PACK:%.*]] = insertelement <2 x i8> poison, i8 [[L0]], i32 0
-; CHECK-NEXT:    [[PACK1:%.*]] = insertelement <2 x i8> [[PACK]], i8 [[L1]], i32 1
-; CHECK-NEXT:    store <2 x i8> [[PACK1]], ptr [[PTR0]], align 1
+; CHECK-NEXT:    [[PACK:%.*]] = insertelement <2 x i8> poison, i8 [[L0]], i32 0, !sandboxvec [[META0:![0-9]+]]
+; CHECK-NEXT:    [[PACK1:%.*]] = insertelement <2 x i8> [[PACK]], i8 [[L1]], i32 1, !sandboxvec [[META0]]
+; CHECK-NEXT:    store <2 x i8> [[PACK1]], ptr [[PTR0]], align 1, !sandboxvec [[META0]]
 ; CHECK-NEXT:    ret void
 ;
   %ptr0 = getelementptr i8, ptr %ptr, i32 0
@@ -26,3 +26,6 @@ bb:
   store i8 %l1, ptr %ptr1
   ret void
 }
+;.
+; CHECK: [[META0]] = distinct !{!"sandboxregion"}
+;.

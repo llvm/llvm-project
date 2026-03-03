@@ -122,8 +122,7 @@ public:
   bool preferPredicateOverEpilogue(TailFoldingInfo *TFI) const override {
     return ST->hasVInstructions();
   }
-  TailFoldingStyle
-  getPreferredTailFoldingStyle(bool IVUpdateMayOverflow) const override {
+  TailFoldingStyle getPreferredTailFoldingStyle() const override {
     return ST->hasVInstructions() ? TailFoldingStyle::DataWithEVL
                                   : TailFoldingStyle::None;
   }
@@ -139,7 +138,7 @@ public:
 
   bool preferAlternateOpcodeVectorization() const override;
 
-  bool preferEpilogueVectorization() const override {
+  bool preferEpilogueVectorization(ElementCount Iters) const override {
     // Epilogue vectorization is usually unprofitable - tail folding or
     // a smaller VF would have been better.  This a blunt hammer - we
     // should re-examine this once vectorization is better tuned.
@@ -358,10 +357,6 @@ public:
 
   bool isLegalMaskedCompressStore(Type *DataTy, Align Alignment) const override;
 
-  bool isVScaleKnownToBeAPowerOfTwo() const override {
-    return TLI->isVScaleKnownToBeAPowerOfTwo();
-  }
-
   /// \returns How the target needs this vector-predicated operation to be
   /// transformed.
   TargetTransformInfo::VPLegalization
@@ -507,6 +502,10 @@ public:
   }
 
   bool shouldTreatInstructionLikeSelect(const Instruction *I) const override;
+
+  bool
+  shouldCopyAttributeWhenOutliningFrom(const Function *Caller,
+                                       const Attribute &Attr) const override;
 };
 
 } // end namespace llvm

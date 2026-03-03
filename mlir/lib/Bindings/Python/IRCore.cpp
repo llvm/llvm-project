@@ -10,7 +10,6 @@
 #include "mlir/Bindings/Python/Globals.h"
 #include "mlir/Bindings/Python/IRCore.h"
 #include "mlir/Bindings/Python/NanobindUtils.h"
-#include "mlir/Bindings/Python/NanobindAdaptors.h"
 #include "mlir-c/Bindings/Python/Interop.h" // This is expected after nanobind.
 // clang-format on
 #include "mlir-c/BuiltinAttributes.h"
@@ -20,6 +19,7 @@
 #include "mlir-c/IR.h"
 #include "mlir-c/Support.h"
 
+#include <array>
 #include <functional>
 #include <optional>
 #include <string>
@@ -54,13 +54,6 @@ operations.
 template <typename T>
 static size_t hash(const T &value) {
   return std::hash<T>{}(value);
-}
-
-/// Helper for creating an @classmethod.
-template <class Func, typename... Args>
-static nb::object classmethod(Func f, Args... args) {
-  nb::object cf = nb::cpp_function(f, args...);
-  return nb::borrow<nb::object>((PyClassMethod_New(cf.ptr())));
 }
 
 static nb::object
@@ -440,13 +433,20 @@ void PyOpOperandIterator::bind(nb::module_ &m) {
 // PyThreadPool
 //------------------------------------------------------------------------------
 
-PyThreadPool::PyThreadPool() {
-  ownedThreadPool = std::make_unique<llvm::DefaultThreadPool>();
+PyThreadPool::PyThreadPool() { threadPool = mlirLlvmThreadPoolCreate(); }
+
+PyThreadPool::~PyThreadPool() {
+  if (threadPool.ptr)
+    mlirLlvmThreadPoolDestroy(threadPool);
+}
+
+int PyThreadPool::getMaxConcurrency() const {
+  return mlirLlvmThreadPoolGetMaxConcurrency(threadPool);
 }
 
 std::string PyThreadPool::_mlir_thread_pool_ptr() const {
   std::stringstream ss;
-  ss << ownedThreadPool.get();
+  ss << threadPool.ptr;
   return ss.str();
 }
 
@@ -803,7 +803,7 @@ nb::tuple PyDiagnostic::getNotes() {
   for (intptr_t i = 0; i < numNotes; ++i) {
     MlirDiagnostic noteDiag = mlirDiagnosticGetNote(diagnostic, i);
     nb::object diagnostic = nb::cast(PyDiagnostic(noteDiag));
-    PyTuple_SET_ITEM(notes.ptr(), i, diagnostic.release().ptr());
+    PyTuple_SetItem(notes.ptr(), i, diagnostic.release().ptr());
   }
   materializedNotes = std::move(notes);
 
@@ -2281,6 +2281,44 @@ PyOpOperandList PyOpOperandList::slice(intptr_t startIndex, intptr_t length,
   return PyOpOperandList(operation, startIndex, length, step);
 }
 
+/// A list of OpOperands. Internally, these are stored as consecutive elements,
+/// random access is cheap. The (returned) OpOperand list is associated with the
+/// operation whose operands these are, and thus extends the lifetime of this
+/// operation.
+class PyOpOperands : public Sliceable<PyOpOperands, PyOpOperand> {
+public:
+  static constexpr const char *pyClassName = "OpOperands";
+  using SliceableT = Sliceable<PyOpOperandList, PyOpOperand>;
+
+  PyOpOperands(PyOperationRef operation, intptr_t startIndex = 0,
+               intptr_t length = -1, intptr_t step = 1)
+      : Sliceable(startIndex,
+                  length == -1 ? mlirOperationGetNumOperands(operation->get())
+                               : length,
+                  step),
+        operation(operation) {}
+
+private:
+  /// Give the parent CRTP class access to hook implementations below.
+  friend class Sliceable<PyOpOperands, PyOpOperand>;
+
+  intptr_t getRawNumElements() {
+    operation->checkValid();
+    return mlirOperationGetNumOperands(operation->get());
+  }
+
+  PyOpOperand getRawElement(intptr_t pos) {
+    MlirOpOperand opOperand = mlirOperationGetOpOperand(operation->get(), pos);
+    return PyOpOperand(opOperand);
+  }
+
+  PyOpOperands slice(intptr_t startIndex, intptr_t length, intptr_t step) {
+    return PyOpOperands(operation, startIndex, length, step);
+  }
+
+  PyOperationRef operation;
+};
+
 PyOpSuccessors::PyOpSuccessors(PyOperationRef operation, intptr_t startIndex,
                                intptr_t length, intptr_t step)
     : Sliceable(startIndex,
@@ -2543,10 +2581,11 @@ static bool attachOpTrait(const nb::object &opName, MlirDynamicOpTrait trait,
 bool PyDynamicOpTrait::attach(const nb::object &opName,
                               const nb::object &target,
                               PyMlirContext &context) {
-  if (!nb::hasattr(target, "verify") && !nb::hasattr(target, "verify_region"))
+  if (!nb::hasattr(target, "verify_invariants") &&
+      !nb::hasattr(target, "verify_region_invariants"))
     throw nb::type_error(
-        "the target object must have at least one of 'verify' or "
-        "'verify_region' methods");
+        "the target object must have at least one of 'verify_invariants' or "
+        "'verify_region_invariants' methods");
 
   MlirDynamicOpTraitCallbacks callbacks;
   callbacks.construct = [](void *userData) {
@@ -2558,11 +2597,11 @@ bool PyDynamicOpTrait::attach(const nb::object &opName,
 
   callbacks.verifyTrait = [](MlirOperation op,
                              void *userData) -> MlirLogicalResult {
-    return verifyTraitByMethod(op, userData, "verify");
+    return verifyTraitByMethod(op, userData, "verify_invariants");
   };
   callbacks.verifyRegionTrait = [](MlirOperation op,
                                    void *userData) -> MlirLogicalResult {
-    return verifyTraitByMethod(op, userData, "verify_region");
+    return verifyTraitByMethod(op, userData, "verify_region_invariants");
   };
 
   // To ensure that the same dynamic trait gets the same TypeID despite how many
@@ -2633,75 +2672,15 @@ void PyDynamicOpTraits::NoTerminator::bind(nb::module_ &m) {
 } // namespace mlir
 
 namespace {
-// see
-// https://raw.githubusercontent.com/python/pythoncapi_compat/master/pythoncapi_compat.h
-
-#ifndef _Py_CAST
-#define _Py_CAST(type, expr) ((type)(expr))
-#endif
-
-// Static inline functions should use _Py_NULL rather than using directly NULL
-// to prevent C++ compiler warnings. On C23 and newer and on C++11 and newer,
-// _Py_NULL is defined as nullptr.
-#ifndef _Py_NULL
-#if (defined(__STDC_VERSION__) && __STDC_VERSION__ > 201710L) ||               \
-    (defined(__cplusplus) && __cplusplus >= 201103)
-#define _Py_NULL nullptr
-#else
-#define _Py_NULL NULL
-#endif
-#endif
-
-// Python 3.10.0a3
-#if PY_VERSION_HEX < 0x030A00A3
-
-// bpo-42262 added Py_XNewRef()
-#if !defined(Py_XNewRef)
-[[maybe_unused]] PyObject *_Py_XNewRef(PyObject *obj) {
-  Py_XINCREF(obj);
-  return obj;
-}
-#define Py_XNewRef(obj) _Py_XNewRef(_PyObject_CAST(obj))
-#endif
-
-// bpo-42262 added Py_NewRef()
-#if !defined(Py_NewRef)
-[[maybe_unused]] PyObject *_Py_NewRef(PyObject *obj) {
-  Py_INCREF(obj);
-  return obj;
-}
-#define Py_NewRef(obj) _Py_NewRef(_PyObject_CAST(obj))
-#endif
-
-#endif // Python 3.10.0a3
-
-// Python 3.9.0b1
-#if PY_VERSION_HEX < 0x030900B1 && !defined(PYPY_VERSION)
-
-// bpo-40429 added PyThreadState_GetFrame()
-PyFrameObject *PyThreadState_GetFrame(PyThreadState *tstate) {
-  assert(tstate != _Py_NULL && "expected tstate != _Py_NULL");
-  return _Py_CAST(PyFrameObject *, Py_XNewRef(tstate->frame));
-}
-
-// bpo-40421 added PyFrame_GetBack()
-PyFrameObject *PyFrame_GetBack(PyFrameObject *frame) {
-  assert(frame != _Py_NULL && "expected frame != _Py_NULL");
-  return _Py_CAST(PyFrameObject *, Py_XNewRef(frame->f_back));
-}
-
-// bpo-40421 added PyFrame_GetCode()
-PyCodeObject *PyFrame_GetCode(PyFrameObject *frame) {
-  assert(frame != _Py_NULL && "expected frame != _Py_NULL");
-  assert(frame->f_code != _Py_NULL && "expected frame->f_code != _Py_NULL");
-  return _Py_CAST(PyCodeObject *, Py_NewRef(frame->f_code));
-}
-
-#endif // Python 3.9.0b1
 
 using namespace mlir::python::MLIR_BINDINGS_PYTHON_DOMAIN;
 
 MlirLocation tracebackToLocation(MlirContext ctx) {
+#if defined(Py_LIMITED_API)
+  // Frame introspection C APIs are not available under the limited API.
+  // Traceback-based auto-location is not supported; return unknown.
+  return mlirLocationUnknownGet(ctx);
+#else
   size_t framesLimit =
       PyGlobals::get().getTracebackLoc().locTracebackFramesLimit();
   // Use a thread_local here to avoid requiring a large amount of space.
@@ -2710,6 +2689,7 @@ MlirLocation tracebackToLocation(MlirContext ctx) {
   size_t count = 0;
 
   nb::gil_scoped_acquire acquire;
+
   PyThreadState *tstate = PyThreadState_GET();
   PyFrameObject *next;
   PyFrameObject *pyFrame = PyThreadState_GetFrame(tstate);
@@ -2733,8 +2713,9 @@ MlirLocation tracebackToLocation(MlirContext ctx) {
         nb::cast<std::string>(nb::borrow<nb::str>(code->co_name));
     std::string_view funcName(name);
     int startLine = PyFrame_GetLineNumber(pyFrame);
-    MlirLocation loc =
-        mlirLocationFileLineColGet(ctx, wrap(fileName), startLine, 0);
+    MlirLocation loc = mlirLocationFileLineColGet(
+        ctx, mlirStringRefCreate(fileName.data(), fileName.size()), startLine,
+        0);
 #else
     std::string name =
         nb::cast<std::string>(nb::borrow<nb::str>(code->co_qualname));
@@ -2746,10 +2727,12 @@ MlirLocation tracebackToLocation(MlirContext ctx) {
       throw nb::python_error();
     }
     MlirLocation loc = mlirLocationFileLineColRangeGet(
-        ctx, wrap(fileName), startLine, startCol, endLine, endCol);
+        ctx, mlirStringRefCreate(fileName.data(), fileName.size()), startLine,
+        startCol, endLine, endCol);
 #endif
 
-    frames[count] = mlirLocationNameGet(ctx, wrap(funcName), loc);
+    frames[count] = mlirLocationNameGet(
+        ctx, mlirStringRefCreate(funcName.data(), funcName.size()), loc);
     ++count;
   }
   // When the loop breaks (after the last iter), current frame (if non-null)
@@ -2770,6 +2753,7 @@ MlirLocation tracebackToLocation(MlirContext ctx) {
     caller = mlirLocationCallSiteGet(frames[i], caller);
 
   return mlirLocationCallSiteGet(callee, caller);
+#endif
 }
 
 PyLocation
@@ -3660,6 +3644,12 @@ void populateIRCore(nb::module_ &m) {
             return PyOpOperandList(self.getOperation().getRef());
           },
           "Returns the list of operation operands.")
+      .def_prop_ro(
+          "op_operands",
+          [](PyOperationBase &self) {
+            return PyOpOperands(self.getOperation().getRef());
+          },
+          "Returns the list of op operands.")
       .def_prop_ro(
           "regions",
           [](PyOperationBase &self) {
@@ -4637,7 +4627,7 @@ void populateIRCore(nb::module_ &m) {
   m.attr("_T") = nb::type_var("_T", "bound"_a = m.attr("Type"));
 
   nb::class_<PyValue>(m, "Value", nb::is_generic(),
-                      nb::sig("class Value(Generic[_T])"))
+                      nb::sig("class Value(typing.Generic[_T])"))
       .def(nb::init<PyValue &>(), nb::keep_alive<0, 1>(), "value"_a,
            "Creates a Value reference from another `Value`.")
       .def_prop_ro(MLIR_PYTHON_CAPI_PTR_ATTR, &PyValue::getCapsule,
@@ -4784,27 +4774,6 @@ void populateIRCore(nb::module_ &m) {
           "with_"_a, "exceptions"_a, kValueReplaceAllUsesExceptDocstring)
       .def(
           "replace_all_uses_except",
-          [](PyValue &self, PyValue &with, const nb::list &exceptions) {
-            // Convert Python list to a std::vector of MlirOperations
-            std::vector<MlirOperation> exceptionOps;
-            for (nb::handle exception : exceptions) {
-              exceptionOps.push_back(nb::cast<PyOperation &>(exception).get());
-            }
-
-            mlirValueReplaceAllUsesExcept(
-                self, with, static_cast<intptr_t>(exceptionOps.size()),
-                exceptionOps.data());
-          },
-          "with_"_a, "exceptions"_a, kValueReplaceAllUsesExceptDocstring)
-      .def(
-          "replace_all_uses_except",
-          [](PyValue &self, PyValue &with, PyOperation &exception) {
-            MlirOperation exceptedUser = exception.get();
-            mlirValueReplaceAllUsesExcept(self, with, 1, &exceptedUser);
-          },
-          "with_"_a, "exceptions"_a, kValueReplaceAllUsesExceptDocstring)
-      .def(
-          "replace_all_uses_except",
           [](PyValue &self, PyValue &with,
              std::vector<PyOperation> &exceptions) {
             // Convert Python list to a std::vector of MlirOperations
@@ -4941,6 +4910,7 @@ void populateIRCore(nb::module_ &m) {
   PyOpAttributeMap::bind(m);
   PyOpOperandIterator::bind(m);
   PyOpOperandList::bind(m);
+  PyOpOperands::bind(m);
   PyOpResultList::bind(m);
   PyOpSuccessors::bind(m);
   PyRegionIterator::bind(m);
