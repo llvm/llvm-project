@@ -1154,9 +1154,10 @@ static bool CheckAArch64AtomicStoreWithStshhCall(SemaARM &S,
   }
 
   ValType = ValType.getUnqualifiedType();
-  unsigned Bits = Context.getTypeSize(ValType);
+  unsigned Bits = 0;
   if (!ValType->isIntegerType() ||
-      (Bits != 8 && Bits != 16 && Bits != 32 && Bits != 64)) {
+      ((Bits = Context.getTypeSize(ValType)),
+       Bits != 8 && Bits != 16 && Bits != 32 && Bits != 64)) {
     SemaRef.Diag(PointerArg->getBeginLoc(),
                  diag::err_arm_atomic_store_with_stshh_bad_type)
         << PtrType << PointerArg->getSourceRange();

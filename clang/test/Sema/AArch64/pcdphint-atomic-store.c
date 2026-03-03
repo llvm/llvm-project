@@ -27,6 +27,12 @@ void test_invalid_bit_width(__int128 *p, __int128 v) {
   // expected-error@-1 {{address argument to '__arm_atomic_store_with_stshh' must be a pointer to an 8,16,32, or 64-bit integer type}}
 }
 
+struct IncompleteType;
+void test_incomplete_pointee(struct IncompleteType *p, int v) {
+  __builtin_arm_atomic_store_with_stshh(p, v, __ATOMIC_RELAXED, 0);
+  // expected-error@-1 {{address argument to '__arm_atomic_store_with_stshh' must be a pointer to an 8,16,32, or 64-bit integer type}}
+}
+
 void test_invalid_memory_order(unsigned int *p, unsigned int v) {
   __builtin_arm_atomic_store_with_stshh(p, v, __ATOMIC_ACQUIRE, 0);
   // expected-error@-1 {{memory order argument to '__arm_atomic_store_with_stshh' must be one of __ATOMIC_RELAXED, __ATOMIC_RELEASE, or __ATOMIC_SEQ_CST}}
