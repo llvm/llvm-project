@@ -96,7 +96,7 @@ LIBC_INLINE constexpr float16 atanpif16(float16 x) {
   // atan(x) = pi/2 - atan(1/x) for x > 0
   // so atanpi(x) = 1/2 - atanpi(1/x)
   double x_recip = 1.0 / x_abs;
-  double result;
+  double result = 0.0;
 
   // if 1/|x| > 0.5, we need to apply Case 2 transformation to 1/|x|
   if (x_recip > 0.5) {
