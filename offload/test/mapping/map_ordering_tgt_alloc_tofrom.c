@@ -7,9 +7,8 @@ int main() {
   int x = 111;
 #pragma omp target map(alloc : x) map(tofrom : x) map(alloc : x)
   {
-    printf("In tgt: %d\n", x); // CHECK-DAG: In tgt: 111
     x = x + 111;
   }
 
-  printf("After tgt: %d\n", x); // CHECK-DAG: After tgt: 222
+  printf("After tgt: %d\n", x); // CHECK: After tgt: 222
 }
