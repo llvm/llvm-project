@@ -29,7 +29,7 @@ static bool shouldQuoteName(StringRef Name) {
     return isalpha(C) || C == '_' || C == '.';
   };
   auto isValidChar = [&](char C) { return isValidStartChar(C) || isdigit(C); };
-  return !(Name.size() > 0 && isValidStartChar(Name.front())) || 
+  return !(Name.size() > 0 && isValidStartChar(Name.front())) ||
          llvm::any_of(Name, [&](char C) { return !isValidChar(C); });
 }
 

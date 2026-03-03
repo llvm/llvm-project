@@ -308,7 +308,7 @@ void WebAssemblyDAGToDAGISel::Select(SDNode *Node) {
     switch (IntNo) {
     case Intrinsic::wasm_tls_base: {
       MachineSDNode *TLSBase =
-          llvm::WebAssembly::getTLSBase(*CurDAG, DL, Subtarget);
+          llvm::WebAssembly::getTLSBase(*CurDAG, DL, Subtarget, Node->getOperand(0));
       ReplaceNode(Node, TLSBase);
       return;
     }
