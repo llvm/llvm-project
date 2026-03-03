@@ -1183,8 +1183,8 @@ public:
   /// for the given \p DataType and kind of access to \p Ptr.
   bool isLegalMaskedStore(Type *DataType, Value *Ptr, Align Alignment,
                           unsigned AddressSpace) const {
-    return ForceTargetSupportsMaskedMemoryOps ||
-           (Legal->isConsecutivePtr(DataType, Ptr) &&
+    return Legal->isConsecutivePtr(DataType, Ptr) &&
+           (ForceTargetSupportsMaskedMemoryOps ||
             TTI.isLegalMaskedStore(DataType, Alignment, AddressSpace));
   }
 
@@ -1192,8 +1192,8 @@ public:
   /// for the given \p DataType and kind of access to \p Ptr.
   bool isLegalMaskedLoad(Type *DataType, Value *Ptr, Align Alignment,
                          unsigned AddressSpace) const {
-    return ForceTargetSupportsMaskedMemoryOps ||
-           (Legal->isConsecutivePtr(DataType, Ptr) &&
+    return Legal->isConsecutivePtr(DataType, Ptr) &&
+           (ForceTargetSupportsMaskedMemoryOps ||
             TTI.isLegalMaskedLoad(DataType, Alignment, AddressSpace));
   }
 
