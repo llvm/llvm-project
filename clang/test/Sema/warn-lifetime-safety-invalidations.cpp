@@ -265,6 +265,18 @@ void ReferenceToVectorElement() {
   (void)ref;
 }
 
+void PointerRefToVectorElement() {
+  std::vector<int*> v = {nullptr, nullptr};
+  int*& ref = v[0];
+  v.push_back(nullptr);
+  // FIXME: Writing through a reference to an invalidated vector element
+  // should be detected. Origin_outer (reference binding) is incorrectly
+  // killed by markUseAsWrite.
+  int y;
+  ref = &y;
+  (void)*ref;
+}
+
 void PointerToVectorElement() {
   std::vector<int> v = {1, 2, 3};
   int* ptr = &v[0];  // expected-warning {{object whose reference is captured is later invalidated}}
