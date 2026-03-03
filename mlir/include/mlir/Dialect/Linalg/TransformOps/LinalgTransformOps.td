@@ -155,6 +155,16 @@ def ApplyDataLayoutPropagationPatternsOp : Op<Transform_Dialect,
   let assemblyFormat = "attr-dict";
 }
 
+def ApplyExtractSliceSinkingPatternsOp : Op<Transform_Dialect,
+    "apply_patterns.linalg.extract_slice_sinking",
+    [DeclareOpInterfaceMethods<PatternDescriptorOpInterface>]> {
+  let description = [{
+    Patterns to sink extract slice across other operations.
+  }];
+
+  let assemblyFormat = "attr-dict";
+}
+
 //===----------------------------------------------------------------------===//
 // BufferizeToAllocationOp
 //===----------------------------------------------------------------------===//
