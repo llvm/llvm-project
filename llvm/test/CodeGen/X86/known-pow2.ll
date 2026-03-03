@@ -11,6 +11,8 @@ declare i32 @llvm.smin.i32(i32, i32)
 declare i32 @llvm.smax.i32(i32, i32)
 declare i32 @llvm.fshl.i32(i32, i32, i32)
 declare i32 @llvm.fshr.i32(i32, i32, i32)
+declare <4 x i32> @llvm.fshl.v4i32(<4 x i32>, <4 x i32>, <4 x i32>)
+declare <4 x i32> @llvm.fshr.v4i32(<4 x i32>, <4 x i32>, <4 x i32>)
 
 define <4 x i32> @pow2_non_splat_vec(<4 x i32> %x) {
 ; CHECK-LABEL: pow2_non_splat_vec:
@@ -1007,74 +1009,82 @@ define i32 @pow2_blsi_sub(i32 %x, i32 %a) {
   ret i32 %r
 }
 
-define i1 @pow2_rotl_extract_vec(<2 x i32> %a0, i32 %rotamt, i32 %x) {
+define i1 @pow2_rotl_extract_vec(<4 x i32> %a0, <4 x i32> %rotamt, i32 %x) {
 ; CHECK-LABEL: pow2_rotl_extract_vec:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    movl %edi, %ecx
-; CHECK-NEXT:    pxor %xmm1, %xmm1
-; CHECK-NEXT:    pcmpgtd %xmm0, %xmm1
-; CHECK-NEXT:    movdqa %xmm1, %xmm0
-; CHECK-NEXT:    pandn {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
+; CHECK-NEXT:    pxor %xmm2, %xmm2
+; CHECK-NEXT:    pcmpgtd %xmm0, %xmm2
+; CHECK-NEXT:    movl $4096, %eax # imm = 0x1000
+; CHECK-NEXT:    movd %eax, %xmm0
+; CHECK-NEXT:    movl $1024, %eax # imm = 0x400
+; CHECK-NEXT:    movd %eax, %xmm3
+; CHECK-NEXT:    pand %xmm2, %xmm3
+; CHECK-NEXT:    pandn %xmm0, %xmm2
+; CHECK-NEXT:    por %xmm2, %xmm3
+; CHECK-NEXT:    pslld $23, %xmm1
 ; CHECK-NEXT:    pand {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm1
+; CHECK-NEXT:    paddd {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm1
+; CHECK-NEXT:    cvttps2dq %xmm1, %xmm0
+; CHECK-NEXT:    pmuludq %xmm3, %xmm0
+; CHECK-NEXT:    pshufd {{.*#+}} xmm1 = xmm0[1,1,3,3]
 ; CHECK-NEXT:    por %xmm0, %xmm1
 ; CHECK-NEXT:    movd %xmm1, %eax
-; CHECK-NEXT:    # kill: def $cl killed $cl killed $ecx
-; CHECK-NEXT:    roll %cl, %eax
-; CHECK-NEXT:    notl %esi
-; CHECK-NEXT:    testl %esi, %eax
+; CHECK-NEXT:    notl %edi
+; CHECK-NEXT:    testl %edi, %eax
 ; CHECK-NEXT:    sete %al
 ; CHECK-NEXT:    retq
-entry:
-  %cmp = icmp sgt <2 x i32> zeroinitializer, %a0
 
-  %powvec = select <2 x i1> %cmp,
-                     <2 x i32> <i32 1024, i32 1024>,
-                     <2 x i32> <i32 4096, i32 4096>
-
-  %base = extractelement <2 x i32> %powvec, i32 0
-
-  %d = call i32 @llvm.fshl.i32(i32 %base,
-                               i32 %base,
-                               i32 %rotamt)
-
-  %and = and i32 %x, %d
-  %r = icmp eq i32 %and, %d
-
+  %cmp = icmp sgt <4 x i32> zeroinitializer, %a0
+  %powvec = select <4 x i1> %cmp,
+                     <4 x i32> <i32 1024, i32 1235, i32 2048, i32 4096>,
+                     <4 x i32> <i32 4096, i32 5679, i32 8192, i32 16384>
+  %d = call <4 x i32> @llvm.fshl.v4i32(
+           <4 x i32> %powvec,
+           <4 x i32> %powvec,
+           <4 x i32> %rotamt)
+  %elt = extractelement <4 x i32> %d, i32 0
+  %and = and i32 %x, %elt
+  %r = icmp eq i32 %and, %elt
   ret i1 %r
 }
 
-define i1 @pow2_rotr_extract_vec(<2 x i32> %a0, i32 %rotamt, i32 %x) {
+
+define i1 @pow2_rotr_extract_vec(<4 x i32> %a0, <4 x i32> %rotamt, i32 %x) {
 ; CHECK-LABEL: pow2_rotr_extract_vec:
-; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    movl %edi, %ecx
-; CHECK-NEXT:    pxor %xmm1, %xmm1
-; CHECK-NEXT:    pcmpgtd %xmm0, %xmm1
-; CHECK-NEXT:    movdqa %xmm1, %xmm0
-; CHECK-NEXT:    pandn {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
-; CHECK-NEXT:    pand {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm1
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    pxor %xmm2, %xmm2
+; CHECK-NEXT:    pxor %xmm3, %xmm3
+; CHECK-NEXT:    pcmpgtd %xmm0, %xmm3
+; CHECK-NEXT:    movl $4096, %eax # imm = 0x1000
+; CHECK-NEXT:    movd %eax, %xmm0
+; CHECK-NEXT:    movl $1024, %eax # imm = 0x400
+; CHECK-NEXT:    movd %eax, %xmm4
+; CHECK-NEXT:    pand %xmm3, %xmm4
+; CHECK-NEXT:    pandn %xmm0, %xmm3
+; CHECK-NEXT:    por %xmm3, %xmm4
+; CHECK-NEXT:    psubd %xmm1, %xmm2
+; CHECK-NEXT:    pslld $23, %xmm2
+; CHECK-NEXT:    pand {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm2
+; CHECK-NEXT:    paddd {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm2
+; CHECK-NEXT:    cvttps2dq %xmm2, %xmm0
+; CHECK-NEXT:    pmuludq %xmm4, %xmm0
+; CHECK-NEXT:    pshufd {{.*#+}} xmm1 = xmm0[1,1,3,3]
 ; CHECK-NEXT:    por %xmm0, %xmm1
 ; CHECK-NEXT:    movd %xmm1, %eax
-; CHECK-NEXT:    # kill: def $cl killed $cl killed $ecx
-; CHECK-NEXT:    rorl %cl, %eax
-; CHECK-NEXT:    notl %esi
-; CHECK-NEXT:    testl %esi, %eax
+; CHECK-NEXT:    notl %edi
+; CHECK-NEXT:    testl %edi, %eax
 ; CHECK-NEXT:    sete %al
 ; CHECK-NEXT:    retq
-entry:
-
-  %cmp = icmp sgt <2 x i32> zeroinitializer, %a0
-  %powvec = select <2 x i1> %cmp,
-                     <2 x i32> <i32 1024, i32 1024>,
-                     <2 x i32> <i32 4096, i32 4096>
-
-  %base = extractelement <2 x i32> %powvec, i32 0
-
-  %d = call i32 @llvm.fshr.i32(i32 %base,
-                               i32 %base,
-                               i32 %rotamt)
-
-  %and = and i32 %x, %d
-  %r = icmp eq i32 %and, %d
-
+  %cmp = icmp sgt <4 x i32> zeroinitializer, %a0
+  %powvec = select <4 x i1> %cmp,
+                     <4 x i32> <i32 1024, i32 1235, i32 2048, i32 4096>,
+                     <4 x i32> <i32 4096, i32 5679, i32 8192, i32 16384>
+  %d = call <4 x i32> @llvm.fshr.v4i32(
+           <4 x i32> %powvec,
+           <4 x i32> %powvec,
+           <4 x i32> %rotamt)
+  %elt = extractelement <4 x i32> %d, i32 0
+  %and = and i32 %x, %elt
+  %r = icmp eq i32 %and, %elt
   ret i1 %r
 }
