@@ -769,11 +769,13 @@ public:
 
   void setBBSectionsType(BasicBlockSection V) { BBSectionsType = V; }
 
-  void setPrefetchTargets(const DenseMap<UniqueBBID, SmallVector<unsigned>> &V) {
+  void
+  setPrefetchTargets(const DenseMap<UniqueBBID, SmallVector<unsigned>> &V) {
     PrefetchTargets = V;
   }
 
-  const DenseMap<UniqueBBID, SmallVector<unsigned>> &getPrefetchTargets() const {
+  const DenseMap<UniqueBBID, SmallVector<unsigned>> &
+  getPrefetchTargets() const {
     return PrefetchTargets;
   }
 

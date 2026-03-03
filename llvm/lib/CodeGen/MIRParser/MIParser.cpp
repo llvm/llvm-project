@@ -3747,19 +3747,19 @@ bool llvm::parseVirtualRegisterReference(PerFunctionMIParsingState &PFS,
   return MIParser(PFS, Error, Src).parseStandaloneVirtualRegister(Info);
 }
 
-bool llvm::parseStackObjectReference(PerFunctionMIParsingState &PFS,
-                                      int &FI, StringRef Src,
-                                      SMDiagnostic &Error) {
+bool llvm::parseStackObjectReference(PerFunctionMIParsingState &PFS, int &FI,
+                                     StringRef Src, SMDiagnostic &Error) {
   return MIParser(PFS, Error, Src).parseStandaloneStackObject(FI);
 }
 
 bool llvm::parsePrefetchTarget(PerFunctionMIParsingState &PFS,
-                                CallsiteID &Target, StringRef Src,
-                                SMDiagnostic &Error) {
+                               CallsiteID &Target, StringRef Src,
+                               SMDiagnostic &Error) {
   return MIParser(PFS, Error, Src).parsePrefetchTarget(Target);
 }
-bool llvm::parseMDNode(PerFunctionMIParsingState &PFS,
-                        MDNode *&Node, StringRef Src, SMDiagnostic &Error) {  return MIParser(PFS, Error, Src).parseStandaloneMDNode(Node);
+bool llvm::parseMDNode(PerFunctionMIParsingState &PFS, MDNode *&Node,
+                       StringRef Src, SMDiagnostic &Error) {
+  return MIParser(PFS, Error, Src).parseStandaloneMDNode(Node);
 }
 
 bool llvm::parseMachineMetadata(PerFunctionMIParsingState &PFS, StringRef Src,

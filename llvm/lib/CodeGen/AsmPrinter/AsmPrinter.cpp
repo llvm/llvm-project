@@ -2020,7 +2020,7 @@ void AsmPrinter::handleCallsiteForCallgraph(
 /// Helper to emit a symbol for the prefetch target associated with the given
 /// BBID and callsite index.
 void AsmPrinter::emitPrefetchTargetSymbol(unsigned BaseID,
-                                         unsigned CallsiteIndex) {
+                                          unsigned CallsiteIndex) {
   MCSymbol *PrefetchTargetSymbol = OutContext.getOrCreateSymbol(
       Twine("__llvm_prefetch_target_") + MF->getName() + Twine("_") +
       Twine(BaseID) + Twine("_") + Twine(static_cast<unsigned>(CallsiteIndex)));

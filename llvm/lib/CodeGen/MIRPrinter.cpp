@@ -168,12 +168,13 @@ static void convertMachineMetadataNodes(yaml::MachineFunction &YMF,
                                         const MachineFunction &MF,
                                         MachineModuleSlotTracker &MST);
 static void convertCalledGlobals(yaml::MachineFunction &YMF,
-                                  const MachineFunction &MF,
-                                  MachineModuleSlotTracker &MST);
+                                 const MachineFunction &MF,
+                                 MachineModuleSlotTracker &MST);
 static void convertPrefetchTargets(yaml::MachineFunction &YMF,
                                    const MachineFunction &MF);
 
-static void printMF(raw_ostream &OS, MFGetterFnT Fn,                    const MachineFunction &MF) {
+static void printMF(raw_ostream &OS, MFGetterFnT Fn,
+                    const MachineFunction &MF) {
   MFPrintState State(std::move(Fn), MF);
 
   State.RegisterMaskIds = initRegisterMaskIds(MF);
