@@ -362,7 +362,7 @@ implementations of a few SYCL library features.
 The ``[[clang::sycl_kernel_entry_point]]`` Attribute
 ----------------------------------------------------
 This attribute is intended for use in the implementation of SYCL run-time
-libraries and should not be used directly by programmers.
+libraries and should not be used in any other context.
 
 The `sycl_kernel_entry_point <attr-sycl_kernel_entry_point_>`_ attribute
 coordinates interaction between Clang and the SYCL run-time library to
@@ -663,7 +663,7 @@ don't have names, but the intent should be clear; ``kernel-entry-point``,
 The ``[[clang::sycl_special_kernel_parameter]]`` Attribute
 ----------------------------------------------------------
 This attribute is intended for use in the implementation of SYCL run-time
-libraries and should not be used directly by programmers.
+libraries and should not be used in any other context.
 
 `SYCL 2020 section 4.12.4, "Rules for parameter passing to kernels" <SYCL-2020-4.12.4_>`_
 specifies that objects of some SYCL types may be passed as kernel arguments
@@ -720,7 +720,7 @@ similar to the following.
 The ``[[clang::sycl_external]]`` Attribute
 ------------------------------------------
 This attribute is intended for use in the implementation of SYCL run-time
-libraries and should not be used directly by programmers.
+libraries and should not be used in any other context.
 
 The `sycl_external <attr-sycl_external_>`_ attribute implements the semantics
 required for the ``SYCL_EXTERNAL`` macro specified in
