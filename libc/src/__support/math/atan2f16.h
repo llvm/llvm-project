@@ -17,6 +17,7 @@
 #include "src/__support/FPUtil/FEnvImpl.h"
 #include "src/__support/FPUtil/FPBits.h"
 #include "src/__support/FPUtil/cast.h"
+#include "src/__support/FPUtil/multiply_add.h"
 #include "src/__support/FPUtil/nearest_integer.h"
 #include "src/__support/macros/optimization.h"
 
