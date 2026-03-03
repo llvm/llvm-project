@@ -1061,28 +1061,28 @@ static constexpr unsigned SVEMaxBitsPerVector = 2048;
 
 // TSFlags layout for memory operation fields (bits 14-26).
 // See AArch64InstrInfo.h for the full TSFlags layout.
-#define TSFLAG_MEM_OP_ADDR_MODE(X)      ((X) << 14) // 5-bits
-#define TSFLAG_MEM_OP_BASE_IDX(X)       ((X) << 19) // 4-bits
-#define TSFLAG_MEM_OP_OFFSET_IDX(X)     ((X) << 23) // 4-bits
+#define TSFLAG_MEM_OP_ADDR_MODE(X) ((X) << 14)  // 5-bits
+#define TSFLAG_MEM_OP_BASE_IDX(X) ((X) << 19)   // 4-bits
+#define TSFLAG_MEM_OP_OFFSET_IDX(X) ((X) << 23) // 4-bits
 
 namespace AArch64 {
 
 /// Memory operation addressing mode classification for load/store instructions.
 /// Used to identify operand layout for memory operations.
 enum MemOpAddrModeType {
-  MemOpAddrModeMask       = TSFLAG_MEM_OP_ADDR_MODE(0x1f),
-  MemOpAddrModeNone       = TSFLAG_MEM_OP_ADDR_MODE(0x0),  // Not a memory op
-  MemOpAddrModeIndexed    = TSFLAG_MEM_OP_ADDR_MODE(0x1),  // [Xn, #imm]
-  MemOpAddrModeUnscaled   = TSFLAG_MEM_OP_ADDR_MODE(0x2),  // [Xn, #simm]
-  MemOpAddrModePreIdx     = TSFLAG_MEM_OP_ADDR_MODE(0x3),  // [Xn, #imm]!
-  MemOpAddrModePostIdx    = TSFLAG_MEM_OP_ADDR_MODE(0x4),  // [Xn], #imm
-  MemOpAddrModeRegOff     = TSFLAG_MEM_OP_ADDR_MODE(0x5),  // [Xn, Xm, ext]
-  MemOpAddrModeLiteral    = TSFLAG_MEM_OP_ADDR_MODE(0x6),  // PC-relative
-  MemOpAddrModeNoIdx      = TSFLAG_MEM_OP_ADDR_MODE(0x7),  // [Xn] (no offset)
-  MemOpAddrModePair       = TSFLAG_MEM_OP_ADDR_MODE(0x8),  // LDP/STP [Xn, #imm]
-  MemOpAddrModePairPre    = TSFLAG_MEM_OP_ADDR_MODE(0x9),  // LDP/STP [Xn, #imm]!
-  MemOpAddrModePairPost   = TSFLAG_MEM_OP_ADDR_MODE(0xa),  // LDP/STP [Xn], #imm
-  MemOpAddrModePostIdxReg = TSFLAG_MEM_OP_ADDR_MODE(0xb),  // [Xn], Xm (SIMD)
+  MemOpAddrModeMask = TSFLAG_MEM_OP_ADDR_MODE(0x1f),
+  MemOpAddrModeNone = TSFLAG_MEM_OP_ADDR_MODE(0x0),       // Not a memory op
+  MemOpAddrModeIndexed = TSFLAG_MEM_OP_ADDR_MODE(0x1),    // [Xn, #imm]
+  MemOpAddrModeUnscaled = TSFLAG_MEM_OP_ADDR_MODE(0x2),   // [Xn, #simm]
+  MemOpAddrModePreIdx = TSFLAG_MEM_OP_ADDR_MODE(0x3),     // [Xn, #imm]!
+  MemOpAddrModePostIdx = TSFLAG_MEM_OP_ADDR_MODE(0x4),    // [Xn], #imm
+  MemOpAddrModeRegOff = TSFLAG_MEM_OP_ADDR_MODE(0x5),     // [Xn, Xm, ext]
+  MemOpAddrModeLiteral = TSFLAG_MEM_OP_ADDR_MODE(0x6),    // PC-relative
+  MemOpAddrModeNoIdx = TSFLAG_MEM_OP_ADDR_MODE(0x7),      // [Xn] (no offset)
+  MemOpAddrModePair = TSFLAG_MEM_OP_ADDR_MODE(0x8),       // LDP/STP [Xn, #imm]
+  MemOpAddrModePairPre = TSFLAG_MEM_OP_ADDR_MODE(0x9),    // LDP/STP [Xn, #imm]!
+  MemOpAddrModePairPost = TSFLAG_MEM_OP_ADDR_MODE(0xa),   // LDP/STP [Xn], #imm
+  MemOpAddrModePostIdxReg = TSFLAG_MEM_OP_ADDR_MODE(0xb), // [Xn], Xm (SIMD)
 };
 
 /// Mask and shift for extracting the base register operand index.
