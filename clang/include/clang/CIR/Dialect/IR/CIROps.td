@@ -3602,6 +3602,36 @@ def CIR_LLVMIntrinsicCallOp : CIR_Op<"call_llvm_intrinsic"> {
 }
 
 //===----------------------------------------------------------------------===//
+// DeleteArrayOp
+//===----------------------------------------------------------------------===//
+
+def CIR_DeleteArrayOp : CIR_Op<"delete_array"> {
+  let summary = "Delete address representing an array";
+  let description = [{
+    `cir.delete_array` operation deletes an array. For example, `delete[] ptr;`
+    will be translated to `cir.delete_array %ptr`.
+
+    The `delete_fn` attribute specifies the operator delete function to call.
+    The `delete_params` attribute describes the parameters needed by the
+    operator delete call.
+    The `element_dtor` attribute, when present, specifies the destructor to call
+    on each array element before deallocation.
+  }];
+
+  let arguments = (ins CIR_PointerType:$address,
+                       FlatSymbolRefAttr:$delete_fn,
+                       CIR_UsualDeleteParamsAttr:$delete_params,
+                       OptionalAttr<FlatSymbolRefAttr>:$element_dtor);
+
+  let assemblyFormat = [{
+    $address `:` qualified(type($address)) attr-dict
+  }];
+
+  let hasLLVMLowering = false;
+  let hasCXXABILowering = true;
+}
+
+//===----------------------------------------------------------------------===//
 // CallOp and TryCallOp
 //===----------------------------------------------------------------------===//
 
