@@ -1,21 +1,21 @@
-# RUN: llvm-mc -no-type-check -show-encoding -triple=wasm32-unknown-unknown -mattr=+atomics,+shared-everything < %s | FileCheck %s
-# RUN: llvm-mc -no-type-check -triple=wasm32-unknown-unknown -mattr=+atomics,+shared-everything %s -filetype=obj -o - | llvm-objdump --no-print-imm-hex -d - | FileCheck %s --check-prefix=DISASM
+# RUN: llvm-mc -no-type-check -show-encoding -triple=wasm32-unknown-unknown -mattr=+atomics,+relaxed-atomics < %s | FileCheck %s
+# RUN: llvm-mc -no-type-check -triple=wasm32-unknown-unknown -mattr=+atomics,+relaxed-atomics %s -filetype=obj -o - | llvm-objdump --no-print-imm-hex -d - | FileCheck %s --check-prefix=DISASM
 
 .section .text.main,"",@
 main:
   .functype main () -> ()
 
   atomic.fence seqcst
-  # CHECK: atomic.fence seqcst # encoding: [0xfe,0x03,0x00]
-  # DISASM: atomic.fence seqcst
+  # CHECK: atomic.fence # encoding: [0xfe,0x03,0x00]
+  # DISASM: atomic.fence
 
   atomic.fence acqrel
   # CHECK: atomic.fence acqrel # encoding: [0xfe,0x03,0x01]
   # DISASM: atomic.fence acqrel
 
   atomic.fence
-  # CHECK: atomic.fence seqcst # encoding: [0xfe,0x03,0x00]
-  # DISASM: atomic.fence seqcst
+  # CHECK: atomic.fence # encoding: [0xfe,0x03,0x00]
+  # DISASM: atomic.fence
 
   # CHECK: i32.atomic.load 0 # encoding: [0xfe,0x10,0x02,0x00]
   # DISASM: i32.atomic.load 0

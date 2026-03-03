@@ -79,13 +79,13 @@ def HasReferenceTypes :
     Predicate<"Subtarget->hasReferenceTypes()">,
     AssemblerPredicate<(all_of FeatureReferenceTypes), "reference-types">;
 
+def HasRelaxedAtomics :
+    Predicate<"Subtarget->hasRelaxedAtomics()">,
+    AssemblerPredicate<(all_of FeatureRelaxedAtomics), "relaxed-atomics">;
+
 def HasRelaxedSIMD :
     Predicate<"Subtarget->hasRelaxedSIMD()">,
     AssemblerPredicate<(all_of FeatureRelaxedSIMD), "relaxed-simd">;
-
-def HasSharedEverything :
-    Predicate<"Subtarget->hasSharedEverything()">,
-    AssemblerPredicate<(all_of FeatureSharedEverything), "shared-everything">;
 
 def HasSignExt :
     Predicate<"Subtarget->hasSignExt()">,

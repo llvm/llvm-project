@@ -13,7 +13,6 @@
 
 #include "MCTargetDesc/WebAssemblyFixupKinds.h"
 #include "MCTargetDesc/WebAssemblyMCTargetDesc.h"
-#include "llvm/ADT/SmallSet.h"
 #include "llvm/ADT/Statistic.h"
 #include "llvm/MC/MCCodeEmitter.h"
 #include "llvm/MC/MCContext.h"
@@ -48,9 +47,10 @@ class WebAssemblyMCCodeEmitter final : public MCCodeEmitter {
                          SmallVectorImpl<MCFixup> &Fixups,
                          const MCSubtargetInfo &STI) const override;
 
-  void encodeMemArg(const MCInst &MI, unsigned I, const MCInstrDesc &Desc,
-                    const MCSubtargetInfo &STI, raw_ostream &OS,
-                    SmallVectorImpl<MCFixup> &Fixups, uint64_t Start) const;
+  void encodeMemArgNoOffset(const MCInst &MI, unsigned P2AlignIdx,
+                            const MCInstrDesc &Desc, const MCSubtargetInfo &STI,
+                            raw_ostream &OS, SmallVectorImpl<MCFixup> &Fixups,
+                            uint64_t Start) const;
 
   uint8_t getEncodedMemOrder(uint8_t Order, unsigned Opcode) const;
 
@@ -75,29 +75,21 @@ uint8_t WebAssemblyMCCodeEmitter::getEncodedMemOrder(uint8_t Order,
   return Order;
 }
 
-void WebAssemblyMCCodeEmitter::encodeMemArg(const MCInst &MI, unsigned I,
-                                            const MCInstrDesc &Desc,
-                                            const MCSubtargetInfo &STI,
-                                            raw_ostream &OS,
-                                            SmallVectorImpl<MCFixup> &Fixups,
-                                            uint64_t Start) const {
-  unsigned P2AlignIdx = I;
-  std::optional<unsigned> MemOrderIdx;
-
-  if (I > 0 &&
-      Desc.operands()[I - 1].OperandType == WebAssembly::OPERAND_MEMORDER)
-    MemOrderIdx = I - 1;
-
+void WebAssemblyMCCodeEmitter::encodeMemArgNoOffset(
+    const MCInst &MI, unsigned P2AlignIdx, const MCInstrDesc &Desc,
+    const MCSubtargetInfo &STI, raw_ostream &OS,
+    SmallVectorImpl<MCFixup> &Fixups, uint64_t Start) const {
   uint64_t P2Align = MI.getOperand(P2AlignIdx).getImm();
   uint8_t Order = wasm::WASM_MEM_ORDER_SEQ_CST;
 
   // Atomic instructions always have an ordering, but if it's SEQ_CST then we
-  // don't use the shared-everything encoding (even if shared everything is
+  // don't use the relaxed-atomics encoding (even if relaxed-atomics is
   // enabled) because the original encoding is smaller.
-  if (MemOrderIdx) {
-    Order = MI.getOperand(*MemOrderIdx).getImm();
+  if (P2AlignIdx > 0 &&
+      Desc.operands()[P2AlignIdx - 1].OperandType == WebAssembly::OPERAND_MEMORDER) {
+    Order = MI.getOperand(P2AlignIdx - 1).getImm();
     if (Order != wasm::WASM_MEM_ORDER_SEQ_CST) {
-      assert(STI.getFeatureBits()[WebAssembly::FeatureSharedEverything] &&
+      assert(STI.getFeatureBits()[WebAssembly::FeatureRelaxedAtomics] &&
              "Non-default atomic ordering but feature not enabled");
       P2Align |= wasm::WASM_MEMARG_HAS_MEM_ORDER;
     }
@@ -160,7 +152,7 @@ void WebAssemblyMCCodeEmitter::encodeInstruction(
           encodeSLEB128(int32_t(MO.getImm()), OS);
           break;
         case WebAssembly::OPERAND_P2ALIGN:
-          encodeMemArg(MI, I, Desc, STI, OS, Fixups, Start);
+          encodeMemArgNoOffset(MI, I, Desc, STI, OS, Fixups, Start);
           break;
         case WebAssembly::OPERAND_OFFSET32:
           encodeULEB128(uint32_t(MO.getImm()), OS);
@@ -181,10 +173,10 @@ void WebAssemblyMCCodeEmitter::encodeInstruction(
                   WebAssembly::OPERAND_P2ALIGN)
             break;
           uint8_t Val = getEncodedMemOrder(MO.getImm(), Opcode);
-          if (STI.getFeatureBits()[WebAssembly::FeatureSharedEverything]) {
+          if (STI.getFeatureBits()[WebAssembly::FeatureRelaxedAtomics]) {
             support::endian::write<uint8_t>(OS, Val, llvm::endianness::little);
-          } else if (Opcode == WebAssembly::ATOMIC_FENCE ||
-                     Opcode == WebAssembly::ATOMIC_FENCE_S) {
+          } else {
+            assert(Opcode == WebAssembly::ATOMIC_FENCE_S);
             support::endian::write<uint8_t>(OS, 0, llvm::endianness::little);
           }
           break;

@@ -82,7 +82,7 @@ enum OperandType {
   OPERAND_TABLE,
   /// A list of catch clauses for try_table.
   OPERAND_CATCH_LIST,
-  /// memory ordering immediate for atomic instructions.
+  /// Memory ordering immediate for atomic instructions.
   OPERAND_MEMORDER,
 };
 } // end namespace WebAssembly

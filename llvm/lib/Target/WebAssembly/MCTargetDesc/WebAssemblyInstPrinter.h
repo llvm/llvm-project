@@ -31,8 +31,6 @@ class WebAssemblyInstPrinter final : public MCInstPrinter {
   enum EHInstKind { TRY, CATCH_LEGACY, CATCH_ALL_LEGACY };
   SmallVector<EHInstKind, 4> EHInstStack;
 
-  const MCSubtargetInfo *STI = nullptr;
-
 public:
   WebAssemblyInstPrinter(const MCAsmInfo &MAI, const MCInstrInfo &MII,
                          const MCRegisterInfo &MRI);

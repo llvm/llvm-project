@@ -283,7 +283,7 @@ MCDisassembler::DecodeStatus WebAssemblyDisassembler::getInstruction(
         return MCDisassembler::Fail;
       break;
     }
-    // Vector lane operands and memory ordering (not LEB encoded).
+    // Vector lane operands (not LEB encoded).
     case WebAssembly::OPERAND_VEC_I8IMM: {
       if (!parseImmediate<uint8_t>(MI, Size, Bytes))
         return MCDisassembler::Fail;
@@ -299,6 +299,7 @@ MCDisassembler::DecodeStatus WebAssemblyDisassembler::getInstruction(
         // and we will update it when we parse P2ALIGN if necessary.
         Val = wasm::WASM_MEM_ORDER_SEQ_CST;
       } else {
+        // atomic.fence instructions have no p2align operand.
         if (Size >= Bytes.size())
           return MCDisassembler::Fail;
         Val = Bytes[Size++];

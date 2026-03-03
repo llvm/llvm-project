@@ -48,7 +48,6 @@ void WebAssemblyInstPrinter::printInst(const MCInst *MI, uint64_t Address,
                                        StringRef Annot,
                                        const MCSubtargetInfo &STI,
                                        raw_ostream &OS) {
-  this->STI = &STI;
   switch (MI->getOpcode()) {
   case WebAssembly::CALL_INDIRECT_S:
   case WebAssembly::RET_CALL_INDIRECT_S: {
@@ -375,11 +374,8 @@ void WebAssemblyInstPrinter::printWebAssemblyMemOrderOperand(const MCInst *MI,
                                                              unsigned OpNo,
                                                              raw_ostream &O) {
   int64_t Imm = MI->getOperand(OpNo).getImm();
-  unsigned Opcode = MI->getOpcode();
-  bool IsFence = Opcode == WebAssembly::ATOMIC_FENCE ||
-                 Opcode == WebAssembly::ATOMIC_FENCE_S;
 
-  if (Imm == wasm::WASM_MEM_ORDER_SEQ_CST && !IsFence)
+  if (Imm == wasm::WASM_MEM_ORDER_SEQ_CST)
     return;
 
   switch (Imm) {
