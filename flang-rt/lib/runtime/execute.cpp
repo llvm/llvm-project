@@ -6,12 +6,14 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "unit.h"
 #include "flang/Runtime/execute.h"
 #include "flang-rt/runtime/descriptor.h"
 #include "flang-rt/runtime/environment.h"
 #include "flang-rt/runtime/stat.h"
 #include "flang-rt/runtime/terminator.h"
 #include "flang-rt/runtime/tools.h"
+#include <cstdio>
 #include <cstdlib>
 #include <errno.h>
 #include <future>
@@ -241,6 +243,13 @@ void RTNAME(ExecuteCommandLine)(const Descriptor &command, bool wait,
     }
     FreeMemory(wcmd);
 #else
+    // Flush all the output streams before fork() in order to avoid parent's
+    // buffered output to be replicated on the child. (Note: the issue of
+    // duplicated output didn't happen for regular terminal output, but was
+    // easy to reproduce when piping the output to a file.)
+    io::IoErrorHandler handler{terminator};
+    io::ExternalFileUnit::FlushAll(handler);
+    std::fflush(nullptr); // Also flush stdio streams
     pid_t pid{fork()};
     if (pid < 0) {
       if (!cmdstat) {
