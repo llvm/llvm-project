@@ -187,6 +187,11 @@ Changes in existing checks
   <clang-tidy/checks/bugprone/macro-parentheses>` check by printing the macro
   definition in the warning message if the macro is defined on command line.
 
+- Improved :doc:`bugprone-std-namespace-modification
+  <clang-tidy/checks/bugprone/std-namespace-modification>` check by fixing
+  false positives when extending the standard library with a specialization of
+  user-defined type.
+
 - Improved :doc:`bugprone-string-constructor
   <clang-tidy/checks/bugprone/string-constructor>` check to detect suspicious
   string constructor calls when the string class constructor has a default
