@@ -85,12 +85,12 @@ public:
   /// recipe that takes an additional VPInstruction for the mask.
   VPRecipeBase *tryToWidenMemory(VPInstruction *VPI, VFRange &Range);
 
-  /// Makes Histogram count operations safe for vectorization, by emitting a
-  /// llvm.experimental.vector.histogram.add intrinsic in place of the
-  /// Load + Add|Sub + Store operations that perform the histogram in the
-  /// original scalar loop.
-  VPHistogramRecipe *tryToWidenHistogram(const HistogramInfo *HI,
-                                         VPInstruction *VPI);
+  /// If \p VPI represents a histogram operation (as determined by
+  /// LoopVectorizationLegality) make that safe for vectorization, by emitting a
+  /// llvm.experimental.vector.histogram.add intrinsic in place of the Load +
+  /// Add|Sub + Store operations that perform the histogram in the original
+  /// scalar loop.
+  VPHistogramRecipe *widenIfHistogram(VPInstruction *VPI);
 
   /// Set the recipe created for given ingredient.
   void setRecipe(Instruction *I, VPRecipeBase *R) {
