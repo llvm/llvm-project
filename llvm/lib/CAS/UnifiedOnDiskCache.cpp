@@ -86,13 +86,7 @@
 #include "llvm/Support/Path.h"
 #include "llvm/Support/Program.h"
 #include "llvm/Support/raw_ostream.h"
-#include <chrono>
 #include <optional>
-
-#ifdef _WIN32
-#define NOMINMAX
-#include <windows.h>
-#endif
 
 using namespace llvm;
 using namespace llvm::cas;

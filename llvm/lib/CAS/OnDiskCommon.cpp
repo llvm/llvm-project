@@ -11,6 +11,7 @@
 #include "llvm/Support/FileSystem.h"
 #include "llvm/Support/Path.h"
 #include "llvm/Support/Process.h"
+#include <chrono>
 #include <mutex>
 #include <thread>
 
@@ -35,6 +36,11 @@
 #if __has_include(<sys/sysctl.h>)
 #include <sys/sysctl.h>
 #endif
+#endif
+
+#ifdef _WIN32
+#define NOMINMAX
+#include <windows.h>
 #endif
 
 using namespace llvm;
