@@ -59,7 +59,7 @@ protected:
   unsigned LocalMemorySize = 0;
   unsigned AddressableLocalMemorySize = 0;
   char WavefrontSizeLog2 = 0;
-  unsigned FlatOffsetBitWidth = 13;
+  unsigned FlatOffsetBitWidth = 0;
 
 public:
   AMDGPUSubtarget(Triple TT) : TargetTriple(std::move(TT)) {}
