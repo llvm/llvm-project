@@ -2411,6 +2411,16 @@ FileCheck output:
 
         self.assertEqual(cmd_status, 0)
 
+    def filecheck_log(
+        self, log_file, check_file, filecheck_options="", expect_cmd_failure=False
+    ):
+        return self.filecheck(
+            f"platform shell -h -- cat {log_file}",
+            check_file,
+            filecheck_options,
+            expect_cmd_failure,
+        )
+
     def expect(
         self,
         string,
