@@ -537,7 +537,7 @@ func.func @op_matmul_transposed_output(%A: tensor<?x?xf32>, %B: tensor<?x?xf32>,
 #map_nc_a = affine_map<(m, k, n) -> (m, k)>
 #map_nc_b = affine_map<(m, k, n) -> (k, n)>
 #map_nc_c = affine_map<(m, k, n) -> (m, n)>
-func.func @op_matmul_non_conventional_dims(%A: tensor<?x?xf32>, %B: tensor<?x?xf32>,
+func.func @op_matmul_non_canonical_loops(%A: tensor<?x?xf32>, %B: tensor<?x?xf32>,
                                             %Out: tensor<?x?xf32>) -> tensor<?x?xf32> {
   %0 = linalg.generic
          {indexing_maps = [#map_nc_a, #map_nc_b, #map_nc_c],
@@ -551,7 +551,7 @@ func.func @op_matmul_non_conventional_dims(%A: tensor<?x?xf32>, %B: tensor<?x?xf
    return %0 : tensor<?x?xf32>
 }
 
-// CHECK-LABEL: op_matmul_non_conventional_dims
+// CHECK-LABEL: op_matmul_non_canonical_loops
 // CHECK-SAME: %[[A:.+]]: tensor<?x?xf32>, %[[B:.+]]: tensor<?x?xf32>, %[[Out:.+]]: tensor<?x?xf32>
 // CHECK-NOT: linalg.generic
 // CHECK: linalg.matmul ins(%[[A]], %[[B]] : tensor<?x?xf32>, tensor<?x?xf32>) outs(%[[Out]] : tensor<?x?xf32>) -> tensor<?x?xf32>
@@ -562,7 +562,7 @@ func.func @op_matmul_non_conventional_dims(%A: tensor<?x?xf32>, %B: tensor<?x?xf
 #map_bnc_a = affine_map<(batch, m, k, n) -> (batch, m, k)>
 #map_bnc_b = affine_map<(batch, m, k, n) -> (batch, k, n)>
 #map_bnc_c = affine_map<(batch, m, k, n) -> (batch, m, n)>
-func.func @op_batch_matmul_non_conventional_dims(%A: tensor<2x16x8xf32>, %B: tensor<2x8x16xf32>,
+func.func @op_batch_matmul_non_canonical_loops(%A: tensor<2x16x8xf32>, %B: tensor<2x8x16xf32>,
                                                   %Out: tensor<2x16x16xf32>) -> tensor<2x16x16xf32> {
   %0 = linalg.generic
            {indexing_maps = [#map_bnc_a, #map_bnc_b, #map_bnc_c],
@@ -576,7 +576,7 @@ func.func @op_batch_matmul_non_conventional_dims(%A: tensor<2x16x8xf32>, %B: ten
   return %0 : tensor<2x16x16xf32>
 }
 
-// CHECK-LABEL: op_batch_matmul_non_conventional_dims
+// CHECK-LABEL: op_batch_matmul_non_canonical_loops
 // CHECK-SAME: %[[A:.+]]: tensor<2x16x8xf32>, %[[B:.+]]: tensor<2x8x16xf32>, %[[Out:.+]]: tensor<2x16x16xf32>
 // CHECK-NOT: linalg.generic
 // CHECK: linalg.batch_matmul ins(%[[A]], %[[B]] : tensor<2x16x8xf32>, tensor<2x8x16xf32>) outs(%[[Out]] : tensor<2x16x16xf32>) -> tensor<2x16x16xf32>
