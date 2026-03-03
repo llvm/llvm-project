@@ -50,8 +50,20 @@
 // LIBC_TYPES_HAS_FLOAT16 is provided by
 // "include/llvm-libc-macros/float16-macros.h"
 #ifdef LIBC_TYPES_HAS_FLOAT16
+
+#ifdef LIBC_USE_SOFT_FLOAT16
+namespace LIBC_NAMESPACE_DECL {
+namespace fputil {
+struct Float16;
+} // namespace fputil
+} // namespace LIBC_NAMESPACE_DECL
+
+using float16 = LIBC_NAMESPACE::fputil::Float16;
+#else
 // Type alias for internal use.
 using float16 = _Float16;
+#endif
+
 #endif // LIBC_TYPES_HAS_FLOAT16
 
 // -- float128 support --------------------------------------------------------

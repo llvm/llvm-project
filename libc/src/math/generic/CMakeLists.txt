@@ -501,10 +501,11 @@ add_entrypoint_object(
   HDRS
     ../fabsf16.h
   DEPENDS
-    libc.src.__support.macros.properties.types
+    libc.src.__support.FPUtil.Float16
     libc.src.__support.FPUtil.basic_operations
     libc.src.__support.macros.properties.architectures
     libc.src.__support.macros.properties.compiler
+    libc.src.__support.macros.properties.types
   FLAGS
     MISC_MATH_BASIC_OPS_OPT
 )
