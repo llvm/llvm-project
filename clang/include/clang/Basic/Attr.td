@@ -5046,6 +5046,14 @@ def HLSLResourceBinding: InheritableAttr {
   }];
 }
 
+def HLSLAssociatedResourceDecl : InheritableAttr {
+  let Spellings = [];
+  let Args = [DeclArgument<Var, "ResDecl">];
+  let Subjects = SubjectList<[ExternalGlobalVar], ErrorDiag>;
+  let LangOpts = [HLSL];
+  let Documentation = [InternalOnly];
+}
+
 def HLSLUnparsedSemantic : HLSLAnnotationAttr {
   let Spellings = [];
   let Args = [DefaultIntArgument<"Index", 0>,

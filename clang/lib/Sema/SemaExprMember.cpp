@@ -1812,6 +1812,12 @@ Sema::BuildFieldReferenceExpr(Expr *BaseExpr, bool IsArrow,
     // except that 'mutable' members don't pick up 'const'.
     if (Field->isMutable()) BaseQuals.removeConst();
 
+    // HLSL resource types do not pick up address space qualifiers from the
+    // base.
+    if (getLangOpts().HLSL && (MemberType->isHLSLResourceRecord() ||
+                               MemberType->isHLSLResourceRecordArray()))
+      BaseQuals.removeAddressSpace();
+
     Qualifiers MemberQuals =
         Context.getCanonicalType(MemberType).getQualifiers();
 

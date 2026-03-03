@@ -222,6 +222,13 @@ public:
                                 const IdentifierInfo *CompName,
                                 SourceLocation CompLoc);
 
+  uint32_t getNextImplicitBindingOrderID() {
+    return ImplicitBindingNextOrderID++;
+  }
+
+  bool initGlobalResourceDecl(VarDecl *VD);
+  bool initGlobalResourceArrayDecl(VarDecl *VD);
+
 private:
   // HLSL resource type attributes need to be processed all at once.
   // This is a list to collect them.
@@ -315,12 +322,7 @@ private:
       const Attr *A, llvm::Triple::EnvironmentType Stage, IOType CurrentIOType,
       std::initializer_list<SemanticStageInfo> AllowedStages);
 
-  uint32_t getNextImplicitBindingOrderID() {
-    return ImplicitBindingNextOrderID++;
-  }
-
-  bool initGlobalResourceDecl(VarDecl *VD);
-  bool initGlobalResourceArrayDecl(VarDecl *VD);
+  void handleGlobalStructOrArrayOfWithResources(VarDecl *VD);
 
   // Infer a common global binding info for an Expr
   //

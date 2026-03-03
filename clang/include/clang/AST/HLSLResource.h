@@ -17,6 +17,7 @@
 #include "clang/AST/ASTContext.h"
 #include "clang/AST/Attr.h"
 #include "clang/AST/DeclBase.h"
+#include "clang/Basic/IdentifierTable.h"
 #include "clang/Basic/TargetInfo.h"
 #include "clang/Support/Compiler.h"
 #include "llvm/Frontend/HLSL/HLSLResource.h"
@@ -107,6 +108,39 @@ inline uint32_t getResourceDimensions(llvm::dxil::ResourceDimension Dim) {
   }
   llvm_unreachable("Unhandled llvm::dxil::ResourceDimension enum.");
 }
+
+// Helper class for building a name of a global resource variable that
+// gets created for a resource embedded in a struct or class. This will
+// also be used from CodeGen to build a name that matches the resource
+// access with the corresponding declaration.
+class EmbeddedResourceNameBuilder {
+  llvm::SmallString<64> Name;
+  llvm::SmallVector<unsigned> Offsets;
+
+  inline static constexpr std::string_view BaseClassDelim = "::";
+  inline static constexpr std::string_view FieldDelim = ".";
+  inline static constexpr std::string_view ArrayIndexDelim = FieldDelim;
+
+public:
+  EmbeddedResourceNameBuilder(llvm::StringRef BaseName) : Name(BaseName) {}
+  EmbeddedResourceNameBuilder() : Name("") {}
+
+  void pushName(llvm::StringRef N) { pushName(N, FieldDelim); }
+  void pushBaseName(llvm::StringRef N);
+  void pushArrayIndex(uint64_t Index);
+
+  void pop() {
+    assert(!Offsets.empty() && "no name to pop");
+    Name.resize(Offsets.pop_back_val());
+  }
+
+  IdentifierInfo *getNameAsIdentifier(ASTContext &AST) const {
+    return &AST.Idents.get(Name);
+  }
+
+private:
+  void pushName(llvm::StringRef N, llvm::StringRef Delim);
+};
 
 } // namespace hlsl
 
