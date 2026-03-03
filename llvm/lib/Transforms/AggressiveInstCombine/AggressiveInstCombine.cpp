@@ -259,60 +259,45 @@ static bool foldAnyOrAllBitsSet(Instruction &I) {
   // The 'any-bits-set' ('or' chain) pattern is simpler to match because the
   // final "and X, 1" instruction must be the final op in the sequence.
   bool MatchAllBitsSet;
-  if (match(&I, m_c_And(m_OneUse(m_And(m_Value(), m_Value())), m_Value())))
-    MatchAllBitsSet = true;
-  else if (match(&I, m_And(m_OneUse(m_Or(m_Value(), m_Value())), m_One())))
-    MatchAllBitsSet = false;
-  else
-    return false;
-
-  MaskOps MOps(I.getType()->getScalarSizeInBits(), MatchAllBitsSet);
-  if (MatchAllBitsSet) {
-    if (!matchAndOrChain(cast<BinaryOperator>(&I), MOps) || !MOps.FoundAnd1)
+  bool MatchTrunc;
+  Value *X;
+  if (I.getType()->isIntOrIntVectorTy(1)) {
+    if (match(&I, m_Trunc(m_OneUse(m_And(m_Value(), m_Value())))))
+      MatchAllBitsSet = true;
+    else if (match(&I, m_Trunc(m_OneUse(m_Or(m_Value(), m_Value())))))
+      MatchAllBitsSet = false;
+    else
       return false;
+    MatchTrunc = true;
+    X = I.getOperand(0);
   } else {
-    if (!matchAndOrChain(cast<BinaryOperator>(&I)->getOperand(0), MOps))
+    if (match(&I, m_c_And(m_OneUse(m_And(m_Value(), m_Value())), m_Value()))) {
+      X = &I;
+      MatchAllBitsSet = true;
+    } else if (match(&I,
+                     m_And(m_OneUse(m_Or(m_Value(), m_Value())), m_One()))) {
+      X = I.getOperand(0);
+      MatchAllBitsSet = false;
+    } else
       return false;
+    MatchTrunc = false;
   }
+  Type *Ty = X->getType();
+
+  MaskOps MOps(Ty->getScalarSizeInBits(), MatchAllBitsSet);
+  if (!matchAndOrChain(X, MOps) ||
+      (MatchAllBitsSet && !MatchTrunc && !MOps.FoundAnd1))
+    return false;
 
   // The pattern was found. Create a masked compare that replaces all of the
   // shift and logic ops.
   IRBuilder<> Builder(&I);
-  Constant *Mask = ConstantInt::get(I.getType(), MOps.Mask);
+  Constant *Mask = ConstantInt::get(Ty, MOps.Mask);
   Value *And = Builder.CreateAnd(MOps.Root, Mask);
   Value *Cmp = MatchAllBitsSet ? Builder.CreateICmpEQ(And, Mask)
                                : Builder.CreateIsNotNull(And);
-  Value *Zext = Builder.CreateZExt(Cmp, I.getType());
+  Value *Zext = MatchTrunc ? Cmp : Builder.CreateZExt(Cmp, Ty);
   I.replaceAllUsesWith(Zext);
-  ++NumAnyOrAllBitsSet;
-  return true;
-}
-
-static bool foldAnyOrAllBitsSetTrunc(Instruction &I) {
-  if (!I.getType()->isIntOrIntVectorTy(1))
-    return false;
-
-  bool MatchAllBitsSet;
-  if (match(&I, m_Trunc(m_OneUse(m_And(m_Value(), m_Value())))))
-    MatchAllBitsSet = true;
-  else if (match(&I, m_Trunc(m_OneUse(m_Or(m_Value(), m_Value())))))
-    MatchAllBitsSet = false;
-  else
-    return false;
-  Value *X = I.getOperand(0);
-
-  MaskOps MOps(X->getType()->getScalarSizeInBits(), MatchAllBitsSet);
-  if (!matchAndOrChain(X, MOps))
-    return false;
-
-  // The pattern was found. Create a masked compare that replaces all of the
-  // shift and logic ops.
-  IRBuilder<> Builder(&I);
-  Constant *Mask = ConstantInt::get(X->getType(), MOps.Mask);
-  Value *And = Builder.CreateAnd(MOps.Root, Mask);
-  Value *Cmp = MatchAllBitsSet ? Builder.CreateICmpEQ(And, Mask)
-                               : Builder.CreateIsNotNull(And);
-  I.replaceAllUsesWith(Cmp);
   ++NumAnyOrAllBitsSet;
   return true;
 }
@@ -1853,7 +1838,6 @@ static bool foldUnusualPatterns(Function &F, DominatorTree &DT,
     // iteratively in this loop rather than waiting until the end.
     for (Instruction &I : make_early_inc_range(llvm::reverse(BB))) {
       MadeChange |= foldAnyOrAllBitsSet(I);
-      MadeChange |= foldAnyOrAllBitsSetTrunc(I);
       MadeChange |= foldGuardedFunnelShift(I, DT);
       MadeChange |= tryToRecognizePopCount(I);
       MadeChange |= tryToFPToSat(I, TTI);
