@@ -244,14 +244,15 @@ class Compiler(ast.NodeVisitor):
                 node,
             )
 
-        # Visit RHS, leaving its value on the stack.
-        self.visit(node.value)
         if isinstance(target, ast.Name):
             names = [target]
         elif isinstance(target, ast.Tuple):
             names = cast(list[ast.Name], target.elts)
         else:
-            names = []
+            raise CompilerError("unsupported assignment target", node)
+
+        # Visit RHS, leaving its value on the stack.
+        self.visit(node.value)
 
         # Forget any previous bindings of these names.
         # Their values are orphaned on the stack.
