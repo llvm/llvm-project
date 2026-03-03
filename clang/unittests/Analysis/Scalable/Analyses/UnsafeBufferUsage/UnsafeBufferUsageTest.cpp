@@ -14,14 +14,9 @@
 #include "clang/Analysis/Scalable/Model/EntityName.h"
 #include "clang/Analysis/Scalable/TUSummary/TUSummary.h"
 #include "clang/Analysis/Scalable/TUSummary/TUSummaryBuilder.h"
-#include "clang/Frontend/ASTUnit.h"
 #include "clang/Tooling/Tooling.h"
-#include "llvm/ADT/iterator_range.h"
-#include "llvm/Support/Error.h"
 #include "gmock/gmock.h"
 #include "gtest/gtest.h"
-#include <optional>
-#include <utility>
 
 using namespace clang;
 using namespace ssaf;
@@ -62,7 +57,7 @@ const FunctionDecl *findFnByName(StringRef Name, ASTContext &Ctx) {
 constexpr inline auto buildEntityPointerLevel =
     UnsafeBufferUsageTUSummaryExtractor::buildEntityPointerLevel;
 
-class UnsafeBufferUsageTest : public ::testing::Test {
+class UnsafeBufferUsageTest : public testing::Test {
 protected:
   TUSummary TUSummary;
   TUSummaryBuilder TUSummaryBuilder;
