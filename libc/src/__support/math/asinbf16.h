@@ -11,7 +11,6 @@
 
 #include "src/__support/FPUtil/FEnvImpl.h"
 #include "src/__support/FPUtil/FPBits.h"
-#include "src/__support/FPUtil/PolyEval.h"
 #include "src/__support/FPUtil/bfloat16.h"
 #include "src/__support/FPUtil/cast.h"
 #include "src/__support/FPUtil/multiply_add.h"
@@ -40,7 +39,7 @@ LIBC_INLINE constexpr bfloat16 asinbf16(bfloat16 x) {
   // case 1: |x|>=1, NaN or Inf
   if (LIBC_UNLIKELY(x_abs >= 0x3F80)) {
     if (x_abs == 0x3F80) {
-      return bfloat16(x_sign * PI_2);
+      return fputil::cast<bfloat16>(x_sign * PI_2);
     }
     // NaN
     if (xbits.is_nan()) {
@@ -64,7 +63,7 @@ LIBC_INLINE constexpr bfloat16 asinbf16(bfloat16 x) {
     int rounding = fputil::quick_get_round();
     if ((xbits.is_pos() && rounding == FE_UPWARD) ||
         (xbits.is_neg() && rounding == FE_DOWNWARD)) {
-      return bfloat16(fputil::multiply_add(xf, 0x1.0p-13f, xf));
+      return fputil::cast<bfloat16>(fputil::multiply_add(xf, 0x1.0p-13f, xf));
     }
     return x;
   }
@@ -75,17 +74,19 @@ LIBC_INLINE constexpr bfloat16 asinbf16(bfloat16 x) {
   // case 3: (0,0.5]
   if (x_abs <= 0x3F00) {
     // asin_eval returns P(x^2) - 1, where P(x^2) ~ asin(x)/x
-    float result = xf * ( 1.0 + inv_trigf_utils_internal::asin_eval(x_sq));
-    return bfloat16(result);
+    float result = xf * static_cast<float>(
+                            1.0 + inv_trigf_utils_internal::asin_eval(x_sq));
+    return fputil::cast<bfloat16>(result);
   }
 
   // case 4: (0.5,1)
   //  using reduction: asin(x) = pi/2 - 2*asin(sqrt((1-x)/2))
   float t = fputil::multiply_add<float>(xf_abs, -0.5f, 0.5f);
   float t_sqrt = fputil::sqrt<float>(t);
-  float asin_sqrt_t = t_sqrt * ( 1.0 + inv_trigf_utils_internal::asin_eval(t));
+  float asin_sqrt_t =
+      t_sqrt * static_cast<float>(1.0 + inv_trigf_utils_internal::asin_eval(t));
   float result = fputil::multiply_add<float>(-2.0f, asin_sqrt_t, PI_2);
-  return bfloat16(x_sign * result);
+  return fputil::cast<bfloat16>(x_sign * result);
 }
 
 } // namespace math
