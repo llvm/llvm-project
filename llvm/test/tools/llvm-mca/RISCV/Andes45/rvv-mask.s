@@ -650,607 +650,607 @@ vfirst.m x8, v8
 
 # CHECK:      [1]    [2]    [3]    [4]    [5]    [6]    [7]    [8]                                        [9]                        Instructions:
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e8, mf2, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VMASK                               VMAND_MM                   vmmv.m	v8, v8
+# CHECK-NEXT:  1      3     1.00                         3     Andes45VMASK                               VMAND_MM                   vmmv.m	v8, v8
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e8, mf4, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VMASK                               VMAND_MM                   vmmv.m	v8, v8
+# CHECK-NEXT:  1      3     1.00                         3     Andes45VMASK                               VMAND_MM                   vmmv.m	v8, v8
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e8, mf8, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VMASK                               VMAND_MM                   vmmv.m	v8, v8
+# CHECK-NEXT:  1      3     1.00                         3     Andes45VMASK                               VMAND_MM                   vmmv.m	v8, v8
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e8, m1, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VMASK                               VMAND_MM                   vmmv.m	v8, v8
+# CHECK-NEXT:  1      3     1.00                         3     Andes45VMASK                               VMAND_MM                   vmmv.m	v8, v8
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e8, m2, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VMASK                               VMAND_MM                   vmmv.m	v8, v8
+# CHECK-NEXT:  1      3     1.00                         3     Andes45VMASK                               VMAND_MM                   vmmv.m	v8, v8
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e8, m4, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VMASK                               VMAND_MM                   vmmv.m	v8, v8
+# CHECK-NEXT:  1      3     1.00                         3     Andes45VMASK                               VMAND_MM                   vmmv.m	v8, v8
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e8, m8, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VMASK                               VMAND_MM                   vmmv.m	v8, v8
+# CHECK-NEXT:  1      3     1.00                         3     Andes45VMASK                               VMAND_MM                   vmmv.m	v8, v8
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e16, mf2, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VMASK                               VMAND_MM                   vmmv.m	v8, v8
+# CHECK-NEXT:  1      3     1.00                         3     Andes45VMASK                               VMAND_MM                   vmmv.m	v8, v8
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e16, mf4, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VMASK                               VMAND_MM                   vmmv.m	v8, v8
+# CHECK-NEXT:  1      3     1.00                         3     Andes45VMASK                               VMAND_MM                   vmmv.m	v8, v8
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e16, m1, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VMASK                               VMAND_MM                   vmmv.m	v8, v8
+# CHECK-NEXT:  1      3     1.00                         3     Andes45VMASK                               VMAND_MM                   vmmv.m	v8, v8
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e16, m2, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VMASK                               VMAND_MM                   vmmv.m	v8, v8
+# CHECK-NEXT:  1      3     1.00                         3     Andes45VMASK                               VMAND_MM                   vmmv.m	v8, v8
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e16, m4, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VMASK                               VMAND_MM                   vmmv.m	v8, v8
+# CHECK-NEXT:  1      3     1.00                         3     Andes45VMASK                               VMAND_MM                   vmmv.m	v8, v8
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e16, m8, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VMASK                               VMAND_MM                   vmmv.m	v8, v8
+# CHECK-NEXT:  1      3     1.00                         3     Andes45VMASK                               VMAND_MM                   vmmv.m	v8, v8
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e32, mf2, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VMASK                               VMAND_MM                   vmmv.m	v8, v8
+# CHECK-NEXT:  1      3     1.00                         3     Andes45VMASK                               VMAND_MM                   vmmv.m	v8, v8
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e32, m1, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VMASK                               VMAND_MM                   vmmv.m	v8, v8
+# CHECK-NEXT:  1      3     1.00                         3     Andes45VMASK                               VMAND_MM                   vmmv.m	v8, v8
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e32, m2, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VMASK                               VMAND_MM                   vmmv.m	v8, v8
+# CHECK-NEXT:  1      3     1.00                         3     Andes45VMASK                               VMAND_MM                   vmmv.m	v8, v8
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e32, m4, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VMASK                               VMAND_MM                   vmmv.m	v8, v8
+# CHECK-NEXT:  1      3     1.00                         3     Andes45VMASK                               VMAND_MM                   vmmv.m	v8, v8
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e32, m8, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VMASK                               VMAND_MM                   vmmv.m	v8, v8
+# CHECK-NEXT:  1      3     1.00                         3     Andes45VMASK                               VMAND_MM                   vmmv.m	v8, v8
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e64, m1, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VMASK                               VMAND_MM                   vmmv.m	v8, v8
+# CHECK-NEXT:  1      3     1.00                         3     Andes45VMASK                               VMAND_MM                   vmmv.m	v8, v8
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e64, m2, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VMASK                               VMAND_MM                   vmmv.m	v8, v8
+# CHECK-NEXT:  1      3     1.00                         3     Andes45VMASK                               VMAND_MM                   vmmv.m	v8, v8
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e64, m4, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VMASK                               VMAND_MM                   vmmv.m	v8, v8
+# CHECK-NEXT:  1      3     1.00                         3     Andes45VMASK                               VMAND_MM                   vmmv.m	v8, v8
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e64, m8, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VMASK                               VMAND_MM                   vmmv.m	v8, v8
+# CHECK-NEXT:  1      3     1.00                         3     Andes45VMASK                               VMAND_MM                   vmmv.m	v8, v8
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e8, mf2, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VMASK                               VMNAND_MM                  vmnot.m	v8, v8
+# CHECK-NEXT:  1      3     1.00                         3     Andes45VMASK                               VMNAND_MM                  vmnot.m	v8, v8
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e8, mf4, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VMASK                               VMNAND_MM                  vmnot.m	v8, v8
+# CHECK-NEXT:  1      3     1.00                         3     Andes45VMASK                               VMNAND_MM                  vmnot.m	v8, v8
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e8, mf8, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VMASK                               VMNAND_MM                  vmnot.m	v8, v8
+# CHECK-NEXT:  1      3     1.00                         3     Andes45VMASK                               VMNAND_MM                  vmnot.m	v8, v8
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e8, m1, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VMASK                               VMNAND_MM                  vmnot.m	v8, v8
+# CHECK-NEXT:  1      3     1.00                         3     Andes45VMASK                               VMNAND_MM                  vmnot.m	v8, v8
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e8, m2, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VMASK                               VMNAND_MM                  vmnot.m	v8, v8
+# CHECK-NEXT:  1      3     1.00                         3     Andes45VMASK                               VMNAND_MM                  vmnot.m	v8, v8
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e8, m4, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VMASK                               VMNAND_MM                  vmnot.m	v8, v8
+# CHECK-NEXT:  1      3     1.00                         3     Andes45VMASK                               VMNAND_MM                  vmnot.m	v8, v8
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e8, m8, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VMASK                               VMNAND_MM                  vmnot.m	v8, v8
+# CHECK-NEXT:  1      3     1.00                         3     Andes45VMASK                               VMNAND_MM                  vmnot.m	v8, v8
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e16, mf2, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VMASK                               VMNAND_MM                  vmnot.m	v8, v8
+# CHECK-NEXT:  1      3     1.00                         3     Andes45VMASK                               VMNAND_MM                  vmnot.m	v8, v8
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e16, mf4, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VMASK                               VMNAND_MM                  vmnot.m	v8, v8
+# CHECK-NEXT:  1      3     1.00                         3     Andes45VMASK                               VMNAND_MM                  vmnot.m	v8, v8
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e16, m1, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VMASK                               VMNAND_MM                  vmnot.m	v8, v8
+# CHECK-NEXT:  1      3     1.00                         3     Andes45VMASK                               VMNAND_MM                  vmnot.m	v8, v8
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e16, m2, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VMASK                               VMNAND_MM                  vmnot.m	v8, v8
+# CHECK-NEXT:  1      3     1.00                         3     Andes45VMASK                               VMNAND_MM                  vmnot.m	v8, v8
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e16, m4, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VMASK                               VMNAND_MM                  vmnot.m	v8, v8
+# CHECK-NEXT:  1      3     1.00                         3     Andes45VMASK                               VMNAND_MM                  vmnot.m	v8, v8
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e16, m8, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VMASK                               VMNAND_MM                  vmnot.m	v8, v8
+# CHECK-NEXT:  1      3     1.00                         3     Andes45VMASK                               VMNAND_MM                  vmnot.m	v8, v8
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e32, mf2, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VMASK                               VMNAND_MM                  vmnot.m	v8, v8
+# CHECK-NEXT:  1      3     1.00                         3     Andes45VMASK                               VMNAND_MM                  vmnot.m	v8, v8
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e32, m1, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VMASK                               VMNAND_MM                  vmnot.m	v8, v8
+# CHECK-NEXT:  1      3     1.00                         3     Andes45VMASK                               VMNAND_MM                  vmnot.m	v8, v8
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e32, m2, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VMASK                               VMNAND_MM                  vmnot.m	v8, v8
+# CHECK-NEXT:  1      3     1.00                         3     Andes45VMASK                               VMNAND_MM                  vmnot.m	v8, v8
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e32, m4, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VMASK                               VMNAND_MM                  vmnot.m	v8, v8
+# CHECK-NEXT:  1      3     1.00                         3     Andes45VMASK                               VMNAND_MM                  vmnot.m	v8, v8
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e32, m8, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VMASK                               VMNAND_MM                  vmnot.m	v8, v8
+# CHECK-NEXT:  1      3     1.00                         3     Andes45VMASK                               VMNAND_MM                  vmnot.m	v8, v8
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e64, m1, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VMASK                               VMNAND_MM                  vmnot.m	v8, v8
+# CHECK-NEXT:  1      3     1.00                         3     Andes45VMASK                               VMNAND_MM                  vmnot.m	v8, v8
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e64, m2, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VMASK                               VMNAND_MM                  vmnot.m	v8, v8
+# CHECK-NEXT:  1      3     1.00                         3     Andes45VMASK                               VMNAND_MM                  vmnot.m	v8, v8
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e64, m4, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VMASK                               VMNAND_MM                  vmnot.m	v8, v8
+# CHECK-NEXT:  1      3     1.00                         3     Andes45VMASK                               VMNAND_MM                  vmnot.m	v8, v8
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e64, m8, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VMASK                               VMNAND_MM                  vmnot.m	v8, v8
+# CHECK-NEXT:  1      3     1.00                         3     Andes45VMASK                               VMNAND_MM                  vmnot.m	v8, v8
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e8, mf2, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VMASK                               VMANDN_MM                  vmandn.mm	v8, v8, v8
+# CHECK-NEXT:  1      3     1.00                         3     Andes45VMASK                               VMANDN_MM                  vmandn.mm	v8, v8, v8
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e8, mf4, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VMASK                               VMANDN_MM                  vmandn.mm	v8, v8, v8
+# CHECK-NEXT:  1      3     1.00                         3     Andes45VMASK                               VMANDN_MM                  vmandn.mm	v8, v8, v8
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e8, mf8, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VMASK                               VMANDN_MM                  vmandn.mm	v8, v8, v8
+# CHECK-NEXT:  1      3     1.00                         3     Andes45VMASK                               VMANDN_MM                  vmandn.mm	v8, v8, v8
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e8, m1, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VMASK                               VMANDN_MM                  vmandn.mm	v8, v8, v8
+# CHECK-NEXT:  1      3     1.00                         3     Andes45VMASK                               VMANDN_MM                  vmandn.mm	v8, v8, v8
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e8, m2, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VMASK                               VMANDN_MM                  vmandn.mm	v8, v8, v8
+# CHECK-NEXT:  1      3     1.00                         3     Andes45VMASK                               VMANDN_MM                  vmandn.mm	v8, v8, v8
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e8, m4, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VMASK                               VMANDN_MM                  vmandn.mm	v8, v8, v8
+# CHECK-NEXT:  1      3     1.00                         3     Andes45VMASK                               VMANDN_MM                  vmandn.mm	v8, v8, v8
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e8, m8, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VMASK                               VMANDN_MM                  vmandn.mm	v8, v8, v8
+# CHECK-NEXT:  1      3     1.00                         3     Andes45VMASK                               VMANDN_MM                  vmandn.mm	v8, v8, v8
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e16, mf2, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VMASK                               VMANDN_MM                  vmandn.mm	v8, v8, v8
+# CHECK-NEXT:  1      3     1.00                         3     Andes45VMASK                               VMANDN_MM                  vmandn.mm	v8, v8, v8
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e16, mf4, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VMASK                               VMANDN_MM                  vmandn.mm	v8, v8, v8
+# CHECK-NEXT:  1      3     1.00                         3     Andes45VMASK                               VMANDN_MM                  vmandn.mm	v8, v8, v8
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e16, m1, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VMASK                               VMANDN_MM                  vmandn.mm	v8, v8, v8
+# CHECK-NEXT:  1      3     1.00                         3     Andes45VMASK                               VMANDN_MM                  vmandn.mm	v8, v8, v8
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e16, m2, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VMASK                               VMANDN_MM                  vmandn.mm	v8, v8, v8
+# CHECK-NEXT:  1      3     1.00                         3     Andes45VMASK                               VMANDN_MM                  vmandn.mm	v8, v8, v8
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e16, m4, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VMASK                               VMANDN_MM                  vmandn.mm	v8, v8, v8
+# CHECK-NEXT:  1      3     1.00                         3     Andes45VMASK                               VMANDN_MM                  vmandn.mm	v8, v8, v8
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e16, m8, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VMASK                               VMANDN_MM                  vmandn.mm	v8, v8, v8
+# CHECK-NEXT:  1      3     1.00                         3     Andes45VMASK                               VMANDN_MM                  vmandn.mm	v8, v8, v8
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e32, mf2, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VMASK                               VMANDN_MM                  vmandn.mm	v8, v8, v8
+# CHECK-NEXT:  1      3     1.00                         3     Andes45VMASK                               VMANDN_MM                  vmandn.mm	v8, v8, v8
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e32, m1, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VMASK                               VMANDN_MM                  vmandn.mm	v8, v8, v8
+# CHECK-NEXT:  1      3     1.00                         3     Andes45VMASK                               VMANDN_MM                  vmandn.mm	v8, v8, v8
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e32, m2, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VMASK                               VMANDN_MM                  vmandn.mm	v8, v8, v8
+# CHECK-NEXT:  1      3     1.00                         3     Andes45VMASK                               VMANDN_MM                  vmandn.mm	v8, v8, v8
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e32, m4, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VMASK                               VMANDN_MM                  vmandn.mm	v8, v8, v8
+# CHECK-NEXT:  1      3     1.00                         3     Andes45VMASK                               VMANDN_MM                  vmandn.mm	v8, v8, v8
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e32, m8, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VMASK                               VMANDN_MM                  vmandn.mm	v8, v8, v8
+# CHECK-NEXT:  1      3     1.00                         3     Andes45VMASK                               VMANDN_MM                  vmandn.mm	v8, v8, v8
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e64, m1, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VMASK                               VMANDN_MM                  vmandn.mm	v8, v8, v8
+# CHECK-NEXT:  1      3     1.00                         3     Andes45VMASK                               VMANDN_MM                  vmandn.mm	v8, v8, v8
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e64, m2, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VMASK                               VMANDN_MM                  vmandn.mm	v8, v8, v8
+# CHECK-NEXT:  1      3     1.00                         3     Andes45VMASK                               VMANDN_MM                  vmandn.mm	v8, v8, v8
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e64, m4, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VMASK                               VMANDN_MM                  vmandn.mm	v8, v8, v8
+# CHECK-NEXT:  1      3     1.00                         3     Andes45VMASK                               VMANDN_MM                  vmandn.mm	v8, v8, v8
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e64, m8, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VMASK                               VMANDN_MM                  vmandn.mm	v8, v8, v8
+# CHECK-NEXT:  1      3     1.00                         3     Andes45VMASK                               VMANDN_MM                  vmandn.mm	v8, v8, v8
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e8, mf2, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VMASK                               VMXOR_MM                   vmclr.m	v8
+# CHECK-NEXT:  1      3     1.00                         3     Andes45VMASK                               VMXOR_MM                   vmclr.m	v8
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e8, mf4, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VMASK                               VMXOR_MM                   vmclr.m	v8
+# CHECK-NEXT:  1      3     1.00                         3     Andes45VMASK                               VMXOR_MM                   vmclr.m	v8
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e8, mf8, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VMASK                               VMXOR_MM                   vmclr.m	v8
+# CHECK-NEXT:  1      3     1.00                         3     Andes45VMASK                               VMXOR_MM                   vmclr.m	v8
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e8, m1, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VMASK                               VMXOR_MM                   vmclr.m	v8
+# CHECK-NEXT:  1      3     1.00                         3     Andes45VMASK                               VMXOR_MM                   vmclr.m	v8
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e8, m2, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VMASK                               VMXOR_MM                   vmclr.m	v8
+# CHECK-NEXT:  1      3     1.00                         3     Andes45VMASK                               VMXOR_MM                   vmclr.m	v8
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e8, m4, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VMASK                               VMXOR_MM                   vmclr.m	v8
+# CHECK-NEXT:  1      3     1.00                         3     Andes45VMASK                               VMXOR_MM                   vmclr.m	v8
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e8, m8, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VMASK                               VMXOR_MM                   vmclr.m	v8
+# CHECK-NEXT:  1      3     1.00                         3     Andes45VMASK                               VMXOR_MM                   vmclr.m	v8
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e16, mf2, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VMASK                               VMXOR_MM                   vmclr.m	v8
+# CHECK-NEXT:  1      3     1.00                         3     Andes45VMASK                               VMXOR_MM                   vmclr.m	v8
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e16, mf4, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VMASK                               VMXOR_MM                   vmclr.m	v8
+# CHECK-NEXT:  1      3     1.00                         3     Andes45VMASK                               VMXOR_MM                   vmclr.m	v8
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e16, m1, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VMASK                               VMXOR_MM                   vmclr.m	v8
+# CHECK-NEXT:  1      3     1.00                         3     Andes45VMASK                               VMXOR_MM                   vmclr.m	v8
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e16, m2, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VMASK                               VMXOR_MM                   vmclr.m	v8
+# CHECK-NEXT:  1      3     1.00                         3     Andes45VMASK                               VMXOR_MM                   vmclr.m	v8
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e16, m4, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VMASK                               VMXOR_MM                   vmclr.m	v8
+# CHECK-NEXT:  1      3     1.00                         3     Andes45VMASK                               VMXOR_MM                   vmclr.m	v8
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e16, m8, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VMASK                               VMXOR_MM                   vmclr.m	v8
+# CHECK-NEXT:  1      3     1.00                         3     Andes45VMASK                               VMXOR_MM                   vmclr.m	v8
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e32, mf2, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VMASK                               VMXOR_MM                   vmclr.m	v8
+# CHECK-NEXT:  1      3     1.00                         3     Andes45VMASK                               VMXOR_MM                   vmclr.m	v8
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e32, m1, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VMASK                               VMXOR_MM                   vmclr.m	v8
+# CHECK-NEXT:  1      3     1.00                         3     Andes45VMASK                               VMXOR_MM                   vmclr.m	v8
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e32, m2, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VMASK                               VMXOR_MM                   vmclr.m	v8
+# CHECK-NEXT:  1      3     1.00                         3     Andes45VMASK                               VMXOR_MM                   vmclr.m	v8
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e32, m4, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VMASK                               VMXOR_MM                   vmclr.m	v8
+# CHECK-NEXT:  1      3     1.00                         3     Andes45VMASK                               VMXOR_MM                   vmclr.m	v8
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e32, m8, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VMASK                               VMXOR_MM                   vmclr.m	v8
+# CHECK-NEXT:  1      3     1.00                         3     Andes45VMASK                               VMXOR_MM                   vmclr.m	v8
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e64, m1, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VMASK                               VMXOR_MM                   vmclr.m	v8
+# CHECK-NEXT:  1      3     1.00                         3     Andes45VMASK                               VMXOR_MM                   vmclr.m	v8
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e64, m2, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VMASK                               VMXOR_MM                   vmclr.m	v8
+# CHECK-NEXT:  1      3     1.00                         3     Andes45VMASK                               VMXOR_MM                   vmclr.m	v8
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e64, m4, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VMASK                               VMXOR_MM                   vmclr.m	v8
+# CHECK-NEXT:  1      3     1.00                         3     Andes45VMASK                               VMXOR_MM                   vmclr.m	v8
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e64, m8, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VMASK                               VMXOR_MM                   vmclr.m	v8
+# CHECK-NEXT:  1      3     1.00                         3     Andes45VMASK                               VMXOR_MM                   vmclr.m	v8
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e8, mf2, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VMASK                               VMOR_MM                    vmor.mm	v8, v8, v8
+# CHECK-NEXT:  1      3     1.00                         3     Andes45VMASK                               VMOR_MM                    vmor.mm	v8, v8, v8
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e8, mf4, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VMASK                               VMOR_MM                    vmor.mm	v8, v8, v8
+# CHECK-NEXT:  1      3     1.00                         3     Andes45VMASK                               VMOR_MM                    vmor.mm	v8, v8, v8
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e8, mf8, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VMASK                               VMOR_MM                    vmor.mm	v8, v8, v8
+# CHECK-NEXT:  1      3     1.00                         3     Andes45VMASK                               VMOR_MM                    vmor.mm	v8, v8, v8
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e8, m1, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VMASK                               VMOR_MM                    vmor.mm	v8, v8, v8
+# CHECK-NEXT:  1      3     1.00                         3     Andes45VMASK                               VMOR_MM                    vmor.mm	v8, v8, v8
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e8, m2, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VMASK                               VMOR_MM                    vmor.mm	v8, v8, v8
+# CHECK-NEXT:  1      3     1.00                         3     Andes45VMASK                               VMOR_MM                    vmor.mm	v8, v8, v8
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e8, m4, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VMASK                               VMOR_MM                    vmor.mm	v8, v8, v8
+# CHECK-NEXT:  1      3     1.00                         3     Andes45VMASK                               VMOR_MM                    vmor.mm	v8, v8, v8
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e8, m8, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VMASK                               VMOR_MM                    vmor.mm	v8, v8, v8
+# CHECK-NEXT:  1      3     1.00                         3     Andes45VMASK                               VMOR_MM                    vmor.mm	v8, v8, v8
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e16, mf2, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VMASK                               VMOR_MM                    vmor.mm	v8, v8, v8
+# CHECK-NEXT:  1      3     1.00                         3     Andes45VMASK                               VMOR_MM                    vmor.mm	v8, v8, v8
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e16, mf4, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VMASK                               VMOR_MM                    vmor.mm	v8, v8, v8
+# CHECK-NEXT:  1      3     1.00                         3     Andes45VMASK                               VMOR_MM                    vmor.mm	v8, v8, v8
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e16, m1, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VMASK                               VMOR_MM                    vmor.mm	v8, v8, v8
+# CHECK-NEXT:  1      3     1.00                         3     Andes45VMASK                               VMOR_MM                    vmor.mm	v8, v8, v8
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e16, m2, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VMASK                               VMOR_MM                    vmor.mm	v8, v8, v8
+# CHECK-NEXT:  1      3     1.00                         3     Andes45VMASK                               VMOR_MM                    vmor.mm	v8, v8, v8
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e16, m4, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VMASK                               VMOR_MM                    vmor.mm	v8, v8, v8
+# CHECK-NEXT:  1      3     1.00                         3     Andes45VMASK                               VMOR_MM                    vmor.mm	v8, v8, v8
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e16, m8, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VMASK                               VMOR_MM                    vmor.mm	v8, v8, v8
+# CHECK-NEXT:  1      3     1.00                         3     Andes45VMASK                               VMOR_MM                    vmor.mm	v8, v8, v8
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e32, mf2, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VMASK                               VMOR_MM                    vmor.mm	v8, v8, v8
+# CHECK-NEXT:  1      3     1.00                         3     Andes45VMASK                               VMOR_MM                    vmor.mm	v8, v8, v8
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e32, m1, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VMASK                               VMOR_MM                    vmor.mm	v8, v8, v8
+# CHECK-NEXT:  1      3     1.00                         3     Andes45VMASK                               VMOR_MM                    vmor.mm	v8, v8, v8
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e32, m2, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VMASK                               VMOR_MM                    vmor.mm	v8, v8, v8
+# CHECK-NEXT:  1      3     1.00                         3     Andes45VMASK                               VMOR_MM                    vmor.mm	v8, v8, v8
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e32, m4, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VMASK                               VMOR_MM                    vmor.mm	v8, v8, v8
+# CHECK-NEXT:  1      3     1.00                         3     Andes45VMASK                               VMOR_MM                    vmor.mm	v8, v8, v8
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e32, m8, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VMASK                               VMOR_MM                    vmor.mm	v8, v8, v8
+# CHECK-NEXT:  1      3     1.00                         3     Andes45VMASK                               VMOR_MM                    vmor.mm	v8, v8, v8
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e64, m1, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VMASK                               VMOR_MM                    vmor.mm	v8, v8, v8
+# CHECK-NEXT:  1      3     1.00                         3     Andes45VMASK                               VMOR_MM                    vmor.mm	v8, v8, v8
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e64, m2, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VMASK                               VMOR_MM                    vmor.mm	v8, v8, v8
+# CHECK-NEXT:  1      3     1.00                         3     Andes45VMASK                               VMOR_MM                    vmor.mm	v8, v8, v8
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e64, m4, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VMASK                               VMOR_MM                    vmor.mm	v8, v8, v8
+# CHECK-NEXT:  1      3     1.00                         3     Andes45VMASK                               VMOR_MM                    vmor.mm	v8, v8, v8
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e64, m8, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VMASK                               VMOR_MM                    vmor.mm	v8, v8, v8
+# CHECK-NEXT:  1      3     1.00                         3     Andes45VMASK                               VMOR_MM                    vmor.mm	v8, v8, v8
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e8, mf2, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VMASK                               VMNOR_MM                   vmnor.mm	v8, v8, v8
+# CHECK-NEXT:  1      3     1.00                         3     Andes45VMASK                               VMNOR_MM                   vmnor.mm	v8, v8, v8
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e8, mf4, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VMASK                               VMNOR_MM                   vmnor.mm	v8, v8, v8
+# CHECK-NEXT:  1      3     1.00                         3     Andes45VMASK                               VMNOR_MM                   vmnor.mm	v8, v8, v8
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e8, mf8, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VMASK                               VMNOR_MM                   vmnor.mm	v8, v8, v8
+# CHECK-NEXT:  1      3     1.00                         3     Andes45VMASK                               VMNOR_MM                   vmnor.mm	v8, v8, v8
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e8, m1, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VMASK                               VMNOR_MM                   vmnor.mm	v8, v8, v8
+# CHECK-NEXT:  1      3     1.00                         3     Andes45VMASK                               VMNOR_MM                   vmnor.mm	v8, v8, v8
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e8, m2, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VMASK                               VMNOR_MM                   vmnor.mm	v8, v8, v8
+# CHECK-NEXT:  1      3     1.00                         3     Andes45VMASK                               VMNOR_MM                   vmnor.mm	v8, v8, v8
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e8, m4, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VMASK                               VMNOR_MM                   vmnor.mm	v8, v8, v8
+# CHECK-NEXT:  1      3     1.00                         3     Andes45VMASK                               VMNOR_MM                   vmnor.mm	v8, v8, v8
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e8, m8, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VMASK                               VMNOR_MM                   vmnor.mm	v8, v8, v8
+# CHECK-NEXT:  1      3     1.00                         3     Andes45VMASK                               VMNOR_MM                   vmnor.mm	v8, v8, v8
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e16, mf2, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VMASK                               VMNOR_MM                   vmnor.mm	v8, v8, v8
+# CHECK-NEXT:  1      3     1.00                         3     Andes45VMASK                               VMNOR_MM                   vmnor.mm	v8, v8, v8
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e16, mf4, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VMASK                               VMNOR_MM                   vmnor.mm	v8, v8, v8
+# CHECK-NEXT:  1      3     1.00                         3     Andes45VMASK                               VMNOR_MM                   vmnor.mm	v8, v8, v8
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e16, m1, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VMASK                               VMNOR_MM                   vmnor.mm	v8, v8, v8
+# CHECK-NEXT:  1      3     1.00                         3     Andes45VMASK                               VMNOR_MM                   vmnor.mm	v8, v8, v8
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e16, m2, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VMASK                               VMNOR_MM                   vmnor.mm	v8, v8, v8
+# CHECK-NEXT:  1      3     1.00                         3     Andes45VMASK                               VMNOR_MM                   vmnor.mm	v8, v8, v8
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e16, m4, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VMASK                               VMNOR_MM                   vmnor.mm	v8, v8, v8
+# CHECK-NEXT:  1      3     1.00                         3     Andes45VMASK                               VMNOR_MM                   vmnor.mm	v8, v8, v8
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e16, m8, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VMASK                               VMNOR_MM                   vmnor.mm	v8, v8, v8
+# CHECK-NEXT:  1      3     1.00                         3     Andes45VMASK                               VMNOR_MM                   vmnor.mm	v8, v8, v8
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e32, mf2, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VMASK                               VMNOR_MM                   vmnor.mm	v8, v8, v8
+# CHECK-NEXT:  1      3     1.00                         3     Andes45VMASK                               VMNOR_MM                   vmnor.mm	v8, v8, v8
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e32, m1, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VMASK                               VMNOR_MM                   vmnor.mm	v8, v8, v8
+# CHECK-NEXT:  1      3     1.00                         3     Andes45VMASK                               VMNOR_MM                   vmnor.mm	v8, v8, v8
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e32, m2, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VMASK                               VMNOR_MM                   vmnor.mm	v8, v8, v8
+# CHECK-NEXT:  1      3     1.00                         3     Andes45VMASK                               VMNOR_MM                   vmnor.mm	v8, v8, v8
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e32, m4, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VMASK                               VMNOR_MM                   vmnor.mm	v8, v8, v8
+# CHECK-NEXT:  1      3     1.00                         3     Andes45VMASK                               VMNOR_MM                   vmnor.mm	v8, v8, v8
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e32, m8, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VMASK                               VMNOR_MM                   vmnor.mm	v8, v8, v8
+# CHECK-NEXT:  1      3     1.00                         3     Andes45VMASK                               VMNOR_MM                   vmnor.mm	v8, v8, v8
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e64, m1, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VMASK                               VMNOR_MM                   vmnor.mm	v8, v8, v8
+# CHECK-NEXT:  1      3     1.00                         3     Andes45VMASK                               VMNOR_MM                   vmnor.mm	v8, v8, v8
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e64, m2, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VMASK                               VMNOR_MM                   vmnor.mm	v8, v8, v8
+# CHECK-NEXT:  1      3     1.00                         3     Andes45VMASK                               VMNOR_MM                   vmnor.mm	v8, v8, v8
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e64, m4, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VMASK                               VMNOR_MM                   vmnor.mm	v8, v8, v8
+# CHECK-NEXT:  1      3     1.00                         3     Andes45VMASK                               VMNOR_MM                   vmnor.mm	v8, v8, v8
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e64, m8, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VMASK                               VMNOR_MM                   vmnor.mm	v8, v8, v8
+# CHECK-NEXT:  1      3     1.00                         3     Andes45VMASK                               VMNOR_MM                   vmnor.mm	v8, v8, v8
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e8, mf2, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VMASK                               VMORN_MM                   vmorn.mm	v8, v8, v8
+# CHECK-NEXT:  1      3     1.00                         3     Andes45VMASK                               VMORN_MM                   vmorn.mm	v8, v8, v8
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e8, mf4, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VMASK                               VMORN_MM                   vmorn.mm	v8, v8, v8
+# CHECK-NEXT:  1      3     1.00                         3     Andes45VMASK                               VMORN_MM                   vmorn.mm	v8, v8, v8
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e8, mf8, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VMASK                               VMORN_MM                   vmorn.mm	v8, v8, v8
+# CHECK-NEXT:  1      3     1.00                         3     Andes45VMASK                               VMORN_MM                   vmorn.mm	v8, v8, v8
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e8, m1, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VMASK                               VMORN_MM                   vmorn.mm	v8, v8, v8
+# CHECK-NEXT:  1      3     1.00                         3     Andes45VMASK                               VMORN_MM                   vmorn.mm	v8, v8, v8
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e8, m2, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VMASK                               VMORN_MM                   vmorn.mm	v8, v8, v8
+# CHECK-NEXT:  1      3     1.00                         3     Andes45VMASK                               VMORN_MM                   vmorn.mm	v8, v8, v8
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e8, m4, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VMASK                               VMORN_MM                   vmorn.mm	v8, v8, v8
+# CHECK-NEXT:  1      3     1.00                         3     Andes45VMASK                               VMORN_MM                   vmorn.mm	v8, v8, v8
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e8, m8, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VMASK                               VMORN_MM                   vmorn.mm	v8, v8, v8
+# CHECK-NEXT:  1      3     1.00                         3     Andes45VMASK                               VMORN_MM                   vmorn.mm	v8, v8, v8
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e16, mf2, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VMASK                               VMORN_MM                   vmorn.mm	v8, v8, v8
+# CHECK-NEXT:  1      3     1.00                         3     Andes45VMASK                               VMORN_MM                   vmorn.mm	v8, v8, v8
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e16, mf4, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VMASK                               VMORN_MM                   vmorn.mm	v8, v8, v8
+# CHECK-NEXT:  1      3     1.00                         3     Andes45VMASK                               VMORN_MM                   vmorn.mm	v8, v8, v8
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e16, m1, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VMASK                               VMORN_MM                   vmorn.mm	v8, v8, v8
+# CHECK-NEXT:  1      3     1.00                         3     Andes45VMASK                               VMORN_MM                   vmorn.mm	v8, v8, v8
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e16, m2, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VMASK                               VMORN_MM                   vmorn.mm	v8, v8, v8
+# CHECK-NEXT:  1      3     1.00                         3     Andes45VMASK                               VMORN_MM                   vmorn.mm	v8, v8, v8
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e16, m4, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VMASK                               VMORN_MM                   vmorn.mm	v8, v8, v8
+# CHECK-NEXT:  1      3     1.00                         3     Andes45VMASK                               VMORN_MM                   vmorn.mm	v8, v8, v8
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e16, m8, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VMASK                               VMORN_MM                   vmorn.mm	v8, v8, v8
+# CHECK-NEXT:  1      3     1.00                         3     Andes45VMASK                               VMORN_MM                   vmorn.mm	v8, v8, v8
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e32, mf2, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VMASK                               VMORN_MM                   vmorn.mm	v8, v8, v8
+# CHECK-NEXT:  1      3     1.00                         3     Andes45VMASK                               VMORN_MM                   vmorn.mm	v8, v8, v8
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e32, m1, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VMASK                               VMORN_MM                   vmorn.mm	v8, v8, v8
+# CHECK-NEXT:  1      3     1.00                         3     Andes45VMASK                               VMORN_MM                   vmorn.mm	v8, v8, v8
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e32, m2, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VMASK                               VMORN_MM                   vmorn.mm	v8, v8, v8
+# CHECK-NEXT:  1      3     1.00                         3     Andes45VMASK                               VMORN_MM                   vmorn.mm	v8, v8, v8
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e32, m4, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VMASK                               VMORN_MM                   vmorn.mm	v8, v8, v8
+# CHECK-NEXT:  1      3     1.00                         3     Andes45VMASK                               VMORN_MM                   vmorn.mm	v8, v8, v8
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e32, m8, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VMASK                               VMORN_MM                   vmorn.mm	v8, v8, v8
+# CHECK-NEXT:  1      3     1.00                         3     Andes45VMASK                               VMORN_MM                   vmorn.mm	v8, v8, v8
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e64, m1, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VMASK                               VMORN_MM                   vmorn.mm	v8, v8, v8
+# CHECK-NEXT:  1      3     1.00                         3     Andes45VMASK                               VMORN_MM                   vmorn.mm	v8, v8, v8
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e64, m2, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VMASK                               VMORN_MM                   vmorn.mm	v8, v8, v8
+# CHECK-NEXT:  1      3     1.00                         3     Andes45VMASK                               VMORN_MM                   vmorn.mm	v8, v8, v8
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e64, m4, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VMASK                               VMORN_MM                   vmorn.mm	v8, v8, v8
+# CHECK-NEXT:  1      3     1.00                         3     Andes45VMASK                               VMORN_MM                   vmorn.mm	v8, v8, v8
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e64, m8, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VMASK                               VMORN_MM                   vmorn.mm	v8, v8, v8
+# CHECK-NEXT:  1      3     1.00                         3     Andes45VMASK                               VMORN_MM                   vmorn.mm	v8, v8, v8
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e8, mf2, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VMASK                               VMXNOR_MM                  vmset.m	v8
+# CHECK-NEXT:  1      3     1.00                         3     Andes45VMASK                               VMXNOR_MM                  vmset.m	v8
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e8, mf4, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VMASK                               VMXNOR_MM                  vmset.m	v8
+# CHECK-NEXT:  1      3     1.00                         3     Andes45VMASK                               VMXNOR_MM                  vmset.m	v8
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e8, mf8, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VMASK                               VMXNOR_MM                  vmset.m	v8
+# CHECK-NEXT:  1      3     1.00                         3     Andes45VMASK                               VMXNOR_MM                  vmset.m	v8
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e8, m1, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VMASK                               VMXNOR_MM                  vmset.m	v8
+# CHECK-NEXT:  1      3     1.00                         3     Andes45VMASK                               VMXNOR_MM                  vmset.m	v8
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e8, m2, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VMASK                               VMXNOR_MM                  vmset.m	v8
+# CHECK-NEXT:  1      3     1.00                         3     Andes45VMASK                               VMXNOR_MM                  vmset.m	v8
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e8, m4, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VMASK                               VMXNOR_MM                  vmset.m	v8
+# CHECK-NEXT:  1      3     1.00                         3     Andes45VMASK                               VMXNOR_MM                  vmset.m	v8
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e8, m8, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VMASK                               VMXNOR_MM                  vmset.m	v8
+# CHECK-NEXT:  1      3     1.00                         3     Andes45VMASK                               VMXNOR_MM                  vmset.m	v8
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e16, mf2, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VMASK                               VMXNOR_MM                  vmset.m	v8
+# CHECK-NEXT:  1      3     1.00                         3     Andes45VMASK                               VMXNOR_MM                  vmset.m	v8
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e16, mf4, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VMASK                               VMXNOR_MM                  vmset.m	v8
+# CHECK-NEXT:  1      3     1.00                         3     Andes45VMASK                               VMXNOR_MM                  vmset.m	v8
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e16, m1, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VMASK                               VMXNOR_MM                  vmset.m	v8
+# CHECK-NEXT:  1      3     1.00                         3     Andes45VMASK                               VMXNOR_MM                  vmset.m	v8
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e16, m2, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VMASK                               VMXNOR_MM                  vmset.m	v8
+# CHECK-NEXT:  1      3     1.00                         3     Andes45VMASK                               VMXNOR_MM                  vmset.m	v8
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e16, m4, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VMASK                               VMXNOR_MM                  vmset.m	v8
+# CHECK-NEXT:  1      3     1.00                         3     Andes45VMASK                               VMXNOR_MM                  vmset.m	v8
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e16, m8, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VMASK                               VMXNOR_MM                  vmset.m	v8
+# CHECK-NEXT:  1      3     1.00                         3     Andes45VMASK                               VMXNOR_MM                  vmset.m	v8
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e32, mf2, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VMASK                               VMXNOR_MM                  vmset.m	v8
+# CHECK-NEXT:  1      3     1.00                         3     Andes45VMASK                               VMXNOR_MM                  vmset.m	v8
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e32, m1, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VMASK                               VMXNOR_MM                  vmset.m	v8
+# CHECK-NEXT:  1      3     1.00                         3     Andes45VMASK                               VMXNOR_MM                  vmset.m	v8
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e32, m2, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VMASK                               VMXNOR_MM                  vmset.m	v8
+# CHECK-NEXT:  1      3     1.00                         3     Andes45VMASK                               VMXNOR_MM                  vmset.m	v8
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e32, m4, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VMASK                               VMXNOR_MM                  vmset.m	v8
+# CHECK-NEXT:  1      3     1.00                         3     Andes45VMASK                               VMXNOR_MM                  vmset.m	v8
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e32, m8, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VMASK                               VMXNOR_MM                  vmset.m	v8
+# CHECK-NEXT:  1      3     1.00                         3     Andes45VMASK                               VMXNOR_MM                  vmset.m	v8
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e64, m1, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VMASK                               VMXNOR_MM                  vmset.m	v8
+# CHECK-NEXT:  1      3     1.00                         3     Andes45VMASK                               VMXNOR_MM                  vmset.m	v8
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e64, m2, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VMASK                               VMXNOR_MM                  vmset.m	v8
+# CHECK-NEXT:  1      3     1.00                         3     Andes45VMASK                               VMXNOR_MM                  vmset.m	v8
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e64, m4, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VMASK                               VMXNOR_MM                  vmset.m	v8
+# CHECK-NEXT:  1      3     1.00                         3     Andes45VMASK                               VMXNOR_MM                  vmset.m	v8
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e64, m8, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VMASK                               VMXNOR_MM                  vmset.m	v8
+# CHECK-NEXT:  1      3     1.00                         3     Andes45VMASK                               VMXNOR_MM                  vmset.m	v8
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e8, mf2, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VMASK                               VMSBF_M                    vmsbf.m	v8, v16
+# CHECK-NEXT:  1      3     1.00                         3     Andes45VMASK                               VMSBF_M                    vmsbf.m	v8, v16
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e8, mf4, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VMASK                               VMSBF_M                    vmsbf.m	v8, v16
+# CHECK-NEXT:  1      3     1.00                         3     Andes45VMASK                               VMSBF_M                    vmsbf.m	v8, v16
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e8, mf8, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VMASK                               VMSBF_M                    vmsbf.m	v8, v16
+# CHECK-NEXT:  1      3     1.00                         3     Andes45VMASK                               VMSBF_M                    vmsbf.m	v8, v16
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e8, m1, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VMASK                               VMSBF_M                    vmsbf.m	v8, v16
+# CHECK-NEXT:  1      3     1.00                         3     Andes45VMASK                               VMSBF_M                    vmsbf.m	v8, v16
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e8, m2, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VMASK                               VMSBF_M                    vmsbf.m	v8, v16
+# CHECK-NEXT:  1      3     1.00                         3     Andes45VMASK                               VMSBF_M                    vmsbf.m	v8, v16
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e8, m4, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VMASK                               VMSBF_M                    vmsbf.m	v8, v16
+# CHECK-NEXT:  1      3     1.00                         3     Andes45VMASK                               VMSBF_M                    vmsbf.m	v8, v16
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e8, m8, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VMASK                               VMSBF_M                    vmsbf.m	v8, v16
+# CHECK-NEXT:  1      3     1.00                         3     Andes45VMASK                               VMSBF_M                    vmsbf.m	v8, v16
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e16, mf2, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VMASK                               VMSBF_M                    vmsbf.m	v8, v16
+# CHECK-NEXT:  1      3     1.00                         3     Andes45VMASK                               VMSBF_M                    vmsbf.m	v8, v16
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e16, mf4, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VMASK                               VMSBF_M                    vmsbf.m	v8, v16
+# CHECK-NEXT:  1      3     1.00                         3     Andes45VMASK                               VMSBF_M                    vmsbf.m	v8, v16
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e16, m1, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VMASK                               VMSBF_M                    vmsbf.m	v8, v16
+# CHECK-NEXT:  1      3     1.00                         3     Andes45VMASK                               VMSBF_M                    vmsbf.m	v8, v16
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e16, m2, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VMASK                               VMSBF_M                    vmsbf.m	v8, v16
+# CHECK-NEXT:  1      3     1.00                         3     Andes45VMASK                               VMSBF_M                    vmsbf.m	v8, v16
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e16, m4, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VMASK                               VMSBF_M                    vmsbf.m	v8, v16
+# CHECK-NEXT:  1      3     1.00                         3     Andes45VMASK                               VMSBF_M                    vmsbf.m	v8, v16
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e16, m8, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VMASK                               VMSBF_M                    vmsbf.m	v8, v16
+# CHECK-NEXT:  1      3     1.00                         3     Andes45VMASK                               VMSBF_M                    vmsbf.m	v8, v16
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e32, mf2, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VMASK                               VMSBF_M                    vmsbf.m	v8, v16
+# CHECK-NEXT:  1      3     1.00                         3     Andes45VMASK                               VMSBF_M                    vmsbf.m	v8, v16
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e32, m1, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VMASK                               VMSBF_M                    vmsbf.m	v8, v16
+# CHECK-NEXT:  1      3     1.00                         3     Andes45VMASK                               VMSBF_M                    vmsbf.m	v8, v16
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e32, m2, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VMASK                               VMSBF_M                    vmsbf.m	v8, v16
+# CHECK-NEXT:  1      3     1.00                         3     Andes45VMASK                               VMSBF_M                    vmsbf.m	v8, v16
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e32, m4, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VMASK                               VMSBF_M                    vmsbf.m	v8, v16
+# CHECK-NEXT:  1      3     1.00                         3     Andes45VMASK                               VMSBF_M                    vmsbf.m	v8, v16
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e32, m8, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VMASK                               VMSBF_M                    vmsbf.m	v8, v16
+# CHECK-NEXT:  1      3     1.00                         3     Andes45VMASK                               VMSBF_M                    vmsbf.m	v8, v16
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e64, m1, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VMASK                               VMSBF_M                    vmsbf.m	v8, v16
+# CHECK-NEXT:  1      3     1.00                         3     Andes45VMASK                               VMSBF_M                    vmsbf.m	v8, v16
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e64, m2, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VMASK                               VMSBF_M                    vmsbf.m	v8, v16
+# CHECK-NEXT:  1      3     1.00                         3     Andes45VMASK                               VMSBF_M                    vmsbf.m	v8, v16
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e64, m4, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VMASK                               VMSBF_M                    vmsbf.m	v8, v16
+# CHECK-NEXT:  1      3     1.00                         3     Andes45VMASK                               VMSBF_M                    vmsbf.m	v8, v16
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e64, m8, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VMASK                               VMSBF_M                    vmsbf.m	v8, v16
+# CHECK-NEXT:  1      3     1.00                         3     Andes45VMASK                               VMSBF_M                    vmsbf.m	v8, v16
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e8, mf2, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VMASK                               VMSIF_M                    vmsif.m	v8, v16
+# CHECK-NEXT:  1      3     1.00                         3     Andes45VMASK                               VMSIF_M                    vmsif.m	v8, v16
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e8, mf4, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VMASK                               VMSIF_M                    vmsif.m	v8, v16
+# CHECK-NEXT:  1      3     1.00                         3     Andes45VMASK                               VMSIF_M                    vmsif.m	v8, v16
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e8, mf8, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VMASK                               VMSIF_M                    vmsif.m	v8, v16
+# CHECK-NEXT:  1      3     1.00                         3     Andes45VMASK                               VMSIF_M                    vmsif.m	v8, v16
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e8, m1, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VMASK                               VMSIF_M                    vmsif.m	v8, v16
+# CHECK-NEXT:  1      3     1.00                         3     Andes45VMASK                               VMSIF_M                    vmsif.m	v8, v16
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e8, m2, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VMASK                               VMSIF_M                    vmsif.m	v8, v16
+# CHECK-NEXT:  1      3     1.00                         3     Andes45VMASK                               VMSIF_M                    vmsif.m	v8, v16
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e8, m4, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VMASK                               VMSIF_M                    vmsif.m	v8, v16
+# CHECK-NEXT:  1      3     1.00                         3     Andes45VMASK                               VMSIF_M                    vmsif.m	v8, v16
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e8, m8, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VMASK                               VMSIF_M                    vmsif.m	v8, v16
+# CHECK-NEXT:  1      3     1.00                         3     Andes45VMASK                               VMSIF_M                    vmsif.m	v8, v16
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e16, mf2, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VMASK                               VMSIF_M                    vmsif.m	v8, v16
+# CHECK-NEXT:  1      3     1.00                         3     Andes45VMASK                               VMSIF_M                    vmsif.m	v8, v16
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e16, mf4, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VMASK                               VMSIF_M                    vmsif.m	v8, v16
+# CHECK-NEXT:  1      3     1.00                         3     Andes45VMASK                               VMSIF_M                    vmsif.m	v8, v16
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e16, m1, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VMASK                               VMSIF_M                    vmsif.m	v8, v16
+# CHECK-NEXT:  1      3     1.00                         3     Andes45VMASK                               VMSIF_M                    vmsif.m	v8, v16
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e16, m2, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VMASK                               VMSIF_M                    vmsif.m	v8, v16
+# CHECK-NEXT:  1      3     1.00                         3     Andes45VMASK                               VMSIF_M                    vmsif.m	v8, v16
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e16, m4, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VMASK                               VMSIF_M                    vmsif.m	v8, v16
+# CHECK-NEXT:  1      3     1.00                         3     Andes45VMASK                               VMSIF_M                    vmsif.m	v8, v16
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e16, m8, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VMASK                               VMSIF_M                    vmsif.m	v8, v16
+# CHECK-NEXT:  1      3     1.00                         3     Andes45VMASK                               VMSIF_M                    vmsif.m	v8, v16
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e32, mf2, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VMASK                               VMSIF_M                    vmsif.m	v8, v16
+# CHECK-NEXT:  1      3     1.00                         3     Andes45VMASK                               VMSIF_M                    vmsif.m	v8, v16
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e32, m1, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VMASK                               VMSIF_M                    vmsif.m	v8, v16
+# CHECK-NEXT:  1      3     1.00                         3     Andes45VMASK                               VMSIF_M                    vmsif.m	v8, v16
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e32, m2, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VMASK                               VMSIF_M                    vmsif.m	v8, v16
+# CHECK-NEXT:  1      3     1.00                         3     Andes45VMASK                               VMSIF_M                    vmsif.m	v8, v16
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e32, m4, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VMASK                               VMSIF_M                    vmsif.m	v8, v16
+# CHECK-NEXT:  1      3     1.00                         3     Andes45VMASK                               VMSIF_M                    vmsif.m	v8, v16
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e32, m8, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VMASK                               VMSIF_M                    vmsif.m	v8, v16
+# CHECK-NEXT:  1      3     1.00                         3     Andes45VMASK                               VMSIF_M                    vmsif.m	v8, v16
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e64, m1, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VMASK                               VMSIF_M                    vmsif.m	v8, v16
+# CHECK-NEXT:  1      3     1.00                         3     Andes45VMASK                               VMSIF_M                    vmsif.m	v8, v16
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e64, m2, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VMASK                               VMSIF_M                    vmsif.m	v8, v16
+# CHECK-NEXT:  1      3     1.00                         3     Andes45VMASK                               VMSIF_M                    vmsif.m	v8, v16
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e64, m4, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VMASK                               VMSIF_M                    vmsif.m	v8, v16
+# CHECK-NEXT:  1      3     1.00                         3     Andes45VMASK                               VMSIF_M                    vmsif.m	v8, v16
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e64, m8, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VMASK                               VMSIF_M                    vmsif.m	v8, v16
+# CHECK-NEXT:  1      3     1.00                         3     Andes45VMASK                               VMSIF_M                    vmsif.m	v8, v16
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e8, mf2, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VMASK                               VMSOF_M                    vmsof.m	v8, v16
+# CHECK-NEXT:  1      3     1.00                         3     Andes45VMASK                               VMSOF_M                    vmsof.m	v8, v16
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e8, mf4, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VMASK                               VMSOF_M                    vmsof.m	v8, v16
+# CHECK-NEXT:  1      3     1.00                         3     Andes45VMASK                               VMSOF_M                    vmsof.m	v8, v16
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e8, mf8, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VMASK                               VMSOF_M                    vmsof.m	v8, v16
+# CHECK-NEXT:  1      3     1.00                         3     Andes45VMASK                               VMSOF_M                    vmsof.m	v8, v16
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e8, m1, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VMASK                               VMSOF_M                    vmsof.m	v8, v16
+# CHECK-NEXT:  1      3     1.00                         3     Andes45VMASK                               VMSOF_M                    vmsof.m	v8, v16
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e8, m2, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VMASK                               VMSOF_M                    vmsof.m	v8, v16
+# CHECK-NEXT:  1      3     1.00                         3     Andes45VMASK                               VMSOF_M                    vmsof.m	v8, v16
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e8, m4, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VMASK                               VMSOF_M                    vmsof.m	v8, v16
+# CHECK-NEXT:  1      3     1.00                         3     Andes45VMASK                               VMSOF_M                    vmsof.m	v8, v16
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e8, m8, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VMASK                               VMSOF_M                    vmsof.m	v8, v16
+# CHECK-NEXT:  1      3     1.00                         3     Andes45VMASK                               VMSOF_M                    vmsof.m	v8, v16
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e16, mf2, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VMASK                               VMSOF_M                    vmsof.m	v8, v16
+# CHECK-NEXT:  1      3     1.00                         3     Andes45VMASK                               VMSOF_M                    vmsof.m	v8, v16
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e16, mf4, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VMASK                               VMSOF_M                    vmsof.m	v8, v16
+# CHECK-NEXT:  1      3     1.00                         3     Andes45VMASK                               VMSOF_M                    vmsof.m	v8, v16
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e16, m1, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VMASK                               VMSOF_M                    vmsof.m	v8, v16
+# CHECK-NEXT:  1      3     1.00                         3     Andes45VMASK                               VMSOF_M                    vmsof.m	v8, v16
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e16, m2, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VMASK                               VMSOF_M                    vmsof.m	v8, v16
+# CHECK-NEXT:  1      3     1.00                         3     Andes45VMASK                               VMSOF_M                    vmsof.m	v8, v16
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e16, m4, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VMASK                               VMSOF_M                    vmsof.m	v8, v16
+# CHECK-NEXT:  1      3     1.00                         3     Andes45VMASK                               VMSOF_M                    vmsof.m	v8, v16
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e16, m8, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VMASK                               VMSOF_M                    vmsof.m	v8, v16
+# CHECK-NEXT:  1      3     1.00                         3     Andes45VMASK                               VMSOF_M                    vmsof.m	v8, v16
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e32, mf2, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VMASK                               VMSOF_M                    vmsof.m	v8, v16
+# CHECK-NEXT:  1      3     1.00                         3     Andes45VMASK                               VMSOF_M                    vmsof.m	v8, v16
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e32, m1, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VMASK                               VMSOF_M                    vmsof.m	v8, v16
+# CHECK-NEXT:  1      3     1.00                         3     Andes45VMASK                               VMSOF_M                    vmsof.m	v8, v16
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e32, m2, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VMASK                               VMSOF_M                    vmsof.m	v8, v16
+# CHECK-NEXT:  1      3     1.00                         3     Andes45VMASK                               VMSOF_M                    vmsof.m	v8, v16
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e32, m4, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VMASK                               VMSOF_M                    vmsof.m	v8, v16
+# CHECK-NEXT:  1      3     1.00                         3     Andes45VMASK                               VMSOF_M                    vmsof.m	v8, v16
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e32, m8, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VMASK                               VMSOF_M                    vmsof.m	v8, v16
+# CHECK-NEXT:  1      3     1.00                         3     Andes45VMASK                               VMSOF_M                    vmsof.m	v8, v16
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e64, m1, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VMASK                               VMSOF_M                    vmsof.m	v8, v16
+# CHECK-NEXT:  1      3     1.00                         3     Andes45VMASK                               VMSOF_M                    vmsof.m	v8, v16
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e64, m2, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VMASK                               VMSOF_M                    vmsof.m	v8, v16
+# CHECK-NEXT:  1      3     1.00                         3     Andes45VMASK                               VMSOF_M                    vmsof.m	v8, v16
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e64, m4, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VMASK                               VMSOF_M                    vmsof.m	v8, v16
+# CHECK-NEXT:  1      3     1.00                         3     Andes45VMASK                               VMSOF_M                    vmsof.m	v8, v16
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e64, m8, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VMASK                               VMSOF_M                    vmsof.m	v8, v16
+# CHECK-NEXT:  1      3     1.00                         3     Andes45VMASK                               VMSOF_M                    vmsof.m	v8, v16
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e8, mf2, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VMASK                               VID_V                      vid.v	v8
+# CHECK-NEXT:  1      4     1.00                         4     Andes45VMASK                               VID_V                      vid.v	v8
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e8, mf4, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VMASK                               VID_V                      vid.v	v8
+# CHECK-NEXT:  1      4     1.00                         4     Andes45VMASK                               VID_V                      vid.v	v8
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e8, mf8, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VMASK                               VID_V                      vid.v	v8
+# CHECK-NEXT:  1      4     1.00                         4     Andes45VMASK                               VID_V                      vid.v	v8
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e8, m1, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VMASK                               VID_V                      vid.v	v8
+# CHECK-NEXT:  1      4     1.00                         4     Andes45VMASK                               VID_V                      vid.v	v8
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e8, m2, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VMASK                               VID_V                      vid.v	v8
+# CHECK-NEXT:  1      4     2.00                         4     Andes45VMASK[2]                            VID_V                      vid.v	v8
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e8, m4, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VMASK                               VID_V                      vid.v	v8
+# CHECK-NEXT:  1      4     4.00                         4     Andes45VMASK[4]                            VID_V                      vid.v	v8
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e8, m8, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VMASK                               VID_V                      vid.v	v8
+# CHECK-NEXT:  1      4     8.00                         4     Andes45VMASK[8]                            VID_V                      vid.v	v8
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e16, mf2, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VMASK                               VID_V                      vid.v	v8
+# CHECK-NEXT:  1      4     1.00                         4     Andes45VMASK                               VID_V                      vid.v	v8
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e16, mf4, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VMASK                               VID_V                      vid.v	v8
+# CHECK-NEXT:  1      4     1.00                         4     Andes45VMASK                               VID_V                      vid.v	v8
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e16, m1, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VMASK                               VID_V                      vid.v	v8
+# CHECK-NEXT:  1      4     1.00                         4     Andes45VMASK                               VID_V                      vid.v	v8
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e16, m2, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VMASK                               VID_V                      vid.v	v8
+# CHECK-NEXT:  1      4     2.00                         4     Andes45VMASK[2]                            VID_V                      vid.v	v8
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e16, m4, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VMASK                               VID_V                      vid.v	v8
+# CHECK-NEXT:  1      4     4.00                         4     Andes45VMASK[4]                            VID_V                      vid.v	v8
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e16, m8, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VMASK                               VID_V                      vid.v	v8
+# CHECK-NEXT:  1      4     8.00                         4     Andes45VMASK[8]                            VID_V                      vid.v	v8
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e32, mf2, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VMASK                               VID_V                      vid.v	v8
+# CHECK-NEXT:  1      4     1.00                         4     Andes45VMASK                               VID_V                      vid.v	v8
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e32, m1, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VMASK                               VID_V                      vid.v	v8
+# CHECK-NEXT:  1      4     1.00                         4     Andes45VMASK                               VID_V                      vid.v	v8
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e32, m2, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VMASK                               VID_V                      vid.v	v8
+# CHECK-NEXT:  1      4     2.00                         4     Andes45VMASK[2]                            VID_V                      vid.v	v8
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e32, m4, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VMASK                               VID_V                      vid.v	v8
+# CHECK-NEXT:  1      4     4.00                         4     Andes45VMASK[4]                            VID_V                      vid.v	v8
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e32, m8, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VMASK                               VID_V                      vid.v	v8
+# CHECK-NEXT:  1      4     8.00                         4     Andes45VMASK[8]                            VID_V                      vid.v	v8
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e64, m1, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VMASK                               VID_V                      vid.v	v8
+# CHECK-NEXT:  1      4     1.00                         4     Andes45VMASK                               VID_V                      vid.v	v8
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e64, m2, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VMASK                               VID_V                      vid.v	v8
+# CHECK-NEXT:  1      4     2.00                         4     Andes45VMASK[2]                            VID_V                      vid.v	v8
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e64, m4, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VMASK                               VID_V                      vid.v	v8
+# CHECK-NEXT:  1      4     4.00                         4     Andes45VMASK[4]                            VID_V                      vid.v	v8
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e64, m8, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VMASK                               VID_V                      vid.v	v8
+# CHECK-NEXT:  1      4     8.00                         4     Andes45VMASK[8]                            VID_V                      vid.v	v8
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e8, mf2, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VMASK                               VCPOP_M                    vcpop.m	s0, v8
+# CHECK-NEXT:  1      3     1.00                         3     Andes45VMASK                               VCPOP_M                    vcpop.m	s0, v8
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e8, mf4, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VMASK                               VCPOP_M                    vcpop.m	s0, v8
+# CHECK-NEXT:  1      3     1.00                         3     Andes45VMASK                               VCPOP_M                    vcpop.m	s0, v8
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e8, mf8, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VMASK                               VCPOP_M                    vcpop.m	s0, v8
+# CHECK-NEXT:  1      3     1.00                         3     Andes45VMASK                               VCPOP_M                    vcpop.m	s0, v8
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e8, m1, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VMASK                               VCPOP_M                    vcpop.m	s0, v8
+# CHECK-NEXT:  1      3     1.00                         3     Andes45VMASK                               VCPOP_M                    vcpop.m	s0, v8
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e8, m2, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VMASK                               VCPOP_M                    vcpop.m	s0, v8
+# CHECK-NEXT:  1      3     1.00                         3     Andes45VMASK                               VCPOP_M                    vcpop.m	s0, v8
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e8, m4, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VMASK                               VCPOP_M                    vcpop.m	s0, v8
+# CHECK-NEXT:  1      3     1.00                         3     Andes45VMASK                               VCPOP_M                    vcpop.m	s0, v8
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e8, m8, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VMASK                               VCPOP_M                    vcpop.m	s0, v8
+# CHECK-NEXT:  1      3     1.00                         3     Andes45VMASK                               VCPOP_M                    vcpop.m	s0, v8
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e16, mf2, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VMASK                               VCPOP_M                    vcpop.m	s0, v8
+# CHECK-NEXT:  1      3     1.00                         3     Andes45VMASK                               VCPOP_M                    vcpop.m	s0, v8
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e16, mf4, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VMASK                               VCPOP_M                    vcpop.m	s0, v8
+# CHECK-NEXT:  1      3     1.00                         3     Andes45VMASK                               VCPOP_M                    vcpop.m	s0, v8
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e16, m1, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VMASK                               VCPOP_M                    vcpop.m	s0, v8
+# CHECK-NEXT:  1      3     1.00                         3     Andes45VMASK                               VCPOP_M                    vcpop.m	s0, v8
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e16, m2, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VMASK                               VCPOP_M                    vcpop.m	s0, v8
+# CHECK-NEXT:  1      3     1.00                         3     Andes45VMASK                               VCPOP_M                    vcpop.m	s0, v8
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e16, m4, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VMASK                               VCPOP_M                    vcpop.m	s0, v8
+# CHECK-NEXT:  1      3     1.00                         3     Andes45VMASK                               VCPOP_M                    vcpop.m	s0, v8
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e16, m8, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VMASK                               VCPOP_M                    vcpop.m	s0, v8
+# CHECK-NEXT:  1      3     1.00                         3     Andes45VMASK                               VCPOP_M                    vcpop.m	s0, v8
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e32, mf2, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VMASK                               VCPOP_M                    vcpop.m	s0, v8
+# CHECK-NEXT:  1      3     1.00                         3     Andes45VMASK                               VCPOP_M                    vcpop.m	s0, v8
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e32, m1, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VMASK                               VCPOP_M                    vcpop.m	s0, v8
+# CHECK-NEXT:  1      3     1.00                         3     Andes45VMASK                               VCPOP_M                    vcpop.m	s0, v8
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e32, m2, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VMASK                               VCPOP_M                    vcpop.m	s0, v8
+# CHECK-NEXT:  1      3     1.00                         3     Andes45VMASK                               VCPOP_M                    vcpop.m	s0, v8
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e32, m4, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VMASK                               VCPOP_M                    vcpop.m	s0, v8
+# CHECK-NEXT:  1      3     1.00                         3     Andes45VMASK                               VCPOP_M                    vcpop.m	s0, v8
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e32, m8, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VMASK                               VCPOP_M                    vcpop.m	s0, v8
+# CHECK-NEXT:  1      3     1.00                         3     Andes45VMASK                               VCPOP_M                    vcpop.m	s0, v8
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e64, m1, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VMASK                               VCPOP_M                    vcpop.m	s0, v8
+# CHECK-NEXT:  1      3     1.00                         3     Andes45VMASK                               VCPOP_M                    vcpop.m	s0, v8
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e64, m2, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VMASK                               VCPOP_M                    vcpop.m	s0, v8
+# CHECK-NEXT:  1      3     1.00                         3     Andes45VMASK                               VCPOP_M                    vcpop.m	s0, v8
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e64, m4, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VMASK                               VCPOP_M                    vcpop.m	s0, v8
+# CHECK-NEXT:  1      3     1.00                         3     Andes45VMASK                               VCPOP_M                    vcpop.m	s0, v8
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e64, m8, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VMASK                               VCPOP_M                    vcpop.m	s0, v8
+# CHECK-NEXT:  1      3     1.00                         3     Andes45VMASK                               VCPOP_M                    vcpop.m	s0, v8
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e16, mf2, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VMASK                               VFIRST_M                   vfirst.m	s0, v8
+# CHECK-NEXT:  1      3     1.00                         3     Andes45VMASK                               VFIRST_M                   vfirst.m	s0, v8
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e16, mf4, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VMASK                               VFIRST_M                   vfirst.m	s0, v8
+# CHECK-NEXT:  1      3     1.00                         3     Andes45VMASK                               VFIRST_M                   vfirst.m	s0, v8
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e16, m1, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VMASK                               VFIRST_M                   vfirst.m	s0, v8
+# CHECK-NEXT:  1      3     1.00                         3     Andes45VMASK                               VFIRST_M                   vfirst.m	s0, v8
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e16, m2, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VMASK                               VFIRST_M                   vfirst.m	s0, v8
+# CHECK-NEXT:  1      3     1.00                         3     Andes45VMASK                               VFIRST_M                   vfirst.m	s0, v8
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e16, m4, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VMASK                               VFIRST_M                   vfirst.m	s0, v8
+# CHECK-NEXT:  1      3     1.00                         3     Andes45VMASK                               VFIRST_M                   vfirst.m	s0, v8
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e16, m8, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VMASK                               VFIRST_M                   vfirst.m	s0, v8
+# CHECK-NEXT:  1      3     1.00                         3     Andes45VMASK                               VFIRST_M                   vfirst.m	s0, v8
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e32, mf2, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VMASK                               VFIRST_M                   vfirst.m	s0, v8
+# CHECK-NEXT:  1      3     1.00                         3     Andes45VMASK                               VFIRST_M                   vfirst.m	s0, v8
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e32, m1, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VMASK                               VFIRST_M                   vfirst.m	s0, v8
+# CHECK-NEXT:  1      3     1.00                         3     Andes45VMASK                               VFIRST_M                   vfirst.m	s0, v8
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e32, m2, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VMASK                               VFIRST_M                   vfirst.m	s0, v8
+# CHECK-NEXT:  1      3     1.00                         3     Andes45VMASK                               VFIRST_M                   vfirst.m	s0, v8
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e32, m4, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VMASK                               VFIRST_M                   vfirst.m	s0, v8
+# CHECK-NEXT:  1      3     1.00                         3     Andes45VMASK                               VFIRST_M                   vfirst.m	s0, v8
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e32, m8, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VMASK                               VFIRST_M                   vfirst.m	s0, v8
+# CHECK-NEXT:  1      3     1.00                         3     Andes45VMASK                               VFIRST_M                   vfirst.m	s0, v8
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e64, m1, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VMASK                               VFIRST_M                   vfirst.m	s0, v8
+# CHECK-NEXT:  1      3     1.00                         3     Andes45VMASK                               VFIRST_M                   vfirst.m	s0, v8
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e64, m2, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VMASK                               VFIRST_M                   vfirst.m	s0, v8
+# CHECK-NEXT:  1      3     1.00                         3     Andes45VMASK                               VFIRST_M                   vfirst.m	s0, v8
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e64, m4, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VMASK                               VFIRST_M                   vfirst.m	s0, v8
+# CHECK-NEXT:  1      3     1.00                         3     Andes45VMASK                               VFIRST_M                   vfirst.m	s0, v8
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e64, m8, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VMASK                               VFIRST_M                   vfirst.m	s0, v8
+# CHECK-NEXT:  1      3     1.00                         3     Andes45VMASK                               VFIRST_M                   vfirst.m	s0, v8
 
 # CHECK:      Resources:
 # CHECK-NEXT: [0.0] - Andes45ALU
@@ -1273,7 +1273,7 @@ vfirst.m x8, v8
 
 # CHECK:      Resource pressure per iteration:
 # CHECK-NEXT: [0.0]  [0.1]  [1]    [2]    [3]    [4]    [5]    [6]    [7]    [8]    [9]    [10]   [11]   [12]   [13]   [14]   [15]
-# CHECK-NEXT:  -      -     301.00  -      -      -      -      -      -      -      -      -      -      -      -     301.00  -
+# CHECK-NEXT:  -      -     301.00  -      -      -      -      -      -      -      -      -      -      -      -     345.00  -
 
 # CHECK:      Resource pressure by instruction:
 # CHECK-NEXT: [0.0]  [0.1]  [1]    [2]    [3]    [4]    [5]    [6]    [7]    [8]    [9]    [10]   [11]   [12]   [13]   [14]   [15]   Instructions:
@@ -1770,11 +1770,11 @@ vfirst.m x8, v8
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -     vsetvli	t3, zero, e8, m1, tu, mu
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     1.00    -     vid.v	v8
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -     vsetvli	t3, zero, e8, m2, tu, mu
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     1.00    -     vid.v	v8
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     2.00    -     vid.v	v8
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -     vsetvli	t3, zero, e8, m4, tu, mu
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     1.00    -     vid.v	v8
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     4.00    -     vid.v	v8
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -     vsetvli	t3, zero, e8, m8, tu, mu
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     1.00    -     vid.v	v8
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     8.00    -     vid.v	v8
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -     vsetvli	t3, zero, e16, mf2, tu, mu
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     1.00    -     vid.v	v8
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -     vsetvli	t3, zero, e16, mf4, tu, mu
@@ -1782,29 +1782,29 @@ vfirst.m x8, v8
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -     vsetvli	t3, zero, e16, m1, tu, mu
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     1.00    -     vid.v	v8
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -     vsetvli	t3, zero, e16, m2, tu, mu
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     1.00    -     vid.v	v8
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     2.00    -     vid.v	v8
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -     vsetvli	t3, zero, e16, m4, tu, mu
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     1.00    -     vid.v	v8
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     4.00    -     vid.v	v8
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -     vsetvli	t3, zero, e16, m8, tu, mu
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     1.00    -     vid.v	v8
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     8.00    -     vid.v	v8
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -     vsetvli	t3, zero, e32, mf2, tu, mu
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     1.00    -     vid.v	v8
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -     vsetvli	t3, zero, e32, m1, tu, mu
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     1.00    -     vid.v	v8
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -     vsetvli	t3, zero, e32, m2, tu, mu
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     1.00    -     vid.v	v8
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     2.00    -     vid.v	v8
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -     vsetvli	t3, zero, e32, m4, tu, mu
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     1.00    -     vid.v	v8
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     4.00    -     vid.v	v8
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -     vsetvli	t3, zero, e32, m8, tu, mu
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     1.00    -     vid.v	v8
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     8.00    -     vid.v	v8
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -     vsetvli	t3, zero, e64, m1, tu, mu
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     1.00    -     vid.v	v8
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -     vsetvli	t3, zero, e64, m2, tu, mu
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     1.00    -     vid.v	v8
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     2.00    -     vid.v	v8
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -     vsetvli	t3, zero, e64, m4, tu, mu
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     1.00    -     vid.v	v8
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     4.00    -     vid.v	v8
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -     vsetvli	t3, zero, e64, m8, tu, mu
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     1.00    -     vid.v	v8
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     8.00    -     vid.v	v8
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -     vsetvli	t3, zero, e8, mf2, tu, mu
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     1.00    -     vcpop.m	s0, v8
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -     vsetvli	t3, zero, e8, mf4, tu, mu

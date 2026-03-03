@@ -1103,13 +1103,26 @@ foreach mx = SchedMxListFWRed in {
 foreach mx = SchedMxList in {
   defvar IsWorstCase = Andes45IsWorstCaseMX<mx, SchedMxList>.c;
 
-  defm "" : LMULWriteResMX<"WriteVMALUV", [Andes45VMASK], mx, IsWorstCase>;
-  defm "" : LMULWriteResMX<"WriteVMPopV", [Andes45VMASK], mx, IsWorstCase>;
-  defm "" : LMULWriteResMX<"WriteVMFFSV", [Andes45VMASK], mx, IsWorstCase>;
-  defm "" : LMULWriteResMX<"WriteVMSFSV", [Andes45VMASK], mx, IsWorstCase>;
+  let Latency = 3, ReleaseAtCycles = [Andes45VLEN_DLEN_RATIO] in {
+    defm "" : LMULWriteResMX<"WriteVMALUV", [Andes45VMASK], mx, IsWorstCase>;
+    defm "" : LMULWriteResMX<"WriteVMSFSV", [Andes45VMASK], mx, IsWorstCase>;
+  }
 
-  defm "" : LMULWriteResMX<"WriteVIotaV", [Andes45VMASK], mx, IsWorstCase>;
-  defm "" : LMULWriteResMX<"WriteVIdxV", [Andes45VMASK], mx, IsWorstCase>;
+  let Latency = !add(3, !ne(Andes45VLEN, Andes45DLEN)),
+      ReleaseAtCycles = [Andes45VLEN_DLEN_RATIO] in {
+    defm "" : LMULWriteResMX<"WriteVMPopV", [Andes45VMASK], mx, IsWorstCase>;
+    defm "" : LMULWriteResMX<"WriteVMFFSV", [Andes45VMASK], mx, IsWorstCase>;
+  }
+
+}
+// TODO: viota and vid have different latency and throughput if VLEN/DLEN=2.
+foreach mx = SchedMxList in {
+  defvar Cycles = Andes45GetCyclesDefault<mx>.c;
+  defvar IsWorstCase = Andes45IsWorstCaseMX<mx, SchedMxList>.c;
+  let Latency = 4, ReleaseAtCycles = [Cycles] in {
+    defm "" : LMULWriteResMX<"WriteVIotaV", [Andes45VMASK], mx, IsWorstCase>;
+    defm "" : LMULWriteResMX<"WriteVIdxV", [Andes45VMASK], mx, IsWorstCase>;
+  }
 }
 
 // 16. Vector Permutation Instructions
