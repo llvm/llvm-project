@@ -135,3 +135,7 @@ TEST(UUIDTest, DenseSet) {
   EXPECT_FALSE(uuid_set.contains(b16));
   EXPECT_FALSE(uuid_set.contains(b20));
 }
+
+TEST(UUIDTest, BogusTest) {
+  EXPECT_FALSE(true);
+}
