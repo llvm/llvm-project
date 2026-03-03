@@ -451,10 +451,11 @@ void ThreadPlanCallFunction::SetBreakpoints() {
         const LazyBool skip_prologue = eLazyBoolNo;
         const bool is_internal = true;
         const bool is_hardware = false;
+        const bool offset_is_insn_count = false;
         m_error_backstop_bp_sp = m_process.GetTarget().CreateBreakpoint(
-              &stdlib_module_list, NULL, backstop_name.str().c_str(),
-              eFunctionNameTypeFull, eLanguageTypeUnknown, 0, skip_prologue,
-              is_internal, is_hardware);
+            &stdlib_module_list, NULL, backstop_name.str().c_str(),
+            eFunctionNameTypeFull, eLanguageTypeUnknown, 0,
+            offset_is_insn_count, skip_prologue, is_internal, is_hardware);
       }
     }
   }
