@@ -2314,20 +2314,19 @@ Instruction *InstCombinerImpl::foldBinopWithPhiOperands(BinaryOperator &BO) {
 }
 
 Instruction *InstCombinerImpl::foldBinOpIntoSelectOrPhi(BinaryOperator &I) {
-  auto TryFoldOperand = [&](unsigned OpIdx, bool IsOtherParamConst) {
+  auto TryFoldOperand = [&](unsigned OpIdx,
+                            bool IsOtherParamConst) -> Instruction * {
     if (auto *Sel = dyn_cast<SelectInst>(I.getOperand(OpIdx)))
       return FoldOpIntoSelect(I, Sel, false, !IsOtherParamConst);
     if (auto *PN = dyn_cast<PHINode>(I.getOperand(OpIdx)))
       return foldOpIntoPhi(I, PN);
-    return static_cast<Instruction *>(nullptr);
+    return nullptr;
   };
 
   if (Instruction *NewI =
           TryFoldOperand(/*OpIdx=*/0, isa<Constant>(I.getOperand(1))))
     return NewI;
-  if (I.isCommutative())
-    return TryFoldOperand(/*OpIdx=*/1, isa<Constant>(I.getOperand(0)));
-  return nullptr;
+  return TryFoldOperand(/*OpIdx=*/1, isa<Constant>(I.getOperand(0)));
 }
 
 static bool shouldMergeGEPs(GEPOperator &GEP, GEPOperator &Src) {
