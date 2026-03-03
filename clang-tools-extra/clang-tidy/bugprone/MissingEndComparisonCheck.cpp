@@ -17,9 +17,7 @@ using namespace clang::ast_matchers;
 
 namespace clang::tidy::bugprone {
 
-namespace {
-
-constexpr llvm::StringRef IteratorAlgorithms[] = {
+static constexpr llvm::StringRef IteratorAlgorithms[] = {
     "::std::find",          "::std::find_if",
     "::std::find_if_not",   "::std::search",
     "::std::search_n",      "::std::find_end",
@@ -28,13 +26,12 @@ constexpr llvm::StringRef IteratorAlgorithms[] = {
     "::std::min_element",   "::std::max_element",
     "::std::adjacent_find", "::std::is_sorted_until"};
 
-constexpr llvm::StringRef RangeAlgorithms[] = {
+static constexpr llvm::StringRef RangeAlgorithms[] = {
     "::std::ranges::find",          "::std::ranges::find_if",
     "::std::ranges::find_if_not",   "::std::ranges::lower_bound",
     "::std::ranges::upper_bound",   "::std::ranges::min_element",
     "::std::ranges::max_element",   "::std::ranges::find_first_of",
     "::std::ranges::adjacent_find", "::std::ranges::is_sorted_until"};
-} // namespace
 
 MissingEndComparisonCheck::MissingEndComparisonCheck(StringRef Name,
                                                      ClangTidyContext *Context)
@@ -62,14 +59,14 @@ static std::optional<std::string> getRangesEndText(const ASTContext &Context,
   if (IsIterPair) {
     if (Call->getNumArgs() < 3)
       return std::nullopt;
-    // find(CPO, Iter, Sent, Val...) -> Sent is Arg 2.
+    // CPO(Iter, Sent, Val...) -> Sent is Arg 2.
     const Expr *EndArg = Call->getArg(2);
     return tooling::fixit::getText(*EndArg, Context).str();
   }
 
   if (Call->getNumArgs() < 2)
     return std::nullopt;
-  // find(CPO, Range, Val, Proj) -> Range is Arg 1.
+  // CPO(Range, Val, Proj) -> Range is Arg 1.
   const Expr *RangeArg = Call->getArg(1);
   // Avoid potential side-effects
   const Expr *InnerRange = RangeArg->IgnoreParenImpCasts();
