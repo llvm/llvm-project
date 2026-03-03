@@ -1465,6 +1465,14 @@ bool DisassemblerLLVMC::MCDisasmInstance::IsAuthenticated(
   return InstrDesc.isAuthenticated() || IsBrkC47x;
 }
 
+static std::string &strip_trailing_comma(std::string &features_str) {
+  // We should delete the last comma from string.
+  if (!features_str.empty() && features_str.back() == ',')
+    features_str.pop_back();
+
+  return features_str;
+}
+
 DisassemblerLLVMC::DisassemblerLLVMC(const ArchSpec &arch,
                                      const char *flavor_string,
                                      const char *cpu_string,
@@ -1620,8 +1628,9 @@ DisassemblerLLVMC::DisassemblerLLVMC(const ArchSpec &arch,
   // We use m_disasm_up.get() to tell whether we are valid or not, so if this
   // isn't good for some reason, we won't be valid and FindPlugin will fail and
   // we won't get used.
-  m_disasm_up = MCDisasmInstance::Create(triple_str, cpu, features_str.c_str(),
-                                         flavor, *this);
+  m_disasm_up = MCDisasmInstance::Create(
+      triple_str, cpu, strip_trailing_comma(features_str).c_str(), flavor,
+      *this);
 
   llvm::Triple::ArchType llvm_arch = triple.getArch();
 
@@ -1630,7 +1639,8 @@ DisassemblerLLVMC::DisassemblerLLVMC(const ArchSpec &arch,
   if (llvm_arch == llvm::Triple::arm) {
     std::string thumb_triple(thumb_arch.GetTriple().getTriple());
     m_alternate_disasm_up = MCDisasmInstance::Create(
-        thumb_triple.c_str(), "", features_str.c_str(), flavor, *this);
+        thumb_triple.c_str(), "", strip_trailing_comma(features_str).c_str(),
+        flavor, *this);
     if (!m_alternate_disasm_up)
       m_disasm_up.reset();
 
@@ -1643,7 +1653,8 @@ DisassemblerLLVMC::DisassemblerLLVMC(const ArchSpec &arch,
       features_str += "+micromips,";
 
     m_alternate_disasm_up = MCDisasmInstance::Create(
-        triple_str, cpu, features_str.c_str(), flavor, *this);
+        triple_str, cpu, strip_trailing_comma(features_str).c_str(), flavor,
+        *this);
     if (!m_alternate_disasm_up)
       m_disasm_up.reset();
   }
