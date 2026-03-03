@@ -8210,13 +8210,11 @@ bool TargetLowering::expandDIVREMByConstant(SDNode *N,
 
     // Determine the largest legal scalar integer type we can safely use
     // for chunk operations.
-    unsigned MaxChunk;
-    EVT LegalVT = EVT(getRegisterType(*DAG.getContext(), VT));
-    if (!LegalVT.isInteger())
-      return false;
+    EVT LegalVT = getTypeToTransformTo(*DAG.getContext(), VT);
 
     // Clamp to the original bit width.
-    MaxChunk = std::min<unsigned>(LegalVT.getScalarSizeInBits(), BitWidth);
+    unsigned MaxChunk =
+        std::min<unsigned>(LegalVT.getScalarSizeInBits(), BitWidth);
 
     // Find the largest W in (MaxChunk/2, MaxChunk] such that
     // 2^W ≡ 1 (mod Divisor).  If this holds, the value can be
