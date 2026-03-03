@@ -1709,31 +1709,38 @@ InstructionCost GCNTTIImpl::getScalingFactorCost(Type *Ty, GlobalValue *BaseGV,
                                                  StackOffset BaseOffset,
                                                  bool HasBaseReg, int64_t Scale,
                                                  unsigned AddrSpace) const {
-  // AMDGPU has limited addressing modes. base+scale*index requires an extra
-  // ADD instruction, unlike architectures with rich addressing modes.
-  if (HasBaseReg && Scale != 0)
+  if (HasBaseReg && Scale != 0) {
+    // gfx1250+ can fold base+scale*index into the instruction when scale
+    // equals the memory access size (scale_offset bit). This is supported
+    // for global/constant/flat/scratch but NOT for LDS or GDS.
+    // GDS does not exist on gfx1250+, but we exclude REGION_ADDRESS for
+    // correctness since the address space is still representable in IR.
+    if (getST()->hasScaleOffset() && Ty && Ty->isSized() &&
+        AddrSpace != AMDGPUAS::LOCAL_ADDRESS &&
+        AddrSpace != AMDGPUAS::REGION_ADDRESS) {
+      TypeSize StoreSize = getDataLayout().getTypeStoreSize(Ty);
+      if (!StoreSize.isScalable() &&
+          static_cast<int64_t>(StoreSize.getFixedValue()) == Scale)
+        return 0;
+    }
     return 1;
+  }
   return BaseT::getScalingFactorCost(Ty, BaseGV, BaseOffset, HasBaseReg, Scale,
                                      AddrSpace);
 }
 
 bool GCNTTIImpl::isLSRCostLess(const TTI::LSRCost &A,
                                const TTI::LSRCost &B) const {
-  // GFX9+: favor lower per-iteration work over preheader/setup costs.
+  // Favor lower per-iteration work over preheader/setup costs.
   // AMDGPU lacks rich addressing modes, so ScaleCost is folded into the
   // effective instruction count (base+scale*index requires a separate ADD).
-  if (getST()->getGeneration() >= AMDGPUSubtarget::GFX9) {
-    unsigned EffInsnsA = A.Insns + A.ScaleCost;
-    unsigned EffInsnsB = B.Insns + B.ScaleCost;
+  unsigned EffInsnsA = A.Insns + A.ScaleCost;
+  unsigned EffInsnsB = B.Insns + B.ScaleCost;
 
-    return std::tie(EffInsnsA, A.NumIVMuls, A.AddRecCost, A.NumBaseAdds,
-                    A.SetupCost, A.ImmCost, A.NumRegs) <
-           std::tie(EffInsnsB, B.NumIVMuls, B.AddRecCost, B.NumBaseAdds,
-                    B.SetupCost, B.ImmCost, B.NumRegs);
-  }
-
-  // Pre-GFX9: keep the default behavior.
-  return BaseT::isLSRCostLess(A, B);
+  return std::tie(EffInsnsA, A.NumIVMuls, A.AddRecCost, A.NumBaseAdds,
+                  A.SetupCost, A.ImmCost, A.NumRegs) <
+         std::tie(EffInsnsB, B.NumIVMuls, B.AddRecCost, B.NumBaseAdds,
+                  B.SetupCost, B.ImmCost, B.NumRegs);
 }
 
 bool GCNTTIImpl::isNumRegsMajorCostOfLSR() const {

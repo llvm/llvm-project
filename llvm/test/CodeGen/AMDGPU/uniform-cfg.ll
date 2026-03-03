@@ -1140,7 +1140,6 @@ define void @move_to_valu_vgpr_operand_phi(ptr addrspace(3) %out) {
 ; SI-LABEL: move_to_valu_vgpr_operand_phi:
 ; SI:       ; %bb.0: ; %bb0
 ; SI-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; SI-NEXT:    v_add_i32_e32 v0, vcc, 28, v0
 ; SI-NEXT:    v_mov_b32_e32 v1, 1
 ; SI-NEXT:    s_and_b64 vcc, exec, 0
 ; SI-NEXT:    s_mov_b32 m0, -1
@@ -1157,7 +1156,8 @@ define void @move_to_valu_vgpr_operand_phi(ptr addrspace(3) %out) {
 ; SI-NEXT:    s_cbranch_scc1 .LBB20_1
 ; SI-NEXT:  ; %bb.3: ; %bb2
 ; SI-NEXT:    ; in Loop: Header=BB20_2 Depth=1
-; SI-NEXT:    ds_write_b32 v0, v1
+; SI-NEXT:    v_add_i32_e64 v2, s[4:5], 28, v0
+; SI-NEXT:    ds_write_b32 v2, v1
 ; SI-NEXT:    s_mov_b64 vcc, vcc
 ; SI-NEXT:    s_cbranch_vccz .LBB20_1
 ; SI-NEXT:  ; %bb.4: ; %DummyReturnBlock
@@ -1167,7 +1167,6 @@ define void @move_to_valu_vgpr_operand_phi(ptr addrspace(3) %out) {
 ; VI-LABEL: move_to_valu_vgpr_operand_phi:
 ; VI:       ; %bb.0: ; %bb0
 ; VI-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; VI-NEXT:    v_add_u32_e32 v0, vcc, 28, v0
 ; VI-NEXT:    v_mov_b32_e32 v1, 1
 ; VI-NEXT:    s_and_b64 vcc, exec, 0
 ; VI-NEXT:    s_mov_b32 m0, -1
@@ -1184,7 +1183,7 @@ define void @move_to_valu_vgpr_operand_phi(ptr addrspace(3) %out) {
 ; VI-NEXT:    s_cbranch_scc1 .LBB20_1
 ; VI-NEXT:  ; %bb.3: ; %bb2
 ; VI-NEXT:    ; in Loop: Header=BB20_2 Depth=1
-; VI-NEXT:    ds_write_b32 v0, v1
+; VI-NEXT:    ds_write_b32 v0, v1 offset:28
 ; VI-NEXT:    s_mov_b64 vcc, vcc
 ; VI-NEXT:    s_cbranch_vccz .LBB20_1
 ; VI-NEXT:  ; %bb.4: ; %DummyReturnBlock

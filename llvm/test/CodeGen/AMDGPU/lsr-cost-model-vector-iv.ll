@@ -15,7 +15,7 @@ declare i32 @llvm.amdgcn.workitem.id.x() #0
 ; CHECK:      v_add_u32
 ; CHECK-NOT:  v_add_u32
 ; CHECK:      s_cbranch
-define amdgpu_kernel void @lsr_vector_iv_cost(<2 x i32> %arg0, i32 %stride) {
+define amdgpu_kernel void @lsr_vector_iv_cost(<2 x i32> %arg0, i32 %stride, ptr addrspace(1) %out) {
 entry:
   %tid = tail call i32 @llvm.amdgcn.workitem.id.x()
   br label %loop
@@ -31,7 +31,12 @@ loop:
   %sum4 = add i32 %sum3, %elt
   %or = or i32 %sum4, %stride
   %shr = lshr i32 %iv.pn, 1
-  br label %loop
+  %cmp = icmp ult i32 %sum1, 1024
+  br i1 %cmp, label %loop, label %exit
+
+exit:
+  store i32 %or, ptr addrspace(1) %out
+  ret void
 }
 
 attributes #0 = { nocallback nofree nosync nounwind speculatable willreturn memory(none) }
