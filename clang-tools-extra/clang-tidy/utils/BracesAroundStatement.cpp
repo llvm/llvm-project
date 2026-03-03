@@ -133,7 +133,7 @@ BraceInsertionHints getBraceInsertionsHints(const Stmt *const S,
 
   SourceLocation InsertLoc = StartLoc;
   if (S != InnerS) {
-    if (std::optional<Token> Tok = tidy::utils::lexer::getPreviousToken(
+    if (std::optional<Token> Tok = utils::lexer::getPreviousToken(
             InnerS->getBeginLoc(), SM, LangOpts, /*SkipComments=*/true)) {
       InsertLoc = Tok->getLocation();
     }
