@@ -199,10 +199,10 @@ exit:
   ret i32 %sel
 }
 
-define i32 @loop_inv_select_condition_issue_182152(i32 %iv.start) {
+define i32 @loop_inv_select_condition_issue_182152(i32 %iv.start, i32 %a, i32 %b) {
 ; CHECK-LABEL: @loop_inv_select_condition_issue_182152(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[INV_COND:%.*]] = icmp eq i32 0, 0
+; CHECK-NEXT:    [[INV_COND:%.*]] = icmp eq i32 [[A:%.*]], [[B:%.*]]
 ; CHECK-NEXT:    [[SMAX:%.*]] = call i32 @llvm.smax.i32(i32 [[IV_START:%.*]], i32 1)
 ; CHECK-NEXT:    [[TMP0:%.*]] = add i32 [[SMAX]], 1
 ; CHECK-NEXT:    [[TMP1:%.*]] = sub i32 [[TMP0]], [[IV_START]]
@@ -252,7 +252,7 @@ define i32 @loop_inv_select_condition_issue_182152(i32 %iv.start) {
 ; CHECK-NEXT:    ret i32 [[SELECT_LCSSA]]
 ;
 entry:
-  %inv_cond = icmp eq i32 0, 0
+  %inv_cond = icmp eq i32 %a, %b
   br label %loop
 
 loop:
