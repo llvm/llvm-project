@@ -8309,7 +8309,8 @@ VPlanPtr LoopVectorizationPlanner::tryToBuildVPlanWithVPRecipes(
       if (isa<VPWidenCanonicalIVRecipe, VPBlendRecipe, VPReductionRecipe>(&R))
         continue;
       auto *VPI = cast<VPInstruction>(&R);
-      if (!VPI->getUnderlyingValue())
+      if (!VPI->getUnderlyingValue() ||
+          VPI->getOpcode() == VPInstruction::BranchOnCount)
         continue;
 
       // TODO: Gradually replace uses of underlying instruction by analyses on
