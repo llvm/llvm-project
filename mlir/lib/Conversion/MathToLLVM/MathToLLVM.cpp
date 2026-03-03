@@ -359,14 +359,14 @@ struct RsqrtOpLowering
   }
 };
 
-struct IsNaNOpLowering
-    : public ConvertOpToLLVMPattern<math::IsNaNOp,
-                                    /*FailOnUnsupportedFP=*/true> {
+template <typename OpTy, int FPClass>
+struct IsFPClassOpLowering
+    : public ConvertOpToLLVMPattern<OpTy, /*FailOnUnsupportedFP=*/true> {
   using ConvertOpToLLVMPattern<
-      math::IsNaNOp, /*FailOnUnsupportedFP=*/true>::ConvertOpToLLVMPattern;
+      OpTy, /*FailOnUnsupportedFP=*/true>::ConvertOpToLLVMPattern;
 
   LogicalResult
-  matchAndRewrite(math::IsNaNOp op, OpAdaptor adaptor,
+  matchAndRewrite(OpTy op, typename OpTy::Adaptor adaptor,
                   ConversionPatternRewriter &rewriter) const override {
     const auto &typeConverter = *this->getTypeConverter();
     auto operandType =
@@ -375,33 +375,18 @@ struct IsNaNOpLowering
     if (!operandType || !resultType)
       return failure();
 
-    rewriter.replaceOpWithNewOp<LLVM::IsFPClass>(
-        op, resultType, adaptor.getOperand(), llvm::fcNan);
+    rewriter.replaceOpWithNewOp<LLVM::IsFPClass>(op, resultType,
+                                                 adaptor.getOperand(), FPClass);
     return success();
   }
 };
 
-struct IsFiniteOpLowering
-    : public ConvertOpToLLVMPattern<math::IsFiniteOp,
-                                    /*FailOnUnsupportedFP=*/true> {
-  using ConvertOpToLLVMPattern<
-      math::IsFiniteOp, /*FailOnUnsupportedFP=*/true>::ConvertOpToLLVMPattern;
-
-  LogicalResult
-  matchAndRewrite(math::IsFiniteOp op, OpAdaptor adaptor,
-                  ConversionPatternRewriter &rewriter) const override {
-    const auto &typeConverter = *this->getTypeConverter();
-    auto operandType =
-        typeConverter.convertType(adaptor.getOperand().getType());
-    auto resultType = typeConverter.convertType(op.getResult().getType());
-    if (!operandType || !resultType)
-      return failure();
-
-    rewriter.replaceOpWithNewOp<LLVM::IsFPClass>(
-        op, resultType, adaptor.getOperand(), llvm::fcFinite);
-    return success();
-  }
-};
+using IsNaNOpLowering = IsFPClassOpLowering<math::IsNaNOp, llvm::fcNan>;
+using IsFiniteOpLowering =
+    IsFPClassOpLowering<math::IsFiniteOp, llvm::fcFinite>;
+using IsNormalOpLowering =
+    IsFPClassOpLowering<math::IsNormalOp, llvm::fcNormal>;
+using IsInfOpLowering = IsFPClassOpLowering<math::IsInfOp, llvm::fcInf>;
 
 struct ConvertMathToLLVMPass
     : public impl::ConvertMathToLLVMPassBase<ConvertMathToLLVMPass> {
@@ -428,6 +413,8 @@ void mlir::populateMathToLLVMConversionPatterns(
   patterns.add<
     IsNaNOpLowering,
     IsFiniteOpLowering,
+    IsNormalOpLowering,
+    IsInfOpLowering,
     AbsFOpLowering,
     AbsIOpLowering,
     CeilOpLowering,
