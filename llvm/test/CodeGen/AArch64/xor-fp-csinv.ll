@@ -8,8 +8,7 @@ define i32 @xor_fp_ogt_f32(float %a, float %b, i32 %x) {
 ; CHECK-LABEL: xor_fp_ogt_f32:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    fcmp s0, s1
-; CHECK-NEXT:    csetm w8, gt
-; CHECK-NEXT:    eor w0, w0, w8
+; CHECK-NEXT:    cinv w0, w0, gt
 ; CHECK-NEXT:    ret
   %cmp = fcmp ogt float %a, %b
   %mask = sext i1 %cmp to i32
@@ -21,8 +20,7 @@ define i32 @xor_fp_olt_f64(double %a, double %b, i32 %x) {
 ; CHECK-LABEL: xor_fp_olt_f64:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    fcmp d0, d1
-; CHECK-NEXT:    csetm w8, mi
-; CHECK-NEXT:    eor w0, w0, w8
+; CHECK-NEXT:    cinv w0, w0, mi
 ; CHECK-NEXT:    ret
   %cmp = fcmp olt double %a, %b
   %mask = sext i1 %cmp to i32
@@ -35,8 +33,7 @@ define i32 @xor_fp_ole_f32_inverted(float %a, float %b, i32 %x) {
 ; CHECK-LABEL: xor_fp_ole_f32_inverted:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    fcmp s0, s1
-; CHECK-NEXT:    csetm w8, ls
-; CHECK-NEXT:    eor w0, w0, w8
+; CHECK-NEXT:    cinv w0, w0, ls
 ; CHECK-NEXT:    ret
   %cmp = fcmp ole float %a, %b
   %mask = sext i1 %cmp to i32
@@ -49,8 +46,7 @@ define i64 @xor_fp_oge_f32_i64(float %a, float %b, i64 %x) {
 ; CHECK-LABEL: xor_fp_oge_f32_i64:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    fcmp s0, s1
-; CHECK-NEXT:    csetm x8, ge
-; CHECK-NEXT:    eor x0, x0, x8
+; CHECK-NEXT:    cinv x0, x0, ge
 ; CHECK-NEXT:    ret
   %cmp = fcmp oge float %a, %b
   %mask = sext i1 %cmp to i64
