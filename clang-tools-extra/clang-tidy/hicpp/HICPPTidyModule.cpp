@@ -8,7 +8,7 @@
 
 #include "../ClangTidy.h"
 #include "../ClangTidyModule.h"
-#include "../bugprone/ExceptionBaseclassCheck.h"
+#include "../bugprone/StdExceptionBaseclassCheck.h"
 #include "../bugprone/UndelegatedConstructorCheck.h"
 #include "../bugprone/UnusedReturnValueCheck.h"
 #include "../bugprone/UseAfterMoveCheck.h"
@@ -56,7 +56,7 @@ public:
         "hicpp-braces-around-statements");
     CheckFactories.registerCheck<modernize::DeprecatedHeadersCheck>(
         "hicpp-deprecated-headers");
-    CheckFactories.registerCheck<bugprone::ExceptionBaseclassCheck>(
+    CheckFactories.registerCheck<bugprone::StdExceptionBaseclassCheck>(
         "hicpp-exception-baseclass");
     CheckFactories.registerCheck<bugprone::UnusedReturnValueCheck>(
         "hicpp-ignored-remove-result");

@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLVM_CLANG_TOOLS_EXTRA_CLANG_TIDY_BUGPRONE_EXCEPTIONBASECLASSCHECK_H
-#define LLVM_CLANG_TOOLS_EXTRA_CLANG_TIDY_BUGPRONE_EXCEPTIONBASECLASSCHECK_H
+#ifndef LLVM_CLANG_TOOLS_EXTRA_CLANG_TIDY_BUGPRONE_STD_EXCEPTIONBASECLASSCHECK_H
+#define LLVM_CLANG_TOOLS_EXTRA_CLANG_TIDY_BUGPRONE_STD_EXCEPTIONBASECLASSCHECK_H
 
 #include "../ClangTidyCheck.h"
 
@@ -17,10 +17,10 @@ namespace clang::tidy::bugprone {
 /// std::exception.
 ///
 /// For the user-facing documentation see:
-/// https://clang.llvm.org/extra/clang-tidy/checks/bugprone/exception-baseclass.html
-class ExceptionBaseclassCheck : public ClangTidyCheck {
+/// https://clang.llvm.org/extra/clang-tidy/checks/bugprone/std-exception-baseclass.html
+class StdExceptionBaseclassCheck : public ClangTidyCheck {
 public:
-  ExceptionBaseclassCheck(StringRef Name, ClangTidyContext *Context)
+  StdExceptionBaseclassCheck(StringRef Name, ClangTidyContext *Context)
       : ClangTidyCheck(Name, Context) {}
   bool isLanguageVersionSupported(const LangOptions &LangOpts) const override {
     return LangOpts.CPlusPlus;
@@ -31,4 +31,4 @@ public:
 
 } // namespace clang::tidy::bugprone
 
-#endif // LLVM_CLANG_TOOLS_EXTRA_CLANG_TIDY_BUGPRONE_EXCEPTIONBASECLASSCHECK_H
+#endif // LLVM_CLANG_TOOLS_EXTRA_CLANG_TIDY_BUGPRONE_STD_EXCEPTIONBASECLASSCHECK_H
