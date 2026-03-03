@@ -177,7 +177,8 @@ public:
 
   /// Enqueue nodes that were created as a result of processing
   /// a statement onto the work list.
-  void enqueue(ExplodedNodeSet &Set, const CFGBlock *Block, unsigned Idx);
+  void enqueueStmtNodes(ExplodedNodeSet &Set, const CFGBlock *Block,
+                        unsigned Idx);
 
   /// enqueue the nodes corresponding to the end of function onto the
   /// end of path / work list.

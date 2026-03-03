@@ -432,7 +432,8 @@ VPInstruction::VPInstruction(unsigned Opcode, ArrayRef<VPValue *> Operands,
   assert(hasRequiredFlagsForOpcode(getOpcode()) &&
          "Opcode requires specific flags to be set");
   assert((getNumOperandsForOpcode() == -1u ||
-          getNumOperandsForOpcode() == getNumOperands()) &&
+          getNumOperandsForOpcode() == getNumOperands() ||
+          (isMasked() && getNumOperandsForOpcode() + 1 == getNumOperands())) &&
          "number of operands does not match opcode");
 }
 
@@ -1277,6 +1278,7 @@ bool VPInstruction::isVectorToScalar() const {
 
 bool VPInstruction::isSingleScalar() const {
   switch (getOpcode()) {
+  case Instruction::Load:
   case Instruction::PHI:
   case VPInstruction::ExplicitVectorLength:
   case VPInstruction::ResumeForEpilogue:
@@ -1382,6 +1384,7 @@ bool VPInstruction::usesFirstLaneOnly(const VPValue *Op) const {
   case VPInstruction::Not:
     // TODO: Cover additional opcodes.
     return vputils::onlyFirstLaneUsed(this);
+  case Instruction::Load:
   case VPInstruction::ActiveLaneMask:
   case VPInstruction::ExplicitVectorLength:
   case VPInstruction::CalculateTripCountMinusVF:
@@ -1603,6 +1606,10 @@ void VPInstructionWithType::printRecipe(raw_ostream &O, const Twine &Indent,
     break;
   case VPInstruction::VScale:
     O << "vscale " << *ResultTy;
+    break;
+  case Instruction::Load:
+    O << "load ";
+    printOperands(O, SlotTracker);
     break;
   default:
     assert(Instruction::isCast(getOpcode()) && "unhandled opcode");
@@ -1944,7 +1951,7 @@ static InstructionCost getCostForIntrinsics(Intrinsic::ID ID,
   IntrinsicCostAttributes CostAttrs(
       ID, RetTy, Arguments, ParamTys, R.getFastMathFlags(),
       dyn_cast_or_null<IntrinsicInst>(R.getUnderlyingValue()),
-      InstructionCost::getInvalid(), &Ctx.TLI);
+      InstructionCost::getInvalid());
   return Ctx.TTI.getIntrinsicInstrCost(CostAttrs, Ctx.CostKind);
 }
 

@@ -1340,7 +1340,7 @@ void llvm::adjustKnownBitsForSelectArm(KnownBits &Known, Value *Cond,
 
   // Finally, we know we get information from the condition and its valid,
   // so return it.
-  Known = CondRes;
+  Known = std::move(CondRes);
 }
 
 // Match a signed min+max clamp pattern like smax(smin(In, CHigh), CLow).
@@ -2263,6 +2263,16 @@ static void computeKnownBitsFromOperator(const Operator *I,
         unsigned KnownZeroFirstBit = Log2_32(MaxVL) + 1;
         if (BitWidth > KnownZeroFirstBit)
           Known.Zero.setBitsFrom(KnownZeroFirstBit);
+        break;
+      }
+      case Intrinsic::amdgcn_mbcnt_hi:
+      case Intrinsic::amdgcn_mbcnt_lo: {
+        // Wave64 mbcnt_lo returns at most 32 + src1. Otherwise these return at
+        // most 31 + src1.
+        Known.Zero.setBitsFrom(
+            II->getIntrinsicID() == Intrinsic::amdgcn_mbcnt_lo ? 6 : 5);
+        computeKnownBits(I->getOperand(1), Known2, Q, Depth + 1);
+        Known = KnownBits::add(Known, Known2);
         break;
       }
       case Intrinsic::vscale: {
@@ -4965,6 +4975,13 @@ static constexpr KnownFPClass::MinMaxKind getMinMaxKind(Intrinsic::ID IID) {
   }
 }
 
+/// \return true if this is a floating point value that is known to have a
+/// magnitude smaller than 1. i.e., fabs(X) <= 1.0
+static bool isAbsoluteValueLessEqualOne(const Value *V) {
+  // TODO: Handle frexp and x - floor(x)?
+  return match(V, m_Intrinsic<Intrinsic::amdgcn_trig_preop>(m_Value()));
+}
+
 void computeKnownFPClass(const Value *V, const APInt &DemandedElts,
                          FPClassTest InterestedClasses, KnownFPClass &Known,
                          const SimplifyQuery &Q, unsigned Depth) {
@@ -5574,36 +5591,43 @@ void computeKnownFPClass(const Value *V, const APInt &DemandedElts,
                 Op->getType()->getScalarType()->getFltSemantics())
           : DenormalMode::getDynamic();
 
+    Value *LHS = Op->getOperand(0);
+    Value *RHS = Op->getOperand(1);
     // X * X is always non-negative or a NaN.
     // FIXME: Should check isGuaranteedNotToBeUndef
-    if (Op->getOperand(0) == Op->getOperand(1)) {
+    if (LHS == RHS) {
       KnownFPClass KnownSrc;
-      computeKnownFPClass(Op->getOperand(0), DemandedElts, fcAllFlags, KnownSrc,
-                          Q, Depth + 1);
+      computeKnownFPClass(LHS, DemandedElts, fcAllFlags, KnownSrc, Q,
+                          Depth + 1);
       Known = KnownFPClass::square(KnownSrc, Mode);
       break;
     }
 
-    const APFloat *CRHS;
-    if (match(Op->getOperand(1), m_APFloat(CRHS))) {
-      KnownFPClass KnownLHS;
-      computeKnownFPClass(Op->getOperand(0), DemandedElts, fcAllFlags, KnownLHS,
-                          Q, Depth + 1);
+    KnownFPClass KnownLHS, KnownRHS;
 
+    const APFloat *CRHS;
+    if (match(RHS, m_APFloat(CRHS))) {
+      computeKnownFPClass(LHS, DemandedElts, fcAllFlags, KnownLHS, Q,
+                          Depth + 1);
       Known = KnownFPClass::fmul(KnownLHS, *CRHS, Mode);
     } else {
-      KnownFPClass KnownLHS, KnownRHS;
-
-      computeKnownFPClass(Op->getOperand(1), DemandedElts, fcAllFlags, KnownRHS,
-                          Q, Depth + 1);
+      computeKnownFPClass(RHS, DemandedElts, fcAllFlags, KnownRHS, Q,
+                          Depth + 1);
       // TODO: Improve accuracy in unfused FMA pattern. We can prove an
       // additional not-nan if the addend is known-not negative infinity if the
       // multiply is known-not infinity.
 
-      computeKnownFPClass(Op->getOperand(0), DemandedElts, fcAllFlags, KnownLHS,
-                          Q, Depth + 1);
+      computeKnownFPClass(LHS, DemandedElts, fcAllFlags, KnownLHS, Q,
+                          Depth + 1);
       Known = KnownFPClass::fmul(KnownLHS, KnownRHS, Mode);
     }
+
+    /// Propgate no-infs if the other source is known smaller than one, such
+    /// that this cannot introduce overflow.
+    if (KnownLHS.isKnownNever(fcInf) && isAbsoluteValueLessEqualOne(RHS))
+      Known.knownNot(fcInf);
+    else if (KnownRHS.isKnownNever(fcInf) && isAbsoluteValueLessEqualOne(LHS))
+      Known.knownNot(fcInf);
 
     break;
   }
@@ -5911,6 +5935,34 @@ void computeKnownFPClass(const Value *V, const APInt &DemandedElts,
       }
     }
 
+    // Look for the case of a for loop which has a positive
+    // initial value and is incremented by a squared value.
+    // This will propagate sign information out of such loops.
+    if (P->getNumIncomingValues() != 2 || Known.cannotBeOrderedLessThanZero())
+      break;
+    for (unsigned I = 0; I < 2; I++) {
+      Value *RecurValue = P->getIncomingValue(1 - I);
+      IntrinsicInst *II = dyn_cast<IntrinsicInst>(RecurValue);
+      if (!II)
+        continue;
+      Value *R, *L, *Init;
+      PHINode *PN;
+      if (matchSimpleTernaryIntrinsicRecurrence(II, PN, Init, L, R) &&
+          PN == P) {
+        switch (II->getIntrinsicID()) {
+        case Intrinsic::fma:
+        case Intrinsic::fmuladd: {
+          KnownFPClass KnownStart;
+          computeKnownFPClass(Init, DemandedElts, InterestedClasses, KnownStart,
+                              Q, Depth + 1);
+          if (KnownStart.cannotBeOrderedLessThanZero() && L == R &&
+              isGuaranteedNotToBeUndef(L, Q.AC, Q.CxtI, Q.DT, Depth + 1))
+            Known.knownNot(KnownFPClass::OrderedLessThanZeroMask);
+          break;
+        }
+        }
+      }
+    }
     break;
   }
   case Instruction::BitCast: {
@@ -7520,7 +7572,7 @@ static bool canCreateUndefOrPoison(const Operator *Op, UndefPoisonKind Kind,
   case Instruction::Call:
     if (auto *II = dyn_cast<IntrinsicInst>(Op)) {
       switch (II->getIntrinsicID()) {
-      // TODO: Add more intrinsics.
+      // NOTE: Use IntrNoCreateUndefOrPoison when possible.
       case Intrinsic::ctlz:
       case Intrinsic::cttz:
       case Intrinsic::abs:
@@ -9231,6 +9283,40 @@ static bool matchTwoInputRecurrence(const PHINode *PN, InstTy *&Inst,
   return false;
 }
 
+template <typename InstTy>
+static bool matchThreeInputRecurrence(const PHINode *PN, InstTy *&Inst,
+                                      Value *&Init, Value *&OtherOp0,
+                                      Value *&OtherOp1) {
+  if (PN->getNumIncomingValues() != 2)
+    return false;
+
+  for (unsigned I = 0; I != 2; ++I) {
+    if (auto *Operation = dyn_cast<InstTy>(PN->getIncomingValue(I));
+        Operation && Operation->getNumOperands() >= 3) {
+      Value *Op0 = Operation->getOperand(0);
+      Value *Op1 = Operation->getOperand(1);
+      Value *Op2 = Operation->getOperand(2);
+
+      if (Op0 != PN && Op1 != PN && Op2 != PN)
+        continue;
+
+      Inst = Operation;
+      Init = PN->getIncomingValue(!I);
+      if (Op0 == PN) {
+        OtherOp0 = Op1;
+        OtherOp1 = Op2;
+      } else if (Op1 == PN) {
+        OtherOp0 = Op0;
+        OtherOp1 = Op2;
+      } else {
+        OtherOp0 = Op0;
+        OtherOp1 = Op1;
+      }
+      return true;
+    }
+  }
+  return false;
+}
 bool llvm::matchSimpleRecurrence(const PHINode *P, BinaryOperator *&BO,
                                  Value *&Start, Value *&Step) {
   // We try to match a recurrence of the form:
@@ -9265,6 +9351,25 @@ bool llvm::matchSimpleBinaryIntrinsicRecurrence(const IntrinsicInst *I,
     P = dyn_cast<PHINode>(I->getArgOperand(1));
 
   return P && matchTwoInputRecurrence(P, II, Init, OtherOp) && II == I;
+}
+
+bool llvm::matchSimpleTernaryIntrinsicRecurrence(const IntrinsicInst *I,
+                                                 PHINode *&P, Value *&Init,
+                                                 Value *&OtherOp0,
+                                                 Value *&OtherOp1) {
+  if (I->arg_size() != 3 || I->getType() != I->getArgOperand(0)->getType() ||
+      I->getType() != I->getArgOperand(1)->getType() ||
+      I->getType() != I->getArgOperand(2)->getType())
+    return false;
+  IntrinsicInst *II = nullptr;
+  P = dyn_cast<PHINode>(I->getArgOperand(0));
+  if (!P) {
+    P = dyn_cast<PHINode>(I->getArgOperand(1));
+    if (!P)
+      P = dyn_cast<PHINode>(I->getArgOperand(2));
+  }
+  return P && matchThreeInputRecurrence(P, II, Init, OtherOp0, OtherOp1) &&
+         II == I;
 }
 
 /// Return true if "icmp Pred LHS RHS" is always true.

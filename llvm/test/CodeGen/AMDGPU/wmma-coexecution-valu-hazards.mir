@@ -81,6 +81,21 @@ body: |
 ...
 
 ---
+name: test_wmma_f32_16x16x32_bf16_D0_overlaps_vopd_vdstX
+body: |
+  bb.0:
+    ; GFX1250-LABEL: name: test_wmma_f32_16x16x32_bf16_D0_overlaps_vopd_vdstX
+    ; GFX1250: early-clobber $vgpr16_vgpr17_vgpr18_vgpr19_vgpr20_vgpr21_vgpr22_vgpr23 = V_WMMA_F32_16X16X32_BF16_w32_twoaddr 8, killed $vgpr0_vgpr1_vgpr2_vgpr3_vgpr4_vgpr5_vgpr6_vgpr7, 8, killed $vgpr8_vgpr9_vgpr10_vgpr11_vgpr12_vgpr13_vgpr14_vgpr15, 8, killed $vgpr16_vgpr17_vgpr18_vgpr19_vgpr20_vgpr21_vgpr22_vgpr23, 0, 0, 0, 0, implicit $exec
+    ; GFX1250-NEXT: V_NOP_e32 implicit $exec
+    ; GFX1250-NEXT: V_NOP_e32 implicit $exec
+    ; GFX1250-NEXT: V_NOP_e32 implicit $exec
+    ; GFX1250-NEXT: V_NOP_e32 implicit $exec
+    ; GFX1250-NEXT: $vgpr16, $vgpr255 = V_DUAL_SUB_F32_e32_X_MUL_F32_e32_gfx1250 undef $vgpr1, undef $vgpr1, undef $vgpr0, undef $vgpr0, implicit $mode, implicit $exec
+    $vgpr16_vgpr17_vgpr18_vgpr19_vgpr20_vgpr21_vgpr22_vgpr23 = V_WMMA_F32_16X16X32_BF16_w32_twoaddr 8, killed $vgpr0_vgpr1_vgpr2_vgpr3_vgpr4_vgpr5_vgpr6_vgpr7, 8, killed $vgpr8_vgpr9_vgpr10_vgpr11_vgpr12_vgpr13_vgpr14_vgpr15, 8, killed $vgpr16_vgpr17_vgpr18_vgpr19_vgpr20_vgpr21_vgpr22_vgpr23, 0, 0, 0, 0, implicit $exec
+    $vgpr16, $vgpr255 = V_DUAL_SUB_F32_e32_X_MUL_F32_e32_gfx1250 undef $vgpr1, undef $vgpr1, undef $vgpr0, undef $vgpr0, implicit $mode, implicit $exec
+...
+
+---
 name: test_wmma_f32_16x16x32_bf16_A0_overlaps_D1
 body: |
   bb.0:
@@ -93,6 +108,21 @@ body: |
     ; GFX1250-NEXT: $vgpr0 = V_ADD_F32_e32 $vgpr24, $vgpr25, implicit $mode, implicit $exec
     $vgpr16_vgpr17_vgpr18_vgpr19_vgpr20_vgpr21_vgpr22_vgpr23 = V_WMMA_F32_16X16X32_BF16_w32_twoaddr 8, killed $vgpr0_vgpr1_vgpr2_vgpr3_vgpr4_vgpr5_vgpr6_vgpr7, 8, killed $vgpr8_vgpr9_vgpr10_vgpr11_vgpr12_vgpr13_vgpr14_vgpr15, 8, killed $vgpr16_vgpr17_vgpr18_vgpr19_vgpr20_vgpr21_vgpr22_vgpr23, 0, 0, 0, 0, implicit $exec
     $vgpr0 = V_ADD_F32_e32 $vgpr24, $vgpr25, implicit $mode, implicit $exec
+...
+
+---
+name: test_wmma_f32_16x16x32_bf16_A0_overlaps_vopd_vdstY
+body: |
+  bb.0:
+    ; GFX1250-LABEL: name: test_wmma_f32_16x16x32_bf16_A0_overlaps_vopd_vdstY
+    ; GFX1250: early-clobber $vgpr16_vgpr17_vgpr18_vgpr19_vgpr20_vgpr21_vgpr22_vgpr23 = V_WMMA_F32_16X16X32_BF16_w32_twoaddr 8, killed $vgpr0_vgpr1_vgpr2_vgpr3_vgpr4_vgpr5_vgpr6_vgpr7, 8, killed $vgpr8_vgpr9_vgpr10_vgpr11_vgpr12_vgpr13_vgpr14_vgpr15, 8, killed $vgpr16_vgpr17_vgpr18_vgpr19_vgpr20_vgpr21_vgpr22_vgpr23, 0, 0, 0, 0, implicit $exec
+    ; GFX1250-NEXT: V_NOP_e32 implicit $exec
+    ; GFX1250-NEXT: V_NOP_e32 implicit $exec
+    ; GFX1250-NEXT: V_NOP_e32 implicit $exec
+    ; GFX1250-NEXT: V_NOP_e32 implicit $exec
+    ; GFX1250-NEXT: $vgpr255, $vgpr0 = V_DUAL_SUB_F32_e32_X_MUL_F32_e32_gfx1250 undef $vgpr1, undef $vgpr1, undef $vgpr0, undef $vgpr0, implicit $mode, implicit $exec
+    $vgpr16_vgpr17_vgpr18_vgpr19_vgpr20_vgpr21_vgpr22_vgpr23 = V_WMMA_F32_16X16X32_BF16_w32_twoaddr 8, killed $vgpr0_vgpr1_vgpr2_vgpr3_vgpr4_vgpr5_vgpr6_vgpr7, 8, killed $vgpr8_vgpr9_vgpr10_vgpr11_vgpr12_vgpr13_vgpr14_vgpr15, 8, killed $vgpr16_vgpr17_vgpr18_vgpr19_vgpr20_vgpr21_vgpr22_vgpr23, 0, 0, 0, 0, implicit $exec
+    $vgpr255, $vgpr0 = V_DUAL_SUB_F32_e32_X_MUL_F32_e32_gfx1250 undef $vgpr1, undef $vgpr1, undef $vgpr0, undef $vgpr0, implicit $mode, implicit $exec
 ...
 
 ---
