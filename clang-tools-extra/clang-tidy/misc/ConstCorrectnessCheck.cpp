@@ -207,6 +207,13 @@ void ConstCorrectnessCheck::check(const MatchFinder::MatchResult &Result) {
 
   assert(Variable && LocalScope && Function);
 
+  // If a variable (e.g. function parameter) is unnamed, don't report it. Being
+  // unnamed already guarantees that the variable can't be accessed, so
+  // 'const'ness (can't be modified) doesn't add extra information. Also, the
+  // messages would be awkward in this case.
+  if (Variable->getDeclName().isIdentifier() && Variable->getName().empty())
+    return;
+
   // It can not be guaranteed that the variable is declared isolated,
   // therefore a transformation might effect the other variables as well and
   // be incorrect. Parameters don't need this check - they receive values from

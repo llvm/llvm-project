@@ -509,3 +509,7 @@ void struct_ptr_param_modified(Bar** bp) {
   // CHECK-FIXES: void struct_ptr_param_modified(Bar** const bp) {
   (*bp)->mutating_method();
 }
+
+void unnamed_parameters(int, char *, Bar, Bar&, int[5]) {
+    // Unnamed parameters are never reported.
+}
