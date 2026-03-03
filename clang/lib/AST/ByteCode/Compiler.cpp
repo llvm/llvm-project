@@ -2343,13 +2343,13 @@ bool Compiler<Emitter>::visitInitList(ArrayRef<const Expr *> Inits,
     QualType ElemQT = MT->getElementType();
     PrimType ElemT = classifyPrim(ElemQT);
 
-    // InitListExpr elements are in column-major order.
-    // Store in row-major order to match APValue convention.
+    // Matrix initializer list elements are in row-major order, which matches
+    // the matrix APValue convention and therefore no index remapping is
+    // required.
     for (unsigned I = 0; I != NumElems; ++I) {
       if (!this->visit(Inits[I]))
         return false;
-      if (!this->emitInitElem(ElemT,
-                              MT->mapColumnMajorToRowMajorFlattenedIndex(I), E))
+      if (!this->emitInitElem(ElemT, I, E))
         return false;
     }
     return true;
