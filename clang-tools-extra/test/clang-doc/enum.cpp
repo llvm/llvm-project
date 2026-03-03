@@ -77,7 +77,7 @@ enum Color {
 // HTML-INDEX-NEXT:           <p> For specifying RGB colors</p>
 // HTML-INDEX-NEXT:       </div>
 // HTML-INDEX-NEXT:     </div>
-// HTML-INDEX-NEXT:     <p>Defined at line [[@LINE-45]] of file {{.*}}clang-tools-extra{{[\/]}}test{{[\/]}}clang-doc{{[\/]}}enum.cpp</p>
+// HTML-INDEX-NEXT:     <p>Defined at line [[@LINE-46]] of file {{.*}}clang-tools-extra{{[\/]}}test{{[\/]}}clang-doc{{[\/]}}enum.cpp</p>
 // HTML-INDEX-NEXT:   </div>
 
 // MD-MUSTACHE-INDEX: ## Enums
@@ -139,7 +139,7 @@ enum class Shapes {
 // HTML-INDEX-NEXT:           <p> Shape Types</p>
 // HTML-INDEX-NEXT:       </div>
 // HTML-INDEX-NEXT:     </div>
-// HTML-INDEX-NEXT:     <p>Defined at line [[@LINE-47]] of file {{.*}}clang-tools-extra{{[\/]}}test{{[\/]}}clang-doc{{[\/]}}enum.cpp</p>
+// HTML-INDEX-NEXT:     <p>Defined at line [[@LINE-48]] of file {{.*}}clang-tools-extra{{[\/]}}test{{[\/]}}clang-doc{{[\/]}}enum.cpp</p>
 // HTML-INDEX-NEXT:   </div>
 
 typedef unsigned char uint8_t;
@@ -339,15 +339,9 @@ public:
 // HTML-ANIMAL-NEXT:                 <p> specify what animal the class is</p>
 // HTML-ANIMAL-NEXT:             </div>
 // HTML-ANIMAL-NEXT:         </div>
-<<<<<<< HEAD
-// HTML-ANIMAL-NEXT:         <p>Defined at line [[@LINE-40]] of file {{.*}}enum.cpp</p>
+// HTML-ANIMAL-NEXT:         <p>Defined at line [[@LINE-41]] of file {{.*}}enum.cpp</p>
 // HTML-ANIMAL-NEXT:      </div>
 // HTML-ANIMAL-NEXT:    </section>
-=======
-// HTML-ANIMAL-NEXT:         <p>Defined at line 135 of file {{.*}}enum.cpp</p>
-// HTML-ANIMAL-NEXT:     </div>
-// HTML-ANIMAL-NEXT: </section>
->>>>>>> ca036029f156 (fix the fix)
 
 // MD-ANIMAL: # class Animals
 // MD-ANIMAL: ## Enums
@@ -426,7 +420,7 @@ enum Car {
 // HTML-VEHICLES-NEXT:           <p> specify type of car</p>
 // HTML-VEHICLES-NEXT:        </div>
 // HTML-VEHICLES-NEXT:      </div>
-// HTML-VEHICLES-NEXT:      <p>Defined at line [[@LINE-54]] of file {{.*}}clang-tools-extra{{[\/]}}test{{[\/]}}clang-doc{{[\/]}}enum.cpp</p>
+// HTML-VEHICLES-NEXT:      <p>Defined at line [[@LINE-55]] of file {{.*}}clang-tools-extra{{[\/]}}test{{[\/]}}clang-doc{{[\/]}}enum.cpp</p>
 // HTML-VEHICLES-NEXT:    </div>
 
 // MD-MUSTACHE-VEHICLES: # namespace Vehicles

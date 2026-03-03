@@ -26,7 +26,7 @@ private {{#IsStatic}}static {{/IsStatic}}{{Type}} {{Name}}
 {{#PublicMethods}}
 ### {{Name}}
 
-*public {{#IsStatic}}static {{/IsStatic}}{{ReturnType.QualName}} {{Name}}({{#Params}}{{Type.QualName}} {{Name}}{{^End}}, {{/End}}{{/Params}})*
+*public {{#IsStatic}}static {{/IsStatic}}{{ReturnType.QualName}} {{Name}}({{#Params}}{{Type.QualName}} {{Name}}{{^ParamEnd}}, {{/ParamEnd}}{{/Params}})*
 {{#Location}}
 
 *Defined at {{Filename}}#{{LineNumber}}*

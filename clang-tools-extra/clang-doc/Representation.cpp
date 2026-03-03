@@ -484,7 +484,7 @@ ClangDocContext::ClangDocContext(tooling::ExecutionContext *ECtx,
                                  StringRef RepositoryLinePrefix, StringRef Base,
                                  std::vector<std::string> UserStylesheets,
                                  clang::DiagnosticsEngine &Diags,
-                                 StringRef Format, bool FTimeTrace)
+                                 OutputFormatTy Format, bool FTimeTrace)
     : ECtx(ECtx), ProjectName(ProjectName), OutDirectory(OutDirectory),
       SourceRoot(std::string(SourceRoot)), UserStylesheets(UserStylesheets),
       Base(Base), Diags(Diags), Format(Format), PublicOnly(PublicOnly),

@@ -102,14 +102,14 @@ class AnonClass {};
 // HTML-ANON-INDEX-NOT: <h2 id="Functions">Functions</h2>
 // HTML-ANON-INDEX-NOT: <h3 id="{{([0-9A-F]{40})}}">anonFunction</h3>
 // HTML-ANON-INDEX-NOT: <p>void anonFunction()</p>
+
 // MD-MUSTACHE-ANON-INDEX: # namespace @nonymous_namespace
-// MD-MUSTACHE-ANON-INDEX:  Anonymous Namespace
+// MD-MUSTACHE-ANON-INDEX: Anonymous Namespace
 // MD-MUSTACHE-ANON-INDEX: ## Records
 // MD-MUSTACHE-ANON-INDEX: * [AnonClass](AnonClass.md)
 // MD-MUSTACHE-ANON-INDEX: ## Functions
 // MD-MUSTACHE-ANON-INDEX: ### anonFunction
 // MD-MUSTACHE-ANON-INDEX: *void anonFunction()*
-
 
 // Primary Namespace
 namespace PrimaryNamespace {
@@ -199,8 +199,9 @@ class ClassInNestedNamespace {};
 // HTML-NESTED-INDEX:                 <p> Function in NestedNamespace</p>
 // HTML-NESTED-INDEX:             </div>
 // HTML-NESTED-INDEX:         </div>
-// HTML-NESTED-INDEX:         <p>Defined at line 146 of file {{.*}}namespace.cpp</p>
+// HTML-NESTED-INDEX:         <p>Defined at line [[@LINE-56]] of file {{.*}}namespace.cpp</p>
 // HTML-NESTED-INDEX:     </div>
+
 // MD-MUSTACHE-NESTED-INDEX: # namespace NestedNamespace
 // MD-MUSTACHE-NESTED-INDEX: Nested namespace
 // MD-MUSTACHE-NESTED-INDEX: ## Records
@@ -243,7 +244,7 @@ class ClassInNestedNamespace {};
 // HTML-PRIMARY-INDEX:                  <p> Function in PrimaryNamespace</p>
 // HTML-PRIMARY-INDEX:              </div>
 // HTML-PRIMARY-INDEX:          </div>
-// HTML-PRIMARY-INDEX:          <p>Defined at line 117 of file {{.*}}clang-tools-extra{{[\/]}}test{{[\/]}}clang-doc{{[\/]}}namespace.cpp</p>
+// HTML-PRIMARY-INDEX:          <p>Defined at line [[@LINE-130]] of file {{.*}}clang-tools-extra{{[\/]}}test{{[\/]}}clang-doc{{[\/]}}namespace.cpp</p>
 // HTML-PRIMARY-INDEX:      </div>
 // HTML-PRIMARY-INDEX      <h2>Inner Classes</h2>
 // HTML-PRIMARY-INDEX          <ul class="class-container">
@@ -253,8 +254,9 @@ class ClassInNestedNamespace {};
 // HTML-PRIMARY-INDEX                  </a>
 // HTML-PRIMARY-INDEX              </li>
 // HTML-PRIMARY-INDEX          </ul>
+
 // MD-MUSTACHE-PRIMARY-INDEX: # namespace PrimaryNamespace
-// MD-MUSTACHE-PRIMARY-INDEX:  Primary Namespace
+// MD-MUSTACHE-PRIMARY-INDEX: Primary Namespace
 // MD-MUSTACHE-PRIMARY-INDEX: ## Namespaces
 // MD-MUSTACHE-PRIMARY-INDEX: * [NestedNamespace](NestedNamespace{{[\/]}}index.md)
 // MD-MUSTACHE-PRIMARY-INDEX: ## Records
@@ -262,7 +264,7 @@ class ClassInNestedNamespace {};
 // MD-MUSTACHE-PRIMARY-INDEX: ## Functions
 // MD-MUSTACHE-PRIMARY-INDEX: ### functionInPrimaryNamespace
 // MD-MUSTACHE-PRIMARY-INDEX: *void functionInPrimaryNamespace()*
-// MD-MUSTACHE-PRIMARY-INDEX:  Function in PrimaryNamespace
+// MD-MUSTACHE-PRIMARY-INDEX: Function in PrimaryNamespace
 
 // AnotherNamespace
 namespace AnotherNamespace {
@@ -287,7 +289,7 @@ class ClassInAnotherNamespace {};
 // HTML-ANOTHER-CLASS: </div>
 
 // MD-MUSTACHE-ANOTHER-CLASS: # class ClassInAnotherNamespace
-// MD-MUSTACHE-ANOTHER-CLASS:  Class in AnotherNamespace
+// MD-MUSTACHE-ANOTHER-CLASS: Class in AnotherNamespace
 
 // HTML-ANOTHER-CLASS: <h1 class="hero__title-large">class ClassInAnotherNamespace</h1>
 
@@ -322,7 +324,7 @@ class ClassInAnotherNamespace {};
 // HTML-ANOTHER-INDEX:                 <p> Function in AnotherNamespace</p>
 // HTML-ANOTHER-INDEX:             </div>
 // HTML-ANOTHER-INDEX:         </div>
-// HTML-ANOTHER-INDEX:         <p>Defined at line 270 of file {{.*}}clang-tools-extra{{[\/]}}test{{[\/]}}clang-doc{{[\/]}}namespace.cpp</p>
+// HTML-ANOTHER-INDEX:         <p>Defined at line [[@LINE-55]] of file {{.*}}clang-tools-extra{{[\/]}}test{{[\/]}}clang-doc{{[\/]}}namespace.cpp</p>
 // HTML-ANOTHER-INDEX:     </div>
 // HTML-ANOTHER-INDEX: </div>
 
@@ -362,10 +364,10 @@ class ClassInAnotherNamespace {};
 // MD-ALL-FILES: ## [PrimaryNamespace](PrimaryNamespace{{[\/]}}index.md)
 
 // MD-MUSTACHE-ALL-FILES: # All Files
-// MD-MUSTACHE-ALL-FILES: ## [@nonymous_namespace](@nonymous_namespace{{[\/]}}index.md)
-// MD-MUSTACHE-ALL-FILES: ## [AnotherNamespace](AnotherNamespace{{[\/]}}index.md)
 // MD-MUSTACHE-ALL-FILES: ## [GlobalNamespace](GlobalNamespace{{[\/]}}index.md)
 // MD-MUSTACHE-ALL-FILES: ## [PrimaryNamespace](PrimaryNamespace{{[\/]}}index.md)
+// MD-MUSTACHE-ALL-FILES: ## [@nonymous_namespace](@nonymous_namespace{{[\/]}}index.md)
+// MD-MUSTACHE-ALL-FILES: ## [AnotherNamespace](AnotherNamespace{{[\/]}}index.md)
 
 // MD-INDEX: #  C/C++ Reference
 // MD-INDEX: * Namespace: [@nonymous_namespace](@nonymous_namespace)

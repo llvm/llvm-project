@@ -45,6 +45,7 @@
 
 using namespace clang::tooling;
 using namespace clang;
+using clang::doc::OutputFormatTy;
 
 static llvm::cl::extrahelp CommonHelp(CommonOptionsParser::HelpMessage);
 static llvm::cl::OptionCategory ClangDocCategory("clang-doc options");
@@ -110,8 +111,6 @@ static llvm::cl::opt<bool> FTimeTrace("ftime-trace", llvm::cl::desc(R"(
 Turn on time profiler. Generates clang-doc-tracing.json)"),
                                       llvm::cl::init(false),
                                       llvm::cl::cat(ClangDocCategory));
-
-enum OutputFormatTy { md, yaml, html, json, md_mustache };
 
 static llvm::cl::opt<OutputFormatTy> FormatEnum(
     "format", llvm::cl::desc("Format for outputted docs."),
@@ -309,8 +308,8 @@ Example usage for a project using a compile commands database:
     clang::doc::ClangDocContext CDCtx(
         Executor->getExecutionContext(), ProjectName, PublicOnly, OutDirectory,
         SourceRoot, RepositoryUrl, RepositoryCodeLinePrefix, BaseDirectory,
-        {UserStylesheets.begin(), UserStylesheets.end()}, Diags,
-        getFormatString(), FTimeTrace);
+        {UserStylesheets.begin(), UserStylesheets.end()}, Diags, FormatEnum,
+        FTimeTrace);
 
     if (Format == "html")
       ExitOnErr(getHtmlFiles(argv[0], CDCtx));

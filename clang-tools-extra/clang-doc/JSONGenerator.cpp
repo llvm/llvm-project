@@ -456,12 +456,11 @@ static void serializeCommonChildren(
   }
 
   if (!Children.Records.empty()) {
-    if (MDReferenceLambda)
-      serializeArray(Children.Records, Obj, "Records",
-                     MDReferenceLambda.value());
-    else
-      serializeArray(Children.Records, Obj, "Records",
-                     SerializeReferenceLambda);
+
+    ReferenceFunc SerializeReferenceFunc = MDReferenceLambda
+                                               ? MDReferenceLambda.value()
+                                               : SerializeReferenceLambda;
+    serializeArray(Children.Records, Obj, "Records", SerializeReferenceFunc);
     Obj["HasRecords"] = true;
   }
 }
@@ -787,30 +786,27 @@ static void serializeInfo(const NamespaceInfo &I, json::Object &Obj,
     Obj["HasVariables"] = true;
   }
 
+  ReferenceFunc SerializeReferenceFunc;
   if (Markdown) {
     SmallString<64> BasePath = I.getRelativeFilePath("");
     // serializeCommonChildren doesn't accept Infos, so this lambda needs to be
     // created here. To avoid making serializeCommonChildren a template, this
     // lambda is an std::function
-    ReferenceFunc SerializeMDReferenceLambda =
-        [BasePath](const Reference &Ref, Object &Object) {
-          serializeMDReference(Ref, Object, BasePath);
-        };
+    SerializeReferenceFunc = [BasePath](const Reference &Ref, Object &Object) {
+      serializeMDReference(Ref, Object, BasePath);
+    };
     serializeCommonChildren(I.Children, Obj, RepositoryUrl,
-                            RepositoryLinePrefix, SerializeMDReferenceLambda);
-    if (!I.Children.Namespaces.empty()) {
-      serializeArray(I.Children.Namespaces, Obj, "Namespaces",
-                     SerializeMDReferenceLambda);
-      Obj["HasNamespaces"] = true;
-    }
+                            RepositoryLinePrefix, SerializeReferenceFunc);
   } else {
+    SerializeReferenceFunc = SerializeReferenceLambda;
     serializeCommonChildren(I.Children, Obj, RepositoryUrl,
                             RepositoryLinePrefix);
-    if (!I.Children.Namespaces.empty()) {
-      serializeArray(I.Children.Namespaces, Obj, "Namespaces",
-                     SerializeReferenceLambda);
-      Obj["HasNamespaces"] = true;
-    }
+  }
+
+  if (!I.Children.Namespaces.empty()) {
+    serializeArray(I.Children.Namespaces, Obj, "Namespaces",
+                   SerializeReferenceFunc);
+    Obj["HasNamespaces"] = true;
   }
 }
 
@@ -831,13 +827,15 @@ static SmallString<16> determineFileName(Info *I, SmallString<128> &Path) {
 /// generator as `const`
 static std::vector<Index> preprocessCDCtxIndex(Index CDCtxIndex) {
   CDCtxIndex.sort();
-  std::vector<Index> Processed = CDCtxIndex.Children;
-  for (auto &Entry : Processed) {
-    auto NewPath = Entry.getRelativeFilePath("");
+  std::vector<Index> Processed;
+  Processed.reserve(CDCtxIndex.Children.size());
+  for (auto &Entry : CDCtxIndex.Children) {
+    auto NewPath = Entry.second.getRelativeFilePath("");
     sys::path::native(NewPath, sys::path::Style::posix);
     sys::path::append(NewPath, sys::path::Style::posix,
-                      Entry.getFileBaseName() + ".md");
-    Entry.Path = NewPath;
+                      Entry.second.getFileBaseName() + ".md");
+    Entry.second.Path = NewPath;
+    Processed.push_back(Entry.second);
   }
 
   return Processed;
@@ -851,7 +849,7 @@ static Error serializeAllFiles(const ClangDocContext &CDCtx,
   std::vector<Index> IndexCopy = preprocessCDCtxIndex(CDCtx.Idx);
   serializeArray(IndexCopy, Obj, "Index", SerializeReferenceLambda);
   SmallString<128> Path;
-  sys::path::append(Path, RootDir.str(), "json", "all_files.json");
+  sys::path::append(Path, RootDir, "json", "all_files.json");
   std::error_code FileErr;
   raw_fd_ostream RootOS(Path, FileErr, sys::fs::OF_Text);
   if (FileErr)
@@ -966,7 +964,7 @@ Error JSONGenerator::generateDocumentation(
     Info->DocumentationFileName = FileName;
   }
 
-  if (CDCtx.Format == "md_mustache") {
+  if (CDCtx.Format == OutputFormatTy::md_mustache) {
     Markdown = true;
     if (auto Err = serializeAllFiles(CDCtx, RootDir))
       return Err;

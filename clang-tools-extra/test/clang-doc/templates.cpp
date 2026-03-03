@@ -153,6 +153,10 @@ void function(T x) {}
 // HTML-NEXT:      <p>Defined at line [[# @LINE - 59]] of file {{.*}}templates.cpp</p>
 // HTML-NEXT:  </div>
 
+// MD-MUSTACHE: ### function
+// MD-MUSTACHE: *void function(T x)*
+// MD-MUSTACHE: *Defined at {{.*}}templates.cpp#[[# @LINE - 64]]*
+
 template <typename A, typename B, typename C, typename D, typename E>
 void longFunction(A a, B b, C c, D d, E e) {}
 
@@ -299,10 +303,6 @@ void longFunction(A a, B b, C c, D d, E e) {}
 // HTML-NEXT:      <p>Defined at line [[# @LINE - 142]] of file {{.*}}templates.cpp</p>
 // HTML-NEXT:  </div>
 
-// MD-MUSTACHE: ### function
-// MD-MUSTACHE: *void function(T x)*
-// MD-MUSTACHE: *Defined at {{.*}}templates.cpp#[[# @LINE - 64]]*
-
 template <>
 void function<bool, 0>(bool x) {}
 
@@ -373,7 +373,7 @@ void function<bool, 0>(bool x) {}
 
 // MD-MUSTACHE: ### function
 // MD-MUSTACHE: *void function(bool x)*
-// MD-MUSTACHE: *Defined at {{.*}}templates.cpp#[[# @LINE - 69]]*
+// MD-MUSTACHE: *Defined at {{.*}}templates.cpp#[[# @LINE - 70]]*
 
 /// A Tuple type
 ///

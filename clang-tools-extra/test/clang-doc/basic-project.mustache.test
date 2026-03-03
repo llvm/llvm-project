@@ -536,7 +536,7 @@ HTML-CIRCLE-NEXT: </html>
 MD-CALC: # class Calculator
 MD-CALC: *Defined at .{{[\/]}}include{{[\/]}}Calculator.h#8*
 MD-CALC: **brief** A simple calculator class.
-MD-CALC:  Provides basic arithmetic operations.
+MD-CALC: Provides basic arithmetic operations.
 MD-CALC: ## Members
 MD-CALC: public int public_val
 MD-CALC: public static const int static_val
@@ -581,7 +581,7 @@ MD-CALC: **return** The result of a % b.
 MD-CIRCLE: # class Circle
 MD-CIRCLE: *Defined at .{{[\/]}}include{{[\/]}}Circle.h#10*
 MD-CIRCLE: **brief** Circle class derived from Shape.
-MD-CIRCLE:  Represents a circle with a given radius.
+MD-CIRCLE: Represents a circle with a given radius.
 MD-CIRCLE: Inherits from Shape
 MD-CIRCLE: ## Members
 MD-CIRCLE: private double radius_
@@ -605,7 +605,7 @@ MD-CIRCLE: **return** double The perimeter of the circle.
 MD-RECTANGLE: # class Rectangle
 MD-RECTANGLE: *Defined at .{{[\/]}}include{{[\/]}}Rectangle.h#10*
 MD-RECTANGLE: **brief** Rectangle class derived from Shape.
-MD-RECTANGLE:  Represents a rectangle with a given width and height.
+MD-RECTANGLE: Represents a rectangle with a given width and height.
 MD-RECTANGLE: Inherits from Shape
 MD-RECTANGLE: ## Members
 MD-RECTANGLE: private double width_
@@ -631,7 +631,7 @@ MD-RECTANGLE: **return** double The perimeter of the rectangle.
 MD-SHAPE: # class Shape
 MD-SHAPE: *Defined at .{{[\/]}}include{{[\/]}}Shape.h#8*
 MD-SHAPE: **brief** Abstract base class for shapes.
-MD-SHAPE:  Provides a common interface for different types of shapes.
+MD-SHAPE: Provides a common interface for different types of shapes.
 MD-SHAPE: ## Functions
 MD-SHAPE: ### area
 MD-SHAPE: *public double area()*
