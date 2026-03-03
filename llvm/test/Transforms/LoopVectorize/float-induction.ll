@@ -1725,6 +1725,26 @@ exit:
   ret i32 0
 }
 
+define void @fp_iv_used_in_gep(float %init, ptr noalias nocapture %A, float %fpinc, i32 %N) {
+entry:
+  br label %for.body
+
+for.body:                                         ; preds = %for.body, %for.body.lr.ph
+  %indvars.iv = phi i64 [ 0, %entry ], [ %indvars.iv.next, %for.body ]
+  %x.05 = phi float [ %init, %entry ], [ %add, %for.body ]
+  %c = fptoui float %x.05 to i32
+  %arrayidx = getelementptr inbounds float, ptr %A, i32 %c
+  store float %x.05, ptr %arrayidx, align 4
+  %add = fsub fast float %x.05, %fpinc
+  %indvars.iv.next = add nuw nsw i64 %indvars.iv, 1
+  %lftr.wideiv = trunc i64 %indvars.iv.next to i32
+  %exitcond = icmp eq i32 %lftr.wideiv, %N
+  br i1 %exitcond, label %exit, label %for.body
+
+exit:
+  ret void
+}
+
 !llvm.module.flags = !{!3}
 
 !0 = distinct !DICompileUnit(language: DW_LANG_C11, file: !1)
