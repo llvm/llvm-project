@@ -704,7 +704,8 @@ static void prepareSymbolRelocation(Symbol *sym, const InputSection *isec,
     // need of rebase opcodes.
     if (!(isThreadLocalVariables(isec->getFlags()) && isa<Defined>(sym))) {
       bool forceOutline = relocAttrs.hasAttr(RelocAttrBits::AUTH);
-      addNonLazyBindingEntries(sym, isec, r.offset, r.addend, forceOutline);
+      addNonLazyBindingEntries(sym, isec, r.offset, r.getAddend(),
+                               forceOutline);
     }
   }
 }

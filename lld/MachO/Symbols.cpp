@@ -15,13 +15,13 @@ using namespace llvm;
 using namespace lld;
 using namespace lld::macho;
 
-static_assert(sizeof(void *) != 8 || sizeof(Symbol) == 56,
+static_assert(sizeof(void *) != 8 || sizeof(Symbol) == 64,
               "Try to minimize Symbol's size; we create many instances");
 
 // The Microsoft ABI doesn't support using parent class tail padding for child
 // members, hence the _MSC_VER check.
 #if !defined(_MSC_VER)
-static_assert(sizeof(void *) != 8 || sizeof(Defined) == 88,
+static_assert(sizeof(void *) != 8 || sizeof(Defined) == 96,
               "Try to minimize Defined's size; we create many instances");
 #endif
 
@@ -50,11 +50,17 @@ uint64_t Symbol::getLazyPtrVA() const {
   return in.lazyPointers->getVA(stubsIndex);
 }
 uint64_t Symbol::getGotVA() const {
-  // For arm64e, symbols may be in authgot instead of regular got.
-  // Check which section contains this symbol.
-  if (in.authgot && in.authgot->getEntries().contains(this))
-    return in.authgot->getVA(gotIndex);
-  return in.got->getVA(gotIndex);
+  // On arm64e a symbol can land in both __got and __auth_got; prefer the
+  // signed slot (used by POINTER_TO_GOT for eh_frame personalities).
+  if (isInAuthGot())
+    return in.authgot->getVA(authGotIndex);
+  if (isInGot())
+    return in.got->getVA(gotIndex);
+  llvm_unreachable("symbol not in any GOT section");
+}
+uint64_t Symbol::getAuthGotVA() const {
+  assert(isInAuthGot());
+  return in.authgot->getVA(authGotIndex);
 }
 uint64_t Symbol::getTlvVA() const { return in.tlvPointers->getVA(gotIndex); }
 

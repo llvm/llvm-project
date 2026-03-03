@@ -652,7 +652,7 @@ void UnwindInfoSectionImpl::writeTo(uint8_t *buf) const {
   // Personalities - for arm64e, use authgot instead of got
   for (const Symbol *personality : personalities) {
     uint64_t personalityVA = config->arch() == AK_arm64e
-                                 ? in.authgot->getVA(personality->gotIndex)
+                                 ? in.authgot->getVA(personality->authGotIndex)
                                  : personality->getGotVA();
     *i32p++ = personalityVA - in.header->addr;
   }

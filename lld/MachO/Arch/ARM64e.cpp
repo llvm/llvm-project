@@ -156,7 +156,7 @@ void ARM64e::writeObjCMsgSendStub(uint8_t *buf, Symbol *sym, uint64_t stubsAddr,
     objcStubSize = target->objcStubsFastSize;
     // ARM64e uses authgot for objc_msgSend.
     objcMsgSendAddr = in.authgot->addr;
-    objcMsgSendIndex = objcMsgSend->gotIndex;
+    objcMsgSendIndex = objcMsgSend->authGotIndex;
     ::writeObjCMsgSendFastStub<LP64>(buf, objcStubsFastCode, sym, stubsAddr,
                                      stubOffset, selrefVA, objcMsgSendAddr,
                                      objcMsgSendIndex);

@@ -129,9 +129,10 @@ public:
     return addr + gotIndex * target->wordSize;
   }
 
+  const bool isAuth;
+
 private:
   llvm::SetVector<const Symbol *> entries;
-  bool isAuth;
 };
 
 class GotSection final : public NonLazyPointerSectionBase {
@@ -809,6 +810,10 @@ public:
   bool hasWeakBinding() const { return hasWeakBind; }
   bool hasNonWeakDefinition() const { return hasNonWeakDef; }
 
+  // Pointer format used by every fixup in this image. Set once at construction
+  // from arch + min-deployment; queried by per-fixup writers in the hot path.
+  const uint16_t pointerFormat;
+
 private:
   // Location::offset initially stores the offset within an InputSection, but
   // contains output segment offsets after finalizeContents().
@@ -839,10 +844,10 @@ private:
 };
 
 void writeChainedRebase(uint8_t *buf, uint64_t targetVA, uint64_t segmentBase,
-                        const Relocation::AuthInfo *ai);
+                        const AuthInfo *ai);
+void writeChainedFixup(uint8_t *buf, const Symbol *sym, const Relocation &r);
 void writeChainedFixup(uint8_t *buf, const Symbol *sym, int64_t addend,
-                       int64_t segmentBase, const Relocation::AuthInfo *ai,
-                       uint32_t authEncodingBits = 0);
+                       uint64_t segmentBase, const AuthInfo *ai);
 
 struct InStruct {
   const uint8_t *bufferStart = nullptr;
