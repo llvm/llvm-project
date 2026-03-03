@@ -4457,29 +4457,6 @@ public:
     return Column * NumRows + Row;
   }
 
-  /// Given a row-major flattened index \p Index, return the corresponding
-  /// {row, column} position.
-  std::pair<unsigned, unsigned> getRowMajorRowAndColumn(unsigned Index) const {
-    return {Index / NumColumns, Index % NumColumns};
-  }
-
-  /// Given a column-major flattened index \p Index, return the corresponding
-  /// {row, column} position.
-  std::pair<unsigned, unsigned>
-  getColumnMajorRowAndColumn(unsigned Index) const {
-    return {Index % NumRows, Index / NumRows};
-  }
-
-  /// Given a flattened index \p Index, return the corresponding {row, column}
-  /// position. If \p IsRowMajor is true, interprets \p Index as a row-major
-  /// flattened index. Otherwise, interprets it as a column-major flattened
-  /// index.
-  std::pair<unsigned, unsigned> getRowAndColumn(unsigned Index,
-                                                bool IsRowMajor = false) const {
-    return IsRowMajor ? getRowMajorRowAndColumn(Index)
-                      : getColumnMajorRowAndColumn(Index);
-  }
-
   void Profile(llvm::FoldingSetNodeID &ID) {
     Profile(ID, getElementType(), getNumRows(), getNumColumns(),
             getTypeClass());
