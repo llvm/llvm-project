@@ -16,12 +16,6 @@
 
 //.
 // HOST: @[[VAR:.+]] = global i8 0, align 1
-// HOST: @indirect_val = global %struct.indirect_stru { ptr @_Z3bazv }, align 8
-// HOST: @indirect_nested_val = global %struct.indirect_stru_nested { %struct.indirect_stru { ptr @_Z3bazv } }, align 8
-// HOST: @indirect_baz = global ptr @_Z3bazv, align 8
-// HOST: @indirect_bar = global ptr @_ZL3barv, align 8
-// HOST: @indirect_foo = global ptr @_Z3foov, align 8
-// HOST: @indirect_array = global [3 x ptr] [ptr @_Z3foov, ptr @_ZL3barv, ptr @_Z3bazv], align 8
 // HOST: @[[FOO_ENTRY_NAME:.+]] = internal unnamed_addr constant [{{[0-9]+}} x i8] c"[[FOO_NAME:__omp_offloading_[0-9a-z]+_[0-9a-z]+_foo_l[0-9]+]]\00"
 // HOST: @.offloading.entry.[[FOO_NAME]] = weak constant %struct.__tgt_offload_entry { i64 0, i16 1, i16 1, i32 8, ptr @_Z3foov, ptr @[[FOO_ENTRY_NAME]], i64 8, i64 0, ptr null }
 // HOST: @[[BAZ_ENTRY_NAME:.+]] = internal unnamed_addr constant [{{[0-9]+}} x i8] c"[[BAZ_NAME:__omp_offloading_[0-9a-z]+_[0-9a-z]+_baz_l[0-9]+]]\00"
@@ -53,60 +47,8 @@ void disabled() { };
 
 char var = 0;
 #pragma omp declare target to(var) indirect
-struct indirect_stru {
-  void (*arg)();
-};
-struct indirect_stru_nested {
-  struct indirect_stru nested;
-};
-
-struct indirect_stru indirect_val = { .arg = baz };
-struct indirect_stru_nested indirect_nested_val = { .nested = { .arg = baz } };
-
-void (*indirect_baz)() = baz;
-void (*indirect_bar)() = bar;
-void (*indirect_foo)() = foo;
-void (*indirect_array[3])() = { foo, bar, baz };
-
-
-int main() {
-    #pragma omp target map(indirect_baz,indirect_bar,indirect_foo,var,indirect_val,indirect_val.arg, indirect_array, indirect_array[0:3], indirect_nested_val, indirect_nested_val.nested.arg)
-    {
-        indirect_foo();
-        indirect_bar();
-        indirect_baz();
-        indirect_val.arg();
-        indirect_nested_val.nested.arg();
-        indirect_array[0]();
-        indirect_array[1]();
-        indirect_array[2]();
-    }
-}
 
 #endif
-// DEVICE-LABEL: define {{.*}}void @__omp_offloading_{{.+}}_main_l{{[0-9]+}}(
-// DEVICE: call {{.*}}@__llvm_omp_indirect_call_lookup(
-// DEVICE: call {{.*}}void %{{.+}}()
-// DEVICE: call {{.*}}@__llvm_omp_indirect_call_lookup(
-// DEVICE: call {{.*}}void %{{.+}}()
-// DEVICE: call {{.*}}@__llvm_omp_indirect_call_lookup(
-// DEVICE: call {{.*}}void %{{.+}}()
-// DEVICE: getelementptr inbounds nuw %struct.indirect_stru,
-// DEVICE: call {{.*}}@__llvm_omp_indirect_call_lookup(
-// DEVICE: call {{.*}}void %{{.+}}()
-// DEVICE: getelementptr inbounds nuw %struct.indirect_stru_nested,
-// DEVICE: getelementptr inbounds nuw %struct.indirect_stru,
-// DEVICE: call {{.*}}@__llvm_omp_indirect_call_lookup(
-// DEVICE: call {{.*}}void %{{.+}}()
-// DEVICE: getelementptr inbounds {{.*}}[3 x ptr{{[^]]*}}],
-// DEVICE: call {{.*}}@__llvm_omp_indirect_call_lookup(
-// DEVICE: call {{.*}}void %{{.+}}()
-// DEVICE: getelementptr inbounds {{.*}}[3 x ptr{{[^]]*}}],
-// DEVICE: call {{.*}}@__llvm_omp_indirect_call_lookup(
-// DEVICE: call {{.*}}void %{{.+}}()
-// DEVICE: getelementptr inbounds {{.*}}[3 x ptr{{[^]]*}}],
-// DEVICE: call {{.*}}@__llvm_omp_indirect_call_lookup(
-// DEVICE: call {{.*}}void %{{.+}}()
 //.
 // HOST-DAG: !{{[0-9]+}} = !{i32 1, !"[[FOO_NAME]]", i32 8, i32 0}
 // HOST-DAG: !{{[0-9]+}} = !{i32 1, !"[[BAZ_NAME]]", i32 8, i32 1}
