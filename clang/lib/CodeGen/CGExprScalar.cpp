@@ -2572,6 +2572,8 @@ static Value *EmitHLSLElementwiseCast(CodeGenFunction &CGF, LValue SrcVal,
     // V is an allocated temporary for constructing the matrix.
     for (unsigned Row = 0, RE = MatTy->getNumRows(); Row < RE; Row++) {
       for (unsigned Col = 0, CE = MatTy->getNumColumns(); Col < CE; Col++) {
+        // When interpreted as a matrix, \p LoadList is *always* row-major order
+        // regardless of the default matrix memory layout.
         unsigned LoadIdx = MatTy->getRowMajorFlattenedIndex(Row, Col);
         RValue RVal = CGF.EmitLoadOfLValue(LoadList[LoadIdx], Loc);
         assert(RVal.isScalar() &&
