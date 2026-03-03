@@ -944,6 +944,56 @@ static std::map<int64_t, unsigned> getNumOccurences(ArrayRef<int64_t> vals) {
   return numOccurences;
 }
 
+/// Returns the set of source dimensions that are dropped in a rank reduction.
+/// For each result dimension in order, matches the leftmost unmatched source
+/// dimension with the same size. Source dimensions not matched are dropped.
+///
+/// Example: memref<1x8x1x3> to memref<1x8x3>. Source sizes [1, 8, 1, 3], result
+/// [1, 8, 3]. Match result[0]=1 -> source dim 0, result[1]=8 -> source dim 1,
+/// result[2]=3 -> source dim 3. Source dim 2 is unmatched and dropped.
+static FailureOr<llvm::SmallBitVector>
+computeMemRefRankReductionMaskByPosition(MemRefType originalType,
+                                         MemRefType reducedType,
+                                         ArrayRef<OpFoldResult> sizes) {
+  int64_t rankReduction = originalType.getRank() - reducedType.getRank();
+  if (rankReduction <= 0)
+    return llvm::SmallBitVector(originalType.getRank());
+
+  // Build source sizes from subview sizes (one per source dim).
+  SmallVector<int64_t> sourceSizes(originalType.getRank());
+  for (const auto &it : llvm::enumerate(sizes)) {
+    if (std::optional<int64_t> cst = getConstantIntValue(it.value()))
+      sourceSizes[it.index()] = *cst;
+    else
+      sourceSizes[it.index()] = ShapedType::kDynamic;
+  }
+
+  ArrayRef<int64_t> resultSizes = reducedType.getShape();
+  llvm::SmallBitVector usedSourceDims(originalType.getRank());
+  for (int64_t resultSize : resultSizes) {
+    bool matched = false;
+    for (int64_t j = 0; j < originalType.getRank(); ++j) {
+      if (usedSourceDims.test(j))
+        continue;
+      if (sourceSizes[j] == resultSize ||
+          (resultSize == ShapedType::kDynamic &&
+           sourceSizes[j] == ShapedType::kDynamic)) {
+        usedSourceDims.set(j);
+        matched = true;
+        break;
+      }
+    }
+    if (!matched)
+      return failure();
+  }
+
+  llvm::SmallBitVector unusedDims(originalType.getRank());
+  for (int64_t i = 0; i < originalType.getRank(); ++i)
+    if (!usedSourceDims.test(i))
+      unusedDims.set(i);
+  return unusedDims;
+}
+
 /// Given the `originalType` and a `candidateReducedType` whose shape is assumed
 /// to be a subset of `originalType` with some `1` entries erased, return the
 /// set of indices that specifies which of the entries of `originalShape` are
@@ -968,6 +1018,17 @@ computeMemRefRankReductionMask(MemRefType originalType, MemRefType reducedType,
   if (static_cast<int64_t>(unusedDims.count()) + reducedType.getRank() ==
       originalType.getRank())
     return unusedDims;
+
+  // Stride-based logic can be wrong when multiple dims share the same size
+  // (e.g. 1x1x384 -> 1x384) or when strides are dynamic. Try position-based
+  // matching first; it is deterministic and matches subview semantics.
+  if (unusedDims.count() > 1) {
+    FailureOr<llvm::SmallBitVector> positionBased =
+        computeMemRefRankReductionMaskByPosition(originalType, reducedType,
+                                                 sizes);
+    if (succeeded(positionBased))
+      return *positionBased;
+  }
 
   SmallVector<int64_t> originalStrides, candidateStrides;
   int64_t originalOffset, candidateOffset;
