@@ -1117,6 +1117,7 @@ RISCVTargetLowering::RISCVTargetLowering(const TargetMachine &TM,
       }
 
       if (Subtarget.hasStdExtZvbc() && Subtarget.hasVInstructionsI64()) {
+        // TODO: Support Zvbc32e.
         if (VT.getVectorElementType() == MVT::i64)
           setOperationAction({ISD::CLMUL, ISD::CLMULH}, VT, Legal);
         else {
