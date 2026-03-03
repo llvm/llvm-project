@@ -149,6 +149,7 @@ OPENCL_EXTENSION(cl_intel_subgroups_short, true, 100)
 OPENCL_EXTENSION(cl_intel_subgroup_buffer_prefetch, false, 100)
 OPENCL_EXTENSION(cl_intel_subgroup_local_block_io, false, 100)
 OPENCL_EXTENSION(cl_intel_device_side_avc_motion_estimation, true, 100)
+OPENCL_EXTENSION(cl_intel_split_work_group_barrier, false, 100)
 
 // OpenCL C 3.0 features (6.2.1. Features)
 OPENCL_OPTIONALCOREFEATURE(__opencl_c_3d_image_writes, false, 300, OCL_C_30)
