@@ -303,18 +303,6 @@ class FeatureMaxHardClauseLength<int size> : SubtargetFeature<
   "Maximum number of instructions in an explicit S_CLAUSE is "#size
 >;
 
-defm FlatOffsetBits12 : AMDGPUSubtargetFeature<"flat-offset-bits-12",
-  "Flat offset encoding has 12 bits",
-  /*GenPredicate=*/ 0,
-  /*GenAssemblerPredicate=*/ 0
->;
-
-defm FlatOffsetBits24 : AMDGPUSubtargetFeature<"flat-offset-bits-24",
-  "Flat offset encoding has 24 bits",
-  /*GenPredicate=*/ 0,
-  /*GenAssemblerPredicate=*/ 0
->;
-
 /// Work around a hardware bug on some chips that can be triggered
 /// under certain circumstances when clauses are longer than 32 operations.
 def FeatureMaxHardClauseLength32 : FeatureMaxHardClauseLength<32>;
