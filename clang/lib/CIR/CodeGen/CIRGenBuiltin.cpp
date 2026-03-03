@@ -1553,9 +1553,8 @@ RValue CIRGenFunction::emitBuiltinExpr(const GlobalDecl &gd, unsigned builtinID,
     CIRGenFunction::CIRGenFPOptionsRAII FPOptsRAII(*this, e);
     mlir::Location loc = getLoc(e->getBeginLoc());
     mlir::Value arg = emitScalarExpr(e->getArg(0));
-    mlir::Value absArg = cir::FAbsOp::create(builder, loc, arg.getType(), arg);
     mlir::Value isInf =
-        builder.createIsFPClass(loc, absArg, cir::FPClassTest::Infinity);
+        builder.createIsFPClass(loc, arg, cir::FPClassTest::Infinity);
     mlir::Value isNeg = emitSignBit(loc, *this, arg);
     mlir::Type intTy = convertType(e->getType());
     cir::ConstantOp zero = builder.getNullValue(intTy, loc);
