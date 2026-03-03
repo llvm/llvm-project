@@ -374,3 +374,26 @@ gpu.module @test_1_1_assignment {
     gpu.return
   }
 }
+
+// -----
+
+// Regression test for https://github.com/llvm/llvm-project/issues/182999:
+// Tensors without an XeGPU layout encoding (e.g. tensor<?xi32>) used to crash
+// VectorType::get() because dynamic sizes are not valid for VectorType.
+// The pass should now leave such tensors unchanged.
+
+// CHECK-LABEL: func.func @no_crash_on_dynamic_tensor
+// CHECK-SAME: %[[ARG0:.*]]: tensor<?xi32>
+// CHECK: scf.for
+// CHECK: tensor.insert
+// CHECK: return
+func.func @no_crash_on_dynamic_tensor(%arg0: tensor<?xi32>, %arg1: index) -> tensor<?xi32> {
+  %c0 = arith.constant 0 : index
+  %c1 = arith.constant 1 : index
+  %result = scf.for %i = %c0 to %arg1 step %c1 iter_args(%acc = %arg0) -> (tensor<?xi32>) {
+    %val = arith.index_cast %i : index to i32
+    %updated = tensor.insert %val into %acc[%i] : tensor<?xi32>
+    scf.yield %updated : tensor<?xi32>
+  }
+  return %result : tensor<?xi32>
+}
