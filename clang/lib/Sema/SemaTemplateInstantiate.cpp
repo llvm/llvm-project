@@ -4481,11 +4481,10 @@ ExprResult Sema::SubstConceptTemplateArguments(
 
     ExprResult TransformUnresolvedLookupExpr(UnresolvedLookupExpr *E,
                                              bool IsAddressOfOperand = false) {
-      if (E->isConceptReference()) {
-        ExprResult Res = SemaRef.SubstExpr(E, MLTAL);
-        return Res;
-      }
-      return E;
+      if (!E->isConceptReference())
+        return E;
+
+      return SemaRef.SubstExpr(E, MLTAL);
     }
   };
 
