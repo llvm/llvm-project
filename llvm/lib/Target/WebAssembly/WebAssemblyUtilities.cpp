@@ -197,21 +197,23 @@ bool WebAssembly::canLowerReturn(size_t ResultSize,
 
 MachineSDNode *WebAssembly::getTLSBase(SelectionDAG &DAG, const SDLoc &DL,
                                        const WebAssemblySubtarget *Subtarget,
-                                       const SDValue *Chain) {
+                                       const SDValue Chain) {
   MVT PtrVT = Subtarget->hasAddr64() ? MVT::i64 : MVT::i32;
   auto GlobalGetIns = PtrVT == MVT::i64 ? WebAssembly::GLOBAL_GET_I64
                                         : WebAssembly::GLOBAL_GET_I32;
   ArrayRef<SDValue> Ops =
       Chain ? ArrayRef<SDValue>(*Chain) : ArrayRef<SDValue>();
   if (Subtarget->hasComponentModelThreadContext()) {
-    return DAG.getMachineNode(
-        WebAssembly::CALL, DL, PtrVT, MVT::Other,
-        DAG.getTargetExternalSymbol(
-            "__wasm_component_model_builtin_context_get_1", PtrVT),
-        Ops);
+if (Chain.getNode())
+      return DAG.getMachineNode(WebAssembly::CALL, DL, {PtrVT, MVT::Other},
+                                {CallTarget, Chain});
+    return DAG.getMachineNode(WebAssembly::CALL, DL, PtrVT, CallTarget);
+
   } else {
-    return DAG.getMachineNode(GlobalGetIns, DL, PtrVT,
-                              DAG.getTargetExternalSymbol("__tls_base", PtrVT),
-                              Ops);
+    SDValue TLSBaseSym = DAG.getTargetExternalSymbol("__tls_base", PtrVT);
+    if (Chain.getNode())
+      return DAG.getMachineNode(GlobalGetIns, DL, PtrVT, {TLSBaseSym, Chain});
+    return DAG.getMachineNode(GlobalGetIns, DL, PtrVT, TLSBaseSym);
+  
   }
 }

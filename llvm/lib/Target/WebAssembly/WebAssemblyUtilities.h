@@ -81,7 +81,7 @@ bool canLowerReturn(size_t ResultSize, const WebAssemblySubtarget *Subtarget);
 // __wasm_component_model_builtin_context_get_1 Otherwise: global.get __tls_base
 MachineSDNode *getTLSBase(SelectionDAG &DAG, const SDLoc &DL,
                           const WebAssemblySubtarget *Subtarget,
-                          const SDValue *Chain = nullptr);
+                          const SDValue Chain = SDValue());
 
 } // end namespace WebAssembly
 
