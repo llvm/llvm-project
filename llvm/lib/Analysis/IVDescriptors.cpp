@@ -229,10 +229,8 @@ static FastMathFlags collectMinMaxFMF(Value *V) {
 }
 
 static std::optional<FastMathFlags>
-hasRequiredFastMathFlags(FPMathOperator *FPOp, RecurKind &RK,
-                         FastMathFlags FuncFMF) {
-  bool HasRequiredFMF = (FuncFMF.noNaNs() && FuncFMF.noSignedZeros()) ||
-                        (FPOp && FPOp->hasNoNaNs() && FPOp->hasNoSignedZeros());
+hasRequiredFastMathFlags(FPMathOperator *FPOp, RecurKind &RK) {
+  bool HasRequiredFMF = FPOp && FPOp->hasNoNaNs() && FPOp->hasNoSignedZeros();
   if (HasRequiredFMF)
     return collectMinMaxFMF(FPOp);
 
@@ -260,7 +258,6 @@ hasRequiredFastMathFlags(FPMathOperator *FPOp, RecurKind &RK,
 }
 
 static RecurrenceDescriptor getMinMaxRecurrence(PHINode *Phi, Loop *TheLoop,
-                                                FastMathFlags FuncFMF,
                                                 ScalarEvolution *SE) {
   Type *Ty = Phi->getType();
   BasicBlock *Latch = TheLoop->getLoopLatch();
@@ -321,8 +318,7 @@ static RecurrenceDescriptor getMinMaxRecurrence(PHINode *Phi, Loop *TheLoop,
     RK = CurRK;
     // Check required fast-math flags for FP recurrences.
     if (RecurrenceDescriptor::isFPMinMaxRecurrenceKind(CurRK)) {
-      auto CurFMF =
-          hasRequiredFastMathFlags(cast<FPMathOperator>(Cur), RK, FuncFMF);
+      auto CurFMF = hasRequiredFastMathFlags(cast<FPMathOperator>(Cur), RK);
       if (!CurFMF)
         return {};
       FMF &= *CurFMF;
@@ -396,7 +392,7 @@ static RecurrenceDescriptor getMinMaxRecurrence(PHINode *Phi, Loop *TheLoop,
     }
   }
 
-  // Validate all stores go to same invariant address.
+  // Validate all stores go to same invariant address and are in the same block.
   StoreInst *IntermediateStore = nullptr;
   const SCEV *StorePtrSCEV = nullptr;
   for (StoreInst *SI : Stores) {
@@ -405,7 +401,11 @@ static RecurrenceDescriptor getMinMaxRecurrence(PHINode *Phi, Loop *TheLoop,
         (StorePtrSCEV && StorePtrSCEV != Ptr))
       return {};
     StorePtrSCEV = Ptr;
-    if (!IntermediateStore || IntermediateStore->comesBefore(SI))
+    if (!IntermediateStore)
+      IntermediateStore = SI;
+    else if (IntermediateStore->getParent() != SI->getParent())
+      return {};
+    else if (IntermediateStore->comesBefore(SI))
       IntermediateStore = SI;
   }
 
@@ -433,9 +433,9 @@ static bool isFindLastLikePhi(PHINode *Phi, PHINode *HeaderPhi,
 }
 
 bool RecurrenceDescriptor::AddReductionVar(
-    PHINode *Phi, RecurKind Kind, Loop *TheLoop, FastMathFlags FuncFMF,
-    RecurrenceDescriptor &RedDes, DemandedBits *DB, AssumptionCache *AC,
-    DominatorTree *DT, ScalarEvolution *SE) {
+    PHINode *Phi, RecurKind Kind, Loop *TheLoop, RecurrenceDescriptor &RedDes,
+    DemandedBits *DB, AssumptionCache *AC, DominatorTree *DT,
+    ScalarEvolution *SE) {
   if (Phi->getNumIncomingValues() != 2)
     return false;
 
@@ -606,8 +606,7 @@ bool RecurrenceDescriptor::AddReductionVar(
     // the starting value (the Phi or an AND instruction if the Phi has been
     // type-promoted).
     if (Cur != Start) {
-      ReduxDesc =
-          isRecurrenceInstr(TheLoop, Phi, Cur, Kind, ReduxDesc, FuncFMF, SE);
+      ReduxDesc = isRecurrenceInstr(TheLoop, Phi, Cur, Kind, ReduxDesc, SE);
       ExactFPMathInst = ExactFPMathInst == nullptr
                             ? ReduxDesc.getExactFPMathInst()
                             : ExactFPMathInst;
@@ -981,9 +980,10 @@ RecurrenceDescriptor::isConditionalRdxPattern(Instruction *I) {
   return InstDesc(true, I);
 }
 
-RecurrenceDescriptor::InstDesc RecurrenceDescriptor::isRecurrenceInstr(
-    Loop *L, PHINode *OrigPhi, Instruction *I, RecurKind Kind, InstDesc &Prev,
-    FastMathFlags FuncFMF, ScalarEvolution *SE) {
+RecurrenceDescriptor::InstDesc
+RecurrenceDescriptor::isRecurrenceInstr(Loop *L, PHINode *OrigPhi,
+                                        Instruction *I, RecurKind Kind,
+                                        InstDesc &Prev, ScalarEvolution *SE) {
   assert(Prev.getRecKind() == RecurKind::None || Prev.getRecKind() == Kind);
   switch (I->getOpcode()) {
   default:
@@ -1051,81 +1051,64 @@ bool RecurrenceDescriptor::isReductionPHI(PHINode *Phi, Loop *TheLoop,
                                           DemandedBits *DB, AssumptionCache *AC,
                                           DominatorTree *DT,
                                           ScalarEvolution *SE) {
-  BasicBlock *Header = TheLoop->getHeader();
-  Function &F = *Header->getParent();
-  FastMathFlags FMF;
-  FMF.setNoNaNs(
-      F.getFnAttribute("no-nans-fp-math").getValueAsBool());
-  FMF.setNoSignedZeros(
-      F.getFnAttribute("no-signed-zeros-fp-math").getValueAsBool());
-
-  if (AddReductionVar(Phi, RecurKind::Add, TheLoop, FMF, RedDes, DB, AC, DT,
-                      SE)) {
+  if (AddReductionVar(Phi, RecurKind::Add, TheLoop, RedDes, DB, AC, DT, SE)) {
     LLVM_DEBUG(dbgs() << "Found an ADD reduction PHI." << *Phi << "\n");
     return true;
   }
-  if (AddReductionVar(Phi, RecurKind::Sub, TheLoop, FMF, RedDes, DB, AC, DT,
-                      SE)) {
+  if (AddReductionVar(Phi, RecurKind::Sub, TheLoop, RedDes, DB, AC, DT, SE)) {
     LLVM_DEBUG(dbgs() << "Found a SUB reduction PHI." << *Phi << "\n");
     return true;
   }
-  if (AddReductionVar(Phi, RecurKind::AddChainWithSubs, TheLoop, FMF, RedDes,
-                      DB, AC, DT, SE)) {
+  if (AddReductionVar(Phi, RecurKind::AddChainWithSubs, TheLoop, RedDes, DB, AC,
+                      DT, SE)) {
     LLVM_DEBUG(dbgs() << "Found a chained ADD-SUB reduction PHI." << *Phi
                       << "\n");
     return true;
   }
-  if (AddReductionVar(Phi, RecurKind::Mul, TheLoop, FMF, RedDes, DB, AC, DT,
-                      SE)) {
+  if (AddReductionVar(Phi, RecurKind::Mul, TheLoop, RedDes, DB, AC, DT, SE)) {
     LLVM_DEBUG(dbgs() << "Found a MUL reduction PHI." << *Phi << "\n");
     return true;
   }
-  if (AddReductionVar(Phi, RecurKind::Or, TheLoop, FMF, RedDes, DB, AC, DT,
-                      SE)) {
+  if (AddReductionVar(Phi, RecurKind::Or, TheLoop, RedDes, DB, AC, DT, SE)) {
     LLVM_DEBUG(dbgs() << "Found an OR reduction PHI." << *Phi << "\n");
     return true;
   }
-  if (AddReductionVar(Phi, RecurKind::And, TheLoop, FMF, RedDes, DB, AC, DT,
-                      SE)) {
+  if (AddReductionVar(Phi, RecurKind::And, TheLoop, RedDes, DB, AC, DT, SE)) {
     LLVM_DEBUG(dbgs() << "Found an AND reduction PHI." << *Phi << "\n");
     return true;
   }
-  if (AddReductionVar(Phi, RecurKind::Xor, TheLoop, FMF, RedDes, DB, AC, DT,
-                      SE)) {
+  if (AddReductionVar(Phi, RecurKind::Xor, TheLoop, RedDes, DB, AC, DT, SE)) {
     LLVM_DEBUG(dbgs() << "Found a XOR reduction PHI." << *Phi << "\n");
     return true;
   }
-  auto RD = getMinMaxRecurrence(Phi, TheLoop, FMF, SE);
+  auto RD = getMinMaxRecurrence(Phi, TheLoop, SE);
   if (RD.getRecurrenceKind() != RecurKind::None) {
     assert(
         RecurrenceDescriptor::isMinMaxRecurrenceKind(RD.getRecurrenceKind()) &&
         "Expected a min/max recurrence kind");
     LLVM_DEBUG(dbgs() << "Found a min/max reduction PHI." << *Phi << "\n");
-    RedDes = RD;
+    RedDes = std::move(RD);
     return true;
   }
-  if (AddReductionVar(Phi, RecurKind::AnyOf, TheLoop, FMF, RedDes, DB, AC, DT,
-                      SE)) {
+  if (AddReductionVar(Phi, RecurKind::AnyOf, TheLoop, RedDes, DB, AC, DT, SE)) {
     LLVM_DEBUG(dbgs() << "Found a conditional select reduction PHI." << *Phi
                       << "\n");
     return true;
   }
-  if (AddReductionVar(Phi, RecurKind::FindLast, TheLoop, FMF, RedDes, DB, AC,
-                      DT, SE)) {
+  if (AddReductionVar(Phi, RecurKind::FindLast, TheLoop, RedDes, DB, AC, DT,
+                      SE)) {
     LLVM_DEBUG(dbgs() << "Found a Find reduction PHI." << *Phi << "\n");
     return true;
   }
-  if (AddReductionVar(Phi, RecurKind::FMul, TheLoop, FMF, RedDes, DB, AC, DT,
-                      SE)) {
+  if (AddReductionVar(Phi, RecurKind::FMul, TheLoop, RedDes, DB, AC, DT, SE)) {
     LLVM_DEBUG(dbgs() << "Found an FMult reduction PHI." << *Phi << "\n");
     return true;
   }
-  if (AddReductionVar(Phi, RecurKind::FAdd, TheLoop, FMF, RedDes, DB, AC, DT,
-                      SE)) {
+  if (AddReductionVar(Phi, RecurKind::FAdd, TheLoop, RedDes, DB, AC, DT, SE)) {
     LLVM_DEBUG(dbgs() << "Found an FAdd reduction PHI." << *Phi << "\n");
     return true;
   }
-  if (AddReductionVar(Phi, RecurKind::FMulAdd, TheLoop, FMF, RedDes, DB, AC, DT,
+  if (AddReductionVar(Phi, RecurKind::FMulAdd, TheLoop, RedDes, DB, AC, DT,
                       SE)) {
     LLVM_DEBUG(dbgs() << "Found an FMulAdd reduction PHI." << *Phi << "\n");
     return true;

@@ -6159,7 +6159,7 @@ def note_template_declared_here : Note<
   "%1 declared here">;
 def err_template_expansion_into_fixed_list : Error<
   "pack expansion used as argument for non-pack parameter of %select{alias "
-  "template|concept}0">;
+  "template|concept|builtin template}0">;
 def note_parameter_type : Note<
   "parameter of type %0 is declared here">;
 
@@ -6296,6 +6296,8 @@ def warn_unavailable_def : Warning<
   InGroup<DeprecatedImplementations>, DefaultIgnore;
 def warn_deprecated_builtin : Warning<
   "builtin %0 is deprecated; use %1 instead">,
+  InGroup<DeprecatedBuiltins>;
+def warn_deprecated_builtin_no_suggestion : Warning<"builtin %0 is deprecated">,
   InGroup<DeprecatedBuiltins>;
 def err_unavailable : Error<"%0 is unavailable">;
 def err_property_method_unavailable :
@@ -10897,26 +10899,23 @@ def warn_dangling_reference_captured_by_unknown : Warning<
    "the full-expression">, InGroup<DanglingCapture>;
 
 // Diagnostics based on the Lifetime safety analysis.
-def warn_lifetime_safety_loan_expires_permissive : Warning<
+def warn_lifetime_safety_use_after_scope : Warning<
    "object whose reference is captured does not live long enough">,
-   InGroup<LifetimeSafetyPermissive>, DefaultIgnore;
-def warn_lifetime_safety_loan_expires_strict : Warning<
-   "object whose reference is captured may not live long enough">,
-   InGroup<LifetimeSafetyStrict>, DefaultIgnore;
-def warn_lifetime_safety_loan_expires_moved_strict : Warning<
+   InGroup<LifetimeSafetyUseAfterScope>, DefaultIgnore;
+def warn_lifetime_safety_use_after_scope_moved : Warning<
    "object whose reference is captured may not live long enough. "
    "This could be false positive as the storage may have been moved later">,
-   InGroup<LifetimeSafetyStrict>, DefaultIgnore;
+   InGroup<LifetimeSafetyUseAfterScopeMoved>, DefaultIgnore;
 
-def warn_lifetime_safety_return_stack_addr_permissive
+def warn_lifetime_safety_return_stack_addr
     : Warning<"address of stack memory is returned later">,
-      InGroup<LifetimeSafetyPermissive>,
+      InGroup<LifetimeSafetyReturnStackAddr>,
       DefaultIgnore;
-def warn_lifetime_safety_return_stack_addr_moved_strict
+def warn_lifetime_safety_return_stack_addr_moved
     : Warning<"address of stack memory may be returned later. "
       "This could be false positive as the storage may have been moved. "
       "Consider moving first and then aliasing later to resolve the issue">,
-      InGroup<LifetimeSafetyStrict>,
+      InGroup<LifetimeSafetyReturnStackAddrMoved>,
       DefaultIgnore;
 
 def warn_lifetime_safety_invalidation
@@ -10932,7 +10931,7 @@ def warn_lifetime_safety_dangling_field_moved
     : Warning<"address of stack memory escapes to a field. "
       "This could be a false positive as the storage may have been moved. "
       "Consider moving first and then aliasing later to resolve the issue">,
-      InGroup<LifetimeSafetyDanglingFieldStrict>,
+      InGroup<LifetimeSafetyDanglingFieldMoved>,
       DefaultIgnore;
 
 def note_lifetime_safety_used_here : Note<"later used here">;
@@ -12625,6 +12624,10 @@ def err_omp_transparent_invalid_value : Error<"invalid value for transparent cla
   " expected one of: omp_not_impex, omp_import, omp_export, omp_impex">;
 def err_omp_transparent_invalid_type : Error<
   "transparent clause cannot be applied to type: %0">;
+def err_omp_num_teams_multi_expr_not_allowed
+    : Error<"only two expressions allowed in 'num_teams' clause">;
+def err_omp_num_teams_lower_bound_larger
+    : Error<"lower bound is greater than upper bound in 'num_teams' clause">;
 } // end of OpenMP category
 
 let CategoryName = "Related Result Type Issue" in {
@@ -13588,6 +13591,10 @@ def err_hlsl_incomplete_resource_array_in_function_param: Error<
   "incomplete resource array in a function parameter">;
 def err_hlsl_assign_to_global_resource: Error<
   "assignment to global resource variable %0 is not allowed">;
+def warn_hlsl_assigning_local_resource_is_not_unique
+    : Warning<"assignment of %0 to local resource %1 is not to the same "
+              "unique global resource">,
+      InGroup<HLSLExplicitBinding>;
 
 def err_hlsl_push_constant_unique
     : Error<"cannot have more than one push constant block">;
