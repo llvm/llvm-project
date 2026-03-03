@@ -50,5 +50,8 @@ class TestCrashingCondition(TestBase):
         self.assertState(process.state, lldb.eStateStopped)
         # We don't actually know what stop reason a given system will
         # report - it could be eStopReasonException or eStopReasonSignal
-        is_crash = thread.stop_reason == lldb.eStopReasonException or thread.stop_reason == lldb.eStopReasonSignal
+        is_crash = (
+            thread.stop_reason == lldb.eStopReasonException
+            or thread.stop_reason == lldb.eStopReasonSignal
+        )
         self.assertTrue(is_crash, "Ran to the actual crash")
