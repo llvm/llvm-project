@@ -3782,7 +3782,7 @@
 #define Q6_Ww_v6mpyacc_WwWubWbI_v(Vxx,Vuu,Vvv,Iu2) __BUILTIN_VECTOR_WRAP(__builtin_HEXAGON_V6_v6mpyvubs10_vxx)(Vxx,Vuu,Vvv,Iu2)
 #endif
 
-#if __HVX_ARCH__ >= 68
+#if __HVX_ARCH__ >= 68 && defined __HVX_IEEE_FP__
 /* ==========================================================================
    Assembly Syntax:       Vd32.hf=vabs(Vu32.hf)
    C Intrinsic Prototype: HVX_Vector Q6_Vhf_vabs_Vhf(HVX_Vector Vu)
@@ -3793,7 +3793,7 @@
 #define Q6_Vhf_vabs_Vhf(Vu) __BUILTIN_VECTOR_WRAP(__builtin_HEXAGON_V6_vabs_hf)(Vu)
 #endif
 
-#if __HVX_ARCH__ >= 68
+#if __HVX_ARCH__ >= 68 && defined __HVX_IEEE_FP__
 /* ==========================================================================
    Assembly Syntax:       Vd32.sf=vabs(Vu32.sf)
    C Intrinsic Prototype: HVX_Vector Q6_Vsf_vabs_Vsf(HVX_Vector Vu)
@@ -3815,7 +3815,7 @@
 #define Q6_Vqf16_vadd_VhfVhf(Vu,Vv) __BUILTIN_VECTOR_WRAP(__builtin_HEXAGON_V6_vadd_hf)(Vu,Vv)
 #endif
 
-#if __HVX_ARCH__ >= 68
+#if __HVX_ARCH__ >= 68 && defined __HVX_IEEE_FP__
 /* ==========================================================================
    Assembly Syntax:       Vd32.hf=vadd(Vu32.hf,Vv32.hf)
    C Intrinsic Prototype: HVX_Vector Q6_Vhf_vadd_VhfVhf(HVX_Vector Vu, HVX_Vector Vv)
@@ -3881,7 +3881,7 @@
 #define Q6_Vqf32_vadd_VsfVsf(Vu,Vv) __BUILTIN_VECTOR_WRAP(__builtin_HEXAGON_V6_vadd_sf)(Vu,Vv)
 #endif
 
-#if __HVX_ARCH__ >= 68
+#if __HVX_ARCH__ >= 68 && defined __HVX_IEEE_FP__
 /* ==========================================================================
    Assembly Syntax:       Vdd32.sf=vadd(Vu32.hf,Vv32.hf)
    C Intrinsic Prototype: HVX_VectorPair Q6_Wsf_vadd_VhfVhf(HVX_Vector Vu, HVX_Vector Vv)
@@ -3892,7 +3892,7 @@
 #define Q6_Wsf_vadd_VhfVhf(Vu,Vv) __BUILTIN_VECTOR_WRAP(__builtin_HEXAGON_V6_vadd_sf_hf)(Vu,Vv)
 #endif
 
-#if __HVX_ARCH__ >= 68
+#if __HVX_ARCH__ >= 68 && defined __HVX_IEEE_FP__
 /* ==========================================================================
    Assembly Syntax:       Vd32.sf=vadd(Vu32.sf,Vv32.sf)
    C Intrinsic Prototype: HVX_Vector Q6_Vsf_vadd_VsfVsf(HVX_Vector Vu, HVX_Vector Vv)
@@ -3903,7 +3903,7 @@
 #define Q6_Vsf_vadd_VsfVsf(Vu,Vv) __BUILTIN_VECTOR_WRAP(__builtin_HEXAGON_V6_vadd_sf_sf)(Vu,Vv)
 #endif
 
-#if __HVX_ARCH__ >= 68
+#if __HVX_ARCH__ >= 68 && defined __HVX_IEEE_FP__
 /* ==========================================================================
    Assembly Syntax:       Vd32.w=vfmv(Vu32.w)
    C Intrinsic Prototype: HVX_Vector Q6_Vw_vfmv_Vw(HVX_Vector Vu)
@@ -3947,7 +3947,7 @@
 #define Q6_Vsf_equals_Vqf32(Vu) __BUILTIN_VECTOR_WRAP(__builtin_HEXAGON_V6_vconv_sf_qf32)(Vu)
 #endif
 
-#if __HVX_ARCH__ >= 68
+#if __HVX_ARCH__ >= 68 && defined __HVX_IEEE_FP__
 /* ==========================================================================
    Assembly Syntax:       Vd32.b=vcvt(Vu32.hf,Vv32.hf)
    C Intrinsic Prototype: HVX_Vector Q6_Vb_vcvt_VhfVhf(HVX_Vector Vu, HVX_Vector Vv)
@@ -3958,7 +3958,7 @@
 #define Q6_Vb_vcvt_VhfVhf(Vu,Vv) __BUILTIN_VECTOR_WRAP(__builtin_HEXAGON_V6_vcvt_b_hf)(Vu,Vv)
 #endif
 
-#if __HVX_ARCH__ >= 68
+#if __HVX_ARCH__ >= 68 && defined __HVX_IEEE_FP__
 /* ==========================================================================
    Assembly Syntax:       Vd32.h=vcvt(Vu32.hf)
    C Intrinsic Prototype: HVX_Vector Q6_Vh_vcvt_Vhf(HVX_Vector Vu)
@@ -3969,7 +3969,7 @@
 #define Q6_Vh_vcvt_Vhf(Vu) __BUILTIN_VECTOR_WRAP(__builtin_HEXAGON_V6_vcvt_h_hf)(Vu)
 #endif
 
-#if __HVX_ARCH__ >= 68
+#if __HVX_ARCH__ >= 68 && defined __HVX_IEEE_FP__
 /* ==========================================================================
    Assembly Syntax:       Vdd32.hf=vcvt(Vu32.b)
    C Intrinsic Prototype: HVX_VectorPair Q6_Whf_vcvt_Vb(HVX_Vector Vu)
@@ -3980,7 +3980,7 @@
 #define Q6_Whf_vcvt_Vb(Vu) __BUILTIN_VECTOR_WRAP(__builtin_HEXAGON_V6_vcvt_hf_b)(Vu)
 #endif
 
-#if __HVX_ARCH__ >= 68
+#if __HVX_ARCH__ >= 68 && defined __HVX_IEEE_FP__
 /* ==========================================================================
    Assembly Syntax:       Vd32.hf=vcvt(Vu32.h)
    C Intrinsic Prototype: HVX_Vector Q6_Vhf_vcvt_Vh(HVX_Vector Vu)
@@ -3991,7 +3991,7 @@
 #define Q6_Vhf_vcvt_Vh(Vu) __BUILTIN_VECTOR_WRAP(__builtin_HEXAGON_V6_vcvt_hf_h)(Vu)
 #endif
 
-#if __HVX_ARCH__ >= 68
+#if __HVX_ARCH__ >= 68 && defined __HVX_IEEE_FP__
 /* ==========================================================================
    Assembly Syntax:       Vd32.hf=vcvt(Vu32.sf,Vv32.sf)
    C Intrinsic Prototype: HVX_Vector Q6_Vhf_vcvt_VsfVsf(HVX_Vector Vu, HVX_Vector Vv)
@@ -4002,7 +4002,7 @@
 #define Q6_Vhf_vcvt_VsfVsf(Vu,Vv) __BUILTIN_VECTOR_WRAP(__builtin_HEXAGON_V6_vcvt_hf_sf)(Vu,Vv)
 #endif
 
-#if __HVX_ARCH__ >= 68
+#if __HVX_ARCH__ >= 68 && defined __HVX_IEEE_FP__
 /* ==========================================================================
    Assembly Syntax:       Vdd32.hf=vcvt(Vu32.ub)
    C Intrinsic Prototype: HVX_VectorPair Q6_Whf_vcvt_Vub(HVX_Vector Vu)
@@ -4013,7 +4013,7 @@
 #define Q6_Whf_vcvt_Vub(Vu) __BUILTIN_VECTOR_WRAP(__builtin_HEXAGON_V6_vcvt_hf_ub)(Vu)
 #endif
 
-#if __HVX_ARCH__ >= 68
+#if __HVX_ARCH__ >= 68 && defined __HVX_IEEE_FP__
 /* ==========================================================================
    Assembly Syntax:       Vd32.hf=vcvt(Vu32.uh)
    C Intrinsic Prototype: HVX_Vector Q6_Vhf_vcvt_Vuh(HVX_Vector Vu)
@@ -4024,7 +4024,7 @@
 #define Q6_Vhf_vcvt_Vuh(Vu) __BUILTIN_VECTOR_WRAP(__builtin_HEXAGON_V6_vcvt_hf_uh)(Vu)
 #endif
 
-#if __HVX_ARCH__ >= 68
+#if __HVX_ARCH__ >= 68 && defined __HVX_IEEE_FP__
 /* ==========================================================================
    Assembly Syntax:       Vdd32.sf=vcvt(Vu32.hf)
    C Intrinsic Prototype: HVX_VectorPair Q6_Wsf_vcvt_Vhf(HVX_Vector Vu)
@@ -4035,7 +4035,7 @@
 #define Q6_Wsf_vcvt_Vhf(Vu) __BUILTIN_VECTOR_WRAP(__builtin_HEXAGON_V6_vcvt_sf_hf)(Vu)
 #endif
 
-#if __HVX_ARCH__ >= 68
+#if __HVX_ARCH__ >= 68 && defined __HVX_IEEE_FP__
 /* ==========================================================================
    Assembly Syntax:       Vd32.ub=vcvt(Vu32.hf,Vv32.hf)
    C Intrinsic Prototype: HVX_Vector Q6_Vub_vcvt_VhfVhf(HVX_Vector Vu, HVX_Vector Vv)
@@ -4046,7 +4046,7 @@
 #define Q6_Vub_vcvt_VhfVhf(Vu,Vv) __BUILTIN_VECTOR_WRAP(__builtin_HEXAGON_V6_vcvt_ub_hf)(Vu,Vv)
 #endif
 
-#if __HVX_ARCH__ >= 68
+#if __HVX_ARCH__ >= 68 && defined __HVX_IEEE_FP__
 /* ==========================================================================
    Assembly Syntax:       Vd32.uh=vcvt(Vu32.hf)
    C Intrinsic Prototype: HVX_Vector Q6_Vuh_vcvt_Vhf(HVX_Vector Vu)
@@ -4057,7 +4057,7 @@
 #define Q6_Vuh_vcvt_Vhf(Vu) __BUILTIN_VECTOR_WRAP(__builtin_HEXAGON_V6_vcvt_uh_hf)(Vu)
 #endif
 
-#if __HVX_ARCH__ >= 68
+#if __HVX_ARCH__ >= 68 && defined __HVX_IEEE_FP__
 /* ==========================================================================
    Assembly Syntax:       Vd32.sf=vdmpy(Vu32.hf,Vv32.hf)
    C Intrinsic Prototype: HVX_Vector Q6_Vsf_vdmpy_VhfVhf(HVX_Vector Vu, HVX_Vector Vv)
@@ -4068,7 +4068,7 @@
 #define Q6_Vsf_vdmpy_VhfVhf(Vu,Vv) __BUILTIN_VECTOR_WRAP(__builtin_HEXAGON_V6_vdmpy_sf_hf)(Vu,Vv)
 #endif
 
-#if __HVX_ARCH__ >= 68
+#if __HVX_ARCH__ >= 68 && defined __HVX_IEEE_FP__
 /* ==========================================================================
    Assembly Syntax:       Vx32.sf+=vdmpy(Vu32.hf,Vv32.hf)
    C Intrinsic Prototype: HVX_Vector Q6_Vsf_vdmpyacc_VsfVhfVhf(HVX_Vector Vx, HVX_Vector Vu, HVX_Vector Vv)
@@ -4079,7 +4079,7 @@
 #define Q6_Vsf_vdmpyacc_VsfVhfVhf(Vx,Vu,Vv) __BUILTIN_VECTOR_WRAP(__builtin_HEXAGON_V6_vdmpy_sf_hf_acc)(Vx,Vu,Vv)
 #endif
 
-#if __HVX_ARCH__ >= 68
+#if __HVX_ARCH__ >= 68 && defined __HVX_IEEE_FP__
 /* ==========================================================================
    Assembly Syntax:       Vd32.hf=vfmax(Vu32.hf,Vv32.hf)
    C Intrinsic Prototype: HVX_Vector Q6_Vhf_vfmax_VhfVhf(HVX_Vector Vu, HVX_Vector Vv)
@@ -4090,7 +4090,7 @@
 #define Q6_Vhf_vfmax_VhfVhf(Vu,Vv) __BUILTIN_VECTOR_WRAP(__builtin_HEXAGON_V6_vfmax_hf)(Vu,Vv)
 #endif
 
-#if __HVX_ARCH__ >= 68
+#if __HVX_ARCH__ >= 68 && defined __HVX_IEEE_FP__
 /* ==========================================================================
    Assembly Syntax:       Vd32.sf=vfmax(Vu32.sf,Vv32.sf)
    C Intrinsic Prototype: HVX_Vector Q6_Vsf_vfmax_VsfVsf(HVX_Vector Vu, HVX_Vector Vv)
@@ -4101,7 +4101,7 @@
 #define Q6_Vsf_vfmax_VsfVsf(Vu,Vv) __BUILTIN_VECTOR_WRAP(__builtin_HEXAGON_V6_vfmax_sf)(Vu,Vv)
 #endif
 
-#if __HVX_ARCH__ >= 68
+#if __HVX_ARCH__ >= 68 && defined __HVX_IEEE_FP__
 /* ==========================================================================
    Assembly Syntax:       Vd32.hf=vfmin(Vu32.hf,Vv32.hf)
    C Intrinsic Prototype: HVX_Vector Q6_Vhf_vfmin_VhfVhf(HVX_Vector Vu, HVX_Vector Vv)
@@ -4112,7 +4112,7 @@
 #define Q6_Vhf_vfmin_VhfVhf(Vu,Vv) __BUILTIN_VECTOR_WRAP(__builtin_HEXAGON_V6_vfmin_hf)(Vu,Vv)
 #endif
 
-#if __HVX_ARCH__ >= 68
+#if __HVX_ARCH__ >= 68 && defined __HVX_IEEE_FP__
 /* ==========================================================================
    Assembly Syntax:       Vd32.sf=vfmin(Vu32.sf,Vv32.sf)
    C Intrinsic Prototype: HVX_Vector Q6_Vsf_vfmin_VsfVsf(HVX_Vector Vu, HVX_Vector Vv)
@@ -4123,7 +4123,7 @@
 #define Q6_Vsf_vfmin_VsfVsf(Vu,Vv) __BUILTIN_VECTOR_WRAP(__builtin_HEXAGON_V6_vfmin_sf)(Vu,Vv)
 #endif
 
-#if __HVX_ARCH__ >= 68
+#if __HVX_ARCH__ >= 68 && defined __HVX_IEEE_FP__
 /* ==========================================================================
    Assembly Syntax:       Vd32.hf=vfneg(Vu32.hf)
    C Intrinsic Prototype: HVX_Vector Q6_Vhf_vfneg_Vhf(HVX_Vector Vu)
@@ -4134,7 +4134,7 @@
 #define Q6_Vhf_vfneg_Vhf(Vu) __BUILTIN_VECTOR_WRAP(__builtin_HEXAGON_V6_vfneg_hf)(Vu)
 #endif
 
-#if __HVX_ARCH__ >= 68
+#if __HVX_ARCH__ >= 68 && defined __HVX_IEEE_FP__
 /* ==========================================================================
    Assembly Syntax:       Vd32.sf=vfneg(Vu32.sf)
    C Intrinsic Prototype: HVX_Vector Q6_Vsf_vfneg_Vsf(HVX_Vector Vu)
@@ -4277,7 +4277,7 @@
 #define Q6_Vsf_vmin_VsfVsf(Vu,Vv) __BUILTIN_VECTOR_WRAP(__builtin_HEXAGON_V6_vmin_sf)(Vu,Vv)
 #endif
 
-#if __HVX_ARCH__ >= 68
+#if __HVX_ARCH__ >= 68 && defined __HVX_IEEE_FP__
 /* ==========================================================================
    Assembly Syntax:       Vd32.hf=vmpy(Vu32.hf,Vv32.hf)
    C Intrinsic Prototype: HVX_Vector Q6_Vhf_vmpy_VhfVhf(HVX_Vector Vu, HVX_Vector Vv)
@@ -4288,7 +4288,7 @@
 #define Q6_Vhf_vmpy_VhfVhf(Vu,Vv) __BUILTIN_VECTOR_WRAP(__builtin_HEXAGON_V6_vmpy_hf_hf)(Vu,Vv)
 #endif
 
-#if __HVX_ARCH__ >= 68
+#if __HVX_ARCH__ >= 68 && defined __HVX_IEEE_FP__
 /* ==========================================================================
    Assembly Syntax:       Vx32.hf+=vmpy(Vu32.hf,Vv32.hf)
    C Intrinsic Prototype: HVX_Vector Q6_Vhf_vmpyacc_VhfVhfVhf(HVX_Vector Vx, HVX_Vector Vu, HVX_Vector Vv)
@@ -4387,7 +4387,7 @@
 #define Q6_Vqf32_vmpy_VsfVsf(Vu,Vv) __BUILTIN_VECTOR_WRAP(__builtin_HEXAGON_V6_vmpy_qf32_sf)(Vu,Vv)
 #endif
 
-#if __HVX_ARCH__ >= 68
+#if __HVX_ARCH__ >= 68 && defined __HVX_IEEE_FP__
 /* ==========================================================================
    Assembly Syntax:       Vdd32.sf=vmpy(Vu32.hf,Vv32.hf)
    C Intrinsic Prototype: HVX_VectorPair Q6_Wsf_vmpy_VhfVhf(HVX_Vector Vu, HVX_Vector Vv)
@@ -4398,7 +4398,7 @@
 #define Q6_Wsf_vmpy_VhfVhf(Vu,Vv) __BUILTIN_VECTOR_WRAP(__builtin_HEXAGON_V6_vmpy_sf_hf)(Vu,Vv)
 #endif
 
-#if __HVX_ARCH__ >= 68
+#if __HVX_ARCH__ >= 68 && defined __HVX_IEEE_FP__
 /* ==========================================================================
    Assembly Syntax:       Vxx32.sf+=vmpy(Vu32.hf,Vv32.hf)
    C Intrinsic Prototype: HVX_VectorPair Q6_Wsf_vmpyacc_WsfVhfVhf(HVX_VectorPair Vxx, HVX_Vector Vu, HVX_Vector Vv)
@@ -4409,7 +4409,7 @@
 #define Q6_Wsf_vmpyacc_WsfVhfVhf(Vxx,Vu,Vv) __BUILTIN_VECTOR_WRAP(__builtin_HEXAGON_V6_vmpy_sf_hf_acc)(Vxx,Vu,Vv)
 #endif
 
-#if __HVX_ARCH__ >= 68
+#if __HVX_ARCH__ >= 68 && defined __HVX_IEEE_FP__
 /* ==========================================================================
    Assembly Syntax:       Vd32.sf=vmpy(Vu32.sf,Vv32.sf)
    C Intrinsic Prototype: HVX_Vector Q6_Vsf_vmpy_VsfVsf(HVX_Vector Vu, HVX_Vector Vv)
@@ -4431,7 +4431,7 @@
 #define Q6_Vqf16_vsub_VhfVhf(Vu,Vv) __BUILTIN_VECTOR_WRAP(__builtin_HEXAGON_V6_vsub_hf)(Vu,Vv)
 #endif
 
-#if __HVX_ARCH__ >= 68
+#if __HVX_ARCH__ >= 68 && defined __HVX_IEEE_FP__
 /* ==========================================================================
    Assembly Syntax:       Vd32.hf=vsub(Vu32.hf,Vv32.hf)
    C Intrinsic Prototype: HVX_Vector Q6_Vhf_vsub_VhfVhf(HVX_Vector Vu, HVX_Vector Vv)
@@ -4497,7 +4497,7 @@
 #define Q6_Vqf32_vsub_VsfVsf(Vu,Vv) __BUILTIN_VECTOR_WRAP(__builtin_HEXAGON_V6_vsub_sf)(Vu,Vv)
 #endif
 
-#if __HVX_ARCH__ >= 68
+#if __HVX_ARCH__ >= 68 && defined __HVX_IEEE_FP__
 /* ==========================================================================
    Assembly Syntax:       Vdd32.sf=vsub(Vu32.hf,Vv32.hf)
    C Intrinsic Prototype: HVX_VectorPair Q6_Wsf_vsub_VhfVhf(HVX_Vector Vu, HVX_Vector Vv)
@@ -4508,7 +4508,7 @@
 #define Q6_Wsf_vsub_VhfVhf(Vu,Vv) __BUILTIN_VECTOR_WRAP(__builtin_HEXAGON_V6_vsub_sf_hf)(Vu,Vv)
 #endif
 
-#if __HVX_ARCH__ >= 68
+#if __HVX_ARCH__ >= 68 && defined __HVX_IEEE_FP__
 /* ==========================================================================
    Assembly Syntax:       Vd32.sf=vsub(Vu32.sf,Vv32.sf)
    C Intrinsic Prototype: HVX_Vector Q6_Vsf_vsub_VsfVsf(HVX_Vector Vu, HVX_Vector Vv)
@@ -4574,7 +4574,7 @@
 #define Q6_Vuh_vmpy_VuhVuh_rs16(Vu,Vv) __BUILTIN_VECTOR_WRAP(__builtin_HEXAGON_V6_vmpyuhvs)(Vu,Vv)
 #endif
 
-#if __HVX_ARCH__ >= 73
+#if __HVX_ARCH__ >= 73 && defined __HVX_IEEE_FP__
 /* ==========================================================================
    Assembly Syntax:       Vdd32.sf=vadd(Vu32.bf,Vv32.bf)
    C Intrinsic Prototype: HVX_VectorPair Q6_Wsf_vadd_VbfVbf(HVX_Vector Vu, HVX_Vector Vv)
@@ -4634,7 +4634,7 @@
   __BUILTIN_VECTOR_WRAP(__builtin_HEXAGON_V6_vconv_w_sf)(Vu)
 #endif
 
-#if __HVX_ARCH__ >= 73
+#if __HVX_ARCH__ >= 73 && defined __HVX_IEEE_FP__
 /* ==========================================================================
    Assembly Syntax:       Vd32.bf=vcvt(Vu32.sf,Vv32.sf)
    C Intrinsic Prototype: HVX_Vector Q6_Vbf_vcvt_VsfVsf(HVX_Vector Vu, HVX_Vector Vv)
@@ -4707,7 +4707,7 @@
    -1)
 #endif
 
-#if __HVX_ARCH__ >= 73
+#if __HVX_ARCH__ >= 73 && defined __HVX_IEEE_FP__
 /* ==========================================================================
    Assembly Syntax:       Vd32.bf=vmax(Vu32.bf,Vv32.bf)
    C Intrinsic Prototype: HVX_Vector Q6_Vbf_vmax_VbfVbf(HVX_Vector Vu, HVX_Vector Vv)
@@ -4719,7 +4719,7 @@
   __BUILTIN_VECTOR_WRAP(__builtin_HEXAGON_V6_vmax_bf)(Vu, Vv)
 #endif
 
-#if __HVX_ARCH__ >= 73
+#if __HVX_ARCH__ >= 73 && defined __HVX_IEEE_FP__
 /* ==========================================================================
    Assembly Syntax:       Vd32.bf=vmin(Vu32.bf,Vv32.bf)
    C Intrinsic Prototype: HVX_Vector Q6_Vbf_vmin_VbfVbf(HVX_Vector Vu, HVX_Vector Vv)
@@ -4731,7 +4731,7 @@
   __BUILTIN_VECTOR_WRAP(__builtin_HEXAGON_V6_vmin_bf)(Vu, Vv)
 #endif
 
-#if __HVX_ARCH__ >= 73
+#if __HVX_ARCH__ >= 73 && defined __HVX_IEEE_FP__
 /* ==========================================================================
    Assembly Syntax:       Vdd32.sf=vmpy(Vu32.bf,Vv32.bf)
    C Intrinsic Prototype: HVX_VectorPair Q6_Wsf_vmpy_VbfVbf(HVX_Vector Vu, HVX_Vector Vv)
@@ -4743,7 +4743,7 @@
   __BUILTIN_VECTOR_WRAP(__builtin_HEXAGON_V6_vmpy_sf_bf)(Vu, Vv)
 #endif
 
-#if __HVX_ARCH__ >= 73
+#if __HVX_ARCH__ >= 73 && defined __HVX_IEEE_FP__
 /* ==========================================================================
    Assembly Syntax:       Vxx32.sf+=vmpy(Vu32.bf,Vv32.bf)
    C Intrinsic Prototype: HVX_VectorPair Q6_Wsf_vmpyacc_WsfVbfVbf(HVX_VectorPair Vxx, HVX_Vector Vu, HVX_Vector Vv)
@@ -4755,7 +4755,7 @@
   __BUILTIN_VECTOR_WRAP(__builtin_HEXAGON_V6_vmpy_sf_bf_acc)(Vxx, Vu, Vv)
 #endif
 
-#if __HVX_ARCH__ >= 73
+#if __HVX_ARCH__ >= 73 && defined __HVX_IEEE_FP__
 /* ==========================================================================
    Assembly Syntax:       Vdd32.sf=vsub(Vu32.bf,Vv32.bf)
    C Intrinsic Prototype: HVX_VectorPair Q6_Wsf_vsub_VbfVbf(HVX_Vector Vu, HVX_Vector Vv)
@@ -4803,7 +4803,7 @@
   __BUILTIN_VECTOR_WRAP(__builtin_HEXAGON_V6_set_qfext)(Vu, Rt)
 #endif
 
-#if __HVX_ARCH__ >= 79
+#if __HVX_ARCH__ >= 79 && defined __HVX_IEEE_FP__
 /* ==========================================================================
    Assembly Syntax:       Vd32.f8=vabs(Vu32.f8)
    C Intrinsic Prototype: HVX_Vector Q6_V_vabs_V(HVX_Vector Vu)
@@ -4814,7 +4814,7 @@
 #define Q6_V_vabs_V(Vu) __BUILTIN_VECTOR_WRAP(__builtin_HEXAGON_V6_vabs_f8)(Vu)
 #endif
 
-#if __HVX_ARCH__ >= 79
+#if __HVX_ARCH__ >= 79 && defined __HVX_IEEE_FP__
 /* ==========================================================================
    Assembly Syntax:       Vdd32.hf=vadd(Vu32.f8,Vv32.f8)
    C Intrinsic Prototype: HVX_VectorPair Q6_Whf_vadd_VV(HVX_Vector Vu, HVX_Vector Vv)
@@ -4826,7 +4826,7 @@
   __BUILTIN_VECTOR_WRAP(__builtin_HEXAGON_V6_vadd_hf_f8)(Vu, Vv)
 #endif
 
-#if __HVX_ARCH__ >= 79
+#if __HVX_ARCH__ >= 79 && defined __HVX_IEEE_FP__
 /* ==========================================================================
    Assembly Syntax:       Vd32.b=vcvt2(Vu32.hf,Vv32.hf)
    C Intrinsic Prototype: HVX_Vector Q6_Vb_vcvt2_VhfVhf(HVX_Vector Vu, HVX_Vector Vv)
@@ -4838,7 +4838,7 @@
   __BUILTIN_VECTOR_WRAP(__builtin_HEXAGON_V6_vcvt2_b_hf)(Vu, Vv)
 #endif
 
-#if __HVX_ARCH__ >= 79
+#if __HVX_ARCH__ >= 79 && defined __HVX_IEEE_FP__
 /* ==========================================================================
    Assembly Syntax:       Vdd32.hf=vcvt2(Vu32.b)
    C Intrinsic Prototype: HVX_VectorPair Q6_Whf_vcvt2_Vb(HVX_Vector Vu)
@@ -4850,7 +4850,7 @@
   __BUILTIN_VECTOR_WRAP(__builtin_HEXAGON_V6_vcvt2_hf_b)(Vu)
 #endif
 
-#if __HVX_ARCH__ >= 79
+#if __HVX_ARCH__ >= 79 && defined __HVX_IEEE_FP__
 /* ==========================================================================
    Assembly Syntax:       Vdd32.hf=vcvt2(Vu32.ub)
    C Intrinsic Prototype: HVX_VectorPair Q6_Whf_vcvt2_Vub(HVX_Vector Vu)
@@ -4862,7 +4862,7 @@
   __BUILTIN_VECTOR_WRAP(__builtin_HEXAGON_V6_vcvt2_hf_ub)(Vu)
 #endif
 
-#if __HVX_ARCH__ >= 79
+#if __HVX_ARCH__ >= 79 && defined __HVX_IEEE_FP__
 /* ==========================================================================
    Assembly Syntax:       Vd32.ub=vcvt2(Vu32.hf,Vv32.hf)
    C Intrinsic Prototype: HVX_Vector Q6_Vub_vcvt2_VhfVhf(HVX_Vector Vu, HVX_Vector Vv)
@@ -4874,7 +4874,7 @@
   __BUILTIN_VECTOR_WRAP(__builtin_HEXAGON_V6_vcvt2_ub_hf)(Vu, Vv)
 #endif
 
-#if __HVX_ARCH__ >= 79
+#if __HVX_ARCH__ >= 79 && defined __HVX_IEEE_FP__
 /* ==========================================================================
    Assembly Syntax:       Vd32.f8=vcvt(Vu32.hf,Vv32.hf)
    C Intrinsic Prototype: HVX_Vector Q6_V_vcvt_VhfVhf(HVX_Vector Vu, HVX_Vector Vv)
@@ -4886,7 +4886,7 @@
   __BUILTIN_VECTOR_WRAP(__builtin_HEXAGON_V6_vcvt_f8_hf)(Vu, Vv)
 #endif
 
-#if __HVX_ARCH__ >= 79
+#if __HVX_ARCH__ >= 79 && defined __HVX_IEEE_FP__
 /* ==========================================================================
    Assembly Syntax:       Vdd32.hf=vcvt(Vu32.f8)
    C Intrinsic Prototype: HVX_VectorPair Q6_Whf_vcvt_V(HVX_Vector Vu)
@@ -4898,7 +4898,7 @@
   __BUILTIN_VECTOR_WRAP(__builtin_HEXAGON_V6_vcvt_hf_f8)(Vu)
 #endif
 
-#if __HVX_ARCH__ >= 79
+#if __HVX_ARCH__ >= 79 && defined __HVX_IEEE_FP__
 /* ==========================================================================
    Assembly Syntax:       Vd32.f8=vfmax(Vu32.f8,Vv32.f8)
    C Intrinsic Prototype: HVX_Vector Q6_V_vfmax_VV(HVX_Vector Vu, HVX_Vector Vv)
@@ -4910,7 +4910,7 @@
   __BUILTIN_VECTOR_WRAP(__builtin_HEXAGON_V6_vfmax_f8)(Vu, Vv)
 #endif
 
-#if __HVX_ARCH__ >= 79
+#if __HVX_ARCH__ >= 79 && defined __HVX_IEEE_FP__
 /* ==========================================================================
    Assembly Syntax:       Vd32.f8=vfmin(Vu32.f8,Vv32.f8)
    C Intrinsic Prototype: HVX_Vector Q6_V_vfmin_VV(HVX_Vector Vu, HVX_Vector Vv)
@@ -4922,7 +4922,7 @@
   __BUILTIN_VECTOR_WRAP(__builtin_HEXAGON_V6_vfmin_f8)(Vu, Vv)
 #endif
 
-#if __HVX_ARCH__ >= 79
+#if __HVX_ARCH__ >= 79 && defined __HVX_IEEE_FP__
 /* ==========================================================================
    Assembly Syntax:       Vd32.f8=vfneg(Vu32.f8)
    C Intrinsic Prototype: HVX_Vector Q6_V_vfneg_V(HVX_Vector Vu)
@@ -4946,7 +4946,7 @@
   __BUILTIN_VECTOR_WRAP(__builtin_HEXAGON_V6_vmerge_qf)(Vu, Vv)
 #endif
 
-#if __HVX_ARCH__ >= 79
+#if __HVX_ARCH__ >= 79 && defined __HVX_IEEE_FP__
 /* ==========================================================================
    Assembly Syntax:       Vdd32.hf=vmpy(Vu32.f8,Vv32.f8)
    C Intrinsic Prototype: HVX_VectorPair Q6_Whf_vmpy_VV(HVX_Vector Vu, HVX_Vector Vv)
@@ -4958,7 +4958,7 @@
   __BUILTIN_VECTOR_WRAP(__builtin_HEXAGON_V6_vmpy_hf_f8)(Vu, Vv)
 #endif
 
-#if __HVX_ARCH__ >= 79
+#if __HVX_ARCH__ >= 79 && defined __HVX_IEEE_FP__
 /* ==========================================================================
    Assembly Syntax:       Vxx32.hf+=vmpy(Vu32.f8,Vv32.f8)
    C Intrinsic Prototype: HVX_VectorPair Q6_Whf_vmpyacc_WhfVV(HVX_VectorPair Vxx, HVX_Vector Vu, HVX_Vector Vv)
@@ -5006,7 +5006,7 @@
   __BUILTIN_VECTOR_WRAP(__builtin_HEXAGON_V6_vmpy_rt_sf)(Vu, Rt)
 #endif
 
-#if __HVX_ARCH__ >= 79
+#if __HVX_ARCH__ >= 79 && defined __HVX_IEEE_FP__
 /* ==========================================================================
    Assembly Syntax:       Vdd32.hf=vsub(Vu32.f8,Vv32.f8)
    C Intrinsic Prototype: HVX_VectorPair Q6_Whf_vsub_VV(HVX_Vector Vu, HVX_Vector Vv)
