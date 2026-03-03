@@ -3136,6 +3136,20 @@ InstructionCost X86TTIImpl::getCastInstrCost(unsigned Opcode, Type *Dst,
   EVT SrcTy = TLI->getValueType(DL, Src);
   EVT DstTy = TLI->getValueType(DL, Dst);
 
+  // If we're sign-extending a vector comparison result back to the comparison
+  // width, this will be free without AVX512 (or for 8/16-bit types without
+  // BWI).
+  if (!ST->hasAVX512() || (!ST->hasBWI() && DstTy.getScalarSizeInBits() < 32)) {
+    if (I && Opcode == Instruction::CastOps::SExt &&
+        SrcTy.isFixedLengthVector() && SrcTy.getScalarType() == MVT::i1) {
+      if (auto *CmpI = dyn_cast<CmpInst>(I->getOperand(0))) {
+        Type *CmpTy = CmpI->getOperand(0)->getType();
+        if (CmpTy->getScalarSizeInBits() == DstTy.getScalarSizeInBits())
+          return TTI::TCC_Free;
+      }
+    }
+  }
+
   // The function getSimpleVT only handles simple value types.
   if (SrcTy.isSimple() && DstTy.isSimple()) {
     MVT SimpleSrcTy = SrcTy.getSimpleVT();

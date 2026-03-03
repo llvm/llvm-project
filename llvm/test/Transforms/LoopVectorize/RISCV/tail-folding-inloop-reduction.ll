@@ -987,7 +987,7 @@ for.end:
   ret float %mul
 }
 
-define float @fmin(ptr %a, i64 %n, float %start) #0 {
+define float @fmin(ptr %a, i64 %n, float %start) {
 ; IF-EVL-LABEL: @fmin(
 ; IF-EVL-NEXT:  entry:
 ; IF-EVL-NEXT:    br label [[VECTOR_PH:%.*]]
@@ -1049,7 +1049,7 @@ define float @fmin(ptr %a, i64 %n, float %start) #0 {
 ; NO-VP-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds float, ptr [[A]], i64 [[IV]]
 ; NO-VP-NEXT:    [[TMP11:%.*]] = load float, ptr [[ARRAYIDX]], align 4
 ; NO-VP-NEXT:    [[CMP:%.*]] = fcmp fast olt float [[TMP11]], [[RDX]]
-; NO-VP-NEXT:    [[MIN]] = select i1 [[CMP]], float [[TMP11]], float [[RDX]]
+; NO-VP-NEXT:    [[MIN]] = select nnan nsz i1 [[CMP]], float [[TMP11]], float [[RDX]]
 ; NO-VP-NEXT:    [[IV_NEXT]] = add nuw nsw i64 [[IV]], 1
 ; NO-VP-NEXT:    [[EXITCOND_NOT:%.*]] = icmp eq i64 [[IV_NEXT]], [[N]]
 ; NO-VP-NEXT:    br i1 [[EXITCOND_NOT]], label [[FOR_END]], label [[FOR_BODY]], !llvm.loop [[LOOP25:![0-9]+]]
@@ -1066,7 +1066,7 @@ for.body:
   %arrayidx = getelementptr inbounds float, ptr %a, i64 %iv
   %0 = load float, ptr %arrayidx, align 4
   %cmp = fcmp fast olt float %0, %rdx
-  %min = select i1 %cmp, float %0, float %rdx
+  %min = select nnan nsz i1 %cmp, float %0, float %rdx
   %iv.next = add nuw nsw i64 %iv, 1
   %exitcond.not = icmp eq i64 %iv.next, %n
   br i1 %exitcond.not, label %for.end, label %for.body, !llvm.loop !0
@@ -1075,7 +1075,7 @@ for.end:
   ret float %min
 }
 
-define float @fmax(ptr %a, i64 %n, float %start) #0 {
+define float @fmax(ptr %a, i64 %n, float %start) {
 ; IF-EVL-LABEL: @fmax(
 ; IF-EVL-NEXT:  entry:
 ; IF-EVL-NEXT:    br label [[VECTOR_PH:%.*]]
@@ -1137,7 +1137,7 @@ define float @fmax(ptr %a, i64 %n, float %start) #0 {
 ; NO-VP-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds float, ptr [[A]], i64 [[IV]]
 ; NO-VP-NEXT:    [[TMP11:%.*]] = load float, ptr [[ARRAYIDX]], align 4
 ; NO-VP-NEXT:    [[CMP:%.*]] = fcmp fast ogt float [[TMP11]], [[RDX]]
-; NO-VP-NEXT:    [[MAX]] = select i1 [[CMP]], float [[TMP11]], float [[RDX]]
+; NO-VP-NEXT:    [[MAX]] = select nnan nsz i1 [[CMP]], float [[TMP11]], float [[RDX]]
 ; NO-VP-NEXT:    [[IV_NEXT]] = add nuw nsw i64 [[IV]], 1
 ; NO-VP-NEXT:    [[EXITCOND_NOT:%.*]] = icmp eq i64 [[IV_NEXT]], [[N]]
 ; NO-VP-NEXT:    br i1 [[EXITCOND_NOT]], label [[FOR_END]], label [[FOR_BODY]], !llvm.loop [[LOOP27:![0-9]+]]
@@ -1154,7 +1154,7 @@ for.body:
   %arrayidx = getelementptr inbounds float, ptr %a, i64 %iv
   %0 = load float, ptr %arrayidx, align 4
   %cmp = fcmp fast ogt float %0, %rdx
-  %max = select i1 %cmp, float %0, float %rdx
+  %max = select nnan nsz i1 %cmp, float %0, float %rdx
   %iv.next = add nuw nsw i64 %iv, 1
   %exitcond.not = icmp eq i64 %iv.next, %n
   br i1 %exitcond.not, label %for.end, label %for.body, !llvm.loop !0
@@ -1661,7 +1661,6 @@ declare float @llvm.minimum.f32(float, float)
 declare float @llvm.maximum.f32(float, float)
 declare float @llvm.fmuladd.f32(float, float, float)
 
-attributes #0 = { "no-nans-fp-math"="true" "no-signed-zeros-fp-math"="true" }
 
 !0 = distinct !{!0, !1}
 !1 = !{!"llvm.loop.vectorize.enable", i1 true}

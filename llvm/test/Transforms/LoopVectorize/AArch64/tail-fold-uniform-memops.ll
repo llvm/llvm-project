@@ -14,9 +14,6 @@ define void @uniform_load(ptr noalias %dst, ptr noalias readonly %src, i64 %n) #
 ; CHECK-NEXT:  [[ENTRY:.*:]]
 ; CHECK-NEXT:    br label %[[VECTOR_PH:.*]]
 ; CHECK:       [[VECTOR_PH]]:
-; CHECK-NEXT:    [[N_MINUS_VF:%.*]] = sub i64 [[N]], 4
-; CHECK-NEXT:    [[CMP:%.*]] = icmp ugt i64 [[N]], 4
-; CHECK-NEXT:    [[N2:%.*]] = select i1 [[CMP]], i64 [[N_MINUS_VF]], i64 0
 ; CHECK-NEXT:    [[ACTIVE_LANE_MASK_ENTRY:%.*]] = call <4 x i1> @llvm.get.active.lane.mask.v4i1.i64(i64 0, i64 [[N]])
 ; CHECK-NEXT:    br label %[[VECTOR_BODY:.*]]
 ; CHECK:       [[VECTOR_BODY]]:
@@ -28,7 +25,7 @@ define void @uniform_load(ptr noalias %dst, ptr noalias readonly %src, i64 %n) #
 ; CHECK-NEXT:    [[TMP6:%.*]] = getelementptr inbounds i32, ptr [[DST]], i64 [[IDX]]
 ; CHECK-NEXT:    call void @llvm.masked.store.v4i32.p0(<4 x i32> [[TMP5]], ptr align 4 [[TMP6]], <4 x i1> [[ACTIVE_LANE_MASK]])
 ; CHECK-NEXT:    [[INDEX_NEXT]] = add i64 [[IDX]], 4
-; CHECK-NEXT:    [[NEXT_ACTIVE_LANE_MASK]] = call <4 x i1> @llvm.get.active.lane.mask.v4i1.i64(i64 [[IDX]], i64 [[N2]])
+; CHECK-NEXT:    [[NEXT_ACTIVE_LANE_MASK]] = call <4 x i1> @llvm.get.active.lane.mask.v4i1.i64(i64 [[INDEX_NEXT]], i64 [[N]])
 ; CHECK-NEXT:    [[EXTRACT_FIRST_LANE_MASK:%.*]] = extractelement <4 x i1> [[NEXT_ACTIVE_LANE_MASK]], i32 0
 ; CHECK-NEXT:    [[FIRST_LANE_SET:%.*]] = xor i1 [[EXTRACT_FIRST_LANE_MASK]], true
 ; CHECK-NEXT:    br i1 [[FIRST_LANE_SET]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP0:![0-9]+]]
@@ -64,9 +61,6 @@ define void @cond_uniform_load(ptr noalias nocapture %dst, ptr nocapture readonl
 ; CHECK-NEXT:  [[ENTRY:.*:]]
 ; CHECK-NEXT:    br label %[[VECTOR_PH:.*]]
 ; CHECK:       [[VECTOR_PH]]:
-; CHECK-NEXT:    [[TMP5:%.*]] = sub i64 [[N]], 4
-; CHECK-NEXT:    [[TMP2:%.*]] = icmp ugt i64 [[N]], 4
-; CHECK-NEXT:    [[TMP3:%.*]] = select i1 [[TMP2]], i64 [[TMP5]], i64 0
 ; CHECK-NEXT:    [[ACTIVE_LANE_MASK_ENTRY:%.*]] = call <4 x i1> @llvm.get.active.lane.mask.v4i1.i64(i64 0, i64 [[N]])
 ; CHECK-NEXT:    [[TMP1:%.*]] = insertelement <4 x ptr> poison, ptr [[SRC]], i64 0
 ; CHECK-NEXT:    [[SRC_SPLAT:%.*]] = shufflevector <4 x ptr> [[TMP1]], <4 x ptr> poison, <4 x i32> zeroinitializer
@@ -83,7 +77,7 @@ define void @cond_uniform_load(ptr noalias nocapture %dst, ptr nocapture readonl
 ; CHECK-NEXT:    [[TMP7:%.*]] = getelementptr inbounds i32, ptr [[DST]], i64 [[INDEX6]]
 ; CHECK-NEXT:    call void @llvm.masked.store.v4i32.p0(<4 x i32> [[PREDPHI]], ptr align 4 [[TMP7]], <4 x i1> [[ACTIVE_LANE_MASK]])
 ; CHECK-NEXT:    [[INDEX_NEXT2]] = add i64 [[INDEX6]], 4
-; CHECK-NEXT:    [[ACTIVE_LANE_MASK_NEXT]] = call <4 x i1> @llvm.get.active.lane.mask.v4i1.i64(i64 [[INDEX6]], i64 [[TMP3]])
+; CHECK-NEXT:    [[ACTIVE_LANE_MASK_NEXT]] = call <4 x i1> @llvm.get.active.lane.mask.v4i1.i64(i64 [[INDEX_NEXT2]], i64 [[N]])
 ; CHECK-NEXT:    [[TMP8:%.*]] = extractelement <4 x i1> [[ACTIVE_LANE_MASK_NEXT]], i32 0
 ; CHECK-NEXT:    [[TMP9:%.*]] = xor i1 [[TMP8]], true
 ; CHECK-NEXT:    br i1 [[TMP9]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP3:![0-9]+]]

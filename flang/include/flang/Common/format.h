@@ -909,6 +909,9 @@ template <typename CHAR> bool FormatValidator<CHAR>::Check() {
       if (++nestLevel > maxNesting_) {
         maxNesting_ = nestLevel;
       }
+      if (LookAheadChar() == ')') {
+        ReportError("Nested parenthesized format item list is empty");
+      }
       break;
     case TokenKind::RParen:
       if (knrValue_ >= 0) {

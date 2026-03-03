@@ -260,7 +260,10 @@ def AddDebugInfo : Pass<"add-debug-info", "mlir::ModuleOp"> {
            "dwarf version">,
     Option<"splitDwarfFile", "split-dwarf-file",
            "std::string", /*default=*/"std::string{}",
-           "Name of the split dwarf file">
+           "Name of the split dwarf file">,
+    Option<"dwarfDebugFlags", "dwarf-debug-flags",
+           "std::string", /*default=*/"std::string{}",
+           "Command-line flags to append to DWARF producer">
 
   ];
 }

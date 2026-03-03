@@ -13,6 +13,10 @@
 #ifndef MLIR_DIALECT_OPENACC_OPENACCUTILSLOOP_H_
 #define MLIR_DIALECT_OPENACC_OPENACCUTILSLOOP_H_
 
+#include "mlir/IR/Block.h"
+#include "mlir/IR/ValueRange.h"
+#include "llvm/ADT/SmallVector.h"
+
 namespace mlir {
 class IRMapping;
 class Location;
@@ -25,6 +29,16 @@ class ExecuteRegionOp;
 } // namespace scf
 namespace acc {
 class LoopOp;
+
+/// Clone an ACC region into a destination block at the given insertion point.
+/// Requires a single-block source region. Maps block arguments and optional
+/// result replacement: values in resultsToReplace are replaced with the
+/// operands of the cloned region's acc.yield (1:1). Erases acc.yield/terminator
+/// and merges blocks. Returns (replacement values, insertion point after
+/// clone).
+std::pair<llvm::SmallVector<Value>, Block::iterator>
+cloneACCRegionInto(Region *src, Block *dest, Block::iterator inlinePoint,
+                   IRMapping &mapping, ValueRange resultsToReplace);
 
 /// Wrap a multi-block region in an scf.execute_region.
 /// Clones the given region into a new scf.execute_region, replacing

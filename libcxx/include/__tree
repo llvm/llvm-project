@@ -1266,24 +1266,74 @@ public:
     return __result;
   }
 
+  // Compatibility escape hatch for comparators that are not strict weak orderings. This
+  // can be removed for the LLVM 23 release.
+#if defined(_LIBCPP_ENABLE_LEGACY_TREE_LOWER_UPPER_BOUND)
+  template <class _Key>
+  _LIBCPP_HIDE_FROM_ABI __end_node_pointer __lower_bound_unique_compat_impl(const _Key& __v) const {
+    auto __rt     = __root();
+    auto __result = __end_node();
+    while (__rt != nullptr) {
+      if (!value_comp()(__rt->__get_value(), __v)) {
+        __result = std::__static_fancy_pointer_cast<__end_node_pointer>(__rt);
+        __rt     = std::__static_fancy_pointer_cast<__node_pointer>(__rt->__left_);
+      } else {
+        __rt = std::__static_fancy_pointer_cast<__node_pointer>(__rt->__right_);
+      }
+    }
+    return __result;
+  }
+
+  template <class _Key>
+  _LIBCPP_HIDE_FROM_ABI __end_node_pointer __upper_bound_unique_compat_impl(const _Key& __v) const {
+    auto __rt     = __root();
+    auto __result = __end_node();
+    while (__rt != nullptr) {
+      if (value_comp()(__v, __rt->__get_value())) {
+        __result = std::__static_fancy_pointer_cast<__end_node_pointer>(__rt);
+        __rt     = std::__static_fancy_pointer_cast<__node_pointer>(__rt->__left_);
+      } else {
+        __rt = std::__static_fancy_pointer_cast<__node_pointer>(__rt->__right_);
+      }
+    }
+    return __result;
+  }
+#endif // _LIBCPP_ENABLE_LEGACY_TREE_LOWER_UPPER_BOUND
+
   template <class _Key>
   _LIBCPP_HIDE_FROM_ABI iterator __lower_bound_unique(const _Key& __v) {
+#if defined(_LIBCPP_ENABLE_LEGACY_TREE_LOWER_UPPER_BOUND)
+    return iterator(__lower_bound_unique_compat_impl(__v));
+#else
     return iterator(__lower_upper_bound_unique_impl<true>(__v));
+#endif
   }
 
   template <class _Key>
   _LIBCPP_HIDE_FROM_ABI const_iterator __lower_bound_unique(const _Key& __v) const {
+#if defined(_LIBCPP_ENABLE_LEGACY_TREE_LOWER_UPPER_BOUND)
+    return const_iterator(__lower_bound_unique_compat_impl(__v));
+#else
     return const_iterator(__lower_upper_bound_unique_impl<true>(__v));
+#endif
   }
 
   template <class _Key>
   _LIBCPP_HIDE_FROM_ABI iterator __upper_bound_unique(const _Key& __v) {
+#if defined(_LIBCPP_ENABLE_LEGACY_TREE_LOWER_UPPER_BOUND)
+    return iterator(__upper_bound_unique_compat_impl(__v));
+#else
     return iterator(__lower_upper_bound_unique_impl<false>(__v));
+#endif
   }
 
   template <class _Key>
   _LIBCPP_HIDE_FROM_ABI const_iterator __upper_bound_unique(const _Key& __v) const {
+#if defined(_LIBCPP_ENABLE_LEGACY_TREE_LOWER_UPPER_BOUND)
+    return iterator(__upper_bound_unique_compat_impl(__v));
+#else
     return iterator(__lower_upper_bound_unique_impl<false>(__v));
+#endif
   }
 
 private:

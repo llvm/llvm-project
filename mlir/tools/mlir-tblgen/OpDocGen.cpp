@@ -110,9 +110,7 @@ static void emitNamedConstraint(const T &it, raw_ostream &os) {
 // Records
 //===----------------------------------------------------------------------===//
 
-// FIXME: Restore namespace {} when
-// https://github.com/llvm/llvm-project/issues/182720 fixed.
-// namespace {
+namespace {
 struct OpDocGroup {
   const Dialect &getDialect() const { return ops.front().getDialect(); }
 
@@ -141,7 +139,7 @@ struct DialectRecords {
   std::vector<TypeDef> typeDefs;
   std::vector<EnumInfo> enums;
 };
-// } // namespace
+} // namespace
 
 //===----------------------------------------------------------------------===//
 // Operation Documentation

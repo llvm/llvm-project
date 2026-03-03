@@ -835,3 +835,18 @@ func.func @invalid_reference(%a: index) {
   }
   return
 }
+
+// -----
+
+// Regression test for https://github.com/llvm/llvm-project/issues/159737
+// A scf.for whose body block has no arguments used to crash in
+// getRegionIterArgs() via verifyLoopLikeOpInterface instead of producing a
+// proper diagnostic.
+func.func @for_missing_induction_var(%arg0: index, %arg1: index) {
+  %c1 = arith.constant 1 : index
+  // expected-error@+1 {{expected body to have at least 1 argument(s) for the induction variable, but got 0}}
+  "scf.for"(%arg0, %arg1, %c1) ({
+    "scf.yield"() : () -> ()
+  }) : (index, index, index) -> ()
+  return
+}

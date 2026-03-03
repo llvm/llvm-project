@@ -302,7 +302,7 @@ bool SILowerSGPRSpills::spillCalleeSavedRegs(
 void SILowerSGPRSpills::updateLaneVGPRDomInstr(
     int FI, MachineBasicBlock *MBB, MachineBasicBlock::iterator InsertPt,
     DenseMap<Register, MachineBasicBlock::iterator> &LaneVGPRDomInstr) {
-  // For the Def of a virtual LaneVPGR to dominate all its uses, we should
+  // For the Def of a virtual LaneVGPR to dominate all its uses, we should
   // insert an IMPLICIT_DEF before the dominating spill. Switching to a
   // depth first order doesn't really help since the machine function can be in
   // the unstructured control flow post-SSA. For each virtual register, hence

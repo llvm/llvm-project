@@ -234,6 +234,15 @@ add_proxy_header_library(
 )
 
 add_proxy_header_library(
+  key_t
+  HDRS
+    key_t.h
+  FULL_BUILD_DEPENDS
+    libc.include.llvm-libc-types.key_t
+    libc.include.sys_ipc
+)
+
+add_proxy_header_library(
   pid_t
   HDRS
     pid_t.h

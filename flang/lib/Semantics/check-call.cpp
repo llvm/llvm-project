@@ -435,6 +435,24 @@ static void CheckExplicitDataArg(const characteristics::DummyDataObject &dummy,
               actualDesc);
         }
       }
+    } else if (actualIsAssumedRank) {
+      if (actualType.type().category() != TypeCategory::Character &&
+          !intrinsic) {
+        // A more specific message will have already been emitted for
+        // assumed-rank argument that's CHARACTER, a callee that's ELEMENTAL,
+        // or an intrinsic procedure that can't handle assumed-rank.
+        if (!context.languageFeatures().IsEnabled(
+                common::LanguageFeature::AssumedRankPassedToNonAssumedRank)) {
+          messages.Say(
+              "Assumed-rank actual argument may not be associated with a %s that is not also assumed-rank"_err_en_US,
+              dummyName);
+        } else {
+          foldingContext.Warn(
+              common::LanguageFeature::AssumedRankPassedToNonAssumedRank,
+              "Assumed-rank actual argument should not be associated with a %s that is not also assumed-rank"_port_en_US,
+              dummyName);
+        }
+      }
     } else if (dummy.ignoreTKR.test(common::IgnoreTKR::Rank)) {
     } else if (dummyRank > 0 && !dummyIsAllocatableOrPointer &&
         !dummy.type.attrs().test(

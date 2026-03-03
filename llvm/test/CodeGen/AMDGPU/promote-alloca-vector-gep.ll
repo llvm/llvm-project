@@ -250,6 +250,119 @@ bb2:
   store i32 0, ptr addrspace(5) %extractelement
   ret void
 }
+
+define amdgpu_ps void @scalar_alloca_vector_gep_i8_0_or_4(i1 %idx_sel) {
+; CHECK-LABEL: define amdgpu_ps void @scalar_alloca_vector_gep_i8_0_or_4(
+; CHECK-SAME: i1 [[IDX_SEL:%.*]]) {
+; CHECK-NEXT:    [[ALLOCA:%.*]] = freeze <3 x float> poison
+; CHECK-NEXT:    [[INDEX:%.*]] = select i1 [[IDX_SEL]], i32 0, i32 4
+; CHECK-NEXT:    [[TMP1:%.*]] = ashr exact i32 [[INDEX]], 2
+; CHECK-NEXT:    [[TMP2:%.*]] = insertelement <3 x float> [[ALLOCA]], float 7.000000e+00, i32 [[TMP1]]
+; CHECK-NEXT:    ret void
+;
+  %alloca = alloca <3 x float>, align 16, addrspace(5)
+  %index = select i1 %idx_sel, i32 0, i32 4
+  %elt = getelementptr inbounds nuw i8, ptr addrspace(5) %alloca, i32 %index
+  store float 7.000000e+00, ptr addrspace(5) %elt, align 4
+  ret void
+}
+
+define amdgpu_ps void @scalar_alloca_vector_gep_i8_4_or_8(i1 %idx_sel) {
+; CHECK-LABEL: define amdgpu_ps void @scalar_alloca_vector_gep_i8_4_or_8(
+; CHECK-SAME: i1 [[IDX_SEL:%.*]]) {
+; CHECK-NEXT:    [[ALLOCA:%.*]] = freeze <3 x float> poison
+; CHECK-NEXT:    [[INDEX:%.*]] = select i1 [[IDX_SEL]], i32 4, i32 8
+; CHECK-NEXT:    [[TMP1:%.*]] = ashr exact i32 [[INDEX]], 2
+; CHECK-NEXT:    [[TMP2:%.*]] = insertelement <3 x float> [[ALLOCA]], float 7.000000e+00, i32 [[TMP1]]
+; CHECK-NEXT:    ret void
+;
+  %alloca = alloca <3 x float>, align 16, addrspace(5)
+  %index = select i1 %idx_sel, i32 4, i32 8
+  %elt = getelementptr inbounds nuw i8, ptr addrspace(5) %alloca, i32 %index
+  store float 7.000000e+00, ptr addrspace(5) %elt, align 4
+  ret void
+}
+
+define amdgpu_ps void @scalar_alloca_nested_vector_gep_i8_4_or_5_no_promote(i1 %idx_sel) {
+; CHECK-LABEL: define amdgpu_ps void @scalar_alloca_nested_vector_gep_i8_4_or_5_no_promote(
+; CHECK-SAME: i1 [[IDX_SEL:%.*]]) {
+; CHECK-NEXT:    [[ALLOCA:%.*]] = alloca <3 x float>, align 16, addrspace(5)
+; CHECK-NEXT:    [[INDEX:%.*]] = select i1 [[IDX_SEL]], i32 4, i32 5
+; CHECK-NEXT:    [[ELT:%.*]] = getelementptr inbounds nuw i8, ptr addrspace(5) [[ALLOCA]], i32 [[INDEX]]
+; CHECK-NEXT:    store float 7.000000e+00, ptr addrspace(5) [[ELT]], align 1
+; CHECK-NEXT:    ret void
+;
+  %alloca = alloca <3 x float>, align 16, addrspace(5)
+  %index = select i1 %idx_sel, i32 4, i32 5
+  %elt = getelementptr inbounds nuw i8, ptr addrspace(5) %alloca, i32 %index
+  store float 7.000000e+00, ptr addrspace(5) %elt, align 1
+  ret void
+}
+
+define amdgpu_ps void @scalar_alloca_vector_gep_i16_0_or_2(i1 %idx_sel) {
+; CHECK-LABEL: define amdgpu_ps void @scalar_alloca_vector_gep_i16_0_or_2(
+; CHECK-SAME: i1 [[IDX_SEL:%.*]]) {
+; CHECK-NEXT:    [[ALLOCA:%.*]] = freeze <3 x float> poison
+; CHECK-NEXT:    [[INDEX:%.*]] = select i1 [[IDX_SEL]], i32 0, i32 2
+; CHECK-NEXT:    [[TMP1:%.*]] = ashr exact i32 [[INDEX]], 1
+; CHECK-NEXT:    [[TMP2:%.*]] = insertelement <3 x float> [[ALLOCA]], float 7.000000e+00, i32 [[TMP1]]
+; CHECK-NEXT:    ret void
+;
+  %alloca = alloca <3 x float>, align 16, addrspace(5)
+  %index = select i1 %idx_sel, i32 0, i32 2
+  %elt = getelementptr inbounds nuw i16, ptr addrspace(5) %alloca, i32 %index
+  store float 7.000000e+00, ptr addrspace(5) %elt, align 4
+  ret void
+}
+
+define amdgpu_ps void @scalar_alloca_vector_gep_i16_2_or_4(i1 %idx_sel) {
+; CHECK-LABEL: define amdgpu_ps void @scalar_alloca_vector_gep_i16_2_or_4(
+; CHECK-SAME: i1 [[IDX_SEL:%.*]]) {
+; CHECK-NEXT:    [[ALLOCA:%.*]] = freeze <3 x float> poison
+; CHECK-NEXT:    [[INDEX:%.*]] = select i1 [[IDX_SEL]], i32 2, i32 4
+; CHECK-NEXT:    [[TMP1:%.*]] = ashr exact i32 [[INDEX]], 1
+; CHECK-NEXT:    [[TMP2:%.*]] = insertelement <3 x float> [[ALLOCA]], float 7.000000e+00, i32 [[TMP1]]
+; CHECK-NEXT:    ret void
+;
+  %alloca = alloca <3 x float>, align 16, addrspace(5)
+  %index = select i1 %idx_sel, i32 2, i32 4
+  %elt = getelementptr inbounds nuw i16, ptr addrspace(5) %alloca, i32 %index
+  store float 7.000000e+00, ptr addrspace(5) %elt, align 4
+  ret void
+}
+
+define amdgpu_ps void @scalar_alloca_vector_gep_i16_1_or_2_no_promote(i1 %idx_sel) {
+; CHECK-LABEL: define amdgpu_ps void @scalar_alloca_vector_gep_i16_1_or_2_no_promote(
+; CHECK-SAME: i1 [[IDX_SEL:%.*]]) {
+; CHECK-NEXT:    [[ALLOCA:%.*]] = alloca <3 x float>, align 16, addrspace(5)
+; CHECK-NEXT:    [[INDEX:%.*]] = select i1 [[IDX_SEL]], i32 1, i32 2
+; CHECK-NEXT:    [[ELT:%.*]] = getelementptr inbounds nuw i16, ptr addrspace(5) [[ALLOCA]], i32 [[INDEX]]
+; CHECK-NEXT:    store float 7.000000e+00, ptr addrspace(5) [[ELT]], align 1
+; CHECK-NEXT:    ret void
+;
+  %alloca = alloca <3 x float>, align 16, addrspace(5)
+  %index = select i1 %idx_sel, i32 1, i32 2
+  %elt = getelementptr inbounds nuw i16, ptr addrspace(5) %alloca, i32 %index
+  store float 7.000000e+00, ptr addrspace(5) %elt, align 1
+  ret void
+}
+
+define amdgpu_ps void @scalar_alloca_vector_gep_i8_odd(i1 %idx_sel) {
+; CHECK-LABEL: define amdgpu_ps void @scalar_alloca_vector_gep_i8_odd(
+; CHECK-SAME: i1 [[IDX_SEL:%.*]]) {
+; CHECK-NEXT:    [[ALLOCA:%.*]] = alloca <3 x i24>, align 1, addrspace(5)
+; CHECK-NEXT:    [[INDEX:%.*]] = select i1 [[IDX_SEL]], i32 0, i32 3
+; CHECK-NEXT:    [[ELT:%.*]] = getelementptr inbounds nuw i8, ptr addrspace(5) [[ALLOCA]], i32 [[INDEX]]
+; CHECK-NEXT:    store i8 7, ptr addrspace(5) [[ELT]], align 1
+; CHECK-NEXT:    ret void
+;
+  %alloca = alloca <3 x i24>, align 1, addrspace(5)
+  %index = select i1 %idx_sel, i32 0, i32 3
+  %elt = getelementptr inbounds nuw i8, ptr addrspace(5) %alloca, i32 %index
+  store i8 7, ptr addrspace(5) %elt, align 1
+  ret void
+}
+
 ;.
 ; CHECK: [[META0]] = !{}
 ; CHECK: [[RNG1]] = !{i32 0, i32 1025}

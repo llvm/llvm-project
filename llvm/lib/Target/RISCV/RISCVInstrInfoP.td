@@ -501,13 +501,18 @@ let Predicates = [HasStdExtP, IsRV64] in {
 let Predicates = [HasStdExtP] in {
   def PSLLI_B  : RVPShiftB_ri<0b000, 0b010, "pslli.b">;
   def PSLLI_H  : RVPShiftH_ri<0b000, 0b010, "pslli.h">;
+
+  let Defs = [VXSAT] in
   def PSSLAI_H : RVPShiftH_ri<0b101, 0b010, "psslai.h">;
 } // Predicates = [HasStdExtP]
 let Predicates = [HasStdExtP, IsRV32], DecoderNamespace = "RV32Only" in {
+  let Defs = [VXSAT] in
   def SSLAI    : RVPShiftW_ri<0b101, 0b010, "sslai">;
 } // Predicates = [HasStdExtP, IsRV32], DecoderNamespace = "RV32Only"
 let Predicates = [HasStdExtP, IsRV64] in {
   def PSLLI_W  : RVPShiftW_ri<0b000, 0b010, "pslli.w">;
+
+  let Defs = [VXSAT] in
   def PSSLAI_W : RVPShiftW_ri<0b101, 0b010, "psslai.w">;
 } // Predicates = [HasStdExtP, IsRV64]
 
@@ -528,8 +533,11 @@ let Predicates = [HasStdExtP] in {
 
 let Predicates = [HasStdExtP] in {
   def PSEXT_H_B : RVPUnary_ri<0b00, 0b00100, "psext.h.b">;
+
+  let Defs = [VXSAT] in {
   def PSABS_H   : RVPUnary_ri<0b00, 0b00111, "psabs.h">;
   def PSABS_B   : RVPUnary_ri<0b10, 0b00111, "psabs.b">;
+  } // Defs = [VXSAT]
 } // Predicates = [HasStdExtP]
 let Predicates = [HasStdExtP, IsRV64] in {
   def PSEXT_W_B : RVPUnary_ri<0b01, 0b00100, "psext.w.b">;
@@ -548,31 +556,40 @@ let Predicates = [HasStdExtP] in {
   def PADD_HS   : RVPBinaryScalar_rr<0b001, 0b00, 0b010, "padd.hs">;
   def PADD_BS   : RVPBinaryScalar_rr<0b001, 0b10, 0b010, "padd.bs">;
 
+  let Defs = [VXSAT] in
   def PSSHA_HS  : RVPBinaryScalar_rr<0b110, 0b00, 0b010, "pssha.hs">;
 
+  let Defs = [VXSAT] in
   def PSSHAR_HS : RVPBinaryScalar_rr<0b111, 0b00, 0b010, "psshar.hs">;
 } // Predicates = [HasStdExtP]
 let Predicates = [HasStdExtP, IsRV32], DecoderNamespace = "RV32Only" in {
+  let Defs = [VXSAT] in
   def SSHA      : RVPBinaryScalar_rr<0b110, 0b01, 0b010, "ssha">;
 
+  let Defs = [VXSAT] in
   def SSHAR     : RVPBinaryScalar_rr<0b111, 0b01, 0b010, "sshar">;
-} // Predicates = [HasStdExtP, IsRV32]
+} // Predicates = [HasStdExtP, IsRV32], DecoderNamespace = "RV32Only"
 let Predicates = [HasStdExtP, IsRV64] in {
   def PSLL_WS   : RVPBinaryScalar_rr<0b000, 0b01, 0b010, "psll.ws">;
 
   def PADD_WS   : RVPBinaryScalar_rr<0b001, 0b01, 0b010, "padd.ws">;
 
+  let Defs = [VXSAT] in {
   def PSSHA_WS  : RVPBinaryScalar_rr<0b110, 0b01, 0b010, "pssha.ws">;
   def SHA       : RVPBinaryScalar_rr<0b110, 0b11, 0b010, "sha">;
+  } // Defs = [VXSAT]
 
+  let Defs = [VXSAT] in {
   def PSSHAR_WS : RVPBinaryScalar_rr<0b111, 0b01, 0b010, "psshar.ws">;
   def SHAR      : RVPBinaryScalar_rr<0b111, 0b11, 0b010, "shar">;
+  } // Defs = [VXSAT]
 } // Predicates = [HasStdExtP, IsRV64]
 
 let Predicates = [HasStdExtP] in {
   def PSRLI_B    : RVPShiftB_ri<0b000, 0b100, "psrli.b">;
   def PSRLI_H    : RVPShiftH_ri<0b000, 0b100, "psrli.h">;
 
+  let Defs = [VXSAT] in
   def PUSATI_H   : RVPShiftH_ri<0b010, 0b100, "pusati.h">;
 
   def PSRAI_B    : RVPShiftB_ri<0b100, 0b100, "psrai.b">;
@@ -580,27 +597,34 @@ let Predicates = [HasStdExtP] in {
 
   def PSRARI_H   : RVPShiftH_ri<0b101, 0b100, "psrari.h">;
 
+  let Defs = [VXSAT] in
   def PSATI_H    : RVPShiftH_ri<0b110, 0b100, "psati.h">;
 } // Predicates = [HasStdExtP]
 let Predicates = [HasStdExtP, IsRV32], DecoderNamespace = "RV32Only" in {
+  let Defs = [VXSAT] in
   def USATI_RV32 : RVPShiftW_ri<0b010, 0b100, "usati">;
 
   def SRARI_RV32 : RVPShiftW_ri<0b101, 0b100, "srari">;
 
+  let Defs = [VXSAT] in
   def SATI_RV32  : RVPShiftW_ri<0b110, 0b100, "sati">;
-} // Predicates = [HasStdExtP, IsRV32]
+} // Predicates = [HasStdExtP, IsRV32], DecoderNamespace = "RV32Only"
 let Predicates = [HasStdExtP, IsRV64] in {
   def PSRLI_W    : RVPShiftW_ri<0b000, 0b100, "psrli.w">;
   def PSRAI_W    : RVPShiftW_ri<0b100, 0b100, "psrai.w">;
 
+  let Defs = [VXSAT] in {
   def PUSATI_W   : RVPShiftW_ri<0b010, 0b100, "pusati.w">;
   def USATI_RV64 : RVPShiftD_ri<0b010, 0b100, "usati">;
+  } // Defs = [VXSAT]
 
   def PSRARI_W   : RVPShiftW_ri<0b101, 0b100, "psrari.w">;
   def SRARI_RV64 : RVPShiftD_ri<0b101, 0b100, "srari">;
 
+  let Defs = [VXSAT] in {
   def PSATI_W    : RVPShiftW_ri<0b110, 0b100, "psati.w">;
   def SATI_RV64  : RVPShiftD_ri<0b110, 0b100, "sati">;
+  } // Defs = [VXSAT]
 } // Predicates = [HasStdExtP, IsRV64]
 
 let Predicates = [HasStdExtP] in {
@@ -630,14 +654,18 @@ let Predicates = [HasStdExtP] in {
   def PADD_H   : RVPBinary_rr<0b0000, 0b00, 0b000, "padd.h", Commutable=1>;
   def PADD_B   : RVPBinary_rr<0b0000, 0b10, 0b000, "padd.b", Commutable=1>;
 
+  let Defs = [VXSAT] in {
   def PSADD_H  : RVPBinary_rr<0b0010, 0b00, 0b000, "psadd.h", Commutable=1>;
   def PSADD_B  : RVPBinary_rr<0b0010, 0b10, 0b000, "psadd.b", Commutable=1>;
+  } // Defs = [VXSAT]
 
   def PAADD_H  : RVPBinary_rr<0b0011, 0b00, 0b000, "paadd.h", Commutable=1>;
   def PAADD_B  : RVPBinary_rr<0b0011, 0b10, 0b000, "paadd.b", Commutable=1>;
 
+  let Defs = [VXSAT] in {
   def PSADDU_H : RVPBinary_rr<0b0110, 0b00, 0b000, "psaddu.h", Commutable=1>;
   def PSADDU_B : RVPBinary_rr<0b0110, 0b10, 0b000, "psaddu.b", Commutable=1>;
+  } // Defs = [VXSAT]
 
   def PAADDU_H : RVPBinary_rr<0b0111, 0b00, 0b000, "paaddu.h", Commutable=1>;
   def PAADDU_B : RVPBinary_rr<0b0111, 0b10, 0b000, "paaddu.b", Commutable=1>;
@@ -648,8 +676,10 @@ let Predicates = [HasStdExtP] in {
   def PABD_H   : RVPBinary_rr<0b1001, 0b00, 0b000, "pabd.h", Commutable=1>;
   def PABD_B   : RVPBinary_rr<0b1001, 0b10, 0b000, "pabd.b", Commutable=1>;
 
+  let Defs = [VXSAT] in {
   def PSSUB_H  : RVPBinary_rr<0b1010, 0b00, 0b000, "pssub.h">;
   def PSSUB_B  : RVPBinary_rr<0b1010, 0b10, 0b000, "pssub.b">;
+  } // Defs = [VXSAT]
 
   def PASUB_H  : RVPBinary_rr<0b1011, 0b00, 0b000, "pasub.h">;
   def PASUB_B  : RVPBinary_rr<0b1011, 0b10, 0b000, "pasub.b">;
@@ -657,25 +687,31 @@ let Predicates = [HasStdExtP] in {
   def PABDU_H  : RVPBinary_rr<0b1101, 0b00, 0b000, "pabdu.h", Commutable=1>;
   def PABDU_B  : RVPBinary_rr<0b1101, 0b10, 0b000, "pabdu.b", Commutable=1>;
 
+  let Defs = [VXSAT] in {
   def PSSUBU_H : RVPBinary_rr<0b1110, 0b00, 0b000, "pssubu.h">;
   def PSSUBU_B : RVPBinary_rr<0b1110, 0b10, 0b000, "pssubu.b">;
+  } // Defs = [VXSAT]
 
   def PASUBU_H : RVPBinary_rr<0b1111, 0b00, 0b000, "pasubu.h">;
   def PASUBU_B : RVPBinary_rr<0b1111, 0b10, 0b000, "pasubu.b">;
 } // Predicates = [HasStdExtP]
 let Predicates = [HasStdExtP, IsRV32], DecoderNamespace = "RV32Only" in {
+  let Defs = [VXSAT] in
   def SADD     : RVPBinary_rr<0b0010, 0b01, 0b000, "sadd", Commutable=1>;
 
   def AADD     : RVPBinary_rr<0b0011, 0b01, 0b000, "aadd", Commutable=1>;
 
+  let Defs = [VXSAT] in
   def SADDU    : RVPBinary_rr<0b0110, 0b01, 0b000, "saddu", Commutable=1>;
 
   def AADDU    : RVPBinary_rr<0b0111, 0b01, 0b000, "aaddu", Commutable=1>;
 
+  let Defs = [VXSAT] in
   def SSUB     : RVPBinary_rr<0b1010, 0b01, 0b000, "ssub">;
 
   def ASUB     : RVPBinary_rr<0b1011, 0b01, 0b000, "asub">;
 
+  let Defs = [VXSAT] in
   def SSUBU    : RVPBinary_rr<0b1110, 0b01, 0b000, "ssubu">;
 
   def ASUBU    : RVPBinary_rr<0b1111, 0b01, 0b000, "asubu">;
@@ -683,20 +719,24 @@ let Predicates = [HasStdExtP, IsRV32], DecoderNamespace = "RV32Only" in {
 let Predicates = [HasStdExtP, IsRV64] in {
   def PADD_W   : RVPBinary_rr<0b0000, 0b01, 0b000, "padd.w", Commutable=1>;
 
+  let Defs = [VXSAT] in
   def PSADD_W  : RVPBinary_rr<0b0010, 0b01, 0b000, "psadd.w", Commutable=1>;
 
   def PAADD_W  : RVPBinary_rr<0b0011, 0b01, 0b000, "paadd.w", Commutable=1>;
 
+  let Defs = [VXSAT] in
   def PSADDU_W : RVPBinary_rr<0b0110, 0b01, 0b000, "psaddu.w", Commutable=1>;
 
   def PAADDU_W : RVPBinary_rr<0b0111, 0b01, 0b000, "paaddu.w", Commutable=1>;
 
   def PSUB_W   : RVPBinary_rr<0b1000, 0b01, 0b000, "psub.w">;
 
+  let Defs = [VXSAT] in
   def PSSUB_W  : RVPBinary_rr<0b1010, 0b01, 0b000, "pssub.w">;
 
   def PASUB_W  : RVPBinary_rr<0b1011, 0b01, 0b000, "pasub.w">;
 
+  let Defs = [VXSAT] in
   def PSSUBU_W : RVPBinary_rr<0b1110, 0b01, 0b000, "pssubu.w">;
 
   def PASUBU_W : RVPBinary_rr<0b1111, 0b01, 0b000, "pasubu.w">;
@@ -745,14 +785,17 @@ let Predicates = [HasStdExtP, IsRV64] in {
 let Predicates = [HasStdExtP] in {
   def PSH1ADD_H   : RVPBinary_rr<0b0100, 0b00, 0b010, "psh1add.h">;
 
+  let Defs = [VXSAT] in
   def PSSH1SADD_H : RVPBinary_rr<0b0110, 0b00, 0b010, "pssh1sadd.h">;
 } // Predicates = [HasStdExtP]
 let Predicates = [HasStdExtP, IsRV32], DecoderNamespace = "RV32Only" in {
+  let Defs = [VXSAT] in
   def SSH1SADD    : RVPBinary_rr<0b0110, 0b01, 0b010, "ssh1sadd">;
 } // Predicates = [HasStdExtP, IsRV32], DecoderNamespace = "RV32Only"
 let Predicates = [HasStdExtP, IsRV64] in {
   def PSH1ADD_W   : RVPBinary_rr<0b0100, 0b01, 0b010, "psh1add.w">;
 
+  let Defs = [VXSAT] in
   def PSSH1SADD_W : RVPBinary_rr<0b0110, 0b01, 0b010, "pssh1sadd.w">;
 
   def UNZIP8P     : RVPBinary_rr<0b1100, 0b00, 0b010, "unzip8p">;
@@ -896,11 +939,13 @@ let Predicates = [HasStdExtP] in {
   def PMQR2ADDA_H : RVPTernary_rrr<0b0111, 0b10, 0b101, "pmqr2adda.h">;
 
   def PM2SUB_H    : RVPBinary_rr<0b1000, 0b00, 0b101, "pm2sub.h">;
+  let Defs = [VXSAT] in
   def PM2SADD_H   : RVPBinary_rr<0b1000, 0b10, 0b101, "pm2sadd.h", Commutable=1>;
 
   def PM2SUBA_H   : RVPTernary_rrr<0b1001, 0b00, 0b101, "pm2suba.h">;
 
   def PM2SUB_HX   : RVPBinary_rr<0b1010, 0b00, 0b101, "pm2sub.hx">;
+  let Defs = [VXSAT] in
   def PM2SADD_HX  : RVPBinary_rr<0b1010, 0b10, 0b101, "pm2sadd.hx", Commutable=1>;
 
   def PM2SUBA_HX  : RVPTernary_rrr<0b1011, 0b00, 0b101, "pm2suba.hx">;
@@ -1053,8 +1098,10 @@ let Predicates = [HasStdExtP] in {
   def PMHACCSU_H    : RVPTernary_rrr<0b1001, 0b00, 0b111, "pmhaccsu.h">;
   def PMHRACCSU_H   : RVPTernary_rrr<0b1001, 0b10, 0b111, "pmhraccsu.h">;
 
+  let Defs = [VXSAT] in {
   def PMULQ_H       : RVPBinary_rr<0b1010, 0b00, 0b111, "pmulq.h", Commutable=1>;
   def PMULQR_H      : RVPBinary_rr<0b1010, 0b10, 0b111, "pmulqr.h", Commutable=1>;
+  } // Defs = [VXSAT]
 } // Predicates = [HasStdExtP]
 let Predicates = [HasStdExtP, IsRV32], DecoderNamespace = "RV32Only" in {
   def MULHR      : RVPBinary_rr<0b0000, 0b11, 0b111, "mulhr", Commutable=1>;
@@ -1084,8 +1131,10 @@ let Predicates = [HasStdExtP, IsRV32], DecoderNamespace = "RV32Only" in {
   def MHACCSU    : RVPTernary_rrr<0b1001, 0b01, 0b111, "mhaccsu">;
   def MHRACCSU   : RVPTernary_rrr<0b1001, 0b11, 0b111, "mhraccsu">;
 
+  let Defs = [VXSAT] in {
   def MULQ       : RVPBinary_rr<0b1010, 0b01, 0b111, "mulq", Commutable=1>;
   def MULQR      : RVPBinary_rr<0b1010, 0b11, 0b111, "mulqr", Commutable=1>;
+  } // Defs = [VXSAT]
 
   def MQACC_H00  : RVPTernary_rrr<0b1101, 0b00, 0b111, "mqacc.h00">;
   def MQRACC_H00 : RVPTernary_rrr<0b1101, 0b10, 0b111, "mqracc.h00">;
@@ -1124,8 +1173,10 @@ let Predicates = [HasStdExtP, IsRV64] in {
   def PMHACCSU_W   : RVPTernary_rrr<0b1001, 0b01, 0b111, "pmhaccsu.w">;
   def PMHRACCSU_W  : RVPTernary_rrr<0b1001, 0b11, 0b111, "pmhraccsu.w">;
 
+  let Defs = [VXSAT] in {
   def PMULQ_W      : RVPBinary_rr<0b1010, 0b01, 0b111, "pmulq.w", Commutable=1>;
   def PMULQR_W     : RVPBinary_rr<0b1010, 0b11, 0b111, "pmulqr.w", Commutable=1>;
+  } // Defs = [VXSAT]
 
   def PMQACC_W_H00  : RVPTernary_rrr<0b1101, 0b00, 0b111, "pmqacc.w.h00">;
   def MQACC_W00     : RVPTernary_rrr<0b1101, 0b01, 0b111, "mqacc.w00">;
@@ -1265,13 +1316,17 @@ let Predicates = [HasStdExtP, IsRV32] in {
   def PNSRLI_H     : RVPNarrowingShiftH_ri<0b000, "pnsrli.h">;
   def NSRLI        : RVPNarrowingShiftW_ri<0b000, "nsrli">;
 
+  let Defs = [VXSAT] in {
   def PNCLIPIU_B   : RVPNarrowingShiftB_ri<0b010, "pnclipiu.b">;
   def PNCLIPIU_H   : RVPNarrowingShiftH_ri<0b010, "pnclipiu.h">;
   def NCLIPIU      : RVPNarrowingShiftW_ri<0b010, "nclipiu">;
+  } // Defs = [VXSAT]
 
+  let Defs = [VXSAT] in {
   def PNCLIPRIU_B  : RVPNarrowingShiftB_ri<0b011, "pnclipriu.b">;
   def PNCLIPRIU_H  : RVPNarrowingShiftH_ri<0b011, "pnclipriu.h">;
   def NCLIPRIU     : RVPNarrowingShiftW_ri<0b011, "nclipriu">;
+  } // Defs = [VXSAT]
 
   def PNSRAI_B     : RVPNarrowingShiftB_ri<0b100, "pnsrai.b">;
   def PNSRAI_H     : RVPNarrowingShiftH_ri<0b100, "pnsrai.h">;
@@ -1281,25 +1336,33 @@ let Predicates = [HasStdExtP, IsRV32] in {
   def PNSRARI_H    : RVPNarrowingShiftH_ri<0b101, "pnsrari.h">;
   def NSRARI       : RVPNarrowingShiftW_ri<0b101, "nsrari">;
 
+  let Defs = [VXSAT] in {
   def PNCLIPI_B    : RVPNarrowingShiftB_ri<0b110, "pnclipi.b">;
   def PNCLIPI_H    : RVPNarrowingShiftH_ri<0b110, "pnclipi.h">;
   def NCLIPI       : RVPNarrowingShiftW_ri<0b110, "nclipi">;
+  } // Defs = [VXSAT]
 
+  let Defs = [VXSAT] in {
   def PNCLIPRI_B   : RVPNarrowingShiftB_ri<0b111, "pnclipri.b">;
   def PNCLIPRI_H   : RVPNarrowingShiftH_ri<0b111, "pnclipri.h">;
   def NCLIPRI      : RVPNarrowingShiftW_ri<0b111, "nclipri">;
+  } // Defs = [VXSAT]
 
   def PNSRL_BS     : RVPNarrowingShift_rr<0b000, 0b00, "pnsrl.bs">;
   def PNSRL_HS     : RVPNarrowingShift_rr<0b000, 0b01, "pnsrl.hs">;
   def NSRL         : RVPNarrowingShift_rr<0b000, 0b11, "nsrl">;
 
+  let Defs = [VXSAT] in {
   def PNCLIPU_BS   : RVPNarrowingShift_rr<0b010, 0b00, "pnclipu.bs">;
   def PNCLIPU_HS   : RVPNarrowingShift_rr<0b010, 0b01, "pnclipu.hs">;
   def NCLIPU       : RVPNarrowingShift_rr<0b010, 0b11, "nclipu">;
+  } // Defs = [VXSAT]
 
+  let Defs = [VXSAT] in {
   def PNCLIPRU_BS  : RVPNarrowingShift_rr<0b011, 0b00, "pnclipru.bs">;
   def PNCLIPRU_HS  : RVPNarrowingShift_rr<0b011, 0b01, "pnclipru.hs">;
   def NCLIPRU      : RVPNarrowingShift_rr<0b011, 0b11, "nclipru">;
+  } // Defs = [VXSAT]
 
   def PNSRA_BS     : RVPNarrowingShift_rr<0b100, 0b00, "pnsra.bs">;
   def PNSRA_HS     : RVPNarrowingShift_rr<0b100, 0b01, "pnsra.hs">;
@@ -1309,28 +1372,36 @@ let Predicates = [HasStdExtP, IsRV32] in {
   def PNSRAR_HS    : RVPNarrowingShift_rr<0b101, 0b01, "pnsrar.hs">;
   def NSRAR        : RVPNarrowingShift_rr<0b101, 0b11, "nsrar">;
 
+  let Defs = [VXSAT] in {
   def PNCLIP_BS    : RVPNarrowingShift_rr<0b110, 0b00, "pnclip.bs">;
   def PNCLIP_HS    : RVPNarrowingShift_rr<0b110, 0b01, "pnclip.hs">;
   def NCLIP        : RVPNarrowingShift_rr<0b110, 0b11, "nclip">;
+  } // Defs = [VXSAT]
 
+  let Defs = [VXSAT] in {
   def PNCLIPR_BS   : RVPNarrowingShift_rr<0b111, 0b00, "pnclipr.bs">;
   def PNCLIPR_HS   : RVPNarrowingShift_rr<0b111, 0b01, "pnclipr.hs">;
   def NCLIPR       : RVPNarrowingShift_rr<0b111, 0b11, "nclipr">;
+  } // Defs = [VXSAT]
 
   def PSLLI_DB     : RVPPairShiftB_ri<0b000, "pslli.db">;
   def PSLLI_DH     : RVPPairShiftH_ri<0b000, "pslli.dh">;
   def PSLLI_DW     : RVPPairShiftW_ri<0b000, "pslli.dw">;
 
+  let Defs = [VXSAT] in {
   def PSSLAI_DH    : RVPPairShiftH_ri<0b101, "psslai.dh">;
   def PSSLAI_DW    : RVPPairShiftW_ri<0b101, "psslai.dw">;
+  } // Defs = [VXSAT]
 
   def PSEXT_DH_B   : RVPPairUnary_r<0b00, 0b00100, "psext.dh.b">;
   def PSEXT_DW_B   : RVPPairUnary_r<0b01, 0b00100, "psext.dw.b">;
 
   def PSEXT_DW_H   : RVPPairUnary_r<0b01, 0b00101, "psext.dw.h">;
 
+  let Defs = [VXSAT] in {
   def PSABS_DH     : RVPPairUnary_r<0b00, 0b00111, "psabs.dh">;
   def PSABS_DB     : RVPPairUnary_r<0b10, 0b00111, "psabs.db">;
+  } // Defs = [VXSAT]
 
   def PSLL_DHS     : RVPPairShift_rr<0b000, 0b00, "psll.dhs">;
   def PSLL_DWS     : RVPPairShift_rr<0b000, 0b01, "psll.dws">;
@@ -1340,18 +1411,24 @@ let Predicates = [HasStdExtP, IsRV32] in {
   def PADD_DWS     : RVPPairShift_rr<0b001, 0b01, "padd.dws">;
   def PADD_DBS     : RVPPairShift_rr<0b001, 0b10, "padd.dbs">;
 
+  let Defs = [VXSAT] in {
   def PSSHA_DHS    : RVPPairShift_rr<0b110, 0b00, "pssha.dhs">;
   def PSSHA_DWS    : RVPPairShift_rr<0b110, 0b01, "pssha.dws">;
+  } // Defs = [VXSAT]
 
+  let Defs = [VXSAT] in {
   def PSSHAR_DHS   : RVPPairShift_rr<0b111, 0b00, "psshar.dhs">;
   def PSSHAR_DWS   : RVPPairShift_rr<0b111, 0b01, "psshar.dws">;
+  } // Defs = [VXSAT]
 
   def PSRLI_DB     : RVPPairShiftB_ri<0b000, "psrli.db",  0b1>;
   def PSRLI_DH     : RVPPairShiftH_ri<0b000, "psrli.dh",  0b1>;
   def PSRLI_DW     : RVPPairShiftW_ri<0b000, "psrli.dw",  0b1>;
 
+  let Defs = [VXSAT] in {
   def PUSATI_DH    : RVPPairShiftH_ri<0b010, "pusati.dh", 0b1>;
   def PUSATI_DW    : RVPPairShiftW_ri<0b010, "pusati.dw", 0b1>;
+  } // Defs = [VXSAT]
 
   def PSRAI_DB     : RVPPairShiftB_ri<0b100, "psrai.db",  0b1>;
   def PSRAI_DH     : RVPPairShiftH_ri<0b100, "psrai.dh",  0b1>;
@@ -1360,8 +1437,10 @@ let Predicates = [HasStdExtP, IsRV32] in {
   def PSRARI_DH    : RVPPairShiftH_ri<0b101, "psrari.dh", 0b1>;
   def PSRARI_DW    : RVPPairShiftW_ri<0b101, "psrari.dw", 0b1>;
 
+  let Defs = [VXSAT] in {
   def PSATI_DH     : RVPPairShiftH_ri<0b110, "psati.dh",  0b1>;
   def PSATI_DW     : RVPPairShiftW_ri<0b110, "psati.dw",  0b1>;
+  } // Defs = [VXSAT]
 
   def PSRL_DHS     : RVPPairShift_rr<0b000, 0b00, "psrl.dhs", 0b1>;
   def PSRL_DWS     : RVPPairShift_rr<0b000, 0b01, "psrl.dws", 0b1>;
@@ -1376,17 +1455,21 @@ let Predicates = [HasStdExtP, IsRV32] in {
   def PADD_DB      : RVPPairBinary_rr<0b0000, 0b10, "padd.db", Commutable=1>;
   def ADDD         : RVPPairBinary_rr<0b0000, 0b11, "addd", Commutable=1>;
 
+  let Defs = [VXSAT] in {
   def PSADD_DH     : RVPPairBinary_rr<0b0010, 0b00, "psadd.dh", Commutable=1>;
   def PSADD_DW     : RVPPairBinary_rr<0b0010, 0b01, "psadd.dw", Commutable=1>;
   def PSADD_DB     : RVPPairBinary_rr<0b0010, 0b10, "psadd.db", Commutable=1>;
+  } // Defs = [VXSAT]
 
   def PAADD_DH     : RVPPairBinary_rr<0b0011, 0b00, "paadd.dh", Commutable=1>;
   def PAADD_DW     : RVPPairBinary_rr<0b0011, 0b01, "paadd.dw", Commutable=1>;
   def PAADD_DB     : RVPPairBinary_rr<0b0011, 0b10, "paadd.db", Commutable=1>;
 
+  let Defs = [VXSAT] in {
   def PSADDU_DH    : RVPPairBinary_rr<0b0110, 0b00, "psaddu.dh", Commutable=1>;
   def PSADDU_DW    : RVPPairBinary_rr<0b0110, 0b01, "psaddu.dw", Commutable=1>;
   def PSADDU_DB    : RVPPairBinary_rr<0b0110, 0b10, "psaddu.db", Commutable=1>;
+  } // Defs = [VXSAT]
 
   def PAADDU_DH    : RVPPairBinary_rr<0b0111, 0b00, "paaddu.dh", Commutable=1>;
   def PAADDU_DW    : RVPPairBinary_rr<0b0111, 0b01, "paaddu.dw", Commutable=1>;
@@ -1400,9 +1483,11 @@ let Predicates = [HasStdExtP, IsRV32] in {
   def PABD_DH      : RVPPairBinary_rr<0b1001, 0b00, "pabd.dh", Commutable=1>;
   def PABD_DB      : RVPPairBinary_rr<0b1001, 0b10, "pabd.db", Commutable=1>;
 
+  let Defs = [VXSAT] in {
   def PSSUB_DH     : RVPPairBinary_rr<0b1010, 0b00, "pssub.dh">;
   def PSSUB_DW     : RVPPairBinary_rr<0b1010, 0b01, "pssub.dw">;
   def PSSUB_DB     : RVPPairBinary_rr<0b1010, 0b10, "pssub.db">;
+  } // Defs = [VXSAT]
 
   def PASUB_DH     : RVPPairBinary_rr<0b1011, 0b00, "pasub.dh">;
   def PASUB_DW     : RVPPairBinary_rr<0b1011, 0b01, "pasub.dw">;
@@ -1411,9 +1496,11 @@ let Predicates = [HasStdExtP, IsRV32] in {
   def PABDU_DH     : RVPPairBinary_rr<0b1101, 0b00, "pabdu.dh", Commutable=1>;
   def PABDU_DB     : RVPPairBinary_rr<0b1101, 0b10, "pabdu.db", Commutable=1>;
 
+  let Defs = [VXSAT] in {
   def PSSUBU_DH    : RVPPairBinary_rr<0b1110, 0b00, "pssubu.dh">;
   def PSSUBU_DW    : RVPPairBinary_rr<0b1110, 0b01, "pssubu.dw">;
   def PSSUBU_DB    : RVPPairBinary_rr<0b1110, 0b10, "pssubu.db">;
+  } // Defs = [VXSAT]
 
   def PASUBU_DH    : RVPPairBinary_rr<0b1111, 0b00, "pasubu.dh">;
   def PASUBU_DW    : RVPPairBinary_rr<0b1111, 0b01, "pasubu.dw">;
@@ -1422,8 +1509,10 @@ let Predicates = [HasStdExtP, IsRV32] in {
   def PSH1ADD_DH   : RVPPairBinaryShift_rr<0b010, 0b00, "psh1add.dh">;
   def PSH1ADD_DW   : RVPPairBinaryShift_rr<0b010, 0b01, "psh1add.dw">;
 
+  let Defs = [VXSAT] in {
   def PSSH1SADD_DH : RVPPairBinaryShift_rr<0b011, 0b00, "pssh1sadd.dh">;
   def PSSH1SADD_DW : RVPPairBinaryShift_rr<0b011, 0b01, "pssh1sadd.dw">;
+  } // Defs = [VXSAT]
 
   def PPAIRE_DB    : RVPPairBinaryPack_rr<0b000, 0b00, "ppaire.db">;
   def PPAIRE_DH    : RVPPairBinaryPack_rr<0b000, 0b01, "ppaire.dh">;

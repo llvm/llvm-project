@@ -2530,8 +2530,10 @@ struct AMDGPUSwizzleBitModeLowering
     Location loc = op.getLoc();
     Type i32 = rewriter.getI32Type();
     Value src = adaptor.getSrc();
-    SmallVector<Value> decomposed =
-        LLVM::decomposeValue(rewriter, loc, src, i32);
+    SmallVector<Value> decomposed;
+    if (failed(LLVM::decomposeValue(rewriter, loc, src, i32, decomposed)))
+      return rewriter.notifyMatchFailure(op,
+                                         "failed to decompose value to i32");
     unsigned andMask = op.getAndMask();
     unsigned orMask = op.getOrMask();
     unsigned xorMask = op.getXorMask();
@@ -2573,8 +2575,10 @@ struct AMDGPUPermlaneLowering : public ConvertOpToLLVMPattern<PermlaneSwapOp> {
     bool fi = op.getFetchInactive();
     bool boundctrl = op.getBoundCtrl();
 
-    SmallVector<Value> decomposed =
-        LLVM::decomposeValue(rewriter, loc, src, i32);
+    SmallVector<Value> decomposed;
+    if (failed(LLVM::decomposeValue(rewriter, loc, src, i32, decomposed)))
+      return rewriter.notifyMatchFailure(op,
+                                         "failed to decompose value to i32");
 
     SmallVector<Value> permuted;
     for (Value v : decomposed) {

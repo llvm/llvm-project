@@ -23,6 +23,7 @@ namespace {
 class X86 : public TargetInfo {
 public:
   X86(Ctx &);
+  void initTargetSpecificSections() override;
   RelExpr getRelExpr(RelType type, const Symbol &s,
                      const uint8_t *loc) const override;
   int64_t getImplicitAddend(const uint8_t *buf, RelType type) const override;
@@ -68,6 +69,13 @@ X86::X86(Ctx &ctx) : TargetInfo(ctx) {
   // Align to the non-PAE large page size (known as a superpage or huge page).
   // FreeBSD automatically promotes large, superpage-aligned allocations.
   defaultImageBase = 0x400000;
+}
+
+void X86::initTargetSpecificSections() {
+  if (ctx.arg.andFeatures & GNU_PROPERTY_X86_FEATURE_1_IBT) {
+    ctx.in.ibtPlt = std::make_unique<IBTPltSection>(ctx);
+    ctx.inputSections.push_back(ctx.in.ibtPlt.get());
+  }
 }
 
 // Only needed to support relocations used by relocateNonAlloc and relocateEh.

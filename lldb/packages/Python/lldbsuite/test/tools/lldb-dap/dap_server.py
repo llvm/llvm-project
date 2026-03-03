@@ -125,6 +125,7 @@ class Breakpoint(TypedDict, total=False):
     def is_verified(src: "Breakpoint") -> bool:
         return src.get("verified", False)
 
+
 def dump_dap_log(log_file: Optional[str]) -> None:
     print("========= DEBUG ADAPTER PROTOCOL LOGS =========", file=sys.stderr)
     if log_file is None:
@@ -769,12 +770,13 @@ class DebugCommunication(object):
             if scope["name"] == scope_name:
                 varRef = scope["variablesReference"]
                 variables_response = self.request_variables(varRef, is_hex=is_hex)
-                if variables_response:
-                    if "body" in variables_response:
-                        body = variables_response["body"]
-                        if "variables" in body:
-                            vars = body["variables"]
-                            return vars
+                if not variables_response["success"]:
+                    return variables_response
+                if variables_response and "body" in variables_response:
+                    body = variables_response["body"]
+                    if "variables" in body:
+                        vars = body["variables"]
+                        return vars
         return []
 
     def get_global_variables(self, frameIndex=0, threadId=None):

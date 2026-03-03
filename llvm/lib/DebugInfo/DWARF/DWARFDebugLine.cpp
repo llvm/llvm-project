@@ -43,7 +43,7 @@ using ContentDescriptors = SmallVector<ContentDescriptor, 4>;
 } // end anonymous namespace
 
 static bool versionIsSupported(uint16_t Version) {
-  return Version >= 2 && Version <= 5;
+  return Version >= 2 && Version <= 6;
 }
 
 void DWARFDebugLine::ContentTypeTracker::trackContentType(

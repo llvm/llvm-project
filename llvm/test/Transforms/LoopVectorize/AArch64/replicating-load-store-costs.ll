@@ -152,7 +152,7 @@ define void @uniform_gep_for_replicating_gep(ptr %dst) {
 ; CHECK:       [[VECTOR_BODY]]:
 ; CHECK-NEXT:    [[INDEX:%.*]] = phi i32 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[VECTOR_BODY]] ]
 ; CHECK-NEXT:    [[VEC_IND:%.*]] = phi <2 x i32> [ <i32 0, i32 1>, %[[VECTOR_PH]] ], [ [[VEC_IND_NEXT:%.*]], %[[VECTOR_BODY]] ]
-; CHECK-NEXT:    [[STEP_ADD:%.*]] = add <2 x i32> [[VEC_IND]], splat (i32 2)
+; CHECK-NEXT:    [[STEP_ADD:%.*]] = add nuw <2 x i32> [[VEC_IND]], splat (i32 2)
 ; CHECK-NEXT:    [[TMP2:%.*]] = add i32 [[INDEX]], 2
 ; CHECK-NEXT:    [[TMP5:%.*]] = icmp eq <2 x i32> [[VEC_IND]], zeroinitializer
 ; CHECK-NEXT:    [[TMP3:%.*]] = icmp eq <2 x i32> [[STEP_ADD]], zeroinitializer
@@ -205,9 +205,9 @@ define void @test_load_gep_widen_induction(ptr noalias %dst, ptr noalias %dst2) 
 ; CHECK:       [[VECTOR_BODY]]:
 ; CHECK-NEXT:    [[OFFSET_IDX:%.*]] = phi i64 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[VECTOR_BODY]] ]
 ; CHECK-NEXT:    [[VEC_IND:%.*]] = phi <2 x i64> [ <i64 0, i64 1>, %[[VECTOR_PH]] ], [ [[VEC_IND_NEXT:%.*]], %[[VECTOR_BODY]] ]
-; CHECK-NEXT:    [[STEP_ADD:%.*]] = add <2 x i64> [[VEC_IND]], splat (i64 2)
-; CHECK-NEXT:    [[STEP_ADD_2:%.*]] = add <2 x i64> [[STEP_ADD]], splat (i64 2)
-; CHECK-NEXT:    [[STEP_ADD_3:%.*]] = add <2 x i64> [[STEP_ADD_2]], splat (i64 2)
+; CHECK-NEXT:    [[STEP_ADD:%.*]] = add nuw <2 x i64> [[VEC_IND]], splat (i64 2)
+; CHECK-NEXT:    [[STEP_ADD_2:%.*]] = add nuw <2 x i64> [[STEP_ADD]], splat (i64 2)
+; CHECK-NEXT:    [[STEP_ADD_3:%.*]] = add nuw <2 x i64> [[STEP_ADD_2]], splat (i64 2)
 ; CHECK-NEXT:    [[TMP0:%.*]] = getelementptr i128, ptr [[DST]], <2 x i64> [[VEC_IND]]
 ; CHECK-NEXT:    [[TMP5:%.*]] = extractelement <2 x ptr> [[TMP0]], i32 0
 ; CHECK-NEXT:    [[TMP6:%.*]] = extractelement <2 x ptr> [[TMP0]], i32 1

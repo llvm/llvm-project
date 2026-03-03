@@ -357,7 +357,7 @@ bool llvm::isDereferenceableAndAlignedInLoop(
   const SCEV *AccessSizeSCEV = nullptr;
   if (const SCEVUnknown *NewBase = dyn_cast<SCEVUnknown>(AccessStart)) {
     Base = NewBase->getValue();
-    AccessSize = MaxPtrDiff;
+    AccessSize = std::move(MaxPtrDiff);
     AccessSizeSCEV = PtrDiff;
   } else if (auto *MinAdd = dyn_cast<SCEVAddExpr>(AccessStart)) {
     if (MinAdd->getNumOperands() != 2)

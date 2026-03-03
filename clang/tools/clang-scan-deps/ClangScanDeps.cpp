@@ -1090,14 +1090,6 @@ int clang_scan_deps_main(int argc, char **argv, const llvm::ToolContext &) {
               HadErrors = true;
             }
           }
-
-          if (llvm::Error Err =
-                  WorkerTool.finalizeCompilerInstanceWithContextOrError()) {
-            handleErrorWithInfoString(
-                "Compiler instance with context finialization error",
-                std::move(Err), DependencyOS, Errs);
-            HadErrors = true;
-          }
         }
       } else {
         std::unique_ptr<llvm::MemoryBuffer> TU;

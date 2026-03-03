@@ -381,7 +381,7 @@ static RValue emitBuiltinAlloca(CIRGenFunction &cgf, const CallExpr *e,
           cgf.getCIRAllocaAddressSpace(),
           e->getType()->getPointeeType().getAddressSpace())) {
     cgf.cgm.errorNYI(e->getSourceRange(),
-                     "Non-default address space for alloca");
+                     "Address Space Cast for builtin alloca");
   }
 
   // Bitcast the alloca to the expected type.
@@ -825,7 +825,7 @@ decodeFixedType(CIRGenFunction &cgf,
   case IITDescriptor::Pointer: {
     mlir::Builder builder(context);
     auto addrSpace = cir::TargetAddressSpaceAttr::get(
-        context, builder.getUI32IntegerAttr(descriptor.Pointer_AddressSpace));
+        context, descriptor.Pointer_AddressSpace);
     return cir::PointerType::get(cir::VoidType::get(context), addrSpace);
   }
   default:

@@ -41,7 +41,12 @@ void ConvertFuncToEmitC::runOnOperation() {
   RewritePatternSet patterns(&getContext());
 
   TypeConverter typeConverter;
-  typeConverter.addConversion([](Type type) { return type; });
+  // Fallback for other types.
+  typeConverter.addConversion([](Type type) -> std::optional<Type> {
+    if (!emitc::isSupportedEmitCType(type))
+      return {};
+    return type;
+  });
 
   populateFuncToEmitCPatterns(typeConverter, patterns);
 

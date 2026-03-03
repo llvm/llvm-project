@@ -1575,7 +1575,7 @@ PreservedAnalyses AMDGPUSplitModulePass::run(Module &M,
               dbgs()
               << "[amdgpu-split-module] unable to acquire lockfile, debug "
                  "output may be mangled by other processes\n");
-          Lock.unsafeMaybeUnlock();
+          Lock.unsafeUnlock();
           break; // give up
         }
       }

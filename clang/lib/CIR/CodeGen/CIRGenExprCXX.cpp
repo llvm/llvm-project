@@ -533,7 +533,7 @@ static mlir::Value emitCXXNewAllocSize(CIRGenFunction &cgf, const CXXNewExpr *e,
     // Create a value for the variable number of elements
     numElements = cgf.emitScalarExpr(*e->getArraySize());
     auto numElementsType = mlir::cast<cir::IntType>(numElements.getType());
-    unsigned numElementsWidth = numElementsType.getWidth();
+    [[maybe_unused]] unsigned numElementsWidth = numElementsType.getWidth();
 
     // We might need check for overflow.
 

@@ -35,6 +35,12 @@ add_header(
 )
 
 add_header(
+  sys_ipc_macros
+  HDR
+    sys-ipc-macros.h
+)
+
+add_header(
   sys_random_macros
   HDR
     sys-random-macros.h

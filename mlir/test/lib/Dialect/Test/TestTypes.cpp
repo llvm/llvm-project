@@ -15,6 +15,7 @@
 #include "TestDialect.h"
 #include "mlir/Dialect/LLVMIR/LLVMTypes.h"
 #include "mlir/IR/Builders.h"
+#include "mlir/IR/BuiltinAttributes.h"
 #include "mlir/IR/DialectImplementation.h"
 #include "mlir/IR/ExtensibleDialect.h"
 #include "mlir/IR/Types.h"
@@ -22,6 +23,7 @@
 #include "llvm/ADT/SetVector.h"
 #include "llvm/ADT/TypeSwitch.h"
 #include "llvm/Support/TypeSize.h"
+#include <cstring>
 #include <optional>
 
 using namespace mlir;
@@ -604,4 +606,30 @@ void TestTypeNewlineAndIndentType::print(::mlir::AsmPrinter &printer) const {
   printer.decreaseIndent();
   printer.printNewline();
   printer << ">";
+}
+
+//===----------------------------------------------------------------------===//
+// TestDenseElementType - DenseElementTypeInterface Implementation
+//===----------------------------------------------------------------------===//
+
+// Elements are stored as 32-bit integers.
+size_t TestDenseElementType::getDenseElementBitSize() const { return 32; }
+
+Attribute
+TestDenseElementType::convertToAttribute(ArrayRef<char> rawData) const {
+  assert(rawData.size() == 4 && "expected 4 bytes for TestDenseElement");
+  int32_t value;
+  std::memcpy(&value, rawData.data(), sizeof(value));
+  return IntegerAttr::get(IntegerType::get(getContext(), 32), value);
+}
+
+LogicalResult TestDenseElementType::convertFromAttribute(
+    Attribute attr, SmallVectorImpl<char> &result) const {
+  auto intAttr = dyn_cast<IntegerAttr>(attr);
+  if (!intAttr || intAttr.getType().getIntOrFloatBitWidth() != 32)
+    return failure();
+  int32_t value = intAttr.getValue().getSExtValue();
+  result.append(reinterpret_cast<const char *>(&value),
+                reinterpret_cast<const char *>(&value) + sizeof(value));
+  return success();
 }

@@ -12,17 +12,13 @@ void foo() {
 }
 
 // CIR: cir.func {{.*}} @_Z3foov()
-// CIR:   cir.scope {
-// CIR:     %[[TMP0:.*]] = cir.alloca !s32i, !cir.ptr<!s32i>, ["ref.tmp0"]
-// CIR:     %[[TMP1:.*]] = cir.const #cir.int<42>
-// CIR:     cir.store{{.*}} %[[TMP1]], %[[TMP0]]
-// CIR:     cir.call @_Z3barRKi(%[[TMP0]])
-// CIR:   }
+// CIR:   %[[TMP0:.*]] = cir.alloca !s32i, !cir.ptr<!s32i>, ["ref.tmp0"]
+// CIR:   %[[TMP1:.*]] = cir.const #cir.int<42>
+// CIR:   cir.store{{.*}} %[[TMP1]], %[[TMP0]]
+// CIR:   cir.call @_Z3barRKi(%[[TMP0]])
 
 // LLVM: define{{.*}} @_Z3foov()
 // LLVM:   %[[TMP0:.*]] = alloca i32
-// LLVM:   br label %[[SCOPE_LABEL:.*]]
-// LLVM: [[SCOPE_LABEL]]:
 // LLVM:   store i32 42, ptr %[[TMP0]]
 // LLVM:   call void @_Z3barRKi(ptr {{.*}} %[[TMP0]])
 

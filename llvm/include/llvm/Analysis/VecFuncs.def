@@ -1563,11 +1563,6 @@ TLI_DEFINE_VECFUNC("powf", "armpl_vpowq_f32", FIXED(4), NOMASK, "_ZGV_LLVM_N4vv"
 TLI_DEFINE_VECFUNC("pow", "armpl_svpow_f64_x", SCALABLE(2), MASKED, "_ZGVsMxvv", NOCC)
 TLI_DEFINE_VECFUNC("powf", "armpl_svpow_f32_x", SCALABLE(4), MASKED, "_ZGVsMxvv", NOCC)
 
-TLI_DEFINE_VECFUNC("llvm.pow.f64", "armpl_vpowq_f64", FIXED(2), NOMASK, "_ZGV_LLVM_N2vv", CallingConv::AArch64_VectorCall)
-TLI_DEFINE_VECFUNC("llvm.pow.f32", "armpl_vpowq_f32", FIXED(4), NOMASK, "_ZGV_LLVM_N4vv", CallingConv::AArch64_VectorCall)
-TLI_DEFINE_VECFUNC("llvm.pow.f64", "armpl_svpow_f64_x", SCALABLE(2), MASKED, "_ZGVsMxvv", NOCC)
-TLI_DEFINE_VECFUNC("llvm.pow.f32", "armpl_svpow_f32_x", SCALABLE(4), MASKED, "_ZGVsMxvv", NOCC)
-
 TLI_DEFINE_VECFUNC("sin", "armpl_vsinq_f64", FIXED(2), NOMASK, "_ZGV_LLVM_N2v", CallingConv::AArch64_VectorCall)
 TLI_DEFINE_VECFUNC("sinf", "armpl_vsinq_f32", FIXED(4), NOMASK, "_ZGV_LLVM_N4v", CallingConv::AArch64_VectorCall)
 TLI_DEFINE_VECFUNC("sin", "armpl_svsin_f64_x",  SCALABLE(2), MASKED, "_ZGVsMxv", NOCC)

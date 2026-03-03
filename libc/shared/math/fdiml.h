@@ -9,6 +9,7 @@
 #ifndef LLVM_LIBC_SHARED_MATH_FDIML_H
 #define LLVM_LIBC_SHARED_MATH_FDIML_H
 
+#include "shared/libc_common.h"
 #include "src/__support/math/fdiml.h"
 
 namespace LIBC_NAMESPACE_DECL {

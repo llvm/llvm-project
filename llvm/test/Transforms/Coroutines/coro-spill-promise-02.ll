@@ -60,14 +60,13 @@ declare void @free(ptr)
 ; CHECK-NEXT:    [[ALLOC:%.*]] = call ptr @malloc(i32 128)
 ; CHECK-NEXT:    [[HDL:%.*]] = call noalias nonnull ptr @llvm.coro.begin(token [[ID]], ptr [[ALLOC]])
 ; CHECK-NEXT:    store ptr @f.resume, ptr [[HDL]], align 8
-; CHECK-NEXT:    [[DESTROY_ADDR:%.*]] = getelementptr inbounds nuw [[F_FRAME:%.*]], ptr [[HDL]], i32 0, i32 1
+; CHECK-NEXT:    [[DESTROY_ADDR:%.*]] = getelementptr inbounds i8, ptr [[HDL]], i64 8
 ; CHECK-NEXT:    store ptr @f.destroy, ptr [[DESTROY_ADDR]], align 8
-; CHECK-NEXT:    [[TMP0:%.*]] = getelementptr inbounds [[F_FRAME]], ptr [[HDL]], i32 0, i32 5
-; CHECK-NEXT:    [[TMP1:%.*]] = load %"class.task::promise_type", ptr [[__PROMISE]], align 1
-; CHECK-NEXT:    store %"class.task::promise_type" [[TMP1]], ptr [[TMP0]], align 1
-; CHECK-NEXT:    [[DATA_RELOAD_ADDR:%.*]] = getelementptr inbounds [[F_FRAME]], ptr [[HDL]], i32 0, i32 2
+; CHECK-NEXT:    [[TMP0:%.*]] = getelementptr inbounds i8, ptr [[HDL]], i64 64
+; CHECK-NEXT:    call void @llvm.memcpy.p0.p0.i64(ptr align 64 [[TMP0]], ptr align 64 [[__PROMISE]], i64 64, i1 false)
+; CHECK-NEXT:    [[DATA_RELOAD_ADDR:%.*]] = getelementptr inbounds i8, ptr [[HDL]], i64 16
 ; CHECK-NEXT:    call void @consume(ptr [[DATA_RELOAD_ADDR]])
-; CHECK-NEXT:    [[INDEX_ADDR1:%.*]] = getelementptr inbounds nuw [[F_FRAME]], ptr [[HDL]], i32 0, i32 3
+; CHECK-NEXT:    [[INDEX_ADDR1:%.*]] = getelementptr inbounds i8, ptr [[HDL]], i64 20
 ; CHECK-NEXT:    store i1 false, ptr [[INDEX_ADDR1]], align 1
 ; CHECK-NEXT:    ret ptr [[HDL]]
 ;
@@ -75,8 +74,8 @@ declare void @free(ptr)
 ; CHECK-LABEL: define internal fastcc void @f.resume(
 ; CHECK-SAME: ptr noundef nonnull align 64 dereferenceable(128) [[HDL:%.*]]) {
 ; CHECK-NEXT:  [[ENTRY_RESUME:.*:]]
-; CHECK-NEXT:    [[DATA_RELOAD_ADDR:%.*]] = getelementptr inbounds [[F_FRAME:%.*]], ptr [[HDL]], i32 0, i32 2
-; CHECK-NEXT:    [[__PROMISE_RELOAD_ADDR:%.*]] = getelementptr inbounds [[F_FRAME]], ptr [[HDL]], i32 0, i32 5
+; CHECK-NEXT:    [[DATA_RELOAD_ADDR:%.*]] = getelementptr inbounds i8, ptr [[HDL]], i64 16
+; CHECK-NEXT:    [[__PROMISE_RELOAD_ADDR:%.*]] = getelementptr inbounds i8, ptr [[HDL]], i64 64
 ; CHECK-NEXT:    call void @consume(ptr [[DATA_RELOAD_ADDR]])
 ; CHECK-NEXT:    call void @consume2(ptr [[__PROMISE_RELOAD_ADDR]])
 ; CHECK-NEXT:    call void @free(ptr [[HDL]])

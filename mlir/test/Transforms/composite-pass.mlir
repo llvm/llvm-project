@@ -7,10 +7,10 @@
 // PIPELINE-SAME: pipeline=canonicalize{ max-iterations=10 max-num-rewrites=-1 region-simplify=normal test-convergence=false top-down=true},cse}
 
 // CHECK-LABEL: running `TestCompositePass`
-//       CHECK: running `Canonicalizer`
-//       CHECK: running `CSE`
-//   CHECK-NOT: running `Canonicalizer`
-//   CHECK-NOT: running `CSE`
+//       CHECK: running `CanonicalizerPass`
+//       CHECK: running `CSEPass`
+//   CHECK-NOT: running `CanonicalizerPass`
+//   CHECK-NOT: running `CSEPass`
 func.func @test() {
   return
 }
@@ -18,12 +18,12 @@ func.func @test() {
 // -----
 
 // CHECK-LABEL: running `TestCompositePass`
-//       CHECK: running `Canonicalizer`
-//       CHECK: running `CSE`
-//       CHECK: running `Canonicalizer`
-//       CHECK: running `CSE`
-//   CHECK-NOT: running `Canonicalizer`
-//   CHECK-NOT: running `CSE`
+//       CHECK: running `CanonicalizerPass`
+//       CHECK: running `CSEPass`
+//       CHECK: running `CanonicalizerPass`
+//       CHECK: running `CSEPass`
+//   CHECK-NOT: running `CanonicalizerPass`
+//   CHECK-NOT: running `CSEPass`
 func.func @test() {
 // this constant will be canonicalized away, causing another pass iteration
   %0 = arith.constant 1.5 : f32

@@ -192,10 +192,21 @@ static void testNoSkipErasureCallbacks(Operation *op) {
       // it, because this means that the use's region holding op is a child of
       // the region holding op containing the current block and was expected to
       // be visited and erased first - we should correctly fail here.
-      Region *blockParentRegion = block->front().getParentRegion();
+      Region *blockParentRegion = block->getParent();
       for (Operation &op : *block) {
         for (OpOperand &use : llvm::make_early_inc_range(op.getUses())) {
           // Early continue if the parent regions are not same.
+          if (blockParentRegion != use.getOwner()->getParentRegion())
+            continue;
+          use.drop();
+        }
+      }
+
+      // Also drop uses of block arguments that are consumed within the same
+      // region. This handles cases like function entry blocks whose arguments
+      // are used by ops in sibling blocks.
+      for (BlockArgument arg : block->getArguments()) {
+        for (OpOperand &use : llvm::make_early_inc_range(arg.getUses())) {
           if (blockParentRegion != use.getOwner()->getParentRegion())
             continue;
           use.drop();

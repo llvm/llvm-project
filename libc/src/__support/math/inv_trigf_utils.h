@@ -177,6 +177,43 @@ LIBC_INLINE double asin_eval(double xsq) {
   return fputil::multiply_add(xsq, r2, r1);
 }
 
+// the coefficients for the polynomial approximation of asin(x)/(pi*x) in the
+// range [0, 0.5] extracted using Sollya.
+//
+// Sollya code:
+// > prec = 200;
+// > display = hexadecimal;
+// > g = asin(x) / (pi * x);
+// > P = fpminimax(g, [|0, 2, 4, 6, 8, 10, 12, 14, 16, 18, 20|],
+// >              [|D...|], [0, 0.5]);
+// > for i from 0 to degree(P) do coeff(P, i);
+// > print("Error:", dirtyinfnorm(P - g, [1e-30; 0.25]));
+// Error: 0x1.45c281e1cf9b58p-50 ~= 2^−49.652
+//
+// Non-zero coefficients (even powers only):
+LIBC_INLINE_VAR constexpr double ASINPI_COEFFS[13] = {
+    0x1.45f306dc9c881p-2,  // x^0
+    0x1.b2995e7b7e756p-5,  // x^2
+    0x1.8723a1d12f828p-6,  // x^4
+    0x1.d1a45564b9545p-7,  // x^6
+    0x1.3ce4ceaa0e1e9p-7,  // x^8
+    0x1.d2c305898ea13p-8,  // x^10
+    0x1.692212e27a5f9p-8,  // x^12
+    0x1.2b22cc744d25bp-8,  // x^14
+    0x1.8427b864479ffp-9,  // x^16
+    0x1.815522d7a2bf1p-8,  // x^18
+    -0x1.f6df98438aef4p-9, // x^20
+    0x1.4b50c2eb13708p-7   // x^22
+};
+
+// Evaluates P1(v2) = c1 + c2*v2 + c3*v2^2 + ... (tail of P without c0)
+LIBC_INLINE double asinpi_eval(double v2) {
+  return fputil::polyeval(
+      v2, ASINPI_COEFFS[1], ASINPI_COEFFS[2], ASINPI_COEFFS[3],
+      ASINPI_COEFFS[4], ASINPI_COEFFS[5], ASINPI_COEFFS[6], ASINPI_COEFFS[7],
+      ASINPI_COEFFS[8], ASINPI_COEFFS[9], ASINPI_COEFFS[10], ASINPI_COEFFS[11]);
+}
+
 } // namespace inv_trigf_utils_internal
 
 } // namespace LIBC_NAMESPACE_DECL

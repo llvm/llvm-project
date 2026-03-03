@@ -3349,12 +3349,8 @@ static Constant *ConstantFoldIntrinsicCall2(Intrinsic::ID IntrinsicID, Type *Ty,
       case Intrinsic::copysign:
         return ConstantFP::get(Ty, APFloat::copySign(Op1V, Op2V));
       case Intrinsic::minnum:
-        if (Op1V.isSignaling() || Op2V.isSignaling())
-          return nullptr;
         return ConstantFP::get(Ty, minnum(Op1V, Op2V));
       case Intrinsic::maxnum:
-        if (Op1V.isSignaling() || Op2V.isSignaling())
-          return nullptr;
         return ConstantFP::get(Ty, maxnum(Op1V, Op2V));
       case Intrinsic::minimum:
         return ConstantFP::get(Ty, minimum(Op1V, Op2V));

@@ -769,10 +769,17 @@ void clang::EmitClangBuiltinDocs(const RecordKeeper &Records, raw_ostream &OS) {
     }
   }
 
-  // Sort categories alphabetically by name for deterministic output.
+  // Sort categories alphabetically by name for deterministic output, but
+  // push the "Undocumented" category to the end so that documented sections
+  // always appear first.
   llvm::sort(SplitDocs, [](const auto &A, const auto &B) {
-    return A.first->getValueAsString("Name") <
-           B.first->getValueAsString("Name");
+    StringRef NameA = A.first->getValueAsString("Name");
+    StringRef NameB = B.first->getValueAsString("Name");
+    bool UndocA = (NameA == "Undocumented");
+    bool UndocB = (NameB == "Undocumented");
+    if (UndocA != UndocB)
+      return UndocB;
+    return NameA < NameB;
   });
 
   // Write out each category and its builtins.

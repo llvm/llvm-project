@@ -265,6 +265,10 @@ void PlainCFGBuilder::createVPInstructionsForVPBB(VPBasicBlock *VPBB,
                                             CI->getType(), CI->getDebugLoc(),
                                             VPIRFlags(*CI), MD);
         NewR->setUnderlyingValue(CI);
+      } else if (auto *LI = dyn_cast<LoadInst>(Inst)) {
+        NewR = VPIRBuilder.createScalarLoad(LI->getType(), VPOperands[0],
+                                            LI->getDebugLoc(), MD);
+        NewR->setUnderlyingValue(LI);
       } else {
         // Build VPInstruction for any arbitrary Instruction without specific
         // representation in VPlan.

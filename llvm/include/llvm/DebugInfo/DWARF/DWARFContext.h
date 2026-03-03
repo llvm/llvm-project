@@ -402,7 +402,7 @@ public:
   getLocalsForAddress(object::SectionedAddress Address) override;
 
   bool isLittleEndian() const { return DObj->isLittleEndian(); }
-  static unsigned getMaxSupportedVersion() { return 5; }
+  static unsigned getMaxSupportedVersion() { return 6; }
   static bool isSupportedVersion(unsigned version) {
     return version >= 2 && version <= getMaxSupportedVersion();
   }

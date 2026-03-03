@@ -397,14 +397,10 @@ bool ToolInvocation::run() {
     ArrayRef<const char *> CC1Args = ArrayRef(Argv).drop_front();
     std::unique_ptr<CompilerInvocation> Invocation(
         newInvocation(&*Diagnostics, CC1Args, BinaryName));
-    if (Diagnostics->hasErrorOccurred()) {
-      Diagnostics->getClient()->finish();
+    if (Diagnostics->hasErrorOccurred())
       return false;
-    }
-    const bool Success = Action->runInvocation(
-        std::move(Invocation), Files, std::move(PCHContainerOps), DiagConsumer);
-    Diagnostics->getClient()->finish();
-    return Success;
+    return Action->runInvocation(std::move(Invocation), Files,
+                                 std::move(PCHContainerOps), DiagConsumer);
   }
 
   const std::unique_ptr<driver::Driver> Driver(
@@ -417,23 +413,16 @@ bool ToolInvocation::run() {
     Driver->setCheckInputsExist(false);
   const std::unique_ptr<driver::Compilation> Compilation(
       Driver->BuildCompilation(llvm::ArrayRef(Argv)));
-  if (!Compilation) {
-    Diagnostics->getClient()->finish();
+  if (!Compilation)
     return false;
-  }
   const llvm::opt::ArgStringList *const CC1Args =
       getCC1Arguments(&*Diagnostics, Compilation.get());
-  if (!CC1Args) {
-    Diagnostics->getClient()->finish();
+  if (!CC1Args)
     return false;
-  }
   std::unique_ptr<CompilerInvocation> Invocation(
       newInvocation(&*Diagnostics, *CC1Args, BinaryName));
-  const bool Success =
-      runInvocation(BinaryName, Compilation.get(), std::move(Invocation),
-                    std::move(PCHContainerOps));
-  Diagnostics->getClient()->finish();
-  return Success;
+  return runInvocation(BinaryName, Compilation.get(), std::move(Invocation),
+                       std::move(PCHContainerOps));
 }
 
 bool ToolInvocation::runInvocation(

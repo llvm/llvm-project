@@ -16,8 +16,10 @@
 
 #include "ABIInfo.h"
 #include "CIRGenTypes.h"
+#include "mlir/Dialect/Ptr/IR/MemorySpaceInterfaces.h"
 #include "clang/Basic/AddressSpaces.h"
 #include "clang/CIR/Dialect/IR/CIRAttrs.h"
+#include "clang/CIR/Dialect/IR/CIROpsEnums.h"
 
 #include <memory>
 #include <utility>
@@ -48,8 +50,9 @@ public:
   const ABIInfo &getABIInfo() const { return *info; }
 
   /// Get the address space for alloca.
-  virtual cir::TargetAddressSpaceAttr getCIRAllocaAddressSpace() const {
-    return {};
+  virtual mlir::ptr::MemorySpaceAttrInterface getCIRAllocaAddressSpace() const {
+    return cir::LangAddressSpaceAttr::get(&info->cgt.getMLIRContext(),
+                                          cir::LangAddressSpace::Default);
   }
 
   /// Determine whether a call to an unprototyped functions under

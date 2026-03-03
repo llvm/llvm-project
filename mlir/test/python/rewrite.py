@@ -318,3 +318,12 @@ def testConversionPattern():
             # CHECK: caught exception: partial conversion failed
             # CHECK: failed to legalize unresolved materialization
             print("caught exception:", e)
+
+        t1 = converter.convert_type(IntegerType.get_signless(64))
+        # CHECK: IntType
+        print(type(t1))
+        # CHECK: !smt.int
+        print(str(t1))
+        t2 = converter.convert_type(F32Type.get())
+        # CHECK: None
+        print(t2)

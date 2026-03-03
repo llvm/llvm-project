@@ -21,12 +21,14 @@
 #include "mlir/Dialect/Func/IR/FuncOps.h"
 #include "mlir/Dialect/LLVMIR/LLVMDialect.h"
 #include "mlir/Dialect/LLVMIR/LLVMTypes.h"
+#include "mlir/Dialect/Ptr/IR/MemorySpaceInterfaces.h"
 #include "mlir/IR/BuiltinAttributes.h"
 #include "mlir/IR/BuiltinDialect.h"
 #include "mlir/IR/BuiltinOps.h"
 #include "mlir/IR/Types.h"
 #include "mlir/Pass/Pass.h"
 #include "mlir/Pass/PassManager.h"
+#include "mlir/Support/LLVM.h"
 #include "mlir/Target/LLVMIR/Dialect/Builtin/BuiltinToLLVMIRTranslation.h"
 #include "mlir/Target/LLVMIR/Dialect/LLVMIR/LLVMToLLVMIRTranslation.h"
 #include "mlir/Target/LLVMIR/Dialect/OpenMP/OpenMPToLLVMIRTranslation.h"
@@ -41,6 +43,7 @@
 #include "clang/CIR/Passes.h"
 #include "llvm/ADT/TypeSwitch.h"
 #include "llvm/IR/Module.h"
+#include "llvm/Support/Casting.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/TimeProfiler.h"
 
@@ -3254,9 +3257,17 @@ mlir::LogicalResult CIRToLLVMSelectOpLowering::matchAndRewrite(
 static void prepareTypeConverter(mlir::LLVMTypeConverter &converter,
                                  mlir::DataLayout &dataLayout) {
   converter.addConversion([&](cir::PointerType type) -> mlir::Type {
-    unsigned addrSpace =
-        type.getAddrSpace() ? type.getAddrSpace().getValue().getUInt() : 0;
-    return mlir::LLVM::LLVMPointerType::get(type.getContext(), addrSpace);
+    mlir::ptr::MemorySpaceAttrInterface addrSpaceAttr = type.getAddrSpace();
+    unsigned numericAS = 0;
+
+    if (auto langAsAttr =
+            mlir::dyn_cast_if_present<cir::LangAddressSpaceAttr>(addrSpaceAttr))
+      llvm_unreachable("lowering LangAddressSpaceAttr NYI");
+    else if (auto targetAsAttr =
+                 mlir::dyn_cast_if_present<cir::TargetAddressSpaceAttr>(
+                     addrSpaceAttr))
+      numericAS = targetAsAttr.getValue();
+    return mlir::LLVM::LLVMPointerType::get(type.getContext(), numericAS);
   });
   converter.addConversion([&](cir::VPtrType type) -> mlir::Type {
     assert(!cir::MissingFeatures::addressSpace());

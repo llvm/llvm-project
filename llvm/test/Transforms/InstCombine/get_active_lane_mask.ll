@@ -36,3 +36,43 @@ define <vscale x 4 x i1> @bail_lhs_is_zero() {
   %mask = call <vscale x 4 x i1> @llvm.get.active.lane.mask.nxv4i1.i32(i32 0, i32 4)
   ret <vscale x 4 x i1> %mask
 }
+
+define <4 x i1> @remove_all_false_subvector() {
+; CHECK-LABEL: define <4 x i1> @remove_all_false_subvector() {
+; CHECK-NEXT:    ret <4 x i1> zeroinitializer
+;
+  %wide.alm = tail call <vscale x 16 x i1> @llvm.get.active.lane.mask.nxv16i1.i64(i32 0, i32 7)
+  %ext = tail call <4 x i1> @llvm.vector.extract.v4i1.nxv16i1(<vscale x 16 x i1> %wide.alm, i64 8)
+  ret <4 x i1> %ext
+}
+
+define <vscale x 4 x i1> @remove_all_false_subvector_vscale() vscale_range(2,16) {
+; CHECK-LABEL: define <vscale x 4 x i1> @remove_all_false_subvector_vscale(
+; CHECK-SAME: ) #[[ATTR0:[0-9]+]] {
+; CHECK-NEXT:    ret <vscale x 4 x i1> zeroinitializer
+;
+  %wide.alm = tail call <vscale x 16 x i1> @llvm.get.active.lane.mask.nxv16i1.i64(i64 0, i64 7)
+  %ext = tail call <vscale x 4 x i1> @llvm.vector.extract.nxv4i1.nxv16i1(<vscale x 16 x i1> %wide.alm, i64 4)
+  ret <vscale x 4 x i1> %ext
+}
+
+define <vscale x 2 x i1> @active_lane_mask_non_const_start(i64 %start) {
+; CHECK-LABEL: define <vscale x 2 x i1> @active_lane_mask_non_const_start(
+; CHECK-SAME: i64 [[START:%.*]]) {
+; CHECK-NEXT:    ret <vscale x 2 x i1> zeroinitializer
+;
+  %wide.alm = tail call <vscale x 4 x i1> @llvm.get.active.lane.mask.nxv4i1.i64(i64 %start, i64 1)
+  %ext = tail call <vscale x 2 x i1> @llvm.vector.extract.nxv2i1.nxv4i1(<vscale x 4 x i1> %wide.alm, i64 2)
+  ret <vscale x 2 x i1> %ext
+}
+
+define <4 x i1> @ext_has_active_lanes() {
+; CHECK-LABEL: define <4 x i1> @ext_has_active_lanes() {
+; CHECK-NEXT:    [[WIDE_ALM:%.*]] = tail call <vscale x 16 x i1> @llvm.get.active.lane.mask.nxv16i1.i32(i32 0, i32 7)
+; CHECK-NEXT:    [[EXT:%.*]] = tail call <4 x i1> @llvm.vector.extract.v4i1.nxv16i1(<vscale x 16 x i1> [[WIDE_ALM]], i64 4)
+; CHECK-NEXT:    ret <4 x i1> [[EXT]]
+;
+  %wide.alm = tail call <vscale x 16 x i1> @llvm.get.active.lane.mask.nxv16i1.i64(i32 0, i32 7)
+  %ext = tail call <4 x i1> @llvm.vector.extract.v4i1.nxv16i1(<vscale x 16 x i1> %wide.alm, i64 4)
+  ret <4 x i1> %ext
+}

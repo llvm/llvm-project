@@ -197,7 +197,7 @@ declare i32 @llvm.amdgcn.workgroup.id.z() #1
 
 !llvm.module.flags = !{!1}
 
-attributes #0 = { nounwind "uniform-work-group-size"="true" }
+attributes #0 = { nounwind "uniform-work-group-size" }
 attributes #1 = { nounwind readnone speculatable }
 !0 = !{i32 8, i32 16, i32 2}
 !1 = !{i32 1, !"amdhsa_code_object_version", i32 500}

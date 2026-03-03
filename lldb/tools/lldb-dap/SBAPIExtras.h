@@ -14,25 +14,43 @@
 #include "lldb/API/SBThread.h"
 #include "lldb/API/SBThreadCollection.h"
 #include "lldb/API/SBValue.h"
+#include "lldb/API/SBValueList.h"
+#include "llvm/ADT/iterator.h"
 #include "llvm/Support/raw_ostream.h"
 #include <cstdint>
 #include <functional>
+#include <iterator>
 
 namespace lldb {
 
 /// An iterator helper for iterating over various SB API containers.
-template <typename Container, typename Item, typename Index,
-          Item (Container::*Get)(Index)>
-struct iter {
-  using difference_type = Index;
-  using value_type = Item;
-
-  Container container;
-  Index index;
+template <typename Container, typename Item, typename Index, auto Get>
+class iter
+    : public llvm::iterator_facade_base<iter<Container, Item, Index, Get>,
+                                        std::random_access_iterator_tag, Item,
+                                        Index> {
+public:
+  iter(const Container &container, Index index)
+      : container(container), index(index) {}
 
   Item operator*() { return std::invoke(Get, container, index); }
-  void operator++() { index++; }
-  bool operator!=(const iter &other) { return index != other.index; }
+  Item operator*() const { return std::invoke(Get, container, index); }
+  iter &operator+=(Index N) {
+    index += N;
+    return *this;
+  }
+  iter &operator-=(Index N) {
+    index -= N;
+    return *this;
+  }
+  Index operator-(const iter &other) const { return index - other.index; }
+  bool operator==(const iter &other) const { return index == other.index; }
+  bool operator!=(const iter &other) const { return !(*this == other); }
+  bool operator<(const iter &other) const { return index < other.index; }
+
+private:
+  Container container;
+  Index index;
 };
 
 /// SBProcess thread iterator.
@@ -57,9 +75,19 @@ inline frame_iter end(SBThread T) { return {T, T.GetNumFrames()}; }
 
 /// SBValue value iterators.
 /// @{
-using value_iter = iter<SBValue, SBValue, uint32_t, &SBValue::GetChildAtIndex>;
+using value_iter = iter<SBValue, SBValue, uint32_t,
+                        static_cast<SBValue (SBValue::*)(uint32_t)>(
+                            &SBValue::GetChildAtIndex)>;
 inline value_iter begin(SBValue &T) { return {T, 0}; }
 inline value_iter end(SBValue &T) { return {T, T.GetNumChildren()}; }
+/// @}
+
+/// SBValue value iterators.
+/// @{
+using value_list_iter =
+    iter<SBValueList, SBValue, uint32_t, &SBValueList::GetValueAtIndex>;
+inline value_list_iter begin(SBValueList &T) { return {T, 0}; }
+inline value_list_iter end(SBValueList &T) { return {T, T.GetSize()}; }
 /// @}
 
 // llvm::raw_ostream print helpers.

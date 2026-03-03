@@ -1526,7 +1526,7 @@ void HWAddressSanitizer::instrumentStack(memtag::StackInfo &SInfo,
     // function return. Work around this by always untagging at every return
     // statement if return_twice functions are called.
     if (DetectUseAfterScope && !SInfo.CallsReturnTwice &&
-        memtag::isStandardLifetime(Info, &DT, &LI, ClMaxLifetimes)) {
+        memtag::isSupportedLifetime(Info, &DT, &LI)) {
       TagStarts();
       if (!memtag::forAllReachableExits(DT, PDT, LI, Info, SInfo.RetVec,
                                         TagEnd)) {

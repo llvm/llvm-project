@@ -1416,7 +1416,7 @@ ReduceScatterOp::verifySymbolUses(SymbolTableCollection &symbolTable) {
   }
 
   return verifyScatterOrSliceOperandAndResultShape(
-      getOperand(), getResult(), getScatterAxis().getSExtValue(), getGridAxes(),
+      getOperand(), getResult(), getScatterDim().getSExtValue(), getGridAxes(),
       grid.value().getShape());
 }
 
@@ -1445,9 +1445,9 @@ LogicalResult ScatterOp::verifySymbolUses(SymbolTableCollection &symbolTable) {
     return failure();
   }
 
-  auto scatterAxis = getScatterAxis().getSExtValue();
+  auto scatterDim = getScatterDim().getSExtValue();
   return verifyScatterOrSliceOperandAndResultShape(getInput(), getResult(),
-                                                   scatterAxis, getGridAxes(),
+                                                   scatterDim, getGridAxes(),
                                                    grid.value().getShape());
 }
 

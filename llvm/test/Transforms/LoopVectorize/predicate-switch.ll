@@ -604,7 +604,7 @@ define void @switch_unconditional_duplicate_target(ptr %start, ptr %dest) {
 ; IC2:       [[VECTOR_BODY]]:
 ; IC2-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[VECTOR_BODY]] ]
 ; IC2-NEXT:    [[VEC_IND:%.*]] = phi <2 x i64> [ <i64 0, i64 1>, %[[VECTOR_PH]] ], [ [[VEC_IND_NEXT:%.*]], %[[VECTOR_BODY]] ]
-; IC2-NEXT:    [[STEP_ADD:%.*]] = add <2 x i64> [[VEC_IND]], splat (i64 2)
+; IC2-NEXT:    [[STEP_ADD:%.*]] = add nuw <2 x i64> [[VEC_IND]], splat (i64 2)
 ; IC2-NEXT:    [[TMP0:%.*]] = getelementptr i32, ptr [[START]], <2 x i64> [[VEC_IND]]
 ; IC2-NEXT:    [[TMP7:%.*]] = extractelement <2 x ptr> [[TMP0]], i32 0
 ; IC2-NEXT:    [[TMP1:%.*]] = getelementptr i32, ptr [[START]], <2 x i64> [[STEP_ADD]]

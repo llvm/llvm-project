@@ -1091,6 +1091,19 @@ public:
   }
 };
 
+// QURT Target
+template <typename Target>
+class LLVM_LIBRARY_VISIBILITY QURTTargetInfo : public OSTargetInfo<Target> {
+protected:
+  void getOSDefines(const LangOptions &Opts, const llvm::Triple &Triple,
+                    MacroBuilder &Builder) const override {
+    Builder.defineMacro("__qurt__");
+  }
+
+public:
+  using OSTargetInfo<Target>::OSTargetInfo;
+};
+
 } // namespace targets
 } // namespace clang
 #endif // LLVM_CLANG_LIB_BASIC_TARGETS_OSTARGETS_H

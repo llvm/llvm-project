@@ -71,7 +71,7 @@ define i64 @second_lshr_operand_zero_via_scev() {
 ; CHECK-NEXT:    [[VEC_PHI:%.*]] = phi <2 x i64> [ zeroinitializer, %[[VECTOR_PH]] ], [ [[TMP10:%.*]], %[[VECTOR_BODY]] ]
 ; CHECK-NEXT:    [[VEC_PHI1:%.*]] = phi <2 x i64> [ zeroinitializer, %[[VECTOR_PH]] ], [ [[TMP11:%.*]], %[[VECTOR_BODY]] ]
 ; CHECK-NEXT:    [[VEC_IND2:%.*]] = phi <2 x i32> [ <i32 0, i32 1>, %[[VECTOR_PH]] ], [ [[VEC_IND_NEXT3:%.*]], %[[VECTOR_BODY]] ]
-; CHECK-NEXT:    [[STEP_ADD:%.*]] = add <2 x i64> [[VEC_IND]], splat (i64 2)
+; CHECK-NEXT:    [[STEP_ADD:%.*]] = add nuw <2 x i64> [[VEC_IND]], splat (i64 2)
 ; CHECK-NEXT:    [[STEP_ADD4:%.*]] = add <2 x i32> [[VEC_IND2]], splat (i32 2)
 ; CHECK-NEXT:    [[TMP0:%.*]] = icmp eq <2 x i64> [[VEC_IND]], zeroinitializer
 ; CHECK-NEXT:    [[TMP1:%.*]] = icmp eq <2 x i64> [[STEP_ADD]], zeroinitializer

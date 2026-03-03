@@ -1,22 +1,10 @@
-// RUN: %check_clang_tidy %s llvm-use-ranges %t
+// RUN: %check_clang_tidy %s llvm-use-ranges %t -- -- -isystem %clang_tidy_headers
+#include <vector>
 
 // Test that the header is included
 // CHECK-FIXES: #include "llvm/ADT/STLExtras.h"
 
 namespace std {
-
-template <typename T> class vector {
-public:
-  using iterator = T *;
-  using const_iterator = const T *;
-
-  iterator begin();
-  iterator end();
-  const_iterator begin() const;
-  const_iterator end() const;
-  const_iterator cbegin() const;
-  const_iterator cend() const;
-};
 
 template <typename T> T* begin(T (&arr)[5]);
 template <typename T> T* end(T (&arr)[5]);

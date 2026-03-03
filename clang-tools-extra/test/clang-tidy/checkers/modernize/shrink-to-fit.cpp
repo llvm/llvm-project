@@ -1,8 +1,5 @@
-// RUN: %check_clang_tidy %s modernize-shrink-to-fit %t
-
-namespace std {
-template <typename T> struct vector { void swap(vector &other); };
-}
+// RUN: %check_clang_tidy %s modernize-shrink-to-fit %t -- -- -isystem %clang_tidy_headers
+#include <vector>
 
 void f() {
   std::vector<int> v;

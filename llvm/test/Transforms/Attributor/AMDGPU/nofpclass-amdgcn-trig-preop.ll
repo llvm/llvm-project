@@ -10,3 +10,116 @@ define double @ret_trig_preop_f64(double %x, i32 %n) {
   %ret = call double @llvm.amdgcn.trig.preop.f64(double %x, i32 %n)
   ret double %ret
 }
+
+define double @ret_not_inf__fmul__trig_preop(double nofpclass(inf) %not.inf, double %x, i32 %n) {
+; CHECK-LABEL: define nofpclass(inf) double @ret_not_inf__fmul__trig_preop(
+; CHECK-SAME: double nofpclass(inf) [[NOT_INF:%.*]], double [[X:%.*]], i32 [[N:%.*]]) #[[ATTR0]] {
+; CHECK-NEXT:    [[TRIG_PREOP:%.*]] = call double @llvm.amdgcn.trig.preop.f64(double [[X]], i32 [[N]]) #[[ATTR2]]
+; CHECK-NEXT:    [[MUL:%.*]] = fmul double [[NOT_INF]], [[TRIG_PREOP]]
+; CHECK-NEXT:    ret double [[MUL]]
+;
+  %trig.preop = call double @llvm.amdgcn.trig.preop.f64(double %x, i32 %n)
+  %mul = fmul double %not.inf, %trig.preop
+  ret double %mul
+}
+
+define double @ret_trig_preop__fmul__not_inf(double nofpclass(inf) %not.inf, double %x, i32 %n) {
+; CHECK-LABEL: define nofpclass(inf) double @ret_trig_preop__fmul__not_inf(
+; CHECK-SAME: double nofpclass(inf) [[NOT_INF:%.*]], double [[X:%.*]], i32 [[N:%.*]]) #[[ATTR0]] {
+; CHECK-NEXT:    [[TRIG_PREOP:%.*]] = call double @llvm.amdgcn.trig.preop.f64(double [[X]], i32 [[N]]) #[[ATTR2]]
+; CHECK-NEXT:    [[MUL:%.*]] = fmul double [[TRIG_PREOP]], [[NOT_INF]]
+; CHECK-NEXT:    ret double [[MUL]]
+;
+  %trig.preop = call double @llvm.amdgcn.trig.preop.f64(double %x, i32 %n)
+  %mul = fmul double %trig.preop, %not.inf
+  ret double %mul
+}
+
+define double @ret_not_nan__fmul__trig_preop(double nofpclass(nan) %not.nan, double %x, i32 %n) {
+; CHECK-LABEL: define double @ret_not_nan__fmul__trig_preop(
+; CHECK-SAME: double nofpclass(nan) [[NOT_NAN:%.*]], double [[X:%.*]], i32 [[N:%.*]]) #[[ATTR0]] {
+; CHECK-NEXT:    [[TRIG_PREOP:%.*]] = call double @llvm.amdgcn.trig.preop.f64(double [[X]], i32 [[N]]) #[[ATTR2]]
+; CHECK-NEXT:    [[MUL:%.*]] = fmul double [[NOT_NAN]], [[TRIG_PREOP]]
+; CHECK-NEXT:    ret double [[MUL]]
+;
+  %trig.preop = call double @llvm.amdgcn.trig.preop.f64(double %x, i32 %n)
+  %mul = fmul double %not.nan, %trig.preop
+  ret double %mul
+}
+
+define double @ret_trig_preop__fmul__not_nan(double nofpclass(nan) %not.nan, double %x, i32 %n) {
+; CHECK-LABEL: define double @ret_trig_preop__fmul__not_nan(
+; CHECK-SAME: double nofpclass(nan) [[NOT_NAN:%.*]], double [[X:%.*]], i32 [[N:%.*]]) #[[ATTR0]] {
+; CHECK-NEXT:    [[TRIG_PREOP:%.*]] = call double @llvm.amdgcn.trig.preop.f64(double [[X]], i32 [[N]]) #[[ATTR2]]
+; CHECK-NEXT:    [[MUL:%.*]] = fmul double [[TRIG_PREOP]], [[NOT_NAN]]
+; CHECK-NEXT:    ret double [[MUL]]
+;
+  %trig.preop = call double @llvm.amdgcn.trig.preop.f64(double %x, i32 %n)
+  %mul = fmul double %trig.preop, %not.nan
+  ret double %mul
+}
+
+; Extraction from __ocmlpriv_trigredlarge_f64. This should be able to
+; propagate no-nans to the return.
+define double @trig_preop_propagate_nonan(double noundef nofpclass(inf nan) %x){
+; CHECK-LABEL: define noundef nofpclass(nan) double @trig_preop_propagate_nonan(
+; CHECK-SAME: double noundef nofpclass(nan inf) [[X:%.*]]) #[[ATTR0]] {
+; CHECK-NEXT:  [[ENTRY:.*:]]
+; CHECK-NEXT:    [[I2:%.*]] = tail call double @llvm.amdgcn.trig.preop.f64(double noundef nofpclass(nan inf) [[X]], i32 noundef 0) #[[ATTR2]]
+; CHECK-NEXT:    [[CMP:%.*]] = fcmp oge double [[X]], 0x7B00000000000000
+; CHECK-NEXT:    [[I9:%.*]] = fmul double [[X]], 0x37F0000000000000
+; CHECK-NEXT:    [[COND:%.*]] = select i1 [[CMP]], double [[I9]], double [[X]]
+; CHECK-NEXT:    [[MUL11:%.*]] = fmul double [[I2]], [[COND]]
+; CHECK-NEXT:    [[FNEG13:%.*]] = fneg double [[MUL11]]
+; CHECK-NEXT:    [[I32:%.*]] = tail call noundef nofpclass(nan) double @llvm.fma.f64(double noundef [[I2]], double noundef [[COND]], double noundef [[FNEG13]]) #[[ATTR2]]
+; CHECK-NEXT:    ret double [[I32]]
+;
+entry:
+  %i2 = tail call double @llvm.amdgcn.trig.preop.f64(double %x, i32 0)
+  %i4 = tail call double @llvm.amdgcn.trig.preop.f64(double %x, i32 1)
+  %cmp = fcmp oge double %x, 0x7B00000000000000
+  %i9 = fmul double %x, 0x37F0000000000000
+  %cond = select i1 %cmp, double %i9, double %x
+  %mul4 = fmul double %i4, %cond
+  %mul11 = fmul double %i2, %cond
+  %fneg13 = fneg double %mul11
+  %i32 = tail call double @llvm.fma.f64(double %i2, double %cond, double %fneg13)
+  ret double %i32
+}
+
+; Superset of trig_preop_propagate_nonan. We would like to able to
+; propagate nonans to the return, but this hits the recursion depth
+; limit.
+define double @trig_preop_propagate_nonan_full(double noundef nofpclass(inf nan) %x) {
+; CHECK-LABEL: define double @trig_preop_propagate_nonan_full(
+; CHECK-SAME: double noundef nofpclass(nan inf) [[X:%.*]]) #[[ATTR0]] {
+; CHECK-NEXT:  [[ENTRY:.*:]]
+; CHECK-NEXT:    [[I2:%.*]] = tail call double @llvm.amdgcn.trig.preop.f64(double noundef nofpclass(nan inf) [[X]], i32 noundef 0) #[[ATTR2]]
+; CHECK-NEXT:    [[I4:%.*]] = tail call double @llvm.amdgcn.trig.preop.f64(double noundef nofpclass(nan inf) [[X]], i32 noundef 1) #[[ATTR2]]
+; CHECK-NEXT:    [[CMP:%.*]] = fcmp oge double [[X]], 0x7B00000000000000
+; CHECK-NEXT:    [[I9:%.*]] = fmul double [[X]], 0x37F0000000000000
+; CHECK-NEXT:    [[COND:%.*]] = select i1 [[CMP]], double [[I9]], double [[X]]
+; CHECK-NEXT:    [[MUL4:%.*]] = fmul double [[I4]], [[COND]]
+; CHECK-NEXT:    [[MUL11:%.*]] = fmul double [[I2]], [[COND]]
+; CHECK-NEXT:    [[FNEG13:%.*]] = fneg double [[MUL11]]
+; CHECK-NEXT:    [[I32:%.*]] = tail call double @llvm.fma.f64(double noundef [[I2]], double noundef [[COND]], double noundef [[FNEG13]]) #[[ATTR2]]
+; CHECK-NEXT:    [[ADD:%.*]] = fadd double [[MUL4]], [[I32]]
+; CHECK-NEXT:    [[ADD57:%.*]] = fadd double [[MUL11]], [[ADD]]
+; CHECK-NEXT:    [[I108:%.*]] = fmul double [[ADD57]], 2.500000e-01
+; CHECK-NEXT:    ret double [[I108]]
+;
+entry:
+  %i2 = tail call double @llvm.amdgcn.trig.preop.f64(double %x, i32 0)
+  %i4 = tail call double @llvm.amdgcn.trig.preop.f64(double %x, i32 1)
+  %cmp = fcmp oge double %x, 0x7B00000000000000
+  %i9 = fmul double %x, 0x37F0000000000000
+  %cond = select i1 %cmp, double %i9, double %x
+  %mul4 = fmul double %i4, %cond
+  %mul11 = fmul double %i2, %cond
+  %fneg13 = fneg double %mul11
+  %i32 = tail call double @llvm.fma.f64(double %i2, double %cond, double %fneg13)
+  %add = fadd double %mul4, %i32
+  %add57 = fadd double %mul11, %add
+  %i108 = fmul double %add57, 2.500000e-01
+  ret double %i108
+}

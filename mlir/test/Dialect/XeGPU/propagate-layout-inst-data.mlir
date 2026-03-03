@@ -41,7 +41,6 @@ func.func @load_store_no_array_len(%arg0: memref<8x32xf32>, %arg1: memref<8x32xf
 // CHECK: %[[T5:.*]] = xegpu.create_nd_tdesc %[[ARG2]][{{.*}}] : memref<8x16xf32> -> !xegpu.tensor_desc<8x16xf32, #xegpu.layout<inst_data = [8, 16]>
 // CHECK: xegpu.store_nd %[[T4]], %[[T5]] <{layout = #xegpu.layout<inst_data = [8, 16]>}> : vector<8x16xf32>, !xegpu.tensor_desc<8x16xf32, #xegpu.layout<inst_data = [8, 16]>>
 gpu.module @test {
-
 func.func @dpas_f16(%arg0: memref<8x16xf16>, %arg1: memref<16x16xf16>, %arg2: memref<8x16xf32>) {
   %c0 = arith.constant 0 : index
   %cst = arith.constant dense<0.000000e+00> : vector<8x16xf32>
@@ -317,6 +316,21 @@ func.func @vector_shape_cast_expand_and_merge(%arg0: memref<256xf16>, %arg1: mem
     %4 = vector.shape_cast %2 : vector<2x4x32xf16> to vector<1x256xf16>
     %5 = vector.shape_cast %4 : vector<1x256xf16> to vector<256xf16>
     xegpu.store %5, %arg1[%0], %cst <{layout = #xegpu.layout<inst_data = [32] >}> : vector<256xf16>, memref<256xf16>, vector<256xindex>, vector<256xi1>
+    return
+  }
+}
+
+// -----
+gpu.module @test{
+  // CHECK-LABEL: load_store_matrix
+  // CHECK: xegpu.load_matrix %{{.*}} <{layout = #xegpu.layout<inst_data = [1, 1]>}>
+  // CHECK: xegpu.store_matrix %{{.*}} <{layout = #xegpu.layout<inst_data = [1, 1]>}>
+  func.func @load_store_matrix(%arg0: !xegpu.mem_desc<64x128xf32>, %arg1: i1) {
+    %c0 = arith.constant 0 : index
+    scf.if %arg1 {
+      %0 = xegpu.load_matrix %arg0[%c0, %c0] : !xegpu.mem_desc<64x128xf32>, index, index -> vector<2x1xf32>
+      xegpu.store_matrix %0, %arg0[%c0, %c0] : vector<2x1xf32>, !xegpu.mem_desc<64x128xf32>, index, index
+    }
     return
   }
 }

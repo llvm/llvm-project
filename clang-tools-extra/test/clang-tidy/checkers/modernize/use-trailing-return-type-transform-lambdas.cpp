@@ -1,22 +1,17 @@
 // RUN: %check_clang_tidy -check-suffix=ALL -std=c++11-or-later %s modernize-use-trailing-return-type %t --\
 // RUN:   -config="{CheckOptions: {modernize-use-trailing-return-type.TransformLambdas: all, \
 // RUN:                            modernize-use-trailing-return-type.TransformFunctions: false}}" \
-// RUN:   -- -fno-delayed-template-parsing
+// RUN:   -- -fno-delayed-template-parsing -isystem %clang_tidy_headers
 // RUN: %check_clang_tidy -check-suffix=NOAUTO -std=c++11-or-later %s modernize-use-trailing-return-type %t --\
 // RUN:   -config="{CheckOptions: {modernize-use-trailing-return-type.TransformLambdas: all_except_auto, \
 // RUN:                            modernize-use-trailing-return-type.TransformFunctions: false}}" \
-// RUN:   -- -fno-delayed-template-parsing
+// RUN:   -- -fno-delayed-template-parsing -isystem %clang_tidy_headers
 // RUN: %check_clang_tidy -check-suffix=NONE -std=c++11-or-later %s modernize-use-trailing-return-type %t --\
 // RUN:   -config="{CheckOptions: {modernize-use-trailing-return-type.TransformLambdas: none, \
 // RUN:                            modernize-use-trailing-return-type.TransformFunctions: true}}" \
-// RUN:   -- -fno-delayed-template-parsing
-
-namespace std {
-    template <typename T>
-    class vector {};
-
-    class string {};
-} // namespace std
+// RUN:   -- -fno-delayed-template-parsing -isystem %clang_tidy_headers
+#include <string>
+#include <vector>
 
 void test_lambda_positive() {
   auto l01 = [] {};

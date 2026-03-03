@@ -833,10 +833,173 @@ body: |
     ; CHECK-LABEL: name: vabs_v
     ; CHECK: liveins: $x8
     ; CHECK-NEXT: {{  $}}
-    ; CHECK-NEXT: %x:vr = PseudoVABS_V_M1 $noreg, $noreg, -1 /* vl=VLMAX */, 5 /* e32 */, 0 /* tu, mu */
+    ; CHECK-NEXT: %x:vr = PseudoVABS_V_M1 $noreg, $noreg, 1 /* vl */, 5 /* e32 */, 0 /* tu, mu */
     ; CHECK-NEXT: %y:vr = PseudoVADD_VV_M1 $noreg, %x, $noreg, 1 /* vl */, 5 /* e32 */, 0 /* tu, mu */
     ; CHECK-NEXT: $v8 = COPY %y
     %x:vr = PseudoVABS_V_M1 $noreg, $noreg, -1, 5 /* e32 */, 0 /* tu, mu */
     %y:vr = PseudoVADD_VV_M1 $noreg, %x, $noreg, 1, 5 /* e32 */, 0 /* tu, mu */
     $v8 = COPY %y
+...
+---
+name: vabd_v
+body: |
+  bb.0:
+    liveins: $x8
+    ; CHECK-LABEL: name: vabd_v
+    ; CHECK: liveins: $x8
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: %x:vr = PseudoVABD_VV_M1 $noreg, $noreg, $noreg, 1 /* vl */, 5 /* e32 */, 0 /* tu, mu */
+    ; CHECK-NEXT: %y:vr = PseudoVADD_VV_M1 $noreg, %x, $noreg, 1 /* vl */, 5 /* e32 */, 0 /* tu, mu */
+    ; CHECK-NEXT: $v8 = COPY %y
+    %x:vr = PseudoVABD_VV_M1 $noreg, $noreg, $noreg, -1, 5 /* e32 */, 0 /* tu, mu */
+    %y:vr = PseudoVADD_VV_M1 $noreg, %x, $noreg, 1, 5 /* e32 */, 0 /* tu, mu */
+    $v8 = COPY %y
+...
+---
+name: vabdu_v
+body: |
+  bb.0:
+    liveins: $x8
+    ; CHECK-LABEL: name: vabdu_v
+    ; CHECK: liveins: $x8
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: %x:vr = PseudoVABD_VV_M1 $noreg, $noreg, $noreg, 1 /* vl */, 5 /* e32 */, 0 /* tu, mu */
+    ; CHECK-NEXT: %y:vr = PseudoVADD_VV_M1 $noreg, %x, $noreg, 1 /* vl */, 5 /* e32 */, 0 /* tu, mu */
+    ; CHECK-NEXT: $v8 = COPY %y
+    %x:vr = PseudoVABD_VV_M1 $noreg, $noreg, $noreg, -1, 5 /* e32 */, 0 /* tu, mu */
+    %y:vr = PseudoVADD_VV_M1 $noreg, %x, $noreg, 1, 5 /* e32 */, 0 /* tu, mu */
+    $v8 = COPY %y
+...
+---
+name: vwabda_vv
+body: |
+  bb.0:
+    liveins: $x8
+    ; CHECK-LABEL: name: vwabda_vv
+    ; CHECK: liveins: $x8
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: early-clobber %x:vr = PseudoVWABDA_VV_MF2 $noreg, $noreg, $noreg, 1 /* vl */, 4 /* e16 */, 0 /* tu, mu */
+    ; CHECK-NEXT: %y:vr = PseudoVADD_VV_M1 $noreg, %x, $noreg, 1 /* vl */, 5 /* e32 */, 0 /* tu, mu */
+    ; CHECK-NEXT: $v8 = COPY %y
+    %x:vr = PseudoVWABDA_VV_MF2 $noreg, $noreg, $noreg, -1, 4 /* e16 */, 0 /* tu, mu */
+    %y:vr = PseudoVADD_VV_M1 $noreg, %x, $noreg, 1, 5 /* e32 */, 0 /* tu, mu */
+    $v8 = COPY %y
+...
+---
+name: vwabdau_vv
+body: |
+  bb.0:
+    liveins: $x8
+    ; CHECK-LABEL: name: vwabdau_vv
+    ; CHECK: liveins: $x8
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: early-clobber %x:vr = PseudoVWABDAU_VV_MF2 $noreg, $noreg, $noreg, 1 /* vl */, 4 /* e16 */, 0 /* tu, mu */
+    ; CHECK-NEXT: %y:vr = PseudoVADD_VV_M1 $noreg, %x, $noreg, 1 /* vl */, 5 /* e32 */, 0 /* tu, mu */
+    ; CHECK-NEXT: $v8 = COPY %y
+    %x:vr = PseudoVWABDAU_VV_MF2 $noreg, $noreg, $noreg, -1, 4 /* e16 */, 0 /* tu, mu */
+    %y:vr = PseudoVADD_VV_M1 $noreg, %x, $noreg, 1, 5 /* e32 */, 0 /* tu, mu */
+    $v8 = COPY %y
+...
+---
+# XRivosVizip: these should't reduce the vl of their inputs.
+name: ri_vzipeven_vv
+body: |
+  bb.0:
+    liveins: $x8
+    ; CHECK-LABEL: name: ri_vzipeven_vv
+    ; CHECK: liveins: $x8
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: %x:vr = PseudoVADD_VV_M1 $noreg, $noreg, $noreg, -1 /* vl=VLMAX */, 5 /* e32 */, 0 /* tu, mu */
+    ; CHECK-NEXT: early-clobber %y:vr = PseudoRI_VZIPEVEN_VV_M1 $noreg, %x, %x, 1 /* vl */, 5 /* e32 */, 0 /* tu, mu */
+    ; CHECK-NEXT: %z:vr = PseudoVADD_VV_M1 $noreg, %y, $noreg, 1 /* vl */, 5 /* e32 */, 0 /* tu, mu */
+    ; CHECK-NEXT: $v8 = COPY %z
+    %x:vr = PseudoVADD_VV_M1 $noreg, $noreg, $noreg, -1, 5 /* e32 */, 0 /* tu, mu */
+    %y:vr = PseudoRI_VZIPEVEN_VV_M1 $noreg, %x, %x, -1, 5 /* e32 */, 0 /* tu, mu */
+    %z:vr = PseudoVADD_VV_M1 $noreg, %y, $noreg, 1, 5 /* e32 */, 0 /* tu, mu */
+    $v8 = COPY %z
+...
+---
+name: ri_vzipodd_vv
+body: |
+  bb.0:
+    liveins: $x8
+    ; CHECK-LABEL: name: ri_vzipodd_vv
+    ; CHECK: liveins: $x8
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: %x:vr = PseudoVADD_VV_M1 $noreg, $noreg, $noreg, -1 /* vl=VLMAX */, 5 /* e32 */, 0 /* tu, mu */
+    ; CHECK-NEXT: early-clobber %y:vr = PseudoRI_VZIPODD_VV_M1 $noreg, %x, %x, 1 /* vl */, 5 /* e32 */, 0 /* tu, mu */
+    ; CHECK-NEXT: %z:vr = PseudoVADD_VV_M1 $noreg, %y, $noreg, 1 /* vl */, 5 /* e32 */, 0 /* tu, mu */
+    ; CHECK-NEXT: $v8 = COPY %z
+    %x:vr = PseudoVADD_VV_M1 $noreg, $noreg, $noreg, -1, 5 /* e32 */, 0 /* tu, mu */
+    %y:vr = PseudoRI_VZIPODD_VV_M1 $noreg, %x, %x, -1, 5 /* e32 */, 0 /* tu, mu */
+    %z:vr = PseudoVADD_VV_M1 $noreg, %y, $noreg, 1, 5 /* e32 */, 0 /* tu, mu */
+    $v8 = COPY %z
+...
+---
+name: ri_vzip2a_vv
+body: |
+  bb.0:
+    liveins: $x8
+    ; CHECK-LABEL: name: ri_vzip2a_vv
+    ; CHECK: liveins: $x8
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: %x:vr = PseudoVADD_VV_M1 $noreg, $noreg, $noreg, -1 /* vl=VLMAX */, 5 /* e32 */, 0 /* tu, mu */
+    ; CHECK-NEXT: early-clobber %y:vr = PseudoRI_VZIP2A_VV_M1 $noreg, %x, %x, 1 /* vl */, 5 /* e32 */, 0 /* tu, mu */
+    ; CHECK-NEXT: %z:vr = PseudoVADD_VV_M1 $noreg, %y, $noreg, 1 /* vl */, 5 /* e32 */, 0 /* tu, mu */
+    ; CHECK-NEXT: $v8 = COPY %z
+    %x:vr = PseudoVADD_VV_M1 $noreg, $noreg, $noreg, -1, 5 /* e32 */, 0 /* tu, mu */
+    %y:vr = PseudoRI_VZIP2A_VV_M1 $noreg, %x, %x, -1, 5 /* e32 */, 0 /* tu, mu */
+    %z:vr = PseudoVADD_VV_M1 $noreg, %y, $noreg, 1, 5 /* e32 */, 0 /* tu, mu */
+    $v8 = COPY %z
+...
+---
+name: ri_vzip2b_vv
+body: |
+  bb.0:
+    liveins: $x8
+    ; CHECK-LABEL: name: ri_vzip2b_vv
+    ; CHECK: liveins: $x8
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: %x:vr = PseudoVADD_VV_M1 $noreg, $noreg, $noreg, -1 /* vl=VLMAX */, 5 /* e32 */, 0 /* tu, mu */
+    ; CHECK-NEXT: early-clobber %y:vr = PseudoRI_VZIP2B_VV_M1 $noreg, %x, %x, 1 /* vl */, 5 /* e32 */, 0 /* tu, mu */
+    ; CHECK-NEXT: %z:vr = PseudoVADD_VV_M1 $noreg, %y, $noreg, 1 /* vl */, 5 /* e32 */, 0 /* tu, mu */
+    ; CHECK-NEXT: $v8 = COPY %z
+    %x:vr = PseudoVADD_VV_M1 $noreg, $noreg, $noreg, -1, 5 /* e32 */, 0 /* tu, mu */
+    %y:vr = PseudoRI_VZIP2B_VV_M1 $noreg, %x, %x, -1, 5 /* e32 */, 0 /* tu, mu */
+    %z:vr = PseudoVADD_VV_M1 $noreg, %y, $noreg, 1, 5 /* e32 */, 0 /* tu, mu */
+    $v8 = COPY %z
+...
+---
+name: ri_vunzip2a_vv
+body: |
+  bb.0:
+    liveins: $x8
+    ; CHECK-LABEL: name: ri_vunzip2a_vv
+    ; CHECK: liveins: $x8
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: %x:vr = PseudoVADD_VV_M1 $noreg, $noreg, $noreg, -1 /* vl=VLMAX */, 5 /* e32 */, 0 /* tu, mu */
+    ; CHECK-NEXT: early-clobber %y:vr = PseudoRI_VUNZIP2A_VV_M1 $noreg, %x, %x, 1 /* vl */, 5 /* e32 */, 0 /* tu, mu */
+    ; CHECK-NEXT: %z:vr = PseudoVADD_VV_M1 $noreg, %y, $noreg, 1 /* vl */, 5 /* e32 */, 0 /* tu, mu */
+    ; CHECK-NEXT: $v8 = COPY %z
+    %x:vr = PseudoVADD_VV_M1 $noreg, $noreg, $noreg, -1, 5 /* e32 */, 0 /* tu, mu */
+    %y:vr = PseudoRI_VUNZIP2A_VV_M1 $noreg, %x, %x, -1, 5 /* e32 */, 0 /* tu, mu */
+    %z:vr = PseudoVADD_VV_M1 $noreg, %y, $noreg, 1, 5 /* e32 */, 0 /* tu, mu */
+    $v8 = COPY %z
+...
+---
+name: ri_vunzip2b_vv
+body: |
+  bb.0:
+    liveins: $x8
+    ; CHECK-LABEL: name: ri_vunzip2b_vv
+    ; CHECK: liveins: $x8
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: %x:vr = PseudoVADD_VV_M1 $noreg, $noreg, $noreg, -1 /* vl=VLMAX */, 5 /* e32 */, 0 /* tu, mu */
+    ; CHECK-NEXT: early-clobber %y:vr = PseudoRI_VUNZIP2B_VV_M1 $noreg, %x, %x, 1 /* vl */, 5 /* e32 */, 0 /* tu, mu */
+    ; CHECK-NEXT: %z:vr = PseudoVADD_VV_M1 $noreg, %y, $noreg, 1 /* vl */, 5 /* e32 */, 0 /* tu, mu */
+    ; CHECK-NEXT: $v8 = COPY %z
+    %x:vr = PseudoVADD_VV_M1 $noreg, $noreg, $noreg, -1, 5 /* e32 */, 0 /* tu, mu */
+    %y:vr = PseudoRI_VUNZIP2B_VV_M1 $noreg, %x, %x, -1, 5 /* e32 */, 0 /* tu, mu */
+    %z:vr = PseudoVADD_VV_M1 $noreg, %y, $noreg, 1, 5 /* e32 */, 0 /* tu, mu */
+    $v8 = COPY %z
 ...

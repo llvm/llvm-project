@@ -1,3 +1,4 @@
+// RUN: %clang_cc1 -triple aarch64-linux-gnu -emit-llvm -fexperimental-allow-pointer-field-protection-attr -fexperimental-pointer-field-protection-abi -o - %s -fexperimental-new-constant-interpreter | FileCheck %s
 // RUN: %clang_cc1 -triple aarch64-linux-gnu -emit-llvm -fexperimental-allow-pointer-field-protection-attr -fexperimental-pointer-field-protection-abi -o - %s | FileCheck %s
 
 // CHECK: @__pfp_ds__ZTS1S.ptr1 = hidden alias i8, inttoptr (i64 3573751839 to ptr)

@@ -11,20 +11,20 @@ define ptr @f(i1 %n) presplitcoroutine {
 ; CHECK-NEXT:    [[ALLOC:%.*]] = call ptr @malloc(i32 48)
 ; CHECK-NEXT:    [[HDL:%.*]] = call noalias nonnull ptr @llvm.coro.begin(token [[ID]], ptr [[ALLOC]])
 ; CHECK-NEXT:    store ptr @f.resume, ptr [[HDL]], align 8
-; CHECK-NEXT:    [[DESTROY_ADDR:%.*]] = getelementptr inbounds nuw [[F_FRAME:%.*]], ptr [[HDL]], i32 0, i32 1
+; CHECK-NEXT:    [[DESTROY_ADDR:%.*]] = getelementptr inbounds i8, ptr [[HDL]], i64 8
 ; CHECK-NEXT:    store ptr @f.destroy, ptr [[DESTROY_ADDR]], align 8
-; CHECK-NEXT:    [[TMP0:%.*]] = getelementptr inbounds [[F_FRAME]], ptr [[HDL]], i32 0, i32 2
+; CHECK-NEXT:    [[TMP0:%.*]] = getelementptr inbounds i8, ptr [[HDL]], i64 16
 ; CHECK-NEXT:    [[X_RELOAD_ADDR:%.*]] = addrspacecast ptr [[TMP0]] to ptr addrspace(5)
-; CHECK-NEXT:    [[TMP1:%.*]] = getelementptr inbounds [[F_FRAME]], ptr [[HDL]], i32 0, i32 3
+; CHECK-NEXT:    [[TMP1:%.*]] = getelementptr inbounds i8, ptr [[HDL]], i64 24
 ; CHECK-NEXT:    [[Y_RELOAD_ADDR:%.*]] = addrspacecast ptr [[TMP1]] to ptr addrspace(5)
 ; CHECK-NEXT:    br i1 [[N]], label %[[FLAG_TRUE:.*]], label %[[FLAG_FALSE:.*]]
 ; CHECK:       [[FLAG_FALSE]]:
 ; CHECK-NEXT:    br label %[[FLAG_TRUE]]
 ; CHECK:       [[FLAG_TRUE]]:
 ; CHECK-NEXT:    [[ALIAS_PHI:%.*]] = phi ptr addrspace(5) [ [[Y_RELOAD_ADDR]], %[[FLAG_FALSE]] ], [ [[X_RELOAD_ADDR]], %[[ENTRY]] ]
-; CHECK-NEXT:    [[ALIAS_PHI_SPILL_ADDR:%.*]] = getelementptr inbounds [[F_FRAME]], ptr [[HDL]], i32 0, i32 4
+; CHECK-NEXT:    [[ALIAS_PHI_SPILL_ADDR:%.*]] = getelementptr inbounds i8, ptr [[HDL]], i64 32
 ; CHECK-NEXT:    store ptr addrspace(5) [[ALIAS_PHI]], ptr [[ALIAS_PHI_SPILL_ADDR]], align 8
-; CHECK-NEXT:    [[INDEX_ADDR1:%.*]] = getelementptr inbounds nuw [[F_FRAME]], ptr [[HDL]], i32 0, i32 5
+; CHECK-NEXT:    [[INDEX_ADDR1:%.*]] = getelementptr inbounds i8, ptr [[HDL]], i64 40
 ; CHECK-NEXT:    store i1 false, ptr [[INDEX_ADDR1]], align 1
 ; CHECK-NEXT:    ret ptr [[HDL]]
 ;

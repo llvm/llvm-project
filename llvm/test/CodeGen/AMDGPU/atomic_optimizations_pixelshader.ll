@@ -37,7 +37,7 @@ define amdgpu_ps void @add_i32_constant(ptr addrspace(8) inreg %out, ptr addrspa
 ; GFX7-NEXT:    s_or_b64 exec, exec, s[10:11]
 ; GFX7-NEXT:    s_waitcnt vmcnt(0)
 ; GFX7-NEXT:    v_readfirstlane_b32 s4, v1
-; GFX7-NEXT:    v_mad_u32_u24 v0, v0, 5, s4
+; GFX7-NEXT:    v_mad_u32_u24 v0, 5, v0, s4
 ; GFX7-NEXT:  .LBB0_4: ; %Flow
 ; GFX7-NEXT:    s_or_b64 exec, exec, s[8:9]
 ; GFX7-NEXT:    s_wqm_b64 s[4:5], -1
@@ -72,7 +72,7 @@ define amdgpu_ps void @add_i32_constant(ptr addrspace(8) inreg %out, ptr addrspa
 ; GFX89-NEXT:    s_or_b64 exec, exec, s[10:11]
 ; GFX89-NEXT:    s_waitcnt vmcnt(0)
 ; GFX89-NEXT:    v_readfirstlane_b32 s4, v1
-; GFX89-NEXT:    v_mad_u32_u24 v0, v0, 5, s4
+; GFX89-NEXT:    v_mad_u32_u24 v0, 5, v0, s4
 ; GFX89-NEXT:  .LBB0_4: ; %Flow
 ; GFX89-NEXT:    s_or_b64 exec, exec, s[8:9]
 ; GFX89-NEXT:    s_wqm_b64 s[4:5], -1
@@ -108,7 +108,7 @@ define amdgpu_ps void @add_i32_constant(ptr addrspace(8) inreg %out, ptr addrspa
 ; GFX1064-NEXT:    s_or_b64 exec, exec, s[10:11]
 ; GFX1064-NEXT:    s_waitcnt vmcnt(0)
 ; GFX1064-NEXT:    v_readfirstlane_b32 s4, v1
-; GFX1064-NEXT:    v_mad_u32_u24 v0, v0, 5, s4
+; GFX1064-NEXT:    v_mad_u32_u24 v0, 5, v0, s4
 ; GFX1064-NEXT:  .LBB0_4: ; %Flow
 ; GFX1064-NEXT:    s_or_b64 exec, exec, s[8:9]
 ; GFX1064-NEXT:    s_wqm_b64 s[4:5], -1
@@ -143,7 +143,7 @@ define amdgpu_ps void @add_i32_constant(ptr addrspace(8) inreg %out, ptr addrspa
 ; GFX1032-NEXT:    s_or_b32 exec_lo, exec_lo, s9
 ; GFX1032-NEXT:    s_waitcnt vmcnt(0)
 ; GFX1032-NEXT:    v_readfirstlane_b32 s4, v1
-; GFX1032-NEXT:    v_mad_u32_u24 v0, v0, 5, s4
+; GFX1032-NEXT:    v_mad_u32_u24 v0, 5, v0, s4
 ; GFX1032-NEXT:  .LBB0_4: ; %Flow
 ; GFX1032-NEXT:    s_or_b32 exec_lo, exec_lo, s8
 ; GFX1032-NEXT:    s_wqm_b32 s4, -1
@@ -182,7 +182,7 @@ define amdgpu_ps void @add_i32_constant(ptr addrspace(8) inreg %out, ptr addrspa
 ; GFX1164-NEXT:    s_waitcnt vmcnt(0)
 ; GFX1164-NEXT:    v_readfirstlane_b32 s4, v1
 ; GFX1164-NEXT:    s_delay_alu instid0(VALU_DEP_1)
-; GFX1164-NEXT:    v_mad_u32_u24 v0, v0, 5, s4
+; GFX1164-NEXT:    v_mad_u32_u24 v0, 5, v0, s4
 ; GFX1164-NEXT:  .LBB0_4: ; %Flow
 ; GFX1164-NEXT:    s_or_b64 exec, exec, s[8:9]
 ; GFX1164-NEXT:    s_wqm_b64 s[4:5], -1
@@ -221,7 +221,7 @@ define amdgpu_ps void @add_i32_constant(ptr addrspace(8) inreg %out, ptr addrspa
 ; GFX1132-NEXT:    s_waitcnt vmcnt(0)
 ; GFX1132-NEXT:    v_readfirstlane_b32 s4, v1
 ; GFX1132-NEXT:    s_delay_alu instid0(VALU_DEP_1)
-; GFX1132-NEXT:    v_mad_u32_u24 v0, v0, 5, s4
+; GFX1132-NEXT:    v_mad_u32_u24 v0, 5, v0, s4
 ; GFX1132-NEXT:  .LBB0_4: ; %Flow
 ; GFX1132-NEXT:    s_or_b32 exec_lo, exec_lo, s8
 ; GFX1132-NEXT:    s_wqm_b32 s4, -1

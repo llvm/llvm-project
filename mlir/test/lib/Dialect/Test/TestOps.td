@@ -831,6 +831,13 @@ def OperandZeroAndResultHaveSameElementCount :
   let results = (outs AnyShaped:$res);
 }
 
+def OperandAndResultHaveSameElementCountAnyType :
+    TEST_Op<"operand_and_result_have_same_element_count_any_type",
+            [AllElementCountsMatch<["x", "res"]>]> {
+  let arguments = (ins AnyType:$x);
+  let results = (outs AnyType:$res);
+}
+
 def FourEqualsFive :
     TEST_Op<"four_equals_five", [AllMatch<["5", "4"], "4 equals 5">]>;
 

@@ -1392,7 +1392,7 @@ static Value *simplifyTernarylogic(const IntrinsicInst &II,
       Res = Xor(Nor(A, B), C);
     break;
   case 0xaa:
-    Res = C;
+    Res = std::move(C);
     break;
   case 0xab:
     if (ABCIsConst)
@@ -1526,7 +1526,7 @@ static Value *simplifyTernarylogic(const IntrinsicInst &II,
       Res = Or(Xnor(A, B), And(B, C));
     break;
   case 0xcc:
-    Res = B;
+    Res = std::move(B);
     break;
   case 0xcd:
     if (ABCIsConst)
@@ -1668,7 +1668,7 @@ static Value *simplifyTernarylogic(const IntrinsicInst &II,
       Res = Nand(A, Nor(B, C));
     break;
   case 0xf0:
-    Res = A;
+    Res = std::move(A);
     break;
   case 0xf1:
     if (ABCIsConst)

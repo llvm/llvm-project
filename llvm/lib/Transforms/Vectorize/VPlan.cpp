@@ -809,7 +809,7 @@ InstructionCost VPRegionBlock::cost(ElementCount VF, VPCostContext &Ctx) {
       Cost += Block->cost(VF, Ctx);
     InstructionCost BackedgeCost =
         ForceTargetInstructionCost.getNumOccurrences()
-            ? InstructionCost(ForceTargetInstructionCost.getNumOccurrences())
+            ? InstructionCost(ForceTargetInstructionCost)
             : Ctx.TTI.getCFInstrCost(Instruction::Br, Ctx.CostKind);
     LLVM_DEBUG(dbgs() << "Cost of " << BackedgeCost << " for VF " << VF
                       << ": vector loop backedge\n");

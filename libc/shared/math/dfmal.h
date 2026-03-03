@@ -10,7 +10,6 @@
 #define LLVM_LIBC_SHARED_MATH_DFMAL_H
 
 #include "shared/libc_common.h"
-
 #include "src/__support/math/dfmal.h"
 
 namespace LIBC_NAMESPACE_DECL {

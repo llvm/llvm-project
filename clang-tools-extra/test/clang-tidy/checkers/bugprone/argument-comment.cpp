@@ -1,4 +1,4 @@
-// RUN: %check_clang_tidy %s bugprone-argument-comment %t -- -- -I %S/Inputs/argument-comment
+// RUN: %check_clang_tidy %s bugprone-argument-comment %t -- -- -I %S/Inputs/argument-comment -isystem %clang_tidy_headers
 
 // FIXME: clang-tidy should provide a -verify mode to make writing these checks
 // easier and more accurate.
@@ -117,12 +117,8 @@ void g() { f6(/*xxy=*/0, 0); }
 }
 
 
+#include <vector>
 namespace std {
-template <typename T>
-class vector {
-public:
-  void assign(int __n, const T &__val);
-};
 template<typename T>
 void swap(T& __a, T& __b);
 } // namespace std

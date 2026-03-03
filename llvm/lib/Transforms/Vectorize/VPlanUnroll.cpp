@@ -220,6 +220,8 @@ void UnrollState::unrollWidenInductionByUF(
   } else {
     AddOpc = Instruction::Add;
     AddFlags = VPIRFlags::getDefaultFlags(AddOpc);
+    if (cast<VPWidenIntOrFpInductionRecipe>(IV)->isCanonical())
+      AddFlags = VPIRFlags::WrapFlagsTy(/*NUW=*/true, /*NSW=*/false);
   }
   for (unsigned Part = 1; Part != UF; ++Part) {
     std::string Name =
@@ -473,7 +475,7 @@ void UnrollState::unrollBlock(VPBlockBase *VPB) {
 void VPlanTransforms::unrollByUF(VPlan &Plan, unsigned UF) {
   assert(UF > 0 && "Unroll factor must be positive");
   Plan.setUF(UF);
-  llvm::scope_exit Cleanup([&Plan]() {
+  llvm::scope_exit Cleanup([&Plan, UF]() {
     auto Iter = vp_depth_first_deep(Plan.getEntry());
     // Remove recipes that are redundant after unrolling.
     for (VPBasicBlock *VPBB : VPBlockUtils::blocksOnly<VPBasicBlock>(Iter)) {
@@ -487,6 +489,9 @@ void VPlanTransforms::unrollByUF(VPlan &Plan, unsigned UF) {
         }
       }
     }
+
+    Type *TCTy = VPTypeAnalysis(Plan).inferScalarType(Plan.getTripCount());
+    Plan.getUF().replaceAllUsesWith(Plan.getConstantInt(TCTy, UF));
   });
   if (UF == 1) {
     return;

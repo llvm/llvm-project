@@ -221,8 +221,6 @@ int main(int argc, const char **argv) {
     }
   }
 
-  diags.getClient()->finish();
-
   // If we have multiple failing commands, we return the result of the first
   // failing command.
   return res;

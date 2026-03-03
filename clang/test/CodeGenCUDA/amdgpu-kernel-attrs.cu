@@ -103,7 +103,7 @@ template __global__ void template_a_b_c_max_num_work_groups<32, 4, 2>();
 // NAMD-NOT: "amdgpu-num-sgpr"
 // NAMD-NOT: "amdgpu-max-num-work-groups"
 
-// DEFAULT-DAG: attributes [[FLAT_WORK_GROUP_SIZE_DEFAULT]] = {{.*}}"amdgpu-flat-work-group-size"="1,1024"{{.*}}"uniform-work-group-size"="true"
+// DEFAULT-DAG: attributes [[FLAT_WORK_GROUP_SIZE_DEFAULT]] = {{.*}}"amdgpu-flat-work-group-size"="1,1024"{{.*}}"uniform-work-group-size"
 // MAX1024-DAG: attributes [[FLAT_WORK_GROUP_SIZE_DEFAULT]] = {{.*}}"amdgpu-flat-work-group-size"="1,1024"
 // MAX1024-SPIRV-DAG: [[MAX_WORK_GROUP_SIZE_DEFAULT]] = !{i32 1024, i32 1, i32 1}
 // CHECK-DAG: attributes [[FLAT_WORK_GROUP_SIZE_32_64]] = {{.*}}"amdgpu-flat-work-group-size"="32,64"
@@ -114,4 +114,4 @@ template __global__ void template_a_b_c_max_num_work_groups<32, 4, 2>();
 // CHECK-DAG: attributes [[MAX_NUM_WORK_GROUPS_32_4_2]] = {{.*}}"amdgpu-max-num-workgroups"="32,4,2"
 // CHECK-DAG: attributes [[MAX_NUM_WORK_GROUPS_32_1_1]] = {{.*}}"amdgpu-max-num-workgroups"="32,1,1"
 
-// NOUB-NOT: "uniform-work-group-size"="true"
+// NOUB-NOT: "uniform-work-group-size"

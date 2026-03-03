@@ -14,6 +14,12 @@
 
 namespace clang::ssaf {
 
+enum class EntityLinkageType {
+  None,     ///< local variables, function parameters
+  Internal, ///< static functions/variables, anonymous namespace
+  External  ///< globally visible across translation units
+};
+
 /// Represents the linkage properties of an entity in the program model.
 ///
 /// EntityLinkage captures whether an entity has no linkage, internal linkage,
@@ -24,26 +30,19 @@ class EntityLinkage {
   friend class TestFixture;
 
 public:
-  enum class LinkageType {
-    None,     ///< local variables, function parameters
-    Internal, ///< static functions/variables, anonymous namespace
-    External  ///< globally visible across translation units
-  };
+  constexpr explicit EntityLinkage(EntityLinkageType L) : Linkage(L) {}
 
-  constexpr explicit EntityLinkage(LinkageType L) : Linkage(L) {}
-
-  LinkageType getLinkage() const { return Linkage; }
+  EntityLinkageType getLinkage() const { return Linkage; }
 
   bool operator==(const EntityLinkage &Other) const;
   bool operator!=(const EntityLinkage &Other) const;
 
 private:
-  LinkageType Linkage;
+  EntityLinkageType Linkage;
 };
 
-/// Returns a string representation of the linkage type.
-llvm::raw_ostream &operator<<(llvm::raw_ostream &OS,
-                              EntityLinkage::LinkageType Linkage);
+/// Writes a string representation of the linkage type to the stream.
+llvm::raw_ostream &operator<<(llvm::raw_ostream &OS, EntityLinkageType Linkage);
 
 llvm::raw_ostream &operator<<(llvm::raw_ostream &OS,
                               const EntityLinkage &Linkage);

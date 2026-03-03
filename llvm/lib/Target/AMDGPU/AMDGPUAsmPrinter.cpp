@@ -654,14 +654,14 @@ AMDGPUAsmPrinter::getAmdhsaKernelDescriptor(const MachineFunction &MF,
   KernelDescriptor.compute_pgm_rsrc2 = PI.getComputePGMRSrc2(Ctx);
   KernelDescriptor.kernel_code_properties = getAmdhsaKernelCodeProperties(MF);
 
-  int64_t PGRM_Rsrc3 = 1;
+  int64_t PGM_Rsrc3 = 1;
   bool EvaluatableRsrc3 =
-      CurrentProgramInfo.ComputePGMRSrc3->evaluateAsAbsolute(PGRM_Rsrc3);
-  (void)PGRM_Rsrc3;
+      CurrentProgramInfo.ComputePGMRSrc3->evaluateAsAbsolute(PGM_Rsrc3);
+  (void)PGM_Rsrc3;
   (void)EvaluatableRsrc3;
   assert(STM.getGeneration() >= AMDGPUSubtarget::GFX10 ||
          STM.hasGFX90AInsts() || STM.hasGFX1250Insts() || !EvaluatableRsrc3 ||
-         static_cast<uint64_t>(PGRM_Rsrc3) == 0);
+         static_cast<uint64_t>(PGM_Rsrc3) == 0);
   KernelDescriptor.compute_pgm_rsrc3 = CurrentProgramInfo.ComputePGMRSrc3;
 
   KernelDescriptor.kernarg_preload = MCConstantExpr::create(

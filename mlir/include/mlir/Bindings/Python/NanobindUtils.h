@@ -13,7 +13,9 @@
 #include "mlir-c/Support.h"
 #include "mlir/Bindings/Python/Nanobind.h"
 
+#include <atomic>
 #include <fstream>
+#include <memory>
 #include <sstream>
 #include <string>
 #include <string_view>
@@ -32,6 +34,41 @@ struct std::iterator_traits<nanobind::detail::fast_iterator> {
 
 namespace mlir {
 namespace python {
+
+/// Safely calls Python initialization code on first use, avoiding deadlocks.
+template <typename T>
+class SafeInit {
+public:
+  typedef std::unique_ptr<T> (*F)();
+
+  explicit SafeInit(F init_fn) : initFn(init_fn) {}
+
+  T &get() {
+    if (T *result = output.load()) {
+      return *result;
+    }
+
+    // Note: init_fn() may be called multiple times if, for example, the GIL is
+    // released during its execution. The intended use case is for module
+    // imports which are safe to perform multiple times. We are careful not to
+    // hold a lock across init_fn() to avoid lock ordering problems.
+    std::unique_ptr<T> m = initFn();
+    {
+      nanobind::ft_lock_guard lock(mu);
+      if (T *result = output.load()) {
+        return *result;
+      }
+      T *p = m.release();
+      output.store(p);
+      return *p;
+    }
+  }
+
+private:
+  nanobind::ft_mutex mu;
+  std::atomic<T *> output{nullptr};
+  F initFn;
+};
 
 struct MlirTypeIDHash {
   size_t operator()(MlirTypeID typeID) const {
@@ -383,8 +420,54 @@ public:
     return elements;
   }
 
+  // Manually implement the sequence protocol via the C API. We do this
+  // because it is approx 4x faster than via nanobind, largely because that
+  // formulation requires a C++ exception to be thrown to detect end of
+  // sequence.
+  // Since we are in a C-context, any C++ exception that happens here
+  // will terminate the program. There is nothing in this implementation
+  // that should throw in a non-terminal way, so we forgo further
+  // exception marshalling.
+  // See: https://github.com/pybind/pybind11/issues/2842
+  //
   /// Binds the indexing and length methods in the Python class.
   static void bind(nanobind::module_ &m) {
+    // These slots are passed via nanobind::type_slots() at class creation
+    // time, which is compatible with both the full and limited (stable ABI)
+    // Python APIs.
+    static PyType_Slot sequenceSlots[] = {
+        {Py_sq_length, (void *)(+[](PyObject *rawSelf) -> Py_ssize_t {
+           auto self = nanobind::cast<Derived *>(nanobind::handle(rawSelf));
+           return self->length;
+         })},
+        // sq_item is called as part of the sequence protocol for iteration,
+        // list construction, etc.
+        {Py_sq_item,
+         (void *)(+[](PyObject *rawSelf, Py_ssize_t index) -> PyObject * {
+           auto self = nanobind::cast<Derived *>(nanobind::handle(rawSelf));
+           return self->getItem(index).release().ptr();
+         })},
+        // mp_subscript is used for both slices and integer lookups.
+        {Py_mp_subscript,
+         (void *)(+[](PyObject *rawSelf, PyObject *rawSubscript) -> PyObject * {
+           auto self = nanobind::cast<Derived *>(nanobind::handle(rawSelf));
+           Py_ssize_t index =
+               PyNumber_AsSsize_t(rawSubscript, PyExc_IndexError);
+           if (!PyErr_Occurred()) {
+             // Integer indexing.
+             return self->getItem(index).release().ptr();
+           }
+           PyErr_Clear();
+
+           // Assume slice-based indexing.
+           if (PySlice_Check(rawSubscript)) {
+             return self->getItemSlice(rawSubscript).release().ptr();
+           }
+
+           PyErr_SetString(PyExc_ValueError, "expected integer or slice");
+           return nullptr;
+         })},
+        {0, nullptr}};
     const std::type_info &elemTy = typeid(ElementTy);
     PyObject *elemTyInfo = nanobind::detail::nb_type_lookup(&elemTy);
     assert(elemTyInfo &&
@@ -394,52 +477,10 @@ public:
                       "(collections.abc.Sequence[" +
                       nanobind::cast<std::string>(elemTyName) + "])";
     auto clazz = nanobind::class_<Derived>(m, Derived::pyClassName,
+                                           nanobind::type_slots(sequenceSlots),
                                            nanobind::sig(sig.c_str()))
                      .def("__add__", &Sliceable::dunderAdd);
     Derived::bindDerived(clazz);
-
-    // Manually implement the sequence protocol via the C API. We do this
-    // because it is approx 4x faster than via nanobind, largely because that
-    // formulation requires a C++ exception to be thrown to detect end of
-    // sequence.
-    // Since we are in a C-context, any C++ exception that happens here
-    // will terminate the program. There is nothing in this implementation
-    // that should throw in a non-terminal way, so we forgo further
-    // exception marshalling.
-    // See: https://github.com/pybind/nanobind/issues/2842
-    auto heap_type = reinterpret_cast<PyHeapTypeObject *>(clazz.ptr());
-    assert(heap_type->ht_type.tp_flags & Py_TPFLAGS_HEAPTYPE &&
-           "must be heap type");
-    heap_type->as_sequence.sq_length = +[](PyObject *rawSelf) -> Py_ssize_t {
-      auto self = nanobind::cast<Derived *>(nanobind::handle(rawSelf));
-      return self->length;
-    };
-    // sq_item is called as part of the sequence protocol for iteration,
-    // list construction, etc.
-    heap_type->as_sequence.sq_item =
-        +[](PyObject *rawSelf, Py_ssize_t index) -> PyObject * {
-      auto self = nanobind::cast<Derived *>(nanobind::handle(rawSelf));
-      return self->getItem(index).release().ptr();
-    };
-    // mp_subscript is used for both slices and integer lookups.
-    heap_type->as_mapping.mp_subscript =
-        +[](PyObject *rawSelf, PyObject *rawSubscript) -> PyObject * {
-      auto self = nanobind::cast<Derived *>(nanobind::handle(rawSelf));
-      Py_ssize_t index = PyNumber_AsSsize_t(rawSubscript, PyExc_IndexError);
-      if (!PyErr_Occurred()) {
-        // Integer indexing.
-        return self->getItem(index).release().ptr();
-      }
-      PyErr_Clear();
-
-      // Assume slice-based indexing.
-      if (PySlice_Check(rawSubscript)) {
-        return self->getItemSlice(rawSubscript).release().ptr();
-      }
-
-      PyErr_SetString(PyExc_ValueError, "expected integer or slice");
-      return nullptr;
-    };
   }
 
   /// Hook for derived classes willing to bind more methods.

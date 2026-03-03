@@ -609,14 +609,16 @@ define i32 @test_pointer_phi_select_simp_store_clobber_10(ptr %a, ptr %b, i1 %co
 ; CHECK-NEXT:    store i32 99, ptr [[A]], align 4
 ; CHECK-NEXT:    [[L_2:%.*]] = load i32, ptr [[B:%.*]], align 4
 ; CHECK-NEXT:    [[CMP_I_I_I:%.*]] = icmp ult i32 [[L_1]], [[L_2]]
+; CHECK-NEXT:    [[TMP0:%.*]] = select i1 [[CMP_I_I_I]], i32 99, i32 [[L_2]]
 ; CHECK-NEXT:    [[MIN_SELECT:%.*]] = select i1 [[CMP_I_I_I]], ptr [[A]], ptr [[B]]
 ; CHECK-NEXT:    br label [[EXIT:%.*]]
 ; CHECK:       else:
+; CHECK-NEXT:    [[RES_2_PRE:%.*]] = load i32, ptr [[A]], align 4
 ; CHECK-NEXT:    br label [[EXIT]]
 ; CHECK:       exit:
+; CHECK-NEXT:    [[RES_2:%.*]] = phi i32 [ [[TMP0]], [[THEN]] ], [ [[RES_2_PRE]], [[ELSE]] ]
 ; CHECK-NEXT:    [[P:%.*]] = phi ptr [ [[MIN_SELECT]], [[THEN]] ], [ [[A]], [[ELSE]] ]
 ; CHECK-NEXT:    [[V:%.*]] = phi i32 [ [[L_2]], [[THEN]] ], [ 10, [[ELSE]] ]
-; CHECK-NEXT:    [[RES_2:%.*]] = load i32, ptr [[P]], align 4
 ; CHECK-NEXT:    [[ADD:%.*]] = add i32 [[RES_2]], [[V]]
 ; CHECK-NEXT:    ret i32 [[RES_2]]
 ;

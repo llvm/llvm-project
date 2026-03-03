@@ -527,6 +527,13 @@ MlirPatternRewriter mlirConversionPatternRewriterAsPatternRewriter(
   return wrap(static_cast<mlir::PatternRewriter *>(unwrap(rewriter)));
 }
 
+MlirLogicalResult mlirConversionPatternRewriterConvertRegionTypes(
+    MlirConversionPatternRewriter rewriter, MlirRegion region,
+    MlirTypeConverter typeConverter) {
+  return wrap(unwrap(rewriter)->convertRegionTypes(unwrap(region),
+                                                   *unwrap(typeConverter)));
+}
+
 //===----------------------------------------------------------------------===//
 /// ConversionTarget API
 //===----------------------------------------------------------------------===//
@@ -588,6 +595,11 @@ void mlirTypeConverterAddConversion(
               return nullptr;
             return unwrap(converted);
           });
+}
+
+MlirType mlirTypeConverterConvertType(MlirTypeConverter typeConverter,
+                                      MlirType type) {
+  return wrap(unwrap(typeConverter)->convertType(unwrap(type)));
 }
 
 //===----------------------------------------------------------------------===//

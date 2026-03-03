@@ -214,7 +214,7 @@ int main(int argc, char *argv[]) {
 #endif
 
   if (llvm::Error err = g_debugger_lifetime->Initialize(
-          std::make_unique<lldb_private::SystemInitializerCommon>(nullptr)))
+          std::make_unique<lldb_private::SystemInitializerCommon>()))
     exitWithError(std::move(err));
 
   llvm::scope_exit cleanup([] { g_debugger_lifetime->Terminate(); });

@@ -65,7 +65,7 @@ public:
   /// Returns the backend associated with this device.
   ///
   /// \return the sycl::backend associated with this device.
-  backend getBackend() const;
+  backend getBackend() const noexcept;
 
   /// Returns the implementation class object of platform associated with this
   /// device.
@@ -114,6 +114,8 @@ public:
     } else
       static_assert(false && "Info descriptor is not properly supported");
   }
+
+  ol_device_handle_t getOLHandle() { return MOffloadDevice; }
 
 private:
   ol_device_handle_t MOffloadDevice = {};

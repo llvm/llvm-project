@@ -128,6 +128,13 @@ enum OperandType : unsigned {
   // or vsetivli.
   OPERAND_AVL,
 
+  // Operand is either a register or imm, this is used by short forward branch
+  // (SFB) pseudos to enable SFB with branches on reg-reg and reg-imm compares.
+  OPERAND_SFB_RHS,
+
+  // Operand is a branch opcode, this too is used by SFB pseudos.
+  OPERAND_BCC_OPCODE,
+
   OPERAND_VMASK,
 };
 } // namespace RISCVOp

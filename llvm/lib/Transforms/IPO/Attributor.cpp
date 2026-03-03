@@ -3340,9 +3340,9 @@ void Attributor::checkAndQueryIRAttr(const IRPosition &IRP, AttributeSet Attrs,
 }
 
 void Attributor::identifyDefaultAbstractAttributes(Function &F) {
+  assert(!F.isDeclaration());
+
   if (!VisitedFunctions.insert(&F).second)
-    return;
-  if (F.isDeclaration())
     return;
 
   // In non-module runs we need to look at the call sites of a function to
@@ -3876,6 +3876,9 @@ static bool runAttributorOnFunctions(InformationCache &InfoCache,
   }
 
   for (Function *F : Functions) {
+    if (F->isDeclaration())
+      continue;
+
     if (F->hasExactDefinition())
       NumFnWithExactDefinition++;
     else
@@ -3939,6 +3942,9 @@ static bool runAttributorLightOnFunctions(InformationCache &InfoCache,
   Attributor A(Functions, InfoCache, AC);
 
   for (Function *F : Functions) {
+    if (F->isDeclaration())
+      continue;
+
     if (F->hasExactDefinition())
       NumFnWithExactDefinition++;
     else

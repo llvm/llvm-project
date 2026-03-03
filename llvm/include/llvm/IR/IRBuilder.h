@@ -2655,7 +2655,8 @@ public:
 
   /// Return the difference between two pointer values. The returned value
   /// type is the address type of the pointers.
-  LLVM_ABI Value *CreatePtrDiff(Value *LHS, Value *RHS, const Twine &Name = "");
+  LLVM_ABI Value *CreatePtrDiff(Value *LHS, Value *RHS, const Twine &Name = "",
+                                bool IsNUW = false);
 
   /// Return the difference between two pointer values, dividing out the size
   /// of the pointed-to objects. The returned value type is the address type

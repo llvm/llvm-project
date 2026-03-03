@@ -1,0 +1,91 @@
+#ifndef _VECTOR_
+#define _VECTOR_
+
+#include "initializer_list"
+#include "memory"
+
+namespace std {
+
+template <typename T, typename A = allocator<T>>
+class vector {
+public:
+  typedef T value_type;
+  typedef size_t size_type;
+  typedef T *iterator;
+  typedef const T *const_iterator;
+  typedef T *reverse_iterator;
+  typedef const T *const_reverse_iterator;
+
+  vector();
+  vector(size_type count);
+  vector(size_type count, const T &value, const A &alloc = A());
+  vector(initializer_list<T>, const A &alloc = A());
+  vector(const vector &other);
+  vector(vector &&other);
+  ~vector();
+
+  vector &operator=(const vector &other);
+  vector &operator=(vector &&other);
+  vector &operator=(initializer_list<T>);
+
+  void push_back(const T &value);
+  void push_back(T &&value);
+
+  template <typename... Args>
+  void emplace_back(Args &&...args);
+
+  template <typename... Args>
+  iterator emplace(const_iterator pos, Args &&...args);
+
+  T &operator[](size_type pos);
+  const T &operator[](size_type pos) const;
+
+  T &front();
+  T &back();
+  T *data();
+  const T *data() const;
+
+  iterator begin();
+  iterator end();
+  const_iterator begin() const;
+  const_iterator end() const;
+  const_iterator cbegin() const;
+  const_iterator cend() const;
+
+  reverse_iterator rbegin();
+  reverse_iterator rend();
+  const_reverse_iterator rbegin() const;
+  const_reverse_iterator rend() const;
+  const_reverse_iterator crbegin() const;
+  const_reverse_iterator crend() const;
+
+  bool empty() const;
+  size_type size() const;
+
+  void clear();
+  void reserve(size_type new_cap);
+  void resize(size_type count);
+  void resize(size_type count, const T &value);
+
+  void assign(size_type count, const T &value);
+
+  iterator insert(const_iterator pos, const T &value);
+  iterator insert(const_iterator pos, T &&value);
+  iterator insert(const_iterator pos, size_type count, const T &value);
+
+  iterator erase(const_iterator pos);
+  iterator erase(const_iterator first, const_iterator last);
+
+  void swap(vector &other);
+  void shrink_to_fit();
+};
+
+template <typename T, typename A>
+bool operator==(const vector<T, A> &, const vector<T, A> &);
+
+template <typename T, typename A>
+bool operator!=(const vector<T, A> &, const vector<T, A> &);
+
+} // namespace std
+
+#endif // _VECTOR_

@@ -342,10 +342,10 @@ static bool hasAllNBitUsers(const MachineInstr &OrigMI,
 
       case RISCV::PseudoCCMOVGPR:
       case RISCV::PseudoCCMOVGPRNoX0:
-        // Either operand 4 or operand 5 is returned by this instruction. If
+        // Either operand 1 or operand 2 is returned by this instruction. If
         // only the lower word of the result is used, then only the lower word
-        // of operand 4 and 5 is used.
-        if (OpIdx != 4 && OpIdx != 5)
+        // of operand 1 and 2 is used.
+        if (OpIdx != 1 && OpIdx != 2)
           return false;
         Worklist.emplace_back(UserMI, Bits);
         break;
@@ -557,9 +557,9 @@ static bool isSignExtendedW(Register SrcReg, const RISCVSubtarget &ST,
     case RISCV::PseudoCCSLLIW:
     case RISCV::PseudoCCSRLIW:
     case RISCV::PseudoCCSRAIW:
-      // Returns operand 4 or an ADDW/SUBW/etc. of operands 5 and 6. We only
-      // need to check if operand 4 is sign extended.
-      if (!AddRegToWorkList(MI->getOperand(4).getReg()))
+      // Returns operand 1 or an ADDW/SUBW/etc. of operands 2 and 3. We only
+      // need to check if operand 1 is sign extended.
+      if (!AddRegToWorkList(MI->getOperand(1).getReg()))
         return false;
       break;
     case RISCV::REMU:
@@ -589,8 +589,8 @@ static bool isSignExtendedW(Register SrcReg, const RISCVSubtarget &ST,
       // MIN, MAX, PHI, or bitwise merge instructions is also sign-extended.
 
       // The input registers for PHI are operand 1, 3, ...
-      // The input registers for PseudoCCMOVGPR(NoX0) are 4 and 5.
-      // The input registers for PseudoCCAND/OR/XOR are 4, 5, and 6.
+      // The input registers for PseudoCCMOVGPR(NoX0) are 1 and 2.
+      // The input registers for PseudoCCAND/OR/XOR are 1, 2, and 3.
       // The input registers for MERGE/MVM/MVMN are 1, 2, and 3.
       // The input registers for others are operand 1 and 2.
       unsigned B = 1, E = 3, D = 1;
@@ -601,8 +601,8 @@ static bool isSignExtendedW(Register SrcReg, const RISCVSubtarget &ST,
         break;
       case RISCV::PseudoCCMOVGPR:
       case RISCV::PseudoCCMOVGPRNoX0:
-        B = 4;
-        E = 6;
+        B = 1;
+        E = 3;
         break;
       case RISCV::PseudoCCAND:
       case RISCV::PseudoCCOR:
@@ -610,8 +610,8 @@ static bool isSignExtendedW(Register SrcReg, const RISCVSubtarget &ST,
       case RISCV::PseudoCCANDN:
       case RISCV::PseudoCCORN:
       case RISCV::PseudoCCXNOR:
-        B = 4;
-        E = 7;
+        B = 1;
+        E = 4;
         break;
       case RISCV::MERGE:
       case RISCV::MVM:

@@ -70,7 +70,7 @@ template <typename T> struct ProgramStateTrait {
 ///  values will never change.
 class ProgramState : public llvm::FoldingSetNode {
 public:
-  typedef llvm::ImmutableMap<void*, void*>                 GenericDataMap;
+  typedef llvm::ImmutableMap<const void *, void *> GenericDataMap;
 
 private:
   void operator=(const ProgramState& R) = delete;
@@ -423,7 +423,7 @@ public:
   // Accessing the Generic Data Map (GDM).
   //==---------------------------------------------------------------------==//
 
-  void *const* FindGDM(void *K) const;
+  void *const *FindGDM(const void *K) const;
 
   template <typename T>
   [[nodiscard]] ProgramStateRef
@@ -512,7 +512,8 @@ private:
 
   ProgramState::GenericDataMap::Factory     GDMFactory;
 
-  typedef llvm::DenseMap<void*,std::pair<void*,void (*)(void*)> > GDMContextsTy;
+  typedef llvm::DenseMap<const void *, std::pair<void *, void (*)(void *)>>
+      GDMContextsTy;
   GDMContextsTy GDMContexts;
 
   /// StateSet - FoldingSet containing all the states created for analyzing
@@ -595,8 +596,8 @@ public:
   }
 
   // Methods that manipulate the GDM.
-  ProgramStateRef addGDM(ProgramStateRef St, void *Key, void *Data);
-  ProgramStateRef removeGDM(ProgramStateRef state, void *Key);
+  ProgramStateRef addGDM(ProgramStateRef St, const void *Key, void *Data);
+  ProgramStateRef removeGDM(ProgramStateRef state, const void *Key);
 
   // Methods that query & manipulate the Store.
 
@@ -677,9 +678,9 @@ public:
     return removeGDM(st, ProgramStateTrait<T>::GDMIndex());
   }
 
-  void *FindGDMContext(void *index,
-                       void *(*CreateContext)(llvm::BumpPtrAllocator&),
-                       void  (*DeleteContext)(void*));
+  void *FindGDMContext(const void *index,
+                       void *(*CreateContext)(llvm::BumpPtrAllocator &),
+                       void (*DeleteContext)(void *));
 
   template <typename T>
   typename ProgramStateTrait<T>::context_type get_context() {

@@ -497,7 +497,7 @@ int main(int argc, char **argv) {
   Ctx.setGenDwarfForAssembly(GenDwarfForAssembly);
   // Default to 4 for dwarf version.
   unsigned DwarfVersion = MCOptions.DwarfVersion ? MCOptions.DwarfVersion : 4;
-  if (DwarfVersion < 2 || DwarfVersion > 5) {
+  if (DwarfVersion < 2 || DwarfVersion > 6) {
     errs() << ProgName << ": Dwarf version " << DwarfVersion
            << " is not supported." << '\n';
     return 1;

@@ -4975,7 +4975,7 @@ APFloat::opStatus DoubleAPFloat::multiply(const DoubleAPFloat &RHS,
   APFloat T = A;
   Status |= T.multiply(C, RM);
   if (!T.isFiniteNonZero()) {
-    Floats[0] = T;
+    Floats[0] = std::move(T);
     Floats[1].makeZero(/* Neg = */ false);
     return (opStatus)Status;
   }
@@ -5007,7 +5007,7 @@ APFloat::opStatus DoubleAPFloat::multiply(const DoubleAPFloat &RHS,
     // Floats[1] = (t - u) + tau
     Status |= T.subtract(U, RM);
     Status |= T.add(Tau, RM);
-    Floats[1] = T;
+    Floats[1] = std::move(T);
   }
   return (opStatus)Status;
 }

@@ -1298,8 +1298,9 @@ static void reportMayClobberedLoad(LoadInst *Load, MemDepResult DepInfo,
   ORE->emit(R);
 }
 
-// Find non-clobbered value for Loc memory location in extended basic block
+// Find a dominating value for Loc memory location in the extended basic block
 // (chain of basic blocks with single predecessors) starting From instruction.
+// Returns the value from a matching load or a simple store to the same pointer.
 static Value *findDominatingValue(const MemoryLocation &Loc, Type *LoadTy,
                                   Instruction *From, AAResults *AA) {
   uint32_t NumVisitedInsts = 0;
@@ -1311,8 +1312,14 @@ static Value *findDominatingValue(const MemoryLocation &Loc, Type *LoadTy,
       // Stop the search if limit is reached.
       if (++NumVisitedInsts > MaxNumVisitedInsts)
         return nullptr;
-      if (isModSet(BatchAA.getModRefInfo(Inst, Loc)))
+      if (isModSet(BatchAA.getModRefInfo(Inst, Loc))) {
+        // A simple store to the exact location can forward its value.
+        if (auto *SI = dyn_cast<StoreInst>(Inst))
+          if (SI->isSimple() && SI->getPointerOperand() == Loc.Ptr &&
+              SI->getValueOperand()->getType() == LoadTy)
+            return SI->getValueOperand();
         return nullptr;
+      }
       if (auto *LI = dyn_cast<LoadInst>(Inst))
         if (LI->getPointerOperand() == Loc.Ptr && LI->getType() == LoadTy)
           return LI;

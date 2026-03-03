@@ -1,7 +1,7 @@
 // RUN: %check_clang_tidy -std=c++20 %s modernize-use-ranges %t -check-suffixes=,PIPE \
 // RUN:   -config="{CheckOptions: { \
-// RUN:     modernize-use-ranges.UseReversePipe: true }}" -- -I %S/Inputs/use-ranges/
-// RUN: %check_clang_tidy -std=c++20 %s modernize-use-ranges %t -check-suffixes=,NOPIPE  -- -I %S/Inputs/use-ranges/
+// RUN:     modernize-use-ranges.UseReversePipe: true }}" -- -isystem %clang_tidy_headers -I %S/Inputs/use-ranges/
+// RUN: %check_clang_tidy -std=c++20 %s modernize-use-ranges %t -check-suffixes=,NOPIPE  -- -isystem %clang_tidy_headers -I %S/Inputs/use-ranges/
 
 // CHECK-FIXES: #include <algorithm>
 // CHECK-FIXES: #include <ranges>

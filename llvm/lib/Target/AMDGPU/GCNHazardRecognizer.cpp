@@ -2182,25 +2182,22 @@ bool GCNHazardRecognizer::hasWMMAToVALURegOverlap(
       return true;
   }
 
-  auto *ValuDst = TII.getNamedOperand(MI, AMDGPU::OpName::vdst);
-  if (!ValuDst)
-    return false;
-  Register D1 = ValuDst->getReg();
-
-  // WMMA writes, VALU writes.
-  if (TRI.regsOverlap(D0, D1))
-    return true;
-
-  // WMMA reads, VALU writes.
+  // WMMA reads or writes, VALU writes.
   Register A0 = TII.getNamedOperand(WMMA, AMDGPU::OpName::src0)->getReg();
   Register B0 = TII.getNamedOperand(WMMA, AMDGPU::OpName::src1)->getReg();
-  if (TRI.regsOverlap(A0, D1) || TRI.regsOverlap(B0, D1))
-    return true;
+  SmallVector<Register, 4> WMMARegs({D0, A0, B0});
 
   if (SIInstrInfo::isSWMMAC(WMMA)) {
     Register Idx0 = TII.getNamedOperand(WMMA, AMDGPU::OpName::src2)->getReg();
-    if (TRI.regsOverlap(D1, Idx0))
-      return true;
+    WMMARegs.push_back(Idx0);
+  }
+
+  for (const MachineOperand &ValuDef : MI.defs()) {
+    Register VDstReg = ValuDef.getReg();
+    for (Register WMMAReg : WMMARegs) {
+      if (TRI.regsOverlap(VDstReg, WMMAReg))
+        return true;
+    }
   }
   return false;
 }

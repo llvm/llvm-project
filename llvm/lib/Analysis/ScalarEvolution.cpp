@@ -11111,13 +11111,13 @@ bool ScalarEvolution::isKnownNonZero(const SCEV *S) {
 
 bool ScalarEvolution::isKnownToBeAPowerOfTwo(const SCEV *S, bool OrZero,
                                              bool OrNegative) {
-  auto NonRecursive = [this, OrNegative](const SCEV *S) {
+  auto NonRecursive = [OrNegative](const SCEV *S) {
     if (auto *C = dyn_cast<SCEVConstant>(S))
       return C->getAPInt().isPowerOf2() ||
              (OrNegative && C->getAPInt().isNegatedPowerOf2());
 
-    // The vscale_range indicates vscale is a power-of-two.
-    return isa<SCEVVScale>(S) && F.hasFnAttribute(Attribute::VScaleRange);
+    // vscale is a power-of-two.
+    return isa<SCEVVScale>(S);
   };
 
   if (NonRecursive(S))

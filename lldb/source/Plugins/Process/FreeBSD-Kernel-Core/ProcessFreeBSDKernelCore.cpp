@@ -6,7 +6,6 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "lldb/Core/Debugger.h"
 #include "lldb/Core/Module.h"
 #include "lldb/Core/PluginManager.h"
 #include "lldb/Interpreter/CommandInterpreter.h"
@@ -24,6 +23,42 @@ using namespace lldb;
 using namespace lldb_private;
 
 LLDB_PLUGIN_DEFINE(ProcessFreeBSDKernelCore)
+
+namespace {
+
+#define LLDB_PROPERTIES_processfreebsdkernelcore
+#include "ProcessFreeBSDKernelCoreProperties.inc"
+
+enum {
+#define LLDB_PROPERTIES_processfreebsdkernelcore
+#include "ProcessFreeBSDKernelCorePropertiesEnum.inc"
+};
+
+class PluginProperties : public Properties {
+public:
+  static llvm::StringRef GetSettingName() {
+    return ProcessFreeBSDKernelCore::GetPluginNameStatic();
+  }
+
+  PluginProperties() : Properties() {
+    m_collection_sp = std::make_shared<OptionValueProperties>(GetSettingName());
+    m_collection_sp->Initialize(g_processfreebsdkernelcore_properties_def);
+  }
+
+  ~PluginProperties() override = default;
+
+  bool GetReadOnly() const {
+    const uint32_t idx = ePropertyReadOnly;
+    return GetPropertyAtIndexAs<bool>(idx, true);
+  }
+};
+
+} // namespace
+
+static PluginProperties &GetGlobalPluginProperties() {
+  static PluginProperties g_settings;
+  return g_settings;
+}
 
 ProcessFreeBSDKernelCore::ProcessFreeBSDKernelCore(lldb::TargetSP target_sp,
                                                    ListenerSP listener_sp,
@@ -56,8 +91,20 @@ void ProcessFreeBSDKernelCore::Initialize() {
 
   llvm::call_once(g_once_flag, []() {
     PluginManager::RegisterPlugin(GetPluginNameStatic(),
-                                  GetPluginDescriptionStatic(), CreateInstance);
+                                  GetPluginDescriptionStatic(), CreateInstance,
+                                  DebuggerInitialize);
   });
+}
+
+void ProcessFreeBSDKernelCore::DebuggerInitialize(Debugger &debugger) {
+  if (!PluginManager::GetSettingForProcessPlugin(
+          debugger, PluginProperties::GetSettingName())) {
+    const bool is_global_setting = true;
+    PluginManager::CreateSettingForProcessPlugin(
+        debugger, GetGlobalPluginProperties().GetValueProperties(),
+        "Properties for the freebsd-kernel process plug-in.",
+        is_global_setting);
+  }
 }
 
 void ProcessFreeBSDKernelCore::Terminate() {
@@ -88,6 +135,26 @@ void ProcessFreeBSDKernelCore::RefreshStateAfterStop() {
     PrintUnreadMessage();
     m_printed_unread_message = true;
   }
+}
+
+size_t ProcessFreeBSDKernelCore::DoWriteMemory(lldb::addr_t addr,
+                                               const void *buf, size_t size,
+                                               Status &error) {
+  if (GetGlobalPluginProperties().GetReadOnly()) {
+    error = Status::FromErrorString(
+        "Memory writes are currently disabled. You can enable them with "
+        "`settings set plugin.process.freebsd-kernel-core.read-only false`.");
+    return 0;
+  }
+
+  ssize_t rd = 0;
+  rd = kvm_write(m_kvm, addr, buf, size);
+  if (rd < 0 || static_cast<size_t>(rd) != size) {
+    error = Status::FromErrorStringWithFormat("Writing memory failed: %s",
+                                              GetError());
+    return rd > 0 ? rd : 0;
+  }
+  return rd;
 }
 
 bool ProcessFreeBSDKernelCore::DoUpdateThreadList(ThreadList &old_thread_list,

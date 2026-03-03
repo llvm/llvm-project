@@ -67,6 +67,7 @@ Transforms/FixIrreducible/switch.ll
 Transforms/GVN/PRE/pre-load-through-select.ll
 Transforms/GVN/PRE/pre-loop-load-through-select.ll
 Transforms/GVN/debugloc-load-select.ll
+Transforms/GVN/load-select-addr-store-fwd.ll
 Transforms/GVN/load-through-select-dbg.ll
 Transforms/GVN/opaque-ptr.ll
 Transforms/GVN/pr69301.ll
@@ -137,7 +138,6 @@ Transforms/InstCombine/wcslen-1.ll
 Transforms/InstCombine/wcslen-3.ll
 Transforms/InstCombine/xor-and-or.ll
 Transforms/InstCombine/zext-bool-add-sub.ll
-Transforms/LoopDeletion/invalidate-scev-after-hoisting.ll
 Transforms/LoopIdiom/AArch64/byte-compare-index.ll
 Transforms/LoopIdiom/AArch64/find-first-byte.ll
 Transforms/LowerAtomic/atomic-load.ll

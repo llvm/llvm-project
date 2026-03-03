@@ -35,12 +35,13 @@ bool fn1() {
 // CHECK-NEXT:    [[TMP0:%.*]] = load i32, ptr [[V_ADDR]], align 4
 // CHECK-NEXT:    [[LOADEDV:%.*]] = trunc i32 [[TMP0]] to i1
 // CHECK-NEXT:    [[VECINIT:%.*]] = insertelement <4 x i1> poison, i1 [[LOADEDV]], i32 0
+// CHECK-NEXT:    [[VECINIT1:%.*]] = insertelement <4 x i1> [[VECINIT]], i1 true, i32 1
 // CHECK-NEXT:    [[TMP1:%.*]] = load i32, ptr [[V_ADDR]], align 4
-// CHECK-NEXT:    [[LOADEDV1:%.*]] = trunc i32 [[TMP1]] to i1
-// CHECK-NEXT:    [[VECINIT2:%.*]] = insertelement <4 x i1> [[VECINIT]], i1 [[LOADEDV1]], i32 1
-// CHECK-NEXT:    [[VECINIT3:%.*]] = insertelement <4 x i1> [[VECINIT2]], i1 true, i32 2
+// CHECK-NEXT:    [[LOADEDV2:%.*]] = trunc i32 [[TMP1]] to i1
+// CHECK-NEXT:    [[VECINIT3:%.*]] = insertelement <4 x i1> [[VECINIT1]], i1 [[LOADEDV2]], i32 2
 // CHECK-NEXT:    [[VECINIT4:%.*]] = insertelement <4 x i1> [[VECINIT3]], i1 false, i32 3
-// CHECK-NEXT:    [[TMP2:%.*]] = zext <4 x i1> [[VECINIT4]] to <4 x i32>
+// CHECK-NEXT:    [[MATRIX_ROWMAJOR2COLMAJOR:%.*]] = shufflevector <4 x i1> [[VECINIT4]], <4 x i1> poison, <4 x i32> <i32 0, i32 2, i32 1, i32 3>
+// CHECK-NEXT:    [[TMP2:%.*]] = zext <4 x i1> [[MATRIX_ROWMAJOR2COLMAJOR]] to <4 x i32>
 // CHECK-NEXT:    store <4 x i32> [[TMP2]], ptr [[A]], align 4
 // CHECK-NEXT:    [[TMP3:%.*]] = load <4 x i32>, ptr [[A]], align 4
 // CHECK-NEXT:    store <4 x i32> [[TMP3]], ptr [[RETVAL]], align 4

@@ -18,15 +18,14 @@ err:
 // CIR:    }
 // CIR:    [[ZERO:%.*]] = cir.const #cir.int<0> : !s32i
 // CIR:    cir.store [[ZERO]], [[RETVAL:%.*]] : !s32i, !cir.ptr<!s32i>
-// CIR:    cir.br ^bb1
-// CIR:  ^bb1:
 // CIR:    [[RET:%.*]] = cir.load [[RETVAL]] : !cir.ptr<!s32i>, !s32i
 // CIR:    cir.return [[RET]] : !s32i
-// CIR:  ^bb2:
+// CIR:  ^bb1:
 // CIR:    cir.label "err"
 // CIR:    [[MINUS_ONE:%.*]] = cir.const #cir.int<-1> : !s32i
 // CIR:    cir.store [[MINUS_ONE]], [[RETVAL]] : !s32i, !cir.ptr<!s32i>
-// CIR:    cir.br ^bb1
+// CIR:    [[RET:%.*]] = cir.load [[RETVAL]] : !cir.ptr<!s32i>, !s32i
+// CIR:    cir.return [[RET]] : !s32i
 
 // LLVM: define dso_local noundef i32 @_Z21shouldNotGenBranchReti
 // LLVM:   [[COND:%.*]] = load i32, ptr {{.*}}, align 4
@@ -35,16 +34,13 @@ err:
 // LLVM: [[IFTHEN]]:
 // LLVM:   br label %[[ERR:.*]]
 // LLVM: [[IFEND]]:
-// LLVM:   br label %[[BB9:.*]]
-// LLVM: [[BB9]]:
 // LLVM:   store i32 0, ptr %[[RETVAL:.*]], align 4
-// LLVM:   br label %[[BBRET:.*]]
-// LLVM: [[BBRET]]:
 // LLVM:   [[RET:%.*]] = load i32, ptr %[[RETVAL]], align 4
 // LLVM:   ret i32 [[RET]]
 // LLVM: [[ERR]]:
 // LLVM:   store i32 -1, ptr %[[RETVAL]], align 4
-// LLVM:   br label %10
+// LLVM:   [[RET:%.*]] = load i32, ptr %[[RETVAL]], align 4
+// LLVM:   ret i32 [[RET]]
 
 // OGCG: define dso_local noundef i32 @_Z21shouldNotGenBranchReti
 // OGCG: if.then:

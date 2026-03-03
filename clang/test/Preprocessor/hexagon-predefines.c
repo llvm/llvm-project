@@ -105,7 +105,20 @@
 // CHECK-V68HVX-128B: #define __HVX_ARCH__ 68
 // CHECK-V68HVX-128B: #define __HVX_LENGTH__ 128
 // CHECK-V68HVX-128B: #define __HVX__ 1
+// CHECK-V68HVX-128B-NOT: #define __HVX_IEEE_FP__ 1
 // CHECK-V68HVX-128B: #define __hexagon__ 1
+
+// RUN: %clang_cc1 -E -dM -triple hexagon-unknown-elf -target-cpu hexagonv68 \
+// RUN: -target-feature +hvxv68 -target-feature +hvx-length128b \
+// RUN: -target-feature +hvx-ieee-fp %s | FileCheck \
+// RUN: %s -check-prefix CHECK-V68HVX-IEEE-FP
+// CHECK-V68HVX-IEEE-FP: #define __HEXAGON_ARCH__ 68
+// CHECK-V68HVX-IEEE-FP: #define __HEXAGON_V68__ 1
+// CHECK-V68HVX-IEEE-FP: #define __HVX_ARCH__ 68
+// CHECK-V68HVX-IEEE-FP: #define __HVX_IEEE_FP__ 1
+// CHECK-V68HVX-IEEE-FP: #define __HVX_LENGTH__ 128
+// CHECK-V68HVX-IEEE-FP: #define __HVX__ 1
+// CHECK-V68HVX-IEEE-FP: #define __hexagon__ 1
 
 // RUN: %clang_cc1 -E -dM -triple hexagon-unknown-elf -target-cpu hexagonv69 \
 // RUN: -target-feature +hvxv69 -target-feature +hvx-length128b %s | FileCheck \
@@ -236,3 +249,9 @@
 // RUN: %s -check-prefix CHECK-INTERFERENCE-73
 // CHECK-INTERFERENCE-73: #define __GCC_CONSTRUCTIVE_SIZE 64
 // CHECK-INTERFERENCE-73: #define __GCC_DESTRUCTIVE_SIZE 64
+
+// RUN: %clang_cc1 -E -dM -triple hexagon-unknown-qurt %s | FileCheck \
+// RUN: %s -check-prefix CHECK-QURT
+// CHECK-QURT: #define __hexagon__ 1
+// CHECK-QURT: #define __qurt__ 1
+// CHECK-QURT-NOT: #define __linux__

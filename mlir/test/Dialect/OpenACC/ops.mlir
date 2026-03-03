@@ -2504,3 +2504,21 @@ func.func @test_acc_reduction_combine(%arg0 : memref<i32>, %arg1 : memref<i32>) 
 
 // CHECK-LABEL: func @test_acc_reduction_combine
 // CHECK:       acc.reduction_combine %arg0 into %arg1 <add> : memref<i32>
+
+// -----
+
+// Test that acc.getdeviceptr with an opaque pointer (!llvm.ptr, which has no
+// element type) can be parsed and printed without an explicit varType clause.
+// This is a regression test for a crash where getElementType() returned null
+// for opaque pointers and was passed to TypeAttr::get() without a null check.
+
+func.func @test_getdeviceptr_opaque_ptr(%a: !llvm.ptr) -> () {
+  %0 = acc.getdeviceptr varPtr(%a : !llvm.ptr) -> !llvm.ptr
+  acc.declare_enter dataOperands(%0 : !llvm.ptr)
+  return
+}
+
+// CHECK-LABEL: func @test_getdeviceptr_opaque_ptr(
+// CHECK-SAME:    %[[A:.*]]: !llvm.ptr)
+// CHECK:         %[[DEVPTR:.*]] = acc.getdeviceptr varPtr(%[[A]] : !llvm.ptr) -> !llvm.ptr
+// CHECK:         acc.declare_enter dataOperands(%[[DEVPTR]] : !llvm.ptr)

@@ -200,12 +200,15 @@ void populateSpecializedTransposeLoweringPatterns(
 
 /// Collect a set of patterns to lower X86 ops to ops that map to LLVM
 /// intrinsics.
-void populateX86LegalizeForLLVMExportPatterns(
-    const LLVMTypeConverter &converter, RewritePatternSet &patterns);
+void populateX86LegalizeForLLVMExportPatterns(LLVMTypeConverter &converter,
+                                              RewritePatternSet &patterns);
 
 /// Configure the target to support lowering X86 ops to ops that map to
 /// LLVM intrinsics.
 void configureX86LegalizeForExportTarget(LLVMConversionTarget &target);
+
+/// Register LLVM conversion interface for X86 dialect.
+void registerConvertX86ToLLVMInterface(DialectRegistry &registry);
 
 } // namespace mlir
 

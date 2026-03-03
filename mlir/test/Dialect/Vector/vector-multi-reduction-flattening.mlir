@@ -1,6 +1,10 @@
 // RUN: mlir-opt %s --transform-interpreter='entry-point=innerreduction' | FileCheck %s --check-prefix=INNER_REDUCTION,ALL
 // RUN: mlir-opt %s --transform-interpreter='entry-point=innerparallel' | FileCheck %s --check-prefix=INNER_PARALLEL,ALL
 
+//=============================================================================
+// Tests for the FlattenMultiReduction pattern
+//=============================================================================
+
 // ALL-LABEL: func @negative_flattening_cases
 func.func @negative_flattening_cases(
     %v1d: vector<8xf32>,

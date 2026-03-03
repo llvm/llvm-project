@@ -18,6 +18,7 @@
 #include "clang/Basic/Diagnostic.h"
 #include "clang/Basic/Specifiers.h"
 #include "clang/Tooling/Execution.h"
+#include "llvm/ADT/SmallString.h"
 #include "llvm/ADT/SmallVector.h"
 #include <array>
 #include <optional>
@@ -611,7 +612,7 @@ struct Index : public Reference {
   bool operator<(const Index &Other) const;
 
   std::optional<SmallString<16>> JumpToSection;
-  std::vector<Index> Children;
+  llvm::StringMap<Index> Children;
 
   void sort();
 };

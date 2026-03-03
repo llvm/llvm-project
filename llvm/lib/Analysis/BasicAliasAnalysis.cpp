@@ -86,7 +86,8 @@ bool BasicAAResult::invalidate(Function &Fn, const PreservedAnalyses &PA,
   // may be created without handles to some analyses and in that case don't
   // depend on them.
   if (Inv.invalidate<AssumptionAnalysis>(Fn, PA) ||
-      (DT_ && Inv.invalidate<DominatorTreeAnalysis>(Fn, PA)))
+      (DT_ && Inv.invalidate<DominatorTreeAnalysis>(Fn, PA)) ||
+      Inv.invalidate<TargetLibraryAnalysis>(Fn, PA))
     return true;
 
   // Otherwise this analysis result remains valid.

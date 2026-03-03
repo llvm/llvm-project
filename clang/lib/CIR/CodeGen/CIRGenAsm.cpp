@@ -563,7 +563,7 @@ mlir::LogicalResult CIRGenFunction::emitAsmStmt(const AsmStmt &s) {
     int i = 0;
     for (auto typ : argElemTypes) {
       if (typ) {
-        auto op = args[i++];
+        [[maybe_unused]] mlir::Value op = args[i++];
         assert(mlir::isa<cir::PointerType>(op.getType()) &&
                "pointer type expected");
         assert(cast<cir::PointerType>(op.getType()).getPointee() == typ &&

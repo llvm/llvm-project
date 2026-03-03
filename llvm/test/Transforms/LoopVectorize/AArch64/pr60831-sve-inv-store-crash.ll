@@ -65,7 +65,7 @@ define void @test_invar_gep(ptr %dst) #0 {
 ; IC2:       vector.body:
 ; IC2-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, [[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], [[VECTOR_BODY]] ]
 ; IC2-NEXT:    [[DOTSPLAT:%.*]] = phi <vscale x 4 x i64> [ [[TMP5]], [[VECTOR_PH]] ], [ [[VEC_IND_NEXT:%.*]], [[VECTOR_BODY]] ]
-; IC2-NEXT:    [[TMP22:%.*]] = add <vscale x 4 x i64> [[DOTSPLAT]], [[TMP21]]
+; IC2-NEXT:    [[TMP22:%.*]] = add nuw <vscale x 4 x i64> [[DOTSPLAT]], [[TMP21]]
 ; IC2-NEXT:    [[TMP6:%.*]] = call i32 @llvm.vscale.i32()
 ; IC2-NEXT:    [[TMP7:%.*]] = mul nuw i32 [[TMP6]], 4
 ; IC2-NEXT:    [[TMP8:%.*]] = sub i32 [[TMP7]], 1

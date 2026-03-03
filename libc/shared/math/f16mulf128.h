@@ -15,6 +15,7 @@
 #ifdef LIBC_TYPES_HAS_FLOAT16
 #ifdef LIBC_TYPES_HAS_FLOAT128
 
+#include "shared/libc_common.h"
 #include "src/__support/math/f16mulf128.h"
 
 namespace LIBC_NAMESPACE_DECL {

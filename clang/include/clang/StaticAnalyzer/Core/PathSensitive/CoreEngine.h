@@ -97,10 +97,6 @@ private:
 
   void setBlockCounter(BlockCounter C);
 
-  void generateNode(const ProgramPoint &Loc,
-                    ProgramStateRef State,
-                    ExplodedNode *Pred);
-
   void HandleBlockEdge(const BlockEdge &E, ExplodedNode *Pred);
   void HandleBlockEntrance(const BlockEntrance &E, ExplodedNode *Pred);
   void HandleBlockExit(const CFGBlock *B, ExplodedNode *Pred);
@@ -121,9 +117,6 @@ private:
   void HandleVirtualBaseBranch(const CFGBlock *B, ExplodedNode *Pred);
 
 private:
-  ExplodedNode *generateCallExitBeginNode(ExplodedNode *N,
-                                          const ReturnStmt *RS);
-
   /// Helper function called by `HandleBranch()`. If the currently handled
   /// branch corresponds to a loop, this returns the number of already
   /// completed iterations in that loop, otherwise the return value is
@@ -184,7 +177,8 @@ public:
 
   /// Enqueue nodes that were created as a result of processing
   /// a statement onto the work list.
-  void enqueue(ExplodedNodeSet &Set, const CFGBlock *Block, unsigned Idx);
+  void enqueueStmtNodes(ExplodedNodeSet &Set, const CFGBlock *Block,
+                        unsigned Idx);
 
   /// enqueue the nodes corresponding to the end of function onto the
   /// end of path / work list.

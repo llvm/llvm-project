@@ -2063,7 +2063,7 @@ void SCCPInstVisitor::handlePredicate(Instruction *I, Value *CopyOf,
     // a chained predicate, as the != x information is more likely to be
     // helpful in practice.
     if (!CopyOfCR.contains(NewCR) && CopyOfCR.getSingleMissingElement())
-      NewCR = CopyOfCR;
+      NewCR = std::move(CopyOfCR);
 
     // The new range is based on a branch condition. That guarantees that
     // neither of the compare operands can be undef in the branch targets,
@@ -2128,7 +2128,7 @@ void SCCPInstVisitor::handleCallResult(CallBase &CB) {
 
       // If Count <= MaxLanes, getvectorlength(Count, MaxLanes) = Count
       if (Count.icmp(CmpInst::ICMP_ULE, MaxLanes))
-        Result = Count;
+        Result = std::move(Count);
 
       Result = Result.truncate(II->getType()->getScalarSizeInBits());
       return (void)mergeInValue(ValueState[II], II,

@@ -238,6 +238,14 @@ void test_builtin_elementwise_max(int i, short s, double d, float4 v, int3 iv, u
   _Complex float c1, c2;
   c1 = __builtin_elementwise_max(c1, c2);
   // expected-error@-1 {{1st argument must be a vector, integer or floating-point type (was '_Complex float')}}
+
+  double dr;
+  dr = __builtin_elementwise_max(d, 0.0);
+  // expected-warning@-1 {{builtin '__builtin_elementwise_max' is deprecated}}
+
+  float4 vr;
+  vr = __builtin_elementwise_max(v, v);
+  // expected-warning@-1 {{builtin '__builtin_elementwise_max' is deprecated}}
 }
 
 void test_builtin_elementwise_min(int i, short s, double d, float4 v, int3 iv, unsigned3 uv, int *p) {
@@ -298,6 +306,14 @@ void test_builtin_elementwise_min(int i, short s, double d, float4 v, int3 iv, u
   _Complex float c1, c2;
   c1 = __builtin_elementwise_min(c1, c2);
   // expected-error@-1 {{1st argument must be a vector, integer or floating-point type (was '_Complex float')}}
+
+  double dr;
+  dr = __builtin_elementwise_min(d, 0.0);
+  // expected-warning@-1 {{builtin '__builtin_elementwise_min' is deprecated}}
+
+  float4 vr;
+  vr = __builtin_elementwise_min(v, v);
+  // expected-warning@-1 {{builtin '__builtin_elementwise_min' is deprecated}}
 }
 
 void test_builtin_elementwise_maximum(int i, short s, float f, double d, float4 fv, double4 dv, int3 iv, unsigned3 uv, int *p) {
@@ -1379,6 +1395,7 @@ typedef struct {
 
 float3 foo(float3 a,const struct_float3* hi) {
   float3 b = __builtin_elementwise_max((float3)(0.0f), a);
+  // expected-warning@-1 {{builtin '__builtin_elementwise_max' is deprecated}}
   return __builtin_elementwise_pow(b, hi->b.yyy);
 }
 

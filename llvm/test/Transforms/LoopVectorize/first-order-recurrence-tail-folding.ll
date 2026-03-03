@@ -95,7 +95,7 @@ define i32 @FOR_used_outside(ptr noalias %A, ptr noalias %B, i64 %n) {
 ; VF2IC2-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[PRED_STORE_CONTINUE12:.*]] ]
 ; VF2IC2-NEXT:    [[VEC_IND:%.*]] = phi <2 x i64> [ <i64 0, i64 1>, %[[VECTOR_PH]] ], [ [[VEC_IND_NEXT:%.*]], %[[PRED_STORE_CONTINUE12]] ]
 ; VF2IC2-NEXT:    [[VECTOR_RECUR:%.*]] = phi <2 x i32> [ <i32 poison, i32 33>, %[[VECTOR_PH]] ], [ [[TMP25:%.*]], %[[PRED_STORE_CONTINUE12]] ]
-; VF2IC2-NEXT:    [[STEP_ADD:%.*]] = add <2 x i64> [[VEC_IND]], splat (i64 2)
+; VF2IC2-NEXT:    [[STEP_ADD:%.*]] = add nuw <2 x i64> [[VEC_IND]], splat (i64 2)
 ; VF2IC2-NEXT:    [[TMP3:%.*]] = add i64 [[INDEX]], 0
 ; VF2IC2-NEXT:    [[TMP1:%.*]] = add i64 [[INDEX]], 1
 ; VF2IC2-NEXT:    [[TMP2:%.*]] = add i64 [[INDEX]], 2
@@ -384,7 +384,7 @@ define i32 @FOR_next_used_outside(ptr noalias %A, ptr noalias %B, i64 %n) {
 ; VF2IC2-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[PRED_STORE_CONTINUE12:.*]] ]
 ; VF2IC2-NEXT:    [[VEC_IND:%.*]] = phi <2 x i64> [ <i64 0, i64 1>, %[[VECTOR_PH]] ], [ [[VEC_IND_NEXT:%.*]], %[[PRED_STORE_CONTINUE12]] ]
 ; VF2IC2-NEXT:    [[VECTOR_RECUR:%.*]] = phi <2 x i32> [ <i32 poison, i32 33>, %[[VECTOR_PH]] ], [ [[TMP25:%.*]], %[[PRED_STORE_CONTINUE12]] ]
-; VF2IC2-NEXT:    [[STEP_ADD:%.*]] = add <2 x i64> [[VEC_IND]], splat (i64 2)
+; VF2IC2-NEXT:    [[STEP_ADD:%.*]] = add nuw <2 x i64> [[VEC_IND]], splat (i64 2)
 ; VF2IC2-NEXT:    [[TMP3:%.*]] = add i64 [[INDEX]], 0
 ; VF2IC2-NEXT:    [[TMP1:%.*]] = add i64 [[INDEX]], 1
 ; VF2IC2-NEXT:    [[TMP2:%.*]] = add i64 [[INDEX]], 2
@@ -672,7 +672,7 @@ define i32 @FOR_and_next_used_outside(ptr noalias %A, ptr noalias %B, i64 %n) {
 ; VF2IC2-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[PRED_STORE_CONTINUE12:.*]] ]
 ; VF2IC2-NEXT:    [[VEC_IND:%.*]] = phi <2 x i64> [ <i64 0, i64 1>, %[[VECTOR_PH]] ], [ [[VEC_IND_NEXT:%.*]], %[[PRED_STORE_CONTINUE12]] ]
 ; VF2IC2-NEXT:    [[VECTOR_RECUR:%.*]] = phi <2 x i32> [ <i32 poison, i32 33>, %[[VECTOR_PH]] ], [ [[TMP25:%.*]], %[[PRED_STORE_CONTINUE12]] ]
-; VF2IC2-NEXT:    [[STEP_ADD:%.*]] = add <2 x i64> [[VEC_IND]], splat (i64 2)
+; VF2IC2-NEXT:    [[STEP_ADD:%.*]] = add nuw <2 x i64> [[VEC_IND]], splat (i64 2)
 ; VF2IC2-NEXT:    [[TMP3:%.*]] = add i64 [[INDEX]], 0
 ; VF2IC2-NEXT:    [[TMP1:%.*]] = add i64 [[INDEX]], 1
 ; VF2IC2-NEXT:    [[TMP2:%.*]] = add i64 [[INDEX]], 2

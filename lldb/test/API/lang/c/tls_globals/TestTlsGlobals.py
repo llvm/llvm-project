@@ -38,7 +38,7 @@ class TlsGlobalTestCase(TestBase):
     # TLS works differently on Windows, this would need to be implemented
     # separately.
     @skipIfWindows
-    @skipIf(oslist=["linux"], archs=["arm$", "aarch64"])
+    @skipIf(oslist=["linux"], archs=["aarch64"])
     @skipIf(oslist=no_match([lldbplatformutil.getDarwinOSTriples(), "linux"]))
     @expectedFailureIf(lldbplatformutil.xcode15LinkerBug())
     def test(self):

@@ -3,6 +3,8 @@
 ; coro.begin.
 ; RUN: opt < %s -passes='cgscc(coro-split),simplifycfg,early-cse' -S | FileCheck %s
 
+target datalayout = "e-m:e-p:64:64-i64:64-f80:128-n8:16:32:64-S128"
+
 define nonnull ptr @f(i32 %n) presplitcoroutine {
 ; CHECK-LABEL: define nonnull ptr @f(
 ; CHECK-SAME: i32 [[N:%.*]]) {
@@ -13,17 +15,16 @@ define nonnull ptr @f(i32 %n) presplitcoroutine {
 ; CHECK-NEXT:    [[CALL:%.*]] = tail call ptr @malloc(i32 24)
 ; CHECK-NEXT:    [[TMP0:%.*]] = tail call noalias nonnull ptr @llvm.coro.begin(token [[ID]], ptr [[CALL]])
 ; CHECK-NEXT:    store ptr @f.resume, ptr [[TMP0]], align 8
-; CHECK-NEXT:    [[DESTROY_ADDR:%.*]] = getelementptr inbounds nuw [[F_FRAME:%.*]], ptr [[TMP0]], i32 0, i32 1
+; CHECK-NEXT:    [[DESTROY_ADDR:%.*]] = getelementptr inbounds i8, ptr [[TMP0]], i64 8
 ; CHECK-NEXT:    store ptr @f.destroy, ptr [[DESTROY_ADDR]], align 8
-; CHECK-NEXT:    [[TMP1:%.*]] = getelementptr inbounds [[F_FRAME]], ptr [[TMP0]], i32 0, i32 2
-; CHECK-NEXT:    [[TMP2:%.*]] = load i32, ptr [[N_ADDR]], align 4
-; CHECK-NEXT:    store i32 [[TMP2]], ptr [[TMP1]], align 4
+; CHECK-NEXT:    [[TMP1:%.*]] = getelementptr inbounds i8, ptr [[TMP0]], i64 16
+; CHECK-NEXT:    call void @llvm.memcpy.p0.p0.i64(ptr align 4 [[TMP1]], ptr align 4 [[N_ADDR]], i64 4, i1 false)
 ; CHECK-NEXT:    call void @ctor(ptr [[TMP1]])
 ; CHECK-NEXT:    [[TMP3:%.*]] = load i32, ptr [[TMP1]], align 4
 ; CHECK-NEXT:    [[DEC:%.*]] = add nsw i32 [[TMP3]], -1
 ; CHECK-NEXT:    store i32 [[DEC]], ptr [[TMP1]], align 4
 ; CHECK-NEXT:    call void @print(i32 [[TMP3]])
-; CHECK-NEXT:    [[INDEX_ADDR1:%.*]] = getelementptr inbounds nuw [[F_FRAME]], ptr [[TMP0]], i32 0, i32 3
+; CHECK-NEXT:    [[INDEX_ADDR1:%.*]] = getelementptr inbounds i8, ptr [[TMP0]], i64 20
 ; CHECK-NEXT:    store i1 false, ptr [[INDEX_ADDR1]], align 1
 ; CHECK-NEXT:    ret ptr [[TMP0]]
 ;

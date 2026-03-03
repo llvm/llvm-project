@@ -2738,6 +2738,13 @@ bool Sema::DiagnoseEmptyLookup(Scope *S, CXXScopeSpec &SS, LookupResult &R,
                          << DroppedSpecifier << NameRange,
                      PDiag(NoteID), AcceptableWithRecovery);
 
+      if (Corrected.WillReplaceSpecifier()) {
+        NestedNameSpecifier NNS = Corrected.getCorrectionSpecifier();
+        // In order to be valid, a non-empty CXXScopeSpec needs a source range.
+        SS.MakeTrivial(Context, NNS,
+                       NNS ? NameRange.getBegin() : SourceRange());
+      }
+
       // Tell the callee whether to try to recover.
       return !AcceptableWithRecovery;
     }
@@ -8885,9 +8892,9 @@ QualType Sema::CheckConditionalOperands(ExprResult &Cond, ExprResult &LHS,
   // C99 6.5.15p5: "If both operands have void type, the result has void type."
   // The following || allows only one side to be void (a GCC-ism).
   if (LHSTy->isVoidType() || RHSTy->isVoidType()) {
-    QualType ResTy;
     if (LHSTy->isVoidType() && RHSTy->isVoidType()) {
-      ResTy = Context.getCommonSugaredType(LHSTy, RHSTy);
+      // UsualArithmeticConversions already handled the case where both sides
+      // are the same type.
     } else if (RHSTy->isVoidType()) {
       ResTy = RHSTy;
       Diag(RHS.get()->getBeginLoc(), diag::ext_typecheck_cond_one_void)
@@ -21722,7 +21729,7 @@ ExprResult Sema::CheckPlaceholderExpr(Expr *E) {
 
   switch (placeholderType->getKind()) {
   case BuiltinType::UnresolvedTemplate: {
-    auto *ULE = cast<UnresolvedLookupExpr>(E);
+    auto *ULE = cast<UnresolvedLookupExpr>(E->IgnoreParens());
     const DeclarationNameInfo &NameInfo = ULE->getNameInfo();
     // There's only one FoundDecl for UnresolvedTemplate type. See
     // BuildTemplateIdExpr.
@@ -21889,7 +21896,7 @@ ExprResult Sema::CheckPlaceholderExpr(Expr *E) {
     // shouldn't need to do any further diagnostic here.
     if (!E->containsErrors())
       Diag(E->getBeginLoc(), diag::err_array_section_use)
-          << cast<ArraySectionExpr>(E)->isOMPArraySection();
+          << cast<ArraySectionExpr>(E->IgnoreParens())->isOMPArraySection();
     return ExprError();
 
   // Expressions of unknown type.

@@ -9,7 +9,8 @@
 // RUN: 2>&1 | FileCheck %s --check-prefixes=CHECK-SPIRV-BASE,CHECK-SPIRV-RDC
 
 // CHECK-SPIRV-BASE: # "spirv64-amd-amdhsa" - "clang", inputs: ["[[INPUT:.+]]"], output: "[[HIPI:.+\.hipi]]"
-// CHECK-SPIRV-BASE: # "spirv64-amd-amdhsa" - "clang", inputs: ["[[HIPI]]"], output: "[[SPV_BC:.+\.bc]]"
+// CHECK-SPIRV-BASE: # "spirv64-amd-amdhsa" - "clang", inputs: ["[[HIPI]]"], output: "[[SPV_TMP_BC:.+\.tmp\.bc]]"
+// CHECK-SPIRV-BASE: # "spirv64-amd-amdhsa" - "clang", inputs: ["[[SPV_TMP_BC]]"], output: "[[SPV_BC:.+\.bc]]"
 // CHECK-SPIRV: # "spirv64-amd-amdhsa" - "Offload::Packager", inputs: ["[[SPV_BC]]"], output: "[[HIP_OUT:.+\.out]]"
 // CHECK-SPIRV: # "spirv64-amd-amdhsa" - "Offload::Linker", inputs: ["[[HIP_OUT]]"], output: "[[HIPFB:.+\.hipfb]]"
 // CHECK-SPIRV-RDC: # "x86_64-unknown-linux-gnu" - "Offload::Packager", inputs: ["[[SPV_BC]]"], output: "[[HIP_OUT:.+\.out]]"

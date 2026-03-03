@@ -3,7 +3,9 @@
 (* This is currently a subset of the final DIL Language, matching the current
    DIL implementation. *)
 
-expression = cast_expression;
+expression = additive_expression ;
+
+additive_expression = cast_expression {"+" cast_expression} ;
 
 cast_expression = unary_expression
                 | "(" type_id ")" cast_expression;

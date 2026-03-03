@@ -60,7 +60,7 @@ declare signext i32 @callout(i32 signext)
 ; CHECK:                in#S)
 ; CHECK: stdin#S XATTR LINKAGE(XPLINK),REFERENCE(DATA),SCOPE(SECTION)
 ; CHECK: * Offset 0 pointer to function descriptor DoFunc
-; CHECK:  DC VD(L#DoFunc@indirect0)
+; CHECK:  DC VD(DoFunc@indirect)
 ; CHECK: * Offset 8 function descriptor of Caller
 ; CHECK:  DC RD(Caller)
 ; CHECK:  DC VD(Caller)
@@ -71,3 +71,7 @@ declare signext i32 @callout(i32 signext)
 ; CHECK: * Offset 40 function descriptor of callout
 ; CHECK:  DC RD(callout)
 ; CHECK:  DC VD(callout)
+; CHECK: EXTRN DoFunc@indirect
+; CHECK: DoFunc@indirect XATTR LINKAGE(XPLINK),REFERENCE(CODE,INDIRECT),SCOPE(EX
+; CHECK:                PORT)
+; CHECK: DoFunc@indirect ALIAS C'DoFunc'

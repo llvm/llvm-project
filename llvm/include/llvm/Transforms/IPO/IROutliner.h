@@ -406,6 +406,13 @@ private:
       // TODO: Update the outliner to capture whether the outlined function
       // needs these extra attributes.
 
+      // `nomerge` states that calls to this function should never be merged
+      // during optimisation. Outlining would have the effect of merging
+      // callsites from separate functions into a single callsite in the
+      // outlined function.
+      if (CI.hasFnAttr(Attribute::NoMerge))
+        return false;
+
       // Functions marked with the swifttailcc and tailcc calling conventions
       // require special handling when outlining musttail functions.  The
       // calling convention must be passed down to the outlined function as

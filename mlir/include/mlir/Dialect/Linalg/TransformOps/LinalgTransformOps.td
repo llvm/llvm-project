@@ -717,7 +717,7 @@ def LowerUnPackOp : Op<Transform_Dialect, "structured.lower_unpack", [
                          ReportTrackingListenerFailuresOpTrait]> {
   let description = [{
     Lower a linalg.unpack into empty + linalg.transpose + tensor.collapse_shape +
-    tensor.extract_slice.
+    tensor.extract_slice + linalg.copy.
 
     #### Return modes
 
@@ -725,7 +725,7 @@ def LowerUnPackOp : Op<Transform_Dialect, "structured.lower_unpack", [
     operation produces a silenceable failure if the rewrite fails for any
     reason. If all the operations referred to by the `target` are rewritten,
     the transform succeeds. Return handles to the newly produced empty,
-    transpose, collapse_shape and extract_slice ops.
+    transpose, collapse_shape, extract_slice and copy ops.
   }];
 
   let arguments = (ins Transform_ConcreteOpType<"linalg.unpack">:$target,
@@ -733,7 +733,8 @@ def LowerUnPackOp : Op<Transform_Dialect, "structured.lower_unpack", [
   let results = (outs Transform_ConcreteOpType<"tensor.empty">:$empty_op,
                       Transform_ConcreteOpType<"linalg.transpose">:$transpose_op,
                       Transform_ConcreteOpType<"tensor.collapse_shape">:$collapse_shape_op,
-                      Transform_ConcreteOpType<"tensor.extract_slice">:$extract_slice_op);
+                      Transform_ConcreteOpType<"tensor.extract_slice">:$extract_slice_op,
+                      Transform_ConcreteOpType<"linalg.copy">:$copy_op);
   let assemblyFormat = [{
     $target attr-dict `:` functional-type(operands, results)
   }];

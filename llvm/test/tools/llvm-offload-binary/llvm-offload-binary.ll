@@ -1,6 +1,9 @@
 ; RUN: llvm-offload-binary -o %t --image=file=%s,arch=abc,triple=x-y-z
 ; RUN: llvm-objdump --offloading %t | FileCheck %s
 ; RUN: llvm-offload-binary %t --image=file=%t2,arch=abc,triple=x-y-z
+; RUN: echo "-o %t --image=file=%s,arch=abc,triple=x-y-z" > %t.rsp
+; RUN: llvm-offload-binary @%t.rsp
+; RUN: llvm-objdump --offloading %t | FileCheck %s
 ; RUN: diff %s %t2
 
 ;      CHECK: OFFLOADING IMAGE [0]:

@@ -254,7 +254,7 @@ LLVMInitializeAArch64Target() {
   initializeAArch64ConditionOptimizerPass(PR);
   initializeAArch64DeadRegisterDefinitionsPass(PR);
   initializeAArch64ExpandPseudoPass(PR);
-  initializeAArch64LoadStoreOptPass(PR);
+  initializeAArch64LoadStoreOptLegacyPass(PR);
   initializeAArch64MIPeepholeOptPass(PR);
   initializeAArch64SIMDInstrOptPass(PR);
   initializeAArch64O0PreLegalizerCombinerPass(PR);
@@ -586,6 +586,8 @@ private:
 } // end anonymous namespace
 
 void AArch64TargetMachine::registerPassBuilderCallbacks(PassBuilder &PB) {
+#define GET_PASS_REGISTRY "AArch64PassRegistry.def"
+#include "llvm/Passes/TargetPassRegistry.inc"
 
   PB.registerLateLoopOptimizationsEPCallback(
       [=](LoopPassManager &LPM, OptimizationLevel Level) {
@@ -877,7 +879,7 @@ void AArch64PassConfig::addPreSched2() {
   // Use load/store pair instructions when possible.
   if (TM->getOptLevel() != CodeGenOptLevel::None) {
     if (EnableLoadStoreOpt)
-      addPass(createAArch64LoadStoreOptimizationPass());
+      addPass(createAArch64LoadStoreOptLegacyPass());
   }
   // Emit KCFI checks for indirect calls.
   addPass(createKCFIPass());
@@ -900,7 +902,7 @@ void AArch64PassConfig::addPreEmitPass() {
   // at O3, where the Tail Duplication Threshold is set to 4 instructions.
   // Run the load/store optimizer once more.
   if (TM->getOptLevel() >= CodeGenOptLevel::Aggressive && EnableLoadStoreOpt)
-    addPass(createAArch64LoadStoreOptimizationPass());
+    addPass(createAArch64LoadStoreOptLegacyPass());
 
   if (TM->getOptLevel() >= CodeGenOptLevel::Aggressive &&
       EnableAArch64CopyPropagation)

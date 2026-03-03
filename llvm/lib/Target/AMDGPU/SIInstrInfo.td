@@ -900,10 +900,13 @@ def as_hw_round_mode : SDNodeXForm<timm, [{
 }]>;
 
 def SupportedRoundMode : TImmLeaf<i32, [{
-  return Imm == (int)RoundingMode::TowardZero ||
-         Imm == (int)RoundingMode::NearestTiesToEven ||
+  return Imm == (int)RoundingMode::NearestTiesToEven ||
          Imm == (int)RoundingMode::TowardPositive ||
          Imm == (int)RoundingMode::TowardNegative;
+}]>;
+
+def RtzRoundMode : TImmLeaf<i32, [{
+  return Imm == (int)RoundingMode::TowardZero;
 }]>;
 
 def VOP3PModsNeg : SDNodeXForm<timm, [{

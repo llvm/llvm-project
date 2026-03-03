@@ -1104,18 +1104,6 @@ class APFloat : public APFloatBase {
   explicit APFloat(DoubleAPFloat F, const fltSemantics &S)
       : U(std::move(F), S) {}
 
-  // Compares the absolute value of this APFloat with another.  Both operands
-  // must be finite non-zero.
-  cmpResult compareAbsoluteValue(const APFloat &RHS) const {
-    assert(&getSemantics() == &RHS.getSemantics() &&
-           "Should only compare APFloats with the same semantics");
-    if (usesLayout<IEEEFloat>(getSemantics()))
-      return U.IEEE.compareAbsoluteValue(RHS.U.IEEE);
-    if (usesLayout<DoubleAPFloat>(getSemantics()))
-      return U.Double.compareAbsoluteValue(RHS.U.Double);
-    llvm_unreachable("Unexpected semantics");
-  }
-
 public:
   APFloat(const fltSemantics &Semantics) : U(Semantics) {}
   LLVM_ABI APFloat(const fltSemantics &Semantics, StringRef S);
@@ -1471,6 +1459,18 @@ public:
       return U.IEEE.compare(RHS.U.IEEE);
     if (usesLayout<DoubleAPFloat>(getSemantics()))
       return U.Double.compare(RHS.U.Double);
+    llvm_unreachable("Unexpected semantics");
+  }
+
+  // Compares the absolute value of this APFloat with another.  Both operands
+  // must be finite non-zero.
+  cmpResult compareAbsoluteValue(const APFloat &RHS) const {
+    assert(&getSemantics() == &RHS.getSemantics() &&
+           "Should only compare APFloats with the same semantics");
+    if (usesLayout<IEEEFloat>(getSemantics()))
+      return U.IEEE.compareAbsoluteValue(RHS.U.IEEE);
+    if (usesLayout<DoubleAPFloat>(getSemantics()))
+      return U.Double.compareAbsoluteValue(RHS.U.Double);
     llvm_unreachable("Unexpected semantics");
   }
 

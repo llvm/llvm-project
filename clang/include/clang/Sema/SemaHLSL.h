@@ -132,6 +132,8 @@ public:
   bool ActOnUninitializedVarDecl(VarDecl *D);
   void ActOnEndOfTranslationUnit(TranslationUnitDecl *TU);
   void CheckEntryPoint(FunctionDecl *FD);
+
+  // Return true if everything is ok; returns false if there was an error.
   bool CheckResourceBinOp(BinaryOperatorKind Opc, Expr *LHSExpr, Expr *RHSExpr,
                           SourceLocation Loc);
 
@@ -234,6 +236,12 @@ private:
   // List of all resource bindings
   ResourceBindings Bindings;
 
+  // Map of local resource variables to their assigned global resources.
+  //
+  // The binding can be a nullptr, in which case, the variable has yet to be
+  // initialized or assigned to.
+  llvm::DenseMap<const VarDecl *, const DeclBindingInfo *> Assigns;
+
   // Global declaration collected for the $Globals default constant
   // buffer which will be created at the end of the translation unit.
   llvm::SmallVector<Decl *> DefaultCBufferDecls;
@@ -313,6 +321,15 @@ private:
 
   bool initGlobalResourceDecl(VarDecl *VD);
   bool initGlobalResourceArrayDecl(VarDecl *VD);
+
+  // Infer a common global binding info for an Expr
+  //
+  // Returns std::nullopt if the expr refers to non-unique global bindings.
+  // Returns nullptr if it refer to any global binding, otherwise it returns
+  // a reference to the global binding info.
+  std::optional<const DeclBindingInfo *> inferGlobalBinding(Expr *E);
+
+  void trackLocalResource(VarDecl *VDecl, Expr *E);
 };
 
 } // namespace clang

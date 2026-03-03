@@ -1027,30 +1027,30 @@ attributes #1 = { "amdgpu-waves-per-eu"="1,1" }
 !4 = !{!"a256"}
 
 ;.
-; CHECK: attributes #[[ATTR0]] = { "amdgpu-agpr-alloc"="0" "target-cpu"="gfx90a" "uniform-work-group-size"="false" }
-; CHECK: attributes #[[ATTR1]] = { "amdgpu-agpr-alloc"="1" "target-cpu"="gfx90a" "uniform-work-group-size"="false" }
-; CHECK: attributes #[[ATTR2]] = { "amdgpu-agpr-alloc"="2" "target-cpu"="gfx90a" "uniform-work-group-size"="false" }
-; CHECK: attributes #[[ATTR3]] = { "target-cpu"="gfx90a" "uniform-work-group-size"="false" }
+; CHECK: attributes #[[ATTR0]] = { "amdgpu-agpr-alloc"="0" "target-cpu"="gfx90a" }
+; CHECK: attributes #[[ATTR1]] = { "amdgpu-agpr-alloc"="1" "target-cpu"="gfx90a" }
+; CHECK: attributes #[[ATTR2]] = { "amdgpu-agpr-alloc"="2" "target-cpu"="gfx90a" }
+; CHECK: attributes #[[ATTR3]] = { "target-cpu"="gfx90a" }
 ; CHECK: attributes #[[ATTR4:[0-9]+]] = { convergent nocallback nocreateundeforpoison nofree nosync nounwind willreturn memory(none) "target-cpu"="gfx90a" }
-; CHECK: attributes #[[ATTR5]] = { "amdgpu-agpr-alloc"="4" "target-cpu"="gfx90a" "uniform-work-group-size"="false" }
-; CHECK: attributes #[[ATTR6]] = { "amdgpu-agpr-alloc"="6" "target-cpu"="gfx90a" "uniform-work-group-size"="false" }
-; CHECK: attributes #[[ATTR7]] = { "amdgpu-agpr-alloc"="5" "target-cpu"="gfx90a" "uniform-work-group-size"="false" }
-; CHECK: attributes #[[ATTR8]] = { "amdgpu-agpr-alloc"="14" "target-cpu"="gfx90a" "uniform-work-group-size"="false" }
-; CHECK: attributes #[[ATTR9]] = { "amdgpu-agpr-alloc"="256" "target-cpu"="gfx90a" "uniform-work-group-size"="false" }
-; CHECK: attributes #[[ATTR10]] = { "amdgpu-agpr-alloc"="32" "target-cpu"="gfx90a" "uniform-work-group-size"="false" }
-; CHECK: attributes #[[ATTR11]] = { "amdgpu-agpr-alloc"="9" "target-cpu"="gfx90a" "uniform-work-group-size"="false" }
-; CHECK: attributes #[[ATTR12]] = { "amdgpu-agpr-alloc"="64" "target-cpu"="gfx90a" "uniform-work-group-size"="false" }
-; CHECK: attributes #[[ATTR13]] = { "amdgpu-agpr-alloc"="49" "target-cpu"="gfx90a" "uniform-work-group-size"="false" }
-; CHECK: attributes #[[ATTR14]] = { "amdgpu-agpr-alloc"="33" "target-cpu"="gfx90a" "uniform-work-group-size"="false" }
-; CHECK: attributes #[[ATTR15]] = { "amdgpu-agpr-alloc"="8" "target-cpu"="gfx90a" "uniform-work-group-size"="false" }
-; CHECK: attributes #[[ATTR16]] = { "amdgpu-agpr-alloc"="13" "target-cpu"="gfx90a" "uniform-work-group-size"="false" }
-; CHECK: attributes #[[ATTR17]] = { "amdgpu-agpr-alloc"="56" "amdgpu-no-cluster-id-x" "amdgpu-no-cluster-id-y" "amdgpu-no-cluster-id-z" "amdgpu-no-completion-action" "amdgpu-no-default-queue" "amdgpu-no-dispatch-id" "amdgpu-no-dispatch-ptr" "amdgpu-no-flat-scratch-init" "amdgpu-no-heap-ptr" "amdgpu-no-hostcall-ptr" "amdgpu-no-implicitarg-ptr" "amdgpu-no-lds-kernel-id" "amdgpu-no-multigrid-sync-arg" "amdgpu-no-queue-ptr" "amdgpu-no-workgroup-id-x" "amdgpu-no-workgroup-id-y" "amdgpu-no-workgroup-id-z" "amdgpu-no-workitem-id-x" "amdgpu-no-workitem-id-y" "amdgpu-no-workitem-id-z" "target-cpu"="gfx90a" "uniform-work-group-size"="false" }
-; CHECK: attributes #[[ATTR18]] = { "amdgpu-agpr-alloc"="58" "target-cpu"="gfx90a" "uniform-work-group-size"="false" }
-; CHECK: attributes #[[ATTR19]] = { "amdgpu-agpr-alloc"="56" "target-cpu"="gfx90a" "uniform-work-group-size"="false" }
-; CHECK: attributes #[[ATTR20]] = { "amdgpu-agpr-alloc"="60" "target-cpu"="gfx90a" "uniform-work-group-size"="false" }
-; CHECK: attributes #[[ATTR21]] = { "amdgpu-agpr-alloc"="256" "amdgpu-waves-per-eu"="1,1" "target-cpu"="gfx90a" "uniform-work-group-size"="false" }
-; CHECK: attributes #[[ATTR22]] = { "amdgpu-agpr-alloc"="7" "target-cpu"="gfx90a" "uniform-work-group-size"="false" }
-; CHECK: attributes #[[ATTR23]] = { "amdgpu-agpr-alloc"="3" "target-cpu"="gfx90a" "uniform-work-group-size"="false" }
+; CHECK: attributes #[[ATTR5]] = { "amdgpu-agpr-alloc"="4" "target-cpu"="gfx90a" }
+; CHECK: attributes #[[ATTR6]] = { "amdgpu-agpr-alloc"="6" "target-cpu"="gfx90a" }
+; CHECK: attributes #[[ATTR7]] = { "amdgpu-agpr-alloc"="5" "target-cpu"="gfx90a" }
+; CHECK: attributes #[[ATTR8]] = { "amdgpu-agpr-alloc"="14" "target-cpu"="gfx90a" }
+; CHECK: attributes #[[ATTR9]] = { "amdgpu-agpr-alloc"="256" "target-cpu"="gfx90a" }
+; CHECK: attributes #[[ATTR10]] = { "amdgpu-agpr-alloc"="32" "target-cpu"="gfx90a" }
+; CHECK: attributes #[[ATTR11]] = { "amdgpu-agpr-alloc"="9" "target-cpu"="gfx90a" }
+; CHECK: attributes #[[ATTR12]] = { "amdgpu-agpr-alloc"="64" "target-cpu"="gfx90a" }
+; CHECK: attributes #[[ATTR13]] = { "amdgpu-agpr-alloc"="49" "target-cpu"="gfx90a" }
+; CHECK: attributes #[[ATTR14]] = { "amdgpu-agpr-alloc"="33" "target-cpu"="gfx90a" }
+; CHECK: attributes #[[ATTR15]] = { "amdgpu-agpr-alloc"="8" "target-cpu"="gfx90a" }
+; CHECK: attributes #[[ATTR16]] = { "amdgpu-agpr-alloc"="13" "target-cpu"="gfx90a" }
+; CHECK: attributes #[[ATTR17]] = { "amdgpu-agpr-alloc"="56" "amdgpu-no-cluster-id-x" "amdgpu-no-cluster-id-y" "amdgpu-no-cluster-id-z" "amdgpu-no-completion-action" "amdgpu-no-default-queue" "amdgpu-no-dispatch-id" "amdgpu-no-dispatch-ptr" "amdgpu-no-flat-scratch-init" "amdgpu-no-heap-ptr" "amdgpu-no-hostcall-ptr" "amdgpu-no-implicitarg-ptr" "amdgpu-no-lds-kernel-id" "amdgpu-no-multigrid-sync-arg" "amdgpu-no-queue-ptr" "amdgpu-no-workgroup-id-x" "amdgpu-no-workgroup-id-y" "amdgpu-no-workgroup-id-z" "amdgpu-no-workitem-id-x" "amdgpu-no-workitem-id-y" "amdgpu-no-workitem-id-z" "target-cpu"="gfx90a" }
+; CHECK: attributes #[[ATTR18]] = { "amdgpu-agpr-alloc"="58" "target-cpu"="gfx90a" }
+; CHECK: attributes #[[ATTR19]] = { "amdgpu-agpr-alloc"="56" "target-cpu"="gfx90a" }
+; CHECK: attributes #[[ATTR20]] = { "amdgpu-agpr-alloc"="60" "target-cpu"="gfx90a" }
+; CHECK: attributes #[[ATTR21]] = { "amdgpu-agpr-alloc"="256" "amdgpu-waves-per-eu"="1,1" "target-cpu"="gfx90a" }
+; CHECK: attributes #[[ATTR22]] = { "amdgpu-agpr-alloc"="7" "target-cpu"="gfx90a" }
+; CHECK: attributes #[[ATTR23]] = { "amdgpu-agpr-alloc"="3" "target-cpu"="gfx90a" }
 ; CHECK: attributes #[[ATTR24:[0-9]+]] = { nocallback nofree nosync nounwind speculatable willreturn memory(none) "target-cpu"="gfx90a" }
 ; CHECK: attributes #[[ATTR25:[0-9]+]] = { nocallback nofree nounwind willreturn memory(argmem: readwrite) "target-cpu"="gfx90a" }
 ; CHECK: attributes #[[ATTR26:[0-9]+]] = { nocallback nofree nosync nounwind willreturn memory(read) "target-cpu"="gfx90a" }

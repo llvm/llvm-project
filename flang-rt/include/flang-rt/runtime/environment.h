@@ -74,6 +74,7 @@ struct ExecutionEnvironment {
   bool defaultUTF8{false}; // DEFAULT_UTF8
   bool checkPointerDeallocation{true}; // FORT_CHECK_POINTER_DEALLOCATION
   bool truncateStream{true}; // FORT_TRUNCATE_STREAM
+  bool noEmptyAllocation{false}; // FORT_NO_EMPTY_ALLOCATION
 
   enum InternalDebugging { WorkQueue = 1 };
   int internalDebugging{0}; // FLANG_RT_DEBUG

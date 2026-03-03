@@ -124,10 +124,10 @@ define { i128, i8 } @muloti_test(i128 %l, i128 %r) unnamed_addr #0 {
 ; THUMBV6-NEXT:    orrs r7, r1
 ; THUMBV6-NEXT:    ldr r1, [sp, #24] @ 4-byte Reload
 ; THUMBV6-NEXT:    adds r0, r0, r1
-; THUMBV6-NEXT:    str r0, [sp, #32] @ 4-byte Spill
+; THUMBV6-NEXT:    str r0, [sp, #40] @ 4-byte Spill
 ; THUMBV6-NEXT:    ldr r0, [sp, #20] @ 4-byte Reload
 ; THUMBV6-NEXT:    adcs r4, r0
-; THUMBV6-NEXT:    str r4, [sp, #40] @ 4-byte Spill
+; THUMBV6-NEXT:    str r4, [sp, #32] @ 4-byte Spill
 ; THUMBV6-NEXT:    ldr r0, [sp, #44] @ 4-byte Reload
 ; THUMBV6-NEXT:    mov r1, r5
 ; THUMBV6-NEXT:    ldr r2, [sp, #56] @ 4-byte Reload
@@ -156,12 +156,12 @@ define { i128, i8 } @muloti_test(i128 %l, i128 %r) unnamed_addr #0 {
 ; THUMBV6-NEXT:    bl __aeabi_lmul
 ; THUMBV6-NEXT:    adds r0, r0, r4
 ; THUMBV6-NEXT:    adcs r1, r6
-; THUMBV6-NEXT:    ldr r2, [sp, #32] @ 4-byte Reload
+; THUMBV6-NEXT:    ldr r2, [sp, #40] @ 4-byte Reload
 ; THUMBV6-NEXT:    adds r0, r0, r2
+; THUMBV6-NEXT:    ldr r2, [sp, #32] @ 4-byte Reload
+; THUMBV6-NEXT:    adcs r1, r2
 ; THUMBV6-NEXT:    ldr r2, [sp, #48] @ 4-byte Reload
 ; THUMBV6-NEXT:    str r0, [r2, #8]
-; THUMBV6-NEXT:    ldr r0, [sp, #40] @ 4-byte Reload
-; THUMBV6-NEXT:    adcs r1, r0
 ; THUMBV6-NEXT:    str r1, [r2, #12]
 ; THUMBV6-NEXT:    adcs r5, r5
 ; THUMBV6-NEXT:    orrs r5, r7

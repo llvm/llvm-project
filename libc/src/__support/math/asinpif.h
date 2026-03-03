@@ -9,6 +9,7 @@
 #ifndef LLVM_LIBC_SRC___SUPPORT_MATH_ASINPIF_H
 #define LLVM_LIBC_SRC___SUPPORT_MATH_ASINPIF_H
 
+#include "inv_trigf_utils.h"
 #include "src/__support/FPUtil/FEnvImpl.h"
 #include "src/__support/FPUtil/FPBits.h"
 #include "src/__support/FPUtil/PolyEval.h"
@@ -66,50 +67,14 @@ LIBC_INLINE float asinpif(float x) {
     return r.value();
 #endif // !LIBC_MATH_HAS_SKIP_ACCURATE_PASS
 
-  // the coefficients for the polynomial approximation of asin(x)/(pi*x) in the
-  // range [0, 0.5] extracted using Sollya.
-  //
-  // Sollya code:
-  // > prec = 200;
-  // > display = hexadecimal;
-  // > g = asin(x) / (pi * x);
-  // > P = fpminimax(g, [|0, 2, 4, 6, 8, 10, 12, 14, 16, 18, 20|],
-  // >              [|D...|], [0, 0.5]);
-  // > for i from 0 to degree(P) do coeff(P, i);
-  // > print("Error:", dirtyinfnorm(P - g, [1e-30; 0.25]));
-  // Error: 0x1.45c281e1cf9b58p-50 ~= 2^−49.652
-  //
-  // Non-zero coefficients (even powers only):
-  constexpr double ASINPI_POLY_COEFFS[] = {
-      0x1.45f306dc9c881p-2,  // x^0
-      0x1.b2995e7b7e756p-5,  // x^2
-      0x1.8723a1d12f828p-6,  // x^4
-      0x1.d1a45564b9545p-7,  // x^6
-      0x1.3ce4ceaa0e1e9p-7,  // x^8
-      0x1.d2c305898ea13p-8,  // x^10
-      0x1.692212e27a5f9p-8,  // x^12
-      0x1.2b22cc744d25bp-8,  // x^14
-      0x1.8427b864479ffp-9,  // x^16
-      0x1.815522d7a2bf1p-8,  // x^18
-      -0x1.f6df98438aef4p-9, // x^20
-      0x1.4b50c2eb13708p-7   // x^22
-  };
-  // Evaluates P1(v2) = c1 + c2*v2 + c3*v2^2 + ... (tail of P without c0)
-  auto asinpi_polyeval = [&](double v2) -> double {
-    return fputil::polyeval(
-        v2, ASINPI_POLY_COEFFS[1], ASINPI_POLY_COEFFS[2], ASINPI_POLY_COEFFS[3],
-        ASINPI_POLY_COEFFS[4], ASINPI_POLY_COEFFS[5], ASINPI_POLY_COEFFS[6],
-        ASINPI_POLY_COEFFS[7], ASINPI_POLY_COEFFS[8], ASINPI_POLY_COEFFS[9],
-        ASINPI_POLY_COEFFS[10], ASINPI_POLY_COEFFS[11]);
-  };
-
   // if |x| <= 0.5:
   //   asinpi(x) = x * (c0 + x^2 * P1(x^2))
   if (LIBC_UNLIKELY(x_abs <= 0.5)) {
     double x_d = fputil::cast<double>(x);
     double v2 = x_d * x_d;
-    double result = x_d * fputil::multiply_add(v2, asinpi_polyeval(v2),
-                                               ASINPI_POLY_COEFFS[0]);
+    double result = x_d * fputil::multiply_add(
+                              v2, inv_trigf_utils_internal::asinpi_eval(v2),
+                              inv_trigf_utils_internal::ASINPI_COEFFS[0]);
     return fputil::cast<float>(result);
   }
 
@@ -131,14 +96,16 @@ LIBC_INLINE float asinpif(float x) {
   constexpr double ONE_OVER_PI_LO = -0x1.6b01ec5417056p-56;
   // C0_MINUS_1OVERPI = c0 - 1/pi = DELTA_C0 + ONE_OVER_PI_LO
   constexpr double C0_MINUS_1OVERPI =
-      (ASINPI_POLY_COEFFS[0] - ONE_OVER_PI_HI) + ONE_OVER_PI_LO;
+      (inv_trigf_utils_internal::ASINPI_COEFFS[0] - ONE_OVER_PI_HI) +
+      ONE_OVER_PI_LO;
 
   double u = fputil::multiply_add(-0.5, x_abs, 0.5);
   double sqrt_u = fputil::sqrt<double>(u);
   double neg2_sqrt_u = -2.0 * sqrt_u;
 
   // tail = (c0 - 1/pi) + u * P1(u)
-  double tail = fputil::multiply_add(u, asinpi_polyeval(u), C0_MINUS_1OVERPI);
+  double tail = fputil::multiply_add(
+      u, inv_trigf_utils_internal::asinpi_eval(u), C0_MINUS_1OVERPI);
 
   double result_hi = fputil::multiply_add(neg2_sqrt_u, ONE_OVER_PI_HI, 0.5);
   double result = fputil::multiply_add(tail, neg2_sqrt_u, result_hi);

@@ -214,7 +214,8 @@ XeGPUBlockingPass::getTileShape(Operation *op) const {
     return getTileShape(op->getOpOperand(0));
 
   if (isa<vector::TransposeOp, vector::BroadcastOp, vector::StepOp,
-          vector::ConstantMaskOp, vector::CreateMaskOp>(op))
+          vector::ShapeCastOp, vector::ConstantMaskOp, vector::CreateMaskOp>(
+          op))
     return getTileShape(op->getOpResult(0));
 
   return std::nullopt;

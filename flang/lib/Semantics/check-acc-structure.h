@@ -115,6 +115,7 @@ private:
 
   llvm::SmallDenseMap<Symbol *, llvm::acc::Clause> declareSymbols;
   unsigned loopNestLevel = 0;
+  bool hasAccRoutineDirective = false;
 };
 
 } // namespace Fortran::semantics

@@ -7,27 +7,10 @@
 //===----------------------------------------------------------------------===//
 
 #include "clang/Analysis/Scalable/Model/EntityLinkage.h"
-#include "llvm/Support/ErrorHandling.h"
+
+#include "../ModelStringConversions.h"
 
 namespace clang::ssaf {
-
-llvm::raw_ostream &operator<<(llvm::raw_ostream &OS,
-                              EntityLinkage::LinkageType Linkage) {
-  switch (Linkage) {
-  case EntityLinkage::LinkageType::None:
-    return OS << "None";
-  case EntityLinkage::LinkageType::Internal:
-    return OS << "Internal";
-  case EntityLinkage::LinkageType::External:
-    return OS << "External";
-  }
-  llvm_unreachable("Unhandled EntityLinkage::LinkageType variant");
-}
-
-llvm::raw_ostream &operator<<(llvm::raw_ostream &OS,
-                              const EntityLinkage &Linkage) {
-  return OS << "EntityLinkage(" << Linkage.getLinkage() << ")";
-}
 
 bool EntityLinkage::operator==(const EntityLinkage &Other) const {
   return Linkage == Other.Linkage;
@@ -35,6 +18,16 @@ bool EntityLinkage::operator==(const EntityLinkage &Other) const {
 
 bool EntityLinkage::operator!=(const EntityLinkage &Other) const {
   return !(*this == Other);
+}
+
+llvm::raw_ostream &operator<<(llvm::raw_ostream &OS,
+                              EntityLinkageType Linkage) {
+  return OS << entityLinkageTypeToString(Linkage);
+}
+
+llvm::raw_ostream &operator<<(llvm::raw_ostream &OS,
+                              const EntityLinkage &Linkage) {
+  return OS << "EntityLinkage(" << Linkage.getLinkage() << ")";
 }
 
 } // namespace clang::ssaf

@@ -3,6 +3,7 @@
 // REQUIRES: webassembly-registered-target
 
 static __externref_t table[0];
+static const __externref_t const_table[0];
 
 // CHECK-LABEL: define {{[^@]+}}@test_builtin_wasm_table_get
 // CHECK-SAME: (i32 noundef [[INDEX:%.*]]) #[[ATTR0:[0-9]+]] {
@@ -14,14 +15,38 @@ __externref_t test_builtin_wasm_table_get(int index) {
   return __builtin_wasm_table_get(table, index);
 }
 
+// CHECK-LABEL: define {{[^@]+}}@test_builtin_wasm_table_get_const
+// CHECK-SAME: (i32 noundef [[INDEX:%.*]]) #[[ATTR0]] {
+// CHECK-NEXT:  entry:
+// CHECK-NEXT:    [[TMP0:%.*]] = call ptr addrspace(10) @llvm.wasm.table.get.externref(ptr addrspace(1) @table, i32 [[INDEX]])
+// CHECK-NEXT:    ret ptr addrspace(10) [[TMP0]]
+//
+__externref_t test_builtin_wasm_table_get_const(const int index) {
+  return __builtin_wasm_table_get(table, index);
+}
+
 // CHECK-LABEL: define {{[^@]+}}@test_builtin_wasm_table_set
 // CHECK-SAME: (i32 noundef [[INDEX:%.*]], ptr addrspace(10) [[REF:%.*]]) #[[ATTR0]] {
 // CHECK-NEXT:  entry:
+// CHECK-NEXT:    call void @llvm.wasm.table.set.externref(ptr addrspace(1) @const_table, i32 [[INDEX]], ptr addrspace(10) [[REF]])
 // CHECK-NEXT:    call void @llvm.wasm.table.set.externref(ptr addrspace(1) @table, i32 [[INDEX]], ptr addrspace(10) [[REF]])
 // CHECK-NEXT:    ret void
 //
-void test_builtin_wasm_table_set(int index, __externref_t ref) {
+void test_builtin_wasm_table_set(const int index, __externref_t ref) {
+  __builtin_wasm_table_set(const_table, index, ref);
   return __builtin_wasm_table_set(table, index, ref);
+}
+
+// CHECK-LABEL: define {{[^@]+}}@test_builtin_wasm_table_set_const
+// CHECK-SAME: (i32 noundef [[INDEX:%.*]], ptr addrspace(10) [[REF:%.*]]) #[[ATTR0]] {
+// CHECK-NEXT:  entry:
+// CHECK-NEXT:    call void @llvm.wasm.table.set.externref(ptr addrspace(1) @table, i32 [[INDEX]], ptr addrspace(10) [[REF]])
+// CHECK-NEXT:    call void @llvm.wasm.table.set.externref(ptr addrspace(1) @const_table, i32 [[INDEX]], ptr addrspace(10) [[REF]])
+// CHECK-NEXT:    ret void
+//
+void test_builtin_wasm_table_set_const(const int index, const __externref_t ref) {
+  __builtin_wasm_table_set(table, index, ref);
+  return __builtin_wasm_table_set(const_table, index, ref);
 }
 
 // CHECK-LABEL: define {{[^@]+}}@test_builtin_wasm_table_size

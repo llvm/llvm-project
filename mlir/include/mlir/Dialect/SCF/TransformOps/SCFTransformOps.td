@@ -392,6 +392,34 @@ def LoopCoalesceOp : Op<Transform_Dialect, "loop.coalesce", [
   }];
 }
 
+def LoopCoalesceNestedOp : Op<Transform_Dialect, "loop.coalesce_nested", [
+  FunctionalStyleTransformOpTrait, MemoryEffectsOpInterface,
+  TransformOpInterface, TransformEachOpTrait]> {
+  let summary = "Coalesces nested loops including imperfectly nested ones";
+  let description = [{
+    Given a loop, collects all nested loops (including imperfectly nested
+    loops with operations between them) and coalesces them directly using
+    coalesceLoops.
+
+    #### Return modes
+
+    The return handle points to the coalesced loop.
+  }];
+  let arguments = (ins TransformHandleTypeInterface:$target);
+  let results = (outs TransformHandleTypeInterface:$transformed);
+
+  let assemblyFormat =
+      "$target attr-dict `:` functional-type($target, $transformed)";
+
+  let extraClassDeclaration = [{
+    ::mlir::DiagnosedSilenceableFailure applyToOne(
+        ::mlir::transform::TransformRewriter &rewriter,
+        ::mlir::Operation *target,
+        ::mlir::transform::ApplyToEachResultList &results,
+        ::mlir::transform::TransformState &state);
+  }];
+}
+
 def TakeAssumedBranchOp : Op<Transform_Dialect, "scf.take_assumed_branch", [
   DeclareOpInterfaceMethods<MemoryEffectsOpInterface>,
   TransformOpInterface, TransformEachOpTrait]> {

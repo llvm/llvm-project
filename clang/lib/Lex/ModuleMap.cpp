@@ -621,6 +621,16 @@ ModuleMap::KnownHeader ModuleMap::findModuleForHeader(FileEntryRef File,
   return MakeResult(findOrCreateModuleForHeaderInUmbrellaDir(File));
 }
 
+OptionalFileEntryRef ModuleMap::findUmbrellaHeaderForModule(
+    Module *M, std::string NameAsWritten,
+    SmallVectorImpl<char> &RelativePathName) {
+  Module::UnresolvedHeaderDirective Header;
+  Header.FileName = std::move(NameAsWritten);
+  Header.IsUmbrella = true;
+  bool NeedsFramework;
+  return findHeader(M, Header, RelativePathName, NeedsFramework);
+}
+
 ModuleMap::KnownHeader
 ModuleMap::findOrCreateModuleForHeaderInUmbrellaDir(FileEntryRef File) {
   assert(!Headers.count(File) && "already have a module for this header");
@@ -1360,6 +1370,26 @@ bool ModuleMap::parseModuleMapFile(FileEntryRef File, bool IsSystem,
       std::make_unique<modulemap::ModuleMapFile>(std::move(*MaybeMMF)));
   const modulemap::ModuleMapFile &MMF = *ParsedModuleMaps.back();
   std::vector<const modulemap::ExternModuleDecl *> PendingExternalModuleMaps;
+  std::function<void(const modulemap::ModuleDecl &)> CollectExternDecls =
+      [&](const modulemap::ModuleDecl &MD) {
+        for (const auto &Decl : MD.Decls) {
+          std::visit(llvm::makeVisitor(
+                         [&](const modulemap::ModuleDecl &SubMD) {
+                           // Skip inferred submodules (module *)
+                           if (SubMD.Id.front().first == "*")
+                             return;
+                           CollectExternDecls(SubMD);
+                         },
+                         [&](const modulemap::ExternModuleDecl &EMD) {
+                           PendingExternalModuleMaps.push_back(&EMD);
+                         },
+                         [&](const auto &) {
+                           // Ignore other decls
+                         }),
+                     Decl);
+        }
+      };
+
   for (const auto &Decl : MMF.Decls) {
     std::visit(llvm::makeVisitor(
                    [&](const modulemap::ModuleDecl &MD) {
@@ -1369,6 +1399,7 @@ bool ModuleMap::parseModuleMapFile(FileEntryRef File, bool IsSystem,
                      auto &ModuleDecls =
                          ParsedModules[StringRef(MD.Id.front().first)];
                      ModuleDecls.push_back(std::pair(&MMF, &MD));
+                     CollectExternDecls(MD);
                    },
                    [&](const modulemap::ExternModuleDecl &EMD) {
                      PendingExternalModuleMaps.push_back(&EMD);
@@ -1398,6 +1429,11 @@ bool ModuleMap::parseModuleMapFile(FileEntryRef File, bool IsSystem,
     Cb->moduleMapFileRead(SourceLocation(), File, IsSystem);
 
   return false;
+}
+
+void ModuleMap::loadAllParsedModules() {
+  for (const auto &Entry : ParsedModules)
+    findOrLoadModule(Entry.first());
 }
 
 FileID ModuleMap::getContainingModuleMapFileID(const Module *Module) const {

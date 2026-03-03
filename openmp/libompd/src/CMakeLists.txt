@@ -21,7 +21,7 @@ set (CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++11")
 set(LIBOMPD_LD_STD_FLAGS FALSE CACHE BOOL
   "Use -stdlibc++ instead of -libc++ library for C++ ")
 
-if(${LIBOMPD_LD_STD_FLAGS})
+if(LIBOMPD_LD_STD_FLAGS)
 #  Find and replace/add libstdc++ to compile flags     
    STRING( FIND "${CMAKE_CXX_FLAGS}" "-stdlib=libc++" OUT )
    if("${OUT}" STREQUAL "-1" )   

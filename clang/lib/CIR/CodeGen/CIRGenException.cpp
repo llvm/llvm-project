@@ -322,8 +322,13 @@ mlir::LogicalResult CIRGenFunction::emitCXXTryStmt(const CXXTryStmt &s) {
       builder, tryLoc,
       /*tryBuilder=*/
       [&](mlir::OpBuilder &b, mlir::Location loc) {
+        // Create a RunCleanupsScope that allows us to apply any cleanups that
+        // are created for statements within the try body before exiting the
+        // try body.
+        RunCleanupsScope tryBodyCleanups(*this);
         if (emitStmt(s.getTryBlock(), /*useCurrentScope=*/true).failed())
           tryRes = mlir::failure();
+        tryBodyCleanups.forceCleanup();
         cir::YieldOp::create(builder, loc);
       },
       /*handlersBuilder=*/

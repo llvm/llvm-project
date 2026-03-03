@@ -123,7 +123,6 @@ public:
   void modifyCmp(MachineInstr *CmpMI, const CmpInfo &Info);
   bool adjustTo(MachineInstr *CmpMI, AArch64CC::CondCode Cmp, MachineInstr *To,
                 int ToImm);
-  bool isPureCmp(MachineInstr &CmpMI);
   bool optimizeIntraBlock(MachineBasicBlock &MBB);
   bool optimizeCrossBlock(MachineBasicBlock &HBB);
   bool runOnMachineFunction(MachineFunction &MF) override;
@@ -396,23 +395,6 @@ bool AArch64ConditionOptimizer::adjustTo(MachineInstr *CmpMI,
   return false;
 }
 
-bool AArch64ConditionOptimizer::isPureCmp(MachineInstr &CmpMI) {
-  unsigned ShiftAmt = AArch64_AM::getShiftValue(CmpMI.getOperand(3).getImm());
-  if (!CmpMI.getOperand(2).isImm()) {
-    LLVM_DEBUG(dbgs() << "Immediate of cmp is symbolic, " << CmpMI << '\n');
-    return false;
-  } else if (CmpMI.getOperand(2).getImm() << ShiftAmt >= 0xfff) {
-    LLVM_DEBUG(dbgs() << "Immediate of cmp may be out of range, " << CmpMI
-                      << '\n');
-    return false;
-  } else if (!MRI->use_nodbg_empty(CmpMI.getOperand(0).getReg())) {
-    LLVM_DEBUG(dbgs() << "Destination of cmp is not dead, " << CmpMI << '\n');
-    return false;
-  }
-
-  return true;
-}
-
 static bool isGreaterThan(AArch64CC::CondCode Cmp) {
   return Cmp == AArch64CC::GT || Cmp == AArch64CC::HI;
 }
@@ -480,7 +462,7 @@ bool AArch64ConditionOptimizer::optimizeIntraBlock(MachineBasicBlock &MBB) {
   if (!registersMatch(FirstCmp, SecondCmp))
     return false;
 
-  if (!isPureCmp(*FirstCmp) || !isPureCmp(*SecondCmp)) {
+  if (!canAdjustCmp(*FirstCmp) || !canAdjustCmp(*SecondCmp)) {
     LLVM_DEBUG(dbgs() << "One or both CMPs are not pure\n");
     return false;
   }

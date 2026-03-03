@@ -1743,7 +1743,8 @@ public:
 llvm::raw_ostream &operator<<(llvm::raw_ostream &OS, const StoredDiagnostic &);
 
 /// Abstract interface, implemented by clients of the front-end, which
-/// formats and prints fully processed diagnostics.
+/// formats and prints fully processed diagnostics. The destructor must be
+/// called even with -disable-free.
 class DiagnosticConsumer {
 protected:
   unsigned NumWarnings = 0; ///< Number of warnings reported
@@ -1777,10 +1778,6 @@ public:
   /// The diagnostic client should assume that any objects made available via
   /// BeginSourceFile() are inaccessible.
   virtual void EndSourceFile() {}
-
-  /// Callback to inform the diagnostic client that processing of all
-  /// source files has ended.
-  virtual void finish() {}
 
   /// Indicates whether the diagnostics handled by this
   /// DiagnosticConsumer should be included in the number of diagnostics

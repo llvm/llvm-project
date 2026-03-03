@@ -725,6 +725,20 @@ struct LLVMInlinerInterface : public DialectInlinerInterface {
           }))
         return false;
     }
+    // Refuse to inline if any block in the callee ends with an op that does
+    // not have the terminator trait. The MLIR verifier conservatively accepts
+    // unregistered ops as potential terminators (via mightHaveTrait), but
+    // handleTerminator uses cast<LLVM::ReturnOp> in the single-block path and
+    // would crash on such ops. Registered terminators from other dialects
+    // (e.g. cf.br) are safe: the multi-block path uses dyn_cast and skips
+    // non-llvm.return ops gracefully.
+    for (Block &block : funcOp.getBody()) {
+      if (!block.empty() && !block.back().hasTrait<OpTrait::IsTerminator>()) {
+        LDBG() << "Cannot inline " << funcOp.getSymName()
+               << ": block ends with non-terminator op";
+        return false;
+      }
+    }
     return true;
   }
 

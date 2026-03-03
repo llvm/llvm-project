@@ -275,7 +275,8 @@ void Options::OutputFormattedUsageText(Stream &strm,
   actual_text.append(
       ansi::FormatAnsiTerminalCodes(option_def.usage_text, use_color));
 
-  ansi::OutputWordWrappedLines(strm, actual_text, output_max_columns);
+  ansi::OutputWordWrappedLines(strm, actual_text, output_max_columns,
+                               use_color);
 }
 
 bool Options::SupportsLongOption(const char *long_option) {

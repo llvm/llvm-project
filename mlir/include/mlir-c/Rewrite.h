@@ -490,6 +490,12 @@ MLIR_CAPI_EXPORTED MlirPatternRewriter
 mlirConversionPatternRewriterAsPatternRewriter(
     MlirConversionPatternRewriter rewriter);
 
+/// Apply a signature conversion to each block in the given region.
+MLIR_CAPI_EXPORTED MlirLogicalResult
+mlirConversionPatternRewriterConvertRegionTypes(
+    MlirConversionPatternRewriter rewriter, MlirRegion region,
+    MlirTypeConverter typeConverter);
+
 //===----------------------------------------------------------------------===//
 /// ConversionTarget API
 //===----------------------------------------------------------------------===//
@@ -545,6 +551,10 @@ MLIR_CAPI_EXPORTED void
 mlirTypeConverterAddConversion(MlirTypeConverter typeConverter,
                                MlirTypeConverterConversionCallback convertType,
                                void *userData);
+
+/// Convert the given type using the given TypeConverter.
+MLIR_CAPI_EXPORTED MlirType
+mlirTypeConverterConvertType(MlirTypeConverter typeConverter, MlirType type);
 
 //===----------------------------------------------------------------------===//
 /// ConversionPattern API

@@ -6726,8 +6726,7 @@ static MinMaxOptResult OptimizeConstMinMax(const Constant *RHSConst,
   assert(OutNewConstVal != nullptr);
 
   bool PropagateNaN = IID == Intrinsic::minimum || IID == Intrinsic::maximum;
-  bool ReturnsOtherForAllNaNs =
-      IID == Intrinsic::minimumnum || IID == Intrinsic::maximumnum;
+  bool PropagateSNaN = IID == Intrinsic::minnum || IID == Intrinsic::maxnum;
   bool IsMin = IID == Intrinsic::minimum || IID == Intrinsic::minnum ||
                IID == Intrinsic::minimumnum;
 
@@ -6744,27 +6743,29 @@ static MinMaxOptResult OptimizeConstMinMax(const Constant *RHSConst,
 
   // minnum(x, qnan) -> x
   // maxnum(x, qnan) -> x
+  // minnum(x, snan) -> qnan
+  // maxnum(x, snan) -> qnan
   // minimum(X, nan) -> qnan
   // maximum(X, nan) -> qnan
   // minimumnum(X, nan) -> x
   // maximumnum(X, nan) -> x
   if (CAPF.isNaN()) {
-    if (PropagateNaN) {
+    if (PropagateNaN || (PropagateSNaN && CAPF.isSignaling())) {
       *OutNewConstVal = ConstantFP::get(CFP->getType(), CAPF.makeQuiet());
       return MinMaxOptResult::UseNewConstVal;
-    } else if (ReturnsOtherForAllNaNs || !CAPF.isSignaling()) {
-      return MinMaxOptResult::UseOtherVal;
     }
-    return MinMaxOptResult::CannotOptimize;
+    return MinMaxOptResult::UseOtherVal;
   }
 
   if (CAPF.isInfinity() || (Call && Call->hasNoInfs() && CAPF.isLargest())) {
+    // minnum(X, -inf) -> -inf (ignoring sNaN -> qNaN propagation)
+    // maxnum(X, +inf) -> +inf (ignoring sNaN -> qNaN propagation)
     // minimum(X, -inf) -> -inf if nnan
     // maximum(X, +inf) -> +inf if nnan
     // minimumnum(X, -inf) -> -inf
     // maximumnum(X, +inf) -> +inf
     if (CAPF.isNegative() == IsMin &&
-        (ReturnsOtherForAllNaNs || (Call && Call->hasNoNaNs()))) {
+        (!PropagateNaN || (Call && Call->hasNoNaNs()))) {
       *OutNewConstVal = const_cast<Constant *>(RHSConst);
       return MinMaxOptResult::UseNewConstVal;
     }
@@ -7109,10 +7110,12 @@ Value *llvm::simplifyBinaryIntrinsic(Intrinsic::ID IID, Type *ReturnType,
   case Intrinsic::minimum:
   case Intrinsic::maximumnum:
   case Intrinsic::minimumnum: {
-    // In some cases here, we deviate from exact IEEE-754 semantics to enable
-    // optimizations (as allowed by the LLVM IR spec) by returning one of the
-    // arguments unmodified instead of inserting an llvm.canonicalize to
-    // transform input sNaNs into qNaNs,
+    // In several cases here, we deviate from exact IEEE 754 semantics
+    // to enable optimizations (as allowed by the LLVM IR spec).
+    //
+    // For instance, we may return one of the arguments unmodified instead of
+    // inserting an llvm.canonicalize to transform input sNaNs into qNaNs,
+    // or may assume all NaN inputs are qNaNs.
 
     // If the arguments are the same, this is a no-op (ignoring NaN quieting)
     if (Op0 == Op1)

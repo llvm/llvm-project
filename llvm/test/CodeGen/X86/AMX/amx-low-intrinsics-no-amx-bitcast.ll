@@ -203,7 +203,7 @@ attributes #0 = { noinline nounwind optnone }
 ;.
 ; CHECK: attributes #[[ATTR0:[0-9]+]] = { noinline nounwind optnone }
 ; CHECK: attributes #[[ATTR1:[0-9]+]] = { nounwind }
-; CHECK: attributes #[[ATTR2:[0-9]+]] = { nocallback nofree nosync nounwind speculatable willreturn memory(none) }
+; CHECK: attributes #[[ATTR2:[0-9]+]] = { nocallback nocreateundeforpoison nofree nosync nounwind speculatable willreturn memory(none) }
 ;.
 ; CHECK: [[PROF0]] = !{!"branch_weights", i32 4, i32 1}
 ;.

@@ -1,5 +1,6 @@
 // RUN: %check_clang_tidy %s bugprone-unused-return-value %t -- \
-// RUN:   --config="{CheckOptions: {bugprone-unused-return-value.AllowCastToVoid: true}}" -- -fexceptions
+// RUN:   --config="{CheckOptions: {bugprone-unused-return-value.AllowCastToVoid: true}}" -- -fexceptions -isystem %clang_tidy_headers
+#include <vector>
 
 namespace std {
 
@@ -41,9 +42,6 @@ struct unique_ptr {
 template <typename T>
 struct char_traits;
 
-template <typename T>
-struct allocator;
-
 template <typename CharT,
           typename Traits = char_traits<CharT>,
           typename Allocator = allocator<CharT>>
@@ -52,11 +50,6 @@ struct basic_string {
 };
 
 typedef basic_string<char> string;
-
-template <typename T, typename Allocator = std::allocator<T>>
-struct vector {
-  bool empty() const noexcept;
-};
 
 class error_code {
 };

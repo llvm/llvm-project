@@ -11065,7 +11065,7 @@ void OpenMPIRBuilder::createOffloadEntry(Constant *ID, Constant *Addr,
   // Add a function attribute for the kernel.
   Fn->addFnAttr("kernel");
   if (T.isAMDGCN())
-    Fn->addFnAttr("uniform-work-group-size", "true");
+    Fn->addFnAttr("uniform-work-group-size");
   Fn->addFnAttr(Attribute::MustProgress);
 }
 

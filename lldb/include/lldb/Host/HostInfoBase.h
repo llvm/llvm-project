@@ -96,8 +96,10 @@ public:
   /// (optionally) replace it with a file spec pointing to a more canonical
   /// copy.
   using SharedLibraryDirectoryHelper = void(FileSpec &this_file);
+  static void
+  SetSharedLibraryDirectoryHelper(SharedLibraryDirectoryHelper *helper);
 
-  static void Initialize(SharedLibraryDirectoryHelper *helper = nullptr);
+  static void Initialize();
   static void Terminate();
 
   /// Gets the host target triple.
@@ -273,7 +275,9 @@ public:
   static llvm::StringRef GetDistributionId() { return llvm::StringRef(); }
 
 protected:
-  static bool ComputeSharedLibraryDirectory(FileSpec &file_spec);
+  static bool
+  ComputeSharedLibraryDirectory(FileSpec &file_spec,
+                                SharedLibraryDirectoryHelper *helper);
   static bool ComputeSupportExeDirectory(FileSpec &file_spec);
   static bool ComputeProcessTempFileDirectory(FileSpec &file_spec);
   static bool ComputeGlobalTempFileDirectory(FileSpec &file_spec);

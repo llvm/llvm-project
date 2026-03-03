@@ -195,7 +195,7 @@ public:
     return frameOffsetInFile_ + recordOffsetInFrame_ + positionInRecord + 1;
   }
 
-  RT_API_ATTRS ChildIo *GetChildIo() { return child_.get(); }
+  RT_API_ATTRS ChildIo *GetChildIo() { return child_; }
   RT_API_ATTRS ChildIo &PushChildIo(IoStatementState &);
   RT_API_ATTRS void PopChildIo(ChildIo &);
 
@@ -262,7 +262,7 @@ private:
 
   // A stack of child I/O pseudo-units for defined I/O that have this
   // unit number.
-  OwningPtr<ChildIo> child_;
+  ChildIo *child_{nullptr};
 };
 
 // A pseudo-unit for child I/O statements in defined I/O subroutines;
@@ -270,8 +270,8 @@ private:
 // be a child I/O statement.
 class ChildIo {
 public:
-  RT_API_ATTRS ChildIo(IoStatementState &parent, OwningPtr<ChildIo> &&previous)
-      : parent_{parent}, previous_{std::move(previous)} {}
+  RT_API_ATTRS ChildIo(IoStatementState &parent, ChildIo *previous)
+      : parent_{parent}, previous_{previous} {}
 
   RT_API_ATTRS IoStatementState &parent() const { return parent_; }
 
@@ -284,15 +284,13 @@ public:
     return *io_;
   }
 
-  RT_API_ATTRS OwningPtr<ChildIo> AcquirePrevious() {
-    return std::move(previous_);
-  }
+  RT_API_ATTRS ChildIo *AcquirePrevious() { return previous_; }
 
   RT_API_ATTRS Iostat CheckFormattingAndDirection(bool unformatted, Direction);
 
 private:
   IoStatementState &parent_;
-  OwningPtr<ChildIo> previous_;
+  ChildIo *previous_;
   std::variant<std::monostate,
       ChildFormattedIoStatementState<Direction::Output>,
       ChildFormattedIoStatementState<Direction::Input>,

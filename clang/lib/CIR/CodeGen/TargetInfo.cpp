@@ -1,6 +1,7 @@
 #include "TargetInfo.h"
 #include "ABIInfo.h"
 #include "CIRGenFunction.h"
+#include "mlir/Dialect/Ptr/IR/MemorySpaceInterfaces.h"
 #include "clang/CIR/Dialect/IR/CIRAttrs.h"
 #include "clang/CIR/Dialect/IR/CIRDialect.h"
 

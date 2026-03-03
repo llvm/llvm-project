@@ -459,6 +459,12 @@ arith::AddUIExtendedOp::fold(FoldAdaptor adaptor,
   if (Attribute sumAttr = constFoldBinaryOp<IntegerAttr>(
           adaptor.getOperands(),
           [](APInt a, const APInt &b) { return std::move(a) + b; })) {
+    // If any operand is poison, propagate poison to both results.
+    if (isa<ub::PoisonAttr>(sumAttr)) {
+      results.push_back(sumAttr);
+      results.push_back(sumAttr);
+      return success();
+    }
     Attribute overflowAttr = constFoldBinaryOp<IntegerAttr>(
         ArrayRef({sumAttr, adaptor.getLhs()}),
         getI1SameShape(llvm::cast<TypedAttr>(sumAttr).getType()),

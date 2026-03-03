@@ -580,6 +580,7 @@ elseif(MINGW OR CYGWIN)
 endif()
 
 option(LLVM_ENABLE_WARNINGS "Enable compiler warnings." ON)
+option(LLVM_ENABLE_WARNING_SUPPRESSIONS "Suppress compiler warnings." ON)
 
 if( MSVC )
 
@@ -784,6 +785,9 @@ if (MSVC)
       # Promoted warnings to errors.
       -we4238 # Promote 'nonstandard extension used : class rvalue used as lvalue' to error.
       )
+    if (NOT LLVM_ENABLE_WARNING_SUPPRESSIONS)
+      list(FILTER msvc_warning_flags EXCLUDE REGEX "^-wd")
+    endif()
   endif(NOT CLANG_CL)
 
   # Enable warnings
@@ -808,6 +812,12 @@ if (MSVC)
     append("${flag}" CMAKE_C_FLAGS CMAKE_CXX_FLAGS)
   endforeach(flag)
 endif (MSVC)
+
+if (NOT LLVM_ENABLE_WARNING_SUPPRESSIONS AND (LLVM_COMPILER_IS_GCC_COMPATIBLE OR CLANG_CL))
+  # Keep track of the flags before LLVM appends its default warnings
+  set(PRE_CMAKE_C_FLAGS "${CMAKE_C_FLAGS}")
+  set(PRE_CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS}")
+endif()
 
 if (LLVM_ENABLE_WARNINGS AND (LLVM_COMPILER_IS_GCC_COMPATIBLE OR CLANG_CL))
 
@@ -888,6 +898,13 @@ if (LLVM_ENABLE_WARNINGS AND (LLVM_COMPILER_IS_GCC_COMPATIBLE OR CLANG_CL))
     if (CMAKE_CXX_COMPILER_VERSION VERSION_GREATER_EQUAL 11.1)
       append("-Wno-stringop-overread" CMAKE_CXX_FLAGS)
     endif()
+
+    # Disable -Wdangling-pointer on GCC 12+; this warning produces false
+    # positives for the RAII listener pattern (storing `this` in a constructor
+    # that is cleaned up in the destructor).
+    if (CMAKE_CXX_COMPILER_VERSION VERSION_GREATER_EQUAL 12.1)
+      append("-Wno-dangling-pointer" CMAKE_CXX_FLAGS)
+    endif()
   endif()
 
   # The LLVM libraries have no stable C++ API, so -Wnoexcept-type is not useful.
@@ -954,6 +971,19 @@ endif (LLVM_ENABLE_WARNINGS AND (LLVM_COMPILER_IS_GCC_COMPATIBLE OR CLANG_CL))
 
 if (LLVM_COMPILER_IS_GCC_COMPATIBLE AND NOT LLVM_ENABLE_WARNINGS)
   append("-w" CMAKE_C_FLAGS CMAKE_CXX_FLAGS)
+endif()
+
+if (NOT LLVM_ENABLE_WARNING_SUPPRESSIONS AND (LLVM_COMPILER_IS_GCC_COMPATIBLE OR CLANG_CL))
+  # Strip the -Wno- flags from the substring of flags added by LLVM in this block
+  string(LENGTH "${PRE_CMAKE_C_FLAGS}" PRE_CMAKE_C_LEN)
+  string(SUBSTRING "${CMAKE_C_FLAGS}" ${PRE_CMAKE_C_LEN} -1 ADDED_CMAKE_C_FLAGS)
+  string(REGEX REPLACE "(^| +)-Wno-[a-zA-Z0-9_-]+" "" ADDED_CMAKE_C_FLAGS "${ADDED_CMAKE_C_FLAGS}")
+  set(CMAKE_C_FLAGS "${PRE_CMAKE_C_FLAGS}${ADDED_CMAKE_C_FLAGS}")
+
+  string(LENGTH "${PRE_CMAKE_CXX_FLAGS}" PRE_CMAKE_CXX_LEN)
+  string(SUBSTRING "${CMAKE_CXX_FLAGS}" ${PRE_CMAKE_CXX_LEN} -1 ADDED_CMAKE_CXX_FLAGS)
+  string(REGEX REPLACE "(^| +)-Wno-[a-zA-Z0-9_-]+" "" ADDED_CMAKE_CXX_FLAGS "${ADDED_CMAKE_CXX_FLAGS}")
+  set(CMAKE_CXX_FLAGS "${PRE_CMAKE_CXX_FLAGS}${ADDED_CMAKE_CXX_FLAGS}")
 endif()
 
 macro(append_common_sanitizer_flags)
@@ -1340,6 +1370,14 @@ if(NOT DEFINED CMAKE_DISABLE_PRECOMPILE_HEADERS)
     # See: https://github.com/mozilla/sccache/issues/615
     # See: https://github.com/mozilla/sccache/issues/2562
     message(NOTICE "Precompiled headers are disabled by default with sccache. "
+      "Pass -DCMAKE_DISABLE_PRECOMPILE_HEADERS=OFF to override.")
+    set(CMAKE_DISABLE_PRECOMPILE_HEADERS ON)
+  elseif(CMAKE_CXX_COMPILER_LAUNCHER MATCHES "clang-cache")
+    # clang-cache does compilation caching through the LLVMCAS. When using PCH,
+    # there are extra build dependencies for PCH that live in the CAS which
+    # build system is not aware of. Re-using PCH might cause incremental build
+    # to fail due to missing dependencies.
+    message(NOTICE "Precompiled headers are disabled by default with clang-cache. "
       "Pass -DCMAKE_DISABLE_PRECOMPILE_HEADERS=OFF to override.")
     set(CMAKE_DISABLE_PRECOMPILE_HEADERS ON)
   elseif(CMAKE_CXX_COMPILER_LAUNCHER MATCHES "ccache" AND NOT CMAKE_CXX_COMPILER_ID MATCHES "Clang")

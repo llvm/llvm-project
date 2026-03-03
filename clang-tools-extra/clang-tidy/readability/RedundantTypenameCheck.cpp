@@ -50,7 +50,7 @@ void RedundantTypenameCheck::registerMatchers(MatchFinder *Finder) {
 void RedundantTypenameCheck::check(const MatchFinder::MatchResult &Result) {
   const TypeLoc TL = [&] {
     if (const auto *TL = Result.Nodes.getNodeAs<TypeLoc>("typeLoc"))
-      return TL->getType()->isDependentType() ? TypeLoc() : *TL;
+      return TL->getType()->isInstantiationDependentType() ? TypeLoc() : *TL;
 
     auto TL = *Result.Nodes.getNodeAs<TypeLoc>("dependentTypeLoc");
     while (const TypeLoc Next = TL.getNextTypeLoc())

@@ -151,9 +151,10 @@ public:
   /// advances the instruction pointer 'I' from the compare instruction to the
   /// select instruction and stores this pointer in 'PatternLastInst' member of
   /// the returned struct.
-  LLVM_ABI static InstDesc
-  isRecurrenceInstr(Loop *L, PHINode *Phi, Instruction *I, RecurKind Kind,
-                    InstDesc &Prev, FastMathFlags FuncFMF, ScalarEvolution *SE);
+  LLVM_ABI static InstDesc isRecurrenceInstr(Loop *L, PHINode *Phi,
+                                             Instruction *I, RecurKind Kind,
+                                             InstDesc &Prev,
+                                             ScalarEvolution *SE);
 
   /// Returns true if instruction I has multiple uses in Insts
   LLVM_ABI static bool hasMultipleUsesOf(Instruction *I,
@@ -195,9 +196,9 @@ public:
   /// computed.
   LLVM_ABI static bool
   AddReductionVar(PHINode *Phi, RecurKind Kind, Loop *TheLoop,
-                  FastMathFlags FuncFMF, RecurrenceDescriptor &RedDes,
-                  DemandedBits *DB = nullptr, AssumptionCache *AC = nullptr,
-                  DominatorTree *DT = nullptr, ScalarEvolution *SE = nullptr);
+                  RecurrenceDescriptor &RedDes, DemandedBits *DB = nullptr,
+                  AssumptionCache *AC = nullptr, DominatorTree *DT = nullptr,
+                  ScalarEvolution *SE = nullptr);
 
   /// Returns true if Phi is a reduction in TheLoop. The RecurrenceDescriptor
   /// is returned in RedDes. If either \p DB is non-null or \p AC and \p DT are

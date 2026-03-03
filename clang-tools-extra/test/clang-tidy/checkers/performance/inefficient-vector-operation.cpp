@@ -1,58 +1,18 @@
 // RUN: %check_clang_tidy %s performance-inefficient-vector-operation %t -- \
 // RUN: -format-style=llvm \
 // RUN: -config='{CheckOptions: \
-// RUN:  {performance-inefficient-vector-operation.EnableProto: true}}'
+// RUN:  {performance-inefficient-vector-operation.EnableProto: true}}' \
+// RUN: -- -isystem %clang_tidy_headers
+#include <vector>
 
 namespace std {
 
 typedef decltype(sizeof 0) size_t;
 
-template<class E> class initializer_list {
-public:
-  using value_type = E;
-  using reference = E&;
-  using const_reference = const E&;
-  using size_type = size_t;
-  using iterator = const E*;
-  using const_iterator = const E*;
-  iterator p;
-  size_t sz;
-  initializer_list();
-  size_t size() const; // number of elements
-  const E* begin() const; // first element
-  const E* end() const; // one past the last element
-};
-
 // initializer list range access
 template<class E> const E* begin(initializer_list<E> il);
 template<class E> const E* end(initializer_list<E> il);
 
-template <class T>
-class vector {
- public:
-  typedef T* iterator;
-  typedef const T* const_iterator;
-  typedef T& reference;
-  typedef const T& const_reference;
-  typedef size_t size_type;
-
-  explicit vector();
-  explicit vector(size_type n);
-
-  void push_back(const T& val);
-
-  template <class... Args> void emplace_back(Args &&... args);
-
-  void reserve(size_t n);
-  void resize(size_t n);
-
-  size_t size() const;
-  const_reference operator[] (size_type) const;
-  reference operator[] (size_type);
-
-  const_iterator begin() const;
-  const_iterator end() const;
-};
 } // namespace std
 
 class Foo {

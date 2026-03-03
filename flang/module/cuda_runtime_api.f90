@@ -36,4 +36,12 @@ interface cudaforsetdefaultstream
   end function
 end interface
 
+interface cudastreamdestroy
+  integer function cudastreamdestroy(stream)
+    import cuda_stream_kind
+    !DIR$ IGNORE_TKR (K) stream
+    integer(kind=cuda_stream_kind), value :: stream
+  end function
+end interface
+
 end module cuda_runtime_api

@@ -240,7 +240,7 @@ func.func @sparse_get_md(%arg0: !sparse_tensor.storage_specifier<#SparseVector>)
 
 #SparseVector = #sparse_tensor.encoding<{map = (d0) -> (d0 : compressed)}>
 
-func.func @sparse_get_md(%arg0: !sparse_tensor.storage_specifier<#SparseVector>) -> i64 {
+func.func @sparse_get_md(%arg0: !sparse_tensor.storage_specifier<#SparseVector>) -> index {
   // expected-error@+1 {{requested slice data on non-slice tensor}}
   %0 = sparse_tensor.storage_specifier.get %arg0 dim_offset at 0
        : !sparse_tensor.storage_specifier<#SparseVector>

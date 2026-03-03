@@ -42,7 +42,12 @@ void ConvertArithToEmitC::runOnOperation() {
   RewritePatternSet patterns(&getContext());
 
   TypeConverter typeConverter;
-  typeConverter.addConversion([](Type type) { return type; });
+  // Fallback for other types.
+  typeConverter.addConversion([](Type type) -> std::optional<Type> {
+    if (!emitc::isSupportedEmitCType(type))
+      return {};
+    return type;
+  });
 
   populateArithToEmitCPatterns(typeConverter, patterns);
 

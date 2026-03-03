@@ -35,7 +35,7 @@ __global__ void kernel() {
 //.
 // OPTNONE: attributes #[[ATTR0]] = { convergent mustprogress noinline nounwind optnone "no-trapping-math"="true" "stack-protector-buffer-size"="8" }
 // OPTNONE: attributes #[[ATTR1:[0-9]+]] = { convergent nounwind "no-trapping-math"="true" "stack-protector-buffer-size"="8" }
-// OPTNONE: attributes #[[ATTR2]] = { convergent mustprogress noinline norecurse nounwind optnone "amdgpu-flat-work-group-size"="1,1024" "no-trapping-math"="true" "stack-protector-buffer-size"="8" "uniform-work-group-size"="true" }
+// OPTNONE: attributes #[[ATTR2]] = { convergent mustprogress noinline norecurse nounwind optnone "amdgpu-flat-work-group-size"="1,1024" "no-trapping-math"="true" "stack-protector-buffer-size"="8" "uniform-work-group-size" }
 // OPTNONE: attributes #[[ATTR3]] = { convergent nounwind }
 //.
 // OPTNONE: [[META0:![0-9]+]] = !{i32 1, !"amdhsa_code_object_version", i32 600}

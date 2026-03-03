@@ -60,4 +60,3 @@ declare void @llvm.assume(i1) #1
 
 attributes #0 = { nounwind uwtable }
 attributes #1 = { nounwind }
-

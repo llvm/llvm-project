@@ -1360,9 +1360,10 @@ struct LowerUnPackOpResult {
   linalg::TransposeOp transposeOp;
   tensor::CollapseShapeOp collapseShapeOp;
   tensor::ExtractSliceOp extractSliceOp;
+  linalg::CopyOp copyOp;
 };
 
-/// Rewrite pack as empty + transpose + reshape + extract_slice.
+/// Rewrite pack as empty + transpose + reshape + extract_slice + copy.
 FailureOr<LowerUnPackOpResult>
 lowerUnPack(RewriterBase &rewriter, linalg::UnPackOp unPackOp,
             bool lowerUnpadLikeWithExtractSlice = true);

@@ -101,7 +101,7 @@ void RegisterClassInfo::runOnMachineFunction(const MachineFunction &mf,
           STI.ignoreCSRForAllocationOrder(mf, *AI);
   if (IgnoreCSRForAllocOrder != CSRHintsForAllocOrder) {
     Update = true;
-    IgnoreCSRForAllocOrder = CSRHintsForAllocOrder;
+    IgnoreCSRForAllocOrder = std::move(CSRHintsForAllocOrder);
   }
 
   RegCosts = TRI->getRegisterCosts(*MF);

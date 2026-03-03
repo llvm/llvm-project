@@ -4932,8 +4932,12 @@ foldCstValueToCstAttrBasis(ArrayRef<OpFoldResult> mixedBasis,
                            MutableOperandRange mutableDynamicBasis,
                            ArrayRef<Attribute> dynamicBasis) {
   uint64_t dynamicBasisIndex = 0;
-  for (OpFoldResult basis : dynamicBasis) {
-    if (basis) {
+  for (Attribute basis : dynamicBasis) {
+    // Skip poison values: they don't have a concrete integer value, so erasing
+    // them from the dynamic operands would create an inconsistency between
+    // the static basis (which would still hold kDynamic) and the dynamic
+    // operand list (which would be one element shorter).
+    if (basis && isa<IntegerAttr>(basis)) {
       mutableDynamicBasis.erase(dynamicBasisIndex);
     } else {
       ++dynamicBasisIndex;
@@ -5294,7 +5298,12 @@ OpFoldResult AffineLinearizeIndexOp::fold(FoldAdaptor adaptor) {
   if (getMultiIndex().size() == 1)
     return getMultiIndex().front();
 
-  if (llvm::is_contained(adaptor.getMultiIndex(), nullptr))
+  // Return nullptr if any multi-index attribute has not been folded to a
+  // concrete integer (e.g. it is still a runtime value or has folded to a
+  // non-integer attribute such as #ub.poison).
+  if (llvm::any_of(adaptor.getMultiIndex(), [](Attribute a) {
+        return !isa_and_nonnull<IntegerAttr>(a);
+      }))
     return nullptr;
 
   if (!adaptor.getDynamicBasis().empty())

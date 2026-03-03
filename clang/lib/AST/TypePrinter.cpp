@@ -1351,12 +1351,12 @@ void TypePrinter::printUnaryTransformBefore(const UnaryTransformType *T,
                                             raw_ostream &OS) {
   IncludeStrongLifetimeRAII Strong(Policy);
 
-  static llvm::DenseMap<int, const char *> Transformation = {{
+  static const llvm::DenseMap<int, const char *> Transformation = {{
 #define TRANSFORM_TYPE_TRAIT_DEF(Enum, Trait)                                  \
   {UnaryTransformType::Enum, "__" #Trait},
 #include "clang/Basic/TransformTypeTraits.def"
   }};
-  OS << Transformation[T->getUTTKind()] << '(';
+  OS << Transformation.lookup(T->getUTTKind()) << '(';
   print(T->getBaseType(), OS, StringRef());
   OS << ')';
   spaceBeforePlaceHolder(OS);

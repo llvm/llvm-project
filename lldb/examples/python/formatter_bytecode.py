@@ -7,6 +7,21 @@ See https://lldb.llvm.org/resources/formatterbytecode.html for more details.
 
 from __future__ import annotations
 
+# Work around the fact that one of the local files is called
+# types.py, which breaks some versions of python.
+import os, sys
+
+path = os.path.abspath(os.path.dirname(__file__))
+if path in sys.path:
+    sys.path.remove(path)
+
+import re
+import io
+from dataclasses import dataclass
+from typing import BinaryIO, TextIO, Tuple, Union
+
+BINARY_VERSION = 1
+
 # Types
 type_String = 1
 type_Int = 2
@@ -74,6 +89,19 @@ sig_init = 1
 sig_get_num_children = 2
 sig_get_child_index = 3
 sig_get_child_at_index = 4
+sig_update = 5
+
+SIGNATURES = {
+    "summary": sig_summary,
+    "init": sig_init,
+    "get_num_children": sig_get_num_children,
+    "get_child_index": sig_get_child_index,
+    "get_child_at_index": sig_get_child_at_index,
+    "update": sig_update,
+}
+
+SIGNATURE_NAMES = "|".join(SIGNATURES.keys())
+SIGNATURE_IDS = {v: k for k, v in SIGNATURES.items()}
 
 # Selectors
 selector = dict()
@@ -119,8 +147,97 @@ define_selector(0x52, "strlen")
 # Compiler.
 ################################################################################
 
+_SIGNATURE_LABEL = re.compile(f"@(?:{SIGNATURE_NAMES}):$")
 
-def compile(assembler: str) -> bytearray:
+
+def _tokenize(assembler: str) -> list[str]:
+    """Convert string of assembly into tokens."""
+    # With one exception, tokens are sequences of non-space characters.
+    # The one exception is string literals, which may have spaces.
+
+    # To parse strings, which can contain escaped contents, use a "Friedl
+    # unrolled loop". The high level of such a regex is:
+    #     open normal* ( special normal* )* close
+    # which for string literals is:
+    string_literal = r'" [^"\\]* (?: \\. [^"\\]* )* "'
+
+    return re.findall(rf"{string_literal} | \S+", assembler, re.VERBOSE)
+
+
+def _segment_by_signature(input: list[str]) -> list[Tuple[str, list[str]]]:
+    """Segment the input tokens along signature labels."""
+    segments = []
+
+    # Loop state
+    signature = None
+    tokens = []
+
+    def conclude_segment():
+        if not tokens:
+            raise ValueError(f"empty signature: {signature}")
+        segments.append((signature, tokens))
+
+    for token in input:
+        if _SIGNATURE_LABEL.match(token):
+            if signature:
+                conclude_segment()
+            signature = token[1:-1]  # strip leading @, trailing :
+            tokens = []
+        else:
+            tokens.append(token)
+
+    if signature:
+        conclude_segment()
+
+    return segments
+
+
+@dataclass
+class BytecodeSection:
+    """Abstraction of the data serialized to __lldbformatters sections."""
+
+    type_name: str
+    flags: int
+    signatures: list[Tuple[str, bytes]]
+
+    def validate(self):
+        seen = set()
+        for sig, _ in self.signatures:
+            if sig in seen:
+                raise ValueError(f"duplicate signature: {sig}")
+            seen.add(sig)
+
+    def write_binary(self, output: BinaryIO) -> None:
+        self.validate()
+
+        bin = bytearray()
+        bin.extend(_to_uleb(len(self.type_name)))
+        bin.extend(bytes(self.type_name, encoding="utf-8"))
+        bin.extend(_to_byte(self.flags))
+        for sig, bc in self.signatures:
+            bin.extend(_to_byte(SIGNATURES[sig]))
+            bin.extend(_to_uleb(len(bc)))
+            bin.extend(bc)
+
+        output.write(_to_byte(BINARY_VERSION))
+        output.write(_to_uleb(len(bin)))
+        output.write(bin)
+
+
+def compile_file(type_name: str, input: TextIO) -> BytecodeSection:
+    input_tokens = _tokenize(input.read())
+    signatures = []
+    for sig, tokens in _segment_by_signature(input_tokens):
+        signatures.append((sig, compile_tokens(tokens)))
+
+    return BytecodeSection(type_name, flags=0, signatures=signatures)
+
+
+def compile(assembler: str) -> bytes:
+    return compile_tokens(_tokenize(assembler))
+
+
+def compile_tokens(tokens: list[str]) -> bytes:
     """Compile assembler into bytecode"""
     # This is a stack of all in-flight/unterminated blocks.
     bytecode = [bytearray()]
@@ -128,7 +245,6 @@ def compile(assembler: str) -> bytearray:
     def emit(byte):
         bytecode[-1].append(byte)
 
-    tokens = list(assembler.split(" "))
     tokens.reverse()
     while tokens:
         tok = tokens.pop()
@@ -152,34 +268,15 @@ def compile(assembler: str) -> bytearray:
             emit(op_lit_selector)
             emit(selector[tok])
         elif tok[0] == '"':
-            s = bytearray()
-            done = False
-            chrs = tok[1:]
-            while not done:
-                quoted = False
-                for c in chrs:
-                    if quoted:
-                        s.append(ord(c))  # FIXME
-                        quoted = False
-                    elif c == "\\":
-                        quoted = True
-                    elif c == '"':
-                        done = True
-                        break
-                        # FIXME assert this is last in token
-                    else:
-                        s.append(ord(c))
-                if not done:
-                    s.append(ord(" "))
-                    chrs = tokens.pop()
-
+            # Remove backslash escaping '"' and '\'.
+            s = re.sub(r'\\(["\\])', r"\1", tok[1:-1]).encode()
             emit(op_lit_string)
             emit(len(s))
             bytecode[-1].extend(s)
         else:
             emit(opcode[tok])
     assert len(bytecode) == 1  # unterminated {
-    return bytecode[0]
+    return bytes(bytecode[0])
 
 
 ################################################################################
@@ -187,7 +284,32 @@ def compile(assembler: str) -> bytearray:
 ################################################################################
 
 
-def disassemble(bytecode: bytearray) -> (str, int):
+def disassemble_file(input: BinaryIO, output: TextIO) -> None:
+    stream = io.BytesIO(input.read())
+
+    version = stream.read(1)[0]
+    if version != BINARY_VERSION:
+        raise ValueError(f"unknown binary version: {version}")
+
+    record_size = _from_uleb(stream)
+    stream.truncate(stream.tell() + record_size)
+
+    name_size = _from_uleb(stream)
+    _type_name = stream.read(name_size).decode()
+    _flags = stream.read(1)[0]
+
+    while True:
+        sig_byte = stream.read(1)
+        if not sig_byte:
+            break
+        sig_name = SIGNATURE_IDS[sig_byte[0]]
+        body_size = _from_uleb(stream)
+        bc = stream.read(body_size)
+        asm, _ = disassemble(bc)
+        print(f"@{sig_name}: {asm}", file=output)
+
+
+def disassemble(bytecode: bytes) -> Tuple[str, list[int]]:
     """Disassemble bytecode into (assembler, token starts)"""
     asm = ""
     all_bytes = list(bytecode)
@@ -221,11 +343,14 @@ def disassemble(bytecode: bytearray) -> (str, int):
             asm += selector[b]
         elif b == op_lit_string:
             length = next_byte()
-            s = "'"
-            while length:
-                s += chr(next_byte())
-                length -= 1
-            asm += '"' + repr(s)[2:]
+            s = '"'
+            for _ in range(length):
+                c = chr(next_byte())
+                if c in ('"', "\\"):
+                    s += "\\"
+                s += c
+            s += '"'
+            asm += s
         else:
             asm += opcode[b]
 
@@ -258,7 +383,7 @@ def count_fmt_params(fmt: str) -> int:
     return n
 
 
-def interpret(bytecode: bytearray, control: list, data: list, tracing: bool = False):
+def interpret(bytecode: bytes, control: list, data: list, tracing: bool = False):
     """Interpret bytecode"""
     frame = []
     frame.append((0, len(bytecode)))
@@ -468,17 +593,51 @@ def interpret(bytecode: bytearray, control: list, data: list, tracing: bool = Fa
             else:
                 print("not implemented: " + selector[sel])
                 assert False
-                pass
     return data[-1]
 
 
-if __name__ == "__main__":
-    # Work around the fact that one of the local files is called
-    # types.py, which breaks some versions of python.
-    import os, sys
+################################################################################
+# Helper functions.
+################################################################################
 
-    path = os.path.abspath(os.path.dirname(__file__))
-    sys.path.remove(path)
+
+def _to_uleb(value: int) -> bytearray:
+    """Encode an integer to ULEB128 bytes."""
+    if value < 0:
+        raise ValueError(f"negative number cannot be encoded to ULEB128: {value}")
+
+    result = bytearray()
+    while True:
+        byte = value & 0x7F
+        value >>= 7
+        if value != 0:
+            byte |= 0x80
+        result.append(byte)
+        if value == 0:
+            break
+
+    return result
+
+
+def _from_uleb(stream: BinaryIO) -> int:
+    """Decode a ULEB128 integer by reading bytes from the stream."""
+    result = 0
+    shift = 0
+    while True:
+        byte = stream.read(1)[0]
+        result |= (byte & 0x7F) << shift
+        shift += 7
+        if not (byte & 0x80):
+            break
+
+    return result
+
+
+def _to_byte(n: int) -> bytes:
+    return n.to_bytes(1, "big")
+
+
+def _main():
     import argparse
 
     parser = argparse.ArgumentParser(
@@ -487,43 +646,116 @@ if __name__ == "__main__":
     See https://lldb.llvm.org/resources/formatterbytecode.html for more details.
     """
     )
-    parser.add_argument(
-        "-c", "--compile", type=str, help="compile assembler into bytecode"
+    parser.add_argument("input", help="input file")
+    mode = parser.add_mutually_exclusive_group()
+    mode.add_argument(
+        "-c",
+        "--compile",
+        action="store_true",
+        help="compile assembler into bytecode",
     )
-    parser.add_argument("-d", "--disassemble", type=str, help="disassemble bytecode")
+    mode.add_argument(
+        "-d",
+        "--disassemble",
+        action="store_true",
+        help="disassemble bytecode",
+    )
+    parser.add_argument(
+        "-o",
+        "--output",
+        help="output file (required for --compile)",
+    )
     parser.add_argument("-t", "--test", action="store_true", help="run unit tests")
+
     args = parser.parse_args()
     if args.compile:
-        print(compile(str(args.compile)).hex())
+        if not args.output:
+            parser.error("--output is required with --compile")
+        with (
+            open(args.input) as input,
+            open(args.output, "wb") as output,
+        ):
+            section = compile_file(args.type_name, input)
+            section.write_binary(output)
+    elif args.disassemble:
+        if args.output:
+            with (
+                open(args.input, "rb") as input,
+                open(args.output, "w") as output,
+            ):
+                disassemble_file(input, output)
+        else:
+            with open(args.input, "rb") as input:
+                disassemble_file(input, sys.stdout)
 
-    if args.disassemble:
-        print(disassemble(bytearray.fromhex(str(args.disassemble))))
+
+if __name__ == "__main__":
+    if not ("-t" in sys.argv or "--test" in sys.argv):
+        _main()
+        sys.exit()
 
     ############################################################################
     # Tests.
     ############################################################################
-    if args.test:
-        import unittest
+    import unittest
 
-        class TestCompiler(unittest.TestCase):
-            def test(self):
-                self.assertEqual(compile("1u dup").hex(), "200101")
-                self.assertEqual(compile('"1u dup"').hex(), "2206317520647570")
-                self.assertEqual(compile("16 < { dup } if").hex(), "21105210010111")
-                self.assertEqual(compile('{ { " } " } }').hex(), "100710052203207d20")
+    class TestCompiler(unittest.TestCase):
 
-                def roundtrip(asm):
-                    self.assertEqual(disassemble(compile(asm))[0], asm)
+        def test_compile(self):
+            self.assertEqual(compile("1u dup").hex(), "200101")
+            self.assertEqual(compile('"1u dup"').hex(), "2206317520647570")
+            self.assertEqual(compile("16 < { dup } if").hex(), "21105210010111")
+            self.assertEqual(compile('{ { " } " } }').hex(), "100710052203207d20")
 
-                roundtrip("1u dup")
-                roundtrip('1u dup "1u dup"')
-                roundtrip("16 < { dup } if")
-                roundtrip('{ { " } " } }')
+            def roundtrip(asm):
+                self.assertEqual(disassemble(compile(asm))[0], asm)
 
-                self.assertEqual(interpret(compile("1 1 +"), [], []), 2)
-                self.assertEqual(interpret(compile("2 1 1 + *"), [], []), 4)
-                self.assertEqual(
-                    interpret(compile('2 1 > { "yes" } { "no" } ifelse'), [], []), "yes"
-                )
+            roundtrip("1u dup")
+            roundtrip("16 < { dup } if")
+            roundtrip('{ { " } " } }')
 
-        unittest.main(argv=[__file__])
+            # String specific checks.
+            roundtrip('1u "2u 3u"')
+            roundtrip('"a  b"')
+            roundtrip('"a \\" b"')
+
+            self.assertEqual(interpret(compile("1 1 +"), [], []), 2)
+            self.assertEqual(interpret(compile("2 1 1 + *"), [], []), 4)
+            self.assertEqual(
+                interpret(compile('2 1 > { "yes" } { "no" } ifelse'), [], []), "yes"
+            )
+
+        def test_compile_file(self):
+            def run_compile(type_name, asm):
+                out = io.BytesIO()
+                section = compile_file(type_name, io.StringIO(asm))
+                section.write_binary(out)
+                out.seek(0)
+                return out
+
+            def run_disassemble(binary):
+                out = io.StringIO()
+                disassemble_file(binary, out)
+                out.seek(0)
+                return out
+
+            # compile -> disassemble -> compile round-trip: binary is identical.
+            asm = "@summary: dup @get_value_as_unsigned call return\n@get_num_children: drop 5u return"
+            binary1 = run_compile("MyType", asm)
+            dis = run_disassemble(binary1)
+            binary2 = run_compile("MyType", dis.read())
+            self.assertEqual(binary1.getvalue(), binary2.getvalue())
+
+            # disassemble -> compile -> disassemble round-trip: text is identical.
+            dis2 = run_disassemble(binary2)
+            self.assertEqual(dis.getvalue(), dis2.getvalue())
+
+            # disassemble output contains expected signatures.
+            self.assertIn("@summary:", dis.getvalue())
+            self.assertIn("@get_num_children:", dis.getvalue())
+
+            # Duplicate signature is an error.
+            with self.assertRaises(ValueError):
+                run_compile("MyType", "@summary: 1u return\n@summary: 2u return")
+
+    unittest.main(argv=[__file__])
