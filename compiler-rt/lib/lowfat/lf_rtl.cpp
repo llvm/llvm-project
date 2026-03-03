@@ -181,16 +181,10 @@ void __lf_init() {
   if (__lowfat::lowfat_inited)
     return;
 
-  // Printf("LowFat Sanitizer: initializing runtime\n");
-
   __lowfat::InitRegionTable();
   
-  if (!__lowfat::InitMemoryRegions()) {
-    // Printf("LowFat Sanitizer: failed to initialize memory regions\n");
+  if (!__lowfat::InitMemoryRegions())
     Die();
-  }
-
-  // Printf("LowFat Sanitizer: initialized runtime\n");
 
   __lowfat::lowfat_inited = true;
 
