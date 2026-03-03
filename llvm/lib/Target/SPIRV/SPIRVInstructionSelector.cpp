@@ -2869,18 +2869,13 @@ bool SPIRVInstructionSelector::selectWaveActiveAllEqual(Register ResVReg,
   Register ScopeConst = GR.getOrCreateConstInt(SPIRV::Scope::Subgroup, I, IntTy,
                                                TII, !STI.isShader());
 
-  // === Scalar case ===
+  // Scalar case
   if (!IsVector) {
-    BuildMI(BB, I, DL, TII.get(SPIRV::OpGroupNonUniformAllEqual))
-        .addDef(ResVReg)
-        .addUse(GR.getSPIRVTypeID(ElemBoolType))
-        .addUse(ScopeConst)
-        .addUse(InputReg)
-        .constrainAllUses(TII, TRI, RBI);
-    return true;
+    return selectWaveOpInst(ResVReg, ElemBoolType, I,
+                            SPIRV::OpGroupNonUniformAllEqual);
   }
 
-  // === Vector case ===
+  // Vector case
   SmallVector<Register, 4> ElementResults;
   ElementResults.reserve(NumElems);
 
