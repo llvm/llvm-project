@@ -128,46 +128,6 @@ std::shared_ptr<ModuleDepCollector> initializeScanInstanceDependencyCollector(
     DependencyActionController &Controller,
     PrebuiltModulesAttrsMap PrebuiltModulesASTMap,
     llvm::SmallVector<StringRef> &StableDirs);
-
-class CompilerInstanceWithContext {
-  // Context
-  DependencyScanningWorker &Worker;
-  llvm::StringRef CWD;
-  std::vector<std::string> CommandLine;
-
-  // Context - Diagnostics engine.
-  DiagnosticConsumer *DiagConsumer = nullptr;
-  std::unique_ptr<DiagnosticsEngineWithDiagOpts> DiagEngineWithCmdAndOpts;
-
-  // Context - compiler invocation
-  std::unique_ptr<CompilerInvocation> OriginalInvocation;
-
-  // Context - output options
-  std::unique_ptr<DependencyOutputOptions> OutputOpts;
-
-  // Context - stable directory handling
-  llvm::SmallVector<StringRef> StableDirs;
-  PrebuiltModulesAttrsMap PrebuiltModuleASTMap;
-
-  // Compiler Instance
-  std::unique_ptr<CompilerInstance> CIPtr;
-
-  // Source location offset.
-  int32_t SrcLocOffset = 0;
-
-public:
-  CompilerInstanceWithContext(DependencyScanningWorker &Worker, StringRef CWD,
-                              const std::vector<std::string> &CMD)
-      : Worker(Worker), CWD(CWD), CommandLine(CMD) {};
-
-  // The two methods below returns false when they fail, with the detail
-  // accumulated in \c DiagEngineWithDiagOpts's diagnostic consumer.
-  bool initialize(
-      std::unique_ptr<DiagnosticsEngineWithDiagOpts> DiagEngineWithDiagOpts,
-      IntrusiveRefCntPtr<llvm::vfs::OverlayFileSystem> OverlayFS);
-  bool computeDependencies(StringRef ModuleName, DependencyConsumer &Consumer,
-                           DependencyActionController &Controller);
-};
 } // namespace dependencies
 } // namespace clang
 

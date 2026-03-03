@@ -27,10 +27,13 @@ namespace clang {
 
 class DependencyOutputOptions;
 
+namespace tooling {
+class CompilerInstanceWithContext;
+}
+
 namespace dependencies {
 
 class DependencyScanningWorkerFilesystem;
-class CompilerInstanceWithContext;
 
 /// A command-line tool invocation that is part of building a TU.
 ///
@@ -135,7 +138,7 @@ private:
   /// overlaid on top of the base VFS passed in the constructor.
   IntrusiveRefCntPtr<DependencyScanningWorkerFilesystem> DepFS;
 
-  friend CompilerInstanceWithContext;
+  friend tooling::CompilerInstanceWithContext;
 };
 
 std::pair<IntrusiveRefCntPtr<llvm::vfs::OverlayFileSystem>,
