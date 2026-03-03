@@ -432,7 +432,7 @@ func.func @test_lookup_without_converter() {
 // expected-remark@-1 {{applyPartialConversion failed}}
 
 func.func @test_skip_1to1_pattern(%arg0: f32) {
-  // expected-error@+1 {{failed to legalize operation 'test.type_consumer' that was explicitly marked illegal: "test.type_consumer"(<<UNKNOWN SSA VALUE>>) : (f32) -> ()}}
+  // expected-error@+1 {{failed to legalize operation 'test.type_consumer' that was explicitly marked illegal: "test.type_consumer"\((%[0-9]+|<<UNKNOWN SSA VALUE>>)\) : \(f32\) -> \(\)}}
   "test.type_consumer"(%arg0) : (f32) -> ()
   return
 }
