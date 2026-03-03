@@ -768,12 +768,7 @@ static void addSanitizers(const Triple &TargetTriple,
       MPM.addPass(DataFlowSanitizerPass(LangOpts.NoSanitizeFiles,
                                         PB.getVirtualFileSystemPtr()));
     }
-
-    if (LangOpts.Sanitize.has(SanitizerKind::LowFat)) {
-      LowFatSanitizerOptions Opts;
-      Opts.Recover = CodeGenOpts.SanitizeRecover.has(SanitizerKind::LowFat);
-      MPM.addPass(LowFatSanitizerPass(Opts));
-    }
+  // TODO: move LowFat sanitizer back here.
   };
   if (ClSanitizeOnOptimizerEarlyEP) {
     PB.registerOptimizerEarlyEPCallback(
@@ -790,6 +785,19 @@ static void addSanitizers(const Triple &TargetTriple,
   } else {
     // LastEP does not need GlobalsAA.
     PB.registerOptimizerLastEPCallback(SanitizersCallback);
+  }
+
+  // LowFat must run BEFORE any optimization or attribute inference so that the
+  // memory accesses it needs to instrument are not eliminated by DCE/DSE first.
+  // OptimizerEarlyEP is too late (InferFunctionAttrs already ran); use
+  // PipelineStart which fires before any analysis or optimization pass.
+  if (LangOpts.Sanitize.has(SanitizerKind::LowFat)) {
+    LowFatSanitizerOptions LFOpts;
+    LFOpts.Recover = CodeGenOpts.SanitizeRecover.has(SanitizerKind::LowFat);
+    PB.registerPipelineStartEPCallback(
+        [LFOpts](ModulePassManager &MPM, OptimizationLevel) {
+          MPM.addPass(LowFatSanitizerPass(LFOpts));
+        });
   }
 }
 
