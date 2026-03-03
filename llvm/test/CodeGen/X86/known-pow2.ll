@@ -1011,7 +1011,7 @@ define i32 @pow2_blsi_sub(i32 %x, i32 %a) {
 
 define i1 @pow2_rotl_extract_vec(<4 x i32> %a0, <4 x i32> %rotamt, i32 %x) {
 ; CHECK-LABEL: pow2_rotl_extract_vec:
-; CHECK:       # %bb.0: # %entry
+; CHECK:       # %bb.0:
 ; CHECK-NEXT:    pxor %xmm2, %xmm2
 ; CHECK-NEXT:    pcmpgtd %xmm0, %xmm2
 ; CHECK-NEXT:    movl $4096, %eax # imm = 0x1000
@@ -1035,13 +1035,8 @@ define i1 @pow2_rotl_extract_vec(<4 x i32> %a0, <4 x i32> %rotamt, i32 %x) {
 ; CHECK-NEXT:    retq
 
   %cmp = icmp sgt <4 x i32> zeroinitializer, %a0
-  %powvec = select <4 x i1> %cmp,
-                     <4 x i32> <i32 1024, i32 1235, i32 2048, i32 4096>,
-                     <4 x i32> <i32 4096, i32 5679, i32 8192, i32 16384>
-  %d = call <4 x i32> @llvm.fshl.v4i32(
-           <4 x i32> %powvec,
-           <4 x i32> %powvec,
-           <4 x i32> %rotamt)
+  %powvec = select <4 x i1> %cmp, <4 x i32> <i32 1024, i32 1235, i32 2048, i32 4096>, <4 x i32> <i32 4096, i32 5679, i32 8192, i32 16384>
+  %d = call <4 x i32> @llvm.fshl.v4i32(<4 x i32> %powvec, <4 x i32> %powvec, <4 x i32> %rotamt)
   %elt = extractelement <4 x i32> %d, i32 0
   %and = and i32 %x, %elt
   %r = icmp eq i32 %and, %elt
@@ -1076,13 +1071,8 @@ define i1 @pow2_rotr_extract_vec(<4 x i32> %a0, <4 x i32> %rotamt, i32 %x) {
 ; CHECK-NEXT:    sete %al
 ; CHECK-NEXT:    retq
   %cmp = icmp sgt <4 x i32> zeroinitializer, %a0
-  %powvec = select <4 x i1> %cmp,
-                     <4 x i32> <i32 1024, i32 1235, i32 2048, i32 4096>,
-                     <4 x i32> <i32 4096, i32 5679, i32 8192, i32 16384>
-  %d = call <4 x i32> @llvm.fshr.v4i32(
-           <4 x i32> %powvec,
-           <4 x i32> %powvec,
-           <4 x i32> %rotamt)
+  %powvec = select <4 x i1> %cmp, <4 x i32> <i32 1024, i32 1235, i32 2048, i32 4096>, <4 x i32> <i32 4096, i32 5679, i32 8192, i32 16384>
+  %d = call <4 x i32> @llvm.fshr.v4i32(<4 x i32> %powvec, <4 x i32> %powvec, <4 x i32> %rotamt)
   %elt = extractelement <4 x i32> %d, i32 0
   %and = and i32 %x, %elt
   %r = icmp eq i32 %and, %elt
