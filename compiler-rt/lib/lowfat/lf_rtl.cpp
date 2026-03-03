@@ -15,9 +15,11 @@
 //===----------------------------------------------------------------------===//
 
 #include "lf_allocator.h"
-#include "lf_interface.h"
 #include "lf_config.h"
+#include "lf_interface.h"
 #include "sanitizer_common/sanitizer_common.h"
+#include "sanitizer_common/sanitizer_flag_parser.h"
+#include "sanitizer_common/sanitizer_flags.h"
 #include "sanitizer_common/sanitizer_mutex.h"
 
 using namespace __sanitizer;
@@ -48,6 +50,26 @@ static FreeBlock *free_lists[kNumSizeClasses];
 // Using one lock per size class allows concurrent allocation across different
 // size classes, which is the common case in multi-threaded programs.
 static StaticSpinMutex region_locks[kNumSizeClasses];
+
+static void InitializeFlags() {
+  SetCommonFlagsDefaults();
+
+  {
+    CommonFlags cf;
+    cf.CopyFrom(*common_flags());
+    cf.exitcode = 1; // Fatal OOB exits with code 1 by default
+    cf.abort_on_error = false; // Use the exitcode path, not SIGABRT, so output is flushed before the process exits
+    OverrideCommonFlags(cf);
+  }
+
+  // Register all common flags with a parser and read LOWFAT_OPTIONS.
+  //    Allow overriding flags at runtime, e.g.: LOWFAT_OPTIONS=exitcode=42:verbosity=1 ./my_program
+  FlagParser parser;
+  RegisterCommonFlags(&parser);
+  parser.ParseStringFromEnv("LOWFAT_OPTIONS");
+
+  InitializeCommonFlags();
+}
 
 static void InitRegionTable() {
   for (uptr i = 0; i < kNumSizeClasses; i++) {
@@ -163,7 +185,7 @@ static void PrintOobHeader(const char *level, uptr ptr, uptr base, uptr bound,
 
 static void PrintErrorAndDie(uptr ptr, uptr base, uptr bound, int is_write) {
   PrintOobHeader("ERROR", ptr, base, bound, is_write);
-  internal__exit(1);
+  Die();
 }
 
 static void PrintWarning(uptr ptr, uptr base, uptr bound, int is_write) {
@@ -181,8 +203,10 @@ void __lf_init() {
   if (__lowfat::lowfat_inited)
     return;
 
+  __lowfat::InitializeFlags();
+
   __lowfat::InitRegionTable();
-  
+
   if (!__lowfat::InitMemoryRegions())
     Die();
 
