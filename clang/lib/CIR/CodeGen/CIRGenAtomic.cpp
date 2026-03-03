@@ -394,9 +394,53 @@ static void emitAtomicCmpXchgFailureSet(CIRGenFunction &cgf, AtomicExpr *e,
     return;
   }
 
-  assert(!cir::MissingFeatures::atomicExpr());
-  cgf.cgm.errorNYI(e->getSourceRange(),
-                   "emitAtomicCmpXchgFailureSet: non-constant failure order");
+  // The failure memory order is not a compile time constant. The CIR atomic ops
+  // require a constant value, so that memory order is known at compile time. In
+  // this case, we can switch based on the memory order and call each variant
+  // individually.
+  mlir::Value failureOrderVal = cgf.emitScalarExpr(failureOrderExpr);
+  mlir::Location atomicLoc = cgf.getLoc(e->getSourceRange());
+  cir::SwitchOp::create(
+      cgf.getBuilder(), atomicLoc, failureOrderVal,
+      [&](mlir::OpBuilder &b, mlir::Location loc, mlir::OperationState &os) {
+        mlir::Block *switchBlock = cgf.getBuilder().getBlock();
+
+        // case cir::MemOrder::Relaxed:
+        //   // 31.7.2.18: "The failure argument shall not be
+        //   memory_order_release
+        //   // nor memory_order_acq_rel". Fallback to monotonic.
+        // case cir::MemOrder::Release:
+        // case cir::MemOrder::AcquireRelease:
+        //  Note: Since there are 3 options, this makes sense to just emit as a
+        //  'default', which prevents user code from 'falling off' of this,
+        //  which seems reasonable.  Also, 'relaxed' being the default behavior
+        //  is also probably the least harmful.
+        emitMemOrderDefaultCaseLabel(cgf.getBuilder(), atomicLoc);
+        emitAtomicCmpXchg(cgf, e, isWeak, dest, ptr, val1, val2, size,
+                          successOrder, cir::MemOrder::Relaxed, scope);
+        cgf.getBuilder().createBreak(atomicLoc);
+        cgf.getBuilder().setInsertionPointToEnd(switchBlock);
+
+        // case cir::MemOrder::Consume:
+        // case cir::MemOrder::Acquire:
+        emitMemOrderCaseLabel(cgf.getBuilder(), loc, failureOrderVal.getType(),
+                              {cir::MemOrder::Consume, cir::MemOrder::Acquire});
+        emitAtomicCmpXchg(cgf, e, isWeak, dest, ptr, val1, val2, size,
+                          successOrder, cir::MemOrder::Acquire, scope);
+        cgf.getBuilder().createBreak(atomicLoc);
+        cgf.getBuilder().setInsertionPointToEnd(switchBlock);
+
+        // case cir::MemOrder::SequentiallyConsistent:
+        emitMemOrderCaseLabel(cgf.getBuilder(), loc, failureOrderVal.getType(),
+                              {cir::MemOrder::SequentiallyConsistent});
+        emitAtomicCmpXchg(cgf, e, isWeak, dest, ptr, val1, val2, size,
+                          successOrder, cir::MemOrder::SequentiallyConsistent,
+                          scope);
+        cgf.getBuilder().createBreak(atomicLoc);
+        cgf.getBuilder().setInsertionPointToEnd(switchBlock);
+
+        cgf.getBuilder().createYield(atomicLoc);
+      });
 }
 
 static void emitAtomicOp(CIRGenFunction &cgf, AtomicExpr *expr, Address dest,
