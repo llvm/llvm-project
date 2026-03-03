@@ -405,7 +405,7 @@ void Rematerializer::deleteReg(RegisterIdx RegIdx) {
 
   Reg &DeleteReg = Regs[RegIdx];
   assert(DeleteReg.DefMI && "register was already deleted");
-  
+
   // It is not possible for the deleted instruction to be the upper region
   // boundary since we don't ever consider them rematerializable.
   MachineBasicBlock::iterator &RegionBegin = Regions[DeleteReg.DefRegion].first;
