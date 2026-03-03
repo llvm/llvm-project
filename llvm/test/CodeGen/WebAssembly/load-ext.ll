@@ -38,10 +38,10 @@ define i32 @global_sext_i8_i32() {
 ; WASM32-FAST-MVP-LABEL: global_sext_i8_i32:
 ; WASM32-FAST-MVP:         .functype global_sext_i8_i32 () -> (i32)
 ; WASM32-FAST-MVP-NEXT:  # %bb.0:
-; WASM32-FAST-MVP-NEXT:    i32.const $push3=, 0
-; WASM32-FAST-MVP-NEXT:    i32.load8_u $push4=, gv8($pop3)
+; WASM32-FAST-MVP-NEXT:    i32.const $push4=, 0
+; WASM32-FAST-MVP-NEXT:    i32.load8_u $push3=, gv8($pop4)
 ; WASM32-FAST-MVP-NEXT:    i32.const $push0=, 24
-; WASM32-FAST-MVP-NEXT:    i32.shl $push1=, $pop4, $pop0
+; WASM32-FAST-MVP-NEXT:    i32.shl $push1=, $pop3, $pop0
 ; WASM32-FAST-MVP-NEXT:    i32.const $push5=, 24
 ; WASM32-FAST-MVP-NEXT:    i32.shr_s $push2=, $pop1, $pop5
 ; WASM32-FAST-MVP-NEXT:    return $pop2
@@ -70,10 +70,10 @@ define i32 @global_sext_i8_i32() {
 ; WASM64-FAST-MVP-LABEL: global_sext_i8_i32:
 ; WASM64-FAST-MVP:         .functype global_sext_i8_i32 () -> (i32)
 ; WASM64-FAST-MVP-NEXT:  # %bb.0:
-; WASM64-FAST-MVP-NEXT:    i64.const $push3=, 0
-; WASM64-FAST-MVP-NEXT:    i32.load8_u $push4=, gv8($pop3)
+; WASM64-FAST-MVP-NEXT:    i64.const $push4=, 0
+; WASM64-FAST-MVP-NEXT:    i32.load8_u $push3=, gv8($pop4)
 ; WASM64-FAST-MVP-NEXT:    i32.const $push0=, 24
-; WASM64-FAST-MVP-NEXT:    i32.shl $push1=, $pop4, $pop0
+; WASM64-FAST-MVP-NEXT:    i32.shl $push1=, $pop3, $pop0
 ; WASM64-FAST-MVP-NEXT:    i32.const $push5=, 24
 ; WASM64-FAST-MVP-NEXT:    i32.shr_s $push2=, $pop1, $pop5
 ; WASM64-FAST-MVP-NEXT:    return $pop2
@@ -107,10 +107,10 @@ define i32 @global_sext_i16_i32() {
 ; WASM32-FAST-MVP-LABEL: global_sext_i16_i32:
 ; WASM32-FAST-MVP:         .functype global_sext_i16_i32 () -> (i32)
 ; WASM32-FAST-MVP-NEXT:  # %bb.0:
-; WASM32-FAST-MVP-NEXT:    i32.const $push3=, 0
-; WASM32-FAST-MVP-NEXT:    i32.load16_u $push4=, gv16($pop3):p2align=0
+; WASM32-FAST-MVP-NEXT:    i32.const $push4=, 0
+; WASM32-FAST-MVP-NEXT:    i32.load16_u $push3=, gv16($pop4):p2align=0
 ; WASM32-FAST-MVP-NEXT:    i32.const $push0=, 16
-; WASM32-FAST-MVP-NEXT:    i32.shl $push1=, $pop4, $pop0
+; WASM32-FAST-MVP-NEXT:    i32.shl $push1=, $pop3, $pop0
 ; WASM32-FAST-MVP-NEXT:    i32.const $push5=, 16
 ; WASM32-FAST-MVP-NEXT:    i32.shr_s $push2=, $pop1, $pop5
 ; WASM32-FAST-MVP-NEXT:    return $pop2
@@ -139,10 +139,10 @@ define i32 @global_sext_i16_i32() {
 ; WASM64-FAST-MVP-LABEL: global_sext_i16_i32:
 ; WASM64-FAST-MVP:         .functype global_sext_i16_i32 () -> (i32)
 ; WASM64-FAST-MVP-NEXT:  # %bb.0:
-; WASM64-FAST-MVP-NEXT:    i64.const $push3=, 0
-; WASM64-FAST-MVP-NEXT:    i32.load16_u $push4=, gv16($pop3):p2align=0
+; WASM64-FAST-MVP-NEXT:    i64.const $push4=, 0
+; WASM64-FAST-MVP-NEXT:    i32.load16_u $push3=, gv16($pop4):p2align=0
 ; WASM64-FAST-MVP-NEXT:    i32.const $push0=, 16
-; WASM64-FAST-MVP-NEXT:    i32.shl $push1=, $pop4, $pop0
+; WASM64-FAST-MVP-NEXT:    i32.shl $push1=, $pop3, $pop0
 ; WASM64-FAST-MVP-NEXT:    i32.const $push5=, 16
 ; WASM64-FAST-MVP-NEXT:    i32.shr_s $push2=, $pop1, $pop5
 ; WASM64-FAST-MVP-NEXT:    return $pop2
@@ -169,19 +169,19 @@ define i64 @global_sext_i8_i64() {
 ; WASM32-FAST-LABEL: global_sext_i8_i64:
 ; WASM32-FAST:         .functype global_sext_i8_i64 () -> (i64)
 ; WASM32-FAST-NEXT:  # %bb.0:
-; WASM32-FAST-NEXT:    i32.const $push2=, 0
-; WASM32-FAST-NEXT:    i32.load8_u $push3=, gv8($pop2)
-; WASM32-FAST-NEXT:    i64.extend_i32_u $push0=, $pop3
+; WASM32-FAST-NEXT:    i32.const $push3=, 0
+; WASM32-FAST-NEXT:    i32.load8_u $push2=, gv8($pop3)
+; WASM32-FAST-NEXT:    i64.extend_i32_u $push0=, $pop2
 ; WASM32-FAST-NEXT:    i64.extend8_s $push1=, $pop0
 ; WASM32-FAST-NEXT:    return $pop1
 ;
 ; WASM32-FAST-MVP-LABEL: global_sext_i8_i64:
 ; WASM32-FAST-MVP:         .functype global_sext_i8_i64 () -> (i64)
 ; WASM32-FAST-MVP-NEXT:  # %bb.0:
-; WASM32-FAST-MVP-NEXT:    i32.const $push4=, 0
-; WASM32-FAST-MVP-NEXT:    i32.load8_u $push5=, gv8($pop4)
+; WASM32-FAST-MVP-NEXT:    i32.const $push5=, 0
+; WASM32-FAST-MVP-NEXT:    i32.load8_u $push4=, gv8($pop5)
 ; WASM32-FAST-MVP-NEXT:    i32.const $push1=, 24
-; WASM32-FAST-MVP-NEXT:    i32.shl $push2=, $pop5, $pop1
+; WASM32-FAST-MVP-NEXT:    i32.shl $push2=, $pop4, $pop1
 ; WASM32-FAST-MVP-NEXT:    i32.const $push6=, 24
 ; WASM32-FAST-MVP-NEXT:    i32.shr_s $push3=, $pop2, $pop6
 ; WASM32-FAST-MVP-NEXT:    i64.extend_i32_s $push0=, $pop3
@@ -204,19 +204,19 @@ define i64 @global_sext_i8_i64() {
 ; WASM64-FAST-LABEL: global_sext_i8_i64:
 ; WASM64-FAST:         .functype global_sext_i8_i64 () -> (i64)
 ; WASM64-FAST-NEXT:  # %bb.0:
-; WASM64-FAST-NEXT:    i64.const $push2=, 0
-; WASM64-FAST-NEXT:    i32.load8_u $push3=, gv8($pop2)
-; WASM64-FAST-NEXT:    i64.extend_i32_u $push0=, $pop3
+; WASM64-FAST-NEXT:    i64.const $push3=, 0
+; WASM64-FAST-NEXT:    i32.load8_u $push2=, gv8($pop3)
+; WASM64-FAST-NEXT:    i64.extend_i32_u $push0=, $pop2
 ; WASM64-FAST-NEXT:    i64.extend8_s $push1=, $pop0
 ; WASM64-FAST-NEXT:    return $pop1
 ;
 ; WASM64-FAST-MVP-LABEL: global_sext_i8_i64:
 ; WASM64-FAST-MVP:         .functype global_sext_i8_i64 () -> (i64)
 ; WASM64-FAST-MVP-NEXT:  # %bb.0:
-; WASM64-FAST-MVP-NEXT:    i64.const $push4=, 0
-; WASM64-FAST-MVP-NEXT:    i32.load8_u $push5=, gv8($pop4)
+; WASM64-FAST-MVP-NEXT:    i64.const $push5=, 0
+; WASM64-FAST-MVP-NEXT:    i32.load8_u $push4=, gv8($pop5)
 ; WASM64-FAST-MVP-NEXT:    i32.const $push1=, 24
-; WASM64-FAST-MVP-NEXT:    i32.shl $push2=, $pop5, $pop1
+; WASM64-FAST-MVP-NEXT:    i32.shl $push2=, $pop4, $pop1
 ; WASM64-FAST-MVP-NEXT:    i32.const $push6=, 24
 ; WASM64-FAST-MVP-NEXT:    i32.shr_s $push3=, $pop2, $pop6
 ; WASM64-FAST-MVP-NEXT:    i64.extend_i32_s $push0=, $pop3
@@ -244,19 +244,19 @@ define i64 @global_sext_i16_i64() {
 ; WASM32-FAST-LABEL: global_sext_i16_i64:
 ; WASM32-FAST:         .functype global_sext_i16_i64 () -> (i64)
 ; WASM32-FAST-NEXT:  # %bb.0:
-; WASM32-FAST-NEXT:    i32.const $push2=, 0
-; WASM32-FAST-NEXT:    i32.load16_u $push3=, gv16($pop2):p2align=0
-; WASM32-FAST-NEXT:    i64.extend_i32_u $push0=, $pop3
+; WASM32-FAST-NEXT:    i32.const $push3=, 0
+; WASM32-FAST-NEXT:    i32.load16_u $push2=, gv16($pop3):p2align=0
+; WASM32-FAST-NEXT:    i64.extend_i32_u $push0=, $pop2
 ; WASM32-FAST-NEXT:    i64.extend16_s $push1=, $pop0
 ; WASM32-FAST-NEXT:    return $pop1
 ;
 ; WASM32-FAST-MVP-LABEL: global_sext_i16_i64:
 ; WASM32-FAST-MVP:         .functype global_sext_i16_i64 () -> (i64)
 ; WASM32-FAST-MVP-NEXT:  # %bb.0:
-; WASM32-FAST-MVP-NEXT:    i32.const $push4=, 0
-; WASM32-FAST-MVP-NEXT:    i32.load16_u $push5=, gv16($pop4):p2align=0
+; WASM32-FAST-MVP-NEXT:    i32.const $push5=, 0
+; WASM32-FAST-MVP-NEXT:    i32.load16_u $push4=, gv16($pop5):p2align=0
 ; WASM32-FAST-MVP-NEXT:    i32.const $push1=, 16
-; WASM32-FAST-MVP-NEXT:    i32.shl $push2=, $pop5, $pop1
+; WASM32-FAST-MVP-NEXT:    i32.shl $push2=, $pop4, $pop1
 ; WASM32-FAST-MVP-NEXT:    i32.const $push6=, 16
 ; WASM32-FAST-MVP-NEXT:    i32.shr_s $push3=, $pop2, $pop6
 ; WASM32-FAST-MVP-NEXT:    i64.extend_i32_s $push0=, $pop3
@@ -279,19 +279,19 @@ define i64 @global_sext_i16_i64() {
 ; WASM64-FAST-LABEL: global_sext_i16_i64:
 ; WASM64-FAST:         .functype global_sext_i16_i64 () -> (i64)
 ; WASM64-FAST-NEXT:  # %bb.0:
-; WASM64-FAST-NEXT:    i64.const $push2=, 0
-; WASM64-FAST-NEXT:    i32.load16_u $push3=, gv16($pop2):p2align=0
-; WASM64-FAST-NEXT:    i64.extend_i32_u $push0=, $pop3
+; WASM64-FAST-NEXT:    i64.const $push3=, 0
+; WASM64-FAST-NEXT:    i32.load16_u $push2=, gv16($pop3):p2align=0
+; WASM64-FAST-NEXT:    i64.extend_i32_u $push0=, $pop2
 ; WASM64-FAST-NEXT:    i64.extend16_s $push1=, $pop0
 ; WASM64-FAST-NEXT:    return $pop1
 ;
 ; WASM64-FAST-MVP-LABEL: global_sext_i16_i64:
 ; WASM64-FAST-MVP:         .functype global_sext_i16_i64 () -> (i64)
 ; WASM64-FAST-MVP-NEXT:  # %bb.0:
-; WASM64-FAST-MVP-NEXT:    i64.const $push4=, 0
-; WASM64-FAST-MVP-NEXT:    i32.load16_u $push5=, gv16($pop4):p2align=0
+; WASM64-FAST-MVP-NEXT:    i64.const $push5=, 0
+; WASM64-FAST-MVP-NEXT:    i32.load16_u $push4=, gv16($pop5):p2align=0
 ; WASM64-FAST-MVP-NEXT:    i32.const $push1=, 16
-; WASM64-FAST-MVP-NEXT:    i32.shl $push2=, $pop5, $pop1
+; WASM64-FAST-MVP-NEXT:    i32.shl $push2=, $pop4, $pop1
 ; WASM64-FAST-MVP-NEXT:    i32.const $push6=, 16
 ; WASM64-FAST-MVP-NEXT:    i32.shr_s $push3=, $pop2, $pop6
 ; WASM64-FAST-MVP-NEXT:    i64.extend_i32_s $push0=, $pop3
