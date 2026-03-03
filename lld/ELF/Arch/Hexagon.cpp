@@ -185,7 +185,7 @@ void Hexagon::scanSectionImpl(InputSectionBase &sec, Relocs<RelTy> rels) {
     case R_HEX_GD_PLT_B22_PCREL_X:
     case R_HEX_GD_PLT_B32_PCREL_X:
       // GD PLT: call foo@GDPLT becomes call __tls_get_addr.
-      // Record R_PLT_PC on the TLS symbol; hexagonTLSSymbolUpdate (called
+      // Record R_PLT_PC on the TLS symbol; finalizeRelocScan (called
       // single-threaded after scanning) will create __tls_get_addr and
       // rebind these relocations.  We cannot access the symbol table here
       // because scanSectionImpl runs in parallel.
