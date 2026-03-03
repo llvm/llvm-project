@@ -1257,7 +1257,7 @@ private:
 
     bool VisitCXXDeleteExpr(CXXDeleteExpr *Delete) override {
       // RecursiveASTVisitor does not visit the called destructor.
-      const Type* DestroyedType = Delete->getDestroyedType().getTypePtr();
+      const Type *DestroyedType = Delete->getDestroyedType().getTypePtr();
       if (const auto *RD = DestroyedType->getAsCXXRecordDecl()) {
         CXXDestructorDecl *Dtor = RD->getDestructor();
         if (Dtor) {
