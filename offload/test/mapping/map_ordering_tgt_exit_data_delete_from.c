@@ -11,10 +11,10 @@ int main() {
 #pragma omp target map(present, alloc : x)
     {
       // NOTE: It's ok for this to be 111 under "unified_shared_memory"
-      printf("%d\n", x); // CHECK-NOT: 111
+      printf("In tgt: %d\n", x); // CHECK-NOT: In tgt: 111
       x = 222;
     }
 #pragma omp target exit data map(delete : x) map(from : x) map(delete : x)
-    printf("%d\n", x); // CHECK: 222
+    printf("After tgt exit data: %d\n", x); // CHECK: After tgt exit data: 222
   }
 }

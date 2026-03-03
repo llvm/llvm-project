@@ -37,10 +37,10 @@ int main() {
 #pragma omp target map(mapper(my_mapper), tofrom : s1) // (2)
     {
       // NOTE: It's ok for this to be 111 under "unified_shared_memory"
-      printf("%d\n", s1.p[1]); // CHECK-NOT: 111
+      printf("In tgt: %d\n", s1.p[1]); // CHECK-NOT: In tgt: 111
       s1.p[1] = 222;
     }
-    printf("%d\n", s1.p[1]); // CHECK: 222
+    printf("After tgt: %d\n", s1.p[1]); // CHECK: After tgt: 222
   }
   // clang-format off
   // DEBUG: omptarget --> Found skipped FROM entry: HstPtr=0x[[#%x,HOST_ADDR:]] size=[[#%u,SIZE:]] within region being released

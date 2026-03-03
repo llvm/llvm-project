@@ -24,5 +24,5 @@ int main() {
     // DEBUG-NOT: omptarget --> Moving {{.*}} bytes
   }
 
-  printf("%d\n", x); // CHECK: 222
+  printf("After tgt exit data: %d\n", x); // CHECK: After tgt exit data: 222
 }
