@@ -248,6 +248,69 @@ void FirstprivateMapInitialOp::getEffects(
 }
 
 //===----------------------------------------------------------------------===//
+// ReductionInitOp
+//===----------------------------------------------------------------------===//
+
+void ReductionInitOp::getSuccessorRegions(
+    RegionBranchPoint point, SmallVectorImpl<RegionSuccessor> &regions) {
+  getSingleRegionOpSuccessorRegions(getOperation(), getRegion(), point,
+                                    regions);
+}
+
+void ReductionInitOp::getRegionInvocationBounds(
+    ArrayRef<Attribute> operands,
+    SmallVectorImpl<InvocationBounds> &invocationBounds) {
+  invocationBounds.emplace_back(1, 1);
+}
+
+ValueRange ReductionInitOp::getSuccessorInputs(RegionSuccessor successor) {
+  return getSingleRegionSuccessorInputs(getOperation(), successor);
+}
+
+LogicalResult ReductionInitOp::verify() {
+  Block &block = getRegion().front();
+  if (auto yieldOp = dyn_cast<acc::YieldOp>(block.getTerminator())) {
+    if (yieldOp.getNumOperands() != 1)
+      return emitOpError(
+          "region must yield exactly one value (private storage)");
+    if (yieldOp.getOperand(0).getType() != getVar().getType())
+      return emitOpError("yielded value type must match var type");
+  }
+  return success();
+}
+
+//===----------------------------------------------------------------------===//
+// ReductionCombineRegionOp
+//===----------------------------------------------------------------------===//
+
+void ReductionCombineRegionOp::getSuccessorRegions(
+    RegionBranchPoint point, SmallVectorImpl<RegionSuccessor> &regions) {
+  getSingleRegionOpSuccessorRegions(getOperation(), getRegion(), point,
+                                    regions);
+}
+
+void ReductionCombineRegionOp::getRegionInvocationBounds(
+    ArrayRef<Attribute> operands,
+    SmallVectorImpl<InvocationBounds> &invocationBounds) {
+  invocationBounds.emplace_back(1, 1);
+}
+
+ValueRange
+ReductionCombineRegionOp::getSuccessorInputs(RegionSuccessor successor) {
+  return getSingleRegionSuccessorInputs(getOperation(), successor);
+}
+
+LogicalResult ReductionCombineRegionOp::verify() {
+  Block &block = getRegion().front();
+  if (auto yieldOp = dyn_cast<acc::YieldOp>(block.getTerminator())) {
+    if (yieldOp.getNumOperands() != 0)
+      return emitOpError("region must be terminated by acc.yield with no "
+                         "operands");
+  }
+  return success();
+}
+
+//===----------------------------------------------------------------------===//
 // ReductionCombineOp
 //===----------------------------------------------------------------------===//
 
