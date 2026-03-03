@@ -973,7 +973,8 @@ class NVVM_MMA_BLOCK_SCALE_SUPPORTED<list<WMMA_REGS> frags, string kind, string 
     !and(!eq(geom, "m16n8k64"),
          !eq(kind, "mxf4nvf4"),
          !eq(scale_vec_size, ".scale_4x"),
-         !eq(stype, "ue4m3")) : true,
+         !or(!eq(stype, "ue4m3"),
+             !eq(stype, "ue8m0"))) : true,
     !and(!eq(geom, "m16n8k32"),
          !eq(kind, "mxf8f6f4"),
          !or(!eq(scale_vec_size, ""),
@@ -1111,7 +1112,8 @@ class NVVM_MMA_SP_BLOCK_SCALE_SUPPORTED<list<WMMA_REGS> frags, string kind,
 
     !and(!eq(geom, "m16n8k128"),
          !eq(kind, "mxf4nvf4"),
-         !eq(stype, "ue4m3"),
+         !or(!eq(stype, "ue4m3"),
+             !eq(stype, "ue8m0")),
          !eq(scale_vec_size, ".scale_4x")): true,
 
     !and(!eq(geom, "m16n8k64"),
@@ -2350,7 +2352,8 @@ foreach vec = [TV_I8, TV_I16, TV_I32,
 // Accessing special registers.
 //
 class PTXReadSRegIntrinsicNB_r32<list<IntrinsicProperty> properties = [], string name = "">
-  : NVVMPureIntrinsic<[llvm_i32_ty], [], [NoUndef<RetIndex>] # properties, name>;
+  : NVVMPureIntrinsic<[llvm_i32_ty], [], [NoUndef<RetIndex>] # properties,
+                      !if(!eq(name, ""), "", !strconcat("llvm.nvvm.read.ptx.sreg.", name))>;
 
 class PTXReadSRegIntrinsic_r32<list<IntrinsicProperty> properties = []>
   : PTXReadSRegIntrinsicNB_r32<properties>, NVVMBuiltin;
@@ -2450,12 +2453,26 @@ defm int_nvvm_read_ptx_sreg_cluster_nctaid : PTXReadSRegIntrinsicNB_v4i32<MAX_GR
 def int_nvvm_read_ptx_sreg_cluster_ctarank : PTXReadSRegIntrinsicNB_r32;
 def int_nvvm_read_ptx_sreg_cluster_nctarank : PTXReadSRegIntrinsicNB_r32;
 
+//
+// Reserved Shared Memory Intrinsics
+//
+def int_nvvm_read_ptx_sreg_reserved_smem_offset_begin
+  : PTXReadSRegIntrinsicNB_r32<name = "reserved_smem_offset_begin">;
+def int_nvvm_read_ptx_sreg_reserved_smem_offset_end
+  : PTXReadSRegIntrinsicNB_r32<name = "reserved_smem_offset_end">;
+def int_nvvm_read_ptx_sreg_reserved_smem_offset_cap
+  : PTXReadSRegIntrinsicNB_r32<name = "reserved_smem_offset_cap">;
+def int_nvvm_read_ptx_sreg_reserved_smem_offset_0
+  : PTXReadSRegIntrinsicNB_r32<name = "reserved_smem_offset_0">;
+def int_nvvm_read_ptx_sreg_reserved_smem_offset_1
+  : PTXReadSRegIntrinsicNB_r32<name = "reserved_smem_offset_1">;
+
 def int_nvvm_read_ptx_sreg_total_smem_size :
-    PTXReadSRegIntrinsicNB_r32<name = "llvm.nvvm.read.ptx.sreg.total_smem_size">;
+    PTXReadSRegIntrinsicNB_r32<name = "total_smem_size">;
 def int_nvvm_read_ptx_sreg_aggr_smem_size :
-    PTXReadSRegIntrinsicNB_r32<name = "llvm.nvvm.read.ptx.sreg.aggr_smem_size">;
+    PTXReadSRegIntrinsicNB_r32<name = "aggr_smem_size">;
 def int_nvvm_read_ptx_sreg_dynamic_smem_size :
-    PTXReadSRegIntrinsicNB_r32<name = "llvm.nvvm.read.ptx.sreg.dynamic_smem_size">;
+    PTXReadSRegIntrinsicNB_r32<name = "dynamic_smem_size">;
 
 //
 // SHUFFLE

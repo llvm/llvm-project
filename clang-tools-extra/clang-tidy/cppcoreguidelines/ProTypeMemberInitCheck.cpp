@@ -71,8 +71,9 @@ removeFieldInitialized(const FieldDecl *M,
     // Erase all members in a union if any member of it is initialized.
     for (const auto *F : R->fields())
       FieldDecls.erase(F);
-  } else
+  } else {
     FieldDecls.erase(M);
+  }
 }
 
 static void

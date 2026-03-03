@@ -160,7 +160,8 @@ class Arith_IntBinaryOpWithOverflowFlags<string mnemonic, list<Trait> traits = [
 
 class Arith_IntBinaryOpWithExactFlag<string mnemonic, list<Trait> traits = []> :
     Arith_BinaryOp<mnemonic, traits #
-      [DeclareOpInterfaceMethods<InferIntRangeInterface, ["inferResultRanges"]>]>,
+      [DeclareOpInterfaceMethods<InferIntRangeInterface, ["inferResultRanges"]>,
+       DeclareOpInterfaceMethods<ArithExactFlagInterface>]>,
     Arguments<(ins SignlessIntegerOrIndexLike:$lhs,
                SignlessIntegerOrIndexLike:$rhs,
                UnitAttr:$isExact)>,
@@ -1172,13 +1173,19 @@ def Arith_RemFOp : Arith_FloatBinaryOp<"remf"> {
 // ExtUIOp
 //===----------------------------------------------------------------------===//
 
-def Arith_ExtUIOp : Arith_IToICastOp<"extui"> {
+def Arith_ExtUIOp :
+    Arith_IToICastOp<"extui", [DeclareOpInterfaceMethods<ArithNonNegFlagInterface>]> {
   let summary = "integer zero extension operation";
   let description = [{
     The integer zero extension operation takes an integer input of
     width M and an integer destination type of width N. The destination
     bit-width must be larger than the input bit-width (N > M).
     The top-most (N - M) bits of the output are filled with zeros.
+
+    When the `nneg` flag is present, the operand is assumed to have
+    the most significant bit set to 0. In this case, zero extension is
+    equivalent to sign extension. When this assumption is violated, the
+    result is poison.
 
     Example:
 
@@ -1189,9 +1196,17 @@ def Arith_ExtUIOp : Arith_IToICastOp<"extui"> {
       %4 = arith.extui %3 : i3 to i6  // %4 is 0b000010
 
       %5 = arith.extui %0 : vector<2 x i32> to vector<2 x i64>
+
+      // Zero extension with nneg flag.
+      %6 = arith.extui %3 nneg : i3 to i6
     ```
   }];
 
+  let arguments = (ins SignlessFixedWidthIntegerLike:$in, UnitAttr:$nonNeg);
+  let results = (outs SignlessFixedWidthIntegerLike:$out);
+  let assemblyFormat = [{
+    $in (`nneg` $nonNeg^)? attr-dict `:` type($in) `to` type($out)
+  }];
   let hasFolder = 1;
   let hasVerifier = 1;
 }
@@ -1477,13 +1492,35 @@ def Arith_ScalingTruncFOp
 // UIToFPOp
 //===----------------------------------------------------------------------===//
 
-def Arith_UIToFPOp : Arith_IToFCastOp<"uitofp"> {
+def Arith_UIToFPOp :
+    Arith_IToFCastOp<"uitofp", [DeclareOpInterfaceMethods<ArithNonNegFlagInterface>]> {
   let summary = "cast from unsigned integer type to floating-point";
   let description = [{
     Cast from a value interpreted as unsigned integer to the corresponding
     floating-point value. If the value cannot be exactly represented, it is
     rounded using the default rounding mode. When operating on vectors, casts
     elementwise.
+
+    When the `nneg` flag is present, the operand is assumed to have
+    the most significant bit set to 0. In this case, zero extension is
+    equivalent to sign extension. When this assumption is violated, the
+    result is poison.
+
+    Example:
+
+    ```mlir
+      // Without nneg flag.
+      %0 = arith.uitofp %a : i32 to f64
+
+      // With nneg flag.
+      %1 = arith.uitofp %a nneg : i32 to f64
+    ```
+  }];
+
+  let arguments = (ins SignlessFixedWidthIntegerLike:$in, UnitAttr:$nonNeg);
+  let results = (outs FloatLike:$out);
+  let assemblyFormat = [{
+    $in (`nneg` $nonNeg^)? attr-dict `:` type($in) `to` type($out)
   }];
   let hasFolder = 1;
 }
@@ -1543,15 +1580,34 @@ def IndexCastTypeConstraint : TypeConstraint<Or<[
 
 def Arith_IndexCastOp
   : Arith_CastOp<"index_cast", IndexCastTypeConstraint, IndexCastTypeConstraint,
-                 [DeclareOpInterfaceMethods<InferIntRangeInterface, ["inferResultRanges"]>]> {
+                 [DeclareOpInterfaceMethods<InferIntRangeInterface, ["inferResultRanges"]>,
+                  DeclareOpInterfaceMethods<ArithExactFlagInterface>]> {
   let summary = "cast between index and integer types";
   let description = [{
     Casts between scalar or vector integers and corresponding 'index' scalar or
     vectors. Index is an integer of platform-specific bit width. If casting to
     a wider integer, the value is sign-extended. If casting to a narrower
     integer, the value is truncated.
+
+    If the `exact` attribute is present, it is assumed that the operand
+    contains a value that fits in the destination's representation, therefore
+    the cast does not lose any information. When this assumption is violated,
+    the result is poison.
+
+    Example:
+
+    ```mlir
+      %0 = arith.index_cast %a : index to i64
+      %1 = arith.index_cast %a exact : index to i64
+      %2 = arith.index_cast %b exact : i32 to index
+    ```
   }];
 
+  let arguments = (ins IndexCastTypeConstraint:$in, UnitAttr:$isExact);
+  let results = (outs IndexCastTypeConstraint:$out);
+  let assemblyFormat = [{
+    $in (`exact` $isExact^)? attr-dict `:` type($in) `to` type($out)
+  }];
   let hasFolder = 1;
   let hasCanonicalizer = 1;
 }
@@ -1562,15 +1618,43 @@ def Arith_IndexCastOp
 
 def Arith_IndexCastUIOp
   : Arith_CastOp<"index_castui", IndexCastTypeConstraint, IndexCastTypeConstraint,
-                 [DeclareOpInterfaceMethods<InferIntRangeInterface, ["inferResultRanges"]>]> {
+                 [DeclareOpInterfaceMethods<InferIntRangeInterface, ["inferResultRanges"]>,
+                  DeclareOpInterfaceMethods<ArithNonNegFlagInterface>,
+                  DeclareOpInterfaceMethods<ArithExactFlagInterface>]> {
   let summary = "unsigned cast between index and integer types";
   let description = [{
     Casts between scalar or vector integers and corresponding 'index' scalar or
     vectors. Index is an integer of platform-specific bit width. If casting to
     a wider integer, the value is zero-extended. If casting to a narrower
     integer, the value is truncated.
+
+    When the `nneg` flag is present, the operand is assumed to have
+    the most significant bit set to 0. In this case, zero extension
+    is equivalent to sign extension. When this assumption is violated,
+    the result is poison.
+
+    If the `exact` attribute is present, it is assumed that the operand
+    contains a value that fits in the destination's representation, therefore
+    the cast does not lose any information. When this assumption is violated,
+    the result is poison.
+
+    Example:
+
+    ```mlir
+      %0 = arith.index_castui %a : i32 to index
+      %1 = arith.index_castui %a nneg : i32 to index
+      %2 = arith.index_castui %b nneg : index to i64
+      %3 = arith.index_castui %a nneg exact : i64 to index
+    ```
   }];
 
+  let arguments = (ins IndexCastTypeConstraint:$in, UnitAttr:$nonNeg,
+                       UnitAttr:$isExact);
+  let results = (outs IndexCastTypeConstraint:$out);
+  let assemblyFormat = [{
+    $in oilist(`exact` $isExact | `nneg` $nonNeg) attr-dict
+        `:` type($in) `to` type($out)
+  }];
   let hasFolder = 1;
   let hasCanonicalizer = 1;
 }

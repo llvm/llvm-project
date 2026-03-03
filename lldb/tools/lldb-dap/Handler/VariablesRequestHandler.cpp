@@ -13,7 +13,6 @@
 #include "Protocol/DAPTypes.h"
 #include "Protocol/ProtocolRequests.h"
 #include "Variables.h"
-#include "llvm/Support/ErrorExtras.h"
 
 using namespace llvm;
 using namespace lldb_dap::protocol;
@@ -38,8 +37,12 @@ VariablesRequestHandler::Run(const VariablesArguments &arguments) const {
         llvm::formatv("invalid variablesReference: {}.", var_ref.AsUInt32()),
         /*error_code=*/llvm::inconvertibleErrorCode(), /*show_user=*/false);
 
-  return VariablesResponseBody{
-      store->GetVariables(dap.reference_storage, dap.configuration, arguments)};
+  Expected<std::vector<Variable>> variables =
+      store->GetVariables(dap.reference_storage, dap.configuration, arguments);
+  if (llvm::Error err = variables.takeError())
+    return err;
+
+  return VariablesResponseBody{*variables};
 }
 
 } // namespace lldb_dap
