@@ -2746,7 +2746,7 @@
    ========================================================================== */
 
 #define Q6_Vb_vsplat_R(Rt) __BUILTIN_VECTOR_WRAP(__builtin_HEXAGON_V6_lvsplatb)(Rt)
-#endif /* __HEXAGON_ARCH___ >= 62 */
+#endif
 
 #if __HVX_ARCH__ >= 62
 /* ==========================================================================
@@ -2757,7 +2757,7 @@
    ========================================================================== */
 
 #define Q6_Vh_vsplat_R(Rt) __BUILTIN_VECTOR_WRAP(__builtin_HEXAGON_V6_lvsplath)(Rt)
-#endif /* __HEXAGON_ARCH___ >= 62 */
+#endif
 
 #if __HVX_ARCH__ >= 62
 /* ==========================================================================
@@ -2768,7 +2768,7 @@
    ========================================================================== */
 
 #define Q6_Q_vsetq2_R(Rt) __BUILTIN_VECTOR_WRAP(__builtin_HEXAGON_V6_vandqrt)((__BUILTIN_VECTOR_WRAP(__builtin_HEXAGON_V6_pred_scalar2v2)(Rt)),-1)
-#endif /* __HEXAGON_ARCH___ >= 62 */
+#endif
 
 #if __HVX_ARCH__ >= 62
 /* ==========================================================================
@@ -2779,7 +2779,7 @@
    ========================================================================== */
 
 #define Q6_Qb_vshuffe_QhQh(Qs,Qt) __BUILTIN_VECTOR_WRAP(__builtin_HEXAGON_V6_vandqrt)((__BUILTIN_VECTOR_WRAP(__builtin_HEXAGON_V6_shuffeqh)(__BUILTIN_VECTOR_WRAP(__builtin_HEXAGON_V6_vandvrt)((Qs),-1),__BUILTIN_VECTOR_WRAP(__builtin_HEXAGON_V6_vandvrt)((Qt),-1))),-1)
-#endif /* __HEXAGON_ARCH___ >= 62 */
+#endif
 
 #if __HVX_ARCH__ >= 62
 /* ==========================================================================
@@ -2790,7 +2790,7 @@
    ========================================================================== */
 
 #define Q6_Qh_vshuffe_QwQw(Qs,Qt) __BUILTIN_VECTOR_WRAP(__builtin_HEXAGON_V6_vandqrt)((__BUILTIN_VECTOR_WRAP(__builtin_HEXAGON_V6_shuffeqw)(__BUILTIN_VECTOR_WRAP(__builtin_HEXAGON_V6_vandvrt)((Qs),-1),__BUILTIN_VECTOR_WRAP(__builtin_HEXAGON_V6_vandvrt)((Qt),-1))),-1)
-#endif /* __HEXAGON_ARCH___ >= 62 */
+#endif
 
 #if __HVX_ARCH__ >= 62
 /* ==========================================================================
@@ -2801,7 +2801,7 @@
    ========================================================================== */
 
 #define Q6_Vb_vadd_VbVb_sat(Vu,Vv) __BUILTIN_VECTOR_WRAP(__builtin_HEXAGON_V6_vaddbsat)(Vu,Vv)
-#endif /* __HEXAGON_ARCH___ >= 62 */
+#endif
 
 #if __HVX_ARCH__ >= 62
 /* ==========================================================================
@@ -2812,7 +2812,7 @@
    ========================================================================== */
 
 #define Q6_Wb_vadd_WbWb_sat(Vuu,Vvv) __BUILTIN_VECTOR_WRAP(__builtin_HEXAGON_V6_vaddbsat_dv)(Vuu,Vvv)
-#endif /* __HEXAGON_ARCH___ >= 62 */
+#endif
 
 #if __HVX_ARCH__ >= 62
 /* ==========================================================================
@@ -2823,7 +2823,7 @@
    ========================================================================== */
 
 #define Q6_Vw_vadd_VwVwQ_carry(Vu,Vv,Qx) __BUILTIN_VECTOR_WRAP(__builtin_HEXAGON_V6_vaddcarry)(Vu,Vv,Qx)
-#endif /* __HEXAGON_ARCH___ >= 62 */
+#endif
 
 #if __HVX_ARCH__ >= 62
 /* ==========================================================================
@@ -2834,7 +2834,7 @@
    ========================================================================== */
 
 #define Q6_Vh_vadd_vclb_VhVh(Vu,Vv) __BUILTIN_VECTOR_WRAP(__builtin_HEXAGON_V6_vaddclbh)(Vu,Vv)
-#endif /* __HEXAGON_ARCH___ >= 62 */
+#endif
 
 #if __HVX_ARCH__ >= 62
 /* ==========================================================================
@@ -2845,7 +2845,7 @@
    ========================================================================== */
 
 #define Q6_Vw_vadd_vclb_VwVw(Vu,Vv) __BUILTIN_VECTOR_WRAP(__builtin_HEXAGON_V6_vaddclbw)(Vu,Vv)
-#endif /* __HEXAGON_ARCH___ >= 62 */
+#endif
 
 #if __HVX_ARCH__ >= 62
 /* ==========================================================================
@@ -2856,7 +2856,7 @@
    ========================================================================== */
 
 #define Q6_Ww_vaddacc_WwVhVh(Vxx,Vu,Vv) __BUILTIN_VECTOR_WRAP(__builtin_HEXAGON_V6_vaddhw_acc)(Vxx,Vu,Vv)
-#endif /* __HEXAGON_ARCH___ >= 62 */
+#endif
 
 #if __HVX_ARCH__ >= 62
 /* ==========================================================================
@@ -2867,7 +2867,7 @@
    ========================================================================== */
 
 #define Q6_Wh_vaddacc_WhVubVub(Vxx,Vu,Vv) __BUILTIN_VECTOR_WRAP(__builtin_HEXAGON_V6_vaddubh_acc)(Vxx,Vu,Vv)
-#endif /* __HEXAGON_ARCH___ >= 62 */
+#endif
 
 #if __HVX_ARCH__ >= 62
 /* ==========================================================================
@@ -2878,7 +2878,7 @@
    ========================================================================== */
 
 #define Q6_Vub_vadd_VubVb_sat(Vu,Vv) __BUILTIN_VECTOR_WRAP(__builtin_HEXAGON_V6_vaddububb_sat)(Vu,Vv)
-#endif /* __HEXAGON_ARCH___ >= 62 */
+#endif
 
 #if __HVX_ARCH__ >= 62
 /* ==========================================================================
@@ -2889,7 +2889,7 @@
    ========================================================================== */
 
 #define Q6_Ww_vaddacc_WwVuhVuh(Vxx,Vu,Vv) __BUILTIN_VECTOR_WRAP(__builtin_HEXAGON_V6_vadduhw_acc)(Vxx,Vu,Vv)
-#endif /* __HEXAGON_ARCH___ >= 62 */
+#endif
 
 #if __HVX_ARCH__ >= 62
 /* ==========================================================================
@@ -2900,7 +2900,7 @@
    ========================================================================== */
 
 #define Q6_Vuw_vadd_VuwVuw_sat(Vu,Vv) __BUILTIN_VECTOR_WRAP(__builtin_HEXAGON_V6_vadduwsat)(Vu,Vv)
-#endif /* __HEXAGON_ARCH___ >= 62 */
+#endif
 
 #if __HVX_ARCH__ >= 62
 /* ==========================================================================
@@ -2911,7 +2911,7 @@
    ========================================================================== */
 
 #define Q6_Wuw_vadd_WuwWuw_sat(Vuu,Vvv) __BUILTIN_VECTOR_WRAP(__builtin_HEXAGON_V6_vadduwsat_dv)(Vuu,Vvv)
-#endif /* __HEXAGON_ARCH___ >= 62 */
+#endif
 
 #if __HVX_ARCH__ >= 62
 /* ==========================================================================
@@ -2922,7 +2922,7 @@
    ========================================================================== */
 
 #define Q6_V_vand_QnR(Qu,Rt) __BUILTIN_VECTOR_WRAP(__builtin_HEXAGON_V6_vandnqrt)(__BUILTIN_VECTOR_WRAP(__builtin_HEXAGON_V6_vandvrt)((Qu),-1),Rt)
-#endif /* __HEXAGON_ARCH___ >= 62 */
+#endif
 
 #if __HVX_ARCH__ >= 62
 /* ==========================================================================
@@ -2933,7 +2933,7 @@
    ========================================================================== */
 
 #define Q6_V_vandor_VQnR(Vx,Qu,Rt) __BUILTIN_VECTOR_WRAP(__builtin_HEXAGON_V6_vandnqrt_acc)(Vx,__BUILTIN_VECTOR_WRAP(__builtin_HEXAGON_V6_vandvrt)((Qu),-1),Rt)
-#endif /* __HEXAGON_ARCH___ >= 62 */
+#endif
 
 #if __HVX_ARCH__ >= 62
 /* ==========================================================================
@@ -2944,7 +2944,7 @@
    ========================================================================== */
 
 #define Q6_V_vand_QnV(Qv,Vu) __BUILTIN_VECTOR_WRAP(__builtin_HEXAGON_V6_vandvnqv)(__BUILTIN_VECTOR_WRAP(__builtin_HEXAGON_V6_vandvrt)((Qv),-1),Vu)
-#endif /* __HEXAGON_ARCH___ >= 62 */
+#endif
 
 #if __HVX_ARCH__ >= 62
 /* ==========================================================================
@@ -2955,7 +2955,7 @@
    ========================================================================== */
 
 #define Q6_V_vand_QV(Qv,Vu) __BUILTIN_VECTOR_WRAP(__builtin_HEXAGON_V6_vandvqv)(__BUILTIN_VECTOR_WRAP(__builtin_HEXAGON_V6_vandvrt)((Qv),-1),Vu)
-#endif /* __HEXAGON_ARCH___ >= 62 */
+#endif
 
 #if __HVX_ARCH__ >= 62
 /* ==========================================================================
@@ -2966,7 +2966,7 @@
    ========================================================================== */
 
 #define Q6_Vb_vasr_VhVhR_sat(Vu,Vv,Rt) __BUILTIN_VECTOR_WRAP(__builtin_HEXAGON_V6_vasrhbsat)(Vu,Vv,Rt)
-#endif /* __HEXAGON_ARCH___ >= 62 */
+#endif
 
 #if __HVX_ARCH__ >= 62
 /* ==========================================================================
@@ -2977,7 +2977,7 @@
    ========================================================================== */
 
 #define Q6_Vuh_vasr_VuwVuwR_rnd_sat(Vu,Vv,Rt) __BUILTIN_VECTOR_WRAP(__builtin_HEXAGON_V6_vasruwuhrndsat)(Vu,Vv,Rt)
-#endif /* __HEXAGON_ARCH___ >= 62 */
+#endif
 
 #if __HVX_ARCH__ >= 62
 /* ==========================================================================
@@ -2988,7 +2988,7 @@
    ========================================================================== */
 
 #define Q6_Vuh_vasr_VwVwR_rnd_sat(Vu,Vv,Rt) __BUILTIN_VECTOR_WRAP(__builtin_HEXAGON_V6_vasrwuhrndsat)(Vu,Vv,Rt)
-#endif /* __HEXAGON_ARCH___ >= 62 */
+#endif
 
 #if __HVX_ARCH__ >= 62
 /* ==========================================================================
@@ -2999,7 +2999,7 @@
    ========================================================================== */
 
 #define Q6_Vub_vlsr_VubR(Vu,Rt) __BUILTIN_VECTOR_WRAP(__builtin_HEXAGON_V6_vlsrb)(Vu,Rt)
-#endif /* __HEXAGON_ARCH___ >= 62 */
+#endif
 
 #if __HVX_ARCH__ >= 62
 /* ==========================================================================
@@ -3010,7 +3010,7 @@
    ========================================================================== */
 
 #define Q6_Vb_vlut32_VbVbR_nomatch(Vu,Vv,Rt) __BUILTIN_VECTOR_WRAP(__builtin_HEXAGON_V6_vlutvvb_nm)(Vu,Vv,Rt)
-#endif /* __HEXAGON_ARCH___ >= 62 */
+#endif
 
 #if __HVX_ARCH__ >= 62
 /* ==========================================================================
@@ -3021,7 +3021,7 @@
    ========================================================================== */
 
 #define Q6_Vb_vlut32or_VbVbVbI(Vx,Vu,Vv,Iu3) __BUILTIN_VECTOR_WRAP(__builtin_HEXAGON_V6_vlutvvb_oracci)(Vx,Vu,Vv,Iu3)
-#endif /* __HEXAGON_ARCH___ >= 62 */
+#endif
 
 #if __HVX_ARCH__ >= 62
 /* ==========================================================================
@@ -3032,7 +3032,7 @@
    ========================================================================== */
 
 #define Q6_Vb_vlut32_VbVbI(Vu,Vv,Iu3) __BUILTIN_VECTOR_WRAP(__builtin_HEXAGON_V6_vlutvvbi)(Vu,Vv,Iu3)
-#endif /* __HEXAGON_ARCH___ >= 62 */
+#endif
 
 #if __HVX_ARCH__ >= 62
 /* ==========================================================================
@@ -3043,7 +3043,7 @@
    ========================================================================== */
 
 #define Q6_Wh_vlut16_VbVhR_nomatch(Vu,Vv,Rt) __BUILTIN_VECTOR_WRAP(__builtin_HEXAGON_V6_vlutvwh_nm)(Vu,Vv,Rt)
-#endif /* __HEXAGON_ARCH___ >= 62 */
+#endif
 
 #if __HVX_ARCH__ >= 62
 /* ==========================================================================
@@ -3054,7 +3054,7 @@
    ========================================================================== */
 
 #define Q6_Wh_vlut16or_WhVbVhI(Vxx,Vu,Vv,Iu3) __BUILTIN_VECTOR_WRAP(__builtin_HEXAGON_V6_vlutvwh_oracci)(Vxx,Vu,Vv,Iu3)
-#endif /* __HEXAGON_ARCH___ >= 62 */
+#endif
 
 #if __HVX_ARCH__ >= 62
 /* ==========================================================================
@@ -3065,7 +3065,7 @@
    ========================================================================== */
 
 #define Q6_Wh_vlut16_VbVhI(Vu,Vv,Iu3) __BUILTIN_VECTOR_WRAP(__builtin_HEXAGON_V6_vlutvwhi)(Vu,Vv,Iu3)
-#endif /* __HEXAGON_ARCH___ >= 62 */
+#endif
 
 #if __HVX_ARCH__ >= 62
 /* ==========================================================================
@@ -3076,7 +3076,7 @@
    ========================================================================== */
 
 #define Q6_Vb_vmax_VbVb(Vu,Vv) __BUILTIN_VECTOR_WRAP(__builtin_HEXAGON_V6_vmaxb)(Vu,Vv)
-#endif /* __HEXAGON_ARCH___ >= 62 */
+#endif
 
 #if __HVX_ARCH__ >= 62
 /* ==========================================================================
@@ -3087,7 +3087,7 @@
    ========================================================================== */
 
 #define Q6_Vb_vmin_VbVb(Vu,Vv) __BUILTIN_VECTOR_WRAP(__builtin_HEXAGON_V6_vminb)(Vu,Vv)
-#endif /* __HEXAGON_ARCH___ >= 62 */
+#endif
 
 #if __HVX_ARCH__ >= 62
 /* ==========================================================================
@@ -3098,7 +3098,7 @@
    ========================================================================== */
 
 #define Q6_Ww_vmpa_WuhRb(Vuu,Rt) __BUILTIN_VECTOR_WRAP(__builtin_HEXAGON_V6_vmpauhb)(Vuu,Rt)
-#endif /* __HEXAGON_ARCH___ >= 62 */
+#endif
 
 #if __HVX_ARCH__ >= 62
 /* ==========================================================================
@@ -3109,7 +3109,7 @@
    ========================================================================== */
 
 #define Q6_Ww_vmpaacc_WwWuhRb(Vxx,Vuu,Rt) __BUILTIN_VECTOR_WRAP(__builtin_HEXAGON_V6_vmpauhb_acc)(Vxx,Vuu,Rt)
-#endif /* __HEXAGON_ARCH___ >= 62 */
+#endif
 
 #if __HVX_ARCH__ >= 62
 /* ==========================================================================
@@ -3120,7 +3120,7 @@
    ========================================================================== */
 
 #define Q6_W_vmpye_VwVuh(Vu,Vv) __BUILTIN_VECTOR_WRAP(__builtin_HEXAGON_V6_vmpyewuh_64)(Vu,Vv)
-#endif /* __HEXAGON_ARCH___ >= 62 */
+#endif
 
 #if __HVX_ARCH__ >= 62
 /* ==========================================================================
@@ -3131,7 +3131,7 @@
    ========================================================================== */
 
 #define Q6_Vw_vmpyi_VwRub(Vu,Rt) __BUILTIN_VECTOR_WRAP(__builtin_HEXAGON_V6_vmpyiwub)(Vu,Rt)
-#endif /* __HEXAGON_ARCH___ >= 62 */
+#endif
 
 #if __HVX_ARCH__ >= 62
 /* ==========================================================================
@@ -3142,7 +3142,7 @@
    ========================================================================== */
 
 #define Q6_Vw_vmpyiacc_VwVwRub(Vx,Vu,Rt) __BUILTIN_VECTOR_WRAP(__builtin_HEXAGON_V6_vmpyiwub_acc)(Vx,Vu,Rt)
-#endif /* __HEXAGON_ARCH___ >= 62 */
+#endif
 
 #if __HVX_ARCH__ >= 62
 /* ==========================================================================
@@ -3153,7 +3153,7 @@
    ========================================================================== */
 
 #define Q6_W_vmpyoacc_WVwVh(Vxx,Vu,Vv) __BUILTIN_VECTOR_WRAP(__builtin_HEXAGON_V6_vmpyowh_64_acc)(Vxx,Vu,Vv)
-#endif /* __HEXAGON_ARCH___ >= 62 */
+#endif
 
 #if __HVX_ARCH__ >= 62
 /* ==========================================================================
@@ -3164,7 +3164,7 @@
    ========================================================================== */
 
 #define Q6_Vub_vround_VuhVuh_sat(Vu,Vv) __BUILTIN_VECTOR_WRAP(__builtin_HEXAGON_V6_vrounduhub)(Vu,Vv)
-#endif /* __HEXAGON_ARCH___ >= 62 */
+#endif
 
 #if __HVX_ARCH__ >= 62
 /* ==========================================================================
@@ -3175,7 +3175,7 @@
    ========================================================================== */
 
 #define Q6_Vuh_vround_VuwVuw_sat(Vu,Vv) __BUILTIN_VECTOR_WRAP(__builtin_HEXAGON_V6_vrounduwuh)(Vu,Vv)
-#endif /* __HEXAGON_ARCH___ >= 62 */
+#endif
 
 #if __HVX_ARCH__ >= 62
 /* ==========================================================================
@@ -3186,7 +3186,7 @@
    ========================================================================== */
 
 #define Q6_Vuh_vsat_VuwVuw(Vu,Vv) __BUILTIN_VECTOR_WRAP(__builtin_HEXAGON_V6_vsatuwuh)(Vu,Vv)
-#endif /* __HEXAGON_ARCH___ >= 62 */
+#endif
 
 #if __HVX_ARCH__ >= 62
 /* ==========================================================================
@@ -3197,7 +3197,7 @@
    ========================================================================== */
 
 #define Q6_Vb_vsub_VbVb_sat(Vu,Vv) __BUILTIN_VECTOR_WRAP(__builtin_HEXAGON_V6_vsubbsat)(Vu,Vv)
-#endif /* __HEXAGON_ARCH___ >= 62 */
+#endif
 
 #if __HVX_ARCH__ >= 62
 /* ==========================================================================
@@ -3208,7 +3208,7 @@
    ========================================================================== */
 
 #define Q6_Wb_vsub_WbWb_sat(Vuu,Vvv) __BUILTIN_VECTOR_WRAP(__builtin_HEXAGON_V6_vsubbsat_dv)(Vuu,Vvv)
-#endif /* __HEXAGON_ARCH___ >= 62 */
+#endif
 
 #if __HVX_ARCH__ >= 62
 /* ==========================================================================
@@ -3219,7 +3219,7 @@
    ========================================================================== */
 
 #define Q6_Vw_vsub_VwVwQ_carry(Vu,Vv,Qx) __BUILTIN_VECTOR_WRAP(__builtin_HEXAGON_V6_vsubcarry)(Vu,Vv,Qx)
-#endif /* __HEXAGON_ARCH___ >= 62 */
+#endif
 
 #if __HVX_ARCH__ >= 62
 /* ==========================================================================
@@ -3230,7 +3230,7 @@
    ========================================================================== */
 
 #define Q6_Vub_vsub_VubVb_sat(Vu,Vv) __BUILTIN_VECTOR_WRAP(__builtin_HEXAGON_V6_vsubububb_sat)(Vu,Vv)
-#endif /* __HEXAGON_ARCH___ >= 62 */
+#endif
 
 #if __HVX_ARCH__ >= 62
 /* ==========================================================================
@@ -3241,7 +3241,7 @@
    ========================================================================== */
 
 #define Q6_Vuw_vsub_VuwVuw_sat(Vu,Vv) __BUILTIN_VECTOR_WRAP(__builtin_HEXAGON_V6_vsubuwsat)(Vu,Vv)
-#endif /* __HEXAGON_ARCH___ >= 62 */
+#endif
 
 #if __HVX_ARCH__ >= 62
 /* ==========================================================================
@@ -3252,7 +3252,7 @@
    ========================================================================== */
 
 #define Q6_Wuw_vsub_WuwWuw_sat(Vuu,Vvv) __BUILTIN_VECTOR_WRAP(__builtin_HEXAGON_V6_vsubuwsat_dv)(Vuu,Vvv)
-#endif /* __HEXAGON_ARCH___ >= 62 */
+#endif
 
 #if __HVX_ARCH__ >= 65
 /* ==========================================================================
@@ -3263,7 +3263,7 @@
    ========================================================================== */
 
 #define Q6_Vb_vabs_Vb(Vu) __BUILTIN_VECTOR_WRAP(__builtin_HEXAGON_V6_vabsb)(Vu)
-#endif /* __HEXAGON_ARCH___ >= 65 */
+#endif
 
 #if __HVX_ARCH__ >= 65
 /* ==========================================================================
@@ -3274,7 +3274,7 @@
    ========================================================================== */
 
 #define Q6_Vb_vabs_Vb_sat(Vu) __BUILTIN_VECTOR_WRAP(__builtin_HEXAGON_V6_vabsb_sat)(Vu)
-#endif /* __HEXAGON_ARCH___ >= 65 */
+#endif
 
 #if __HVX_ARCH__ >= 65
 /* ==========================================================================
@@ -3285,7 +3285,7 @@
    ========================================================================== */
 
 #define Q6_Vh_vaslacc_VhVhR(Vx,Vu,Rt) __BUILTIN_VECTOR_WRAP(__builtin_HEXAGON_V6_vaslh_acc)(Vx,Vu,Rt)
-#endif /* __HEXAGON_ARCH___ >= 65 */
+#endif
 
 #if __HVX_ARCH__ >= 65
 /* ==========================================================================
@@ -3296,7 +3296,7 @@
    ========================================================================== */
 
 #define Q6_Vh_vasracc_VhVhR(Vx,Vu,Rt) __BUILTIN_VECTOR_WRAP(__builtin_HEXAGON_V6_vasrh_acc)(Vx,Vu,Rt)
-#endif /* __HEXAGON_ARCH___ >= 65 */
+#endif
 
 #if __HVX_ARCH__ >= 65
 /* ==========================================================================
@@ -3307,7 +3307,7 @@
    ========================================================================== */
 
 #define Q6_Vub_vasr_VuhVuhR_rnd_sat(Vu,Vv,Rt) __BUILTIN_VECTOR_WRAP(__builtin_HEXAGON_V6_vasruhubrndsat)(Vu,Vv,Rt)
-#endif /* __HEXAGON_ARCH___ >= 65 */
+#endif
 
 #if __HVX_ARCH__ >= 65
 /* ==========================================================================
@@ -3318,7 +3318,7 @@
    ========================================================================== */
 
 #define Q6_Vub_vasr_VuhVuhR_sat(Vu,Vv,Rt) __BUILTIN_VECTOR_WRAP(__builtin_HEXAGON_V6_vasruhubsat)(Vu,Vv,Rt)
-#endif /* __HEXAGON_ARCH___ >= 65 */
+#endif
 
 #if __HVX_ARCH__ >= 65
 /* ==========================================================================
@@ -3329,7 +3329,7 @@
    ========================================================================== */
 
 #define Q6_Vuh_vasr_VuwVuwR_sat(Vu,Vv,Rt) __BUILTIN_VECTOR_WRAP(__builtin_HEXAGON_V6_vasruwuhsat)(Vu,Vv,Rt)
-#endif /* __HEXAGON_ARCH___ >= 65 */
+#endif
 
 #if __HVX_ARCH__ >= 65
 /* ==========================================================================
@@ -3340,7 +3340,7 @@
    ========================================================================== */
 
 #define Q6_Vb_vavg_VbVb(Vu,Vv) __BUILTIN_VECTOR_WRAP(__builtin_HEXAGON_V6_vavgb)(Vu,Vv)
-#endif /* __HEXAGON_ARCH___ >= 65 */
+#endif
 
 #if __HVX_ARCH__ >= 65
 /* ==========================================================================
@@ -3351,7 +3351,7 @@
    ========================================================================== */
 
 #define Q6_Vb_vavg_VbVb_rnd(Vu,Vv) __BUILTIN_VECTOR_WRAP(__builtin_HEXAGON_V6_vavgbrnd)(Vu,Vv)
-#endif /* __HEXAGON_ARCH___ >= 65 */
+#endif
 
 #if __HVX_ARCH__ >= 65
 /* ==========================================================================
@@ -3362,7 +3362,7 @@
    ========================================================================== */
 
 #define Q6_Vuw_vavg_VuwVuw(Vu,Vv) __BUILTIN_VECTOR_WRAP(__builtin_HEXAGON_V6_vavguw)(Vu,Vv)
-#endif /* __HEXAGON_ARCH___ >= 65 */
+#endif
 
 #if __HVX_ARCH__ >= 65
 /* ==========================================================================
@@ -3373,7 +3373,7 @@
    ========================================================================== */
 
 #define Q6_Vuw_vavg_VuwVuw_rnd(Vu,Vv) __BUILTIN_VECTOR_WRAP(__builtin_HEXAGON_V6_vavguwrnd)(Vu,Vv)
-#endif /* __HEXAGON_ARCH___ >= 65 */
+#endif
 
 #if __HVX_ARCH__ >= 65
 /* ==========================================================================
@@ -3384,7 +3384,7 @@
    ========================================================================== */
 
 #define Q6_W_vzero() __BUILTIN_VECTOR_WRAP(__builtin_HEXAGON_V6_vdd0)()
-#endif /* __HEXAGON_ARCH___ >= 65 */
+#endif
 
 #if __HVX_ARCH__ >= 65
 /* ==========================================================================
@@ -3395,7 +3395,7 @@
    ========================================================================== */
 
 #define Q6_vgather_ARMVh(Rs,Rt,Mu,Vv) __BUILTIN_VECTOR_WRAP(__builtin_HEXAGON_V6_vgathermh)(Rs,Rt,Mu,Vv)
-#endif /* __HEXAGON_ARCH___ >= 65 */
+#endif
 
 #if __HVX_ARCH__ >= 65
 /* ==========================================================================
@@ -3406,7 +3406,7 @@
    ========================================================================== */
 
 #define Q6_vgather_AQRMVh(Rs,Qs,Rt,Mu,Vv) __BUILTIN_VECTOR_WRAP(__builtin_HEXAGON_V6_vgathermhq)(Rs,__BUILTIN_VECTOR_WRAP(__builtin_HEXAGON_V6_vandvrt)((Qs),-1),Rt,Mu,Vv)
-#endif /* __HEXAGON_ARCH___ >= 65 */
+#endif
 
 #if __HVX_ARCH__ >= 65
 /* ==========================================================================
@@ -3417,7 +3417,7 @@
    ========================================================================== */
 
 #define Q6_vgather_ARMWw(Rs,Rt,Mu,Vvv) __BUILTIN_VECTOR_WRAP(__builtin_HEXAGON_V6_vgathermhw)(Rs,Rt,Mu,Vvv)
-#endif /* __HEXAGON_ARCH___ >= 65 */
+#endif
 
 #if __HVX_ARCH__ >= 65
 /* ==========================================================================
@@ -3428,7 +3428,7 @@
    ========================================================================== */
 
 #define Q6_vgather_AQRMWw(Rs,Qs,Rt,Mu,Vvv) __BUILTIN_VECTOR_WRAP(__builtin_HEXAGON_V6_vgathermhwq)(Rs,__BUILTIN_VECTOR_WRAP(__builtin_HEXAGON_V6_vandvrt)((Qs),-1),Rt,Mu,Vvv)
-#endif /* __HEXAGON_ARCH___ >= 65 */
+#endif
 
 #if __HVX_ARCH__ >= 65
 /* ==========================================================================
@@ -3439,7 +3439,7 @@
    ========================================================================== */
 
 #define Q6_vgather_ARMVw(Rs,Rt,Mu,Vv) __BUILTIN_VECTOR_WRAP(__builtin_HEXAGON_V6_vgathermw)(Rs,Rt,Mu,Vv)
-#endif /* __HEXAGON_ARCH___ >= 65 */
+#endif
 
 #if __HVX_ARCH__ >= 65
 /* ==========================================================================
@@ -3450,7 +3450,7 @@
    ========================================================================== */
 
 #define Q6_vgather_AQRMVw(Rs,Qs,Rt,Mu,Vv) __BUILTIN_VECTOR_WRAP(__builtin_HEXAGON_V6_vgathermwq)(Rs,__BUILTIN_VECTOR_WRAP(__builtin_HEXAGON_V6_vandvrt)((Qs),-1),Rt,Mu,Vv)
-#endif /* __HEXAGON_ARCH___ >= 65 */
+#endif
 
 #if __HVX_ARCH__ >= 65
 /* ==========================================================================
@@ -3461,7 +3461,7 @@
    ========================================================================== */
 
 #define Q6_Vh_vlut4_VuhPh(Vu,Rtt) __BUILTIN_VECTOR_WRAP(__builtin_HEXAGON_V6_vlut4)(Vu,Rtt)
-#endif /* __HEXAGON_ARCH___ >= 65 */
+#endif
 
 #if __HVX_ARCH__ >= 65
 /* ==========================================================================
@@ -3472,7 +3472,7 @@
    ========================================================================== */
 
 #define Q6_Wh_vmpa_WubRub(Vuu,Rt) __BUILTIN_VECTOR_WRAP(__builtin_HEXAGON_V6_vmpabuu)(Vuu,Rt)
-#endif /* __HEXAGON_ARCH___ >= 65 */
+#endif
 
 #if __HVX_ARCH__ >= 65
 /* ==========================================================================
@@ -3483,7 +3483,7 @@
    ========================================================================== */
 
 #define Q6_Wh_vmpaacc_WhWubRub(Vxx,Vuu,Rt) __BUILTIN_VECTOR_WRAP(__builtin_HEXAGON_V6_vmpabuu_acc)(Vxx,Vuu,Rt)
-#endif /* __HEXAGON_ARCH___ >= 65 */
+#endif
 
 #if __HVX_ARCH__ >= 65
 /* ==========================================================================
@@ -3494,7 +3494,7 @@
    ========================================================================== */
 
 #define Q6_Vh_vmpa_VhVhVhPh_sat(Vx,Vu,Rtt) __BUILTIN_VECTOR_WRAP(__builtin_HEXAGON_V6_vmpahhsat)(Vx,Vu,Rtt)
-#endif /* __HEXAGON_ARCH___ >= 65 */
+#endif
 
 #if __HVX_ARCH__ >= 65
 /* ==========================================================================
@@ -3505,7 +3505,7 @@
    ========================================================================== */
 
 #define Q6_Vh_vmpa_VhVhVuhPuh_sat(Vx,Vu,Rtt) __BUILTIN_VECTOR_WRAP(__builtin_HEXAGON_V6_vmpauhuhsat)(Vx,Vu,Rtt)
-#endif /* __HEXAGON_ARCH___ >= 65 */
+#endif
 
 #if __HVX_ARCH__ >= 65
 /* ==========================================================================
@@ -3516,7 +3516,7 @@
    ========================================================================== */
 
 #define Q6_Vh_vmps_VhVhVuhPuh_sat(Vx,Vu,Rtt) __BUILTIN_VECTOR_WRAP(__builtin_HEXAGON_V6_vmpsuhuhsat)(Vx,Vu,Rtt)
-#endif /* __HEXAGON_ARCH___ >= 65 */
+#endif
 
 #if __HVX_ARCH__ >= 65
 /* ==========================================================================
@@ -3527,7 +3527,7 @@
    ========================================================================== */
 
 #define Q6_Ww_vmpyacc_WwVhRh(Vxx,Vu,Rt) __BUILTIN_VECTOR_WRAP(__builtin_HEXAGON_V6_vmpyh_acc)(Vxx,Vu,Rt)
-#endif /* __HEXAGON_ARCH___ >= 65 */
+#endif
 
 #if __HVX_ARCH__ >= 65
 /* ==========================================================================
@@ -3538,7 +3538,7 @@
    ========================================================================== */
 
 #define Q6_Vuw_vmpye_VuhRuh(Vu,Rt) __BUILTIN_VECTOR_WRAP(__builtin_HEXAGON_V6_vmpyuhe)(Vu,Rt)
-#endif /* __HEXAGON_ARCH___ >= 65 */
+#endif
 
 #if __HVX_ARCH__ >= 65
 /* ==========================================================================
@@ -3549,7 +3549,7 @@
    ========================================================================== */
 
 #define Q6_Vuw_vmpyeacc_VuwVuhRuh(Vx,Vu,Rt) __BUILTIN_VECTOR_WRAP(__builtin_HEXAGON_V6_vmpyuhe_acc)(Vx,Vu,Rt)
-#endif /* __HEXAGON_ARCH___ >= 65 */
+#endif
 
 #if __HVX_ARCH__ >= 65
 /* ==========================================================================
@@ -3560,7 +3560,7 @@
    ========================================================================== */
 
 #define Q6_Vb_vnavg_VbVb(Vu,Vv) __BUILTIN_VECTOR_WRAP(__builtin_HEXAGON_V6_vnavgb)(Vu,Vv)
-#endif /* __HEXAGON_ARCH___ >= 65 */
+#endif
 
 #if __HVX_ARCH__ >= 65
 /* ==========================================================================
@@ -3571,7 +3571,7 @@
    ========================================================================== */
 
 #define Q6_Vb_prefixsum_Q(Qv) __BUILTIN_VECTOR_WRAP(__builtin_HEXAGON_V6_vprefixqb)(__BUILTIN_VECTOR_WRAP(__builtin_HEXAGON_V6_vandvrt)((Qv),-1))
-#endif /* __HEXAGON_ARCH___ >= 65 */
+#endif
 
 #if __HVX_ARCH__ >= 65
 /* ==========================================================================
@@ -3582,7 +3582,7 @@
    ========================================================================== */
 
 #define Q6_Vh_prefixsum_Q(Qv) __BUILTIN_VECTOR_WRAP(__builtin_HEXAGON_V6_vprefixqh)(__BUILTIN_VECTOR_WRAP(__builtin_HEXAGON_V6_vandvrt)((Qv),-1))
-#endif /* __HEXAGON_ARCH___ >= 65 */
+#endif
 
 #if __HVX_ARCH__ >= 65
 /* ==========================================================================
@@ -3593,7 +3593,7 @@
    ========================================================================== */
 
 #define Q6_Vw_prefixsum_Q(Qv) __BUILTIN_VECTOR_WRAP(__builtin_HEXAGON_V6_vprefixqw)(__BUILTIN_VECTOR_WRAP(__builtin_HEXAGON_V6_vandvrt)((Qv),-1))
-#endif /* __HEXAGON_ARCH___ >= 65 */
+#endif
 
 #if __HVX_ARCH__ >= 65
 /* ==========================================================================
@@ -3604,7 +3604,7 @@
    ========================================================================== */
 
 #define Q6_vscatter_RMVhV(Rt,Mu,Vv,Vw) __BUILTIN_VECTOR_WRAP(__builtin_HEXAGON_V6_vscattermh)(Rt,Mu,Vv,Vw)
-#endif /* __HEXAGON_ARCH___ >= 65 */
+#endif
 
 #if __HVX_ARCH__ >= 65
 /* ==========================================================================
@@ -3615,7 +3615,7 @@
    ========================================================================== */
 
 #define Q6_vscatteracc_RMVhV(Rt,Mu,Vv,Vw) __BUILTIN_VECTOR_WRAP(__builtin_HEXAGON_V6_vscattermh_add)(Rt,Mu,Vv,Vw)
-#endif /* __HEXAGON_ARCH___ >= 65 */
+#endif
 
 #if __HVX_ARCH__ >= 65
 /* ==========================================================================
@@ -3626,7 +3626,7 @@
    ========================================================================== */
 
 #define Q6_vscatter_QRMVhV(Qs,Rt,Mu,Vv,Vw) __BUILTIN_VECTOR_WRAP(__builtin_HEXAGON_V6_vscattermhq)(__BUILTIN_VECTOR_WRAP(__builtin_HEXAGON_V6_vandvrt)((Qs),-1),Rt,Mu,Vv,Vw)
-#endif /* __HEXAGON_ARCH___ >= 65 */
+#endif
 
 #if __HVX_ARCH__ >= 65
 /* ==========================================================================
@@ -3637,7 +3637,7 @@
    ========================================================================== */
 
 #define Q6_vscatter_RMWwV(Rt,Mu,Vvv,Vw) __BUILTIN_VECTOR_WRAP(__builtin_HEXAGON_V6_vscattermhw)(Rt,Mu,Vvv,Vw)
-#endif /* __HEXAGON_ARCH___ >= 65 */
+#endif
 
 #if __HVX_ARCH__ >= 65
 /* ==========================================================================
@@ -3648,7 +3648,7 @@
    ========================================================================== */
 
 #define Q6_vscatteracc_RMWwV(Rt,Mu,Vvv,Vw) __BUILTIN_VECTOR_WRAP(__builtin_HEXAGON_V6_vscattermhw_add)(Rt,Mu,Vvv,Vw)
-#endif /* __HEXAGON_ARCH___ >= 65 */
+#endif
 
 #if __HVX_ARCH__ >= 65
 /* ==========================================================================
@@ -3659,7 +3659,7 @@
    ========================================================================== */
 
 #define Q6_vscatter_QRMWwV(Qs,Rt,Mu,Vvv,Vw) __BUILTIN_VECTOR_WRAP(__builtin_HEXAGON_V6_vscattermhwq)(__BUILTIN_VECTOR_WRAP(__builtin_HEXAGON_V6_vandvrt)((Qs),-1),Rt,Mu,Vvv,Vw)
-#endif /* __HEXAGON_ARCH___ >= 65 */
+#endif
 
 #if __HVX_ARCH__ >= 65
 /* ==========================================================================
@@ -3670,7 +3670,7 @@
    ========================================================================== */
 
 #define Q6_vscatter_RMVwV(Rt,Mu,Vv,Vw) __BUILTIN_VECTOR_WRAP(__builtin_HEXAGON_V6_vscattermw)(Rt,Mu,Vv,Vw)
-#endif /* __HEXAGON_ARCH___ >= 65 */
+#endif
 
 #if __HVX_ARCH__ >= 65
 /* ==========================================================================
@@ -3681,7 +3681,7 @@
    ========================================================================== */
 
 #define Q6_vscatteracc_RMVwV(Rt,Mu,Vv,Vw) __BUILTIN_VECTOR_WRAP(__builtin_HEXAGON_V6_vscattermw_add)(Rt,Mu,Vv,Vw)
-#endif /* __HEXAGON_ARCH___ >= 65 */
+#endif
 
 #if __HVX_ARCH__ >= 65
 /* ==========================================================================
@@ -3692,7 +3692,7 @@
    ========================================================================== */
 
 #define Q6_vscatter_QRMVwV(Qs,Rt,Mu,Vv,Vw) __BUILTIN_VECTOR_WRAP(__builtin_HEXAGON_V6_vscattermwq)(__BUILTIN_VECTOR_WRAP(__builtin_HEXAGON_V6_vandvrt)((Qs),-1),Rt,Mu,Vv,Vw)
-#endif /* __HEXAGON_ARCH___ >= 65 */
+#endif
 
 #if __HVX_ARCH__ >= 66
 /* ==========================================================================
@@ -3703,7 +3703,7 @@
    ========================================================================== */
 
 #define Q6_Vw_vadd_VwVwQ_carry_sat(Vu,Vv,Qs) __BUILTIN_VECTOR_WRAP(__builtin_HEXAGON_V6_vaddcarrysat)(Vu,Vv,__BUILTIN_VECTOR_WRAP(__builtin_HEXAGON_V6_vandvrt)((Qs),-1))
-#endif /* __HEXAGON_ARCH___ >= 66 */
+#endif
 
 #if __HVX_ARCH__ >= 66
 /* ==========================================================================
@@ -3714,7 +3714,7 @@
    ========================================================================== */
 
 #define Q6_Ww_vasrinto_WwVwVw(Vxx,Vu,Vv) __BUILTIN_VECTOR_WRAP(__builtin_HEXAGON_V6_vasr_into)(Vxx,Vu,Vv)
-#endif /* __HEXAGON_ARCH___ >= 66 */
+#endif
 
 #if __HVX_ARCH__ >= 66
 /* ==========================================================================
@@ -3725,7 +3725,7 @@
    ========================================================================== */
 
 #define Q6_Vuw_vrotr_VuwVuw(Vu,Vv) __BUILTIN_VECTOR_WRAP(__builtin_HEXAGON_V6_vrotr)(Vu,Vv)
-#endif /* __HEXAGON_ARCH___ >= 66 */
+#endif
 
 #if __HVX_ARCH__ >= 66
 /* ==========================================================================
@@ -3736,7 +3736,7 @@
    ========================================================================== */
 
 #define Q6_Vw_vsatdw_VwVw(Vu,Vv) __BUILTIN_VECTOR_WRAP(__builtin_HEXAGON_V6_vsatdw)(Vu,Vv)
-#endif /* __HEXAGON_ARCH___ >= 66 */
+#endif
 
 #if __HVX_ARCH__ >= 68
 /* ==========================================================================
@@ -3747,7 +3747,7 @@
    ========================================================================== */
 
 #define Q6_Ww_v6mpy_WubWbI_h(Vuu,Vvv,Iu2) __BUILTIN_VECTOR_WRAP(__builtin_HEXAGON_V6_v6mpyhubs10)(Vuu,Vvv,Iu2)
-#endif /* __HEXAGON_ARCH___ >= 68 */
+#endif
 
 #if __HVX_ARCH__ >= 68
 /* ==========================================================================
@@ -3758,7 +3758,7 @@
    ========================================================================== */
 
 #define Q6_Ww_v6mpyacc_WwWubWbI_h(Vxx,Vuu,Vvv,Iu2) __BUILTIN_VECTOR_WRAP(__builtin_HEXAGON_V6_v6mpyhubs10_vxx)(Vxx,Vuu,Vvv,Iu2)
-#endif /* __HEXAGON_ARCH___ >= 68 */
+#endif
 
 #if __HVX_ARCH__ >= 68
 /* ==========================================================================
@@ -3769,7 +3769,7 @@
    ========================================================================== */
 
 #define Q6_Ww_v6mpy_WubWbI_v(Vuu,Vvv,Iu2) __BUILTIN_VECTOR_WRAP(__builtin_HEXAGON_V6_v6mpyvubs10)(Vuu,Vvv,Iu2)
-#endif /* __HEXAGON_ARCH___ >= 68 */
+#endif
 
 #if __HVX_ARCH__ >= 68
 /* ==========================================================================
@@ -3780,7 +3780,7 @@
    ========================================================================== */
 
 #define Q6_Ww_v6mpyacc_WwWubWbI_v(Vxx,Vuu,Vvv,Iu2) __BUILTIN_VECTOR_WRAP(__builtin_HEXAGON_V6_v6mpyvubs10_vxx)(Vxx,Vuu,Vvv,Iu2)
-#endif /* __HEXAGON_ARCH___ >= 68 */
+#endif
 
 #if __HVX_ARCH__ >= 68
 /* ==========================================================================
@@ -3791,7 +3791,7 @@
    ========================================================================== */
 
 #define Q6_Vhf_vabs_Vhf(Vu) __BUILTIN_VECTOR_WRAP(__builtin_HEXAGON_V6_vabs_hf)(Vu)
-#endif /* __HEXAGON_ARCH___ >= 68 */
+#endif
 
 #if __HVX_ARCH__ >= 68
 /* ==========================================================================
@@ -3802,7 +3802,7 @@
    ========================================================================== */
 
 #define Q6_Vsf_vabs_Vsf(Vu) __BUILTIN_VECTOR_WRAP(__builtin_HEXAGON_V6_vabs_sf)(Vu)
-#endif /* __HEXAGON_ARCH___ >= 68 */
+#endif
 
 #if __HVX_ARCH__ >= 68
 /* ==========================================================================
@@ -3813,7 +3813,7 @@
    ========================================================================== */
 
 #define Q6_Vqf16_vadd_VhfVhf(Vu,Vv) __BUILTIN_VECTOR_WRAP(__builtin_HEXAGON_V6_vadd_hf)(Vu,Vv)
-#endif /* __HEXAGON_ARCH___ >= 68 */
+#endif
 
 #if __HVX_ARCH__ >= 68
 /* ==========================================================================
@@ -3824,7 +3824,7 @@
    ========================================================================== */
 
 #define Q6_Vhf_vadd_VhfVhf(Vu,Vv) __BUILTIN_VECTOR_WRAP(__builtin_HEXAGON_V6_vadd_hf_hf)(Vu,Vv)
-#endif /* __HEXAGON_ARCH___ >= 68 */
+#endif
 
 #if __HVX_ARCH__ >= 68
 /* ==========================================================================
@@ -3835,7 +3835,7 @@
    ========================================================================== */
 
 #define Q6_Vqf16_vadd_Vqf16Vqf16(Vu,Vv) __BUILTIN_VECTOR_WRAP(__builtin_HEXAGON_V6_vadd_qf16)(Vu,Vv)
-#endif /* __HEXAGON_ARCH___ >= 68 */
+#endif
 
 #if __HVX_ARCH__ >= 68
 /* ==========================================================================
@@ -3846,7 +3846,7 @@
    ========================================================================== */
 
 #define Q6_Vqf16_vadd_Vqf16Vhf(Vu,Vv) __BUILTIN_VECTOR_WRAP(__builtin_HEXAGON_V6_vadd_qf16_mix)(Vu,Vv)
-#endif /* __HEXAGON_ARCH___ >= 68 */
+#endif
 
 #if __HVX_ARCH__ >= 68
 /* ==========================================================================
@@ -3857,7 +3857,7 @@
    ========================================================================== */
 
 #define Q6_Vqf32_vadd_Vqf32Vqf32(Vu,Vv) __BUILTIN_VECTOR_WRAP(__builtin_HEXAGON_V6_vadd_qf32)(Vu,Vv)
-#endif /* __HEXAGON_ARCH___ >= 68 */
+#endif
 
 #if __HVX_ARCH__ >= 68
 /* ==========================================================================
@@ -3868,7 +3868,7 @@
    ========================================================================== */
 
 #define Q6_Vqf32_vadd_Vqf32Vsf(Vu,Vv) __BUILTIN_VECTOR_WRAP(__builtin_HEXAGON_V6_vadd_qf32_mix)(Vu,Vv)
-#endif /* __HEXAGON_ARCH___ >= 68 */
+#endif
 
 #if __HVX_ARCH__ >= 68
 /* ==========================================================================
@@ -3879,7 +3879,7 @@
    ========================================================================== */
 
 #define Q6_Vqf32_vadd_VsfVsf(Vu,Vv) __BUILTIN_VECTOR_WRAP(__builtin_HEXAGON_V6_vadd_sf)(Vu,Vv)
-#endif /* __HEXAGON_ARCH___ >= 68 */
+#endif
 
 #if __HVX_ARCH__ >= 68
 /* ==========================================================================
@@ -3890,7 +3890,7 @@
    ========================================================================== */
 
 #define Q6_Wsf_vadd_VhfVhf(Vu,Vv) __BUILTIN_VECTOR_WRAP(__builtin_HEXAGON_V6_vadd_sf_hf)(Vu,Vv)
-#endif /* __HEXAGON_ARCH___ >= 68 */
+#endif
 
 #if __HVX_ARCH__ >= 68
 /* ==========================================================================
@@ -3901,7 +3901,7 @@
    ========================================================================== */
 
 #define Q6_Vsf_vadd_VsfVsf(Vu,Vv) __BUILTIN_VECTOR_WRAP(__builtin_HEXAGON_V6_vadd_sf_sf)(Vu,Vv)
-#endif /* __HEXAGON_ARCH___ >= 68 */
+#endif
 
 #if __HVX_ARCH__ >= 68
 /* ==========================================================================
@@ -3912,7 +3912,7 @@
    ========================================================================== */
 
 #define Q6_Vw_vfmv_Vw(Vu) __BUILTIN_VECTOR_WRAP(__builtin_HEXAGON_V6_vassign_fp)(Vu)
-#endif /* __HEXAGON_ARCH___ >= 68 */
+#endif
 
 #if __HVX_ARCH__ >= 68
 /* ==========================================================================
@@ -3923,7 +3923,7 @@
    ========================================================================== */
 
 #define Q6_Vhf_equals_Vqf16(Vu) __BUILTIN_VECTOR_WRAP(__builtin_HEXAGON_V6_vconv_hf_qf16)(Vu)
-#endif /* __HEXAGON_ARCH___ >= 68 */
+#endif
 
 #if __HVX_ARCH__ >= 68
 /* ==========================================================================
@@ -3934,7 +3934,7 @@
    ========================================================================== */
 
 #define Q6_Vhf_equals_Wqf32(Vuu) __BUILTIN_VECTOR_WRAP(__builtin_HEXAGON_V6_vconv_hf_qf32)(Vuu)
-#endif /* __HEXAGON_ARCH___ >= 68 */
+#endif
 
 #if __HVX_ARCH__ >= 68
 /* ==========================================================================
@@ -3945,7 +3945,7 @@
    ========================================================================== */
 
 #define Q6_Vsf_equals_Vqf32(Vu) __BUILTIN_VECTOR_WRAP(__builtin_HEXAGON_V6_vconv_sf_qf32)(Vu)
-#endif /* __HEXAGON_ARCH___ >= 68 */
+#endif
 
 #if __HVX_ARCH__ >= 68
 /* ==========================================================================
@@ -3956,7 +3956,7 @@
    ========================================================================== */
 
 #define Q6_Vb_vcvt_VhfVhf(Vu,Vv) __BUILTIN_VECTOR_WRAP(__builtin_HEXAGON_V6_vcvt_b_hf)(Vu,Vv)
-#endif /* __HEXAGON_ARCH___ >= 68 */
+#endif
 
 #if __HVX_ARCH__ >= 68
 /* ==========================================================================
@@ -3967,7 +3967,7 @@
    ========================================================================== */
 
 #define Q6_Vh_vcvt_Vhf(Vu) __BUILTIN_VECTOR_WRAP(__builtin_HEXAGON_V6_vcvt_h_hf)(Vu)
-#endif /* __HEXAGON_ARCH___ >= 68 */
+#endif
 
 #if __HVX_ARCH__ >= 68
 /* ==========================================================================
@@ -3978,7 +3978,7 @@
    ========================================================================== */
 
 #define Q6_Whf_vcvt_Vb(Vu) __BUILTIN_VECTOR_WRAP(__builtin_HEXAGON_V6_vcvt_hf_b)(Vu)
-#endif /* __HEXAGON_ARCH___ >= 68 */
+#endif
 
 #if __HVX_ARCH__ >= 68
 /* ==========================================================================
@@ -3989,7 +3989,7 @@
    ========================================================================== */
 
 #define Q6_Vhf_vcvt_Vh(Vu) __BUILTIN_VECTOR_WRAP(__builtin_HEXAGON_V6_vcvt_hf_h)(Vu)
-#endif /* __HEXAGON_ARCH___ >= 68 */
+#endif
 
 #if __HVX_ARCH__ >= 68
 /* ==========================================================================
@@ -4000,7 +4000,7 @@
    ========================================================================== */
 
 #define Q6_Vhf_vcvt_VsfVsf(Vu,Vv) __BUILTIN_VECTOR_WRAP(__builtin_HEXAGON_V6_vcvt_hf_sf)(Vu,Vv)
-#endif /* __HEXAGON_ARCH___ >= 68 */
+#endif
 
 #if __HVX_ARCH__ >= 68
 /* ==========================================================================
@@ -4011,7 +4011,7 @@
    ========================================================================== */
 
 #define Q6_Whf_vcvt_Vub(Vu) __BUILTIN_VECTOR_WRAP(__builtin_HEXAGON_V6_vcvt_hf_ub)(Vu)
-#endif /* __HEXAGON_ARCH___ >= 68 */
+#endif
 
 #if __HVX_ARCH__ >= 68
 /* ==========================================================================
@@ -4022,7 +4022,7 @@
    ========================================================================== */
 
 #define Q6_Vhf_vcvt_Vuh(Vu) __BUILTIN_VECTOR_WRAP(__builtin_HEXAGON_V6_vcvt_hf_uh)(Vu)
-#endif /* __HEXAGON_ARCH___ >= 68 */
+#endif
 
 #if __HVX_ARCH__ >= 68
 /* ==========================================================================
@@ -4033,7 +4033,7 @@
    ========================================================================== */
 
 #define Q6_Wsf_vcvt_Vhf(Vu) __BUILTIN_VECTOR_WRAP(__builtin_HEXAGON_V6_vcvt_sf_hf)(Vu)
-#endif /* __HEXAGON_ARCH___ >= 68 */
+#endif
 
 #if __HVX_ARCH__ >= 68
 /* ==========================================================================
@@ -4044,7 +4044,7 @@
    ========================================================================== */
 
 #define Q6_Vub_vcvt_VhfVhf(Vu,Vv) __BUILTIN_VECTOR_WRAP(__builtin_HEXAGON_V6_vcvt_ub_hf)(Vu,Vv)
-#endif /* __HEXAGON_ARCH___ >= 68 */
+#endif
 
 #if __HVX_ARCH__ >= 68
 /* ==========================================================================
@@ -4055,7 +4055,7 @@
    ========================================================================== */
 
 #define Q6_Vuh_vcvt_Vhf(Vu) __BUILTIN_VECTOR_WRAP(__builtin_HEXAGON_V6_vcvt_uh_hf)(Vu)
-#endif /* __HEXAGON_ARCH___ >= 68 */
+#endif
 
 #if __HVX_ARCH__ >= 68
 /* ==========================================================================
@@ -4066,7 +4066,7 @@
    ========================================================================== */
 
 #define Q6_Vsf_vdmpy_VhfVhf(Vu,Vv) __BUILTIN_VECTOR_WRAP(__builtin_HEXAGON_V6_vdmpy_sf_hf)(Vu,Vv)
-#endif /* __HEXAGON_ARCH___ >= 68 */
+#endif
 
 #if __HVX_ARCH__ >= 68
 /* ==========================================================================
@@ -4077,7 +4077,7 @@
    ========================================================================== */
 
 #define Q6_Vsf_vdmpyacc_VsfVhfVhf(Vx,Vu,Vv) __BUILTIN_VECTOR_WRAP(__builtin_HEXAGON_V6_vdmpy_sf_hf_acc)(Vx,Vu,Vv)
-#endif /* __HEXAGON_ARCH___ >= 68 */
+#endif
 
 #if __HVX_ARCH__ >= 68
 /* ==========================================================================
@@ -4088,7 +4088,7 @@
    ========================================================================== */
 
 #define Q6_Vhf_vfmax_VhfVhf(Vu,Vv) __BUILTIN_VECTOR_WRAP(__builtin_HEXAGON_V6_vfmax_hf)(Vu,Vv)
-#endif /* __HEXAGON_ARCH___ >= 68 */
+#endif
 
 #if __HVX_ARCH__ >= 68
 /* ==========================================================================
@@ -4099,7 +4099,7 @@
    ========================================================================== */
 
 #define Q6_Vsf_vfmax_VsfVsf(Vu,Vv) __BUILTIN_VECTOR_WRAP(__builtin_HEXAGON_V6_vfmax_sf)(Vu,Vv)
-#endif /* __HEXAGON_ARCH___ >= 68 */
+#endif
 
 #if __HVX_ARCH__ >= 68
 /* ==========================================================================
@@ -4110,7 +4110,7 @@
    ========================================================================== */
 
 #define Q6_Vhf_vfmin_VhfVhf(Vu,Vv) __BUILTIN_VECTOR_WRAP(__builtin_HEXAGON_V6_vfmin_hf)(Vu,Vv)
-#endif /* __HEXAGON_ARCH___ >= 68 */
+#endif
 
 #if __HVX_ARCH__ >= 68
 /* ==========================================================================
@@ -4121,7 +4121,7 @@
    ========================================================================== */
 
 #define Q6_Vsf_vfmin_VsfVsf(Vu,Vv) __BUILTIN_VECTOR_WRAP(__builtin_HEXAGON_V6_vfmin_sf)(Vu,Vv)
-#endif /* __HEXAGON_ARCH___ >= 68 */
+#endif
 
 #if __HVX_ARCH__ >= 68
 /* ==========================================================================
@@ -4132,7 +4132,7 @@
    ========================================================================== */
 
 #define Q6_Vhf_vfneg_Vhf(Vu) __BUILTIN_VECTOR_WRAP(__builtin_HEXAGON_V6_vfneg_hf)(Vu)
-#endif /* __HEXAGON_ARCH___ >= 68 */
+#endif
 
 #if __HVX_ARCH__ >= 68
 /* ==========================================================================
@@ -4143,7 +4143,7 @@
    ========================================================================== */
 
 #define Q6_Vsf_vfneg_Vsf(Vu) __BUILTIN_VECTOR_WRAP(__builtin_HEXAGON_V6_vfneg_sf)(Vu)
-#endif /* __HEXAGON_ARCH___ >= 68 */
+#endif
 
 #if __HVX_ARCH__ >= 68
 /* ==========================================================================
@@ -4154,7 +4154,7 @@
    ========================================================================== */
 
 #define Q6_Q_vcmp_gt_VhfVhf(Vu,Vv) __BUILTIN_VECTOR_WRAP(__builtin_HEXAGON_V6_vandqrt)((__BUILTIN_VECTOR_WRAP(__builtin_HEXAGON_V6_vgthf)(Vu,Vv)),-1)
-#endif /* __HEXAGON_ARCH___ >= 68 */
+#endif
 
 #if __HVX_ARCH__ >= 68
 /* ==========================================================================
@@ -4165,7 +4165,7 @@
    ========================================================================== */
 
 #define Q6_Q_vcmp_gtand_QVhfVhf(Qx,Vu,Vv) __BUILTIN_VECTOR_WRAP(__builtin_HEXAGON_V6_vandqrt)((__BUILTIN_VECTOR_WRAP(__builtin_HEXAGON_V6_vgthf_and)(__BUILTIN_VECTOR_WRAP(__builtin_HEXAGON_V6_vandvrt)((Qx),-1),Vu,Vv)),-1)
-#endif /* __HEXAGON_ARCH___ >= 68 */
+#endif
 
 #if __HVX_ARCH__ >= 68
 /* ==========================================================================
@@ -4176,7 +4176,7 @@
    ========================================================================== */
 
 #define Q6_Q_vcmp_gtor_QVhfVhf(Qx,Vu,Vv) __BUILTIN_VECTOR_WRAP(__builtin_HEXAGON_V6_vandqrt)((__BUILTIN_VECTOR_WRAP(__builtin_HEXAGON_V6_vgthf_or)(__BUILTIN_VECTOR_WRAP(__builtin_HEXAGON_V6_vandvrt)((Qx),-1),Vu,Vv)),-1)
-#endif /* __HEXAGON_ARCH___ >= 68 */
+#endif
 
 #if __HVX_ARCH__ >= 68
 /* ==========================================================================
@@ -4187,7 +4187,7 @@
    ========================================================================== */
 
 #define Q6_Q_vcmp_gtxacc_QVhfVhf(Qx,Vu,Vv) __BUILTIN_VECTOR_WRAP(__builtin_HEXAGON_V6_vandqrt)((__BUILTIN_VECTOR_WRAP(__builtin_HEXAGON_V6_vgthf_xor)(__BUILTIN_VECTOR_WRAP(__builtin_HEXAGON_V6_vandvrt)((Qx),-1),Vu,Vv)),-1)
-#endif /* __HEXAGON_ARCH___ >= 68 */
+#endif
 
 #if __HVX_ARCH__ >= 68
 /* ==========================================================================
@@ -4198,7 +4198,7 @@
    ========================================================================== */
 
 #define Q6_Q_vcmp_gt_VsfVsf(Vu,Vv) __BUILTIN_VECTOR_WRAP(__builtin_HEXAGON_V6_vandqrt)((__BUILTIN_VECTOR_WRAP(__builtin_HEXAGON_V6_vgtsf)(Vu,Vv)),-1)
-#endif /* __HEXAGON_ARCH___ >= 68 */
+#endif
 
 #if __HVX_ARCH__ >= 68
 /* ==========================================================================
@@ -4209,7 +4209,7 @@
    ========================================================================== */
 
 #define Q6_Q_vcmp_gtand_QVsfVsf(Qx,Vu,Vv) __BUILTIN_VECTOR_WRAP(__builtin_HEXAGON_V6_vandqrt)((__BUILTIN_VECTOR_WRAP(__builtin_HEXAGON_V6_vgtsf_and)(__BUILTIN_VECTOR_WRAP(__builtin_HEXAGON_V6_vandvrt)((Qx),-1),Vu,Vv)),-1)
-#endif /* __HEXAGON_ARCH___ >= 68 */
+#endif
 
 #if __HVX_ARCH__ >= 68
 /* ==========================================================================
@@ -4220,7 +4220,7 @@
    ========================================================================== */
 
 #define Q6_Q_vcmp_gtor_QVsfVsf(Qx,Vu,Vv) __BUILTIN_VECTOR_WRAP(__builtin_HEXAGON_V6_vandqrt)((__BUILTIN_VECTOR_WRAP(__builtin_HEXAGON_V6_vgtsf_or)(__BUILTIN_VECTOR_WRAP(__builtin_HEXAGON_V6_vandvrt)((Qx),-1),Vu,Vv)),-1)
-#endif /* __HEXAGON_ARCH___ >= 68 */
+#endif
 
 #if __HVX_ARCH__ >= 68
 /* ==========================================================================
@@ -4231,7 +4231,7 @@
    ========================================================================== */
 
 #define Q6_Q_vcmp_gtxacc_QVsfVsf(Qx,Vu,Vv) __BUILTIN_VECTOR_WRAP(__builtin_HEXAGON_V6_vandqrt)((__BUILTIN_VECTOR_WRAP(__builtin_HEXAGON_V6_vgtsf_xor)(__BUILTIN_VECTOR_WRAP(__builtin_HEXAGON_V6_vandvrt)((Qx),-1),Vu,Vv)),-1)
-#endif /* __HEXAGON_ARCH___ >= 68 */
+#endif
 
 #if __HVX_ARCH__ >= 68
 /* ==========================================================================
@@ -4242,7 +4242,7 @@
    ========================================================================== */
 
 #define Q6_Vhf_vmax_VhfVhf(Vu,Vv) __BUILTIN_VECTOR_WRAP(__builtin_HEXAGON_V6_vmax_hf)(Vu,Vv)
-#endif /* __HEXAGON_ARCH___ >= 68 */
+#endif
 
 #if __HVX_ARCH__ >= 68
 /* ==========================================================================
@@ -4253,7 +4253,7 @@
    ========================================================================== */
 
 #define Q6_Vsf_vmax_VsfVsf(Vu,Vv) __BUILTIN_VECTOR_WRAP(__builtin_HEXAGON_V6_vmax_sf)(Vu,Vv)
-#endif /* __HEXAGON_ARCH___ >= 68 */
+#endif
 
 #if __HVX_ARCH__ >= 68
 /* ==========================================================================
@@ -4264,7 +4264,7 @@
    ========================================================================== */
 
 #define Q6_Vhf_vmin_VhfVhf(Vu,Vv) __BUILTIN_VECTOR_WRAP(__builtin_HEXAGON_V6_vmin_hf)(Vu,Vv)
-#endif /* __HEXAGON_ARCH___ >= 68 */
+#endif
 
 #if __HVX_ARCH__ >= 68
 /* ==========================================================================
@@ -4275,7 +4275,7 @@
    ========================================================================== */
 
 #define Q6_Vsf_vmin_VsfVsf(Vu,Vv) __BUILTIN_VECTOR_WRAP(__builtin_HEXAGON_V6_vmin_sf)(Vu,Vv)
-#endif /* __HEXAGON_ARCH___ >= 68 */
+#endif
 
 #if __HVX_ARCH__ >= 68
 /* ==========================================================================
@@ -4286,7 +4286,7 @@
    ========================================================================== */
 
 #define Q6_Vhf_vmpy_VhfVhf(Vu,Vv) __BUILTIN_VECTOR_WRAP(__builtin_HEXAGON_V6_vmpy_hf_hf)(Vu,Vv)
-#endif /* __HEXAGON_ARCH___ >= 68 */
+#endif
 
 #if __HVX_ARCH__ >= 68
 /* ==========================================================================
@@ -4297,7 +4297,7 @@
    ========================================================================== */
 
 #define Q6_Vhf_vmpyacc_VhfVhfVhf(Vx,Vu,Vv) __BUILTIN_VECTOR_WRAP(__builtin_HEXAGON_V6_vmpy_hf_hf_acc)(Vx,Vu,Vv)
-#endif /* __HEXAGON_ARCH___ >= 68 */
+#endif
 
 #if __HVX_ARCH__ >= 68
 /* ==========================================================================
@@ -4308,7 +4308,7 @@
    ========================================================================== */
 
 #define Q6_Vqf16_vmpy_Vqf16Vqf16(Vu,Vv) __BUILTIN_VECTOR_WRAP(__builtin_HEXAGON_V6_vmpy_qf16)(Vu,Vv)
-#endif /* __HEXAGON_ARCH___ >= 68 */
+#endif
 
 #if __HVX_ARCH__ >= 68
 /* ==========================================================================
@@ -4319,7 +4319,7 @@
    ========================================================================== */
 
 #define Q6_Vqf16_vmpy_VhfVhf(Vu,Vv) __BUILTIN_VECTOR_WRAP(__builtin_HEXAGON_V6_vmpy_qf16_hf)(Vu,Vv)
-#endif /* __HEXAGON_ARCH___ >= 68 */
+#endif
 
 #if __HVX_ARCH__ >= 68
 /* ==========================================================================
@@ -4330,7 +4330,7 @@
    ========================================================================== */
 
 #define Q6_Vqf16_vmpy_Vqf16Vhf(Vu,Vv) __BUILTIN_VECTOR_WRAP(__builtin_HEXAGON_V6_vmpy_qf16_mix_hf)(Vu,Vv)
-#endif /* __HEXAGON_ARCH___ >= 68 */
+#endif
 
 #if __HVX_ARCH__ >= 68
 /* ==========================================================================
@@ -4341,7 +4341,7 @@
    ========================================================================== */
 
 #define Q6_Vqf32_vmpy_Vqf32Vqf32(Vu,Vv) __BUILTIN_VECTOR_WRAP(__builtin_HEXAGON_V6_vmpy_qf32)(Vu,Vv)
-#endif /* __HEXAGON_ARCH___ >= 68 */
+#endif
 
 #if __HVX_ARCH__ >= 68
 /* ==========================================================================
@@ -4352,7 +4352,7 @@
    ========================================================================== */
 
 #define Q6_Wqf32_vmpy_VhfVhf(Vu,Vv) __BUILTIN_VECTOR_WRAP(__builtin_HEXAGON_V6_vmpy_qf32_hf)(Vu,Vv)
-#endif /* __HEXAGON_ARCH___ >= 68 */
+#endif
 
 #if __HVX_ARCH__ >= 68
 /* ==========================================================================
@@ -4363,7 +4363,7 @@
    ========================================================================== */
 
 #define Q6_Wqf32_vmpy_Vqf16Vhf(Vu,Vv) __BUILTIN_VECTOR_WRAP(__builtin_HEXAGON_V6_vmpy_qf32_mix_hf)(Vu,Vv)
-#endif /* __HEXAGON_ARCH___ >= 68 */
+#endif
 
 #if __HVX_ARCH__ >= 68
 /* ==========================================================================
@@ -4374,7 +4374,7 @@
    ========================================================================== */
 
 #define Q6_Wqf32_vmpy_Vqf16Vqf16(Vu,Vv) __BUILTIN_VECTOR_WRAP(__builtin_HEXAGON_V6_vmpy_qf32_qf16)(Vu,Vv)
-#endif /* __HEXAGON_ARCH___ >= 68 */
+#endif
 
 #if __HVX_ARCH__ >= 68
 /* ==========================================================================
@@ -4385,7 +4385,7 @@
    ========================================================================== */
 
 #define Q6_Vqf32_vmpy_VsfVsf(Vu,Vv) __BUILTIN_VECTOR_WRAP(__builtin_HEXAGON_V6_vmpy_qf32_sf)(Vu,Vv)
-#endif /* __HEXAGON_ARCH___ >= 68 */
+#endif
 
 #if __HVX_ARCH__ >= 68
 /* ==========================================================================
@@ -4396,7 +4396,7 @@
    ========================================================================== */
 
 #define Q6_Wsf_vmpy_VhfVhf(Vu,Vv) __BUILTIN_VECTOR_WRAP(__builtin_HEXAGON_V6_vmpy_sf_hf)(Vu,Vv)
-#endif /* __HEXAGON_ARCH___ >= 68 */
+#endif
 
 #if __HVX_ARCH__ >= 68
 /* ==========================================================================
@@ -4407,7 +4407,7 @@
    ========================================================================== */
 
 #define Q6_Wsf_vmpyacc_WsfVhfVhf(Vxx,Vu,Vv) __BUILTIN_VECTOR_WRAP(__builtin_HEXAGON_V6_vmpy_sf_hf_acc)(Vxx,Vu,Vv)
-#endif /* __HEXAGON_ARCH___ >= 68 */
+#endif
 
 #if __HVX_ARCH__ >= 68
 /* ==========================================================================
@@ -4418,7 +4418,7 @@
    ========================================================================== */
 
 #define Q6_Vsf_vmpy_VsfVsf(Vu,Vv) __BUILTIN_VECTOR_WRAP(__builtin_HEXAGON_V6_vmpy_sf_sf)(Vu,Vv)
-#endif /* __HEXAGON_ARCH___ >= 68 */
+#endif
 
 #if __HVX_ARCH__ >= 68
 /* ==========================================================================
@@ -4429,7 +4429,7 @@
    ========================================================================== */
 
 #define Q6_Vqf16_vsub_VhfVhf(Vu,Vv) __BUILTIN_VECTOR_WRAP(__builtin_HEXAGON_V6_vsub_hf)(Vu,Vv)
-#endif /* __HEXAGON_ARCH___ >= 68 */
+#endif
 
 #if __HVX_ARCH__ >= 68
 /* ==========================================================================
@@ -4440,7 +4440,7 @@
    ========================================================================== */
 
 #define Q6_Vhf_vsub_VhfVhf(Vu,Vv) __BUILTIN_VECTOR_WRAP(__builtin_HEXAGON_V6_vsub_hf_hf)(Vu,Vv)
-#endif /* __HEXAGON_ARCH___ >= 68 */
+#endif
 
 #if __HVX_ARCH__ >= 68
 /* ==========================================================================
@@ -4451,7 +4451,7 @@
    ========================================================================== */
 
 #define Q6_Vqf16_vsub_Vqf16Vqf16(Vu,Vv) __BUILTIN_VECTOR_WRAP(__builtin_HEXAGON_V6_vsub_qf16)(Vu,Vv)
-#endif /* __HEXAGON_ARCH___ >= 68 */
+#endif
 
 #if __HVX_ARCH__ >= 68
 /* ==========================================================================
@@ -4462,7 +4462,7 @@
    ========================================================================== */
 
 #define Q6_Vqf16_vsub_Vqf16Vhf(Vu,Vv) __BUILTIN_VECTOR_WRAP(__builtin_HEXAGON_V6_vsub_qf16_mix)(Vu,Vv)
-#endif /* __HEXAGON_ARCH___ >= 68 */
+#endif
 
 #if __HVX_ARCH__ >= 68
 /* ==========================================================================
@@ -4473,7 +4473,7 @@
    ========================================================================== */
 
 #define Q6_Vqf32_vsub_Vqf32Vqf32(Vu,Vv) __BUILTIN_VECTOR_WRAP(__builtin_HEXAGON_V6_vsub_qf32)(Vu,Vv)
-#endif /* __HEXAGON_ARCH___ >= 68 */
+#endif
 
 #if __HVX_ARCH__ >= 68
 /* ==========================================================================
@@ -4484,7 +4484,7 @@
    ========================================================================== */
 
 #define Q6_Vqf32_vsub_Vqf32Vsf(Vu,Vv) __BUILTIN_VECTOR_WRAP(__builtin_HEXAGON_V6_vsub_qf32_mix)(Vu,Vv)
-#endif /* __HEXAGON_ARCH___ >= 68 */
+#endif
 
 #if __HVX_ARCH__ >= 68
 /* ==========================================================================
@@ -4495,7 +4495,7 @@
    ========================================================================== */
 
 #define Q6_Vqf32_vsub_VsfVsf(Vu,Vv) __BUILTIN_VECTOR_WRAP(__builtin_HEXAGON_V6_vsub_sf)(Vu,Vv)
-#endif /* __HEXAGON_ARCH___ >= 68 */
+#endif
 
 #if __HVX_ARCH__ >= 68
 /* ==========================================================================
@@ -4506,7 +4506,7 @@
    ========================================================================== */
 
 #define Q6_Wsf_vsub_VhfVhf(Vu,Vv) __BUILTIN_VECTOR_WRAP(__builtin_HEXAGON_V6_vsub_sf_hf)(Vu,Vv)
-#endif /* __HEXAGON_ARCH___ >= 68 */
+#endif
 
 #if __HVX_ARCH__ >= 68
 /* ==========================================================================
@@ -4517,7 +4517,7 @@
    ========================================================================== */
 
 #define Q6_Vsf_vsub_VsfVsf(Vu,Vv) __BUILTIN_VECTOR_WRAP(__builtin_HEXAGON_V6_vsub_sf_sf)(Vu,Vv)
-#endif /* __HEXAGON_ARCH___ >= 68 */
+#endif
 
 #if __HVX_ARCH__ >= 69
 /* ==========================================================================
@@ -4528,7 +4528,7 @@
    ========================================================================== */
 
 #define Q6_Vub_vasr_WuhVub_rnd_sat(Vuu,Vv) __BUILTIN_VECTOR_WRAP(__builtin_HEXAGON_V6_vasrvuhubrndsat)(Vuu,Vv)
-#endif /* __HEXAGON_ARCH___ >= 69 */
+#endif
 
 #if __HVX_ARCH__ >= 69
 /* ==========================================================================
@@ -4539,7 +4539,7 @@
    ========================================================================== */
 
 #define Q6_Vub_vasr_WuhVub_sat(Vuu,Vv) __BUILTIN_VECTOR_WRAP(__builtin_HEXAGON_V6_vasrvuhubsat)(Vuu,Vv)
-#endif /* __HEXAGON_ARCH___ >= 69 */
+#endif
 
 #if __HVX_ARCH__ >= 69
 /* ==========================================================================
@@ -4550,7 +4550,7 @@
    ========================================================================== */
 
 #define Q6_Vuh_vasr_WwVuh_rnd_sat(Vuu,Vv) __BUILTIN_VECTOR_WRAP(__builtin_HEXAGON_V6_vasrvwuhrndsat)(Vuu,Vv)
-#endif /* __HEXAGON_ARCH___ >= 69 */
+#endif
 
 #if __HVX_ARCH__ >= 69
 /* ==========================================================================
@@ -4561,7 +4561,7 @@
    ========================================================================== */
 
 #define Q6_Vuh_vasr_WwVuh_sat(Vuu,Vv) __BUILTIN_VECTOR_WRAP(__builtin_HEXAGON_V6_vasrvwuhsat)(Vuu,Vv)
-#endif /* __HEXAGON_ARCH___ >= 69 */
+#endif
 
 #if __HVX_ARCH__ >= 69
 /* ==========================================================================
@@ -4572,7 +4572,7 @@
    ========================================================================== */
 
 #define Q6_Vuh_vmpy_VuhVuh_rs16(Vu,Vv) __BUILTIN_VECTOR_WRAP(__builtin_HEXAGON_V6_vmpyuhvs)(Vu,Vv)
-#endif /* __HEXAGON_ARCH___ >= 69 */
+#endif
 
 #if __HVX_ARCH__ >= 73
 /* ==========================================================================
@@ -4584,7 +4584,7 @@
 
 #define Q6_Wsf_vadd_VbfVbf(Vu, Vv)                                             \
   __BUILTIN_VECTOR_WRAP(__builtin_HEXAGON_V6_vadd_sf_bf)(Vu, Vv)
-#endif /* __HEXAGON_ARCH___ >= 73 */
+#endif
 
 #if __HVX_ARCH__ >= 73
 /* ==========================================================================
@@ -4596,7 +4596,7 @@
 
 #define Q6_Vh_equals_Vhf(Vu)                                                   \
   __BUILTIN_VECTOR_WRAP(__builtin_HEXAGON_V6_vconv_h_hf)(Vu)
-#endif /* __HEXAGON_ARCH___ >= 73 */
+#endif
 
 #if __HVX_ARCH__ >= 73
 /* ==========================================================================
@@ -4608,7 +4608,7 @@
 
 #define Q6_Vhf_equals_Vh(Vu)                                                   \
   __BUILTIN_VECTOR_WRAP(__builtin_HEXAGON_V6_vconv_hf_h)(Vu)
-#endif /* __HEXAGON_ARCH___ >= 73 */
+#endif
 
 #if __HVX_ARCH__ >= 73
 /* ==========================================================================
@@ -4620,7 +4620,7 @@
 
 #define Q6_Vsf_equals_Vw(Vu)                                                   \
   __BUILTIN_VECTOR_WRAP(__builtin_HEXAGON_V6_vconv_sf_w)(Vu)
-#endif /* __HEXAGON_ARCH___ >= 73 */
+#endif
 
 #if __HVX_ARCH__ >= 73
 /* ==========================================================================
@@ -4632,7 +4632,7 @@
 
 #define Q6_Vw_equals_Vsf(Vu)                                                   \
   __BUILTIN_VECTOR_WRAP(__builtin_HEXAGON_V6_vconv_w_sf)(Vu)
-#endif /* __HEXAGON_ARCH___ >= 73 */
+#endif
 
 #if __HVX_ARCH__ >= 73
 /* ==========================================================================
@@ -4644,7 +4644,7 @@
 
 #define Q6_Vbf_vcvt_VsfVsf(Vu, Vv)                                             \
   __BUILTIN_VECTOR_WRAP(__builtin_HEXAGON_V6_vcvt_bf_sf)(Vu, Vv)
-#endif /* __HEXAGON_ARCH___ >= 73 */
+#endif
 
 #if __HVX_ARCH__ >= 73
 /* ==========================================================================
@@ -4657,7 +4657,7 @@
 #define Q6_Q_vcmp_gt_VbfVbf(Vu, Vv)                                            \
   __BUILTIN_VECTOR_WRAP(__builtin_HEXAGON_V6_vandqrt)                          \
   ((__BUILTIN_VECTOR_WRAP(__builtin_HEXAGON_V6_vgtbf)(Vu, Vv)), -1)
-#endif /* __HEXAGON_ARCH___ >= 73 */
+#endif
 
 #if __HVX_ARCH__ >= 73
 /* ==========================================================================
@@ -4673,7 +4673,7 @@
        __BUILTIN_VECTOR_WRAP(__builtin_HEXAGON_V6_vandvrt)((Qx), -1), Vu,      \
        Vv)),                                                                   \
    -1)
-#endif /* __HEXAGON_ARCH___ >= 73 */
+#endif
 
 #if __HVX_ARCH__ >= 73
 /* ==========================================================================
@@ -4689,7 +4689,7 @@
        __BUILTIN_VECTOR_WRAP(__builtin_HEXAGON_V6_vandvrt)((Qx), -1), Vu,      \
        Vv)),                                                                   \
    -1)
-#endif /* __HEXAGON_ARCH___ >= 73 */
+#endif
 
 #if __HVX_ARCH__ >= 73
 /* ==========================================================================
@@ -4705,7 +4705,7 @@
        __BUILTIN_VECTOR_WRAP(__builtin_HEXAGON_V6_vandvrt)((Qx), -1), Vu,      \
        Vv)),                                                                   \
    -1)
-#endif /* __HEXAGON_ARCH___ >= 73 */
+#endif
 
 #if __HVX_ARCH__ >= 73
 /* ==========================================================================
@@ -4717,7 +4717,7 @@
 
 #define Q6_Vbf_vmax_VbfVbf(Vu, Vv)                                             \
   __BUILTIN_VECTOR_WRAP(__builtin_HEXAGON_V6_vmax_bf)(Vu, Vv)
-#endif /* __HEXAGON_ARCH___ >= 73 */
+#endif
 
 #if __HVX_ARCH__ >= 73
 /* ==========================================================================
@@ -4729,7 +4729,7 @@
 
 #define Q6_Vbf_vmin_VbfVbf(Vu, Vv)                                             \
   __BUILTIN_VECTOR_WRAP(__builtin_HEXAGON_V6_vmin_bf)(Vu, Vv)
-#endif /* __HEXAGON_ARCH___ >= 73 */
+#endif
 
 #if __HVX_ARCH__ >= 73
 /* ==========================================================================
@@ -4741,7 +4741,7 @@
 
 #define Q6_Wsf_vmpy_VbfVbf(Vu, Vv)                                             \
   __BUILTIN_VECTOR_WRAP(__builtin_HEXAGON_V6_vmpy_sf_bf)(Vu, Vv)
-#endif /* __HEXAGON_ARCH___ >= 73 */
+#endif
 
 #if __HVX_ARCH__ >= 73
 /* ==========================================================================
@@ -4753,7 +4753,7 @@
 
 #define Q6_Wsf_vmpyacc_WsfVbfVbf(Vxx, Vu, Vv)                                  \
   __BUILTIN_VECTOR_WRAP(__builtin_HEXAGON_V6_vmpy_sf_bf_acc)(Vxx, Vu, Vv)
-#endif /* __HEXAGON_ARCH___ >= 73 */
+#endif
 
 #if __HVX_ARCH__ >= 73
 /* ==========================================================================
@@ -4765,7 +4765,7 @@
 
 #define Q6_Wsf_vsub_VbfVbf(Vu, Vv)                                             \
   __BUILTIN_VECTOR_WRAP(__builtin_HEXAGON_V6_vsub_sf_bf)(Vu, Vv)
-#endif /* __HEXAGON_ARCH___ >= 73 */
+#endif
 
 #if __HVX_ARCH__ >= 79
 /* ==========================================================================
@@ -4777,7 +4777,7 @@
 
 #define Q6_V_vgetqfext_VR(Vu, Rt)                                              \
   __BUILTIN_VECTOR_WRAP(__builtin_HEXAGON_V6_get_qfext)(Vu, Rt)
-#endif /* __HEXAGON_ARCH___ >= 79 */
+#endif
 
 #if __HVX_ARCH__ >= 79
 /* ==========================================================================
@@ -4789,7 +4789,7 @@
 
 #define Q6_V_vgetqfextor_VVR(Vx, Vu, Rt)                                       \
   __BUILTIN_VECTOR_WRAP(__builtin_HEXAGON_V6_get_qfext_oracc)(Vx, Vu, Rt)
-#endif /* __HEXAGON_ARCH___ >= 79 */
+#endif
 
 #if __HVX_ARCH__ >= 79
 /* ==========================================================================
@@ -4801,7 +4801,7 @@
 
 #define Q6_V_vsetqfext_VR(Vu, Rt)                                              \
   __BUILTIN_VECTOR_WRAP(__builtin_HEXAGON_V6_set_qfext)(Vu, Rt)
-#endif /* __HEXAGON_ARCH___ >= 79 */
+#endif
 
 #if __HVX_ARCH__ >= 79
 /* ==========================================================================
@@ -4812,7 +4812,7 @@
    ========================================================================== */
 
 #define Q6_V_vabs_V(Vu) __BUILTIN_VECTOR_WRAP(__builtin_HEXAGON_V6_vabs_f8)(Vu)
-#endif /* __HEXAGON_ARCH___ >= 79 */
+#endif
 
 #if __HVX_ARCH__ >= 79
 /* ==========================================================================
@@ -4824,7 +4824,7 @@
 
 #define Q6_Whf_vadd_VV(Vu, Vv)                                                 \
   __BUILTIN_VECTOR_WRAP(__builtin_HEXAGON_V6_vadd_hf_f8)(Vu, Vv)
-#endif /* __HEXAGON_ARCH___ >= 79 */
+#endif
 
 #if __HVX_ARCH__ >= 79
 /* ==========================================================================
@@ -4836,7 +4836,7 @@
 
 #define Q6_Vb_vcvt2_VhfVhf(Vu, Vv)                                             \
   __BUILTIN_VECTOR_WRAP(__builtin_HEXAGON_V6_vcvt2_b_hf)(Vu, Vv)
-#endif /* __HEXAGON_ARCH___ >= 79 */
+#endif
 
 #if __HVX_ARCH__ >= 79
 /* ==========================================================================
@@ -4848,7 +4848,7 @@
 
 #define Q6_Whf_vcvt2_Vb(Vu)                                                    \
   __BUILTIN_VECTOR_WRAP(__builtin_HEXAGON_V6_vcvt2_hf_b)(Vu)
-#endif /* __HEXAGON_ARCH___ >= 79 */
+#endif
 
 #if __HVX_ARCH__ >= 79
 /* ==========================================================================
@@ -4860,7 +4860,7 @@
 
 #define Q6_Whf_vcvt2_Vub(Vu)                                                   \
   __BUILTIN_VECTOR_WRAP(__builtin_HEXAGON_V6_vcvt2_hf_ub)(Vu)
-#endif /* __HEXAGON_ARCH___ >= 79 */
+#endif
 
 #if __HVX_ARCH__ >= 79
 /* ==========================================================================
@@ -4872,7 +4872,7 @@
 
 #define Q6_Vub_vcvt2_VhfVhf(Vu, Vv)                                            \
   __BUILTIN_VECTOR_WRAP(__builtin_HEXAGON_V6_vcvt2_ub_hf)(Vu, Vv)
-#endif /* __HEXAGON_ARCH___ >= 79 */
+#endif
 
 #if __HVX_ARCH__ >= 79
 /* ==========================================================================
@@ -4884,7 +4884,7 @@
 
 #define Q6_V_vcvt_VhfVhf(Vu, Vv)                                               \
   __BUILTIN_VECTOR_WRAP(__builtin_HEXAGON_V6_vcvt_f8_hf)(Vu, Vv)
-#endif /* __HEXAGON_ARCH___ >= 79 */
+#endif
 
 #if __HVX_ARCH__ >= 79
 /* ==========================================================================
@@ -4896,7 +4896,7 @@
 
 #define Q6_Whf_vcvt_V(Vu)                                                      \
   __BUILTIN_VECTOR_WRAP(__builtin_HEXAGON_V6_vcvt_hf_f8)(Vu)
-#endif /* __HEXAGON_ARCH___ >= 79 */
+#endif
 
 #if __HVX_ARCH__ >= 79
 /* ==========================================================================
@@ -4908,7 +4908,7 @@
 
 #define Q6_V_vfmax_VV(Vu, Vv)                                                  \
   __BUILTIN_VECTOR_WRAP(__builtin_HEXAGON_V6_vfmax_f8)(Vu, Vv)
-#endif /* __HEXAGON_ARCH___ >= 79 */
+#endif
 
 #if __HVX_ARCH__ >= 79
 /* ==========================================================================
@@ -4920,7 +4920,7 @@
 
 #define Q6_V_vfmin_VV(Vu, Vv)                                                  \
   __BUILTIN_VECTOR_WRAP(__builtin_HEXAGON_V6_vfmin_f8)(Vu, Vv)
-#endif /* __HEXAGON_ARCH___ >= 79 */
+#endif
 
 #if __HVX_ARCH__ >= 79
 /* ==========================================================================
@@ -4932,7 +4932,7 @@
 
 #define Q6_V_vfneg_V(Vu)                                                       \
   __BUILTIN_VECTOR_WRAP(__builtin_HEXAGON_V6_vfneg_f8)(Vu)
-#endif /* __HEXAGON_ARCH___ >= 79 */
+#endif
 
 #if __HVX_ARCH__ >= 79
 /* ==========================================================================
@@ -4944,7 +4944,7 @@
 
 #define Q6_V_vmerge_VVw(Vu, Vv)                                                \
   __BUILTIN_VECTOR_WRAP(__builtin_HEXAGON_V6_vmerge_qf)(Vu, Vv)
-#endif /* __HEXAGON_ARCH___ >= 79 */
+#endif
 
 #if __HVX_ARCH__ >= 79
 /* ==========================================================================
@@ -4956,7 +4956,7 @@
 
 #define Q6_Whf_vmpy_VV(Vu, Vv)                                                 \
   __BUILTIN_VECTOR_WRAP(__builtin_HEXAGON_V6_vmpy_hf_f8)(Vu, Vv)
-#endif /* __HEXAGON_ARCH___ >= 79 */
+#endif
 
 #if __HVX_ARCH__ >= 79
 /* ==========================================================================
@@ -4968,7 +4968,7 @@
 
 #define Q6_Whf_vmpyacc_WhfVV(Vxx, Vu, Vv)                                      \
   __BUILTIN_VECTOR_WRAP(__builtin_HEXAGON_V6_vmpy_hf_f8_acc)(Vxx, Vu, Vv)
-#endif /* __HEXAGON_ARCH___ >= 79 */
+#endif
 
 #if __HVX_ARCH__ >= 79
 /* ==========================================================================
@@ -4980,7 +4980,7 @@
 
 #define Q6_Vqf16_vmpy_VhfRhf(Vu, Rt)                                           \
   __BUILTIN_VECTOR_WRAP(__builtin_HEXAGON_V6_vmpy_rt_hf)(Vu, Rt)
-#endif /* __HEXAGON_ARCH___ >= 79 */
+#endif
 
 #if __HVX_ARCH__ >= 79
 /* ==========================================================================
@@ -4992,7 +4992,7 @@
 
 #define Q6_Vqf16_vmpy_Vqf16Rhf(Vu, Rt)                                         \
   __BUILTIN_VECTOR_WRAP(__builtin_HEXAGON_V6_vmpy_rt_qf16)(Vu, Rt)
-#endif /* __HEXAGON_ARCH___ >= 79 */
+#endif
 
 #if __HVX_ARCH__ >= 79
 /* ==========================================================================
@@ -5004,7 +5004,7 @@
 
 #define Q6_Vqf32_vmpy_VsfRsf(Vu, Rt)                                           \
   __BUILTIN_VECTOR_WRAP(__builtin_HEXAGON_V6_vmpy_rt_sf)(Vu, Rt)
-#endif /* __HEXAGON_ARCH___ >= 79 */
+#endif
 
 #if __HVX_ARCH__ >= 79
 /* ==========================================================================
@@ -5016,7 +5016,7 @@
 
 #define Q6_Whf_vsub_VV(Vu, Vv)                                                 \
   __BUILTIN_VECTOR_WRAP(__builtin_HEXAGON_V6_vsub_hf_f8)(Vu, Vv)
-#endif /* __HEXAGON_ARCH___ >= 79 */
+#endif
 
 #if __HVX_ARCH__ >= 81
 /* ==========================================================================
@@ -5028,7 +5028,7 @@
 
 #define Q6_Vqf16_vabs_Vhf(Vu)                                                  \
   __BUILTIN_VECTOR_WRAP(__builtin_HEXAGON_V6_vabs_qf16_hf)(Vu)
-#endif /* __HEXAGON_ARCH___ >= 81 */
+#endif
 
 #if __HVX_ARCH__ >= 81
 /* ==========================================================================
@@ -5040,7 +5040,7 @@
 
 #define Q6_Vqf16_vabs_Vqf16(Vu)                                                \
   __BUILTIN_VECTOR_WRAP(__builtin_HEXAGON_V6_vabs_qf16_qf16)(Vu)
-#endif /* __HEXAGON_ARCH___ >= 81 */
+#endif
 
 #if __HVX_ARCH__ >= 81
 /* ==========================================================================
@@ -5052,7 +5052,7 @@
 
 #define Q6_Vqf32_vabs_Vqf32(Vu)                                                \
   __BUILTIN_VECTOR_WRAP(__builtin_HEXAGON_V6_vabs_qf32_qf32)(Vu)
-#endif /* __HEXAGON_ARCH___ >= 81 */
+#endif
 
 #if __HVX_ARCH__ >= 81
 /* ==========================================================================
@@ -5064,7 +5064,7 @@
 
 #define Q6_Vqf32_vabs_Vsf(Vu)                                                  \
   __BUILTIN_VECTOR_WRAP(__builtin_HEXAGON_V6_vabs_qf32_sf)(Vu)
-#endif /* __HEXAGON_ARCH___ >= 81 */
+#endif
 
 #if __HVX_ARCH__ >= 81
 /* ==========================================================================
@@ -5076,7 +5076,7 @@
 
 #define Q6_V_valign4_VVR(Vu, Vv, Rt)                                           \
   __BUILTIN_VECTOR_WRAP(__builtin_HEXAGON_V6_valign4)(Vu, Vv, Rt)
-#endif /* __HEXAGON_ARCH___ >= 81 */
+#endif
 
 #if __HVX_ARCH__ >= 81
 /* ==========================================================================
@@ -5088,7 +5088,7 @@
 
 #define Q6_Vbf_equals_Wqf32(Vuu)                                               \
   __BUILTIN_VECTOR_WRAP(__builtin_HEXAGON_V6_vconv_bf_qf32)(Vuu)
-#endif /* __HEXAGON_ARCH___ >= 81 */
+#endif
 
 #if __HVX_ARCH__ >= 81
 /* ==========================================================================
@@ -5100,7 +5100,7 @@
 
 #define Q6_V_equals_Vqf16(Vu)                                                  \
   __BUILTIN_VECTOR_WRAP(__builtin_HEXAGON_V6_vconv_f8_qf16)(Vu)
-#endif /* __HEXAGON_ARCH___ >= 81 */
+#endif
 
 #if __HVX_ARCH__ >= 81
 /* ==========================================================================
@@ -5112,7 +5112,7 @@
 
 #define Q6_Vh_equals_Vhf_rnd(Vu)                                               \
   __BUILTIN_VECTOR_WRAP(__builtin_HEXAGON_V6_vconv_h_hf_rnd)(Vu)
-#endif /* __HEXAGON_ARCH___ >= 81 */
+#endif
 
 #if __HVX_ARCH__ >= 81
 /* ==========================================================================
@@ -5124,7 +5124,7 @@
 
 #define Q6_Wqf16_equals_V(Vu)                                                  \
   __BUILTIN_VECTOR_WRAP(__builtin_HEXAGON_V6_vconv_qf16_f8)(Vu)
-#endif /* __HEXAGON_ARCH___ >= 81 */
+#endif
 
 #if __HVX_ARCH__ >= 81
 /* ==========================================================================
@@ -5136,7 +5136,7 @@
 
 #define Q6_Vqf16_equals_Vhf(Vu)                                                \
   __BUILTIN_VECTOR_WRAP(__builtin_HEXAGON_V6_vconv_qf16_hf)(Vu)
-#endif /* __HEXAGON_ARCH___ >= 81 */
+#endif
 
 #if __HVX_ARCH__ >= 81
 /* ==========================================================================
@@ -5148,7 +5148,7 @@
 
 #define Q6_Vqf16_equals_Vqf16(Vu)                                              \
   __BUILTIN_VECTOR_WRAP(__builtin_HEXAGON_V6_vconv_qf16_qf16)(Vu)
-#endif /* __HEXAGON_ARCH___ >= 81 */
+#endif
 
 #if __HVX_ARCH__ >= 81
 /* ==========================================================================
@@ -5160,7 +5160,7 @@
 
 #define Q6_Vqf32_equals_Vqf32(Vu)                                              \
   __BUILTIN_VECTOR_WRAP(__builtin_HEXAGON_V6_vconv_qf32_qf32)(Vu)
-#endif /* __HEXAGON_ARCH___ >= 81 */
+#endif
 
 #if __HVX_ARCH__ >= 81
 /* ==========================================================================
@@ -5172,7 +5172,7 @@
 
 #define Q6_Vqf32_equals_Vsf(Vu)                                                \
   __BUILTIN_VECTOR_WRAP(__builtin_HEXAGON_V6_vconv_qf32_sf)(Vu)
-#endif /* __HEXAGON_ARCH___ >= 81 */
+#endif
 
 #if __HVX_ARCH__ >= 81
 /* ==========================================================================
@@ -5185,7 +5185,7 @@
 #define Q6_Q_vcmp_eq_VhfVhf(Vu, Vv)                                            \
   __BUILTIN_VECTOR_WRAP(__builtin_HEXAGON_V6_vandqrt)(                         \
       (__BUILTIN_VECTOR_WRAP(__builtin_HEXAGON_V6_veqhf)(Vu, Vv)), -1)
-#endif /* __HEXAGON_ARCH___ >= 81 */
+#endif
 
 #if __HVX_ARCH__ >= 81
 /* ==========================================================================
@@ -5201,7 +5201,7 @@
           __BUILTIN_VECTOR_WRAP(__builtin_HEXAGON_V6_vandvrt)((Qx), -1), Vu,   \
           Vv)),                                                                \
       -1)
-#endif /* __HEXAGON_ARCH___ >= 81 */
+#endif
 
 #if __HVX_ARCH__ >= 81
 /* ==========================================================================
@@ -5217,7 +5217,7 @@
           __BUILTIN_VECTOR_WRAP(__builtin_HEXAGON_V6_vandvrt)((Qx), -1), Vu,   \
           Vv)),                                                                \
       -1)
-#endif /* __HEXAGON_ARCH___ >= 81 */
+#endif
 
 #if __HVX_ARCH__ >= 81
 /* ==========================================================================
@@ -5233,7 +5233,7 @@
           __BUILTIN_VECTOR_WRAP(__builtin_HEXAGON_V6_vandvrt)((Qx), -1), Vu,   \
           Vv)),                                                                \
       -1)
-#endif /* __HEXAGON_ARCH___ >= 81 */
+#endif
 
 #if __HVX_ARCH__ >= 81
 /* ==========================================================================
@@ -5246,7 +5246,7 @@
 #define Q6_Q_vcmp_eq_VsfVsf(Vu, Vv)                                            \
   __BUILTIN_VECTOR_WRAP(__builtin_HEXAGON_V6_vandqrt)(                         \
       (__BUILTIN_VECTOR_WRAP(__builtin_HEXAGON_V6_veqsf)(Vu, Vv)), -1)
-#endif /* __HEXAGON_ARCH___ >= 81 */
+#endif
 
 #if __HVX_ARCH__ >= 81
 /* ==========================================================================
@@ -5262,7 +5262,7 @@
           __BUILTIN_VECTOR_WRAP(__builtin_HEXAGON_V6_vandvrt)((Qx), -1), Vu,   \
           Vv)),                                                                \
       -1)
-#endif /* __HEXAGON_ARCH___ >= 81 */
+#endif
 
 #if __HVX_ARCH__ >= 81
 /* ==========================================================================
@@ -5278,7 +5278,7 @@
           __BUILTIN_VECTOR_WRAP(__builtin_HEXAGON_V6_vandvrt)((Qx), -1), Vu,   \
           Vv)),                                                                \
       -1)
-#endif /* __HEXAGON_ARCH___ >= 81 */
+#endif
 
 #if __HVX_ARCH__ >= 81
 /* ==========================================================================
@@ -5294,7 +5294,7 @@
           __BUILTIN_VECTOR_WRAP(__builtin_HEXAGON_V6_vandvrt)((Qx), -1), Vu,   \
           Vv)),                                                                \
       -1)
-#endif /* __HEXAGON_ARCH___ >= 81 */
+#endif
 
 #if __HVX_ARCH__ >= 81
 /* ==========================================================================
@@ -5306,7 +5306,7 @@
 
 #define Q6_Vw_vilog2_Vhf(Vu)                                                   \
   __BUILTIN_VECTOR_WRAP(__builtin_HEXAGON_V6_vilog2_hf)(Vu)
-#endif /* __HEXAGON_ARCH___ >= 81 */
+#endif
 
 #if __HVX_ARCH__ >= 81
 /* ==========================================================================
@@ -5318,7 +5318,7 @@
 
 #define Q6_Vw_vilog2_Vqf16(Vu)                                                 \
   __BUILTIN_VECTOR_WRAP(__builtin_HEXAGON_V6_vilog2_qf16)(Vu)
-#endif /* __HEXAGON_ARCH___ >= 81 */
+#endif
 
 #if __HVX_ARCH__ >= 81
 /* ==========================================================================
@@ -5330,7 +5330,7 @@
 
 #define Q6_Vw_vilog2_Vqf32(Vu)                                                 \
   __BUILTIN_VECTOR_WRAP(__builtin_HEXAGON_V6_vilog2_qf32)(Vu)
-#endif /* __HEXAGON_ARCH___ >= 81 */
+#endif
 
 #if __HVX_ARCH__ >= 81
 /* ==========================================================================
@@ -5342,7 +5342,7 @@
 
 #define Q6_Vw_vilog2_Vsf(Vu)                                                   \
   __BUILTIN_VECTOR_WRAP(__builtin_HEXAGON_V6_vilog2_sf)(Vu)
-#endif /* __HEXAGON_ARCH___ >= 81 */
+#endif
 
 #if __HVX_ARCH__ >= 81
 /* ==========================================================================
@@ -5354,7 +5354,7 @@
 
 #define Q6_Vqf16_vneg_Vhf(Vu)                                                  \
   __BUILTIN_VECTOR_WRAP(__builtin_HEXAGON_V6_vneg_qf16_hf)(Vu)
-#endif /* __HEXAGON_ARCH___ >= 81 */
+#endif
 
 #if __HVX_ARCH__ >= 81
 /* ==========================================================================
@@ -5366,7 +5366,7 @@
 
 #define Q6_Vqf16_vneg_Vqf16(Vu)                                                \
   __BUILTIN_VECTOR_WRAP(__builtin_HEXAGON_V6_vneg_qf16_qf16)(Vu)
-#endif /* __HEXAGON_ARCH___ >= 81 */
+#endif
 
 #if __HVX_ARCH__ >= 81
 /* ==========================================================================
@@ -5378,7 +5378,7 @@
 
 #define Q6_Vqf32_vneg_Vqf32(Vu)                                                \
   __BUILTIN_VECTOR_WRAP(__builtin_HEXAGON_V6_vneg_qf32_qf32)(Vu)
-#endif /* __HEXAGON_ARCH___ >= 81 */
+#endif
 
 #if __HVX_ARCH__ >= 81
 /* ==========================================================================
@@ -5390,7 +5390,7 @@
 
 #define Q6_Vqf32_vneg_Vsf(Vu)                                                  \
   __BUILTIN_VECTOR_WRAP(__builtin_HEXAGON_V6_vneg_qf32_sf)(Vu)
-#endif /* __HEXAGON_ARCH___ >= 81 */
+#endif
 
 #if __HVX_ARCH__ >= 81
 /* ==========================================================================
@@ -5402,7 +5402,7 @@
 
 #define Q6_Vqf16_vsub_VhfVqf16(Vu, Vv)                                         \
   __BUILTIN_VECTOR_WRAP(__builtin_HEXAGON_V6_vsub_hf_mix)(Vu, Vv)
-#endif /* __HEXAGON_ARCH___ >= 81 */
+#endif
 
 #if __HVX_ARCH__ >= 81
 /* ==========================================================================
@@ -5414,7 +5414,7 @@
 
 #define Q6_Vqf32_vsub_VsfVqf32(Vu, Vv)                                         \
   __BUILTIN_VECTOR_WRAP(__builtin_HEXAGON_V6_vsub_sf_mix)(Vu, Vv)
-#endif /* __HEXAGON_ARCH___ >= 81 */
+#endif
 
 #endif /* __HVX__ */
 
