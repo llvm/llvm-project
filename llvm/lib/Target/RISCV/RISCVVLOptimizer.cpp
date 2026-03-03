@@ -1261,8 +1261,12 @@ bool RISCVVLOptimizer::tryReduceVL(MachineInstr &MI,
   };
   if (!VLDominates(MI)) {
     assert(MI.getNumExplicitDefs() == 1);
+    auto Uses = MRI->use_instructions(MI.getOperand(0).getReg());
+    auto UsesSameBB = make_filter_range(Uses, [&MI](MachineInstr &Use) {
+      return Use.getParent() == MI.getParent();
+    });
     if (VLMI->getParent() == MI.getParent() &&
-        all_of(MRI->use_instructions(MI.getOperand(0).getReg()), VLDominates) &&
+        all_of(UsesSameBB, VLDominates) &&
         RISCVInstrInfo::isSafeToMove(MI, *VLMI->getNextNode())) {
       MI.moveBefore(VLMI->getNextNode());
     } else {
