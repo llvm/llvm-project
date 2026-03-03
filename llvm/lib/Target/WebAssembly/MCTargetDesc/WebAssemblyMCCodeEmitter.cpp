@@ -85,8 +85,8 @@ void WebAssemblyMCCodeEmitter::encodeMemArgNoOffset(
   // Atomic instructions always have an ordering, but if it's SEQ_CST then we
   // don't use the relaxed-atomics encoding (even if relaxed-atomics is
   // enabled) because the original encoding is smaller.
-  if (P2AlignIdx > 0 &&
-      Desc.operands()[P2AlignIdx - 1].OperandType == WebAssembly::OPERAND_MEMORDER) {
+  if (P2AlignIdx > 0 && Desc.operands()[P2AlignIdx - 1].OperandType ==
+                            WebAssembly::OPERAND_MEMORDER) {
     Order = MI.getOperand(P2AlignIdx - 1).getImm();
     if (Order != wasm::WASM_MEM_ORDER_SEQ_CST) {
       assert(STI.getFeatureBits()[WebAssembly::FeatureRelaxedAtomics] &&

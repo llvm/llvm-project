@@ -673,9 +673,6 @@ public:
     } else if (Name == "delegate") {
       if (pop(Name, Try))
         return true;
-    } else if (Name == "atomic.fence") {
-      if (addMemOrderOrDefault(Operands))
-        return true;
     } else if (Name == "end_loop") {
       if (pop(Name, Loop))
         return true;
@@ -700,8 +697,7 @@ public:
       ExpectFuncType = true;
     }
 
-    bool IsAtomic = Name.contains("atomic.");
-    if (IsAtomic && Name != "atomic.fence") {
+    if (Name.contains("atomic.")) {
       if (addMemOrderOrDefault(Operands))
         return true;
     }
