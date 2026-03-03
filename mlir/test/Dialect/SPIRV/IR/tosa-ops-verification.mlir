@@ -23,6 +23,59 @@ spirv.ARM.Graph @argmax_axis_value_not_in_input_rank_range(%arg0: !spirv.arm.ten
 }
 
 //===----------------------------------------------------------------------===//
+// spirv.TOSA.AvgPool2D
+//===----------------------------------------------------------------------===//
+
+spirv.ARM.Graph @avgpool2d_input_output_different_elemnt_type(%arg0: !spirv.arm.tensor<1x3x65537x1xi8>) -> (!spirv.arm.tensor<1x2x32768x1xi16>) {
+  %4 = spirv.Constant dense<125> : !spirv.arm.tensor<1xi8>
+  %5 = spirv.Constant dense<-90> : !spirv.arm.tensor<1xi8>
+  // expected-error @+1 {{op failed to verify that all of {input, input_zp, output, output_zp} have same element type}}
+  %6 = spirv.Tosa.AvgPool2D kernel = [3, 3], stride = [1, 2], pad = [0, 1, 0, 0], acc_type = <INT32>, %arg0, %4, %5 : !spirv.arm.tensor<1x3x65537x1xi8>, !spirv.arm.tensor<1xi8>, !spirv.arm.tensor<1xi8> -> !spirv.arm.tensor<1x2x32768x1xi16>
+  spirv.ARM.GraphOutputs %6 : !spirv.arm.tensor<1x2x32768x1xi16>
+}
+
+spirv.ARM.Graph @avgpool2d_input_input_zero_point_different_elemnt_type(%arg0: !spirv.arm.tensor<1x3x65537x1xi8>) -> (!spirv.arm.tensor<1x2x32768x1xi8>) {
+  %4 = spirv.Constant dense<125> : !spirv.arm.tensor<1xi16>
+  %5 = spirv.Constant dense<-90> : !spirv.arm.tensor<1xi8>
+  // expected-error @+1 {{op failed to verify that all of {input, input_zp, output, output_zp} have same element type}}
+  %6 = spirv.Tosa.AvgPool2D kernel = [3, 3], stride = [1, 2], pad = [0, 1, 0, 0], acc_type = <INT32>, %arg0, %4, %5 : !spirv.arm.tensor<1x3x65537x1xi8>, !spirv.arm.tensor<1xi16>, !spirv.arm.tensor<1xi8> -> !spirv.arm.tensor<1x2x32768x1xi8>
+  spirv.ARM.GraphOutputs %6 : !spirv.arm.tensor<1x2x32768x1xi8>
+}
+
+spirv.ARM.Graph @avgpool2d_output_output_zero_point_different_elemnt_type(%arg0: !spirv.arm.tensor<1x3x65537x1xi8>) -> (!spirv.arm.tensor<1x2x32768x1xi8>) {
+  %4 = spirv.Constant dense<125> : !spirv.arm.tensor<1xi8>
+  %5 = spirv.Constant dense<-90> : !spirv.arm.tensor<1xi16>
+  // expected-error @+1 {{op failed to verify that all of {input, input_zp, output, output_zp} have same element type}}
+  %6 = spirv.Tosa.AvgPool2D kernel = [3, 3], stride = [1, 2], pad = [0, 1, 0, 0], acc_type = <INT32>, %arg0, %4, %5 : !spirv.arm.tensor<1x3x65537x1xi8>, !spirv.arm.tensor<1xi8>, !spirv.arm.tensor<1xi16> -> !spirv.arm.tensor<1x2x32768x1xi8>
+  spirv.ARM.GraphOutputs %6 : !spirv.arm.tensor<1x2x32768x1xi8>
+}
+
+spirv.ARM.Graph @avgpool2d_accumulator_should_be_INT32_for_integer_element_types(%arg0: !spirv.arm.tensor<1x3x65537x1xi8>) -> (!spirv.arm.tensor<1x2x32768x1xi8>) {
+  %4 = spirv.Constant dense<125> : !spirv.arm.tensor<1xi8>
+  %5 = spirv.Constant dense<-90> : !spirv.arm.tensor<1xi8>
+  // expected-error @+1 {{op failed to verify that acc_type must be one in [INT32] when type has value 8-bit signless integer}}
+  %6 = spirv.Tosa.AvgPool2D kernel = [3, 3], stride = [1, 2], pad = [0, 1, 0, 0], acc_type = <INT48>, %arg0, %4, %5 : !spirv.arm.tensor<1x3x65537x1xi8>, !spirv.arm.tensor<1xi8>, !spirv.arm.tensor<1xi8> -> !spirv.arm.tensor<1x2x32768x1xi8>
+  spirv.ARM.GraphOutputs %6 : !spirv.arm.tensor<1x2x32768x1xi8>
+}
+
+spirv.ARM.Graph @avgpool2d_accumulator_should_be_either_FP16_or_FP32_for_fp16_element_types(%arg0: !spirv.arm.tensor<1x2x65533x2xf16>) -> (!spirv.arm.tensor<1x2x65532x2xf16>) {
+  %4 = spirv.Constant dense<0.000000e+00> : !spirv.arm.tensor<1xf16>
+  %5 = spirv.Constant dense<0.000000e+00> : !spirv.arm.tensor<1xf16>
+  // expected-error @+1 {{op failed to verify that acc_type must be one in [FP16,FP32] when type has value 16-bit float}}
+  %6 = spirv.Tosa.AvgPool2D kernel = [2, 2], stride = [1, 1], pad = [1, 0, 0, 0], acc_type = <INT32>, %arg0, %4, %5 : !spirv.arm.tensor<1x2x65533x2xf16>, !spirv.arm.tensor<1xf16>, !spirv.arm.tensor<1xf16> -> !spirv.arm.tensor<1x2x65532x2xf16>
+  spirv.ARM.GraphOutputs %6 : !spirv.arm.tensor<1x2x65532x2xf16>
+}
+
+
+spirv.ARM.Graph @avgpool2d_accumulator_should_be_either_FP32_for_fp32_element_types(%arg0: !spirv.arm.tensor<1x2x65533x2xf32>) -> (!spirv.arm.tensor<1x2x65532x2xf32>) {
+  %4 = spirv.Constant dense<0.000000e+00> : !spirv.arm.tensor<1xf32>
+  %5 = spirv.Constant dense<0.000000e+00> : !spirv.arm.tensor<1xf32>
+  // expected-error @+1 {{op failed to verify that acc_type must be one in [FP32] when type has value 32-bit float}}
+  %6 = spirv.Tosa.AvgPool2D kernel = [2, 2], stride = [1, 1], pad = [1, 0, 0, 0], acc_type = <FP16>, %arg0, %4, %5 : !spirv.arm.tensor<1x2x65533x2xf32>, !spirv.arm.tensor<1xf32>, !spirv.arm.tensor<1xf32> -> !spirv.arm.tensor<1x2x65532x2xf32>
+  spirv.ARM.GraphOutputs %6 : !spirv.arm.tensor<1x2x65532x2xf32>
+}
+
+//===----------------------------------------------------------------------===//
 // spirv.TOSA.Conv2D
 //===----------------------------------------------------------------------===//
 
@@ -105,7 +158,6 @@ spirv.ARM.Graph @conv2d_accumulator_must_be_either_FP32_for_f32_input_element_ty
   %7 = spirv.Tosa.Conv2D pad = [0, 0, 0, 0], stride = [1, 1], dilation = [1, 1], acc_type = <FP16>, local_bound = true, %arg0, %arg1, %arg2, %5, %6 : !spirv.arm.tensor<1x34x18x27xf32>, !spirv.arm.tensor<11x1x1x27xf32>, !spirv.arm.tensor<11xf32>, !spirv.arm.tensor<1xf32>, !spirv.arm.tensor<1xf32> -> !spirv.arm.tensor<1x34x18x11xf32>
   spirv.ARM.GraphOutputs %7 : !spirv.arm.tensor<1x34x18x11xf32>
 }
-
 
 //===----------------------------------------------------------------------===//
 // spirv.TOSA.Conv3D
@@ -276,6 +328,68 @@ spirv.ARM.Graph @depthwise_conv2d_accumulator_must_be_either_FP32_for_f32_input_
 }
 
 //===----------------------------------------------------------------------===//
+// spirv.TOSA.MatMul
+//===----------------------------------------------------------------------===//
+
+spirv.ARM.Graph @matmul_mismatch_result_element_type_i8_input(%arg0: !spirv.arm.tensor<1x4x4xi8>, %arg1: !spirv.arm.tensor<1x4x4xi8>, %arg2: !spirv.arm.tensor<1xi8>, %arg3: !spirv.arm.tensor<1xi8>) -> (!spirv.arm.tensor<1x4x4xi16>) {
+  // expected-error @+1 {{op failed to verify that if A has type 8-bit signless integer then output must have a type in [32-bit signless integer]}}
+  %0 = spirv.Tosa.MatMul %arg0, %arg1, %arg2, %arg3 : !spirv.arm.tensor<1x4x4xi8>, !spirv.arm.tensor<1x4x4xi8>, !spirv.arm.tensor<1xi8>, !spirv.arm.tensor<1xi8> -> !spirv.arm.tensor<1x4x4xi16>
+  spirv.ARM.GraphOutputs %0 : !spirv.arm.tensor<1x4x4xi16>
+}
+
+spirv.ARM.Graph @matmul_mismatch_result_element_type_i16_input(%arg0: !spirv.arm.tensor<1x4x4xi16>, %arg1: !spirv.arm.tensor<1x4x4xi16>, %arg2: !spirv.arm.tensor<1xi16>, %arg3: !spirv.arm.tensor<1xi16>) -> (!spirv.arm.tensor<1x4x4xi32>) {
+  // expected-error @+1 {{op failed to verify that if A has type 16-bit signless integer then output must have a type in [64-bit signless integer]}}
+  %0 = spirv.Tosa.MatMul %arg0, %arg1, %arg2, %arg3 : !spirv.arm.tensor<1x4x4xi16>, !spirv.arm.tensor<1x4x4xi16>, !spirv.arm.tensor<1xi16>, !spirv.arm.tensor<1xi16> -> !spirv.arm.tensor<1x4x4xi32>
+  spirv.ARM.GraphOutputs %0 : !spirv.arm.tensor<1x4x4xi32>
+}
+
+spirv.ARM.Graph @matmul_mismatch_result_element_type_bf16_input(%arg0: !spirv.arm.tensor<1x4x4xbf16>, %arg1: !spirv.arm.tensor<1x4x4xbf16>, %arg2: !spirv.arm.tensor<1xbf16>, %arg3: !spirv.arm.tensor<1xbf16>) -> (!spirv.arm.tensor<1x4x4xbf16>) {
+  // expected-error @+1 {{op failed to verify that if A has type bfloat16 type then output must have a type in [32-bit float]}}
+  %0 = spirv.Tosa.MatMul %arg0, %arg1, %arg2, %arg3 : !spirv.arm.tensor<1x4x4xbf16>, !spirv.arm.tensor<1x4x4xbf16>, !spirv.arm.tensor<1xbf16>, !spirv.arm.tensor<1xbf16> -> !spirv.arm.tensor<1x4x4xbf16>
+  spirv.ARM.GraphOutputs %0 : !spirv.arm.tensor<1x4x4xbf16>
+}
+
+spirv.ARM.Graph @matmul_mismatch_result_element_type_f16_input(%arg0: !spirv.arm.tensor<1x4x4xf16>, %arg1: !spirv.arm.tensor<1x4x4xf16>, %arg2: !spirv.arm.tensor<1xf16>, %arg3: !spirv.arm.tensor<1xf16>) -> (!spirv.arm.tensor<1x4x4xi32>) {
+  // expected-error @+1 {{op failed to verify that if A has type 16-bit float then output must have a type in [16-bit float,32-bit float]}}
+  %0 = spirv.Tosa.MatMul %arg0, %arg1, %arg2, %arg3 : !spirv.arm.tensor<1x4x4xf16>, !spirv.arm.tensor<1x4x4xf16>, !spirv.arm.tensor<1xf16>, !spirv.arm.tensor<1xf16> -> !spirv.arm.tensor<1x4x4xi32>
+  spirv.ARM.GraphOutputs %0 : !spirv.arm.tensor<1x4x4xi32>
+}
+
+spirv.ARM.Graph @matmul_mismatch_result_element_type_f32_input(%arg0: !spirv.arm.tensor<1x4x4xf32>, %arg1: !spirv.arm.tensor<1x4x4xf32>, %arg2: !spirv.arm.tensor<1xf32>, %arg3: !spirv.arm.tensor<1xf32>) -> (!spirv.arm.tensor<1x4x4xf16>) {
+  // expected-error @+1 {{op failed to verify that if A has type 32-bit float then output must have a type in [32-bit float]}}
+  %0 = spirv.Tosa.MatMul %arg0, %arg1, %arg2, %arg3 : !spirv.arm.tensor<1x4x4xf32>, !spirv.arm.tensor<1x4x4xf32>, !spirv.arm.tensor<1xf32>, !spirv.arm.tensor<1xf32> -> !spirv.arm.tensor<1x4x4xf16>
+  spirv.ARM.GraphOutputs %0 : !spirv.arm.tensor<1x4x4xf16>
+}
+
+spirv.ARM.Graph @matmul_element_types_must_match_between_input_A_and_A_zero_point(%arg0: !spirv.arm.tensor<1x4x4xi8>, %arg1: !spirv.arm.tensor<1x4x4xi8>, %arg2: !spirv.arm.tensor<1xi16>, %arg3: !spirv.arm.tensor<1xi8>) -> (!spirv.arm.tensor<1x4x4xi32>) {
+  // expected-error @+1 {{op failed to verify that all of {A, A_zp, B, B_zp} have same element type}}
+  %0 = spirv.Tosa.MatMul %arg0, %arg1, %arg2, %arg3 : !spirv.arm.tensor<1x4x4xi8>, !spirv.arm.tensor<1x4x4xi8>, !spirv.arm.tensor<1xi16>, !spirv.arm.tensor<1xi8> -> !spirv.arm.tensor<1x4x4xi32>
+  spirv.ARM.GraphOutputs %0 : !spirv.arm.tensor<1x4x4xi32>
+}
+
+spirv.ARM.Graph @matmul_element_types_must_match_between_inputs_A_and_B(%arg0: !spirv.arm.tensor<1x4x4xi8>, %arg1: !spirv.arm.tensor<1x4x4xi16>, %arg2: !spirv.arm.tensor<1xi8>, %arg3: !spirv.arm.tensor<1xi8>) -> (!spirv.arm.tensor<1x4x4xi32>) {
+  // expected-error @+1 {{op failed to verify that all of {A, A_zp, B, B_zp} have same element type}}
+  %0 = spirv.Tosa.MatMul %arg0, %arg1, %arg2, %arg3 : !spirv.arm.tensor<1x4x4xi8>, !spirv.arm.tensor<1x4x4xi16>, !spirv.arm.tensor<1xi8>, !spirv.arm.tensor<1xi8> -> !spirv.arm.tensor<1x4x4xi32>
+  spirv.ARM.GraphOutputs %0 : !spirv.arm.tensor<1x4x4xi32>
+}
+
+spirv.ARM.Graph @matmul_element_types_must_match_between_input_B_and_B_zero_point(%arg0: !spirv.arm.tensor<1x4x4xi8>, %arg1: !spirv.arm.tensor<1x4x4xi8>, %arg2: !spirv.arm.tensor<1xi8>, %arg3: !spirv.arm.tensor<1xi16>) -> (!spirv.arm.tensor<1x4x4xi32>) {
+  // expected-error @+1 {{op failed to verify that all of {A, A_zp, B, B_zp} have same element type}}
+  %0 = spirv.Tosa.MatMul %arg0, %arg1, %arg2, %arg3 : !spirv.arm.tensor<1x4x4xi8>, !spirv.arm.tensor<1x4x4xi8>, !spirv.arm.tensor<1xi8>, !spirv.arm.tensor<1xi16> -> !spirv.arm.tensor<1x4x4xi32>
+  spirv.ARM.GraphOutputs %0 : !spirv.arm.tensor<1x4x4xi32>
+}
+
+//===----------------------------------------------------------------------===//
+// spirv.TOSA.MaxPool2D
+//===----------------------------------------------------------------------===//
+
+spirv.ARM.Graph @maxpool2d_input_output_different_element_types(%arg0: !spirv.arm.tensor<1x3x65537x1xi8>) -> (!spirv.arm.tensor<1x2x32769x1xi16>) {
+  // expected-error @+1 {{op failed to verify that all of {input, output} have same element type}}
+  %4 = spirv.Tosa.MaxPool2D kernel = [3, 2], stride = [1, 2], pad = [1, 0, 0, 1], nan_mode = <Propagate>, %arg0 : !spirv.arm.tensor<1x3x65537x1xi8> -> !spirv.arm.tensor<1x2x32769x1xi16>
+  spirv.ARM.GraphOutputs %4 : !spirv.arm.tensor<1x2x32769x1xi16>
+}
+
+//===----------------------------------------------------------------------===//
 // spirv.TOSA.TransposeConv2D
 //===----------------------------------------------------------------------===//
 
@@ -360,63 +474,6 @@ spirv.ARM.Graph @transpose_conv2d_accumulator_must_be_either_FP32_for_f32_input_
 }
 
 //===----------------------------------------------------------------------===//
-// spirv.TOSA.AvgPool2D
-//===----------------------------------------------------------------------===//
-
-spirv.ARM.Graph @avgpool2d_input_output_different_type(%arg0: !spirv.arm.tensor<1x3x65537x1xi8>) -> (!spirv.arm.tensor<1x2x32768x1xi16>) {
-  %4 = spirv.Constant dense<125> : !spirv.arm.tensor<1xi8>
-  %5 = spirv.Constant dense<-90> : !spirv.arm.tensor<1xi8>
-  // expected-error @+1 {{op failed to verify that all of {input, input_zp, output, output_zp} have same element type}}
-  %6 = spirv.Tosa.AvgPool2D kernel = [3, 3], stride = [1, 2], pad = [0, 1, 0, 0], acc_type = <INT32>, %arg0, %4, %5 : !spirv.arm.tensor<1x3x65537x1xi8>, !spirv.arm.tensor<1xi8>, !spirv.arm.tensor<1xi8> -> !spirv.arm.tensor<1x2x32768x1xi16>
-  spirv.ARM.GraphOutputs %6 : !spirv.arm.tensor<1x2x32768x1xi16>
-}
-
-spirv.ARM.Graph @avgpool2d_accumulator_should_be_INT32_for_integer_element_types(%arg0: !spirv.arm.tensor<1x3x65537x1xi8>) -> (!spirv.arm.tensor<1x2x32768x1xi8>) {
-  %4 = spirv.Constant dense<125> : !spirv.arm.tensor<1xi8>
-  %5 = spirv.Constant dense<-90> : !spirv.arm.tensor<1xi8>
-  // expected-error @+1 {{op failed to verify that acc_type must be one in [INT32] when type has value 8-bit signless integer}}
-  %6 = spirv.Tosa.AvgPool2D kernel = [3, 3], stride = [1, 2], pad = [0, 1, 0, 0], acc_type = <INT48>, %arg0, %4, %5 : !spirv.arm.tensor<1x3x65537x1xi8>, !spirv.arm.tensor<1xi8>, !spirv.arm.tensor<1xi8> -> !spirv.arm.tensor<1x2x32768x1xi8>
-  spirv.ARM.GraphOutputs %6 : !spirv.arm.tensor<1x2x32768x1xi8>
-}
-
-spirv.ARM.Graph @avgpool2d_accumulator_should_be_either_FP16_or_FP32_for_fp16_element_types(%arg0: !spirv.arm.tensor<1x2x65533x2xf16>) -> (!spirv.arm.tensor<1x2x65532x2xf16>) {
-  %4 = spirv.Constant dense<0.000000e+00> : !spirv.arm.tensor<1xf16>
-  %5 = spirv.Constant dense<0.000000e+00> : !spirv.arm.tensor<1xf16>
-  // expected-error @+1 {{op failed to verify that acc_type must be one in [FP16,FP32] when type has value 16-bit float}}
-  %6 = spirv.Tosa.AvgPool2D kernel = [2, 2], stride = [1, 1], pad = [1, 0, 0, 0], acc_type = <INT32>, %arg0, %4, %5 : !spirv.arm.tensor<1x2x65533x2xf16>, !spirv.arm.tensor<1xf16>, !spirv.arm.tensor<1xf16> -> !spirv.arm.tensor<1x2x65532x2xf16>
-  spirv.ARM.GraphOutputs %6 : !spirv.arm.tensor<1x2x65532x2xf16>
-}
-
-
-spirv.ARM.Graph @avgpool2d_accumulator_should_be_either_FP32_for_fp32_element_types(%arg0: !spirv.arm.tensor<1x2x65533x2xf32>) -> (!spirv.arm.tensor<1x2x65532x2xf32>) {
-  %4 = spirv.Constant dense<0.000000e+00> : !spirv.arm.tensor<1xf32>
-  %5 = spirv.Constant dense<0.000000e+00> : !spirv.arm.tensor<1xf32>
-  // expected-error @+1 {{op failed to verify that acc_type must be one in [FP32] when type has value 32-bit float}}
-  %6 = spirv.Tosa.AvgPool2D kernel = [2, 2], stride = [1, 1], pad = [1, 0, 0, 0], acc_type = <FP16>, %arg0, %4, %5 : !spirv.arm.tensor<1x2x65533x2xf32>, !spirv.arm.tensor<1xf32>, !spirv.arm.tensor<1xf32> -> !spirv.arm.tensor<1x2x65532x2xf32>
-  spirv.ARM.GraphOutputs %6 : !spirv.arm.tensor<1x2x65532x2xf32>
-}
-
-//===----------------------------------------------------------------------===//
-// spirv.TOSA.MatMul
-//===----------------------------------------------------------------------===//
-
-spirv.ARM.Graph @matmul_invalid_input_output_element_type_combination(%arg0: !spirv.arm.tensor<1x4x4xi16>, %arg1: !spirv.arm.tensor<1x4x4xi16>, %arg2: !spirv.arm.tensor<1xi16>, %arg3: !spirv.arm.tensor<1xi16>) -> (!spirv.arm.tensor<1x4x4xi32>) {
-  // expected-error @+1 {{op failed to verify that if A has type 16-bit signless integer then output must have a type in [64-bit signless integer]}}
-  %0 = spirv.Tosa.MatMul %arg0, %arg1, %arg2, %arg3 : !spirv.arm.tensor<1x4x4xi16>, !spirv.arm.tensor<1x4x4xi16>, !spirv.arm.tensor<1xi16>, !spirv.arm.tensor<1xi16> -> !spirv.arm.tensor<1x4x4xi32>
-  spirv.ARM.GraphOutputs %0 : !spirv.arm.tensor<1x4x4xi32>
-}
-
-//===----------------------------------------------------------------------===//
-// spirv.TOSA.MaxPool2D
-//===----------------------------------------------------------------------===//
-
-spirv.ARM.Graph @maxpool2d_input_output_different_element_types(%arg0: !spirv.arm.tensor<1x3x65537x1xi8>) -> (!spirv.arm.tensor<1x2x32769x1xi16>) {
-  // expected-error @+1 {{op failed to verify that all of {input, output} have same element type}}
-  %4 = spirv.Tosa.MaxPool2D kernel = [3, 2], stride = [1, 2], pad = [1, 0, 0, 1], nan_mode = <Propagate>, %arg0 : !spirv.arm.tensor<1x3x65537x1xi8> -> !spirv.arm.tensor<1x2x32769x1xi16>
-  spirv.ARM.GraphOutputs %4 : !spirv.arm.tensor<1x2x32769x1xi16>
-}
-
-//===----------------------------------------------------------------------===//
 // spirv.TOSA.Clamp
 //===----------------------------------------------------------------------===//
 
@@ -430,6 +487,54 @@ spirv.ARM.Graph @clamp_max_val_different_element_type_wrt_input_output(%arg0: !s
   // expected-error @+1 {{op failed to verify that all of {input, output, min_val, max_val} have same element type}}
   %3 = spirv.Tosa.Clamp min_val = -102 : i8, max_val = -100 : i16, nan_mode = <Propagate>, %arg0 : !spirv.arm.tensor<27x44x55xi8> -> !spirv.arm.tensor<27x44x55xi8>
   spirv.ARM.GraphOutputs %3 : !spirv.arm.tensor<27x44x55xi8>
+}
+
+//===----------------------------------------------------------------------===//
+// spirv.TOSA.Erf
+//===----------------------------------------------------------------------===//
+
+spirv.ARM.Graph @erf_input_output_element_types_not_matching(%arg0: !spirv.arm.tensor<47x38x51xf16>) -> (!spirv.arm.tensor<47x38x51xf32>) {
+  // expected-error @+1 {{op failed to verify that all of {input, output} have same type}}
+  %0 = spirv.Tosa.Erf %arg0 : !spirv.arm.tensor<47x38x51xf16> -> !spirv.arm.tensor<47x38x51xf32>
+  spirv.ARM.GraphOutputs %0 : !spirv.arm.tensor<47x38x51xf32>
+}
+
+spirv.ARM.Graph @erf_input_output_shapes_not_matching(%arg0: !spirv.arm.tensor<47x38x51xf16>) -> (!spirv.arm.tensor<47x38x52xf16>) {
+  // expected-error @+1 {{op failed to verify that all of {input, output} have same type}}
+  %0 = spirv.Tosa.Erf %arg0 : !spirv.arm.tensor<47x38x51xf16> -> !spirv.arm.tensor<47x38x52xf16>
+  spirv.ARM.GraphOutputs %0 : !spirv.arm.tensor<47x38x52xf16>
+}
+
+//===----------------------------------------------------------------------===//
+// spirv.TOSA.Sigmoid
+//===----------------------------------------------------------------------===//
+
+spirv.ARM.Graph @sigmoid_input_output_element_types_not_matching(%arg0: !spirv.arm.tensor<28x43x45xf16>) -> (!spirv.arm.tensor<28x43x45xf32>) {
+  // expected-error @+1 {{op failed to verify that all of {input, output} have same type}}
+  %0 = spirv.Tosa.Sigmoid %arg0 : !spirv.arm.tensor<28x43x45xf16> -> !spirv.arm.tensor<28x43x45xf32>
+  spirv.ARM.GraphOutputs %0 : !spirv.arm.tensor<28x43x45xf32>
+}
+
+spirv.ARM.Graph @sigmoid_input_output_shapes_not_matching(%arg0: !spirv.arm.tensor<28x43x45xf16>) -> (!spirv.arm.tensor<29x43x45xf16>) {
+  // expected-error @+1 {{op failed to verify that all of {input, output} have same type}}
+  %0 = spirv.Tosa.Sigmoid %arg0 : !spirv.arm.tensor<28x43x45xf16> -> !spirv.arm.tensor<29x43x45xf16>
+  spirv.ARM.GraphOutputs %0 : !spirv.arm.tensor<29x43x45xf16>
+}
+
+//===----------------------------------------------------------------------===//
+// spirv.TOSA.Tanh
+//===----------------------------------------------------------------------===//
+
+spirv.ARM.Graph @tanh_input_output_element_types_not_matching(%arg0: !spirv.arm.tensor<46x50x36xf16>) -> (!spirv.arm.tensor<46x50x36xf32>) {
+  // expected-error @+1 {{op failed to verify that all of {input, output} have same type}}
+  %0 = spirv.Tosa.Tanh %arg0 : !spirv.arm.tensor<46x50x36xf16> -> !spirv.arm.tensor<46x50x36xf32>
+  spirv.ARM.GraphOutputs %0 : !spirv.arm.tensor<46x50x36xf32>
+}
+
+spirv.ARM.Graph @tanh_input_output_shapes_not_matching(%arg0: !spirv.arm.tensor<46x50x36xf16>) -> (!spirv.arm.tensor<46x51x36xf16>) {
+  // expected-error @+1 {{op failed to verify that all of {input, output} have same type}}
+  %0 = spirv.Tosa.Tanh %arg0 : !spirv.arm.tensor<46x50x36xf16> -> !spirv.arm.tensor<46x51x36xf16>
+  spirv.ARM.GraphOutputs %0 : !spirv.arm.tensor<46x51x36xf16>
 }
 
 //===----------------------------------------------------------------------===//
@@ -634,4 +739,175 @@ spirv.ARM.Graph @intdiv_output_shape_does_not_match_broadcast_shape(%arg0: !spir
   // expected-error @+1 {{op failed to verify that the shape of input1 and input2 are compatible for broadcasting and the broadcast shape is equal to the output shape}}
   %0 = spirv.Tosa.IntDiv %arg0, %arg1 : !spirv.arm.tensor<6x10x6x6xi32>, !spirv.arm.tensor<1x10x6x6xi32> -> !spirv.arm.tensor<1x10x6x6xi32>
   spirv.ARM.GraphOutputs %0 : !spirv.arm.tensor<1x10x6x6xi32>
+}
+
+//===----------------------------------------------------------------------===//
+// spirv.TOSA.LogicalAnd
+//===----------------------------------------------------------------------===//
+
+spirv.ARM.Graph @logicaland_input_ranks_not_matching(%arg0: !spirv.arm.tensor<6x10x6xi1>, %arg1: !spirv.arm.tensor<1x10x6x6xi1>) -> (!spirv.arm.tensor<6x10x6x6xi1>) {
+  // expected-error @+1 {{op failed to verify that all of {input1, input2, output} have same rank}}
+  %0 = spirv.Tosa.LogicalAnd %arg0, %arg1 : !spirv.arm.tensor<6x10x6xi1>, !spirv.arm.tensor<1x10x6x6xi1> -> !spirv.arm.tensor<6x10x6x6xi1>
+  spirv.ARM.GraphOutputs %0 : !spirv.arm.tensor<6x10x6x6xi1>
+}
+
+spirv.ARM.Graph @logicaland_input_element_types_not_bool(%arg0: !spirv.arm.tensor<6x10x6x6xi16>, %arg1: !spirv.arm.tensor<1x10x6x6xi1>) -> (!spirv.arm.tensor<6x10x6x6xi1>) {
+  // expected-error @+1 {{op operand #0 must be 1D/2D/3D/4D/5D/6D tensorArm of bool values, but got '!spirv.arm.tensor<6x10x6x6xi16>'}}
+  %0 = spirv.Tosa.LogicalAnd %arg0, %arg1 : !spirv.arm.tensor<6x10x6x6xi16>, !spirv.arm.tensor<1x10x6x6xi1> -> !spirv.arm.tensor<6x10x6x6xi1>
+  spirv.ARM.GraphOutputs %0 : !spirv.arm.tensor<6x10x6x6xi1>
+}
+
+spirv.ARM.Graph @logicaland_output_element_types_not_bool(%arg0: !spirv.arm.tensor<6x10x6x6xi1>, %arg1: !spirv.arm.tensor<1x10x6x6xi1>) -> (!spirv.arm.tensor<6x10x6x6xi16>) {
+  // expected-error @+1 {{ op result #0 must be 1D/2D/3D/4D/5D/6D tensorArm of bool values, but got '!spirv.arm.tensor<6x10x6x6xi16>'}}
+  %0 = spirv.Tosa.LogicalAnd %arg0, %arg1 : !spirv.arm.tensor<6x10x6x6xi1>, !spirv.arm.tensor<1x10x6x6xi1> -> !spirv.arm.tensor<6x10x6x6xi16>
+  spirv.ARM.GraphOutputs %0 : !spirv.arm.tensor<6x10x6x6xi16>
+}
+
+spirv.ARM.Graph @logicaland_inputs_not_broadcastable(%arg0: !spirv.arm.tensor<6x10x6x6xi1>, %arg1: !spirv.arm.tensor<2x10x6x6xi1>) -> (!spirv.arm.tensor<6x10x6x6xi1>) {
+  // expected-error @+1 {{op failed to verify that the shape of input1 and input2 are compatible for broadcasting and the broadcast shape is equal to the output shape}}
+  %0 = spirv.Tosa.LogicalAnd %arg0, %arg1 : !spirv.arm.tensor<6x10x6x6xi1>, !spirv.arm.tensor<2x10x6x6xi1> -> !spirv.arm.tensor<6x10x6x6xi1>
+  spirv.ARM.GraphOutputs %0 : !spirv.arm.tensor<6x10x6x6xi1>
+}
+
+spirv.ARM.Graph @logicaland_output_shape_does_not_match_broadcast_shape(%arg0: !spirv.arm.tensor<6x10x6x6xi1>, %arg1: !spirv.arm.tensor<1x10x6x6xi1>) -> (!spirv.arm.tensor<1x10x6x6xi1>) {
+  // expected-error @+1 {{op failed to verify that the shape of input1 and input2 are compatible for broadcasting and the broadcast shape is equal to the output shape}}
+  %0 = spirv.Tosa.LogicalAnd %arg0, %arg1 : !spirv.arm.tensor<6x10x6x6xi1>, !spirv.arm.tensor<1x10x6x6xi1> -> !spirv.arm.tensor<1x10x6x6xi1>
+  spirv.ARM.GraphOutputs %0 : !spirv.arm.tensor<1x10x6x6xi1>
+}
+
+//===----------------------------------------------------------------------===//
+// spirv.TOSA.LogicalLeftShift
+//===----------------------------------------------------------------------===//
+
+spirv.ARM.Graph @logicalleftshift_input_ranks_not_matching(%arg0: !spirv.arm.tensor<6x10x6xi32>, %arg1: !spirv.arm.tensor<1x10x6x6xi32>) -> (!spirv.arm.tensor<6x10x6x6xi32>) {
+  // expected-error @+1 {{op failed to verify that all of {input1, input2, output} have same rank}}
+  %0 = spirv.Tosa.LogicalLeftShift %arg0, %arg1 : !spirv.arm.tensor<6x10x6xi32>, !spirv.arm.tensor<1x10x6x6xi32> -> !spirv.arm.tensor<6x10x6x6xi32>
+  spirv.ARM.GraphOutputs %0 : !spirv.arm.tensor<6x10x6x6xi32>
+}
+
+spirv.ARM.Graph @logicalleftshift_input_element_types_not_matching(%arg0: !spirv.arm.tensor<6x10x6x6xi16>, %arg1: !spirv.arm.tensor<1x10x6x6xi32>) -> (!spirv.arm.tensor<6x10x6x6xi16>) {
+  // expected-error @+1 {{op failed to verify that all of {input1, input2} have same element type}}
+  %0 = spirv.Tosa.LogicalLeftShift %arg0, %arg1 : !spirv.arm.tensor<6x10x6x6xi16>, !spirv.arm.tensor<1x10x6x6xi32> -> !spirv.arm.tensor<6x10x6x6xi16>
+  spirv.ARM.GraphOutputs %0 : !spirv.arm.tensor<6x10x6x6xi16>
+}
+
+spirv.ARM.Graph @logicalleftshift_input_output_element_types_not_matching(%arg0: !spirv.arm.tensor<6x10x6x6xi32>, %arg1: !spirv.arm.tensor<1x10x6x6xi32>) -> (!spirv.arm.tensor<6x10x6x6xi16>) {
+  // expected-error @+1 {{op failed to verify that all of {input1, output} have same element type}}
+  %0 = spirv.Tosa.LogicalLeftShift %arg0, %arg1 : !spirv.arm.tensor<6x10x6x6xi32>, !spirv.arm.tensor<1x10x6x6xi32> -> !spirv.arm.tensor<6x10x6x6xi16>
+  spirv.ARM.GraphOutputs %0 : !spirv.arm.tensor<6x10x6x6xi16>
+}
+
+spirv.ARM.Graph @logicalleftshift_inputs_not_broadcastable(%arg0: !spirv.arm.tensor<6x10x6x6xi32>, %arg1: !spirv.arm.tensor<2x10x6x6xi32>) -> (!spirv.arm.tensor<6x10x6x6xi32>) {
+  // expected-error @+1 {{op failed to verify that the shape of input1 and input2 are compatible for broadcasting and the broadcast shape is equal to the output shape}}
+  %0 = spirv.Tosa.LogicalLeftShift %arg0, %arg1 : !spirv.arm.tensor<6x10x6x6xi32>, !spirv.arm.tensor<2x10x6x6xi32> -> !spirv.arm.tensor<6x10x6x6xi32>
+  spirv.ARM.GraphOutputs %0 : !spirv.arm.tensor<6x10x6x6xi32>
+}
+
+spirv.ARM.Graph @logicalleftshift_output_shape_does_not_match_broadcast_shape(%arg0: !spirv.arm.tensor<6x10x6x6xi32>, %arg1: !spirv.arm.tensor<1x10x6x6xi32>) -> (!spirv.arm.tensor<1x10x6x6xi32>) {
+  // expected-error @+1 {{op failed to verify that the shape of input1 and input2 are compatible for broadcasting and the broadcast shape is equal to the output shape}}
+  %0 = spirv.Tosa.LogicalLeftShift %arg0, %arg1 : !spirv.arm.tensor<6x10x6x6xi32>, !spirv.arm.tensor<1x10x6x6xi32> -> !spirv.arm.tensor<1x10x6x6xi32>
+  spirv.ARM.GraphOutputs %0 : !spirv.arm.tensor<1x10x6x6xi32>
+}
+
+
+//===----------------------------------------------------------------------===//
+// spirv.TOSA.LogicalRightShift
+//===----------------------------------------------------------------------===//
+
+spirv.ARM.Graph @logicalrightshift_input_ranks_not_matching(%arg0: !spirv.arm.tensor<6x10x6xi32>, %arg1: !spirv.arm.tensor<1x10x6x6xi32>) -> (!spirv.arm.tensor<6x10x6x6xi32>) {
+  // expected-error @+1 {{op failed to verify that all of {input1, input2, output} have same rank}}
+  %0 = spirv.Tosa.LogicalRightShift %arg0, %arg1 : !spirv.arm.tensor<6x10x6xi32>, !spirv.arm.tensor<1x10x6x6xi32> -> !spirv.arm.tensor<6x10x6x6xi32>
+  spirv.ARM.GraphOutputs %0 : !spirv.arm.tensor<6x10x6x6xi32>
+}
+
+spirv.ARM.Graph @logicalrightshift_input_element_types_not_matching(%arg0: !spirv.arm.tensor<6x10x6x6xi16>, %arg1: !spirv.arm.tensor<1x10x6x6xi32>) -> (!spirv.arm.tensor<6x10x6x6xi16>) {
+  // expected-error @+1 {{op failed to verify that all of {input1, input2} have same element type}}
+  %0 = spirv.Tosa.LogicalRightShift %arg0, %arg1 : !spirv.arm.tensor<6x10x6x6xi16>, !spirv.arm.tensor<1x10x6x6xi32> -> !spirv.arm.tensor<6x10x6x6xi16>
+  spirv.ARM.GraphOutputs %0 : !spirv.arm.tensor<6x10x6x6xi16>
+}
+
+spirv.ARM.Graph @logicalrightshift_input_output_element_types_not_matching(%arg0: !spirv.arm.tensor<6x10x6x6xi32>, %arg1: !spirv.arm.tensor<1x10x6x6xi32>) -> (!spirv.arm.tensor<6x10x6x6xi16>) {
+  // expected-error @+1 {{op failed to verify that all of {input1, output} have same element type}}
+  %0 = spirv.Tosa.LogicalRightShift %arg0, %arg1 : !spirv.arm.tensor<6x10x6x6xi32>, !spirv.arm.tensor<1x10x6x6xi32> -> !spirv.arm.tensor<6x10x6x6xi16>
+  spirv.ARM.GraphOutputs %0 : !spirv.arm.tensor<6x10x6x6xi16>
+}
+
+spirv.ARM.Graph @logicalrightshift_inputs_not_broadcastable(%arg0: !spirv.arm.tensor<6x10x6x6xi32>, %arg1: !spirv.arm.tensor<2x10x6x6xi32>) -> (!spirv.arm.tensor<6x10x6x6xi32>) {
+  // expected-error @+1 {{op failed to verify that the shape of input1 and input2 are compatible for broadcasting and the broadcast shape is equal to the output shape}}
+  %0 = spirv.Tosa.LogicalRightShift %arg0, %arg1 : !spirv.arm.tensor<6x10x6x6xi32>, !spirv.arm.tensor<2x10x6x6xi32> -> !spirv.arm.tensor<6x10x6x6xi32>
+  spirv.ARM.GraphOutputs %0 : !spirv.arm.tensor<6x10x6x6xi32>
+}
+
+spirv.ARM.Graph @logicalrightshift_output_shape_does_not_match_broadcast_shape(%arg0: !spirv.arm.tensor<6x10x6x6xi32>, %arg1: !spirv.arm.tensor<1x10x6x6xi32>) -> (!spirv.arm.tensor<1x10x6x6xi32>) {
+  // expected-error @+1 {{op failed to verify that the shape of input1 and input2 are compatible for broadcasting and the broadcast shape is equal to the output shape}}
+  %0 = spirv.Tosa.LogicalRightShift %arg0, %arg1 : !spirv.arm.tensor<6x10x6x6xi32>, !spirv.arm.tensor<1x10x6x6xi32> -> !spirv.arm.tensor<1x10x6x6xi32>
+  spirv.ARM.GraphOutputs %0 : !spirv.arm.tensor<1x10x6x6xi32>
+}
+
+//===----------------------------------------------------------------------===//
+// spirv.TOSA.LogicalOr
+//===----------------------------------------------------------------------===//
+
+spirv.ARM.Graph @logicalor_input_ranks_not_matching(%arg0: !spirv.arm.tensor<6x10x6xi1>, %arg1: !spirv.arm.tensor<1x10x6x6xi1>) -> (!spirv.arm.tensor<6x10x6x6xi1>) {
+  // expected-error @+1 {{op failed to verify that all of {input1, input2, output} have same rank}}
+  %0 = spirv.Tosa.LogicalOr %arg0, %arg1 : !spirv.arm.tensor<6x10x6xi1>, !spirv.arm.tensor<1x10x6x6xi1> -> !spirv.arm.tensor<6x10x6x6xi1>
+  spirv.ARM.GraphOutputs %0 : !spirv.arm.tensor<6x10x6x6xi1>
+}
+
+spirv.ARM.Graph @logicalor_input_element_types_not_bool(%arg0: !spirv.arm.tensor<6x10x6x6xi16>, %arg1: !spirv.arm.tensor<1x10x6x6xi1>) -> (!spirv.arm.tensor<6x10x6x6xi1>) {
+  // expected-error @+1 {{op operand #0 must be 1D/2D/3D/4D/5D/6D tensorArm of bool values, but got '!spirv.arm.tensor<6x10x6x6xi16>'}}
+  %0 = spirv.Tosa.LogicalOr %arg0, %arg1 : !spirv.arm.tensor<6x10x6x6xi16>, !spirv.arm.tensor<1x10x6x6xi1> -> !spirv.arm.tensor<6x10x6x6xi1>
+  spirv.ARM.GraphOutputs %0 : !spirv.arm.tensor<6x10x6x6xi1>
+}
+
+spirv.ARM.Graph @logicalor_output_element_types_not_bool(%arg0: !spirv.arm.tensor<6x10x6x6xi1>, %arg1: !spirv.arm.tensor<1x10x6x6xi1>) -> (!spirv.arm.tensor<6x10x6x6xi16>) {
+  // expected-error @+1 {{ op result #0 must be 1D/2D/3D/4D/5D/6D tensorArm of bool values, but got '!spirv.arm.tensor<6x10x6x6xi16>'}}
+  %0 = spirv.Tosa.LogicalOr %arg0, %arg1 : !spirv.arm.tensor<6x10x6x6xi1>, !spirv.arm.tensor<1x10x6x6xi1> -> !spirv.arm.tensor<6x10x6x6xi16>
+  spirv.ARM.GraphOutputs %0 : !spirv.arm.tensor<6x10x6x6xi16>
+}
+
+spirv.ARM.Graph @logicalor_inputs_not_broadcastable(%arg0: !spirv.arm.tensor<6x10x6x6xi1>, %arg1: !spirv.arm.tensor<2x10x6x6xi1>) -> (!spirv.arm.tensor<6x10x6x6xi1>) {
+  // expected-error @+1 {{op failed to verify that the shape of input1 and input2 are compatible for broadcasting and the broadcast shape is equal to the output shape}}
+  %0 = spirv.Tosa.LogicalOr %arg0, %arg1 : !spirv.arm.tensor<6x10x6x6xi1>, !spirv.arm.tensor<2x10x6x6xi1> -> !spirv.arm.tensor<6x10x6x6xi1>
+  spirv.ARM.GraphOutputs %0 : !spirv.arm.tensor<6x10x6x6xi1>
+}
+
+spirv.ARM.Graph @logicalor_output_shape_does_not_match_broadcast_shape(%arg0: !spirv.arm.tensor<6x10x6x6xi1>, %arg1: !spirv.arm.tensor<1x10x6x6xi1>) -> (!spirv.arm.tensor<1x10x6x6xi1>) {
+  // expected-error @+1 {{op failed to verify that the shape of input1 and input2 are compatible for broadcasting and the broadcast shape is equal to the output shape}}
+  %0 = spirv.Tosa.LogicalOr %arg0, %arg1 : !spirv.arm.tensor<6x10x6x6xi1>, !spirv.arm.tensor<1x10x6x6xi1> -> !spirv.arm.tensor<1x10x6x6xi1>
+  spirv.ARM.GraphOutputs %0 : !spirv.arm.tensor<1x10x6x6xi1>
+}
+
+//===----------------------------------------------------------------------===//
+// spirv.TOSA.LogicalXor
+//===----------------------------------------------------------------------===//
+
+spirv.ARM.Graph @logicalxor_input_ranks_not_matching(%arg0: !spirv.arm.tensor<6x10x6xi1>, %arg1: !spirv.arm.tensor<1x10x6x6xi1>) -> (!spirv.arm.tensor<6x10x6x6xi1>) {
+  // expected-error @+1 {{op failed to verify that all of {input1, input2, output} have same rank}}
+  %0 = spirv.Tosa.LogicalXor %arg0, %arg1 : !spirv.arm.tensor<6x10x6xi1>, !spirv.arm.tensor<1x10x6x6xi1> -> !spirv.arm.tensor<6x10x6x6xi1>
+  spirv.ARM.GraphOutputs %0 : !spirv.arm.tensor<6x10x6x6xi1>
+}
+
+spirv.ARM.Graph @logicalxor_input_element_types_not_bool(%arg0: !spirv.arm.tensor<6x10x6x6xi16>, %arg1: !spirv.arm.tensor<1x10x6x6xi1>) -> (!spirv.arm.tensor<6x10x6x6xi1>) {
+  // expected-error @+1 {{op operand #0 must be 1D/2D/3D/4D/5D/6D tensorArm of bool values, but got '!spirv.arm.tensor<6x10x6x6xi16>'}}
+  %0 = spirv.Tosa.LogicalXor %arg0, %arg1 : !spirv.arm.tensor<6x10x6x6xi16>, !spirv.arm.tensor<1x10x6x6xi1> -> !spirv.arm.tensor<6x10x6x6xi1>
+  spirv.ARM.GraphOutputs %0 : !spirv.arm.tensor<6x10x6x6xi1>
+}
+
+spirv.ARM.Graph @logicalxor_output_element_types_not_bool(%arg0: !spirv.arm.tensor<6x10x6x6xi1>, %arg1: !spirv.arm.tensor<1x10x6x6xi1>) -> (!spirv.arm.tensor<6x10x6x6xi16>) {
+  // expected-error @+1 {{ op result #0 must be 1D/2D/3D/4D/5D/6D tensorArm of bool values, but got '!spirv.arm.tensor<6x10x6x6xi16>'}}
+  %0 = spirv.Tosa.LogicalXor %arg0, %arg1 : !spirv.arm.tensor<6x10x6x6xi1>, !spirv.arm.tensor<1x10x6x6xi1> -> !spirv.arm.tensor<6x10x6x6xi16>
+  spirv.ARM.GraphOutputs %0 : !spirv.arm.tensor<6x10x6x6xi16>
+}
+
+spirv.ARM.Graph @logicalxor_inputs_not_broadcastable(%arg0: !spirv.arm.tensor<6x10x6x6xi1>, %arg1: !spirv.arm.tensor<2x10x6x6xi1>) -> (!spirv.arm.tensor<6x10x6x6xi1>) {
+  // expected-error @+1 {{op failed to verify that the shape of input1 and input2 are compatible for broadcasting and the broadcast shape is equal to the output shape}}
+  %0 = spirv.Tosa.LogicalXor %arg0, %arg1 : !spirv.arm.tensor<6x10x6x6xi1>, !spirv.arm.tensor<2x10x6x6xi1> -> !spirv.arm.tensor<6x10x6x6xi1>
+  spirv.ARM.GraphOutputs %0 : !spirv.arm.tensor<6x10x6x6xi1>
+}
+
+spirv.ARM.Graph @logicalxor_output_shape_does_not_match_broadcast_shape(%arg0: !spirv.arm.tensor<6x10x6x6xi1>, %arg1: !spirv.arm.tensor<1x10x6x6xi1>) -> (!spirv.arm.tensor<1x10x6x6xi1>) {
+  // expected-error @+1 {{op failed to verify that the shape of input1 and input2 are compatible for broadcasting and the broadcast shape is equal to the output shape}}
+  %0 = spirv.Tosa.LogicalXor %arg0, %arg1 : !spirv.arm.tensor<6x10x6x6xi1>, !spirv.arm.tensor<1x10x6x6xi1> -> !spirv.arm.tensor<1x10x6x6xi1>
+  spirv.ARM.GraphOutputs %0 : !spirv.arm.tensor<1x10x6x6xi1>
 }

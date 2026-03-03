@@ -69,7 +69,7 @@ define ptr @low_trip_count_via_profile_info_with_iv_live_out(ptr align 16 %start
 ; CHECK-NEXT:    [[TMP5:%.*]] = getelementptr i8, ptr [[SRC]], i64 [[TMP4]]
 ; CHECK-NEXT:    [[WIDE_MASKED_LOAD:%.*]] = call <64 x i8> @llvm.masked.load.v64i8.p0(ptr align 1 [[TMP5]], <64 x i1> [[TMP3]], <64 x i8> poison)
 ; CHECK-NEXT:    call void @llvm.masked.store.v64i8.p0(<64 x i8> [[WIDE_MASKED_LOAD]], ptr align 1 [[NEXT_GEP]], <64 x i1> [[TMP3]])
-; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 64
+; CHECK-NEXT:    [[INDEX_NEXT]] = add i64 [[INDEX]], 64
 ; CHECK-NEXT:    [[TMP6:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[N_VEC]]
 ; CHECK-NEXT:    br i1 [[TMP6]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !prof [[PROF1:![0-9]+]], !llvm.loop [[LOOP2:![0-9]+]]
 ; CHECK:       [[MIDDLE_BLOCK]]:
@@ -123,7 +123,7 @@ define void @low_trip_count_via_profile_info(ptr align 16 %start, ptr align 16 %
 ; CHECK-NEXT:    [[TMP4:%.*]] = getelementptr i8, ptr [[SRC]], i64 [[TMP3]]
 ; CHECK-NEXT:    [[WIDE_MASKED_LOAD:%.*]] = call <64 x i8> @llvm.masked.load.v64i8.p0(ptr align 1 [[TMP4]], <64 x i1> [[TMP2]], <64 x i8> poison)
 ; CHECK-NEXT:    call void @llvm.masked.store.v64i8.p0(<64 x i8> [[WIDE_MASKED_LOAD]], ptr align 1 [[NEXT_GEP]], <64 x i1> [[TMP2]])
-; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 64
+; CHECK-NEXT:    [[INDEX_NEXT]] = add i64 [[INDEX]], 64
 ; CHECK-NEXT:    [[TMP5:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[N_VEC]]
 ; CHECK-NEXT:    br i1 [[TMP5]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !prof [[PROF1]], !llvm.loop [[LOOP6:![0-9]+]]
 ; CHECK:       [[MIDDLE_BLOCK]]:

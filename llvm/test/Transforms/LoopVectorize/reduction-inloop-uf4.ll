@@ -154,13 +154,10 @@ define i32 @predicated(ptr noalias nocapture %A) {
 ; CHECK-NEXT:    [[VEC_PHI4:%.*]] = phi i32 [ 0, [[VECTOR_PH]] ], [ [[TMP104:%.*]], [[PRED_LOAD_CONTINUE36]] ]
 ; CHECK-NEXT:    [[VEC_PHI5:%.*]] = phi i32 [ 0, [[VECTOR_PH]] ], [ [[TMP107:%.*]], [[PRED_LOAD_CONTINUE36]] ]
 ; CHECK-NEXT:    [[VEC_PHI6:%.*]] = phi i32 [ 0, [[VECTOR_PH]] ], [ [[TMP110:%.*]], [[PRED_LOAD_CONTINUE36]] ]
-; CHECK-NEXT:    [[STEP_ADD:%.*]] = add <4 x i64> [[VEC_IND]], splat (i64 4)
-; CHECK-NEXT:    [[STEP_ADD_2:%.*]] = add <4 x i64> [[VEC_IND]], splat (i64 8)
-; CHECK-NEXT:    [[STEP_ADD_3:%.*]] = add <4 x i64> [[VEC_IND]], splat (i64 12)
 ; CHECK-NEXT:    [[TMP0:%.*]] = icmp ult <4 x i64> [[VEC_IND]], splat (i64 257)
-; CHECK-NEXT:    [[TMP1:%.*]] = icmp ult <4 x i64> [[STEP_ADD]], splat (i64 257)
-; CHECK-NEXT:    [[TMP2:%.*]] = icmp ult <4 x i64> [[STEP_ADD_2]], splat (i64 257)
-; CHECK-NEXT:    [[TMP3:%.*]] = icmp ult <4 x i64> [[STEP_ADD_3]], splat (i64 257)
+; CHECK-NEXT:    [[TMP1:%.*]] = icmp ult <4 x i64> [[VEC_IND]], splat (i64 253)
+; CHECK-NEXT:    [[TMP2:%.*]] = icmp ult <4 x i64> [[VEC_IND]], splat (i64 249)
+; CHECK-NEXT:    [[TMP3:%.*]] = icmp ult <4 x i64> [[VEC_IND]], splat (i64 245)
 ; CHECK-NEXT:    [[TMP4:%.*]] = extractelement <4 x i1> [[TMP0]], i64 0
 ; CHECK-NEXT:    br i1 [[TMP4]], label [[PRED_LOAD_IF:%.*]], label [[PRED_LOAD_CONTINUE:%.*]]
 ; CHECK:       pred.load.if:
@@ -384,9 +381,9 @@ define i32 @cond_rdx_pred(i32 %cond, ptr noalias %a, i64 %N) {
 ; CHECK-NEXT:    [[VEC_PHI4:%.*]] = phi i32 [ 1, [[VECTOR_PH]] ], [ [[TMP112:%.*]], [[PRED_LOAD_CONTINUE38]] ]
 ; CHECK-NEXT:    [[VEC_PHI5:%.*]] = phi i32 [ 1, [[VECTOR_PH]] ], [ [[TMP115:%.*]], [[PRED_LOAD_CONTINUE38]] ]
 ; CHECK-NEXT:    [[VEC_PHI6:%.*]] = phi i32 [ 1, [[VECTOR_PH]] ], [ [[TMP118:%.*]], [[PRED_LOAD_CONTINUE38]] ]
-; CHECK-NEXT:    [[STEP_ADD:%.*]] = add <4 x i64> [[VEC_IND]], splat (i64 4)
-; CHECK-NEXT:    [[STEP_ADD1:%.*]] = add <4 x i64> [[VEC_IND]], splat (i64 8)
-; CHECK-NEXT:    [[STEP_ADD2:%.*]] = add <4 x i64> [[VEC_IND]], splat (i64 12)
+; CHECK-NEXT:    [[STEP_ADD:%.*]] = add nuw <4 x i64> [[VEC_IND]], splat (i64 4)
+; CHECK-NEXT:    [[STEP_ADD1:%.*]] = add nuw <4 x i64> [[VEC_IND]], splat (i64 8)
+; CHECK-NEXT:    [[STEP_ADD2:%.*]] = add nuw <4 x i64> [[VEC_IND]], splat (i64 12)
 ; CHECK-NEXT:    [[TMP0:%.*]] = icmp ule <4 x i64> [[VEC_IND]], [[BROADCAST_SPLAT]]
 ; CHECK-NEXT:    [[TMP1:%.*]] = icmp ule <4 x i64> [[STEP_ADD]], [[BROADCAST_SPLAT]]
 ; CHECK-NEXT:    [[TMP2:%.*]] = icmp ule <4 x i64> [[STEP_ADD1]], [[BROADCAST_SPLAT]]
@@ -566,7 +563,7 @@ define i32 @cond_rdx_pred(i32 %cond, ptr noalias %a, i64 %N) {
 ; CHECK-NEXT:    [[TMP116:%.*]] = select <4 x i1> [[TMP11]], <4 x i32> [[TMP106]], <4 x i32> splat (i32 1)
 ; CHECK-NEXT:    [[TMP117:%.*]] = call i32 @llvm.vector.reduce.mul.v4i32(<4 x i32> [[TMP116]])
 ; CHECK-NEXT:    [[TMP118]] = mul i32 [[VEC_PHI6]], [[TMP117]]
-; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 16
+; CHECK-NEXT:    [[INDEX_NEXT]] = add i64 [[INDEX]], 16
 ; CHECK-NEXT:    [[VEC_IND_NEXT]] = add <4 x i64> [[VEC_IND]], splat (i64 16)
 ; CHECK-NEXT:    [[TMP119:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[N_VEC]]
 ; CHECK-NEXT:    br i1 [[TMP119]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP5:![0-9]+]]

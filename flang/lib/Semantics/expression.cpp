@@ -2605,7 +2605,7 @@ auto ExpressionAnalyzer::AnalyzeProcedureComponentRef(
           sym = result.specific;
           if (!sym) {
             EmitGenericResolutionError(generic, result.failedDueToAmbiguity,
-                isSubroutine, arguments, result.tried);
+                isSubroutine, arguments, result.tried, adjustment);
             return std::nullopt;
           }
           // re-resolve the name to the specific binding
@@ -3145,7 +3145,7 @@ const Symbol &ExpressionAnalyzer::AccessSpecific(
 
 void ExpressionAnalyzer::EmitGenericResolutionError(const Symbol &symbol,
     bool dueToAmbiguity, bool isSubroutine, ActualArguments &arguments,
-    const SymbolVector &tried) {
+    const SymbolVector &tried, const AdjustActuals &adjustment) {
   if (auto *msg{Say(dueToAmbiguity
               ? "The actual arguments to the generic procedure '%s' matched multiple specific procedures, perhaps due to use of NULL() without MOLD= or an actual procedure with an implicit interface"_err_en_US
               : semantics::IsGenericDefinedOp(symbol)
@@ -3158,7 +3158,16 @@ void ExpressionAnalyzer::EmitGenericResolutionError(const Symbol &symbol,
       if (auto procChars{characteristics::Procedure::Characterize(
               specific, GetFoldingContext())}) {
         if (procChars->HasExplicitInterface()) {
-          auto reasons{semantics::CheckExplicitInterface(*procChars, arguments,
+          ActualArguments *actuals{&arguments};
+          ActualArguments adjustedActuals;
+          if (specific.has<semantics::ProcBindingDetails>() &&
+              adjustment.has_value()) {
+            adjustedActuals = arguments;
+            if ((*adjustment)(specific, adjustedActuals)) {
+              actuals = &adjustedActuals;
+            }
+          }
+          auto reasons{semantics::CheckExplicitInterface(*procChars, *actuals,
               context_, /*scope=*/nullptr, /*intrinsic=*/nullptr,
               /*allocActualArgumentConversions=*/false,
               /*extentErrors=*/false,
@@ -3256,8 +3265,9 @@ auto ExpressionAnalyzer::GetCalleeAndArguments(const parser::Name &name,
           std::move(specificCall->arguments)};
     } else {
       if (isGenericInterface) {
-        EmitGenericResolutionError(
-            *symbol, dueToAmbiguity, isSubroutine, arguments, tried);
+        AdjustActuals noAdjustment;
+        EmitGenericResolutionError(*symbol, dueToAmbiguity, isSubroutine,
+            arguments, tried, noAdjustment);
       }
       return std::nullopt;
     }
@@ -4417,8 +4427,17 @@ bool ExpressionAnalyzer::CheckIntrinsicKind(
     return true;
   } else if (foldingContext_.targetCharacteristics().CanSupportType(
                  category, kind)) {
-    Say("%s(KIND=%jd) is not an enabled type for this target"_err_en_US,
-        ToUpperCase(EnumToString(category)), kind);
+    if (const semantics::Scope *modFileScope{
+            semantics::FindModuleFileContaining(
+                context_.FindScope(GetContextualMessages().at()))};
+        modFileScope && modFileScope->parent().IsIntrinsicModules()) {
+      // Ignore usage of unsupported intrinsic type kinds in intrinsic module
+      // files.  They might be USE'd into a cross-compilation or into a
+      // compilation with a disabled REAL kind.
+    } else {
+      Say("%s(KIND=%jd) is not an enabled type for this target"_err_en_US,
+          ToUpperCase(EnumToString(category)), kind);
+    }
     return true;
   } else {
     Say("%s(KIND=%jd) is not a supported type"_err_en_US,
@@ -5203,7 +5222,7 @@ const Symbol *ArgumentAnalyzer::FindBoundOp(parser::CharBlock oprName,
         *isAmbiguous = result.failedDueToAmbiguity;
       }
       context_.EmitGenericResolutionError(*generic, result.failedDueToAmbiguity,
-          isSubroutine, actuals_, result.tried);
+          isSubroutine, actuals_, result.tried, adjustment);
     }
   }
   return nullptr;

@@ -96,15 +96,14 @@ bool RegisterContextFreeBSDKernelCore_arm64::ReadRegister(
                     "nonconsecutive arm64 register numbers");
       value = pcb.x[reg - gpr_x19_arm64];
       break;
-    case gpr_lr_arm64:
+    case gpr_sp_arm64:
+      value = pcb.sp;
+      break;
     case gpr_pc_arm64:
       // The pc of crashing thread is stored in lr.
       static_assert(gpr_lr_arm64 - gpr_x19_arm64 == PCB_LR,
                     "nonconsecutive arm64 register numbers");
-      value = pcb.x[reg - gpr_x19_arm64];
-      break;
-    case gpr_sp_arm64:
-      value = pcb.sp;
+      value = pcb.x[gpr_lr_arm64 - gpr_x19_arm64];
       break;
     default:
       return false;
