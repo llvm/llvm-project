@@ -347,7 +347,8 @@ void FactsGenerator::handleAssignment(const Expr *LHSExpr,
   // assigned.
   RHSList = getRValueOrigins(RHSExpr, RHSList);
 
-  if (const auto *DRE_LHS = dyn_cast<DeclRefExpr>(LHSExpr))
+  if (const auto *DRE_LHS = dyn_cast<DeclRefExpr>(LHSExpr);
+      DRE_LHS && !DRE_LHS->getDecl()->getType()->isReferenceType())
     markUseAsWrite(DRE_LHS);
   // Kill the old loans of the destination origin and flow the new loans
   // from the source origin.
