@@ -160,6 +160,7 @@ void EHScopeStack::popCleanup() {
   assert(isa<EHCleanupScope>(*begin()));
   EHCleanupScope &cleanup = cast<EHCleanupScope>(*begin());
   innermostNormalCleanup = cleanup.getEnclosingNormalCleanup();
+  innermostEHScope = cleanup.getEnclosingEHScope();
   deallocate(cleanup.getAllocatedSize());
 
   cir::CleanupScopeOp cleanupScope = cleanup.getCleanupScopeOp();

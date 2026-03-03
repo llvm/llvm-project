@@ -1014,6 +1014,9 @@ mlir::presburger::BoundType ReifyBoundOp::getBoundType() {
 }
 
 LogicalResult ReifyBoundOp::verify() {
+  if (getType() != "EQ" && getType() != "LB" && getType() != "UB")
+    return emitOpError("invalid bound type '")
+           << getType() << "', expected 'EQ', 'LB', or 'UB'";
   if (isa<ShapedType>(getVar().getType())) {
     if (!getDim().has_value())
       return emitOpError("expected 'dim' attribute for shaped type variable");
