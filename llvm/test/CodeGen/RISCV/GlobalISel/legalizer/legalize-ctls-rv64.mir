@@ -69,14 +69,12 @@ body:             |
     ; RV64P: liveins: $x10
     ; RV64P-NEXT: {{  $}}
     ; RV64P-NEXT: [[COPY:%[0-9]+]]:_(s64) = COPY $x10
-    ; RV64P-NEXT: [[C:%[0-9]+]]:_(s64) = G_CONSTANT i64 56
-    ; RV64P-NEXT: [[SHL:%[0-9]+]]:_(s64) = G_SHL [[COPY]], [[C]](s64)
-    ; RV64P-NEXT: [[ASHR:%[0-9]+]]:_(s64) = G_ASHR [[SHL]], [[C]](s64)
-    ; RV64P-NEXT: [[CLSW:%[0-9]+]]:_(s64) = G_CLSW [[ASHR]]
-    ; RV64P-NEXT: [[C1:%[0-9]+]]:_(s64) = G_CONSTANT i64 24
-    ; RV64P-NEXT: [[SUB:%[0-9]+]]:_(s64) = G_SUB [[CLSW]], [[C1]]
-    ; RV64P-NEXT: [[SEXT_INREG:%[0-9]+]]:_(s64) = G_SEXT_INREG [[SUB]], 32
-    ; RV64P-NEXT: $x10 = COPY [[SEXT_INREG]](s64)
+    ; RV64P-NEXT: [[SEXT_INREG:%[0-9]+]]:_(s64) = G_SEXT_INREG [[COPY]], 8
+    ; RV64P-NEXT: [[CLSW:%[0-9]+]]:_(s64) = G_CLSW [[SEXT_INREG]]
+    ; RV64P-NEXT: [[C:%[0-9]+]]:_(s64) = G_CONSTANT i64 24
+    ; RV64P-NEXT: [[SUB:%[0-9]+]]:_(s64) = G_SUB [[CLSW]], [[C]]
+    ; RV64P-NEXT: [[SEXT_INREG1:%[0-9]+]]:_(s64) = G_SEXT_INREG [[SUB]], 32
+    ; RV64P-NEXT: $x10 = COPY [[SEXT_INREG1]](s64)
     ; RV64P-NEXT: PseudoRET implicit $x10
     ;
     ; RV64ZBB-LABEL: name: cls_i8
@@ -167,14 +165,12 @@ body:             |
     ; RV64P: liveins: $x10
     ; RV64P-NEXT: {{  $}}
     ; RV64P-NEXT: [[COPY:%[0-9]+]]:_(s64) = COPY $x10
-    ; RV64P-NEXT: [[C:%[0-9]+]]:_(s64) = G_CONSTANT i64 48
-    ; RV64P-NEXT: [[SHL:%[0-9]+]]:_(s64) = G_SHL [[COPY]], [[C]](s64)
-    ; RV64P-NEXT: [[ASHR:%[0-9]+]]:_(s64) = G_ASHR [[SHL]], [[C]](s64)
-    ; RV64P-NEXT: [[CLSW:%[0-9]+]]:_(s64) = G_CLSW [[ASHR]]
-    ; RV64P-NEXT: [[C1:%[0-9]+]]:_(s64) = G_CONSTANT i64 16
-    ; RV64P-NEXT: [[SUB:%[0-9]+]]:_(s64) = G_SUB [[CLSW]], [[C1]]
-    ; RV64P-NEXT: [[SEXT_INREG:%[0-9]+]]:_(s64) = G_SEXT_INREG [[SUB]], 32
-    ; RV64P-NEXT: $x10 = COPY [[SEXT_INREG]](s64)
+    ; RV64P-NEXT: [[SEXT_INREG:%[0-9]+]]:_(s64) = G_SEXT_INREG [[COPY]], 16
+    ; RV64P-NEXT: [[CLSW:%[0-9]+]]:_(s64) = G_CLSW [[SEXT_INREG]]
+    ; RV64P-NEXT: [[C:%[0-9]+]]:_(s64) = G_CONSTANT i64 16
+    ; RV64P-NEXT: [[SUB:%[0-9]+]]:_(s64) = G_SUB [[CLSW]], [[C]]
+    ; RV64P-NEXT: [[SEXT_INREG1:%[0-9]+]]:_(s64) = G_SEXT_INREG [[SUB]], 32
+    ; RV64P-NEXT: $x10 = COPY [[SEXT_INREG1]](s64)
     ; RV64P-NEXT: PseudoRET implicit $x10
     ;
     ; RV64ZBB-LABEL: name: cls_i16

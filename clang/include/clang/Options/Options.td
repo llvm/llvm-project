@@ -1572,6 +1572,11 @@ defm access_control : BoolFOption<"access-control",
   PosFlag<SetTrue>>;
 def falign_functions : Flag<["-"], "falign-functions">, Group<f_Group>;
 def falign_functions_EQ : Joined<["-"], "falign-functions=">, Group<f_Group>;
+def fpreferred_function_alignment_EQ :
+  Joined<["-"], "fpreferred-function-alignment=">, Group<f_Group>,
+  HelpText<"preferred alignment for functions">,
+  Visibility<[ClangOption, CC1Option]>,
+  MarshallingInfoInt<LangOpts<"PreferredFunctionAlignment">>;
 def falign_loops_EQ : Joined<["-"], "falign-loops=">, Group<f_Group>,
   Visibility<[ClangOption, CC1Option]>, MetaVarName<"<N>">,
   HelpText<"N must be a power of two. Align loops to the boundary">,
@@ -3293,6 +3298,11 @@ def clangir_disable_verifier : Flag<["-"], "clangir-disable-verifier">,
   HelpText<"ClangIR: Disable MLIR module verifier">,
   MarshallingInfoFlag<FrontendOpts<"ClangIRDisableCIRVerifier">>;
 
+def clangir_enable_idiom_recognizer : Flag<["-"], "clangir-enable-idiom-recognizer">,
+  Visibility<[ClangOption, CC1Option]>,
+  HelpText<"ClangIR: Enable Idiom Recognizer pass">,
+  MarshallingInfoFlag<FrontendOpts<"ClangIREnableIdiomRecognizer">>;
+
 defm clangir : BoolFOption<"clangir",
   FrontendOpts<"UseClangIRPipeline">, DefaultFalse,
   PosFlag<SetTrue, [], [ClangOption, CC1Option], "Use the ClangIR pipeline to compile">,
@@ -3488,6 +3498,12 @@ def fmodule_output : Flag<["-"], "fmodule-output">, Flags<[NoXarchOption]>,
   Visibility<[ClangOption, CLOption, CC1Option]>,
   HelpText<"Save intermediate module file results when compiling a standard C++ module unit.">;
 
+def fimplicit_modules_lock_timeout_EQ : Joined<["-"], "fimplicit-modules-lock-timeout=">,
+  Flags<[NoXarchOption]>, Visibility<[ClangOption, CLOption, CC1Option]>,
+  MetaVarName<"<seconds>">,
+  HelpText<"Time to wait on an implicit module lock before timing out">,
+  MarshallingInfoInt<FrontendOpts<"ImplicitModulesLockTimeoutSeconds">, "90">;
+
 defm skip_odr_check_in_gmf : BoolOption<"f", "skip-odr-check-in-gmf",
   LangOpts<"SkipODRCheckInGMF">, DefaultFalse,
   PosFlag<SetTrue, [], [CC1Option],
@@ -3571,6 +3587,17 @@ def fmodules_single_module_parse_mode :
   Flag<["-"], "fmodules-single-module-parse-mode">,
   Group<f_Group>, Flags<[]>, Visibility<[CC1Option]>,
   MarshallingInfoFlag<PreprocessorOpts<"SingleModuleParseMode">>;
+
+def fmodules_driver :
+  Flag<["-"], "fmodules-driver">,
+  Group<f_Group>,
+  Visibility<[ClangOption]>,
+  HelpText<"Enable support for driver managed module builds (experimental)">;
+def fno_modules_driver :
+  Flag<["-"], "fno-modules-driver">,
+  Group<f_Group>,
+  Visibility<[ClangOption]>,
+  HelpText<"Disable support for driver managed module builds (experimental)">;
 
 def fincremental_extensions :
   Flag<["-"], "fincremental-extensions">,
@@ -4978,9 +5005,11 @@ def gxcoff : Joined<["-"], "gxcoff">, Group<g_Group>, Flags<[Unsupported]>;
 def gvms : Joined<["-"], "gvms">, Group<g_Group>, Flags<[Unsupported]>;
 def gtoggle : Flag<["-"], "gtoggle">, Group<g_flags_Group>, Flags<[Unsupported]>;
 def grecord_command_line : Flag<["-"], "grecord-command-line">,
-  Group<g_flags_Group>;
+  Group<g_flags_Group>,
+  Visibility<[ClangOption, FlangOption]>;
 def gno_record_command_line : Flag<["-"], "gno-record-command-line">,
-  Group<g_flags_Group>;
+  Group<g_flags_Group>,
+  Visibility<[ClangOption, FlangOption]>;
 def : Flag<["-"], "grecord-gcc-switches">, Alias<grecord_command_line>;
 def : Flag<["-"], "gno-record-gcc-switches">, Alias<gno_record_command_line>;
 defm strict_dwarf : BoolOption<"g", "strict-dwarf",
@@ -7926,6 +7955,9 @@ def debug_info_kind_EQ : Joined<["-"], "debug-info-kind=">;
 def record_command_line : Separate<["-"], "record-command-line">,
   HelpText<"The string to embed in the .LLVM.command.line section.">,
   MarshallingInfoString<CodeGenOpts<"RecordCommandLine">>;
+def dwarf_debug_flags : Separate<["-"], "dwarf-debug-flags">,
+  HelpText<"The string to embed in the Dwarf debug flags record.">,
+  MarshallingInfoString<CodeGenOpts<"DwarfDebugFlags">>;
 def dwarf_version_EQ : Joined<["-"], "dwarf-version=">,
   MarshallingInfoInt<CodeGenOpts<"DwarfVersion">>;
 
@@ -7947,9 +7979,6 @@ def debugger_tuning_EQ : Joined<["-"], "debugger-tuning=">,
   Values<"gdb,lldb,sce,dbx">,
   NormalizedValuesScope<"llvm::DebuggerKind">, NormalizedValues<["GDB", "LLDB", "SCE", "DBX"]>,
   MarshallingInfoEnum<CodeGenOpts<"DebuggerTuning">, "Default">;
-def dwarf_debug_flags : Separate<["-"], "dwarf-debug-flags">,
-  HelpText<"The string to embed in the Dwarf debug flags record.">,
-  MarshallingInfoString<CodeGenOpts<"DwarfDebugFlags">>;
 def compress_debug_sections_EQ : Joined<["-", "--"], "compress-debug-sections=">,
     HelpText<"DWARF debug sections compression type">, Values<"none,zlib,zstd">,
     NormalizedValuesScope<"llvm::DebugCompressionType">, NormalizedValues<["None", "Zlib", "Zstd"]>,
@@ -7968,6 +7997,12 @@ def massembler_fatal_warnings : Flag<["-"], "massembler-fatal-warnings">,
 def crel : Flag<["--"], "crel">,
   HelpText<"Enable CREL relocation format (ELF only)">,
   MarshallingInfoFlag<CodeGenOpts<"Crel">>;
+def reloc_section_sym : Joined<["--"], "reloc-section-sym=">,
+  HelpText<"Section symbol conversion for relocations: all, internal, none (ELF only)">,
+  Values<"all,internal,none">,
+  NormalizedValuesScope<"llvm::RelocSectionSymType">,
+  NormalizedValues<["All", "Internal", "None"]>,
+  MarshallingInfoEnum<CodeGenOpts<"RelocSectionSym">, "All">;
 // The leading 'g' is misleading. This is an unwind tables option, not
 // a debug option. But uses this name for gnu compatibility.
 def gsframe : Flag<["--"], "gsframe">,
@@ -8556,6 +8591,9 @@ def ftest_module_file_extension_EQ :
   Joined<["-"], "ftest-module-file-extension=">,
   HelpText<"introduce a module file extension for testing purposes. "
            "The argument is parsed as blockname:major:minor:hashed:user info">;
+def fmodules_lazy_load_module_maps : Flag<["-"], "fmodules-lazy-load-module-maps">,
+  HelpText<"Load modules from module maps only when needed">,
+  MarshallingInfoFlag<HeaderSearchOpts<"LazyLoadModuleMaps">>;
 
 defm recovery_ast : BoolOption<"f", "recovery-ast",
   LangOpts<"RecoveryAST">, DefaultTrue,
@@ -9496,6 +9534,8 @@ def _SLASH_d2epilogunwind : CLFlag<"d2epilogunwind">,
   HelpText<"Best effort generate unwind v2 (epilog) information for x64 Windows">;
 def _SLASH_d2epilogunwindrequirev2 : CLFlag<"d2epilogunwindrequirev2">,
   HelpText<"Require generation of unwind v2 (epilog) information for x64 Windows">;
+def _SLASH_d2guardnochecks : CLFlag<"d2guardnochecks">,
+  HelpText<"When used with /guard:cf, emits Windows Control Flow Guard tables only (no checks)">;
 def _SLASH_EH : CLJoined<"EH">, HelpText<"Set exception handling model">;
 def _SLASH_EP : CLFlag<"EP">,
   HelpText<"Disable linemarker output and preprocess to stdout">;

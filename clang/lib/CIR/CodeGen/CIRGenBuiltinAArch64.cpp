@@ -202,6 +202,9 @@ mlir::Value CIRGenFunction::emitSVEPredicateCast(mlir::Value pred,
   return call;
 }
 
+//===----------------------------------------------------------------------===//
+//  SVE helpers
+//===----------------------------------------------------------------------===//
 // Get the minimum number of elements in an SVE vector for the given element
 // type. The actual number of elements in the vector would be an integer (power
 // of two) multiple of this value.
@@ -240,9 +243,58 @@ static unsigned getSVEMinEltCount(clang::SVETypeFlags::EltType sveType) {
   }
 }
 
+// TODO: Share with OGCG
+constexpr unsigned sveBitsPerBlock = 128;
+
+static cir::VectorType getSVEVectorForElementType(CIRGenModule &cgm,
+                                                  mlir::Type eltTy) {
+  unsigned numElts =
+      sveBitsPerBlock / cgm.getDataLayout().getTypeSizeInBits(eltTy);
+  return cir::VectorType::get(eltTy, numElts, /*is_scalable=*/true);
+}
+
+//===----------------------------------------------------------------------===//
+//  NEON helpers
+//===----------------------------------------------------------------------===//
+/// Return true if BuiltinID is an overloaded Neon intrinsic with an extra
+/// argument that specifies the vector type. The additional argument is meant
+/// for Sema checking (see `CheckNeonBuiltinFunctionCall`) and this function
+/// should be kept consistent with the logic in Sema.
+/// TODO: Make this return false for SISD builtins.
+/// TODO: Share this with ARM.cpp
+static bool hasExtraNeonArgument(unsigned builtinID) {
+  // Required by the headers included below, but not in this particular
+  // function.
+  [[maybe_unused]] int PtrArgNum = -1;
+  [[maybe_unused]] bool HasConstPtr = false;
+
+  // The mask encodes the type. We don't care about the actual value. Instead,
+  // we just check whether its been set.
+  uint64_t mask = 0;
+  switch (builtinID) {
+#define GET_NEON_OVERLOAD_CHECK
+#include "clang/Basic/arm_fp16.inc"
+#include "clang/Basic/arm_neon.inc"
+#undef GET_NEON_OVERLOAD_CHECK
+  // Non-neon builtins for controling VFP that take extra argument for
+  // discriminating the type.
+  case ARM::BI__builtin_arm_vcvtr_f:
+  case ARM::BI__builtin_arm_vcvtr_d:
+    mask = 1;
+  }
+  switch (builtinID) {
+  default:
+    break;
+  }
+
+  return mask != 0;
+}
+
 std::optional<mlir::Value>
 CIRGenFunction::emitAArch64SVEBuiltinExpr(unsigned builtinID,
                                           const CallExpr *expr) {
+  mlir::Type ty = convertType(expr->getType());
+
   if (builtinID >= SVE::BI__builtin_sve_reinterpret_s8_s8 &&
       builtinID <= SVE::BI__builtin_sve_reinterpret_f64_f64_x4) {
     cgm.errorNYI(expr->getSourceRange(),
@@ -293,9 +345,8 @@ CIRGenFunction::emitAArch64SVEBuiltinExpr(unsigned builtinID,
     }
 
     if (typeFlags.getMergeType() == SVETypeFlags::MergeAnyExp)
-      cgm.errorNYI(expr->getSourceRange(),
-                   std::string("unimplemented AArch64 builtin call: ") +
-                       getContext().BuiltinInfo.getName(builtinID));
+      ops.insert(ops.begin(),
+                 builder.getConstant(loc, cir::UndefAttr::get(ty)));
 
     // Some ACLE builtins leave out the argument to specify the predicate
     // pattern, which is expected to be expanded to an SV_ALL pattern.
@@ -318,9 +369,10 @@ CIRGenFunction::emitAArch64SVEBuiltinExpr(unsigned builtinID,
 
     // Splat scalar operand to vector (intrinsics with _n infix)
     if (typeFlags.hasSplatOperand()) {
-      cgm.errorNYI(expr->getSourceRange(),
-                   std::string("unimplemented AArch64 builtin call: ") +
-                       getContext().BuiltinInfo.getName(builtinID));
+      unsigned opNo = typeFlags.getSplatOperand();
+      ops[opNo] = cir::VecSplatOp::create(
+          builder, loc, getSVEVectorForElementType(cgm, ops[opNo].getType()),
+          ops[opNo]);
     }
 
     if (typeFlags.isReverseCompare())
@@ -1360,8 +1412,13 @@ CIRGenFunction::emitAArch64BuiltinExpr(unsigned builtinID, const CallExpr *expr,
   getContext().GetBuiltinType(builtinID, error, &iceArguments);
   assert(error == ASTContext::GE_None && "Should not codegen an error");
   llvm::SmallVector<mlir::Value> ops;
-  for (auto [idx, arg] : llvm::enumerate(expr->arguments())) {
-    if (idx == 0) {
+
+  // Skip extra arguments used to discriminate vector types and that are
+  // intended for Sema checking.
+  bool hasExtraArg = hasExtraNeonArgument(builtinID);
+  unsigned numArgs = expr->getNumArgs() - (hasExtraArg ? 1 : 0);
+  for (unsigned i = 0, e = numArgs; i != e; i++) {
+    if (i == 0) {
       switch (builtinID) {
       case NEON::BI__builtin_neon_vld1_v:
       case NEON::BI__builtin_neon_vld1q_v:
@@ -1385,10 +1442,17 @@ CIRGenFunction::emitAArch64BuiltinExpr(unsigned builtinID, const CallExpr *expr,
                 getContext().BuiltinInfo.getName(builtinID));
       }
     }
-    ops.push_back(emitScalarOrConstFoldImmArg(iceArguments, idx, arg));
+    ops.push_back(
+        emitScalarOrConstFoldImmArg(iceArguments, i, expr->getArg(i)));
   }
 
   assert(!cir::MissingFeatures::neonSISDIntrinsics());
+
+  // Not all intrinsics handled by the common case work for AArch64 yet, so only
+  // defer to common code if it's been added to our special map.
+  assert(!cir::MissingFeatures::aarch64SIMDIntrinsics());
+
+  assert(!cir::MissingFeatures::aarch64TblBuiltinExpr());
 
   mlir::Location loc = getLoc(expr->getExprLoc());
 
@@ -1613,12 +1677,6 @@ CIRGenFunction::emitAArch64BuiltinExpr(unsigned builtinID, const CallExpr *expr,
                      getContext().BuiltinInfo.getName(builtinID));
     return mlir::Value{};
   }
-
-  // Not all intrinsics handled by the common case work for AArch64 yet, so only
-  // defer to common code if it's been added to our special map.
-  assert(!cir::MissingFeatures::aarch64SIMDIntrinsics());
-
-  assert(!cir::MissingFeatures::aarch64TblBuiltinExpr());
 
   switch (builtinID) {
   default:

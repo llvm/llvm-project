@@ -635,6 +635,8 @@ const MFMA_F8F6F4_Info *getWMMA_F8F6F4_WithFormatArgs(unsigned FmtA,
 }
 
 unsigned getVOPDEncodingFamily(const MCSubtargetInfo &ST) {
+  if (ST.hasFeature(AMDGPU::FeatureGFX13Insts))
+    return SIEncodingFamily::GFX13;
   if (ST.hasFeature(AMDGPU::FeatureGFX1250Insts))
     return SIEncodingFamily::GFX1250;
   if (ST.hasFeature(AMDGPU::FeatureGFX12Insts))
@@ -654,9 +656,18 @@ CanBeVOPD getCanBeVOPD(unsigned Opc, unsigned EncodingFamily, bool VOPD3) {
     // TODO: This can be optimized by creating tables of supported VOPDY
     // opcodes per encoding.
     unsigned VOPDMov = AMDGPU::getVOPDOpcode(AMDGPU::V_MOV_B32_e32, VOPD3);
+    bool CanBeVOPDX;
+    if (VOPD3) {
+      CanBeVOPDX = getVOPDFull(AMDGPU::getVOPDOpcode(Opc, VOPD3), VOPDMov,
+                               EncodingFamily, VOPD3) != -1;
+    } else {
+      // The list of VOPDX opcodes is currently the same in all encoding
+      // families, so we do not need a family-specific check.
+      CanBeVOPDX = Info->CanBeVOPDX;
+    }
     bool CanBeVOPDY = getVOPDFull(VOPDMov, AMDGPU::getVOPDOpcode(Opc, VOPD3),
                                   EncodingFamily, VOPD3) != -1;
-    return {VOPD3 ? Info->CanBeVOPD3X : Info->CanBeVOPDX, CanBeVOPDY};
+    return {CanBeVOPDX, CanBeVOPDY};
   }
 
   return {false, false};
@@ -682,9 +693,11 @@ bool isMAC(unsigned Opc) {
          Opc == AMDGPU::V_MAC_F16_e64_vi ||
          Opc == AMDGPU::V_FMAC_F64_e64_gfx90a ||
          Opc == AMDGPU::V_FMAC_F64_e64_gfx12 ||
+         Opc == AMDGPU::V_FMAC_F64_e64_gfx13 ||
          Opc == AMDGPU::V_FMAC_F32_e64_gfx10 ||
          Opc == AMDGPU::V_FMAC_F32_e64_gfx11 ||
          Opc == AMDGPU::V_FMAC_F32_e64_gfx12 ||
+         Opc == AMDGPU::V_FMAC_F32_e64_gfx13 ||
          Opc == AMDGPU::V_FMAC_F32_e64_vi ||
          Opc == AMDGPU::V_FMAC_LEGACY_F32_e64_gfx10 ||
          Opc == AMDGPU::V_FMAC_DX9_ZERO_F32_e64_gfx11 ||
@@ -693,6 +706,8 @@ bool isMAC(unsigned Opc) {
          Opc == AMDGPU::V_FMAC_F16_fake16_e64_gfx11 ||
          Opc == AMDGPU::V_FMAC_F16_t16_e64_gfx12 ||
          Opc == AMDGPU::V_FMAC_F16_fake16_e64_gfx12 ||
+         Opc == AMDGPU::V_FMAC_F16_t16_e64_gfx13 ||
+         Opc == AMDGPU::V_FMAC_F16_fake16_e64_gfx13 ||
          Opc == AMDGPU::V_DOT2C_F32_F16_e64_vi ||
          Opc == AMDGPU::V_DOT2C_F32_BF16_e64_vi ||
          Opc == AMDGPU::V_DOT2C_I32_I16_e64_vi ||
@@ -1853,9 +1868,9 @@ void decodeWaitcnt(const IsaVersion &Version, unsigned Waitcnt, unsigned &Vmcnt,
 
 Waitcnt decodeWaitcnt(const IsaVersion &Version, unsigned Encoded) {
   Waitcnt Decoded;
-  Decoded.LoadCnt = decodeVmcnt(Version, Encoded);
-  Decoded.ExpCnt = decodeExpcnt(Version, Encoded);
-  Decoded.DsCnt = decodeLgkmcnt(Version, Encoded);
+  Decoded.set(LOAD_CNT, decodeVmcnt(Version, Encoded));
+  Decoded.set(EXP_CNT, decodeExpcnt(Version, Encoded));
+  Decoded.set(DS_CNT, decodeLgkmcnt(Version, Encoded));
   return Decoded;
 }
 
@@ -1890,7 +1905,8 @@ unsigned encodeWaitcnt(const IsaVersion &Version, unsigned Vmcnt,
 }
 
 unsigned encodeWaitcnt(const IsaVersion &Version, const Waitcnt &Decoded) {
-  return encodeWaitcnt(Version, Decoded.LoadCnt, Decoded.ExpCnt, Decoded.DsCnt);
+  return encodeWaitcnt(Version, Decoded.get(LOAD_CNT), Decoded.get(EXP_CNT),
+                       Decoded.get(DS_CNT));
 }
 
 static unsigned getCombinedCountBitMask(const IsaVersion &Version,
@@ -1909,21 +1925,21 @@ static unsigned getCombinedCountBitMask(const IsaVersion &Version,
 
 Waitcnt decodeLoadcntDscnt(const IsaVersion &Version, unsigned LoadcntDscnt) {
   Waitcnt Decoded;
-  Decoded.LoadCnt =
-      unpackBits(LoadcntDscnt, getLoadcntStorecntBitShift(Version.Major),
-                 getLoadcntBitWidth(Version.Major));
-  Decoded.DsCnt = unpackBits(LoadcntDscnt, getDscntBitShift(Version.Major),
-                             getDscntBitWidth(Version.Major));
+  Decoded.set(LOAD_CNT, unpackBits(LoadcntDscnt,
+                                   getLoadcntStorecntBitShift(Version.Major),
+                                   getLoadcntBitWidth(Version.Major)));
+  Decoded.set(DS_CNT, unpackBits(LoadcntDscnt, getDscntBitShift(Version.Major),
+                                 getDscntBitWidth(Version.Major)));
   return Decoded;
 }
 
 Waitcnt decodeStorecntDscnt(const IsaVersion &Version, unsigned StorecntDscnt) {
   Waitcnt Decoded;
-  Decoded.StoreCnt =
-      unpackBits(StorecntDscnt, getLoadcntStorecntBitShift(Version.Major),
-                 getStorecntBitWidth(Version.Major));
-  Decoded.DsCnt = unpackBits(StorecntDscnt, getDscntBitShift(Version.Major),
-                             getDscntBitWidth(Version.Major));
+  Decoded.set(STORE_CNT, unpackBits(StorecntDscnt,
+                                    getLoadcntStorecntBitShift(Version.Major),
+                                    getStorecntBitWidth(Version.Major)));
+  Decoded.set(DS_CNT, unpackBits(StorecntDscnt, getDscntBitShift(Version.Major),
+                                 getDscntBitWidth(Version.Major)));
   return Decoded;
 }
 
@@ -1954,7 +1970,8 @@ static unsigned encodeLoadcntDscnt(const IsaVersion &Version, unsigned Loadcnt,
 }
 
 unsigned encodeLoadcntDscnt(const IsaVersion &Version, const Waitcnt &Decoded) {
-  return encodeLoadcntDscnt(Version, Decoded.LoadCnt, Decoded.DsCnt);
+  return encodeLoadcntDscnt(Version, Decoded.get(LOAD_CNT),
+                            Decoded.get(DS_CNT));
 }
 
 static unsigned encodeStorecntDscnt(const IsaVersion &Version,
@@ -1967,7 +1984,8 @@ static unsigned encodeStorecntDscnt(const IsaVersion &Version,
 
 unsigned encodeStorecntDscnt(const IsaVersion &Version,
                              const Waitcnt &Decoded) {
-  return encodeStorecntDscnt(Version, Decoded.StoreCnt, Decoded.DsCnt);
+  return encodeStorecntDscnt(Version, Decoded.get(STORE_CNT),
+                             Decoded.get(DS_CNT));
 }
 
 //===----------------------------------------------------------------------===//
