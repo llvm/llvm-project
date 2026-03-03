@@ -1397,6 +1397,14 @@ def CIR_ASTVarDeclAttr : CIR_AST<"VarDecl", "var.decl", [
   ASTVarDeclInterface
 ]>;
 
+def CIR_ASTFunctionDeclAttr : CIR_AST<"FunctionDecl", "function.decl", [
+  ASTFunctionDeclInterface
+]>;
+
+def CIR_ASTCXXDeleteExprAttr : CIR_AST<"CXXDeleteExpr", "cxx_delete.expr", [
+  ASTCXXDeleteExprInterface
+]>;
+
 include "clang/CIR/Dialect/IR/CIRCUDAAttrs.td"
 
 #endif // CLANG_CIR_DIALECT_IR_CIRATTRS_TD

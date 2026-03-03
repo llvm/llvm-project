@@ -3590,6 +3590,45 @@ def CIR_LLVMIntrinsicCallOp : CIR_Op<"call_llvm_intrinsic"> {
 }
 
 //===----------------------------------------------------------------------===//
+// DeleteArrayOp
+//===----------------------------------------------------------------------===//
+
+def CIR_DeleteArrayOp : CIR_Op<"delete_array"> {
+  let summary = "Delete address representing an array";
+  let description = [{
+    `cir.delete_array` operation deletes an array. For example, `delete[] ptr;`
+    will be translated to `cir.delete_array %ptr`.
+
+    When present, the AST attribute provides the CXXDeleteExpr for generating
+    the delete call during CXXABILowering. The callee attribute specifies the
+    operator delete function to call.
+  }];
+
+  let arguments = (ins CIR_PointerType:$address,
+                       OptionalAttr<ASTCXXDeleteExprInterface>:$ast,
+                       OptionalAttr<FlatSymbolRefAttr>:$callee);
+
+  let assemblyFormat = [{
+    $address `:` qualified(type($address)) attr-dict
+  }];
+
+  let builders = [
+    OpBuilder<(ins "mlir::Value":$address,
+                   CArg<"mlir::Attribute", "{}">:$ast,
+                   CArg<"mlir::FlatSymbolRefAttr", "{}">:$callee), [{
+        $_state.addOperands(ValueRange{address});
+        if (ast)
+          $_state.addAttribute("ast", ast);
+        if (callee)
+          $_state.addAttribute("callee", callee);
+    }]>
+  ];
+
+  let hasLLVMLowering = false;
+  let hasCXXABILowering = true;
+}
+
+//===----------------------------------------------------------------------===//
 // CallOp and TryCallOp
 //===----------------------------------------------------------------------===//
 
