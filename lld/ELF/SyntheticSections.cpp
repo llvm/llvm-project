@@ -4109,35 +4109,6 @@ bool ThunkSection::assignOffsets() {
   return changed;
 }
 
-PPC32Got2Section::PPC32Got2Section(Ctx &ctx)
-    : SyntheticSection(ctx, ".got2", SHT_PROGBITS, SHF_ALLOC | SHF_WRITE, 4) {}
-
-bool PPC32Got2Section::isNeeded() const {
-  // See the comment below. This is not needed if there is no other
-  // InputSection.
-  for (SectionCommand *cmd : getParent()->commands)
-    if (auto *isd = dyn_cast<InputSectionDescription>(cmd))
-      for (InputSection *isec : isd->sections)
-        if (isec != this)
-          return true;
-  return false;
-}
-
-void PPC32Got2Section::finalizeContents() {
-  // PPC32 may create multiple GOT sections for -fPIC/-fPIE, one per file in
-  // .got2 . This function computes outSecOff of each .got2 to be used in
-  // PPC32PltCallStub::writeTo(). The purpose of this empty synthetic section is
-  // to collect input sections named ".got2".
-  for (SectionCommand *cmd : getParent()->commands)
-    if (auto *isd = dyn_cast<InputSectionDescription>(cmd)) {
-      for (InputSection *isec : isd->sections) {
-        // isec->file may be nullptr for MergeSyntheticSection.
-        if (isec != this && isec->file)
-          isec->file->ppc32Got2 = isec;
-      }
-    }
-}
-
 // If linking position-dependent code then the table will store the addresses
 // directly in the binary so the section has type SHT_PROGBITS. If linking
 // position-independent code the section has type SHT_NOBITS since it will be
