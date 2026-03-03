@@ -34,3 +34,20 @@ define <4 x i32> @cmpeq_epi64_and(<4 x i32> noundef %a, <4 x i32> noundef %b) {
   %and = and <4 x i32> %sext, %shuffle
   ret <4 x i32> %and
 }
+
+define <4 x i32> @cmpeq_epi64_commutated_and(<4 x i32> noundef %a, <4 x i32> noundef %b) {
+; CHECK-LABEL: define <4 x i32> @cmpeq_epi64_commutated_and(
+; CHECK-SAME: <4 x i32> noundef [[A:%.*]], <4 x i32> noundef [[B:%.*]]) {
+; CHECK-NEXT:    [[TMP1:%.*]] = bitcast <4 x i32> [[A]] to <2 x i64>
+; CHECK-NEXT:    [[TMP2:%.*]] = bitcast <4 x i32> [[B]] to <2 x i64>
+; CHECK-NEXT:    [[TMP3:%.*]] = icmp eq <2 x i64> [[TMP1]], [[TMP2]]
+; CHECK-NEXT:    [[TMP4:%.*]] = sext <2 x i1> [[TMP3]] to <2 x i64>
+; CHECK-NEXT:    [[AND:%.*]] = bitcast <2 x i64> [[TMP4]] to <4 x i32>
+; CHECK-NEXT:    ret <4 x i32> [[AND]]
+;
+  %cmp = icmp eq <4 x i32> %a, %b
+  %sext = sext <4 x i1> %cmp to <4 x i32>
+  %shuffle = shufflevector <4 x i32> %sext, <4 x i32> poison, <4 x i32> <i32 1, i32 0, i32 3, i32 2>
+  %and = and <4 x i32> %shuffle, %sext
+  ret <4 x i32> %and
+}

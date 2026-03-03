@@ -5468,7 +5468,7 @@ bool VectorCombine::foldEqualShuffleAnd(Instruction &I) {
       m_CombineOr(m_SExt(m_Shuffle(Equal, m_Poison(), m_SpecificMask(Mask))),
                   m_Shuffle(m_SExt(Equal), m_Poison(), m_SpecificMask(Mask)));
 
-  if (!match(&I, m_CombineOr(m_And(m_SExt(Equal), Shuffle),
+  if (!match(&I, m_CombineOr(m_c_And(m_SExt(Equal), Shuffle),
                              m_Select(Equal, Shuffle, m_ZeroInt()))) ||
       !ICmpInst::isEquality(Pred) || !L->getType()->isVectorTy())
     return false;
