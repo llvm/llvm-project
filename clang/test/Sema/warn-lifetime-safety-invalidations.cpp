@@ -455,4 +455,16 @@ void MapSubscriptDoesNotInvalidate() {
   *it;
 }
 
+void PrintMax(const int& a, const int& b);
+
+void MapSubscriptMultipleCallsDoesNotInvalidate(std::map<int, int> mp, int a, int b) {
+    PrintMax(mp[a], mp[b]);
+}
+
+void FlatMapSubscriptMultipleCallsInvalidate(std::flat_map<int, int> mp, int a, int b) {
+    PrintMax(mp[a], mp[b]); // expected-warning {{object whose reference is captured is later invalidated}} \
+                                 // expected-note {{invalidated here}} \
+                                 // expected-note {{later used here}}
+}
+
 } // namespace AssociativeContainers

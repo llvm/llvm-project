@@ -279,7 +279,6 @@ bool isContainerInvalidationMethod(const CXXMethodDecl &MD) {
 
   // `pop_back` is excluded: it only invalidates references to the removed
   // element, not to other elements.
-  // https://en.cppreference.com/w/cpp/container/vector/pop_back.html
   static const llvm::StringSet<> Vector = {// Insertion
                                            "insert", "emplace", "emplace_back",
                                            "push_back", "insert_range",
@@ -293,7 +292,6 @@ bool isContainerInvalidationMethod(const CXXMethodDecl &MD) {
 
   // `pop_*` methods are excluded: they only invalidate references to the
   // removed element, not to other elements.
-  // https://en.cppreference.com/w/cpp/container/deque.html#Invalidation_notes
   static const llvm::StringSet<> Deque = {// Insertion
                                           "insert", "emplace", "insert_range",
                                           // Removal
@@ -324,8 +322,6 @@ bool isContainerInvalidationMethod(const CXXMethodDecl &MD) {
 
   // `erase` and `extract` are excluded: they only affect the removed element,
   // not to other elements.
-  // https://en.cppreference.com/w/cpp/container/map/erase.html
-  // https://en.cppreference.com/w/cpp/container/map/extract.html
   static const llvm::StringSet<> NodeBased = {// Removal
                                               "clear"};
 
@@ -342,6 +338,8 @@ bool isContainerInvalidationMethod(const CXXMethodDecl &MD) {
                                          "replace"};
 
   const StringRef ContainerName = getName(*RD);
+  // TODO: Consider caching this lookup by CXXMethodDecl pointer if this
+  // StringSwitch becomes a performance bottleneck.
   const llvm::StringSet<> *InvalidatingMethods =
       llvm::StringSwitch<const llvm::StringSet<> *>(ContainerName)
           .Case("vector", &Vector)
@@ -368,8 +366,6 @@ bool isContainerInvalidationMethod(const CXXMethodDecl &MD) {
     case OO_Subscript: // operator[] : Invalidation only for
                        // `flat_map` (Insert-or-access).
                        // `map` and `unordered_map` are excluded.
-      // https://en.cppreference.com/w/cpp/container/unordered_map.html#Iterator_invalidation
-      // https://en.cppreference.com/w/cpp/container/map/operator_at.html
       return ContainerName == "flat_map";
     default:
       return false;
