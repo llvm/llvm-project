@@ -1192,6 +1192,68 @@ struct dyld_chained_ptr_64_rebase {
   uint64_t bind : 1; // set to 0
 };
 
+// DYLD_CHAINED_PTR_ARM64E / DYLD_CHAINED_PTR_ARM64E_USERLAND
+struct dyld_chained_ptr_arm64e_rebase {
+  uint64_t target : 43;
+  uint64_t high8 : 8;
+  uint64_t next : 11; // 4 or 8-byte stride
+  uint64_t bind : 1;  // == 0
+  uint64_t auth : 1;  // == 0
+};
+
+struct dyld_chained_ptr_arm64e_bind {
+  uint64_t ordinal : 16;
+  uint64_t zero : 16;
+  uint64_t addend : 19; // +/-256K
+  uint64_t next : 11;   // 4 or 8-byte stride
+  uint64_t bind : 1;    // == 1
+  uint64_t auth : 1;    // == 0
+};
+
+struct dyld_chained_ptr_arm64e_auth_bind {
+  uint64_t ordinal : 16;
+  uint64_t zero : 16;
+  uint64_t diversity : 16;
+  uint64_t addrDiv : 1;
+  uint64_t key : 2;
+  uint64_t next : 11; // 4 or 8-byte stride
+  uint64_t bind : 1;  // == 1
+  uint64_t auth : 1;  // == 1
+};
+
+struct dyld_chained_ptr_arm64e_auth_rebase {
+  uint64_t target : 32; // runtimeOffset
+  uint64_t diversity : 16;
+  uint64_t addrDiv : 1;
+  uint64_t key : 2;
+  uint64_t next : 11; // 4 or 8-byte stride
+  uint64_t bind : 1;  // == 0
+  uint64_t auth : 1;  // == 1
+};
+
+// DYLD_CHAINED_PTR_ARM64E_USERLAND24: 24-bit ordinal (vs 16) for more imports.
+// Rebase formats are shared with DYLD_CHAINED_PTR_ARM64E.
+struct dyld_chained_ptr_arm64e_bind24 {
+  uint64_t ordinal : 24;
+  uint64_t zero : 8;
+  uint64_t addend : 19; // +/-256K
+  uint64_t next : 11;   // 8-byte stride
+  uint64_t bind : 1;    // == 1
+  uint64_t auth : 1;    // == 0
+};
+
+// DYLD_CHAINED_PTR_ARM64E_USERLAND24
+struct dyld_chained_ptr_arm64e_auth_bind24 {
+  uint64_t ordinal : 24;
+  uint64_t zero : 8;
+  uint64_t diversity : 16;
+  uint64_t addrDiv : 1;
+  uint64_t key : 2;
+  uint64_t next : 11; // 8-byte stride
+  uint64_t bind : 1;  // == 1
+  uint64_t auth : 1;  // == 1
+};
+
 // Byte order swapping functions for MachO structs
 
 inline void swapStruct(fat_header &mh) {
