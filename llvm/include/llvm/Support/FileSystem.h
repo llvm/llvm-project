@@ -344,7 +344,8 @@ LLVM_ABI std::error_code real_path(const Twine &path,
 /// @param path The path of the symlink.
 /// @param output The location to store the symlink target.
 /// @returns errc::success if the symlink target has been stored in output,
-///          otherwise a platform-specific error_code.
+///          errc::invalid_argument if path is not a symbolic link, otherwise
+///          a platform-specific error_code.
 LLVM_ABI std::error_code readlink(const Twine &path,
                                   SmallVectorImpl<char> &output);
 

@@ -1734,8 +1734,12 @@ std::error_code readlink(const Twine &path, SmallVectorImpl<char> &dest) {
   };
   DWORD BytesReturned;
   if (!::DeviceIoControl(H, FSCTL_GET_REPARSE_POINT, NULL, 0, &RDB,
-                         sizeof(Buffer), &BytesReturned, NULL))
-    return mapWindowsError(::GetLastError());
+                         sizeof(Buffer), &BytesReturned, NULL)) {
+    DWORD Err = ::GetLastError();
+    if (Err == ERROR_NOT_A_REPARSE_POINT)
+      return make_error_code(errc::invalid_argument);
+    return mapWindowsError(Err);
+  }
 
   if (RDB.ReparseTag != IO_REPARSE_TAG_SYMLINK)
     return make_error_code(errc::invalid_argument);
