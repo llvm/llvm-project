@@ -3199,13 +3199,15 @@ std::optional<bool> lowerBuiltin(const StringRef DemangledCall,
   if (Args.size() < Call->Builtin->MinNumArgs) {
     LLVM_DEBUG(dbgs() << "Too few arguments for builtin " << DemangledCall
                       << ": expected at least " << Call->Builtin->MinNumArgs
-                      << ", got " << Args.size() << "\n");
+                      << ", got " << Args.size()
+                      << "; treating as a normal function\n");
     return std::nullopt;
   }
   if (Call->Builtin->MaxNumArgs && Args.size() > Call->Builtin->MaxNumArgs) {
     LLVM_DEBUG(dbgs() << "Too many arguments for builtin " << DemangledCall
                       << ": expected at most " << Call->Builtin->MaxNumArgs
-                      << ", got " << Args.size() << "\n");
+                      << ", got " << Args.size()
+                      << "; treating as a normal function\n");
     return std::nullopt;
   }
 
