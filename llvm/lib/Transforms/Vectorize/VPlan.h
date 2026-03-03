@@ -4067,6 +4067,8 @@ public:
     return true;
   }
 
+  Instruction::BinaryOps getInductionOpcode() const { return InductionOpcode; }
+
 protected:
 #if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
   /// Print the recipe.
