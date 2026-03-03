@@ -30,10 +30,13 @@ void registerConvertAMXToLLVMInterface(DialectRegistry &registry);
 
 namespace amx {
 
+// A set of patterns for lowering 32-bit packed vector contraction operations
+// to their corresponding packed-type tiled dot-product operations, using
+// AMX ultimately targeting the relevant x86 LLVM intrinsics (e.g., BF16 and
+// Int8).
 void populateVectorContractToPackedTypeTiledDotProductPatterns(
     RewritePatternSet &patterns);
-
-}
+} // namespace amx
 
 } // namespace mlir
 
