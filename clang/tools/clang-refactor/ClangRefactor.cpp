@@ -222,7 +222,7 @@ class CommandLineRefactoringOptionCreator final
     : public RefactoringOptionVisitor {
 public:
   CommandLineRefactoringOptionCreator(
-      cl::OptionCategory &Category, cl::SubCommand &Subcommand,
+      const cl::OptionCategory &Category, cl::SubCommand &Subcommand,
       RefactoringActionCommandLineOptions &Options)
       : Category(Category), Subcommand(Subcommand), Options(Options) {}
 
@@ -247,7 +247,7 @@ private:
 
   llvm::SmallPtrSet<const RefactoringOption *, 8> Visited;
   llvm::StringSet<> OptionNames;
-  cl::OptionCategory &Category;
+  const cl::OptionCategory &Category;
   cl::SubCommand &Subcommand;
   RefactoringActionCommandLineOptions &Options;
 };
@@ -257,7 +257,7 @@ class RefactoringActionSubcommand : public cl::SubCommand {
 public:
   RefactoringActionSubcommand(std::unique_ptr<RefactoringAction> Action,
                               RefactoringActionRules ActionRules,
-                              cl::OptionCategory &Category)
+                              const cl::OptionCategory &Category)
       : SubCommand(Action->getCommand(), Action->getDescription()),
         Action(std::move(Action)), ActionRules(std::move(ActionRules)) {
     // Check if the selection option is supported.
