@@ -33,7 +33,7 @@ LIBC_INLINE constexpr bfloat16 asinbf16(bfloat16 x) {
 
   uint16_t x_u = xbits.uintval();
   uint16_t x_abs = x_u & 0x7fff;
-  float x_sign = (xbits.sign() == Sign::NEG) ? -1 : 1;
+  float x_sign = (x_u >> 15) ? -1 : 1;
   float xf = x;
 
   // case 1: |x|>=1, NaN or Inf
@@ -73,9 +73,9 @@ LIBC_INLINE constexpr bfloat16 asinbf16(bfloat16 x) {
 
   // case 3: (0,0.5]
   if (x_abs <= 0x3F00) {
-    // asin_eval returns P(x^2) - 1, where P(x^2) ~ asin(x)/x
-    float result = xf * static_cast<float>(
-                            1.0 + inv_trigf_utils_internal::asin_eval(x_sq));
+    double xp = inv_trigf_utils_internal::asin_eval(x_sq);
+    float result =
+        xf * static_cast<float>(fputil::multiply_add<double>(x_sq, xp, 1.0));
     return fputil::cast<bfloat16>(result);
   }
 
@@ -83,8 +83,9 @@ LIBC_INLINE constexpr bfloat16 asinbf16(bfloat16 x) {
   //  using reduction: asin(x) = pi/2 - 2*asin(sqrt((1-x)/2))
   float t = fputil::multiply_add<float>(xf_abs, -0.5f, 0.5f);
   float t_sqrt = fputil::sqrt<float>(t);
+  double tp = inv_trigf_utils_internal::asin_eval(t);
   float asin_sqrt_t =
-      t_sqrt * static_cast<float>(1.0 + inv_trigf_utils_internal::asin_eval(t));
+      t_sqrt * static_cast<float>(fputil::multiply_add<double>(t, tp, 1.0));
   float result = fputil::multiply_add<float>(-2.0f, asin_sqrt_t, PI_2);
   return fputil::cast<bfloat16>(x_sign * result);
 }
