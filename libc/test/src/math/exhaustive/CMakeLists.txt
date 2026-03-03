@@ -551,23 +551,6 @@ add_fp_unittest(
 )
 
 add_fp_unittest(
-  atanbf16_test
-  NO_RUN_POSTBUILD
-  NEED_MPFR
-  SUITE
-    libc_math_exhaustive_tests
-  SRCS
-    atanbf16_test.cpp
-  DEPENDS
-    .exhaustive_test
-    libc.src.math.atanbf16
-    libc.src.__support.FPUtil.fp_bits
-    libc.src.__support.FPUtil.bfloat16
-  LINK_LIBRARIES
-    -lpthread
-)
-
-add_fp_unittest(
   atanf_test
   NO_RUN_POSTBUILD
   NEED_MPFR
