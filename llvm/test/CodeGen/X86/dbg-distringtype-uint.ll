@@ -10,7 +10,7 @@
 ; CHECK-NOT:                 DW_TAG
 ; CHECK:                     DW_TAG_formal_parameter
 ; CHECK-NOT:                 DW_TAG
-; Ensure that static local variable elemnt is placed in abstract subprogram DIE.
+; Ensure that the static local variable is in the abstract subprogram DIE.
 ; CHECK:                     DW_TAG_variable
 ; CHECK-NEXT:                  DW_AT_name  ("elemnt")
 
