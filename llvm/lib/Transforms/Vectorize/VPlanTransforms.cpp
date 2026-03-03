@@ -5674,33 +5674,31 @@ getExpressionIV(VPValue *V, VPRegionBlock *VectorLoopRegion) {
   if (!BinOp || !Instruction::isBinaryOp(BinOp->getOpcode()))
     return nullptr;
 
-  VPWidenIntOrFpInductionRecipe *WideIV = nullptr;
-  for (VPValue *Op : BinOp->operands()) {
-    // Operands must be a single IV and others must be loop invariant.
-    auto *Cand = dyn_cast<VPWidenIntOrFpInductionRecipe>(Op);
-    if (Cand) {
-      if (WideIV)
-        return nullptr;
-      WideIV = Cand;
-      continue;
-    }
-    if (!Op->isDefinedOutsideLoopRegions())
+  VPValue *Op0 = BinOp->getOperand(0);
+  VPValue *Op1 = BinOp->getOperand(1);
+  if (!isa<VPWidenIntOrFpInductionRecipe>(Op0))
+    std::swap(Op0, Op1);
+
+  if (!Op1->isDefinedOutsideLoopRegions())
       return nullptr;
-  }
-  return WideIV;
+
+  return dyn_cast<VPWidenIntOrFpInductionRecipe>(Op0);
 }
 
-/// Create a scalar version of the binary op \p V in the middle block,
+/// Create a scalar version of the binary op \p V and sink before \p InsertPt,
 /// replacing \p WidenIV with \p ScalarIV.
 static VPValue *sinkBinOpToMiddleBlock(VPValue *V, VPValue *ScalarIV,
                                        VPWidenIntOrFpInductionRecipe *WidenIV,
-                                       VPBuilder &Builder) {
-  auto *BinOp = cast<VPWidenRecipe>(V->getDefiningRecipe());
-  auto Ops = to_vector(map_range(BinOp->operands(), [&](VPValue *Op) {
-    return Op == WidenIV ? ScalarIV : Op;
-  }));
-  return Builder.createNaryOp(BinOp->getOpcode(), Ops, VPIRFlags(*BinOp),
-                              BinOp->getDebugLoc());
+                                       VPBasicBlock::iterator InsertPt) {
+  auto *BinOp = V->getDefiningRecipe()->clone();
+  if (BinOp->getOperand(0) == WidenIV)
+    BinOp->setOperand(0, ScalarIV);
+  else {
+    assert(BinOp->getOperand(1) ==  WidenIV && "one operand must be WideIV");
+    BinOp->setOperand(1, ScalarIV);
+  }
+  BinOp->insertBefore(*InsertPt->getParent(), InsertPt);
+  return cast<VPWidenRecipe>(BinOp);
 }
 
 void VPlanTransforms::optimizeFindIVReductions(VPlan &Plan,
@@ -5749,17 +5747,14 @@ void VPlanTransforms::optimizeFindIVReductions(VPlan &Plan,
                                     m_VPValue(FalseVal))))
       continue;
 
-    // The non-phi operand of the select is the IV (or expression of IV).
-    assert(is_contained(BackedgeVal->getDefiningRecipe()->operands(), PhiR));
-    VPValue *IV = TrueVal == PhiR ? FalseVal : TrueVal;
+    // The non-phi operand of the select is the IV or and expression of IV.
+    assert(is_contained(CondSelect->getDefiningRecipe()->operands(), PhiR));
+    VPValue *ExprOfIV = TrueVal == PhiR ? FalseVal : TrueVal;
 
-    // Check if IV is a simple expression of a widened IV.
-    // If so, we can track the underlying IV and sink the expression.
-    VPWidenIntOrFpInductionRecipe *ExpressionIV =
-        getExpressionIV(IV, VectorLoopRegion);
-    VPValue *IVToTrack = ExpressionIV ? ExpressionIV : IV;
-
-    const SCEV *IVSCEV = vputils::getSCEVExprForVPValue(IVToTrack, PSE, &L);
+    // Check if IV is a simple expression of a widened IV. If so, we can track the underlying IV and sink the expression.
+    auto *ExpressionIV =
+        getExpressionIV(ExprOfIV, VectorLoopRegion);
+    const SCEV *IVSCEV = vputils::getSCEVExprForVPValue(ExpressionIV ? ExpressionIV : ExprOfIV, PSE, &L);
     const SCEV *Step;
     if (!match(IVSCEV, m_scev_AffineAddRec(m_SCEV(), m_SCEV(Step))))
       continue;
@@ -5830,7 +5825,7 @@ void VPlanTransforms::optimizeFindIVReductions(VPlan &Plan,
       VPValue *ResultVal = ReducedIV;
       if (ExpressionIV)
         ResultVal =
-            sinkBinOpToMiddleBlock(IV, ReducedIV, ExpressionIV, MiddleBuilder);
+            sinkBinOpToMiddleBlock(ExprOfIV, ReducedIV, ExpressionIV, MiddleBuilder.getInsertPoint());
 
       NewRdxResult =
           MiddleBuilder.createSelect(Cmp, ResultVal, StartVPV, ExitDL);
