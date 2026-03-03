@@ -1,4 +1,4 @@
-//===- Dtlto.cpp - Distributed ThinLTO implementation --------------------===//
+//===- DTLTO.cpp - Distributed ThinLTO implementation ---------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -14,6 +14,8 @@
 
 #include "llvm/DTLTO/DTLTO.h"
 
+#include "llvm/ADT/STLExtras.h"
+#include "llvm/ADT/ScopeExit.h"
 #include "llvm/ADT/SmallString.h"
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/ADT/StringRef.h"
@@ -21,10 +23,10 @@
 #include "llvm/LTO/LTO.h"
 #include "llvm/Object/Archive.h"
 #include "llvm/Support/FileSystem.h"
+#include "llvm/Support/JSON.h"
 #include "llvm/Support/MemoryBufferRef.h"
 #include "llvm/Support/Path.h"
 #include "llvm/Support/Process.h"
-#include "llvm/Support/Signals.h"
 #include "llvm/Support/TimeProfiler.h"
 #include "llvm/Support/raw_ostream.h"
 #ifdef _WIN32
@@ -67,7 +69,7 @@ Expected<StringRef> normalizePath(StringRef Path, StringSaver &Saver) {
   if (Path.empty())
     return Path;
   SmallString<256> Expanded;
-  if (std::error_code EC = llvm::sys::windows::makeLongFormPath(Path, Expanded))
+  if (std::error_code EC = sys::windows::makeLongFormPath(Path, Expanded))
     return createStringError(inconvertibleErrorCode(),
                              "Normalization failed for path %s: %s",
                              Path.str().c_str(), EC.message().c_str());
@@ -88,8 +90,9 @@ SmallString<256> computeThinArchiveMemberPath(StringRef ArchivePath,
   if (sys::path::is_relative(MemberName)) {
     MemberPath = sys::path::parent_path(ArchivePath);
     sys::path::append(MemberPath, MemberName);
-  } else
+  } else {
     MemberPath = MemberName;
+  }
   sys::path::remove_dots(MemberPath, /*remove_dot_dot=*/true);
   return MemberPath;
 }
@@ -97,10 +100,6 @@ SmallString<256> computeThinArchiveMemberPath(StringRef ArchivePath,
 } // namespace
 
 // Determines if a file at the given path is a thin archive file.
-//
-// This function uses a cache to avoid repeatedly reading the same file.
-// It reads only the header portion (magic bytes) of the file to identify
-// the archive type.
 Expected<bool> lto::DTLTO::isThinArchive(const StringRef ArchivePath) {
   // Return cached result if available.
   auto Cached = ArchiveIsThinCache.find(ArchivePath);
@@ -141,17 +140,6 @@ Expected<bool> lto::DTLTO::isThinArchive(const StringRef ArchivePath) {
 }
 
 // Add an input file and prepare it for distribution.
-//
-// This function performs the following tasks:
-// 1. Add the input file to the LTO object's list of input files.
-// 2. For individual bitcode file inputs on Windows only, overwrite the module
-//    ID with a normalized path to remove short 8.3 form components.
-// 3. For thin archive members, overwrite the module ID with the path
-//    (normalized on Windows) to the member file on disk.
-// 4. For archive members and FatLTO objects, overwrite the module ID with a
-//    unique path (normalized on Windows) naming a file that will contain the
-//    member content. The file is created and populated later (see
-//    serializeInputs()).
 Expected<std::shared_ptr<lto::InputFile>>
 lto::DTLTO::addInput(std::unique_ptr<InputFile> InputPtr) {
   TimeTraceScope TimeScope("Add input for DTLTO");
@@ -205,7 +193,8 @@ lto::DTLTO::addInput(std::unique_ptr<InputFile> InputPtr) {
 
   // Get the normalized output directory, if we haven't already.
   if (LinkerOutputDir.empty()) {
-    auto N = normalizePath(sys::path::parent_path(LinkerOutputFile), Saver);
+    auto N = normalizePath(
+        sys::path::parent_path(DistributorParams.LinkerOutputFile), Saver);
     if (!N)
       return N.takeError();
     LinkerOutputDir = *N;
@@ -223,43 +212,416 @@ lto::DTLTO::addInput(std::unique_ptr<InputFile> InputPtr) {
 }
 
 // Save the contents of ThinLTO-enabled input files that must be serialized for
-// distribution, such as archive members and FatLTO objects, to individual
-// bitcode files named after the module ID.
-//
-// Must be called after all input files are added but before optimization
-// begins. If a file with that name already exists, it is likely a leftover from
-// a previously terminated linker process and can be safely overwritten.
-llvm::Error lto::DTLTO::serializeInputsForDistribution() {
+// distribution.
+Error lto::DTLTO::handleArchiveInputs() {
   for (auto &Input : InputFiles) {
     if (!Input->isThinLTO() || !Input->getSerializeForDistribution())
       continue;
     // Save the content of the input file to a file named after the module ID.
     StringRef ModuleId = Input->getName();
     TimeTraceScope TimeScope("Serialize bitcode input for DTLTO", ModuleId);
+    MemoryBufferRef Buf = Input->getFileBuffer();
+    if (Error Err = save(Buf.getBuffer(), ModuleId))
+      return Err;
     // Cleanup this file on abnormal process exit.
     if (!SaveTemps)
-      llvm::sys::RemoveFileOnSignal(ModuleId);
-    if (Error EC = save(Input.get(), ModuleId))
-      return EC;
+      addToCleanup(ModuleId);
   }
+  return Error::success();
+}
+
+// Remove temporary files created to enable distribution.
+void lto::DTLTO::cleanup() {
+  if (!SaveTemps) {
+    // Remove one file, report error if any.
+    auto removeFile = [](StringRef FileName) -> void {
+      std::error_code EC = sys::fs::remove(FileName, true);
+      if (EC &&
+          EC != std::make_error_code(std::errc::no_such_file_or_directory))
+        errs() << "warning: could not remove the file '" << FileName
+               << "': " << EC.message() << "\n";
+    };
+
+    TimeTraceScope JobScope("Remove DTLTO temporary files");
+    for (const auto &Name : CleanupList) {
+      removeFile(Name);
+    }
+  }
+  // Base::cleanup();
+}
+
+// Runs the DTLTO thin link phase, producing per-module summary indices,
+// import lists, and cache keys for distribution.
+Error lto::DTLTO::performThinLink() {
+  auto ThinIndexBackend = lto::createWriteIndexesThinBackend(
+      hardware_concurrency(), "", "", "", true, nullptr, nullptr);
+  setThinBackend(ThinIndexBackend);
+  setLTOMode(lto::LTO::LTOKind::LTOK_UnifiedThin);
+
+  size_t NumTasks = getMaxTasks();
+  SummaryIndexFiles.resize(NumTasks);
+  ImportsFilesLists.resize(NumTasks);
+  CacheKeysList.resize(NumTasks);
+
+  lto::Config &Cfg = getConfig();
+  Cfg.OnSummaryIndexStoreCb =
+      [&](size_t task) -> std::unique_ptr<raw_svector_ostream> {
+    return std::make_unique<raw_svector_ostream>(SummaryIndexFiles[task]);
+  };
+  Cfg.OnCacheKeyStoreCb = [&](size_t task) -> std::string & {
+    return CacheKeysList[task];
+  };
+  Cfg.OnImportsListStoreCb = [&](size_t task) -> std::vector<std::string> & {
+    return ImportsFilesLists[task];
+  };
+
+  return Base::run(AddStreamFunc, {});
+}
+
+// Runs the DTLTO pipeline.
+LLVM_ABI Error lto::DTLTO::run(AddStreamFn AddStream, FileCache CacheParam) {
+  scope_exit CleanUp([this]() { cleanup(); });
+
+  AddStreamFunc = AddStream;
+  Cache = std::move(CacheParam);
+  Conf.Dtlto = 1;
+  UID = itostr(sys::Process::getProcessId());
+
+  if (Error Err = performThinLink())
+    return Err;
+
+  ThinLTOTaskOffset = RegularLTO.ParallelCodeGenParallelismLevel;
+  DistributorParams.TargetTriple = RegularLTO.CombinedModule->getTargetTriple();
+
+  if (Error Err = prepareDtltoJobs())
+    return Err;
+  if (Error Err = handleArchiveInputs())
+    return Err;
+  if (Error Err = performCodegen())
+    return Err;
+  if (Error Err = addObjectFilesToLink())
+    return Err;
+  return Error::success();
+}
+
+// Probes the LTO cache for a compiled native object for the given job.
+Error lto::DTLTO::checkCacheHit(Job &J) {
+  if (!Cache.isValid())
+    return Error::success();
+
+  auto CacheAddStreamExp = Cache(J.Task, J.CacheKey, J.ModuleID);
+  if (Error Err = CacheAddStreamExp.takeError())
+    return Err;
+  AddStreamFn &CacheAddStream = *CacheAddStreamExp;
+  // If CacheAddStream is null, we have a cache hit and at this point
+  // object file is already passed back to the linker.
+  if (!CacheAddStream) {
+    J.Cached = true; // Cache hit, mark the job as cached.
+    CachedJobs.fetch_add(1);
+  } else {
+    // If CacheAddStream is not null, we have a cache miss and we need to
+    // run the backend for codegen. Save cache 'add stream'
+    // function for a later use.
+    J.CacheAddStream = std::move(CacheAddStream);
+  }
+  return Error::success();
+}
+
+// Prepares a single DTLTO backend compilation job for a ThinLTO module.
+Error lto::DTLTO::prepareDtltoJob(StringRef ModulePath, unsigned Task) {
+  assert(Task >= ThinLTOTaskOffset && Task - ThinLTOTaskOffset < Jobs.size() &&
+         "Task index out of range for Jobs");
+  assert(Task < SummaryIndexFiles.size() && "Task index out of range");
+
+  SString ObjFilePath =
+      sys::path::parent_path(DistributorParams.LinkerOutputFile);
+  sys::path::append(ObjFilePath, sys::path::stem(ModulePath) + "." +
+                                     itostr(Task) + "." + UID + ".native.o");
+
+  SString SummaryIndexPathStr = ObjFilePath;
+  SummaryIndexPathStr += ".thinlto.bc";
+  SString ImportsPathStr = ModulePath;
+  ImportsPathStr += ".imports";
+
+  Job &J = Jobs[Task - ThinLTOTaskOffset];
+  J = {Task,
+       ModulePath,
+       Saver.save(ObjFilePath.str()),
+       Saver.save(SummaryIndexPathStr.str()),
+       Saver.save(ImportsPathStr.str()),
+       ImportsFilesLists[Task],
+       CacheKeysList[Task],
+       nullptr,
+       false};
+
+  if (Error Err = checkCacheHit(J))
+    return Err;
+  if (!J.Cached) {
+    TimeTraceScope JobScope("Emit individual index for DTLTO",
+                            J.SummaryIndexPath);
+    if (Error Err = save(SummaryIndexFiles[Task], J.SummaryIndexPath))
+      return Err;
+  }
+  if (OnWriteCb)
+    OnWriteCb(J.SummaryIndexPath.str());
+
+  if (ShouldEmitImportFiles)
+    if (Error Err = save(join(ImportsFilesLists[Task], "\n"), J.ImportsPath))
+      return Err;
+
+  if (!SaveTemps) {
+    if (!J.Cached)
+      addToCleanup(J.NativeObjectPath.str());
+    if (!ShouldEmitIndexFiles)
+      addToCleanup(J.SummaryIndexPath.str());
+    if (!ShouldEmitImportFiles)
+      addToCleanup(J.ImportsPath.str());
+  }
+  return Error::success();
+}
+
+// Derive a set of Clang options that will be shared/common for all DTLTO
+// backend compilations.
+void lto::DTLTO::buildCommonRemoteCompilerOptions() {
+  const lto::Config &C = getConfig();
+  auto &Ops = DistributorParams.CodegenOptions;
+
+  Ops.push_back(Saver.save("-O" + Twine(C.OptLevel)));
+
+  if (C.Options.EmitAddrsig)
+    Ops.push_back("-faddrsig");
+  if (C.Options.FunctionSections)
+    Ops.push_back("-ffunction-sections");
+  if (C.Options.DataSections)
+    Ops.push_back("-fdata-sections");
+
+  if (C.RelocModel == Reloc::PIC_)
+    // Clang doesn't have -fpic for all triples.
+    if (!DistributorParams.TargetTriple.isOSBinFormatCOFF())
+      Ops.push_back("-fpic");
+
+  // Turn on/off warnings about profile cfg mismatch (default on)
+  // --lto-pgo-warn-mismatch.
+  if (!C.PGOWarnMismatch) {
+    Ops.push_back("-mllvm");
+    Ops.push_back("-no-pgo-warn-mismatch");
+  }
+
+  // Enable sample-based profile guided optimizations.
+  // Sample profile file path --lto-sample-profile=<value>.
+  if (!C.SampleProfile.empty()) {
+    Ops.push_back(Saver.save("-fprofile-sample-use=" + Twine(C.SampleProfile)));
+    DistributorParams.CommonInputs.insert(C.SampleProfile);
+  }
+
+  // We don't know which of options will be used by Clang.
+  Ops.push_back("-Wno-unused-command-line-argument");
+
+  // Forward any supplied options.
+  if (!DistributorParams.RemoteCompilerArgs.empty())
+    for (auto &a : DistributorParams.RemoteCompilerArgs)
+      Ops.push_back(a);
+}
+
+// Initializes DTLTO state and prepares a job for each ThinLTO module.
+Error lto::DTLTO::prepareDtltoJobs() {
+  auto &ModuleMap =
+      ThinLTO.ModulesToCompile ? *ThinLTO.ModulesToCompile : ThinLTO.ModuleMap;
+
+  if (ModuleMap.empty())
+    return Error::success();
+
+  Jobs.resize(ModuleMap.size());
+
+  for (auto [I, Mod] : enumerate(ModuleMap))
+    if (Error E = prepareDtltoJob(Mod.first, ThinLTOTaskOffset + I))
+      return E;
 
   return Error::success();
 }
 
-// Remove serialized inputs created to enable distribution.
-void lto::DTLTO::cleanup() {
-  if (!SaveTemps) {
-    TimeTraceScope TimeScope("Remove temporary inputs for DTLTO");
-    for (auto &Input : InputFiles) {
-      if (!Input->getSerializeForDistribution())
-        continue;
-      std::error_code EC =
-          sys::fs::remove(Input->getName(), /*IgnoreNonExisting=*/true);
-      if (EC &&
-          EC != std::make_error_code(std::errc::no_such_file_or_directory))
-        errs() << "warning: could not remove temporary DTLTO input file '"
-               << Input->getName() << "': " << EC.message() << "\n";
+// Runs the DTLTO code generation phase. Must be invoked after thinLink().
+Error lto::DTLTO::performCodegen() {
+  if (Jobs.empty())
+    return Error::success();
+  // Build common remote compiler options.
+  buildCommonRemoteCompilerOptions();
+
+  DistributionDriver Distributor(DistributorParams, Jobs, SaveTemps,
+                                 [&](StringRef S) { addToCleanup(S); });
+
+  if (CachedJobs.load() < Jobs.size()) {
+    if (Error E = Distributor())
+      return E;
+  }
+  return Error::success();
+}
+
+// Adds compiled object files to the link for each non-cached job.
+Error lto::DTLTO::addObjectFilesToLink() {
+  TimeTraceScope FilesScope("Add DTLTO files to the link");
+  for (auto &Job : Jobs) {
+    if (!Job.CacheKey.empty() && Job.Cached) {
+      assert(Cache.isValid());
+      continue;
+    }
+    // Load the native object from a file into a memory buffer
+    // and store its contents in the output buffer.
+    auto ObjFileMbOrErr =
+        MemoryBuffer::getFile(Job.NativeObjectPath, /*IsText=*/false,
+                              /*RequiresNullTerminator=*/false);
+    if (std::error_code EC = ObjFileMbOrErr.getError())
+      return make_error<StringError>(
+          BCError + "cannot open native object file: " + Job.NativeObjectPath +
+              ": " + EC.message(),
+          inconvertibleErrorCode());
+
+    MemoryBufferRef ObjFileMbRef = ObjFileMbOrErr->get()->getMemBufferRef();
+    if (Cache.isValid()) {
+      // Cache hits are taken care of earlier. At this point, we could only
+      // have cache misses.
+      assert(Job.CacheAddStream);
+      // Obtain a file stream for a storing a cache entry.
+      auto CachedFileStreamOrErr = Job.CacheAddStream(Job.Task, Job.ModuleID);
+      if (!CachedFileStreamOrErr)
+        return joinErrors(
+            CachedFileStreamOrErr.takeError(),
+            createStringError(inconvertibleErrorCode(),
+                              "Cannot get a cache file stream: %s",
+                              Job.NativeObjectPath.data()));
+      // Store a file buffer into the cache stream.
+      auto &CacheStream = *(CachedFileStreamOrErr->get());
+      *(CacheStream.OS) << ObjFileMbRef.getBuffer();
+      if (Error Err = CacheStream.commit())
+        return Err;
+    } else {
+      if (AddBuffer) {
+        AddBuffer(Job.Task, Job.ModuleID, std::move(ObjFileMbOrErr.get()));
+      } else {
+        auto StreamOrErr = AddStreamFunc(Job.Task, Job.ModuleID);
+        if (Error Err = StreamOrErr.takeError())
+          return Err;
+        auto &Stream = *StreamOrErr->get();
+        *Stream.OS << ObjFileMbRef.getBuffer();
+        if (Error Err = Stream.commit())
+          return Err;
+      }
     }
   }
-  Base::cleanup();
+  return Error::success();
+}
+
+// Generates a JSON file describing the backend compilations, for the
+// distributor.
+Error lto::DistributionDriver::emitJson() {
+  using json::Array;
+  std::error_code EC;
+  raw_fd_ostream OS(DistributorJsonFile, EC);
+  if (EC)
+    return createStringError(EC, "Error while creating Json file");
+
+  json::OStream JOS(OS);
+  JOS.object([&]() {
+    // Information common to all jobs.
+    JOS.attributeObject("common", [&]() {
+      JOS.attribute("linker_output", Params.LinkerOutputFile);
+
+      JOS.attributeArray("args", [&]() {
+        JOS.value(Params.RemoteCompiler);
+
+        // Forward any supplied prepend options.
+        if (!Params.RemoteCompilerPrependArgs.empty())
+          for (auto &A : Params.RemoteCompilerPrependArgs)
+            JOS.value(A);
+
+        JOS.value("-c");
+
+        JOS.value(std::string("--target=") + Params.TargetTriple.str());
+
+        for (const auto &A : Params.CodegenOptions)
+          JOS.value(A);
+      });
+
+      JOS.attribute("inputs", Array(Params.CommonInputs));
+    });
+
+    // Per-compilation-job information.
+    JOS.attributeArray("jobs", [&]() {
+      for (const auto &J : Jobs) {
+        assert(J.Task != 0);
+        if (J.Cached) {
+          continue;
+        }
+
+        SmallVector<StringRef, 2> Inputs;
+        SmallVector<StringRef, 1> Outputs;
+
+        JOS.object([&]() {
+          JOS.attributeArray("args", [&]() {
+            JOS.value(J.ModuleID);
+            Inputs.push_back(J.ModuleID);
+
+            JOS.value(
+                std::string("-fthinlto-index=" + J.SummaryIndexPath.str()));
+            Inputs.push_back(J.SummaryIndexPath);
+
+            JOS.value("-o");
+            JOS.value(J.NativeObjectPath);
+            Outputs.push_back(J.NativeObjectPath);
+          });
+
+          // Add the bitcode files from which imports will be made. These do
+          // not explicitly appear on the backend compilation command lines
+          // but are recorded in the summary index shards.
+          append_range(Inputs, J.ImportsFiles);
+          JOS.attribute("inputs", Array(Inputs));
+
+          JOS.attribute("outputs", Array(Outputs));
+        });
+      }
+    });
+  });
+
+  return Error::success();
+}
+
+// Saves JSON file on a filesystem.
+Error lto::DistributionDriver::saveJson() {
+  DistributorJsonFile = sys::path::parent_path(Params.LinkerOutputFile);
+  TimeTraceScope TimeScope("Emit DTLTO JSON");
+  sys::path::append(DistributorJsonFile,
+                    sys::path::stem(Params.LinkerOutputFile) + "." +
+                        itostr(sys::Process::getProcessId()) +
+                        ".dist-file.json");
+  if (Error E = emitJson())
+    return make_error<StringError>(
+        BCError + "failed to generate distributor JSON script: " +
+            DistributorJsonFile,
+        errorToErrorCode(std::move(E)));
+
+  // Add JSON file to the cleanup files list.
+  if (!SaveTemps)
+    AddToCleanup(DistributorJsonFile);
+  return Error::success();
+}
+
+// Invokes the distributor to compile uncached ThinLTO modules remotely.
+Error lto::DistributionDriver::operator()() {
+  if (Error E = saveJson())
+    return E;
+
+  TimeTraceScope TimeScope("Execute DTLTO distributor", Params.DistributorPath);
+  SmallVector<StringRef, 3> Args = {Params.DistributorPath};
+  append_range(Args, Params.DistributorArgs);
+  Args.push_back(DistributorJsonFile);
+  std::string ErrMsg;
+  if (sys::ExecuteAndWait(Args[0], Args,
+                          /*Env=*/std::nullopt, /*Redirects=*/{},
+                          /*SecondsToWait=*/0, /*MemoryLimit=*/0, &ErrMsg)) {
+    return make_error<StringError>(
+        BCError + "distributor execution failed" +
+            (!ErrMsg.empty() ? ": " + ErrMsg + Twine(".") : Twine(".")),
+        inconvertibleErrorCode());
+  }
+  return Error::success();
 }

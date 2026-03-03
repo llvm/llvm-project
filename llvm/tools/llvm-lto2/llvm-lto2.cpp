@@ -19,6 +19,7 @@
 #include "llvm/Bitcode/BitcodeReader.h"
 #include "llvm/CodeGen/CommandFlags.h"
 #include "llvm/IR/DiagnosticPrinter.h"
+#include "llvm/DTLTO/DTLTO.h"
 #include "llvm/LTO/LTO.h"
 #include "llvm/Plugins/PassPlugin.h"
 #include "llvm/Remarks/HotnessThresholdParser.h"
@@ -443,7 +444,7 @@ static int run(int argc, char **argv) {
   };
 
   ThinBackend Backend;
-  if (ThinLTODistributedIndexes)
+  if (ThinLTODistributedIndexes || !DTLTODistributor.empty())
     Backend = createWriteIndexesThinBackend(llvm::hardware_concurrency(Threads),
                                             /*OldPrefix=*/"",
                                             /*NewPrefix=*/"",
@@ -451,13 +452,7 @@ static int run(int argc, char **argv) {
                                             ThinLTOEmitImports,
                                             /*LinkedObjectsFile=*/nullptr,
                                             /*OnWrite=*/{});
-  else if (!DTLTODistributor.empty()) {
-    Backend = createOutOfProcessThinBackend(
-        llvm::heavyweight_hardware_concurrency(Threads),
-        /*OnWrite=*/{}, ThinLTOEmitIndexes, ThinLTOEmitImports, OutputFilename,
-        DTLTODistributor, DTLTODistributorArgsSV, DTLTOCompiler,
-        DTLTOCompilerPrependArgsSV, DTLTOCompilerArgsSV, SaveTemps, AddBuffer);
-  } else
+  else
     Backend = createInProcessThinBackend(
         llvm::heavyweight_hardware_concurrency(Threads),
         /* OnWrite */ {}, ThinLTOEmitIndexes, ThinLTOEmitImports);
@@ -480,7 +475,17 @@ static int run(int argc, char **argv) {
 
   LTO::LTOKind LTOMode = UnifiedLTOMode;
 
-  LTO Lto(std::move(Conf), std::move(Backend), 1, LTOMode);
+  std::unique_ptr<LTO> Lto;
+  if (!DTLTODistributor.empty()) {
+    Lto = std::make_unique<DTLTO>(
+        std::move(Conf), std::move(Backend), 1, LTOMode, nullptr,
+        ThinLTOEmitIndexes, ThinLTOEmitImports, OutputFilename,
+        DTLTODistributor, DTLTODistributorArgsSV, DTLTOCompiler,
+        DTLTOCompilerPrependArgsSV, DTLTOCompilerArgsSV, AddBuffer, SaveTemps);
+  } else {
+    Lto =
+        std::make_unique<LTO>(std::move(Conf), std::move(Backend), 1, LTOMode);
+  }
 
   for (std::string F : InputFilenames) {
     std::unique_ptr<MemoryBuffer> MB = check(MemoryBuffer::getFile(F), F);
@@ -514,7 +519,7 @@ static int run(int argc, char **argv) {
       continue;
 
     MBs.push_back(std::move(MB));
-    check(Lto.add(std::move(Input), Res), F);
+    check(Lto->add(std::move(Input), Res), F);
   }
 
   if (!CommandLineResolutions.empty()) {
@@ -535,7 +540,7 @@ static int run(int argc, char **argv) {
     Cache = check(localCache("ThinLTO", "Thin", CacheDir, AddBuffer),
                   "failed to create cache");
 
-  check(Lto.run(AddStream, Cache), "LTO::run failed");
+  check(Lto->run(AddStream, Cache), "LTO::run failed");
   return static_cast<int>(HasErrors);
 }
 

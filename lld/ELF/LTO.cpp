@@ -184,21 +184,13 @@ BitcodeCompiler::BitcodeCompiler(Ctx &ctx) : ctx(ctx) {
   // Initialize ltoObj.
   lto::ThinBackend backend;
   auto onIndexWrite = [&](StringRef s) { thinIndices.erase(s); };
-  if (ctx.arg.thinLTOIndexOnly) {
+  if (ctx.arg.thinLTOIndexOnly || !ctx.arg.dtltoDistributor.empty()) {
     backend = lto::createWriteIndexesThinBackend(
         llvm::hardware_concurrency(ctx.arg.thinLTOJobs),
         std::string(ctx.arg.thinLTOPrefixReplaceOld),
         std::string(ctx.arg.thinLTOPrefixReplaceNew),
         std::string(ctx.arg.thinLTOPrefixReplaceNativeObject),
         ctx.arg.thinLTOEmitImportsFiles, indexFile.get(), onIndexWrite);
-  } else if (!ctx.arg.dtltoDistributor.empty()) {
-    backend = lto::createOutOfProcessThinBackend(
-        llvm::hardware_concurrency(ctx.arg.thinLTOJobs), onIndexWrite,
-        ctx.arg.thinLTOEmitIndexFiles, ctx.arg.thinLTOEmitImportsFiles,
-        ctx.arg.outputFile, ctx.arg.dtltoDistributor,
-        ctx.arg.dtltoDistributorArgs, ctx.arg.dtltoCompiler,
-        ctx.arg.dtltoCompilerPrependArgs, ctx.arg.dtltoCompilerArgs,
-        !ctx.arg.saveTempsArgs.empty(), createAddBufferFn(files, filenames));
   } else {
     backend = lto::createInProcessThinBackend(
         llvm::heavyweight_hardware_concurrency(ctx.arg.thinLTOJobs),
@@ -210,6 +202,7 @@ BitcodeCompiler::BitcodeCompiler(Ctx &ctx) : ctx(ctx) {
       llvm::lto::LTO::LTOKind::LTOK_UnifiedThin,
       llvm::lto::LTO::LTOKind::LTOK_UnifiedRegular,
       llvm::lto::LTO::LTOKind::LTOK_Default};
+
   if (ctx.arg.dtltoDistributor.empty())
     ltoObj = std::make_unique<lto::LTO>(createConfig(ctx), backend,
                                         ctx.arg.ltoPartitions,
@@ -217,7 +210,11 @@ BitcodeCompiler::BitcodeCompiler(Ctx &ctx) : ctx(ctx) {
   else
     ltoObj = std::make_unique<lto::DTLTO>(
         createConfig(ctx), backend, ctx.arg.ltoPartitions,
-        ltoModes[ctx.arg.ltoKind], ctx.arg.outputFile,
+        ltoModes[ctx.arg.ltoKind], onIndexWrite, ctx.arg.thinLTOEmitIndexFiles,
+        ctx.arg.thinLTOEmitImportsFiles, ctx.arg.outputFile,
+        ctx.arg.dtltoDistributor, ctx.arg.dtltoDistributorArgs,
+        ctx.arg.dtltoCompiler, ctx.arg.dtltoCompilerPrependArgs,
+        ctx.arg.dtltoCompilerArgs, createAddBufferFn(files, filenames),
         !ctx.arg.saveTempsArgs.empty());
   // Initialize usedStartStop.
   if (ctx.bitcodeFiles.empty())

@@ -126,17 +126,7 @@ BitcodeCompiler::BitcodeCompiler(COFFLinkerContext &c) : ctx(c) {
 
   // Initialize ltoObj.
   lto::ThinBackend backend;
-  if (!ctx.config.dtltoDistributor.empty()) {
-    backend = lto::createOutOfProcessThinBackend(
-        llvm::hardware_concurrency(ctx.config.thinLTOJobs),
-        /*OnWrite=*/nullptr,
-        /*ShouldEmitIndexFiles=*/false,
-        /*ShouldEmitImportFiles=*/false, ctx.config.outputFile,
-        ctx.config.dtltoDistributor, ctx.config.dtltoDistributorArgs,
-        ctx.config.dtltoCompiler, ctx.config.dtltoCompilerPrependArgs,
-        ctx.config.dtltoCompilerArgs, !ctx.config.saveTempsArgs.empty(),
-        createAddBufferFn(files, file_names));
-  } else if (ctx.config.thinLTOIndexOnly) {
+  if (ctx.config.thinLTOIndexOnly || !ctx.config.dtltoDistributor.empty()) {
     auto OnIndexWrite = [&](StringRef S) { thinIndices.erase(S); };
     backend = lto::createWriteIndexesThinBackend(
         llvm::hardware_concurrency(ctx.config.thinLTOJobs),
@@ -155,7 +145,12 @@ BitcodeCompiler::BitcodeCompiler(COFFLinkerContext &c) : ctx(c) {
   else
     ltoObj = std::make_unique<lto::DTLTO>(
         createConfig(), backend, ctx.config.ltoPartitions,
-        llvm::lto::LTO::LTOKind::LTOK_Default, ctx.config.outputFile,
+        llvm::lto::LTO::LTOKind::LTOK_Default, nullptr,
+        ctx.config.thinLTOEmitImportsFiles, ctx.config.thinLTOIndexOnly,
+        ctx.config.outputFile, ctx.config.dtltoDistributor,
+        ctx.config.dtltoDistributorArgs, ctx.config.dtltoCompiler,
+        ctx.config.dtltoCompilerPrependArgs, ctx.config.dtltoCompilerArgs,
+        createAddBufferFn(files, file_names),
         !ctx.config.saveTempsArgs.empty());
 }
 

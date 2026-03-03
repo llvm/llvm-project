@@ -292,6 +292,23 @@ struct Config {
   LLVM_ABI Error addSaveTemps(std::string OutputFileName,
                               bool UseInputModulePath = false,
                               const DenseSet<StringRef> &SaveTempsArgs = {});
+
+  /// Called by WriteIndexesThinBackend when it needs to write a bitcode
+  /// module's summary index. The callback should return a stream to write
+  /// the index into. If the callback returns nullptr, the backend falls back
+  /// to writing the summary index to a file.
+  std::function<std::unique_ptr<raw_pwrite_stream>(size_t Task)>
+      OnSummaryIndexStoreCb;
+  /// Called by WriteIndexesThinBackend when it needs to store a bitcode
+  /// module's imports list. The callback should return a vector that the
+  /// backend will populate with the imported module paths. If not set, the
+  /// backend writes the imports list to a file instead.
+  std::function<std::vector<std::string> &(size_t Task)> OnImportsListStoreCb;
+  /// Called by WriteIndexesThinBackend when it needs to store a bitcode
+  /// module's cache key. The callback should return a string that the backend
+  /// will fill with the computed cache key. If not set, the cache key is
+  /// discarded.
+  std::function<std::string &(size_t Task)> OnCacheKeyStoreCb;
 };
 
 struct LTOLLVMDiagnosticHandler : public DiagnosticHandler {
