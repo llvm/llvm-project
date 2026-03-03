@@ -1141,15 +1141,19 @@ DIE &DwarfCompileUnit::constructSubprogramScopeDIE(const DISubprogram *Sub,
   }
 
   // If this is a variadic function, add an unspecified parameter.
-  DITypeArray FnArgs = Sub->getType()->getTypeArray();
+  // Sub->getType() may be null when using LineTablesOnly emission, since
+  // DISubprograms are not required to have a type in that mode.
+  if (auto *SPTy = Sub->getType()) {
+    DITypeArray FnArgs = SPTy->getTypeArray();
 
-  // If we have a single element of null, it is a function that returns void.
-  // If we have more than one elements and the last one is null, it is a
-  // variadic function.
-  if (FnArgs.size() > 1 && !FnArgs[FnArgs.size() - 1] &&
-      !includeMinimalInlineScopes())
-    ScopeDIE.addChild(
-        DIE::get(DIEValueAllocator, dwarf::DW_TAG_unspecified_parameters));
+    // If we have a single element of null, it is a function that returns void.
+    // If we have more than one elements and the last one is null, it is a
+    // variadic function.
+    if (FnArgs.size() > 1 && !FnArgs[FnArgs.size() - 1] &&
+        !includeMinimalInlineScopes())
+      ScopeDIE.addChild(
+          DIE::get(DIEValueAllocator, dwarf::DW_TAG_unspecified_parameters));
+  }
 
   return ScopeDIE;
 }
