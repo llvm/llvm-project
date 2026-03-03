@@ -435,8 +435,8 @@ public:
     // START: SubclassID for recipes that inherit VPHeaderPHIRecipe.
     // VPHeaderPHIRecipe need to be kept together.
     VPCanonicalIVPHISC,
+    VPCurrentIterationPHISC,
     VPActiveLaneMaskPHISC,
-    VPEVLBasedIVPHISC,
     VPFirstOrderRecurrencePHISC,
     VPWidenIntOrFpInductionSC,
     VPWidenPointerInductionSC,
@@ -598,7 +598,6 @@ public:
   static inline bool classof(const VPRecipeBase *R) {
     switch (R->getVPRecipeID()) {
     case VPRecipeBase::VPDerivedIVSC:
-    case VPRecipeBase::VPEVLBasedIVPHISC:
     case VPRecipeBase::VPExpandSCEVSC:
     case VPRecipeBase::VPExpressionSC:
     case VPRecipeBase::VPInstructionSC:
@@ -617,6 +616,7 @@ public:
     case VPRecipeBase::VPBlendSC:
     case VPRecipeBase::VPPredInstPHISC:
     case VPRecipeBase::VPCanonicalIVPHISC:
+    case VPRecipeBase::VPCurrentIterationPHISC:
     case VPRecipeBase::VPActiveLaneMaskPHISC:
     case VPRecipeBase::VPFirstOrderRecurrencePHISC:
     case VPRecipeBase::VPWidenPHISC:
@@ -638,6 +638,11 @@ public:
       return false;
     }
     llvm_unreachable("Unhandled VPRecipeID");
+  }
+
+  static inline bool classof(const VPValue *V) {
+    auto *R = V->getDefiningRecipe();
+    return R && classof(R);
   }
 
   static inline bool classof(const VPUser *U) {
@@ -1152,8 +1157,7 @@ public:
 /// opcodes can take an optional mask. Masks may be assigned during
 /// predication.
 class LLVM_ABI_FOR_TEST VPInstruction : public VPRecipeWithIRFlags,
-                                        public VPIRMetadata,
-                                        public VPUnrollPartAccessor<1> {
+                                        public VPIRMetadata {
   friend class VPlanSlp;
 
 public:
@@ -1268,10 +1272,10 @@ public:
     VScale,
     /// Compute the exiting value of a wide induction after vectorization, that
     /// is the value of the last lane of the induction increment (i.e. its
-    /// backedge value). Takes the wide induction recipe and the original
-    /// backedge value as operands.
+    /// backedge value). Has the wide induction recipe as operand.
     ExitingIVValue,
-    OpsEnd = ExitingIVValue,
+    MaskedCond,
+    OpsEnd = MaskedCond,
   };
 
   /// Returns true if this VPInstruction generates scalar values for all lanes.
@@ -1305,6 +1309,9 @@ private:
 
   /// Returns true if the VPInstruction does not need masking.
   bool alwaysUnmasked() const {
+    if (Opcode == VPInstruction::MaskedCond)
+      return false;
+
     // For now only VPInstructions with underlying values use masks.
     // TODO: provide masks to VPInstructions w/o underlying values.
     if (!getUnderlyingValue())
@@ -1466,6 +1473,7 @@ public:
     case VPInstruction::WideIVStep:
     case VPInstruction::StepVector:
     case VPInstruction::VScale:
+    case Instruction::Load:
       return true;
     default:
       return false;
@@ -1523,6 +1531,10 @@ public:
 
   /// Returns the incoming value for \p VPBB. \p VPBB must be an incoming block.
   VPValue *getIncomingValueForBlock(const VPBasicBlock *VPBB) const;
+
+  /// Sets the incoming value for \p VPBB to \p V. \p VPBB must be an incoming
+  /// block.
+  void setIncomingValueForBlock(const VPBasicBlock *VPBB, VPValue *V) const;
 
   /// Returns the number of incoming values, also number of incoming blocks.
   virtual unsigned getNumIncoming() const {
@@ -1655,11 +1667,6 @@ public:
            "Op must be an operand of the recipe");
     return true;
   }
-
-  /// Update the recipe's first operand to the last lane of the last part of the
-  /// operand using \p Builder. Must only be used for VPIRInstructions with at
-  /// least one operand wrapping a PHINode.
-  void extractLastLaneOfLastPartOfFirstOperand(VPBuilder &Builder);
 
 protected:
 #if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
@@ -2215,14 +2222,13 @@ protected:
 ///  * VPWidenIntOrFpInductionRecipe: Generates vector values for integer and
 ///    floating point inductions with arbitrary start and step values. Produces
 ///    a vector PHI per-part.
-///  * VPDerivedIVRecipe: Converts the canonical IV value to the corresponding
-///    value of an IV with different start and step values. Produces a single
-///    scalar value per iteration
-///  * VPScalarIVStepsRecipe: Generates scalar values per-lane based on a
-///    canonical or derived induction.
 ///  * VPWidenPointerInductionRecipe: Generate vector and scalar values for a
 ///    pointer induction. Produces either a vector PHI per-part or scalar values
 ///    per-lane based on the canonical induction.
+///  * VPFirstOrderRecurrencePHIRecipe
+///  * VPReductionPHIRecipe
+///  * VPActiveLaneMaskPHIRecipe
+///  * VPEVLBasedIVPHIRecipe
 class LLVM_ABI_FOR_TEST VPHeaderPHIRecipe : public VPSingleDefRecipe,
                                             public VPPhiAccessors {
 protected:
@@ -2335,7 +2341,10 @@ public:
   /// incoming value, its start value.
   unsigned getNumIncoming() const override { return 1; }
 
-  PHINode *getPHINode() const { return cast<PHINode>(getUnderlyingValue()); }
+  /// Returns the underlying PHINode if one exists, or null otherwise.
+  PHINode *getPHINode() const {
+    return cast_if_present<PHINode>(getUnderlyingValue());
+  }
 
   /// Returns the induction descriptor for the recipe.
   const InductionDescriptor &getInductionDescriptor() const { return IndDesc; }
@@ -2614,7 +2623,7 @@ inline ReductionStyle getReductionStyle(bool InLoop, bool Ordered,
 /// A recipe for handling reduction phis. The start value is the first operand
 /// of the recipe and the incoming value from the backedge is the second
 /// operand.
-class VPReductionPHIRecipe : public VPHeaderPHIRecipe {
+class VPReductionPHIRecipe : public VPHeaderPHIRecipe, public VPIRFlags {
   /// The recurrence kind of the reduction.
   const RecurKind Kind;
 
@@ -2630,9 +2639,10 @@ public:
   /// Create a new VPReductionPHIRecipe for the reduction \p Phi.
   VPReductionPHIRecipe(PHINode *Phi, RecurKind Kind, VPValue &Start,
                        VPValue &BackedgeValue, ReductionStyle Style,
+                       const VPIRFlags &Flags,
                        bool HasUsesOutsideReductionChain = false)
       : VPHeaderPHIRecipe(VPRecipeBase::VPReductionPHISC, Phi, &Start),
-        Kind(Kind), Style(Style),
+        VPIRFlags(Flags), Kind(Kind), Style(Style),
         HasUsesOutsideReductionChain(HasUsesOutsideReductionChain) {
     addOperand(&BackedgeValue);
   }
@@ -2642,7 +2652,7 @@ public:
   VPReductionPHIRecipe *clone() override {
     return new VPReductionPHIRecipe(
         dyn_cast_or_null<PHINode>(getUnderlyingValue()), getRecurrenceKind(),
-        *getOperand(0), *getBackedgeValue(), Style,
+        *getOperand(0), *getBackedgeValue(), Style, *this,
         HasUsesOutsideReductionChain);
   }
 
@@ -3830,30 +3840,30 @@ protected:
 #endif
 };
 
-/// A recipe for generating the phi node for the current index of elements,
-/// adjusted in accordance with EVL value. It starts at the start value of the
-/// canonical induction and gets incremented by EVL in each iteration of the
-/// vector loop.
-class VPEVLBasedIVPHIRecipe : public VPHeaderPHIRecipe {
+/// A recipe for generating the phi node tracking the current scalar iteration
+/// index. It starts at the start value of the canonical induction and gets
+/// incremented by the number of scalar iterations processed by the vector loop
+/// iteration. The increment does not have to be loop invariant.
+class VPCurrentIterationPHIRecipe : public VPHeaderPHIRecipe {
 public:
-  VPEVLBasedIVPHIRecipe(VPValue *StartIV, DebugLoc DL)
-      : VPHeaderPHIRecipe(VPRecipeBase::VPEVLBasedIVPHISC, nullptr, StartIV,
-                          DL) {}
+  VPCurrentIterationPHIRecipe(VPValue *StartIV, DebugLoc DL)
+      : VPHeaderPHIRecipe(VPRecipeBase::VPCurrentIterationPHISC, nullptr,
+                          StartIV, DL) {}
 
-  ~VPEVLBasedIVPHIRecipe() override = default;
+  ~VPCurrentIterationPHIRecipe() override = default;
 
-  VPEVLBasedIVPHIRecipe *clone() override {
+  VPCurrentIterationPHIRecipe *clone() override {
     llvm_unreachable("cloning not implemented yet");
   }
 
-  VP_CLASSOF_IMPL(VPRecipeBase::VPEVLBasedIVPHISC)
+  VP_CLASSOF_IMPL(VPRecipeBase::VPCurrentIterationPHISC)
 
   void execute(VPTransformState &State) override {
     llvm_unreachable("cannot execute this recipe, should be replaced by a "
                      "scalar phi recipe");
   }
 
-  /// Return the cost of this VPEVLBasedIVPHIRecipe.
+  /// Return the cost of this VPCurrentIterationPHIRecipe.
   InstructionCost computeCost(ElementCount VF,
                               VPCostContext &Ctx) const override {
     // For now, match the behavior of the legacy cost model.
@@ -4010,10 +4020,9 @@ public:
   ~VPScalarIVStepsRecipe() override = default;
 
   VPScalarIVStepsRecipe *clone() override {
-    return new VPScalarIVStepsRecipe(
-        getOperand(0), getOperand(1), getOperand(2), InductionOpcode,
-        hasFastMathFlags() ? getFastMathFlags() : FastMathFlags(),
-        getDebugLoc());
+    return new VPScalarIVStepsRecipe(getOperand(0), getOperand(1),
+                                     getOperand(2), InductionOpcode,
+                                     getFastMathFlags(), getDebugLoc());
   }
 
   VP_CLASSOF_IMPL(VPRecipeBase::VPScalarIVStepsSC)
@@ -4764,6 +4773,14 @@ public:
 
   /// Return a VPIRValue wrapping i1 false.
   VPIRValue *getFalse() { return getConstantInt(1, 0); }
+
+  /// Return a VPIRValue wrapping the null value of type \p Ty.
+  VPIRValue *getZero(Type *Ty) { return getConstantInt(Ty, 0); }
+
+  /// Return a VPIRValue wrapping the AllOnes value of type \p Ty.
+  VPIRValue *getAllOnesValue(Type *Ty) {
+    return getConstantInt(APInt::getAllOnes(Ty->getIntegerBitWidth()));
+  }
 
   /// Return a VPIRValue wrapping a ConstantInt with the given type and value.
   VPIRValue *getConstantInt(Type *Ty, uint64_t Val, bool IsSigned = false) {

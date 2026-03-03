@@ -164,12 +164,12 @@ void IteratorInvalidationInAForeachLoop(std::vector<int> v) {
 }  // namespace InvalidationInLoops
 
 namespace StdVectorPopBack {
-void StdVectorPopBackInvalid(std::vector<int> v) {
-  auto it = v.begin();  // expected-warning {{object whose reference is captured is later invalidated}}
+void StdVectorPopBackDoesNotInvalidateOthers(std::vector<int> v) {
+  auto it = v.begin();
   if (it == v.end()) return;
-  *it;  // ok
-  v.pop_back(); // expected-note {{invalidated here}}
-  *it;          // expected-note {{later used here}}
+  *it;
+  v.pop_back();
+  *it;
 }
 }  // namespace StdVectorPopBack
 
@@ -275,9 +275,26 @@ void PointerToVectorElement() {
 }
 
 void SelfInvalidatingMap() {
-  std::unordered_map<int, int> mp;
-  mp[1] = 1;
-  mp[2] = mp[1];  // FIXME: Detect this. We are mising a UseFact for the assignment params.
+  std::flat_map<int, std::string> mp;
+  // TODO: We do not have a way to differentiate between pointer stability and iterator stability!
+  //
+  // std::unordered_map and other node-based containers provide pointer/reference stability.
+  // Therefore the following is safe in practice.
+  // On the other hand, std::flat_map (since C++23) does not provide pointer stability on
+  // insertion and following is unsafe for this container.
+  mp[1] = "42";
+  mp[2]     // expected-note {{invalidated here}}
+    = 
+    mp[1];  // expected-warning {{object whose reference is captured is later invalidated}} expected-note {{later used here}}
+}
+
+void InvalidateErase() {
+  std::flat_map<int, std::string> mp;
+  // None of these containers provide iterator stability. So following is unsafe:
+  auto it = mp.find(3); // expected-warning {{object whose reference is captured is later invalidated}}
+  mp.erase(mp.find(4)); // expected-note {{invalidated here}} 
+  if (it != mp.end())   // expected-note {{later used here}}
+    *it;
 }
 } // namespace ElementReferences
 
@@ -357,3 +374,97 @@ void ChangingRegionOwnedByContainerIsOk() {
 }
 
 } // namespace ContainersAsFields
+
+namespace AssociativeContainers {
+void SetInsertDoesNotInvalidate() {
+  std::set<int> s;
+  s.insert(0);
+  auto it = s.begin();
+  s.insert(2);
+  *it;
+}
+
+void MapInsertDoesNotInvalidate() {
+  std::map<int, int> m;
+  auto it = m.begin();
+  m.insert({1, 2});
+  *it;
+}
+
+void MapEmplaceDoesNotInvalidate() {
+  std::map<int, int> m;
+  auto it = m.begin();
+  m.emplace(1, 2);
+  *it;
+}
+
+void MultisetInsertDoesNotInvalidate() {
+  std::multiset<int> s;
+  auto it = s.begin();
+  s.insert(1);
+  *it;
+}
+
+void MultimapInsertDoesNotInvalidate() {
+  std::multimap<int, int> m;
+  auto it = m.begin();
+  m.insert({1, 2});
+  *it;
+}
+
+void SetEraseDoesNotInvalidateOthers() {
+  std::set<int> s;
+  s.insert(1);
+  s.insert(2);
+  auto it1 = s.begin();
+  auto it2 = it1;
+  ++it2;
+  s.erase(it2);
+  *it1;
+}
+
+void SetExtractDoesNotInvalidateOthers() {
+  std::set<int> s;
+  s.insert(1);
+  s.insert(2);
+  auto it1 = s.begin();
+  auto it2 = it1;
+  ++it2;
+  s.extract(it2);
+  *it1;
+}
+
+void SetClearInvalidates() {
+  std::set<int> s;
+  auto it = s.begin(); // expected-warning {{object whose reference is captured is later invalidated}}
+  s.clear(); // expected-note {{invalidated here}}
+  *it; // expected-note {{later used here}}
+}
+
+void MapClearInvalidates() {
+  std::map<int, int> m;
+  auto it = m.begin();  // expected-warning {{object whose reference is captured is later invalidated}}
+  m.clear(); // expected-note {{invalidated here}}
+  *it; // expected-note {{later used here}}
+}
+
+void MapSubscriptDoesNotInvalidate() {
+  std::map<int, int> m;
+  auto it = m.begin();
+  m[1];
+  *it;
+}
+
+void PrintMax(const int& a, const int& b);
+
+void MapSubscriptMultipleCallsDoesNotInvalidate(std::map<int, int> mp, int a, int b) {
+    PrintMax(mp[a], mp[b]);
+}
+
+void FlatMapSubscriptMultipleCallsInvalidate(std::flat_map<int, int> mp, int a, int b) {
+    PrintMax(mp[a], mp[b]); // expected-warning {{object whose reference is captured is later invalidated}} \
+                                 // expected-note {{invalidated here}} \
+                                 // expected-note {{later used here}}
+}
+
+} // namespace AssociativeContainers

@@ -7757,6 +7757,27 @@ QualType TreeTransform<Derived>::TransformBTFTagAttributedType(
 }
 
 template <typename Derived>
+QualType TreeTransform<Derived>::TransformOverflowBehaviorType(
+    TypeLocBuilder &TLB, OverflowBehaviorTypeLoc TL) {
+  const OverflowBehaviorType *OldTy = TL.getTypePtr();
+  QualType InnerTy = getDerived().TransformType(TLB, TL.getWrappedLoc());
+  if (InnerTy.isNull())
+    return QualType();
+
+  QualType Result = TL.getType();
+  if (getDerived().AlwaysRebuild() || InnerTy != OldTy->getUnderlyingType()) {
+    Result = SemaRef.Context.getOverflowBehaviorType(OldTy->getBehaviorKind(),
+                                                     InnerTy);
+    if (Result.isNull())
+      return QualType();
+  }
+
+  OverflowBehaviorTypeLoc NewTL = TLB.push<OverflowBehaviorTypeLoc>(Result);
+  NewTL.initializeLocal(SemaRef.Context, TL.getAttrLoc());
+  return Result;
+}
+
+template <typename Derived>
 QualType TreeTransform<Derived>::TransformHLSLAttributedResourceType(
     TypeLocBuilder &TLB, HLSLAttributedResourceTypeLoc TL) {
 
@@ -14545,10 +14566,17 @@ TreeTransform<Derived>::TransformCXXTypeidExpr(CXXTypeidExpr *E) {
   // semantic processing can re-transform an already transformed operand.
   Expr *Op = E->getExprOperand();
   auto EvalCtx = Sema::ExpressionEvaluationContext::Unevaluated;
-  if (E->isGLValue())
-    if (auto *RD = Op->getType()->getAsCXXRecordDecl();
-        RD && RD->isPolymorphic())
-      EvalCtx = SemaRef.ExprEvalContexts.back().Context;
+  if (E->isGLValue()) {
+    QualType OpType = Op->getType();
+    if (auto *RD = OpType->getAsCXXRecordDecl()) {
+      if (SemaRef.RequireCompleteType(E->getBeginLoc(), OpType,
+                                      diag::err_incomplete_typeid))
+        return ExprError();
+
+      if (RD->isPolymorphic())
+        EvalCtx = SemaRef.ExprEvalContexts.back().Context;
+    }
+  }
 
   EnterExpressionEvaluationContext Unevaluated(SemaRef, EvalCtx,
                                                Sema::ReuseLambdaContextDecl);

@@ -1335,6 +1335,7 @@ R"(All available -march extensions for RISC-V
     xsfcease             1.0
     xsfmm128t            0.6
     xsfmm16t             0.6
+    xsfmm32a             0.6
     xsfmm32a16f          0.6
     xsfmm32a32f          0.6
     xsfmm32a8f           0.6
@@ -1378,10 +1379,10 @@ Experimental extensions
     zicfiss              1.0
     zvabd                0.7
     zvbc32e              0.7
+    zvdot4a8i            0.1
     zvfbfa               0.1
     zvfofp8min           0.2
     zvkgs                0.7
-    zvqdotq              0.0
     smpmpmt              0.6
     svukte               0.3
     xrivosvisni          0.1

@@ -268,14 +268,17 @@ static std::optional<ExceptionDetails> FormatException(lldb::SBThread &thread) {
     return {};
 
   ExceptionDetails details;
-  raw_string_ostream OS(details.message);
 
   if (const char *name = exception.GetName())
     details.evaluateName = name;
   if (const char *typeName = exception.GetDisplayTypeName())
     details.typeName = typeName;
 
+  std::string message;
+  raw_string_ostream OS(message);
   OS << exception;
+
+  details.message = std::move(message);
 
   if (lldb::SBThread exception_backtrace =
           thread.GetCurrentExceptionBacktrace())
@@ -316,22 +319,19 @@ ExceptionInfoRequestHandler::Run(const ExceptionInfoArguments &args) const {
   body.breakMode = eExceptionBreakModeAlways;
   body.exceptionId = FormatExceptionId(dap, thread);
   body.details = FormatException(thread);
-
-  raw_string_ostream OS(body.description);
-  OS << FormatStopDescription(thread);
+  body.description = FormatStopDescription(thread);
 
   if (std::string stop_info = FormatExtendedStopInfo(thread);
       !stop_info.empty())
-    OS << "\n\n" << stop_info;
+    body.description += formatv("\n\n{0}", stop_info);
 
   if (std::string crash_report = FormatCrashReport(thread);
       !crash_report.empty())
-    OS << "\n\n" << crash_report;
+    body.description += formatv("\n\n{0}", crash_report);
 
   lldb::SBProcess process = thread.GetProcess();
   for (uint32_t idx = 0; idx < lldb::eNumInstrumentationRuntimeTypes; idx++) {
-    lldb::InstrumentationRuntimeType type =
-        static_cast<lldb::InstrumentationRuntimeType>(idx);
+    auto type = static_cast<lldb::InstrumentationRuntimeType>(idx);
     if (!process.IsInstrumentationRuntimePresent(type))
       continue;
 

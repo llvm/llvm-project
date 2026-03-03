@@ -24,14 +24,14 @@ Lead Maintainer
 
 clang-tidy
 ----------
-| Congcong Cai
-| congcongcai0907@163.com (email), HerrCai0907 (GitHub), HerrCai0907 (Discourse)
-
 | Julian Schmidt
 | git.julian.schmidt@gmail.com (email), 5chmidti (GitHub), 5chmidti (Discourse), 5chmidti (Discord)
 
 | Victor Baranov
 | bar.victor.2002@gmail.com (email), vbvictor (GitHub), vbvictor (Discourse), vbvictor  (Discord)
+
+| Victor Chernyakin
+| chernyakin.victor.j@outlook.com (email), localspook (GitHub), LocalSpook (Discourse), localspook (Discord)
 
 
 clang-query
@@ -75,3 +75,4 @@ Inactive component maintainers
 | Piotr Zegar (me@piotrzegar.pl (email), PiotrZSL (GitHub), PiotrZSL (Discourse), PiotrZSL (Discord)) -- clang-tidy
 | Kadir Çetinkaya (kadircet@google.com (email), kadircet (GitHub) kadircet (Discourse), kadircet (Discord)) -- clangd
 | Chris Bieneman (chris.bieneman@gmail.com (email), llvm-beanz (GitHub), beanz (Discord), beanz (Discourse)) -- clangd
+| Congcong Cai (congcongcai0907@163.com (email), HerrCai0907 (GitHub), HerrCai0907 (Discourse)) -- clang-tidy
