@@ -201,6 +201,18 @@ private:
   MlirConversionPattern pattern;
 };
 
+// Convert the Python object to a boolean.
+// If it evaluates to False, treat it as success;
+// otherwise, treat it as failure.
+// Note that None is considered success.
+static MlirLogicalResult logicalResultFromObject(const nb::object &obj) {
+  if (obj.is_none())
+    return mlirLogicalResultSuccess();
+
+  return nb::cast<bool>(obj) ? mlirLogicalResultFailure()
+                             : mlirLogicalResultSuccess();
+}
+
 void PyRewritePatternSet::addConversion(nb::handle root, unsigned benefit,
                                         const nb::callable &matchAndRewrite,
                                         PyTypeConverter &typeConverter) {
@@ -277,18 +289,6 @@ static std::vector<nb::object> objectsFromPDLValues(size_t nValues,
   for (size_t i = 0; i < nValues; ++i)
     args.push_back(objectFromPDLValue(values[i]));
   return args;
-}
-
-// Convert the Python object to a boolean.
-// If it evaluates to False, treat it as success;
-// otherwise, treat it as failure.
-// Note that None is considered success.
-static MlirLogicalResult logicalResultFromObject(const nb::object &obj) {
-  if (obj.is_none())
-    return mlirLogicalResultSuccess();
-
-  return nb::cast<bool>(obj) ? mlirLogicalResultFailure()
-                             : mlirLogicalResultSuccess();
 }
 
 /// Owning Wrapper around a PDLPatternModule.
