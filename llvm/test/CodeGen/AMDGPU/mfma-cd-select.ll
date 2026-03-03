@@ -300,14 +300,14 @@ define amdgpu_kernel void @test_mfma_f32_32x32x1f32_inline_asm_virtual_agpr(ptr 
 ; GFX908-NEXT:    ; def a0
 ; GFX908-NEXT:    ;;#ASMEND
 ; GFX908-NEXT:    s_waitcnt lgkmcnt(0)
-; GFX908-NEXT:    global_load_dwordx4 v[28:31], v32, s[0:1] offset:112
 ; GFX908-NEXT:    global_load_dwordx4 v[24:27], v32, s[0:1] offset:96
-; GFX908-NEXT:    global_load_dwordx4 v[20:23], v32, s[0:1] offset:80
+; GFX908-NEXT:    global_load_dwordx4 v[28:31], v32, s[0:1] offset:112
 ; GFX908-NEXT:    global_load_dwordx4 v[16:19], v32, s[0:1] offset:64
-; GFX908-NEXT:    global_load_dwordx4 v[12:15], v32, s[0:1] offset:48
+; GFX908-NEXT:    global_load_dwordx4 v[20:23], v32, s[0:1] offset:80
 ; GFX908-NEXT:    global_load_dwordx4 v[8:11], v32, s[0:1] offset:32
-; GFX908-NEXT:    global_load_dwordx4 v[4:7], v32, s[0:1] offset:16
+; GFX908-NEXT:    global_load_dwordx4 v[12:15], v32, s[0:1] offset:48
 ; GFX908-NEXT:    global_load_dwordx4 v[0:3], v32, s[0:1]
+; GFX908-NEXT:    global_load_dwordx4 v[4:7], v32, s[0:1] offset:16
 ; GFX908-NEXT:    s_waitcnt vmcnt(0)
 ; GFX908-NEXT:    v_accvgpr_write_b32 a0, v0
 ; GFX908-NEXT:    v_accvgpr_write_b32 a1, v1
@@ -406,14 +406,14 @@ define amdgpu_kernel void @test_mfma_f32_32x32x1f32_inline_asm_phys_agpr(ptr add
 ; GFX908-NEXT:    ; use a[100:131]
 ; GFX908-NEXT:    ;;#ASMEND
 ; GFX908-NEXT:    s_waitcnt lgkmcnt(0)
-; GFX908-NEXT:    global_load_dwordx4 v[28:31], v32, s[0:1] offset:112
 ; GFX908-NEXT:    global_load_dwordx4 v[24:27], v32, s[0:1] offset:96
-; GFX908-NEXT:    global_load_dwordx4 v[20:23], v32, s[0:1] offset:80
+; GFX908-NEXT:    global_load_dwordx4 v[28:31], v32, s[0:1] offset:112
 ; GFX908-NEXT:    global_load_dwordx4 v[16:19], v32, s[0:1] offset:64
-; GFX908-NEXT:    global_load_dwordx4 v[12:15], v32, s[0:1] offset:48
+; GFX908-NEXT:    global_load_dwordx4 v[20:23], v32, s[0:1] offset:80
 ; GFX908-NEXT:    global_load_dwordx4 v[8:11], v32, s[0:1] offset:32
-; GFX908-NEXT:    global_load_dwordx4 v[4:7], v32, s[0:1] offset:16
+; GFX908-NEXT:    global_load_dwordx4 v[12:15], v32, s[0:1] offset:48
 ; GFX908-NEXT:    global_load_dwordx4 v[0:3], v32, s[0:1]
+; GFX908-NEXT:    global_load_dwordx4 v[4:7], v32, s[0:1] offset:16
 ; GFX908-NEXT:    s_waitcnt vmcnt(0)
 ; GFX908-NEXT:    v_accvgpr_write_b32 a0, v0
 ; GFX908-NEXT:    v_accvgpr_write_b32 a1, v1
@@ -512,14 +512,14 @@ define amdgpu_kernel void @test_mfma_f32_32x32x1f32_inline_asm_no_agprs(ptr addr
 ; GFX908-NEXT:    ; def v0
 ; GFX908-NEXT:    ;;#ASMEND
 ; GFX908-NEXT:    s_waitcnt lgkmcnt(0)
-; GFX908-NEXT:    global_load_dwordx4 v[28:31], v32, s[0:1] offset:112
 ; GFX908-NEXT:    global_load_dwordx4 v[24:27], v32, s[0:1] offset:96
-; GFX908-NEXT:    global_load_dwordx4 v[20:23], v32, s[0:1] offset:80
+; GFX908-NEXT:    global_load_dwordx4 v[28:31], v32, s[0:1] offset:112
 ; GFX908-NEXT:    global_load_dwordx4 v[16:19], v32, s[0:1] offset:64
-; GFX908-NEXT:    global_load_dwordx4 v[12:15], v32, s[0:1] offset:48
+; GFX908-NEXT:    global_load_dwordx4 v[20:23], v32, s[0:1] offset:80
 ; GFX908-NEXT:    global_load_dwordx4 v[8:11], v32, s[0:1] offset:32
-; GFX908-NEXT:    global_load_dwordx4 v[4:7], v32, s[0:1] offset:16
+; GFX908-NEXT:    global_load_dwordx4 v[12:15], v32, s[0:1] offset:48
 ; GFX908-NEXT:    global_load_dwordx4 v[0:3], v32, s[0:1]
+; GFX908-NEXT:    global_load_dwordx4 v[4:7], v32, s[0:1] offset:16
 ; GFX908-NEXT:    s_waitcnt vmcnt(0)
 ; GFX908-NEXT:    v_accvgpr_write_b32 a0, v0
 ; GFX908-NEXT:    v_accvgpr_write_b32 a1, v1
@@ -640,14 +640,14 @@ define amdgpu_kernel void @test_mfma_f32_32x32x1f32_call(ptr addrspace(1) %arg) 
 ; GFX908-NEXT:    v_mov_b32_e32 v40, 0
 ; GFX908-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX908-NEXT:    s_swappc_b64 s[30:31], s[16:17]
-; GFX908-NEXT:    global_load_dwordx4 v[28:31], v40, s[34:35] offset:112
 ; GFX908-NEXT:    global_load_dwordx4 v[24:27], v40, s[34:35] offset:96
-; GFX908-NEXT:    global_load_dwordx4 v[20:23], v40, s[34:35] offset:80
+; GFX908-NEXT:    global_load_dwordx4 v[28:31], v40, s[34:35] offset:112
 ; GFX908-NEXT:    global_load_dwordx4 v[16:19], v40, s[34:35] offset:64
-; GFX908-NEXT:    global_load_dwordx4 v[12:15], v40, s[34:35] offset:48
+; GFX908-NEXT:    global_load_dwordx4 v[20:23], v40, s[34:35] offset:80
 ; GFX908-NEXT:    global_load_dwordx4 v[8:11], v40, s[34:35] offset:32
-; GFX908-NEXT:    global_load_dwordx4 v[4:7], v40, s[34:35] offset:16
+; GFX908-NEXT:    global_load_dwordx4 v[12:15], v40, s[34:35] offset:48
 ; GFX908-NEXT:    global_load_dwordx4 v[0:3], v40, s[34:35]
+; GFX908-NEXT:    global_load_dwordx4 v[4:7], v40, s[34:35] offset:16
 ; GFX908-NEXT:    s_waitcnt vmcnt(0)
 ; GFX908-NEXT:    v_accvgpr_write_b32 a0, v0
 ; GFX908-NEXT:    v_accvgpr_write_b32 a1, v1
@@ -925,14 +925,14 @@ define void @test_mfma_f32_32x32x1f32_nonentry_noagpr(ptr addrspace(1) %arg) #0 
 ; GFX908-LABEL: test_mfma_f32_32x32x1f32_nonentry_noagpr:
 ; GFX908:       ; %bb.0: ; %bb
 ; GFX908-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX908-NEXT:    global_load_dwordx4 v[30:33], v[0:1], off offset:112
 ; GFX908-NEXT:    global_load_dwordx4 v[26:29], v[0:1], off offset:96
-; GFX908-NEXT:    global_load_dwordx4 v[22:25], v[0:1], off offset:80
+; GFX908-NEXT:    global_load_dwordx4 v[30:33], v[0:1], off offset:112
 ; GFX908-NEXT:    global_load_dwordx4 v[18:21], v[0:1], off offset:64
-; GFX908-NEXT:    global_load_dwordx4 v[14:17], v[0:1], off offset:48
+; GFX908-NEXT:    global_load_dwordx4 v[22:25], v[0:1], off offset:80
 ; GFX908-NEXT:    global_load_dwordx4 v[10:13], v[0:1], off offset:32
-; GFX908-NEXT:    global_load_dwordx4 v[6:9], v[0:1], off offset:16
+; GFX908-NEXT:    global_load_dwordx4 v[14:17], v[0:1], off offset:48
 ; GFX908-NEXT:    global_load_dwordx4 v[2:5], v[0:1], off
+; GFX908-NEXT:    global_load_dwordx4 v[6:9], v[0:1], off offset:16
 ; GFX908-NEXT:    s_waitcnt vmcnt(0)
 ; GFX908-NEXT:    v_accvgpr_write_b32 a0, v2
 ; GFX908-NEXT:    v_accvgpr_write_b32 a1, v3
@@ -1026,14 +1026,14 @@ define void @test_mfma_f32_32x32x1f32_nonentry_with_agpr(ptr addrspace(1) %arg) 
 ; GFX908-LABEL: test_mfma_f32_32x32x1f32_nonentry_with_agpr:
 ; GFX908:       ; %bb.0: ; %bb
 ; GFX908-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX908-NEXT:    global_load_dwordx4 v[30:33], v[0:1], off offset:112
 ; GFX908-NEXT:    global_load_dwordx4 v[26:29], v[0:1], off offset:96
-; GFX908-NEXT:    global_load_dwordx4 v[22:25], v[0:1], off offset:80
+; GFX908-NEXT:    global_load_dwordx4 v[30:33], v[0:1], off offset:112
 ; GFX908-NEXT:    global_load_dwordx4 v[18:21], v[0:1], off offset:64
-; GFX908-NEXT:    global_load_dwordx4 v[14:17], v[0:1], off offset:48
+; GFX908-NEXT:    global_load_dwordx4 v[22:25], v[0:1], off offset:80
 ; GFX908-NEXT:    global_load_dwordx4 v[10:13], v[0:1], off offset:32
-; GFX908-NEXT:    global_load_dwordx4 v[6:9], v[0:1], off offset:16
+; GFX908-NEXT:    global_load_dwordx4 v[14:17], v[0:1], off offset:48
 ; GFX908-NEXT:    global_load_dwordx4 v[2:5], v[0:1], off
+; GFX908-NEXT:    global_load_dwordx4 v[6:9], v[0:1], off offset:16
 ; GFX908-NEXT:    s_waitcnt vmcnt(0)
 ; GFX908-NEXT:    v_accvgpr_write_b32 a0, v2
 ; GFX908-NEXT:    v_accvgpr_write_b32 a1, v3
