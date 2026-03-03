@@ -1,74 +1,18 @@
-// RUN: %clang_cc1 -triple dxil-pc-shadermodel6.6-library %s -verify
+// RUN: %clang_cc1 -triple dxil-pc-shadermodel6.0-library %s -verify
 
-void no_arg() {
-  __builtin_hlsl_interlocked_or64();
-  // expected-error@-1 {{too few arguments to function call, expected 3, have 0}}
-}
-
-void too_many_args() {
-  __builtin_hlsl_interlocked_or64(0, 0, 0, 0, 0);
-  // expected-error@-1 {{too many arguments to function call, expected at most 4, have 5}}
-}
-
-void non_resource_arg() {
-  __builtin_hlsl_interlocked_or64(0, 0, 0);
-  // expected-error@-1 {{used type 'int' where __hlsl_resource_t is required}}
-}
-
-void ret_no_arg() {
-  __builtin_hlsl_interlocked_or_ret64();
-  // expected-error@-1 {{too few arguments to function call, expected 4, have 0}}
-}
-
-void ret_too_many_args() {
-  __builtin_hlsl_interlocked_or_ret64(0, 0, 0, 0, 0, 0);
-  // expected-error@-1 {{too many arguments to function call, expected at most 5, have 6}}
-}
-
-void ret_non_resource_arg() {
-  __builtin_hlsl_interlocked_or_ret64(0, 0, 0, 0);
-  // expected-error@-1 {{used type 'int' where __hlsl_resource_t is required}}
-}
-
-// ByteAddressBuffer
-using handle_char_t = __hlsl_resource_t [[hlsl::resource_class(SRV)]] [[hlsl::raw_buffer]] [[hlsl::contained_type(char)]];
-// Buffer<int>
-using handle_int_t = __hlsl_resource_t [[hlsl::resource_class(SRV)]] [[hlsl::contained_type(int)]];
-// RWBuffer<float>
-using handle_float_t = __hlsl_resource_t [[hlsl::resource_class(UAV)]] [[hlsl::contained_type(float)]];
+using handle_long_t = __hlsl_resource_t [[hlsl::resource_class(UAV)]] [[hlsl::contained_type(long)]];
 
 struct CustomResource {
-  handle_char_t ByteAddressBufferChar;
-  handle_int_t BufferInt;
-  handle_float_t RWBufferFloat;
+  handle_long_t BufferLong;
 };
 
-void invalid_byte_address_buffer(CustomResource CR) {
-  __builtin_hlsl_interlocked_or64(CR.ByteAddressBufferChar, 0, 0);
-  // expected-error@-1 {{invalid __hlsl_resource_t type attributes}}
+void wrong_shader_model(CustomResource CR) {
+  __builtin_hlsl_interlocked_or(CR.BufferLong, 0u, 0l);
+  // expected-error@-1 {{intrinsic '__builtin_hlsl_interlocked_or(CR.BufferLong, 0U, 0L)' requires shader model 6.6 or greater}}
 }
 
-void invalid_typed_buffer(CustomResource CR) {
-  __builtin_hlsl_interlocked_or64(CR.BufferInt, 0, 0);
-  // expected-error@-1 {{invalid __hlsl_resource_t type attributes}}
-}
-
-void invalid_rw_typed_buffer(CustomResource CR) {
-  __builtin_hlsl_interlocked_or64(CR.RWBufferFloat, 0, 0);
-  // expected-error@-1 {{invalid __hlsl_resource_t type attributes}}
-}
-
-void ret_invalid_byte_address_buffer(CustomResource CR) {
-  __builtin_hlsl_interlocked_or_ret64(CR.ByteAddressBufferChar, 0, 0, 0);
-  // expected-error@-1 {{invalid __hlsl_resource_t type attributes}}
-}
-
-void ret_invalid_typed_buffer(CustomResource CR) {
-  __builtin_hlsl_interlocked_or_ret64(CR.BufferInt, 0, 0, 0);
-  // expected-error@-1 {{invalid __hlsl_resource_t type attributes}}
-}
-
-void ret_invalid_rw_typed_buffer(CustomResource CR) {
-  __builtin_hlsl_interlocked_or_ret64(CR.RWBufferFloat, 0, 0, 0);
-  // expected-error@-1 {{invalid __hlsl_resource_t type attributes}}
+void ret_wrong_shader_model(CustomResource CR) {
+  long ret;
+  __builtin_hlsl_interlocked_or_ret_ll(CR.BufferLong, 0u, 0l, ret);
+  // expected-error@-1 {{intrinsic '__builtin_hlsl_interlocked_or_ret_ll(CR.BufferLong, 0U, 0L, ret)' requires shader model 6.6 or greater}}
 }

@@ -301,7 +301,9 @@ static Value *handleElementwiseF32ToF16(CodeGenFunction &CGF,
 }
 
 static Value *handleInterlockedOr(CodeGenFunction &CGF, const CallExpr *E,
-                                  const bool HasReturn, const bool Is32Bit) {
+                                  const bool HasReturn) {
+  const bool Is32Bit = CGF.getContext().getTypeSize(
+                           E->getArg(E->getNumArgs() - 1)->getType()) == 32;
   Value *HandleOp = CGF.EmitScalarExpr(E->getArg(0));
   Value *IndexOp = CGF.EmitScalarExpr(E->getArg(1));
   Value *StructuredBufIndexOp;
@@ -344,8 +346,10 @@ static Value *handleInterlockedOr(CodeGenFunction &CGF, const CallExpr *E,
     if (!ResourceTy->getAttrs().RawBuffer) {
       assert(
           (ResourceTy->getContainedType() == CGF.getContext().IntTy ||
-           ResourceTy->getContainedType() == CGF.getContext().UnsignedIntTy) &&
-          "AtomicBinOp RWBuffer must contain int or uint");
+           ResourceTy->getContainedType() == CGF.getContext().UnsignedIntTy ||
+           ResourceTy->getContainedType() == CGF.getContext().LongTy ||
+           ResourceTy->getContainedType() == CGF.getContext().UnsignedLongTy) &&
+          "AtomicBinOp RWBuffer must contain 32 or 64bit (unsigned) int type");
       // RWBuffer: c0
       C0 = IndexOp;
 
@@ -1414,18 +1418,13 @@ Value *CodeGenFunction::EmitHLSLBuiltinExpr(unsigned BuiltinID,
     return Builder.CreateCall(SpecConstantFn, Args);
   }
   case Builtin::BI__builtin_hlsl_interlocked_or: {
-    return handleInterlockedOr(*this, E, false, true);
-  }
-  case Builtin::BI__builtin_hlsl_interlocked_or64: {
-    return handleInterlockedOr(*this, E, false, false);
+    return handleInterlockedOr(*this, E, false);
   }
   case Builtin::BI__builtin_hlsl_interlocked_or_ret_int:
-  case Builtin::BI__builtin_hlsl_interlocked_or_ret_uint: {
-    return handleInterlockedOr(*this, E, true, true);
-  }
-  case Builtin::BI__builtin_hlsl_interlocked_or_ret64_longlong:
-  case Builtin::BI__builtin_hlsl_interlocked_or_ret64_ulonglong: {
-    return handleInterlockedOr(*this, E, true, false);
+  case Builtin::BI__builtin_hlsl_interlocked_or_ret_uint:
+  case Builtin::BI__builtin_hlsl_interlocked_or_ret_ll:
+  case Builtin::BI__builtin_hlsl_interlocked_or_ret_ull: {
+    return handleInterlockedOr(*this, E, true);
   }
   }
   return nullptr;

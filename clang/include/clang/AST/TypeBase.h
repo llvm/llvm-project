@@ -6801,6 +6801,9 @@ public:
   const Attributes &getAttrs() const { return Attrs; }
   bool isRaw() const { return Attrs.RawBuffer; }
   bool isStructured() const { return !ContainedType->isChar8Type(); }
+  bool isTexture() const {
+    return Attrs.ResourceDimension != llvm::dxil::ResourceDimension::Unknown;
+  }
 
   bool isSugared() const { return false; }
   QualType desugar() const { return QualType(this, 0); }
