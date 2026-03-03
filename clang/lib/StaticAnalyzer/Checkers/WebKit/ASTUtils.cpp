@@ -111,7 +111,7 @@ bool tryToFindPtrOrigin(
             E = memberCall->getImplicitObjectArgument()->IgnoreParenCasts();
             if (auto *DRE = dyn_cast<DeclRefExpr>(E)) {
               if (auto *Decl = dyn_cast_or_null<VarDecl>(DRE->getDecl())) {
-                if (isa<ParmVarDecl>(Decl) || Decl->isLocalVarDecl()) {
+                if (Decl->isLocalVarDeclOrParm()) {
                   if (StopAtFirstRefCountedObj)
                     return callback(E, true);
                 }
