@@ -4496,8 +4496,6 @@ void Process::ProcessEventData::DoOnRemoval(Event *event_ptr) {
   if (m_update_state != 1)
     return;
 
-  bool restarted = Process::ProcessEventData::GetRestartedFromEvent(event_ptr);
-
   if (m_state == eStateStopped && !m_restarted) {
     // Let process subclasses know we are about to do a public stop and do
     // anything they might need to in order to speed up register and memory
