@@ -9,6 +9,7 @@ end program
 ! CHECK: Pass statistics report
 
 ! CHECK: Fortran::lower::VerifierPass
+! CHECK-NEXT: MIFOpConversion
 ! CHECK-NEXT: CSE
 ! Ideally, we need an output with only the pass names, but
 ! there is currently no way to get that, so in order to

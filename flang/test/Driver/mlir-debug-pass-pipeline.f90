@@ -43,6 +43,7 @@ end program
 ! ALL-NEXT: LowerHLFIRIntrinsics
 ! ALL-NEXT: BufferizeHLFIR
 ! ALL-NEXT: ConvertHLFIRtoFIR
+! ALL-NEXT: MIFOpConversion
 ! ALL-NEXT: CSE
 ! Ideally, we need an output with only the pass names, but
 ! there is currently no way to get that, so in order to
@@ -107,7 +108,6 @@ end program
 ! ALL-NEXT: CSE
 ! ALL-NEXT:   (S) 0 num-cse'd - Number of operations CSE'd
 ! ALL-NEXT:   (S) 0 num-dce'd - Number of operations DCE'd
-! ALL-NEXT: MIFOpConversion
 ! ALL-NEXT: BoxedProcedurePass
 
 ! ALL-NEXT: Pipeline Collection : ['fir.global', 'func.func', 'gpu.module', 'omp.declare_mapper', 'omp.declare_reduction', 'omp.private']
