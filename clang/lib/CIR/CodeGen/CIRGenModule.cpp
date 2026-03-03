@@ -2372,12 +2372,6 @@ cir::FuncOp CIRGenModule::getOrCreateCIRFunction(
     mlir::ArrayAttr extraAttrs) {
   const Decl *d = gd.getDecl();
 
-  if (isThunk)
-    errorNYI(d->getSourceRange(), "getOrCreateCIRFunction: thunk");
-
-  // In what follows, we continue past 'errorNYI' as if nothing happened because
-  // the rest of the implementation is better than doing nothing.
-
   if (const auto *fd = cast_or_null<FunctionDecl>(d)) {
     // For the device mark the function as one that should be emitted.
     if (getLangOpts().OpenMPIsTargetDevice && fd->isDefined() && !dontDefer &&
