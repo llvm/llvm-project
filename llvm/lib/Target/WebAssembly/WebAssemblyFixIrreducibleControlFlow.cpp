@@ -556,6 +556,17 @@ bool WebAssemblyFixIrreducibleControlFlow::runOnMachineFunction(
   // Start the recursive process on the entire function body.
   BlockSet AllBlocks;
   for (auto &MBB : MF) {
+    // Prevent isolated orphan blocks from being processed.
+    //
+    // Even at O0, translation from IR to SelectionDAG or gMIR may optimize away
+    // branches to blocks containing only `unreachable`. Doing so without DCE
+    // orphans the block, which trips our assertion that all MBBs get assigned
+    // an SCC.
+    //
+    // Ignoring these blocks is safe, as they couldn't possibly be irreducible.
+    if (&MBB != &*MF.begin() && MBB.pred_empty() && MBB.succ_empty())
+      continue;
+
     AllBlocks.insert(&MBB);
   }
 
