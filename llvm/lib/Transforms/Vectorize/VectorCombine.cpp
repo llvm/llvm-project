@@ -27,12 +27,15 @@
 #include "llvm/Analysis/TargetTransformInfo.h"
 #include "llvm/Analysis/ValueTracking.h"
 #include "llvm/Analysis/VectorUtils.h"
+#include "llvm/IR/DerivedTypes.h"
 #include "llvm/IR/Dominators.h"
 #include "llvm/IR/Function.h"
 #include "llvm/IR/IRBuilder.h"
+#include "llvm/IR/Instruction.h"
 #include "llvm/IR/Instructions.h"
 #include "llvm/IR/PatternMatch.h"
 #include "llvm/Support/CommandLine.h"
+#include "llvm/Support/Debug.h"
 #include "llvm/Support/MathExtras.h"
 #include "llvm/Transforms/Utils/Local.h"
 #include "llvm/Transforms/Utils/LoopUtils.h"
@@ -153,6 +156,7 @@ private:
   bool foldEquivalentReductionCmp(Instruction &I);
   bool foldSelectShuffle(Instruction &I, bool FromReduction = false);
   bool foldInterleaveIntrinsics(Instruction &I);
+  bool foldEqualShuffleAnd(Instruction &I);
   bool shrinkType(Instruction &I);
   bool shrinkLoadForShuffles(Instruction &I);
   bool shrinkPhiOfShuffles(Instruction &I);
@@ -5435,6 +5439,69 @@ bool VectorCombine::foldInterleaveIntrinsics(Instruction &I) {
   return true;
 }
 
+// Prior to SSE4.1, performing equality comparison on v2i64 types require a
+// comparison on v4i32 types using the following pattern:
+//
+// ...
+// %3 = icmp eq <4 x i32> %1, %2
+// %4 = sext <4 x i1> %3 to <4 x i32>
+// %5 = shufflevector <4 x i32> %4, <4 x i32> poison, <4 x i32> <i32 1, i32 0,
+// i32 3, i32 2> %6 = select <4 x i1> %3, <4 x i32> %5, <4 x i32>
+// zeroinitializer
+// ...
+//
+// We should detect such patterns and fold them to:
+//
+// %3 = bitcast <4 x i32> %1 to <2 x i64>
+// %4 = bitcast <4 x i32> %2 to <2 x i64>
+// %5 = icmp eq <2 x i64> %3, %4
+// %6 = bitcast <2 x i64> %5 to <4 x i32>
+//
+bool VectorCombine::foldEqualShuffleAnd(Instruction &I) {
+  // Check pattern existance
+  Value *L, *R;
+  CmpPredicate Pred;
+
+  auto Equal = m_ICmp(Pred, m_Value(L), m_Value(R));
+  SmallVector<int> Mask = {1, 0, 3, 2};
+  auto Shuffle =
+      m_CombineOr(m_SExt(m_Shuffle(Equal, m_Poison(), m_SpecificMask(Mask))),
+                  m_Shuffle(m_SExt(Equal), m_Poison(), m_SpecificMask(Mask)));
+
+  if (!match(&I, m_CombineOr(m_And(m_SExt(Equal), Shuffle),
+                             m_Select(Equal, Shuffle, m_ZeroInt()))) ||
+      !ICmpInst::isEquality(Pred) || !L->getType()->isVectorTy())
+    return false;
+
+  auto *OldVecType = cast<VectorType>(L->getType());
+
+  if (OldVecType->isScalableTy() ||
+      !OldVecType->getElementType()->isIntegerTy())
+    return false;
+
+  int ElementCount = OldVecType->getElementCount().getFixedValue();
+  int ElementBitWidth = OldVecType->getElementType()->getIntegerBitWidth();
+
+  if (ElementCount != 4 || ElementBitWidth != 32)
+    return false;
+
+  LLVM_DEBUG(dbgs() << "VC: Found equal-shuffle-and pattern" << '\n');
+
+  // Perform folding
+  IRBuilder Builder(&I);
+  auto *NewElementType = IntegerType::get(I.getContext(), ElementBitWidth * 2);
+  auto *NewVecType = VectorType::get(NewElementType, ElementCount / 2, false);
+  auto *BitCastL = Builder.CreateBitCast(L, NewVecType);
+  auto *BitCastR = Builder.CreateBitCast(R, NewVecType);
+  auto *Cmp = Builder.CreateICmp(Pred, BitCastL, BitCastR);
+  auto *SExt = Builder.CreateSExt(Cmp, NewVecType);
+  auto *BitCastCmp = Builder.CreateBitCast(SExt, OldVecType);
+
+  replaceValue(I, *BitCastCmp);
+
+  return false;
+}
+
 // Attempt to shrink loads that are only used by shufflevector instructions.
 bool VectorCombine::shrinkLoadForShuffles(Instruction &I) {
   auto *OldLoad = dyn_cast<LoadInst>(&I);
@@ -5777,9 +5844,15 @@ bool VectorCombine::run() {
           return true;
         if (foldBitOpOfCastConstant(I))
           return true;
+        if (foldEqualShuffleAnd(I))
+          return true;
         break;
       case Instruction::PHI:
         if (shrinkPhiOfShuffles(I))
+          return true;
+        break;
+      case Instruction::Select:
+        if (foldEqualShuffleAnd(I))
           return true;
         break;
       default:
