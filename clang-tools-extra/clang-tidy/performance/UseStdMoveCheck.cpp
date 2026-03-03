@@ -15,6 +15,7 @@
 #include "clang/ASTMatchers/ASTMatchers.h"
 #include "clang/Analysis/Analyses/CFGReachabilityAnalysis.h"
 #include "clang/Lex/Lexer.h"
+#include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/STLExtras.h"
 
 using namespace clang::ast_matchers;
@@ -28,7 +29,7 @@ AST_MATCHER(CXXRecordDecl, hasAccessibleNonTrivialMoveAssignment) {
   for (const auto *CM : Node.methods())
     if (CM->isMoveAssignmentOperator())
       return !CM->isDeleted() && CM->getAccess() == AS_public;
-  llvm_unreachable("Move Assignment Operaotr Not Found");
+  llvm_unreachable("Move Assignment Operator Not Found");
 }
 
 AST_MATCHER(QualType, isLValueReferenceType) {
@@ -118,9 +119,9 @@ void UseStdMoveCheck::check(const MatchFinder::MatchResult &Result) {
     bool Ready;
     unsigned RemainingSuccessors;
   };
-  std::unordered_map<const CFGBlock *, BlockState> CFGState;
+  llvm::DenseMap<const CFGBlock *, BlockState> CFGState;
   for (const auto *B : *TheCFG)
-    CFGState.emplace(B, BlockState{true, B->succ_size()});
+    CFGState.try_emplace(B, BlockState{true, B->succ_size()});
 
   const CFGBlock &TheExit = TheCFG->getExit();
   std::vector<const CFGBlock *> WorkList = {&TheExit};
