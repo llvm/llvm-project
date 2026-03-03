@@ -8284,7 +8284,7 @@ VPlanPtr LoopVectorizationPlanner::tryToBuildVPlanWithVPRecipes(
                            Range, RecipeBuilder, CostCtx);
 
   RUN_VPLAN_PASS_NO_VERIFY(VPlanTransforms::makeScalarizationDecisions, *Plan,
-                           Range, RecipeBuilder);
+                           Range);
 
   // Now process all other blocks and instructions.
   for (VPBasicBlock *VPBB : VPBlockUtils::blocksOnly<VPBasicBlock>(RPOT)) {
