@@ -1,7 +1,7 @@
-.. title:: clang-tidy - bugprone-exception-baseclass
+.. title:: clang-tidy - bugprone-std-exception-baseclass
 
-bugprone-exception-baseclass
-============================
+bugprone-std-exception-baseclass
+================================
 
 Ensure that every value that in a ``throw`` expression is an instance of
 ``std::exception``.
