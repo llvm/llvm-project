@@ -838,6 +838,35 @@ mlir::LogicalResult CIRToLLVMIsFPClassOpLowering::matchAndRewrite(
   return mlir::success();
 }
 
+mlir::LogicalResult CIRToLLVMSignBitOpLowering::matchAndRewrite(
+    cir::SignBitOp op, OpAdaptor adaptor,
+    mlir::ConversionPatternRewriter &rewriter) const {
+  assert(!cir::MissingFeatures::isPPC_FP128Ty());
+
+  mlir::DataLayout layout(op->getParentOfType<mlir::ModuleOp>());
+  int width = layout.getTypeSizeInBits(op.getInput().getType());
+  if (auto longDoubleType =
+          mlir::dyn_cast<cir::LongDoubleType>(op.getInput().getType())) {
+    if (mlir::isa<cir::FP80Type>(longDoubleType.getUnderlying())) {
+      // If the underlying type of LongDouble is FP80Type,
+      // DataLayout::getTypeSizeInBits returns 128.
+      // See https://github.com/llvm/clangir/issues/1057.
+      // Set the width to 80 manually.
+      width = 80;
+    }
+  }
+  mlir::Type intTy = mlir::IntegerType::get(rewriter.getContext(), width);
+  auto bitcast = mlir::LLVM::BitcastOp::create(rewriter, op->getLoc(), intTy,
+                                               adaptor.getInput());
+
+  auto zero = mlir::LLVM::ConstantOp::create(rewriter, op->getLoc(), intTy, 0);
+  auto cmpResult = mlir::LLVM::ICmpOp::create(rewriter, op.getLoc(),
+                                              mlir::LLVM::ICmpPredicate::slt,
+                                              bitcast.getResult(), zero);
+  rewriter.replaceOp(op, cmpResult);
+  return mlir::success();
+}
+
 mlir::LogicalResult CIRToLLVMAssumeOpLowering::matchAndRewrite(
     cir::AssumeOp op, OpAdaptor adaptor,
     mlir::ConversionPatternRewriter &rewriter) const {
