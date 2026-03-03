@@ -908,32 +908,34 @@ void MCAssembler::relaxBoundaryAlign(MCBoundaryAlignFragment &BF) {
   BF.setSize(NewSize);
 }
 
-void MCAssembler::relaxPrefAlign(MCFragment &F) {
+// Compute the body size by walking forward from F to the End symbol and
+// summing fragment sizes. This avoids depending on stale layout offsets.
+void MCAssembler::layoutPrefAlign(MCFragment &F, uint64_t RawStart) {
   const MCSymbol &End = F.getPrefAlignEnd();
   if (!End.getFragment() || End.getFragment()->getParent() != F.getParent()) {
     recordError(SMLoc(), "end symbol '" + End.getName() +
                              "' must be a symbol in the current section");
     return;
   }
-  uint64_t EndOffset;
-  if (!getSymbolOffset(End, EndOffset))
+  const MCFragment *EndFrag = End.getFragment();
+  if (EndFrag->getLayoutOrder() <= F.getLayoutOrder())
     return;
-  // RawStart is the start of the (variable) padding region; StartOffset is
-  // the start of the body (RawStart plus current padding). BodySize is
-  // measured from StartOffset, not RawStart, so that padding is not counted
-  // as part of the body.
-  uint64_t RawStart = F.Offset + F.getFixedSize();
-  uint64_t StartOffset = RawStart + F.getVarSize();
+  uint64_t BodySize = 0;
+  for (const MCFragment *Cur = F.getNext();; Cur = Cur->getNext()) {
+    if (Cur == EndFrag) {
+      BodySize += End.getOffset();
+      break;
+    }
+    BodySize += computeFragmentSize(*Cur);
+  }
   Align NewAlign;
-  if (StartOffset < EndOffset) {
-    uint64_t BodySize = EndOffset - StartOffset;
+  if (BodySize) {
     if (BodySize < F.getPrefAlignPreferred().value())
       NewAlign = Align(NextPowerOf2(BodySize - 1));
     else
       NewAlign = F.getPrefAlignPreferred();
   }
   F.setPrefAlignComputed(NewAlign);
-  // Compute padding to align the body start to NewAlign.
   uint64_t NewPadSize = offsetToAlignment(RawStart, NewAlign);
   F.VarContentStart = F.getFixedSize();
   F.VarContentEnd = F.VarContentStart + NewPadSize;
@@ -1020,7 +1022,7 @@ bool MCAssembler::relaxFragment(MCFragment &F) {
     relaxBoundaryAlign(static_cast<MCBoundaryAlignFragment &>(F));
     break;
   case MCFragment::FT_PrefAlign:
-    relaxPrefAlign(F);
+    layoutPrefAlign(F, F.Offset + F.getFixedSize());
     break;
   case MCFragment::FT_CVInlineLines:
     getContext().getCVContext().encodeInlineLineTable(
@@ -1037,11 +1039,16 @@ bool MCAssembler::relaxFragment(MCFragment &F) {
   return computeFragmentSize(F) != Size;
 }
 
+// Assign offsets to fragments. While most fragments are relaxed by
+// relaxFragment, alignment fragments are exceptions: their padding
+// depend on the current offset. If computed in relaxFragment,
+// the offset comes from F.Offset set by the previous layoutSection call.
+// When an upstream alignment fragment changes padding, F.Offset becomes
+// stale, causing each relaxOnce iteration to fix only one more fragment
+// — O(N) iterations for N alignment fragments. Computing them here with
+// the tracked Offset avoids this.
 void MCAssembler::layoutSection(MCSection &Sec) {
   uint64_t Offset = 0;
-  // Note: fragments are not relaxed here. Some fragments depend on
-  // downstream symbols whose offsets have not been set in this pass yet.
-  // They are instead relaxed by relaxFragment.
   for (MCFragment &F : Sec) {
     F.Offset = Offset;
     if (F.getKind() == MCFragment::FT_Align) {
@@ -1067,6 +1074,10 @@ void MCAssembler::layoutSection(MCSection &Sec) {
       if (F.VarContentEnd > F.getParent()->ContentStorage.size())
         F.getParent()->ContentStorage.resize(F.VarContentEnd);
       Offset += Size;
+    } else if (F.getKind() == MCFragment::FT_PrefAlign) {
+      Offset += F.getFixedSize();
+      layoutPrefAlign(F, Offset);
+      Offset += F.getVarSize();
     } else {
       Offset += computeFragmentSize(F);
     }
@@ -1074,7 +1085,7 @@ void MCAssembler::layoutSection(MCSection &Sec) {
 }
 
 unsigned MCAssembler::relaxOnce(unsigned FirstStable) {
-  ++stats::RelaxationSteps;
+  uint64_t MaxIterations = 0;
   PendingErrors.clear();
 
   unsigned Res = 0;
@@ -1082,8 +1093,10 @@ unsigned MCAssembler::relaxOnce(unsigned FirstStable) {
     // Assume each iteration finalizes at least one extra fragment. If the
     // layout does not converge after N+1 iterations, bail out.
     auto &Sec = *Sections[I];
-    auto MaxIter = Sec.curFragList()->Tail->getLayoutOrder() + 1;
+    auto Limit = Sec.curFragList()->Tail->getLayoutOrder() + 1;
+    auto MaxIter = Limit;
     for (;;) {
+      --MaxIter;
       bool Changed = false;
       for (MCFragment &F : Sec)
         if (F.getKind() != MCFragment::FT_Data && relaxFragment(F))
@@ -1095,11 +1108,13 @@ unsigned MCAssembler::relaxOnce(unsigned FirstStable) {
       // sections. Therefore, we must re-evaluate all sections.
       FirstStable = Sections.size();
       Res = I;
-      if (--MaxIter == 0)
+      if (MaxIter == 0)
         break;
       layoutSection(Sec);
     }
+    MaxIterations = std::max(MaxIterations, uint64_t(Limit - MaxIter));
   }
+  stats::RelaxationSteps += MaxIterations;
   // The subsequent relaxOnce call only needs to visit Sections [0,Res) if no
   // change occurred.
   return Res;
