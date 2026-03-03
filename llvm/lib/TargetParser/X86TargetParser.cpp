@@ -778,6 +778,22 @@ llvm::X86::getCpuSupportsMask(ArrayRef<StringRef> FeatureStrs) {
   return FeatureMask;
 }
 
+bool llvm::X86::expandAPXFeatures(StringRef Name, const llvm::Triple &Triple,
+                                  std::vector<StringRef> &Features) {
+  if (Name == "+apxf") {
+    Features.insert(Features.end(), {"+egpr", "+ndd", "+ccmp", "+nf", "+zu"});
+    if (!Triple.isOSWindows()) {
+      Features.insert(Features.end(), {"+push2pop2", "+ppx"});
+    }
+  } else if (Name == "-apxf") {
+    Features.insert(Features.end(), {"-egpr", "-ndd", "-ccmp", "-nf", "-zu",
+                                     "-push2pop2", "-ppx"});
+  } else {
+    return false;
+  }
+  return true;
+}
+
 unsigned llvm::X86::getFeaturePriority(ProcessorFeatures Feat) {
 #ifndef NDEBUG
   // Check that priorities are set properly in the .def file. We expect that

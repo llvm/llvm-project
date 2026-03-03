@@ -169,7 +169,7 @@ bool X86TargetInfo::initFeatureMap(
     setFeatureEnabled(Features, "ppx", false);
   }
 
-  std::vector<std::string> UpdatedFeaturesVec;
+  std::vector<StringRef> UpdatedFeaturesVec;
   for (const auto &Feature : FeaturesVec) {
     // Expand general-regs-only to -x86, -mmx and -sse
     if (Feature == "+general-regs-only") {
@@ -179,35 +179,15 @@ bool X86TargetInfo::initFeatureMap(
       continue;
     }
 
-    // Expand apxf to the individual APX features
-    if (Feature == "+apxf") {
-      UpdatedFeaturesVec.push_back("+egpr");
-      UpdatedFeaturesVec.push_back("+ndd");
-      UpdatedFeaturesVec.push_back("+ccmp");
-      UpdatedFeaturesVec.push_back("+nf");
-      UpdatedFeaturesVec.push_back("+zu");
-      if (!getTriple().isOSWindows()) {
-        UpdatedFeaturesVec.push_back("+push2pop2");
-        UpdatedFeaturesVec.push_back("+ppx");
-      }
+    if (llvm::X86::expandAPXFeatures(Feature, getTriple(), UpdatedFeaturesVec))
       continue;
-    }
-
-    if (Feature == "-apxf") {
-      UpdatedFeaturesVec.push_back("-egpr");
-      UpdatedFeaturesVec.push_back("-ndd");
-      UpdatedFeaturesVec.push_back("-ccmp");
-      UpdatedFeaturesVec.push_back("-nf");
-      UpdatedFeaturesVec.push_back("-zu");
-      UpdatedFeaturesVec.push_back("-push2pop2");
-      UpdatedFeaturesVec.push_back("-ppx");
-      continue;
-    }
 
     UpdatedFeaturesVec.push_back(Feature);
   }
 
-  if (!TargetInfo::initFeatureMap(Features, Diags, CPU, UpdatedFeaturesVec))
+  if (!TargetInfo::initFeatureMap(
+          Features, Diags, CPU,
+          {UpdatedFeaturesVec.begin(), UpdatedFeaturesVec.end()}))
     return false;
 
   // Can't do this earlier because we need to be able to explicitly enable
