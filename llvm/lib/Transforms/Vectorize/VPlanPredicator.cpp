@@ -134,14 +134,8 @@ VPValue *VPPredicator::createEdgeMask(const VPBasicBlock *Src,
 }
 
 void VPPredicator::createBlockInMask(VPBasicBlock *VPBB) {
-  // Compute the edge masks for all incoming edges to VPBB. Insert after the
-  // block's phis, which will be replaced by blends later.
-  // TODO: Skip creating edge masks for blocks that are control-flow equivalent
-  // to header and have no phis.
+  // Start inserting after the block's phis, which be replaced by blends later.
   Builder.setInsertPoint(VPBB, VPBB->getFirstNonPhi());
-  for (auto *Predecessor : SetVector<VPBlockBase *>(
-           VPBB->getPredecessors().begin(), VPBB->getPredecessors().end()))
-    createEdgeMask(cast<VPBasicBlock>(Predecessor), VPBB);
 
   // Reuse the mask of the header if VPBB is post-dominated by the header.
   // TODO: Generalize to reuse mask of immediate dominator.
@@ -151,14 +145,13 @@ void VPPredicator::createBlockInMask(VPBasicBlock *VPBB) {
     setBlockInMask(VPBB, getBlockInMask(Header));
     return;
   }
-
   // All-one mask is modelled as no-mask following the convention for masked
   // load/store/gather/scatter. Initialize BlockMask to no-mask.
   VPValue *BlockMask = nullptr;
   // This is the block mask. We OR all unique incoming edges.
   for (auto *Predecessor : SetVector<VPBlockBase *>(
            VPBB->getPredecessors().begin(), VPBB->getPredecessors().end())) {
-    VPValue *EdgeMask = getEdgeMask(cast<VPBasicBlock>(Predecessor), VPBB);
+    VPValue *EdgeMask = createEdgeMask(cast<VPBasicBlock>(Predecessor), VPBB);
     if (!EdgeMask) { // Mask of predecessor is all-one so mask of block is
                      // too.
       setBlockInMask(VPBB, EdgeMask);
@@ -277,7 +270,7 @@ void VPPredicator::convertPhisToBlends(VPBasicBlock *VPBB) {
     SmallVector<VPValue *, 2> OperandsWithMask;
     for (const auto &[InVPV, InVPBB] : PhiR->incoming_values_and_blocks()) {
       OperandsWithMask.push_back(InVPV);
-      OperandsWithMask.push_back(getEdgeMask(InVPBB, VPBB));
+      OperandsWithMask.push_back(createEdgeMask(InVPBB, VPBB));
     }
     PHINode *IRPhi = cast_or_null<PHINode>(PhiR->getUnderlyingValue());
     auto *Blend =

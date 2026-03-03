@@ -193,11 +193,11 @@ define void @optimized_mask(ptr %a) {
 ; CHECK-EMPTY:
 ; CHECK-NEXT:    bb5:
 ; CHECK-NEXT:      EMIT vp<[[VP10:%[0-9]+]]> = logical-and vp<[[VP4]]>, ir<%c6>
-; CHECK-NEXT:      EMIT vp<[[VP11:%[0-9]+]]> = not ir<%c3>
-; CHECK-NEXT:      EMIT vp<[[VP12:%[0-9]+]]> = logical-and vp<[[VP6]]>, vp<[[VP11]]>
-; CHECK-NEXT:      EMIT vp<[[VP13:%[0-9]+]]> = or vp<[[VP10]]>, vp<[[VP9]]>
-; CHECK-NEXT:      EMIT vp<[[VP14:%[0-9]+]]> = or vp<[[VP13]]>, vp<[[VP12]]>
-; CHECK-NEXT:      BLEND ir<%phi5> = ir<%add6>/vp<[[VP10]]> ir<%add4>/vp<[[VP9]]> ir<%add3>/vp<[[VP12]]>
+; CHECK-NEXT:      EMIT vp<[[VP11:%[0-9]+]]> = or vp<[[VP10]]>, vp<[[VP9]]>
+; CHECK-NEXT:      EMIT vp<[[VP12:%[0-9]+]]> = not ir<%c3>
+; CHECK-NEXT:      EMIT vp<[[VP13:%[0-9]+]]> = logical-and vp<[[VP6]]>, vp<[[VP12]]>
+; CHECK-NEXT:      EMIT vp<[[VP14:%[0-9]+]]> = or vp<[[VP11]]>, vp<[[VP13]]>
+; CHECK-NEXT:      BLEND ir<%phi5> = ir<%add6>/vp<[[VP10]]> ir<%add4>/vp<[[VP9]]> ir<%add3>/vp<[[VP13]]>
 ; CHECK-NEXT:      EMIT ir<%add5> = add ir<%iv>, ir<5>, vp<[[VP14]]>
 ; CHECK-NEXT:    Successor(s): bb7
 ; CHECK-EMPTY:
