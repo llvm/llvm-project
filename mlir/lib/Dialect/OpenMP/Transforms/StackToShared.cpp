@@ -15,7 +15,9 @@
 
 #include "mlir/Dialect/LLVMIR/LLVMDialect.h"
 #include "mlir/Dialect/OpenMP/OpenMPDialect.h"
+#include "mlir/Dialect/OpenMP/Utils/Utils.h"
 #include "mlir/Pass/Pass.h"
+#include "llvm/ADT/STLExtras.h"
 
 namespace mlir {
 namespace omp {
@@ -26,94 +28,20 @@ namespace omp {
 
 using namespace mlir;
 
-/// When a use takes place inside an omp.parallel region and it's not as a
-/// private clause argument, or when it is a reduction argument passed to
-/// omp.parallel or a function call argument, then the defining allocation is
-/// eligible for replacement with shared memory.
-static bool allocaUseRequiresDeviceSharedMem(const OpOperand &use) {
-  Operation *owner = use.getOwner();
-  if (auto parallelOp = dyn_cast<omp::ParallelOp>(owner)) {
-    if (llvm::is_contained(parallelOp.getReductionVars(), use.get()))
-      return true;
-  } else if (auto callOp = dyn_cast<CallOpInterface>(owner)) {
-    if (llvm::is_contained(callOp.getArgOperands(), use.get()))
-      return true;
-  }
-
-  // If it is used directly inside of a parallel region, it has to be replaced
-  // unless the use is a private clause.
-  if (owner->getParentOfType<omp::ParallelOp>()) {
-    if (auto argIface = dyn_cast<omp::BlockArgOpenMPOpInterface>(owner)) {
-      if (auto privateSyms =
-              cast_or_null<ArrayAttr>(owner->getAttr("private_syms"))) {
-        for (auto [var, sym] :
-             llvm::zip_equal(argIface.getPrivateVars(), privateSyms)) {
-          if (var != use.get())
-            continue;
-
-          auto moduleOp = owner->getParentOfType<ModuleOp>();
-          auto privateOp = cast<omp::PrivateClauseOp>(
-              moduleOp.lookupSymbol(cast<SymbolRefAttr>(sym)));
-          return privateOp.getDataSharingType() !=
-                 omp::DataSharingClauseType::Private;
-        }
-      }
-    }
-    return true;
-  }
-  return false;
-}
-
-static bool shouldReplaceAllocaWithUses(const Operation::use_range &uses) {
-  // Check direct uses and also follow hlfir.declare/fir.convert uses.
-  for (const OpOperand &use : uses) {
-    Operation *owner = use.getOwner();
-    if (llvm::isa<LLVM::AddrSpaceCastOp, LLVM::GEPOp>(owner)) {
-      if (shouldReplaceAllocaWithUses(owner->getUses()))
-        return true;
-    } else if (allocaUseRequiresDeviceSharedMem(use)) {
-      return true;
-    }
-  }
-
-  return false;
-}
-
-// TODO: Refactor the logic in `shouldReplaceAllocaWithDeviceSharedMem`,
-// `shouldReplaceAllocaWithUses` and `allocaUseRequiresDeviceSharedMem` to
-// be reusable by the MLIR to LLVM IR translation stage, as something very
-// similar is also implemented there to choose between allocas and device
-// shared memory allocations when processing OpenMP reductions, mapping and
-// privatization.
+/// Tell whether to replace an operation representing a stack allocation with a
+/// device shared memory allocation/deallocation pair based on the location of
+/// the allocation and its uses.
 static bool shouldReplaceAllocaWithDeviceSharedMem(Operation &op) {
-  auto offloadIface = op.getParentOfType<omp::OffloadModuleInterface>();
-  if (!offloadIface || !offloadIface.getIsTargetDevice())
-    return false;
-
-  auto targetOp = op.getParentOfType<omp::TargetOp>();
-
-  // It must be inside of a generic omp.target or in a target device function,
-  // and not inside of omp.parallel.
-  if (auto parallelOp = op.getParentOfType<omp::ParallelOp>()) {
-    if (!targetOp || targetOp->isProperAncestor(parallelOp))
-      return false;
-  }
-
-  if (targetOp) {
-    if (targetOp.getKernelExecFlags(targetOp.getInnermostCapturedOmpOp()) !=
-        omp::TargetExecMode::generic)
-      return false;
-  } else {
-    auto declTargetIface = op.getParentOfType<omp::DeclareTargetInterface>();
-    if (!declTargetIface || !declTargetIface.isDeclareTarget() ||
-        declTargetIface.getDeclareTargetDeviceType() ==
-            omp::DeclareTargetDeviceType::host)
-      return false;
-  }
-
-  return shouldReplaceAllocaWithUses(op.getUses());
+  return omp::opInSharedDeviceContext(op) &&
+         llvm::any_of(op.getResults(), [&](Value result) {
+           return omp::allocaUsesRequireSharedMem(result);
+         });
 }
 
+/// Based on the location of the definition of the given value representing the
+/// result of a device shared memory allocation, find the corresponding points
+/// where its deallocation should be placed and introduce `omp.free_shared_mem`
+/// ops at those points.
 static void insertDeviceSharedMemDeallocation(OpBuilder &builder,
                                               TypeAttr elemType,
                                               Value arraySize,

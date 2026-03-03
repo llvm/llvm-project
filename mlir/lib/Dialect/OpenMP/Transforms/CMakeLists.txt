@@ -18,6 +18,7 @@ add_mlir_dialect_library(MLIROpenMPTransforms
   MLIRLLVMDialect
   MLIROpenACCMPCommon
   MLIROpenMPDialect
+  MLIROpenMPUtils
   MLIRPass
   MLIRSupport
   MLIRTransforms
