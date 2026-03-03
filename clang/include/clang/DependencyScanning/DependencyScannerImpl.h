@@ -154,6 +154,16 @@ public:
       IntrusiveRefCntPtr<llvm::vfs::OverlayFileSystem> OverlayFS);
   bool computeDependencies(StringRef ModuleName, DependencyConsumer &Consumer,
                            DependencyActionController &Controller);
+
+  // FIXME: see if we can use a smaller fake buffer, or set the buffer's size
+  // dynamically.
+  // At the time of this commit, the estimated number of total unique importable
+  // names is around 3000 from Apple's SDKs. We usually import them in parallel,
+  // so it is unlikely that all names are all scanned by the same dependency
+  // scanning worker. Therefore the 64k (20x bigger than our estimate) size is
+  // sufficient to hold the unique source locations to report diagnostics per
+  // worker.
+  static const int32_t FakeInputBufferSize = 1 << 16;
 };
 } // namespace dependencies
 } // namespace clang

@@ -162,6 +162,12 @@ dependencies::initVFSForTUBufferScanning(
   return std::make_pair(OverlayFS, ModifiedCommandLine);
 }
 
+// The fake input buffer is read-only, and it is used to produce
+// unique source locations for the diagnostics. Therefore sharing
+// this global buffer across threads is ok.
+static const std::string
+    FakeInput(" ", CompilerInstanceWithContext::FakeInputBufferSize);
+
 std::pair<IntrusiveRefCntPtr<llvm::vfs::OverlayFileSystem>,
           std::vector<std::string>>
 dependencies::initVFSForByNameScanning(
@@ -179,10 +185,10 @@ dependencies::initVFSForByNameScanning(
   InMemoryFS->setCurrentWorkingDirectory(WorkingDirectory);
   SmallString<128> FakeInputPath;
   // TODO: We should retry the creation if the path already exists.
-  llvm::sys::fs::createUniquePath("module-includes-%%%%%%%%.input",
-                                  FakeInputPath,
+  llvm::sys::fs::createUniquePath("module-import-%%%%.input", FakeInputPath,
                                   /*MakeAbsolute=*/false);
-  InMemoryFS->addFile(FakeInputPath, 0, llvm::MemoryBuffer::getMemBuffer(""));
+  InMemoryFS->addFile(FakeInputPath, 0,
+                      llvm::MemoryBuffer::getMemBuffer(FakeInput));
   IntrusiveRefCntPtr<llvm::vfs::FileSystem> InMemoryOverlay = InMemoryFS;
   OverlayFS->pushOverlay(InMemoryOverlay);
 
