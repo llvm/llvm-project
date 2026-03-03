@@ -1175,13 +1175,11 @@ DwarfCompileUnit *DwarfDebug::getDwarfCompileUnit(const DICompileUnit *DIUnit) {
   if (auto *CU = CUMap.lookup(DIUnit))
     return CU;
 
-  if (useSplitDwarf() &&
-      !shareAcrossDWOCUs() &&
+  if (useSplitDwarf() && !shareAcrossDWOCUs() &&
       (!DIUnit->getSplitDebugInlining() ||
        DIUnit->getEmissionKind() == DICompileUnit::FullDebug) &&
-      !CUMap.empty()) {
+      !CUMap.empty())
     return CUMap.begin()->second;
-  }
 
   return nullptr;
 }
