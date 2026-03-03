@@ -196,7 +196,8 @@ bool WebAssembly::canLowerReturn(size_t ResultSize,
 }
 
 MachineSDNode *WebAssembly::getTLSBase(SelectionDAG &DAG, const SDLoc &DL,
-                                       const WebAssemblySubtarget *Subtarget, const SDValue &Chain) {
+                                       const WebAssemblySubtarget *Subtarget,
+                                       const SDValue &Chain) {
   MVT PtrVT = Subtarget->hasAddr64() ? MVT::i64 : MVT::i32;
   auto GlobalGetIns = PtrVT == MVT::i64 ? WebAssembly::GLOBAL_GET_I64
                                         : WebAssembly::GLOBAL_GET_I32;
@@ -209,6 +210,7 @@ MachineSDNode *WebAssembly::getTLSBase(SelectionDAG &DAG, const SDLoc &DL,
         Chain);
   } else {
     return DAG.getMachineNode(GlobalGetIns, DL, PtrVT,
-                              DAG.getTargetExternalSymbol("__tls_base", PtrVT), Chain);
+                              DAG.getTargetExternalSymbol("__tls_base", PtrVT),
+                              Chain);
   }
 }
