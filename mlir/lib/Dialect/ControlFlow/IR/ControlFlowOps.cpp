@@ -166,6 +166,14 @@ simplifyBrToBlockWithSinglePred(BranchOp op, PatternRewriter &rewriter) {
   if (succ == opParent || !llvm::hasSingleElement(succ->getPredecessors()))
     return failure();
 
+  // If any branch operand is itself a block argument of the successor, merging
+  // would call replaceAllUsesWith(arg, arg) — a no-op — leaving dangling uses
+  // of that argument after the successor block is erased.
+  for (Value operand : op.getOperands())
+    if (auto ba = dyn_cast<BlockArgument>(operand))
+      if (ba.getOwner() == succ)
+        return failure();
+
   // Merge the successor into the current block and erase the branch.
   SmallVector<Value> brOperands(op.getOperands());
   rewriter.eraseOp(op);

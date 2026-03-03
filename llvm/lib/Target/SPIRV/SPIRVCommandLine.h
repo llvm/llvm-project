@@ -48,6 +48,9 @@ public:
   /// target environment (i.e., OpenCL or Vulkan).
   static std::set<SPIRV::Extension::Extension>
   getValidExtensions(const Triple &TT);
+
+private:
+  static std::set<SPIRV::Extension::Extension> DisabledExtensions;
 };
 
 } // namespace llvm
