@@ -19,7 +19,7 @@ import re
 import io
 import textwrap
 from dataclasses import dataclass
-from typing import Any, BinaryIO, TextIO, Tuple, Union
+from typing import BinaryIO, TextIO, Tuple, Union
 
 BINARY_VERSION = 1
 
@@ -231,7 +231,7 @@ class BytecodeSection:
     class _CBuilder:
         """Helper class for emitting binary data as a C-string literal."""
 
-        entries: list[Tuple[Any, str]]
+        entries: list[Tuple[str, str]]
 
         def __init__(self) -> None:
             self.entries = []
