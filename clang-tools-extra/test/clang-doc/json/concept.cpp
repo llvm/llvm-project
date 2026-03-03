@@ -34,6 +34,7 @@ concept Incrementable = requires(T x) {
 // CHECK-NEXT:              "Param": "typename T"
 // CHECK-NEXT:            }
 // CHECK-NEXT:          ]
+// CHECK-NEXT:        "VerticalDisplay": false
 // CHECK-NEXT:        },
 // CHECK-NEXT:        "USR": "{{[0-9A-F]*}}"
 // CHECK-NEXT:      }

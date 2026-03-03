@@ -2092,7 +2092,7 @@ def ROCDL_RawBufferAtomicCmpSwap :
 
 def ROCDL_GlobalPrefetchOp :
   ROCDL_IntrOp<"global.prefetch", [], [], [], 0, 0, 1, 0, [1], ["scope"]> {
-  dag args = (ins Arg<LLVM_PointerInAddressSpace<1>, "", [MemRead, MemRead]>:$ptr,
+  dag args = (ins Arg<LLVM_PointerInAddressSpace<1>, "", [MemWrite, MemRead]>:$ptr,
                   I32Attr:$scope);
   let arguments = !con(args, baseArgs);
   let description = [{
@@ -2116,7 +2116,7 @@ def ROCDL_GlobalPrefetchOp :
 
 def ROCDL_FlatPrefetchOp :
   ROCDL_IntrOp<"flat.prefetch", [], [], [], 0, 0, 1, 0, [1], ["scope"]> {
-  dag args = (ins Arg<LLVM_PointerInAddressSpace<0>, "", [MemRead, MemRead]>:$ptr,
+  dag args = (ins Arg<LLVM_PointerInAddressSpace<0>, "", [MemWrite, MemRead]>:$ptr,
                   I32Attr:$scope);
   let arguments = !con(args, baseArgs);
   let description = [{
