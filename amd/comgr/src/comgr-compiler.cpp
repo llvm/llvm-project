@@ -2245,7 +2245,9 @@ AMDGPUCompiler::AMDGPUCompiler(DataAction *ActionInfo, DataSet *InSet,
 }
 
 AMDGPUCompiler::~AMDGPUCompiler() {
-  if (!env::shouldSaveTemps()) {
+  // LLVM temps get saved in the same directory as regular temps. We can only
+  // call `removeTmpDirs` if none of the env vars is enabled.
+  if (!env::shouldSaveTemps() && !env::shouldSaveLLVMTemps()) {
     removeTmpDirs();
   }
 }
