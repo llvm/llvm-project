@@ -27,6 +27,7 @@ namespace {
 class PPC final : public TargetInfo {
 public:
   PPC(Ctx &);
+  void initTargetSpecificSections() override;
   RelExpr getRelExpr(RelType type, const Symbol &s,
                      const uint8_t *loc) const override;
   RelType getDynRel(RelType type) const override;
@@ -218,6 +219,11 @@ bool PPC::inBranchRange(RelType type, uint64_t src, uint64_t dst) const {
   if (type == R_PPC_LOCAL24PC || type == R_PPC_REL24 || type == R_PPC_PLTREL24)
     return isInt<26>(offset);
   llvm_unreachable("unsupported relocation type used in branch");
+}
+
+void PPC::initTargetSpecificSections() {
+  ctx.in.ppc32Got2 = std::make_unique<PPC32Got2Section>(ctx);
+  ctx.inputSections.push_back(ctx.in.ppc32Got2.get());
 }
 
 // Only needed to support relocations used by relocateNonAlloc and
