@@ -22,6 +22,7 @@
 #include "clang/AST/DeclOpenACC.h"
 #include "clang/AST/GlobalDecl.h"
 #include "clang/AST/RecordLayout.h"
+#include "clang/Basic/DiagnosticFrontend.h"
 #include "clang/Basic/SourceManager.h"
 #include "clang/CIR/Dialect/IR/CIRAttrs.h"
 #include "clang/CIR/Dialect/IR/CIRDialect.h"
@@ -1820,7 +1821,10 @@ cir::FuncOp CIRGenModule::getAddrOfFunction(clang::GlobalDecl gd,
       cast<FunctionDecl>(gd.getDecl())->hasAttr<CUDAGlobalAttr>()) {
     mlir::Operation *handle = getCUDARuntime().getKernelHandle(func, gd);
 
-    if (isForDefinition)
+    // For HIP the kernel handle is a GlobalOp, which cannot be cast to
+    // FuncOp. Return the stub directly in that case.
+    bool isHIPHandle = mlir::isa<cir::GlobalOp>(*handle);
+    if (isForDefinition || isHIPHandle)
       return func;
     return mlir::dyn_cast<cir::FuncOp>(*handle);
   }
@@ -2185,6 +2189,15 @@ void CIRGenModule::setGVPropertiesAux(mlir::Operation *op,
   assert(!cir::MissingFeatures::opGlobalPartition());
 }
 
+bool CIRGenModule::lookupRepresentativeDecl(StringRef mangledName,
+                                            GlobalDecl &result) const {
+  auto res = manglings.find(mangledName);
+  if (res == manglings.end())
+    return false;
+  result = res->getValue();
+  return true;
+}
+
 cir::TLS_Model CIRGenModule::getDefaultCIRTLSModel() const {
   switch (getCodeGenOpts().getDefaultTLSModel()) {
   case CodeGenOptions::GeneralDynamicTLSModel:
@@ -2225,18 +2238,21 @@ void CIRGenModule::setCIRFunctionAttributes(GlobalDecl globalDecl,
   assert(!cir::MissingFeatures::opFuncExtraAttrs());
   // Initialize PAL with existing attributes to merge attributes.
   mlir::NamedAttrList pal{};
+  std::vector<mlir::NamedAttrList> argAttrs(info.arguments().size());
   mlir::NamedAttrList retAttrs{};
-  constructAttributeList(func.getName(), info, globalDecl, pal, retAttrs,
-                         callingConv, sideEffect,
+  constructAttributeList(func.getName(), info, globalDecl, pal, argAttrs,
+                         retAttrs, callingConv, sideEffect,
                          /*attrOnCallSite=*/false, isThunk);
 
   for (mlir::NamedAttribute attr : pal)
     func->setAttr(attr.getName(), attr.getValue());
 
-  assert(!cir::MissingFeatures::functionArgumentAttrs());
-
-  for (mlir::NamedAttribute attr : retAttrs)
-    func.setResultAttr(/*index=*/0, attr.getName(), attr.getValue());
+  llvm::for_each(llvm::enumerate(argAttrs), [func](auto idx_arg_pair) {
+    mlir::function_interface_impl::setArgAttrs(func, idx_arg_pair.index(),
+                                               idx_arg_pair.value());
+  });
+  if (!retAttrs.empty())
+    mlir::function_interface_impl::setResultAttrs(func, 0, retAttrs);
 
   // TODO(cir): Check X86_VectorCall incompatibility wiht WinARM64EC
 
@@ -2366,12 +2382,6 @@ cir::FuncOp CIRGenModule::getOrCreateCIRFunction(
     mlir::ArrayAttr extraAttrs) {
   const Decl *d = gd.getDecl();
 
-  if (isThunk)
-    errorNYI(d->getSourceRange(), "getOrCreateCIRFunction: thunk");
-
-  // In what follows, we continue past 'errorNYI' as if nothing happened because
-  // the rest of the implementation is better than doing nothing.
-
   if (const auto *fd = cast_or_null<FunctionDecl>(d)) {
     // For the device mark the function as one that should be emitted.
     if (getLangOpts().OpenMPIsTargetDevice && fd->isDefined() && !dontDefer &&
@@ -2402,8 +2412,20 @@ cir::FuncOp CIRGenModule::getOrCreateCIRFunction(
     // error.
     auto fn = cast<cir::FuncOp>(entry);
     if (isForDefinition && fn && !fn.isDeclaration()) {
-      errorNYI(d->getSourceRange(), "Duplicate function definition");
+      GlobalDecl otherGd;
+      // Check that GD is not yet in DiagnosedConflictingDefinitions is required
+      // to make sure that we issue an error only once.
+      if (lookupRepresentativeDecl(mangledName, otherGd) &&
+          (gd.getCanonicalDecl().getDecl() !=
+           otherGd.getCanonicalDecl().getDecl()) &&
+          diagnosedConflictingDefinitions.insert(gd).second) {
+        getDiags().Report(d->getLocation(), diag::err_duplicate_mangled_name)
+            << mangledName;
+        getDiags().Report(otherGd.getDecl()->getLocation(),
+                          diag::note_previous_definition);
+      }
     }
+
     if (fn && fn.getFunctionType() == funcType) {
       return fn;
     }
@@ -2883,4 +2905,120 @@ void CIRGenModule::updateResolvedBlockAddress(cir::BlockAddressOp op,
 cir::LabelOp
 CIRGenModule::lookupBlockAddressInfo(cir::BlockAddrInfoAttr blockInfo) {
   return blockAddressInfoToLabel.lookup(blockInfo);
+}
+
+mlir::Operation *
+CIRGenModule::getAddrOfGlobalTemporary(const MaterializeTemporaryExpr *mte,
+                                       const Expr *init) {
+  assert((mte->getStorageDuration() == SD_Static ||
+          mte->getStorageDuration() == SD_Thread) &&
+         "not a global temporary");
+  const auto *varDecl = cast<VarDecl>(mte->getExtendingDecl());
+
+  // If we're not materializing a subobject of the temporary, keep the
+  // cv-qualifiers from the type of the MaterializeTemporaryExpr.
+  QualType materializedType = init->getType();
+  if (init == mte->getSubExpr())
+    materializedType = mte->getType();
+
+  CharUnits align = getASTContext().getTypeAlignInChars(materializedType);
+
+  auto insertResult = materializedGlobalTemporaryMap.insert({mte, nullptr});
+  if (!insertResult.second)
+    errorNYI(mte->getSourceRange(), "duplicate materialized temporaries");
+
+  // FIXME: If an externally-visible declaration extends multiple temporaries,
+  // we need to give each temporary the same name in every translation unit (and
+  // we also need to make the temporaries externally-visible).
+  llvm::SmallString<256> name;
+  llvm::raw_svector_ostream out(name);
+  getCXXABI().getMangleContext().mangleReferenceTemporary(
+      varDecl, mte->getManglingNumber(), out);
+
+  APValue *value = nullptr;
+  if (mte->getStorageDuration() == SD_Static && varDecl->evaluateValue()) {
+    // If the initializer of the extending declaration is a constant
+    // initializer, we should have a cached constant initializer for this
+    // temporay. Note taht this m ight have a different value from the value
+    // computed by evaluating the initializer if the surrounding constant
+    // expression modifies the temporary.
+    value = mte->getOrCreateValue(/*MayCreate=*/false);
+  }
+
+  // Try evaluating it now, it might have a constant initializer
+  Expr::EvalResult evalResult;
+  if (!value && init->EvaluateAsRValue(evalResult, getASTContext()) &&
+      !evalResult.hasSideEffects())
+    value = &evalResult.Val;
+
+  assert(!cir::MissingFeatures::addressSpace());
+
+  std::optional<ConstantEmitter> emitter;
+  mlir::Attribute initialValue = nullptr;
+  bool isConstant = false;
+  mlir::Type type;
+
+  if (value) {
+    emitter.emplace(*this);
+    initialValue = emitter->emitForInitializer(*value, materializedType);
+
+    isConstant = materializedType.isConstantStorage(
+        getASTContext(), /*ExcludeCtor=*/value, /*ExcludeDtor=*/false);
+
+    type = mlir::cast<mlir::TypedAttr>(initialValue).getType();
+  } else {
+    // No initializer, the initialization will be provided when we initialize
+    // the declaration which performed lifetime extension.
+    type = getTypes().convertTypeForMem(materializedType);
+  }
+
+  // Create a global variable for this lifetime-extended temporary.
+  cir::GlobalLinkageKind linkage =
+      getCIRLinkageVarDefinition(varDecl, /*isConstant=*/false);
+  if (linkage == cir::GlobalLinkageKind::ExternalLinkage) {
+    const VarDecl *initVD;
+    if (varDecl->isStaticDataMember() && varDecl->getAnyInitializer(initVD) &&
+        isa<CXXRecordDecl>(initVD->getLexicalDeclContext())) {
+      // Temporaries defined inside a class get linkonce_odr linkage because the
+      // calss can be defined in multiple translation units.
+      errorNYI(mte->getSourceRange(), "static data member initialization");
+    } else {
+      // There is no need for this temporary to have external linkage if the
+      // VarDecl has external linkage.
+      linkage = cir::GlobalLinkageKind::InternalLinkage;
+    }
+  }
+  mlir::Location loc = getLoc(mte->getSourceRange());
+  cir::GlobalOp gv = createGlobalOp(*this, loc, name, type, isConstant);
+  gv.setInitialValueAttr(initialValue);
+
+  if (emitter)
+    emitter->finalize(gv);
+  // Don't assign dllimport or dllexport to local linkage globals
+  if (!gv.hasLocalLinkage()) {
+    setGVProperties(gv, varDecl);
+    assert(!cir::MissingFeatures::setDLLStorageClass());
+  }
+
+  gv.setAlignment(align.getAsAlign().value());
+  if (supportsCOMDAT() && gv.isWeakForLinker())
+    errorNYI(mte->getSourceRange(),
+             "Global temporary with comdat/weak linkage");
+  if (varDecl->getTLSKind())
+    errorNYI(mte->getSourceRange(),
+             "Global temporary with thread local storage");
+  mlir::Operation *cv = gv;
+
+  assert(!cir::MissingFeatures::addressSpace());
+
+  // Update the map with the new temporary. If we created a placeholder above,
+  // replace it with the new global now.
+  mlir::Operation *&entry = materializedGlobalTemporaryMap[mte];
+  if (entry) {
+    entry->replaceAllUsesWith(cv);
+    entry->erase();
+  }
+  entry = cv;
+
+  return cv;
 }

@@ -22,6 +22,8 @@
 #include "llvm/CodeGen/TargetLowering.h"
 #include "llvm/Support/KnownBits.h"
 
+#include <type_traits>
+
 namespace llvm {
 namespace SDPatternMatch {
 
@@ -1159,11 +1161,55 @@ struct ConstantInt_match {
                                       BindVal ? *BindVal : Discard);
   }
 };
+
+template <typename T> struct Constant64_match {
+  static_assert(sizeof(T) == 8, "T must be 64 bits wide");
+
+  T &BindVal;
+
+  explicit Constant64_match(T &V) : BindVal(V) {}
+
+  template <typename MatchContext>
+  bool match(const MatchContext &Ctx, SDValue N) {
+    APInt V;
+    if (!ConstantInt_match(&V).match(Ctx, N))
+      return false;
+
+    if constexpr (std::is_signed_v<T>) {
+      if (std::optional<int64_t> TrySExt = V.trySExtValue()) {
+        BindVal = *TrySExt;
+        return true;
+      }
+    }
+
+    if constexpr (std::is_unsigned_v<T>) {
+      if (std::optional<uint64_t> TryZExt = V.tryZExtValue()) {
+        BindVal = *TryZExt;
+        return true;
+      }
+    }
+
+    return false;
+  }
+};
+
 /// Match any integer constants or splat of an integer constant.
 inline ConstantInt_match m_ConstInt() { return ConstantInt_match(nullptr); }
 /// Match any integer constants or splat of an integer constant; return the
 /// specific constant or constant splat value.
 inline ConstantInt_match m_ConstInt(APInt &V) { return ConstantInt_match(&V); }
+/// Match any integer constants or splat of an integer constant that can fit in
+/// 64 bits; return the specific constant or constant splat value, zero-extended
+/// to 64 bits.
+inline Constant64_match<uint64_t> m_ConstInt(uint64_t &V) {
+  return Constant64_match<uint64_t>(V);
+}
+/// Match any integer constants or splat of an integer constant that can fit in
+/// 64 bits; return the specific constant or constant splat value, sign-extended
+/// to 64 bits.
+inline Constant64_match<int64_t> m_ConstInt(int64_t &V) {
+  return Constant64_match<int64_t>(V);
+}
 
 struct SpecificInt_match {
   APInt IntVal;

@@ -31,7 +31,6 @@ namespace {
 class VPlanVerifier {
   const VPDominatorTree &VPDT;
   VPTypeAnalysis &TypeInfo;
-  bool VerifyLate;
 
   SmallPtrSet<BasicBlock *, 8> WrappedIRBBs;
 
@@ -62,9 +61,8 @@ class VPlanVerifier {
   bool verifyRegionRec(const VPRegionBlock *Region);
 
 public:
-  VPlanVerifier(VPDominatorTree &VPDT, VPTypeAnalysis &TypeInfo,
-                bool VerifyLate)
-      : VPDT(VPDT), TypeInfo(TypeInfo), VerifyLate(VerifyLate) {}
+  VPlanVerifier(VPDominatorTree &VPDT, VPTypeAnalysis &TypeInfo)
+      : VPDT(VPDT), TypeInfo(TypeInfo) {}
 
   bool verify(const VPlan &Plan);
 };
@@ -119,7 +117,7 @@ bool VPlanVerifier::verifyPhiRecipes(const VPBasicBlock *VPBB) {
     RecipeI++;
   }
 
-  if (!VerifyLate && NumActiveLaneMaskPhiRecipes > 1) {
+  if (!VPBB->getPlan()->isUnrolled() && NumActiveLaneMaskPhiRecipes > 1) {
     errs() << "There should be no more than one VPActiveLaneMaskPHIRecipe";
     return false;
   }
@@ -141,6 +139,27 @@ bool VPlanVerifier::verifyPhiRecipes(const VPBasicBlock *VPBB) {
   return true;
 }
 
+static bool isKnownMonotonic(VPValue *V) {
+  VPValue *X, *Y;
+  if (match(V, m_Add(m_VPValue(X), m_VPValue(Y))))
+    return cast<VPRecipeWithIRFlags>(V)->hasNoUnsignedWrap() &&
+           isKnownMonotonic(X) && isKnownMonotonic(Y);
+  if (match(V, m_StepVector()))
+    return true;
+  // Only handle a subset of IVs until we can guarantee there's no overflow.
+  if (auto *WidenIV = dyn_cast<VPWidenIntOrFpInductionRecipe>(V))
+    return WidenIV->isCanonical();
+  if (auto *Steps = dyn_cast<VPScalarIVStepsRecipe>(V))
+    return match(Steps->getOperand(0),
+                 m_CombineOr(
+                     m_CanonicalIV(),
+                     m_DerivedIV(m_ZeroInt(), m_CanonicalIV(), m_One()))) &&
+           match(Steps->getStepValue(), m_One());
+  if (isa<VPWidenCanonicalIVRecipe>(V))
+    return true;
+  return vputils::isUniformAcrossVFsAndUFs(V);
+}
+
 bool VPlanVerifier::verifyLastActiveLaneRecipe(
     const VPInstruction &LastActiveLane) const {
   assert(LastActiveLane.getOpcode() == VPInstruction::LastActiveLane &&
@@ -152,18 +171,19 @@ bool VPlanVerifier::verifyLastActiveLaneRecipe(
   }
 
   const VPlan &Plan = *LastActiveLane.getParent()->getPlan();
-  // All operands must be prefix-mask. Currently we check for header masks or
-  // EVL-derived masks, as those are currently the only operands in practice,
-  // but this may need updating in the future.
+  // All operands must be prefix-mask. This means an icmp ult/ule LHS, RHS where
+  // the LHS is monotonically increasing and RHS is uniform across VFs and UF.
   for (VPValue *Op : LastActiveLane.operands()) {
     if (vputils::isHeaderMask(Op, Plan))
       continue;
 
-    // Masks derived from EVL are also fine.
-    auto BroadcastOrEVL =
-        m_CombineOr(m_Broadcast(m_EVL(m_VPValue())), m_EVL(m_VPValue()));
-    if (match(Op, m_CombineOr(m_ICmp(m_StepVector(), BroadcastOrEVL),
-                              m_ICmp(BroadcastOrEVL, m_StepVector()))))
+    CmpPredicate Pred;
+    VPValue *LHS, *RHS;
+    if (match(Op, m_ICmp(Pred, m_VPValue(LHS), m_VPValue(RHS))) &&
+        (Pred == CmpInst::ICMP_ULE || Pred == CmpInst::ICMP_ULT) &&
+        isKnownMonotonic(LHS) &&
+        (vputils::isUniformAcrossVFsAndUFs(RHS) ||
+         match(RHS, m_EVL(m_VPValue()))))
       continue;
 
     errs() << "LastActiveLane operand ";
@@ -456,9 +476,9 @@ bool VPlanVerifier::verify(const VPlan &Plan) {
   return true;
 }
 
-bool llvm::verifyVPlanIsValid(const VPlan &Plan, bool VerifyLate) {
+bool llvm::verifyVPlanIsValid(const VPlan &Plan) {
   VPDominatorTree VPDT(const_cast<VPlan &>(Plan));
   VPTypeAnalysis TypeInfo(Plan);
-  VPlanVerifier Verifier(VPDT, TypeInfo, VerifyLate);
+  VPlanVerifier Verifier(VPDT, TypeInfo);
   return Verifier.verify(Plan);
 }

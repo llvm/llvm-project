@@ -118,7 +118,7 @@ sha a0, t5, t5
 # CHECK-ASM-AND-OBJ: shar t5, t5, t3
 # CHECK-ASM: encoding: [0x1b,0x2f,0xcf,0xff]
 shar t5, t5, t3
-# CHECK-ASM-AND-OBJ: psrli.b a6, a7
+# CHECK-ASM-AND-OBJ: psrli.b a6, a7, 0
 # CHECK-ASM: encoding: [0x1b,0xc8,0x88,0x80]
 psrli.b a6, a7, 0
 # CHECK-ASM-AND-OBJ: psrli.h ra, sp, 1
