@@ -33,7 +33,7 @@ class APINotesReader {
                  llvm::VersionTuple SwiftVersion, bool &Failed);
 
 public:
-  /// Create a new API notes reader from the given member buffer, which
+  /// Create a new API notes reader from the given memory buffer, which
   /// contains the contents of a binary API notes file.
   ///
   /// \returns the new API notes reader, or null if an error occurred.

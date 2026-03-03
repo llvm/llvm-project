@@ -122,8 +122,7 @@ public:
   bool preferPredicateOverEpilogue(TailFoldingInfo *TFI) const override {
     return ST->hasVInstructions();
   }
-  TailFoldingStyle
-  getPreferredTailFoldingStyle(bool IVUpdateMayOverflow) const override {
+  TailFoldingStyle getPreferredTailFoldingStyle() const override {
     return ST->hasVInstructions() ? TailFoldingStyle::DataWithEVL
                                   : TailFoldingStyle::None;
   }

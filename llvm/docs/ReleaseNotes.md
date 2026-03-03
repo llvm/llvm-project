@@ -221,17 +221,20 @@ Changes to LLDB
 * Support for libfbsdvmcore has been removed. As a result, FreeBSD kernel dump debugging is now only
   available on FreeBSD hosts. Live kernel debugging through the GDB remote protocol is still available
   from any platform.
-* Support for ARM has been added.
+* Support for ARM, PPC64le, and RISCV64 has been added.
 * The crashed thread is now automatically selected on start.
 * Threads are listed in incrmental order by pid then by tid.
 * Unread kernel messages saved in msgbufp are now printed when lldb starts. This information is printed only
   when lldb is in the interactive mode (i.e. not in batch mode).
-* Memory writes are currently disabled. You can enable them with
-  `settings set plugin.process.freebsd-kernel-core.read-only false`.
+* Writing to the core is now supported. For safety reasons, this feature is off by default. To enable it,
+  `plugin.process.freebsd-kernel-core.read-only` must be set to `false`. This setting is available when
+  using `/dev/mem` or a kernel dump. However, since `kvm_write()` does not support writing to kernel dumps,
+  writes to a kernel dump will still fail when the setting is false.
 
 ### Linux
 
 * On Arm Linux, the tpidruro register can now be read. Writing to this register is not supported.
+* Thread local variables are now supported on Arm Linux if the program being debugged is using glibc.
 
 Changes to BOLT
 ---------------

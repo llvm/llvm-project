@@ -142,8 +142,8 @@ size_t ProcessFreeBSDKernelCore::DoWriteMemory(lldb::addr_t addr,
                                                Status &error) {
   if (GetGlobalPluginProperties().GetReadOnly()) {
     error = Status::FromErrorString(
-        "Memory writes are disabled in read-only mode. Disable with 'settings "
-        "set plugin.process.freebsd-kernel-core.read-only false'");
+        "Memory writes are currently disabled. You can enable them with "
+        "`settings set plugin.process.freebsd-kernel-core.read-only false`.");
     return 0;
   }
 

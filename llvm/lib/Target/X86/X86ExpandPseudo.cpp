@@ -594,18 +594,18 @@ bool X86ExpandPseudoImpl::expandMI(MachineBasicBlock &MBB,
   case X86::PTILELOADDT1V:
   case X86::PTILELOADDRSV:
   case X86::PTILELOADDRST1V:
-  case X86::PTCVTROWD2PSrreV:
-  case X86::PTCVTROWD2PSrriV:
-  case X86::PTCVTROWPS2BF16HrreV:
-  case X86::PTCVTROWPS2BF16HrriV:
-  case X86::PTCVTROWPS2BF16LrreV:
-  case X86::PTCVTROWPS2BF16LrriV:
-  case X86::PTCVTROWPS2PHHrreV:
-  case X86::PTCVTROWPS2PHHrriV:
-  case X86::PTCVTROWPS2PHLrreV:
-  case X86::PTCVTROWPS2PHLrriV:
-  case X86::PTILEMOVROWrreV:
-  case X86::PTILEMOVROWrriV: {
+  case X86::PTCVTROWD2PSrteV:
+  case X86::PTCVTROWD2PSrtiV:
+  case X86::PTCVTROWPS2BF16HrteV:
+  case X86::PTCVTROWPS2BF16HrtiV:
+  case X86::PTCVTROWPS2BF16LrteV:
+  case X86::PTCVTROWPS2BF16LrtiV:
+  case X86::PTCVTROWPS2PHHrteV:
+  case X86::PTCVTROWPS2PHHrtiV:
+  case X86::PTCVTROWPS2PHLrteV:
+  case X86::PTCVTROWPS2PHLrtiV:
+  case X86::PTILEMOVROWrteV:
+  case X86::PTILEMOVROWrtiV: {
     for (unsigned i = 2; i > 0; --i)
       MI.removeOperand(i);
     unsigned Opc;
@@ -622,40 +622,40 @@ bool X86ExpandPseudoImpl::expandMI(MachineBasicBlock &MBB,
     case X86::PTILELOADDT1V:
       Opc = GET_EGPR_IF_ENABLED(X86::TILELOADDT1);
       break;
-    case X86::PTCVTROWD2PSrreV:
+    case X86::PTCVTROWD2PSrteV:
       Opc = X86::TCVTROWD2PSrte;
       break;
-    case X86::PTCVTROWD2PSrriV:
+    case X86::PTCVTROWD2PSrtiV:
       Opc = X86::TCVTROWD2PSrti;
       break;
-    case X86::PTCVTROWPS2BF16HrreV:
+    case X86::PTCVTROWPS2BF16HrteV:
       Opc = X86::TCVTROWPS2BF16Hrte;
       break;
-    case X86::PTCVTROWPS2BF16HrriV:
+    case X86::PTCVTROWPS2BF16HrtiV:
       Opc = X86::TCVTROWPS2BF16Hrti;
       break;
-    case X86::PTCVTROWPS2BF16LrreV:
+    case X86::PTCVTROWPS2BF16LrteV:
       Opc = X86::TCVTROWPS2BF16Lrte;
       break;
-    case X86::PTCVTROWPS2BF16LrriV:
+    case X86::PTCVTROWPS2BF16LrtiV:
       Opc = X86::TCVTROWPS2BF16Lrti;
       break;
-    case X86::PTCVTROWPS2PHHrreV:
+    case X86::PTCVTROWPS2PHHrteV:
       Opc = X86::TCVTROWPS2PHHrte;
       break;
-    case X86::PTCVTROWPS2PHHrriV:
+    case X86::PTCVTROWPS2PHHrtiV:
       Opc = X86::TCVTROWPS2PHHrti;
       break;
-    case X86::PTCVTROWPS2PHLrreV:
+    case X86::PTCVTROWPS2PHLrteV:
       Opc = X86::TCVTROWPS2PHLrte;
       break;
-    case X86::PTCVTROWPS2PHLrriV:
+    case X86::PTCVTROWPS2PHLrtiV:
       Opc = X86::TCVTROWPS2PHLrti;
       break;
-    case X86::PTILEMOVROWrreV:
+    case X86::PTILEMOVROWrteV:
       Opc = X86::TILEMOVROWrte;
       break;
-    case X86::PTILEMOVROWrriV:
+    case X86::PTILEMOVROWrtiV:
       Opc = X86::TILEMOVROWrti;
       break;
     default:

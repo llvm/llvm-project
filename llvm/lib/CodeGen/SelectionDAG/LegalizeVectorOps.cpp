@@ -389,6 +389,9 @@ SDValue VectorLegalizer::LegalizeOp(SDValue Op) {
   case ISD::CTLZ_ZERO_UNDEF:
   case ISD::CTTZ_ZERO_UNDEF:
   case ISD::CTPOP:
+  case ISD::CLMUL:
+  case ISD::CLMULH:
+  case ISD::CLMULR:
   case ISD::SELECT:
   case ISD::VSELECT:
   case ISD::SELECT_CC:
@@ -1312,6 +1315,15 @@ void VectorLegalizer::Expand(SDNode *Node, SmallVectorImpl<SDValue> &Results) {
                             : RTLIB::getSINCOSPI(VT);
     if (LC != RTLIB::UNKNOWN_LIBCALL &&
         TLI.expandMultipleResultFPLibCall(DAG, LC, Node, Results))
+      return;
+
+    // TODO: Try to see if there's a narrower call available to use before
+    // scalarizing.
+    break;
+  }
+  case ISD::FPOW: {
+    RTLIB::Libcall LC = RTLIB::getPOW(Node->getValueType(0));
+    if (tryExpandVecMathCall(Node, LC, Results))
       return;
 
     // TODO: Try to see if there's a narrower call available to use before
