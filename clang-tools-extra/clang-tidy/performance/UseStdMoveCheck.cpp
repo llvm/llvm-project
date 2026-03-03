@@ -106,8 +106,12 @@ void UseStdMoveCheck::check(const MatchFinder::MatchResult &Result) {
 
       const Stmt *EltStmt = Elt.castAs<CFGStmt>().getStmt();
       if (EltStmt == AssignExpr) {
+        const StringRef AssignValueName = AssignValue->getDecl()->getName();
         diag(AssignValue->getBeginLoc(), "'%0' could be moved here")
-            << AssignValue->getDecl()->getName();
+            << AssignValueName
+            << FixItHint::CreateReplacement(
+                   AssignValue->getLocation(),
+                   ("std::move(" + AssignValueName + ")").str());
         break;
       }
       // The reference is being referenced after the assignment, bail out.

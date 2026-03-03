@@ -529,7 +529,7 @@ void CIRGenFunction::startFunction(GlobalDecl gd, QualType returnType,
   didCallStackSave = false;
   curCodeDecl = d;
   const auto *fd = dyn_cast_or_null<FunctionDecl>(d);
-  curFuncDecl = d->getNonClosureContext();
+  curFuncDecl = (d ? d->getNonClosureContext() : nullptr);
 
   prologueCleanupDepth = ehStack.stable_begin();
 
