@@ -17,6 +17,7 @@
 
 using namespace llvm;
 
+namespace {
 class LFIAsmParser : public MCAsmParserExtension {
   MCLFIRewriter *Rewriter;
   template <bool (LFIAsmParser::*HandlerMethod)(StringRef, SMLoc)>
@@ -62,9 +63,8 @@ public:
     return false;
   }
 };
+} // namespace
 
-namespace llvm {
-MCAsmParserExtension *createLFIAsmParser(MCLFIRewriter *Exp) {
+MCAsmParserExtension *llvm::createLFIAsmParser(MCLFIRewriter *Exp) {
   return new LFIAsmParser(Exp);
 }
-} // namespace llvm
