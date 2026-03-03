@@ -6366,8 +6366,7 @@ void VPlanTransforms::makeScalarizationDecisions(
   for (VPBasicBlock *VPBB : VPBlockUtils::blocksOnly<VPBasicBlock>(
            post_order<VPBlockShallowTraversalWrapper<VPBlockBase *>>(
                HeaderVPBB))) {
-    for (VPRecipeBase &R :
-         make_early_inc_range(make_range(VPBB->rbegin(), VPBB->rend()))) {
+    for (VPRecipeBase &R : make_early_inc_range(reverse(*VPBB))) {
       auto *VPI = dyn_cast<VPInstruction>(&R);
       if (!VPI)
         continue;
@@ -6390,8 +6389,7 @@ void VPlanTransforms::makeScalarizationDecisions(
         // Avoid rewriting IV increment as that interferes with
         // `removeRedundantCanonicalIVs`.
         if (VPI->getOpcode() == Instruction::Add &&
-            any_of(VPI->operands(),
-                   [&](auto *Op) { return isa<VPWidenInductionRecipe>(Op); }))
+            any_of(VPI->operands(), IsaPred<VPWidenInductionRecipe>))
           return false;
 
         if (!all_of(VPI->users(), [&](auto *U) {
