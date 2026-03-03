@@ -1467,7 +1467,7 @@ GCNTTIImpl::instCombineIntrinsic(InstCombiner &IC, IntrinsicInst &II) const {
     // stream ID or other parameters for some message types (e.g., MSG_GS).
     uint64_t MsgId = Msg & ID_MASK_PreGFX11_;
 
-    if (!msgDoesNotUseM0(MsgId))
+    if (!msgDoesNotUseM0(MsgId, *ST))
       break;
 
     // Drop noundef attribute since we're replacing with poison.
