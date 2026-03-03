@@ -19,6 +19,7 @@
 #include "clang/CIR/Dialect/IR/CIRTypes.h"
 #include "clang/CIR/MissingFeatures.h"
 
+#include "mlir/Dialect/Ptr/IR/MemorySpaceInterfaces.h"
 #include "mlir/IR/Location.h"
 #include "mlir/IR/Value.h"
 
@@ -1313,7 +1314,7 @@ public:
                                                 b.getInsertionBlock()};
           cgf.curLexScope->setAsTernary();
           mlir::Value res = cgf.evaluateExprAsBool(e->getRHS());
-          lexScope.forceCleanup();
+          lexScope.forceCleanup({&res});
           cir::YieldOp::create(b, loc, res);
           if (res.getParentBlock() != builder.getInsertionBlock())
             cgf.cgm.errorNYI(
@@ -1370,7 +1371,7 @@ public:
                                                 b.getInsertionBlock()};
           cgf.curLexScope->setAsTernary();
           mlir::Value res = cgf.evaluateExprAsBool(e->getRHS());
-          lexScope.forceCleanup();
+          lexScope.forceCleanup({&res});
           cir::YieldOp::create(b, loc, res);
           if (res.getParentBlock() != builder.getInsertionBlock())
             cgf.cgm.errorNYI(
@@ -1593,26 +1594,12 @@ mlir::Value ScalarExprEmitter::emitCompoundAssign(
 }
 
 mlir::Value ScalarExprEmitter::VisitExprWithCleanups(ExprWithCleanups *e) {
-  mlir::Location scopeLoc = cgf.getLoc(e->getSourceRange());
-  mlir::OpBuilder &builder = cgf.builder;
-
-  auto scope = cir::ScopeOp::create(
-      builder, scopeLoc,
-      /*scopeBuilder=*/
-      [&](mlir::OpBuilder &b, mlir::Type &yieldTy, mlir::Location loc) {
-        CIRGenFunction::LexicalScope lexScope{cgf, loc,
-                                              builder.getInsertionBlock()};
-        mlir::Value scopeYieldVal = Visit(e->getSubExpr());
-        if (scopeYieldVal) {
-          // Defend against dominance problems caused by jumps out of expression
-          // evaluation through the shared cleanup block.
-          lexScope.forceCleanup();
-          cir::YieldOp::create(builder, loc, scopeYieldVal);
-          yieldTy = scopeYieldVal.getType();
-        }
-      });
-
-  return scope.getNumResults() > 0 ? scope->getResult(0) : nullptr;
+  CIRGenFunction::RunCleanupsScope cleanups(cgf);
+  mlir::Value v = Visit(e->getSubExpr());
+  // Defend against dominance problems caused by jumps out of expression
+  // evaluation through the shared cleanup block.
+  cleanups.forceCleanup({&v});
+  return v;
 }
 
 } // namespace
