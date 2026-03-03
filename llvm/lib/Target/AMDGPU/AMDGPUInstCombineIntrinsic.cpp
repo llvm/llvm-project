@@ -1460,18 +1460,14 @@ GCNTTIImpl::instCombineIntrinsic(InstCombiner &IC, IntrinsicInst &II) const {
       break;
 
     auto *MsgImm = cast<ConstantInt>(II.getArgOperand(0));
-    uint64_t Msg = MsgImm->getZExtValue();
-    // Extract the message ID. Pre-GFX11 uses the lower 4 bits, GFX11+ uses
-    // the lower 8 bits. Use 4-bit mask for extracting base message ID since
-    // all message types we handle fit in 4 bits, and the upper bits encode
-    // stream ID or other parameters for some message types (e.g., MSG_GS).
-    uint64_t MsgId = Msg & ID_MASK_PreGFX11_;
+    uint16_t MsgId, OpId, StreamId;
+    decodeMsg(MsgImm->getZExtValue(), MsgId, OpId, StreamId, *ST);
 
     if (!msgDoesNotUseM0(MsgId, *ST))
       break;
 
-    // Drop noundef attribute since we're replacing with poison.
-    II.removeParamAttr(1, Attribute::NoUndef);
+    // Drop UB-implying attributes since we're replacing with poison.
+    II.dropUBImplyingAttrsAndMetadata();
     IC.replaceOperand(II, 1, PoisonValue::get(M0Val->getType()));
     return nullptr;
   }
