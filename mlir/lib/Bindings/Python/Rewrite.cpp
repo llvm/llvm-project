@@ -379,20 +379,19 @@ void PyRewritePatternSet::bind(nb::module_ &m) {
             new (&self) PyRewritePatternSet(context.get()->get());
           },
           "context"_a = nb::none())
-      .def(
-          "add", &PyRewritePatternSet::add, nb::arg("root"), nb::arg("fn"),
-          nb::arg("benefit") = 1,
-          R"(Add a new rewrite pattern on the specified root operation, using
-             the provided callable for matching and rewriting, and assign it the
-             given benefit.
+      .def("add", &PyRewritePatternSet::add, nb::arg("root"), nb::arg("fn"),
+           nb::arg("benefit") = 1,
+           R"(Add a new rewrite pattern on the specified root operation, using
+              the provided callable for matching and rewriting, and assign it
+              the given benefit.
 
-             Args:
-               root: The root operation to which this pattern applies.
-                     This may be either an OpView subclass or an operation name.
-               fn: The callable to use for matching and rewriting, which takes
-                   an operation and a pattern rewriter. The match is considered
-                   successful iff the callable returns a falsy value.
-               benefit: The benefit of the pattern, defaulting to 1.)")
+              Args:
+                root: The root operation to which this pattern applies. This may
+                      be either an OpView subclass or an operation name.
+                fn: The callable to use for matching and rewriting, which takes
+                    an operation and a pattern rewriter. The match is considered
+                    successful iff the callable returns a falsy value.
+                benefit: The benefit of the pattern, defaulting to 1.)")
       .def(
           "add_conversion",
           [](PyRewritePatternSet &self, nb::handle root, const nb::callable &fn,

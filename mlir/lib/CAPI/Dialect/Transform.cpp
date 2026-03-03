@@ -329,9 +329,9 @@ public:
     return transform::PatternDescriptorOpInterface::getInterfaceID();
   }
 
-  static bool classof(
-      const mlir::transform::detail::PatternDescriptorOpInterfaceInterfaceTraits::
-          Concept *op) {
+  static bool
+  classof(const mlir::transform::detail::
+              PatternDescriptorOpInterfaceInterfaceTraits::Concept *op) {
     // Enable casting back to the FallbackModel from the Interface. This is
     // necessary as attachInterface(...) default-constructs the FallbackModel
     // without being able to pass in the callbacks and returns just the Concept.
