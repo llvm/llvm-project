@@ -2825,33 +2825,23 @@ void VPlanTransforms::optimize(VPlan &Plan) {
 // dropped from the canonical IV increment. Return the created
 // VPActiveLaneMaskPHIRecipe.
 //
-// The function uses the following definitions:
-//
-//  %TripCount = DataWithControlFlowWithoutRuntimeCheck ?
-//    calculate-trip-count-minus-VF (original TC) : original TC
-//  %IncrementValue = DataWithControlFlowWithoutRuntimeCheck ?
-//     CanonicalIVPhi : CanonicalIVIncrement
-//  %StartV is the canonical induction start value.
-//
 // The function adds the following recipes:
 //
 // vector.ph:
-//   %TripCount = calculate-trip-count-minus-VF (original TC)
-//       [if DataWithControlFlowWithoutRuntimeCheck]
-//   %EntryInc = canonical-iv-increment-for-part %StartV
-//   %EntryALM = active-lane-mask %EntryInc, %TripCount
+//   %EntryInc = canonical-iv-increment-for-part CanonicalIVStart
+//   %EntryALM = active-lane-mask %EntryInc, TC
 //
 // vector.body:
 //   ...
 //   %P = active-lane-mask-phi [ %EntryALM, %vector.ph ], [ %ALM, %vector.body ]
 //   ...
-//   %InLoopInc = canonical-iv-increment-for-part %IncrementValue
-//   %ALM = active-lane-mask %InLoopInc, TripCount
+//   %InLoopInc = canonical-iv-increment-for-part CanonicalIVIncrement
+//   %ALM = active-lane-mask %InLoopInc, TC
 //   %Negated = Not %ALM
 //   branch-on-cond %Negated
 //
-static VPActiveLaneMaskPHIRecipe *addVPLaneMaskPhiAndUpdateExitBranch(
-    VPlan &Plan, bool DataAndControlFlowWithoutRuntimeCheck) {
+static VPActiveLaneMaskPHIRecipe *
+addVPLaneMaskPhiAndUpdateExitBranch(VPlan &Plan) {
   VPRegionBlock *TopRegion = Plan.getVectorLoopRegion();
   VPBasicBlock *EB = TopRegion->getExitingBasicBlock();
   auto *CanonicalIVPHI = TopRegion->getCanonicalIV();
@@ -2859,8 +2849,7 @@ static VPActiveLaneMaskPHIRecipe *addVPLaneMaskPhiAndUpdateExitBranch(
 
   auto *CanonicalIVIncrement =
       cast<VPInstruction>(CanonicalIVPHI->getBackedgeValue());
-  // TODO: Check if dropping the flags is needed if
-  // !DataAndControlFlowWithoutRuntimeCheck.
+  // TODO: Check if dropping the flags is needed.
   CanonicalIVIncrement->dropPoisonGeneratingFlags();
   DebugLoc DL = CanonicalIVIncrement->getDebugLoc();
   // We can't use StartV directly in the ActiveLaneMask VPInstruction, since
@@ -2871,24 +2860,8 @@ static VPActiveLaneMaskPHIRecipe *addVPLaneMaskPhiAndUpdateExitBranch(
 
   // Create the ActiveLaneMask instruction using the correct start values.
   VPValue *TC = Plan.getTripCount();
-  VPValue *VFxUF = &Plan.getVFxUF();
   VPValue *VF = &Plan.getVF();
 
-  VPValue *TripCount, *IncrementValue;
-  if (!DataAndControlFlowWithoutRuntimeCheck) {
-    // When the loop is guarded by a runtime overflow check for the loop
-    // induction variable increment by VF, we can increment the value before
-    // the get.active.lane mask and use the unmodified tripcount.
-    IncrementValue = CanonicalIVIncrement;
-    TripCount = TC;
-  } else {
-    // When avoiding a runtime check, the active.lane.mask inside the loop
-    // uses a modified trip count and the induction variable increment is
-    // done after the active.lane.mask intrinsic is called.
-    IncrementValue = CanonicalIVPHI;
-    TripCount = Builder.createNaryOp(VPInstruction::CalculateTripCountMinusVF,
-                                     {TC, VFxUF}, DL);
-  }
   auto *EntryIncrement = Builder.createOverflowingOp(
       VPInstruction::CanonicalIVIncrementForPart, {StartV, VF}, {false, false},
       DL, "index.part.next");
@@ -2912,10 +2885,10 @@ static VPActiveLaneMaskPHIRecipe *addVPLaneMaskPhiAndUpdateExitBranch(
   Builder.setInsertPoint(OriginalTerminator);
   auto *InLoopIncrement = Builder.createOverflowingOp(
       VPInstruction::CanonicalIVIncrementForPart,
-      {IncrementValue, &Plan.getVF()}, {false, false}, DL);
+      {CanonicalIVIncrement, &Plan.getVF()}, {false, false}, DL);
   auto *ALM = Builder.createNaryOp(VPInstruction::ActiveLaneMask,
-                                   {InLoopIncrement, TripCount, ALMMultiplier},
-                                   DL, "active.lane.mask.next");
+                                   {InLoopIncrement, TC, ALMMultiplier}, DL,
+                                   "active.lane.mask.next");
   LaneMaskPhi->addOperand(ALM);
 
   // Replace the original terminator with BranchOnCond. We have to invert the
@@ -2926,14 +2899,8 @@ static VPActiveLaneMaskPHIRecipe *addVPLaneMaskPhiAndUpdateExitBranch(
   return LaneMaskPhi;
 }
 
-void VPlanTransforms::addActiveLaneMask(
-    VPlan &Plan, bool UseActiveLaneMaskForControlFlow,
-    bool DataAndControlFlowWithoutRuntimeCheck) {
-  assert((!DataAndControlFlowWithoutRuntimeCheck ||
-          UseActiveLaneMaskForControlFlow) &&
-         "DataAndControlFlowWithoutRuntimeCheck implies "
-         "UseActiveLaneMaskForControlFlow");
-
+void VPlanTransforms::addActiveLaneMask(VPlan &Plan,
+                                        bool UseActiveLaneMaskForControlFlow) {
   VPRegionBlock *LoopRegion = Plan.getVectorLoopRegion();
   auto *FoundWidenCanonicalIVUser = find_if(
       LoopRegion->getCanonicalIV()->users(), IsaPred<VPWidenCanonicalIVRecipe>);
@@ -2944,8 +2911,7 @@ void VPlanTransforms::addActiveLaneMask(
       cast<VPWidenCanonicalIVRecipe>(*FoundWidenCanonicalIVUser);
   VPSingleDefRecipe *LaneMask;
   if (UseActiveLaneMaskForControlFlow) {
-    LaneMask = addVPLaneMaskPhiAndUpdateExitBranch(
-        Plan, DataAndControlFlowWithoutRuntimeCheck);
+    LaneMask = addVPLaneMaskPhiAndUpdateExitBranch(Plan);
   } else {
     VPBuilder B = VPBuilder::getToInsertAfter(WideCanonicalIV);
     VPValue *ALMMultiplier =
@@ -4112,10 +4078,27 @@ void VPlanTransforms::handleUncountableEarlyExits(VPlan &Plan,
   }
 
   assert(!Exits.empty() && "must have at least one early exit");
-  // Sort exits by dominance to get the correct program order.
-  llvm::sort(Exits, [&VPDT](const EarlyExitInfo &A, const EarlyExitInfo &B) {
-    return VPDT.properlyDominates(A.EarlyExitingVPBB, B.EarlyExitingVPBB);
+  // Sort exits by RPO order to get correct program order. RPO gives a
+  // topological ordering of the CFG, ensuring upstream exits are checked
+  // before downstream exits in the dispatch chain.
+  ReversePostOrderTraversal<VPBlockShallowTraversalWrapper<VPBlockBase *>> RPOT(
+      HeaderVPBB);
+  DenseMap<VPBlockBase *, unsigned> RPOIdx;
+  for (const auto &[Num, VPB] : enumerate(RPOT))
+    RPOIdx[VPB] = Num;
+  llvm::sort(Exits, [&RPOIdx](const EarlyExitInfo &A, const EarlyExitInfo &B) {
+    return RPOIdx[A.EarlyExitingVPBB] < RPOIdx[B.EarlyExitingVPBB];
   });
+#ifndef NDEBUG
+  // After RPO sorting, verify that for any pair where one exit dominates
+  // another, the dominating exit comes first. This is guaranteed by RPO
+  // (topological order) and is required for the dispatch chain correctness.
+  for (unsigned I = 0; I + 1 < Exits.size(); ++I)
+    for (unsigned J = I + 1; J < Exits.size(); ++J)
+      assert(!VPDT.properlyDominates(Exits[J].EarlyExitingVPBB,
+                                     Exits[I].EarlyExitingVPBB) &&
+             "RPO sort must place dominating exits before dominated ones");
+#endif
 
   // Build the AnyOf condition for the latch terminator using logical OR
   // to avoid poison propagation from later exit conditions when an earlier
@@ -5075,10 +5058,6 @@ void VPlanTransforms::materializeFactors(VPlan &Plan, VPBasicBlock *VectorPH,
   // Plan.getVFxUF should be added.
   // TODO: Add assertions for this.
 
-  VPValue *UF =
-      Plan.getOrAddLiveIn(ConstantInt::get(TCTy, Plan.getConcreteUF()));
-  Plan.getUF().replaceAllUsesWith(UF);
-
   // If there are no users of the runtime VF, compute VFxUF by constant folding
   // the multiplication of VF and UF.
   if (VF.getNumUsers() == 0) {
@@ -5099,7 +5078,9 @@ void VPlanTransforms::materializeFactors(VPlan &Plan, VPBasicBlock *VectorPH,
   VF.replaceAllUsesWith(RuntimeVF);
 
   VPValue *MulByUF = Builder.createOverflowingOp(
-      Instruction::Mul, {RuntimeVF, UF}, {true, false});
+      Instruction::Mul,
+      {RuntimeVF, Plan.getConstantInt(TCTy, Plan.getConcreteUF())},
+      {true, false});
   VFxUF.replaceAllUsesWith(MulByUF);
 }
 

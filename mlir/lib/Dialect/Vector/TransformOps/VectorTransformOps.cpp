@@ -126,6 +126,9 @@ void transform::ApplyMaterializeMasksPatternsOp::populatePatterns(
                                             /*force32BitVectorIndices=*/false);
 }
 
+//===----------------------------------------------------------------------===//
+// Multi-reduction patterns
+//===----------------------------------------------------------------------===//
 void transform::ApplyReorderAndExpandMultiReductionPatternsOp::populatePatterns(
     RewritePatternSet &patterns) {
   vector::VectorTransformsOptions vectorTransformOptions;

@@ -8520,8 +8520,13 @@ SDValue TargetLowering::expandCLMUL(SDNode *Node, SelectionDAG &DAG) const {
         *DAG.getContext(), EVT::getIntegerVT(*DAG.getContext(), 2 * BW));
     // For example, ExtVT = i64 based operations aren't legal on a 32-bit
     // target; use bitreverse-based lowering in this case.
+    // Also prefer bitreverse-based lowering when CLMUL is legal on VT but
+    // not on ExtVT, to avoid expanding CLMUL on the wider type (e.g. v8i8
+    // on AArch64 where CLMUL v8i8 is legal via PMUL but CLMUL v8i16 is not).
     if (!isOperationLegalOrCustom(ISD::ZERO_EXTEND, ExtVT) ||
-        !isOperationLegalOrCustom(ISD::SRL, ExtVT)) {
+        !isOperationLegalOrCustom(ISD::SRL, ExtVT) ||
+        (!isOperationLegalOrCustom(ISD::CLMUL, ExtVT) &&
+         isOperationLegalOrCustom(ISD::CLMUL, VT))) {
       SDValue XRev = DAG.getNode(ISD::BITREVERSE, DL, VT, X);
       SDValue YRev = DAG.getNode(ISD::BITREVERSE, DL, VT, Y);
       SDValue ClMul = DAG.getNode(ISD::CLMUL, DL, VT, XRev, YRev);
