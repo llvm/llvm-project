@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "unit.h"
 #include "flang/Runtime/execute.h"
+#include "unit.h"
 #include "flang-rt/runtime/descriptor.h"
 #include "flang-rt/runtime/environment.h"
 #include "flang-rt/runtime/stat.h"
@@ -76,8 +76,8 @@ std::int64_t TerminationCheck(std::int64_t status, const Descriptor *cmdstat,
     // On Windows, ENOENT means the command interpreter can't be found.
     // On Linux, system calls execl with filepath "/bin/sh", ENOENT means the
     // file pathname does not exist.
-    constexpr char msg[] =
-        "Command line execution is not supported, system returns -1 with errno ENOENT.";
+    constexpr char msg[] = "Command line execution is not supported, system "
+                           "returns -1 with errno ENOENT.";
     if (errno == ENOENT) {
       if (!cmdstat) {
         terminator.Crash(msg);
