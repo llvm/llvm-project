@@ -15,6 +15,7 @@
 #include "CIRGenFunction.h"
 #include "CIRGenModule.h"
 #include "CIRGenValue.h"
+#include "mlir/Dialect/Ptr/IR/MemorySpaceInterfaces.h"
 #include "mlir/IR/BuiltinAttributes.h"
 #include "mlir/IR/Value.h"
 #include "clang/AST/Attr.h"
@@ -1455,9 +1456,9 @@ LValue CIRGenFunction::emitCastLValue(const CastExpr *e) {
     QualType destTy = getContext().getPointerType(e->getType());
 
     clang::LangAS srcLangAS = e->getSubExpr()->getType().getAddressSpace();
-    cir::TargetAddressSpaceAttr srcAS;
+    mlir::ptr::MemorySpaceAttrInterface srcAS;
     if (clang::isTargetAddressSpace(srcLangAS))
-      srcAS = cir::toCIRTargetAddressSpace(getMLIRContext(), srcLangAS);
+      srcAS = cir::toCIRAddressSpaceAttr(getMLIRContext(), srcLangAS);
     else
       cgm.errorNYI(
           e->getSourceRange(),
@@ -2546,6 +2547,18 @@ cir::AllocaOp CIRGenFunction::createTempAlloca(mlir::Type ty,
   return mlir::cast<cir::AllocaOp>(
       emitAlloca(name.str(), ty, loc, CharUnits(), ip, arraySize)
           .getDefiningOp());
+}
+
+/// CreateDefaultAlignTempAlloca - This creates an alloca with the
+/// default alignment of the corresponding LLVM type, which is *not*
+/// guaranteed to be related in any way to the expected alignment of
+/// an AST type that might have been lowered to Ty.
+Address CIRGenFunction::createDefaultAlignTempAlloca(mlir::Type ty,
+                                                     mlir::Location loc,
+                                                     const Twine &name) {
+  CharUnits align =
+      CharUnits::fromQuantity(cgm.getDataLayout().getABITypeAlign(ty));
+  return createTempAlloca(ty, align, loc, name);
 }
 
 /// Try to emit a reference to the given value without producing it as
