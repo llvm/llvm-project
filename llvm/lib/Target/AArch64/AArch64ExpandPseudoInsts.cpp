@@ -1041,18 +1041,17 @@ bool AArch64ExpandPseudo::expandSTSHHAtomicStore(
 
   // Emit the associated store instruction.
   Register ValReg = MI.getOperand(0).getReg();
-  Register StoreValReg = ValReg;
 
   if (Size < 64) {
     const TargetRegisterInfo *TRI =
         MBB.getParent()->getSubtarget().getRegisterInfo();
     Register SubReg = TRI->getSubReg(ValReg, AArch64::sub_32);
     if (SubReg)
-      StoreValReg = SubReg;
+      ValReg = SubReg;
   }
 
   MachineInstrBuilder Store = BuildMI(MBB, MBBI, DL, TII->get(StoreOpc))
-                                  .addReg(StoreValReg)
+                                  .addReg(ValReg)
                                   .add(MI.getOperand(1));
 
   // Relaxed uses base+imm addressing with a zero offset.

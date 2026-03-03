@@ -6879,8 +6879,7 @@ void Verifier::visitIntrinsicCall(Intrinsic::ID ID, CallBase &Call) {
           "order argument to llvm.aarch64.stshh.atomic.store must be 0, 3 or 5",
           Call);
 
-    uint64_t Policy = cast<ConstantInt>(Call.getArgOperand(3))->getZExtValue();
-    Check(Policy < 2,
+    Check(cast<ConstantInt>(Call.getArgOperand(3))->getZExtValue() < 2,
           "policy argument to llvm.aarch64.stshh.atomic.store must be 0 or 1",
           Call);
 

@@ -5277,11 +5277,9 @@ Value *CodeGenFunction::EmitAArch64BuiltinExpr(unsigned BuiltinID,
   if (BuiltinID == clang::AArch64::BI__builtin_arm_atomic_store_with_stshh) {
     Value *StoreAddr = EmitScalarExpr(E->getArg(0));
     Value *StoreValue = EmitScalarExpr(E->getArg(1));
-    Value *Order = EmitScalarExpr(E->getArg(2));
-    Value *Policy = EmitScalarExpr(E->getArg(3));
 
-    auto *OrderC = cast<llvm::ConstantInt>(Order);
-    auto *PolicyC = cast<llvm::ConstantInt>(Policy);
+    auto *OrderC = cast<llvm::ConstantInt>(EmitScalarExpr(E->getArg(2)));
+    auto *PolicyC = cast<llvm::ConstantInt>(EmitScalarExpr(E->getArg(3)));
 
     // Compute pointee bit-width from arg0 and create as i32 constant
     QualType ValQT =
@@ -5289,21 +5287,18 @@ Value *CodeGenFunction::EmitAArch64BuiltinExpr(unsigned BuiltinID,
     unsigned SizeBits = getContext().getTypeSize(ValQT);
     auto *SizeC = llvm::ConstantInt::get(Int32Ty, SizeBits);
 
-    const bool IsSignedValType = ValQT->isSignedIntegerType();
-    Value *StoreValue64 =
-        Builder.CreateIntCast(StoreValue, Int64Ty, IsSignedValType);
+    Value *StoreValue64 = Builder.CreateIntCast(StoreValue, Int64Ty,
+                                                ValQT->isSignedIntegerType());
 
     Function *F = CGM.getIntrinsic(Intrinsic::aarch64_stshh_atomic_store,
                                    {StoreAddr->getType()});
 
-    // Intrinsic imm args are i32 regardless of source integer width
-    auto *OrderI32 = llvm::ConstantInt::get(Int32Ty, OrderC->getZExtValue());
-    auto *PolicyI32 = llvm::ConstantInt::get(Int32Ty, PolicyC->getZExtValue());
-
     // Emit a single intrinsic so backend can expand to STSHH followed by
     // atomic store, to guarantee STSHH immediately precedes STR insn
     return Builder.CreateCall(
-        F, {StoreAddr, StoreValue64, OrderI32, PolicyI32, SizeC});
+        F, {StoreAddr, StoreValue64,
+            ConstantInt::get(Int32Ty, OrderC->getZExtValue()),
+            ConstantInt::get(Int32Ty, PolicyC->getZExtValue()), SizeC});
   }
 
   if (BuiltinID == clang::AArch64::BI__builtin_arm_rndr ||
