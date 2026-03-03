@@ -1,19 +1,7 @@
-// RUN: %check_clang_tidy %s bugprone-string-integer-assignment %t -- -- -fno-delayed-template-parsing
+// RUN: %check_clang_tidy %s bugprone-string-integer-assignment %t -- -- -isystem %clang_tidy_headers -fno-delayed-template-parsing
+#include <string>
 
 namespace std {
-template<typename T>
-struct basic_string {
-  basic_string& operator=(T);
-  basic_string& operator=(basic_string);
-  basic_string& operator+=(T);
-  basic_string& operator+=(basic_string);
-  const T &operator[](int i) const;
-  T &operator[](int i);
-};
-
-typedef basic_string<char> string;
-typedef basic_string<wchar_t> wstring;
-
 int tolower(int i);
 int toupper(int i);
 }

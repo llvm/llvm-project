@@ -578,6 +578,78 @@ TEST_F(OpenACCUtilsLoopTest, ConvertUnstructuredLoopPreservesSuccessors) {
 }
 
 //===----------------------------------------------------------------------===//
+// wrapMultiBlockRegionWithSCFExecuteRegion Tests
+//===----------------------------------------------------------------------===//
+
+TEST_F(OpenACCUtilsLoopTest,
+       WrapMultiBlockRegionWithSCFExecuteRegionMultiBlock) {
+  auto [module, funcOp] = createModuleWithFunc();
+
+  // Create a region with multi-block control flow: use acc.parallel
+  // only to own the region, then build entry -> then/else -> exit with
+  // acc.yield.
+  OwningOpRef<acc::ParallelOp> parallelOp =
+      acc::ParallelOp::create(b, loc, TypeRange{}, ValueRange{});
+  Region &region = parallelOp->getRegion();
+  Block *entry = b.createBlock(&region, region.begin());
+  Block *thenBlock = b.createBlock(&region, region.end());
+  Block *elseBlock = b.createBlock(&region, region.end());
+  Block *exitBlock = b.createBlock(&region, region.end());
+
+  b.setInsertionPointToEnd(entry);
+  Value cond =
+      arith::ConstantOp::create(b, loc, b.getI1Type(), b.getBoolAttr(true));
+  cf::CondBranchOp::create(b, loc, cond, thenBlock, elseBlock);
+
+  b.setInsertionPointToEnd(thenBlock);
+  Value c1 =
+      arith::ConstantOp::create(b, loc, b.getIndexType(), b.getIndexAttr(1));
+  Value c2 =
+      arith::ConstantOp::create(b, loc, b.getIndexType(), b.getIndexAttr(2));
+  arith::AddIOp::create(b, loc, c1, c2);
+  cf::BranchOp::create(b, loc, exitBlock);
+
+  b.setInsertionPointToEnd(elseBlock);
+  Value c3 =
+      arith::ConstantOp::create(b, loc, b.getIndexType(), b.getIndexAttr(3));
+  Value c4 =
+      arith::ConstantOp::create(b, loc, b.getIndexType(), b.getIndexAttr(4));
+  arith::MulIOp::create(b, loc, c3, c4);
+  cf::BranchOp::create(b, loc, exitBlock);
+
+  b.setInsertionPointToEnd(exitBlock);
+  acc::YieldOp::create(b, loc);
+
+  EXPECT_EQ(region.getBlocks().size(), 4u);
+
+  b.setInsertionPointAfter(parallelOp.get());
+  IRMapping mapping;
+  scf::ExecuteRegionOp exeRegionOp =
+      wrapMultiBlockRegionWithSCFExecuteRegion(region, mapping, loc, b);
+
+  ASSERT_TRUE(exeRegionOp);
+
+  // The execute_region should have the same number of blocks as the source
+  EXPECT_EQ(exeRegionOp.getRegion().getBlocks().size(), 4u);
+
+  // Entry block should have cond_br (control flow preserved)
+  Block &entryBlock = exeRegionOp.getRegion().front();
+  EXPECT_TRUE(isa<cf::CondBranchOp>(entryBlock.getTerminator()));
+
+  // Last block should have scf.yield (acc.yield was replaced)
+  Block &lastBlock = exeRegionOp.getRegion().back();
+  EXPECT_TRUE(isa<scf::YieldOp>(lastBlock.getTerminator()));
+
+  // Body ops should be cloned (one addi, one muli from then/else blocks)
+  unsigned addCount = 0;
+  unsigned mulCount = 0;
+  exeRegionOp.getRegion().walk([&](arith::AddIOp) { ++addCount; });
+  exeRegionOp.getRegion().walk([&](arith::MulIOp) { ++mulCount; });
+  EXPECT_EQ(addCount, 1u);
+  EXPECT_EQ(mulCount, 1u);
+}
+
+//===----------------------------------------------------------------------===//
 // Error Case Tests
 //===----------------------------------------------------------------------===//
 
@@ -628,4 +700,90 @@ TEST_F(OpenACCUtilsLoopTest, UnstructuredLoopWithYieldOperandsReturnsNullptr) {
   // Should return nullptr due to unsupported loop with results
   EXPECT_FALSE(exeRegionOp);
   EXPECT_TRUE(errorMsg.find("not yet supported") != std::string::npos);
+}
+
+//===----------------------------------------------------------------------===//
+// cloneACCRegionInto Tests
+//===----------------------------------------------------------------------===//
+
+TEST_F(OpenACCUtilsLoopTest, CloneACCRegionIntoWithYield) {
+  auto [module, funcOp] = createModuleWithFunc();
+  Block *entry = &funcOp.getBody().front();
+
+  Value c0 = createIndexConstant(0);
+  Value c10 = createIndexConstant(10);
+  Value c1 = createIndexConstant(1);
+  acc::LoopOp loopOp = createLoopOp({c0}, {c10}, {c1});
+
+  // Add a constant to the loop body before the yield so the region has
+  // something to clone besides the terminator.
+  Block *loopBody = &loopOp.getRegion().front();
+  b.setInsertionPoint(loopBody->getTerminator());
+  arith::ConstantOp::create(b, loc, b.getI32IntegerAttr(42));
+
+  b.setInsertionPointToEnd(entry);
+  func::ReturnOp::create(b, loc);
+
+  IRMapping mapping;
+  mapping.map(loopBody->getArgument(0), c0);
+
+  auto [replacements, ip] = acc::cloneACCRegionInto(
+      &loopOp.getRegion(), entry, entry->begin(), mapping, ValueRange{});
+
+  EXPECT_TRUE(replacements.empty());
+  // The cloned block should have been merged: constant 42 present, no acc.yield
+  bool hasConst42 = false;
+  bool hasAccYield = false;
+  for (Operation &op : entry->getOperations()) {
+    if (auto cst = dyn_cast<arith::ConstantOp>(op))
+      hasConst42 = hasConst42 || (cst.getValue() == b.getI32IntegerAttr(42));
+    hasAccYield = hasAccYield || isa<acc::YieldOp>(op);
+  }
+  EXPECT_TRUE(hasConst42);
+  EXPECT_FALSE(hasAccYield);
+}
+
+TEST_F(OpenACCUtilsLoopTest, CloneACCRegionIntoWithResultReplacement) {
+  auto [module, funcOp] = createModuleWithFunc();
+  Block *entry = &funcOp.getBody().front();
+
+  // Value that will be replaced by the cloned region's yield operand
+  Value origVal =
+      arith::ConstantOp::create(b, loc, b.getI32IntegerAttr(0)).getResult();
+
+  Value c0 = createIndexConstant(0);
+  Value c10 = createIndexConstant(10);
+  Value c1 = createIndexConstant(1);
+  acc::LoopOp loopOp = createLoopOp({c0}, {c10}, {c1});
+
+  Block *loopBody = &loopOp.getRegion().front();
+  b.setInsertionPoint(loopBody->getTerminator());
+  Value replacementVal =
+      arith::ConstantOp::create(b, loc, b.getI32IntegerAttr(1)).getResult();
+  loopBody->getTerminator()->erase();
+  b.setInsertionPointToEnd(loopBody);
+  acc::YieldOp::create(b, loc, ValueRange{replacementVal});
+
+  b.setInsertionPointToEnd(entry);
+  Value c1value =
+      arith::ConstantOp::create(b, loc, b.getI32IntegerAttr(1)).getResult();
+  Value addResult = arith::AddIOp::create(b, loc, origVal, c1value)
+                        .getResult(); // use of origVal
+  (void)addResult;
+  func::ReturnOp::create(b, loc);
+
+  IRMapping mapping;
+  mapping.map(loopBody->getArgument(0), c0);
+
+  auto [replacements, ip] = acc::cloneACCRegionInto(
+      &loopOp.getRegion(), entry, entry->begin(), mapping, ValueRange{origVal});
+
+  ASSERT_EQ(replacements.size(), 1u);
+  // The addi should now use the replacement (constant 1), not origVal
+  bool addiUsesReplacement = false;
+  for (Operation &op : entry->getOperations()) {
+    if (auto addi = dyn_cast<arith::AddIOp>(op))
+      addiUsesReplacement = (addi.getLhs() == replacements[0]);
+  }
+  EXPECT_TRUE(addiUsesReplacement);
 }

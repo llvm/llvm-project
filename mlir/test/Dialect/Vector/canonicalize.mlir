@@ -272,6 +272,98 @@ func.func @extract_from_non_constant_create_mask(%dim0: index) -> vector<[2]xi1>
 
 // -----
 
+// CHECK-LABEL: extract_from_constant_mask
+func.func @extract_from_constant_mask() -> vector<4xi1> {
+  %mask = vector.constant_mask [2, 3] : vector<4x4xi1>
+  // CHECK: %[[RES:.*]] = vector.constant_mask [3] : vector<4xi1>
+  // CHECK-NEXT: return %[[RES]]
+  %extract = vector.extract %mask[1] : vector<4xi1> from vector<4x4xi1>
+  return %extract : vector<4xi1>
+}
+
+// -----
+
+// CHECK-LABEL: extract_from_constant_mask_all_false
+func.func @extract_from_constant_mask_all_false() -> vector<4xi1> {
+  %mask = vector.constant_mask [2, 3] : vector<4x4xi1>
+  // CHECK: %[[RES:.*]] = arith.constant dense<false> : vector<4xi1>
+  // CHECK-NEXT: return %[[RES]]
+  %extract = vector.extract %mask[3] : vector<4xi1> from vector<4x4xi1>
+  return %extract : vector<4xi1>
+}
+
+// -----
+
+// CHECK-LABEL: extract_from_constant_mask_at_boundary
+func.func @extract_from_constant_mask_at_boundary() -> vector<4xi1> {
+  %mask = vector.constant_mask [2, 3] : vector<4x4xi1>
+  // CHECK: %[[RES:.*]] = arith.constant dense<false> : vector<4xi1>
+  // CHECK-NEXT: return %[[RES]]
+  %extract = vector.extract %mask[2] : vector<4xi1> from vector<4x4xi1>
+  return %extract : vector<4xi1>
+}
+
+// -----
+
+// CHECK-LABEL: extract_from_constant_mask_multiple_indices
+func.func @extract_from_constant_mask_multiple_indices() -> vector<4xi1> {
+  %mask = vector.constant_mask [2, 3, 3] : vector<4x4x4xi1>
+  // CHECK: %[[RES:.*]] = vector.constant_mask [3] : vector<4xi1>
+  // CHECK-NEXT: return %[[RES]]
+  %extract = vector.extract %mask[1, 2] : vector<4xi1> from vector<4x4x4xi1>
+  return %extract : vector<4xi1>
+}
+
+// -----
+
+// CHECK-LABEL: extract_from_constant_mask_dynamic_position_all_true
+//  CHECK-SAME: %[[INDEX:.*]]: index
+func.func @extract_from_constant_mask_dynamic_position_all_true(%index: index) -> vector<4xi1> {
+  // The mask covers the entire first dimension, so a dynamic index is fine.
+  %mask = vector.constant_mask [4, 3] : vector<4x4xi1>
+  // CHECK: %[[RES:.*]] = vector.constant_mask [3] : vector<4xi1>
+  // CHECK-NEXT: return %[[RES]]
+  %extract = vector.extract %mask[%index] : vector<4xi1> from vector<4x4xi1>
+  return %extract : vector<4xi1>
+}
+
+// -----
+
+// CHECK-LABEL: extract_from_constant_mask_dynamic_position_not_all_true
+//  CHECK-SAME: %[[INDEX:.*]]: index
+func.func @extract_from_constant_mask_dynamic_position_not_all_true(%index: index) -> vector<4xi1> {
+  %mask = vector.constant_mask [2, 3] : vector<4x4xi1>
+  // CHECK: %[[MASK:.*]] = vector.constant_mask [2, 3] : vector<4x4xi1>
+  // CHECK-NEXT: %[[RES:.*]] = vector.extract %[[MASK]][%[[INDEX]]] : vector<4xi1> from vector<4x4xi1>
+  // CHECK-NEXT: return %[[RES]]
+  %extract = vector.extract %mask[%index] : vector<4xi1> from vector<4x4xi1>
+  return %extract : vector<4xi1>
+}
+
+// -----
+
+// CHECK-LABEL: extract_scalar_from_constant_mask_within_bounds
+func.func @extract_scalar_from_constant_mask_within_bounds() -> i1 {
+  %mask = vector.constant_mask [2, 3] : vector<4x4xi1>
+  // CHECK: %[[RES:.*]] = arith.constant true
+  // CHECK-NEXT: return %[[RES]]
+  %extract = vector.extract %mask[0, 1] : i1 from vector<4x4xi1>
+  return %extract : i1
+}
+
+// -----
+
+// CHECK-LABEL: extract_scalar_from_constant_mask_outside_bounds
+func.func @extract_scalar_from_constant_mask_outside_bounds() -> i1 {
+  %mask = vector.constant_mask [2, 3] : vector<4x4xi1>
+  // CHECK: %[[RES:.*]] = arith.constant false
+  // CHECK-NEXT: return %[[RES]]
+  %extract = vector.extract %mask[0, 3] : i1 from vector<4x4xi1>
+  return %extract : i1
+}
+
+// -----
+
 // CHECK-LABEL: constant_mask_to_true_splat
 func.func @constant_mask_to_true_splat() -> vector<2x4xi1> {
   // CHECK: arith.constant dense<true>
@@ -1367,6 +1459,19 @@ func.func @bitcast_i8_to_i32() -> (vector<4xi32>, vector<4xi32>) {
   %cast0 = vector.bitcast %cst0: vector<16xi8> to vector<4xi32>
   %cast1 = vector.bitcast %cst1: vector<16xi8> to vector<4xi32>
   return %cast0, %cast1: vector<4xi32>, vector<4xi32>
+}
+
+// -----
+
+// Verify that bitcast with index source element type does not crash (the fold
+// must not call getIntOrFloatBitWidth on a non-integer/float type).
+// CHECK-LABEL: func @bitcast_index_no_fold
+//       CHECK: %[[CST:.+]] = arith.constant dense<0> : vector<16xindex>
+//       CHECK: vector.bitcast %[[CST]] : vector<16xindex> to vector<16xi64>
+func.func @bitcast_index_no_fold() -> vector<16xi64> {
+  %cst = arith.constant dense<0> : vector<16xindex>
+  %0 = vector.bitcast %cst : vector<16xindex> to vector<16xi64>
+  return %0 : vector<16xi64>
 }
 
 // -----
@@ -4068,4 +4173,37 @@ func.func @extract_strided_slice_outer_shorter(%arg0: vector<4x8x16xf32>) -> vec
   %0 = vector.extract_strided_slice %arg0 {offsets = [1, 2], sizes = [3, 4], strides = [1, 1]} : vector<4x8x16xf32> to vector<3x4x16xf32>
   %1 = vector.extract_strided_slice %0 {offsets = [0], sizes = [2], strides = [1]} : vector<3x4x16xf32> to vector<2x4x16xf32>
   return %1 : vector<2x4x16xf32>
+}
+
+// -----
+
+// Regression test for https://github.com/llvm/llvm-project/issues/177833:
+// CanonializeEmptyMaskOp must not create arith.select with a vector condition
+// and scalar value types (incompatible with arith.select semantics). The
+// vector.mask op should remain unchanged.
+//
+// CHECK-LABEL: func @no_fold_empty_mask_scalar_result_with_passthru
+//  CHECK-SAME:     %[[MASK:.*]]: vector<1xi1>, %[[PASSTHRU:.*]]: i32, %[[VAL:.*]]: i32
+//       CHECK:   vector.mask %[[MASK]], %[[PASSTHRU]] { vector.yield %[[VAL]] : i32 } : vector<1xi1> -> i32
+//   CHECK-NOT:   arith.select
+func.func @no_fold_empty_mask_scalar_result_with_passthru(
+    %mask : vector<1xi1>, %passthru : i32, %val : i32) -> i32 {
+  %result = vector.mask %mask, %passthru { vector.yield %val : i32 } : vector<1xi1> -> i32
+  return %result : i32
+}
+
+// -----
+
+// Regression test for https://github.com/llvm/llvm-project/issues/177833:
+// MaskOp::fold must not crash with a null pointer dereference when the mask
+// is all-true and the mask body has no maskable op (only a yield).
+//
+// CHECK-LABEL: func @no_fold_alltrue_mask_empty_body_scalar_result
+//  CHECK-SAME:     %[[PASSTHRU:.*]]: i32, %[[VAL:.*]]: i32
+//       CHECK:   vector.mask
+func.func @no_fold_alltrue_mask_empty_body_scalar_result(
+    %passthru : i32, %val : i32) -> i32 {
+  %all_true = vector.constant_mask [1] : vector<1xi1>
+  %result = vector.mask %all_true, %passthru { vector.yield %val : i32 } : vector<1xi1> -> i32
+  return %result : i32
 }

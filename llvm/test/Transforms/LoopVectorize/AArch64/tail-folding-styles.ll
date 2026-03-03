@@ -3,7 +3,6 @@
 ; RUN: opt -S -passes=loop-vectorize -force-tail-folding-style=data < %s | FileCheck %s --check-prefix=DATA
 ; RUN: opt -S -passes=loop-vectorize -force-tail-folding-style=data-without-lane-mask < %s | FileCheck %s --check-prefix=DATA_NO_LANEMASK
 ; RUN: opt -S -passes=loop-vectorize -force-tail-folding-style=data-and-control < %s | FileCheck %s --check-prefix=DATA_AND_CONTROL
-; RUN: opt -S -passes=loop-vectorize -force-tail-folding-style=data-and-control-without-rt-check < %s | FileCheck %s --check-prefix=DATA_AND_CONTROL_NO_RT_CHECK
 
 target triple = "aarch64-unknown-linux-gnu"
 
@@ -135,35 +134,6 @@ define void @simple_memset_tailfold(i32 %val, ptr %ptr, i64 %n) "target-features
 ; DATA_AND_CONTROL-NEXT:    br label [[WHILE_BODY:%.*]]
 ; DATA_AND_CONTROL:       while.end.loopexit:
 ; DATA_AND_CONTROL-NEXT:    ret void
-;
-; DATA_AND_CONTROL_NO_RT_CHECK-LABEL: @simple_memset_tailfold(
-; DATA_AND_CONTROL_NO_RT_CHECK-NEXT:  entry:
-; DATA_AND_CONTROL_NO_RT_CHECK-NEXT:    [[UMAX:%.*]] = call i64 @llvm.umax.i64(i64 [[N:%.*]], i64 1)
-; DATA_AND_CONTROL_NO_RT_CHECK-NEXT:    br label [[VECTOR_PH:%.*]]
-; DATA_AND_CONTROL_NO_RT_CHECK:       vector.ph:
-; DATA_AND_CONTROL_NO_RT_CHECK-NEXT:    [[TMP5:%.*]] = call i64 @llvm.vscale.i64()
-; DATA_AND_CONTROL_NO_RT_CHECK-NEXT:    [[TMP6:%.*]] = shl nuw i64 [[TMP5]], 2
-; DATA_AND_CONTROL_NO_RT_CHECK-NEXT:    [[TMP7:%.*]] = sub i64 [[UMAX]], [[TMP6]]
-; DATA_AND_CONTROL_NO_RT_CHECK-NEXT:    [[TMP8:%.*]] = icmp ugt i64 [[UMAX]], [[TMP6]]
-; DATA_AND_CONTROL_NO_RT_CHECK-NEXT:    [[TMP9:%.*]] = select i1 [[TMP8]], i64 [[TMP7]], i64 0
-; DATA_AND_CONTROL_NO_RT_CHECK-NEXT:    [[ACTIVE_LANE_MASK_ENTRY:%.*]] = call <vscale x 4 x i1> @llvm.get.active.lane.mask.nxv4i1.i64(i64 0, i64 [[UMAX]])
-; DATA_AND_CONTROL_NO_RT_CHECK-NEXT:    [[BROADCAST_SPLATINSERT:%.*]] = insertelement <vscale x 4 x i32> poison, i32 [[VAL:%.*]], i64 0
-; DATA_AND_CONTROL_NO_RT_CHECK-NEXT:    [[BROADCAST_SPLAT:%.*]] = shufflevector <vscale x 4 x i32> [[BROADCAST_SPLATINSERT]], <vscale x 4 x i32> poison, <vscale x 4 x i32> zeroinitializer
-; DATA_AND_CONTROL_NO_RT_CHECK-NEXT:    br label [[VECTOR_BODY:%.*]]
-; DATA_AND_CONTROL_NO_RT_CHECK:       vector.body:
-; DATA_AND_CONTROL_NO_RT_CHECK-NEXT:    [[INDEX1:%.*]] = phi i64 [ 0, [[VECTOR_PH]] ], [ [[INDEX_NEXT2:%.*]], [[VECTOR_BODY]] ]
-; DATA_AND_CONTROL_NO_RT_CHECK-NEXT:    [[ACTIVE_LANE_MASK:%.*]] = phi <vscale x 4 x i1> [ [[ACTIVE_LANE_MASK_ENTRY]], [[VECTOR_PH]] ], [ [[ACTIVE_LANE_MASK_NEXT:%.*]], [[VECTOR_BODY]] ]
-; DATA_AND_CONTROL_NO_RT_CHECK-NEXT:    [[TMP11:%.*]] = getelementptr i32, ptr [[PTR:%.*]], i64 [[INDEX1]]
-; DATA_AND_CONTROL_NO_RT_CHECK-NEXT:    call void @llvm.masked.store.nxv4i32.p0(<vscale x 4 x i32> [[BROADCAST_SPLAT]], ptr align 4 [[TMP11]], <vscale x 4 x i1> [[ACTIVE_LANE_MASK]])
-; DATA_AND_CONTROL_NO_RT_CHECK-NEXT:    [[INDEX_NEXT2]] = add i64 [[INDEX1]], [[TMP6]]
-; DATA_AND_CONTROL_NO_RT_CHECK-NEXT:    [[ACTIVE_LANE_MASK_NEXT]] = call <vscale x 4 x i1> @llvm.get.active.lane.mask.nxv4i1.i64(i64 [[INDEX1]], i64 [[TMP9]])
-; DATA_AND_CONTROL_NO_RT_CHECK-NEXT:    [[TMP15:%.*]] = extractelement <vscale x 4 x i1> [[ACTIVE_LANE_MASK_NEXT]], i32 0
-; DATA_AND_CONTROL_NO_RT_CHECK-NEXT:    [[TMP12:%.*]] = xor i1 [[TMP15]], true
-; DATA_AND_CONTROL_NO_RT_CHECK-NEXT:    br i1 [[TMP12]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP0:![0-9]+]]
-; DATA_AND_CONTROL_NO_RT_CHECK:       middle.block:
-; DATA_AND_CONTROL_NO_RT_CHECK-NEXT:    br label [[WHILE_BODY:%.*]]
-; DATA_AND_CONTROL_NO_RT_CHECK:       while.end.loopexit:
-; DATA_AND_CONTROL_NO_RT_CHECK-NEXT:    ret void
 ;
 entry:
   br label %while.body
