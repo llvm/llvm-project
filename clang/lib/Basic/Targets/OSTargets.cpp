@@ -276,8 +276,8 @@ static void addVisualCDefines(const LangOptions &Opts, MacroBuilder &Builder) {
 
   // As of version 19.15 (VS 2017 15.8), MSVC predefines this macro to indicate
   // whether the traditional or standards-conforming preprocessor is in use.
-  // In MSVC compatibility mode, Clang attempts to be compatible with the
-  // traditional preprocessor, so this is always 1.
+  // Currently, MSVC compatibility mode only attempts to be compatible with the
+  // traditional preprocessor.
   if (Opts.isCompatibleWithMSVC(LangOptions::MSVC2017_8))
     Builder.defineMacro("_MSVC_TRADITIONAL", "1");
 }
