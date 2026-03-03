@@ -1435,7 +1435,7 @@ getSmallestVectorTypeForIndex(LLT VecTy, unsigned MaxIdx,
   return getLLTForMVT(SmallerVT);
 }
 
-bool RISCVLegalizerInfo::legalizeInsertVectotElt(MachineInstr &MI,
+bool RISCVLegalizerInfo::legalizeInsertVectorElt(MachineInstr &MI,
                                                  LegalizerHelper &Helper,
                                                  MachineIRBuilder &MIB) const {
   MachineOperand &Dst = MI.getOperand(0); // Destination vector
@@ -1704,7 +1704,7 @@ bool RISCVLegalizerInfo::legalizeCustom(
   case TargetOpcode::G_STORE:
     return legalizeLoadStore(MI, Helper, MIRBuilder);
   case TargetOpcode::G_INSERT_VECTOR_ELT:
-    return legalizeInsertVectotElt(MI, Helper, MIRBuilder);
+    return legalizeInsertVectorElt(MI, Helper, MIRBuilder);
   }
 
   llvm_unreachable("expected switch to return");

@@ -534,7 +534,7 @@ RISCVRegisterBankInfo::getInstrMapping(const MachineInstr &MI) const {
     else
       OpdsMapping[2] = GPRValueMapping;
 
-    // Index needs to be a GPR.
+    // VL needs to be a GPR.
     OpdsMapping[3] = GPRValueMapping;
     break;
   }

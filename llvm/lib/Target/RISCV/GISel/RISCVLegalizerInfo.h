@@ -53,7 +53,7 @@ private:
                                MachineIRBuilder &MIB) const;
   bool legalizeLoadStore(MachineInstr &MI, LegalizerHelper &Helper,
                          MachineIRBuilder &MIB) const;
-  bool legalizeInsertVectotElt(MachineInstr &MI, LegalizerHelper &Helper,
+  bool legalizeInsertVectorElt(MachineInstr &MI, LegalizerHelper &Helper,
                                MachineIRBuilder &MIB) const;
 };
 } // end namespace llvm
