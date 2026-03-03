@@ -34,7 +34,8 @@ class TensorDescType;
 namespace xegpu {
 
 LogicalResult propagateLayouts(OpBuilder &builder, Operation *target,
-                               LayoutKind layoutKind, bool printOnly = false);
+                               LayoutKind layoutKind, unsigned indexBitWidth,
+                               bool printOnly = false);
 
 LogicalResult resolveLayoutConflicts(Operation *target);
 
@@ -134,7 +135,8 @@ DistributeLayoutAttr setupBitCastResultLayout(
 /// Lane).
 DistributeLayoutAttr setupInsertStridedSliceResultLayout(
     LayoutKind layoutKind, VectorType srcVectorTy, VectorType resVectorTy,
-    DistributeLayoutAttr consumerLayout, const uArch::uArch *uArch);
+    DistributeLayoutAttr consumerLayout, const uArch::uArch *uArch,
+    unsigned indexBitWidth);
 
 /// Sets up the anchor layout for a load gather operation.
 DistributeLayoutAttr

@@ -622,7 +622,7 @@ xegpu::DistributeLayoutAttr xegpu::setupBitCastResultLayout(
 xegpu::DistributeLayoutAttr xegpu::setupInsertStridedSliceResultLayout(
     xegpu::LayoutKind layoutKind, VectorType srcVectorTy,
     VectorType resVectorTy, xegpu::DistributeLayoutAttr consumerLayout,
-    const xegpu::uArch::uArch *uArch) {
+    const xegpu::uArch::uArch *uArch, unsigned indexBitWidth) {
 
   xegpu::DistributeLayoutAttr requiredResLayout;
   auto subgroupSize = uArch->getSubgroupSize();
@@ -640,7 +640,10 @@ xegpu::DistributeLayoutAttr xegpu::setupInsertStridedSliceResultLayout(
   SmallVector<int> laneData(resShapeSize, 1);
 
   const unsigned packingSize{uArch->getGeneralPackedFormatBitSize()};
-  unsigned bitwidth = resVectorTy.getElementType().getIntOrFloatBitWidth();
+  unsigned bitwidth =
+      resVectorTy.getElementType().isIndex()
+          ? indexBitWidth
+          : resVectorTy.getElementType().getIntOrFloatBitWidth();
   int packingFactor = bitwidth < packingSize ? packingSize / bitwidth : 1;
   int packedDataSize = subgroupSize * packingFactor;
 
