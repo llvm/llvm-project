@@ -430,6 +430,23 @@ struct HasDtor {
 	~HasDtor() {}
 };
 
+struct SafeDeleteUnsafeDestroy {
+	using size_t = unsigned long;
+	static unsigned char storage[256];
+
+	void* operator new(size_t) { return storage; }
+	void operator delete(void* ptr) {}
+
+	SafeDeleteUnsafeDestroy(); // expected-note {{declaration cannot be inferred 'nonblocking' because it has no definition in this translation unit}}
+	~SafeDeleteUnsafeDestroy(); // expected-note {{declaration cannot be inferred 'nonblocking' because it has no definition in this translation unit}}
+};
+
+void nb24a() [[clang::nonblocking]]
+{
+	auto *ptr = new SafeDeleteUnsafeDestroy; // expected-warning {{function with 'nonblocking' attribute must not call non-'nonblocking' constructor 'SafeDeleteUnsafeDestroy::SafeDeleteUnsafeDestroy'}}
+	delete ptr; // expected-warning {{function with 'nonblocking' attribute must not call non-'nonblocking' destructor 'SafeDeleteUnsafeDestroy::~SafeDeleteUnsafeDestroy'}}
+}
+
 template <typename T>
 struct Optional {
 	union {
