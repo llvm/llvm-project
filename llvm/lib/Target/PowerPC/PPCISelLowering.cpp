@@ -12136,10 +12136,8 @@ SDValue PPCTargetLowering::LowerVectorLoad(SDValue Op,
          "Type unsupported without paired vector support");
 
   // For v256i1 on ISA Future, let the load go through to instruction selection
-  // where it will be matched to lxvp by the instruction patterns, unless it's
-  // a PC-relative load which should use plxv instead.
-  if (VT == MVT::v256i1 && Subtarget.isISAFuture() &&
-      !isPCRelNode(LN->getBasePtr()))
+  // where it will be matched to lxvp/plxvp by the instruction patterns.
+  if (VT == MVT::v256i1 && Subtarget.isISAFuture())
     return Op;
 
   // For other cases, create 2 or 4 v16i8 loads to load the pair or accumulator
@@ -12312,10 +12310,8 @@ SDValue PPCTargetLowering::LowerVectorStore(SDValue Op,
          "Type unsupported without paired vector support");
 
   // For v256i1 on ISA Future, let the store go through to instruction selection
-  // where it will be matched to stxvp by the instruction patterns, unless it's
-  // a PC-relative store which should use pstxv instead.
-  if (StoreVT == MVT::v256i1 && Subtarget.isISAFuture() &&
-      !isPCRelNode(SN->getBasePtr()))
+  // where it will be matched to stxvp/pstxvp by the instruction patterns.
+  if (StoreVT == MVT::v256i1 && Subtarget.isISAFuture())
     return Op;
 
   // For other cases, create 2 or 4 v16i8 stores to store the pair or

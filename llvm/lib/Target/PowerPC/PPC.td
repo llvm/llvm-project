@@ -277,10 +277,6 @@ def FeatureISA3_1 : SubtargetFeature<"isa-v31-instructions", "IsISA3_1",
                                      "true",
                                      "Enable instructions in ISA 3.1.",
                                      [FeatureISA3_0]>;
-def FeatureISAFuture : SubtargetFeature<"isa-future-instructions",
-                                        "IsISAFuture", "true",
-                                        "Enable instructions for Future ISA.",
-                                        [FeatureISA3_1]>;
 def FeatureP9Altivec : SubtargetFeature<"power9-altivec", "HasP9Altivec", "true",
                                         "Enable POWER9 Altivec instructions",
                                         [FeatureISA3_0, FeatureP8Altivec]>;
@@ -292,6 +288,14 @@ def FeatureP10Vector  : SubtargetFeature<"power10-vector", "HasP10Vector",
                                          "true",
                                          "Enable POWER10 vector instructions",
                                          [FeatureISA3_1, FeatureP9Vector]>;
+def FeatureFutureVector : SubtargetFeature<"future-vector", "HasFutureVector",
+                                           "true",
+                                           "Enable Future vector instructions",
+                                           [FeatureP10Vector]>;
+def FeatureISAFuture : SubtargetFeature<"isa-future-instructions",
+                                        "IsISAFuture", "true",
+                                        "Enable instructions for Future ISA.",
+                                        [FeatureISA3_1, FeatureFutureVector]>;
 // A separate feature for this even though it is equivalent to P9Vector
 // because this is a feature of the implementation rather than the architecture
 // and may go away with future CPU's.
