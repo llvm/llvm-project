@@ -2323,6 +2323,12 @@ static std::string GetSDKPath(std::string m_description, XcodeSDK sdk) {
   }
   LOG_PRINTF(GetLog(LLDBLog::Types), "Host SDK path: \"%s\" (XcodeSDK: %s)",
              sdk_path.c_str(), sdk.GetString().str().c_str());
+
+#if not defined(__APPLE__)
+  // FXIME: The Swift compiler seems to be happier with an empty SDK path.
+  if (sdk_path == "/")
+    return {};
+#endif          
   return sdk_path;
 }
 
