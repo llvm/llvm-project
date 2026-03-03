@@ -10,39 +10,23 @@ from lldbsuite.test import lldbutil
 
 class BlockAPITestCase(TestBase):
     def test_block_equality(self):
-        """Exercise SBBlock equality checks."""
+        """Exercise SBBlock equality checks across frames and functions in different dylibs."""
         self.build()
-        exe = self.getBuildArtifact("a.out")
-
-        # Create a target by the debugger.
-        target = self.dbg.CreateTarget(exe)
-        self.assertTrue(target, VALID_TARGET)
-
-        line1 = line_number("main.c", "// breakpoint 1")
-        line2 = line_number("fn.c", "// breakpoint 2")
-        breakpoint1 = target.BreakpointCreateByLocation("main.c", line1)
-        breakpoint2 = target.BreakpointCreateByLocation("fn.c", line2)
-
-        # Now launch the process, and do not stop at the entry point.
-        process = target.LaunchSimple(None, None, self.get_process_working_directory())
-        self.assertState(process.GetState(), lldb.eStateStopped, PROCESS_STOPPED)
-
-        threads = lldbutil.get_threads_stopped_at_breakpoint(process, breakpoint1)
-        self.assertEqual(
-            len(threads), 1, "There should be a thread stopped at breakpoint 1"
+        target, process, thread, _ = lldbutil.run_to_source_breakpoint(
+            self, "// breakpoint 1", lldb.SBFileSpec("main.c"), extra_images=["libfn"]
         )
 
-        thread = threads[0]
-        self.assertTrue(thread.IsValid(), "Thread must be valid")
         frame = thread.GetFrameAtIndex(0)
         self.assertTrue(frame.IsValid(), "Frame must be valid")
 
         main_frame_block = frame.GetFrameBlock()
 
-        # Continue to breakpoint 2
-        process.Continue()
-
-        threads = lldbutil.get_threads_stopped_at_breakpoint(process, breakpoint2)
+        threads = lldbutil.continue_to_source_breakpoint(
+            self,
+            process,
+            "// breakpoint 2",
+            lldb.SBFileSpec("fn.c"),
+        )
         self.assertEqual(
             len(threads), 1, "There should be a thread stopped at breakpoint 2"
         )
