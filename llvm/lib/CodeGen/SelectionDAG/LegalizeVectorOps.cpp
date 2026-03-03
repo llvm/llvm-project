@@ -389,6 +389,9 @@ SDValue VectorLegalizer::LegalizeOp(SDValue Op) {
   case ISD::CTLZ_ZERO_UNDEF:
   case ISD::CTTZ_ZERO_UNDEF:
   case ISD::CTPOP:
+  case ISD::CLMUL:
+  case ISD::CLMULH:
+  case ISD::CLMULR:
   case ISD::SELECT:
   case ISD::VSELECT:
   case ISD::SELECT_CC:
