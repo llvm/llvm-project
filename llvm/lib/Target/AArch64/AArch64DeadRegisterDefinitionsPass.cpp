@@ -33,7 +33,6 @@ STATISTIC(NumDeadDefsReplaced, "Number of dead definitions replaced");
 namespace {
 class AArch64DeadRegisterDefinitions : public MachineFunctionPass {
 private:
-  const TargetRegisterInfo *TRI;
   const MachineRegisterInfo *MRI;
   const TargetInstrInfo *TII;
   bool Changed;
@@ -187,7 +186,6 @@ bool AArch64DeadRegisterDefinitions::runOnMachineFunction(MachineFunction &MF) {
   if (skipFunction(MF.getFunction()))
     return false;
 
-  TRI = MF.getSubtarget().getRegisterInfo();
   TII = MF.getSubtarget().getInstrInfo();
   MRI = &MF.getRegInfo();
   LLVM_DEBUG(dbgs() << "***** AArch64DeadRegisterDefinitions *****\n");
