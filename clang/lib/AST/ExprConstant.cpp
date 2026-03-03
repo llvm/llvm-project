@@ -14715,8 +14715,6 @@ bool MatrixExprEvaluator::VisitCastExpr(const CastExpr *E) {
 
 bool MatrixExprEvaluator::VisitInitListExpr(const InitListExpr *E) {
   const auto *MT = E->getType()->castAs<ConstantMatrixType>();
-  unsigned NumRows = MT->getNumRows();
-  unsigned NumCols = MT->getNumColumns();
   QualType EltTy = MT->getElementType();
 
   assert(E->getNumInits() == MT->getNumElementsFlattened() &&
@@ -14726,22 +14724,20 @@ bool MatrixExprEvaluator::VisitInitListExpr(const InitListExpr *E) {
   SmallVector<APValue, 16> Elements;
   Elements.reserve(MT->getNumElementsFlattened());
 
-  // The initializer list elements are stored in column-major order, but APValue
-  // stores matrix elements in row-major order.
-  for (unsigned Row = 0; Row < NumRows; ++Row) {
-    for (unsigned Col = 0; Col < NumCols; ++Col) {
-      unsigned ColMajorIdx = MT->getColumnMajorFlattenedIndex(Row, Col);
-      if (EltTy->isIntegerType()) {
-        llvm::APSInt IntVal;
-        if (!EvaluateInteger(E->getInit(ColMajorIdx), IntVal, Info))
-          return false;
-        Elements.push_back(APValue(IntVal));
-      } else {
-        llvm::APFloat FloatVal(0.0);
-        if (!EvaluateFloat(E->getInit(ColMajorIdx), FloatVal, Info))
-          return false;
-        Elements.push_back(APValue(FloatVal));
-      }
+  // The following loop assumes the elements of the matrix InitListExpr are in
+  // row-major order, which matches the row-major ordering assumption of the
+  // matrix APValue.
+  for (unsigned I = 0, N = MT->getNumElementsFlattened(); I < N; ++I) {
+    if (EltTy->isIntegerType()) {
+      llvm::APSInt IntVal;
+      if (!EvaluateInteger(E->getInit(I), IntVal, Info))
+        return false;
+      Elements.push_back(APValue(IntVal));
+    } else {
+      llvm::APFloat FloatVal(0.0);
+      if (!EvaluateFloat(E->getInit(I), FloatVal, Info))
+        return false;
+      Elements.push_back(APValue(FloatVal));
     }
   }
 
