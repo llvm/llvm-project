@@ -22,6 +22,7 @@ namespace clang::ssaf {
 /// Entities are never removed.
 class EntityIdTable {
   friend class SerializationFormat;
+  friend class TestFixture;
 
   std::map<EntityName, EntityId> Entities;
 
