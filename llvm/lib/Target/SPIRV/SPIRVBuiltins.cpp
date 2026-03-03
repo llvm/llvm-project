@@ -291,15 +291,13 @@ lookupBuiltin(StringRef DemangledCall,
     if (Arguments.size() < B->MinNumArgs) {
       LLVM_DEBUG(dbgs() << "Too few arguments for builtin " << DemangledCall
                         << ": expected at least " << (unsigned)B->MinNumArgs
-                        << ", got " << Arguments.size()
-                        << "; treating as a normal function\n");
+                        << ", got " << Arguments.size() << "\n");
       return false;
     }
     if (B->MaxNumArgs && Arguments.size() > B->MaxNumArgs) {
       LLVM_DEBUG(dbgs() << "Too many arguments for builtin " << DemangledCall
                         << ": expected at most " << (unsigned)B->MaxNumArgs
-                        << ", got " << Arguments.size()
-                        << "; treating as a normal function\n");
+                        << ", got " << Arguments.size() << "\n");
       return false;
     }
     return true;

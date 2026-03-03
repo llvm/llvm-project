@@ -11,7 +11,7 @@ define spir_func void @test_too_few() {
   ret void
 }
 
-; Too many args - consider as user function.
+; To many args - consider as user function.
 ; CHECK: OpFunctionCall %[[#]] %[[#]] %[[#]] %[[#]] %[[#]] %[[#]]
 define spir_func void @test_too_many() {
   call spir_func void @_Z7barrieriiii(i32 1, i32 2, i32 3, i32 4)
