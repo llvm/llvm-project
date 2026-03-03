@@ -92,17 +92,15 @@ public:
   /// necessary.
   static Operation *create(Location location, OperationName name,
                            TypeRange resultTypes, ValueRange operands,
-                           NamedAttrList &&attributes,
-                           OpaqueProperties properties, BlockRange successors,
-                           unsigned numRegions);
+                           NamedAttrList &&attributes, PropertyRef properties,
+                           BlockRange successors, unsigned numRegions);
 
   /// Create a new Operation with the specific fields. This constructor uses an
   /// existing attribute dictionary to avoid uniquing a list of attributes.
   static Operation *create(Location location, OperationName name,
                            TypeRange resultTypes, ValueRange operands,
-                           DictionaryAttr attributes,
-                           OpaqueProperties properties, BlockRange successors,
-                           unsigned numRegions);
+                           DictionaryAttr attributes, PropertyRef properties,
+                           BlockRange successors, unsigned numRegions);
 
   /// Create a new Operation from the fields stored in `state`.
   static Operation *create(const OperationState &state);
@@ -110,8 +108,7 @@ public:
   /// Create a new Operation with the specific fields.
   static Operation *create(Location location, OperationName name,
                            TypeRange resultTypes, ValueRange operands,
-                           NamedAttrList &&attributes,
-                           OpaqueProperties properties,
+                           NamedAttrList &&attributes, PropertyRef properties,
                            BlockRange successors = {},
                            RegionRange regions = {});
 
@@ -925,23 +922,29 @@ public:
   int getPropertiesStorageSize() const {
     return ((int)propertiesStorageSize) * 8;
   }
-  /// Returns the properties storage.
-  OpaqueProperties getPropertiesStorage() {
+
+  /// Return a geeric (but typed) reference to the property type storage.
+  PropertyRef getPropertiesStorage() {
     if (propertiesStorageSize)
-      return getPropertiesStorageUnsafe();
+      return PropertyRef(name.getOpPropertiesTypeID(),
+                         getRawPropertiesStorageUnsafe());
     return {nullptr};
   }
-  OpaqueProperties getPropertiesStorage() const {
+
+  PropertyRef getPropertiesStorage() const {
     if (propertiesStorageSize)
-      return {reinterpret_cast<void *>(const_cast<detail::OpProperties *>(
-          getTrailingObjects<detail::OpProperties>()))};
+      return PropertyRef(
+          name.getOpPropertiesTypeID(),
+          reinterpret_cast<void *>(const_cast<detail::OpProperties *>(
+              getTrailingObjects<detail::OpProperties>())));
     return {nullptr};
   }
-  /// Returns the properties storage without checking whether properties are
-  /// present.
-  OpaqueProperties getPropertiesStorageUnsafe() {
-    return {
-        reinterpret_cast<void *>(getTrailingObjects<detail::OpProperties>())};
+
+  /// Returns a pointer to the properties storage (if it exists) with no type
+  /// information.
+  void *getRawPropertiesStorageUnsafe() {
+    return reinterpret_cast<void *>(const_cast<detail::OpProperties *>(
+        getTrailingObjects<detail::OpProperties>()));
   }
 
   /// Return the properties converted to an attribute.
@@ -961,7 +964,7 @@ public:
 
   /// Copy properties from an existing other properties object. The two objects
   /// must be the same type.
-  void copyProperties(OpaqueProperties rhs);
+  void copyProperties(PropertyRef rhs);
 
   /// Compute a hash for the op properties (if any).
   llvm::hash_code hashProperties();
@@ -990,7 +993,7 @@ private:
   Operation(Location location, OperationName name, unsigned numResults,
             unsigned numSuccessors, unsigned numRegions,
             int propertiesStorageSize, DictionaryAttr attributes,
-            OpaqueProperties properties, bool hasOperandStorage);
+            PropertyRef properties, bool hasOperandStorage);
 
   // Operations are deleted through the destroy() member because they are
   // allocated with malloc.
