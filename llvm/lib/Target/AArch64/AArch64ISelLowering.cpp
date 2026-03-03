@@ -28135,56 +28135,9 @@ static SDValue performGatherLoadCombine(SDNode *N, SelectionDAG &DAG,
   return DAG.getMergeValues({Load, LoadChain}, DL);
 }
 
-/// Attempts to fold SEXT_IN_REG(VECREDUCE_ADD(SETcc)) to SADDLV(SETcc).
-/// Note: With legal types a VECREDUCE_ADD of SETcc won't overflow so is
-/// equivalent to SADDLV(SETcc).
-static SDValue performVecReduceAddToSADDLVCombine(
-    SDNode *N, TargetLowering::DAGCombinerInfo &DCI, SelectionDAG &DAG) {
-  if (DCI.isBeforeLegalize())
-    return SDValue();
-
-  EVT VT = N->getValueType(0);
-
-  // Look through ANY_EXTENDS (which can occur between the VECREDUCE for i64).
-  SDValue Op = N->getOperand(0);
-  if (Op->getOpcode() == ISD::ANY_EXTEND)
-    Op = Op->getOperand(0);
-
-  if (Op->getOpcode() != ISD::VECREDUCE_ADD || !Op.hasOneUse())
-    return SDValue();
-
-  SDValue Vec = Op->getOperand(0);
-
-  EVT VecVT = Vec.getValueType();
-  EVT EltVT = VecVT.getScalarType();
-  EVT SrcVT = cast<VTSDNode>(N->getOperand(1))->getVT();
-  // TODO: Support i32 -> i64 (that won't use a SIGN_EXTEND_INREG).
-  assert(EltVT == MVT::i8 || EltVT == MVT::i16);
-
-  if (Vec->getOpcode() != ISD::SETCC || SrcVT != EltVT)
-    return SDValue();
-
-  SDLoc DL(N);
-  unsigned WideEltBits = EltVT.getScalarSizeInBits() * 2;
-  MVT WideEltVT = MVT::getIntegerVT(WideEltBits);
-  MVT WideVecVT = MVT::getVectorVT(WideEltVT, 128 / WideEltBits);
-
-  // Replace SEXT_IN_REG(VECREDUCE_ADD(SETcc)) with SADDLV(SETcc).
-  SDValue SADDLV = DAG.getNode(AArch64ISD::SADDLV, DL, MVT::v4i32, Vec);
-  SADDLV = DAG.getNode(AArch64ISD::NVCAST, DL, WideVecVT, SADDLV);
-  SDValue Result = DAG.getNode(ISD::EXTRACT_VECTOR_ELT, DL, MVT::i32, SADDLV,
-                               DAG.getVectorIdxConstant(0, DL));
-  Result = DAG.getNode(ISD::ANY_EXTEND, DL, VT, Result);
-  return DAG.getNode(ISD::SIGN_EXTEND_INREG, DL, VT, Result,
-                     DAG.getValueType(WideEltVT));
-}
-
 static SDValue
 performSignExtendInRegCombine(SDNode *N, TargetLowering::DAGCombinerInfo &DCI,
                               SelectionDAG &DAG) {
-  if (SDValue Result = performVecReduceAddToSADDLVCombine(N, DCI, DAG))
-    return Result;
-
   SDLoc DL(N);
   SDValue Src = N->getOperand(0);
   unsigned Opc = Src->getOpcode();
