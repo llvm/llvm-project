@@ -892,15 +892,6 @@ func.func @subview(%arg0 : index, %arg1 : index) -> (index, index) {
   return %7, %8 : index, index
 }
 
-// CHECK-LABEL: func @index_cast
-// CHECK-SAME: %[[ARG_0:arg[0-9]+]]: i16
-func.func @index_cast(%arg0: i16) -> (i16) {
-  %11 = arith.index_cast %arg0 exact : i16 to index
-  %12 = arith.index_cast %11 : index to i16
-  // CHECK: return %[[ARG_0]] : i16
-  return %12 : i16
-}
-
 // CHECK-LABEL: func @index_cast_fold
 func.func @index_cast_fold() -> (i16, index) {
   %c4 = arith.constant 4 : index

@@ -288,15 +288,6 @@ def SelectI1ToNot :
 // IndexCastOp
 //===----------------------------------------------------------------------===//
 
-// index_cast(index_cast(x, exact)) -> x, if dstType == srcType.
-// The inner exact guarantees the iN -> index conversion is lossless,
-// so the roundtrip through index preserves the value.
-def IndexCastOfIndexCast :
-    Pat<(Arith_IndexCastOp:$res (Arith_IndexCastOp $x, $exact1), $exact2),
-        (replaceWithValue $x),
-        [(Constraint<CPred<"$0.getType() == $1.getType()">> $res, $x),
-         (Constraint<CPred<"(bool)$0">> $exact1)]>;
-
 // index_cast(extsi(x)) -> index_cast(x)
 def IndexCastOfExtSI :
     Pat<(Arith_IndexCastOp (Arith_ExtSIOp $x), $exact),

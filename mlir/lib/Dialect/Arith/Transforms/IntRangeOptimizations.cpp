@@ -305,8 +305,11 @@ static Value doCast(OpBuilder &builder, Location loc, Value src, Type dstType,
     return src;
 
   if (isa<IndexType>(srcElemType) || isa<IndexType>(dstElemType)) {
-    if (castKind == CastKind::Signed)
-      return arith::IndexCastOp::create(builder, loc, dstType, src);
+    if (castKind == CastKind::Signed) {
+      auto cast = arith::IndexCastOp::create(builder, loc, dstType, src);
+      cast.setExact(true);
+      return cast;
+    }
     return arith::IndexCastUIOp::create(builder, loc, dstType, src);
   }
 
@@ -725,9 +728,8 @@ void mlir::arith::populateIntRangeNarrowingPatterns(
     ArrayRef<unsigned> bitwidthsSupported) {
   patterns.add<NarrowElementwise, NarrowCmpI>(patterns.getContext(), solver,
                                               bitwidthsSupported);
-  patterns.add<FoldIndexCastChain<arith::IndexCastUIOp>,
-               FoldIndexCastChain<arith::IndexCastOp>>(patterns.getContext(),
-                                                       bitwidthsSupported);
+  patterns.add<FoldIndexCastChain<arith::IndexCastUIOp>>(patterns.getContext(),
+                                                        bitwidthsSupported);
 }
 
 void mlir::arith::populateControlFlowValuesNarrowingPatterns(

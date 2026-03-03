@@ -9,9 +9,9 @@
 //       CHECK:  %[[POS:.*]] = test.with_bounds {smax = 1 : index, smin = 0 : index, umax = 1 : index, umin = 0 : index} : index
 //       CHECK:  %[[NEG:.*]] = test.with_bounds {smax = 0 : index, smin = -1 : index, umax = -1 : index, umin = 0 : index} : index
 //       CHECK:  %[[POS_I8:.*]] = arith.index_castui %[[POS]] : index to i8
-//       CHECK:  %[[NEG_I8:.*]] = arith.index_cast %[[NEG]] : index to i8
+//       CHECK:  %[[NEG_I8:.*]] = arith.index_cast %[[NEG]] exact : index to i8
 //       CHECK:  %[[RES_I8:.*]] = arith.addi %[[POS_I8]], %[[NEG_I8]] : i8
-//       CHECK:  %[[RES:.*]] = arith.index_cast %[[RES_I8]] : i8 to index
+//       CHECK:  %[[RES:.*]] = arith.index_cast %[[RES_I8]] exact : i8 to index
 //       CHECK:  return %[[RES]] : index
 func.func @test_addi_neg() -> index {
   %0 = test.with_bounds { umin = 0 : index, umax = 1 : index, smin = 0 : index, smax = 1 : index } : index
@@ -330,8 +330,8 @@ func.func @i32_overflows_to_i64(%arg0: i32) -> i64 {
 // CHECK:   %[[ARG0_I8:.+]] = arith.index_castui %[[ARG0_INDEX]] : index to i8
 // CHECK:   %[[V0_I8:.+]] = arith.subi %[[BOUND_I8]], %[[ARG0_I8]] : i8
 // CHECK:   %[[V1_I8:.+]] = arith.minsi %[[V0_I8]], %[[C64_I8]] : i8
-// CHECK:   %[[V1_INDEX:.+]] = arith.index_cast %[[V1_I8]] : i8 to index
-// CHECK:   %[[V1_I16:.+]] = arith.index_cast %[[V1_INDEX]] : index to i16
+// CHECK:   %[[V1_INDEX:.+]] = arith.index_cast %[[V1_I8]] exact : i8 to index
+// CHECK:   %[[V1_I16:.+]] = arith.index_cast %[[V1_INDEX]] exact : index to i16
 // CHECK:   %[[TID_I16:.+]] = arith.index_castui %[[TID]] : index to i16
 // CHECK:   %[[V2_I16:.+]] = arith.subi %[[V1_I16]], %[[TID_I16]] : i16
 // CHECK:   %[[V3:.+]] = arith.cmpi slt, %[[V2_I16]], %[[C0_I16]] : i16
@@ -371,9 +371,9 @@ func.func @loop_with_iter_arg() {
 // Check iter args are still present
 //       CHECK:  scf.for {{.*}} iter_args({{.*}})
 //       CHECK:  %[[POS_I8:.*]] = arith.index_castui %[[POS]] : index to i8
-//       CHECK:  %[[NEG_I8:.*]] = arith.index_cast %[[NEG]] : index to i8
+//       CHECK:  %[[NEG_I8:.*]] = arith.index_cast %[[NEG]] exact : index to i8
 //       CHECK:  %[[RES_I8:.*]] = arith.addi %[[POS_I8]], %[[NEG_I8]] : i8
-//       CHECK:  %[[RES:.*]] = arith.index_cast %[[RES_I8]] : i8 to index
+//       CHECK:  %[[RES:.*]] = arith.index_cast %[[RES_I8]] exact : i8 to index
 //       CHECK:  call @use(%[[RES]])
 
   %0 = test.with_bounds { umin = 0 : index, umax = 1 : index, smin = 0 : index, smax = 1 : index } : index
