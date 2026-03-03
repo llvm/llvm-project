@@ -1251,6 +1251,8 @@ public:
       // 'An assignment expression has the value of the left operand after the
       // assignment...'.
       if (lhs.isBitField()) {
+        CIRGenFunction::SourceLocRAIIObject loc{
+            cgf, cgf.getLoc(e->getSourceRange())};
         rhs = cgf.emitStoreThroughBitfieldLValue(RValue::get(rhs), lhs);
       } else {
         cgf.emitNullabilityCheck(lhs, rhs, e->getExprLoc());
