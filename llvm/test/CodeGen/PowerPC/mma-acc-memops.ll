@@ -510,10 +510,10 @@ define dso_local void @testLdStPair(i64 %SrcIdx, i64 %DstIdx) {
 ; BE-PAIRED-WACC:       # %bb.0: # %entry
 ; BE-PAIRED-WACC-NEXT:    addis r3, r2, g@toc@ha
 ; BE-PAIRED-WACC-NEXT:    addi r3, r3, g@toc@l
-; BE-PAIRED-WACC-NEXT:    lxv vs0, 48(r3)
-; BE-PAIRED-WACC-NEXT:    lxv vs1, 32(r3)
-; BE-PAIRED-WACC-NEXT:    stxv vs0, 80(r3)
-; BE-PAIRED-WACC-NEXT:    stxv vs1, 64(r3)
+; BE-PAIRED-WACC-NEXT:    li r4, 32
+; BE-PAIRED-WACC-NEXT:    lxvpx vsp34, r3, r4
+; BE-PAIRED-WACC-NEXT:    li r4, 64
+; BE-PAIRED-WACC-NEXT:    stxvpx vsp34, r3, r4
 ; BE-PAIRED-WACC-NEXT:    blr
 ;
 ; LE-PWR9-LABEL: testLdStPair:
@@ -589,13 +589,9 @@ define dso_local void @testXLdStPair(i64 %SrcIdx, i64 %DstIdx) {
 ; LE-PAIRED-WACC:       # %bb.0: # %entry
 ; LE-PAIRED-WACC-NEXT:    sldi r3, r3, 5
 ; LE-PAIRED-WACC-NEXT:    paddi r5, 0, g@PCREL, 1
-; LE-PAIRED-WACC-NEXT:    add r6, r5, r3
-; LE-PAIRED-WACC-NEXT:    lxvx vs0, r5, r3
-; LE-PAIRED-WACC-NEXT:    lxv vs1, 16(r6)
+; LE-PAIRED-WACC-NEXT:    lxvpx vsp34, r5, r3
 ; LE-PAIRED-WACC-NEXT:    sldi r3, r4, 5
-; LE-PAIRED-WACC-NEXT:    add r4, r5, r3
-; LE-PAIRED-WACC-NEXT:    stxvx vs0, r5, r3
-; LE-PAIRED-WACC-NEXT:    stxv vs1, 16(r4)
+; LE-PAIRED-WACC-NEXT:    stxvpx vsp34, r5, r3
 ; LE-PAIRED-WACC-NEXT:    blr
 ;
 ; BE-PAIRED-LABEL: testXLdStPair:
@@ -617,13 +613,9 @@ define dso_local void @testXLdStPair(i64 %SrcIdx, i64 %DstIdx) {
 ; BE-PAIRED-WACC-NEXT:    addis r5, r2, g@toc@ha
 ; BE-PAIRED-WACC-NEXT:    sldi r3, r3, 5
 ; BE-PAIRED-WACC-NEXT:    addi r5, r5, g@toc@l
-; BE-PAIRED-WACC-NEXT:    add r6, r5, r3
-; BE-PAIRED-WACC-NEXT:    lxvx vs0, r5, r3
-; BE-PAIRED-WACC-NEXT:    lxv vs1, 16(r6)
+; BE-PAIRED-WACC-NEXT:    lxvpx vsp34, r5, r3
 ; BE-PAIRED-WACC-NEXT:    sldi r3, r4, 5
-; BE-PAIRED-WACC-NEXT:    add r4, r5, r3
-; BE-PAIRED-WACC-NEXT:    stxvx vs0, r5, r3
-; BE-PAIRED-WACC-NEXT:    stxv vs1, 16(r4)
+; BE-PAIRED-WACC-NEXT:    stxvpx vsp34, r5, r3
 ; BE-PAIRED-WACC-NEXT:    blr
 ;
 ; LE-PWR9-LABEL: testXLdStPair:
@@ -722,10 +714,10 @@ define dso_local void @testUnalignedLdStPair() {
 ; BE-PAIRED-WACC:       # %bb.0: # %entry
 ; BE-PAIRED-WACC-NEXT:    addis r3, r2, g@toc@ha
 ; BE-PAIRED-WACC-NEXT:    addi r3, r3, g@toc@l
-; BE-PAIRED-WACC-NEXT:    plxv vs0, 27(r3), 0
-; BE-PAIRED-WACC-NEXT:    plxv vs1, 11(r3), 0
-; BE-PAIRED-WACC-NEXT:    pstxv vs0, 35(r3), 0
-; BE-PAIRED-WACC-NEXT:    pstxv vs1, 19(r3), 0
+; BE-PAIRED-WACC-NEXT:    li r4, 11
+; BE-PAIRED-WACC-NEXT:    lxvpx vsp34, r3, r4
+; BE-PAIRED-WACC-NEXT:    li r4, 19
+; BE-PAIRED-WACC-NEXT:    stxvpx vsp34, r3, r4
 ; BE-PAIRED-WACC-NEXT:    blr
 ;
 ; LE-PWR9-LABEL: testUnalignedLdStPair:

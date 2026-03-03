@@ -37,12 +37,10 @@ define void @test_wacc_copy(ptr noundef %vdmrp, ptr noundef %vpp, <16 x i8> noun
 ; CHECK-NEXT:    stxvp vsp34, 160(r31)
 ; CHECK-NEXT:    stxvp vsp36, 128(r31)
 ; CHECK-NEXT:    ld r3, 352(r31)
-; CHECK-NEXT:    lxv v2, 16(r3)
-; CHECK-NEXT:    lxv v3, 0(r3)
-; CHECK-NEXT:    stxv v2, 112(r31)
-; CHECK-NEXT:    stxv v3, 96(r31)
-; CHECK-NEXT:    lxv v2, 112(r31)
-; CHECK-NEXT:    lxv v3, 96(r31)
+; CHECK-NEXT:    lxvpx vsp34, 0, r3
+; CHECK-NEXT:    addi r3, r31, 96
+; CHECK-NEXT:    stxvpx vsp34, 0, r3
+; CHECK-NEXT:    lxvpx vsp34, 0, r3
 ; CHECK-NEXT:    lxv vs0, 336(r31)
 ; CHECK-NEXT:    dmxvi8gerx4 dmr0, vsp34, vs0
 ; CHECK-NEXT:    dmxxextfdmr512 vsp34, vsp36, wacc0, 0
@@ -96,12 +94,10 @@ define void @test_wacc_copy(ptr noundef %vdmrp, ptr noundef %vpp, <16 x i8> noun
 ; CHECK-BE-NEXT:    stxvp vsp36, 160(r31)
 ; CHECK-BE-NEXT:    stxvp vsp34, 128(r31)
 ; CHECK-BE-NEXT:    ld r3, 352(r31)
-; CHECK-BE-NEXT:    lxv v2, 0(r3)
-; CHECK-BE-NEXT:    lxv v3, 16(r3)
-; CHECK-BE-NEXT:    stxv v3, 112(r31)
-; CHECK-BE-NEXT:    stxv v2, 96(r31)
-; CHECK-BE-NEXT:    lxv v2, 96(r31)
-; CHECK-BE-NEXT:    lxv v3, 112(r31)
+; CHECK-BE-NEXT:    lxvpx vsp34, 0, r3
+; CHECK-BE-NEXT:    addi r3, r31, 96
+; CHECK-BE-NEXT:    stxvpx vsp34, 0, r3
+; CHECK-BE-NEXT:    lxvpx vsp34, 0, r3
 ; CHECK-BE-NEXT:    lxv vs0, 336(r31)
 ; CHECK-BE-NEXT:    dmxvi8gerx4 dmr0, vsp34, vs0
 ; CHECK-BE-NEXT:    dmxxextfdmr512 vsp34, vsp36, wacc_hi0, 1

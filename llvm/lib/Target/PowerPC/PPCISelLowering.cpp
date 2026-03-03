@@ -12107,6 +12107,14 @@ SDValue PPCTargetLowering::DMFInsert1024(const SmallVectorImpl<SDValue> &Pairs,
                  0);
 }
 
+static bool isPCRelNode(SDValue N) {
+  return (N.getOpcode() == PPCISD::MAT_PCREL_ADDR ||
+      isValidPCRelNode<ConstantPoolSDNode>(N) ||
+      isValidPCRelNode<GlobalAddressSDNode>(N) ||
+      isValidPCRelNode<JumpTableSDNode>(N) ||
+      isValidPCRelNode<BlockAddressSDNode>(N));
+}
+
 SDValue PPCTargetLowering::LowerVectorLoad(SDValue Op,
                                            SelectionDAG &DAG) const {
   SDLoc dl(Op);
@@ -12122,12 +12130,20 @@ SDValue PPCTargetLowering::LowerVectorLoad(SDValue Op,
     return Op;
 
   // Type v256i1 is used for pairs and v512i1 is used for accumulators.
-  // Here we create 2 or 4 v16i8 loads to load the pair or accumulator value in
-  // 2 or 4 vsx registers.
   assert((VT != MVT::v512i1 || Subtarget.hasMMA()) &&
          "Type unsupported without MMA");
   assert((VT != MVT::v256i1 || Subtarget.pairedVectorMemops()) &&
          "Type unsupported without paired vector support");
+
+  // For v256i1 on ISA Future, let the load go through to instruction selection
+  // where it will be matched to lxvp by the instruction patterns, unless it's
+  // a PC-relative load which should use plxv instead.
+  if (VT == MVT::v256i1 && Subtarget.isISAFuture() &&
+      !isPCRelNode(LN->getBasePtr()))
+    return Op;
+
+  // For other cases, create 2 or 4 v16i8 loads to load the pair or accumulator
+  // value in 2 or 4 vsx registers.
   Align Alignment = LN->getAlign();
   SmallVector<SDValue, 4> Loads;
   SmallVector<SDValue, 4> LoadChains;
@@ -12290,12 +12306,20 @@ SDValue PPCTargetLowering::LowerVectorStore(SDValue Op,
     return Op;
 
   // Type v256i1 is used for pairs and v512i1 is used for accumulators.
-  // Here we create 2 or 4 v16i8 stores to store the pair or accumulator
-  // underlying registers individually.
   assert((StoreVT != MVT::v512i1 || Subtarget.hasMMA()) &&
          "Type unsupported without MMA");
   assert((StoreVT != MVT::v256i1 || Subtarget.pairedVectorMemops()) &&
          "Type unsupported without paired vector support");
+
+  // For v256i1 on ISA Future, let the store go through to instruction selection
+  // where it will be matched to stxvp by the instruction patterns, unless it's
+  // a PC-relative store which should use pstxv instead.
+  if (StoreVT == MVT::v256i1 && Subtarget.isISAFuture() &&
+      !isPCRelNode(SN->getBasePtr()))
+    return Op;
+
+  // For other cases, create 2 or 4 v16i8 stores to store the pair or
+  // accumulator underlying registers individually.
   Align Alignment = SN->getAlign();
   SmallVector<SDValue, 4> Stores;
   unsigned NumVecs = 2;
@@ -20047,13 +20071,6 @@ static void computeFlagsForAddressComputation(SDValue N, unsigned &FlagSet,
   }
 }
 
-static bool isPCRelNode(SDValue N) {
-  return (N.getOpcode() == PPCISD::MAT_PCREL_ADDR ||
-      isValidPCRelNode<ConstantPoolSDNode>(N) ||
-      isValidPCRelNode<GlobalAddressSDNode>(N) ||
-      isValidPCRelNode<JumpTableSDNode>(N) ||
-      isValidPCRelNode<BlockAddressSDNode>(N));
-}
 
 /// computeMOFlags - Given a node N and it's Parent (a MemSDNode), compute
 /// the address flags of the load/store instruction that is to be matched.

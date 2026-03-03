@@ -111,17 +111,18 @@ define void @testMultiply(ptr nocapture noundef readonly %a, ptr nocapture nound
 ; CHECK-LE-WACC-NEXT:    stxv v31, -48(r30) # 16-byte Folded Spill
 ; CHECK-LE-WACC-NEXT:    lxv v31, 0(r3)
 ; CHECK-LE-WACC-NEXT:    lxv v30, 0(r4)
-; CHECK-LE-WACC-NEXT:    addi r3, r1, 32
+; CHECK-LE-WACC-NEXT:    std r28, -32(r30) # 8-byte Folded Spill
 ; CHECK-LE-WACC-NEXT:    std r29, -24(r30) # 8-byte Folded Spill
+; CHECK-LE-WACC-NEXT:    addi r28, r1, 32
+; CHECK-LE-WACC-NEXT:    mr r3, r28
 ; CHECK-LE-WACC-NEXT:    vmr v2, v31
 ; CHECK-LE-WACC-NEXT:    vmr v3, v30
 ; CHECK-LE-WACC-NEXT:    mr r29, r5
 ; CHECK-LE-WACC-NEXT:    bl _Z15buildVectorPairPu13__vector_pairDv16_hS0_@notoc
 ; CHECK-LE-WACC-NEXT:    dmxxsetaccz wacc0
 ; CHECK-LE-WACC-NEXT:    xvf32gerpp wacc0, v31, v30
-; CHECK-LE-WACC-NEXT:    lxv vs0, 48(r1)
-; CHECK-LE-WACC-NEXT:    lxv vs1, 32(r1)
-; CHECK-LE-WACC-NEXT:    xvf32gerpp wacc0, vs1, vs0
+; CHECK-LE-WACC-NEXT:    lxvpx vsp34, 0, r28
+; CHECK-LE-WACC-NEXT:    xvf32gerpp wacc0, v3, v2
 ; CHECK-LE-WACC-NEXT:    dmxxextfdmr512 vsp36, vsp34, wacc0, 0
 ; CHECK-LE-WACC-NEXT:    dmxxinstdmr512 wacc0, vsp36, vsp34, 0
 ; CHECK-LE-WACC-NEXT:    dmxxextfdmr512 vsp34, vsp36, wacc0, 0
@@ -132,6 +133,7 @@ define void @testMultiply(ptr nocapture noundef readonly %a, ptr nocapture nound
 ; CHECK-LE-WACC-NEXT:    lxv v31, -48(r30) # 16-byte Folded Reload
 ; CHECK-LE-WACC-NEXT:    lxv v30, -64(r30) # 16-byte Folded Reload
 ; CHECK-LE-WACC-NEXT:    ld r29, -24(r30) # 8-byte Folded Reload
+; CHECK-LE-WACC-NEXT:    ld r28, -32(r30) # 8-byte Folded Reload
 ; CHECK-LE-WACC-NEXT:    mr r1, r30
 ; CHECK-LE-WACC-NEXT:    ld r0, 16(r1)
 ; CHECK-LE-WACC-NEXT:    ld r30, -16(r1)
@@ -151,8 +153,10 @@ define void @testMultiply(ptr nocapture noundef readonly %a, ptr nocapture nound
 ; CHECK-BE-WACC-NEXT:    stxv v31, -48(r30) # 16-byte Folded Spill
 ; CHECK-BE-WACC-NEXT:    lxv v31, 0(r3)
 ; CHECK-BE-WACC-NEXT:    lxv v30, 0(r4)
-; CHECK-BE-WACC-NEXT:    addi r3, r1, 128
+; CHECK-BE-WACC-NEXT:    std r28, -32(r30) # 8-byte Folded Spill
 ; CHECK-BE-WACC-NEXT:    std r29, -24(r30) # 8-byte Folded Spill
+; CHECK-BE-WACC-NEXT:    addi r28, r1, 128
+; CHECK-BE-WACC-NEXT:    mr r3, r28
 ; CHECK-BE-WACC-NEXT:    vmr v2, v31
 ; CHECK-BE-WACC-NEXT:    vmr v3, v30
 ; CHECK-BE-WACC-NEXT:    mr r29, r5
@@ -160,9 +164,8 @@ define void @testMultiply(ptr nocapture noundef readonly %a, ptr nocapture nound
 ; CHECK-BE-WACC-NEXT:    nop
 ; CHECK-BE-WACC-NEXT:    dmxxsetaccz wacc0
 ; CHECK-BE-WACC-NEXT:    xvf32gerpp wacc0, v31, v30
-; CHECK-BE-WACC-NEXT:    lxv vs0, 128(r1)
-; CHECK-BE-WACC-NEXT:    lxv vs1, 144(r1)
-; CHECK-BE-WACC-NEXT:    xvf32gerpp wacc0, vs0, vs1
+; CHECK-BE-WACC-NEXT:    lxvpx vsp34, 0, r28
+; CHECK-BE-WACC-NEXT:    xvf32gerpp wacc0, v2, v3
 ; CHECK-BE-WACC-NEXT:    dmxxextfdmr512 vsp34, vsp36, wacc0, 0
 ; CHECK-BE-WACC-NEXT:    vmr v1, v2
 ; CHECK-BE-WACC-NEXT:    vmr v7, v4
@@ -177,6 +180,7 @@ define void @testMultiply(ptr nocapture noundef readonly %a, ptr nocapture nound
 ; CHECK-BE-WACC-NEXT:    lxv v31, -48(r30) # 16-byte Folded Reload
 ; CHECK-BE-WACC-NEXT:    lxv v30, -64(r30) # 16-byte Folded Reload
 ; CHECK-BE-WACC-NEXT:    ld r29, -24(r30) # 8-byte Folded Reload
+; CHECK-BE-WACC-NEXT:    ld r28, -32(r30) # 8-byte Folded Reload
 ; CHECK-BE-WACC-NEXT:    mr r1, r30
 ; CHECK-BE-WACC-NEXT:    ld r0, 16(r1)
 ; CHECK-BE-WACC-NEXT:    ld r30, -16(r1)
