@@ -17,6 +17,7 @@
 #include "src/__support/FPUtil/multiply_add.h"
 #include "src/__support/FPUtil/sqrt.h"
 #include "src/__support/macros/optimization.h"
+#include "src/__support/math/inv_trigf_utils.h"
 
 namespace LIBC_NAMESPACE_DECL {
 
@@ -71,17 +72,10 @@ LIBC_INLINE constexpr bfloat16 asinbf16(bfloat16 x) {
   float xf_abs = (xf < 0 ? -xf : xf);
   float x_sq = xf_abs * xf_abs;
 
-  // Degree 6 polynomial of asin(x) generated using Sollya with command :
-  // > display = hexadecimal
-  // > P = fpminimax(asin(x)/x, [|0,2,4,6|], [|SG,SG,SG,SG|], [0, 0.5]);
-  auto asin_poly = [](float u) {
-    return fputil::polyeval(u, 0x1.ffffcep-1f, 0x1.55b648p-3f, 0x1.24d192p-4f,
-                            0x1.0a788p-4f);
-  };
-
   // case 3: (0,0.5]
   if (x_abs <= 0x3F00) {
-    float result = xf * asin_poly(x_sq);
+    // asin_eval returns P(x^2) - 1, where P(x^2) ~ asin(x)/x
+    float result = xf * ( 1.0 + inv_trigf_utils_internal::asin_eval(x_sq));
     return bfloat16(result);
   }
 
@@ -89,7 +83,7 @@ LIBC_INLINE constexpr bfloat16 asinbf16(bfloat16 x) {
   //  using reduction: asin(x) = pi/2 - 2*asin(sqrt((1-x)/2))
   float t = fputil::multiply_add<float>(xf_abs, -0.5f, 0.5f);
   float t_sqrt = fputil::sqrt<float>(t);
-  float asin_sqrt_t = t_sqrt * asin_poly(t);
+  float asin_sqrt_t = t_sqrt * ( 1.0 + inv_trigf_utils_internal::asin_eval(t));
   float result = fputil::multiply_add<float>(-2.0f, asin_sqrt_t, PI_2);
   return bfloat16(x_sign * result);
 }
