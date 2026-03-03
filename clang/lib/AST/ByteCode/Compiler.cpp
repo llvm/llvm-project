@@ -7293,7 +7293,7 @@ bool Compiler<Emitter>::visitDeclRef(const ValueDecl *D, const Expr *E) {
   // we haven't seen yet.
   const auto *VD = dyn_cast<VarDecl>(D);
   if (!VD)
-    return this->emitDummyPtr(D, E);
+    return this->emitError(E);
 
   // For C.
   if (!Ctx.getLangOpts().CPlusPlus) {
