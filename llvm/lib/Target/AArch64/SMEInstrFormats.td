@@ -1113,6 +1113,9 @@ class sme_spill_fill_base<bit isStore, dag outs, dag ins, string opcodestr>
   let Inst{9-5}   = Rn;
   let Inst{4}     = 0b0;
   let Inst{3-0}   = imm4;
+  let MemOpAddrMode = MemOpAddrModeIndexed;
+  let MemOpBaseIdx = 3;
+  let MemOpOffsetIdx = 4;
 }
 
 let mayStore = 1 in
@@ -3685,6 +3688,8 @@ class sme2_spill_fill_vector<string mnemonic, bits<8> opc>
 
   let mayLoad     = !not(opc{7});
   let mayStore    = opc{7};
+  let MemOpAddrMode = MemOpAddrModeNoIdx;
+  let MemOpBaseIdx = 1;
 }
 
 

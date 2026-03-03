@@ -366,6 +366,11 @@ AArch64TargetMachine::AArch64TargetMachine(const Target &T, const Triple &TT,
     this->Options.NoTrapAfterNoreturn = true;
   }
 
+  // Disable jump table compression for LFI since it may cause assembler errors
+  // after LFI instrumentation if branch distances were incorrectly estimated.
+  if (TT.isLFI())
+    EnableCompressJumpTables = false;
+
   if (getMCAsmInfo()->usesWindowsCFI()) {
     // Unwinding can get confused if the last instruction in an
     // exception-handling region (function, funclet, try block, etc.)

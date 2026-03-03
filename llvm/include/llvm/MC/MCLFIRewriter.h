@@ -41,6 +41,7 @@ public:
       : Ctx(Ctx), InstInfo(std::move(II)), RegInfo(std::move(RI)) {}
 
   LLVM_ABI void error(const MCInst &Inst, const char Msg[]);
+  LLVM_ABI void warning(const MCInst &Inst, const char Msg[]);
 
   void disable() { Enabled = false; }
   void enable() { Enabled = true; }
@@ -61,7 +62,10 @@ public:
 
   // Called when a label is emitted. Used for optimizations that require
   // information about jump targets, such as guard elimination.
-  virtual void onLabel(const MCSymbol *Symbol) {}
+  virtual void onLabel(const MCSymbol *Symbol, MCStreamer &Out) {}
+
+  // Called at the end of the stream to flush any pending state.
+  virtual void finish(MCStreamer &Out) {}
 };
 
 } // namespace llvm

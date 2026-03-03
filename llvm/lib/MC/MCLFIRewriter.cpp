@@ -23,6 +23,10 @@ void MCLFIRewriter::error(const MCInst &Inst, const char Msg[]) {
   Ctx.reportError(Inst.getLoc(), Msg);
 }
 
+void MCLFIRewriter::warning(const MCInst &Inst, const char Msg[]) {
+  Ctx.reportWarning(Inst.getLoc(), Msg);
+}
+
 bool MCLFIRewriter::isCall(const MCInst &Inst) const {
   return InstInfo->get(Inst.getOpcode()).isCall();
 }
