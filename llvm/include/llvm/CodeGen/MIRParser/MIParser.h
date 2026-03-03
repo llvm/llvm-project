@@ -20,6 +20,7 @@
 #include "llvm/IR/TrackingMDRef.h"
 #include "llvm/Support/Allocator.h"
 #include "llvm/Support/SMLoc.h"
+#include "llvm/Support/UniqueBBID.h"
 #include <map>
 #include <utility>
 
