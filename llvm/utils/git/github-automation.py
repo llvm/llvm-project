@@ -673,7 +673,8 @@ class ReleaseWorkflow:
                 for review in pull.get_reviews():
                     if review.state != "APPROVED":
                         continue
-                    reviewers.append(review.user.login)
+                    if review.user.login not in reviewers:
+                        reviewers.append(review.user.login)
         if len(reviewers):
             message = "{} What do you think about merging this PR to the release branch?".format(
                 " ".join(["@" + r for r in reviewers])
