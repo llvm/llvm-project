@@ -969,29 +969,58 @@ TEST_F(AArch64SelectionDAGTest, KnownToBeAPowerOfTwo_ZeroExtend) {
   SDLoc Loc;
   auto Cst0 = DAG->getConstant(0, Loc, MVT::i16);
   auto Cst4 = DAG->getConstant(4, Loc, MVT::i16);
-  auto CstBig = DAG->getConstant(2 << 14, Loc, MVT::i16);
-  auto node0 = DAG->getNode(ISD::ZERO_EXTEND, Loc, MVT::i32, Cst0);
-  EXPECT_FALSE(DAG->isKnownToBeAPowerOfTwo(node0)); // this gets transformed
-  EXPECT_TRUE(DAG->isKnownToBeAPowerOfTwo(node0, /*OrZero=*/true)); // so need to pass OrZero=true
+  auto Cst6 = DAG->getConstant(6, Loc, MVT::i16);
+
+  auto node0 = DAG->getNode(ISD::ZERO_EXTEND, Loc, MVT::i32, Cst0); // this will be folded, and not pass through ZERO_EXTEND case.
+  EXPECT_FALSE(DAG->isKnownToBeAPowerOfTwo(node0));
+  EXPECT_TRUE(DAG->isKnownToBeAPowerOfTwo(node0, /*OrZero=*/true));
   auto node4 = DAG->getNode(ISD::ZERO_EXTEND, Loc, MVT::i32, Cst4);
   EXPECT_TRUE(DAG->isKnownToBeAPowerOfTwo(node4));
-  auto nodeBig = DAG->getNode(ISD::ZERO_EXTEND, Loc, MVT::i32, CstBig);
-  EXPECT_TRUE(DAG->isKnownToBeAPowerOfTwo(nodeBig));
+  auto node6 = DAG->getNode(ISD::ZERO_EXTEND, Loc, MVT::i32, Cst6);
+  EXPECT_FALSE(DAG->isKnownToBeAPowerOfTwo(node6));
+  EXPECT_FALSE(DAG->isKnownToBeAPowerOfTwo(node6, /*OrZero=*/true));
+
   auto VecVT = MVT::v2i16;
-  auto Vec04 = DAG->getNode(ISD::ZERO_EXTEND, Loc, MVT::v2i32, DAG->getBuildVector(VecVT, Loc, {Cst0, Cst4}));
-  auto Vec4Big = DAG->getNode(ISD::ZERO_EXTEND, Loc, MVT::v2i32, DAG->getBuildVector(VecVT, Loc, {Cst4, CstBig}));
-  auto Vec0Big = DAG->getNode(ISD::ZERO_EXTEND, Loc, MVT::v2i32, DAG->getBuildVector(VecVT, Loc, {Cst0, CstBig}));
-  EXPECT_TRUE(DAG->isKnownToBeAPowerOfTwo(Vec04));
-  EXPECT_FALSE(DAG->isKnownToBeAPowerOfTwo(Vec4Big));
-  EXPECT_FALSE(DAG->isKnownToBeAPowerOfTwo(Vec0Big));
+  auto Vec04 = DAG->getNode(ISD::ZERO_EXTEND, Loc, MVT::v2i32,
+    DAG->getBuildVector(VecVT, Loc, {Cst0, Cst4}));
+  auto Vec46 = DAG->getNode(ISD::ZERO_EXTEND, Loc, MVT::v2i32,
+    DAG->getBuildVector(VecVT, Loc, {Cst4, Cst6}));
+  auto Vec06 = DAG->getNode(ISD::ZERO_EXTEND, Loc, MVT::v2i32,
+      DAG->getBuildVector(VecVT, Loc, {Cst0, Cst6}));
+  EXPECT_FALSE(DAG->isKnownToBeAPowerOfTwo(Vec04));
+  EXPECT_TRUE(DAG->isKnownToBeAPowerOfTwo(Vec04, /*OrZero=*/true));
+  EXPECT_FALSE(DAG->isKnownToBeAPowerOfTwo(Vec46));
+  EXPECT_FALSE(DAG->isKnownToBeAPowerOfTwo(Vec46, /*OrZero=*/true));
+  EXPECT_FALSE(DAG->isKnownToBeAPowerOfTwo(Vec06));
+  EXPECT_FALSE(DAG->isKnownToBeAPowerOfTwo(Vec06, /*OrZero=*/true));
 
   auto SplatVT = MVT::nxv2i16;
-  auto Splat0 = DAG->getNode(ISD::ZERO_EXTEND, Loc, MVT::nxv2i32, DAG->getSplat(SplatVT, Loc, Cst0));
-  auto Splat4 = DAG->getNode(ISD::ZERO_EXTEND, Loc, MVT::nxv2i32, DAG->getSplat(SplatVT, Loc, Cst4));
-  auto SplatBig = DAG->getNode(ISD::ZERO_EXTEND, Loc, MVT::nxv2i32, DAG->getSplat(SplatVT, Loc, CstBig));
-  EXPECT_TRUE(DAG->isKnownToBeAPowerOfTwo(Splat0));
+  auto Splat0 = DAG->getNode(ISD::ZERO_EXTEND, Loc, MVT::nxv2i32,
+                              DAG->getSplat(SplatVT, Loc, Cst0));
+  auto Splat4 = DAG->getNode(ISD::ZERO_EXTEND, Loc, MVT::nxv2i32,
+                              DAG->getSplat(SplatVT, Loc, Cst4));
+  auto Splat6 = DAG->getNode(ISD::ZERO_EXTEND, Loc, MVT::nxv2i32,
+                                    DAG->getSplat(SplatVT, Loc, Cst6));
+
+  EXPECT_FALSE(DAG->isKnownToBeAPowerOfTwo(Splat0));
+  EXPECT_TRUE(DAG->isKnownToBeAPowerOfTwo(Splat0, /*OrZero=*/true));
   EXPECT_TRUE(DAG->isKnownToBeAPowerOfTwo(Splat4));
-  EXPECT_TRUE(DAG->isKnownToBeAPowerOfTwo(SplatBig));
+  EXPECT_TRUE(DAG->isKnownToBeAPowerOfTwo(Splat4, /*OrZero=*/true));
+  EXPECT_FALSE(DAG->isKnownToBeAPowerOfTwo(Splat6));
+  EXPECT_FALSE(DAG->isKnownToBeAPowerOfTwo(Splat6, /*OrZero=*/true));
+
+  auto Cst2_16 = DAG->getConstant(2, Loc, MVT::i16);
+  auto Cond = DAG->getCopyFromReg(DAG->getEntryNode(), Loc, 1, MVT::i1);
+  auto selectNode = DAG->getNode(ISD::SELECT, Loc, MVT::i16, Cond, Cst2_16, Cst4);
+  // zext of select(2,4) should still be power of 2
+  auto zextNode = DAG->getNode(ISD::ZERO_EXTEND, Loc, MVT::i32, selectNode);
+  EXPECT_TRUE(DAG->isKnownToBeAPowerOfTwo(zextNode));
+  EXPECT_TRUE(DAG->isKnownToBeAPowerOfTwo(zextNode, /*OrZero=*/true));
+
+  auto selectNode2 = DAG->getNode(ISD::SELECT, Loc, MVT::i16, Cond, Cst6, Cst4); // select(6,4)
+  auto zextNode2 = DAG->getNode(ISD::ZERO_EXTEND, Loc, MVT::i32, selectNode2);
+  EXPECT_FALSE(DAG->isKnownToBeAPowerOfTwo(zextNode2));
+  EXPECT_FALSE(DAG->isKnownToBeAPowerOfTwo(zextNode2, /*OrZero=*/true));
 }
 
 TEST_F(AArch64SelectionDAGTest, KnownToBeAPowerOfTwo_Select) {
