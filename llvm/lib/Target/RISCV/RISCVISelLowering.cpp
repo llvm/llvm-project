@@ -8933,11 +8933,11 @@ SDValue RISCVTargetLowering::LowerOperation(SDValue Op,
     assert(Op.getOpcode() != ISD::CTTZ);
     return lowerCTLZ_CTTZ_ZERO_UNDEF(Op, DAG);
   case ISD::CLMUL: {
-    assert(Op.getValueType().isScalableVector() && Subtarget.hasStdExtZvbc() &&
+    MVT VT = Op.getSimpleValueType();
+    assert(VT.isScalableVector() && Subtarget.hasStdExtZvbc() &&
            "Unexpected custom legalisation");
     // Promote to i64 vector.
-    MVT VT = Op.getSimpleValueType();
-    MVT I64VecVT = MVT::getVectorVT(MVT::i64, VT.getVectorElementCount());
+    MVT I64VecVT = VT.changeVectorElementType(MVT::i64);
     SDLoc DL(Op);
     SDValue Op0 = DAG.getNode(ISD::ZERO_EXTEND, DL, I64VecVT, Op.getOperand(0));
     SDValue Op1 = DAG.getNode(ISD::ZERO_EXTEND, DL, I64VecVT, Op.getOperand(1));
