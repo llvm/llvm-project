@@ -2086,12 +2086,13 @@ def Vector_GatherOp :
                    else pass_thru[i,j]
     ```
     Note, `indices` are element offsets - they are expressed in units of
-    elements (not bytes). The offset is added to the underlying memory address,
-    so if the resulting position exceeds the size of the innermost dimension,
-    it naturally advances into the next row and/or plane according to the
-    identity (row-major) layout of 3D `base` (col = dim 0, row = dim 1, plane
-    = dim 2). Importantly, `indices` are interpreted assuming an identity
-    (contiguous) MemRef layout and do not account for non-identity strides.
+    elements (not bytes). Each element in `indices` represents a displacement
+    in units of elements from the starting element, i.e. `%base[%ofs_0, %ofs_1,
+    %ofs_2]` for the example above. If the resulting position exceeds the size
+    of a dimension, it naturally advances into the next row and/or plane
+    according to the identity (row-major) layout of `base`. Importantly, for
+    MemRefs, `indices` are interpreted assuming an identity (contiguous) MemRef
+    layout and do not account for non-identity strides.
 
 
     If a mask bit is set and the corresponding index is out-of-bounds for the
@@ -2200,12 +2201,13 @@ def Vector_ScatterOp
     ```
 
     Note, `indices` are element offsets - they are expressed in units of
-    elements (not bytes). The offset is added to the underlying memory address,
-    so if the resulting position exceeds the size of the innermost dimension,
-    it naturally advances into the next row and/or plane according to the
-    identity (row-major) layout of 3D `base` (col = dim 0, row = dim 1, plane
-    = dim 2). Importantly, `indices` are interpreted assuming an identity
-    (contiguous) MemRef layout and do not account for non-identity strides.
+    elements (not bytes). Each element in `indices` represents a displacement
+    in units of elements from the starting element, i.e. `%base[%ofs_0, %ofs_1,
+    %ofs_2]` for the example above. If the resulting position exceeds the size
+    of a dimension, it naturally advances into the next row and/or plane
+    according to the identity (row-major) layout of `base`. Importantly, for
+    MemRefs, `indices` are interpreted assuming an identity (contiguous) MemRef
+    layout and do not account for non-identity strides.
 
     If the index vector contains two or more duplicate indices, the behavior is
     undefined. Underlying implementation may enforce strict sequential
