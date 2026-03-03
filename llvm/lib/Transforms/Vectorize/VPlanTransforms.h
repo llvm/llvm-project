@@ -26,7 +26,6 @@ namespace llvm {
 class InductionDescriptor;
 class Instruction;
 class Loop;
-class LoopVectorizationLegality;
 class LoopVersioning;
 class OptimizationRemarkEmitter;
 class PHINode;
@@ -538,8 +537,7 @@ struct VPlanTransforms {
 
   static void makeMemOpWideningDecisions(VPlan &Plan, VFRange &Range,
                                          VPRecipeBuilder &RecipeBuilder,
-                                         VPCostContext &CostCtx,
-                                         LoopVectorizationLegality &Legal);
+                                         VPCostContext &CostCtx);
 };
 
 } // namespace llvm
