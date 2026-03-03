@@ -1670,7 +1670,7 @@ PreservedAnalyses llvm::AMDGPUAttributorPass::run(Module &M,
 
   // TODO: Probably preserves CFG
   return runImpl(Functions, /*IsModulePass=*/true, /*DeleteFns=*/true, M, AG,
-                 TM, Options, ThinOrFullLTOPhase::None)
+                 TM, Options, LTOPhase)
              ? PreservedAnalyses::none()
              : PreservedAnalyses::all();
 }
