@@ -153,8 +153,8 @@ void ItaniumEHLowering::ensureRuntimeDecls(mlir::Location loc) {
   if (!personalityFunc) {
     auto s32Type = cir::IntType::get(ctx, 32, /*isSigned=*/true);
     auto personalityFuncTy = cir::FuncType::get({}, s32Type, /*isVarArg=*/true);
-    personalityFunc = getOrCreateRuntimeFuncDecl(mod, loc, "__gxx_personality_v0",
-                                                personalityFuncTy);
+    personalityFunc = getOrCreateRuntimeFuncDecl(
+        mod, loc, "__gxx_personality_v0", personalityFuncTy);
   }
 
   if (!beginCatchFunc) {
@@ -166,8 +166,8 @@ void ItaniumEHLowering::ensureRuntimeDecls(mlir::Location loc) {
 
   if (!endCatchFunc) {
     auto endCatchFuncTy = cir::FuncType::get({}, voidType, /*isVarArg=*/false);
-    endCatchFunc = getOrCreateRuntimeFuncDecl(mod, loc, "__cxa_end_catch",
-                                              endCatchFuncTy);
+    endCatchFunc =
+        getOrCreateRuntimeFuncDecl(mod, loc, "__cxa_end_catch", endCatchFuncTy);
   }
 }
 
@@ -309,7 +309,8 @@ void ItaniumEHLowering::lowerEhInitiate(
         // end_cleanup first (drops the cleanup_token use) then the begin.
         for (auto &tokenUsers :
              llvm::make_early_inc_range(op.getCleanupToken().getUses())) {
-          if (auto endOp = mlir::dyn_cast<cir::EndCleanupOp>(tokenUsers.getOwner()))
+          if (auto endOp =
+                  mlir::dyn_cast<cir::EndCleanupOp>(tokenUsers.getOwner()))
             endOp.erase();
         }
         op.erase();
@@ -318,7 +319,8 @@ void ItaniumEHLowering::lowerEhInitiate(
         // then replace begin_catch → __cxa_begin_catch.
         for (auto &tokenUsers :
              llvm::make_early_inc_range(op.getCatchToken().getUses())) {
-          if (auto endOp = mlir::dyn_cast<cir::EndCatchOp>(tokenUsers.getOwner())) {
+          if (auto endOp =
+                  mlir::dyn_cast<cir::EndCatchOp>(tokenUsers.getOwner())) {
             builder.setInsertionPoint(endOp);
             cir::CallOp::create(builder, endOp.getLoc(),
                                 mlir::FlatSymbolRefAttr::get(endCatchFunc),
@@ -419,8 +421,8 @@ void ItaniumEHLowering::lowerDispatch(
     mlir::Block *falseDest = defaultDest;
     mlir::Block *firstCmpBlock = nullptr;
     for (int i = numCatches - 1; i >= 0; --i) {
-      auto *cmpBlock = builder.createBlock(
-          insertBefore, {voidPtrType, u32Type}, {dispLoc, dispLoc});
+      auto *cmpBlock = builder.createBlock(insertBefore, {voidPtrType, u32Type},
+                                           {dispLoc, dispLoc});
 
       mlir::Value cmpExnPtr = cmpBlock->getArgument(0);
       mlir::Value cmpTypeId = cmpBlock->getArgument(1);
