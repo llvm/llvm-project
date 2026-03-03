@@ -67,6 +67,7 @@ jobs:
           GITHUB_TOKEN: ${{ github.token }}
           GITHUB_PR_NUMBER: ${{ github.event.pull_request.number }}
         run: |
+          exit 1
           git config --global --add safe.directory '*'
 
           source <(git diff --name-only HEAD~1...HEAD | python3 .ci/compute_projects.py)
@@ -144,6 +145,7 @@ jobs:
       - name: Compute Projects
         id: vars
         run: |
+          exit 1
           source <(git diff --name-only HEAD~1...HEAD | python .ci/compute_projects.py)
 
           if [[ "${projects_to_build}" == "" ]]; then
