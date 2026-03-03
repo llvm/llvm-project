@@ -224,7 +224,7 @@ static cl::opt<bool> VectorizeCopyableElements(
              "better vectorization."));
 
 static cl::opt<unsigned> LoopAwareTripCount(
-    "slp-cost-loop-min-trip-count", cl::init(2), cl::Hidden,
+    "slp-cost-loop-trip-count", cl::init(2), cl::Hidden,
     cl::desc("Loop trip count, considered by the cost model during "
              "modeling (0=loops are ignored and considered flat code)"));
 
@@ -15290,7 +15290,7 @@ TTI::CastContextHint BoUpSLP::getCastContextHint(const TreeEntry &TE) const {
   return TTI::CastContextHint::None;
 }
 
-/// Get the minimum loop trip count for the loop \p L.
+/// Get the assumed loop trip count for the loop \p L.
 static unsigned getLoopTripCount(const Loop *L, ScalarEvolution &SE) {
   if (LoopAwareTripCount == 0)
     return 1;
