@@ -674,12 +674,6 @@ LogicalResult SparseMFMAOp::verify() {
 // DPPOp
 //===----------------------------------------------------------------------===//
 LogicalResult DPPOp::verify() {
-  Type srcType = getSrc().getType();
-  if (srcType.getIntOrFloatBitWidth() > 64) {
-    return emitOpError("integer and floating point types larger than 64 bits "
-                       "are not supported");
-  }
-
   DPPPerm kind = getKind();
   Attribute permArgument = getPermArgument().value_or(Attribute{});
 
@@ -1151,9 +1145,9 @@ struct PackScales final : OpRewritePattern<ScaledMFMAOp> {
       }
 
       int64_t numElements = scaleSrcType.getNumElements();
-      if (numElements <= 4) {
+      if (numElements < 4) {
         return rewriter.notifyMatchFailure(
-            op, "no packing if # of scales less than four");
+            op, "do not pack if # of scales less than four");
       }
 
       // Find a linearized idx using the size and offsets of the extract op.

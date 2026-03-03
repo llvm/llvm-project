@@ -476,6 +476,15 @@ void AMDGPUInstPrinter::printVOPDst(const MCInst *MI, unsigned OpNo,
   case AMDGPU::V_ADD_CO_CI_U32_dpp8_gfx12:
   case AMDGPU::V_SUB_CO_CI_U32_dpp8_gfx12:
   case AMDGPU::V_SUBREV_CO_CI_U32_dpp8_gfx12:
+  case AMDGPU::V_ADD_CO_CI_U32_e32_gfx13:
+  case AMDGPU::V_SUB_CO_CI_U32_e32_gfx13:
+  case AMDGPU::V_SUBREV_CO_CI_U32_e32_gfx13:
+  case AMDGPU::V_ADD_CO_CI_U32_dpp_gfx13:
+  case AMDGPU::V_SUB_CO_CI_U32_dpp_gfx13:
+  case AMDGPU::V_SUBREV_CO_CI_U32_dpp_gfx13:
+  case AMDGPU::V_ADD_CO_CI_U32_dpp8_gfx13:
+  case AMDGPU::V_SUB_CO_CI_U32_dpp8_gfx13:
+  case AMDGPU::V_SUBREV_CO_CI_U32_dpp8_gfx13:
     printDefaultVccOperand(false, STI, O);
     break;
   }
@@ -953,6 +962,18 @@ void AMDGPUInstPrinter::printRegularOperand(const MCInst *MI, unsigned OpNo,
   case AMDGPU::V_ADD_CO_CI_U32_dpp8_gfx12:
   case AMDGPU::V_SUB_CO_CI_U32_dpp8_gfx12:
   case AMDGPU::V_SUBREV_CO_CI_U32_dpp8_gfx12:
+  case AMDGPU::V_CNDMASK_B32_e32_gfx13:
+  case AMDGPU::V_ADD_CO_CI_U32_e32_gfx13:
+  case AMDGPU::V_SUB_CO_CI_U32_e32_gfx13:
+  case AMDGPU::V_SUBREV_CO_CI_U32_e32_gfx13:
+  case AMDGPU::V_CNDMASK_B32_dpp_gfx13:
+  case AMDGPU::V_ADD_CO_CI_U32_dpp_gfx13:
+  case AMDGPU::V_SUB_CO_CI_U32_dpp_gfx13:
+  case AMDGPU::V_SUBREV_CO_CI_U32_dpp_gfx13:
+  case AMDGPU::V_CNDMASK_B32_dpp8_gfx13:
+  case AMDGPU::V_ADD_CO_CI_U32_dpp8_gfx13:
+  case AMDGPU::V_SUB_CO_CI_U32_dpp8_gfx13:
+  case AMDGPU::V_SUBREV_CO_CI_U32_dpp8_gfx13:
 
   case AMDGPU::V_CNDMASK_B32_e32_gfx6_gfx7:
   case AMDGPU::V_CNDMASK_B32_e32_vi:
@@ -1659,6 +1680,19 @@ void AMDGPUInstPrinter::printSendMsg(const MCInst *MI, unsigned OpNo,
   } else {
     O << Imm16; // Unknown imm16 code.
   }
+}
+
+void AMDGPUInstPrinter::printWaitEvent(const MCInst *MI, unsigned OpNo,
+                                       const MCSubtargetInfo &STI,
+                                       raw_ostream &O) {
+  using namespace llvm::AMDGPU::WaitEvent;
+  const uint16_t Imm16 = static_cast<uint16_t>(MI->getOperand(OpNo).getImm());
+
+  StringRef EventName = getWaitEventMaskName(Imm16, STI);
+  if (EventName.empty())
+    O << formatHex(static_cast<uint64_t>(Imm16));
+  else
+    O << EventName;
 }
 
 static void printSwizzleBitmask(const uint16_t AndMask,

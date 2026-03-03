@@ -1,5 +1,5 @@
-// RUN: %clang_cc1 -std=c++2c -fcxx-exceptions -fexperimental-new-constant-interpreter -verify=expected,both %s -DBYTECODE
-// RUN: %clang_cc1 -std=c++2c -fcxx-exceptions -verify=ref,both %s
+// RUN: %clang_cc1 -std=c++2c -fexperimental-new-constant-interpreter -verify=expected,both %s -DBYTECODE
+// RUN: %clang_cc1 -std=c++2c                                         -verify=ref,both %s
 
 typedef __INT64_TYPE__ int64_t;
 namespace std {
@@ -239,7 +239,7 @@ namespace records {
   /// Destructor is NOT called.
   struct A {
     bool b;
-    constexpr ~A() { if (b) throw; }
+    constexpr ~A() { if (b) __builtin_abort(); }
   };
 
   constexpr int foo() {

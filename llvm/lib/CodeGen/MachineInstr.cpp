@@ -1832,7 +1832,7 @@ void MachineInstr::print(raw_ostream &OS, ModuleSlotTracker &MST,
 
   SmallBitVector PrintedTypes(8);
   bool ShouldPrintRegisterTies = IsStandalone || hasComplexRegisterTies();
-  auto getTiedOperandIdx = [&](unsigned OpIdx) {
+  auto GetTiedOperandIdx = [&](unsigned OpIdx) {
     if (!ShouldPrintRegisterTies)
       return 0U;
     const MachineOperand &MO = getOperand(OpIdx);
@@ -1853,9 +1853,9 @@ void MachineInstr::print(raw_ostream &OS, ModuleSlotTracker &MST,
       OS << ", ";
 
     LLT TypeToPrint = MRI ? getTypeToPrint(StartOp, PrintedTypes, *MRI) : LLT{};
-    unsigned TiedOperandIdx = getTiedOperandIdx(StartOp);
+    // tied operands are not printed for defs.
     MO.print(OS, MST, TypeToPrint, StartOp, /*PrintDef=*/false, IsStandalone,
-             ShouldPrintRegisterTies, TiedOperandIdx, TRI);
+             /*ShouldPrintRegisterTies=*/false, /*TiedOperandIdx=*/0, TRI);
     ++StartOp;
   }
 
@@ -1890,6 +1890,8 @@ void MachineInstr::print(raw_ostream &OS, ModuleSlotTracker &MST,
     OS << "nofpexcept ";
   if (getFlag(MachineInstr::NoMerge))
     OS << "nomerge ";
+  if (getFlag(MachineInstr::NoConvergent))
+    OS << "noconvergent ";
   if (getFlag(MachineInstr::NonNeg))
     OS << "nneg ";
   if (getFlag(MachineInstr::Disjoint))
@@ -1920,7 +1922,7 @@ void MachineInstr::print(raw_ostream &OS, ModuleSlotTracker &MST,
     OS << " ";
     const unsigned OpIdx = InlineAsm::MIOp_AsmString;
     LLT TypeToPrint = MRI ? getTypeToPrint(OpIdx, PrintedTypes, *MRI) : LLT{};
-    unsigned TiedOperandIdx = getTiedOperandIdx(OpIdx);
+    unsigned TiedOperandIdx = GetTiedOperandIdx(OpIdx);
     getOperand(OpIdx).print(OS, MST, TypeToPrint, OpIdx, /*PrintDef=*/true,
                             IsStandalone, ShouldPrintRegisterTies,
                             TiedOperandIdx, TRI);
@@ -1961,7 +1963,7 @@ void MachineInstr::print(raw_ostream &OS, ModuleSlotTracker &MST,
         OS << "!\"" << DIV->getName() << '\"';
       else {
         LLT TypeToPrint = MRI ? getTypeToPrint(i, PrintedTypes, *MRI) : LLT{};
-        unsigned TiedOperandIdx = getTiedOperandIdx(i);
+        unsigned TiedOperandIdx = GetTiedOperandIdx(i);
         MO.print(OS, MST, TypeToPrint, i, /*PrintDef=*/true, IsStandalone,
                  ShouldPrintRegisterTies, TiedOperandIdx, TRI);
       }
@@ -1972,7 +1974,7 @@ void MachineInstr::print(raw_ostream &OS, ModuleSlotTracker &MST,
         OS << "\"" << DIL->getName() << '\"';
       else {
         LLT TypeToPrint = MRI ? getTypeToPrint(i, PrintedTypes, *MRI) : LLT{};
-        unsigned TiedOperandIdx = getTiedOperandIdx(i);
+        unsigned TiedOperandIdx = GetTiedOperandIdx(i);
         MO.print(OS, MST, TypeToPrint, i, /*PrintDef=*/true, IsStandalone,
                  ShouldPrintRegisterTies, TiedOperandIdx, TRI);
       }
@@ -2011,14 +2013,13 @@ void MachineInstr::print(raw_ostream &OS, ModuleSlotTracker &MST,
 
       // Compute the index of the next operand descriptor.
       AsmDescOp += 1 + F.getNumOperandRegisters();
+    } else if (MO.isImm() && isOperandSubregIdx(i)) {
+      MachineOperand::printSubRegIdx(OS, MO.getImm(), TRI);
     } else {
       LLT TypeToPrint = MRI ? getTypeToPrint(i, PrintedTypes, *MRI) : LLT{};
-      unsigned TiedOperandIdx = getTiedOperandIdx(i);
-      if (MO.isImm() && isOperandSubregIdx(i))
-        MachineOperand::printSubRegIdx(OS, MO.getImm(), TRI);
-      else
-        MO.print(OS, MST, TypeToPrint, i, /*PrintDef=*/true, IsStandalone,
-                 ShouldPrintRegisterTies, TiedOperandIdx, TRI);
+      unsigned TiedOperandIdx = GetTiedOperandIdx(i);
+      MO.print(OS, MST, TypeToPrint, i, /*PrintDef=*/true, IsStandalone,
+               ShouldPrintRegisterTies, TiedOperandIdx, TRI);
     }
   }
 

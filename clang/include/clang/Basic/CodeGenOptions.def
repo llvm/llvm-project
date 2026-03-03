@@ -29,6 +29,8 @@ CODEGENOPT(Name, Bits, Default, Compatibility)
 
 CODEGENOPT(DisableIntegratedAS, 1, 0, Benign) ///< -no-integrated-as
 CODEGENOPT(Crel, 1, 0, Benign) ///< -Wa,--crel
+ENUM_CODEGENOPT(RelocSectionSym, RelocSectionSymType, 2,
+                RelocSectionSymType::All, Benign) ///< -Wa,--reloc-section-sym=
 CODEGENOPT(ImplicitMapSyms, 1, 0, Benign) ///< -Wa,-mmapsyms=implicit
 CODEGENOPT(AsmVerbose        , 1, 0, Benign) ///< -dA, -fverbose-asm.
 CODEGENOPT(PreserveAsmComments, 1, 1, Benign) ///< -dA, -fno-preserve-as-comments.
@@ -191,6 +193,8 @@ CODEGENOPT(EnableSegmentedStacks , 1, 0, Benign) ///< Set when -fsplit-stack is 
 CODEGENOPT(StackClashProtector, 1, 0, Benign) ///< Set when -fstack-clash-protection is enabled.
 CODEGENOPT(NoImplicitFloat   , 1, 0, Benign) ///< Set when -mno-implicit-float is enabled.
 CODEGENOPT(NullPointerIsValid , 1, 0, Benign) ///< Assume Null pointer deference is defined.
+CODEGENOPT(StrictLifetimes , 1, 0, Benign) ///< Assume an object is dead
+                                           ///< after its destructor returns.
 CODEGENOPT(OpenCLCorrectlyRoundedDivSqrt, 1, 0, Benign) ///< -cl-fp32-correctly-rounded-divide-sqrt
 CODEGENOPT(HIPCorrectlyRoundedDivSqrt, 1, 1, Benign) ///< -fno-hip-fp32-correctly-rounded-divide-sqrt
 CODEGENOPT(DisableBlockSignatureString, 1, 0, Benign) ///< Set when -fdisable-block-signature-string is enabled.
@@ -506,6 +510,9 @@ CODEGENOPT(AllResourcesBound, 1, 0, Benign)
 /// Windows.
 ENUM_CODEGENOPT(WinX64EHUnwindV2, WinX64EHUnwindV2Mode,
                 2, WinX64EHUnwindV2Mode::Disabled, Benign)
+
+/// Adds attributes that prevent outlining (`-mno-outline`)
+CODEGENOPT(DisableOutlining, 1, 0, Benign)
 
 /// FIXME: Make DebugOptions its own top-level .def file.
 #include "DebugOptions.def"

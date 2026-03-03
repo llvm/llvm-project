@@ -15,6 +15,7 @@
 #include "CIRGenFunction.h"
 #include "CIRGenModule.h"
 #include "CIRGenValue.h"
+#include "mlir/Dialect/Ptr/IR/MemorySpaceInterfaces.h"
 #include "mlir/IR/BuiltinAttributes.h"
 #include "mlir/IR/Value.h"
 #include "clang/AST/Attr.h"
@@ -305,8 +306,8 @@ static LValue emitGlobalVarDeclLValue(CIRGenFunction &cgf, const Expr *e,
   Address addr(v, realVarTy, alignment);
   LValue lv;
   if (vd->getType()->isReferenceType())
-    cgf.cgm.errorNYI(e->getSourceRange(),
-                     "emitGlobalVarDeclLValue: reference type");
+    lv = cgf.emitLoadOfReferenceLValue(addr, cgf.getLoc(e->getSourceRange()),
+                                       vd->getType(), AlignmentSource::Decl);
   else
     lv = cgf.makeAddrLValue(addr, t, AlignmentSource::Decl);
   assert(!cir::MissingFeatures::setObjCGCLValueClass());
@@ -383,9 +384,9 @@ mlir::Value CIRGenFunction::emitStoreThroughBitfieldLValue(RValue src,
                      dst.isVolatileQualified() &&
                      info.volatileStorageSize != 0 && isAAPCS(cgm.getTarget());
 
-  mlir::Value dstAddr = dst.getAddress().getPointer();
+  assert(currSrcLoc && "must pass in source location");
 
-  return builder.createSetBitfield(dstAddr.getLoc(), resLTy, ptr,
+  return builder.createSetBitfield(*currSrcLoc, resLTy, ptr,
                                    ptr.getElementType(), src.getValue(), info,
                                    dst.isVolatileQualified(), useVoaltile);
 }
@@ -989,7 +990,7 @@ mlir::Value CIRGenFunction::evaluateExprAsBool(const Expr *e) {
     return createDummyValue(getLoc(loc), boolTy);
   }
 
-  assert(!cir::MissingFeatures::cgFPOptionsRAII());
+  CIRGenFunction::CIRGenFPOptionsRAII FPOptsRAII(*this, e);
   if (!e->getType()->isAnyComplexType())
     return emitScalarConversion(emitScalarExpr(e), e->getType(), boolTy, loc);
 
@@ -1455,9 +1456,9 @@ LValue CIRGenFunction::emitCastLValue(const CastExpr *e) {
     QualType destTy = getContext().getPointerType(e->getType());
 
     clang::LangAS srcLangAS = e->getSubExpr()->getType().getAddressSpace();
-    cir::TargetAddressSpaceAttr srcAS;
+    mlir::ptr::MemorySpaceAttrInterface srcAS;
     if (clang::isTargetAddressSpace(srcLangAS))
-      srcAS = cir::toCIRTargetAddressSpace(getMLIRContext(), srcLangAS);
+      srcAS = cir::toCIRAddressSpaceAttr(getMLIRContext(), srcLangAS);
     else
       cgm.errorNYI(
           e->getSourceRange(),
@@ -1657,10 +1658,13 @@ static Address createReferenceTemporary(CIRGenFunction &cgf,
   }
   case SD_Thread:
   case SD_Static: {
-    cgf.cgm.errorNYI(
-        m->getSourceRange(),
-        "createReferenceTemporary: static/thread storage duration");
-    return Address::invalid();
+    auto addr =
+        mlir::cast<cir::GlobalOp>(cgf.cgm.getAddrOfGlobalTemporary(m, inner));
+    auto getGlobal = cgf.cgm.getBuilder().createGetGlobal(addr);
+    assert(addr.getAlignment().has_value() &&
+           "This should always have an alignment");
+    return Address(getGlobal,
+                   clang::CharUnits::fromQuantity(addr.getAlignment().value()));
   }
 
   case SD_Dynamic:
@@ -1933,8 +1937,12 @@ CIRGenCallee CIRGenFunction::emitDirectCallee(const GlobalDecl &gd) {
 
     bool isPredefinedLibFunction =
         cgm.getASTContext().BuiltinInfo.isPredefinedLibFunction(builtinID);
-    // Assume nobuiltins everywhere until we actually read the attributes.
-    bool hasAttributeNoBuiltin = true;
+    // TODO: Read no-builtin function attribute and set this accordingly.
+    // Using false here matches OGCG's default behavior - builtins are called
+    // as builtins unless explicitly disabled. The previous value of true was
+    // overly conservative and caused functions to be marked as no_inline when
+    // they shouldn't be.
+    bool hasAttributeNoBuiltin = false;
     assert(!cir::MissingFeatures::attributeNoBuiltin());
 
     // When directing calling an inline builtin, call it through it's mangled
@@ -1973,7 +1981,12 @@ CIRGenCallee CIRGenFunction::emitDirectCallee(const GlobalDecl &gd) {
 
   cir::FuncOp callee = emitFunctionDeclPointer(cgm, gd);
 
-  assert(!cir::MissingFeatures::hip());
+  if ((cgm.getLangOpts().CUDA || cgm.getLangOpts().HIP) &&
+      !cgm.getLangOpts().CUDAIsDevice && fd->hasAttr<CUDAGlobalAttr>()) {
+    mlir::Operation *handle = cgm.getCUDARuntime().getKernelHandle(callee, gd);
+    callee =
+        mlir::cast<cir::FuncOp>(*cgm.getCUDARuntime().getKernelStub(handle));
+  }
 
   return CIRGenCallee::forDirect(callee, gd);
 }
@@ -2124,10 +2137,8 @@ RValue CIRGenFunction::emitCallExpr(const clang::CallExpr *e,
   if (const auto *ce = dyn_cast<CXXMemberCallExpr>(e))
     return emitCXXMemberCallExpr(ce, returnValue);
 
-  if (isa<CUDAKernelCallExpr>(e)) {
-    cgm.errorNYI(e->getSourceRange(), "call to CUDA kernel");
-    return RValue::get(nullptr);
-  }
+  if (const auto *cudaKernelCallExpr = dyn_cast<CUDAKernelCallExpr>(e))
+    return emitCUDAKernelCallExpr(cudaKernelCallExpr, returnValue);
 
   if (const auto *operatorCall = dyn_cast<CXXOperatorCallExpr>(e)) {
     // If the callee decl is a CXXMethodDecl, we need to emit this as a C++
@@ -2536,6 +2547,18 @@ cir::AllocaOp CIRGenFunction::createTempAlloca(mlir::Type ty,
   return mlir::cast<cir::AllocaOp>(
       emitAlloca(name.str(), ty, loc, CharUnits(), ip, arraySize)
           .getDefiningOp());
+}
+
+/// CreateDefaultAlignTempAlloca - This creates an alloca with the
+/// default alignment of the corresponding LLVM type, which is *not*
+/// guaranteed to be related in any way to the expected alignment of
+/// an AST type that might have been lowered to Ty.
+Address CIRGenFunction::createDefaultAlignTempAlloca(mlir::Type ty,
+                                                     mlir::Location loc,
+                                                     const Twine &name) {
+  CharUnits align =
+      CharUnits::fromQuantity(cgm.getDataLayout().getABITypeAlign(ty));
+  return createTempAlloca(ty, align, loc, name);
 }
 
 /// Try to emit a reference to the given value without producing it as

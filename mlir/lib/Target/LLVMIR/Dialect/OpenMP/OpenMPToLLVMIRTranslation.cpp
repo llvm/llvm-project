@@ -354,10 +354,6 @@ static LogicalResult checkImplementationStatus(Operation &op) {
     if (op.getOrder() || op.getOrderMod())
       result = todo("order");
   };
-  auto checkParLevelSimd = [&todo](auto op, LogicalResult &result) {
-    if (op.getParLevelSimd())
-      result = todo("parallelization-level");
-  };
   auto checkPrivate = [&todo](auto op, LogicalResult &result) {
     if (!op.getPrivateVars().empty() || op.getPrivateSyms())
       result = todo("privatization");
@@ -396,7 +392,6 @@ static LogicalResult checkImplementationStatus(Operation &op) {
         checkAllocate(op, result);
         checkOrder(op, result);
       })
-      .Case([&](omp::OrderedRegionOp op) { checkParLevelSimd(op, result); })
       .Case([&](omp::SectionsOp op) {
         checkAllocate(op, result);
         checkPrivate(op, result);
@@ -3515,9 +3510,26 @@ convertOmpSimd(Operation &opInst, llvm::IRBuilderBase &builder,
                         order, simdlen, safelen);
 
   linearClauseProcessor.emitStoresForLinearVar(builder);
-  for (size_t index = 0; index < simdOp.getLinearVars().size(); index++)
+
+  // Check if this SIMD loop contains ordered regions
+  bool hasOrderedRegions = false;
+  simdOp.getRegion().walk([&](omp::OrderedRegionOp orderedOp) {
+    hasOrderedRegions = true;
+    return WalkResult::interrupt();
+  });
+
+  for (size_t index = 0; index < simdOp.getLinearVars().size(); index++) {
     linearClauseProcessor.rewriteInPlace(builder, "omp.loop_nest.region",
                                          index);
+    if (hasOrderedRegions) {
+      // Also rewrite uses in ordered regions so they read the current value
+      linearClauseProcessor.rewriteInPlace(builder, "omp.ordered.region",
+                                           index);
+      // Also rewrite uses in finalize blocks (code after ordered regions)
+      linearClauseProcessor.rewriteInPlace(builder, "omp_region.finalize",
+                                           index);
+    }
+  }
 
   // We now need to reduce the per-simd-lane reduction variable into the
   // original variable. This works a bit differently to other reductions (e.g.
@@ -3785,6 +3797,51 @@ static LogicalResult applyTile(omp::TileOp op, llvm::IRBuilderBase &builder,
     for (auto [mlirLoop, genLoop] :
          zip_equal(op.getGeneratees(), generatedLoops))
       moduleTranslation.mapOmpLoop(mlirLoop, genLoop);
+  }
+
+  // CLIs can only be consumed once
+  for (Value applyee : op.getApplyees())
+    moduleTranslation.invalidateOmpLoop(applyee);
+
+  return success();
+}
+
+/// Apply a `#pragma omp fuse` / `!$omp fuse` transformation using the
+/// OpenMPIRBuilder.
+static LogicalResult applyFuse(omp::FuseOp op, llvm::IRBuilderBase &builder,
+                               LLVM::ModuleTranslation &moduleTranslation) {
+  llvm::OpenMPIRBuilder *ompBuilder = moduleTranslation.getOpenMPBuilder();
+  llvm::OpenMPIRBuilder::LocationDescription loc(builder);
+
+  // Select what CLIs are going to be fused
+  SmallVector<llvm::CanonicalLoopInfo *> beforeFuse, toFuse, afterFuse;
+  for (size_t i = 0; i < op.getApplyees().size(); i++) {
+    Value applyee = op.getApplyees()[i];
+    llvm::CanonicalLoopInfo *consBuilderCLI =
+        moduleTranslation.lookupOMPLoop(applyee);
+    assert(applyee && "Canonical loop must already been translated");
+    if (op.getFirst().has_value() && i < op.getFirst().value() - 1)
+      beforeFuse.push_back(consBuilderCLI);
+    else if (op.getCount().has_value() &&
+             i >= op.getFirst().value() + op.getCount().value() - 1)
+      afterFuse.push_back(consBuilderCLI);
+    else
+      toFuse.push_back(consBuilderCLI);
+  }
+  assert(
+      (op.getGeneratees().empty() ||
+       beforeFuse.size() + afterFuse.size() + 1 == op.getGeneratees().size()) &&
+      "Wrong number of generatees");
+
+  // do the fuse
+  auto generatedLoop = ompBuilder->fuseLoops(loc.DL, toFuse);
+  if (!op.getGeneratees().empty()) {
+    size_t i = 0;
+    for (; i < beforeFuse.size(); i++)
+      moduleTranslation.mapOmpLoop(op.getGeneratees()[i], beforeFuse[i]);
+    moduleTranslation.mapOmpLoop(op.getGeneratees()[i++], generatedLoop);
+    for (; i < afterFuse.size(); i++)
+      moduleTranslation.mapOmpLoop(op.getGeneratees()[i], afterFuse[i]);
   }
 
   // CLIs can only be consumed once
@@ -5459,7 +5516,7 @@ emitUserDefinedMapper(Operation *op, llvm::IRBuilderBase &builder,
       genMapInfoCB, varType, mapperFuncName, customMapperCB);
   if (!newFn)
     return newFn.takeError();
-  if (llvm::Function *mappedFunc =
+  if ([[maybe_unused]] llvm::Function *mappedFunc =
           moduleTranslation.lookupFunction(mapperFuncName)) {
     assert(mappedFunc == *newFn &&
            "mapper function mapping disagrees with emitted function");
@@ -6443,6 +6500,7 @@ static LogicalResult
 convertOmpTarget(Operation &opInst, llvm::IRBuilderBase &builder,
                  LLVM::ModuleTranslation &moduleTranslation) {
   auto targetOp = cast<omp::TargetOp>(opInst);
+
   // The current debug location already has the DISubprogram for the outlined
   // function that will be created for the target op. We save it here so that
   // we can set it on the outlined function.
@@ -7269,6 +7327,9 @@ LogicalResult OpenMPDialectLLVMIRTranslationInterface::convertOperation(
           })
           .Case([&](omp::TileOp op) {
             return applyTile(op, builder, moduleTranslation);
+          })
+          .Case([&](omp::FuseOp op) {
+            return applyFuse(op, builder, moduleTranslation);
           })
           .Case([&](omp::TargetAllocMemOp) {
             return convertTargetAllocMemOp(*op, builder, moduleTranslation);

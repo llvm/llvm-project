@@ -1070,78 +1070,6 @@ void DependenceInfo::collectCommonLoops(const SCEV *Expression,
   }
 }
 
-void DependenceInfo::unifySubscriptType(ArrayRef<Subscript *> Pairs) {
-
-  unsigned widestWidthSeen = 0;
-  Type *widestType;
-
-  // Go through each pair and find the widest bit to which we need
-  // to extend all of them.
-  for (Subscript *Pair : Pairs) {
-    const SCEV *Src = Pair->Src;
-    const SCEV *Dst = Pair->Dst;
-    IntegerType *SrcTy = dyn_cast<IntegerType>(Src->getType());
-    IntegerType *DstTy = dyn_cast<IntegerType>(Dst->getType());
-    if (SrcTy == nullptr || DstTy == nullptr) {
-      assert(SrcTy == DstTy &&
-             "This function only unify integer types and "
-             "expect Src and Dst share the same type otherwise.");
-      continue;
-    }
-    if (SrcTy->getBitWidth() > widestWidthSeen) {
-      widestWidthSeen = SrcTy->getBitWidth();
-      widestType = SrcTy;
-    }
-    if (DstTy->getBitWidth() > widestWidthSeen) {
-      widestWidthSeen = DstTy->getBitWidth();
-      widestType = DstTy;
-    }
-  }
-
-  assert(widestWidthSeen > 0);
-
-  // Now extend each pair to the widest seen.
-  for (Subscript *Pair : Pairs) {
-    const SCEV *Src = Pair->Src;
-    const SCEV *Dst = Pair->Dst;
-    IntegerType *SrcTy = dyn_cast<IntegerType>(Src->getType());
-    IntegerType *DstTy = dyn_cast<IntegerType>(Dst->getType());
-    if (SrcTy == nullptr || DstTy == nullptr) {
-      assert(SrcTy == DstTy &&
-             "This function only unify integer types and "
-             "expect Src and Dst share the same type otherwise.");
-      continue;
-    }
-    if (SrcTy->getBitWidth() < widestWidthSeen)
-      // Sign-extend Src to widestType
-      Pair->Src = SE->getSignExtendExpr(Src, widestType);
-    if (DstTy->getBitWidth() < widestWidthSeen) {
-      // Sign-extend Dst to widestType
-      Pair->Dst = SE->getSignExtendExpr(Dst, widestType);
-    }
-  }
-}
-
-// removeMatchingExtensions - Examines a subscript pair.
-// If the source and destination are identically sign (or zero)
-// extended, it strips off the extension in an effect to simplify
-// the actual analysis.
-void DependenceInfo::removeMatchingExtensions(Subscript *Pair) {
-  const SCEV *Src = Pair->Src;
-  const SCEV *Dst = Pair->Dst;
-  if ((isa<SCEVZeroExtendExpr>(Src) && isa<SCEVZeroExtendExpr>(Dst)) ||
-      (isa<SCEVSignExtendExpr>(Src) && isa<SCEVSignExtendExpr>(Dst))) {
-    const SCEVIntegralCastExpr *SrcCast = cast<SCEVIntegralCastExpr>(Src);
-    const SCEVIntegralCastExpr *DstCast = cast<SCEVIntegralCastExpr>(Dst);
-    const SCEV *SrcCastOp = SrcCast->getOperand();
-    const SCEV *DstCastOp = DstCast->getOperand();
-    if (SrcCastOp->getType() == DstCastOp->getType()) {
-      Pair->Src = SrcCastOp;
-      Pair->Dst = DstCastOp;
-    }
-  }
-}
-
 // Examine the scev and return true iff it's affine.
 // Collect any loops mentioned in the set of "Loops".
 bool DependenceInfo::checkSubscript(const SCEV *Expr, const Loop *LoopNest,
@@ -1206,8 +1134,7 @@ DependenceInfo::classifyPair(const SCEV *Src, const Loop *SrcLoopNest,
     return Subscript::ZIV;
   if (N == 1)
     return Subscript::SIV;
-  if (N == 2 && (SrcLoops.count() == 0 || DstLoops.count() == 0 ||
-                 (SrcLoops.count() == 1 && DstLoops.count() == 1)))
+  if (N == 2 && SrcLoops.count() == 1 && DstLoops.count() == 1)
     return Subscript::RDIV;
   return Subscript::MIV;
 }
@@ -1243,32 +1170,6 @@ static const SCEV *minusSCEVNoSignedOverflow(const SCEV *A, const SCEV *B,
   if (SE.willNotOverflow(Instruction::Sub, /*Signed=*/true, A, B))
     return SE.getMinusSCEV(A, B);
   return nullptr;
-}
-
-/// Returns \p A * \p B if it guaranteed not to signed wrap. Otherwise returns
-/// nullptr. \p A and \p B must have the same integer type.
-static const SCEV *mulSCEVNoSignedOverflow(const SCEV *A, const SCEV *B,
-                                           ScalarEvolution &SE) {
-  if (SE.willNotOverflow(Instruction::Mul, /*Signed=*/true, A, B))
-    return SE.getMulExpr(A, B);
-  return nullptr;
-}
-
-/// Returns the absolute value of \p A. In the context of dependence analysis,
-/// we need an absolute value in a mathematical sense. If \p A is the signed
-/// minimum value, we cannot represent it unless extending the original type.
-/// Thus if we cannot prove that \p A is not the signed minimum value, returns
-/// nullptr.
-static const SCEV *absSCEVNoSignedOverflow(const SCEV *A, ScalarEvolution &SE) {
-  IntegerType *Ty = cast<IntegerType>(A->getType());
-  if (!Ty)
-    return nullptr;
-
-  const SCEV *SMin =
-      SE.getConstant(APInt::getSignedMinValue(Ty->getBitWidth()));
-  if (!SE.isKnownPredicate(CmpInst::ICMP_NE, A, SMin))
-    return nullptr;
-  return SE.getAbsExpr(A, /*IsNSW=*/true);
 }
 
 /// Returns true iff \p Test is enabled.
@@ -1334,14 +1235,18 @@ bool DependenceInfo::testZIV(const SCEV *Src, const SCEV *Dst,
 //                { > if d < 0
 //
 // Return true if dependence disproved.
-bool DependenceInfo::strongSIVtest(const SCEV *Coeff, const SCEV *SrcConst,
-                                   const SCEV *DstConst, const Loop *CurSrcLoop,
-                                   const Loop *CurDstLoop, unsigned Level,
+bool DependenceInfo::strongSIVtest(const SCEVAddRecExpr *Src,
+                                   const SCEVAddRecExpr *Dst, unsigned Level,
                                    FullDependence &Result,
                                    bool UnderRuntimeAssumptions) {
   if (!isDependenceTestEnabled(DependenceTestType::StrongSIV))
     return false;
 
+  const SCEV *Coeff = Src->getStepRecurrence(*SE);
+  assert(Coeff == Dst->getStepRecurrence(*SE) &&
+         "Expecting same coefficient in Strong SIV test");
+  const SCEV *SrcConst = Src->getStart();
+  const SCEV *DstConst = Dst->getStart();
   LLVM_DEBUG(dbgs() << "\tStrong SIV test\n");
   LLVM_DEBUG(dbgs() << "\t    Coeff = " << *Coeff);
   LLVM_DEBUG(dbgs() << ", " << *Coeff->getType() << "\n");
@@ -1353,6 +1258,15 @@ bool DependenceInfo::strongSIVtest(const SCEV *Coeff, const SCEV *SrcConst,
   assert(0 < Level && Level <= CommonLevels && "level out of range");
   Level--;
 
+  // First try to prove independence based on the ranges of the two subscripts.
+  ConstantRange SrcRange = SE->getSignedRange(Src);
+  ConstantRange DstRange = SE->getSignedRange(Dst);
+  if (SrcRange.intersectWith(DstRange).isEmptySet()) {
+    ++StrongSIVindependence;
+    ++StrongSIVsuccesses;
+    return true;
+  }
+
   const SCEV *Delta = minusSCEVNoSignedOverflow(SrcConst, DstConst, *SE);
   if (!Delta) {
     Result.Consistent = false;
@@ -1360,30 +1274,6 @@ bool DependenceInfo::strongSIVtest(const SCEV *Coeff, const SCEV *SrcConst,
   }
   LLVM_DEBUG(dbgs() << "\t    Delta = " << *Delta);
   LLVM_DEBUG(dbgs() << ", " << *Delta->getType() << "\n");
-
-  // check that |Delta| < iteration count
-  bool IsDeltaLarge = [&] {
-    const SCEV *UpperBound = collectUpperBound(CurSrcLoop, Delta->getType());
-    if (!UpperBound)
-      return false;
-
-    LLVM_DEBUG(dbgs() << "\t    UpperBound = " << *UpperBound);
-    LLVM_DEBUG(dbgs() << ", " << *UpperBound->getType() << "\n");
-    const SCEV *AbsDelta = absSCEVNoSignedOverflow(Delta, *SE);
-    const SCEV *AbsCoeff = absSCEVNoSignedOverflow(Coeff, *SE);
-    if (!AbsDelta || !AbsCoeff)
-      return false;
-    const SCEV *Product = mulSCEVNoSignedOverflow(UpperBound, AbsCoeff, *SE);
-    if (!Product)
-      return false;
-    return SE->isKnownPredicate(CmpInst::ICMP_SGT, AbsDelta, Product);
-  }();
-  if (IsDeltaLarge) {
-    // Distance greater than trip count - no dependence
-    ++StrongSIVindependence;
-    ++StrongSIVsuccesses;
-    return true;
-  }
 
   // Can we compute distance?
   if (isa<SCEVConstant>(Delta) && isa<SCEVConstant>(Coeff)) {
@@ -2430,9 +2320,8 @@ bool DependenceInfo::testSIV(const SCEV *Src, const SCEV *Dst, unsigned &Level,
     Level = mapSrcLoop(CurSrcLoop);
     bool disproven;
     if (SrcCoeff == DstCoeff)
-      disproven =
-          strongSIVtest(SrcCoeff, SrcConst, DstConst, CurSrcLoop, CurDstLoop,
-                        Level, Result, UnderRuntimeAssumptions);
+      disproven = strongSIVtest(SrcAddRec, DstAddRec, Level, Result,
+                                UnderRuntimeAssumptions);
     else if (SrcCoeff == SE->getNegativeSCEV(DstCoeff))
       disproven = weakCrossingSIVtest(SrcCoeff, SrcConst, DstConst, CurSrcLoop,
                                       CurDstLoop, Level, Result);
@@ -2476,18 +2365,9 @@ bool DependenceInfo::testSIV(const SCEV *Src, const SCEV *Dst, unsigned &Level,
 // so there's no point in making special versions of the Strong SIV test or
 // the Weak-crossing SIV test.
 //
-// With minor algebra, this test can also be used for things like
-// [c1 + a1*i + a2*j][c2].
-//
 // Return true if dependence disproved.
 bool DependenceInfo::testRDIV(const SCEV *Src, const SCEV *Dst,
                               FullDependence &Result) const {
-  // we have 3 possible situations here:
-  //   1) [a*i + b] and [c*j + d]
-  //   2) [a*i + c*j + b] and [d]
-  //   3) [b] and [a*i + c*j + d]
-  // We need to find what we've got and get organized
-
   const SCEV *SrcConst, *DstConst;
   const SCEV *SrcCoeff, *DstCoeff;
   const Loop *SrcLoop, *DstLoop;
@@ -2503,28 +2383,6 @@ bool DependenceInfo::testRDIV(const SCEV *Src, const SCEV *Dst,
     DstConst = DstAddRec->getStart();
     DstCoeff = DstAddRec->getStepRecurrence(*SE);
     DstLoop = DstAddRec->getLoop();
-  } else if (SrcAddRec) {
-    if (const SCEVAddRecExpr *tmpAddRec =
-            dyn_cast<SCEVAddRecExpr>(SrcAddRec->getStart())) {
-      SrcConst = tmpAddRec->getStart();
-      SrcCoeff = tmpAddRec->getStepRecurrence(*SE);
-      SrcLoop = tmpAddRec->getLoop();
-      DstConst = Dst;
-      DstCoeff = SE->getNegativeSCEV(SrcAddRec->getStepRecurrence(*SE));
-      DstLoop = SrcAddRec->getLoop();
-    } else
-      llvm_unreachable("RDIV reached by surprising SCEVs");
-  } else if (DstAddRec) {
-    if (const SCEVAddRecExpr *tmpAddRec =
-            dyn_cast<SCEVAddRecExpr>(DstAddRec->getStart())) {
-      DstConst = tmpAddRec->getStart();
-      DstCoeff = tmpAddRec->getStepRecurrence(*SE);
-      DstLoop = tmpAddRec->getLoop();
-      SrcConst = Src;
-      SrcCoeff = SE->getNegativeSCEV(DstAddRec->getStepRecurrence(*SE));
-      SrcLoop = DstAddRec->getLoop();
-    } else
-      llvm_unreachable("RDIV reached by surprising SCEVs");
   } else
     llvm_unreachable("RDIV expected at least one AddRec");
   return exactRDIVtest(SrcCoeff, DstCoeff, SrcConst, DstConst, SrcLoop, DstLoop,
@@ -3283,7 +3141,9 @@ bool DependenceInfo::tryDelinearize(Instruction *Src, Instruction *Dst,
   for (int I = 0; I < Size; ++I) {
     Pair[I].Src = SrcSubscripts[I];
     Pair[I].Dst = DstSubscripts[I];
-    unifySubscriptType(&Pair[I]);
+
+    assert(Pair[I].Src->getType() == Pair[I].Dst->getType() &&
+           "Unexpected different types for the subscripts");
 
     if (EnableMonotonicityCheck) {
       if (MonChecker.checkMonotonicity(Pair[I].Src, OutermostLoop).isUnknown())
@@ -3608,7 +3468,6 @@ DependenceInfo::depends(Instruction *Src, Instruction *Dst,
     Pair[P].Loops.resize(MaxLevels + 1);
     Pair[P].GroupLoops.resize(MaxLevels + 1);
     Pair[P].Group.resize(Pairs);
-    removeMatchingExtensions(&Pair[P]);
     Pair[P].Classification =
         classifyPair(Pair[P].Src, LI->getLoopFor(Src->getParent()), Pair[P].Dst,
                      LI->getLoopFor(Dst->getParent()), Pair[P].Loops);

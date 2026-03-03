@@ -570,9 +570,7 @@ public:
         return ConcreteOp::getInherentAttr(concreteOp->getContext(),
                                            concreteOp.getProperties(), name);
       }
-      // If the op does not have support for properties, we dispatch back to the
-      // dictionnary of discardable attributes for now.
-      return cast<ConcreteOp>(op)->getDiscardableAttr(name);
+      return std::nullopt;
     }
     void setInherentAttr(Operation *op, StringAttr name,
                          Attribute value) final {
@@ -581,9 +579,8 @@ public:
         return ConcreteOp::setInherentAttr(concreteOp.getProperties(), name,
                                            value);
       }
-      // If the op does not have support for properties, we dispatch back to the
-      // dictionnary of discardable attributes for now.
-      return cast<ConcreteOp>(op)->setDiscardableAttr(name, value);
+      llvm_unreachable(
+          "Can't call setInherentAttr on operation with empty properties");
     }
     void populateInherentAttrs(Operation *op, NamedAttrList &attrs) final {
       if constexpr (hasProperties) {
@@ -639,7 +636,7 @@ public:
         auto p = properties.as<Properties *>();
         return ConcreteOp::setPropertiesFromAttr(*p, attr, emitError);
       }
-      emitError() << "this operation does not support properties";
+      emitError() << "this operation has empty properties";
       return failure();
     }
     Attribute getPropertiesAsAttr(Operation *op) final {
@@ -651,11 +648,9 @@ public:
       return {};
     }
     bool compareProperties(OpaqueProperties lhs, OpaqueProperties rhs) final {
-      if constexpr (hasProperties) {
+      if constexpr (hasProperties)
         return *lhs.as<Properties *>() == *rhs.as<Properties *>();
-      } else {
-        return true;
-      }
+      return true;
     }
     void copyProperties(OpaqueProperties lhs, OpaqueProperties rhs) final {
       *lhs.as<Properties *>() = *rhs.as<Properties *>();
@@ -802,8 +797,6 @@ public:
   using size_type = size_t;
 
   NamedAttrList() : dictionarySorted({}, true) {}
-  LLVM_DEPRECATED("Use NamedAttrList() instead", "NamedAttrList()")
-  NamedAttrList(std::nullopt_t none) : NamedAttrList() {}
   NamedAttrList(ArrayRef<NamedAttribute> attributes);
   NamedAttrList(DictionaryAttr attributes);
   NamedAttrList(const_iterator inStart, const_iterator inEnd);
@@ -1176,8 +1169,6 @@ private:
 class OpPrintingFlags {
 public:
   OpPrintingFlags();
-  LLVM_DEPRECATED("Use OpPrintingFlags() instead", "OpPrintingFlags()")
-  OpPrintingFlags(std::nullopt_t) : OpPrintingFlags() {}
 
   /// Enables the elision of large elements attributes by printing a lexically
   /// valid but otherwise meaningless form instead of the element data. The
