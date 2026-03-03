@@ -25,6 +25,7 @@
 #include "clang/Basic/TokenKinds.h"
 #include "clang/Lex/CodeCompletionHandler.h"
 #include "clang/Lex/HeaderSearch.h"
+#include "clang/Lex/HeaderSearchOptions.h"
 #include "clang/Lex/LexDiagnostic.h"
 #include "clang/Lex/LiteralSupport.h"
 #include "clang/Lex/MacroInfo.h"
@@ -1115,7 +1116,9 @@ OptionalFileEntryRef Preprocessor::LookupFile(
     // MSVC searches the current include stack from top to bottom for
     // headers included by quoted include directives.
     // See: http://msdn.microsoft.com/en-us/library/36k2cdd4.aspx
-    if (LangOpts.MSVCCompat && !isAngled) {
+    if (getHeaderSearchInfo().getHeaderSearchOpts().Mode ==
+            HeaderSearchMode::Microsoft &&
+        !isAngled) {
       for (IncludeStackInfo &ISEntry : llvm::reverse(IncludeMacroStack)) {
         if (IsFileLexer(ISEntry))
           if ((FileEnt = ISEntry.ThePPLexer->getFileEntry()))

@@ -3321,14 +3321,17 @@ static void GenerateHeaderSearchArgs(const HeaderSearchOptions &Opts,
   auto It = Opts.UserEntries.begin();
   auto End = Opts.UserEntries.end();
 
-  // Add -I... and -F... options in order.
-  for (; It < End && Matches(*It, {frontend::Angled}, std::nullopt, true);
+  // Add the -I..., -F..., and -iexternal options in order.
+  for (; It < End && Matches(*It, {frontend::Angled, frontend::External},
+                             std::nullopt, true);
        ++It) {
     OptSpecifier Opt = [It, Matches]() {
       if (Matches(*It, frontend::Angled, true, true))
         return OPT_F;
       if (Matches(*It, frontend::Angled, false, true))
         return OPT_I;
+      if (Matches(*It, frontend::External, false, true))
+        return OPT_iexternal;
       llvm_unreachable("Unexpected HeaderSearchOptions::Entry.");
     }();
 
@@ -3354,10 +3357,16 @@ static void GenerateHeaderSearchArgs(const HeaderSearchOptions &Opts,
     GenerateArg(Consumer, OPT_idirafter, It->Path);
   for (; It < End && Matches(*It, {frontend::Quoted}, false, true); ++It)
     GenerateArg(Consumer, OPT_iquote, It->Path);
-  for (; It < End && Matches(*It, {frontend::System}, false, std::nullopt);
-       ++It)
-    GenerateArg(Consumer, It->IgnoreSysRoot ? OPT_isystem : OPT_iwithsysroot,
-                It->Path);
+  for (; It < End && Matches(*It, {frontend::System, frontend::ExternalSystem},
+                             false, std::nullopt);
+       ++It) {
+    OptSpecifier Opt = OPT_isystem;
+    if (It->Group == frontend::ExternalSystem)
+      Opt = OPT_iexternal_system;
+    else if (!It->IgnoreSysRoot)
+      Opt = OPT_iwithsysroot;
+    GenerateArg(Consumer, Opt, It->Path);
+  }
   for (; It < End && Matches(*It, {frontend::System}, true, true); ++It)
     GenerateArg(Consumer, OPT_iframework, It->Path);
   for (; It < End && Matches(*It, {frontend::System}, true, false); ++It)
@@ -3377,12 +3386,16 @@ static void GenerateHeaderSearchArgs(const HeaderSearchOptions &Opts,
   // Note: Some paths that came from "-internal-isystem" arguments may have
   // already been generated as "-isystem". If that's the case, their position on
   // command line was such that this has no semantic impact on include paths.
-  for (; It < End &&
-         Matches(*It, {frontend::System, frontend::ExternCSystem}, false, true);
+  for (; It < End && Matches(*It,
+                             {frontend::System, frontend::ExternalSystem,
+                              frontend::ExternCSystem},
+                             false, true);
        ++It) {
-    OptSpecifier Opt = It->Group == frontend::System
-                           ? OPT_internal_isystem
-                           : OPT_internal_externc_isystem;
+    OptSpecifier Opt = OPT_internal_isystem;
+    if (It->Group == frontend::ExternalSystem)
+      Opt = OPT_internal_iexternal_system;
+    else if (It->Group == frontend::ExternCSystem)
+      Opt = OPT_internal_externc_isystem;
     GenerateArg(Consumer, Opt, It->Path);
   }
   for (; It < End && Matches(*It, {frontend::System}, true, true); ++It)
@@ -3433,7 +3446,6 @@ static bool ParseHeaderSearchArgs(HeaderSearchOptions &Opts, ArgList &Args,
         llvm::CachedHashString(MacroDef.split('=').first));
   }
 
-  // Add -I... and -F... options in order.
   bool IsSysrootSpecified =
       Args.hasArg(OPT__sysroot_EQ) || Args.hasArg(OPT_isysroot);
 
@@ -3452,10 +3464,14 @@ static bool ParseHeaderSearchArgs(HeaderSearchOptions &Opts, ArgList &Args,
     return A->getValue();
   };
 
-  for (const auto *A : Args.filtered(OPT_I, OPT_F)) {
+  // Add the -I..., -F..., and -iexternal options in order.
+  for (const auto *A : Args.filtered(OPT_I, OPT_F, OPT_iexternal)) {
+    frontend::IncludeDirGroup Group = frontend::Angled;
+    if (A->getOption().matches(OPT_iexternal))
+      Group = frontend::External;
     bool IsFramework = A->getOption().matches(OPT_F);
-    Opts.AddPath(PrefixHeaderPath(A, IsFramework), frontend::Angled,
-                 IsFramework, /*IgnoreSysroot=*/true);
+    Opts.AddPath(PrefixHeaderPath(A, IsFramework), Group, IsFramework,
+                 /*IgnoreSysroot=*/true);
   }
 
   // Add -iprefix/-iwithprefix/-iwithprefixbefore options.
@@ -3475,13 +3491,17 @@ static bool ParseHeaderSearchArgs(HeaderSearchOptions &Opts, ArgList &Args,
   for (const auto *A : Args.filtered(OPT_iquote))
     Opts.AddPath(PrefixHeaderPath(A), frontend::Quoted, false, true);
 
-  for (const auto *A : Args.filtered(OPT_isystem, OPT_iwithsysroot)) {
-    if (A->getOption().matches(OPT_iwithsysroot)) {
-      Opts.AddPath(A->getValue(), frontend::System, false,
-                   /*IgnoreSysRoot=*/false);
-      continue;
-    }
-    Opts.AddPath(PrefixHeaderPath(A), frontend::System, false, true);
+  for (const auto *A :
+       Args.filtered(OPT_isystem, OPT_iwithsysroot, OPT_iexternal_system)) {
+    if (A->getOption().matches(OPT_iexternal_system))
+      Opts.AddPath(A->getValue(), frontend::ExternalSystem,
+                   /*IsFramework=*/false, /*IgnoreSysRoot=*/true);
+    else if (A->getOption().matches(OPT_iwithsysroot))
+      Opts.AddPath(A->getValue(), frontend::System,
+                   /*IsFramework=*/false, /*IgnoreSysRoot=*/false);
+    else
+      Opts.AddPath(PrefixHeaderPath(A), frontend::System,
+                   /*IsFramework=*/false, /*IgnoreSysRoot=*/true);
   }
   for (const auto *A : Args.filtered(OPT_iframework))
     Opts.AddPath(A->getValue(), frontend::System, true, true);
@@ -3501,9 +3521,12 @@ static bool ParseHeaderSearchArgs(HeaderSearchOptions &Opts, ArgList &Args,
 
   // Add the internal paths from a driver that detects standard include paths.
   for (const auto *A :
-       Args.filtered(OPT_internal_isystem, OPT_internal_externc_isystem)) {
+       Args.filtered(OPT_internal_isystem, OPT_internal_iexternal_system,
+                     OPT_internal_externc_isystem)) {
     frontend::IncludeDirGroup Group = frontend::System;
-    if (A->getOption().matches(OPT_internal_externc_isystem))
+    if (A->getOption().matches(OPT_internal_iexternal_system))
+      Group = frontend::ExternalSystem;
+    else if (A->getOption().matches(OPT_internal_externc_isystem))
       Group = frontend::ExternCSystem;
     Opts.AddPath(A->getValue(), Group, false, true);
   }
