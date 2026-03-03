@@ -339,7 +339,6 @@ add_header_library(
   DEPENDS
     libc.src.__support.FPUtil.fenv_impl
     libc.src.__support.FPUtil.fp_bits
-    libc.src.__support.FPUtil.polyeval
     libc.src.__support.FPUtil.cast
     libc.src.__support.FPUtil.multiply_add
     libc.src.__support.FPUtil.sqrt
