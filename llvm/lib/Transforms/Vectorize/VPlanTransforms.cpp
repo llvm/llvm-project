@@ -42,7 +42,6 @@
 #include "llvm/Support/TypeSize.h"
 #include "llvm/Transforms/Utils/LoopUtils.h"
 #include "llvm/Transforms/Utils/ScalarEvolutionExpander.h"
-#include "llvm/Transforms/Vectorize/LoopVectorizationLegality.h"
 
 using namespace llvm;
 using namespace VPlanPatternMatch;
@@ -6254,16 +6253,19 @@ void VPlanTransforms::createPartialReductions(VPlan &Plan,
       transformToPartialReduction(Chain, CostCtx.Types, Plan, Phi);
 }
 
-void VPlanTransforms::makeMemOpWideningDecisions(
-    VPlan &Plan, VFRange &Range, VPRecipeBuilder &RecipeBuilder,
-    VPCostContext &CostCtx, LoopVectorizationLegality &Legal) {
+void VPlanTransforms::makeMemOpWideningDecisions(VPlan &Plan, VFRange &Range,
+                                                 VPRecipeBuilder &RecipeBuilder,
+                                                 VPCostContext &CostCtx) {
   // Filter out scalar VPlan.
   if (LoopVectorizationPlanner::getDecisionAndClampRange(
           [](ElementCount VF) { return VF.isScalar(); }, Range))
     return;
 
   // Scan the body of the loop in a topological order to visit each basic block
-  // after having visited its predecessor basic blocks.
+  // after having visited its predecessor basic blocks. This is necessary
+  // because we need to preserve the order of the reduction stores into
+  // invariant address when transforming those to a scalar store outside the
+  // vector loop body.
   VPRegionBlock *LoopRegion = Plan.getVectorLoopRegion();
   VPBasicBlock *HeaderVPBB = LoopRegion->getEntryBasicBlock();
   ReversePostOrderTraversal<VPBlockShallowTraversalWrapper<VPBlockBase *>> RPOT(
@@ -6284,7 +6286,7 @@ void VPlanTransforms::makeMemOpWideningDecisions(
   }
 
   auto *MiddleVPBB = Plan.getMiddleBlock();
-  VPBasicBlock::iterator MBIP = MiddleVPBB->getFirstNonPhi();
+  VPBuilder FinalRedStoresBuilder(MiddleVPBB, MiddleVPBB->getFirstNonPhi());
 
   for (VPInstruction *VPI : MemOps) {
     Instruction *Instr = cast<Instruction>(VPI->getUnderlyingValue());
@@ -6298,22 +6300,9 @@ void VPlanTransforms::makeMemOpWideningDecisions(
       VPI->eraseFromParent();
     };
 
-    // The stores with invariant address inside the loop will be deleted, and
-    // in the exit block, a uniform store recipe will be created for the final
-    // invariant store of the reduction.
-    StoreInst *SI;
-    if ((SI = dyn_cast<StoreInst>(Instr)) &&
-        Legal.isInvariantAddressOfReduction(SI->getPointerOperand())) {
-      // Only create recipe for the final invariant store of the reduction.
-      if (Legal.isInvariantStoreOfReduction(SI)) {
-        auto *Recipe = new VPReplicateRecipe(
-            SI, VPI->operandsWithoutMask(), true /* IsUniform */,
-            nullptr /*Mask*/, *VPI, *VPI, VPI->getDebugLoc());
-        Recipe->insertBefore(*MiddleVPBB, MBIP);
-      }
-      VPI->eraseFromParent();
+    if (RecipeBuilder.replaceWithFinalIfReductionStore(FinalRedStoresBuilder,
+                                                       VPI))
       continue;
-    }
 
     if (VPHistogramRecipe *Histogram = RecipeBuilder.widenIfHistogram(VPI)) {
       ReplaceWith(Histogram);

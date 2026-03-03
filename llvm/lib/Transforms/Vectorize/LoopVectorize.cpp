@@ -7998,6 +7998,26 @@ VPHistogramRecipe *VPRecipeBuilder::widenIfHistogram(VPInstruction *VPI) {
   return new VPHistogramRecipe(Opcode, HGramOps, VPI->getDebugLoc());
 }
 
+bool VPRecipeBuilder::replaceWithFinalIfReductionStore(
+    VPBuilder &FinalRedStoresBuilder, VPInstruction *VPI) {
+  StoreInst *SI;
+  if ((SI = dyn_cast<StoreInst>(VPI->getUnderlyingInstr())) &&
+      Legal->isInvariantAddressOfReduction(SI->getPointerOperand())) {
+    // Only create recipe for the final invariant store of the reduction.
+    if (Legal->isInvariantStoreOfReduction(SI)) {
+      auto *Recipe = new VPReplicateRecipe(
+          SI, VPI->operandsWithoutMask(), true /* IsUniform */,
+          nullptr /*Mask*/, *VPI, *VPI, VPI->getDebugLoc());
+      FinalRedStoresBuilder.insert(Recipe);
+      // Recipe->insertBefore(*MiddleVPBB, MBIP);
+    }
+    VPI->eraseFromParent();
+    return true;
+  }
+
+  return false;
+}
+
 VPReplicateRecipe *VPRecipeBuilder::handleReplication(VPInstruction *VPI,
                                                       VFRange &Range) {
   auto *I = VPI->getUnderlyingInstr();
@@ -8271,7 +8291,7 @@ VPlanPtr LoopVectorizationPlanner::tryToBuildVPlanWithVPRecipes(
                         OrigLoop);
 
   RUN_VPLAN_PASS_NO_VERIFY(VPlanTransforms::makeMemOpWideningDecisions, *Plan,
-                           Range, RecipeBuilder, CostCtx, *CM.Legal);
+                           Range, RecipeBuilder, CostCtx);
 
   // Now process all other blocks and instructions.
   for (VPBasicBlock *VPBB : VPBlockUtils::blocksOnly<VPBasicBlock>(RPOT)) {
