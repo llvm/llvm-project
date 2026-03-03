@@ -120,6 +120,15 @@ func.func @rsqrt_fold_vec() -> (vector<2xf32>) {
   return %0 : vector<2xf32>
 }
 
+// CHECK-LABEL: @rsqrt_poison
+//       CHECK:   %[[P:.*]] = ub.poison : f32
+//       CHECK:   return %[[P]]
+func.func @rsqrt_poison() -> f32 {
+  %0 = ub.poison : f32
+  %1 = math.rsqrt %0 : f32
+  return %1 : f32
+}
+
 // CHECK-LABEL: @sqrt_fold
 // CHECK: %[[cst:.+]] = arith.constant 2.000000e+00 : f32
 // CHECK: return %[[cst]]
