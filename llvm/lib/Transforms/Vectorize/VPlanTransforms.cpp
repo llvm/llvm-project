@@ -6391,13 +6391,7 @@ void VPlanTransforms::makeScalarizationDecisions(VPlan &Plan, VFRange &Range) {
             any_of(VPI->operands(), IsaPred<VPWidenInductionRecipe>))
           return false;
 
-        if (!all_of(VPI->users(), [&](auto *U) {
-              // TODO: This "ScalarCast" is bonkers...
-              if (VPI->isScalarCast() && isa<VPWidenGEPRecipe>(U))
-                return false;
-
-              return U->usesFirstLaneOnly(VPI);
-            }))
+        if (!vputils::onlyFirstLaneUsed(VPI))
           return false;
 
         return true;
