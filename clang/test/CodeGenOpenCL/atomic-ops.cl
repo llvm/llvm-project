@@ -174,13 +174,13 @@ void fi6(atomic_int *i, int order, int scope) {
 
 float ff1(global atomic_float *d) {
   // CHECK-LABEL: @ff1
-  // CHECK: load atomic i32, ptr addrspace(1) {{.*}} syncscope("workgroup-one-as") monotonic, align 4{{$}}
+  // CHECK: load atomic float, ptr addrspace(1) {{.*}} syncscope("workgroup-one-as") monotonic, align 4{{$}}
   return __opencl_atomic_load(d, memory_order_relaxed, memory_scope_work_group);
 }
 
 void ff2(atomic_float *d) {
   // CHECK-LABEL: @ff2
-  // CHECK: store atomic i32 {{.*}} syncscope("workgroup-one-as") release, align 4
+  // CHECK: store atomic float {{.*}} syncscope("workgroup-one-as") release, align 4
   __opencl_atomic_store(d, 1, memory_order_release, memory_scope_work_group);
 }
 
