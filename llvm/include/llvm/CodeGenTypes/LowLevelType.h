@@ -89,35 +89,20 @@ public:
     return LLT{Kind::ANY_SCALAR, ElementCount::getFixed(0), SizeInBits};
   }
 
-  static constexpr LLT integer(unsigned SizeInBits) {
+  static LLT integer(unsigned SizeInBits) {
+    if (!getUseExtended())
+      return LLT::scalar(SizeInBits);
+
     return LLT{Kind::INTEGER, ElementCount::getFixed(0), SizeInBits};
   }
 
   static LLT floatingPoint(const FpSemantics &Sem) {
-    return LLT{Kind::FLOAT, ElementCount::getFixed(0),
-               APFloat::getSizeInBits(APFloatBase::EnumToSemantics(Sem)), Sem};
-  }
-
-  static LLT buildInteger(unsigned SizeInBits) {
-    if (!getUseExtended())
-      return LLT::scalar(SizeInBits);
-
-    return integer(SizeInBits);
-  }
-
-  static LLT buildFloatingPoint(const FpSemantics &Sem) {
     if (!getUseExtended())
       return LLT::scalar(
           APFloat::getSizeInBits(APFloatBase::EnumToSemantics(Sem)));
 
-    return floatingPoint(Sem);
-  }
-
-  static LLT buildFloatingIEEE(unsigned SizeInBits) {
-    if (!getUseExtended())
-      return LLT::scalar(SizeInBits);
-
-    return floatIEEE(SizeInBits);
+    return LLT{Kind::FLOAT, ElementCount::getFixed(0),
+               APFloat::getSizeInBits(APFloatBase::EnumToSemantics(Sem)), Sem};
   }
 
   /// Get a low-level token; just a scalar with zero bits (or no size).
@@ -156,7 +141,10 @@ public:
   }
 
   // FIXME: Remove this builder
-  static constexpr LLT floatIEEE(unsigned SizeInBits) {
+  static LLT floatIEEE(unsigned SizeInBits) {
+    if (!getUseExtended())
+      return LLT::scalar(SizeInBits);
+
     switch (SizeInBits) {
     default:
       llvm_unreachable("Wrong SizeInBits for IEEE Floating point!");
