@@ -27979,7 +27979,7 @@ static SDValue performSelectCombine(SDNode *N,
   // ruled out to prevent the creation of setcc that need to be scalarized.
   EVT SrcVT = N0.getOperand(0).getValueType();
   if (SrcVT == MVT::i1 ||
-      (SrcVT.isFloatingPoint() && SrcVT.getSizeInBits() <= 16))
+      (SrcVT.isFloatingPoint() && SrcVT != MVT::f32 && SrcVT != MVT::f64))
     return SDValue();
 
   // If NumMaskElts == 0, the comparison is larger than select result. The
