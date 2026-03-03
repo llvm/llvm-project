@@ -6242,8 +6242,8 @@ bool SelectionDAG::isKnownNeverZero(SDValue Op, const APInt &DemandedElts,
   }
 
   case ISD::OR:
-    return isKnownNeverZero(Op.getOperand(1), Depth + 1) ||
-           isKnownNeverZero(Op.getOperand(0), Depth + 1);
+    return isKnownNeverZero(Op.getOperand(1), DemandedElts, Depth + 1) ||
+           isKnownNeverZero(Op.getOperand(0), DemandedElts, Depth + 1);
 
   case ISD::VSELECT:
   case ISD::SELECT:
@@ -6264,10 +6264,15 @@ bool SelectionDAG::isKnownNeverZero(SDValue Op, const APInt &DemandedElts,
       return true;
     break;
   }
+
   case ISD::UADDSAT:
   case ISD::UMAX:
-    return isKnownNeverZero(Op.getOperand(1), Depth + 1) ||
-           isKnownNeverZero(Op.getOperand(0), Depth + 1);
+    return isKnownNeverZero(Op.getOperand(1), DemandedElts, Depth + 1) ||
+           isKnownNeverZero(Op.getOperand(0), DemandedElts, Depth + 1);
+
+  case ISD::UMIN:
+    return isKnownNeverZero(Op.getOperand(1), DemandedElts, Depth + 1) &&
+           isKnownNeverZero(Op.getOperand(0), DemandedElts, Depth + 1);
 
     // For smin/smax: If either operand is known negative/positive
     // respectively we don't need the other to be known at all.
@@ -6301,9 +6306,6 @@ bool SelectionDAG::isKnownNeverZero(SDValue Op, const APInt &DemandedElts,
     return isKnownNeverZero(Op.getOperand(1), DemandedElts, Depth + 1) &&
            isKnownNeverZero(Op.getOperand(0), DemandedElts, Depth + 1);
   }
-  case ISD::UMIN:
-    return isKnownNeverZero(Op.getOperand(1), Depth + 1) &&
-           isKnownNeverZero(Op.getOperand(0), Depth + 1);
 
   case ISD::ROTL:
   case ISD::ROTR:
@@ -6316,12 +6318,14 @@ bool SelectionDAG::isKnownNeverZero(SDValue Op, const APInt &DemandedElts,
   case ISD::SRA:
   case ISD::SRL: {
     if (Op->getFlags().hasExact())
-      return isKnownNeverZero(Op.getOperand(0), Depth + 1);
-    KnownBits ValKnown = computeKnownBits(Op.getOperand(0), Depth + 1);
+      return isKnownNeverZero(Op.getOperand(0), DemandedElts, Depth + 1);
+    KnownBits ValKnown =
+        computeKnownBits(Op.getOperand(0), DemandedElts, Depth + 1);
     if (ValKnown.isNegative())
       return true;
     // If max shift cnt of known ones is non-zero, result is non-zero.
-    APInt MaxCnt = computeKnownBits(Op.getOperand(1), Depth + 1).getMaxValue();
+    APInt MaxCnt = computeKnownBits(Op.getOperand(1), DemandedElts, Depth + 1)
+                       .getMaxValue();
     if (MaxCnt.ult(ValKnown.getBitWidth()) &&
         !ValKnown.One.lshr(MaxCnt).isZero())
       return true;
@@ -6362,7 +6366,7 @@ bool SelectionDAG::isKnownNeverZero(SDValue Op, const APInt &DemandedElts,
 
   case ISD::ZERO_EXTEND:
   case ISD::SIGN_EXTEND:
-    return isKnownNeverZero(Op.getOperand(0), Depth + 1);
+    return isKnownNeverZero(Op.getOperand(0), DemandedElts, Depth + 1);
   case ISD::VSCALE: {
     const Function &F = getMachineFunction().getFunction();
     const APInt &Multiplier = Op.getConstantOperandAPInt(0);
@@ -7689,12 +7693,8 @@ SDValue SelectionDAG::foldConstantFPMath(unsigned Opcode, const SDLoc &DL,
       C1.copySign(C2);
       return getConstantFP(C1, DL, VT);
     case ISD::FMINNUM:
-      if (C1.isSignaling() || C2.isSignaling())
-        return SDValue();
       return getConstantFP(minnum(C1, C2), DL, VT);
     case ISD::FMAXNUM:
-      if (C1.isSignaling() || C2.isSignaling())
-        return SDValue();
       return getConstantFP(maxnum(C1, C2), DL, VT);
     case ISD::FMINIMUM:
       return getConstantFP(minimum(C1, C2), DL, VT);

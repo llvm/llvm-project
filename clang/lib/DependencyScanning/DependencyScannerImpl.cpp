@@ -470,9 +470,6 @@ createScanCompilerInvocation(const CompilerInvocation &Invocation,
       true;
   ScanInvocation->getHeaderSearchOpts().ModulesForceValidateUserHeaders = false;
 
-  // Avoid some checks and module map parsing when loading PCM files.
-  ScanInvocation->getPreprocessorOpts().ModulesCheckRelocated = false;
-
   // Ensure that the scanner does not create new dependency collectors,
   // and thus won't write out the extra '.d' files to disk.
   ScanInvocation->getDependencyOutputOpts() = {};
@@ -777,7 +774,6 @@ bool DependencyScanningAction::runInvocation(
                               std::move(PCHContainerOps), std::move(ModCache));
   CompilerInstance &ScanInstance = *ScanInstanceStorage;
 
-  assert(!DiagConsumerFinished && "attempt to reuse finished consumer");
   initializeScanCompilerInstance(ScanInstance, FS, DiagConsumer, Service,
                                  DepFS);
 
@@ -799,9 +795,6 @@ bool DependencyScanningAction::runInvocation(
 
   ReadPCHAndPreprocessAction Action;
   const bool Result = ScanInstance.ExecuteAction(Action);
-
-  // ExecuteAction is responsible for calling finish.
-  DiagConsumerFinished = true;
 
   if (Result) {
     if (MDC)
@@ -963,10 +956,5 @@ bool CompilerInstanceWithContext::computeDependencies(
   Consumer.handleBuildCommand(
       {CommandLine[0], ModuleInvocation.getCC1CommandLine()});
 
-  return true;
-}
-
-bool CompilerInstanceWithContext::finalize() {
-  DiagConsumer->finish();
   return true;
 }

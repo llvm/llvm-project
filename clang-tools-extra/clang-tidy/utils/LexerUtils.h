@@ -12,6 +12,7 @@
 #include "clang/AST/ASTContext.h"
 #include "clang/Basic/TokenKinds.h"
 #include "clang/Lex/Lexer.h"
+#include "llvm/ADT/STLFunctionalExtras.h"
 #include <optional>
 #include <utility>
 #include <vector>
@@ -130,6 +131,14 @@ std::vector<CommentToken> getCommentsInRange(CharSourceRange Range,
 std::vector<CommentToken>
 getTrailingCommentsInRange(CharSourceRange Range, const SourceManager &SM,
                            const LangOptions &LangOpts);
+
+/// Returns source range of the first token in \p Range matching \p Pred.
+/// The returned char range starts at the matched token and ends at the start
+/// of the next token. Returns invalid range if no token matches.
+CharSourceRange
+findTokenTextInRange(CharSourceRange Range, const SourceManager &SM,
+                     const LangOptions &LangOpts,
+                     llvm::function_ref<bool(const Token &)> Pred);
 
 /// Assuming that ``Range`` spans a CVR-qualified type, returns the
 /// token in ``Range`` that is responsible for the qualification. ``Range``

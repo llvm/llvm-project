@@ -7250,11 +7250,11 @@ emitLoadScalarOpsFromVGPRLoop(const SIInstrInfo &TII,
 // with SGPRs by iterating over all unique values across all lanes.
 // Returns the loop basic block that now contains \p MI.
 static MachineBasicBlock *
-loadMBUFScalarOperandsFromVGPR(const SIInstrInfo &TII, MachineInstr &MI,
-                               ArrayRef<MachineOperand *> ScalarOps,
-                               MachineDominatorTree *MDT,
-                               MachineBasicBlock::iterator Begin = nullptr,
-                               MachineBasicBlock::iterator End = nullptr) {
+loadScalarOperandsFromVGPR(const SIInstrInfo &TII, MachineInstr &MI,
+                           ArrayRef<MachineOperand *> ScalarOps,
+                           MachineDominatorTree *MDT,
+                           MachineBasicBlock::iterator Begin = nullptr,
+                           MachineBasicBlock::iterator End = nullptr) {
   MachineBasicBlock &MBB = *MI.getParent();
   MachineFunction &MF = *MBB.getParent();
   const GCNSubtarget &ST = MF.getSubtarget<GCNSubtarget>();
@@ -7529,13 +7529,13 @@ SIInstrInfo::legalizeOperands(MachineInstr &MI,
                                     : AMDGPU::OpName::srsrc;
     MachineOperand *SRsrc = getNamedOperand(MI, RSrcOpName);
     if (SRsrc && !RI.isSGPRClass(MRI.getRegClass(SRsrc->getReg())))
-      CreatedBB = loadMBUFScalarOperandsFromVGPR(*this, MI, {SRsrc}, MDT);
+      CreatedBB = loadScalarOperandsFromVGPR(*this, MI, {SRsrc}, MDT);
 
     AMDGPU::OpName SampOpName =
         isMIMG(MI) ? AMDGPU::OpName::ssamp : AMDGPU::OpName::samp;
     MachineOperand *SSamp = getNamedOperand(MI, SampOpName);
     if (SSamp && !RI.isSGPRClass(MRI.getRegClass(SSamp->getReg())))
-      CreatedBB = loadMBUFScalarOperandsFromVGPR(*this, MI, {SSamp}, MDT);
+      CreatedBB = loadScalarOperandsFromVGPR(*this, MI, {SSamp}, MDT);
 
     return CreatedBB;
   }
@@ -7564,7 +7564,7 @@ SIInstrInfo::legalizeOperands(MachineInstr &MI,
              MI.definesRegister(End->getOperand(1).getReg(), /*TRI=*/nullptr))
         ++End;
       CreatedBB =
-          loadMBUFScalarOperandsFromVGPR(*this, MI, {Dest}, MDT, Start, End);
+          loadScalarOperandsFromVGPR(*this, MI, {Dest}, MDT, Start, End);
     }
   }
 
@@ -7746,11 +7746,10 @@ SIInstrInfo::legalizeOperands(MachineInstr &MI,
       // Legalize a VGPR Rsrc and soffset together.
       if (!isSoffsetLegal) {
         MachineOperand *Soffset = getNamedOperand(MI, AMDGPU::OpName::soffset);
-        CreatedBB =
-            loadMBUFScalarOperandsFromVGPR(*this, MI, {Rsrc, Soffset}, MDT);
+        CreatedBB = loadScalarOperandsFromVGPR(*this, MI, {Rsrc, Soffset}, MDT);
         return CreatedBB;
       }
-      CreatedBB = loadMBUFScalarOperandsFromVGPR(*this, MI, {Rsrc}, MDT);
+      CreatedBB = loadScalarOperandsFromVGPR(*this, MI, {Rsrc}, MDT);
       return CreatedBB;
     }
   }
@@ -7758,7 +7757,7 @@ SIInstrInfo::legalizeOperands(MachineInstr &MI,
   // Legalize a VGPR soffset.
   if (!isSoffsetLegal) {
     MachineOperand *Soffset = getNamedOperand(MI, AMDGPU::OpName::soffset);
-    CreatedBB = loadMBUFScalarOperandsFromVGPR(*this, MI, {Soffset}, MDT);
+    CreatedBB = loadScalarOperandsFromVGPR(*this, MI, {Soffset}, MDT);
     return CreatedBB;
   }
   return CreatedBB;

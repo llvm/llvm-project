@@ -1,5 +1,5 @@
 // This test checks that we don't crash when we load two conflicting PCM files
-// and instead emit the appropriate diagnostics.
+// and instead use the newer copy.
 
 // RUN: rm -rf %t
 // RUN: split-file %s %t
@@ -13,14 +13,11 @@
 
 // RUN: cp -r %t/frameworks2/A.framework %t/frameworks1
 
-// RUN: not clang-scan-deps -format experimental-full -o %t/deps2.json 2>%t/errs -- \
+// RUN: clang-scan-deps -format experimental-full -o %t/deps2.json 2>&1 -- \
 // RUN:   %clang -fmodules -fmodules-cache-path=%t/cache \
 // RUN:   -F %t/frameworks1 -F %t/frameworks2 \
-// RUN:   -c %t/tu2.m -o %t/tu2.o
-// RUN: FileCheck --input-file=%t/errs %s
-
-// CHECK:      fatal error: module 'A' is defined in both '{{.*}}.pcm' and '{{.*}}.pcm'
-// CHECK-NEXT: note: compiled from '{{.*}}frameworks1{{.*}}' and '{{.*}}frameworks2{{.*}}'
+// RUN:   -c %t/tu2.m -o %t/tu2.o \
+// RUN: | FileCheck %s --allow-empty --implicit-check-not="warning"
 
 //--- frameworks2/A.framework/Modules/module.modulemap
 framework module A { header "A.h" }
@@ -37,7 +34,7 @@ framework module B { header "B.h" }
 
 //--- tu2.m
 #include <A/A.h>
-#include <B/B.h> // This results in a conflict and a fatal loader error.
+#include <B/B.h> // This results in a rebuild of B. 
 
-#if MACRO_A // This crashes with lexer that does not respect `cutOfLexing()`.
+#if MACRO_A // This previously crashed with lexer that does not respect `cutOfLexing()`.
 #endif

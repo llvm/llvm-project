@@ -38,9 +38,6 @@ const MCAsmInfo::AtSpecifier COFFAtSpecifiers[] = {
 
 const MCAsmInfo::AtSpecifier ELFAtSpecifiers[] = {
     {AArch64::S_GOT, "GOT"},
-    {AArch64::S_GOTPCREL, "GOTPCREL"},
-    {AArch64::S_PLT, "PLT"},
-    {AArch64::S_FUNCINIT, "FUNCINIT"},
 };
 
 const MCAsmInfo::AtSpecifier MachOAtSpecifiers[] = {

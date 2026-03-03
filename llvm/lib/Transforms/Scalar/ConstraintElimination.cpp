@@ -430,7 +430,7 @@ static OffsetResult collectOffsets(GEPOperator &GEP, const DataLayout &DL) {
     Result.BasePtr = InnerGEP->getPointerOperand();
     Result.ConstantOffset += ConstantOffset2;
     if (Result.VariableOffsets.size() == 0 && VariableOffsets2.size() == 1)
-      Result.VariableOffsets = VariableOffsets2;
+      Result.VariableOffsets = std::move(VariableOffsets2);
     Result.NW &= InnerGEP->getNoWrapFlags();
   }
   return Result;
@@ -1512,9 +1512,7 @@ static bool checkAndReplaceCondition(
     generateReproducer(Cmp, ReproducerModule, ReproducerCondStack, Info, DT);
     Constant *ConstantC = ConstantInt::getBool(
         CmpInst::makeCmpResultType(Cmp->getType()), IsTrue);
-    bool Changed = false;
-    Cmp->replaceUsesWithIf(ConstantC, [&DT, NumIn, NumOut, ContextInst,
-                                       &Changed](Use &U) {
+    bool Changed = Cmp->replaceUsesWithIf(ConstantC, [&](Use &U) {
       auto *UserI = getContextInstForUse(U);
       auto *DTN = DT.getNode(UserI->getParent());
       if (!DTN || DTN->getDFSNumIn() < NumIn || DTN->getDFSNumOut() > NumOut)
@@ -1526,9 +1524,7 @@ static bool checkAndReplaceCondition(
       // Conditions in an assume trivially simplify to true. Skip uses
       // in assume calls to not destroy the available information.
       auto *II = dyn_cast<IntrinsicInst>(U.getUser());
-      bool ShouldReplace = !II || II->getIntrinsicID() != Intrinsic::assume;
-      Changed |= ShouldReplace;
-      return ShouldReplace;
+      return !II || II->getIntrinsicID() != Intrinsic::assume;
     });
     NumCondsRemoved++;
 

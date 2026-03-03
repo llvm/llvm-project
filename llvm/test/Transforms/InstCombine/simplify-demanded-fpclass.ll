@@ -10,8 +10,6 @@ declare float @llvm.trunc.f32(float)
 declare float @llvm.arithmetic.fence.f32(float)
 declare float @llvm.minnum.f32(float, float)
 declare float @llvm.maxnum.f32(float, float)
-declare float @llvm.minimumnum.f32(float, float)
-declare float @llvm.maximumnum.f32(float, float)
 
 declare nofpclass(inf norm sub zero) float @nan_only()
 
@@ -1893,7 +1891,7 @@ define nofpclass(pinf) float @ret_nofpclass_pinf__minnum_ninf(i1 %cond, float %x
 ; CHECK-SAME: (i1 [[COND:%.*]], float [[X:%.*]]) {
 ; CHECK-NEXT:    ret float 0xFFF0000000000000
 ;
-  %min = call float @llvm.minimumnum.f32(float %x, float 0xFFF0000000000000)
+  %min = call float @llvm.minnum.f32(float %x, float 0xFFF0000000000000)
   ret float %min
 }
 
@@ -1914,7 +1912,7 @@ define nofpclass(ninf) float @ret_nofpclass_ninf__maxnum_pinf(i1 %cond, float %x
 ; CHECK-SAME: (i1 [[COND:%.*]], float [[X:%.*]]) {
 ; CHECK-NEXT:    ret float 0x7FF0000000000000
 ;
-  %max = call float @llvm.maximumnum.f32(float %x, float 0x7FF0000000000000)
+  %max = call float @llvm.maxnum.f32(float %x, float 0x7FF0000000000000)
   ret float %max
 }
 

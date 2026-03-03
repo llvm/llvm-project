@@ -5971,6 +5971,7 @@ bool InterpretBuiltin(InterpState &S, CodePtr OpPC, const CallExpr *Call,
 
 bool InterpretOffsetOf(InterpState &S, CodePtr OpPC, const OffsetOfExpr *E,
                        ArrayRef<int64_t> ArrayIndices, int64_t &IntResult) {
+  S.getASTContext().recordOffsetOfEvaluation(E);
   CharUnits Result;
   unsigned N = E->getNumComponents();
   assert(N > 0);

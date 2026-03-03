@@ -1340,7 +1340,7 @@ void llvm::adjustKnownBitsForSelectArm(KnownBits &Known, Value *Cond,
 
   // Finally, we know we get information from the condition and its valid,
   // so return it.
-  Known = CondRes;
+  Known = std::move(CondRes);
 }
 
 // Match a signed min+max clamp pattern like smax(smin(In, CHigh), CLow).
@@ -7572,7 +7572,7 @@ static bool canCreateUndefOrPoison(const Operator *Op, UndefPoisonKind Kind,
   case Instruction::Call:
     if (auto *II = dyn_cast<IntrinsicInst>(Op)) {
       switch (II->getIntrinsicID()) {
-      // TODO: Add more intrinsics.
+      // NOTE: Use IntrNoCreateUndefOrPoison when possible.
       case Intrinsic::ctlz:
       case Intrinsic::cttz:
       case Intrinsic::abs:

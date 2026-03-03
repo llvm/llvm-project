@@ -868,7 +868,7 @@ void LinkerDriver::addWinSysRootLibSearchPaths() {
   llvm::StringSet<> noDefaultLibs;
   for (auto &iter : ctx.config.noDefaultLibs)
     noDefaultLibs.insert(findLib(iter.first()).lower());
-  ctx.config.noDefaultLibs = noDefaultLibs;
+  ctx.config.noDefaultLibs = std::move(noDefaultLibs);
 }
 
 // Parses LIB environment which contains a list of search paths.

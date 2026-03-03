@@ -701,3 +701,89 @@ TEST_F(OpenACCUtilsLoopTest, UnstructuredLoopWithYieldOperandsReturnsNullptr) {
   EXPECT_FALSE(exeRegionOp);
   EXPECT_TRUE(errorMsg.find("not yet supported") != std::string::npos);
 }
+
+//===----------------------------------------------------------------------===//
+// cloneACCRegionInto Tests
+//===----------------------------------------------------------------------===//
+
+TEST_F(OpenACCUtilsLoopTest, CloneACCRegionIntoWithYield) {
+  auto [module, funcOp] = createModuleWithFunc();
+  Block *entry = &funcOp.getBody().front();
+
+  Value c0 = createIndexConstant(0);
+  Value c10 = createIndexConstant(10);
+  Value c1 = createIndexConstant(1);
+  acc::LoopOp loopOp = createLoopOp({c0}, {c10}, {c1});
+
+  // Add a constant to the loop body before the yield so the region has
+  // something to clone besides the terminator.
+  Block *loopBody = &loopOp.getRegion().front();
+  b.setInsertionPoint(loopBody->getTerminator());
+  arith::ConstantOp::create(b, loc, b.getI32IntegerAttr(42));
+
+  b.setInsertionPointToEnd(entry);
+  func::ReturnOp::create(b, loc);
+
+  IRMapping mapping;
+  mapping.map(loopBody->getArgument(0), c0);
+
+  auto [replacements, ip] = acc::cloneACCRegionInto(
+      &loopOp.getRegion(), entry, entry->begin(), mapping, ValueRange{});
+
+  EXPECT_TRUE(replacements.empty());
+  // The cloned block should have been merged: constant 42 present, no acc.yield
+  bool hasConst42 = false;
+  bool hasAccYield = false;
+  for (Operation &op : entry->getOperations()) {
+    if (auto cst = dyn_cast<arith::ConstantOp>(op))
+      hasConst42 = hasConst42 || (cst.getValue() == b.getI32IntegerAttr(42));
+    hasAccYield = hasAccYield || isa<acc::YieldOp>(op);
+  }
+  EXPECT_TRUE(hasConst42);
+  EXPECT_FALSE(hasAccYield);
+}
+
+TEST_F(OpenACCUtilsLoopTest, CloneACCRegionIntoWithResultReplacement) {
+  auto [module, funcOp] = createModuleWithFunc();
+  Block *entry = &funcOp.getBody().front();
+
+  // Value that will be replaced by the cloned region's yield operand
+  Value origVal =
+      arith::ConstantOp::create(b, loc, b.getI32IntegerAttr(0)).getResult();
+
+  Value c0 = createIndexConstant(0);
+  Value c10 = createIndexConstant(10);
+  Value c1 = createIndexConstant(1);
+  acc::LoopOp loopOp = createLoopOp({c0}, {c10}, {c1});
+
+  Block *loopBody = &loopOp.getRegion().front();
+  b.setInsertionPoint(loopBody->getTerminator());
+  Value replacementVal =
+      arith::ConstantOp::create(b, loc, b.getI32IntegerAttr(1)).getResult();
+  loopBody->getTerminator()->erase();
+  b.setInsertionPointToEnd(loopBody);
+  acc::YieldOp::create(b, loc, ValueRange{replacementVal});
+
+  b.setInsertionPointToEnd(entry);
+  Value c1value =
+      arith::ConstantOp::create(b, loc, b.getI32IntegerAttr(1)).getResult();
+  Value addResult = arith::AddIOp::create(b, loc, origVal, c1value)
+                        .getResult(); // use of origVal
+  (void)addResult;
+  func::ReturnOp::create(b, loc);
+
+  IRMapping mapping;
+  mapping.map(loopBody->getArgument(0), c0);
+
+  auto [replacements, ip] = acc::cloneACCRegionInto(
+      &loopOp.getRegion(), entry, entry->begin(), mapping, ValueRange{origVal});
+
+  ASSERT_EQ(replacements.size(), 1u);
+  // The addi should now use the replacement (constant 1), not origVal
+  bool addiUsesReplacement = false;
+  for (Operation &op : entry->getOperations()) {
+    if (auto addi = dyn_cast<arith::AddIOp>(op))
+      addiUsesReplacement = (addi.getLhs() == replacements[0]);
+  }
+  EXPECT_TRUE(addiUsesReplacement);
+}

@@ -3816,6 +3816,9 @@ Sema::CheckBuiltinFunctionCall(FunctionDecl *FDecl, unsigned BuiltinID,
   }
 
   case Builtin::BI__builtin_allow_sanitize_check: {
+    if (checkArgCount(TheCall, 1))
+      return ExprError();
+
     Expr *Arg = TheCall->getArg(0);
     // Check if the argument is a string literal.
     const StringLiteral *SanitizerName =

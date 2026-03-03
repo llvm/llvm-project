@@ -29,7 +29,7 @@ struct LLVM_LIBRARY_VISIBILITY MCUInfo {
 };
 
 // NOTE: This list has been synchronized with gcc-avr 5.4.0 and avr-libc 2.0.0.
-static MCUInfo AVRMcus[] = {
+static const MCUInfo AVRMcus[] = {
     {"avr1", nullptr, "1", 0},
     {"at90s1200", "__AVR_AT90S1200__", "1", 0},
     {"attiny11", "__AVR_ATtiny11__", "1", 0},
