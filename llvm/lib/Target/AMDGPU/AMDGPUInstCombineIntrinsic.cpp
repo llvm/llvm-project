@@ -731,13 +731,13 @@ GCNTTIImpl::instCombineIntrinsic(InstCombiner &IC, IntrinsicInst &II) const {
     uint64_t CurrentOrNullBytes =
         II.getAttributes().getRetDereferenceableOrNullBytes();
     if (CurrentOrNullBytes != 0) {
+      // Refine "dereferenceable (A) meets dereferenceable_or_null(B)"
+      // into dereferenceable(max(A, B))
       uint64_t NewBytes = std::max(CurrentOrNullBytes, ImplicitArgBytes);
-      if (NewBytes != CurrentOrNullBytes) {
-        II.addRetAttr(Attribute::getWithDereferenceableOrNullBytes(
-            II.getContext(), NewBytes));
-        return &II;
-      }
-      return std::nullopt;
+      II.addRetAttr(
+          Attribute::getWithDereferenceableBytes(II.getContext(), NewBytes));
+      II.removeRetAttr(Attribute::DereferenceableOrNull);
+      return &II;
     }
 
     uint64_t CurrentBytes = II.getAttributes().getRetDereferenceableBytes();

@@ -45,7 +45,7 @@ entry:
 define ptr addrspace(4) @derefornull() {
 ; DEREF-LABEL: define ptr addrspace(4) @derefornull() {
 ; DEREF-NEXT:  [[ENTRY:.*:]]
-; DEREF-NEXT:    [[TMP:%.*]] = tail call dereferenceable_or_null(256) ptr addrspace(4) @llvm.amdgcn.implicitarg.ptr()
+; DEREF-NEXT:    [[TMP:%.*]] = tail call dereferenceable(256) ptr addrspace(4) @llvm.amdgcn.implicitarg.ptr()
 ; DEREF-NEXT:    [[TMP0:%.*]] = getelementptr inbounds nuw i8, ptr addrspace(4) [[TMP]], i64 12
 ; DEREF-NEXT:    ret ptr addrspace(4) [[TMP0]]
 ;
