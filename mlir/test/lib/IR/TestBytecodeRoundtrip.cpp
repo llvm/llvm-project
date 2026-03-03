@@ -166,6 +166,8 @@ private:
             Type &entry) -> LogicalResult {
           // Get test dialect version from the version map.
           auto versionOr = reader.getDialectVersion<test::TestDialect>();
+          // Missing version is non-fatal (consistent with other test-dialect
+          // readers); return success() and fall through to default parsing.
           if (failed(versionOr))
             return success();
           const auto *version =
@@ -191,7 +193,8 @@ private:
                     widthAndSignedness & 0x3)),
                true))
             entry = IntegerType::get(reader.getContext(), width, signedness);
-          // Return nullopt to fall through the rest of the parsing code path.
+          // Return success() and fall through to default parsing when this
+          // callback does not override the entry.
           return success();
         });
     doRoundtripWithConfigs(op, writeConfig, parseConfig);
