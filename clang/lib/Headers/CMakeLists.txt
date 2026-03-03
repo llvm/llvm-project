@@ -129,14 +129,16 @@ set(ppc_htm_files
   )
 
 set(riscv_files
+  # Standard headers
   riscv_bitmanip.h
-  riscv_corev_alu.h
   riscv_crypto.h
-  riscv_nds.h
   riscv_ntlh.h
-  sifive_vector.h
+  # Vendor headers
   andes_vector.h
+  riscv_corev_alu.h
   riscv_mips.h
+  riscv_nds.h
+  sifive_vector.h
   )
 
 set(spirv_files

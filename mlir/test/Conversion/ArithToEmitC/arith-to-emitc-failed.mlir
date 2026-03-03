@@ -13,3 +13,11 @@ func.func @vector(%arg0: vector<4xi32>, %arg1: vector<4xi32>) {
   %0 = arith.addi %arg0, %arg1 : vector<4xi32>
   return
 }
+
+// -----
+
+func.func @unsuppoted_emitc_type(%arg0: i4, %arg1: i4) {
+  // expected-error@+1 {{failed to legalize operation 'arith.addi'}}
+  %0 = arith.addi %arg0, %arg1 : i4
+  return
+}
