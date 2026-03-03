@@ -179,7 +179,7 @@ public:
   SmallVector<Option*, 4> DefaultOptions;
 
   // This collects the different option categories that have been registered.
-  SmallPtrSet<OptionCategory *, 16> RegisteredOptionCategories;
+  SmallPtrSet<const OptionCategory *, 16> RegisteredOptionCategories;
 
   // This collects the different subcommands that have been registered.
   SmallPtrSet<SubCommand *, 4> RegisteredSubCommands;
@@ -346,7 +346,7 @@ public:
 
   void printOptionValues();
 
-  void registerCategory(OptionCategory *cat) {
+  void registerCategory(const OptionCategory *cat) {
     assert(count_if(RegisteredOptionCategories,
                     [cat](const OptionCategory *Category) {
              return cat->getName() == Category->getName();
@@ -465,7 +465,7 @@ void Option::setArgStr(StringRef S) {
     setMiscFlag(Grouping);
 }
 
-void Option::addCategory(OptionCategory &C) {
+void Option::addCategory(const OptionCategory &C) {
   assert(!Categories.empty() && "Categories cannot be empty.");
   // Maintain backward compatibility by replacing the default GeneralCategory
   // if it's still set.  Otherwise, just add the new one.  The GeneralCategory
@@ -483,7 +483,7 @@ void Option::reset() {
     removeArgument();
 }
 
-void OptionCategory::registerCategory() {
+void OptionCategory::registerCategory() const {
   GlobalParser->registerCategory(this);
 }
 
@@ -2453,8 +2453,8 @@ public:
   // It shall return a negative value if A's name should be lexicographically
   // ordered before B's name. It returns a value greater than zero if B's name
   // should be ordered before A's name, and it returns 0 otherwise.
-  static int OptionCategoryCompare(OptionCategory *const *A,
-                                   OptionCategory *const *B) {
+  static int OptionCategoryCompare(const OptionCategory *const *A,
+                                   const OptionCategory *const *B) {
     return (*A)->getName().compare((*B)->getName());
   }
 
@@ -2463,8 +2463,8 @@ public:
 
 protected:
   void printOptions(StrOptionPairVector &Opts, size_t MaxArgLen) override {
-    std::vector<OptionCategory *> SortedCategories;
-    DenseMap<OptionCategory *, std::vector<Option *>> CategorizedOptions;
+    std::vector<const OptionCategory *> SortedCategories;
+    DenseMap<const OptionCategory *, std::vector<Option *>> CategorizedOptions;
 
     // Collect registered option categories into vector in preparation for
     // sorting.
@@ -2481,7 +2481,7 @@ protected:
     // options within categories will also be alphabetically sorted.
     for (const auto &I : Opts) {
       Option *Opt = I.second;
-      for (OptionCategory *Cat : Opt->Categories) {
+      for (const OptionCategory *Cat : Opt->Categories) {
         assert(llvm::is_contained(SortedCategories, Cat) &&
                "Option has an unregistered category");
         CategorizedOptions[Cat].push_back(Opt);
@@ -2489,7 +2489,7 @@ protected:
     }
 
     // Now do printing.
-    for (OptionCategory *Category : SortedCategories) {
+    for (const OptionCategory *Category : SortedCategories) {
       // Hide empty categories for --help, but show for --help-hidden.
       const auto &CategoryOptions = CategorizedOptions[Category];
       if (CategoryOptions.empty())
@@ -2691,9 +2691,9 @@ static void initCommonOptions() {
   initRandomSeedOptions();
 }
 
-OptionCategory &cl::getGeneralCategory() {
+const OptionCategory &cl::getGeneralCategory() {
   // Initialise the general option category.
-  static OptionCategory GeneralCategory{"General options"};
+  static const OptionCategory GeneralCategory{"General options"};
   return GeneralCategory;
 }
 
@@ -2831,7 +2831,8 @@ cl::getRegisteredSubcommands() {
   return GlobalParser->getRegisteredSubcommands();
 }
 
-void cl::HideUnrelatedOptions(cl::OptionCategory &Category, SubCommand &Sub) {
+void cl::HideUnrelatedOptions(const cl::OptionCategory &Category,
+                              SubCommand &Sub) {
   initCommonOptions();
   for (auto &I : Sub.OptionsMap) {
     bool Unrelated = true;

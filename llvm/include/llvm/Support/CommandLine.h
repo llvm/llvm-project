@@ -182,7 +182,7 @@ private:
   StringRef const Name;
   StringRef const Description;
 
-  LLVM_ABI void registerCategory();
+  LLVM_ABI void registerCategory() const;
 
 public:
   OptionCategory(StringRef const Name,
@@ -196,7 +196,7 @@ public:
 };
 
 // The general Option Category (used as default category).
-LLVM_ABI OptionCategory &getGeneralCategory();
+LLVM_ABI const OptionCategory &getGeneralCategory();
 
 //===----------------------------------------------------------------------===//
 //
@@ -283,7 +283,7 @@ public:
   StringRef ArgStr;   // The argument string itself (ex: "help", "o")
   StringRef HelpStr;  // The descriptive text message for -help
   StringRef ValueStr; // String describing what the value of this option is
-  SmallVector<OptionCategory *, 1>
+  SmallVector<const OptionCategory *, 1>
       Categories;                    // The Categories this option belongs to
   SmallPtrSet<SubCommand *, 1> Subs; // The subcommands this option belongs to.
 
@@ -329,7 +329,7 @@ public:
   void setFormattingFlag(enum FormattingFlags V) { Formatting = V; }
   void setMiscFlag(enum MiscFlags M) { Misc |= M; }
   void setPosition(unsigned pos) { Position = pos; }
-  void addCategory(OptionCategory &C);
+  void addCategory(const OptionCategory &C);
   void addSubCommand(SubCommand &S) { Subs.insert(&S); }
 
 protected:
@@ -467,9 +467,9 @@ template <class Ty> LocationClass<Ty> location(Ty &L) {
 
 // Specify the Option category for the command line argument to belong to.
 struct cat {
-  OptionCategory &Category;
+  const OptionCategory &Category;
 
-  cat(OptionCategory &c) : Category(c) {}
+  cat(const OptionCategory &c) : Category(c) {}
 
   template <class Opt> void apply(Opt &O) const { O.addCategory(Category); }
 };
@@ -2306,7 +2306,7 @@ LLVM_ABI bool expandResponseFiles(int Argc, const char *const *Argv,
 /// Some tools (like clang-format) like to be able to hide all options that are
 /// not specific to the tool. This function allows a tool to specify a single
 /// option category to display in the -help output.
-LLVM_ABI void HideUnrelatedOptions(cl::OptionCategory &Category,
+LLVM_ABI void HideUnrelatedOptions(const cl::OptionCategory &Category,
                                    SubCommand &Sub = SubCommand::getTopLevel());
 
 /// Mark all options not part of the categories as cl::ReallyHidden.
