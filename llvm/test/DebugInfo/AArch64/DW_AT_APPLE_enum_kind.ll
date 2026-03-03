@@ -15,16 +15,16 @@
 
 ; CHECK: .debug_abbrev contents:
 
-; CHECK: [2] DW_TAG_enumeration_type DW_CHILDREN_yes
+; CHECK: [[[ABBREV_IDX:[0-9]+]]] DW_TAG_enumeration_type DW_CHILDREN_yes
 ; CHECK: DW_AT_APPLE_enum_kind   DW_FORM_data1
 
 ; CHECK: .debug_info contents:
 
-; CHECK: DW_TAG_enumeration_type [2]
+; CHECK: DW_TAG_enumeration_type [[[ABBREV_IDX]]]
 ; CHECK-DAG: DW_AT_name {{.*}} string = "OpenEnum"
 ; CHECK-DAG: DW_AT_APPLE_enum_kind [DW_FORM_data1]  (DW_APPLE_ENUM_KIND_Open)
 
-; CHECK: DW_TAG_enumeration_type [2]
+; CHECK: DW_TAG_enumeration_type [[[ABBREV_IDX]]]
 ; CHECK-DAG: DW_AT_name {{.*}} string = "ClosedEnum"
 ; CHECK-DAG: DW_AT_APPLE_enum_kind [DW_FORM_data1]  (DW_APPLE_ENUM_KIND_Closed)
 

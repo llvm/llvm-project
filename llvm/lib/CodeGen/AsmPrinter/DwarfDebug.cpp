@@ -1170,20 +1170,29 @@ void DwarfDebug::finishUnitAttributes(const DICompileUnit *DIUnit,
     }
   }
 }
-// Create new DwarfCompileUnit for the given metadata node with tag
-// DW_TAG_compile_unit.
-DwarfCompileUnit &
-DwarfDebug::getOrCreateDwarfCompileUnit(const DICompileUnit *DIUnit) {
+
+DwarfCompileUnit *DwarfDebug::getDwarfCompileUnit(const DICompileUnit *DIUnit) {
   if (auto *CU = CUMap.lookup(DIUnit))
-    return *CU;
+    return CU;
 
   if (useSplitDwarf() &&
       !shareAcrossDWOCUs() &&
       (!DIUnit->getSplitDebugInlining() ||
        DIUnit->getEmissionKind() == DICompileUnit::FullDebug) &&
       !CUMap.empty()) {
-    return *CUMap.begin()->second;
+    return CUMap.begin()->second;
   }
+
+  return nullptr;
+}
+
+// Create new DwarfCompileUnit for the given metadata node with tag
+// DW_TAG_compile_unit.
+DwarfCompileUnit &
+DwarfDebug::getOrCreateDwarfCompileUnit(const DICompileUnit *DIUnit) {
+  if (auto *CU = getDwarfCompileUnit(DIUnit))
+    return *CU;
+
   CompilationDir = DIUnit->getDirectory();
 
   auto OwnedUnit = std::make_unique<DwarfCompileUnit>(
@@ -1500,17 +1509,11 @@ void DwarfDebug::endModule() {
   }
 
   for (DICompileUnit *CUNode : M->debug_compile_units()) {
-    DwarfCompileUnit *CU = CUMap.lookup(CUNode);
+    DwarfCompileUnit *CU = getDwarfCompileUnit(CUNode);
 
-    // If the CU hasn't been emitted yet, create it here unless it is empty.
-    if (!CU) {
-      if (CUNode->getImportedEntities().empty() &&
-          CUNode->getEnumTypes().empty() &&
-          CUNode->getRetainedTypes().empty() &&
-          CUNode->getGlobalVariables().empty() && CUNode->getMacros().empty())
-        continue;
-      CU = &getOrCreateDwarfCompileUnit(CUNode);
-    }
+    // If the CU hasn't been emitted yet, it must be empty. Skip it.
+    if (!CU)
+      continue;
 
     // Emit Global Variables.
     for (auto *GVE : CUNode->getGlobalVariables()) {
