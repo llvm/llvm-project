@@ -9057,28 +9057,32 @@ enum class CountedByInvalidPointeeTypeKind {
 /// Calculate the pointer nesting level for counted_by attribute validation.
 /// Counts the number of pointer/array/function declarator chunks before the
 /// specified chunk index.
+///
+/// For example, given \c "int * __counted_by(n) *pp" the declarator chunks
+/// are (outermost first): [0]=Pointer(\c int **), [1]=Pointer(\c int *).
+/// When processing the inner pointer at \p chunkIndex=1, one Pointer chunk
+/// precedes it, so the function returns 1.
+///
 /// \param state The type processing state
 /// \param chunkIndex The index of the current declarator chunk
 /// \return The number of pointer/array/function chunks before chunkIndex
 static unsigned getPointerNestLevel(TypeProcessingState &state,
                                     unsigned chunkIndex) {
   unsigned pointerNestLevel = 0;
-  if (chunkIndex > 0) {
-    const auto &stateDeclarator = state.getDeclarator();
-    assert(chunkIndex <= stateDeclarator.getNumTypeObjects());
-    // DeclChunks are ordered identifier out. Index 0 is the outer most type
-    // object. Find outer pointer, array or function.
-    for (unsigned i = 0; i < chunkIndex; ++i) {
-      auto TypeObject = stateDeclarator.getTypeObject(i);
-      switch (TypeObject.Kind) {
-      case DeclaratorChunk::Function:
-      case DeclaratorChunk::Array:
-      case DeclaratorChunk::Pointer:
-        pointerNestLevel++;
-        break;
-      default:
-        break;
-      }
+  const auto &stateDeclarator = state.getDeclarator();
+  assert(chunkIndex <= stateDeclarator.getNumTypeObjects());
+  // DeclChunks are ordered identifier out. Index 0 is the outer most type
+  // object. Find outer pointer, array or function.
+  for (unsigned i = 0; i < chunkIndex; ++i) {
+    auto TypeObject = stateDeclarator.getTypeObject(i);
+    switch (TypeObject.Kind) {
+    case DeclaratorChunk::Function:
+    case DeclaratorChunk::Array:
+    case DeclaratorChunk::Pointer:
+      pointerNestLevel++;
+      break;
+    default:
+      break;
     }
   }
   return pointerNestLevel;
