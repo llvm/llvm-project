@@ -5687,12 +5687,40 @@ void OmpStructureChecker::Leave(const parser::OpenMPInvalidDirective &x) {
     RequiresPositiveParameter(llvm::omp::Clause::Y, c.v); \
   }
 
+void OmpStructureChecker::Enter(const parser::OmpClause::Affinity &x) {
+  CheckAllowedClause(llvm::omp::Clause::OMPC_affinity);
+
+  auto &modifiers{OmpGetModifiers(x.v)};
+  if (auto *iter{OmpGetUniqueModifier<parser::OmpIterator>(modifiers)})
+    CheckIteratorModifier(*iter);
+
+  const auto &objects{std::get<parser::OmpObjectList>(x.v.t)};
+  for (const parser::OmpObject &object : objects.v) {
+    if (const parser::Designator *designator{
+            omp::GetDesignatorFromObj(object)}) {
+      if (std::holds_alternative<parser::Substring>(designator->u)) {
+        context_.Say(designator->source,
+            "Substrings are not allowed on AFFINITY clause"_err_en_US);
+        continue;
+      }
+
+      // OpenMP 5.2 3.2.1, unless otherwise specified, a variable
+      // that is part of another variable as a structure element cannot be a
+      // locator list item. AFFINITY does not provide an exception for
+      // structure components.
+      if (parser::Unwrap<parser::StructureComponent>(object)) {
+        context_.Say(designator->source,
+            "Structure components are not allowed in an AFFINITY clause"_err_en_US);
+      }
+    }
+  }
+}
+
 // Following clauses do not have a separate node in parse-tree.h.
 CHECK_SIMPLE_CLAUSE(Absent, OMPC_absent)
 CHECK_SIMPLE_CLAUSE(AcqRel, OMPC_acq_rel)
 CHECK_SIMPLE_CLAUSE(Acquire, OMPC_acquire)
 CHECK_SIMPLE_CLAUSE(AdjustArgs, OMPC_adjust_args)
-CHECK_SIMPLE_CLAUSE(Affinity, OMPC_affinity)
 CHECK_SIMPLE_CLAUSE(AppendArgs, OMPC_append_args)
 CHECK_SIMPLE_CLAUSE(Apply, OMPC_apply)
 CHECK_SIMPLE_CLAUSE(Bind, OMPC_bind)
