@@ -267,6 +267,25 @@ static inline bool aligned(const void *P) {
     }                                                                          \
   } while (0)
 
+#define NUMERIC_TYPE_SWITCH(Expr, B)                                           \
+  do {                                                                         \
+    switch (Expr) {                                                            \
+      TYPE_SWITCH_CASE(PT_Sint8, B)                                            \
+      TYPE_SWITCH_CASE(PT_Uint8, B)                                            \
+      TYPE_SWITCH_CASE(PT_Sint16, B)                                           \
+      TYPE_SWITCH_CASE(PT_Uint16, B)                                           \
+      TYPE_SWITCH_CASE(PT_Sint32, B)                                           \
+      TYPE_SWITCH_CASE(PT_Uint32, B)                                           \
+      TYPE_SWITCH_CASE(PT_Sint64, B)                                           \
+      TYPE_SWITCH_CASE(PT_Uint64, B)                                           \
+      TYPE_SWITCH_CASE(PT_IntAP, B)                                            \
+      TYPE_SWITCH_CASE(PT_IntAPS, B)                                           \
+      TYPE_SWITCH_CASE(PT_Float, B)                                            \
+    default:                                                                   \
+      llvm_unreachable("Not an integer or floating point value");              \
+    }                                                                          \
+  } while (0)
+
 #define TYPE_SWITCH_ALLOC(Expr, B)                                             \
   do {                                                                         \
     switch (Expr) {                                                            \
