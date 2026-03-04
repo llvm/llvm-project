@@ -443,7 +443,7 @@ struct TwoDimMultiReductionToReduction
   }
 };
 
-/// Converts 1-D vector.multi_reduction directly to vector.reduction.
+/// Converts 1D vector.multi_reduction directly to vector.reduction.
 ///
 /// Example:
 /// ```mlir
