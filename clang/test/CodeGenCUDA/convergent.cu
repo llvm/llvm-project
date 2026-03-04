@@ -34,10 +34,10 @@ __host__ __device__ [[clang::noconvergent]] float aliasf1(int) asm("somethingels
 // DEVICE-NEXT:  [[ENTRY:.*:]]
 // DEVICE-NEXT:    [[X:%.*]] = alloca i32, align 4
 // DEVICE-NEXT:    call void @_Z3bazv() #[[ATTR4:[0-9]+]]
-// DEVICE-NEXT:    [[TMP0:%.*]] = call i32 asm "trap", "=l"() #[[ATTR5:[0-9]+]], !srcloc [[META3:![0-9]+]]
+// DEVICE-NEXT:    [[TMP0:%.*]] = call i32 asm "trap", "=l"() #[[ATTR5:[0-9]+]], !srcloc [[META2:![0-9]+]]
 // DEVICE-NEXT:    store i32 [[TMP0]], ptr [[X]], align 4
-// DEVICE-NEXT:    call void asm sideeffect "trap", ""() #[[ATTR4]], !srcloc [[META4:![0-9]+]]
-// DEVICE-NEXT:    call void asm sideeffect "nop", ""() #[[ATTR6:[0-9]+]], !srcloc [[META5:![0-9]+]]
+// DEVICE-NEXT:    call void asm sideeffect "trap", ""() #[[ATTR4]], !srcloc [[META3:![0-9]+]]
+// DEVICE-NEXT:    call void asm sideeffect "nop", ""() #[[ATTR6:[0-9]+]], !srcloc [[META4:![0-9]+]]
 // DEVICE-NEXT:    [[TMP1:%.*]] = load i32, ptr [[X]], align 4
 // DEVICE-NEXT:    [[CALL:%.*]] = call contract noundef float @something(i32 noundef [[TMP1]]) #[[ATTR4]]
 // DEVICE-NEXT:    [[TMP2:%.*]] = load i32, ptr [[X]], align 4
@@ -49,10 +49,10 @@ __host__ __device__ [[clang::noconvergent]] float aliasf1(int) asm("somethingels
 // HOST-NEXT:  [[ENTRY:.*:]]
 // HOST-NEXT:    [[X:%.*]] = alloca i32, align 4
 // HOST-NEXT:    call void @_Z3bazv()
-// HOST-NEXT:    [[TMP0:%.*]] = call i32 asm "trap", "=l,~{dirflag},~{fpsr},~{flags}"() #[[ATTR2:[0-9]+]], !srcloc [[META2:![0-9]+]]
+// HOST-NEXT:    [[TMP0:%.*]] = call i32 asm "trap", "=l,~{dirflag},~{fpsr},~{flags}"() #[[ATTR2:[0-9]+]], !srcloc [[META1:![0-9]+]]
 // HOST-NEXT:    store i32 [[TMP0]], ptr [[X]], align 4
-// HOST-NEXT:    call void asm sideeffect "trap", "~{dirflag},~{fpsr},~{flags}"() #[[ATTR3:[0-9]+]], !srcloc [[META3:![0-9]+]]
-// HOST-NEXT:    call void asm sideeffect "nop", "~{dirflag},~{fpsr},~{flags}"() #[[ATTR3]], !srcloc [[META4:![0-9]+]]
+// HOST-NEXT:    call void asm sideeffect "trap", "~{dirflag},~{fpsr},~{flags}"() #[[ATTR3:[0-9]+]], !srcloc [[META2:![0-9]+]]
+// HOST-NEXT:    call void asm sideeffect "nop", "~{dirflag},~{fpsr},~{flags}"() #[[ATTR3]], !srcloc [[META3:![0-9]+]]
 // HOST-NEXT:    [[TMP1:%.*]] = load i32, ptr [[X]], align 4
 // HOST-NEXT:    [[CALL:%.*]] = call contract noundef float @something(i32 noundef [[TMP1]])
 // HOST-NEXT:    [[TMP2:%.*]] = load i32, ptr [[X]], align 4
@@ -84,16 +84,14 @@ __host__ __device__ void bar() {
 // HOST: attributes #[[ATTR2]] = { nounwind memory(none) }
 // HOST: attributes #[[ATTR3]] = { nounwind }
 //.
-// DEVICE: [[META0:![0-9]+]] = !{i32 1, !"wchar_size", i32 4}
-// DEVICE: [[META1:![0-9]+]] = !{i32 4, !"nvvm-reflect-ftz", i32 0}
-// DEVICE: [[META2:![0-9]+]] = !{!"{{.*}}clang version {{.*}}"}
-// DEVICE: [[META3]] = !{i64 3120}
-// DEVICE: [[META4]] = !{i64 3155}
-// DEVICE: [[META5]] = !{i64 3206}
+// DEVICE: [[META0:![0-9]+]] = !{i32 4, !"nvvm-reflect-ftz", i32 0}
+// DEVICE: [[META1:![0-9]+]] = !{!"{{.*}}clang version {{.*}}"}
+// DEVICE: [[META2]] = !{i64 3120}
+// DEVICE: [[META3]] = !{i64 3155}
+// DEVICE: [[META4]] = !{i64 3206}
 //.
-// HOST: [[META0:![0-9]+]] = !{i32 1, !"wchar_size", i32 4}
-// HOST: [[META1:![0-9]+]] = !{!"{{.*}}clang version {{.*}}"}
-// HOST: [[META2]] = !{i64 3120}
-// HOST: [[META3]] = !{i64 3155}
-// HOST: [[META4]] = !{i64 3206}
+// HOST: [[META0:![0-9]+]] = !{!"{{.*}}clang version {{.*}}"}
+// HOST: [[META1]] = !{i64 3120}
+// HOST: [[META2]] = !{i64 3155}
+// HOST: [[META3]] = !{i64 3206}
 //.
