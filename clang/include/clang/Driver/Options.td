@@ -3240,8 +3240,8 @@ def fms_compatibility : Flag<["-"], "fms-compatibility">, Group<f_Group>,
   MarshallingInfoFlag<LangOpts<"MSVCCompat">>;
 def fms_preprocessor_compat : Flag<["-"], "fms-preprocessor-compat">, Group<f_Group>,
   Visibility<[ClangOption, CC1Option]>,
-  HelpText<"Enable full emulation of the traditional MSVC preprocessor">,
-  MarshallingInfoFlag<LangOpts<"MSVCPreprocessor">>;
+  HelpText<"Enable emulation of the traditional MSVC preprocessor">,
+  MarshallingInfoFlag<LangOpts<"MSVCPreprocessor">>, ImpliedByAnyOf<[fms_compatibility.KeyPath]>;
 def fms_define_stdc : Flag<["-"], "fms-define-stdc">, Group<f_Group>,
   Visibility<[ClangOption, CC1Option, CLOption]>,
   HelpText<"Define '__STDC__' to '1' in MSVC Compatibility mode">,
