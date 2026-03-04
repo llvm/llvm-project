@@ -689,10 +689,10 @@ public:
 
   LLVM_ABI cmpResult compareAbsoluteValue(const IEEEFloat &) const;
 
-  /// returns the exponent
+  /// This method returns the exponent
   LLVM_ABI ExponentType getExponent() const;
 
-  /// returns the significand
+  /// This method returns the significand
   LLVM_ABI APInt getSignificand() const;
 
 private:
@@ -1757,7 +1757,7 @@ public:
   }
   bool isDenormal() const { APFLOAT_DISPATCH_ON_SEMANTICS(isDenormal()); }
   bool isSignaling() const {
-    return (!isHexFloat()) && getIEEE().isSignaling();
+    return !isHexFloat() && getIEEE().isSignaling();
   }
 
   bool isNormal() const { return !isDenormal() && isFiniteNonZero(); }

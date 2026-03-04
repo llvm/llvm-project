@@ -135,6 +135,14 @@ constexpr fltSemantics APFloatBase::semPPCDoubleDoubleLegacy = {
    of the SIGNIFICAND.
    Precision is given in terms of the radix, e.g., Hex_FP32 has
    6 hexits of precision.
+
+   HesFloat is described in http://eece.cu.edu.eg/~hfahmy/arith_class/hex_bin_FP.pdf
+   and in chapters 9 and 18 of the z/Architecture Principles of Operation.
+
+   Note that in the fltSemantics below the size of the significand is
+   given in terms of radix places.  As the radix is 16, the number of
+   places is the width of the significand in bits divided by 4 as each
+   radix place is represented by 4 bits.
 */
 constexpr fltSemantics APFloatBase::semHex_FP32 = {
     "Hex_FP32", 63, -64, 6, 32, 16, fltNonfiniteBehavior::FiniteOnly};
@@ -5955,13 +5963,17 @@ public:
 
 unsigned int HexFloat::getNumPrecisionBits(const fltSemantics *semantics) {
   assert(APFloat::usesLayout<HexFloat>(*semantics) && "not a HexFloat");
+  // The precision field in the fltSemantics is terms of places in
+  // the semantics radix.  For HexFloat the radix is 16, so each radix place
+  // is represented by 4 bits.  Hence to get the number of bits required for
+  // precision radix-16 places we need 4 * precision.
   return 4 * semantics->precision;
 }
 
 void HexFloat::initialize(const fltSemantics *ourSemantics) {
   semantics = ourSemantics;
   significand = APInt(getNumPrecisionBits(semantics), 0);
-  makeZero(/* IsNegative */ false);
+  makeZero(/*IsNegative=*/ false);
 }
 
 void HexFloat::assign(const HexFloat &rhs) {
@@ -6066,14 +6078,10 @@ HexFloat::HexFloat(const fltSemantics &ourSemantics,
 }
 
 HexFloat::HexFloat(double d) {
-  semantics = &APFloatBase::HexFP64();
-  initialize(semantics);
   llvm_unreachable("HexFloat constructor double: cannot create from double\n");
 }
 
 HexFloat::HexFloat(float f) {
-  semantics = &APFloatBase::HexFP32();
-  initialize(semantics);
   llvm_unreachable("HexFloat constructor float: cannot create from float\n");
 }
 
