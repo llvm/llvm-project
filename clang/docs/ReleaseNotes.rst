@@ -308,6 +308,7 @@ Bug Fixes in This Version
 - Fixed an assertion failure in the serialized diagnostic printer when it is destroyed without calling ``finish()``. (#GH140433)
 - Fixed an assertion failure caused by error recovery while extending a nested name specifier with results from ordinary lookup. (#GH181470)
 - Fixed a crash when parsing ``#pragma clang attribute`` arguments for attributes that forbid arguments. (#GH182122)
+- Fixed a crash where constexpr evaluation encountered invalid overrides. (#GH183290)
 
 Bug Fixes to Compiler Builtins
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
