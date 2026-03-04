@@ -13,7 +13,7 @@ uint test_too_many_arg(uint p0) {
 struct S { uint x; };
 
 S test_expr_struct_type_check(S p0) {
-  return __builtin_hlsl_wave_active_max(p0);
+  return __builtin_hlsl_wave_active_bit_or(p0);
   // expected-error@-1 {{invalid operand of type 'S' where a scalar or vector is required}}
 }
 
