@@ -511,6 +511,13 @@ static void createExtractsForLiveOuts(VPlan &Plan, VPBasicBlock *MiddleVPBB) {
   }
 }
 
+/// Return an iterator range to iterate over pairs of matching phi nodes in
+/// \p Header and \p ScalarHeader, skipping the canonical IV in the former.
+static auto getMatchingPhisForScalarLoop(VPBasicBlock *Header,
+                                         VPBasicBlock *ScalarHeader) {
+  return zip_equal(drop_begin(Header->phis()), ScalarHeader->phis());
+}
+
 static void addInitialSkeleton(VPlan &Plan, Type *InductionTy, DebugLoc IVDL,
                                PredicatedScalarEvolution &PSE, Loop *TheLoop) {
   VPDominatorTree VPDT(Plan);
@@ -562,18 +569,24 @@ static void addInitialSkeleton(VPlan &Plan, Type *InductionTy, DebugLoc IVDL,
 
   createExtractsForLiveOuts(Plan, MiddleVPBB);
 
+  // Create resume phis in the scalar preheader for each phi in the scalar loop.
+  // Their incoming value from the vector loop will be the last lane of the
+  // corresponding vector loop header phi.
   VPBuilder MiddleBuilder(MiddleVPBB, MiddleVPBB->getFirstNonPhi());
   VPBuilder ScalarPHBuilder(ScalarPH);
-  for (const auto &[PhiR, ScalarPhiR] : zip_equal(
-           drop_begin(HeaderVPBB->phis()), Plan.getScalarHeader()->phis())) {
+  assert(equal(ScalarPH->getPredecessors(),
+               ArrayRef<VPBlockBase *>({MiddleVPBB, Plan.getEntry()})) &&
+         "unexpected predecessor order of scalar ph");
+  for (const auto &[PhiR, ScalarPhiR] :
+       getMatchingPhisForScalarLoop(HeaderVPBB, Plan.getScalarHeader())) {
     auto *VectorPhiR = cast<VPPhi>(&PhiR);
-    VPValue *ResumeFromVectorLoop = VectorPhiR->getOperand(1);
-    if (!isa<VPIRValue>(ResumeFromVectorLoop)) {
-      ResumeFromVectorLoop = MiddleBuilder.createNaryOp(
-          VPInstruction::ExtractLastPart, ResumeFromVectorLoop);
-      ResumeFromVectorLoop = MiddleBuilder.createNaryOp(
-          VPInstruction::ExtractLastLane, ResumeFromVectorLoop);
-    }
+    VPValue *BackedgeVal = VectorPhiR->getOperand(1);
+    VPValue *ResumeFromVectorLoop =
+        MiddleBuilder.createNaryOp(VPInstruction::ExtractLastPart, BackedgeVal);
+    ResumeFromVectorLoop = MiddleBuilder.createNaryOp(
+        VPInstruction::ExtractLastLane, ResumeFromVectorLoop);
+    // Create scalar resume phi, with the first operand being the incoming value
+    // from the middle block and the second operand coming from the entry block.
     auto *ResumePhiR = ScalarPHBuilder.createScalarPhi(
         {ResumeFromVectorLoop, VectorPhiR->getOperand(0)},
         VectorPhiR->getDebugLoc());
@@ -752,23 +765,13 @@ void VPlanTransforms::createHeaderPhiRecipes(
     PhiR->eraseFromParent();
   }
 
-  for (const auto &[HeaderPhiR, ScalarPhiR] : zip_equal(
-           drop_begin(HeaderVPBB->phis()), Plan.getScalarPreheader()->phis())) {
+  for (const auto &[HeaderPhiR, ScalarPhiR] :
+       getMatchingPhisForScalarLoop(HeaderVPBB, Plan.getScalarPreheader())) {
     auto *ResumePhiR = cast<VPPhi>(&ScalarPhiR);
     if (auto *FOR = dyn_cast<VPFirstOrderRecurrencePHIRecipe>(&HeaderPhiR)) {
       ResumePhiR->setName("scalar.recur.init");
       auto *ExtractLastLane = cast<VPInstruction>(ResumePhiR->getOperand(0));
       ExtractLastLane->setName("vector.recur.extract");
-      if (ExtractLastLane->getOpcode() == VPInstruction::ExitingIVValue) {
-        // The FOR's backedge value is shared with an induction and the extract
-        // chain was replaced. Create a fresh one from the backedge value.
-        VPBuilder MiddleBuilder(ExtractLastLane);
-        VPValue *Resume = MiddleBuilder.createNaryOp(
-            VPInstruction::ExtractLastPart, FOR->getBackedgeValue());
-        Resume =
-            MiddleBuilder.createNaryOp(VPInstruction::ExtractLastLane, Resume);
-        ResumePhiR->setOperand(0, Resume);
-      }
       continue;
     }
     ResumePhiR->setName(isa<VPWidenInductionRecipe>(HeaderPhiR)
