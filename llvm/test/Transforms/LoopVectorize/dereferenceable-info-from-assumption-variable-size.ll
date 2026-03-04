@@ -759,3 +759,52 @@ loop.latch:                                       ; preds = %loop.then, %loop
 exit:
   ret void
 }
+
+; Test to check type mismatch while calling getUMaxExpr()
+define void @test_assumed_bounds_type_mismatch(ptr noalias %array, ptr readonly %pred, i32 %n) nosync nofree {
+; CHECK-LABEL: define void @test_assumed_bounds_type_mismatch(
+; CHECK-SAME: ptr noalias [[ARRAY:%.*]], ptr readonly [[PRED:%.*]], i32 [[N:%.*]]) #[[ATTR1]] {
+; CHECK-NEXT:  [[ENTRY:.*]]:
+; CHECK-NEXT:    [[N_BYTES:%.*]] = mul nuw nsw i32 [[N]], 2
+; CHECK-NEXT:    call void @llvm.assume(i1 true) [ "dereferenceable"(ptr [[PRED]], i32 [[N_BYTES]]) ]
+; CHECK-NEXT:    [[TC:%.*]] = sext i32 [[N]] to i64
+; CHECK-NEXT:    br label %[[FOR_BODY:.*]]
+; CHECK:       [[FOR_BODY]]:
+; CHECK-NEXT:    [[IV:%.*]] = phi i64 [ 0, %[[ENTRY]] ], [ [[IV_NEXT:%.*]], %[[FOR_INC:.*]] ]
+; CHECK-NEXT:    [[ST_ADDR:%.*]] = getelementptr inbounds i16, ptr [[ARRAY]], i64 [[IV]]
+; CHECK-NEXT:    [[DATA:%.*]] = load i16, ptr [[ST_ADDR]], align 2
+; CHECK-NEXT:    [[INC:%.*]] = add nsw i16 [[DATA]], 1
+; CHECK-NEXT:    [[EE_ADDR:%.*]] = getelementptr inbounds i16, ptr [[PRED]], i64 [[IV]]
+; CHECK-NEXT:    [[EE_VAL:%.*]] = load i16, ptr [[EE_ADDR]], align 2
+; CHECK-NEXT:    [[EE_COND:%.*]] = icmp sgt i16 [[EE_VAL]], 500
+; CHECK-NEXT:    br i1 [[EE_COND]], label %[[EXIT:.*]], label %[[FOR_INC]]
+; CHECK:       [[FOR_INC]]:
+; CHECK-NEXT:    [[IV_NEXT]] = add nuw nsw i64 [[IV]], 1
+; CHECK-NEXT:    [[COUNTED_COND:%.*]] = icmp eq i64 [[IV_NEXT]], [[TC]]
+; CHECK-NEXT:    br i1 [[COUNTED_COND]], label %[[EXIT]], label %[[FOR_BODY]]
+; CHECK:       [[EXIT]]:
+; CHECK-NEXT:    ret void
+;
+entry:
+  %n_bytes = mul nuw nsw i32 %n, 2
+  call void @llvm.assume(i1 true) [ "dereferenceable"(ptr %pred, i32 %n_bytes) ]
+  %tc = sext i32 %n to i64
+  br label %for.body
+
+for.body:
+  %iv = phi i64 [ 0, %entry ], [ %iv.next, %for.inc ]
+  %st.addr = getelementptr inbounds i16, ptr %array, i64 %iv
+  %data = load i16, ptr %st.addr, align 2
+  %ee.addr = getelementptr inbounds i16, ptr %pred, i64 %iv
+  %ee.val = load i16, ptr %ee.addr, align 2
+  %ee.cond = icmp sgt i16 %ee.val, 500
+  br i1 %ee.cond, label %exit, label %for.inc
+
+for.inc:
+  %iv.next = add nuw nsw i64 %iv, 1
+  %counted.cond = icmp eq i64 %iv.next, %tc
+  br i1 %counted.cond, label %exit, label %for.body
+
+exit:
+  ret void
+}

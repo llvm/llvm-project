@@ -165,6 +165,7 @@ exit:
   ret void
 }
 
+; Function Attrs: mustprogress norecurse nosync nounwind ssp memory(read, inaccessiblemem: write, target_mem0: none, target_mem1: none) uwtable(sync)
 define void @loop_contains_store_assumed_bounds(ptr noalias %array, ptr readonly %pred, i32 %n) {
 ; CHECK-LABEL: LV: Checking a loop in 'loop_contains_store_assumed_bounds'
 ; CHECK:       LV: Not vectorizing: Loop may fault.
