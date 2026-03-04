@@ -48,9 +48,9 @@ class TestFrameVarDILArithmetic(TestBase):
         # Check basic math and resulting types
         self.expect_var_path("1 + 2", value="3", type="int")
         self.expect_var_path("1 + true", value="2", type="int")
-        self.expect_var_path("1L + wchar", value="2", type="long")
-        self.expect_var_path("1L + char16", value="3", type="long")
-        self.expect_var_path("1LL + char32", value="4", type="long long")
+        self.expect_var_path("1UL + wchar", value="2", type="unsigned long")
+        self.expect_var_path("1UL + char16", value="3", type="unsigned long")
+        self.expect_var_path("1ULL + char32", value="4", type="unsigned long long")
         self.expect_var_path("1UL + 1L", value="2", type="unsigned long")
         self.expect_var_path("s + x", value="12", type="int")
         self.expect_var_path("s + l", value="15", type="long")

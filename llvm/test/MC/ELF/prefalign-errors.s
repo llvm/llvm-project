@@ -35,13 +35,13 @@
 #--- b.s
 ## End symbol is undefined.
 .section .text.f1,"ax",@progbits
-# CHECK: <unknown>:0: error: end symbol 'undef' must be a symbol in the current section
+# CHECK: <unknown>:0: error: end symbol 'undef' must be in the current section
 .prefalign 4,undef,0
 
 #--- c.s
 ## End symbol is defined in a different section.
 .section .text.f1,"ax",@progbits
 .prefalign 4,.Lend,0
-# CHECK: <unknown>:0: error: end symbol '.Lend' must be a symbol in the current section
+# CHECK: <unknown>:0: error: end symbol '.Lend' must be in the current section
 .section .text.f2,"ax",@progbits
 .Lend:
