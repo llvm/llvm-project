@@ -118,7 +118,7 @@ bool ProcessFreeBSDKernelCore::CanDebug(lldb::TargetSP target_sp,
 
 Status ProcessFreeBSDKernelCore::DoLoadCore() {
   // The core is already loaded by CreateInstance().
-  ApplyKASLR();
+  SetKernelDisplacement();
 
   return Status();
 }
@@ -326,7 +326,7 @@ lldb::addr_t ProcessFreeBSDKernelCore::FindSymbol(const char *name) {
   return sym ? sym->GetLoadAddress(&GetTarget()) : LLDB_INVALID_ADDRESS;
 }
 
-void ProcessFreeBSDKernelCore::ApplyKASLR() {
+void ProcessFreeBSDKernelCore::SetKernelDisplacement() {
   kssize_t displacement = kvm_kerndisp(m_kvm);
 
   if (displacement == 0)

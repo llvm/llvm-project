@@ -230,8 +230,6 @@ Changes to LLDB
   `plugin.process.freebsd-kernel-core.read-only` must be set to `false`. This setting is available when
   using `/dev/mem` or a kernel dump. However, since `kvm_write()` does not support writing to kernel dumps,
   writes to a kernel dump will still fail when the setting is false.
-* Debugging core with KASLR applied is now supported. Note that this does not work for some crash dumps due to
-  kvm's limitations.
 
 ### Linux
 
