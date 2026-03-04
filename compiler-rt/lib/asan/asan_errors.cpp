@@ -437,8 +437,16 @@ ErrorGeneric::ErrorGeneric(u32 tid, uptr pc_, uptr bp_, uptr sp_, uptr addr,
     bug_descr = "unknown-crash";
     if (AddrIsInMem(addr)) {
       u8 *shadow_addr = (u8 *)MemToShadow(addr);
-      // If we are accessing 16 bytes, look at the second shadow byte.
-      if (*shadow_addr == 0 && access_size > ASAN_SHADOW_GRANULARITY)
+      u8 *shadow_addr_upper_bound = (u8 *)MEM_TO_SHADOW(addr + access_size);
+      // We use the MEM_TO_SHADOW macro for the upper bound above instead of
+      // MemToShadow to skip the assertion that (addr + access_size) is within
+      // the valid memory range. The validity of the shadow address is checked
+      // via AddrIsInShadow in the while loop below.
+
+      // If the access could span multiple shadow bytes,
+      // do a sequential scan and look for the first bad shadow byte.
+      while (*shadow_addr == 0 && shadow_addr < shadow_addr_upper_bound &&
+             AddrIsInShadow((uptr)(shadow_addr + 1)))
         shadow_addr++;
       // If we are in the partial right redzone, look at the next shadow byte.
       if (*shadow_addr > 0 && *shadow_addr < 128) shadow_addr++;
