@@ -4485,7 +4485,7 @@ ExprResult Sema::SubstConceptTemplateArguments(
       if (!E->isConceptReference())
         return E;
 
-      assert(std::next(E->decls_begin()) == E->decls_end() &&
+      assert(E->getNumDecls() == 1 &&
              "ConceptReference must have single declaration");
       NamedDecl *D = *E->decls_begin();
       ConceptDecl *ResolvedConcept = nullptr;
