@@ -1874,22 +1874,6 @@ struct InferExactOnIndexCast final : OpRewritePattern<CastOp> {
   }
 };
 
-OpFoldResult arith::IndexCastUIOp::fold(FoldAdaptor adaptor) {
-  // index_castui(constant) -> constant
-  DataLayout layout = DataLayout::closest(*this);
-  // Sane defaults for index integer attributes.
-  unsigned resultBitwidth =
-      layout.getTypeSizeInBits(IndexType::get(this->getContext()));
-  if (auto intTy = dyn_cast<IntegerType>(getElementTypeOrSelf(getType())))
-    resultBitwidth = intTy.getWidth();
-
-  return constFoldCastOp<IntegerAttr, IntegerAttr>(
-      adaptor.getOperands(), getType(),
-      [resultBitwidth](const APInt &a, bool & /*castStatus*/) {
-        return a.zextOrTrunc(resultBitwidth);
-      });
-}
-
 OpFoldResult arith::IndexCastOp::fold(FoldAdaptor adaptor) {
   // index_cast(constant) -> constant
   unsigned resultBitwidth = 64; // Default for index integer attributes.
@@ -1916,6 +1900,22 @@ void arith::IndexCastOp::getCanonicalizationPatterns(
 bool arith::IndexCastUIOp::areCastCompatible(TypeRange inputs,
                                              TypeRange outputs) {
   return areIndexCastCompatible(inputs, outputs);
+}
+
+OpFoldResult arith::IndexCastUIOp::fold(FoldAdaptor adaptor) {
+  // index_castui(constant) -> constant
+  DataLayout layout = DataLayout::closest(*this);
+  // Sane defaults for index integer attributes.
+  unsigned resultBitwidth =
+      layout.getTypeSizeInBits(IndexType::get(this->getContext()));
+  if (auto intTy = dyn_cast<IntegerType>(getElementTypeOrSelf(getType())))
+    resultBitwidth = intTy.getWidth();
+
+  return constFoldCastOp<IntegerAttr, IntegerAttr>(
+      adaptor.getOperands(), getType(),
+      [resultBitwidth](const APInt &a, bool & /*castStatus*/) {
+        return a.zextOrTrunc(resultBitwidth);
+      });
 }
 
 void arith::IndexCastUIOp::getCanonicalizationPatterns(
