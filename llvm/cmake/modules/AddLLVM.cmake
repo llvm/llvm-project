@@ -3,6 +3,7 @@ include(LLVMDistributionSupport)
 include(LLVMProcessSources)
 include(LLVM-Config)
 include(DetermineGCCCompatible)
+include(CheckLinkerFlag)
 
 # get_subproject_title(titlevar)
 #   Set ${outvar} to the title of the current LLVM subproject (Clang, MLIR ...)
@@ -317,7 +318,6 @@ if (NOT DEFINED LLVM_LINKER_DETECTED AND NOT WIN32)
   endif()
 
   if("${CMAKE_SYSTEM_NAME}" MATCHES "Darwin")
-    include(CheckLinkerFlag)
     # Linkers that support Darwin allow a setting to internalize all symbol exports,
     # aiding in reducing binary size and often is applicable for executables.
     check_linker_flag(C "-Wl,-no_exported_symbols" LLVM_LINKER_SUPPORTS_NO_EXPORTED_SYMBOLS)
@@ -337,8 +337,23 @@ if (NOT DEFINED LLVM_LINKER_DETECTED AND NOT WIN32)
   endif()
 endif()
 
+if (NOT uppercase_CMAKE_BUILD_TYPE STREQUAL "DEBUG")
+  if(NOT LLVM_NO_DEAD_STRIP)
+    if("${CMAKE_SYSTEM_NAME}" MATCHES "SunOS" AND LLVM_LINKER_IS_SOLARISLD)
+      # Support for ld -z discard-unused=sections was only added in
+      # Solaris 11.4.  GNU ld ignores it, but warns every time.
+      check_linker_flag(CXX "-Wl,-z,discard-unused=sections" LINKER_SUPPORTS_Z_DISCARD_UNUSED)
+    endif()
+  endif()
+endif()
+
+# Check for existence of symbolic functions flag. Not supported
+# by the older BFD linker (such as on some OpenBSD archs), the
+# MinGW driver for LLD, and the Solaris native linker.
+check_linker_flag(CXX "-Wl,-Bsymbolic-functions"
+                  LLVM_LINKER_SUPPORTS_B_SYMBOLIC_FUNCTIONS)
+
 function(add_link_opts target_name)
-  include(CheckLinkerFlag)
   get_llvm_distribution(${target_name} in_distribution in_distribution_var)
   if(NOT in_distribution)
     # Don't LTO optimize targets that aren't part of any distribution.
@@ -368,9 +383,6 @@ function(add_link_opts target_name)
         set_property(TARGET ${target_name} APPEND_STRING PROPERTY
                      LINK_FLAGS " -Wl,-dead_strip")
       elseif("${CMAKE_SYSTEM_NAME}" MATCHES "SunOS" AND LLVM_LINKER_IS_SOLARISLD)
-        # Support for ld -z discard-unused=sections was only added in
-        # Solaris 11.4.  GNU ld ignores it, but warns every time.
-        check_linker_flag(CXX "-Wl,-z,discard-unused=sections" LINKER_SUPPORTS_Z_DISCARD_UNUSED)
         if (LINKER_SUPPORTS_Z_DISCARD_UNUSED)
           set_property(TARGET ${target_name} APPEND_STRING PROPERTY
                        LINK_FLAGS " -Wl,-z,discard-unused=sections")
@@ -397,12 +409,6 @@ function(add_link_opts target_name)
     set_property(TARGET ${target_name} APPEND_STRING PROPERTY
                  LINK_FLAGS " -Wl,-brtl")
   endif()
-
-  # Check for existence of symbolic functions flag. Not supported
-  # by the older BFD linker (such as on some OpenBSD archs), the
-  # MinGW driver for LLD, and the Solaris native linker.
-  check_linker_flag(CXX "-Wl,-Bsymbolic-functions"
-                    LLVM_LINKER_SUPPORTS_B_SYMBOLIC_FUNCTIONS)
 endfunction(add_link_opts)
 
 # Set each output directory according to ${CMAKE_CONFIGURATION_TYPES}.
@@ -2307,6 +2313,9 @@ function(add_lit_testsuite target comment)
 endfunction()
 
 function(add_lit_testsuites project directory)
+  if(NOT LLVM_ENABLE_LIT_CONVENIENCE_TARGETS)
+    return()
+  endif()
   if (NOT LLVM_ENABLE_IDE)
     cmake_parse_arguments(ARG
       "EXCLUDE_FROM_CHECK_ALL"
