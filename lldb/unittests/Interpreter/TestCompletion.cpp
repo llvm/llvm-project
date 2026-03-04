@@ -72,8 +72,9 @@ protected:
 
     const char *DirNames[] = {"foo", "fooa", "foob",        "fooc",
                               "bar", "baz",  "test_folder", "foo/nested"};
-    const char *FileNames[] = {"aa1234.tmp",  "ab1234.tmp",  "ac1234.tmp",
-                               "foo1234.tmp", "bar1234.tmp", "baz1234.tmp"};
+    const char *FileNames[] = {"aa1234-%%%%.tmp",  "ab1234-%%%%.tmp",
+                               "ac1234-%%%%.tmp",  "foo1234-%%%%.tmp",
+                               "bar1234-%%%%.tmp", "baz1234-%%%%.tmp"};
     SmallString<128> *Dirs[] = {&DirFoo, &DirFooA, &DirFooB,       &DirFooC,
                                 &DirBar, &DirBaz,  &DirTestFolder, &DirNested};
     for (auto Dir : llvm::zip(DirNames, Dirs)) {
@@ -88,7 +89,7 @@ protected:
     for (auto File : llvm::zip(FileNames, Files)) {
       auto &Path = *std::get<1>(File);
       Path = BaseDir;
-      path::append(Path, std::get<0>(File), "-%%%%%%");
+      path::append(Path, std::get<0>(File));
       int FD;
       ASSERT_NO_ERROR(fs::createUniqueFile(Path, FD, Path));
       ::close(FD);
