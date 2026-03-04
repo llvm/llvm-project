@@ -50494,8 +50494,8 @@ define inreg <60 x i16> @bitcast_v60f16_to_v60i16_scalar(<60 x half> inreg %a, i
 ; SI-NEXT:    v_and_b32_e32 v24, 0xffff, v51
 ; SI-NEXT:    v_lshlrev_b32_e32 v26, 16, v26
 ; SI-NEXT:    v_or_b32_e32 v24, v24, v26
-; SI-NEXT:    buffer_load_dword v25, off, s[0:3], s32 offset:60 ; 4-byte Folded Reload
 ; SI-NEXT:    buffer_load_dword v26, off, s[0:3], s32 offset:64 ; 4-byte Folded Reload
+; SI-NEXT:    buffer_load_dword v25, off, s[0:3], s32 offset:60 ; 4-byte Folded Reload
 ; SI-NEXT:    v_and_b32_e32 v27, 0xffff, v44
 ; SI-NEXT:    buffer_load_dword v30, off, s[0:3], s32 offset:68 ; 4-byte Folded Reload
 ; SI-NEXT:    buffer_load_dword v31, off, s[0:3], s32 offset:72 ; 4-byte Folded Reload
