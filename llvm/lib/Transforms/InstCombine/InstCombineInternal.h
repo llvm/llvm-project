@@ -484,6 +484,8 @@ private:
     return Sel;
   }
 
+  Instruction *foldV4EqualShuffleAndToV2Equal(Instruction &I);
+
 public:
   /// Create and insert the idiom we use to indicate a block is unreachable
   /// without having to rewrite the CFG from within InstCombine.

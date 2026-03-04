@@ -1296,6 +1296,90 @@ Value *InstCombinerImpl::foldUsingDistributiveLaws(BinaryOperator &I) {
   return SimplifySelectsFeedingBinaryOp(I, LHS, RHS);
 }
 
+// Prior to SSE4.1, performing equality comparison on v2i64 types require a
+// comparison on v4i32 types using the following pattern:
+//
+// %3 = icmp eq <4 x i32> %1, %2
+//
+// %4 = sext <4 x i1> %3 to <4 x i32>
+//
+// %5 = shufflevector <4 x i32> %4, <4 x i32> poison, <4 x i32> <i32 1, i32 0,
+// i32 3, i32 2>
+//
+// %6 = select <4 x i1> %3, <4 x i32> %5, <4 x i32> zeroinitializer
+//
+// OR
+//
+// %6 = and <4 x i32> %sext, %shuffle
+//
+// We should detect such patterns and fold them into:
+//
+// %3 = bitcast <4 x i32> %1 to <2 x i64>
+//
+// %4 = bitcast <4 x i32> %2 to <2 x i64>
+//
+// %5 = icmp eq <2 x i64> %3, %4
+//
+// %6 = bitcast <2 x i64> %5 to <4 x i32>
+//
+Instruction *InstCombinerImpl::foldV4EqualShuffleAndToV2Equal(Instruction &I) {
+  Value *Equal, *Shuffle, *L, *R;
+  CmpPredicate Pred;
+  SmallVector<int> Mask = {1, 0, 3, 2};
+
+  // Check pattern existance
+  if (!match(&I,
+             m_CombineOr(m_c_And(m_SExt(m_Value(Equal)),
+                                 m_SExtOrSelf(m_Value(Shuffle))),
+                         m_Select(m_Value(Equal),
+                                  m_SExtOrSelf(m_Value(Shuffle)), m_Zero()))) ||
+      !match(Shuffle, m_Shuffle(m_SExtOrSelf(m_Specific(Equal)), m_Poison(),
+                                m_SpecificMask(Mask))) ||
+      !match(Equal, m_ICmp(Pred, m_Value(L), m_Value(R))) ||
+      Pred != CmpInst::ICMP_EQ)
+    return nullptr;
+
+  // Check argument type
+  auto *OldVecType = cast<VectorType>(L->getType());
+
+  if (OldVecType->isScalableTy() ||
+      !OldVecType->getElementType()->isIntegerTy())
+    return nullptr;
+
+  int ElementCount = OldVecType->getElementCount().getFixedValue();
+  int ElementBitWidth = OldVecType->getElementType()->getIntegerBitWidth();
+
+  if (ElementCount != 4 || ElementBitWidth != 32)
+    return nullptr;
+
+  // Check uses outside pattern
+  if (!Shuffle->hasOneUse())
+    return nullptr;
+
+  for (auto *U : Equal->users()) {
+    if (U == &I || U == Shuffle)
+      continue;
+    if (!isa<llvm::CastInst>(U))
+      return nullptr;
+    for (auto *U : U->users())
+      if (U != &I && U != Shuffle)
+        return nullptr;
+  }
+
+  LLVM_DEBUG(dbgs() << "IC: Folding equal-shuffle-and pattern" << '\n');
+
+  // Perform folding
+  auto *NewElementType = IntegerType::get(I.getContext(), ElementBitWidth * 2);
+  auto *NewVecType = VectorType::get(NewElementType, ElementCount / 2, false);
+  auto *BitCastL = Builder.CreateBitCast(L, NewVecType);
+  auto *BitCastR = Builder.CreateBitCast(R, NewVecType);
+  auto *Cmp = Builder.CreateICmp(Pred, BitCastL, BitCastR);
+  auto *SExt = Builder.CreateSExt(Cmp, NewVecType);
+  auto *BitCastCmp = Builder.CreateBitCast(SExt, OldVecType);
+
+  return replaceInstUsesWith(I, BitCastCmp);
+}
+
 static std::optional<std::pair<Value *, Value *>>
 matchSymmetricPhiNodesPair(PHINode *LHS, PHINode *RHS) {
   if (LHS->getParent() != RHS->getParent())
