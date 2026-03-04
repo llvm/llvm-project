@@ -4771,12 +4771,18 @@ void VPlanTransforms::hoistPredicatedLoads(VPlan &Plan,
     // Find the load with minimum alignment to use.
     auto *LoadWithMinAlign = findRecipeWithMinAlign<LoadInst>(Group);
 
+    bool IsSingleScalar = EarliestLoad->isSingleScalar();
+    assert(all_of(Group,
+                  [IsSingleScalar](VPReplicateRecipe *R) {
+                    return R->isSingleScalar() == IsSingleScalar;
+                  }) &&
+           "all members in group must agree on IsSingleScalar");
+
     // Create an unpredicated version of the earliest load with common
     // metadata.
     auto *UnpredicatedLoad = new VPReplicateRecipe(
         LoadWithMinAlign->getUnderlyingInstr(), {EarliestLoad->getOperand(0)},
-        /*IsSingleScalar=*/false, /*Mask=*/nullptr, *EarliestLoad,
-        CommonMetadata);
+        IsSingleScalar, /*Mask=*/nullptr, *EarliestLoad, CommonMetadata);
 
     UnpredicatedLoad->insertBefore(EarliestLoad);
 
