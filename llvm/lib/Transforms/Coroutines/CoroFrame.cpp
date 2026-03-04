@@ -25,8 +25,10 @@
 #include "llvm/IR/IRBuilder.h"
 #include "llvm/IR/InstIterator.h"
 #include "llvm/IR/IntrinsicInst.h"
+#include "llvm/IR/LLVMContext.h"
 #include "llvm/IR/MDBuilder.h"
 #include "llvm/IR/Module.h"
+#include "llvm/IR/ProfDataUtils.h"
 #include "llvm/Support/Compiler.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/OptimizedStructLayout.h"
@@ -42,6 +44,10 @@
 #include <optional>
 
 using namespace llvm;
+
+namespace llvm {
+extern cl::opt<bool> ProfcheckDisableMetadataFixes;
+}
 
 #define DEBUG_TYPE "coro-frame"
 
@@ -1367,6 +1373,19 @@ static void rewritePHIsForCleanupPad(BasicBlock *CleanupPadBB,
     SetDispatchValuePN->addIncoming(SwitchConstant, Pred);
     SwitchOnDispatch->addCase(SwitchConstant, CaseBB);
     SwitchIndex++;
+  }
+
+  if (!ProfcheckDisableMetadataFixes) {
+    // Add branch weights to SwitchOnDispatch, where branches are unreachable by
+    // default. We mark two branches as having equal weights because they are
+    // mutually exclusive.
+    if (SwitchIndex == 2) {
+      MDBuilder MDB(SwitchOnDispatch->getContext());
+      SwitchOnDispatch->setMetadata(
+          LLVMContext::MD_prof,
+          MDB.createBranchWeights({0, llvm::MDBuilder::kUnlikelyBranchWeight,
+                                   llvm::MDBuilder::kUnlikelyBranchWeight}));
+    }
   }
 }
 

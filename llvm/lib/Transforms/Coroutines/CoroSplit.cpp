@@ -55,7 +55,9 @@
 #include "llvm/IR/Instructions.h"
 #include "llvm/IR/IntrinsicInst.h"
 #include "llvm/IR/LLVMContext.h"
+#include "llvm/IR/MDBuilder.h"
 #include "llvm/IR/Module.h"
+#include "llvm/IR/ProfDataUtils.h"
 #include "llvm/IR/Type.h"
 #include "llvm/IR/Value.h"
 #include "llvm/IR/Verifier.h"
@@ -76,6 +78,10 @@
 #include <iterator>
 
 using namespace llvm;
+
+namespace llvm {
+extern cl::opt<bool> ProfcheckDisableMetadataFixes;
+}
 
 #define DEBUG_TYPE "coro-split"
 
@@ -427,7 +433,11 @@ void coro::BaseCloner::handleFinalSuspend() {
       auto *Load =
           Builder.CreateLoad(Shape.getSwitchResumePointerType(), NewFramePtr);
       auto *Cond = Builder.CreateIsNull(Load);
-      Builder.CreateCondBr(Cond, ResumeBB, NewSwitchBB);
+      auto *Br = Builder.CreateCondBr(Cond, ResumeBB, NewSwitchBB);
+      applyProfMetadataIfEnabled(Br, [&](Instruction *Inst) {
+        setExplicitlyUnknownBranchWeightsIfProfiled(
+            *Inst, DEBUG_TYPE, Inst->getFunction());
+      });
     }
     OldSwitchBB->getTerminator()->eraseFromParent();
   }
@@ -1594,6 +1604,23 @@ private:
       ++SuspendIndex;
     }
 
+    // Add the branch weights to the switch instruction.
+    if (!ProfcheckDisableMetadataFixes) {
+      if (!Shape.CoroSuspends.empty()) {
+        SmallVector<uint32_t> Weights;
+        // Add the Unlikly weight for the default case.
+        Weights.push_back(llvm::MDBuilder::kUnlikelyBranchWeight);
+        // The first case (IndexVal == 0) represents the coroutine initialization, 
+        // which is expected to be the most common case, so we give it the highest weight. 
+        Weights.push_back(llvm::MDBuilder::kLikelyBranchWeight);
+        // Remaning cases are unlikely to be hit, so we give them the unlikely weight.
+        for (size_t i = 1, e = Shape.CoroSuspends.size(); i < e; ++i)
+          Weights.push_back(llvm::MDBuilder::kUnlikelyBranchWeight);
+        MDBuilder MDB(C);
+        Switch->setMetadata(LLVMContext::MD_prof, MDB.createBranchWeights(Weights));
+      }
+    }
+
     Builder.SetInsertPoint(UnreachBB);
     Builder.CreateUnreachable();
     DBuilder.finalize();
@@ -1618,6 +1645,10 @@ private:
       // If there is a CoroAlloc and it returns false (meaning we elide the
       // allocation, use CleanupFn instead of DestroyFn).
       DestroyOrCleanupFn = Builder.CreateSelect(CA, DestroyFn, CleanupFn);
+      applyProfMetadataIfEnabled(DestroyOrCleanupFn, [&](Instruction *Inst) {
+        setExplicitlyUnknownBranchWeightsIfProfiled(*Inst, DEBUG_TYPE, 
+                                                     CoroId->getFunction());
+      });
     }
 
     // Destroy function pointer
