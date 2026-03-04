@@ -926,6 +926,8 @@ void ScanServer::start(bool Exclusive, ArrayRef<const char *> CASArgs) {
   CompilerInvocation::ParseCASArgs(CASOpts, ParsedCASArgs, Diags);
   CASOpts.ensurePersistentCAS();
 
+  auto BypassSandbox = llvm::sys::sandbox::scopedDisable();
+
   static std::once_flag ValidateOnce;
   std::call_once(ValidateOnce, [&] {
     if (getenv("LLVM_CAS_DISABLE_VALIDATION"))
@@ -1255,10 +1257,13 @@ int cc1depscand_main(ArrayRef<const char *> Argv, const char *Argv0, void *MainA
     }
   }
 
-  // Create the base directory if necessary.
-  StringRef BaseDir = llvm::sys::path::parent_path(Server.BasePath);
-  if (std::error_code EC = llvm::sys::fs::create_directories(BaseDir))
-    reportError(Twine("cannot create basedir: ") + EC.message());
+  {
+    // Create the base directory if necessary.
+    auto BypassSandbox = llvm::sys::sandbox::scopedDisable();
+    StringRef BaseDir = llvm::sys::path::parent_path(Server.BasePath);
+    if (std::error_code EC = llvm::sys::fs::create_directories(BaseDir))
+      reportError(Twine("cannot create basedir: ") + EC.message());
+  }
 
   if (Command == "-serve") {
     Server.start(/*Exclusive*/ true, CASArgs);
@@ -1333,6 +1338,7 @@ int cc1depscand_main(ArrayRef<const char *> Argv, const char *Argv0, void *MainA
 
   // Redirect stdout and stderr using dup2.
   auto openAndReplaceFD = [&](int ReplacedFD, StringRef Path) {
+    auto BypassSandbox = llvm::sys::sandbox::scopedDisable();
     int FD;
     if (std::error_code EC = llvm::sys::fs::openFile(
             Path, FD, llvm::sys::fs::CD_CreateAlways, llvm::sys::fs::FA_Write,

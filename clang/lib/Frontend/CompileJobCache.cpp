@@ -21,6 +21,7 @@
 #include "llvm/MCCAS/MCCASObjectV1.h"
 #include "llvm/RemoteCachingService/Client.h"
 #include "llvm/Support/FileOutputBuffer.h"
+#include "llvm/Support/IOSandbox.h"
 #include "llvm/Support/Path.h"
 #include "llvm/Support/PrefixMapper.h"
 #include "llvm/Support/Process.h"
@@ -601,7 +602,11 @@ Expected<bool> CompileJobCache::maybeIngestNonVirtualOutputFromFileSystem(
     StringRef OutputPath = FrontendOpts.OutputFile;
     if (OutputPath.empty())
       return false;
-    if (llvm::sys::fs::is_directory(OutputPath)) {
+    bool IsDirectory = [&] {
+      auto BypassSandbox = llvm::sys::sandbox::scopedDisable();
+      return llvm::sys::fs::is_directory(OutputPath);
+    }();
+    if (IsDirectory) {
       // FIXME: A directory is produced for the 'html' output of the analyzer,
       // support it for caching purposes.
       Clang.getDiagnostics().Report(diag::warn_clang_cache_disabled_caching)
@@ -713,6 +718,8 @@ Expected<llvm::cas::ObjectRef> ObjectStoreCachingOutputs::writeOutputs(
 }
 
 Error ObjectStoreCachingOutputs::addNonVirtualOutputFile(StringRef FilePath) {
+  auto BypassSandbox = llvm::sys::sandbox::scopedDisable();
+
   auto F = llvm::sys::fs::openNativeFileForRead(FilePath);
   if (!F)
     return F.takeError();
