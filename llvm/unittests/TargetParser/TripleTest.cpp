@@ -3402,6 +3402,7 @@ TEST(TripleTest, DefaultWCharSize) {
   EXPECT_EQ(4u, Triple("armv7-unknown-linux-gnueabi").getDefaultWCharSize());
   EXPECT_EQ(4u, Triple("s390x-none-zos").getDefaultWCharSize());
   EXPECT_EQ(4u, Triple("powerpc64-ibm-aix").getDefaultWCharSize());
+  EXPECT_EQ(4u, Triple("").getDefaultWCharSize());
 
   EXPECT_EQ(2u, Triple("x86_64-pc-windows-msvc").getDefaultWCharSize());
   EXPECT_EQ(2u, Triple("aarch64-pc-windows-msvc").getDefaultWCharSize());
