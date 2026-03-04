@@ -86,6 +86,13 @@ static mlir::Value emitFromInt(CIRGenFunction &cgf, mlir::Value v, QualType t,
   return v;
 }
 
+static mlir::Value emitSignBit(mlir::Location loc, CIRGenFunction &cgf,
+                               mlir::Value val) {
+  assert(!::cir::MissingFeatures::isPPC_FP128Ty());
+  cir::SignBitOp returnValue = cgf.getBuilder().createSignBit(loc, val);
+  return returnValue->getResult(0);
+}
+
 static Address checkAtomicAlignment(CIRGenFunction &cgf, const CallExpr *e) {
   ASTContext &astContext = cgf.getContext();
   Address ptr = cgf.emitPointerWithAlignment(e->getArg(0));
@@ -1540,7 +1547,23 @@ RValue CIRGenFunction::emitBuiltinExpr(const GlobalDecl &gd, unsigned builtinID,
   case Builtin::BI__builtin_masked_store:
   case Builtin::BI__builtin_masked_compress_store:
   case Builtin::BI__builtin_masked_scatter:
-  case Builtin::BI__builtin_isinf_sign:
+    return errorBuiltinNYI(*this, e, builtinID);
+  case Builtin::BI__builtin_isinf_sign: {
+    CIRGenFunction::CIRGenFPOptionsRAII FPOptsRAII(*this, e);
+    mlir::Location loc = getLoc(e->getBeginLoc());
+    mlir::Value arg = emitScalarExpr(e->getArg(0));
+    mlir::Value isInf =
+        builder.createIsFPClass(loc, arg, cir::FPClassTest::Infinity);
+    mlir::Value isNeg = emitSignBit(loc, *this, arg);
+    mlir::Type intTy = convertType(e->getType());
+    cir::ConstantOp zero = builder.getNullValue(intTy, loc);
+    cir::ConstantOp one = builder.getConstant(loc, cir::IntAttr::get(intTy, 1));
+    cir::ConstantOp negativeOne =
+        builder.getConstant(loc, cir::IntAttr::get(intTy, -1));
+    mlir::Value signResult = builder.createSelect(loc, isNeg, negativeOne, one);
+    mlir::Value result = builder.createSelect(loc, isInf, signResult, zero);
+    return RValue::get(result);
+  }
   case Builtin::BI__builtin_flt_rounds:
   case Builtin::BI__builtin_set_flt_rounds:
   case Builtin::BI__builtin_fpclassify:

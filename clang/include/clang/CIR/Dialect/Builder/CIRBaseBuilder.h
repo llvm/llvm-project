@@ -547,6 +547,11 @@ public:
     return cir::VecInsertOp::create(*this, loc, vec, newElt, idxVal);
   }
 
+  cir::SignBitOp createSignBit(mlir::Location loc, mlir::Value val) {
+    auto resTy = cir::BoolType::get(getContext());
+    return cir::SignBitOp::create(*this, loc, resTy, val);
+  }
+
   //===--------------------------------------------------------------------===//
   // Binary Operators
   //===--------------------------------------------------------------------===//
