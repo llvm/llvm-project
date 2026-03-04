@@ -135,3 +135,70 @@ define nofpclass(inf) [3 x [2 x float]] @ret_float_array(i1 %cond, [3 x [2 x flo
   %select = select i1 %cond, [3 x [2 x float]] %x, [3 x [2 x float]] %y
   ret [3 x [2 x float ]] %select
 }
+
+define nofpclass(nan) float @simplify_demanded_extractvalue_array(i1 %cond, [2 x float] %arg0) {
+; CHECK-LABEL: define nofpclass(nan) float @simplify_demanded_extractvalue_array
+; CHECK-SAME: (i1 [[COND:%.*]], [2 x float] [[ARG0:%.*]]) {
+; CHECK-NEXT:    [[TMP1:%.*]] = extractvalue [2 x float] [[ARG0]], 0
+; CHECK-NEXT:    ret float [[TMP1]]
+;
+  %select = select i1 %cond, [2 x float] %arg0, [2 x float] [float 0x7FF8000000000000, float 0x7FF8000000000000]
+  %extract = extractvalue [2 x float] %select, 0
+  ret float %extract
+}
+
+define nofpclass(nan) float @simplify_demanded_extractvalue_array_partial_positive(i1 %cond, [2 x float] %arg0) {
+; CHECK-LABEL: define nofpclass(nan) float @simplify_demanded_extractvalue_array_partial_positive
+; CHECK-SAME: (i1 [[COND:%.*]], [2 x float] [[ARG0:%.*]]) {
+; CHECK-NEXT:    [[TMP1:%.*]] = extractvalue [2 x float] [[ARG0]], 1
+; CHECK-NEXT:    [[EXTRACT:%.*]] = select i1 [[COND]], float [[TMP1]], float 0.000000e+00
+; CHECK-NEXT:    ret float [[EXTRACT]]
+;
+  %select = select i1 %cond, [2 x float] %arg0, [2 x float] [float 0x7FF8000000000000, float 0.0]
+  %extract = extractvalue [2 x float] %select, 1
+  ret float %extract
+}
+
+define nofpclass(nan) float @simplify_demanded_extractvalue_array_partialnegative(i1 %cond, [2 x float] %arg0) {
+; CHECK-LABEL: define nofpclass(nan) float @simplify_demanded_extractvalue_array_partialnegative
+; CHECK-SAME: (i1 [[COND:%.*]], [2 x float] [[ARG0:%.*]]) {
+; CHECK-NEXT:    [[TMP1:%.*]] = extractvalue [2 x float] [[ARG0]], 1
+; CHECK-NEXT:    ret float [[TMP1]]
+;
+  %select = select i1 %cond, [2 x float] %arg0, [2 x float] [float 0.0, float 0x7FF8000000000000]
+  %extract = extractvalue [2 x float] %select, 1
+  ret float %extract
+}
+
+define nofpclass(nan) float @simplify_demanded_extractvalue_struct(i1 %cond, { float, float } %arg0) {
+; CHECK-LABEL: define nofpclass(nan) float @simplify_demanded_extractvalue_struct
+; CHECK-SAME: (i1 [[COND:%.*]], { float, float } [[ARG0:%.*]]) {
+; CHECK-NEXT:    [[TMP1:%.*]] = extractvalue { float, float } [[ARG0]], 0
+; CHECK-NEXT:    ret float [[TMP1]]
+;
+  %select = select i1 %cond, { float, float } %arg0, { float, float } {float 0x7FF8000000000000, float 0x7FF8000000000000}
+  %extract = extractvalue { float, float } %select, 0
+  ret float %extract
+}
+
+define nofpclass(inf norm sub zero) float @simplify_demanded_extractvalue_only_nan(i1 %cond, [2 x float] %arg0) {
+; CHECK-LABEL: define nofpclass(inf zero sub norm) float @simplify_demanded_extractvalue_only_nan
+; CHECK-SAME: (i1 [[COND:%.*]], [2 x float] [[ARG0:%.*]]) {
+; CHECK-NEXT:    [[TMP1:%.*]] = extractvalue [2 x float] [[ARG0]], 0
+; CHECK-NEXT:    [[EXTRACT:%.*]] = select i1 [[COND]], float [[TMP1]], float 0x7FF8000000000000
+; CHECK-NEXT:    ret float [[EXTRACT]]
+;
+  %select = select i1 %cond, [2 x float] %arg0, [2 x float] [float 0x7FF8000000000000, float 0x7FF8000000000000]
+  %extract = extractvalue [2 x float] %select, 0
+  ret float %extract
+}
+
+define nofpclass(nan inf norm sub nzero) float @simplify_demanded_extractvalue_only_pzero(i1 %cond, [2 x float] %arg0) {
+; CHECK-LABEL: define nofpclass(nan inf nzero sub norm) float @simplify_demanded_extractvalue_only_pzero
+; CHECK-SAME: (i1 [[COND:%.*]], [2 x float] [[ARG0:%.*]]) {
+; CHECK-NEXT:    ret float 0.000000e+00
+;
+  %select = select i1 %cond, [2 x float] %arg0, [2 x float] [float 0x7FF8000000000000, float 0x7FF8000000000000]
+  %extract = extractvalue [2 x float] %select, 0
+  ret float %extract
+}
