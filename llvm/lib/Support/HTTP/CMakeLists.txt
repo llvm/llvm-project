@@ -12,9 +12,6 @@ add_llvm_library(LLVMSupportHTTP
   HTTPClient.cpp
   HTTPServer.cpp
 
-  ADDITIONAL_HEADER_DIRS
-  ${LLVM_MAIN_INCLUDE_DIR}/llvm/Support/HTTP
-
   LINK_LIBS
   ${imported_libs}
 
