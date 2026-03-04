@@ -8,12 +8,15 @@
 
 #include "TestUtilities.h"
 #include "lldb/API/SBStructuredData.h"
+#include "lldb/API/SBTarget.h"
 #include "llvm/ADT/SmallString.h"
 #include "llvm/ObjectYAML/yaml2obj.h"
 #include "llvm/Support/FileSystem.h"
 #include "llvm/Support/Path.h"
 #include "llvm/Support/YAMLTraits.h"
+#include "llvm/Testing/Support/Error.h"
 #include "gtest/gtest.h"
+#include <utility>
 
 using namespace lldb_private;
 
@@ -77,4 +80,38 @@ bool lldb_private::DebuggerSupportsPlatform(lldb::SBDebugger &debugger,
   }
 
   return false;
+}
+
+std::pair<lldb::SBTarget, lldb::SBProcess>
+lldb_private::LoadCore(lldb::SBDebugger &debugger, llvm::StringRef binary_path,
+                       llvm::StringRef core_path) {
+  EXPECT_TRUE(debugger);
+
+  llvm::Expected<lldb_private::TestFile> binary_yaml =
+      lldb_private::TestFile::fromYamlFile(binary_path);
+  EXPECT_THAT_EXPECTED(binary_yaml, llvm::Succeeded());
+  llvm::Expected<llvm::sys::fs::TempFile> binary_file =
+      binary_yaml->writeToTemporaryFile();
+  EXPECT_THAT_EXPECTED(binary_file, llvm::Succeeded());
+  lldb::SBError error;
+  lldb::SBTarget target = debugger.CreateTarget(
+      /*filename=*/binary_file->TmpName.data(), /*target_triple=*/"",
+      /*platform_name=*/"", /*add_dependent_modules=*/false, /*error=*/error);
+  EXPECT_TRUE(target);
+  EXPECT_TRUE(error.Success()) << error.GetCString();
+  debugger.SetSelectedTarget(target);
+
+  llvm::Expected<lldb_private::TestFile> core_yaml =
+      lldb_private::TestFile::fromYamlFile(core_path);
+  EXPECT_THAT_EXPECTED(core_yaml, llvm::Succeeded());
+  llvm::Expected<llvm::sys::fs::TempFile> core_file =
+      core_yaml->writeToTemporaryFile();
+  EXPECT_THAT_EXPECTED(core_file, llvm::Succeeded());
+  lldb::SBProcess process = target.LoadCore(core_file->TmpName.data());
+  EXPECT_TRUE(process);
+
+  EXPECT_THAT_ERROR(binary_file->discard(), llvm::Succeeded());
+  EXPECT_THAT_ERROR(core_file->discard(), llvm::Succeeded());
+
+  return std::make_pair(target, process);
 }

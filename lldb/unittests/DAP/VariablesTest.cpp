@@ -36,10 +36,6 @@ public:
   static void TearDownTestSuite() { SBDebugger::Terminate(); }
 
   void TearDown() override {
-    if (core)
-      ASSERT_THAT_ERROR(core->discard(), Succeeded());
-    if (binary)
-      ASSERT_THAT_ERROR(binary->discard(), Succeeded());
     if (debugger)
       debugger.Clear();
   }
@@ -53,40 +49,12 @@ protected:
   lldb::SBTarget target;
   lldb::SBProcess process;
 
-  static constexpr llvm::StringLiteral k_binary = "linux-x86_64.out.yaml";
-  static constexpr llvm::StringLiteral k_core = "linux-x86_64.core.yaml";
-
-  std::optional<llvm::sys::fs::TempFile> core;
-  std::optional<llvm::sys::fs::TempFile> binary;
+  static constexpr llvm::StringLiteral k_binary_x86_64 =
+      "linux-x86_64.out.yaml";
+  static constexpr llvm::StringLiteral k_core_x86_64 = "linux-x86_64.core.yaml";
 
   void CreateDebugger() {
-    debugger = lldb::SBDebugger::Create();
-    SKIP_UNLESS_PLATFORM_SUPPORTED(debugger, "X86");
-  }
-
-  void LoadCore() {
-    ASSERT_TRUE(debugger);
-
-    llvm::Expected<lldb_private::TestFile> binary_yaml =
-        lldb_private::TestFile::fromYamlFile(k_binary);
-    ASSERT_THAT_EXPECTED(binary_yaml, Succeeded());
-    llvm::Expected<llvm::sys::fs::TempFile> binary_file =
-        binary_yaml->writeToTemporaryFile();
-    ASSERT_THAT_EXPECTED(binary_file, Succeeded());
-    binary = std::move(*binary_file);
-    target = debugger.CreateTarget(binary->TmpName.data());
-    ASSERT_TRUE(target);
-    debugger.SetSelectedTarget(target);
-
-    llvm::Expected<lldb_private::TestFile> core_yaml =
-        lldb_private::TestFile::fromYamlFile(k_core);
-    ASSERT_THAT_EXPECTED(core_yaml, Succeeded());
-    llvm::Expected<llvm::sys::fs::TempFile> core_file =
-        core_yaml->writeToTemporaryFile();
-    ASSERT_THAT_EXPECTED(core_file, Succeeded());
-    this->core = std::move(*core_file);
-    process = target.LoadCore(this->core->TmpName.data());
-    ASSERT_TRUE(process);
+    debugger = lldb::SBDebugger::Create(/*source_init_files*/ false);
   }
 
   static const protocol::Scope *
@@ -102,7 +70,9 @@ protected:
 
 TEST_F(VariablesTest, GetNewVariableReference_UniqueAndRanges) {
   CreateDebugger();
-  LoadCore();
+  SKIP_UNLESS_PLATFORM_SUPPORTED(debugger, "X86");
+  std::tie(target, process) =
+      lldb_private::LoadCore(debugger, k_binary_x86_64, k_core_x86_64);
   auto x15 = target.CreateValueFromExpression("x", "15");
   auto y42 = target.CreateValueFromExpression("y", "42");
   auto gzero = target.CreateValueFromExpression("$0", "42");
@@ -153,7 +123,10 @@ TEST_F(VariablesTest, Clear_RemovesTemporaryKeepsPermanent) {
 
 TEST_F(VariablesTest, VariablesStore) {
   CreateDebugger();
-  LoadCore();
+  SKIP_UNLESS_PLATFORM_SUPPORTED(debugger, "X86");
+  std::tie(target, process) =
+      lldb_private::LoadCore(debugger, k_binary_x86_64, k_core_x86_64);
+
   lldb::SBFrame frame = process.GetSelectedThread().GetSelectedFrame();
 
   std::vector<protocol::Scope> scopes = vars.Insert(frame);

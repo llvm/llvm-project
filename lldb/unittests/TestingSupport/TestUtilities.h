@@ -83,6 +83,10 @@ template <typename T> static llvm::Expected<T> roundtripJSON(const T &input) {
   return llvm::json::parse<T>(encoded);
 }
 
+std::pair<lldb::SBTarget, lldb::SBProcess> LoadCore(lldb::SBDebugger &debugger,
+                                                    llvm::StringRef binary_path,
+                                                    llvm::StringRef core_path);
+
 } // namespace lldb_private
 
 #endif
