@@ -133,6 +133,38 @@
 ;     MULT4: !1 = distinct !{!1, !2, !3}
 ;     MULT4: !2 = !{!"llvm.loop.estimated_trip_count", i32 3}
 ;     MULT4: !3 = !{!"llvm.loop.unroll.disable"}
+;
+;   -unroll-count=6, so there are 3 remaining conditional latches, the lowest
+;   number where the implementation cannot compute uniform weights using a
+;   simple formula.
+;
+;     RUN: %{ur-bf} -unroll-count=6 | %{fc} MULT6
+;
+;     Multiply by 2 and sum to get the original loop body frequency, 10.
+;     MULT6: - do.body: float = 2.1956,
+;     MULT6: - do.body.2: float = 1.476,
+;     MULT6: - do.body.4: float = 1.3284,
+;
+;     MULT6:       call void @f
+;     MULT6-NOT:   br
+;     MULT6:       call void @f
+;     MULT6:       br i1 %{{.*}}, label %do.body.2, label %do.end, !prof !0
+;     MULT6:       call void @f
+;     MULT6-NOT:   br
+;     MULT6:       call void @f
+;     MULT6:       br i1 %{{.*}}, label %do.body.4, label %do.end, !prof !1
+;     MULT6:       call void @f
+;     MULT6-NOT:   br
+;     MULT6:       call void @f
+;     MULT6:       br i1 %{{.*}}, label %do.body, label %do.end, !prof !1, !llvm.loop !2
+;
+;     There are 3 conditional latches remaining, so it adjusts the first and
+;     leaves the second two with the original loop's branch weights.
+;     MULT6: !0 = !{!"branch_weights", i32 1443686486, i32 703797162}
+;     MULT6: !1 = !{!"branch_weights", i32 9, i32 1}
+;     MULT6: !2 = distinct !{!2, !3, !4}
+;     MULT6: !3 = !{!"llvm.loop.estimated_trip_count", i32 2}
+;     MULT6: !4 = !{!"llvm.loop.unroll.disable"}
 
 ; ------------------------------------------------------------------------------
 ; Check case when the original loop's number of iterations is a run-time
@@ -193,6 +225,40 @@
 ;   LOW4: !1 = distinct !{!1, !2, !3}
 ;   LOW4: !2 = !{!"llvm.loop.estimated_trip_count", i32 1}
 ;   LOW4: !3 = !{!"llvm.loop.unroll.disable"}
+;
+; -unroll-count=6, so there are 3 remaining conditional latches.  The
+; implementation cannot compute uniform weights using a simple formula, and
+; ultimately it must set all those latches' probabilities to zero.  The
+; implementation will face a new stumbling block starting at the second latch:
+; reaching the remaining iterations already has a zero probability due to the
+; zero probability set at the first latch, so the required probability could
+; accidentally be computed as negative infinity.
+;
+;   RUN: %{ur-bf} -unroll-count=6 | %{fc} LOW6
+;
+;   Multiply by 2 and sum, but the result is greater than the original loop body
+;   frequency, 1, which is impossibly low.
+;   LOW6: - do.body: float = 1.0,
+;   LOW6: - do.body.2: float = 0.0{{(0000[0-9]*)?}},
+;   LOW6: - do.body.4: float = 0.0{{(0000[0-9]*)?}},
+;
+;   LOW6:     call void @f
+;   LOW6-NOT: br
+;   LOW6:     call void @f
+;   LOW6:     br i1 %{{.*}}, label %do.body.2, label %do.end, !prof !0
+;   LOW6:     call void @f
+;   LOW6-NOT: br
+;   LOW6:     call void @f
+;   LOW6:     br i1 %{{.*}}, label %do.body.4, label %do.end, !prof !0
+;   LOW6:     call void @f
+;   LOW6-NOT: br
+;   LOW6:     call void @f
+;   LOW6:     br i1 %{{.*}}, label %do.body, label %do.end, !prof !0, !llvm.loop !1
+;
+;   LOW6: !0 = !{!"branch_weights", i32 0, i32 -2147483648}
+;   LOW6: !1 = distinct !{!1, !2, !3}
+;   LOW6: !2 = !{!"llvm.loop.estimated_trip_count", i32 1}
+;   LOW6: !3 = !{!"llvm.loop.unroll.disable"}
 
 ; ------------------------------------------------------------------------------
 ; Check cases when the original loop's number of iterations is a constant 10 and

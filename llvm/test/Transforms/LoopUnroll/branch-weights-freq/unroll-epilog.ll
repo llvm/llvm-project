@@ -139,6 +139,74 @@
 ; UR4-EUR: !6 = !{!"branch_weights", i32 1265493781, i32 881989867}
 
 ; ------------------------------------------------------------------------------
+; Check -unroll-count=8.
+;
+; RUN: %{ur-bf} -unroll-count=8 | %{fc} UR8,UR8-ELP
+; RUN: %{ur-bf} -unroll-count=8 -unroll-remainder | \
+; RUN:   %{fc} UR8,UR8-EUR
+;
+; Multiply do.body by 8 and add do.body.epil* for either ELP or EUR to get the
+; original loop body frequency, 11.
+; UR8:     - do.body: float = 0.96188,
+; UR8-ELP: - do.body.epil: float = 3.3049,
+; UR8-EUR: - do.body.epil: float = 0.91256,
+; UR8-EUR: - do.body.epil.1: float = 0.7716,
+; UR8-EUR: - do.body.epil.2: float = 0.55854,
+; UR8-EUR: - do.body.epil.3: float = 0.40432,
+; UR8-EUR: - do.body.epil.4: float = 0.29268,
+; UR8-EUR: - do.body.epil.5: float = 0.21186,
+; UR8-EUR: - do.body.epil.6: float = 0.15336,
+;
+; Unrolled loop guard, body, and latch.
+; UR8: br i1 %{{.*}}, label %do.body.epil.preheader, label %entry.new, !prof !0
+; UR8-COUNT-8: call void @f
+; UR8: br i1 %{{.*}}, label %do.end.unr-lcssa, label %do.body, !prof !1, !llvm.loop !2
+;
+; Epilogue guard.
+; UR8: br i1 %{{.*}}, label %do.body.epil.preheader, label %do.end, !prof !5
+;
+; Non-unrolled epilogue loop.
+; UR8-ELP: call void @f
+; UR8-ELP: br i1 %{{.*}}, label %do.body.epil, label %do.end.epilog-lcssa, !prof !6, !llvm.loop !7
+;
+; Completely unrolled epilogue loop.
+; UR8-EUR: call void @f
+; UR8-EUR: br i1 %{{.*}}, label %do.body.epil.1, label %do.end.epilog-lcssa, !prof !6
+; UR8-EUR: call void @f
+; UR8-EUR: br i1 %{{.*}}, label %do.body.epil.2, label %do.end.epilog-lcssa, !prof !7
+; UR8-EUR: call void @f
+; UR8-EUR: br i1 %{{.*}}, label %do.body.epil.3, label %do.end.epilog-lcssa, !prof !7
+; UR8-EUR: call void @f
+; UR8-EUR: br i1 %{{.*}}, label %do.body.epil.4, label %do.end.epilog-lcssa, !prof !7
+; UR8-EUR: call void @f
+; UR8-EUR: br i1 %{{.*}}, label %do.body.epil.5, label %do.end.epilog-lcssa, !prof !7
+; UR8-EUR: call void @f
+; UR8-EUR: br i1 %{{.*}}, label %do.body.epil.6, label %do.end.epilog-lcssa, !prof !7
+; UR8-EUR: call void @f
+;
+; Unrolled loop metadata.
+; UR8: !0 = !{!"branch_weights", i32 1045484980, i32 1101998668}
+; UR8: !1 = !{!"branch_weights", i32 1145666677, i32 1001816971}
+; UR8: !2 = distinct !{!2, !3, !4}
+; UR8: !3 = !{!"llvm.loop.estimated_trip_count", i32 1}
+; UR8: !4 = !{!"llvm.loop.unroll.disable"}
+; UR8: !5 = !{!"branch_weights", i32 1781544591, i32 365939057}
+;
+; Non-unrolled epilogue loop metadata.
+; UR8-ELP: !6 = !{!"branch_weights", i32 1554520665, i32 592962983}
+; UR8-ELP: !7 = distinct !{!7, !8, !4}
+; UR8-ELP: !8 = !{!"llvm.loop.estimated_trip_count", i32 3}
+;
+; Completely unrolled epilogue loop metadata.  Because it loses its backedge:
+; - The remaining conditional latches' branch weights must be adjusted relative
+;   to the non-unrolled case.  There are many, so the implementation does not
+;   compute uniform branch weights.  Adjusting the first is sufficient, so the
+;   second is the same as the non-unrolled epilogue branch weights.
+; - It has no llvm.loop.estimated_trip_count.
+; UR8-EUR: !6 = !{!"branch_weights", i32 1815773828, i32 331709820}
+; UR8-EUR: !7 = !{!"branch_weights", i32 1554520665, i32 592962983}
+
+; ------------------------------------------------------------------------------
 ; Check -unroll-count=10.
 ;
 ; RUN: %{ur-bf} -unroll-count=10 | %{fc} UR10,UR10-ELP
