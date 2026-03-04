@@ -644,6 +644,7 @@ bool Vreg1LoweringHelper::lowerCopiesToI1() {
       unsigned FoundLoopLevel = LF.findLoop(PostDomBound);
       if (FoundLoopLevel) {
         SSAUpdater.Initialize(DstReg);
+        abort();
         SSAUpdater.AddAvailableValue(&MBB, DstReg);
         LF.addLoopEntries(FoundLoopLevel, SSAUpdater, *MRI, LaneMaskRegAttrs);
 

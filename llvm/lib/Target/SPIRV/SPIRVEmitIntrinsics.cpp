@@ -759,8 +759,10 @@ Type *SPIRVEmitIntrinsics::getGEPType(GetElementPtrInst *Ref) {
   // useful here
   if (isNestedPointer(Ref->getSourceElementType())) {
     Ty = Ref->getSourceElementType();
-    for (Use &U : drop_begin(Ref->indices()))
+    for (Use &U : drop_begin(Ref->indices())) {
       Ty = GetElementPtrInst::getTypeAtIndex(Ty, U.get());
+      abort();
+    }
   } else {
     Ty = Ref->getResultElementType();
   }
@@ -1134,8 +1136,10 @@ void SPIRVEmitIntrinsics::deduceOperandElementTypeFunctionPointer(
       IsNewFTy = true;
       RetTy =
           getTypedPointerWrapper(ElemTy, getPointerAddressSpace(CI->getType()));
-      if (isTodoType(CI))
+      if (isTodoType(CI)) {
         IsIncomplete = true;
+        abort();
+      }
     } else {
       IsIncomplete = true;
     }
@@ -2658,8 +2662,10 @@ Type *SPIRVEmitIntrinsics::deduceFunParamElementType(
       return KnownTy;
     // try to deduce from the operand itself
     Visited.clear();
-    if (Type *Ty = deduceElementTypeHelper(OpArg, Visited, false))
+    if (Type *Ty = deduceElementTypeHelper(OpArg, Visited, false)) {
+      abort();
       return Ty;
+    }
     // search in actual parameter's users
     for (User *OpU : OpArg->users()) {
       Instruction *Inst = dyn_cast<Instruction>(OpU);
