@@ -12,8 +12,8 @@
 ///
 //===----------------------------------------------------------------------===//
 
-#ifndef LLVM_DEBUGINFOD_HTTPCLIENT_H
-#define LLVM_DEBUGINFOD_HTTPCLIENT_H
+#ifndef LLVM_SUPPORT_HTTP_HTTPCLIENT_H
+#define LLVM_SUPPORT_HTTP_HTTPCLIENT_H
 
 #include "llvm/ADT/SmallString.h"
 #include "llvm/ADT/SmallVector.h"
@@ -83,4 +83,4 @@ public:
 
 } // end namespace llvm
 
-#endif // LLVM_DEBUGINFOD_HTTPCLIENT_H
+#endif // LLVM_SUPPORT_HTTP_HTTPCLIENT_H
