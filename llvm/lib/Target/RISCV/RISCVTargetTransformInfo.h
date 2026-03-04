@@ -393,6 +393,7 @@ public:
     case RecurKind::UMax:
     case RecurKind::FMin:
     case RecurKind::FMax:
+    case RecurKind::FindLast:
       return true;
     case RecurKind::AnyOf:
     case RecurKind::FAdd:

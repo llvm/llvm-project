@@ -116,7 +116,7 @@ define i32 @simple_csa_int_select(i64 %N, ptr %data, i32 %a) {
 ; CHECK-TF-EMPTY:
 ; CHECK-TF-NEXT:    loop.0:
 ; CHECK-TF-NEXT:      WIDEN ir<%select.cmp> = icmp slt ir<%a>, vp<[[VP8]]>
-; CHECK-TF-NEXT:      EMIT vp<[[VP9:%[0-9]+]]> = logical-and vp<[[VP6]]>, ir<%select.cmp>
+; CHECK-TF-NEXT:      EMIT vp<[[VP9:%[0-9]+]]> = select vp<[[VP6]]>, ir<%select.cmp>, ir<false>
 ; CHECK-TF-NEXT:      EMIT vp<[[VP10:%[0-9]+]]> = any-of vp<[[VP9]]>
 ; CHECK-TF-NEXT:      EMIT vp<[[VP11]]> = select vp<[[VP10]]>, vp<[[VP9]]>, vp<[[VP5]]>
 ; CHECK-TF-NEXT:      EMIT vp<[[VP12]]> = select vp<[[VP10]]>, vp<[[VP8]]>, ir<%data.phi>
@@ -316,7 +316,7 @@ define i32 @simple_csa_int_load(ptr noalias %a, ptr noalias %b, i32 %default_val
 ; CHECK-TF-NEXT:    Successor(s): if.then.1
 ; CHECK-TF-EMPTY:
 ; CHECK-TF-NEXT:    if.then.1:
-; CHECK-TF-NEXT:      EMIT vp<[[VP11:%[0-9]+]]> = logical-and vp<[[VP7]]>, vp<[[VP9]]>
+; CHECK-TF-NEXT:      EMIT vp<[[VP11:%[0-9]+]]> = select vp<[[VP7]]>, vp<[[VP9]]>, ir<false>
 ; CHECK-TF-NEXT:      EMIT vp<[[VP12:%[0-9]+]]> = any-of vp<[[VP11]]>
 ; CHECK-TF-NEXT:      EMIT vp<[[VP13]]> = select vp<[[VP12]]>, vp<[[VP11]]>, vp<[[VP5]]>
 ; CHECK-TF-NEXT:      EMIT vp<[[VP14]]> = select vp<[[VP12]]>, vp<[[VP10]]>, ir<%data.phi>
