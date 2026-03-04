@@ -3346,12 +3346,11 @@ static SDValue performAnyAllCombine(SDNode *N, SelectionDAG &DAG) {
       return SDValue();
 
     SDLoc DL(N);
-    SDValue Ret = DAG.getZExtOrTrunc(
-        DAG.getNode(ISD::INTRINSIC_WO_CHAIN, DL, MVT::i32,
-                    {DAG.getConstant(InPost, DL, MVT::i32), LHS}),
-        DL, MVT::i1);
+    SDValue Ret = DAG.getNode(ISD::INTRINSIC_WO_CHAIN, DL, MVT::i32,
+                              {DAG.getConstant(InPost, DL, MVT::i32), LHS});
     if (SetType == ISD::SETEQ)
-      Ret = DAG.getNOT(DL, Ret, MVT::i1);
+      Ret = DAG.getNode(ISD::XOR, DL, MVT::i32, Ret,
+                        DAG.getConstant(1, DL, MVT::i32));
     return DAG.getZExtOrTrunc(Ret, DL, N->getValueType(0));
   };
 
@@ -3384,13 +3383,13 @@ static SDValue TryMatchTrue(SDNode *N, EVT VecVT, SelectionDAG &DAG) {
     return SDValue();
 
   SDLoc DL(N);
-  SDValue Ret = DAG.getZExtOrTrunc(
+  SDValue Ret =
       DAG.getNode(ISD::INTRINSIC_WO_CHAIN, DL, MVT::i32,
                   {DAG.getConstant(Intrin, DL, MVT::i32),
-                   DAG.getSExtOrTrunc(LHS->getOperand(0), DL, VecVT)}),
-      DL, MVT::i1);
+                   DAG.getSExtOrTrunc(LHS->getOperand(0), DL, VecVT)});
   if (RequiresNegate)
-    Ret = DAG.getNOT(DL, Ret, MVT::i1);
+    Ret = DAG.getNode(ISD::XOR, DL, MVT::i32, Ret,
+                      DAG.getConstant(1, DL, MVT::i32));
   return DAG.getZExtOrTrunc(Ret, DL, N->getValueType(0));
 }
 

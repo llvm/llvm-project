@@ -430,10 +430,8 @@ void mlir::sparse_tensor::sizesFromSrc(OpBuilder &builder,
 }
 
 Operation *mlir::sparse_tensor::getTop(Operation *op) {
-  for (; isa<scf::ForOp>(op->getParentOp()) ||
-         isa<scf::WhileOp>(op->getParentOp()) ||
-         isa<scf::ParallelOp>(op->getParentOp()) ||
-         isa<scf::IfOp>(op->getParentOp());
+  for (; isa<scf::ForOp, scf::WhileOp, scf::ParallelOp, scf::IfOp>(
+           op->getParentOp());
        op = op->getParentOp())
     ;
   return op;
