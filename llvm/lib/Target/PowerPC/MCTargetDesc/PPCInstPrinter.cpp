@@ -421,6 +421,15 @@ void PPCInstPrinter::printU12ImmOperand(const MCInst *MI, unsigned OpNo,
   O << (unsigned short)Value;
 }
 
+void PPCInstPrinter::printU32ImmOperand(const MCInst *MI, unsigned OpNo,
+                                        const MCSubtargetInfo &STI,
+                                        raw_ostream &O) {
+  if (MI->getOperand(OpNo).isImm())
+    O << (unsigned int)MI->getOperand(OpNo).getImm();
+  else
+    printOperand(MI, OpNo, STI, O);
+}
+
 void PPCInstPrinter::printS16ImmOperand(const MCInst *MI, unsigned OpNo,
                                         const MCSubtargetInfo &STI,
                                         raw_ostream &O) {
