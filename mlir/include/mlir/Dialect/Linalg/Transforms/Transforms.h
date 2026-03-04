@@ -924,7 +924,7 @@ FailureOr<GenericOp> generalizeNamedOp(RewriterBase &rewriter,
                                        LinalgOp linalgOp);
 
 struct SpecializationOptions {
-  // Specialize generics to category ops.
+  // Specialize generics to category ops (default: named ops).
   bool emitCategoryOps = false;
 };
 
