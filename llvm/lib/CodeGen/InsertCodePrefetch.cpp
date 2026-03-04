@@ -81,16 +81,10 @@ INITIALIZE_PASS_DEPENDENCY(BasicBlockSectionsProfileReaderWrapperPass)
 INITIALIZE_PASS_END(InsertCodePrefetch, DEBUG_TYPE, "Code prefetch insertion",
                     true, false)
 
-bool InsertCodePrefetch::runOnMachineFunction(MachineFunction &MF) {
-  assert(MF.getTarget().getBBSectionsType() == BasicBlockSection::List &&
-         "BB Sections list not enabled!");
-  if (hasInstrProfHashMismatch(MF))
-    return false;
+static void setPrefetchTargets(MachineFunction &MF,
+                               const SmallVector<CallsiteID> &PrefetchTargets) {
   // Set each block's prefetch targets so AsmPrinter can emit a special symbol
   // there.
-  SmallVector<CallsiteID> PrefetchTargets =
-      getAnalysis<BasicBlockSectionsProfileReaderWrapperPass>()
-          .getPrefetchTargetsForFunction(MF.getName());
   DenseMap<UniqueBBID, SmallVector<unsigned>> PrefetchTargetsByBBID;
   for (const auto &Target : PrefetchTargets)
     PrefetchTargetsByBBID[Target.BBID].push_back(Target.CallsiteIndex);
@@ -100,10 +94,11 @@ bool InsertCodePrefetch::runOnMachineFunction(MachineFunction &MF) {
     V.erase(llvm::unique(V), V.end());
   }
   MF.setPrefetchTargets(PrefetchTargetsByBBID);
+}
 
-  SmallVector<PrefetchHint> PrefetchHints =
-      getAnalysis<BasicBlockSectionsProfileReaderWrapperPass>()
-          .getPrefetchHintsForFunction(MF.getName());
+static void
+insertPrefetchHints(MachineFunction &MF,
+                    const SmallVector<PrefetchHint> &PrefetchHints) {
   DenseMap<UniqueBBID, SmallVector<PrefetchHint>> PrefetchHintsBySiteBBID;
   for (const auto &H : PrefetchHints)
     PrefetchHintsBySiteBBID[H.SiteID.BBID].push_back(H);
@@ -121,14 +116,14 @@ bool InsertCodePrefetch::runOnMachineFunction(MachineFunction &MF) {
     auto It = PrefetchHintsBySiteBBID.find(*BB.getBBID());
     if (It == PrefetchHintsBySiteBBID.end())
       continue;
-    const auto &PrefetchHints = It->second;
+    const auto &BBHints = It->second;
     unsigned NumCallsInBB = 0;
     auto InstrIt = BB.begin();
-    for (auto HintIt = PrefetchHints.begin(); HintIt != PrefetchHints.end();) {
+    for (auto HintIt = BBHints.begin(); HintIt != BBHints.end();) {
       auto NextInstrIt = InstrIt == BB.end() ? BB.end() : std::next(InstrIt);
       // Insert all the prefetch hints which must be placed after this call (or
       // at the beginning of the block if `NumCallsInBB` is zero.
-      while (HintIt != PrefetchHints.end() &&
+      while (HintIt != BBHints.end() &&
              NumCallsInBB >= HintIt->SiteID.CallsiteIndex) {
         auto *GV = MF.getFunction().getParent()->getOrInsertGlobal(
             getPrefetchTargetSymbolName(HintIt->TargetFunction,
@@ -145,6 +140,19 @@ bool InsertCodePrefetch::runOnMachineFunction(MachineFunction &MF) {
       InstrIt = NextInstrIt;
     }
   }
+}
+
+bool InsertCodePrefetch::runOnMachineFunction(MachineFunction &MF) {
+  assert(MF.getTarget().getBBSectionsType() == BasicBlockSection::List &&
+         "BB Sections list not enabled!");
+  if (hasInstrProfHashMismatch(MF))
+    return false;
+
+  auto &ProfileReader =
+      getAnalysis<BasicBlockSectionsProfileReaderWrapperPass>();
+  setPrefetchTargets(MF, ProfileReader.getPrefetchTargetsForFunction(MF.getName()));
+  insertPrefetchHints(MF, ProfileReader.getPrefetchHintsForFunction(MF.getName()));
+
   return true;
 }
 
