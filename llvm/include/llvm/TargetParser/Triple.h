@@ -252,9 +252,11 @@ public:
     Serenity,
     Vulkan, // Vulkan SPIR-V
     CheriotRTOS,
+    OpenCL,
     ChipStar,
     Firmware,
-    LastOSType = Firmware
+    QURT,
+    LastOSType = QURT
   };
   enum EnvironmentType {
     UnknownEnvironment,
@@ -314,7 +316,6 @@ public:
     Mesh,
     Amplification,
     RootSignature,
-    OpenCL,
     OpenHOS,
     Mlibc,
 
@@ -794,6 +795,9 @@ public:
   bool isOSSerenity() const {
     return getOS() == Triple::Serenity;
   }
+
+  /// Tests whether the OS is QURT.
+  bool isOSQurt() const { return getOS() == Triple::QURT; }
 
   /// Tests whether the OS uses the ELF binary format.
   bool isOSBinFormatELF() const {

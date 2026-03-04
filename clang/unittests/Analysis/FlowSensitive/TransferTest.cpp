@@ -3834,6 +3834,34 @@ TEST(TransferTest, StaticCastBaseToDerived) {
       });
 }
 
+TEST(TransferTest, StaticCastBaseToDerivedUnknown) {
+  // This code used to crash.
+  std::string Code = R"(
+    struct Base {};
+    struct Derived: Base {};
+
+    Base *unknown();
+    void target() {
+      Derived *DPtr = static_cast<Derived *>(unknown());
+      // [[p]]
+    }
+  )";
+  runDataflow(
+      Code,
+      [](const llvm::StringMap<DataflowAnalysisState<NoopLattice>> &Results,
+         ASTContext &ASTCtx) {
+        ASSERT_THAT(Results.keys(), UnorderedElementsAre("p"));
+        const Environment &Env = getEnvironmentAtAnnotation(Results, "p");
+
+        const ValueDecl *DPtrDecl = findValueDecl(ASTCtx, "DPtr");
+        ASSERT_THAT(DPtrDecl, NotNull());
+
+        const auto *DPtrVal =
+            dyn_cast_or_null<PointerValue>(Env.getValue(*DPtrDecl));
+        EXPECT_THAT(DPtrVal, NotNull());
+      });
+}
+
 TEST(TransferTest, MultipleConstructionsFromStaticCastsBaseToDerived) {
   std::string Code = R"cc(
  struct Base {};

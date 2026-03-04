@@ -72,8 +72,6 @@ enum class IRMemLocation {
 
   /// Helpers to iterate all locations in the MemoryEffectsBase class.
   First = ArgMem,
-  FirstTarget = TargetMem0,
-  // TargetMem IDs must be at the end of the list.
   Last = TargetMem1,
 };
 
@@ -102,6 +100,11 @@ public:
   /// Returns iterator over all supported location kinds.
   static auto locations() {
     return enum_seq_inclusive(Location::First, Location::Last,
+                              force_iteration_on_noniterable_enum);
+  }
+
+  static auto targetMemLocations() {
+    return enum_seq_inclusive(Location::TargetMem0, Location::TargetMem1,
                               force_iteration_on_noniterable_enum);
   }
 
@@ -238,6 +241,15 @@ public:
   /// Whether this function only (at most) accesses inaccessible memory.
   bool onlyAccessesInaccessibleMem() const {
     return getWithoutLoc(Location::InaccessibleMem).doesNotAccessMemory();
+  }
+
+  /// Whether this function only (at most) accesses inaccessible or target
+  /// memory.
+  bool onlyAccessesInaccessibleOrTargetMem() const {
+    MemoryEffectsBase ME = *this;
+    for (auto Loc : MemoryEffectsBase::targetMemLocations())
+      ME &= ME.getWithoutLoc(Loc);
+    return ME.getWithoutLoc(Location::InaccessibleMem).doesNotAccessMemory();
   }
 
   /// Whether this function only (at most) accesses errno memory.

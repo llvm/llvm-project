@@ -1157,6 +1157,9 @@ DEF_TRAVERSE_TYPE(CountAttributedType, {
 DEF_TRAVERSE_TYPE(BTFTagAttributedType,
                   { TRY_TO(TraverseType(T->getWrappedType())); })
 
+DEF_TRAVERSE_TYPE(OverflowBehaviorType,
+                  { TRY_TO(TraverseType(T->getUnderlyingType())); })
+
 DEF_TRAVERSE_TYPE(HLSLAttributedResourceType,
                   { TRY_TO(TraverseType(T->getWrappedType())); })
 
@@ -1510,6 +1513,9 @@ DEF_TRAVERSE_TYPELOC(CountAttributedType,
                      { TRY_TO(TraverseTypeLoc(TL.getInnerLoc())); })
 
 DEF_TRAVERSE_TYPELOC(BTFTagAttributedType,
+                     { TRY_TO(TraverseTypeLoc(TL.getWrappedLoc())); })
+
+DEF_TRAVERSE_TYPELOC(OverflowBehaviorType,
                      { TRY_TO(TraverseTypeLoc(TL.getWrappedLoc())); })
 
 DEF_TRAVERSE_TYPELOC(HLSLAttributedResourceType,
@@ -2884,6 +2890,8 @@ DEF_TRAVERSE_STMT(CXXUnresolvedConstructExpr, {
   TRY_TO(TraverseTypeLoc(S->getTypeSourceInfo()->getTypeLoc()));
 })
 
+DEF_TRAVERSE_STMT(CXXReflectExpr, {/*TODO*/})
+
 // These expressions all might take explicit template arguments.
 // We traverse those if so.  FIXME: implement these.
 DEF_TRAVERSE_STMT(CXXConstructExpr, {})
@@ -2942,6 +2950,7 @@ DEF_TRAVERSE_STMT(UserDefinedLiteral, {})
 DEF_TRAVERSE_STMT(DesignatedInitExpr, {})
 DEF_TRAVERSE_STMT(DesignatedInitUpdateExpr, {})
 DEF_TRAVERSE_STMT(ExtVectorElementExpr, {})
+DEF_TRAVERSE_STMT(MatrixElementExpr, {})
 DEF_TRAVERSE_STMT(GNUNullExpr, {})
 DEF_TRAVERSE_STMT(ImplicitValueInitExpr, {})
 DEF_TRAVERSE_STMT(NoInitExpr, {})

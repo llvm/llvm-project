@@ -27,6 +27,10 @@ class TensorDescType;
 class DistributeLayoutAttr;
 class LayoutAttr;
 class SliceAttr;
+
+/// Specifies the level of a layout hierarchy for comparison or propagation.
+enum class LayoutKind { Lane, InstData, Subgroup };
+
 } // namespace xegpu
 } // namespace mlir
 

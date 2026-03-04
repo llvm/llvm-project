@@ -38,21 +38,21 @@ static bool RetValue(InterpState &S, CodePtr &Pt) {
 
 static bool Jmp(InterpState &S, CodePtr &PC, int32_t Offset) {
   PC += Offset;
-  return true;
+  return S.noteStep(PC);
 }
 
 static bool Jt(InterpState &S, CodePtr &PC, int32_t Offset) {
   if (S.Stk.pop<bool>()) {
     PC += Offset;
   }
-  return true;
+  return S.noteStep(PC);
 }
 
 static bool Jf(InterpState &S, CodePtr &PC, int32_t Offset) {
   if (!S.Stk.pop<bool>()) {
     PC += Offset;
   }
-  return true;
+  return S.noteStep(PC);
 }
 
 // https://github.com/llvm/llvm-project/issues/102513
@@ -230,7 +230,7 @@ static bool CheckTemporary(InterpState &S, CodePtr OpPC, const Block *B,
     // FIXME(perf): Since we do this check on every Load from a static
     // temporary, it might make sense to cache the value of the
     // isUsableInConstantExpressions call.
-    if (B->getEvalID() != S.Ctx.getEvalID() &&
+    if (B->getEvalID() != S.EvalID &&
         !MTE->isUsableInConstantExpressions(S.getASTContext())) {
       const SourceInfo &E = S.Current->getSource(OpPC);
       S.FFDiag(E, diag::note_constexpr_access_static_temporary, 1) << AK;
@@ -626,16 +626,8 @@ bool CheckMutable(InterpState &S, CodePtr OpPC, const Pointer &Ptr) {
 
   // In C++14 onwards, it is permitted to read a mutable member whose
   // lifetime began within the evaluation.
-  if (S.getLangOpts().CPlusPlus14 &&
-      Ptr.block()->getEvalID() == S.Ctx.getEvalID()) {
-    // FIXME: This check is necessary because (of the way) we revisit
-    // variables in Compiler.cpp:visitDeclRef. Revisiting a so far
-    // unknown variable will get the same EvalID and we end up allowing
-    // reads from mutable members of it.
-    if (!S.inConstantContext() && isConstexprUnknown(Ptr))
-      return false;
+  if (S.getLangOpts().CPlusPlus14 && Ptr.block()->getEvalID() == S.EvalID)
     return true;
-  }
 
   const SourceInfo &Loc = S.Current->getSource(OpPC);
   const FieldDecl *Field = Ptr.getField();
@@ -1260,7 +1252,8 @@ static bool runRecordDestructor(InterpState &S, CodePtr OpPC,
   const Record *R = Desc->ElemRecord;
   assert(R);
 
-  if (S.Current->hasThisPointer() && S.Current->getFunction()->isDestructor() &&
+  if (!S.Current->isBottomFrame() && S.Current->hasThisPointer() &&
+      S.Current->getFunction()->isDestructor() &&
       Pointer::pointToSameBlock(BasePtr, S.Current->getThis())) {
     const SourceInfo &Loc = S.Current->getSource(OpPC);
     S.FFDiag(Loc, diag::note_constexpr_double_destroy);
@@ -2338,7 +2331,6 @@ bool arePotentiallyOverlappingStringLiterals(const Pointer &LHS,
 
 static void copyPrimitiveMemory(InterpState &S, const Pointer &Ptr,
                                 PrimType T) {
-
   if (T == PT_IntAPS) {
     auto &Val = Ptr.deref<IntegralAP<true>>();
     if (!Val.singleWord()) {
@@ -2357,16 +2349,30 @@ static void copyPrimitiveMemory(InterpState &S, const Pointer &Ptr,
       uint64_t *NewMemory = new (S.P) uint64_t[Val.numWords()];
       Val.take(NewMemory);
     }
+  } else if (T == PT_MemberPtr) {
+    auto &Val = Ptr.deref<MemberPointer>();
+    unsigned PathLength = Val.getPathLength();
+    auto *NewPath = new (S.P) const CXXRecordDecl *[PathLength];
+    std::copy_n(Val.path(), PathLength, NewPath);
+    Val.takePath(NewPath);
   }
 }
 
 template <typename T>
 static void copyPrimitiveMemory(InterpState &S, const Pointer &Ptr) {
   assert(needsAlloc<T>());
-  auto &Val = Ptr.deref<T>();
-  if (!Val.singleWord()) {
-    uint64_t *NewMemory = new (S.P) uint64_t[Val.numWords()];
-    Val.take(NewMemory);
+  if constexpr (std::is_same_v<T, MemberPointer>) {
+    auto &Val = Ptr.deref<MemberPointer>();
+    unsigned PathLength = Val.getPathLength();
+    auto *NewPath = new (S.P) const CXXRecordDecl *[PathLength];
+    std::copy_n(Val.path(), PathLength, NewPath);
+    Val.takePath(NewPath);
+  } else {
+    auto &Val = Ptr.deref<T>();
+    if (!Val.singleWord()) {
+      uint64_t *NewMemory = new (S.P) uint64_t[Val.numWords()];
+      Val.take(NewMemory);
+    }
   }
 }
 
@@ -2377,9 +2383,9 @@ static void finishGlobalRecurse(InterpState &S, const Pointer &Ptr) {
         TYPE_SWITCH_ALLOC(Fi.Desc->getPrimType(), {
           copyPrimitiveMemory<T>(S, Ptr.atField(Fi.Offset));
         });
-        copyPrimitiveMemory(S, Ptr.atField(Fi.Offset), Fi.Desc->getPrimType());
-      } else
+      } else {
         finishGlobalRecurse(S, Ptr.atField(Fi.Offset));
+      }
     }
     return;
   }
@@ -2491,6 +2497,83 @@ bool Destroy(InterpState &S, CodePtr OpPC, uint32_t I) {
 
   S.Current->destroy(I);
   return true;
+}
+
+// Perform a cast towards the class of the Decl (either up or down the
+// hierarchy).
+static bool castBackMemberPointer(InterpState &S,
+                                  const MemberPointer &MemberPtr,
+                                  int32_t BaseOffset,
+                                  const RecordDecl *BaseDecl) {
+  const CXXRecordDecl *Expected;
+  if (MemberPtr.getPathLength() >= 2)
+    Expected = MemberPtr.getPathEntry(MemberPtr.getPathLength() - 2);
+  else
+    Expected = MemberPtr.getRecordDecl();
+
+  assert(Expected);
+  if (Expected->getCanonicalDecl() != BaseDecl->getCanonicalDecl()) {
+    // C++11 [expr.static.cast]p12: In a conversion from (D::*) to (B::*),
+    // if B does not contain the original member and is not a base or
+    // derived class of the class containing the original member, the result
+    // of the cast is undefined.
+    // C++11 [conv.mem]p2 does not cover this case for a cast from (B::*) to
+    // (D::*). We consider that to be a language defect.
+    return false;
+  }
+
+  unsigned OldPathLength = MemberPtr.getPathLength();
+  unsigned NewPathLength = OldPathLength - 1;
+  bool IsDerivedMember = NewPathLength != 0;
+  auto NewPath = S.allocMemberPointerPath(NewPathLength);
+  std::copy_n(MemberPtr.path(), NewPathLength, NewPath);
+
+  S.Stk.push<MemberPointer>(MemberPtr.atInstanceBase(BaseOffset, NewPathLength,
+                                                     NewPath, IsDerivedMember));
+  return true;
+}
+
+static bool appendToMemberPointer(InterpState &S,
+                                  const MemberPointer &MemberPtr,
+                                  int32_t BaseOffset,
+                                  const RecordDecl *BaseDecl,
+                                  bool IsDerivedMember) {
+  unsigned OldPathLength = MemberPtr.getPathLength();
+  unsigned NewPathLength = OldPathLength + 1;
+
+  auto NewPath = S.allocMemberPointerPath(NewPathLength);
+  std::copy_n(MemberPtr.path(), OldPathLength, NewPath);
+  NewPath[OldPathLength] = cast<CXXRecordDecl>(BaseDecl);
+
+  S.Stk.push<MemberPointer>(MemberPtr.atInstanceBase(BaseOffset, NewPathLength,
+                                                     NewPath, IsDerivedMember));
+  return true;
+}
+
+/// DerivedToBaseMemberPointer
+bool CastMemberPtrBasePop(InterpState &S, CodePtr OpPC, int32_t Off,
+                          const RecordDecl *BaseDecl) {
+  const auto &Ptr = S.Stk.pop<MemberPointer>();
+
+  if (!Ptr.isDerivedMember() && Ptr.hasPath())
+    return castBackMemberPointer(S, Ptr, Off, BaseDecl);
+
+  bool IsDerivedMember = Ptr.isDerivedMember() || !Ptr.hasPath();
+  return appendToMemberPointer(S, Ptr, Off, BaseDecl, IsDerivedMember);
+}
+
+/// BaseToDerivedMemberPointer
+bool CastMemberPtrDerivedPop(InterpState &S, CodePtr OpPC, int32_t Off,
+                             const RecordDecl *BaseDecl) {
+  const auto &Ptr = S.Stk.pop<MemberPointer>();
+
+  if (!Ptr.isDerivedMember()) {
+    // Simply append.
+    return appendToMemberPointer(S, Ptr, Off, BaseDecl,
+                                 /*IsDerivedMember=*/false);
+  }
+
+  return castBackMemberPointer(S, Ptr, Off, BaseDecl);
 }
 
 // https://github.com/llvm/llvm-project/issues/102513
