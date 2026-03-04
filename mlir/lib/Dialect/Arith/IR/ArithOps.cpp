@@ -1905,8 +1905,8 @@ OpFoldResult arith::IndexCastOp::fold(FoldAdaptor adaptor) {
 
 void arith::IndexCastOp::getCanonicalizationPatterns(
     RewritePatternSet &patterns, MLIRContext *context) {
-  patterns.add<IndexCastOfIndexCast, IndexCastOfExtSI>(context);
-  // InferExactOnIndexCast<IndexCastOp>>(context);
+  patterns.add<IndexCastOfIndexCast, IndexCastOfExtSI,
+               InferExactOnIndexCast<IndexCastOp>>(context);
 }
 
 //===----------------------------------------------------------------------===//

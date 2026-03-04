@@ -588,7 +588,7 @@ func.func @arm_sme_extract_tile_slice_ver_i128(%tile_slice_index : index) -> vec
 // CHECK-LABEL: @arm_sme_streaming_vl_bytes
 // CHECK: %[[CONST:.*]] = arith.constant 8 : index
 // CHECK: %[[CNTSD:.*]] = "arm_sme.intr.cntsd"() : () -> i64
-// CHECK: %[[CNTSD_IDX:.*]] = arith.index_cast %[[CNTSD]] : i64 to index
+// CHECK: %[[CNTSD_IDX:.*]] = arith.index_cast %[[CNTSD]] exact : i64 to index
 // CHECK: %[[MUL:.*]] = arith.muli %[[CNTSD_IDX]], %[[CONST]] : index
 func.func @arm_sme_streaming_vl_bytes() -> index {
   %svl_b = arm_sme.streaming_vl <byte>
@@ -600,7 +600,7 @@ func.func @arm_sme_streaming_vl_bytes() -> index {
 // CHECK-LABEL: @arm_sme_streaming_vl_half_words
 // CHECK: %[[CONST:.*]] = arith.constant 4 : index
 // CHECK: %[[CNTSD:.*]] = "arm_sme.intr.cntsd"() : () -> i64
-// CHECK: %[[CNTSD_IDX:.*]] = arith.index_cast %[[CNTSD]] : i64 to index
+// CHECK: %[[CNTSD_IDX:.*]] = arith.index_cast %[[CNTSD]] exact : i64 to index
 // CHECK: %[[MUL:.*]] = arith.muli %[[CNTSD_IDX]], %[[CONST]] : index
 func.func @arm_sme_streaming_vl_half_words() -> index {
   %svl_h = arm_sme.streaming_vl <half>
@@ -612,7 +612,7 @@ func.func @arm_sme_streaming_vl_half_words() -> index {
 // CHECK-LABEL: @arm_sme_streaming_vl_words
 // CHECK: %[[CONST:.*]] = arith.constant 2 : index
 // CHECK: %[[CNTSD:.*]] = "arm_sme.intr.cntsd"() : () -> i64
-// CHECK: %[[CNTSD_IDX:.*]] = arith.index_cast %[[CNTSD]] : i64 to index
+// CHECK: %[[CNTSD_IDX:.*]] = arith.index_cast %[[CNTSD]] exact : i64 to index
 // CHECK: %[[MUL:.*]] = arith.muli %[[CNTSD_IDX]], %[[CONST]] : index
 func.func @arm_sme_streaming_vl_words() -> index {
   %svl_w = arm_sme.streaming_vl <word>
