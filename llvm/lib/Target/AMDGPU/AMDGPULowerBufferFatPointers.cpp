@@ -223,6 +223,7 @@
 #include "GCNSubtarget.h"
 #include "SIDefines.h"
 #include "llvm/ADT/SetOperations.h"
+#include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/Analysis/InstSimplifyFolder.h"
 #include "llvm/Analysis/TargetTransformInfo.h"
@@ -2467,13 +2468,19 @@ bool AMDGPULowerBufferFatPointers::run(Module &M, const TargetMachine &TM) {
 
   BufferFatPtrToStructTypeMap StructTM(DL);
   BufferFatPtrToIntTypeMap IntTM(DL);
-  SmallVector<GlobalVariable *, 4> InvalidGlobals;
-  for (GlobalVariable &GV : M.globals()) {
+
+  auto EraseInvalidGlobal = [&Changed](GlobalVariable &GV) {
+    GV.replaceAllUsesWith(PoisonValue::get(GV.getType()));
+    GV.eraseFromParent();
+    Changed = true;
+  };
+
+  for (GlobalVariable &GV : make_early_inc_range(M.globals())) {
     if (GV.getAddressSpace() == AMDGPUAS::BUFFER_FAT_POINTER) {
       // FIXME: Use DiagnosticInfo unsupported but it requires a Function
       Ctx.emitError("global variables with a buffer fat pointer address "
                     "space (7) are not supported");
-      InvalidGlobals.push_back(&GV);
+      EraseInvalidGlobal(GV);
       continue;
     }
 
@@ -2483,15 +2490,9 @@ bool AMDGPULowerBufferFatPointers::run(Module &M, const TargetMachine &TM) {
       Ctx.emitError("global variables that contain buffer fat pointers "
                     "(address space 7 pointers) are unsupported. Use "
                     "buffer resource pointers (address space 8) instead");
-      InvalidGlobals.push_back(&GV);
+      EraseInvalidGlobal(GV);
       continue;
     }
-  }
-
-  for (GlobalVariable *GV : InvalidGlobals) {
-    GV->replaceAllUsesWith(PoisonValue::get(GV->getType()));
-    GV->eraseFromParent();
-    Changed = true;
   }
 
   {
