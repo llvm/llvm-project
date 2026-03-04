@@ -277,23 +277,83 @@ bool isContainerInvalidationMethod(const CXXMethodDecl &MD) {
   if (!isInStlNamespace(RD))
     return false;
 
-  StringRef ContainerName = getName(*RD);
-  static const llvm::StringSet<> Containers = {
-      // Sequence
-      "vector", "basic_string", "deque",
-      // Adaptors
-      // FIXME: Add queue and stack and check for underlying container (e.g. no
-      // invalidation for std::list).
-      "priority_queue",
-      // Associative
-      "set", "multiset", "map", "multimap",
-      // Unordered Associative
-      "unordered_set", "unordered_multiset", "unordered_map",
-      "unordered_multimap",
-      // C++23 Flat
-      "flat_map", "flat_set", "flat_multimap", "flat_multiset"};
+  // `pop_back` is excluded: it only invalidates references to the removed
+  // element, not to other elements.
+  static const llvm::StringSet<> Vector = {// Insertion
+                                           "insert", "emplace", "emplace_back",
+                                           "push_back", "insert_range",
+                                           "append_range",
+                                           // Removal
+                                           "erase", "clear",
+                                           // Memory management
+                                           "reserve", "resize", "shrink_to_fit",
+                                           // Assignment
+                                           "assign", "assign_range"};
 
-  if (!Containers.contains(ContainerName))
+  // `pop_*` methods are excluded: they only invalidate references to the
+  // removed element, not to other elements.
+  static const llvm::StringSet<> Deque = {// Insertion
+                                          "insert", "emplace", "insert_range",
+                                          // Removal
+                                          "erase", "clear",
+                                          // Memory management
+                                          "resize", "shrink_to_fit",
+                                          // Assignment
+                                          "assign", "assign_range"};
+
+  static const llvm::StringSet<> String = {
+      // Insertion
+      "insert", "push_back", "append", "replace", "replace_with_range",
+      "insert_range", "append_range",
+      // Removal
+      "pop_back", "erase", "clear",
+      // Memory management
+      "reserve", "resize", "resize_and_overwrite", "shrink_to_fit",
+      // Assignment
+      "swap", "assign", "assign_range"};
+
+  // FIXME: Add queue and stack and check for underlying container
+  // (e.g. no invalidation for std::list).
+  static const llvm::StringSet<> PriorityQueue = {// Insertion
+                                                  "push", "emplace",
+                                                  "push_range",
+                                                  // Removal
+                                                  "pop"};
+
+  // `erase` and `extract` are excluded: they only affect the removed element,
+  // not to other elements.
+  static const llvm::StringSet<> NodeBased = {// Removal
+                                              "clear"};
+
+  // For `flat_*` container adaptors, `try_emplace` and `insert_or_assign`
+  // only exist on `flat_map`. Listing them here is harmless since the methods
+  // won't be found on other types.
+  static const llvm::StringSet<> Flat = {// Insertion
+                                         "insert", "emplace", "emplace_hint",
+                                         "try_emplace", "insert_or_assign",
+                                         "insert_range", "merge",
+                                         // Removal
+                                         "extract", "erase", "clear",
+                                         // Assignment
+                                         "replace"};
+
+  const StringRef ContainerName = getName(*RD);
+  // TODO: Consider caching this lookup by CXXMethodDecl pointer if this
+  // StringSwitch becomes a performance bottleneck.
+  const llvm::StringSet<> *InvalidatingMethods =
+      llvm::StringSwitch<const llvm::StringSet<> *>(ContainerName)
+          .Case("vector", &Vector)
+          .Case("basic_string", &String)
+          .Case("deque", &Deque)
+          .Case("priority_queue", &PriorityQueue)
+          .Cases({"set", "multiset", "map", "multimap", "unordered_set",
+                  "unordered_multiset", "unordered_map", "unordered_multimap"},
+                 &NodeBased)
+          .Cases({"flat_map", "flat_set", "flat_multimap", "flat_multiset"},
+                 &Flat)
+          .Default(nullptr);
+
+  if (!InvalidatingMethods)
     return false;
 
   // Handle Operators via OverloadedOperatorKind
@@ -303,13 +363,10 @@ bool isContainerInvalidationMethod(const CXXMethodDecl &MD) {
     case OO_Equal:     // operator= : Always invalidates (Assignment)
     case OO_PlusEqual: // operator+= : Append (String/Vector)
       return true;
-    case OO_Subscript: // operator[] : Invalidation only for Maps
-                       // (Insert-or-access)
-    {
-      static const llvm::StringSet<> MapContainers = {"map", "unordered_map",
-                                                      "flat_map"};
-      return MapContainers.contains(ContainerName);
-    }
+    case OO_Subscript: // operator[] : Invalidation only for
+                       // `flat_map` (Insert-or-access).
+                       // `map` and `unordered_map` are excluded.
+      return ContainerName == "flat_map";
     default:
       return false;
     }
@@ -317,20 +374,7 @@ bool isContainerInvalidationMethod(const CXXMethodDecl &MD) {
 
   if (!MD.getIdentifier())
     return false;
-  static const llvm::StringSet<> InvalidatingMembers = {
-      // Basic Insertion/Emplacement
-      "push_front", "push_back", "emplace_front", "emplace_back", "insert",
-      "emplace", "push",
-      // Basic Removal/Clearing
-      "pop_front", "pop_back", "pop", "erase", "clear",
-      // Memory Management
-      "reserve", "resize", "shrink_to_fit",
-      // Assignment (Named)
-      "assign", "swap",
-      // String Specifics
-      "append", "replace",
-      // Modern C++ (C++17/23)
-      "extract", "try_emplace", "insert_range", "append_range", "assign_range"};
-  return InvalidatingMembers.contains(MD.getName());
+
+  return InvalidatingMethods->contains(MD.getName());
 }
 } // namespace clang::lifetimes

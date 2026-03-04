@@ -722,6 +722,31 @@ std::optional<Instruction *>
 GCNTTIImpl::instCombineIntrinsic(InstCombiner &IC, IntrinsicInst &II) const {
   Intrinsic::ID IID = II.getIntrinsicID();
   switch (IID) {
+  case Intrinsic::amdgcn_implicitarg_ptr: {
+    uint64_t ImplicitArgBytes = ST->getImplicitArgNumBytes(*II.getFunction());
+
+    uint64_t CurrentOrNullBytes =
+        II.getAttributes().getRetDereferenceableOrNullBytes();
+    if (CurrentOrNullBytes != 0) {
+      // Refine "dereferenceable (A) meets dereferenceable_or_null(B)"
+      // into dereferenceable(max(A, B))
+      uint64_t NewBytes = std::max(CurrentOrNullBytes, ImplicitArgBytes);
+      II.addRetAttr(
+          Attribute::getWithDereferenceableBytes(II.getContext(), NewBytes));
+      II.removeRetAttr(Attribute::DereferenceableOrNull);
+      return &II;
+    }
+
+    uint64_t CurrentBytes = II.getAttributes().getRetDereferenceableBytes();
+    uint64_t NewBytes = std::max(CurrentBytes, ImplicitArgBytes);
+    if (NewBytes != CurrentBytes) {
+      II.addRetAttr(
+          Attribute::getWithDereferenceableBytes(II.getContext(), NewBytes));
+      return &II;
+    }
+
+    return std::nullopt;
+  }
   case Intrinsic::amdgcn_rcp: {
     Value *Src = II.getArgOperand(0);
     if (isa<PoisonValue>(Src))
@@ -1454,7 +1479,7 @@ GCNTTIImpl::instCombineIntrinsic(InstCombiner &IC, IntrinsicInst &II) const {
     auto *BC = cast<ConstantInt>(II.getArgOperand(5));
     auto *RM = cast<ConstantInt>(II.getArgOperand(3));
     auto *BM = cast<ConstantInt>(II.getArgOperand(4));
-    if (BC->isZeroValue() || RM->getZExtValue() != 0xF ||
+    if (BC->isNullValue() || RM->getZExtValue() != 0xF ||
         BM->getZExtValue() != 0xF || isa<PoisonValue>(Old))
       break;
 
@@ -1544,6 +1569,11 @@ GCNTTIImpl::instCombineIntrinsic(InstCombiner &IC, IntrinsicInst &II) const {
 
     if (isa<UndefValue>(Segment))
       return IC.replaceInstUsesWith(II, ConstantFP::getZero(II.getType()));
+
+    // Sign bit is not used.
+    Value *StrippedSign = InstCombiner::stripSignOnlyFPOps(Src);
+    if (StrippedSign != Src)
+      return IC.replaceOperand(II, 0, StrippedSign);
 
     if (II.isStrictFP())
       break;
@@ -1820,27 +1850,6 @@ GCNTTIImpl::instCombineIntrinsic(InstCombiner &IC, IntrinsicInst &II) const {
         Args, &II);
     NewII->takeName(&II);
     return IC.replaceInstUsesWith(II, NewII);
-  }
-  case Intrinsic::amdgcn_tensor_load_to_lds:
-  case Intrinsic::amdgcn_tensor_store_from_lds: {
-    Value *D2 = II.getArgOperand(2);
-    Value *D3 = II.getArgOperand(3);
-    // We know that not passing the second and third tensor DMA groups is
-    // equivalent to passing zeroes for those registers, so we rewrite to the
-    // shorter form here. Undef or poison are replaced by 0.
-    auto Pred = m_CombineOr(m_Zero(), m_Undef());
-    if (!match(D2, Pred) || !match(D3, Pred))
-      return std::nullopt;
-
-    auto ShortIntrinsic = IID == Intrinsic::amdgcn_tensor_load_to_lds
-                              ? Intrinsic::amdgcn_tensor_load_to_lds_d2
-                              : Intrinsic::amdgcn_tensor_store_from_lds_d2;
-    CallInst *NewII = IC.Builder.CreateIntrinsic(
-        ShortIntrinsic,
-        {II.getArgOperand(0), II.getArgOperand(1), II.getArgOperand(4)});
-    NewII->takeName(&II);
-    NewII->copyMetadata(II);
-    return IC.eraseInstFromFunction(II);
   }
   case Intrinsic::amdgcn_wave_shuffle: {
     if (!ST->hasDPP())

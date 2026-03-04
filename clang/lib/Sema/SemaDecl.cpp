@@ -6727,7 +6727,7 @@ static QualType TryToFixInvalidVariablyModifiedType(QualType T,
           ? ConstantArrayType::getNumAddressingBits(Context, ElemTy, Res)
           : Res.getActiveBits();
   if (ActiveSizeBits > ConstantArrayType::getMaxSizeBits(Context)) {
-    Oversized = Res;
+    Oversized = std::move(Res);
     return QualType();
   }
 
@@ -14134,6 +14134,10 @@ void Sema::AddInitializerToDecl(Decl *RealDecl, Expr *Init, bool DirectInit) {
   //   struct T { S a, b; } t = { Temp(), Temp() }
   //
   // we should destroy the first Temp before constructing the second.
+
+  // Set context flag for OverflowBehaviorType initialization analysis
+  llvm::SaveAndRestore OBTAssignmentContext(InOverflowBehaviorAssignmentContext,
+                                            true);
   ExprResult Result =
       ActOnFinishFullExpr(Init, VDecl->getLocation(),
                           /*DiscardedValue*/ false, VDecl->isConstexpr());

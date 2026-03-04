@@ -21,7 +21,7 @@ machineFunctionInfo:
   isEntryFunction: true
 body:             |
   ; DEBUG: Machine code for function sink_and_inc_idx_when_skipping_small_region_1: IsSSA, NoPHIs, TracksLiveness
-  ; DEBUG: [PreRARemat] Retrying function scheduling with new min. occupancy of 10 from rematerializing (original was 9, target was 10)
+  ; DEBUG: [PreRARemat] Retrying function scheduling with new min. occupancy of 9 from rematerializing (original was 9, target was 10)
   ; DEBUG-NEXT: ********** MI Scheduling **********
   ; DEBUG-NEXT: sink_and_inc_idx_when_skipping_small_region_1:%bb.1
   ; DEBUG-NEXT:   From: %23:vgpr_32 = nofpexcept DBG_VALUE 23, implicit $noreg, implicit $noreg
@@ -168,12 +168,8 @@ machineFunctionInfo:
   isEntryFunction: true
 body:             |
   ; DEBUG: Machine code for function test_occ_inc_revert_all_regions: IsSSA, NoPHIs, TracksLiveness
-  ; DEBUG: [PreRARemat] Retrying function scheduling with new min. occupancy of 7 from rematerializing (original was 7, target was 8)
-  ; DEBUG: Region 1 cannot meet occupancy target, interrupting re-scheduling in all regions
-  ; DEBUG: Reverting re-scheduling in region 0
-  ; DEBUG: Reverting re-scheduling in region 1
-  ; DEBUG-NOT: Reverting re-scheduling in region 3
-  ; DEBUG-NOT: Reverting re-scheduling in region 4
+  ; DEBUG: [PreRARemat] Retrying function scheduling with new min. occupancy of 6 from rematerializing (original was 5, target was 6)
+  ; DEBUG: [PreRARemat] Commiting all rematerializations
   bb.0:
     successors: %bb.1
 

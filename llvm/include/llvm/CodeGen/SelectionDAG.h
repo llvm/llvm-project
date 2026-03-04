@@ -1292,6 +1292,12 @@ public:
   /// stack arguments from being clobbered.
   LLVM_ABI SDValue getStackArgumentTokenFactor(SDValue Chain);
 
+  /// Lower a memccpy operation into a target library call and return the
+  /// resulting chain and call result as SelectionDAG SDValues.
+  LLVM_ABI std::pair<SDValue, SDValue>
+  getMemccpy(SDValue Chain, const SDLoc &dl, SDValue Dst, SDValue Src,
+             SDValue C, SDValue Size, const CallInst *CI);
+
   /// Lower a memcmp operation into a target library call and return the
   /// resulting chain and call result as SelectionDAG SDValues.
   LLVM_ABI std::pair<SDValue, SDValue> getMemcmp(SDValue Chain, const SDLoc &dl,
@@ -2243,8 +2249,19 @@ public:
 
   /// Test if the given value is known to have exactly one bit set. This differs
   /// from computeKnownBits in that it doesn't necessarily determine which bit
-  /// is set.
-  LLVM_ABI bool isKnownToBeAPowerOfTwo(SDValue Val, unsigned Depth = 0) const;
+  /// is set. If 'OrZero' is set, then return true if the given value is either
+  /// a power of two or zero.
+  LLVM_ABI bool isKnownToBeAPowerOfTwo(SDValue Val, bool OrZero = false,
+                                       unsigned Depth = 0) const;
+
+  /// Test if the given value is known to have exactly one bit set. This differs
+  /// from computeKnownBits in that it doesn't necessarily determine which bit
+  /// is set. The DemandedElts argument allows us to only collect the minimum
+  /// sign bits of the requested vector elements. If 'OrZero' is set, then
+  /// return true if the given value is either a power of two or zero.
+  LLVM_ABI bool isKnownToBeAPowerOfTwo(SDValue Val, const APInt &DemandedElts,
+                                       bool OrZero = false,
+                                       unsigned Depth = 0) const;
 
   /// Test if the given _fp_ value is known to be an integer power-of-2, either
   /// positive or negative.
@@ -2383,6 +2400,12 @@ public:
 
   /// Test whether the given SDValue is known to contain non-zero value(s).
   LLVM_ABI bool isKnownNeverZero(SDValue Op, unsigned Depth = 0) const;
+
+  /// Test whether the given SDValue is known to contain non-zero value(s).
+  /// The DemandedElts argument limits the check to the requested vector
+  /// elements.
+  LLVM_ABI bool isKnownNeverZero(SDValue Op, const APInt &DemandedElts,
+                                 unsigned Depth = 0) const;
 
   /// Test whether the given float value is known to be positive. +0.0, +inf and
   /// +nan are considered positive, -0.0, -inf and -nan are not.
