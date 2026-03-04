@@ -390,7 +390,7 @@ foreach( t ${LIBCLC_TARGETS_TO_BUILD} )
     # maps to the private address space.
     set ( private_addrspace_val 0 )
     set ( generic_addrspace_val 0 )
-    if( ARCH STREQUAL amdgcn-amdhsa )
+    if( ARCH STREQUAL amdgcn )
       set ( private_addrspace_val 5 )
     endif()
     if( ARCH STREQUAL spirv OR ARCH STREQUAL spirv64)
