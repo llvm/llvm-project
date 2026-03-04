@@ -526,9 +526,12 @@ objc_library(
 
 cc_library(
     name = "Host",
-    srcs = glob([
-        "source/Host/common/**/*.cpp",
-    ]) + select({
+    srcs = glob(
+        [
+            "source/Host/common/**/*.cpp",
+        ],
+        exclude = ["source/Host/common/Editline.cpp"],
+    ) + select({
         "@platforms//os:linux": glob(
             [
                 "source/Host/posix/**/*.cpp",
@@ -542,11 +545,17 @@ cc_library(
                 "source/Host/posix/**/*.cpp",
             ],
         ),
+    }) + select({
+        ":libedit_enabled": ["source/Host/common/Editline.cpp"],
+        "//conditions:default": [],
     }),
-    hdrs = [":ConfigHeader"] + glob([
-        "include/lldb/Host/*.h",
-        "include/lldb/Host/common/*.h",
-    ]) + select({
+    hdrs = [":ConfigHeader"] + glob(
+        [
+            "include/lldb/Host/*.h",
+            "include/lldb/Host/common/*.h",
+        ],
+        exclude = ["include/lldb/Host/Editline.h"],
+    ) + select({
         "@platforms//os:macos": glob([
             "include/lldb/Host/macosx/*.h",
             "include/lldb/Host/posix/*.h",
@@ -555,6 +564,9 @@ cc_library(
             "include/lldb/Host/linux/*.h",
             "include/lldb/Host/posix/*.h",
         ]),
+    }) + select({
+        ":libedit_enabled": ["include/lldb/Host/Editline.h"],
+        "//conditions:default": [],
     }),
     features = ["-layering_check"],  # histedit.h breaks this.
     includes = ["include"],
