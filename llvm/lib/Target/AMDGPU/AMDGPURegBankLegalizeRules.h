@@ -226,8 +226,8 @@ enum RegBankLLTMappingApplyID {
   SgprP0Call_WF,
   SgprP4Call_WF,
 
-  // Src only modifiers: readfirstlane if divergent (not waterfall)
-  ForceSgprB32,
+  // Src only modifiers: readfirstlane to M0 if divergent (not waterfall)
+  SgprB32_M0,
 
   // Src only modifiers: extends
   Sgpr32AExt,
