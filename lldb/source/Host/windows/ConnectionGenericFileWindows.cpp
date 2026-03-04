@@ -19,37 +19,6 @@
 using namespace lldb;
 using namespace lldb_private;
 
-namespace {
-// This is a simple helper class to package up the information needed to return
-// from a Read/Write operation function.  Since there is a lot of code to be
-// run before exit regardless of whether the operation succeeded or failed,
-// combined with many possible return paths, this is the cleanest way to
-// represent it.
-class ReturnInfo {
-public:
-  void Set(size_t bytes, ConnectionStatus status, DWORD error_code) {
-    m_error = Status(error_code, eErrorTypeWin32);
-    m_bytes = bytes;
-    m_status = status;
-  }
-
-  void Set(size_t bytes, ConnectionStatus status, llvm::StringRef error_msg) {
-    m_error = Status::FromErrorString(error_msg.data());
-    m_bytes = bytes;
-    m_status = status;
-  }
-
-  size_t GetBytes() const { return m_bytes; }
-  ConnectionStatus GetStatus() const { return m_status; }
-  const Status &GetError() const { return m_error; }
-
-private:
-  Status m_error;
-  size_t m_bytes;
-  ConnectionStatus m_status;
-};
-}
-
 ConnectionGenericFile::ConnectionGenericFile()
     : m_file(INVALID_HANDLE_VALUE), m_owns_file(false) {
   ::ZeroMemory(&m_overlapped, sizeof(m_overlapped));
@@ -164,150 +133,127 @@ size_t ConnectionGenericFile::Read(void *dst, size_t dst_len,
                                    const Timeout<std::micro> &timeout,
                                    lldb::ConnectionStatus &status,
                                    Status *error_ptr) {
-  ReturnInfo return_info;
-  BOOL result = 0;
-  DWORD bytes_read = 0;
-
   if (error_ptr)
     error_ptr->Clear();
 
-  if (!IsConnected()) {
-    return_info.Set(0, eConnectionStatusNoConnection, ERROR_INVALID_HANDLE);
-    goto finish;
+  auto finish = [&](size_t bytes, ConnectionStatus s, DWORD error_code) {
+    m_read_pending = s == eConnectionStatusInterrupted;
+    status = s;
+    if (error_ptr)
+      *error_ptr = Status(error_code, eErrorTypeWin32);
+
+    // kBytesAvailableEvent is a manual reset event.  Make sure it gets reset
+    // here so that any subsequent operations don't immediately see bytes
+    // available.
+    ResetEvent(m_event_handles[kBytesAvailableEvent]);
+    IncrementFilePointer(bytes);
+    Log *log = GetLog(LLDBLog::Connection);
+    LLDB_LOGF(log,
+              "%p ConnectionGenericFile::Read()  handle = %p, dst = %p, "
+              "dst_len = %zu) => %zu, error = %s",
+              static_cast<void *>(this), m_file, dst, dst_len, bytes,
+              error_code ? Status(error_code, eErrorTypeWin32).AsCString()
+                         : "");
+    return bytes;
+  };
+
+  if (!IsConnected())
+    return finish(0, eConnectionStatusNoConnection, ERROR_INVALID_HANDLE);
+
+  BOOL read_result;
+  DWORD read_error;
+  if (!m_read_pending) {
+    m_overlapped.hEvent = m_event_handles[kBytesAvailableEvent];
+    read_result = ::ReadFile(m_file, dst, dst_len, NULL, &m_overlapped);
+    read_error = ::GetLastError();
   }
 
-  if (m_read_pending) {
-    if (::GetOverlappedResult(m_file, &m_overlapped, &bytes_read, FALSE)) {
-      m_read_pending = false;
-      return bytes_read;
+  if (!m_read_pending && !read_result && read_error != ERROR_IO_PENDING) {
+    if (read_error == ERROR_BROKEN_PIPE) {
+      // The write end of a pipe was closed.  This is equivalent to EOF.
+      return finish(0, eConnectionStatusEndOfFile, 0);
     }
-  }
-
-  m_overlapped.hEvent = m_event_handles[kBytesAvailableEvent];
-
-  result = ::ReadFile(m_file, dst, dst_len, NULL, &m_overlapped);
-  if (result || ::GetLastError() == ERROR_IO_PENDING) {
-    if (!result) {
-      // The expected return path.  The operation is pending.  Wait for the
-      // operation to complete or be interrupted.
-      DWORD milliseconds =
-          timeout
-              ? std::chrono::duration_cast<std::chrono::milliseconds>(*timeout)
-                    .count()
-              : INFINITE;
-      DWORD wait_result = ::WaitForMultipleObjects(
-          std::size(m_event_handles), m_event_handles, FALSE, milliseconds);
-      // All of the events are manual reset events, so make sure we reset them
-      // to non-signalled.
-      switch (wait_result) {
-      case WAIT_OBJECT_0 + kBytesAvailableEvent:
-        break;
-      case WAIT_OBJECT_0 + kInterruptEvent:
-        return_info.Set(0, eConnectionStatusInterrupted, 0);
-        goto finish;
-      case WAIT_TIMEOUT:
-        return_info.Set(0, eConnectionStatusTimedOut, 0);
-        goto finish;
-      case WAIT_FAILED:
-        return_info.Set(0, eConnectionStatusError, ::GetLastError());
-        goto finish;
-      }
-    }
-    // The data is ready.  Figure out how much was read and return;
-    if (!::GetOverlappedResult(m_file, &m_overlapped, &bytes_read, FALSE)) {
-      DWORD result_error = ::GetLastError();
-      // ERROR_OPERATION_ABORTED occurs when someone calls Disconnect() during
-      // a blocking read. This triggers a call to CancelIoEx, which causes the
-      // operation to complete and the result to be ERROR_OPERATION_ABORTED.
-      if (result_error == ERROR_HANDLE_EOF ||
-          result_error == ERROR_OPERATION_ABORTED ||
-          result_error == ERROR_BROKEN_PIPE)
-        return_info.Set(bytes_read, eConnectionStatusEndOfFile, 0);
-      else
-        return_info.Set(bytes_read, eConnectionStatusError, result_error);
-    } else if (bytes_read == 0)
-      return_info.Set(bytes_read, eConnectionStatusEndOfFile, 0);
-    else
-      return_info.Set(bytes_read, eConnectionStatusSuccess, 0);
-
-    goto finish;
-  } else if (::GetLastError() == ERROR_BROKEN_PIPE) {
-    // The write end of a pipe was closed.  This is equivalent to EOF.
-    return_info.Set(0, eConnectionStatusEndOfFile, 0);
-  } else {
     // An unknown error occurred.  Fail out.
-    return_info.Set(0, eConnectionStatusError, ::GetLastError());
+    return finish(0, eConnectionStatusError, ::GetLastError());
   }
-  goto finish;
 
-finish:
-  m_read_pending = return_info.GetStatus() == eConnectionStatusInterrupted;
-  status = return_info.GetStatus();
-  if (error_ptr)
-    *error_ptr = return_info.GetError().Clone();
+  if (!read_result || m_read_pending) {
+    // The expected return path.  The operation is pending.  Wait for the
+    // operation to complete or be interrupted.
+    DWORD milliseconds =
+        timeout
+            ? std::chrono::duration_cast<std::chrono::milliseconds>(*timeout)
+                  .count()
+            : INFINITE;
+    DWORD wait_result = ::WaitForMultipleObjects(
+        std::size(m_event_handles), m_event_handles, FALSE, milliseconds);
+    // All of the events are manual reset events, so make sure we reset them
+    // to non-signalled.
+    switch (wait_result) {
+    case WAIT_OBJECT_0 + kBytesAvailableEvent:
+      break;
+    case WAIT_OBJECT_0 + kInterruptEvent:
+      return finish(0, eConnectionStatusInterrupted, 0);
+    case WAIT_TIMEOUT:
+      return finish(0, eConnectionStatusTimedOut, 0);
+    case WAIT_FAILED:
+      return finish(0, eConnectionStatusError, ::GetLastError());
+    }
+  }
 
-  // kBytesAvailableEvent is a manual reset event.  Make sure it gets reset
-  // here so that any subsequent operations don't immediately see bytes
-  // available.
-  ResetEvent(m_event_handles[kBytesAvailableEvent]);
+  // The data is ready.  Figure out how much was read and return;
+  DWORD bytes_read = 0;
+  if (!::GetOverlappedResult(m_file, &m_overlapped, &bytes_read, FALSE)) {
+    DWORD result_error = ::GetLastError();
+    // ERROR_OPERATION_ABORTED occurs when someone calls Disconnect() during
+    // a blocking read. This triggers a call to CancelIoEx, which causes the
+    // operation to complete and the result to be ERROR_OPERATION_ABORTED.
+    if (result_error == ERROR_HANDLE_EOF ||
+        result_error == ERROR_OPERATION_ABORTED ||
+        result_error == ERROR_BROKEN_PIPE)
+      return finish(bytes_read, eConnectionStatusEndOfFile, 0);
+    return finish(bytes_read, eConnectionStatusError, result_error);
+  }
 
-  IncrementFilePointer(return_info.GetBytes());
-  Log *log = GetLog(LLDBLog::Connection);
-  LLDB_LOGF(log,
-            "%p ConnectionGenericFile::Read()  handle = %p, dst = %p, "
-            "dst_len = %zu) => %zu, error = %s",
-            static_cast<void *>(this), m_file, dst, dst_len,
-            return_info.GetBytes(), return_info.GetError().AsCString());
-
-  return return_info.GetBytes();
+  if (bytes_read == 0)
+    return finish(0, eConnectionStatusEndOfFile, 0);
+  return finish(bytes_read, eConnectionStatusSuccess, 0);
 }
 
 size_t ConnectionGenericFile::Write(const void *src, size_t src_len,
                                     lldb::ConnectionStatus &status,
                                     Status *error_ptr) {
-  ReturnInfo return_info;
-  DWORD bytes_written = 0;
-  BOOL result = 0;
-
   if (error_ptr)
     error_ptr->Clear();
 
-  if (!IsConnected()) {
-    return_info.Set(0, eConnectionStatusNoConnection, ERROR_INVALID_HANDLE);
-    goto finish;
-  }
+  auto finish = [&](size_t bytes, ConnectionStatus s, DWORD error_code) {
+    status = s;
+    if (error_ptr)
+      *error_ptr = Status(error_code, eErrorTypeWin32);
+    IncrementFilePointer(bytes);
+    Log *log = GetLog(LLDBLog::Connection);
+    LLDB_LOGF(log,
+              "%p ConnectionGenericFile::Write()  handle = %p, src = %p, "
+              "src_len = %zu) => %zu, error = %s",
+              static_cast<void *>(this), m_file, src, src_len, bytes,
+              Status(error_code, eErrorTypeWin32).AsCString());
+    return bytes;
+  };
+
+  if (!IsConnected())
+    return finish(0, eConnectionStatusNoConnection, ERROR_INVALID_HANDLE);
 
   m_overlapped.hEvent = NULL;
 
-  // Writes are not interruptible like reads are, so just block until it's
-  // done.
-  result = ::WriteFile(m_file, src, src_len, NULL, &m_overlapped);
-  if (!result && ::GetLastError() != ERROR_IO_PENDING) {
-    return_info.Set(0, eConnectionStatusError, ::GetLastError());
-    goto finish;
-  }
+  DWORD bytes_written = 0;
+  BOOL result = ::WriteFile(m_file, src, src_len, NULL, &m_overlapped);
+  if (!result && ::GetLastError() != ERROR_IO_PENDING)
+    return finish(0, eConnectionStatusError, ::GetLastError());
 
-  if (!::GetOverlappedResult(m_file, &m_overlapped, &bytes_written, TRUE)) {
-    return_info.Set(bytes_written, eConnectionStatusError, ::GetLastError());
-    goto finish;
-  }
+  if (!::GetOverlappedResult(m_file, &m_overlapped, &bytes_written, TRUE))
+    return finish(bytes_written, eConnectionStatusError, ::GetLastError());
 
-  return_info.Set(bytes_written, eConnectionStatusSuccess, 0);
-  goto finish;
-
-finish:
-  status = return_info.GetStatus();
-  if (error_ptr)
-    *error_ptr = return_info.GetError().Clone();
-
-  IncrementFilePointer(return_info.GetBytes());
-  Log *log = GetLog(LLDBLog::Connection);
-  LLDB_LOGF(log,
-            "%p ConnectionGenericFile::Write()  handle = %p, src = %p, "
-            "src_len = %zu) => %zu, error = %s",
-            static_cast<void *>(this), m_file, src, src_len,
-            return_info.GetBytes(), return_info.GetError().AsCString());
-  return return_info.GetBytes();
+  return finish(bytes_written, eConnectionStatusSuccess, 0);
 }
 
 std::string ConnectionGenericFile::GetURI() { return m_uri; }

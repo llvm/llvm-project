@@ -3464,8 +3464,9 @@ Instruction *InstCombinerImpl::visitGetElementPtrInst(GetElementPtrInst &GEP) {
 
   bool SeenNonZeroIndex = false;
   for (auto [IdxNum, Idx] : enumerate(Indices)) {
+    // Ignore one leading zero index.
     auto *C = dyn_cast<Constant>(Idx);
-    if (C && C->isNullValue())
+    if (C && C->isNullValue() && IdxNum == 0)
       continue;
 
     if (!SeenNonZeroIndex) {
@@ -3515,13 +3516,9 @@ Instruction *InstCombinerImpl::visitGetElementPtrInst(GetElementPtrInst &GEP) {
             GEPType == Y->getType()) {
           bool HasNonAddressBits =
               DL.getAddressSizeInBits(AS) != DL.getPointerSizeInBits(AS);
-          bool Changed = false;
-          GEP.replaceUsesWithIf(Y, [&](Use &U) {
-            bool ShouldReplace =
-                isa<PtrToAddrInst, ICmpInst>(U.getUser()) ||
-                (!HasNonAddressBits && isa<PtrToIntInst>(U.getUser()));
-            Changed |= ShouldReplace;
-            return ShouldReplace;
+          bool Changed = GEP.replaceUsesWithIf(Y, [&](Use &U) {
+            return isa<PtrToAddrInst, ICmpInst>(U.getUser()) ||
+                   (!HasNonAddressBits && isa<PtrToIntInst>(U.getUser()));
           });
           return Changed ? &GEP : nullptr;
         }
@@ -5357,11 +5354,8 @@ bool InstCombinerImpl::freezeOtherUses(FreezeInst &FI) {
     Changed = true;
   }
 
-  Op->replaceUsesWithIf(&FI, [&](Use &U) -> bool {
-    bool Dominates = DT.dominates(&FI, U);
-    Changed |= Dominates;
-    return Dominates;
-  });
+  Changed |= Op->replaceUsesWithIf(
+      &FI, [&](Use &U) -> bool { return DT.dominates(&FI, U); });
 
   return Changed;
 }
