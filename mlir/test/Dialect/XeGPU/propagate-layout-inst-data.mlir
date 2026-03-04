@@ -334,3 +334,21 @@ gpu.module @test{
     return
   }
 }
+
+
+// -----
+gpu.module @test{
+  // CHECK-LABEL: insert_strided_slice_index_type
+  // CHECK: vector.insert_strided_slice %{{.*}} {layout_result_0 = #xegpu.layout<inst_data = [1, 16]>
+  // CHECK: xegpu.store %{{.*}} <{layout = #xegpu.layout<inst_data = [1, 16]>}>
+  func.func @insert_strided_slice_index_type(%arg0: i64) {
+    %vector_step_2d_placeholder = arith.constant dense<1> : vector<16x16xindex>
+    %vector_step_slice = arith.constant dense<12> : vector<1x16xindex>
+    %v = vector.insert_strided_slice %vector_step_slice, %vector_step_2d_placeholder
+      {offsets = [0, 0], sizes = [1, 16], strides = [1, 1]} : vector<1x16xindex> into vector<16x16xindex>
+    %cst = arith.constant dense<true> : vector<16x16xi1>
+    %data = arith.constant dense<0.000000e+00> : vector<16x16xf16>
+    xegpu.store %data, %arg0[%v], %cst : vector<16x16xf16>, i64, vector<16x16xindex>, vector<16x16xi1>
+    return
+  }
+}
