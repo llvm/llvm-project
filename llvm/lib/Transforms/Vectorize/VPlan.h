@@ -25,7 +25,6 @@
 #define LLVM_TRANSFORMS_VECTORIZE_VPLAN_H
 
 #include "VPlanValue.h"
-#include "llvm/ADT/Bitfields.h"
 #include "llvm/ADT/MapVector.h"
 #include "llvm/ADT/SmallPtrSet.h"
 #include "llvm/ADT/SmallVector.h"
@@ -727,7 +726,7 @@ private:
   /// Holds both the predicate and fast-math flags for floating-point
   /// comparisons.
   struct FCmpFlagsTy {
-    uint8_t CmpPredStorage;
+    CmpInst::Predicate Pred;
     FastMathFlagsTy FMFs;
   };
   /// Holds reduction-specific flags: RecurKind, IsOrdered, IsInLoop, and FMFs.
@@ -749,33 +748,30 @@ private:
   OperationType OpType;
 
   union {
-    uint8_t CmpPredStorage;
+    CmpInst::Predicate CmpPredicate;
     WrapFlagsTy WrapFlags;
     TruncFlagsTy TruncFlags;
     DisjointFlagsTy DisjointFlags;
     ExactFlagsTy ExactFlags;
-    uint8_t GEPFlagsStorage;
+    GEPNoWrapFlags GEPFlags;
     NonNegFlagsTy NonNegFlags;
     FastMathFlagsTy FMFs;
     FCmpFlagsTy FCmpFlags;
     ReductionFlagsTy ReductionFlags;
+    unsigned AllFlags;
   };
 
 public:
-  VPIRFlags() : OpType(OperationType::Other), CmpPredStorage(0) {}
+  VPIRFlags() : OpType(OperationType::Other), AllFlags(0) {}
 
   VPIRFlags(Instruction &I) {
     if (auto *FCmp = dyn_cast<FCmpInst>(&I)) {
       OpType = OperationType::FCmp;
-      Bitfield::set<CmpInst::PredicateField>(FCmpFlags.CmpPredStorage,
-                                             FCmp->getPredicate());
-      assert(getPredicate() == FCmp->getPredicate() && "predicate truncated");
+      FCmpFlags.Pred = FCmp->getPredicate();
       FCmpFlags.FMFs = FCmp->getFastMathFlags();
     } else if (auto *Op = dyn_cast<CmpInst>(&I)) {
       OpType = OperationType::Cmp;
-      Bitfield::set<CmpInst::PredicateField>(CmpPredStorage,
-                                             Op->getPredicate());
-      assert(getPredicate() == Op->getPredicate() && "predicate truncated");
+      CmpPredicate = Op->getPredicate();
     } else if (auto *Op = dyn_cast<PossiblyDisjointInst>(&I)) {
       OpType = OperationType::DisjointOp;
       DisjointFlags.IsDisjoint = Op->isDisjoint();
@@ -790,9 +786,7 @@ public:
       ExactFlags.IsExact = Op->isExact();
     } else if (auto *GEP = dyn_cast<GetElementPtrInst>(&I)) {
       OpType = OperationType::GEPOp;
-      GEPFlagsStorage = GEP->getNoWrapFlags().getRaw();
-      assert(getGEPNoWrapFlags() == GEP->getNoWrapFlags() &&
-             "wrap flags truncated");
+      GEPFlags = GEP->getNoWrapFlags();
     } else if (auto *PNNI = dyn_cast<PossiblyNonNegInst>(&I)) {
       OpType = OperationType::NonNegOp;
       NonNegFlags.NonNeg = PNNI->hasNonNeg();
@@ -801,19 +795,16 @@ public:
       FMFs = Op->getFastMathFlags();
     } else {
       OpType = OperationType::Other;
-      CmpPredStorage = 0;
+      AllFlags = 0;
     }
   }
 
-  VPIRFlags(CmpInst::Predicate Pred) : OpType(OperationType::Cmp) {
-    Bitfield::set<CmpInst::PredicateField>(CmpPredStorage, Pred);
-    assert(getPredicate() == Pred && "predicate truncated");
-  }
+  VPIRFlags(CmpInst::Predicate Pred)
+      : OpType(OperationType::Cmp), CmpPredicate(Pred) {}
 
   VPIRFlags(CmpInst::Predicate Pred, FastMathFlags FMFs)
       : OpType(OperationType::FCmp) {
-    Bitfield::set<CmpInst::PredicateField>(FCmpFlags.CmpPredStorage, Pred);
-    assert(getPredicate() == Pred && "predicate truncated");
+    FCmpFlags.Pred = Pred;
     FCmpFlags.FMFs = FMFs;
   }
 
@@ -835,13 +826,16 @@ public:
       : OpType(OperationType::PossiblyExactOp), ExactFlags(ExactFlags) {}
 
   VPIRFlags(GEPNoWrapFlags GEPFlags)
-      : OpType(OperationType::GEPOp), GEPFlagsStorage(GEPFlags.getRaw()) {}
+      : OpType(OperationType::GEPOp), GEPFlags(GEPFlags) {}
 
   VPIRFlags(RecurKind Kind, bool IsOrdered, bool IsInLoop, FastMathFlags FMFs)
       : OpType(OperationType::ReductionOp),
         ReductionFlags(Kind, IsOrdered, IsInLoop, FMFs) {}
 
-  void transferFlags(VPIRFlags &Other) { *this = Other; }
+  void transferFlags(VPIRFlags &Other) {
+    OpType = Other.OpType;
+    AllFlags = Other.AllFlags;
+  }
 
   /// Only keep flags also present in \p Other. \p Other must have the same
   /// OpType as the current object.
@@ -867,7 +861,7 @@ public:
       ExactFlags.IsExact = false;
       break;
     case OperationType::GEPOp:
-      GEPFlagsStorage = 0;
+      GEPFlags = GEPNoWrapFlags::none();
       break;
     case OperationType::FPMathOp:
     case OperationType::FCmp:
@@ -902,8 +896,7 @@ public:
       I.setIsExact(ExactFlags.IsExact);
       break;
     case OperationType::GEPOp:
-      cast<GetElementPtrInst>(&I)->setNoWrapFlags(
-          GEPNoWrapFlags::fromRaw(GEPFlagsStorage));
+      cast<GetElementPtrInst>(&I)->setNoWrapFlags(GEPFlags);
       break;
     case OperationType::FPMathOp:
     case OperationType::FCmp: {
@@ -931,24 +924,19 @@ public:
   CmpInst::Predicate getPredicate() const {
     assert((OpType == OperationType::Cmp || OpType == OperationType::FCmp) &&
            "recipe doesn't have a compare predicate");
-    uint8_t Storage = OpType == OperationType::FCmp ? FCmpFlags.CmpPredStorage
-                                                    : CmpPredStorage;
-    return Bitfield::get<CmpInst::PredicateField>(Storage);
+    return OpType == OperationType::FCmp ? FCmpFlags.Pred : CmpPredicate;
   }
 
   void setPredicate(CmpInst::Predicate Pred) {
     assert((OpType == OperationType::Cmp || OpType == OperationType::FCmp) &&
            "recipe doesn't have a compare predicate");
     if (OpType == OperationType::FCmp)
-      Bitfield::set<CmpInst::PredicateField>(FCmpFlags.CmpPredStorage, Pred);
+      FCmpFlags.Pred = Pred;
     else
-      Bitfield::set<CmpInst::PredicateField>(CmpPredStorage, Pred);
-    assert(getPredicate() == Pred && "predicate truncated");
+      CmpPredicate = Pred;
   }
 
-  GEPNoWrapFlags getGEPNoWrapFlags() const {
-    return GEPNoWrapFlags::fromRaw(GEPFlagsStorage);
-  }
+  GEPNoWrapFlags getGEPNoWrapFlags() const { return GEPFlags; }
 
   /// Returns true if the recipe has a comparison predicate.
   bool hasPredicate() const {
@@ -1053,8 +1041,6 @@ public:
   void printFlags(raw_ostream &O) const;
 #endif
 };
-
-static_assert(sizeof(VPIRFlags) <= 3, "VPIRFlags should not grow");
 
 /// A pure-virtual common base class for recipes defining a single VPValue and
 /// using IR flags.

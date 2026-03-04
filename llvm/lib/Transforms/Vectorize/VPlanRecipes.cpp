@@ -334,12 +334,12 @@ void VPIRFlags::intersectFlags(const VPIRFlags &Other) {
     ExactFlags.IsExact &= Other.ExactFlags.IsExact;
     break;
   case OperationType::GEPOp:
-    GEPFlagsStorage &= Other.GEPFlagsStorage;
+    GEPFlags &= Other.GEPFlags;
     break;
   case OperationType::FPMathOp:
   case OperationType::FCmp:
     assert((OpType != OperationType::FCmp ||
-            FCmpFlags.CmpPredStorage == Other.FCmpFlags.CmpPredStorage) &&
+            FCmpFlags.Pred == Other.FCmpFlags.Pred) &&
            "Cannot drop CmpPredicate");
     getFMFsRef().NoNaNs &= Other.getFMFsRef().NoNaNs;
     getFMFsRef().NoInfs &= Other.getFMFsRef().NoInfs;
@@ -348,8 +348,7 @@ void VPIRFlags::intersectFlags(const VPIRFlags &Other) {
     NonNegFlags.NonNeg &= Other.NonNegFlags.NonNeg;
     break;
   case OperationType::Cmp:
-    assert(CmpPredStorage == Other.CmpPredStorage &&
-           "Cannot drop CmpPredicate");
+    assert(CmpPredicate == Other.CmpPredicate && "Cannot drop CmpPredicate");
     break;
   case OperationType::ReductionOp:
     assert(ReductionFlags.Kind == Other.ReductionFlags.Kind &&
@@ -362,6 +361,7 @@ void VPIRFlags::intersectFlags(const VPIRFlags &Other) {
     getFMFsRef().NoInfs &= Other.getFMFsRef().NoInfs;
     break;
   case OperationType::Other:
+    assert(AllFlags == Other.AllFlags && "Cannot drop other flags");
     break;
   }
 }
@@ -2219,16 +2219,14 @@ void VPIRFlags::printFlags(raw_ostream &O) const {
   case OperationType::FPMathOp:
     getFastMathFlags().print(O);
     break;
-  case OperationType::GEPOp: {
-    GEPNoWrapFlags Flags = getGEPNoWrapFlags();
-    if (Flags.isInBounds())
+  case OperationType::GEPOp:
+    if (GEPFlags.isInBounds())
       O << " inbounds";
-    else if (Flags.hasNoUnsignedSignedWrap())
+    else if (GEPFlags.hasNoUnsignedSignedWrap())
       O << " nusw";
-    if (Flags.hasNoUnsignedWrap())
+    if (GEPFlags.hasNoUnsignedWrap())
       O << " nuw";
     break;
-  }
   case OperationType::NonNegOp:
     if (NonNegFlags.NonNeg)
       O << " nneg";
