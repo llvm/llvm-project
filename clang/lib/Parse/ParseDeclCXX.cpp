@@ -229,7 +229,7 @@ void Parser::ParseInnerNamespace(const InnerNamespaceInfoList &InnerNSs,
                                  BalancedDelimiterTracker &Tracker) {
   if (index == InnerNSs.size()) {
     while (!tryParseMisplacedModuleImport() && Tok.isNot(tok::r_brace) &&
-           Tok.isNot(tok::eof)) {
+           !isAtInputEnd(Tok)) {
       ParsedAttributes DeclAttrs(AttrFactory);
       MaybeParseCXX11Attributes(DeclAttrs);
       ParsedAttributes EmptyDeclSpecAttrs(AttrFactory);
@@ -428,7 +428,7 @@ Decl *Parser::ParseExportDeclaration() {
   T.consumeOpen();
 
   while (!tryParseMisplacedModuleImport() && Tok.isNot(tok::r_brace) &&
-         Tok.isNot(tok::eof)) {
+         !isAtInputEnd(Tok)) {
     ParsedAttributes DeclAttrs(AttrFactory);
     MaybeParseCXX11Attributes(DeclAttrs);
     ParsedAttributes EmptyDeclSpecAttrs(AttrFactory);
@@ -3671,7 +3671,7 @@ void Parser::ParseCXXMemberSpecification(SourceLocation RecordLoc,
   if (TagDecl) {
     // While we still have something to read, read the member-declarations.
     while (!tryParseMisplacedModuleImport() && Tok.isNot(tok::r_brace) &&
-           Tok.isNot(tok::eof)) {
+           !isAtInputEnd(Tok)) {
       // Each iteration of this loop reads one member-declaration.
       ParseCXXClassMemberDeclarationWithPragmas(
           CurAS, AccessAttrs, static_cast<DeclSpec::TST>(TagType), TagDecl);
@@ -4441,7 +4441,7 @@ bool Parser::ParseCXX11AttributeArgs(
   if (LO.CPlusPlus) {
     TentativeParsingAction TPA(*this);
     bool HasInvalidArgument = false;
-    while (Tok.isNot(tok::r_paren) && Tok.isNot(tok::eof)) {
+    while (Tok.isNot(tok::r_paren) && !isAtInputEnd(Tok)) {
       if (Tok.isOneOf(tok::hash, tok::hashhash)) {
         Diag(Tok.getLocation(), diag::ext_invalid_attribute_argument)
             << PP.getSpelling(Tok);
