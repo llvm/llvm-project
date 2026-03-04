@@ -40,6 +40,7 @@
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/SaveAndRestore.h"
 #include "llvm/Support/TimeProfiler.h"
+#include <iterator>
 #include <optional>
 
 using namespace clang;
@@ -4484,19 +4485,20 @@ ExprResult Sema::SubstConceptTemplateArguments(
       if (!E->isConceptReference())
         return E;
 
+      assert(std::next(E->decls_begin()) == E->decls_end() &&
+             "ConceptReference must have single declaration");
       NamedDecl *D = *E->decls_begin();
       ConceptDecl *ResolvedConcept = nullptr;
 
       if (auto *TTP = dyn_cast<TemplateTemplateParmDecl>(D)) {
         unsigned Depth = TTP->getDepth();
         unsigned Pos = TTP->getPosition();
-        if (Depth < MLTAL.getNumLevels() &&
-            MLTAL.hasTemplateArgument(Depth, Pos)) {
-          TemplateArgument Arg = MLTAL(Depth, Pos);
-          if (Arg.getKind() == TemplateArgument::Template)
-            ResolvedConcept = dyn_cast_or_null<ConceptDecl>(
-                Arg.getAsTemplate().getAsTemplateDecl());
-        }
+        assert(Depth < MLTAL.getNumLevels() &&
+               MLTAL.hasTemplateArgument(Depth, Pos));
+        TemplateArgument Arg = MLTAL(Depth, Pos);
+        assert(Arg.getKind() == TemplateArgument::Template);
+        ResolvedConcept = dyn_cast_or_null<ConceptDecl>(
+            Arg.getAsTemplate().getAsTemplateDecl());
       } else
         ResolvedConcept = dyn_cast<ConceptDecl>(D);
 
