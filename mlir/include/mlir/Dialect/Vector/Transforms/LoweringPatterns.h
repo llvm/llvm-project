@@ -84,8 +84,7 @@ void populateVectorMultiReductionFlatteningPatterns(
 /// Populate the pattern set with the following patterns:
 ///
 /// [OneDimMultiReductionToReduction]
-/// Converts 1-D vector.multi_reduction directly to vector.reduction.
-/// This is the terminal case for unrolling.
+/// Converts 1-D vector.multi_reduction to vector.reduction.
 ///
 /// [TwoDimMultiReductionToElementWise]
 /// Once in 2-D vector.multi_reduction form, with an **outermost** reduction
