@@ -2846,13 +2846,13 @@ genTargetOp(lower::AbstractConverter &converter, lower::SymMap &symTable,
 
           if (!mapperIdName.empty()) {
             bool isPointer = semantics::IsPointer(sym);
-            bool allowImplicitMapper = semantics::IsAllocatable(sym);
+            bool isAllocatable = semantics::IsAllocatable(sym);
             bool hasDefaultMapper =
                 converter.getModuleOp().lookupSymbol(mapperIdName);
             // Avoid attaching implicit default mappers to pointer captures.
             // For large pointer-based derived aggregates this can over-map
             // nested payloads and conflict with explicit enter/exit maps.
-            if (!isPointer && (hasDefaultMapper || allowImplicitMapper)) {
+            if (!isPointer && (hasDefaultMapper || isAllocatable)) {
               if (!hasDefaultMapper) {
                 if (auto recordType = mlir::dyn_cast_or_null<fir::RecordType>(
                         converter.genType(*typeSpec)))
