@@ -305,9 +305,12 @@ LogicalResult FuncOp::verify() {
              << " operands, but enclosing function (@" << getName()
              << ") returns " << resultTypes.size();
 
-    for (auto [i, opType] :
-         llvm::enumerate(llvm::zip(returnOp->getOperandTypes(), resultTypes))) {
-      auto [opTy, resTy] = opType;
+    for (auto [i, operand] :
+         llvm::enumerate(llvm::zip(returnOp->getOpOperands(), resultTypes))) {
+      auto [opOperand, resTy] = operand;
+      if (!opOperand.get())
+        return returnOp->emitOpError("null operand at index ") << i;
+      auto opTy = opOperand.get().getType();
       if (opTy != resTy)
         return returnOp->emitError()
                << "type of return operand " << i << " (" << opTy
