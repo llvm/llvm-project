@@ -200,7 +200,10 @@ static void buildMatmulOp(OpBuilder &b, OperationState &state,
       llvm::map_to_vector(indexingMaps, [](AffineMap map) -> Attribute {
         return AffineMapAttr::get(map);
       });
-  state.addAttribute("indexing_maps", b.getArrayAttr(indexingMapsAttrVal));
+  if (none_of(attributes, [](NamedAttribute attr) {
+        return attr.getName() == "indexing_maps";
+      }))
+    state.addAttribute("indexing_maps", b.getArrayAttr(indexingMapsAttrVal));
   return buildStructuredOp(b, state, resultTensorTypes, inputs, outputs,
                            attributes, regionBuilder);
 }
@@ -217,7 +220,10 @@ static void buildBatchMatmulOp(OpBuilder &b, OperationState &state,
       llvm::map_to_vector(indexingMaps, [](AffineMap map) -> Attribute {
         return AffineMapAttr::get(map);
       });
-  state.addAttribute("indexing_maps", b.getArrayAttr(indexingMapsAttrVal));
+  if (none_of(attributes, [](NamedAttribute attr) {
+        return attr.getName() == "indexing_maps";
+      }))
+    state.addAttribute("indexing_maps", b.getArrayAttr(indexingMapsAttrVal));
   return buildStructuredOp(b, state, resultTensorTypes, inputs, outputs,
                            attributes, regionBuilder);
 }

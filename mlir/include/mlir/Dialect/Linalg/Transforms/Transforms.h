@@ -923,10 +923,15 @@ FailureOr<GenericOp> interchangeGenericOp(RewriterBase &rewriter,
 FailureOr<GenericOp> generalizeNamedOp(RewriterBase &rewriter,
                                        LinalgOp linalgOp);
 
-/// Create a namedOp from the given GenericOp and replace the GenericOp.
-/// Currently we can specialize only trivial linalg copy operations.
-FailureOr<LinalgOp> specializeGenericOp(RewriterBase &rewriter,
-                                        GenericOp genericOp);
+struct SpecializationOptions {
+  // Specialize generics to category ops.
+  bool emitCategoryOps = false;
+};
+
+/// Replace the given GenericOp with a namedOp or categoryOp.
+FailureOr<LinalgOp>
+specializeGenericOp(RewriterBase &rewriter, GenericOp genericOp,
+                    const SpecializationOptions options = {});
 
 /// Create a new buffer using the `allocationFn` provided. The size of this
 /// buffer is either the original subview size when 'useOriginalSubviewSize' is
@@ -1718,17 +1723,24 @@ struct LinalgGeneralizationPattern
 };
 
 struct LinalgSpecializationPattern : public OpRewritePattern<GenericOp> {
-  using OpRewritePattern<GenericOp>::OpRewritePattern;
+
+  LinalgSpecializationPattern(MLIRContext *context,
+                              const SpecializationOptions &options = {},
+                              PatternBenefit benefit = 1)
+      : OpRewritePattern<GenericOp>(context, benefit), options(options) {}
 
   FailureOr<GenericOp>
   returningMatchAndRewrite(GenericOp op, PatternRewriter &rewriter) const {
-    return specializeGenericOp(rewriter, op);
+    return specializeGenericOp(rewriter, op, options);
   }
 
   LogicalResult matchAndRewrite(GenericOp op,
                                 PatternRewriter &rewriter) const override {
     return returningMatchAndRewrite(op, rewriter);
   }
+
+private:
+  SpecializationOptions options;
 };
 
 /// Vectorization pattern for memref::CopyOp.
@@ -1938,13 +1950,13 @@ void populateLinalgTilingCanonicalizationPatterns(RewritePatternSet &patterns);
 void populateLinalgNamedOpsGeneralizationPatterns(RewritePatternSet &patterns);
 
 /// Populates `patterns` with patterns to convert linalg.generic ops to named
-/// ops where possible. A linalg.generic can represent wide range and complex
-/// computations for which equivalent linalg named op may not exist e.g.
-/// linalg.generic that takes a tensor and computes a polynomial such as:
+/// or category ops where possible. A linalg.generic can represent wide range
+/// and complex computations for which equivalent linalg named op may not exist
+/// e.g. linalg.generic that takes a tensor and computes a polynomial such as:
 ///     p(x) = an*x^n + ... + a1x + a0
-/// There is no equivalent named op to convert to. Many such cases exist.
+/// There is no equivalent ops to convert to. Many such cases exist.
 void populateLinalgGenericOpsSpecializationPatterns(
-    RewritePatternSet &patterns);
+    RewritePatternSet &patterns, const SpecializationOptions &options = {});
 
 /// Populates `patterns` that convert linalg named ops e.g. `linalg.add`
 /// to equivalent `linalg.elementwise`.
