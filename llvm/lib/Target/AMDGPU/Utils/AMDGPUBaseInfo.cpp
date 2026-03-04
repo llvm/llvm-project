@@ -1135,7 +1135,7 @@ std::string AMDGPUTargetID::toString() const {
   std::string StringRep;
   raw_string_ostream StreamRep(StringRep);
 
-  auto TargetTriple = STI.getTargetTriple();
+  const Triple &TargetTriple = STI.getTargetTriple();
   auto Version = getIsaVersion(STI.getCPU());
 
   StreamRep << TargetTriple.getArchName() << '-' << TargetTriple.getVendorName()
