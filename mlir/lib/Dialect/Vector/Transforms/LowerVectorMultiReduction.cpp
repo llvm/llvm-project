@@ -444,8 +444,6 @@ struct TwoDimMultiReductionToReduction
 };
 
 /// Converts 1-D vector.multi_reduction directly to vector.reduction.
-/// This is the terminal case for unrolling - once we reach rank 1,
-/// we convert to vector.reduction which backends can optimize.
 ///
 /// Example:
 /// ```mlir
