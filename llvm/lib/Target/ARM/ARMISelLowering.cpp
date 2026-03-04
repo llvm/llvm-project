@@ -851,6 +851,14 @@ ARMTargetLowering::ARMTargetLowering(const TargetMachine &TM_,
     setOperationAction(ISD::FNEG,       MVT::f64, Expand);
     setOperationAction(ISD::FABS,       MVT::f64, Expand);
     setOperationAction(ISD::FSQRT,      MVT::f64, Expand);
+    // Strict FP counterparts must also be Expand so the legalizer converts
+    // them to library calls (via ConvertNodeToLibcall).
+    setOperationAction(ISD::STRICT_FADD,  MVT::f64, Expand);
+    setOperationAction(ISD::STRICT_FSUB,  MVT::f64, Expand);
+    setOperationAction(ISD::STRICT_FMUL,  MVT::f64, Expand);
+    setOperationAction(ISD::STRICT_FMA,   MVT::f64, Expand);
+    setOperationAction(ISD::STRICT_FDIV,  MVT::f64, Expand);
+    setOperationAction(ISD::STRICT_FSQRT, MVT::f64, Expand);
     setOperationAction(ISD::FSIN,       MVT::f64, Expand);
     setOperationAction(ISD::FCOS,       MVT::f64, Expand);
     setOperationAction(ISD::FPOW,       MVT::f64, Expand);
@@ -1229,6 +1237,8 @@ ARMTargetLowering::ARMTargetLowering(const TargetMachine &TM_,
   if (!Subtarget->hasVFP4Base()) {
     setOperationAction(ISD::FMA, MVT::f64, Expand);
     setOperationAction(ISD::FMA, MVT::f32, Expand);
+    setOperationAction(ISD::STRICT_FMA, MVT::f64, Expand);
+    setOperationAction(ISD::STRICT_FMA, MVT::f32, Expand);
   }
 
   // Various VFP goodness
@@ -1256,6 +1266,28 @@ ARMTargetLowering::ARMTargetLowering(const TargetMachine &TM_,
     setOperationAction(ISD::STRICT_FSETCCS, MVT::f32, Custom);
     setOperationAction(ISD::STRICT_FSETCC,  MVT::f64, Custom);
     setOperationAction(ISD::STRICT_FSETCCS, MVT::f64, Custom);
+
+    // Mark strict FP arithmetic as Expand so that mutateStrictFPToFP (in
+    // SelectionDAGISel) converts them to normal FP opcodes before instruction
+    // selection.  This preserves the chain side-effects that prevent the
+    // optimizer from speculating FP operations past branches, while still
+    // using the existing VFP/NEON instruction patterns for codegen.
+    // Note: we do NOT set IsStrictFPEnabled, so the mutation path fires.
+    for (auto Op : {ISD::STRICT_FADD, ISD::STRICT_FSUB, ISD::STRICT_FMUL,
+                    ISD::STRICT_FDIV, ISD::STRICT_FSQRT}) {
+      setOperationAction(Op, MVT::f32, Expand);
+      if (Subtarget->hasFP64())
+        setOperationAction(Op, MVT::f64, Expand);
+      if (Subtarget->hasFullFP16())
+        setOperationAction(Op, MVT::f16, Expand);
+    }
+    if (Subtarget->hasVFP4Base()) {
+      setOperationAction(ISD::STRICT_FMA, MVT::f32, Expand);
+      if (Subtarget->hasFP64())
+        setOperationAction(ISD::STRICT_FMA, MVT::f64, Expand);
+      if (Subtarget->hasFullFP16())
+        setOperationAction(ISD::STRICT_FMA, MVT::f16, Expand);
+    }
   }
 
   setOperationAction(ISD::FSINCOS, MVT::f64, Expand);
