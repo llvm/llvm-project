@@ -16,6 +16,7 @@
 #include "llvm/ADT/Statistic.h"
 #include "llvm/Analysis/InstructionSimplify.h"
 #include "llvm/Analysis/ValueTracking.h"
+#include "llvm/IR/GetElementPtrTypeIterator.h"
 #include "llvm/IR/PatternMatch.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Transforms/InstCombine/InstCombiner.h"
@@ -568,16 +569,24 @@ Instruction *InstCombinerImpl::foldPHIArgGEPIntoPHI(PHINode &PN) {
       AllBasePointersAreAllocas = false;
 
     // Compare the operand lists.
+    gep_type_iterator TypeIter = gep_type_begin(GEP);
     for (unsigned Op = 0, E = FirstInst->getNumOperands(); Op != E; ++Op) {
       if (FirstInst->getOperand(Op) == GEP->getOperand(Op))
         continue;
 
-      // Don't merge two GEPs when two operands differ (introducing phi nodes)
-      // if one of the PHIs has a constant for the index.  The index may be
-      // substantially cheaper to compute for the constants, so making it a
-      // variable index could pessimize the path.  This also handles the case
-      // for struct indices, which must always be constant.
-      if (isa<Constant>(FirstInst->getOperand(Op)) ||
+      // Don't merge two GEPs if the GEP indices a struct, because struct
+      // indices must be constant.
+      if (Op > 0) { // skip pointer operand
+        if (TypeIter.isStruct())
+          return nullptr;
+        ++TypeIter;
+      }
+
+      // Don't merge if there is a mixture of constant and variable indices for
+      // the same operand. If all the indices are constant, the chance is higher
+      // that we can create a lookup table. Otherwise, we could pessimize the
+      // path.
+      if (isa<Constant>(FirstInst->getOperand(Op)) !=
           isa<Constant>(GEP->getOperand(Op)))
         return nullptr;
 
@@ -589,7 +598,7 @@ Instruction *InstCombinerImpl::foldPHIArgGEPIntoPHI(PHINode &PN) {
       // also requires a PHI, we'd be introducing more PHIs than we're
       // eliminating, which increases register pressure on entry to the PHI's
       // block.
-      if (NeededPhi)
+      if (NeededPhi && FixedOperands[Op] != nullptr)
         return nullptr;
 
       FixedOperands[Op] = nullptr; // Needs a PHI.
