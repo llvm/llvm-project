@@ -766,6 +766,15 @@ llvm::Value *CGHLSLRuntime::emitSystemSemanticLoad(
     }
   }
 
+  if (SemanticName == "SV_VERTEXID") {
+    if (ST == Triple::EnvironmentType::Vertex) {
+      if (CGM.getTarget().getTriple().isSPIRV())
+        return createSPIRVBuiltinLoad(B, CGM.getModule(), Type, Semantic->getAttrName()->getName(), /* BuiltIn::VertexIndex */ 42);
+      else
+        return emitDXILUserSemanticLoad(B, Type, Semantic, Index);
+    }
+  }
+
   llvm_unreachable(
       "Load hasn't been implemented yet for this system semantic. FIXME");
 }
