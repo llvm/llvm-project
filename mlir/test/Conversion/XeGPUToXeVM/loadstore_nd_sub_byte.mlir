@@ -11,11 +11,11 @@ gpu.module @load_store_check {
         // CHECK: %[[C128_I32:.*]] = arith.constant 128 : i32
         // CHECK: %[[SRCCE:.*]] = memref.memory_space_cast %[[ARG0]]
         // CHECK: %[[SRCINDEX:.*]] = memref.extract_aligned_pointer_as_index %[[SRCCE]]
-        // CHECK: %[[SRCPTR64:.*]] = arith.index_castui %[[SRCINDEX]] : index to i64
+        // CHECK: %[[SRCPTR64:.*]] = arith.index_castui %[[SRCINDEX]] exact : index to i64
         %srcce = memref.memory_space_cast %src : memref<16x128xi4, 1> to memref<16x128xi4>
         // CHECK: %[[DSTTE:.*]] = memref.memory_space_cast %[[ARG1]]
         // CHECK: %[[DSTINDEX:.*]] = memref.extract_aligned_pointer_as_index %[[DSTTE]]
-        // CHECK: %[[DSTPTR64:.*]] = arith.index_castui %[[DSTINDEX]] : index to i64
+        // CHECK: %[[DSTPTR64:.*]] = arith.index_castui %[[DSTINDEX]] exact : index to i64
         %dstte = memref.memory_space_cast %dst : memref<16x128xi4, 1> to memref<16x128xi4>
 
         // CHECK: %[[PAYLOAD_SRC:.*]] = vector.insert %[[SRCPTR64]], %[[CST]] [0] : i64 into vector<4xi64>
