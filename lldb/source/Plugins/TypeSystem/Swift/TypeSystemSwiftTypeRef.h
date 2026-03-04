@@ -119,6 +119,8 @@ public:
   Status IsCompatible() override;
 
   plugin::dwarf::DWARFASTParser *GetDWARFParser() override;
+  npdb::PdbAstBuilder *GetNativePDBParser() override;
+
   // CompilerDecl functions
   ConstString DeclGetName(void *opaque_decl) override {
     return ConstString("");
@@ -642,6 +644,7 @@ protected:
       m_dwarf_importer_for_clang_types_up;
   mutable std::unique_ptr<ClangNameImporter> m_name_importer_up;
   std::unique_ptr<plugin::dwarf::DWARFASTParser> m_dwarf_ast_parser_up;
+  std::unique_ptr<npdb::PdbAstBuilder> m_pdb_ast_parser_up;
 
   /// The APINotesManager responsible for each Clang module.
   llvm::DenseMap<clang::Module *,

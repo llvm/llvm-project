@@ -22,6 +22,7 @@
 #include "Plugins/LanguageRuntime/Swift/SwiftLanguageRuntime.h"
 #include "Plugins/Language/Swift/LogChannelSwift.h"
 #include "Plugins/SymbolFile/DWARF/DWARFASTParserSwift.h"
+#include "Plugins/SymbolFile/NativePDB/PdbAstBuilderSwift.h"
 #include "Plugins/TypeSystem/Clang/TypeSystemClang.h"
 #include "TypeSystemSwiftTypeRef.h"
 #include "lldb/Core/Debugger.h"
@@ -2780,6 +2781,13 @@ plugin::dwarf::DWARFASTParser *TypeSystemSwiftTypeRef::GetDWARFParser() {
   if (!m_dwarf_ast_parser_up)
     m_dwarf_ast_parser_up.reset(new DWARFASTParserSwift(*this));
   return m_dwarf_ast_parser_up.get();
+}
+
+npdb::PdbAstBuilder *TypeSystemSwiftTypeRef::GetNativePDBParser() {
+  if (!m_pdb_ast_parser_up)
+    m_pdb_ast_parser_up =
+        std::make_unique<npdb::PdbAstBuilderSwift>(*this);
+  return m_pdb_ast_parser_up.get();
 }
 
 TypeSP
