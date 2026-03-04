@@ -1354,7 +1354,6 @@ template <class Opt, class Mod> void apply(Opt *O, const Mod &M) {
 template <class DataType, bool ExternalStorage, bool isClass>
 class opt_storage {
   DataType *Location = nullptr; // Where to store the object...
-  OptionValue<DataType> Default;
 
   void check_location() const {
     assert(Location && "cl::location(...) not specified for a command "
@@ -1362,22 +1361,20 @@ class opt_storage {
                        "or cl::init specified before cl::location()!!");
   }
 
-public:
-  opt_storage() = default;
-
+protected:
   bool setLocation(Option &O, DataType &L) {
     if (Location)
       return O.error("cl::location(x) specified more than once!");
     Location = &L;
-    Default = L;
     return false;
   }
 
-  template <class T> void setValue(const T &V, bool initial = false) {
+public:
+  opt_storage() = default;
+
+  template <class T> void setValue(const T &V) {
     check_location();
     *Location = V;
-    if (initial)
-      Default = V;
   }
 
   DataType &getValue() {
@@ -1390,8 +1387,6 @@ public:
   }
 
   operator DataType() const { return this->getValue(); }
-
-  const OptionValue<DataType> &getDefault() const { return Default; }
 };
 
 // Define how to hold a class type object, such as a string.  Since we can
@@ -1401,18 +1396,10 @@ public:
 template <class DataType>
 class opt_storage<DataType, false, true> : public DataType {
 public:
-  OptionValue<DataType> Default;
-
-  template <class T> void setValue(const T &V, bool initial = false) {
-    DataType::operator=(V);
-    if (initial)
-      Default = V;
-  }
+  template <class T> void setValue(const T &V) { DataType::operator=(V); }
 
   DataType &getValue() { return *this; }
   const DataType &getValue() const { return *this; }
-
-  const OptionValue<DataType> &getDefault() const { return Default; }
 };
 
 // Define a partial specialization to handle things we cannot inherit from.  In
@@ -1422,21 +1409,14 @@ public:
 template <class DataType> class opt_storage<DataType, false, false> {
 public:
   DataType Value;
-  OptionValue<DataType> Default;
 
   // Make sure we initialize the value with the default constructor for the
   // type.
-  opt_storage() : Value(DataType()), Default() {}
+  opt_storage() : Value(DataType()) {}
 
-  template <class T> void setValue(const T &V, bool initial = false) {
-    Value = V;
-    if (initial)
-      Default = V;
-  }
+  template <class T> void setValue(const T &V) { Value = V; }
   DataType &getValue() { return Value; }
   DataType getValue() const { return Value; }
-
-  const OptionValue<DataType> &getDefault() const { return Default; }
 
   operator DataType() const { return getValue(); }
 
@@ -1453,6 +1433,7 @@ class opt
     : public Option,
       public opt_storage<DataType, ExternalStorage, std::is_class_v<DataType>> {
   ParserClass Parser;
+  OptionValue<DataType> Default;
 
   bool handleOccurrence(unsigned pos, StringRef ArgName,
                         StringRef Arg) override {
@@ -1485,17 +1466,16 @@ class opt
   }
 
   void printOptionValue(size_t GlobalWidth, bool Force) const override {
-    if (Force || !this->getDefault().compare(this->getValue())) {
-      cl::printOptionDiff<ParserClass>(*this, Parser, this->getValue(),
-                                       this->getDefault(), GlobalWidth);
+    if (Force || !Default.compare(this->getValue())) {
+      cl::printOptionDiff<ParserClass>(*this, Parser, this->getValue(), Default,
+                                       GlobalWidth);
     }
   }
 
   void setDefault() override {
     if constexpr (std::is_assignable_v<DataType &, DataType>) {
-      const OptionValue<DataType> &V = this->getDefault();
-      if (V.hasValue())
-        this->setValue(V.getValue());
+      if (Default.hasValue())
+        this->setValue(Default.getValue());
       else
         this->setValue(DataType());
     }
@@ -1512,7 +1492,25 @@ public:
   opt &operator=(const opt &) = delete;
 
   // setInitialValue - Used by the cl::init modifier...
-  void setInitialValue(const DataType &V) { this->setValue(V, true); }
+  void setInitialValue(const DataType &V) {
+    this->setValue(V);
+    Default = V;
+  }
+
+  bool setLocation(Option &O, DataType &L) {
+    // Only external storage options can have their location set. For these we
+    // also need to set the default value.
+    if constexpr (ExternalStorage) {
+      if (opt_storage<DataType, ExternalStorage,
+                      std::is_class_v<DataType>>::setLocation(O, L))
+        return true;
+      Default = L;
+      return false;
+    }
+    return true;
+  }
+
+  const OptionValue<DataType> &getDefault() const { return Default; }
 
   ParserClass &getParser() { return Parser; }
 
@@ -1565,9 +1563,6 @@ extern template class LLVM_TEMPLATE_ABI opt<bool>;
 //
 template <class DataType, class StorageClass> class list_storage {
   StorageClass *Location = nullptr; // Where to store the object...
-  std::vector<OptionValue<DataType>> Default =
-      std::vector<OptionValue<DataType>>();
-  bool DefaultAssigned = false;
 
 public:
   list_storage() = default;
@@ -1581,22 +1576,12 @@ public:
     return false;
   }
 
-  template <class T> void addValue(const T &V, bool initial = false) {
+  template <class T> void addValue(const T &V) {
     assert(Location != nullptr &&
            "cl::location(...) not specified for a command "
            "line option with external storage!");
     Location->push_back(V);
-    if (initial)
-      Default.push_back(V);
   }
-
-  const std::vector<OptionValue<DataType>> &getDefault() const {
-    return Default;
-  }
-
-  void assignDefault() { DefaultAssigned = true; }
-  void overwriteDefault() { DefaultAssigned = false; }
-  bool isDefaultAssigned() { return DefaultAssigned; }
 };
 
 // Define how to hold a class type object, such as a string.
@@ -1609,8 +1594,6 @@ public:
 //
 template <class DataType> class list_storage<DataType, bool> {
   std::vector<DataType> Storage;
-  std::vector<OptionValue<DataType>> Default;
-  bool DefaultAssigned = false;
 
 public:
   using iterator = typename std::vector<DataType>::iterator;
@@ -1674,19 +1657,7 @@ public:
   std::vector<DataType> *operator&() { return &Storage; }
   const std::vector<DataType> *operator&() const { return &Storage; }
 
-  template <class T> void addValue(const T &V, bool initial = false) {
-    Storage.push_back(V);
-    if (initial)
-      Default.push_back(OptionValue<DataType>(V));
-  }
-
-  const std::vector<OptionValue<DataType>> &getDefault() const {
-    return Default;
-  }
-
-  void assignDefault() { DefaultAssigned = true; }
-  void overwriteDefault() { DefaultAssigned = false; }
-  bool isDefaultAssigned() { return DefaultAssigned; }
+  template <class T> void addValue(const T &V) { Storage.push_back(V); }
 };
 
 //===----------------------------------------------------------------------===//
@@ -1697,6 +1668,8 @@ template <class DataType, class StorageClass = bool,
 class list : public Option, public list_storage<DataType, StorageClass> {
   std::vector<unsigned> Positions;
   ParserClass Parser;
+  std::vector<OptionValue<DataType>> Default;
+  bool DefaultAssigned = false;
 
   enum ValueExpected getValueExpectedFlagDefault() const override {
     return Parser.getValueExpectedFlagDefault();
@@ -1710,9 +1683,9 @@ class list : public Option, public list_storage<DataType, StorageClass> {
                         StringRef Arg) override {
     typename ParserClass::parser_data_type Val =
         typename ParserClass::parser_data_type();
-    if (list_storage<DataType, StorageClass>::isDefaultAssigned()) {
+    if (DefaultAssigned) {
       clear();
-      list_storage<DataType, StorageClass>::overwriteDefault();
+      DefaultAssigned = false;
     }
     if (Parser.parse(*this, ArgName, Arg, Val))
       return true; // Parse Error!
@@ -1740,7 +1713,7 @@ class list : public Option, public list_storage<DataType, StorageClass> {
   void setDefault() override {
     Positions.clear();
     list_storage<DataType, StorageClass>::clear();
-    for (auto &Val : list_storage<DataType, StorageClass>::getDefault())
+    for (auto &Val : Default)
       list_storage<DataType, StorageClass>::addValue(Val.getValue());
   }
 
@@ -1768,11 +1741,12 @@ public:
 
   // setInitialValues - Used by the cl::list_init modifier...
   void setInitialValues(ArrayRef<DataType> Vs) {
-    assert(!(list_storage<DataType, StorageClass>::isDefaultAssigned()) &&
-           "Cannot have two default values");
-    list_storage<DataType, StorageClass>::assignDefault();
-    for (auto &Val : Vs)
-      list_storage<DataType, StorageClass>::addValue(Val, true);
+    assert(!DefaultAssigned && "Cannot have two default values");
+    DefaultAssigned = true;
+    for (auto &Val : Vs) {
+      list_storage<DataType, StorageClass>::addValue(Val);
+      Default.push_back(OptionValue<DataType>(Val));
+    }
   }
 
   void setNumAdditionalVals(unsigned n) { Option::setNumAdditionalVals(n); }
