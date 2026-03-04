@@ -688,29 +688,27 @@ void CIRGenModule::replaceGlobal(cir::GlobalOp oldGV, cir::GlobalOp newGV) {
   // If the type didn't change, why are we here?
   assert(oldTy != newTy && "expected type change in replaceGlobal");
 
-  // Otherwise, visit all uses and add handling to fix up the types.
+  // Visit all uses and add handling to fix up the types.
   std::optional<mlir::SymbolTable::UseRange> oldSymUses =
       oldGV.getSymbolUses(theModule);
-  if (oldSymUses) {
-    for (mlir::SymbolTable::SymbolUse use : *oldSymUses) {
-      mlir::Operation *userOp = use.getUser();
-      assert((mlir::isa<cir::GetGlobalOp, cir::GlobalOp, cir::ConstantOp>(
-                 userOp)) &&
-             "Unexpected user for global op");
+  for (mlir::SymbolTable::SymbolUse use : *oldSymUses) {
+    mlir::Operation *userOp = use.getUser();
+    assert(
+        (mlir::isa<cir::GetGlobalOp, cir::GlobalOp, cir::ConstantOp>(userOp)) &&
+        "Unexpected user for global op");
 
-      if (auto getGlobalOp = dyn_cast<cir::GetGlobalOp>(use.getUser())) {
-        mlir::Value useOpResultValue = getGlobalOp.getAddr();
-        useOpResultValue.setType(cir::PointerType::get(newTy));
+    if (auto getGlobalOp = dyn_cast<cir::GetGlobalOp>(use.getUser())) {
+      mlir::Value useOpResultValue = getGlobalOp.getAddr();
+      useOpResultValue.setType(cir::PointerType::get(newTy));
 
-        mlir::OpBuilder::InsertionGuard guard(builder);
-        builder.setInsertionPointAfter(getGlobalOp);
-        mlir::Type ptrTy = builder.getPointerTo(oldTy);
-        mlir::Value cast = builder.createBitcast(getGlobalOp->getLoc(),
-                                                 useOpResultValue, ptrTy);
-        useOpResultValue.replaceAllUsesExcept(cast, cast.getDefiningOp());
-      } else {
-        errorNYI(userOp->getLoc(), "Replace global op use in global view attr");
-      }
+      mlir::OpBuilder::InsertionGuard guard(builder);
+      builder.setInsertionPointAfter(getGlobalOp);
+      mlir::Type ptrTy = builder.getPointerTo(oldTy);
+      mlir::Value cast =
+          builder.createBitcast(getGlobalOp->getLoc(), useOpResultValue, ptrTy);
+      useOpResultValue.replaceAllUsesExcept(cast, cast.getDefiningOp());
+    } else {
+      errorNYI(userOp->getLoc(), "Replace global op use in global view attr");
     }
   }
 
