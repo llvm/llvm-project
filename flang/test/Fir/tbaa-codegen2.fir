@@ -94,7 +94,7 @@ module attributes {fir.defaultkind = "a1c4d8i4l4r4", fir.kindmap = "", llvm.targ
 // CHECK:  %[[VAL40:.*]] = getelementptr { ptr, i64, i32, i8, i8, i8, i8, [1 x [3 x i64]] }, ptr %{{.*}}, i32 0, i32 0
 // box access:
 // CHECK:  %[[VAL41:.*]] = load ptr, ptr %[[VAL40]], align 8, !tbaa ![[BOX_ACCESS_TAG]]
-// CHECK:  %[[VAL42:.*]] = getelementptr i8, ptr %[[VAL41]], i64 %{{.*}}
+// CHECK:  %[[VAL42:.*]] = getelementptr nusw nuw i8, ptr %[[VAL41]], i64 %{{.*}}
 // access to 'a':
 // CHECK:  %[[VAL43:.*]] = load i32, ptr %[[VAL42]], align 4, !tbaa ![[A_ACCESS_TAG:.*]]
 // [...]

@@ -2223,7 +2223,7 @@ func.func @ext_array_coor0(%arg0: !fir.ref<!fir.array<?xi32>>) {
 // CHECK:         %[[C0:.*]] = llvm.mlir.constant(0 : i64) : i64
 // CHECK:         %[[C1:.*]] = llvm.mlir.constant(1 : i64) : i64
 // CHECK:         %[[C0_1:.*]] = llvm.mlir.constant(0 : i64) : i64
-// CHECK:         %[[IDX:.*]] = llvm.sub %[[C0]], %[[C1]] overflow<nsw> : i64
+// CHECK:         %[[IDX:.*]] = llvm.sub %[[C0]], %[[C1]] overflow<nsw, nuw> : i64
 // CHECK:         %[[DIFF0:.*]] = llvm.mul %[[IDX]], %[[C1]] overflow<nsw, nuw> : i64
 // CHECK:         %[[SC:.*]] = llvm.mul %[[DIFF0]], %[[C1]]  overflow<nsw, nuw> : i64
 // CHECK:         %[[OFFSET:.*]] = llvm.add %[[SC]], %[[C0_1]]  overflow<nsw, nuw> : i64
@@ -2243,12 +2243,12 @@ func.func @ext_array_coor1(%arg0: !fir.ref<!fir.array<?xi32>>) {
 // CHECK:         %[[C1:.*]] = llvm.mlir.constant(1 : i64) : i64
 // CHECK:         %[[C0_1:.*]] = llvm.mlir.constant(0 : i64) : i64
 // CHECK:         %[[IDX:.*]] = llvm.sub %[[C0]], %[[C0]] overflow<nsw> : i64
-// CHECK:         %[[DIFF0:.*]] = llvm.mul %[[IDX]], %[[C0]] overflow<nsw> : i64
+// CHECK:         %[[DIFF0:.*]] = llvm.mul %[[IDX]], %[[C0]] overflow<nsw, nuw> : i64
 // CHECK:         %[[ADJ:.*]] = llvm.sub %[[C0]], %[[C0]]  overflow<nsw> : i64
-// CHECK:         %[[DIFF1:.*]] = llvm.add %[[DIFF0]], %[[ADJ]] overflow<nsw> : i64
-// CHECK:         %[[STRIDE:.*]] = llvm.mul %[[DIFF1]], %[[C1]] overflow<nsw> : i64
-// CHECK:         %[[OFFSET:.*]] = llvm.add %[[STRIDE]], %[[C0_1]] overflow<nsw> : i64
-// CHECK:         %{{.*}} = llvm.getelementptr %[[ARG0]][%[[OFFSET]]] : (!llvm.ptr, i64) -> !llvm.ptr, i32
+// CHECK:         %[[DIFF1:.*]] = llvm.add %[[DIFF0]], %[[ADJ]] overflow<nsw, nuw> : i64
+// CHECK:         %[[STRIDE:.*]] = llvm.mul %[[DIFF1]], %[[C1]] overflow<nsw, nuw> : i64
+// CHECK:         %[[OFFSET:.*]] = llvm.add %[[STRIDE]], %[[C0_1]] overflow<nsw, nuw> : i64
+// CHECK:         %{{.*}} = llvm.getelementptr nusw|nuw %[[ARG0]][%[[OFFSET]]] : (!llvm.ptr, i64) -> !llvm.ptr, i32
 
 // Conversion for a dynamic length char.
 
@@ -2263,7 +2263,7 @@ func.func @ext_array_coor2(%arg0: !fir.ref<!fir.array<?x!fir.char<1,?>>>) {
 // CHECK:         %[[C0:.*]] = llvm.mlir.constant(0 : i64) : i64
 // CHECK:         %[[C1:.*]] = llvm.mlir.constant(1 : i64) : i64
 // CHECK:         %[[C0_1:.*]] = llvm.mlir.constant(0 : i64) : i64
-// CHECK:         %[[IDX:.*]] = llvm.sub %[[C0]], %[[C1]] overflow<nsw> : i64
+// CHECK:         %[[IDX:.*]] = llvm.sub %[[C0]], %[[C1]] overflow<nsw, nuw> : i64
 // CHECK:         %[[DIFF0:.*]] = llvm.mul %[[IDX]], %[[C1]] overflow<nsw, nuw> : i64
 // CHECK:         %[[SC:.*]] = llvm.mul %[[DIFF0]], %[[C1]]  overflow<nsw, nuw> : i64
 // CHECK:         %[[OFFSET:.*]] = llvm.add %[[SC]], %[[C0_1]] overflow<nsw, nuw> : i64
@@ -2282,15 +2282,15 @@ func.func @ext_array_coor3(%arg0: !fir.box<!fir.array<?xi32>>) {
 // CHECK:         %[[C0:.*]] = llvm.mlir.constant(0 : i64) : i64
 // CHECK:         %[[C1:.*]] = llvm.mlir.constant(1 : i64) : i64
 // CHECK:         %[[C0_1:.*]] = llvm.mlir.constant(0 : i64) : i64
-// CHECK:         %[[IDX:.*]] = llvm.sub %[[C0]], %[[C1]] overflow<nsw> : i64
-// CHECK:         %[[DIFF0:.*]] = llvm.mul %[[IDX]], %[[C1]] overflow<nsw> : i64
+// CHECK:         %[[IDX:.*]] = llvm.sub %[[C0]], %[[C1]] overflow<nsw, nuw> : i64
+// CHECK:         %[[DIFF0:.*]] = llvm.mul %[[IDX]], %[[C1]] overflow<nsw, nuw> : i64
 // CHECK:         %[[GEPSTRIDE:.*]] = llvm.getelementptr %[[ARG0]][0, 7, 0, 2] : (!llvm.ptr) -> !llvm.ptr, !llvm.struct<(ptr, i{{.*}}, i{{.*}}, i{{.*}}, i{{.*}}, i{{.*}}, i{{.*}}, array<1 x array<3 x i64>>)>
 // CHECK:         %[[LOADEDSTRIDE:.*]] = llvm.load %[[GEPSTRIDE]] : !llvm.ptr -> i64
-// CHECK:         %[[SC:.*]] = llvm.mul %[[DIFF0]], %[[LOADEDSTRIDE]] overflow<nsw> : i64
-// CHECK:         %[[OFFSET:.*]] = llvm.add %[[SC]], %[[C0_1]] overflow<nsw> : i64
+// CHECK:         %[[SC:.*]] = llvm.mul %[[DIFF0]], %[[LOADEDSTRIDE]] overflow<nsw, nuw> : i64
+// CHECK:         %[[OFFSET:.*]] = llvm.add %[[SC]], %[[C0_1]] overflow<nsw, nuw> : i64
 // CHECK:         %[[GEPADDR:.*]] = llvm.getelementptr %[[ARG0]][0, 0] : (!llvm.ptr) -> !llvm.ptr, !llvm.struct<(ptr, i{{.*}}, i{{.*}}, i{{.*}}, i{{.*}}, i{{.*}}, i{{.*}}, array<1 x array<3 x i64>>)>
 // CHECK:         %[[LOADEDADDR:.*]] = llvm.load %[[GEPADDR]] : !llvm.ptr -> !llvm.ptr
-// CHECK:         %[[GEPADDROFFSET:.*]] = llvm.getelementptr %[[LOADEDADDR]][%[[OFFSET]]] : (!llvm.ptr, i64) -> !llvm.ptr, i8
+// CHECK:         %[[GEPADDROFFSET:.*]] = llvm.getelementptr nusw|nuw %[[LOADEDADDR]][%[[OFFSET]]] : (!llvm.ptr, i64) -> !llvm.ptr, i8
 
 // Conversion with non zero shift and slice.
 
@@ -2312,12 +2312,12 @@ func.func @ext_array_coor4(%arg0: !fir.ref<!fir.array<100xi32>>) {
 // CHECK:         %[[C1_1:.*]] = llvm.mlir.constant(1 : i64) : i64
 // CHECK:         %[[C0_1:.*]] = llvm.mlir.constant(0 : i64) : i64
 // CHECK:         %[[IDX:.*]] = llvm.sub %[[C1]], %[[C0]] overflow<nsw> : i64
-// CHECK:         %[[DIFF0:.*]] = llvm.mul %[[IDX]], %[[C1]] overflow<nsw> : i64
+// CHECK:         %[[DIFF0:.*]] = llvm.mul %[[IDX]], %[[C1]] overflow<nsw, nuw> : i64
 // CHECK:         %[[ADJ:.*]] = llvm.sub %[[C10]], %[[C0]] overflow<nsw> : i64
-// CHECK:         %[[DIFF1:.*]] = llvm.add %[[DIFF0]], %[[ADJ]] overflow<nsw> : i64
-// CHECK:         %[[STRIDE:.*]] = llvm.mul %[[DIFF1]], %[[C1_1]] overflow<nsw> : i64
-// CHECK:         %[[OFFSET:.*]] = llvm.add %[[STRIDE]], %[[C0_1]] overflow<nsw> : i64
-// CHECK:         %{{.*}} = llvm.getelementptr %[[ARG0]][%[[OFFSET]]] : (!llvm.ptr, i64) -> !llvm.ptr, i32
+// CHECK:         %[[DIFF1:.*]] = llvm.add %[[DIFF0]], %[[ADJ]] overflow<nsw, nuw> : i64
+// CHECK:         %[[STRIDE:.*]] = llvm.mul %[[DIFF1]], %[[C1_1]] overflow<nsw, nuw> : i64
+// CHECK:         %[[OFFSET:.*]] = llvm.add %[[STRIDE]], %[[C0_1]] overflow<nsw, nuw> : i64
+// CHECK:         %{{.*}} = llvm.getelementptr nusw|nuw %[[ARG0]][%[[OFFSET]]] : (!llvm.ptr, i64) -> !llvm.ptr, i32
 
 // Conversion with index type shape and slice
 
@@ -2330,14 +2330,14 @@ func.func @ext_array_coor5(%arg0: !fir.ref<!fir.array<?xi32>>, %idx1 : index, %i
 // CHECK-SAME:        %[[VAL_0:.*]]: !llvm.ptr, %[[VAL_1:.*]]: i64, %[[VAL_2:.*]]: i64, %[[VAL_3:.*]]: i64, %[[VAL_4:.*]]: i64, %[[VAL_5:.*]]: i64) {
 // CHECK:           %[[VAL_6:.*]] = llvm.mlir.constant(1 : i64) : i64
 // CHECK:           %[[VAL_7:.*]] = llvm.mlir.constant(0 : i64) : i64
-// CHECK:           %[[VAL_8:.*]] = llvm.sub %[[VAL_5]], %[[VAL_6]] overflow<nsw> : i64
-// CHECK:           %[[VAL_9:.*]] = llvm.mul %[[VAL_8]], %[[VAL_4]] overflow<nsw> : i64
-// CHECK:           %[[VAL_10:.*]] = llvm.sub %[[VAL_2]], %[[VAL_6]] overflow<nsw> : i64
-// CHECK:           %[[VAL_11:.*]] = llvm.add %[[VAL_9]], %[[VAL_10]] overflow<nsw> : i64
-// CHECK:           %[[VAL_12:.*]] = llvm.mul %[[VAL_11]], %[[VAL_6]] overflow<nsw> : i64
-// CHECK:           %[[VAL_13:.*]] = llvm.add %[[VAL_12]], %[[VAL_7]] overflow<nsw> : i64
-// CHECK:           %[[VAL_14:.*]] = llvm.mul %[[VAL_6]], %[[VAL_1]] overflow<nsw> : i64
-// CHECK:           %[[VAL_16:.*]] = llvm.getelementptr %[[VAL_0]][%[[VAL_13]]] : (!llvm.ptr, i64) -> !llvm.ptr, i32
+// CHECK:           %[[VAL_8:.*]] = llvm.sub %[[VAL_5]], %[[VAL_6]] overflow<nsw, nuw> : i64
+// CHECK:           %[[VAL_9:.*]] = llvm.mul %[[VAL_8]], %[[VAL_4]] overflow<nsw, nuw> : i64
+// CHECK:           %[[VAL_10:.*]] = llvm.sub %[[VAL_2]], %[[VAL_6]] overflow<nsw, nuw> : i64
+// CHECK:           %[[VAL_11:.*]] = llvm.add %[[VAL_9]], %[[VAL_10]] overflow<nsw, nuw> : i64
+// CHECK:           %[[VAL_12:.*]] = llvm.mul %[[VAL_11]], %[[VAL_6]] overflow<nsw, nuw> : i64
+// CHECK:           %[[VAL_13:.*]] = llvm.add %[[VAL_12]], %[[VAL_7]] overflow<nsw, nuw> : i64
+// CHECK:           %[[VAL_14:.*]] = llvm.mul %[[VAL_6]], %[[VAL_1]] overflow<nsw, nuw> : i64
+// CHECK:           %[[VAL_16:.*]] = llvm.getelementptr nusw|nuw %[[VAL_0]][%[[VAL_13]]] : (!llvm.ptr, i64) -> !llvm.ptr, i32
 // CHECK:         }
 
 // Conversion for 3-d array
@@ -2351,28 +2351,28 @@ func.func @ext_array_coor6(%arg0: !fir.ref<!fir.array<?x?x?xi32>>, %idx1 : index
 // CHECK-SAME:        %[[VAL_0:.*]]: !llvm.ptr, %[[VAL_1:.*]]: i64, %[[VAL_2:.*]]: i64, %[[VAL_3:.*]]: i64, %[[VAL_4:.*]]: i64, %[[VAL_5:.*]]: i64) {
 // CHECK:           %[[VAL_6:.*]] = llvm.mlir.constant(1 : i64) : i64
 // CHECK:           %[[VAL_7:.*]] = llvm.mlir.constant(0 : i64) : i64
-// CHECK:           %[[VAL_8:.*]] = llvm.sub %[[VAL_5]], %[[VAL_6]] overflow<nsw> : i64
-// CHECK:           %[[VAL_9:.*]] = llvm.mul %[[VAL_8]], %[[VAL_4]] overflow<nsw> : i64
-// CHECK:           %[[VAL_10:.*]] = llvm.sub %[[VAL_2]], %[[VAL_6]] overflow<nsw> : i64
-// CHECK:           %[[VAL_11:.*]] = llvm.add %[[VAL_9]], %[[VAL_10]] overflow<nsw> : i64
-// CHECK:           %[[VAL_12:.*]] = llvm.mul %[[VAL_11]], %[[VAL_6]] overflow<nsw> : i64
-// CHECK:           %[[VAL_13:.*]] = llvm.add %[[VAL_12]], %[[VAL_7]] overflow<nsw> : i64
-// CHECK:           %[[VAL_14:.*]] = llvm.mul %[[VAL_6]], %[[VAL_1]] overflow<nsw> : i64
-// CHECK:           %[[VAL_15:.*]] = llvm.sub %[[VAL_5]], %[[VAL_6]] overflow<nsw> : i64
-// CHECK:           %[[VAL_16:.*]] = llvm.mul %[[VAL_15]], %[[VAL_4]] overflow<nsw> : i64
-// CHECK:           %[[VAL_17:.*]] = llvm.sub %[[VAL_2]], %[[VAL_6]] overflow<nsw> : i64
-// CHECK:           %[[VAL_18:.*]] = llvm.add %[[VAL_16]], %[[VAL_17]] overflow<nsw> : i64
-// CHECK:           %[[VAL_19:.*]] = llvm.mul %[[VAL_18]], %[[VAL_14]] overflow<nsw> : i64
-// CHECK:           %[[VAL_20:.*]] = llvm.add %[[VAL_19]], %[[VAL_13]] overflow<nsw> : i64
-// CHECK:           %[[VAL_21:.*]] = llvm.mul %[[VAL_14]], %[[VAL_1]] overflow<nsw> : i64
-// CHECK:           %[[VAL_22:.*]] = llvm.sub %[[VAL_5]], %[[VAL_6]] overflow<nsw> : i64
-// CHECK:           %[[VAL_23:.*]] = llvm.mul %[[VAL_22]], %[[VAL_4]] overflow<nsw> : i64
-// CHECK:           %[[VAL_24:.*]] = llvm.sub %[[VAL_2]], %[[VAL_6]] overflow<nsw> : i64
-// CHECK:           %[[VAL_25:.*]] = llvm.add %[[VAL_23]], %[[VAL_24]] overflow<nsw> : i64
-// CHECK:           %[[VAL_26:.*]] = llvm.mul %[[VAL_25]], %[[VAL_21]] overflow<nsw> : i64
-// CHECK:           %[[VAL_27:.*]] = llvm.add %[[VAL_26]], %[[VAL_20]] overflow<nsw> : i64
-// CHECK:           %[[VAL_28:.*]] = llvm.mul %[[VAL_21]], %[[VAL_1]] overflow<nsw> : i64
-// CHECK:           %[[VAL_30:.*]] = llvm.getelementptr %[[VAL_0]][%[[VAL_27]]] : (!llvm.ptr, i64) -> !llvm.ptr, i32
+// CHECK:           %[[VAL_8:.*]] = llvm.sub %[[VAL_5]], %[[VAL_6]] overflow<nsw, nuw> : i64
+// CHECK:           %[[VAL_9:.*]] = llvm.mul %[[VAL_8]], %[[VAL_4]] overflow<nsw, nuw> : i64
+// CHECK:           %[[VAL_10:.*]] = llvm.sub %[[VAL_2]], %[[VAL_6]] overflow<nsw, nuw> : i64
+// CHECK:           %[[VAL_11:.*]] = llvm.add %[[VAL_9]], %[[VAL_10]] overflow<nsw, nuw> : i64
+// CHECK:           %[[VAL_12:.*]] = llvm.mul %[[VAL_11]], %[[VAL_6]] overflow<nsw, nuw> : i64
+// CHECK:           %[[VAL_13:.*]] = llvm.add %[[VAL_12]], %[[VAL_7]] overflow<nsw, nuw> : i64
+// CHECK:           %[[VAL_14:.*]] = llvm.mul %[[VAL_6]], %[[VAL_1]] overflow<nsw, nuw> : i64
+// CHECK:           %[[VAL_15:.*]] = llvm.sub %[[VAL_5]], %[[VAL_6]] overflow<nsw, nuw> : i64
+// CHECK:           %[[VAL_16:.*]] = llvm.mul %[[VAL_15]], %[[VAL_4]] overflow<nsw, nuw> : i64
+// CHECK:           %[[VAL_17:.*]] = llvm.sub %[[VAL_2]], %[[VAL_6]] overflow<nsw, nuw> : i64
+// CHECK:           %[[VAL_18:.*]] = llvm.add %[[VAL_16]], %[[VAL_17]] overflow<nsw, nuw> : i64
+// CHECK:           %[[VAL_19:.*]] = llvm.mul %[[VAL_18]], %[[VAL_14]] overflow<nsw, nuw> : i64
+// CHECK:           %[[VAL_20:.*]] = llvm.add %[[VAL_19]], %[[VAL_13]] overflow<nsw, nuw> : i64
+// CHECK:           %[[VAL_21:.*]] = llvm.mul %[[VAL_14]], %[[VAL_1]] overflow<nsw, nuw> : i64
+// CHECK:           %[[VAL_22:.*]] = llvm.sub %[[VAL_5]], %[[VAL_6]] overflow<nsw, nuw> : i64
+// CHECK:           %[[VAL_23:.*]] = llvm.mul %[[VAL_22]], %[[VAL_4]] overflow<nsw, nuw> : i64
+// CHECK:           %[[VAL_24:.*]] = llvm.sub %[[VAL_2]], %[[VAL_6]] overflow<nsw, nuw> : i64
+// CHECK:           %[[VAL_25:.*]] = llvm.add %[[VAL_23]], %[[VAL_24]] overflow<nsw, nuw> : i64
+// CHECK:           %[[VAL_26:.*]] = llvm.mul %[[VAL_25]], %[[VAL_21]] overflow<nsw, nuw> : i64
+// CHECK:           %[[VAL_27:.*]] = llvm.add %[[VAL_26]], %[[VAL_20]] overflow<nsw, nuw> : i64
+// CHECK:           %[[VAL_28:.*]] = llvm.mul %[[VAL_21]], %[[VAL_1]] overflow<nsw, nuw> : i64
+// CHECK:           %[[VAL_30:.*]] = llvm.getelementptr nusw|nuw %[[VAL_0]][%[[VAL_27]]] : (!llvm.ptr, i64) -> !llvm.ptr, i32
 // CHECK:           llvm.return
 // CHECK:         }
 
@@ -2389,14 +2389,14 @@ func.func @ext_array_coor_dt_slice(%arg0: !fir.ref<!fir.array<20x!fir.type<_QFte
 // CHECK:           %[[VAL_6:.*]] = llvm.mlir.constant(0 : i32) : i32
 // CHECK:           %[[VAL_7:.*]] = llvm.mlir.constant(1 : i64) : i64
 // CHECK:           %[[VAL_8:.*]] = llvm.mlir.constant(0 : i64) : i64
-// CHECK:           %[[VAL_9:.*]] = llvm.sub %[[VAL_5]], %[[VAL_7]] overflow<nsw> : i64
-// CHECK:           %[[VAL_10:.*]] = llvm.mul %[[VAL_9]], %[[VAL_4]] overflow<nsw> : i64
-// CHECK:           %[[VAL_11:.*]] = llvm.sub %[[VAL_2]], %[[VAL_7]] overflow<nsw> : i64
-// CHECK:           %[[VAL_12:.*]] = llvm.add %[[VAL_10]], %[[VAL_11]] overflow<nsw> : i64
-// CHECK:           %[[VAL_13:.*]] = llvm.mul %[[VAL_12]], %[[VAL_7]] overflow<nsw> : i64
-// CHECK:           %[[VAL_14:.*]] = llvm.add %[[VAL_13]], %[[VAL_8]] overflow<nsw> : i64
-// CHECK:           %[[VAL_15:.*]] = llvm.mul %[[VAL_7]], %[[VAL_1]] overflow<nsw> : i64
-// CHECK:           %[[VAL_17:.*]] = llvm.getelementptr %[[VAL_0]][%[[VAL_14]], 0] : (!llvm.ptr, i64) -> !llvm.ptr, !llvm.struct<"_QFtest_dt_sliceTt", (i32, i32)>
+// CHECK:           %[[VAL_9:.*]] = llvm.sub %[[VAL_5]], %[[VAL_7]] overflow<nsw, nuw> : i64
+// CHECK:           %[[VAL_10:.*]] = llvm.mul %[[VAL_9]], %[[VAL_4]] overflow<nsw, nuw> : i64
+// CHECK:           %[[VAL_11:.*]] = llvm.sub %[[VAL_2]], %[[VAL_7]] overflow<nsw, nuw> : i64
+// CHECK:           %[[VAL_12:.*]] = llvm.add %[[VAL_10]], %[[VAL_11]] overflow<nsw, nuw> : i64
+// CHECK:           %[[VAL_13:.*]] = llvm.mul %[[VAL_12]], %[[VAL_7]] overflow<nsw, nuw> : i64
+// CHECK:           %[[VAL_14:.*]] = llvm.add %[[VAL_13]], %[[VAL_8]] overflow<nsw, nuw> : i64
+// CHECK:           %[[VAL_15:.*]] = llvm.mul %[[VAL_7]], %[[VAL_1]] overflow<nsw, nuw> : i64
+// CHECK:           %[[VAL_17:.*]] = llvm.getelementptr nusw|nuw %[[VAL_0]][%[[VAL_14]], 0] : (!llvm.ptr, i64) -> !llvm.ptr, !llvm.struct<"_QFtest_dt_sliceTt", (i32, i32)>
 // CHECK:           llvm.return
 // CHECK:         }
 
@@ -2410,7 +2410,7 @@ func.func @ext_array_coor_dt_slice2(%arg0: !fir.ref<!fir.array<2x!fir.type<_QFte
 
 // CHECK-LABEL:   llvm.func @ext_array_coor_dt_slice2(
 // CHECK-SAME:        %[[ARG0:.*]]: !llvm.ptr, %[[IDX1:.*]]: i64, %[[IDX2:.*]]: i64, %[[IDX3:.*]]: i64, %[[IDX4:.*]]: i64, %[[IDX5:.*]]: i64, %[[IDX6:.*]]: i64, %[[IDX7:.*]]: i64) {
-// CHECK:           %{{.*}} = llvm.getelementptr %[[ARG0]][%{{.*}}, 0, %[[IDX6]], %[[IDX5]]] : (!llvm.ptr, i64, i64, i64) -> !llvm.ptr, !llvm.struct<"_QFtest_dt_slice2Tt", (array<3 x array<2 x i32>>)>
+// CHECK:           %{{.*}} = llvm.getelementptr nusw|nuw %[[ARG0]][%{{.*}}, 0, %[[IDX6]], %[[IDX5]]] : (!llvm.ptr, i64, i64, i64) -> !llvm.ptr, !llvm.struct<"_QFtest_dt_slice2Tt", (array<3 x array<2 x i32>>)>
 // CHECK:           llvm.return
 // CHECK:         }
 

@@ -2715,23 +2715,14 @@ struct XArrayCoorOpConversion
         mlir::LLVM::IntegerOverflowFlags::nsw;
     mlir::LLVM::IntegerOverflowFlags nuw =
         mlir::LLVM::IntegerOverflowFlags::nuw;
-    mlir::LLVM::IntegerOverflowFlags subFlags = nsw;
-    mlir::LLVM::IntegerOverflowFlags addMulFlags = nsw;
-    mlir::LLVM::GEPNoWrapFlags gepFlags = mlir::LLVM::GEPNoWrapFlags::none;
-
-    // In certain cases, where unsigned wrapping is known not to not occur, we
-    // can apply the nuw flag to Add/Mul operations, and `nusw nuw` flags to
-    // getelementptr's. By doing so, this enables better optimization through
-    // slp-vectorizer later in the LLVM pipeline.
-    const bool canUseNuw = !baseIsBoxed && !isShifted && !isSliced &&
-                           coor.getSubcomponent().empty() &&
-                           coor.getLenParams().empty() &&
-                           !coor.getShape().empty();
-    if (canUseNuw) {
-      addMulFlags = addMulFlags | nuw;
-      gepFlags =
-          mlir::LLVM::GEPNoWrapFlags::nusw | mlir::LLVM::GEPNoWrapFlags::nuw;
-    }
+    // TODO Allow for non-default lower bounds that are positive
+    // We know at compile time this is possible, so could be updated in future
+    // to allow for this, and just exclude non-default lower bounds that are
+    // negative. Currently, all shifted XArrayCoorOp's only have nsw on sub
+    // operations.
+    mlir::LLVM::IntegerOverflowFlags subFlags = isShifted ? nsw : (nsw | nuw);
+    mlir::LLVM::IntegerOverflowFlags addMulFlags = nsw | nuw;
+    mlir::LLVM::GEPNoWrapFlags gepFlags = mlir::LLVM::GEPNoWrapFlags::nusw | mlir::LLVM::GEPNoWrapFlags::nuw;
 
     // For each dimension of the array, generate the offset calculation.
     for (unsigned i = 0; i < rank; ++i, ++indexOffset, ++shapeOffset,
