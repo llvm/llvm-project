@@ -19358,16 +19358,16 @@ vec_unpack_lsn_to_byte(vector unsigned char __a) {
   return __builtin_altivec_vupklsntob(__a);
 }
 
-#define vec_unpack_int4_to_bf16(__a, __imm) \
+#define vec_unpack_int4_to_bf16(__a, __imm)                                    \
   __builtin_altivec_vupkint4tobf16((__a), (__imm))
 
-#define vec_unpack_int8_to_bf16(__a, __imm) \
+#define vec_unpack_int8_to_bf16(__a, __imm)                                    \
   __builtin_altivec_vupkint8tobf16((__a), (__imm))
 
-#define vec_unpack_int4_to_fp32(__a, __imm) \
+#define vec_unpack_int4_to_fp32(__a, __imm)                                    \
   __builtin_altivec_vupkint4tofp32((__a), (__imm))
 
-#define vec_unpack_int8_to_fp32(__a, __imm) \
+#define vec_unpack_int8_to_fp32(__a, __imm)                                    \
   __builtin_altivec_vupkint8tofp32((__a), (__imm))
 
 #endif /* __FUTURE_VECTOR__ */
