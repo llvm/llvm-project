@@ -35,6 +35,7 @@
 #include "llvm/Analysis/TargetLibraryInfo.h"
 #include "llvm/Analysis/ValueTracking.h"
 #include "llvm/Analysis/VectorUtils.h"
+#include "llvm/IR/Constant.h"
 #include "llvm/IR/ConstantFPRange.h"
 #include "llvm/IR/ConstantRange.h"
 #include "llvm/IR/DataLayout.h"
@@ -45,6 +46,7 @@
 #include "llvm/IR/Operator.h"
 #include "llvm/IR/PatternMatch.h"
 #include "llvm/IR/Statepoint.h"
+#include "llvm/Support/Casting.h"
 #include "llvm/Support/KnownBits.h"
 #include "llvm/Support/KnownFPClass.h"
 #include <algorithm>
@@ -4411,9 +4413,13 @@ static bool areTheseAllTheValuesThatMayCausePoisonInValue(
     return true;
 
   if (const Instruction *I = dyn_cast<Instruction>(V)) {
+    // Having a poison generating annotation means that it can be poison
+    // without any of the given values being poison.
     if (I->hasPoisonGeneratingAnnotations())
       return false;
 
+    // Filtering out the assumed poison values, so only the relevant ones are
+    // brought forward to the next recursive call.
     SmallVector<const Value *, 2> ValuesImplyingPoison;
     copy_if(ValuesAssumedPoison, std::back_inserter(ValuesImplyingPoison),
             [V](const auto *P) { return impliesPoison(P, V); });
@@ -4431,6 +4437,11 @@ static bool areTheseAllTheValuesThatMayCausePoisonInValue(
                         ValuesImplyingPoison, Op, Depth + 1);
                   });
   }
+
+  // A constant can't cause poison, unless it is itself a poison.
+  if (const Constant *C = dyn_cast<Constant>(V))
+    return !C->containsUndefOrPoisonElement();
+
   return false;
 }
 
@@ -4603,7 +4614,7 @@ static Value *simplifyWithOpsReplaced(Value *V,
         // refinment.
         if (NewOps[1] == NewOps[2] &&
             areTheseAllTheValuesThatMayCausePoisonInValue(
-                {SI->getFalseValue(), SI->getTrueValue()}, Cond))
+                {SI->getFalseValue(), SI->getTrueValue(), NewOps[1]}, Cond))
           SimplifiedValue = NewOps[1];
 
         // TODO: Implement more non refining select optimizations here!
@@ -5279,6 +5290,16 @@ static Value *simplifySelectInst(Value *Cond, Value *TrueVal, Value *FalseVal,
     if (NewC.size() == NumElts)
       return ConstantVector::get(NewC);
   }
+
+  CmpPredicate Pred1, Pred2;
+  Value *V1, *V2, *EQV;
+  if (match(Cond,
+            m_And(m_SpecificICmp(ICmpInst::ICMP_EQ, m_Value(V1), m_Value(EQV)),
+                  m_SpecificICmp(ICmpInst::ICMP_EQ, m_Value(V2),
+                                 m_Deferred(EQV)))))
+    if (Value *V = simplifySelectWithEquivalence(
+            {{V2, EQV}, {V1, EQV}}, TrueVal, FalseVal, Q, MaxRecurse))
+      return V;
 
   if (Value *V =
           simplifySelectWithICmpCond(Cond, TrueVal, FalseVal, Q, MaxRecurse))
