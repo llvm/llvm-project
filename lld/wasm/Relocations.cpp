@@ -33,7 +33,7 @@ static bool requiresGOTAccess(const Symbol *sym) {
   return true;
 }
 
-static bool allowUndefined(const Symbol* sym) {
+static bool allowUndefined(const Symbol *sym) {
   // Symbols that are explicitly imported are always allowed to be undefined at
   // link time.
   if (sym->isImported())

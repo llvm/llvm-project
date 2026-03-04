@@ -365,6 +365,8 @@ static bool interp__builtin_strlen(InterpState &S, CodePtr OpPC,
 
   assert(StrPtr.getFieldDesc()->isPrimitiveArray());
   unsigned ElemSize = StrPtr.getFieldDesc()->getElemSize();
+  if (ElemSize != 1 && ElemSize != 2 && ElemSize != 4)
+    return Invalid(S, OpPC);
 
   if (ID == Builtin::BI__builtin_wcslen || ID == Builtin::BIwcslen) {
     const ASTContext &AC = S.getASTContext();
@@ -411,7 +413,8 @@ static bool interp__builtin_nan(InterpState &S, CodePtr OpPC,
   if (!CheckLoad(S, OpPC, Arg))
     return false;
 
-  assert(Arg.getFieldDesc()->isPrimitiveArray());
+  if (!Arg.getFieldDesc()->isPrimitiveArray())
+    return Invalid(S, OpPC);
 
   // Convert the given string to an integer using StringRef's API.
   llvm::APInt Fill;
@@ -1987,11 +1990,7 @@ static bool interp__builtin_memcmp(InterpState &S, CodePtr OpPC,
     return false;
   }
 
-  if (PtrA.isDummy() || PtrB.isDummy())
-    return false;
-
-  if (!CheckRange(S, OpPC, PtrA, AK_Read) ||
-      !CheckRange(S, OpPC, PtrB, AK_Read))
+  if (!CheckLoad(S, OpPC, PtrA, AK_Read) || !CheckLoad(S, OpPC, PtrB, AK_Read))
     return false;
 
   // Now, read both pointers to a buffer and compare those.
@@ -2510,7 +2509,8 @@ static bool interp__builtin_elementwise_fp_binop(
     InterpState &S, CodePtr OpPC, const CallExpr *Call,
     llvm::function_ref<std::optional<APFloat>(
         const APFloat &, const APFloat &, std::optional<APSInt> RoundingMode)>
-        Fn) {
+        Fn,
+    bool IsScalar = false) {
   assert((Call->getNumArgs() == 2) || (Call->getNumArgs() == 3));
   const auto *VT = Call->getArg(0)->getType()->castAs<VectorType>();
   assert(VT->getElementType()->isFloatingType());
@@ -2533,6 +2533,10 @@ static bool interp__builtin_elementwise_fp_binop(
   const Pointer &Dst = S.Stk.peek<Pointer>();
   for (unsigned ElemIdx = 0; ElemIdx != NumElems; ++ElemIdx) {
     using T = PrimConv<PT_Float>::T;
+    if (IsScalar && ElemIdx > 0) {
+      Dst.elem<T>(ElemIdx) = APtr.elem<T>(ElemIdx);
+      continue;
+    }
     APFloat ElemA = APtr.elem<T>(ElemIdx).getAPFloat();
     APFloat ElemB = BPtr.elem<T>(ElemIdx).getAPFloat();
     std::optional<APFloat> Result = Fn(ElemA, ElemB, RoundingMode);
@@ -2540,6 +2544,43 @@ static bool interp__builtin_elementwise_fp_binop(
       return false;
     Dst.elem<T>(ElemIdx) = static_cast<T>(*Result);
   }
+
+  Dst.initializeAllElements();
+
+  return true;
+}
+
+static bool interp__builtin_scalar_fp_round_mask_binop(
+    InterpState &S, CodePtr OpPC, const CallExpr *Call,
+    llvm::function_ref<std::optional<APFloat>(const APFloat &, const APFloat &,
+                                              std::optional<APSInt>)>
+        Fn) {
+  assert(Call->getNumArgs() == 5);
+  const auto *VT = Call->getArg(0)->getType()->castAs<VectorType>();
+  unsigned NumElems = VT->getNumElements();
+
+  APSInt RoundingMode = popToAPSInt(S, Call->getArg(4));
+  uint64_t MaskVal = popToUInt64(S, Call->getArg(3));
+  const Pointer &SrcPtr = S.Stk.pop<Pointer>();
+  const Pointer &BPtr = S.Stk.pop<Pointer>();
+  const Pointer &APtr = S.Stk.pop<Pointer>();
+  const Pointer &Dst = S.Stk.peek<Pointer>();
+
+  using T = PrimConv<PT_Float>::T;
+
+  if (MaskVal & 1) {
+    APFloat ElemA = APtr.elem<T>(0).getAPFloat();
+    APFloat ElemB = BPtr.elem<T>(0).getAPFloat();
+    std::optional<APFloat> Result = Fn(ElemA, ElemB, RoundingMode);
+    if (!Result)
+      return false;
+    Dst.elem<T>(0) = static_cast<T>(*Result);
+  } else {
+    Dst.elem<T>(0) = SrcPtr.elem<T>(0);
+  }
+
+  for (unsigned I = 1; I < NumElems; ++I)
+    Dst.elem<T>(I) = APtr.elem<T>(I);
 
   Dst.initializeAllElements();
 
@@ -4288,6 +4329,7 @@ bool InterpretBuiltin(InterpState &S, CodePtr OpPC, const CallExpr *Call,
           return APInt(Val.getBitWidth(),
                        Val.getBitWidth() - Val.getSignificantBits());
         });
+  case Builtin::BI__builtin_bitreverseg:
   case Builtin::BI__builtin_bitreverse8:
   case Builtin::BI__builtin_bitreverse16:
   case Builtin::BI__builtin_bitreverse32:
@@ -5858,6 +5900,33 @@ bool InterpretBuiltin(InterpState &S, CodePtr OpPC, const CallExpr *Call,
           return llvm::minimum(A, B);
         });
 
+  case clang::X86::BI__builtin_ia32_minss:
+  case clang::X86::BI__builtin_ia32_minsd:
+    return interp__builtin_elementwise_fp_binop(
+        S, OpPC, Call,
+        [](const APFloat &A, const APFloat &B,
+           std::optional<APSInt> RoundingMode) -> std::optional<APFloat> {
+          return EvalScalarMinMaxFp(A, B, RoundingMode, /*IsMin=*/true);
+        },
+        /*IsScalar=*/true);
+
+  case clang::X86::BI__builtin_ia32_minsd_round_mask:
+  case clang::X86::BI__builtin_ia32_minss_round_mask:
+  case clang::X86::BI__builtin_ia32_minsh_round_mask:
+  case clang::X86::BI__builtin_ia32_maxsd_round_mask:
+  case clang::X86::BI__builtin_ia32_maxss_round_mask:
+  case clang::X86::BI__builtin_ia32_maxsh_round_mask: {
+    bool IsMin = BuiltinID == clang::X86::BI__builtin_ia32_minsd_round_mask ||
+                 BuiltinID == clang::X86::BI__builtin_ia32_minss_round_mask ||
+                 BuiltinID == clang::X86::BI__builtin_ia32_minsh_round_mask;
+    return interp__builtin_scalar_fp_round_mask_binop(
+        S, OpPC, Call,
+        [IsMin](const APFloat &A, const APFloat &B,
+                std::optional<APSInt> RoundingMode) -> std::optional<APFloat> {
+          return EvalScalarMinMaxFp(A, B, RoundingMode, IsMin);
+        });
+  }
+
   case clang::X86::BI__builtin_ia32_maxps:
   case clang::X86::BI__builtin_ia32_maxpd:
   case clang::X86::BI__builtin_ia32_maxph128:
@@ -5879,6 +5948,16 @@ bool InterpretBuiltin(InterpState &S, CodePtr OpPC, const CallExpr *Call,
           return llvm::maximum(A, B);
         });
 
+  case clang::X86::BI__builtin_ia32_maxss:
+  case clang::X86::BI__builtin_ia32_maxsd:
+    return interp__builtin_elementwise_fp_binop(
+        S, OpPC, Call,
+        [](const APFloat &A, const APFloat &B,
+           std::optional<APSInt> RoundingMode) -> std::optional<APFloat> {
+          return EvalScalarMinMaxFp(A, B, RoundingMode, /*IsMin=*/false);
+        },
+        /*IsScalar=*/true);
+
   default:
     S.FFDiag(S.Current->getLocation(OpPC),
              diag::note_invalid_subexpr_in_const_expr)
@@ -5892,6 +5971,7 @@ bool InterpretBuiltin(InterpState &S, CodePtr OpPC, const CallExpr *Call,
 
 bool InterpretOffsetOf(InterpState &S, CodePtr OpPC, const OffsetOfExpr *E,
                        ArrayRef<int64_t> ArrayIndices, int64_t &IntResult) {
+  S.getASTContext().recordOffsetOfEvaluation(E);
   CharUnits Result;
   unsigned N = E->getNumComponents();
   assert(N > 0);

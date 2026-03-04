@@ -8,15 +8,12 @@
 
 #include "Rewrite.h"
 
+#include "mlir-c/Bindings/Python/Interop.h"
 #include "mlir-c/IR.h"
 #include "mlir-c/Rewrite.h"
 #include "mlir-c/Support.h"
 #include "mlir/Bindings/Python/Globals.h"
 #include "mlir/Bindings/Python/IRCore.h"
-// clang-format off
-#include "mlir/Bindings/Python/Nanobind.h"
-#include "mlir-c/Bindings/Python/Interop.h" // This is expected after nanobind.
-// clang-format on
 #include "mlir/Config/mlir-config.h"
 #include "nanobind/nanobind.h"
 #include <type_traits>
@@ -30,45 +27,22 @@ namespace mlir {
 namespace python {
 namespace MLIR_BINDINGS_PYTHON_DOMAIN {
 
-class PyPatternRewriter {
+class PyPatternRewriter : public PyRewriterBase<PyPatternRewriter> {
 public:
+  static constexpr const char *pyClassName = "PatternRewriter";
+
   PyPatternRewriter(MlirPatternRewriter rewriter)
-      : base(mlirPatternRewriterAsBase(rewriter)),
-        ctx(PyMlirContext::forContext(mlirRewriterBaseGetContext(base))) {}
-
-  PyInsertionPoint getInsertionPoint() const {
-    MlirBlock block = mlirRewriterBaseGetInsertionBlock(base);
-    MlirOperation op = mlirRewriterBaseGetOperationAfterInsertion(base);
-
-    if (mlirOperationIsNull(op)) {
-      MlirOperation owner = mlirBlockGetParentOperation(block);
-      auto parent = PyOperation::forOperation(ctx, owner);
-      return PyInsertionPoint(PyBlock(parent, block));
-    }
-
-    return PyInsertionPoint(PyOperation::forOperation(ctx, op));
-  }
-
-  void replaceOp(MlirOperation op, MlirOperation newOp) {
-    mlirRewriterBaseReplaceOpWithOperation(base, op, newOp);
-  }
-
-  void replaceOp(MlirOperation op, const std::vector<MlirValue> &values) {
-    mlirRewriterBaseReplaceOpWithValues(base, op, values.size(), values.data());
-  }
-
-  void eraseOp(const PyOperation &op) { mlirRewriterBaseEraseOp(base, op); }
-
-private:
-  MlirRewriterBase base;
-  PyMlirContextRef ctx;
+      : PyRewriterBase(mlirPatternRewriterAsBase(rewriter)) {}
 };
 
-class PyConversionPatternRewriter : PyPatternRewriter {
+class PyConversionPatternRewriter : public PyPatternRewriter {
 public:
   PyConversionPatternRewriter(MlirConversionPatternRewriter rewriter)
       : PyPatternRewriter(
-            mlirConversionPatternRewriterAsPatternRewriter(rewriter)) {}
+            mlirConversionPatternRewriterAsPatternRewriter(rewriter)),
+        rewriter(rewriter) {}
+
+  MlirConversionPatternRewriter rewriter;
 };
 
 class PyConversionTarget {
@@ -128,6 +102,15 @@ public:
           return mlirLogicalResultSuccess();
         },
         convert.ptr());
+  }
+
+  nb::typed<nb::object, std::optional<PyType>> convertType(PyType &type) {
+    MlirType converted = mlirTypeConverterConvertType(typeConverter, type);
+    if (mlirTypeIsNull(converted))
+      return nb::none();
+    return PyType(PyMlirContext::forContext(mlirTypeGetContext(converted)),
+                  converted)
+        .maybeDownCast();
   }
 
   MlirTypeConverter get() { return typeConverter; }
@@ -326,8 +309,10 @@ public:
       std::vector<MlirValue> operandsVec(operands, operands + nOperands);
       nb::object adaptorCls =
           PyGlobals::get()
-              .lookupOpAdaptorClass(
-                  unwrap(mlirIdentifierStr(mlirOperationGetName(op))))
+              .lookupOpAdaptorClass([&] {
+                MlirStringRef ref = mlirIdentifierStr(mlirOperationGetName(op));
+                return std::string_view(ref.data, ref.length);
+              }())
               .value_or(nb::borrow(nb::type<PyOpAdaptor>()));
 
       nb::object res = f(opView, adaptorCls(operandsVec, opView),
@@ -514,29 +499,8 @@ void populateRewriteSubmodule(nb::module_ &m) {
   //----------------------------------------------------------------------------
   // Mapping of the PatternRewriter
   //----------------------------------------------------------------------------
-  nb::class_<PyPatternRewriter>(m, "PatternRewriter")
-      .def_prop_ro("ip", &PyPatternRewriter::getInsertionPoint,
-                   "The current insertion point of the PatternRewriter.")
-      .def(
-          "replace_op",
-          [](PyPatternRewriter &self, PyOperationBase &op,
-             PyOperationBase &newOp) {
-            self.replaceOp(op.getOperation(), newOp.getOperation());
-          },
-          "Replace an operation with a new operation.", nb::arg("op"),
-          nb::arg("new_op"))
-      .def(
-          "replace_op",
-          [](PyPatternRewriter &self, PyOperationBase &op,
-             const std::vector<PyValue> &values) {
-            std::vector<MlirValue> values_(values.size());
-            std::copy(values.begin(), values.end(), values_.begin());
-            self.replaceOp(op.getOperation(), values_);
-          },
-          "Replace an operation with a list of values.", nb::arg("op"),
-          nb::arg("values"))
-      .def("erase_op", &PyPatternRewriter::eraseOp, "Erase an operation.",
-           nb::arg("op"));
+
+  PyPatternRewriter::bind(m);
 
   //----------------------------------------------------------------------------
   // Mapping of the RewritePatternSet
@@ -616,7 +580,13 @@ void populateRewriteSubmodule(nb::module_ &m) {
            "Freeze the pattern set into a frozen one.");
 
   nb::class_<PyConversionPatternRewriter, PyPatternRewriter>(
-      m, "ConversionPatternRewriter");
+      m, "ConversionPatternRewriter")
+      .def("convert_region_types",
+           [](PyConversionPatternRewriter &self, PyRegion &region,
+              PyTypeConverter &typeConverter) {
+             mlirConversionPatternRewriterConvertRegionTypes(
+                 self.rewriter, region.get(), typeConverter.get());
+           });
 
   nb::class_<PyConversionTarget>(m, "ConversionTarget")
       .def(
@@ -669,7 +639,9 @@ void populateRewriteSubmodule(nb::module_ &m) {
   nb::class_<PyTypeConverter>(m, "TypeConverter")
       .def(nb::init<>(), "Create a new TypeConverter.")
       .def("add_conversion", &PyTypeConverter::addConversion, "convert"_a,
-           nb::keep_alive<0, 1>(), "Register a type conversion function.");
+           nb::keep_alive<0, 1>(), "Register a type conversion function.")
+      .def("convert_type", &PyTypeConverter::convertType, "type"_a,
+           "Convert the given type. Returns None if conversion fails.");
 
   //----------------------------------------------------------------------------
   // Mapping of the PDLResultList and PDLModule
@@ -817,10 +789,11 @@ void populateRewriteSubmodule(nb::module_ &m) {
              std::optional<PyConversionConfig> config) {
             if (!config)
               config.emplace(PyConversionConfig());
+            PyMlirContext::ErrorCapture errors(op.getOperation().getContext());
             MlirLogicalResult status = mlirApplyPartialConversion(
                 op.getOperation(), target.get(), set.get(), config->get());
             if (mlirLogicalResultIsFailure(status))
-              throw std::runtime_error("partial conversion failed");
+              throw MLIRError("partial conversion failed", errors.take());
           },
           "op"_a, "target"_a, "set"_a, "config"_a = nb::none(),
           "Applies a partial conversion on the given operation.")
@@ -831,10 +804,11 @@ void populateRewriteSubmodule(nb::module_ &m) {
              std::optional<PyConversionConfig> config) {
             if (!config)
               config.emplace(PyConversionConfig());
+            PyMlirContext::ErrorCapture errors(op.getOperation().getContext());
             MlirLogicalResult status = mlirApplyFullConversion(
                 op.getOperation(), target.get(), set.get(), config->get());
             if (mlirLogicalResultIsFailure(status))
-              throw std::runtime_error("full conversion failed");
+              throw MLIRError("full conversion failed", errors.take());
           },
           "op"_a, "target"_a, "set"_a, "config"_a = nb::none(),
           "Applies a full conversion on the given operation.");

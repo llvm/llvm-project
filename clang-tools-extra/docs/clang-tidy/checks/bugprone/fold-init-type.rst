@@ -5,10 +5,18 @@ bugprone-fold-init-type
 
 The check flags type mismatches in
 `folds <https://en.wikipedia.org/wiki/Fold_(higher-order_function)>`_
-like ``std::accumulate`` that might result in loss of precision.
-``std::accumulate`` folds an input range into an initial value using
-the type of the latter, with ``operator+`` by default. This can cause
-loss of precision through:
+that might result in loss of precision.
+
+The check supports the following functions:
+
+- ``std::accumulate``
+- ``std::reduce``
+- ``std::inner_product``
+
+These functions fold an input range into an initial value using the type of the
+latter. By default, ``std::accumulate`` and ``std::reduce`` use ``operator+``
+while ``std::inner_product`` uses ``operator+`` and ``operator*``. This can
+cause loss of precision through:
 
 - Truncation: The following code uses a floating point range and an int
   initial value, so truncation will happen at every application of
@@ -26,3 +34,13 @@ loss of precision through:
 
   auto a = {65536LL * 65536 * 65536};
   return std::accumulate(std::begin(a), std::end(a), 0);
+
+The check handles overloads with the following transparent standard functors:
+
+- ``std::plus``
+- ``std::minus``
+- ``std::multiplies``
+- ``std::divides``
+- ``std::bit_and``
+- ``std::bit_or``
+- ``std::bit_xor``

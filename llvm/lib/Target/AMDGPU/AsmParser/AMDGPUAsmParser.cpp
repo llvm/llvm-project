@@ -126,6 +126,7 @@ public:
     ImmTySMEMOffsetMod,
     ImmTyCPol,
     ImmTyTFE,
+    ImmTyIsAsync,
     ImmTyD16,
     ImmTyClamp,
     ImmTyOModSI,
@@ -1121,6 +1122,7 @@ public:
     case ImmTyIndexKey16bit: OS << "index_key"; break;
     case ImmTyIndexKey32bit: OS << "index_key"; break;
     case ImmTyTFE: OS << "TFE"; break;
+    case ImmTyIsAsync: OS << "IsAsync"; break;
     case ImmTyD16: OS << "D16"; break;
     case ImmTyFORMAT: OS << "FORMAT"; break;
     case ImmTyClamp: OS << "Clamp"; break;
@@ -1553,6 +1555,8 @@ public:
   bool isGFX11Plus() const {
     return AMDGPU::isGFX11Plus(getSTI());
   }
+
+  bool isGFX1170() const { return AMDGPU::isGFX1170(getSTI()); }
 
   bool isGFX12() const { return AMDGPU::isGFX12(getSTI()); }
 
@@ -3967,9 +3971,12 @@ AMDGPUAsmParser::checkVOPDRegBankConstraints(const MCInst &Inst, bool AsVOPD3) {
 
   // On GFX12+ if both OpX and OpY are V_MOV_B32 then OPY uses SRC2
   // source-cache.
-  bool SkipSrc = Opcode == AMDGPU::V_DUAL_MOV_B32_e32_X_MOV_B32_e32_gfx12 ||
-                 Opcode == AMDGPU::V_DUAL_MOV_B32_e32_X_MOV_B32_e32_gfx1250 ||
-                 Opcode == AMDGPU::V_DUAL_MOV_B32_e32_X_MOV_B32_e32_e96_gfx1250;
+  bool SkipSrc =
+      Opcode == AMDGPU::V_DUAL_MOV_B32_e32_X_MOV_B32_e32_gfx12 ||
+      Opcode == AMDGPU::V_DUAL_MOV_B32_e32_X_MOV_B32_e32_gfx1250 ||
+      Opcode == AMDGPU::V_DUAL_MOV_B32_e32_X_MOV_B32_e32_gfx13 ||
+      Opcode == AMDGPU::V_DUAL_MOV_B32_e32_X_MOV_B32_e32_e96_gfx1250 ||
+      Opcode == AMDGPU::V_DUAL_MOV_B32_e32_X_MOV_B32_e32_e96_gfx13;
   bool AllowSameVGPR = isGFX1250Plus();
 
   if (AsVOPD3) { // Literal constants are not allowed with VOPD3.
@@ -5484,6 +5491,10 @@ bool AMDGPUAsmParser::validateTHAndScopeBits(const MCInst &Inst,
     Error(S, Msg);
     return false;
   };
+
+  if ((TH & AMDGPU::CPol::TH_ATOMIC_RETURN) &&
+      (TID.TSFlags & SIInstrFlags::IsAtomicNoRet))
+    return PrintError("th:TH_ATOMIC_RETURN requires a destination operand");
 
   if ((TID.TSFlags & SIInstrFlags::IsAtomicRet) &&
       (TID.TSFlags & (SIInstrFlags::FLAT | SIInstrFlags::MUBUF)) &&

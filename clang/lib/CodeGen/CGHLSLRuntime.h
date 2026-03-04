@@ -165,6 +165,15 @@ public:
                                    resource_getpointer)
   GENERATE_HLSL_INTRINSIC_FUNCTION(Sample, resource_sample)
   GENERATE_HLSL_INTRINSIC_FUNCTION(SampleClamp, resource_sample_clamp)
+  GENERATE_HLSL_INTRINSIC_FUNCTION(SampleBias, resource_samplebias)
+  GENERATE_HLSL_INTRINSIC_FUNCTION(SampleBiasClamp, resource_samplebias_clamp)
+  GENERATE_HLSL_INTRINSIC_FUNCTION(SampleGrad, resource_samplegrad)
+  GENERATE_HLSL_INTRINSIC_FUNCTION(SampleGradClamp, resource_samplegrad_clamp)
+  GENERATE_HLSL_INTRINSIC_FUNCTION(SampleLevel, resource_samplelevel)
+  GENERATE_HLSL_INTRINSIC_FUNCTION(SampleCmp, resource_samplecmp)
+  GENERATE_HLSL_INTRINSIC_FUNCTION(SampleCmpClamp, resource_samplecmp_clamp)
+  GENERATE_HLSL_INTRINSIC_FUNCTION(SampleCmpLevelZero,
+                                   resource_samplecmplevelzero)
   GENERATE_HLSL_INTRINSIC_FUNCTION(CreateHandleFromBinding,
                                    resource_handlefrombinding)
   GENERATE_HLSL_INTRINSIC_FUNCTION(CreateHandleFromImplicitBinding,
@@ -271,6 +280,9 @@ public:
   std::optional<LValue> emitBufferArraySubscriptExpr(
       const ArraySubscriptExpr *E, CodeGenFunction &CGF,
       llvm::function_ref<llvm::Value *(bool Promote)> EmitIdxAfterBase);
+
+  RawAddress createBufferMatrixTempAddress(const LValue &LV, SourceLocation Loc,
+                                           CodeGenFunction &CGF);
 
   bool emitBufferCopy(CodeGenFunction &CGF, Address DestPtr, Address SrcPtr,
                       QualType CType);
