@@ -1099,112 +1099,133 @@ define <vscale x 2 x double> @minimum_nxv2f64(<vscale x 2 x double> %a, <vscale 
   ret <vscale x 2 x double> %res
 }
 
-; TODO: Fix crash!
-;define <vscale x 8 x half> @canonicalize_nxv8f16(<vscale x 8 x half> %a) {
-;  %r = call <vscale x 8 x half> @llvm.canonicalize.nxv8f16(<vscale x 8 x half> %a)
-;  ret <vscale x 8 x half> %r
-;}
+define <vscale x 8 x half> @canonicalize_nxv8f16(<vscale x 8 x half> %a) {
+; CHECK-LABEL: canonicalize_nxv8f16:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    ptrue p0.h
+; CHECK-NEXT:    fminnm z0.h, p0/m, z0.h, z0.h
+; CHECK-NEXT:    ret
+  %r = call <vscale x 8 x half> @llvm.canonicalize.nxv8f16(<vscale x 8 x half> %a)
+  ret <vscale x 8 x half> %r
+}
 
-; TODO: Fix crash!
-;define <vscale x 4 x half> @canonicalize_nxv4f16(<vscale x 4 x half> %a) {
-;  %r = call <vscale x 4 x half> @llvm.canonicalize.nxv4f16(<vscale x 4 x half> %a)
-;  ret <vscale x 4 x half> %r
-;}
+define <vscale x 4 x half> @canonicalize_nxv4f16(<vscale x 4 x half> %a) {
+; CHECK-LABEL: canonicalize_nxv4f16:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    ptrue p0.s
+; CHECK-NEXT:    fminnm z0.h, p0/m, z0.h, z0.h
+; CHECK-NEXT:    ret
+  %r = call <vscale x 4 x half> @llvm.canonicalize.nxv4f16(<vscale x 4 x half> %a)
+  ret <vscale x 4 x half> %r
+}
 
-; TODO: Fix crash!
-;define <vscale x 2 x half> @canonicalize_nxv2f16(<vscale x 2 x half> %a) {
-;  %r = call <vscale x 2 x half> @llvm.canonicalize.nxv2f16(<vscale x 2 x half> %a)
-;  ret <vscale x 2 x half> %r
-;}
+define <vscale x 2 x half> @canonicalize_nxv2f16(<vscale x 2 x half> %a) {
+; CHECK-LABEL: canonicalize_nxv2f16:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    ptrue p0.d
+; CHECK-NEXT:    fminnm z0.h, p0/m, z0.h, z0.h
+; CHECK-NEXT:    ret
+  %r = call <vscale x 2 x half> @llvm.canonicalize.nxv2f16(<vscale x 2 x half> %a)
+  ret <vscale x 2 x half> %r
+}
 
-; TODO: Fix crash!
-;define <vscale x 4 x float> @canonicalize_nxv4f32(<vscale x 4 x float> %a) {
-;  %r = call <vscale x 4 x float> @llvm.canonicalize.nxv4f32(<vscale x 4 x float> %a)
-;  ret <vscale x 4 x float> %r
-;}
+define <vscale x 4 x float> @canonicalize_nxv4f32(<vscale x 4 x float> %a) {
+; CHECK-LABEL: canonicalize_nxv4f32:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    ptrue p0.s
+; CHECK-NEXT:    fminnm z0.s, p0/m, z0.s, z0.s
+; CHECK-NEXT:    ret
+  %r = call <vscale x 4 x float> @llvm.canonicalize.nxv4f32(<vscale x 4 x float> %a)
+  ret <vscale x 4 x float> %r
+}
 
-; TODO: Fix crash!
-;define <vscale x 2 x float> @canonicalize_nxv2f32(<vscale x 2 x float> %a) {
-;  %r = call <vscale x 2 x float> @llvm.canonicalize.nxv2f32(<vscale x 2 x float> %a)
-;  ret <vscale x 2 x float> %r
-;}
+define <vscale x 2 x float> @canonicalize_nxv2f32(<vscale x 2 x float> %a) {
+; CHECK-LABEL: canonicalize_nxv2f32:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    ptrue p0.d
+; CHECK-NEXT:    fminnm z0.s, p0/m, z0.s, z0.s
+; CHECK-NEXT:    ret
+  %r = call <vscale x 2 x float> @llvm.canonicalize.nxv2f32(<vscale x 2 x float> %a)
+  ret <vscale x 2 x float> %r
+}
 
-; TODO: Fix crash!
-;define <vscale x 2 x double> @canonicalize_nxv2f64(<vscale x 2 x double> %a) {
-;  %r = call <vscale x 2 x double> @llvm.canonicalize.nxv2f64(<vscale x 2 x double> %a)
-;  ret <vscale x 2 x double> %r
-;}
+define <vscale x 2 x double> @canonicalize_nxv2f64(<vscale x 2 x double> %a) {
+; CHECK-LABEL: canonicalize_nxv2f64:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    ptrue p0.d
+; CHECK-NEXT:    fminnm z0.d, p0/m, z0.d, z0.d
+; CHECK-NEXT:    ret
+  %r = call <vscale x 2 x double> @llvm.canonicalize.nxv2f64(<vscale x 2 x double> %a)
+  ret <vscale x 2 x double> %r
+}
 
 define <vscale x 8 x half> @maximumnum_nxv8f16(<vscale x 8 x half> %a, <vscale x 8 x half> %b) {
 ; CHECK-LABEL: maximumnum_nxv8f16:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    ptrue p0.h
-; CHECK-NEXT:    fcmuo p1.h, p0/z, z0.h, z0.h
-; CHECK-NEXT:    fcmuo p2.h, p0/z, z1.h, z1.h
-; CHECK-NEXT:    mov z0.h, p1/m, z1.h
-; CHECK-NEXT:    mov z1.h, p2/m, z0.h
-; CHECK-NEXT:    fcmgt p1.h, p0/z, z0.h, z1.h
-; CHECK-NEXT:    mov z1.h, p1/m, z0.h
-; CHECK-NEXT:    cmpeq p1.h, p0/z, z0.h, #0
-; CHECK-NEXT:    fcmeq p0.h, p0/z, z1.h, #0.0
-; CHECK-NEXT:    sel z0.h, p1, z0.h, z1.h
-; CHECK-NEXT:    sel z0.h, p0, z0.h, z1.h
+; CHECK-NEXT:    fminnm z1.h, p0/m, z1.h, z1.h
+; CHECK-NEXT:    fminnm z0.h, p0/m, z0.h, z0.h
+; CHECK-NEXT:    fmaxnm z0.h, p0/m, z0.h, z1.h
 ; CHECK-NEXT:    ret
   %res = call <vscale x 8 x half> @llvm.maximumnum.nxv8f16(<vscale x 8 x half> %a, <vscale x 8 x half> %b)
   ret <vscale x 8 x half> %res
 }
 
-; TODO: Fix crash!
-;define <vscale x 4 x half> @maximumnum_nxv4f16(<vscale x 4 x half> %a, <vscale x 4 x half> %b) {
-;  %res = call <vscale x 4 x half> @llvm.maximumnum.nxv4f16(<vscale x 4 x half> %a, <vscale x 4 x half> %b)
-;  ret <vscale x 4 x half> %res
-;}
+define <vscale x 4 x half> @maximumnum_nxv4f16(<vscale x 4 x half> %a, <vscale x 4 x half> %b) {
+; CHECK-LABEL: maximumnum_nxv4f16:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    ptrue p0.s
+; CHECK-NEXT:    fminnm z1.h, p0/m, z1.h, z1.h
+; CHECK-NEXT:    fminnm z0.h, p0/m, z0.h, z0.h
+; CHECK-NEXT:    fmaxnm z0.h, p0/m, z0.h, z1.h
+; CHECK-NEXT:    ret
+  %res = call <vscale x 4 x half> @llvm.maximumnum.nxv4f16(<vscale x 4 x half> %a, <vscale x 4 x half> %b)
+  ret <vscale x 4 x half> %res
+}
 
-; TODO: Fix crash!
-;define <vscale x 2 x half> @maximumnum_nxv2f16(<vscale x 2 x half> %a, <vscale x 2 x half> %b) {
-;  %res = call <vscale x 2 x half> @llvm.maximumnum.nxv2f16(<vscale x 2 x half> %a, <vscale x 2 x half> %b)
-;  ret <vscale x 2 x half> %res
-;}
+define <vscale x 2 x half> @maximumnum_nxv2f16(<vscale x 2 x half> %a, <vscale x 2 x half> %b) {
+; CHECK-LABEL: maximumnum_nxv2f16:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    ptrue p0.d
+; CHECK-NEXT:    fminnm z1.h, p0/m, z1.h, z1.h
+; CHECK-NEXT:    fminnm z0.h, p0/m, z0.h, z0.h
+; CHECK-NEXT:    fmaxnm z0.h, p0/m, z0.h, z1.h
+; CHECK-NEXT:    ret
+  %res = call <vscale x 2 x half> @llvm.maximumnum.nxv2f16(<vscale x 2 x half> %a, <vscale x 2 x half> %b)
+  ret <vscale x 2 x half> %res
+}
 
 define <vscale x 4 x float> @maximumnum_nxv4f32(<vscale x 4 x float> %a, <vscale x 4 x float> %b) {
 ; CHECK-LABEL: maximumnum_nxv4f32:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    ptrue p0.s
-; CHECK-NEXT:    fcmuo p1.s, p0/z, z0.s, z0.s
-; CHECK-NEXT:    fcmuo p2.s, p0/z, z1.s, z1.s
-; CHECK-NEXT:    mov z0.s, p1/m, z1.s
-; CHECK-NEXT:    mov z1.s, p2/m, z0.s
-; CHECK-NEXT:    fcmgt p1.s, p0/z, z0.s, z1.s
-; CHECK-NEXT:    mov z1.s, p1/m, z0.s
-; CHECK-NEXT:    cmpeq p1.s, p0/z, z0.s, #0
-; CHECK-NEXT:    fcmeq p0.s, p0/z, z1.s, #0.0
-; CHECK-NEXT:    sel z0.s, p1, z0.s, z1.s
-; CHECK-NEXT:    sel z0.s, p0, z0.s, z1.s
+; CHECK-NEXT:    fminnm z1.s, p0/m, z1.s, z1.s
+; CHECK-NEXT:    fminnm z0.s, p0/m, z0.s, z0.s
+; CHECK-NEXT:    fmaxnm z0.s, p0/m, z0.s, z1.s
 ; CHECK-NEXT:    ret
   %res = call <vscale x 4 x float> @llvm.maximumnum.nxv4f32(<vscale x 4 x float> %a, <vscale x 4 x float> %b)
   ret <vscale x 4 x float> %res
 }
 
-; TODO: Fix crash!
-;define <vscale x 2 x float> @maximumnum_nxv2f32(<vscale x 2 x float> %a, <vscale x 2 x float> %b) {
-;  %res = call <vscale x 2 x float> @llvm.maximumnum.nxv2f32(<vscale x 2 x float> %a, <vscale x 2 x float> %b)
-;  ret <vscale x 2 x float> %res
-;}
+define <vscale x 2 x float> @maximumnum_nxv2f32(<vscale x 2 x float> %a, <vscale x 2 x float> %b) {
+; CHECK-LABEL: maximumnum_nxv2f32:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    ptrue p0.d
+; CHECK-NEXT:    fminnm z1.s, p0/m, z1.s, z1.s
+; CHECK-NEXT:    fminnm z0.s, p0/m, z0.s, z0.s
+; CHECK-NEXT:    fmaxnm z0.s, p0/m, z0.s, z1.s
+; CHECK-NEXT:    ret
+  %res = call <vscale x 2 x float> @llvm.maximumnum.nxv2f32(<vscale x 2 x float> %a, <vscale x 2 x float> %b)
+  ret <vscale x 2 x float> %res
+}
 
 define <vscale x 2 x double> @maximumnum_nxv2f64(<vscale x 2 x double> %a, <vscale x 2 x double> %b) {
 ; CHECK-LABEL: maximumnum_nxv2f64:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    ptrue p0.d
-; CHECK-NEXT:    fcmuo p1.d, p0/z, z0.d, z0.d
-; CHECK-NEXT:    fcmuo p2.d, p0/z, z1.d, z1.d
-; CHECK-NEXT:    mov z0.d, p1/m, z1.d
-; CHECK-NEXT:    mov z1.d, p2/m, z0.d
-; CHECK-NEXT:    fcmgt p1.d, p0/z, z0.d, z1.d
-; CHECK-NEXT:    mov z1.d, p1/m, z0.d
-; CHECK-NEXT:    cmpeq p1.d, p0/z, z0.d, #0
-; CHECK-NEXT:    fcmeq p0.d, p0/z, z1.d, #0.0
-; CHECK-NEXT:    sel z0.d, p1, z0.d, z1.d
-; CHECK-NEXT:    sel z0.d, p0, z0.d, z1.d
+; CHECK-NEXT:    fminnm z1.d, p0/m, z1.d, z1.d
+; CHECK-NEXT:    fminnm z0.d, p0/m, z0.d, z0.d
+; CHECK-NEXT:    fmaxnm z0.d, p0/m, z0.d, z1.d
 ; CHECK-NEXT:    ret
   %res = call <vscale x 2 x double> @llvm.maximumnum.nxv2f64(<vscale x 2 x double> %a, <vscale x 2 x double> %b)
   ret <vscale x 2 x double> %res
@@ -1214,75 +1235,69 @@ define <vscale x 8 x half> @minimumnum_nxv8f16(<vscale x 8 x half> %a, <vscale x
 ; CHECK-LABEL: minimumnum_nxv8f16:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    ptrue p0.h
-; CHECK-NEXT:    mov z2.h, #-32768 // =0xffffffffffff8000
-; CHECK-NEXT:    fcmuo p1.h, p0/z, z0.h, z0.h
-; CHECK-NEXT:    fcmuo p2.h, p0/z, z1.h, z1.h
-; CHECK-NEXT:    mov z0.h, p1/m, z1.h
-; CHECK-NEXT:    mov z1.h, p2/m, z0.h
-; CHECK-NEXT:    fcmgt p1.h, p0/z, z1.h, z0.h
-; CHECK-NEXT:    mov z1.h, p1/m, z0.h
-; CHECK-NEXT:    cmpeq p1.h, p0/z, z0.h, z2.h
-; CHECK-NEXT:    fcmeq p0.h, p0/z, z1.h, #0.0
-; CHECK-NEXT:    sel z0.h, p1, z0.h, z1.h
-; CHECK-NEXT:    sel z0.h, p0, z0.h, z1.h
+; CHECK-NEXT:    fminnm z1.h, p0/m, z1.h, z1.h
+; CHECK-NEXT:    fminnm z0.h, p0/m, z0.h, z0.h
+; CHECK-NEXT:    fminnm z0.h, p0/m, z0.h, z1.h
 ; CHECK-NEXT:    ret
   %res = call <vscale x 8 x half> @llvm.minimumnum.nxv8f16(<vscale x 8 x half> %a, <vscale x 8 x half> %b)
   ret <vscale x 8 x half> %res
 }
 
-; TODO: Fix crash!
-;define <vscale x 4 x half> @minimumnum_nxv4f16(<vscale x 4 x half> %a, <vscale x 4 x half> %b) {
-;  %res = call <vscale x 4 x half> @llvm.minimumnum.nxv4f16(<vscale x 4 x half> %a, <vscale x 4 x half> %b)
-;  ret <vscale x 4 x half> %res
-;}
+define <vscale x 4 x half> @minimumnum_nxv4f16(<vscale x 4 x half> %a, <vscale x 4 x half> %b) {
+; CHECK-LABEL: minimumnum_nxv4f16:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    ptrue p0.s
+; CHECK-NEXT:    fminnm z1.h, p0/m, z1.h, z1.h
+; CHECK-NEXT:    fminnm z0.h, p0/m, z0.h, z0.h
+; CHECK-NEXT:    fminnm z0.h, p0/m, z0.h, z1.h
+; CHECK-NEXT:    ret
+  %res = call <vscale x 4 x half> @llvm.minimumnum.nxv4f16(<vscale x 4 x half> %a, <vscale x 4 x half> %b)
+  ret <vscale x 4 x half> %res
+}
 
-; TODO: Fix crash!
-;define <vscale x 2 x half> @minimumnum_nxv2f16(<vscale x 2 x half> %a, <vscale x 2 x half> %b) {
-;  %res = call <vscale x 2 x half> @llvm.minimumnum.nxv2f16(<vscale x 2 x half> %a, <vscale x 2 x half> %b)
-;  ret <vscale x 2 x half> %res
-;}
+define <vscale x 2 x half> @minimumnum_nxv2f16(<vscale x 2 x half> %a, <vscale x 2 x half> %b) {
+; CHECK-LABEL: minimumnum_nxv2f16:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    ptrue p0.d
+; CHECK-NEXT:    fminnm z1.h, p0/m, z1.h, z1.h
+; CHECK-NEXT:    fminnm z0.h, p0/m, z0.h, z0.h
+; CHECK-NEXT:    fminnm z0.h, p0/m, z0.h, z1.h
+; CHECK-NEXT:    ret
+  %res = call <vscale x 2 x half> @llvm.minimumnum.nxv2f16(<vscale x 2 x half> %a, <vscale x 2 x half> %b)
+  ret <vscale x 2 x half> %res
+}
 
 define <vscale x 4 x float> @minimumnum_nxv4f32(<vscale x 4 x float> %a, <vscale x 4 x float> %b) {
 ; CHECK-LABEL: minimumnum_nxv4f32:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    ptrue p0.s
-; CHECK-NEXT:    mov z2.s, #0x80000000
-; CHECK-NEXT:    fcmuo p1.s, p0/z, z0.s, z0.s
-; CHECK-NEXT:    fcmuo p2.s, p0/z, z1.s, z1.s
-; CHECK-NEXT:    mov z0.s, p1/m, z1.s
-; CHECK-NEXT:    mov z1.s, p2/m, z0.s
-; CHECK-NEXT:    fcmgt p1.s, p0/z, z1.s, z0.s
-; CHECK-NEXT:    mov z1.s, p1/m, z0.s
-; CHECK-NEXT:    cmpeq p1.s, p0/z, z0.s, z2.s
-; CHECK-NEXT:    fcmeq p0.s, p0/z, z1.s, #0.0
-; CHECK-NEXT:    sel z0.s, p1, z0.s, z1.s
-; CHECK-NEXT:    sel z0.s, p0, z0.s, z1.s
+; CHECK-NEXT:    fminnm z1.s, p0/m, z1.s, z1.s
+; CHECK-NEXT:    fminnm z0.s, p0/m, z0.s, z0.s
+; CHECK-NEXT:    fminnm z0.s, p0/m, z0.s, z1.s
 ; CHECK-NEXT:    ret
   %res = call <vscale x 4 x float> @llvm.minimumnum.nxv4f32(<vscale x 4 x float> %a, <vscale x 4 x float> %b)
   ret <vscale x 4 x float> %res
 }
 
-; TODO: Fix crash!
-;define <vscale x 2 x float> @minimumnum_nxv2f32(<vscale x 2 x float> %a, <vscale x 2 x float> %b) {
-;  %res = call <vscale x 2 x float> @llvm.minimumnum.nxv2f32(<vscale x 2 x float> %a, <vscale x 2 x float> %b)
-;  ret <vscale x 2 x float> %res
-;}
+define <vscale x 2 x float> @minimumnum_nxv2f32(<vscale x 2 x float> %a, <vscale x 2 x float> %b) {
+; CHECK-LABEL: minimumnum_nxv2f32:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    ptrue p0.d
+; CHECK-NEXT:    fminnm z1.s, p0/m, z1.s, z1.s
+; CHECK-NEXT:    fminnm z0.s, p0/m, z0.s, z0.s
+; CHECK-NEXT:    fminnm z0.s, p0/m, z0.s, z1.s
+; CHECK-NEXT:    ret
+  %res = call <vscale x 2 x float> @llvm.minimumnum.nxv2f32(<vscale x 2 x float> %a, <vscale x 2 x float> %b)
+  ret <vscale x 2 x float> %res
+}
 
 define <vscale x 2 x double> @minimumnum_nxv2f64(<vscale x 2 x double> %a, <vscale x 2 x double> %b) {
 ; CHECK-LABEL: minimumnum_nxv2f64:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    ptrue p0.d
-; CHECK-NEXT:    mov z2.d, #0x8000000000000000
-; CHECK-NEXT:    fcmuo p1.d, p0/z, z0.d, z0.d
-; CHECK-NEXT:    fcmuo p2.d, p0/z, z1.d, z1.d
-; CHECK-NEXT:    mov z0.d, p1/m, z1.d
-; CHECK-NEXT:    mov z1.d, p2/m, z0.d
-; CHECK-NEXT:    fcmgt p1.d, p0/z, z1.d, z0.d
-; CHECK-NEXT:    mov z1.d, p1/m, z0.d
-; CHECK-NEXT:    cmpeq p1.d, p0/z, z0.d, z2.d
-; CHECK-NEXT:    fcmeq p0.d, p0/z, z1.d, #0.0
-; CHECK-NEXT:    sel z0.d, p1, z0.d, z1.d
-; CHECK-NEXT:    sel z0.d, p0, z0.d, z1.d
+; CHECK-NEXT:    fminnm z1.d, p0/m, z1.d, z1.d
+; CHECK-NEXT:    fminnm z0.d, p0/m, z0.d, z0.d
+; CHECK-NEXT:    fminnm z0.d, p0/m, z0.d, z1.d
 ; CHECK-NEXT:    ret
   %res = call <vscale x 2 x double> @llvm.minimumnum.nxv2f64(<vscale x 2 x double> %a, <vscale x 2 x double> %b)
   ret <vscale x 2 x double> %res

@@ -2910,16 +2910,8 @@ define void @frintz_v4f64(ptr %a) {
 define <2 x half> @fcanonicalize_v2f16(<2 x half> %op) {
 ; CHECK-LABEL: fcanonicalize_v2f16:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    mov z1.h, z0.h[3]
-; CHECK-NEXT:    mov z2.h, z0.h[2]
-; CHECK-NEXT:    mov z3.h, z0.h[1]
-; CHECK-NEXT:    fminnm h0, h0, h0
-; CHECK-NEXT:    fminnm h1, h1, h1
-; CHECK-NEXT:    fminnm h2, h2, h2
-; CHECK-NEXT:    fminnm h3, h3, h3
-; CHECK-NEXT:    zip1 z1.h, z2.h, z1.h
-; CHECK-NEXT:    zip1 z0.h, z0.h, z3.h
-; CHECK-NEXT:    zip1 z0.s, z0.s, z1.s
+; CHECK-NEXT:    ptrue p0.h, vl4
+; CHECK-NEXT:    fminnm z0.h, p0/m, z0.h, z0.h
 ; CHECK-NEXT:    ret
 ;
 ; NONEON-NOSVE-LABEL: fcanonicalize_v2f16:
@@ -2956,16 +2948,8 @@ define <2 x half> @fcanonicalize_v2f16(<2 x half> %op) {
 define <4 x half> @fcanonicalize_v4f16(<4 x half> %op) {
 ; CHECK-LABEL: fcanonicalize_v4f16:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    mov z1.h, z0.h[3]
-; CHECK-NEXT:    mov z2.h, z0.h[2]
-; CHECK-NEXT:    mov z3.h, z0.h[1]
-; CHECK-NEXT:    fminnm h0, h0, h0
-; CHECK-NEXT:    fminnm h1, h1, h1
-; CHECK-NEXT:    fminnm h2, h2, h2
-; CHECK-NEXT:    fminnm h3, h3, h3
-; CHECK-NEXT:    zip1 z1.h, z2.h, z1.h
-; CHECK-NEXT:    zip1 z0.h, z0.h, z3.h
-; CHECK-NEXT:    zip1 z0.s, z0.s, z1.s
+; CHECK-NEXT:    ptrue p0.h, vl4
+; CHECK-NEXT:    fminnm z0.h, p0/m, z0.h, z0.h
 ; CHECK-NEXT:    ret
 ;
 ; NONEON-NOSVE-LABEL: fcanonicalize_v4f16:
@@ -3002,28 +2986,8 @@ define <4 x half> @fcanonicalize_v4f16(<4 x half> %op) {
 define <8 x half> @fcanonicalize_v8f16(<8 x half> %op) {
 ; CHECK-LABEL: fcanonicalize_v8f16:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    mov z1.h, z0.h[7]
-; CHECK-NEXT:    mov z2.h, z0.h[6]
-; CHECK-NEXT:    mov z3.h, z0.h[5]
-; CHECK-NEXT:    mov z4.h, z0.h[4]
-; CHECK-NEXT:    mov z5.h, z0.h[3]
-; CHECK-NEXT:    mov z6.h, z0.h[2]
-; CHECK-NEXT:    mov z7.h, z0.h[1]
-; CHECK-NEXT:    fminnm h0, h0, h0
-; CHECK-NEXT:    fminnm h1, h1, h1
-; CHECK-NEXT:    fminnm h2, h2, h2
-; CHECK-NEXT:    fminnm h3, h3, h3
-; CHECK-NEXT:    fminnm h4, h4, h4
-; CHECK-NEXT:    fminnm h5, h5, h5
-; CHECK-NEXT:    fminnm h6, h6, h6
-; CHECK-NEXT:    fminnm h7, h7, h7
-; CHECK-NEXT:    zip1 z1.h, z2.h, z1.h
-; CHECK-NEXT:    zip1 z2.h, z4.h, z3.h
-; CHECK-NEXT:    zip1 z3.h, z6.h, z5.h
-; CHECK-NEXT:    zip1 z0.h, z0.h, z7.h
-; CHECK-NEXT:    zip1 z1.s, z2.s, z1.s
-; CHECK-NEXT:    zip1 z0.s, z0.s, z3.s
-; CHECK-NEXT:    zip1 z0.d, z0.d, z1.d
+; CHECK-NEXT:    ptrue p0.h, vl8
+; CHECK-NEXT:    fminnm z0.h, p0/m, z0.h, z0.h
 ; CHECK-NEXT:    ret
 ;
 ; NONEON-NOSVE-LABEL: fcanonicalize_v8f16:
@@ -3080,52 +3044,11 @@ define <8 x half> @fcanonicalize_v8f16(<8 x half> %op) {
 define void @fcanonicalize_v16f16(ptr %a) {
 ; CHECK-LABEL: fcanonicalize_v16f16:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    ldp q1, q0, [x0]
-; CHECK-NEXT:    mov z2.h, z0.h[7]
-; CHECK-NEXT:    mov z3.h, z0.h[6]
-; CHECK-NEXT:    mov z4.h, z0.h[5]
-; CHECK-NEXT:    mov z5.h, z0.h[4]
-; CHECK-NEXT:    mov z6.h, z0.h[3]
-; CHECK-NEXT:    mov z7.h, z1.h[7]
-; CHECK-NEXT:    mov z16.h, z1.h[6]
-; CHECK-NEXT:    mov z17.h, z1.h[5]
-; CHECK-NEXT:    mov z18.h, z1.h[4]
-; CHECK-NEXT:    mov z19.h, z1.h[3]
-; CHECK-NEXT:    mov z20.h, z0.h[2]
-; CHECK-NEXT:    mov z21.h, z1.h[2]
-; CHECK-NEXT:    mov z22.h, z1.h[1]
-; CHECK-NEXT:    mov z23.h, z0.h[1]
-; CHECK-NEXT:    fminnm h2, h2, h2
-; CHECK-NEXT:    fminnm h3, h3, h3
-; CHECK-NEXT:    fminnm h4, h4, h4
-; CHECK-NEXT:    fminnm h5, h5, h5
-; CHECK-NEXT:    fminnm h6, h6, h6
-; CHECK-NEXT:    fminnm h7, h7, h7
-; CHECK-NEXT:    fminnm h16, h16, h16
-; CHECK-NEXT:    fminnm h17, h17, h17
-; CHECK-NEXT:    fminnm h18, h18, h18
-; CHECK-NEXT:    fminnm h19, h19, h19
-; CHECK-NEXT:    fminnm h21, h21, h21
-; CHECK-NEXT:    fminnm h1, h1, h1
-; CHECK-NEXT:    fminnm h22, h22, h22
-; CHECK-NEXT:    fminnm h20, h20, h20
-; CHECK-NEXT:    fminnm h0, h0, h0
-; CHECK-NEXT:    fminnm h23, h23, h23
-; CHECK-NEXT:    zip1 z2.h, z3.h, z2.h
-; CHECK-NEXT:    zip1 z3.h, z16.h, z7.h
-; CHECK-NEXT:    zip1 z4.h, z5.h, z4.h
-; CHECK-NEXT:    zip1 z7.h, z18.h, z17.h
-; CHECK-NEXT:    zip1 z16.h, z21.h, z19.h
-; CHECK-NEXT:    zip1 z1.h, z1.h, z22.h
-; CHECK-NEXT:    zip1 z5.h, z20.h, z6.h
-; CHECK-NEXT:    zip1 z0.h, z0.h, z23.h
-; CHECK-NEXT:    zip1 z2.s, z4.s, z2.s
-; CHECK-NEXT:    zip1 z3.s, z7.s, z3.s
-; CHECK-NEXT:    zip1 z1.s, z1.s, z16.s
-; CHECK-NEXT:    zip1 z0.s, z0.s, z5.s
-; CHECK-NEXT:    zip1 z1.d, z1.d, z3.d
-; CHECK-NEXT:    zip1 z0.d, z0.d, z2.d
-; CHECK-NEXT:    stp q1, q0, [x0]
+; CHECK-NEXT:    ldp q0, q1, [x0]
+; CHECK-NEXT:    ptrue p0.h, vl8
+; CHECK-NEXT:    fminnm z0.h, p0/m, z0.h, z0.h
+; CHECK-NEXT:    fminnm z1.h, p0/m, z1.h, z1.h
+; CHECK-NEXT:    stp q0, q1, [x0]
 ; CHECK-NEXT:    ret
 ;
 ; NONEON-NOSVE-LABEL: fcanonicalize_v16f16:
@@ -3226,10 +3149,8 @@ define void @fcanonicalize_v16f16(ptr %a) {
 define <2 x float> @fcanonicalize_v2f32(<2 x float> %op) {
 ; CHECK-LABEL: fcanonicalize_v2f32:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    mov z1.s, z0.s[1]
-; CHECK-NEXT:    fminnm s0, s0, s0
-; CHECK-NEXT:    fminnm s1, s1, s1
-; CHECK-NEXT:    zip1 z0.s, z0.s, z1.s
+; CHECK-NEXT:    ptrue p0.s, vl2
+; CHECK-NEXT:    fminnm z0.s, p0/m, z0.s, z0.s
 ; CHECK-NEXT:    ret
 ;
 ; NONEON-NOSVE-LABEL: fcanonicalize_v2f32:
@@ -3251,16 +3172,8 @@ define <2 x float> @fcanonicalize_v2f32(<2 x float> %op) {
 define <4 x float> @fcanonicalize_v4f32(<4 x float> %op) {
 ; CHECK-LABEL: fcanonicalize_v4f32:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    mov z1.s, z0.s[3]
-; CHECK-NEXT:    mov z2.s, z0.s[2]
-; CHECK-NEXT:    mov z3.s, z0.s[1]
-; CHECK-NEXT:    fminnm s0, s0, s0
-; CHECK-NEXT:    fminnm s1, s1, s1
-; CHECK-NEXT:    fminnm s2, s2, s2
-; CHECK-NEXT:    fminnm s3, s3, s3
-; CHECK-NEXT:    zip1 z1.s, z2.s, z1.s
-; CHECK-NEXT:    zip1 z0.s, z0.s, z3.s
-; CHECK-NEXT:    zip1 z0.d, z0.d, z1.d
+; CHECK-NEXT:    ptrue p0.s, vl4
+; CHECK-NEXT:    fminnm z0.s, p0/m, z0.s, z0.s
 ; CHECK-NEXT:    ret
 ;
 ; NONEON-NOSVE-LABEL: fcanonicalize_v4f32:
@@ -3288,26 +3201,9 @@ define void @fcanonicalize_v8f32(ptr %a) {
 ; CHECK-LABEL: fcanonicalize_v8f32:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    ldp q0, q1, [x0]
-; CHECK-NEXT:    mov z2.s, z0.s[3]
-; CHECK-NEXT:    mov z3.s, z0.s[2]
-; CHECK-NEXT:    mov z4.s, z0.s[1]
-; CHECK-NEXT:    mov z5.s, z1.s[3]
-; CHECK-NEXT:    mov z6.s, z1.s[2]
-; CHECK-NEXT:    mov z7.s, z1.s[1]
-; CHECK-NEXT:    fminnm s1, s1, s1
-; CHECK-NEXT:    fminnm s0, s0, s0
-; CHECK-NEXT:    fminnm s2, s2, s2
-; CHECK-NEXT:    fminnm s3, s3, s3
-; CHECK-NEXT:    fminnm s4, s4, s4
-; CHECK-NEXT:    fminnm s5, s5, s5
-; CHECK-NEXT:    fminnm s6, s6, s6
-; CHECK-NEXT:    fminnm s7, s7, s7
-; CHECK-NEXT:    zip1 z2.s, z3.s, z2.s
-; CHECK-NEXT:    zip1 z0.s, z0.s, z4.s
-; CHECK-NEXT:    zip1 z3.s, z6.s, z5.s
-; CHECK-NEXT:    zip1 z1.s, z1.s, z7.s
-; CHECK-NEXT:    zip1 z0.d, z0.d, z2.d
-; CHECK-NEXT:    zip1 z1.d, z1.d, z3.d
+; CHECK-NEXT:    ptrue p0.s, vl4
+; CHECK-NEXT:    fminnm z0.s, p0/m, z0.s, z0.s
+; CHECK-NEXT:    fminnm z1.s, p0/m, z1.s, z1.s
 ; CHECK-NEXT:    stp q0, q1, [x0]
 ; CHECK-NEXT:    ret
 ;
@@ -3366,10 +3262,8 @@ define <1 x double> @fcanonicalize_v1f64(<1 x double> %op) {
 define <2 x double> @fcanonicalize_v2f64(<2 x double> %op) {
 ; CHECK-LABEL: fcanonicalize_v2f64:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    mov z1.d, z0.d[1]
-; CHECK-NEXT:    fminnm d0, d0, d0
-; CHECK-NEXT:    fminnm d1, d1, d1
-; CHECK-NEXT:    zip1 z0.d, z0.d, z1.d
+; CHECK-NEXT:    ptrue p0.d, vl2
+; CHECK-NEXT:    fminnm z0.d, p0/m, z0.d, z0.d
 ; CHECK-NEXT:    ret
 ;
 ; NONEON-NOSVE-LABEL: fcanonicalize_v2f64:
@@ -3392,14 +3286,9 @@ define void @fcanonicalize_v4f64(ptr %a) {
 ; CHECK-LABEL: fcanonicalize_v4f64:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    ldp q0, q1, [x0]
-; CHECK-NEXT:    mov z2.d, z0.d[1]
-; CHECK-NEXT:    mov z3.d, z1.d[1]
-; CHECK-NEXT:    fminnm d0, d0, d0
-; CHECK-NEXT:    fminnm d1, d1, d1
-; CHECK-NEXT:    fminnm d2, d2, d2
-; CHECK-NEXT:    fminnm d3, d3, d3
-; CHECK-NEXT:    zip1 z0.d, z0.d, z2.d
-; CHECK-NEXT:    zip1 z1.d, z1.d, z3.d
+; CHECK-NEXT:    ptrue p0.d, vl2
+; CHECK-NEXT:    fminnm z0.d, p0/m, z0.d, z0.d
+; CHECK-NEXT:    fminnm z1.d, p0/m, z1.d, z1.d
 ; CHECK-NEXT:    stp q0, q1, [x0]
 ; CHECK-NEXT:    ret
 ;

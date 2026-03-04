@@ -1848,53 +1848,10 @@ define void @fmin_v4f64(ptr %a, ptr %b) {
 define <4 x half> @fmaximumnum_v4f16(<4 x half> %op1, <4 x half> %op2) {
 ; CHECK-LABEL: fmaximumnum_v4f16:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    mov z2.h, z0.h[3]
-; CHECK-NEXT:    mov z3.h, z1.h[3]
-; CHECK-NEXT:    adrp x8, .LCPI36_0
-; CHECK-NEXT:    mov z4.h, z0.h[2]
-; CHECK-NEXT:    mov z5.h, z1.h[2]
 ; CHECK-NEXT:    ptrue p0.h, vl4
-; CHECK-NEXT:    fcmp h2, h2
-; CHECK-NEXT:    fcsel h2, h3, h2, vs
-; CHECK-NEXT:    fcmp h3, h3
-; CHECK-NEXT:    fcsel h3, h2, h3, vs
-; CHECK-NEXT:    fcmp h2, h3
-; CHECK-NEXT:    fcsel h3, h2, h3, gt
-; CHECK-NEXT:    fcmp h4, h4
-; CHECK-NEXT:    fcsel h4, h5, h4, vs
-; CHECK-NEXT:    fcmp h5, h5
-; CHECK-NEXT:    fcsel h5, h4, h5, vs
-; CHECK-NEXT:    zip1 z2.h, z4.h, z2.h
-; CHECK-NEXT:    fcmp h4, h5
-; CHECK-NEXT:    fcsel h5, h4, h5, gt
-; CHECK-NEXT:    fcmp h0, h0
-; CHECK-NEXT:    fcsel h6, h1, h0, vs
-; CHECK-NEXT:    fcmp h1, h1
-; CHECK-NEXT:    mov z0.h, z0.h[1]
-; CHECK-NEXT:    zip1 z3.h, z5.h, z3.h
-; CHECK-NEXT:    fcsel h7, h6, h1, vs
-; CHECK-NEXT:    mov z1.h, z1.h[1]
-; CHECK-NEXT:    fcmp h6, h7
-; CHECK-NEXT:    fcsel h7, h6, h7, gt
-; CHECK-NEXT:    fcmp h0, h0
-; CHECK-NEXT:    fcsel h0, h1, h0, vs
-; CHECK-NEXT:    fcmp h1, h1
-; CHECK-NEXT:    fcsel h1, h0, h1, vs
-; CHECK-NEXT:    zip1 z4.h, z6.h, z0.h
-; CHECK-NEXT:    fcmp h0, h1
-; CHECK-NEXT:    zip1 z2.s, z4.s, z2.s
-; CHECK-NEXT:    ldr d4, [x8, :lo12:.LCPI36_0]
-; CHECK-NEXT:    fcsel h0, h0, h1, gt
-; CHECK-NEXT:    cmpeq p1.h, p0/z, z2.h, z4.h
-; CHECK-NEXT:    zip1 z0.h, z7.h, z0.h
-; CHECK-NEXT:    mov z1.h, p1/z, #-1 // =0xffffffffffffffff
-; CHECK-NEXT:    ptrue p1.h
-; CHECK-NEXT:    zip1 z0.s, z0.s, z3.s
-; CHECK-NEXT:    and z1.h, z1.h, #0x1
-; CHECK-NEXT:    fcmeq p0.h, p0/z, z0.h, #0.0
-; CHECK-NEXT:    cmpne p1.h, p1/z, z1.h, #0
-; CHECK-NEXT:    sel z1.h, p1, z2.h, z0.h
-; CHECK-NEXT:    mov z0.h, p0/m, z1.h
+; CHECK-NEXT:    fminnm z1.h, p0/m, z1.h, z1.h
+; CHECK-NEXT:    fminnm z0.h, p0/m, z0.h, z0.h
+; CHECK-NEXT:    fmaxnm z0.h, p0/m, z0.h, z1.h
 ; CHECK-NEXT:    ret
 ;
 ; NONEON-NOSVE-LABEL: fmaximumnum_v4f16:
@@ -1940,93 +1897,10 @@ define <4 x half> @fmaximumnum_v4f16(<4 x half> %op1, <4 x half> %op2) {
 define <8 x half> @fmaximumnum_v8f16(<8 x half> %op1, <8 x half> %op2) {
 ; CHECK-LABEL: fmaximumnum_v8f16:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    mov z2.h, z0.h[7]
-; CHECK-NEXT:    mov z3.h, z1.h[7]
-; CHECK-NEXT:    adrp x8, .LCPI37_0
-; CHECK-NEXT:    mov z5.h, z1.h[6]
-; CHECK-NEXT:    mov z16.h, z1.h[5]
-; CHECK-NEXT:    mov z18.h, z1.h[4]
-; CHECK-NEXT:    mov z19.h, z1.h[3]
-; CHECK-NEXT:    mov z21.h, z1.h[2]
 ; CHECK-NEXT:    ptrue p0.h, vl8
-; CHECK-NEXT:    fcmp h2, h2
-; CHECK-NEXT:    fcsel h4, h3, h2, vs
-; CHECK-NEXT:    fcmp h3, h3
-; CHECK-NEXT:    fcsel h2, h4, h3, vs
-; CHECK-NEXT:    mov z3.h, z0.h[6]
-; CHECK-NEXT:    fcmp h4, h2
-; CHECK-NEXT:    fcsel h2, h4, h2, gt
-; CHECK-NEXT:    fcmp h3, h3
-; CHECK-NEXT:    fcsel h6, h5, h3, vs
-; CHECK-NEXT:    fcmp h5, h5
-; CHECK-NEXT:    fcsel h3, h6, h5, vs
-; CHECK-NEXT:    mov z5.h, z0.h[5]
-; CHECK-NEXT:    zip1 z4.h, z6.h, z4.h
-; CHECK-NEXT:    fcmp h6, h3
-; CHECK-NEXT:    fcsel h3, h6, h3, gt
-; CHECK-NEXT:    fcmp h5, h5
-; CHECK-NEXT:    fcsel h7, h16, h5, vs
-; CHECK-NEXT:    fcmp h16, h16
-; CHECK-NEXT:    fcsel h5, h7, h16, vs
-; CHECK-NEXT:    mov z16.h, z0.h[4]
-; CHECK-NEXT:    fcmp h7, h5
-; CHECK-NEXT:    fcsel h5, h7, h5, gt
-; CHECK-NEXT:    fcmp h16, h16
-; CHECK-NEXT:    fcsel h17, h18, h16, vs
-; CHECK-NEXT:    fcmp h18, h18
-; CHECK-NEXT:    fcsel h16, h17, h18, vs
-; CHECK-NEXT:    mov z18.h, z0.h[3]
-; CHECK-NEXT:    zip1 z6.h, z17.h, z7.h
-; CHECK-NEXT:    fcmp h17, h16
-; CHECK-NEXT:    zip1 z4.s, z6.s, z4.s
-; CHECK-NEXT:    fcsel h16, h17, h16, gt
-; CHECK-NEXT:    fcmp h18, h18
-; CHECK-NEXT:    fcsel h20, h19, h18, vs
-; CHECK-NEXT:    fcmp h19, h19
-; CHECK-NEXT:    fcsel h18, h20, h19, vs
-; CHECK-NEXT:    mov z19.h, z0.h[2]
-; CHECK-NEXT:    fcmp h20, h18
-; CHECK-NEXT:    fcsel h18, h20, h18, gt
-; CHECK-NEXT:    fcmp h19, h19
-; CHECK-NEXT:    fcsel h19, h21, h19, vs
-; CHECK-NEXT:    fcmp h21, h21
-; CHECK-NEXT:    fcsel h21, h19, h21, vs
-; CHECK-NEXT:    zip1 z7.h, z19.h, z20.h
-; CHECK-NEXT:    fcmp h19, h21
-; CHECK-NEXT:    fcsel h21, h19, h21, gt
-; CHECK-NEXT:    fcmp h0, h0
-; CHECK-NEXT:    fcsel h22, h1, h0, vs
-; CHECK-NEXT:    fcmp h1, h1
-; CHECK-NEXT:    mov z0.h, z0.h[1]
-; CHECK-NEXT:    fcsel h23, h22, h1, vs
-; CHECK-NEXT:    mov z1.h, z1.h[1]
-; CHECK-NEXT:    fcmp h22, h23
-; CHECK-NEXT:    fcsel h23, h22, h23, gt
-; CHECK-NEXT:    fcmp h0, h0
-; CHECK-NEXT:    fcsel h0, h1, h0, vs
-; CHECK-NEXT:    fcmp h1, h1
-; CHECK-NEXT:    zip1 z17.h, z22.h, z0.h
-; CHECK-NEXT:    fcsel h1, h0, h1, vs
-; CHECK-NEXT:    zip1 z6.s, z17.s, z7.s
-; CHECK-NEXT:    fcmp h0, h1
-; CHECK-NEXT:    zip1 z4.d, z6.d, z4.d
-; CHECK-NEXT:    ldr q6, [x8, :lo12:.LCPI37_0]
-; CHECK-NEXT:    fcsel h0, h0, h1, gt
-; CHECK-NEXT:    zip1 z1.h, z3.h, z2.h
-; CHECK-NEXT:    zip1 z2.h, z16.h, z5.h
-; CHECK-NEXT:    zip1 z3.h, z21.h, z18.h
-; CHECK-NEXT:    cmpeq p1.h, p0/z, z4.h, z6.h
-; CHECK-NEXT:    zip1 z0.h, z23.h, z0.h
-; CHECK-NEXT:    zip1 z1.s, z2.s, z1.s
-; CHECK-NEXT:    zip1 z0.s, z0.s, z3.s
-; CHECK-NEXT:    mov z5.h, p1/z, #-1 // =0xffffffffffffffff
-; CHECK-NEXT:    ptrue p1.h
-; CHECK-NEXT:    zip1 z0.d, z0.d, z1.d
-; CHECK-NEXT:    and z5.h, z5.h, #0x1
-; CHECK-NEXT:    fcmeq p0.h, p0/z, z0.h, #0.0
-; CHECK-NEXT:    cmpne p1.h, p1/z, z5.h, #0
-; CHECK-NEXT:    sel z1.h, p1, z4.h, z0.h
-; CHECK-NEXT:    mov z0.h, p0/m, z1.h
+; CHECK-NEXT:    fminnm z1.h, p0/m, z1.h, z1.h
+; CHECK-NEXT:    fminnm z0.h, p0/m, z0.h, z0.h
+; CHECK-NEXT:    fmaxnm z0.h, p0/m, z0.h, z1.h
 ; CHECK-NEXT:    ret
 ;
 ; NONEON-NOSVE-LABEL: fmaximumnum_v8f16:
@@ -2099,186 +1973,16 @@ define <8 x half> @fmaximumnum_v8f16(<8 x half> %op1, <8 x half> %op2) {
 define void @fmaximumnum_v16f16(ptr %a, ptr %b) {
 ; CHECK-LABEL: fmaximumnum_v16f16:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    stp d9, d8, [sp, #-16]! // 16-byte Folded Spill
-; CHECK-NEXT:    .cfi_def_cfa_offset 16
-; CHECK-NEXT:    .cfi_offset b8, -8
-; CHECK-NEXT:    .cfi_offset b9, -16
-; CHECK-NEXT:    ldr q6, [x0, #16]
-; CHECK-NEXT:    ldr q16, [x1, #16]
-; CHECK-NEXT:    adrp x8, .LCPI38_0
+; CHECK-NEXT:    ldp q0, q3, [x1]
 ; CHECK-NEXT:    ptrue p0.h, vl8
-; CHECK-NEXT:    mov z0.h, z6.h[7]
-; CHECK-NEXT:    mov z1.h, z16.h[7]
-; CHECK-NEXT:    mov z2.h, z16.h[6]
-; CHECK-NEXT:    mov z3.h, z16.h[5]
-; CHECK-NEXT:    mov z4.h, z16.h[4]
-; CHECK-NEXT:    mov z5.h, z16.h[3]
-; CHECK-NEXT:    mov z21.h, z16.h[2]
-; CHECK-NEXT:    mov z24.h, z6.h[1]
-; CHECK-NEXT:    fcmp h0, h0
-; CHECK-NEXT:    fcsel h7, h1, h0, vs
-; CHECK-NEXT:    fcmp h1, h1
-; CHECK-NEXT:    fcsel h0, h7, h1, vs
-; CHECK-NEXT:    mov z1.h, z6.h[6]
-; CHECK-NEXT:    fcmp h7, h0
-; CHECK-NEXT:    fcsel h0, h7, h0, gt
-; CHECK-NEXT:    fcmp h1, h1
-; CHECK-NEXT:    fcsel h17, h2, h1, vs
-; CHECK-NEXT:    fcmp h2, h2
-; CHECK-NEXT:    fcsel h1, h17, h2, vs
-; CHECK-NEXT:    mov z2.h, z6.h[5]
-; CHECK-NEXT:    zip1 z7.h, z17.h, z7.h
-; CHECK-NEXT:    fcmp h17, h1
-; CHECK-NEXT:    fcsel h1, h17, h1, gt
-; CHECK-NEXT:    fcmp h2, h2
-; CHECK-NEXT:    fcsel h18, h3, h2, vs
-; CHECK-NEXT:    fcmp h3, h3
-; CHECK-NEXT:    zip1 z0.h, z1.h, z0.h
-; CHECK-NEXT:    fcsel h2, h18, h3, vs
-; CHECK-NEXT:    mov z3.h, z6.h[4]
-; CHECK-NEXT:    fcmp h18, h2
-; CHECK-NEXT:    fcsel h2, h18, h2, gt
-; CHECK-NEXT:    fcmp h3, h3
-; CHECK-NEXT:    fcsel h19, h4, h3, vs
-; CHECK-NEXT:    fcmp h4, h4
-; CHECK-NEXT:    fcsel h3, h19, h4, vs
-; CHECK-NEXT:    mov z4.h, z6.h[3]
-; CHECK-NEXT:    zip1 z17.h, z19.h, z18.h
-; CHECK-NEXT:    fcmp h19, h3
-; CHECK-NEXT:    zip1 z7.s, z17.s, z7.s
-; CHECK-NEXT:    fcsel h3, h19, h3, gt
-; CHECK-NEXT:    fcmp h4, h4
-; CHECK-NEXT:    fcsel h20, h5, h4, vs
-; CHECK-NEXT:    fcmp h5, h5
-; CHECK-NEXT:    zip1 z1.h, z3.h, z2.h
-; CHECK-NEXT:    fcsel h4, h20, h5, vs
-; CHECK-NEXT:    mov z5.h, z6.h[2]
-; CHECK-NEXT:    zip1 z0.s, z1.s, z0.s
-; CHECK-NEXT:    fcmp h20, h4
-; CHECK-NEXT:    fcsel h4, h20, h4, gt
-; CHECK-NEXT:    fcmp h5, h5
-; CHECK-NEXT:    fcsel h22, h21, h5, vs
-; CHECK-NEXT:    fcmp h21, h21
-; CHECK-NEXT:    fcsel h5, h22, h21, vs
-; CHECK-NEXT:    zip1 z18.h, z22.h, z20.h
-; CHECK-NEXT:    ldr q20, [x0]
-; CHECK-NEXT:    mov z30.h, z20.h[2]
-; CHECK-NEXT:    fcmp h22, h5
-; CHECK-NEXT:    fcsel h5, h22, h5, gt
-; CHECK-NEXT:    fcmp h6, h6
-; CHECK-NEXT:    ldr q22, [x1]
-; CHECK-NEXT:    mov z26.h, z22.h[5]
-; CHECK-NEXT:    mov z28.h, z22.h[4]
-; CHECK-NEXT:    mov z29.h, z22.h[3]
-; CHECK-NEXT:    fcsel h21, h16, h6, vs
-; CHECK-NEXT:    fcmp h16, h16
-; CHECK-NEXT:    mov z31.h, z22.h[2]
-; CHECK-NEXT:    zip1 z2.h, z5.h, z4.h
-; CHECK-NEXT:    fcsel h23, h21, h16, vs
-; CHECK-NEXT:    mov z16.h, z16.h[1]
-; CHECK-NEXT:    fcmp h21, h23
-; CHECK-NEXT:    fcsel h6, h21, h23, gt
-; CHECK-NEXT:    fcmp h24, h24
-; CHECK-NEXT:    fcsel h23, h16, h24, vs
-; CHECK-NEXT:    fcmp h16, h16
-; CHECK-NEXT:    mov z24.h, z22.h[6]
-; CHECK-NEXT:    zip1 z19.h, z21.h, z23.h
-; CHECK-NEXT:    fcsel h16, h23, h16, vs
-; CHECK-NEXT:    mov z21.h, z20.h[6]
-; CHECK-NEXT:    zip1 z17.s, z19.s, z18.s
-; CHECK-NEXT:    fcmp h23, h16
-; CHECK-NEXT:    mov z19.h, z20.h[7]
-; CHECK-NEXT:    zip1 z7.d, z17.d, z7.d
-; CHECK-NEXT:    ldr q17, [x8, :lo12:.LCPI38_0]
-; CHECK-NEXT:    fcsel h16, h23, h16, gt
-; CHECK-NEXT:    cmpeq p1.h, p0/z, z7.h, z17.h
-; CHECK-NEXT:    zip1 z3.h, z6.h, z16.h
-; CHECK-NEXT:    zip1 z1.s, z3.s, z2.s
-; CHECK-NEXT:    mov z18.h, p1/z, #-1 // =0xffffffffffffffff
-; CHECK-NEXT:    ptrue p1.h
-; CHECK-NEXT:    zip1 z0.d, z1.d, z0.d
-; CHECK-NEXT:    and z18.h, z18.h, #0x1
-; CHECK-NEXT:    cmpne p2.h, p1/z, z18.h, #0
-; CHECK-NEXT:    mov z18.h, z22.h[7]
-; CHECK-NEXT:    fcmp h19, h19
-; CHECK-NEXT:    fcsel h19, h18, h19, vs
-; CHECK-NEXT:    fcmp h18, h18
-; CHECK-NEXT:    sel z3.h, p2, z7.h, z0.h
-; CHECK-NEXT:    fcsel h18, h19, h18, vs
-; CHECK-NEXT:    fcmp h19, h18
-; CHECK-NEXT:    fcsel h18, h19, h18, gt
-; CHECK-NEXT:    fcmp h21, h21
-; CHECK-NEXT:    fcsel h23, h24, h21, vs
-; CHECK-NEXT:    fcmp h24, h24
-; CHECK-NEXT:    fcsel h21, h23, h24, vs
-; CHECK-NEXT:    mov z24.h, z20.h[5]
-; CHECK-NEXT:    zip1 z19.h, z23.h, z19.h
-; CHECK-NEXT:    fcmp h23, h21
-; CHECK-NEXT:    fcsel h21, h23, h21, gt
-; CHECK-NEXT:    fcmp h24, h24
-; CHECK-NEXT:    fcsel h25, h26, h24, vs
-; CHECK-NEXT:    fcmp h26, h26
-; CHECK-NEXT:    zip1 z18.h, z21.h, z18.h
-; CHECK-NEXT:    fcsel h24, h25, h26, vs
-; CHECK-NEXT:    mov z26.h, z20.h[4]
-; CHECK-NEXT:    fcmp h25, h24
-; CHECK-NEXT:    fcsel h24, h25, h24, gt
-; CHECK-NEXT:    fcmp h26, h26
-; CHECK-NEXT:    fcsel h27, h28, h26, vs
-; CHECK-NEXT:    fcmp h28, h28
-; CHECK-NEXT:    fcsel h26, h27, h28, vs
-; CHECK-NEXT:    mov z28.h, z20.h[3]
-; CHECK-NEXT:    zip1 z23.h, z27.h, z25.h
-; CHECK-NEXT:    fcmp h27, h26
-; CHECK-NEXT:    zip1 z19.s, z23.s, z19.s
-; CHECK-NEXT:    fcsel h26, h27, h26, gt
-; CHECK-NEXT:    fcmp h28, h28
-; CHECK-NEXT:    fcsel h28, h29, h28, vs
-; CHECK-NEXT:    fcmp h29, h29
-; CHECK-NEXT:    zip1 z21.h, z26.h, z24.h
-; CHECK-NEXT:    fcsel h29, h28, h29, vs
-; CHECK-NEXT:    zip1 z4.s, z21.s, z18.s
-; CHECK-NEXT:    fcmp h28, h29
-; CHECK-NEXT:    fcsel h29, h28, h29, gt
-; CHECK-NEXT:    fcmp h30, h30
-; CHECK-NEXT:    fcsel h30, h31, h30, vs
-; CHECK-NEXT:    fcmp h31, h31
-; CHECK-NEXT:    fcsel h31, h30, h31, vs
-; CHECK-NEXT:    zip1 z25.h, z30.h, z28.h
-; CHECK-NEXT:    fcmp h30, h31
-; CHECK-NEXT:    fcsel h31, h30, h31, gt
-; CHECK-NEXT:    fcmp h20, h20
-; CHECK-NEXT:    fcsel h8, h22, h20, vs
-; CHECK-NEXT:    fcmp h22, h22
-; CHECK-NEXT:    mov z20.h, z20.h[1]
-; CHECK-NEXT:    fcsel h9, h8, h22, vs
-; CHECK-NEXT:    mov z22.h, z22.h[1]
-; CHECK-NEXT:    fcmp h8, h9
-; CHECK-NEXT:    fcsel h9, h8, h9, gt
-; CHECK-NEXT:    fcmp h20, h20
-; CHECK-NEXT:    fcsel h20, h22, h20, vs
-; CHECK-NEXT:    fcmp h22, h22
-; CHECK-NEXT:    zip1 z27.h, z8.h, z20.h
-; CHECK-NEXT:    fcsel h22, h20, h22, vs
-; CHECK-NEXT:    zip1 z23.s, z27.s, z25.s
-; CHECK-NEXT:    fcmp h20, h22
-; CHECK-NEXT:    zip1 z19.d, z23.d, z19.d
-; CHECK-NEXT:    fcsel h20, h20, h22, gt
-; CHECK-NEXT:    zip1 z22.h, z31.h, z29.h
-; CHECK-NEXT:    cmpeq p3.h, p0/z, z19.h, z17.h
-; CHECK-NEXT:    zip1 z20.h, z9.h, z20.h
-; CHECK-NEXT:    zip1 z5.s, z20.s, z22.s
-; CHECK-NEXT:    mov z17.h, p3/z, #-1 // =0xffffffffffffffff
-; CHECK-NEXT:    zip1 z2.d, z5.d, z4.d
-; CHECK-NEXT:    and z17.h, z17.h, #0x1
-; CHECK-NEXT:    cmpne p1.h, p1/z, z17.h, #0
-; CHECK-NEXT:    sel z1.h, p1, z19.h, z2.h
-; CHECK-NEXT:    fcmeq p1.h, p0/z, z2.h, #0.0
-; CHECK-NEXT:    fcmeq p0.h, p0/z, z0.h, #0.0
-; CHECK-NEXT:    sel z1.h, p1, z1.h, z2.h
-; CHECK-NEXT:    mov z0.h, p0/m, z3.h
-; CHECK-NEXT:    stp q1, q0, [x0]
-; CHECK-NEXT:    ldp d9, d8, [sp], #16 // 16-byte Folded Reload
+; CHECK-NEXT:    ldp q1, q2, [x0]
+; CHECK-NEXT:    fminnm z0.h, p0/m, z0.h, z0.h
+; CHECK-NEXT:    fminnm z3.h, p0/m, z3.h, z3.h
+; CHECK-NEXT:    fminnm z1.h, p0/m, z1.h, z1.h
+; CHECK-NEXT:    fminnm z2.h, p0/m, z2.h, z2.h
+; CHECK-NEXT:    fmaxnm z0.h, p0/m, z0.h, z1.h
+; CHECK-NEXT:    fmaxnm z2.h, p0/m, z2.h, z3.h
+; CHECK-NEXT:    stp q0, q2, [x0]
 ; CHECK-NEXT:    ret
 ;
 ; NONEON-NOSVE-LABEL: fmaximumnum_v16f16:
@@ -2415,33 +2119,10 @@ define void @fmaximumnum_v16f16(ptr %a, ptr %b) {
 define <2 x float> @fmaximumnum_v2f32(<2 x float> %op1, <2 x float> %op2) {
 ; CHECK-LABEL: fmaximumnum_v2f32:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    fcmp s0, s0
-; CHECK-NEXT:    adrp x8, .LCPI39_0
 ; CHECK-NEXT:    ptrue p0.s, vl2
-; CHECK-NEXT:    ldr d4, [x8, :lo12:.LCPI39_0]
-; CHECK-NEXT:    fcsel s2, s1, s0, vs
-; CHECK-NEXT:    fcmp s1, s1
-; CHECK-NEXT:    mov z0.s, z0.s[1]
-; CHECK-NEXT:    fcsel s3, s2, s1, vs
-; CHECK-NEXT:    mov z1.s, z1.s[1]
-; CHECK-NEXT:    fcmp s2, s3
-; CHECK-NEXT:    fcsel s3, s2, s3, gt
-; CHECK-NEXT:    fcmp s0, s0
-; CHECK-NEXT:    fcsel s0, s1, s0, vs
-; CHECK-NEXT:    fcmp s1, s1
-; CHECK-NEXT:    fcsel s1, s0, s1, vs
-; CHECK-NEXT:    zip1 z2.s, z2.s, z0.s
-; CHECK-NEXT:    fcmp s0, s1
-; CHECK-NEXT:    fcsel s0, s0, s1, gt
-; CHECK-NEXT:    cmpeq p1.s, p0/z, z2.s, z4.s
-; CHECK-NEXT:    zip1 z0.s, z3.s, z0.s
-; CHECK-NEXT:    mov z1.s, p1/z, #-1 // =0xffffffffffffffff
-; CHECK-NEXT:    ptrue p1.s
-; CHECK-NEXT:    fcmeq p0.s, p0/z, z0.s, #0.0
-; CHECK-NEXT:    and z1.s, z1.s, #0x1
-; CHECK-NEXT:    cmpne p1.s, p1/z, z1.s, #0
-; CHECK-NEXT:    sel z1.s, p1, z2.s, z0.s
-; CHECK-NEXT:    mov z0.s, p0/m, z1.s
+; CHECK-NEXT:    fminnm z1.s, p0/m, z1.s, z1.s
+; CHECK-NEXT:    fminnm z0.s, p0/m, z0.s, z0.s
+; CHECK-NEXT:    fmaxnm z0.s, p0/m, z0.s, z1.s
 ; CHECK-NEXT:    ret
 ;
 ; NONEON-NOSVE-LABEL: fmaximumnum_v2f32:
@@ -2470,53 +2151,10 @@ define <2 x float> @fmaximumnum_v2f32(<2 x float> %op1, <2 x float> %op2) {
 define <4 x float> @fmaximumnum_v4f32(<4 x float> %op1, <4 x float> %op2) {
 ; CHECK-LABEL: fmaximumnum_v4f32:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    mov z2.s, z0.s[3]
-; CHECK-NEXT:    mov z3.s, z1.s[3]
-; CHECK-NEXT:    adrp x8, .LCPI40_0
-; CHECK-NEXT:    mov z4.s, z0.s[2]
-; CHECK-NEXT:    mov z5.s, z1.s[2]
 ; CHECK-NEXT:    ptrue p0.s, vl4
-; CHECK-NEXT:    fcmp s2, s2
-; CHECK-NEXT:    fcsel s2, s3, s2, vs
-; CHECK-NEXT:    fcmp s3, s3
-; CHECK-NEXT:    fcsel s3, s2, s3, vs
-; CHECK-NEXT:    fcmp s2, s3
-; CHECK-NEXT:    fcsel s3, s2, s3, gt
-; CHECK-NEXT:    fcmp s4, s4
-; CHECK-NEXT:    fcsel s4, s5, s4, vs
-; CHECK-NEXT:    fcmp s5, s5
-; CHECK-NEXT:    fcsel s5, s4, s5, vs
-; CHECK-NEXT:    zip1 z2.s, z4.s, z2.s
-; CHECK-NEXT:    fcmp s4, s5
-; CHECK-NEXT:    fcsel s5, s4, s5, gt
-; CHECK-NEXT:    fcmp s0, s0
-; CHECK-NEXT:    fcsel s6, s1, s0, vs
-; CHECK-NEXT:    fcmp s1, s1
-; CHECK-NEXT:    mov z0.s, z0.s[1]
-; CHECK-NEXT:    zip1 z3.s, z5.s, z3.s
-; CHECK-NEXT:    fcsel s7, s6, s1, vs
-; CHECK-NEXT:    mov z1.s, z1.s[1]
-; CHECK-NEXT:    fcmp s6, s7
-; CHECK-NEXT:    fcsel s7, s6, s7, gt
-; CHECK-NEXT:    fcmp s0, s0
-; CHECK-NEXT:    fcsel s0, s1, s0, vs
-; CHECK-NEXT:    fcmp s1, s1
-; CHECK-NEXT:    fcsel s1, s0, s1, vs
-; CHECK-NEXT:    zip1 z4.s, z6.s, z0.s
-; CHECK-NEXT:    fcmp s0, s1
-; CHECK-NEXT:    zip1 z2.d, z4.d, z2.d
-; CHECK-NEXT:    ldr q4, [x8, :lo12:.LCPI40_0]
-; CHECK-NEXT:    fcsel s0, s0, s1, gt
-; CHECK-NEXT:    cmpeq p1.s, p0/z, z2.s, z4.s
-; CHECK-NEXT:    zip1 z0.s, z7.s, z0.s
-; CHECK-NEXT:    mov z1.s, p1/z, #-1 // =0xffffffffffffffff
-; CHECK-NEXT:    ptrue p1.s
-; CHECK-NEXT:    zip1 z0.d, z0.d, z3.d
-; CHECK-NEXT:    and z1.s, z1.s, #0x1
-; CHECK-NEXT:    fcmeq p0.s, p0/z, z0.s, #0.0
-; CHECK-NEXT:    cmpne p1.s, p1/z, z1.s, #0
-; CHECK-NEXT:    sel z1.s, p1, z2.s, z0.s
-; CHECK-NEXT:    mov z0.s, p0/m, z1.s
+; CHECK-NEXT:    fminnm z1.s, p0/m, z1.s, z1.s
+; CHECK-NEXT:    fminnm z0.s, p0/m, z0.s, z0.s
+; CHECK-NEXT:    fmaxnm z0.s, p0/m, z0.s, z1.s
 ; CHECK-NEXT:    ret
 ;
 ; NONEON-NOSVE-LABEL: fmaximumnum_v4f32:
@@ -2555,101 +2193,16 @@ define <4 x float> @fmaximumnum_v4f32(<4 x float> %op1, <4 x float> %op2) {
 define void @fmaximumnum_v8f32(ptr %a, ptr %b) {
 ; CHECK-LABEL: fmaximumnum_v8f32:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    ldr q2, [x0, #16]
-; CHECK-NEXT:    ldr q3, [x1, #16]
-; CHECK-NEXT:    adrp x8, .LCPI41_0
+; CHECK-NEXT:    ldp q0, q3, [x1]
 ; CHECK-NEXT:    ptrue p0.s, vl4
-; CHECK-NEXT:    ldr q17, [x1]
-; CHECK-NEXT:    mov z0.s, z2.s[3]
-; CHECK-NEXT:    mov z1.s, z3.s[3]
-; CHECK-NEXT:    mov z5.s, z3.s[2]
-; CHECK-NEXT:    mov z16.s, z2.s[1]
-; CHECK-NEXT:    mov z19.s, z17.s[2]
-; CHECK-NEXT:    fcmp s0, s0
-; CHECK-NEXT:    fcsel s4, s1, s0, vs
-; CHECK-NEXT:    fcmp s1, s1
-; CHECK-NEXT:    fcsel s0, s4, s1, vs
-; CHECK-NEXT:    mov z1.s, z2.s[2]
-; CHECK-NEXT:    fcmp s4, s0
-; CHECK-NEXT:    fcsel s0, s4, s0, gt
-; CHECK-NEXT:    fcmp s1, s1
-; CHECK-NEXT:    fcsel s6, s5, s1, vs
-; CHECK-NEXT:    fcmp s5, s5
-; CHECK-NEXT:    fcsel s1, s6, s5, vs
-; CHECK-NEXT:    zip1 z4.s, z6.s, z4.s
-; CHECK-NEXT:    fcmp s6, s1
-; CHECK-NEXT:    fcsel s1, s6, s1, gt
-; CHECK-NEXT:    fcmp s2, s2
-; CHECK-NEXT:    fcsel s5, s3, s2, vs
-; CHECK-NEXT:    fcmp s3, s3
-; CHECK-NEXT:    zip1 z0.s, z1.s, z0.s
-; CHECK-NEXT:    fcsel s7, s5, s3, vs
-; CHECK-NEXT:    mov z3.s, z3.s[1]
-; CHECK-NEXT:    fcmp s5, s7
-; CHECK-NEXT:    fcsel s2, s5, s7, gt
-; CHECK-NEXT:    fcmp s16, s16
-; CHECK-NEXT:    fcsel s7, s3, s16, vs
-; CHECK-NEXT:    fcmp s3, s3
-; CHECK-NEXT:    fcsel s6, s7, s3, vs
-; CHECK-NEXT:    zip1 z3.s, z5.s, z7.s
-; CHECK-NEXT:    ldr q5, [x8, :lo12:.LCPI41_0]
-; CHECK-NEXT:    fcmp s7, s6
-; CHECK-NEXT:    zip1 z3.d, z3.d, z4.d
-; CHECK-NEXT:    fcsel s4, s7, s6, gt
-; CHECK-NEXT:    cmpeq p1.s, p0/z, z3.s, z5.s
-; CHECK-NEXT:    ldr q7, [x0]
-; CHECK-NEXT:    mov z16.s, z7.s[3]
-; CHECK-NEXT:    mov z18.s, z7.s[2]
-; CHECK-NEXT:    zip1 z1.s, z2.s, z4.s
-; CHECK-NEXT:    mov z6.s, p1/z, #-1 // =0xffffffffffffffff
-; CHECK-NEXT:    ptrue p1.s
-; CHECK-NEXT:    zip1 z0.d, z1.d, z0.d
-; CHECK-NEXT:    and z6.s, z6.s, #0x1
-; CHECK-NEXT:    cmpne p2.s, p1/z, z6.s, #0
-; CHECK-NEXT:    mov z6.s, z17.s[3]
-; CHECK-NEXT:    fcmp s16, s16
-; CHECK-NEXT:    fcsel s16, s6, s16, vs
-; CHECK-NEXT:    fcmp s6, s6
-; CHECK-NEXT:    sel z3.s, p2, z3.s, z0.s
-; CHECK-NEXT:    fcsel s6, s16, s6, vs
-; CHECK-NEXT:    fcmp s16, s6
-; CHECK-NEXT:    fcsel s6, s16, s6, gt
-; CHECK-NEXT:    fcmp s18, s18
-; CHECK-NEXT:    fcsel s18, s19, s18, vs
-; CHECK-NEXT:    fcmp s19, s19
-; CHECK-NEXT:    fcsel s19, s18, s19, vs
-; CHECK-NEXT:    zip1 z16.s, z18.s, z16.s
-; CHECK-NEXT:    fcmp s18, s19
-; CHECK-NEXT:    fcsel s19, s18, s19, gt
-; CHECK-NEXT:    fcmp s7, s7
-; CHECK-NEXT:    fcsel s20, s17, s7, vs
-; CHECK-NEXT:    fcmp s17, s17
-; CHECK-NEXT:    mov z7.s, z7.s[1]
-; CHECK-NEXT:    zip1 z6.s, z19.s, z6.s
-; CHECK-NEXT:    fcsel s21, s20, s17, vs
-; CHECK-NEXT:    mov z17.s, z17.s[1]
-; CHECK-NEXT:    fcmp s20, s21
-; CHECK-NEXT:    fcsel s21, s20, s21, gt
-; CHECK-NEXT:    fcmp s7, s7
-; CHECK-NEXT:    fcsel s7, s17, s7, vs
-; CHECK-NEXT:    fcmp s17, s17
-; CHECK-NEXT:    fcsel s17, s7, s17, vs
-; CHECK-NEXT:    zip1 z18.s, z20.s, z7.s
-; CHECK-NEXT:    zip1 z16.d, z18.d, z16.d
-; CHECK-NEXT:    fcmp s7, s17
-; CHECK-NEXT:    fcsel s7, s7, s17, gt
-; CHECK-NEXT:    cmpeq p3.s, p0/z, z16.s, z5.s
-; CHECK-NEXT:    zip1 z7.s, z21.s, z7.s
-; CHECK-NEXT:    mov z5.s, p3/z, #-1 // =0xffffffffffffffff
-; CHECK-NEXT:    zip1 z2.d, z7.d, z6.d
-; CHECK-NEXT:    and z5.s, z5.s, #0x1
-; CHECK-NEXT:    cmpne p1.s, p1/z, z5.s, #0
-; CHECK-NEXT:    sel z1.s, p1, z16.s, z2.s
-; CHECK-NEXT:    fcmeq p1.s, p0/z, z2.s, #0.0
-; CHECK-NEXT:    fcmeq p0.s, p0/z, z0.s, #0.0
-; CHECK-NEXT:    sel z1.s, p1, z1.s, z2.s
-; CHECK-NEXT:    mov z0.s, p0/m, z3.s
-; CHECK-NEXT:    stp q1, q0, [x0]
+; CHECK-NEXT:    ldp q1, q2, [x0]
+; CHECK-NEXT:    fminnm z0.s, p0/m, z0.s, z0.s
+; CHECK-NEXT:    fminnm z3.s, p0/m, z3.s, z3.s
+; CHECK-NEXT:    fminnm z1.s, p0/m, z1.s, z1.s
+; CHECK-NEXT:    fminnm z2.s, p0/m, z2.s, z2.s
+; CHECK-NEXT:    fmaxnm z0.s, p0/m, z0.s, z1.s
+; CHECK-NEXT:    fmaxnm z2.s, p0/m, z2.s, z3.s
+; CHECK-NEXT:    stp q0, q2, [x0]
 ; CHECK-NEXT:    ret
 ;
 ; NONEON-NOSVE-LABEL: fmaximumnum_v8f32:
@@ -2739,33 +2292,10 @@ define <1 x double> @fmaximumnum_v1f64(<1 x double> %op1, <1 x double> %op2) {
 define <2 x double> @fmaximumnum_v2f64(<2 x double> %op1, <2 x double> %op2) {
 ; CHECK-LABEL: fmaximumnum_v2f64:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    fcmp d0, d0
-; CHECK-NEXT:    adrp x8, .LCPI43_0
 ; CHECK-NEXT:    ptrue p0.d, vl2
-; CHECK-NEXT:    ldr q4, [x8, :lo12:.LCPI43_0]
-; CHECK-NEXT:    fcsel d2, d1, d0, vs
-; CHECK-NEXT:    fcmp d1, d1
-; CHECK-NEXT:    mov z0.d, z0.d[1]
-; CHECK-NEXT:    fcsel d3, d2, d1, vs
-; CHECK-NEXT:    mov z1.d, z1.d[1]
-; CHECK-NEXT:    fcmp d2, d3
-; CHECK-NEXT:    fcsel d3, d2, d3, gt
-; CHECK-NEXT:    fcmp d0, d0
-; CHECK-NEXT:    fcsel d0, d1, d0, vs
-; CHECK-NEXT:    fcmp d1, d1
-; CHECK-NEXT:    fcsel d1, d0, d1, vs
-; CHECK-NEXT:    zip1 z2.d, z2.d, z0.d
-; CHECK-NEXT:    fcmp d0, d1
-; CHECK-NEXT:    fcsel d0, d0, d1, gt
-; CHECK-NEXT:    cmpeq p1.d, p0/z, z2.d, z4.d
-; CHECK-NEXT:    zip1 z0.d, z3.d, z0.d
-; CHECK-NEXT:    mov z1.d, p1/z, #-1 // =0xffffffffffffffff
-; CHECK-NEXT:    ptrue p1.d
-; CHECK-NEXT:    fcmeq p0.d, p0/z, z0.d, #0.0
-; CHECK-NEXT:    and z1.d, z1.d, #0x1
-; CHECK-NEXT:    cmpne p1.d, p1/z, z1.d, #0
-; CHECK-NEXT:    sel z1.d, p1, z2.d, z0.d
-; CHECK-NEXT:    mov z0.d, p0/m, z1.d
+; CHECK-NEXT:    fminnm z1.d, p0/m, z1.d, z1.d
+; CHECK-NEXT:    fminnm z0.d, p0/m, z0.d, z0.d
+; CHECK-NEXT:    fmaxnm z0.d, p0/m, z0.d, z1.d
 ; CHECK-NEXT:    ret
 ;
 ; NONEON-NOSVE-LABEL: fmaximumnum_v2f64:
@@ -2793,61 +2323,16 @@ define <2 x double> @fmaximumnum_v2f64(<2 x double> %op1, <2 x double> %op2) {
 define void @fmaximumnum_v4f64(ptr %a, ptr %b) {
 ; CHECK-LABEL: fmaximumnum_v4f64:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    ldr q0, [x0, #16]
-; CHECK-NEXT:    ldr q1, [x1, #16]
-; CHECK-NEXT:    adrp x8, .LCPI44_0
+; CHECK-NEXT:    ldp q0, q3, [x1]
 ; CHECK-NEXT:    ptrue p0.d, vl2
-; CHECK-NEXT:    ldr q5, [x0]
-; CHECK-NEXT:    fcmp d0, d0
-; CHECK-NEXT:    mov z4.d, z0.d[1]
-; CHECK-NEXT:    ptrue p2.d
-; CHECK-NEXT:    fcsel d2, d1, d0, vs
-; CHECK-NEXT:    fcmp d1, d1
-; CHECK-NEXT:    fcsel d3, d2, d1, vs
-; CHECK-NEXT:    mov z1.d, z1.d[1]
-; CHECK-NEXT:    fcmp d2, d3
-; CHECK-NEXT:    fcsel d0, d2, d3, gt
-; CHECK-NEXT:    fcmp d4, d4
-; CHECK-NEXT:    fcsel d3, d1, d4, vs
-; CHECK-NEXT:    fcmp d1, d1
-; CHECK-NEXT:    ldr q4, [x8, :lo12:.LCPI44_0]
-; CHECK-NEXT:    fcsel d1, d3, d1, vs
-; CHECK-NEXT:    zip1 z2.d, z2.d, z3.d
-; CHECK-NEXT:    fcmp d3, d1
-; CHECK-NEXT:    fcsel d1, d3, d1, gt
-; CHECK-NEXT:    cmpeq p1.d, p0/z, z2.d, z4.d
-; CHECK-NEXT:    zip1 z0.d, z0.d, z1.d
-; CHECK-NEXT:    mov z3.d, p1/z, #-1 // =0xffffffffffffffff
-; CHECK-NEXT:    and z3.d, z3.d, #0x1
-; CHECK-NEXT:    cmpne p1.d, p2/z, z3.d, #0
-; CHECK-NEXT:    ldr q3, [x1]
-; CHECK-NEXT:    fcmp d5, d5
-; CHECK-NEXT:    fcsel d6, d3, d5, vs
-; CHECK-NEXT:    fcmp d3, d3
-; CHECK-NEXT:    mov z5.d, z5.d[1]
-; CHECK-NEXT:    sel z2.d, p1, z2.d, z0.d
-; CHECK-NEXT:    fcsel d7, d6, d3, vs
-; CHECK-NEXT:    mov z3.d, z3.d[1]
-; CHECK-NEXT:    fcmp d6, d7
-; CHECK-NEXT:    fcsel d7, d6, d7, gt
-; CHECK-NEXT:    fcmp d5, d5
-; CHECK-NEXT:    fcsel d5, d3, d5, vs
-; CHECK-NEXT:    fcmp d3, d3
-; CHECK-NEXT:    fcsel d3, d5, d3, vs
-; CHECK-NEXT:    zip1 z6.d, z6.d, z5.d
-; CHECK-NEXT:    fcmp d5, d3
-; CHECK-NEXT:    fcsel d3, d5, d3, gt
-; CHECK-NEXT:    cmpeq p3.d, p0/z, z6.d, z4.d
-; CHECK-NEXT:    zip1 z3.d, z7.d, z3.d
-; CHECK-NEXT:    mov z4.d, p3/z, #-1 // =0xffffffffffffffff
-; CHECK-NEXT:    and z4.d, z4.d, #0x1
-; CHECK-NEXT:    cmpne p2.d, p2/z, z4.d, #0
-; CHECK-NEXT:    sel z1.d, p2, z6.d, z3.d
-; CHECK-NEXT:    fcmeq p2.d, p0/z, z3.d, #0.0
-; CHECK-NEXT:    fcmeq p0.d, p0/z, z0.d, #0.0
-; CHECK-NEXT:    sel z1.d, p2, z1.d, z3.d
-; CHECK-NEXT:    mov z0.d, p0/m, z2.d
-; CHECK-NEXT:    stp q1, q0, [x0]
+; CHECK-NEXT:    ldp q1, q2, [x0]
+; CHECK-NEXT:    fminnm z0.d, p0/m, z0.d, z0.d
+; CHECK-NEXT:    fminnm z3.d, p0/m, z3.d, z3.d
+; CHECK-NEXT:    fminnm z1.d, p0/m, z1.d, z1.d
+; CHECK-NEXT:    fminnm z2.d, p0/m, z2.d, z2.d
+; CHECK-NEXT:    fmaxnm z0.d, p0/m, z0.d, z1.d
+; CHECK-NEXT:    fmaxnm z2.d, p0/m, z2.d, z3.d
+; CHECK-NEXT:    stp q0, q2, [x0]
 ; CHECK-NEXT:    ret
 ;
 ; NONEON-NOSVE-LABEL: fmaximumnum_v4f64:
@@ -2898,53 +2383,10 @@ define void @fmaximumnum_v4f64(ptr %a, ptr %b) {
 define <4 x half> @fminimumnum_v4f16(<4 x half> %op1, <4 x half> %op2) {
 ; CHECK-LABEL: fminimumnum_v4f16:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    mov z2.h, z0.h[3]
-; CHECK-NEXT:    mov z3.h, z1.h[3]
-; CHECK-NEXT:    adrp x8, .LCPI45_0
-; CHECK-NEXT:    mov z4.h, z0.h[2]
-; CHECK-NEXT:    mov z5.h, z1.h[2]
 ; CHECK-NEXT:    ptrue p0.h, vl4
-; CHECK-NEXT:    fcmp h2, h2
-; CHECK-NEXT:    fcsel h2, h3, h2, vs
-; CHECK-NEXT:    fcmp h3, h3
-; CHECK-NEXT:    fcsel h3, h2, h3, vs
-; CHECK-NEXT:    fcmp h2, h3
-; CHECK-NEXT:    fcsel h3, h2, h3, lt
-; CHECK-NEXT:    fcmp h4, h4
-; CHECK-NEXT:    fcsel h4, h5, h4, vs
-; CHECK-NEXT:    fcmp h5, h5
-; CHECK-NEXT:    fcsel h5, h4, h5, vs
-; CHECK-NEXT:    zip1 z2.h, z4.h, z2.h
-; CHECK-NEXT:    fcmp h4, h5
-; CHECK-NEXT:    fcsel h5, h4, h5, lt
-; CHECK-NEXT:    fcmp h0, h0
-; CHECK-NEXT:    fcsel h6, h1, h0, vs
-; CHECK-NEXT:    fcmp h1, h1
-; CHECK-NEXT:    mov z0.h, z0.h[1]
-; CHECK-NEXT:    zip1 z3.h, z5.h, z3.h
-; CHECK-NEXT:    fcsel h7, h6, h1, vs
-; CHECK-NEXT:    mov z1.h, z1.h[1]
-; CHECK-NEXT:    fcmp h6, h7
-; CHECK-NEXT:    fcsel h7, h6, h7, lt
-; CHECK-NEXT:    fcmp h0, h0
-; CHECK-NEXT:    fcsel h0, h1, h0, vs
-; CHECK-NEXT:    fcmp h1, h1
-; CHECK-NEXT:    fcsel h1, h0, h1, vs
-; CHECK-NEXT:    zip1 z4.h, z6.h, z0.h
-; CHECK-NEXT:    fcmp h0, h1
-; CHECK-NEXT:    zip1 z2.s, z4.s, z2.s
-; CHECK-NEXT:    ldr d4, [x8, :lo12:.LCPI45_0]
-; CHECK-NEXT:    fcsel h0, h0, h1, lt
-; CHECK-NEXT:    cmpeq p1.h, p0/z, z2.h, z4.h
-; CHECK-NEXT:    zip1 z0.h, z7.h, z0.h
-; CHECK-NEXT:    mov z1.h, p1/z, #-1 // =0xffffffffffffffff
-; CHECK-NEXT:    ptrue p1.h
-; CHECK-NEXT:    zip1 z0.s, z0.s, z3.s
-; CHECK-NEXT:    and z1.h, z1.h, #0x1
-; CHECK-NEXT:    fcmeq p0.h, p0/z, z0.h, #0.0
-; CHECK-NEXT:    cmpne p1.h, p1/z, z1.h, #0
-; CHECK-NEXT:    sel z1.h, p1, z2.h, z0.h
-; CHECK-NEXT:    mov z0.h, p0/m, z1.h
+; CHECK-NEXT:    fminnm z1.h, p0/m, z1.h, z1.h
+; CHECK-NEXT:    fminnm z0.h, p0/m, z0.h, z0.h
+; CHECK-NEXT:    fminnm z0.h, p0/m, z0.h, z1.h
 ; CHECK-NEXT:    ret
 ;
 ; NONEON-NOSVE-LABEL: fminimumnum_v4f16:
@@ -2990,93 +2432,10 @@ define <4 x half> @fminimumnum_v4f16(<4 x half> %op1, <4 x half> %op2) {
 define <8 x half> @fminimumnum_v8f16(<8 x half> %op1, <8 x half> %op2) {
 ; CHECK-LABEL: fminimumnum_v8f16:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    mov z2.h, z0.h[7]
-; CHECK-NEXT:    mov z3.h, z1.h[7]
-; CHECK-NEXT:    adrp x8, .LCPI46_0
-; CHECK-NEXT:    mov z5.h, z1.h[6]
-; CHECK-NEXT:    mov z16.h, z1.h[5]
-; CHECK-NEXT:    mov z18.h, z1.h[4]
-; CHECK-NEXT:    mov z19.h, z1.h[3]
-; CHECK-NEXT:    mov z21.h, z1.h[2]
 ; CHECK-NEXT:    ptrue p0.h, vl8
-; CHECK-NEXT:    fcmp h2, h2
-; CHECK-NEXT:    fcsel h4, h3, h2, vs
-; CHECK-NEXT:    fcmp h3, h3
-; CHECK-NEXT:    fcsel h2, h4, h3, vs
-; CHECK-NEXT:    mov z3.h, z0.h[6]
-; CHECK-NEXT:    fcmp h4, h2
-; CHECK-NEXT:    fcsel h2, h4, h2, lt
-; CHECK-NEXT:    fcmp h3, h3
-; CHECK-NEXT:    fcsel h6, h5, h3, vs
-; CHECK-NEXT:    fcmp h5, h5
-; CHECK-NEXT:    fcsel h3, h6, h5, vs
-; CHECK-NEXT:    mov z5.h, z0.h[5]
-; CHECK-NEXT:    zip1 z4.h, z6.h, z4.h
-; CHECK-NEXT:    fcmp h6, h3
-; CHECK-NEXT:    fcsel h3, h6, h3, lt
-; CHECK-NEXT:    fcmp h5, h5
-; CHECK-NEXT:    fcsel h7, h16, h5, vs
-; CHECK-NEXT:    fcmp h16, h16
-; CHECK-NEXT:    fcsel h5, h7, h16, vs
-; CHECK-NEXT:    mov z16.h, z0.h[4]
-; CHECK-NEXT:    fcmp h7, h5
-; CHECK-NEXT:    fcsel h5, h7, h5, lt
-; CHECK-NEXT:    fcmp h16, h16
-; CHECK-NEXT:    fcsel h17, h18, h16, vs
-; CHECK-NEXT:    fcmp h18, h18
-; CHECK-NEXT:    fcsel h16, h17, h18, vs
-; CHECK-NEXT:    mov z18.h, z0.h[3]
-; CHECK-NEXT:    zip1 z6.h, z17.h, z7.h
-; CHECK-NEXT:    fcmp h17, h16
-; CHECK-NEXT:    zip1 z4.s, z6.s, z4.s
-; CHECK-NEXT:    fcsel h16, h17, h16, lt
-; CHECK-NEXT:    fcmp h18, h18
-; CHECK-NEXT:    fcsel h20, h19, h18, vs
-; CHECK-NEXT:    fcmp h19, h19
-; CHECK-NEXT:    fcsel h18, h20, h19, vs
-; CHECK-NEXT:    mov z19.h, z0.h[2]
-; CHECK-NEXT:    fcmp h20, h18
-; CHECK-NEXT:    fcsel h18, h20, h18, lt
-; CHECK-NEXT:    fcmp h19, h19
-; CHECK-NEXT:    fcsel h19, h21, h19, vs
-; CHECK-NEXT:    fcmp h21, h21
-; CHECK-NEXT:    fcsel h21, h19, h21, vs
-; CHECK-NEXT:    zip1 z7.h, z19.h, z20.h
-; CHECK-NEXT:    fcmp h19, h21
-; CHECK-NEXT:    fcsel h21, h19, h21, lt
-; CHECK-NEXT:    fcmp h0, h0
-; CHECK-NEXT:    fcsel h22, h1, h0, vs
-; CHECK-NEXT:    fcmp h1, h1
-; CHECK-NEXT:    mov z0.h, z0.h[1]
-; CHECK-NEXT:    fcsel h23, h22, h1, vs
-; CHECK-NEXT:    mov z1.h, z1.h[1]
-; CHECK-NEXT:    fcmp h22, h23
-; CHECK-NEXT:    fcsel h23, h22, h23, lt
-; CHECK-NEXT:    fcmp h0, h0
-; CHECK-NEXT:    fcsel h0, h1, h0, vs
-; CHECK-NEXT:    fcmp h1, h1
-; CHECK-NEXT:    zip1 z17.h, z22.h, z0.h
-; CHECK-NEXT:    fcsel h1, h0, h1, vs
-; CHECK-NEXT:    zip1 z6.s, z17.s, z7.s
-; CHECK-NEXT:    fcmp h0, h1
-; CHECK-NEXT:    zip1 z4.d, z6.d, z4.d
-; CHECK-NEXT:    ldr q6, [x8, :lo12:.LCPI46_0]
-; CHECK-NEXT:    fcsel h0, h0, h1, lt
-; CHECK-NEXT:    zip1 z1.h, z3.h, z2.h
-; CHECK-NEXT:    zip1 z2.h, z16.h, z5.h
-; CHECK-NEXT:    zip1 z3.h, z21.h, z18.h
-; CHECK-NEXT:    cmpeq p1.h, p0/z, z4.h, z6.h
-; CHECK-NEXT:    zip1 z0.h, z23.h, z0.h
-; CHECK-NEXT:    zip1 z1.s, z2.s, z1.s
-; CHECK-NEXT:    zip1 z0.s, z0.s, z3.s
-; CHECK-NEXT:    mov z5.h, p1/z, #-1 // =0xffffffffffffffff
-; CHECK-NEXT:    ptrue p1.h
-; CHECK-NEXT:    zip1 z0.d, z0.d, z1.d
-; CHECK-NEXT:    and z5.h, z5.h, #0x1
-; CHECK-NEXT:    fcmeq p0.h, p0/z, z0.h, #0.0
-; CHECK-NEXT:    cmpne p1.h, p1/z, z5.h, #0
-; CHECK-NEXT:    sel z1.h, p1, z4.h, z0.h
-; CHECK-NEXT:    mov z0.h, p0/m, z1.h
+; CHECK-NEXT:    fminnm z1.h, p0/m, z1.h, z1.h
+; CHECK-NEXT:    fminnm z0.h, p0/m, z0.h, z0.h
+; CHECK-NEXT:    fminnm z0.h, p0/m, z0.h, z1.h
 ; CHECK-NEXT:    ret
 ;
 ; NONEON-NOSVE-LABEL: fminimumnum_v8f16:
@@ -3149,186 +2508,16 @@ define <8 x half> @fminimumnum_v8f16(<8 x half> %op1, <8 x half> %op2) {
 define void @fminimumnum_v16f16(ptr %a, ptr %b) {
 ; CHECK-LABEL: fminimumnum_v16f16:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    stp d9, d8, [sp, #-16]! // 16-byte Folded Spill
-; CHECK-NEXT:    .cfi_def_cfa_offset 16
-; CHECK-NEXT:    .cfi_offset b8, -8
-; CHECK-NEXT:    .cfi_offset b9, -16
-; CHECK-NEXT:    ldr q6, [x0, #16]
-; CHECK-NEXT:    ldr q16, [x1, #16]
-; CHECK-NEXT:    adrp x8, .LCPI47_0
+; CHECK-NEXT:    ldp q0, q3, [x1]
 ; CHECK-NEXT:    ptrue p0.h, vl8
-; CHECK-NEXT:    mov z0.h, z6.h[7]
-; CHECK-NEXT:    mov z1.h, z16.h[7]
-; CHECK-NEXT:    mov z2.h, z16.h[6]
-; CHECK-NEXT:    mov z3.h, z16.h[5]
-; CHECK-NEXT:    mov z4.h, z16.h[4]
-; CHECK-NEXT:    mov z5.h, z16.h[3]
-; CHECK-NEXT:    mov z21.h, z16.h[2]
-; CHECK-NEXT:    mov z24.h, z6.h[1]
-; CHECK-NEXT:    fcmp h0, h0
-; CHECK-NEXT:    fcsel h7, h1, h0, vs
-; CHECK-NEXT:    fcmp h1, h1
-; CHECK-NEXT:    fcsel h0, h7, h1, vs
-; CHECK-NEXT:    mov z1.h, z6.h[6]
-; CHECK-NEXT:    fcmp h7, h0
-; CHECK-NEXT:    fcsel h0, h7, h0, lt
-; CHECK-NEXT:    fcmp h1, h1
-; CHECK-NEXT:    fcsel h17, h2, h1, vs
-; CHECK-NEXT:    fcmp h2, h2
-; CHECK-NEXT:    fcsel h1, h17, h2, vs
-; CHECK-NEXT:    mov z2.h, z6.h[5]
-; CHECK-NEXT:    zip1 z7.h, z17.h, z7.h
-; CHECK-NEXT:    fcmp h17, h1
-; CHECK-NEXT:    fcsel h1, h17, h1, lt
-; CHECK-NEXT:    fcmp h2, h2
-; CHECK-NEXT:    fcsel h18, h3, h2, vs
-; CHECK-NEXT:    fcmp h3, h3
-; CHECK-NEXT:    zip1 z0.h, z1.h, z0.h
-; CHECK-NEXT:    fcsel h2, h18, h3, vs
-; CHECK-NEXT:    mov z3.h, z6.h[4]
-; CHECK-NEXT:    fcmp h18, h2
-; CHECK-NEXT:    fcsel h2, h18, h2, lt
-; CHECK-NEXT:    fcmp h3, h3
-; CHECK-NEXT:    fcsel h19, h4, h3, vs
-; CHECK-NEXT:    fcmp h4, h4
-; CHECK-NEXT:    fcsel h3, h19, h4, vs
-; CHECK-NEXT:    mov z4.h, z6.h[3]
-; CHECK-NEXT:    zip1 z17.h, z19.h, z18.h
-; CHECK-NEXT:    fcmp h19, h3
-; CHECK-NEXT:    zip1 z7.s, z17.s, z7.s
-; CHECK-NEXT:    fcsel h3, h19, h3, lt
-; CHECK-NEXT:    fcmp h4, h4
-; CHECK-NEXT:    fcsel h20, h5, h4, vs
-; CHECK-NEXT:    fcmp h5, h5
-; CHECK-NEXT:    zip1 z1.h, z3.h, z2.h
-; CHECK-NEXT:    fcsel h4, h20, h5, vs
-; CHECK-NEXT:    mov z5.h, z6.h[2]
-; CHECK-NEXT:    zip1 z0.s, z1.s, z0.s
-; CHECK-NEXT:    fcmp h20, h4
-; CHECK-NEXT:    fcsel h4, h20, h4, lt
-; CHECK-NEXT:    fcmp h5, h5
-; CHECK-NEXT:    fcsel h22, h21, h5, vs
-; CHECK-NEXT:    fcmp h21, h21
-; CHECK-NEXT:    fcsel h5, h22, h21, vs
-; CHECK-NEXT:    zip1 z18.h, z22.h, z20.h
-; CHECK-NEXT:    ldr q20, [x0]
-; CHECK-NEXT:    mov z30.h, z20.h[2]
-; CHECK-NEXT:    fcmp h22, h5
-; CHECK-NEXT:    fcsel h5, h22, h5, lt
-; CHECK-NEXT:    fcmp h6, h6
-; CHECK-NEXT:    ldr q22, [x1]
-; CHECK-NEXT:    mov z26.h, z22.h[5]
-; CHECK-NEXT:    mov z28.h, z22.h[4]
-; CHECK-NEXT:    mov z29.h, z22.h[3]
-; CHECK-NEXT:    fcsel h21, h16, h6, vs
-; CHECK-NEXT:    fcmp h16, h16
-; CHECK-NEXT:    mov z31.h, z22.h[2]
-; CHECK-NEXT:    zip1 z2.h, z5.h, z4.h
-; CHECK-NEXT:    fcsel h23, h21, h16, vs
-; CHECK-NEXT:    mov z16.h, z16.h[1]
-; CHECK-NEXT:    fcmp h21, h23
-; CHECK-NEXT:    fcsel h6, h21, h23, lt
-; CHECK-NEXT:    fcmp h24, h24
-; CHECK-NEXT:    fcsel h23, h16, h24, vs
-; CHECK-NEXT:    fcmp h16, h16
-; CHECK-NEXT:    mov z24.h, z22.h[6]
-; CHECK-NEXT:    zip1 z19.h, z21.h, z23.h
-; CHECK-NEXT:    fcsel h16, h23, h16, vs
-; CHECK-NEXT:    mov z21.h, z20.h[6]
-; CHECK-NEXT:    zip1 z17.s, z19.s, z18.s
-; CHECK-NEXT:    fcmp h23, h16
-; CHECK-NEXT:    mov z19.h, z20.h[7]
-; CHECK-NEXT:    zip1 z7.d, z17.d, z7.d
-; CHECK-NEXT:    ldr q17, [x8, :lo12:.LCPI47_0]
-; CHECK-NEXT:    fcsel h16, h23, h16, lt
-; CHECK-NEXT:    cmpeq p1.h, p0/z, z7.h, z17.h
-; CHECK-NEXT:    zip1 z3.h, z6.h, z16.h
-; CHECK-NEXT:    zip1 z1.s, z3.s, z2.s
-; CHECK-NEXT:    mov z18.h, p1/z, #-1 // =0xffffffffffffffff
-; CHECK-NEXT:    ptrue p1.h
-; CHECK-NEXT:    zip1 z0.d, z1.d, z0.d
-; CHECK-NEXT:    and z18.h, z18.h, #0x1
-; CHECK-NEXT:    cmpne p2.h, p1/z, z18.h, #0
-; CHECK-NEXT:    mov z18.h, z22.h[7]
-; CHECK-NEXT:    fcmp h19, h19
-; CHECK-NEXT:    fcsel h19, h18, h19, vs
-; CHECK-NEXT:    fcmp h18, h18
-; CHECK-NEXT:    sel z3.h, p2, z7.h, z0.h
-; CHECK-NEXT:    fcsel h18, h19, h18, vs
-; CHECK-NEXT:    fcmp h19, h18
-; CHECK-NEXT:    fcsel h18, h19, h18, lt
-; CHECK-NEXT:    fcmp h21, h21
-; CHECK-NEXT:    fcsel h23, h24, h21, vs
-; CHECK-NEXT:    fcmp h24, h24
-; CHECK-NEXT:    fcsel h21, h23, h24, vs
-; CHECK-NEXT:    mov z24.h, z20.h[5]
-; CHECK-NEXT:    zip1 z19.h, z23.h, z19.h
-; CHECK-NEXT:    fcmp h23, h21
-; CHECK-NEXT:    fcsel h21, h23, h21, lt
-; CHECK-NEXT:    fcmp h24, h24
-; CHECK-NEXT:    fcsel h25, h26, h24, vs
-; CHECK-NEXT:    fcmp h26, h26
-; CHECK-NEXT:    zip1 z18.h, z21.h, z18.h
-; CHECK-NEXT:    fcsel h24, h25, h26, vs
-; CHECK-NEXT:    mov z26.h, z20.h[4]
-; CHECK-NEXT:    fcmp h25, h24
-; CHECK-NEXT:    fcsel h24, h25, h24, lt
-; CHECK-NEXT:    fcmp h26, h26
-; CHECK-NEXT:    fcsel h27, h28, h26, vs
-; CHECK-NEXT:    fcmp h28, h28
-; CHECK-NEXT:    fcsel h26, h27, h28, vs
-; CHECK-NEXT:    mov z28.h, z20.h[3]
-; CHECK-NEXT:    zip1 z23.h, z27.h, z25.h
-; CHECK-NEXT:    fcmp h27, h26
-; CHECK-NEXT:    zip1 z19.s, z23.s, z19.s
-; CHECK-NEXT:    fcsel h26, h27, h26, lt
-; CHECK-NEXT:    fcmp h28, h28
-; CHECK-NEXT:    fcsel h28, h29, h28, vs
-; CHECK-NEXT:    fcmp h29, h29
-; CHECK-NEXT:    zip1 z21.h, z26.h, z24.h
-; CHECK-NEXT:    fcsel h29, h28, h29, vs
-; CHECK-NEXT:    zip1 z4.s, z21.s, z18.s
-; CHECK-NEXT:    fcmp h28, h29
-; CHECK-NEXT:    fcsel h29, h28, h29, lt
-; CHECK-NEXT:    fcmp h30, h30
-; CHECK-NEXT:    fcsel h30, h31, h30, vs
-; CHECK-NEXT:    fcmp h31, h31
-; CHECK-NEXT:    fcsel h31, h30, h31, vs
-; CHECK-NEXT:    zip1 z25.h, z30.h, z28.h
-; CHECK-NEXT:    fcmp h30, h31
-; CHECK-NEXT:    fcsel h31, h30, h31, lt
-; CHECK-NEXT:    fcmp h20, h20
-; CHECK-NEXT:    fcsel h8, h22, h20, vs
-; CHECK-NEXT:    fcmp h22, h22
-; CHECK-NEXT:    mov z20.h, z20.h[1]
-; CHECK-NEXT:    fcsel h9, h8, h22, vs
-; CHECK-NEXT:    mov z22.h, z22.h[1]
-; CHECK-NEXT:    fcmp h8, h9
-; CHECK-NEXT:    fcsel h9, h8, h9, lt
-; CHECK-NEXT:    fcmp h20, h20
-; CHECK-NEXT:    fcsel h20, h22, h20, vs
-; CHECK-NEXT:    fcmp h22, h22
-; CHECK-NEXT:    zip1 z27.h, z8.h, z20.h
-; CHECK-NEXT:    fcsel h22, h20, h22, vs
-; CHECK-NEXT:    zip1 z23.s, z27.s, z25.s
-; CHECK-NEXT:    fcmp h20, h22
-; CHECK-NEXT:    zip1 z19.d, z23.d, z19.d
-; CHECK-NEXT:    fcsel h20, h20, h22, lt
-; CHECK-NEXT:    zip1 z22.h, z31.h, z29.h
-; CHECK-NEXT:    cmpeq p3.h, p0/z, z19.h, z17.h
-; CHECK-NEXT:    zip1 z20.h, z9.h, z20.h
-; CHECK-NEXT:    zip1 z5.s, z20.s, z22.s
-; CHECK-NEXT:    mov z17.h, p3/z, #-1 // =0xffffffffffffffff
-; CHECK-NEXT:    zip1 z2.d, z5.d, z4.d
-; CHECK-NEXT:    and z17.h, z17.h, #0x1
-; CHECK-NEXT:    cmpne p1.h, p1/z, z17.h, #0
-; CHECK-NEXT:    sel z1.h, p1, z19.h, z2.h
-; CHECK-NEXT:    fcmeq p1.h, p0/z, z2.h, #0.0
-; CHECK-NEXT:    fcmeq p0.h, p0/z, z0.h, #0.0
-; CHECK-NEXT:    sel z1.h, p1, z1.h, z2.h
-; CHECK-NEXT:    mov z0.h, p0/m, z3.h
-; CHECK-NEXT:    stp q1, q0, [x0]
-; CHECK-NEXT:    ldp d9, d8, [sp], #16 // 16-byte Folded Reload
+; CHECK-NEXT:    ldp q1, q2, [x0]
+; CHECK-NEXT:    fminnm z0.h, p0/m, z0.h, z0.h
+; CHECK-NEXT:    fminnm z3.h, p0/m, z3.h, z3.h
+; CHECK-NEXT:    fminnm z1.h, p0/m, z1.h, z1.h
+; CHECK-NEXT:    fminnm z2.h, p0/m, z2.h, z2.h
+; CHECK-NEXT:    fminnm z0.h, p0/m, z0.h, z1.h
+; CHECK-NEXT:    fminnm z2.h, p0/m, z2.h, z3.h
+; CHECK-NEXT:    stp q0, q2, [x0]
 ; CHECK-NEXT:    ret
 ;
 ; NONEON-NOSVE-LABEL: fminimumnum_v16f16:
@@ -3465,33 +2654,10 @@ define void @fminimumnum_v16f16(ptr %a, ptr %b) {
 define <2 x float> @fminimumnum_v2f32(<2 x float> %op1, <2 x float> %op2) {
 ; CHECK-LABEL: fminimumnum_v2f32:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    fcmp s0, s0
-; CHECK-NEXT:    adrp x8, .LCPI48_0
 ; CHECK-NEXT:    ptrue p0.s, vl2
-; CHECK-NEXT:    ldr d4, [x8, :lo12:.LCPI48_0]
-; CHECK-NEXT:    fcsel s2, s1, s0, vs
-; CHECK-NEXT:    fcmp s1, s1
-; CHECK-NEXT:    mov z0.s, z0.s[1]
-; CHECK-NEXT:    fcsel s3, s2, s1, vs
-; CHECK-NEXT:    mov z1.s, z1.s[1]
-; CHECK-NEXT:    fcmp s2, s3
-; CHECK-NEXT:    fcsel s3, s2, s3, lt
-; CHECK-NEXT:    fcmp s0, s0
-; CHECK-NEXT:    fcsel s0, s1, s0, vs
-; CHECK-NEXT:    fcmp s1, s1
-; CHECK-NEXT:    fcsel s1, s0, s1, vs
-; CHECK-NEXT:    zip1 z2.s, z2.s, z0.s
-; CHECK-NEXT:    fcmp s0, s1
-; CHECK-NEXT:    fcsel s0, s0, s1, lt
-; CHECK-NEXT:    cmpeq p1.s, p0/z, z2.s, z4.s
-; CHECK-NEXT:    zip1 z0.s, z3.s, z0.s
-; CHECK-NEXT:    mov z1.s, p1/z, #-1 // =0xffffffffffffffff
-; CHECK-NEXT:    ptrue p1.s
-; CHECK-NEXT:    fcmeq p0.s, p0/z, z0.s, #0.0
-; CHECK-NEXT:    and z1.s, z1.s, #0x1
-; CHECK-NEXT:    cmpne p1.s, p1/z, z1.s, #0
-; CHECK-NEXT:    sel z1.s, p1, z2.s, z0.s
-; CHECK-NEXT:    mov z0.s, p0/m, z1.s
+; CHECK-NEXT:    fminnm z1.s, p0/m, z1.s, z1.s
+; CHECK-NEXT:    fminnm z0.s, p0/m, z0.s, z0.s
+; CHECK-NEXT:    fminnm z0.s, p0/m, z0.s, z1.s
 ; CHECK-NEXT:    ret
 ;
 ; NONEON-NOSVE-LABEL: fminimumnum_v2f32:
@@ -3520,53 +2686,10 @@ define <2 x float> @fminimumnum_v2f32(<2 x float> %op1, <2 x float> %op2) {
 define <4 x float> @fminimumnum_v4f32(<4 x float> %op1, <4 x float> %op2) {
 ; CHECK-LABEL: fminimumnum_v4f32:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    mov z2.s, z0.s[3]
-; CHECK-NEXT:    mov z3.s, z1.s[3]
-; CHECK-NEXT:    adrp x8, .LCPI49_0
-; CHECK-NEXT:    mov z4.s, z0.s[2]
-; CHECK-NEXT:    mov z5.s, z1.s[2]
 ; CHECK-NEXT:    ptrue p0.s, vl4
-; CHECK-NEXT:    fcmp s2, s2
-; CHECK-NEXT:    fcsel s2, s3, s2, vs
-; CHECK-NEXT:    fcmp s3, s3
-; CHECK-NEXT:    fcsel s3, s2, s3, vs
-; CHECK-NEXT:    fcmp s2, s3
-; CHECK-NEXT:    fcsel s3, s2, s3, lt
-; CHECK-NEXT:    fcmp s4, s4
-; CHECK-NEXT:    fcsel s4, s5, s4, vs
-; CHECK-NEXT:    fcmp s5, s5
-; CHECK-NEXT:    fcsel s5, s4, s5, vs
-; CHECK-NEXT:    zip1 z2.s, z4.s, z2.s
-; CHECK-NEXT:    fcmp s4, s5
-; CHECK-NEXT:    fcsel s5, s4, s5, lt
-; CHECK-NEXT:    fcmp s0, s0
-; CHECK-NEXT:    fcsel s6, s1, s0, vs
-; CHECK-NEXT:    fcmp s1, s1
-; CHECK-NEXT:    mov z0.s, z0.s[1]
-; CHECK-NEXT:    zip1 z3.s, z5.s, z3.s
-; CHECK-NEXT:    fcsel s7, s6, s1, vs
-; CHECK-NEXT:    mov z1.s, z1.s[1]
-; CHECK-NEXT:    fcmp s6, s7
-; CHECK-NEXT:    fcsel s7, s6, s7, lt
-; CHECK-NEXT:    fcmp s0, s0
-; CHECK-NEXT:    fcsel s0, s1, s0, vs
-; CHECK-NEXT:    fcmp s1, s1
-; CHECK-NEXT:    fcsel s1, s0, s1, vs
-; CHECK-NEXT:    zip1 z4.s, z6.s, z0.s
-; CHECK-NEXT:    fcmp s0, s1
-; CHECK-NEXT:    zip1 z2.d, z4.d, z2.d
-; CHECK-NEXT:    ldr q4, [x8, :lo12:.LCPI49_0]
-; CHECK-NEXT:    fcsel s0, s0, s1, lt
-; CHECK-NEXT:    cmpeq p1.s, p0/z, z2.s, z4.s
-; CHECK-NEXT:    zip1 z0.s, z7.s, z0.s
-; CHECK-NEXT:    mov z1.s, p1/z, #-1 // =0xffffffffffffffff
-; CHECK-NEXT:    ptrue p1.s
-; CHECK-NEXT:    zip1 z0.d, z0.d, z3.d
-; CHECK-NEXT:    and z1.s, z1.s, #0x1
-; CHECK-NEXT:    fcmeq p0.s, p0/z, z0.s, #0.0
-; CHECK-NEXT:    cmpne p1.s, p1/z, z1.s, #0
-; CHECK-NEXT:    sel z1.s, p1, z2.s, z0.s
-; CHECK-NEXT:    mov z0.s, p0/m, z1.s
+; CHECK-NEXT:    fminnm z1.s, p0/m, z1.s, z1.s
+; CHECK-NEXT:    fminnm z0.s, p0/m, z0.s, z0.s
+; CHECK-NEXT:    fminnm z0.s, p0/m, z0.s, z1.s
 ; CHECK-NEXT:    ret
 ;
 ; NONEON-NOSVE-LABEL: fminimumnum_v4f32:
@@ -3605,101 +2728,16 @@ define <4 x float> @fminimumnum_v4f32(<4 x float> %op1, <4 x float> %op2) {
 define void @fminimumnum_v8f32(ptr %a, ptr %b) {
 ; CHECK-LABEL: fminimumnum_v8f32:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    ldr q2, [x0, #16]
-; CHECK-NEXT:    ldr q3, [x1, #16]
-; CHECK-NEXT:    adrp x8, .LCPI50_0
+; CHECK-NEXT:    ldp q0, q3, [x1]
 ; CHECK-NEXT:    ptrue p0.s, vl4
-; CHECK-NEXT:    ldr q17, [x1]
-; CHECK-NEXT:    mov z0.s, z2.s[3]
-; CHECK-NEXT:    mov z1.s, z3.s[3]
-; CHECK-NEXT:    mov z5.s, z3.s[2]
-; CHECK-NEXT:    mov z16.s, z2.s[1]
-; CHECK-NEXT:    mov z19.s, z17.s[2]
-; CHECK-NEXT:    fcmp s0, s0
-; CHECK-NEXT:    fcsel s4, s1, s0, vs
-; CHECK-NEXT:    fcmp s1, s1
-; CHECK-NEXT:    fcsel s0, s4, s1, vs
-; CHECK-NEXT:    mov z1.s, z2.s[2]
-; CHECK-NEXT:    fcmp s4, s0
-; CHECK-NEXT:    fcsel s0, s4, s0, lt
-; CHECK-NEXT:    fcmp s1, s1
-; CHECK-NEXT:    fcsel s6, s5, s1, vs
-; CHECK-NEXT:    fcmp s5, s5
-; CHECK-NEXT:    fcsel s1, s6, s5, vs
-; CHECK-NEXT:    zip1 z4.s, z6.s, z4.s
-; CHECK-NEXT:    fcmp s6, s1
-; CHECK-NEXT:    fcsel s1, s6, s1, lt
-; CHECK-NEXT:    fcmp s2, s2
-; CHECK-NEXT:    fcsel s5, s3, s2, vs
-; CHECK-NEXT:    fcmp s3, s3
-; CHECK-NEXT:    zip1 z0.s, z1.s, z0.s
-; CHECK-NEXT:    fcsel s7, s5, s3, vs
-; CHECK-NEXT:    mov z3.s, z3.s[1]
-; CHECK-NEXT:    fcmp s5, s7
-; CHECK-NEXT:    fcsel s2, s5, s7, lt
-; CHECK-NEXT:    fcmp s16, s16
-; CHECK-NEXT:    fcsel s7, s3, s16, vs
-; CHECK-NEXT:    fcmp s3, s3
-; CHECK-NEXT:    fcsel s6, s7, s3, vs
-; CHECK-NEXT:    zip1 z3.s, z5.s, z7.s
-; CHECK-NEXT:    ldr q5, [x8, :lo12:.LCPI50_0]
-; CHECK-NEXT:    fcmp s7, s6
-; CHECK-NEXT:    zip1 z3.d, z3.d, z4.d
-; CHECK-NEXT:    fcsel s4, s7, s6, lt
-; CHECK-NEXT:    cmpeq p1.s, p0/z, z3.s, z5.s
-; CHECK-NEXT:    ldr q7, [x0]
-; CHECK-NEXT:    mov z16.s, z7.s[3]
-; CHECK-NEXT:    mov z18.s, z7.s[2]
-; CHECK-NEXT:    zip1 z1.s, z2.s, z4.s
-; CHECK-NEXT:    mov z6.s, p1/z, #-1 // =0xffffffffffffffff
-; CHECK-NEXT:    ptrue p1.s
-; CHECK-NEXT:    zip1 z0.d, z1.d, z0.d
-; CHECK-NEXT:    and z6.s, z6.s, #0x1
-; CHECK-NEXT:    cmpne p2.s, p1/z, z6.s, #0
-; CHECK-NEXT:    mov z6.s, z17.s[3]
-; CHECK-NEXT:    fcmp s16, s16
-; CHECK-NEXT:    fcsel s16, s6, s16, vs
-; CHECK-NEXT:    fcmp s6, s6
-; CHECK-NEXT:    sel z3.s, p2, z3.s, z0.s
-; CHECK-NEXT:    fcsel s6, s16, s6, vs
-; CHECK-NEXT:    fcmp s16, s6
-; CHECK-NEXT:    fcsel s6, s16, s6, lt
-; CHECK-NEXT:    fcmp s18, s18
-; CHECK-NEXT:    fcsel s18, s19, s18, vs
-; CHECK-NEXT:    fcmp s19, s19
-; CHECK-NEXT:    fcsel s19, s18, s19, vs
-; CHECK-NEXT:    zip1 z16.s, z18.s, z16.s
-; CHECK-NEXT:    fcmp s18, s19
-; CHECK-NEXT:    fcsel s19, s18, s19, lt
-; CHECK-NEXT:    fcmp s7, s7
-; CHECK-NEXT:    fcsel s20, s17, s7, vs
-; CHECK-NEXT:    fcmp s17, s17
-; CHECK-NEXT:    mov z7.s, z7.s[1]
-; CHECK-NEXT:    zip1 z6.s, z19.s, z6.s
-; CHECK-NEXT:    fcsel s21, s20, s17, vs
-; CHECK-NEXT:    mov z17.s, z17.s[1]
-; CHECK-NEXT:    fcmp s20, s21
-; CHECK-NEXT:    fcsel s21, s20, s21, lt
-; CHECK-NEXT:    fcmp s7, s7
-; CHECK-NEXT:    fcsel s7, s17, s7, vs
-; CHECK-NEXT:    fcmp s17, s17
-; CHECK-NEXT:    fcsel s17, s7, s17, vs
-; CHECK-NEXT:    zip1 z18.s, z20.s, z7.s
-; CHECK-NEXT:    zip1 z16.d, z18.d, z16.d
-; CHECK-NEXT:    fcmp s7, s17
-; CHECK-NEXT:    fcsel s7, s7, s17, lt
-; CHECK-NEXT:    cmpeq p3.s, p0/z, z16.s, z5.s
-; CHECK-NEXT:    zip1 z7.s, z21.s, z7.s
-; CHECK-NEXT:    mov z5.s, p3/z, #-1 // =0xffffffffffffffff
-; CHECK-NEXT:    zip1 z2.d, z7.d, z6.d
-; CHECK-NEXT:    and z5.s, z5.s, #0x1
-; CHECK-NEXT:    cmpne p1.s, p1/z, z5.s, #0
-; CHECK-NEXT:    sel z1.s, p1, z16.s, z2.s
-; CHECK-NEXT:    fcmeq p1.s, p0/z, z2.s, #0.0
-; CHECK-NEXT:    fcmeq p0.s, p0/z, z0.s, #0.0
-; CHECK-NEXT:    sel z1.s, p1, z1.s, z2.s
-; CHECK-NEXT:    mov z0.s, p0/m, z3.s
-; CHECK-NEXT:    stp q1, q0, [x0]
+; CHECK-NEXT:    ldp q1, q2, [x0]
+; CHECK-NEXT:    fminnm z0.s, p0/m, z0.s, z0.s
+; CHECK-NEXT:    fminnm z3.s, p0/m, z3.s, z3.s
+; CHECK-NEXT:    fminnm z1.s, p0/m, z1.s, z1.s
+; CHECK-NEXT:    fminnm z2.s, p0/m, z2.s, z2.s
+; CHECK-NEXT:    fminnm z0.s, p0/m, z0.s, z1.s
+; CHECK-NEXT:    fminnm z2.s, p0/m, z2.s, z3.s
+; CHECK-NEXT:    stp q0, q2, [x0]
 ; CHECK-NEXT:    ret
 ;
 ; NONEON-NOSVE-LABEL: fminimumnum_v8f32:
@@ -3789,33 +2827,10 @@ define <1 x double> @fminimumnum_v1f64(<1 x double> %op1, <1 x double> %op2) {
 define <2 x double> @fminimumnum_v2f64(<2 x double> %op1, <2 x double> %op2) {
 ; CHECK-LABEL: fminimumnum_v2f64:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    fcmp d0, d0
-; CHECK-NEXT:    adrp x8, .LCPI52_0
 ; CHECK-NEXT:    ptrue p0.d, vl2
-; CHECK-NEXT:    ldr q4, [x8, :lo12:.LCPI52_0]
-; CHECK-NEXT:    fcsel d2, d1, d0, vs
-; CHECK-NEXT:    fcmp d1, d1
-; CHECK-NEXT:    mov z0.d, z0.d[1]
-; CHECK-NEXT:    fcsel d3, d2, d1, vs
-; CHECK-NEXT:    mov z1.d, z1.d[1]
-; CHECK-NEXT:    fcmp d2, d3
-; CHECK-NEXT:    fcsel d3, d2, d3, lt
-; CHECK-NEXT:    fcmp d0, d0
-; CHECK-NEXT:    fcsel d0, d1, d0, vs
-; CHECK-NEXT:    fcmp d1, d1
-; CHECK-NEXT:    fcsel d1, d0, d1, vs
-; CHECK-NEXT:    zip1 z2.d, z2.d, z0.d
-; CHECK-NEXT:    fcmp d0, d1
-; CHECK-NEXT:    fcsel d0, d0, d1, lt
-; CHECK-NEXT:    cmpeq p1.d, p0/z, z2.d, z4.d
-; CHECK-NEXT:    zip1 z0.d, z3.d, z0.d
-; CHECK-NEXT:    mov z1.d, p1/z, #-1 // =0xffffffffffffffff
-; CHECK-NEXT:    ptrue p1.d
-; CHECK-NEXT:    fcmeq p0.d, p0/z, z0.d, #0.0
-; CHECK-NEXT:    and z1.d, z1.d, #0x1
-; CHECK-NEXT:    cmpne p1.d, p1/z, z1.d, #0
-; CHECK-NEXT:    sel z1.d, p1, z2.d, z0.d
-; CHECK-NEXT:    mov z0.d, p0/m, z1.d
+; CHECK-NEXT:    fminnm z1.d, p0/m, z1.d, z1.d
+; CHECK-NEXT:    fminnm z0.d, p0/m, z0.d, z0.d
+; CHECK-NEXT:    fminnm z0.d, p0/m, z0.d, z1.d
 ; CHECK-NEXT:    ret
 ;
 ; NONEON-NOSVE-LABEL: fminimumnum_v2f64:
@@ -3843,61 +2858,16 @@ define <2 x double> @fminimumnum_v2f64(<2 x double> %op1, <2 x double> %op2) {
 define void @fminimumnum_v4f64(ptr %a, ptr %b) {
 ; CHECK-LABEL: fminimumnum_v4f64:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    ldr q0, [x0, #16]
-; CHECK-NEXT:    ldr q1, [x1, #16]
-; CHECK-NEXT:    adrp x8, .LCPI53_0
+; CHECK-NEXT:    ldp q0, q3, [x1]
 ; CHECK-NEXT:    ptrue p0.d, vl2
-; CHECK-NEXT:    ldr q5, [x0]
-; CHECK-NEXT:    fcmp d0, d0
-; CHECK-NEXT:    mov z4.d, z0.d[1]
-; CHECK-NEXT:    ptrue p2.d
-; CHECK-NEXT:    fcsel d2, d1, d0, vs
-; CHECK-NEXT:    fcmp d1, d1
-; CHECK-NEXT:    fcsel d3, d2, d1, vs
-; CHECK-NEXT:    mov z1.d, z1.d[1]
-; CHECK-NEXT:    fcmp d2, d3
-; CHECK-NEXT:    fcsel d0, d2, d3, lt
-; CHECK-NEXT:    fcmp d4, d4
-; CHECK-NEXT:    fcsel d3, d1, d4, vs
-; CHECK-NEXT:    fcmp d1, d1
-; CHECK-NEXT:    ldr q4, [x8, :lo12:.LCPI53_0]
-; CHECK-NEXT:    fcsel d1, d3, d1, vs
-; CHECK-NEXT:    zip1 z2.d, z2.d, z3.d
-; CHECK-NEXT:    fcmp d3, d1
-; CHECK-NEXT:    fcsel d1, d3, d1, lt
-; CHECK-NEXT:    cmpeq p1.d, p0/z, z2.d, z4.d
-; CHECK-NEXT:    zip1 z0.d, z0.d, z1.d
-; CHECK-NEXT:    mov z3.d, p1/z, #-1 // =0xffffffffffffffff
-; CHECK-NEXT:    and z3.d, z3.d, #0x1
-; CHECK-NEXT:    cmpne p1.d, p2/z, z3.d, #0
-; CHECK-NEXT:    ldr q3, [x1]
-; CHECK-NEXT:    fcmp d5, d5
-; CHECK-NEXT:    fcsel d6, d3, d5, vs
-; CHECK-NEXT:    fcmp d3, d3
-; CHECK-NEXT:    mov z5.d, z5.d[1]
-; CHECK-NEXT:    sel z2.d, p1, z2.d, z0.d
-; CHECK-NEXT:    fcsel d7, d6, d3, vs
-; CHECK-NEXT:    mov z3.d, z3.d[1]
-; CHECK-NEXT:    fcmp d6, d7
-; CHECK-NEXT:    fcsel d7, d6, d7, lt
-; CHECK-NEXT:    fcmp d5, d5
-; CHECK-NEXT:    fcsel d5, d3, d5, vs
-; CHECK-NEXT:    fcmp d3, d3
-; CHECK-NEXT:    fcsel d3, d5, d3, vs
-; CHECK-NEXT:    zip1 z6.d, z6.d, z5.d
-; CHECK-NEXT:    fcmp d5, d3
-; CHECK-NEXT:    fcsel d3, d5, d3, lt
-; CHECK-NEXT:    cmpeq p3.d, p0/z, z6.d, z4.d
-; CHECK-NEXT:    zip1 z3.d, z7.d, z3.d
-; CHECK-NEXT:    mov z4.d, p3/z, #-1 // =0xffffffffffffffff
-; CHECK-NEXT:    and z4.d, z4.d, #0x1
-; CHECK-NEXT:    cmpne p2.d, p2/z, z4.d, #0
-; CHECK-NEXT:    sel z1.d, p2, z6.d, z3.d
-; CHECK-NEXT:    fcmeq p2.d, p0/z, z3.d, #0.0
-; CHECK-NEXT:    fcmeq p0.d, p0/z, z0.d, #0.0
-; CHECK-NEXT:    sel z1.d, p2, z1.d, z3.d
-; CHECK-NEXT:    mov z0.d, p0/m, z2.d
-; CHECK-NEXT:    stp q1, q0, [x0]
+; CHECK-NEXT:    ldp q1, q2, [x0]
+; CHECK-NEXT:    fminnm z0.d, p0/m, z0.d, z0.d
+; CHECK-NEXT:    fminnm z3.d, p0/m, z3.d, z3.d
+; CHECK-NEXT:    fminnm z1.d, p0/m, z1.d, z1.d
+; CHECK-NEXT:    fminnm z2.d, p0/m, z2.d, z2.d
+; CHECK-NEXT:    fminnm z0.d, p0/m, z0.d, z1.d
+; CHECK-NEXT:    fminnm z2.d, p0/m, z2.d, z3.d
+; CHECK-NEXT:    stp q0, q2, [x0]
 ; CHECK-NEXT:    ret
 ;
 ; NONEON-NOSVE-LABEL: fminimumnum_v4f64:
