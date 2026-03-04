@@ -17559,8 +17559,8 @@ bool Sema::DiagnoseAssignmentResult(AssignConvertType ConvTy,
   }
   case AssignConvertType::IncompatiblePointerDiscardsOverflowBehavior:
     // Perform decay if necessary.
-    if (SrcType->isArrayType() || SrcType->isFunctionType())
-      SrcType = Context.getDecayedType(SrcType);
+    if (SrcType->isArrayType())
+      SrcType = Context.getArrayDecayedType(SrcType);
 
     DiagKind = diag::ext_typecheck_convert_discards_overflow_behavior;
     break;
@@ -17741,6 +17741,9 @@ bool Sema::DiagnoseAssignmentResult(AssignConvertType ConvTy,
     Diag(IFace->getLocation(), diag::note_incomplete_class_and_qualified_id)
         << IFace << PDecl;
 
+    if (SrcType->isArrayType() || SrcType->isFunctionType()) {
+      SrcType = Context.getDecayedType(SrcType);
+    }
   if (SecondType == Context.OverloadTy)
     NoteAllOverloadCandidates(OverloadExpr::find(SrcExpr).Expression,
                               FirstType, /*TakingAddress=*/true);
