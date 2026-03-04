@@ -1347,8 +1347,8 @@ public:
   ///  e.g. src[012]_mod, omod, clamp.
   bool hasModifiers(unsigned Opcode) const;
 
-  bool hasModifiersSet(const MachineInstr &MI, AMDGPU::OpName OpName) const;
-  bool hasAnyModifiersSet(const MachineInstr &MI) const;
+  static bool hasModifiersSet(const MachineInstr &MI, AMDGPU::OpName OpName);
+  static bool hasAnyModifiersSet(const MachineInstr &MI);
 
   bool canShrink(const MachineInstr &MI,
                  const MachineRegisterInfo &MRI) const;
@@ -1524,12 +1524,12 @@ public:
   /// Returns the operand named \p Op.  If \p MI does not have an
   /// operand named \c Op, this function returns nullptr.
   LLVM_READONLY
-  MachineOperand *getNamedOperand(MachineInstr &MI,
-                                  AMDGPU::OpName OperandName) const;
+  static MachineOperand *getNamedOperand(MachineInstr &MI,
+                                         AMDGPU::OpName OperandName);
 
   LLVM_READONLY
-  const MachineOperand *getNamedOperand(const MachineInstr &MI,
-                                        AMDGPU::OpName OperandName) const {
+  static const MachineOperand *getNamedOperand(const MachineInstr &MI,
+                                               AMDGPU::OpName OperandName) {
     return getNamedOperand(const_cast<MachineInstr &>(MI), OperandName);
   }
 
