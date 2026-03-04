@@ -77,7 +77,7 @@ private:
   // Returns true if MBB contains at least one layout-sensitive pattern.
   bool detectLayoutSensitivePattern(MachineBasicBlock *MBB);
 
-  bool optimizeForCodeAlignment(MachineFunction &MF);
+  bool optimizeForCodeLayout(MachineFunction &MF);
 };
 
 } // end anonymous namespace
@@ -108,7 +108,7 @@ bool AArch64CodeLayoutOpt::runOnMachineFunction(MachineFunction &MF) {
       !((Mask & 0x2) && Subtarget->hasFuseCmpCSel()))
     return false;
 
-  return optimizeForCodeAlignment(MF);
+  return optimizeForCodeLayout(MF);
 }
 
 // Returns true if MBB contains at least one layout-sensitive pair.
@@ -199,8 +199,8 @@ bool AArch64CodeLayoutOpt::detectLayoutSensitivePattern(
   return false;
 }
 
-bool AArch64CodeLayoutOpt::optimizeForCodeAlignment(MachineFunction &MF) {
-  LLVM_DEBUG(dbgs() << DEBUG_TYPE ": optimizeForCodeAlignment: " << MF.getName()
+bool AArch64CodeLayoutOpt::optimizeForCodeLayout(MachineFunction &MF) {
+  LLVM_DEBUG(dbgs() << DEBUG_TYPE ": optimizeForCodeLayout: " << MF.getName()
                     << "\n");
 
   for (auto &MBB : MF) {
