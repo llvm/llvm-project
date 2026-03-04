@@ -113,6 +113,10 @@ let Attributes = [NoThrow, Const] in {
 	def prefetch : AArch64Builtin<"void (void const *, unsigned int, unsigned int, unsigned int, unsigned int)">;
 }
 
+let Attributes = [NoThrow, Const] in {
+	def prefetch_ir : AArch64Builtin<"void (void const *)">;
+}
+
 // Range Prefetch
 let Attributes = [NoThrow] in {
 	def range_prefetch_x : AArch64Builtin<"void (void const *, unsigned int, unsigned int, int, unsigned int, int, size_t)">;
