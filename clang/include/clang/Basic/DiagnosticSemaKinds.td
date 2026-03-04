@@ -6674,6 +6674,8 @@ def err_block_extern_cant_init : Error<
   "declaration of block scope identifier with linkage cannot have an initializer">;
 def warn_extern_init : Warning<"'extern' variable has an initializer">,
   InGroup<DiagGroup<"extern-initializer">>;
+def warn_hlsl_groupshared_init : Warning<"initializer of groupshared variable will be ignored">,
+  InGroup<DiagGroup<"groupshared-initializer">>, DefaultError;
 def err_variable_object_no_init : Error<
   "variable-sized object may not be initialized">;
 def err_excess_initializers : Error<
