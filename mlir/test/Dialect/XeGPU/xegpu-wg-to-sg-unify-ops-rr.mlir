@@ -128,7 +128,8 @@ gpu.module @test_distribution {
         -> vector<256x128xf32>
     // CHECK-COUNT-2: vector.transpose {{.*}}, [1, 0] : vector<32x16xf32> to vector<16x32xf32>
     // CHECK-NOT: vector.transpose
-    %trans = vector.transpose %load, [1, 0] {layout_result_0 = #xegpu.layout<sg_layout = [4, 8], sg_data = [16, 32], lane_layout = [1, 16], lane_data = [1, 1], order =[1, 0]>} : vector<256x128xf32> to vector<128x256xf32>
+    %trans = vector.transpose %load, [1, 0] {layout_result_0 = #xegpu.layout<sg_layout = [4, 8], sg_data = [16, 32], lane_layout = [1, 16], lane_data = [1, 1]>}
+    : vector<256x128xf32> to vector<128x256xf32>
       gpu.return
   }
 
@@ -146,7 +147,7 @@ gpu.module @test_distribution {
     %cst16 = arith.constant 16 : index
     %constant_mask = vector.create_mask %cst16, %cst16 {layout_result_0 = #xegpu.layout<sg_layout = [8, 4], sg_data = [16, 16]>} : vector<256x128xi1>
     gpu.return
-  } 
+  }
 
   // CHECK-LABEL: distribute_shapecast_expandunitdims_broadcast
   // CHECK: %[[CAST:.*]] = vector.shape_cast %[[REDUCE:.*]] : vector<8xf32> to vector<8x1xf32>
