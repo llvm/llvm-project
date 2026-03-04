@@ -1095,12 +1095,14 @@ bool SymbolLocatorDebugSymbols::DownloadObjectAndSymbolFile(
   int exit_status = -1;
   int signo = -1;
   std::string command_output;
+  std::string error_output;
   error = Host::RunShellCommand(
       command.GetData(),
       FileSpec(),      // current working directory
       &exit_status,    // Exit status
       &signo,          // Signal int *
       &command_output, // Command output
+      &error_output,   // Command error output
       std::chrono::seconds(
           640), // Large timeout to allow for long dsym download times
       false);   // Don't run in a shell (we don't need shell expansion)
@@ -1108,7 +1110,7 @@ bool SymbolLocatorDebugSymbols::DownloadObjectAndSymbolFile(
   if (error.Fail() || exit_status != 0 || command_output.empty()) {
     LLDB_LOGF(log, "'%s' failed (exit status: %d, error: '%s', output: '%s')",
               command.GetData(), exit_status, error.AsCString(),
-              command_output.c_str());
+              error_output.c_str());
     return false;
   }
 
@@ -1123,6 +1125,7 @@ bool SymbolLocatorDebugSymbols::DownloadObjectAndSymbolFile(
   if (!plist.get()) {
     LLDB_LOGF(log, "'%s' failed: output is not a valid plist",
               command.GetData());
+    LLDB_LOGF(log, "Response:\n%s\n", command_output.c_str());
     return false;
   }
 

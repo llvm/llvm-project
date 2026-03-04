@@ -54,22 +54,23 @@ Status RemoteAwarePlatform::ResolveExecutable(const ModuleSpec &module_spec,
 
 Status RemoteAwarePlatform::RunShellCommand(
     llvm::StringRef command, const FileSpec &working_dir, int *status_ptr,
-    int *signo_ptr, std::string *command_output,
+    int *signo_ptr, std::string *command_output, std::string *error_output,
     const Timeout<std::micro> &timeout) {
   return RunShellCommand(llvm::StringRef(), command, working_dir, status_ptr,
-                         signo_ptr, command_output, timeout);
+                         signo_ptr, command_output, error_output, timeout);
 }
 
 Status RemoteAwarePlatform::RunShellCommand(
     llvm::StringRef shell, llvm::StringRef command, const FileSpec &working_dir,
     int *status_ptr, int *signo_ptr, std::string *command_output,
-    const Timeout<std::micro> &timeout) {
+    std::string *error_output, const Timeout<std::micro> &timeout) {
   if (m_remote_platform_sp)
-    return m_remote_platform_sp->RunShellCommand(shell, command, working_dir,
-                                                 status_ptr, signo_ptr,
-                                                 command_output, timeout);
+    return m_remote_platform_sp->RunShellCommand(
+        shell, command, working_dir, status_ptr, signo_ptr, command_output,
+        error_output, timeout);
   return Platform::RunShellCommand(shell, command, working_dir, status_ptr,
-                                   signo_ptr, command_output, timeout);
+                                   signo_ptr, command_output, error_output,
+                                   timeout);
 }
 
 Status RemoteAwarePlatform::MakeDirectory(const FileSpec &file_spec,

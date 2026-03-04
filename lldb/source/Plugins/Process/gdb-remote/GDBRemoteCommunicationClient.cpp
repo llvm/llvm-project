@@ -2984,6 +2984,8 @@ lldb_private::Status GDBRemoteCommunicationClient::RunShellCommand(
                      // process to exit
     std::string
         *command_output, // Pass NULL if you don't want the command output
+    std::string
+        *error_output, // Pass NULL if you don't want the command error output
     const Timeout<std::micro> &timeout) {
   lldb_private::StreamString stream;
   stream.PutCString("qPlatform_shell:");

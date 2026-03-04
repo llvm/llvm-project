@@ -452,12 +452,14 @@ xcrun(const std::string &sdk, llvm::ArrayRef<llvm::StringRef> arguments,
   int status = 0;
   int signo = 0;
   std::string output_str;
+  std::string error_str;
   // The first time after Xcode was updated or freshly installed,
   // xcrun can take surprisingly long to build up its database.
   auto timeout = std::chrono::seconds(60);
   bool run_in_shell = false;
-  lldb_private::Status error = Host::RunShellCommand(
-      args, FileSpec(), &status, &signo, &output_str, timeout, run_in_shell);
+  lldb_private::Status error =
+      Host::RunShellCommand(args, FileSpec(), &status, &signo, &output_str,
+                            &error_str, timeout, run_in_shell);
 
   // Check that xcrun returned something useful.
   if (error.Fail()) {
@@ -471,6 +473,8 @@ xcrun(const std::string &sdk, llvm::ArrayRef<llvm::StringRef> arguments,
     LLDB_LOG(log, "xcrun returned exit code {0}", status);
     if (!output_str.empty())
       LLDB_LOG(log, "xcrun output was:\n{0}", output_str);
+    if (!error_str.empty())
+      LLDB_LOG(log, "xcrun error output was:\n{0}", error_str);
     return "";
   }
   if (output_str.empty()) {

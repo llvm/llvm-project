@@ -683,12 +683,13 @@ static FileSpec GetXcodeSelectPath() {
       int exit_status = -1;
       int signo = -1;
       std::string command_output;
-      Status status =
-          Host::RunShellCommand("/usr/bin/xcode-select --print-path",
-                                FileSpec(), // current working directory
-                                &exit_status, &signo, &command_output,
-                                std::chrono::seconds(2), // short timeout
-                                false);                  // don't run in a shell
+      std::string error_output;
+      Status status = Host::RunShellCommand(
+          "/usr/bin/xcode-select --print-path",
+          FileSpec(), // current working directory
+          &exit_status, &signo, &command_output, &error_output,
+          std::chrono::seconds(2), // short timeout
+          false);                  // don't run in a shell
       if (status.Success() && exit_status == 0 && !command_output.empty()) {
         size_t first_non_newline = command_output.find_last_not_of("\r\n");
         if (first_non_newline != std::string::npos) {

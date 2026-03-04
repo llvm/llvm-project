@@ -70,12 +70,13 @@ public:
 
   Status RunShellCommand(llvm::StringRef command, const FileSpec &working_dir,
                          int *status_ptr, int *signo_ptr,
-                         std::string *command_output,
+                         std::string *command_output, std::string *error_output,
                          const Timeout<std::micro> &timeout) override;
 
   Status RunShellCommand(llvm::StringRef interpreter, llvm::StringRef command,
                          const FileSpec &working_dir, int *status_ptr,
                          int *signo_ptr, std::string *command_output,
+                         std::string *error,
                          const Timeout<std::micro> &timeout) override;
 
   const char *GetHostname() override;
