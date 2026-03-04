@@ -3110,10 +3110,12 @@ define dso_local i32 @test_atomic_load_udec_wrap_i32(i32 %offset) nounwind {
 ; INLINE_ATOMICS-NEXT:  .LBB46_1: // %atomicrmw.start
 ; INLINE_ATOMICS-NEXT:    // =>This Inner Loop Header: Depth=1
 ; INLINE_ATOMICS-NEXT:    ldaxr w8, [x9]
+; INLINE_ATOMICS-NEXT:    subs w10, w8, #1
+; INLINE_ATOMICS-NEXT:    cset w11, lo
 ; INLINE_ATOMICS-NEXT:    cmp w8, w0
-; INLINE_ATOMICS-NEXT:    sub w10, w8, #1
-; INLINE_ATOMICS-NEXT:    ccmp w8, #0, #4, ls
-; INLINE_ATOMICS-NEXT:    csel w10, w0, w10, eq
+; INLINE_ATOMICS-NEXT:    csinc w11, w11, wzr, ls
+; INLINE_ATOMICS-NEXT:    cmp w11, #0
+; INLINE_ATOMICS-NEXT:    csel w10, w0, w10, ne
 ; INLINE_ATOMICS-NEXT:    stlxr w11, w10, [x9]
 ; INLINE_ATOMICS-NEXT:    cbnz w11, .LBB46_1
 ; INLINE_ATOMICS-NEXT:  // %bb.2: // %atomicrmw.end
@@ -3127,10 +3129,12 @@ define dso_local i32 @test_atomic_load_udec_wrap_i32(i32 %offset) nounwind {
 ; MSVC_INLINE_ATOMICS-NEXT:  .LBB46_1: // %atomicrmw.start
 ; MSVC_INLINE_ATOMICS-NEXT:    // =>This Inner Loop Header: Depth=1
 ; MSVC_INLINE_ATOMICS-NEXT:    ldaxr w8, [x9]
+; MSVC_INLINE_ATOMICS-NEXT:    subs w10, w8, #1
+; MSVC_INLINE_ATOMICS-NEXT:    cset w11, lo
 ; MSVC_INLINE_ATOMICS-NEXT:    cmp w8, w0
-; MSVC_INLINE_ATOMICS-NEXT:    sub w10, w8, #1
-; MSVC_INLINE_ATOMICS-NEXT:    ccmp w8, #0, #4, ls
-; MSVC_INLINE_ATOMICS-NEXT:    csel w10, w0, w10, eq
+; MSVC_INLINE_ATOMICS-NEXT:    csinc w11, w11, wzr, ls
+; MSVC_INLINE_ATOMICS-NEXT:    cmp w11, #0
+; MSVC_INLINE_ATOMICS-NEXT:    csel w10, w0, w10, ne
 ; MSVC_INLINE_ATOMICS-NEXT:    stlxr w11, w10, [x9]
 ; MSVC_INLINE_ATOMICS-NEXT:    cbnz w11, .LBB46_1
 ; MSVC_INLINE_ATOMICS-NEXT:  // %bb.2: // %atomicrmw.end
@@ -3145,10 +3149,12 @@ define dso_local i32 @test_atomic_load_udec_wrap_i32(i32 %offset) nounwind {
 ; OUTLINE_ATOMICS-NEXT:  .LBB46_1: // %atomicrmw.start
 ; OUTLINE_ATOMICS-NEXT:    // =>This Inner Loop Header: Depth=1
 ; OUTLINE_ATOMICS-NEXT:    ldaxr w8, [x9]
+; OUTLINE_ATOMICS-NEXT:    subs w10, w8, #1
+; OUTLINE_ATOMICS-NEXT:    cset w11, lo
 ; OUTLINE_ATOMICS-NEXT:    cmp w8, w0
-; OUTLINE_ATOMICS-NEXT:    sub w10, w8, #1
-; OUTLINE_ATOMICS-NEXT:    ccmp w8, #0, #4, ls
-; OUTLINE_ATOMICS-NEXT:    csel w10, w0, w10, eq
+; OUTLINE_ATOMICS-NEXT:    csinc w11, w11, wzr, ls
+; OUTLINE_ATOMICS-NEXT:    cmp w11, #0
+; OUTLINE_ATOMICS-NEXT:    csel w10, w0, w10, ne
 ; OUTLINE_ATOMICS-NEXT:    stlxr w11, w10, [x9]
 ; OUTLINE_ATOMICS-NEXT:    cbnz w11, .LBB46_1
 ; OUTLINE_ATOMICS-NEXT:  // %bb.2: // %atomicrmw.end
@@ -3162,10 +3168,12 @@ define dso_local i32 @test_atomic_load_udec_wrap_i32(i32 %offset) nounwind {
 ; MSVC_OUTLINE_ATOMICS-NEXT:  .LBB46_1: // %atomicrmw.start
 ; MSVC_OUTLINE_ATOMICS-NEXT:    // =>This Inner Loop Header: Depth=1
 ; MSVC_OUTLINE_ATOMICS-NEXT:    ldaxr w8, [x9]
+; MSVC_OUTLINE_ATOMICS-NEXT:    subs w10, w8, #1
+; MSVC_OUTLINE_ATOMICS-NEXT:    cset w11, lo
 ; MSVC_OUTLINE_ATOMICS-NEXT:    cmp w8, w0
-; MSVC_OUTLINE_ATOMICS-NEXT:    sub w10, w8, #1
-; MSVC_OUTLINE_ATOMICS-NEXT:    ccmp w8, #0, #4, ls
-; MSVC_OUTLINE_ATOMICS-NEXT:    csel w10, w0, w10, eq
+; MSVC_OUTLINE_ATOMICS-NEXT:    csinc w11, w11, wzr, ls
+; MSVC_OUTLINE_ATOMICS-NEXT:    cmp w11, #0
+; MSVC_OUTLINE_ATOMICS-NEXT:    csel w10, w0, w10, ne
 ; MSVC_OUTLINE_ATOMICS-NEXT:    stlxr w11, w10, [x9]
 ; MSVC_OUTLINE_ATOMICS-NEXT:    cbnz w11, .LBB46_1
 ; MSVC_OUTLINE_ATOMICS-NEXT:  // %bb.2: // %atomicrmw.end
@@ -3182,10 +3190,12 @@ define dso_local i32 @test_atomic_load_udec_wrap_i32(i32 %offset) nounwind {
 ; LSE-NEXT:    mov w10, w8
 ; LSE-NEXT:  .LBB46_1: // %atomicrmw.start
 ; LSE-NEXT:    // =>This Inner Loop Header: Depth=1
+; LSE-NEXT:    subs w11, w8, #1
+; LSE-NEXT:    cset w12, lo
 ; LSE-NEXT:    cmp w8, w0
-; LSE-NEXT:    sub w11, w8, #1
-; LSE-NEXT:    ccmp w8, #0, #4, ls
-; LSE-NEXT:    csel w11, w0, w11, eq
+; LSE-NEXT:    csinc w12, w12, wzr, ls
+; LSE-NEXT:    cmp w12, #0
+; LSE-NEXT:    csel w11, w0, w11, ne
 ; LSE-NEXT:    casal w10, w11, [x9]
 ; LSE-NEXT:    cmp w10, w8
 ; LSE-NEXT:    mov w8, w10
@@ -3205,10 +3215,12 @@ define dso_local i64 @test_atomic_load_udec_wrap_i64(i64 %offset) nounwind {
 ; INLINE_ATOMICS-NEXT:  .LBB47_1: // %atomicrmw.start
 ; INLINE_ATOMICS-NEXT:    // =>This Inner Loop Header: Depth=1
 ; INLINE_ATOMICS-NEXT:    ldaxr x8, [x9]
+; INLINE_ATOMICS-NEXT:    subs x10, x8, #1
+; INLINE_ATOMICS-NEXT:    cset w11, lo
 ; INLINE_ATOMICS-NEXT:    cmp x8, x0
-; INLINE_ATOMICS-NEXT:    sub x10, x8, #1
-; INLINE_ATOMICS-NEXT:    ccmp x8, #0, #4, ls
-; INLINE_ATOMICS-NEXT:    csel x10, x0, x10, eq
+; INLINE_ATOMICS-NEXT:    csinc w11, w11, wzr, ls
+; INLINE_ATOMICS-NEXT:    cmp w11, #0
+; INLINE_ATOMICS-NEXT:    csel x10, x0, x10, ne
 ; INLINE_ATOMICS-NEXT:    stxr w11, x10, [x9]
 ; INLINE_ATOMICS-NEXT:    cbnz w11, .LBB47_1
 ; INLINE_ATOMICS-NEXT:  // %bb.2: // %atomicrmw.end
@@ -3222,10 +3234,12 @@ define dso_local i64 @test_atomic_load_udec_wrap_i64(i64 %offset) nounwind {
 ; MSVC_INLINE_ATOMICS-NEXT:  .LBB47_1: // %atomicrmw.start
 ; MSVC_INLINE_ATOMICS-NEXT:    // =>This Inner Loop Header: Depth=1
 ; MSVC_INLINE_ATOMICS-NEXT:    ldaxr x8, [x9]
+; MSVC_INLINE_ATOMICS-NEXT:    subs x10, x8, #1
+; MSVC_INLINE_ATOMICS-NEXT:    cset w11, lo
 ; MSVC_INLINE_ATOMICS-NEXT:    cmp x8, x0
-; MSVC_INLINE_ATOMICS-NEXT:    sub x10, x8, #1
-; MSVC_INLINE_ATOMICS-NEXT:    ccmp x8, #0, #4, ls
-; MSVC_INLINE_ATOMICS-NEXT:    csel x10, x0, x10, eq
+; MSVC_INLINE_ATOMICS-NEXT:    csinc w11, w11, wzr, ls
+; MSVC_INLINE_ATOMICS-NEXT:    cmp w11, #0
+; MSVC_INLINE_ATOMICS-NEXT:    csel x10, x0, x10, ne
 ; MSVC_INLINE_ATOMICS-NEXT:    stxr w11, x10, [x9]
 ; MSVC_INLINE_ATOMICS-NEXT:    cbnz w11, .LBB47_1
 ; MSVC_INLINE_ATOMICS-NEXT:  // %bb.2: // %atomicrmw.end
@@ -3239,10 +3253,12 @@ define dso_local i64 @test_atomic_load_udec_wrap_i64(i64 %offset) nounwind {
 ; OUTLINE_ATOMICS-NEXT:  .LBB47_1: // %atomicrmw.start
 ; OUTLINE_ATOMICS-NEXT:    // =>This Inner Loop Header: Depth=1
 ; OUTLINE_ATOMICS-NEXT:    ldaxr x8, [x9]
+; OUTLINE_ATOMICS-NEXT:    subs x10, x8, #1
+; OUTLINE_ATOMICS-NEXT:    cset w11, lo
 ; OUTLINE_ATOMICS-NEXT:    cmp x8, x0
-; OUTLINE_ATOMICS-NEXT:    sub x10, x8, #1
-; OUTLINE_ATOMICS-NEXT:    ccmp x8, #0, #4, ls
-; OUTLINE_ATOMICS-NEXT:    csel x10, x0, x10, eq
+; OUTLINE_ATOMICS-NEXT:    csinc w11, w11, wzr, ls
+; OUTLINE_ATOMICS-NEXT:    cmp w11, #0
+; OUTLINE_ATOMICS-NEXT:    csel x10, x0, x10, ne
 ; OUTLINE_ATOMICS-NEXT:    stxr w11, x10, [x9]
 ; OUTLINE_ATOMICS-NEXT:    cbnz w11, .LBB47_1
 ; OUTLINE_ATOMICS-NEXT:  // %bb.2: // %atomicrmw.end
@@ -3256,10 +3272,12 @@ define dso_local i64 @test_atomic_load_udec_wrap_i64(i64 %offset) nounwind {
 ; MSVC_OUTLINE_ATOMICS-NEXT:  .LBB47_1: // %atomicrmw.start
 ; MSVC_OUTLINE_ATOMICS-NEXT:    // =>This Inner Loop Header: Depth=1
 ; MSVC_OUTLINE_ATOMICS-NEXT:    ldaxr x8, [x9]
+; MSVC_OUTLINE_ATOMICS-NEXT:    subs x10, x8, #1
+; MSVC_OUTLINE_ATOMICS-NEXT:    cset w11, lo
 ; MSVC_OUTLINE_ATOMICS-NEXT:    cmp x8, x0
-; MSVC_OUTLINE_ATOMICS-NEXT:    sub x10, x8, #1
-; MSVC_OUTLINE_ATOMICS-NEXT:    ccmp x8, #0, #4, ls
-; MSVC_OUTLINE_ATOMICS-NEXT:    csel x10, x0, x10, eq
+; MSVC_OUTLINE_ATOMICS-NEXT:    csinc w11, w11, wzr, ls
+; MSVC_OUTLINE_ATOMICS-NEXT:    cmp w11, #0
+; MSVC_OUTLINE_ATOMICS-NEXT:    csel x10, x0, x10, ne
 ; MSVC_OUTLINE_ATOMICS-NEXT:    stxr w11, x10, [x9]
 ; MSVC_OUTLINE_ATOMICS-NEXT:    cbnz w11, .LBB47_1
 ; MSVC_OUTLINE_ATOMICS-NEXT:  // %bb.2: // %atomicrmw.end
@@ -3275,10 +3293,12 @@ define dso_local i64 @test_atomic_load_udec_wrap_i64(i64 %offset) nounwind {
 ; LSE-NEXT:    mov x10, x8
 ; LSE-NEXT:  .LBB47_1: // %atomicrmw.start
 ; LSE-NEXT:    // =>This Inner Loop Header: Depth=1
+; LSE-NEXT:    subs x11, x8, #1
+; LSE-NEXT:    cset w12, lo
 ; LSE-NEXT:    cmp x8, x0
-; LSE-NEXT:    sub x11, x8, #1
-; LSE-NEXT:    ccmp x8, #0, #4, ls
-; LSE-NEXT:    csel x11, x0, x11, eq
+; LSE-NEXT:    csinc w12, w12, wzr, ls
+; LSE-NEXT:    cmp w12, #0
+; LSE-NEXT:    csel x11, x0, x11, ne
 ; LSE-NEXT:    casa x10, x11, [x9]
 ; LSE-NEXT:    cmp x10, x8
 ; LSE-NEXT:    mov x8, x10

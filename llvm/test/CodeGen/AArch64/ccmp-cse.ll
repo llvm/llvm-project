@@ -5,8 +5,11 @@ define i64 @test_single_or(i64 %unrelated, i64 %x, i64 %y) nounwind {
 ; CHECK-LABEL: test_single_or:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    subs x8, x2, x1
-; CHECK-NEXT:    ccmp x2, x0, #2, hs
-; CHECK-NEXT:    csel x0, xzr, x8, hi
+; CHECK-NEXT:    cset w9, lo
+; CHECK-NEXT:    cmp x2, x0
+; CHECK-NEXT:    csinc w9, w9, wzr, ls
+; CHECK-NEXT:    cmp w9, #0
+; CHECK-NEXT:    csel x0, xzr, x8, ne
 ; CHECK-NEXT:    ret
   %cmp.match = icmp ult i64 %y, %x
   %cmp.nomatch = icmp ugt i64 %y, %unrelated
@@ -20,9 +23,12 @@ define i64 @test_two_ors(i64 %unrelated, i64 %x, i64 %y) nounwind {
 ; CHECK-LABEL: test_two_ors:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    subs x8, x2, x1
-; CHECK-NEXT:    ccmp x0, x1, #0, hs
+; CHECK-NEXT:    cset w9, lo
+; CHECK-NEXT:    cmp x0, x1
 ; CHECK-NEXT:    ccmp x2, x0, #2, hs
-; CHECK-NEXT:    csel x0, xzr, x8, hi
+; CHECK-NEXT:    csinc w9, w9, wzr, ls
+; CHECK-NEXT:    cmp w9, #0
+; CHECK-NEXT:    csel x0, xzr, x8, ne
 ; CHECK-NEXT:    ret
   %cmp.match = icmp ult i64 %y, %x
   %cmp.nomatch1 = icmp ult i64 %unrelated, %x
@@ -37,10 +43,13 @@ define i64 @test_two_ors(i64 %unrelated, i64 %x, i64 %y) nounwind {
 define i64 @test_two_ors_commuted(i64 %unrelated, i64 %x, i64 %y) nounwind {
 ; CHECK-LABEL: test_two_ors_commuted:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    subs x8, x2, x1
-; CHECK-NEXT:    ccmp x0, x1, #0, hs
+; CHECK-NEXT:    cmp x0, x1
 ; CHECK-NEXT:    ccmp x2, x0, #2, hs
-; CHECK-NEXT:    csel x0, xzr, x8, hi
+; CHECK-NEXT:    cset w8, hi
+; CHECK-NEXT:    subs x9, x2, x1
+; CHECK-NEXT:    csinc w8, w8, wzr, hs
+; CHECK-NEXT:    cmp w8, #0
+; CHECK-NEXT:    csel x0, xzr, x9, ne
 ; CHECK-NEXT:    ret
   %cmp.match = icmp ult i64 %y, %x
   %cmp.nomatch1 = icmp ult i64 %unrelated, %x
@@ -56,8 +65,11 @@ define i64 @test_single_and(i64 %unrelated, i64 %x, i64 %y) nounwind {
 ; CHECK-LABEL: test_single_and:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    subs x8, x2, x1
-; CHECK-NEXT:    ccmp x2, x0, #0, lo
-; CHECK-NEXT:    csel x0, xzr, x8, hi
+; CHECK-NEXT:    cset w9, lo
+; CHECK-NEXT:    cmp x2, x0
+; CHECK-NEXT:    cset w10, hi
+; CHECK-NEXT:    tst w9, w10
+; CHECK-NEXT:    csel x0, xzr, x8, ne
 ; CHECK-NEXT:    ret
   %cmp.match = icmp ult i64 %y, %x
   %cmp.nomatch = icmp ugt i64 %y, %unrelated
@@ -86,11 +98,13 @@ define i64 @test_single_or_sub_commuted(i64 %unrelated, i64 %x, i64 %y) nounwind
 define i64 @test_mustbefirst_overrides_preferfirst_negative(i64 %unrelated, i64 %x, i64 %y) nounwind {
 ; CHECK-LABEL: test_mustbefirst_overrides_preferfirst_negative:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    cmp x2, x0
-; CHECK-NEXT:    sub x8, x2, x1
-; CHECK-NEXT:    ccmp x0, x1, #0, ls
-; CHECK-NEXT:    ccmp x2, x1, #2, lo
-; CHECK-NEXT:    csel x0, xzr, x8, lo
+; CHECK-NEXT:    subs x8, x2, x1
+; CHECK-NEXT:    cset w9, lo
+; CHECK-NEXT:    cmp x0, x1
+; CHECK-NEXT:    ccmp x2, x0, #2, hs
+; CHECK-NEXT:    cset w10, hi
+; CHECK-NEXT:    tst w10, w9
+; CHECK-NEXT:    csel x0, xzr, x8, ne
 ; CHECK-NEXT:    ret
   %cmp.match = icmp ult i64 %y, %x
   %cmp.nomatch1 = icmp ult i64 %unrelated, %x
@@ -124,10 +138,12 @@ define float @test_negative_float(float %unrelated, float %x, float %y) nounwind
 define i64 @test_prefer_right_negative(i64 %x, i64 %y, i64 %z) nounwind {
 ; CHECK-LABEL: test_prefer_right_negative:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    cmp x2, x0
-; CHECK-NEXT:    ccmp x2, x1, #0, ls
-; CHECK-NEXT:    csel x8, x0, x1, lo
-; CHECK-NEXT:    sub x0, x2, x8
+; CHECK-NEXT:    subs x8, x2, x1
+; CHECK-NEXT:    cset w9, lo
+; CHECK-NEXT:    subs x10, x2, x0
+; CHECK-NEXT:    csinc w9, w9, wzr, ls
+; CHECK-NEXT:    cmp w9, #0
+; CHECK-NEXT:    csel x0, x10, x8, ne
 ; CHECK-NEXT:    ret
   %cmp.match1 = icmp ult i64 %z, %y
   %cmp.match2 = icmp ugt i64 %z, %x
