@@ -226,6 +226,18 @@ public:
       return *this;
     }
 
+    bool GetCustomSubscripting() const {
+      return m_flags & lldb::eTypeOptionCustomSubscripting;
+    }
+
+    Flags &SetCustomSubscripting(bool value = true) {
+      if (value)
+        m_flags |= lldb::eTypeOptionCustomSubscripting;
+      else
+        m_flags &= ~lldb::eTypeOptionCustomSubscripting;
+      return *this;
+    }
+
     uint32_t GetValue() { return m_flags; }
 
     void SetValue(uint32_t value) { m_flags = value; }
@@ -247,6 +259,8 @@ public:
   bool NonCacheable() const { return m_flags.GetNonCacheable(); }
 
   bool WantsDereference() const { return m_flags.GetFrontEndWantsDereference();}
+
+  bool CustomSubscripting() const { return m_flags.GetCustomSubscripting(); }
 
   void SetCascades(bool value) { m_flags.SetCascades(value); }
 

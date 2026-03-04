@@ -364,7 +364,7 @@ ValueObjectSynthetic::GetIndexOfChildWithName(llvm::StringRef name_ref) {
     size_t index = SIZE_MAX;
     if (auto index_or_err = m_synth_filter_up->GetIndexOfChildWithName(name)) {
       index = *index_or_err;
-    } else {
+    } else if (!m_synth_sp->CustomSubscripting()) {
       // Provide automatic support for subscript child names ("[N]").
       auto maybe_index = ParseSubscriptIndex(*this, name);
       if (!maybe_index)
