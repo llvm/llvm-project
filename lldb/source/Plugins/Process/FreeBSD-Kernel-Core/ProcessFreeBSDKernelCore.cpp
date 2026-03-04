@@ -227,7 +227,7 @@ bool ProcessFreeBSDKernelCore::DoUpdateThreadList(ThreadList &old_thread_list,
     uint32_t long_bit = long_size_bytes * 8;
 
     if (stopped_cpus != LLDB_INVALID_ADDRESS) {
-      // From sys/kern/subr_smp.c:
+      // https://cgit.freebsd.org/src/tree/sys/kern/subr_smp.c
       mp_maxid =
           ReadSignedIntegerFromMemory(FindSymbol("mp_maxid"), 4, 0, error);
       if (error.Fail())
@@ -245,7 +245,7 @@ bool ProcessFreeBSDKernelCore::DoUpdateThreadList(ThreadList &old_thread_list,
         llvm::consumeError(type_system_or_err.takeError());
     }
 
-    // From sys/param.h:
+    // https://cgit.freebsd.org/src/tree/sys/sys/param.h
     constexpr size_t fbsd_maxcomlen = 19;
 
     // Iterate through a linked list of all processes. New processes are added
