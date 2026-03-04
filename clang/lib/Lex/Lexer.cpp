@@ -862,8 +862,17 @@ SourceLocation Lexer::getLocForEndOfToken(SourceLocation Loc, unsigned Offset,
     return {};
 
   if (Loc.isMacroID()) {
+    // Token-split expansion ranges (for example, when splitting '>>' into two
+    // '>' tokens while parsing templates) are character ranges, so the
+    // expansion end location already points just past the split token.
+    const bool IsTokenSplitRange =
+        !SM.getSLocEntry(SM.getFileID(Loc))
+             .getExpansion()
+             .isExpansionTokenRange();
     if (Offset > 0 || !isAtEndOfMacroExpansion(Loc, SM, LangOpts, &Loc))
       return {}; // Points inside the macro expansion.
+    if (IsTokenSplitRange)
+      return Loc;
   }
 
   unsigned Len = Lexer::MeasureTokenLength(Loc, SM, LangOpts);
