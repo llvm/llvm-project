@@ -936,8 +936,9 @@ bool llvm::computeUnrollCount(
     Loop *L, const TargetTransformInfo &TTI, DominatorTree &DT, LoopInfo *LI,
     AssumptionCache *AC, ScalarEvolution &SE,
     const SmallPtrSetImpl<const Value *> &EphValues,
-    OptimizationRemarkEmitter *ORE, unsigned TripCount, unsigned MaxTripCount,
-    bool MaxOrZero, unsigned TripMultiple, const UnrollCostEstimator &UCE,
+    OptimizationRemarkEmitter *ORE, const unsigned TripCount,
+    const unsigned MaxTripCount, const bool MaxOrZero,
+    const unsigned TripMultiple, const UnrollCostEstimator &UCE,
     TargetTransformInfo::UnrollingPreferences &UP,
     TargetTransformInfo::PeelingPreferences &PP, bool &UseUpperBound) {
 
