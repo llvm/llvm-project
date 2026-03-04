@@ -19,5 +19,6 @@
 #include <sycl/__impl/device_selector.hpp>
 #include <sycl/__impl/exception.hpp>
 #include <sycl/__impl/platform.hpp>
+#include <sycl/__impl/queue.hpp>
 
 #endif // _LIBSYCL_SYCL_HPP
