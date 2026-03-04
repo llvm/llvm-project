@@ -4469,10 +4469,8 @@ SDValue SITargetLowering::LowerCall(CallLoweringInfo &CLI,
 
   unsigned ArgIdx = 0;
   for (auto [Reg, Val] : RegsToPass) {
-    if (ArgIdx >= NumSpecialInputs &&
-        (IsChainCallConv || !Val->isDivergent() ||
-         Outs[ArgIdx - NumSpecialInputs].Flags.isArgInReg()) &&
-        TRI->isSGPRPhysReg(Reg)) {
+    if (ArgIdx++ >= NumSpecialInputs &&
+        (IsChainCallConv || !Val->isDivergent()) && TRI->isSGPRPhysReg(Reg)) {
       // For chain calls, the inreg arguments are required to be
       // uniform. Speculatively Insert a readfirstlane in case we cannot prove
       // they are uniform.
@@ -4492,7 +4490,6 @@ SDValue SITargetLowering::LowerCall(CallLoweringInfo &CLI,
 
     Chain = DAG.getCopyToReg(Chain, DL, Reg, Val, InGlue);
     InGlue = Chain.getValue(1);
-    ArgIdx++;
   }
 
   // We don't usually want to end the call-sequence here because we would tidy
