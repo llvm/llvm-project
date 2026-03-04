@@ -146,8 +146,8 @@ public:
   bool runOnFunction(Function &F);
 
 private:
-  // Only add checks if the module has the cfguard=2 flag.
-  int CFGuardModuleFlag = 0;
+  // Only add checks if the module has them enabled.
+  ControlFlowGuardMode CFGuardModuleFlag = ControlFlowGuardMode::Disabled;
   StringRef GuardFnName;
   Mechanism GuardMechanism = Mechanism::Check;
   FunctionType *GuardFnType = nullptr;
@@ -233,12 +233,10 @@ void CFGuardImpl::insertCFGuardDispatch(CallBase *CB) {
 
 bool CFGuardImpl::doInitialization(Module &M) {
   // Check if this module has the cfguard flag and read its value.
-  if (auto *MD =
-          mdconst::extract_or_null<ConstantInt>(M.getModuleFlag("cfguard")))
-    CFGuardModuleFlag = MD->getZExtValue();
+  CFGuardModuleFlag = M.getControlFlowGuardMode();
 
   // Skip modules for which CFGuard checks have been disabled.
-  if (CFGuardModuleFlag != 2)
+  if (CFGuardModuleFlag != ControlFlowGuardMode::Enabled)
     return false;
 
   // Set up prototypes for the guard check and dispatch functions.
@@ -260,7 +258,7 @@ bool CFGuardImpl::doInitialization(Module &M) {
 
 bool CFGuardImpl::runOnFunction(Function &F) {
   // Skip modules for which CFGuard checks have been disabled.
-  if (CFGuardModuleFlag != 2)
+  if (CFGuardModuleFlag != ControlFlowGuardMode::Enabled)
     return false;
 
   SmallVector<CallBase *, 8> IndirectCalls;
@@ -311,6 +309,11 @@ FunctionPass *llvm::createCFGuardCheckPass() {
 
 FunctionPass *llvm::createCFGuardDispatchPass() {
   return new CFGuard(CFGuardPass::Mechanism::Dispatch);
+}
+
+bool llvm::isCFGuardCall(const CallBase *CB) {
+  return CB->getCallingConv() == CallingConv::CFGuard_Check ||
+         CB->countOperandBundlesOfType(LLVMContext::OB_cfguardtarget);
 }
 
 bool llvm::isCFGuardFunction(const GlobalValue *GV) {

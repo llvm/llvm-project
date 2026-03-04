@@ -56,6 +56,16 @@ struct ScriptedFrameProviderDescriptor {
   ///         empty string if no description is available.
   std::string GetDescription() const;
 
+  /// Get the priority of this frame provider.
+  ///
+  /// Priority determines the order in which providers are evaluated when
+  /// multiple providers could apply to the same thread. Lower numbers indicate
+  /// higher priority (like Unix nice values).
+  ///
+  /// \return Priority value where 0 is highest priority, or std::nullopt for
+  ///         default priority (UINT32_MAX - lowest priority).
+  std::optional<uint32_t> GetPriority() const;
+
   /// Check if this descriptor applies to the given thread.
   bool AppliesToThread(Thread &thread) const {
     // If no thread specs specified, applies to all threads.
@@ -142,6 +152,17 @@ public:
   ~SyntheticFrameProvider() override;
 
   virtual std::string GetDescription() const = 0;
+
+  /// Get the priority of this frame provider.
+  ///
+  /// Priority determines the order in which providers are evaluated when
+  /// multiple providers could apply to the same thread. Lower numbers indicate
+  /// higher priority (like Unix nice values).
+  ///
+  /// \return
+  ///     Priority value where 0 is highest priority, or std::nullopt for
+  ///     default priority (UINT32_MAX - lowest priority).
+  virtual std::optional<uint32_t> GetPriority() const { return std::nullopt; }
 
   /// Get a single stack frame at the specified index.
   ///

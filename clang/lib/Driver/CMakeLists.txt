@@ -22,6 +22,7 @@ add_clang_library(clangDriver
   Distro.cpp
   Driver.cpp
   Job.cpp
+  ModulesDriver.cpp
   Multilib.cpp
   MultilibBuilder.cpp
   OffloadBundler.cpp
@@ -65,6 +66,7 @@ add_clang_library(clangDriver
   ToolChains/Hexagon.cpp
   ToolChains/HLSL.cpp
   ToolChains/Hurd.cpp
+  ToolChains/LFILinux.cpp
   ToolChains/Linux.cpp
   ToolChains/Managarm.cpp
   ToolChains/MipsLinux.cpp

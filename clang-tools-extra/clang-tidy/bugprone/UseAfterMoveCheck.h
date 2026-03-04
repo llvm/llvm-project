@@ -20,13 +20,17 @@ namespace clang::tidy::bugprone {
 /// https://clang.llvm.org/extra/clang-tidy/checks/bugprone/use-after-move.html
 class UseAfterMoveCheck : public ClangTidyCheck {
 public:
-  UseAfterMoveCheck(StringRef Name, ClangTidyContext *Context)
-      : ClangTidyCheck(Name, Context) {}
+  UseAfterMoveCheck(StringRef Name, ClangTidyContext *Context);
+  void storeOptions(ClangTidyOptions::OptionMap &Opts) override;
   bool isLanguageVersionSupported(const LangOptions &LangOpts) const override {
     return LangOpts.CPlusPlus11;
   }
   void registerMatchers(ast_matchers::MatchFinder *Finder) override;
   void check(const ast_matchers::MatchFinder::MatchResult &Result) override;
+
+private:
+  std::vector<StringRef> InvalidationFunctions;
+  std::vector<StringRef> ReinitializationFunctions;
 };
 
 } // namespace clang::tidy::bugprone

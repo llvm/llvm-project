@@ -10,6 +10,7 @@ executable("llc") {
     "//llvm/lib/IRReader",
     "//llvm/lib/MC",
     "//llvm/lib/Passes",
+    "//llvm/lib/Plugins",
     "//llvm/lib/Support",
     "//llvm/lib/Target",
     "//llvm/lib/Target:TargetsToBuild",

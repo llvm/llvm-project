@@ -37,6 +37,10 @@ class NVPTXTTIImpl final : public BasicTTIImplBase<NVPTXTTIImpl> {
   const NVPTXSubtarget *getST() const { return ST; };
   const NVPTXTargetLowering *getTLI() const { return TLI; };
 
+  /// \returns true if the result of the value could potentially be
+  /// different across threads in a warp.
+  bool isSourceOfDivergence(const Value *V) const;
+
 public:
   explicit NVPTXTTIImpl(const NVPTXTargetMachine *TM, const Function &F)
       : BaseT(TM, F.getDataLayout()), ST(TM->getSubtargetImpl()),
@@ -45,8 +49,6 @@ public:
   bool hasBranchDivergence(const Function *F = nullptr) const override {
     return true;
   }
-
-  bool isSourceOfDivergence(const Value *V) const override;
 
   unsigned getFlatAddressSpace() const override {
     return AddressSpace::ADDRESS_SPACE_GENERIC;
@@ -117,10 +119,13 @@ public:
       ArrayRef<const Value *> Args = {},
       const Instruction *CxtI = nullptr) const override;
 
-  InstructionCost getScalarizationOverhead(
-      VectorType *InTy, const APInt &DemandedElts, bool Insert, bool Extract,
-      TTI::TargetCostKind CostKind, bool ForPoisonSrc = true,
-      ArrayRef<Value *> VL = {}) const override {
+  InstructionCost
+  getScalarizationOverhead(VectorType *InTy, const APInt &DemandedElts,
+                           bool Insert, bool Extract,
+                           TTI::TargetCostKind CostKind,
+                           bool ForPoisonSrc = true, ArrayRef<Value *> VL = {},
+                           TTI::VectorInstrContext VIC =
+                               TTI::VectorInstrContext::None) const override {
     if (!InTy->getElementCount().isFixed())
       return InstructionCost::getInvalid();
 
@@ -178,6 +183,20 @@ public:
     }
   }
 
+  APInt getAddrSpaceCastPreservedPtrMask(unsigned SrcAS,
+                                         unsigned DstAS) const override {
+    if (SrcAS != llvm::ADDRESS_SPACE_GENERIC)
+      return BaseT::getAddrSpaceCastPreservedPtrMask(SrcAS, DstAS);
+    if (DstAS != llvm::ADDRESS_SPACE_GLOBAL &&
+        DstAS != llvm::ADDRESS_SPACE_SHARED)
+      return BaseT::getAddrSpaceCastPreservedPtrMask(SrcAS, DstAS);
+
+    // Address change within 4K size does not change the original address space
+    // and is safe to perform address cast form SrcAS to DstAS.
+    APInt PtrMask(DL.getPointerSizeInBits(llvm::ADDRESS_SPACE_GENERIC), 0xfff);
+    return PtrMask;
+  }
+
   bool collectFlatAddressOperands(SmallVectorImpl<int> &OpIndexes,
                                   Intrinsic::ID IID) const override;
 
@@ -201,6 +220,8 @@ public:
     // Self-referential globals are not supported.
     return false;
   }
+
+  InstructionUniformity getInstructionUniformity(const Value *V) const override;
 };
 
 } // end namespace llvm

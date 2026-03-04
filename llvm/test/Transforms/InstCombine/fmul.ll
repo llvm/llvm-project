@@ -1257,7 +1257,7 @@ define float @fmul_select_strict(float %x, i1 %c) {
 define double @fmul_sqrt_select(double %x, i1 %c) {
 ; CHECK-LABEL: @fmul_sqrt_select(
 ; CHECK-NEXT:    [[SQR:%.*]] = call double @llvm.sqrt.f64(double [[X:%.*]])
-; CHECK-NEXT:    [[MUL:%.*]] = select fast i1 [[C:%.*]], double [[X]], double [[SQR]]
+; CHECK-NEXT:    [[MUL:%.*]] = select i1 [[C:%.*]], double [[X]], double [[SQR]]
 ; CHECK-NEXT:    ret double [[MUL]]
 ;
   %sqr = call double @llvm.sqrt.f64(double %x)
@@ -1401,7 +1401,7 @@ entry:
 define <3 x float> @mul_mixed_zero_nnan_ninf_vec(<3 x float> nofpclass(inf nan) %a) {
 ; CHECK-LABEL: @mul_mixed_zero_nnan_ninf_vec(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[RET:%.*]] = fmul <3 x float> [[A:%.*]], <float -0.000000e+00, float 0.000000e+00, float poison>
+; CHECK-NEXT:    [[RET:%.*]] = fmul nnan ninf <3 x float> [[A:%.*]], <float -0.000000e+00, float 0.000000e+00, float poison>
 ; CHECK-NEXT:    ret <3 x float> [[RET]]
 ;
 entry:

@@ -144,10 +144,6 @@ public:
   /// (the compiler understands nothing and makes worst-case assumptions).
   virtual bool isConfused() const { return true; }
 
-  /// isConsistent - Returns true if this dependence is consistent
-  /// (occurs every time the source and destination are executed).
-  virtual bool isConsistent() const { return false; }
-
   /// getLevels - Returns the number of common loops surrounding the
   /// source and destination of the dependence.
   virtual unsigned getLevels() const { return 0; }
@@ -260,10 +256,6 @@ public:
   /// assumptions).
   bool isConfused() const override { return false; }
 
-  /// isConsistent - Returns true if this dependence is consistent
-  /// (occurs every time the source and destination are executed).
-  bool isConsistent() const override { return Consistent; }
-
   /// getLevels - Returns the number of common loops surrounding the
   /// source and destination of the dependence.
   unsigned getLevels() const override { return Levels; }
@@ -326,7 +318,6 @@ private:
   unsigned short Levels;
   unsigned short SameSDLevels;
   bool LoopIndependent;
-  bool Consistent; // Init to true, then refine.
   std::unique_ptr<DVEntry[]> DV;
   std::unique_ptr<DVEntry[]> DVSameSD; // DV entries on SameSD levels
   friend class DependenceInfo;
@@ -472,18 +463,6 @@ private:
   /// in LoopNest.
   bool isLoopInvariant(const SCEV *Expression, const Loop *LoopNest) const;
 
-  /// Makes sure all subscript pairs share the same integer type by
-  /// sign-extending as necessary.
-  /// Sign-extending a subscript is safe because getelementptr assumes the
-  /// array subscripts are signed.
-  void unifySubscriptType(ArrayRef<Subscript *> Pairs);
-
-  /// removeMatchingExtensions - Examines a subscript pair.
-  /// If the source and destination are identically sign (or zero)
-  /// extended, it strips off the extension in an effort to
-  /// simplify the actual analysis.
-  void removeMatchingExtensions(Subscript *Pair);
-
   /// collectCommonLoops - Finds the set of loops from the LoopNest that
   /// have a level <= CommonLevels and are referred to by the SCEV Expression.
   void collectCommonLoops(const SCEV *Expression, const Loop *LoopNest,
@@ -498,13 +477,6 @@ private:
   /// linear. Collect the set of loops mentioned by Dst.
   bool checkDstSubscript(const SCEV *Dst, const Loop *LoopNest,
                          SmallBitVector &Loops);
-
-  /// isKnownPredicate - Compare X and Y using the predicate Pred.
-  /// Basically a wrapper for SCEV::isKnownPredicate,
-  /// but tries harder, especially in the presence of sign and zero
-  /// extensions and symbolics.
-  bool isKnownPredicate(ICmpInst::Predicate Pred, const SCEV *X,
-                        const SCEV *Y) const;
 
   /// collectUpperBound - All subscripts are the same type (on my machine,
   /// an i64). The loop bound may be a smaller type. collectUpperBound
@@ -543,7 +515,7 @@ private:
   /// If the dependence isn't proven to exist,
   /// marks the Result as inconsistent.
   bool testSIV(const SCEV *Src, const SCEV *Dst, unsigned &Level,
-               FullDependence &Result) const;
+               FullDependence &Result, bool UnderRuntimeAssumptions);
 
   /// testRDIV - Tests the RDIV subscript pair (Src and Dst) for dependence.
   /// Things of the form [c1 + a1*i] and [c2 + a2*j]
@@ -562,7 +534,7 @@ private:
   bool testMIV(const SCEV *Src, const SCEV *Dst, const SmallBitVector &Loops,
                FullDependence &Result) const;
 
-  /// strongSIVtest - Tests the strong SIV subscript pair (Src and Dst)
+  /// strongSIVtest - Tests the strong SIV subscript pair (\p Src and \p Dst)
   /// for dependence.
   /// Things of the form [c1 + a*i] and [c2 + a*i],
   /// where i is an induction variable, c1 and c2 are loop invariant,
@@ -570,10 +542,9 @@ private:
   /// Returns true if any possible dependence is disproved.
   /// If there might be a dependence, returns false.
   /// Sets appropriate direction and distance.
-  bool strongSIVtest(const SCEV *Coeff, const SCEV *SrcConst,
-                     const SCEV *DstConst, const Loop *CurrentSrcLoop,
-                     const Loop *CurrentDstLoop, unsigned Level,
-                     FullDependence &Result) const;
+  bool strongSIVtest(const SCEVAddRecExpr *Src, const SCEVAddRecExpr *Dst,
+                     unsigned Level, FullDependence &Result,
+                     bool UnderRuntimeAssumptions);
 
   /// weakCrossingSIVtest - Tests the weak-crossing SIV subscript pair
   /// (Src and Dst) for dependence.

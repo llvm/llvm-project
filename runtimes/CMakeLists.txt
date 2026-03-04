@@ -33,10 +33,11 @@ list(INSERT CMAKE_MODULE_PATH 0
   "${CMAKE_CURRENT_SOURCE_DIR}/../llvm/cmake/modules"
 )
 
-# We order libraries to mirror roughly how they are layered, except that compiler-rt can depend
-# on libc++, so we put it after.
+# We order libraries to mirror roughly how they are layered, except that
+# compiler-rt can depend on libc++, so we put it after. Offload can depend on
+# flang-rt so we order it before.
 set(LLVM_DEFAULT_RUNTIMES "libc;libunwind;libcxxabi;libcxx;compiler-rt;libclc;openmp;offload")
-set(LLVM_SUPPORTED_RUNTIMES "${LLVM_DEFAULT_RUNTIMES};llvm-libgcc;flang-rt;libsycl;orc-rt")
+set(LLVM_SUPPORTED_RUNTIMES "libc;libunwind;libcxxabi;libcxx;compiler-rt;libclc;openmp;flang-rt;offload;llvm-libgcc;libsycl;orc-rt")
 set(LLVM_ENABLE_RUNTIMES "" CACHE STRING
   "Semicolon-separated list of runtimes to build, or \"all\" (${LLVM_DEFAULT_RUNTIMES}). Supported runtimes are ${LLVM_SUPPORTED_RUNTIMES}.")
 if(LLVM_ENABLE_RUNTIMES STREQUAL "all" )
@@ -45,15 +46,17 @@ endif()
 include(SortSubset)
 sort_subset("${LLVM_SUPPORTED_RUNTIMES}" "${LLVM_ENABLE_RUNTIMES}" LLVM_ENABLE_RUNTIMES)
 foreach(proj ${LLVM_ENABLE_RUNTIMES})
-  set(proj_dir "${CMAKE_CURRENT_SOURCE_DIR}/../${proj}")
+  string(TOUPPER "${proj}" canon_name)
+  STRING(REGEX REPLACE "-" "_" canon_name ${canon_name})
+  if(NOT LLVM_EXTERNAL_${canon_name}_SOURCE_DIR)
+    set(LLVM_EXTERNAL_${canon_name}_SOURCE_DIR "${CMAKE_CURRENT_SOURCE_DIR}/../${proj}")
+  endif()
+  set(proj_dir "${LLVM_EXTERNAL_${canon_name}_SOURCE_DIR}")
   if(IS_DIRECTORY ${proj_dir} AND EXISTS ${proj_dir}/CMakeLists.txt)
     list(APPEND runtimes ${proj_dir})
   else()
     message(FATAL_ERROR "LLVM_ENABLE_RUNTIMES requests ${proj} but directory not found: ${proj_dir}")
   endif()
-  string(TOUPPER "${proj}" canon_name)
-  STRING(REGEX REPLACE "-" "_" canon_name ${canon_name})
-  set(LLVM_EXTERNAL_${canon_name}_SOURCE_DIR "${CMAKE_CURRENT_SOURCE_DIR}/../${proj}")
 endforeach()
 
 function(runtime_register_component name)
@@ -240,6 +243,8 @@ option(LLVM_INCLUDE_TESTS "Generate build targets for the runtimes unit tests." 
 option(LLVM_INCLUDE_DOCS "Generate build targets for the runtimes documentation." ON)
 option(LLVM_ENABLE_SPHINX "Use Sphinx to generate the runtimes documentation." OFF)
 option(RUNTIMES_EXECUTE_ONLY_CODE "Compile runtime libraries as execute-only." OFF)
+
+include(HandleDoxygen)
 
 if (RUNTIMES_EXECUTE_ONLY_CODE)
   # If a target doesn't support or recognise -mexecute-only, Clang will simply ignore the flag.

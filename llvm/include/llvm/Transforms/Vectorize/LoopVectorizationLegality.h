@@ -364,7 +364,7 @@ public:
 
   /// Return true if the block BB needs to be predicated in order for the loop
   /// to be vectorized.
-  bool blockNeedsPredication(BasicBlock *BB) const;
+  bool blockNeedsPredication(const BasicBlock *BB) const;
 
   /// Check if this pointer is consecutive when vectorizing. This happens
   /// when the last index of the GEP is the induction variable, or that the
@@ -407,14 +407,9 @@ public:
     return LAI->getDepChecker().getMaxSafeVectorWidthInBits();
   }
 
-  /// Returns true if the loop has exactly one uncountable early exit, i.e. an
-  /// uncountable exit that isn't the latch block.
-  bool hasUncountableEarlyExit() const { return UncountableExitingBB; }
-
-  /// Returns the uncountable early exiting block, if there is exactly one.
-  BasicBlock *getUncountableEarlyExitingBlock() const {
-    return UncountableExitingBB;
-  }
+  /// Returns true if the loop has uncountable early exits, i.e. uncountable
+  /// exits that aren't the latch block.
+  bool hasUncountableEarlyExit() const { return HasUncountableEarlyExit; }
 
   /// Returns true if this is an early exit loop with state-changing or
   /// potentially-faulting operations and the condition for the uncountable
@@ -743,9 +738,8 @@ private:
   /// the exact backedge taken count is not computable.
   SmallVector<BasicBlock *, 4> CountableExitingBlocks;
 
-  /// Keep track of an uncountable exiting block, if there is exactly one early
-  /// exit.
-  BasicBlock *UncountableExitingBB = nullptr;
+  /// True if the loop has uncountable early exits.
+  bool HasUncountableEarlyExit = false;
 
   /// If true, the loop has at least one uncountable exit and operations within
   /// the loop may have observable side effects.

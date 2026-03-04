@@ -22,7 +22,7 @@ concept has_value_or = requires(Opt opt, T&& t) {
 };
 
 static_assert(has_value_or<std::optional<int>, int>);
-static_assert(has_value_or<std::optional<int&>, int&>);
-static_assert(has_value_or<std::optional<const int&>, const int&>);
+static_assert(has_value_or<std::optional<int&>, int>);
+static_assert(has_value_or<std::optional<const int&>, int>);
 static_assert(!has_value_or<std::optional<int (&)[1]>&&, int (&)[1]>);
 static_assert(!has_value_or<std::optional<int (&)()>&&, int (&)()>);

@@ -207,21 +207,23 @@ bool UnrollLoopsCheck::hasLargeNumIterations(const Stmt *Statement,
     if (!extractValue(ConstantValue, Op, Context))
       return true;
     switch (Op->getOpcode()) {
-    case (BO_AddAssign):
-      Iterations = std::ceil(float(EndValue - InitValue) / ConstantValue);
-      break;
-    case (BO_SubAssign):
-      Iterations = std::ceil(float(InitValue - EndValue) / ConstantValue);
-      break;
-    case (BO_MulAssign):
+    case BO_AddAssign:
       Iterations =
-          1 + ((std::log((double)EndValue) - std::log((double)InitValue)) /
-               std::log((double)ConstantValue));
+          std::ceil(static_cast<float>(EndValue - InitValue) / ConstantValue);
       break;
-    case (BO_DivAssign):
+    case BO_SubAssign:
       Iterations =
-          1 + ((std::log((double)InitValue) - std::log((double)EndValue)) /
-               std::log((double)ConstantValue));
+          std::ceil(static_cast<float>(InitValue - EndValue) / ConstantValue);
+      break;
+    case BO_MulAssign:
+      Iterations = 1 + ((std::log(static_cast<double>(EndValue)) -
+                         std::log(static_cast<double>(InitValue))) /
+                        std::log(static_cast<double>(ConstantValue)));
+      break;
+    case BO_DivAssign:
+      Iterations = 1 + ((std::log(static_cast<double>(InitValue)) -
+                         std::log(static_cast<double>(EndValue))) /
+                        std::log(static_cast<double>(ConstantValue)));
       break;
     default:
       // All other operators are not handled; assume large bounds.

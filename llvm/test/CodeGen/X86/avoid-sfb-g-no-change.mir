@@ -1,5 +1,7 @@
-# RUN: llc %s -run-pass x86-avoid-SFB -mtriple=x86_64-unknown-linux-gnu -o - | FileCheck %s -check-prefixes=CHECK,DEBUG
-# RUN: llc %s -run-pass x86-avoid-SFB -mtriple=x86_64-unknown-linux-gnu -o - | FileCheck %s -check-prefixes=CHECK,NODEBUG
+# RUN: llc %s -run-pass x86-avoid-sfb -mtriple=x86_64-unknown-linux-gnu -o - | FileCheck %s -check-prefixes=CHECK,DEBUG
+# RUN: llc %s -passes=x86-avoid-sfb -mtriple=x86_64-unknown-linux-gnu -o - | FileCheck %s -check-prefixes=CHECK,DEBUG
+# RUN: llc %s -run-pass x86-avoid-sfb -mtriple=x86_64-unknown-linux-gnu -o - | FileCheck %s -check-prefixes=CHECK,NODEBUG
+# RUN: llc %s -passes=x86-avoid-sfb -mtriple=x86_64-unknown-linux-gnu -o - | FileCheck %s -check-prefixes=CHECK,NODEBUG
 #
 # This was generated from:
 #

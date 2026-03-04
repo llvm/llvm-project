@@ -290,34 +290,29 @@ UserExpression::Evaluate(ExecutionContext &exe_ctx,
 
   // If there is a fixed expression, try to parse it:
   if (!parse_success) {
-    // Delete the expression that failed to parse before attempting to parse
-    // the next expression.
-    user_expression_sp.reset();
-
     execution_results = lldb::eExpressionParseError;
     if (!fixed_expression->empty() && options.GetAutoApplyFixIts()) {
       const uint64_t max_fix_retries = options.GetRetriesWithFixIts();
       for (uint64_t i = 0; i < max_fix_retries; ++i) {
         // Try parsing the fixed expression.
-        lldb::UserExpressionSP fixed_expression_sp(
-            target->GetUserExpressionForLanguage(
-                fixed_expression->c_str(), full_prefix, language, desired_type,
-                options, ctx_obj, error));
-        if (!fixed_expression_sp)
+        user_expression_sp.reset(target->GetUserExpressionForLanguage(
+            fixed_expression->c_str(), full_prefix, language, desired_type,
+            options, ctx_obj, error));
+        if (!user_expression_sp)
           break;
+
         DiagnosticManager fixed_diagnostic_manager;
-        parse_success = fixed_expression_sp->Parse(
+        parse_success = user_expression_sp->Parse(
             fixed_diagnostic_manager, exe_ctx, execution_policy,
             keep_expression_in_memory, generate_debug_info);
         if (parse_success) {
           diagnostic_manager.Clear();
-          user_expression_sp = fixed_expression_sp;
           break;
         }
         // The fixed expression also didn't parse. Let's check for any new
         // fixits we could try.
-        if (!fixed_expression_sp->GetFixedText().empty()) {
-          *fixed_expression = fixed_expression_sp->GetFixedText().str();
+        if (!user_expression_sp->GetFixedText().empty()) {
+          *fixed_expression = user_expression_sp->GetFixedText().str();
         } else {
           // Fixed expression didn't compile without a fixit, don't retry and
           // don't tell the user about it.
@@ -328,6 +323,9 @@ UserExpression::Evaluate(ExecutionContext &exe_ctx,
     }
 
     if (!parse_success) {
+      if (user_expression_sp)
+        user_expression_sp->FixupParseErrorDiagnostics(diagnostic_manager);
+
       if (target->GetEnableNotifyAboutFixIts() && fixed_expression &&
           !fixed_expression->empty()) {
         std::string fixit =
@@ -427,15 +425,10 @@ UserExpression::Execute(DiagnosticManager &diagnostic_manager,
                         lldb::ExpressionVariableSP &result_var) {
   Debugger *debugger =
       exe_ctx.GetTargetPtr() ? &exe_ctx.GetTargetPtr()->GetDebugger() : nullptr;
-  std::string details;
-  if (m_options.IsForUtilityExpr())
-    details = "LLDB utility";
-  else if (m_expr_text.size() > 15)
-    details = m_expr_text.substr(0, 14) + "…";
-  else
-    details = m_expr_text;
 
-  Progress progress("Running expression", details, {}, debugger);
+  Progress progress("Running expression",
+                    m_options.IsForUtilityExpr() ? "LLDB utility" : m_expr_text,
+                    {}, debugger);
 
   lldb::ExpressionResults expr_result = DoExecute(
       diagnostic_manager, exe_ctx, options, shared_ptr_to_me, result_var);

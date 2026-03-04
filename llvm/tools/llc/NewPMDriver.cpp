@@ -14,8 +14,10 @@
 
 #include "NewPMDriver.h"
 #include "llvm/Analysis/CGSCCPassManager.h"
+#include "llvm/Analysis/RuntimeLibcallInfo.h"
 #include "llvm/Analysis/TargetLibraryInfo.h"
 #include "llvm/CodeGen/CommandFlags.h"
+#include "llvm/CodeGen/LibcallLoweringInfo.h"
 #include "llvm/CodeGen/MIRParser/MIRParser.h"
 #include "llvm/CodeGen/MIRPrinter.h"
 #include "llvm/CodeGen/MachineFunctionAnalysis.h"
@@ -136,6 +138,16 @@ int llvm::compileModuleWithNewPM(
   SI.registerCallbacks(PIC, &MAM);
 
   FAM.registerPass([&] { return TargetLibraryAnalysis(TLII); });
+
+  MAM.registerPass([&] {
+    const TargetOptions &Options = Target->Options;
+    return RuntimeLibraryAnalysis(
+        M->getTargetTriple(), Target->Options.ExceptionModel,
+        Target->Options.FloatABIType, Target->Options.EABIVersion,
+        Options.MCOptions.ABIName, Target->Options.VecLib);
+  });
+  MAM.registerPass([&] { return LibcallLoweringModuleAnalysis(); });
+
   MAM.registerPass([&] { return MachineModuleAnalysis(MMI); });
 
   ModulePassManager MPM;
@@ -161,8 +173,9 @@ int llvm::compileModuleWithNewPM(
     MPM.addPass(createModuleToFunctionPassAdaptor(std::move(FPM)));
 
   } else {
-    ExitOnErr(Target->buildCodeGenPipeline(
-        MPM, *OS, DwoOut ? &DwoOut->os() : nullptr, FileType, Opt, &PIC));
+    ExitOnErr(
+        Target->buildCodeGenPipeline(MPM, *OS, DwoOut ? &DwoOut->os() : nullptr,
+                                     FileType, Opt, MMI.getContext(), &PIC));
   }
 
   // If user only wants to print the pipeline, print it before parsing the MIR.
@@ -186,7 +199,7 @@ int llvm::compileModuleWithNewPM(
   MPM.run(*M, MAM);
 
   if (Context.getDiagHandlerPtr()->HasErrors)
-    exit(1);
+    return 1;
 
   // Declare success.
   Out->keep();

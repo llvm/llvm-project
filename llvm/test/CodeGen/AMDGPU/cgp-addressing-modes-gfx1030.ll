@@ -7,12 +7,12 @@
 define amdgpu_kernel void @test_sink_small_offset_global_atomic_csub_i32(ptr addrspace(1) %out, ptr addrspace(1) %in) {
 ; OPT-LABEL: @test_sink_small_offset_global_atomic_csub_i32(
 ; OPT-NEXT:  entry:
-; OPT-NEXT:    [[TID:%.*]] = call i32 @llvm.amdgcn.mbcnt.lo(i32 -1, i32 0) #[[ATTR3:[0-9]+]]
+; OPT-NEXT:    [[TID:%.*]] = call i32 @llvm.amdgcn.mbcnt.lo(i32 -1, i32 0) #[[ATTR2:[0-9]+]]
 ; OPT-NEXT:    [[CMP:%.*]] = icmp eq i32 [[TID]], 0
 ; OPT-NEXT:    br i1 [[CMP]], label [[ENDIF:%.*]], label [[IF:%.*]]
 ; OPT:       if:
 ; OPT-NEXT:    [[IN_GEP:%.*]] = getelementptr i32, ptr addrspace(1) [[IN:%.*]], i32 7
-; OPT-NEXT:    [[VAL:%.*]] = call i32 @llvm.amdgcn.global.atomic.csub.p1(ptr addrspace(1) [[IN_GEP]], i32 2)
+; OPT-NEXT:    [[VAL:%.*]] = atomicrmw usub_sat ptr addrspace(1) [[IN_GEP]], i32 2 seq_cst, align 4
 ; OPT-NEXT:    br label [[ENDIF]]
 ; OPT:       endif:
 ; OPT-NEXT:    [[X:%.*]] = phi i32 [ [[VAL]], [[IF]] ], [ 0, [[ENTRY:%.*]] ]
@@ -35,10 +35,13 @@ define amdgpu_kernel void @test_sink_small_offset_global_atomic_csub_i32(ptr add
 ; GCN-NEXT:    v_mov_b32_e32 v1, 2
 ; GCN-NEXT:    s_waitcnt lgkmcnt(0)
 ; GCN-NEXT:    global_atomic_csub v0, v0, v1, s[2:3] offset:28 glc
+; GCN-NEXT:    s_waitcnt vmcnt(0)
+; GCN-NEXT:    buffer_gl1_inv
+; GCN-NEXT:    buffer_gl0_inv
 ; GCN-NEXT:  .LBB0_2: ; %endif
 ; GCN-NEXT:    s_or_b32 exec_lo, exec_lo, s4
 ; GCN-NEXT:    v_mov_b32_e32 v1, 0x3d0800
-; GCN-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
+; GCN-NEXT:    s_waitcnt lgkmcnt(0)
 ; GCN-NEXT:    global_store_dword v1, v0, s[0:1] offset:252
 ; GCN-NEXT:    s_endpgm
 entry:
@@ -48,7 +51,7 @@ entry:
 
 if:
   %in.gep = getelementptr i32, ptr addrspace(1) %in, i32 7
-  %val = call i32 @llvm.amdgcn.global.atomic.csub.p1(ptr addrspace(1) %in.gep, i32 2)
+  %val = atomicrmw usub_sat ptr addrspace(1) %in.gep, i32 2 seq_cst, !amdgpu.no.remote.memory !0
   br label %endif
 
 endif:
@@ -61,9 +64,10 @@ done:
   ret void
 }
 
-declare i32 @llvm.amdgcn.global.atomic.csub.p1(ptr addrspace(1) nocapture, i32) #0
 declare i32 @llvm.amdgcn.mbcnt.lo(i32, i32) #1
 
 attributes #0 = { argmemonly nounwind }
 attributes #1 = { nounwind readnone willreturn }
 attributes #2 = { argmemonly nounwind willreturn }
+
+!0 = !{}

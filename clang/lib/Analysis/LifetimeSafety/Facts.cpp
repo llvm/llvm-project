@@ -9,6 +9,8 @@
 #include "clang/Analysis/Analyses/LifetimeSafety/Facts.h"
 #include "clang/AST/Decl.h"
 #include "clang/Analysis/Analyses/PostOrderCFGView.h"
+#include "clang/Analysis/FlowSensitive/DataflowWorklist.h"
+#include "llvm/ADT/STLFunctionalExtras.h"
 
 namespace clang::lifetimes::internal {
 
@@ -20,7 +22,7 @@ void Fact::dump(llvm::raw_ostream &OS, const LoanManager &,
 void IssueFact::dump(llvm::raw_ostream &OS, const LoanManager &LM,
                      const OriginManager &OM) const {
   OS << "Issue (";
-  LM.getLoan(getLoanID()).dump(OS);
+  LM.getLoan(getLoanID())->dump(OS);
   OS << ", ToOrigin: ";
   OM.dump(getOriginID(), OS);
   OS << ")\n";
@@ -29,32 +31,62 @@ void IssueFact::dump(llvm::raw_ostream &OS, const LoanManager &LM,
 void ExpireFact::dump(llvm::raw_ostream &OS, const LoanManager &LM,
                       const OriginManager &) const {
   OS << "Expire (";
-  LM.getLoan(getLoanID()).dump(OS);
+  LM.getLoan(getLoanID())->dump(OS);
   OS << ")\n";
 }
 
 void OriginFlowFact::dump(llvm::raw_ostream &OS, const LoanManager &,
                           const OriginManager &OM) const {
-  OS << "OriginFlow (Dest: ";
+  OS << "OriginFlow: \n";
+  OS << "\tDest: ";
   OM.dump(getDestOriginID(), OS);
-  OS << ", Src: ";
+  OS << "\n";
+  OS << "\tSrc:  ";
   OM.dump(getSrcOriginID(), OS);
   OS << (getKillDest() ? "" : ", Merge");
+  OS << "\n";
+}
+
+void MovedOriginFact::dump(llvm::raw_ostream &OS, const LoanManager &,
+                           const OriginManager &OM) const {
+  OS << "MovedOrigins (";
+  OM.dump(getMovedOrigin(), OS);
   OS << ")\n";
 }
 
-void OriginEscapesFact::dump(llvm::raw_ostream &OS, const LoanManager &,
-                             const OriginManager &OM) const {
+void ReturnEscapeFact::dump(llvm::raw_ostream &OS, const LoanManager &,
+                            const OriginManager &OM) const {
   OS << "OriginEscapes (";
   OM.dump(getEscapedOriginID(), OS);
-  OS << ")\n";
+  OS << ", via Return)\n";
+}
+
+void FieldEscapeFact::dump(llvm::raw_ostream &OS, const LoanManager &,
+                           const OriginManager &OM) const {
+  OS << "OriginEscapes (";
+  OM.dump(getEscapedOriginID(), OS);
+  OS << ", via Field)\n";
 }
 
 void UseFact::dump(llvm::raw_ostream &OS, const LoanManager &,
                    const OriginManager &OM) const {
   OS << "Use (";
-  OM.dump(getUsedOrigin(), OS);
+  size_t NumUsedOrigins = getUsedOrigins()->getLength();
+  size_t I = 0;
+  for (const OriginList *Cur = getUsedOrigins(); Cur;
+       Cur = Cur->peelOuterOrigin(), ++I) {
+    OM.dump(Cur->getOuterOriginID(), OS);
+    if (I < NumUsedOrigins - 1)
+      OS << ", ";
+  }
   OS << ", " << (isWritten() ? "Write" : "Read") << ")\n";
+}
+
+void InvalidateOriginFact::dump(llvm::raw_ostream &OS, const LoanManager &,
+                                const OriginManager &OM) const {
+  OS << "InvalidateOrigin (";
+  OM.dump(getInvalidatedOrigin(), OS);
+  OS << ")\n";
 }
 
 void TestPointFact::dump(llvm::raw_ostream &OS, const LoanManager &,

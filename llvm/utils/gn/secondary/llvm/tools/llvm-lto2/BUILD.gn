@@ -6,6 +6,7 @@ executable("llvm-lto2") {
     "//llvm/lib/Linker",
     "//llvm/lib/MC",
     "//llvm/lib/Object",
+    "//llvm/lib/Plugins",
     "//llvm/lib/Support",
     "//llvm/lib/Target",
     "//llvm/lib/Target:TargetsToBuild",

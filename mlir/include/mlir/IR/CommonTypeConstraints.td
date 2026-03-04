@@ -308,6 +308,17 @@ def Index : Type<CPred<"::llvm::isa<::mlir::IndexType>($_self)">, "index",
 def AnySignlessIntegerOrIndex : Type<CPred<"$_self.isSignlessIntOrIndex()">,
                                      "signless integer or index">;
 
+// A signless integer type with a non-zero bitwidth (excludes i0).
+def AnyNonZeroBitwidthSignlessInteger : ConfinedType<
+    AnySignlessInteger, [CPred<"!$_self.isInteger(0)">],
+    "non-zero-bitwidth signless integer">;
+
+// A non-zero-bitwidth signless integer or index type.
+def AnyNonZeroBitwidthSignlessIntegerOrIndex : Type<
+    Or<[AnyNonZeroBitwidthSignlessInteger.predicate,
+        Index.predicate]>,
+    "non-zero-bitwidth signless integer or index">;
+
 // Floating point types.
 
 // Any float type irrespective of its width.
@@ -537,6 +548,18 @@ class IsVectorOfLengthPred<list<int> allowedLengths> :
                            == }]
                          # allowedlength>)>]>;
 
+// Whether the number of elements of a vector is greater than
+// or equal to `minLength`.
+class IsVectorOfMinLengthPred<int minLength> :
+  And<[IsVectorOfNonZeroRankTypePred,
+       CPred<"::llvm::cast<::mlir::VectorType>($_self).getNumElements() >= " # minLength>]>;
+
+// Whether the number of elements of a vector is less than
+// or equal to `maxLength`.
+class IsVectorOfMaxLengthPred<int maxLength> :
+  And<[IsVectorOfNonZeroRankTypePred,
+       CPred<"::llvm::cast<::mlir::VectorType>($_self).getNumElements() <= " # maxLength>]>;
+
 // Whether the number of elements of a fixed-length vector is from the given
 // `allowedLengths` list
 class IsFixedVectorOfLengthPred<list<int> allowedLengths> :
@@ -600,6 +623,20 @@ class VectorOfLength<list<int> allowedLengths> : Type<
   " of length " # !interleave(allowedLengths, "/"),
   "::mlir::VectorType">;
 
+// Any vector where the number of elements is more than
+// or equal to minLength.
+class VectorOfMinLength<int minLength> : Type<
+  IsVectorOfMinLengthPred<minLength>,
+  " of at least length " # minLength,
+  "::mlir::VectorType">;
+
+// Any vector where the number of elements is less than
+// or equal to maxLength.
+class VectorOfMaxLength<int maxLength> : Type<
+  IsVectorOfMaxLengthPred<maxLength>,
+  " of at most length " # maxLength,
+  "::mlir::VectorType">;
+
 // Any fixed-length vector where the number of elements is from the given
 // `allowedLengths` list
 class FixedVectorOfLength<list<int> allowedLengths> : Type<
@@ -623,6 +660,24 @@ class VectorOfLengthAndType<list<int> allowedLengths,
    VectorOfNonZeroRankOf<allowedTypes>.summary # VectorOfLength<allowedLengths>.summary,
   "::mlir::VectorType">;
 
+// Any vector where the number of elements is from the given
+// `allowedLengths` list and the type is from the given `allowedTypes`
+// list and the rank is from the given `allowedRanks` list
+class VectorOfRankAndLengthAndType<list<int> allowedRanks,
+                                   list<int> allowedLengths,
+                                   list<Type> allowedTypes> : AllOfType<
+  [VectorOfRank<allowedRanks>, VectorOfNonZeroRankOf<allowedTypes>, VectorOfLength<allowedLengths>],
+   VectorOfNonZeroRankOf<allowedTypes>.summary # VectorOfLength<allowedLengths>.summary # VectorOfRank<allowedRanks>.summary,
+  "::mlir::VectorType">;
+
+// Any vector where the number of elements is between
+// `minLength` and `maxLength` (inclusive).
+class VectorOfMinMaxLengthAndType<int minLength, int maxLength,
+                                  list<Type> allowedTypes> : AllOfType<
+  [VectorOfNonZeroRankOf<allowedTypes>, VectorOfMinLength<minLength>, VectorOfMaxLength<maxLength>],
+   VectorOfNonZeroRankOf<allowedTypes>.summary # VectorOfMinLength<minLength>.summary # VectorOfMaxLength<maxLength>.summary,
+  "::mlir::VectorType">;
+
 class FixedVectorOfShapeAndType<list<int> shape, Type elType>: ShapedContainerType<
   [elType],
   And<[IsVectorOfShape<shape>, IsFixedVectorOfAnyRankTypePred]>,
@@ -638,6 +693,18 @@ class FixedVectorOfLengthAndType<list<int> allowedLengths,
   [FixedVectorOfAnyRank<allowedTypes>, FixedVectorOfLength<allowedLengths>],
   FixedVectorOfAnyRank<allowedTypes>.summary #
   FixedVectorOfLength<allowedLengths>.summary,
+  "::mlir::VectorType">;
+
+// Any fixed-length vector where the number of elements is from the given
+// `allowedLengths` list and the type is from the given `allowedTypes` list
+// as the rank is from the given `allowedRanks` list
+class FixedVectorOfRankAndLengthAndType<list<int> allowedRanks,
+                                        list<int> allowedLengths,
+                                        list<Type> allowedTypes> : AllOfType<
+  [VectorOfRank<allowedRanks>, FixedVectorOfAnyRank<allowedTypes>, FixedVectorOfLength<allowedLengths>],
+  FixedVectorOfAnyRank<allowedTypes>.summary #
+  FixedVectorOfLength<allowedLengths>.summary #
+  VectorOfRank<allowedRanks>.summary,
   "::mlir::VectorType">;
 
 // Any scalable vector where the number of elements is from the given

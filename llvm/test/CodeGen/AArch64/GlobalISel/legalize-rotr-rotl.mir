@@ -116,7 +116,7 @@ body:             |
     ; CHECK-NEXT: [[SHL:%[0-9]+]]:_(<4 x s32>) = G_SHL [[COPY]], [[AND]](<4 x s32>)
     ; CHECK-NEXT: [[AND1:%[0-9]+]]:_(<4 x s32>) = G_AND [[SUB]], [[BUILD_VECTOR1]]
     ; CHECK-NEXT: [[LSHR:%[0-9]+]]:_(<4 x s32>) = G_LSHR [[COPY]], [[AND1]](<4 x s32>)
-    ; CHECK-NEXT: %rot:_(<4 x s32>) = G_OR [[SHL]], [[LSHR]]
+    ; CHECK-NEXT: %rot:_(<4 x s32>) = disjoint G_OR [[SHL]], [[LSHR]]
     ; CHECK-NEXT: $q0 = COPY %rot(<4 x s32>)
     ; CHECK-NEXT: RET_ReallyLR implicit $q0
     %0:_(<4 x s32>) = COPY $q0
@@ -148,7 +148,7 @@ body:             |
     ; CHECK-NEXT: [[LSHR:%[0-9]+]]:_(<4 x s32>) = G_LSHR [[COPY]], [[AND]](<4 x s32>)
     ; CHECK-NEXT: [[AND1:%[0-9]+]]:_(<4 x s32>) = G_AND [[SUB]], [[BUILD_VECTOR1]]
     ; CHECK-NEXT: [[SHL:%[0-9]+]]:_(<4 x s32>) = G_SHL [[COPY]], [[AND1]](<4 x s32>)
-    ; CHECK-NEXT: %rot:_(<4 x s32>) = G_OR [[LSHR]], [[SHL]]
+    ; CHECK-NEXT: %rot:_(<4 x s32>) = disjoint G_OR [[LSHR]], [[SHL]]
     ; CHECK-NEXT: $q0 = COPY %rot(<4 x s32>)
     ; CHECK-NEXT: RET_ReallyLR implicit $q0
     %0:_(<4 x s32>) = COPY $q0

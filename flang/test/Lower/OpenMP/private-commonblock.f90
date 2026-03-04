@@ -75,7 +75,7 @@ subroutine private_clause_commonblock()
   real::b(10)
   character(5):: c, d(5)
   common /blk/ a, b, c, d
-  
+
   call sub1(a, b, c, d)
   !$omp parallel private(/blk/)
         call sub2(a, b, c, d)

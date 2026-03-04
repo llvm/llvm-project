@@ -1182,6 +1182,18 @@ END PROGRAM example_dsecnds
 This intrinsic is an alias for `CPU_TIME`: supporting both a subroutine and a
 function form.
 
+### Non-Standard Intrinsics: RTC
+
+#### Description
+`RTC()` returns the current time of the system as a REAL(8), interpreted as
+seconds since the Unix epoch.
+
+#### Usage and Info
+
+- **Standard:** Intel extension
+- **Class:** function
+- **Syntax:** `RESULT = RTC()`
+
 ### Non-Standard Intrinsics: TIME
 
 #### Description
@@ -1455,3 +1467,45 @@ The return value is of `REAL` type with the default kind.
 - **Standard:** GNU extension
 - **Class:** function
 - **Syntax:** `RESULT = RAND(I)`
+
+### Non-Standard Intrinsics: SHOW_DESCRIPTOR
+
+#### Description
+`SHOW_DESCRIPTOR(VAR)` prints (on the C stderr stream) a contents of a descriptor for the variable VAR,
+which can be of any type and rank, including scalars.
+Requires use of flang_debug module.
+
+Here is an example of its output:
+```
+Descriptor @ 0x7ffe506fc368:
+  base_addr 0x55944caef0f0
+  elem_len  4
+  version   20240719
+  rank      1
+  type      9 "INTEGER(kind=4)"
+  attribute 2 (allocatable)
+  extra     0
+    addendum  0
+    alloc_idx 0
+  dim[0] lower_bound 1
+         extent      5
+         sm          4
+```
+
+#### Usage and Info
+- **Standard:** flang extension
+- **Class:** subroutine
+- **Syntax:** `CALL show_descriptor(VAR)`
+
+#### Example
+```Fortran
+subroutine test
+  use flang_debug
+  implicit none
+  character(len=9) :: c = 'Hey buddy'
+  integer :: a(5)
+  call show_descriptor(c)
+  call show_descriptor(c(1:3))
+  call show_descriptor(a)
+end subroutine test
+```

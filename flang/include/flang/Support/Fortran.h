@@ -72,6 +72,9 @@ ENUM_CLASS(
 ENUM_CLASS(
     OpenACCDeviceType, Star, Default, Nvidia, Radeon, Host, Multicore, None)
 
+// OpenMP dependence kinds
+ENUM_CLASS(OmpDependenceKind, In, Out, Inout, Inoutset, Mutexinoutset, Depobj)
+
 // OpenMP memory-order types
 ENUM_CLASS(OmpMemoryOrderType, Acq_Rel, Acquire, Relaxed, Release, Seq_Cst)
 

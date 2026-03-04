@@ -51,7 +51,6 @@ protected:
   /// Split a vector store into multiple scalar stores.
   /// \returns The resulting chain.
 
-  SDValue LowerFREM(SDValue Op, SelectionDAG &DAG) const;
   SDValue LowerFCEIL(SDValue Op, SelectionDAG &DAG) const;
   SDValue LowerFTRUNC(SDValue Op, SelectionDAG &DAG) const;
   SDValue LowerFRINT(SDValue Op, SelectionDAG &DAG) const;
@@ -78,11 +77,15 @@ protected:
                           bool IsLog10, SDNodeFlags Flags) const;
   SDValue lowerFEXP2(SDValue Op, SelectionDAG &DAG) const;
 
+  SDValue lowerFEXPUnsafeImpl(SDValue Op, const SDLoc &SL, SelectionDAG &DAG,
+                              SDNodeFlags Flags, bool IsExp10) const;
+
   SDValue lowerFEXPUnsafe(SDValue Op, const SDLoc &SL, SelectionDAG &DAG,
                           SDNodeFlags Flags) const;
   SDValue lowerFEXP10Unsafe(SDValue Op, const SDLoc &SL, SelectionDAG &DAG,
                             SDNodeFlags Flags) const;
   SDValue lowerFEXP(SDValue Op, SelectionDAG &DAG) const;
+  SDValue lowerFEXPF64(SDValue Op, SelectionDAG &DAG) const;
 
   SDValue lowerCTLZResults(SDValue Op, SelectionDAG &DAG) const;
 
@@ -96,6 +99,7 @@ protected:
   SDValue LowerFP_TO_INT64(SDValue Op, SelectionDAG &DAG, bool Signed) const;
   SDValue LowerFP_TO_FP16(SDValue Op, SelectionDAG &DAG) const;
   SDValue LowerFP_TO_INT(SDValue Op, SelectionDAG &DAG) const;
+  SDValue LowerFP_TO_INT_SAT(SDValue Op, SelectionDAG &DAG) const;
 
   SDValue LowerF64ToF16Safe(SDValue Src, const SDLoc &DL,
                             SelectionDAG &DAG) const;
@@ -103,6 +107,9 @@ protected:
   SDValue LowerSIGN_EXTEND_INREG(SDValue Op, SelectionDAG &DAG) const;
 
 protected:
+  /// Check whether value Val can be supported by v_mov_b64, for the current
+  /// target.
+  bool isInt64ImmLegal(SDNode *Val, SelectionDAG &DAG) const;
   bool shouldCombineMemoryType(EVT VT) const;
   SDValue performLoadCombine(SDNode *N, DAGCombinerInfo &DCI) const;
   SDValue performStoreCombine(SDNode *N, DAGCombinerInfo &DCI) const;

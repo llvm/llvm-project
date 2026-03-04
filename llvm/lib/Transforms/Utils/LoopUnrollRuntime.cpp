@@ -536,10 +536,10 @@ static Loop *CloneLoopBlocks(Loop *L, Value *NewIter,
   return NewLoop;
 }
 
-/// Returns true if we can profitably unroll the multi-exit loop L. Currently,
-/// we return true only if UnrollRuntimeMultiExit is set to true.
+/// Returns true if we can profitably unroll the multi-exit loop L.
 static bool canProfitablyRuntimeUnrollMultiExitLoop(
-    Loop *L, SmallVectorImpl<BasicBlock *> &OtherExits, BasicBlock *LatchExit,
+    Loop *L, const TargetTransformInfo *TTI,
+    SmallVectorImpl<BasicBlock *> &OtherExits, BasicBlock *LatchExit,
     bool UseEpilogRemainder) {
 
   // The main pain point with multi-exit loop unrolling is that once unrolled,
@@ -566,15 +566,34 @@ static bool canProfitablyRuntimeUnrollMultiExitLoop(
   if (OtherExits.size() == 0)
     return true;
 
+  if (OtherExits.size() != 1)
+    return false;
+
+  // When UnrollRuntimeOtherExitPredictable is specified, we assume the other
+  // exit branch is predictable even if it has no deoptimize call.
+  if (UnrollRuntimeOtherExitPredictable)
+    return true;
+
   // The second heuristic is that L has one exit other than the latchexit and
-  // that exit is a deoptimize block. We know that deoptimize blocks are rarely
-  // taken, which also implies the branch leading to the deoptimize block is
-  // highly predictable. When UnrollRuntimeOtherExitPredictable is specified, we
-  // assume the other exit branch is predictable even if it has no deoptimize
-  // call.
-  return (OtherExits.size() == 1 &&
-          (UnrollRuntimeOtherExitPredictable ||
-           OtherExits[0]->getPostdominatingDeoptimizeCall()));
+  // that exit is highly unlikely.
+  if (TTI) {
+    BasicBlock *LatchBB = L->getLoopLatch();
+    assert(LatchBB && "Expected loop to have a latch");
+    BasicBlock *NonLatchExitingBlock =
+        (ExitingBlocks[0] == LatchBB) ? ExitingBlocks[1] : ExitingBlocks[0];
+    auto BranchProb =
+        llvm::getBranchProbability(NonLatchExitingBlock, OtherExits[0]);
+    // If BranchProbability could not be extracted (returns unknown), then
+    // don't return and do the check for deopt block.
+    if (!BranchProb.isUnknown()) {
+      auto Threshold = TTI->getPredictableBranchThreshold().getCompl();
+      return BranchProb < Threshold;
+    }
+  }
+
+  // We know that deoptimize blocks are rarely taken, which also implies the
+  // branch leading to the deoptimize block is highly unlikely.
+  return OtherExits[0]->getPostdominatingDeoptimizeCall();
   // TODO: These can be fine-tuned further to consider code size or deopt states
   // that are captured by the deoptimize exit block.
   // Also, we can extend this to support more cases, if we actually
@@ -715,8 +734,8 @@ bool llvm::UnrollRuntimeLoopRemainder(
       // Otherwise perform multi-exit unrolling, if either the target indicates
       // it is profitable or the general profitability heuristics apply.
       if (!RuntimeUnrollMultiExit &&
-          !canProfitablyRuntimeUnrollMultiExitLoop(L, OtherExits, LatchExit,
-                                                   UseEpilogRemainder)) {
+          !canProfitablyRuntimeUnrollMultiExitLoop(
+              L, TTI, OtherExits, LatchExit, UseEpilogRemainder)) {
         LLVM_DEBUG(dbgs() << "Multiple exit/exiting blocks in loop and "
                              "multi-exit unrolling not enabled!\n");
         return false;
@@ -752,8 +771,7 @@ bool llvm::UnrollRuntimeLoopRemainder(
 
   BasicBlock *PreHeader = L->getLoopPreheader();
   BranchInst *PreHeaderBR = cast<BranchInst>(PreHeader->getTerminator());
-  const DataLayout &DL = Header->getDataLayout();
-  SCEVExpander Expander(*SE, DL, "loop-unroll");
+  SCEVExpander Expander(*SE, "loop-unroll");
   if (!AllowExpensiveTripCount &&
       Expander.isHighCostExpansion(TripCountSC, L, SCEVExpansionBudget, TTI,
                                    PreHeaderBR)) {

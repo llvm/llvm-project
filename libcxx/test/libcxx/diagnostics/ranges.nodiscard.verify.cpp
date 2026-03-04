@@ -40,9 +40,6 @@ void test() {
   std::views::as_rvalue(range);       // expected-warning {{ignoring return value of function declared with 'nodiscard' attribute}}
   std::views::as_rvalue(rvalue_view); // expected-warning {{ignoring return value of function declared with 'nodiscard' attribute}}
 
-  std::views::chunk_by(pred);        // expected-warning {{ignoring return value of function declared with 'nodiscard' attribute}}
-  std::views::chunk_by(range, pred); // expected-warning {{ignoring return value of function declared with 'nodiscard' attribute}}
-
   std::views::take(std::views::repeat(3), 3);                            // expected-warning {{ignoring return value of function declared with 'nodiscard' attribute}}
   std::views::take(std::views::repeat(3, std::unreachable_sentinel), 3); // expected-warning {{ignoring return value of function declared with 'nodiscard' attribute}}
 

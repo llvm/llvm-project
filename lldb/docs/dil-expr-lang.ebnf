@@ -3,7 +3,10 @@
 (* This is currently a subset of the final DIL Language, matching the current
    DIL implementation. *)
 
-expression = cast_expression;
+expression = additive_expression ;
+
+additive_expression = cast_expression {"+" cast_expression}
+                      cast_expression {"-" cast_expression} ;
 
 cast_expression = unary_expression
                 | "(" type_id ")" cast_expression;
@@ -14,7 +17,8 @@ unary_expression = postfix_expression
 unary_operator = "*" | "&" | "+" | "-";
 
 postfix_expression = primary_expression
-                   | postfix_expression "[" integer_literal "]"
+                   | postfix_expression "[" expression "]"
+                   | postfix_expression "[" expression ":" expression "]"
                    | postfix_expression "." id_expression
                    | postfix_expression "->" id_expression ;
 
@@ -33,8 +37,6 @@ qualified_id = ["::"] [nested_name_specifier] unqualified_id
              | ["::"] identifier ;
 
 identifier = ? C99 Identifier ? ;
-
-integer_literal = ? Integer constant: hexademical, decimal, octal, binary ? ;
 
 numeric_literal = ? Integer constant: hexademical, decimal, octal, binary ?
                 | ? Floating constant ? ;

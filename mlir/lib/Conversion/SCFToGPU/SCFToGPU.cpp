@@ -1,4 +1,4 @@
-//===- SCFToGPU.cpp - Convert an affine loop nest to a GPU kernel -------===//
+//===- SCFToGPU.cpp - Convert an affine loop nest to a GPU kernel ---------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -333,12 +333,10 @@ static Value deriveStaticUpperBound(Value upperBound,
   }
 
   if (auto multiplyOp = upperBound.getDefiningOp<arith::MulIOp>()) {
-    if (auto lhs = dyn_cast_or_null<arith::ConstantIndexOp>(
-            deriveStaticUpperBound(multiplyOp.getOperand(0), rewriter)
-                .getDefiningOp()))
-      if (auto rhs = dyn_cast_or_null<arith::ConstantIndexOp>(
-              deriveStaticUpperBound(multiplyOp.getOperand(1), rewriter)
-                  .getDefiningOp())) {
+    if (auto lhs = deriveStaticUpperBound(multiplyOp.getOperand(0), rewriter)
+                       .getDefiningOp<arith::ConstantIndexOp>())
+      if (auto rhs = deriveStaticUpperBound(multiplyOp.getOperand(1), rewriter)
+                         .getDefiningOp<arith::ConstantIndexOp>()) {
         // Assumptions about the upper bound of minimum computations no longer
         // work if multiplied by mixed signs, so abort in this case.
         if ((lhs.value() < 0) != (rhs.value() < 0))
@@ -421,9 +419,9 @@ static LogicalResult processParallelLoop(
                                   launchIndependent](Value val) -> Value {
     if (launchIndependent(val))
       return val;
-    if (auto constOp = val.getDefiningOp<arith::ConstantOp>())
-      return arith::ConstantOp::create(rewriter, constOp.getLoc(),
-                                       constOp.getValue());
+    if (std::optional<int64_t> constOp = getConstantIntValue(val))
+      return arith::ConstantIndexOp::create(rewriter, val.getLoc(),
+                                            constOp.value());
     return {};
   };
 
@@ -482,17 +480,15 @@ static LogicalResult processParallelLoop(
         // conditional. If the lower-bound is constant or defined before the
         // launch, we can use it in the launch bounds. Otherwise fail.
         if (!launchIndependent(lowerBound) &&
-            !isa_and_nonnull<arith::ConstantOp>(lowerBound.getDefiningOp()))
+            !getConstantIntValue(lowerBound).has_value())
           return failure();
         // The step must also be constant or defined outside of the loop nest.
-        if (!launchIndependent(step) &&
-            !isa_and_nonnull<arith::ConstantOp>(step.getDefiningOp()))
+        if (!launchIndependent(step) && !getConstantIntValue(step).has_value())
           return failure();
         // If the upper-bound is constant or defined before the launch, we can
         // use it in the launch bounds directly. Otherwise try derive a bound.
-        bool boundIsPrecise =
-            launchIndependent(upperBound) ||
-            isa_and_nonnull<arith::ConstantOp>(upperBound.getDefiningOp());
+        bool boundIsPrecise = launchIndependent(upperBound) ||
+                              getConstantIntValue(upperBound).has_value();
         {
           PatternRewriter::InsertionGuard guard(rewriter);
           rewriter.setInsertionPoint(launchOp);
@@ -621,11 +617,10 @@ ParallelToGpuLaunchLowering::matchAndRewrite(ParallelOp parallelOp,
   // Create a launch operation. We start with bound one for all grid/block
   // sizes. Those will be refined later as we discover them from mappings.
   Location loc = parallelOp.getLoc();
-  Value constantOne =
-      arith::ConstantIndexOp::create(rewriter, parallelOp.getLoc(), 1);
-  gpu::LaunchOp launchOp = gpu::LaunchOp::create(
-      rewriter, parallelOp.getLoc(), constantOne, constantOne, constantOne,
-      constantOne, constantOne, constantOne);
+  Value constantOne = arith::ConstantIndexOp::create(rewriter, loc, 1);
+  gpu::LaunchOp launchOp =
+      gpu::LaunchOp::create(rewriter, loc, constantOne, constantOne,
+                            constantOne, constantOne, constantOne, constantOne);
   rewriter.setInsertionPointToEnd(&launchOp.getBody().front());
   gpu::TerminatorOp::create(rewriter, loc);
   rewriter.setInsertionPointToStart(&launchOp.getBody().front());
@@ -710,7 +705,7 @@ ParallelToGpuLaunchLowering::matchAndRewrite(ParallelOp parallelOp,
       // Ensure reduction region is isolated from above.
       llvm::SetVector<Value> externalValues;
       getUsedValuesDefinedAbove(reduceOp.getRegion(0), externalValues);
-      if (externalValues.size())
+      if (!externalValues.empty())
         return failure();
       // Replace by gpu.all_reduce.
       auto gpuRedOp = gpu::AllReduceOp::create(rewriter, loc, newValue);

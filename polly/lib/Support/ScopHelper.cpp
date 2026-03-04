@@ -242,10 +242,10 @@ struct ScopExpander final : SCEVVisitor<ScopExpander, const SCEV *> {
   friend struct SCEVVisitor<ScopExpander, const SCEV *>;
 
   explicit ScopExpander(const Region &R, ScalarEvolution &SE, Function *GenFn,
-                        ScalarEvolution &GenSE, const DataLayout &DL,
-                        const char *Name, ValueMapT *VMap,
-                        LoopToScevMapT *LoopMap, BasicBlock *RTCBB)
-      : Expander(GenSE, DL, Name, /*PreserveLCSSA=*/false), Name(Name), R(R),
+                        ScalarEvolution &GenSE, const char *Name,
+                        ValueMapT *VMap, LoopToScevMapT *LoopMap,
+                        BasicBlock *RTCBB)
+      : Expander(GenSE, Name, /*PreserveLCSSA=*/false), Name(Name), R(R),
         VMap(VMap), LoopMap(LoopMap), RTCBB(RTCBB), GenSE(GenSE), GenFn(GenFn) {
   }
 
@@ -367,6 +367,9 @@ private:
   ///{
   const SCEV *visitConstant(const SCEVConstant *E) { return E; }
   const SCEV *visitVScale(const SCEVVScale *E) { return E; }
+  const SCEV *visitPtrToAddrExpr(const SCEVPtrToAddrExpr *E) {
+    return GenSE.getPtrToAddrExpr(visit(E->getOperand()));
+  }
   const SCEV *visitPtrToIntExpr(const SCEVPtrToIntExpr *E) {
     return GenSE.getPtrToIntExpr(visit(E->getOperand()), E->getType());
   }
@@ -455,8 +458,8 @@ Value *polly::expandCodeFor(Scop &S, llvm::ScalarEvolution &SE,
                             const SCEV *E, Type *Ty, BasicBlock::iterator IP,
                             ValueMapT *VMap, LoopToScevMapT *LoopMap,
                             BasicBlock *RTCBB) {
-  ScopExpander Expander(S.getRegion(), SE, GenFn, GenSE, DL, Name, VMap,
-                        LoopMap, RTCBB);
+  ScopExpander Expander(S.getRegion(), SE, GenFn, GenSE, Name, VMap, LoopMap,
+                        RTCBB);
   return Expander.expandCodeFor(E, Ty, IP);
 }
 

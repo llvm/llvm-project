@@ -173,21 +173,17 @@ const Stmt *ExprSequence::getSequenceSuccessor(const Stmt *S) const {
       // Initializer list: Each initializer clause is sequenced after the
       // clauses that precede it.
       for (const InitListExpr *Form : getAllInitListForms(InitList)) {
-        for (unsigned I = 1; I < Form->getNumInits(); ++I) {
-          if (Form->getInit(I - 1) == S) {
+        for (unsigned I = 1; I < Form->getNumInits(); ++I)
+          if (Form->getInit(I - 1) == S)
             return Form->getInit(I);
-          }
-        }
       }
     } else if (const auto *ConstructExpr = dyn_cast<CXXConstructExpr>(Parent)) {
       // Constructor arguments are sequenced if the constructor call is written
       // as list-initialization.
       if (ConstructExpr->isListInitialization()) {
-        for (unsigned I = 1; I < ConstructExpr->getNumArgs(); ++I) {
-          if (ConstructExpr->getArg(I - 1) == S) {
+        for (unsigned I = 1; I < ConstructExpr->getNumArgs(); ++I)
+          if (ConstructExpr->getArg(I - 1) == S)
             return ConstructExpr->getArg(I);
-          }
-        }
       }
     } else if (const auto *Compound = dyn_cast<CompoundStmt>(Parent)) {
       // Compound statement: Each sub-statement is sequenced after the
@@ -260,10 +256,9 @@ const Stmt *ExprSequence::resolveSyntheticStmt(const Stmt *S) const {
 StmtToBlockMap::StmtToBlockMap(const CFG *TheCFG, ASTContext *TheContext)
     : Context(TheContext) {
   for (const auto *B : *TheCFG) {
-    for (const auto &Elem : *B) {
+    for (const auto &Elem : *B)
       if (std::optional<CFGStmt> S = Elem.getAs<CFGStmt>())
         Map[S->getStmt()] = B;
-    }
   }
 }
 

@@ -84,24 +84,24 @@ static void BM_format_to_string_pointer(benchmark::State& state) {
 
 /*** Main ***/
 
-BENCHMARK(BM_format_to_string_back_inserter<std::string>)->RangeMultiplier(2)->Range(1, 1 << 20);
-BENCHMARK(BM_format_to_string_back_inserter<std::vector<char>>)->RangeMultiplier(2)->Range(1, 1 << 20);
-BENCHMARK(BM_format_to_string_back_inserter<std::list<char>>)->RangeMultiplier(2)->Range(1, 1 << 20);
-BENCHMARK(BM_format_to_string_begin<std::string>)->RangeMultiplier(2)->Range(1, 1 << 20);
-BENCHMARK(BM_format_to_string_begin<std::vector<char>>)->RangeMultiplier(2)->Range(1, 1 << 20);
-BENCHMARK(BM_format_to_string_begin<std::list<char>>)->RangeMultiplier(2)->Range(1, 1 << 20);
-BENCHMARK(BM_format_to_string_span<char>)->RangeMultiplier(2)->Range(1, 1 << 20);
-BENCHMARK(BM_format_to_string_pointer<char>)->RangeMultiplier(2)->Range(1, 1 << 20);
+BENCHMARK(BM_format_to_string_back_inserter<std::string>)->Arg(1)->Arg(16384)->Arg(1048576);
+BENCHMARK(BM_format_to_string_back_inserter<std::vector<char>>)->Arg(1)->Arg(16384)->Arg(1048576);
+BENCHMARK(BM_format_to_string_back_inserter<std::list<char>>)->Arg(1)->Arg(16384)->Arg(1048576);
+BENCHMARK(BM_format_to_string_begin<std::string>)->Arg(1)->Arg(16384)->Arg(1048576);
+BENCHMARK(BM_format_to_string_begin<std::vector<char>>)->Arg(1)->Arg(16384)->Arg(1048576);
+BENCHMARK(BM_format_to_string_begin<std::list<char>>)->Arg(1)->Arg(16384)->Arg(1048576);
+BENCHMARK(BM_format_to_string_span<char>)->Arg(1)->Arg(16384)->Arg(1048576);
+BENCHMARK(BM_format_to_string_pointer<char>)->Arg(1)->Arg(16384)->Arg(1048576);
 
 #ifndef TEST_HAS_NO_WIDE_CHARACTERS
-BENCHMARK(BM_format_to_string_back_inserter<std::wstring>)->RangeMultiplier(2)->Range(1, 1 << 20);
-BENCHMARK(BM_format_to_string_back_inserter<std::vector<wchar_t>>)->RangeMultiplier(2)->Range(1, 1 << 20);
-BENCHMARK(BM_format_to_string_back_inserter<std::list<wchar_t>>)->RangeMultiplier(2)->Range(1, 1 << 20);
-BENCHMARK(BM_format_to_string_begin<std::wstring>)->RangeMultiplier(2)->Range(1, 1 << 20);
-BENCHMARK(BM_format_to_string_begin<std::vector<wchar_t>>)->RangeMultiplier(2)->Range(1, 1 << 20);
-BENCHMARK(BM_format_to_string_begin<std::list<wchar_t>>)->RangeMultiplier(2)->Range(1, 1 << 20);
-BENCHMARK(BM_format_to_string_span<wchar_t>)->RangeMultiplier(2)->Range(1, 1 << 20);
-BENCHMARK(BM_format_to_string_pointer<wchar_t>)->RangeMultiplier(2)->Range(1, 1 << 20);
+BENCHMARK(BM_format_to_string_back_inserter<std::wstring>)->Arg(1)->Arg(16384)->Arg(1048576);
+BENCHMARK(BM_format_to_string_back_inserter<std::vector<wchar_t>>)->Arg(1)->Arg(16384)->Arg(1048576);
+BENCHMARK(BM_format_to_string_back_inserter<std::list<wchar_t>>)->Arg(1)->Arg(16384)->Arg(1048576);
+BENCHMARK(BM_format_to_string_begin<std::wstring>)->Arg(1)->Arg(16384)->Arg(1048576);
+BENCHMARK(BM_format_to_string_begin<std::vector<wchar_t>>)->Arg(1)->Arg(16384)->Arg(1048576);
+BENCHMARK(BM_format_to_string_begin<std::list<wchar_t>>)->Arg(1)->Arg(16384)->Arg(1048576);
+BENCHMARK(BM_format_to_string_span<wchar_t>)->Arg(1)->Arg(16384)->Arg(1048576);
+BENCHMARK(BM_format_to_string_pointer<wchar_t>)->Arg(1)->Arg(16384)->Arg(1048576);
 #endif
 
 BENCHMARK_MAIN();

@@ -251,6 +251,9 @@ set(TARGET_LIBC_ENTRYPOINTS
     # sys/ioctl.h entrypoints
     libc.src.sys.ioctl.ioctl
 
+    # sys/ipc.h entrypoints
+    libc.src.sys.ipc.ftok
+
     # sys/mman.h entrypoints
     libc.src.sys.mman.madvise
     libc.src.sys.mman.mincore
@@ -347,6 +350,7 @@ set(TARGET_LIBC_ENTRYPOINTS
     libc.src.unistd.getentropy
     libc.src.unistd.geteuid
     libc.src.unistd.gethostname
+    libc.src.unistd.getpagesize
     libc.src.unistd.getpid
     libc.src.unistd.getppid
     libc.src.unistd.getsid
@@ -468,9 +472,11 @@ set(TARGET_LIBM_ENTRYPOINTS
     libc.src.math.acos
     libc.src.math.acosf
     libc.src.math.acoshf
+    libc.src.math.acospif
     libc.src.math.asin
     libc.src.math.asinf
     libc.src.math.asinhf
+    libc.src.math.asinpif
     libc.src.math.atan2
     libc.src.math.atan2f
     libc.src.math.atan
@@ -844,6 +850,7 @@ if(LIBC_TYPES_HAS_FLOAT128)
   list(APPEND TARGET_LIBM_ENTRYPOINTS
     # math.h C23 _Float128 entrypoints
     libc.src.math.atan2f128
+    libc.src.math.atan2l
     libc.src.math.canonicalizef128
     libc.src.math.ceilf128
     libc.src.math.copysignf128
@@ -1395,7 +1402,16 @@ if(LLVM_LIBC_FULL_BUILD)
   )
 endif()
 
+set(TARGET_LIBMVEC_ENTRYPOINTS)
+
+if(LIBC_COMPILER_HAS_EXT_VECTOR_TYPE)
+list(APPEND TARGET_LIBMVEC_ENTRYPOINTS
+    libc.src.mathvec.expf
+  )
+endif()
+
 set(TARGET_LLVMLIBC_ENTRYPOINTS
   ${TARGET_LIBC_ENTRYPOINTS}
   ${TARGET_LIBM_ENTRYPOINTS}
+  ${TARGET_LIBMVEC_ENTRYPOINTS}
 )

@@ -85,6 +85,8 @@ extern uint32_t __bolt_instr_num_ind_targets;
 extern uint32_t __bolt_instr_num_funcs;
 // Time to sleep across dumps (when we write the fdata profile to disk)
 extern uint32_t __bolt_instr_sleep_time;
+// Max size of bump allocator
+extern uint32_t __bolt_instr_max_size;
 // Do not clear counters across dumps, rewrite file with the updated values
 extern bool __bolt_instr_no_counters_clear;
 // Wait until all forks of instrumented process will finish
@@ -129,6 +131,9 @@ class BumpPtrAllocator {
   };
 
 public:
+#if defined(__ANDROID__)
+  __attribute__((noinline))
+#endif
   void *allocate(size_t Size) {
     Lock L(M);
 
@@ -156,6 +161,9 @@ public:
   /// bugs by checking magic bytes. Ordinarily, we reset the allocator once
   /// we are done with it. Reset is done with clear(). There's no need
   /// to deallocate each element individually.
+#if defined(__ANDROID__)
+  __attribute__((noinline))
+#endif
   void deallocate(void *Ptr) {
     Lock L(M);
     uint8_t MetadataOffset = sizeof(EntryMetadata);
@@ -257,6 +265,7 @@ struct SimpleHashTableEntryBase {
   uint64_t Key;
   uint64_t Val;
   void dump(const char *Msg = nullptr) {
+#if !defined(__ANDROID__)
     // TODO: make some sort of formatting function
     // Currently we have to do it the ugly way because
     // we want every message to be printed atomically via a single call to
@@ -286,6 +295,7 @@ struct SimpleHashTableEntryBase {
     assert(Ptr - Buf < BufSize, "Buffer overflow!");
     // print everything all at once for atomicity
     __write(2, Buf, Ptr - Buf);
+#endif
   }
 };
 
@@ -599,6 +609,9 @@ int compareStr(const char *Str1, const char *Str2, int Size) {
 }
 
 /// Output Location to the fdata file
+#if defined(__ANDROID__)
+__attribute__((noinline))
+#endif
 char *serializeLoc(const ProfileWriterContext &Ctx, char *OutBuf,
                    const Location Loc, uint32_t BufSize) {
   // fdata location format: Type Name Offset
@@ -821,6 +834,7 @@ ProfileWriterContext readDescriptions() {
 #if !defined(__APPLE__)
 /// Debug by printing overall metadata global numbers to check it is sane
 void printStats(const ProfileWriterContext &Ctx) {
+#if !defined(__ANDROID__)
   char StatMsg[BufSize];
   char *StatPtr = StatMsg;
   StatPtr =
@@ -841,6 +855,7 @@ void printStats(const ProfileWriterContext &Ctx) {
   StatPtr = intToStr(StatPtr, __bolt_instr_num_funcs, 10);
   StatPtr = strCopy(StatPtr, "\n");
   __write(2, StatMsg, StatPtr - StatMsg);
+#endif
 }
 #endif
 
@@ -1514,10 +1529,18 @@ int openProfile() {
 /// Where 0xdeadbeef is this function address and PROCESSNAME your binary file
 /// name.
 extern "C" void __bolt_instr_clear_counters() {
-  memset(reinterpret_cast<char *>(__bolt_instr_locations), 0,
-         __bolt_num_counters * 8);
+  while (!GlobalWriteProfileMutex->acquire()) {
+  }
+
+  // Use atomic stores instead of memset to avoid torn writes that could be
+  // observed by other threads concurrently incrementing counters.
+  for (uint32_t I = 0; I < __bolt_num_counters; ++I)
+    __atomic_store_n(&__bolt_instr_locations[I], 0ULL, __ATOMIC_RELAXED);
+
   for (int I = 0; I < __bolt_instr_num_ind_calls; ++I)
     GlobalIndCallCounters[I].resetCounters();
+
+  GlobalWriteProfileMutex->release();
 }
 
 /// This is the entry point for profile writing.
@@ -1551,14 +1574,14 @@ __bolt_instr_data_dump(int FD, const char *LibPath = nullptr,
   ret = __ftruncate(FD, 0);
   assert(ret == 0, "Failed to ftruncate!");
   BumpPtrAllocator HashAlloc;
-  HashAlloc.setMaxSize(0x6400000);
+  HashAlloc.setMaxSize(__bolt_instr_max_size);
   ProfileWriterContext Ctx = readDescriptions(LibContents, LibSize);
   Ctx.CallFlowTable = new (HashAlloc, 0) CallFlowHashTable(HashAlloc);
 
   DEBUG(printStats(Ctx));
 
   BumpPtrAllocator Alloc;
-  Alloc.setMaxSize(0x6400000);
+  Alloc.setMaxSize(__bolt_instr_max_size);
   const uint8_t *FuncDesc = Ctx.FuncDescriptions;
   for (int I = 0, E = __bolt_instr_num_funcs; I < E; ++I) {
     FuncDesc = writeFunctionProfile(FD, Ctx, FuncDesc, Alloc);
@@ -1662,8 +1685,9 @@ extern "C" void __attribute((force_align_arg_pointer)) __bolt_instr_setup() {
          "__bolt_instr_setup: failed to mmap page for metadata!");
 
   GlobalAlloc = new (GlobalMetadataStorage) BumpPtrAllocator;
-  // Conservatively reserve 100MiB
-  GlobalAlloc->setMaxSize(0x6400000);
+  // The max memory size can be set by -instrumentation-max-size, the default
+  // is 100MiB.
+  GlobalAlloc->setMaxSize(__bolt_instr_max_size);
   GlobalAlloc->setShared(Shared);
   GlobalWriteProfileMutex = new (*GlobalAlloc, 0) Mutex();
   if (__bolt_instr_num_ind_calls > 0)
@@ -1691,12 +1715,9 @@ instrumentIndirectCall(uint64_t Target, uint64_t IndCallID) {
 extern "C" __attribute((naked)) void __bolt_instr_indirect_call()
 {
 #if defined(__aarch64__)
-  // the target address is placed on stack
-  // the identifier of the indirect call site is placed in X1 register
-
   // clang-format off
   __asm__ __volatile__(SAVE_ALL
-                       "ldr x0, [sp, #272]\n"
+                       "ldp x0, x1, [sp, #272]\n"
                        "bl instrumentIndirectCall\n"
                        RESTORE_ALL
                        "ret\n"
@@ -1731,12 +1752,9 @@ extern "C" __attribute((naked)) void __bolt_instr_indirect_call()
 extern "C" __attribute((naked)) void __bolt_instr_indirect_tailcall()
 {
 #if defined(__aarch64__)
-  // the target address is placed on stack
-  // the identifier of the indirect call site is placed in X1 register
-
   // clang-format off
   __asm__ __volatile__(SAVE_ALL
-                       "ldr x0, [sp, #272]\n"
+                       "ldp x0, x1, [sp, #272]\n"
                        "bl instrumentIndirectCall\n"
                        RESTORE_ALL
                        "ret\n"

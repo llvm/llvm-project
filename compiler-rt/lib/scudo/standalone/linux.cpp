@@ -246,6 +246,38 @@ void setAbortMessage(const char *Message) {
     android_set_abort_message(Message);
 }
 
+u64 getResidentPages(uptr BaseAddress, uptr Size) {
+  unsigned char PageData[256];
+
+  uptr PageSize = getPageSizeCached();
+  uptr PageSizeLog = getPageSizeLogCached();
+
+  // Make sure the address is page aligned.
+  uptr CurrentAddress = BaseAddress & ~(PageSize - 1);
+  uptr LastAddress = roundUp(BaseAddress + Size, PageSize);
+  u64 ResidentPages = 0;
+  while (CurrentAddress < LastAddress) {
+    uptr Length = LastAddress - CurrentAddress;
+    if ((Length >> PageSizeLog) > sizeof(PageData)) {
+      Length = sizeof(PageData) << PageSizeLog;
+    }
+    if (mincore(reinterpret_cast<void *>(CurrentAddress), Length, PageData) ==
+        -1) {
+      ScopedString Str;
+      Str.append("mincore failed: %s\n", strerror(errno));
+      Str.output();
+      break;
+    }
+    for (size_t I = 0; I < Length >> PageSizeLog; ++I) {
+      if (PageData[I])
+        ++ResidentPages;
+    }
+    CurrentAddress += Length;
+  }
+
+  return ResidentPages;
+}
+
 } // namespace scudo
 
 #endif // SCUDO_LINUX

@@ -15,6 +15,7 @@ unittest("OrcJITTests") {
     "//llvm/lib/Testing/Support",
   ]
   sources = [
+    "CallSPSViaEPCTest.cpp",
     "CallableTraitsHelperTest.cpp",
     "CoreAPIsTest.cpp",
     "EPCGenericJITLinkMemoryManagerTest.cpp",

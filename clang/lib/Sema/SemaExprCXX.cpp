@@ -644,8 +644,10 @@ Sema::ActOnCXXTypeid(SourceLocation OpLoc, SourceLocation LParenLoc,
   }
 
   // Find the std::type_info type.
-  if (!getStdNamespace())
-    return ExprError(Diag(OpLoc, diag::err_need_header_before_typeid));
+  if (!getStdNamespace()) {
+    return ExprError(Diag(OpLoc, diag::err_need_header_before_typeid)
+                     << (getLangOpts().CPlusPlus20 ? 1 : 0));
+  }
 
   if (!CXXTypeInfoDecl) {
     IdentifierInfo *TypeInfoII = &PP.getIdentifierTable().get("type_info");
@@ -659,7 +661,8 @@ Sema::ActOnCXXTypeid(SourceLocation OpLoc, SourceLocation LParenLoc,
       CXXTypeInfoDecl = R.getAsSingle<RecordDecl>();
     }
     if (!CXXTypeInfoDecl)
-      return ExprError(Diag(OpLoc, diag::err_need_header_before_typeid));
+      return ExprError(Diag(OpLoc, diag::err_need_header_before_typeid)
+                       << (getLangOpts().CPlusPlus20 ? 1 : 0));
   }
 
   if (!getLangOpts().RTTI) {
@@ -2631,6 +2634,19 @@ ExprResult Sema::BuildCXXNew(SourceRange Range, bool UseGlobal,
     MarkFunctionReferenced(StartLoc, OperatorDelete);
   }
 
+  // For MSVC vector deleting destructors support we record that for the class
+  // new[] was called. We try to optimize the code size and only emit vector
+  // deleting destructors when they are required. Vector deleting destructors
+  // are required for delete[] call but MSVC triggers emission of them
+  // whenever new[] is called for an object of the class and we do the same
+  // for compatibility.
+  if (const CXXConstructExpr *CCE =
+          dyn_cast_or_null<CXXConstructExpr>(Initializer);
+      CCE && ArraySize) {
+    Context.setClassNeedsVectorDeletingDestructor(
+        CCE->getConstructor()->getParent());
+  }
+
   return CXXNewExpr::Create(Context, UseGlobal, OperatorNew, OperatorDelete,
                             IAP, UsualArrayDeleteWantsSize, PlacementArgs,
                             TypeIdParens, ArraySize, InitStyle, Initializer,
@@ -2660,8 +2676,9 @@ bool Sema::CheckAllocatedType(QualType AllocType, SourceLocation Loc,
   else if (AllocType.getAddressSpace() != LangAS::Default &&
            !getLangOpts().OpenCLCPlusPlus)
     return Diag(Loc, diag::err_address_space_qualified_new)
-      << AllocType.getUnqualifiedType()
-      << AllocType.getQualifiers().getAddressSpaceAttributePrintValue();
+           << AllocType.getUnqualifiedType()
+           << Qualifiers::getAddrSpaceAsString(AllocType.getAddressSpace());
+
   else if (getLangOpts().ObjCAutoRefCount) {
     if (const ArrayType *AT = Context.getAsArrayType(AllocType)) {
       QualType BaseAllocType = Context.getBaseElementType(AT);
@@ -3612,11 +3629,9 @@ Sema::FindUsualDeallocationFunction(SourceLocation StartLoc,
   return Result.FD;
 }
 
-FunctionDecl *Sema::FindDeallocationFunctionForDestructor(SourceLocation Loc,
-                                                          CXXRecordDecl *RD,
-                                                          bool Diagnose,
-                                                          bool LookForGlobal) {
-  DeclarationName Name = Context.DeclarationNames.getCXXOperatorName(OO_Delete);
+FunctionDecl *Sema::FindDeallocationFunctionForDestructor(
+    SourceLocation Loc, CXXRecordDecl *RD, bool Diagnose, bool LookForGlobal,
+    DeclarationName Name) {
 
   FunctionDecl *OperatorDelete = nullptr;
   CanQualType DeallocType = Context.getCanonicalTagType(RD);
@@ -3649,8 +3664,11 @@ bool Sema::FindDeallocationFunction(SourceLocation StartLoc, CXXRecordDecl *RD,
   // Try to find operator delete/operator delete[] in class scope.
   LookupQualifiedName(Found, RD);
 
-  if (Found.isAmbiguous())
+  if (Found.isAmbiguous()) {
+    if (!Diagnose)
+      Found.suppressDiagnostics();
     return true;
+  }
 
   Found.suppressDiagnostics();
 
@@ -4052,7 +4070,7 @@ Sema::ActOnCXXDelete(SourceLocation StartLoc, bool UseGlobal,
       return Diag(Ex.get()->getBeginLoc(),
                   diag::err_address_space_qualified_delete)
              << Pointee.getUnqualifiedType()
-             << Pointee.getQualifiers().getAddressSpaceAttributePrintValue();
+             << Qualifiers::getAddrSpaceAsString(Pointee.getAddressSpace());
 
     CXXRecordDecl *PointeeRD = nullptr;
     if (Pointee->isVoidType() && !isSFINAEContext()) {
@@ -4669,20 +4687,55 @@ Sema::PerformImplicitConversion(Expr *From, QualType ToType,
   return From;
 }
 
-// adjustVectorType - Compute the intermediate cast type casting elements of the
-// from type to the elements of the to type without resizing the vector.
-static QualType adjustVectorType(ASTContext &Context, QualType FromTy,
-                                 QualType ToType, QualType *ElTy = nullptr) {
+// adjustVectorOrConstantMatrixType - Compute the intermediate cast type casting
+// elements of the from type to the elements of the to type without resizing the
+// vector or matrix.
+static QualType adjustVectorOrConstantMatrixType(ASTContext &Context,
+                                                 QualType FromTy,
+                                                 QualType ToType,
+                                                 QualType *ElTy = nullptr) {
   QualType ElType = ToType;
   if (auto *ToVec = ToType->getAs<VectorType>())
     ElType = ToVec->getElementType();
+  else if (auto *ToMat = ToType->getAs<ConstantMatrixType>())
+    ElType = ToMat->getElementType();
 
   if (ElTy)
     *ElTy = ElType;
-  if (!FromTy->isVectorType())
-    return ElType;
-  auto *FromVec = FromTy->castAs<VectorType>();
-  return Context.getExtVectorType(ElType, FromVec->getNumElements());
+  if (FromTy->isVectorType()) {
+    auto *FromVec = FromTy->castAs<VectorType>();
+    return Context.getExtVectorType(ElType, FromVec->getNumElements());
+  }
+  if (FromTy->isConstantMatrixType()) {
+    auto *FromMat = FromTy->castAs<ConstantMatrixType>();
+    return Context.getConstantMatrixType(ElType, FromMat->getNumRows(),
+                                         FromMat->getNumColumns());
+  }
+  return ElType;
+}
+
+/// Check if an integral conversion involves incompatible overflow behavior
+/// types. Returns true if the conversion is invalid.
+static bool checkIncompatibleOBTConversion(Sema &S, QualType FromType,
+                                           QualType ToType, Expr *From) {
+  const auto *FromOBT = FromType->getAs<OverflowBehaviorType>();
+  const auto *ToOBT = ToType->getAs<OverflowBehaviorType>();
+
+  if (FromOBT && ToOBT &&
+      FromOBT->getBehaviorKind() != ToOBT->getBehaviorKind()) {
+    S.Diag(From->getExprLoc(), diag::err_incompatible_obt_kinds_assignment)
+        << ToType << FromType
+        << (ToOBT->getBehaviorKind() ==
+                    OverflowBehaviorType::OverflowBehaviorKind::Trap
+                ? "__ob_trap"
+                : "__ob_wrap")
+        << (FromOBT->getBehaviorKind() ==
+                    OverflowBehaviorType::OverflowBehaviorKind::Trap
+                ? "__ob_trap"
+                : "__ob_wrap");
+    return true;
+  }
+  return false;
 }
 
 ExprResult
@@ -4842,8 +4895,15 @@ Sema::PerformImplicitConversion(Expr *From, QualType ToType,
   case ICK_Integral_Conversion: {
     QualType ElTy = ToType;
     QualType StepTy = ToType;
-    if (FromType->isVectorType() || ToType->isVectorType())
-      StepTy = adjustVectorType(Context, FromType, ToType, &ElTy);
+    if (FromType->isVectorType() || ToType->isVectorType() ||
+        FromType->isConstantMatrixType() || ToType->isConstantMatrixType())
+      StepTy =
+          adjustVectorOrConstantMatrixType(Context, FromType, ToType, &ElTy);
+
+    // Check for incompatible OBT kinds before converting
+    if (checkIncompatibleOBTConversion(*this, FromType, StepTy, From))
+      return ExprError();
+
     if (ElTy->isBooleanType()) {
       assert(FromType->castAsEnumDecl()->isFixed() &&
              SCS.Second == ICK_Integral_Promotion &&
@@ -4862,8 +4922,9 @@ Sema::PerformImplicitConversion(Expr *From, QualType ToType,
   case ICK_Floating_Promotion:
   case ICK_Floating_Conversion: {
     QualType StepTy = ToType;
-    if (FromType->isVectorType() || ToType->isVectorType())
-      StepTy = adjustVectorType(Context, FromType, ToType);
+    if (FromType->isVectorType() || ToType->isVectorType() ||
+        FromType->isConstantMatrixType() || ToType->isConstantMatrixType())
+      StepTy = adjustVectorOrConstantMatrixType(Context, FromType, ToType);
     From = ImpCastExprToType(From, StepTy, CK_FloatingCast, VK_PRValue,
                              /*BasePath=*/nullptr, CCK)
                .get();
@@ -4894,8 +4955,10 @@ Sema::PerformImplicitConversion(Expr *From, QualType ToType,
   case ICK_Floating_Integral: {
     QualType ElTy = ToType;
     QualType StepTy = ToType;
-    if (FromType->isVectorType() || ToType->isVectorType())
-      StepTy = adjustVectorType(Context, FromType, ToType, &ElTy);
+    if (FromType->isVectorType() || ToType->isVectorType() ||
+        FromType->isConstantMatrixType() || ToType->isConstantMatrixType())
+      StepTy =
+          adjustVectorOrConstantMatrixType(Context, FromType, ToType, &ElTy);
     if (ElTy->isRealFloatingType())
       From = ImpCastExprToType(From, StepTy, CK_IntegralToFloating, VK_PRValue,
                                /*BasePath=*/nullptr, CCK)
@@ -5049,9 +5112,13 @@ Sema::PerformImplicitConversion(Expr *From, QualType ToType,
     QualType StepTy = ToType;
     if (FromType->isVectorType())
       ElTy = FromType->castAs<VectorType>()->getElementType();
-    if (getLangOpts().HLSL &&
-        (FromType->isVectorType() || ToType->isVectorType()))
-      StepTy = adjustVectorType(Context, FromType, ToType);
+    else if (FromType->isConstantMatrixType())
+      ElTy = FromType->castAs<ConstantMatrixType>()->getElementType();
+    if (getLangOpts().HLSL) {
+      if (FromType->isVectorType() || ToType->isVectorType() ||
+          FromType->isConstantMatrixType() || ToType->isConstantMatrixType())
+        StepTy = adjustVectorOrConstantMatrixType(Context, FromType, ToType);
+    }
 
     From = ImpCastExprToType(From, StepTy, ScalarTypeToBooleanCastKind(ElTy),
                              VK_PRValue,
@@ -5198,6 +5265,7 @@ Sema::PerformImplicitConversion(Expr *From, QualType ToType,
   case ICK_HLSL_Vector_Truncation:
   case ICK_HLSL_Matrix_Truncation:
   case ICK_HLSL_Vector_Splat:
+  case ICK_HLSL_Matrix_Splat:
     llvm_unreachable("Improper second standard conversion");
   }
 
@@ -5215,6 +5283,15 @@ Sema::PerformImplicitConversion(Expr *From, QualType ToType,
       From = ImpCastExprToType(Elem, ToType, CK_VectorSplat, VK_PRValue,
                                /*BasePath=*/nullptr, CCK)
                  .get();
+      break;
+    }
+    case ICK_HLSL_Matrix_Splat: {
+      // Matrix splat from any arithmetic type to a matrix.
+      Expr *Elem = prepareMatrixSplat(ToType, From).get();
+      From =
+          ImpCastExprToType(Elem, ToType, CK_HLSLAggregateSplatCast, VK_PRValue,
+                            /*BasePath=*/nullptr, CCK)
+              .get();
       break;
     }
     case ICK_HLSL_Vector_Truncation: {
@@ -5689,8 +5766,10 @@ QualType Sema::CheckVectorConditionalTypes(ExprResult &Cond, ExprResult &LHS,
   QualType LHSType = LHS.get()->getType();
   QualType RHSType = RHS.get()->getType();
 
-  bool LHSIsVector = LHSType->isVectorType() || LHSType->isSizelessVectorType();
-  bool RHSIsVector = RHSType->isVectorType() || RHSType->isSizelessVectorType();
+  bool LHSSizelessVector = LHSType->isSizelessVectorType();
+  bool RHSSizelessVector = RHSType->isSizelessVectorType();
+  bool LHSIsVector = LHSType->isVectorType() || LHSSizelessVector;
+  bool RHSIsVector = RHSType->isVectorType() || RHSSizelessVector;
 
   auto GetVectorInfo =
       [&](QualType Type) -> std::pair<QualType, llvm::ElementCount> {
@@ -5708,7 +5787,7 @@ QualType Sema::CheckVectorConditionalTypes(ExprResult &Cond, ExprResult &LHS,
   if (LHSIsVector && RHSIsVector) {
     if (CondType->isExtVectorType() != LHSType->isExtVectorType()) {
       Diag(QuestionLoc, diag::err_conditional_vector_cond_result_mismatch)
-          << /*isExtVector*/ CondType->isExtVectorType();
+          << /*isExtVectorNotSizeless=*/1;
       return {};
     }
 
@@ -5720,7 +5799,13 @@ QualType Sema::CheckVectorConditionalTypes(ExprResult &Cond, ExprResult &LHS,
     }
     ResultType = Context.getCommonSugaredType(LHSType, RHSType);
   } else if (LHSIsVector || RHSIsVector) {
-    if (CondType->isSizelessVectorType())
+    bool ResultSizeless = LHSSizelessVector || RHSSizelessVector;
+    if (ResultSizeless != CondType->isSizelessVectorType()) {
+      Diag(QuestionLoc, diag::err_conditional_vector_cond_result_mismatch)
+          << /*isExtVectorNotSizeless=*/0;
+      return {};
+    }
+    if (ResultSizeless)
       ResultType = CheckSizelessVectorOperands(LHS, RHS, QuestionLoc,
                                                /*IsCompAssign*/ false,
                                                ArithConvKind::Conditional);
@@ -7933,7 +8018,9 @@ concepts::Requirement *Sema::ActOnNestedRequirement(Expr *Constraint) {
 concepts::NestedRequirement *
 Sema::BuildNestedRequirement(Expr *Constraint) {
   ConstraintSatisfaction Satisfaction;
+  LocalInstantiationScope Scope(*this);
   if (!Constraint->isInstantiationDependent() &&
+      !Constraint->isValueDependent() &&
       CheckConstraintSatisfaction(nullptr, AssociatedConstraint(Constraint),
                                   /*TemplateArgs=*/{},
                                   Constraint->getSourceRange(), Satisfaction))

@@ -8,7 +8,6 @@
 
 #include "../ClangTidy.h"
 #include "../ClangTidyModule.h"
-#include "../ClangTidyModuleRegistry.h"
 #include "ArgumentCommentCheck.h"
 #include "AssertSideEffectCheck.h"
 #include "AssignmentInIfConditionCheck.h"
@@ -107,6 +106,7 @@
 #include "UnintendedCharOstreamOutputCheck.h"
 #include "UniquePtrArrayMismatchCheck.h"
 #include "UnsafeFunctionsCheck.h"
+#include "UnsafeToAllowExceptionsCheck.h"
 #include "UnusedLocalNonTrivialVariableCheck.h"
 #include "UnusedRaiiCheck.h"
 #include "UnusedReturnValueCheck.h"
@@ -115,6 +115,7 @@
 
 namespace clang::tidy {
 namespace bugprone {
+namespace {
 
 class BugproneModule : public ClangTidyModule {
 public:
@@ -308,6 +309,8 @@ public:
         "bugprone-crtp-constructor-accessibility");
     CheckFactories.registerCheck<UnsafeFunctionsCheck>(
         "bugprone-unsafe-functions");
+    CheckFactories.registerCheck<UnsafeToAllowExceptionsCheck>(
+        "bugprone-unsafe-to-allow-exceptions");
     CheckFactories.registerCheck<UnusedLocalNonTrivialVariableCheck>(
         "bugprone-unused-local-non-trivial-variable");
     CheckFactories.registerCheck<UnusedRaiiCheck>("bugprone-unused-raii");
@@ -319,6 +322,7 @@ public:
   }
 };
 
+} // namespace
 } // namespace bugprone
 
 // Register the BugproneTidyModule using this statically initialized variable.

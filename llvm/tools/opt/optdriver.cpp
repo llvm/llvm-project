@@ -39,7 +39,7 @@
 #include "llvm/LinkAllPasses.h"
 #include "llvm/MC/MCTargetOptionsCommandFlags.h"
 #include "llvm/MC/TargetRegistry.h"
-#include "llvm/Passes/PassPlugin.h"
+#include "llvm/Plugins/PassPlugin.h"
 #include "llvm/Remarks/HotnessThresholdParser.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/ErrorHandling.h"
@@ -72,13 +72,6 @@ static codegen::RegisterSaveStatsFlag SSF;
 // PassNameParser.
 static cl::list<const PassInfo *, bool, PassNameParser> PassList(cl::desc(
     "Optimizations available (use \"-passes=\" for the new pass manager)"));
-
-static cl::opt<bool> EnableLegacyPassManager(
-    "bugpoint-enable-legacy-pm",
-    cl::desc(
-        "Enable the legacy pass manager. This is strictly for bugpoint "
-        "due to it not working with the new PM, please do not use otherwise."),
-    cl::init(false));
 
 // This flag specifies a textual description of the optimization pass pipeline
 // to run over the module. This flag switches opt to use the new pass manager
@@ -375,11 +368,10 @@ static bool shouldPinPassToLegacyPM(StringRef Pass) {
       "view-regions",
       "view-regions-only",
       "select-optimize",
-      "expand-large-div-rem",
       "structurizecfg",
       "fix-irreducible",
-      "expand-fp",
-      "callbrprepare",
+      "expand-ir-insts",
+      "inline-asm-prepare",
       "scalarizer",
   };
   for (StringLiteral P : PassNamePrefix)
@@ -429,12 +421,11 @@ optMain(int argc, char **argv,
   initializeTarget(Registry);
   // For codegen passes, only passes that do IR to IR transformation are
   // supported.
-  initializeExpandLargeDivRemLegacyPassPass(Registry);
-  initializeExpandFpLegacyPassPass(Registry);
+  initializeExpandIRInstsLegacyPassPass(Registry);
   initializeExpandMemCmpLegacyPassPass(Registry);
   initializeScalarizeMaskedMemIntrinLegacyPassPass(Registry);
   initializeSelectOptimizePass(Registry);
-  initializeCallBrPreparePass(Registry);
+  initializeInlineAsmPreparePass(Registry);
   initializeCodeGenPrepareLegacyPassPass(Registry);
   initializeAtomicExpandLegacyPass(Registry);
   initializeWinEHPreparePass(Registry);
@@ -471,8 +462,8 @@ optMain(int argc, char **argv,
   LLVMContext Context;
 
   // TODO: remove shouldForceLegacyPM().
-  const bool UseNPM = (!EnableLegacyPassManager && !shouldForceLegacyPM()) ||
-                      PassPipeline.getNumOccurrences() > 0;
+  const bool UseNPM =
+      !shouldForceLegacyPM() || PassPipeline.getNumOccurrences() > 0;
 
   if (UseNPM && !PassList.empty()) {
     errs() << "The `opt -passname` syntax for the new pass manager is "
@@ -657,6 +648,13 @@ optMain(int argc, char **argv,
     return 1;
   }
 
+  TargetOptions CodeGenFlagsOptions;
+  const TargetOptions *Options = TM ? &TM->Options : &CodeGenFlagsOptions;
+  if (!TM) {
+    CodeGenFlagsOptions =
+        codegen::InitTargetOptionsFromCodeGenFlags(ModuleTriple);
+  }
+
   // Override function attributes based on CPUStr, FeaturesStr, and command line
   // flags.
   codegen::setFunctionAttributes(CPUStr, FeaturesStr, *M);
@@ -674,13 +672,8 @@ optMain(int argc, char **argv,
       M->addModuleFlag(Module::Error, "UnifiedLTO", 1);
   }
 
-  VectorLibrary VecLib = codegen::getVectorLibrary();
   // Add an appropriate TargetLibraryInfo pass for the module's triple.
-  TargetLibraryInfoImpl TLII(ModuleTriple, VecLib);
-
-  RTLIB::RuntimeLibcallsInfo RTLCI(ModuleTriple, codegen::getExceptionModel(),
-                                   codegen::getFloatABIForCalls(),
-                                   codegen::getEABIVersion(), ABIName, VecLib);
+  TargetLibraryInfoImpl TLII(ModuleTriple, Options->VecLib);
 
   // The -disable-simplify-libcalls flag actually disables all builtin optzns.
   if (DisableSimplifyLibCalls)
@@ -756,7 +749,7 @@ optMain(int argc, char **argv,
     // string. Hand off the rest of the functionality to the new code for that
     // layer.
     if (!runPassPipeline(
-            argv[0], *M, TM.get(), &TLII, RTLCI, Out.get(), ThinLinkOut.get(),
+            argv[0], *M, TM.get(), &TLII, Out.get(), ThinLinkOut.get(),
             RemarksFile.get(), Pipeline, PluginList, PassBuilderCallbacks, OK,
             VK, /* ShouldPreserveAssemblyUseListOrder */ false,
             /* ShouldPreserveBitcodeUseListOrder */ true, EmitSummaryIndex,
@@ -804,6 +797,9 @@ optMain(int argc, char **argv,
       (VerifyDebugInfoPreserve && !VerifyEachDebugInfoPreserve);
 
   Passes.add(new TargetLibraryInfoWrapperPass(TLII));
+  Passes.add(new RuntimeLibraryInfoWrapper(
+      ModuleTriple, Options->ExceptionModel, Options->FloatABIType,
+      Options->EABIVersion, Options->MCOptions.ABIName, Options->VecLib));
 
   // Add internal analysis passes from the target machine.
   Passes.add(createTargetTransformInfoWrapperPass(TM ? TM->getTargetIRAnalysis()

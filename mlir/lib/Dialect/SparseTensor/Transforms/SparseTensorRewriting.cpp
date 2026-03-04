@@ -39,11 +39,6 @@ using namespace mlir::sparse_tensor;
 // Helper methods for the actual rewriting rules.
 //===---------------------------------------------------------------------===//
 
-// Helper method to match any typed zero.
-static bool isZeroValue(Value val) {
-  return matchPattern(val, m_Zero()) || matchPattern(val, m_AnyZeroFloat());
-}
-
 // Helper to detect a sparse tensor type operand.
 static bool isSparseTensor(Value v) {
   auto enc = getSparseTensorEncoding(v.getType());
@@ -59,14 +54,14 @@ static bool isMaterializing(OpOperand *op, bool isZero) {
   if (auto alloc = val.getDefiningOp<AllocTensorOp>()) {
     Value copy = alloc.getCopy();
     if (isZero)
-      return copy && isZeroValue(copy);
+      return copy && isZeroIntegerOrFloat(copy);
     return !copy;
   }
   // Check for empty tensor materialization.
   if (auto empty = val.getDefiningOp<tensor::EmptyOp>())
     return !isZero;
   // Last resort for zero alloc: the whole value is zero.
-  return isZero && isZeroValue(val);
+  return isZero && isZeroIntegerOrFloat(val);
 }
 
 // Helper to detect sampling operation.
@@ -114,10 +109,10 @@ static bool isZeroYield(GenericOp op) {
   auto yieldOp = cast<linalg::YieldOp>(op.getRegion().front().getTerminator());
   if (auto arg = dyn_cast<BlockArgument>(yieldOp.getOperand(0))) {
     if (arg.getOwner()->getParentOp() == op) {
-      return isZeroValue(op->getOperand(arg.getArgNumber()));
+      return isZeroIntegerOrFloat(op->getOperand(arg.getArgNumber()));
     }
   }
-  return isZeroValue(yieldOp.getOperand(0));
+  return isZeroIntegerOrFloat(yieldOp.getOperand(0));
 }
 
 /// Populates given sizes array from type (for static sizes) and from
@@ -1385,6 +1380,46 @@ public:
 
     // Otherwise, use loop emitter to generate loops.
     const auto enc = stt.getEncoding();
+
+    // Special-case: rank-0 tensors have no dimensions to loop over.
+    // The LoopEmitter (getValPosits) requires at least one loop level, so
+    // handle scalar tensors separately.
+    if (lvlRank == 0) {
+      // Sparse rank-0 tensors are not yet supported.
+      if (enc)
+        return rewriter.notifyMatchFailure(
+            op, "foreach over rank-0 sparse tensors is not supported");
+      // Dense rank-0 tensor: bufferize and load the single element once,
+      // then inline the body without any surrounding loop.
+      LoopEmitter loopEmitter(
+          ValueRange{input},
+          StringAttr::get(getContext(), ForeachOp::getOperationName()));
+      loopEmitter.initializeLoopEmit(rewriter, loc);
+      Value vals = loopEmitter.getValBuffer()[0];
+      Value val = memref::LoadOp::create(rewriter, loc, vals, ValueRange{});
+      // Rank-0 has no coordinates; body args = [value, reductions...].
+      SmallVector<Value> args = {val};
+      args.append(reduc);
+      Block *srcBlock = op.getBody();
+      Operation *terminator = srcBlock->getTerminator();
+      SmallVector<Value> reducValue(terminator->getOperands());
+      // Remap any block-arg entries in reducValue to their post-inline values
+      // before the terminator is erased and the block is inlined, because
+      // inlineBlockBefore() will detach the block args.
+      for (Value &v : reducValue)
+        if (auto ba = dyn_cast<BlockArgument>(v))
+          if (ba.getOwner() == srcBlock)
+            v = args[ba.getArgNumber()];
+      rewriter.eraseOp(terminator);
+      Operation &last = rewriter.getBlock()->back();
+      if (llvm::isa<scf::YieldOp>(last))
+        rewriter.setInsertionPoint(&last);
+      rewriter.inlineBlockBefore(srcBlock, rewriter.getBlock(),
+                                 rewriter.getInsertionPoint(), args);
+      rewriter.setInsertionPointToEnd(rewriter.getBlock());
+      rewriter.replaceOp(op, reducValue);
+      return success();
+    }
 
     // 1. Generates loop for the sparse input.
     LoopEmitter loopEmitter(

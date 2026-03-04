@@ -16,10 +16,10 @@ __attribute__((noinline)) FULL_TYPE foo(FULL_TYPE a, FULL_TYPE b) {
 int main(int argc, char *argv[]) {
   FULL_TYPE a = 1;
   FULL_TYPE b = 10;
-  dfsan_set_label(4, (HALF_TYPE *)&a, sizeof(HALF_TYPE));
+  dfsan_set_label(4, (HALF_TYPE *)&a + 1, sizeof(HALF_TYPE));
   FULL_TYPE c = foo(a, b);
   dfsan_print_origin_trace(&c, NULL);
-  dfsan_print_origin_trace((HALF_TYPE *)&c, NULL);
+  dfsan_print_origin_trace((HALF_TYPE *)&c + 1, NULL);
 }
 
 // CHECK: Taint value 0x4 {{.*}} origin tracking ()

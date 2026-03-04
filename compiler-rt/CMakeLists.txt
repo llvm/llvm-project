@@ -290,6 +290,9 @@ option(SANITIZER_USE_STATIC_TEST_CXX
   "Use static libc++ for tests." ${DEFAULT_SANITIZER_USE_STATIC_TEST_CXX})
 pythonize_bool(SANITIZER_USE_STATIC_TEST_CXX)
 
+option(SANITIZER_AARCH64_39BIT_VA
+  "Configure sanitizers for 39-bit VA kernel." OFF)
+
 set(COMPILER_RT_SUPPORTED_CXX_LIBRARIES none default libcxx)
 set(COMPILER_RT_CXX_LIBRARY "default" CACHE STRING "Specify C++ library to use. Supported values are ${COMPILER_RT_SUPPORTED_CXX_LIBRARIES}.")
 if (NOT "${COMPILER_RT_CXX_LIBRARY}" IN_LIST COMPILER_RT_SUPPORTED_CXX_LIBRARIES)
@@ -308,6 +311,8 @@ option(COMPILER_RT_USE_BUILTINS_LIBRARY
   "Use compiler-rt builtins instead of libgcc" ${DEFAULT_COMPILER_RT_USE_BUILTINS_LIBRARY})
 
 option(COMPILER_RT_USE_ATOMIC_LIBRARY "Use compiler-rt atomic instead of libatomic" OFF)
+
+option(COMPILER_RT_PROFILE_BAREMETAL "Build minimal baremetal profile library" OFF)
 
 include(config-ix)
 
@@ -557,6 +562,10 @@ if("${COMPILER_RT_DEFAULT_TARGET_ARCH}" MATCHES "sparc")
   list(APPEND SANITIZER_COMMON_LINK_LIBS -Wl,--as-needed atomic -Wl,--no-as-needed)
 endif()
 
+if("${COMPILER_RT_DEFAULT_TARGET_ARCH}" MATCHES "mips")
+  list(APPEND SANITIZER_COMMON_LINK_LIBS atomic)
+endif()
+
 if (COMPILER_RT_USE_BUILTINS_LIBRARY)
   string(REPLACE "-Wl,-z,defs" "" CMAKE_SHARED_LINKER_FLAGS "${CMAKE_SHARED_LINKER_FLAGS}")
 else()
@@ -598,8 +607,8 @@ append_list_if(COMPILER_RT_HAS_NOSTDINCXX_FLAG -nostdinc++ SANITIZER_COMMON_CFLA
 append_list_if(COMPILER_RT_HAS_NOSTDLIBXX_FLAG -nostdlib++ SANITIZER_COMMON_LINK_FLAGS)
 
 # Remove -stdlib= which is unused when passing -nostdinc++...
-string(REGEX MATCHALL "-stdlib=[a-zA-Z+]*" stdlib_flag "${CMAKE_CXX_FLAGS}")
-string(REGEX REPLACE "-stdlib=[a-zA-Z+]*" "" CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS}")
+string(REGEX MATCHALL "-?-stdlib=[a-zA-Z+]*" stdlib_flag "${CMAKE_CXX_FLAGS}")
+string(REGEX REPLACE "-?-stdlib=[a-zA-Z+]*" "" CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS}")
 
 # ...we need it to build some runtimes and tests so readd it where appropriate.
 list(APPEND COMPILER_RT_COMMON_CFLAGS ${stdlib_flag})
@@ -845,6 +854,10 @@ mark_as_advanced(SANITIZER_DISABLE_SYMBOLIZER_PATH_SEARCH)
 
 if (SANITIZER_DISABLE_SYMBOLIZER_PATH_SEARCH)
   add_compile_definitions(SANITIZER_DISABLE_SYMBOLIZER_PATH_SEARCH)
+endif()
+
+if (SANITIZER_AARCH64_39BIT_VA)
+  add_compile_definitions(SANITIZER_AARCH64_39BIT_VA)
 endif()
 
 add_subdirectory(lib)

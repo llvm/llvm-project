@@ -99,6 +99,12 @@ void UnusedUsingDeclsCheck::check(const MatchFinder::MatchResult &Result) {
     if (isa<FunctionDecl>(Using->getDeclContext()))
       return;
 
+    // Ignore exported using-decls.
+    if (Using->hasOwningModule() &&
+        Using->getModuleOwnershipKind() <=
+            Decl::ModuleOwnershipKind::VisibleWhenImported)
+      return;
+
     UsingDeclContext Context(Using);
     Context.UsingDeclRange = CharSourceRange::getCharRange(
         Using->getBeginLoc(),
@@ -161,9 +167,8 @@ void UnusedUsingDeclsCheck::check(const MatchFinder::MatchResult &Result) {
       return;
     }
 
-    if (Used->getKind() == TemplateArgument::Declaration) {
+    if (Used->getKind() == TemplateArgument::Declaration)
       RemoveNamedDecl(Used->getAsDecl());
-    }
     return;
   }
 
@@ -173,10 +178,9 @@ void UnusedUsingDeclsCheck::check(const MatchFinder::MatchResult &Result) {
   }
   // Check the uninstantiated template function usage.
   if (const auto *ULE = Result.Nodes.getNodeAs<UnresolvedLookupExpr>("used")) {
-    for (const NamedDecl *ND : ULE->decls()) {
+    for (const NamedDecl *ND : ULE->decls())
       if (const auto *USD = dyn_cast<UsingShadowDecl>(ND))
         removeFromFoundDecls(USD->getTargetDecl()->getCanonicalDecl());
-    }
     return;
   }
   // Check user-defined literals

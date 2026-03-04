@@ -304,10 +304,8 @@ define <4 x i32> @sqdmulh_4s(ptr %A, ptr %B) nounwind {
 define i32 @sqdmulh_1s(ptr %A, ptr %B) nounwind {
 ; CHECK-LABEL: sqdmulh_1s:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    ldr w8, [x0]
-; CHECK-NEXT:    ldr w9, [x1]
-; CHECK-NEXT:    fmov s0, w8
-; CHECK-NEXT:    fmov s1, w9
+; CHECK-NEXT:    ldr s0, [x0]
+; CHECK-NEXT:    ldr s1, [x1]
 ; CHECK-NEXT:    sqdmulh s0, s0, s1
 ; CHECK-NEXT:    fmov w0, s0
 ; CHECK-NEXT:    ret
@@ -376,23 +374,13 @@ define <4 x i32> @sqrdmulh_4s(ptr %A, ptr %B) nounwind {
 }
 
 define i32 @sqrdmulh_1s(ptr %A, ptr %B) nounwind {
-; CHECK-SD-LABEL: sqrdmulh_1s:
-; CHECK-SD:       // %bb.0:
-; CHECK-SD-NEXT:    ldr w8, [x0]
-; CHECK-SD-NEXT:    ldr w9, [x1]
-; CHECK-SD-NEXT:    fmov s0, w8
-; CHECK-SD-NEXT:    fmov s1, w9
-; CHECK-SD-NEXT:    sqrdmulh s0, s0, s1
-; CHECK-SD-NEXT:    fmov w0, s0
-; CHECK-SD-NEXT:    ret
-;
-; CHECK-GI-LABEL: sqrdmulh_1s:
-; CHECK-GI:       // %bb.0:
-; CHECK-GI-NEXT:    ldr s0, [x0]
-; CHECK-GI-NEXT:    ldr s1, [x1]
-; CHECK-GI-NEXT:    sqrdmulh s0, s0, s1
-; CHECK-GI-NEXT:    fmov w0, s0
-; CHECK-GI-NEXT:    ret
+; CHECK-LABEL: sqrdmulh_1s:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    ldr s0, [x0]
+; CHECK-NEXT:    ldr s1, [x1]
+; CHECK-NEXT:    sqrdmulh s0, s0, s1
+; CHECK-NEXT:    fmov w0, s0
+; CHECK-NEXT:    ret
   %tmp1 = load i32, ptr %A
   %tmp2 = load i32, ptr %B
   %tmp3 = call i32 @llvm.aarch64.neon.sqrdmulh.i32(i32 %tmp1, i32 %tmp2)

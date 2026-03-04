@@ -153,6 +153,10 @@ private:
     /// register allocator.
     bool isStatepointSpillSlot = false;
 
+    /// If true, this stack slot is used for spilling a callee saved register
+    /// in the calling convention of the containing function.
+    bool isCalleeSaved = false;
+
     /// Identifier for stack memory type analagous to address space. If this is
     /// non-0, the meaning is target defined. Offsets cannot be directly
     /// compared between objects with different stack IDs. The object may not
@@ -760,6 +764,18 @@ public:
     assert(unsigned(ObjectIdx+NumFixedObjects) < Objects.size() &&
            "Invalid Object Idx!");
     return Objects[ObjectIdx+NumFixedObjects].isStatepointSpillSlot;
+  }
+
+  bool isCalleeSavedObjectIndex(int ObjectIdx) const {
+    assert(unsigned(ObjectIdx + NumFixedObjects) < Objects.size() &&
+           "Invalid Object Idx!");
+    return Objects[ObjectIdx + NumFixedObjects].isCalleeSaved;
+  }
+
+  void setIsCalleeSavedObjectIndex(int ObjectIdx, bool IsCalleeSaved) {
+    assert(unsigned(ObjectIdx + NumFixedObjects) < Objects.size() &&
+           "Invalid Object Idx!");
+    Objects[ObjectIdx + NumFixedObjects].isCalleeSaved = IsCalleeSaved;
   }
 
   /// \see StackID

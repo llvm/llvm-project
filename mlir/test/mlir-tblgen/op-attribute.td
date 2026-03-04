@@ -469,7 +469,6 @@ def EOp : NS_Op<"e_op", []> {
 // DECL-LABEL: EOp declarations
 // DECL: static void build({{.*}}, uint32_t i32_attr, uint32_t dv_i32_attr, ::llvm::APFloat f64_attr, ::llvm::APFloat dv_f64_attr, ::llvm::StringRef str_attr, ::llvm::StringRef dv_str_attr, bool bool_attr, bool dv_bool_attr, ::SomeI32Enum enum_attr, ::SomeI32Enum dv_enum_attr = ::SomeI32Enum::case5)
 
-
 // Test proper namespacing for AttrDef
 // ---
 
