@@ -1712,18 +1712,24 @@ RISCVTTIImpl::getIntrinsicInstrCost(const IntrinsicCostAttributes &ICA,
     if (!ValLT.first.isValid() || !MaskLT.first.isValid())
       return InstructionCost::getInvalid();
 
-    // TODO: Return free when the entire lane is inactive.
+    // TODO: Return cheaper cost when the entire lane is inactive.
     // The expected asm sequence is:
+    // vcpop.m a0, v0
+    // beqz a0, exit # Return passthru when the entire lane is inactive.
     // vid v10, v0.t
     // vredmaxu.vs v10, v10, v10
     // vmv.x.s a0, v10
     // zext.b a0, a0
     // vslidedown v8, v8, a0
     // vmv.x.s a0, v8
+    // exit:
+    //   ...
     unsigned Opcodes[] = {RISCV::VID_V, RISCV::VREDMAXU_VS, RISCV::VMV_X_S,
                           RISCV::VSLIDEDOWN_VI, RISCV::VMV_X_S};
-    return ValLT.first *
-           getRISCVInstructionCost(Opcodes, ValLT.second, CostKind);
+    return MaskLT.first * getRISCVInstructionCost(RISCV::VCPOP_M, MaskLT.second,
+                                                  CostKind) +
+           ValLT.first *
+               getRISCVInstructionCost(Opcodes, ValLT.second, CostKind);
   }
   }
 
