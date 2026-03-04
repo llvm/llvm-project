@@ -4493,12 +4493,13 @@ ExprResult Sema::SubstConceptTemplateArguments(
       if (auto *TTP = dyn_cast<TemplateTemplateParmDecl>(D)) {
         unsigned Depth = TTP->getDepth();
         unsigned Pos = TTP->getPosition();
-        assert(Depth < MLTAL.getNumLevels() &&
-               MLTAL.hasTemplateArgument(Depth, Pos));
-        TemplateArgument Arg = MLTAL(Depth, Pos);
-        assert(Arg.getKind() == TemplateArgument::Template);
-        ResolvedConcept = dyn_cast<ConceptDecl>(
-            Arg.getAsTemplate().getAsTemplateDecl());
+        if (Depth < MLTAL.getNumLevels() &&
+            MLTAL.hasTemplateArgument(Depth, Pos)) {
+          TemplateArgument Arg = MLTAL(Depth, Pos);
+          assert(Arg.getKind() == TemplateArgument::Template);
+          ResolvedConcept = dyn_cast<ConceptDecl>(
+              Arg.getAsTemplate().getAsTemplateDecl());
+        }
         if (ResolvedConcept == nullptr)
           return E;
       } else
