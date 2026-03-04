@@ -68,7 +68,7 @@ void populateVectorOuterProductLoweringPatterns(RewritePatternSet &patterns,
 /// operations.
 void populateVectorMultiReductionReorderPatterns(
     RewritePatternSet &patterns, VectorMultiReductionLowering options,
-    PatternBenefit benefit = 2);
+    PatternBenefit benefit = 1);
 
 /// Populate the pattern set with the following patterns:
 ///
