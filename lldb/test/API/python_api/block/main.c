@@ -1,10 +1,6 @@
 #include <stdio.h>
 
-#ifdef _WIN32
-__declspec(dllimport) int fn(int a, int b);
-#else
-extern int fn(int a, int b);
-#endif
+extern LLDB_DYLIB_IMPORT int fn(int a, int b);
 
 int main(int argc, char const *argv[]) {
   int a = 3;
