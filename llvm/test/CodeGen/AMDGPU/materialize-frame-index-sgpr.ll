@@ -799,7 +799,7 @@ define void @scalar_mov_materializes_frame_index_no_live_scc_no_live_sgprs() #0 
 ; GFX942-GCNTRACKERS-NEXT:    s_add_i32 s0, s32, 64
 ; GFX942-GCNTRACKERS-NEXT:    v_writelane_b32 v23, s54, 15
 ; GFX942-GCNTRACKERS-NEXT:    v_mov_b32_e32 v0, s0
-; GFX942-GCNTRACKERS-NEXT:    s_and_b64 s[0:1], 0, exec
+; GFX942-GCNTRACKERS-NEXT:    s_and_b64 s[60:61], 0, exec
 ; GFX942-GCNTRACKERS-NEXT:    v_writelane_b32 v23, s55, 16
 ; GFX942-GCNTRACKERS-NEXT:    ;;#ASMSTART
 ; GFX942-GCNTRACKERS-NEXT:    ; use alloca0 v0
@@ -1826,7 +1826,7 @@ define void @scalar_mov_materializes_frame_index_no_live_scc_no_live_sgprs__lowe
 ; GFX942-GCNTRACKERS-NEXT:    v_writelane_b32 v21, s52, 13
 ; GFX942-GCNTRACKERS-NEXT:    v_writelane_b32 v21, s53, 14
 ; GFX942-GCNTRACKERS-NEXT:    v_writelane_b32 v21, s54, 15
-; GFX942-GCNTRACKERS-NEXT:    s_and_b64 s[0:1], 0, exec
+; GFX942-GCNTRACKERS-NEXT:    s_and_b64 s[60:61], 0, exec
 ; GFX942-GCNTRACKERS-NEXT:    v_writelane_b32 v21, s55, 16
 ; GFX942-GCNTRACKERS-NEXT:    ;;#ASMSTART
 ; GFX942-GCNTRACKERS-NEXT:    ; def s[0:15], s[16:31], s[32:47], s[48:55], s[56:57], s58, v[0:15], v[16:20], vcc
@@ -2916,12 +2916,10 @@ define void @scalar_mov_materializes_frame_index_no_live_scc_no_live_sgprs_gep_i
 ; GFX942-GCNTRACKERS-NEXT:    v_writelane_b32 v22, s50, 11
 ; GFX942-GCNTRACKERS-NEXT:    v_writelane_b32 v22, s51, 12
 ; GFX942-GCNTRACKERS-NEXT:    v_writelane_b32 v22, s52, 13
-; GFX942-GCNTRACKERS-NEXT:    s_add_i32 s0, s32, 64
 ; GFX942-GCNTRACKERS-NEXT:    v_writelane_b32 v22, s53, 14
-; GFX942-GCNTRACKERS-NEXT:    s_add_i32 s58, s32, 0x4240
+; GFX942-GCNTRACKERS-NEXT:    s_add_i32 s0, s32, 64
 ; GFX942-GCNTRACKERS-NEXT:    v_writelane_b32 v22, s54, 15
 ; GFX942-GCNTRACKERS-NEXT:    v_mov_b32_e32 v0, s0
-; GFX942-GCNTRACKERS-NEXT:    s_and_b64 s[0:1], 0, exec
 ; GFX942-GCNTRACKERS-NEXT:    v_writelane_b32 v22, s55, 16
 ; GFX942-GCNTRACKERS-NEXT:    ;;#ASMSTART
 ; GFX942-GCNTRACKERS-NEXT:    ; use alloca0 v0
@@ -2929,7 +2927,9 @@ define void @scalar_mov_materializes_frame_index_no_live_scc_no_live_sgprs_gep_i
 ; GFX942-GCNTRACKERS-NEXT:    ;;#ASMSTART
 ; GFX942-GCNTRACKERS-NEXT:    ; def s[0:15], s[16:31], s[32:47], s[48:55], s[56:57], v[0:15], v[16:21], vcc
 ; GFX942-GCNTRACKERS-NEXT:    ;;#ASMEND
+; GFX942-GCNTRACKERS-NEXT:    s_add_i32 s58, s32, 0x4240
 ; GFX942-GCNTRACKERS-NEXT:    ; kill: def $sgpr48_sgpr49_sgpr50_sgpr51_sgpr52_sgpr53_sgpr54_sgpr55 killed $sgpr48_sgpr49_sgpr50_sgpr51_sgpr52_sgpr53_sgpr54_sgpr55 def $sgpr54
+; GFX942-GCNTRACKERS-NEXT:    s_and_b64 s[60:61], 0, exec
 ; GFX942-GCNTRACKERS-NEXT:    s_mov_b32 s54, s58
 ; GFX942-GCNTRACKERS-NEXT:    ;;#ASMSTART
 ; GFX942-GCNTRACKERS-NEXT:    ; use s[0:15], s[16:31], s[32:47], s[48:55], s[56:57], v[0:15], v[16:21], vcc, s54, scc
