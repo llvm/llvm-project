@@ -88,7 +88,7 @@ protected:
     for (auto File : llvm::zip(FileNames, Files)) {
       auto &Path = *std::get<1>(File);
       Path = BaseDir;
-      path::append(Path, std::get<0>(File));
+      path::append(Path, std::get<0>(File), "-%%%%%%");
       int FD;
       ASSERT_NO_ERROR(fs::createUniqueFile(Path, FD, Path));
       ::close(FD);
