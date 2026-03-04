@@ -1070,7 +1070,7 @@ xegpu::setupDpasLayout(xegpu::LayoutKind layoutKind, VectorType aTy,
     auto bLayout = getDefaultLaneLayout2DBlockIo(
         bTy, uArch, uArchInstruction->getPackedFormatBitSizeB(), true);
     auto cdLayout = getDefaultLaneLayout2DBlockIo(
-        cdTy, uArch, uArchInstruction->getPackedFormatBitSizeB());
+        cdTy, uArch /*, packingSize = std::nullopt */);
     return std::make_tuple(aLayout, bLayout, cdLayout);
   }
   return std::nullopt;
