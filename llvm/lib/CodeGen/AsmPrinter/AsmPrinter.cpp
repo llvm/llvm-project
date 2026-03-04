@@ -2021,9 +2021,11 @@ void AsmPrinter::handleCallsiteForCallgraph(
 /// BBID and callsite index.
 void AsmPrinter::emitPrefetchTargetSymbol(unsigned BaseID,
                                           unsigned CallsiteIndex) {
+  SmallString<128> FunctionName;
+  getNameWithPrefix(FunctionName, &MF->getFunction());
   MCSymbol *PrefetchTargetSymbol = OutContext.getOrCreateSymbol(
-      Twine("__llvm_prefetch_target_") + MF->getName() + Twine("_") +
-      Twine(BaseID) + Twine("_") + Twine(static_cast<unsigned>(CallsiteIndex)));
+      Twine("__llvm_prefetch_target_") + FunctionName + Twine("_") +
+      Twine(BaseID) + Twine("_") + Twine(CallsiteIndex));
   // If the function is weak-linkage it may be replaced by a strong
   // version, in which case the prefetch targets should also be replaced.
   OutStreamer->emitSymbolAttribute(
@@ -2034,18 +2036,18 @@ void AsmPrinter::emitPrefetchTargetSymbol(unsigned BaseID,
 
 /// Emit dangling prefetch targets that were not mapped to any basic block.
 void AsmPrinter::emitDanglingPrefetchTargets() {
-  const auto &MFPrefetchTargets = MF->getPrefetchTargets();
+  const DenseMap<UniqueBBID, SmallVector<unsigned>> &MFPrefetchTargets = MF->getPrefetchTargets();
   if (MFPrefetchTargets.empty())
     return;
   DenseSet<UniqueBBID> MFBBIDs;
-  for (auto &MBB : *MF)
-    if (auto BBID = MBB.getBBID())
+  for (const MachineBasicBlock &MBB : *MF)
+    if (std::optional<UniqueBBID> BBID = MBB.getBBID())
       MFBBIDs.insert(*BBID);
 
   for (const auto &[BBID, CallsiteIndexes] : MFPrefetchTargets) {
     if (MFBBIDs.contains(BBID))
       continue;
-    for (auto CallsiteIndex : CallsiteIndexes)
+    for (unsigned CallsiteIndex : CallsiteIndexes)
       emitPrefetchTargetSymbol(BBID.BaseID, CallsiteIndex);
   }
 }
