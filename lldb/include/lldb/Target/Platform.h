@@ -27,6 +27,7 @@
 #include "lldb/Utility/FileSpec.h"
 #include "lldb/Utility/StructuredData.h"
 #include "lldb/Utility/Timeout.h"
+#include "lldb/Utility/UnimplementedError.h"
 #include "lldb/Utility/UserIDResolver.h"
 #include "lldb/Utility/XcodeSDK.h"
 #include "lldb/lldb-private-forward.h"
@@ -453,9 +454,7 @@ public:
   ///          (e.g., a public and internal SDK).
   virtual llvm::Expected<std::pair<XcodeSDK, bool>>
   GetSDKPathFromDebugInfo(Module &module) {
-    return llvm::createStringError(
-        llvm::formatv("{0} not implemented for '{1}' platform.",
-                      LLVM_PRETTY_FUNCTION, GetName()));
+    return llvm::make_error<UnimplementedError>();
   }
 
   /// Returns the full path of the most appropriate SDK for the
@@ -478,11 +477,9 @@ public:
   ///
   /// \param[in] unit The CU
   ///
-  /// \returns A parsed XcodeSDK object if successful, an Error otherwise. 
+  /// \returns A parsed XcodeSDK object if successful, an Error otherwise.
   virtual llvm::Expected<XcodeSDK> GetSDKPathFromDebugInfo(CompileUnit &unit) {
-    return llvm::createStringError(
-        llvm::formatv("{0} not implemented for '{1}' platform.",
-                      LLVM_PRETTY_FUNCTION, GetName()));
+    return llvm::make_error<UnimplementedError>();
   }
 
   /// Returns the full path of the most appropriate SDK for the
