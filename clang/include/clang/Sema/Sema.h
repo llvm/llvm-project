@@ -2927,6 +2927,10 @@ public:
       CallExpr *TheCall, EltwiseBuiltinArgTyRestriction ArgTyRestr =
                              EltwiseBuiltinArgTyRestriction::None);
 
+  /// Check for source buffer overread in memory functions.
+  void checkSourceBufferOverread(FunctionDecl *FD, CallExpr *TheCall,
+                                 unsigned SrcArgIdx, unsigned SizeArgIdx);
+
 private:
   void CheckArrayAccess(const Expr *BaseExpr, const Expr *IndexExpr,
                         const ArraySubscriptExpr *ASE = nullptr,

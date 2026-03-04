@@ -956,6 +956,10 @@ def warn_fortify_source_size_mismatch : Warning<
   "'%0' size argument is too large; destination buffer has size %1,"
   " but size argument is %2">, InGroup<FortifySource>;
 
+def warn_stringop_overread
+    : Warning<"'%0' reading %1 byte%s1 from a region of size %2">,
+      InGroup<StringopOverread>;
+
 def warn_fortify_strlen_overflow: Warning<
   "'%0' will always overflow; destination buffer has size %1,"
   " but the source string has length %2 (including NUL byte)">,
