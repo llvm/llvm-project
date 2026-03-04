@@ -684,21 +684,12 @@ subroutine target_unstructured
       !CHECK-NO-FPRIV: %[[VAL_8:.*]]:2 = hlfir.declare %[[VAL_6]] {uniq_name = "_QFtarget_unstructuredEi"} : (!fir.ref<i32>) -> (!fir.ref<i32>, !fir.ref<i32>)
       !CHECK-NO-FPRIV: %[[VAL_9:.*]]:2 = hlfir.declare %[[VAL_7]] {uniq_name = "_QFtarget_unstructuredEj"} : (!fir.ref<i32>) -> (!fir.ref<i32>, !fir.ref<i32>)
 
-      !CHECK: scf.while : () -> () {
-      !CHECK:   %[[I_CUR:.*]] = fir.load %[[VAL_8]]#0 : !fir.ref<i32>
-      !CHECK:   %[[J_CUR:.*]] = fir.load %[[VAL_9]]#0 : !fir.ref<i32>
-      !CHECK:   %[[COND:.*]] = arith.cmpi sle, %[[I_CUR]], %[[J_CUR]] : i32
-      !CHECK:   scf.condition(%[[COND]])
-      !CHECK: } do {
-      !CHECK:   %[[I_BODY:.*]] = fir.load %[[VAL_8]]#0 : !fir.ref<i32>
-      !CHECK:   %[[ONE:.*]] = arith.constant 1 : i32
-      !CHECK:   %[[I_NEXT:.*]] = arith.addi %[[I_BODY]], %[[ONE]] : i32
-      !CHECK:   hlfir.assign %[[I_NEXT]] to %[[VAL_8]]#0 : i32, !fir.ref<i32>
-      !CHECK:   scf.yield
-      !CHECK: }
+      !CHECK: ^bb1:
       do while (i <= j)
+         !CHECK: ^bb2:
          i = i + 1
       end do
+      !CHECK: ^bb3:
       !CHECK: omp.terminator
    !$omp end target
    !CHECK: }
