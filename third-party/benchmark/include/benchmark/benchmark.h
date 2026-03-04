@@ -1495,6 +1495,7 @@ BENCHMARK_RESTORE_PEDANTIC_WARNING
   BaseClass##_##Method##_Benchmark
 
 #define BENCHMARK_PRIVATE_DECLARE(n)                                 \
+  BENCHMARK_DISABLE_PEDANTIC_WARNING                                 \
   static ::benchmark::internal::Benchmark* BENCHMARK_PRIVATE_NAME(n) \
       BENCHMARK_UNUSED
 
@@ -1503,12 +1504,14 @@ BENCHMARK_RESTORE_PEDANTIC_WARNING
   BENCHMARK_PRIVATE_DECLARE(_benchmark_) =                           \
       (::benchmark::internal::RegisterBenchmarkInternal(             \
           new ::benchmark::internal::FunctionBenchmark(#__VA_ARGS__, \
-                                                       __VA_ARGS__)))
+                                                       __VA_ARGS__))) \
+  BENCHMARK_RESTORE_PEDANTIC_WARNING
 #else
 #define BENCHMARK(n)                                     \
   BENCHMARK_PRIVATE_DECLARE(n) =                         \
       (::benchmark::internal::RegisterBenchmarkInternal( \
-          new ::benchmark::internal::FunctionBenchmark(#n, n)))
+          new ::benchmark::internal::FunctionBenchmark(#n, n))) \
+  BENCHMARK_RESTORE_PEDANTIC_WARNING
 #endif  // BENCHMARK_HAS_CXX11
 
 // Old-style macros
