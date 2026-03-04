@@ -188,12 +188,8 @@ Expected<unsigned> HTTPServer::bind(const char *HostInterface) {
   return make_error<HTTPServerError>("no httplib");
 }
 
-Error HTTPServer::listen() {
-  return make_error<HTTPServerError>("no httplib");
-}
+Error HTTPServer::listen() { return make_error<HTTPServerError>("no httplib"); }
 
-void HTTPServer::stop() {
-  llvm_unreachable("no httplib");
-}
+void HTTPServer::stop() { llvm_unreachable("no httplib"); }
 
 #endif // LLVM_ENABLE_HTTPLIB
