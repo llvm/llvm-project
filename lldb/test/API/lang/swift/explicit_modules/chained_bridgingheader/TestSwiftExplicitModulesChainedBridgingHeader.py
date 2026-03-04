@@ -25,7 +25,7 @@ class TestSwiftExplicitModulesChainedBridgingHeader(lldbtest.TestBase):
         self.expect("frame variable b") # FIXME: substrs=['b = 42'])
         self.expect("expression a", substrs=['a = 23'])
         self.expect("expression b") # FIXME: substrs=['b = 42'])
-        self.filecheck('platform shell cat "%s"' % log, __file__)
+        self.filecheck_log(log, __file__)
         # CHECK: LogConfiguration{{.*}}Bridging Header PCH{{.*}}a-{{.*}}ChainedBridgingHeader{{.*}}.pch
         # CHECK: LogConfiguration{{.*}}Explicit module map{{.*}}
         # CHECK-NOT: secret

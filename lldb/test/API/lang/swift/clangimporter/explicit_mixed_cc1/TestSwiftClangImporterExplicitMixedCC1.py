@@ -21,5 +21,5 @@ class TestSwiftClangImporterExplicitCC1(TestBase):
         log = self.getBuildArtifact("types.log")
         self.expect('log enable lldb types -f "%s"' % log)
         self.expect("expr -l Swift -- 1+1")
-        self.filecheck('platform shell cat "%s"' % log, __file__)
+        self.filecheck_log(log, __file__)
 #       CHECK: SwiftASTContextForExpressions(module: "{{.*}}", cu: "*")::AddDiagnostic() -- Mixing and matching of cc1 and driver options detected

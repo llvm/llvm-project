@@ -27,7 +27,7 @@ class TestSwiftExplicitModules(lldbtest.TestBase):
                     substrs=["could not find file", "referenced by AST file", ".pch"])
         self.expect("expression m", error=True,
                     substrs=["could not find file", "referenced by AST file", ".pch"])
-        self.filecheck('platform shell cat "%s"' % log, __file__)
+        self.filecheck_log(log, __file__)
         # CHECK: LogConfiguration
         # CHECK-NOT: secret
         # CHECK: Import 

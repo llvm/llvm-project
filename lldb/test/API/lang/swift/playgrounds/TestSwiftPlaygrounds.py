@@ -198,7 +198,7 @@ class TestSwiftPlaygrounds(TestBase):
         self.assertIn("Hello from the Dylib", playground_output)
 
         # Scan through the types log to make sure the SwiftASTContext was poisoned.
-        self.filecheck('platform shell cat ""%s"' % log, __file__)
+        self.filecheck_log(log, __file__)
 #       CHECK: RegisterSectionModules("AuxSources") 
 #       CHECK: Playground : true
 #       If we wanted this to work, SwiftASTContext would need to find the AuxSources image and switch the symbol context to there.

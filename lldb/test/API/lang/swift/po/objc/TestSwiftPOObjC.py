@@ -19,7 +19,7 @@ class TestSwiftPOObjC(TestBase):
         log = self.getBuildArtifact("types.log")
         self.expect('log enable lldb types -f "%s"' % log)
         self.expect("expr -O -- base", substrs=["Hello from Swift"])
-        self.filecheck('platform shell cat "%s"' % log, __file__)
+        self.filecheck_log(log, __file__)
 ### -cc1 should be round-tripped so there is no more `-cc1` in the extra args. Look for `-triple` which is a cc1 flag.
 #       CHECK-NOT: parsed module "a"
 #       CHECK:  SwiftASTContextForExpressions(module: "{{.*-.*-.*}}", cu: "*")::LogConfiguration()

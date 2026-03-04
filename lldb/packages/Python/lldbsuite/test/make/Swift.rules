@@ -144,8 +144,20 @@ endif
 ifeq "$(SWIFT_EMBEDDED_MODE)" "1"
 	SWIFTFLAGS += -gdwarf-types -enable-experimental-feature Embedded -enable-experimental-feature ValueGenerics -Xfrontend -disable-objc-interop -runtime-compatibility-version none
 	ifeq "$(OS)" "Darwin"
-		SWIFTFLAGS += -target $(ARCH)-apple-macos14
-		SWIFT_EMBEDDED_TRIPLE = $(ARCH)-apple-macos
+		# If TARGET_SWIFTFLAGS already specifies a -target (e.g. for remote-ios),
+		# honour it; the embedded triple is the target triple with the version
+		# number stripped (e.g. arm64-apple-ios26.0 → arm64-apple-ios).
+		# Otherwise default to a macOS host build.
+		ifneq "$(findstring -target,$(TARGET_SWIFTFLAGS))" ""
+			# Extract the triple from TARGET_SWIFTFLAGS (e.g. "-target arm64-apple-ios26.0"
+			# becomes "arm64-apple-ios26.0"), then strip the version number so the result
+			# matches the directory names under lib/swift/embedded/ (e.g. "arm64-apple-ios").
+			SWIFT_EMBEDDED_TRIPLE_VERSIONED = $(shell echo $(TARGET_SWIFTFLAGS) | sed -E 's/.*-target ([^ ]+).*/\1/')
+			SWIFT_EMBEDDED_TRIPLE = $(shell echo $(SWIFT_EMBEDDED_TRIPLE_VERSIONED) | sed -E 's/([^-]+-[^-]+-[^.0-9]+).*/\1/')
+		else
+			SWIFTFLAGS += -target $(ARCH)-apple-macos14
+			SWIFT_EMBEDDED_TRIPLE = $(ARCH)-apple-macos
+		endif
 	endif
 	SWIFT_WMO = 1
 endif

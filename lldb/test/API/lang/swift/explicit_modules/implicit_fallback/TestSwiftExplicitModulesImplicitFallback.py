@@ -26,7 +26,7 @@ class TestCase(lldbtest.TestBase):
 
         self.expect("expression c", substrs=["hello implicit fallback"])
 
-        self.filecheck(f"platform shell cat {log}", __file__)
+        self.filecheck_log(log, __file__)
         # CHECK: Nonexistent explicit module file
         # CHECK: Explicit modules : false (downgraded
 
@@ -52,8 +52,7 @@ class TestCase(lldbtest.TestBase):
         self.expect("expression c")
         # FIXME: self.expect("expression -- import Foundation")
 
-        self.filecheck(f"platform shell cat {log}", __file__,
-                       '--check-prefix=CHECK-SANITY')
+        self.filecheck_log(log, __file__, "--check-prefix=CHECK-SANITY")
         # CHECK-SANITY: Explicit modules : true
         # CHECK-SANITY: Turning off implicit modules
         # CHECK-SANITY: Turning on implicit modules
@@ -73,7 +72,6 @@ class TestCase(lldbtest.TestBase):
 
         self.expect("expression c")
 
-        self.filecheck(f"platform shell cat {log}", __file__,
-                       '--check-prefix=CHECK-SETTING')
+        self.filecheck_log(log, __file__, "--check-prefix=CHECK-SETTING")
         # CHECK-SETTING: Explicit modules : true
         # CHECK-SETTING-NOT: Turning {{.*}} implicit modules

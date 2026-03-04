@@ -60,5 +60,5 @@ class TestSwiftForwardInteropSTLTypes(TestBase):
             '[2] = 9.19'])
 
         # Make sure lldb picks the correct C++ stdlib.
-        self.filecheck('platform shell cat "%s"' % log, __file__)
+        self.filecheck_log(log, __file__)
 #       CHECK-NOT: but current compilation uses unknown C++ stdlib

@@ -104,7 +104,7 @@ class TestSwiftMacro(lldbtest.TestBase):
         self.expect('log enable lldb types -f "%s"' % types_log)
         self.expect('expression -- import Macro')
         self.expect('expression -- #stringify(1)', substrs=['0 = 1', '1 = "1"'])
-        self.filecheck('platform shell cat "%s"' % types_log, __file__)
+        self.filecheck_log(types_log, __file__)
 #       CHECK: CacheUserImports(){{.*}}: Macro.
 #       CHECK: SwiftASTContextForExpressions{{.*}}::LoadOneModule(){{.*}}Imported module Macro from {kind = Serialized Swift AST, filename = "{{.*}}Macro.swiftmodule";}
 #       CHECK: CacheUserImports(){{.*}}Scanning for search paths in{{.*}}Macro.swiftmodule

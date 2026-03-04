@@ -19,7 +19,7 @@ class TestSwiftLateDylib(TestBase):
                                           lldb.SBFileSpec("main.swift"))
         self.expect("expr -- import Dylib")
         # Scan through the types log.
-        self.filecheck('platform shell cat "%s"' % log, __file__)
+        self.filecheck_log(log, __file__)
 # CHECK: SwiftASTContextForExpressions(module: "a", cu: "main.swift")::LogConfiguration(){{.*}}Architecture{{.*}}-apple-macosx11.0.0
 # CHECK-NOT: __PATH_FROM_DYLIB__
 #       Verify that the deployment target didn't change:

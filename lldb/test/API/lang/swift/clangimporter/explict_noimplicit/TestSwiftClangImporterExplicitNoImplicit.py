@@ -25,7 +25,7 @@ class TestSwiftClangImporterExplicitNoImplicit(TestBase):
         self.expect('log enable lldb types -f "%s"' % log)
         self.expect("expression obj", DATA_TYPES_DISPLAYED_CORRECTLY,
                     substrs=["hidden"])
-        self.filecheck('platform shell cat "%s"' % log, __file__)
+        self.filecheck_log(log, __file__)
         # CHECK: Turning off implicit modules
         # CHECK: Turning on implicit modules
         # CHECK: loaded module 'Hidden'

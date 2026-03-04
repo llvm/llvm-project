@@ -23,5 +23,5 @@ class TestPlaygroundREPLImport(repl.PlaygroundREPLTest):
         self.assertIn("and back again", playground_output.GetSummary())
 
         # Scan through the types log to make sure the SwiftASTContext was poisoned.
-        self.filecheck('platform shell cat ""%s"' % log, __file__)
+        self.filecheck_log(log, __file__)
 #       CHECK: New Swift image added{{.*}}Versions/A/Dylib{{.*}}ClangImporter needs to be reinitialized

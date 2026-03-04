@@ -2434,6 +2434,16 @@ FileCheck output:
             expect_cmd_failure,
         )
 
+    def filecheck_log(
+        self, log_file, check_file, filecheck_options="", expect_cmd_failure=False
+    ):
+        return self.filecheck(
+            f"platform shell -h -- cat {log_file}",
+            check_file,
+            filecheck_options,
+            expect_cmd_failure,
+        )
+
     def expect(
         self,
         string,

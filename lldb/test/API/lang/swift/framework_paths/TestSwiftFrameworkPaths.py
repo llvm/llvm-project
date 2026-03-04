@@ -19,6 +19,5 @@ class TestSwiftFrameworkPaths(lldbtest.TestBase):
         log = self.getBuildArtifact("types.log")
         self.expect('log enable lldb types -f "%s"' % log)
         self.expect("expression -- 0")
-        self.filecheck('platform shell cat "%s"' % log, __file__,
-                       '--check-prefix=CHECK_SYS')
+        self.filecheck_log(log, __file__, "--check-prefix=CHECK_SYS")
         # CHECK_SYS: SwiftASTContextForExpressions(module: "a", cu: "main.swift")::LogConfiguration(){{.*}}/secret_path

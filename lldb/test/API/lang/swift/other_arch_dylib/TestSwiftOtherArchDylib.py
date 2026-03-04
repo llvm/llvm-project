@@ -32,6 +32,6 @@ class TestSwiftOtherArchDylib(TestBase):
         self.expect("expression 1", substrs=['1'])
 
         # Check the types log.
-        self.filecheck('platform shell cat "%s"' % types_log, __file__)
+        self.filecheck_log(types_log, __file__)
         # CHECK: SwiftASTContextForExpressions(module: "OtherArch", cu: "OtherArch.swift")::LogConfiguration(){{.*}}arm64e-apple-macos
         # CHECK: SwiftASTContextForExpressions(module: "arm64-apple-macos{{.*}})::LogConfiguration(){{.*}}arm64-apple-macos

@@ -16,7 +16,7 @@ class TestSwiftExplicitModules(lldbtest.TestBase):
         log = self.getBuildArtifact("types.log")
         self.expect('log enable lldb types -f "%s"' % log)
         self.expect("expression c", substrs=['hello explicit'])
-        self.filecheck('platform shell cat "%s"' % log, __file__)
+        self.filecheck_log(log, __file__)
         # CHECK: SwiftASTContextForExpressions(module: "a", cu: "main.swift"){{.*}} Discovered main module {{.*}}a.swiftmodule
         # CHECK: SwiftASTContextForExpressions(module: "a", cu: "main.swift"){{.*}} Module import remark: loaded module 'a'; source: '{{.*}}a.swiftmodule', loaded: '{{.*}}a.swiftmodule'
 
@@ -32,8 +32,8 @@ class TestSwiftExplicitModules(lldbtest.TestBase):
 
         log = self.getBuildArtifact("types.log")
         self.expect('log enable lldb types -f "%s"' % log)
-        self.expect("expression c", substrs=['hello explicit'])
-        self.filecheck('platform shell cat "%s"' % log, __file__, '--check-prefix=DISABLED')
+        self.expect("expression c", substrs=["hello explicit"])
+        self.filecheck_log(log, __file__, "--check-prefix=DISABLED")
         # DISABLED: SwiftASTContextForExpressions(module: "a", cu: "main.swift"){{.*}} Discovered main module{{.*}}a.swiftmodule
         # DISABLED: SwiftASTContextForExpressions(module: "a", cu: "main.swift"){{.*}} Module import remark: loaded module 'a'; source: 'a', loaded: 'a'
 

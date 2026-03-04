@@ -62,7 +62,7 @@ class TestSwiftDeploymentTarget(TestBase):
             self, "break here", lldb.SBFileSpec("main.swift")
         )
         self.expect("expression f", substrs=["i = 23"])
-        self.filecheck('platform shell cat ""%s"' % log, __file__)
+        self.filecheck_log(log, __file__)
 #       CHECK: SwiftASTContextForExpressions(module: "a", cu: "main.swift")::SetTriple({{.*}}apple-macosx11.0.0
 #       CHECK-NOT: SwiftASTContextForExpressions(module: "a", cu: "main.swift")::RegisterSectionModules("a.out"){{.*}} AST Data blobs
 
@@ -87,8 +87,6 @@ class TestSwiftDeploymentTarget(TestBase):
             substrs=["-apple-macosx11.1.0"],
         )
         self.expect("expression self", substrs=["i = 23"])
-        self.filecheck(
-            f'platform shell cat "{log}"', __file__, "-check-prefix=CHECK-PRECISE"
-        )
+        self.filecheck_log(log, __file__, "-check-prefix=CHECK-PRECISE")
 #       CHECK-PRECISE: SwiftASTContextForExpressions(module: "NewerTarget", cu: "NewerTarget.swift")::CreateInstance() -- Fully specified triple {{.*}}-apple-macosx11.1.0
 #       CHECK-PRECISE: SwiftASTContextForExpressions(module: "NewerTarget", cu: "NewerTarget.swift")::SetTriple("{{.*}}-apple-macosx11.1.0")

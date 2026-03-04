@@ -16,7 +16,7 @@ class TestCase(TestBase):
         self.runCmd(f"log enable lldb expr -f {log}")
 
         self.expect("frame variable -O x", substrs=["Easy as pie"])
-        self.filecheck(f"platform shell cat {log}", __file__)
+        self.filecheck_log(log, __file__)
 
         # Clear the log.
         self.runCmd(f"log disable lldb expr")
@@ -24,7 +24,7 @@ class TestCase(TestBase):
         self.runCmd(f"log enable lldb expr -f {log}")
 
         self.expect("dwim-print -O -- x", substrs=["Easy as pie"])
-        self.filecheck(f"platform shell cat {log}", __file__)
+        self.filecheck_log(log, __file__)
 
         # Verify po used the mangled name of the static type - which is public,
         # and not the private dynamic type.

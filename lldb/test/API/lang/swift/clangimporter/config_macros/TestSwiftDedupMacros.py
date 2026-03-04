@@ -43,7 +43,7 @@ class TestSwiftDedupMacros(TestBase):
         self.expect('log enable lldb types -f "%s"' % log)
 
         self.expect("expression foo", DATA_TYPES_DISPLAYED_CORRECTLY, substrs=["42"])
-        self.filecheck('platform shell cat "%s"' % log, __file__)
+        self.filecheck_log(log, __file__)
 #       CHECK: SwiftASTContextForExpressions{{.*}}-DDEBUG=1
 #       CHECK: SwiftASTContextForExpressions{{.*}}-DSPACE
 #       CHECK-NOT: {{ SPACE}}

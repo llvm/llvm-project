@@ -19,5 +19,5 @@ class TestSwiftEmbeddedExpression(TestBase):
 
         self.expect("expr a.foo()", substrs=["(Int)", " = 16"])
 
-        self.filecheck('platform shell cat "%s"' % types_log, __file__)
+        self.filecheck_log(types_log, __file__)
         # CHECK: [CheckFlagInCU] Found flag -enable-embedded-swift in CU:
