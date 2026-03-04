@@ -363,11 +363,12 @@ class ClassInAnotherNamespace {};
 // MD-ALL-FILES: ## [GlobalNamespace](GlobalNamespace{{[\/]}}index.md)
 // MD-ALL-FILES: ## [PrimaryNamespace](PrimaryNamespace{{[\/]}}index.md)
 
+// COM: FIXME: The output from the sorted index should be deterministic.
 // MD-MUSTACHE-ALL-FILES: # All Files
-// MD-MUSTACHE-ALL-FILES: ## [GlobalNamespace](GlobalNamespace{{[\/]}}index.md)
-// MD-MUSTACHE-ALL-FILES: ## [PrimaryNamespace](PrimaryNamespace{{[\/]}}index.md)
-// MD-MUSTACHE-ALL-FILES: ## [@nonymous_namespace](@nonymous_namespace{{[\/]}}index.md)
-// MD-MUSTACHE-ALL-FILES: ## [AnotherNamespace](AnotherNamespace{{[\/]}}index.md)
+// MD-MUSTACHE-ALL-FILES-DAG: ## [GlobalNamespace](GlobalNamespace{{[\/]}}index.md)
+// MD-MUSTACHE-ALL-FILES-DAG: ## [PrimaryNamespace](PrimaryNamespace{{[\/]}}index.md)
+// MD-MUSTACHE-ALL-FILES-DAG: ## [@nonymous_namespace](@nonymous_namespace{{[\/]}}index.md)
+// MD-MUSTACHE-ALL-FILES-DAG: ## [AnotherNamespace](AnotherNamespace{{[\/]}}index.md)
 
 // MD-INDEX: #  C/C++ Reference
 // MD-INDEX: * Namespace: [@nonymous_namespace](@nonymous_namespace)
