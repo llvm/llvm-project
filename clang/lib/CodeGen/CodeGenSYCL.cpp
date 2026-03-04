@@ -13,6 +13,7 @@
 
 #include "CodeGenFunction.h"
 #include "CodeGenModule.h"
+#include <cassert>
 
 using namespace clang;
 using namespace CodeGen;
@@ -23,8 +24,9 @@ void CodeGenFunction::EmitSYCLKernelCallStmt(const SYCLKernelCallStmt &S) {
   // such a function in code emitted during device compilation should be
   // diagnosed. Thus, any attempt to emit a SYCLKernelCallStmt during device
   // compilation indicates a missing diagnostic.
-  assert(!getLangOpts().SYCLIsDevice, "Attempt to emit a SYCL kernel call "
-                                      "statement during device compilation");
+  assert(!getLangOpts().SYCLIsDevice &&
+         "Attempt to emit a SYCL kernel call statement during device"
+         " compilation");
   EmitStmt(S.getKernelLaunchStmt());
 }
 
