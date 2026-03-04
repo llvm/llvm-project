@@ -262,6 +262,114 @@ TEST(CPlusPlusLanguage, InvalidMethodNameParsing) {
   }
 }
 
+TEST(CPlusPlusLanguage, AbiContainsPath) {
+
+  using Match = std::initializer_list<llvm::StringRef>;
+  using NoMatch = std::initializer_list<llvm::StringRef>;
+
+  struct TestCase {
+    std::string input;
+    Match matches;
+    NoMatch no_matches;
+  };
+
+  // NOTE: Constraints to avoid testing/matching unreachable states:
+  // (see specification for more information
+  // https://clang.llvm.org/docs/ItaniumMangleAbiTags.html)
+  // - ABI tags must appear in a specific order: func[abi:TAG1][abi:TAG2] is
+  //   valid, but func[abi:TAG2][abi:TAG1] is not.
+  // - Invalid functions are filtered during module lookup and not set here.
+
+  const std::initializer_list<TestCase> test_cases = {
+      // function with abi_tag
+      TestCase{"func[abi:TAG1][abi:TAG2]()",
+               Match{"func", "func[abi:TAG1]", "func[abi:TAG2]"},
+               NoMatch{"func[abi:WRONG_TAG]"}},
+      TestCase{"Foo::Bar::baz::func(Ball[abi:CTX_TAG]::Val )",
+               Match{"func", "baz::func", "Bar::baz::func"},
+               NoMatch{"baz", "baz::fun"}},
+      TestCase{"second::first::func[abi:FUNC_TAG]()",
+               Match{"func", "func[abi:FUNC_TAG]", "first::func",
+                     "first::func[abi:FUNC_TAG]"},
+               NoMatch{"func[abi:WRONG_TAG]", "funcc[abi:FUNC_TAG]",
+                       "fun[abi:FUNC_TAG]", "func[abi:FUNC_TA]",
+                       "func[abi:UNC_TAG]", "func[abi::FUNC_TAG]",
+                       "second::func"}},
+      // function with abi_tag and template
+      TestCase{"ns::Animal func[abi:FUNC_TAG]<ns::Animal>()",
+               Match{
+                   "func<ns::Animal>",
+                   "func[abi:FUNC_TAG]",
+                   "func[abi:FUNC_TAG]<ns::Animal>",
+                   "func",
+               },
+               NoMatch{"nn::func<ns::Plane>"}},
+      TestCase{"Ball[abi:STRUCT_TAG]<int> "
+               "first::func[abi:FUNC_TAG]<Ball[abi:STRUCT_TAG]<int>>()",
+               Match{"func", "func[abi:FUNC_TAG]", "first::func"},
+               NoMatch{"func[abi:STRUCT_TAG]"}},
+      // first context with abi_tag
+      TestCase{"second::first[abi:CTX_TAG]::func()",
+               Match{"func", "first::func", "first[abi:CTX_TAG]::func"},
+               NoMatch{"first[abi:CTX_TAG]", "first[abi:WRONG_CTX_TAG]::func",
+                       "first::func[abi:WRONG_FUNC_TAG]",
+                       "first:func[abi:CTX_TAG]", "second::func"}},
+      // templated context
+      TestCase{"second::first[abi:CTX_TAG]<SomeClass>::func[abi:FUNC_TAG]()",
+               Match{"first::func", "first[abi:CTX_TAG]::func",
+                     "first::func[abi:FUNC_TAG]", "first<SomeClass>::func",
+                     "first[abi:CTX_TAG]<SomeClass>::func",
+                     "first[abi:CTX_TAG]<SomeClass>::func[abi:FUNC_TAG]",
+                     "second::first::func"},
+               NoMatch{"first::func[abi:CTX_TAG]", "first[abi:FUNC_TAG]::func",
+                       "first::func<SomeClass>",
+                       "second[abi:CTX_TAG]::first::func"}},
+      // multiple abi tag
+      TestCase{"func[abi:TAG1][abi:TAG2]()",
+               Match{"func", "func[abi:TAG1]", "func[abi:TAG2]"},
+               NoMatch{"func[abi:WRONG_TAG]"}},
+      // multiple two context twice with abi_tag
+      TestCase{"first[abi:CTX_TAG1][abi:CTX_TAG2]::func[abi:FUNC_TAG]::first::"
+               "func(int)",
+               Match{"first::func", "func", "first::func::first::func"},
+               NoMatch{"first[abi:CTX_TAG1]", "func[abi:FUNC_TAG]",
+                       "func::first", "first::func::first"}},
+      // operator overload
+      TestCase{"Ball[abi:CTX_TAG]<int>::operator<[abi:OPERATOR]<int>(int)",
+               Match{"operator<", "operator<[abi:OPERATOR]", "Ball::operator<"},
+               NoMatch{"operator<<", "Ball::operator<<"}},
+      TestCase{
+          "Ball[abi:CTX_TAG]<int>::operator[][abi:OPERATOR]<int>(int)",
+          Match{"Ball[abi:CTX_TAG]::operator[][abi:OPERATOR]", "operator[]",
+                "Ball::operator[]", "Ball::operator[][abi:OPERATOR]",
+                "Ball[abi:CTX_TAG]::operator[]"},
+          NoMatch{"operator_", "operator>>", "Ball[abi:OPERATOR]::operator[]"}},
+      TestCase{"Ball[abi:CTX_TAG]<int>::operator<<[abi:OPERATOR]<int>(int)",
+               Match{"Ball::operator<<<int>", "operator<<",
+                     "operator<<[abi:OPERATOR]", "operator<<<int>",
+                     "Ball[abi:CTX_TAG]<int>::operator<<[abi:OPERATOR]<int>"},
+               NoMatch{"operator<", "operator<<<long>",
+                       "Ball<long>::operator<<<int>",
+                       "operator<<[abi:operator]"}},
+  };
+
+  for (const auto &[input, matches, no_matches] : test_cases) {
+    CPlusPlusLanguage::CxxMethodName method{ConstString(input)};
+    EXPECT_TRUE(method.IsValid()) << input;
+    if (!method.IsValid())
+      continue;
+
+    for (const auto &path : matches) {
+      EXPECT_TRUE(method.ContainsPath(path))
+          << llvm::formatv("`{0}` should match `{1}`", path, input);
+    }
+
+    for (const auto &path : no_matches)
+      EXPECT_FALSE(method.ContainsPath(path))
+          << llvm::formatv("`{0}` should not match `{1}`", path, input);
+  }
+}
+
 TEST(CPlusPlusLanguage, ContainsPath) {
   CPlusPlusLanguage::CxxMethodName reference_1(
       ConstString("int foo::bar::func01(int a, double b)"));
@@ -275,6 +383,9 @@ TEST(CPlusPlusLanguage, ContainsPath) {
   CPlusPlusLanguage::CxxMethodName reference_6(ConstString(
       "bar::baz::operator<<<Type<double>, Type<std::vector<double>>>()"));
 
+  CPlusPlusLanguage::CxxMethodName ref(
+      ConstString("Foo::Bar::Baz::Function()"));
+  EXPECT_TRUE(ref.ContainsPath("Bar::Baz::Function"));
   EXPECT_TRUE(reference_1.ContainsPath(""));
   EXPECT_TRUE(reference_1.ContainsPath("func01"));
   EXPECT_TRUE(reference_1.ContainsPath("bar::func01"));
@@ -284,11 +395,11 @@ TEST(CPlusPlusLanguage, ContainsPath) {
   EXPECT_FALSE(reference_1.ContainsPath("::bar::func01"));
   EXPECT_FALSE(reference_1.ContainsPath("::foo::baz::func01"));
   EXPECT_FALSE(reference_1.ContainsPath("foo::bar::baz::func01"));
-  
+
   EXPECT_TRUE(reference_2.ContainsPath(""));
   EXPECT_TRUE(reference_2.ContainsPath("foofoo::bar::func01"));
   EXPECT_FALSE(reference_2.ContainsPath("foo::bar::func01"));
-  
+
   EXPECT_TRUE(reference_3.ContainsPath(""));
   EXPECT_TRUE(reference_3.ContainsPath("func01"));
   EXPECT_FALSE(reference_3.ContainsPath("func"));
@@ -368,8 +479,8 @@ TEST(CPlusPlusLanguage, ExtractContextAndIdentifier) {
       "selector:", context, basename));
   EXPECT_FALSE(CPlusPlusLanguage::ExtractContextAndIdentifier(
       "selector:otherField:", context, basename));
-  EXPECT_FALSE(CPlusPlusLanguage::ExtractContextAndIdentifier(
-      "abc::", context, basename));
+  EXPECT_FALSE(CPlusPlusLanguage::ExtractContextAndIdentifier("abc::", context,
+                                                              basename));
   EXPECT_FALSE(CPlusPlusLanguage::ExtractContextAndIdentifier(
       "f<A<B><C>>", context, basename));
 
