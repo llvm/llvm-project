@@ -89,7 +89,6 @@ void registerTestComposeSubView();
 void registerTestCompositePass();
 void registerTestControlFlowSink();
 void registerTestConvertToSPIRVPass();
-void registerTestDataLayoutPropagation();
 void registerTestDataLayoutQuery();
 void registerTestDeadCodeAnalysisPass();
 void registerTestDecomposeCallGraphTypes();
@@ -238,7 +237,6 @@ static void registerTestPasses() {
   mlir::test::registerTestCompositePass();
   mlir::test::registerTestControlFlowSink();
   mlir::test::registerTestConvertToSPIRVPass();
-  mlir::test::registerTestDataLayoutPropagation();
   mlir::test::registerTestDataLayoutQuery();
   mlir::test::registerTestDeadCodeAnalysisPass();
   mlir::test::registerTestDecomposeCallGraphTypes();

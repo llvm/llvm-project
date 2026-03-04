@@ -3110,9 +3110,6 @@ bool RISCVInstrInfo::verifyInstruction(const MachineInstr &MI,
         case RISCVOp::OPERAND_UIMM8_GE32:
           Ok = isUInt<8>(Imm) && Imm >= 32;
           break;
-        case RISCVOp::OPERAND_SIMM8_UNSIGNED:
-          Ok = isInt<8>(Imm);
-          break;
         case RISCVOp::OPERAND_SIMM10_LSB0000_NONZERO:
           Ok = isShiftedInt<6, 4>(Imm) && (Imm != 0);
           break;
@@ -3134,6 +3131,7 @@ bool RISCVInstrInfo::verifyInstruction(const MachineInstr &MI,
           // clang-format off
         CASE_OPERAND_SIMM(5)
         CASE_OPERAND_SIMM(6)
+        CASE_OPERAND_SIMM(8)
         CASE_OPERAND_SIMM(10)
         CASE_OPERAND_SIMM(11)
         CASE_OPERAND_SIMM(26)
@@ -5444,4 +5442,31 @@ bool RISCVInstrInfo::requiresNTLHint(const MachineInstr &MI) const {
     return false;
 
   return true;
+}
+
+bool RISCVInstrInfo::isSafeToMove(const MachineInstr &From,
+                                  const MachineInstr &To) {
+  assert(From.getParent() == To.getParent());
+  SmallVector<Register> PhysUses, PhysDefs;
+  for (const MachineOperand &MO : From.all_uses())
+    if (MO.getReg().isPhysical())
+      PhysUses.push_back(MO.getReg());
+  for (const MachineOperand &MO : From.all_defs())
+    if (MO.getReg().isPhysical())
+      PhysDefs.push_back(MO.getReg());
+  bool SawStore = false;
+  for (auto II = std::next(From.getIterator()); II != To.getIterator(); II++) {
+    for (Register PhysReg : PhysUses)
+      if (II->definesRegister(PhysReg, nullptr))
+        return false;
+    for (Register PhysReg : PhysDefs)
+      if (II->definesRegister(PhysReg, nullptr) ||
+          II->readsRegister(PhysReg, nullptr))
+        return false;
+    if (II->mayStore()) {
+      SawStore = true;
+      break;
+    }
+  }
+  return From.isSafeToMove(SawStore);
 }

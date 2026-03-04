@@ -308,6 +308,17 @@ def Index : Type<CPred<"::llvm::isa<::mlir::IndexType>($_self)">, "index",
 def AnySignlessIntegerOrIndex : Type<CPred<"$_self.isSignlessIntOrIndex()">,
                                      "signless integer or index">;
 
+// A signless integer type with a non-zero bitwidth (excludes i0).
+def AnyNonZeroBitwidthSignlessInteger : ConfinedType<
+    AnySignlessInteger, [CPred<"!$_self.isInteger(0)">],
+    "non-zero-bitwidth signless integer">;
+
+// A non-zero-bitwidth signless integer or index type.
+def AnyNonZeroBitwidthSignlessIntegerOrIndex : Type<
+    Or<[AnyNonZeroBitwidthSignlessInteger.predicate,
+        Index.predicate]>,
+    "non-zero-bitwidth signless integer or index">;
+
 // Floating point types.
 
 // Any float type irrespective of its width.

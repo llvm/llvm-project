@@ -2434,19 +2434,20 @@ define <vscale x 16 x double> @vpgather_baseidx_nxv16i16_nxv16f64(ptr %base, <vs
 ;
 ; RV64-LABEL: vpgather_baseidx_nxv16i16_nxv16f64:
 ; RV64:       # %bb.0:
-; RV64-NEXT:    vsetvli a2, zero, e64, m8, ta, ma
+; RV64-NEXT:    vsetivli zero, 1, e8, m1, ta, ma
 ; RV64-NEXT:    vmv1r.v v12, v0
-; RV64-NEXT:    vsext.vf4 v16, v10
 ; RV64-NEXT:    csrr a2, vlenb
-; RV64-NEXT:    vsll.vi v16, v16, 3
 ; RV64-NEXT:    sub a3, a1, a2
-; RV64-NEXT:    srli a4, a2, 3
-; RV64-NEXT:    vsetvli a5, zero, e8, mf4, ta, ma
-; RV64-NEXT:    vslidedown.vx v0, v0, a4
 ; RV64-NEXT:    sltu a4, a1, a3
 ; RV64-NEXT:    addi a4, a4, -1
 ; RV64-NEXT:    and a3, a4, a3
+; RV64-NEXT:    srli a4, a2, 3
 ; RV64-NEXT:    vsetvli zero, a3, e64, m8, ta, ma
+; RV64-NEXT:    vsext.vf4 v16, v10
+; RV64-NEXT:    vsetvli a5, zero, e8, mf4, ta, ma
+; RV64-NEXT:    vslidedown.vx v0, v0, a4
+; RV64-NEXT:    vsetvli zero, a3, e64, m8, ta, ma
+; RV64-NEXT:    vsll.vi v16, v16, 3
 ; RV64-NEXT:    vluxei64.v v16, (a0), v16, v0.t
 ; RV64-NEXT:    vsetvli a3, zero, e64, m8, ta, ma
 ; RV64-NEXT:    vsext.vf4 v24, v8
@@ -2491,19 +2492,20 @@ define <vscale x 16 x double> @vpgather_baseidx_sext_nxv16i16_nxv16f64(ptr %base
 ;
 ; RV64-LABEL: vpgather_baseidx_sext_nxv16i16_nxv16f64:
 ; RV64:       # %bb.0:
-; RV64-NEXT:    vsetvli a2, zero, e64, m8, ta, ma
+; RV64-NEXT:    vsetivli zero, 1, e8, m1, ta, ma
 ; RV64-NEXT:    vmv1r.v v12, v0
-; RV64-NEXT:    vsext.vf4 v16, v10
 ; RV64-NEXT:    csrr a2, vlenb
-; RV64-NEXT:    vsll.vi v16, v16, 3
 ; RV64-NEXT:    sub a3, a1, a2
-; RV64-NEXT:    srli a4, a2, 3
-; RV64-NEXT:    vsetvli a5, zero, e8, mf4, ta, ma
-; RV64-NEXT:    vslidedown.vx v0, v0, a4
 ; RV64-NEXT:    sltu a4, a1, a3
 ; RV64-NEXT:    addi a4, a4, -1
 ; RV64-NEXT:    and a3, a4, a3
+; RV64-NEXT:    srli a4, a2, 3
 ; RV64-NEXT:    vsetvli zero, a3, e64, m8, ta, ma
+; RV64-NEXT:    vsext.vf4 v16, v10
+; RV64-NEXT:    vsetvli a5, zero, e8, mf4, ta, ma
+; RV64-NEXT:    vslidedown.vx v0, v0, a4
+; RV64-NEXT:    vsetvli zero, a3, e64, m8, ta, ma
+; RV64-NEXT:    vsll.vi v16, v16, 3
 ; RV64-NEXT:    vluxei64.v v16, (a0), v16, v0.t
 ; RV64-NEXT:    vsetvli a3, zero, e64, m8, ta, ma
 ; RV64-NEXT:    vsext.vf4 v24, v8

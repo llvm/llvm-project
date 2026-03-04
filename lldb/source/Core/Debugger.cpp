@@ -967,34 +967,6 @@ Debugger::FindDebuggerWithInstanceName(llvm::StringRef instance_name) {
   return nullptr;
 }
 
-TargetSP Debugger::FindTargetWithProcessID(lldb::pid_t pid) {
-  std::lock_guard<std::mutex> guard(GetDebuggerListMutex());
-  if (!g_debugger_list_ptr)
-    return nullptr;
-
-  for (const DebuggerSP &debugger_sp : *g_debugger_list_ptr) {
-    if (TargetSP target_sp =
-            debugger_sp->GetTargetList().FindTargetWithProcessID(pid))
-      return target_sp;
-  }
-
-  return nullptr;
-}
-
-TargetSP Debugger::FindTargetWithProcess(Process *process) {
-  std::lock_guard<std::mutex> guard(GetDebuggerListMutex());
-  if (!g_debugger_list_ptr)
-    return nullptr;
-
-  for (const DebuggerSP &debugger_sp : *g_debugger_list_ptr) {
-    if (TargetSP target_sp =
-            debugger_sp->GetTargetList().FindTargetWithProcess(process))
-      return target_sp;
-  }
-
-  return nullptr;
-}
-
 llvm::StringRef Debugger::GetStaticBroadcasterClass() {
   static constexpr llvm::StringLiteral class_name("lldb.debugger");
   return class_name;

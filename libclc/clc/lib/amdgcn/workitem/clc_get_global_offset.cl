@@ -6,11 +6,12 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include <amdhsa_abi.h>
 #include <clc/workitem/clc_get_global_offset.h>
 
 _CLC_DEF _CLC_OVERLOAD size_t __clc_get_global_offset(uint dim) {
-  __constant uint *ptr = (__constant uint *)__builtin_amdgcn_implicitarg_ptr();
-  if (dim < 3)
-    return ptr[dim + 1];
-  return 0;
+  __constant amdhsa_implicit_kernarg_v5 *implicit_args =
+      (__constant amdhsa_implicit_kernarg_v5 *)
+          __builtin_amdgcn_implicitarg_ptr();
+  return dim < 3 ? implicit_args->global_offset[dim] : 0;
 }

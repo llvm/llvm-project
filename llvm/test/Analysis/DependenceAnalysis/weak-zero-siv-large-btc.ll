@@ -20,15 +20,15 @@ define void @weak_zero_src_siv_large_btc(ptr %A) {
 ; CHECK-ALL-NEXT:  Src: store i8 0, ptr %gep, align 1 --> Dst: store i8 1, ptr %A, align 1
 ; CHECK-ALL-NEXT:    da analyze - none!
 ; CHECK-ALL-NEXT:  Src: store i8 1, ptr %A, align 1 --> Dst: store i8 1, ptr %A, align 1
-; CHECK-ALL-NEXT:    da analyze - consistent output [S]!
+; CHECK-ALL-NEXT:    da analyze - output [S]!
 ;
 ; CHECK-WEAK-ZERO-SRC-SIV-LABEL: 'weak_zero_src_siv_large_btc'
 ; CHECK-WEAK-ZERO-SRC-SIV-NEXT:  Src: store i8 0, ptr %gep, align 1 --> Dst: store i8 0, ptr %gep, align 1
-; CHECK-WEAK-ZERO-SRC-SIV-NEXT:    da analyze - consistent output [*]!
+; CHECK-WEAK-ZERO-SRC-SIV-NEXT:    da analyze - output [*]!
 ; CHECK-WEAK-ZERO-SRC-SIV-NEXT:  Src: store i8 0, ptr %gep, align 1 --> Dst: store i8 1, ptr %A, align 1
 ; CHECK-WEAK-ZERO-SRC-SIV-NEXT:    da analyze - none!
 ; CHECK-WEAK-ZERO-SRC-SIV-NEXT:  Src: store i8 1, ptr %A, align 1 --> Dst: store i8 1, ptr %A, align 1
-; CHECK-WEAK-ZERO-SRC-SIV-NEXT:    da analyze - consistent output [S]!
+; CHECK-WEAK-ZERO-SRC-SIV-NEXT:    da analyze - output [S]!
 ;
 entry:
   br label %loop.header
@@ -66,7 +66,7 @@ exit:
 define void @weak_zero_dst_siv_large_btc(ptr %A) {
 ; CHECK-ALL-LABEL: 'weak_zero_dst_siv_large_btc'
 ; CHECK-ALL-NEXT:  Src: store i8 1, ptr %A, align 1 --> Dst: store i8 1, ptr %A, align 1
-; CHECK-ALL-NEXT:    da analyze - consistent output [S]!
+; CHECK-ALL-NEXT:    da analyze - output [S]!
 ; CHECK-ALL-NEXT:  Src: store i8 1, ptr %A, align 1 --> Dst: store i8 0, ptr %gep, align 1
 ; CHECK-ALL-NEXT:    da analyze - none!
 ; CHECK-ALL-NEXT:  Src: store i8 0, ptr %gep, align 1 --> Dst: store i8 0, ptr %gep, align 1
@@ -74,11 +74,11 @@ define void @weak_zero_dst_siv_large_btc(ptr %A) {
 ;
 ; CHECK-WEAK-ZERO-SRC-SIV-LABEL: 'weak_zero_dst_siv_large_btc'
 ; CHECK-WEAK-ZERO-SRC-SIV-NEXT:  Src: store i8 1, ptr %A, align 1 --> Dst: store i8 1, ptr %A, align 1
-; CHECK-WEAK-ZERO-SRC-SIV-NEXT:    da analyze - consistent output [S]!
+; CHECK-WEAK-ZERO-SRC-SIV-NEXT:    da analyze - output [S]!
 ; CHECK-WEAK-ZERO-SRC-SIV-NEXT:  Src: store i8 1, ptr %A, align 1 --> Dst: store i8 0, ptr %gep, align 1
 ; CHECK-WEAK-ZERO-SRC-SIV-NEXT:    da analyze - none!
 ; CHECK-WEAK-ZERO-SRC-SIV-NEXT:  Src: store i8 0, ptr %gep, align 1 --> Dst: store i8 0, ptr %gep, align 1
-; CHECK-WEAK-ZERO-SRC-SIV-NEXT:    da analyze - consistent output [*]!
+; CHECK-WEAK-ZERO-SRC-SIV-NEXT:    da analyze - output [*]!
 ;
 entry:
   br label %loop.header

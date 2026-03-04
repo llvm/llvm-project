@@ -773,8 +773,8 @@ bool isAsyncStore(unsigned Opc) {
 }
 
 bool isTensorStore(unsigned Opc) {
-  return Opc == TENSOR_STORE_FROM_LDS_gfx1250 ||
-         Opc == TENSOR_STORE_FROM_LDS_D2_gfx1250;
+  return Opc == TENSOR_STORE_FROM_LDS_d2_gfx1250 ||
+         Opc == TENSOR_STORE_FROM_LDS_d4_gfx1250;
 }
 
 unsigned getTemporalHintType(const MCInstrDesc TID) {

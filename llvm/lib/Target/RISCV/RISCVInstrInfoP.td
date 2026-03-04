@@ -39,7 +39,7 @@ def simm8_unsigned : RISCVOp, ImmLeaf<XLenVT, "return isInt<8>(Imm);"> {
   let ParserMatchClass = SImm8UnsignedAsmOperand;
   let EncoderMethod = "getImmOpValue";
   let DecoderMethod = "decodeSImmOperand<8>";
-  let OperandType = "OPERAND_SIMM8_UNSIGNED";
+  let OperandType = "OPERAND_SIMM8";
   let MCOperandPredicate = [{
     int64_t Imm;
     if (!MCOp.evaluateAsConstantImm(Imm))
@@ -58,7 +58,7 @@ def simm10_unsigned : RISCVOp {
   let ParserMatchClass = SImm10UnsignedAsmOperand;
   let EncoderMethod = "getImmOpValue";
   let DecoderMethod = "decodeSImmOperand<10>";
-  let OperandType = "OPERAND_SIMM10_UNSIGNED";
+  let OperandType = "OPERAND_SIMM10";
   let MCOperandPredicate = [{
     int64_t Imm;
     if (!MCOp.evaluateAsConstantImm(Imm))
