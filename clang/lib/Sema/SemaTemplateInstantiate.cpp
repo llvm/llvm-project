@@ -4487,7 +4487,7 @@ ExprResult Sema::SubstConceptTemplateArguments(
       NamedDecl *D = *E->decls_begin();
       ConceptDecl *ResolvedConcept = nullptr;
 
-      if (const auto * const TTP = dyn_cast<TemplateTemplateParmDecl>(D)) {
+      if (auto *TTP = dyn_cast<TemplateTemplateParmDecl>(D)) {
         const auto Depth = TTP->getDepth();
         const auto Pos = TTP->getPosition();
         if (Depth < MLTAL.getNumLevels() &&
