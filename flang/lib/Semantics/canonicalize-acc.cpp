@@ -98,10 +98,14 @@ private:
     const auto &accClauseList =
         std::get<parser::AccClauseList>(beginLoopDirective.t);
     for (const auto &clause : accClauseList.v) {
-      if (std::holds_alternative<parser::AccClause::Collapse>(clause.u) ||
-          std::holds_alternative<parser::AccClause::Tile>(clause.u)) {
+      if (std::holds_alternative<parser::AccClause::Tile>(clause.u)) {
         messages_.Say(beginLoopDirective.source,
-            "TILE and COLLAPSE clause may not appear on loop construct "
+            "TILE clause may not appear on loop construct "
+            "associated with DO CONCURRENT"_err_en_US);
+      }
+      if (std::holds_alternative<parser::AccClause::Collapse>(clause.u)) {
+        messages_.Say(beginLoopDirective.source,
+            "COLLAPSE clause may not appear on loop construct "
             "associated with DO CONCURRENT"_err_en_US);
       }
     }

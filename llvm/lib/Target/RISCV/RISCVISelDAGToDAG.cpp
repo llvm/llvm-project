@@ -3061,6 +3061,11 @@ void RISCVDAGToDAGISel::Select(SDNode *Node) {
     return;
   }
   case ISD::PREFETCH:
+    // MIPS's prefetch instruction already encodes the hint within the
+    // instruction itself, so no extra NTL hint is needed.
+    if (Subtarget->hasVendorXMIPSCBOP())
+      break;
+
     unsigned Locality = Node->getConstantOperandVal(3);
     if (Locality > 2)
       break;
@@ -4305,6 +4310,12 @@ bool RISCVDAGToDAGISel::hasAllNBitUsers(SDNode *Node, unsigned Bits,
       return false;
     case RISCV::PACK:
       if (Bits >= (Subtarget->getXLen() / 2))
+        break;
+      return false;
+    case RISCV::PPAIRE_H:
+      // If only the lower 32-bits of the result are used, then only the
+      // lower 16 bits of the inputs are used.
+      if (Bits >= 16 && hasAllNBitUsers(User, 32, Depth + 1))
         break;
       return false;
     case RISCV::ADD_UW:

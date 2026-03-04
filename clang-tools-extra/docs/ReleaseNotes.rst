@@ -142,6 +142,12 @@ New checks
   Finds and removes redundant conversions from ``std::[w|u8|u16|u32]string_view`` to
   ``std::[...]string`` in call expressions expecting ``std::[...]string_view``.
 
+- New :doc:`performance-use-std-move
+  <clang-tidy/checks/performance/use-std-move>` check.
+
+  Suggests insertion of ``std::move(...)`` to turn copy assignment operator
+  calls into move assignment ones, when deemed valid and profitable.
+
 - New :doc:`readability-trailing-comma
   <clang-tidy/checks/readability/trailing-comma>` check.
 
@@ -172,9 +178,19 @@ Changes in existing checks
   for unannotated functions, enabling reporting when no explicit ``throw``
   is seen and allowing separate tuning for known and unknown implementations.
 
+- Improved :doc:`bugprone-fold-init-type
+  <clang-tidy/checks/bugprone/fold-init-type>` check by detecting precision
+  loss in overloads with transparent standard functors (e.g. ``std::plus<>``)
+  for ``std::accumulate``, ``std::reduce``, and ``std::inner_product``.
+
 - Improved :doc:`bugprone-macro-parentheses
   <clang-tidy/checks/bugprone/macro-parentheses>` check by printing the macro
   definition in the warning message if the macro is defined on command line.
+
+- Improved :doc:`bugprone-std-namespace-modification
+  <clang-tidy/checks/bugprone/std-namespace-modification>` check by fixing
+  false positives when extending the standard library with a specialization of
+  user-defined type.
 
 - Improved :doc:`bugprone-string-constructor
   <clang-tidy/checks/bugprone/string-constructor>` check to detect suspicious
@@ -214,6 +230,10 @@ Changes in existing checks
 
   - Fixed false positive where an array of pointers to ``const`` was
     incorrectly diagnosed as allowing the pointee to be made ``const``.
+
+- Improved :doc:`misc-unused-using-decls
+  <clang-tidy/checks/misc/unused-using-decls>` to not diagnose ``using``
+  declarations as unused if they're exported from a module.
 
 - Improved :doc:`modernize-pass-by-value
   <clang-tidy/checks/modernize/pass-by-value>` check by adding `IgnoreMacros`
@@ -269,6 +289,11 @@ Changes in existing checks
   <clang-tidy/checks/readability/non-const-parameter>` check by avoiding false
   positives on parameters used in dependent expressions (e.g. inside generic
   lambdas).
+
+- Improved :doc:`readability-redundant-preprocessor
+  <clang-tidy/checks/readability/redundant-preprocessor>` check by fixing a
+  false positive for nested ``#if`` directives using different builtin
+  expressions such as ``__has_builtin`` and ``__has_cpp_attribute``.
 
 - Improved :doc:`readability-simplify-boolean-expr
   <clang-tidy/checks/readability/simplify-boolean-expr>` check to provide valid
