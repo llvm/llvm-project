@@ -2024,8 +2024,8 @@ void AsmPrinter::emitPrefetchTargetSymbol(unsigned BaseID,
   SmallString<128> FunctionName;
   getNameWithPrefix(FunctionName, &MF->getFunction());
   MCSymbol *PrefetchTargetSymbol = OutContext.getOrCreateSymbol(
-      "__llvm_prefetch_target_" + FunctionName + "_" +
-      Twine(BaseID) + "_" + Twine(CallsiteIndex));
+      "__llvm_prefetch_target_" + FunctionName + "_" + Twine(BaseID) + "_" +
+      Twine(CallsiteIndex));
   // If the function is weak-linkage it may be replaced by a strong
   // version, in which case the prefetch targets should also be replaced.
   OutStreamer->emitSymbolAttribute(
