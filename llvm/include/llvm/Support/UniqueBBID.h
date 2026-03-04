@@ -33,6 +33,14 @@ struct CallsiteID {
   unsigned CallsiteIndex;
 };
 
+// This represents a prefetch hint to be injected at site `SiteID`, targetting
+// `TargetID` in function `TargetFunction`.
+struct PrefetchHint {
+  CallsiteID SiteID;
+  StringRef TargetFunction;
+  CallsiteID TargetID;
+};
+
 // Provides DenseMapInfo for UniqueBBID.
 template <> struct DenseMapInfo<UniqueBBID> {
   static inline UniqueBBID getEmptyKey() {
