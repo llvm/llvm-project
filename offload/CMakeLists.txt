@@ -28,6 +28,15 @@ elseif(NOT CMAKE_SIZEOF_VOID_P EQUAL 8)
   return()
 endif()
 
+set(OPENMP_ENABLED OFF)
+if("openmp" IN_LIST LLVM_ENABLE_RUNTIMES)
+  set(OPENMP_ENABLED ON)
+endif()
+set(LIBOFFLOAD_ENABLED OFF)
+if("offload" IN_LIST LLVM_ENABLE_RUNTIMES)
+  set(OFFLOAD_ENABLED ON)
+endif()
+
 set(OFFLOAD_SOURCE_DIR ${CMAKE_CURRENT_SOURCE_DIR})
 
 if(OPENMP_STANDALONE_BUILD)
@@ -394,7 +403,9 @@ add_subdirectory(tools)
 add_subdirectory(docs)
 
 # Build target agnostic offloading library.
+if(OPENMP_ENABLED)
 add_subdirectory(libomptarget)
+endif()
 
 add_subdirectory(liboffload)
 
