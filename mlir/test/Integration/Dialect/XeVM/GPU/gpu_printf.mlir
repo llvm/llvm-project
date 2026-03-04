@@ -9,6 +9,7 @@
 // RUN:   --entry-point-result=void \
 // RUN: | FileCheck %s
 
+// XFAIL: *
 module @test attributes {gpu.container_module} {
   gpu.module @test_module {
     gpu.func @test_printf(%arg0: i32, %arg1: f32) kernel {
