@@ -12107,14 +12107,6 @@ SDValue PPCTargetLowering::DMFInsert1024(const SmallVectorImpl<SDValue> &Pairs,
                  0);
 }
 
-static bool isPCRelNode(SDValue N) {
-  return (N.getOpcode() == PPCISD::MAT_PCREL_ADDR ||
-      isValidPCRelNode<ConstantPoolSDNode>(N) ||
-      isValidPCRelNode<GlobalAddressSDNode>(N) ||
-      isValidPCRelNode<JumpTableSDNode>(N) ||
-      isValidPCRelNode<BlockAddressSDNode>(N));
-}
-
 SDValue PPCTargetLowering::LowerVectorLoad(SDValue Op,
                                            SelectionDAG &DAG) const {
   SDLoc dl(Op);
@@ -20067,6 +20059,13 @@ static void computeFlagsForAddressComputation(SDValue N, unsigned &FlagSet,
   }
 }
 
+static bool isPCRelNode(SDValue N) {
+  return (N.getOpcode() == PPCISD::MAT_PCREL_ADDR ||
+      isValidPCRelNode<ConstantPoolSDNode>(N) ||
+      isValidPCRelNode<GlobalAddressSDNode>(N) ||
+      isValidPCRelNode<JumpTableSDNode>(N) ||
+      isValidPCRelNode<BlockAddressSDNode>(N));
+}
 
 /// computeMOFlags - Given a node N and it's Parent (a MemSDNode), compute
 /// the address flags of the load/store instruction that is to be matched.
