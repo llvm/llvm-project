@@ -1,8 +1,5 @@
-// RUN: %clangxx_lowfat -O0 %s -o %t
-// RUN: %clangxx_lowfat -O1 %s -o %t
-// RUN: %clangxx_lowfat -O2 %s -o %t
-// RUN: %clangxx_lowfat -O3 %s -o %t
-// RUN: not %run %t 2>&1 | FileCheck %s
+// RUN: %clangxx_lowfat -O0 %s -o %t && not %run %t 2>&1 | FileCheck %s
+// RUN: %clangxx_lowfat_safe -O1 %s -o %t && not %run %t 2>&1 | FileCheck %s
 
 // Verify that memset writing past the end of a LowFat allocation is detected
 // in fatal mode.

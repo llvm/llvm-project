@@ -38,14 +38,29 @@ def build_invocation(flags):
     return " " + " ".join([clang] + flags) + " "
 
 
-# Fatal mode  : terminate on first OOB
-lowfat_flags = ["-fsanitize=lowfat", "-O1"]
-# Recover mode: warn + continue
-lowfat_recover_flags = lowfat_flags + ["-fsanitize-recover=lowfat"]
+# Base flags
+lowfat_base = ["-fsanitize=lowfat"]
 
-config.substitutions.append(("%clangxx_lowfat ", build_invocation(lowfat_flags)))
+# Fast mode (OptimizerLastEP)
+lowfat_fast = lowfat_base + ["-mllvm", "-lowfat-mode=fast"]
+# Safe mode (Barrier at PipelineStartEP + instrument at OptimizerLastEP)
+lowfat_safe = lowfat_base + ["-mllvm", "-lowfat-mode=safe"]
+
+config.substitutions.append(("%clangxx_lowfat ", build_invocation(lowfat_fast)))
+config.substitutions.append(("%clangxx_lowfat_safe ", build_invocation(lowfat_safe)))
+
+# Recover mode versions
 config.substitutions.append(
-    ("%clangxx_lowfat_recover ", build_invocation(lowfat_recover_flags))
+    (
+        "%clangxx_lowfat_recover ",
+        build_invocation(lowfat_fast + ["-fsanitize-recover=lowfat"]),
+    )
+)
+config.substitutions.append(
+    (
+        "%clangxx_lowfat_safe_recover ",
+        build_invocation(lowfat_safe + ["-fsanitize-recover=lowfat"]),
+    )
 )
 
 # Only Darwin and Linux are supported.
