@@ -1032,10 +1032,11 @@ struct UnrollStoreMatrixOp : public UnrollPattern<xegpu::StoreMatrixOp> {
   }
 };
 
-/// UnrollConvertLayoutOp pattern for unrolling xegpu::ConvertLayoutOp operations.
-/// It first check whether the convert layout op has valid layouts after inst_data stripped.
-/// If it does, it will unroll the vector into multiple smaller vectors according to the target shape,
-/// and create multiple ConvertLayoutOp with the unrolled vectors and the stripped layouts.
+/// UnrollConvertLayoutOp pattern for unrolling xegpu::ConvertLayoutOp
+/// operations. It first check whether the convert layout op has valid layouts
+/// after inst_data stripped. If it does, it will unroll the vector into
+/// multiple smaller vectors according to the target shape, and create multiple
+/// ConvertLayoutOp with the unrolled vectors and the stripped layouts.
 struct UnrollConvertLayoutOp : public UnrollPattern<xegpu::ConvertLayoutOp> {
   using UnrollPattern<xegpu::ConvertLayoutOp>::UnrollPattern;
   LogicalResult matchAndRewrite(xegpu::ConvertLayoutOp op,
