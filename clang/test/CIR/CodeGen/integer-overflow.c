@@ -19,26 +19,26 @@
 void test1(void) {
   extern volatile int f11G, a, b;
   
-  // DEFAULT-CIR:  cir.binop(add, {{.*}}, {{.*}}) nsw : !s32i
+  // DEFAULT-CIR:  cir.add nsw {{.*}}, {{.*}} : !s32i
   // DEFAULT-LLVM: add nsw i32
   // DEFAULT-OGCG: add nsw i32
-  // WRAPV-CIR:  cir.binop(add, {{.*}}, {{.*}}) : !s32i
+  // WRAPV-CIR:  cir.add {{.*}}, {{.*}} : !s32i
   // WRAPV-LLVM: add i32
   // WRAPV-OGCG: add i32
   f11G = a + b;
   
-  // DEFAULT-CIR:  cir.binop(sub, {{.*}}, {{.*}}) nsw : !s32i
+  // DEFAULT-CIR:  cir.sub nsw {{.*}}, {{.*}} : !s32i
   // DEFAULT-LLVM: sub nsw i32
   // DEFAULT-OGCG: sub nsw i32
-  // WRAPV-CIR:  cir.binop(sub, {{.*}}, {{.*}}) : !s32i
+  // WRAPV-CIR:  cir.sub {{.*}}, {{.*}} : !s32i
   // WRAPV-LLVM: sub i32
   // WRAPV-OGCG: sub i32
   f11G = a - b;
   
-  // DEFAULT-CIR:  cir.binop(mul, {{.*}}, {{.*}}) nsw : !s32i
+  // DEFAULT-CIR:  cir.mul nsw {{.*}}, {{.*}} : !s32i
   // DEFAULT-LLVM: mul nsw i32
   // DEFAULT-OGCG: mul nsw i32
-  // WRAPV-CIR:  cir.binop(mul, {{.*}}, {{.*}}) : !s32i
+  // WRAPV-CIR:  cir.mul {{.*}}, {{.*}} : !s32i
   // WRAPV-LLVM: mul i32
   // WRAPV-OGCG: mul i32
   f11G = a * b;

@@ -33,9 +33,12 @@
 ; CHECK: DW_TAG_compile_unit
 ; CHECK-NOT: DW_TAG
 ; CHECK:     DW_AT_name ("a.cpp")
+; CHECK: DW_TAG_subprogram
+; CHECK-NOT: DW_TAG
 ; CHECK:     DW_AT_name ("func")
 
 source_filename = "test/DebugInfo/Generic/cross-cu-linkonce-distinct.ll"
+target triple = "x86_64-unknown-linux-gnu"
 
 @x = global ptr @_Z4funci, align 8, !dbg !0
 @y = global ptr @_Z4funci, align 8, !dbg !7

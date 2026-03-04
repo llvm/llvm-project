@@ -495,6 +495,9 @@ public:
   /// The list of files to embed into the compiled module file.
   std::vector<std::string> ModulesEmbedFiles;
 
+  /// The time in seconds to wait on an implicit module lock before timing out.
+  unsigned ImplicitModulesLockTimeoutSeconds = 90;
+
   /// The list of AST files to merge.
   std::vector<std::string> ASTMergeFiles;
 

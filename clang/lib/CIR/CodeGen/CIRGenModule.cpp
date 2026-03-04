@@ -22,6 +22,7 @@
 #include "clang/AST/DeclOpenACC.h"
 #include "clang/AST/GlobalDecl.h"
 #include "clang/AST/RecordLayout.h"
+#include "clang/Basic/DiagnosticFrontend.h"
 #include "clang/Basic/SourceManager.h"
 #include "clang/CIR/Dialect/IR/CIRAttrs.h"
 #include "clang/CIR/Dialect/IR/CIRDialect.h"
@@ -2188,6 +2189,15 @@ void CIRGenModule::setGVPropertiesAux(mlir::Operation *op,
   assert(!cir::MissingFeatures::opGlobalPartition());
 }
 
+bool CIRGenModule::lookupRepresentativeDecl(StringRef mangledName,
+                                            GlobalDecl &result) const {
+  auto res = manglings.find(mangledName);
+  if (res == manglings.end())
+    return false;
+  result = res->getValue();
+  return true;
+}
+
 cir::TLS_Model CIRGenModule::getDefaultCIRTLSModel() const {
   switch (getCodeGenOpts().getDefaultTLSModel()) {
   case CodeGenOptions::GeneralDynamicTLSModel:
@@ -2372,12 +2382,6 @@ cir::FuncOp CIRGenModule::getOrCreateCIRFunction(
     mlir::ArrayAttr extraAttrs) {
   const Decl *d = gd.getDecl();
 
-  if (isThunk)
-    errorNYI(d->getSourceRange(), "getOrCreateCIRFunction: thunk");
-
-  // In what follows, we continue past 'errorNYI' as if nothing happened because
-  // the rest of the implementation is better than doing nothing.
-
   if (const auto *fd = cast_or_null<FunctionDecl>(d)) {
     // For the device mark the function as one that should be emitted.
     if (getLangOpts().OpenMPIsTargetDevice && fd->isDefined() && !dontDefer &&
@@ -2408,8 +2412,20 @@ cir::FuncOp CIRGenModule::getOrCreateCIRFunction(
     // error.
     auto fn = cast<cir::FuncOp>(entry);
     if (isForDefinition && fn && !fn.isDeclaration()) {
-      errorNYI(d->getSourceRange(), "Duplicate function definition");
+      GlobalDecl otherGd;
+      // Check that GD is not yet in DiagnosedConflictingDefinitions is required
+      // to make sure that we issue an error only once.
+      if (lookupRepresentativeDecl(mangledName, otherGd) &&
+          (gd.getCanonicalDecl().getDecl() !=
+           otherGd.getCanonicalDecl().getDecl()) &&
+          diagnosedConflictingDefinitions.insert(gd).second) {
+        getDiags().Report(d->getLocation(), diag::err_duplicate_mangled_name)
+            << mangledName;
+        getDiags().Report(otherGd.getDecl()->getLocation(),
+                          diag::note_previous_definition);
+      }
     }
+
     if (fn && fn.getFunctionType() == funcType) {
       return fn;
     }
