@@ -323,7 +323,8 @@ SPIRVLegalizerInfo::SPIRVLegalizerInfo(const SPIRVSubtarget &ST) {
   getActionDefinitionsBuilder(G_STRICT_FLDEXP)
       .legalForCartesianProduct(allFloatScalarsAndVectors, allIntScalars);
 
-  getActionDefinitionsBuilder({G_FPTOSI, G_FPTOUI})
+  getActionDefinitionsBuilder(
+      {G_FPTOSI, G_FPTOUI, G_STRICT_FPTOSI, G_STRICT_FPTOUI})
       .legalForCartesianProduct(allIntScalarsAndVectors,
                                 allFloatScalarsAndVectors);
 
@@ -331,7 +332,8 @@ SPIRVLegalizerInfo::SPIRVLegalizerInfo(const SPIRVSubtarget &ST) {
       .legalForCartesianProduct(allIntScalarsAndVectors,
                                 allFloatScalarsAndVectors);
 
-  getActionDefinitionsBuilder({G_SITOFP, G_UITOFP})
+  getActionDefinitionsBuilder(
+      {G_SITOFP, G_UITOFP, G_STRICT_SITOFP, G_STRICT_UITOFP})
       .legalForCartesianProduct(allFloatScalarsAndVectors,
                                 allScalarsAndVectors);
 
@@ -420,7 +422,8 @@ SPIRVLegalizerInfo::SPIRVLegalizerInfo(const SPIRVSubtarget &ST) {
                                 allIntScalarsAndVectors);
 
   // FP conversions.
-  getActionDefinitionsBuilder({G_FPTRUNC, G_FPEXT})
+  getActionDefinitionsBuilder(
+      {G_FPTRUNC, G_FPEXT, G_STRICT_FPEXT, G_STRICT_FPTRUNC})
       .legalForCartesianProduct(allFloatScalarsAndVectors);
 
   // Pointer-handling.
