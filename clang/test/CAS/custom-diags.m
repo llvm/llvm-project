@@ -11,4 +11,4 @@
 // RUN: FileCheck %s -input-file %t/diags-cached
 
 const char s8[] = @encode(__SVInt8_t);
-// CHECK: cannot yet @encode type __SVInt8_t
+// CHECK: cannot yet @encode type '__SVInt8_t'
