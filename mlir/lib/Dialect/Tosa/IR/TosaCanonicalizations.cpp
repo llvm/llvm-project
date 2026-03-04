@@ -854,9 +854,9 @@ struct SliceDynamicSizeCanonicalization
         llvm::to_vector(sizeElems.getValues<int64_t>());
 
     bool replaceSliceSize{false};
-    // if size op has kInferableDimSize indicating dynamic shape but corresponding dim on the
-    // output is statically known, update size to match with known output dim
-    // shape
+    // if size op has kInferableDimSize indicating dynamic shape but
+    // corresponding dim on the output is statically known, update size to match
+    // with known output dim shape
     for (const auto &[index, size] : llvm::enumerate(sliceSizes)) {
       if (size == kInferableDimSize && !resultType.isDynamicDim(index)) {
         sliceSizes[index] = resultType.getDimSize(index);
@@ -1797,15 +1797,15 @@ OpFoldResult SliceOp::fold(FoldAdaptor adaptor) {
       int64_t size = sizeVal.getSExtValue();
 
       if (inputTy.isDynamicDim(i)) {
-        // For dynamic dimensions, check for kInferableDimSize indicating full dimension is
-        // sliced
+        // For dynamic dimensions, check for kInferableDimSize indicating full
+        // dimension is sliced
         if (size != kInferableDimSize) {
           sizeMatchesInput = false;
           break;
         }
       } else {
-        // For static dimensions, check that size must match exactly or be kInferableDimSize
-        // indicating full dimension is sliced
+        // For static dimensions, check that size must match exactly or be
+        // kInferableDimSize indicating full dimension is sliced
         if (size != kInferableDimSize && size != inputShape[i]) {
           sizeMatchesInput = false;
           break;
