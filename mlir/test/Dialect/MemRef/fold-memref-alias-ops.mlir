@@ -172,9 +172,9 @@ func.func @fold_rank_reducing_subview_with_load
 // CHECK-SAME:   %[[ARG16:[a-zA-Z0-9_]+]]: index
 //  CHECK-DAG:   %[[I0:.+]] = affine.apply #[[MAP]]()[%[[ARG1]], %[[ARG13]], %[[ARG7]]]
 //  CHECK-DAG:   %[[I1:.+]] = affine.apply #[[MAP]]()[%[[ARG2]], %[[ARG14]], %[[ARG8]]]
-//  CHECK-DAG:   %[[I2:.+]] = affine.apply #[[MAP]]()[%[[ARG3]], %[[ARG15]], %[[ARG9]]]
-//  CHECK-DAG:   %[[I3:.+]] = affine.apply #[[MAP]]()[%[[ARG4]], %[[ARG16]], %[[ARG10]]]
-//      CHECK:   memref.load %[[ARG0]][%[[I0]], %[[I1]], %[[I2]], %[[I3]], %[[ARG5]], %[[ARG6]]]
+//  CHECK-DAG:   %[[I2:.+]] = affine.apply #[[MAP]]()[%[[ARG4]], %[[ARG15]], %[[ARG10]]]
+//  CHECK-DAG:   %[[I3:.+]] = affine.apply #[[MAP]]()[%[[ARG5]], %[[ARG16]], %[[ARG11]]]
+//      CHECK:   memref.load %[[ARG0]][%[[I0]], %[[I1]], %[[ARG3]], %[[I2]], %[[I3]], %[[ARG6]]]
 
 // -----
 

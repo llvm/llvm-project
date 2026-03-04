@@ -970,16 +970,14 @@ computeMemRefRankReductionMaskByPosition(MemRefType originalType,
 
   ArrayRef<int64_t> resultSizes = reducedType.getShape();
   llvm::SmallBitVector usedSourceDims(originalType.getRank());
+  int64_t startJ = 0;
   for (int64_t resultSize : resultSizes) {
     bool matched = false;
-    for (int64_t j = 0; j < originalType.getRank(); ++j) {
-      if (usedSourceDims.test(j))
-        continue;
-      if (sourceSizes[j] == resultSize ||
-          (resultSize == ShapedType::kDynamic &&
-           sourceSizes[j] == ShapedType::kDynamic)) {
+    for (int64_t j = startJ; j < originalType.getRank(); ++j) {
+      if (sourceSizes[j] == resultSize) {
         usedSourceDims.set(j);
         matched = true;
+        startJ = j + 1;
         break;
       }
     }
@@ -991,6 +989,45 @@ computeMemRefRankReductionMaskByPosition(MemRefType originalType,
   for (int64_t i = 0; i < originalType.getRank(); ++i)
     if (!usedSourceDims.test(i))
       unusedDims.set(i);
+  return unusedDims;
+}
+
+/// Returns the set of source dimensions that are dropped in a rank reduction.
+/// A dimension is dropped if its stride is dropped; uses stride occurrence
+/// counting to disambiguate when multiple unit dims exist.
+///
+/// Example: memref<1x1x?xf32, strided<[?, 4, 1]>> to memref<1x4xf32,
+/// strided<[4, 1]>>. Source strides [?, 4, 1], candidate [4, 1]. Dim 0 (stride
+/// ?) can be dropped; dim 1 (stride 4) must be kept. Source dim 0 is dropped.
+static FailureOr<llvm::SmallBitVector> computeMemRefRankReductionMaskByStrides(
+    MemRefType originalType, MemRefType reducedType,
+    ArrayRef<int64_t> originalStrides, ArrayRef<int64_t> candidateStrides,
+    llvm::SmallBitVector unusedDims) {
+  std::map<int64_t, unsigned> currUnaccountedStrides =
+      getNumOccurences(originalStrides);
+  std::map<int64_t, unsigned> candidateStridesNumOccurences =
+      getNumOccurences(candidateStrides);
+  for (size_t dim = 0, e = unusedDims.size(); dim != e; ++dim) {
+    if (!unusedDims.test(dim))
+      continue;
+    int64_t originalStride = originalStrides[dim];
+    if (currUnaccountedStrides[originalStride] >
+        candidateStridesNumOccurences[originalStride]) {
+      currUnaccountedStrides[originalStride]--;
+      continue;
+    }
+    if (currUnaccountedStrides[originalStride] ==
+        candidateStridesNumOccurences[originalStride]) {
+      unusedDims.reset(dim);
+      continue;
+    }
+    if (currUnaccountedStrides[originalStride] <
+        candidateStridesNumOccurences[originalStride])
+      return failure();
+  }
+  if (static_cast<int64_t>(unusedDims.count()) + reducedType.getRank() !=
+      originalType.getRank())
+    return failure();
   return unusedDims;
 }
 
@@ -1027,59 +1064,27 @@ computeMemRefRankReductionMask(MemRefType originalType, MemRefType reducedType,
           reducedType.getStridesAndOffset(candidateStrides, candidateOffset)))
     return failure();
 
-  // When strides are dynamic and multiple dimensions need to be dropped, we use
-  // position-based matching instead.
-  if (unusedDims.count() > 1 &&
-      (llvm::any_of(originalStrides, ShapedType::isDynamic) ||
-       llvm::any_of(candidateStrides, ShapedType::isDynamic))) {
-    FailureOr<llvm::SmallBitVector> positionBased =
-        computeMemRefRankReductionMaskByPosition(originalType, reducedType,
-                                                 sizes);
-    if (succeeded(positionBased))
-      return *positionBased;
+  // Try stride-based first when we have meaningful static stride info
+  // (preserves static strides). Fall back to position-based otherwise.
+  auto hasNonTrivialStaticStride = [](ArrayRef<int64_t> strides) {
+    // The innermost stride 1 is trivial for row-major and does not help
+    // disambiguate.
+    if (strides.size() <= 1)
+      return false;
+    return llvm::any_of(strides.drop_back(),
+                        [](int64_t s) { return !ShapedType::isDynamic(s); });
+  };
+  if (hasNonTrivialStaticStride(originalStrides) ||
+      hasNonTrivialStaticStride(candidateStrides)) {
+    FailureOr<llvm::SmallBitVector> strideBased =
+        computeMemRefRankReductionMaskByStrides(originalType, reducedType,
+                                                originalStrides,
+                                                candidateStrides, unusedDims);
+    if (succeeded(strideBased))
+      return *strideBased;
   }
-
-  // For memrefs, a dimension is truly dropped if its corresponding stride is
-  // also dropped. This is particularly important when more than one of the dims
-  // is 1. Track the number of occurences of the strides in the original type
-  // and the candidate type. For each unused dim that stride should not be
-  // present in the candidate type. Note that there could be multiple dimensions
-  // that have the same size. We dont need to exactly figure out which dim
-  // corresponds to which stride, we just need to verify that the number of
-  // reptitions of a stride in the original + number of unused dims with that
-  // stride == number of repititions of a stride in the candidate.
-  std::map<int64_t, unsigned> currUnaccountedStrides =
-      getNumOccurences(originalStrides);
-  std::map<int64_t, unsigned> candidateStridesNumOccurences =
-      getNumOccurences(candidateStrides);
-  for (size_t dim = 0, e = unusedDims.size(); dim != e; ++dim) {
-    if (!unusedDims.test(dim))
-      continue;
-    int64_t originalStride = originalStrides[dim];
-    if (currUnaccountedStrides[originalStride] >
-        candidateStridesNumOccurences[originalStride]) {
-      // This dim can be treated as dropped.
-      currUnaccountedStrides[originalStride]--;
-      continue;
-    }
-    if (currUnaccountedStrides[originalStride] ==
-        candidateStridesNumOccurences[originalStride]) {
-      // The stride for this is not dropped. Keep as is.
-      unusedDims.reset(dim);
-      continue;
-    }
-    if (currUnaccountedStrides[originalStride] <
-        candidateStridesNumOccurences[originalStride]) {
-      // This should never happen. Cant have a stride in the reduced rank type
-      // that wasnt in the original one.
-      return failure();
-    }
-  }
-
-  if ((int64_t)unusedDims.count() + reducedType.getRank() !=
-      originalType.getRank())
-    return failure();
-  return unusedDims;
+  return computeMemRefRankReductionMaskByPosition(originalType, reducedType,
+                                                  sizes);
 }
 
 llvm::SmallBitVector SubViewOp::getDroppedDims() {
