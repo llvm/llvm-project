@@ -372,6 +372,149 @@ static bool tryToRecognizePopCount(Instruction &I) {
   return false;
 }
 
+// Try to recognize below function as popcount intrinsic.
+// https://doc.lagout.org/security/Hackers%20Delight.pdf
+// Also used in TargetLowering::expandCTPOP().
+//
+// int popcount32(unsigned int i) {
+// uWord = (uWord & 0x55555555) + ((uWord>>1) & 0x55555555);
+// uWord = (uWord & 0x33333333) + ((uWord>>2) & 0x33333333);
+// uWord = (uWord & 0x0F0F0F0F) + ((uWord>>4) & 0x0F0F0F0F);
+// uWord = (uWord & 0x00FF00FF) + ((uWord>>8) & 0x00FF00FF);
+// return  (uWord & 0x0000FFFF) + (uWord>>16);
+// }
+// int popcount64(unsigned long i) {
+// uWord = (uWord & 0x5555555555555555) + ((uWord>>1) & 0x5555555555555555);
+// uWord = (uWord & 0x3333333333333333) + ((uWord>>2) & 0x3333333333333333);
+// uWord = (uWord & 0x0F0F0F0F0F0F0F0F) + ((uWord>>4) & 0x0F0F0F0F0F0F0F0F);
+// uWord = (uWord & 0x00FF00FF00FF00FF) + ((uWord>>8) & 0x00FF00FF00FF00FF);
+// return  (uWord & 0x0000FFFF0000FFFF) + ((uWord>>16) & 0x0000FFFF0000FFFF);
+// return  (uWord & 0x00000000FFFFFFFF) + (uWord>>32) & 0x00000000FFFFFFFF;
+// }
+static bool tryToRecognizePopCount1(Instruction &I) {
+  if (I.getOpcode() != Instruction::Add)
+    return false;
+
+  Type *Ty = I.getType();
+  if (!Ty->isIntOrIntVectorTy())
+    return false;
+
+  unsigned Len = Ty->getScalarSizeInBits();
+  if (!(Len <= 64 && Len > 8 && Len % 8 == 0))
+    return false;
+
+  APInt Mask55 = APInt::getSplat(Len, APInt(8, 0x55));
+  APInt Mask33 = APInt::getSplat(Len, APInt(8, 0x33));
+  APInt Mask0F = APInt::getSplat(Len, APInt(8, 0x0F));
+  APInt Mask00FF;
+  if (Len <= 16) {
+    Mask00FF = APInt(16, 0x00FF);
+  } else {
+    Mask00FF = APInt::getSplat(Len, APInt(16, 0x00FF));
+  }
+  APInt Mask0000FFFF;
+  if (Len <= 32) {
+    Mask0000FFFF = APInt(32, 0x0000FFFF);
+  } else {
+    Mask0000FFFF = APInt::getSplat(Len, APInt(32, 0x0000FFFF));
+  }
+
+  APInt Mask64 = APInt(64, 0x00000000FFFFFFFF);
+  // Matching "(uWord & 0x00000000FFFFFFFF) + (uWord>>32)".
+  // OR
+  // Matching "(uWord & 0x00000000FFFFFFFF) + ((uWord>>32) &
+  // 0x00000000FFFFFFFF)".
+  Value *ShiftOp;
+  Value *Start = &I;
+  bool is64 = false;
+  if (match(Start,
+            m_c_Add(m_And(m_LShr(m_Value(ShiftOp), m_SpecificInt(32)),
+                          m_SpecificInt(Mask64)),
+                    m_And(m_Deferred(ShiftOp), m_SpecificInt(Mask64)))) ||
+      match(Start,
+            m_c_Add(m_LShr(m_Value(ShiftOp), m_SpecificInt(32)),
+                    m_And(m_Deferred(ShiftOp), m_SpecificInt(Mask64))))) {
+    Start = ShiftOp;
+    is64 = true;
+  }
+  Value *LShrOp0;
+  // Matching "(uWord & 0x0000FFFF) + (uWord>>16)".
+  // Matching "(uWord & 0x0000FFFF) + ((uWord>>16) & 0x0000FFFF)".
+  bool test16 = match(
+      Start, m_c_Add(m_And(m_LShr(m_Value(LShrOp0), m_SpecificInt(16)),
+                           m_SpecificInt(Mask0000FFFF)),
+                     m_And(m_Deferred(LShrOp0), m_SpecificInt(Mask0000FFFF))));
+
+  bool is32 = false;
+  if ((is64 && test16) ||
+      (!is64 && Len == 32 &&
+       (test16 ||
+        match(Start, m_c_Add(m_LShr(m_Value(LShrOp0), m_SpecificInt(16)),
+                             m_And(m_Deferred(LShrOp0),
+                                   m_SpecificInt(Mask0000FFFF))))))) {
+    Start = LShrOp0;
+
+    is32 = true;
+  }
+  Value *ShiftOp0;
+  // Matching "uWord = (uWord & 0x00FF00FF) + ((uWord>>8) & 0x00FF00FF);".
+  // OR
+  // Matching "uWord = (uWord & 0x00FF00FF) + (uWord>>8) ;".
+  bool test8 = match(
+      Start, m_c_Add(m_And(m_LShr(m_Value(ShiftOp0), m_SpecificInt(8)),
+                           m_SpecificInt(Mask00FF)),
+                     m_And(m_Deferred(ShiftOp0), m_SpecificInt(Mask00FF))));
+
+  bool is16 = false;
+  if ((is32 && test8) ||
+      (!is32 && Len == 16 &&
+       (test8 ||
+        match(Start, m_c_Add(m_LShr(m_Value(ShiftOp0), m_SpecificInt(8)),
+                             m_And(m_Deferred(ShiftOp0),
+                                   m_SpecificInt(Mask00FF))))))) {
+    Start = ShiftOp0;
+    is16 = true;
+  }
+
+  Value *ShiftOp1;
+  // Matching "uWord = (uWord & 0x0F0F0F0F) + ((uWord>>4) & 0x0F0F0F0F)".
+  bool test4 =
+      match(Start, m_c_Add(m_And(m_LShr(m_Value(ShiftOp1), m_SpecificInt(4)),
+                                 m_SpecificInt(Mask0F)),
+                           m_And(m_Deferred(ShiftOp1), m_SpecificInt(Mask0F))));
+
+  bool is8 = false;
+  if ((is16 && test4)) {
+    Start = ShiftOp1;
+    is8 = true;
+  }
+
+  Value *ShiftOp2;
+  // Matching "uWord = (uWord & 0x33333333) + ((uWord>>2) & 0x33333333)".
+  if (is8 &&
+      match(Start,
+            m_c_Add(m_And(m_LShr(m_Value(ShiftOp2), m_SpecificInt(2)),
+                          m_SpecificInt(Mask33)),
+                    m_And(m_Deferred(ShiftOp2), m_SpecificInt(Mask33))))) {
+    Value *ShiftOp3;
+    // Matching "uWord = (uWord & 0x55555555) + ((uWord>>1) &
+    // 0x55555555)".
+    if (match(ShiftOp2,
+              m_c_Add(m_And(m_LShr(m_Value(ShiftOp3), m_SpecificInt(1)),
+                            m_SpecificInt(Mask55)),
+                      m_And(m_Deferred(ShiftOp3), m_SpecificInt(Mask55))))) {
+      LLVM_DEBUG(dbgs() << "Recognized popcount intrinsic\n");
+      IRBuilder<> Builder(&I);
+      I.replaceAllUsesWith(
+          Builder.CreateIntrinsic(Intrinsic::ctpop, I.getType(), {ShiftOp3}));
+      ++NumPopCountRecognized;
+      return true;
+    }
+  }
+
+  return false;
+}
+
 /// Fold smin(smax(fptosi(x), C1), C2) to llvm.fptosi.sat(x), providing C1 and
 /// C2 saturate the value of the fp conversion. The transform is not reversable
 /// as the fptosi.sat is more defined than the input - all values produce a
@@ -1826,6 +1969,7 @@ static bool foldUnusualPatterns(Function &F, DominatorTree &DT,
       MadeChange |= foldAnyOrAllBitsSet(I);
       MadeChange |= foldGuardedFunnelShift(I, DT);
       MadeChange |= tryToRecognizePopCount(I);
+      MadeChange |= tryToRecognizePopCount1(I);
       MadeChange |= tryToFPToSat(I, TTI);
       MadeChange |= tryToRecognizeTableBasedCttz(I, DL);
       MadeChange |= foldConsecutiveLoads(I, DL, TTI, AA, DT);

@@ -239,3 +239,267 @@ define i32 @popcount64_mask(i64 %x) {
   %13 = trunc nuw nsw i64 %12 to i32
   ret i32 %13
 }
+
+; Function Attrs: mustprogress nofree norecurse nosync nounwind willreturn memory(none) uwtable
+define dso_local noundef range(i32 0, 59) i32 @popcnt1_32(i32 noundef %uWord) local_unnamed_addr {
+; CHECK-LABEL: define dso_local noundef range(i32 0, 59) i32 @popcnt1_32(
+; CHECK-SAME: i32 noundef [[UWORD:%.*]]) local_unnamed_addr {
+; CHECK-NEXT:  [[ENTRY:.*:]]
+; CHECK-NEXT:    [[TMP0:%.*]] = call i32 @llvm.ctpop.i32(i32 [[UWORD]])
+; CHECK-NEXT:    ret i32 [[TMP0]]
+;
+entry:
+  %and = and i32 %uWord, 1431655765
+  %shr = lshr i32 %uWord, 1
+  %and1 = and i32 %shr, 1431655765
+  %add = add nuw i32 %and1, %and
+  %and2 = and i32 %add, 858993459
+  %shr3 = lshr i32 %add, 2
+  %and4 = and i32 %shr3, 858993459
+  %add5 = add nuw nsw i32 %and4, %and2
+  %and6 = and i32 %add5, 252645135
+  %shr7 = lshr i32 %add5, 4
+  %and8 = and i32 %shr7, 252645135
+  %add9 = add nuw nsw i32 %and8, %and6
+  %and10 = and i32 %add9, 16711935
+  %shr11 = lshr i32 %add9, 8
+  %and12 = and i32 %shr11, 16711935
+  %add13 = add nuw nsw i32 %and12, %and10
+  %and14 = and i32 %add13, 65535
+  %shr15 = lshr i32 %add13, 16
+  %add16 = add nuw nsw i32 %and14, %shr15
+  ret i32 %add16
+}
+
+; Function Attrs: mustprogress nofree norecurse nosync nounwind willreturn memory(none) uwtable
+define dso_local noundef range(i32 0, 59) i32 @popcnt1_32_variant2(i32 noundef %uWord) local_unnamed_addr {
+; CHECK-LABEL: define dso_local noundef range(i32 0, 59) i32 @popcnt1_32_variant2(
+; CHECK-SAME: i32 noundef [[UWORD:%.*]]) local_unnamed_addr {
+; CHECK-NEXT:  [[ENTRY:.*:]]
+; CHECK-NEXT:    [[TMP0:%.*]] = call i32 @llvm.ctpop.i32(i32 [[UWORD]])
+; CHECK-NEXT:    ret i32 [[TMP0]]
+;
+entry:
+  %and = and i32 %uWord, 1431655765
+  %shr = lshr i32 %uWord, 1
+  %and1 = and i32 %shr, 1431655765
+  %add = add nuw i32 %and1, %and
+  %and2 = and i32 %add, 858993459
+  %shr3 = lshr i32 %add, 2
+  %and4 = and i32 %shr3, 858993459
+  %add5 = add nuw nsw i32 %and4, %and2
+  %and6 = and i32 %add5, 252645135
+  %shr7 = lshr i32 %add5, 4
+  %and8 = and i32 %shr7, 252645135
+  %add9 = add nuw nsw i32 %and8, %and6
+  %and10 = and i32 %add9, 16711935
+  %shr11 = lshr i32 %add9, 8
+  %and12 = and i32 %shr11, 16711935
+  %add13 = add nuw nsw i32 %and12, %and10
+  %and14 = and i32 %add13, 65535
+  %shr15 = lshr i32 %add13, 16
+  %and16 = and i32 %shr15, 65535
+  %add17 = add nuw nsw i32 %and14, %and16
+  ret i32 %add17
+}
+
+; Function Attrs: mustprogress nofree norecurse nosync nounwind willreturn memory(none) uwtable
+define dso_local noundef i64 @popcnt1_64(i64 noundef %uWord) local_unnamed_addr {
+; CHECK-LABEL: define dso_local noundef i64 @popcnt1_64(
+; CHECK-SAME: i64 noundef [[UWORD:%.*]]) local_unnamed_addr {
+; CHECK-NEXT:  [[ENTRY:.*:]]
+; CHECK-NEXT:    [[TMP0:%.*]] = call i64 @llvm.ctpop.i64(i64 [[UWORD]])
+; CHECK-NEXT:    ret i64 [[TMP0]]
+;
+entry:
+  %and = and i64 %uWord, 6148914691236517205 ; 0x5555555555555555
+  %shr = lshr i64 %uWord, 1
+  %and1 = and i64 %shr, 6148914691236517205
+  %add = add nuw i64 %and1, %and
+  %and2 = and i64 %add, 3689348814741910323 ; 0x3333333333333333
+  %shr3 = lshr i64 %add, 2
+  %and4 = and i64 %shr3, 3689348814741910323
+  %add5 = add nuw nsw i64 %and4, %and2
+  %and6 = and i64 %add5, 1085102592571150095 ; 0F0F0F0F0F0F0F0F
+  %shr7 = lshr i64 %add5, 4
+  %and8 = and i64 %shr7, 1085102592571150095
+  %add9 = add nuw nsw i64 %and8, %and6
+  %and10 = and i64 %add9, 71777214294589695 ; 00FF00FF00FF00FF
+  %shr11 = lshr i64 %add9, 8
+  %and12 = and i64 %shr11, 71777214294589695
+  %add13 = add nuw nsw i64 %and12, %and10
+  %and14 = and i64 %add13, 281470681808895 ; 0000FFFF0000FFFF
+  %shr15 = lshr i64 %add13, 16
+  %and16 = and i64 %shr15, 281470681808895
+  %add17 = add nuw nsw i64 %and16, %and14
+  %and18 = and i64 %add17, 4294967295 ; 00000000FFFFFFFF
+  %shr19 = lshr i64 %add17, 32
+  %add20 = add nuw nsw i64 %and18, %shr19
+  ret i64 %add20
+}
+
+; Test 16-bit popcount pattern (Hacker's Delight)
+define i16 @popcnt1_16(i16 noundef %uWord) {
+; CHECK-LABEL: @popcnt1_16(
+; CHECK-NEXT:    [[TMP1:%.*]] = call i16 @llvm.ctpop.i16(i16 [[UWORD:%.*]])
+; CHECK-NEXT:    ret i16 [[TMP1]]
+;
+  %and = and i16 %uWord, 21845 ; 0x5555
+  %shr = lshr i16 %uWord, 1
+  %and1 = and i16 %shr, 21845
+  %add = add nuw i16 %and1, %and
+  %and2 = and i16 %add, 13107 ; 0x3333
+  %shr3 = lshr i16 %add, 2
+  %and4 = and i16 %shr3, 13107
+  %add5 = add nuw nsw i16 %and4, %and2
+  %and6 = and i16 %add5, 3855 ; 0x0F0F
+  %shr7 = lshr i16 %add5, 4
+  %and8 = and i16 %shr7, 3855
+  %add9 = add nuw nsw i16 %and8, %and6
+  %and10 = and i16 %add9, 255 ; 0x00FF
+  %shr11 = lshr i16 %add9, 8
+  %add13 = add nuw nsw i16 %shr11, %and10
+  ret i16 %add13
+}
+
+; Test 16-bit popcount pattern variant2 (with extra mask on final shift)
+define i16 @popcnt1_16_variant2(i16 noundef %uWord) {
+; CHECK-LABEL: @popcnt1_16_variant2(
+; CHECK-NEXT:    [[TMP1:%.*]] = call i16 @llvm.ctpop.i16(i16 [[UWORD:%.*]])
+; CHECK-NEXT:    ret i16 [[TMP1]]
+;
+  %and = and i16 %uWord, 21845 ; 0x5555
+  %shr = lshr i16 %uWord, 1
+  %and1 = and i16 %shr, 21845
+  %add = add nuw i16 %and1, %and
+  %and2 = and i16 %add, 13107 ; 0x3333
+  %shr3 = lshr i16 %add, 2
+  %and4 = and i16 %shr3, 13107
+  %add5 = add nuw nsw i16 %and4, %and2
+  %and6 = and i16 %add5, 3855 ; 0x0F0F
+  %shr7 = lshr i16 %add5, 4
+  %and8 = and i16 %shr7, 3855
+  %add9 = add nuw nsw i16 %and8, %and6
+  %and10 = and i16 %add9, 255 ; 0x00FF
+  %shr11 = lshr i16 %add9, 8
+  %and12 = and i16 %shr11, 255
+  %add13 = add nuw nsw i16 %and10, %and12
+  ret i16 %add13
+}
+
+; Vector variant: 16-bit popcount pattern (Hacker's Delight)
+define <8 x i16> @popcnt1_16vec(<8 x i16> %uWord) {
+; CHECK-LABEL: @popcnt1_16vec(
+; CHECK-NEXT:    [[TMP1:%.*]] = call <8 x i16> @llvm.ctpop.v8i16(<8 x i16> [[UWORD:%.*]])
+; CHECK-NEXT:    ret <8 x i16> [[TMP1]]
+;
+  %and = and <8 x i16> %uWord, <i16 21845, i16 21845, i16 21845, i16 21845, i16 21845, i16 21845, i16 21845, i16 21845>
+  %shr = lshr <8 x i16> %uWord, <i16 1, i16 1, i16 1, i16 1, i16 1, i16 1, i16 1, i16 1>
+  %and1 = and <8 x i16> %shr, <i16 21845, i16 21845, i16 21845, i16 21845, i16 21845, i16 21845, i16 21845, i16 21845>
+  %add = add nuw <8 x i16> %and1, %and
+  %and2 = and <8 x i16> %add, <i16 13107, i16 13107, i16 13107, i16 13107, i16 13107, i16 13107, i16 13107, i16 13107>
+  %shr3 = lshr <8 x i16> %add, <i16 2, i16 2, i16 2, i16 2, i16 2, i16 2, i16 2, i16 2>
+  %and4 = and <8 x i16> %shr3, <i16 13107, i16 13107, i16 13107, i16 13107, i16 13107, i16 13107, i16 13107, i16 13107>
+  %add5 = add nuw nsw <8 x i16> %and4, %and2
+  %and6 = and <8 x i16> %add5, <i16 3855, i16 3855, i16 3855, i16 3855, i16 3855, i16 3855, i16 3855, i16 3855>
+  %shr7 = lshr <8 x i16> %add5, <i16 4, i16 4, i16 4, i16 4, i16 4, i16 4, i16 4, i16 4>
+  %and8 = and <8 x i16> %shr7, <i16 3855, i16 3855, i16 3855, i16 3855, i16 3855, i16 3855, i16 3855, i16 3855>
+  %add9 = add nuw nsw <8 x i16> %and8, %and6
+  %and10 = and <8 x i16> %add9, <i16 255, i16 255, i16 255, i16 255, i16 255, i16 255, i16 255, i16 255>
+  %shr11 = lshr <8 x i16> %add9, <i16 8, i16 8, i16 8, i16 8, i16 8, i16 8, i16 8, i16 8>
+  %add13 = add nuw nsw <8 x i16> %shr11, %and10
+  ret <8 x i16> %add13
+}
+
+; Vector variant: 32-bit popcount pattern (Hacker's Delight)
+define <4 x i32> @popcnt1_32vec(<4 x i32> %uWord) {
+; CHECK-LABEL: @popcnt1_32vec(
+; CHECK-NEXT:    [[TMP1:%.*]] = call <4 x i32> @llvm.ctpop.v4i32(<4 x i32> [[UWORD:%.*]])
+; CHECK-NEXT:    ret <4 x i32> [[TMP1]]
+;
+  %and = and <4 x i32> %uWord, <i32 1431655765, i32 1431655765, i32 1431655765, i32 1431655765>
+  %shr = lshr <4 x i32> %uWord, <i32 1, i32 1, i32 1, i32 1>
+  %and1 = and <4 x i32> %shr, <i32 1431655765, i32 1431655765, i32 1431655765, i32 1431655765>
+  %add = add nuw <4 x i32> %and1, %and
+  %and2 = and <4 x i32> %add, <i32 858993459, i32 858993459, i32 858993459, i32 858993459>
+  %shr3 = lshr <4 x i32> %add, <i32 2, i32 2, i32 2, i32 2>
+  %and4 = and <4 x i32> %shr3, <i32 858993459, i32 858993459, i32 858993459, i32 858993459>
+  %add5 = add nuw nsw <4 x i32> %and4, %and2
+  %and6 = and <4 x i32> %add5, <i32 252645135, i32 252645135, i32 252645135, i32 252645135>
+  %shr7 = lshr <4 x i32> %add5, <i32 4, i32 4, i32 4, i32 4>
+  %and8 = and <4 x i32> %shr7, <i32 252645135, i32 252645135, i32 252645135, i32 252645135>
+  %add9 = add nuw nsw <4 x i32> %and8, %and6
+  %and10 = and <4 x i32> %add9, <i32 16711935, i32 16711935, i32 16711935, i32 16711935>
+  %shr11 = lshr <4 x i32> %add9, <i32 8, i32 8, i32 8, i32 8>
+  %and12 = and <4 x i32> %shr11, <i32 16711935, i32 16711935, i32 16711935, i32 16711935>
+  %add13 = add nuw nsw <4 x i32> %and12, %and10
+  %and14 = and <4 x i32> %add13, <i32 65535, i32 65535, i32 65535, i32 65535>
+  %shr15 = lshr <4 x i32> %add13, <i32 16, i32 16, i32 16, i32 16>
+  %add16 = add nuw nsw <4 x i32> %and14, %shr15
+  ret <4 x i32> %add16
+}
+
+; Test 64-bit popcount pattern variant2 (with extra mask on final shift)
+define i64 @popcnt1_64_variant2(i64 noundef %uWord) {
+; CHECK-LABEL: @popcnt1_64_variant2(
+; CHECK-NEXT:    [[TMP1:%.*]] = call i64 @llvm.ctpop.i64(i64 [[UWORD:%.*]])
+; CHECK-NEXT:    ret i64 [[TMP1]]
+;
+  %and = and i64 %uWord, 6148914691236517205 ; 0x5555555555555555
+  %shr = lshr i64 %uWord, 1
+  %and1 = and i64 %shr, 6148914691236517205
+  %add = add nuw i64 %and1, %and
+  %and2 = and i64 %add, 3689348814741910323 ; 0x3333333333333333
+  %shr3 = lshr i64 %add, 2
+  %and4 = and i64 %shr3, 3689348814741910323
+  %add5 = add nuw nsw i64 %and4, %and2
+  %and6 = and i64 %add5, 1085102592571150095 ; 0x0F0F0F0F0F0F0F0F
+  %shr7 = lshr i64 %add5, 4
+  %and8 = and i64 %shr7, 1085102592571150095
+  %add9 = add nuw nsw i64 %and8, %and6
+  %and10 = and i64 %add9, 71777214294589695 ; 0x00FF00FF00FF00FF
+  %shr11 = lshr i64 %add9, 8
+  %and12 = and i64 %shr11, 71777214294589695
+  %add13 = add nuw nsw i64 %and12, %and10
+  %and14 = and i64 %add13, 281470681808895 ; 0x0000FFFF0000FFFF
+  %shr15 = lshr i64 %add13, 16
+  %and16 = and i64 %shr15, 281470681808895
+  %add17 = add nuw nsw i64 %and16, %and14
+  %and18 = and i64 %add17, 4294967295 ; 0x00000000FFFFFFFF
+  %shr19 = lshr i64 %add17, 32
+  %and20 = and i64 %shr19, 4294967295
+  %add21 = add nuw nsw i64 %and18, %and20
+  ret i64 %add21
+}
+
+; Vector variant: 64-bit popcount pattern (Hacker's Delight)
+define <2 x i64> @popcnt1_64vec(<2 x i64> %uWord) {
+; CHECK-LABEL: @popcnt1_64vec(
+; CHECK-NEXT:    [[TMP1:%.*]] = call <2 x i64> @llvm.ctpop.v2i64(<2 x i64> [[UWORD:%.*]])
+; CHECK-NEXT:    ret <2 x i64> [[TMP1]]
+;
+  %and = and <2 x i64> %uWord, <i64 6148914691236517205, i64 6148914691236517205>
+  %shr = lshr <2 x i64> %uWord, <i64 1, i64 1>
+  %and1 = and <2 x i64> %shr, <i64 6148914691236517205, i64 6148914691236517205>
+  %add = add nuw <2 x i64> %and1, %and
+  %and2 = and <2 x i64> %add, <i64 3689348814741910323, i64 3689348814741910323>
+  %shr3 = lshr <2 x i64> %add, <i64 2, i64 2>
+  %and4 = and <2 x i64> %shr3, <i64 3689348814741910323, i64 3689348814741910323>
+  %add5 = add nuw nsw <2 x i64> %and4, %and2
+  %and6 = and <2 x i64> %add5, <i64 1085102592571150095, i64 1085102592571150095>
+  %shr7 = lshr <2 x i64> %add5, <i64 4, i64 4>
+  %and8 = and <2 x i64> %shr7, <i64 1085102592571150095, i64 1085102592571150095>
+  %add9 = add nuw nsw <2 x i64> %and8, %and6
+  %and10 = and <2 x i64> %add9, <i64 71777214294589695, i64 71777214294589695>
+  %shr11 = lshr <2 x i64> %add9, <i64 8, i64 8>
+  %and12 = and <2 x i64> %shr11, <i64 71777214294589695, i64 71777214294589695>
+  %add13 = add nuw nsw <2 x i64> %and12, %and10
+  %and14 = and <2 x i64> %add13, <i64 281470681808895, i64 281470681808895>
+  %shr15 = lshr <2 x i64> %add13, <i64 16, i64 16>
+  %and16 = and <2 x i64> %shr15, <i64 281470681808895, i64 281470681808895>
+  %add17 = add nuw nsw <2 x i64> %and16, %and14
+  %and18 = and <2 x i64> %add17, <i64 4294967295, i64 4294967295>
+  %shr19 = lshr <2 x i64> %add17, <i64 32, i64 32>
+  %add20 = add nuw nsw <2 x i64> %and18, %shr19
+  ret <2 x i64> %add20
+}
