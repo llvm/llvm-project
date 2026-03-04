@@ -1216,9 +1216,7 @@ LogicalResult mlir::moveOperationDependencies(RewriterBase &rewriter,
     return true;
   };
   llvm::SetVector<Operation *> slice;
-  LogicalResult result = getBackwardSlice(op, &slice, options);
-  assert(result.succeeded() && "expected a backward slice");
-  (void)result;
+  getBackwardSlice(op, &slice, options);
 
   // Check if any operation in the slice is side-effecting.
   if (dependsOnSideEffectingOp) {
@@ -1321,11 +1319,8 @@ LogicalResult mlir::moveValueDefinitions(RewriterBase &rewriter,
     return true;
   };
   llvm::SetVector<Operation *> slice;
-  for (auto value : prunedValues) {
-    LogicalResult result = getBackwardSlice(value, &slice, options);
-    assert(result.succeeded() && "expected a backward slice");
-    (void)result;
-  }
+  for (auto value : prunedValues)
+    getBackwardSlice(value, &slice, options);
 
   // Check if any operation in the slice is side-effecting.
   if (dependsOnSideEffectingOp) {

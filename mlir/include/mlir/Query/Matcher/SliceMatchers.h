@@ -113,9 +113,7 @@ bool BackwardSliceMatcher<Matcher>::matches(
     }
     return true;
   };
-  LogicalResult result = getBackwardSlice(rootOp, &backwardSlice, options);
-  assert(result.succeeded() && "expected backward slice to succeed");
-  (void)result;
+  getBackwardSlice(rootOp, &backwardSlice, options);
   return options.inclusive ? backwardSlice.size() > 1
                            : backwardSlice.size() >= 1;
 }
@@ -143,9 +141,7 @@ public:
       options.filter = [&](Operation *subOp) {
         return !filterMatcher.match(subOp);
       };
-      LogicalResult result = getBackwardSlice(rootOp, &backwardSlice, options);
-      assert(result.succeeded() && "expected backward slice to succeed");
-      (void)result;
+      getBackwardSlice(rootOp, &backwardSlice, options);
       return options.inclusive ? backwardSlice.size() > 1
                                : backwardSlice.size() >= 1;
     }
