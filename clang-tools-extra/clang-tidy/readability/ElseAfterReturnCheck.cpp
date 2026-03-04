@@ -39,6 +39,15 @@ private:
   const SourceManager &SM;
 };
 
+AST_MATCHER_P(Stmt, stripAttribute, ast_matchers::internal::Matcher<Stmt>,
+              InnerMatcher) {
+  const Stmt *S = &Node;
+  if (const auto *AttrStmt = dyn_cast<AttributedStmt>(S))
+    S = AttrStmt->getSubStmt();
+
+  return S && InnerMatcher.matches(*S, Finder, Builder);
+}
+
 AST_MATCHER_P(Stmt, stripLabelLikeStatements,
               ast_matchers::internal::Matcher<Stmt>, InnerMatcher) {
   const Stmt *S = Node.stripLabelLikeStatements();
@@ -178,8 +187,9 @@ void ElseAfterReturnCheck::registerMatchers(MatchFinder *Finder) {
 
   const auto IfWithInterruptingThenElse =
       ifStmt(unless(isConstexpr()), unless(isConsteval()),
-             hasThen(stmt(anyOf(InterruptsControlFlow,
-                                compoundStmt(has(InterruptsControlFlow))))),
+             hasThen(stripAttribute(
+                 stmt(anyOf(InterruptsControlFlow,
+                            compoundStmt(has(InterruptsControlFlow)))))),
              hasElse(stmt().bind("else")))
           .bind("if");
 

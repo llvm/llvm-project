@@ -282,7 +282,9 @@ Changes in existing checks
 
 - Improved :doc:`readability-else-after-return
   <clang-tidy/checks/readability/else-after-return>` check by fixing missed
-  diagnostics when ``if`` statements appear in unbraced ``switch`` case labels.
+  diagnostics when ``if`` statements appear in unbraced ``switch`` case labels,
+  and by handling attributed ``if`` then-branches such as ``[[likely]]`` and
+  ``[[unlikely]]``.
 
 - Improved :doc:`readability-enum-initial-value
   <clang-tidy/checks/readability/enum-initial-value>` check: the warning message
