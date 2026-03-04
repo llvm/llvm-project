@@ -46,7 +46,7 @@ public:
   };
 
 private:
-  Triple TargetTriple;
+  const Triple &TargetTriple;
 
 protected:
   bool HasMulI24 = true;
@@ -62,7 +62,7 @@ protected:
   unsigned FlatOffsetBitWidth = 0;
 
 public:
-  AMDGPUSubtarget(Triple TT) : TargetTriple(std::move(TT)) {}
+  AMDGPUSubtarget(const Triple &TT) : TargetTriple(TT) {}
 
   static const AMDGPUSubtarget &get(const MachineFunction &MF);
   static const AMDGPUSubtarget &get(const TargetMachine &TM,

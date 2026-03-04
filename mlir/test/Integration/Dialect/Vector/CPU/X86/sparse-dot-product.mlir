@@ -180,8 +180,7 @@ func.func @memref_dot_optimized(%m_A : memref<?xi64>, %m_B : memref<?xf64>,
     -> f64 {
   // Helper constants for loops.
   %c0 = arith.constant 0 : index
-  %i0 = arith.constant 0 : i32
-  %i7 = arith.constant 7 : i32
+  %c7 = arith.constant 7 : index
   %c8 = arith.constant 8 : index
 
   %data_zero = arith.constant 0.0 : f64
@@ -196,13 +195,13 @@ func.func @memref_dot_optimized(%m_A : memref<?xi64>, %m_B : memref<?xf64>,
       iter_args(%sum0 = %data_zero, %b_start0 = %c0) -> (f64, index) {
     %v_A = vector.transfer_read %m_A[%a], %index_padding
         : memref<?xi64>, vector<8xi64>
-    %segA_min = vector.extract %v_A[%i0] : i64 from vector<8xi64>
+    %segA_min = vector.extract %v_A[%c0] : i64 from vector<8xi64>
 
     %r1, %next_b_start0 = scf.for %b = %b_start0 to %N step %c8
         iter_args(%sum1 = %sum0, %b_start1 = %b_start0) -> (f64, index) {
       %v_C = vector.transfer_read %m_C[%b], %index_padding
           : memref<?xi64>, vector<8xi64>
-      %segB_max = vector.extract %v_C[%i7] : i64 from vector<8xi64>
+      %segB_max = vector.extract %v_C[%c7] : i64 from vector<8xi64>
       %seg1_done = arith.cmpi "slt", %segB_max, %segA_min : i64
 
       %r2, %next_b_start1 = scf.if %seg1_done -> (f64, index) {
@@ -251,8 +250,7 @@ func.func @memref_dot_while(%m_A : memref<?xi64>, %m_B : memref<?xf64>,
     -> f64 {
   // Helper constants for loops.
   %c0 = arith.constant 0 : index
-  %i0 = arith.constant 0 : i32
-  %i7 = arith.constant 7 : i32
+  %c7 = arith.constant 7 : index
   %c8 = arith.constant 8 : index
 
   %data_zero = arith.constant 0.0 : f64
@@ -273,10 +271,10 @@ func.func @memref_dot_while(%m_A : memref<?xi64>, %m_B : memref<?xf64>,
     %v_C = vector.transfer_read %m_C[%b1], %index_padding
         : memref<?xi64>, vector<8xi64>
 
-    %segA_min = vector.extract %v_A[%i0] : i64 from vector<8xi64>
-    %segA_max = vector.extract %v_A[%i7] : i64 from vector<8xi64>
-    %segB_min = vector.extract %v_C[%i0] : i64 from vector<8xi64>
-    %segB_max = vector.extract %v_C[%i7] : i64 from vector<8xi64>
+    %segA_min = vector.extract %v_A[%c0] : i64 from vector<8xi64>
+    %segA_max = vector.extract %v_A[%c7] : i64 from vector<8xi64>
+    %segB_min = vector.extract %v_C[%c0] : i64 from vector<8xi64>
+    %segB_max = vector.extract %v_C[%c7] : i64 from vector<8xi64>
 
     %seg1_done = arith.cmpi "slt", %segB_max, %segA_min : i64
     %r2, %a2, %b2 = scf.if %seg1_done -> (f64, index, index) {
@@ -340,7 +338,7 @@ func.func @memref_dot_while_branchless(%m_A : memref<?xi64>, %m_B : memref<?xf64
     -> f64 {
   // Helper constants for loops.
   %c0 = arith.constant 0 : index
-  %i7 = arith.constant 7 : i32
+  %c7 = arith.constant 7 : index
   %c8 = arith.constant 8 : index
 
   %data_zero = arith.constant 0.0 : f64
@@ -370,8 +368,8 @@ func.func @memref_dot_while_branchless(%m_A : memref<?xi64>, %m_B : memref<?xf64
             -> f64
     %r2 = arith.addf %r1, %subresult : f64
 
-    %segA_max = vector.extract %v_A[%i7] : i64 from vector<8xi64>
-    %segB_max = vector.extract %v_C[%i7] : i64 from vector<8xi64>
+    %segA_max = vector.extract %v_A[%c7] : i64 from vector<8xi64>
+    %segB_max = vector.extract %v_C[%c7] : i64 from vector<8xi64>
 
     %cond_a = arith.cmpi "sle", %segA_max, %segB_max : i64
     %cond_a_i64 = arith.extui %cond_a : i1 to i64
