@@ -3567,10 +3567,22 @@ Sema::CheckBuiltinFunctionCall(FunctionDecl *FDecl, unsigned BuiltinID,
       return ExprError();
     break;
   case Builtin::BI__builtin_elementwise_min:
-  case Builtin::BI__builtin_elementwise_max:
+  case Builtin::BI__builtin_elementwise_max: {
     if (BuiltinElementwiseMath(TheCall))
       return ExprError();
+    Expr *Arg0 = TheCall->getArg(0);
+    Expr *Arg1 = TheCall->getArg(1);
+    QualType Ty0 = Arg0->getType();
+    QualType Ty1 = Arg1->getType();
+    const VectorType *VecTy0 = Ty0->getAs<VectorType>();
+    const VectorType *VecTy1 = Ty1->getAs<VectorType>();
+    if (Ty0->isFloatingType() || Ty1->isFloatingType() ||
+        (VecTy0 && VecTy0->getElementType()->isFloatingType()) ||
+        (VecTy1 && VecTy1->getElementType()->isFloatingType()))
+      Diag(TheCall->getBeginLoc(), diag::warn_deprecated_builtin_no_suggestion)
+          << Context.BuiltinInfo.getQuotedName(BuiltinID);
     break;
+  }
   case Builtin::BI__builtin_elementwise_popcount:
   case Builtin::BI__builtin_elementwise_bitreverse:
     if (PrepareBuiltinElementwiseMathOneArgCall(
@@ -3804,6 +3816,9 @@ Sema::CheckBuiltinFunctionCall(FunctionDecl *FDecl, unsigned BuiltinID,
   }
 
   case Builtin::BI__builtin_allow_sanitize_check: {
+    if (checkArgCount(TheCall, 1))
+      return ExprError();
+
     Expr *Arg = TheCall->getArg(0);
     // Check if the argument is a string literal.
     const StringLiteral *SanitizerName =
@@ -4649,11 +4664,13 @@ ExprResult Sema::BuildAtomicExpr(SourceRange CallRange, SourceRange ExprRange,
   case AtomicExpr::AO__hip_atomic_load:
   case AtomicExpr::AO__atomic_load_n:
   case AtomicExpr::AO__scoped_atomic_load_n:
+    ArithAllows = AOEVT_Pointer | AOEVT_FP;
     Form = Load;
     break;
 
   case AtomicExpr::AO__atomic_load:
   case AtomicExpr::AO__scoped_atomic_load:
+    ArithAllows = AOEVT_Pointer | AOEVT_FP;
     Form = LoadCopy;
     break;
 
@@ -4664,6 +4681,7 @@ ExprResult Sema::BuildAtomicExpr(SourceRange CallRange, SourceRange ExprRange,
   case AtomicExpr::AO__atomic_store_n:
   case AtomicExpr::AO__scoped_atomic_store:
   case AtomicExpr::AO__scoped_atomic_store_n:
+    ArithAllows = AOEVT_Pointer | AOEVT_FP;
     Form = Copy;
     break;
   case AtomicExpr::AO__atomic_fetch_add:
@@ -4738,11 +4756,13 @@ ExprResult Sema::BuildAtomicExpr(SourceRange CallRange, SourceRange ExprRange,
   case AtomicExpr::AO__opencl_atomic_exchange:
   case AtomicExpr::AO__atomic_exchange_n:
   case AtomicExpr::AO__scoped_atomic_exchange_n:
+    ArithAllows = AOEVT_Pointer | AOEVT_FP;
     Form = Xchg;
     break;
 
   case AtomicExpr::AO__atomic_exchange:
   case AtomicExpr::AO__scoped_atomic_exchange:
+    ArithAllows = AOEVT_Pointer | AOEVT_FP;
     Form = GNUXchg;
     break;
 
@@ -4759,6 +4779,7 @@ ExprResult Sema::BuildAtomicExpr(SourceRange CallRange, SourceRange ExprRange,
   case AtomicExpr::AO__atomic_compare_exchange_n:
   case AtomicExpr::AO__scoped_atomic_compare_exchange:
   case AtomicExpr::AO__scoped_atomic_compare_exchange_n:
+    ArithAllows = AOEVT_Pointer;
     Form = GNUCmpXchg;
     break;
 
@@ -4861,11 +4882,16 @@ ExprResult Sema::BuildAtomicExpr(SourceRange CallRange, SourceRange ExprRange,
   }
 
   // For an arithmetic operation, the implied arithmetic must be well-formed.
-  if (Form == Arithmetic) {
+  // For _n operations, the value type must also be a valid atomic type.
+  if (Form == Arithmetic || IsN) {
     // GCC does not enforce these rules for GNU atomics, but we do to help catch
     // trivial type errors.
     auto IsAllowedValueType = [&](QualType ValType,
                                   unsigned AllowedType) -> bool {
+      bool IsX87LongDouble =
+          ValType->isSpecificBuiltinType(BuiltinType::LongDouble) &&
+          &Context.getTargetInfo().getLongDoubleFormat() ==
+              &llvm::APFloat::x87DoubleExtended();
       if (ValType->isIntegerType())
         return true;
       if (ValType->isPointerType())
@@ -4873,9 +4899,7 @@ ExprResult Sema::BuildAtomicExpr(SourceRange CallRange, SourceRange ExprRange,
       if (!(ValType->isFloatingType() && (AllowedType & AOEVT_FP)))
         return false;
       // LLVM Parser does not allow atomicrmw with x86_fp80 type.
-      if (ValType->isSpecificBuiltinType(BuiltinType::LongDouble) &&
-          &Context.getTargetInfo().getLongDoubleFormat() ==
-              &llvm::APFloat::x87DoubleExtended())
+      if (IsX87LongDouble)
         return false;
       return true;
     };
@@ -4884,7 +4908,9 @@ ExprResult Sema::BuildAtomicExpr(SourceRange CallRange, SourceRange ExprRange,
                      ? (ArithAllows & AOEVT_Pointer
                             ? diag::err_atomic_op_needs_atomic_int_ptr_or_fp
                             : diag::err_atomic_op_needs_atomic_int_or_fp)
-                     : diag::err_atomic_op_needs_atomic_int;
+                     : (ArithAllows & AOEVT_Pointer
+                            ? diag::err_atomic_op_needs_atomic_int_or_ptr
+                            : diag::err_atomic_op_needs_atomic_int);
       Diag(ExprRange.getBegin(), DID)
           << IsC11 << Ptr->getType() << Ptr->getSourceRange();
       return ExprError();
@@ -4894,12 +4920,6 @@ ExprResult Sema::BuildAtomicExpr(SourceRange CallRange, SourceRange ExprRange,
                             diag::err_incomplete_type)) {
       return ExprError();
     }
-  } else if (IsN && !ValType->isIntegerType() && !ValType->isPointerType()) {
-    // For __atomic_*_n operations, the value type must be a scalar integral or
-    // pointer type which is 1, 2, 4, 8 or 16 bytes in length.
-    Diag(ExprRange.getBegin(), diag::err_atomic_op_needs_atomic_int_or_ptr)
-        << IsC11 << Ptr->getType() << Ptr->getSourceRange();
-    return ExprError();
   }
 
   if (!IsC11 && !AtomTy.isTriviallyCopyableType(Context) &&
@@ -6783,7 +6803,7 @@ static void sumOffsets(llvm::APSInt &Offset, llvm::APSInt Addend,
     return;
   }
 
-  Offset = ResOffset;
+  Offset = std::move(ResOffset);
 }
 
 namespace {

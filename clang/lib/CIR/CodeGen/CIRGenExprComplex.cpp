@@ -214,7 +214,7 @@ public:
     mlir::Value complexVal = Visit(e->getSubExpr());
     // Defend against dominance problems caused by jumps out of expression
     // evaluation through the shared cleanup block.
-    scope.forceCleanup();
+    scope.forceCleanup({&complexVal});
     return complexVal;
   }
   mlir::Value VisitCXXScalarValueInitExpr(CXXScalarValueInitExpr *e) {
@@ -223,9 +223,9 @@ public:
     return builder.getNullValue(complexTy, loc);
   }
   mlir::Value VisitImplicitValueInitExpr(ImplicitValueInitExpr *e) {
-    cgf.cgm.errorNYI(e->getExprLoc(),
-                     "ComplexExprEmitter VisitImplicitValueInitExpr");
-    return {};
+    mlir::Location loc = cgf.getLoc(e->getExprLoc());
+    mlir::Type complexTy = cgf.convertType(e->getType());
+    return builder.getNullValue(complexTy, loc);
   }
 
   struct BinOpInfo {

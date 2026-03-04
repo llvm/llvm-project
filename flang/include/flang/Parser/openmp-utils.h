@@ -239,6 +239,19 @@ struct OmpAllocateInfo {
 
 OmpAllocateInfo SplitOmpAllocate(const OmpAllocateDirective &x);
 
+template <typename R, typename = void, typename = void> struct is_range {
+  static constexpr bool value{false};
+};
+
+template <typename R>
+struct is_range<R, //
+    std::void_t<decltype(std::declval<R>().begin())>,
+    std::void_t<decltype(std::declval<R>().end())>> {
+  static constexpr bool value{true};
+};
+
+template <typename R> constexpr bool is_range_v = is_range<R>::value;
+
 // Iterate over a range of parser::Block::const_iterator's. When the end
 // of the range is reached, the iterator becomes invalid.
 // Treat BLOCK constructs as if they were transparent, i.e. as if the
@@ -296,9 +309,7 @@ struct ExecutionPartIterator {
     stack_.emplace_back(b, e, c);
     adjust();
   }
-  template <typename R, //
-      typename = decltype(std::declval<R>().begin()),
-      typename = decltype(std::declval<R>().end())>
+  template <typename R, typename = std::enable_if_t<is_range_v<R>>>
   ExecutionPartIterator(const R &range, Step stepping = Step::Default,
       const ExecutionPartConstruct *construct = nullptr)
       : ExecutionPartIterator(range.begin(), range.end(), stepping, construct) {
@@ -368,9 +379,7 @@ template <typename Iterator = ExecutionPartIterator> struct ExecutionPartRange {
       Step stepping = Step::Default,
       const ExecutionPartConstruct *owner = nullptr)
       : begin_(begin, end, stepping, owner), end_() {}
-  template <typename R, //
-      typename = decltype(std::declval<R>().begin()),
-      typename = decltype(std::declval<R>().end())>
+  template <typename R, typename = std::enable_if_t<is_range_v<R>>>
   ExecutionPartRange(const R &range, Step stepping = Step::Default,
       const ExecutionPartConstruct *owner = nullptr)
       : ExecutionPartRange(range.begin(), range.end(), stepping, owner) {}
@@ -390,9 +399,7 @@ struct LoopNestIterator : public ExecutionPartIterator {
       : ExecutionPartIterator(b, e, s, c) {
     adjust();
   }
-  template <typename R, //
-      typename = decltype(std::declval<R>().begin()),
-      typename = decltype(std::declval<R>().end())>
+  template <typename R, typename = std::enable_if_t<is_range_v<R>>>
   LoopNestIterator(const R &range, Step stepping = Step::Default,
       const ExecutionPartConstruct *construct = nullptr)
       : LoopNestIterator(range.begin(), range.end(), stepping, construct) {}

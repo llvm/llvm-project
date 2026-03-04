@@ -3,7 +3,8 @@
 ; range is not overlapping each other should not re-use the same slot in Coroutine frame.
 ; RUN: opt < %s -passes='cgscc(coro-split<reuse-storage>),simplifycfg,early-cse' -S | FileCheck %s
 
-; CHECK:       %a.Frame = type { ptr, ptr, %"struct.task::promise_type", %struct.big_structure, i1, [26 x i8], %struct.big_structure.2 }
+
+target datalayout = "e-m:e-p:64:64-i64:64-f80:128-n8:16:32:64-S128"
 
 %"struct.task::promise_type" = type { i8 }
 %struct.awaitable = type { i8 }
@@ -19,19 +20,19 @@ define void @a(i1 zeroext %cond) presplitcoroutine {
 ; CHECK-NEXT:    [[TMP0:%.*]] = call token @llvm.coro.id(i32 16, ptr nonnull null, ptr @a, ptr @a.resumers)
 ; CHECK-NEXT:    [[TMP1:%.*]] = call noalias nonnull ptr @llvm.coro.begin(token [[TMP0]], ptr null)
 ; CHECK-NEXT:    store ptr @a.resume, ptr [[TMP1]], align 8
-; CHECK-NEXT:    [[DESTROY_ADDR:%.*]] = getelementptr inbounds nuw [[A_FRAME:%.*]], ptr [[TMP1]], i32 0, i32 1
+; CHECK-NEXT:    [[DESTROY_ADDR:%.*]] = getelementptr inbounds i8, ptr [[TMP1]], i64 8
 ; CHECK-NEXT:    store ptr @a.destroy, ptr [[DESTROY_ADDR]], align 8
-; CHECK-NEXT:    [[A_RELOAD_ADDR:%.*]] = getelementptr inbounds [[A_FRAME]], ptr [[TMP1]], i32 0, i32 3
-; CHECK-NEXT:    [[B_RELOAD_ADDR:%.*]] = getelementptr inbounds [[A_FRAME]], ptr [[TMP1]], i32 0, i32 6
+; CHECK-NEXT:    [[A_RELOAD_ADDR:%.*]] = getelementptr inbounds i8, ptr [[TMP1]], i64 17
+; CHECK-NEXT:    [[B_RELOAD_ADDR:%.*]] = getelementptr inbounds i8, ptr [[TMP1]], i64 544
 ; CHECK-NEXT:    br i1 [[COND]], label %[[IF_THEN:.*]], label %[[IF_ELSE:.*]]
 ; CHECK:       [[IF_THEN]]:
 ; CHECK-NEXT:    call void @consume(ptr nonnull [[A_RELOAD_ADDR]])
-; CHECK-NEXT:    [[INDEX_ADDR4:%.*]] = getelementptr inbounds nuw [[A_FRAME]], ptr [[TMP1]], i32 0, i32 4
+; CHECK-NEXT:    [[INDEX_ADDR4:%.*]] = getelementptr inbounds i8, ptr [[TMP1]], i64 517
 ; CHECK-NEXT:    store i1 false, ptr [[INDEX_ADDR4]], align 1
 ; CHECK-NEXT:    br label %[[AFTERCOROEND:.*]]
 ; CHECK:       [[IF_ELSE]]:
 ; CHECK-NEXT:    call void @consume.2(ptr nonnull [[B_RELOAD_ADDR]])
-; CHECK-NEXT:    [[INDEX_ADDR5:%.*]] = getelementptr inbounds nuw [[A_FRAME]], ptr [[TMP1]], i32 0, i32 4
+; CHECK-NEXT:    [[INDEX_ADDR5:%.*]] = getelementptr inbounds i8, ptr [[TMP1]], i64 517
 ; CHECK-NEXT:    store i1 true, ptr [[INDEX_ADDR5]], align 1
 ; CHECK-NEXT:    br label %[[AFTERCOROEND]]
 ; CHECK:       [[AFTERCOROEND]]:

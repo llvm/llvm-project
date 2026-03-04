@@ -2057,7 +2057,7 @@ class WriteSysRegImm<SysReg SR, list<Register> Regs>
 
 class SwapSysReg<SysReg SR, list<Register> Regs>
   : Pseudo<(outs GPR:$rd), (ins GPR:$val),
-           [(set GPR:$rd, (riscv_swap_csr (XLenVT SR.Encoding), (XLenVT GPR:$val)))]>,
+           [(set GPR:$rd, (XLenVT (riscv_swap_csr (XLenVT SR.Encoding), (XLenVT GPR:$val))))]>,
     PseudoInstExpansion<(CSRRW GPR:$rd, SR.Encoding, GPR:$val)> {
   let hasSideEffects = 0;
   let Uses = Regs;
@@ -2316,8 +2316,8 @@ def : Pat<(i64 (add GPR:$rs1, negImm:$rs2)), (SUB GPR:$rs1, negImm:$rs2)>;
 // Zihintpause
 //===----------------------------------------------------------------------===//
 
-// Zihintpause
-let Predicates = [HasStdExtZihintpause] in
+// int_riscv_pause is always available since pause is a HINT encoding that is
+// guaranteed not to trap (riscv-non-isa/riscv-elf-psabi-doc#474).
 def : Pat<(int_riscv_pause), (FENCE 0x1, 0x0)>;
 
 //===----------------------------------------------------------------------===//

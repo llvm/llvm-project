@@ -246,14 +246,14 @@ else()
 endif()
 
 # Check if adaptive locks are available
-if((${IA32} OR ${INTEL64}) AND NOT MSVC)
+if((IA32 OR INTEL64) AND NOT MSVC)
   set(LIBOMP_HAVE_ADAPTIVE_LOCKS TRUE)
 else()
   set(LIBOMP_HAVE_ADAPTIVE_LOCKS FALSE)
 endif()
 
 # Check if stats-gathering is available
-if(${LIBOMP_STATS})
+if(LIBOMP_STATS)
   check_c_source_compiles(
      "__thread int x;
      int main(int argc, char** argv)
@@ -264,7 +264,7 @@ if(${LIBOMP_STATS})
      { unsigned long long t = __builtin_readcyclecounter(); return 0; }"
      LIBOMP_HAVE___BUILTIN_READCYCLECOUNTER)
   if(NOT LIBOMP_HAVE___BUILTIN_READCYCLECOUNTER)
-    if(${IA32} OR ${INTEL64} OR ${MIC})
+    if(IA32 OR INTEL64 OR MIC)
       check_include_file(x86intrin.h LIBOMP_HAVE_X86INTRIN_H)
       libomp_append(CMAKE_REQUIRED_DEFINITIONS -DLIBOMP_HAVE_X86INTRIN_H LIBOMP_HAVE_X86INTRIN_H)
       check_c_source_compiles(
@@ -327,7 +327,7 @@ endif()
 set(LIBOMP_HAVE_OMPT_SUPPORT ${LIBOMP_HAVE_OMPT_SUPPORT} PARENT_SCOPE)
 
 # Check if HWLOC support is available
-if(${LIBOMP_USE_HWLOC})
+if(LIBOMP_USE_HWLOC)
   find_path(LIBOMP_HWLOC_INCLUDE_DIR NAMES hwloc.h HINTS ${LIBOMP_HWLOC_INSTALL_DIR} PATH_SUFFIXES include)
   set(CMAKE_REQUIRED_INCLUDES ${LIBOMP_HWLOC_INCLUDE_DIR})
   check_include_file(hwloc.h LIBOMP_HAVE_HWLOC_H)
@@ -349,7 +349,7 @@ if(${LIBOMP_USE_HWLOC})
 endif()
 
 # Check if ThreadSanitizer support is available
-if("${CMAKE_SYSTEM_NAME}" MATCHES "Linux" AND ${INTEL64})
+if("${CMAKE_SYSTEM_NAME}" MATCHES "Linux" AND INTEL64)
   set(LIBOMP_HAVE_TSAN_SUPPORT TRUE)
 else()
   set(LIBOMP_HAVE_TSAN_SUPPORT FALSE)

@@ -265,6 +265,10 @@ void PlainCFGBuilder::createVPInstructionsForVPBB(VPBasicBlock *VPBB,
                                             CI->getType(), CI->getDebugLoc(),
                                             VPIRFlags(*CI), MD);
         NewR->setUnderlyingValue(CI);
+      } else if (auto *LI = dyn_cast<LoadInst>(Inst)) {
+        NewR = VPIRBuilder.createScalarLoad(LI->getType(), VPOperands[0],
+                                            LI->getDebugLoc(), MD);
+        NewR->setUnderlyingValue(LI);
       } else {
         // Build VPInstruction for any arbitrary Instruction without specific
         // representation in VPlan.
@@ -1331,7 +1335,8 @@ bool VPlanTransforms::handleFindLastReductions(VPlan &Plan) {
   //   result = extract-last-active vp<new.data>, vp<new.mask>, ir<default.val>
 
   VPValue *HeaderMask = vputils::findHeaderMask(Plan);
-  for (auto &Phi : Plan.getVectorLoopRegion()->getEntryBasicBlock()->phis()) {
+  for (auto &Phi : make_early_inc_range(
+           Plan.getVectorLoopRegion()->getEntryBasicBlock()->phis())) {
     auto *PhiR = dyn_cast<VPReductionPHIRecipe>(&Phi);
     if (!PhiR || !RecurrenceDescriptor::isFindLastRecurrenceKind(
                      PhiR->getRecurrenceKind()))
