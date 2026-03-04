@@ -63,6 +63,7 @@ class SetDescLayoutOp(SetDescLayoutOp):
         *,
         inst_data: Optional[MixedValues] = None,
         slice_dims: Optional[MixedInt] = None,
+        order: Optional[MixedInt] = None,
         loc=None,
         ip=None,
     ):
@@ -94,6 +95,7 @@ class SetDescLayoutOp(SetDescLayoutOp):
             static_sg_data=static_sg_data,
             static_inst_data=static_inst_data,
             slice_dims=slice_dims,
+            order=order,
             loc=loc,
             ip=ip,
         )
@@ -106,6 +108,7 @@ def set_desc_layout(
     *,
     inst_data: Optional[MixedValues] = None,
     slice_dims: Optional[MixedInt] = None,
+    order: Optional[MixedInt] = None,
     loc=None,
     ip=None,
 ) -> OpResult:
@@ -115,6 +118,7 @@ def set_desc_layout(
         sg_data,
         inst_data=inst_data,
         slice_dims=slice_dims,
+        order=order,
         loc=loc,
         ip=ip,
     ).result
@@ -132,6 +136,7 @@ class SetOpLayoutAttrOp(SetOpLayoutAttrOp):
         *,
         inst_data: Optional[MixedValues] = None,
         slice_dims: Optional[MixedInt] = None,
+        order: Optional[MixedInt] = None,
         index: Optional[Union[int, Attribute]] = None,
         result: Optional[Union[bool, Attribute]] = None,
         operand: Optional[Union[bool, Attribute]] = None,
@@ -163,6 +168,7 @@ class SetOpLayoutAttrOp(SetOpLayoutAttrOp):
             static_sg_data=static_sg_data,
             static_inst_data=static_inst_data,
             slice_dims=slice_dims,
+            order=order,
             index=index,
             result=result,
             operand=operand,
@@ -178,6 +184,7 @@ def set_op_layout_attr(
     *,
     inst_data: Optional[MixedValues] = None,
     slice_dims: Optional[MixedInt] = None,
+    order: Optional[MixedInt] = None,
     index: Optional[Union[int, Attribute]] = None,
     result: Optional[Union[bool, Attribute]] = None,
     operand: Optional[Union[bool, Attribute]] = None,
@@ -190,6 +197,7 @@ def set_op_layout_attr(
         sg_data,
         inst_data=inst_data,
         slice_dims=slice_dims,
+        order=order,
         index=index,
         result=result,
         operand=operand,
