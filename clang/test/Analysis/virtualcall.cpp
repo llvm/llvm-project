@@ -14,7 +14,6 @@
 // Verify no warnings for virtual calls in system headers.
 // RUN: %clang_analyze_cc1 -analyzer-checker=core,optin.cplusplus.VirtualCall \
 // RUN:                    -std=c++11 -verify=system,impure %s
-// system-no-diagnostics
 
 #include "virtualcall.h"
 #include "Inputs/virtualcall-system-header.h"
