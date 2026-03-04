@@ -1,4 +1,3 @@
-import glob
 import os
 import shutil
 import tempfile
@@ -7,16 +6,18 @@ import lldb
 from lldbsuite.test.decorators import *
 from lldbsuite.test.lldbtest import *
 
+
 """
-Test debug symbol acquisition from a local SymStore repository.
+Test debug symbol acquisition from a local SymStore repository. This can work
+cross-platform and for arbitrary debug info formats. We only support PDB
+currently.
 """
 
 
 class MockedSymStore:
     """
-    Populate a file structure equivalent to SymStore.exe in a temporary directory.
-    This can work cross-platform and for arbitrary debug info formats. Right now,
-    we support only PDB.
+    Context Manager to populate a file structure equivalent to SymStore.exe in a
+    temporary directory.
     """
 
     def __init__(self, test, exe, pdb):
@@ -30,18 +31,15 @@ class MockedSymStore:
         Module UUID: 12345678-1234-5678-9ABC-DEF012345678-00000001
         To SymStore key: 12345678123456789ABCDEF0123456781
         """
-        try:
-            spec = lldb.SBModuleSpec()
-            spec.SetFileSpec(lldb.SBFileSpec(self._test.getBuildArtifact(exe)))
-            module = lldb.SBModule(spec)
-            raw = module.GetUUIDString().replace("-", "").upper()
-            if len(raw) != 40:
-                return None
-            guid_hex = raw[:32]
-            age = int(raw[32:], 16)
-            return guid_hex + str(age)
-        except Exception:
-            return None
+        spec = lldb.SBModuleSpec()
+        spec.SetFileSpec(lldb.SBFileSpec(self._test.getBuildArtifact(exe)))
+        module = lldb.SBModule(spec)
+        raw = module.GetUUIDString().replace("-", "").upper()
+        if len(raw) != 40:
+            raise RuntimeError("Unexpected number of bytes in embedded UUID")
+        guid_hex = raw[:32]
+        age = int(raw[32:], 16)
+        return guid_hex + str(age)
 
     def __enter__(self):
         """
@@ -67,7 +65,6 @@ class MockedSymStore:
         shutil.rmtree(self._tmp)
         self._test.runCmd("settings clear plugin.symbol-locator.symstore")
         os.remove(self._test.getBuildArtifact(self._exe))
-        return False  # do not suppress exceptions
 
 
 class SymStoreLocalTests(TestBase):
@@ -93,9 +90,9 @@ class SymStoreLocalTests(TestBase):
         self.assertEqual(bp.GetNumLocations(), 1 if should_have_loc else 0)
         self.dbg.DeleteTarget(target)
 
-    def test_no_symstore(self):
+    def test_off(self):
         """
-        Check that breakpoint doesn't hit without SymStore.
+        Check that breakpoint doesn't resolve without SymStore.
         """
         exe, sym = self.build_inferior()
         with MockedSymStore(self, exe, sym):
@@ -103,11 +100,11 @@ class SymStoreLocalTests(TestBase):
 
     def test_basic(self):
         """
-        Check that breakpoint hits with local SymStore.
+        Check that breakpoint resolves with local SymStore.
         """
         exe, sym = self.build_inferior()
         with MockedSymStore(self, exe, sym) as symstore_dir:
             self.runCmd(
-                "settings set plugin.symbol-locator.symstore.urls %s" % symstore_dir
+                f"settings set plugin.symbol-locator.symstore.urls {symstore_dir}"
             )
             self.try_breakpoint(exe, should_have_loc=True)

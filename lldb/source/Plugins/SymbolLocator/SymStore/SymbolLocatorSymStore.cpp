@@ -95,7 +95,7 @@ SymbolLocator *SymbolLocatorSymStore::CreateInstance() {
   return new SymbolLocatorSymStore();
 }
 
-// LLDB stores PDB identity as a 20-byte UUID composed of 16-byte GUID and
+// RSDS entries store identity as a 20-byte UUID composed of 16-byte GUID and
 // 4-byte age:
 //   12345678-1234-5678-9ABC-DEF012345678-00000001
 //
@@ -127,7 +127,7 @@ std::optional<FileSpec> SymbolLocatorSymStore::LocateExecutableSymbolFile(
   LLDB_LOGV(log, "LocateExecutableSymbolFile {0} with UUID {1}", pdb_name,
             uuid.GetAsString());
   if (uuid.GetBytes().size() != 20) {
-    LLDB_LOGV(log, "  Failed to resolve symbol PDB module: UUID invalid");
+    LLDB_LOGV(log, "Failed to resolve symbol PDB module: UUID invalid");
     return {};
   }
 
@@ -138,7 +138,7 @@ std::optional<FileSpec> SymbolLocatorSymStore::LocateExecutableSymbolFile(
     llvm::sys::path::append(path, url.ref(), pdb_name, key, pdb_name);
     FileSpec spec(path);
     if (FileSystem::Instance().Exists(spec)) {
-      LLDB_LOGV(log, "  Found {0} in SymStore {1}", pdb_name, url.ref());
+      LLDB_LOGV(log, "Found {0} in SymStore {1}", pdb_name, url.ref());
       return spec;
     }
   }

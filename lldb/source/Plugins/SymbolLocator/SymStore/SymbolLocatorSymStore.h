@@ -15,6 +15,9 @@
 
 namespace lldb_private {
 
+/// This plugin implements lookup in Microsoft SymStore instances. This can work
+/// cross-platform and for arbitrary debug info formats, but the focus is on PDB
+/// with PE/COFF binaries on Windows.
 class SymbolLocatorSymStore : public SymbolLocator {
 public:
   SymbolLocatorSymStore();
