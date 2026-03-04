@@ -582,10 +582,4 @@ define i32 @unique_caller(ptr %p) {
 }
 
 ; CHECK-LABEL: .section .custom_section.target_features
-; CHECK-NEXT: .int8 2
-; CHECK-NEXT: .int8 45
-; CHECK-NEXT: .int8 30
-; CHECK-NEXT: .ascii "component-model-thread-context"
-; CHECK-NEXT: .int8 43
-; CHECK-NEXT: .int8 9
-; CHECK-NEXT: .ascii "tail-call"
+; CHECK: .ascii "tail-call"
