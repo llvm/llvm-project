@@ -20,9 +20,7 @@
 #include "Protocol/ProtocolRequests.h"
 #include "Protocol/ProtocolTypes.h"
 #include "ProtocolUtils.h"
-#include "Transport.h"
 #include "Variables.h"
-#include "lldb/API/SBBreakpoint.h"
 #include "lldb/API/SBCommandInterpreter.h"
 #include "lldb/API/SBCommandInterpreterRunOptions.h"
 #include "lldb/API/SBEvent.h"
@@ -50,19 +48,18 @@
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/FormatVariadic.h"
 #include "llvm/Support/raw_ostream.h"
-#include <algorithm>
 #include <cassert>
 #include <chrono>
 #include <condition_variable>
 #include <cstdarg>
 #include <cstdint>
 #include <cstdio>
+#include <fcntl.h>
 #include <functional>
 #include <memory>
 #include <mutex>
 #include <optional>
 #include <string>
-#include <sys/fcntl.h>
 #include <thread>
 #include <tuple>
 #include <utility>
@@ -1073,6 +1070,8 @@ void DAP::Received(const protocol::Request &request) {
     if (m_active_request && cancel_args->requestId == m_active_request->seq) {
       DAP_LOG(log, "interrupting inflight request (command={0} seq={1})",
               m_active_request->command, m_active_request->seq);
+      // FIXME: Which of these are actually required, they all have different
+      // behavior.
       debugger.RequestInterrupt();
       debugger.DispatchInputInterrupt();
       debugger.GetCommandInterpreter().InterruptCommand();
