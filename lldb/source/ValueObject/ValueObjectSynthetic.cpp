@@ -331,21 +331,6 @@ ValueObjectSynthetic::GetChildMemberWithName(llvm::StringRef name,
   return GetChildAtIndex(*index_or_err, can_create);
 }
 
-static std::optional<uint32_t> ParseSubscriptIndex(ValueObjectSynthetic &valobj,
-                                                   llvm::StringRef name) {
-  auto maybe_index = formatters::ExtractIndexFromString(name.data());
-  if (!maybe_index)
-    return std::nullopt;
-
-  auto idx = *maybe_index;
-  // Prevent unnecessary work by limiting max to one past the index.
-  uint32_t max = idx + 1;
-  auto num_children = valobj.GetNumChildrenIgnoringErrors(max);
-  if (idx >= num_children)
-    return std::nullopt;
-  return idx;
-}
-
 llvm::Expected<size_t>
 ValueObjectSynthetic::GetIndexOfChildWithName(llvm::StringRef name_ref) {
   UpdateValueIfNeeded();
@@ -366,10 +351,20 @@ ValueObjectSynthetic::GetIndexOfChildWithName(llvm::StringRef name_ref) {
       index = *index_or_err;
     } else if (!m_synth_sp->CustomSubscripting()) {
       // Provide automatic support for subscript child names ("[N]").
-      auto maybe_index = ParseSubscriptIndex(*this, name);
+      auto maybe_index = formatters::ExtractIndexFromString(name.GetCString());
       if (!maybe_index)
+        // The child name was not of the form "[N]", return the original error.
         return index_or_err.takeError();
+
       index = *maybe_index;
+      // Prevent unnecessary work by limiting max to one past the index.
+      uint32_t max = index + 1;
+      auto num_children = GetNumChildrenIgnoringErrors(max);
+      if (index >= num_children)
+        return llvm::createStringError("Subscript index out of range: %zu",
+                                       index);
+
+      // Subscripting succeeded, ignore the original error.
       llvm::consumeError(index_or_err.takeError());
     }
     std::lock_guard<std::mutex> guard(m_child_mutex);
