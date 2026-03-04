@@ -53,9 +53,14 @@ RUN:   --disallow=/nonexistent/path 2>&1 \
 RUN:   | FileCheck %s --check-prefix=MISSING-FILE
 
 # Test error when combined with -y.
-RUN: not dsymutil --allow=%t.allow-one.yaml \
+RUN: not dsymutil --allow=some.file.yaml \
 RUN:   -y %p/../Inputs/remarks/basic.macho.remarks.arm64 2>&1 \
 RUN:   | FileCheck %s --check-prefix=YAML-CONFLICT
+
+# Test error when --allow and --disallow are both specified.
+RUN: not dsymutil --allow=some.file.yaml --disallow=some.file.yaml \
+RUN:   %p/../Inputs/allow-disallow/a.out.arm64 2>&1 \
+RUN:   | FileCheck %s --check-prefix=ALLOW-DISALLOW-CONFLICT
 
 ALLOW-ONE:     ---
 ALLOW-ONE:     filename: {{.*}}1.o
@@ -96,3 +101,5 @@ DISALLOW-NONE:     ...
 MISSING-FILE: error: cannot open allow/disallow file
 
 YAML-CONFLICT: error: -y and --allow/--disallow cannot be specified together
+
+ALLOW-DISALLOW-CONFLICT: error: --allow and --disallow cannot be specified together

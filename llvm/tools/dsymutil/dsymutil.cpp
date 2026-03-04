@@ -238,6 +238,11 @@ static Error verifyOptions(const DsymutilOptions &Options) {
         "-y and --allow/--disallow cannot be specified together",
         errc::invalid_argument);
 
+  if (!Options.AllowFile.empty() && !Options.DisallowFile.empty())
+    return make_error<StringError>(
+        "--allow and --disallow cannot be specified together",
+        errc::invalid_argument);
+
   return Error::success();
 }
 
@@ -733,8 +738,8 @@ int dsymutil_main(int argc, char **argv, const llvm::ToolContext &) {
     }
 
     // Parse allow/disallow object list YAML files if specified.
-    std::optional<StringSet<>> AllowedObjects;
-    std::optional<StringSet<>> DisallowedObjects;
+    std::optional<StringSet<>> ObjectFilter;
+    enum ObjectFilterType ObjectFilterType = Allow;
 
     auto ParseAllowDisallowFile =
         [&](const std::string &FilePath) -> Expected<StringSet<>> {
@@ -770,7 +775,8 @@ int dsymutil_main(int argc, char **argv, const llvm::ToolContext &) {
         WithColor::error() << toString(AllowedOrErr.takeError()) << '\n';
         return EXIT_FAILURE;
       }
-      AllowedObjects = std::move(*AllowedOrErr);
+      ObjectFilter = std::move(*AllowedOrErr);
+      ObjectFilterType = Allow;
     }
 
     if (!Options.DisallowFile.empty()) {
@@ -779,14 +785,15 @@ int dsymutil_main(int argc, char **argv, const llvm::ToolContext &) {
         WithColor::error() << toString(DisallowedOrErr.takeError()) << '\n';
         return EXIT_FAILURE;
       }
-      DisallowedObjects = std::move(*DisallowedOrErr);
+      ObjectFilter = std::move(*DisallowedOrErr);
+      ObjectFilterType = Disallow;
     }
 
     auto DebugMapPtrsOrErr = parseDebugMap(
         BinHolder, InputFile, Options.Archs, Options.LinkOpts.DSYMSearchPaths,
         Options.LinkOpts.PrependPath, Options.LinkOpts.BuildVariantSuffix,
-        Options.LinkOpts.Verbose, Options.InputIsYAMLDebugMap, AllowedObjects,
-        DisallowedObjects);
+        Options.LinkOpts.Verbose, Options.InputIsYAMLDebugMap, ObjectFilter,
+        ObjectFilterType);
 
     if (auto EC = DebugMapPtrsOrErr.getError()) {
       WithColor::error() << "cannot parse the debug map for '" << InputFile
