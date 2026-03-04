@@ -78,7 +78,7 @@ TEST_F(BitcodeTest, emitNamespaceInfoBitcode) {
 
   std::string WriteResult = writeInfo(&I, this->Diags);
   EXPECT_TRUE(WriteResult.size() > 0);
-  std::vector<OwnedPtr<Info>> ReadResults =
+  OwningPtrVec<Info> ReadResults =
       readInfo(WriteResult, 1, this->Diags);
 
   CheckNamespaceInfo(&I, InfoAsNamespace(ReadResults[0].get()));
@@ -121,7 +121,7 @@ TEST_F(BitcodeTest, emitRecordInfoBitcode) {
 
   std::string WriteResult = writeInfo(&I, this->Diags);
   EXPECT_TRUE(WriteResult.size() > 0);
-  std::vector<OwnedPtr<Info>> ReadResults =
+  OwningPtrVec<Info> ReadResults =
       readInfo(WriteResult, 1, this->Diags);
 
   CheckRecordInfo(&I, InfoAsRecord(ReadResults[0].get()));
@@ -142,7 +142,7 @@ TEST_F(BitcodeTest, emitFunctionInfoBitcode) {
 
   std::string WriteResult = writeInfo(&I, this->Diags);
   EXPECT_TRUE(WriteResult.size() > 0);
-  std::vector<OwnedPtr<Info>> ReadResults =
+  OwningPtrVec<Info> ReadResults =
       readInfo(WriteResult, 1, this->Diags);
 
   CheckFunctionInfo(&I, InfoAsFunction(ReadResults[0].get()));
@@ -165,7 +165,7 @@ TEST_F(BitcodeTest, emitMethodInfoBitcode) {
 
   std::string WriteResult = writeInfo(&I, this->Diags);
   EXPECT_TRUE(WriteResult.size() > 0);
-  std::vector<OwnedPtr<Info>> ReadResults =
+  OwningPtrVec<Info> ReadResults =
       readInfo(WriteResult, 1, this->Diags);
 
   CheckFunctionInfo(&I, InfoAsFunction(ReadResults[0].get()));
@@ -184,7 +184,7 @@ TEST_F(BitcodeTest, emitEnumInfoBitcode) {
 
   std::string WriteResult = writeInfo(&I, this->Diags);
   EXPECT_TRUE(WriteResult.size() > 0);
-  std::vector<OwnedPtr<Info>> ReadResults =
+  OwningPtrVec<Info> ReadResults =
       readInfo(WriteResult, 1, this->Diags);
 
   CheckEnumInfo(&I, InfoAsEnum(ReadResults[0].get()));
@@ -212,7 +212,7 @@ TEST_F(BitcodeTest, emitTypedefInfoBitcode) {
 
   std::string WriteResult = writeInfo(&I, this->Diags);
   EXPECT_TRUE(WriteResult.size() > 0);
-  std::vector<OwnedPtr<Info>> ReadResults =
+  OwningPtrVec<Info> ReadResults =
       readInfo(WriteResult, 1, this->Diags);
 
   CheckTypedefInfo(&I, InfoAsTypedef(ReadResults[0].get()));
@@ -342,7 +342,7 @@ TEST_F(BitcodeTest, emitInfoWithCommentBitcode) {
 
   std::string WriteResult = writeInfo(&F, this->Diags);
   EXPECT_TRUE(WriteResult.size() > 0);
-  std::vector<OwnedPtr<Info>> ReadResults =
+  OwningPtrVec<Info> ReadResults =
       readInfo(WriteResult, 1, this->Diags);
 
   CheckFunctionInfo(&F, InfoAsFunction(ReadResults[0].get()));

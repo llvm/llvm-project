@@ -1111,9 +1111,8 @@ ClangDocBitcodeReader::readBlockToInfo(unsigned ID) {
 }
 
 // Entry point
-llvm::Expected<std::vector<OwnedPtr<Info>>>
-ClangDocBitcodeReader::readBitcode() {
-  std::vector<OwnedPtr<Info>> Infos;
+llvm::Expected<OwningPtrArray<Info>> ClangDocBitcodeReader::readBitcode() {
+  OwningPtrArray<Info> Infos;
   if (auto Err = validateStream())
     return std::move(Err);
 

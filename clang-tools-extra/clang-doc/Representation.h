@@ -40,6 +40,14 @@ template <typename T> using OwningArray = std::vector<T>;
 // To be eventually transitioned to llvm::simple_ilist.
 template <typename T> using OwningVec = std::vector<T>;
 
+// An abstraction for dynamic lists of owned pointers.
+// To be eventually transitioned to llvm::simple_ilist<T*> or similar.
+template <typename T> using OwningPtrVec = std::vector<OwnedPtr<T>>;
+
+// An abstraction for arrays of owned pointers.
+// To be eventually transitioned to arena-allocated arrays of bare pointers.
+template <typename T> using OwningPtrArray = std::vector<OwnedPtr<T>>;
+
 // SHA1'd hash of a USR.
 using SymbolID = std::array<uint8_t, 20>;
 
@@ -102,7 +110,7 @@ struct CommentInfo {
   // the vector.
   bool operator<(const CommentInfo &Other) const;
 
-  OwningVec<OwnedPtr<CommentInfo>>
+  OwningPtrVec<CommentInfo>
       Children;              // List of child comments for this CommentInfo.
   SmallString<8> Direction;  // Parameter direction (for (T)ParamCommand).
   SmallString<16> Name;      // Name of the comment (for Verbatim and HTML).
@@ -637,7 +645,7 @@ struct Index : public Reference {
 // A standalone function to call to merge a vector of infos into one.
 // This assumes that all infos in the vector are of the same type, and will fail
 // if they are different.
-llvm::Expected<OwnedPtr<Info>> mergeInfos(std::vector<OwnedPtr<Info>> &Values);
+llvm::Expected<OwnedPtr<Info>> mergeInfos(OwningPtrArray<Info> &Values);
 
 struct ClangDocContext {
   ClangDocContext(tooling::ExecutionContext *ECtx, StringRef ProjectName,
