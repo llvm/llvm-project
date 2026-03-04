@@ -168,3 +168,28 @@ TEST(CASFSBuilderTest, Missing) {
                       Failed());
   }
 }
+
+TEST(CASFSBuilderTest, NonRecursive) {
+  std::unique_ptr<ObjectStore> CAS = createInMemoryCAS();
+  ASSERT_TRUE(CAS);
+
+  TempDir TestDirectory("casfs-builder-test", /*Unique*/ true);
+
+  TempDir a(TestDirectory.path("a"));
+  TempFile f1(a.path("f1"), "", "aaaa");
+
+  std::optional<ObjectProxy> aRoot;
+  {
+    CASFSBuilder Builder(*CAS);
+    ASSERT_THAT_ERROR(Builder.ingestFileSystemPath(a.path(), /*Recursive=*/false), Succeeded());
+    ASSERT_THAT_ERROR(Builder.finish().moveInto(aRoot), Succeeded());
+  }
+
+  std::unique_ptr<vfs::FileSystem> CASFS;
+  ASSERT_THAT_ERROR(
+      createCASFileSystem(*CAS, aRoot->getID()).moveInto(CASFS),
+      Succeeded());
+
+  EXPECT_TRUE(CASFS->exists(a.path()));
+  EXPECT_FALSE(CASFS->exists(f1.path()));
+}

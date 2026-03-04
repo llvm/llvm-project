@@ -28,10 +28,12 @@ public:
 
   ~CASFSBuilder();
 
-  /// Ingest contents from the on-disk file-system. For a directory it will
-  /// recursively ingest its contents. Symlinks are not followed. Emits an error
-  /// if the path doesn't exist.
-  Error ingestFileSystemPath(const Twine &Path);
+  /// Ingest contents from the on-disk file-system. Symlinks are not followed.
+  /// Emits an error if the path doesn't exist.
+  ///
+  /// \param Recursive if true, and path is a directory, its contents will be
+  /// ingested recursively, otherwise only the path will be included.
+  Error ingestFileSystemPath(const Twine &Path, bool Recursive = true);
 
   /// Merge a prior constructed CAS file-system tree root.
   ///
