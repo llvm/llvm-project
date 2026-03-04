@@ -10,17 +10,14 @@ uint test_too_many_arg(uint p0) {
   // expected-error@-1 {{too many arguments to function call, expected 1, have 2}}
 }
 
-struct Foo
-{
-  int a;
-};
+struct S { uint x; };
 
-uint test_type_check(Foo p0) {
-  return __builtin_hlsl_wave_active_bit_or(p0);
-  // expected-error@-1 {{no viable conversion from 'Foo' to 'unsigned int'}}
+S test_expr_struct_type_check(S p0) {
+  return __builtin_hlsl_wave_active_max(p0);
+  // expected-error@-1 {{invalid operand of type 'S' where a scalar or vector is required}}
 }
 
-float test_expr_bool_type_check(float p0) {
+bool test_expr_bool_type_check(bool p0) {
   return __builtin_hlsl_wave_active_bit_or(p0);
-  // expected-error@-1 {{1st argument must be a scalar or vector of integer types (was 'float')}}
+  // expected-error@-1 {{invalid operand of type 'bool'}}
 }

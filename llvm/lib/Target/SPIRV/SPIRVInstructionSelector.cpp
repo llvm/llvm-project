@@ -241,6 +241,9 @@ private:
                         MachineInstr &I, bool IsUnsigned,
                         PickOpcodeFn &&PickOpcode) const;
 
+  bool selectWaveReduceOp(Register ResVReg, SPIRVTypeInst ResType,
+                          MachineInstr &I, unsigned Opcode) const;
+
   bool selectWaveReduceMax(Register ResVReg, SPIRVTypeInst ResType,
                            MachineInstr &I, bool IsUnsigned) const;
 
@@ -2936,9 +2939,9 @@ bool SPIRVInstructionSelector::selectWaveReduce(
 }
 
 bool SPIRVInstructionSelector::selectWaveReduceOp(Register ResVReg,
-                                                  const SPIRVType *ResType,
+                                                  SPIRVTypeInst ResType,
                                                   MachineInstr &I,
-                                                  unsigned Opcode) {
+                                                  unsigned Opcode) const {
   return selectWaveReduce(
       ResVReg, ResType, I, false,
       [&](Register InputRegister, bool IsUnsigned) { return Opcode; });
@@ -4135,7 +4138,8 @@ bool SPIRVInstructionSelector::selectIntrinsic(Register ResVReg,
   case Intrinsic::spv_wave_is_first_lane:
     return selectWaveOpInst(ResVReg, ResType, I, SPIRV::OpGroupNonUniformElect);
   case Intrinsic::spv_wave_reduce_or:
-    return selectWaveReduceOp(ResVReg, ResType, I, SPIRV::OpGroupNonUniformBitwiseOr);
+    return selectWaveReduceOp(ResVReg, ResType, I,
+                              SPIRV::OpGroupNonUniformBitwiseOr);
   case Intrinsic::spv_wave_reduce_umax:
     return selectWaveReduceMax(ResVReg, ResType, I, /*IsUnsigned*/ true);
   case Intrinsic::spv_wave_reduce_max:

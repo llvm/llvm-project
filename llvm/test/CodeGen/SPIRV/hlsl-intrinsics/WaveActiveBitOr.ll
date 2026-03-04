@@ -3,6 +3,8 @@
 
 ; Test lowering to spir-v backend for various types and scalar/vector
 
+; CHECK: OpCapability GroupNonUniformArithmetic
+
 ; CHECK-DAG:   %[[#uint:]] = OpTypeInt 32 0
 ; CHECK-DAG:   %[[#uint64:]] = OpTypeInt 64 0
 ; CHECK-DAG:   %[[#scope:]] = OpConstant %[[#uint]] 3
