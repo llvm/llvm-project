@@ -565,6 +565,24 @@ static void serializeInfo(const EnumValueInfo &I, Object &Obj) {
     Obj["ValueExpr"] = I.ValueExpr;
   else
     Obj["Value"] = I.Value;
+
+  if (I.Description.empty())
+    return;
+
+  Object Description = Object();
+  auto &Comments = I.Description.at(0).Children;
+  for (const auto &CommentInfo : Comments) {
+    json::Value Comment = serializeComment(*CommentInfo, Description);
+    if (auto *ParagraphComment = Comment.getAsObject();
+        ParagraphComment->get("ParagraphComment")) {
+      auto TextCommentsArray = extractTextComments(ParagraphComment);
+      if (TextCommentsArray.kind() == json::Value::Null ||
+          TextCommentsArray.getAsArray()->empty())
+        continue;
+      insertComment(Description, TextCommentsArray, "ParagraphComments");
+    }
+  }
+  Obj["Description"] = std::move(Description);
 }
 
 static void serializeInfo(const EnumInfo &I, json::Object &Obj,
@@ -582,8 +600,15 @@ static void serializeInfo(const EnumInfo &I, json::Object &Obj,
     Obj["BaseType"] = BaseTypeVal;
   }
 
-  if (!I.Members.empty())
+  if (!I.Members.empty()) {
+    for (const auto &Member : I.Members) {
+      if (!Member.Description.empty()) {
+        Obj["HasComments"] = true;
+        break;
+      }
+    }
     serializeArray(I.Members, Obj, "Members", SerializeInfoLambda);
+  }
 }
 
 static void

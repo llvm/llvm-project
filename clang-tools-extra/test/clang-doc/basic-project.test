@@ -92,7 +92,7 @@
 // MD-CALC: **a** First integer.
 // MD-CALC: **b** Second integer.
 // MD-CALC: **return** double The result of a / b.
-// MD-CALC: **throw**if b is zero.
+// MD-CALC: **throw** if b is zero.
 // MD-CALC: ### mod
 // MD-CALC: *public static int mod(int a, int b)*
 // MD-CALC: *Defined at ./include{{[\/]}}Calculator.h#54*
