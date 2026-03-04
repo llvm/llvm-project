@@ -580,7 +580,7 @@ func.func @orOfExtUI_nneg_mixed(%arg0: i8, %arg1: i8) -> i64 {
 // -----
 
 // CHECK-LABEL: @indexCastOfSignExtend
-//       CHECK:   %[[res:.+]] = arith.index_cast %arg0 : i8 to index
+//       CHECK:   %[[res:.+]] = arith.index_cast %arg0 exact : i8 to index
 //       CHECK:   return %[[res]]
 func.func @indexCastOfSignExtend(%arg0: i8) -> index {
   %ext = arith.extsi %arg0 : i8 to i16

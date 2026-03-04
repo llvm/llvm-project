@@ -25,7 +25,7 @@ func.func @process_multi_index_reorder() -> (index, index) {
 // CHECK-LABEL: func @process_linear_index
 func.func @process_linear_index() -> index {
   // CHECK: %[[RES:.*]], %[[rank:.*]] = mpi.comm_rank
-  // CHECK: %[[cast:.*]] = arith.index_cast %[[rank]] : i32 to index
+  // CHECK: %[[cast:.*]] = arith.index_cast %[[rank]] exact : i32 to index
   %0 = shard.process_linear_index on @grid0 : index
   // CHECK: return %[[cast]] : index
   return %0 : index
@@ -97,7 +97,7 @@ module {
   func.func @all_slice(%arg0 : tensor<3x5xf32>) -> tensor<3x1xf32> {
     // CHECK: [[v0:%.*]] = mpi.comm_world : !mpi.comm
     // CHECK: [[vretval:%.*]], [[vrank:%.*]] = mpi.comm_rank([[v0]]) : !mpi.retval, i32
-    // CHECK: [[v1:%.*]] = arith.index_cast [[vrank]] : i32 to index
+    // CHECK: [[v1:%.*]] = arith.index_cast [[vrank]] exact : i32 to index
     // CHECK: [[v2:%.*]]:3 = affine.delinearize_index [[v1]] into (3, 4, 5) : index, index, index
     // CHECK: [[vextracted_slice:%.*]] = tensor.extract_slice
     // CHECK-SAME: [0, [[v2]]#2] [3, 1] [1, 1] : tensor<3x5xf32> to tensor<3x1xf32>
@@ -203,7 +203,7 @@ module attributes { mpi.dlti = #dlti.map<"MPI:comm_world_rank" = 7> } {
     // CHECK: [[v1:%.*]] = mpi.comm_world : !mpi.comm
     // CHECK: [[vnewcomm:%.*]] = mpi.comm_split([[v1]], [[vc2_i32]], [[vc1_i32]]) : !mpi.comm
     // CHECK: [[vsize:%.*]] = mpi.comm_size([[vnewcomm]]) : i32
-    // CHECK: [[v2:%.*]] = arith.index_cast [[vsize]] : i32 to index
+    // CHECK: [[v2:%.*]] = arith.index_cast [[vsize]] exact : i32 to index
     // CHECK: [[v3:%.*]] = arith.cmpi eq, [[v2]], [[vc4]] : index
     // CHECK: cf.assert [[v3]]
     // CHECK: [[valloc:%.*]] = memref.alloc() : memref<4x3x4xf32>
@@ -227,7 +227,7 @@ module attributes { mpi.dlti = #dlti.map<"MPI:comm_world_rank" = 7> } {
     // CHECK: [[v1:%.*]] = mpi.comm_world : !mpi.comm
     // CHECK: [[vnewcomm:%.*]] = mpi.comm_split([[v1]], [[vc1_i32]], [[vc2_i32]]) : !mpi.comm
     // CHECK: [[vsize:%.*]] = mpi.comm_size([[vnewcomm]]) : i32
-    // CHECK: [[v2:%.*]] = arith.index_cast [[vsize]] : i32 to index
+    // CHECK: [[v2:%.*]] = arith.index_cast [[vsize]] exact : i32 to index
     // CHECK: [[v3:%.*]] = arith.cmpi eq, [[v2]], [[vc5]] : index
     // CHECK: cf.assert [[v3]]
     // CHECK: [[valloc:%.*]] = memref.alloc() : memref<5x3x4xf32>
@@ -252,7 +252,7 @@ module attributes { mpi.dlti = #dlti.map<"MPI:comm_world_rank" = 7> } {
     // CHECK: [[v0:%.*]] = mpi.comm_world : !mpi.comm
     // CHECK: [[vnewcomm:%.*]] = mpi.comm_split([[v0]], [[vc1_i32]], [[vc2_i32]]) : !mpi.comm
     // CHECK: [[vsize:%.*]] = mpi.comm_size([[vnewcomm]]) : i32
-    // CHECK: [[v1:%.*]] = arith.index_cast [[vsize]] : i32 to index
+    // CHECK: [[v1:%.*]] = arith.index_cast [[vsize]] exact : i32 to index
     // CHECK: [[v2:%.*]] = arith.cmpi eq, [[v1]], [[vc5]] : index
     // CHECK: cf.assert [[v2]]
     // CHECK: [[valloc:%.*]] = memref.alloc() : memref<5x3x4xf32>
@@ -509,7 +509,7 @@ func.func @mlp_1dgrid(%arg0: tensor<512x512xf32>, %arg1: tensor<2048x256xf32>, %
   // CHECK: [[v0:%.*]] = bufferization.to_buffer [[varg0]] : tensor<512x512xf32> to memref<512x512xf32>
   // CHECK: [[v1:%.*]] = mpi.comm_world : !mpi.comm
   // CHECK: [[vsize:%.*]] = mpi.comm_size([[v1]]) : i32
-  // CHECK: [[v2:%.*]] = arith.index_cast [[vsize]] : i32 to index
+  // CHECK: [[v2:%.*]] = arith.index_cast [[vsize]] exact : i32 to index
   // CHECK: [[v3:%.*]] = arith.cmpi eq, [[v2]], [[vc4]] : index
   // CHECK: cf.assert [[v3]]
   // CHECK: [[valloc:%.*]] = memref.alloc() : memref<4x512x512xf32>

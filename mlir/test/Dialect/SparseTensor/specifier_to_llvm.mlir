@@ -18,7 +18,7 @@ func.func @sparse_metadata_init() -> !sparse_tensor.storage_specifier<#CSR> {
 // CHECK-LABEL:   func.func @sparse_get_md(
 // CHECK-SAME:      %[[VAL_0:.*]]: !llvm.struct<(array<2 x i64>, array<3 x i64>)>) -> index {
 // CHECK:           %[[VAL_1:.*]] = llvm.extractvalue %[[VAL_0]][0, 0] : !llvm.struct<(array<2 x i64>, array<3 x i64>)>
-// CHECK:           %[[CAST:.*]] = arith.index_cast %[[VAL_1]] : i64 to index
+// CHECK:           %[[CAST:.*]] = arith.index_cast %[[VAL_1]] exact : i64 to index
 // CHECK:           return %[[CAST]] : index
 func.func @sparse_get_md(%arg0: !sparse_tensor.storage_specifier<#CSR>) -> index {
   %0 = sparse_tensor.storage_specifier.get %arg0 lvl_sz at 0
@@ -29,7 +29,7 @@ func.func @sparse_get_md(%arg0: !sparse_tensor.storage_specifier<#CSR>) -> index
 // CHECK-LABEL:   func.func @sparse_set_md(
 // CHECK-SAME:      %[[VAL_0:.*]]: !llvm.struct<(array<2 x i64>, array<3 x i64>)>,
 // CHECK-SAME:      %[[VAL_1:.*]]: index) -> !llvm.struct<(array<2 x i64>, array<3 x i64>)> {
-// CHECK:           %[[CAST:.*]] = arith.index_cast %[[VAL_1]] : index to i64
+// CHECK:           %[[CAST:.*]] = arith.index_cast %[[VAL_1]] exact : index to i64
 // CHECK:           %[[VAL_2:.*]] = llvm.insertvalue %[[CAST]], %[[VAL_0]][0, 0] : !llvm.struct<(array<2 x i64>, array<3 x i64>)>
 // CHECK:           return %[[VAL_2]] : !llvm.struct<(array<2 x i64>, array<3 x i64>)>
 func.func @sparse_set_md(%arg0: !sparse_tensor.storage_specifier<#CSR>, %arg1: index)

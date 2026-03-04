@@ -1419,7 +1419,7 @@ func.func @shape_of_from_reshape(%arg0: tensor<*xf32>, %arg1: tensor<?xindex>) -
 // CHECK-SAME: %[[INPUT:.*]]: tensor<?x1xf32>
 // CHECK-SAME: %[[SHAPE:.*]]: tensor<3xi32>
 func.func @shape_of_from_reshape_int_to_index(%arg0: tensor<?x1xf32>, %arg1: tensor<3xi32>) -> tensor<3xindex> {
-  // CHECK: %[[CAST_SHAPE:.*]] = arith.index_cast %[[SHAPE]] : tensor<3xi32> to tensor<3xindex>
+  // CHECK: %[[CAST_SHAPE:.*]] = arith.index_cast %[[SHAPE]] exact : tensor<3xi32> to tensor<3xindex>
   // CHECK: return %[[CAST_SHAPE]] : tensor<3xindex>
     %0 = tensor.reshape %arg0(%arg1) : (tensor<?x1xf32>, tensor<3xi32>) -> tensor<?x1x1xf32>
     %1 = shape.shape_of %0 : tensor<?x1x1xf32> -> tensor<3xindex>

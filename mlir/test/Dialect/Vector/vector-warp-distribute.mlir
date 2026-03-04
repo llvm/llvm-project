@@ -1535,7 +1535,7 @@ func.func @vector_insert_strided_slice_2d_to_2d(%laneid: index) -> (vector<64x1x
 //       CHECK-PROP:   %[[W:.*]] = gpu.warp_execute_on_lane_0(%[[THREADID]])[32] args(%[[IN2]]
 //       CHECK-PROP:     %[[GATHER:.*]] = vector.gather %[[AR1]][{{.*}}]
 //       CHECK-PROP:     %[[EXTRACT:.*]] = vector.shape_cast %[[GATHER]] : vector<1x64xi32> to vector<64xi32>
-//       CHECK-PROP:     %[[CAST:.*]] = arith.index_cast %[[EXTRACT]] : vector<64xi32> to vector<64xindex>
+//       CHECK-PROP:     %[[CAST:.*]] = arith.index_cast %[[EXTRACT]] exact : vector<64xi32> to vector<64xindex>
 //       CHECK-PROP:     %[[EXTRACTELT:.*]] = vector.extract %[[CAST]][{{.*}}] : index from vector<64xindex>
 //       CHECK-PROP:     gpu.yield %[[EXTRACTELT]] : index
 //       CHECK-PROP:   %[[APPLY:.*]] = affine.apply #[[$MAP]]()[%[[THREADID]]]
@@ -1555,7 +1555,7 @@ func.func @transfer_read_prop_operands(%in2: vector<1x2xindex>, %ar1 :  memref<1
   ^bb0(%arg4: vector<1x64xindex>):
     %28 = vector.gather %ar1[%c0, %c0, %c0] [%arg4], %cst_0, %cst : memref<1x4x2xi32>, vector<1x64xindex>, vector<1x64xi1>, vector<1x64xi32> into vector<1x64xi32>
     %29 = vector.extract %28[0] : vector<64xi32> from vector<1x64xi32>
-    %30 = arith.index_cast %29 : vector<64xi32> to vector<64xindex>
+    %30 = arith.index_cast %29 exact : vector<64xi32> to vector<64xindex>
     %36 = vector.extract %30[%c0_i32] : index from vector<64xindex>
     %37 = vector.transfer_read %ar2[%c0, %36, %c0], %cst_6 {in_bounds = [true]} : memref<1x4x1024xf32>, vector<64xf32>
     gpu.yield %37 : vector<64xf32>
