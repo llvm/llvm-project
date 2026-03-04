@@ -29,6 +29,43 @@ define i64 @abs_i64(i64 %x) {
   ret i64 %abs
 }
 
+; Test scalar saturating add/sub operations for i32
+define i32 @test_scalar_psadd_w(i32 %a, i32 %b) {
+; CHECK-LABEL: test_scalar_psadd_w:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    psadd.w a0, a0, a1
+; CHECK-NEXT:    ret
+  %res = call i32 @llvm.sadd.sat.i32(i32 %a, i32 %b)
+  ret i32 %res
+}
+
+define i32 @test_scalar_psaddu_w(i32 %a, i32 %b) {
+; CHECK-LABEL: test_scalar_psaddu_w:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    psaddu.w a0, a0, a1
+; CHECK-NEXT:    ret
+  %res = call i32 @llvm.uadd.sat.i32(i32 %a, i32 %b)
+  ret i32 %res
+}
+
+define i32 @test_scalar_pssub_w(i32 %a, i32 %b) {
+; CHECK-LABEL: test_scalar_pssub_w:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    pssub.w a0, a0, a1
+; CHECK-NEXT:    ret
+  %res = call i32 @llvm.ssub.sat.i32(i32 %a, i32 %b)
+  ret i32 %res
+}
+
+define i32 @test_scalar_pssubu_w(i32 %a, i32 %b) {
+; CHECK-LABEL: test_scalar_pssubu_w:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    pssubu.w a0, a0, a1
+; CHECK-NEXT:    ret
+  %res = call i32 @llvm.usub.sat.i32(i32 %a, i32 %b)
+  ret i32 %res
+}
+
 define i64 @pack_i64_imm() {
 ; CHECK-LABEL: pack_i64_imm:
 ; CHECK:       # %bb.0:
@@ -391,21 +428,12 @@ define i128 @slli_i128_large(i128 %x) {
 define i128 @srl_i128(i128 %x, i128 %y) {
 ; CHECK-LABEL: srl_i128:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    addi a4, a2, -64
 ; CHECK-NEXT:    srl a3, a1, a2
-; CHECK-NEXT:    bltz a4, .LBB32_2
-; CHECK-NEXT:  # %bb.1:
-; CHECK-NEXT:    mv a0, a3
-; CHECK-NEXT:    j .LBB32_3
-; CHECK-NEXT:  .LBB32_2:
-; CHECK-NEXT:    srl a0, a0, a2
-; CHECK-NEXT:    not a2, a2
-; CHECK-NEXT:    slli a1, a1, 1
-; CHECK-NEXT:    sll a1, a1, a2
-; CHECK-NEXT:    or a0, a0, a1
-; CHECK-NEXT:  .LBB32_3:
-; CHECK-NEXT:    srai a1, a4, 63
-; CHECK-NEXT:    and a1, a1, a3
+; CHECK-NEXT:    srx a0, a1, a2
+; CHECK-NEXT:    slli a2, a2, 57
+; CHECK-NEXT:    srai a2, a2, 63
+; CHECK-NEXT:    mvm a0, a3, a2
+; CHECK-NEXT:    andn a1, a3, a2
 ; CHECK-NEXT:    ret
   %b = lshr i128 %x, %y
   ret i128 %b
@@ -461,21 +489,12 @@ define i128 @srli_i128_large(i128 %x) {
 define i128 @sra_i128(i128 %x, i128 %y) {
 ; CHECK-LABEL: sra_i128:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    mv a3, a1
-; CHECK-NEXT:    addi a4, a2, -64
-; CHECK-NEXT:    sra a1, a1, a2
-; CHECK-NEXT:    bltz a4, .LBB37_2
-; CHECK-NEXT:  # %bb.1:
-; CHECK-NEXT:    srai a3, a3, 63
-; CHECK-NEXT:    mv a0, a1
-; CHECK-NEXT:    mv a1, a3
-; CHECK-NEXT:    ret
-; CHECK-NEXT:  .LBB37_2:
-; CHECK-NEXT:    srl a0, a0, a2
-; CHECK-NEXT:    not a2, a2
-; CHECK-NEXT:    slli a3, a3, 1
-; CHECK-NEXT:    sll a2, a3, a2
-; CHECK-NEXT:    or a0, a0, a2
+; CHECK-NEXT:    sra a3, a1, a2
+; CHECK-NEXT:    srx a0, a1, a2
+; CHECK-NEXT:    slli a2, a2, 57
+; CHECK-NEXT:    srai a2, a2, 63
+; CHECK-NEXT:    mvm a0, a3, a2
+; CHECK-NEXT:    sra a1, a3, a2
 ; CHECK-NEXT:    ret
   %b = ashr i128 %x, %y
   ret i128 %b

@@ -699,8 +699,6 @@ FailureOr<SmallVector<SmallVector<Value>>>
 SliceAttr::computeDistributedCoords(OpBuilder &builder, Location loc,
                                     Value linearId, ArrayRef<int64_t> shape) {
   assert(getRank() == static_cast<int64_t>(shape.size()) && "invalid shape.");
-  if (!isForWorkgroup())
-    return failure();
 
   SmallVector<int64_t> layout;
   SmallVector<int64_t> subShape;
@@ -982,7 +980,7 @@ TensorDescType TensorDescType::get(llvm::ArrayRef<int64_t> shape,
                                    bool boundary_check,
                                    MemorySpace memory_space,
                                    mlir::Attribute layout) {
-  auto context = elementType.getContext();
+  auto *context = elementType.getContext();
   auto attr = BlockTensorDescAttr::get(context, memory_space, array_length,
                                        boundary_check);
   return Base::get(context, shape, elementType, attr, layout);
@@ -992,7 +990,7 @@ TensorDescType TensorDescType::get(llvm::ArrayRef<int64_t> shape,
                                    mlir::Type elementType, int chunk_size,
                                    MemorySpace memory_space,
                                    mlir::Attribute layout) {
-  auto context = elementType.getContext();
+  auto *context = elementType.getContext();
   auto attr = ScatterTensorDescAttr::get(context, memory_space, chunk_size);
   return Base::get(context, shape, elementType, attr, layout);
 }
@@ -1133,7 +1131,7 @@ void MemDescType::print(AsmPrinter &printer) const {
 
 Attribute MemLayoutAttr::parse(AsmParser &parser, Type type) {
 
-  auto context = parser.getContext();
+  auto *context = parser.getContext();
   llvm::SMLoc loc = parser.getCurrentLocation();
 
   llvm::SmallDenseSet<StringRef> seenKeys;

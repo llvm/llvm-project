@@ -100,6 +100,8 @@ private:
 
   llvm::SmallVector<mlir::Attribute> globalScopeAsm;
 
+  llvm::DenseSet<clang::GlobalDecl> diagnosedConflictingDefinitions;
+
   void createCUDARuntime();
 
   /// A helper for constructAttributeList that handles return attributes.
@@ -107,13 +109,18 @@ private:
                                          const Decl *targetDecl, bool isThunk,
                                          mlir::NamedAttrList &retAttrs);
   /// A helper for constructAttributeList that handles argument attributes.
-  void constructFunctionArgumentAttributes();
+  void constructFunctionArgumentAttributes(
+      const CIRGenFunctionInfo &info, bool isThunk,
+      llvm::MutableArrayRef<mlir::NamedAttrList> argAttrs);
   /// A helper function for constructAttributeList that determines whether a
   /// return value might have been discarded.
   bool mayDropFunctionReturn(const ASTContext &context, QualType retTy);
   /// A helper function for constructAttributeList that determines whether
   /// `noundef` on a return is possible.
   bool hasStrictReturn(QualType retTy, const Decl *targetDecl);
+
+  llvm::DenseMap<const Expr *, mlir::Operation *>
+      materializedGlobalTemporaryMap;
 
 public:
   mlir::ModuleOp getModule() const { return theModule; }
@@ -268,6 +275,9 @@ public:
   getAddrOfGlobalVar(const VarDecl *d, mlir::Type ty = {},
                      ForDefinition_t isForDefinition = NotForDefinition);
 
+  /// Get or create a thunk function with the given name and type.
+  cir::FuncOp getAddrOfThunk(StringRef name, mlir::Type fnTy, GlobalDecl gd);
+
   /// Return the mlir::GlobalViewAttr for the address of the given global.
   cir::GlobalViewAttr getAddrOfGlobalVarAttr(const VarDecl *d);
 
@@ -292,6 +302,7 @@ public:
   void constructAttributeList(
       llvm::StringRef name, const CIRGenFunctionInfo &info,
       CIRGenCalleeInfo calleeInfo, mlir::NamedAttrList &attrs,
+      llvm::MutableArrayRef<mlir::NamedAttrList> argAttrs,
       mlir::NamedAttrList &retAttrs, cir::CallingConv &callingConv,
       cir::SideEffect &sideEffect, bool attrOnCallSite, bool isThunk);
   /// Helper function for constructAttributeList/others.  Builds a set of
@@ -590,6 +601,9 @@ public:
   // or if they are alias to each other.
   cir::FuncOp codegenCXXStructor(clang::GlobalDecl gd);
 
+  bool lookupRepresentativeDecl(llvm::StringRef mangledName,
+                                clang::GlobalDecl &gd) const;
+
   bool supportsCOMDAT() const;
   void maybeSetTrivialComdat(const clang::Decl &d, mlir::Operation *op);
 
@@ -654,6 +668,11 @@ public:
 
   // Finalize CIR code generation.
   void release();
+
+  /// Returns a pointer to a global variable representing a temporary with
+  /// static or thread storage duration.
+  mlir::Operation *getAddrOfGlobalTemporary(const MaterializeTemporaryExpr *mte,
+                                            const Expr *init);
 
   /// -------
   /// Visibility and Linkage
@@ -730,8 +749,7 @@ private:
   llvm::StringMap<clang::GlobalDecl, llvm::BumpPtrAllocator> manglings;
 
   // FIXME: should we use llvm::TrackingVH<mlir::Operation> here?
-  typedef llvm::StringMap<mlir::Operation *> ReplacementsTy;
-  ReplacementsTy replacements;
+  llvm::MapVector<StringRef, mlir::Operation *> replacements;
   /// Call replaceAllUsesWith on all pairs in replacements.
   void applyReplacements();
 
