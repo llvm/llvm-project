@@ -58,7 +58,6 @@ define void @extractions() {
 ; NEON-NEXT:  Cost Model: Invalid cost for instruction: %nxv4bf16 = call bfloat @llvm.experimental.vector.extract.last.active.nxv4bf16(<vscale x 4 x bfloat> poison, <vscale x 4 x i1> poison, bfloat poison)
 ; NEON-NEXT:  Cost Model: Invalid cost for instruction: %nxv2f32 = call float @llvm.experimental.vector.extract.last.active.nxv2f32(<vscale x 2 x float> poison, <vscale x 2 x i1> poison, float poison)
 ; NEON-NEXT:  Cost Model: Invalid cost for instruction: %nxv1f64 = call double @llvm.experimental.vector.extract.last.active.nxv1f64(<vscale x 1 x double> poison, <vscale x 1 x i1> poison, double poison)
-; NEON-NEXT:  Cost Model: Invalid cost for instruction: %nxv1p0 = call ptr @llvm.experimental.vector.extract.last.active.nxv1p0(<vscale x 1 x ptr> poison, <vscale x 1 x i1> poison, ptr poison)
 ; NEON-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret void
 ;
 ; SVE-LABEL: 'extractions'
@@ -110,12 +109,11 @@ define void @extractions() {
 ; SVE-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %nxv8i8 = call i8 @llvm.experimental.vector.extract.last.active.nxv8i8(<vscale x 8 x i8> poison, <vscale x 8 x i1> poison, i8 poison)
 ; SVE-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %nxv4i16 = call i16 @llvm.experimental.vector.extract.last.active.nxv4i16(<vscale x 4 x i16> poison, <vscale x 4 x i1> poison, i16 poison)
 ; SVE-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %nxv2i32 = call i32 @llvm.experimental.vector.extract.last.active.nxv2i32(<vscale x 2 x i32> poison, <vscale x 2 x i1> poison, i32 poison)
-; SVE-NEXT:  Cost Model: Invalid cost for instruction: %nxv1i64 = call i64 @llvm.experimental.vector.extract.last.active.nxv1i64(<vscale x 1 x i64> poison, <vscale x 1 x i1> poison, i64 poison)
+; SVE-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %nxv1i64 = call i64 @llvm.experimental.vector.extract.last.active.nxv1i64(<vscale x 1 x i64> poison, <vscale x 1 x i1> poison, i64 poison)
 ; SVE-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %nxv4f16 = call half @llvm.experimental.vector.extract.last.active.nxv4f16(<vscale x 4 x half> poison, <vscale x 4 x i1> poison, half poison)
 ; SVE-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %nxv4bf16 = call bfloat @llvm.experimental.vector.extract.last.active.nxv4bf16(<vscale x 4 x bfloat> poison, <vscale x 4 x i1> poison, bfloat poison)
 ; SVE-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %nxv2f32 = call float @llvm.experimental.vector.extract.last.active.nxv2f32(<vscale x 2 x float> poison, <vscale x 2 x i1> poison, float poison)
-; SVE-NEXT:  Cost Model: Invalid cost for instruction: %nxv1f64 = call double @llvm.experimental.vector.extract.last.active.nxv1f64(<vscale x 1 x double> poison, <vscale x 1 x i1> poison, double poison)
-; SVE-NEXT:  Cost Model: Invalid cost for instruction: %nxv1p0 = call ptr @llvm.experimental.vector.extract.last.active.nxv1p0(<vscale x 1 x ptr> poison, <vscale x 1 x i1> poison, ptr poison)
+; SVE-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %nxv1f64 = call double @llvm.experimental.vector.extract.last.active.nxv1f64(<vscale x 1 x double> poison, <vscale x 1 x i1> poison, double poison)
 ; SVE-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret void
 ;
 ; SME-STREAMING-LABEL: 'extractions'
@@ -167,12 +165,11 @@ define void @extractions() {
 ; SME-STREAMING-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %nxv8i8 = call i8 @llvm.experimental.vector.extract.last.active.nxv8i8(<vscale x 8 x i8> poison, <vscale x 8 x i1> poison, i8 poison)
 ; SME-STREAMING-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %nxv4i16 = call i16 @llvm.experimental.vector.extract.last.active.nxv4i16(<vscale x 4 x i16> poison, <vscale x 4 x i1> poison, i16 poison)
 ; SME-STREAMING-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %nxv2i32 = call i32 @llvm.experimental.vector.extract.last.active.nxv2i32(<vscale x 2 x i32> poison, <vscale x 2 x i1> poison, i32 poison)
-; SME-STREAMING-NEXT:  Cost Model: Invalid cost for instruction: %nxv1i64 = call i64 @llvm.experimental.vector.extract.last.active.nxv1i64(<vscale x 1 x i64> poison, <vscale x 1 x i1> poison, i64 poison)
+; SME-STREAMING-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %nxv1i64 = call i64 @llvm.experimental.vector.extract.last.active.nxv1i64(<vscale x 1 x i64> poison, <vscale x 1 x i1> poison, i64 poison)
 ; SME-STREAMING-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %nxv4f16 = call half @llvm.experimental.vector.extract.last.active.nxv4f16(<vscale x 4 x half> poison, <vscale x 4 x i1> poison, half poison)
 ; SME-STREAMING-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %nxv4bf16 = call bfloat @llvm.experimental.vector.extract.last.active.nxv4bf16(<vscale x 4 x bfloat> poison, <vscale x 4 x i1> poison, bfloat poison)
 ; SME-STREAMING-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %nxv2f32 = call float @llvm.experimental.vector.extract.last.active.nxv2f32(<vscale x 2 x float> poison, <vscale x 2 x i1> poison, float poison)
-; SME-STREAMING-NEXT:  Cost Model: Invalid cost for instruction: %nxv1f64 = call double @llvm.experimental.vector.extract.last.active.nxv1f64(<vscale x 1 x double> poison, <vscale x 1 x i1> poison, double poison)
-; SME-STREAMING-NEXT:  Cost Model: Invalid cost for instruction: %nxv1p0 = call ptr @llvm.experimental.vector.extract.last.active.nxv1p0(<vscale x 1 x ptr> poison, <vscale x 1 x i1> poison, ptr poison)
+; SME-STREAMING-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %nxv1f64 = call double @llvm.experimental.vector.extract.last.active.nxv1f64(<vscale x 1 x double> poison, <vscale x 1 x i1> poison, double poison)
 ; SME-STREAMING-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret void
 ;
 
@@ -234,8 +231,6 @@ define void @extractions() {
   %nxv4bf16 = call bfloat @llvm.experimental.vector.extract.last.active.nxv4bf16(<vscale x 4 x bfloat> poison, <vscale x 4 x i1> poison, bfloat poison)
   %nxv2f32 = call float @llvm.experimental.vector.extract.last.active.nxv2f32(<vscale x 2 x float> poison, <vscale x 2 x i1> poison, float poison)
   %nxv1f64 = call double @llvm.experimental.vector.extract.last.active.nxv1f64(<vscale x 1 x double> poison, <vscale x 1 x i1> poison, double poison)
-  %nxv1p0 = call ptr @llvm.experimental.vector.extract.last.active.nxv1p0(<vscale x 1 x ptr> poison, <vscale x 1 x i1> poison, ptr poison)
-
 
   ret void
 }
