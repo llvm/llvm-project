@@ -4497,7 +4497,7 @@ ExprResult Sema::SubstConceptTemplateArguments(
                MLTAL.hasTemplateArgument(Depth, Pos));
         TemplateArgument Arg = MLTAL(Depth, Pos);
         assert(Arg.getKind() == TemplateArgument::Template);
-        ResolvedConcept = dyn_cast_or_null<ConceptDecl>(
+        ResolvedConcept = dyn_cast<ConceptDecl>(
             Arg.getAsTemplate().getAsTemplateDecl());
         if (ResolvedConcept == nullptr)
           return E;
