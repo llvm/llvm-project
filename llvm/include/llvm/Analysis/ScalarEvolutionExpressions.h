@@ -58,10 +58,6 @@ enum SCEVTypes : unsigned short {
   scCouldNotCompute
 };
 
-inline SmallVector<SCEVUse> toSCEV(ArrayRef<SCEVUse> Ops) {
-  return SmallVector<SCEVUse>(Ops.begin(), Ops.end());
-}
-
 /// This class represents a constant integer value.
 class SCEVConstant : public SCEV {
   friend class ScalarEvolution;
@@ -385,8 +381,8 @@ public:
   SCEVUse getStepRecurrence(ScalarEvolution &SE) const {
     if (isAffine())
       return getOperand(1);
-    return SE.getAddRecExpr(toSCEV(operands().drop_front()), getLoop(),
-                            FlagAnyWrap);
+    return SE.getAddRecExpr(SmallVector<SCEVUse, 3>(operands().drop_front()),
+                            getLoop(), FlagAnyWrap);
   }
 
   /// Return true if this represents an expression A + B*x where A
@@ -975,9 +971,8 @@ public:
 
     const Loop *L = Expr->getLoop();
     auto It = Map.find(L);
-    if (It == Map.end()) {
+    if (It == Map.end())
       return SE.getAddRecExpr(Operands, L, Expr->getNoWrapFlags());
-    }
 
     return SCEVAddRecExpr::evaluateAtIteration(Operands, It->second, SE);
   }

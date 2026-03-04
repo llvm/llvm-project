@@ -109,8 +109,6 @@ template <> struct PointerLikeTypeTraits<SCEVUse> {
 };
 
 template <> struct DenseMapInfo<SCEVUse> {
-  static constexpr uintptr_t Log2MaxAlign = 12;
-
   static inline SCEVUse getEmptyKey() {
     uintptr_t Val = static_cast<uintptr_t>(-1);
     return PointerLikeTypeTraits<SCEVUse>::getFromVoidPointer((void *)Val);
