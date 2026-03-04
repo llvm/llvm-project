@@ -252,6 +252,9 @@ struct Ctx {
     // Used as an address space for function pointers, with each function that
     // is used as a function pointer being allocated a slot.
     TableSymbol *indirectFunctionTable;
+    // __externref_table
+    // Used as an address space for pointers to externref.
+    TableSymbol *externrefTable;
   };
   WasmSym sym;
 
