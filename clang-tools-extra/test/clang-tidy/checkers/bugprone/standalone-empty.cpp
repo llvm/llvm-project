@@ -630,6 +630,9 @@ void test_empty_expressions() {
 
   bool StmtExprReturn = ({std::empty(s); std::empty(s);});
   // CHECK-MESSAGES: :[[#@LINE-1]]:27: warning: ignoring the result of 'std::empty' [bugprone-standalone-empty]
+
+  // FIXME: This is a false negative.
+  ({ std::empty(s); });
 }
 
 bool test_clear_in_base_class() {

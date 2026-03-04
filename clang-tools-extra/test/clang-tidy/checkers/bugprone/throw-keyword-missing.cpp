@@ -226,3 +226,15 @@ struct ExceptionInConstructorTest {
     RegularException{0};
   }
 };
+
+void statementExpressionTest() {
+  auto E = ({
+    // CHECK-MESSAGES: :[[@LINE+1]]:5: warning: suspicious exception
+    RegularException();
+
+    RegularException();
+  });
+
+  // FIXME: We should probably warn here.
+  ({ RegularException(); });
+}
