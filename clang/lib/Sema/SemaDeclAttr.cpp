@@ -48,6 +48,7 @@
 #include "clang/Sema/SemaBPF.h"
 #include "clang/Sema/SemaCUDA.h"
 #include "clang/Sema/SemaHLSL.h"
+#include "clang/Sema/SemaInternal.h"
 #include "clang/Sema/SemaM68k.h"
 #include "clang/Sema/SemaMIPS.h"
 #include "clang/Sema/SemaMSP430.h"
@@ -705,6 +706,24 @@ static void handleExcludeFromExplicitInstantiationAttr(Sema &S, Decl *D,
         << AL << /*IsMember=*/!isa<CXXRecordDecl>(D);
     return;
   }
+
+  if (auto *DA = getDLLAttr(D); DA && !DA->isInherited()) {
+    if (auto *RD = dyn_cast<CXXRecordDecl>(D->getDeclContext())) {
+      if (RD->isTemplated()) {
+        S.Diag(DA->getLoc(),
+               diag::warn_dllattr_ignored_exclusion_takes_precedence)
+            << DA << AL;
+        D->dropAttrs<DLLExportAttr, DLLImportAttr>();
+      } else {
+        S.Diag(AL.getLoc(), diag::warn_attribute_ignored_in_non_template) << AL;
+        return;
+      }
+    } else {
+      S.Diag(AL.getLoc(), diag::warn_attribute_ignored_on_non_member) << AL;
+      return;
+    }
+  }
+
   D->addAttr(::new (S.Context)
                  ExcludeFromExplicitInstantiationAttr(S.Context, AL));
 }
@@ -6466,6 +6485,22 @@ static void handleDLLAttr(Sema &S, Decl *D, const ParsedAttr &A) {
         MD->getParent()->isLambda()) {
       S.Diag(A.getRange().getBegin(), diag::err_attribute_dll_lambda) << A;
       return;
+    }
+  }
+
+  if (auto *EA = D->getAttr<ExcludeFromExplicitInstantiationAttr>()) {
+    if (auto *RD = dyn_cast<CXXRecordDecl>(D->getDeclContext())) {
+      if (RD->isTemplated()) {
+        S.Diag(A.getRange().getBegin(),
+               diag::warn_dllattr_ignored_exclusion_takes_precedence)
+            << A << EA;
+        return;
+      }
+      S.Diag(EA->getLoc(), diag::warn_attribute_ignored_in_non_template) << EA;
+      D->dropAttr<ExcludeFromExplicitInstantiationAttr>();
+    } else {
+      S.Diag(EA->getLoc(), diag::warn_attribute_ignored_on_non_member) << EA;
+      D->dropAttr<ExcludeFromExplicitInstantiationAttr>();
     }
   }
 
