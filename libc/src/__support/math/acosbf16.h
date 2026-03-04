@@ -41,8 +41,10 @@ LIBC_INLINE constexpr bfloat16 acosbf16(bfloat16 x) {
   // case 1: |x|>=1, NaN or Inf
   if (LIBC_UNLIKELY(x_abs >= 0x3F80)) {
     if (x_abs == 0x3F80) {
-      if(sign) return fputil::cast<bfloat16>(PI);
-      else return fputil::cast<bfloat16>(0.0f);
+      if (sign)
+        return fputil::cast<bfloat16>(PI);
+      else
+        return fputil::cast<bfloat16>(0.0f);
     }
     // NaN
     if (xbits.is_nan()) {
@@ -59,7 +61,7 @@ LIBC_INLINE constexpr bfloat16 acosbf16(bfloat16 x) {
   }
 
   // case 2:  |x| = {0}
-  if (LIBC_UNLIKELY(x_abs == 0)){
+  if (LIBC_UNLIKELY(x_abs == 0)) {
     return fputil::cast<bfloat16>(PI_2);
   }
 
@@ -75,15 +77,17 @@ LIBC_INLINE constexpr bfloat16 acosbf16(bfloat16 x) {
   }
 
   // case 4: (0.5,1)
-  //  using reduction: asin(x) = pi/2 - 2*asin(sqrt((1-x)/2))
+  // using reduction for acos:
+  // acos(|x|) = 2*asin(sqrt((1 - |x|)/2)),
+  // and acos(x) = acos(|x|) for x >= 0, pi - acos(|x|) for x < 0
   float t = fputil::multiply_add<float>(xf_abs, -0.5f, 0.5f);
   float t_sqrt = fputil::sqrt<float>(t);
   double tp = inv_trigf_utils_internal::asin_eval(t);
   float asin_sqrt_t =
       t_sqrt * static_cast<float>(fputil::multiply_add<double>(t, tp, 1.0));
-      
-  if(sign) return fputil::cast<bfloat16>(fputil::multiply_add(asin_sqrt_t,-2.0f,PI));
-  else return fputil::cast<bfloat16>(2*asin_sqrt_t);
+
+  return fputil::cast<bfloat16>(
+      (sign) ? fputil::multiply_add(asin_sqrt_t, -2.0f, PI) : 2 * asin_sqrt_t);
 }
 
 } // namespace math
