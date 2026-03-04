@@ -1728,21 +1728,21 @@ define <1 x i128> @clmul_v1i128_neon(<1 x i128> %x, <1 x i128> %y) {
 ; CHECK-AES:       // %bb.0:
 ; CHECK-AES-NEXT:    rbit x8, x2
 ; CHECK-AES-NEXT:    rbit x9, x0
-; CHECK-AES-NEXT:    fmov d0, x2
-; CHECK-AES-NEXT:    fmov d1, x1
-; CHECK-AES-NEXT:    fmov d2, x3
+; CHECK-AES-NEXT:    fmov d0, x3
+; CHECK-AES-NEXT:    fmov d1, x0
+; CHECK-AES-NEXT:    fmov d2, x2
 ; CHECK-AES-NEXT:    fmov d3, x8
 ; CHECK-AES-NEXT:    fmov d4, x9
-; CHECK-AES-NEXT:    pmull v1.1q, v1.1d, v0.1d
+; CHECK-AES-NEXT:    pmull v0.1q, v1.1d, v0.1d
 ; CHECK-AES-NEXT:    pmull v3.1q, v4.1d, v3.1d
-; CHECK-AES-NEXT:    fmov d4, x0
-; CHECK-AES-NEXT:    pmull v2.1q, v4.1d, v2.1d
-; CHECK-AES-NEXT:    fmov x9, d1
+; CHECK-AES-NEXT:    fmov d4, x1
+; CHECK-AES-NEXT:    pmull v1.1q, v1.1d, v2.1d
+; CHECK-AES-NEXT:    pmull v4.1q, v4.1d, v2.1d
+; CHECK-AES-NEXT:    fmov x10, d0
 ; CHECK-AES-NEXT:    fmov x8, d3
-; CHECK-AES-NEXT:    pmull v0.1q, v4.1d, v0.1d
-; CHECK-AES-NEXT:    fmov x10, d2
+; CHECK-AES-NEXT:    fmov x0, d1
+; CHECK-AES-NEXT:    fmov x9, d4
 ; CHECK-AES-NEXT:    rbit x8, x8
-; CHECK-AES-NEXT:    fmov x0, d0
 ; CHECK-AES-NEXT:    eor x9, x10, x9
 ; CHECK-AES-NEXT:    eor x1, x9, x8, lsr #1
 ; CHECK-AES-NEXT:    ret
