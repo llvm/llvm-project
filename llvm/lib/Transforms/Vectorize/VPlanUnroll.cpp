@@ -606,31 +606,31 @@ cloneForLane(VPlan &Plan, VPBuilder &Builder, Type *IdxTy,
         VPTypeAnalysis TypeInfo(Plan);
         Type *BaseIVTy = TypeInfo.inferScalarType(DefR->getOperand(0));
 
+        VPValue *StartIndex = Steps->getStartIndex();
         VPValue *LaneOffset;
+        unsigned AddOp;
+        VPIRFlags Flags;
         if (BaseIVTy->isFloatingPointTy()) {
+          int SignedLane = static_cast<int>(KnownLane);
+          if (!StartIndex && Steps->getInductionOpcode() == Instruction::FSub)
+            SignedLane = -SignedLane;
           LaneOffset =
-              Plan.getOrAddLiveIn(ConstantFP::get(BaseIVTy, KnownLane));
+              Plan.getOrAddLiveIn(ConstantFP::get(BaseIVTy, SignedLane));
+          AddOp = Steps->getInductionOpcode();
+          Flags = VPIRFlags(FastMathFlags());
         } else {
           unsigned BaseIVBits = BaseIVTy->getScalarSizeInBits();
           LaneOffset = Plan.getConstantInt(APInt(BaseIVBits, KnownLane,
                                                  /*isSigned*/ false,
                                                  /*implicitTrunc*/ true));
+          AddOp = Instruction::Add;
+          Flags = VPIRFlags(VPIRFlags::WrapFlagsTy(false, false));
         }
 
-        VPBuilder LaneBuilder(DefR);
-        VPValue *StartIndex = Steps->getStartIndex();
-        if (!StartIndex && Steps->getInductionOpcode() == Instruction::FSub)
-          StartIndex = Plan.getOrAddLiveIn(ConstantFP::getNullValue(BaseIVTy));
-
         if (StartIndex) {
-          unsigned InductionOpcode = BaseIVTy->isFloatingPointTy()
-                                         ? Steps->getInductionOpcode()
-                                         : Instruction::Add;
-          LaneOffset = LaneBuilder.createNaryOp(
-              InductionOpcode, {StartIndex, LaneOffset},
-              BaseIVTy->isFloatingPointTy()
-                  ? VPIRFlags(FastMathFlags())
-                  : VPIRFlags(VPIRFlags::WrapFlagsTy(false, false)));
+          VPBuilder LaneBuilder(DefR);
+          LaneOffset =
+              LaneBuilder.createNaryOp(AddOp, {StartIndex, LaneOffset}, Flags);
         }
         Steps->setStartIndex(LaneOffset);
       }
