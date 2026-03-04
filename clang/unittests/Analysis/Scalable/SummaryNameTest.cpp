@@ -7,6 +7,8 @@
 //===----------------------------------------------------------------------===//
 
 #include "clang/Analysis/Scalable/Model/SummaryName.h"
+#include "clang/Analysis/Scalable/Support/FormatProviders.h"
+#include "llvm/Support/FormatVariadic.h"
 #include "llvm/Support/raw_ostream.h"
 #include "gtest/gtest.h"
 
@@ -49,6 +51,11 @@ TEST(SummaryNameTest, Str) {
   EXPECT_EQ(Handle1.str(), "TestAnalysis1");
   EXPECT_EQ(Handle2.str(), "TestAnalysis1");
   EXPECT_EQ(Handle3.str(), "TestAnalysis2");
+}
+
+TEST(SummaryNameTest, FormatProvider) {
+  EXPECT_EQ(llvm::formatv("{0}", SummaryName("MyAnalysis")).str(),
+            "SummaryName(MyAnalysis)");
 }
 
 TEST(SummaryNameTest, StreamOutput) {

@@ -640,6 +640,11 @@ public:
     llvm_unreachable("Unhandled VPRecipeID");
   }
 
+  static inline bool classof(const VPValue *V) {
+    auto *R = V->getDefiningRecipe();
+    return R && classof(R);
+  }
+
   static inline bool classof(const VPUser *U) {
     auto *R = dyn_cast<VPRecipeBase>(U);
     return R && classof(R);
@@ -1267,8 +1272,7 @@ public:
     VScale,
     /// Compute the exiting value of a wide induction after vectorization, that
     /// is the value of the last lane of the induction increment (i.e. its
-    /// backedge value). Takes the wide induction recipe and the original
-    /// backedge value as operands.
+    /// backedge value). Has the wide induction recipe as operand.
     ExitingIVValue,
     MaskedCond,
     OpsEnd = MaskedCond,
@@ -1469,6 +1473,7 @@ public:
     case VPInstruction::WideIVStep:
     case VPInstruction::StepVector:
     case VPInstruction::VScale:
+    case Instruction::Load:
       return true;
     default:
       return false;
@@ -4768,6 +4773,14 @@ public:
 
   /// Return a VPIRValue wrapping i1 false.
   VPIRValue *getFalse() { return getConstantInt(1, 0); }
+
+  /// Return a VPIRValue wrapping the null value of type \p Ty.
+  VPIRValue *getZero(Type *Ty) { return getConstantInt(Ty, 0); }
+
+  /// Return a VPIRValue wrapping the AllOnes value of type \p Ty.
+  VPIRValue *getAllOnesValue(Type *Ty) {
+    return getConstantInt(APInt::getAllOnes(Ty->getIntegerBitWidth()));
+  }
 
   /// Return a VPIRValue wrapping a ConstantInt with the given type and value.
   VPIRValue *getConstantInt(Type *Ty, uint64_t Val, bool IsSigned = false) {

@@ -322,8 +322,13 @@ mlir::LogicalResult CIRGenFunction::emitCXXTryStmt(const CXXTryStmt &s) {
       builder, tryLoc,
       /*tryBuilder=*/
       [&](mlir::OpBuilder &b, mlir::Location loc) {
+        // Create a RunCleanupsScope that allows us to apply any cleanups that
+        // are created for statements within the try body before exiting the
+        // try body.
+        RunCleanupsScope tryBodyCleanups(*this);
         if (emitStmt(s.getTryBlock(), /*useCurrentScope=*/true).failed())
           tryRes = mlir::failure();
+        tryBodyCleanups.forceCleanup();
         cir::YieldOp::create(builder, loc);
       },
       /*handlersBuilder=*/
@@ -344,8 +349,9 @@ mlir::LogicalResult CIRGenFunction::emitCXXTryStmt(const CXXTryStmt &s) {
         if (!hasCatchAll) {
           // Create unwind region.
           mlir::Region *region = result.addRegion();
-          builder.createBlock(region, /*insertPt=*/{}, {ehTokenTy}, {loc});
-          cir::ResumeOp::create(builder, loc);
+          mlir::Block *unwindBlock =
+              builder.createBlock(region, /*insertPt=*/{}, {ehTokenTy}, {loc});
+          cir::ResumeOp::create(builder, loc, unwindBlock->getArgument(0));
           handlerAttrs.push_back(cir::UnwindAttr::get(&getMLIRContext()));
         }
       });

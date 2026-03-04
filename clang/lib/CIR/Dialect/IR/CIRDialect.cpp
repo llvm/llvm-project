@@ -339,6 +339,12 @@ cir::ConditionOp::getMutableSuccessorOperands(RegionSuccessor point) {
   return MutableOperandRange(getOperation(), 0, 0);
 }
 
+MutableOperandRange
+cir::ResumeOp::getMutableSuccessorOperands(RegionSuccessor point) {
+  // The eh_token operand is not forwarded to the parent region.
+  return MutableOperandRange(getOperation(), 0, 0);
+}
+
 LogicalResult cir::ConditionOp::verify() {
   if (!isa<LoopOpInterface, AwaitOp>(getOperation()->getParentOp()))
     return emitOpError("condition must be within a conditional region");
@@ -822,7 +828,6 @@ static mlir::ParseResult parseCallCommon(mlir::OpAsmParser &parser,
   llvm::SmallVector<mlir::OpAsmParser::UnresolvedOperand, 4> ops;
   llvm::SMLoc opsLoc;
   mlir::FlatSymbolRefAttr calleeAttr;
-  llvm::ArrayRef<mlir::Type> allResultTypes;
 
   // If we cannot parse a string callee, it means this is an indirect call.
   if (!parser
@@ -872,15 +877,51 @@ static mlir::ParseResult parseCallCommon(mlir::OpAsmParser &parser,
   if (parser.parseColon())
     return ::mlir::failure();
 
-  mlir::FunctionType opsFnTy;
-  if (parser.parseType(opsFnTy))
+  SmallVector<Type> argTypes;
+  SmallVector<DictionaryAttr> argAttrs;
+  SmallVector<Type> resultTypes;
+  SmallVector<DictionaryAttr> resultAttrs;
+  if (call_interface_impl::parseFunctionSignature(parser, argTypes, argAttrs,
+                                                  resultTypes, resultAttrs))
     return mlir::failure();
 
-  allResultTypes = opsFnTy.getResults();
-  result.addTypes(allResultTypes);
+  if (resultTypes.size() > 1 || resultAttrs.size() > 1)
+    return parser.emitError(
+        parser.getCurrentLocation(),
+        "functions with multiple return types are not supported");
 
-  if (parser.resolveOperands(ops, opsFnTy.getInputs(), opsLoc, result.operands))
+  result.addTypes(resultTypes);
+
+  if (parser.resolveOperands(ops, argTypes, opsLoc, result.operands))
     return mlir::failure();
+
+  if (!resultAttrs.empty() && resultAttrs[0])
+    result.addAttribute(
+        CIRDialect::getResAttrsAttrName(),
+        mlir::ArrayAttr::get(parser.getContext(), {resultAttrs[0]}));
+
+  // ArrayAttr requires a vector of 'Attribute', so we have to do the conversion
+  // here into a separate collection.
+  llvm::SmallVector<Attribute> convertedArgAttrs;
+  bool argAttrsEmpty = true;
+
+  llvm::transform(argAttrs, std::back_inserter(convertedArgAttrs),
+                  [&](DictionaryAttr da) -> mlir::Attribute {
+                    if (da)
+                      argAttrsEmpty = false;
+                    return da;
+                  });
+
+  if (!argAttrsEmpty) {
+    llvm::ArrayRef argAttrsRef = convertedArgAttrs;
+    if (!calleeAttr) {
+      // Fixup for indirect calls, which get an extra entry in the 'args' for
+      // the indirect type, which doesn't get attributes.
+      argAttrsRef = argAttrsRef.drop_front();
+    }
+    result.addAttribute(CIRDialect::getArgAttrsAttrName(),
+                        mlir::ArrayAttr::get(parser.getContext(), argAttrsRef));
+  }
 
   return mlir::success();
 }
@@ -2000,6 +2041,7 @@ ParseResult cir::FuncOp::parse(OpAsmParser &parser, OperationState &state) {
   mlir::StringAttr inlineKindNameAttr = getInlineKindAttrName(state.name);
   mlir::StringAttr lambdaNameAttr = getLambdaAttrName(state.name);
   mlir::StringAttr noProtoNameAttr = getNoProtoAttrName(state.name);
+  mlir::StringAttr comdatNameAttr = getComdatAttrName(state.name);
   mlir::StringAttr visNameAttr = getSymVisibilityAttrName(state.name);
   mlir::StringAttr visibilityNameAttr = getGlobalVisibilityAttrName(state.name);
   mlir::StringAttr dsoLocalNameAttr = getDsoLocalAttrName(state.name);
@@ -2022,6 +2064,9 @@ ParseResult cir::FuncOp::parse(OpAsmParser &parser, OperationState &state) {
     state.addAttribute(lambdaNameAttr, parser.getBuilder().getUnitAttr());
   if (parser.parseOptionalKeyword(noProtoNameAttr).succeeded())
     state.addAttribute(noProtoNameAttr, parser.getBuilder().getUnitAttr());
+
+  if (parser.parseOptionalKeyword(comdatNameAttr).succeeded())
+    state.addAttribute(comdatNameAttr, parser.getBuilder().getUnitAttr());
 
   // Default to external linkage if no keyword is provided.
   state.addAttribute(getLinkageAttrNameString(),
@@ -2057,13 +2102,22 @@ ParseResult cir::FuncOp::parse(OpAsmParser &parser, OperationState &state) {
           resultAttrs))
     return failure();
   llvm::SmallVector<mlir::Type> argTypes;
-  for (OpAsmParser::Argument &arg : arguments)
+  llvm::SmallVector<mlir::Attribute> argAttrs;
+  bool argAttrsEmpty = true;
+  for (OpAsmParser::Argument &arg : arguments) {
     argTypes.push_back(arg.type);
+    // Add the 'empty' attribute anyway to make sure the arity matches, but we
+    // only want to 'set' the attribute at the top level if there is SOME data
+    // along the way.
+    argAttrs.push_back(arg.attrs);
+    if (arg.attrs)
+      argAttrsEmpty = false;
+  }
 
-  if (resultTypes.size() > 1) {
+  // These should be in sync anyway, but test both of them anyway.
+  if (resultTypes.size() > 1 || resultAttrs.size() > 1)
     return parser.emitError(
         loc, "functions with multiple return types are not supported");
-  }
 
   mlir::Type returnType =
       (resultTypes.empty() ? cir::VoidType::get(builder.getContext())
@@ -2072,8 +2126,18 @@ ParseResult cir::FuncOp::parse(OpAsmParser &parser, OperationState &state) {
   cir::FuncType fnType = cir::FuncType::get(argTypes, returnType, isVariadic);
   if (!fnType)
     return failure();
+
   state.addAttribute(getFunctionTypeAttrName(state.name),
                      TypeAttr::get(fnType));
+
+  if (!resultAttrs.empty() && resultAttrs[0])
+    state.addAttribute(
+        getResAttrsAttrName(state.name),
+        mlir::ArrayAttr::get(parser.getContext(), {resultAttrs[0]}));
+
+  if (!argAttrsEmpty)
+    state.addAttribute(getArgAttrsAttrName(state.name),
+                       mlir::ArrayAttr::get(parser.getContext(), argAttrs));
 
   bool hasAlias = false;
   mlir::StringAttr aliaseeNameAttr = getAliaseeAttrName(state.name);

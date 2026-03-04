@@ -361,7 +361,7 @@ define i1 @logical_and_icmp_clamp_partial(<4 x i32> %x) {
 ; CHECK-NEXT:    [[TMP5:%.*]] = freeze <4 x i1> [[TMP4]]
 ; CHECK-NEXT:    [[TMP6:%.*]] = call i1 @llvm.vector.reduce.and.v4i1(<4 x i1> [[TMP5]])
 ; CHECK-NEXT:    [[TMP7:%.*]] = extractelement <2 x i1> [[TMP3]], i32 0
-; CHECK-NEXT:    [[OP_RDX:%.*]] = select i1 [[TMP7]], i1 [[TMP6]], i1 false
+; CHECK-NEXT:    [[OP_RDX:%.*]] = select i1 [[TMP6]], i1 [[TMP7]], i1 false
 ; CHECK-NEXT:    [[TMP8:%.*]] = extractelement <2 x i1> [[TMP3]], i32 1
 ; CHECK-NEXT:    [[TMP9:%.*]] = freeze i1 [[TMP8]]
 ; CHECK-NEXT:    [[OP_RDX1:%.*]] = select i1 [[TMP9]], i1 [[C2]], i1 false
