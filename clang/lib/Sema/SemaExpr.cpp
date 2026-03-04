@@ -17651,6 +17651,9 @@ bool Sema::DiagnoseAssignmentResult(AssignConvertType ConvTy,
   case AssignConvertType::CompatibleOBTDiscards:
     return false;
   case AssignConvertType::IncompatibleOBTKinds: {
+    if (SrcType->isArrayType() || SrcType->isFunctionType()) {
+      SrcType = Context.getDecayedType(SrcType);
+    }
     auto getOBTKindName = [](QualType Ty) -> StringRef {
       if (Ty->isPointerType())
         Ty = Ty->getPointeeType();
@@ -17741,9 +17744,6 @@ bool Sema::DiagnoseAssignmentResult(AssignConvertType ConvTy,
     Diag(IFace->getLocation(), diag::note_incomplete_class_and_qualified_id)
         << IFace << PDecl;
 
-    if (SrcType->isArrayType() || SrcType->isFunctionType()) {
-      SrcType = Context.getDecayedType(SrcType);
-    }
   if (SecondType == Context.OverloadTy)
     NoteAllOverloadCandidates(OverloadExpr::find(SrcExpr).Expression,
                               FirstType, /*TakingAddress=*/true);
