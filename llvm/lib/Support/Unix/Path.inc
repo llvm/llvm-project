@@ -123,7 +123,7 @@ namespace llvm {
 namespace sys {
 namespace fs {
 
-const file_t kInvalidFile = -1;
+const file_t::value_type file_t::Invalid = -1;
 
 #if defined(__FreeBSD__) || defined(__NetBSD__) || defined(__OpenBSD__) ||     \
     defined(__FreeBSD_kernel__) || defined(__linux__) ||                       \
@@ -789,6 +789,10 @@ std::error_code status(const Twine &Path, file_status &Result, bool Follow) {
   return fillStatus(StatRet, Status, Result);
 }
 
+std::error_code status(file_t F, file_status &Result) {
+  return status(F.native_handle(), Result);
+}
+
 std::error_code status(int FD, file_status &Result) {
   sandbox::violationIfEnabled();
 
@@ -855,7 +859,7 @@ std::error_code setLastAccessAndModificationTime(int FD, TimePoint<> AccessTime,
 #endif
 }
 
-std::error_code mapped_file_region::init(int FD, uint64_t Offset,
+std::error_code mapped_file_region::init(file_t FD, uint64_t Offset,
                                          mapmode Mode) {
   assert(Size != 0);
 
@@ -884,13 +888,13 @@ std::error_code mapped_file_region::init(int FD, uint64_t Offset,
   }
 #endif // #if defined (__APPLE__)
 
-  Mapping = ::mmap(nullptr, Size, prot, flags, FD, Offset);
+  Mapping = ::mmap(nullptr, Size, prot, flags, FD.native_handle(), Offset);
   if (Mapping == MAP_FAILED)
     return errnoAsErrorCode();
   return std::error_code();
 }
 
-mapped_file_region::mapped_file_region(int fd, mapmode mode, size_t length,
+mapped_file_region::mapped_file_region(file_t fd, mapmode mode, size_t length,
                                        uint64_t offset, std::error_code &ec)
     : Size(length), Mode(mode) {
   sandbox::violationIfEnabled();
@@ -1174,9 +1178,9 @@ std::error_code openFile(const Twine &Name, int &ResultFD,
   return std::error_code();
 }
 
-Expected<int> openNativeFile(const Twine &Name, CreationDisposition Disp,
-                             FileAccess Access, OpenFlags Flags,
-                             unsigned Mode) {
+Expected<file_t> openNativeFile(const Twine &Name, CreationDisposition Disp,
+                                FileAccess Access, OpenFlags Flags,
+                                unsigned Mode) {
   sandbox::violationIfEnabled();
 
   int FD;
@@ -1234,7 +1238,7 @@ Expected<file_t> openNativeFileForRead(const Twine &Name, OpenFlags Flags,
                                        SmallVectorImpl<char> *RealPath) {
   sandbox::violationIfEnabled();
 
-  file_t ResultFD;
+  int ResultFD;
   std::error_code EC = openFileForRead(Name, ResultFD, Flags, RealPath);
   if (EC)
     return errorCodeToError(EC);
@@ -1253,7 +1257,8 @@ Expected<size_t> readNativeFile(file_t FD, MutableArrayRef<char> Buf) {
 #else
   size_t Size = Buf.size();
 #endif
-  ssize_t NumRead = sys::RetryAfterSignal(-1, ::read, FD, Buf.data(), Size);
+  ssize_t NumRead =
+      sys::RetryAfterSignal(-1, ::read, FD.native_handle(), Buf.data(), Size);
   if (NumRead == -1)
     return errorCodeToError(errnoAsErrorCode());
 // The underlying operation on these platforms allow opening directories
@@ -1278,8 +1283,8 @@ Expected<size_t> readNativeFileSlice(file_t FD, MutableArrayRef<char> Buf,
   size_t Size = Buf.size();
 #endif
 #ifdef HAVE_PREAD
-  ssize_t NumRead =
-      sys::RetryAfterSignal(-1, ::pread, FD, Buf.data(), Size, Offset);
+  ssize_t NumRead = sys::RetryAfterSignal(-1, ::pread, FD.native_handle(),
+                                          Buf.data(), Size, Offset);
 #else
   if (lseek(FD, Offset, SEEK_SET) == -1)
     return errorCodeToError(errnoAsErrorCode());
@@ -1354,8 +1359,8 @@ std::error_code closeFile(file_t &F) {
   sandbox::violationIfEnabled();
 
   file_t TmpF = F;
-  F = kInvalidFile;
-  return Process::SafelyCloseFileDescriptor(TmpF);
+  F = file_t::Invalid;
+  return Process::SafelyCloseFileDescriptor(TmpF.native_handle());
 }
 
 template <typename T>

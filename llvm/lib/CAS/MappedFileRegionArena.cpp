@@ -396,7 +396,7 @@ Expected<int64_t> MappedFileRegionArena::allocateOffset(uint64_t AllocSize) {
 ErrorOr<FileSizeInfo> FileSizeInfo::get(sys::fs::file_t File) {
 #if LLVM_ON_UNIX && defined(MAPPED_FILE_BSIZE)
   struct stat Status;
-  int StatRet = ::fstat(File, &Status);
+  int StatRet = ::fstat(File.native_handle(), &Status);
   if (StatRet)
     return errnoAsErrorCode();
   uint64_t AllocatedSize = uint64_t(Status.st_blksize) * MAPPED_FILE_BSIZE;
