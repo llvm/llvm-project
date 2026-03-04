@@ -2,4 +2,3 @@
 ! CHECK: Program -> ProgramUnit -> MainProgram
 ! CHECK: ProgramUnit -> SubroutineSubprogram
 program semicolon; end; subroutine sub; end;
-
