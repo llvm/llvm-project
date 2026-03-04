@@ -3238,8 +3238,7 @@ protected:
     lldb::StateType GetPublicState() const {
       if (UsesPrivateState())
         return m_private_state.GetValue();
-      else
-        return m_public_state.GetValue();
+      return m_public_state.GetValue();
     }
 
     void SetPublicState(lldb::StateType new_value) {
