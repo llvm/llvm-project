@@ -121,11 +121,16 @@ cl::opt<bool> ReadPreAggregated(
     "pa", cl::desc("skip perf and read data from a pre-aggregated file format"),
     cl::cat(AggregatorCategory));
 
-cl::opt<std::string>
-    ReadPerfEvents("perf-script-events",
-                   cl::desc("skip perf event collection by supplying a "
-                            "perf-script output in a textual format"),
-                   cl::ReallyHidden, cl::init(""), cl::cat(AggregatorCategory));
+cl::opt<bool> ReadPerfTextData(
+    "perf-text-data",
+    cl::desc("skip perf event collection by reading a "
+             "pre-parsed perf-script output in a textual format"),
+    cl::Hidden, cl::cat(AggregatorCategory));
+
+cl::opt<bool> GeneratePerfTextProfile(
+    "generate-perf-text-data",
+    cl::desc("Dump perf-script jobs' output into a file"), cl::Hidden,
+    cl::cat(AggregatorCategory));
 
 static cl::opt<bool>
 TimeAggregator("time-aggr",
@@ -140,6 +145,8 @@ namespace {
 
 const char TimerGroupName[] = "aggregator";
 const char TimerGroupDesc[] = "Aggregator";
+
+constexpr const StringLiteral PerfTextMagicStr = "PERFTEXT";
 
 std::vector<SectionNameAndRange> getTextSections(const BinaryContext *BC) {
   std::vector<SectionNameAndRange> sections;
@@ -169,6 +176,17 @@ void deleteTempFile(const std::string &FileName) {
 }
 }
 
+uint64_t DataAggregator::getFileSize(const StringRef File) {
+  uint64_t Size;
+  std::error_code EC = sys::fs::file_size(File, Size);
+  if (EC) {
+    errs() << "unable to obtain file size: " << EC.message() << "\n";
+    deleteTempFiles();
+    exit(1);
+  }
+  return Size;
+}
+
 void DataAggregator::deleteTempFiles() {
   for (std::string &FileName : TempFiles)
     deleteTempFile(FileName);
@@ -194,7 +212,7 @@ void DataAggregator::start() {
 
   // Don't launch perf for pre-aggregated files or when perf input is specified
   // by the user.
-  if (opts::ReadPreAggregated || !opts::ReadPerfEvents.empty())
+  if (opts::ReadPreAggregated || opts::ReadPerfTextData)
     return;
 
   findPerfExecutable();
@@ -233,6 +251,8 @@ void DataAggregator::start() {
 
   launchPerfProcess("task events", TaskEventsPPI,
                     "script --show-task-events --no-itrace");
+
+  launchPerfProcess("buildid list", BuildIDProcessInfo, "buildid-list");
 }
 
 void DataAggregator::abort() {
@@ -303,8 +323,6 @@ void DataAggregator::processFileBuildID(StringRef FileBuildID) {
     errs() << "PERF-ERROR: return code " << ReturnCode << "\n" << ErrBuf;
   };
 
-  PerfProcessInfo BuildIDProcessInfo;
-  launchPerfProcess("buildid list", BuildIDProcessInfo, "buildid-list");
   if (prepareToParse("buildid", BuildIDProcessInfo, WarningCallback))
     return;
 
@@ -336,7 +354,7 @@ void DataAggregator::processFileBuildID(StringRef FileBuildID) {
 }
 
 bool DataAggregator::checkPerfDataMagic(StringRef FileName) {
-  if (opts::ReadPreAggregated)
+  if (opts::ReadPreAggregated || opts::ReadPerfTextData)
     return true;
 
   Expected<sys::fs::file_t> FD = sys::fs::openNativeFileForRead(FileName);
@@ -382,6 +400,156 @@ void DataAggregator::parsePreAggregated() {
   }
 }
 
+std::error_code DataAggregator::parsePerfTextFileHeader() {
+  size_t LineEnd = ParsingBuf.find_first_of("\n");
+  if (LineEnd == StringRef::npos) {
+    reportError("expected rest of line");
+    Diag << "Found: " << ParsingBuf << "\n";
+    return make_error_code(llvm::errc::io_error);
+  }
+  StringRef HeaderLine = ParsingBuf.substr(0, LineEnd);
+  size_t HeaderLineSize = HeaderLine.size() + 1;
+
+  if (!HeaderLine.consume_front(PerfTextMagicStr)) {
+    reportError("expected 'PERFTEXT' magic string");
+    Diag << "Found: " << HeaderLine << "\n";
+    return make_error_code(llvm::errc::io_error);
+  }
+  Col += PerfTextMagicStr.size();
+
+  SmallVector<StringRef, 5> Events;
+  HeaderLine.trim().split(Events, ";", -1, false);
+
+  if (Events.empty()) {
+    reportError("missing events=sizes content");
+    Diag << "Found: " << HeaderLine << "\n";
+    return make_error_code(llvm::errc::io_error);
+  }
+
+  uint64_t Offset = HeaderLineSize;
+  uint64_t Length = 0;
+  for (StringRef EV : Events) {
+    StringRef EventStr, LengthStr;
+    std::tie(EventStr, LengthStr) = EV.split("=");
+
+    PerfProcessInfo *PPI =
+        StringSwitch<PerfProcessInfo *>(EventStr)
+            .Case(PerfProcessInfo::BuildIDEventStr, &BuildIDProcessInfo)
+            .Case(PerfProcessInfo::MainEventStr, &MainEventsPPI)
+            .Case(PerfProcessInfo::MemEventStr, &MemEventsPPI)
+            .Case(PerfProcessInfo::MMapEventStr, &MMapEventsPPI)
+            .Case(PerfProcessInfo::TaskEventsStr, &TaskEventsPPI)
+            .Default(nullptr);
+
+    if (!PPI) {
+      reportError("malformed text profile");
+      Diag << "Found: " << EventStr << " in " << HeaderLine << "\n";
+      return make_error_code(llvm::errc::io_error);
+    }
+
+    if (LengthStr.getAsInteger(16, Length)) {
+      reportError("expected hexadecimal number");
+      Diag << "Found: " << LengthStr << " in " << HeaderLine << "\n";
+      return make_error_code(llvm::errc::io_error);
+    }
+    PPI->Offset = Offset;
+    PPI->Length = Length;
+    Offset = Offset + Length;
+    Col += EV.size();
+  }
+  uint64_t FS = getFileSize(Filename);
+  if (FS != Offset) {
+    reportError("corrupted perf text profile");
+    Diag << "Found: " << FS << " != " << Offset << "\n";
+    return make_error_code(llvm::errc::io_error);
+  }
+  return std::error_code();
+}
+
+void DataAggregator::parsePerfTextData(BinaryContext &BC) {
+  outs() << "PERF2BOLT: parsing a hybrid perf-script events...\n";
+  NamedRegionTimer T("parsePerfTextData", "Parsing perf-script events",
+                     TimerGroupName, TimerGroupDesc, opts::TimeAggregator);
+
+  ErrorOr<std::unique_ptr<MemoryBuffer>> MB =
+      MemoryBuffer::getFileOrSTDIN(Filename);
+  if (std::error_code EC = MB.getError()) {
+    errs() << "PERF2BOLT-ERROR: cannot open " << Filename << ": "
+           << EC.message() << "\n";
+    exit(1);
+  }
+
+  ParsingBuf = (*MB)->getBuffer();
+  Col = 0;
+  Line = 1;
+  if (std::error_code EC = parsePerfTextFileHeader()) {
+    errs() << "PERF2BOLT-ERROR: failed to parse text header" << EC.message()
+           << "\n";
+    exit(1);
+  }
+
+  parsePerfData(BC);
+}
+
+void DataAggregator::generatePerfTextData() {
+  std::error_code EC;
+  raw_fd_ostream OutFile(opts::OutputFilename, EC, sys::fs::OpenFlags::OF_None);
+  if (EC) {
+    errs() << "error opening output file: " << EC.message() << "\n";
+    deleteTempFiles();
+    exit(1);
+  }
+
+  SmallVector<PerfProcessInfo *, 5> ProcessInfos = {
+      &BuildIDProcessInfo, &MMapEventsPPI, &MainEventsPPI, &TaskEventsPPI};
+  if (opts::ParseMemProfile)
+    ProcessInfos.push_back(&MemEventsPPI);
+
+  // Create a file header as a table of the contents.
+  // Initially pre-allocate enough space for the header at the beginning of
+  // the file.
+  // The header can be maximum 132 character, this number is pre-calculated,
+  // the sum of the length of the magic strings, event names, their sizes,
+  // and the field separators.
+  // PERFTEXT;EVENT1={0x$SIZE};EVENT2={0x$SIZE}...
+  // The size of the events are printed in hex format (16 width) in order to be
+  // predictable fixed length.
+  OutFile << std::string(132, ' ') << "\n";
+  std::string Header;
+  raw_string_ostream SS(Header);
+  SS << PerfTextMagicStr << ";";
+  for (const auto PPI : ProcessInfos) {
+    std::string Error;
+    auto PathData = PPI->StdoutPath.data();
+    sys::Wait(PPI->PI, std::nullopt, &Error);
+    if (!Error.empty()) {
+      errs() << "PERF-ERROR: " << PerfPath << ": " << Error << "\n";
+      deleteTempFiles();
+      exit(1);
+    }
+
+    SS << PPI->Type << formatv("={0:x-16};", getFileSize(PathData));
+
+    // Merge all perf-scripts jobs' output into the single OutputFile
+    ErrorOr<std::unique_ptr<MemoryBuffer>> MB =
+        MemoryBuffer::getFileOrSTDIN(PathData);
+    if (std::error_code EC = MB.getError()) {
+      errs() << "Cannot open " << PathData << ": " << EC.message() << "\n";
+      deleteTempFiles();
+      exit(1);
+    }
+    OutFile << (*MB)->getBuffer();
+  }
+
+  OutFile.seek(0);
+  OutFile << Header;
+  OutFile.close();
+  outs() << "PERF2BOLT: Profile is saved to file " << opts::OutputFilename
+         << "\n";
+  deleteTempFiles();
+  exit(0);
+}
+
 void DataAggregator::filterBinaryMMapInfo() {
   if (opts::FilterPID) {
     auto MMapInfoIter = BinaryMMapInfo.find(opts::FilterPID);
@@ -411,10 +579,24 @@ void DataAggregator::filterBinaryMMapInfo() {
 
 int DataAggregator::prepareToParse(StringRef Name, PerfProcessInfo &Process,
                                    PerfProcessErrorCallbackTy Callback) {
-  if (!opts::ReadPerfEvents.empty()) {
-    outs() << "PERF2BOLT: using pre-processed perf events for '" << Name
-           << "' (perf-script-events)\n";
-    ParsingBuf = opts::ReadPerfEvents;
+  if (opts::ReadPerfTextData) {
+    if (Process.Length == 0) {
+      errs() << "PERF2BOLT-WARNING: your input profile was generated with "
+             << "parsing " << Process.Type << " event enabled. "
+             << "This data is missing from your pre-parsed profile.\n";
+    }
+
+    ErrorOr<std::unique_ptr<MemoryBuffer>> MB =
+        MemoryBuffer::getFileSlice(Filename, Process.Length, Process.Offset);
+    if (std::error_code EC = MB.getError()) {
+      errs() << "Cannot open " << Process.Type << ": " << EC.message() << "\n";
+      exit(1);
+    }
+
+    FileBuf = std::move(*MB);
+    ParsingBuf = FileBuf->getBuffer();
+    Col = 0;
+    Line = 1;
     return 0;
   }
 
@@ -594,8 +776,12 @@ void DataAggregator::imputeFallThroughs() {
 Error DataAggregator::preprocessProfile(BinaryContext &BC) {
   this->BC = &BC;
 
-  if (opts::ReadPreAggregated) {
+  if (opts::GeneratePerfTextProfile) {
+    generatePerfTextData();
+  } else if (opts::ReadPreAggregated) {
     parsePreAggregated();
+  } else if (opts::ReadPerfTextData) {
+    parsePerfTextData(BC);
   } else {
     parsePerfData(BC);
   }
