@@ -70,9 +70,13 @@ StringRef LinkerScript::getOutputSectionName(const InputSectionBase *s) const {
     return s->name;
 
   // A BssSection created for a common symbol is identified as "COMMON" in
-  // linker scripts. It should go to .bss section.
+  // linker scripts. It should go to .bss section. A large bss section,
+  // LbssCommon, created for a large common symbol is identified as
+  // "LARGE_COMMON".
   if (s->name == "COMMON")
     return ".bss";
+  else if (s->name == "LARGE_COMMON")
+    return ".lbss";
 
   if (hasSectionsCommand)
     return s->name;
