@@ -1123,14 +1123,13 @@ RISCVTargetLowering::RISCVTargetLowering(const TargetMachine &TM,
       } else {
         if (Subtarget.hasStdExtZvbc32e()) {
           setOperationAction({ISD::CLMUL, ISD::CLMULH}, VT, Legal);
-        } else if (Subtarget.hasStdExtZvbc() && Subtarget.hasVInstructionsI64()) {
+        } else if (Subtarget.hasStdExtZvbc()) {
           // Promote to i64 if the lmul is small enough.
           // FIXME: Split if necessary to widen.
           // FIXME: Promote clmulh directly without legalizing to clmul first.
           MVT I64VecVT = MVT::getVectorVT(MVT::i64, VT.getVectorElementCount());
           if (isTypeLegal(I64VecVT))
             setOperationAction(ISD::CLMUL, VT, Custom);
-
         }
       }
 
