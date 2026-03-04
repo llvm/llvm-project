@@ -447,27 +447,48 @@ vector::unrollVectorValue(TypedValue<VectorType> vector,
 }
 
 LogicalResult vector::unrollVectorOp(Operation *op, PatternRewriter &rewriter,
-                                     vector::UnrollVectorOpFn unrollFn) {
-  assert(op->getNumResults() == 1 && "expected single result");
-  assert(isa<VectorType>(op->getResult(0).getType()) && "expected vector type");
-  VectorType resultTy = cast<VectorType>(op->getResult(0).getType());
-  if (resultTy.getRank() < 2)
+                                     vector::UnrollVectorOpFn unrollFn,
+                                     VectorType vectorTy) {
+  // If vector type is not provided, get it from the result.
+  if (!vectorTy) {
+    assert(op->getNumResults() == 1 &&
+           "expected single result when vector type not provided");
+    vectorTy = dyn_cast<VectorType>(op->getResult(0).getType());
+    assert(vectorTy && "expected result to have vector type");
+  }
+
+  if (vectorTy.getRank() < 2)
     return rewriter.notifyMatchFailure(op, "already 1-D");
 
   // Unrolling doesn't take vscale into account. Pattern is disabled for
   // vectors with leading scalable dim(s).
-  if (resultTy.getScalableDims().front())
+  if (vectorTy.getScalableDims().front())
     return rewriter.notifyMatchFailure(op, "cannot unroll scalable dim");
 
   Location loc = op->getLoc();
-  Value result = ub::PoisonOp::create(rewriter, loc, resultTy);
-  VectorType subTy = VectorType::Builder(resultTy).dropDim(0);
 
-  for (int64_t i = 0, e = resultTy.getShape().front(); i < e; ++i) {
-    Value subVector = unrollFn(rewriter, loc, subTy, i);
-    result = vector::InsertOp::create(rewriter, loc, subVector, result, i);
+  // Only create result value if the operation produces results.
+  Value result;
+  if (op->getNumResults() > 0) {
+    result = ub::PoisonOp::create(rewriter, loc, vectorTy);
   }
 
-  rewriter.replaceOp(op, result);
+  VectorType subTy = VectorType::Builder(vectorTy).dropDim(0);
+
+  for (int64_t i = 0, e = vectorTy.getShape().front(); i < e; ++i) {
+    Value subVector = unrollFn(rewriter, loc, subTy, i);
+
+    // Only insert if we have a result to build.
+    if (op->getNumResults() > 0) {
+      result = vector::InsertOp::create(rewriter, loc, subVector, result, i);
+    }
+  }
+
+  if (op->getNumResults() > 0) {
+    rewriter.replaceOp(op, result);
+  } else {
+    rewriter.eraseOp(op);
+  }
+
   return success();
 }
