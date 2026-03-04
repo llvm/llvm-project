@@ -530,34 +530,6 @@ bool RISCVVectorPeephole::convertToUnmasked(MachineInstr &MI) const {
   return true;
 }
 
-/// Check if it's safe to move From down to To, checking that no physical
-/// registers are clobbered.
-static bool isSafeToMove(const MachineInstr &From, const MachineInstr &To) {
-  assert(From.getParent() == To.getParent());
-  SmallVector<Register> PhysUses, PhysDefs;
-  for (const MachineOperand &MO : From.all_uses())
-    if (MO.getReg().isPhysical())
-      PhysUses.push_back(MO.getReg());
-  for (const MachineOperand &MO : From.all_defs())
-    if (MO.getReg().isPhysical())
-      PhysDefs.push_back(MO.getReg());
-  bool SawStore = false;
-  for (auto II = std::next(From.getIterator()); II != To.getIterator(); II++) {
-    for (Register PhysReg : PhysUses)
-      if (II->definesRegister(PhysReg, nullptr))
-        return false;
-    for (Register PhysReg : PhysDefs)
-      if (II->definesRegister(PhysReg, nullptr) ||
-          II->readsRegister(PhysReg, nullptr))
-        return false;
-    if (II->mayStore()) {
-      SawStore = true;
-      break;
-    }
-  }
-  return From.isSafeToMove(SawStore);
-}
-
 /// Given A and B are in the same MBB, returns true if A comes before B.
 static bool dominates(MachineBasicBlock::const_iterator A,
                       MachineBasicBlock::const_iterator B) {
@@ -585,7 +557,7 @@ bool RISCVVectorPeephole::ensureDominates(const MachineOperand &MO,
 
   MachineInstr *Def = MRI->getVRegDef(MO.getReg());
   if (Def->getParent() == Src.getParent() && !dominates(Def, Src)) {
-    if (!isSafeToMove(Src, *Def->getNextNode()))
+    if (!RISCVInstrInfo::isSafeToMove(Src, *Def->getNextNode()))
       return false;
     Src.moveBefore(Def->getNextNode());
   }
@@ -743,7 +715,8 @@ bool RISCVVectorPeephole::foldVMergeToMask(MachineInstr &MI) const {
   // Collect chain of COPYs on True's result for later cleanup.
   SmallVector<MachineInstr *, 4> TrueCopies;
   Register PassthruReg = lookThruCopies(MI.getOperand(1).getReg());
-  Register FalseReg = lookThruCopies(MI.getOperand(2).getReg());
+  const MachineOperand &FalseOp = MI.getOperand(2);
+  Register FalseReg = lookThruCopies(FalseOp.getReg());
   Register TrueReg = lookThruCopies(MI.getOperand(3).getReg(),
                                     /*OneUseOnly=*/true, &TrueCopies);
   if (!TrueReg.isVirtual() || !MRI->hasOneUse(TrueReg))
@@ -832,10 +805,15 @@ bool RISCVVectorPeephole::foldVMergeToMask(MachineInstr &MI) const {
   assert(RISCVII::hasVecPolicyOp(True.getDesc().TSFlags) &&
          "Foldable unmasked pseudo should have a policy op already");
 
-  // Make sure the mask dominates True and its copies, otherwise move down True
-  // so it does. VL will always dominate since if it's a register they need to
-  // be the same.
-  if (!ensureDominates(MaskOp, True))
+  // Make sure both mask and false dominate True and its copies, otherwise move
+  // down True so it does. VL will always dominate since if it's a register they
+  // need to be the same.
+  const MachineOperand *DomOp = &MaskOp;
+  MachineInstr *False = MRI->getUniqueVRegDef(FalseReg);
+  if (False && False->getParent() == Mask->getParent() &&
+      dominates(Mask, False))
+    DomOp = &FalseOp;
+  if (!ensureDominates(*DomOp, True))
     return false;
 
   if (NeedsCommute) {

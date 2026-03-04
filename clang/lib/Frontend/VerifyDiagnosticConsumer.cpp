@@ -704,8 +704,6 @@ VerifyDiagnosticConsumer::~VerifyDiagnosticConsumer() {
   assert(!CurrentPreprocessor && "CurrentPreprocessor should be invalid!");
   SrcManager = nullptr;
   CheckDiagnostics();
-  assert(!Diags.ownsClient() &&
-         "The VerifyDiagnosticConsumer takes over ownership of the client!");
 }
 
 // DiagnosticConsumer interface.

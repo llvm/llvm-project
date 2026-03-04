@@ -66,7 +66,7 @@ static LogicalResult foldMemrefViewOp(PatternRewriter &rewriter, Location loc,
 }
 
 struct FoldMemRefOpsIntoGatherToLDSOp final : OpRewritePattern<GatherToLDSOp> {
-  using OpRewritePattern::OpRewritePattern;
+  using Base::Base;
   LogicalResult matchAndRewrite(GatherToLDSOp op,
                                 PatternRewriter &rewriter) const override {
     Location loc = op.getLoc();
@@ -92,16 +92,37 @@ struct FoldMemRefOpsIntoGatherToLDSOp final : OpRewritePattern<GatherToLDSOp> {
       destIndices = op.getDstIndices();
     }
 
-    rewriter.replaceOpWithNewOp<GatherToLDSOp>(op, memrefSource, sourceIndices,
-                                               memrefDest, destIndices,
-                                               op.getTransferType());
+    rewriter.replaceOpWithNewOp<GatherToLDSOp>(
+        op, memrefSource, sourceIndices, memrefDest, destIndices,
+        op.getTransferType(), op.getAsync());
 
+    return success();
+  }
+};
+
+struct FoldMemRefOpsIntoTransposeLoadOp final
+    : OpRewritePattern<TransposeLoadOp> {
+  using Base::Base;
+  LogicalResult matchAndRewrite(TransposeLoadOp op,
+                                PatternRewriter &rewriter) const override {
+    SmallVector<Value> sourceIndices;
+    Value memrefSource;
+
+    if (failed(foldMemrefViewOp(rewriter, op.getLoc(), op.getSrc(),
+                                op.getSrcIndices(), sourceIndices, memrefSource,
+                                "source")))
+      return failure();
+
+    rewriter.replaceOpWithNewOp<TransposeLoadOp>(op, op.getResult().getType(),
+                                                 memrefSource, sourceIndices);
     return success();
   }
 };
 
 void populateAmdgpuFoldMemRefOpsPatterns(RewritePatternSet &patterns,
                                          PatternBenefit benefit) {
-  patterns.add<FoldMemRefOpsIntoGatherToLDSOp>(patterns.getContext(), benefit);
+  patterns
+      .add<FoldMemRefOpsIntoGatherToLDSOp, FoldMemRefOpsIntoTransposeLoadOp>(
+          patterns.getContext(), benefit);
 }
 } // namespace mlir::amdgpu
