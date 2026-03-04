@@ -1171,8 +1171,6 @@ std::optional<llvm::SmallVector<mlir::Value>> getIteratorElementIndices(
           loc, converter, toEvExpr(indirect->value()), converter.getSymbolMap(),
           stmtCtx));
     }
-    if (!idx.getType().isIndex())
-      idx = fir::ConvertOp::create(builder, loc, builder.getIndexType(), idx);
     indices.push_back(idx);
   }
 

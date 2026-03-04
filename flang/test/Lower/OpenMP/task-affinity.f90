@@ -284,9 +284,8 @@ end subroutine
 ! CHECK: %[[ITERATED:.*]] = omp.iterator(%[[IV:.*]]: index) = ({{.*}} to {{.*}} step {{.*}}) {
 ! CHECK:   %[[IV_I32:.*]] = fir.convert %[[IV]] : (index) -> i32
 ! CHECK:   %[[IV_I64:.*]] = fir.convert %[[IV_I32]] : (i32) -> i64
-! CHECK:   %[[IV_IDX:.*]] = fir.convert %[[IV_I64]] : (i64) -> index
 ! CHECK:   %[[SHAPE:.*]] = fir.shape %c16 : (index) -> !fir.shape<1>
-! CHECK:   %[[COOR:.*]] = fir.array_coor {{.*}}(%[[SHAPE]]) %[[IV_IDX]] : (!fir.ref<!fir.array<16xi32>>, !fir.shape<1>, index) -> !fir.ref<i32>
+! CHECK:   %[[COOR:.*]] = fir.array_coor {{.*}}(%[[SHAPE]]) %[[IV_I64]] : (!fir.ref<!fir.array<16xi32>>, !fir.shape<1>, i64) -> !fir.ref<i32>
 ! CHECK:   %[[C4:.*]] = arith.constant 4 : i64
 ! CHECK:   %[[ADDRI8:.*]] = fir.convert %[[COOR]] : (!fir.ref<i32>) -> !fir.ref<i8>
 ! CHECK:   %[[ENTRY:.*]] = omp.affinity_entry %[[ADDRI8]], %[[C4]] : (!fir.ref<i8>, i64) -> !omp.affinity_entry_ty<!fir.ref<i8>, i64>
@@ -313,9 +312,8 @@ end subroutine
 ! CHECK: %[[ITERATED_NDLB:.*]] = omp.iterator(%[[IV_NDLB:.*]]: index) = ({{.*}} to {{.*}} step {{.*}}) {
 ! CHECK:   %[[IV_NDLB_I32:.*]] = fir.convert %[[IV_NDLB]] : (index) -> i32
 ! CHECK:   %[[IV_NDLB_I64:.*]] = fir.convert %[[IV_NDLB_I32]] : (i32) -> i64
-! CHECK:   %[[IV_NDLB_IDX:.*]] = fir.convert %[[IV_NDLB_I64]] : (i64) -> index
 ! CHECK:   %[[SHIFT_NDLB:.*]] = fir.shape_shift %c0, %c9 : (index, index) -> !fir.shapeshift<1>
-! CHECK:   %[[COOR_NDLB:.*]] = fir.array_coor {{.*}}(%[[SHIFT_NDLB]]) %[[IV_NDLB_IDX]] : (!fir.box<!fir.array<9xi32>>, !fir.shapeshift<1>, index) -> !fir.ref<i32>
+! CHECK:   %[[COOR_NDLB:.*]] = fir.array_coor {{.*}}(%[[SHIFT_NDLB]]) %[[IV_NDLB_I64]] : (!fir.box<!fir.array<9xi32>>, !fir.shapeshift<1>, i64) -> !fir.ref<i32>
 ! CHECK:   %[[ELEM_NDLB:.*]] = fir.box_elesize %{{.*}} : (!fir.box<!fir.array<9xi32>>) -> index
 ! CHECK:   %[[ELEM_NDLB_I64:.*]] = fir.convert %[[ELEM_NDLB]] : (index) -> i64
 ! CHECK:   %[[ADDRI8_NDLB:.*]] = fir.convert %[[COOR_NDLB]] : (!fir.ref<i32>) -> !fir.ref<i8>
@@ -344,11 +342,9 @@ end subroutine
 ! CHECK:   %[[IV0_NDLB2_I32:.*]] = fir.convert %[[IV0_NDLB2]] : (index) -> i32
 ! CHECK:   %[[IV1_NDLB2_I32:.*]] = fir.convert %[[IV1_NDLB2]] : (index) -> i32
 ! CHECK:   %[[IV0_NDLB2_I64:.*]] = fir.convert %[[IV0_NDLB2_I32]] : (i32) -> i64
-! CHECK:   %[[IV0_NDLB2_IDX:.*]] = fir.convert %[[IV0_NDLB2_I64]] : (i64) -> index
 ! CHECK:   %[[IV1_NDLB2_I64:.*]] = fir.convert %[[IV1_NDLB2_I32]] : (i32) -> i64
-! CHECK:   %[[IV1_NDLB2_IDX:.*]] = fir.convert %[[IV1_NDLB2_I64]] : (i64) -> index
 ! CHECK:   %[[SHIFT_NDLB2:.*]] = fir.shape_shift %c0, %c5, %c-1, %c8 : (index, index, index, index) -> !fir.shapeshift<2>
-! CHECK:   %[[COOR_NDLB2:.*]] = fir.array_coor {{.*}}(%[[SHIFT_NDLB2]]) %[[IV0_NDLB2_IDX]], %[[IV1_NDLB2_IDX]] : (!fir.box<!fir.array<5x8xi32>>, !fir.shapeshift<2>, index, index) -> !fir.ref<i32>
+! CHECK:   %[[COOR_NDLB2:.*]] = fir.array_coor {{.*}}(%[[SHIFT_NDLB2]]) %[[IV0_NDLB2_I64]], %[[IV1_NDLB2_I64]] : (!fir.box<!fir.array<5x8xi32>>, !fir.shapeshift<2>, i64, i64) -> !fir.ref<i32>
 ! CHECK:   %[[ELEM_NDLB2:.*]] = fir.box_elesize %{{.*}} : (!fir.box<!fir.array<5x8xi32>>) -> index
 ! CHECK:   %[[ELEM_NDLB2_I64:.*]] = fir.convert %[[ELEM_NDLB2]] : (index) -> i64
 ! CHECK:   %[[ADDRI8_NDLB2:.*]] = fir.convert %[[COOR_NDLB2]] : (!fir.ref<i32>) -> !fir.ref<i8>
@@ -380,11 +376,9 @@ end subroutine
 ! CHECK:   %[[IV0_I32:.*]] = fir.convert %[[IV0]] : (index) -> i32
 ! CHECK:   %[[IV1_I32:.*]] = fir.convert %[[IV1]] : (index) -> i32
 ! CHECK:   %[[IV0_I64:.*]] = fir.convert %[[IV0_I32]] : (i32) -> i64
-! CHECK:   %[[IV0_IDX:.*]] = fir.convert %[[IV0_I64]] : (i64) -> index
 ! CHECK:   %[[IV1_I64:.*]] = fir.convert %[[IV1_I32]] : (i32) -> i64
-! CHECK:   %[[IV1_IDX:.*]] = fir.convert %[[IV1_I64]] : (i64) -> index
 ! CHECK:   %[[SHAPE:.*]] = fir.shape %c4, %c6 : (index, index) -> !fir.shape<2>
-! CHECK:   %[[COOR:.*]] = fir.array_coor {{.*}}(%[[SHAPE]]) %[[IV0_IDX]], %[[IV1_IDX]] : (!fir.ref<!fir.array<4x6xi32>>, !fir.shape<2>, index, index) -> !fir.ref<i32>
+! CHECK:   %[[COOR:.*]] = fir.array_coor {{.*}}(%[[SHAPE]]) %[[IV0_I64]], %[[IV1_I64]] : (!fir.ref<!fir.array<4x6xi32>>, !fir.shape<2>, i64, i64) -> !fir.ref<i32>
 ! CHECK:   %[[C4:.*]] = arith.constant 4 : i64
 ! CHECK:   %[[ADDRI8:.*]] = fir.convert %[[COOR]] : (!fir.ref<i32>) -> !fir.ref<i8>
 ! CHECK:   %[[ENTRY:.*]] = omp.affinity_entry %[[ADDRI8]], %[[C4]] : (!fir.ref<i8>, i64) -> !omp.affinity_entry_ty<!fir.ref<i8>, i64>
@@ -411,11 +405,9 @@ end subroutine
 ! CHECK:   %[[RO_IV0_I32:.*]] = fir.convert %[[IV0]] : (index) -> i32
 ! CHECK:   %[[RO_IV1_I32:.*]] = fir.convert %[[IV1]] : (index) -> i32
 ! CHECK:   %[[RO_IV1_I64:.*]] = fir.convert %[[RO_IV1_I32]] : (i32) -> i64
-! CHECK:   %[[RO_IV1_IDX:.*]] = fir.convert %[[RO_IV1_I64]] : (i64) -> index
 ! CHECK:   %[[RO_IV0_I64:.*]] = fir.convert %[[RO_IV0_I32]] : (i32) -> i64
-! CHECK:   %[[RO_IV0_IDX:.*]] = fir.convert %[[RO_IV0_I64]] : (i64) -> index
 ! CHECK:   %[[SHAPE:.*]] = fir.shape %c4, %c6 : (index, index) -> !fir.shape<2>
-! CHECK:   %[[COOR:.*]] = fir.array_coor {{.*}}(%[[SHAPE]]) %[[RO_IV1_IDX]], %[[RO_IV0_IDX]] : (!fir.ref<!fir.array<4x6xi32>>, !fir.shape<2>, index, index) -> !fir.ref<i32>
+! CHECK:   %[[COOR:.*]] = fir.array_coor {{.*}}(%[[SHAPE]]) %[[RO_IV1_I64]], %[[RO_IV0_I64]] : (!fir.ref<!fir.array<4x6xi32>>, !fir.shape<2>, i64, i64) -> !fir.ref<i32>
 
 subroutine task_affinity_iterator_expr_subscript()
   integer, parameter :: n = 5, m = 6
@@ -438,11 +430,9 @@ end subroutine
 ! CHECK:   %[[C1_I32:.*]] = arith.constant 1 : i32
 ! CHECK:   %[[IP1_I32:.*]] = arith.addi %[[IVA_I32]], %[[C1_I32]] : i32
 ! CHECK:   %[[IP1_I64:.*]] = fir.convert %[[IP1_I32]] : (i32) -> i64
-! CHECK:   %[[IP1_IDX:.*]] = fir.convert %[[IP1_I64]] : (i64) -> index
 ! CHECK:   %[[IVB_I64:.*]] = fir.convert %[[IVB_I32]] : (i32) -> i64
-! CHECK:   %[[IVB_IDX:.*]] = fir.convert %[[IVB_I64]] : (i64) -> index
 ! CHECK:   %[[SHAPE2:.*]] = fir.shape %c5, %c6 : (index, index) -> !fir.shape<2>
-! CHECK:   %[[COOR2:.*]] = fir.array_coor {{.*}}(%[[SHAPE2]]) %[[IP1_IDX]], %[[IVB_IDX]] : (!fir.ref<!fir.array<5x6xi32>>, !fir.shape<2>, index, index) -> !fir.ref<i32>
+! CHECK:   %[[COOR2:.*]] = fir.array_coor {{.*}}(%[[SHAPE2]]) %[[IP1_I64]], %[[IVB_I64]] : (!fir.ref<!fir.array<5x6xi32>>, !fir.shape<2>, i64, i64) -> !fir.ref<i32>
 
 subroutine task_affinity_iterator_section_subscript()
   integer, parameter :: n = 5, m = 6
@@ -463,13 +453,11 @@ end subroutine
 ! CHECK:   %[[IVS0_I32:.*]] = fir.convert %[[IVS0]] : (index) -> i32
 ! CHECK:   %[[IVS1_I32:.*]] = fir.convert %[[IVS1]] : (index) -> i32
 ! CHECK:   %[[IVS0_I64:.*]] = fir.convert %[[IVS0_I32]] : (i32) -> i64
-! CHECK:   %[[IVS0_IDX:.*]] = fir.convert %[[IVS0_I64]] : (i64) -> index
 ! CHECK:   %[[C2_I32:.*]] = arith.constant 2 : i32
 ! CHECK:   %[[JP2_I32:.*]] = arith.addi %[[IVS1_I32]], %[[C2_I32]] : i32
 ! CHECK:   %[[JP2_I64:.*]] = fir.convert %[[JP2_I32]] : (i32) -> i64
-! CHECK:   %[[JP2_IDX:.*]] = fir.convert %[[JP2_I64]] : (i64) -> index
 ! CHECK:   %[[SHAPE3:.*]] = fir.shape %c5, %c6 : (index, index) -> !fir.shape<2>
-! CHECK:   %[[COOR3:.*]] = fir.array_coor {{.*}}(%[[SHAPE3]]) %[[IVS0_IDX]], %[[JP2_IDX]] : (!fir.ref<!fir.array<5x6xi32>>, !fir.shape<2>, index, index) -> !fir.ref<i32>
+! CHECK:   %[[COOR3:.*]] = fir.array_coor {{.*}}(%[[SHAPE3]]) %[[IVS0_I64]], %[[JP2_I64]] : (!fir.ref<!fir.array<5x6xi32>>, !fir.shape<2>, i64, i64) -> !fir.ref<i32>
 
 subroutine task_affinity_iterator_section_implicit_lower()
   integer, parameter :: n = 5, m = 6
@@ -492,9 +480,8 @@ end subroutine
 ! CHECK:   %[[C2_I32_2:.*]] = arith.constant 2 : i32
 ! CHECK:   %[[JP2_I32_2:.*]] = arith.addi %[[IVT1_I32]], %[[C2_I32_2]] : i32
 ! CHECK:   %[[JP2_I64_2:.*]] = fir.convert %[[JP2_I32_2]] : (i32) -> i64
-! CHECK:   %[[JP2_IDX_2:.*]] = fir.convert %[[JP2_I64_2]] : (i64) -> index
 ! CHECK:   %[[SHAPE4:.*]] = fir.shape %c5, %c6 : (index, index) -> !fir.shape<2>
-! CHECK:   %[[COOR4:.*]] = fir.array_coor {{.*}}(%[[SHAPE4]]) %[[C1_IDX]], %[[JP2_IDX_2]] : (!fir.ref<!fir.array<5x6xi32>>, !fir.shape<2>, index, index) -> !fir.ref<i32>
+! CHECK:   %[[COOR4:.*]] = fir.array_coor {{.*}}(%[[SHAPE4]]) %[[C1_IDX]], %[[JP2_I64_2]] : (!fir.ref<!fir.array<5x6xi32>>, !fir.shape<2>, index, i64) -> !fir.ref<i32>
 
 subroutine task_affinity_iterator_char_simple()
   integer, parameter :: n = 8
@@ -514,9 +501,8 @@ end subroutine
 ! CHECK: %[[ITER5:.*]] = omp.iterator(%[[IVC:.*]]: index) = ({{.*}} to {{.*}} step {{.*}}) {
 ! CHECK:   %[[IVC_I32:.*]] = fir.convert %[[IVC]] : (index) -> i32
 ! CHECK:   %[[IVC_I64:.*]] = fir.convert %[[IVC_I32]] : (i32) -> i64
-! CHECK:   %[[IVC_IDX:.*]] = fir.convert %[[IVC_I64]] : (i64) -> index
 ! CHECK:   %[[SHAPE5:.*]] = fir.shape {{.*}} : (index) -> !fir.shape<1>
-! CHECK:   %[[COOR5:.*]] = fir.array_coor {{.*}}(%[[SHAPE5]]) %[[IVC_IDX]] : ({{.*}}, !fir.shape<1>, index) -> !fir.ref<!fir.char<1,7>>
+! CHECK:   %[[COOR5:.*]] = fir.array_coor {{.*}}(%[[SHAPE5]]) %[[IVC_I64]] : ({{.*}}, !fir.shape<1>, i64) -> !fir.ref<!fir.char<1,7>>
 ! CHECK:   %[[C1_I64:.*]] = arith.constant 1 : i64
 ! CHECK:   %[[C7_I64:.*]] = fir.convert %c7 : (index) -> i64
 ! CHECK:   %[[ELEM5:.*]] = arith.muli %[[C7_I64]], %[[C1_I64]] : i64
@@ -543,9 +529,8 @@ end subroutine
 ! CHECK:   %[[C1_I32_6:.*]] = arith.constant 1 : i32
 ! CHECK:   %[[IP1C_I32:.*]] = arith.addi %[[IVC2_I32]], %[[C1_I32_6]] : i32
 ! CHECK:   %[[IP1C_I64:.*]] = fir.convert %[[IP1C_I32]] : (i32) -> i64
-! CHECK:   %[[IP1C_IDX:.*]] = fir.convert %[[IP1C_I64]] : (i64) -> index
 ! CHECK:   %[[SHAPE6:.*]] = fir.shape {{.*}} : (index) -> !fir.shape<1>
-! CHECK:   %[[COOR6:.*]] = fir.array_coor {{.*}}(%[[SHAPE6]]) %[[IP1C_IDX]] : ({{.*}}, !fir.shape<1>, index) -> !fir.ref<!fir.char<1,7>>
+! CHECK:   %[[COOR6:.*]] = fir.array_coor {{.*}}(%[[SHAPE6]]) %[[IP1C_I64]] : ({{.*}}, !fir.shape<1>, i64) -> !fir.ref<!fir.char<1,7>>
 ! CHECK:   %[[C1_I64_2:.*]] = arith.constant 1 : i64
 ! CHECK:   %[[C7_I64_2:.*]] = fir.convert %c7 : (index) -> i64
 ! CHECK:   %[[ELEM6:.*]] = arith.muli %[[C7_I64_2]], %[[C1_I64_2]] : i64
@@ -569,7 +554,7 @@ end subroutine
 ! CHECK-LABEL: func.func @_QPtask_affinity_iterator_char_runtime(
 ! CHECK: %[[A:.*]]:2 = hlfir.declare %{{.*}}(%{{.*}}) typeparams %{{.*}} {uniq_name = "_QFtask_affinity_iterator_char_runtimeEa"}
 ! CHECK: %[[ITER:.*]] = omp.iterator(%[[IV:.*]]: index) = ({{.*}} to {{.*}} step {{.*}}) {
-! CHECK:   %[[COOR:.*]] = fir.array_coor %[[A]]#0({{.*}}) {{.*}} : (!fir.box<!fir.array<?x!fir.char<1,?>>>, !fir.shape<1>, index) -> !fir.ref<!fir.char<1,?>>
+! CHECK:   %[[COOR:.*]] = fir.array_coor %[[A]]#0({{.*}}) {{.*}} : (!fir.box<!fir.array<?x!fir.char<1,?>>>, !fir.shape<1>, i64) -> !fir.ref<!fir.char<1,?>>
 ! CHECK:   %[[ELEM:.*]] = fir.box_elesize %[[A]]#0 : (!fir.box<!fir.array<?x!fir.char<1,?>>>) -> index
 ! CHECK:   %[[ELEM_I64:.*]] = fir.convert %[[ELEM]] : (index) -> i64
 ! CHECK:   %[[ADDR:.*]] = fir.convert %[[COOR]] : (!fir.ref<!fir.char<1,?>>) -> !fir.ref<i8>
