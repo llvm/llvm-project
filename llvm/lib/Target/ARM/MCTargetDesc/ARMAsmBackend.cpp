@@ -1093,7 +1093,11 @@ std::optional<bool> ARMAsmBackend::evaluateFixup(const MCFragment &F,
   case ARM::fixup_t2_adr_pcrel_12:
   case ARM::fixup_arm_thumb_blx:
   case ARM::fixup_arm_thumb_cp:
-    Value = (Asm->getFragmentOffset(F) + Fixup.getOffset()) % 4;
+    // Use the pre-Stretch offset so that the AlignDown(PC, 4) compensation
+    // is consistent with the Stretch-adjusted displacement computed by the
+    // generic evaluateFixup.
+    Value =
+        (Asm->getFragmentOffset(F) - Asm->getStretch() + Fixup.getOffset()) % 4;
   }
   return {};
 }

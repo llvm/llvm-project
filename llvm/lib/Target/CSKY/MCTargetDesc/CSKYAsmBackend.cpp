@@ -191,7 +191,11 @@ std::optional<bool> CSKYAsmBackend::evaluateFixup(const MCFragment &F,
   case CSKY::fixup_csky_pcrel_uimm16_scale4:
   case CSKY::fixup_csky_pcrel_uimm8_scale4:
   case CSKY::fixup_csky_pcrel_uimm7_scale4:
-    Value = (Asm->getFragmentOffset(F) + Fixup.getOffset()) % 4;
+    // Use the pre-Stretch offset so that the AlignDown(PC, 4) compensation
+    // is consistent with the Stretch-adjusted displacement computed by the
+    // generic evaluateFixup.
+    Value =
+        (Asm->getFragmentOffset(F) - Asm->getStretch() + Fixup.getOffset()) % 4;
   }
   return {};
 }
