@@ -3291,6 +3291,9 @@ class VPExpressionRecipe : public VPSingleDefRecipe {
     /// Represent an inloop multiply-accumulate reduction, multiplying the
     /// extended vector operands, negating the multiplication, performing a
     /// reduction.add on the result, and adding the scalar result to a chain.
+    /// FIXME: This one can be removed, because during codegen the extends
+    /// cannot be folded into the expression's operands, as described in
+    /// https://github.com/llvm/llvm-project/pull/178919.
     ExtNegatedMulAccReduction,
   };
 
