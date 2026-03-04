@@ -1876,7 +1876,11 @@ struct InferExactOnIndexCast final : OpRewritePattern<CastOp> {
 
 OpFoldResult arith::IndexCastOp::fold(FoldAdaptor adaptor) {
   // index_cast(constant) -> constant
-  unsigned resultBitwidth = 64; // Default for index integer attributes.
+  DataLayout layout = DataLayout::closest(*this);
+  // Sane defaults for index integer attributes.
+  unsigned resultBitwidth =
+      layout.getTypeSizeInBits(IndexType::get(this->getContext()));
+  if (auto intTy = dyn_cast<IntegerType>(getElementTypeOrSelf(getType())))
   if (auto intTy = dyn_cast<IntegerType>(getElementTypeOrSelf(getType())))
     resultBitwidth = intTy.getWidth();
 
