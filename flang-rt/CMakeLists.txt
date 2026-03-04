@@ -283,10 +283,14 @@ endif()
 find_package(Threads)
 
 # function checks
-find_package(Backtrace)
+# FIXME: The NVPTX target will erroneously report it has backtrace support. This
+#        is caused by using "-c -flto" in the required flags to suppress CUDA
+#        tools from being required for the CMake flag checks to succeed.
+if (NOT "${LLVM_RUNTIMES_TARGET}" MATCHES "^nvptx")
+  find_package(Backtrace)
+endif()
 set(HAVE_BACKTRACE ${Backtrace_FOUND})
 set(BACKTRACE_HEADER ${Backtrace_HEADER})
-
 
 #####################
 # Build Preparation #

@@ -139,6 +139,12 @@ public:
 
   mlir::Attribute getAddrOfRTTIDescriptor(mlir::Location loc,
                                           QualType ty) override;
+
+  StringRef getPureVirtualCallName() override { return "__cxa_pure_virtual"; }
+  StringRef getDeletedVirtualCallName() override {
+    return "__cxa_deleted_virtual";
+  }
+
   CatchTypeInfo
   getAddrOfCXXCatchHandlerType(mlir::Location loc, QualType ty,
                                QualType catchHandlerType) override {

@@ -1014,6 +1014,12 @@ enum NodeType {
   STRICT_BF16_TO_FP,
   STRICT_FP_TO_BF16,
 
+  /// CONVERT_FROM_ARBITRARY_FP - This operator converts from an arbitrary
+  /// floating-point represented as an integer to a native FP type.
+  /// The first operand is the integer containing the source FP bits.
+  /// The second operand is a constant indicating the source FP semantics.
+  CONVERT_FROM_ARBITRARY_FP,
+
   /// Perform various unary floating-point operations inspired by libm. For
   /// FPOWI, the result is undefined if the integer operand doesn't fit into
   /// sizeof(int).

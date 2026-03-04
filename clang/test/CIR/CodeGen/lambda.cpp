@@ -93,7 +93,7 @@ void l0() {
 // CIR:   %[[I_ADDR:.*]] = cir.load %[[I_ADDR_ADDR]]
 // CIR:   %[[I:.*]] = cir.load align(4) %[[I_ADDR]]
 // CIR:   %[[ONE:.*]] = cir.const #cir.int<1> : !s32i
-// CIR:   %[[I_PLUS_ONE:.*]] = cir.binop(add, %[[I]], %[[ONE]]) nsw
+// CIR:   %[[I_PLUS_ONE:.*]] = cir.add nsw %[[I]], %[[ONE]]
 // CIR:   %[[I_ADDR_ADDR:.*]] = cir.get_member %[[THIS]][0] {name = "i"}
 // CIR:   %[[I_ADDR:.*]] = cir.load %[[I_ADDR_ADDR]]
 // CIR:   cir.store{{.*}} %[[I_PLUS_ONE]], %[[I_ADDR]]
@@ -241,7 +241,7 @@ int f() {
 // CIR:   %[[I_ADDR_ADDR:.*]] = cir.get_member %[[THIS]][0] {name = "i"}
 // CIR:   %[[I_ADDR:.*]] = cir.load %[[I_ADDR_ADDR]]
 // CIR:   %[[I:.*]] = cir.load{{.*}} %[[I_ADDR]]
-// CIR:   %[[I_PLUS_ONE_HUNDRED:.*]] = cir.binop(add, %[[I]], %[[ONE_HUNDRED]]) nsw : !s32i
+// CIR:   %[[I_PLUS_ONE_HUNDRED:.*]] = cir.add nsw %[[I]], %[[ONE_HUNDRED]] : !s32i
 // CIR:   cir.store{{.*}} %[[I_PLUS_ONE_HUNDRED]], %[[I_ADDR]] : !s32i, !cir.ptr<!s32i>
 // CIR:   %[[I_ADDR_ADDR:.*]] = cir.get_member %[[THIS]][0] {name = "i"}
 // CIR:   %[[I_ADDR:.*]] = cir.load %[[I_ADDR_ADDR]]

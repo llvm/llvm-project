@@ -48,7 +48,6 @@
 #include <cstdio>
 #include <cstdlib>
 #include <memory>
-#include <mutex>
 #include <optional>
 #include <string>
 
@@ -292,15 +291,11 @@ llvm::StringRef ScriptInterpreterPython::GetPluginDescriptionStatic() {
 void ScriptInterpreterPython::Initialize() {
   HostInfo::SetSharedLibraryDirectoryHelper(
       ScriptInterpreterPython::SharedLibraryDirectoryHelper);
-  static llvm::once_flag g_once_flag;
-  llvm::call_once(g_once_flag, []() {
-    PluginManager::RegisterPlugin(GetPluginNameStatic(),
-                                  GetPluginDescriptionStatic(),
-                                  lldb::eScriptLanguagePython,
-                                  ScriptInterpreterPythonImpl::CreateInstance,
-                                  ScriptInterpreterPythonImpl::GetPythonDir);
-    ScriptInterpreterPythonImpl::Initialize();
-  });
+  PluginManager::RegisterPlugin(
+      GetPluginNameStatic(), GetPluginDescriptionStatic(),
+      lldb::eScriptLanguagePython, ScriptInterpreterPythonImpl::CreateInstance,
+      ScriptInterpreterPythonImpl::GetPythonDir);
+  ScriptInterpreterPythonImpl::Initialize();
   ScriptInterpreterPythonInterfaces::Initialize();
 }
 

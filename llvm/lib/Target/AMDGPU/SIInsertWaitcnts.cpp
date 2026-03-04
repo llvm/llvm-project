@@ -1614,16 +1614,8 @@ void WaitcntBrackets::tryClearSCCWriteEvent(MachineInstr *Inst) {
 }
 
 void WaitcntBrackets::applyWaitcnt(const AMDGPU::Waitcnt &Wait) {
-  applyWaitcnt(Wait, LOAD_CNT);
-  applyWaitcnt(Wait, EXP_CNT);
-  applyWaitcnt(Wait, DS_CNT);
-  applyWaitcnt(Wait, STORE_CNT);
-  applyWaitcnt(Wait, SAMPLE_CNT);
-  applyWaitcnt(Wait, BVH_CNT);
-  applyWaitcnt(Wait, KM_CNT);
-  applyWaitcnt(Wait, X_CNT);
-  applyWaitcnt(Wait, VA_VDST);
-  applyWaitcnt(Wait, VM_VSRC);
+  for (InstCounterType T : inst_counter_types())
+    applyWaitcnt(Wait, T);
 }
 
 void WaitcntBrackets::applyWaitcnt(InstCounterType T, unsigned Count) {

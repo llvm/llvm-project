@@ -114,8 +114,6 @@ struct MissingFeatures {
   static bool opCallExtParameterInfo() { return false; }
   static bool opCallCIRGenFuncInfoParamInfo() { return false; }
   static bool opCallCIRGenFuncInfoExtParamInfo() { return false; }
-  static bool opCallLandingPad() { return false; }
-  static bool opCallContinueBlock() { return false; }
   static bool opCallChain() { return false; }
   static bool opCallExceptionAttr() { return false; }
 
@@ -274,6 +272,7 @@ struct MissingFeatures {
   static bool emitNullabilityCheck() { return false; }
   static bool emitTypeCheck() { return false; }
   static bool emitTypeMetadataCodeForVCall() { return false; }
+  static bool isPPC_FP128Ty() { return false; }
 
   // Fast math.
   static bool fastMathGuard() { return false; }

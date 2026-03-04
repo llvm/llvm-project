@@ -558,6 +558,8 @@ Interpreter::EvaluateScalarOp(BinaryOpKind kind, lldb::ValueObjectSP lhs,
   switch (kind) {
   case BinaryOpKind::Add:
     return value_object(l + r);
+  case BinaryOpKind::Sub:
+    return value_object(l - r);
   }
   return llvm::make_error<DILDiagnosticError>(
       m_expr, "invalid arithmetic operation", location);
@@ -577,6 +579,28 @@ llvm::Expected<lldb::ValueObjectSP> Interpreter::EvaluateBinaryAddition(
 
   if (result_type.IsScalarType())
     return EvaluateScalarOp(BinaryOpKind::Add, lhs, rhs, result_type, location);
+
+  std::string errMsg =
+      llvm::formatv("invalid operands to binary expression ('{0}' and '{1}')",
+                    orig_lhs_type.GetTypeName(), orig_rhs_type.GetTypeName());
+  return llvm::make_error<DILDiagnosticError>(m_expr, std::move(errMsg),
+                                              location);
+}
+
+llvm::Expected<lldb::ValueObjectSP> Interpreter::EvaluateBinarySubtraction(
+    lldb::ValueObjectSP lhs, lldb::ValueObjectSP rhs, uint32_t location) {
+  // Operation '-' works for:
+  //   {scalar,unscoped_enum} <-> {scalar,unscoped_enum}
+  // TODO: Pointer arithmetics
+  auto orig_lhs_type = lhs->GetCompilerType();
+  auto orig_rhs_type = rhs->GetCompilerType();
+  auto type_or_err = ArithmeticConversion(lhs, rhs, location);
+  if (!type_or_err)
+    return type_or_err.takeError();
+  CompilerType result_type = *type_or_err;
+
+  if (result_type.IsScalarType())
+    return EvaluateScalarOp(BinaryOpKind::Sub, lhs, rhs, result_type, location);
 
   std::string errMsg =
       llvm::formatv("invalid operands to binary expression ('{0}' and '{1}')",
@@ -609,6 +633,8 @@ Interpreter::Visit(const BinaryOpNode &node) {
   switch (node.GetKind()) {
   case BinaryOpKind::Add:
     return EvaluateBinaryAddition(lhs, rhs, node.GetLocation());
+  case BinaryOpKind::Sub:
+    return EvaluateBinarySubtraction(lhs, rhs, node.GetLocation());
   }
 
   return llvm::make_error<DILDiagnosticError>(

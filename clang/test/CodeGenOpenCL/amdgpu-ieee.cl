@@ -1,19 +1,24 @@
 // REQUIRES: amdgpu-registered-target
 //
 // RUN: %clang_cc1 -triple amdgcn-amd-amdhsa -O0 -emit-llvm -o - %s \
+// RUN:   -target-feature +dx10-clamp-and-ieee-mode \
 // RUN:   | FileCheck -check-prefixes=COMMON,ON %s
 // RUN: %clang_cc1 -triple amdgcn-amd-amdhsa -O0 -emit-llvm -o - %s \
+// RUN:   -target-feature +dx10-clamp-and-ieee-mode \
 // RUN:   -mno-amdgpu-ieee -menable-no-nans \
 // RUN:   | FileCheck -check-prefixes=COMMON,OFF %s
 // RUN: %clang_cc1 -triple amdgcn-amd-amdhsa -O0 -emit-llvm -o - %s \
+// RUN:   -target-feature +dx10-clamp-and-ieee-mode \
 // RUN:   -mno-amdgpu-ieee -cl-fast-relaxed-math \
 // RUN:   | FileCheck -check-prefixes=COMMON,OFF %s
 
 // Check AMDGCN ISA generation.
 
 // RUN: %clang_cc1 -triple amdgcn-amd-amdhsa -O3 -S -o - %s \
+// RUN:   -target-feature +dx10-clamp-and-ieee-mode \
 // RUN:   | FileCheck -check-prefixes=ISA-ON %s
 // RUN: %clang_cc1 -triple amdgcn-amd-amdhsa -O3 -S -o - %s \
+// RUN:   -target-feature +dx10-clamp-and-ieee-mode \
 // RUN:   -mno-amdgpu-ieee -menable-no-nans \
 // RUN:   | FileCheck -check-prefixes=ISA-OFF %s
 

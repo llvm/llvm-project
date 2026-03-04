@@ -1,0 +1,514 @@
+// RUN: cir-opt %s -cir-eh-abi-lowering -o %t.cir
+// RUN: FileCheck --input-file=%t.cir %s
+
+// Test Itanium ABI lowering of flattened CIR exception handling operations.
+// The input is the form produced by cir-flatten-cfg, and the output should
+// have all EH-specific tokens replaced with concrete values and ABI calls.
+
+!s32i = !cir.int<s, 32>
+!u32i = !cir.int<u, 32>
+!u8i = !cir.int<u, 8>
+!void = !cir.void
+!rec_SomeClass = !cir.record<struct "SomeClass" {!s32i}>
+!rec_exception = !cir.record<struct "std::exception" {!s32i}>
+
+module attributes {cir.triple = "x86_64-unknown-linux-gnu"} {
+
+// Test: EH cleanup only (no catch handlers).
+// cir.eh.initiate cleanup → cir.eh.inflight_exception cleanup
+// cir.begin_cleanup / cir.end_cleanup → removed
+// cir.resume → cir.resume.flat
+cir.func @test_cleanup_only() {
+  %0 = cir.alloca !rec_SomeClass, !cir.ptr<!rec_SomeClass>, ["c", init] {alignment = 4 : i64}
+  cir.call @ctor(%0) : (!cir.ptr<!rec_SomeClass>) -> ()
+  cir.try_call @doSomething(%0) ^bb1, ^bb2 : (!cir.ptr<!rec_SomeClass>) -> ()
+^bb1:
+  cir.call @dtor(%0) nothrow : (!cir.ptr<!rec_SomeClass>) -> ()
+  cir.br ^bb5
+^bb2:
+  %1 = cir.eh.initiate cleanup : !cir.eh_token
+  cir.br ^bb3(%1 : !cir.eh_token)
+^bb3(%eh_token : !cir.eh_token):
+  %2 = cir.begin_cleanup %eh_token : !cir.eh_token -> !cir.cleanup_token
+  cir.call @dtor(%0) nothrow : (!cir.ptr<!rec_SomeClass>) -> ()
+  cir.end_cleanup %2 : !cir.cleanup_token
+  cir.resume %eh_token : !cir.eh_token
+^bb5:
+  cir.return
+}
+
+// CHECK-LABEL: cir.func @test_cleanup_only()
+// CHECK-SAME: personality(@__gxx_personality_v0)
+// CHECK:         cir.try_call @doSomething(%{{.*}}) ^[[NORMAL:bb[0-9]+]], ^[[UNWIND:bb[0-9]+]]
+//
+// Normal path unchanged.
+// CHECK:       ^[[NORMAL]]:
+// CHECK:         cir.call @dtor
+// CHECK:         cir.br ^[[RETURN:bb[0-9]+]]
+//
+// Unwind: eh.initiate replaced with eh.inflight_exception.
+// CHECK:       ^[[UNWIND]]:
+// CHECK:         %[[EXN:.*]], %[[TID:.*]] = cir.eh.inflight_exception cleanup
+// CHECK:         cir.br ^[[CLEANUP:bb[0-9]+]](%[[EXN]], %[[TID]] : !cir.ptr<!void>, !u32i)
+//
+// Cleanup: begin_cleanup/end_cleanup removed, resume becomes resume.flat.
+// CHECK:       ^[[CLEANUP]](%[[C_EXN:.*]]: !cir.ptr<!void>, %[[C_TID:.*]]: !u32i):
+// CHECK-NOT:     cir.begin_cleanup
+// CHECK:         cir.call @dtor
+// CHECK-NOT:     cir.end_cleanup
+// CHECK:         cir.resume.flat %[[C_EXN]], %[[C_TID]]
+//
+// CHECK:       ^[[RETURN]]:
+// CHECK:         cir.return
+
+// Test: Try-catch with catch-all handler.
+// cir.eh.dispatch [catch_all] → cir.br to catch-all block
+// cir.begin_catch → __cxa_begin_catch + bitcast
+// cir.end_catch → __cxa_end_catch
+cir.func @test_catch_all() {
+  cir.try_call @mayThrow() ^bb1, ^bb2 : () -> ()
+^bb1:
+  cir.br ^bb5
+^bb2:
+  %1 = cir.eh.initiate : !cir.eh_token
+  cir.br ^bb3(%1 : !cir.eh_token)
+^bb3(%eh_token : !cir.eh_token):
+  cir.eh.dispatch %eh_token : !cir.eh_token [
+    catch_all : ^bb4
+  ]
+^bb4(%eh_token.1 : !cir.eh_token):
+  %ct, %exn = cir.begin_catch %eh_token.1 : !cir.eh_token -> (!cir.catch_token, !cir.ptr<!void>)
+  cir.end_catch %ct : !cir.catch_token
+  cir.br ^bb5
+^bb5:
+  cir.return
+}
+
+// CHECK-LABEL: cir.func @test_catch_all()
+// CHECK-SAME: personality(@__gxx_personality_v0)
+// CHECK:         cir.try_call @mayThrow() ^[[NORMAL:bb[0-9]+]], ^[[UNWIND:bb[0-9]+]]
+//
+// CHECK:       ^[[NORMAL]]:
+// CHECK:         cir.br ^[[RETURN:bb[0-9]+]]
+//
+// Landing pad with catch_all (no cleanup, no typed catches).
+// CHECK:       ^[[UNWIND]]:
+// CHECK:         %[[EXN:.*]], %[[TID:.*]] = cir.eh.inflight_exception
+// CHECK:         cir.br ^[[DISPATCH:bb[0-9]+]](%[[EXN]], %[[TID]] : !cir.ptr<!void>, !u32i)
+//
+// Dispatch replaced with direct branch to catch-all handler.
+// CHECK:       ^[[DISPATCH]](%[[D_EXN:.*]]: !cir.ptr<!void>, %[[D_TID:.*]]: !u32i):
+// CHECK:         cir.br ^[[CATCH_ALL:bb[0-9]+]](%[[D_EXN]], %[[D_TID]] : !cir.ptr<!void>, !u32i)
+//
+// Catch-all: begin_catch → __cxa_begin_catch, end_catch → __cxa_end_catch.
+// CHECK:       ^[[CATCH_ALL]](%[[CA_EXN:.*]]: !cir.ptr<!void>, %{{.*}}: !u32i):
+// CHECK:         %{{.*}} = cir.call @__cxa_begin_catch(%[[CA_EXN]])
+// CHECK:         cir.call @__cxa_end_catch()
+// CHECK:         cir.br ^[[RETURN]]
+//
+// CHECK:       ^[[RETURN]]:
+// CHECK:         cir.return
+
+// Test: Try-catch with typed handler and unwind.
+// cir.eh.dispatch with typed catch → typeid + cmp + brcond chain
+// unwind handler → cir.resume.flat
+cir.func @test_typed_catch_with_unwind() {
+  cir.try_call @mayThrow() ^bb1, ^bb2 : () -> ()
+^bb1:
+  cir.br ^bb6
+^bb2:
+  %1 = cir.eh.initiate : !cir.eh_token
+  cir.br ^bb3(%1 : !cir.eh_token)
+^bb3(%eh_token : !cir.eh_token):
+  cir.eh.dispatch %eh_token : !cir.eh_token [
+    catch(#cir.global_view<@_ZTISt9exception> : !cir.ptr<!u8i>) : ^bb4,
+    unwind : ^bb5
+  ]
+^bb4(%eh_token.1 : !cir.eh_token):
+  %ct, %exn = cir.begin_catch %eh_token.1 : !cir.eh_token -> (!cir.catch_token, !cir.ptr<!cir.ptr<!rec_exception>>)
+  cir.end_catch %ct : !cir.catch_token
+  cir.br ^bb6
+^bb5(%eh_token.2 : !cir.eh_token):
+  cir.resume %eh_token.2 : !cir.eh_token
+^bb6:
+  cir.return
+}
+
+// CHECK-LABEL: cir.func @test_typed_catch_with_unwind()
+// CHECK-SAME: personality(@__gxx_personality_v0)
+// CHECK:         cir.try_call @mayThrow() ^[[NORMAL:bb[0-9]+]], ^[[UNWIND:bb[0-9]+]]
+//
+// CHECK:       ^[[NORMAL]]:
+// CHECK:         cir.br ^[[RETURN:bb[0-9]+]]
+//
+// Landing pad with typed catch list.
+// CHECK:       ^[[UNWIND]]:
+// CHECK:         %[[EXN:.*]], %[[TID:.*]] = cir.eh.inflight_exception [@_ZTISt9exception]
+// CHECK:         cir.br ^[[DISPATCH:bb[0-9]+]](%[[EXN]], %[[TID]] : !cir.ptr<!void>, !u32i)
+//
+// Dispatch: branch to comparison chain.
+// CHECK:       ^[[DISPATCH]](%{{.*}}: !cir.ptr<!void>, %{{.*}}: !u32i):
+// CHECK:         cir.br ^[[CMP_BLOCK:bb[0-9]+]]
+//
+// Comparison: typeid comparison + brcond.
+// CHECK:       ^[[CMP_BLOCK]](%[[D_EXN:.*]]: !cir.ptr<!void>, %[[D_TID:.*]]: !u32i):
+// CHECK:         %[[TYPE_ID:.*]] = cir.eh.typeid @_ZTISt9exception
+// CHECK:         %[[CMP:.*]] = cir.cmp(eq, %[[D_TID]], %[[TYPE_ID]])
+// CHECK:         cir.brcond %[[CMP]] ^[[CATCH:bb[0-9]+]](%[[D_EXN]], %[[D_TID]] : !cir.ptr<!void>, !u32i), ^[[UNWIND_HANDLER:bb[0-9]+]](%[[D_EXN]], %[[D_TID]] : !cir.ptr<!void>, !u32i)
+//
+// Typed catch handler.
+// CHECK:       ^[[CATCH]](%[[C_EXN:.*]]: !cir.ptr<!void>, %{{.*}}: !u32i):
+// CHECK:         %{{.*}} = cir.call @__cxa_begin_catch(%[[C_EXN]])
+// CHECK:         cir.call @__cxa_end_catch()
+// CHECK:         cir.br ^[[RETURN]]
+//
+// Unwind handler: resume.flat.
+// CHECK:       ^[[UNWIND_HANDLER]](%[[UW_EXN:.*]]: !cir.ptr<!void>, %[[UW_TID:.*]]: !u32i):
+// CHECK:         cir.resume.flat %[[UW_EXN]], %[[UW_TID]]
+//
+// CHECK:       ^[[RETURN]]:
+// CHECK:         cir.return
+
+// Test: Try-catch with multiple typed handlers and catch-all.
+// Dispatch → chain of typeid comparisons, catch-all as final default.
+cir.func @test_multiple_typed_and_catch_all() {
+  cir.try_call @mayThrow() ^bb1, ^bb2 : () -> ()
+^bb1:
+  cir.br ^bb7
+^bb2:
+  %1 = cir.eh.initiate : !cir.eh_token
+  cir.br ^bb3(%1 : !cir.eh_token)
+^bb3(%eh_token : !cir.eh_token):
+  cir.eh.dispatch %eh_token : !cir.eh_token [
+    catch(#cir.global_view<@_ZTISt9exception> : !cir.ptr<!u8i>) : ^bb4,
+    catch(#cir.global_view<@_ZTIi> : !cir.ptr<!u8i>) : ^bb5,
+    catch_all : ^bb6
+  ]
+^bb4(%eh_token.1 : !cir.eh_token):
+  %ct1, %exn1 = cir.begin_catch %eh_token.1 : !cir.eh_token -> (!cir.catch_token, !cir.ptr<!cir.ptr<!rec_exception>>)
+  cir.end_catch %ct1 : !cir.catch_token
+  cir.br ^bb7
+^bb5(%eh_token.2 : !cir.eh_token):
+  %ct2, %exn2 = cir.begin_catch %eh_token.2 : !cir.eh_token -> (!cir.catch_token, !cir.ptr<!s32i>)
+  cir.end_catch %ct2 : !cir.catch_token
+  cir.br ^bb7
+^bb6(%eh_token.3 : !cir.eh_token):
+  %ct3, %exn3 = cir.begin_catch %eh_token.3 : !cir.eh_token -> (!cir.catch_token, !cir.ptr<!void>)
+  cir.end_catch %ct3 : !cir.catch_token
+  cir.br ^bb7
+^bb7:
+  cir.return
+}
+
+// CHECK-LABEL: cir.func @test_multiple_typed_and_catch_all()
+// CHECK-SAME: personality(@__gxx_personality_v0)
+// CHECK:         cir.try_call @mayThrow() ^[[NORMAL:bb[0-9]+]], ^[[UNWIND:bb[0-9]+]]
+//
+// CHECK:       ^[[NORMAL]]:
+// CHECK:         cir.br ^[[RETURN:bb[0-9]+]]
+//
+// Landing pad with typed catches AND catch-all.
+// CHECK:       ^[[UNWIND]]:
+// CHECK:         %[[EXN:.*]], %[[TID:.*]] = cir.eh.inflight_exception [@_ZTISt9exception, @_ZTIi]
+// CHECK:         cir.br ^[[CMP1_BLOCK:bb[0-9]+]](%[[EXN]], %[[TID]] : !cir.ptr<!void>, !u32i)
+//
+// Dispatch: branch to comparison chain.
+// CHECK:       ^[[CMP1_BLOCK]](%{{.*}}: !cir.ptr<!void>, %{{.*}}: !u32i):
+// CHECK:         cir.br ^[[CMP1:bb[0-9]+]]
+//
+// First type comparison (exception type).
+// CHECK:       ^[[CMP1]](%[[C1_EXN:.*]]: !cir.ptr<!void>, %[[C1_TID:.*]]: !u32i):
+// CHECK:         %[[TID1:.*]] = cir.eh.typeid @_ZTISt9exception
+// CHECK:         %[[CMP1V:.*]] = cir.cmp(eq, %[[C1_TID]], %[[TID1]])
+// CHECK:         cir.brcond %[[CMP1V]] ^[[CATCH_EXN:bb[0-9]+]](%[[C1_EXN]], %[[C1_TID]] : !cir.ptr<!void>, !u32i), ^[[CMP2_BLOCK:bb[0-9]+]](%[[C1_EXN]], %[[C1_TID]] : !cir.ptr<!void>, !u32i)
+//
+// Second type comparison (int type).
+// CHECK:       ^[[CMP2_BLOCK]](%[[C2_EXN:.*]]: !cir.ptr<!void>, %[[C2_TID:.*]]: !u32i):
+// CHECK:         %[[TID2:.*]] = cir.eh.typeid @_ZTIi
+// CHECK:         %[[CMP2:.*]] = cir.cmp(eq, %[[C2_TID]], %[[TID2]])
+// CHECK:         cir.brcond %[[CMP2]] ^[[CATCH_INT:bb[0-9]+]](%[[C2_EXN]], %[[C2_TID]] : !cir.ptr<!void>, !u32i), ^[[CATCH_ALL:bb[0-9]+]](%[[C2_EXN]], %[[C2_TID]] : !cir.ptr<!void>, !u32i)
+//
+// Exception catch handler.
+// CHECK:       ^[[CATCH_EXN]](%[[CE_EXN:.*]]: !cir.ptr<!void>, %{{.*}}: !u32i):
+// CHECK:         cir.call @__cxa_begin_catch(%[[CE_EXN]])
+// CHECK:         cir.call @__cxa_end_catch()
+// CHECK:         cir.br ^[[RETURN]]
+//
+// Int catch handler.
+// CHECK:       ^[[CATCH_INT]](%[[CI_EXN:.*]]: !cir.ptr<!void>, %{{.*}}: !u32i):
+// CHECK:         cir.call @__cxa_begin_catch(%[[CI_EXN]])
+// CHECK:         cir.call @__cxa_end_catch()
+// CHECK:         cir.br ^[[RETURN]]
+//
+// Catch-all handler.
+// CHECK:       ^[[CATCH_ALL]](%[[CA_EXN:.*]]: !cir.ptr<!void>, %{{.*}}: !u32i):
+// CHECK:         cir.call @__cxa_begin_catch(%[[CA_EXN]])
+// CHECK:         cir.call @__cxa_end_catch()
+// CHECK:         cir.br ^[[RETURN]]
+//
+// CHECK:       ^[[RETURN]]:
+// CHECK:         cir.return
+
+// Test: Try-catch with cleanup + catch handler.
+// Two landing pads: one without cleanup (ctor), one with cleanup (doSomething).
+// cleanup ops are removed, cleanup code stays.
+cir.func @test_catch_with_cleanup() {
+  %0 = cir.alloca !rec_SomeClass, !cir.ptr<!rec_SomeClass>, ["c", init] {alignment = 4 : i64}
+  cir.try_call @ctor(%0) ^bb1, ^bb3 : (!cir.ptr<!rec_SomeClass>) -> ()
+^bb1:
+  cir.try_call @doSomething(%0) ^bb2, ^bb4 : (!cir.ptr<!rec_SomeClass>) -> ()
+^bb2:
+  cir.call @dtor(%0) nothrow : (!cir.ptr<!rec_SomeClass>) -> ()
+  cir.br ^bb8
+^bb3:
+  %1 = cir.eh.initiate : !cir.eh_token
+  cir.br ^bb6(%1 : !cir.eh_token)
+^bb4:
+  %2 = cir.eh.initiate cleanup : !cir.eh_token
+  cir.br ^bb5(%2 : !cir.eh_token)
+^bb5(%eh_token : !cir.eh_token):
+  %3 = cir.begin_cleanup %eh_token : !cir.eh_token -> !cir.cleanup_token
+  cir.call @dtor(%0) nothrow : (!cir.ptr<!rec_SomeClass>) -> ()
+  cir.end_cleanup %3 : !cir.cleanup_token
+  cir.br ^bb6(%eh_token : !cir.eh_token)
+^bb6(%eh_token.1 : !cir.eh_token):
+  cir.eh.dispatch %eh_token.1 : !cir.eh_token [
+    catch_all : ^bb7
+  ]
+^bb7(%eh_token.2 : !cir.eh_token):
+  %ct, %exn = cir.begin_catch %eh_token.2 : !cir.eh_token -> (!cir.catch_token, !cir.ptr<!void>)
+  cir.end_catch %ct : !cir.catch_token
+  cir.br ^bb8
+^bb8:
+  cir.return
+}
+
+// CHECK-LABEL: cir.func @test_catch_with_cleanup()
+// CHECK-SAME: personality(@__gxx_personality_v0)
+//
+// Entry: ctor call.
+// CHECK:         cir.try_call @ctor(%{{.*}}) ^[[AFTER_CTOR:bb[0-9]+]], ^[[CTOR_UNWIND:bb[0-9]+]]
+//
+// After ctor: doSomething call.
+// CHECK:       ^[[AFTER_CTOR]]:
+// CHECK:         cir.try_call @doSomething(%{{.*}}) ^[[NORMAL_CLEANUP:bb[0-9]+]], ^[[DO_UNWIND:bb[0-9]+]]
+//
+// Normal cleanup.
+// CHECK:       ^[[NORMAL_CLEANUP]]:
+// CHECK:         cir.call @dtor
+// CHECK:         cir.br ^[[RETURN:bb[0-9]+]]
+//
+// Ctor unwind: landing pad without cleanup.
+// CHECK:       ^[[CTOR_UNWIND]]:
+// CHECK:         %[[E1:.*]], %[[T1:.*]] = cir.eh.inflight_exception
+// CHECK:         cir.br ^[[DISPATCH:bb[0-9]+]](%[[E1]], %[[T1]] : !cir.ptr<!void>, !u32i)
+//
+// doSomething unwind: landing pad with cleanup.
+// CHECK:       ^[[DO_UNWIND]]:
+// CHECK:         %[[E2:.*]], %[[T2:.*]] = cir.eh.inflight_exception cleanup
+// CHECK:         cir.br ^[[CLEANUP:bb[0-9]+]](%[[E2]], %[[T2]] : !cir.ptr<!void>, !u32i)
+//
+// EH cleanup: begin_cleanup and end_cleanup are REMOVED, dtor call stays.
+// CHECK:       ^[[CLEANUP]](%[[CL_EXN:.*]]: !cir.ptr<!void>, %[[CL_TID:.*]]: !u32i):
+// CHECK-NOT:     cir.begin_cleanup
+// CHECK:         cir.call @dtor
+// CHECK-NOT:     cir.end_cleanup
+// CHECK:         cir.br ^[[DISPATCH]](%[[CL_EXN]], %[[CL_TID]] : !cir.ptr<!void>, !u32i)
+//
+// Dispatch: catch-all handler (direct branch).
+// CHECK:       ^[[DISPATCH]](%[[D_EXN:.*]]: !cir.ptr<!void>, %[[D_TID:.*]]: !u32i):
+// CHECK:         cir.br ^[[CATCH_ALL:bb[0-9]+]](%[[D_EXN]], %[[D_TID]] : !cir.ptr<!void>, !u32i)
+//
+// Catch-all handler.
+// CHECK:       ^[[CATCH_ALL]](%[[CA_EXN:.*]]: !cir.ptr<!void>, %{{.*}}: !u32i):
+// CHECK:         cir.call @__cxa_begin_catch(%[[CA_EXN]])
+// CHECK:         cir.call @__cxa_end_catch()
+// CHECK:         cir.br ^[[RETURN]]
+//
+// CHECK:       ^[[RETURN]]:
+// CHECK:         cir.return
+
+// Test: Try-catch with cleanup + typed catch handler.
+// Like test_catch_with_cleanup but with a typed catch instead of catch-all.
+// Having a typed catch in the dispatch causes both eh.initiate sites to
+// include @_ZTISt9exception in their catch_type_list.
+cir.func @test_typed_catch_with_cleanup() {
+  %0 = cir.alloca !rec_SomeClass, !cir.ptr<!rec_SomeClass>, ["c", init] {alignment = 4 : i64}
+  cir.try_call @ctor(%0) ^bb1, ^bb3 : (!cir.ptr<!rec_SomeClass>) -> ()
+^bb1:
+  cir.try_call @doSomething(%0) ^bb2, ^bb4 : (!cir.ptr<!rec_SomeClass>) -> ()
+^bb2:
+  cir.call @dtor(%0) nothrow : (!cir.ptr<!rec_SomeClass>) -> ()
+  cir.br ^bb9
+^bb3:
+  %1 = cir.eh.initiate : !cir.eh_token
+  cir.br ^bb6(%1 : !cir.eh_token)
+^bb4:
+  %2 = cir.eh.initiate cleanup : !cir.eh_token
+  cir.br ^bb5(%2 : !cir.eh_token)
+^bb5(%eh_token : !cir.eh_token):
+  %3 = cir.begin_cleanup %eh_token : !cir.eh_token -> !cir.cleanup_token
+  cir.call @dtor(%0) nothrow : (!cir.ptr<!rec_SomeClass>) -> ()
+  cir.end_cleanup %3 : !cir.cleanup_token
+  cir.br ^bb6(%eh_token : !cir.eh_token)
+^bb6(%eh_token.1 : !cir.eh_token):
+  cir.eh.dispatch %eh_token.1 : !cir.eh_token [
+    catch(#cir.global_view<@_ZTISt9exception> : !cir.ptr<!u8i>) : ^bb7,
+    unwind : ^bb8
+  ]
+^bb7(%eh_token.2 : !cir.eh_token):
+  %ct, %exn = cir.begin_catch %eh_token.2 : !cir.eh_token -> (!cir.catch_token, !cir.ptr<!cir.ptr<!rec_exception>>)
+  cir.end_catch %ct : !cir.catch_token
+  cir.br ^bb9
+^bb8(%eh_token.3 : !cir.eh_token):
+  cir.resume %eh_token.3 : !cir.eh_token
+^bb9:
+  cir.return
+}
+
+// CHECK-LABEL: cir.func @test_typed_catch_with_cleanup()
+// CHECK-SAME: personality(@__gxx_personality_v0)
+//
+// Entry: ctor call.
+// CHECK:         cir.try_call @ctor(%{{.*}}) ^[[AFTER_CTOR:bb[0-9]+]], ^[[CTOR_UNWIND:bb[0-9]+]]
+//
+// After ctor: doSomething call.
+// CHECK:       ^[[AFTER_CTOR]]:
+// CHECK:         cir.try_call @doSomething(%{{.*}}) ^[[NORMAL_CLEANUP:bb[0-9]+]], ^[[DO_UNWIND:bb[0-9]+]]
+//
+// Normal cleanup.
+// CHECK:       ^[[NORMAL_CLEANUP]]:
+// CHECK:         cir.call @dtor
+// CHECK:         cir.br ^[[RETURN:bb[0-9]+]]
+//
+// Ctor unwind: landing pad without cleanup; typed catch list from shared dispatch.
+// CHECK:       ^[[CTOR_UNWIND]]:
+// CHECK:         %[[E1:.*]], %[[T1:.*]] = cir.eh.inflight_exception [@_ZTISt9exception]
+// CHECK:         cir.br ^[[DISPATCH:bb[0-9]+]](%[[E1]], %[[T1]] : !cir.ptr<!void>, !u32i)
+//
+// doSomething unwind: landing pad with cleanup and same typed catch list.
+// CHECK:       ^[[DO_UNWIND]]:
+// CHECK:         %[[E2:.*]], %[[T2:.*]] = cir.eh.inflight_exception cleanup [@_ZTISt9exception]
+// CHECK:         cir.br ^[[CLEANUP:bb[0-9]+]](%[[E2]], %[[T2]] : !cir.ptr<!void>, !u32i)
+//
+// EH cleanup: begin_cleanup and end_cleanup are REMOVED, dtor call stays.
+// CHECK:       ^[[CLEANUP]](%[[CL_EXN:.*]]: !cir.ptr<!void>, %[[CL_TID:.*]]: !u32i):
+// CHECK-NOT:     cir.begin_cleanup
+// CHECK:         cir.call @dtor
+// CHECK-NOT:     cir.end_cleanup
+// CHECK:         cir.br ^[[DISPATCH]](%[[CL_EXN]], %[[CL_TID]] : !cir.ptr<!void>, !u32i)
+//
+// Dispatch: branch to comparison chain.
+// CHECK:       ^[[DISPATCH]](%{{.*}}: !cir.ptr<!void>, %{{.*}}: !u32i):
+// CHECK:         cir.br ^[[CMP_BLOCK:bb[0-9]+]]
+//
+// Comparison: typeid comparison for std::exception, with unwind fallthrough.
+// CHECK:       ^[[CMP_BLOCK]](%[[D_EXN:.*]]: !cir.ptr<!void>, %[[D_TID:.*]]: !u32i):
+// CHECK:         %[[TYPE_ID:.*]] = cir.eh.typeid @_ZTISt9exception
+// CHECK:         %[[CMP:.*]] = cir.cmp(eq, %[[D_TID]], %[[TYPE_ID]])
+// CHECK:         cir.brcond %[[CMP]] ^[[CATCH:bb[0-9]+]](%[[D_EXN]], %[[D_TID]] : !cir.ptr<!void>, !u32i), ^[[UNWIND_HANDLER:bb[0-9]+]](%[[D_EXN]], %[[D_TID]] : !cir.ptr<!void>, !u32i)
+//
+// Typed catch handler.
+// CHECK:       ^[[CATCH]](%[[C_EXN:.*]]: !cir.ptr<!void>, %{{.*}}: !u32i):
+// CHECK:         cir.call @__cxa_begin_catch(%[[C_EXN]])
+// CHECK:         cir.call @__cxa_end_catch()
+// CHECK:         cir.br ^[[RETURN]]
+//
+// Unwind handler: resume.flat.
+// CHECK:       ^[[UNWIND_HANDLER]](%[[UW_EXN:.*]]: !cir.ptr<!void>, %[[UW_TID:.*]]: !u32i):
+// CHECK:         cir.resume.flat %[[UW_EXN]], %[[UW_TID]]
+//
+// CHECK:       ^[[RETURN]]:
+// CHECK:         cir.return
+
+// Test: try-catch with a local variable that has a non-trivial destructor.
+// The cleanup path calls ~S() then falls through to the catch-all dispatch.
+// begin_cleanup/end_cleanup are removed; typed catch + catch-all dispatch is lowered.
+cir.func no_inline dso_local @test_catch_with_cleanup_no_ctor() personality(@__gxx_personality_v0) {
+  cir.br ^bb1
+^bb1:  // pred: ^bb0
+  %0 = cir.alloca !rec_SomeClass, !cir.ptr<!rec_SomeClass>, ["s"] {alignment = 1 : i64}
+  cir.br ^bb2
+^bb2:  // pred: ^bb1
+  cir.try_call @mayThrow() ^bb3, ^bb4 : () -> ()
+^bb3:  // pred: ^bb2
+  cir.call @dtor(%0) nothrow : (!cir.ptr<!rec_SomeClass>) -> ()
+  cir.br ^bb9
+^bb4:  // pred: ^bb2
+  %1 = cir.eh.initiate cleanup : !cir.eh_token
+  cir.br ^bb5(%1 : !cir.eh_token)
+^bb5(%2: !cir.eh_token):  // pred: ^bb4
+  %3 = cir.begin_cleanup %2 : !cir.eh_token -> !cir.cleanup_token
+  cir.call @dtor(%0) nothrow : (!cir.ptr<!rec_SomeClass>) -> ()
+  cir.end_cleanup %3 : !cir.cleanup_token
+  cir.br ^bb6(%2 : !cir.eh_token)
+^bb6(%4: !cir.eh_token):  // pred: ^bb5
+  cir.eh.dispatch %4 : !cir.eh_token [
+    catch(#cir.global_view<@_ZTISt9exception> : !cir.ptr<!u8i>) : ^bb7,
+    catch_all : ^bb8
+  ]
+^bb7(%6: !cir.eh_token):  // pred: ^bb6
+  %catch_token2, %exn_ptr2 = cir.begin_catch %6 : !cir.eh_token -> (!cir.catch_token, !cir.ptr<!cir.ptr<!rec_exception>>)
+  cir.end_catch %catch_token2 : !cir.catch_token
+  cir.br ^bb9
+^bb8(%5: !cir.eh_token):  // pred: ^bb6
+  %catch_token, %exn_ptr = cir.begin_catch %5 : !cir.eh_token -> (!cir.catch_token, !cir.ptr<!void>)
+  cir.end_catch %catch_token : !cir.catch_token
+  cir.br ^bb9
+^bb9:  // preds: ^bb3, ^bb7, ^bb8
+  cir.return
+}
+
+// CHECK-LABEL: cir.func {{.*}} @test_catch_with_cleanup_no_ctor()
+// CHECK-SAME: personality(@__gxx_personality_v0)
+// CHECK:         cir.try_call @mayThrow() ^[[NORMAL:bb[0-9]+]], ^[[UNWIND:bb[0-9]+]]
+//
+// Normal path: destructor called on success.
+// CHECK:       ^[[NORMAL]]:
+// CHECK:         cir.call @dtor
+//
+// Unwind: initiate cleanup → inflight_exception cleanup with std::exception type.
+// CHECK:       ^[[UNWIND]]:
+// CHECK:         %[[EXN:.*]], %[[TID:.*]] = cir.eh.inflight_exception cleanup [@_ZTISt9exception]
+// CHECK:         cir.br ^[[CLEANUP:bb[0-9]+]](%[[EXN]], %[[TID]] : !cir.ptr<!void>, !u32i)
+//
+// Cleanup: begin_cleanup/end_cleanup removed, destructor call stays.
+// CHECK:       ^[[CLEANUP]](%[[CL_EXN:.*]]: !cir.ptr<!void>, %[[CL_TID:.*]]: !u32i):
+// CHECK-NOT:     cir.begin_cleanup
+// CHECK:         cir.call @dtor
+// CHECK-NOT:     cir.end_cleanup
+// CHECK:         cir.br ^[[DISPATCH:bb[0-9]+]](%[[CL_EXN]], %[[CL_TID]] : !cir.ptr<!void>, !u32i)
+//
+// Dispatch: branch to comparison chain.
+// CHECK:       ^[[DISPATCH]](%{{.*}}: !cir.ptr<!void>, %{{.*}}: !u32i):
+// CHECK:         cir.br ^[[CMP_BLOCK:bb[0-9]+]]
+//
+// Comparison: typeid comparison for std::exception, with catch-all fallthrough.
+// CHECK:       ^[[CMP_BLOCK]](%[[D_EXN:.*]]: !cir.ptr<!void>, %[[D_TID:.*]]: !u32i):
+// CHECK:         %[[TYPE_ID:.*]] = cir.eh.typeid @_ZTISt9exception
+// CHECK:         %[[CMP:.*]] = cir.cmp(eq, %[[D_TID]], %[[TYPE_ID]])
+// CHECK:         cir.brcond %[[CMP]] ^[[TYPED:bb[0-9]+]](%[[D_EXN]], %[[D_TID]] : !cir.ptr<!void>, !u32i), ^[[CATCH_ALL:bb[0-9]+]](%[[D_EXN]], %[[D_TID]] : !cir.ptr<!void>, !u32i)
+//
+// Typed catch for std::exception (^bb7 in source).
+// CHECK:       ^[[TYPED]](%[[T_EXN:.*]]: !cir.ptr<!void>, %{{.*}}: !u32i):
+// CHECK:         cir.call @__cxa_begin_catch(%[[T_EXN]])
+// CHECK:         cir.call @__cxa_end_catch()
+//
+// Catch-all handler (^bb8 in source).
+// CHECK:       ^[[CATCH_ALL]](%[[CA_EXN:.*]]: !cir.ptr<!void>, %{{.*}}: !u32i):
+// CHECK:         cir.call @__cxa_begin_catch(%[[CA_EXN]])
+// CHECK:         cir.call @__cxa_end_catch()
+
+// Verify that runtime function declarations are added.
+// CHECK: cir.func private @__gxx_personality_v0(...)
+// CHECK: cir.func private @__cxa_begin_catch(!cir.ptr<!void>)
+// CHECK: cir.func private @__cxa_end_catch()
+
+cir.func private @mayThrow()
+cir.func private @ctor(!cir.ptr<!rec_SomeClass>)
+cir.func private @dtor(!cir.ptr<!rec_SomeClass>) attributes {nothrow}
+cir.func private @doSomething(!cir.ptr<!rec_SomeClass>)
+cir.global "private" constant external @_ZTISt9exception : !cir.ptr<!u8i>
+cir.global "private" constant external @_ZTIi : !cir.ptr<!u8i>
+
+} // end module

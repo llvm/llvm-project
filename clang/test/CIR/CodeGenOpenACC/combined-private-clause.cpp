@@ -135,7 +135,7 @@ struct HasDtor {
 // CHECK-NEXT: %[[UB1_CAST:.*]] = builtin.unrealized_conversion_cast %[[UB1]] : index to !u64i
 // CHECK-NEXT: %[[ITR:.*]] = cir.alloca !u64i, !cir.ptr<!u64i>, ["iter"] {alignment = 8 : i64}
 // CHECK-NEXT: %[[CONST_ONE:.*]] = cir.const #cir.int<1> : !u64i
-// CHECK-NEXT: %[[ONE_BELOW_UB:.*]] = cir.binop(sub, %[[UB1_CAST]], %[[CONST_ONE]]) : !u64i
+// CHECK-NEXT: %[[ONE_BELOW_UB:.*]] = cir.sub %[[UB1_CAST]], %[[CONST_ONE]] : !u64i
 // CHECK-NEXT: cir.store %[[ONE_BELOW_UB]], %[[ITR]] : !u64i, !cir.ptr<!u64i>
 // CHECK-NEXT: cir.for : cond {
 // CHECK-NEXT: %[[ITR_LOAD:.*]] = cir.load %[[ITR]] : !cir.ptr<!u64i>, !u64i

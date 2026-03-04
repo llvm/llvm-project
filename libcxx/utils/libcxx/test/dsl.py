@@ -83,7 +83,7 @@ def _memoizeExpensiveOperation(extractCacheKey):
 
 def _executeWithFakeConfig(test, commands):
     """
-    Returns (stdout, stderr, exitCode, timeoutInfo, parsedCommands)
+    Returns (stdout, stderr, exitCode, timeoutInfo, parsedCommands, testUpdateOutput)
     """
     litConfig = lit.LitConfig.LitConfig(
         progname="lit",

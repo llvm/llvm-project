@@ -48,6 +48,19 @@ enum ShiftExtendType {
   SXTX,
 };
 
+/// isSignExtendShiftType - Returns true if \p Type is sign extending.
+static inline bool isSignExtendShiftType(AArch64_AM::ShiftExtendType Type) {
+  switch (Type) {
+  case AArch64_AM::SXTB:
+  case AArch64_AM::SXTH:
+  case AArch64_AM::SXTW:
+  case AArch64_AM::SXTX:
+    return true;
+  default:
+    return false;
+  }
+}
+
 /// getShiftName - Get the string encoding for the shift type.
 static inline const char *getShiftExtendName(AArch64_AM::ShiftExtendType ST) {
   switch (ST) {

@@ -12,7 +12,7 @@ define void @single_loop_invariant(ptr %a, i64 %x, i64 %n) {
 ; CHECK-NEXT:      Monotonicity: Invariant
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  Src: store i8 0, ptr %idx, align 1 --> Dst: store i8 0, ptr %idx, align 1
-; CHECK-NEXT:    da analyze - consistent output [S]!
+; CHECK-NEXT:    da analyze - output [S]!
 ;
 entry:
   %guard = icmp sgt i64 %n, 0
@@ -72,7 +72,7 @@ define void @invariant_plus_monotonic0(ptr %a, i64 %x, i64 %n, i64 %m) {
 ; CHECK-NEXT:      Monotonicity: MultivariateSignedMonotonic
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  Src: store i8 0, ptr %idx, align 1 --> Dst: store i8 0, ptr %idx, align 1
-; CHECK-NEXT:    da analyze - consistent output [0 S]!
+; CHECK-NEXT:    da analyze - output [0 S]!
 ;
 entry:
   %guard.i = icmp sgt i64 %n, 0
@@ -116,7 +116,7 @@ define void @invariant_plus_monotonic1(ptr %a, i64 %x, i64 %n, i64 %m) {
 ; CHECK-NEXT:      Monotonicity: MultivariateSignedMonotonic
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  Src: store i8 0, ptr %idx, align 1 --> Dst: store i8 0, ptr %idx, align 1
-; CHECK-NEXT:    da analyze - consistent output [S 0]!
+; CHECK-NEXT:    da analyze - output [S 0]!
 ;
 entry:
   %guard.i = icmp sgt i64 %n, 0

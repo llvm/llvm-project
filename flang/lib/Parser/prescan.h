@@ -324,7 +324,6 @@ private:
   static const int prime1{1019}, prime2{1021};
   std::bitset<prime2> compilerDirectiveBloomFilter_; // 128 bytes
   std::unordered_set<std::string> compilerDirectiveSentinels_;
-  int maxSentinelLength_{0};
 };
 } // namespace Fortran::parser
 #endif // FORTRAN_PARSER_PRESCAN_H_

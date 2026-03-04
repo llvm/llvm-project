@@ -341,7 +341,7 @@ int foo16(int _Complex a, int _Complex b) {
 // CIR: %[[A_IMAG:.*]] = cir.complex.imag %[[COMPLEX_A]] : !cir.complex<!s32i> -> !s32i
 // CIR: %[[COMPLEX_B:.*]] = cir.load{{.*}} {{.*}} : !cir.ptr<!cir.complex<!s32i>>, !cir.complex<!s32i>
 // CIR: %[[B_IMAG:.*]] = cir.complex.imag %[[COMPLEX_B]] : !cir.complex<!s32i> -> !s32i
-// CIR: %[[ADD:.*]] = cir.binop(add, %[[A_IMAG]], %[[B_IMAG]]) nsw : !s32i
+// CIR: %[[ADD:.*]] = cir.add nsw %[[A_IMAG]], %[[B_IMAG]] : !s32i
 // CIR: cir.store %[[ADD]], %[[RET]] : !s32i, !cir.ptr<!s32i>
 // CIR: %[[TMP:.*]] = cir.load %[[RET]] : !cir.ptr<!s32i>, !s32i
 // CIR: cir.return %[[TMP]] : !s32i
@@ -374,7 +374,7 @@ int foo17(int _Complex a, int _Complex b) {
 // CIR: %[[A_REAL:.*]] = cir.complex.real %[[COMPLEX_A]] : !cir.complex<!s32i> -> !s32i
 // CIR: %[[COMPLEX_B:.*]] = cir.load{{.*}} {{.*}} : !cir.ptr<!cir.complex<!s32i>>, !cir.complex<!s32i>
 // CIR: %[[B_REAL:.*]] = cir.complex.real %[[COMPLEX_B]] : !cir.complex<!s32i> -> !s32i
-// CIR: %[[ADD:.*]] = cir.binop(add, %[[A_REAL]], %[[B_REAL]]) nsw : !s32i
+// CIR: %[[ADD:.*]] = cir.add nsw %[[A_REAL]], %[[B_REAL]] : !s32i
 // CIR: cir.store %[[ADD]], %[[RET]] : !s32i, !cir.ptr<!s32i>
 // CIR: %[[TMP:.*]] = cir.load %[[RET]] : !cir.ptr<!s32i>, !s32i
 // CIR: cir.return %[[TMP]] : !s32i

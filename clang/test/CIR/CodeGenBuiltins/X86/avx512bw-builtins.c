@@ -167,7 +167,7 @@ __mmask32 test_kand_mask32(__mmask32 A, __mmask32 B) {
   // CIR-LABEL: _kand_mask32
   // CIR: cir.cast bitcast {{.*}} : !u32i -> !cir.vector<32 x !cir.int<s, 1>>
   // CIR: cir.cast bitcast {{.*}} : !u32i -> !cir.vector<32 x !cir.int<s, 1>>
-  // CIR: cir.binop(and, {{.*}}, {{.*}}) : !cir.vector<32 x !cir.int<s, 1>>
+  // CIR: cir.and {{.*}}, {{.*}} : !cir.vector<32 x !cir.int<s, 1>>
   // CIR: cir.cast bitcast {{.*}} : !cir.vector<32 x !cir.int<s, 1>> -> !u32i
 
   // LLVM-LABEL: _kand_mask32
@@ -188,7 +188,7 @@ __mmask64 test_kand_mask64(__mmask64 A, __mmask64 B) {
   // CIR-LABEL: _kand_mask64
   // CIR: cir.cast bitcast {{.*}} : !u64i -> !cir.vector<64 x !cir.int<s, 1>>
   // CIR: cir.cast bitcast {{.*}} : !u64i -> !cir.vector<64 x !cir.int<s, 1>>
-  // CIR: cir.binop(and, {{.*}}, {{.*}}) : !cir.vector<64 x !cir.int<s, 1>>
+  // CIR: cir.and {{.*}}, {{.*}} : !cir.vector<64 x !cir.int<s, 1>>
   // CIR: cir.cast bitcast {{.*}} : !cir.vector<64 x !cir.int<s, 1>> -> !u64i
 
   // LLVM-LABEL: _kand_mask64
@@ -210,7 +210,7 @@ __mmask32 test_kandn_mask32(__mmask32 A, __mmask32 B) {
   // CIR: cir.cast bitcast {{.*}} : !u32i -> !cir.vector<32 x !cir.int<s, 1>>
   // CIR: cir.cast bitcast {{.*}} : !u32i -> !cir.vector<32 x !cir.int<s, 1>>
   // CIR: cir.unary(not, {{.*}}) : !cir.vector<32 x !cir.int<s, 1>>
-  // CIR: cir.binop(and, {{.*}}, {{.*}}) : !cir.vector<32 x !cir.int<s, 1>>
+  // CIR: cir.and {{.*}}, {{.*}} : !cir.vector<32 x !cir.int<s, 1>>
   // CIR: cir.cast bitcast {{.*}} : !cir.vector<32 x !cir.int<s, 1>> -> !u32i
 
   // LLVM-LABEL: _kandn_mask32
@@ -234,7 +234,7 @@ __mmask64 test_kandn_mask64(__mmask64 A, __mmask64 B) {
   // CIR: cir.cast bitcast {{.*}} : !u64i -> !cir.vector<64 x !cir.int<s, 1>>
   // CIR: cir.cast bitcast {{.*}} : !u64i -> !cir.vector<64 x !cir.int<s, 1>>
   // CIR: cir.unary(not, {{.*}}) : !cir.vector<64 x !cir.int<s, 1>>
-  // CIR: cir.binop(and, {{.*}}, {{.*}}) : !cir.vector<64 x !cir.int<s, 1>>
+  // CIR: cir.and {{.*}}, {{.*}} : !cir.vector<64 x !cir.int<s, 1>>
   // CIR: cir.cast bitcast {{.*}} : !cir.vector<64 x !cir.int<s, 1>> -> !u64i
 
   // LLVM-LABEL: _kandn_mask64
@@ -257,7 +257,7 @@ __mmask32 test_kor_mask32(__mmask32 A, __mmask32 B) {
   // CIR-LABEL: _kor_mask32
   // CIR: cir.cast bitcast {{.*}} : !u32i -> !cir.vector<32 x !cir.int<s, 1>>
   // CIR: cir.cast bitcast {{.*}} : !u32i -> !cir.vector<32 x !cir.int<s, 1>>
-  // CIR: cir.binop(or, {{.*}}, {{.*}}) : !cir.vector<32 x !cir.int<s, 1>>
+  // CIR: cir.or {{.*}}, {{.*}} : !cir.vector<32 x !cir.int<s, 1>>
   // CIR: cir.cast bitcast {{.*}} : !cir.vector<32 x !cir.int<s, 1>> -> !u32i
 
   // LLVM-LABEL: _kor_mask32
@@ -278,7 +278,7 @@ __mmask64 test_kor_mask64(__mmask64 A, __mmask64 B) {
   // CIR-LABEL: _kor_mask64
   // CIR: cir.cast bitcast {{.*}} : !u64i -> !cir.vector<64 x !cir.int<s, 1>>
   // CIR: cir.cast bitcast {{.*}} : !u64i -> !cir.vector<64 x !cir.int<s, 1>>
-  // CIR: cir.binop(or, {{.*}}, {{.*}}) : !cir.vector<64 x !cir.int<s, 1>>
+  // CIR: cir.or {{.*}}, {{.*}} : !cir.vector<64 x !cir.int<s, 1>>
   // CIR: cir.cast bitcast {{.*}} : !cir.vector<64 x !cir.int<s, 1>> -> !u64i
 
   // LLVM-LABEL: _kor_mask64
@@ -299,7 +299,7 @@ __mmask32 test_kxor_mask32(__mmask32 A, __mmask32 B) {
   // CIR-LABEL: _kxor_mask32
   // CIR: cir.cast bitcast {{.*}} : !u32i -> !cir.vector<32 x !cir.int<s, 1>>
   // CIR: cir.cast bitcast {{.*}} : !u32i -> !cir.vector<32 x !cir.int<s, 1>>
-  // CIR: cir.binop(xor, {{.*}}, {{.*}}) : !cir.vector<32 x !cir.int<s, 1>>
+  // CIR: cir.xor {{.*}}, {{.*}} : !cir.vector<32 x !cir.int<s, 1>>
   // CIR: cir.cast bitcast {{.*}} : !cir.vector<32 x !cir.int<s, 1>> -> !u32i
 
   // LLVM-LABEL: _kxor_mask32
@@ -320,7 +320,7 @@ __mmask64 test_kxor_mask64(__mmask64 A, __mmask64 B) {
   // CIR-LABEL: _kxor_mask64
   // CIR: cir.cast bitcast {{.*}} : !u64i -> !cir.vector<64 x !cir.int<s, 1>>
   // CIR: cir.cast bitcast {{.*}} : !u64i -> !cir.vector<64 x !cir.int<s, 1>>
-  // CIR: cir.binop(xor, {{.*}}, {{.*}}) : !cir.vector<64 x !cir.int<s, 1>>
+  // CIR: cir.xor {{.*}}, {{.*}} : !cir.vector<64 x !cir.int<s, 1>>
   // CIR: cir.cast bitcast {{.*}} : !cir.vector<64 x !cir.int<s, 1>> -> !u64i
 
   // LLVM-LABEL: _kxor_mask64
@@ -342,7 +342,7 @@ __mmask32 test_kxnor_mask32(__mmask32 A, __mmask32 B) {
   // CIR: cir.cast bitcast {{.*}} : !u32i -> !cir.vector<32 x !cir.int<s, 1>>
   // CIR: cir.cast bitcast {{.*}} : !u32i -> !cir.vector<32 x !cir.int<s, 1>>
   // CIR: cir.unary(not, {{.*}}) : !cir.vector<32 x !cir.int<s, 1>>
-  // CIR: cir.binop(xor, {{.*}}, {{.*}}) : !cir.vector<32 x !cir.int<s, 1>>
+  // CIR: cir.xor {{.*}}, {{.*}} : !cir.vector<32 x !cir.int<s, 1>>
   // CIR: cir.cast bitcast {{.*}} : !cir.vector<32 x !cir.int<s, 1>> -> !u32i
 
   // LLVM-LABEL: _kxnor_mask32
@@ -367,7 +367,7 @@ __mmask64 test_kxnor_mask64(__mmask64 A, __mmask64 B) {
   // CIR: cir.cast bitcast {{.*}} : !u64i -> !cir.vector<64 x !cir.int<s, 1>>
   // CIR: cir.cast bitcast {{.*}} : !u64i -> !cir.vector<64 x !cir.int<s, 1>>
   // CIR: cir.unary(not, {{.*}}) : !cir.vector<64 x !cir.int<s, 1>>
-  // CIR: cir.binop(xor, {{.*}}, {{.*}}) : !cir.vector<64 x !cir.int<s, 1>>
+  // CIR: cir.xor {{.*}}, {{.*}} : !cir.vector<64 x !cir.int<s, 1>>
   // CIR: cir.cast bitcast {{.*}} : !cir.vector<64 x !cir.int<s, 1>> -> !u64i
 
   // LLVM-LABEL: _kxnor_mask64
@@ -553,7 +553,7 @@ unsigned char test_kortestc_mask32_u8(__mmask32 __A, __mmask32 __B) {
   // CIR: %[[ALL_ONES:.*]] = cir.const #cir.int<4294967295> : !u32i
   // CIR: %[[LHS:.*]] = cir.cast bitcast {{.*}} : !u32i -> !cir.vector<32 x !cir.int<s, 1>>
   // CIR: %[[RHS:.*]] = cir.cast bitcast {{.*}} : !u32i -> !cir.vector<32 x !cir.int<s, 1>>
-  // CIR: %[[OR:.*]]  = cir.binop(or, %[[LHS]], %[[RHS]]) : !cir.vector<32 x !cir.int<s, 1>>
+  // CIR: %[[OR:.*]]  = cir.or %[[LHS]], %[[RHS]] : !cir.vector<32 x !cir.int<s, 1>>
   // CIR: %[[OR_INT:.*]] = cir.cast bitcast %[[OR]] : !cir.vector<32 x !cir.int<s, 1>> -> !u32i
   // CIR: %[[CMP:.*]] = cir.cmp(eq, %[[OR_INT]], %[[ALL_ONES]]) : !u32i, !cir.bool
   // CIR: %[[B2I:.*]] = cir.cast bool_to_int %[[CMP]] : !cir.bool -> !s32i
@@ -584,7 +584,7 @@ unsigned char test_kortestc_mask64_u8(__mmask64 __A, __mmask64 __B) {
   // CIR: %[[ALL_ONES:.*]] = cir.const #cir.int<18446744073709551615> : !u64i
   // CIR: %[[LHS:.*]] = cir.cast bitcast {{.*}} : !u64i -> !cir.vector<64 x !cir.int<s, 1>>
   // CIR: %[[RHS:.*]] = cir.cast bitcast {{.*}} : !u64i -> !cir.vector<64 x !cir.int<s, 1>>
-  // CIR: %[[OR:.*]]  = cir.binop(or, %[[LHS]], %[[RHS]]) : !cir.vector<64 x !cir.int<s, 1>>
+  // CIR: %[[OR:.*]]  = cir.or %[[LHS]], %[[RHS]] : !cir.vector<64 x !cir.int<s, 1>>
   // CIR: %[[OR_INT:.*]] = cir.cast bitcast %[[OR]] : !cir.vector<64 x !cir.int<s, 1>> -> !u64i
   // CIR: %[[CMP:.*]] = cir.cmp(eq, %[[OR_INT]], %[[ALL_ONES]]) : !u64i, !cir.bool
   // CIR: %[[B2I:.*]] = cir.cast bool_to_int %[[CMP]] : !cir.bool -> !s32i
@@ -615,7 +615,7 @@ unsigned char test_kortestz_mask32_u8(__mmask32 __A, __mmask32 __B) {
   // CIR: %[[ZERO:.*]] = cir.const #cir.int<0> : !u32i
   // CIR: %[[LHS:.*]] = cir.cast bitcast {{.*}} : !u32i -> !cir.vector<32 x !cir.int<s, 1>>
   // CIR: %[[RHS:.*]] = cir.cast bitcast {{.*}} : !u32i -> !cir.vector<32 x !cir.int<s, 1>>
-  // CIR: %[[OR:.*]]  = cir.binop(or, %[[LHS]], %[[RHS]]) : !cir.vector<32 x !cir.int<s, 1>>
+  // CIR: %[[OR:.*]]  = cir.or %[[LHS]], %[[RHS]] : !cir.vector<32 x !cir.int<s, 1>>
   // CIR: %[[OR_INT:.*]] = cir.cast bitcast %[[OR]] : !cir.vector<32 x !cir.int<s, 1>> -> !u32i
   // CIR: %[[CMP:.*]] = cir.cmp(eq, %[[OR_INT]], %[[ZERO]]) : !u32i, !cir.bool
   // CIR: %[[B2I:.*]] = cir.cast bool_to_int %[[CMP]] : !cir.bool -> !s32i
@@ -646,7 +646,7 @@ unsigned char test_kortestz_mask64_u8(__mmask64 __A, __mmask64 __B) {
   // CIR: %[[ZERO:.*]] = cir.const #cir.int<0> : !u64i
   // CIR: %[[LHS:.*]] = cir.cast bitcast {{.*}} : !u64i -> !cir.vector<64 x !cir.int<s, 1>>
   // CIR: %[[RHS:.*]] = cir.cast bitcast {{.*}} : !u64i -> !cir.vector<64 x !cir.int<s, 1>>
-  // CIR: %[[OR:.*]]  = cir.binop(or, %[[LHS]], %[[RHS]]) : !cir.vector<64 x !cir.int<s, 1>>
+  // CIR: %[[OR:.*]]  = cir.or %[[LHS]], %[[RHS]] : !cir.vector<64 x !cir.int<s, 1>>
   // CIR: %[[OR_INT:.*]] = cir.cast bitcast %[[OR]] : !cir.vector<64 x !cir.int<s, 1>> -> !u64i
   // CIR: %[[CMP:.*]] = cir.cmp(eq, %[[OR_INT]], %[[ZERO]]) : !u64i, !cir.bool
   // CIR: %[[B2I:.*]] = cir.cast bool_to_int %[[CMP]] : !cir.bool -> !s32i

@@ -2357,6 +2357,36 @@ cc_binary(
     ],
 )
 
+gentbl_cc_library(
+    name = "nvlink_wrapper_opts_gen",
+    strip_include_prefix = "tools/clang-nvlink-wrapper",
+    tbl_outs = {"tools/clang-nvlink-wrapper/NVLinkOpts.inc": ["-gen-opt-parser-defs"]},
+    tblgen = "//llvm:llvm-tblgen",
+    td_file = "tools/clang-nvlink-wrapper/NVLinkOpts.td",
+    deps = ["//llvm:OptParserTdFiles"],
+)
+
+cc_binary(
+    name = "clang-nvlink-wrapper",
+    srcs = glob(["tools/clang-nvlink-wrapper/*.cpp"]),
+    stamp = 0,
+    deps = [
+        ":basic",
+        ":driver",
+        ":nvlink_wrapper_opts_gen",
+        ":tooling",
+        "//llvm:BinaryFormat",
+        "//llvm:BitWriter",
+        "//llvm:CodeGen",
+        "//llvm:Core",
+        "//llvm:LTO",
+        "//llvm:Object",
+        "//llvm:Option",
+        "//llvm:Remarks",
+        "//llvm:Support",
+    ],
+)
+
 cc_binary(
     name = "clang-offload-bundler",
     srcs = glob(["tools/clang-offload-bundler/*.cpp"]),

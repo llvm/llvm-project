@@ -1288,6 +1288,24 @@ LoopBlockTerminatorOp::getMutableSuccessorOperands(RegionSuccessor successor) {
 }
 
 //===----------------------------------------------------------------------===//
+// TestCrashingReturnOp
+//===----------------------------------------------------------------------===//
+
+LogicalResult TestCrashingReturnOp::verify() {
+  if (!getValid())
+    return emitOpError("requires 'valid' unit attribute");
+  return success();
+}
+
+MutableOperandRange
+TestCrashingReturnOp::getMutableSuccessorOperands(RegionSuccessor successor) {
+  if (!getValid())
+    llvm::report_fatal_error("getMutableSuccessorOperands called on unverified "
+                             "test.crashing_return");
+  return getArgsMutable();
+}
+
+//===----------------------------------------------------------------------===//
 // SwitchWithNoBreakOp
 //===----------------------------------------------------------------------===//
 

@@ -36,8 +36,11 @@ bool DirectXTTIImpl::isTargetIntrinsicWithOverloadTypeAtArg(Intrinsic::ID ID,
   case Intrinsic::dx_isnan:
   case Intrinsic::dx_legacyf16tof32:
   case Intrinsic::dx_legacyf32tof16:
+  case Intrinsic::dx_wave_all_equal:
     return OpdIdx == 0;
   default:
+    // All DX intrinsics are overloaded on return type unless specified
+    // otherwise
     return OpdIdx == -1;
   }
 }
@@ -57,6 +60,7 @@ bool DirectXTTIImpl::isTargetIntrinsicTriviallyScalarizable(
   case Intrinsic::dx_rsqrt:
   case Intrinsic::dx_saturate:
   case Intrinsic::dx_splitdouble:
+  case Intrinsic::dx_wave_all_equal:
   case Intrinsic::dx_wave_readlane:
   case Intrinsic::dx_wave_reduce_max:
   case Intrinsic::dx_wave_reduce_min:

@@ -34,5 +34,6 @@ static_library("performance") {
     "TypePromotionInMathFnCheck.cpp",
     "UnnecessaryCopyInitializationCheck.cpp",
     "UnnecessaryValueParamCheck.cpp",
+    "UseStdMoveCheck.cpp",
   ]
 }

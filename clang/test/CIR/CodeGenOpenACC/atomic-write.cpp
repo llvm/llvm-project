@@ -22,7 +22,7 @@ void use(int x, unsigned int y, float f, ConvertsToScalar cts) {
   // CHECK-NEXT: %[[Y_LOAD:.*]] = cir.load {{.*}}%[[Y_ALLOC]] : !cir.ptr<!u32i>, !u32i
   // CHECK-NEXT: %[[Y_TO_FLOAT:.*]] = cir.cast int_to_float %[[Y_LOAD]] : !u32i -> !cir.float
   // CHECK-NEXT: %[[F_LOAD:.*]] = cir.load {{.*}}%[[F_ALLOC]] : !cir.ptr<!cir.float>, !cir.float
-  // CHECK-NEXT: %[[MUL:.*]] = cir.binop(mul, %[[Y_TO_FLOAT]], %[[F_LOAD]]) : !cir.float
+  // CHECK-NEXT: %[[MUL:.*]] = cir.mul %[[Y_TO_FLOAT]], %[[F_LOAD]] : !cir.float
   // CHECK-NEXT: %[[RHS_CAST:.*]] = cir.cast float_to_int %[[MUL]] : !cir.float -> !s32i
   // CHECK-NEXT: acc.atomic.write %[[X_ALLOC]] = %[[RHS_CAST]] : !cir.ptr<!s32i>, !s32i
 #pragma acc atomic write

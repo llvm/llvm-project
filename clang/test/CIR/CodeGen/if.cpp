@@ -271,14 +271,14 @@ int if_init() {
 // CIR:   cir.if %[[COND]] {
 // CIR:     %[[X_IF:.*]] = cir.load{{.*}} %[[X]] : !cir.ptr<!s32i>, !s32i
 // CIR:     %[[ONE:.*]] = cir.const #cir.int<1> : !s32i
-// CIR:     %[[ADD:.*]] = cir.binop(add, %[[X_IF]], %[[ONE]]) nsw : !s32i
+// CIR:     %[[ADD:.*]] = cir.add nsw %[[X_IF]], %[[ONE]] : !s32i
 // CIR:     cir.store{{.*}} %[[ADD]], %[[RETVAL]] : !s32i, !cir.ptr<!s32i>
 // CIR:     %[[RETVAL_LOAD1:.*]] = cir.load{{.*}} %[[RETVAL]] : !cir.ptr<!s32i>, !s32i
 // CIR:     cir.return %[[RETVAL_LOAD1]] : !s32i
 // CIR:   } else {
 // CIR:     %[[X_ELSE:.*]] = cir.load{{.*}} %[[X]] : !cir.ptr<!s32i>, !s32i
 // CIR:     %[[ONE2:.*]] = cir.const #cir.int<1> : !s32i
-// CIR:     %[[SUB:.*]] = cir.binop(sub, %[[X_ELSE]], %[[ONE2]]) nsw : !s32i
+// CIR:     %[[SUB:.*]] = cir.sub nsw %[[X_ELSE]], %[[ONE2]] : !s32i
 // CIR:     cir.store{{.*}} %[[SUB]], %[[RETVAL]] : !s32i, !cir.ptr<!s32i>
 // CIR:     %[[RETVAL_LOAD2:.*]] = cir.load{{.*}} %[[RETVAL]] : !cir.ptr<!s32i>, !s32i
 // CIR:     cir.return %[[RETVAL_LOAD2]] : !s32i

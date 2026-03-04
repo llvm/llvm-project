@@ -15,6 +15,8 @@ BinaryOpKind GetBinaryOpKindFromToken(Token::Kind token_kind) {
   switch (token_kind) {
   case Token::plus:
     return BinaryOpKind::Add;
+  case Token::minus:
+    return BinaryOpKind::Sub;
   default:
     break;
   }

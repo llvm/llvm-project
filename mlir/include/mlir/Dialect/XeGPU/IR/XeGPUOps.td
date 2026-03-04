@@ -1539,9 +1539,7 @@ def XeGPU_ConvertLayoutOp: XeGPU_Op<"convert_layout", [Pure, AllTypesMatch<["sou
 
     }];
 
-    let hasFolder = 1;
     let hasVerifier = 1;
-    let hasCanonicalizer = 1;
 }
 
 class SizeInBits<string name> :

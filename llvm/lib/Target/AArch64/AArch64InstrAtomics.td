@@ -577,10 +577,10 @@ let Predicates = [HasRCPC3, HasNEON] in {
   def : Pat<(vector_insert (v2f64 VecListOne128:$Rd),
                 (f64 (bitconvert (i64 (acquiring_load<atomic_load_nonext_64> GPR64sp:$Rn)))), (i64 VectorIndexD:$idx)),
             (LDAP1 VecListOne128:$Rd, VectorIndexD:$idx, GPR64sp:$Rn)>;
-  def : Pat<(v1i64 (scalar_to_vector
+  def : Pat<(v1i64 (scalar_to_vector_v1f64
                 (i64 (acquiring_load<atomic_load_nonext_64> GPR64sp:$Rn)))),
             (EXTRACT_SUBREG (LDAP1 (v2i64 (IMPLICIT_DEF)), (i64 0), GPR64sp:$Rn), dsub)>;
-  def : Pat<(v1f64 (scalar_to_vector
+  def : Pat<(v1f64 (scalar_to_vector_v1f64
                 (f64 (bitconvert (i64 (acquiring_load<atomic_load_nonext_64> GPR64sp:$Rn)))))),
             (EXTRACT_SUBREG (LDAP1 (v2f64 (IMPLICIT_DEF)), (i64 0), GPR64sp:$Rn), dsub)>;
 

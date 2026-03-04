@@ -19,7 +19,7 @@ template <typename T> void summable(T a) {
 // CIR:     %[[B_ADDR:.*]] = cir.alloca !s32i, !cir.ptr<!s32i>, ["b", init]
 // CIR:     %[[TMP_A_1:.*]] = cir.load {{.*}} %[[A_ADDR]] : !cir.ptr<!s32i>, !s32i
 // CIR:     %[[TMP_A_2:.*]] = cir.load {{.*}} %[[A_ADDR]] : !cir.ptr<!s32i>, !s32i
-// CIR:     %[[RESULT:.*]] = cir.binop(add, %[[TMP_A_1]], %[[TMP_A_2]]) nsw : !s32i
+// CIR:     %[[RESULT:.*]] = cir.add nsw %[[TMP_A_1]], %[[TMP_A_2]] : !s32i
 // CIR:     cir.store {{.*}} %[[RESULT]], %[[B_ADDR]] : !s32i, !cir.ptr<!s32i>
 // CIR:   }
 // CIR: }

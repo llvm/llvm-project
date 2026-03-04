@@ -1,4 +1,4 @@
-//===- FoldSubviewOps.cpp - AMDGPU fold subview ops -----------------------===//
+//===- FoldMemRefsOps.cpp - AMDGPU fold memref ops ------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -92,10 +92,48 @@ struct FoldMemRefOpsIntoGatherToLDSOp final : OpRewritePattern<GatherToLDSOp> {
       destIndices = op.getDstIndices();
     }
 
+    if (failed(foldSrcResult) && failed(foldDstResult))
+      return rewriter.notifyMatchFailure(op, "no fold found");
+
     rewriter.replaceOpWithNewOp<GatherToLDSOp>(
         op, memrefSource, sourceIndices, memrefDest, destIndices,
         op.getTransferType(), op.getAsync());
 
+    return success();
+  }
+};
+
+template <typename OpTy>
+struct FoldMemRefOpsIntoDmaBaseOp final : OpRewritePattern<OpTy> {
+  using OpRewritePattern<OpTy>::OpRewritePattern;
+  LogicalResult matchAndRewrite(OpTy op,
+                                PatternRewriter &rewriter) const override {
+    Location loc = op.getLoc();
+
+    SmallVector<Value> globalIndices, ldsIndices;
+    Value globalBase, ldsBase;
+
+    LogicalResult didFoldGlobal =
+        foldMemrefViewOp(rewriter, loc, op.getGlobal(), op.getGlobalIndices(),
+                         globalIndices, globalBase, "global");
+    if (failed(didFoldGlobal)) {
+      globalBase = op.getGlobal();
+      globalIndices = op.getGlobalIndices();
+    }
+
+    LogicalResult didFoldLds =
+        foldMemrefViewOp(rewriter, loc, op.getLds(), op.getLdsIndices(),
+                         ldsIndices, ldsBase, "lds");
+    if (failed(didFoldLds)) {
+      ldsBase = op.getLds();
+      ldsIndices = op.getLdsIndices();
+    }
+
+    if (failed(didFoldGlobal) && failed(didFoldLds))
+      return rewriter.notifyMatchFailure(op, "no fold found");
+
+    rewriter.replaceOpWithNewOp<OpTy>(op, op.getBase().getType(), globalBase,
+                                      globalIndices, ldsBase, ldsIndices);
     return success();
   }
 };
@@ -121,8 +159,10 @@ struct FoldMemRefOpsIntoTransposeLoadOp final
 
 void populateAmdgpuFoldMemRefOpsPatterns(RewritePatternSet &patterns,
                                          PatternBenefit benefit) {
-  patterns
-      .add<FoldMemRefOpsIntoGatherToLDSOp, FoldMemRefOpsIntoTransposeLoadOp>(
-          patterns.getContext(), benefit);
+  patterns.add<FoldMemRefOpsIntoGatherToLDSOp,
+               FoldMemRefOpsIntoDmaBaseOp<MakeDmaBaseOp>,
+               FoldMemRefOpsIntoDmaBaseOp<MakeGatherDmaBaseOp>,
+               FoldMemRefOpsIntoTransposeLoadOp>(patterns.getContext(),
+                                                 benefit);
 }
 } // namespace mlir::amdgpu

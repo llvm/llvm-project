@@ -87,6 +87,10 @@ public:
 
   void render(llvm::json::Value &V, raw_ostream &OS) { T.render(V, OS); }
 
+  void setEscapeCharacters(const llvm::DenseMap<char, std::string> Characters) {
+    T.overrideEscapeCharacters(Characters);
+  }
+
   MustacheTemplateFile(std::unique_ptr<llvm::MemoryBuffer> &&B)
       : Saver(Allocator), Ctx(Allocator, Saver), T(B->getBuffer(), Ctx),
         Buffer(std::move(B)) {}
@@ -138,6 +142,7 @@ extern volatile int YAMLGeneratorAnchorSource;
 extern volatile int MDGeneratorAnchorSource;
 extern volatile int HTMLGeneratorAnchorSource;
 extern volatile int JSONGeneratorAnchorSource;
+extern volatile int MDMustacheGeneratorAnchorSource;
 
 } // namespace doc
 } // namespace clang

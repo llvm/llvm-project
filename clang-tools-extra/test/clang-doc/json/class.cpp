@@ -142,7 +142,6 @@ private:
 // CHECK-NEXT:          ],
 // CHECK-NEXT:          "VerticalDisplay": false
 // CHECK-NEXT:        }
-// CHECK-NEXT:        "USR": "0000000000000000000000000000000000000000"
 // CHECK-NEXT:      },
 // CHECK-NEXT:      {
 // CHECK-NEXT:        "Description": {
@@ -164,12 +163,12 @@ private:
 // CHECK-NEXT:          "QualName": "Foo",
 // CHECK-NEXT:          "USR": "{{[0-9A-F]*}}"
 // CHECK-NEXT:        }
-// CHECK-NEXT:        "USR": "0000000000000000000000000000000000000000"
 // CHECK-NEXT:      }
 // CHECK-NEXT:    ],
 // CHECK-NEXT:    "HasContexts": true,
 // CHECK-NEXT:    "HasEnums": true,
 // CHECK-NEXT:    "HasFriends": true,
+// CHECK-NEXT:    "HasMembers": true,
 // CHECK-NEXT:    "HasPrivateMembers": true,
 // CHECK-NEXT:    "HasProtectedMembers": true,
 // CHECK-NEXT:    "HasProtectedMethods": true,

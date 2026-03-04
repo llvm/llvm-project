@@ -486,9 +486,6 @@ static uint32_t g_d31_invalidates[] = {fpu_v31, fpu_s31, LLDB_INVALID_REGNUM};
 // Generates register kinds array for vector registers
 #define GPR64_KIND(reg, generic_kind) MISC_KIND(reg, gpr, generic_kind)
 #define VREG_KIND(reg) MISC_KIND(reg, fpu, LLDB_INVALID_REGNUM)
-#define MISC_GPR_KIND(lldb_kind) MISC_KIND(cpsr, gpr, LLDB_REGNUM_GENERIC_FLAGS)
-#define MISC_FPU_KIND(lldb_kind) LLDB_KIND(lldb_kind)
-#define MISC_EXC_KIND(lldb_kind) LLDB_KIND(lldb_kind)
 
 // Defines a 64-bit general purpose register
 #define DEFINE_GPR64(reg, generic_kind)                                        \
@@ -535,6 +532,15 @@ static uint32_t g_d31_invalidates[] = {fpu_v31, fpu_s31, LLDB_INVALID_REGNUM};
   {                                                                            \
     #reg, nullptr, size, TYPE##_OFFSET_NAME(reg), lldb::eEncodingUint,         \
         lldb::eFormatHex, MISC_##TYPE##_KIND(lldb_kind), nullptr, nullptr,     \
+        nullptr,                                                               \
+  }
+
+// Defines miscellaneous status and control registers like cpsr, fpsr etc
+// that have no DWARF/eh_frame register numbers.
+#define DEFINE_MISC_LLDB_REGS(reg, size, TYPE, lldb_kind)                           \
+  {                                                                            \
+    #reg, nullptr, size, TYPE##_OFFSET_NAME(reg), lldb::eEncodingUint,         \
+        lldb::eFormatHex, LLDB_KIND(lldb_kind), nullptr, nullptr,     \
         nullptr,                                                               \
   }
 
@@ -588,8 +594,8 @@ static lldb_private::RegisterInfo g_register_infos_arm64_le[] = {
     DEFINE_GPR64_ALT(sp, x31, LLDB_REGNUM_GENERIC_SP),
     DEFINE_GPR64(pc, LLDB_REGNUM_GENERIC_PC),
 
-    // DEFINE_MISC_REGS(name, size, TYPE, lldb kind)
-    DEFINE_MISC_REGS(cpsr, 4, GPR, gpr_cpsr),
+    // DEFINE_MISC_LLDB_REGS(name, size, TYPE, lldb kind)
+    DEFINE_MISC_LLDB_REGS(cpsr, 4, GPR, gpr_cpsr),
 
     // DEFINE_GPR32(name, parent name)
     DEFINE_GPR32(w0, x0),
@@ -723,12 +729,12 @@ static lldb_private::RegisterInfo g_register_infos_arm64_le[] = {
     DEFINE_FPU_PSEUDO(d30, 8, FPU_D_PSEUDO_REG_ENDIAN_OFFSET, v30),
     DEFINE_FPU_PSEUDO(d31, 8, FPU_D_PSEUDO_REG_ENDIAN_OFFSET, v31),
 
-    // DEFINE_MISC_REGS(name, size, TYPE, lldb kind)
-    DEFINE_MISC_REGS(fpsr, 4, FPU, fpu_fpsr),
-    DEFINE_MISC_REGS(fpcr, 4, FPU, fpu_fpcr),
-    DEFINE_MISC_REGS(far, 8, EXC, exc_far),
-    DEFINE_MISC_REGS(esr, 4, EXC, exc_esr),
-    DEFINE_MISC_REGS(exception, 4, EXC, exc_exception),
+    // DEFINE_MISC_LLDB_REGS(name, size, TYPE, lldb kind)
+    DEFINE_MISC_LLDB_REGS(fpsr, 4, FPU, fpu_fpsr),
+    DEFINE_MISC_LLDB_REGS(fpcr, 4, FPU, fpu_fpcr),
+    DEFINE_MISC_LLDB_REGS(far, 8, EXC, exc_far),
+    DEFINE_MISC_LLDB_REGS(esr, 4, EXC, exc_esr),
+    DEFINE_MISC_LLDB_REGS(exception, 4, EXC, exc_exception),
 
     {DEFINE_DBG(bvr, 0)},
     {DEFINE_DBG(bvr, 1)},

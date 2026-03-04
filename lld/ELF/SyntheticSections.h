@@ -1245,45 +1245,6 @@ private:
   size_t size = 0;
 };
 
-// Cortex-M Security Extensions. Prefix for functions that should be exported
-// for the non-secure world.
-const char ACLESESYM_PREFIX[] = "__acle_se_";
-const int ACLESESYM_SIZE = 8;
-
-class ArmCmseSGVeneer {
-public:
-  ArmCmseSGVeneer(Symbol *sym, Symbol *acleSeSym,
-                  std::optional<uint64_t> addr = std::nullopt)
-      : sym(sym), acleSeSym(acleSeSym), entAddr{addr} {}
-  static const size_t size{ACLESESYM_SIZE};
-  std::optional<uint64_t> getAddr() const { return entAddr; };
-
-  Symbol *sym;
-  Symbol *acleSeSym;
-  uint64_t offset = 0;
-
-private:
-  const std::optional<uint64_t> entAddr;
-};
-
-class ArmCmseSGSection final : public SyntheticSection {
-public:
-  ArmCmseSGSection(Ctx &ctx);
-  bool isNeeded() const override { return !entries.empty(); }
-  size_t getSize() const override;
-  void writeTo(uint8_t *buf) override;
-  void addSGVeneer(Symbol *sym, Symbol *ext_sym);
-  void addMappingSymbol();
-  void finalizeContents() override;
-  void exportEntries(SymbolTableBaseSection *symTab);
-  uint64_t impLibMaxAddr = 0;
-
-private:
-  SmallVector<std::pair<Symbol *, Symbol *>, 0> entries;
-  SmallVector<std::unique_ptr<ArmCmseSGVeneer>, 0> sgVeneers;
-  uint64_t newEntries = 0;
-};
-
 // This section is used to store the addresses of functions that are called
 // in range-extending thunks on PowerPC64. When producing position dependent
 // code the addresses are link-time constants and the table is written out to

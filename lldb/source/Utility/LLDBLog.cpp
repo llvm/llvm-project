@@ -84,8 +84,6 @@ template <> Log::Channel &lldb_private::LogChannelFor<LLDBLog>() {
   return g_log_channel;
 }
 
-void lldb_private::InitializeLLDBChannel() {
-  Log::Register("lldb", g_log_channel);
-}
+void LLDBLogChannel::Initialize() { Log::Register("lldb", g_log_channel); }
 
-void lldb_private::TerminateLLDBChannel() { Log::Unregister("lldb"); }
+void LLDBLogChannel::Terminate() { Log::Unregister("lldb"); }

@@ -42,13 +42,14 @@ void CommandObjectApropos::DoExecute(Args &args, CommandReturnObject &result) {
           search_word, commands_found, commands_help, true, true, true, true);
 
       if (commands_found.GetSize() == 0) {
-        result.AppendMessageWithFormat("No commands found pertaining to '%s'. "
-                                       "Try 'help' to see a complete list of "
-                                       "debugger commands.\n",
-                                       args[0].c_str());
+        result.AppendMessageWithFormatv(
+            "No commands found pertaining to '{0}'. "
+            "Try 'help' to see a complete list of "
+            "debugger commands.",
+            args[0].c_str());
       } else {
-        result.AppendMessageWithFormat(
-            "The following commands may relate to '%s':\n", args[0].c_str());
+        result.AppendMessageWithFormatv(
+            "The following commands may relate to '{0}':", args[0].c_str());
         const size_t commands_max_len = commands_found.GetMaxStringLength();
         for (size_t i = 0; i < commands_found.GetSize(); ++i)
           m_interpreter.OutputFormattedHelpText(
@@ -70,10 +71,10 @@ void CommandObjectApropos::DoExecute(Args &args, CommandReturnObject &result) {
       }
 
       if (num_properties == 0) {
-        result.AppendMessageWithFormat(
-            "No settings found pertaining to '%s'. "
+        result.AppendMessageWithFormatv(
+            "No settings found pertaining to '{0}'. "
             "Try 'settings show' to see a complete list of "
-            "debugger settings.\n",
+            "debugger settings.",
             args[0].c_str());
 
       } else {

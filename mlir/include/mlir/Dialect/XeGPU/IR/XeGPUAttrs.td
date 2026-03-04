@@ -217,6 +217,9 @@ def DistributeLayoutAttr: AttrInterface<"DistributeLayoutAttr"> {
     InterfaceMethod<"Get the effective LaneData of the layout attribute as integer array",
                     "SmallVector<int64_t>",
                     "getEffectiveLaneDataAsInt">,
+    InterfaceMethod<"Get the effective order of the layout attribute as integer array",
+                    "SmallVector<int64_t>",
+                    "getEffectiveOrderAsInt">,
     InterfaceMethod<"Derive a new layout by dropping sgLayout and sgData",
                     "xegpu::DistributeLayoutAttr",
                     "dropSgLayoutAndData">,
@@ -236,15 +239,15 @@ def DistributeLayoutAttr: AttrInterface<"DistributeLayoutAttr"> {
                     "FailureOr<SmallVector<Value>>",
                     "delinearizeId",
                     (ins "OpBuilder &": $builder, "Location":$loc, "Value":$linearId)>,
-    InterfaceMethod<[{Derive a new layout with sg_data, inst_data and lane_data set to the 
-                      specified values for the given dimension. Passing -1 for any parameter 
+    InterfaceMethod<[{Derive a new layout with sg_data, inst_data and lane_data set to the
+                      specified values for the given dimension. Passing -1 for any parameter
                       preserves its original value.}],
                     "xegpu::DistributeLayoutAttr",
                     "setDimData",
                     (ins "int64_t": $dim,
                           "int64_t": $sgData,
                           "int64_t": $instData,
-                          "int64_t": $laneData)>,              
+                          "int64_t": $laneData)>,
     InterfaceMethod<[{Derive a new layout by collapsing dimensions.
                       `dimGroup` specifies a group of adjacent dimensions that are collapsed into
                        a single dimension in the derived layout.}],
@@ -297,13 +300,10 @@ def DistributeLayoutAttr: AttrInterface<"DistributeLayoutAttr"> {
                       // Check laneData
                       if (!checkTranspose($_self.getEffectiveLaneDataAsInt(), other.getEffectiveLaneDataAsInt(), perm))
                         return false;
-                      // Check order if both sides have order field.
-                      if ($_self.getOrder() && other.getOrder()) {
-                        auto thisOrderAsInt = llvm::to_vector_of<int64_t>($_self.getOrder().asArrayRef());
-                        auto otherOrderAsInt = llvm::to_vector_of<int64_t>(other.getOrder().asArrayRef());
-                        if (!checkTranspose(thisOrderAsInt, otherOrderAsInt, perm))
-                          return false;
-                      }
+                      // Check order
+                      if (!checkTranspose($_self.getEffectiveOrderAsInt(), other.getEffectiveOrderAsInt(), perm))
+                        return false;
+
                       return true;
                     }]>,
     InterfaceMethod</*desc=*/[{Check if this layout is a slice of another layout.}],
@@ -484,7 +484,7 @@ def XeGPU_LayoutAttr : XeGPUAttr<"Layout", "layout", [DistributeLayoutAttr]> {
       return !isForWorkgroup();
     }
 
-    int64_t getRank() {
+    int64_t getRank() const {
       if (auto attr = getSgLayout())
         return attr.size();
       if (auto attr = getInstData())
@@ -540,14 +540,25 @@ def XeGPU_LayoutAttr : XeGPUAttr<"Layout", "layout", [DistributeLayoutAttr]> {
       return {};
     }
 
+    // Returns the order as integers. If order is not set, returns the default
+    // value [rank-1, ..., 0] (row-major, last dim is fastest).
+    SmallVector<int64_t> getEffectiveOrderAsInt() const {
+      if (DenseI32ArrayAttr order = getOrder())
+        return llvm::to_vector_of<int64_t>(order.asArrayRef());
+      int64_t rank = getRank();
+      SmallVector<int64_t> defaultOrder(rank);
+      std::iota(defaultOrder.rbegin(), defaultOrder.rend(), 0);
+      return defaultOrder;
+    }
+
     //set the layout for the sepcified unit dims: sg_data, inst_data and lane_data to 1
     DistributeLayoutAttr setUnitDimData(SmallVector<int64_t> unitDims) const;
 
     //set the layout for the sepcified unit dims: sg_lane and lane_layout to 1
     DistributeLayoutAttr setUnitDimLayout(SmallVector<int64_t> unitDims) const;
 
-    // Derive a new layout with sg_data, inst_data and lane_data set to the 
-    // specified values for the given dimension. Passing -1 for any parameter 
+    // Derive a new layout with sg_data, inst_data and lane_data set to the
+    // specified values for the given dimension. Passing -1 for any parameter
     // preserves its original value.
     DistributeLayoutAttr setDimData(int64_t dim, int64_t sgData, int64_t instData, int64_t laneData);
 
@@ -702,6 +713,26 @@ def XeGPU_SliceAttr : XeGPUAttr<"Slice", "slice", [DistributeLayoutAttr]> {
       return {};
     }
 
+    /// Returns the effective order of the attribute. The parent's effective
+    /// order (or default [rank-1,...,0]) is filtered by removing entries that
+    /// correspond to sliced dimensions, then renumbered to form a valid
+    /// permutation over the remaining dimensions.
+    /// Example: parent order = [2, 0, 1, 3], slice dims = [0, 2] -> result = [1, 0]
+    SmallVector<int64_t> getEffectiveOrderAsInt() const {
+      SliceAttr attr = flatten();
+      auto parent = dyn_cast<LayoutAttr>(attr.getParent());
+      auto order = parent.getEffectiveOrderAsInt();
+      ArrayRef<int64_t> dims = attr.getDims().asArrayRef();
+      SmallVector<int64_t> result;
+      for (int64_t d : order) {
+        if (llvm::is_contained(dims, d))
+          continue;
+        int64_t offset = llvm::count_if(dims, [&](int64_t s) { return s < d; });
+        result.push_back(d - offset);
+      }
+      return result;
+    }
+
     SliceAttr dropSgLayoutAndData() const{
       SliceAttr attr = flatten();
       auto parent = dyn_cast<LayoutAttr>(attr.getParent());
@@ -726,8 +757,8 @@ def XeGPU_SliceAttr : XeGPUAttr<"Slice", "slice", [DistributeLayoutAttr]> {
     //set the layout for the sepcified unit dims: sg_lane and lane_layout to 1
     DistributeLayoutAttr setUnitDimLayout(SmallVector<int64_t> unitDims) const;
 
-    // Derive a new layout with sg_data, inst_data and lane_data set to the 
-    // specified values for the given dimension. Passing -1 for any parameter 
+    // Derive a new layout with sg_data, inst_data and lane_data set to the
+    // specified values for the given dimension. Passing -1 for any parameter
     // preserves its original value.
     DistributeLayoutAttr setDimData(int64_t dim, int64_t sgData, int64_t instData, int64_t laneData);
 

@@ -64,7 +64,6 @@ void buildGPUPassPipeline(OpPassManager &pm,
   xegpu::XeGPUPropagateLayoutOptions laneLayoutOptions;
   laneLayoutOptions.layoutKind = "lane";
   pm.addNestedPass<ModuleOp>(createCSEPass());
-  pm.addNestedPass<ModuleOp>(createGpuXeVMAttachTarget());
   if (options.xegpuOpLevel == "workgroup") {
     xegpu::XeGPUPropagateLayoutOptions sgLayoutOptions;
     sgLayoutOptions.layoutKind = "subgroup";

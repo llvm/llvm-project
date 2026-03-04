@@ -37,6 +37,9 @@ sslai a4, a5, 3
 # CHECK-ASM-AND-OBJ: pli.h a5, 16
 # CHECK-ASM: encoding: [0x9b,0x27,0x10,0xb0]
 pli.h a5, 16
+# CHECK-ASM-AND-OBJ: pli.h a5, -512
+# CHECK-ASM: encoding: [0x9b,0xa7,0x00,0xb0]
+pli.h a5, 65024
 # CHECK-ASM-AND-OBJ: pli.b a6, 16
 # CHECK-ASM: encoding: [0x1b,0x28,0x10,0xb4]
 pli.b a6, 16
@@ -660,6 +663,9 @@ wslai t1, a2, 63
 # CHECK-ASM-AND-OBJ: pli.dh a4, 16
 # CHECK-ASM: encoding: [0x1b,0x27,0x10,0x30]
 pli.dh a4, 16
+# CHECK-ASM-AND-OBJ: pli.dh a4, -1
+# CHECK-ASM: encoding: [0x1b,0xa7,0xff,0x31]
+pli.dh a4, 65535
 # CHECK-ASM-AND-OBJ: pli.db a6, 16
 # CHECK-ASM: encoding: [0x1b,0x28,0x10,0x34]
 pli.db a6, 16

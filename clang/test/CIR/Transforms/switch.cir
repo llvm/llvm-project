@@ -259,7 +259,7 @@ module {
 // CHECK-NEXT:    cir.br ^[[EPILOG]]
 // CHECK-NEXT:  ^[[JUDGE_RANGE]]:
 // CHECK-NEXT:     %[[LOWER_BOUND:[0-9]+]] = cir.const #cir.int<1>
-// CHECK-NEXT:     %[[DIFF:[0-9]+]] = cir.binop(sub, %[[X]], %[[LOWER_BOUND]])
+// CHECK-NEXT:     %[[DIFF:[0-9]+]] = cir.sub %[[X]], %[[LOWER_BOUND]]
 // CHECK-NEXT:     %[[U_DIFF:[0-9]+]] = cir.cast integral %[[DIFF]] : !s32i -> !u32i
 // CHECK-NEXT:     %[[RANGE:[0-9]+]] = cir.const #cir.int<99>
 // CHECK-NEXT:     %[[CMP_RESULT:[0-9]+]] = cir.cmp(le, %[[U_DIFF]], %[[RANGE]])
@@ -301,7 +301,7 @@ module {
 // CHECK:    cir.br ^bb[[#EXIT:]]
 // CHECK:  ^bb[[#RANGE_BR]]:  // pred: ^bb[[#BB2:]]
 // CHECK:    %[[CONST3:.*]] = cir.const #cir.int<3> : !s32i
-// CHECK:    %[[SUB:.*]] = cir.binop(sub, %[[COND]], %[[CONST3]]) : !s32i
+// CHECK:    %[[SUB:.*]] = cir.sub %[[COND]], %[[CONST3]] : !s32i
 // CHECK:    %[[CAST1:.*]] = cir.cast integral %[[SUB]] : !s32i -> !u32i
 // CHECK:    %[[CONST97:.*]] = cir.const #cir.int<97> : !u32i
 // CHECK:    %[[CMP:.*]] = cir.cmp(le, %[[CAST1]], %[[CONST97]]) : !u32i, !cir.bool

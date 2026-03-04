@@ -266,3 +266,329 @@ def DocABIGridSizeZ : Documentation {
 Returns the total grid size in the Z dimension.
 }];
 }
+
+//===----------------------------------------------------------------------===//
+// WMMA (Wave Matrix Multiply-Accumulate) Builtins
+//===----------------------------------------------------------------------===//
+
+def DocCatWMMA : DocumentationCategory<"WMMA (Wave Matrix Multiply-Accumulate) Builtins"> {
+  let Content = [{
+WMMA builtins perform wave-cooperative matrix multiply-accumulate of the form
+``D = A * B + C``. The work is distributed across all lanes in the wavefront.
+The ``_w32`` suffix indicates a wave32 variant, ``_w64`` for wave64.
+}];
+}
+
+//===----------------------------------------------------------------------===//
+// GFX11 WMMA — Documentation records
+//===----------------------------------------------------------------------===//
+
+def DocWMMAF32_16x16x16_GFX11 : Documentation {
+  let Category = DocCatWMMA;
+  let Content = [{
+Multiplies a 16x16 matrix ``A`` by a 16x16 matrix ``B`` (both f16 or bf16)
+and adds the 16x16 f32 accumulator ``C`` using fused multiply-add. Returns
+the f32 result matrix.
+
+On GFX11, the A and B input matrices require replication (full 256-bit
+operands): 2 copies for wave32, 4 copies for wave64. The total VGPR
+footprint is the same for both wave sizes.
+}];
+}
+
+def DocWMMAOpsel_16x16x16_GFX11 : Documentation {
+  let Category = DocCatWMMA;
+  let Content = [{
+Multiplies a 16x16 matrix ``A`` by a 16x16 matrix ``B`` and adds the
+accumulator ``C``, where all operands and the result are f16 or bf16.
+
+The ``opsel`` argument selects which 16-bit half of the accumulator
+registers to read from and write to. The content of the other 16-bit
+half is undefined.
+
+On GFX11, the A and B input matrices require replication (full 256-bit
+operands).
+}];
+}
+
+def DocWMMAOpselTied_16x16x16_GFX11 : Documentation {
+  let Category = DocCatWMMA;
+  let Content = [{
+Same as the non-tied f16/bf16 WMMA variant, but the destination register
+is tied to the input accumulator: the unselected 16-bit half is preserved
+from the input rather than being undefined.
+
+On GFX11, the A and B input matrices require replication (full 256-bit
+operands).
+}];
+}
+
+def DocWMMAIU_16x16x16_GFX11 : Documentation {
+  let Category = DocCatWMMA;
+  let Content = [{
+Integer wave matrix multiply-accumulate on packed 8-bit or 4-bit integer
+inputs. Multiplies a 16x16 matrix ``A`` by a 16x16 matrix ``B`` and adds
+the i32 accumulator ``C``.
+
+- ``a_sign`` / ``b_sign``: if true, the corresponding operand is treated
+  as signed; if false, as unsigned.
+- ``clamp``: if true, the result saturates instead of wrapping on overflow.
+
+On GFX11, the A and B input matrices require replication: 2 copies for
+wave32 and 4 copies for wave64. In the builtin API, IU8 A/B operands are
+128-bit and IU4 A/B operands are 64-bit.
+}];
+}
+
+//===----------------------------------------------------------------------===//
+// GFX12 WMMA — Documentation records
+//===----------------------------------------------------------------------===//
+
+def DocWMMAF32_16x16x16_GFX12 : Documentation {
+  let Category = DocCatWMMA;
+  let Content = [{
+Multiplies a 16x16 matrix ``A`` by a 16x16 matrix ``B`` (both f16 or bf16)
+and adds the 16x16 f32 accumulator ``C`` using fused multiply-add. Returns
+the f32 result matrix.
+
+Unlike the GFX11 variants, these GFX12 builtins do not require A/B matrix
+replication in their input arguments, so A/B vectors are smaller (128-bit
+for wave32 and 64-bit for wave64).
+}];
+}
+
+def DocWMMAHalf_16x16x16_GFX12 : Documentation {
+  let Category = DocCatWMMA;
+  let Content = [{
+Multiplies a 16x16 matrix ``A`` by a 16x16 matrix ``B`` and adds the
+accumulator ``C``, where all operands and the result are f16 or bf16.
+Returns the result matrix.
+
+On GFX12, the output always uses the low 16-bit half of the accumulator
+registers (the ``opsel`` bit is implicitly false). In these builtins,
+no explicit A/B matrix replication is required in the arguments.
+}];
+}
+
+def DocWMMAIU_16x16x16_GFX12 : Documentation {
+  let Category = DocCatWMMA;
+  let Content = [{
+Integer wave matrix multiply-accumulate on packed 8-bit or 4-bit integer
+inputs. Multiplies a 16x16 matrix ``A`` by a 16x16 matrix ``B`` and adds
+the i32 accumulator ``C``.
+
+- ``a_sign`` / ``b_sign``: if true, the corresponding operand is treated
+  as signed; if false, as unsigned.
+- ``clamp``: if true, the result saturates instead of wrapping on overflow.
+
+In these builtins, no explicit A/B matrix replication is required in the
+arguments.
+}];
+}
+
+def DocWMMAFP8_16x16x16_GFX12 : Documentation {
+  let Category = DocCatWMMA;
+  let Content = [{
+WMMA with 8-bit floating-point inputs (FP8 or BF8) and f32 result.
+Multiplies a 16x16 matrix ``A`` by a 16x16 matrix ``B`` and adds the f32
+accumulator ``C``.
+
+A and B contain packed 8-bit floats (4 values per 32-bit word). Since FP8
+and BF8 are not first-class LLVM types, the inputs are passed as integer
+vectors.
+}];
+}
+
+def DocWMMAIU4_16x16x32_GFX12 : Documentation {
+  let Category = DocCatWMMA;
+  let Content = [{
+Integer wave matrix multiply-accumulate on packed 4-bit integer inputs with
+a 32-deep K dimension (16x16x32). Multiplies a 16x32 matrix ``A`` by a
+32x16 matrix ``B`` and adds the i32 accumulator ``C``.
+
+- ``a_sign`` / ``b_sign``: if true, the corresponding operand is treated
+  as signed; if false, as unsigned.
+- ``clamp``: if true, the result saturates instead of wrapping on overflow.
+}];
+}
+
+//===----------------------------------------------------------------------===//
+// GFX1250 WMMA — Documentation records
+//===----------------------------------------------------------------------===//
+
+def DocWMMA_f32_16x16x4_f32_GFX1250 : Documentation {
+  let Category = DocCatWMMA;
+  let Content = [{
+Wave matrix multiply-accumulate with f32 inputs and f32 output, using a
+4-deep K dimension. Multiplies a 16x4 matrix ``A`` by a 4x16 matrix ``B``
+and adds the 16x16 f32 accumulator ``C``.
+
+- ``a_neg`` / ``b_neg``: if true, negate the corresponding input matrix.
+- ``c_mod``: accumulator modifier (0 = none, 1 = neg, 2 = abs,
+  3 = neg(abs)).
+- ``matrix_a_reuse`` / ``matrix_b_reuse``: hints to the hardware that
+  matrix A or B data can be reused from a previous WMMA instruction.
+}];
+}
+
+def DocWMMA_f32_16x16x32_GFX1250 : Documentation {
+  let Category = DocCatWMMA;
+  let Content = [{
+Wave matrix multiply-accumulate with f16 or bf16 inputs and f32 output,
+using a 32-deep K dimension. Multiplies a 16x32 matrix ``A`` by a 32x16
+matrix ``B`` and adds the 16x16 f32 accumulator ``C``.
+
+- ``a_neg`` / ``b_neg``: if true, negate the corresponding input matrix.
+- ``c_mod``: accumulator modifier (0 = none, 1 = neg, 2 = abs,
+  3 = neg(abs)).
+- ``matrix_a_reuse`` / ``matrix_b_reuse``: hints to the hardware that
+  matrix A or B data can be reused from a previous WMMA instruction.
+}];
+}
+
+def DocWMMA_bf16f32_16x16x32_GFX1250 : Documentation {
+  let Category = DocCatWMMA;
+  let Content = [{
+Wave matrix multiply-accumulate with bf16 inputs, f32 accumulator, and bf16
+output. Uses a 32-deep K dimension. Multiplies a 16x32 matrix ``A`` by a
+32x16 matrix ``B``, adds the 16x16 f32 accumulator ``C``, and converts the
+result to bf16.
+
+- ``a_neg`` / ``b_neg``: if true, negate the corresponding input matrix.
+- ``c_mod``: accumulator modifier (0 = none, 1 = neg, 2 = abs,
+  3 = neg(abs)).
+- ``matrix_a_reuse`` / ``matrix_b_reuse``: hints to the hardware that
+  matrix A or B data can be reused from a previous WMMA instruction.
+}];
+}
+
+def DocWMMA_half_16x16x32_GFX1250 : Documentation {
+  let Category = DocCatWMMA;
+  let Content = [{
+Wave matrix multiply-accumulate with f16 or bf16 inputs and matching
+f16 or bf16 output, using a 32-deep K dimension. Multiplies a 16x32
+matrix ``A`` by a 32x16 matrix ``B`` and adds the 16x16 accumulator ``C``.
+
+- ``a_neg`` / ``b_neg``: if true, negate the corresponding input matrix.
+- ``c_mod``: accumulator modifier (0 = none, 1 = neg, 2 = abs,
+  3 = neg(abs)).
+- ``matrix_a_reuse`` / ``matrix_b_reuse``: hints to the hardware that
+  matrix A or B data can be reused from a previous WMMA instruction.
+}];
+}
+
+def DocWMMA_fp8_16x16x64_GFX1250 : Documentation {
+  let Category = DocCatWMMA;
+  let Content = [{
+Wave matrix multiply-accumulate with FP8 or BF8 inputs and f32 or f16
+output, using a 64-deep K dimension. Multiplies a 16x64 matrix ``A`` by a
+64x16 matrix ``B`` and adds the 16x16 accumulator ``C``.
+
+A and B contain packed 8-bit floats passed as integer vectors.
+
+- ``c_mod``: accumulator modifier (0 = none, 1 = neg, 2 = abs,
+  3 = neg(abs)).
+- ``matrix_a_reuse`` / ``matrix_b_reuse``: hints to the hardware that
+  matrix A or B data can be reused from a previous WMMA instruction.
+}];
+}
+
+def DocWMMA_fp8_16x16x128_GFX1250 : Documentation {
+  let Category = DocCatWMMA;
+  let Content = [{
+Wave matrix multiply-accumulate with FP8 or BF8 inputs and f32 or f16
+output, using a 128-deep K dimension. Multiplies a 16x128 matrix ``A``
+by a 128x16 matrix ``B`` and adds the 16x16 accumulator ``C``.
+
+A and B contain packed 8-bit floats passed as integer vectors.
+
+- ``c_mod``: accumulator modifier (0 = none, 1 = neg, 2 = abs,
+  3 = neg(abs)).
+- ``matrix_a_reuse`` / ``matrix_b_reuse``: hints to the hardware that
+  matrix A or B data can be reused from a previous WMMA instruction.
+}];
+}
+
+def DocWMMA_i32_16x16x64_iu8_GFX1250 : Documentation {
+  let Category = DocCatWMMA;
+  let Content = [{
+Integer wave matrix multiply-accumulate on packed 8-bit integer inputs
+with a 64-deep K dimension. Multiplies a 16x64 matrix ``A`` by a 64x16
+matrix ``B`` and adds the i32 accumulator ``C``.
+
+- ``a_sign`` / ``b_sign``: if true, the corresponding operand is treated
+  as signed; if false, as unsigned.
+- ``matrix_a_reuse`` / ``matrix_b_reuse``: hints to the hardware that
+  matrix A or B data can be reused from a previous WMMA instruction.
+- ``clamp`` (optional): an optional 8th argument. When present, it must be
+  a compile-time constant integer expression convertible to bool. If true,
+  the result saturates instead of wrapping on overflow. If omitted, defaults
+  to false.
+}];
+}
+
+def DocWMMA_f8f6f4_GFX1250 : Documentation {
+  let Category = DocCatWMMA;
+  let Content = [{
+Mixed-format wave matrix multiply-accumulate with a 128-deep K dimension.
+Multiplies a 16x128 matrix ``A`` by a 128x16 matrix ``B`` and adds the
+16x16 f32 accumulator ``C``. The input element types are selected
+independently per operand.
+
+- ``matrix_a_fmt`` / ``matrix_b_fmt``: format selectors for A and B
+  (FP8, BF8, FP6, BF6, or FP4). Must be compile-time constants.
+- ``c_mod``: accumulator modifier (0 = none, 1 = neg, 2 = abs,
+  3 = neg(abs)).
+}];
+}
+
+def DocWMMA_f4_GFX1250 : Documentation {
+  let Category = DocCatWMMA;
+  let Content = [{
+FP4 wave matrix multiply-accumulate with a 128-deep K dimension and a
+32x16 output. Multiplies a 32x128 matrix ``A`` by a 128x16 matrix ``B``
+and adds the 32x16 f32 accumulator ``C``.
+
+- ``c_mod``: accumulator modifier (0 = none, 1 = neg, 2 = abs,
+  3 = neg(abs)).
+}];
+}
+
+def DocWMMA_scale_GFX1250 : Documentation {
+  let Category = DocCatWMMA;
+  let Content = [{
+Scaled wave matrix multiply-accumulate. Extends the ``f8f6f4`` or ``f4``
+WMMA with per-operand scale factors applied during the computation.
+
+- For ``..._f8f6f4`` variants, ``matrix_a_fmt`` / ``matrix_b_fmt`` are format
+  selectors for A and B. They must be compile-time constants.
+- ``c_mod``: accumulator modifier.
+- ``matrix_a_scale`` / ``matrix_b_scale``: scale factor selectors.
+  Must be compile-time constants.
+- ``matrix_a_scale_fmt`` / ``matrix_b_scale_fmt``: scale format selectors.
+  Must be compile-time constants.
+- ``matrix_a_scale_exp`` / ``matrix_b_scale_exp``: 32-bit scale exponents.
+- ``matrix_a_reuse`` / ``matrix_b_reuse``: hints to the hardware that
+  matrix A or B data can be reused from a previous WMMA instruction.
+}];
+}
+
+def DocWMMA_scale16_GFX1250 : Documentation {
+  let Category = DocCatWMMA;
+  let Content = [{
+Scaled wave matrix multiply-accumulate with 64-bit (16-bit per element)
+scale exponents, as opposed to the 32-bit exponents used by the non-16
+scale variant.
+
+- For ``..._f8f6f4`` variants, ``matrix_a_fmt`` / ``matrix_b_fmt`` are format
+  selectors for A and B. They must be compile-time constants.
+- ``c_mod``: accumulator modifier.
+- ``matrix_a_scale`` / ``matrix_b_scale``: scale factor selectors.
+  Must be compile-time constants.
+- ``matrix_a_scale_fmt`` / ``matrix_b_scale_fmt``: scale format selectors.
+  Must be compile-time constants.
+- ``matrix_a_scale_exp`` / ``matrix_b_scale_exp``: 64-bit scale exponents.
+- ``matrix_a_reuse`` / ``matrix_b_reuse``: hints to the hardware that
+  matrix A or B data can be reused from a previous WMMA instruction.
+}];
+}

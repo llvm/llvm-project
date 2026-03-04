@@ -129,11 +129,11 @@ void transform::ApplyMaterializeMasksPatternsOp::populatePatterns(
 //===----------------------------------------------------------------------===//
 // Multi-reduction patterns
 //===----------------------------------------------------------------------===//
-void transform::ApplyReorderAndExpandMultiReductionPatternsOp::populatePatterns(
+void transform::ApplyReorderMultiReductionPatternsOp::populatePatterns(
     RewritePatternSet &patterns) {
   vector::VectorTransformsOptions vectorTransformOptions;
   vectorTransformOptions.setVectorMultiReductionLowering(getLoweringStrategy());
-  vector::populateVectorMultiReductionReorderAndExpandPatterns(
+  vector::populateVectorMultiReductionReorderPatterns(
       patterns, vectorTransformOptions.vectorMultiReductionLowering);
 }
 

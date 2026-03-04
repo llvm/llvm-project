@@ -33,7 +33,7 @@ public:
     lldb::SBError error = SBDebugger::InitializeWithErrorHandling();
     EXPECT_TRUE(error.Success());
   }
-  static void TeatUpTestSuite() { SBDebugger::Terminate(); }
+  static void TearDownTestSuite() { SBDebugger::Terminate(); }
 
   void TearDown() override {
     if (core)

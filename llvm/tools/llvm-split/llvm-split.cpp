@@ -160,9 +160,7 @@ private:
     if (F.isDeclaration())
       return false;
 
-    return F.getCallingConv() == CallingConv::SPIR_KERNEL ||
-           F.getCallingConv() == CallingConv::AMDGPU_KERNEL ||
-           F.getCallingConv() == CallingConv::PTX_Kernel;
+    return F.hasKernelCallingConv();
   }
 
   static SmallString<0> computeFunctionCategory(SplitByCategoryType Type,

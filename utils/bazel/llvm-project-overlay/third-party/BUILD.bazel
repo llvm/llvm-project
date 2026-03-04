@@ -49,7 +49,9 @@ cc_library_wrapper(
         ":llvm_zlib_enabled": [
             "LLVM_ENABLE_ZLIB=1",
         ],
-        "//conditions:default": [],
+        "//conditions:default": [
+            "LLVM_ENABLE_ZLIB=0",
+        ],
     }),
     deps = select({
         ":llvm_zlib_enabled": [

@@ -269,8 +269,8 @@ std::pair<mlir::Value, mlir::Value> OpenACCRecipeBuilderBase::createBoundsLoop(
     if (inverse) {
       cir::ConstantOp constOne = builder.getConstInt(loc, itrTy, 1);
 
-      auto sub = cir::BinOp::create(builder, loc, itrTy, cir::BinOpKind::Sub,
-                                    ubConversion.getResult(0), constOne);
+      auto sub =
+          cir::SubOp::create(builder, loc, ubConversion.getResult(0), constOne);
 
       // Upperbound is exclusive, so subtract 1.
       builder.CIRBaseBuilderTy::createStore(loc, sub, itr);

@@ -807,6 +807,16 @@ public:
       return true;
     }
 
+    // -ffixed-r8 through -ffixed-r31 are lowered to reserve-r8 through
+    // reserve-r31 target features, so canonicalize subregister spellings
+    // like r15d/r15w/r15b back to the corresponding 64-bit register first.
+    StringRef Reg64 = RegName;
+    if (Reg64.back() == 'd' || Reg64.back() == 'w' || Reg64.back() == 'b') {
+      Reg64 = Reg64.substr(0, Reg64.size() - 1);
+    }
+    if (getTargetOpts().FeatureMap.lookup(("reserve-" + Reg64).str()))
+      return true;
+
     // Check if the register is a 32-bit register the backend can handle.
     return X86TargetInfo::validateGlobalRegisterVariable(RegName, RegSize,
                                                          HasSizeMismatch);

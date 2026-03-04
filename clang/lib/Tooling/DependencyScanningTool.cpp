@@ -211,7 +211,7 @@ std::optional<P1689Rule> DependencyScanningTool::getP1689ModuleDependencyFile(
     void handleProvidedAndRequiredStdCXXModules(
         std::optional<P1689ModuleInfo> Provided,
         std::vector<P1689ModuleInfo> Requires) override {
-      Rule.Provides = Provided;
+      Rule.Provides = std::move(Provided);
       if (Rule.Provides)
         Rule.Provides->SourcePath = Filename.str();
       Rule.Requires = std::move(Requires);

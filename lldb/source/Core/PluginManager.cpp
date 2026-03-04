@@ -491,6 +491,8 @@ public:
     if (!callback)
       return false;
     assert(!name.empty());
+
+    std::lock_guard<std::mutex> guard(m_mutex);
     m_instances.emplace_back(name, description, callback,
                              std::forward<Args>(args)...);
     return true;
@@ -499,6 +501,8 @@ public:
   bool UnregisterPlugin(typename Instance::CallbackType callback) {
     if (!callback)
       return false;
+
+    std::lock_guard<std::mutex> guard(m_mutex);
     auto pos = m_instances.begin();
     auto end = m_instances.end();
     for (; pos != end; ++pos) {
@@ -511,33 +515,31 @@ public:
   }
 
   typename Instance::CallbackType GetCallbackAtIndex(uint32_t idx) {
-    if (const Instance *instance = GetInstanceAtIndex(idx))
+    if (auto instance = GetInstanceAtIndex(idx))
       return instance->create_callback;
     return nullptr;
   }
 
   llvm::StringRef GetDescriptionAtIndex(uint32_t idx) {
-    if (const Instance *instance = GetInstanceAtIndex(idx))
+    if (auto instance = GetInstanceAtIndex(idx))
       return instance->description;
     return "";
   }
 
   llvm::StringRef GetNameAtIndex(uint32_t idx) {
-    if (const Instance *instance = GetInstanceAtIndex(idx))
+    if (auto instance = GetInstanceAtIndex(idx))
       return instance->name;
     return "";
   }
 
   typename Instance::CallbackType GetCallbackForName(llvm::StringRef name) {
-    if (const Instance *instance = GetInstanceForName(name))
+    if (auto instance = GetInstanceForName(name))
       return instance->create_callback;
     return nullptr;
   }
 
   void PerformDebuggerCallback(Debugger &debugger) {
-    for (const auto &instance : m_instances) {
-      if (!instance.enabled)
-        continue;
+    for (const auto &instance : GetSnapshot()) {
       if (instance.debugger_init_callback)
         instance.debugger_init_callback(debugger);
     }
@@ -547,8 +549,11 @@ public:
   // Note that this is a copy of the internal state so modifications
   // to the returned instances will not be reflected back to instances
   // stored by the PluginInstances object.
-  std::vector<Instance> GetSnapshot() {
+  std::vector<Instance> GetSnapshot() const {
+    std::lock_guard<std::mutex> guard(m_mutex);
+
     std::vector<Instance> enabled_instances;
+    enabled_instances.reserve(m_instances.size());
     for (const auto &instance : m_instances) {
       if (instance.enabled)
         enabled_instances.push_back(instance);
@@ -556,30 +561,28 @@ public:
     return enabled_instances;
   }
 
-  const Instance *GetInstanceAtIndex(uint32_t idx) {
+  std::optional<Instance> GetInstanceAtIndex(uint32_t idx) {
     uint32_t count = 0;
 
     return FindEnabledInstance(
         [&](const Instance &instance) { return count++ == idx; });
   }
 
-  const Instance *GetInstanceForName(llvm::StringRef name) {
+  std::optional<Instance> GetInstanceForName(llvm::StringRef name) {
     if (name.empty())
-      return nullptr;
+      return std::nullopt;
 
     return FindEnabledInstance(
         [&](const Instance &instance) { return instance.name == name; });
   }
 
-  const Instance *
+  std::optional<Instance>
   FindEnabledInstance(std::function<bool(const Instance &)> predicate) const {
-    for (const auto &instance : m_instances) {
-      if (!instance.enabled)
-        continue;
+    for (const auto &instance : GetSnapshot()) {
       if (predicate(instance))
-        return &instance;
+        return instance;
     }
-    return nullptr;
+    return std::nullopt;
   }
 
   // Return a list of all the registered plugin instances. This includes both
@@ -587,9 +590,12 @@ public:
   // were registered which is the order they would be queried if they were all
   // enabled.
   std::vector<RegisteredPluginInfo> GetPluginInfoForAllInstances() {
+    std::lock_guard<std::mutex> guard(m_mutex);
+
     // Lookup the plugin info for each instance in the sorted order.
     std::vector<RegisteredPluginInfo> plugin_infos;
     plugin_infos.reserve(m_instances.size());
+
     for (const Instance &instance : m_instances)
       plugin_infos.push_back(
           {instance.name, instance.description, instance.enabled});
@@ -598,6 +604,7 @@ public:
   }
 
   bool SetInstanceEnabled(llvm::StringRef name, bool enable) {
+    std::lock_guard<std::mutex> guard(m_mutex);
     auto it = llvm::find_if(m_instances, [&](const Instance &instance) {
       return instance.name == name;
     });
@@ -610,6 +617,7 @@ public:
   }
 
 private:
+  mutable std::mutex m_mutex;
   std::vector<Instance> m_instances;
 };
 
@@ -975,7 +983,7 @@ bool PluginManager::IsRegisteredObjectFilePluginName(llvm::StringRef name) {
   if (name.empty())
     return false;
 
-  return GetObjectFileInstances().GetInstanceForName(name) != nullptr;
+  return GetObjectFileInstances().GetInstanceForName(name).has_value();
 }
 
 bool PluginManager::RegisterPlugin(
@@ -1737,8 +1745,7 @@ llvm::StringRef PluginManager::GetTraceSchema(llvm::StringRef plugin_name) {
 }
 
 llvm::StringRef PluginManager::GetTraceSchema(size_t index) {
-  if (const TraceInstance *instance =
-          GetTracePluginInstances().GetInstanceAtIndex(index))
+  if (auto instance = GetTracePluginInstances().GetInstanceAtIndex(index))
     return instance->schema;
   return llvm::StringRef();
 }
@@ -1786,8 +1793,7 @@ bool PluginManager::UnregisterPlugin(
 
 ThreadTraceExportCommandCreator
 PluginManager::GetThreadTraceExportCommandCreatorAtIndex(uint32_t index) {
-  if (const TraceExporterInstance *instance =
-          GetTraceExporterInstances().GetInstanceAtIndex(index))
+  if (auto instance = GetTraceExporterInstances().GetInstanceAtIndex(index))
     return instance->create_thread_trace_export_command;
   return nullptr;
 }

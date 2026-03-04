@@ -265,7 +265,7 @@ void test_cond_lvalue_compound(bool flag) {
 // CIR:   cir.yield %[[B]] : !cir.ptr<!s32i>
 // CIR: }) : (!cir.bool) -> !cir.ptr<!s32i>
 // CIR: %[[OLD_VAL:.*]] = cir.load{{.*}} %[[LVAL_PTR]]
-// CIR: %[[NEW_VAL:.*]] = cir.binop(add, %[[OLD_VAL]], %{{.*}})
+// CIR: %[[NEW_VAL:.*]] = cir.add nsw %[[OLD_VAL]], %{{.*}}
 // CIR: cir.store{{.*}} %[[NEW_VAL]], %[[LVAL_PTR]]
 
 // LLVM-LABEL: define{{.*}} void @_Z25test_cond_lvalue_compoundb(

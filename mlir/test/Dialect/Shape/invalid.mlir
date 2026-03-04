@@ -258,6 +258,14 @@ module attributes {shape.lib = @fn} { }
 
 // -----
 
+// Test that shape function library array entry is defined (regression test for
+// github.com/llvm/llvm-project/issues/159653: dyn_cast crash on missing symbol).
+
+// expected-error@+1 {{@missing does not refer to FunctionLibraryOp}}
+module attributes {shape.lib = [@missing]} { }
+
+// -----
+
 func.func @fn(%arg: !shape.shape) -> !shape.witness {
   // expected-error@+1 {{required at least 2 input shapes}}
   %0 = shape.cstr_broadcastable %arg : !shape.shape

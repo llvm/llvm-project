@@ -1210,4 +1210,22 @@ getSpirvLinkageTypeFor(const SPIRVSubtarget &ST, const GlobalValue &GV) {
   return SPIRV::LinkageType::Export;
 }
 
+Function *getOrCreateBackendServiceFunction(Module &M) {
+  std::string ServiceFunName = SPIRV_BACKEND_SERVICE_FUN_NAME;
+  if (!getVacantFunctionName(M, ServiceFunName))
+    report_fatal_error(
+        "cannot allocate a name for the internal service function");
+  if (Function *SF = M.getFunction(ServiceFunName)) {
+    if (SF->getInstructionCount() > 0)
+      report_fatal_error(
+          "Unexpected combination of global variables and function pointers");
+    return SF;
+  }
+  Function *SF = Function::Create(
+      FunctionType::get(Type::getVoidTy(M.getContext()), {}, false),
+      GlobalValue::PrivateLinkage, ServiceFunName, M);
+  SF->addFnAttr(SPIRV_BACKEND_SERVICE_FUN_NAME, "");
+  return SF;
+}
+
 } // namespace llvm

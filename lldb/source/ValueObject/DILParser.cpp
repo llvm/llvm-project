@@ -138,7 +138,7 @@ ASTNodeUP DILParser::ParseAdditiveExpression() {
   auto lhs = ParseCastExpression();
   assert(lhs && "ASTNodeUP must not contain a nullptr");
 
-  while (CurToken().Is(Token::plus)) {
+  while (CurToken().IsOneOf({Token::plus, Token::minus})) {
     Token token = CurToken();
     m_dil_lexer.Advance();
     auto rhs = ParseCastExpression();

@@ -1100,36 +1100,6 @@ bool Process::IsAlive() {
   }
 }
 
-// This static callback can be used to watch for local child processes on the
-// current host. The child process exits, the process will be found in the
-// global target list (we want to be completely sure that the
-// lldb_private::Process doesn't go away before we can deliver the signal.
-bool Process::SetProcessExitStatus(
-    lldb::pid_t pid, bool exited,
-    int signo,      // Zero for no signal
-    int exit_status // Exit value of process if signal is zero
-    ) {
-  Log *log = GetLog(LLDBLog::Process);
-  LLDB_LOGF(log,
-            "Process::SetProcessExitStatus (pid=%" PRIu64
-            ", exited=%i, signal=%i, exit_status=%i)\n",
-            pid, exited, signo, exit_status);
-
-  if (exited) {
-    TargetSP target_sp(Debugger::FindTargetWithProcessID(pid));
-    if (target_sp) {
-      ProcessSP process_sp(target_sp->GetProcessSP());
-      if (process_sp) {
-        llvm::StringRef signal_str =
-            process_sp->GetUnixSignals()->GetSignalAsStringRef(signo);
-        process_sp->SetExitStatus(exit_status, signal_str);
-      }
-    }
-    return true;
-  }
-  return false;
-}
-
 bool Process::UpdateThreadList(ThreadList &old_thread_list,
                                ThreadList &new_thread_list) {
   m_thread_plans.ClearThreadCache();

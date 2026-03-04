@@ -1,5 +1,14 @@
 import("//llvm/utils/TableGen/tablegen.gni")
 
+tablegen("X86GenAsmMatcher") {
+  visibility = [
+    ":LLVMX86CodeGen",
+    "AsmParser",
+  ]
+  args = [ "-gen-asm-matcher" ]
+  td_file = "X86.td"
+}
+
 tablegen("X86GenCallingConv") {
   visibility = [ ":LLVMX86CodeGen" ]
   args = [ "-gen-callingconv" ]
@@ -68,6 +77,7 @@ tablegen("X86GenPostLegalizeGICombiner") {
 
 static_library("LLVMX86CodeGen") {
   deps = [
+    ":X86GenAsmMatcher",
     ":X86GenCallingConv",
     ":X86GenDAGISel",
     ":X86GenFastISel",

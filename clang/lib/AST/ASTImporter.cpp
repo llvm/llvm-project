@@ -771,7 +771,7 @@ Error ASTNodeImporter::ImportTemplateArgumentListInfo(
   TemplateArgumentListInfo ToTAInfo(*ToLAngleLocOrErr, *ToRAngleLocOrErr);
   if (auto Err = ImportTemplateArgumentListInfo(Container, ToTAInfo))
     return Err;
-  Result = ToTAInfo;
+  Result = std::move(ToTAInfo);
   return Error::success();
 }
 
