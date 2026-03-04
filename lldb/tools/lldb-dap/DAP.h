@@ -88,8 +88,9 @@ struct IOWrapper {
   IOWrapper(lldb::FileSP read, lldb::FileSP write)
       : read(read), write(write) {};
 
-  static llvm::Expected<std::pair<IOWrapper, IOWrapper>> CreatePseudoTerminal();
-  static llvm::Expected<std::pair<IOWrapper, IOWrapper>> CreatePipePair();
+  /// Create a set of handles, either a pty and duplicate or a pair of pipes
+  /// based on platform support.
+  static llvm::Expected<std::pair<IOWrapper, IOWrapper>> Create();
 
   lldb::FileSP read;
   lldb::FileSP write;

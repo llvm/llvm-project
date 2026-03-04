@@ -222,8 +222,7 @@ ExceptionBreakpoint *DAP::GetExceptionBreakpoint(const lldb::break_id_t bp_id) {
   return nullptr;
 }
 
-llvm::Expected<std::pair<IOWrapper, IOWrapper>>
-IOWrapper::CreatePseudoTerminal() {
+static llvm::Expected<std::pair<IOWrapper, IOWrapper>> CreatePseudoTerminal() {
 #ifdef WIN32
   // Fallback to a pair of pipes until we have better support for a
   // PsuedoConsole on Windows.
@@ -274,8 +273,7 @@ IOWrapper::CreatePseudoTerminal() {
 #endif
 }
 
-// Hookup a pair of pipes such that reading from one writes to the other.
-llvm::Expected<std::pair<IOWrapper, IOWrapper>> IOWrapper::CreatePipePair() {
+static llvm::Expected<std::pair<IOWrapper, IOWrapper>> CreatePipePair() {
   lldb_private::Pipe primary_pipe, replica_pipe;
   if (auto err = primary_pipe.CreateNew().takeError())
     return err;
@@ -286,32 +284,36 @@ llvm::Expected<std::pair<IOWrapper, IOWrapper>> IOWrapper::CreatePipePair() {
       IOWrapper(/*read=*/
                 std::make_shared<lldb_private::NativeFile>(
                     primary_pipe.ReleaseReadFileDescriptor(),
-                    lldb_private::File::eOpenOptionReadOnly, false),
+                    lldb_private::File::eOpenOptionReadOnly, true),
                 /*write=*/std::make_shared<lldb_private::NativeFile>(
                     replica_pipe.ReleaseWriteFileDescriptor(),
                     lldb_private::File::eOpenOptionWriteOnly, true)),
       IOWrapper(/*read=*/
                 std::make_shared<lldb_private::NativeFile>(
                     replica_pipe.ReleaseReadFileDescriptor(),
-                    lldb_private::File::eOpenOptionReadOnly, false),
+                    lldb_private::File::eOpenOptionReadOnly, true),
                 /*write=*/std::make_shared<lldb_private::NativeFile>(
                     primary_pipe.ReleaseWriteFileDescriptor(),
                     lldb_private::File::eOpenOptionWriteOnly, true)));
 }
 
+llvm::Expected<std::pair<IOWrapper, IOWrapper>> IOWrapper::Create() {
+  llvm::Expected<std::pair<IOWrapper, IOWrapper>> io = CreatePseudoTerminal();
+  if (!io) {
+    // Fallback to creating a pipe.
+    llvm::consumeError(io.takeError());
+    return CreatePipePair();
+  }
+
+  return *io;
+}
+
 llvm::Error DAP::ConfigureIO(std::FILE *overrideOut, std::FILE *overrideErr) {
   DAP_LOG(log, "Initializing IO");
 
-  llvm::Expected<std::pair<IOWrapper, IOWrapper>> io =
-      IOWrapper::CreatePseudoTerminal();
-  if (!io) {
-    DAP_LOG_ERROR(
-        log, io.takeError(),
-        "Falling back to a pipe for debugger IO, creating a pty failed: {0}");
-    io = IOWrapper::CreatePipePair();
-    if (!io)
-      return io.takeError();
-  }
+  llvm::Expected<std::pair<IOWrapper, IOWrapper>> io = IOWrapper::Create();
+  if (!io)
+    return io.takeError();
 
   std::tie(primary, replica) = *io;
 
