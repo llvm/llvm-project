@@ -63,15 +63,25 @@ class TestFrameVarDILArithmetic(TestBase):
         self.expect_var_path("1 + s + (x + l)", value="18", type="long")
         self.expect_var_path("+2 + (-1)", value="1", type="int")
         self.expect_var_path("-2 + (+1)", value="-1", type="int")
+        self.expect_var_path("1 + (2 - 3)", value="0")
+        self.expect_var_path("s - x - 1", value="7")
 
         # Check limits and overflows
         frame = thread.GetFrameAtIndex(0)
         int_min = frame.GetValueForVariablePath("int_min").GetValue()
+        int_max = frame.GetValueForVariablePath("int_max").GetValue()
+        uint_max = frame.GetValueForVariablePath("uint_max").GetValue()
         ll_min = frame.GetValueForVariablePath("ll_min").GetValue()
+        ll_max = frame.GetValueForVariablePath("ll_max").GetValue()
+        ull_max = frame.GetValueForVariablePath("ull_max").GetValue()
         self.expect_var_path("int_max + 1", value=int_min)
+        self.expect_var_path("int_min - 1", value=int_max)
         self.expect_var_path("uint_max + 1", value="0")
+        self.expect_var_path("uint_zero - 1", value=uint_max)
         self.expect_var_path("ll_max + 1", value=ll_min)
+        self.expect_var_path("ll_min - 1", value=ll_max)
         self.expect_var_path("ull_max + 1", value="0")
+        self.expect_var_path("ull_zero - 1", value=ull_max)
 
         # Check signed integer promotion when different types have the same size
         uint = frame.GetValueForVariablePath("ui")
@@ -87,5 +97,20 @@ class TestFrameVarDILArithmetic(TestBase):
 
         # Check references and typedefs
         self.expect_var_path("ref + 1", value="3")
+        self.expect_var_path("ref - 1l", value="1")
         self.expect_var_path("my_ref + 1", value="3")
+        self.expect_var_path("my_ref - 1", value="1")
         self.expect_var_path("ref + my_ref", value="4")
+        self.expect_var_path("ref - my_ref", value="0")
+
+        # TODO: Pointer arithmetics
+        self.expect(
+            "frame var -- 'p + 1'",
+            error=True,
+            substrs=["invalid operands to binary expression ('int *' and 'int')"],
+        )
+        self.expect(
+            "frame var -- 'p - 1'",
+            error=True,
+            substrs=["invalid operands to binary expression ('int *' and 'int')"],
+        )
