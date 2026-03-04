@@ -716,7 +716,10 @@ static mlir::Operation *
 createAndSetPrivatizedLoopVar(lower::AbstractConverter &converter,
                               mlir::Location loc, mlir::Value indexVal,
                               const semantics::Symbol *sym) {
-  assert(converter.isPresentShallowLookup(*sym) &&
+  // The handling of linear symbols is deferred to the OpenMP IRBuilder,
+  // which is responsible for all its aspects, including privatization.
+  assert((converter.isPresentShallowLookup(*sym) ||
+          sym->test(semantics::Symbol::Flag::OmpLinear)) &&
          "Expected symbol to be in symbol table.");
   return setLoopVar(converter, loc, indexVal, sym);
 }
@@ -1589,7 +1592,7 @@ genOrderedRegionClauses(lower::AbstractConverter &converter,
                         const List<Clause> &clauses, mlir::Location loc,
                         mlir::omp::OrderedRegionOperands &clauseOps) {
   ClauseProcessor cp(converter, semaCtx, clauses);
-  cp.processTODO<clause::Simd>(loc, llvm::omp::Directive::OMPD_ordered);
+  cp.processSimd(clauseOps);
 }
 
 static void genParallelClauses(
@@ -2307,6 +2310,7 @@ static void genFuseOp(Fortran::lower::AbstractConverter &converter,
   mlir::omp::LooprangeClauseOps looprangeClause;
   ClauseProcessor cp(converter, semaCtx, item->clauses);
   bool looprange = cp.processLooprange(stmtCtx, looprangeClause, count);
+  cp.processTODO<clause::Depth>(loc, llvm::omp::Directive::OMPD_fuse);
 
   llvm::SmallVector<mlir::Value> applyees;
   for (auto &child : eval.getNestedEvaluations()) {
@@ -3955,8 +3959,28 @@ static void genOMP(lower::AbstractConverter &converter, lower::SymMap &symTable,
       appendCombiner(construct, clauses, semaCtx);
   const auto &identifier =
       std::get<parser::OmpReductionIdentifier>(specifier.t);
-  const auto &designator = std::get<parser::ProcedureDesignator>(identifier.u);
-  const auto &reductionName = std::get<parser::Name>(designator.u);
+
+  std::string reductionNameStr = Fortran::common::visit(
+      common::visitors{
+          [](const parser::ProcedureDesignator &pd) -> std::string {
+            return std::get<parser::Name>(pd.u).ToString();
+          },
+          [](const parser::DefinedOperator &defOp) -> std::string {
+            return Fortran::common::visit(
+                common::visitors{
+                    [](const parser::DefinedOpName &opName) -> std::string {
+                      return opName.v.ToString();
+                    },
+                    [](parser::DefinedOperator::IntrinsicOperator intrOp)
+                        -> std::string {
+                      return std::string(
+                          parser::DefinedOperator::EnumToString(intrOp));
+                    },
+                },
+                defOp.u);
+          },
+      },
+      identifier.u);
 
   for (const auto &typeSpec : typeNameList.v) {
     (void)typeSpec; // Currently unused
@@ -3969,7 +3993,7 @@ static void genOMP(lower::AbstractConverter &converter, lower::SymMap &symTable,
     bool isByRef = ReductionProcessor::doReductionByRef(reductionType);
     ReductionProcessor::createDeclareReductionHelper<
         mlir::omp::DeclareReductionOp>(
-        converter, reductionName.ToString(), reductionType,
+        converter, reductionNameStr, reductionType,
         converter.getCurrentLocation(), isByRef, genCombinerCB, genInitValueCB);
   }
 }

@@ -63,7 +63,7 @@ int f(int i) {
         ? a.*p
         // CIR: %[[TWO:.*]] = cir.const #cir.int<2> : !s32i
         // CIR: %[[N:.*]] = cir.load{{.*}} %{{.*}} : !cir.ptr<!s32i>, !s32i
-        // CIR: %[[SUB:.*]] = cir.binop(sub, %[[TWO]], %[[N]]) nsw : !s32i
+        // CIR: %[[SUB:.*]] = cir.sub nsw %[[TWO]], %[[N]] : !s32i
         // CIR: %[[A:.*]] = cir.get_global @[[F_A]] : !cir.ptr<!rec_A>
         // CIR: %[[Y:.*]] = cir.get_member %[[A]][1] {name = "y"} : !cir.ptr<!rec_A> -> !cir.ptr<!cir.array<!s32i x 2>>
         // CIR: cir.get_element %[[Y]][%[[SUB]] : !s32i] : !cir.ptr<!cir.array<!s32i x 2>> -> !cir.ptr<!s32i>
@@ -87,7 +87,7 @@ int f(int i) {
 
 // LLVM-LABEL: define{{.*}} i32 @_Z1fi(
 // LLVM:         call void @llvm.memcpy{{.*}}({{.*}}, ptr @[[F_A]]
-// LLVM:         call{{.*}} i32 @"_ZZ1fiENK3$_0clEiM1Ai"(ptr %{{.*}}, i32 %{{.*}}, i64 0)
+// LLVM:         call{{.*}} i32 @"_ZZ1fiENK3$_0clEiM1Ai"(ptr {{.*}} %{{.*}}, i32 {{.*}} %{{.*}}, i64 0)
 
 namespace PR42276 {
   class State {
@@ -96,11 +96,11 @@ namespace PR42276 {
     using l = void (State::*)();
     static constexpr l m[]{&State::f1, &State::f2};
   };
-  // CIR-CXX11-LABEL: cir.func {{.*}} @_ZN7PR422765State2f1Ev(!cir.ptr<!rec_PR422763A3AState>)
-  // CIR-CXX11-LABEL: cir.func {{.*}} @_ZN7PR422765State2f2Ev(!cir.ptr<!rec_PR422763A3AState>)
+  // CIR-CXX11-LABEL: cir.func {{.*}} @_ZN7PR422765State2f1Ev(!cir.ptr<!rec_PR422763A3AState>{{.*}})
+  // CIR-CXX11-LABEL: cir.func {{.*}} @_ZN7PR422765State2f2Ev(!cir.ptr<!rec_PR422763A3AState>{{.*}})
   //
-  // LLVM-CXX11-LABEL: declare{{.*}} @_ZN7PR422765State2f1Ev(ptr)
-  // LLVM-CXX11-LABEL: declare{{.*}} @_ZN7PR422765State2f2Ev(ptr)
+  // LLVM-CXX11-LABEL: declare{{.*}} @_ZN7PR422765State2f1Ev(ptr{{.*}})
+  // LLVM-CXX11-LABEL: declare{{.*}} @_ZN7PR422765State2f2Ev(ptr{{.*}})
   //
   // OG-Codegen always generates these deferred, not only if they are non-const.
   //
@@ -119,11 +119,11 @@ namespace PR42276 {
       // OGCG-CXX2A: getelementptr inbounds [2 x { i64, i64 }], ptr @_ZN7PR422765State1mE, i64 0, i64 %{{.*}}
       (this->*m[i])();
   }
-  // CIR-CXX2A-LABEL: cir.func {{.*}} @_ZN7PR422765State2f1Ev(!cir.ptr<!rec_PR422763A3AState>)
-  // CIR-CXX2A-LABEL: cir.func {{.*}} @_ZN7PR422765State2f2Ev(!cir.ptr<!rec_PR422763A3AState>)
+  // CIR-CXX2A-LABEL: cir.func {{.*}} @_ZN7PR422765State2f1Ev(!cir.ptr<!rec_PR422763A3AState>{{.*}})
+  // CIR-CXX2A-LABEL: cir.func {{.*}} @_ZN7PR422765State2f2Ev(!cir.ptr<!rec_PR422763A3AState>{{.*}})
   //
-  // LLVM-CXX2A-LABEL: declare{{.*}} @_ZN7PR422765State2f1Ev(ptr)
-  // LLVM-CXX2A-LABEL: declare{{.*}} @_ZN7PR422765State2f2Ev(ptr)
+  // LLVM-CXX2A-LABEL: declare{{.*}} @_ZN7PR422765State2f1Ev(ptr{{.*}})
+  // LLVM-CXX2A-LABEL: declare{{.*}} @_ZN7PR422765State2f2Ev(ptr{{.*}})
   //
   // OGCG-LABEL: declare{{.*}} @_ZN7PR422765State2f1Ev(ptr{{.*}})
   // OGCG-LABEL: declare{{.*}} @_ZN7PR422765State2f2Ev(ptr{{.*}})

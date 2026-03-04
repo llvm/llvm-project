@@ -328,9 +328,7 @@ void VPlanTransforms::introduceMasksAndLinearize(VPlan &Plan, bool FoldTail) {
     VPBuilder B(Plan.getMiddleBlock()->getTerminator());
     for (VPRecipeBase &R : *Plan.getMiddleBlock()) {
       VPValue *Op;
-      if (!match(&R, m_CombineOr(
-                         m_ExitingIVValue(m_VPValue(), m_VPValue(Op)),
-                         m_ExtractLastLane(m_ExtractLastPart(m_VPValue(Op))))))
+      if (!match(&R, m_ExtractLastLane(m_ExtractLastPart(m_VPValue(Op)))))
         continue;
 
       // Compute the index of the last active lane.

@@ -921,8 +921,7 @@ bool llvm::hoistRegion(DomTreeNode *N, AAResults *AA, LoopInfo *LI,
     for (Instruction &I : llvm::make_early_inc_range(*BB)) {
       // Try hoisting the instruction out to the preheader.  We can only do
       // this if all of the operands of the instruction are loop invariant and
-      // if it is safe to hoist the instruction. We also check block frequency
-      // to make sure instruction only gets hoisted into colder blocks.
+      // if it is safe to hoist the instruction.
       // TODO: It may be safe to hoist if we are hoisting to a conditional block
       // and we have accurately duplicated the control flow from the loop header
       // to that block.
@@ -2587,11 +2586,11 @@ static bool hoistAdd(ICmpInst::Predicate Pred, Value *VariantLHS,
   // Try to represent VariantLHS as sum of invariant and variant operands.
   using namespace PatternMatch;
   Value *VariantOp, *InvariantOp;
-  if (IsSigned &&
-      !match(VariantLHS, m_NSWAdd(m_Value(VariantOp), m_Value(InvariantOp))))
+  if (IsSigned && !match(VariantLHS, m_NSWAddLike(m_Value(VariantOp),
+                                                  m_Value(InvariantOp))))
     return false;
-  if (!IsSigned &&
-      !match(VariantLHS, m_NUWAdd(m_Value(VariantOp), m_Value(InvariantOp))))
+  if (!IsSigned && !match(VariantLHS, m_NUWAddLike(m_Value(VariantOp),
+                                                   m_Value(InvariantOp))))
     return false;
 
   // LHS itself is a loop-variant, try to represent it in the form:
