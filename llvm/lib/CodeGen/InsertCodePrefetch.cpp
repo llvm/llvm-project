@@ -150,8 +150,10 @@ bool InsertCodePrefetch::runOnMachineFunction(MachineFunction &MF) {
 
   auto &ProfileReader =
       getAnalysis<BasicBlockSectionsProfileReaderWrapperPass>();
-  setPrefetchTargets(MF, ProfileReader.getPrefetchTargetsForFunction(MF.getName()));
-  insertPrefetchHints(MF, ProfileReader.getPrefetchHintsForFunction(MF.getName()));
+  setPrefetchTargets(MF,
+                     ProfileReader.getPrefetchTargetsForFunction(MF.getName()));
+  insertPrefetchHints(MF,
+                      ProfileReader.getPrefetchHintsForFunction(MF.getName()));
 
   return true;
 }
