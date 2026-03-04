@@ -38,6 +38,7 @@ class TestTraceDumpInfo(TraceIntelPTTestCaseBase):
             error=True,
         )
 
+    @skipIfNoIntelPT
     def testDumpRawTraceSize(self):
         self.expect(
             "trace load -v "
@@ -67,6 +68,7 @@ class TestTraceDumpInfo(TraceIntelPTTestCaseBase):
             patterns=[r"Decoding instructions: \d.\d\ds"],
         )
 
+    @skipIfNoIntelPT
     def testDumpRawTraceSizeJSON(self):
         self.expect(
             "trace load -v "
