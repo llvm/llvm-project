@@ -1,12 +1,12 @@
 ; REQUIRES: asserts
 ; RUN: opt -S < %s -p loop-vectorize -debug-only=loop-vectorize -force-vector-width=4 -disable-output 2>&1 | FileCheck %s
 
-define i64 @loop_contains_store(ptr %dest) {
+;; This currently doesn't vectorize because the load used to determine the
+;; uncountable exit condition has a second user (the store).
+define i64 @loop_contains_store(ptr dereferenceable(1024) %p1, ptr noalias %dest) {
 ; CHECK-LABEL: LV: Checking a loop in 'loop_contains_store'
 ; CHECK:       LV: Not vectorizing: Early exit loop with store but no supported condition load.
 entry:
-  %p1 = alloca [1024 x i8]
-  call void @init_mem(ptr %p1, i64 1024)
   br label %loop
 
 loop:
@@ -54,8 +54,11 @@ exit:
   ret void
 }
 
-define void @loop_contains_store_ee_condition_is_invariant(ptr dereferenceable(40) noalias %array, i16 %ee.val) {
-; CHECK-LABEL: LV: Checking a loop in 'loop_contains_store_ee_condition_is_invariant'
+;; Avoid vectorization because we will either exit on the first iteration, or
+;; never exit early.
+;; We shouldn't see IR like this if LV-LICM has done its job.
+define void @novec_loop_contains_store_ee_condition_is_invariant(ptr dereferenceable(40) noalias %array, i16 %ee.val) {
+; CHECK-LABEL: LV: Checking a loop in 'novec_loop_contains_store_ee_condition_is_invariant'
 ; CHECK:       LV: Not vectorizing: Early exit loop with store but no supported condition load.
 entry:
   br label %for.body
@@ -78,6 +81,7 @@ exit:
   ret void
 }
 
+;; Vectorizeable, needs work on exit condition recipe collection.
 define void @loop_contains_store_fcmp_condition(ptr dereferenceable(40) noalias %array, ptr align 2 dereferenceable(40) readonly %pred) {
 ; CHECK-LABEL: LV: Checking a loop in 'loop_contains_store_fcmp_condition'
 ; CHECK:       LV: Not vectorizing: Early exit loop with store but no supported condition load.
@@ -104,6 +108,7 @@ exit:
   ret void
 }
 
+;; Vectorizeable, needs work on alias checks for the exit condition load.
 define void @loop_contains_store_safe_dependency(ptr dereferenceable(40) noalias %array, ptr align 2 dereferenceable(96) %pred) {
 ; CHECK-LABEL: LV: Checking a loop in 'loop_contains_store_safe_dependency'
 ; CHECK:       LV: Not vectorizing: Cannot determine whether critical uncountable exit load address does not alias with a memory write.
@@ -133,7 +138,8 @@ exit:
   ret void
 }
 
-define void @loop_contains_store_unsafe_dependency(ptr dereferenceable(40) noalias %array, ptr align 2 dereferenceable(80) readonly %pred) {
+;; Possibly vectorizeable, but would require some runtime checks.
+define void @loop_contains_store_unsafe_dependency(ptr dereferenceable(40) noalias %array, ptr align 2 dereferenceable(80) %pred) {
 ; CHECK-LABEL: LV: Checking a loop in 'loop_contains_store_unsafe_dependency'
 ; CHECK:       LV: Not vectorizing: Loop may fault.
 entry:
@@ -165,13 +171,15 @@ exit:
   ret void
 }
 
-define void @loop_contains_store_assumed_bounds(ptr noalias %array, ptr readonly %pred, i32 %n) {
+;; Vectorizeable, needs runtime checks to determine whether the iteration count
+;; might exceed known dereferenceable extents.
+;; Alternatively, we could use masked.load.ff or vp.load.ff
+define void @loop_contains_store_assumed_bounds(ptr noalias %array, ptr readonly %pred, i64 %n) {
 ; CHECK-LABEL: LV: Checking a loop in 'loop_contains_store_assumed_bounds'
 ; CHECK:       LV: Not vectorizing: Loop may fault.
 entry:
-  %n_bytes = mul nuw nsw i32 %n, 2
-  call void @llvm.assume(i1 true) [ "align"(ptr %pred, i64 2), "dereferenceable"(ptr %pred, i32 %n_bytes) ]
-  %tc = sext i32 %n to i64
+  %n_bytes = mul nuw nsw i64 %n, 2
+  call void @llvm.assume(i1 true) [ "align"(ptr %pred, i64 2), "dereferenceable"(ptr %pred, i64 %n_bytes) ]
   br label %for.body
 
 for.body:
@@ -187,7 +195,7 @@ for.body:
 
 for.inc:
   %iv.next = add nuw nsw i64 %iv, 1
-  %counted.cond = icmp eq i64 %iv.next, %tc
+  %counted.cond = icmp eq i64 %iv.next, %n
   br i1 %counted.cond, label %exit, label %for.body
 
 exit:
@@ -221,6 +229,7 @@ exit:
   ret void
 }
 
+;; Vectorizeable, requires runtime checks and/or ff loads.
 define void @loop_contains_store_unknown_bounds(ptr align 2 dereferenceable(100) noalias %array, ptr align 2 dereferenceable(100) readonly %pred, i64 %n) {
 ; CHECK-LABEL: LV: Checking a loop in 'loop_contains_store_unknown_bounds'
 ; CHECK:       LV: Not vectorizing: Loop may fault.
@@ -247,8 +256,10 @@ exit:
   ret void
 }
 
-define void @loop_contains_store_volatile(ptr dereferenceable(40) noalias %array, ptr align 2 dereferenceable(40) readonly %pred) {
-; CHECK-LABEL: LV: Checking a loop in 'loop_contains_store_volatile'
+;; Avoid vectorization, volatile memory locations may have unexpected behaviour
+;; if we try to vectorize.
+define void @novec_loop_contains_store_volatile(ptr dereferenceable(40) noalias %array, ptr align 2 dereferenceable(40) readonly %pred) {
+; CHECK-LABEL: LV: Checking a loop in 'novec_loop_contains_store_volatile'
 ; CHECK:       LV: Not vectorizing: Complex writes to memory unsupported in early exit loops.
 entry:
   br label %for.body
@@ -273,6 +284,7 @@ exit:
   ret void
 }
 
+;; Vectorizeable, but we really want LICM to sink the store out of the loop
 define void @loop_contains_store_to_invariant_location(ptr dereferenceable(40) readonly %array, ptr align 2 dereferenceable(40) readonly %pred, ptr noalias %store_addr) {
 ; CHECK-LABEL: LV: Checking a loop in 'loop_contains_store_to_invariant_location'
 ; CHECK:       LV: Not vectorizing: Writes to memory unsupported in early exit loops.
@@ -325,6 +337,7 @@ exit:
   ret void
 }
 
+;; Vectorizeable, requires runtime checks.
 define void @loop_contains_store_requiring_alias_check(ptr dereferenceable(40) %array, ptr align 2 dereferenceable(40) %pred) {
 ; CHECK-LABEL: LV: Checking a loop in 'loop_contains_store_requiring_alias_check'
 ; CHECK:       LV: Not vectorizing: Cannot determine whether critical uncountable exit load address does not alias with a memory write.
@@ -338,34 +351,6 @@ for.body:
   %inc = add nsw i16 %data, 1
   store i16 %inc, ptr %st.addr, align 2
   %ee.addr = getelementptr inbounds nuw i16, ptr %pred, i64 %iv
-  %ee.val = load i16, ptr %ee.addr, align 2
-  %ee.cond = icmp sgt i16 %ee.val, 500
-  br i1 %ee.cond, label %exit, label %for.inc
-
-for.inc:
-  %iv.next = add nuw nsw i64 %iv, 1
-  %counted.cond = icmp eq i64 %iv.next, 20
-  br i1 %counted.cond, label %exit, label %for.body
-
-exit:
-  ret void
-}
-
-define void @loop_contains_store_condition_load_is_chained(ptr dereferenceable(40) noalias %array, ptr align 8 dereferenceable(160) readonly %offsets, ptr align 2 dereferenceable(40) readonly %pred) {
-; CHECK-LABEL: LV: Checking a loop in 'loop_contains_store_condition_load_is_chained'
-; CHECK:       LV: Not vectorizing: Uncountable exit condition depends on load with an address that is not an add recurrence in the loop.
-entry:
-  br label %for.body
-
-for.body:
-  %iv = phi i64 [ 0, %entry ], [ %iv.next, %for.inc ]
-  %st.addr = getelementptr inbounds nuw i16, ptr %array, i64 %iv
-  %data = load i16, ptr %st.addr, align 2
-  %inc = add nsw i16 %data, 1
-  store i16 %inc, ptr %st.addr, align 2
-  %gather.addr = getelementptr inbounds nuw i64, ptr %offsets, i64 %iv
-  %ee.offset = load i64, ptr %gather.addr, align 8
-  %ee.addr = getelementptr inbounds nuw i16, ptr %pred, i64 %ee.offset
   %ee.val = load i16, ptr %ee.addr, align 2
   %ee.cond = icmp sgt i16 %ee.val, 500
   br i1 %ee.cond, label %exit, label %for.inc
@@ -405,6 +390,8 @@ exit:
   ret void
 }
 
+;; Vectorizeable, requires improvements to exit condition recipe collection and
+;; masked.gather.ff
 define void @loop_contains_store_condition_load_requires_gather(ptr dereferenceable(40) noalias %array, ptr align 2 dereferenceable(512) readonly %pred, ptr align 1 dereferenceable(20) readonly %offsets) {
 ; CHECK-LABEL: LV: Checking a loop in 'loop_contains_store_condition_load_requires_gather'
 ; CHECK:       LV: Not vectorizing: Uncountable exit condition depends on load with an address that is not an add recurrence in the loop.
@@ -434,6 +421,7 @@ exit:
   ret void
 }
 
+;; Vectorizeable, requires improvements in handling switch instructions in LV.
 define void @loop_contains_store_uncounted_exit_is_a_switch(ptr dereferenceable(40) noalias %array, ptr align 2 dereferenceable(40) readonly %pred) {
 ; CHECK-LABEL: LV: Checking a loop in 'loop_contains_store_uncounted_exit_is_a_switch'
 ; CHECK:       LV: Not vectorizing: Loop contains an unsupported switch
@@ -459,6 +447,8 @@ exit:
   ret void
 }
 
+;; Vectorizeable, needs to extend the predicated early exit work and improve
+;; exit condition recipe collection.
 define void @loop_contains_store_uncounted_exit_is_not_guaranteed_to_execute(ptr dereferenceable(40) noalias %array, ptr align 2 dereferenceable(40) readonly %pred) {
 ; CHECK-LABEL: LV: Checking a loop in 'loop_contains_store_uncounted_exit_is_not_guaranteed_to_execute'
 ; CHECK:       LV: Not vectorizing: Load for uncountable exit not guaranteed to execute.
@@ -490,6 +480,9 @@ exit:
   ret void
 }
 
+;; Vectorizeable, requires better alias checking in legality. However, hopefully
+;; we wouldn't get this as input IR since it stores to the same address that
+;; we load from immediately afterwards.
 define void @test_nodep(ptr align 2 dereferenceable(40) readonly %pred) {
 ; CHECK-LABEL: LV: Checking a loop in 'test_nodep'
 ; CHECK:       LV: Not vectorizing: Cannot determine whether critical uncountable exit load address does not alias with a memory write.
@@ -513,6 +506,7 @@ exit:
   ret void
 }
 
+;; Vectorizeable, requires working with the existing histogram code.
 define void @histogram_with_uncountable_exit(ptr noalias %buckets, ptr readonly %indices, ptr align 2 dereferenceable(40) readonly %pred) {
 ; CHECK-LABEL: LV: Checking a loop in 'histogram_with_uncountable_exit'
 ; CHECK:       LV: Not vectorizing: Cannot vectorize unsafe dependencies in uncountable exit loop with side effects.
@@ -542,8 +536,247 @@ exit:
   ret void
 }
 
-define void @uncountable_exit_condition_address_is_invariant(ptr dereferenceable(40) noalias %array, ptr align 2 dereferenceable(2) readonly %pred) {
-; CHECK-LABEL: LV: Checking a loop in 'uncountable_exit_condition_address_is_invariant'
+;; Vectorizeable, requires processing more than one exit.
+define void @loop_contains_store_between_two_early_exits(ptr dereferenceable(40) noalias %array, ptr align 2 dereferenceable(40) readonly %pred, ptr align 2 dereferenceable(40) readonly %pred2) {
+; CHECK-LABEL: LV: Checking a loop in 'loop_contains_store_between_two_early_exits'
+; CHECK:       LV: Not vectorizing: Load for uncountable exit not guaranteed to execute.
+entry:
+  br label %for.body
+
+for.body:
+  %iv = phi i64 [ 0, %entry ], [ %iv.next, %for.inc ]
+  %ee.addr = getelementptr inbounds nuw i16, ptr %pred, i64 %iv
+  %ee.val = load i16, ptr %ee.addr, align 2
+  %ee.cond = icmp slt i16 %ee.val, 250
+  br i1 %ee.cond, label %exit, label %for.cont
+
+for.cont:
+  %st.addr = getelementptr inbounds nuw i16, ptr %array, i64 %iv
+  %data = load i16, ptr %st.addr, align 2
+  %inc = add nsw i16 %data, 1
+  store i16 %inc, ptr %st.addr, align 2
+  %ee2.addr = getelementptr inbounds nuw i16, ptr %pred2, i64 %iv
+  %ee2.val = load i16, ptr %ee2.addr, align 2
+  %ee2.cond = icmp sgt i16 %ee2.val, 500
+  br i1 %ee2.cond, label %exit, label %for.inc
+
+for.inc:
+  %iv.next = add nuw nsw i64 %iv, 1
+  %counted.cond = icmp eq i64 %iv.next, 20
+  br i1 %counted.cond, label %exit, label %for.body
+
+exit:
+  ret void
+}
+
+;; Vectorizeable, requires processing more than one exit.
+define void @loop_contains_store_before_two_early_exits(ptr dereferenceable(40) noalias %array, ptr align 2 dereferenceable(40) readonly %pred, ptr align 2 dereferenceable(40) readonly %pred2) {
+; CHECK-LABEL: LV: Checking a loop in 'loop_contains_store_before_two_early_exits'
+; CHECK:       LV: Not vectorizing: Load for uncountable exit not guaranteed to execute.
+entry:
+  br label %for.body
+
+for.body:
+  %iv = phi i64 [ 0, %entry ], [ %iv.next, %for.inc ]
+  %st.addr = getelementptr inbounds nuw i16, ptr %array, i64 %iv
+  %data = load i16, ptr %st.addr, align 2
+  %inc = add nsw i16 %data, 1
+  store i16 %inc, ptr %st.addr, align 2
+  %ee.addr = getelementptr inbounds nuw i16, ptr %pred, i64 %iv
+  %ee.val = load i16, ptr %ee.addr, align 2
+  %ee.cond = icmp slt i16 %ee.val, 250
+  br i1 %ee.cond, label %exit, label %for.cont
+
+for.cont:
+  %ee2.addr = getelementptr inbounds nuw i16, ptr %pred2, i64 %iv
+  %ee2.val = load i16, ptr %ee2.addr, align 2
+  %ee2.cond = icmp sgt i16 %ee2.val, 500
+  br i1 %ee2.cond, label %exit, label %for.inc
+
+for.inc:
+  %iv.next = add nuw nsw i64 %iv, 1
+  %counted.cond = icmp eq i64 %iv.next, 20
+  br i1 %counted.cond, label %exit, label %for.body
+
+exit:
+  ret void
+}
+
+;; Vectorizeable, requires processing more than one exit.
+define void @one_uncountable_two_countable_exits(ptr dereferenceable(1024) noalias %array, ptr dereferenceable(1024) readonly %pred) {
+; CHECK-LABEL: LV: Checking a loop in 'one_uncountable_two_countable_exits'
+; CHECK:       LV: Not vectorizing: Load for uncountable exit not guaranteed to execute.
+entry:
+  br label %loop
+
+loop:
+  %iv = phi i64 [ %iv.next, %loop.inc ], [ 3, %entry ]
+  %ce.ee.cmp = icmp ne i64 %iv, 64
+  br i1 %ce.ee.cmp, label %update, label %loop.end
+
+update:
+  %st.addr = getelementptr inbounds i8, ptr %array, i64 %iv
+  %data = load i8, ptr %st.addr, align 1
+  %inc = add nsw i8 %data, 1
+  store i8 %inc, ptr %st.addr, align 1
+  %ee.addr = getelementptr inbounds i8, ptr %pred, i64 %iv
+  %ee.val = load i8, ptr %ee.addr, align 1
+  %ee.cond = icmp eq i8 %ee.val, 37
+  br i1 %ee.cond, label %loop.end, label %loop.inc
+
+loop.inc:
+  %iv.next = add i64 %iv, 1
+  %ce.latch.cmp = icmp ne i64 %iv.next, 128
+  br i1 %ce.latch.cmp, label %loop, label %loop.end
+
+loop.end:
+  ret void
+}
+
+;; Vectorizeable, need to handle reductions.
+define i16 @uncountable_exit_with_reduction(ptr dereferenceable(40) noalias %array, ptr align 2 dereferenceable(40) readonly %pred) {
+; CHECK-LABEL: LV: Checking a loop in 'uncountable_exit_with_reduction'
+; CHECK:       LV: Not vectorizing: Found an unidentified PHI %rdx = phi i16 [ 0, %entry ], [ %rdx.next, %for.inc ]
+entry:
+  br label %for.body
+
+for.body:
+  %iv = phi i64 [ 0, %entry ], [ %iv.next, %for.inc ]
+  %rdx = phi i16 [ 0, %entry ], [ %rdx.next, %for.inc ]
+  %st.addr = getelementptr inbounds nuw i16, ptr %array, i64 %iv
+  %data = load i16, ptr %st.addr, align 2
+  %inc = add nsw i16 %data, 1
+  store i16 %inc, ptr %st.addr, align 2
+  %ee.addr = getelementptr inbounds nuw i16, ptr %pred, i64 %iv
+  %ee.val = load i16, ptr %ee.addr, align 2
+  %ee.cond = icmp sgt i16 %ee.val, 500
+  br i1 %ee.cond, label %exit, label %for.inc
+
+for.inc:
+  %rdx.next = add i16 %rdx, %data
+  %iv.next = add nuw nsw i64 %iv, 1
+  %counted.cond = icmp eq i64 %iv.next, 20
+  br i1 %counted.cond, label %exit, label %for.body
+
+exit:
+  %res = phi i16 [ %rdx, %for.body ], [ %rdx.next, %for.inc ]
+  ret i16 %res
+}
+
+define i16 @uncountable_exit_with_live_out(ptr dereferenceable(40) noalias %array, ptr align 2 dereferenceable(40) readonly %pred) {
+; CHECK-LABEL: LV: Checking a loop in 'uncountable_exit_with_live_out'
+; CHECK:       LV: Not vectorizing: Writes to memory unsupported in early exit loops.
+entry:
+  br label %for.body
+
+for.body:
+  %iv = phi i64 [ 0, %entry ], [ %iv.next, %for.inc ]
+  %st.addr = getelementptr inbounds nuw i16, ptr %array, i64 %iv
+  %data = load i16, ptr %st.addr, align 2
+  %inc = add nsw i16 %data, 1
+  store i16 %inc, ptr %st.addr, align 2
+  %ee.addr = getelementptr inbounds nuw i16, ptr %pred, i64 %iv
+  %ee.val = load i16, ptr %ee.addr, align 2
+  %ee.cond = icmp sgt i16 %ee.val, 500
+  br i1 %ee.cond, label %exit, label %for.inc
+
+for.inc:
+  %iv.next = add nuw nsw i64 %iv, 1
+  %counted.cond = icmp eq i64 %iv.next, 20
+  br i1 %counted.cond, label %exit, label %for.body
+
+exit:
+  ret i16 %data
+}
+
+; Vectorizeable, requires improvements in dereferenceability checks
+define void @uncountable_exit_with_constant_nonunit_stride(ptr dereferenceable(4000) noalias %array, ptr align 2 dereferenceable(4000) readonly %pred) {
+; CHECK-LABEL: LV: Checking a loop in 'uncountable_exit_with_constant_nonunit_stride'
+; CHECK:       LV: Not vectorizing: Writes to memory unsupported in early exit loops.
+entry:
+  br label %for.body
+
+for.body:
+  %iv = phi i64 [ 0, %entry ], [ %iv.next, %for.inc ]
+  %st.addr = getelementptr inbounds nuw i16, ptr %array, i64 %iv
+  %data = load i16, ptr %st.addr, align 2
+  %inc = add nsw i16 %data, 1
+  store i16 %inc, ptr %st.addr, align 2
+  %ee.addr = getelementptr inbounds nuw i16, ptr %pred, i64 %iv
+  %ee.val = load i16, ptr %ee.addr, align 2
+  %ee.cond = icmp sgt i16 %ee.val, 500
+  br i1 %ee.cond, label %exit, label %for.inc
+
+for.inc:
+  %iv.next = add nuw nsw i64 %iv, 20
+  %counted.cond = icmp slt i64 %iv.next, 2001
+  br i1 %counted.cond, label %exit, label %for.body
+
+exit:
+  ret void
+}
+
+; Vectorizeable, requires improvements in dereferenceability checks
+define void @uncountable_exit_with_invariant_but_unknown_stride(ptr dereferenceable(4000) noalias %array, ptr align 2 dereferenceable(4000) readonly %pred, i64 %stride) {
+; CHECK-LABEL: LV: Checking a loop in 'uncountable_exit_with_invariant_but_unknown_stride'
+; CHECK:       LV: Not vectorizing: Cannot determine exact exit count for latch block.
+entry:
+  br label %for.body
+
+for.body:
+  %iv = phi i64 [ 0, %entry ], [ %iv.next, %for.inc ]
+  %st.addr = getelementptr inbounds nuw i16, ptr %array, i64 %iv
+  %data = load i16, ptr %st.addr, align 2
+  %inc = add nsw i16 %data, 1
+  store i16 %inc, ptr %st.addr, align 2
+  %ee.addr = getelementptr inbounds nuw i16, ptr %pred, i64 %iv
+  %ee.val = load i16, ptr %ee.addr, align 2
+  %ee.cond = icmp sgt i16 %ee.val, 500
+  br i1 %ee.cond, label %exit, label %for.inc
+
+for.inc:
+  %iv.next = add nuw nsw i64 %iv, %stride
+  %counted.cond = icmp slt i64 %iv.next, 2001
+  br i1 %counted.cond, label %exit, label %for.body
+
+exit:
+  ret void
+}
+
+define i32 @uncountable_exit_with_separate_exit_block(ptr dereferenceable(40) noalias %array, ptr align 2 dereferenceable(40) readonly %pred) {
+; CHECK-LABEL: LV: Checking a loop in 'uncountable_exit_with_separate_exit_block'
+; CHECK:       LV: Not vectorizing: Writes to memory unsupported in early exit loops.
+entry:
+  br label %for.body
+
+for.body:
+  %iv = phi i64 [ 0, %entry ], [ %iv.next, %for.inc ]
+  %st.addr = getelementptr inbounds nuw i16, ptr %array, i64 %iv
+  %data = load i16, ptr %st.addr, align 2
+  %inc = add nsw i16 %data, 1
+  store i16 %inc, ptr %st.addr, align 2
+  %ee.addr = getelementptr inbounds nuw i16, ptr %pred, i64 %iv
+  %ee.val = load i16, ptr %ee.addr, align 2
+  %ee.cond = icmp sgt i16 %ee.val, 500
+  br i1 %ee.cond, label %exit.uncountable, label %for.inc
+
+for.inc:
+  %iv.next = add nuw nsw i64 %iv, 1
+  %counted.cond = icmp eq i64 %iv.next, 20
+  br i1 %counted.cond, label %exit.countable, label %for.body
+
+exit.countable:
+  ret i32 0
+
+exit.uncountable:
+  ret i32 1
+}
+
+;; Avoid vectorization; similar to another invariant test above, we would either
+;; exit immediately on the first lane or never take the early exit. Should be
+;; versioned before reaching LV.
+define void @novec_uncountable_exit_condition_address_is_invariant(ptr dereferenceable(40) noalias %array, ptr align 2 dereferenceable(2) readonly %pred) {
+; CHECK-LABEL: LV: Checking a loop in 'novec_uncountable_exit_condition_address_is_invariant'
 ; CHECK:       LV: Not vectorizing: Uncountable exit condition depends on load with an address that is not an add recurrence in the loop.
 entry:
   br label %for.body
@@ -567,8 +800,11 @@ exit:
   ret void
 }
 
-define void @uncountable_exit_condition_address_is_addrec_in_outer_loop(ptr dereferenceable(40) noalias %array, ptr align 2 dereferenceable(2) readonly %pred) {
-; CHECK-LABEL: LV: Checking a loop in 'uncountable_exit_condition_address_is_addrec_in_outer_loop'
+;; Avoid vectorization; similar to the test above, we would either exit
+;; immediately on the first lane or never take the early exit. Should be
+;; versioned before reaching LV.
+define void @novec_uncountable_exit_condition_address_is_addrec_in_outer_loop(ptr dereferenceable(40) noalias %array, ptr align 2 dereferenceable(2) readonly %pred) {
+; CHECK-LABEL: LV: Checking a loop in 'novec_uncountable_exit_condition_address_is_addrec_in_outer_loop'
 ; CHECK:       LV: Not vectorizing: Uncountable exit condition depends on load with an address that is not an add recurrence in the loop.
 entry:
   br label %outer.body
