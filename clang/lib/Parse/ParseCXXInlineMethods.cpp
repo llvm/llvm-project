@@ -416,6 +416,15 @@ void Parser::ParseLexedMethodDeclaration(LateParsedMethodDeclaration &LM) {
           Actions,
           Sema::ExpressionEvaluationContext::PotentiallyEvaluatedIfUsed, Param);
 
+      // Delayed default arguments may contain lambdas, e.g.
+      //   struct S {
+      //     void ICE(int x, int = sizeof([x] { return x; }()));
+      //   }
+      // Lambda capture handling in tryCaptureVariable() expects an enclosing
+      // function scope in Sema's FunctionScopes stack.
+      Sema::FunctionScopeRAII PopFnContext(Actions);
+      Actions.PushFunctionScope();
+
       ExprResult DefArgResult;
       if (getLangOpts().CPlusPlus11 && Tok.is(tok::l_brace)) {
         Diag(Tok, diag::warn_cxx98_compat_generalized_initializer_lists);
