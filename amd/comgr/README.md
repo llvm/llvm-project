@@ -80,6 +80,11 @@ may be enabled during development via `-DADDRESS_SANITIZER=On` during the Comgr
 **Static Comgr:** Comgr can be built as a static library by passing
 `-DCOMGR_BUILD_SHARED_LIBS=OFF` during the Comgr `cmake` step.
 
+**Static LLVM Linking:** When building Comgr as a shared library within a
+super-project, you can statically link LLVM/Clang into Comgr by passing
+`-DCOMGR_STATIC_LLVM=ON`. By default (`OFF`), Comgr respects the existing
+`LLVM_LINK_LLVM_DYLIB` and `CLANG_LINK_CLANG_DYLIB` settings.
+
 **SPIRV Support:** To enable SPIRV support, checkout
 [SPIRV-LLVM-Translator](https://github.com/ROCm/SPIRV-LLVM-Translator) in
 `llvm/projects` or `llvm/tools` and build using the above instructions, with the
