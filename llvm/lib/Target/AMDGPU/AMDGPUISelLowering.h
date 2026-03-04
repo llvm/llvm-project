@@ -85,6 +85,7 @@ protected:
   SDValue lowerFEXP10Unsafe(SDValue Op, const SDLoc &SL, SelectionDAG &DAG,
                             SDNodeFlags Flags) const;
   SDValue lowerFEXP(SDValue Op, SelectionDAG &DAG) const;
+  SDValue lowerFEXPF64(SDValue Op, SelectionDAG &DAG) const;
 
   SDValue lowerCTLZResults(SDValue Op, SelectionDAG &DAG) const;
 
@@ -106,6 +107,9 @@ protected:
   SDValue LowerSIGN_EXTEND_INREG(SDValue Op, SelectionDAG &DAG) const;
 
 protected:
+  /// Check whether value Val can be supported by v_mov_b64, for the current
+  /// target.
+  bool isInt64ImmLegal(SDNode *Val, SelectionDAG &DAG) const;
   bool shouldCombineMemoryType(EVT VT) const;
   SDValue performLoadCombine(SDNode *N, DAGCombinerInfo &DCI) const;
   SDValue performStoreCombine(SDNode *N, DAGCombinerInfo &DCI) const;

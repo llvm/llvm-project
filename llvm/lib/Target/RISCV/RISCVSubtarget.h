@@ -200,6 +200,9 @@ public:
   bool hasREV8Like() const {
     return HasStdExtZbb || HasStdExtZbkb || HasVendorXTHeadBb;
   }
+  bool hasREVLike() const {
+    return HasStdExtP || ((HasVendorXCVbitmanip || HasVendorXqcibm) && !IsRV64);
+  }
 
   bool hasBEXTILike() const { return HasStdExtZbs || HasVendorXTHeadBs; }
 
@@ -331,7 +334,6 @@ public:
     }
   }
 
-  bool enablePExtSIMDCodeGen() const;
   bool isPExtPackedType(MVT VT) const;
 
   // Returns VLEN divided by DLEN. Where DLEN is the datapath width of the
