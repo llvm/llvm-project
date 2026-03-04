@@ -732,6 +732,10 @@ public:
     bool RuntimeUnrollMultiExit;
     /// Allow unrolling to add parallel reduction phis.
     bool AddAdditionalAccumulators;
+    /// Multiply the full-unroll Threshold when the loop contains
+    /// loop-dependent accesses to alloca-backed arrays whose
+    /// elimination would benefit from full unrolling. Default 1 (no boost).
+    unsigned LoopDependentMemoryAccessThresholdMultiplier = 1;
   };
 
   /// Get target-customized preferences for the generic loop unrolling

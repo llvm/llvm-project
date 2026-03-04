@@ -537,6 +537,7 @@ void NVPTXTTIImpl::getUnrollingPreferences(
   // beneficial.
   UP.Partial = UP.Runtime = true;
   UP.PartialThreshold = UP.Threshold / 4;
+  UP.LoopDependentMemoryAccessThresholdMultiplier = 8;
 }
 
 void NVPTXTTIImpl::getPeelingPreferences(Loop *L, ScalarEvolution &SE,
