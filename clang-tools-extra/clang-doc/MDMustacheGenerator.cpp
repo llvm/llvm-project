@@ -27,7 +27,7 @@ static std::unique_ptr<MustacheTemplateFile> IndexTemplate = nullptr;
 struct MDMustacheGenerator : public MustacheGenerator {
   static const char *Format;
   Error generateDocumentation(StringRef RootDir,
-                              StringMap<std::unique_ptr<doc::Info>> Infos,
+                              StringMap<doc::OwnedPtr<doc::Info>> Infos,
                               const ClangDocContext &CDCtx,
                               std::string DirName) override;
   Error setupTemplateFiles(const ClangDocContext &CDCtx) override;
@@ -72,7 +72,7 @@ Error MDMustacheGenerator::setupTemplateFiles(const ClangDocContext &CDCtx) {
 }
 
 Error MDMustacheGenerator::generateDocumentation(
-    StringRef RootDir, StringMap<std::unique_ptr<doc::Info>> Infos,
+    StringRef RootDir, StringMap<doc::OwnedPtr<doc::Info>> Infos,
     const clang::doc::ClangDocContext &CDCtx, std::string Dirname) {
   return MustacheGenerator::generateDocumentation(RootDir, std::move(Infos),
                                                   CDCtx, "md");

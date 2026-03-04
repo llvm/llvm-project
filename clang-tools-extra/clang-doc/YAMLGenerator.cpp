@@ -346,7 +346,7 @@ public:
   static const char *Format;
 
   llvm::Error generateDocumentation(
-      StringRef RootDir, llvm::StringMap<std::unique_ptr<doc::Info>> Infos,
+      StringRef RootDir, llvm::StringMap<doc::OwnedPtr<doc::Info>> Infos,
       const ClangDocContext &CDCtx, std::string DirName) override;
   llvm::Error generateDocForInfo(Info *I, llvm::raw_ostream &OS,
                                  const ClangDocContext &CDCtx) override;
@@ -355,7 +355,7 @@ public:
 const char *YAMLGenerator::Format = "yaml";
 
 llvm::Error YAMLGenerator::generateDocumentation(
-    StringRef RootDir, llvm::StringMap<std::unique_ptr<doc::Info>> Infos,
+    StringRef RootDir, llvm::StringMap<doc::OwnedPtr<doc::Info>> Infos,
     const ClangDocContext &CDCtx, std::string DirName) {
   for (const auto &Group : Infos) {
     doc::Info *Info = Group.getValue().get();

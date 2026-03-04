@@ -224,7 +224,7 @@ static llvm::Error getMdFiles(const char *Argv0,
 /// Make the output of clang-doc deterministic by sorting the children of
 /// namespaces and records.
 static void
-sortUsrToInfo(llvm::StringMap<std::unique_ptr<doc::Info>> &USRToInfo) {
+sortUsrToInfo(llvm::StringMap<doc::OwnedPtr<doc::Info>> &USRToInfo) {
   for (auto &I : USRToInfo) {
     auto &Info = I.second;
     if (Info->IT == doc::InfoType::IT_namespace) {
@@ -339,7 +339,7 @@ Example usage for a project using a compile commands database:
     // Collects all Infos according to their unique USR value. This map is added
     // to from the thread pool below and is protected by the USRToInfoMutex.
     llvm::sys::Mutex USRToInfoMutex;
-    llvm::StringMap<std::unique_ptr<doc::Info>> USRToInfo;
+    llvm::StringMap<doc::OwnedPtr<doc::Info>> USRToInfo;
 
     // First reducing phase (reduce all decls into one info per decl).
     llvm::outs() << "Reducing " << USRToBitcode.size() << " infos...\n";
@@ -381,7 +381,7 @@ Example usage for a project using a compile commands database:
             }
           } // time trace decoding bitcode
 
-          std::unique_ptr<doc::Info> Reduced;
+          doc::OwnedPtr<doc::Info> Reduced;
 
           {
             llvm::TimeTraceScope Merge("merging bitcode");
