@@ -29,6 +29,7 @@ namespace llvm {
 
 namespace AMDGPU {
 StringRef getSchedStrategy(const Function &F);
+StringRef getPostSchedStrategy(const Function &F);
 }
 
 class AMDGPUTargetMachine : public CodeGenTargetMachineImpl {
