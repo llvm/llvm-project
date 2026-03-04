@@ -1013,6 +1013,18 @@ bool AArch64DAGToDAGISel::SelectArithExtendedRegister(SDValue N, SDValue &Reg,
     if (Ext == AArch64_AM::InvalidShiftExtend)
       return false;
 
+    // Don't match sext of vector extracts. These can use SMOV, but if we match
+    // this as an extended register, we'll always fold the extend into an ALU op
+    // user of the extend (which results in a UMOV).
+    if (AArch64_AM::isSignExtendShiftType(Ext)) {
+      SDValue Op = N.getOperand(0);
+      if (Op->getOpcode() == ISD::ANY_EXTEND)
+        Op = Op->getOperand(0);
+      if (Op.getOpcode() == ISD::EXTRACT_VECTOR_ELT &&
+          Op.getOperand(0).getValueType().isFixedLengthVector())
+        return false;
+    }
+
     Reg = N.getOperand(0);
 
     // Don't match if free 32-bit -> 64-bit zext can be used instead. Use the

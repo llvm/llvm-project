@@ -1144,25 +1144,22 @@ void ExprEngine::ProcessStmt(const Stmt *currStmt, ExplodedNode *Pred) {
   }
 
   // Enqueue the new nodes onto the work list.
-  Engine.enqueue(Dst, currBldrCtx->getBlock(), currStmtIdx);
+  Engine.enqueueStmtNodes(Dst, currBldrCtx->getBlock(), currStmtIdx);
 }
 
 void ExprEngine::ProcessLoopExit(const Stmt* S, ExplodedNode *Pred) {
   PrettyStackTraceLoc CrashInfo(getContext().getSourceManager(),
                                 S->getBeginLoc(),
                                 "Error evaluating end of the loop");
-  ExplodedNodeSet Dst;
-  Dst.Add(Pred);
-  NodeBuilder Bldr(Pred, Dst, *currBldrCtx);
   ProgramStateRef NewState = Pred->getState();
 
   if(AMgr.options.ShouldUnrollLoops)
     NewState = processLoopEnd(S, NewState);
 
   LoopExit PP(S, Pred->getLocationContext());
-  Bldr.generateNode(PP, NewState, Pred);
-  // Enqueue the new nodes onto the work list.
-  Engine.enqueue(Dst, currBldrCtx->getBlock(), currStmtIdx);
+  ExplodedNode *N = Engine.makeNode(PP, NewState, Pred);
+  if (N && !N->isSink())
+    Engine.enqueueStmtNode(N, currBldrCtx->getBlock(), currStmtIdx);
 }
 
 void ExprEngine::ProcessInitializer(const CFGInitializer CFGInit,
@@ -1193,9 +1190,8 @@ void ExprEngine::ProcessInitializer(const CFGInitializer CFGInit,
       // The field was directly constructed, so there is no need to bind.
       // But we still need to stop tracking the object under construction.
       State = finishObjectConstruction(State, BMI, LC);
-      NodeBuilder Bldr(Pred, Tmp, *currBldrCtx);
       PostStore PS(Init, LC, /*Loc*/ nullptr, /*tag*/ nullptr);
-      Bldr.generateNode(PS, State, Pred);
+      Tmp.Add(Engine.makeNode(PS, State, Pred));
     } else {
       const ValueDecl *Field;
       if (BMI->isIndirectMemberInitializer()) {
@@ -1247,15 +1243,12 @@ void ExprEngine::ProcessInitializer(const CFGInitializer CFGInit,
   // Construct PostInitializer nodes whether the state changed or not,
   // so that the diagnostics don't get confused.
   PostInitializer PP(BMI, FieldLoc.getAsRegion(), stackFrame);
-  ExplodedNodeSet Dst;
-  NodeBuilder Bldr(Tmp, Dst, *currBldrCtx);
-  for (const auto I : Tmp) {
-    ProgramStateRef State = I->getState();
-    Bldr.generateNode(PP, State, I);
-  }
 
+  ExplodedNodeSet Dst;
+  for (ExplodedNode *Pred : Tmp)
+    Dst.Add(Engine.makeNode(PP, Pred->getState(), Pred));
   // Enqueue the new nodes onto the work list.
-  Engine.enqueue(Dst, currBldrCtx->getBlock(), currStmtIdx);
+  Engine.enqueueStmtNodes(Dst, currBldrCtx->getBlock(), currStmtIdx);
 }
 
 std::pair<ProgramStateRef, uint64_t>
@@ -1319,7 +1312,7 @@ void ExprEngine::ProcessImplicitDtor(const CFGImplicitDtor D,
   }
 
   // Enqueue the new nodes onto the work list.
-  Engine.enqueue(Dst, currBldrCtx->getBlock(), currStmtIdx);
+  Engine.enqueueStmtNodes(Dst, currBldrCtx->getBlock(), currStmtIdx);
 }
 
 void ExprEngine::ProcessNewAllocator(const CXXNewExpr *NE,
@@ -1333,13 +1326,12 @@ void ExprEngine::ProcessNewAllocator(const CXXNewExpr *NE,
   if (Opts.MayInlineCXXAllocator)
     VisitCXXNewAllocatorCall(NE, Pred, Dst);
   else {
-    NodeBuilder Bldr(Pred, Dst, *currBldrCtx);
     const LocationContext *LCtx = Pred->getLocationContext();
     PostImplicitCall PP(NE->getOperatorNew(), NE->getBeginLoc(), LCtx,
                         getCFGElementRef());
-    Bldr.generateNode(PP, Pred->getState(), Pred);
+    Dst.Add(Engine.makeNode(PP, Pred->getState(), Pred));
   }
-  Engine.enqueue(Dst, currBldrCtx->getBlock(), currStmtIdx);
+  Engine.enqueueStmtNodes(Dst, currBldrCtx->getBlock(), currStmtIdx);
 }
 
 void ExprEngine::ProcessAutomaticObjDtor(const CFGAutomaticObjDtor Dtor,
