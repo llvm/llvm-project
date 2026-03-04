@@ -153,8 +153,8 @@ define i32 @caller_passes_42() {
 ; SDAG-NEXT:    v_writelane_b32 v18, s31, 1
 ; SDAG-NEXT:    s_waitcnt lgkmcnt(0)
 ; SDAG-NEXT:    s_swappc_b64 s[30:31], s[40:41]
-; SDAG-NEXT:    v_readlane_b32 s31, v18, 1
 ; SDAG-NEXT:    v_readlane_b32 s30, v18, 0
+; SDAG-NEXT:    v_readlane_b32 s31, v18, 1
 ; SDAG-NEXT:    s_mov_b32 s32, s33
 ; SDAG-NEXT:    s_xor_saveexec_b64 s[4:5], -1
 ; SDAG-NEXT:    buffer_load_dword v18, off, s[0:3], s33 ; 4-byte Folded Reload
@@ -212,8 +212,8 @@ define i32 @caller_passes_42() {
 ; GISEL-NEXT:    v_writelane_b32 v18, s31, 1
 ; GISEL-NEXT:    s_waitcnt lgkmcnt(0)
 ; GISEL-NEXT:    s_swappc_b64 s[30:31], s[40:41]
-; GISEL-NEXT:    v_readlane_b32 s31, v18, 1
 ; GISEL-NEXT:    v_readlane_b32 s30, v18, 0
+; GISEL-NEXT:    v_readlane_b32 s31, v18, 1
 ; GISEL-NEXT:    s_mov_b32 s32, s33
 ; GISEL-NEXT:    s_xor_saveexec_b64 s[4:5], -1
 ; GISEL-NEXT:    buffer_load_dword v18, off, s[0:3], s33 ; 4-byte Folded Reload
