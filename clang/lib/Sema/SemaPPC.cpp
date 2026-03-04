@@ -224,6 +224,14 @@ bool SemaPPC::CheckPPCBuiltinFunctionCall(const TargetInfo &TI,
     return SemaRef.BuiltinConstantArgRange(TheCall, 2, 0, 7);
   case PPC::BI__builtin_vsx_xxpermx:
     return SemaRef.BuiltinConstantArgRange(TheCall, 3, 0, 7);
+  case PPC::BI__builtin_altivec_vupkint4tobf16:
+    return SemaRef.BuiltinConstantArgRange(TheCall, 1, 0, 3);
+  case PPC::BI__builtin_altivec_vupkint8tobf16:
+    return SemaRef.BuiltinConstantArgRange(TheCall, 1, 0, 1);
+  case PPC::BI__builtin_altivec_vupkint4tofp32:
+    return SemaRef.BuiltinConstantArgRange(TheCall, 1, 0, 7);
+  case PPC::BI__builtin_altivec_vupkint8tofp32:
+    return SemaRef.BuiltinConstantArgRange(TheCall, 1, 0, 3);
   case PPC::BI__builtin_ppc_tw:
   case PPC::BI__builtin_ppc_tdw:
     return SemaRef.BuiltinConstantArgRange(TheCall, 2, 1, 31);
