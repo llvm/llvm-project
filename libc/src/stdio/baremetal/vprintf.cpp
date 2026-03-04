@@ -8,11 +8,11 @@
 
 #include "src/stdio/vprintf.h"
 
-#include "hdr/stdio_macros.h"
 #include "src/__support/arg_list.h"
 #include "src/__support/common.h"
 #include "src/__support/macros/config.h"
 #include "src/stdio/baremetal/vfprintf_internal.h"
+#include "src/stdio/stdout.h"
 
 #include <stdarg.h>
 

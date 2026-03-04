@@ -1,4 +1,4 @@
-//===--- Definition of Linux stdout ---------------------------------------===//
+//===--- Definition of Linux stderr ---------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -6,21 +6,19 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "file.h"
-#include "hdr/stdio_macros.h"
+#include "src/stdio/stderr.h"
+
 #include "hdr/types/FILE.h"
+#include "src/__support/File/linux/file.h"
+#include "src/__support/common.h"
 #include "src/__support/macros/config.h"
 
 namespace LIBC_NAMESPACE_DECL {
 
-constexpr size_t STDOUT_BUFFER_SIZE = 1024;
-uint8_t stdout_buffer[STDOUT_BUFFER_SIZE];
-static LinuxFile StdOut(1, stdout_buffer, STDOUT_BUFFER_SIZE, _IOLBF, false,
+constexpr size_t STDERR_BUFFER_SIZE = 0;
+static LinuxFile StdErr(2, nullptr, STDERR_BUFFER_SIZE, _IONBF, false,
                         File::ModeFlags(File::OpenMode::APPEND));
-File *stdout = &StdOut;
+
+LLVM_LIBC_VARIABLE(FILE *, stderr) = reinterpret_cast<FILE *>(&StdErr);
 
 } // namespace LIBC_NAMESPACE_DECL
-
-extern "C" {
-FILE *stdout = reinterpret_cast<FILE *>(&LIBC_NAMESPACE::StdOut);
-} // extern "C"
