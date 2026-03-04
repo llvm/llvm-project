@@ -54,4 +54,4 @@ class TestCrashingCondition(TestBase):
             thread.stop_reason == lldb.eStopReasonException
             or thread.stop_reason == lldb.eStopReasonSignal
         )
-        self.assertTrue(is_crash, "Ran to the actual crash")
+        self.assertIn(thread.stop_reason, [lldb.eStopReasonException, lldb.eStopReasonSignal], "Ran to the actual crash")
