@@ -6,6 +6,7 @@ add_mlir_dialect_library(MLIRArithTransforms
   EmulateWideInt.cpp
   EmulateNarrowType.cpp
   ExpandOps.cpp
+  InferExactFromDLTI.cpp
   IntRangeOptimizations.cpp
   ReifyValueBounds.cpp
   ShardingInterfaceImpl.cpp
