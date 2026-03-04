@@ -72,7 +72,7 @@
 // CXX-AARCH64-BAREMETAL: "{{.*}}/Inputs/basic_aarch64_gcc_tree/lib/gcc/aarch64-none-elf/8.2.1/crtbegin.o"
 // CXX-AARCH64-BAREMETAL: "-L{{.*}}/Inputs/basic_aarch64_gcc_tree/lib/gcc/aarch64-none-elf/8.2.1"
 // CXX-AARCH64-BAREMETAL: "-L{{.*}}/Inputs/basic_aarch64_gcc_tree/aarch64-none-elf/lib"
-// CXX-AARCH64-BAREMETAL: "{{.*}}.o" "-lstdc++" "-lm" "--start-group" "-lgcc_s" "-lgcc" "-lc" "-lgloss" "--end-group"
+// CXX-AARCH64-BAREMETAL: "{{.*}}.o" "-lstdc++" "-lstdc++fs" "-lm" "--start-group" "-lgcc_s" "-lgcc" "-lc" "-lgloss" "--end-group"
 // CXX-AARCH64-BAREMETAL: "{{.*}}/Inputs/basic_aarch64_gcc_tree/lib/gcc/aarch64-none-elf/8.2.1/crtend.o"
 
 // RUN: %clangxx -### %s -fuse-ld= \
@@ -91,7 +91,7 @@
 // CXX-AARCH64-BAREMETAL-NOSYSROOT: "{{.*}}/Inputs/basic_aarch64_gcc_tree/lib/gcc/aarch64-none-elf/8.2.1/crtbegin.o"
 // CXX-AARCH64-BAREMETAL-NOSYSROOT: "-L{{.*}}/Inputs/basic_aarch64_gcc_tree/lib/gcc/aarch64-none-elf/8.2.1"
 // CXX-AARCH64-BAREMETAL-NOSYSROOT: "-L{{.*}}/Inputs/basic_aarch64_gcc_tree/lib/gcc/aarch64-none-elf/8.2.1/../../../../aarch64-none-elf/lib"
-// CXX-AARCH64-BAREMETAL-NOSYSROOT: "{{.*}}.o" "-lstdc++" "-lm" "--start-group" "-lgcc_s" "-lgcc" "-lc" "-lgloss" "--end-group"
+// CXX-AARCH64-BAREMETAL-NOSYSROOT: "{{.*}}.o" "-lstdc++" "-lstdc++fs" "-lm" "--start-group" "-lgcc_s" "-lgcc" "-lc" "-lgloss" "--end-group"
 // CXX-AARCH64-BAREMETAL-NOSYSROOT: "{{.*}}/Inputs/basic_aarch64_gcc_tree/lib/gcc/aarch64-none-elf/8.2.1/crtend.o"
 
 // RUN: %clangxx -### %s -fuse-ld= \
