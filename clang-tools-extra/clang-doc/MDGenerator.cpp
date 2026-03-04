@@ -8,7 +8,9 @@
 
 #include "Generators.h"
 #include "Representation.h"
+#include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/StringRef.h"
+#include "llvm/Support/Error.h"
 #include "llvm/Support/FileSystem.h"
 #include "llvm/Support/FormatVariadic.h"
 #include "llvm/Support/Path.h"
@@ -67,28 +69,42 @@ static void writeSourceFileRef(const ClangDocContext &CDCtx, const Location &L,
   OS << "\n\n";
 }
 
-static std::string genRawText(const std::vector<CommentInfo> &Comments) {
-  std::string Result;
-  llvm::raw_string_ostream OS(Result);
-  std::queue<const CommentInfo *> Q;
-  for (const auto &CI : Comments)
-    Q.push(&CI);
-  const CommentInfo *Comment;
-  bool First = true;
-  while (Q.size()) {
-    Comment = Q.front();
-    Q.pop();
-    if (!Comment->Text.empty()) {
-      if (!First)
-        OS << "<br>";
-      else
-        First = false;
-      OS << Comment->Text;
-    }
-    for (const auto &CI : Comment->Children)
-      Q.push(CI.get());
+static void extractChildComment(const CommentInfo &Comment,
+                                llvm::raw_ostream &OS, bool &FirstLine,
+                                bool &FirstParagraph, bool &ParagraphBreak) {
+  if (Comment.Kind == CommentKind::CK_ParagraphComment) {
+    if (!FirstParagraph)
+      ParagraphBreak = true;
   }
-  return Result;
+
+  if (!Comment.Text.empty()) {
+    if (FirstParagraph)
+      FirstParagraph = false;
+    if (ParagraphBreak) {
+      OS << "<br><br>";
+      ParagraphBreak = false;
+      FirstLine = true;
+    }
+
+    if (!FirstLine)
+      OS << "<br>";
+    else
+      FirstLine = false;
+
+    OS << Comment.Text;
+  }
+
+  for (const auto &Child : Comment.Children)
+    extractChildComment(*Child, OS, FirstLine, FirstParagraph, ParagraphBreak);
+}
+
+static void genCommentString(ArrayRef<CommentInfo> Comments,
+                             std::string &Buffer) {
+  llvm::raw_string_ostream OS(Buffer);
+  bool FirstLine = true, FirstParagraph = true, ParagraphBreak = false;
+
+  for (const auto &Child : Comments)
+    extractChildComment(Child, OS, FirstLine, FirstParagraph, ParagraphBreak);
 }
 
 static void maybeWriteSourceFileRef(llvm::raw_ostream &OS,
@@ -211,9 +227,10 @@ static void genMarkdown(const ClangDocContext &CDCtx, const EnumInfo &I,
       if (!N.Value.empty())
         Members << "| " << N.Value << " ";
       if (HasComments) {
-        std::string RawComment =
-            StringRef(genRawText(N.Description)).trim().str();
-        Members << "| " << (RawComment.empty() ? "--" : RawComment) << " ";
+        std::string CommentString;
+        genCommentString(ArrayRef(N.Description), CommentString);
+        Members << "| " << (CommentString.empty() ? "--" : CommentString)
+                << " ";
       }
       Members << "|\n";
     }

@@ -151,7 +151,7 @@ enum Size : uint8_t {
 // MD-INDEX: | enum Size : uint8_t |
 // MD-INDEX: | Name | Value | Comments |
 // MD-INDEX: |:-:|:-:|:-:|
-// MD-INDEX: | Small | 0 | A pearl.<br> Pearls are quite small.<br> Pearls are used in jewelry. |
+// MD-INDEX: | Small | 0 | A pearl.<br> Pearls are quite small.<br><br> Pearls are used in jewelry. |
 // MD-INDEX: | Medium | 1 | A tennis ball. |
 // MD-INDEX: | Large | 2 | A football. |
 // MD-INDEX: **brief** Specify the size
