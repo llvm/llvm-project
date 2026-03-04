@@ -14,6 +14,7 @@
 
 #include "mlir/Dialect/Arith/IR/Arith.h"
 #include "mlir/Dialect/Arith/Utils/Utils.h"
+#include "mlir/Dialect/Func/IR/FuncOps.h"
 #include "mlir/Dialect/OpenACC/OpenACC.h"
 #include "mlir/Dialect/SCF/IR/SCF.h"
 #include "mlir/Dialect/SCF/Utils/Utils.h"
@@ -170,27 +171,33 @@ cloneACCRegionInto(Region *src, Block *dest, Block::iterator inlinePoint,
 /// Wrap a multi-block region with scf.execute_region.
 scf::ExecuteRegionOp
 wrapMultiBlockRegionWithSCFExecuteRegion(Region &region, IRMapping &mapping,
-                                         Location loc, RewriterBase &rewriter) {
+                                         Location loc, RewriterBase &rewriter,
+                                         bool convertFuncReturn) {
   auto exeRegionOp = scf::ExecuteRegionOp::create(rewriter, loc, TypeRange{});
 
   rewriter.cloneRegionBefore(region, exeRegionOp.getRegion(),
                              exeRegionOp.getRegion().end(), mapping);
 
-  // Find and replace the ACC terminator with scf.yield
-  Operation *terminator = exeRegionOp.getRegion().back().getTerminator();
-  if (auto yieldOp = dyn_cast<acc::YieldOp>(terminator)) {
-    if (yieldOp.getNumOperands() > 0) {
-      region.getParentOp()->emitError(
-          "acc.loop with results not yet supported");
-      return nullptr;
+  SmallVector<Block *, 8> blocks(
+      llvm::make_pointer_range(exeRegionOp.getRegion().getBlocks()));
+
+  for (Block *block : blocks) {
+    if (block->empty())
+      continue;
+    Operation *blockTerminator = block->getTerminator();
+    if ((convertFuncReturn && isa<func::ReturnOp>(*blockTerminator)) ||
+        isa<acc::YieldOp>(*blockTerminator)) {
+      if (blockTerminator->getNumOperands()) {
+        region.getParentOp()->emitError(
+            "region with results not yet supported");
+        return nullptr;
+      }
+      rewriter.setInsertionPointToEnd(block);
+      (void)scf::YieldOp::create(rewriter, blockTerminator->getLoc());
+      rewriter.eraseOp(blockTerminator);
     }
-  } else if (!isa<acc::TerminatorOp>(terminator)) {
-    llvm_unreachable("unexpected terminator in ACC region");
   }
 
-  rewriter.eraseOp(terminator);
-  rewriter.setInsertionPointToEnd(&exeRegionOp.getRegion().back());
-  scf::YieldOp::create(rewriter, loc);
   return exeRegionOp;
 }
 
