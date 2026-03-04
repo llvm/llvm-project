@@ -2512,6 +2512,21 @@ libc_support_library(
 )
 
 libc_support_library(
+    name = "__support_math_acosbf16",
+    hdrs = ["src/__support/math/acosbf16.h"],
+    deps = [
+        ":__support_FPUtil_FEnvImpl",
+        ":__support_FPUtil_FPBits",
+        ":__support_FPUtil_bfloat16",
+        ":__support_FPUtil_cast",
+        ":__support_FPUtil_multiply_add",
+        ":__support_FPUtil_sqrt",
+        ":__support_macros_optimization",
+        ":__support_math_inv_trigf_utils",
+    ],
+)
+
+libc_support_library(
     name = "__support_math_acosf",
     hdrs = ["src/__support/math/acosf.h"],
     deps = [
@@ -5884,6 +5899,11 @@ libc_function(
 libc_math_function(
     name = "acos",
     additional_deps = [":__support_math_acos"],
+)
+
+libc_math_function(
+    name = "acosbf16",
+    additional_deps = [":__support_math_acosbf16"],
 )
 
 libc_math_function(

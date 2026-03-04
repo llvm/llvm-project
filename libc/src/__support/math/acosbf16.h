@@ -35,8 +35,7 @@ LIBC_INLINE constexpr bfloat16 acosbf16(bfloat16 x) {
 
   uint16_t x_u = xbits.uintval();
   uint16_t x_abs = x_u & 0x7fff;
-  bool sign = (x_u>>15);
-  float x_sign = (sign) ? -1 : 1;
+  bool sign = (x_u >> 15);
   float xf = x;
 
   // case 1: |x|>=1, NaN or Inf
