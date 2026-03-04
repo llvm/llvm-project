@@ -582,4 +582,4 @@ define i32 @unique_caller(ptr %p) {
 }
 
 ; CHECK-LABEL: .section .custom_section.target_features
-; CHECK: .ascii "tail-call"
+; CHECK: .ascii  "tail-call"
