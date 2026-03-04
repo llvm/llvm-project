@@ -40,7 +40,7 @@ bb0:
 ;       bb1  bb2
 ;         \  /
 ;          bb4
-; TODO: bb4 should be unmasked.
+; Verify that bb4 is unmasked.
   %iv = phi i64 [0, %entry], [%iv.next, %bb4]
   %gep = getelementptr i64, ptr %a, i64 %iv
   %c0 = icmp sle i64 %iv, 0
@@ -119,7 +119,8 @@ bb0:
 ;       bb3  /
 ;         \ /
 ;         bb4
-; TODO: bb3 can reuse bb1's mask and bb4 should be unmasked.
+; TODO: bb3 can reuse bb1's mask.
+; Verify that bb4 is unmasked.
   %iv = phi i64 [0, %entry], [%iv.next, %bb4]
   %gep = getelementptr i64, ptr %a, i64 %iv
   %c0 = icmp sle i64 %iv, 0
