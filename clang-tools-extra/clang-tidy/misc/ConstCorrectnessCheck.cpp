@@ -23,6 +23,12 @@ namespace {
 // FIXME: This matcher exists in some other code-review as well.
 // It should probably move to ASTMatchers.
 AST_MATCHER(VarDecl, isLocal) { return Node.isLocalVarDecl(); }
+// FIXME: The matcher 'hasName(Name)' asserts that its argument 'Name' is
+// nonempty. Perhaps remove that assertion and replace 'isUnnamed()' with
+// 'hasName("")'.
+AST_MATCHER(VarDecl, isUnnamed) {
+  return Node.getDeclName().isIdentifier() && Node.getName().empty();
+}
 AST_MATCHER_P(DeclStmt, containsAnyDeclaration,
               ast_matchers::internal::Matcher<Decl>, InnerMatcher) {
   return ast_matchers::internal::matchesFirstInPointerRange(
@@ -148,7 +154,7 @@ void ConstCorrectnessCheck::registerMatchers(MatchFinder *Finder) {
 
   if (AnalyzeParameters) {
     const auto ParamMatcher =
-        parmVarDecl(unless(CommonExcludeTypes),
+        parmVarDecl(unless(CommonExcludeTypes), unless(isUnnamed()),
                     anyOf(hasType(referenceType()), hasType(pointerType())))
             .bind("value");
 
@@ -206,13 +212,6 @@ void ConstCorrectnessCheck::check(const MatchFinder::MatchResult &Result) {
   const auto *VarDeclStmt = Result.Nodes.getNodeAs<DeclStmt>("decl-stmt");
 
   assert(Variable && LocalScope && Function);
-
-  // If a variable (e.g. function parameter) is unnamed, don't report it. Being
-  // unnamed already guarantees that the variable can't be accessed, so
-  // 'const'ness (can't be modified) doesn't add extra information. Also, the
-  // messages would be awkward in this case.
-  if (Variable->getDeclName().isIdentifier() && Variable->getName().empty())
-    return;
 
   // It can not be guaranteed that the variable is declared isolated,
   // therefore a transformation might effect the other variables as well and
