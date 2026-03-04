@@ -4499,11 +4499,11 @@ ExprResult Sema::SubstConceptTemplateArguments(
         assert(Arg.getKind() == TemplateArgument::Template);
         ResolvedConcept = dyn_cast_or_null<ConceptDecl>(
             Arg.getAsTemplate().getAsTemplateDecl());
+        if (ResolvedConcept == nullptr)
+          return E;
       } else
         ResolvedConcept = dyn_cast<ConceptDecl>(D);
 
-      if (ResolvedConcept == nullptr)
-        return E;
 
       TemplateArgumentListInfo TransArgs(E->getLAngleLoc(), E->getRAngleLoc());
       if (TransformTemplateArguments(E->getTemplateArgs(),
