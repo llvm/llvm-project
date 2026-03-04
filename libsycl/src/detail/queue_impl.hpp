@@ -31,7 +31,7 @@ public:
   ~QueueImpl() = default;
 
   /// Constructs a SYCL queue from a device using an asyncHandler and
-  /// propList provided.
+  /// a propList.
   ///
   /// \param deviceImpl is a SYCL device that is used to dispatch tasks
   /// submitted to the queue.
@@ -40,35 +40,26 @@ public:
   explicit QueueImpl(DeviceImpl &deviceImpl, const async_handler &asyncHandler,
                      const property_list &propList, PrivateTag);
 
-  /// Constructs a QueueImpl with a provided arguments. Variadic helper.
-  /// Restrics ways of QueueImpl creation.
+  /// Constructs a QueueImpl with the provided arguments. Variadic helper.
+  /// Restricts QueueImpl creation to std::shared_ptr allocations.
   template <typename... Ts>
   static std::shared_ptr<QueueImpl> create(Ts &&...args) {
     return std::make_shared<QueueImpl>(std::forward<Ts>(args)..., PrivateTag{});
   }
 
-  /// Returns backend this queue is associated with.
-  ///
-  /// \return SYCL backend.
+  /// \return the SYCL backend this queue is associated with.
   backend getBackend() const noexcept;
 
-  /// Returns context this queue is associated with.
-  ///
-  /// \return context implementation object.
+  /// \return the context implementation object this queue is associated with.
   ContextImpl &getContext() { return MContext; }
 
-  /// Returns device this queue is associated with.
-  ///
-  /// \return device implementation object.
+  /// \return the device implementation object this queue is associated with.
   DeviceImpl &getDevice() { return MDevice; }
 
-  /// Returns whether the queue is in order or out of order.
-  ///
-  /// \return true if queue is in order.
+  /// \return true if and only if the queue is in order.
   bool isInOrder() const { return MIsInorder; }
 
 private:
-  // ol_queue_handle_t MOffloadQueue = {};
   const bool MIsInorder;
   const async_handler MAsyncHandler;
   const property_list MPropList;

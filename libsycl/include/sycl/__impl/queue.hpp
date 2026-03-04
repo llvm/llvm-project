@@ -15,13 +15,13 @@
 #ifndef _LIBSYCL___IMPL_QUEUE_HPP
 #define _LIBSYCL___IMPL_QUEUE_HPP
 
-#include <sycl/__impl/detail/config.hpp>
-#include <sycl/__impl/detail/default_async_handler.hpp>
-#include <sycl/__impl/detail/obj_utils.hpp>
-
 #include <sycl/__impl/async_handler.hpp>
 #include <sycl/__impl/device.hpp>
 #include <sycl/__impl/property_list.hpp>
+
+#include <sycl/__impl/detail/config.hpp>
+#include <sycl/__impl/detail/default_async_handler.hpp>
+#include <sycl/__impl/detail/obj_utils.hpp>
 
 _LIBSYCL_BEGIN_NAMESPACE_SYCL
 
@@ -70,8 +70,8 @@ public:
 
   /// Constructs a SYCL queue instance using the device identified by the
   /// device selector provided.
-  /// \param deviceSelector is SYCL 2020 Device Selector, a simple callable that
-  /// takes a device and returns an int
+  /// \param deviceSelector is a SYCL 2020 Device Selector, a simple callable
+  /// that takes a device and returns an int
   /// \param propList is a list of properties for queue construction.
   template <
       typename DeviceSelector,
@@ -83,8 +83,8 @@ public:
 
   /// Constructs a SYCL queue instance using the device identified by the
   /// device selector provided.
-  /// \param deviceSelector is SYCL 2020 Device Selector, a simple callable that
-  /// takes a device and returns an int
+  /// \param deviceSelector is a SYCL 2020 Device Selector, a simple callable
+  /// that takes a device and returns an int
   /// \param asyncHandler is a SYCL asynchronous exception handler.
   /// \param propList is a list of properties for queue construction.
   template <
@@ -111,36 +111,28 @@ public:
   explicit queue(const device &syclDevice, const async_handler &asyncHandler,
                  const property_list &propList = {});
 
-  /// Returns the SYCL backend that is associated with this queue.
-  ///
-  /// \return the backend associated with this queue.
+  /// \return the SYCL backend associated with this queue.
   backend get_backend() const noexcept;
 
-  /// Returns context that is associated with this queue.
-  ///
-  /// \return an associated SYCL context.
+  /// \return the associated SYCL context.
   context get_context() const;
 
-  /// Returns device that is associated with this queue.
-  ///
-  /// \return SYCL device this queue was constructed with.
+  /// \return the SYCL device this queue was constructed with.
   device get_device() const;
 
-  /// Returns whether the queue is in order or out of order.
-  ///
   /// Equivalent to has_property<property::queue::in_order>().
   ///
-  /// \return true if queue is in order.
+  /// \return true if and only if the queue is in order.
   bool is_in_order() const;
 
-  /// Queries SYCL queue for information.
+  /// Queries the queue for information.
   ///
   /// The return type depends on information being queried.
   template <typename Param> typename Param::return_type get_info() const;
 
-  /// Queries SYCL queue for SYCL backend-specific information.
+  /// Queries the queue for SYCL backend-specific information.
   ///
-  /// The return type depends on information being queried.
+  /// The return type depends on the information being queried.
   template <typename Param>
   typename Param::return_type get_backend_info() const;
 

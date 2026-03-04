@@ -7,8 +7,8 @@
 //===----------------------------------------------------------------------===//
 ///
 /// \file
-/// This file contains definition of an implementation-defined default
-/// async_handler which is invoked when an asynchronous error occurs in a queue
+/// This file contains the definition of an implementation-defined default
+/// async_handler, which is invoked when an asynchronous error occurs in a queue
 /// or context that has no user-supplied asynchronous error handler object (see
 /// SYCL 2020 4.13.1.2).
 ///

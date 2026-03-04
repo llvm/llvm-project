@@ -20,7 +20,7 @@
 _LIBSYCL_BEGIN_NAMESPACE_SYCL
 
 /// Collection of properties for SYCL objects. Supported properties are defined
-/// by exact object the property_list passed to.
+/// by the exact object the property_list is passed to.
 // TODO: This is just a placeholder for initial stage.
 class property_list {
 public:
