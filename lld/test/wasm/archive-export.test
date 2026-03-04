@@ -1,18 +1,21 @@
 Test that --export will also fetch lazy symbols from archives
 
 RUN: llvm-mc -filetype=obj -triple=wasm32-unknown-unknown %p/Inputs/start.s -o %t.o
-RUN: llvm-mc -filetype=obj -triple=wasm32-unknown-unknown %S/Inputs/archive1.s -o %t.a1.o
-RUN: llvm-mc -filetype=obj -triple=wasm32-unknown-unknown %S/Inputs/archive2.s -o %t.a2.o
+RUN: llc -filetype=obj %S/Inputs/archive1.ll -o %t.a1.o
+RUN: llc -filetype=obj %S/Inputs/archive2.ll -o %t.a2.o
 RUN: rm -f %t.a
 RUN: llvm-ar rcs %t.a %t.a1.o %t.a2.o
 RUN: wasm-ld --export-dynamic --export=archive2_symbol -o %t.wasm %t.a %t.o
 RUN: obj2yaml %t.wasm | FileCheck %s
-RUN: wasm-ld --export-dynamic -o %t.noexport.wasm %t.a %t.o
-RUN: obj2yaml %t.noexport.wasm | FileCheck %s -check-prefix=NOEXPORT
+RUN: wasm-ld --export-dynamic -o %t.wasm %t.a %t.o
+RUN: obj2yaml %t.wasm | FileCheck %s -check-prefix=NOEXPORT
 
 CHECK:         Exports:
 CHECK-NEXT:       - Name:            memory
 CHECK-NEXT:         Kind:            MEMORY
+CHECK-NEXT:         Index:           0
+CHECK-NEXT:       - Name:            __stack_pointer
+CHECK-NEXT:         Kind:            GLOBAL
 CHECK-NEXT:         Index:           0
 CHECK-NEXT:       - Name:            foo
 CHECK-NEXT:         Kind:            FUNCTION
@@ -25,9 +28,6 @@ CHECK-NEXT:         Kind:            FUNCTION
 CHECK-NEXT:         Index:           3
 CHECK-NEXT:       - Name:            _start
 CHECK-NEXT:         Kind:            FUNCTION
-CHECK-NEXT:         Index:           0
-CHECK-NEXT:       - Name:            __stack_pointer
-CHECK-NEXT:         Kind:            GLOBAL
 CHECK-NEXT:         Index:           0
 CHECK-NEXT:   - Type:            CODE
 
