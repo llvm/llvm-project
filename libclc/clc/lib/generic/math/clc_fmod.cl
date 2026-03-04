@@ -130,7 +130,7 @@ _CLC_DEF _CLC_OVERLOAD double __clc_fmod(double x, double y) {
     w *= scale;
   }
 
-  // One more time: final iteration of the subtraction using floor instead of trunc
+  // One more time
   t = __clc_floor(dx / w);
 
   p = w * t;
