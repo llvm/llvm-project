@@ -1881,7 +1881,6 @@ OpFoldResult arith::IndexCastOp::fold(FoldAdaptor adaptor) {
   unsigned resultBitwidth =
       layout.getTypeSizeInBits(IndexType::get(this->getContext()));
   if (auto intTy = dyn_cast<IntegerType>(getElementTypeOrSelf(getType())))
-  if (auto intTy = dyn_cast<IntegerType>(getElementTypeOrSelf(getType())))
     resultBitwidth = intTy.getWidth();
 
   return constFoldCastOp<IntegerAttr, IntegerAttr>(
