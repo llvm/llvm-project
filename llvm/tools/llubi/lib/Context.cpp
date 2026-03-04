@@ -205,12 +205,16 @@ AnyValue Context::fromBytes(ArrayRef<Byte> Bytes, Type *Ty,
   }
   if (auto *ArrTy = dyn_cast<ArrayType>(Ty)) {
     Type *ElemTy = ArrTy->getElementType();
+    uint32_t StrideInBits = getEffectiveTypeAllocSize(ElemTy) * 8;
     std::vector<AnyValue> ValVec;
     uint32_t NumElements = ArrTy->getNumElements();
     ValVec.reserve(NumElements);
-    for (uint32_t I = 0; I != NumElements; ++I)
+    uint32_t BaseOffsetInBits = OffsetInBits;
+    for (uint32_t I = 0; I != NumElements; ++I) {
+      OffsetInBits = BaseOffsetInBits + I * StrideInBits;
       ValVec.push_back(
           fromBytes(Bytes, ElemTy, OffsetInBits, /*CheckPaddingBits=*/true));
+    }
     return AnyValue(std::move(ValVec));
   }
   if (auto *StructTy = dyn_cast<StructType>(Ty)) {
@@ -321,25 +325,30 @@ void Context::toBytes(const AnyValue &Val, Type *Ty, uint32_t &OffsetInBits,
     OffsetInBits = NewOffsetInBits;
     return;
   }
+  auto FillUndefBytes = [&](uint32_t NewOffsetInBits) {
+    if (OffsetInBits == NewOffsetInBits)
+      return;
+    // Fill padding bits due to alignment requirement.
+    assert(NewOffsetInBits > OffsetInBits &&
+           "Unexpected negative padding bits!");
+    fill(Bytes.slice(OffsetInBits / 8, (NewOffsetInBits - OffsetInBits) / 8),
+         Byte::undef());
+    OffsetInBits = NewOffsetInBits;
+  };
   if (auto *ArrTy = dyn_cast<ArrayType>(Ty)) {
     Type *ElemTy = ArrTy->getElementType();
-    for (const auto &SubVal : Val.asAggregate())
+    uint32_t CurrentOffsetInBits = OffsetInBits;
+    uint32_t StrideInBits = getEffectiveTypeAllocSize(ElemTy) * 8;
+    for (const auto &SubVal : Val.asAggregate()) {
+      FillUndefBytes(CurrentOffsetInBits);
       toBytes(SubVal, ElemTy, OffsetInBits, Bytes, /*PaddingBits=*/true);
+      CurrentOffsetInBits += StrideInBits;
+    }
     return;
   }
   if (auto *StructTy = dyn_cast<StructType>(Ty)) {
     auto *Layout = DL.getStructLayout(StructTy);
     uint32_t BaseOffsetInBits = OffsetInBits;
-    auto FillUndefBytes = [&](uint32_t NewOffsetInBits) {
-      if (OffsetInBits == NewOffsetInBits)
-        return;
-      // Fill padding bits due to alignment requirement.
-      assert(NewOffsetInBits > OffsetInBits &&
-             "Unexpected negative padding bits!");
-      fill(Bytes.slice(OffsetInBits / 8, (NewOffsetInBits - OffsetInBits) / 8),
-           Byte::undef());
-      OffsetInBits = NewOffsetInBits;
-    };
     for (uint32_t I = 0, E = Val.asAggregate().size(); I != E; ++I) {
       Type *ElemTy = StructTy->getElementType(I);
       TypeSize ElemOffset = Layout->getElementOffset(I);
