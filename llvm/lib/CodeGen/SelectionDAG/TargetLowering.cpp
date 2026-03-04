@@ -2337,6 +2337,12 @@ bool TargetLowering::SimplifyDemandedBits(
       if (SimplifyDemandedBits(Op1, DemandedAmtBits, DemandedElts, Known2, TLO,
                                Depth + 1))
         return true;
+
+      // rot*(x, 0) --> x
+      APInt AmtMask = APInt(Known2.getBitWidth(), BitWidth);
+      KnownBits Amt = KnownBits::urem(Known2, KnownBits::makeConstant(AmtMask));
+      if (Amt.isZero())
+        return TLO.CombineTo(Op, Op0);
     }
     break;
   }
