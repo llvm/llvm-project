@@ -250,7 +250,7 @@ private:
   bool selectWaveReduceSum(Register ResVReg, SPIRVTypeInst ResType,
                            MachineInstr &I) const;
 
-  bool selectWaveReduceProduct(Register ResVReg, const SPIRVType *ResType,
+  bool selectWaveReduceProduct(Register ResVReg, const SPIRVTypeInst ResType,
                                MachineInstr &I) const;
 
   template <typename PickOpcodeFn>
