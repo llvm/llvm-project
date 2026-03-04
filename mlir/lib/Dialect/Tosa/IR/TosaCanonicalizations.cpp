@@ -754,7 +754,7 @@ struct PadSliceOptimization : public OpRewritePattern<tosa::SliceOp> {
     if (llvm::any_of(llvm::seq<int64_t>(0, rank), [&](int64_t i) {
           const bool isDimDynamic = inputTy.isDynamicDim(i);
           const bool isDimSliced =
-              (sliceStarts[i] != 0) || (sliceSizes[i] != -1);
+              (sliceStarts[i] != 0) || (sliceSizes[i] != kInferableDimSize);
 
           return isDimDynamic && isDimSliced;
         })) {
@@ -854,11 +854,11 @@ struct SliceDynamicSizeCanonicalization
         llvm::to_vector(sizeElems.getValues<int64_t>());
 
     bool replaceSliceSize{false};
-    // if size op has -1 indicating dynamic shape but corresponding dim on the
-    // output is statically known, update size to match with known output dim
-    // shape
+    // if size op has kInferableDimSize indicating dynamic shape but
+    // corresponding dim on the output is statically known, update size to match
+    // with known output dim shape
     for (const auto &[index, size] : llvm::enumerate(sliceSizes)) {
-      if (size == -1 && !resultType.isDynamicDim(index)) {
+      if (size == kInferableDimSize && !resultType.isDynamicDim(index)) {
         sliceSizes[index] = resultType.getDimSize(index);
         replaceSliceSize = true;
       }
@@ -1792,24 +1792,21 @@ OpFoldResult SliceOp::fold(FoldAdaptor adaptor) {
     auto inputShape = inputTy.getShape();
     auto sizeValues = sizeElems.getValues<APInt>();
 
-    if (sizeValues.size() != inputShape.size())
-      return {};
-
     bool sizeMatchesInput = true;
     for (const auto &[i, sizeVal] : llvm::enumerate(sizeValues)) {
       int64_t size = sizeVal.getSExtValue();
 
       if (inputTy.isDynamicDim(i)) {
-        // For dynamic dimensions, check for -1 indicating full dimension is
-        // sliced
-        if (size != -1) {
+        // For dynamic dimensions, check for kInferableDimSize indicating full
+        // dimension is sliced
+        if (size != kInferableDimSize) {
           sizeMatchesInput = false;
           break;
         }
       } else {
-        // For static dimensions, check that size must match exactly or be -1
-        // indicating full dimension is sliced
-        if (size != -1 && size != inputShape[i]) {
+        // For static dimensions, check that size must match exactly or be
+        // kInferableDimSize indicating full dimension is sliced
+        if (size != kInferableDimSize && size != inputShape[i]) {
           sizeMatchesInput = false;
           break;
         }
