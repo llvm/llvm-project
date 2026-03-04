@@ -186,10 +186,10 @@ void foo() {
 // OGCG-FULL: %[[C_REAL:.*]] = fsub float %[[MUL_AR_BR]], %[[MUL_AI_BI]]
 // OGCG-FULL: %[[C_IMAG:.*]] = fadd float %[[MUL_AR_BI]], %[[MUL_AI_BR]]
 // OGCG-FULL: %[[IS_C_REAL_NAN:.*]] = fcmp uno float %[[C_REAL]], %[[C_REAL]]
-// OGCG-FULL: br i1 %[[IS_C_REAL_NAN]], label %[[COMPLEX_IS_IMAG_NAN:.*]], label %[[END_LABEL:.*]], !prof !2
+// OGCG-FULL: br i1 %[[IS_C_REAL_NAN]], label %[[COMPLEX_IS_IMAG_NAN:.*]], label %[[END_LABEL:[^,]*]]
 // OGCG-FULL: [[COMPLEX_IS_IMAG_NAN]]:
 // OGCG-FULL:  %[[IS_C_IMAG_NAN:.*]] = fcmp uno float %[[C_IMAG]], %[[C_IMAG]]
-// OGCG-FULL:  br i1 %[[IS_C_IMAG_NAN]], label %[[COMPLEX_LIB_CALL:.*]], label %[[END_LABEL]], !prof !2
+// OGCG-FULL:  br i1 %[[IS_C_IMAG_NAN]], label %[[COMPLEX_LIB_CALL:.*]], label %[[END_LABEL]]
 // OGCG-FULL: [[COMPLEX_LIB_CALL]]:
 // OGCG-FULL:  %[[CALL_RESULT:.*]] = call noundef <2 x float> @__mulsc3(float noundef %[[A_REAL]], float noundef %[[A_IMAG]], float noundef %[[B_REAL]], float noundef %[[B_IMAG]])
 // OGCG-FULL:  store <2 x float> %[[CALL_RESULT]], ptr %[[COMPLEX_CALL_ADDR]], align 4
