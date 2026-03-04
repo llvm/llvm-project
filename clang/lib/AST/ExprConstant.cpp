@@ -15713,6 +15713,9 @@ static bool refersToCompleteObject(const LValue &LVal) {
   if (LVal.Designator.Invalid)
     return false;
 
+  if (LVal.AllowConstexprUnknown)
+    return false;
+
   if (!LVal.Designator.Entries.empty())
     return LVal.Designator.isMostDerivedAnUnsizedArray();
 
@@ -15762,7 +15765,7 @@ static bool isUserWritingOffTheEnd(const ASTContext &Ctx, const LValue &LVal) {
     return false;
   };
 
-  return LVal.InvalidBase &&
+  return (LVal.InvalidBase || LVal.AllowConstexprUnknown) &&
          Designator.Entries.size() == Designator.MostDerivedPathLength &&
          Designator.MostDerivedIsArrayElement && isFlexibleArrayMember() &&
          isDesignatorAtObjectEnd(Ctx, LVal);
@@ -15830,6 +15833,19 @@ static bool determineEndOffset(EvalInfo &Info, SourceLocation ExprLoc,
     if (LVal.InvalidBase)
       return false;
 
+    if (LVal.AllowConstexprUnknown) {
+      // We cannot deterimine the end offset of the enitre object.
+      if ((Type == 0 || Type == 2))
+        return false;
+
+      // We cannot deterimine the end offset of the subobject if the subobject
+      // designator is invalid (e.g., unsized array designator).
+      if (LVal.Designator.Invalid) {
+        assert(Type != 3 && "cannot be Type 3");
+        return false;
+      }
+    }
+
     QualType BaseTy = getObjectType(LVal.getLValueBase());
     const bool Ret = CheckedHandleSizeof(BaseTy, EndOffset);
     addFlexibleArrayMemberInitSize(Info, BaseTy, LVal, EndOffset);
@@ -15855,9 +15871,13 @@ static bool determineEndOffset(EvalInfo &Info, SourceLocation ExprLoc,
       return convertUnsignedAPIntToCharUnits(APEndOffset, EndOffset);
 
     // If we cannot determine the size of the initial allocation, then we can't
-    // given an accurate upper-bound. However, we are still able to give
-    // conservative lower-bounds for Type=3.
+    // give an accurate upper-bound.
     if (Type == 1)
+      return false;
+
+    // However, we are still able to give conservative lower-bounds if Type=3
+    // and this isn't an unknown reference.
+    if (LVal.AllowConstexprUnknown)
       return false;
   }
 
@@ -15875,6 +15895,10 @@ static bool determineEndOffset(EvalInfo &Info, SourceLocation ExprLoc,
     uint64_t ArrayIndex = Designator.Entries.back().getAsArrayIndex();
     ElemsRemaining = ArraySize <= ArrayIndex ? 0 : ArraySize - ArrayIndex;
   } else {
+    // If this is an unknown reference and there are no subobject designators,
+    // we cannot determine whether the object is an array element.
+    if (LVal.AllowConstexprUnknown && LVal.Designator.Entries.empty())
+      return false;
     ElemsRemaining = Designator.isOnePastTheEnd() ? 0 : 1;
   }
 
@@ -16068,7 +16092,7 @@ bool IntExprEvaluator::VisitBuiltinCallExpr(const CallExpr *E,
     case EvaluationMode::ConstantFold:
     case EvaluationMode::IgnoreSideEffects:
       // Leave it to IR generation.
-      return Error(E);
+      return Info.CheckingPotentialConstantExpression ? false : Error(E);
     case EvaluationMode::ConstantExpressionUnevaluated:
       // Reduce it to a constant now.
       return Success((Type & 2) ? 0 : -1, E);
