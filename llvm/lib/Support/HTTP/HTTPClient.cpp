@@ -18,6 +18,7 @@
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Support/Errc.h"
 #include "llvm/Support/Error.h"
+#include "llvm/Support/ManagedStatic.h"
 #include "llvm/Support/MemoryBuffer.h"
 #ifdef LLVM_ENABLE_CURL
 #include <curl/curl.h>
@@ -40,7 +41,7 @@ class HTTPClientCleanup {
 public:
   ~HTTPClientCleanup() { HTTPClient::cleanup(); }
 };
-static const HTTPClientCleanup Cleanup;
+ManagedStatic<HTTPClientCleanup> Cleanup;
 
 #ifdef LLVM_ENABLE_CURL
 
