@@ -1898,9 +1898,9 @@ static void EmitDestroyingObjectDelete(CodeGenFunction &CGF,
                        ElementType);
 }
 
-static bool CanDevirtualizeDtorCall(const CXXDeleteExpr *E,
-                                    CXXDestructorDecl *&Dtor,
-                                    const LangOptions &LO) {
+static CXXDestructorDecl *TryDevirtualizeDtorCall(const CXXDeleteExpr *E,
+                                                  CXXDestructorDecl *Dtor,
+                                                  const LangOptions &LO) {
   assert(Dtor && Dtor->isVirtual() && "virtual dtor is expected");
   const Expr *DBase = E->getArgument();
   if (auto *MaybeDevirtualizedDtor = dyn_cast_or_null<CXXDestructorDecl>(
@@ -1910,8 +1910,7 @@ static bool CanDevirtualizeDtorCall(const CXXDeleteExpr *E,
     if (declaresSameEntity(getCXXRecord(DBase), DevirtualizedClass)) {
       // Devirtualized to the class of the base type (the type of the
       // whole expression).
-      Dtor = MaybeDevirtualizedDtor;
-      return true;
+      return MaybeDevirtualizedDtor;
     }
     // Devirtualized to some other type. Would need to cast the this
     // pointer to that type but we don't have support for that yet, so
@@ -1919,7 +1918,7 @@ static bool CanDevirtualizeDtorCall(const CXXDeleteExpr *E,
     // devirtualized to the derived type (the type of the inner
     // expression) as in EmitCXXMemberOrOperatorMemberCallExpr.
   }
-  return false;
+  return nullptr;
 }
 
 /// Emit the code for deleting a single object.
@@ -1946,11 +1945,15 @@ static bool EmitObjectDelete(CodeGenFunction &CGF, const CXXDeleteExpr *DE,
     if (RD->hasDefinition() && !RD->hasTrivialDestructor()) {
       Dtor = RD->getDestructor();
 
-      if (Dtor->isVirtual() &&
-          !CanDevirtualizeDtorCall(DE, Dtor, CGF.CGM.getLangOpts())) {
-        CGF.CGM.getCXXABI().emitVirtualObjectDelete(CGF, DE, Ptr, ElementType,
-                                                    Dtor);
-        return false;
+      if (Dtor->isVirtual()) {
+        if (auto *DevirtualizedDtor =
+                TryDevirtualizeDtorCall(DE, Dtor, CGF.CGM.getLangOpts())) {
+          Dtor = DevirtualizedDtor;
+        } else {
+          CGF.CGM.getCXXABI().emitVirtualObjectDelete(CGF, DE, Ptr, ElementType,
+                                                      Dtor);
+          return false;
+        }
       }
     }
   }
@@ -2100,7 +2103,7 @@ void CodeGenFunction::EmitCXXDeleteExpr(const CXXDeleteExpr *E) {
         // Emit normal loop over the array elements if we can easily
         // devirtualize destructor call.
         // Emit virtual call to vector deleting destructor otherwise.
-        if (!CanDevirtualizeDtorCall(E, Dtor, CGM.getLangOpts())) {
+        if (!TryDevirtualizeDtorCall(E, Dtor, CGM.getLangOpts())) {
           llvm::Value *NumElements = nullptr;
           llvm::Value *AllocatedPtr = nullptr;
           CharUnits CookieSize;
@@ -2124,8 +2127,9 @@ void CodeGenFunction::EmitCXXDeleteExpr(const CXXDeleteExpr *E) {
           EmitBranch(DeleteEnd);
 
           EmitBlock(BodyBB);
-          if (!EmitObjectDelete(*this, E, Ptr, DeleteTy, DeleteEnd))
-            EmitBlock(DeleteEnd);
+          CGM.getCXXABI().emitVirtualObjectDelete(*this, E, Ptr, DeleteTy,
+                                                  Dtor);
+          EmitBlock(DeleteEnd);
           return;
         }
       }
