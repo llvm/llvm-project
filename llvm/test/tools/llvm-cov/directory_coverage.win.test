@@ -23,13 +23,13 @@
 
 
 
-# HTML-TOP: coverage\index.html
+# HTML-TOP: coverage{{[/\\]}}index.html
 
-# ROOT: a0\a1\a2.cc
-# ROOT: b0\
+# ROOT: a0{{[/\\]}}a1{{[/\\]}}a2.cc
+# ROOT: b0{{[/\\]}}
 # ROOT-NOT: b1_1.cc
 # ROOT-NOT: b1_2.cc
-# ROOT: c0\c1\
+# ROOT: c0{{[/\\]}}c1{{[/\\]}}
 # ROOT-NOT: c2_1.cc
 # ROOT-NOT: b2_2.cc
 # ROOT: main.cc

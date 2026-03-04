@@ -13,8 +13,8 @@
 // RUN: llvm-cov show -format=html %S/Inputs/native_separators.covmapping -instr-profile=%t.profdata -path-equivalence=/tmp,%S %s -o %t.dir
 // RUN: FileCheck -check-prefixes=HTML -input-file=%t.dir/coverage/tmp/native_separators.c.html %s
 
-// TEXT-INDEX: \tmp\native_separators.c
-// HTML-INDEX: >tmp\native_separators.c</a>
-// HTML: <pre>\tmp\native_separators.c</pre>
+// TEXT-INDEX: {{[/\\]}}tmp{{[/\\]}}native_separators.c
+// HTML-INDEX: >tmp{{[/\\]}}native_separators.c</a>
+// HTML: <pre>{{[/\\]}}tmp{{[/\\]}}native_separators.c</pre>
 
 int main() {}
