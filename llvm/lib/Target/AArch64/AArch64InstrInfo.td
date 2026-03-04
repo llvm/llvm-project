@@ -11842,7 +11842,7 @@ let Predicates = [HasLSFE] in {
 }
 
 let Predicates = [HasF16F32DOT] in {
-  defm FDOT :SIMDThreeSameVectorFDot<"fdot">;
+  defm FDOT :SIMDThreeSameVectorFDot<"fdot", partial_reduce_fmla>;
   defm FDOTlane: SIMDThreeSameVectorFDOTIndex<"fdot">;
 }
 
