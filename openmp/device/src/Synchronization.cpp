@@ -189,7 +189,7 @@ void namedBarrierInit() {
 }
 
 void namedBarrier() {
-  uint32_t NumThreads = mapping::getMaxTeamThreads();
+  uint32_t NumThreads = omp_get_num_threads();
   uint32_t ThreadId = mapping::getThreadIdInBlock();
   if (ThreadId < NumThreads) {
     uint32_t load = atomic::add(&namedBarrierTracker, 1, atomic::seq_cst);
