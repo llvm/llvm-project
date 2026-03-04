@@ -5814,20 +5814,20 @@ def Tcgen05MMACollectorOpAttr : EnumAttr<NVVM_Dialect, Tcgen05MMACollectorOp, "t
   let assemblyFormat = "`<` $value `>`";
 }
 
-defvar Tcgen05MMANonBlockScaleKindCases =
+defvar Tcgen05MMANonBlockScaleKindList =
   [Tcgen05MMAKindF16, Tcgen05MMAKindTF32,
    Tcgen05MMAKindF8F6F4, Tcgen05MMAKindI8];
 
-defvar Tcgen05MMABlockScaleKindCases =
+defvar Tcgen05MMABlockScaleKindList =
   [Tcgen05MMAKindMXF8F6F4, Tcgen05MMAKindMXF4, Tcgen05MMAKindMXF4NVF4];
 
 defvar Tcgen05MMANonBlockScaleKindAttr =
   ConfinedAttr<Tcgen05MMAKindAttr,
-    [EnumAttrIsOneOf<Tcgen05MMAKindAttr, Tcgen05MMANonBlockScaleKindCases>]>;
+    [EnumAttrIsOneOf<Tcgen05MMAKindAttr, Tcgen05MMANonBlockScaleKindList>]>;
 
 defvar Tcgen05MMABlockScaleKindAttr =
   ConfinedAttr<Tcgen05MMAKindAttr,
-    [EnumAttrIsOneOf<Tcgen05MMAKindAttr, Tcgen05MMABlockScaleKindCases>]>;
+    [EnumAttrIsOneOf<Tcgen05MMAKindAttr, Tcgen05MMABlockScaleKindList>]>;
 
 def NVVM_Tcgen05MMAOp : NVVM_Op<"tcgen05.mma",
                           [AttrSizedOperandSegments,
