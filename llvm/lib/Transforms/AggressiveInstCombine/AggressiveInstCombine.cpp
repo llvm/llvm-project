@@ -372,6 +372,124 @@ static bool tryToRecognizePopCount(Instruction &I) {
   return false;
 }
 
+// Try to recognize below function as popcount intrinsic.
+// https://doc.lagout.org/security/Hackers%20Delight.pdf
+// Also used in TargetLowering::expandCTPOP().
+//
+// int popcnt(unsigned x) {
+// x = x - ((x >> 1) & 0x55555555);
+// x = (x & 0x33333333) + ((x >> 2) & 0x33333333);
+// x = (x + (x >> 4)) & 0x0F0F0F0F;
+// x = x + (x >> 8);
+// x = x + (x >> 16);
+// return x & 0x0000003F;
+// }
+
+// int popcnt(unsigned x) {
+// x = x - ((x >> 1) & 0x55555555);
+// x = x - 3*((x >> 2) & 0x33333333);
+// x = (x + (x >> 4)) & 0x0F0F0F0F;
+// x = x + (x >> 8);
+// x = x + (x >> 16);
+// return x & 0x0000003F;
+// }
+
+static bool tryToRecognizePopCount2n3(Instruction &I) {
+  if (I.getOpcode() != Instruction::And)
+    return false;
+
+  Type *Ty = I.getType();
+  if (!Ty->isIntOrIntVectorTy())
+    return false;
+
+  unsigned Len = Ty->getScalarSizeInBits();
+  if (!(Len == 16 || Len == 32 || Len == 64))
+    return false;
+  APInt Mask55 = APInt::getSplat(Len, APInt(8, 0x55));
+  APInt Mask33 = APInt::getSplat(Len, APInt(8, 0x33));
+  APInt Mask0F = APInt::getSplat(Len, APInt(8, 0x0F));
+
+  APInt MaskRes = APInt(Len, 2 * Len - 1);
+
+  Value *Op0 = I.getOperand(0);
+  Value *Op1 = I.getOperand(1);
+
+  // Matching "x & 0x001F" (16-bit).
+  // Matching "x & 0x0000003F" (32-bit).
+  // Matching "x & 0x0000007F" (64-bit).
+  if (!(match(Op0, m_SpecificInt(MaskRes)) ||
+        match(Op1, m_SpecificInt(MaskRes)))) {
+    return false;
+  }
+
+  // Get the value being masked
+  Value *Add1 = (match(Op0, m_SpecificInt(MaskRes))) ? Op1 : Op0;
+
+  // Matching "x = x + (x >> 32)" for 64-bit.
+  Value *Add2 = Add1;
+  if (Len == 64) {
+    if (!match(Add1, m_c_Add(m_LShr(m_Value(Add2), m_SpecificInt(32)),
+                             m_Deferred(Add2)))) {
+      return false;
+    }
+  }
+
+  // Matching "x = x + (x >> 16)" for 32-bit and 64-bit.
+  Value *Add3 = Add2;
+  if (Len == 32 || Len == 64) {
+    if (!match(Add2, m_c_Add(m_LShr(m_Value(Add3), m_SpecificInt(16)),
+                             m_Deferred(Add3)))) {
+      return false;
+    }
+  }
+
+  // Matching "x = x + (x >> 8)".
+  Value *And1;
+  if (!match(Add3, m_c_Add(m_LShr(m_Value(And1), m_SpecificInt(8)),
+                           m_Deferred(And1)))) {
+    return false;
+  }
+
+  // Matching "x = (x + (x >> 4)) & 0x0F0F0F0F".
+  Value *Add4;
+  if (!match(And1, m_c_And(m_c_Add(m_LShr(m_Value(Add4), m_SpecificInt(4)),
+                                   m_Deferred(Add4)),
+                           m_SpecificInt(Mask0F)))) {
+    return false;
+  }
+
+  Value *Sub1;
+  llvm::APInt NegThree(/*BitWidth=*/Len, /*Value=*/-3,
+                       /*isSigned=*/true);
+  // x = (x & 0x33333333) + ((x >> 2) & 0x33333333)".
+  if (!(match(Add4,
+              m_c_Add(m_c_And(m_LShr(m_Value(Sub1), m_SpecificInt(2)),
+                              m_SpecificInt(Mask33)),
+                      m_c_And(m_Deferred(Sub1), m_SpecificInt(Mask33)))) ||
+        // Matching "x = x - 3*((x >> 2) & 0x33333333)".
+        match(Add4, m_Add(m_Mul(m_And(m_LShr(m_Value(Sub1), m_SpecificInt(2)),
+                                      m_SpecificInt(Mask33)),
+                                m_SpecificInt(NegThree)),
+                          m_Deferred(Sub1))))) {
+    return false;
+  }
+
+  Value *Root;
+  // x = x - ((x >> 1) & 0x55555555);
+  if (match(Sub1, m_Sub(m_Value(Root),
+                        m_c_And(m_LShr(m_Deferred(Root), m_SpecificInt(1)),
+                                m_SpecificInt(Mask55))))) {
+    LLVM_DEBUG(dbgs() << "Recognized popcount intrinsic\n");
+    IRBuilder<> Builder(&I);
+    I.replaceAllUsesWith(
+        Builder.CreateIntrinsic(Intrinsic::ctpop, I.getType(), {Root}));
+    ++NumPopCountRecognized;
+    return true;
+  }
+
+  return false;
+}
+
 /// Fold smin(smax(fptosi(x), C1), C2) to llvm.fptosi.sat(x), providing C1 and
 /// C2 saturate the value of the fp conversion. The transform is not reversable
 /// as the fptosi.sat is more defined than the input - all values produce a
@@ -1826,6 +1944,7 @@ static bool foldUnusualPatterns(Function &F, DominatorTree &DT,
       MadeChange |= foldAnyOrAllBitsSet(I);
       MadeChange |= foldGuardedFunnelShift(I, DT);
       MadeChange |= tryToRecognizePopCount(I);
+      MadeChange |= tryToRecognizePopCount2n3(I);
       MadeChange |= tryToFPToSat(I, TTI);
       MadeChange |= tryToRecognizeTableBasedCttz(I, DL);
       MadeChange |= foldConsecutiveLoads(I, DL, TTI, AA, DT);

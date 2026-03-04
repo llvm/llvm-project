@@ -239,3 +239,423 @@ define i32 @popcount64_mask(i64 %x) {
   %13 = trunc nuw nsw i64 %12 to i32
   ret i32 %13
 }
+
+define i32 @popcnt2_32(i32 noundef %0)  {
+; CHECK-LABEL: define i32 @popcnt2_32(
+; CHECK-SAME: i32 noundef [[TMP0:%.*]])  {
+; CHECK-NEXT:    [[TMP2:%.*]] = call i32 @llvm.ctpop.i32(i32 [[TMP0]])
+; CHECK-NEXT:    ret i32 [[TMP2]]
+;
+  %2 = lshr i32 %0, 1
+  %3 = and i32 %2, 1431655765
+  %4 = sub i32 %0, %3
+  %5 = and i32 %4, 858993459
+  %6 = lshr i32 %4, 2
+  %7 = and i32 %6, 858993459
+  %8 = add nuw nsw i32 %7, %5
+  %9 = lshr i32 %8, 4
+  %10 = add nuw nsw i32 %9, %8
+  %11 = and i32 %10, 252645135
+  %12 = lshr i32 %11, 8
+  %13 = add nuw nsw i32 %12, %11
+  %14 = lshr i32 %13, 16
+  %15 = add nuw nsw i32 %14, %13
+  %16 = and i32 %15, 63
+  ret i32 %16
+}
+
+define i32 @popcnt3_32(i32 noundef %0) {
+; CHECK-LABEL: define i32 @popcnt3_32(
+; CHECK-SAME: i32 noundef [[TMP0:%.*]]) {
+; CHECK-NEXT:    [[TMP16:%.*]] = call i32 @llvm.ctpop.i32(i32 [[TMP0]])
+; CHECK-NEXT:    ret i32 [[TMP16]]
+;
+  %2 = lshr i32 %0, 1
+  %3 = and i32 %2, 1431655765
+  %4 = sub i32 %0, %3
+  %5 = lshr i32 %4, 2
+  %6 = and i32 %5, 858993459
+  %7 = mul i32 %6, -3
+  %8 = add i32 %7, %4
+  %9 = lshr i32 %8, 4
+  %10 = add i32 %9, %8
+  %11 = and i32 %10, 252645135
+  %12 = lshr i32 %11, 8
+  %13 = add nuw nsw i32 %12, %11
+  %14 = lshr i32 %13, 16
+  %15 = add nuw nsw i32 %14, %13
+  %16 = and i32 %15, 63
+  ret i32 %16
+}
+
+; 16-bit scalar popcount
+define i16 @popcnt2_16(i16 noundef %0) {
+; CHECK-LABEL: @popcnt2_16(
+; CHECK-NEXT:    [[TMP2:%.*]] = call i16 @llvm.ctpop.i16(i16 [[TMP0:%.*]])
+; CHECK-NEXT:    ret i16 [[TMP2]]
+;
+  %2 = lshr i16 %0, 1
+  %3 = and i16 %2, 21845
+  %4 = sub i16 %0, %3
+  %5 = and i16 %4, 13107
+  %6 = lshr i16 %4, 2
+  %7 = and i16 %6, 13107
+  %8 = add nuw nsw i16 %7, %5
+  %9 = lshr i16 %8, 4
+  %10 = add nuw nsw i16 %9, %8
+  %11 = and i16 %10, 3855
+  %12 = lshr i16 %11, 8
+  %13 = add nuw nsw i16 %12, %11
+  %14 = and i16 %13, 31
+  ret i16 %14
+}
+
+; 64-bit scalar popcount
+define i64 @popcnt2_64(i64 noundef %0) {
+; CHECK-LABEL: @popcnt2_64(
+; CHECK-NEXT:    [[TMP2:%.*]] = call i64 @llvm.ctpop.i64(i64 [[TMP0:%.*]])
+; CHECK-NEXT:    ret i64 [[TMP2]]
+;
+  %2 = lshr i64 %0, 1
+  %3 = and i64 %2, 6148914691236517205
+  %4 = sub i64 %0, %3
+  %5 = and i64 %4, 3689348814741910323
+  %6 = lshr i64 %4, 2
+  %7 = and i64 %6, 3689348814741910323
+  %8 = add nuw nsw i64 %7, %5
+  %9 = lshr i64 %8, 4
+  %10 = add nuw nsw i64 %9, %8
+  %11 = and i64 %10, 1085102592571150095
+  %12 = lshr i64 %11, 8
+  %13 = add nuw nsw i64 %12, %11
+  %14 = lshr i64 %13, 16
+  %15 = add nuw nsw i64 %14, %13
+  %16 = lshr i64 %15, 32
+  %17 = add nuw nsw i64 %16, %15
+  %18 = and i64 %17, 127
+  ret i64 %18
+}
+
+; 16-bit vector popcount
+define <8 x i16> @popcnt2_16vec(<8 x i16> %0) {
+; CHECK-LABEL: @popcnt2_16vec(
+; CHECK-NEXT:    [[TMP2:%.*]] = call <8 x i16> @llvm.ctpop.v8i16(<8 x i16> [[TMP0:%.*]])
+; CHECK-NEXT:    ret <8 x i16> [[TMP2]]
+;
+  %2 = lshr <8 x i16> %0, <i16 1, i16 1, i16 1, i16 1, i16 1, i16 1, i16 1, i16 1>
+  %3 = and <8 x i16> %2, <i16 21845, i16 21845, i16 21845, i16 21845, i16 21845, i16 21845, i16 21845, i16 21845>
+  %4 = sub <8 x i16> %0, %3
+  %5 = and <8 x i16> %4, <i16 13107, i16 13107, i16 13107, i16 13107, i16 13107, i16 13107, i16 13107, i16 13107>
+  %6 = lshr <8 x i16> %4, <i16 2, i16 2, i16 2, i16 2, i16 2, i16 2, i16 2, i16 2>
+  %7 = and <8 x i16> %6, <i16 13107, i16 13107, i16 13107, i16 13107, i16 13107, i16 13107, i16 13107, i16 13107>
+  %8 = add nuw nsw <8 x i16> %7, %5
+  %9 = lshr <8 x i16> %8, <i16 4, i16 4, i16 4, i16 4, i16 4, i16 4, i16 4, i16 4>
+  %10 = add nuw nsw <8 x i16> %9, %8
+  %11 = and <8 x i16> %10, <i16 3855, i16 3855, i16 3855, i16 3855, i16 3855, i16 3855, i16 3855, i16 3855>
+  %12 = lshr <8 x i16> %11, <i16 8, i16 8, i16 8, i16 8, i16 8, i16 8, i16 8, i16 8>
+  %13 = add nuw nsw <8 x i16> %12, %11
+  %14 = and <8 x i16> %13, <i16 31, i16 31, i16 31, i16 31, i16 31, i16 31, i16 31, i16 31>
+  ret <8 x i16> %14
+}
+
+; 32-bit vector popcount (variant 2) - 4 elements
+define <4 x i32> @popcnt2_32vec(<4 x i32> %0) {
+; CHECK-LABEL: @popcnt2_32vec(
+; CHECK-NEXT:    [[TMP2:%.*]] = call <4 x i32> @llvm.ctpop.v4i32(<4 x i32> [[TMP0:%.*]])
+; CHECK-NEXT:    ret <4 x i32> [[TMP2]]
+;
+  %2 = lshr <4 x i32> %0, <i32 1, i32 1, i32 1, i32 1>
+  %3 = and <4 x i32> %2, <i32 1431655765, i32 1431655765, i32 1431655765, i32 1431655765>
+  %4 = sub <4 x i32> %0, %3
+  %5 = and <4 x i32> %4, <i32 858993459, i32 858993459, i32 858993459, i32 858993459>
+  %6 = lshr <4 x i32> %4, <i32 2, i32 2, i32 2, i32 2>
+  %7 = and <4 x i32> %6, <i32 858993459, i32 858993459, i32 858993459, i32 858993459>
+  %8 = add nuw nsw <4 x i32> %7, %5
+  %9 = lshr <4 x i32> %8, <i32 4, i32 4, i32 4, i32 4>
+  %10 = add nuw nsw <4 x i32> %9, %8
+  %11 = and <4 x i32> %10, <i32 252645135, i32 252645135, i32 252645135, i32 252645135>
+  %12 = lshr <4 x i32> %11, <i32 8, i32 8, i32 8, i32 8>
+  %13 = add nuw nsw <4 x i32> %12, %11
+  %14 = lshr <4 x i32> %13, <i32 16, i32 16, i32 16, i32 16>
+  %15 = add nuw nsw <4 x i32> %14, %13
+  %16 = and <4 x i32> %15, <i32 63, i32 63, i32 63, i32 63>
+  ret <4 x i32> %16
+}
+
+; 64-bit vector popcount
+define <2 x i64> @popcnt2_64vec(<2 x i64> %0) {
+; CHECK-LABEL: @popcnt2_64vec(
+; CHECK-NEXT:    [[TMP2:%.*]] = call <2 x i64> @llvm.ctpop.v2i64(<2 x i64> [[TMP0:%.*]])
+; CHECK-NEXT:    ret <2 x i64> [[TMP2]]
+;
+  %2 = lshr <2 x i64> %0, <i64 1, i64 1>
+  %3 = and <2 x i64> %2, <i64 6148914691236517205, i64 6148914691236517205>
+  %4 = sub <2 x i64> %0, %3
+  %5 = and <2 x i64> %4, <i64 3689348814741910323, i64 3689348814741910323>
+  %6 = lshr <2 x i64> %4, <i64 2, i64 2>
+  %7 = and <2 x i64> %6, <i64 3689348814741910323, i64 3689348814741910323>
+  %8 = add nuw nsw <2 x i64> %7, %5
+  %9 = lshr <2 x i64> %8, <i64 4, i64 4>
+  %10 = add nuw nsw <2 x i64> %9, %8
+  %11 = and <2 x i64> %10, <i64 1085102592571150095, i64 1085102592571150095>
+  %12 = lshr <2 x i64> %11, <i64 8, i64 8>
+  %13 = add nuw nsw <2 x i64> %12, %11
+  %14 = lshr <2 x i64> %13, <i64 16, i64 16>
+  %15 = add nuw nsw <2 x i64> %14, %13
+  %16 = lshr <2 x i64> %15, <i64 32, i64 32>
+  %17 = add nuw nsw <2 x i64> %16, %15
+  %18 = and <2 x i64> %17, <i64 127, i64 127>
+  ret <2 x i64> %18
+}
+
+; 16-bit scalar popcount (variant 3 - using multiply by -3)
+define i16 @popcnt3_16(i16 noundef %0) {
+; CHECK-LABEL: @popcnt3_16(
+; CHECK-NEXT:    [[TMP2:%.*]] = call i16 @llvm.ctpop.i16(i16 [[TMP0:%.*]])
+; CHECK-NEXT:    ret i16 [[TMP2]]
+;
+  %2 = lshr i16 %0, 1
+  %3 = and i16 %2, 21845
+  %4 = sub i16 %0, %3
+  %5 = lshr i16 %4, 2
+  %6 = and i16 %5, 13107
+  %7 = mul i16 %6, -3
+  %8 = add i16 %7, %4
+  %9 = lshr i16 %8, 4
+  %10 = add i16 %9, %8
+  %11 = and i16 %10, 3855
+  %12 = lshr i16 %11, 8
+  %13 = add nuw nsw i16 %12, %11
+  %14 = and i16 %13, 31
+  ret i16 %14
+}
+
+; 64-bit scalar popcount (variant 3 - using multiply by -3)
+define i64 @popcnt3_64(i64 noundef %0) {
+; CHECK-LABEL: @popcnt3_64(
+; CHECK-NEXT:    [[TMP2:%.*]] = call i64 @llvm.ctpop.i64(i64 [[TMP0:%.*]])
+; CHECK-NEXT:    ret i64 [[TMP2]]
+;
+  %2 = lshr i64 %0, 1
+  %3 = and i64 %2, 6148914691236517205
+  %4 = sub i64 %0, %3
+  %5 = lshr i64 %4, 2
+  %6 = and i64 %5, 3689348814741910323
+  %7 = mul i64 %6, -3
+  %8 = add i64 %7, %4
+  %9 = lshr i64 %8, 4
+  %10 = add i64 %9, %8
+  %11 = and i64 %10, 1085102592571150095
+  %12 = lshr i64 %11, 8
+  %13 = add nuw nsw i64 %12, %11
+  %14 = lshr i64 %13, 16
+  %15 = add nuw nsw i64 %14, %13
+  %16 = lshr i64 %15, 32
+  %17 = add nuw nsw i64 %16, %15
+  %18 = and i64 %17, 127
+  ret i64 %18
+}
+
+; 16-bit vector popcount (variant 3 - using multiply by -3) - 8 elements
+define <8 x i16> @popcnt3_16vec(<8 x i16> %0) {
+; CHECK-LABEL: @popcnt3_16vec(
+; CHECK-NEXT:    [[TMP2:%.*]] = call <8 x i16> @llvm.ctpop.v8i16(<8 x i16> [[TMP0:%.*]])
+; CHECK-NEXT:    ret <8 x i16> [[TMP2]]
+;
+  %2 = lshr <8 x i16> %0, <i16 1, i16 1, i16 1, i16 1, i16 1, i16 1, i16 1, i16 1>
+  %3 = and <8 x i16> %2, <i16 21845, i16 21845, i16 21845, i16 21845, i16 21845, i16 21845, i16 21845, i16 21845>
+  %4 = sub <8 x i16> %0, %3
+  %5 = lshr <8 x i16> %4, <i16 2, i16 2, i16 2, i16 2, i16 2, i16 2, i16 2, i16 2>
+  %6 = and <8 x i16> %5, <i16 13107, i16 13107, i16 13107, i16 13107, i16 13107, i16 13107, i16 13107, i16 13107>
+  %7 = mul <8 x i16> %6, <i16 -3, i16 -3, i16 -3, i16 -3, i16 -3, i16 -3, i16 -3, i16 -3>
+  %8 = add <8 x i16> %7, %4
+  %9 = lshr <8 x i16> %8, <i16 4, i16 4, i16 4, i16 4, i16 4, i16 4, i16 4, i16 4>
+  %10 = add <8 x i16> %9, %8
+  %11 = and <8 x i16> %10, <i16 3855, i16 3855, i16 3855, i16 3855, i16 3855, i16 3855, i16 3855, i16 3855>
+  %12 = lshr <8 x i16> %11, <i16 8, i16 8, i16 8, i16 8, i16 8, i16 8, i16 8, i16 8>
+  %13 = add nuw nsw <8 x i16> %12, %11
+  %14 = and <8 x i16> %13, <i16 31, i16 31, i16 31, i16 31, i16 31, i16 31, i16 31, i16 31>
+  ret <8 x i16> %14
+}
+
+; 32-bit vector popcount (variant 3 - using multiply by -3) - 4 elements
+define <4 x i32> @popcnt3_32vec(<4 x i32> %0) {
+; CHECK-LABEL: @popcnt3_32vec(
+; CHECK-NEXT:    [[TMP2:%.*]] = call <4 x i32> @llvm.ctpop.v4i32(<4 x i32> [[TMP0:%.*]])
+; CHECK-NEXT:    ret <4 x i32> [[TMP2]]
+;
+  %2 = lshr <4 x i32> %0, <i32 1, i32 1, i32 1, i32 1>
+  %3 = and <4 x i32> %2, <i32 1431655765, i32 1431655765, i32 1431655765, i32 1431655765>
+  %4 = sub <4 x i32> %0, %3
+  %5 = lshr <4 x i32> %4, <i32 2, i32 2, i32 2, i32 2>
+  %6 = and <4 x i32> %5, <i32 858993459, i32 858993459, i32 858993459, i32 858993459>
+  %7 = mul <4 x i32> %6, <i32 -3, i32 -3, i32 -3, i32 -3>
+  %8 = add <4 x i32> %7, %4
+  %9 = lshr <4 x i32> %8, <i32 4, i32 4, i32 4, i32 4>
+  %10 = add <4 x i32> %9, %8
+  %11 = and <4 x i32> %10, <i32 252645135, i32 252645135, i32 252645135, i32 252645135>
+  %12 = lshr <4 x i32> %11, <i32 8, i32 8, i32 8, i32 8>
+  %13 = add nuw nsw <4 x i32> %12, %11
+  %14 = lshr <4 x i32> %13, <i32 16, i32 16, i32 16, i32 16>
+  %15 = add nuw nsw <4 x i32> %14, %13
+  %16 = and <4 x i32> %15, <i32 63, i32 63, i32 63, i32 63>
+  ret <4 x i32> %16
+}
+
+; 64-bit vector popcount (variant 3 - using multiply by -3) - 2 elements
+define <2 x i64> @popcnt3_64vec(<2 x i64> %0) {
+; CHECK-LABEL: @popcnt3_64vec(
+; CHECK-NEXT:    [[TMP2:%.*]] = call <2 x i64> @llvm.ctpop.v2i64(<2 x i64> [[TMP0:%.*]])
+; CHECK-NEXT:    ret <2 x i64> [[TMP2]]
+;
+  %2 = lshr <2 x i64> %0, <i64 1, i64 1>
+  %3 = and <2 x i64> %2, <i64 6148914691236517205, i64 6148914691236517205>
+  %4 = sub <2 x i64> %0, %3
+  %5 = lshr <2 x i64> %4, <i64 2, i64 2>
+  %6 = and <2 x i64> %5, <i64 3689348814741910323, i64 3689348814741910323>
+  %7 = mul <2 x i64> %6, <i64 -3, i64 -3>
+  %8 = add <2 x i64> %7, %4
+  %9 = lshr <2 x i64> %8, <i64 4, i64 4>
+  %10 = add <2 x i64> %9, %8
+  %11 = and <2 x i64> %10, <i64 1085102592571150095, i64 1085102592571150095>
+  %12 = lshr <2 x i64> %11, <i64 8, i64 8>
+  %13 = add nuw nsw <2 x i64> %12, %11
+  %14 = lshr <2 x i64> %13, <i64 16, i64 16>
+  %15 = add nuw nsw <2 x i64> %14, %13
+  %16 = lshr <2 x i64> %15, <i64 32, i64 32>
+  %17 = add nuw nsw <2 x i64> %16, %15
+  %18 = and <2 x i64> %17, <i64 127, i64 127>
+  ret <2 x i64> %18
+}
+
+; Negative test case for popcnt2 i8 - wrong constant (should NOT optimize)
+define i8 @popcnt2_negative_i8(i8 noundef %0) {
+; CHECK-LABEL: @popcnt2_negative_i8(
+; CHECK-NEXT:    [[TMP2:%.*]] = lshr i8 [[TMP0:%.*]], 1
+; CHECK-NEXT:    [[TMP3:%.*]] = and i8 [[TMP2]], 85
+; CHECK-NEXT:    [[TMP4:%.*]] = sub i8 [[TMP0]], [[TMP3]]
+; CHECK-NEXT:    [[TMP5:%.*]] = and i8 [[TMP4]], 51
+; CHECK-NEXT:    [[TMP6:%.*]] = lshr i8 [[TMP4]], 2
+; CHECK-NEXT:    [[TMP7:%.*]] = and i8 [[TMP6]], 51
+; CHECK-NEXT:    [[TMP8:%.*]] = add nuw nsw i8 [[TMP7]], [[TMP5]]
+; CHECK-NEXT:    [[TMP9:%.*]] = lshr i8 [[TMP8]], 4
+; CHECK-NEXT:    [[TMP10:%.*]] = add nuw nsw i8 [[TMP9]], [[TMP8]]
+; CHECK-NEXT:    [[TMP11:%.*]] = and i8 [[TMP10]], 15
+; CHECK-NEXT:    ret i8 [[TMP11]]
+;
+  %2 = lshr i8 %0, 1
+  %3 = and i8 %2, 85
+  %4 = sub i8 %0, %3
+  %5 = and i8 %4, 51
+  %6 = lshr i8 %4, 2
+  %7 = and i8 %6, 51
+  %8 = add nuw nsw i8 %7, %5
+  %9 = lshr i8 %8, 4
+  %10 = add nuw nsw i8 %9, %8
+  %11 = and i8 %10, 15
+  ret i8 %11
+}
+
+; Negative test case for popcnt3 i8 - using wrong multiplier (should NOT optimize)
+define i8 @popcnt3_negative_i8(i8 noundef %0) {
+; CHECK-LABEL: @popcnt3_negative_i8(
+; CHECK-NEXT:    [[TMP2:%.*]] = lshr i8 [[TMP0:%.*]], 1
+; CHECK-NEXT:    [[TMP3:%.*]] = and i8 [[TMP2]], 85
+; CHECK-NEXT:    [[TMP4:%.*]] = sub i8 [[TMP0]], [[TMP3]]
+; CHECK-NEXT:    [[TMP5:%.*]] = lshr i8 [[TMP4]], 2
+; CHECK-NEXT:    [[TMP6:%.*]] = and i8 [[TMP5]], 51
+; CHECK-NEXT:    [[TMP7:%.*]] = mul i8 [[TMP6]], -3
+; CHECK-NEXT:    [[TMP8:%.*]] = add i8 [[TMP7]], [[TMP4]]
+; CHECK-NEXT:    [[TMP9:%.*]] = lshr i8 [[TMP8]], 4
+; CHECK-NEXT:    [[TMP10:%.*]] = add i8 [[TMP9]], [[TMP8]]
+; CHECK-NEXT:    [[TMP11:%.*]] = and i8 [[TMP10]], 15
+; CHECK-NEXT:    ret i8 [[TMP11]]
+;
+  %2 = lshr i8 %0, 1
+  %3 = and i8 %2, 85
+  %4 = sub i8 %0, %3
+  %5 = lshr i8 %4, 2
+  %6 = and i8 %5, 51
+  %7 = mul i8 %6, -3
+  %8 = add i8 %7, %4
+  %9 = lshr i8 %8, 4
+  %10 = add i8 %9, %8
+  %11 = and i8 %10, 15
+  ret i8 %11
+}
+
+; Negative test case for popcnt2 i32 - wrong constant in second step (should NOT optimize)
+define i32 @popcnt2_negative_i32(i32 noundef %0) {
+; CHECK-LABEL: @popcnt2_negative_i32(
+; CHECK-NEXT:    [[TMP2:%.*]] = lshr i32 [[TMP0:%.*]], 1
+; CHECK-NEXT:    [[TMP3:%.*]] = and i32 [[TMP2]], 1431655765
+; CHECK-NEXT:    [[TMP4:%.*]] = sub i32 [[TMP0]], [[TMP3]]
+; CHECK-NEXT:    [[TMP5:%.*]] = and i32 [[TMP4]], 858993460
+; CHECK-NEXT:    [[TMP6:%.*]] = lshr i32 [[TMP4]], 2
+; CHECK-NEXT:    [[TMP7:%.*]] = and i32 [[TMP6]], 858993459
+; CHECK-NEXT:    [[TMP8:%.*]] = add nuw nsw i32 [[TMP7]], [[TMP5]]
+; CHECK-NEXT:    [[TMP9:%.*]] = lshr i32 [[TMP8]], 4
+; CHECK-NEXT:    [[TMP10:%.*]] = add nuw nsw i32 [[TMP9]], [[TMP8]]
+; CHECK-NEXT:    [[TMP11:%.*]] = and i32 [[TMP10]], 252645135
+; CHECK-NEXT:    [[TMP12:%.*]] = lshr i32 [[TMP11]], 8
+; CHECK-NEXT:    [[TMP13:%.*]] = add nuw nsw i32 [[TMP12]], [[TMP11]]
+; CHECK-NEXT:    [[TMP14:%.*]] = lshr i32 [[TMP13]], 16
+; CHECK-NEXT:    [[TMP15:%.*]] = add nuw nsw i32 [[TMP14]], [[TMP13]]
+; CHECK-NEXT:    [[TMP16:%.*]] = and i32 [[TMP15]], 63
+; CHECK-NEXT:    ret i32 [[TMP16]]
+;
+  %2 = lshr i32 %0, 1
+  %3 = and i32 %2, 1431655765
+  %4 = sub i32 %0, %3
+  %5 = and i32 %4, 858993460  ; Wrong constant (should be 858993459)
+  %6 = lshr i32 %4, 2
+  %7 = and i32 %6, 858993459
+  %8 = add nuw nsw i32 %7, %5
+  %9 = lshr i32 %8, 4
+  %10 = add nuw nsw i32 %9, %8
+  %11 = and i32 %10, 252645135
+  %12 = lshr i32 %11, 8
+  %13 = add nuw nsw i32 %12, %11
+  %14 = lshr i32 %13, 16
+  %15 = add nuw nsw i32 %14, %13
+  %16 = and i32 %15, 63
+  ret i32 %16
+}
+
+; Negative test case for popcnt3 i32 - using wrong multiplier (should NOT optimize)
+define i32 @popcnt3_negative_i32(i32 noundef %0) {
+; CHECK-LABEL: @popcnt3_negative_i32(
+; CHECK-NEXT:    [[TMP2:%.*]] = lshr i32 [[TMP0:%.*]], 1
+; CHECK-NEXT:    [[TMP3:%.*]] = and i32 [[TMP2]], 1431655765
+; CHECK-NEXT:    [[TMP4:%.*]] = sub i32 [[TMP0]], [[TMP3]]
+; CHECK-NEXT:    [[TMP5:%.*]] = lshr i32 [[TMP4]], 2
+; CHECK-NEXT:    [[TMP6:%.*]] = and i32 [[TMP5]], 858993459
+; CHECK-NEXT:    [[TMP7:%.*]] = mul i32 [[TMP6]], -2
+; CHECK-NEXT:    [[TMP8:%.*]] = add i32 [[TMP7]], [[TMP4]]
+; CHECK-NEXT:    [[TMP9:%.*]] = lshr i32 [[TMP8]], 4
+; CHECK-NEXT:    [[TMP10:%.*]] = add i32 [[TMP9]], [[TMP8]]
+; CHECK-NEXT:    [[TMP11:%.*]] = and i32 [[TMP10]], 252645135
+; CHECK-NEXT:    [[TMP12:%.*]] = lshr i32 [[TMP11]], 8
+; CHECK-NEXT:    [[TMP13:%.*]] = add nuw nsw i32 [[TMP12]], [[TMP11]]
+; CHECK-NEXT:    [[TMP14:%.*]] = lshr i32 [[TMP13]], 16
+; CHECK-NEXT:    [[TMP15:%.*]] = add nuw nsw i32 [[TMP14]], [[TMP13]]
+; CHECK-NEXT:    [[TMP16:%.*]] = and i32 [[TMP15]], 63
+; CHECK-NEXT:    ret i32 [[TMP16]]
+;
+  %2 = lshr i32 %0, 1
+  %3 = and i32 %2, 1431655765
+  %4 = sub i32 %0, %3
+  %5 = lshr i32 %4, 2
+  %6 = and i32 %5, 858993459
+  %7 = mul i32 %6, -2  ; Wrong multiplier (should be -3)
+  %8 = add i32 %7, %4
+  %9 = lshr i32 %8, 4
+  %10 = add i32 %9, %8
+  %11 = and i32 %10, 252645135
+  %12 = lshr i32 %11, 8
+  %13 = add nuw nsw i32 %12, %11
+  %14 = lshr i32 %13, 16
+  %15 = add nuw nsw i32 %14, %13
+  %16 = and i32 %15, 63
+  ret i32 %16
+}
