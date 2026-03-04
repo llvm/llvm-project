@@ -1722,6 +1722,11 @@ class list : public Option, public list_storage<DataType, StorageClass> {
     Parser.initialize();
   }
 
+protected:
+  bool isDefaultAssigned() const { return DefaultAssigned; }
+  void overwriteDefault() { DefaultAssigned = false; }
+  ArrayRef<OptionValue<DataType>> getDefault() const { return Default; }
+
 public:
   // Command line options should not be copyable
   list(const list &) = delete;
