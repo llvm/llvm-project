@@ -23,7 +23,7 @@ define void @f(i32 %length.i.88, i32 %length.i, ptr %tmp12, i32 %tmp10, ptr %tmp
 ; CHECK-NEXT:    [[ADDR22:%.*]] = getelementptr inbounds i8, ptr [[TMP12:%.*]], i64 [[TMP16]]
 ; CHECK-NEXT:    store i8 [[TMP21]], ptr [[ADDR22]], align 1
 ; CHECK-NEXT:    [[TMP22]] = add nuw nsw i32 [[V_1]], 1
-; CHECK-NEXT:    [[TMP23:%.*]] = icmp slt i32 [[TMP22]], [[TMP14]]
+; CHECK-NEXT:    [[TMP23:%.*]] = icmp samesign ult i32 [[TMP22]], [[TMP14]]
 ; CHECK-NEXT:    br i1 [[TMP23]], label [[NOT_ZERO11]], label [[MAIN_EXIT_SELECTOR:%.*]]
 ; CHECK:       main.exit.selector:
 ; CHECK-NEXT:    [[TMP22_LCSSA:%.*]] = phi i32 [ [[TMP22]], [[NOT_ZERO11]] ]

@@ -32,7 +32,7 @@ define void @basic(ptr %p, i32 %k) #0 {
 ; CHECK-NEXT:    [[INCDEC_PTR]] = getelementptr inbounds nuw i8, ptr [[P_ADDR_04]], i64 4
 ; CHECK-NEXT:    store i32 [[I_05]], ptr [[P_ADDR_04]], align 4
 ; CHECK-NEXT:    [[INC]] = add nuw nsw i32 [[I_05]], 1
-; CHECK-NEXT:    [[CMP:%.*]] = icmp slt i32 [[INC]], [[K]]
+; CHECK-NEXT:    [[CMP:%.*]] = icmp samesign ult i32 [[INC]], [[K]]
 ; CHECK-NEXT:    br i1 [[CMP]], label [[FOR_BODY]], label [[FOR_END]], !llvm.loop [[LOOP0:![0-9]+]]
 ; CHECK:       for.end:
 ; CHECK-NEXT:    ret void
@@ -92,7 +92,7 @@ define i32 @output(ptr %p, i32 %k) #0 {
 ; CHECK-NEXT:    [[INCDEC_PTR]] = getelementptr inbounds nuw i8, ptr [[P_ADDR_04]], i64 4
 ; CHECK-NEXT:    store i32 [[I_05]], ptr [[P_ADDR_04]], align 4
 ; CHECK-NEXT:    [[INC]] = add nuw nsw i32 [[I_05]], 1
-; CHECK-NEXT:    [[CMP:%.*]] = icmp slt i32 [[INC]], [[K]]
+; CHECK-NEXT:    [[CMP:%.*]] = icmp samesign ult i32 [[INC]], [[K]]
 ; CHECK-NEXT:    br i1 [[CMP]], label [[FOR_BODY]], label [[FOR_END]], !llvm.loop [[LOOP3:![0-9]+]]
 ; CHECK:       for.end:
 ; CHECK-NEXT:    [[RET:%.*]] = phi i32 [ 0, [[ENTRY:%.*]] ], [ 3, [[FOR_BODY_PEEL7]] ], [ 1, [[FOR_BODY_PEEL]] ], [ 2, [[FOR_BODY_PEEL2]] ], [ [[INC]], [[FOR_BODY]] ]

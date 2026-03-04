@@ -290,7 +290,7 @@ void SimplifyIndvar::eliminateIVComparison(ICmpInst *ICmp,
 
   if ((ICmpInst::isSigned(OriginalPred) ||
        (ICmpInst::isUnsigned(OriginalPred) && !ICmp->hasSameSign())) &&
-      SE->haveSameSign(S, X)) {
+      SE->haveSameSignAt(S, X, CtxI)) {
     // Set the samesign flag on the compare if legal, and canonicalize to
     // the unsigned variant (for signed compares) hoping that it will open
     // the doors for other optimizations.  Note that we cannot rely on Pred

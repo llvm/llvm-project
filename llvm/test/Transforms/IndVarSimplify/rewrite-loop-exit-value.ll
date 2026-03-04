@@ -214,7 +214,7 @@ define i32 @vscale_slt_with_vp_umin(ptr nocapture %A, i32 %n) mustprogress vscal
 ; CHECK-NEXT:    [[VF_CAPPED:%.*]] = call i32 @llvm.umin.i32(i32 [[VF]], i32 [[LEFT]])
 ; CHECK-NEXT:    store i32 [[VF_CAPPED]], ptr [[A:%.*]], align 4
 ; CHECK-NEXT:    [[ADD]] = add nuw nsw i32 [[I_05]], [[VF]]
-; CHECK-NEXT:    [[CMP:%.*]] = icmp slt i32 [[ADD]], [[N]]
+; CHECK-NEXT:    [[CMP:%.*]] = icmp samesign ult i32 [[ADD]], [[N]]
 ; CHECK-NEXT:    br i1 [[CMP]], label [[FOR_BODY]], label [[FOR_END:%.*]]
 ; CHECK:       for.end:
 ; CHECK-NEXT:    [[TMP0:%.*]] = add nsw i32 [[N]], -1
@@ -267,7 +267,7 @@ define i32 @vscale_slt_with_vp_umin2(ptr nocapture %A, i32 %n) mustprogress vsca
 ; CHECK-NEXT:    [[VF_CAPPED:%.*]] = call i32 @llvm.umin.i32(i32 [[VF]], i32 [[LEFT]])
 ; CHECK-NEXT:    store i32 [[VF_CAPPED]], ptr [[A:%.*]], align 4
 ; CHECK-NEXT:    [[ADD]] = add nuw nsw i32 [[I_05]], [[VF]]
-; CHECK-NEXT:    [[CMP:%.*]] = icmp slt i32 [[ADD]], [[N]]
+; CHECK-NEXT:    [[CMP:%.*]] = icmp samesign ult i32 [[ADD]], [[N]]
 ; CHECK-NEXT:    br i1 [[CMP]], label [[FOR_BODY]], label [[FOR_END:%.*]]
 ; CHECK:       for.end:
 ; CHECK-NEXT:    [[TMP0:%.*]] = add i32 [[N]], -1

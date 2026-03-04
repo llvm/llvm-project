@@ -11184,6 +11184,20 @@ bool ScalarEvolution::haveSameSign(const SCEV *S1, const SCEV *S2) {
           (isKnownNegative(S1) && isKnownNegative(S2)));
 }
 
+bool ScalarEvolution::haveSameSignAt(const SCEV *S1, const SCEV *S2,
+                                     const Instruction *CtxI) {
+  auto IsKnownNonNegative = [this, CtxI](const SCEV *S) {
+    return isKnownPredicateAt(ICmpInst::ICMP_SGE, S, getZero(S->getType()),
+                              CtxI);
+  };
+  auto IsKnownNegative = [this, CtxI](const SCEV *S) {
+    return isKnownPredicateAt(ICmpInst::ICMP_SLT, S, getZero(S->getType()),
+                              CtxI);
+  };
+  return ((IsKnownNonNegative(S1) && IsKnownNonNegative(S2)) ||
+          (IsKnownNegative(S1) && IsKnownNegative(S2)));
+}
+
 std::pair<const SCEV *, const SCEV *>
 ScalarEvolution::SplitIntoInitAndPostInc(const Loop *L, const SCEV *S) {
   // Compute SCEV on entry of loop L.

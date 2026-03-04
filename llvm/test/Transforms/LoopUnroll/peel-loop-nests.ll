@@ -32,7 +32,7 @@ define void @test1(i32 %k) {
 ; CHECK:       outer.inc:
 ; CHECK-NEXT:    [[J_INC]] = add nsw i32 [[J]], 1
 ; CHECK-NEXT:    [[OUTER_CMP:%.*]] = icmp slt i32 [[J_INC]], [[K]]
-; CHECK-NEXT:    br i1 [[OUTER_CMP]], label [[OUTER_HEADER]], label [[FOR_END:%.*]], !llvm.loop !{{.*}}
+; CHECK-NEXT:    br i1 [[OUTER_CMP]], label [[OUTER_HEADER]], label [[FOR_END:%.*]], !llvm.loop [[LOOP0:![0-9]+]]
 ; CHECK:       for.end:
 ; CHECK-NEXT:    ret void
 ;
@@ -60,9 +60,7 @@ define void @test1(i32 %k) {
 ; PEELED:       outer.inc.peel:
 ; PEELED-NEXT:    [[J_INC_PEEL:%.*]] = add nsw i32 0, 1
 ; PEELED-NEXT:    [[OUTER_CMP_PEEL:%.*]] = icmp slt i32 [[J_INC_PEEL]], [[K]]
-; PEELED-NEXT:    br i1 [[OUTER_CMP_PEEL]], label [[OUTER_HEADER_PEEL_NEXT:%.*]], label [[FOR_END:%[^,]*]]
-; Verify that MD_loop metadata is dropped.
-; PEELED-NOT:   , !llvm.loop !{{[0-9]*}}
+; PEELED-NEXT:    br i1 [[OUTER_CMP_PEEL]], label [[OUTER_HEADER_PEEL_NEXT:%.*]], label [[FOR_END:%.*]]
 ; PEELED:       outer.header.peel.next:
 ; PEELED-NEXT:    br label [[OUTER_HEADER_PEEL2:%.*]]
 ; PEELED:       outer.header.peel2:
@@ -85,8 +83,6 @@ define void @test1(i32 %k) {
 ; PEELED-NEXT:    [[J_INC_PEEL12:%.*]] = add nsw i32 [[J_INC_PEEL]], 1
 ; PEELED-NEXT:    [[OUTER_CMP_PEEL13:%.*]] = icmp slt i32 [[J_INC_PEEL12]], [[K]]
 ; PEELED-NEXT:    br i1 [[OUTER_CMP_PEEL13]], label [[OUTER_HEADER_PEEL_NEXT1:%.*]], label [[FOR_END]]
-; Verify that MD_loop metadata is dropped.
-; PEELED-NOT:   , !llvm.loop !{{[0-9]*}}
 ; PEELED:       outer.header.peel.next1:
 ; PEELED-NEXT:    br label [[OUTER_HEADER_PEEL_NEXT14:%.*]]
 ; PEELED:       outer.header.peel.next14:
@@ -111,13 +107,15 @@ define void @test1(i32 %k) {
 ; PEELED-NEXT:    br i1 [[CMP]], label [[FOR_BODY]], label [[OUTER_INC]]
 ; PEELED:       outer.inc:
 ; PEELED-NEXT:    [[J_INC]] = add nuw nsw i32 [[J]], 1
-; PEELED-NEXT:    [[OUTER_CMP:%.*]] = icmp slt i32 [[J_INC]], [[K]]
-; PEELED-NEXT:    br i1 [[OUTER_CMP]], label [[OUTER_HEADER]], label [[FOR_END_LOOPEXIT:%.*]], !llvm.loop !{{.*}}
+; PEELED-NEXT:    [[OUTER_CMP:%.*]] = icmp samesign ult i32 [[J_INC]], [[K]]
+; PEELED-NEXT:    br i1 [[OUTER_CMP]], label [[OUTER_HEADER]], label [[FOR_END_LOOPEXIT:%.*]], !llvm.loop [[LOOP0:![0-9]+]]
 ; PEELED:       for.end.loopexit:
 ; PEELED-NEXT:    br label [[FOR_END]]
 ; PEELED:       for.end:
 ; PEELED-NEXT:    ret void
 ;
+; Verify that MD_loop metadata is dropped.
+; Verify that MD_loop metadata is dropped.
 for.body.lr.ph:
   br label %outer.header
 
