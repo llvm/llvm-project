@@ -113,7 +113,7 @@ namespace llvm {
     EVT changeVectorElementCount(LLVMContext &Context, ElementCount EC) const {
       assert(isVector() && "Not a vector EVT!");
       if (isSimple()) {
-        MVT M = MVT::getVectorVT(getSimpleVT(), EC);
+        MVT M = getSimpleVT().changeVectorElementCount(EC);
         if (M != MVT::INVALID_SIMPLE_VALUE_TYPE)
           return M;
       }
