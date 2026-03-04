@@ -1002,7 +1002,9 @@ llvm::UnrollLoop(Loop *L, UnrollLoopOptions ULO, LoopInfo *LI,
   };
 
   // Fold branches for iterations where we know that they will exit or not
-  // exit.
+  // exit.  In the case of an iteration's latch, if we thus find
+  // *OriginalLoopProb is incorrect, set ProbUpdateRequired to true.
+  bool ProbUpdateRequired = false;
   for (auto &Pair : ExitInfos) {
     ExitInfo &Info = Pair.second;
     for (unsigned i = 0, e = Info.ExitingBlocks.size(); i != e; ++i) {
@@ -1025,6 +1027,14 @@ llvm::UnrollLoop(Loop *L, UnrollLoopOptions ULO, LoopInfo *LI,
         if (!Info.FirstExitingBlock)
           Info.FirstExitingBlock = Info.ExitingBlocks[i];
         continue;
+      }
+
+      // For a latch, record any OriginalLoopProb contradiction.
+      if (!OriginalLoopProb.isUnknown() && IsLatch) {
+        BranchProbability ActualProb = *KnownWillExit
+                                           ? BranchProbability::getZero()
+                                           : BranchProbability::getOne();
+        ProbUpdateRequired |= OriginalLoopProb != ActualProb;
       }
 
       SetDest(Info.ExitingBlocks[i], *KnownWillExit, Info.ExitOnTrue);
@@ -1062,14 +1072,39 @@ llvm::UnrollLoop(Loop *L, UnrollLoopOptions ULO, LoopInfo *LI,
     changeToUnreachable(Latches.back()->getTerminator(), PreserveLCSSA);
   }
 
+  // After merging adjacent blocks in Latches below:
+  // - CondLatches will list the blocks from Latches that are still terminated
+  //   with conditional branches.
+  // - For 1 <= I < CondLatches.size(), IterCounts[I] will store the number of
+  //   the original loop iterations through which control flows from
+  //   CondLatches[I-1] to CondLatches[I].
+  // - For I == 0 or I == CondLatches.size(), IterCounts[I] will store the
+  //   number of the original loop iterations through which control can flow
+  //   before CondLatches.front() or after CondLatches.back(), respectively,
+  //   without taking the unrolled loop's backedge, if any.
+  // - CondLatchNexts[I] will store the CondLatches[I] branch target for the
+  //   next of the original loop's iterations (as opposed to the exit target).
+  assert(ULO.Count == Latches.size() &&
+         "Expected one latch block per unrolled iteration");
+  std::vector<unsigned> IterCounts(1, 0);
+  std::vector<BasicBlock *> CondLatches;
+  std::vector<BasicBlock *> CondLatchNexts;
+  IterCounts.reserve(Latches.size() + 1);
+  CondLatches.reserve(Latches.size());
+  CondLatchNexts.reserve(Latches.size());
+
   // Merge adjacent basic blocks, if possible.
-  for (BasicBlock *Latch : Latches) {
+  for (unsigned I = 0, E = Latches.size(); I < E; ++I) {
+    ++IterCounts.back();
+    BasicBlock *Latch = Latches[I];
     BranchInst *Term = dyn_cast<BranchInst>(Latch->getTerminator());
     assert((Term ||
             (CompletelyUnroll && !LatchIsExiting && Latch == Latches.back())) &&
            "Need a branch as terminator, except when fully unrolling with "
            "unconditional latch");
-    if (Term && Term->isUnconditional()) {
+    if (!Term)
+      continue;
+    if (Term->isUnconditional()) {
       BasicBlock *Dest = Term->getSuccessor(0);
       BasicBlock *Fold = Dest->getUniquePredecessor();
       if (MergeBlockIntoPredecessor(Dest, /*DTU=*/DTUToUse, LI,
@@ -1080,6 +1115,10 @@ llvm::UnrollLoop(Loop *L, UnrollLoopOptions ULO, LoopInfo *LI,
         llvm::replace(Latches, Dest, Fold);
         llvm::erase(UnrolledLoopBlocks, Dest);
       }
+    } else {
+      IterCounts.push_back(0);
+      CondLatches.push_back(Latch);
+      CondLatchNexts.push_back(Headers[(I + 1) % E]);
     }
   }
 
@@ -1166,6 +1205,10 @@ llvm::UnrollLoop(Loop *L, UnrollLoopOptions ULO, LoopInfo *LI,
     // each unrolled iteration's latch within it, we store the new trip count as
     // separate metadata.
     if (!OriginalLoopProb.isUnknown() && ULO.Runtime && EpilogProfitability) {
+      assert((CondLatches.size() == 1 &&
+              (ProbUpdateRequired || OriginalLoopProb.isOne())) &&
+             "Expected ULO.Runtime to give unrolled loop 1 conditional latch, "
+             "the backedge, requiring a probability update unless infinite");
       // Where p is always the probability of executing at least 1 more
       // iteration, the probability for at least n more iterations is p^n.
       setLoopProbability(L, OriginalLoopProb.pow(ULO.Count));

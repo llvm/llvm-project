@@ -46,6 +46,7 @@ public:
   LLVM_ABI BranchProbability(uint32_t Numerator, uint32_t Denominator);
 
   bool isZero() const { return N == 0; }
+  bool isOne() const { return N == D; }
   bool isUnknown() const { return N == UnknownN; }
 
   static BranchProbability getZero() { return BranchProbability(0); }
