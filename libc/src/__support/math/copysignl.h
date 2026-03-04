@@ -13,7 +13,6 @@
 #include "src/__support/macros/config.h"
 
 namespace LIBC_NAMESPACE_DECL {
-
 namespace math {
 
 LIBC_INLINE constexpr long double copysignl(long double x, long double y) {

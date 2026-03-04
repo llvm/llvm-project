@@ -687,6 +687,7 @@ add_header_library(
     libc.src.__support.macros.config
     libc.src.__support.number_pair
 )
+
 add_header_library(
   copysign
   HDRS
@@ -695,6 +696,7 @@ add_header_library(
     libc.src.__support.FPUtil.manipulation_functions
     libc.src.__support.macros.config
 )
+
 add_header_library(
   copysignbf16
   HDRS
@@ -704,6 +706,7 @@ add_header_library(
     libc.src.__support.FPUtil.manipulation_functions
     libc.src.__support.macros.config
 )
+
 add_header_library(
   copysignf
   HDRS
@@ -712,6 +715,7 @@ add_header_library(
     libc.src.__support.FPUtil.manipulation_functions
     libc.src.__support.macros.config
 )
+
 add_header_library(
   copysignf128
   HDRS
@@ -721,6 +725,7 @@ add_header_library(
     libc.src.__support.FPUtil.manipulation_functions
     libc.src.__support.macros.config
 )
+
 add_header_library(
   copysignf16
   HDRS
@@ -730,6 +735,7 @@ add_header_library(
     libc.src.__support.FPUtil.manipulation_functions
     libc.src.__support.macros.config
 )
+
 add_header_library(
   copysignl
   HDRS
