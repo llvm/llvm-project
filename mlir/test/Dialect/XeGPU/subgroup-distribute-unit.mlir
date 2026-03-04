@@ -516,7 +516,7 @@ gpu.func @scatter_ops_with_leading_dims(%src: memref<256xf16>, %laneid: index) {
 // CHECK:         gpu.yield %{{.*}}, %{{.*}} : index, memref<256x256xf16>
 // CHECK-NEXT:  }
 // CHECK-NEXT:  %[[INTPTR:.*]] = memref.extract_aligned_pointer_as_index %[[W]]#1 : memref<256x256xf16> -> index
-// CHECK-NEXT:  arith.index_cast %[[INTPTR]] : index to i64
+// CHECK-NEXT:  arith.index_cast %[[INTPTR]] exact : index to i64
 gpu.func @memref_extract_aligned_pointer_as_index(%arg0 : memref<256x256xf16>, %laneid: index) {
   %r = gpu.warp_execute_on_lane_0(%laneid)[16] -> (index) {
     %ptr = memref.extract_aligned_pointer_as_index %arg0 : memref<256x256xf16> -> index
@@ -530,7 +530,7 @@ gpu.func @memref_extract_aligned_pointer_as_index(%arg0 : memref<256x256xf16>, %
 // CHECK-LABEL: gpu.func @memref_alloca(
 // CHECK-NEXT:    %[[ALLOCA:.*]] = memref.alloca() : memref<2048xi8, 3>
 // CHECK-NEXT:    %[[INTPTR:.*]] = memref.extract_aligned_pointer_as_index %[[ALLOCA]] : memref<2048xi8, 3> -> index
-// CHECK-NEXT:    %[[CAST:.*]] = arith.index_cast %[[INTPTR]] : index to i64
+// CHECK-NEXT:    %[[CAST:.*]] = arith.index_cast %[[INTPTR]] exact : index to i64
 gpu.func @memref_alloca(%laneid: index) {
   %r = gpu.warp_execute_on_lane_0(%laneid)[16] -> (memref<2048xi8, 3>) {
     %alloca = memref.alloca() : memref<2048xi8, 3>

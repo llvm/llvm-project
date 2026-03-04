@@ -91,7 +91,7 @@ func.func @test_vector_store_load_4x4x4(%buffer: memref<4x4x4xf32>) {
 // CHECK: %[[ADDI:.*]] = arith.addi %[[CAST2]], %[[CST]] : vector<4xindex>
 // CHECK: %[[INDEX_CAST1:.*]] = arith.index_cast %[[ADDI]] : vector<4xindex> to vector<4xi32>
 // CHECK: %[[MULI:.*]] = arith.muli %[[INDEX_CAST1]], %[[CAST1]] : vector<4xi32>
-// CHECK: %[[INDEX_CAST2:.*]] = arith.index_cast %[[MULI]] : vector<4xi32> to vector<4xindex>
+// CHECK: %[[INDEX_CAST2:.*]] = arith.index_cast %[[MULI]] exact : vector<4xi32> to vector<4xindex>
 // CHECK: %[[RESULT:.*]] = vector.shape_cast %[[INDEX_CAST2]] : vector<4xindex> to vector<2x2xindex>
 // CHECK: return %[[RESULT]] : vector<2x2xindex>
 func.func @test_linearize_index(%arg0: vector<2x2xindex>, %arg1: vector<2x2xi32>) -> vector<2x2xindex> {
