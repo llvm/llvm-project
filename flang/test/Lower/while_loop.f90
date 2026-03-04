@@ -11,23 +11,22 @@ subroutine simple_loop
   ! CHECK: hlfir.assign %[[C5]] to %[[I]]#0
   i = 5
 
-  ! CHECK: cf.br ^[[BB1:.*]]
-  ! CHECK: ^[[BB1]]:  // 2 preds: ^{{.*}}, ^[[BB2:.*]]
+  ! CHECK: scf.while : () -> () {
   ! CHECK: %[[IVAL:.*]] = fir.load %[[I]]#0 : !fir.ref<i32>
   ! CHECK: %[[C1:.*]] = arith.constant 1 : i32
   ! CHECK: %[[COND:.*]] = arith.cmpi sgt, %[[IVAL]], %[[C1]] : i32
-  ! CHECK: cf.cond_br %[[COND]], ^[[BB2]], ^[[BB3:.*]]
-  ! CHECK: ^[[BB2]]:  // pred: ^[[BB1]]
+  ! CHECK: scf.condition(%[[COND]])
+  ! CHECK: } do {
   ! CHECK: %[[IVAL2:.*]] = fir.load %[[I]]#0 : !fir.ref<i32>
   ! CHECK: %[[C2:.*]] = arith.constant 2 : i32
   ! CHECK: %[[INC:.*]] = arith.subi %[[IVAL2]], %[[C2]] : i32
   ! CHECK: hlfir.assign %[[INC]] to %[[I]]#0 : i32, !fir.ref<i32>
-  ! CHECK: cf.br ^[[BB1]]
+  ! CHECK: scf.yield
+  ! CHECK: }
   do while (i .gt. 1)
     i = i - 2
   end do
 
-  ! CHECK: ^[[BB3]]:  // pred: ^[[BB1]]
   ! CHECK: %[[IVAL3:.*]] = fir.load %[[I]]#0 : !fir.ref<i32>
   ! CHECK: fir.call @_FortranAioOutputInteger32(%{{.*}}, %[[IVAL3]])
   print *, i
@@ -46,14 +45,13 @@ subroutine while_inside_while_loop
   ! CHECK: hlfir.assign %[[C13]] to %[[I]]#0
   i = 13
 
-  ! CHECK: cf.br ^[[HDR1:.*]]
-  ! CHECK: ^[[HDR1]]:  // 2 preds: ^{{.*}}, ^[[EXIT2:.*]]
+  ! CHECK: scf.while : () -> () {
   ! CHECK: %[[IVAL:.*]] = fir.load %[[I]]#0 : !fir.ref<i32>
   ! CHECK: %[[C8:.*]] = arith.constant 8 : i32
   ! CHECK: %[[COND:.*]] = arith.cmpi sgt, %[[IVAL]], %[[C8]] : i32
-  ! CHECK: cf.cond_br %[[COND]], ^[[BODY1:.*]], ^[[EXIT1:.*]]
+  ! CHECK: scf.condition(%[[COND]])
+  ! CHECK: } do {
   do while (i .gt. 8)
-    ! CHECK: ^[[BODY1]]:  // pred: ^[[HDR1]]
     ! CHECK: %[[IVAL2:.*]] = fir.load %[[I]]#0 : !fir.ref<i32>
     ! CHECK: %[[C5:.*]] = arith.constant 5 : i32
     ! CHECK: %[[INC:.*]] = arith.subi %[[IVAL2]], %[[C5]] : i32
@@ -64,27 +62,26 @@ subroutine while_inside_while_loop
     ! CHECK: hlfir.assign %[[C3]] to %[[J]]#0
     j = 3
 
-    ! CHECK: cf.br ^[[HDR2:.*]]
-    ! CHECK: ^[[HDR2]]:  // 2 preds: ^[[BODY1]], ^[[BODY2:.*]]
+    ! CHECK: scf.while : () -> () {
     ! CHECK: %[[JVAL:.*]] = fir.load %[[J]]#0 : !fir.ref<i32>
     ! CHECK: %[[IVAL3:.*]] = fir.load %[[I]]#0 : !fir.ref<i32>
     ! CHECK: %[[COND2:.*]] = arith.cmpi slt, %[[JVAL]], %[[IVAL3]] : i32
-    ! CHECK: cf.cond_br %[[COND2]], ^[[BODY2]], ^[[EXIT2:.*]]
+    ! CHECK: scf.condition(%[[COND2]])
+    ! CHECK: } do {
     do while (j .lt. i)
-      ! CHECK: ^[[BODY2]]:  // pred: ^[[HDR2]]
       ! CHECK: %[[C2:.*]] = arith.constant 2 : i32
       ! CHECK: %[[JVAL2:.*]] = fir.load %[[J]]#0 : !fir.ref<i32>
       ! CHECK: %[[INC2:.*]] = arith.muli %[[C2]], %[[JVAL2]] : i32
       ! CHECK: hlfir.assign %[[INC2]] to %[[J]]#0 : i32, !fir.ref<i32>
       j = j * 2
-    ! CHECK: cf.br ^[[HDR2]]
+    ! CHECK: scf.yield
     end do
+    ! CHECK: }
 
-    ! CHECK: ^[[EXIT2]]: // pred: ^[[HDR2]]
-    ! CHECK: cf.br ^[[HDR1]]
+    ! CHECK: scf.yield
   end do
+  ! CHECK: }
 
-  ! CHECK: ^[[EXIT1]]:  // pred: ^[[HDR1]]
   ! CHECK: %[[IPRINT:.*]] = fir.load %[[I]]#0 : !fir.ref<i32>
   ! CHECK: fir.call @_FortranAioOutputInteger32(%{{.*}}, %[[IPRINT]])
   ! CHECK: %[[JPRINT:.*]] = fir.load %[[J]]#0 : !fir.ref<i32>
