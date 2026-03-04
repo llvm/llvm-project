@@ -191,11 +191,10 @@ define i32 @test_nxv1i1(<vscale x 1 x i1> %x) {
 ;
 ; ZVE-LABEL: test_nxv1i1:
 ; ZVE:       # %bb.0: # %entry
-; ZVE-NEXT:    vsetvli a0, zero, e32, m1, ta, ma
-; ZVE-NEXT:    vmv.v.i v8, 0
 ; ZVE-NEXT:    csrr a0, vlenb
 ; ZVE-NEXT:    srli a0, a0, 3
 ; ZVE-NEXT:    vsetvli zero, a0, e32, m1, ta, ma
+; ZVE-NEXT:    vmv.v.i v8, 0
 ; ZVE-NEXT:    vmerge.vim v8, v8, 1, v0
 ; ZVE-NEXT:    vsetivli zero, 1, e32, m1, ta, ma
 ; ZVE-NEXT:    vmv.s.x v9, zero

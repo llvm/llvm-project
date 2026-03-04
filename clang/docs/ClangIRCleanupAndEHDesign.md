@@ -1,7 +1,10 @@
 # ClangIR Cleanup and Exception Handling Design
 
-::: {.contents local=""}
-:::
+```{contents}
+---
+local:
+---
+```
 
 ## Overview
 
@@ -333,7 +336,7 @@ cir.func @_ZN7DerivedC2Ev(%arg0: !cir.ptr<!rec_Derived>) {
   } cleanup eh {
     %3 = cir.base_class_addr %1 : !cir.ptr<!rec_Derived> nonnull [0] -> !cir.ptr<!rec_Base>
     cir.call @_ZN4BaseD2Ev(%3) : (!cir.ptr<!rec_Base>) -> ()
-    cir.resume
+    cir.yield
   }
   cir.return
 }
@@ -385,7 +388,7 @@ cir.try {
   }
   cir.yield
 } unwind (%eh_token : !cir.eh_token) {
-  cir.resume
+  cir.resume %eh_token : !cir.eh_token
 }
 ```
 
@@ -429,7 +432,7 @@ cir.func @someFunc(){
       }
       cir.yield
     } unwind (%eh_token : !cir.eh_token) {
-      cir.resume
+      cir.resume %eh_token : !cir.eh_token
     }
   }
   cir.return
@@ -596,7 +599,7 @@ cir.func @someFunc(){
         }
         cir.yield
       } unwind (%eh_token : !cir.eh_token) {
-        cir.resume
+        cir.resume %eh_token : !cir.eh_token
       }
     }
     cir.yield
@@ -939,7 +942,7 @@ cir.func @someFunc(){
   %2 = cir.begin_cleanup(%eh_token : !cir.eh_token) : !cir.cleanup_token
   cir.call @_ZN9SomeClassD1Ev(%0) : (!cir.ptr<!rec_SomeClass>) -> ()
   cir.end_cleanup(%2 : !cir.cleanup_token)
-  cir.resume // Unwind to caller
+  cir.resume %eh_token : !cir.eh_token // Unwind to caller
 ^bb4 // Normal continue (from ^bb1)
   cir.return
 }

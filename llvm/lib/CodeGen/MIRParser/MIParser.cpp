@@ -2104,7 +2104,10 @@ static bool getUnsigned(const MIToken &Token, unsigned &Result,
                         ErrorCallbackType ErrCB) {
   if (Token.hasIntegerValue()) {
     const uint64_t Limit = uint64_t(std::numeric_limits<unsigned>::max()) + 1;
-    uint64_t Val64 = Token.integerValue().getLimitedValue(Limit);
+    const APSInt &SInt = Token.integerValue();
+    if (SInt.isNegative())
+      return ErrCB(Token.location(), "expected unsigned integer");
+    uint64_t Val64 = SInt.getLimitedValue(Limit);
     if (Val64 == Limit)
       return ErrCB(Token.location(), "expected 32-bit integer (too large)");
     Result = Val64;

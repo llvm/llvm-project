@@ -422,6 +422,7 @@ void AccStructureChecker::Enter(const parser::OpenACCRoutineConstruct &x) {
           "part of a subroutine or function definition, or within an interface "
           "body for a subroutine or function in an interface block"_err_en_US);
     }
+    hasAccRoutineDirective = true;
   }
 }
 void AccStructureChecker::Leave(const parser::OpenACCRoutineConstruct &) {
@@ -668,9 +669,9 @@ void AccStructureChecker::Enter(const parser::OpenACCCacheConstruct &x) {
   const auto &verbatim = std::get<parser::Verbatim>(x.t);
   PushContextAndClauseSets(verbatim.source, llvm::acc::Directive::ACCD_cache);
   SetContextDirectiveSource(verbatim.source);
-  if (loopNestLevel == 0) {
-    context_.Say(
-        verbatim.source, "The CACHE directive must be inside a loop"_err_en_US);
+  if (loopNestLevel == 0 && !hasAccRoutineDirective) {
+    context_.Say(verbatim.source,
+        "The CACHE directive must be inside a loop or an ACC ROUTINE subprogram"_err_en_US);
   }
 
   // Check cache directive array section constraints
@@ -1155,18 +1156,22 @@ void AccStructureChecker::Enter(const parser::OpenACCEndConstruct &x) {
 
 void AccStructureChecker::Enter(const parser::Module &) {
   declareSymbols.clear();
+  hasAccRoutineDirective = false;
 }
 
 void AccStructureChecker::Enter(const parser::FunctionSubprogram &x) {
   declareSymbols.clear();
+  hasAccRoutineDirective = false;
 }
 
 void AccStructureChecker::Enter(const parser::SubroutineSubprogram &) {
   declareSymbols.clear();
+  hasAccRoutineDirective = false;
 }
 
 void AccStructureChecker::Enter(const parser::SeparateModuleSubprogram &) {
   declareSymbols.clear();
+  hasAccRoutineDirective = false;
 }
 
 void AccStructureChecker::Enter(const parser::DoConstruct &) {
