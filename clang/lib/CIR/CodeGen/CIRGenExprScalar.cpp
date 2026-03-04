@@ -1197,9 +1197,20 @@ public:
     } else {
       // Complex Comparison: can only be an equality comparison.
       assert(e->getOpcode() == BO_EQ || e->getOpcode() == BO_NE);
-
       BinOpInfo boInfo = emitBinOps(e);
-      result = cir::CmpOp::create(builder, loc, kind, boInfo.lhs, boInfo.rhs);
+      mlir::Value lhs = boInfo.lhs;
+      if (!lhsTy->isAnyComplexType()) {
+        lhs = builder.createComplexCreate(
+            loc, lhs, builder.getNullValue(lhs.getType(), loc));
+      }
+
+      mlir::Value rhs = boInfo.rhs;
+      if (!rhsTy->isAnyComplexType()) {
+        rhs = builder.createComplexCreate(
+            loc, rhs, builder.getNullValue(rhs.getType(), loc));
+      }
+
+      result = builder.createCompare(loc, kind, lhs, rhs);
     }
 
     return emitScalarConversion(result, cgf.getContext().BoolTy, e->getType(),
