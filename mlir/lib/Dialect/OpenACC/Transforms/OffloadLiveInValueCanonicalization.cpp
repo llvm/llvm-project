@@ -106,16 +106,11 @@ static bool allUsersAreInsideRegion(Value val, Region &region) {
 }
 
 /// Traces through view-like and partial entity access operations to find the
-/// original defining value. Stops tracing at ops that implement
-/// OutlineRematerializationOpInterface, since those ops are rematerialization
-/// candidates themselves and should not be traced through.
+/// original defining value.
 static Value getOriginalValue(Value val) {
   Value prev;
   while (val && val != prev) {
     prev = val;
-    if (isa_and_nonnull<acc::OutlineRematerializationOpInterface>(
-            val.getDefiningOp()))
-      break;
     if (auto viewLikeOp = val.getDefiningOp<ViewLikeOpInterface>())
       val = viewLikeOp.getViewSource();
     if (auto partialAccess =
@@ -140,7 +135,7 @@ static bool isRematerializationCandidate(Value val,
   // Trace through view-like operations to find the original value.
   Value origVal = getOriginalValue(val);
   Operation *definingOp = origVal.getDefiningOp();
-  if (!definingOp)
+  if (!definingOp && !(definingOp = val.getDefiningOp()))
     return false;
 
   LLVM_DEBUG(llvm::dbgs() << "\tChecking candidate: " << *definingOp << "\n");
@@ -183,6 +178,20 @@ static bool isRematerializationCandidate(Value val,
           return true;
         }
       }
+    }
+  }
+
+  // An op implementing both ViewLikeOpInterface and
+  // OutlineRematerializationOpInterface may have been traced through by
+  // getOriginalValue. If the traced op is not a candidate, check the direct
+  // defining op of the live-in value.
+  if (origVal != val) {
+    definingOp = val.getDefiningOp();
+    if (definingOp &&
+        isa<acc::OutlineRematerializationOpInterface>(definingOp)) {
+      LLVM_DEBUG(llvm::dbgs()
+                 << "\t\t-> OutlineRematerializationOpInterface (direct)\n");
+      return true;
     }
   }
 
