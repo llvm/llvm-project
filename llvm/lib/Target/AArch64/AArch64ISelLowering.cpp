@@ -29232,7 +29232,7 @@ static SDValue performCTPOPCombine(SDNode *N,
   // Use the same VT as the SETcc if -CTPOP would not overflow.
   if (sd_match(Mask, m_SetCC(m_VT(CmpVT), m_Value(), m_Value()))) {
     CmpVT = CmpVT.changeVectorElementTypeToInteger();
-    if (MaskVT.getSizeInBits() <= (1 << (CmpVT.getScalarSizeInBits() - 1)))
+    if (Log2_64_Ceil(MaskVT.getSizeInBits()) <= CmpVT.getScalarSizeInBits() - 1)
       ReduceInVT = CmpVT;
   }
 
