@@ -292,6 +292,11 @@ int cc1_main(ArrayRef<const char *> Argv, const char *Argv0, void *MainAddr) {
   llvm::install_fatal_error_handler(LLVMErrorHandler,
                                   static_cast<void*>(&Clang->getDiagnostics()));
 
+  // Un-register error handler before exiting to ensure clang-cache wrapper
+  // works in process.
+  llvm::scope_exit FinishDiagnosticClientScope(
+      [&]() { llvm::remove_fatal_error_handler(); });
+
   DiagsBuffer->FlushDiagnostics(Clang->getDiagnostics());
   if (!Success)
     return 1;
