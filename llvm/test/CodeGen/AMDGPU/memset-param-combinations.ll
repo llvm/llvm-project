@@ -498,8 +498,6 @@ define void @memset_p0_sz1055_align_4_varsetval(ptr addrspace(0) align 4 %dst, i
 ; GFX942-SDAG-LABEL: memset_p0_sz1055_align_4_varsetval:
 ; GFX942-SDAG:       ; %bb.0: ; %entry
 ; GFX942-SDAG-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX942-SDAG-NEXT:    s_mov_b32 s0, 0x4040404
-; GFX942-SDAG-NEXT:    v_perm_b32 v4, v2, v2, s0
 ; GFX942-SDAG-NEXT:    v_accvgpr_write_b32 a0, v40 ; Reload Reuse
 ; GFX942-SDAG-NEXT:    v_accvgpr_write_b32 a1, v41 ; Reload Reuse
 ; GFX942-SDAG-NEXT:    v_accvgpr_write_b32 a2, v42 ; Reload Reuse
@@ -514,6 +512,8 @@ define void @memset_p0_sz1055_align_4_varsetval(ptr addrspace(0) align 4 %dst, i
 ; GFX942-SDAG-NEXT:    v_accvgpr_write_b32 a11, v59 ; Reload Reuse
 ; GFX942-SDAG-NEXT:    v_accvgpr_write_b32 a12, v60 ; Reload Reuse
 ; GFX942-SDAG-NEXT:    v_accvgpr_write_b32 a13, v61 ; Reload Reuse
+; GFX942-SDAG-NEXT:    s_mov_b32 s0, 0x4040404
+; GFX942-SDAG-NEXT:    v_perm_b32 v4, v2, v2, s0
 ; GFX942-SDAG-NEXT:    v_mov_b32_e32 v5, v4
 ; GFX942-SDAG-NEXT:    v_mov_b32_e32 v6, v4
 ; GFX942-SDAG-NEXT:    v_mov_b32_e32 v7, v4
@@ -690,8 +690,6 @@ define void @memset_p0_sz2048_align_4_varsetval(ptr addrspace(0) align 4 %dst, i
 ; GFX942-SDAG-LABEL: memset_p0_sz2048_align_4_varsetval:
 ; GFX942-SDAG:       ; %bb.0: ; %entry
 ; GFX942-SDAG-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX942-SDAG-NEXT:    s_mov_b32 s0, 0x4040404
-; GFX942-SDAG-NEXT:    v_perm_b32 v2, v2, v2, s0
 ; GFX942-SDAG-NEXT:    v_accvgpr_write_b32 a0, v40 ; Reload Reuse
 ; GFX942-SDAG-NEXT:    v_accvgpr_write_b32 a1, v41 ; Reload Reuse
 ; GFX942-SDAG-NEXT:    v_accvgpr_write_b32 a2, v42 ; Reload Reuse
@@ -704,6 +702,8 @@ define void @memset_p0_sz2048_align_4_varsetval(ptr addrspace(0) align 4 %dst, i
 ; GFX942-SDAG-NEXT:    v_accvgpr_write_b32 a9, v57 ; Reload Reuse
 ; GFX942-SDAG-NEXT:    v_accvgpr_write_b32 a10, v58 ; Reload Reuse
 ; GFX942-SDAG-NEXT:    v_accvgpr_write_b32 a11, v59 ; Reload Reuse
+; GFX942-SDAG-NEXT:    s_mov_b32 s0, 0x4040404
+; GFX942-SDAG-NEXT:    v_perm_b32 v2, v2, v2, s0
 ; GFX942-SDAG-NEXT:    v_mov_b32_e32 v3, v2
 ; GFX942-SDAG-NEXT:    v_mov_b32_e32 v4, v2
 ; GFX942-SDAG-NEXT:    v_mov_b32_e32 v5, v2

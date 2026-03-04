@@ -984,10 +984,6 @@ define void @test_readfirstlane_v32f32(ptr addrspace(1) %out, <32 x float> %src)
 ; CHECK-SDAG-NEXT:    s_xor_saveexec_b64 s[4:5], -1
 ; CHECK-SDAG-NEXT:    buffer_store_dword v31, off, s[0:3], s32 offset:12 ; 4-byte Folded Spill
 ; CHECK-SDAG-NEXT:    s_mov_b64 exec, s[4:5]
-; CHECK-SDAG-NEXT:    v_readfirstlane_b32 s61, v27
-; CHECK-SDAG-NEXT:    buffer_load_dword v0, off, s[0:3], s32 offset:8
-; CHECK-SDAG-NEXT:    buffer_load_dword v1, off, s[0:3], s32 offset:4
-; CHECK-SDAG-NEXT:    buffer_load_dword v27, off, s[0:3], s32
 ; CHECK-SDAG-NEXT:    v_writelane_b32 v31, s36, 0
 ; CHECK-SDAG-NEXT:    v_writelane_b32 v31, s37, 1
 ; CHECK-SDAG-NEXT:    v_writelane_b32 v31, s38, 2
@@ -1004,6 +1000,10 @@ define void @test_readfirstlane_v32f32(ptr addrspace(1) %out, <32 x float> %src)
 ; CHECK-SDAG-NEXT:    v_writelane_b32 v31, s65, 13
 ; CHECK-SDAG-NEXT:    v_writelane_b32 v31, s66, 14
 ; CHECK-SDAG-NEXT:    v_writelane_b32 v31, s67, 15
+; CHECK-SDAG-NEXT:    v_readfirstlane_b32 s61, v27
+; CHECK-SDAG-NEXT:    buffer_load_dword v0, off, s[0:3], s32 offset:8
+; CHECK-SDAG-NEXT:    buffer_load_dword v1, off, s[0:3], s32 offset:4
+; CHECK-SDAG-NEXT:    buffer_load_dword v27, off, s[0:3], s32
 ; CHECK-SDAG-NEXT:    v_readfirstlane_b32 s64, v30
 ; CHECK-SDAG-NEXT:    v_readfirstlane_b32 s55, v21
 ; CHECK-SDAG-NEXT:    v_readfirstlane_b32 s54, v20
@@ -1070,10 +1070,6 @@ define void @test_readfirstlane_v32f32(ptr addrspace(1) %out, <32 x float> %src)
 ; CHECK-GISEL-NEXT:    buffer_store_dword v31, off, s[0:3], s32 offset:12 ; 4-byte Folded Spill
 ; CHECK-GISEL-NEXT:    s_mov_b64 exec, s[4:5]
 ; CHECK-GISEL-NEXT:    v_writelane_b32 v31, s36, 0
-; CHECK-GISEL-NEXT:    v_readfirstlane_b32 s36, v2
-; CHECK-GISEL-NEXT:    buffer_load_dword v0, off, s[0:3], s32
-; CHECK-GISEL-NEXT:    buffer_load_dword v1, off, s[0:3], s32 offset:4
-; CHECK-GISEL-NEXT:    buffer_load_dword v2, off, s[0:3], s32 offset:8
 ; CHECK-GISEL-NEXT:    v_writelane_b32 v31, s37, 1
 ; CHECK-GISEL-NEXT:    v_writelane_b32 v31, s38, 2
 ; CHECK-GISEL-NEXT:    v_writelane_b32 v31, s39, 3
@@ -1089,6 +1085,10 @@ define void @test_readfirstlane_v32f32(ptr addrspace(1) %out, <32 x float> %src)
 ; CHECK-GISEL-NEXT:    v_writelane_b32 v31, s65, 13
 ; CHECK-GISEL-NEXT:    v_writelane_b32 v31, s66, 14
 ; CHECK-GISEL-NEXT:    v_writelane_b32 v31, s67, 15
+; CHECK-GISEL-NEXT:    v_readfirstlane_b32 s36, v2
+; CHECK-GISEL-NEXT:    buffer_load_dword v0, off, s[0:3], s32
+; CHECK-GISEL-NEXT:    buffer_load_dword v1, off, s[0:3], s32 offset:4
+; CHECK-GISEL-NEXT:    buffer_load_dword v2, off, s[0:3], s32 offset:8
 ; CHECK-GISEL-NEXT:    v_readfirstlane_b32 s37, v3
 ; CHECK-GISEL-NEXT:    v_readfirstlane_b32 s38, v4
 ; CHECK-GISEL-NEXT:    v_readfirstlane_b32 s39, v5
@@ -1429,10 +1429,6 @@ define void @test_readfirstlane_v32i32(ptr addrspace(1) %out, <32 x i32> %src) {
 ; CHECK-SDAG-NEXT:    s_xor_saveexec_b64 s[4:5], -1
 ; CHECK-SDAG-NEXT:    buffer_store_dword v31, off, s[0:3], s32 offset:12 ; 4-byte Folded Spill
 ; CHECK-SDAG-NEXT:    s_mov_b64 exec, s[4:5]
-; CHECK-SDAG-NEXT:    v_readfirstlane_b32 s61, v27
-; CHECK-SDAG-NEXT:    buffer_load_dword v0, off, s[0:3], s32 offset:8
-; CHECK-SDAG-NEXT:    buffer_load_dword v1, off, s[0:3], s32 offset:4
-; CHECK-SDAG-NEXT:    buffer_load_dword v27, off, s[0:3], s32
 ; CHECK-SDAG-NEXT:    v_writelane_b32 v31, s36, 0
 ; CHECK-SDAG-NEXT:    v_writelane_b32 v31, s37, 1
 ; CHECK-SDAG-NEXT:    v_writelane_b32 v31, s38, 2
@@ -1449,6 +1445,10 @@ define void @test_readfirstlane_v32i32(ptr addrspace(1) %out, <32 x i32> %src) {
 ; CHECK-SDAG-NEXT:    v_writelane_b32 v31, s65, 13
 ; CHECK-SDAG-NEXT:    v_writelane_b32 v31, s66, 14
 ; CHECK-SDAG-NEXT:    v_writelane_b32 v31, s67, 15
+; CHECK-SDAG-NEXT:    v_readfirstlane_b32 s61, v27
+; CHECK-SDAG-NEXT:    buffer_load_dword v0, off, s[0:3], s32 offset:8
+; CHECK-SDAG-NEXT:    buffer_load_dword v1, off, s[0:3], s32 offset:4
+; CHECK-SDAG-NEXT:    buffer_load_dword v27, off, s[0:3], s32
 ; CHECK-SDAG-NEXT:    v_readfirstlane_b32 s64, v30
 ; CHECK-SDAG-NEXT:    v_readfirstlane_b32 s55, v21
 ; CHECK-SDAG-NEXT:    v_readfirstlane_b32 s54, v20
@@ -1515,10 +1515,6 @@ define void @test_readfirstlane_v32i32(ptr addrspace(1) %out, <32 x i32> %src) {
 ; CHECK-GISEL-NEXT:    buffer_store_dword v31, off, s[0:3], s32 offset:12 ; 4-byte Folded Spill
 ; CHECK-GISEL-NEXT:    s_mov_b64 exec, s[4:5]
 ; CHECK-GISEL-NEXT:    v_writelane_b32 v31, s36, 0
-; CHECK-GISEL-NEXT:    v_readfirstlane_b32 s36, v2
-; CHECK-GISEL-NEXT:    buffer_load_dword v0, off, s[0:3], s32
-; CHECK-GISEL-NEXT:    buffer_load_dword v1, off, s[0:3], s32 offset:4
-; CHECK-GISEL-NEXT:    buffer_load_dword v2, off, s[0:3], s32 offset:8
 ; CHECK-GISEL-NEXT:    v_writelane_b32 v31, s37, 1
 ; CHECK-GISEL-NEXT:    v_writelane_b32 v31, s38, 2
 ; CHECK-GISEL-NEXT:    v_writelane_b32 v31, s39, 3
@@ -1534,6 +1530,10 @@ define void @test_readfirstlane_v32i32(ptr addrspace(1) %out, <32 x i32> %src) {
 ; CHECK-GISEL-NEXT:    v_writelane_b32 v31, s65, 13
 ; CHECK-GISEL-NEXT:    v_writelane_b32 v31, s66, 14
 ; CHECK-GISEL-NEXT:    v_writelane_b32 v31, s67, 15
+; CHECK-GISEL-NEXT:    v_readfirstlane_b32 s36, v2
+; CHECK-GISEL-NEXT:    buffer_load_dword v0, off, s[0:3], s32
+; CHECK-GISEL-NEXT:    buffer_load_dword v1, off, s[0:3], s32 offset:4
+; CHECK-GISEL-NEXT:    buffer_load_dword v2, off, s[0:3], s32 offset:8
 ; CHECK-GISEL-NEXT:    v_readfirstlane_b32 s37, v3
 ; CHECK-GISEL-NEXT:    v_readfirstlane_b32 s38, v4
 ; CHECK-GISEL-NEXT:    v_readfirstlane_b32 s39, v5

@@ -7758,6 +7758,9 @@ define <32 x bfloat> @v_maximumnum_v32bf16(<32 x bfloat> %x, <32 x bfloat> %y) {
 ; GFX8-LABEL: v_maximumnum_v32bf16:
 ; GFX8:       ; %bb.0:
 ; GFX8-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX8-NEXT:    buffer_store_dword v40, off, s[0:3], s32 offset:12 ; 4-byte Folded Spill
+; GFX8-NEXT:    buffer_store_dword v41, off, s[0:3], s32 offset:8 ; 4-byte Folded Spill
+; GFX8-NEXT:    buffer_store_dword v42, off, s[0:3], s32 offset:4 ; 4-byte Folded Spill
 ; GFX8-NEXT:    buffer_load_dword v55, off, s[0:3], s32
 ; GFX8-NEXT:    v_and_b32_e32 v31, 0xffff0000, v14
 ; GFX8-NEXT:    v_lshrrev_b32_e32 v32, 16, v30
@@ -7809,13 +7812,10 @@ define <32 x bfloat> @v_maximumnum_v32bf16(<32 x bfloat> %x, <32 x bfloat> %y) {
 ; GFX8-NEXT:    v_and_b32_e32 v52, 0xffff0000, v21
 ; GFX8-NEXT:    v_and_b32_e32 v53, 0xffff0000, v20
 ; GFX8-NEXT:    v_and_b32_e32 v54, 0xffff0000, v19
-; GFX8-NEXT:    buffer_store_dword v40, off, s[0:3], s32 offset:12 ; 4-byte Folded Spill
-; GFX8-NEXT:    buffer_store_dword v41, off, s[0:3], s32 offset:8 ; 4-byte Folded Spill
-; GFX8-NEXT:    buffer_store_dword v42, off, s[0:3], s32 offset:4 ; 4-byte Folded Spill
 ; GFX8-NEXT:    v_and_b32_e32 v40, 0xffff0000, v18
 ; GFX8-NEXT:    v_and_b32_e32 v41, 0xffff0000, v17
 ; GFX8-NEXT:    v_and_b32_e32 v42, 0xffff0000, v16
-; GFX8-NEXT:    s_waitcnt vmcnt(3)
+; GFX8-NEXT:    s_waitcnt vmcnt(0)
 ; GFX8-NEXT:    v_lshrrev_b32_e32 v35, 16, v55
 ; GFX8-NEXT:    v_and_b32_e32 v36, 0xffff0000, v55
 ; GFX8-NEXT:    v_cndmask_b32_e32 v33, v34, v35, vcc
@@ -8316,6 +8316,9 @@ define <32 x bfloat> @v_maximumnum_v32bf16(<32 x bfloat> %x, <32 x bfloat> %y) {
 ; GFX900-LABEL: v_maximumnum_v32bf16:
 ; GFX900:       ; %bb.0:
 ; GFX900-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX900-NEXT:    buffer_store_dword v40, off, s[0:3], s32 offset:12 ; 4-byte Folded Spill
+; GFX900-NEXT:    buffer_store_dword v41, off, s[0:3], s32 offset:8 ; 4-byte Folded Spill
+; GFX900-NEXT:    buffer_store_dword v42, off, s[0:3], s32 offset:4 ; 4-byte Folded Spill
 ; GFX900-NEXT:    buffer_load_dword v55, off, s[0:3], s32
 ; GFX900-NEXT:    v_and_b32_e32 v31, 0xffff0000, v14
 ; GFX900-NEXT:    v_lshrrev_b32_e32 v32, 16, v30
@@ -8367,13 +8370,10 @@ define <32 x bfloat> @v_maximumnum_v32bf16(<32 x bfloat> %x, <32 x bfloat> %y) {
 ; GFX900-NEXT:    v_and_b32_e32 v52, 0xffff0000, v21
 ; GFX900-NEXT:    v_and_b32_e32 v53, 0xffff0000, v20
 ; GFX900-NEXT:    v_and_b32_e32 v54, 0xffff0000, v19
-; GFX900-NEXT:    buffer_store_dword v40, off, s[0:3], s32 offset:12 ; 4-byte Folded Spill
-; GFX900-NEXT:    buffer_store_dword v41, off, s[0:3], s32 offset:8 ; 4-byte Folded Spill
-; GFX900-NEXT:    buffer_store_dword v42, off, s[0:3], s32 offset:4 ; 4-byte Folded Spill
 ; GFX900-NEXT:    v_and_b32_e32 v40, 0xffff0000, v18
 ; GFX900-NEXT:    v_and_b32_e32 v41, 0xffff0000, v17
 ; GFX900-NEXT:    v_and_b32_e32 v42, 0xffff0000, v16
-; GFX900-NEXT:    s_waitcnt vmcnt(3)
+; GFX900-NEXT:    s_waitcnt vmcnt(0)
 ; GFX900-NEXT:    v_lshrrev_b32_e32 v35, 16, v55
 ; GFX900-NEXT:    v_and_b32_e32 v36, 0xffff0000, v55
 ; GFX900-NEXT:    v_cndmask_b32_e32 v33, v34, v35, vcc
@@ -8859,6 +8859,9 @@ define <32 x bfloat> @v_maximumnum_v32bf16(<32 x bfloat> %x, <32 x bfloat> %y) {
 ; GFX950-LABEL: v_maximumnum_v32bf16:
 ; GFX950:       ; %bb.0:
 ; GFX950-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX950-NEXT:    v_accvgpr_write_b32 a0, v40 ; Reload Reuse
+; GFX950-NEXT:    v_accvgpr_write_b32 a1, v41 ; Reload Reuse
+; GFX950-NEXT:    v_accvgpr_write_b32 a2, v42 ; Reload Reuse
 ; GFX950-NEXT:    scratch_load_dword v50, off, s32
 ; GFX950-NEXT:    v_and_b32_e32 v31, 0xffff0000, v14
 ; GFX950-NEXT:    v_lshrrev_b32_e32 v32, 16, v30
@@ -8910,11 +8913,8 @@ define <32 x bfloat> @v_maximumnum_v32bf16(<32 x bfloat> %x, <32 x bfloat> %y) {
 ; GFX950-NEXT:    v_and_b32_e32 v53, 0xffff0000, v21
 ; GFX950-NEXT:    v_and_b32_e32 v54, 0xffff0000, v20
 ; GFX950-NEXT:    v_and_b32_e32 v55, 0xffff0000, v19
-; GFX950-NEXT:    v_accvgpr_write_b32 a0, v40 ; Reload Reuse
 ; GFX950-NEXT:    v_and_b32_e32 v40, 0xffff0000, v18
-; GFX950-NEXT:    v_accvgpr_write_b32 a1, v41 ; Reload Reuse
 ; GFX950-NEXT:    v_and_b32_e32 v41, 0xffff0000, v17
-; GFX950-NEXT:    v_accvgpr_write_b32 a2, v42 ; Reload Reuse
 ; GFX950-NEXT:    v_and_b32_e32 v42, 0xffff0000, v16
 ; GFX950-NEXT:    s_waitcnt vmcnt(0)
 ; GFX950-NEXT:    v_lshrrev_b32_e32 v35, 16, v50

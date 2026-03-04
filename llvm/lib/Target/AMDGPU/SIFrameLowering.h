@@ -119,6 +119,13 @@ public:
            const DebugLoc &DL, const MCCFIInstruction &CFIInst,
            MachineInstr::MIFlag flag = MachineInstr::FrameSetup) const;
 
+  /// Create a CFI index describing a spill of the VGPR/AGPR \p Reg to another
+  /// VGPR/AGPR \p RegCopy and build a MachineInstr around it.
+  MachineInstr *buildCFIForVRegToVRegSpill(MachineBasicBlock &MBB,
+                                           MachineBasicBlock::iterator MBBI,
+                                           const DebugLoc &DL,
+                                           const MCRegister Reg,
+                                           const MCRegister RegCopy) const;
   /// Create a CFI index describing a spill of an SGPR to a single lane of
   /// a VGPR and build a MachineInstr around it.
   MachineInstr *buildCFIForSGPRToVGPRSpill(MachineBasicBlock &MBB,
@@ -133,11 +140,26 @@ public:
       MachineBasicBlock &MBB, MachineBasicBlock::iterator MBBI,
       const DebugLoc &DL, MCRegister SGPR,
       ArrayRef<SIRegisterInfo::SpilledReg> VGPRSpills) const;
+  /// Create a CFI index describing a spill of a SGPR to VMEM and
+  /// build a MachineInstr around it.
+  MachineInstr *buildCFIForSGPRToVMEMSpill(MachineBasicBlock &MBB,
+                                           MachineBasicBlock::iterator MBBI,
+                                           const DebugLoc &DL, MCRegister SGPR,
+                                           int64_t Offset) const;
+  /// Create a CFI index describing a spill of a VGPR to VMEM and
+  /// build a MachineInstr around it.
+  MachineInstr *buildCFIForVGPRToVMEMSpill(MachineBasicBlock &MBB,
+                                           MachineBasicBlock::iterator MBBI,
+                                           const DebugLoc &DL, MCRegister VGPR,
+                                           int64_t Offset) const;
   MachineInstr *buildCFIForRegToSGPRPairSpill(MachineBasicBlock &MBB,
                                               MachineBasicBlock::iterator MBBI,
                                               const DebugLoc &DL,
                                               MCRegister Reg,
                                               MCRegister SGPRPair) const;
+  MachineInstr *buildCFIForSameValue(MachineBasicBlock &MBB,
+                                     MachineBasicBlock::iterator MBBI,
+                                     const DebugLoc &DL, MCRegister Reg) const;
   // Returns true if the function may need to reserve space on the stack for the
   // CWSR trap handler.
   bool mayReserveScratchForCWSR(const MachineFunction &MF) const;

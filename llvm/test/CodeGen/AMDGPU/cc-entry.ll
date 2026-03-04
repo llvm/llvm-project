@@ -38,19 +38,18 @@ define void @caller() {
 ; CHECK-NEXT:    s_wait_alu depctr_sa_sdst(0)
 ; CHECK-NEXT:    s_mov_b32 exec_lo, s1
 ; CHECK-NEXT:    v_writelane_b32 v40, s0, 2
+; CHECK-NEXT:    v_writelane_b32 v40, s30, 0
 ; CHECK-NEXT:    s_add_co_i32 s32, s32, 16
+; CHECK-NEXT:    v_writelane_b32 v40, s31, 1
 ; CHECK-NEXT:    s_getpc_b64 s[0:1]
 ; CHECK-NEXT:    s_wait_alu depctr_sa_sdst(0)
 ; CHECK-NEXT:    s_sext_i32_i16 s1, s1
 ; CHECK-NEXT:    s_add_co_u32 s0, s0, entry_fn@gotpcrel32@lo+12
 ; CHECK-NEXT:    s_wait_alu depctr_sa_sdst(0)
 ; CHECK-NEXT:    s_add_co_ci_u32 s1, s1, entry_fn@gotpcrel32@hi+24
-; CHECK-NEXT:    v_writelane_b32 v40, s30, 0
 ; CHECK-NEXT:    s_load_b64 s[0:1], s[0:1], 0x0
-; CHECK-NEXT:    v_writelane_b32 v40, s31, 1
 ; CHECK-NEXT:    s_wait_kmcnt 0x0
 ; CHECK-NEXT:    s_swappc_b64 s[30:31], s[0:1]
-; CHECK-NEXT:    s_delay_alu instid0(VALU_DEP_1)
 ; CHECK-NEXT:    v_readlane_b32 s30, v40, 0
 ; CHECK-NEXT:    v_readlane_b32 s31, v40, 1
 ; CHECK-NEXT:    s_mov_b32 s32, s33
