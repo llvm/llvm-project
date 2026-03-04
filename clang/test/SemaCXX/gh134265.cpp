@@ -56,7 +56,20 @@ struct Final1 : BaseDelete1, BaseDelete2, BaseDestructor {
 };
 #endif // MS
 
+// Make sure there is no double diagnosing for delcared only destructors.
+struct DeclaredOnly {
+  virtual ~DeclaredOnly(); // ms-error {{attempt to use a deleted function}}
+  static void operator delete(void* ptr) = delete; // ms-note {{explicitly marked deleted here}}
+};
+
+struct DeclaredOnlyArr {
+  virtual ~DeclaredOnlyArr();
+  static void operator delete[](void* ptr) = delete;
+};
+
 void foo() {
     Final* a = new Final[10]();
     FinalExplicit* b = new FinalExplicit[10]();
+    DeclaredOnly *d = new DeclaredOnly[5]();
+    DeclaredOnlyArr *e = new DeclaredOnlyArr[5]();
 }

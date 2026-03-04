@@ -2640,11 +2640,25 @@ ExprResult Sema::BuildCXXNew(SourceRange Range, bool UseGlobal,
   // are required for delete[] call but MSVC triggers emission of them
   // whenever new[] is called for an object of the class and we do the same
   // for compatibility.
-  if (const CXXConstructExpr *CCE =
-          dyn_cast_or_null<CXXConstructExpr>(Initializer);
-      CCE && ArraySize) {
-    Context.setClassNeedsVectorDeletingDestructor(
-        CCE->getConstructor()->getParent());
+  if (Context.getTargetInfo().emitVectorDeletingDtors(Context.getLangOpts())) {
+    if (const CXXConstructExpr *CCE =
+            dyn_cast_or_null<CXXConstructExpr>(Initializer);
+        CCE && ArraySize) {
+      CXXRecordDecl *ClassDecl = CCE->getConstructor()->getParent();
+      auto *Dtor = ClassDecl->getDestructor();
+      if (Dtor && Dtor->isVirtual() && !Dtor->isDeleted()) {
+        Context.setClassNeedsVectorDeletingDestructor(ClassDecl);
+        if (!Dtor->isDefined() && !Dtor->isInvalidDecl()) {
+          // Call CheckDestructor even if Destructor is not defined. This is
+          // needed to find operators delete and delete[] for vector deleting
+          // destructor body because new[] will trigger emission of vector
+          // deleting destructor body even if destructor is defined in another
+          // translation unit.
+          ContextRAII SavedContext(*this, Dtor);
+          CheckDestructor(Dtor);
+        }
+      }
+    }
   }
 
   return CXXNewExpr::Create(Context, UseGlobal, OperatorNew, OperatorDelete,

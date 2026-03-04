@@ -1202,6 +1202,10 @@ void CodeGenFunction::EmitNewArrayInitializer(
     EmitCXXAggrConstructorCall(Ctor, NumElements, CurPtr, CCE,
                                /*NewPointerIsChecked*/ true,
                                CCE->requiresZeroInitialization());
+    if (getContext().classNeedsVectorDeletingDestructor(Ctor->getParent())) {
+      CXXDestructorDecl *Dtor = Ctor->getParent()->getDestructor();
+      CGM.EmitGlobal(GlobalDecl(Dtor, Dtor_VectorDeleting));
+    }
     return;
   }
 

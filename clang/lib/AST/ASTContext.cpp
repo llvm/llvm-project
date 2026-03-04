@@ -13631,6 +13631,8 @@ bool ASTContext::classNeedsVectorDeletingDestructor(const CXXRecordDecl *RD) {
   if (!getTargetInfo().emitVectorDeletingDtors(getLangOpts()))
     return false;
   CXXDestructorDecl *Dtor = RD->getDestructor();
+  if (!Dtor || !Dtor->isVirtual())
+    return false;
   // The compiler can't know if new[]/delete[] will be used outside of the DLL,
   // so just force vector deleting destructor emission if dllexport is present.
   // This matches MSVC behavior.
