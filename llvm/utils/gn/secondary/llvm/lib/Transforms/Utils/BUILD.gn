@@ -26,6 +26,7 @@ static_library("Utils") {
     "CodeMoverUtils.cpp",
     "ControlFlowUtils.cpp",
     "CountVisits.cpp",
+    "CollapseIdencticalNodes.cpp",
     "CtorUtils.cpp",
     "DXILUpgrade.cpp",
     "Debugify.cpp",

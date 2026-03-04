@@ -19,6 +19,7 @@ add_llvm_component_library(LLVMTransformUtils
   ControlFlowUtils.cpp
   CtorUtils.cpp
   CountVisits.cpp
+  CollapseIdenticalNodes.cpp
   Debugify.cpp
   DebugSSAUpdater.cpp
   DeclareRuntimeLibcalls.cpp
