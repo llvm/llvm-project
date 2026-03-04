@@ -56,7 +56,7 @@ public:
   /// \return the device implementation object this queue is associated with.
   DeviceImpl &getDevice() { return MDevice; }
 
-  /// \return true if the queue is in order.
+  /// \return true if and only if the queue is in order.
   bool isInOrder() const { return MIsInorder; }
 
 private:

@@ -122,7 +122,7 @@ public:
 
   /// Equivalent to has_property<property::queue::in_order>().
   ///
-  /// \return true if the queue is in order.
+  /// \return true if and only if the queue is in order.
   bool is_in_order() const;
 
   /// Queries the queue for information.
