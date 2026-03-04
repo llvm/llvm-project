@@ -6464,6 +6464,9 @@ static ExprResult BuildConvertedConstantExpression(Sema &S, Expr *From,
   if (checkPlaceholderForOverload(S, From))
     return ExprError();
 
+  if (From->containsErrors())
+    return S.ImpCastExprToType(From, T, CK_NoOp, From->getValueKind());
+
   // C++1z [expr.const]p3:
   //  A converted constant expression of type T is an expression,
   //  implicitly converted to type T, where the converted
