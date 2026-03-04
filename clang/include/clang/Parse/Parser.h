@@ -2018,7 +2018,7 @@ private:
 
   /// isTypeSpecifierQualifier - Return true if the current token could be the
   /// start of a specifier-qualifier-list.
-  bool isTypeSpecifierQualifier();
+  bool isTypeSpecifierQualifier(const Token &Tok);
 
   /// isKnownToBeTypeSpecifier - Return true if we know that the specified token
   /// is definitely a type-specifier.  Return false if it isn't part of a type
@@ -4336,7 +4336,7 @@ private:
       return isCXXTypeId(TentativeCXXTypeIdContext::AsGenericSelectionArgument,
                          isAmbiguous);
     }
-    return isTypeSpecifierQualifier();
+    return isTypeSpecifierQualifier(Tok);
   }
 
   /// Checks if the current tokens form type-id or expression.
@@ -4347,7 +4347,7 @@ private:
       bool isAmbiguous;
       return isCXXTypeId(TentativeCXXTypeIdContext::Unambiguous, isAmbiguous);
     }
-    return isTypeSpecifierQualifier();
+    return isTypeSpecifierQualifier(Tok);
   }
 
   /// ParseBlockId - Parse a block-id, which roughly looks like int (int x).
@@ -5016,7 +5016,7 @@ private:
     if (getLangOpts().CPlusPlus)
       return isCXXTypeId(TentativeCXXTypeIdContext::InParens, isAmbiguous);
     isAmbiguous = false;
-    return isTypeSpecifierQualifier();
+    return isTypeSpecifierQualifier(Tok);
   }
   bool isTypeIdInParens() {
     bool isAmbiguous;
