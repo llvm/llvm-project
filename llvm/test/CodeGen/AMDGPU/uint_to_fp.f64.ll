@@ -263,24 +263,24 @@ define amdgpu_kernel void @s_uint_to_fp_v4i64_to_v4f64(ptr addrspace(1) %out, <4
 ; GFX942-NEXT:    s_load_dwordx2 s[0:1], s[4:5], 0x0
 ; GFX942-NEXT:    v_mov_b32_e32 v10, 0
 ; GFX942-NEXT:    s_waitcnt lgkmcnt(0)
-; GFX942-NEXT:    v_cvt_f64_u32_e32 v[0:1], s11
-; GFX942-NEXT:    v_cvt_f64_u32_e32 v[2:3], s10
-; GFX942-NEXT:    v_cvt_f64_u32_e32 v[4:5], s9
+; GFX942-NEXT:    v_cvt_f64_u32_e32 v[0:1], s15
+; GFX942-NEXT:    v_cvt_f64_u32_e32 v[2:3], s14
+; GFX942-NEXT:    v_cvt_f64_u32_e32 v[4:5], s13
 ; GFX942-NEXT:    v_ldexp_f64 v[0:1], v[0:1], 32
 ; GFX942-NEXT:    v_add_f64 v[2:3], v[0:1], v[2:3]
 ; GFX942-NEXT:    v_ldexp_f64 v[0:1], v[4:5], 32
-; GFX942-NEXT:    v_cvt_f64_u32_e32 v[4:5], s8
+; GFX942-NEXT:    v_cvt_f64_u32_e32 v[4:5], s12
 ; GFX942-NEXT:    v_add_f64 v[0:1], v[0:1], v[4:5]
-; GFX942-NEXT:    v_cvt_f64_u32_e32 v[4:5], s15
+; GFX942-NEXT:    v_cvt_f64_u32_e32 v[4:5], s11
 ; GFX942-NEXT:    v_ldexp_f64 v[4:5], v[4:5], 32
-; GFX942-NEXT:    v_cvt_f64_u32_e32 v[6:7], s14
+; GFX942-NEXT:    v_cvt_f64_u32_e32 v[6:7], s10
 ; GFX942-NEXT:    v_add_f64 v[6:7], v[4:5], v[6:7]
-; GFX942-NEXT:    v_cvt_f64_u32_e32 v[4:5], s13
+; GFX942-NEXT:    v_cvt_f64_u32_e32 v[4:5], s9
 ; GFX942-NEXT:    v_ldexp_f64 v[4:5], v[4:5], 32
-; GFX942-NEXT:    v_cvt_f64_u32_e32 v[8:9], s12
+; GFX942-NEXT:    v_cvt_f64_u32_e32 v[8:9], s8
 ; GFX942-NEXT:    v_add_f64 v[4:5], v[4:5], v[8:9]
-; GFX942-NEXT:    global_store_dwordx4 v10, v[4:7], s[0:1] offset:16
-; GFX942-NEXT:    global_store_dwordx4 v10, v[0:3], s[0:1]
+; GFX942-NEXT:    global_store_dwordx4 v10, v[0:3], s[0:1] offset:16
+; GFX942-NEXT:    global_store_dwordx4 v10, v[4:7], s[0:1]
 ; GFX942-NEXT:    s_endpgm
   %cast = uitofp <4 x i64> %in to <4 x double>
   store <4 x double> %cast, ptr addrspace(1) %out, align 16
@@ -412,12 +412,12 @@ define amdgpu_kernel void @s_uint_to_fp_v4i32_to_v4f64(ptr addrspace(1) %out, <4
 ; GFX942-NEXT:    s_load_dwordx2 s[6:7], s[4:5], 0x0
 ; GFX942-NEXT:    v_mov_b32_e32 v8, 0
 ; GFX942-NEXT:    s_waitcnt lgkmcnt(0)
-; GFX942-NEXT:    v_cvt_f64_u32_e32 v[6:7], s3
-; GFX942-NEXT:    v_cvt_f64_u32_e32 v[4:5], s2
-; GFX942-NEXT:    v_cvt_f64_u32_e32 v[2:3], s1
-; GFX942-NEXT:    v_cvt_f64_u32_e32 v[0:1], s0
-; GFX942-NEXT:    global_store_dwordx4 v8, v[4:7], s[6:7] offset:16
-; GFX942-NEXT:    global_store_dwordx4 v8, v[0:3], s[6:7]
+; GFX942-NEXT:    v_cvt_f64_u32_e32 v[2:3], s3
+; GFX942-NEXT:    v_cvt_f64_u32_e32 v[0:1], s2
+; GFX942-NEXT:    v_cvt_f64_u32_e32 v[6:7], s1
+; GFX942-NEXT:    v_cvt_f64_u32_e32 v[4:5], s0
+; GFX942-NEXT:    global_store_dwordx4 v8, v[0:3], s[6:7] offset:16
+; GFX942-NEXT:    global_store_dwordx4 v8, v[4:7], s[6:7]
 ; GFX942-NEXT:    s_endpgm
   %cast = uitofp <4 x i32> %in to <4 x double>
   store <4 x double> %cast, ptr addrspace(1) %out, align 16

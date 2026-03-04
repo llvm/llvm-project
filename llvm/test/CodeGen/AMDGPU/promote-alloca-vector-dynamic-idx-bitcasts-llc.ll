@@ -18,36 +18,21 @@ define amdgpu_kernel void @test_bitcast_llc_v128i8_v16i8(ptr addrspace(1) %out, 
 ; GFX9-NEXT:    s_add_i32 s33, s33, s33
 ; GFX9-NEXT:    s_mov_b32 s1, s0
 ; GFX9-NEXT:    s_lshl_b32 s33, s33, 1
-; GFX9-NEXT:    s_mov_b32 s2, s0
-; GFX9-NEXT:    s_mov_b32 s3, s0
-; GFX9-NEXT:    s_mov_b32 s4, s0
-; GFX9-NEXT:    s_mov_b32 s5, s0
-; GFX9-NEXT:    s_mov_b32 s6, s0
-; GFX9-NEXT:    s_mov_b32 s7, s0
-; GFX9-NEXT:    s_mov_b32 s8, s0
-; GFX9-NEXT:    s_mov_b32 s9, s0
-; GFX9-NEXT:    s_mov_b32 s10, s0
-; GFX9-NEXT:    s_mov_b32 s11, s0
-; GFX9-NEXT:    s_mov_b32 s12, s0
-; GFX9-NEXT:    s_mov_b32 s13, s0
-; GFX9-NEXT:    s_mov_b32 s14, s0
-; GFX9-NEXT:    s_mov_b32 s15, s0
-; GFX9-NEXT:    s_mov_b32 s16, s0
-; GFX9-NEXT:    s_mov_b32 s17, s0
-; GFX9-NEXT:    s_mov_b32 s18, s0
-; GFX9-NEXT:    s_mov_b32 s19, s0
-; GFX9-NEXT:    s_mov_b32 s20, s0
-; GFX9-NEXT:    s_mov_b32 s21, s0
-; GFX9-NEXT:    s_mov_b32 s22, s0
-; GFX9-NEXT:    s_mov_b32 s23, s0
-; GFX9-NEXT:    s_mov_b32 s24, s0
-; GFX9-NEXT:    s_mov_b32 s25, s0
-; GFX9-NEXT:    s_mov_b32 s26, s0
-; GFX9-NEXT:    s_mov_b32 s27, s0
-; GFX9-NEXT:    s_mov_b32 s28, s0
-; GFX9-NEXT:    s_mov_b32 s29, s0
-; GFX9-NEXT:    s_mov_b32 s30, s0
-; GFX9-NEXT:    s_mov_b32 s31, s0
+; GFX9-NEXT:    s_mov_b64 s[2:3], s[0:1]
+; GFX9-NEXT:    s_mov_b64 s[4:5], s[0:1]
+; GFX9-NEXT:    s_mov_b64 s[6:7], s[0:1]
+; GFX9-NEXT:    s_mov_b64 s[8:9], s[0:1]
+; GFX9-NEXT:    s_mov_b64 s[10:11], s[0:1]
+; GFX9-NEXT:    s_mov_b64 s[12:13], s[0:1]
+; GFX9-NEXT:    s_mov_b64 s[14:15], s[0:1]
+; GFX9-NEXT:    s_mov_b64 s[16:17], s[0:1]
+; GFX9-NEXT:    s_mov_b64 s[18:19], s[0:1]
+; GFX9-NEXT:    s_mov_b64 s[20:21], s[0:1]
+; GFX9-NEXT:    s_mov_b64 s[22:23], s[0:1]
+; GFX9-NEXT:    s_mov_b64 s[24:25], s[0:1]
+; GFX9-NEXT:    s_mov_b64 s[26:27], s[0:1]
+; GFX9-NEXT:    s_mov_b64 s[28:29], s[0:1]
+; GFX9-NEXT:    s_mov_b64 s[30:31], s[0:1]
 ; GFX9-NEXT:    s_add_i32 s36, s33, 3
 ; GFX9-NEXT:    v_mov_b64_e32 v[0:1], s[0:1]
 ; GFX9-NEXT:    v_mov_b64_e32 v[2:3], s[2:3]
@@ -245,17 +230,17 @@ define amdgpu_kernel void @test_bitcast_llc_v64i16_v8i16(ptr addrspace(1) %out, 
 ; GFX9-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX9-NEXT:    s_add_i32 s2, s2, s2
 ; GFX9-NEXT:    s_lshl_b32 s2, s2, 1
-; GFX9-NEXT:    s_set_gpr_idx_on s2, gpr_idx(SRC0)
-; GFX9-NEXT:    v_mov_b32_e32 v1, v1
 ; GFX9-NEXT:    s_add_i32 s3, s2, 3
-; GFX9-NEXT:    v_mov_b32_e32 v0, v0
-; GFX9-NEXT:    s_set_gpr_idx_off
 ; GFX9-NEXT:    s_set_gpr_idx_on s3, gpr_idx(SRC0)
 ; GFX9-NEXT:    v_mov_b32_e32 v3, v0
 ; GFX9-NEXT:    s_set_gpr_idx_off
-; GFX9-NEXT:    s_add_i32 s2, s2, 2
-; GFX9-NEXT:    s_set_gpr_idx_on s2, gpr_idx(SRC0)
+; GFX9-NEXT:    s_add_i32 s3, s2, 2
+; GFX9-NEXT:    s_set_gpr_idx_on s3, gpr_idx(SRC0)
 ; GFX9-NEXT:    v_mov_b32_e32 v2, v0
+; GFX9-NEXT:    s_set_gpr_idx_off
+; GFX9-NEXT:    s_set_gpr_idx_on s2, gpr_idx(SRC0)
+; GFX9-NEXT:    v_mov_b32_e32 v1, v1
+; GFX9-NEXT:    v_mov_b32_e32 v0, v0
 ; GFX9-NEXT:    s_set_gpr_idx_off
 ; GFX9-NEXT:    global_store_dwordx4 v4, v[0:3], s[0:1]
 ; GFX9-NEXT:    s_endpgm

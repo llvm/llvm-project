@@ -82,10 +82,8 @@ define <3 x float> @extract_subvector_v3f32_v33f32_elt30_1(ptr addrspace(1) %ptr
 ; GFX942-NEXT:    global_load_dwordx4 v[4:7], v[0:1], off
 ; GFX942-NEXT:    global_load_dwordx4 v[8:11], v[0:1], off offset:112
 ; GFX942-NEXT:    global_load_dword v2, v[0:1], off offset:128
-; GFX942-NEXT:    s_mov_b32 s0, 0
-; GFX942-NEXT:    s_mov_b32 s1, s0
-; GFX942-NEXT:    s_mov_b32 s2, s0
-; GFX942-NEXT:    s_mov_b32 s3, s0
+; GFX942-NEXT:    s_mov_b64 s[0:1], 0
+; GFX942-NEXT:    s_mov_b64 s[2:3], s[0:1]
 ; GFX942-NEXT:    s_waitcnt vmcnt(2)
 ; GFX942-NEXT:    buffer_store_dwordx4 v[4:7], off, s[0:3], 0
 ; GFX942-NEXT:    s_waitcnt vmcnt(2)
@@ -125,10 +123,8 @@ define <6 x float> @extract_subvector_v6f32_v36f32_elt30(ptr addrspace(1) %ptr) 
 ; GFX942-NEXT:    global_load_dwordx4 v[6:9], v[0:1], off
 ; GFX942-NEXT:    global_load_dwordx4 v[10:13], v[0:1], off offset:112
 ; GFX942-NEXT:    global_load_dwordx4 v[2:5], v[0:1], off offset:128
-; GFX942-NEXT:    s_mov_b32 s0, 0
-; GFX942-NEXT:    s_mov_b32 s1, s0
-; GFX942-NEXT:    s_mov_b32 s2, s0
-; GFX942-NEXT:    s_mov_b32 s3, s0
+; GFX942-NEXT:    s_mov_b64 s[0:1], 0
+; GFX942-NEXT:    s_mov_b64 s[2:3], s[0:1]
 ; GFX942-NEXT:    s_waitcnt vmcnt(2)
 ; GFX942-NEXT:    buffer_store_dwordx4 v[6:9], off, s[0:3], 0
 ; GFX942-NEXT:    s_waitcnt vmcnt(2)
@@ -165,10 +161,8 @@ define <3 x float> @issue153808_vector_extract_assert(ptr addrspace(1) %ptr) #0 
 ; GFX942-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX942-NEXT:    global_load_dwordx4 v[6:9], v[0:1], off
 ; GFX942-NEXT:    global_load_dwordx3 v[2:4], v[0:1], off offset:192
-; GFX942-NEXT:    s_mov_b32 s0, 0
-; GFX942-NEXT:    s_mov_b32 s1, s0
-; GFX942-NEXT:    s_mov_b32 s2, s0
-; GFX942-NEXT:    s_mov_b32 s3, s0
+; GFX942-NEXT:    s_mov_b64 s[0:1], 0
+; GFX942-NEXT:    s_mov_b64 s[2:3], s[0:1]
 ; GFX942-NEXT:    s_waitcnt vmcnt(1)
 ; GFX942-NEXT:    buffer_store_dwordx4 v[6:9], off, s[0:3], 0
 ; GFX942-NEXT:    s_waitcnt vmcnt(1)
