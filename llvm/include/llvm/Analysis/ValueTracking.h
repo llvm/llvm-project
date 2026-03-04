@@ -821,6 +821,13 @@ inline bool isGuaranteedNotToBePoison(const Value *V, AssumptionCache *AC,
   return isGuaranteedNotToBePoison(V, AC, &*CtxI, DT, Depth);
 }
 
+// Return true if this is an atomic which has an ordering stronger than
+// unordered.  Note that this is different than the predicate we use in
+// Attributor.  Here we chose to be conservative and consider monotonic
+// operations potentially synchronizing.  We generally don't do much with
+// monotonic operations, so this is simply risk reduction.
+bool isOrderedAtomic(const Instruction *I);
+
 /// Returns true if V cannot be undef, but may be poison.
 LLVM_ABI bool isGuaranteedNotToBeUndef(const Value *V,
                                        AssumptionCache *AC = nullptr,
