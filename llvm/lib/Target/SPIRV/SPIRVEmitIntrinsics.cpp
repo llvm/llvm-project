@@ -146,7 +146,6 @@ class SPIRVEmitIntrinsics
 
   void preprocessCompositeConstants(IRBuilder<> &B);
   void preprocessUndefs(IRBuilder<> &B);
-  void preprocessPtrToAddrDiff(Function &F, IRBuilder<> &B);
 
   Type *reconstructType(Value *Op, bool UnknownElemTypeI8,
                         bool IsPostprocessing);
@@ -1739,44 +1738,6 @@ Instruction *SPIRVEmitIntrinsics::visitPtrToAddrInst(PtrToAddrInst &I) {
   return PtrToInt;
 }
 
-// Recognize sub(ptrtoaddr(A), ptrtoaddr(B)) patterns and replace with
-// spv_ptrdiff intrinsic.
-void SPIRVEmitIntrinsics::preprocessPtrToAddrDiff(Function &F, IRBuilder<> &B) {
-  // OpPtrDiff was added in SPIR-V 1.4, check for it.
-  const SPIRVSubtarget *ST = TM->getSubtargetImpl(F);
-  if (!ST->isAtLeastSPIRVVer(VersionTuple(1, 4)))
-    return;
-
-  SmallVector<BinaryOperator *> SubsToReplace;
-  for (auto &I : instructions(F)) {
-    auto *Sub = dyn_cast<BinaryOperator>(&I);
-    if (!Sub || Sub->getOpcode() != Instruction::Sub)
-      continue;
-    if (isa<PtrToAddrInst>(Sub->getOperand(0)) &&
-        isa<PtrToAddrInst>(Sub->getOperand(1)))
-      SubsToReplace.push_back(Sub);
-  }
-
-  for (auto *Sub : SubsToReplace) {
-    auto *PtrToAddrA = cast<PtrToAddrInst>(Sub->getOperand(0));
-    auto *PtrToAddrB = cast<PtrToAddrInst>(Sub->getOperand(1));
-    Value *Ptr1 = PtrToAddrA->getOperand(0);
-    Value *Ptr2 = PtrToAddrB->getOperand(0);
-
-    B.SetInsertPoint(Sub);
-    auto *PtrDiff =
-        B.CreateIntrinsic(Intrinsic::spv_ptrdiff,
-                          {Sub->getType(), Ptr1->getType()}, {Ptr1, Ptr2});
-    Sub->replaceAllUsesWith(PtrDiff);
-    Sub->eraseFromParent();
-
-    if (PtrToAddrA->use_empty())
-      PtrToAddrA->eraseFromParent();
-    if (PtrToAddrB->use_empty())
-      PtrToAddrB->eraseFromParent();
-  }
-}
-
 void SPIRVEmitIntrinsics::insertAssignPtrTypeTargetExt(
     TargetExtType *AssignedType, Value *V, IRBuilder<> &B) {
   Type *VTy = V->getType();
@@ -3063,7 +3024,6 @@ bool SPIRVEmitIntrinsics::runOnFunction(Function &Func) {
 
   preprocessUndefs(B);
   preprocessCompositeConstants(B);
-  preprocessPtrToAddrDiff(Func, B);
   SmallVector<Instruction *> Worklist(
       llvm::make_pointer_range(instructions(Func)));
 
