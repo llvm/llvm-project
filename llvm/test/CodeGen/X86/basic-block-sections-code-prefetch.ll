@@ -49,9 +49,9 @@ end:                                             ; preds = %11, %9
 ; CHECK:      .LBB0_3:
 ; CHECK-NEXT:   .globl	__llvm_prefetch_target_foo_3_0
 ; CHECK-NEXT: __llvm_prefetch_target_foo_3_0:
+; CHECK-NEXT:   prefetchit1	__llvm_prefetch_target_bar_0_0(%rip)
 ; CHECK:        .globl	__llvm_prefetch_target_foo_3_1
 ; CHECK-NEXT: __llvm_prefetch_target_foo_3_1:
-; CHECK-NEXT:   prefetchit1	__llvm_prefetch_target_bar_0_0(%rip)
 }
 
 define weak i32 @bar() nounwind {
