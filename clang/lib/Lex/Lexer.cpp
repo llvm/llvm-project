@@ -866,7 +866,8 @@ SourceLocation Lexer::getLocForEndOfToken(SourceLocation Loc, unsigned Offset,
       return {};
 
     // Token-split expansions (e.g., '>>' split into '>') use a char range
-    // whose end is already the correct insertion point; skip MeasureTokenLength.
+    // whose end is already the correct insertion point; skip
+    // MeasureTokenLength.
     CharSourceRange ExpRange = SM.getImmediateExpansionRange(Loc);
     if (!ExpRange.isTokenRange()) {
       SourceLocation End = ExpRange.getEnd();
