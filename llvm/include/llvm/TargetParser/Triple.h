@@ -1240,15 +1240,7 @@ public:
   }
 
   /// Returns the default wchar_t size (in bytes) for this target triple.
-  unsigned getDefaultWCharSize() const {
-    if (getArch() == Triple::xcore)
-      return 1;
-    if (isOSWindows() || isWindowsCygwinEnvironment() || isPS() || isUEFI())
-      return 2;
-    if (isOSAIX() && isArch32Bit())
-      return 2;
-    return 4;
-  }
+  unsigned getDefaultWCharSize() const;
 
   /// Tests if the environment supports dllimport/export annotations.
   bool hasDLLImportExport() const { return isOSWindows() || isPS(); }
