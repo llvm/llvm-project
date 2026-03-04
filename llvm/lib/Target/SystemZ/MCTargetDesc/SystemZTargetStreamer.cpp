@@ -15,8 +15,8 @@
 #include "SystemZTargetStreamer.h"
 #include "SystemZHLASMAsmStreamer.h"
 #include "llvm/MC/MCAsmInfo.h"
+#include "llvm/MC/MCGOFFStreamer.h"
 #include "llvm/MC/MCObjectFileInfo.h"
-#include "llvm/MC/MCSectionGOFF.h"
 
 using namespace llvm;
 
