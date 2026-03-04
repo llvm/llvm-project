@@ -20,7 +20,7 @@ public:
   UseNewMlirOpBuilderCheck(StringRef Name, ClangTidyContext *Context);
 
   bool isLanguageVersionSupported(const LangOptions &LangOpts) const override {
-    return getLangOpts().CPlusPlus;
+    return LangOpts.CPlusPlus;
   }
 };
 

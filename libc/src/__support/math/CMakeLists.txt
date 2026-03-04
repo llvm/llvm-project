@@ -95,6 +95,21 @@ add_header_library(
 )
 
 add_header_library(
+  acospif
+  HDRS
+    acospif.h
+  DEPENDS
+    .inv_trigf_utils
+    libc.src.__support.FPUtil.fenv_implt
+    libc.src.__support.FPUtil.fp_bits
+    libc.src.__support.FPUtil.polyeval
+    libc.src.__support.FPUtil.cast
+    libc.src.__support.FPUtil.multiply_add
+    libc.src.__support.FPUtil.sqrt
+    libc.src.__support.macros.optimization
+)
+
+add_header_library(
   acospif16
   HDRS
     acospif16.h
@@ -177,12 +192,11 @@ add_header_library(
   HDRS
     asinpif.h
   DEPENDS
-    libc.src.__support.FPUtil.fenv_impl
-    libc.src.__support.FPUtil.fp_bits
-    libc.src.__support.FPUtil.polyeval
-    libc.src.__support.FPUtil.cast
+    .inv_trigf_utils
     libc.src.__support.FPUtil.except_value_utils
+    libc.src.__support.FPUtil.fp_bits
     libc.src.__support.FPUtil.multiply_add
+    libc.src.__support.FPUtil.polyeval
     libc.src.__support.FPUtil.sqrt
     libc.src.__support.macros.optimization
 )
@@ -422,6 +436,7 @@ add_header_library(
     libc.src.__support.FPUtil.fma
     libc.src.__support.macros.config
 )
+
 add_header_library(
   bf16fmaf128
   HDRS
@@ -472,6 +487,36 @@ add_header_library(
     libc.src.__support.FPUtil.bfloat16
     libc.src.__support.FPUtil.generic.mul
     libc.src.__support.macros.config
+)
+
+add_header_library(
+  bf16sub
+  HDRS
+    bf16sub.h
+  DEPENDS
+    libc.src.__support.FPUtil.bfloat16
+    libc.src.__support.FPUtil.generic.add_sub
+    libc.src.__support.macros.config
+)
+
+add_header_library(
+  bf16subf
+  HDRS
+    bf16subf.h
+  DEPENDS
+    libc.src.__support.FPUtil.bfloat16
+    libc.src.__support.FPUtil.generic.add_sub
+    libc.src.__support.macros.config
+)
+
+add_header_library(
+  bf16subf128
+  HDRS
+    bf16subf128.h
+  DEPENDS
+    libc.include.llvm-libc-types.float128
+    libc.src.__support.FPUtil.bfloat16
+    libc.src.__support.FPUtil.generic.add_sub
 )
 
 add_header_library(
@@ -1180,6 +1225,72 @@ add_header_library(
 )
 
 add_header_library(
+  floor
+  HDRS
+    floor.h
+  DEPENDS
+    libc.src.__support.FPUtil.nearest_integer_operations
+    libc.src.__support.macros.config
+  FLAGS
+    ROUND_OPT
+)
+
+add_header_library(
+  floorbf16
+  HDRS
+    floorbf16.h
+  DEPENDS
+    libc.src.__support.FPUtil.bfloat16
+    libc.src.__support.FPUtil.nearest_integer_operations
+    libc.src.__support.macros.config
+  FLAGS
+    ROUND_OPT
+)
+
+add_header_library(
+  floorf
+  HDRS
+    floorf.h
+  DEPENDS
+    libc.src.__support.FPUtil.nearest_integer_operations
+    libc.src.__support.macros.config
+  FLAGS
+    ROUND_OPT
+)
+
+add_header_library(
+  floorf128
+  HDRS
+    floorf128.h
+  DEPENDS
+    libc.include.llvm-libc-types.float128
+    libc.src.__support.FPUtil.nearest_integer_operations
+    libc.src.__support.macros.config
+)
+
+add_header_library(
+  floorf16
+  HDRS
+    floorf16.h
+  DEPENDS
+    libc.include.llvm-libc-macros.float16_macros
+    libc.src.__support.FPUtil.cast
+    libc.src.__support.FPUtil.nearest_integer_operations
+    libc.src.__support.macros.config
+  FLAGS
+    ROUND_OPT
+)
+
+add_header_library(
+  floorl
+  HDRS
+    floorl.h
+  DEPENDS
+    libc.src.__support.FPUtil.nearest_integer_operations
+    libc.src.__support.macros.config
+)
+
+add_header_library(
   fmax
   HDRS
     fmax.h
@@ -1845,6 +1956,63 @@ add_header_library(
   DEPENDS
     libc.src.__support.FPUtil.manipulation_functions
     libc.src.__support.common
+    libc.src.__support.macros.config
+)
+
+add_header_library(
+  nextafter
+  HDRS
+    nextafter.h
+  DEPENDS
+    libc.src.__support.FPUtil.manipulation_functions
+    libc.src.__support.macros.config
+)
+
+add_header_library(
+  nextafterbf16
+  HDRS
+    nextafterbf16.h
+  DEPENDS
+    libc.src.__support.FPUtil.bfloat16
+    libc.src.__support.FPUtil.manipulation_functions
+    libc.src.__support.macros.config
+)
+
+add_header_library(
+  nextafterf
+  HDRS
+    nextafterf.h
+  DEPENDS
+    libc.src.__support.FPUtil.manipulation_functions
+    libc.src.__support.macros.config
+)
+
+add_header_library(
+  nextafterf128
+  HDRS
+    nextafterf128.h
+  DEPENDS
+    libc.include.llvm-libc-types.float128
+    libc.src.__support.FPUtil.manipulation_functions
+    libc.src.__support.macros.config
+)
+
+add_header_library(
+  nextafterf16
+  HDRS
+    nextafterf16.h
+  DEPENDS
+    libc.include.llvm-libc-macros.float16_macros
+    libc.src.__support.FPUtil.manipulation_functions
+    libc.src.__support.macros.config
+)
+
+add_header_library(
+  nextafterl
+  HDRS
+    nextafterl.h
+  DEPENDS
+    libc.src.__support.FPUtil.manipulation_functions
     libc.src.__support.macros.config
 )
 

@@ -94,6 +94,11 @@ struct MlirOptMainConfigCLOptions : public MlirOptMainConfig {
         cl::desc("Elide resources when generating bytecode"),
         cl::location(elideResourceDataFromBytecodeFlag), cl::init(false));
 
+    static cl::opt<std::string, /*ExternalStorage=*/true> emitBytecodeProducer(
+        "emit-bytecode-producer",
+        cl::desc("Use specified producer when generating bytecode output"),
+        cl::location(emitBytecodeProducerFlag), cl::init(""));
+
     static cl::opt<std::optional<int64_t>, /*ExternalStorage=*/true,
                    BytecodeVersionParser>
         bytecodeVersion(
@@ -602,7 +607,10 @@ performActions(raw_ostream &os,
   // Print the output.
   TimingScope outputTiming = timing.nest("Output");
   if (config.shouldEmitBytecode()) {
-    BytecodeWriterConfig writerConfig(fallbackResourceMap);
+    std::optional<StringRef> producer = config.bytecodeProducerToEmit();
+    BytecodeWriterConfig writerConfig =
+        producer ? BytecodeWriterConfig(fallbackResourceMap, producer.value())
+                 : BytecodeWriterConfig(fallbackResourceMap);
     if (auto v = config.bytecodeVersionToEmit())
       writerConfig.setDesiredBytecodeVersion(*v);
     if (config.shouldElideResourceDataFromBytecode())
