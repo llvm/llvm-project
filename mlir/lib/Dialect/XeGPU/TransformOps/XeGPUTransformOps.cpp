@@ -12,6 +12,7 @@
 #include "mlir/Dialect/SCF/Utils/Utils.h"
 #include "mlir/Dialect/XeGPU/IR/XeGPU.h"
 #include "mlir/Dialect/XeGPU/Utils/XeGPUUtils.h"
+#include "mlir/IR/BuiltinAttributes.h"
 #include "llvm/ADT/SmallVectorExtras.h"
 
 #include <optional>
@@ -215,7 +216,8 @@ void transform::SetDescLayoutOp::build(OpBuilder &builder,
                                        ArrayRef<OpFoldResult> mixedSgLayout,
                                        ArrayRef<OpFoldResult> mixedSgData,
                                        ArrayRef<OpFoldResult> mixedInstData,
-                                       ArrayRef<int64_t> sliceDims) {
+                                       ArrayRef<int64_t> sliceDims,
+                                       ArrayRef<int32_t> order) {
   SmallVector<int64_t> staticSgLayout, staticSgData, staticInstData;
   SmallVector<Value> dynamicSgLayout, dynamicSgData, dynamicInstData;
   dispatchIndexOpFoldResults(mixedSgLayout, dynamicSgLayout, staticSgLayout);
@@ -229,7 +231,8 @@ void transform::SetDescLayoutOp::build(OpBuilder &builder,
         /*static_sg_layout=*/staticSgLayout,
         /*static_sg_data=*/staticSgData,
         /*static_inst_data=*/staticInstData,
-        /*slice_dims=*/sliceDims);
+        /*slice_dims=*/sliceDims,
+        /*order=*/order);
 }
 
 DiagnosedSilenceableFailure
@@ -249,6 +252,12 @@ transform::SetDescLayoutOp::apply(transform::TransformRewriter &rewriter,
                                           getMixedInstData(), layoutAttr);
   if (!status.succeeded())
     return status;
+
+  // If order is provided, clone the layout with the provided order.
+  auto order = getOrder();
+  if (order.size() > 0)
+    layoutAttr =
+        layoutAttr.cloneWithOrder(DenseI32ArrayAttr::get(getContext(), order));
 
   xegpu::DistributeLayoutAttr layout = layoutAttr;
   auto sliceDims = getSliceDims();
@@ -291,7 +300,7 @@ void transform::SetOpLayoutAttrOp::build(
     OpBuilder &builder, OperationState &ostate, Value target, int64_t index,
     ArrayRef<OpFoldResult> mixedSgLayout, ArrayRef<OpFoldResult> mixedSgData,
     ArrayRef<OpFoldResult> mixedInstData, ArrayRef<int64_t> sliceDims,
-    bool result, bool operand) {
+    ArrayRef<int32_t> order, bool result, bool operand) {
   SmallVector<int64_t> staticSgLayout, staticSgData, staticInstData;
   SmallVector<Value> dynamicSgLayout, dynamicSgData, dynamicInstData;
   dispatchIndexOpFoldResults(mixedSgLayout, dynamicSgLayout, staticSgLayout);
@@ -307,6 +316,7 @@ void transform::SetOpLayoutAttrOp::build(
         /*static_sg_data=*/staticSgData,
         /*static_inst_data=*/staticInstData,
         /*slice_dims=*/sliceDims,
+        /*order=*/order,
         /*result=*/result,
         /*operand=*/operand);
 }
@@ -341,6 +351,12 @@ transform::SetOpLayoutAttrOp::apply(transform::TransformRewriter &rewriter,
                                           getMixedInstData(), layoutAttr);
   if (!status.succeeded())
     return status;
+
+  // If order is provided, clone the layout with the provided order.
+  auto order = getOrder();
+  if (order.size() > 0)
+    layoutAttr =
+        layoutAttr.cloneWithOrder(DenseI32ArrayAttr::get(getContext(), order));
 
   xegpu::DistributeLayoutAttr layout = layoutAttr;
   auto sliceDims = getSliceDims();
