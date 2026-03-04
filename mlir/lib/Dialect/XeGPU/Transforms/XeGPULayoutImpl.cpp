@@ -178,6 +178,14 @@ xegpu::inferMultiReductionSourceLayout(xegpu::DistributeLayoutAttr resLayout,
   return sliceLayout.getParent();
 }
 
+/// Infers the source layout attribute for a transpose operation given the
+/// result layout attribute and permutation.
+xegpu::DistributeLayoutAttr
+xegpu::inferTransposeSourceLayout(xegpu::DistributeLayoutAttr resLayout,
+                                  ArrayRef<int64_t> permutation) {
+  return resLayout.transposeDims(permutation);
+}
+
 /// Infers the source layout attribute for a bitcast operation given the
 /// result layout attribute, result element type bitwidth, and source element
 /// type bitwidth.
