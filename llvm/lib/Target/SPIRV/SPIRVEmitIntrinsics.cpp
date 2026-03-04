@@ -1727,9 +1727,7 @@ Instruction *SPIRVEmitIntrinsics::visitBitCastInst(BitCastInst &I) {
 }
 
 Instruction *SPIRVEmitIntrinsics::visitPtrToAddrInst(PtrToAddrInst &I) {
-  // If ptrtoaddr instruction wasn't handled previously during
-  // sub(ptrtoaddr, ptrtoaddr) -> OpPtrDiff pattern lowering, then
-  // replace it with PtrToInt.
+  // Replace PtrToAddr with PtrToInt.
   auto *PtrToInt =
       CastInst::Create(Instruction::PtrToInt, I.getOperand(0), I.getType());
   PtrToInt->insertBefore(I.getIterator());
