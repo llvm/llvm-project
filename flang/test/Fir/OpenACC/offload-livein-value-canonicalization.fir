@@ -295,3 +295,48 @@ func.func @test_convert_sink(%arg0: !fir.ref<i32>) {
 // CHECK: acc.parallel {
 // CHECK:   %[[CVT:.*]] = fir.convert
 // CHECK:   fir.call @use_i64(%[[CVT]])
+
+// -----
+
+// Test fir.convert sinking when input is fir.alloca (not a block argument).
+func.func private @use_i64(i64) -> ()
+
+func.func @test_convert_alloca_sink() {
+  %0 = fir.alloca i32
+  %1 = fir.convert %0 : (!fir.ref<i32>) -> i64
+  acc.parallel {
+    fir.call @use_i64(%1) : (i64) -> ()
+    acc.yield
+  }
+  return
+}
+
+// CHECK-LABEL: @test_convert_alloca_sink
+// CHECK: %[[ALLOCA:.*]] = fir.alloca i32
+// CHECK: acc.parallel {
+// CHECK:   %[[CVT:.*]] = fir.convert %[[ALLOCA]]
+// CHECK:   fir.call @use_i64(%[[CVT]])
+
+// -----
+
+// Test fir.convert rematerialization when input is fir.alloca.
+func.func private @use_i64(i64) -> ()
+
+func.func @test_convert_alloca_remat() {
+  %0 = fir.alloca i32
+  %1 = fir.convert %0 : (!fir.ref<i32>) -> i64
+  fir.call @use_i64(%1) : (i64) -> ()
+  acc.parallel {
+    fir.call @use_i64(%1) : (i64) -> ()
+    acc.yield
+  }
+  return
+}
+
+// CHECK-LABEL: @test_convert_alloca_remat
+// CHECK: %[[ALLOCA:.*]] = fir.alloca i32
+// CHECK: %[[CVT_OUTER:.*]] = fir.convert %[[ALLOCA]]
+// CHECK: fir.call @use_i64(%[[CVT_OUTER]])
+// CHECK: acc.parallel {
+// CHECK:   %[[CVT_INNER:.*]] = fir.convert %[[ALLOCA]]
+// CHECK:   fir.call @use_i64(%[[CVT_INNER]])
