@@ -48,5 +48,3 @@ merge:
   %val = load i32, ptr %p, align 4
   ret i32 %val
 }
-
-attributes #0 = { nounwind "target-cpu"="hexagonv60" }
