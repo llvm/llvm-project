@@ -18,11 +18,14 @@ static void serializeArray(
 // sophisticated heuristic than number of parameters.
 constexpr static unsigned getMaxParamWrapLimit() { return 2; }
 
+typedef std::function<void(const Reference &, Object &)> ReferenceFunc;
+
 class JSONGenerator : public Generator {
   json::Object serializeLocation(const Location &Loc);
   void serializeCommonAttributes(const Info &I, json::Object &Obj);
-  void serializeCommonChildren(const ScopeChildren &Children,
-                               json::Object &Obj);
+  void serializeCommonChildren(
+      const ScopeChildren &Children, json::Object &Obj,
+      std::optional<ReferenceFunc> MDReferenceLambda = std::nullopt);
   void serializeInfo(const ConstraintInfo &I, Object &Obj);
   void serializeInfo(const TemplateInfo &Template, Object &Obj);
   void serializeInfo(const ConceptInfo &I, Object &Obj);
@@ -41,6 +44,9 @@ class JSONGenerator : public Generator {
   Error serializeIndex(StringRef RootDir);
   void generateContext(const Info &I, Object &Obj);
   void serializeReference(const Reference &Ref, Object &ReferenceObj);
+  Error serializeAllFiles(const ClangDocContext &CDCtx, StringRef RootDir);
+  void serializeMDReference(const Reference &Ref, Object &ReferenceObj,
+                            StringRef BasePath);
 
   // Convenience lambdas to pass to serializeArray.
   auto serializeInfoLambda() {
@@ -57,6 +63,7 @@ class JSONGenerator : public Generator {
 public:
   static const char *Format;
   const ClangDocContext *CDCtx;
+  bool Markdown;
 
   Error generateDocumentation(StringRef RootDir,
                               llvm::StringMap<std::unique_ptr<doc::Info>> Infos,
@@ -433,8 +440,9 @@ void JSONGenerator::serializeReference(const Reference &Ref,
   }
 }
 
-static void serializeMDReference(const Reference &Ref, Object &ReferenceObj,
-                                 StringRef BasePath) {
+void JSONGenerator::serializeMDReference(const Reference &Ref,
+                                         Object &ReferenceObj,
+                                         StringRef BasePath) {
   serializeReference(Ref, ReferenceObj);
   SmallString<64> Path = Ref.getRelativeFilePath(BasePath);
   sys::path::native(Path, sys::path::Style::posix);
@@ -447,8 +455,9 @@ typedef std::function<void(const Reference &, Object &)> ReferenceFunc;
 
 // Although namespaces and records both have ScopeChildren, they serialize them
 // differently. Only enums, records, and typedefs are handled here.
-void JSONGenerator::serializeCommonChildren(const ScopeChildren &Children,
-                                            json::Object &Obj) {
+void JSONGenerator::serializeCommonChildren(
+    const ScopeChildren &Children, json::Object &Obj,
+    std::optional<ReferenceFunc> MDReferenceLambda) {
   if (!Children.Enums.empty()) {
     serializeArray(Children.Enums, Obj, "Enums", serializeInfoLambda());
     Obj["HasEnums"] = true;
@@ -460,8 +469,10 @@ void JSONGenerator::serializeCommonChildren(const ScopeChildren &Children,
   }
 
   if (!Children.Records.empty()) {
-    serializeArray(Children.Records, Obj, "Records",
-                   serializeReferenceLambda());
+    ReferenceFunc SerializeReferenceFunc = MDReferenceLambda
+                                               ? MDReferenceLambda.value()
+                                               : serializeReferenceLambda();
+    serializeArray(Children.Records, Obj, "Records", SerializeReferenceFunc);
     Obj["HasRecords"] = true;
   }
 }
@@ -769,15 +780,14 @@ void JSONGenerator::serializeInfo(const NamespaceInfo &I, json::Object &Obj) {
     // serializeCommonChildren doesn't accept Infos, so this lambda needs to be
     // created here. To avoid making serializeCommonChildren a template, this
     // lambda is an std::function
-    SerializeReferenceFunc = [BasePath](const Reference &Ref, Object &Object) {
+    SerializeReferenceFunc = [this, BasePath](const Reference &Ref,
+                                              Object &Object) {
       serializeMDReference(Ref, Object, BasePath);
     };
-    serializeCommonChildren(I.Children, Obj, RepositoryUrl,
-                            RepositoryLinePrefix, SerializeReferenceFunc);
+    serializeCommonChildren(I.Children, Obj, SerializeReferenceFunc);
   } else {
-    SerializeReferenceFunc = SerializeReferenceLambda;
-    serializeCommonChildren(I.Children, Obj, RepositoryUrl,
-                            RepositoryLinePrefix);
+    SerializeReferenceFunc = serializeReferenceLambda();
+    serializeCommonChildren(I.Children, Obj);
   }
 
   if (!I.Children.Namespaces.empty()) {
@@ -820,12 +830,12 @@ static std::vector<Index> preprocessCDCtxIndex(Index CDCtxIndex) {
 }
 
 /// Serialize ClangDocContext's Index for Markdown output
-static Error serializeAllFiles(const ClangDocContext &CDCtx,
-                               StringRef RootDir) {
+Error JSONGenerator::serializeAllFiles(const ClangDocContext &CDCtx,
+                                       StringRef RootDir) {
   json::Value ObjVal = Object();
   Object &Obj = *ObjVal.getAsObject();
   std::vector<Index> IndexCopy = preprocessCDCtxIndex(CDCtx.Idx);
-  serializeArray(IndexCopy, Obj, "Index", SerializeReferenceLambda);
+  serializeArray(IndexCopy, Obj, "Index", serializeReferenceLambda());
   SmallString<128> Path;
   sys::path::append(Path, RootDir, "json", "all_files.json");
   std::error_code FileErr;
