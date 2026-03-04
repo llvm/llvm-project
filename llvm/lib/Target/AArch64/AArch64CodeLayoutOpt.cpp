@@ -88,7 +88,7 @@ INITIALIZE_PASS(AArch64CodeLayoutOpt, "aarch64-code-layout-opt",
                 AARCH64_CODE_LAYOUT_OPT_NAME, false, false)
 
 void AArch64CodeLayoutOpt::getAnalysisUsage(AnalysisUsage &AU) const {
-  AU.setPreservesCFG();
+  AU.setPreservesAll();
   MachineFunctionPass::getAnalysisUsage(AU);
 }
 
