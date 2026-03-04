@@ -41,6 +41,368 @@ static SUnit *pickOnlyChoice(SchedBoundary &Zone) {
   return OnlyChoice;
 }
 
+InstructionFlavor llvm::classifyFlavor(const MachineInstr *MI,
+                                       const SIInstrInfo *SII) {
+  if (!MI || MI->isDebugInstr())
+    return InstructionFlavor::Other;
+
+  unsigned Opc = MI->getOpcode();
+
+  // Check for specific opcodes first.
+  if (Opc == AMDGPU::ATOMIC_FENCE || Opc == AMDGPU::S_WAIT_ASYNCCNT ||
+      Opc == AMDGPU::S_WAIT_TENSORCNT || Opc == AMDGPU::S_BARRIER_WAIT ||
+      Opc == AMDGPU::S_BARRIER_SIGNAL_IMM)
+    return InstructionFlavor::Fence;
+
+  if ((SII->isFLAT(*MI) || SII->isFLATGlobal(*MI)) && SII->isDS(*MI))
+    return InstructionFlavor::DMA;
+
+  if (SII->isMFMAorWMMA(*MI))
+    return InstructionFlavor::WMMA;
+
+  if (SII->isTRANS(*MI))
+    return InstructionFlavor::TRANS;
+
+  if (SII->isVALU(*MI))
+    return InstructionFlavor::SingleCycleVALU;
+
+  if (SII->isDS(*MI))
+    return InstructionFlavor::DS;
+
+  if (SII->isFLAT(*MI) || SII->isFLATGlobal(*MI) || SII->isFLATScratch(*MI))
+    return InstructionFlavor::VMEM;
+
+  if (SII->isSALU(*MI))
+    return InstructionFlavor::SALU;
+
+  return InstructionFlavor::Other;
+}
+
+SUnit *HardwareUnitInfo::getNextTargetSU(bool LookDeep) {
+  for (auto *PrioritySU : PrioritySUs) {
+    if (!PrioritySU->isTopReady())
+      return PrioritySU;
+  }
+
+  if (!LookDeep)
+    return nullptr;
+
+  // TODO -- we may want to think about more advance strategies here.
+  unsigned MinDepth = std::numeric_limits<unsigned int>::max();
+  SUnit *TargetSU = nullptr;
+  for (auto *SU : AllSUs) {
+    if (SU->isScheduled)
+      continue;
+
+    if (SU->isTopReady())
+      continue;
+
+    if (SU->getDepth() < MinDepth) {
+      MinDepth = SU->getDepth();
+      TargetSU = SU;
+    }
+  }
+  return TargetSU;
+}
+
+void HardwareUnitInfo::insert(SUnit *SU, unsigned BlockingCycles) {
+  bool Inserted = AllSUs.insert(SU);
+  TotalCycles += BlockingCycles;
+
+  assert(Inserted);
+  if (PrioritySUs.empty()) {
+    PrioritySUs.insert(SU);
+    return;
+  }
+  unsigned SUDepth = SU->getDepth();
+  unsigned CurrDepth = (*PrioritySUs.begin())->getDepth();
+  if (SUDepth > CurrDepth)
+    return;
+
+  if (SUDepth == CurrDepth) {
+    PrioritySUs.insert(SU);
+    return;
+  }
+
+  // SU is lower depth and should be prioritized.
+  PrioritySUs.clear();
+  PrioritySUs.insert(SU);
+}
+
+void HardwareUnitInfo::schedule(SUnit *SU, unsigned BlockingCycles) {
+  // We may want to ignore some HWUIs (e.g. InstructionFlavor::Other). To do so,
+  // we just clear the HWUI. However, we still have instructions which map to
+  // this HWUI. Don't bother managing the state for these HWUI.
+  if (TotalCycles == 0)
+    return;
+
+  AllSUs.remove(SU);
+  PrioritySUs.remove(SU);
+
+  TotalCycles -= BlockingCycles;
+
+  if (AllSUs.empty())
+    return;
+  if (PrioritySUs.empty()) {
+    for (auto SU : AllSUs) {
+      if (PrioritySUs.empty()) {
+        PrioritySUs.insert(SU);
+        continue;
+      }
+      unsigned SUDepth = SU->getDepth();
+      unsigned CurrDepth = (*PrioritySUs.begin())->getDepth();
+      if (SUDepth > CurrDepth)
+        continue;
+
+      if (SUDepth == CurrDepth) {
+        PrioritySUs.insert(SU);
+        continue;
+      }
+
+      // SU is lower depth and should be prioritized.
+      PrioritySUs.clear();
+      PrioritySUs.insert(SU);
+    }
+  }
+}
+
+HardwareUnitInfo *
+CandidateHeuristics::getHWUIFromFlavor(InstructionFlavor Flavor) {
+  for (auto &HWUICand : HWUInfo) {
+    if (HWUICand.getType() == Flavor) {
+      return &HWUICand;
+    }
+  }
+  return nullptr;
+}
+
+unsigned CandidateHeuristics::getHWUICyclesForInst(SUnit *SU) {
+  if (SchedModel && SchedModel->hasInstrSchedModel()) {
+    unsigned ReleaseAtCycle = 0;
+    const MCSchedClassDesc *SC = DAG->getSchedClass(SU);
+    for (TargetSchedModel::ProcResIter
+             PI = SchedModel->getWriteProcResBegin(SC),
+             PE = SchedModel->getWriteProcResEnd(SC);
+         PI != PE; ++PI) {
+      ReleaseAtCycle = std::max(ReleaseAtCycle, (unsigned)PI->ReleaseAtCycle);
+    }
+    return ReleaseAtCycle;
+  }
+  return -1;
+}
+
+void CandidateHeuristics::schedNode(SUnit *SU) {
+  HardwareUnitInfo *HWUI =
+      getHWUIFromFlavor(classifyFlavor(SU->getInstr(), SII));
+  HWUI->schedule(SU, getHWUICyclesForInst(SU));
+}
+
+void CandidateHeuristics::initialize(ScheduleDAGMI *SchedDAG,
+                                     const TargetSchedModel *TargetSchedModel,
+                                     const TargetRegisterInfo *TRI) {
+  DAG = SchedDAG;
+  SchedModel = TargetSchedModel;
+
+  SRI = static_cast<const SIRegisterInfo *>(TRI);
+  SII = static_cast<const SIInstrInfo *>(DAG->TII);
+
+  HWUInfo.resize((int)InstructionFlavor::NUM_FLAVORS);
+
+  for (unsigned I = 0; I < HWUInfo.size(); I++) {
+    HWUInfo[I].setType(I);
+    HWUInfo[I].reset();
+  }
+
+  HWUInfo[(int)InstructionFlavor::WMMA].setProducesCoexecWindow(true);
+  HWUInfo[(int)InstructionFlavor::MultiCycleVALU].setProducesCoexecWindow(true);
+  HWUInfo[(int)InstructionFlavor::TRANS].setProducesCoexecWindow(true);
+
+  collectHWUIPressure();
+}
+
+void CandidateHeuristics::collectHWUIPressure() {
+  if (!SchedModel || !SchedModel->hasInstrSchedModel())
+    return;
+
+  for (auto &SU : DAG->SUnits) {
+    InstructionFlavor Flavor = classifyFlavor(SU.getInstr(), SII);
+    HWUInfo[(int)(Flavor)].insert(&SU, getHWUICyclesForInst(&SU));
+  }
+
+  LLVM_DEBUG(dumpRegionSummary());
+}
+
+void CandidateHeuristics::dumpRegionSummary() {
+  MachineBasicBlock *BB = DAG->begin()->getParent();
+  dbgs() << "\n=== Region: " << DAG->MF.getName() << " BB" << BB->getNumber()
+         << " (" << DAG->SUnits.size() << " SUs) ===\n";
+
+  dbgs() << "\nHWUI Resource Pressure:\n";
+  for (auto &HWUI : HWUInfo) {
+    if (HWUI.getTotalCycles() == 0)
+      continue;
+
+    StringRef Name = getFlavorName(HWUI.getType());
+    dbgs() << "  [" << HWUI.getIdx() << "] " << Name << ": "
+           << HWUI.getTotalCycles() << " cycles, " << HWUI.size()
+           << " instrs\n";
+  }
+  dbgs() << "\n";
+}
+
+void CandidateHeuristics::sortHWUIResources() {
+  // Highest priority should be first.
+  llvm::sort(HWUInfo, [](HardwareUnitInfo &A, HardwareUnitInfo &B) {
+    // Prefer CoexecWindow producers
+    if (A.producesCoexecWindow() != B.producesCoexecWindow())
+      return A.producesCoexecWindow();
+
+    // Prefer more demanded resources
+    if (A.getTotalCycles() != B.getTotalCycles())
+      return A.getTotalCycles() > B.getTotalCycles();
+
+    // In ties -- prefer the resource with longer latency instructions
+    if (A.size() != B.size())
+      return A.size() < B.size();
+
+    // Default to HardwareUnitInfo order
+    return A.getIdx() < B.getIdx();
+  });
+}
+
+bool CandidateHeuristics::tryCriticalResourceDependency(
+    GenericSchedulerBase::SchedCandidate &TryCand,
+    GenericSchedulerBase::SchedCandidate &Cand, SchedBoundary *Zone) const {
+
+  auto IsCandidateResource = [this, &Cand, &TryCand](unsigned ResourceIdx) {
+    HardwareUnitInfo HWUI = HWUInfo[ResourceIdx];
+
+    auto CandFlavor = classifyFlavor(Cand.SU->getInstr(), SII);
+    auto TryCandFlavor = classifyFlavor(TryCand.SU->getInstr(), SII);
+    bool LookDeep = (CandFlavor == InstructionFlavor::DS ||
+                     TryCandFlavor == InstructionFlavor::DS) &&
+                    HWUI.getType() == InstructionFlavor::WMMA;
+    auto *TargetSU = HWUI.getNextTargetSU(LookDeep);
+
+    // If we do not have a TargetSU for this resource, then it is not critical.
+    if (!TargetSU)
+      return false;
+
+    return true;
+  };
+
+  auto TryEnablesResource = [&Cand, &TryCand, this](unsigned ResourceIdx) {
+    HardwareUnitInfo HWUI = HWUInfo[ResourceIdx];
+    auto CandFlavor = classifyFlavor(Cand.SU->getInstr(), SII);
+
+    // We want to ensure our DS order matches WMMA order.
+    bool LookDeep = CandFlavor == InstructionFlavor::DS &&
+                    HWUI.getType() == InstructionFlavor::WMMA;
+    auto *TargetSU = HWUI.getNextTargetSU(LookDeep);
+
+    bool CandEnables =
+        TargetSU != Cand.SU && DAG->IsReachable(TargetSU, Cand.SU);
+    bool TryCandEnables =
+        TargetSU != TryCand.SU && DAG->IsReachable(TargetSU, TryCand.SU);
+
+    if (!CandEnables && !TryCandEnables)
+      return false;
+
+    if (CandEnables && !TryCandEnables) {
+      if (Cand.Reason > GenericSchedulerBase::RegCritical)
+        Cand.Reason = GenericSchedulerBase::RegCritical;
+
+      return true;
+    }
+
+    if (!CandEnables && TryCandEnables) {
+      TryCand.Reason = GenericSchedulerBase::RegCritical;
+      return true;
+    }
+
+    // Both enable, prefer the critical path.
+    bool CandHeight = Cand.SU->getHeight();
+    bool TryCandHeight = TryCand.SU->getHeight();
+
+    if (CandHeight > TryCandHeight) {
+      if (Cand.Reason > GenericSchedulerBase::RegCritical)
+        Cand.Reason = GenericSchedulerBase::RegCritical;
+
+      return true;
+    }
+
+    if (CandHeight < TryCandHeight) {
+      TryCand.Reason = GenericSchedulerBase::RegCritical;
+      return true;
+    }
+
+    // Same critical path, just prefer original candidate.
+    if (Cand.Reason > GenericSchedulerBase::RegCritical)
+      Cand.Reason = GenericSchedulerBase::RegCritical;
+
+    return true;
+  };
+
+  for (unsigned I = 0; I < HWUInfo.size(); I++) {
+    // If we have encountered a resource that is not critical, then neither
+    // candidate enables a critical resource
+    if (!IsCandidateResource(I))
+      return false;
+
+    bool Enabled = TryEnablesResource(I);
+    // If neither has enabled the resource, continue to the next resource
+    if (Enabled)
+      return true;
+  }
+  return false;
+}
+
+bool CandidateHeuristics::tryCriticalResource(
+    GenericSchedulerBase::SchedCandidate &TryCand,
+    GenericSchedulerBase::SchedCandidate &Cand, SchedBoundary *Zone) const {
+  for (unsigned I = 0; I < HWUInfo.size(); I++) {
+    HardwareUnitInfo HWUI = HWUInfo[I];
+
+    bool CandUsesCrit = HWUI.contains(Cand.SU);
+    bool TryCandUsesCrit = HWUI.contains(TryCand.SU);
+
+    if (!CandUsesCrit && !TryCandUsesCrit)
+      continue;
+
+    if (CandUsesCrit != TryCandUsesCrit) {
+      if (CandUsesCrit) {
+        if (Cand.Reason > GenericSchedulerBase::RegCritical)
+          Cand.Reason = GenericSchedulerBase::RegCritical;
+        return true;
+      }
+      TryCand.Reason = GenericSchedulerBase::RegCritical;
+      return true;
+    }
+
+    // Otherwise, both use the critical resource
+    // For longer latency InstructionFlavors, we should prioritize first by
+    // their enablement of critical resources
+    if (HWUI.getType() == InstructionFlavor::DS) {
+      if (tryCriticalResourceDependency(TryCand, Cand, Zone))
+        return true;
+    }
+
+    // Prioritize based on HWUI priorities.
+    SUnit *Match = HWUI.getHigherPriority(Cand.SU, TryCand.SU);
+    if (Match) {
+      if (Match == Cand.SU) {
+        if (Cand.Reason > GenericSchedulerBase::RegCritical)
+          Cand.Reason = GenericSchedulerBase::RegCritical;
+        return true;
+      }
+      TryCand.Reason = GenericSchedulerBase::RegCritical;
+      return true;
+    }
+  }
+
+  return false;
+}
+
 AMDGPUCoExecSchedStrategy::AMDGPUCoExecSchedStrategy(
     const MachineSchedContext *C)
     : GCNSchedStrategy(C) {
@@ -60,6 +422,12 @@ void AMDGPUCoExecSchedStrategy::initialize(ScheduleDAGMI *DAG) {
   RegionPolicy.OnlyBottomUp = false;
 
   GCNSchedStrategy::initialize(DAG);
+  Heurs.initialize(DAG, SchedModel, TRI);
+}
+
+void AMDGPUCoExecSchedStrategy::schedNode(SUnit *SU, bool IsTopNode) {
+  Heurs.schedNode(SU);
+  GCNSchedStrategy::schedNode(SU, IsTopNode);
 }
 
 SUnit *AMDGPUCoExecSchedStrategy::pickNode(bool &IsTopNode) {
@@ -74,6 +442,7 @@ SUnit *AMDGPUCoExecSchedStrategy::pickNode(bool &IsTopNode) {
 
   bool PickedPending = false;
   SUnit *SU = nullptr;
+  SchedCandidate *PickedCand = nullptr;
   do {
     PickedPending = false;
     SU = pickOnlyChoice(Top);
@@ -84,9 +453,12 @@ SUnit *AMDGPUCoExecSchedStrategy::pickNode(bool &IsTopNode) {
                         PickedPending, /*IsBottomUp=*/false);
       assert(TopCand.Reason != NoCand && "failed to find a candidate");
       SU = TopCand.SU;
+      PickedCand = &TopCand;
     }
     IsTopNode = true;
   } while (SU->isScheduled);
+
+  LLVM_DEBUG(if (PickedCand) dumpPickSummary(SU, IsTopNode, *PickedCand));
 
   if (PickedPending) {
     unsigned ReadyCycle = SU->TopReadyCycle;
@@ -141,7 +513,7 @@ void AMDGPUCoExecSchedStrategy::pickNodeFromQueue(
       initCandidate(TryCand, SU, Zone.isTop(), RPTracker, SRI, SGPRPressure,
                     VGPRPressure, IsBottomUp);
       SchedBoundary *ZoneArg = Cand.AtTop == TryCand.AtTop ? &Zone : nullptr;
-      tryCandidate(Cand, TryCand, ZoneArg);
+      tryCandidateCoexec(Cand, TryCand, ZoneArg);
       if (TryCand.Reason != NoCand) {
         if (TryCand.ResDelta == SchedResourceDelta())
           TryCand.initResourceDelta(Zone.DAG, SchedModel);
@@ -161,9 +533,34 @@ void AMDGPUCoExecSchedStrategy::pickNodeFromQueue(
   EvaluateQueue(Zone.Pending, /*FromPending=*/true);
 }
 
-bool AMDGPUCoExecSchedStrategy::tryCandidate(SchedCandidate &Cand,
-                                             SchedCandidate &TryCand,
-                                             SchedBoundary *Zone) const {
+void AMDGPUCoExecSchedStrategy::dumpPickSummary(SUnit *SU, bool IsTopNode,
+                                                SchedCandidate &Cand) {
+  const SIInstrInfo *SII = static_cast<const SIInstrInfo *>(DAG->TII);
+  unsigned Cycle = IsTopNode ? Top.getCurrCycle() : Bot.getCurrCycle();
+
+  dbgs() << "=== Pick @ Cycle " << Cycle << " ===\n";
+
+  InstructionFlavor Flavor = classifyFlavor(SU->getInstr(), SII);
+  dbgs() << "Picked: SU(" << SU->NodeNum << ") ";
+  SU->getInstr()->print(dbgs(), /*IsStandalone=*/true, /*SkipOpers=*/false,
+                        /*SkipDebugLoc=*/true);
+  dbgs() << " [" << getFlavorName(Flavor) << "]\n";
+
+  dbgs() << "  Reason: ";
+  if (LastAMDGPUReason != AMDGPUSchedReason::None)
+    dbgs() << getReasonName(LastAMDGPUReason);
+  else if (Cand.Reason != NoCand)
+    dbgs() << GenericSchedulerBase::getReasonStr(Cand.Reason);
+  else
+    dbgs() << "Unknown";
+  dbgs() << "\n\n";
+
+  LastAMDGPUReason = AMDGPUSchedReason::None;
+}
+
+bool AMDGPUCoExecSchedStrategy::tryCandidateCoexec(SchedCandidate &Cand,
+                                                   SchedCandidate &TryCand,
+                                                   SchedBoundary *Zone) {
   // Initialize the candidate if needed.
   if (!Cand.isValid()) {
     TryCand.Reason = FirstValid;
@@ -188,17 +585,21 @@ bool AMDGPUCoExecSchedStrategy::tryCandidate(SchedCandidate &Cand,
   // "tie-breaking" in nature.
   bool SameBoundary = Zone != nullptr;
   if (SameBoundary) {
-    // For loops that are acyclic path limited, aggressively schedule for
-    // latency. Within an single cycle, whenever CurrMOps > 0, allow normal
-    // heuristics to take precedence.
-    if (Rem.IsAcyclicLatencyLimited && !Zone->getCurrMOps() &&
-        tryLatency(TryCand, Cand, *Zone))
-      return TryCand.Reason != NoCand;
-
-    // Otherwise compare candidates by the stall they would introduce if
+    // Compare candidates by the stall they would introduce if
     // scheduled in the current cycle.
     if (tryEffectiveStall(Cand, TryCand, *Zone))
       return TryCand.Reason != NoCand;
+
+    Heurs.sortHWUIResources();
+    if (Heurs.tryCriticalResource(TryCand, Cand, Zone)) {
+      LastAMDGPUReason = AMDGPUSchedReason::CritResourceBalance;
+      return TryCand.Reason != NoCand;
+    }
+
+    if (Heurs.tryCriticalResourceDependency(TryCand, Cand, Zone)) {
+      LastAMDGPUReason = AMDGPUSchedReason::CritResourceDep;
+      return TryCand.Reason != NoCand;
+    }
   }
 
   // Keep clustered nodes together to encourage downstream peephole
@@ -232,16 +633,6 @@ bool AMDGPUCoExecSchedStrategy::tryCandidate(SchedCandidate &Cand,
     return TryCand.Reason != NoCand;
 
   if (SameBoundary) {
-    // Avoid critical resource consumption and balance the schedule.
-    TryCand.initResourceDelta(DAG, SchedModel);
-    if (tryLess(TryCand.ResDelta.CritResources, Cand.ResDelta.CritResources,
-                TryCand, Cand, ResourceReduce))
-      return TryCand.Reason != NoCand;
-    if (tryGreater(TryCand.ResDelta.DemandedResources,
-                   Cand.ResDelta.DemandedResources, TryCand, Cand,
-                   ResourceDemand))
-      return TryCand.Reason != NoCand;
-
     // Avoid serializing long latency dependence chains.
     // For acyclic path limited loops, latency was already checked above.
     if (!RegionPolicy.DisableLatencyHeuristic && TryCand.Policy.ReduceLatency &&
