@@ -13952,6 +13952,120 @@ static SDValue performNegCMovCombine(SDNode *N, SelectionDAG &DAG) {
                      CMov.getOperand(3));
 }
 
+// Attempt to combine the following patterns:
+//   SUB x, (ZEXT (SETCC a, b, ult)) -> SUBE x, 0, (CMP a, b)
+//   SUB (SUB x, y), (ZEXT (SETCC a, b, ult)) -> SUBE x, y, (CMP a, b)
+//   SUB x, (ZEXT (SETCC a, b, ugt)) -> SUBE x, 0, (CMP b, a)
+//   SUB (SUB x, y), (ZEXT (SETCC a, b, ugt)) -> SUBE x, y, (CMP b, a)
+// Also handles post-legalization patterns with CMOV/CSINC.
+static SDValue performSubWithBorrowCombine(SDNode *N, SelectionDAG &DAG) {
+  EVT VT = N->getValueType(0);
+  if (VT != MVT::i32)
+    return SDValue();
+
+  SDValue N0 = N->getOperand(0);
+  SDValue N1 = N->getOperand(1);
+
+  // Look through ZERO_EXTEND
+  if (N1.getOpcode() == ISD::ZERO_EXTEND && N1.hasOneUse())
+    N1 = N1.getOperand(0);
+  if (!N1.hasOneUse())
+    return SDValue();
+
+  SDLoc DL(N);
+  SDValue Flags;
+
+  // Pre-legalization: match ISD::SETCC with unsigned less-than or greater-than
+  if (N1.getOpcode() == ISD::SETCC) {
+    ISD::CondCode CC = cast<CondCodeSDNode>(N1.getOperand(2))->get();
+    SDValue LHS = N1.getOperand(0);
+    SDValue RHS = N1.getOperand(1);
+    if (CC == ISD::SETUGT) {
+      // ugt a, b -> ult b, a (swap operands)
+      std::swap(LHS, RHS);
+    } else if (CC != ISD::SETULT) {
+      return SDValue();
+    }
+    // Create the CMP node
+    Flags = DAG.getNode(ARMISD::CMP, DL, FlagsVT, LHS, RHS);
+  }
+  // Post-legalization: match CSINC 0, 0, HS, Flags
+  else if (N1.getOpcode() == ARMISD::CSINC &&
+           isNullConstant(N1.getOperand(0)) &&
+           isNullConstant(N1.getOperand(1)) &&
+           N1.getConstantOperandVal(2) == ARMCC::HS) {
+    Flags = N1.getOperand(3);
+    if (Flags.getOpcode() != ARMISD::CMP)
+      return SDValue();
+  }
+  // Post-legalization: match CMOV 0, 1, LO, Flags (CMOV is FalseVal, TrueVal)
+  // Returns 1 when LO (carry clear), 0 otherwise
+  else if (N1.getOpcode() == ARMISD::CMOV && isNullConstant(N1.getOperand(0)) &&
+           isOneConstant(N1.getOperand(1)) &&
+           N1.getConstantOperandVal(2) == ARMCC::LO) {
+    Flags = N1.getOperand(3);
+    if (Flags.getOpcode() != ARMISD::CMP)
+      return SDValue();
+  }
+  // Post-legalization: match CMOV 1, 0, HS, Flags (inverted condition)
+  // Returns 0 when HS (carry set), 1 when not HS = LO
+  else if (N1.getOpcode() == ARMISD::CMOV && isOneConstant(N1.getOperand(0)) &&
+           isNullConstant(N1.getOperand(1)) &&
+           N1.getConstantOperandVal(2) == ARMCC::HS) {
+    Flags = N1.getOperand(3);
+    if (Flags.getOpcode() != ARMISD::CMP)
+      return SDValue();
+  }
+  // Post-legalization: match CSINC 0, 0, LS, Flags (ugt -> swap and use LO)
+  else if (N1.getOpcode() == ARMISD::CSINC &&
+           isNullConstant(N1.getOperand(0)) &&
+           isNullConstant(N1.getOperand(1)) &&
+           N1.getConstantOperandVal(2) == ARMCC::LS) {
+    SDValue OldFlags = N1.getOperand(3);
+    if (OldFlags.getOpcode() != ARMISD::CMP)
+      return SDValue();
+    // Swap CMP operands to convert HI to LO
+    Flags = DAG.getNode(ARMISD::CMP, DL, FlagsVT, OldFlags.getOperand(1),
+                        OldFlags.getOperand(0));
+  }
+  // Post-legalization: match CMOV 0, 1, HI, Flags (ugt -> swap and use LO)
+  // Returns 1 when HI (a > b unsigned), need to swap CMP to get LO
+  else if (N1.getOpcode() == ARMISD::CMOV && isNullConstant(N1.getOperand(0)) &&
+           isOneConstant(N1.getOperand(1)) &&
+           N1.getConstantOperandVal(2) == ARMCC::HI) {
+    SDValue OldFlags = N1.getOperand(3);
+    if (OldFlags.getOpcode() != ARMISD::CMP)
+      return SDValue();
+    // Swap CMP operands to convert HI to LO
+    Flags = DAG.getNode(ARMISD::CMP, DL, FlagsVT, OldFlags.getOperand(1),
+                        OldFlags.getOperand(0));
+  }
+  // Post-legalization: match CMOV 1, 0, LS, Flags (inverted ugt -> swap)
+  // Returns 0 when LS, 1 when not LS = HI, need to swap CMP
+  else if (N1.getOpcode() == ARMISD::CMOV && isOneConstant(N1.getOperand(0)) &&
+           isNullConstant(N1.getOperand(1)) &&
+           N1.getConstantOperandVal(2) == ARMCC::LS) {
+    SDValue OldFlags = N1.getOperand(3);
+    if (OldFlags.getOpcode() != ARMISD::CMP)
+      return SDValue();
+    // Swap CMP operands to convert LS (not HI) to HS (not LO), then use LO
+    Flags = DAG.getNode(ARMISD::CMP, DL, FlagsVT, OldFlags.getOperand(1),
+                        OldFlags.getOperand(0));
+  } else {
+    return SDValue();
+  }
+
+  // SUBE expects: LHS, RHS, Flags and returns: Result, OutFlags
+  SDVTList VTs = DAG.getVTList(MVT::i32, FlagsVT);
+  if (N0.getOpcode() == ISD::SUB && N0.hasOneUse())
+    return DAG.getNode(ARMISD::SUBE, DL, VTs, N0.getOperand(0),
+                       N0.getOperand(1), Flags);
+  if (isNullConstant(N0))
+    return SDValue();
+  return DAG.getNode(ARMISD::SUBE, DL, VTs, N0, DAG.getConstant(0, DL, VT),
+                     Flags);
+}
+
 /// PerformSUBCombine - Target-specific dag combine xforms for ISD::SUB.
 ///
 static SDValue PerformSUBCombine(SDNode *N,
@@ -13959,6 +14073,11 @@ static SDValue PerformSUBCombine(SDNode *N,
                                  const ARMSubtarget *Subtarget) {
   SDValue N0 = N->getOperand(0);
   SDValue N1 = N->getOperand(1);
+
+  // Try to fold SUB with borrow pattern before combineSelectAndUse transforms
+  // the pattern into a CMOV.
+  if (SDValue Val = performSubWithBorrowCombine(N, DCI.DAG))
+    return Val;
 
   // fold (sub x, (select cc, 0, c)) -> (select cc, x, (sub, x, c))
   if (N1.getNode()->hasOneUse())
