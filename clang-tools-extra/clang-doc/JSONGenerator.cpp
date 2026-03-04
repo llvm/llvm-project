@@ -829,16 +829,16 @@ static std::vector<Index> preprocessCDCtxIndex(Index CDCtxIndex) {
   CDCtxIndex.sort();
   std::vector<Index> Processed;
   Processed.reserve(CDCtxIndex.Children.size());
-  for (auto &Entry : CDCtxIndex.Children) {
-    auto NewPath = Entry.second.getRelativeFilePath("");
+  for (const auto *Idx : CDCtxIndex.getSortedChildren()) {
+    Index NewIdx = *Idx;
+    auto NewPath = NewIdx.getRelativeFilePath("");
     sys::path::native(NewPath, sys::path::Style::posix);
     sys::path::append(NewPath, sys::path::Style::posix,
-                      Entry.second.getFileBaseName() + ".md");
-    Entry.second.Path = NewPath;
-    Processed.push_back(Entry.second);
+                      NewIdx.getFileBaseName() + ".md");
+    NewIdx.Path = NewPath;
+    Processed.push_back(NewIdx);
   }
 
-  llvm::sort(Processed);
   return Processed;
 }
 
@@ -885,11 +885,7 @@ static Error serializeIndex(const ClangDocContext &CDCtx, StringRef RootDir,
     IndexArrayRef.reserve(CDCtx.Idx.Children.size());
   }
 
-  llvm::SmallVector<const Index *> Children;
-  Children.reserve(IndexCopy.Children.size());
-  for (const auto &[_, Idx] : IndexCopy.Children)
-    Children.push_back(&Idx);
-  llvm::sort(Children, [](const Index *A, const Index *B) { return *A < *B; });
+  auto Children = IndexCopy.getSortedChildren();
 
   for (const auto *Idx : Children) {
     if (Idx->Children.empty())
