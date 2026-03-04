@@ -1711,16 +1711,15 @@ InstructionCost GCNTTIImpl::getScalingFactorCost(Type *Ty, GlobalValue *BaseGV,
                                                  unsigned AddrSpace) const {
   if (HasBaseReg && Scale != 0) {
     // gfx1250+ can fold base+scale*index into the instruction when scale
-    // equals the memory access size (scale_offset bit). This is supported
-    // for global/constant/flat/scratch but NOT for LDS or GDS.
-    // GDS does not exist on gfx1250+, but we exclude REGION_ADDRESS for
-    // correctness since the address space is still representable in IR.
+    // equals the memory access size (scale_offset bit). Supported address
+    // spaces: flat, global, constant, private (scratch).
     if (getST()->hasScaleOffset() && Ty && Ty->isSized() &&
-        AddrSpace != AMDGPUAS::LOCAL_ADDRESS &&
-        AddrSpace != AMDGPUAS::REGION_ADDRESS) {
-      TypeSize StoreSize = getDataLayout().getTypeStoreSize(Ty);
-      if (!StoreSize.isScalable() &&
-          static_cast<int64_t>(StoreSize.getFixedValue()) == Scale)
+        (AddrSpace == AMDGPUAS::FLAT_ADDRESS ||
+         AddrSpace == AMDGPUAS::GLOBAL_ADDRESS ||
+         AddrSpace == AMDGPUAS::CONSTANT_ADDRESS ||
+         AddrSpace == AMDGPUAS::PRIVATE_ADDRESS)) {
+      if (static_cast<int64_t>(
+              getDataLayout().getTypeStoreSize(Ty).getFixedValue()) == Scale)
         return 0;
     }
     return 1;
