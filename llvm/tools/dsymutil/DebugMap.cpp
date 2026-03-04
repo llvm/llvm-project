@@ -94,7 +94,8 @@ DebugMapObject &
 DebugMap::addDebugMapObject(StringRef ObjectFilePath,
                             sys::TimePoint<std::chrono::seconds> Timestamp,
                             uint8_t Type) {
-  getObjects().emplace_back(new DebugMapObject(ObjectFilePath, Timestamp, Type));
+  getObjects().emplace_back(
+      new DebugMapObject(ObjectFilePath, Timestamp, Type));
   return *getObjects().back();
 }
 
@@ -125,7 +126,6 @@ void DebugMap::dump() const { print(errs()); }
 
 DebugMapObjectFilter::DebugMapObjectFilter(StringRef ObjectFilename)
     : Filename(std::string(ObjectFilename)) {}
-
 
 namespace {
 
@@ -235,9 +235,8 @@ SequenceTraits<std::vector<std::unique_ptr<dsymutil::DebugMapObjectFilter>>>::
     element(IO &io,
             std::vector<std::unique_ptr<dsymutil::DebugMapObjectFilter>> &seq,
             size_t index) {
-  auto &Objects =
-      reinterpret_cast<std::vector<std::unique_ptr<dsymutil::DebugMapObject>> &>(
-          seq);
+  auto &Objects = reinterpret_cast<
+      std::vector<std::unique_ptr<dsymutil::DebugMapObject>> &>(seq);
   return SequenceTraits<
       std::vector<std::unique_ptr<dsymutil::DebugMapObject>>>::element(io,
                                                                        Objects,

@@ -890,8 +890,8 @@ parseDebugMap(BinaryHolder &BinHolder, StringRef InputFile,
                                        Verbose);
 
   MachODebugMapParser Parser(BinHolder, InputFile, Archs, DSYMSearchPaths,
-                             PrependPath, VariantSuffix, Verbose,
-                             ObjectFilter, ObjectFilterType);
+                             PrependPath, VariantSuffix, Verbose, ObjectFilter,
+                             ObjectFilterType);
 
   return Parser.parse();
 }

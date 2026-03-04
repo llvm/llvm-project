@@ -85,8 +85,12 @@ class DebugMap : public DebugMapFilter {
   std::vector<uint8_t> BinaryUUID;
   using ObjectContainer = std::vector<std::unique_ptr<DebugMapObject>>;
 
-  ObjectContainer& getObjects() { return reinterpret_cast<ObjectContainer&>(Objects); }
-  const ObjectContainer& getObjects() const { return reinterpret_cast<const ObjectContainer&>(Objects); }
+  ObjectContainer &getObjects() {
+    return reinterpret_cast<ObjectContainer &>(Objects);
+  }
+  const ObjectContainer &getObjects() const {
+    return reinterpret_cast<const ObjectContainer &>(Objects);
+  }
 
   /// For YAML IO support.
   ///@{
@@ -153,7 +157,8 @@ private:
   /// For YAMLIO support.
   ///@{
   friend yaml::MappingTraits<dsymutil::DebugMapObjectFilter>;
-  friend yaml::SequenceTraits<std::vector<std::unique_ptr<DebugMapObjectFilter>>>;
+  friend yaml::SequenceTraits<
+      std::vector<std::unique_ptr<DebugMapObjectFilter>>>;
 
   DebugMapObjectFilter() = default;
 
@@ -273,11 +278,14 @@ struct SequenceTraits<std::vector<std::unique_ptr<dsymutil::DebugMapObject>>> {
 };
 
 template <>
-struct SequenceTraits<std::vector<std::unique_ptr<dsymutil::DebugMapObjectFilter>>> {
+struct SequenceTraits<
+    std::vector<std::unique_ptr<dsymutil::DebugMapObjectFilter>>> {
   static size_t
-  size(IO &io, std::vector<std::unique_ptr<dsymutil::DebugMapObjectFilter>> &seq);
+  size(IO &io,
+       std::vector<std::unique_ptr<dsymutil::DebugMapObjectFilter>> &seq);
   static dsymutil::DebugMapObject &
-  element(IO &, std::vector<std::unique_ptr<dsymutil::DebugMapObjectFilter>> &seq,
+  element(IO &,
+          std::vector<std::unique_ptr<dsymutil::DebugMapObjectFilter>> &seq,
           size_t index);
 };
 
