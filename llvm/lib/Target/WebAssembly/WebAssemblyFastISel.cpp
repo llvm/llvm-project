@@ -1370,17 +1370,57 @@ static unsigned getFoldedLoadOpcode(MachineInstr *MI, MachineRegisterInfo &MRI,
   }
 }
 
+static unsigned matchFoldableShift(MachineInstr *MI, const LoadInst *LI,
+                                   MachineRegisterInfo &MRI, bool A64,
+                                   MachineInstr *&UserMI) {
+  unsigned Opc = MI->getOpcode();
+  unsigned NewOpc = WebAssembly::INSTRUCTION_LIST_END;
+  if (Opc != WebAssembly::SHL_I32 && Opc != WebAssembly::SHL_I64)
+    return NewOpc;
+
+  Register DestReg = MI->getOperand(0).getReg();
+  if (!MRI.hasOneNonDBGUse(DestReg))
+    return NewOpc;
+
+  UserMI = &*MRI.use_instr_nodbg_begin(DestReg);
+  unsigned UserOpc = UserMI->getOpcode();
+  if (UserOpc != WebAssembly::SHR_S_I32 && UserOpc != WebAssembly::SHR_S_I64)
+    return NewOpc;
+
+  Type *LoadTy = LI->getType();
+  if (LoadTy->isIntegerTy(8))
+    NewOpc = A64 ? WebAssembly::LOAD8_S_I32_A64 : WebAssembly::LOAD8_S_I32_A32;
+  else if (LoadTy->isIntegerTy(16))
+    NewOpc =
+        A64 ? WebAssembly::LOAD16_S_I32_A64 : WebAssembly::LOAD16_S_I32_A32;
+
+  return NewOpc;
+}
+
 bool WebAssemblyFastISel::tryToFoldLoadIntoMI(MachineInstr *MI, unsigned OpNo,
                                               const LoadInst *LI) {
   bool A64 = Subtarget->hasAddr64();
   MachineRegisterInfo &MRI = FuncInfo.MF->getRegInfo();
-  unsigned NewOpc = getFoldedLoadOpcode(MI, MRI, LI, A64);
-  if (NewOpc == WebAssembly::INSTRUCTION_LIST_END)
+  Register ResultReg;
+  MachineInstr *UserMI = nullptr;
+  unsigned NewOpc;
+  if ((NewOpc = getFoldedLoadOpcode(MI, MRI, LI, A64)) !=
+      WebAssembly::INSTRUCTION_LIST_END) {
+    ResultReg = MI->getOperand(0).getReg();
+  } else if ((NewOpc = matchFoldableShift(MI, LI, MRI, A64, UserMI)) !=
+             WebAssembly::INSTRUCTION_LIST_END) {
+    ResultReg = UserMI->getOperand(0).getReg();
+  } else {
     return false;
+  }
 
-  Register ResultReg = MI->getOperand(0).getReg();
   if (!emitLoad(ResultReg, NewOpc, LI))
     return false;
+
+  if (UserMI) {
+    MachineBasicBlock::iterator UserIter(UserMI);
+    removeDeadCode(UserIter, std::next(UserIter));
+  }
 
   MachineBasicBlock::iterator Iter(MI);
   removeDeadCode(Iter, std::next(Iter));
