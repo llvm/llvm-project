@@ -17270,7 +17270,7 @@ static SDValue combineSELECT_CCBitFloor(SDNode *N, SelectionDAG &DAG) {
   SDLoc DL(N);
   SDValue PPCSrl =
       DAG.getNode(PPCISD::SRL, DL, FalseVal.getValueType(), ShiftVal, ShiftAmt);
-  return PPCSrl; 
+  return PPCSrl;
 }
 
 // Optimize zero-extension of setcc when the compared value is known to be 0
