@@ -502,6 +502,11 @@ public:
   struct Key {
     const CodeGenRegister::Vec *Members;
     RegSizeInfoByHwMode RSI;
+
+    // Ignore artificial registers when comparing classes. We use this
+    // to find existing classes that contain the same non-artificial
+    // members, but may differ in presence of artificial ones, thus
+    // avoiding creating extra register classes for codegen needs.
     bool IgnoreArtificialMembers;
 
     Key(const CodeGenRegister::Vec *M, const RegSizeInfoByHwMode &I,
