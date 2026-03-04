@@ -196,6 +196,9 @@ SITargetLowering::SITargetLowering(const TargetMachine &TM,
 
   computeRegisterProperties(Subtarget->getRegisterInfo());
 
+  setMinFunctionAlignment(Align(4));
+  setPrefFunctionAlignment(Align(STI.getInstCacheLineSize()));
+
   // The boolean content concept here is too inflexible. Compares only ever
   // really produce a 1-bit result. Any copy/extend from these will turn into a
   // select, and zext/1 or sext/-1 are equally cheap. Arbitrarily choose 0/1, as
