@@ -223,6 +223,27 @@ def ApplyMaterializeMasksPatternsOp : Op<Transform_Dialect,
   let assemblyFormat = "attr-dict";
 }
 
+def ApplyMultiReductionPatternsOp : Op<Transform_Dialect,
+    "apply_patterns.vector.multi_reduction",
+    [DeclareOpInterfaceMethods<PatternDescriptorOpInterface>]> {
+  let description = [{
+    Indicates that vector multi_reduction operations will be lowered to
+    vector arithmetic elementwise operations on vectors of rank 1 or
+    vector.reduction operations.
+
+    This populates all multi_reduction lowering patterns,
+    i.e., reorder_and_expand, flattening, and unrolling.
+  }];
+
+  let arguments = (ins DefaultValuedAttr<VectorMultiReductionLoweringAttr,
+      "vector::VectorMultiReductionLowering::InnerParallel">:$lowering_strategy
+  );
+
+  let assemblyFormat = [{
+    (`lowering_strategy` `=` $lowering_strategy^)? attr-dict
+  }];
+}
+
 def ApplyReorderAndExpandMultiReductionPatternsOp: Op<Transform_Dialect,
     "apply_patterns.vector.reorder_and_expand_multi_reduction_dims",
     [DeclareOpInterfaceMethods<PatternDescriptorOpInterface>]> {
