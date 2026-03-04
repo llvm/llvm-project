@@ -1787,7 +1787,7 @@ bool CodeGenFunction::ConstantFoldsToSimpleInteger(const Expr *Cond,
     return false;  // Contains a label.
 
   PGO->markStmtMaybeUsed(Cond);
-  ResultInt = Int;
+  ResultInt = std::move(Int);
   return true;
 }
 

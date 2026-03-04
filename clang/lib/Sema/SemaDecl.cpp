@@ -7476,7 +7476,7 @@ static QualType TryToFixInvalidVariablyModifiedType(QualType T,
           ? ConstantArrayType::getNumAddressingBits(Context, ElemTy, Res)
           : Res.getActiveBits();
   if (ActiveSizeBits > ConstantArrayType::getMaxSizeBits(Context)) {
-    Oversized = Res;
+    Oversized = std::move(Res);
     return QualType();
   }
 
