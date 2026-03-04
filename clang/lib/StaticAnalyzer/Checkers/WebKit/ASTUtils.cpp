@@ -240,10 +240,12 @@ bool tryToFindPtrOrigin(
 bool isASafeCallArg(const Expr *E) {
   assert(E);
   auto IsCheckedLocalVarOrParam = [](const VarDecl *Decl) {
-    if (auto *CXXRD = Decl->getType()->getAsCXXRecordDecl()) {
-      if (isWeakPtr(CXXRD))
-        return false;
-    }
+    auto Ty = Decl->getType();
+    const CXXRecordDecl *CXXRD = Ty->getAsCXXRecordDecl();
+    if (!CXXRD)
+      CXXRD = Ty->getPointeeCXXRecordDecl();
+    if (CXXRD && isWeakPtr(CXXRD))
+      return false;
     return Decl->isLocalVarDeclOrParm();
   };
   if (auto *Ref = dyn_cast<DeclRefExpr>(E)) {
