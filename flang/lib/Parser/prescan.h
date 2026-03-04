@@ -170,18 +170,29 @@ private:
     return *at_;
   }
 
+  bool IsOpenMPConditionalLine(const char *sentinel) const {
+    return sentinel && sentinel[0] == '$' && !sentinel[1];
+  }
+  bool IsOpenACCConditionalLine(const char *sentinel) const {
+    return sentinel && sentinel[0] == '@' && sentinel[1] == 'a' &&
+        sentinel[2] == 'c' && sentinel[3] == 'c' && sentinel[4] == '\0';
+  }
+  bool IsCUDAConditionalLine(const char *sentinel) const {
+    return sentinel && sentinel[0] == '@' && sentinel[1] == 'c' &&
+        sentinel[2] == 'u' && sentinel[3] == 'f' && sentinel[4] == '\0';
+  }
   bool InCompilerDirective() const { return directiveSentinel_ != nullptr; }
   bool InOpenMPConditionalLine() const {
-    return directiveSentinel_ && directiveSentinel_[0] == '$' &&
-        !directiveSentinel_[1];
+    return IsOpenMPConditionalLine(directiveSentinel_);
+  }
+  bool InOpenACCConditionalLine() const {
+    return IsOpenACCConditionalLine(directiveSentinel_);
+  }
+  bool InCUDAConditionalLine() const {
+    return IsCUDAConditionalLine(directiveSentinel_);
   }
   bool InOpenACCOrCUDAConditionalLine() const {
-    return directiveSentinel_ && directiveSentinel_[0] == '@' &&
-        ((directiveSentinel_[1] == 'a' && directiveSentinel_[2] == 'c' &&
-             directiveSentinel_[3] == 'c') ||
-            (directiveSentinel_[1] == 'c' && directiveSentinel_[2] == 'u' &&
-                directiveSentinel_[3] == 'f')) &&
-        directiveSentinel_[4] == '\0';
+    return InOpenACCConditionalLine() || InCUDAConditionalLine();
   }
   bool InConditionalLine() const {
     return InOpenMPConditionalLine() || InOpenACCOrCUDAConditionalLine();

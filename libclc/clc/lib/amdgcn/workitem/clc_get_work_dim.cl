@@ -6,17 +6,12 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include <amdhsa_abi.h>
 #include <clc/workitem/clc_get_work_dim.h>
 
-#if __clang_major__ >= 8
-#define CONST_AS __constant
-#elif __clang_major__ >= 7
-#define CONST_AS __attribute__((address_space(4)))
-#else
-#define CONST_AS __attribute__((address_space(2)))
-#endif
-
 _CLC_OVERLOAD _CLC_DEF uint __clc_get_work_dim() {
-  CONST_AS uint *ptr = (CONST_AS uint *)__builtin_amdgcn_implicitarg_ptr();
-  return ptr[0];
+  __constant amdhsa_implicit_kernarg_v5 *implicit_args =
+      (__constant amdhsa_implicit_kernarg_v5 *)
+          __builtin_amdgcn_implicitarg_ptr();
+  return implicit_args->grid_dims;
 }

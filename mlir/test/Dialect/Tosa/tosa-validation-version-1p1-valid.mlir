@@ -272,6 +272,14 @@ func.func @test_dim(%arg0: tensor<1x2x3x4xi32>) -> !tosa.shape<1> {
 }
 
 // -----
+
+// CHECK-LABEL: test_dim_bf16
+func.func @test_dim_bf16(%0: tensor<6x4x6x9xbf16>) {
+  %1 = tosa.dim %0 {axis = 1 : i32} : (tensor<6x4x6x9xbf16>) -> !tosa.shape<1>
+  return
+}
+
+// -----
 // CHECK-LABEL: test_exp2_shape
 func.func @test_exp2_shape() -> !tosa.shape<4> {
   %a = tosa.const_shape {values = dense<[5, 7, 10, 1]> : tensor<4xindex>} : () -> !tosa.shape<4>
@@ -307,6 +315,8 @@ func.func @test_conv2d_block_scaled(%arg0: tensor<1x4x4x64xf4E2M1FN>, %arg1: ten
   %0 = tosa.conv2d_block_scaled %arg0, %arg1, %arg2, %arg3, %arg4, %pad, %stride, %dilation {block_size = BLOCK_SIZE_32} : (tensor<1x4x4x64xf4E2M1FN>, tensor<1x4x4x2xf8E8M0FNU>, tensor<8x1x1x64xf4E2M1FN>, tensor<8x1x1x2xf8E8M0FNU>, tensor<1xf32>, !tosa.shape<4>, !tosa.shape<2>, !tosa.shape<2>) -> tensor<1x4x4x8xf32>
   return %0 : tensor<1x4x4x8xf32>
 }
+
+// -----
 
 // CHECK-LABEL: test_assert_equal_shape
 func.func @test_assert_equal_shape() {

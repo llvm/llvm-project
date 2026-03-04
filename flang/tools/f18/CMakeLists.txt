@@ -16,6 +16,7 @@ set(MODULES
   "__cuda_builtins"
   "__cuda_device"
   "cooperative_groups"
+  "cuda_runtime_api"
   "cudadevice"
   "ieee_arithmetic"
   "ieee_exceptions"
@@ -64,7 +65,8 @@ if (NOT CMAKE_CROSSCOMPILING)
       set(depends ${FLANG_INTRINSIC_MODULES_DIR}/__ppc_types.mod)
     elseif(${filename} STREQUAL "__cuda_device" OR
            ${filename} STREQUAL "cudadevice" OR
-           ${filename} STREQUAL "cooperative_groups")
+           ${filename} STREQUAL "cooperative_groups" OR
+           ${filename} STREQUAL "cuda_runtime_api")
       set(opts -fc1 -xcuda)
       if(${filename} STREQUAL "__cuda_device")
         set(depends ${FLANG_INTRINSIC_MODULES_DIR}/__cuda_builtins.mod)

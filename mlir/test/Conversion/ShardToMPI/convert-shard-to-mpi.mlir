@@ -5,10 +5,21 @@
 shard.grid @grid0(shape = 3x4x5)
 func.func @process_multi_index() -> (index, index, index) {
   // CHECK: mpi.comm_rank
-  // CHECK: [[res:%.*]]:3 = affine.delinearize_index %1 into (3, 4, 5) : index, index, index 
+  // CHECK: [[v1:%.*]] = arith.index_cast
+  // CHECK: [[res:%.*]]:3 = affine.delinearize_index [[v1]] into (3, 4, 5) : index, index, index 
   %0:3 = shard.process_multi_index on @grid0 axes = [] : index, index, index
   // CHECK: return [[res]]#0, [[res]]#1, [[res]]#2 : index, index, index
   return %0#0, %0#1, %0#2 : index, index, index
+}
+
+// CHECK-LABEL: func @process_multi_index_reorder
+func.func @process_multi_index_reorder() -> (index, index) {
+  // CHECK: mpi.comm_rank
+  // CHECK: [[v1:%.*]] = arith.index_cast
+  // CHECK: [[v2:%.*]]:3 = affine.delinearize_index [[v1]] into (3, 4, 5) : index, index, index
+  %0:2 = shard.process_multi_index on @grid0 axes = [2, 0] : index, index
+  // CHECK: return [[v2]]#2, [[v2]]#0 : index, index
+  return %0#0, %0#1 : index, index
 }
 
 // CHECK-LABEL: func @process_linear_index
@@ -146,6 +157,40 @@ module attributes { mpi.dlti = #dlti.map<"MPI:comm_world_rank" = 7> } {
     %0 = shard.all_reduce %arg0 on @grid0 grid_axes = [0, 1] reduction = max : memref<3x4xf32> -> memref<3x4xf64>
     // CHECK: return [[valloc]] : memref<3x4xf64>
     return %0 : memref<3x4xf64>
+  }
+
+  // CHECK-LABEL: func.func @reduce_scatter_memref(
+  func.func @reduce_scatter_memref(
+    // CHECK-SAME: [[varg0:%.*]]: memref<3x4xf32>
+    %arg0 : memref<3x4xf32>) -> memref<1x4xf32> {
+    // CHECK-DAG: [[vc1_i32:%.*]] = arith.constant 0 : i32
+    // CHECK-DAG: [[vc2_i32:%.*]] = arith.constant 7 : i32
+    // CHECK: [[v0:%.*]] = mpi.comm_world : !mpi.comm
+    // CHECK: [[vnewcomm:%.*]] = mpi.comm_split([[v0]], [[vc2_i32]], [[vc1_i32]]) : !mpi.comm
+    // CHECK: [[valloc:%.*]] = memref.alloc() : memref<1x4xf32>
+    // CHECK: mpi.reduce_scatter_block([[varg0]], [[valloc]], MPI_SUM, [[vnewcomm]]) : memref<3x4xf32>, memref<1x4xf32>
+    %0 = shard.reduce_scatter %arg0 on @grid0 grid_axes = [0] scatter_dim = 0 : memref<3x4xf32> -> memref<1x4xf32>
+    // CHECK: return [[valloc]] : memref<1x4xf32>
+    return %0 : memref<1x4xf32>
+  }
+
+  // CHECK-LABEL: func.func @reduce_scatter_tensor_dim1(
+  func.func @reduce_scatter_tensor_dim1(
+    // CHECK-SAME: [[varg0:%.*]]: tensor<2x12xf32>
+    %arg0 : tensor<2x12xf32>) -> tensor<2x4xf32> {
+    // CHECK: [[vexpanded:%.*]] = tensor.expand_shape [[varg0]] {{\[\[}}0], [1, 2]] output_shape [2, 3, 4] : tensor<2x12xf32> into tensor<2x3x4xf32>
+    // CHECK: [[vempty:%.*]] = tensor.empty() : tensor<3x2x4xf32>
+    // CHECK: [[vtransposed:%.*]] = linalg.transpose ins([[vexpanded]] : tensor<2x3x4xf32>) outs([[vempty]] : tensor<3x2x4xf32>) permutation = [1, 0, 2]
+    // CHECK: [[vtobuf:%.*]] = bufferization.to_buffer [[vtransposed]] : tensor<3x2x4xf32> to memref<3x2x4xf32>
+    // CHECK: [[valloctmp:%.*]] = memref.alloc() : memref<3x2x4xf32>
+    // CHECK: linalg.copy ins([[vtobuf]] : memref<3x2x4xf32>) outs([[valloctmp]] : memref<3x2x4xf32>)
+    // CHECK: [[valloc:%.*]] = memref.alloc() : memref<2x4xf32>
+    // CHECK: mpi.reduce_scatter_block([[valloctmp]], [[valloc]], MPI_SUM,
+    // CHECK: memref.dealloc [[valloctmp]] : memref<3x2x4xf32>
+    // CHECK: [[vout:%.*]] = bufferization.to_tensor [[valloc]] restrict : memref<2x4xf32> to tensor<2x4xf32>
+    %0 = shard.reduce_scatter %arg0 on @grid0 grid_axes = [0] scatter_dim = 1 : tensor<2x12xf32> -> tensor<2x4xf32>
+    // CHECK: return [[vout]] : tensor<2x4xf32>
+    return %0 : tensor<2x4xf32>
   }
 
   // CHECK-LABEL: func @allgather_tensor_0
