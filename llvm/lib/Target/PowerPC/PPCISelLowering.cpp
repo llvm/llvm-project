@@ -17268,8 +17268,8 @@ static SDValue combineSELECT_CCBitFloor(SDNode *N, SelectionDAG &DAG) {
   // On PowerPC, PPCISD::SRL guarantees that shift by bitwidth returns 0,
   // which is exactly what we need for the bitfloor(0) case.
   SDLoc DL(N);
-  SDValue PPCSrl = DAG.getNode(PPCISD::SRL, DL, FalseVal.getValueType(),
-                               ShiftVal, ShiftAmt);
+  SDValue PPCSrl =
+      DAG.getNode(PPCISD::SRL, DL, FalseVal.getValueType(), ShiftVal, ShiftAmt);
   return PPCSrl; 
 }
 
