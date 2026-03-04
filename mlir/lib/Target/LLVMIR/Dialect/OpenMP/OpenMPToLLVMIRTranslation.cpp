@@ -1468,14 +1468,18 @@ static LogicalResult createReductionsAndCleanup(
   if (!contInsertPoint->getBlock())
     return op->emitOpError() << "failed to convert reductions";
 
-  llvm::OpenMPIRBuilder::InsertPointOrErrorTy afterIP =
-      ompBuilder->createBarrier(*contInsertPoint, llvm::omp::OMPD_for);
+  llvm::OpenMPIRBuilder::InsertPointTy afterIP = *contInsertPoint;
+  if (!isTeamsReduction) {
+    llvm::OpenMPIRBuilder::InsertPointOrErrorTy barrierIP =
+        ompBuilder->createBarrier(*contInsertPoint, llvm::omp::OMPD_for);
 
-  if (failed(handleError(afterIP, *op)))
-    return failure();
+    if (failed(handleError(barrierIP, *op)))
+      return failure();
+    afterIP = *barrierIP;
+  }
 
   tempTerminator->eraseFromParent();
-  builder.restoreIP(*afterIP);
+  builder.restoreIP(afterIP);
 
   // after the construct, deallocate private reduction variables
   SmallVector<Region *> reductionRegions;
