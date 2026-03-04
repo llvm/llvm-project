@@ -2482,34 +2482,42 @@ mlir::LogicalResult cir::FuncOp::verify() {
 }
 
 //===----------------------------------------------------------------------===//
-// BinOp
+// AddOp / SubOp / MulOp
 //===----------------------------------------------------------------------===//
-LogicalResult cir::BinOp::verify() {
-  bool noWrap = getNoUnsignedWrap() || getNoSignedWrap();
-  bool saturated = getSaturated();
 
-  if (!isa<cir::IntType>(getType()) && noWrap)
-    return emitError()
+static LogicalResult verifyBinaryOverflowOp(mlir::Operation *op,
+                                            bool noSignedWrap,
+                                            bool noUnsignedWrap, bool saturated,
+                                            bool hasSat) {
+  bool noWrap = noSignedWrap || noUnsignedWrap;
+  if (!isa<cir::IntType>(op->getResultTypes()[0]) && noWrap)
+    return op->emitError()
            << "only operations on integer values may have nsw/nuw flags";
-
-  bool noWrapOps = getKind() == cir::BinOpKind::Add ||
-                   getKind() == cir::BinOpKind::Sub ||
-                   getKind() == cir::BinOpKind::Mul;
-
-  bool saturatedOps =
-      getKind() == cir::BinOpKind::Add || getKind() == cir::BinOpKind::Sub;
-
-  if (noWrap && !noWrapOps)
-    return emitError() << "The nsw/nuw flags are applicable to opcodes: 'add', "
-                          "'sub' and 'mul'";
-  if (saturated && !saturatedOps)
-    return emitError() << "The saturated flag is applicable to opcodes: 'add' "
-                          "and 'sub'";
-  if (noWrap && saturated)
-    return emitError() << "The nsw/nuw flags and the saturated flag are "
-                          "mutually exclusive";
-
+  if (hasSat && saturated && !isa<cir::IntType>(op->getResultTypes()[0]))
+    return op->emitError()
+           << "only operations on integer values may have sat flag";
+  if (hasSat && noWrap && saturated)
+    return op->emitError()
+           << "the nsw/nuw flags and the saturated flag are mutually exclusive";
   return mlir::success();
+}
+
+LogicalResult cir::AddOp::verify() {
+  return verifyBinaryOverflowOp(getOperation(), getNoSignedWrap(),
+                                getNoUnsignedWrap(), getSaturated(),
+                                /*hasSat=*/true);
+}
+
+LogicalResult cir::SubOp::verify() {
+  return verifyBinaryOverflowOp(getOperation(), getNoSignedWrap(),
+                                getNoUnsignedWrap(), getSaturated(),
+                                /*hasSat=*/true);
+}
+
+LogicalResult cir::MulOp::verify() {
+  return verifyBinaryOverflowOp(getOperation(), getNoSignedWrap(),
+                                getNoUnsignedWrap(), /*saturated=*/false,
+                                /*hasSat=*/false);
 }
 
 //===----------------------------------------------------------------------===//

@@ -49,6 +49,13 @@ entry:
   ret i32 %ret
 }
 
+define noundef i1 @wave_all_equal(i1 %x) {
+entry:
+  ; CHECK: Function wave_all_equal : [[WAVE_FLAG]]
+  %ret = call i1 @llvm.dx.wave.all.equal(i1 %x)
+  ret i1 %ret
+}
+
 define noundef i1 @wave_readlane(i1 %x, i32 %idx) {
 entry:
   ; CHECK: Function wave_readlane : [[WAVE_FLAG]]
