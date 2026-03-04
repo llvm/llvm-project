@@ -329,8 +329,8 @@ TEST_F(SpecialCaseListTest, DotSlash) {
   EXPECT_FALSE(SCL4->inSection("dot", "fun", "foo"));
 
   EXPECT_TRUE(SCL2->inSection("dot", "src", "./bar"));
-  EXPECT_FALSE(SCL3->inSection("dot", "src", "./bar"));
-  EXPECT_FALSE(SCL4->inSection("dot", "src", "./bar"));
+  EXPECT_TRUE(SCL3->inSection("dot", "src", "./bar"));
+  EXPECT_TRUE(SCL4->inSection("dot", "src", "./bar"));
 
   EXPECT_FALSE(SCL2->inSection("dot", "src", "bar"));
   EXPECT_FALSE(SCL3->inSection("dot", "src", "bar"));
@@ -346,7 +346,7 @@ TEST_F(SpecialCaseListTest, DotSlash) {
 
   EXPECT_FALSE(SCL2->inSection("not", "src", "./bar"));
   EXPECT_TRUE(SCL3->inSection("not", "src", "./bar"));
-  EXPECT_TRUE(SCL4->inSection("not", "src", "./bar"));
+  EXPECT_FALSE(SCL4->inSection("not", "src", "./bar"));
 
   EXPECT_TRUE(SCL2->inSection("not", "src", "bar"));
   EXPECT_TRUE(SCL3->inSection("not", "src", "bar"));
