@@ -2,7 +2,7 @@
 // whenever \12 (LF) is in the input string.
 UNSUPPORTED: system-windows
 RUN: printf '\201rforpl\377' > %t-foo.profraw
-RUN: printf '\12\0\0\0\0\0\0\0' >> %t-foo.profraw
+RUN: printf '\13\0\0\0\0\0\0\0' >> %t-foo.profraw
 RUN: printf '\0\0\0\0\0\0\0\0' >> %t-foo.profraw
 RUN: printf '\1\0\0\0\0\0\0\0' >> %t-foo.profraw
 RUN: printf '\0\0\0\0\0\0\0\0' >> %t-foo.profraw
@@ -26,12 +26,13 @@ RUN: printf '\0\0\0\0\0\0\0\0' >> %t-foo.profraw
 RUN: printf '\0\0\0\0\0\0\0\0' >> %t-foo.profraw
 RUN: printf '\1\0\0\0\0\0\0\0' >> %t-foo.profraw
 RUN: printf '\0\0\0\0\0\0\0\0' >> %t-foo.profraw
+RUN: printf '\0\0\0\0\0\0\0\0' >> %t-foo.profraw
 
 RUN: printf '\023\0\0\0\0\0\0\0' >> %t-foo.profraw
 RUN: printf '\3\0foo\0\0\0' >> %t-foo.profraw
 
 RUN: printf '\201rforpl\377' > %t-bar.profraw
-RUN: printf '\12\0\0\0\0\0\0\0' >> %t-bar.profraw
+RUN: printf '\13\0\0\0\0\0\0\0' >> %t-bar.profraw
 RUN: printf '\0\0\0\0\0\0\0\0' >> %t-bar.profraw
 RUN: printf '\1\0\0\0\0\0\0\0' >> %t-bar.profraw
 RUN: printf '\0\0\0\0\0\0\0\0' >> %t-bar.profraw
@@ -54,6 +55,7 @@ RUN: printf '\0\0\0\0\0\0\0\0' >> %t-bar.profraw
 RUN: printf '\0\0\0\0\0\0\0\0' >> %t-bar.profraw
 RUN: printf '\0\0\0\0\0\0\0\0' >> %t-bar.profraw
 RUN: printf '\02\0\0\0\0\0\0\0' >> %t-bar.profraw
+RUN: printf '\0\0\0\0\0\0\0\0' >> %t-bar.profraw
 RUN: printf '\0\0\0\0\0\0\0\0' >> %t-bar.profraw
 
 RUN: printf '\067\0\0\0\0\0\0\0' >> %t-bar.profraw

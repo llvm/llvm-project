@@ -1027,6 +1027,7 @@ void InstrProfRecord::merge(InstrProfRecord &Other, uint64_t Weight,
       UniformityBits = std::move(NewUniformityBits);
     }
     NumOffloadProfilingThreads = 0;
+    OffloadDeviceWaveSize = 0;
 
     // Early return: offload data has been processed and reduced.
     // Don't fall through to the regular merge loop which expects matching
@@ -1052,6 +1053,7 @@ void InstrProfRecord::merge(InstrProfRecord &Other, uint64_t Weight,
     }
   }
   NumOffloadProfilingThreads = Other.NumOffloadProfilingThreads;
+  OffloadDeviceWaveSize = Other.OffloadDeviceWaveSize;
   for (size_t I = 0, E = Other.Counts.size(); I < E; ++I) {
     bool Overflowed;
     uint64_t Value =

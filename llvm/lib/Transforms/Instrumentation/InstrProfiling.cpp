@@ -2447,8 +2447,11 @@ void InstrLowerer::createDataVariable(InstrProfCntrInstBase *Inc) {
     Int16ArrayVals[Kind] = ConstantInt::get(Int16Ty, PD.NumValueSites[Kind]);
 
   uint16_t NumOffloadProfilingThreadsVal = 0;
-  if (TT.isAMDGPU())
+  uint16_t OffloadDeviceWaveSizeVal = 0;
+  if (TT.isAMDGPU()) {
     NumOffloadProfilingThreadsVal = (1u << OffloadProfilingThreadBitWidth) - 1;
+    OffloadDeviceWaveSizeVal = getAMDGPUWavefrontSize(*Fn);
+  }
 
   if (isGPUProfTarget(M)) {
     // For GPU targets, weak functions need weak linkage for their profile data

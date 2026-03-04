@@ -7,7 +7,7 @@
 
 target triple = "x86_64-unknown-linux-gnu"
 
-;; Note: struct layout is { ..., i32, [3 x i16], i16, i32 } where i16 is NumOffloadProfilingThreads
+;; Note: struct layout is { ..., i32, [3 x i16], i16, i16, i32 } where the two i16s are NumOffloadProfilingThreads and OffloadDeviceWaveSize
 ; INLINEFIRST: @__profd_foo = private global{{.*}}i16 0, i32 21
 ; INLINEFIRST: @__profd_bar = private global{{.*}}i16 0, i32 23
 ; INLINEFIRST: @__profd_foobar = private global{{.*}}i16 0, i32 99

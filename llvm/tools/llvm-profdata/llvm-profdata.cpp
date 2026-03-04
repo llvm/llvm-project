@@ -355,11 +355,6 @@ static cl::opt<unsigned> MemprofGenerateRandomHotnessSeed(
     cl::sub(MergeSubcommand),
     cl::desc("Random hotness seed to use (0 to generate new seed)"));
 
-static cl::opt<unsigned> OffloadDeviceWaveSize(
-    "wave-size", cl::init(32), cl::sub(MergeSubcommand),
-    cl::desc("Wave size for AMDGPU offload profiling uniformity detection "
-             "(32 for gfx10/gfx11, 64 for gfx9). Default: 32"));
-
 // Options specific to overlap subcommand.
 static cl::opt<std::string> BaseFilename(cl::Positional, cl::Required,
                                          cl::desc("<base profile file>"),
@@ -661,15 +656,11 @@ struct WriterContext {
 
   WriterContext(bool IsSparse, std::mutex &ErrLock,
                 SmallSet<instrprof_error, 4> &WriterErrorCodes,
-                uint64_t ReservoirSize = 0, uint64_t MaxTraceLength = 0,
-                unsigned WaveSize = 0)
+                uint64_t ReservoirSize = 0, uint64_t MaxTraceLength = 0)
       : Writer(IsSparse, ReservoirSize, MaxTraceLength, DoWritePrevVersion,
                MemProfVersionRequested, MemProfFullSchema,
                MemprofGenerateRandomHotness, MemprofGenerateRandomHotnessSeed),
-        ErrLock(ErrLock), WriterErrorCodes(WriterErrorCodes) {
-    if (WaveSize > 0)
-      Writer.setOffloadWaveSize(WaveSize);
-  }
+        ErrLock(ErrLock), WriterErrorCodes(WriterErrorCodes) {}
 };
 
 /// Computer the overlap b/w profile BaseFilename and TestFileName,
@@ -1148,7 +1139,7 @@ static void mergeInstrProfile(const WeightedFileVector &Inputs,
   for (unsigned I = 0; I < NumThreads; ++I)
     Contexts.emplace_back(std::make_unique<WriterContext>(
         OutputSparse, ErrorLock, WriterErrorCodes, TraceReservoirSize,
-        MaxTraceLength, OffloadDeviceWaveSize));
+        MaxTraceLength));
 
   if (NumThreads == 1) {
     for (const auto &Input : Inputs)
@@ -1582,8 +1573,8 @@ static void supplementInstrProfile(const WeightedFileVector &Inputs,
   // Read instr profile.
   std::mutex ErrorLock;
   SmallSet<instrprof_error, 4> WriterErrorCodes;
-  auto WC = std::make_unique<WriterContext>(
-      OutputSparse, ErrorLock, WriterErrorCodes, 0, 0, OffloadDeviceWaveSize);
+  auto WC = std::make_unique<WriterContext>(OutputSparse, ErrorLock,
+                                            WriterErrorCodes);
   loadInput(Inputs[0], nullptr, nullptr, /*ProfiledBinary=*/"", WC.get());
   if (WC->Errors.size() > 0)
     exitWithError(std::move(WC->Errors[0].first), InstrFilename);

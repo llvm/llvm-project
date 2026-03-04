@@ -900,13 +900,16 @@ struct InstrProfRecord {
   /// wave size, the branch is considered wave-uniform.
   std::vector<uint8_t> UniformityBits;
   uint16_t NumOffloadProfilingThreads = 0;
+  uint16_t OffloadDeviceWaveSize = 0;
 
   InstrProfRecord() = default;
   InstrProfRecord(std::vector<uint64_t> Counts) : Counts(std::move(Counts)) {}
   InstrProfRecord(std::vector<uint64_t> Counts,
-                  uint16_t NumOffloadProfilingThreads)
+                  uint16_t NumOffloadProfilingThreads,
+                  uint16_t OffloadDeviceWaveSize = 0)
       : Counts(std::move(Counts)),
-        NumOffloadProfilingThreads(NumOffloadProfilingThreads) {}
+        NumOffloadProfilingThreads(NumOffloadProfilingThreads),
+        OffloadDeviceWaveSize(OffloadDeviceWaveSize) {}
   InstrProfRecord(std::vector<uint64_t> Counts,
                   std::vector<uint8_t> BitmapBytes)
       : Counts(std::move(Counts)), BitmapBytes(std::move(BitmapBytes)) {}
@@ -915,6 +918,7 @@ struct InstrProfRecord {
       : Counts(RHS.Counts), BitmapBytes(RHS.BitmapBytes),
         UniformityBits(RHS.UniformityBits),
         NumOffloadProfilingThreads(RHS.NumOffloadProfilingThreads),
+        OffloadDeviceWaveSize(RHS.OffloadDeviceWaveSize),
         ValueData(RHS.ValueData
                       ? std::make_unique<ValueProfData>(*RHS.ValueData)
                       : nullptr) {}
@@ -924,6 +928,7 @@ struct InstrProfRecord {
     BitmapBytes = RHS.BitmapBytes;
     UniformityBits = RHS.UniformityBits;
     NumOffloadProfilingThreads = RHS.NumOffloadProfilingThreads;
+    OffloadDeviceWaveSize = RHS.OffloadDeviceWaveSize;
     if (!RHS.ValueData) {
       ValueData = nullptr;
       return *this;
@@ -1097,8 +1102,10 @@ struct NamedInstrProfRecord : InstrProfRecord {
       : InstrProfRecord(std::move(Counts)), Name(Name), Hash(Hash) {}
   NamedInstrProfRecord(StringRef Name, uint64_t Hash,
                        std::vector<uint64_t> Counts,
-                       uint16_t NumOffloadProfilingThreads)
-      : InstrProfRecord(std::move(Counts), NumOffloadProfilingThreads),
+                       uint16_t NumOffloadProfilingThreads,
+                       uint16_t OffloadDeviceWaveSize = 0)
+      : InstrProfRecord(std::move(Counts), NumOffloadProfilingThreads,
+                        OffloadDeviceWaveSize),
         Name(Name), Hash(Hash) {}
   NamedInstrProfRecord(StringRef Name, uint64_t Hash,
                        std::vector<uint64_t> Counts,

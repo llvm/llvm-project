@@ -882,6 +882,7 @@ Error RawInstrProfReader<IntPtrT>::readNextRecord(NamedInstrProfRecord &Record) 
     return error(std::move(E));
 
   Record.NumOffloadProfilingThreads = swap(Data->NumOffloadProfilingThreads);
+  Record.OffloadDeviceWaveSize = swap(Data->OffloadDeviceWaveSize);
 
   // Read raw counts and set Record.
   if (Error E = readRawCounts(Record))

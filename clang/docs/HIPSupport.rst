@@ -477,8 +477,6 @@ Limitations
 
 - Device PGO is supported only on AMD GPUs with HIP.
 - Value profiling is not supported for device code.
-- The ``--wave-size`` option to ``llvm-profdata merge`` can be used to specify
-  the wave size for uniformity analysis (default: 32).
 
 C++17 Class Template Argument Deduction (CTAD) Support
 ======================================================

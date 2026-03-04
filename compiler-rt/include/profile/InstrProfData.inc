@@ -89,13 +89,17 @@ INSTR_PROF_DATA(IntPtrT, llvm::PointerType::getUnqual(Ctx), Values, \
                 ValuesPtrExpr)
 INSTR_PROF_DATA(const uint32_t, llvm::Type::getInt32Ty(Ctx), NumCounters, \
                 ConstantInt::get(llvm::Type::getInt32Ty(Ctx), NumCounters))
-INSTR_PROF_DATA(const uint16_t, Int16ArrayTy, NumValueSites[IPVK_Last+1], \
-                ConstantArray::get(Int16ArrayTy, Int16ArrayVals)) \
-INSTR_PROF_DATA(const uint16_t, llvm::Type::getInt16Ty(Ctx), \
-                NumOffloadProfilingThreads, \
-                ConstantInt::get(llvm::Type::getInt16Ty(Ctx), \
-                                 NumOffloadProfilingThreadsVal)) \
-INSTR_PROF_DATA(const uint32_t, llvm::Type::getInt32Ty(Ctx), NumBitmapBytes, \
+INSTR_PROF_DATA(const uint16_t, Int16ArrayTy, NumValueSites[IPVK_Last + 1],
+                ConstantArray::get(Int16ArrayTy, Int16ArrayVals))
+INSTR_PROF_DATA(const uint16_t, llvm::Type::getInt16Ty(Ctx),
+                NumOffloadProfilingThreads,
+                ConstantInt::get(llvm::Type::getInt16Ty(Ctx),
+                                 NumOffloadProfilingThreadsVal))
+INSTR_PROF_DATA(const uint16_t, llvm::Type::getInt16Ty(Ctx),
+                OffloadDeviceWaveSize,
+                ConstantInt::get(llvm::Type::getInt16Ty(Ctx),
+                                 OffloadDeviceWaveSizeVal))
+INSTR_PROF_DATA(const uint32_t, llvm::Type::getInt32Ty(Ctx), NumBitmapBytes,
                 ConstantInt::get(llvm::Type::getInt32Ty(Ctx), NumBitmapBytes))
 #undef INSTR_PROF_DATA
 /* INSTR_PROF_DATA end. */
@@ -727,7 +731,7 @@ serializeValueProfDataFrom(ValueProfRecordClosure *Closure,
         (uint64_t)'f' << 16 | (uint64_t)'R' << 8 | (uint64_t)129
 
 /* Raw profile format version (start from 1). */
-#define INSTR_PROF_RAW_VERSION 10
+#define INSTR_PROF_RAW_VERSION 11
 /* Indexed profile format version (start from 1). */
 #define INSTR_PROF_INDEX_VERSION 14
 /* Coverage mapping format version (start from 0). */

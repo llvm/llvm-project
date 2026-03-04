@@ -63,7 +63,8 @@ static int DylibAvailable(void) { return dlopen != NULL; }
 
 #endif /* _WIN32 */
 
-static int ProcessDeviceOffloadPrf(void *DeviceOffloadPrf, int TUIndex);
+static int ProcessDeviceOffloadPrf(void *DeviceOffloadPrf, int TUIndex,
+                                   const char *Target);
 
 static int IsVerboseMode() {
   static int IsVerbose = -1;
@@ -79,10 +80,31 @@ static int IsVerboseMode() {
 typedef int (*hipGetSymbolAddressTy)(void **, const void *);
 typedef int (*hipMemcpyTy)(void *, void *, size_t, int);
 typedef int (*hipModuleGetGlobalTy)(void **, size_t *, void *, const char *);
+typedef int (*hipGetDeviceCountTy)(int *);
+typedef int (*hipGetDeviceTy)(int *);
+typedef int (*hipSetDeviceTy)(int);
+
+/* hipDeviceProp_t layout for HIP 6.x+ (R0600).
+ * We only need gcnArchName at offset 1160. Pad to 4096 to safely
+ * accommodate future struct growth without recompilation. */
+typedef struct {
+  char padding[1160];
+  char gcnArchName[256];
+  char tail_padding[2680];
+} HipDevicePropMinimal;
+typedef int (*hipGetDevicePropertiesTy)(HipDevicePropMinimal *, int);
 
 static hipGetSymbolAddressTy pHipGetSymbolAddress = NULL;
 static hipMemcpyTy pHipMemcpy = NULL;
 static hipModuleGetGlobalTy pHipModuleGetGlobal = NULL;
+static hipGetDeviceCountTy pHipGetDeviceCount = NULL;
+static hipGetDeviceTy pHipGetDevice = NULL;
+static hipSetDeviceTy pHipSetDevice = NULL;
+static hipGetDevicePropertiesTy pHipGetDeviceProperties = NULL;
+
+#define MAX_DEVICES 16
+static int NumDevices = 0;
+static char DeviceArchNames[MAX_DEVICES][256];
 
 /* -------------------------------------------------------------------------- */
 /*  Device-to-host copies                                                     */
@@ -123,6 +145,35 @@ static void EnsureHipLoaded(void) {
   pHipMemcpy = (hipMemcpyTy)DylibSym(Handle, "hipMemcpy");
   pHipModuleGetGlobal =
       (hipModuleGetGlobalTy)DylibSym(Handle, "hipModuleGetGlobal");
+  pHipGetDeviceCount =
+      (hipGetDeviceCountTy)DylibSym(Handle, "hipGetDeviceCount");
+  pHipGetDevice = (hipGetDeviceTy)DylibSym(Handle, "hipGetDevice");
+  pHipSetDevice = (hipSetDeviceTy)DylibSym(Handle, "hipSetDevice");
+  pHipGetDeviceProperties =
+      (hipGetDevicePropertiesTy)DylibSym(Handle, "hipGetDevicePropertiesR0600");
+  if (!pHipGetDeviceProperties)
+    pHipGetDeviceProperties =
+        (hipGetDevicePropertiesTy)DylibSym(Handle, "hipGetDeviceProperties");
+
+  if (pHipGetDeviceCount && pHipGetDeviceProperties) {
+    int Count = 0;
+    if (pHipGetDeviceCount(&Count) == 0) {
+      if (Count > MAX_DEVICES)
+        Count = MAX_DEVICES;
+      HipDevicePropMinimal Prop;
+      for (int i = 0; i < Count; ++i) {
+        memset(&Prop, 0, sizeof(Prop));
+        if (pHipGetDeviceProperties(&Prop, i) == 0) {
+          strncpy(DeviceArchNames[i], Prop.gcnArchName,
+                  sizeof(DeviceArchNames[i]) - 1);
+          DeviceArchNames[i][sizeof(DeviceArchNames[i]) - 1] = '\0';
+          if (IsVerboseMode())
+            PROF_NOTE("Device %d arch: %s\n", i, DeviceArchNames[i]);
+        }
+      }
+      NumDevices = Count;
+    }
+  }
 }
 
 /* -------------------------------------------------------------------------- */
@@ -151,6 +202,22 @@ static int hipModuleGetGlobal(void **DevPtr, size_t *Bytes, void *Module,
   EnsureHipLoaded();
   return pHipModuleGetGlobal ? pHipModuleGetGlobal(DevPtr, Bytes, Module, Name)
                              : -1;
+}
+
+static int hipGetDevice(int *DeviceId) {
+  EnsureHipLoaded();
+  return pHipGetDevice ? pHipGetDevice(DeviceId) : -1;
+}
+
+static int hipSetDevice(int DeviceId) {
+  EnsureHipLoaded();
+  return pHipSetDevice ? pHipSetDevice(DeviceId) : -1;
+}
+
+static const char *getDeviceArchName(int DeviceId) {
+  if (DeviceId < 0 || DeviceId >= NumDevices || !DeviceArchNames[DeviceId][0])
+    return "amdgpu";
+  return DeviceArchNames[DeviceId];
 }
 
 /* -------------------------------------------------------------------------- */
@@ -428,7 +495,10 @@ void __llvm_profile_offload_unregister_dynamic_module(void *Ptr) {
       /* Use a globally unique index as TU index for the output filename. */
       int TUIndex = i * 1000 + t;
       if (TU->DeviceVar) {
-        if (ProcessDeviceOffloadPrf(TU->DeviceVar, TUIndex) == 0)
+        int CurDev = 0;
+        hipGetDevice(&CurDev);
+        const char *ArchName = getDeviceArchName(CurDev);
+        if (ProcessDeviceOffloadPrf(TU->DeviceVar, TUIndex, ArchName) == 0)
           TU->Processed = 1;
         else
           PROF_WARN("Failed to process profile data for module %p TU %d\n", Ptr,
@@ -485,7 +555,8 @@ void __llvm_profile_offload_register_section_shadow_variable(void *ptr) {
   OffloadSectionShadowVariables[NumSectionShadowVariables++] = ptr;
 }
 
-static int ProcessDeviceOffloadPrf(void *DeviceOffloadPrf, int TUIndex) {
+static int ProcessDeviceOffloadPrf(void *DeviceOffloadPrf, int TUIndex,
+                                   const char *Target) {
   void *HostOffloadPrf[8];
 
   if (IsVerboseMode())
@@ -665,10 +736,8 @@ static int ProcessDeviceOffloadPrf(void *DeviceOffloadPrf, int TUIndex) {
     snprintf(TUIndexStr, sizeof(TUIndexStr), "%d", TUIndex);
   }
 
-  // Use shared profile writing API
-  const char *TargetTriple = "amdgcn-amd-amdhsa";
   ret = __llvm_write_custom_profile(
-      TargetTriple, TUIndex >= 0 ? TUIndexStr : NULL,
+      Target, TUIndex >= 0 ? TUIndexStr : NULL,
       (__llvm_profile_data *)BufDataBegin,
       (__llvm_profile_data *)(BufDataBegin + DataSize), BufCountersBegin,
       BufCountersBegin + CountersSize, HostUniformCountersBegin,
@@ -692,14 +761,15 @@ cleanup:
   return ret;
 }
 
-static int ProcessShadowVariable(void *ShadowVar, int TUIndex) {
+static int ProcessShadowVariable(void *ShadowVar, int TUIndex,
+                                 const char *Target) {
   void *DeviceOffloadPrf = NULL;
   if (hipGetSymbolAddress(&DeviceOffloadPrf, ShadowVar) != 0) {
     PROF_WARN("Failed to get symbol address for shadow variable %p\n",
               ShadowVar);
     return -1;
   }
-  return ProcessDeviceOffloadPrf(DeviceOffloadPrf, TUIndex);
+  return ProcessDeviceOffloadPrf(DeviceOffloadPrf, TUIndex, Target);
 }
 
 /* Check if HIP runtime is available and loaded */
@@ -732,12 +802,30 @@ int __llvm_profile_hip_collect_device_data(void) {
 
   int Ret = 0;
 
-  /* Shadow variables (static-linked kernels) */
-  /* Always use TU index for consistent naming
-   * (profile.amdgcn-amd-amdhsa.0.profraw, etc.) */
-  for (int i = 0; i < NumShadowVariables; ++i) {
-    if (ProcessShadowVariable(OffloadShadowVariables[i], i) != 0)
-      Ret = -1;
+  /* Shadow variables (static-linked kernels).
+   * Iterate over all devices to collect profile data from each GPU. */
+  if (NumShadowVariables > 0) {
+    int OrigDevice = -1;
+    hipGetDevice(&OrigDevice);
+
+    for (int Dev = 0; Dev < NumDevices; ++Dev) {
+      if (hipSetDevice(Dev) != 0) {
+        if (IsVerboseMode())
+          PROF_NOTE("Failed to set device %d, skipping\n", Dev);
+        continue;
+      }
+      const char *ArchName = getDeviceArchName(Dev);
+      if (IsVerboseMode())
+        PROF_NOTE("Collecting static profile data from device %d (%s)\n", Dev,
+                  ArchName);
+      for (int i = 0; i < NumShadowVariables; ++i) {
+        if (ProcessShadowVariable(OffloadShadowVariables[i], i, ArchName) != 0)
+          Ret = -1;
+      }
+    }
+
+    if (OrigDevice >= 0)
+      hipSetDevice(OrigDevice);
   }
 
   /* Dynamically-loaded modules — warn about any unprocessed TUs */

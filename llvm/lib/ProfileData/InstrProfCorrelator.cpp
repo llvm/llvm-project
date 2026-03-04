@@ -320,6 +320,7 @@ void InstrProfCorrelatorImpl<IntPtrT>::addDataProbe(uint64_t NameRef,
       /*NumValueSites=*/{maybeSwap<uint16_t>(0), maybeSwap<uint16_t>(0)},
       // Offload profiling not used in correlation mode.
       /*NumOffloadProfilingThreads=*/maybeSwap<uint16_t>(0),
+      /*OffloadDeviceWaveSize=*/maybeSwap<uint16_t>(0),
       // TODO: MC/DC is not yet supported.
       /*NumBitmapBytes=*/maybeSwap<uint32_t>(0),
   });

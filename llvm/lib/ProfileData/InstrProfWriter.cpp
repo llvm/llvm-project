@@ -254,18 +254,17 @@ void InstrProfWriter::addRecord(StringRef Name, uint64_t Hash,
     if (Weight > 1)
       Dest.scale(Weight, 1, MapWarn);
     // For new records with offload profiling slots, compute uniformity bits
-    // if WaveSize is specified.
-    if (OffloadWaveSize > 0 && Dest.NumOffloadProfilingThreads > 0) {
-      // Create a temporary record to merge into an empty one to trigger
-      // uniformity computation.
+    // using the wave size embedded in the raw profile data.
+    unsigned WaveSize = Dest.OffloadDeviceWaveSize;
+    if (WaveSize > 0 && Dest.NumOffloadProfilingThreads > 0) {
       InstrProfRecord Temp;
       Temp.Counts.resize(Dest.Counts.size());
-      Temp.merge(Dest, 1, MapWarn, OffloadWaveSize);
+      Temp.merge(Dest, 1, MapWarn, WaveSize);
       Dest = std::move(Temp);
     }
   } else {
     // We're updating a function we've seen before.
-    Dest.merge(I, Weight, MapWarn, OffloadWaveSize);
+    Dest.merge(I, Weight, MapWarn, I.OffloadDeviceWaveSize);
   }
 
   Dest.sortValueData();
