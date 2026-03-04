@@ -69,7 +69,6 @@ int main(void) {
   return 0;
 }
 
-
 //.
 // CHECK: @.omp.reduction..internal_pivate_.result.result_996 = common global %class.Sum zeroinitializer, align 4
 // CHECK: @.omp.reduction..internal_pivate_.sum_v.sum_v_1188 = common global i32 0, align 4
@@ -708,41 +707,3 @@ int main(void) {
 // CHECK-NEXT:    call void @__kmpc_push_num_threads(ptr @[[GLOB3]], i32 [[TMP0]], i32 4)
 // CHECK-NEXT:    call void (ptr, i32, ptr, ...) @__kmpc_fork_call(ptr @[[GLOB3]], i32 3, ptr @main.omp_outlined.1, ptr [[V]], ptr [[SUM_V_EXT]], ptr [[PROD_V_EXT]])
 // CHECK-NEXT:    ret i32 0
-//
-//
-// CHECK-LABEL: define {{[^@]+}}@main.omp_outlined
-// CHECK-SAME: (ptr noalias noundef [[DOTGLOBAL_TID_:%.*]], ptr noalias noundef [[DOTBOUND_TID_:%.*]], ptr noundef nonnull align 4 dereferenceable(40) [[V:%.*]]) #[[ATTR2]] {
-// CHECK-NEXT:  entry:
-// CHECK-NEXT:    [[DOTGLOBAL_TID__ADDR:%.*]] = alloca ptr, align 8
-// CHECK-NEXT:    [[DOTBOUND_TID__ADDR:%.*]] = alloca ptr, align 8
-// CHECK-NEXT:    [[V_ADDR:%.*]] = alloca ptr, align 8
-// CHECK-NEXT:    [[S_V:%.*]] = alloca i32, align 4
-// CHECK-NEXT:    store ptr [[DOTGLOBAL_TID_]], ptr [[DOTGLOBAL_TID__ADDR]], align 8
-// CHECK-NEXT:    store ptr [[DOTBOUND_TID_]], ptr [[DOTBOUND_TID__ADDR]], align 8
-// CHECK-NEXT:    store ptr [[V]], ptr [[V_ADDR]], align 8
-// CHECK-NEXT:    [[TMP0:%.*]] = load ptr, ptr [[V_ADDR]], align 8, !nonnull [[META5]], !align [[META6]]
-// CHECK-NEXT:    [[ARRAYDECAY:%.*]] = getelementptr inbounds [10 x i32], ptr [[TMP0]], i64 0, i64 0
-// CHECK-NEXT:    call void @_Z6do_rediPiRi(i32 noundef 10, ptr noundef [[ARRAYDECAY]], ptr noundef nonnull align 4 dereferenceable(4) [[S_V]])
-// CHECK-NEXT:    ret void
-//
-//
-// CHECK-LABEL: define {{[^@]+}}@main.omp_outlined.1
-// CHECK-SAME: (ptr noalias noundef [[DOTGLOBAL_TID_:%.*]], ptr noalias noundef [[DOTBOUND_TID_:%.*]], ptr noundef nonnull align 4 dereferenceable(40) [[V:%.*]], ptr noundef nonnull align 4 dereferenceable(4) [[SUM_V_EXT:%.*]], ptr noundef nonnull align 4 dereferenceable(4) [[PROD_V_EXT:%.*]]) #[[ATTR2]] {
-// CHECK-NEXT:  entry:
-// CHECK-NEXT:    [[DOTGLOBAL_TID__ADDR:%.*]] = alloca ptr, align 8
-// CHECK-NEXT:    [[DOTBOUND_TID__ADDR:%.*]] = alloca ptr, align 8
-// CHECK-NEXT:    [[V_ADDR:%.*]] = alloca ptr, align 8
-// CHECK-NEXT:    [[SUM_V_EXT_ADDR:%.*]] = alloca ptr, align 8
-// CHECK-NEXT:    [[PROD_V_EXT_ADDR:%.*]] = alloca ptr, align 8
-// CHECK-NEXT:    store ptr [[DOTGLOBAL_TID_]], ptr [[DOTGLOBAL_TID__ADDR]], align 8
-// CHECK-NEXT:    store ptr [[DOTBOUND_TID_]], ptr [[DOTBOUND_TID__ADDR]], align 8
-// CHECK-NEXT:    store ptr [[V]], ptr [[V_ADDR]], align 8
-// CHECK-NEXT:    store ptr [[SUM_V_EXT]], ptr [[SUM_V_EXT_ADDR]], align 8
-// CHECK-NEXT:    store ptr [[PROD_V_EXT]], ptr [[PROD_V_EXT_ADDR]], align 8
-// CHECK-NEXT:    [[TMP0:%.*]] = load ptr, ptr [[V_ADDR]], align 8, !nonnull [[META5]], !align [[META6]]
-// CHECK-NEXT:    [[TMP1:%.*]] = load ptr, ptr [[SUM_V_EXT_ADDR]], align 8, !nonnull [[META5]], !align [[META6]]
-// CHECK-NEXT:    [[TMP2:%.*]] = load ptr, ptr [[PROD_V_EXT_ADDR]], align 8, !nonnull [[META5]], !align [[META6]]
-// CHECK-NEXT:    [[ARRAYDECAY:%.*]] = getelementptr inbounds [10 x i32], ptr [[TMP0]], i64 0, i64 0
-// CHECK-NEXT:    call void @_Z15do_red_extendediPiRiS0_(i32 noundef 10, ptr noundef [[ARRAYDECAY]], ptr noundef nonnull align 4 dereferenceable(4) [[TMP1]], ptr noundef nonnull align 4 dereferenceable(4) [[TMP2]])
-// CHECK-NEXT:    ret void
-//

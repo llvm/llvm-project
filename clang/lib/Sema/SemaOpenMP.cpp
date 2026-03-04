@@ -9135,6 +9135,7 @@ std::pair<Expr *, Expr *> OpenMPIterationSpaceChecker::buildMinMaxValues(
       UBNonRect ? UBExpr : tryBuildCapture(SemaRef, UBExpr, Captures).get();
   if (!Upper || !Lower)
     return std::make_pair(nullptr, nullptr);
+
   if (*TestIsLessOp)
     MinExpr = Lower;
   else
