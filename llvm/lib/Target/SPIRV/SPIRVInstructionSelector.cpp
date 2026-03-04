@@ -266,8 +266,9 @@ private:
 
   bool selectSelect(Register ResVReg, SPIRVTypeInst ResType,
                     MachineInstr &I) const;
-  bool selectSelectDefaultArgs(Register ResVReg, SPIRVTypeInst ResType,
-                               MachineInstr &I, bool IsSigned) const;
+  bool selectBoolToInt(Register ResVReg, SPIRVTypeInst ResType,
+                       Register BooleanVReg, MachineInstr &InsertAt,
+                       bool IsSigned) const;
   bool selectIToF(Register ResVReg, SPIRVTypeInst ResType, MachineInstr &I,
                   bool IsSigned, unsigned Opcode) const;
   bool selectExt(Register ResVReg, SPIRVTypeInst ResType, MachineInstr &I,
@@ -3382,21 +3383,24 @@ bool SPIRVInstructionSelector::selectSelect(Register ResVReg,
   return true;
 }
 
-bool SPIRVInstructionSelector::selectSelectDefaultArgs(Register ResVReg,
-                                                       SPIRVTypeInst ResType,
-                                                       MachineInstr &I,
-                                                       bool IsSigned) const {
+// This function is used to extend a bool or a vector of bools into an integer
+// or vector of integers.
+bool SPIRVInstructionSelector::selectBoolToInt(Register ResVReg,
+                                               SPIRVTypeInst ResType,
+                                               Register BooleanVReg,
+                                               MachineInstr &InsertAt,
+                                               bool IsSigned) const {
   // To extend a bool, we need to use OpSelect between constants.
-  Register ZeroReg = buildZerosVal(ResType, I);
-  Register OneReg = buildOnesVal(IsSigned, ResType, I);
-  bool IsScalarBool =
-      GR.isScalarOfType(I.getOperand(1).getReg(), SPIRV::OpTypeBool);
+  Register ZeroReg = buildZerosVal(ResType, InsertAt);
+  Register OneReg = buildOnesVal(IsSigned, ResType, InsertAt);
+  bool IsScalarBool = GR.isScalarOfType(BooleanVReg, SPIRV::OpTypeBool);
   unsigned Opcode =
       IsScalarBool ? SPIRV::OpSelectSISCond : SPIRV::OpSelectVIVCond;
-  BuildMI(*I.getParent(), I, I.getDebugLoc(), TII.get(Opcode))
+  BuildMI(*InsertAt.getParent(), InsertAt, InsertAt.getDebugLoc(),
+          TII.get(Opcode))
       .addDef(ResVReg)
       .addUse(GR.getSPIRVTypeID(ResType))
-      .addUse(I.getOperand(1).getReg())
+      .addUse(BooleanVReg)
       .addUse(OneReg)
       .addUse(ZeroReg)
       .constrainAllUses(TII, TRI, RBI);
@@ -3418,7 +3422,7 @@ bool SPIRVInstructionSelector::selectIToF(Register ResVReg,
       TmpType = GR.getOrCreateSPIRVVectorType(TmpType, NumElts, I, TII);
     }
     SrcReg = createVirtualRegister(TmpType, &GR, MRI, MRI->getMF());
-    selectSelectDefaultArgs(SrcReg, TmpType, I, false);
+    selectBoolToInt(SrcReg, TmpType, I.getOperand(1).getReg(), I, false);
   }
   return selectOpWithSrcs(ResVReg, ResType, I, {SrcReg}, Opcode);
 }
@@ -3428,7 +3432,8 @@ bool SPIRVInstructionSelector::selectExt(Register ResVReg,
                                          bool IsSigned) const {
   Register SrcReg = I.getOperand(1).getReg();
   if (GR.isScalarOrVectorOfType(SrcReg, SPIRV::OpTypeBool))
-    return selectSelectDefaultArgs(ResVReg, ResType, I, IsSigned);
+    return selectBoolToInt(ResVReg, ResType, I.getOperand(1).getReg(), I,
+                           IsSigned);
 
   SPIRVTypeInst SrcType = GR.getSPIRVTypeForVReg(SrcReg);
   if (ResType == SrcType)

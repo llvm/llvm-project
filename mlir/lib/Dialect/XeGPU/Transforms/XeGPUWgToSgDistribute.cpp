@@ -1521,13 +1521,6 @@ struct WgToSgVectorTransposeOp
     SmallVector<int64_t> sourceSgLayout =
         sourceLayout.getEffectiveSgLayoutAsInt();
     SmallVector<int64_t> resultSgLayout = layout.getEffectiveSgLayoutAsInt();
-    DenseI32ArrayAttr sourceOrder = sourceLayout.getOrder();
-    DenseI32ArrayAttr resultOrder = layout.getOrder();
-
-    if (!sourceOrder || !resultOrder) {
-      return rewriter.notifyMatchFailure(
-          op, "Both source and result must have order attributes");
-    }
 
     ArrayRef<int64_t> permutation = op.getPermutation();
     size_t permutationSize = permutation.size();

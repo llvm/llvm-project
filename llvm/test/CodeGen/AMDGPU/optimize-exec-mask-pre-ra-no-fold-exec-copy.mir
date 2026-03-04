@@ -15,7 +15,7 @@ body:             |
   ; CHECK-NEXT:   successors: %bb.1(0x80000000)
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT:   [[COPY:%[0-9]+]]:sgpr_64 = COPY $exec
-  ; CHECK-NEXT:   INLINEASM &"", 25 /* sideeffect mayload maystore attdialect */, 4653065 /* reguse:SGPR_64 */, [[COPY]]
+  ; CHECK-NEXT:   INLINEASM &"", 25 /* sideeffect mayload maystore attdialect */, 4259849 /* reguse:SGPR_64 */, [[COPY]]
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT: bb.1:
   ; CHECK-NEXT:   SI_RETURN
@@ -23,7 +23,7 @@ body:             |
     successors: %bb.1(0x80000000)
 
     %0:sgpr_64 = COPY $exec
-    INLINEASM &"", 25 /* sideeffect mayload maystore attdialect */, 4653065 /* reguse:SGPR_64 */, %0
+    INLINEASM &"", 25 /* sideeffect mayload maystore attdialect */, 4259849 /* reguse:SGPR_64 */, %0
 
   bb.1:
     SI_RETURN
