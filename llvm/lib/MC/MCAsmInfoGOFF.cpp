@@ -145,8 +145,9 @@ void MCAsmInfoGOFF::printSwitchToSection(const MCSection &Section,
                 Sec.EDAttributes.FillByteValue, StringRef());
       if (auto *BeginSym = static_cast<MCSymbolGOFF *>(Sec.getBeginSymbol())) {
         if (BeginSym->getADA())
-          emitXATTR(OS, BeginSym->getName(), BeginSym->getADA(), GOFF::ESD_LT_XPLink,
-                    GOFF::ESD_EXE_Unspecified, GOFF::ESD_BSC_Section);
+          emitXATTR(OS, BeginSym->getName(), BeginSym->getADA(),
+                    GOFF::ESD_LT_XPLink, GOFF::ESD_EXE_Unspecified,
+                    GOFF::ESD_BSC_Section);
       }
       Sec.Emitted = true;
       EmitExternalName();

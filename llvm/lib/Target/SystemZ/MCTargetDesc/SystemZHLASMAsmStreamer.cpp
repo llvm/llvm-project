@@ -369,8 +369,8 @@ void SystemZHLASMAsmStreamer::finishImpl() {
     auto &Sym = static_cast<MCSymbolGOFF &>(const_cast<MCSymbol &>(Symbol));
     OS << " " << (Sym.isWeak() ? "WXTRN" : "EXTRN") << " " << Sym.getName();
     EmitEOL();
-    emitXATTR(OS, Sym.getName(), Sym.getADA(), Sym.isIndirect(), Sym.getLinkage(),
-              Sym.getCodeData(), Sym.getBindingScope());
+    emitXATTR(OS, Sym.getName(), Sym.getADA(), Sym.isIndirect(),
+              Sym.getLinkage(), Sym.getCodeData(), Sym.getBindingScope());
     EmitEOL();
     if (Sym.hasExternalName())
       OS << Sym.getName() << " ALIAS C'" << Sym.getExternalName() << "'\n";
