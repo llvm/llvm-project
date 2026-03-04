@@ -465,6 +465,10 @@ protected:
 
   ObjCLanguageRuntime(const ObjCLanguageRuntime &) = delete;
   const ObjCLanguageRuntime &operator=(const ObjCLanguageRuntime &) = delete;
+
+private:
+  CompilerType LookupInRuntime(ConstString class_name);
+  CompilerType LookupInModulesVendor(ConstString class_name, Target &process);
 };
 
 } // namespace lldb_private

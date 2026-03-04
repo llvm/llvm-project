@@ -6,7 +6,7 @@ set(LIBUNWIND_CXX_SOURCES
     Unwind-seh.cpp
     )
 
-if(${CMAKE_SYSTEM_NAME} MATCHES "AIX")
+if("${CMAKE_SYSTEM_NAME}" MATCHES "AIX")
   list(APPEND LIBUNWIND_CXX_SOURCES
     Unwind_AIXExtras.cpp
     )
@@ -159,13 +159,6 @@ set_target_properties(unwind_shared
     SOVERSION   "1"
 )
 
-if (LIBUNWIND_ENABLE_SHARED)
-  list(APPEND LIBUNWIND_BUILD_TARGETS "unwind_shared")
-endif()
-if (LIBUNWIND_INSTALL_SHARED_LIBRARY)
-  list(APPEND LIBUNWIND_INSTALL_TARGETS "unwind_shared")
-endif()
-
 # Build the static library.
 add_library(unwind_static_objects OBJECT EXCLUDE_FROM_ALL ${LIBUNWIND_SOURCES} ${LIBUNWIND_HEADERS})
 cxx_add_warning_flags(unwind_static_objects ${LIBUNWIND_ENABLE_WERROR} ${LIBUNWIND_ENABLE_PEDANTIC})
@@ -205,35 +198,40 @@ set_target_properties(unwind_static
     OUTPUT_NAME "${LIBUNWIND_STATIC_OUTPUT_NAME}"
 )
 
-if (LIBUNWIND_ENABLE_STATIC)
-  list(APPEND LIBUNWIND_BUILD_TARGETS "unwind_static")
-endif()
-if (LIBUNWIND_INSTALL_STATIC_LIBRARY)
-  list(APPEND LIBUNWIND_INSTALL_TARGETS "unwind_static")
-endif()
-
 # Add a meta-target for both libraries.
-add_custom_target(unwind DEPENDS ${LIBUNWIND_BUILD_TARGETS})
+add_custom_target(unwind)
+if (LIBUNWIND_ENABLE_SHARED)
+  add_dependencies(unwind unwind_shared)
+endif()
+if (LIBUNWIND_ENABLE_STATIC)
+  add_dependencies(unwind unwind_static)
+endif()
 
-if (LIBUNWIND_INSTALL_LIBRARY)
-  install(TARGETS ${LIBUNWIND_INSTALL_TARGETS}
-    LIBRARY DESTINATION ${LIBUNWIND_INSTALL_LIBRARY_DIR} COMPONENT unwind
+if (LIBUNWIND_INSTALL_SHARED_LIBRARY)
+  install(TARGETS unwind_shared
     ARCHIVE DESTINATION ${LIBUNWIND_INSTALL_LIBRARY_DIR} COMPONENT unwind
+    LIBRARY DESTINATION ${LIBUNWIND_INSTALL_LIBRARY_DIR} COMPONENT unwind
     RUNTIME DESTINATION ${LIBUNWIND_INSTALL_RUNTIME_DIR} COMPONENT unwind)
 endif()
 
-if (NOT CMAKE_CONFIGURATION_TYPES AND LIBUNWIND_INSTALL_LIBRARY)
+if (LIBUNWIND_INSTALL_STATIC_LIBRARY)
+  install(TARGETS unwind_static
+    ARCHIVE DESTINATION ${LIBUNWIND_INSTALL_LIBRARY_DIR} COMPONENT unwind
+    LIBRARY DESTINATION ${LIBUNWIND_INSTALL_LIBRARY_DIR} COMPONENT unwind
+    RUNTIME DESTINATION ${LIBUNWIND_INSTALL_RUNTIME_DIR} COMPONENT unwind)
+endif()
+
+if (NOT CMAKE_CONFIGURATION_TYPES)
   add_custom_target(install-unwind
-    DEPENDS unwind
-    COMMAND "${CMAKE_COMMAND}"
-            -DCMAKE_INSTALL_COMPONENT=unwind
-            -P "${LIBUNWIND_BINARY_DIR}/cmake_install.cmake")
+    COMMAND "${CMAKE_COMMAND}" --install "${CMAKE_BINARY_DIR}" --component unwind)
   add_custom_target(install-unwind-stripped
-    DEPENDS unwind
-    COMMAND "${CMAKE_COMMAND}"
-            -DCMAKE_INSTALL_COMPONENT=unwind
-            -DCMAKE_INSTALL_DO_STRIP=1
-            -P "${LIBUNWIND_BINARY_DIR}/cmake_install.cmake")
+    COMMAND "${CMAKE_COMMAND}" --install "${CMAKE_BINARY_DIR}" --component unwind --strip)
+
+  if (LIBUNWIND_INSTALL_LIBRARY)
+    add_dependencies(install-unwind unwind)
+    add_dependencies(install-unwind-stripped unwind)
+  endif()
+
   if(LIBUNWIND_INSTALL_HEADERS)
     add_dependencies(install-unwind install-unwind-headers)
     add_dependencies(install-unwind-stripped install-unwind-headers-stripped)

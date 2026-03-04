@@ -27,13 +27,14 @@
 
 using namespace llvm;
 
-static bool isInvariantLoad(const LoadInst *LI, const bool IsKernelFn) {
+static bool isInvariantLoad(const Instruction *I, const Value *Ptr,
+                            const bool IsKernelFn) {
   // Don't bother with non-global loads
-  if (LI->getPointerAddressSpace() != NVPTXAS::ADDRESS_SPACE_GLOBAL)
+  if (Ptr->getType()->getPointerAddressSpace() != NVPTXAS::ADDRESS_SPACE_GLOBAL)
     return false;
 
   // If the load is already marked as invariant, we don't need to do anything
-  if (LI->getMetadata(LLVMContext::MD_invariant_load))
+  if (I->getMetadata(LLVMContext::MD_invariant_load))
     return false;
 
   // We use getUnderlyingObjects() here instead of getUnderlyingObject()
@@ -41,7 +42,7 @@ static bool isInvariantLoad(const LoadInst *LI, const bool IsKernelFn) {
   // not. We need to look through phi nodes to handle pointer induction
   // variables.
   SmallVector<const Value *, 8> Objs;
-  getUnderlyingObjects(LI->getPointerOperand(), Objs);
+  getUnderlyingObjects(Ptr, Objs);
 
   return all_of(Objs, [&](const Value *V) {
     if (const auto *A = dyn_cast<const Argument>(V))
@@ -53,9 +54,9 @@ static bool isInvariantLoad(const LoadInst *LI, const bool IsKernelFn) {
   });
 }
 
-static void markLoadsAsInvariant(LoadInst *LI) {
-  LI->setMetadata(LLVMContext::MD_invariant_load,
-                  MDNode::get(LI->getContext(), {}));
+static void markLoadsAsInvariant(Instruction *I) {
+  I->setMetadata(LLVMContext::MD_invariant_load,
+                 MDNode::get(I->getContext(), {}));
 }
 
 static bool tagInvariantLoads(Function &F) {
@@ -63,12 +64,17 @@ static bool tagInvariantLoads(Function &F) {
 
   bool Changed = false;
   for (auto &I : instructions(F)) {
-    if (auto *LI = dyn_cast<LoadInst>(&I)) {
-      if (isInvariantLoad(LI, IsKernelFn)) {
+    if (auto *LI = dyn_cast<LoadInst>(&I))
+      if (isInvariantLoad(LI, LI->getPointerOperand(), IsKernelFn)) {
         markLoadsAsInvariant(LI);
         Changed = true;
       }
-    }
+    if (auto *II = dyn_cast<IntrinsicInst>(&I))
+      if (II->getIntrinsicID() == Intrinsic::masked_load &&
+          isInvariantLoad(II, II->getOperand(0), IsKernelFn)) {
+        markLoadsAsInvariant(II);
+        Changed = true;
+      }
   }
   return Changed;
 }

@@ -8,7 +8,7 @@
 
 #include "BitsFxTest.h"
 
-#include "llvm-libc-types/stdfix-types.h" // uint_uhr_t
+#include "llvm-libc-types/uint_uhr_t.h" // uint_uhr_t
 #include "src/stdfix/bitsuhr.h"
 
 LIST_BITSFX_TESTS(uhr, unsigned short fract, uint_uhr_t,

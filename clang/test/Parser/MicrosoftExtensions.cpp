@@ -145,7 +145,7 @@ typedef COM_CLASS_TEMPLATE_REF<struct_with_uuid, __uuidof(struct_with_uuid)> COM
 
 COM_CLASS_TEMPLATE_REF<int, __uuidof(struct_with_uuid)> good_template_arg;
 
-COM_CLASS_TEMPLATE<int, __uuidof(struct_with_uuid)> bad_template_arg; // expected-error {{non-type template argument for template parameter of pointer type 'const GUID *' (aka 'const _GUID *') must have its address taken}}
+COM_CLASS_TEMPLATE<int, __uuidof(struct_with_uuid)> bad_template_arg; // expected-error {{non-type template argument for template parameter of pointer type 'const GUID *' (aka 'const struct _GUID *') must have its address taken}}
 
 namespace PR16911 {
 struct __declspec(uuid("{12345678-1234-1234-1234-1234567890aB}")) uuid;

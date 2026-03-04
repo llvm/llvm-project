@@ -7,10 +7,14 @@
 //===----------------------------------------------------------------------===//
 
 // UNSUPPORTED: c++03, c++11, c++14
-// UNSUPPORTED: availability-filesystem-missing
 
 // These tests require locale for non-char paths
 // UNSUPPORTED: no-localization
+
+// In MinGW mode, with optimizations enabled with a DLL, the number of counted
+// allocations mismatches, as some ctor/dtor calls are generated in the
+// calling code, and some are called from the DLL.
+// ADDITIONAL_COMPILE_FLAGS: -DALLOW_MISMATCHING_LIBRRARY_INTERNAL_ALLOCATIONS
 
 // <filesystem>
 
@@ -35,6 +39,7 @@
 #include <string>
 #include <string_view>
 #include <cassert>
+#include <utility>
 
 // On Windows, charset conversions cause allocations in the path class in
 // cases where no allocations are done on other platforms.

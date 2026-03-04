@@ -64,7 +64,6 @@ define <4 x float> @fadd_v4f32_mixed_types(<4 x float> %a0) {
   ret <4 x float> %post
 }
 
-; Negative test - multiple use of fadd
 define <4 x double> @fadd_v4f64_multiuse_op(<4 x double> %a, <4 x double> %b) {
 ; CHECK-LABEL: define <4 x double> @fadd_v4f64_multiuse_op(
 ; CHECK-SAME: <4 x double> [[A:%.*]], <4 x double> [[B:%.*]]) #[[ATTR0]] {
@@ -97,6 +96,42 @@ define <4 x double> @fadd_v4f64_multiuse_shuffle(<4 x double> %a, <4 x double> %
   %b1 = shufflevector <4 x double> %b, <4 x double> poison, <4 x i32> <i32 1, i32 0, i32 1, i32 0>
   %op = fadd <4 x double> %a1, %b1
   %post = shufflevector <4 x double> %op, <4 x double> poison, <4 x i32> <i32 1, i32 0, i32 3, i32 2>
+  call void @use_v4f64(<4 x double> %a1)
+  ret <4 x double> %post
+}
+
+declare void @use_v32i8(<32 x i8>)
+define <32 x i8> @max_expense_multi_use_triggered(<32 x i8> %a, <32 x i8> %b) {
+; CHECK-LABEL: define <32 x i8> @max_expense_multi_use_triggered(
+; CHECK-SAME: <32 x i8> [[A:%.*]], <32 x i8> [[B:%.*]]) #[[ATTR0]] {
+; CHECK-NEXT:    [[A1:%.*]] = shufflevector <32 x i8> [[A]], <32 x i8> poison, <32 x i32> <i32 31, i32 30, i32 29, i32 28, i32 27, i32 26, i32 25, i32 24, i32 23, i32 22, i32 21, i32 20, i32 19, i32 18, i32 17, i32 16, i32 15, i32 14, i32 13, i32 12, i32 11, i32 10, i32 9, i32 8, i32 7, i32 6, i32 5, i32 4, i32 3, i32 2, i32 1, i32 0>
+; CHECK-NEXT:    [[B1:%.*]] = shufflevector <32 x i8> [[B]], <32 x i8> poison, <32 x i32> <i32 31, i32 30, i32 29, i32 28, i32 27, i32 26, i32 25, i32 24, i32 23, i32 22, i32 21, i32 20, i32 19, i32 18, i32 17, i32 16, i32 15, i32 14, i32 13, i32 12, i32 11, i32 10, i32 9, i32 8, i32 7, i32 6, i32 5, i32 4, i32 3, i32 2, i32 1, i32 0>
+; CHECK-NEXT:    [[OP:%.*]] = add <32 x i8> [[A1]], [[B1]]
+; CHECK-NEXT:    call void @use_v32i8(<32 x i8> [[OP]])
+; CHECK-NEXT:    [[POST:%.*]] = add <32 x i8> [[A]], [[B]]
+; CHECK-NEXT:    ret <32 x i8> [[POST]]
+;
+  %a1 = shufflevector <32 x i8> %a, <32 x i8> poison, <32 x i32> <i32 31, i32 30, i32 29, i32 28, i32 27, i32 26, i32 25, i32 24, i32 23, i32 22, i32 21, i32 20, i32 19, i32 18, i32 17, i32 16, i32 15, i32 14, i32 13, i32 12, i32 11, i32 10, i32 9, i32 8, i32 7, i32 6, i32 5, i32 4, i32 3, i32 2, i32 1, i32 0>
+  %b1 = shufflevector <32 x i8> %b, <32 x i8> poison, <32 x i32> <i32 31, i32 30, i32 29, i32 28, i32 27, i32 26, i32 25, i32 24, i32 23, i32 22, i32 21, i32 20, i32 19, i32 18, i32 17, i32 16, i32 15, i32 14, i32 13, i32 12, i32 11, i32 10, i32 9, i32 8, i32 7, i32 6, i32 5, i32 4, i32 3, i32 2, i32 1, i32 0>
+  %op = add <32 x i8> %a1, %b1
+  call void @use_v32i8(<32 x i8> %op)
+  %post = shufflevector <32 x i8> %op, <32 x i8> poison, <32 x i32> <i32 31, i32 30, i32 29, i32 28, i32 27, i32 26, i32 25, i32 24, i32 23, i32 22, i32 21, i32 20, i32 19, i32 18, i32 17, i32 16, i32 15, i32 14, i32 13, i32 12, i32 11, i32 10, i32 9, i32 8, i32 7, i32 6, i32 5, i32 4, i32 3, i32 2, i32 1, i32 0>
+  ret <32 x i8> %post
+}
+
+define <4 x double> @fadd_v4f64_multiuse_shuffle_triggers(<4 x double> %a, <4 x double> %b) {
+; CHECK-LABEL: define <4 x double> @fadd_v4f64_multiuse_shuffle_triggers(
+; CHECK-SAME: <4 x double> [[A:%.*]], <4 x double> [[B:%.*]]) #[[ATTR0]] {
+; CHECK-NEXT:    [[A1:%.*]] = shufflevector <4 x double> [[A]], <4 x double> poison, <4 x i32> <i32 3, i32 2, i32 1, i32 0>
+; CHECK-NEXT:    [[TMP1:%.*]] = shufflevector <4 x double> [[B]], <4 x double> poison, <4 x i32> <i32 0, i32 1, i32 0, i32 1>
+; CHECK-NEXT:    [[POST:%.*]] = fadd <4 x double> [[A]], [[TMP1]]
+; CHECK-NEXT:    call void @use_v4f64(<4 x double> [[A1]])
+; CHECK-NEXT:    ret <4 x double> [[POST]]
+;
+  %a1 = shufflevector <4 x double> %a, <4 x double> poison, <4 x i32> <i32 3, i32 2, i32 1, i32 0>
+  %b1 = shufflevector <4 x double> %b, <4 x double> poison, <4 x i32> <i32 1, i32 0, i32 1, i32 0>
+  %op = fadd <4 x double> %a1, %b1
+  %post = shufflevector <4 x double> %op, <4 x double> poison, <4 x i32> <i32 3, i32 2, i32 1, i32 0>
   call void @use_v4f64(<4 x double> %a1)
   ret <4 x double> %post
 }

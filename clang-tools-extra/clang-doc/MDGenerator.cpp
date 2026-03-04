@@ -156,11 +156,14 @@ static void writeNameLink(const StringRef &CurrentPath, const Reference &R,
 
 static void genMarkdown(const ClangDocContext &CDCtx, const EnumInfo &I,
                         llvm::raw_ostream &OS) {
+  OS << "| enum ";
   if (I.Scoped)
-    writeLine("| enum class " + I.Name + " |", OS);
-  else
-    writeLine("| enum " + I.Name + " |", OS);
-  writeLine("--", OS);
+    OS << "class ";
+  OS << (I.Name.empty() ? "(unnamed)" : StringRef(I.Name)) << " ";
+  if (I.BaseType && !I.BaseType->Type.QualName.empty()) {
+    OS << ": " << I.BaseType->Type.QualName << " ";
+  }
+  OS << "|\n\n" << "--\n\n";
 
   std::string Buffer;
   llvm::raw_string_ostream Members(Buffer);
@@ -311,7 +314,8 @@ static void genMarkdown(const ClangDocContext &CDCtx, const TypedefInfo &I,
   // TODO support typedefs in markdown.
 }
 
-static void serializeReference(llvm::raw_fd_ostream &OS, Index &I, int Level) {
+static void serializeReference(llvm::raw_fd_ostream &OS, const Index &I,
+                               int Level) {
   // Write out the heading level starting at ##
   OS << "##" << std::string(Level, '#') << " ";
   writeNameLink("", I, OS);
@@ -335,8 +339,9 @@ static llvm::Error serializeIndex(ClangDocContext &CDCtx) {
     OS << " for " << CDCtx.ProjectName;
   OS << "\n\n";
 
-  for (auto C : CDCtx.Idx.Children)
-    serializeReference(OS, C, 0);
+  std::vector<const Index *> Children = CDCtx.Idx.getSortedChildren();
+  for (const auto *C : Children)
+    serializeReference(OS, *C, 0);
 
   return llvm::Error::success();
 }
@@ -353,10 +358,11 @@ static llvm::Error genIndex(ClangDocContext &CDCtx) {
                                        FileErr.message());
   CDCtx.Idx.sort();
   OS << "# " << CDCtx.ProjectName << " C/C++ Reference\n\n";
-  for (auto C : CDCtx.Idx.Children) {
-    if (!C.Children.empty()) {
+  std::vector<const Index *> Children = CDCtx.Idx.getSortedChildren();
+  for (const auto *C : Children) {
+    if (!C->Children.empty()) {
       const char *Type;
-      switch (C.RefType) {
+      switch (C->RefType) {
       case InfoType::IT_namespace:
         Type = "Namespace";
         break;
@@ -384,10 +390,10 @@ static llvm::Error genIndex(ClangDocContext &CDCtx) {
       case InfoType::IT_default:
         Type = "Other";
       }
-      OS << "* " << Type << ": [" << C.Name << "](";
-      if (!C.Path.empty())
-        OS << C.Path << "/";
-      OS << C.Name << ")\n";
+      OS << "* " << Type << ": [" << C->Name << "](";
+      if (!C->Path.empty())
+        OS << C->Path << "/";
+      OS << C->Name << ")\n";
     }
   }
   return llvm::Error::success();
@@ -398,9 +404,9 @@ class MDGenerator : public Generator {
 public:
   static const char *Format;
 
-  llvm::Error generateDocs(StringRef RootDir,
-                           llvm::StringMap<std::unique_ptr<doc::Info>> Infos,
-                           const ClangDocContext &CDCtx) override;
+  llvm::Error generateDocumentation(
+      StringRef RootDir, llvm::StringMap<std::unique_ptr<doc::Info>> Infos,
+      const ClangDocContext &CDCtx, std::string DirName) override;
   llvm::Error createResources(ClangDocContext &CDCtx) override;
   llvm::Error generateDocForInfo(Info *I, llvm::raw_ostream &OS,
                                  const ClangDocContext &CDCtx) override;
@@ -408,10 +414,9 @@ public:
 
 const char *MDGenerator::Format = "md";
 
-llvm::Error
-MDGenerator::generateDocs(StringRef RootDir,
-                          llvm::StringMap<std::unique_ptr<doc::Info>> Infos,
-                          const ClangDocContext &CDCtx) {
+llvm::Error MDGenerator::generateDocumentation(
+    StringRef RootDir, llvm::StringMap<std::unique_ptr<doc::Info>> Infos,
+    const ClangDocContext &CDCtx, std::string DirName) {
   // Track which directories we already tried to create.
   llvm::StringSet<> CreatedDirs;
 

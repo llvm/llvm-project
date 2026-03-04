@@ -43,17 +43,83 @@ public:
               lldb::DynamicValueType use_dynamic, bool use_synthetic,
               bool fragile_ivar, bool check_ptr_vs_member);
 
-  llvm::Expected<lldb::ValueObjectSP> Evaluate(const ASTNode *node);
+  /// Evaluate an ASTNode.
+  /// \returns A non-null lldb::ValueObjectSP or an Error.
+  llvm::Expected<lldb::ValueObjectSP> Evaluate(const ASTNode &node);
 
 private:
+  /// Evaluate an ASTNode. If the result is a reference, it is also
+  /// dereferenced using ValueObject::Dereference.
+  /// \returns A non-null lldb::ValueObjectSP or an Error.
   llvm::Expected<lldb::ValueObjectSP>
-  Visit(const IdentifierNode *node) override;
-  llvm::Expected<lldb::ValueObjectSP> Visit(const MemberOfNode *node) override;
-  llvm::Expected<lldb::ValueObjectSP> Visit(const UnaryOpNode *node) override;
+  EvaluateAndDereference(const ASTNode &node);
   llvm::Expected<lldb::ValueObjectSP>
-  Visit(const ArraySubscriptNode *node) override;
+  Visit(const IdentifierNode &node) override;
+  llvm::Expected<lldb::ValueObjectSP> Visit(const MemberOfNode &node) override;
+  llvm::Expected<lldb::ValueObjectSP> Visit(const UnaryOpNode &node) override;
+  llvm::Expected<lldb::ValueObjectSP> Visit(const BinaryOpNode &node) override;
   llvm::Expected<lldb::ValueObjectSP>
-  Visit(const BitFieldExtractionNode *node) override;
+  Visit(const ArraySubscriptNode &node) override;
+  llvm::Expected<lldb::ValueObjectSP>
+  Visit(const BitFieldExtractionNode &node) override;
+  llvm::Expected<lldb::ValueObjectSP>
+  Visit(const IntegerLiteralNode &node) override;
+  llvm::Expected<lldb::ValueObjectSP>
+  Visit(const FloatLiteralNode &node) override;
+  llvm::Expected<lldb::ValueObjectSP>
+  Visit(const BooleanLiteralNode &node) override;
+  llvm::Expected<lldb::ValueObjectSP> Visit(const CastNode &node) override;
+
+  /// Perform usual unary conversions on a value. At the moment this
+  /// includes array-to-pointer and integral promotion for eligible types.
+  llvm::Expected<lldb::ValueObjectSP>
+  UnaryConversion(lldb::ValueObjectSP valobj, uint32_t location);
+
+  /// If `lhs_type` is unsigned and `rhs_type` is signed, check whether it
+  /// can represent all of the values of `lhs_type`.
+  /// If not, then promote `rhs_type` to the unsigned version of its type.
+  /// This expects that Rank(lhs_type) < Rank(rhs_type).
+  /// \returns Unchanged `rhs_type` or promoted unsigned version.
+  llvm::Expected<CompilerType> PromoteSignedInteger(CompilerType &lhs_type,
+                                                    CompilerType &rhs_type);
+
+  /// Perform an arithmetic conversion on two values from an arithmetic
+  /// operation.
+  /// \returns The result type of an arithmetic operation.
+  llvm::Expected<CompilerType> ArithmeticConversion(lldb::ValueObjectSP &lhs,
+                                                    lldb::ValueObjectSP &rhs,
+                                                    uint32_t location);
+  llvm::Expected<lldb::ValueObjectSP> EvaluateScalarOp(BinaryOpKind kind,
+                                                       lldb::ValueObjectSP lhs,
+                                                       lldb::ValueObjectSP rhs,
+                                                       CompilerType result_type,
+                                                       uint32_t location);
+  llvm::Expected<lldb::ValueObjectSP>
+  EvaluateBinaryAddition(lldb::ValueObjectSP lhs, lldb::ValueObjectSP rhs,
+                         uint32_t location);
+  llvm::Expected<lldb::ValueObjectSP>
+  EvaluateBinarySubtraction(lldb::ValueObjectSP lhs, lldb::ValueObjectSP rhs,
+                            uint32_t location);
+  llvm::Expected<CompilerType>
+  PickIntegerType(lldb::TypeSystemSP type_system,
+                  std::shared_ptr<ExecutionContextScope> ctx,
+                  const IntegerLiteralNode &literal);
+
+  /// A helper function for VerifyCastType (below). This performs
+  /// arithmetic-specific checks. It should only be called if the target_type
+  /// is a scalar type.
+  llvm::Expected<CastKind> VerifyArithmeticCast(CompilerType source_type,
+                                                CompilerType target_type,
+                                                int location);
+
+  /// As a preparation for type casting, compare the requested 'target' type
+  /// of the cast with the type of the operand to be cast. If the cast is
+  /// allowed, return the appropriate CastKind for the cast; otherwise return
+  /// an error.
+  llvm::Expected<CastKind> VerifyCastType(lldb::ValueObjectSP operand,
+                                          CompilerType source_type,
+                                          CompilerType target_type,
+                                          int location);
 
   // Used by the interpreter to create objects, perform casts, etc.
   lldb::TargetSP m_target;

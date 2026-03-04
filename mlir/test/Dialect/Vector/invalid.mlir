@@ -223,6 +223,14 @@ func.func @outerproduct_non_vector_operand(%arg0: f32) {
 
 // -----
 
+func.func @outerproduct_invalid_kind_attr(%arg0 : vector<[4]xf32>, %arg1 : vector<[8]xf32>) {
+  // expected-error@+1 {{expected 'kind' attribute of type CombiningKind (e.g. 'vector.kind<add>')}}
+  %0 = vector.outerproduct %arg0, %arg1 {kind = "invalid"} : vector<[4]xf32>, vector<[8]xf32>
+  return
+}
+
+// -----
+
 func.func @outerproduct_operand_1(%arg0: vector<4xf32>, %arg1: vector<4x8xf32>) {
   // expected-error@+1 {{expected 1-d vector for operand #1}}
   %1 = vector.outerproduct %arg1, %arg1 : vector<4x8xf32>, vector<4x8xf32>
@@ -320,7 +328,7 @@ func.func @test_vector.transfer_write(%m:  memref<1xi32>, %2: vector<1x32xi32>) 
 func.func @test_vector.transfer_read(%arg0: vector<4x3xf32>) {
   %c3 = arith.constant 3 : index
   %f0 = arith.constant 0.0 : f32
-  %vf0 = vector.splat %f0 : vector<4x3xf32>
+  %vf0 = vector.broadcast %f0 : f32 to vector<4x3xf32>
   // expected-error@+1 {{ requires memref or ranked tensor type}}
   %0 = vector.transfer_read %arg0[%c3, %c3], %vf0 : vector<4x3xf32>, vector<1x1x2x3xf32>
 }
@@ -330,7 +338,7 @@ func.func @test_vector.transfer_read(%arg0: vector<4x3xf32>) {
 func.func @test_vector.transfer_read(%arg0: memref<4x3xf32>) {
   %c3 = arith.constant 3 : index
   %f0 = arith.constant 0.0 : f32
-  %vf0 = vector.splat %f0 : vector<4x3xf32>
+  %vf0 = vector.broadcast %f0 : f32 to vector<4x3xf32>
   // expected-error@+1 {{ requires vector type}}
   %0 = vector.transfer_read %arg0[%c3, %c3], %vf0 : memref<4x3xf32>, f32
 }
@@ -414,7 +422,7 @@ func.func @test_vector.transfer_read(%arg0: memref<?x?x?xf32>) {
   %c3 = arith.constant 3 : index
   %cst = arith.constant 3.0 : f32
   // expected-note@+1 {{prior use here}}
-  %mask = vector.splat %c1 : vector<3x8x7xi1>
+  %mask = vector.broadcast %c1 : i1 to vector<3x8x7xi1>
   // expected-error@+1 {{expects different type than prior uses: 'vector<3x7xi1>' vs 'vector<3x8x7xi1>'}}
   %0 = vector.transfer_read %arg0[%c3, %c3, %c3], %cst, %mask {permutation_map = affine_map<(d0, d1, d2)->(d0, 0, d2)>} : memref<?x?x?xf32>, vector<3x8x7xf32>
 }
@@ -424,7 +432,7 @@ func.func @test_vector.transfer_read(%arg0: memref<?x?x?xf32>) {
 func.func @test_vector.transfer_read(%arg0: memref<?x?xvector<4x3xf32>>) {
   %c3 = arith.constant 3 : index
   %f0 = arith.constant 0.0 : f32
-  %vf0 = vector.splat %f0 : vector<4x3xf32>
+  %vf0 = vector.broadcast %f0 : f32 to vector<4x3xf32>
   // expected-error@+1 {{requires source vector element and vector result ranks to match}}
   %0 = vector.transfer_read %arg0[%c3, %c3], %vf0 {permutation_map = affine_map<(d0, d1)->(d0, d1)>} : memref<?x?xvector<4x3xf32>>, vector<3xf32>
 }
@@ -434,7 +442,7 @@ func.func @test_vector.transfer_read(%arg0: memref<?x?xvector<4x3xf32>>) {
 func.func @test_vector.transfer_read(%arg0: memref<?x?xvector<6xf32>>) {
   %c3 = arith.constant 3 : index
   %f0 = arith.constant 0.0 : f32
-  %vf0 = vector.splat %f0 : vector<6xf32>
+  %vf0 = vector.broadcast %f0 : f32 to vector<6xf32>
   // expected-error@+1 {{requires the bitwidth of the minor 1-D vector to be an integral multiple of the bitwidth of the minor 1-D vector of the source}}
   %0 = vector.transfer_read %arg0[%c3, %c3], %vf0 : memref<?x?xvector<6xf32>>, vector<3xf32>
 }
@@ -444,7 +452,7 @@ func.func @test_vector.transfer_read(%arg0: memref<?x?xvector<6xf32>>) {
 func.func @test_vector.transfer_read(%arg0: memref<?x?xvector<2x3xf32>>) {
   %c3 = arith.constant 3 : index
   %f0 = arith.constant 0.0 : f32
-  %vf0 = vector.splat %f0 : vector<2x3xf32>
+  %vf0 = vector.broadcast %f0 : f32 to vector<2x3xf32>
   // expected-error@+1 {{ expects the in_bounds attr of same rank as permutation_map results: affine_map<(d0, d1) -> (d0, d1)>}}
   %0 = vector.transfer_read %arg0[%c3, %c3], %vf0 {in_bounds = [true], permutation_map = affine_map<(d0, d1)->(d0, d1)>} : memref<?x?xvector<2x3xf32>>, vector<1x1x2x3xf32>
 }
@@ -454,8 +462,8 @@ func.func @test_vector.transfer_read(%arg0: memref<?x?xvector<2x3xf32>>) {
 func.func @test_vector.transfer_read(%arg0: memref<?x?xvector<2x3xf32>>) {
   %c3 = arith.constant 3 : index
   %f0 = arith.constant 0.0 : f32
-  %vf0 = vector.splat %f0 : vector<2x3xf32>
-  %mask = vector.splat %c1 : vector<2x3xi1>
+  %vf0 = vector.broadcast %f0 : f32 to vector<2x3xf32>
+  %mask = vector.broadcast %c1 : f32 to vector<2x3xi1>
   // expected-error@+1 {{does not support masks with vector element type}}
   %0 = vector.transfer_read %arg0[%c3, %c3], %vf0, %mask {permutation_map = affine_map<(d0, d1)->(d0, d1)>} : memref<?x?xvector<2x3xf32>>, vector<1x1x2x3xf32>
 }
@@ -492,7 +500,7 @@ func.func @test_vector.transfer_write(%arg0: memref<?x?xf32>) {
 func.func @test_vector.transfer_write(%arg0: memref<vector<4x3xf32>>) {
   %c3 = arith.constant 3 : index
   %f0 = arith.constant 0.0 : f32
-  %vf0 = vector.splat %f0 : vector<4x3xf32>
+  %vf0 = vector.broadcast %f0 : f32 to vector<4x3xf32>
   // expected-error@+1 {{ requires vector type}}
   vector.transfer_write %arg0, %arg0[%c3, %c3] : memref<vector<4x3xf32>>, vector<4x3xf32>
 }
@@ -502,7 +510,7 @@ func.func @test_vector.transfer_write(%arg0: memref<vector<4x3xf32>>) {
 func.func @test_vector.transfer_write(%arg0: vector<4x3xf32>) {
   %c3 = arith.constant 3 : index
   %f0 = arith.constant 0.0 : f32
-  %vf0 = vector.splat %f0 : vector<4x3xf32>
+  %vf0 = vector.broadcast %f0 : f32 to vector<4x3xf32>
   // expected-error@+1 {{ requires memref or ranked tensor type}}
   vector.transfer_write %arg0, %arg0[%c3, %c3] : vector<4x3xf32>, f32
 }
@@ -961,7 +969,7 @@ func.func @contraction(%arg0: vector<4x3xi32>,
   iterator_types = ["parallel", "parallel", "reduction"]
 }
 func.func @contraction(%arg0: vector<2x1xf32>, %arg1: vector<1x3xf32>, %arg2: vector<2x3xf32>)
--> vector<3x2xf32>
+-> vector<2x3xf32>
 {
 // expected-error@+1 {{invalid accumulator/result vector shape, expected: 'vector<3x2xf32>'}}
   %0 = vector.contract #contraction_trait %arg0, %arg1, %arg2
@@ -990,6 +998,27 @@ func.func @contract_missing_iterator_types(%arg0: vector<1x2xi32>, %arg1: vector
   // expected-error@+1 {{'vector.contract' expected "iterator_types" array attribute}}
   %0 = vector.contract {} %arg0, %arg1, %arg2 : vector<1x2xi32>, vector<2xi32> into vector<1xi32>
   return %0 : vector<1xi32>
+}
+
+// -----
+
+#contraction_accesses = [
+        affine_map<(i, j, k) -> (i, k)>,
+        affine_map<(i, j, k) -> (k, j)>,
+        affine_map<(i, j, k) -> (i, j)>
+      ]
+#contraction_trait = {
+        kind = "invalid",
+        indexing_maps = #contraction_accesses,
+        iterator_types = ["parallel", "parallel", "reduction"]
+      }
+func.func @contraction_invalid_kind(%arg0: vector<4x3xf32>,
+                                    %arg1: vector<3x7xf32>,
+                                    %arg2: vector<4x7xf32>) {
+  // expected-error@+1 {{expected 'kind' attribute of type CombiningKind (e.g. 'vector.kind<add>')}}
+  %0 = vector.contract #contraction_trait %arg0, %arg1, %arg2
+    : vector<4x3xf32>, vector<3x7xf32> into vector<4x7xf32>
+  return
 }
 
 // -----
@@ -1104,7 +1133,7 @@ func.func @cannot_print_string_with_source_set(%vec: vector<[4]xf32>) {
 
 
 func.func @shape_cast_wrong_element_type(%arg0 : vector<5x1x3x2xf32>) {
-  // expected-error@+1 {{'vector.shape_cast' op has different source and result element types}}
+  // expected-error@+1 {{'vector.shape_cast' op source element type ('f32') does not match result element type ('i32')}}
   %0 = vector.shape_cast %arg0 : vector<5x1x3x2xf32> to vector<15x2xi32>
 }
 
@@ -1305,9 +1334,29 @@ func.func @store_memref_index_mismatch(%base : memref<?xf32>, %value : vector<16
 
 // -----
 
+//===----------------------------------------------------------------------===//
+// vector.maskedload
+//===----------------------------------------------------------------------===//
+
+func.func @maskedload_nonpositive_alignment(%base: memref<4xi32>, %mask: vector<32xi1>, %pass: vector<1xi32>, %index: index) {
+  // expected-error@below {{'vector.maskedload' op attribute 'alignment' failed to satisfy constraint: 64-bit signless integer attribute whose value is positive and whose value is a power of two > 0}}
+  %val = vector.maskedload %base[%index], %mask, %pass { alignment = 0 } : memref<4xi32>, vector<32xi1>, vector<1xi32> into vector<1xi32>
+  return
+}
+
+// -----
+
+func.func @maskedload_non_power_of_2_alignment(%base: memref<4xi32>, %mask: vector<32xi1>, %pass: vector<1xi32>, %index: index) {
+  // expected-error@below {{'vector.maskedload' op attribute 'alignment' failed to satisfy constraint: 64-bit signless integer attribute whose value is positive and whose value is a power of two > 0}}
+  %val = vector.maskedload %base[%index], %mask, %pass { alignment = 3 } : memref<4xi32>, vector<32xi1>, vector<1xi32> into vector<1xi32>
+  return
+}
+
+// -----
+
 func.func @maskedload_base_type_mismatch(%base: memref<?xf64>, %mask: vector<16xi1>, %pass: vector<16xf32>) {
   %c0 = arith.constant 0 : index
-  // expected-error@+1 {{'vector.maskedload' op base and result element type should match}}
+  // expected-error@+1 {{'vector.maskedload' op base element type ('f64') does not match result element type ('f32')}}
   %0 = vector.maskedload %base[%c0], %mask, %pass : memref<?xf64>, vector<16xi1>, vector<16xf32> into vector<16xf32>
 }
 
@@ -1336,9 +1385,29 @@ func.func @maskedload_memref_mismatch(%base: memref<?xf32>, %mask: vector<16xi1>
 
 // -----
 
+//===----------------------------------------------------------------------===//
+// vector.maskedstore
+//===----------------------------------------------------------------------===//
+
+func.func @maskedstore_nonpositive_alignment(%base: memref<4xi32>, %mask: vector<32xi1>, %value: vector<1xi32>, %index: index) {
+  // expected-error@below {{'vector.maskedstore' op attribute 'alignment' failed to satisfy constraint: 64-bit signless integer attribute whose value is positive and whose value is a power of two > 0}}
+  vector.maskedstore %base[%index], %mask, %value { alignment = 0 } : memref<4xi32>, vector<32xi1>, vector<1xi32> into vector<1xi32>
+  return
+}
+
+// -----
+
+func.func @maskedstore_non_power_of_2_alignment(%base: memref<4xi32>, %mask: vector<32xi1>, %value: vector<1xi32>, %index: index) {
+  // expected-error@below {{'vector.maskedstore' op attribute 'alignment' failed to satisfy constraint: 64-bit signless integer attribute whose value is positive and whose value is a power of two > 0}}
+  vector.maskedstore %base[%index], %mask, %value { alignment = 3 } : memref<4xi32>, vector<32xi1>, vector<1xi32> into vector<1xi32>
+  return
+}
+
+// -----
+
 func.func @maskedstore_base_type_mismatch(%base: memref<?xf64>, %mask: vector<16xi1>, %value: vector<16xf32>) {
   %c0 = arith.constant 0 : index
-  // expected-error@+1 {{'vector.maskedstore' op base and valueToStore element type should match}}
+  // expected-error@+1 {{'vector.maskedstore' op base element type ('f64') does not match valueToStore element type ('f32')}}
   vector.maskedstore %base[%c0], %mask, %value : memref<?xf64>, vector<16xi1>, vector<16xf32>
 }
 
@@ -1373,7 +1442,7 @@ func.func @gather_from_vector(%base: vector<16xf32>, %indices: vector<16xi32>,
 func.func @gather_base_type_mismatch(%base: memref<?xf64>, %indices: vector<16xi32>,
                                 %mask: vector<16xi1>, %pass_thru: vector<16xf32>) {
   %c0 = arith.constant 0 : index
-  // expected-error@+1 {{'vector.gather' op base and result element type should match}}
+  // expected-error@+1 {{'vector.gather' op base element type ('f64') does not match result element type ('f32')}}
   %0 = vector.gather %base[%c0][%indices], %mask, %pass_thru
     : memref<?xf64>, vector<16xi32>, vector<16xi1>, vector<16xf32> into vector<16xf32>
 }
@@ -1430,12 +1499,30 @@ func.func @gather_pass_thru_type_mismatch(%base: memref<?xf32>, %indices: vector
 
 // -----
 
+func.func @gather_nonpositive_alignment(%base: memref<16xf32>, %indices: vector<16xi32>,
+                                %mask: vector<16xi1>, %pass_thru: vector<16xf32>, %c0 : index) {
+  // expected-error@+2 {{'vector.gather' op attribute 'alignment' failed to satisfy constraint: 64-bit signless integer attribute whose value is positive and whose value is a power of two > 0}}
+  %0 = vector.gather %base[%c0][%indices], %mask, %pass_thru
+    { alignment = 0 } : memref<16xf32>, vector<16xi32>, vector<16xi1>, vector<16xf32> into vector<16xf32>
+}
+
+// -----
+
+func.func @gather_non_power_of_two_alignment(%base: memref<16xf32>, %indices: vector<16xi32>,
+                                %mask: vector<16xi1>, %pass_thru: vector<16xf32>, %c0 : index) {
+  // expected-error@+2 {{'vector.gather' op attribute 'alignment' failed to satisfy constraint: 64-bit signless integer attribute whose value is positive and whose value is a power of two > 0}}
+  %0 = vector.gather %base[%c0][%indices], %mask, %pass_thru
+    { alignment = 3 } : memref<16xf32>, vector<16xi32>, vector<16xi1>, vector<16xf32> into vector<16xf32>
+}
+
+// -----
+
 func.func @scatter_to_vector(%base: vector<16xf32>, %indices: vector<16xi32>,
                              %mask: vector<16xi1>, %pass_thru: vector<16xf32>) {
   %c0 = arith.constant 0 : index
-  // expected-error@+2 {{custom op 'vector.scatter' invalid kind of type specified}}
+  // expected-error@+1 {{'vector.scatter' op operand #0 must be Tensor or MemRef of any type values, but got 'vector<16xf32>'}}
   vector.scatter %base[%c0][%indices], %mask, %pass_thru
-    : vector<16xf32>, vector<16xi32>, vector<16xi1>, vector<16xf32> into vector<16xf32>
+    : vector<16xf32>, vector<16xi32>, vector<16xi1>, vector<16xf32>
 }
 
 // -----
@@ -1444,7 +1531,7 @@ func.func @scatter_to_vector(%base: vector<16xf32>, %indices: vector<16xi32>,
 func.func @scatter_base_type_mismatch(%base: memref<?xf64>, %indices: vector<16xi32>,
                                  %mask: vector<16xi1>, %value: vector<16xf32>) {
   %c0 = arith.constant 0 : index
-  // expected-error@+1 {{'vector.scatter' op base and valueToStore element type should match}}
+  // expected-error@+1 {{'vector.scatter' op base element type ('f64') does not match valueToStore element type ('f32')}}
   vector.scatter %base[%c0][%indices], %mask, %value
     : memref<?xf64>, vector<16xi32>, vector<16xi1>, vector<16xf32>
 }
@@ -1491,9 +1578,27 @@ func.func @scatter_dim_mask_mismatch(%base: memref<?xf32>, %indices: vector<16xi
 
 // -----
 
+func.func @scatter_nonpositive_alignment(%base: memref<?xf32>, %indices: vector<16xi32>,
+                                %mask: vector<16xi1>, %value: vector<16xf32>, %c0: index) {
+  // expected-error@+1 {{'vector.scatter' op attribute 'alignment' failed to satisfy constraint: 64-bit signless integer attribute whose value is positive and whose value is a power of two > 0}}
+  vector.scatter %base[%c0][%indices], %mask, %value { alignment = 0 }
+    : memref<?xf32>, vector<16xi32>, vector<16xi1>, vector<16xf32>
+}
+
+// -----
+
+func.func @scatter_non_power_of_2_alignment(%base: memref<?xf32>, %indices: vector<16xi32>,
+                                %mask: vector<16xi1>, %value: vector<16xf32>, %c0: index) {
+  // expected-error@+1 {{'vector.scatter' op attribute 'alignment' failed to satisfy constraint: 64-bit signless integer attribute whose value is positive and whose value is a power of two > 0}}
+  vector.scatter %base[%c0][%indices], %mask, %value { alignment = 3 }
+    : memref<?xf32>, vector<16xi32>, vector<16xi1>, vector<16xf32>
+}
+
+// -----
+
 func.func @expand_base_type_mismatch(%base: memref<?xf64>, %mask: vector<16xi1>, %pass_thru: vector<16xf32>) {
   %c0 = arith.constant 0 : index
-  // expected-error@+1 {{'vector.expandload' op base and result element type should match}}
+  // expected-error@+1 {{'vector.expandload' op base element type ('f64') does not match result element type ('f32')}}
   %0 = vector.expandload %base[%c0], %mask, %pass_thru : memref<?xf64>, vector<16xi1>, vector<16xf32> into vector<16xf32>
 }
 
@@ -1531,9 +1636,23 @@ func.func @expand_memref_mismatch(%base: memref<?x?xf32>, %mask: vector<16xi1>, 
 
 // -----
 
+func.func @expand_nonpositive_alignment(%base: memref<?xf32>, %mask: vector<16xi1>, %pass_thru: vector<16xf32>, %c0: index) {
+  // expected-error@+1 {{'vector.expandload' op attribute 'alignment' failed to satisfy constraint: 64-bit signless integer attribute whose value is positive and whose value is a power of two > 0}}
+  %0 = vector.expandload %base[%c0], %mask, %pass_thru { alignment = 0 } : memref<?xf32>, vector<16xi1>, vector<16xf32> into vector<16xf32>
+}
+
+// -----
+
+func.func @expand_non_power_of_2_alignment(%base: memref<?xf32>, %mask: vector<16xi1>, %pass_thru: vector<16xf32>, %c0: index) {
+  // expected-error@+1 {{'vector.expandload' op attribute 'alignment' failed to satisfy constraint: 64-bit signless integer attribute whose value is positive and whose value is a power of two > 0}}
+  %0 = vector.expandload %base[%c0], %mask, %pass_thru { alignment = 3 } : memref<?xf32>, vector<16xi1>, vector<16xf32> into vector<16xf32>
+}
+
+// -----
+
 func.func @compress_base_type_mismatch(%base: memref<?xf64>, %mask: vector<16xi1>, %value: vector<16xf32>) {
   %c0 = arith.constant 0 : index
-  // expected-error@+1 {{'vector.compressstore' op base and valueToStore element type should match}}
+  // expected-error@+1 {{'vector.compressstore' op base element type ('f64') does not match valueToStore element type ('f32')}}
   vector.compressstore %base[%c0], %mask, %value : memref<?xf64>, vector<16xi1>, vector<16xf32>
 }
 
@@ -1559,6 +1678,20 @@ func.func @compress_memref_mismatch(%base: memref<?x?xf32>, %mask: vector<16xi1>
   %c0 = arith.constant 0 : index
   // expected-error@+1 {{'vector.compressstore' op requires 2 indices}}
   vector.compressstore %base[%c0, %c0, %c0], %mask, %value : memref<?x?xf32>, vector<16xi1>, vector<16xf32>
+}
+
+// -----
+
+func.func @compress_nonpositive_alignment(%base: memref<?xf32>, %mask: vector<16xi1>, %value: vector<16xf32>, %c0: index) {
+  // expected-error @below {{'vector.compressstore' op attribute 'alignment' failed to satisfy constraint: 64-bit signless integer attribute whose value is positive and whose value is a power of two > 0}}
+  vector.compressstore %base[%c0], %mask, %value { alignment = 0 } : memref<?xf32>, vector<16xi1>, vector<16xf32>
+}
+
+// -----
+
+func.func @compress_non_power_of_2_alignment(%base: memref<?xf32>, %mask: vector<16xi1>, %value: vector<16xf32>, %c0: index) {
+  // expected-error @below {{'vector.compressstore' op attribute 'alignment' failed to satisfy constraint: 64-bit signless integer attribute whose value is positive and whose value is a power of two > 0}}
+  vector.compressstore %base[%c0], %mask, %value { alignment = 3 } : memref<?xf32>, vector<16xi1>, vector<16xf32>
 }
 
 // -----
@@ -1877,29 +2010,6 @@ func.func @invalid_step_2d() {
 // -----
 
 //===----------------------------------------------------------------------===//
-// vector.splat
-//===----------------------------------------------------------------------===//
-
-// -----
-
-func.func @vector_splat_invalid_result(%v : f32) {
-  // expected-error@+1 {{invalid kind of type specified: expected builtin.vector, but found 'memref<8xf32>'}}
-  vector.splat %v : memref<8xf32>
-  return
-}
-
-// -----
-
-// expected-note @+1 {{prior use here}}
-func.func @vector_splat_type_mismatch(%a: f32) {
-  // expected-error @+1 {{expects different type than prior uses: 'i32' vs 'f32'}}
-  %0 = vector.splat %a : vector<1xi32>
-  return
-}
-
-// -----
-
-//===----------------------------------------------------------------------===//
 // vector.load
 //===----------------------------------------------------------------------===//
 
@@ -1912,10 +2022,17 @@ func.func @vector_load(%src : memref<?xi8>) {
 
 // -----
 
-func.func @invalid_load_alignment(%memref: memref<4xi32>) {
-  %c0 = arith.constant 0 : index
+func.func @load_nonpositive_alignment(%memref: memref<4xi32>, %c0: index) {
   // expected-error @below {{'vector.load' op attribute 'alignment' failed to satisfy constraint: 64-bit signless integer attribute whose value is positive and whose value is a power of two > 0}}
-  %val = vector.load %memref[%c0] { alignment = -1 } : memref<4xi32>, vector<4xi32>
+  %val = vector.load %memref[%c0] { alignment = 0 } : memref<4xi32>, vector<4xi32>
+  return
+}
+
+// -----
+
+func.func @load_non_pow_of_2_alignment(%memref: memref<4xi32>, %c0: index) {
+  // expected-error @below {{'vector.load' op attribute 'alignment' failed to satisfy constraint: 64-bit signless integer attribute whose value is positive and whose value is a power of two > 0}}
+  %val = vector.load %memref[%c0] { alignment = 3 } : memref<4xi32>, vector<4xi32>
   return
 }
 
@@ -1934,9 +2051,72 @@ func.func @vector_store(%dest : memref<?xi8>, %vec : vector<16x16xi8>) {
 
 // -----
 
-func.func @invalid_store_alignment(%memref: memref<4xi32>, %val: vector<4xi32>) {
-  %c0 = arith.constant 0 : index
+func.func @store_nonpositive_alignment(%memref: memref<4xi32>, %val: vector<4xi32>, %c0: index) {
+  // expected-error @below {{'vector.store' op attribute 'alignment' failed to satisfy constraint: 64-bit signless integer attribute whose value is positive and whose value is a power of two > 0}}
+  vector.store %val, %memref[%c0] { alignment = 0 } : memref<4xi32>, vector<4xi32>
+  return
+}
+
+// -----
+
+func.func @store_non_pow_of_2_alignment(%memref: memref<4xi32>, %val: vector<4xi32>, %c0: index) {
   // expected-error @below {{'vector.store' op attribute 'alignment' failed to satisfy constraint: 64-bit signless integer attribute whose value is positive and whose value is a power of two > 0}}
   vector.store %val, %memref[%c0] { alignment = 3 } : memref<4xi32>, vector<4xi32>
   return
+}
+
+// -----
+
+// Verify that vector.bitcast rejects vectors with i0 (zero-bitwidth) element type.
+func.func @bitcast_i0(%a: vector<4xi0>) -> vector<4xi0> {
+  // expected-error @+1 {{'vector.bitcast' op operand #0 must be vector of non-zero-bitwidth type values, but got 'vector<4xi0>'}}
+  %0 = vector.bitcast %a : vector<4xi0> to vector<4xi0>
+  return %0 : vector<4xi0>
+}
+
+// -----
+
+func.func @reduction_i0(%a: vector<4xi0>) -> i0 {
+  // expected-error @+1 {{'vector.reduction' op operand #0 must be vector of non-zero-bitwidth type values, but got 'vector<4xi0>'}}
+  %0 = vector.reduction <add>, %a : vector<4xi0> into i0
+  return %0 : i0
+}
+
+// -----
+
+func.func @multi_reduction_i0(%a: vector<4x8xi0>, %acc: vector<4xi0>) -> vector<4xi0> {
+  // expected-error @+1 {{'vector.multi_reduction' op operand #0 must be vector of non-zero-bitwidth type values, but got 'vector<4x8xi0>'}}
+  %0 = vector.multi_reduction <add>, %a, %acc [1] : vector<4x8xi0> to vector<4xi0>
+  return %0 : vector<4xi0>
+}
+
+// -----
+
+func.func @contract_i0(%lhs: vector<4xi0>, %rhs: vector<4xi0>, %acc: i0) -> i0 {
+  // expected-error @+1 {{'vector.contract' op operand #0 must be vector of non-zero-bitwidth type values, but got 'vector<4xi0>'}}
+  %0 = vector.contract {
+    indexing_maps = [affine_map<(d0) -> (d0)>,
+                     affine_map<(d0) -> (d0)>,
+                     affine_map<(d0) -> ()>],
+    iterator_types = ["reduction"],
+    kind = #vector.kind<add>
+  } %lhs, %rhs, %acc : vector<4xi0>, vector<4xi0> into i0
+  return %0 : i0
+}
+
+// -----
+
+func.func @outerproduct_i0(%lhs: vector<4xi0>, %rhs: i0) -> vector<4xi0> {
+  // expected-error @+1 {{'vector.outerproduct' op operand #0 must be vector of non-zero-bitwidth type values, but got 'vector<4xi0>'}}
+  %0 = vector.outerproduct %lhs, %rhs : vector<4xi0>, i0
+  return %0 : vector<4xi0>
+}
+
+// -----
+
+func.func @scan_i0(%a: vector<4xi0>, %init: vector<1xi0>) -> (vector<4xi0>, vector<1xi0>) {
+  // expected-error @+1 {{'vector.scan' op operand #0 must be vector of non-zero-bitwidth type values, but got 'vector<4xi0>'}}
+  %0:2 = vector.scan <add>, %a, %init {inclusive = true, reduction_dim = 0 : i64} :
+    vector<4xi0>, vector<1xi0>
+  return %0#0, %0#1 : vector<4xi0>, vector<1xi0>
 }

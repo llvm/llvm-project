@@ -11,8 +11,7 @@ define i32 @atomic_nand_i32_lds(ptr addrspace(3) %ptr) nounwind {
 ; GCN-NEXT:    ; =>This Inner Loop Header: Depth=1
 ; GCN-NEXT:    s_waitcnt lgkmcnt(0)
 ; GCN-NEXT:    v_mov_b32_e32 v2, v1
-; GCN-NEXT:    v_not_b32_e32 v1, v2
-; GCN-NEXT:    v_or_b32_e32 v1, -5, v1
+; GCN-NEXT:    v_bfi_b32 v1, v2, -5, -1
 ; GCN-NEXT:    ds_cmpst_rtn_b32 v1, v0, v2, v1
 ; GCN-NEXT:    s_waitcnt lgkmcnt(0)
 ; GCN-NEXT:    v_cmp_eq_u32_e32 vcc, v1, v2
@@ -37,8 +36,7 @@ define i32 @atomic_nand_i32_global(ptr addrspace(1) %ptr) nounwind {
 ; GCN-NEXT:    ; =>This Inner Loop Header: Depth=1
 ; GCN-NEXT:    s_waitcnt vmcnt(0)
 ; GCN-NEXT:    v_mov_b32_e32 v3, v2
-; GCN-NEXT:    v_not_b32_e32 v2, v3
-; GCN-NEXT:    v_or_b32_e32 v2, -5, v2
+; GCN-NEXT:    v_bfi_b32 v2, v3, -5, -1
 ; GCN-NEXT:    global_atomic_cmpswap v2, v[0:1], v[2:3], off glc
 ; GCN-NEXT:    s_waitcnt vmcnt(0)
 ; GCN-NEXT:    buffer_wbinvl1_vol
@@ -64,8 +62,7 @@ define i32 @atomic_nand_i32_flat(ptr %ptr) nounwind {
 ; GCN-NEXT:    ; =>This Inner Loop Header: Depth=1
 ; GCN-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
 ; GCN-NEXT:    v_mov_b32_e32 v3, v2
-; GCN-NEXT:    v_not_b32_e32 v2, v3
-; GCN-NEXT:    v_or_b32_e32 v2, -5, v2
+; GCN-NEXT:    v_bfi_b32 v2, v3, -5, -1
 ; GCN-NEXT:    flat_atomic_cmpswap v2, v[0:1], v[2:3] glc
 ; GCN-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
 ; GCN-NEXT:    buffer_wbinvl1_vol

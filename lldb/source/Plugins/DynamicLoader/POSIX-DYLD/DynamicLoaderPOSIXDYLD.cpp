@@ -9,6 +9,7 @@
 // Main header include
 #include "DynamicLoaderPOSIXDYLD.h"
 
+#include "Plugins/ObjectFile/Placeholder/ObjectFilePlaceholder.h"
 #include "lldb/Breakpoint/BreakpointLocation.h"
 #include "lldb/Core/Debugger.h"
 #include "lldb/Core/Module.h"
@@ -469,7 +470,8 @@ void DynamicLoaderPOSIXDYLD::RefreshModules() {
           }
 
           ModuleSP module_sp = LoadModuleAtAddress(
-              so_entry.file_spec, so_entry.link_addr, so_entry.base_addr, true);
+              so_entry.file_spec, so_entry.link_addr, so_entry.base_addr,
+              /*base_addr_is_offset=*/true);
           if (!module_sp.get())
             return;
 
@@ -538,7 +540,7 @@ DynamicLoaderPOSIXDYLD::GetStepThroughTrampolinePlan(Thread &thread,
 
   StackFrame *frame = thread.GetStackFrameAtIndex(0).get();
   const SymbolContext &context = frame->GetSymbolContext(eSymbolContextSymbol);
-  Symbol *sym = context.symbol;
+  const Symbol *sym = context.symbol;
 
   if (sym == nullptr || !sym->IsTrampoline())
     return thread_plan_sp;
@@ -595,16 +597,20 @@ void DynamicLoaderPOSIXDYLD::LoadVDSO() {
 
   FileSpec file("[vdso]");
 
+  Log *log = GetLog(LLDBLog::DynamicLoader);
   MemoryRegionInfo info;
   Status status = m_process->GetMemoryRegionInfo(m_vdso_base, info);
   if (status.Fail()) {
-    Log *log = GetLog(LLDBLog::DynamicLoader);
     LLDB_LOG(log, "Failed to get vdso region info: {0}", status);
     return;
   }
 
-  if (ModuleSP module_sp = m_process->ReadModuleFromMemory(
-          file, m_vdso_base, info.GetRange().GetByteSize())) {
+  llvm::Expected<ModuleSP> module_sp_or_err = m_process->ReadModuleFromMemory(
+      file, m_vdso_base, info.GetRange().GetByteSize());
+  if (auto err = module_sp_or_err.takeError()) {
+    LLDB_LOG_ERROR(log, std::move(err),
+                   "Failed to read module from memory: {0}");
+  } else if (ModuleSP module_sp = *module_sp_or_err) {
     UpdateLoadedSections(module_sp, LLDB_INVALID_ADDRESS, m_vdso_base, false);
     m_process->GetTarget().GetImages().AppendIfNeeded(module_sp);
   }
@@ -697,22 +703,35 @@ void DynamicLoaderPOSIXDYLD::LoadAllCurrentModules() {
   ModuleSP executable = GetTargetExecutable();
   SetLoadedModule(executable, m_rendezvous.GetLinkMapAddress());
 
+  Target &target = m_process->GetTarget();
   std::vector<FileSpec> module_names;
   for (I = m_rendezvous.begin(), E = m_rendezvous.end(); I != E; ++I)
     module_names.push_back(I->file_spec);
-  m_process->PrefetchModuleSpecs(
-      module_names, m_process->GetTarget().GetArchitecture().GetTriple());
+  m_process->PrefetchModuleSpecs(module_names,
+                                 target.GetArchitecture().GetTriple());
 
-  auto load_module_fn = [this, &module_list,
+  auto load_module_fn = [this, &module_list, &target,
                          &log](const DYLDRendezvous::SOEntry &so_entry) {
     ModuleSP module_sp = LoadModuleAtAddress(
         so_entry.file_spec, so_entry.link_addr, so_entry.base_addr, true);
+    if (!module_sp && !m_process->IsLiveDebugSession()) {
+      // Create placeholder modules for any modules we couldn't load from disk
+      // or from memory.
+      ModuleSpec module_spec(so_entry.file_spec, target.GetArchitecture());
+      if (UUID uuid = m_process->FindModuleUUID(so_entry.file_spec.GetPath()))
+        module_spec.GetUUID() = uuid;
+      module_sp = Module::CreateModuleFromObjectFile<ObjectFilePlaceholder>(
+          module_spec, so_entry.base_addr, 512);
+      bool load_addr_changed = false;
+      target.GetImages().Append(module_sp, false);
+      module_sp->SetLoadAddress(target, so_entry.base_addr, false,
+                                load_addr_changed);
+    }
     if (module_sp.get()) {
       LLDB_LOG(log, "LoadAllCurrentModules loading module: {0}",
                so_entry.file_spec.GetFilename());
       module_list.Append(module_sp);
     } else {
-      Log *log = GetLog(LLDBLog::DynamicLoader);
       LLDB_LOGF(
           log,
           "DynamicLoaderPOSIXDYLD::%s failed loading module %s at 0x%" PRIx64,
@@ -726,9 +745,8 @@ void DynamicLoaderPOSIXDYLD::LoadAllCurrentModules() {
       task_group.async(load_module_fn, *I);
     task_group.wait();
   } else {
-    for (I = m_rendezvous.begin(), E = m_rendezvous.end(); I != E; ++I) {
+    for (I = m_rendezvous.begin(), E = m_rendezvous.end(); I != E; ++I)
       load_module_fn(*I);
-    }
   }
 
   m_process->GetTarget().ModulesDidLoad(module_list);
@@ -825,10 +843,11 @@ DynamicLoaderPOSIXDYLD::GetThreadLocalData(const lldb::ModuleSP module_sp,
   LLDB_LOGF(log,
             "GetThreadLocalData info: link_map=0x%" PRIx64
             ", thread info metadata: "
-            "modid_offset=0x%" PRIx32 ", dtv_offset=0x%" PRIx32
-            ", tls_offset=0x%" PRIx32 ", dtv_slot_size=%" PRIx32 "\n",
-            link_map, metadata.modid_offset, metadata.dtv_offset,
-            metadata.tls_offset, metadata.dtv_slot_size);
+            "modid_offset=0x%" PRIx32 ", pthread_size=0x%" PRIx32
+            ", dtv_offset=0x%" PRIx32 ", tls_offset=0x%" PRIx32
+            ", dtv_slot_size=%" PRIx32 "\n",
+            link_map, metadata.modid_offset, metadata.pthread_size,
+            metadata.dtv_offset, metadata.tls_offset, metadata.dtv_slot_size);
 
   // Get the thread pointer.
   addr_t tp = thread->GetThreadPointer();
@@ -847,8 +866,33 @@ DynamicLoaderPOSIXDYLD::GetThreadLocalData(const lldb::ModuleSP module_sp,
   }
 
   // Lookup the DTV structure for this thread.
-  addr_t dtv_ptr = tp + metadata.dtv_offset;
-  addr_t dtv = ReadPointer(dtv_ptr);
+  addr_t dtv_ptr = LLDB_INVALID_ADDRESS;
+  if (metadata.dtv_offset < metadata.pthread_size) {
+    // The DTV pointer field lies within `pthread`. This indicates that `libc`
+    // placed `tcbhead_t header`, which contains the `dtv` field, inside
+    // `pthread`, so, for this architecture, `TLS_TCB_AT_TP` is set to `1` and
+    // `TLS_DTV_AT_TP` is `0`. This corresponds to the "Variant II" memory
+    // layout described in Ulrich Drepper's ELF TLS document
+    // (https://akkadia.org/drepper/tls.pdf). The thread pointer points to the
+    // start of `pthread`, and the address of the `dtv` field can be calculated
+    // by adding its offset.
+    dtv_ptr = tp + metadata.dtv_offset;
+  } else if (metadata.dtv_offset == metadata.pthread_size) {
+    // The DTV pointer field is located right after `pthread`. This means that,
+    // for this architecture, `TLS_DTV_AT_TP` is set to `1` in `libc`, which may
+    // correspond to the "Variant I" memory layout, in which the thread pointer
+    // points directly to the `dtv` field. However, for different architectures,
+    // the position of the `dtv` field relative to the thread pointer may vary,
+    // so the following calculations must be adjusted for each platform.
+    //
+    // On AArch64 and ARM, `tp` is known to point directly to `dtv`.
+    const llvm::Triple &triple = module_sp->GetArchitecture().GetTriple();
+    if (triple.isAArch64() || triple.isARM()) {
+      dtv_ptr = tp;
+    }
+  }
+  addr_t dtv = (dtv_ptr != LLDB_INVALID_ADDRESS) ? ReadPointer(dtv_ptr)
+                                                 : LLDB_INVALID_ADDRESS;
   if (dtv == LLDB_INVALID_ADDRESS) {
     LLDB_LOGF(log, "GetThreadLocalData error: fail to read dtv");
     return LLDB_INVALID_ADDRESS;
@@ -901,10 +945,9 @@ void DynamicLoaderPOSIXDYLD::ResolveExecutableModule(
   if (module_sp && module_sp->MatchesModuleSpec(module_spec))
     return;
 
+  module_spec.SetTarget(target.shared_from_this());
   const auto executable_search_paths(Target::GetDefaultExecutableSearchPaths());
-  auto error = platform_sp->ResolveExecutable(
-      module_spec, module_sp,
-      !executable_search_paths.IsEmpty() ? &executable_search_paths : nullptr);
+  auto error = platform_sp->ResolveExecutable(module_spec, module_sp);
   if (error.Fail()) {
     StreamString stream;
     module_spec.Dump(stream);

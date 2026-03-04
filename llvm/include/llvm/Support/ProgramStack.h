@@ -12,17 +12,6 @@
 #include "llvm/ADT/STLFunctionalExtras.h"
 #include "llvm/Support/Compiler.h"
 
-// LLVM_HAS_SPLIT_STACKS is exposed in the header because CrashRecoveryContext
-// needs to know if it's running on another thread or not.
-//
-// Currently only Apple AArch64 is known to support split stacks in the debugger
-// and other tooling.
-#if defined(__APPLE__) && defined(__MACH__) && defined(__aarch64__) &&         \
-    __has_extension(gnu_asm)
-# define LLVM_HAS_SPLIT_STACKS
-# define LLVM_HAS_SPLIT_STACKS_AARCH64
-#endif
-
 namespace llvm {
 
 /// \returns an address close to the current value of the stack pointer.
@@ -46,17 +35,15 @@ LLVM_ABI unsigned getDefaultStackSize();
 LLVM_ABI void runOnNewStack(unsigned StackSize, function_ref<void()> Fn);
 
 template <typename R, typename... Ts>
-std::enable_if_t<!std::is_same_v<R, void>, R>
-runOnNewStack(unsigned StackSize, function_ref<R(Ts...)> Fn, Ts &&...Args) {
-  std::optional<R> Ret;
-  runOnNewStack(StackSize, [&]() { Ret = Fn(std::forward<Ts>(Args)...); });
-  return std::move(*Ret);
-}
-
-template <typename... Ts>
-void runOnNewStack(unsigned StackSize, function_ref<void(Ts...)> Fn,
+auto runOnNewStack(unsigned StackSize, function_ref<R(Ts...)> Fn,
                    Ts &&...Args) {
-  runOnNewStack(StackSize, [&]() { Fn(std::forward<Ts>(Args)...); });
+  if constexpr (std::is_same_v<R, void>) {
+    runOnNewStack(StackSize, [&]() { Fn(std::forward<Ts>(Args)...); });
+  } else {
+    std::optional<R> Ret;
+    runOnNewStack(StackSize, [&]() { Ret = Fn(std::forward<Ts>(Args)...); });
+    return std::move(*Ret);
+  }
 }
 
 } // namespace llvm

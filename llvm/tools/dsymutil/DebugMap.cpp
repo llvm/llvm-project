@@ -40,7 +40,7 @@ using namespace llvm::object;
 DebugMapObject::DebugMapObject(StringRef ObjectFilename,
                                sys::TimePoint<std::chrono::seconds> Timestamp,
                                uint8_t Type)
-    : Filename(std::string(ObjectFilename)), Timestamp(Timestamp), Type(Type) {}
+    : DebugMapObjectFilter(ObjectFilename), Timestamp(Timestamp), Type(Type) {}
 
 bool DebugMapObject::addSymbol(StringRef Name,
                                std::optional<uint64_t> ObjectAddress,
@@ -94,8 +94,9 @@ DebugMapObject &
 DebugMap::addDebugMapObject(StringRef ObjectFilePath,
                             sys::TimePoint<std::chrono::seconds> Timestamp,
                             uint8_t Type) {
-  Objects.emplace_back(new DebugMapObject(ObjectFilePath, Timestamp, Type));
-  return *Objects.back();
+  getObjects().emplace_back(
+      new DebugMapObject(ObjectFilePath, Timestamp, Type));
+  return *getObjects().back();
 }
 
 const DebugMapObject::DebugMapEntry *
@@ -123,6 +124,9 @@ void DebugMap::print(raw_ostream &OS) const {
 void DebugMap::dump() const { print(errs()); }
 #endif
 
+DebugMapObjectFilter::DebugMapObjectFilter(StringRef ObjectFilename)
+    : Filename(std::string(ObjectFilename)) {}
+
 namespace {
 
 struct YAMLContext {
@@ -134,6 +138,11 @@ struct YAMLContext {
 };
 
 } // end anonymous namespace
+
+DebugMap::DebugMap(const Triple &BinaryTriple, StringRef BinaryPath,
+                   ArrayRef<uint8_t> BinaryUUID)
+    : BinaryTriple(BinaryTriple), BinaryPath(std::string(BinaryPath)),
+      BinaryUUID(BinaryUUID.begin(), BinaryUUID.end()) {}
 
 ErrorOr<std::vector<std::unique_ptr<DebugMap>>>
 DebugMap::parseYAMLDebugMap(BinaryHolder &BinHolder, StringRef InputFile,
@@ -212,6 +221,26 @@ SequenceTraits<std::vector<std::unique_ptr<dsymutil::DebugMapObject>>>::element(
     seq[index].reset(new dsymutil::DebugMapObject);
   }
   return *seq[index];
+}
+
+size_t
+SequenceTraits<std::vector<std::unique_ptr<dsymutil::DebugMapObjectFilter>>>::
+    size(IO &io,
+         std::vector<std::unique_ptr<dsymutil::DebugMapObjectFilter>> &seq) {
+  return seq.size();
+}
+
+dsymutil::DebugMapObject &
+SequenceTraits<std::vector<std::unique_ptr<dsymutil::DebugMapObjectFilter>>>::
+    element(IO &io,
+            std::vector<std::unique_ptr<dsymutil::DebugMapObjectFilter>> &seq,
+            size_t index) {
+  auto &Objects = reinterpret_cast<
+      std::vector<std::unique_ptr<dsymutil::DebugMapObject>> &>(seq);
+  return SequenceTraits<
+      std::vector<std::unique_ptr<dsymutil::DebugMapObject>>>::element(io,
+                                                                       Objects,
+                                                                       index);
 }
 
 void MappingTraits<dsymutil::DebugMap>::mapping(IO &io,

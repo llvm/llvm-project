@@ -1,10 +1,12 @@
 add_subdirectory(Support)
 add_subdirectory(CUF)
 add_subdirectory(FIRCG)
+add_subdirectory(MIF)
 
 add_flang_library(FIRDialect
   FIRAttr.cpp
   FIRDialect.cpp
+  FIROperationMoveOpInterface.cpp
   FIROps.cpp
   FIRType.cpp
   FirAliasTagOpInterface.cpp
@@ -14,6 +16,7 @@ add_flang_library(FIRDialect
 
   DEPENDS
   CanonicalizationPatternsIncGen
+  FIROperationMoveOpInterfaceIncGen
   FIROpsIncGen
   FIRSafeTempArrayCopyAttrInterfaceIncGen
   CUFAttrsIncGen

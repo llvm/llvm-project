@@ -69,15 +69,15 @@ public:
   /// getZeroValueForNegation.
   LLVM_ABI bool isNegativeZeroValue() const;
 
-  /// Return true if the value is negative zero or null value.
-  LLVM_ABI bool isZeroValue() const;
-
   /// Return true if the value is not the smallest signed value, or,
   /// for vectors, does not contain smallest signed value elements.
   LLVM_ABI bool isNotMinSignedValue() const;
 
   /// Return true if the value is the smallest signed value.
   LLVM_ABI bool isMinSignedValue() const;
+
+  /// Return true if the value is the largest signed value.
+  LLVM_ABI bool isMaxSignedValue() const;
 
   /// Return true if this is a finite and non-zero floating-point scalar
   /// constant or a fixed width vector constant with all finite and non-zero

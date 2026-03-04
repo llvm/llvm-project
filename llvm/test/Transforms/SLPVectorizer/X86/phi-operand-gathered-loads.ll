@@ -19,7 +19,7 @@ define void @test(ptr %this, i1 %cmp4.not) {
 ; CHECK-NEXT:    [[TMP2:%.*]] = shufflevector <4 x ptr> [[TMP1]], <4 x ptr> poison, <4 x i32> zeroinitializer
 ; CHECK-NEXT:    [[TMP3:%.*]] = getelementptr i8, <4 x ptr> [[TMP2]], <4 x i64> [[TMP0]]
 ; CHECK-NEXT:    [[TMP4:%.*]] = getelementptr i8, ptr [[NEWPT]], i64 92
-; CHECK-NEXT:    [[TMP5:%.*]] = call <4 x i32> @llvm.masked.gather.v4i32.v4p0(<4 x ptr> [[TMP3]], i32 4, <4 x i1> splat (i1 true), <4 x i32> poison)
+; CHECK-NEXT:    [[TMP5:%.*]] = call <4 x i32> @llvm.masked.gather.v4i32.v4p0(<4 x ptr> align 4 [[TMP3]], <4 x i1> splat (i1 true), <4 x i32> poison)
 ; CHECK-NEXT:    store <4 x i32> [[TMP5]], ptr [[TMP4]], align 4
 ; CHECK-NEXT:    ret void
 ;

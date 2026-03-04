@@ -97,10 +97,11 @@ Finally, MLIR takes the same view on scalable Vectors as LLVM (c.f.
 [VectorType](https://llvm.org/docs/LangRef.html#vector-type)):
 > For scalable vectors, the total number of elements is a constant multiple
 > (called vscale) of the specified number of elements; vscale is a positive
-> integer that is unknown at compile time and the same hardware-dependent
-> constant for all scalable vectors at run time.  The size of a specific
-> scalable vector type is thus constant within IR, even if the exact size in
-> bytes cannot be determined until run time.
+> power-of-two integer that is unknown at compile time and the same
+> hardware-dependent constant for all scalable vectors at run time.
+> The size of a specific scalable vector type is thus constant within
+> IR, even if the exact size in bytes cannot be determined until run
+> time.
 
 ### Hardware Vector Ops
 
@@ -125,7 +126,7 @@ Some existing Arith and Vector Dialect on `n-D` `vector` types comprise:
 // Produces a vector<3x7x8xf32>
 %b = arith.mulf %0, %1 : vector<3x7x8xf32>
 // Produces a vector<3x7x8xf32>
-%c = vector.splat %1 : vector<3x7x8xf32>
+%c = vector.broadcast %1 : f32 to vector<3x7x8xf32>
 
 %d = vector.extract %0[1]: vector<7x8xf32> from vector<3x7x8xf32>
 %e = vector.extract %0[1, 5]: vector<8xf32> from vector<3x7x8xf32>
@@ -176,8 +177,6 @@ infrastructure can apply iteratively.
 ### Virtual Vector to Hardware Vector Lowering
 
 For now, `VV -> HWV` are specified in C++ (see for instance the
-[SplatOpLowering for n-D vectors](https://github.com/tensorflow/mlir/commit/0a0c4867c6a6fcb0a2f17ef26a791c1d551fe33d)
-or the
 [VectorOuterProductOp lowering](https://github.com/tensorflow/mlir/commit/957b1ca9680b4aacabb3a480fbc4ebd2506334b8)).
 
 Simple

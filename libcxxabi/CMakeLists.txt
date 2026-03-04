@@ -64,6 +64,9 @@ option(LIBCXXABI_HAS_WIN32_THREAD_API "Ignore auto-detection and force use of wi
 option(LIBCXXABI_HAS_EXTERNAL_THREAD_API
   "Build libc++abi with an externalized threading API.
   This option may only be set to ON when LIBCXXABI_ENABLE_THREADS=ON." OFF)
+set(LIBCXXABI_AVAILABILITY_MINIMUM_HEADER_VERSION "2" CACHE STRING
+  "Minimum version of the libc++ headers that are allowed to be used by binaries linked against the libc++ library. This
+   version must correspond to the major version of an LLVM release.")
 option(LIBCXXABI_ENABLE_FORGIVING_DYNAMIC_CAST
 "Make dynamic_cast more forgiving when type_info's mistakenly have hidden \
 visibility, and thus multiple type_infos can exist for a single type. \
@@ -244,7 +247,7 @@ include(HandleLibcxxabiFlags)
 #===============================================================================
 
 # Configure target flags
-if (${CMAKE_SYSTEM_NAME} MATCHES "AIX")
+if ("${CMAKE_SYSTEM_NAME}" MATCHES "AIX")
   add_flags_if_supported("-mdefault-visibility-export-mapping=explicit")
   set(CMAKE_AIX_EXPORT_ALL_SYMBOLS OFF)
 endif()
@@ -321,6 +324,7 @@ add_definitions(-D_LIBCXXABI_BUILDING_LIBRARY)
 # libcxxabi needs to, for various reasons, include the libcpp headers as if
 # it is being built as part of libcxx.
 add_definitions(-D_LIBCPP_BUILDING_LIBRARY)
+add_definitions(-D_LIBCPP_AVAILABILITY_MINIMUM_HEADER_VERSION=${LIBCXXABI_AVAILABILITY_MINIMUM_HEADER_VERSION})
 
 # Get feature flags.
 add_compile_flags_if_supported(-fstrict-aliasing)
@@ -458,7 +462,7 @@ set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} ${LIBCXXABI_C_FLAGS}")
 
 # On AIX, avoid picking up VMX extensions(i.e. vec_malloc) which would change
 # the default alignment of the allocators here.
-if (UNIX AND ${CMAKE_SYSTEM_NAME} MATCHES "AIX")
+if (UNIX AND "${CMAKE_SYSTEM_NAME}" MATCHES "AIX")
   add_definitions("-D_XOPEN_SOURCE=700")
 endif()
 

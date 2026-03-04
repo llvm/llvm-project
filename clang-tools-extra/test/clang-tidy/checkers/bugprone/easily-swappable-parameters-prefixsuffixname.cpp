@@ -6,12 +6,10 @@
 // RUN:     bugprone-easily-swappable-parameters.QualifiersMix: 0, \
 // RUN:     bugprone-easily-swappable-parameters.ModelImplicitConversions: 0, \
 // RUN:     bugprone-easily-swappable-parameters.SuppressParametersUsedTogether: 0, \
-// RUN:     bugprone-easily-swappable-parameters.NamePrefixSuffixSilenceDissimilarityTreshold: 1 \
-// RUN:  }}' --
+// RUN:     bugprone-easily-swappable-parameters.NamePrefixSuffixSilenceDissimilarityThreshold: 1 \
+// RUN:  }}' -- -isystem %clang_tidy_headers
+#include <string>
 
-namespace std {
-struct string {};
-} // namespace std
 class Matrix {};
 
 void test1(int Foo, int Bar) {}

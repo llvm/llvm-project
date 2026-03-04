@@ -143,9 +143,6 @@ class Lexer : public PreprocessorLexer {
   /// True if this is the first time we're lexing the input file.
   bool IsFirstTimeLexingFile;
 
-  /// True if current lexing token is the first pp-token.
-  bool IsFirstPPToken;
-
   // NewLinePtr - A pointer to new line character '\n' being lexed. For '\r\n',
   // it also points to '\n.'
   const char *NewLinePtr;
@@ -630,7 +627,7 @@ private:
   /// LexTokenInternal - Internal interface to lex a preprocessing token. Called
   /// by Lex.
   ///
-  bool LexTokenInternal(Token &Result, bool TokAtPhysicalStartOfLine);
+  bool LexTokenInternal(Token &Result);
 
   bool CheckUnicodeWhitespace(Token &Result, uint32_t C, const char *CurPtr);
 
@@ -765,12 +762,9 @@ private:
   bool LexCharConstant       (Token &Result, const char *CurPtr,
                               tok::TokenKind Kind);
   bool LexEndOfFile          (Token &Result, const char *CurPtr);
-  bool SkipWhitespace        (Token &Result, const char *CurPtr,
-                              bool &TokAtPhysicalStartOfLine);
-  bool SkipLineComment       (Token &Result, const char *CurPtr,
-                              bool &TokAtPhysicalStartOfLine);
-  bool SkipBlockComment      (Token &Result, const char *CurPtr,
-                              bool &TokAtPhysicalStartOfLine);
+  bool SkipWhitespace(Token &Result, const char *CurPtr);
+  bool SkipLineComment(Token &Result, const char *CurPtr);
+  bool SkipBlockComment(Token &Result, const char *CurPtr);
   bool SaveLineComment       (Token &Result, const char *CurPtr);
 
   bool IsStartOfConflictMarker(const char *CurPtr);

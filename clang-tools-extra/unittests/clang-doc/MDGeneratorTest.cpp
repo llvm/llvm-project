@@ -21,7 +21,9 @@ static std::unique_ptr<Generator> getMDGenerator() {
   return std::move(G.get());
 }
 
-TEST(MDGeneratorTest, emitNamespaceMD) {
+class MDGeneratorTest : public ClangDocContextTest {};
+
+TEST_F(MDGeneratorTest, emitNamespaceMD) {
   NamespaceInfo I;
   I.Name = "Namespace";
   I.Namespace.emplace_back(EmptySID, "A", InfoType::IT_namespace);
@@ -39,7 +41,7 @@ TEST(MDGeneratorTest, emitNamespaceMD) {
   assert(G);
   std::string Buffer;
   llvm::raw_string_ostream Actual(Buffer);
-  auto Err = G->generateDocForInfo(&I, Actual, ClangDocContext());
+  auto Err = G->generateDocForInfo(&I, Actual, getClangDocContext());
   assert(!Err);
   std::string Expected = R"raw(# namespace Namespace
 
@@ -77,7 +79,7 @@ TEST(MDGeneratorTest, emitNamespaceMD) {
   EXPECT_EQ(Expected, Actual.str());
 }
 
-TEST(MDGeneratorTest, emitRecordMD) {
+TEST_F(MDGeneratorTest, emitRecordMD) {
   RecordInfo I;
   I.Name = "r";
   I.Namespace.emplace_back(EmptySID, "A", InfoType::IT_namespace);
@@ -100,7 +102,7 @@ TEST(MDGeneratorTest, emitRecordMD) {
   assert(G);
   std::string Buffer;
   llvm::raw_string_ostream Actual(Buffer);
-  auto Err = G->generateDocForInfo(&I, Actual, ClangDocContext());
+  auto Err = G->generateDocForInfo(&I, Actual, getClangDocContext());
   assert(!Err);
   std::string Expected = R"raw(# class r
 
@@ -144,7 +146,7 @@ ChildStruct
   EXPECT_EQ(Expected, Actual.str());
 }
 
-TEST(MDGeneratorTest, emitFunctionMD) {
+TEST_F(MDGeneratorTest, emitFunctionMD) {
   FunctionInfo I;
   I.Name = "f";
   I.Namespace.emplace_back(EmptySID, "A", InfoType::IT_namespace);
@@ -163,7 +165,7 @@ TEST(MDGeneratorTest, emitFunctionMD) {
   assert(G);
   std::string Buffer;
   llvm::raw_string_ostream Actual(Buffer);
-  auto Err = G->generateDocForInfo(&I, Actual, ClangDocContext());
+  auto Err = G->generateDocForInfo(&I, Actual, getClangDocContext());
   assert(!Err);
   std::string Expected = R"raw(### f
 
@@ -176,7 +178,7 @@ TEST(MDGeneratorTest, emitFunctionMD) {
   EXPECT_EQ(Expected, Actual.str());
 }
 
-TEST(MDGeneratorTest, emitEnumMD) {
+TEST_F(MDGeneratorTest, emitEnumMD) {
   EnumInfo I;
   I.Name = "e";
   I.Namespace.emplace_back(EmptySID, "A", InfoType::IT_namespace);
@@ -191,7 +193,7 @@ TEST(MDGeneratorTest, emitEnumMD) {
   assert(G);
   std::string Buffer;
   llvm::raw_string_ostream Actual(Buffer);
-  auto Err = G->generateDocForInfo(&I, Actual, ClangDocContext());
+  auto Err = G->generateDocForInfo(&I, Actual, getClangDocContext());
   assert(!Err);
   std::string Expected = R"raw(| enum class e |
 
@@ -207,7 +209,7 @@ TEST(MDGeneratorTest, emitEnumMD) {
   EXPECT_EQ(Expected, Actual.str());
 }
 
-TEST(MDGeneratorTest, emitCommentMD) {
+TEST_F(MDGeneratorTest, emitCommentMD) {
   FunctionInfo I;
   I.Name = "f";
 
@@ -325,7 +327,7 @@ TEST(MDGeneratorTest, emitCommentMD) {
   assert(G);
   std::string Buffer;
   llvm::raw_string_ostream Actual(Buffer);
-  auto Err = G->generateDocForInfo(&I, Actual, ClangDocContext());
+  auto Err = G->generateDocForInfo(&I, Actual, getClangDocContext());
   assert(!Err);
   std::string Expected =
       R"raw(### f

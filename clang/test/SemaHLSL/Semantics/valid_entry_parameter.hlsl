@@ -4,91 +4,91 @@
 void CSMain(uint ID : SV_DispatchThreadID) {
 // CHECK: FunctionDecl 0x{{[0-9a-fA-F]+}} <{{.*}}> line:[[@LINE-1]]:6 CSMain 'void (uint)'
 // CHECK-NEXT: ParmVarDecl 0x{{[0-9a-fA-F]+}} <{{.*}}> col:18 ID 'uint'
-// CHECK-NEXT: HLSLSV_DispatchThreadIDAttr
+// CHECK-NEXT:  HLSLParsedSemanticAttr 0x{{[0-9a-f]+}} <col:23> "SV_DispatchThreadID" 0
 }
 [numthreads(8,8,1)]
 void CSMain1(uint2 ID : SV_DispatchThreadID) {
 // CHECK: FunctionDecl 0x{{[0-9a-fA-F]+}} <{{.*}}> line:[[@LINE-1]]:6 CSMain1 'void (uint2)'
 // CHECK-NEXT: ParmVarDecl 0x{{[0-9a-fA-F]+}} <{{.*}}> col:20 ID 'uint2'
-// CHECK-NEXT: HLSLSV_DispatchThreadIDAttr
+// CHECK-NEXT:  HLSLParsedSemanticAttr 0x{{[0-9a-f]+}} <col:25> "SV_DispatchThreadID" 0
 }
 [numthreads(8,8,1)]
 void CSMain2(uint3 ID : SV_DispatchThreadID) {
 // CHECK: FunctionDecl 0x{{[0-9a-fA-F]+}} <{{.*}}> line:[[@LINE-1]]:6 CSMain2 'void (uint3)'
 // CHECK-NEXT: ParmVarDecl 0x{{[0-9a-fA-F]+}} <{{.*}}> col:20 ID 'uint3'
-// CHECK-NEXT: HLSLSV_DispatchThreadIDAttr
+// CHECK-NEXT:  HLSLParsedSemanticAttr 0x{{[0-9a-f]+}} <col:25> "SV_DispatchThreadID" 0
 }
 [numthreads(8,8,1)]
 void CSMain3(uint3 : SV_DispatchThreadID) {
 // CHECK: FunctionDecl 0x{{[0-9a-fA-F]+}} <{{.*}}> line:[[@LINE-1]]:6 CSMain3 'void (uint3)'
 // CHECK-NEXT: ParmVarDecl 0x{{[0-9a-fA-F]+}} <{{.*}}> col:20 'uint3'
-// CHECK-NEXT: HLSLSV_DispatchThreadIDAttr
+// CHECK-NEXT:  HLSLParsedSemanticAttr 0x{{[0-9a-f]+}} <col:22> "SV_DispatchThreadID" 0
 }
 [numthreads(8,8,1)]
 void CSMain4(uint3 : SV_DispatchThreadId) {
 // CHECK: FunctionDecl 0x{{[0-9a-fA-F]+}} <{{.*}}> line:[[@LINE-1]]:6 CSMain4 'void (uint3)'
 // CHECK-NEXT: ParmVarDecl 0x{{[0-9a-fA-F]+}} <{{.*}}> col:20 'uint3'
-// CHECK-NEXT: HLSLSV_DispatchThreadIDAttr
+// CHECK-NEXT:  HLSLParsedSemanticAttr 0x{{[0-9a-f]+}} <col:22> "SV_DispatchThreadId" 0
 }
 
 [numthreads(8,8,1)]
 void CSMain_GID(uint ID : SV_GroupID) {
 // CHECK: FunctionDecl 0x{{[0-9a-fA-F]+}} <{{.*}}> line:[[@LINE-1]]:6 CSMain_GID 'void (uint)'
 // CHECK-NEXT: ParmVarDecl 0x{{[0-9a-fA-F]+}} <{{.*}}> col:22 ID 'uint'
-// CHECK-NEXT: HLSLSV_GroupIDAttr
+// CHECK-NEXT:  HLSLParsedSemanticAttr 0x{{[0-9a-f]+}} <col:27> "SV_GroupID" 0
 }
 [numthreads(8,8,1)]
 void CSMain1_GID(uint2 ID : SV_GroupID) {
 // CHECK: FunctionDecl 0x{{[0-9a-fA-F]+}} <{{.*}}> line:[[@LINE-1]]:6 CSMain1_GID 'void (uint2)'
 // CHECK-NEXT: ParmVarDecl 0x{{[0-9a-fA-F]+}} <{{.*}}> col:24 ID 'uint2'
-// CHECK-NEXT: HLSLSV_GroupIDAttr
+// CHECK-NEXT:  HLSLParsedSemanticAttr 0x{{[0-9a-f]+}} <col:29> "SV_GroupID" 0
 }
 [numthreads(8,8,1)]
 void CSMain2_GID(uint3 ID : SV_GroupID) {
 // CHECK: FunctionDecl 0x{{[0-9a-fA-F]+}} <{{.*}}> line:[[@LINE-1]]:6 CSMain2_GID 'void (uint3)'
 // CHECK-NEXT: ParmVarDecl 0x{{[0-9a-fA-F]+}} <{{.*}}> col:24 ID 'uint3'
-// CHECK-NEXT: HLSLSV_GroupIDAttr
+// CHECK-NEXT:  HLSLParsedSemanticAttr 0x{{[0-9a-f]+}} <col:29> "SV_GroupID" 0
 }
 [numthreads(8,8,1)]
 void CSMain3_GID(uint3 : SV_GroupID) {
 // CHECK: FunctionDecl 0x{{[0-9a-fA-F]+}} <{{.*}}> line:[[@LINE-1]]:6 CSMain3_GID 'void (uint3)'
 // CHECK-NEXT: ParmVarDecl 0x{{[0-9a-fA-F]+}} <{{.*}}> col:24 'uint3'
-// CHECK-NEXT: HLSLSV_GroupIDAttr
+// CHECK-NEXT:  HLSLParsedSemanticAttr 0x{{[0-9a-f]+}} <col:26> "SV_GroupID" 0
 }
 [numthreads(8,8,1)]
 void CSMain4_GID(uint3 : Sv_GroupId) {
 // CHECK: FunctionDecl 0x{{[0-9a-fA-F]+}} <{{.*}}> line:[[@LINE-1]]:6 CSMain4_GID 'void (uint3)'
 // CHECK-NEXT: ParmVarDecl 0x{{[0-9a-fA-F]+}} <{{.*}}> col:24 'uint3'
-// CHECK-NEXT: HLSLSV_GroupIDAttr
+// CHECK-NEXT:  HLSLParsedSemanticAttr 0x{{[0-9a-f]+}} <col:26> "Sv_GroupId" 0
 }
 
 [numthreads(8,8,1)]
 void CSMain_GThreadID(uint ID : SV_GroupThreadID) {
 // CHECK: FunctionDecl 0x{{[0-9a-fA-F]+}} <{{.*}}> line:[[@LINE-1]]:6 CSMain_GThreadID 'void (uint)'
 // CHECK-NEXT: ParmVarDecl 0x{{[0-9a-fA-F]+}} <{{.*}}> col:28 ID 'uint'
-// CHECK-NEXT: HLSLSV_GroupThreadIDAttr
+// CHECK-NEXT:  HLSLParsedSemanticAttr 0x{{[0-9a-f]+}} <col:33> "SV_GroupThreadID" 0
 }
 [numthreads(8,8,1)]
 void CSMain1_GThreadID(uint2 ID : SV_GroupThreadID) {
 // CHECK: FunctionDecl 0x{{[0-9a-fA-F]+}} <{{.*}}> line:[[@LINE-1]]:6 CSMain1_GThreadID 'void (uint2)'
 // CHECK-NEXT: ParmVarDecl 0x{{[0-9a-fA-F]+}} <{{.*}}> col:30 ID 'uint2'
-// CHECK-NEXT: HLSLSV_GroupThreadIDAttr
+// CHECK-NEXT:  HLSLParsedSemanticAttr 0x{{[0-9a-f]+}} <col:35> "SV_GroupThreadID" 0
 }
 [numthreads(8,8,1)]
 void CSMain2_GThreadID(uint3 ID : SV_GroupThreadID) {
 // CHECK: FunctionDecl 0x{{[0-9a-fA-F]+}} <{{.*}}> line:[[@LINE-1]]:6 CSMain2_GThreadID 'void (uint3)'
 // CHECK-NEXT: ParmVarDecl 0x{{[0-9a-fA-F]+}} <{{.*}}> col:30 ID 'uint3'
-// CHECK-NEXT: HLSLSV_GroupThreadIDAttr
+// CHECK-NEXT:  HLSLParsedSemanticAttr 0x{{[0-9a-f]+}} <col:35> "SV_GroupThreadID" 0
 }
 [numthreads(8,8,1)]
 void CSMain3_GThreadID(uint3 : SV_GroupThreadID) {
 // CHECK: FunctionDecl 0x{{[0-9a-fA-F]+}} <{{.*}}> line:[[@LINE-1]]:6 CSMain3_GThreadID 'void (uint3)'
 // CHECK-NEXT: ParmVarDecl 0x{{[0-9a-fA-F]+}} <{{.*}}> col:30 'uint3'
-// CHECK-NEXT: HLSLSV_GroupThreadIDAttr
+// CHECK-NEXT:  HLSLParsedSemanticAttr 0x{{[0-9a-f]+}} <col:32> "SV_GroupThreadID" 0
 }
 [numthreads(8,8,1)]
 void CSMain4_GThreadID(uint3 : sv_GroupThreadid) {
 // CHECK: FunctionDecl 0x{{[0-9a-fA-F]+}} <{{.*}}> line:[[@LINE-1]]:6 CSMain4_GThreadID 'void (uint3)'
 // CHECK-NEXT: ParmVarDecl 0x{{[0-9a-fA-F]+}} <{{.*}}> col:30 'uint3'
-// CHECK-NEXT: HLSLSV_GroupThreadIDAttr
+// CHECK-NEXT:  HLSLParsedSemanticAttr 0x{{[0-9a-f]+}} <col:32> "sv_GroupThreadid" 0
 }

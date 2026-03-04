@@ -17,6 +17,7 @@
 #include "X86ISelLowering.h"
 #include "X86InstrInfo.h"
 #include "X86SelectionDAGInfo.h"
+#include "llvm/ADT/BitVector.h"
 #include "llvm/CodeGen/TargetSubtargetInfo.h"
 #include "llvm/IR/CallingConv.h"
 #include "llvm/TargetParser/Triple.h"
@@ -65,6 +66,9 @@ class X86Subtarget final : public X86GenSubtargetInfo {
 #define GET_SUBTARGETINFO_MACRO(ATTRIBUTE, DEFAULT, GETTER)                    \
   bool ATTRIBUTE = DEFAULT;
 #include "X86GenSubtargetInfo.inc"
+  /// ReservedRReg R#i is not available as a general purpose register.
+  BitVector ReservedRReg;
+
   /// The minimum alignment known to hold of the stack frame on
   /// entry to the function and which must be maintained by every function.
   Align stackAlignment = Align(4);
@@ -155,6 +159,10 @@ public:
   const LegalizerInfo *getLegalizerInfo() const override;
   const RegisterBankInfo *getRegBankInfo() const override;
 
+  bool isRegisterReservedByUser(Register i) const override {
+    return ReservedRReg[i.id()];
+  }
+
 private:
   /// Initialize the full set of dependencies so we can use an initializer
   /// list for X86Subtarget.
@@ -170,10 +178,10 @@ public:
 #include "X86GenSubtargetInfo.inc"
 
   /// Is this x86_64 with the ILP32 programming model (x32 ABI)?
-  bool isTarget64BitILP32() const { return Is64Bit && (TargetTriple.isX32()); }
+  bool isTarget64BitILP32() const { return Is64Bit && IsX32; }
 
   /// Is this x86_64 with the LP64 programming model (standard AMD64, no x32)?
-  bool isTarget64BitLP64() const { return Is64Bit && (!TargetTriple.isX32()); }
+  bool isTarget64BitLP64() const { return Is64Bit && !IsX32; }
 
   PICStyles::Style getPICStyle() const { return PICStyle; }
   void setPICStyle(PICStyles::Style Style)  { PICStyle = Style; }
@@ -226,8 +234,7 @@ public:
   // TODO: Currently we're always allowing widening on CPUs without VLX,
   // because for many cases we don't have a better option.
   bool canExtendTo512DQ() const {
-    return hasAVX512() && hasEVEX512() &&
-           (!hasVLX() || getPreferVectorWidth() >= 512);
+    return hasAVX512() && (!hasVLX() || getPreferVectorWidth() >= 512);
   }
   bool canExtendTo512BW() const  {
     return hasBWI() && canExtendTo512DQ();
@@ -247,8 +254,7 @@ public:
   // If there are no 512-bit vectors and we prefer not to use 512-bit registers,
   // disable them in the legalizer.
   bool useAVX512Regs() const {
-    return hasAVX512() && hasEVEX512() &&
-           (canExtendTo512DQ() || RequiredVectorWidth > 256);
+    return hasAVX512() && (canExtendTo512DQ() || RequiredVectorWidth > 256);
   }
 
   bool useLight256BitInstructions() const {
@@ -293,7 +299,9 @@ public:
 
   bool isTargetLinux() const { return TargetTriple.isOSLinux(); }
   bool isTargetKFreeBSD() const { return TargetTriple.isOSKFreeBSD(); }
+  bool isTargetHurd() const { return TargetTriple.isOSHurd(); }
   bool isTargetGlibc() const { return TargetTriple.isOSGlibc(); }
+  bool isTargetMusl() const { return TargetTriple.isMusl(); }
   bool isTargetAndroid() const { return TargetTriple.isAndroid(); }
   bool isTargetMCU() const { return TargetTriple.isOSIAMCU(); }
   bool isTargetFuchsia() const { return TargetTriple.isOSFuchsia(); }

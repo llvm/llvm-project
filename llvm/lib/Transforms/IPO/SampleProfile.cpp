@@ -83,7 +83,6 @@
 #include <cstdint>
 #include <functional>
 #include <limits>
-#include <map>
 #include <memory>
 #include <queue>
 #include <string>
@@ -115,6 +114,8 @@ STATISTIC(NumCSInlinedHitMaxLimit,
 STATISTIC(
     NumCSInlinedHitGrowthLimit,
     "Number of functions with FDO inline stopped due to growth size limit");
+
+namespace llvm {
 
 // Command line option to specify the file to read samples from. This is
 // mainly used for debugging.
@@ -198,7 +199,6 @@ static cl::opt<bool> DisableSampleLoaderInlining(
         "pass, and merge (or scale) profiles (as configured by "
         "--sample-profile-merge-inlinee)."));
 
-namespace llvm {
 cl::opt<bool>
     SortProfiledSCC("sort-profiled-scc-member", cl::init(true), cl::Hidden,
                     cl::desc("Sort profiled recursion by edge weights."));
@@ -485,11 +485,11 @@ public:
         UseFlattenedProfile(UseFlattenedProfile) {}
 
   bool doInitialization(Module &M, FunctionAnalysisManager *FAM = nullptr);
-  bool runOnModule(Module &M, ModuleAnalysisManager *AM,
+  bool runOnModule(Module &M, ModuleAnalysisManager &AM,
                    ProfileSummaryInfo *_PSI);
 
 protected:
-  bool runOnFunction(Function &F, ModuleAnalysisManager *AM);
+  bool runOnFunction(Function &F, ModuleAnalysisManager &AM);
   bool emitAnnotations(Function &F);
   ErrorOr<uint64_t> getInstWeight(const Instruction &I) override;
   const FunctionSamples *findCalleeFunctionSamples(const CallBase &I) const;
@@ -1664,8 +1664,9 @@ void SampleProfileLoader::generateMDProfMetadata(Function &F) {
           else if (OverwriteExistingWeights)
             I.setMetadata(LLVMContext::MD_prof, nullptr);
         } else if (!isa<IntrinsicInst>(&I)) {
-          setBranchWeights(I, {static_cast<uint32_t>(BlockWeights[BB])},
-                           /*IsExpected=*/false);
+          setBranchWeights(
+              I, ArrayRef<uint32_t>{static_cast<uint32_t>(BlockWeights[BB])},
+              /*IsExpected=*/false);
         }
       }
     } else if (OverwriteExistingWeights || ProfileSampleBlockAccurate) {
@@ -1676,7 +1677,8 @@ void SampleProfileLoader::generateMDProfMetadata(Function &F) {
           if (cast<CallBase>(I).isIndirectCall()) {
             I.setMetadata(LLVMContext::MD_prof, nullptr);
           } else {
-            setBranchWeights(I, {uint32_t(0)}, /*IsExpected=*/false);
+            setBranchWeights(I, ArrayRef<uint32_t>{uint32_t(0)},
+                             /*IsExpected=*/false);
           }
         }
       }
@@ -2160,7 +2162,7 @@ void SampleProfileLoader::removePseudoProbeInstsDiscriminator(Module &M) {
   }
 }
 
-bool SampleProfileLoader::runOnModule(Module &M, ModuleAnalysisManager *AM,
+bool SampleProfileLoader::runOnModule(Module &M, ModuleAnalysisManager &AM,
                                       ProfileSummaryInfo *_PSI) {
   GUIDToFuncNameMapper Mapper(M, *Reader, GUIDToFuncNameMap);
 
@@ -2238,7 +2240,8 @@ bool SampleProfileLoader::runOnModule(Module &M, ModuleAnalysisManager *AM,
   return retval;
 }
 
-bool SampleProfileLoader::runOnFunction(Function &F, ModuleAnalysisManager *AM) {
+bool SampleProfileLoader::runOnFunction(Function &F,
+                                        ModuleAnalysisManager &AM) {
   LLVM_DEBUG(dbgs() << "\n\nProcessing Function " << F.getName() << "\n");
   DILocation2SampleMap.clear();
   // By default the entry count is initialized to -1, which will be treated
@@ -2289,16 +2292,9 @@ bool SampleProfileLoader::runOnFunction(Function &F, ModuleAnalysisManager *AM) 
   // count value.
   if (!F.getEntryCount())
     F.setEntryCount(ProfileCount(initialEntryCount, Function::PCT_Real));
-  std::unique_ptr<OptimizationRemarkEmitter> OwnedORE;
-  if (AM) {
-    auto &FAM =
-        AM->getResult<FunctionAnalysisManagerModuleProxy>(*F.getParent())
-            .getManager();
-    ORE = &FAM.getResult<OptimizationRemarkEmitterAnalysis>(F);
-  } else {
-    OwnedORE = std::make_unique<OptimizationRemarkEmitter>(&F);
-    ORE = OwnedORE.get();
-  }
+  auto &FAM = AM.getResult<FunctionAnalysisManagerModuleProxy>(*F.getParent())
+                  .getManager();
+  ORE = &FAM.getResult<OptimizationRemarkEmitterAnalysis>(F);
 
   if (FunctionSamples::ProfileIsCS)
     Samples = ContextTracker->getBaseSamplesFor(F);
@@ -2363,7 +2359,7 @@ PreservedAnalyses SampleProfileLoaderPass::run(Module &M,
     return PreservedAnalyses::all();
 
   ProfileSummaryInfo *PSI = &AM.getResult<ProfileSummaryAnalysis>(M);
-  if (!SampleLoader.runOnModule(M, &AM, PSI))
+  if (!SampleLoader.runOnModule(M, AM, PSI))
     return PreservedAnalyses::all();
 
   return PreservedAnalyses::none();

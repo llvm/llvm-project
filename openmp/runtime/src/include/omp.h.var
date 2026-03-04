@@ -536,6 +536,11 @@
 
     /* OpenMP 5.2 */
     extern int __KAI_KMPC_CONVENTION omp_in_explicit_task(void);
+    #define omp_invalid_device -2
+
+    /* OpenMP 6.0 */
+    extern int   __KAI_KMPC_CONVENTION  omp_get_device_from_uid(const char *DeviceUid);
+    extern const char *   __KAI_KMPC_CONVENTION  omp_get_uid_from_device(int DeviceNum);
 
     /* LLVM Extensions */
     extern void *llvm_omp_target_dynamic_shared_alloc(void);

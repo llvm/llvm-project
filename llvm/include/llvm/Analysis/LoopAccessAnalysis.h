@@ -183,10 +183,12 @@ public:
   MemoryDepChecker(PredicatedScalarEvolution &PSE, AssumptionCache *AC,
                    DominatorTree *DT, const Loop *L,
                    const DenseMap<Value *, const SCEV *> &SymbolicStrides,
-                   unsigned MaxTargetVectorWidthInBits)
+                   unsigned MaxTargetVectorWidthInBits,
+                   std::optional<ScalarEvolution::LoopGuards> &LoopGuards)
       : PSE(PSE), AC(AC), DT(DT), InnermostLoop(L),
         SymbolicStrides(SymbolicStrides),
-        MaxTargetVectorWidthInBits(MaxTargetVectorWidthInBits) {}
+        MaxTargetVectorWidthInBits(MaxTargetVectorWidthInBits),
+        LoopGuards(LoopGuards) {}
 
   /// Register the location (instructions are given increasing numbers)
   /// of a write access.
@@ -373,7 +375,7 @@ private:
       PointerBounds;
 
   /// Cache for the loop guards of InnermostLoop.
-  std::optional<ScalarEvolution::LoopGuards> LoopGuards;
+  std::optional<ScalarEvolution::LoopGuards> &LoopGuards;
 
   /// Check whether there is a plausible dependence between the two
   /// accesses.
@@ -531,8 +533,9 @@ public:
           AliasSetId(AliasSetId), Expr(Expr), NeedsFreeze(NeedsFreeze) {}
   };
 
-  RuntimePointerChecking(MemoryDepChecker &DC, ScalarEvolution *SE)
-      : DC(DC), SE(SE) {}
+  RuntimePointerChecking(MemoryDepChecker &DC, ScalarEvolution *SE,
+                         std::optional<ScalarEvolution::LoopGuards> &LoopGuards)
+      : DC(DC), SE(SE), LoopGuards(LoopGuards) {}
 
   /// Reset the state of the pointer runtime information.
   void reset() {
@@ -559,8 +562,7 @@ public:
 
   /// Generate the checks and store it.  This also performs the grouping
   /// of pointers to reduce the number of memchecks necessary.
-  LLVM_ABI void generateChecks(MemoryDepChecker::DepCandidates &DepCands,
-                               bool UseDependencies);
+  LLVM_ABI void generateChecks(MemoryDepChecker::DepCandidates &DepCands);
 
   /// Returns the checks that generateChecks created. They can be used to ensure
   /// no read/write accesses overlap across all loop iterations.
@@ -627,10 +629,8 @@ public:
 private:
   /// Groups pointers such that a single memcheck is required
   /// between two different groups. This will clear the CheckingGroups vector
-  /// and re-compute it. We will only group dependecies if \p UseDependencies
-  /// is true, otherwise we will create a separate group for each pointer.
-  void groupChecks(MemoryDepChecker::DepCandidates &DepCands,
-                   bool UseDependencies);
+  /// and re-compute it.
+  void groupChecks(MemoryDepChecker::DepCandidates &DepCands);
 
   /// Generate the checks and return them.
   SmallVector<RuntimePointerCheck, 4> generateChecks();
@@ -645,6 +645,9 @@ private:
 
   /// Holds a pointer to the ScalarEvolution analysis.
   ScalarEvolution *SE;
+
+  /// Cache for the loop guards of the loop.
+  std::optional<ScalarEvolution::LoopGuards> &LoopGuards;
 
   /// Set of run-time checks required to establish independence of
   /// otherwise may-aliasing pointers in the loop.
@@ -718,8 +721,9 @@ public:
 
   /// Return true if the block BB needs to be predicated in order for the loop
   /// to be vectorized.
-  LLVM_ABI static bool blockNeedsPredication(BasicBlock *BB, Loop *TheLoop,
-                                             DominatorTree *DT);
+  LLVM_ABI static bool blockNeedsPredication(const BasicBlock *BB,
+                                             const Loop *TheLoop,
+                                             const DominatorTree *DT);
 
   /// Returns true if value \p V is loop invariant.
   LLVM_ABI bool isInvariant(Value *V) const;
@@ -821,6 +825,9 @@ private:
 
   Loop *TheLoop;
 
+  /// Cache for the loop guards of TheLoop.
+  std::optional<ScalarEvolution::LoopGuards> LoopGuards;
+
   /// Determines whether we should generate partial runtime checks when not all
   /// memory accesses could be analyzed.
   bool AllowPartial;
@@ -883,7 +890,7 @@ replaceSymbolicStrideSCEV(PredicatedScalarEvolution &PSE,
 /// result of this function is undefined.
 LLVM_ABI std::optional<int64_t>
 getPtrStride(PredicatedScalarEvolution &PSE, Type *AccessTy, Value *Ptr,
-             const Loop *Lp,
+             const Loop *Lp, const DominatorTree &DT,
              const DenseMap<Value *, const SCEV *> &StridesMap =
                  DenseMap<Value *, const SCEV *>(),
              bool Assume = false, bool ShouldCheckWrap = true);
@@ -938,7 +945,8 @@ LLVM_ABI std::pair<const SCEV *, const SCEV *> getStartAndEndForAccess(
     const SCEV *MaxBTC, ScalarEvolution *SE,
     DenseMap<std::pair<const SCEV *, Type *>,
              std::pair<const SCEV *, const SCEV *>> *PointerBounds,
-    DominatorTree *DT, AssumptionCache *AC);
+    DominatorTree *DT, AssumptionCache *AC,
+    std::optional<ScalarEvolution::LoopGuards> &LoopGuards);
 
 class LoopAccessInfoManager {
   /// The cache.

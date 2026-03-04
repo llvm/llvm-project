@@ -17,6 +17,7 @@
 #include "PPCCallingConv.h"
 #include "PPCISelLowering.h"
 #include "PPCMachineFunctionInfo.h"
+#include "PPCSelectionDAGInfo.h"
 #include "PPCSubtarget.h"
 #include "llvm/CodeGen/CallingConvLower.h"
 #include "llvm/CodeGen/FastISel.h"
@@ -88,8 +89,10 @@ class PPCFastISel final : public FastISel {
 
   public:
     explicit PPCFastISel(FunctionLoweringInfo &FuncInfo,
-                         const TargetLibraryInfo *LibInfo)
-        : FastISel(FuncInfo, LibInfo), TM(FuncInfo.MF->getTarget()),
+                         const TargetLibraryInfo *LibInfo,
+                         const LibcallLoweringInfo *LibcallLowering)
+        : FastISel(FuncInfo, LibInfo, LibcallLowering),
+          TM(FuncInfo.MF->getTarget()),
           Subtarget(&FuncInfo.MF->getSubtarget<PPCSubtarget>()),
           PPCFuncInfo(FuncInfo.MF->getInfo<PPCFunctionInfo>()),
           TII(*Subtarget->getInstrInfo()), TLI(*Subtarget->getTargetLowering()),
@@ -142,7 +145,7 @@ class PPCFastISel final : public FastISel {
       return RC->getID() == PPC::VSSRCRegClassID;
     }
     Register copyRegToRegClass(const TargetRegisterClass *ToRC, Register SrcReg,
-                               unsigned Flag = 0, unsigned SubReg = 0) {
+                               RegState Flag = {}, unsigned SubReg = 0) {
       Register TmpReg = createResultReg(ToRC);
       BuildMI(*FuncInfo.MBB, FuncInfo.InsertPt, MIMD,
               TII.get(TargetOpcode::COPY), TmpReg).addReg(SrcReg, Flag, SubReg);
@@ -1374,7 +1377,10 @@ bool PPCFastISel::processCallArgs(SmallVectorImpl<Value *> &Args,
   unsigned LinkageSize = Subtarget->getFrameLowering()->getLinkageSize();
   CCInfo.AllocateStack(LinkageSize, Align(8));
 
-  CCInfo.AnalyzeCallOperands(ArgVTs, ArgFlags, CC_PPC64_ELF_FIS);
+  SmallVector<Type *, 16> ArgTys;
+  for (Value *Arg : Args)
+    ArgTys.push_back(Arg->getType());
+  CCInfo.AnalyzeCallOperands(ArgVTs, ArgFlags, ArgTys, CC_PPC64_ELF_FIS);
 
   // Bail out if we can't handle any of the arguments.
   for (const CCValAssign &VA : ArgLocs) {
@@ -1487,7 +1493,7 @@ bool PPCFastISel::finishCall(MVT RetVT, CallLoweringInfo &CLI, unsigned &NumByte
   if (RetVT != MVT::isVoid) {
     SmallVector<CCValAssign, 16> RVLocs;
     CCState CCInfo(CC, false, *FuncInfo.MF, RVLocs, *Context);
-    CCInfo.AnalyzeCallResult(RetVT, RetCC_PPC64_ELF_FIS);
+    CCInfo.AnalyzeCallResult(RetVT, CLI.RetTy, RetCC_PPC64_ELF_FIS);
     CCValAssign &VA = RVLocs[0];
     assert(RVLocs.size() == 1 && "No support for multi-reg return values!");
     assert(VA.isRegLoc() && "Can only return in registers!");
@@ -1573,7 +1579,7 @@ bool PPCFastISel::fastLowerCall(CallLoweringInfo &CLI) {
       RetVT != MVT::f64) {
     SmallVector<CCValAssign, 16> RVLocs;
     CCState CCInfo(CC, IsVarArg, *FuncInfo.MF, RVLocs, *Context);
-    CCInfo.AnalyzeCallResult(RetVT, RetCC_PPC64_ELF_FIS);
+    CCInfo.AnalyzeCallResult(RetVT, RetTy, RetCC_PPC64_ELF_FIS);
     if (RVLocs.size() > 1)
       return false;
   }
@@ -1704,7 +1710,8 @@ bool PPCFastISel::SelectRet(const Instruction *I) {
 
     // Special case for returning a constant integer of any size - materialize
     // the constant as an i64 and copy it to the return register.
-    if (const ConstantInt *CI = dyn_cast<ConstantInt>(RV)) {
+    if (isa<ConstantInt>(RV) && RV->getType()->isIntegerTy()) {
+      const ConstantInt *CI = cast<ConstantInt>(RV);
       CCValAssign &VA = ValLocs[0];
 
       Register RetReg = VA.getLocReg();
@@ -1877,7 +1884,7 @@ bool PPCFastISel::SelectTrunc(const Instruction *I) {
 
   // The only interesting case is when we need to switch register classes.
   if (SrcVT == MVT::i64)
-    SrcReg = copyRegToRegClass(&PPC::GPRCRegClass, SrcReg, 0, PPC::sub_32);
+    SrcReg = copyRegToRegClass(&PPC::GPRCRegClass, SrcReg, {}, PPC::sub_32);
 
   updateValueMap(I, SrcReg);
   return true;
@@ -2457,12 +2464,13 @@ Register PPCFastISel::fastEmitInst_rr(unsigned MachineInstOpcode,
 
 namespace llvm {
   // Create the fast instruction selector for PowerPC64 ELF.
-  FastISel *PPC::createFastISel(FunctionLoweringInfo &FuncInfo,
-                                const TargetLibraryInfo *LibInfo) {
-    // Only available on 64-bit for now.
-    const PPCSubtarget &Subtarget = FuncInfo.MF->getSubtarget<PPCSubtarget>();
-    if (Subtarget.isPPC64())
-      return new PPCFastISel(FuncInfo, LibInfo);
-    return nullptr;
-  }
+FastISel *PPC::createFastISel(FunctionLoweringInfo &FuncInfo,
+                              const TargetLibraryInfo *LibInfo,
+                              const LibcallLoweringInfo *LibcallLowering) {
+  // Only available on 64-bit for now.
+  const PPCSubtarget &Subtarget = FuncInfo.MF->getSubtarget<PPCSubtarget>();
+  if (Subtarget.isPPC64())
+    return new PPCFastISel(FuncInfo, LibInfo, LibcallLowering);
+  return nullptr;
+}
 }

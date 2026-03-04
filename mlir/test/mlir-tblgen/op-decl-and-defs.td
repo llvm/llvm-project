@@ -65,6 +65,9 @@ def NS_AOp : NS_Op<"a_op", [IsolatedFromAbove, IsolatedFromAbove]> {
 // CHECK:   ::std::optional< ::llvm::APFloat > getSomeAttr2();
 // CHECK:   ::mlir::Region &getSomeRegion() {
 // CHECK:   ::mlir::RegionRange getSomeRegions() {
+// CHECK-NEXT:     return odsRegions.drop_front(1);
+// CHECK:   ::mlir::RegionRange getRegions() {
+// CHECK-NEXT:     return odsRegions;
 // CHECK: };
 // CHECK: }
 
@@ -152,10 +155,6 @@ def NS_AOp : NS_Op<"a_op", [IsolatedFromAbove, IsolatedFromAbove]> {
 
 // Check that `getAttrDictionary()` is used when not using properties.
 
-// DECLS: ::mlir::RegionRange AOpGenericAdaptorBase::getSomeRegions()
-// DECLS-NEXT: return odsRegions.drop_front(1);
-// DECLS: ::mlir::RegionRange AOpGenericAdaptorBase::getRegions()
-
 // Check AttrSizedOperandSegments
 // ---
 
@@ -236,14 +235,14 @@ def NS_FOp : NS_Op<"op_with_all_types_constraint",
 
 // DEFS: FOp FOp::create(::mlir::OpBuilder &builder, ::mlir::Location location, ::mlir::Value a) {
 // DEFS:   ::mlir::OperationState __state__(location, getOperationName());
-// DEFS:   build(builder, __state__, a);
+// DEFS:   build(builder, __state__, std::forward<decltype(a)>(a));
 // DEFS:   auto __res__ = ::llvm::dyn_cast<FOp>(builder.create(__state__));
 // DEFS:   assert(__res__ && "builder didn't return the right type");
 // DEFS:   return __res__;
 // DEFS: }
 
 // DEFS: FOp FOp::create(::mlir::ImplicitLocOpBuilder &builder, ::mlir::Value a) {
-// DEFS:   return create(builder, builder.getLoc(), a);
+// DEFS:   return create(builder, builder.getLoc(), std::forward<decltype(a)>(a));
 // DEFS: }
 
 def NS_GOp : NS_Op<"op_with_fixed_return_type", []> {
@@ -543,3 +542,12 @@ def _BOp : NS_Op<"_op_with_leading_underscore_and_no_namespace", []>;
 
 // REDUCE_EXC-NOT: NS::AOp declarations
 // REDUCE_EXC-LABEL: NS::BOp declarations
+
+// CHECK-LABEL: _TypeInferredPropOp declarations
+def _TypeInferredPropOp : NS_Op<"type_inferred_prop_op_with_properties", [
+    AllTypesMatch<["value", "result"]>
+  ]> {
+  let arguments = (ins Property<"unsigned">:$prop, AnyType:$value);
+  let results = (outs AnyType:$result);
+  let hasCustomAssemblyFormat = 1;
+}

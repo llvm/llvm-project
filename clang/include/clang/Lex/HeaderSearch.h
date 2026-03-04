@@ -276,11 +276,11 @@ class HeaderSearch {
   /// a system header.
   std::vector<std::pair<std::string, bool>> SystemHeaderPrefixes;
 
-  /// The hash used for module cache paths.
-  std::string ModuleHash;
+  /// The context hash used in SpecificModuleCachePath (unless suppressed).
+  std::string ContextHash;
 
-  /// The path to the module cache.
-  std::string ModuleCachePath;
+  /// The specific module cache path containing ContextHash (unless suppressed).
+  std::string SpecificModuleCachePath;
 
   /// All of the preprocessor-specific data about files that are
   /// included, indexed by the FileEntry's UID.
@@ -334,11 +334,20 @@ class HeaderSearch {
 
   struct ModuleMapDirectoryState {
     OptionalFileEntryRef ModuleMapFile;
+    OptionalFileEntryRef PrivateModuleMapFile;
     enum {
       Parsed,
       Loaded,
       Invalid,
     } Status;
+
+    /// Relative header path -> list of module names
+    llvm::StringMap<llvm::SmallVector<StringRef, 1>> HeaderToModules{};
+    /// Relative dir path -> module name
+    llvm::SmallVector<std::pair<std::string, StringRef>, 2>
+        UmbrellaDirModules{};
+    /// List of module names with umbrella header decls
+    llvm::SmallVector<StringRef, 2> UmbrellaHeaderModules{};
   };
 
   /// Describes whether a given directory has a module map in it.
@@ -371,6 +380,31 @@ class HeaderSearch {
   /// Scan all of the header maps at the beginning of SearchDirs and
   /// map their keys to the SearchDir index of their header map.
   void indexInitialHeaderMaps();
+
+  /// Build the module map index for a directory's module map.
+  ///
+  /// This fills a ModuleMapDirectoryState with index information from its
+  /// directory's module map.
+  void buildModuleMapIndex(DirectoryEntryRef Dir,
+                           ModuleMapDirectoryState &MMState);
+
+  void processModuleMapForIndex(const modulemap::ModuleMapFile &MMF,
+                                DirectoryEntryRef MMDir, StringRef PathPrefix,
+                                ModuleMapDirectoryState &MMState);
+
+  void processExternModuleDeclForIndex(const modulemap::ExternModuleDecl &EMD,
+                                       DirectoryEntryRef MMDir,
+                                       StringRef PathPrefix,
+                                       ModuleMapDirectoryState &MMState);
+
+  void processModuleDeclForIndex(const modulemap::ModuleDecl &MD,
+                                 StringRef ModuleName, DirectoryEntryRef MMDir,
+                                 StringRef PathPrefix,
+                                 ModuleMapDirectoryState &MMState);
+
+  void addToModuleMapIndex(StringRef RelPath, StringRef ModuleName,
+                           StringRef PathPrefix,
+                           ModuleMapDirectoryState &MMState);
 
 public:
   HeaderSearch(const HeaderSearchOptions &HSOpts, SourceManager &SourceMgr,
@@ -433,19 +467,21 @@ public:
     return {};
   }
 
-  /// Set the hash to use for module cache paths.
-  void setModuleHash(StringRef Hash) { ModuleHash = std::string(Hash); }
+  /// Set the context hash to use for module cache paths.
+  void setContextHash(StringRef Hash) { ContextHash = std::string(Hash); }
 
-  /// Set the path to the module cache.
-  void setModuleCachePath(StringRef CachePath) {
-    ModuleCachePath = std::string(CachePath);
+  /// Set the module cache path with the context hash (unless suppressed).
+  void setSpecificModuleCachePath(StringRef Path) {
+    SpecificModuleCachePath = std::string(Path);
   }
 
-  /// Retrieve the module hash.
-  StringRef getModuleHash() const { return ModuleHash; }
+  /// Retrieve the context hash.
+  StringRef getContextHash() const { return ContextHash; }
 
-  /// Retrieve the path to the module cache.
-  StringRef getModuleCachePath() const { return ModuleCachePath; }
+  /// Retrieve the module cache path with the context hash (unless suppressed).
+  StringRef getSpecificModuleCachePath() const {
+    return SpecificModuleCachePath;
+  }
 
   /// Forget everything we know about headers so far.
   void ClearFileInfo() {
@@ -464,6 +500,12 @@ public:
   void SetExternalSource(ExternalHeaderFileInfoSource *ES) {
     ExternalSource = ES;
   }
+
+  void diagnoseHeaderShadowing(
+      StringRef Filename, OptionalFileEntryRef FE, bool &DiagnosedShadowing,
+      SourceLocation IncludeLoc, ConstSearchDirIterator FromDir,
+      ArrayRef<std::pair<OptionalFileEntryRef, DirectoryEntryRef>> Includers,
+      bool isAngled, int IncluderLoopIndex, ConstSearchDirIterator MainLoopIt);
 
   /// Set the target information for the header search, if not
   /// already known.
@@ -945,7 +987,8 @@ private:
                                                 bool IsSystem,
                                                 DirectoryEntryRef Dir,
                                                 FileID ID = FileID(),
-                                                unsigned *Offset = nullptr);
+                                                unsigned *Offset = nullptr,
+                                                bool DiagnosePrivMMap = false);
 
   ModuleMapResult parseModuleMapFileImpl(FileEntryRef File, bool IsSystem,
                                          DirectoryEntryRef Dir,
@@ -985,6 +1028,9 @@ void ApplyHeaderSearchOptions(HeaderSearch &HS,
                               const HeaderSearchOptions &HSOpts,
                               const LangOptions &Lang,
                               const llvm::Triple &triple);
+
+void normalizeModuleCachePath(FileManager &FileMgr, StringRef Path,
+                              SmallVectorImpl<char> &NormalizedPath);
 
 } // namespace clang
 

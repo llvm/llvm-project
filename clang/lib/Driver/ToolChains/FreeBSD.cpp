@@ -13,8 +13,8 @@
 #include "clang/Config/config.h"
 #include "clang/Driver/CommonArgs.h"
 #include "clang/Driver/Compilation.h"
-#include "clang/Driver/Options.h"
 #include "clang/Driver/SanitizerArgs.h"
+#include "clang/Options/Options.h"
 #include "llvm/Option/ArgList.h"
 #include "llvm/Support/VirtualFileSystem.h"
 
@@ -212,6 +212,14 @@ void freebsd::Linker::ConstructJob(Compilation &C, const JobAction &JA,
     CmdArgs.push_back("-m");
     CmdArgs.push_back("elf64lriscv");
     break;
+  case llvm::Triple::riscv32be:
+    CmdArgs.push_back("-m");
+    CmdArgs.push_back("elf32briscv");
+    break;
+  case llvm::Triple::riscv64be:
+    CmdArgs.push_back("-m");
+    CmdArgs.push_back("elf64briscv");
+    break;
   case llvm::Triple::loongarch64:
     CmdArgs.push_back("-m");
     CmdArgs.push_back("elf64loongarch");
@@ -404,7 +412,7 @@ void FreeBSD::AddClangSystemIncludeArgs(
     llvm::opt::ArgStringList &CC1Args) const {
   const Driver &D = getDriver();
 
-  if (DriverArgs.hasArg(clang::driver::options::OPT_nostdinc))
+  if (DriverArgs.hasArg(options::OPT_nostdinc))
     return;
 
   if (!DriverArgs.hasArg(options::OPT_nobuiltininc)) {

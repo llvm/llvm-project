@@ -1,18 +1,18 @@
 #ifndef LLVM_LIBC_BENCHMARKS_LIBC_GPU_BENCHMARK_H
 #define LLVM_LIBC_BENCHMARKS_LIBC_GPU_BENCHMARK_H
 
-#include "benchmarks/gpu/BenchmarkLogger.h"
+#include "benchmarks/gpu/Random.h"
+
 #include "benchmarks/gpu/timing/timing.h"
+
 #include "hdr/stdint_proxy.h"
+#include "src/__support/CPP/algorithm.h"
 #include "src/__support/CPP/array.h"
-#include "src/__support/CPP/functional.h"
-#include "src/__support/CPP/limits.h"
 #include "src/__support/CPP/string_view.h"
 #include "src/__support/CPP/type_traits.h"
 #include "src/__support/FPUtil/FPBits.h"
+#include "src/__support/FPUtil/sqrt.h"
 #include "src/__support/macros/config.h"
-#include "src/stdlib/rand.h"
-#include "src/time/clock.h"
 
 namespace LIBC_NAMESPACE_DECL {
 
@@ -30,68 +30,136 @@ struct BenchmarkOptions {
   double scaling_factor = 1.4;
 };
 
-struct Measurement {
+class RefinableRuntimeEstimator {
   uint32_t iterations = 0;
-  uint64_t elapsed_cycles = 0;
-};
-
-class RefinableRuntimeEstimation {
-  uint64_t total_cycles = 0;
-  uint32_t total_iterations = 0;
+  uint64_t sum_of_cycles = 0;
+  uint64_t sum_of_squared_cycles = 0;
 
 public:
-  uint64_t update(const Measurement &M) {
-    total_cycles += M.elapsed_cycles;
-    total_iterations += M.iterations;
-    return total_cycles / total_iterations;
+  void update(uint64_t cycles) noexcept {
+    iterations += 1;
+    sum_of_cycles += cycles;
+    sum_of_squared_cycles += cycles * cycles;
   }
+
+  void update(const RefinableRuntimeEstimator &other) noexcept {
+    iterations += other.iterations;
+    sum_of_cycles += other.sum_of_cycles;
+    sum_of_squared_cycles += other.sum_of_squared_cycles;
+  }
+
+  double get_mean() const noexcept {
+    if (iterations == 0)
+      return 0.0;
+
+    return static_cast<double>(sum_of_cycles) / iterations;
+  }
+
+  double get_variance() const noexcept {
+    if (iterations == 0)
+      return 0.0;
+
+    const double num = static_cast<double>(iterations);
+    const double sum_x = static_cast<double>(sum_of_cycles);
+    const double sum_x2 = static_cast<double>(sum_of_squared_cycles);
+
+    const double mean_of_squares = sum_x2 / num;
+    const double mean = sum_x / num;
+    const double mean_squared = mean * mean;
+    const double variance = mean_of_squares - mean_squared;
+
+    return variance < 0.0 ? 0.0 : variance;
+  }
+
+  double get_stddev() const noexcept {
+    return fputil::sqrt<double>(get_variance());
+  }
+
+  uint32_t get_iterations() const noexcept { return iterations; }
 };
 
 // Tracks the progression of the runtime estimation
 class RuntimeEstimationProgression {
-  RefinableRuntimeEstimation rre;
+  RefinableRuntimeEstimator estimator;
+  double current_mean = 0.0;
 
 public:
-  uint64_t current_estimation = 0;
+  const RefinableRuntimeEstimator &get_estimator() const noexcept {
+    return estimator;
+  }
 
-  double compute_improvement(const Measurement &M) {
-    const uint64_t new_estimation = rre.update(M);
-    double ratio =
-        (static_cast<double>(current_estimation) / new_estimation) - 1.0;
+  double
+  compute_improvement(const RefinableRuntimeEstimator &sample_estimator) {
+    if (sample_estimator.get_iterations() == 0)
+      return 1.0;
 
-    // Get absolute value
+    estimator.update(sample_estimator);
+
+    const double new_mean = estimator.get_mean();
+    if (current_mean == 0.0 || new_mean == 0.0) {
+      current_mean = new_mean;
+      return 1.0;
+    }
+
+    double ratio = (current_mean / new_mean) - 1.0;
     if (ratio < 0)
-      ratio *= -1;
+      ratio = -ratio;
 
-    current_estimation = new_estimation;
+    current_mean = new_mean;
     return ratio;
   }
 };
 
 struct BenchmarkResult {
-  uint64_t cycles = 0;
+  uint64_t total_iterations = 0;
+  double cycles = 0;
   double standard_deviation = 0;
   uint64_t min = UINT64_MAX;
   uint64_t max = 0;
-  uint32_t samples = 0;
-  uint32_t total_iterations = 0;
-  clock_t total_time = 0;
+};
+
+struct BenchmarkTarget {
+  using IndexedFnPtr = uint64_t (*)(uint32_t);
+  using IndexlessFnPtr = uint64_t (*)();
+
+  enum class Kind : uint8_t { Indexed, Indexless } kind;
+  union {
+    IndexedFnPtr indexed_fn_ptr;
+    IndexlessFnPtr indexless_fn_ptr;
+  };
+
+  LIBC_INLINE BenchmarkTarget(IndexedFnPtr func)
+      : kind(Kind::Indexed), indexed_fn_ptr(func) {}
+  LIBC_INLINE BenchmarkTarget(IndexlessFnPtr func)
+      : kind(Kind::Indexless), indexless_fn_ptr(func) {}
+
+  LIBC_INLINE uint64_t operator()([[maybe_unused]] uint32_t call_index) const {
+    return kind == Kind::Indexed ? indexed_fn_ptr(call_index)
+                                 : indexless_fn_ptr();
+  }
 };
 
 BenchmarkResult benchmark(const BenchmarkOptions &options,
-                          cpp::function<uint64_t(void)> wrapper_func);
+                          const BenchmarkTarget &target);
 
 class Benchmark {
-  const cpp::function<uint64_t(void)> func;
+  const BenchmarkTarget target;
   const cpp::string_view suite_name;
   const cpp::string_view test_name;
   const uint32_t num_threads;
 
 public:
-  Benchmark(cpp::function<uint64_t(void)> func, char const *suite_name,
+  Benchmark(uint64_t (*f)(), const char *suite, const char *test,
+            uint32_t threads)
+      : target(BenchmarkTarget(f)), suite_name(suite), test_name(test),
+        num_threads(threads) {
+    add_benchmark(this);
+  }
+
+  Benchmark(uint64_t (*f)(uint32_t), char const *suite_name,
             char const *test_name, uint32_t num_threads)
-      : func(func), suite_name(suite_name), test_name(test_name),
-        num_threads(num_threads) {
+      : target(BenchmarkTarget(f)), suite_name(suite_name),
+        test_name(test_name), num_threads(num_threads) {
     add_benchmark(this);
   }
 
@@ -105,67 +173,49 @@ protected:
 private:
   BenchmarkResult run() {
     BenchmarkOptions options;
-    return benchmark(options, func);
+    return benchmark(options, target);
   }
 };
 
-// We want our random values to be approximately
-// Output: a random number with the exponent field between min_exp and max_exp,
-// i.e. 2^min_exp <= |real_value| < 2^(max_exp + 1),
-// Caveats:
-//   -EXP_BIAS corresponding to denormal values,
-//   EXP_BIAS + 1 corresponding to inf or nan.
-template <typename T>
-static T
-get_rand_input(int max_exp = LIBC_NAMESPACE::fputil::FPBits<T>::EXP_BIAS,
-               int min_exp = -LIBC_NAMESPACE::fputil::FPBits<T>::EXP_BIAS) {
-  using FPBits = LIBC_NAMESPACE::fputil::FPBits<T>;
-
-  // Required to correctly instantiate FPBits for floats and doubles.
-  using RandType = typename cpp::conditional_t<(cpp::is_same_v<T, double>),
-                                               uint64_t, uint32_t>;
-  RandType bits;
-  if constexpr (cpp::is_same_v<T, uint64_t>)
-    bits = (static_cast<uint64_t>(LIBC_NAMESPACE::rand()) << 32) |
-           static_cast<uint64_t>(LIBC_NAMESPACE::rand());
-  else
-    bits = LIBC_NAMESPACE::rand();
-  double scale =
-      static_cast<double>(max_exp - min_exp + 1) / (2 * FPBits::EXP_BIAS + 1);
-  FPBits fp(bits);
-  fp.set_biased_exponent(
-      static_cast<uint32_t>(fp.get_biased_exponent() * scale + min_exp));
-  return fp.get_val();
-}
-
 template <typename T> class MathPerf {
-  using FPBits = fputil::FPBits<T>;
-  using StorageType = typename FPBits::StorageType;
-  static constexpr StorageType UIntMax =
-      cpp::numeric_limits<StorageType>::max();
+  static LIBC_INLINE uint64_t make_seed(uint64_t base_seed, uint64_t salt) {
+    const uint64_t tid = gpu::get_thread_id();
+    return base_seed ^ (salt << 32) ^ (tid * 0x9E3779B97F4A7C15ULL);
+  }
 
 public:
-  template <size_t N = 1>
-  static uint64_t run_throughput_in_range(T f(T), int min_exp, int max_exp) {
+  // Returns cycles-per-call (lower is better)
+  template <size_t N = 1, typename Dist>
+  static uint64_t run_throughput(T (*f)(T), const Dist &dist,
+                                 uint32_t call_index) {
     cpp::array<T, N> inputs;
+
+    uint64_t base_seed = static_cast<uint64_t>(call_index);
+    uint64_t salt = static_cast<uint64_t>(N);
+    RandomGenerator rng(make_seed(base_seed, salt));
+
     for (size_t i = 0; i < N; ++i)
-      inputs[i] = get_rand_input<T>(min_exp, max_exp);
+      inputs[i] = dist(rng);
 
     uint64_t total_time = LIBC_NAMESPACE::throughput(f, inputs);
 
     return total_time / N;
   }
 
-  // Throughput benchmarking for functions that take 2 inputs.
-  template <size_t N = 1>
-  static uint64_t run_throughput_in_range(T f(T, T), int arg1_min_exp,
-                                          int arg1_max_exp, int arg2_min_exp,
-                                          int arg2_max_exp) {
+  // Returns cycles-per-call (lower is better)
+  template <size_t N = 1, typename Dist1, typename Dist2>
+  static uint64_t run_throughput(T (*f)(T, T), const Dist1 &dist1,
+                                 const Dist2 &dist2, uint32_t call_index) {
     cpp::array<T, N> inputs1;
     cpp::array<T, N> inputs2;
+
+    uint64_t base_seed = static_cast<uint64_t>(call_index);
+    uint64_t salt = static_cast<uint64_t>(N);
+    RandomGenerator rng(make_seed(base_seed, salt));
+
     for (size_t i = 0; i < N; ++i) {
-      inputs1[i] = get_rand_input<T>(arg1_min_exp, arg1_max_exp);
-      inputs2[i] = get_rand_input<T>(arg2_min_exp, arg2_max_exp);
+      inputs1[i] = dist1(rng);
+      inputs2[i] = dist2(rng);
     }
 
     uint64_t total_time = LIBC_NAMESPACE::throughput(f, inputs1, inputs2);
@@ -193,4 +243,5 @@ public:
 #define SINGLE_WAVE_BENCHMARK(SuiteName, TestName, Func)                       \
   BENCHMARK_N_THREADS(SuiteName, TestName, Func,                               \
                       LIBC_NAMESPACE::gpu::get_lane_size())
-#endif
+
+#endif // LLVM_LIBC_BENCHMARKS_LIBC_GPU_BENCHMARK_H

@@ -64,8 +64,6 @@ static bool hasUAVsAtEveryStage(const DXILResourceMap &DRM,
 static bool checkWaveOps(Intrinsic::ID IID) {
   // Currently unsupported intrinsics
   // case Intrinsic::dx_wave_getlanecount:
-  // case Intrinsic::dx_wave_allequal:
-  // case Intrinsic::dx_wave_ballot:
   // case Intrinsic::dx_wave_readfirst:
   // case Intrinsic::dx_wave_reduce.and:
   // case Intrinsic::dx_wave_reduce.or:
@@ -86,16 +84,53 @@ static bool checkWaveOps(Intrinsic::ID IID) {
   case Intrinsic::dx_wave_is_first_lane:
   case Intrinsic::dx_wave_getlaneindex:
   case Intrinsic::dx_wave_any:
+  case Intrinsic::dx_wave_all_equal:
   case Intrinsic::dx_wave_all:
   case Intrinsic::dx_wave_readlane:
   case Intrinsic::dx_wave_active_countbits:
+  case Intrinsic::dx_wave_ballot:
+  case Intrinsic::dx_wave_prefix_bit_count:
   // Wave Active Op Variants
   case Intrinsic::dx_wave_reduce_sum:
   case Intrinsic::dx_wave_reduce_usum:
   case Intrinsic::dx_wave_reduce_max:
   case Intrinsic::dx_wave_reduce_umax:
+  case Intrinsic::dx_wave_reduce_min:
+  case Intrinsic::dx_wave_reduce_umin:
+    // Wave Prefix Op Variants
+  case Intrinsic::dx_wave_prefix_sum:
+  case Intrinsic::dx_wave_prefix_usum:
+  case Intrinsic::dx_wave_prefix_product:
+  case Intrinsic::dx_wave_prefix_uproduct:
     return true;
   }
+}
+
+static bool isOptimizationDisabled(const Module &M) {
+  const StringRef Key = "dx.disable_optimizations";
+  if (auto *Flag = mdconst::extract_or_null<ConstantInt>(M.getModuleFlag(Key)))
+    return Flag->getValue().getBoolValue();
+  return false;
+}
+
+// Checks to see if the status bit from a load with status
+// instruction is ever extracted. If it is, the module needs
+// to have the TiledResources shader flag set.
+bool checkIfStatusIsExtracted(const IntrinsicInst &II) {
+  [[maybe_unused]] Intrinsic::ID IID = II.getIntrinsicID();
+  assert(IID == Intrinsic::dx_resource_load_typedbuffer ||
+         IID == Intrinsic::dx_resource_load_rawbuffer &&
+             "unexpected intrinsic ID");
+  for (const User *U : II.users()) {
+    if (const ExtractValueInst *EVI = dyn_cast<ExtractValueInst>(U)) {
+      // Resource load operations return a {result, status} pair.
+      // Check if we extract the status
+      if (EVI->getNumIndices() == 1 && EVI->getIndices()[0] == 1)
+        return true;
+    }
+  }
+
+  return false;
 }
 
 /// Update the shader flags mask based on the given instruction.
@@ -162,7 +197,7 @@ void ModuleShaderFlags::updateFunctionFlags(ComputedShaderFlags &CSF,
     }
   }
 
-  if (auto *II = dyn_cast<IntrinsicInst>(&I)) {
+  if (const auto *II = dyn_cast<IntrinsicInst>(&I)) {
     switch (II->getIntrinsicID()) {
     default:
       break;
@@ -190,6 +225,13 @@ void ModuleShaderFlags::updateFunctionFlags(ComputedShaderFlags &CSF,
           DRTM[cast<TargetExtType>(II->getArgOperand(0)->getType())];
       if (RTI.isTyped())
         CSF.TypedUAVLoadAdditionalFormats |= RTI.getTyped().ElementCount > 1;
+      if (!CSF.TiledResources && checkIfStatusIsExtracted(*II))
+        CSF.TiledResources = true;
+      break;
+    }
+    case Intrinsic::dx_resource_load_rawbuffer: {
+      if (!CSF.TiledResources && checkIfStatusIsExtracted(*II))
+        CSF.TiledResources = true;
       break;
     }
     }
@@ -216,18 +258,7 @@ ModuleShaderFlags::gatherGlobalModuleFlags(const Module &M,
 
   ComputedShaderFlags CSF;
 
-  // Set DisableOptimizations flag based on the presence of OptimizeNone
-  // attribute of entry functions.
-  if (MMDI.EntryPropertyVec.size() > 0) {
-    CSF.DisableOptimizations = MMDI.EntryPropertyVec[0].Entry->hasFnAttribute(
-        llvm::Attribute::OptimizeNone);
-    // Ensure all entry functions have the same optimization attribute
-    for (const auto &EntryFunProps : MMDI.EntryPropertyVec)
-      if (CSF.DisableOptimizations !=
-          EntryFunProps.Entry->hasFnAttribute(llvm::Attribute::OptimizeNone))
-        EntryFunProps.Entry->getContext().diagnose(DiagnosticInfoUnsupported(
-            *(EntryFunProps.Entry), "Inconsistent optnone attribute "));
-  }
+  CSF.DisableOptimizations = isOptimizationDisabled(M);
 
   CSF.UAVsAtEveryStage = hasUAVsAtEveryStage(DRM, MMDI);
 
@@ -257,6 +288,13 @@ ModuleShaderFlags::gatherGlobalModuleFlags(const Module &M,
   // are UAVs present globally.
   if (CanSetResMayNotAlias && MMDI.ValidatorVersion < VersionTuple(1, 8))
     CSF.ResMayNotAlias = !DRM.uavs().empty();
+
+  // The command line option -all-resources-bound will set the
+  // dx.allresourcesbound module flag to 1
+  if (auto *AllResourcesBound = mdconst::extract_or_null<ConstantInt>(
+          M.getModuleFlag("dx.allresourcesbound")))
+    if (AllResourcesBound->getValue().getBoolValue())
+      CSF.AllResourcesBound = true;
 
   return CSF;
 }

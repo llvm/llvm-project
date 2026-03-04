@@ -3,6 +3,7 @@
 // Same below, but using the `ConvertToLLVMPatternInterface` entry point
 // and the generic `convert-to-llvm` pass.
 // RUN: mlir-opt --convert-to-llvm="filter-dialects=arith" --split-input-file %s | FileCheck %s
+// RUN: mlir-opt --convert-to-llvm="filter-dialects=arith allow-pattern-rollback=0" --split-input-file %s | FileCheck %s
 
 // CHECK-LABEL: @vector_ops
 func.func @vector_ops(%arg0: vector<4xf32>, %arg1: vector<4xi1>, %arg2: vector<4xi64>, %arg3: vector<4xi64>) -> vector<4xf32> {
@@ -135,6 +136,77 @@ func.func @vector_index_castui(%arg0: vector<2xindex>, %arg1: vector<2xi1>) {
   %0 = arith.index_castui %arg0: vector<2xindex> to vector<2xi1>
 // CHECK-NEXT: = llvm.zext %{{.*}} : vector<2xi1> to vector<2xi{{.*}}>
   %1 = arith.index_castui %arg1: vector<2xi1> to vector<2xindex>
+  return
+}
+
+// -----
+
+// CHECK-LABEL: @index_castui_nneg
+func.func @index_castui_nneg(%arg0: i1) {
+// CHECK: llvm.zext nneg %{{.*}} : i1 to i{{.*}}
+  %0 = arith.index_castui %arg0 nneg : i1 to index
+  return
+}
+
+// -----
+
+// CHECK-LABEL: @index_castui_nneg_not_set
+func.func @index_castui_nneg_not_set(%arg0: i1) {
+// CHECK: llvm.zext %{{.*}} : i1 to i{{.*}}
+// CHECK-NOT: nneg
+  %0 = arith.index_castui %arg0 : i1 to index
+  return
+}
+
+// -----
+
+// index_cast exact on truncation lowers to trunc nsw (signed semantics).
+// CHECK-LABEL: @index_cast_exact_trunc
+func.func @index_cast_exact_trunc(%arg0: index) {
+// CHECK: llvm.trunc %{{.*}} overflow<nsw> : i{{.*}} to i1
+  %0 = arith.index_cast %arg0 exact : index to i1
+  return
+}
+
+// -----
+
+// index_cast exact on widening: exact is vacuously true, sext has no flag.
+// CHECK-LABEL: @index_cast_exact_ext
+func.func @index_cast_exact_ext(%arg0: i1) {
+// CHECK: llvm.sext %{{.*}} : i1 to i{{.*}}
+// CHECK-NOT: nsw
+  %0 = arith.index_cast %arg0 exact : i1 to index
+  return
+}
+
+// -----
+
+// index_castui exact on truncation lowers to trunc nuw (unsigned semantics).
+// CHECK-LABEL: @index_castui_exact_trunc
+func.func @index_castui_exact_trunc(%arg0: index) {
+// CHECK: llvm.trunc %{{.*}} overflow<nuw> : i{{.*}} to i1
+  %0 = arith.index_castui %arg0 exact : index to i1
+  return
+}
+
+// -----
+
+// index_castui nneg exact on truncation lowers to trunc nuw nsw.
+// CHECK-LABEL: @index_castui_nneg_exact_trunc
+func.func @index_castui_nneg_exact_trunc(%arg0: index) {
+// CHECK: llvm.trunc %{{.*}} overflow<nsw, nuw> : i{{.*}} to i1
+  %0 = arith.index_castui %arg0 nneg exact : index to i1
+  return
+}
+
+// -----
+
+// index_castui exact on widening: exact is vacuously true, zext has no flag.
+// CHECK-LABEL: @index_castui_exact_ext
+func.func @index_castui_exact_ext(%arg0: i1) {
+// CHECK: llvm.zext %{{.*}} : i1 to i{{.*}}
+// CHECK-NOT: nuw
+  %0 = arith.index_castui %arg0 exact : i1 to index
   return
 }
 
@@ -373,12 +445,11 @@ func.func @integer_extension_and_truncation(%arg0 : i3) {
 
 // CHECK-LABEL: @integer_cast_0d_vector
 func.func @integer_cast_0d_vector(%arg0 : vector<i3>) {
-// CHECK: %[[ARG0:.*]] = builtin.unrealized_conversion_cast
-// CHECK-NEXT: = llvm.sext %[[ARG0]] : vector<1xi3> to vector<1xi6>
+// CHECK: = llvm.sext %{{.*}}: vector<1xi3> to vector<1xi6>
   %0 = arith.extsi %arg0 : vector<i3> to vector<i6>
-// CHECK-NEXT: = llvm.zext %[[ARG0]] : vector<1xi3> to vector<1xi6>
+// CHECK-NEXT: = llvm.zext %{{.*}} : vector<1xi3> to vector<1xi6>
   %1 = arith.extui %arg0 : vector<i3> to vector<i6>
-// CHECK-NEXT: = llvm.trunc %[[ARG0]] : vector<1xi3> to vector<1xi2>
+// CHECK-NEXT: = llvm.trunc %{{.*}} : vector<1xi3> to vector<1xi2>
   %2 = arith.trunci %arg0 : vector<i3> to vector<i2>
   return
 }
@@ -738,6 +809,46 @@ func.func @ops_supporting_overflow(%arg0: i64, %arg1: i64) {
 
 // -----
 
+// CHECK-LABEL: @ops_supporting_exact
+func.func @ops_supporting_exact(i32, i32) {
+^bb0(%arg0: i32, %arg1: i32):
+// CHECK: = llvm.ashr exact %arg0, %arg1 : i32
+  %0 = arith.shrsi %arg0, %arg1 exact : i32
+// CHECK: = llvm.lshr exact %arg0, %arg1 : i32
+  %1 = arith.shrui %arg0, %arg1 exact : i32
+// CHECK: = llvm.sdiv exact %arg0, %arg1 : i32
+  %2 = arith.divsi %arg0, %arg1 exact : i32
+// CHECK: = llvm.udiv exact %arg0, %arg1 : i32
+  %3 = arith.divui %arg0, %arg1 exact : i32
+  return
+}
+
+// -----
+
+// CHECK-LABEL: @ops_supporting_nneg
+func.func @ops_supporting_nneg(%arg0: i32) {
+  // CHECK: llvm.zext nneg %{{.*}} : i32 to i64
+  %0 = arith.extui %arg0 nneg : i32 to i64
+  // CHECK: llvm.uitofp nneg %{{.*}} : i32 to f32
+  %1 = arith.uitofp %arg0 nneg : i32 to f32
+  return
+}
+
+// -----
+
+// CHECK-LABEL: @ops_nneg_not_set
+func.func @ops_nneg_not_set(%arg0: i32) {
+  // CHECK: llvm.zext %{{.*}} : i32 to i64
+  // CHECK-NOT: nneg
+  %0 = arith.extui %arg0 : i32 to i64
+  // CHECK: llvm.uitofp %{{.*}} : i32 to f32
+  // CHECK-NOT: nneg
+  %1 = arith.uitofp %arg0 : i32 to f32
+  return
+}
+
+// -----
+
 // CHECK-LABEL: func @memref_bitcast
 //  CHECK-SAME:   (%[[ARG:.*]]: memref<?xi16>)
 //       CHECK:   %[[V1:.*]] = builtin.unrealized_conversion_cast %[[ARG]] : memref<?xi16> to !llvm.struct<(ptr, ptr, i64, array<1 x i64>, array<1 x i64>)>
@@ -746,4 +857,36 @@ func.func @ops_supporting_overflow(%arg0: i64, %arg1: i64) {
 func.func @memref_bitcast(%1: memref<?xi16>) -> memref<?xbf16> {
   %2 = arith.bitcast %1 : memref<?xi16> to memref<?xbf16>
   func.return %2 : memref<?xbf16>
+}
+
+// -----
+
+// CHECK-LABEL: func @unsupported_fp_type
+//       CHECK:   arith.addf {{.*}} : f4E2M1FN
+//       CHECK:   arith.addf {{.*}} : vector<4xf4E2M1FN>
+//       CHECK:   arith.addf {{.*}} : vector<8x4xf4E2M1FN>
+//       CHECK:   arith.cmpf {{.*}} : f4E2M1FN
+//       CHECK:   llvm.select {{.*}} : i1, i4
+func.func @unsupported_fp_type(%arg0: f4E2M1FN, %arg1: vector<4xf4E2M1FN>, %arg2: vector<8x4xf4E2M1FN>, %arg3: f4E2M1FN, %arg4: i1) {
+  %0 = arith.addf %arg0, %arg0 : f4E2M1FN
+  %1 = arith.addf %arg1, %arg1 : vector<4xf4E2M1FN>
+  %2 = arith.addf %arg2, %arg2 : vector<8x4xf4E2M1FN>
+  %3 = arith.cmpf oeq, %arg0, %arg3 : f4E2M1FN
+  %4 = arith.select %arg4, %arg0, %arg3 : f4E2M1FN
+  return
+}
+
+// -----
+
+//   CHECK-LABEL: func @supported_fp_type
+//         CHECK:   llvm.fadd {{.*}} : f32
+//         CHECK:   llvm.fadd {{.*}} : vector<4xf32>
+// CHECK-COUNT-4:   llvm.fadd {{.*}} : vector<8xf32>
+//         CHECK:   llvm.fcmp {{.*}} : f32
+func.func @supported_fp_type(%arg0: f32, %arg1: vector<4xf32>, %arg2: vector<4x8xf32>, %arg3: f32) {
+  %0 = arith.addf %arg0, %arg0 : f32
+  %1 = arith.addf %arg1, %arg1 : vector<4xf32>
+  %2 = arith.addf %arg2, %arg2 : vector<4x8xf32>
+  %3 = arith.cmpf oeq, %arg0, %arg3 : f32
+  return
 }

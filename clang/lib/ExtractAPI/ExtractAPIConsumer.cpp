@@ -419,7 +419,8 @@ ExtractAPIAction::CreateASTConsumer(CompilerInstance &CI, StringRef InFile) {
 
   // Do not include location in anonymous decls.
   PrintingPolicy Policy = CI.getASTContext().getPrintingPolicy();
-  Policy.AnonymousTagLocations = false;
+  Policy.AnonymousTagNameStyle =
+      llvm::to_underlying(PrintingPolicy::AnonymousTagMode::Plain);
   CI.getASTContext().setPrintingPolicy(Policy);
 
   if (!CI.getFrontendOpts().ExtractAPIIgnoresFileList.empty()) {
@@ -444,8 +445,7 @@ bool ExtractAPIAction::PrepareToExecuteAction(CompilerInstance &CI) {
     return true;
 
   if (!CI.hasFileManager())
-    if (!CI.createFileManager())
-      return false;
+    CI.createFileManager();
 
   auto Kind = Inputs[0].getKind();
 
@@ -523,7 +523,8 @@ WrappingExtractAPIAction::CreateASTConsumer(CompilerInstance &CI,
 
   // Do not include location in anonymous decls.
   PrintingPolicy Policy = CI.getASTContext().getPrintingPolicy();
-  Policy.AnonymousTagLocations = false;
+  Policy.AnonymousTagNameStyle =
+      llvm::to_underlying(PrintingPolicy::AnonymousTagMode::Plain);
   CI.getASTContext().setPrintingPolicy(Policy);
 
   if (!CI.getFrontendOpts().ExtractAPIIgnoresFileList.empty()) {

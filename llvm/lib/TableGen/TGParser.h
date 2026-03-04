@@ -46,12 +46,10 @@ struct RecordsEntry {
   void dump() const;
 
   RecordsEntry() = default;
-  RecordsEntry(std::unique_ptr<Record> Rec) : Rec(std::move(Rec)) {}
-  RecordsEntry(std::unique_ptr<ForeachLoop> Loop) : Loop(std::move(Loop)) {}
-  RecordsEntry(std::unique_ptr<Record::AssertionInfo> Assertion)
-      : Assertion(std::move(Assertion)) {}
-  RecordsEntry(std::unique_ptr<Record::DumpInfo> Dump)
-      : Dump(std::move(Dump)) {}
+  RecordsEntry(std::unique_ptr<Record> Rec);
+  RecordsEntry(std::unique_ptr<ForeachLoop> Loop);
+  RecordsEntry(std::unique_ptr<Record::AssertionInfo> Assertion);
+  RecordsEntry(std::unique_ptr<Record::DumpInfo> Dump);
 };
 
 /// ForeachLoop - Record the iteration state associated with a for loop.
@@ -167,9 +165,9 @@ class TGParser {
   // in the middle of creating in. For those situations, allow the
   // parser to ignore missing object errors.
   enum IDParseMode {
-    ParseValueMode,   // We are parsing a value we expect to look up.
-    ParseNameMode,    // We are parsing a name of an object that does not yet
-                      // exist.
+    ParseValueMode, // We are parsing a value we expect to look up.
+    ParseNameMode,  // We are parsing a name of an object that does not yet
+                    // exist.
   };
 
   bool NoWarnOnUnusedTemplateArgs = false;
@@ -191,9 +189,7 @@ public:
     PrintError(L, Msg);
     return true;
   }
-  bool TokError(const Twine &Msg) const {
-    return Error(Lex.getLoc(), Msg);
-  }
+  bool TokError(const Twine &Msg) const { return Error(Lex.getLoc(), Msg); }
   const TGLexer::DependenciesSetTy &getDependencies() const {
     return Lex.getDependencies();
   }
@@ -257,7 +253,7 @@ private: // Semantic analysis methods.
                                     ArrayRef<const ArgumentInit *> ArgValues,
                                     const Init *DefmName, SMLoc Loc);
 
-private:  // Parser methods.
+private: // Parser methods.
   bool consume(tgtok::TokKind K);
   bool ParseObjectList(MultiClass *MC = nullptr);
   bool ParseObject(MultiClass *MC);

@@ -137,6 +137,7 @@ void LinuxSignals::Reset() {
   ADD_SIGCODE(SIGSEGV, 11, SEGV_MAPERR,  1, "address not mapped to object", SignalCodePrintOption::Address);
   ADD_SIGCODE(SIGSEGV, 11, SEGV_ACCERR,  2, "invalid permissions for mapped object", SignalCodePrintOption::Address);
   ADD_SIGCODE(SIGSEGV, 11, SEGV_BNDERR,  3, "failed address bounds checks", SignalCodePrintOption::Bounds);
+  ADD_SIGCODE(SIGSEGV, 11, SEGV_PKUERR,  4, "failed protection key checks", SignalCodePrintOption::Address);
   ADD_SIGCODE(SIGSEGV, 11, SEGV_MTEAERR, 8, "async tag check fault");
   ADD_SIGCODE(SIGSEGV, 11, SEGV_MTESERR, 9, "sync tag check fault", SignalCodePrintOption::Address);
   ADD_SIGCODE(SIGSEGV, 11, SEGV_CPERR,  10, "control protection fault");
@@ -160,7 +161,7 @@ void LinuxSignals::Reset() {
   ADD_LINUX_SIGNAL(25,     "SIGXFSZ",      false,    true,   true,   "file size limit exceeded");
   ADD_LINUX_SIGNAL(26,     "SIGVTALRM",    false,    true,   true,   "virtual time alarm");
   ADD_LINUX_SIGNAL(27,     "SIGPROF",      false,    false,  false,  "profiling time alarm");
-  ADD_LINUX_SIGNAL(28,     "SIGWINCH",     false,    true,   true,   "window size changes");
+  ADD_LINUX_SIGNAL(28,     "SIGWINCH",     false,    false,   false,   "window size changes");
   ADD_LINUX_SIGNAL(29,     "SIGIO",        false,    true,   true,   "input/output ready/Pollable event", "SIGPOLL");
   ADD_LINUX_SIGNAL(30,     "SIGPWR",       false,    true,   true,   "power failure");
   ADD_LINUX_SIGNAL(31,     "SIGSYS",       false,    true,   true,   "invalid system call");

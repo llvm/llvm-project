@@ -22,6 +22,7 @@
 #include "llvm/MC/MCFixup.h"
 #include "llvm/MC/MCInst.h"
 #include "llvm/MC/MCObjectWriter.h"
+#include "llvm/MC/MCSFrame.h"
 #include "llvm/MC/MCSection.h"
 #include "llvm/MC/MCSymbol.h"
 #include "llvm/MC/MCValue.h"
@@ -172,6 +173,19 @@ bool MCAssembler::evaluateFixup(const MCFragment &F, MCFixup &Fixup,
 
     if (Fixup.isPCRel()) {
       Value -= getFragmentOffset(F) + Fixup.getOffset();
+      // During relaxation, F's offset is already updated but forward reference
+      // targets are stale. Add Stretch so that the displacement equals
+      // target_old - source_old, preventing premature relaxation.
+      if (Stretch) {
+        assert(!RecordReloc &&
+               "Stretch should only be applied during relaxation");
+        MCFragment *AF = Add ? Add->getFragment() : nullptr;
+        if (AF && AF->getLayoutOrder() > F.getLayoutOrder())
+          Value += Stretch;
+        MCFragment *SF = Sub ? Sub->getFragment() : nullptr;
+        if (SF && SF->getLayoutOrder() > F.getLayoutOrder())
+          Value -= Stretch;
+      }
       if (Add && !Sub && !Add->isUndefined() && !Add->isAbsolute()) {
         IsResolved = getWriter().isSymbolRefDifferenceFullyResolvedImpl(
             *Add, F, false, true);
@@ -199,11 +213,12 @@ uint64_t MCAssembler::computeFragmentSize(const MCFragment &F) const {
   case MCFragment::FT_LEB:
   case MCFragment::FT_Dwarf:
   case MCFragment::FT_DwarfFrame:
+  case MCFragment::FT_SFrame:
   case MCFragment::FT_CVInlineLines:
   case MCFragment::FT_CVDefRange:
     return F.getSize();
   case MCFragment::FT_Fill: {
-    auto &FF = cast<MCFillFragment>(F);
+    auto &FF = static_cast<const MCFillFragment &>(F);
     int64_t NumValues = 0;
     if (!FF.getNumValues().evaluateKnownAbsolute(NumValues, *this)) {
       recordError(FF.getLoc(), "expected assembly-time absolute expression");
@@ -353,10 +368,9 @@ const MCSymbol *MCAssembler::getBaseSymbol(const MCSymbol &Symbol) const {
 }
 
 uint64_t MCAssembler::getSectionAddressSize(const MCSection &Sec) const {
-  assert(HasLayout);
-  // The size is the last fragment's end offset.
   const MCFragment &F = *Sec.curFragList()->Tail;
-  return getFragmentOffset(F) + computeFragmentSize(F);
+  assert(HasLayout && F.getKind() == MCFragment::FT_Data);
+  return getFragmentOffset(F) + F.getSize();
 }
 
 uint64_t MCAssembler::getSectionFileSize(const MCSection &Sec) const {
@@ -400,6 +414,7 @@ static void writeFragment(raw_ostream &OS, const MCAssembler &Asm,
   case MCFragment::FT_LEB:
   case MCFragment::FT_Dwarf:
   case MCFragment::FT_DwarfFrame:
+  case MCFragment::FT_SFrame:
   case MCFragment::FT_CVInlineLines:
   case MCFragment::FT_CVDefRange: {
     if (F.getKind() == MCFragment::FT_Data)
@@ -657,7 +672,7 @@ void MCAssembler::layout() {
 
   // Some targets might want to adjust fragment offsets. If so, perform another
   // layout iteration.
-  if (getBackend().finishLayout(*this))
+  if (getBackend().finishLayout())
     for (MCSection &Sec : *this)
       layoutSection(Sec);
 
@@ -731,11 +746,32 @@ void MCAssembler::layout() {
 void MCAssembler::Finish() {
   layout();
 
-  // Write the object file.
-  stats::ObjectBytes += getWriter().writeObject();
+  // Write the object file if there is no error. The output would be discarded
+  // anyway, and this avoids wasting time writing large files (e.g. when testing
+  // fixup overflow with `.space 0x80000000`).
+  if (!getContext().hadError())
+    stats::ObjectBytes += getWriter().writeObject();
 
   HasLayout = false;
   assert(PendingErrors.empty());
+}
+
+void MCAssembler::relaxAlign(MCFragment &F) {
+  uint64_t Offset = F.Offset + F.getFixedSize();
+  unsigned Size = offsetToAlignment(Offset, F.getAlignment());
+  bool AlignFixup = false;
+  if (F.hasAlignEmitNops()) {
+    AlignFixup = getBackend().relaxAlign(F, Size);
+    if (!AlignFixup)
+      while (Size % getBackend().getMinimumNopSize())
+        Size += F.getAlignment().value();
+  }
+  if (!AlignFixup && Size > F.getAlignMaxBytesToEmit())
+    Size = 0;
+  F.VarContentStart = F.getFixedSize();
+  F.VarContentEnd = F.VarContentStart + Size;
+  if (F.VarContentEnd > F.getParent()->ContentStorage.size())
+    F.getParent()->ContentStorage.resize(F.VarContentEnd);
 }
 
 bool MCAssembler::fixupNeedsRelaxation(const MCFragment &F,
@@ -749,7 +785,7 @@ bool MCAssembler::fixupNeedsRelaxation(const MCFragment &F,
                                                    Resolved);
 }
 
-bool MCAssembler::relaxInstruction(MCFragment &F) {
+void MCAssembler::relaxInstruction(MCFragment &F) {
   assert(getEmitterPtr() &&
          "Expected CodeEmitter defined for relaxInstruction");
   // If this inst doesn't ever need relaxation, ignore it. This occurs when we
@@ -757,14 +793,14 @@ bool MCAssembler::relaxInstruction(MCFragment &F) {
   // previous instruction to one that doesn't need relaxation.
   if (!getBackend().mayNeedRelaxation(F.getOpcode(), F.getOperands(),
                                       *F.getSubtargetInfo()))
-    return false;
+    return;
 
   bool DoRelax = false;
   for (const MCFixup &Fixup : F.getVarFixups())
     if ((DoRelax = fixupNeedsRelaxation(F, Fixup)))
       break;
   if (!DoRelax)
-    return false;
+    return;
 
   ++stats::RelaxedInstructions;
 
@@ -780,12 +816,10 @@ bool MCAssembler::relaxInstruction(MCFragment &F) {
   getEmitter().encodeInstruction(Relaxed, Data, Fixups, *F.getSubtargetInfo());
   F.setVarContents(Data);
   F.setVarFixups(Fixups);
-  return true;
 }
 
-bool MCAssembler::relaxLEB(MCFragment &F) {
-  const unsigned OldSize = F.getVarSize();
-  unsigned PadTo = OldSize;
+void MCAssembler::relaxLEB(MCFragment &F) {
+  unsigned PadTo = F.getVarSize();
   int64_t Value;
   F.clearVarFixups();
   // Use evaluateKnownAbsolute for Mach-O as a hack: .subsections_via_symbols
@@ -819,7 +853,6 @@ bool MCAssembler::relaxLEB(MCFragment &F) {
   else
     Size = encodeULEB128(Value, Data, PadTo);
   F.setVarContents({reinterpret_cast<char *>(Data), Size});
-  return OldSize != Size;
 }
 
 /// Check if the branch crosses the boundary.
@@ -859,11 +892,11 @@ static bool needPadding(uint64_t StartAddr, uint64_t Size,
          isAgainstBoundary(StartAddr, Size, BoundaryAlignment);
 }
 
-bool MCAssembler::relaxBoundaryAlign(MCBoundaryAlignFragment &BF) {
+void MCAssembler::relaxBoundaryAlign(MCBoundaryAlignFragment &BF) {
   // BoundaryAlignFragment that doesn't need to align any fragment should not be
   // relaxed.
   if (!BF.getLastFragment())
-    return false;
+    return;
 
   uint64_t AlignedOffset = getFragmentOffset(BF);
   uint64_t AlignedSize = 0;
@@ -878,18 +911,15 @@ bool MCAssembler::relaxBoundaryAlign(MCBoundaryAlignFragment &BF) {
                          ? offsetToAlignment(AlignedOffset, BoundaryAlignment)
                          : 0U;
   if (NewSize == BF.getSize())
-    return false;
+    return;
   BF.setSize(NewSize);
-  return true;
 }
 
-bool MCAssembler::relaxDwarfLineAddr(MCFragment &F) {
-  bool WasRelaxed;
-  if (getBackend().relaxDwarfLineAddr(F, WasRelaxed))
-    return WasRelaxed;
+void MCAssembler::relaxDwarfLineAddr(MCFragment &F) {
+  if (getBackend().relaxDwarfLineAddr(F))
+    return;
 
   MCContext &Context = getContext();
-  auto OldSize = F.getVarSize();
   int64_t AddrDelta;
   bool Abs = F.getDwarfAddrDelta().evaluateKnownAbsolute(AddrDelta, *this);
   assert(Abs && "We created a line delta with an invalid expression");
@@ -899,13 +929,11 @@ bool MCAssembler::relaxDwarfLineAddr(MCFragment &F) {
                           F.getDwarfLineDelta(), AddrDelta, Data);
   F.setVarContents(Data);
   F.clearVarFixups();
-  return OldSize != Data.size();
 }
 
-bool MCAssembler::relaxDwarfCallFrameFragment(MCFragment &F) {
-  bool WasRelaxed;
-  if (getBackend().relaxDwarfCFA(F, WasRelaxed))
-    return WasRelaxed;
+void MCAssembler::relaxDwarfCallFrameFragment(MCFragment &F) {
+  if (getBackend().relaxDwarfCFA(F))
+    return;
 
   MCContext &Context = getContext();
   int64_t Value;
@@ -914,68 +942,67 @@ bool MCAssembler::relaxDwarfCallFrameFragment(MCFragment &F) {
     reportError(F.getDwarfAddrDelta().getLoc(),
                 "invalid CFI advance_loc expression");
     F.setDwarfAddrDelta(MCConstantExpr::create(0, Context));
-    return false;
+    return;
   }
 
-  auto OldSize = F.getVarContents().size();
   SmallVector<char, 8> Data;
   MCDwarfFrameEmitter::encodeAdvanceLoc(Context, Value, Data);
   F.setVarContents(Data);
   F.clearVarFixups();
-  return OldSize != Data.size();
 }
 
-bool MCAssembler::relaxCVInlineLineTable(MCCVInlineLineTableFragment &F) {
-  unsigned OldSize = F.getVarContents().size();
-  getContext().getCVContext().encodeInlineLineTable(*this, F);
-  return OldSize != F.getVarContents().size();
+void MCAssembler::relaxSFrameFragment(MCFragment &F) {
+  assert(F.getKind() == MCFragment::FT_SFrame);
+  MCContext &C = getContext();
+  int64_t Value;
+  bool Abs = F.getSFrameAddrDelta().evaluateAsAbsolute(Value, *this);
+  if (!Abs) {
+    C.reportError(F.getSFrameAddrDelta().getLoc(),
+                  "invalid CFI advance_loc expression in sframe");
+    F.setSFrameAddrDelta(MCConstantExpr::create(0, C));
+    return;
+  }
+
+  SmallVector<char, 4> Data;
+  MCSFrameEmitter::encodeFuncOffset(Context, Value, Data, F.getSFrameFDE());
+  F.setVarContents(Data);
+  F.clearVarFixups();
 }
 
-bool MCAssembler::relaxCVDefRange(MCCVDefRangeFragment &F) {
-  unsigned OldSize = F.getVarContents().size();
-  getContext().getCVContext().encodeDefRange(*this, F);
-  return OldSize != F.getVarContents().size();
-}
-
-bool MCAssembler::relaxFill(MCFillFragment &F) {
-  uint64_t Size = computeFragmentSize(F);
-  if (F.getSize() == Size)
-    return false;
-  F.setSize(Size);
-  return true;
-}
-
-bool MCAssembler::relaxOrg(MCOrgFragment &F) {
-  uint64_t Size = computeFragmentSize(F);
-  if (F.getSize() == Size)
-    return false;
-  F.setSize(Size);
-  return true;
-}
-
-bool MCAssembler::relaxFragment(MCFragment &F) {
-  switch(F.getKind()) {
+void MCAssembler::relaxFragment(MCFragment &F) {
+  switch (F.getKind()) {
   default:
-    return false;
+    return;
+  case MCFragment::FT_Align:
+    relaxAlign(F);
+    break;
   case MCFragment::FT_Relaxable:
     assert(!getRelaxAll() && "Did not expect a FT_Relaxable in RelaxAll mode");
-    return relaxInstruction(F);
+    relaxInstruction(F);
+    break;
   case MCFragment::FT_LEB:
-    return relaxLEB(F);
+    relaxLEB(F);
+    break;
   case MCFragment::FT_Dwarf:
-    return relaxDwarfLineAddr(F);
+    relaxDwarfLineAddr(F);
+    break;
   case MCFragment::FT_DwarfFrame:
-    return relaxDwarfCallFrameFragment(F);
+    relaxDwarfCallFrameFragment(F);
+    break;
+  case MCFragment::FT_SFrame:
+    relaxSFrameFragment(F);
+    break;
   case MCFragment::FT_BoundaryAlign:
-    return relaxBoundaryAlign(cast<MCBoundaryAlignFragment>(F));
+    relaxBoundaryAlign(static_cast<MCBoundaryAlignFragment &>(F));
+    break;
   case MCFragment::FT_CVInlineLines:
-    return relaxCVInlineLineTable(cast<MCCVInlineLineTableFragment>(F));
+    getContext().getCVContext().encodeInlineLineTable(
+        *this, static_cast<MCCVInlineLineTableFragment &>(F));
+    break;
   case MCFragment::FT_CVDefRange:
-    return relaxCVDefRange(cast<MCCVDefRangeFragment>(F));
-  case MCFragment::FT_Fill:
-    return relaxFill(cast<MCFillFragment>(F));
-  case MCFragment::FT_Org:
-    return relaxOrg(static_cast<MCOrgFragment &>(F));
+    getContext().getCVContext().encodeDefRange(
+        *this, static_cast<MCCVDefRangeFragment &>(F));
+    break;
   }
 }
 
@@ -983,50 +1010,35 @@ void MCAssembler::layoutSection(MCSection &Sec) {
   uint64_t Offset = 0;
   for (MCFragment &F : Sec) {
     F.Offset = Offset;
-    if (F.getKind() == MCFragment::FT_Align) {
-      Offset += F.getFixedSize();
-      unsigned Size = offsetToAlignment(Offset, F.getAlignment());
-      // In the nops mode, RISC-V style linker relaxation might adjust the size
-      // and add a fixup, even if `Size` is originally 0.
-      bool AlignFixup = false;
-      if (F.hasAlignEmitNops()) {
-        AlignFixup = getBackend().relaxAlign(F, Size);
-        // If the backend does not handle the fragment specially, pad with nops,
-        // but ensure that the padding is larger than the minimum nop size.
-        if (!AlignFixup)
-          while (Size % getBackend().getMinimumNopSize())
-            Size += F.getAlignment().value();
-      }
-      if (!AlignFixup && Size > F.getAlignMaxBytesToEmit())
-        Size = 0;
-      // Update the variable tail size, offset by FixedSize to prevent ubsan
-      // pointer-overflow in evaluateFixup. The content is ignored.
-      F.VarContentStart = F.getFixedSize();
-      F.VarContentEnd = F.VarContentStart + Size;
-      if (F.VarContentEnd > F.getParent()->ContentStorage.size())
-        F.getParent()->ContentStorage.resize(F.VarContentEnd);
-      Offset += Size;
-    } else {
-      Offset += computeFragmentSize(F);
-    }
+    if (F.getKind() == MCFragment::FT_Align)
+      relaxAlign(F);
+    Offset += computeFragmentSize(F);
   }
 }
 
+// Fused relaxation and layout: a single forward pass that updates each
+// fragment's offset before processing it, so upstream size changes are
+// immediately visible.
 unsigned MCAssembler::relaxOnce(unsigned FirstStable) {
-  ++stats::RelaxationSteps;
+  uint64_t MaxIterations = 0;
   PendingErrors.clear();
-
   unsigned Res = 0;
   for (unsigned I = 0; I != FirstStable; ++I) {
-    // Assume each iteration finalizes at least one extra fragment. If the
-    // layout does not converge after N+1 iterations, bail out.
     auto &Sec = *Sections[I];
-    auto MaxIter = Sec.curFragList()->Tail->getLayoutOrder() + 1;
+    uint64_t Iters = 0;
     for (;;) {
       bool Changed = false;
-      for (MCFragment &F : Sec)
-        if (relaxFragment(F))
+      uint64_t Offset = 0;
+      for (MCFragment &F : Sec) {
+        if (F.Offset != Offset)
           Changed = true;
+        Stretch = Offset - F.Offset;
+        F.Offset = Offset;
+        if (F.getKind() != MCFragment::FT_Data)
+          relaxFragment(F);
+        Offset += computeFragmentSize(F);
+      }
+      ++Iters;
 
       if (!Changed)
         break;
@@ -1034,11 +1046,15 @@ unsigned MCAssembler::relaxOnce(unsigned FirstStable) {
       // sections. Therefore, we must re-evaluate all sections.
       FirstStable = Sections.size();
       Res = I;
-      if (--MaxIter == 0)
+      // Assume each iteration finalizes at least one extra fragment. If the
+      // layout does not converge after N+1 iterations, bail out.
+      if (Iters > Sec.curFragList()->Tail->getLayoutOrder())
         break;
-      layoutSection(Sec);
     }
+    MaxIterations = std::max(MaxIterations, Iters);
   }
+  stats::RelaxationSteps += MaxIterations;
+  Stretch = 0;
   // The subsequent relaxOnce call only needs to visit Sections [0,Res) if no
   // change occurred.
   return Res;

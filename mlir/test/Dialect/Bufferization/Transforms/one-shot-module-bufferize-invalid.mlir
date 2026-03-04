@@ -134,3 +134,12 @@ func.func @func_multiple_yields(%t: tensor<5xf32>) -> tensor<5xf32> {
 ^bb1(%arg1 : tensor<5xf32>):
   func.return %arg1 : tensor<5xf32>
 }
+
+// -----
+
+func.func @non_memref_elem_type() -> tensor<1x!quant.uniform<i8:f32, 1.0>> {
+  // expected-error @below{{cannot bufferize value of type 'tensor<1x!quant.uniform<i8:f32, 1.000000e+00>>': element type '!quant.uniform<i8:f32, 1.000000e+00>' is not a valid memref element type}}
+  // expected-error @below{{failed to bufferize op}}
+  %t = tensor.empty() : tensor<1x!quant.uniform<i8:f32, 1.0>>
+  return %t : tensor<1x!quant.uniform<i8:f32, 1.0>>
+}

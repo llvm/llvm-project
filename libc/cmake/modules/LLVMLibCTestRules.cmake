@@ -1,11 +1,7 @@
 function(_get_common_test_compile_options output_var c_test flags)
   _get_compile_options_from_flags(compile_flags ${flags})
   _get_compile_options_from_config(config_flags)
-
-  # Remove -fno-math-errno if it was added.
-  if(LIBC_ADD_FNO_MATH_ERRNO)
-    list(REMOVE_ITEM compile_flags "-fno-math-errno")
-  endif()
+  _get_compile_options_from_arch(arch_flags)
 
   # Death test executor is only available in Linux for now.
   if(NOT ${LIBC_TARGET_OS} STREQUAL "linux")
@@ -16,7 +12,8 @@ function(_get_common_test_compile_options output_var c_test flags)
       ${LIBC_COMPILE_OPTIONS_DEFAULT}
       ${LIBC_TEST_COMPILE_OPTIONS_DEFAULT}
       ${compile_flags}
-      ${config_flags})
+      ${config_flags}
+      ${arch_flags})
 
   if(LLVM_LIBC_COMPILER_IS_GCC_COMPATIBLE)
     list(APPEND compile_options "-fpie")
@@ -37,8 +34,8 @@ function(_get_common_test_compile_options output_var c_test flags)
       list(APPEND compile_options "-ffixed-point")
     endif()
 
-    # list(APPEND compile_options "-Wall")
-    # list(APPEND compile_options "-Wextra")
+    list(APPEND compile_options "-Wall")
+    list(APPEND compile_options "-Wextra")
     # -DLIBC_WNO_ERROR=ON if you can't build cleanly with -Werror.
     if(NOT LIBC_WNO_ERROR)
       # list(APPEND compile_options "-Werror")
@@ -85,7 +82,6 @@ function(_get_hermetic_test_compile_options output_var)
          -mcode-object-version=${LIBC_GPU_CODE_OBJECT_VERSION})
   elseif(LIBC_TARGET_ARCHITECTURE_IS_NVPTX)
     list(APPEND compile_options
-         "SHELL:-mllvm -nvptx-emit-init-fini-kernel=false"
          -Wno-multi-gpu --cuda-path=${LIBC_CUDA_ROOT}
          -nogpulib -march=${LIBC_GPU_TARGET_ARCHITECTURE} -fno-use-cxa-atexit)
   endif()
@@ -293,6 +289,7 @@ function(create_libc_unittest fq_target_name)
   )
   target_include_directories(${fq_build_target_name} SYSTEM PRIVATE ${LIBC_INCLUDE_DIR})
   target_include_directories(${fq_build_target_name} PRIVATE ${LIBC_SOURCE_DIR})
+  target_include_directories(${fq_build_target_name} PRIVATE ${LIBC_BUILD_DIR})
   target_compile_options(${fq_build_target_name} PRIVATE ${compile_options})
   target_link_options(${fq_build_target_name} PRIVATE ${link_options})
 
@@ -346,6 +343,10 @@ function(create_libc_unittest fq_target_name)
     )
   endif()
   add_dependencies(libc-unit-tests ${fq_target_name})
+  # Also add dependency to build-only target for lit
+  if(TARGET libc-unit-tests-build)
+    add_dependencies(libc-unit-tests-build ${fq_build_target_name})
+  endif()
 endfunction(create_libc_unittest)
 
 function(add_libc_unittest target_name)
@@ -635,10 +636,30 @@ function(add_integration_test test_name)
   # makes `add_custom_target` construct the correct command and execute it.
   set(test_cmd
       ${INTEGRATION_TEST_ENV}
+      $<$<BOOL:${LIBC_TARGET_ARCHITECTURE_IS_NVPTX}>:LIBOMPTARGET_STACK_SIZE=3072>
       $<$<BOOL:${LIBC_TARGET_OS_IS_GPU}>:${gpu_loader_exe}>
       ${CMAKE_CROSSCOMPILING_EMULATOR}
       ${INTEGRATION_TEST_LOADER_ARGS}
       $<TARGET_FILE:${fq_build_target_name}> ${INTEGRATION_TEST_ARGS})
+  # Generate a sidecar .params file alongside the executable for any test that
+  # requires specific command-line arguments or environment variables.  The
+  # LibcTest lit format reads this file at test time.  Format: one arg per line,
+  # a "---" separator, then one KEY=VALUE env entry per line.
+  if(INTEGRATION_TEST_ARGS OR INTEGRATION_TEST_ENV)
+    set(_params_content "")
+    foreach(_arg IN LISTS INTEGRATION_TEST_ARGS)
+      string(APPEND _params_content "${_arg}\n")
+    endforeach()
+    string(APPEND _params_content "---\n")
+    foreach(_env_entry IN LISTS INTEGRATION_TEST_ENV)
+      string(APPEND _params_content "${_env_entry}\n")
+    endforeach()
+    file(GENERATE
+      OUTPUT  "${CMAKE_CURRENT_BINARY_DIR}/${fq_build_target_name}.params"
+      CONTENT "${_params_content}"
+    )
+  endif()
+
   add_custom_target(
     ${fq_target_name}
     COMMAND ${test_cmd}
@@ -788,8 +809,7 @@ function(add_libc_hermetic test_name)
   if(LIBC_TARGET_ARCHITECTURE_IS_AMDGPU)
     target_link_options(${fq_build_target_name} PRIVATE
       ${LIBC_COMPILE_OPTIONS_DEFAULT} -Wno-multi-gpu
-      -mcpu=${LIBC_GPU_TARGET_ARCHITECTURE} -flto
-      "-Wl,-mllvm,-amdgpu-lower-global-ctor-dtor=0" -nostdlib -static
+      -mcpu=${LIBC_GPU_TARGET_ARCHITECTURE} -flto -nostdlib -static
       "-Wl,-mllvm,-amdhsa-code-object-version=${LIBC_GPU_CODE_OBJECT_VERSION}")
   elseif(LIBC_TARGET_ARCHITECTURE_IS_NVPTX)
     target_link_options(${fq_build_target_name} PRIVATE
@@ -836,7 +856,7 @@ function(add_libc_hermetic test_name)
                    ${fq_deps_list})
   # TODO: currently the dependency chain is broken such that getauxval cannot properly
   # propagate to hermetic tests. This is a temporary workaround.
-  if (LIBC_TARGET_ARCHITECTURE_IS_AARCH64)
+  if (LIBC_TARGET_ARCHITECTURE_IS_AARCH64 AND NOT(LIBC_TARGET_OS_IS_BAREMETAL))
     target_link_libraries(
       ${fq_build_target_name}
       PRIVATE
@@ -857,6 +877,7 @@ function(add_libc_hermetic test_name)
       string(REPLACE " " ";" test_cmd "${test_cmd_parsed}")
     else()
       set(test_cmd ${HERMETIC_TEST_ENV}
+        $<$<BOOL:${LIBC_TARGET_ARCHITECTURE_IS_NVPTX}>:LIBOMPTARGET_STACK_SIZE=3072>
         $<$<BOOL:${LIBC_TARGET_OS_IS_GPU}>:${gpu_loader_exe}> ${CMAKE_CROSSCOMPILING_EMULATOR} ${HERMETIC_TEST_LOADER_ARGS}
         $<TARGET_FILE:${fq_build_target_name}> ${HERMETIC_TEST_ARGS})
     endif()
@@ -885,6 +906,10 @@ function(add_libc_hermetic test_name)
     # If it is a benchmark, it will already have been added to the
     # gpu-benchmark target
     add_dependencies(libc-hermetic-tests ${fq_target_name})
+    # Also add dependency to build-only target for lit
+    if(TARGET libc-hermetic-tests-build)
+      add_dependencies(libc-hermetic-tests-build ${fq_build_target_name})
+    endif()
   endif()
 endfunction(add_libc_hermetic)
 

@@ -19,7 +19,7 @@ void C::f() {}
 
 void C::f2(int a, int b) {}
 
-// CIR:      cir.func{{.*}} @_ZN1C2f2Eii(%[[THIS_ARG:.*]]: !cir.ptr<!rec_C> {{.*}}, %[[A_ARG:.*]]: !s32i {{.*}}, %[[B_ARG:.*]]: !s32i {{.*}}) {
+// CIR:      cir.func{{.*}} @_ZN1C2f2Eii(%[[THIS_ARG:.*]]: !cir.ptr<!rec_C> {{.*}}, %[[A_ARG:.*]]: !s32i {{.*}}, %[[B_ARG:.*]]: !s32i {{.*}})
 // CIR-NEXT:   %[[THIS_ADDR:.*]] = cir.alloca !cir.ptr<!rec_C>, !cir.ptr<!cir.ptr<!rec_C>>, ["this", init]
 // CIR-NEXT:   %[[A_ADDR:.*]] = cir.alloca !s32i, !cir.ptr<!s32i>, ["a", init]
 // CIR-NEXT:   %[[B_ADDR:.*]] = cir.alloca !s32i, !cir.ptr<!s32i>, ["b", init]
@@ -36,11 +36,11 @@ void test1() {
   c.f2(1, 2);
 }
 
-// CIR: cir.func{{.*}} @_Z5test1v() {
+// CIR: cir.func{{.*}} @_Z5test1v()
 // CIR-NEXT:   %[[C_ADDR:.*]] = cir.alloca !rec_C, !cir.ptr<!rec_C>, ["c"]
-// CIR-NEXT:   cir.call @_ZN1C1fEv(%[[C_ADDR]]) : (!cir.ptr<!rec_C>) -> ()
+// CIR-NEXT:   cir.call @_ZN1C1fEv(%[[C_ADDR]]) : (!cir.ptr<!rec_C> {{.*}}) -> ()
 // CIR-NEXT:   %[[ONE:.*]] = cir.const #cir.int<1> : !s32i
 // CIR-NEXT:   %[[TWO:.*]] = cir.const #cir.int<2> : !s32i
-// CIR-NEXT:   cir.call @_ZN1C2f2Eii(%[[C_ADDR]], %[[ONE]], %[[TWO]]) : (!cir.ptr<!rec_C>, !s32i, !s32i) -> ()
+// CIR-NEXT:   cir.call @_ZN1C2f2Eii(%[[C_ADDR]], %[[ONE]], %[[TWO]]) : (!cir.ptr<!rec_C> {{.*}}, !s32i {{.*}}, !s32i {{.*}}) -> ()
 // CIR-NEXT:   cir.return
 // CIR-NEXT: }

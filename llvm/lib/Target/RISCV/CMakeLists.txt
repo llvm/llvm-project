@@ -7,7 +7,8 @@ tablegen(LLVM RISCVGenAsmWriter.inc -gen-asm-writer)
 tablegen(LLVM RISCVGenCompressInstEmitter.inc -gen-compress-inst-emitter)
 tablegen(LLVM RISCVGenMacroFusion.inc -gen-macro-fusion-pred)
 tablegen(LLVM RISCVGenDAGISel.inc -gen-dag-isel)
-tablegen(LLVM RISCVGenDisassemblerTables.inc -gen-disassembler)
+tablegen(LLVM RISCVGenDisassemblerTables.inc -gen-disassembler
+              --specialize-decoders-per-bitwidth)
 tablegen(LLVM RISCVGenInstrInfo.inc -gen-instr-info)
 tablegen(LLVM RISCVGenMCCodeEmitter.inc -gen-emitter)
 tablegen(LLVM RISCVGenMCPseudoLowering.inc -gen-pseudo-lowering)
@@ -53,10 +54,12 @@ add_llvm_target(RISCVCodeGen
   RISCVLoadStoreOptimizer.cpp
   RISCVMachineFunctionInfo.cpp
   RISCVMakeCompressible.cpp
+  RISCVMachineScheduler.cpp
   RISCVMergeBaseOffset.cpp
   RISCVMoveMerger.cpp
   RISCVOptWInstrs.cpp
   RISCVPostRAExpandPseudoInsts.cpp
+  RISCVPromoteConstant.cpp
   RISCVPushPopOptimizer.cpp
   RISCVRedundantCopyElimination.cpp
   RISCVRegisterInfo.cpp
@@ -69,7 +72,9 @@ add_llvm_target(RISCVCodeGen
   RISCVVectorPeephole.cpp
   RISCVVLOptimizer.cpp
   RISCVVMV0Elimination.cpp
+  RISCVVSETVLIInfoAnalysis.cpp
   RISCVZacasABIFix.cpp
+  RISCVZilsdOptimizer.cpp
   GISel/RISCVCallLowering.cpp
   GISel/RISCVInstructionSelector.cpp
   GISel/RISCVLegalizerInfo.cpp
@@ -87,6 +92,7 @@ add_llvm_target(RISCVCodeGen
   GlobalISel
   IPO
   MC
+  Passes
   RISCVDesc
   RISCVInfo
   Scalar

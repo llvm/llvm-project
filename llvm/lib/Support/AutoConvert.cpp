@@ -91,12 +91,18 @@ std::error_code llvm::setzOSFileTag(int FD, int CCSID, bool Text) {
   Tag.ft_deferred = 0;
   Tag.ft_rsvflags = 0;
 
-  if (fcntl(FD, F_SETTAG, &Tag) == -1)
-    return errnoAsErrorCode();
+  if (fcntl(FD, F_SETTAG, &Tag) == -1) {
+    if (errno == ENOSYS)
+      // Some file systems do not support filetags.
+      // Ignore ENOSYS error to allow compilation.
+      errno = 0;
+    else
+      return errnoAsErrorCode();
+  }
   return std::error_code();
 }
 
-ErrorOr<__ccsid_t> llvm::getzOSFileTag(const char *FileName, const int FD) {
+ErrorOr<__ccsid_t> llvm::getzOSFileTag(const Twine &FileName, const int FD) {
   // If we have a file descriptor, use it to find out file tagging. Otherwise we
   // need to use stat() with the file path.
   if (FD != -1) {
@@ -110,12 +116,12 @@ ErrorOr<__ccsid_t> llvm::getzOSFileTag(const char *FileName, const int FD) {
     return Query.fccsid;
   }
   struct stat Attr;
-  if (stat(FileName, &Attr) == -1)
+  if (stat(FileName.str().c_str(), &Attr) == -1)
     return std::error_code(errno, std::generic_category());
   return Attr.st_tag.ft_ccsid;
 }
 
-ErrorOr<bool> llvm::needzOSConversion(const char *FileName, const int FD) {
+ErrorOr<bool> llvm::needzOSConversion(const Twine &FileName, const int FD) {
   ErrorOr<__ccsid_t> Ccsid = getzOSFileTag(FileName, FD);
   if (std::error_code EC = Ccsid.getError())
     return EC;
@@ -130,6 +136,16 @@ ErrorOr<bool> llvm::needzOSConversion(const char *FileName, const int FD) {
   default:
     return true;
   }
+}
+
+std::error_code llvm::copyFileTagAttributes(const std::string &Source,
+                                            const int DestinationFD) {
+  struct stat SourceAttributes;
+  if (stat(Source.c_str(), &SourceAttributes) == -1)
+    return std::error_code(errno, std::generic_category());
+
+  return setzOSFileTag(DestinationFD, SourceAttributes.st_tag.ft_ccsid,
+                       SourceAttributes.st_tag.ft_txtflag);
 }
 
 #endif //__MVS__

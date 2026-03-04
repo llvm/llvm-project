@@ -8,6 +8,7 @@
 
 #include "InputFiles.h"
 #include "OutputSections.h"
+#include "RelocScan.h"
 #include "Symbols.h"
 #include "SyntheticSections.h"
 #include "Target.h"
@@ -36,11 +37,19 @@ public:
   RelExpr getRelExpr(RelType type, const Symbol &s,
                      const uint8_t *loc) const override;
   bool usesOnlyLowPageBits(RelType type) const override;
+  template <class ELFT, class RelTy>
+  void scanSectionImpl(InputSectionBase &, Relocs<RelTy>);
+  void scanSection(InputSectionBase &sec) override {
+    if (ctx.arg.is64)
+      elf::scanSection1<LoongArch, ELF64LE>(*this, sec);
+    else
+      elf::scanSection1<LoongArch, ELF32LE>(*this, sec);
+  }
   void relocate(uint8_t *loc, const Relocation &rel,
                 uint64_t val) const override;
   bool relaxOnce(int pass) const override;
-  RelExpr adjustTlsExpr(RelType type, RelExpr expr) const override;
-  void relocateAlloc(InputSectionBase &sec, uint8_t *buf) const override;
+  bool synthesizeAlign(uint64_t &dot, InputSection *sec) override;
+  void relocateAlloc(InputSection &sec, uint8_t *buf) const override;
   void finalizeRelax(int passes) const override;
 
 private:
@@ -48,6 +57,19 @@ private:
   void tlsdescToLe(uint8_t *loc, const Relocation &rel, uint64_t val) const;
   bool tryGotToPCRel(uint8_t *loc, const Relocation &rHi20,
                      const Relocation &rLo12, uint64_t secAddr) const;
+  template <class ELFT, class RelTy>
+  bool synthesizeAlignForInput(uint64_t &dot, InputSection *sec,
+                               Relocs<RelTy> rels);
+  template <class ELFT, class RelTy>
+  void finalizeSynthesizeAligns(uint64_t &dot, InputSection *sec,
+                                Relocs<RelTy> rels);
+  template <class ELFT>
+  bool synthesizeAlignAux(uint64_t &dot, InputSection *sec);
+
+  // The following two variables are used by synthesized ALIGN relocations.
+  InputSection *baseSec = nullptr;
+  // r_offset and r_addend pairs.
+  SmallVector<std::pair<uint64_t, uint64_t>, 0> synthesizedAligns;
 };
 } // end anonymous namespace
 
@@ -401,42 +423,17 @@ RelType LoongArch::getDynRel(RelType type) const {
                                          : static_cast<RelType>(R_LARCH_NONE);
 }
 
+// Used by relocateNonAlloc(), scanEhSection(), and the extreme code model
+// fallback in relocateAlloc(). For alloc sections, scanSectionImpl() is the
+// primary relocation classifier.
 RelExpr LoongArch::getRelExpr(const RelType type, const Symbol &s,
                               const uint8_t *loc) const {
   switch (type) {
   case R_LARCH_NONE:
-  case R_LARCH_MARK_LA:
-  case R_LARCH_MARK_PCREL:
     return R_NONE;
   case R_LARCH_32:
   case R_LARCH_64:
-  case R_LARCH_ABS_HI20:
-  case R_LARCH_ABS_LO12:
-  case R_LARCH_ABS64_LO20:
-  case R_LARCH_ABS64_HI12:
     return R_ABS;
-  case R_LARCH_PCALA_LO12:
-    // We could just R_ABS, but the JIRL instruction reuses the relocation type
-    // for a different purpose. The questionable usage is part of glibc 2.37
-    // libc_nonshared.a [1], which is linked into user programs, so we have to
-    // work around it for a while, even if a new relocation type may be
-    // introduced in the future [2].
-    //
-    // [1]: https://sourceware.org/git/?p=glibc.git;a=commitdiff;h=9f482b73f41a9a1bbfb173aad0733d1c824c788a
-    // [2]: https://github.com/loongson/la-abi-specs/pull/3
-    return isJirl(read32le(loc)) ? R_PLT : R_ABS;
-  case R_LARCH_TLS_DTPREL32:
-  case R_LARCH_TLS_DTPREL64:
-    return R_DTPREL;
-  case R_LARCH_TLS_TPREL32:
-  case R_LARCH_TLS_TPREL64:
-  case R_LARCH_TLS_LE_HI20:
-  case R_LARCH_TLS_LE_HI20_R:
-  case R_LARCH_TLS_LE_LO12:
-  case R_LARCH_TLS_LE_LO12_R:
-  case R_LARCH_TLS_LE64_LO20:
-  case R_LARCH_TLS_LE64_HI12:
-    return R_TPREL;
   case R_LARCH_ADD6:
   case R_LARCH_ADD8:
   case R_LARCH_ADD16:
@@ -455,100 +452,8 @@ RelExpr LoongArch::getRelExpr(const RelType type, const Symbol &s,
   case R_LARCH_32_PCREL:
   case R_LARCH_64_PCREL:
   case R_LARCH_PCREL20_S2:
+  case R_LARCH_PCADD_HI20:
     return R_PC;
-  case R_LARCH_B16:
-  case R_LARCH_B21:
-  case R_LARCH_B26:
-  case R_LARCH_CALL36:
-    return R_PLT_PC;
-  case R_LARCH_GOT_PC_HI20:
-  case R_LARCH_GOT64_PC_LO20:
-  case R_LARCH_GOT64_PC_HI12:
-  case R_LARCH_TLS_IE_PC_HI20:
-  case R_LARCH_TLS_IE64_PC_LO20:
-  case R_LARCH_TLS_IE64_PC_HI12:
-    return RE_LOONGARCH_GOT_PAGE_PC;
-  case R_LARCH_GOT_PC_LO12:
-  case R_LARCH_TLS_IE_PC_LO12:
-    return RE_LOONGARCH_GOT;
-  case R_LARCH_TLS_LD_PC_HI20:
-  case R_LARCH_TLS_GD_PC_HI20:
-    return RE_LOONGARCH_TLSGD_PAGE_PC;
-  case R_LARCH_PCALA_HI20:
-    // Why not RE_LOONGARCH_PAGE_PC, majority of references don't go through
-    // PLT anyway so why waste time checking only to get everything relaxed back
-    // to it?
-    //
-    // This is again due to the R_LARCH_PCALA_LO12 on JIRL case, where we want
-    // both the HI20 and LO12 to potentially refer to the PLT. But in reality
-    // the HI20 reloc appears earlier, and the relocs don't contain enough
-    // information to let us properly resolve semantics per symbol.
-    // Unlike RISCV, our LO12 relocs *do not* point to their corresponding HI20
-    // relocs, hence it is nearly impossible to 100% accurately determine each
-    // HI20's "flavor" without taking big performance hits, in the presence of
-    // edge cases (e.g. HI20 without pairing LO12; paired LO12 placed so far
-    // apart that relationship is not certain anymore), and programmer mistakes
-    // (e.g. as outlined in https://github.com/loongson/la-abi-specs/pull/3).
-    //
-    // Ideally we would scan in an extra pass for all LO12s on JIRL, then mark
-    // every HI20 reloc referring to the same symbol differently; this is not
-    // feasible with the current function signature of getRelExpr that doesn't
-    // allow for such inter-pass state.
-    //
-    // So, unfortunately we have to again workaround this quirk the same way as
-    // BFD: assuming every R_LARCH_PCALA_HI20 is potentially PLT-needing, only
-    // relaxing back to RE_LOONGARCH_PAGE_PC if it's known not so at a later
-    // stage.
-    return RE_LOONGARCH_PLT_PAGE_PC;
-  case R_LARCH_PCALA64_LO20:
-  case R_LARCH_PCALA64_HI12:
-    return RE_LOONGARCH_PAGE_PC;
-  case R_LARCH_GOT_HI20:
-  case R_LARCH_GOT_LO12:
-  case R_LARCH_GOT64_LO20:
-  case R_LARCH_GOT64_HI12:
-  case R_LARCH_TLS_IE_HI20:
-  case R_LARCH_TLS_IE_LO12:
-  case R_LARCH_TLS_IE64_LO20:
-  case R_LARCH_TLS_IE64_HI12:
-    return R_GOT;
-  case R_LARCH_TLS_LD_HI20:
-    return R_TLSLD_GOT;
-  case R_LARCH_TLS_GD_HI20:
-    return R_TLSGD_GOT;
-  case R_LARCH_TLS_LE_ADD_R:
-  case R_LARCH_RELAX:
-    return ctx.arg.relax ? R_RELAX_HINT : R_NONE;
-  case R_LARCH_ALIGN:
-    return R_RELAX_HINT;
-  case R_LARCH_TLS_DESC_PC_HI20:
-  case R_LARCH_TLS_DESC64_PC_LO20:
-  case R_LARCH_TLS_DESC64_PC_HI12:
-    return RE_LOONGARCH_TLSDESC_PAGE_PC;
-  case R_LARCH_TLS_DESC_PC_LO12:
-  case R_LARCH_TLS_DESC_LD:
-  case R_LARCH_TLS_DESC_HI20:
-  case R_LARCH_TLS_DESC_LO12:
-  case R_LARCH_TLS_DESC64_LO20:
-  case R_LARCH_TLS_DESC64_HI12:
-    return R_TLSDESC;
-  case R_LARCH_TLS_DESC_CALL:
-    return R_TLSDESC_CALL;
-  case R_LARCH_TLS_LD_PCREL20_S2:
-    return R_TLSLD_PC;
-  case R_LARCH_TLS_GD_PCREL20_S2:
-    return R_TLSGD_PC;
-  case R_LARCH_TLS_DESC_PCREL20_S2:
-    return R_TLSDESC_PC;
-
-  // Other known relocs that are explicitly unimplemented:
-  //
-  // - psABI v1 relocs that need a stateful stack machine to work, and not
-  //   required when implementing psABI v2;
-  // - relocs that are not used anywhere (R_LARCH_{ADD,SUB}_24 [1], and the
-  //   two GNU vtable-related relocs).
-  //
-  // [1]: https://web.archive.org/web/20230709064026/https://github.com/loongson/LoongArch-Documentation/issues/51
   default:
     Err(ctx) << getErrorLoc(ctx, loc) << "unknown relocation (" << type.v
              << ") against symbol " << &s;
@@ -568,6 +473,267 @@ bool LoongArch::usesOnlyLowPageBits(RelType type) const {
   case R_LARCH_TLS_DESC_PC_LO12:
     return true;
   }
+}
+
+template <class ELFT, class RelTy>
+void LoongArch::scanSectionImpl(InputSectionBase &sec, Relocs<RelTy> rels) {
+  RelocScan rs(ctx, &sec);
+  sec.relocations.reserve(rels.size());
+  for (auto it = rels.begin(); it != rels.end(); ++it) {
+    RelType type = it->getType(false);
+    uint32_t symIndex = it->getSymbol(false);
+    Symbol &sym = sec.getFile<ELFT>()->getSymbol(symIndex);
+    uint64_t offset = it->r_offset;
+    if (sym.isUndefined() && symIndex != 0 &&
+        rs.maybeReportUndefined(cast<Undefined>(sym), offset))
+      continue;
+    int64_t addend = rs.getAddend<ELFT>(*it, type);
+    RelExpr expr;
+    // Relocation types that only need a RelExpr set `expr` and break out of
+    // the switch to reach rs.process(). Types that need special handling
+    // (fast-path helpers, TLS) call a handler and use `continue`.
+    switch (type) {
+    case R_LARCH_NONE:
+    case R_LARCH_MARK_LA:
+    case R_LARCH_MARK_PCREL:
+      continue;
+
+    // Absolute relocations:
+    case R_LARCH_32:
+    case R_LARCH_64:
+    case R_LARCH_ABS_HI20:
+    case R_LARCH_ABS_LO12:
+    case R_LARCH_ABS64_LO20:
+    case R_LARCH_ABS64_HI12:
+      expr = R_ABS;
+      break;
+
+    case R_LARCH_PCALA_LO12:
+      // R_LARCH_PCALA_LO12 on JIRL is used for function calls (glibc 2.37).
+      expr = isJirl(read32le(sec.content().data() + offset)) ? R_PLT : R_ABS;
+      break;
+
+    // PC-indirect relocations (lo12 paired with a preceding hi20 pcadd):
+    case R_LARCH_PCADD_LO12:
+    case R_LARCH_GOT_PCADD_LO12:
+    case R_LARCH_TLS_IE_PCADD_LO12:
+    case R_LARCH_TLS_LD_PCADD_LO12:
+    case R_LARCH_TLS_GD_PCADD_LO12:
+    case R_LARCH_TLS_DESC_PCADD_LO12:
+      expr = RE_LOONGARCH_PC_INDIRECT;
+      break;
+
+    // PC-relative relocations:
+    case R_LARCH_32_PCREL:
+    case R_LARCH_64_PCREL:
+    case R_LARCH_PCREL20_S2:
+    case R_LARCH_PCADD_HI20:
+      rs.processR_PC(type, offset, addend, sym);
+      continue;
+
+    // PLT-generating relocations:
+    case R_LARCH_B16:
+    case R_LARCH_B21:
+    case R_LARCH_B26:
+    case R_LARCH_CALL30:
+    case R_LARCH_CALL36:
+      rs.processR_PLT_PC(type, offset, addend, sym);
+      continue;
+
+    // Page-PC relocations:
+    case R_LARCH_PCALA_HI20:
+      // Why not RE_LOONGARCH_PAGE_PC, majority of references don't go through
+      // PLT anyway so why waste time checking only to get everything relaxed
+      // back to it?
+      //
+      // This is again due to the R_LARCH_PCALA_LO12 on JIRL case, where we want
+      // both the HI20 and LO12 to potentially refer to the PLT. But in reality
+      // the HI20 reloc appears earlier, and the relocs don't contain enough
+      // information to let us properly resolve semantics per symbol.
+      // Unlike RISCV, our LO12 relocs *do not* point to their corresponding
+      // HI20 relocs, hence it is nearly impossible to 100% accurately determine
+      // each HI20's "flavor" without taking big performance hits, in the
+      // presence of edge cases (e.g. HI20 without pairing LO12; paired LO12
+      // placed so far apart that relationship is not certain anymore), and
+      // programmer mistakes (e.g. as outlined in
+      // https://github.com/loongson/la-abi-specs/pull/3).
+      //
+      // Ideally we would scan in an extra pass for all LO12s on JIRL, then mark
+      // every HI20 reloc referring to the same symbol differently; this is not
+      // feasible with the current function signature of getRelExpr that doesn't
+      // allow for such inter-pass state.
+      //
+      // So, unfortunately we have to again workaround this quirk the same way
+      // as BFD: assuming every R_LARCH_PCALA_HI20 is potentially PLT-needing,
+      // only relaxing back to RE_LOONGARCH_PAGE_PC if it's known not so at a
+      // later stage.
+      expr = RE_LOONGARCH_PLT_PAGE_PC;
+      break;
+    case R_LARCH_PCALA64_LO20:
+    case R_LARCH_PCALA64_HI12:
+      expr = RE_LOONGARCH_PAGE_PC;
+      break;
+
+    // GOT-generating relocations:
+    case R_LARCH_GOT_PC_HI20:
+    case R_LARCH_GOT64_PC_LO20:
+    case R_LARCH_GOT64_PC_HI12:
+      expr = RE_LOONGARCH_GOT_PAGE_PC;
+      break;
+    case R_LARCH_GOT_PCADD_HI20:
+      expr = R_GOT_PC;
+      break;
+    case R_LARCH_GOT_PC_LO12:
+      expr = RE_LOONGARCH_GOT;
+      break;
+    case R_LARCH_GOT_HI20:
+    case R_LARCH_GOT_LO12:
+    case R_LARCH_GOT64_LO20:
+    case R_LARCH_GOT64_HI12:
+      expr = R_GOT;
+      break;
+
+    // DTPREL relocations:
+    case R_LARCH_TLS_DTPREL32:
+    case R_LARCH_TLS_DTPREL64:
+      expr = R_DTPREL;
+      break;
+
+    // TLS LE relocations:
+    case R_LARCH_TLS_TPREL32:
+    case R_LARCH_TLS_TPREL64:
+    case R_LARCH_TLS_LE_HI20:
+    case R_LARCH_TLS_LE_HI20_R:
+    case R_LARCH_TLS_LE_LO12:
+    case R_LARCH_TLS_LE_LO12_R:
+    case R_LARCH_TLS_LE64_LO20:
+    case R_LARCH_TLS_LE64_HI12:
+      if (rs.checkTlsLe(offset, sym, type))
+        continue;
+      expr = R_TPREL;
+      break;
+    // TLS IE relocations (optimizable to LE in non-extreme code model):
+    case R_LARCH_TLS_IE_PC_HI20:
+      rs.handleTlsIe(RE_LOONGARCH_GOT_PAGE_PC, type, offset, addend, sym);
+      continue;
+    case R_LARCH_TLS_IE_PC_LO12:
+      rs.handleTlsIe(RE_LOONGARCH_GOT, type, offset, addend, sym);
+      continue;
+    // TLS IE relocations (extreme code model, no IE->LE optimization):
+    case R_LARCH_TLS_IE64_PC_LO20:
+    case R_LARCH_TLS_IE64_PC_HI12:
+      rs.handleTlsIe<false>(RE_LOONGARCH_GOT_PAGE_PC, type, offset, addend,
+                            sym);
+      continue;
+    // TLS IE relocations (pcadd/absolute, no IE->LE optimization):
+    case R_LARCH_TLS_IE_PCADD_HI20:
+      rs.handleTlsIe<false>(R_GOT_PC, type, offset, addend, sym);
+      continue;
+    case R_LARCH_TLS_IE_HI20:
+    case R_LARCH_TLS_IE_LO12:
+    case R_LARCH_TLS_IE64_LO20:
+    case R_LARCH_TLS_IE64_HI12:
+      rs.handleTlsIe<false>(R_GOT, type, offset, addend, sym);
+      continue;
+    // TLS GD/LD relocations (no GD/LD->IE/LE optimization):
+    case R_LARCH_TLS_LD_PC_HI20:
+    case R_LARCH_TLS_GD_PC_HI20:
+      sym.setFlags(NEEDS_TLSGD);
+      sec.addReloc({RE_LOONGARCH_TLSGD_PAGE_PC, type, offset, addend, &sym});
+      continue;
+    case R_LARCH_TLS_LD_HI20:
+      ctx.needsTlsLd.store(true, std::memory_order_relaxed);
+      sec.addReloc({R_TLSLD_GOT, type, offset, addend, &sym});
+      continue;
+    case R_LARCH_TLS_GD_HI20:
+      sym.setFlags(NEEDS_TLSGD);
+      sec.addReloc({R_TLSGD_GOT, type, offset, addend, &sym});
+      continue;
+    case R_LARCH_TLS_LD_PCREL20_S2:
+    case R_LARCH_TLS_LD_PCADD_HI20:
+      ctx.needsTlsLd.store(true, std::memory_order_relaxed);
+      sec.addReloc({R_TLSLD_PC, type, offset, addend, &sym});
+      continue;
+    case R_LARCH_TLS_GD_PCREL20_S2:
+    case R_LARCH_TLS_GD_PCADD_HI20:
+      sym.setFlags(NEEDS_TLSGD);
+      sec.addReloc({R_TLSGD_PC, type, offset, addend, &sym});
+      continue;
+
+    // TLSDESC relocations (optimizable to IE/LE in non-extreme code model):
+    case R_LARCH_TLS_DESC_PC_HI20:
+      rs.handleTlsDesc(RE_LOONGARCH_TLSDESC_PAGE_PC, RE_LOONGARCH_GOT_PAGE_PC,
+                       type, offset, addend, sym);
+      continue;
+    case R_LARCH_TLS_DESC_PC_LO12:
+    case R_LARCH_TLS_DESC_LD:
+      rs.handleTlsDesc(R_TLSDESC, RE_LOONGARCH_GOT_PAGE_PC, type, offset,
+                       addend, sym);
+      continue;
+    case R_LARCH_TLS_DESC_PCREL20_S2:
+      rs.handleTlsDesc(R_TLSDESC_PC, RE_LOONGARCH_GOT_PAGE_PC, type, offset,
+                       addend, sym);
+      continue;
+    case R_LARCH_TLS_DESC_CALL:
+      if (!ctx.arg.shared)
+        sec.addReloc(
+            {sym.isPreemptible ? R_GOT : R_TPREL, type, offset, addend, &sym});
+      continue;
+    // TLSDESC relocations (extreme code model, no optimization):
+    case R_LARCH_TLS_DESC64_PC_LO20:
+    case R_LARCH_TLS_DESC64_PC_HI12:
+      sym.setFlags(NEEDS_TLSDESC);
+      sec.addReloc({RE_LOONGARCH_TLSDESC_PAGE_PC, type, offset, addend, &sym});
+      continue;
+    // TLSDESC relocations (absolute/pcadd, no optimization):
+    case R_LARCH_TLS_DESC_HI20:
+    case R_LARCH_TLS_DESC_LO12:
+    case R_LARCH_TLS_DESC64_LO20:
+    case R_LARCH_TLS_DESC64_HI12:
+    case R_LARCH_TLS_DESC_PCADD_HI20:
+      sym.setFlags(NEEDS_TLSDESC);
+      sec.addReloc({R_TLSDESC, type, offset, addend, &sym});
+      continue;
+
+    // Relaxation hints:
+    case R_LARCH_TLS_LE_ADD_R:
+    case R_LARCH_RELAX:
+      if (ctx.arg.relax)
+        sec.addReloc({R_RELAX_HINT, type, offset, addend, &sym});
+      continue;
+    case R_LARCH_ALIGN:
+      sec.addReloc({R_RELAX_HINT, type, offset, addend, &sym});
+      continue;
+
+    // Misc relocations:
+    case R_LARCH_ADD6:
+    case R_LARCH_ADD8:
+    case R_LARCH_ADD16:
+    case R_LARCH_ADD32:
+    case R_LARCH_ADD64:
+    case R_LARCH_ADD_ULEB128:
+    case R_LARCH_SUB6:
+    case R_LARCH_SUB8:
+    case R_LARCH_SUB16:
+    case R_LARCH_SUB32:
+    case R_LARCH_SUB64:
+    case R_LARCH_SUB_ULEB128:
+      expr = RE_RISCV_ADD;
+      break;
+
+    default:
+      Err(ctx) << getErrorLoc(ctx, sec.content().data() + offset)
+               << "unknown relocation (" << type.v << ") against symbol "
+               << &sym;
+      continue;
+    }
+    rs.process(expr, type, offset, sym, addend);
+  }
+
+  llvm::stable_sort(sec.relocs(),
+                    [](const Relocation &lhs, const Relocation &rhs) {
+                      return lhs.offset < rhs.offset;
+                    });
 }
 
 void LoongArch::relocate(uint8_t *loc, const Relocation &rel,
@@ -614,6 +780,22 @@ void LoongArch::relocate(uint8_t *loc, const Relocation &rel,
     write32le(loc, setD10k16(read32le(loc), val >> 2));
     return;
 
+  case R_LARCH_CALL30: {
+    // This relocation is designed for adjacent pcaddu12i+jirl pairs that
+    // are patched in one time.
+    // The relocation range is [-2G, +2G) (of course must be 4-byte aligned).
+    checkInt(ctx, loc, val, 32, rel);
+    checkAlignment(ctx, loc, val, 4, rel);
+    // Although jirl adds the immediate as a signed value, it is always positive
+    // in this case, so no adjustment is needed, unlike CALL36.
+    uint32_t hi20 = extractBits(val, 31, 12);
+    // Despite the name, the lower part is actually 12 bits with 4-byte aligned.
+    uint32_t lo10 = extractBits(val, 11, 2);
+    write32le(loc, setJ20(read32le(loc), hi20));
+    write32le(loc + 4, setK16(read32le(loc + 4), lo10));
+    return;
+  }
+
   case R_LARCH_CALL36: {
     // This relocation is designed for adjacent pcaddu18i+jirl pairs that
     // are patched in one time. Because of sign extension of these insns'
@@ -657,6 +839,12 @@ void LoongArch::relocate(uint8_t *loc, const Relocation &rel,
   case R_LARCH_TLS_LE_LO12_R:
   case R_LARCH_TLS_DESC_PC_LO12:
   case R_LARCH_TLS_DESC_LO12:
+  case R_LARCH_PCADD_LO12:
+  case R_LARCH_GOT_PCADD_LO12:
+  case R_LARCH_TLS_IE_PCADD_LO12:
+  case R_LARCH_TLS_LD_PCADD_LO12:
+  case R_LARCH_TLS_GD_PCADD_LO12:
+  case R_LARCH_TLS_DESC_PCADD_LO12:
     write32le(loc, setK12(read32le(loc), extractBits(val, 11, 0)));
     return;
 
@@ -676,6 +864,17 @@ void LoongArch::relocate(uint8_t *loc, const Relocation &rel,
   case R_LARCH_TLS_DESC_HI20:
     write32le(loc, setJ20(read32le(loc), extractBits(val, 31, 12)));
     return;
+  case R_LARCH_PCADD_HI20:
+  case R_LARCH_GOT_PCADD_HI20:
+  case R_LARCH_TLS_IE_PCADD_HI20:
+  case R_LARCH_TLS_LD_PCADD_HI20:
+  case R_LARCH_TLS_GD_PCADD_HI20:
+  case R_LARCH_TLS_DESC_PCADD_HI20: {
+    uint64_t hi = val + 0x800;
+    checkInt(ctx, loc, val, 32, rel);
+    write32le(loc, setJ20(read32le(loc), extractBits(hi, 31, 12)));
+    return;
+  }
   case R_LARCH_TLS_LE_HI20_R:
     write32le(loc, setJ20(read32le(loc), extractBits(val + 0x800, 31, 12)));
     return;
@@ -764,6 +963,117 @@ void LoongArch::relocate(uint8_t *loc, const Relocation &rel,
   default:
     llvm_unreachable("unknown relocation");
   }
+}
+
+// If the section alignment is > 4, advance `dot` to insert NOPs and synthesize
+// an ALIGN relocation. Otherwise, return false to use default handling.
+template <class ELFT, class RelTy>
+bool LoongArch::synthesizeAlignForInput(uint64_t &dot, InputSection *sec,
+                                        Relocs<RelTy> rels) {
+  if (!baseSec) {
+    // Record the first input section with RELAX relocations. We will synthesize
+    // ALIGN relocations here.
+    for (auto rel : rels) {
+      if (rel.getType(false) == R_LARCH_RELAX) {
+        baseSec = sec;
+        break;
+      }
+    }
+  } else if (sec->addralign > 4) {
+    // If the alignment is > 4 and the section does not start with an ALIGN
+    // relocation, synthesize one.
+    bool hasAlignRel = llvm::any_of(rels, [](const RelTy &rel) {
+      return rel.r_offset == 0 && rel.getType(false) == R_LARCH_ALIGN;
+    });
+    if (!hasAlignRel) {
+      synthesizedAligns.emplace_back(dot - baseSec->getVA(),
+                                     sec->addralign - 4);
+      dot += sec->addralign - 4;
+      return true;
+    }
+  }
+  return false;
+}
+
+// Finalize the relocation section by appending synthesized ALIGN relocations
+// after processing all input sections.
+template <class ELFT, class RelTy>
+void LoongArch::finalizeSynthesizeAligns(uint64_t &dot, InputSection *sec,
+                                         Relocs<RelTy> rels) {
+  auto *f = cast<ObjFile<ELFT>>(baseSec->file);
+  auto shdr = f->template getELFShdrs<ELFT>()[baseSec->relSecIdx];
+  // Create a copy of InputSection.
+  sec = make<InputSection>(*f, shdr, baseSec->name);
+  auto *baseRelSec = cast<InputSection>(f->getSections()[baseSec->relSecIdx]);
+  *sec = *baseRelSec;
+  baseSec = nullptr;
+
+  // Allocate buffer for original and synthesized relocations in RELA format.
+  // If CREL is used, OutputSection::finalizeNonAllocCrel will convert RELA to
+  // CREL.
+  auto newSize = rels.size() + synthesizedAligns.size();
+  auto *relas = makeThreadLocalN<typename ELFT::Rela>(newSize);
+  sec->size = newSize * sizeof(typename ELFT::Rela);
+  sec->content_ = reinterpret_cast<uint8_t *>(relas);
+  sec->type = SHT_RELA;
+  // Copy original relocations to the new buffer, potentially converting CREL to
+  // RELA.
+  for (auto [i, r] : llvm::enumerate(rels)) {
+    relas[i].r_offset = r.r_offset;
+    relas[i].setSymbolAndType(r.getSymbol(0), r.getType(0), false);
+    if constexpr (RelTy::HasAddend)
+      relas[i].r_addend = r.r_addend;
+  }
+  // Append synthesized ALIGN relocations to the buffer.
+  for (auto [i, r] : llvm::enumerate(synthesizedAligns)) {
+    auto &rela = relas[rels.size() + i];
+    rela.r_offset = r.first;
+    rela.setSymbolAndType(0, R_LARCH_ALIGN, false);
+    rela.r_addend = r.second;
+  }
+  synthesizedAligns.clear();
+  // Replace the old relocation section with the new one in the output section.
+  // addOrphanSections ensures that the output relocation section is processed
+  // after osec.
+  for (SectionCommand *cmd : sec->getParent()->commands) {
+    auto *isd = dyn_cast<InputSectionDescription>(cmd);
+    if (!isd)
+      continue;
+    for (auto *&isec : isd->sections)
+      if (isec == baseRelSec)
+        isec = sec;
+  }
+}
+
+template <class ELFT>
+bool LoongArch::synthesizeAlignAux(uint64_t &dot, InputSection *sec) {
+  bool ret = false;
+  if (sec) {
+    invokeOnRelocs(*sec, ret = synthesizeAlignForInput<ELFT>, dot, sec);
+  } else if (baseSec) {
+    invokeOnRelocs(*baseSec, finalizeSynthesizeAligns<ELFT>, dot, sec);
+  }
+  return ret;
+}
+
+// Without linker relaxation enabled for a particular relocatable file or
+// section, the assembler will not generate R_LARCH_ALIGN relocations for
+// alignment directives. This becomes problematic in a two-stage linking
+// process: ld -r a.o b.o -o ab.o; ld ab.o -o ab. This function synthesizes an
+// R_LARCH_ALIGN relocation at section start when needed.
+//
+// When called with an input section (`sec` is not null): If the section
+// alignment is > 4, advance `dot` to insert NOPs and synthesize an ALIGN
+// relocation.
+//
+// When called after all input sections are processed (`sec` is null): The
+// output relocation section is updated with all the newly synthesized ALIGN
+// relocations.
+bool LoongArch::synthesizeAlign(uint64_t &dot, InputSection *sec) {
+  assert(ctx.arg.relocatable);
+  if (ctx.arg.is64)
+    return synthesizeAlignAux<ELF64LE>(dot, sec);
+  return synthesizeAlignAux<ELF32LE>(dot, sec);
 }
 
 static bool relaxable(ArrayRef<Relocation> relocs, size_t i) {
@@ -873,12 +1183,16 @@ static void relaxPCHi20Lo12(Ctx &ctx, const InputSection &sec, size_t i,
 
 // Relax code sequence.
 // From:
-//   pcaddu18i $ra, %call36(foo)
-//   jirl $ra, $ra, 0
+//   la32r:
+//     pcaddu12i $ra, %call30(foo)
+//     jirl $ra, $ra, 0
+//   la32s/la64:
+//     pcaddu18i $ra, %call36(foo)
+//     jirl $ra, $ra, 0
 // To:
 //   b/bl foo
-static void relaxCall36(Ctx &ctx, const InputSection &sec, size_t i,
-                        uint64_t loc, Relocation &r, uint32_t &remove) {
+static void relaxMediumCall(Ctx &ctx, const InputSection &sec, size_t i,
+                            uint64_t loc, Relocation &r, uint32_t &remove) {
   const uint64_t dest =
       (r.expr == R_PLT_PC ? r.sym->getPltVA(ctx) : r.sym->getVA(ctx)) +
       r.addend;
@@ -976,16 +1290,16 @@ static bool relax(Ctx &ctx, InputSection &sec) {
         relaxPCHi20Lo12(ctx, sec, i, loc, r, relocs[i + 2], remove);
       break;
     case R_LARCH_TLS_DESC_PC_HI20:
-      if (r.expr == RE_LOONGARCH_RELAX_TLS_GD_TO_IE_PAGE_PC ||
-          r.expr == R_RELAX_TLS_GD_TO_LE) {
+      if (r.expr == RE_LOONGARCH_GOT_PAGE_PC || r.expr == R_TPREL) {
         if (relaxable(relocs, i))
           remove = 4;
       } else if (isPairRelaxable(relocs, i))
         relaxPCHi20Lo12(ctx, sec, i, loc, r, relocs[i + 2], remove);
       break;
+    case R_LARCH_CALL30:
     case R_LARCH_CALL36:
       if (relaxable(relocs, i))
-        relaxCall36(ctx, sec, i, loc, r, remove);
+        relaxMediumCall(ctx, sec, i, loc, r, remove);
       break;
     case R_LARCH_TLS_LE_HI20_R:
     case R_LARCH_TLS_LE_ADD_R:
@@ -994,18 +1308,17 @@ static bool relax(Ctx &ctx, InputSection &sec) {
         relaxTlsLe(ctx, sec, i, loc, r, remove);
       break;
     case R_LARCH_TLS_IE_PC_HI20:
-      if (relaxable(relocs, i) && r.expr == R_RELAX_TLS_IE_TO_LE &&
+      if (relaxable(relocs, i) && r.expr == R_TPREL &&
           isUInt<12>(r.sym->getVA(ctx, r.addend)))
         remove = 4;
       break;
     case R_LARCH_TLS_DESC_PC_LO12:
       if (relaxable(relocs, i) &&
-          (r.expr == RE_LOONGARCH_RELAX_TLS_GD_TO_IE_PAGE_PC ||
-           r.expr == R_RELAX_TLS_GD_TO_LE))
+          (r.expr == RE_LOONGARCH_GOT_PAGE_PC || r.expr == R_TPREL))
         remove = 4;
       break;
     case R_LARCH_TLS_DESC_LD:
-      if (relaxable(relocs, i) && r.expr == R_RELAX_TLS_GD_TO_LE &&
+      if (relaxable(relocs, i) && r.expr == R_TPREL &&
           isUInt<12>(r.sym->getVA(ctx, r.addend)))
         remove = 4;
       break;
@@ -1229,22 +1542,13 @@ bool LoongArch::tryGotToPCRel(uint8_t *loc, const Relocation &rHi20,
   return true;
 }
 
-// During TLSDESC GD_TO_IE, the converted code sequence always includes an
+// During TLSDESC to IE, the converted code sequence always includes an
 // instruction related to the Lo12 relocation (ld.[wd]). To obtain correct val
-// in `getRelocTargetVA`, expr of this instruction should be adjusted to
-// R_RELAX_TLS_GD_TO_IE_ABS, while expr of other instructions related to the
-// Hi20 relocation (pcalau12i) should be adjusted to
-// RE_LOONGARCH_RELAX_TLS_GD_TO_IE_PAGE_PC. Specifically, in the normal or
-// medium code model, the instruction with relocation R_LARCH_TLS_DESC_CALL is
-// the candidate of Lo12 relocation.
-RelExpr LoongArch::adjustTlsExpr(RelType type, RelExpr expr) const {
-  if (expr == R_RELAX_TLS_GD_TO_IE) {
-    if (type != R_LARCH_TLS_DESC_CALL)
-      return RE_LOONGARCH_RELAX_TLS_GD_TO_IE_PAGE_PC;
-    return R_RELAX_TLS_GD_TO_IE_ABS;
-  }
-  return expr;
-}
+// in `getRelocTargetVA`, expr of this instruction should be adjusted to R_GOT,
+// while expr of other instructions related to the Hi20 relocation (pcalau12i)
+// should be adjusted to RE_LOONGARCH_GOT_PAGE_PC. Specifically, in the normal
+// or medium code model, the instruction with relocation R_LARCH_TLS_DESC_CALL
+// is the candidate of Lo12 relocation.
 
 static bool pairForGotRels(ArrayRef<Relocation> relocs) {
   // Check if R_LARCH_GOT_PC_HI20 and R_LARCH_GOT_PC_LO12 always appear in
@@ -1270,117 +1574,94 @@ static bool pairForGotRels(ArrayRef<Relocation> relocs) {
   return i == size;
 }
 
-void LoongArch::relocateAlloc(InputSectionBase &sec, uint8_t *buf) const {
+void LoongArch::relocateAlloc(InputSection &sec, uint8_t *buf) const {
   const unsigned bits = ctx.arg.is64 ? 64 : 32;
-  uint64_t secAddr = sec.getOutputSection()->addr;
-  if (auto *s = dyn_cast<InputSection>(&sec))
-    secAddr += s->outSecOff;
-  else if (auto *ehIn = dyn_cast<EhInputSection>(&sec))
-    secAddr += ehIn->getParent()->outSecOff;
-  bool isExtreme = false, isRelax = false;
+  uint64_t secAddr = sec.getOutputSection()->addr + sec.outSecOff;
+  bool isExtreme = false;
   const MutableArrayRef<Relocation> relocs = sec.relocs();
   const bool isPairForGotRels = pairForGotRels(relocs);
   for (size_t i = 0, size = relocs.size(); i != size; ++i) {
     Relocation &rel = relocs[i];
+    if (rel.expr == R_RELAX_HINT)
+      continue;
     uint8_t *loc = buf + rel.offset;
     uint64_t val = SignExtend64(
         sec.getRelocTargetVA(ctx, rel, secAddr + rel.offset), bits);
-
-    switch (rel.expr) {
-    case R_RELAX_HINT:
-      continue;
-    case R_RELAX_TLS_IE_TO_LE:
-      if (rel.type == R_LARCH_TLS_IE_PC_HI20) {
-        // LoongArch does not support IE to LE optimization in the extreme code
-        // model. In this case, the relocs are as follows:
-        //
-        //  * i   -- R_LARCH_TLS_IE_PC_HI20
-        //  * i+1 -- R_LARCH_TLS_IE_PC_LO12
-        //  * i+2 -- R_LARCH_TLS_IE64_PC_LO20
-        //  * i+3 -- R_LARCH_TLS_IE64_PC_HI12
+    switch (rel.type) {
+    case R_LARCH_TLS_IE_PC_HI20:
+    case R_LARCH_TLS_IE_PC_LO12:
+      // IE to LE. Not supported in extreme code model.
+      if (rel.expr != R_TPREL)
+        break;
+      if (rel.type == R_LARCH_TLS_IE_PC_HI20)
         isExtreme =
             i + 2 < size && relocs[i + 2].type == R_LARCH_TLS_IE64_PC_LO20;
-      }
       if (isExtreme) {
         rel.expr = getRelExpr(rel.type, *rel.sym, loc);
         val = SignExtend64(sec.getRelocTargetVA(ctx, rel, secAddr + rel.offset),
                            bits);
-        relocateNoSym(loc, rel.type, val);
-      } else {
-        isRelax = relaxable(relocs, i);
-        if (isRelax && rel.type == R_LARCH_TLS_IE_PC_HI20 && isUInt<12>(val))
-          continue;
-        tlsIeToLe(loc, rel, val);
+        break;
       }
+      if (relaxable(relocs, i) && rel.type == R_LARCH_TLS_IE_PC_HI20 &&
+          isUInt<12>(val))
+        continue;
+      tlsIeToLe(loc, rel, val);
       continue;
-    case RE_LOONGARCH_RELAX_TLS_GD_TO_IE_PAGE_PC:
-      if (rel.type == R_LARCH_TLS_DESC_PC_HI20) {
-        // LoongArch does not support TLSDESC GD/LD to LE/IE optimization in the
-        // extreme code model. In these cases, the relocs are as follows:
-        //
-        //  * i   -- R_LARCH_TLS_DESC_PC_HI20
-        //  * i+1 -- R_LARCH_TLS_DESC_PC_LO12
-        //  * i+2 -- R_LARCH_TLS_DESC64_PC_LO20
-        //  * i+3 -- R_LARCH_TLS_DESC64_PC_HI12
+
+    case R_LARCH_TLS_DESC_PC_HI20:
+    case R_LARCH_TLS_DESC_PC_LO12:
+    case R_LARCH_TLS_DESC_LD:
+    case R_LARCH_TLS_DESC_PCREL20_S2:
+      // TLSDESC to LE/IE. Not supported in extreme code model.
+      if (rel.expr != R_TPREL && rel.expr != RE_LOONGARCH_GOT_PAGE_PC)
+        break;
+      if (rel.type == R_LARCH_TLS_DESC_PC_HI20)
         isExtreme =
             i + 2 < size && relocs[i + 2].type == R_LARCH_TLS_DESC64_PC_LO20;
-      }
-      [[fallthrough]];
-    case R_RELAX_TLS_GD_TO_IE_ABS:
       if (isExtreme) {
-        if (rel.type == R_LARCH_TLS_DESC_CALL)
-          continue;
         rel.expr = getRelExpr(rel.type, *rel.sym, loc);
         val = SignExtend64(sec.getRelocTargetVA(ctx, rel, secAddr + rel.offset),
                            bits);
-        relocateNoSym(loc, rel.type, val);
-      } else {
-        isRelax = relaxable(relocs, i);
-        if (isRelax && (rel.type == R_LARCH_TLS_DESC_PC_HI20 ||
-                        rel.type == R_LARCH_TLS_DESC_PC_LO12))
+        break;
+      }
+      if (relaxable(relocs, i) && (rel.type == R_LARCH_TLS_DESC_PC_HI20 ||
+                                   rel.type == R_LARCH_TLS_DESC_PC_LO12))
+        continue;
+      if (rel.expr == R_TPREL) {
+        if (relaxable(relocs, i) && rel.type == R_LARCH_TLS_DESC_LD &&
+            isUInt<12>(val))
           continue;
+        tlsdescToLe(loc, rel, val);
+      } else {
         tlsdescToIe(loc, rel, val);
       }
       continue;
-    case R_RELAX_TLS_GD_TO_LE:
-      if (rel.type == R_LARCH_TLS_DESC_PC_HI20) {
-        isExtreme =
-            i + 2 < size && relocs[i + 2].type == R_LARCH_TLS_DESC64_PC_LO20;
-      }
-      if (isExtreme) {
-        if (rel.type == R_LARCH_TLS_DESC_CALL)
-          continue;
-        rel.expr = getRelExpr(rel.type, *rel.sym, loc);
-        val = SignExtend64(sec.getRelocTargetVA(ctx, rel, secAddr + rel.offset),
-                           bits);
-        relocateNoSym(loc, rel.type, val);
-      } else {
-        isRelax = relaxable(relocs, i);
-        if (isRelax && (rel.type == R_LARCH_TLS_DESC_PC_HI20 ||
-                        rel.type == R_LARCH_TLS_DESC_PC_LO12 ||
-                        (rel.type == R_LARCH_TLS_DESC_LD && isUInt<12>(val))))
-          continue;
+
+    case R_LARCH_TLS_DESC_CALL:
+      if (isExtreme)
+        continue;
+      if (rel.expr == R_TPREL)
         tlsdescToLe(loc, rel, val);
-      }
+      else
+        tlsdescToIe(loc, rel, val);
       continue;
-    case RE_LOONGARCH_GOT_PAGE_PC:
-      // In LoongArch, we try GOT indirection to PC relative optimization in
-      // normal or medium code model, whether or not with R_LARCH_RELAX
-      // relocation. Moreover, if the original code sequence can be relaxed to a
-      // single instruction `pcaddi`, the first instruction will be removed and
+
+    case R_LARCH_GOT_PC_HI20:
+      // GOT indirection to PC relative optimization in normal or medium code
+      // model, whether or not with R_LARCH_RELAX. If the code sequence can be
+      // relaxed to a single pcaddi, the first instruction will be removed and
       // it will not reach here.
-      if (isPairForGotRels && rel.type == R_LARCH_GOT_PC_HI20) {
+      if (isPairForGotRels) {
         bool isRelax = relaxable(relocs, i);
         const Relocation lo12Rel = isRelax ? relocs[i + 2] : relocs[i + 1];
         if (lo12Rel.type == R_LARCH_GOT_PC_LO12 &&
             tryGotToPCRel(loc, rel, lo12Rel, secAddr)) {
-          // isRelax: skip relocations R_LARCH_RELAX, R_LARCH_GOT_PC_LO12
-          // !isRelax: skip relocation R_LARCH_GOT_PC_LO12
           i += isRelax ? 2 : 1;
           continue;
         }
       }
       break;
+
     default:
       break;
     }
@@ -1396,9 +1677,6 @@ void LoongArch::relocateAlloc(InputSectionBase &sec, uint8_t *buf) const {
 // change in section sizes can have cascading effect and require another
 // relaxation pass.
 bool LoongArch::relaxOnce(int pass) const {
-  if (ctx.arg.relocatable)
-    return false;
-
   if (pass == 0)
     initSymbolAnchors(ctx);
 

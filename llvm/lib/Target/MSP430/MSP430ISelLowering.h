@@ -124,10 +124,8 @@ namespace llvm {
                         const SmallVectorImpl<SDValue> &OutVals,
                         const SDLoc &dl, SelectionDAG &DAG) const override;
 
-    bool getPostIndexedAddressParts(SDNode *N, SDNode *Op,
-                                    SDValue &Base,
-                                    SDValue &Offset,
-                                    ISD::MemIndexedMode &AM,
+    bool getPostIndexedAddressParts(SDNode *N, SDNode *Op, SDValue &Base,
+                                    SDValue &Offset, ISD::MemIndexedMode &AM,
                                     SelectionDAG &DAG) const override;
   };
 } // namespace llvm

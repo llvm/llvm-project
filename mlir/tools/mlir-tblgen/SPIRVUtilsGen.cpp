@@ -50,7 +50,6 @@ using mlir::tblgen::EnumCase;
 using mlir::tblgen::EnumInfo;
 using mlir::tblgen::NamedAttribute;
 using mlir::tblgen::NamedTypeConstraint;
-using mlir::tblgen::NamespaceEmitter;
 using mlir::tblgen::Operator;
 
 //===----------------------------------------------------------------------===//
@@ -260,8 +259,8 @@ static void emitInterfaceDecl(const Availability &availability,
   std::string interfaceTraitsName =
       std::string(formatv("{0}Traits", interfaceName));
 
-  StringRef cppNamespace = availability.getInterfaceClassNamespace();
-  NamespaceEmitter nsEmitter(os, cppNamespace);
+  llvm::NamespaceEmitter nsEmitter(os,
+                                   availability.getInterfaceClassNamespace());
   os << "class " << interfaceName << ";\n\n";
 
   // Emit the traits struct containing the concept and model declarations.
@@ -419,15 +418,9 @@ static void emitAvailabilityQueryForBitEnum(const Record &enumDef,
 static void emitEnumDecl(const Record &enumDef, raw_ostream &os) {
   EnumInfo enumInfo(enumDef);
   StringRef enumName = enumInfo.getEnumClassName();
-  StringRef cppNamespace = enumInfo.getCppNamespace();
   auto enumerants = enumInfo.getAllCases();
 
-  llvm::SmallVector<StringRef, 2> namespaces;
-  llvm::SplitString(cppNamespace, namespaces, "::");
-
-  for (auto ns : namespaces)
-    os << "namespace " << ns << " {\n";
-
+  llvm::NamespaceEmitter ns(os, enumInfo.getCppNamespace());
   llvm::StringSet<> handledClasses;
 
   // Place all availability specifications to their corresponding
@@ -442,9 +435,6 @@ static void emitEnumDecl(const Record &enumDef, raw_ostream &os) {
                     enumName);
       handledClasses.insert(className);
     }
-
-  for (auto ns : llvm::reverse(namespaces))
-    os << "} // namespace " << ns << "\n";
 }
 
 static bool emitEnumDecls(const RecordKeeper &records, raw_ostream &os) {
@@ -460,31 +450,19 @@ static bool emitEnumDecls(const RecordKeeper &records, raw_ostream &os) {
 
 static void emitEnumDef(const Record &enumDef, raw_ostream &os) {
   EnumInfo enumInfo(enumDef);
-  StringRef cppNamespace = enumInfo.getCppNamespace();
+  llvm::NamespaceEmitter ns(os, enumInfo.getCppNamespace());
 
-  llvm::SmallVector<StringRef, 2> namespaces;
-  llvm::SplitString(cppNamespace, namespaces, "::");
-
-  for (auto ns : namespaces)
-    os << "namespace " << ns << " {\n";
-
-  if (enumInfo.isBitEnum()) {
+  if (enumInfo.isBitEnum())
     emitAvailabilityQueryForBitEnum(enumDef, os);
-  } else {
+  else
     emitAvailabilityQueryForIntEnum(enumDef, os);
-  }
-
-  for (auto ns : llvm::reverse(namespaces))
-    os << "} // namespace " << ns << "\n";
-  os << "\n";
 }
 
 static bool emitEnumDefs(const RecordKeeper &records, raw_ostream &os) {
   llvm::emitSourceFileHeader("SPIR-V Enum Availability Definitions", os,
                              records);
 
-  auto defs = records.getAllDerivedDefinitions("EnumInfo");
-  for (const auto *def : defs)
+  for (const Record *def : records.getAllDerivedDefinitions("EnumInfo"))
     emitEnumDef(*def, os);
 
   return false;
@@ -518,9 +496,15 @@ static mlir::GenRegistration
 // directly use the constant value as attribute in SPIR-V dialect. So need
 // to handle them separately from normal enum attributes.
 constexpr llvm::StringLiteral constantIdEnumAttrs[] = {
-    "SPIRV_ScopeAttr", "SPIRV_KHR_CooperativeMatrixUseAttr",
-    "SPIRV_KHR_CooperativeMatrixLayoutAttr", "SPIRV_MemorySemanticsAttr",
-    "SPIRV_MatrixLayoutAttr"};
+    "SPIRV_ScopeAttr",
+    "SPIRV_KHR_CooperativeMatrixUseAttr",
+    "SPIRV_KHR_CooperativeMatrixLayoutAttr",
+    "SPIRV_MemorySemanticsAttr",
+    "SPIRV_MatrixLayoutAttr",
+    "SPIRV_TosaExtAccTypeAttr",
+    "SPIRV_TosaExtNaNPropagationModeAttr",
+    "SPIRV_QuadSwapDirectionAttr",
+};
 
 /// Generates code to serialize attributes of a SPIRV_Op `op` into `os`. The
 /// generates code extracts the attribute with name `attrName` from
@@ -574,6 +558,19 @@ static void emitAttributeSerialization(const Attribute &attr,
     os << tabs << "    return failure();\n";
     os << tabs << "  }\n";
     os << tabs << formatv("  {0}.push_back(attrTypeID);\n", operandList);
+  } else if (llvm::is_contained({"SPIRV_BoolConstAttr",
+                                 "SPIRV_TensorArmAxisAttr",
+                                 "SPIRV_TosaNumericalAttr"},
+                                attr.getAttrDefName())) {
+    os << tabs
+       << formatv(
+              "  {0}.push_back(prepareConstantScalar({1}.getLoc(), attr));\n",
+              operandList, opVar);
+  } else if (attr.getAttrDefName().contains("TensorArm")) {
+    os << tabs
+       << formatv("  {0}.push_back(prepareConstant({1}.getLoc(), "
+                  "llvm::cast<DenseElementsAttr>(attr).getType(), attr));\n",
+                  operandList, opVar);
   } else {
     PrintFatalError(
         loc,
@@ -868,6 +865,26 @@ static void emitAttributeDeserialization(const Attribute &attr,
        << formatv("{0}.push_back(opBuilder.getNamedAttr(\"{1}\", "
                   "TypeAttr::get(getType({2}[{3}++]))));\n",
                   attrList, attrName, words, wordIndex);
+  } else if (llvm::is_contained(
+                 {"SPIRV_BoolConstAttr", "SPIRV_TosaNumericalAttr"},
+                 attr.getAttrDefName()) ||
+             attr.getAttrDefName().contains("TensorArm")) {
+    os << tabs
+       << formatv("std::optional<std::pair<Attribute, Type>> c = "
+                  "getConstant({0}[{1}++]);\n",
+                  words, wordIndex);
+    os << tabs << "if (!c.has_value()) {\n";
+    os << tabs
+       << formatv("  "
+                  "return emitError(unknownLoc, \"could not fetch "
+                  "constant attribute for {0}\") << "
+                  "{1} << \" of \" << {2}.size() << \" processed\";\n",
+                  attrName, wordIndex, words);
+    os << tabs << "}\n";
+    os << tabs
+       << formatv("{0}.push_back(opBuilder.getNamedAttr(\"{1}\", "
+                  "c.value().first));\n",
+                  attrList, attrName);
   } else {
     PrintFatalError(
         loc, llvm::Twine(

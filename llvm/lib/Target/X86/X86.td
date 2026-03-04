@@ -25,10 +25,19 @@ def Is32Bit : SubtargetFeature<"32bit-mode", "Is32Bit", "true",
                                "32-bit mode (80386)">;
 def Is16Bit : SubtargetFeature<"16bit-mode", "Is16Bit", "true",
                                "16-bit mode (i8086)">;
+def IsX32 : SubtargetFeature<"x32", "IsX32", "true",
+                             "64-bit with ILP32 programming model (e.g. x32 ABI)">;
 
 //===----------------------------------------------------------------------===//
 // X86 Subtarget ISA features
 //===----------------------------------------------------------------------===//
+
+foreach i = {8-15} in
+    def FeatureReserveR#i : SubtargetFeature<"reserve-r"#i, "ReservedRReg[X86::R"#i#"]", "true",
+                                             "Reserve R"#i#", making it unavailable as a GPR">;
+foreach i = {16-31} in
+    def FeatureReserveR#i : SubtargetFeature<"reserve-r"#i, "ReservedRReg[X86::R"#i#"]", "true",
+                                             "Reserve R"#i#", making it unavailable as a GPR">;
 
 def FeatureX87     : SubtargetFeature<"x87","HasX87", "true",
                                       "Enable X87 float instructions">;
@@ -113,6 +122,7 @@ def FeatureFMA     : SubtargetFeature<"fma", "HasFMA", "true",
 def FeatureF16C    : SubtargetFeature<"f16c", "HasF16C", "true",
                        "Support 16-bit floating point conversion instructions",
                        [FeatureAVX]>;
+// Deprecated feature. Keep it here to suppress warnings in old IRs.
 def FeatureEVEX512  : SubtargetFeature<"evex512", "HasEVEX512", "true",
                         "Support ZMM and 64-bit mask instructions">;
 def FeatureAVX512   : SubtargetFeature<"avx512f", "X86SSELevel", "AVX512",
@@ -271,9 +281,6 @@ def FeatureAMXFP8 : SubtargetFeature<"amx-fp8", "HasAMXFP8", "true",
 def FeatureAMXMOVRS : SubtargetFeature<"amx-movrs", "HasAMXMOVRS", "true",
                                        "Support AMX-MOVRS instructions",
                                        [FeatureAMXTILE]>;
-def FeatureAMXTRANSPOSE : SubtargetFeature<"amx-transpose", "HasAMXTRANSPOSE", "true",
-                                           "Support AMX amx-transpose instructions",
-                                           [FeatureAMXTILE]>;
 def FeatureAMXAVX512 : SubtargetFeature<"amx-avx512",
                                         "HasAMXAVX512", "true",
                                         "Support AMX-AVX512 instructions",
@@ -329,20 +336,22 @@ def FeatureMOVDIRI  : SubtargetFeature<"movdiri", "HasMOVDIRI", "true",
                                        "Support movdiri instruction (direct store integer)">;
 def FeatureMOVDIR64B : SubtargetFeature<"movdir64b", "HasMOVDIR64B", "true",
                                         "Support movdir64b instruction (direct store 64 bytes)">;
-def FeatureAVX10_1 : SubtargetFeature<"avx10.1-256", "HasAVX10_1", "true",
-                                      "Support AVX10.1 up to 256-bit instruction",
+def FeatureAVX10_1 : SubtargetFeature<"avx10.1", "HasAVX10_1", "true",
+                                      "Support AVX10.1 instruction",
                                       [FeatureCDI, FeatureVBMI, FeatureIFMA, FeatureVNNI,
                                        FeatureBF16, FeatureVPOPCNTDQ, FeatureVBMI2, FeatureBITALG,
                                        FeatureFP16, FeatureVLX, FeatureDQI]>;
+// Deprecated feature. Keep it here to suppress warnings in old IRs.
 def FeatureAVX10_1_512 : SubtargetFeature<"avx10.1-512", "HasAVX10_1_512", "true",
-                                          "Support AVX10.1 up to 512-bit instruction",
-                                          [FeatureAVX10_1, FeatureEVEX512]>;
-def FeatureAVX10_2 : SubtargetFeature<"avx10.2-256", "HasAVX10_2", "true",
-                                      "Support AVX10.2 up to 256-bit instruction",
+                                          "Support AVX10.1 instruction",
+                                          [FeatureAVX10_1]>;
+def FeatureAVX10_2 : SubtargetFeature<"avx10.2", "HasAVX10_2", "true",
+                                      "Support AVX10.2 instruction",
                                       [FeatureAVX10_1]>;
+// Deprecated feature. Keep it here to suppress warnings in old IRs.
 def FeatureAVX10_2_512 : SubtargetFeature<"avx10.2-512", "HasAVX10_2_512", "true",
-                                          "Support AVX10.2 up to 512-bit instruction",
-                                          [FeatureAVX10_2, FeatureAVX10_1_512]>;
+                                          "Support AVX10.2 instruction",
+                                          [FeatureAVX10_2]>;
 def FeatureEGPR : SubtargetFeature<"egpr", "HasEGPR", "true",
                                    "Support extended general purpose register">;
 def FeaturePush2Pop2 : SubtargetFeature<"push2pop2", "HasPush2Pop2", "true",
@@ -355,6 +364,9 @@ def FeatureCCMP : SubtargetFeature<"ccmp", "HasCCMP", "true",
                                    "Support conditional cmp & test instructions">;
 def FeatureNF : SubtargetFeature<"nf", "HasNF", "true",
                                  "Support status flags update suppression">;
+// FeatureCF is not enabled by default for APXF and targets that support APXF
+// due to performance reason, though it is part of APXF. Users need to enable it
+// manually.
 def FeatureCF : SubtargetFeature<"cf", "HasCF", "true",
                                  "Support conditional faulting">;
 def FeatureZU : SubtargetFeature<"zu", "HasZU", "true",
@@ -479,6 +491,9 @@ def TuningSlowSHLD : SubtargetFeature<"slow-shld", "IsSHLDSlow", "true",
 
 def TuningSlowPMULLD : SubtargetFeature<"slow-pmulld", "IsPMULLDSlow", "true",
                                         "PMULLD instruction is slow (compared to PMULLW/PMULHW and PMULUDQ)">;
+
+def TuningSlowPMULLQ : SubtargetFeature<"slow-pmullq", "IsPMULLQSlow", "true",
+                                        "PMULLQ instruction is slow">;
 
 def TuningSlowPMADDWD : SubtargetFeature<"slow-pmaddwd", "IsPMADDWDSlow",
                                           "true",
@@ -767,6 +782,10 @@ def TuningUseGLMDivSqrtCosts
 def TuningBranchHint: SubtargetFeature<"branch-hint", "HasBranchHint", "true",
                                         "Target has branch hint feature">;
 
+def TuningPreferLegacySetCC
+    : SubtargetFeature<"prefer-legacy-setcc", "PreferLegacySetCC", "true",
+                       "Prefer to emit legacy SetCC.">;
+
 //===----------------------------------------------------------------------===//
 // X86 CPU Families
 // TODO: Remove these - use general tuning features to determine codegen.
@@ -789,6 +808,8 @@ include "X86RegisterBanks.td"
 include "X86Schedule.td"
 include "X86InstrInfo.td"
 include "X86SchedPredicates.td"
+
+defm : RemapAllTargetPseudoPointerOperands<x86_ptr_rc>;
 
 def X86InstrInfo : InstrInfo;
 
@@ -868,7 +889,6 @@ def ProcessorFeatures {
   ];
 
   list<SubtargetFeature> X86_64V4Features = !listconcat(X86_64V3Features, [
-    FeatureEVEX512,
     FeatureBWI,
     FeatureCDI,
     FeatureDQI,
@@ -993,7 +1013,6 @@ def ProcessorFeatures {
                                                   FeatureXSAVES,
                                                   FeatureCLFLUSHOPT,
                                                   FeatureAVX512,
-                                                  FeatureEVEX512,
                                                   FeatureCDI,
                                                   FeatureDQI,
                                                   FeatureBWI,
@@ -1036,7 +1055,6 @@ def ProcessorFeatures {
 
   // Cannonlake
   list<SubtargetFeature> CNLAdditionalFeatures = [FeatureAVX512,
-                                                  FeatureEVEX512,
                                                   FeatureCDI,
                                                   FeatureDQI,
                                                   FeatureBWI,
@@ -1061,7 +1079,8 @@ def ProcessorFeatures {
                                       TuningNoDomainDelayMov,
                                       TuningNoDomainDelayShuffle,
                                       TuningNoDomainDelayBlend,
-                                      TuningFastImmVectorShift];
+                                      TuningFastImmVectorShift,
+                                      TuningSlowPMULLQ];
   list<SubtargetFeature> CNLFeatures =
     !listconcat(SKLFeatures, CNLAdditionalFeatures);
 
@@ -1090,7 +1109,8 @@ def ProcessorFeatures {
                                       TuningNoDomainDelayMov,
                                       TuningNoDomainDelayShuffle,
                                       TuningNoDomainDelayBlend,
-                                      TuningFastImmVectorShift];
+                                      TuningFastImmVectorShift,
+                                      TuningSlowPMULLQ];
   list<SubtargetFeature> ICLFeatures =
     !listconcat(CNLFeatures, ICLAdditionalFeatures);
 
@@ -1152,14 +1172,13 @@ def ProcessorFeatures {
     !listconcat(GNRFeatures, GNRDAdditionalFeatures);
 
   // Diamond Rapids
-  list<SubtargetFeature> DMRAdditionalFeatures = [FeatureAVX10_2_512,
+  list<SubtargetFeature> DMRAdditionalFeatures = [FeatureAVX10_2,
                                                   FeatureSM4,
                                                   FeatureCMPCCXADD,
                                                   FeatureAVXIFMA,
                                                   FeatureAVXNECONVERT,
                                                   FeatureAVXVNNIINT8,
                                                   FeatureAVXVNNIINT16,
-                                                  FeatureUSERMSR,
                                                   FeatureSHA512,
                                                   FeatureSM3,
                                                   FeatureEGPR,
@@ -1169,13 +1188,11 @@ def ProcessorFeatures {
                                                   FeaturePPX,
                                                   FeatureNDD,
                                                   FeatureNF,
-                                                  FeatureCF,
                                                   FeatureMOVRS,
                                                   FeatureAMXMOVRS,
                                                   FeatureAMXAVX512,
                                                   FeatureAMXFP8,
-                                                  FeatureAMXTF32,
-                                                  FeatureAMXTRANSPOSE];
+                                                  FeatureAMXTF32];
   list<SubtargetFeature> DMRFeatures =
     !listconcat(GNRDFeatures, DMRAdditionalFeatures);
 
@@ -1290,8 +1307,11 @@ def ProcessorFeatures {
                                                   FeatureWAITPKG];
   list<SubtargetFeature> ADLAdditionalTuning = [TuningPERMFalseDeps,
                                                 TuningPreferMovmskOverVTest,
-                                                TuningFastImmVectorShift];
-  list<SubtargetFeature> ADLTuning = !listconcat(SKLTuning, ADLAdditionalTuning);
+                                                TuningFastImmVectorShift,
+                                                TuningSlowPMULLQ];
+  list<SubtargetFeature> ADLRemoveTuning = [TuningPOPCNTFalseDeps];
+  list<SubtargetFeature> ADLTuning =
+      !listremove(!listconcat(SKLTuning, ADLAdditionalTuning), ADLRemoveTuning);
   list<SubtargetFeature> ADLFeatures =
     !listconcat(TRMFeatures, ADLAdditionalFeatures);
 
@@ -1329,10 +1349,22 @@ def ProcessorFeatures {
     !listconcat(ARLFeatures, ARLSAdditionalFeatures);
 
   // Pantherlake
-  list<SubtargetFeature> PTLAdditionalFeatures = [FeaturePREFETCHI];
   list<SubtargetFeature> PTLFeatures =
-    !listremove(!listconcat(ARLSFeatures, PTLAdditionalFeatures), [FeatureWIDEKL]);
+    !listremove(ARLSFeatures, [FeatureWIDEKL]);
 
+  // Novalake
+  list<SubtargetFeature> NVLAdditionalFeatures = [FeatureAVX10_2,
+                                                  FeatureMOVRS,
+                                                  FeatureEGPR,
+                                                  FeaturePush2Pop2,
+                                                  FeaturePPX,
+                                                  FeatureNF,
+                                                  FeatureNDD,
+                                                  FeatureZU,
+                                                  FeatureCCMP,
+                                                  FeaturePREFETCHI];
+  list<SubtargetFeature> NVLFeatures =
+      !listconcat(PTLFeatures, NVLAdditionalFeatures);
 
   // Clearwaterforest
   list<SubtargetFeature> CWFAdditionalFeatures = [FeaturePREFETCHI,
@@ -1364,7 +1396,6 @@ def ProcessorFeatures {
                                         FeatureF16C,
                                         FeatureFSGSBase,
                                         FeatureAVX512,
-                                        FeatureEVEX512,
                                         FeatureCDI,
                                         FeatureADX,
                                         FeatureRDSEED,
@@ -1582,7 +1613,6 @@ def ProcessorFeatures {
   list<SubtargetFeature> ZN4Tuning =
     !listconcat(ZN3Tuning, ZN4AdditionalTuning);
   list<SubtargetFeature> ZN4AdditionalFeatures = [FeatureAVX512,
-                                                  FeatureEVEX512,
                                                   FeatureCDI,
                                                   FeatureDQI,
                                                   FeatureBWI,
@@ -1608,6 +1638,15 @@ def ProcessorFeatures {
                                                   ];
   list<SubtargetFeature> ZN5Features =
     !listconcat(ZN4Features, ZN5AdditionalFeatures);
+
+  list<SubtargetFeature> ZN6Tuning = ZN5Tuning;
+  list<SubtargetFeature> ZN6AdditionalFeatures = [FeatureFP16,
+                                                  FeatureAVXVNNIINT8,
+                                                  FeatureAVXNECONVERT,
+                                                  FeatureAVXIFMA
+                                                  ];
+  list<SubtargetFeature> ZN6Features =
+    !listconcat(ZN5Features, ZN6AdditionalFeatures);
 }
 
 //===----------------------------------------------------------------------===//
@@ -1877,8 +1916,13 @@ def : ProcModel<P, AlderlakePModel,
 }
 def : ProcModel<"lunarlake", LunarlakePModel, ProcessorFeatures.ARLSFeatures,
                 ProcessorFeatures.ADLTuning>;
-def : ProcModel<"pantherlake", AlderlakePModel,
+foreach P = ["pantherlake", "wildcatlake"] in {
+def : ProcModel<P, AlderlakePModel,
                 ProcessorFeatures.PTLFeatures, ProcessorFeatures.ADLTuning>;
+}
+def : ProcModel<"novalake", AlderlakePModel, ProcessorFeatures.NVLFeatures,
+                ProcessorFeatures.ADLTuning>;
+
 def : ProcModel<"clearwaterforest", AlderlakePModel,
                 ProcessorFeatures.CWFFeatures, ProcessorFeatures.ADLTuning>;
 def : ProcModel<"emeraldrapids", SapphireRapidsModel,
@@ -1965,6 +2009,8 @@ def : ProcModel<"znver4", Znver4Model, ProcessorFeatures.ZN4Features,
                 ProcessorFeatures.ZN4Tuning>;
 def : ProcModel<"znver5", Znver4Model, ProcessorFeatures.ZN5Features,
                 ProcessorFeatures.ZN5Tuning>;
+def : ProcModel<"znver6", Znver4Model, ProcessorFeatures.ZN6Features,
+                ProcessorFeatures.ZN6Tuning>;
 
 def : Proc<"geode",           [FeatureX87, FeatureCX8, FeatureMMX, FeaturePRFCHW],
                               [TuningSlowUAMem16, TuningInsertVZEROUPPER]>;
@@ -2066,3 +2112,8 @@ def X86 : Target {
 //===----------------------------------------------------------------------===//
 
 include "X86PfmCounters.td"
+
+//===----------------------------------------------------------------------===//
+// Global Isel Combiner
+//===----------------------------------------------------------------------===//
+include "X86Combine.td"

@@ -101,10 +101,16 @@ void funky(inout int3 X) {
 // Call the function with the temporary.
 // CHECK: call void {{.*}}funky{{.*}}(ptr noalias noundef nonnull align 16 dereferenceable(16) [[ArgTmp]])
 
-// Shuffle it back.
+// Write it back.
 // CHECK:  [[RetVal:%.*]] = load <3 x i32>, ptr [[ArgTmp]]
-// CHECK:  [[Vxyz:%.*]] = shufflevector <3 x i32> [[RetVal]], <3 x i32> poison, <3 x i32> <i32 2, i32 0, i32 1>
-// CHECK:  store <3 x i32> [[Vxyz]], ptr [[V]]
+// CHECK:  [[Src0:%.*]] = extractelement <3 x i32> [[RetVal]], i32 0
+// CHECK:  [[PtrY:%.*]] = getelementptr <3 x i32>, ptr %V, i32 0, i32 1
+// CHECK:  store i32 [[Src0]], ptr [[PtrY]], align 4
+// CHECK:  [[Src1:%.*]] = extractelement <3 x i32> [[RetVal]], i32 1
+// CHECK:  [[PtrZ:%.*]] = getelementptr <3 x i32>, ptr %V, i32 0, i32 2
+// CHECK:  store i32 [[Src1]], ptr [[PtrZ]], align 4
+// CHECK:  [[Src2:%.*]] = extractelement <3 x i32> [[RetVal]], i32 2
+// CHECK:  store i32 [[Src2]], ptr %V, align 4
 
 // OPT: ret <3 x i32> <i32 3, i32 1, i32 2>
 export int3 case4() {

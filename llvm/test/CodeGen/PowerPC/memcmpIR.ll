@@ -4,48 +4,19 @@
 define signext i32 @test1(ptr nocapture readonly %buffer1, ptr nocapture readonly %buffer2)  {
 entry:
   ; CHECK-LABEL: @test1(
-  ; CHECK-LABEL: res_block:{{.*}}
-  ; CHECK: [[ICMP2:%[0-9]+]] = icmp ult i64
-  ; CHECK-NEXT: [[SELECT:%[0-9]+]] = select i1 [[ICMP2]], i32 -1, i32 1
-  ; CHECK-NEXT: br label %endblock
-
-  ; CHECK-LABEL: loadbb:{{.*}}
-  ; CHECK: [[LOAD1:%[0-9]+]] = load i64, ptr
-  ; CHECK-NEXT: [[LOAD2:%[0-9]+]] = load i64, ptr
-  ; CHECK-NEXT: [[BSWAP1:%[0-9]+]] = call i64 @llvm.bswap.i64(i64 [[LOAD1]])
-  ; CHECK-NEXT: [[BSWAP2:%[0-9]+]] = call i64 @llvm.bswap.i64(i64 [[LOAD2]])
-  ; CHECK-NEXT: [[ICMP:%[0-9]+]] = icmp eq i64 [[BSWAP1]], [[BSWAP2]]
-  ; CHECK-NEXT:  br i1 [[ICMP]], label %loadbb1, label %res_block
-
-  ; CHECK-LABEL: loadbb1:{{.*}}
-  ; CHECK-NEXT: [[GEP1:%[0-9]+]] = getelementptr i8, ptr {{.*}}, i64 8
-  ; CHECK-NEXT: [[GEP2:%[0-9]+]] = getelementptr i8, ptr {{.*}}, i64 8
-  ; CHECK-NEXT: [[LOAD1:%[0-9]+]] = load i64, ptr [[GEP1]]
-  ; CHECK-NEXT: [[LOAD2:%[0-9]+]] = load i64, ptr [[GEP2]]
-  ; CHECK-NEXT: [[BSWAP1:%[0-9]+]] = call i64 @llvm.bswap.i64(i64 [[LOAD1]])
-  ; CHECK-NEXT: [[BSWAP2:%[0-9]+]] = call i64 @llvm.bswap.i64(i64 [[LOAD2]])
-  ; CHECK-NEXT: [[ICMP:%[0-9]+]] = icmp eq i64 [[BSWAP1]], [[BSWAP2]]
-  ; CHECK-NEXT:  br i1 [[ICMP]], label %endblock, label %res_block
-
+  ; CHECK: [[LOAD0:%[0-9]+]] = load i128, ptr %buffer1, align 1
+  ; CHECK-NEXT:  [[LOAD1:%[0-9]+]] = load i128, ptr %buffer2, align 1
+  ; CHECK-NEXT:  [[CALL1:%[0-9]+]] = call i128 @llvm.bswap.i128(i128 [[LOAD0]])
+  ; CHECK-NEXT:  [[CALL2:%[0-9]+]] = call i128 @llvm.bswap.i128(i128 [[LOAD1]])
+  ; CHECK-NEXT:  [[CALL3:%[0-9]+]] = call i32 @llvm.ucmp.i32.i128(i128 [[CALL1]], i128 [[CALL2]])
+  ; CHECK-NEXT:  ret i32 [[CALL3]]
+		  
+		  
   ; CHECK-BE-LABEL: @test1(
-  ; CHECK-BE-LABEL: res_block:{{.*}}
-  ; CHECK-BE: [[ICMP2:%[0-9]+]] = icmp ult i64
-  ; CHECK-BE-NEXT: [[SELECT:%[0-9]+]] = select i1 [[ICMP2]], i32 -1, i32 1
-  ; CHECK-BE-NEXT: br label %endblock
-
-  ; CHECK-BE-LABEL: loadbb:{{.*}}
-  ; CHECK-BE: [[LOAD1:%[0-9]+]] = load i64, ptr
-  ; CHECK-BE-NEXT: [[LOAD2:%[0-9]+]] = load i64, ptr
-  ; CHECK-BE-NEXT: [[ICMP:%[0-9]+]] = icmp eq i64 [[LOAD1]], [[LOAD2]]
-  ; CHECK-BE-NEXT:  br i1 [[ICMP]], label %loadbb1, label %res_block
-
-  ; CHECK-BE-LABEL: loadbb1:{{.*}}
-  ; CHECK-BE-NEXT: [[GEP1:%[0-9]+]] = getelementptr i8, ptr {{.*}}, i64 8
-  ; CHECK-BE-NEXT: [[GEP2:%[0-9]+]] = getelementptr i8, ptr {{.*}}, i64 8
-  ; CHECK-BE-NEXT: [[LOAD1:%[0-9]+]] = load i64, ptr [[GEP1]]
-  ; CHECK-BE-NEXT: [[LOAD2:%[0-9]+]] = load i64, ptr [[GEP2]]
-  ; CHECK-BE-NEXT: [[ICMP:%[0-9]+]] = icmp eq i64 [[LOAD1]], [[LOAD2]]
-  ; CHECK-BE-NEXT:  br i1 [[ICMP]], label %endblock, label %res_block
+  ; CHECK-BE: [[LOAD0:%[0-9]+]] = load i128, ptr %buffer1, align 1
+  ; CHECK-BE-NEXT:  [[LOAD1:%[0-9]+]] = load i128, ptr %buffer2, align 1
+  ; CHECK-BE-NEXT:  [[CALL0:%[0-9]+]] = call i32 @llvm.ucmp.i32.i128(i128 [[LOAD0]], i128 [[LOAD1]])
+  ; CHECK-BE-NEXT:   ret i32 [[CALL0]]
 
   %call = tail call signext i32 @memcmp(ptr %buffer1, ptr %buffer2, i64 16)
   ret i32 %call
@@ -156,7 +127,7 @@ entry:
 define signext i32 @test4(ptr nocapture readonly %buffer1, ptr nocapture readonly %buffer2)  {
 
 entry:
-  %call = tail call signext i32 @memcmp(ptr %buffer1, ptr %buffer2, i64 65)
+  %call = tail call signext i32 @memcmp(ptr %buffer1, ptr %buffer2, i64 129)
   ret i32 %call
 }
 

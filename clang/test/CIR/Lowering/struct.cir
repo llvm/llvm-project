@@ -1,0 +1,23 @@
+// RUN: cir-opt %s -cir-to-llvm -o %t.mlir
+// RUN: FileCheck --input-file=%t.mlir %s
+
+!s32i = !cir.int<s, 32>
+!u8i = !cir.int<u, 8>
+!ty_S = !cir.record<struct "S" {!u8i, !s32i}>
+
+module {
+  // CHECK-LABEL: @test_value
+  cir.func @test_value() {
+    %0 = cir.const #cir.const_record<{#cir.int<1> : !u8i, #cir.int<2> : !s32i}> : !ty_S
+    //      CHECK: %[[#v0:]] = llvm.mlir.undef : !llvm.struct<"struct.S", (i8, i32)>
+    // CHECK-NEXT: %[[#v1:]] = llvm.mlir.constant(1 : i8) : i8
+    // CHECK-NEXT: %[[#v2:]] = llvm.insertvalue %[[#v1]], %[[#v0]][0] : !llvm.struct<"struct.S", (i8, i32)>
+    // CHECK-NEXT: %[[#v3:]] = llvm.mlir.constant(2 : i32) : i32
+    // CHECK-NEXT: %[[#v4:]] = llvm.insertvalue %[[#v3]], %[[#v2]][1] : !llvm.struct<"struct.S", (i8, i32)>
+    %1 = cir.extract_member %0[0] : !ty_S -> !u8i
+    // CHECK-NEXT: %{{.+}} = llvm.extractvalue %[[#v4]][0] : !llvm.struct<"struct.S", (i8, i32)>
+    %2 = cir.extract_member %0[1] : !ty_S -> !s32i
+    // CHECK-NEXT: %{{.+}} = llvm.extractvalue %[[#v4]][1] : !llvm.struct<"struct.S", (i8, i32)>
+    cir.return
+  }
+}

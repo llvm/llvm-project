@@ -8,11 +8,13 @@
 
 #include "X86.h"
 #include "clang/Driver/Driver.h"
-#include "clang/Driver/Options.h"
+#include "clang/Options/Options.h"
+#include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/ADT/StringMap.h"
 #include "llvm/Option/ArgList.h"
 #include "llvm/TargetParser/Host.h"
+#include "llvm/TargetParser/X86TargetParser.h"
 
 using namespace clang::driver;
 using namespace clang::driver::tools;
@@ -21,7 +23,7 @@ using namespace llvm::opt;
 
 std::string x86::getX86TargetCPU(const Driver &D, const ArgList &Args,
                                  const llvm::Triple &Triple) {
-  if (const Arg *A = Args.getLastArg(clang::driver::options::OPT_march_EQ)) {
+  if (const Arg *A = Args.getLastArg(options::OPT_march_EQ)) {
     StringRef CPU = A->getValue();
     if (CPU != "native")
       return std::string(CPU);
@@ -42,6 +44,8 @@ std::string x86::getX86TargetCPU(const Driver &D, const ArgList &Args,
         {"AVX2", "haswell"},
         {"AVX512F", "knl"},
         {"AVX512", "skylake-avx512"},
+        {"AVX10.1", "sapphirerapids"},
+        {"AVX10.2", "diamondrapids"},
     });
     if (Triple.getArch() == llvm::Triple::x86) {
       // 32-bit-only /arch: flags.
@@ -119,7 +123,7 @@ void x86::getX86TargetFeatures(const Driver &D, const llvm::Triple &Triple,
                                std::vector<StringRef> &Features) {
   // Claim and report unsupported -mabi=. Note: we don't support "sysv_abi" or
   // "ms_abi" as default function attributes.
-  if (const Arg *A = Args.getLastArg(clang::driver::options::OPT_mabi_EQ)) {
+  if (const Arg *A = Args.getLastArg(options::OPT_mabi_EQ)) {
     StringRef DefaultAbi =
         (Triple.isOSWindows() || Triple.isUEFI()) ? "ms" : "sysv";
     if (A->getValue() != DefaultAbi)
@@ -128,7 +132,7 @@ void x86::getX86TargetFeatures(const Driver &D, const llvm::Triple &Triple,
   }
 
   // If -march=native, autodetect the feature list.
-  if (const Arg *A = Args.getLastArg(clang::driver::options::OPT_march_EQ)) {
+  if (const Arg *A = Args.getLastArg(options::OPT_march_EQ)) {
     if (StringRef(A->getValue()) == "native") {
       for (auto &F : llvm::sys::getHostCPUFeatures())
         Features.push_back(
@@ -147,6 +151,17 @@ void x86::getX86TargetFeatures(const Driver &D, const llvm::Triple &Triple,
   }
 
   const llvm::Triple::ArchType ArchType = Triple.getArch();
+  bool HasEGPR = false;
+
+  // -ffixed-r16 through -ffixed-r31 are only valid when the selected x86_64
+  // CPU enables APX EGPR by default; later -target-feature arguments still get
+  // their own validation when translated to backend features.
+  if (ArchType == llvm::Triple::x86_64) {
+    SmallVector<StringRef, 16> CPUFeatures;
+    llvm::X86::getFeaturesForCPU(getX86TargetCPU(D, Args, Triple), CPUFeatures);
+    HasEGPR = llvm::is_contained(CPUFeatures, "+egpr");
+  }
+
   // Add features to be compatible with gcc for Android.
   if (Triple.isAndroid()) {
     if (ArchType == llvm::Triple::x86_64) {
@@ -163,7 +178,7 @@ void x86::getX86TargetFeatures(const Driver &D, const llvm::Triple &Triple,
   // flags). This is a bit hacky but keeps existing usages working. We should
   // consider deprecating this and instead warn if the user requests external
   // retpoline thunks and *doesn't* request some form of retpolines.
-  auto SpectreOpt = clang::driver::options::ID::OPT_INVALID;
+  auto SpectreOpt = options::ID::OPT_INVALID;
   if (Args.hasArgNoClaim(options::OPT_mretpoline, options::OPT_mno_retpoline,
                          options::OPT_mspeculative_load_hardening,
                          options::OPT_mno_speculative_load_hardening)) {
@@ -189,7 +204,7 @@ void x86::getX86TargetFeatures(const Driver &D, const llvm::Triple &Triple,
     SpectreOpt = options::OPT_mretpoline_external_thunk;
   }
 
-  auto LVIOpt = clang::driver::options::ID::OPT_INVALID;
+  auto LVIOpt = options::ID::OPT_INVALID;
   if (Args.hasFlag(options::OPT_mlvi_hardening, options::OPT_mno_lvi_hardening,
                    false)) {
     Features.push_back("+lvi-load-hardening");
@@ -207,7 +222,7 @@ void x86::getX86TargetFeatures(const Driver &D, const llvm::Triple &Triple,
           << D.getOpts().getOptionName(options::OPT_mlvi_hardening)
           << D.getOpts().getOptionName(options::OPT_m_seses);
 
-    if (SpectreOpt != clang::driver::options::ID::OPT_INVALID)
+    if (SpectreOpt != options::ID::OPT_INVALID)
       D.Diag(diag::err_drv_argument_not_allowed_with)
           << D.getOpts().getOptionName(SpectreOpt)
           << D.getOpts().getOptionName(options::OPT_m_seses);
@@ -219,45 +234,11 @@ void x86::getX86TargetFeatures(const Driver &D, const llvm::Triple &Triple,
     }
   }
 
-  if (SpectreOpt != clang::driver::options::ID::OPT_INVALID &&
-      LVIOpt != clang::driver::options::ID::OPT_INVALID) {
+  if (SpectreOpt != options::ID::OPT_INVALID &&
+      LVIOpt != options::ID::OPT_INVALID) {
     D.Diag(diag::err_drv_argument_not_allowed_with)
         << D.getOpts().getOptionName(SpectreOpt)
         << D.getOpts().getOptionName(LVIOpt);
-  }
-
-  for (const Arg *A : Args.filtered(options::OPT_m_x86_AVX10_Features_Group)) {
-    StringRef Name = A->getOption().getName();
-    A->claim();
-
-    // Skip over "-m".
-    assert(Name.starts_with("m") && "Invalid feature name.");
-    Name = Name.substr(1);
-
-    bool IsNegative = Name.consume_front("no-");
-
-    StringRef Version, Width;
-    std::tie(Version, Width) = Name.substr(6).split('-');
-    assert(Name.starts_with("avx10.") && "Invalid AVX10 feature name.");
-    assert((Version == "1" || Version == "2") && "Invalid AVX10 feature name.");
-
-    if (Width == "") {
-      if (IsNegative)
-        Features.push_back(Args.MakeArgString("-" + Name + "-256"));
-      else
-        Features.push_back(Args.MakeArgString("+" + Name + "-512"));
-    } else {
-      if (Width == "512")
-        D.Diag(diag::warn_drv_deprecated_arg) << Name << 1 << Name.drop_back(4);
-      else if (Width == "256")
-        D.Diag(diag::warn_drv_deprecated_custom)
-            << Name
-            << "no alternative argument provided because "
-               "AVX10/256 is not supported and will be removed";
-      else
-        assert((Width == "256" || Width == "512") && "Invalid vector length.");
-      Features.push_back(Args.MakeArgString((IsNegative ? "-" : "+") + Name));
-    }
   }
 
   // Now add any that the user explicitly requested on the command line,
@@ -284,20 +265,36 @@ void x86::getX86TargetFeatures(const Driver &D, const llvm::Triple &Triple,
       D.Diag(diag::err_drv_unsupported_opt_for_target)
           << A->getSpelling() << Triple.getTriple();
 
-    if (A->getOption().matches(options::OPT_mevex512) ||
-        A->getOption().matches(options::OPT_mno_evex512))
-      D.Diag(diag::warn_drv_deprecated_custom)
-          << Name
-          << "no alternative argument provided because "
-             "AVX10/256 is not supported and will be removed";
+    if (IsNegative)
+      Name = Name.substr(3);
+
+    if (A->getOption().matches(options::OPT_mapxf) ||
+        A->getOption().matches(options::OPT_mno_apxf)) {
+      if (IsNegative) {
+        HasEGPR = false;
+        Features.insert(Features.end(),
+                        {"-egpr", "-ndd", "-ccmp", "-nf", "-zu"});
+        if (!Triple.isOSWindows())
+          Features.insert(Features.end(), {"-push2pop2", "-ppx"});
+      } else {
+        HasEGPR = true;
+        Features.insert(Features.end(),
+                        {"+egpr", "+ndd", "+ccmp", "+nf", "+zu"});
+        if (!Triple.isOSWindows())
+          Features.insert(Features.end(), {"+push2pop2", "+ppx"});
+
+        if (Not64Bit)
+          D.Diag(diag::err_drv_unsupported_opt_for_target)
+              << StringRef("-mapxf") << Triple.getTriple();
+      }
+      continue;
+    }
 
     if (A->getOption().matches(options::OPT_mapx_features_EQ) ||
         A->getOption().matches(options::OPT_mno_apx_features_EQ)) {
-
       if (Not64Bit && !IsNegative)
         D.Diag(diag::err_drv_unsupported_opt_for_target)
-            << StringRef(A->getSpelling().str() + "|-mapxf")
-            << Triple.getTriple();
+            << StringRef("-mapx-features=") << Triple.getTriple();
 
       for (StringRef Value : A->getValues()) {
         if (Value != "egpr" && Value != "push2pop2" && Value != "ppx" &&
@@ -306,13 +303,17 @@ void x86::getX86TargetFeatures(const Driver &D, const llvm::Triple &Triple,
           D.Diag(clang::diag::err_drv_unsupported_option_argument)
               << A->getSpelling() << Value;
 
+        if (Value == "egpr")
+          HasEGPR = !IsNegative;
+
         Features.push_back(
             Args.MakeArgString((IsNegative ? "-" : "+") + Value));
       }
       continue;
     }
-    if (IsNegative)
-      Name = Name.substr(3);
+
+    if (Name == "egpr")
+      HasEGPR = !IsNegative;
     Features.push_back(Args.MakeArgString((IsNegative ? "-" : "+") + Name));
   }
 
@@ -352,4 +353,43 @@ void x86::getX86TargetFeatures(const Driver &D, const llvm::Triple &Triple,
     if (A->getOption().matches(options::OPT_m3dnow))
       D.Diag(diag::warn_drv_clang_unsupported) << A->getAsString(Args);
   }
+
+  // Handle features corresponding to "-ffixed-X" options
+#define RESERVE_REG(REG)                                                       \
+  if (Args.hasArg(options::OPT_ffixed_##REG))                                  \
+    Features.push_back("+reserve-" #REG);
+  RESERVE_REG(r8)
+  RESERVE_REG(r9)
+  RESERVE_REG(r10)
+  RESERVE_REG(r11)
+  RESERVE_REG(r12)
+  RESERVE_REG(r13)
+  RESERVE_REG(r14)
+  RESERVE_REG(r15)
+#define RESERVE_EGPR(REG)                                                      \
+  if (Args.hasArg(options::OPT_ffixed_##REG)) {                                \
+    if (!HasEGPR)                                                              \
+      D.Diag(diag::err_drv_unsupported_opt_for_target)                         \
+          << "-ffixed-" #REG << Triple.getTriple();                            \
+    else                                                                       \
+      Features.push_back("+reserve-" #REG);                                    \
+  }
+  RESERVE_EGPR(r16)
+  RESERVE_EGPR(r17)
+  RESERVE_EGPR(r18)
+  RESERVE_EGPR(r19)
+  RESERVE_EGPR(r20)
+  RESERVE_EGPR(r21)
+  RESERVE_EGPR(r22)
+  RESERVE_EGPR(r23)
+  RESERVE_EGPR(r24)
+  RESERVE_EGPR(r25)
+  RESERVE_EGPR(r26)
+  RESERVE_EGPR(r27)
+  RESERVE_EGPR(r28)
+  RESERVE_EGPR(r29)
+  RESERVE_EGPR(r30)
+  RESERVE_EGPR(r31)
+#undef RESERVE_EGPR
+#undef RESERVE_REG
 }

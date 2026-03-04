@@ -6,15 +6,24 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "hdr/errno_macros.h"
 #include "hdr/math_macros.h"
 #include "hdr/stdint_proxy.h"
 #include "src/__support/FPUtil/FPBits.h"
-#include "src/__support/libc_errno.h"
+#include "src/__support/macros/optimization.h"
 #include "src/math/cosf.h"
 #include "test/UnitTest/FPMatcher.h"
 #include "test/UnitTest/Test.h"
 #include "test/src/math/sdcomp26094.h"
 #include "utils/MPFRWrapper/MPFRUtils.h"
+
+#ifdef LIBC_MATH_HAS_SKIP_ACCURATE_PASS
+#define TOLERANCE 3
+#define FP_ASSERT ASSERT_MPFR_MATCH
+#else
+#define TOLERANCE 0
+#define FP_ASSERT ASSERT_MPFR_MATCH_ALL_ROUNDING
+#endif // LIBC_MATH_HAS_SKIP_ACCURATE_PASS
 
 using LIBC_NAMESPACE::testing::SDCOMP26094_VALUES;
 using LlvmLibcCosfTest = LIBC_NAMESPACE::testing::FPTest<float>;
@@ -22,8 +31,6 @@ using LlvmLibcCosfTest = LIBC_NAMESPACE::testing::FPTest<float>;
 namespace mpfr = LIBC_NAMESPACE::testing::mpfr;
 
 TEST_F(LlvmLibcCosfTest, SpecialNumbers) {
-  libc_errno = 0;
-
   EXPECT_FP_EQ(aNaN, LIBC_NAMESPACE::cosf(aNaN));
   EXPECT_MATH_ERRNO(0);
 
@@ -47,8 +54,8 @@ TEST_F(LlvmLibcCosfTest, InFloatRange) {
     float x = FPBits(v).get_val();
     if (FPBits(v).is_nan() || FPBits(v).is_inf())
       continue;
-    ASSERT_MPFR_MATCH_ALL_ROUNDING(mpfr::Operation::Cos, x,
-                                   LIBC_NAMESPACE::cosf(x), 0.5);
+    FP_ASSERT(mpfr::Operation::Cos, x, LIBC_NAMESPACE::cosf(x),
+              TOLERANCE + 0.5);
   }
 }
 
@@ -101,10 +108,10 @@ TEST_F(LlvmLibcCosfTest, SpecificBitPatterns) {
 
   for (int i = 0; i < N; ++i) {
     float x = FPBits(INPUTS[i]).get_val();
-    EXPECT_MPFR_MATCH_ALL_ROUNDING(mpfr::Operation::Cos, x,
-                                   LIBC_NAMESPACE::cosf(x), 0.5);
-    EXPECT_MPFR_MATCH_ALL_ROUNDING(mpfr::Operation::Cos, -x,
-                                   LIBC_NAMESPACE::cosf(-x), 0.5);
+    FP_ASSERT(mpfr::Operation::Cos, x, LIBC_NAMESPACE::cosf(x),
+              TOLERANCE + 0.5);
+    FP_ASSERT(mpfr::Operation::Cos, -x, LIBC_NAMESPACE::cosf(-x),
+              TOLERANCE + 0.5);
   }
 }
 
@@ -113,6 +120,7 @@ TEST_F(LlvmLibcCosfTest, SpecificBitPatterns) {
 TEST_F(LlvmLibcCosfTest, SDCOMP_26094) {
   for (uint32_t v : SDCOMP26094_VALUES) {
     float x = FPBits(v).get_val();
-    ASSERT_MPFR_MATCH(mpfr::Operation::Cos, x, LIBC_NAMESPACE::cosf(x), 0.5);
+    FP_ASSERT(mpfr::Operation::Cos, x, LIBC_NAMESPACE::cosf(x),
+              TOLERANCE + 0.5);
   }
 }

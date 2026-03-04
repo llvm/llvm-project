@@ -630,9 +630,8 @@ computeUnlikelySuccessors(const BasicBlock *BB, Loop *L,
           CI->getPredicate(), CmpLHSConst, CmpConst, DL);
       // If the result means we don't branch to the block then that block is
       // unlikely.
-      if (Result &&
-          ((Result->isZeroValue() && B == BI->getSuccessor(0)) ||
-           (Result->isOneValue() && B == BI->getSuccessor(1))))
+      if (Result && ((Result->isNullValue() && B == BI->getSuccessor(0)) ||
+                     (Result->isOneValue() && B == BI->getSuccessor(1))))
         UnlikelyBlocks.insert(B);
     }
   }
@@ -987,7 +986,7 @@ bool BranchProbabilityInfo::calcZeroHeuristics(const BasicBlock *BB,
           return false;
 
   // Check if the LHS is the return value of a library function
-  LibFunc Func = NumLibFuncs;
+  LibFunc Func = LibFunc::NotLibFunc;
   if (TLI)
     if (CallInst *Call = dyn_cast<CallInst>(CI->getOperand(0)))
       if (Function *CalledFn = Call->getCalledFunction())

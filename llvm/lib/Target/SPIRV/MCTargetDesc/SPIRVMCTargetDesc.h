@@ -15,7 +15,6 @@
 
 #include "llvm/Support/DataTypes.h"
 #include <cassert>
-#include <memory>
 
 namespace llvm {
 class MCAsmBackend;

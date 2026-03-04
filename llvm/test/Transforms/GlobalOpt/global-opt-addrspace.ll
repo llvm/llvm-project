@@ -8,9 +8,9 @@
 @_ZM2C = internal addrspace(1) global %struct.FakeDeviceGlobal zeroinitializer, align 8
 @_ZL1C = internal addrspace(1) global %struct.FakeDeviceGlobal zeroinitializer, align 8
 
-@llvm.compiler.used = appending global [2 x ptr addrspace(4)] [ptr addrspace(4) addrspacecast (ptr addrspace(1) @_ZM2C to ptr addrspace(4)), ptr addrspace(4) addrspacecast (ptr addrspace(1) @_ZL1C to ptr addrspace(4))]
+@llvm.compiler.used = appending addrspace(1) global [2 x ptr addrspace(4)] [ptr addrspace(4) addrspacecast (ptr addrspace(1) @_ZM2C to ptr addrspace(4)), ptr addrspace(4) addrspacecast (ptr addrspace(1) @_ZL1C to ptr addrspace(4))]
 
-; CHECK: @llvm.compiler.used = appending global [2 x ptr addrspace(4)] [ptr addrspace(4) addrspacecast (ptr addrspace(1) @_ZL1C to ptr addrspace(4)), ptr addrspace(4) addrspacecast (ptr addrspace(1) @_ZM2C to ptr addrspace(4))]
+; CHECK: @llvm.compiler.used = appending addrspace(1) global [2 x ptr addrspace(4)] [ptr addrspace(4) addrspacecast (ptr addrspace(1) @_ZL1C to ptr addrspace(4)), ptr addrspace(4) addrspacecast (ptr addrspace(1) @_ZM2C to ptr addrspace(4))]
 
 define weak_odr dso_local void @foo() {
 entry:

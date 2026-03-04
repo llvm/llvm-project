@@ -13,9 +13,15 @@
 #ifndef CLANG_CIR_DIALECT_IR_CIRTYPES_H
 #define CLANG_CIR_DIALECT_IR_CIRTYPES_H
 
+#include "mlir/Dialect/Ptr/IR/MemorySpaceInterfaces.h"
+#include "mlir/IR/Attributes.h"
 #include "mlir/IR/BuiltinAttributes.h"
+#include "mlir/IR/MLIRContext.h"
 #include "mlir/IR/Types.h"
 #include "mlir/Interfaces/DataLayoutInterfaces.h"
+#include "clang/Basic/AddressSpaces.h"
+#include "clang/CIR/Dialect/IR/CIRAttrs.h"
+#include "clang/CIR/Dialect/IR/CIROpsEnums.h"
 #include "clang/CIR/Interfaces/CIRTypeInterfaces.h"
 
 namespace cir {
@@ -34,6 +40,28 @@ bool isValidFundamentalIntWidth(unsigned width);
 /// Unsized types are those that do not have a size, such as
 /// void, or abstract types.
 bool isSized(mlir::Type ty);
+
+//===----------------------------------------------------------------------===//
+// AddressSpace helpers
+//===----------------------------------------------------------------------===//
+
+cir::LangAddressSpace toCIRLangAddressSpace(clang::LangAS langAS);
+
+// Compare a CIR memory space attribute with a Clang LangAS.
+bool isMatchingAddressSpace(mlir::ptr::MemorySpaceAttrInterface cirAS,
+                            clang::LangAS as);
+
+/// Convert an AST LangAS to the appropriate CIR address space attribute
+/// interface.
+mlir::ptr::MemorySpaceAttrInterface
+toCIRAddressSpaceAttr(mlir::MLIRContext &ctx, clang::LangAS langAS);
+
+/// Normalize LangAddressSpace::Default to null (empty attribute).
+mlir::ptr::MemorySpaceAttrInterface
+normalizeDefaultAddressSpace(mlir::ptr::MemorySpaceAttrInterface addrSpace);
+
+bool isSupportedCIRMemorySpaceAttr(
+    mlir::ptr::MemorySpaceAttrInterface memorySpace);
 
 } // namespace cir
 

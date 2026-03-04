@@ -2,7 +2,8 @@
 ; RUN: llc -mtriple=amdgcn-mesa-mesa3d -mcpu=gfx908 < %s | FileCheck -check-prefix=GFX908 %s
 ; RUN: llc -mtriple=amdgcn-mesa-mesa3d -mcpu=gfx90a < %s | FileCheck -check-prefix=GFX90A %s
 ; RUN: llc -mtriple=amdgcn-mesa-mesa3d -mcpu=gfx942 < %s | FileCheck -check-prefix=GFX942 %s
-; RUN: llc -mtriple=amdgcn-mesa-mesa3d -mcpu=gfx1200 < %s | FileCheck -check-prefix=GFX12 %s
+; RUN: llc -mtriple=amdgcn-mesa-mesa3d -mcpu=gfx1200 < %s | FileCheck -check-prefix=GFX1200 %s
+; RUN: llc -mtriple=amdgcn-mesa-mesa3d -mcpu=gfx1250 < %s | FileCheck -check-prefix=GFX1250 %s
 
 define void @raw_ptr_buffer_atomic_add_f32_noret__vgpr_val__sgpr_rsrc__vgpr_voffset__sgpr_soffset(float %val, ptr addrspace(8) inreg %rsrc, i32 %voffset, i32 inreg %soffset) #0 {
 ; GFX908-LABEL: raw_ptr_buffer_atomic_add_f32_noret__vgpr_val__sgpr_rsrc__vgpr_voffset__sgpr_soffset:
@@ -26,15 +27,22 @@ define void @raw_ptr_buffer_atomic_add_f32_noret__vgpr_val__sgpr_rsrc__vgpr_voff
 ; GFX942-NEXT:    s_waitcnt vmcnt(0)
 ; GFX942-NEXT:    s_setpc_b64 s[30:31]
 ;
-; GFX12-LABEL: raw_ptr_buffer_atomic_add_f32_noret__vgpr_val__sgpr_rsrc__vgpr_voffset__sgpr_soffset:
-; GFX12:       ; %bb.0:
-; GFX12-NEXT:    s_wait_loadcnt_dscnt 0x0
-; GFX12-NEXT:    s_wait_expcnt 0x0
-; GFX12-NEXT:    s_wait_samplecnt 0x0
-; GFX12-NEXT:    s_wait_bvhcnt 0x0
-; GFX12-NEXT:    s_wait_kmcnt 0x0
-; GFX12-NEXT:    buffer_atomic_add_f32 v0, v1, s[0:3], s16 offen scope:SCOPE_SYS
-; GFX12-NEXT:    s_setpc_b64 s[30:31]
+; GFX1200-LABEL: raw_ptr_buffer_atomic_add_f32_noret__vgpr_val__sgpr_rsrc__vgpr_voffset__sgpr_soffset:
+; GFX1200:       ; %bb.0:
+; GFX1200-NEXT:    s_wait_loadcnt_dscnt 0x0
+; GFX1200-NEXT:    s_wait_expcnt 0x0
+; GFX1200-NEXT:    s_wait_samplecnt 0x0
+; GFX1200-NEXT:    s_wait_bvhcnt 0x0
+; GFX1200-NEXT:    s_wait_kmcnt 0x0
+; GFX1200-NEXT:    buffer_atomic_add_f32 v0, v1, s[0:3], s16 offen scope:SCOPE_SYS
+; GFX1200-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX1250-LABEL: raw_ptr_buffer_atomic_add_f32_noret__vgpr_val__sgpr_rsrc__vgpr_voffset__sgpr_soffset:
+; GFX1250:       ; %bb.0:
+; GFX1250-NEXT:    s_wait_loadcnt_dscnt 0x0
+; GFX1250-NEXT:    s_wait_kmcnt 0x0
+; GFX1250-NEXT:    buffer_atomic_add_f32 v0, v1, s[0:3], s16 offen scope:SCOPE_SYS
+; GFX1250-NEXT:    s_set_pc_i64 s[30:31]
   %ret = call float @llvm.amdgcn.raw.ptr.buffer.atomic.fadd.f32(float %val, ptr addrspace(8) %rsrc, i32 %voffset, i32 %soffset, i32 24)
   ret void
 }
@@ -61,15 +69,22 @@ define void @raw_ptr_buffer_atomic_add_f32_noret__vgpr_val__sgpr_rsrc__0_voffset
 ; GFX942-NEXT:    s_waitcnt vmcnt(0)
 ; GFX942-NEXT:    s_setpc_b64 s[30:31]
 ;
-; GFX12-LABEL: raw_ptr_buffer_atomic_add_f32_noret__vgpr_val__sgpr_rsrc__0_voffset__sgpr_soffset:
-; GFX12:       ; %bb.0:
-; GFX12-NEXT:    s_wait_loadcnt_dscnt 0x0
-; GFX12-NEXT:    s_wait_expcnt 0x0
-; GFX12-NEXT:    s_wait_samplecnt 0x0
-; GFX12-NEXT:    s_wait_bvhcnt 0x0
-; GFX12-NEXT:    s_wait_kmcnt 0x0
-; GFX12-NEXT:    buffer_atomic_add_f32 v0, off, s[0:3], s16
-; GFX12-NEXT:    s_setpc_b64 s[30:31]
+; GFX1200-LABEL: raw_ptr_buffer_atomic_add_f32_noret__vgpr_val__sgpr_rsrc__0_voffset__sgpr_soffset:
+; GFX1200:       ; %bb.0:
+; GFX1200-NEXT:    s_wait_loadcnt_dscnt 0x0
+; GFX1200-NEXT:    s_wait_expcnt 0x0
+; GFX1200-NEXT:    s_wait_samplecnt 0x0
+; GFX1200-NEXT:    s_wait_bvhcnt 0x0
+; GFX1200-NEXT:    s_wait_kmcnt 0x0
+; GFX1200-NEXT:    buffer_atomic_add_f32 v0, off, s[0:3], s16
+; GFX1200-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX1250-LABEL: raw_ptr_buffer_atomic_add_f32_noret__vgpr_val__sgpr_rsrc__0_voffset__sgpr_soffset:
+; GFX1250:       ; %bb.0:
+; GFX1250-NEXT:    s_wait_loadcnt_dscnt 0x0
+; GFX1250-NEXT:    s_wait_kmcnt 0x0
+; GFX1250-NEXT:    buffer_atomic_add_f32 v0, off, s[0:3], s16
+; GFX1250-NEXT:    s_set_pc_i64 s[30:31]
   %ret = call float @llvm.amdgcn.raw.ptr.buffer.atomic.fadd.f32(float %val, ptr addrspace(8) %rsrc, i32 0, i32 %soffset, i32 0)
   ret void
 }
@@ -96,15 +111,22 @@ define void @raw_ptr_buffer_atomic_add_v2f16_noret__vgpr_val__sgpr_rsrc__vgpr_vo
 ; GFX942-NEXT:    s_waitcnt vmcnt(0)
 ; GFX942-NEXT:    s_setpc_b64 s[30:31]
 ;
-; GFX12-LABEL: raw_ptr_buffer_atomic_add_v2f16_noret__vgpr_val__sgpr_rsrc__vgpr_voffset__sgpr_soffset:
-; GFX12:       ; %bb.0:
-; GFX12-NEXT:    s_wait_loadcnt_dscnt 0x0
-; GFX12-NEXT:    s_wait_expcnt 0x0
-; GFX12-NEXT:    s_wait_samplecnt 0x0
-; GFX12-NEXT:    s_wait_bvhcnt 0x0
-; GFX12-NEXT:    s_wait_kmcnt 0x0
-; GFX12-NEXT:    buffer_atomic_pk_add_f16 v0, v1, s[0:3], s16 offen
-; GFX12-NEXT:    s_setpc_b64 s[30:31]
+; GFX1200-LABEL: raw_ptr_buffer_atomic_add_v2f16_noret__vgpr_val__sgpr_rsrc__vgpr_voffset__sgpr_soffset:
+; GFX1200:       ; %bb.0:
+; GFX1200-NEXT:    s_wait_loadcnt_dscnt 0x0
+; GFX1200-NEXT:    s_wait_expcnt 0x0
+; GFX1200-NEXT:    s_wait_samplecnt 0x0
+; GFX1200-NEXT:    s_wait_bvhcnt 0x0
+; GFX1200-NEXT:    s_wait_kmcnt 0x0
+; GFX1200-NEXT:    buffer_atomic_pk_add_f16 v0, v1, s[0:3], s16 offen
+; GFX1200-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX1250-LABEL: raw_ptr_buffer_atomic_add_v2f16_noret__vgpr_val__sgpr_rsrc__vgpr_voffset__sgpr_soffset:
+; GFX1250:       ; %bb.0:
+; GFX1250-NEXT:    s_wait_loadcnt_dscnt 0x0
+; GFX1250-NEXT:    s_wait_kmcnt 0x0
+; GFX1250-NEXT:    buffer_atomic_pk_add_f16 v0, v1, s[0:3], s16 offen
+; GFX1250-NEXT:    s_set_pc_i64 s[30:31]
   %ret = call <2 x half> @llvm.amdgcn.raw.ptr.buffer.atomic.fadd.v2f16(<2 x half> %val, ptr addrspace(8) %rsrc, i32 %voffset, i32 %soffset, i32 0)
   ret void
 }
@@ -131,15 +153,22 @@ define void @raw_ptr_buffer_atomic_add_v2f16_noret__vgpr_val__sgpr_rsrc__0_voffs
 ; GFX942-NEXT:    s_waitcnt vmcnt(0)
 ; GFX942-NEXT:    s_setpc_b64 s[30:31]
 ;
-; GFX12-LABEL: raw_ptr_buffer_atomic_add_v2f16_noret__vgpr_val__sgpr_rsrc__0_voffset__sgpr_soffset:
-; GFX12:       ; %bb.0:
-; GFX12-NEXT:    s_wait_loadcnt_dscnt 0x0
-; GFX12-NEXT:    s_wait_expcnt 0x0
-; GFX12-NEXT:    s_wait_samplecnt 0x0
-; GFX12-NEXT:    s_wait_bvhcnt 0x0
-; GFX12-NEXT:    s_wait_kmcnt 0x0
-; GFX12-NEXT:    buffer_atomic_pk_add_f16 v0, off, s[0:3], s16 offset:92
-; GFX12-NEXT:    s_setpc_b64 s[30:31]
+; GFX1200-LABEL: raw_ptr_buffer_atomic_add_v2f16_noret__vgpr_val__sgpr_rsrc__0_voffset__sgpr_soffset:
+; GFX1200:       ; %bb.0:
+; GFX1200-NEXT:    s_wait_loadcnt_dscnt 0x0
+; GFX1200-NEXT:    s_wait_expcnt 0x0
+; GFX1200-NEXT:    s_wait_samplecnt 0x0
+; GFX1200-NEXT:    s_wait_bvhcnt 0x0
+; GFX1200-NEXT:    s_wait_kmcnt 0x0
+; GFX1200-NEXT:    buffer_atomic_pk_add_f16 v0, off, s[0:3], s16 offset:92
+; GFX1200-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX1250-LABEL: raw_ptr_buffer_atomic_add_v2f16_noret__vgpr_val__sgpr_rsrc__0_voffset__sgpr_soffset:
+; GFX1250:       ; %bb.0:
+; GFX1250-NEXT:    s_wait_loadcnt_dscnt 0x0
+; GFX1250-NEXT:    s_wait_kmcnt 0x0
+; GFX1250-NEXT:    buffer_atomic_pk_add_f16 v0, off, s[0:3], s16 offset:92
+; GFX1250-NEXT:    s_set_pc_i64 s[30:31]
   %ret = call <2 x half> @llvm.amdgcn.raw.ptr.buffer.atomic.fadd.v2f16(<2 x half> %val, ptr addrspace(8) %rsrc, i32 92, i32 %soffset, i32 0)
   ret void
 }
@@ -166,15 +195,22 @@ define void @raw_ptr_buffer_atomic_add_f32_noret__vgpr_val__sgpr_rsrc__vgpr_voff
 ; GFX942-NEXT:    s_waitcnt vmcnt(0)
 ; GFX942-NEXT:    s_setpc_b64 s[30:31]
 ;
-; GFX12-LABEL: raw_ptr_buffer_atomic_add_f32_noret__vgpr_val__sgpr_rsrc__vgpr_voffset__sgpr_soffset_slc:
-; GFX12:       ; %bb.0:
-; GFX12-NEXT:    s_wait_loadcnt_dscnt 0x0
-; GFX12-NEXT:    s_wait_expcnt 0x0
-; GFX12-NEXT:    s_wait_samplecnt 0x0
-; GFX12-NEXT:    s_wait_bvhcnt 0x0
-; GFX12-NEXT:    s_wait_kmcnt 0x0
-; GFX12-NEXT:    buffer_atomic_add_f32 v0, v1, s[0:3], s16 offen th:TH_ATOMIC_NT
-; GFX12-NEXT:    s_setpc_b64 s[30:31]
+; GFX1200-LABEL: raw_ptr_buffer_atomic_add_f32_noret__vgpr_val__sgpr_rsrc__vgpr_voffset__sgpr_soffset_slc:
+; GFX1200:       ; %bb.0:
+; GFX1200-NEXT:    s_wait_loadcnt_dscnt 0x0
+; GFX1200-NEXT:    s_wait_expcnt 0x0
+; GFX1200-NEXT:    s_wait_samplecnt 0x0
+; GFX1200-NEXT:    s_wait_bvhcnt 0x0
+; GFX1200-NEXT:    s_wait_kmcnt 0x0
+; GFX1200-NEXT:    buffer_atomic_add_f32 v0, v1, s[0:3], s16 offen th:TH_ATOMIC_NT
+; GFX1200-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX1250-LABEL: raw_ptr_buffer_atomic_add_f32_noret__vgpr_val__sgpr_rsrc__vgpr_voffset__sgpr_soffset_slc:
+; GFX1250:       ; %bb.0:
+; GFX1250-NEXT:    s_wait_loadcnt_dscnt 0x0
+; GFX1250-NEXT:    s_wait_kmcnt 0x0
+; GFX1250-NEXT:    buffer_atomic_add_f32 v0, v1, s[0:3], s16 offen th:TH_ATOMIC_NT
+; GFX1250-NEXT:    s_set_pc_i64 s[30:31]
   %ret = call float @llvm.amdgcn.raw.ptr.buffer.atomic.fadd.f32(float %val, ptr addrspace(8) %rsrc, i32 %voffset, i32 %soffset, i32 2)
   ret void
 }

@@ -6,6 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "clang/Driver/CreateInvocationFromArgs.h"
 #include "clang/Frontend/CompilerInstance.h"
 #include "clang/Frontend/CompilerInvocation.h"
 #include "clang/Frontend/FrontendActions.h"
@@ -113,12 +114,8 @@ export using ::E;
 
   auto Clang = std::make_unique<CompilerInstance>(std::move(Invocation));
   Clang->setDiagnostics(Diags);
-
-  if (auto VFSWithRemapping = createVFSFromCompilerInvocation(
-          Clang->getInvocation(), Clang->getDiagnostics(), VFS))
-    VFS = VFSWithRemapping;
-
-  Clang->createFileManager(VFS);
+  Clang->createVirtualFileSystem(VFS);
+  Clang->createFileManager();
   EXPECT_TRUE(Clang->createTarget());
 
   Buffer.release();

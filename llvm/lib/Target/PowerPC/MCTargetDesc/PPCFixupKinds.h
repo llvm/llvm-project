@@ -40,6 +40,12 @@ enum Fixups {
   /// instrs like 'std'.
   fixup_ppc_half16ds,
 
+  // A 32-bit fixup corresponding to PC-relative paddis.
+  fixup_ppc_pcrel32,
+
+  // A 32-bit fixup corresponding to Non-PC-relative paddis.
+  fixup_ppc_imm32,
+
   // A 34-bit fixup corresponding to PC-relative paddi.
   fixup_ppc_pcrel34,
 

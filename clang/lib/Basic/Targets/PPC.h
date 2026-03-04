@@ -122,41 +122,40 @@ public:
               .Case("970", ArchDefineName | ArchDefinePwr4 | ArchDefinePpcgr |
                                ArchDefinePpcsq)
               .Case("a2", ArchDefineA2)
-              .Cases("power3", "pwr3", ArchDefinePpcgr)
-              .Cases("power4", "pwr4",
+              .Cases({"power3", "pwr3"}, ArchDefinePpcgr)
+              .Cases({"power4", "pwr4"},
                      ArchDefinePwr4 | ArchDefinePpcgr | ArchDefinePpcsq)
-              .Cases("power5", "pwr5",
-                     ArchDefinePwr5 | ArchDefinePwr4 | ArchDefinePpcgr |
-                         ArchDefinePpcsq)
-              .Cases("power5x", "pwr5x",
+              .Cases({"power5", "pwr5"}, ArchDefinePwr5 | ArchDefinePwr4 |
+                                             ArchDefinePpcgr | ArchDefinePpcsq)
+              .Cases({"power5x", "pwr5x"},
                      ArchDefinePwr5x | ArchDefinePwr5 | ArchDefinePwr4 |
                          ArchDefinePpcgr | ArchDefinePpcsq)
-              .Cases("power6", "pwr6",
-                     ArchDefinePwr6 | ArchDefinePwr5x | ArchDefinePwr5 |
-                         ArchDefinePwr4 | ArchDefinePpcgr | ArchDefinePpcsq)
-              .Cases("power6x", "pwr6x",
+              .Cases({"power6", "pwr6"}, ArchDefinePwr6 | ArchDefinePwr5x |
+                                             ArchDefinePwr5 | ArchDefinePwr4 |
+                                             ArchDefinePpcgr | ArchDefinePpcsq)
+              .Cases({"power6x", "pwr6x"},
                      ArchDefinePwr6x | ArchDefinePwr6 | ArchDefinePwr5x |
                          ArchDefinePwr5 | ArchDefinePwr4 | ArchDefinePpcgr |
                          ArchDefinePpcsq)
-              .Cases("power7", "pwr7",
-                     ArchDefinePwr7 | ArchDefinePwr6 | ArchDefinePwr5x |
-                         ArchDefinePwr5 | ArchDefinePwr4 | ArchDefinePpcgr |
-                         ArchDefinePpcsq)
+              .Cases({"power7", "pwr7"}, ArchDefinePwr7 | ArchDefinePwr6 |
+                                             ArchDefinePwr5x | ArchDefinePwr5 |
+                                             ArchDefinePwr4 | ArchDefinePpcgr |
+                                             ArchDefinePpcsq)
               // powerpc64le automatically defaults to at least power8.
-              .Cases("power8", "pwr8", "ppc64le",
+              .Cases({"power8", "pwr8", "ppc64le"},
                      ArchDefinePwr8 | ArchDefinePwr7 | ArchDefinePwr6 |
                          ArchDefinePwr5x | ArchDefinePwr5 | ArchDefinePwr4 |
                          ArchDefinePpcgr | ArchDefinePpcsq)
-              .Cases("power9", "pwr9",
+              .Cases({"power9", "pwr9"},
                      ArchDefinePwr9 | ArchDefinePwr8 | ArchDefinePwr7 |
                          ArchDefinePwr6 | ArchDefinePwr5x | ArchDefinePwr5 |
                          ArchDefinePwr4 | ArchDefinePpcgr | ArchDefinePpcsq)
-              .Cases("power10", "pwr10",
+              .Cases({"power10", "pwr10"},
                      ArchDefinePwr10 | ArchDefinePwr9 | ArchDefinePwr8 |
                          ArchDefinePwr7 | ArchDefinePwr6 | ArchDefinePwr5x |
                          ArchDefinePwr5 | ArchDefinePwr4 | ArchDefinePpcgr |
                          ArchDefinePpcsq)
-              .Cases("power11", "pwr11",
+              .Cases({"power11", "pwr11"},
                      ArchDefinePwr11 | ArchDefinePwr10 | ArchDefinePwr9 |
                          ArchDefinePwr8 | ArchDefinePwr7 | ArchDefinePwr6 |
                          ArchDefinePwr5x | ArchDefinePwr5 | ArchDefinePwr4 |
@@ -166,7 +165,7 @@ public:
                         ArchDefinePwr9 | ArchDefinePwr8 | ArchDefinePwr7 |
                         ArchDefinePwr6 | ArchDefinePwr5x | ArchDefinePwr5 |
                         ArchDefinePwr4 | ArchDefinePpcgr | ArchDefinePpcsq)
-              .Cases("8548", "e500", ArchDefineE500)
+              .Cases({"8548", "e500"}, ArchDefineE500)
               .Default(ArchDefineNone);
     }
     return CPUKnown;
@@ -369,7 +368,7 @@ public:
   bool supportsCpuSupports() const override {
     llvm::Triple Triple = getTriple();
     // AIX 7.2 is the minimum requirement to support __builtin_cpu_supports().
-    return Triple.isOSGlibc() ||
+    return Triple.isOSGlibc() || Triple.isMusl() ||
            (Triple.isOSAIX() &&
             !Triple.isOSVersionLT(MINIMUM_AIX_OS_MAJOR, MINIMUM_AIX_OS_MINOR));
   }
@@ -377,7 +376,7 @@ public:
   bool supportsCpuIs() const override {
     llvm::Triple Triple = getTriple();
     // AIX 7.2 is the minimum requirement to support __builtin_cpu_is().
-    return Triple.isOSGlibc() ||
+    return Triple.isOSGlibc() || Triple.isMusl() ||
            (Triple.isOSAIX() &&
             !Triple.isOSVersionLT(MINIMUM_AIX_OS_MAJOR, MINIMUM_AIX_OS_MINOR));
   }
@@ -389,12 +388,7 @@ class LLVM_LIBRARY_VISIBILITY PPC32TargetInfo : public PPCTargetInfo {
 public:
   PPC32TargetInfo(const llvm::Triple &Triple, const TargetOptions &Opts)
       : PPCTargetInfo(Triple, Opts) {
-    if (Triple.isOSAIX())
-      resetDataLayout("E-m:a-p:32:32-Fi32-i64:64-n32");
-    else if (Triple.getArch() == llvm::Triple::ppcle)
-      resetDataLayout("e-m:e-p:32:32-Fn32-i64:64-n32");
-    else
-      resetDataLayout("E-m:e-p:32:32-Fn32-i64:64-n32");
+    resetDataLayout();
 
     switch (getTriple().getOS()) {
     case llvm::Triple::Linux:
@@ -445,27 +439,17 @@ public:
     LongWidth = LongAlign = PointerWidth = PointerAlign = 64;
     IntMaxType = SignedLong;
     Int64Type = SignedLong;
-    std::string DataLayout;
 
     if (Triple.isOSAIX()) {
       // TODO: Set appropriate ABI for AIX platform.
-      DataLayout = "E-m:a-Fi64-i64:64-i128:128-n32:64";
       LongDoubleWidth = 64;
       LongDoubleAlign = DoubleAlign = 32;
       LongDoubleFormat = &llvm::APFloat::IEEEdouble();
-    } else if ((Triple.getArch() == llvm::Triple::ppc64le)) {
-      DataLayout = "e-m:e-Fn32-i64:64-i128:128-n32:64";
+    } else if ((Triple.getArch() == llvm::Triple::ppc64le) ||
+               Triple.isPPC64ELFv2ABI()) {
       ABI = "elfv2";
     } else {
-      DataLayout = "E-m:e";
-      if (Triple.isPPC64ELFv2ABI()) {
-        ABI = "elfv2";
-        DataLayout += "-Fn32";
-      } else {
-        ABI = "elfv1";
-        DataLayout += "-Fi64";
-      }
-      DataLayout += "-i64:64-i128:128-n32:64";
+      ABI = "elfv1";
     }
 
     if (Triple.isOSFreeBSD() || Triple.isOSOpenBSD() || Triple.isMusl()) {
@@ -473,14 +457,12 @@ public:
       LongDoubleFormat = &llvm::APFloat::IEEEdouble();
     }
 
-    if (Triple.isOSAIX() || Triple.isOSLinux())
-      DataLayout += "-S128-v256:256:256-v512:512:512";
-    resetDataLayout(DataLayout);
-
     // Newer PPC64 instruction sets support atomics up to 16 bytes.
     MaxAtomicPromoteWidth = 128;
     // Baseline PPC64 supports inlining atomics up to 8 bytes.
     MaxAtomicInlineWidth = 64;
+
+    resetDataLayout();
   }
 
   void setMaxAtomicWidth() override {
@@ -499,6 +481,7 @@ public:
   bool setABI(const std::string &Name) override {
     if (Name == "elfv1" || Name == "elfv2") {
       ABI = Name;
+      resetDataLayout();
       return true;
     }
     return false;

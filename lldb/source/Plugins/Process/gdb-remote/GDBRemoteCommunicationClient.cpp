@@ -211,6 +211,12 @@ bool GDBRemoteCommunicationClient::GetReverseStepSupported() {
   return m_supports_reverse_step == eLazyBoolYes;
 }
 
+bool GDBRemoteCommunicationClient::GetMultiMemReadSupported() {
+  if (m_supports_multi_mem_read == eLazyBoolCalculate)
+    GetRemoteQSupported();
+  return m_supports_multi_mem_read == eLazyBoolYes;
+}
+
 bool GDBRemoteCommunicationClient::QueryNoAckModeSupported() {
   if (m_supports_not_sending_acks == eLazyBoolCalculate) {
     m_send_acks = true;
@@ -339,6 +345,7 @@ void GDBRemoteCommunicationClient::ResetDiscoverableSettings(bool did_exec) {
     m_supported_async_json_packets_is_valid = false;
     m_supported_async_json_packets_sp.reset();
     m_supports_jModulesInfo = true;
+    m_supports_multi_mem_read = eLazyBoolCalculate;
   }
 
   // These flags should be reset when we first connect to a GDB server and when
@@ -365,6 +372,7 @@ void GDBRemoteCommunicationClient::GetRemoteQSupported() {
   m_x_packet_state.reset();
   m_supports_reverse_continue = eLazyBoolNo;
   m_supports_reverse_step = eLazyBoolNo;
+  m_supports_multi_mem_read = eLazyBoolNo;
 
   m_max_packet_size = UINT64_MAX; // It's supposed to always be there, but if
                                   // not, we assume no limit
@@ -424,6 +432,8 @@ void GDBRemoteCommunicationClient::GetRemoteQSupported() {
         m_supports_reverse_continue = eLazyBoolYes;
       else if (x == "ReverseStep+")
         m_supports_reverse_step = eLazyBoolYes;
+      else if (x == "MultiMemRead+")
+        m_supports_multi_mem_read = eLazyBoolYes;
       // Look for a list of compressions in the features list e.g.
       // qXfer:features:read+;PacketSize=20000;qEcho+;SupportedCompressions=zlib-
       // deflate,lzma
@@ -470,7 +480,9 @@ bool GDBRemoteCommunicationClient::GetThreadSuffixSupported() {
   }
   return m_supports_thread_suffix;
 }
-bool GDBRemoteCommunicationClient::GetVContSupported(char flavor) {
+
+bool GDBRemoteCommunicationClient::GetVContSupported(llvm::StringRef flavor) {
+  assert(!flavor.empty());
   if (m_supports_vCont_c == eLazyBoolCalculate) {
     StringExtractorGDBRemote response;
     m_supports_vCont_any = eLazyBoolNo;
@@ -481,18 +493,16 @@ bool GDBRemoteCommunicationClient::GetVContSupported(char flavor) {
     m_supports_vCont_S = eLazyBoolNo;
     if (SendPacketAndWaitForResponse("vCont?", response) ==
         PacketResult::Success) {
-      const char *response_cstr = response.GetStringRef().data();
-      if (::strstr(response_cstr, ";c"))
-        m_supports_vCont_c = eLazyBoolYes;
-
-      if (::strstr(response_cstr, ";C"))
-        m_supports_vCont_C = eLazyBoolYes;
-
-      if (::strstr(response_cstr, ";s"))
-        m_supports_vCont_s = eLazyBoolYes;
-
-      if (::strstr(response_cstr, ";S"))
-        m_supports_vCont_S = eLazyBoolYes;
+      for (llvm::StringRef token : llvm::split(response.GetStringRef(), ';')) {
+        if (token == "c")
+          m_supports_vCont_c = eLazyBoolYes;
+        if (token == "C")
+          m_supports_vCont_C = eLazyBoolYes;
+        if (token == "s")
+          m_supports_vCont_s = eLazyBoolYes;
+        if (token == "S")
+          m_supports_vCont_S = eLazyBoolYes;
+      }
 
       if (m_supports_vCont_c == eLazyBoolYes &&
           m_supports_vCont_C == eLazyBoolYes &&
@@ -510,23 +520,14 @@ bool GDBRemoteCommunicationClient::GetVContSupported(char flavor) {
     }
   }
 
-  switch (flavor) {
-  case 'a':
-    return m_supports_vCont_any;
-  case 'A':
-    return m_supports_vCont_all;
-  case 'c':
-    return m_supports_vCont_c;
-  case 'C':
-    return m_supports_vCont_C;
-  case 's':
-    return m_supports_vCont_s;
-  case 'S':
-    return m_supports_vCont_S;
-  default:
-    break;
-  }
-  return false;
+  return llvm::StringSwitch<bool>(flavor)
+      .Case("a", m_supports_vCont_any)
+      .Case("A", m_supports_vCont_all)
+      .Case("c", m_supports_vCont_c)
+      .Case("C", m_supports_vCont_C)
+      .Case("s", m_supports_vCont_s)
+      .Case("S", m_supports_vCont_S)
+      .Default(false);
 }
 
 GDBRemoteCommunication::PacketResult

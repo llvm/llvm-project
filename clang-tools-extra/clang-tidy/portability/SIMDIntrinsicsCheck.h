@@ -1,4 +1,4 @@
-//===--- SIMDIntrinsicsCheck.h - clang-tidy----------------------*- C++ -*-===//
+//===----------------------------------------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLVM_CLANG_TOOLS_EXTRA_CLANG_TIDY_SIMD_INTRINSICS_CHECK_H
-#define LLVM_CLANG_TOOLS_EXTRA_CLANG_TIDY_SIMD_INTRINSICS_CHECK_H
+#ifndef LLVM_CLANG_TOOLS_EXTRA_CLANG_TIDY_PORTABILITY_SIMDINTRINSICSCHECK_H
+#define LLVM_CLANG_TOOLS_EXTRA_CLANG_TIDY_PORTABILITY_SIMDINTRINSICSCHECK_H
 
 #include "../ClangTidyCheck.h"
 
@@ -18,7 +18,7 @@ namespace clang::tidy::portability {
 /// Find SIMD intrinsics calls and suggest std::experimental::simd alternatives.
 ///
 /// For the user-facing documentation see:
-/// http://clang.llvm.org/extra/clang-tidy/checks/portability/simd-intrinsics.html
+/// https://clang.llvm.org/extra/clang-tidy/checks/portability/simd-intrinsics.html
 class SIMDIntrinsicsCheck : public ClangTidyCheck {
 public:
   SIMDIntrinsicsCheck(StringRef Name, ClangTidyContext *Context);
@@ -37,4 +37,4 @@ private:
 
 } // namespace clang::tidy::portability
 
-#endif // LLVM_CLANG_TOOLS_EXTRA_CLANG_TIDY_SIMD_INTRINSICS_CHECK_H
+#endif // LLVM_CLANG_TOOLS_EXTRA_CLANG_TIDY_PORTABILITY_SIMDINTRINSICSCHECK_H

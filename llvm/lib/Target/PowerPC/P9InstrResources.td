@@ -905,7 +905,7 @@ def : InstRW<[P9_LS_1C, IP_EXEC_1C, IP_AGEN_1C, DISP_3SLOTS_1C],
     SLBIEG,
     STMW,
     STSWI,
-    TLBIE
+    TLBIE, TLBIEP9, TLBIE8P9
 )>;
 
 // Vector Store Instruction
@@ -938,7 +938,8 @@ def : InstRW<[P9_DIV_12C, IP_EXECE_1C, IP_EXECO_1C, DISP_EVEN_1C],
     (instregex "MF(SPR|CTR|LR)(8)?$"),
     (instregex "M(T|F)MSR(D)?$"),
     (instregex "M(T|F)(U)?DSCR$"),
-    (instregex "MTSPR(8)?$")
+    (instregex "MTSPR(8)?$"),
+    (instregex "MSGSNDP(8)?$")
 )>;
 
 // 16 Cycle DIV operation. Only one DIV unit per superslice so we use the whole

@@ -15,7 +15,7 @@ define i32 @neg_sel_constants(i32 %a) {
 ; CHECK-GI:       // %bb.0:
 ; CHECK-GI-NEXT:    mov w8, #5 // =0x5
 ; CHECK-GI-NEXT:    cmp w0, #0
-; CHECK-GI-NEXT:    csel w0, w8, wzr, lt
+; CHECK-GI-NEXT:    csel w0, w8, wzr, mi
 ; CHECK-GI-NEXT:    ret
   %tmp.1 = icmp slt i32 %a, 0
   %retval = select i1 %tmp.1, i32 5, i32 0
@@ -34,7 +34,7 @@ define i32 @neg_sel_special_constant(i32 %a) {
 ; CHECK-GI-LABEL: neg_sel_special_constant:
 ; CHECK-GI:       // %bb.0:
 ; CHECK-GI-NEXT:    cmp w0, #0
-; CHECK-GI-NEXT:    cset w8, lt
+; CHECK-GI-NEXT:    cset w8, mi
 ; CHECK-GI-NEXT:    lsl w0, w8, #9
 ; CHECK-GI-NEXT:    ret
   %tmp.1 = icmp slt i32 %a, 0
@@ -53,7 +53,7 @@ define i32 @neg_sel_variable_and_zero(i32 %a, i32 %b) {
 ; CHECK-GI-LABEL: neg_sel_variable_and_zero:
 ; CHECK-GI:       // %bb.0:
 ; CHECK-GI-NEXT:    cmp w0, #0
-; CHECK-GI-NEXT:    csel w0, w1, wzr, lt
+; CHECK-GI-NEXT:    csel w0, w1, wzr, mi
 ; CHECK-GI-NEXT:    ret
   %tmp.1 = icmp slt i32 %a, 0
   %retval = select i1 %tmp.1, i32 %b, i32 0
@@ -93,7 +93,7 @@ define i32 @pos_sel_constants(i32 %a) {
 ; CHECK-GI:       // %bb.0:
 ; CHECK-GI-NEXT:    mov w8, #5 // =0x5
 ; CHECK-GI-NEXT:    cmp w0, #0
-; CHECK-GI-NEXT:    csel w0, w8, wzr, ge
+; CHECK-GI-NEXT:    csel w0, w8, wzr, pl
 ; CHECK-GI-NEXT:    ret
   %tmp.1 = icmp sgt i32 %a, -1
   %retval = select i1 %tmp.1, i32 5, i32 0
@@ -112,7 +112,7 @@ define i32 @pos_sel_special_constant(i32 %a) {
 ; CHECK-GI-LABEL: pos_sel_special_constant:
 ; CHECK-GI:       // %bb.0:
 ; CHECK-GI-NEXT:    cmp w0, #0
-; CHECK-GI-NEXT:    cset w8, ge
+; CHECK-GI-NEXT:    cset w8, pl
 ; CHECK-GI-NEXT:    lsl w0, w8, #9
 ; CHECK-GI-NEXT:    ret
   %tmp.1 = icmp sgt i32 %a, -1
@@ -131,7 +131,7 @@ define i32 @pos_sel_variable_and_zero(i32 %a, i32 %b) {
 ; CHECK-GI-LABEL: pos_sel_variable_and_zero:
 ; CHECK-GI:       // %bb.0:
 ; CHECK-GI-NEXT:    cmp w0, #0
-; CHECK-GI-NEXT:    csel w0, w1, wzr, ge
+; CHECK-GI-NEXT:    csel w0, w1, wzr, pl
 ; CHECK-GI-NEXT:    ret
   %tmp.1 = icmp sgt i32 %a, -1
   %retval = select i1 %tmp.1, i32 %b, i32 0
@@ -255,7 +255,7 @@ define <16 x i8> @sel_shift_bool_v16i8(<16 x i1> %t) {
 ; CHECK-GI:       // %bb.0:
 ; CHECK-GI-NEXT:    shl v0.16b, v0.16b, #7
 ; CHECK-GI-NEXT:    movi v1.16b, #128
-; CHECK-GI-NEXT:    sshr v0.16b, v0.16b, #7
+; CHECK-GI-NEXT:    cmlt v0.16b, v0.16b, #0
 ; CHECK-GI-NEXT:    and v0.16b, v1.16b, v0.16b
 ; CHECK-GI-NEXT:    ret
   %shl = select <16 x i1> %t, <16 x i8> <i8 128, i8 128, i8 128, i8 128, i8 128, i8 128, i8 128, i8 128, i8 128, i8 128, i8 128, i8 128, i8 128, i8 128, i8 128, i8 128>, <16 x i8> zeroinitializer
@@ -277,7 +277,7 @@ define <8 x i16> @sel_shift_bool_v8i16(<8 x i1> %t) {
 ; CHECK-GI-NEXT:    ushll v0.8h, v0.8b, #0
 ; CHECK-GI-NEXT:    movi v1.8h, #128
 ; CHECK-GI-NEXT:    shl v0.8h, v0.8h, #15
-; CHECK-GI-NEXT:    sshr v0.8h, v0.8h, #15
+; CHECK-GI-NEXT:    cmlt v0.8h, v0.8h, #0
 ; CHECK-GI-NEXT:    and v0.16b, v1.16b, v0.16b
 ; CHECK-GI-NEXT:    ret
   %shl= select <8 x i1> %t, <8 x i16> <i16 128, i16 128, i16 128, i16 128, i16 128, i16 128, i16 128, i16 128>, <8 x i16> zeroinitializer
@@ -299,7 +299,7 @@ define <4 x i32> @sel_shift_bool_v4i32(<4 x i1> %t) {
 ; CHECK-GI-NEXT:    ushll v0.4s, v0.4h, #0
 ; CHECK-GI-NEXT:    movi v1.4s, #64
 ; CHECK-GI-NEXT:    shl v0.4s, v0.4s, #31
-; CHECK-GI-NEXT:    sshr v0.4s, v0.4s, #31
+; CHECK-GI-NEXT:    cmlt v0.4s, v0.4s, #0
 ; CHECK-GI-NEXT:    and v0.16b, v1.16b, v0.16b
 ; CHECK-GI-NEXT:    ret
   %shl = select <4 x i1> %t, <4 x i32> <i32 64, i32 64, i32 64, i32 64>, <4 x i32> zeroinitializer
@@ -323,7 +323,7 @@ define <2 x i64> @sel_shift_bool_v2i64(<2 x i1> %t) {
 ; CHECK-GI-NEXT:    adrp x8, .LCPI16_0
 ; CHECK-GI-NEXT:    ldr q1, [x8, :lo12:.LCPI16_0]
 ; CHECK-GI-NEXT:    shl v0.2d, v0.2d, #63
-; CHECK-GI-NEXT:    sshr v0.2d, v0.2d, #63
+; CHECK-GI-NEXT:    cmlt v0.2d, v0.2d, #0
 ; CHECK-GI-NEXT:    and v0.16b, v1.16b, v0.16b
 ; CHECK-GI-NEXT:    ret
   %shl = select <2 x i1> %t, <2 x i64> <i64 65536, i64 65536>, <2 x i64> zeroinitializer

@@ -15,7 +15,7 @@
 // use it after failing to parse commands from the command line:
 //
 // RUN: mkdir -p %t.dir/diagnostics/
-// RUN: echo '[{"directory": "%/t.dir/diagnostics/","command": "clang++ -fan-option-from-compilation-database -c %/T/diagnostics/input.cpp", "file": "%/T/diagnostics/input.cpp"}]' > %t.dir/diagnostics/compile_commands.json
+// RUN: echo '[{"directory": "%/t.dir/diagnostics/","command": "clang++ -fan-option-from-compilation-database -c %/t.dir/diagnostics/input.cpp", "file": "%/t.dir/diagnostics/input.cpp"}]' > %t.dir/diagnostics/compile_commands.json
 // RUN: cat %s > %t.dir/diagnostics/input.cpp
 // RUN: not clang-tidy -checks='-*,modernize-use-override' %t.dir/diagnostics/nonexistent.cpp -- 2>&1 | FileCheck -check-prefix=CHECK1 -implicit-check-not='{{warning:|error:}}' %s
 // RUN: not clang-tidy -checks='-*,clang-diagnostic-*,google-explicit-constructor' %t.dir/diagnostics/input.cpp -- -fan-unknown-option 2>&1 | FileCheck -check-prefix=CHECK2 -implicit-check-not='{{warning:|error:}}' %s

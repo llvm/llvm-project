@@ -12,6 +12,7 @@
 #include "SystemZMachineFunctionInfo.h"
 #include "SystemZRegisterInfo.h"
 #include "SystemZSubtarget.h"
+#include "llvm/ADT/STLExtras.h"
 #include "llvm/CodeGen/LivePhysRegs.h"
 #include "llvm/CodeGen/MachineInstrBuilder.h"
 #include "llvm/CodeGen/MachineModuleInfo.h"
@@ -20,7 +21,6 @@
 #include "llvm/CodeGen/TargetLoweringObjectFileImpl.h"
 #include "llvm/IR/CallingConv.h"
 #include "llvm/IR/Function.h"
-#include "llvm/IR/Module.h"
 #include "llvm/Target/TargetMachine.h"
 
 using namespace llvm;
@@ -361,12 +361,12 @@ bool SystemZELFFrameLowering::spillCalleeSavedRegisters(
     if (SystemZ::FP64BitRegClass.contains(Reg)) {
       MBB.addLiveIn(Reg);
       TII->storeRegToStackSlot(MBB, MBBI, Reg, true, I.getFrameIdx(),
-                               &SystemZ::FP64BitRegClass, TRI, Register());
+                               &SystemZ::FP64BitRegClass, Register());
     }
     if (SystemZ::VR128BitRegClass.contains(Reg)) {
       MBB.addLiveIn(Reg);
       TII->storeRegToStackSlot(MBB, MBBI, Reg, true, I.getFrameIdx(),
-                               &SystemZ::VR128BitRegClass, TRI, Register());
+                               &SystemZ::VR128BitRegClass, Register());
     }
   }
 
@@ -390,10 +390,10 @@ bool SystemZELFFrameLowering::restoreCalleeSavedRegisters(
     MCRegister Reg = I.getReg();
     if (SystemZ::FP64BitRegClass.contains(Reg))
       TII->loadRegFromStackSlot(MBB, MBBI, Reg, I.getFrameIdx(),
-                                &SystemZ::FP64BitRegClass, TRI, Register());
+                                &SystemZ::FP64BitRegClass, Register());
     if (SystemZ::VR128BitRegClass.contains(Reg))
       TII->loadRegFromStackSlot(MBB, MBBI, Reg, I.getFrameIdx(),
-                                &SystemZ::VR128BitRegClass, TRI, Register());
+                                &SystemZ::VR128BitRegClass, Register());
   }
 
   // Restore call-saved GPRs (but not call-clobbered varargs, which at
@@ -574,13 +574,11 @@ void SystemZELFFrameLowering::emitPrologue(MachineFunction &MF,
 
     // Call mcount (Regmask from CC AnyReg since mcount preserves all normal
     // argument registers).
-    FunctionCallee FC = MF.getFunction().getParent()->getOrInsertFunction(
-        "mcount", Type::getVoidTy(MF.getFunction().getContext()));
     const uint32_t *Mask = MF.getSubtarget<SystemZSubtarget>()
                                .getSpecialRegisters()
                                ->getCallPreservedMask(MF, CallingConv::AnyReg);
     BuildMI(MBB, MBBI, DL, ZII->get(SystemZ::CallBRASL))
-        .addGlobalAddress(dyn_cast<Function>(FC.getCallee()))
+        .addExternalSymbol("mcount")
         .addRegMask(Mask);
 
     // Reload return address from 8 bytes above stack pointer.
@@ -1030,8 +1028,10 @@ bool SystemZXPLINKFrameLowering::assignCalleeSavedSpillSlots(
 
   // If this function has an associated personality function then the
   // environment register R5 must be saved in the DSA.
-  if (!MF.getLandingPads().empty())
+  if (!MF.getLandingPads().empty()) {
     CSI.push_back(CalleeSavedInfo(Regs.getADARegister()));
+    CSI.back().setRestored(false);
+  }
 
   // Scan the call-saved GPRs and find the bounds of the register spill area.
   Register LowRestoreGPR = 0;
@@ -1155,17 +1155,21 @@ bool SystemZXPLINKFrameLowering::spillCalleeSavedRegisters(
   }
 
   // Spill FPRs to the stack in the normal TargetInstrInfo way
-  for (const CalleeSavedInfo &I : CSI) {
+  // Registers in CSI are in inverted order so registers with large
+  // numbers will be assigned to high address.
+  // Reverse the order at spilling and restoring so instructions on
+  // registers with small numbers are emitted first.
+  for (const CalleeSavedInfo &I : llvm::reverse(CSI)) {
     MCRegister Reg = I.getReg();
     if (SystemZ::FP64BitRegClass.contains(Reg)) {
       MBB.addLiveIn(Reg);
       TII->storeRegToStackSlot(MBB, MBBI, Reg, true, I.getFrameIdx(),
-                               &SystemZ::FP64BitRegClass, TRI, Register());
+                               &SystemZ::FP64BitRegClass, Register());
     }
     if (SystemZ::VR128BitRegClass.contains(Reg)) {
       MBB.addLiveIn(Reg);
       TII->storeRegToStackSlot(MBB, MBBI, Reg, true, I.getFrameIdx(),
-                               &SystemZ::VR128BitRegClass, TRI, Register());
+                               &SystemZ::VR128BitRegClass, Register());
     }
   }
 
@@ -1188,14 +1192,14 @@ bool SystemZXPLINKFrameLowering::restoreCalleeSavedRegisters(
   DebugLoc DL = MBBI != MBB.end() ? MBBI->getDebugLoc() : DebugLoc();
 
   // Restore FPRs in the normal TargetInstrInfo way.
-  for (const CalleeSavedInfo &I : CSI) {
+  for (const CalleeSavedInfo &I : llvm::reverse(CSI)) {
     MCRegister Reg = I.getReg();
     if (SystemZ::FP64BitRegClass.contains(Reg))
       TII->loadRegFromStackSlot(MBB, MBBI, Reg, I.getFrameIdx(),
-                                &SystemZ::FP64BitRegClass, TRI, Register());
+                                &SystemZ::FP64BitRegClass, Register());
     if (SystemZ::VR128BitRegClass.contains(Reg))
       TII->loadRegFromStackSlot(MBB, MBBI, Reg, I.getFrameIdx(),
-                                &SystemZ::VR128BitRegClass, TRI, Register());
+                                &SystemZ::VR128BitRegClass, Register());
   }
 
   // Restore call-saved GPRs (but not call-clobbered varargs, which at

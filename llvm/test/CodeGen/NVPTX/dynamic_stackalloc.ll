@@ -4,15 +4,15 @@
 
 ; RUN: llc < %s -mtriple=nvptx -mattr=+ptx73 -mcpu=sm_52 | FileCheck %s --check-prefixes=CHECK-32
 ; RUN: llc < %s -mtriple=nvptx64 -mattr=+ptx73 -mcpu=sm_52 | FileCheck %s --check-prefixes=CHECK-64
-; RUN: %if ptxas && !ptxas-12.0 %{ llc < %s -mtriple=nvptx -mattr=+ptx73 -mcpu=sm_52 | %ptxas-verify %}
-; RUN: %if ptxas %{ llc < %s -mtriple=nvptx64 -mattr=+ptx73 -mcpu=sm_52 | %ptxas-verify %}
+; RUN: %if ptxas-isa-7.3 && ptxas-ptr32 %{ llc < %s -mtriple=nvptx -mattr=+ptx73 -mcpu=sm_52 | %ptxas-verify %}
+; RUN: %if ptxas-isa-7.3 %{ llc < %s -mtriple=nvptx64 -mattr=+ptx73 -mcpu=sm_52 | %ptxas-verify %}
 
 ; CHECK-FAILS: in function test_dynamic_stackalloc{{.*}}: Support for dynamic alloca introduced in PTX ISA version 7.3 and requires target sm_52.
 
 define i32 @test_dynamic_stackalloc(i64 %n) {
 ; CHECK-32-LABEL: test_dynamic_stackalloc(
 ; CHECK-32:       {
-; CHECK-32-NEXT:    .reg .b32 %r<8>;
+; CHECK-32-NEXT:    .reg .b32 %r<7>;
 ; CHECK-32-EMPTY:
 ; CHECK-32-NEXT:  // %bb.0:
 ; CHECK-32-NEXT:    ld.param.b32 %r1, [test_dynamic_stackalloc_param_0];
@@ -32,7 +32,7 @@ define i32 @test_dynamic_stackalloc(i64 %n) {
 ;
 ; CHECK-64-LABEL: test_dynamic_stackalloc(
 ; CHECK-64:       {
-; CHECK-64-NEXT:    .reg .b32 %r<3>;
+; CHECK-64-NEXT:    .reg .b32 %r<2>;
 ; CHECK-64-NEXT:    .reg .b64 %rd<6>;
 ; CHECK-64-EMPTY:
 ; CHECK-64-NEXT:  // %bb.0:

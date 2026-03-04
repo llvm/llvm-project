@@ -210,9 +210,7 @@ namespace {
     static char ID;
 
     IfConverter(std::function<bool(const MachineFunction &)> Ftor = nullptr)
-        : MachineFunctionPass(ID), PredicateFtor(std::move(Ftor)) {
-      initializeIfConverterPass(*PassRegistry::getPassRegistry());
-    }
+        : MachineFunctionPass(ID), PredicateFtor(std::move(Ftor)) {}
 
     void getAnalysisUsage(AnalysisUsage &AU) const override {
       AU.addRequired<MachineBlockFrequencyInfoWrapperPass>();
@@ -940,7 +938,7 @@ bool IfConverter::ValidForkedDiamond(
     FalseReversed = true;
     reverseBranchCondition(FalseBBI);
   }
-  auto UnReverseOnExit = make_scope_exit([&]() {
+  llvm::scope_exit UnReverseOnExit([&]() {
     if (FalseReversed)
       reverseBranchCondition(FalseBBI);
   });
@@ -1498,7 +1496,7 @@ static void UpdatePredRedefs(MachineInstr &MI, LivePhysRegs &Redefs) {
   // Before stepping forward past MI, remember which regs were live
   // before MI. This is needed to set the Undef flag only when reg is
   // dead.
-  SparseSet<MCPhysReg, identity<MCPhysReg>> LiveBeforeMI;
+  SparseSet<MCPhysReg, MCPhysReg> LiveBeforeMI;
   LiveBeforeMI.setUniverse(TRI->getNumRegs());
   for (unsigned Reg : Redefs)
     LiveBeforeMI.insert(Reg);

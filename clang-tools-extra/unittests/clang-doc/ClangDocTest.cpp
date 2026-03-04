@@ -9,10 +9,25 @@
 #include "ClangDocTest.h"
 #include "Representation.h"
 #include "clang/AST/RecursiveASTVisitor.h"
+#include "clang/Basic/DiagnosticOptions.h"
 #include "gtest/gtest.h"
 
 namespace clang {
 namespace doc {
+
+ClangDocContextTest::ClangDocContextTest()
+    : DiagID(new DiagnosticIDs()),
+      Diags(DiagID, DiagOpts, new IgnoringDiagConsumer()) {}
+
+ClangDocContextTest::~ClangDocContextTest() = default;
+
+ClangDocContext ClangDocContextTest::getClangDocContext(
+    std::vector<std::string> UserStylesheets, StringRef RepositoryUrl,
+    StringRef RepositoryLinePrefix, StringRef Base) {
+  return ClangDocContext(nullptr, "test-project", false, "", "", RepositoryUrl,
+                         RepositoryLinePrefix, Base, UserStylesheets, Diags,
+                         OutputFormatTy::html, false);
+}
 
 NamespaceInfo *InfoAsNamespace(Info *I) {
   assert(I->IT == InfoType::IT_namespace);
@@ -232,8 +247,8 @@ void CheckBaseRecordInfo(BaseRecordInfo *Expected, BaseRecordInfo *Actual) {
 void CheckIndex(Index &Expected, Index &Actual) {
   CheckReference(Expected, Actual);
   ASSERT_EQ(Expected.Children.size(), Actual.Children.size());
-  for (size_t Idx = 0; Idx < Actual.Children.size(); ++Idx)
-    CheckIndex(Expected.Children[Idx], Actual.Children[Idx]);
+  for (auto &[_, C] : Expected.Children)
+    CheckIndex(C, Actual.Children.find(llvm::toStringRef(C.USR))->second);
 }
 
 } // namespace doc

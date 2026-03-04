@@ -13,11 +13,20 @@
 using olGetEventInfoTest = OffloadEventTest;
 OFFLOAD_TESTS_INSTANTIATE_DEVICE_FIXTURE(olGetEventInfoTest);
 
-TEST_P(olGetEventInfoTest, SuccessDevice) {
+TEST_P(olGetEventInfoTest, SuccessQueue) {
   ol_queue_handle_t RetrievedQueue;
   ASSERT_SUCCESS(olGetEventInfo(Event, OL_EVENT_INFO_QUEUE,
                                 sizeof(ol_queue_handle_t), &RetrievedQueue));
   ASSERT_EQ(Queue, RetrievedQueue);
+}
+
+TEST_P(olGetEventInfoTest, SuccessIsComplete) {
+  bool Complete = false;
+  while (!Complete) {
+    ASSERT_SUCCESS(olGetEventInfo(Event, OL_EVENT_INFO_IS_COMPLETE,
+                                  sizeof(Complete), &Complete));
+  }
+  ASSERT_EQ(Complete, true);
 }
 
 TEST_P(olGetEventInfoTest, InvalidNullHandle) {

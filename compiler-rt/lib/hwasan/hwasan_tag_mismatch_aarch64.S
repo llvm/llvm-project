@@ -70,7 +70,7 @@
 // clobbering the x17 register in error reports, and that the program will have
 // a runtime dependency on the __hwasan_tag_mismatch_v2 symbol therefore it will
 // fail to start up given an older (i.e. incompatible) runtime.
-.section .text
+TEXT_SECTION
 .file "hwasan_tag_mismatch_aarch64.S"
 .global __hwasan_tag_mismatch
 .type __hwasan_tag_mismatch, %function
@@ -157,4 +157,4 @@ mismatch:
 // We do not need executable stack.
 NO_EXEC_STACK_DIRECTIVE
 
-GNU_PROPERTY_BTI_PAC
+GNU_PROPERTY_BTI_PAC_GCS

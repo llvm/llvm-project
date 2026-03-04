@@ -390,7 +390,6 @@ external set_diagnostic_handler
 (*===-- Contexts ----------------------------------------------------------===*)
 external create_context : unit -> llcontext = "llvm_create_context"
 external dispose_context : llcontext -> unit = "llvm_dispose_context"
-external global_context : unit -> llcontext = "llvm_global_context"
 external mdkind_id : llcontext -> string -> llmdkind = "llvm_mdkind_id"
 
 (*===-- Attributes --------------------------------------------------------===*)
@@ -455,8 +454,8 @@ external module_context : llmodule -> llcontext = "llvm_get_module_context"
 external get_module_identifier : llmodule -> string
                                = "llvm_get_module_identifier"
 
-external set_module_identifer : llmodule -> string -> unit
-                              = "llvm_set_module_identifier"
+external set_module_identifier : llmodule -> string -> unit
+                               = "llvm_set_module_identifier"
 
 external get_module_flag : llmodule -> string -> llmetadata option
                          = "llvm_get_module_flag"
@@ -649,7 +648,6 @@ external align_of : lltype -> llvalue = "llvm_align_of"
 external size_of : lltype -> llvalue = "llvm_size_of"
 external const_neg : llvalue -> llvalue = "llvm_const_neg"
 external const_nsw_neg : llvalue -> llvalue = "llvm_const_nsw_neg"
-external const_nuw_neg : llvalue -> llvalue = "llvm_const_nuw_neg"
 external const_not : llvalue -> llvalue = "llvm_const_not"
 external const_add : llvalue -> llvalue -> llvalue = "llvm_const_add"
 external const_nsw_add : llvalue -> llvalue -> llvalue = "llvm_const_nsw_add"
@@ -793,7 +791,17 @@ external define_function : string -> lltype -> llmodule -> llvalue
 external lookup_function : string -> llmodule -> llvalue option
                          = "llvm_lookup_function"
 external delete_function : llvalue -> unit = "llvm_delete_function"
-external is_intrinsic : llvalue -> bool = "llvm_is_intrinsic"
+external lookup_intrinsic_id : string -> int = "llvm_lookup_intrinsic_id"
+external intrinsic_id : llvalue -> int = "llvm_intrinsic_id"
+let is_intrinsic v = intrinsic_id v <> 0
+external intrinsic_declaration : llmodule -> int -> lltype array -> llvalue
+                               = "llvm_intrinsic_declaration"
+external intrinsic_type : llcontext -> int -> lltype array -> lltype
+                        = "llvm_intrinsic_type"
+external intrinsic_name : int -> string = "llvm_intrinsic_name"
+external intrinsic_overloaded_name : llmodule -> int -> lltype array -> string
+                                   = "llvm_intrinsic_overloaded_name"
+external intrinsic_is_overloaded : int -> bool = "llvm_intrinsic_is_overloaded"
 external function_call_conv : llvalue -> int = "llvm_function_call_conv"
 external set_function_call_conv : int -> llvalue -> unit
                                 = "llvm_set_function_call_conv"
@@ -1264,8 +1272,6 @@ external build_neg : llvalue -> string -> llbuilder -> llvalue
                    = "llvm_build_neg"
 external build_nsw_neg : llvalue -> string -> llbuilder -> llvalue
                        = "llvm_build_nsw_neg"
-external build_nuw_neg : llvalue -> string -> llbuilder -> llvalue
-                       = "llvm_build_nuw_neg"
 external build_fneg : llvalue -> string -> llbuilder -> llvalue
                     = "llvm_build_fneg"
 external build_not : llvalue -> string -> llbuilder -> llvalue

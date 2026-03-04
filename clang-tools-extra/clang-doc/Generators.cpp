@@ -7,8 +7,14 @@
 //===----------------------------------------------------------------------===//
 
 #include "Generators.h"
+#include "support/File.h"
+#include "llvm/Support/TimeProfiler.h"
 
 LLVM_INSTANTIATE_REGISTRY(clang::doc::GeneratorRegistry)
+
+using namespace llvm;
+using namespace llvm::json;
+using namespace llvm::mustache;
 
 namespace clang {
 namespace doc {
@@ -26,7 +32,7 @@ findGeneratorByName(llvm::StringRef Format) {
 
 // Enum conversion
 
-std::string getTagType(TagTypeKind AS) {
+llvm::StringRef getTagType(TagTypeKind AS) {
   switch (AS) {
   case TagTypeKind::Class:
     return "class";
@@ -40,6 +46,149 @@ std::string getTagType(TagTypeKind AS) {
     return "enum";
   }
   llvm_unreachable("Unknown TagTypeKind");
+}
+
+Error createFileOpenError(StringRef FileName, std::error_code EC) {
+  return createFileError("cannot open file " + FileName, EC);
+}
+
+Error MustacheGenerator::setupTemplate(
+    std::unique_ptr<MustacheTemplateFile> &Template, StringRef TemplatePath,
+    std::vector<std::pair<StringRef, StringRef>> Partials) {
+  auto T = MustacheTemplateFile::createMustacheFile(TemplatePath);
+  if (Error Err = T.takeError())
+    return Err;
+  Template = std::move(T.get());
+  for (const auto &[Name, FileName] : Partials)
+    if (auto Err = Template->registerPartialFile(Name, FileName))
+      return Err;
+  return Error::success();
+}
+
+Error MustacheGenerator::generateDocumentation(
+    StringRef RootDir, StringMap<std::unique_ptr<doc::Info>> Infos,
+    const clang::doc::ClangDocContext &CDCtx, std::string DirName) {
+  {
+    llvm::TimeTraceScope TS("Setup Templates");
+    if (auto Err = setupTemplateFiles(CDCtx))
+      return Err;
+  }
+
+  {
+    llvm::TimeTraceScope TS("Generate JSON for Mustache");
+    if (auto JSONGenerator = findGeneratorByName("json")) {
+      if (Error Err = JSONGenerator.get()->generateDocumentation(
+              RootDir, std::move(Infos), CDCtx))
+        return Err;
+    } else
+      return JSONGenerator.takeError();
+  }
+
+  SmallString<128> JSONDirPath(RootDir);
+  SmallString<128> DocsDirPath(RootDir);
+  {
+    TimeTraceScope TS("Create Output Directories");
+    sys::path::append(JSONDirPath, "json");
+    if (auto EC = sys::fs::create_directories(JSONDirPath))
+      return createFileError(JSONDirPath, EC);
+    sys::path::append(DocsDirPath, DirName);
+    if (auto EC = sys::fs::create_directories(DocsDirPath))
+      return createFileError(DocsDirPath, EC);
+  }
+
+  {
+    llvm::TimeTraceScope TS("Iterate JSON files");
+    std::error_code EC;
+    sys::fs::recursive_directory_iterator JSONIter(JSONDirPath, EC);
+    std::vector<json::Value> JSONFiles;
+    JSONFiles.reserve(Infos.size());
+    if (EC)
+      return createStringError("Failed to create directory iterator.");
+
+    while (JSONIter != sys::fs::recursive_directory_iterator()) {
+      // create the same directory structure in the docs format dir
+      if (JSONIter->type() == sys::fs::file_type::directory_file) {
+        SmallString<128> DocsClonedPath(JSONIter->path());
+        sys::path::replace_path_prefix(DocsClonedPath, JSONDirPath,
+                                       DocsDirPath);
+        if (auto EC = sys::fs::create_directories(DocsClonedPath)) {
+          return createFileError(DocsClonedPath, EC);
+        }
+      }
+
+      if (EC)
+        return createFileError("Failed to iterate: " + JSONIter->path(), EC);
+
+      auto Path = StringRef(JSONIter->path());
+      if (!Path.ends_with(".json")) {
+        JSONIter.increment(EC);
+        continue;
+      }
+
+      auto File = MemoryBuffer::getFile(Path);
+      if (EC = File.getError(); EC) {
+        unsigned ID = CDCtx.Diags.getCustomDiagID(DiagnosticsEngine::Warning,
+                                                  "Failed to open file: %0 %1");
+        CDCtx.Diags.Report(ID) << Path << EC.message();
+        JSONIter.increment(EC);
+        continue;
+      }
+
+      auto Parsed = json::parse((*File)->getBuffer());
+      if (!Parsed)
+        return Parsed.takeError();
+      auto ValidJSON = Parsed.get();
+
+      std::error_code FileErr;
+      SmallString<128> DocsFilePath(JSONIter->path());
+      sys::path::replace_path_prefix(DocsFilePath, JSONDirPath, DocsDirPath);
+      sys::path::replace_extension(DocsFilePath, DirName);
+      raw_fd_ostream InfoOS(DocsFilePath, FileErr, sys::fs::OF_None);
+      if (FileErr)
+        return createFileOpenError(Path, FileErr);
+
+      auto RelativeRootPath = getRelativePathToRoot(DocsFilePath, DocsDirPath);
+      auto InfoTypeStr =
+          getInfoTypeStr(Parsed->getAsObject(), sys::path::stem(DocsFilePath));
+      if (!InfoTypeStr)
+        return InfoTypeStr.takeError();
+      if (Error Err = generateDocForJSON(*Parsed, InfoOS, CDCtx,
+                                         InfoTypeStr.get(), RelativeRootPath))
+        return Err;
+      JSONIter.increment(EC);
+    }
+  }
+
+  return Error::success();
+}
+
+Expected<std::string> MustacheGenerator::getInfoTypeStr(Object *Info,
+                                                        StringRef Filename) {
+  if (Filename == "all_files")
+    return "all_files";
+  // Checking for an InfoType ensures that only the special top-level index file
+  // is caught here, since it is not an Info.
+  if (Filename == "index" && !Info->get("InfoType"))
+    return "index";
+  auto StrValue = (*Info)["InfoType"];
+  if (StrValue.kind() != json::Value::Kind::String)
+    return createStringError("JSON file '%s' does not contain key: 'InfoType'.",
+                             Filename.str().c_str());
+  auto ObjTypeStr = StrValue.getAsString();
+  if (!ObjTypeStr.has_value())
+    return createStringError(
+        "JSON file '%s' does not contain 'InfoType' field as a string.",
+        Filename.str().c_str());
+  return ObjTypeStr.value().str();
+}
+
+SmallString<128>
+MustacheGenerator::getRelativePathToRoot(StringRef PathToFile,
+                                         StringRef DocsRootPath) {
+  SmallString<128> PathVec(PathToFile);
+  // Remove filename, or else the relative path will have an extra "../"
+  sys::path::remove_filename(PathVec);
+  return computeRelativePath(DocsRootPath, PathVec);
 }
 
 llvm::Error Generator::createResources(ClangDocContext &CDCtx) {
@@ -65,47 +214,45 @@ void Generator::addInfoToIndex(Index &Idx, const doc::Info *Info) {
   for (const auto &R : llvm::reverse(Info->Namespace)) {
     // Look for the current namespace in the children of the index I is
     // pointing.
-    auto It = llvm::find(I->Children, R.USR);
+    auto It = I->Children.find(llvm::toStringRef(R.USR));
     if (It != I->Children.end()) {
       // If it is found, just change I to point the namespace reference found.
-      I = &*It;
+      I = &It->second;
     } else {
       // If it is not found a new reference is created
-      I->Children.emplace_back(R.USR, R.Name, R.RefType, R.Path);
+      auto [NewInfo, success] = I->Children.try_emplace(
+          llvm::toStringRef(R.USR), R.USR, R.Name, R.RefType, R.Path);
       // I is updated with the reference of the new namespace reference
-      I = &I->Children.back();
+      if (success)
+        I = &NewInfo->second;
     }
   }
   // Look for Info in the vector where it is supposed to be; it could already
   // exist if it is a parent namespace of an Info already passed to this
   // function.
-  auto It = llvm::find(I->Children, Info->USR);
+  auto It = I->Children.find(llvm::toStringRef(Info->USR));
   if (It == I->Children.end()) {
     // If it is not in the vector it is inserted
-    I->Children.emplace_back(Info->USR, Info->extractName(), Info->IT,
-                             Info->Path);
+    I->Children.try_emplace(llvm::toStringRef(Info->USR), Info->USR,
+                            Info->extractName(), Info->IT, Info->Path);
   } else {
     // If it not in the vector we only check if Path and Name are not empty
     // because if the Info was included by a namespace it may not have those
     // values.
-    if (It->Path.empty())
-      It->Path = Info->Path;
-    if (It->Name.empty())
-      It->Name = Info->extractName();
+    if (It->second.Path.empty())
+      It->second.Path = Info->Path;
+    if (It->second.Name.empty())
+      It->second.Name = Info->extractName();
   }
 }
 
 // This anchor is used to force the linker to link in the generated object file
 // and thus register the generators.
-static int LLVM_ATTRIBUTE_UNUSED YAMLGeneratorAnchorDest =
-    YAMLGeneratorAnchorSource;
-static int LLVM_ATTRIBUTE_UNUSED MDGeneratorAnchorDest =
-    MDGeneratorAnchorSource;
-static int LLVM_ATTRIBUTE_UNUSED HTMLGeneratorAnchorDest =
-    HTMLGeneratorAnchorSource;
-static int LLVM_ATTRIBUTE_UNUSED MHTMLGeneratorAnchorDest =
-    MHTMLGeneratorAnchorSource;
-static int LLVM_ATTRIBUTE_UNUSED JSONGeneratorAnchorDest =
-    JSONGeneratorAnchorSource;
+[[maybe_unused]] static int YAMLGeneratorAnchorDest = YAMLGeneratorAnchorSource;
+[[maybe_unused]] static int MDGeneratorAnchorDest = MDGeneratorAnchorSource;
+[[maybe_unused]] static int HTMLGeneratorAnchorDest = HTMLGeneratorAnchorSource;
+[[maybe_unused]] static int JSONGeneratorAnchorDest = JSONGeneratorAnchorSource;
+[[maybe_unused]] static int MDMustacheGeneratorAnchorDest =
+    MDMustacheGeneratorAnchorSource;
 } // namespace doc
 } // namespace clang

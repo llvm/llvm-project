@@ -20,6 +20,7 @@
 #include "mlir/Dialect/LLVMIR/LLVMAttrs.h"
 #include "mlir/Interfaces/LoopLikeInterface.h"
 #include "mlir/Interfaces/SideEffectInterfaces.h"
+#include "mlir/Interfaces/ViewLikeInterface.h"
 
 namespace fir {
 
@@ -151,6 +152,11 @@ struct LocalitySpecifierOperands {
   llvm::SmallVector<::mlir::Value> privateVars;
   llvm::SmallVector<::mlir::Attribute> privateSyms;
 };
+
+/// Returns true if the given box value may be absent.
+/// The given value must have BaseBoxType.
+bool mayBeAbsentBox(mlir::Value val);
+
 } // namespace fir
 
 #endif // FORTRAN_OPTIMIZER_DIALECT_FIROPS_H

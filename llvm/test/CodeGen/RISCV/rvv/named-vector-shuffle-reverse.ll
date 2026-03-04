@@ -416,14 +416,14 @@ define <vscale x 32 x i1> @reverse_nxv32i1(<vscale x 32 x i1> %a) {
 ; RV32-BITS-UNKNOWN-NEXT:    vsetvli a1, zero, e16, m2, ta, ma
 ; RV32-BITS-UNKNOWN-NEXT:    vrsub.vx v16, v12, a0
 ; RV32-BITS-UNKNOWN-NEXT:    vsetvli a0, zero, e8, m4, ta, ma
-; RV32-BITS-UNKNOWN-NEXT:    vmerge.vim v12, v8, 1, v0
+; RV32-BITS-UNKNOWN-NEXT:    vmerge.vim v8, v8, 1, v0
 ; RV32-BITS-UNKNOWN-NEXT:    vsetvli a0, zero, e8, m1, ta, ma
-; RV32-BITS-UNKNOWN-NEXT:    vrgatherei16.vv v11, v12, v16
-; RV32-BITS-UNKNOWN-NEXT:    vrgatherei16.vv v10, v13, v16
-; RV32-BITS-UNKNOWN-NEXT:    vrgatherei16.vv v9, v14, v16
-; RV32-BITS-UNKNOWN-NEXT:    vrgatherei16.vv v8, v15, v16
+; RV32-BITS-UNKNOWN-NEXT:    vrgatherei16.vv v15, v8, v16
+; RV32-BITS-UNKNOWN-NEXT:    vrgatherei16.vv v14, v9, v16
+; RV32-BITS-UNKNOWN-NEXT:    vrgatherei16.vv v13, v10, v16
+; RV32-BITS-UNKNOWN-NEXT:    vrgatherei16.vv v12, v11, v16
 ; RV32-BITS-UNKNOWN-NEXT:    vsetvli a0, zero, e8, m4, ta, ma
-; RV32-BITS-UNKNOWN-NEXT:    vmsne.vi v0, v8, 0
+; RV32-BITS-UNKNOWN-NEXT:    vmsne.vi v0, v12, 0
 ; RV32-BITS-UNKNOWN-NEXT:    ret
 ;
 ; RV32-BITS-256-LABEL: reverse_nxv32i1:
@@ -437,14 +437,14 @@ define <vscale x 32 x i1> @reverse_nxv32i1(<vscale x 32 x i1> %a) {
 ; RV32-BITS-256-NEXT:    vsetvli a1, zero, e8, m1, ta, ma
 ; RV32-BITS-256-NEXT:    vrsub.vx v16, v12, a0
 ; RV32-BITS-256-NEXT:    vsetvli a0, zero, e8, m4, ta, ma
-; RV32-BITS-256-NEXT:    vmerge.vim v12, v8, 1, v0
+; RV32-BITS-256-NEXT:    vmerge.vim v8, v8, 1, v0
 ; RV32-BITS-256-NEXT:    vsetvli a0, zero, e8, m1, ta, ma
-; RV32-BITS-256-NEXT:    vrgather.vv v11, v12, v16
-; RV32-BITS-256-NEXT:    vrgather.vv v10, v13, v16
-; RV32-BITS-256-NEXT:    vrgather.vv v9, v14, v16
-; RV32-BITS-256-NEXT:    vrgather.vv v8, v15, v16
+; RV32-BITS-256-NEXT:    vrgather.vv v15, v8, v16
+; RV32-BITS-256-NEXT:    vrgather.vv v14, v9, v16
+; RV32-BITS-256-NEXT:    vrgather.vv v13, v10, v16
+; RV32-BITS-256-NEXT:    vrgather.vv v12, v11, v16
 ; RV32-BITS-256-NEXT:    vsetvli a0, zero, e8, m4, ta, ma
-; RV32-BITS-256-NEXT:    vmsne.vi v0, v8, 0
+; RV32-BITS-256-NEXT:    vmsne.vi v0, v12, 0
 ; RV32-BITS-256-NEXT:    ret
 ;
 ; RV32-BITS-512-LABEL: reverse_nxv32i1:
@@ -458,14 +458,14 @@ define <vscale x 32 x i1> @reverse_nxv32i1(<vscale x 32 x i1> %a) {
 ; RV32-BITS-512-NEXT:    vsetvli a1, zero, e8, m1, ta, ma
 ; RV32-BITS-512-NEXT:    vrsub.vx v16, v12, a0
 ; RV32-BITS-512-NEXT:    vsetvli a0, zero, e8, m4, ta, ma
-; RV32-BITS-512-NEXT:    vmerge.vim v12, v8, 1, v0
+; RV32-BITS-512-NEXT:    vmerge.vim v8, v8, 1, v0
 ; RV32-BITS-512-NEXT:    vsetvli a0, zero, e8, m1, ta, ma
-; RV32-BITS-512-NEXT:    vrgather.vv v11, v12, v16
-; RV32-BITS-512-NEXT:    vrgather.vv v10, v13, v16
-; RV32-BITS-512-NEXT:    vrgather.vv v9, v14, v16
-; RV32-BITS-512-NEXT:    vrgather.vv v8, v15, v16
+; RV32-BITS-512-NEXT:    vrgather.vv v15, v8, v16
+; RV32-BITS-512-NEXT:    vrgather.vv v14, v9, v16
+; RV32-BITS-512-NEXT:    vrgather.vv v13, v10, v16
+; RV32-BITS-512-NEXT:    vrgather.vv v12, v11, v16
 ; RV32-BITS-512-NEXT:    vsetvli a0, zero, e8, m4, ta, ma
-; RV32-BITS-512-NEXT:    vmsne.vi v0, v8, 0
+; RV32-BITS-512-NEXT:    vmsne.vi v0, v12, 0
 ; RV32-BITS-512-NEXT:    ret
 ;
 ; RV64-BITS-UNKNOWN-LABEL: reverse_nxv32i1:
@@ -479,14 +479,14 @@ define <vscale x 32 x i1> @reverse_nxv32i1(<vscale x 32 x i1> %a) {
 ; RV64-BITS-UNKNOWN-NEXT:    vsetvli a1, zero, e16, m2, ta, ma
 ; RV64-BITS-UNKNOWN-NEXT:    vrsub.vx v16, v12, a0
 ; RV64-BITS-UNKNOWN-NEXT:    vsetvli a0, zero, e8, m4, ta, ma
-; RV64-BITS-UNKNOWN-NEXT:    vmerge.vim v12, v8, 1, v0
+; RV64-BITS-UNKNOWN-NEXT:    vmerge.vim v8, v8, 1, v0
 ; RV64-BITS-UNKNOWN-NEXT:    vsetvli a0, zero, e8, m1, ta, ma
-; RV64-BITS-UNKNOWN-NEXT:    vrgatherei16.vv v11, v12, v16
-; RV64-BITS-UNKNOWN-NEXT:    vrgatherei16.vv v10, v13, v16
-; RV64-BITS-UNKNOWN-NEXT:    vrgatherei16.vv v9, v14, v16
-; RV64-BITS-UNKNOWN-NEXT:    vrgatherei16.vv v8, v15, v16
+; RV64-BITS-UNKNOWN-NEXT:    vrgatherei16.vv v15, v8, v16
+; RV64-BITS-UNKNOWN-NEXT:    vrgatherei16.vv v14, v9, v16
+; RV64-BITS-UNKNOWN-NEXT:    vrgatherei16.vv v13, v10, v16
+; RV64-BITS-UNKNOWN-NEXT:    vrgatherei16.vv v12, v11, v16
 ; RV64-BITS-UNKNOWN-NEXT:    vsetvli a0, zero, e8, m4, ta, ma
-; RV64-BITS-UNKNOWN-NEXT:    vmsne.vi v0, v8, 0
+; RV64-BITS-UNKNOWN-NEXT:    vmsne.vi v0, v12, 0
 ; RV64-BITS-UNKNOWN-NEXT:    ret
 ;
 ; RV64-BITS-256-LABEL: reverse_nxv32i1:
@@ -500,14 +500,14 @@ define <vscale x 32 x i1> @reverse_nxv32i1(<vscale x 32 x i1> %a) {
 ; RV64-BITS-256-NEXT:    vsetvli a1, zero, e8, m1, ta, ma
 ; RV64-BITS-256-NEXT:    vrsub.vx v16, v12, a0
 ; RV64-BITS-256-NEXT:    vsetvli a0, zero, e8, m4, ta, ma
-; RV64-BITS-256-NEXT:    vmerge.vim v12, v8, 1, v0
+; RV64-BITS-256-NEXT:    vmerge.vim v8, v8, 1, v0
 ; RV64-BITS-256-NEXT:    vsetvli a0, zero, e8, m1, ta, ma
-; RV64-BITS-256-NEXT:    vrgather.vv v11, v12, v16
-; RV64-BITS-256-NEXT:    vrgather.vv v10, v13, v16
-; RV64-BITS-256-NEXT:    vrgather.vv v9, v14, v16
-; RV64-BITS-256-NEXT:    vrgather.vv v8, v15, v16
+; RV64-BITS-256-NEXT:    vrgather.vv v15, v8, v16
+; RV64-BITS-256-NEXT:    vrgather.vv v14, v9, v16
+; RV64-BITS-256-NEXT:    vrgather.vv v13, v10, v16
+; RV64-BITS-256-NEXT:    vrgather.vv v12, v11, v16
 ; RV64-BITS-256-NEXT:    vsetvli a0, zero, e8, m4, ta, ma
-; RV64-BITS-256-NEXT:    vmsne.vi v0, v8, 0
+; RV64-BITS-256-NEXT:    vmsne.vi v0, v12, 0
 ; RV64-BITS-256-NEXT:    ret
 ;
 ; RV64-BITS-512-LABEL: reverse_nxv32i1:
@@ -521,14 +521,14 @@ define <vscale x 32 x i1> @reverse_nxv32i1(<vscale x 32 x i1> %a) {
 ; RV64-BITS-512-NEXT:    vsetvli a1, zero, e8, m1, ta, ma
 ; RV64-BITS-512-NEXT:    vrsub.vx v16, v12, a0
 ; RV64-BITS-512-NEXT:    vsetvli a0, zero, e8, m4, ta, ma
-; RV64-BITS-512-NEXT:    vmerge.vim v12, v8, 1, v0
+; RV64-BITS-512-NEXT:    vmerge.vim v8, v8, 1, v0
 ; RV64-BITS-512-NEXT:    vsetvli a0, zero, e8, m1, ta, ma
-; RV64-BITS-512-NEXT:    vrgather.vv v11, v12, v16
-; RV64-BITS-512-NEXT:    vrgather.vv v10, v13, v16
-; RV64-BITS-512-NEXT:    vrgather.vv v9, v14, v16
-; RV64-BITS-512-NEXT:    vrgather.vv v8, v15, v16
+; RV64-BITS-512-NEXT:    vrgather.vv v15, v8, v16
+; RV64-BITS-512-NEXT:    vrgather.vv v14, v9, v16
+; RV64-BITS-512-NEXT:    vrgather.vv v13, v10, v16
+; RV64-BITS-512-NEXT:    vrgather.vv v12, v11, v16
 ; RV64-BITS-512-NEXT:    vsetvli a0, zero, e8, m4, ta, ma
-; RV64-BITS-512-NEXT:    vmsne.vi v0, v8, 0
+; RV64-BITS-512-NEXT:    vmsne.vi v0, v12, 0
 ; RV64-BITS-512-NEXT:    ret
   %res = call <vscale x 32 x i1> @llvm.vector.reverse.nxv32i1(<vscale x 32 x i1> %a)
   ret <vscale x 32 x i1> %res
@@ -2089,49 +2089,3 @@ define <vscale x 12 x i64> @reverse_nxv12i64(<vscale x 12 x i64> %a) {
   ret <vscale x 12 x i64> %res
 }
 
-declare <vscale x 2 x i1> @llvm.vector.reverse.nxv2i1(<vscale x 2 x i1>)
-declare <vscale x 4 x i1> @llvm.vector.reverse.nxv4i1(<vscale x 4 x i1>)
-declare <vscale x 8 x i1> @llvm.vector.reverse.nxv8i1(<vscale x 8 x i1>)
-declare <vscale x 16 x i1> @llvm.vector.reverse.nxv16i1(<vscale x 16 x i1>)
-declare <vscale x 32 x i1> @llvm.vector.reverse.nxv32i1(<vscale x 32 x i1>)
-declare <vscale x 64 x i1> @llvm.vector.reverse.nxv64i1(<vscale x 64 x i1>)
-declare <vscale x 1 x i8> @llvm.vector.reverse.nxv1i8(<vscale x 1 x i8>)
-declare <vscale x 2 x i8> @llvm.vector.reverse.nxv2i8(<vscale x 2 x i8>)
-declare <vscale x 4 x i8> @llvm.vector.reverse.nxv4i8(<vscale x 4 x i8>)
-declare <vscale x 8 x i8> @llvm.vector.reverse.nxv8i8(<vscale x 8 x i8>)
-declare <vscale x 16 x i8> @llvm.vector.reverse.nxv16i8(<vscale x 16 x i8>)
-declare <vscale x 32 x i8> @llvm.vector.reverse.nxv32i8(<vscale x 32 x i8>)
-declare <vscale x 64 x i8> @llvm.vector.reverse.nxv64i8(<vscale x 64 x i8>)
-declare <vscale x 1 x i16> @llvm.vector.reverse.nxv1i16(<vscale x 1 x i16>)
-declare <vscale x 2 x i16> @llvm.vector.reverse.nxv2i16(<vscale x 2 x i16>)
-declare <vscale x 4 x i16> @llvm.vector.reverse.nxv4i16(<vscale x 4 x i16>)
-declare <vscale x 8 x i16> @llvm.vector.reverse.nxv8i16(<vscale x 8 x i16>)
-declare <vscale x 16 x i16> @llvm.vector.reverse.nxv16i16(<vscale x 16 x i16>)
-declare <vscale x 32 x i16> @llvm.vector.reverse.nxv32i16(<vscale x 32 x i16>)
-declare <vscale x 1 x i32> @llvm.vector.reverse.nxv1i32(<vscale x 1 x i32>)
-declare <vscale x 2 x i32> @llvm.vector.reverse.nxv2i32(<vscale x 2 x i32>)
-declare <vscale x 4 x i32> @llvm.vector.reverse.nxv4i32(<vscale x 4 x i32>)
-declare <vscale x 8 x i32> @llvm.vector.reverse.nxv8i32(<vscale x 8 x i32>)
-declare <vscale x 16 x i32> @llvm.vector.reverse.nxv16i32(<vscale x 16 x i32>)
-declare <vscale x 1 x i64> @llvm.vector.reverse.nxv1i64(<vscale x 1 x i64>)
-declare <vscale x 2 x i64> @llvm.vector.reverse.nxv2i64(<vscale x 2 x i64>)
-declare <vscale x 4 x i64> @llvm.vector.reverse.nxv4i64(<vscale x 4 x i64>)
-declare <vscale x 8 x i64> @llvm.vector.reverse.nxv8i64(<vscale x 8 x i64>)
-declare <vscale x 1 x half> @llvm.vector.reverse.nxv1f16(<vscale x 1 x half>)
-declare <vscale x 2 x half> @llvm.vector.reverse.nxv2f16(<vscale x 2 x half>)
-declare <vscale x 4 x half> @llvm.vector.reverse.nxv4f16(<vscale x 4 x half>)
-declare <vscale x 8 x half> @llvm.vector.reverse.nxv8f16(<vscale x 8 x half>)
-declare <vscale x 16 x half> @llvm.vector.reverse.nxv16f16(<vscale x 16 x half>)
-declare <vscale x 32 x half> @llvm.vector.reverse.nxv32f16(<vscale x 32 x half>)
-declare <vscale x 1 x float> @llvm.vector.reverse.nxv1f32(<vscale x 1 x float>)
-declare <vscale x 2 x float> @llvm.vector.reverse.nxv2f32(<vscale x 2 x float>)
-declare <vscale x 4 x float> @llvm.vector.reverse.nxv4f32(<vscale x 4 x float>)
-declare <vscale x 8 x float> @llvm.vector.reverse.nxv8f32(<vscale x 8 x float>)
-declare <vscale x 16 x float> @llvm.vector.reverse.nxv16f32(<vscale x 16 x float>)
-declare <vscale x 1 x double> @llvm.vector.reverse.nxv1f64(<vscale x 1 x double>)
-declare <vscale x 2 x double> @llvm.vector.reverse.nxv2f64(<vscale x 2 x double>)
-declare <vscale x 4 x double> @llvm.vector.reverse.nxv4f64(<vscale x 4 x double>)
-declare <vscale x 8 x double> @llvm.vector.reverse.nxv8f64(<vscale x 8 x double>)
-declare <vscale x 3 x i64> @llvm.vector.reverse.nxv3i64(<vscale x 3 x i64>)
-declare <vscale x 6 x i64> @llvm.vector.reverse.nxv6i64(<vscale x 6 x i64>)
-declare <vscale x 12 x i64> @llvm.vector.reverse.nxv12i64(<vscale x 12 x i64>)

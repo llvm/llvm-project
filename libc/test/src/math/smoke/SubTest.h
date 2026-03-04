@@ -47,6 +47,10 @@ public:
     EXPECT_FP_EQ(neg_inf, func(in.neg_inf, in.zero));
     EXPECT_FP_EQ(inf, func(in.inf, in.neg_zero));
     EXPECT_FP_EQ(neg_inf, func(in.neg_inf, in.neg_zero));
+    EXPECT_FP_EQ(neg_inf, func(in.zero, in.inf));
+    EXPECT_FP_EQ(neg_inf, func(in.neg_zero, in.inf));
+    EXPECT_FP_EQ(inf, func(in.zero, in.neg_inf));
+    EXPECT_FP_EQ(inf, func(in.neg_zero, in.neg_inf));
   }
 
   void test_invalid_operations(SubFunc func) {
@@ -140,6 +144,18 @@ public:
     func(InType(1.0), in.min_denormal);
     EXPECT_FP_EXCEPTION(FE_INEXACT);
   }
+
+  void test_mixed_signs(SubFunc func) {
+    EXPECT_FP_EQ(OutType(-1.0), func(InType(1.0), InType(2.0)));
+    EXPECT_FP_EQ(OutType(3.0), func(InType(1.0), InType(-2.0)));
+    EXPECT_FP_EQ(OutType(-3.0), func(InType(-1.0), InType(2.0)));
+    EXPECT_FP_EQ(OutType(1.0), func(InType(-1.0), InType(-2.0)));
+
+    EXPECT_FP_EQ(OutType(1.0), func(InType(2.0), InType(1.0)));
+    EXPECT_FP_EQ(OutType(3.0), func(InType(2.0), InType(-1.0)));
+    EXPECT_FP_EQ(OutType(-3.0), func(InType(-2.0), InType(1.0)));
+    EXPECT_FP_EQ(OutType(-1.0), func(InType(-2.0), InType(-1.0)));
+  }
 };
 
 #define LIST_SUB_TESTS(OutType, InType, func)                                  \
@@ -149,7 +165,8 @@ public:
     test_invalid_operations(&func);                                            \
   }                                                                            \
   TEST_F(LlvmLibcSubTest, RangeErrors) { test_range_errors(&func); }           \
-  TEST_F(LlvmLibcSubTest, InexactResults) { test_inexact_results(&func); }
+  TEST_F(LlvmLibcSubTest, InexactResults) { test_inexact_results(&func); }     \
+  TEST_F(LlvmLibcSubTest, MixedSigns) { test_mixed_signs(&func); }
 
 #define LIST_SUB_SAME_TYPE_TESTS(suffix, OutType, InType, func)                \
   using LlvmLibcSubTest##suffix = SubTest<OutType, InType>;                    \
@@ -162,6 +179,7 @@ public:
   TEST_F(LlvmLibcSubTest##suffix, RangeErrors) { test_range_errors(&func); }   \
   TEST_F(LlvmLibcSubTest##suffix, InexactResults) {                            \
     test_inexact_results(&func);                                               \
-  }
+  }                                                                            \
+  TEST_F(LlvmLibcSubTest##suffix, MixedSigns) { test_mixed_signs(&func); }
 
 #endif // LLVM_LIBC_TEST_SRC_MATH_SMOKE_SUBTEST_H

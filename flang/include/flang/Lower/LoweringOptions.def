@@ -34,6 +34,10 @@ ENUM_LOWERINGOPT(NoPPCNativeVecElemOrder, unsigned, 1, 0)
 /// On by default.
 ENUM_LOWERINGOPT(Underscoring, unsigned, 1, 1)
 
+/// If true, respect parentheses in expression evaluation.
+/// On by default.
+ENUM_LOWERINGOPT(ProtectParens, unsigned, 1, 1)
+
 /// If true, assume the behavior of integer overflow is defined
 /// (i.e. wraps around as two's complement). Off by default.
 ENUM_LOWERINGOPT(IntegerWrapAround, unsigned, 1, 0)
@@ -78,6 +82,11 @@ ENUM_LOWERINGOPT(ComplexDivisionToRuntime, unsigned, 1, 1)
 /// When true, it registers MLIRDiagnosticsHandler for the duration
 /// of the lowering pipeline.
 ENUM_LOWERINGOPT(RegisterMLIRDiagnosticsHandler, unsigned, 1, 1)
+
+/// If true, preserve USE statement information during PFT building for
+/// debug info generation. Should be enabled when debug info level is above
+/// LineTablesOnly. Off by default.
+ENUM_LOWERINGOPT(PreserveUseDebugInfo, unsigned, 1, 0)
 
 #undef LOWERINGOPT
 #undef ENUM_LOWERINGOPT

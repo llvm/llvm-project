@@ -180,6 +180,10 @@ static cl::opt<bool> DisableGEPConstOperand(
     "disable-gep-const-evaluation", cl::Hidden, cl::init(false),
     cl::desc("Disables evaluation of GetElementPtr with constant operands"));
 
+static cl::opt<bool> InlineAllViableCalls(
+    "inline-all-viable-calls", cl::Hidden, cl::init(false),
+    cl::desc("Inline all viable calls, even if they exceed the inlining "
+             "threshold"));
 namespace llvm {
 std::optional<int> getStringFnAttrAsInt(const Attribute &Attr) {
   if (Attr.isValid()) {
@@ -747,7 +751,7 @@ class InlineCostCallAnalyzer final : public CallAnalyzer {
       if (CA.analyze().isSuccess()) {
         // We were able to inline the indirect call! Subtract the cost from the
         // threshold to get the bonus we want to apply, but don't go below zero.
-        Cost -= std::max(0, CA.getThreshold() - CA.getCost());
+        addCost(-std::max(0, CA.getThreshold() - CA.getCost()));
       }
     } else
       // Otherwise simply add the cost for merely making the call.
@@ -1187,7 +1191,7 @@ class InlineCostCallAnalyzer final : public CallAnalyzer {
     // If this function uses the coldcc calling convention, prefer not to inline
     // it.
     if (F.getCallingConv() == CallingConv::Cold)
-      Cost += InlineConstants::ColdccPenalty;
+      addCost(InlineConstants::ColdccPenalty);
 
     LLVM_DEBUG(dbgs() << "      Initial cost: " << Cost << "\n");
 
@@ -1238,7 +1242,7 @@ public:
     return std::nullopt;
   }
 
-  virtual ~InlineCostCallAnalyzer() = default;
+  ~InlineCostCallAnalyzer() override = default;
   int getThreshold() const { return Threshold; }
   int getCost() const { return Cost; }
   int getStaticBonusApplied() const { return StaticBonusApplied; }
@@ -1598,19 +1602,20 @@ bool CallAnalyzer::visitAlloca(AllocaInst &I) {
     }
   }
 
-  // Accumulate the allocated size.
   if (I.isStaticAlloca()) {
-    Type *Ty = I.getAllocatedType();
-    AllocatedSize = SaturatingAdd(DL.getTypeAllocSize(Ty).getKnownMinValue(),
-                                  AllocatedSize);
-  }
-
-  // FIXME: This is overly conservative. Dynamic allocas are inefficient for
-  // a variety of reasons, and so we would like to not inline them into
-  // functions which don't currently have a dynamic alloca. This simply
-  // disables inlining altogether in the presence of a dynamic alloca.
-  if (!I.isStaticAlloca())
+    // Accumulate the allocated size if constant and executed once.
+    // Note: if AllocSize is a vscale value, this is an underestimate of the
+    // allocated size, and it also requires some of the cost of a dynamic
+    // alloca, but is recorded here as a constant size alloca.
+    TypeSize AllocSize = I.getAllocationSize(DL).value_or(TypeSize::getZero());
+    AllocatedSize = SaturatingAdd(AllocSize.getKnownMinValue(), AllocatedSize);
+  } else {
+    // FIXME: This is overly conservative. Dynamic allocas are inefficient for
+    // a variety of reasons, and so we would like to not inline them into
+    // functions which don't currently have a dynamic alloca. This simply
+    // disables inlining altogether in the presence of a dynamic alloca.
     HasDynamicAlloca = true;
+  }
 
   return false;
 }
@@ -1698,7 +1703,7 @@ bool CallAnalyzer::visitPHI(PHINode &I) {
 
   // Check if we can map phi to a pointer with constant offset.
   if (FirstBaseAndOffset.first) {
-    ConstantOffsetPtrs[&I] = FirstBaseAndOffset;
+    ConstantOffsetPtrs[&I] = std::move(FirstBaseAndOffset);
 
     if (auto *SROAArg = getSROAArgForValueOrNull(FirstV))
       SROAArgValues[&I] = SROAArg;
@@ -1724,7 +1729,7 @@ bool CallAnalyzer::canFoldInboundsGEP(GetElementPtrInst &I) {
     return false;
 
   // Add the result as a new mapping to Base + Offset.
-  ConstantOffsetPtrs[&I] = BaseAndOffset;
+  ConstantOffsetPtrs[&I] = std::move(BaseAndOffset);
 
   return true;
 }
@@ -1874,7 +1879,7 @@ bool CallAnalyzer::visitBitCast(BitCastInst &I) {
       ConstantOffsetPtrs.lookup(I.getOperand(0));
   // Casts don't change the offset, just wrap it up.
   if (BaseAndOffset.first)
-    ConstantOffsetPtrs[&I] = BaseAndOffset;
+    ConstantOffsetPtrs[&I] = std::move(BaseAndOffset);
 
   // Also look for SROA candidates here.
   if (auto *SROAArg = getSROAArgForValueOrNull(I.getOperand(0)))
@@ -1897,7 +1902,7 @@ bool CallAnalyzer::visitPtrToInt(PtrToIntInst &I) {
     std::pair<Value *, APInt> BaseAndOffset =
         ConstantOffsetPtrs.lookup(I.getOperand(0));
     if (BaseAndOffset.first)
-      ConstantOffsetPtrs[&I] = BaseAndOffset;
+      ConstantOffsetPtrs[&I] = std::move(BaseAndOffset);
   }
 
   // This is really weird. Technically, ptrtoint will disable SROA. However,
@@ -1926,7 +1931,7 @@ bool CallAnalyzer::visitIntToPtr(IntToPtrInst &I) {
   if (IntegerSize <= DL.getPointerTypeSizeInBits(I.getType())) {
     std::pair<Value *, APInt> BaseAndOffset = ConstantOffsetPtrs.lookup(Op);
     if (BaseAndOffset.first)
-      ConstantOffsetPtrs[&I] = BaseAndOffset;
+      ConstantOffsetPtrs[&I] = std::move(BaseAndOffset);
   }
 
   // "Propagate" SROA here in the same manner as we do for ptrtoint above.
@@ -2189,7 +2194,7 @@ void InlineCostCallAnalyzer::updateThreshold(CallBase &Call, Function &Callee) {
   // the cost of inlining it drops dramatically. It may seem odd to update
   // Cost in updateThreshold, but the bonus depends on the logic in this method.
   if (isSoleCallToLocalFunction(Call, F)) {
-    Cost -= LastCallToStaticBonus;
+    addCost(-LastCallToStaticBonus);
     StaticBonusApplied = LastCallToStaticBonus;
   }
 }
@@ -2592,7 +2597,7 @@ bool CallAnalyzer::visitSelectInst(SelectInst &SI) {
     std::pair<Value *, APInt> FalseBaseAndOffset =
         ConstantOffsetPtrs.lookup(FalseVal);
     if (TrueBaseAndOffset == FalseBaseAndOffset && TrueBaseAndOffset.first) {
-      ConstantOffsetPtrs[&SI] = TrueBaseAndOffset;
+      ConstantOffsetPtrs[&SI] = std::move(TrueBaseAndOffset);
 
       if (auto *SROAArg = getSROAArgForValueOrNull(TrueVal))
         SROAArgValues[&SI] = SROAArg;
@@ -2631,7 +2636,7 @@ bool CallAnalyzer::visitSelectInst(SelectInst &SI) {
   std::pair<Value *, APInt> BaseAndOffset =
       ConstantOffsetPtrs.lookup(SelectedV);
   if (BaseAndOffset.first) {
-    ConstantOffsetPtrs[&SI] = BaseAndOffset;
+    ConstantOffsetPtrs[&SI] = std::move(BaseAndOffset);
 
     if (auto *SROAArg = getSROAArgForValueOrNull(SelectedV))
       SROAArgValues[&SI] = SROAArg;
@@ -2976,7 +2981,7 @@ InlineResult CallAnalyzer::analyze() {
 
     onBlockStart(BB);
 
-    // Disallow inlining a blockaddress with uses other than strictly callbr.
+    // Disallow inlining a blockaddress.
     // A blockaddress only has defined behavior for an indirect branch in the
     // same function, and we do not currently support inlining indirect
     // branches.  But, the inliner may not see an indirect branch that ends up
@@ -2985,9 +2990,7 @@ InlineResult CallAnalyzer::analyze() {
     // invalid cross-function reference.
     // FIXME: pr/39560: continue relaxing this overt restriction.
     if (BB->hasAddressTaken())
-      for (User *U : BlockAddress::get(&*BB)->users())
-        if (!isa<CallBrInst>(*U))
-          return InlineResult::failure("blockaddress used outside of callbr");
+      return InlineResult::failure("blockaddress used");
 
     // Analyze the cost of this block. If we blow through the threshold, this
     // returns false, and we can bail on out.
@@ -3272,6 +3275,10 @@ InlineCost llvm::getInlineCost(
     return llvm::InlineCost::getNever(UserDecision->getFailureReason());
   }
 
+  if (InlineAllViableCalls && isInlineViable(*Callee).isSuccess())
+    return llvm::InlineCost::getAlways(
+        "Inlining forced by -inline-all-viable-calls");
+
   LLVM_DEBUG(llvm::dbgs() << "      Analyzing call of " << Callee->getName()
                           << "... (caller:" << Call.getCaller()->getName()
                           << ")\n");
@@ -3312,12 +3319,9 @@ InlineResult llvm::isInlineViable(Function &F) {
     if (isa<IndirectBrInst>(BB.getTerminator()))
       return InlineResult::failure("contains indirect branches");
 
-    // Disallow inlining of blockaddresses which are used by non-callbr
-    // instructions.
+    // Disallow inlining of blockaddresses.
     if (BB.hasAddressTaken())
-      for (User *U : BlockAddress::get(&BB)->users())
-        if (!isa<CallBrInst>(*U))
-          return InlineResult::failure("blockaddress used outside of callbr");
+      return InlineResult::failure("blockaddress used");
 
     for (auto &II : BB) {
       CallBase *Call = dyn_cast<CallBase>(&II);

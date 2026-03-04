@@ -1,4 +1,4 @@
-//===--- TaggedUnionMemberCountCheck.cpp - clang-tidy ---------------------===//
+//===----------------------------------------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -16,24 +16,22 @@ using namespace clang::ast_matchers;
 
 namespace clang::tidy::bugprone {
 
-static constexpr llvm::StringLiteral StrictModeOptionName = "StrictMode";
-static constexpr llvm::StringLiteral EnableCountingEnumHeuristicOptionName =
+static constexpr StringRef StrictModeOptionName = "StrictMode";
+static constexpr StringRef EnableCountingEnumHeuristicOptionName =
     "EnableCountingEnumHeuristic";
-static constexpr llvm::StringLiteral CountingEnumPrefixesOptionName =
+static constexpr StringRef CountingEnumPrefixesOptionName =
     "CountingEnumPrefixes";
-static constexpr llvm::StringLiteral CountingEnumSuffixesOptionName =
+static constexpr StringRef CountingEnumSuffixesOptionName =
     "CountingEnumSuffixes";
 
 static constexpr bool StrictModeOptionDefaultValue = false;
 static constexpr bool EnableCountingEnumHeuristicOptionDefaultValue = true;
-static constexpr llvm::StringLiteral CountingEnumPrefixesOptionDefaultValue =
-    "";
-static constexpr llvm::StringLiteral CountingEnumSuffixesOptionDefaultValue =
-    "count";
+static constexpr StringRef CountingEnumPrefixesOptionDefaultValue = "";
+static constexpr StringRef CountingEnumSuffixesOptionDefaultValue = "count";
 
-static constexpr llvm::StringLiteral RootMatchBindName = "root";
-static constexpr llvm::StringLiteral UnionMatchBindName = "union";
-static constexpr llvm::StringLiteral TagMatchBindName = "tags";
+static constexpr StringRef RootMatchBindName = "root";
+static constexpr StringRef UnionMatchBindName = "union";
+static constexpr StringRef TagMatchBindName = "tags";
 
 namespace {
 
@@ -50,9 +48,8 @@ AST_MATCHER_P2(RecordDecl, fieldCountOfKindIsOne,
   const FieldDecl *FirstMatch = nullptr;
   for (const FieldDecl *Field : Node.fields()) {
     if (InnerMatcher.matches(*Field, Finder, &TempBuilder)) {
-      if (FirstMatch) {
+      if (FirstMatch)
         return false;
-      }
       FirstMatch = Field;
     }
   }
@@ -104,7 +101,6 @@ void TaggedUnionMemberCountCheck::storeOptions(
 }
 
 void TaggedUnionMemberCountCheck::registerMatchers(MatchFinder *Finder) {
-
   auto NotFromSystemHeaderOrStdNamespace =
       unless(anyOf(isExpansionInSystemHeader(), isInStdNamespace()));
 
@@ -169,15 +165,8 @@ void TaggedUnionMemberCountCheck::check(
   if (!Root || !UnionField || !TagField)
     return;
 
-  const auto *UnionDef =
-      UnionField->getType().getCanonicalType().getTypePtr()->getAsRecordDecl();
-  const auto *EnumDef = llvm::dyn_cast<EnumDecl>(
-      TagField->getType().getCanonicalType().getTypePtr()->getAsTagDecl());
-
-  assert(UnionDef && "UnionDef is missing!");
-  assert(EnumDef && "EnumDef is missing!");
-  if (!UnionDef || !EnumDef)
-    return;
+  const auto *UnionDef = UnionField->getType()->castAsRecordDecl();
+  const auto *EnumDef = TagField->getType()->castAsEnumDecl();
 
   const std::size_t UnionMemberCount = llvm::range_size(UnionDef->fields());
   auto [TagCount, CountingEnumConstantDecl] = getNumberOfEnumValues(EnumDef);

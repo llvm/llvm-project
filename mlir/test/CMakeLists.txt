@@ -32,8 +32,8 @@ if (MLIR_INCLUDE_INTEGRATION_TESTS)
       "The GPU compilation format used by the tests.")
   set(ARM_SME_ABI_ROUTINES_SHLIB "" CACHE STRING
       "Path to a shared library containing Arm SME ABI routines, required for Arm SME integration tests.")
-  option(MLIR_RUN_AMX_TESTS "Run AMX tests.")
-  option(MLIR_RUN_X86VECTOR_TESTS "Run X86Vector tests.")
+  option(MLIR_RUN_X86_TESTS "Run X86 tests.")
+  option(MLIR_RUN_X86_AMX_TESTS "Run X86 AMX tests.")
   option(MLIR_RUN_CUDA_TENSOR_CORE_TESTS "Run CUDA Tensor core WMMA tests.")
   option(MLIR_RUN_CUDA_SM80_TESTS "Run CUDA A100 tests.")
   option(MLIR_RUN_CUDA_SM80_LT_TESTS "Run CUDA A100 structured sparsity tests.")
@@ -70,20 +70,22 @@ llvm_canonicalize_cmake_booleans(
   LLVM_HAS_NVPTX_TARGET
   LLVM_INCLUDE_SPIRV_TOOLS_TESTS
   MLIR_ENABLE_BINDINGS_PYTHON
+  MLIR_ENABLE_PYTHON_STABLE_ABI
   MLIR_ENABLE_CUDA_RUNNER
   MLIR_ENABLE_ROCM_CONVERSIONS
   MLIR_ENABLE_ROCM_RUNNER
   MLIR_ENABLE_SPIRV_CPU_RUNNER
   MLIR_ENABLE_VULKAN_RUNNER
   MLIR_INCLUDE_INTEGRATION_TESTS
-  MLIR_RUN_AMX_TESTS
+  MLIR_RUN_X86_AMX_TESTS
   MLIR_RUN_CUDA_TENSOR_CORE_TESTS
-  MLIR_RUN_X86VECTOR_TESTS
+  MLIR_RUN_X86_TESTS
   MLIR_RUN_ARM_SVE_TESTS
   MLIR_RUN_ARM_SME_TESTS
   MLIR_RUN_CUDA_SM80_TESTS
   MLIR_RUN_CUDA_SM80_LT_TESTS
   MLIR_RUN_CUDA_SM90_TESTS
+  BUILD_SHARED_LIBS
   )
 
 configure_lit_site_cfg(
@@ -100,6 +102,7 @@ configure_lit_site_cfg(
   )
 
 set(MLIR_TEST_DEPENDS
+  llvm-strings
   mlir-capi-ir-test
   mlir-capi-irdl-test
   mlir-capi-llvm-test
@@ -123,7 +126,11 @@ set(MLIR_TEST_DEPENDS
   tblgen-to-irdl
   )
 if(NOT MLIR_STANDALONE_BUILD)
-  list(APPEND MLIR_TEST_DEPENDS FileCheck count not split-file)
+  list(APPEND MLIR_TEST_DEPENDS FileCheck count not split-file yaml2obj)
+endif()
+# Examples/standalone/test.toy (vis-a-vis the standalone example) depends on these.
+if(LLVM_INCLUDE_EXAMPLES)
+  list(APPEND MLIR_TEST_DEPENDS MLIRCAPIArith)
 endif()
 
 set(MLIR_TEST_DEPENDS ${MLIR_TEST_DEPENDS}
@@ -141,6 +148,7 @@ if(LLVM_ENABLE_PIC AND TARGET ${LLVM_NATIVE_ARCH})
     llc
     mlir_async_runtime
     mlir-capi-execution-engine-test
+    mlir-capi-global-constructors-test
     mlir_c_runner_utils
     mlir_runner_utils
     mlir_float16_utils
@@ -156,7 +164,10 @@ if(MLIR_ENABLE_CUDA_RUNNER)
 endif()
 
 if(MLIR_ENABLE_EXECUTION_ENGINE)
-  list(APPEND MLIR_TEST_DEPENDS mlir-capi-execution-engine-test)
+  list(APPEND MLIR_TEST_DEPENDS
+    mlir-capi-execution-engine-test
+    mlir-capi-global-constructors-test
+  )
 endif()
 
 if(MLIR_ENABLE_ROCM_RUNNER)
@@ -165,6 +176,10 @@ endif()
 
 if(MLIR_ENABLE_SYCL_RUNNER)
   list(APPEND MLIR_TEST_DEPENDS mlir_sycl_runtime)
+endif()
+
+if(MLIR_ENABLE_LEVELZERO_RUNNER)
+  list(APPEND MLIR_TEST_DEPENDS mlir_levelzero_runtime)
 endif()
 
 if (MLIR_RUN_ARM_SME_TESTS AND NOT ARM_SME_ABI_ROUTINES_SHLIB)
@@ -239,4 +254,5 @@ add_lit_testsuite(check-mlir "Running the MLIR regression tests"
 
 add_lit_testsuites(MLIR ${CMAKE_CURRENT_SOURCE_DIR}
   DEPENDS ${MLIR_TEST_DEPENDS}
+  SKIP "^python*"
 )

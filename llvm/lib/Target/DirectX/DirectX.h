@@ -66,6 +66,12 @@ void initializeDXILLegalizeLegacyPass(PassRegistry &);
 /// elements
 FunctionPass *createDXILLegalizeLegacyPass();
 
+/// Initializer for DXIL Mem Intrinsics.
+void initializeDXILMemIntrinsicsLegacyPass(PassRegistry &);
+
+/// Pass to transform all llvm memory intrinsics to explicit loads and stores.
+ModulePass *createDXILMemIntrinsicsLegacyPass();
+
 /// Initializer for DXILOpLowering
 void initializeDXILOpLoweringLegacyPass(PassRegistry &);
 

@@ -1,5 +1,4 @@
 ; RUN: opt < %s -passes=inline -S | FileCheck %s
-; RUN: opt < %s -passes='cgscc(inline)' -S | FileCheck %s
 target datalayout = "E-p:64:64:64-a0:0:8-f32:32:32-f64:64:64-i1:8:8-i8:8:8-i16:16:16-i32:32:32-i64:32:64-v64:64:64-v128:128:128"
 
 define i32 @noattr_callee(i32 %i) {
@@ -23,6 +22,10 @@ define i32 @sanitize_memory_callee(i32 %i) sanitize_memory {
 }
 
 define i32 @sanitize_memtag_callee(i32 %i) sanitize_memtag {
+  ret i32 %i
+}
+
+define i32 @sanitize_alloc_token_callee(i32 %i) sanitize_alloc_token {
   ret i32 %i
 }
 
@@ -55,6 +58,10 @@ define i32 @alwaysinline_sanitize_memory_callee(i32 %i) alwaysinline sanitize_me
 }
 
 define i32 @alwaysinline_sanitize_memtag_callee(i32 %i) alwaysinline sanitize_memtag {
+  ret i32 %i
+}
+
+define i32 @alwaysinline_sanitize_alloc_token_callee(i32 %i) alwaysinline sanitize_alloc_token {
   ret i32 %i
 }
 
@@ -182,6 +189,39 @@ define i32 @test_sanitize_memtag(i32 %arg) sanitize_memtag {
 ; CHECK-LABEL: @test_sanitize_memtag(
 ; CHECK-NEXT: @noattr_callee
 ; CHECK-NEXT: ret i32
+}
+
+; ---------------------------------------------------------------------------- ;
+
+; Can inline sanitize_alloc_token functions into a noattr function. The
+; attribute is *not* viral, otherwise may break code.
+define i32 @test_no_sanitize_alloc_token(i32 %arg) {
+; CHECK-LABEL: @test_no_sanitize_alloc_token(
+; CHECK-SAME: ) {
+; CHECK-NOT: call
+; CHECK: ret i32
+entry:
+  %x1 = call i32 @noattr_callee(i32 %arg)
+  %x2 = call i32 @sanitize_alloc_token_callee(i32 %x1)
+  %x3 = call i32 @alwaysinline_callee(i32 %x2)
+  %x4 = call i32 @alwaysinline_sanitize_alloc_token_callee(i32 %x3)
+  ret i32 %x4
+}
+
+; Can inline noattr functions into a sanitize_alloc_token function. If
+; inlinable noattr functions cannot be instrumented, they should be marked with
+; explicit noinline.
+define i32 @test_sanitize_alloc_token(i32 %arg) sanitize_alloc_token {
+; CHECK-LABEL: @test_sanitize_alloc_token(
+; CHECK-SAME: ) [[SANITIZE_ALLOC_TOKEN:.*]] {
+; CHECK-NOT: call
+; CHECK: ret i32
+entry:
+  %x1 = call i32 @noattr_callee(i32 %arg)
+  %x2 = call i32 @sanitize_alloc_token_callee(i32 %x1)
+  %x3 = call i32 @alwaysinline_callee(i32 %x2)
+  %x4 = call i32 @alwaysinline_sanitize_alloc_token_callee(i32 %x3)
+  ret i32 %x4
 }
 
 define i32 @test_safestack(i32 %arg) safestack {
@@ -440,46 +480,6 @@ define i32 @test_null-pointer-is-valid2(i32 %i) null_pointer_is_valid {
 ; CHECK-NEXT: ret i32
 }
 
-define i32 @no-infs-fp-math_callee0(i32 %i) "no-infs-fp-math"="false" {
-  ret i32 %i
-; CHECK: @no-infs-fp-math_callee0(i32 %i) [[NO_INFS_FPMATH_FALSE:#[0-9]+]] {
-; CHECK-NEXT: ret i32
-}
-
-define i32 @no-infs-fp-math_callee1(i32 %i) "no-infs-fp-math"="true" {
-  ret i32 %i
-; CHECK: @no-infs-fp-math_callee1(i32 %i) [[NO_INFS_FPMATH_TRUE:#[0-9]+]] {
-; CHECK-NEXT: ret i32
-}
-
-define i32 @test_no-infs-fp-math0(i32 %i) "no-infs-fp-math"="false" {
-  %1 = call i32 @no-infs-fp-math_callee0(i32 %i)
-  ret i32 %1
-; CHECK: @test_no-infs-fp-math0(i32 %i) [[NO_INFS_FPMATH_FALSE]] {
-; CHECK-NEXT: ret i32
-}
-
-define i32 @test_no-infs-fp-math1(i32 %i) "no-infs-fp-math"="false" {
-  %1 = call i32 @no-infs-fp-math_callee1(i32 %i)
-  ret i32 %1
-; CHECK: @test_no-infs-fp-math1(i32 %i) [[NO_INFS_FPMATH_FALSE]] {
-; CHECK-NEXT: ret i32
-}
-
-define i32 @test_no-infs-fp-math2(i32 %i) "no-infs-fp-math"="true" {
-  %1 = call i32 @no-infs-fp-math_callee0(i32 %i)
-  ret i32 %1
-; CHECK: @test_no-infs-fp-math2(i32 %i) [[NO_INFS_FPMATH_FALSE]] {
-; CHECK-NEXT: ret i32
-}
-
-define i32 @test_no-infs-fp-math3(i32 %i) "no-infs-fp-math"="true" {
-  %1 = call i32 @no-infs-fp-math_callee1(i32 %i)
-  ret i32 %1
-; CHECK: @test_no-infs-fp-math3(i32 %i) [[NO_INFS_FPMATH_TRUE]] {
-; CHECK-NEXT: ret i32
-}
-
 define i32 @no-nans-fp-math_callee0(i32 %i) "no-nans-fp-math"="false" {
   ret i32 %i
 ; CHECK: @no-nans-fp-math_callee0(i32 %i) [[NO_NANS_FPMATH_FALSE:#[0-9]+]] {
@@ -560,46 +560,6 @@ define i32 @test_no-signed-zeros-fp-math3(i32 %i) "no-signed-zeros-fp-math"="tru
 ; CHECK-NEXT: ret i32
 }
 
-define i32 @unsafe-fp-math_callee0(i32 %i) "unsafe-fp-math"="false" {
-  ret i32 %i
-; CHECK: @unsafe-fp-math_callee0(i32 %i) [[UNSAFE_FPMATH_FALSE:#[0-9]+]] {
-; CHECK-NEXT: ret i32
-}
-
-define i32 @unsafe-fp-math_callee1(i32 %i) "unsafe-fp-math"="true" {
-  ret i32 %i
-; CHECK: @unsafe-fp-math_callee1(i32 %i) [[UNSAFE_FPMATH_TRUE:#[0-9]+]] {
-; CHECK-NEXT: ret i32
-}
-
-define i32 @test_unsafe-fp-math0(i32 %i) "unsafe-fp-math"="false" {
-  %1 = call i32 @unsafe-fp-math_callee0(i32 %i)
-  ret i32 %1
-; CHECK: @test_unsafe-fp-math0(i32 %i) [[UNSAFE_FPMATH_FALSE]] {
-; CHECK-NEXT: ret i32
-}
-
-define i32 @test_unsafe-fp-math1(i32 %i) "unsafe-fp-math"="false" {
-  %1 = call i32 @unsafe-fp-math_callee1(i32 %i)
-  ret i32 %1
-; CHECK: @test_unsafe-fp-math1(i32 %i) [[UNSAFE_FPMATH_FALSE]] {
-; CHECK-NEXT: ret i32
-}
-
-define i32 @test_unsafe-fp-math2(i32 %i) "unsafe-fp-math"="true" {
-  %1 = call i32 @unsafe-fp-math_callee0(i32 %i)
-  ret i32 %1
-; CHECK: @test_unsafe-fp-math2(i32 %i) [[UNSAFE_FPMATH_FALSE]] {
-; CHECK-NEXT: ret i32
-}
-
-define i32 @test_unsafe-fp-math3(i32 %i) "unsafe-fp-math"="true" {
-  %1 = call i32 @unsafe-fp-math_callee1(i32 %i)
-  ret i32 %1
-; CHECK: @test_unsafe-fp-math3(i32 %i) [[UNSAFE_FPMATH_TRUE]] {
-; CHECK-NEXT: ret i32
-}
-
 ; Test that fn_ret_thunk_extern has no CompatRule; inlining is permitted.
 ; Test that fn_ret_thunk_extern has no MergeRule; fn_ret_thunk_extern is not
 ; propagated or dropped on the caller after inlining.
@@ -639,18 +599,15 @@ define i32 @loader_replaceable_caller() {
   ret i32 %1
 }
 
+; CHECK: attributes [[SANITIZE_ALLOC_TOKEN]] = { sanitize_alloc_token }
 ; CHECK: attributes [[SLH]] = { speculative_load_hardening }
 ; CHECK: attributes [[FPMAD_FALSE]] = { "less-precise-fpmad"="false" }
 ; CHECK: attributes [[FPMAD_TRUE]] = { "less-precise-fpmad"="true" }
 ; CHECK: attributes [[NOIMPLICITFLOAT]] = { noimplicitfloat }
 ; CHECK: attributes [[NOUSEJUMPTABLES]] = { "no-jump-tables"="true" }
 ; CHECK: attributes [[NULLPOINTERISVALID]] = { null_pointer_is_valid }
-; CHECK: attributes [[NO_INFS_FPMATH_FALSE]] = { "no-infs-fp-math"="false" }
-; CHECK: attributes [[NO_INFS_FPMATH_TRUE]] = { "no-infs-fp-math"="true" }
 ; CHECK: attributes [[NO_NANS_FPMATH_FALSE]] = { "no-nans-fp-math"="false" }
 ; CHECK: attributes [[NO_NANS_FPMATH_TRUE]] = { "no-nans-fp-math"="true" }
 ; CHECK: attributes [[NO_SIGNED_ZEROS_FPMATH_FALSE]] = { "no-signed-zeros-fp-math"="false" }
 ; CHECK: attributes [[NO_SIGNED_ZEROS_FPMATH_TRUE]] = { "no-signed-zeros-fp-math"="true" }
-; CHECK: attributes [[UNSAFE_FPMATH_FALSE]] = { "unsafe-fp-math"="false" }
-; CHECK: attributes [[UNSAFE_FPMATH_TRUE]] = { "unsafe-fp-math"="true" }
 ; CHECK: attributes [[FNRETTHUNK_EXTERN]] = { fn_ret_thunk_extern }

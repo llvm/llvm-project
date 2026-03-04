@@ -25,6 +25,18 @@ add_object_library(
 )
 
 add_header_library(
+  auxv
+  HDRS
+    auxv.h
+  DEPENDS
+    libc.hdr.fcntl_macros
+    libc.src.__support.OSUtil.osutil
+    libc.src.__support.common
+    libc.src.__support.CPP.optional
+    libc.src.__support.threads.callonce
+)
+
+add_header_library(
   getrandom
   HDRS
     getrandom.h
@@ -58,11 +70,12 @@ add_object_library(
     libc.src.__support.CPP.string_view
     libc.src.__support.threads.callonce
     libc.src.__support.threads.linux.futex_word_type
-    libc.hdr.types.struct_timeval
-    libc.hdr.types.struct_timespec
-    libc.hdr.types.clockid_t
-    libc.hdr.types.time_t
+    libc.src.__support.OSUtil.linux.auxv
+    libc.hdr.elf_proxy
     libc.hdr.link_macros
-    libc.src.errno.errno
-    libc.src.sys.auxv.getauxval
+    libc.hdr.sys_auxv_macros
+    libc.hdr.types.clockid_t
+    libc.hdr.types.struct_timespec
+    libc.hdr.types.struct_timeval
+    libc.hdr.types.time_t
 )

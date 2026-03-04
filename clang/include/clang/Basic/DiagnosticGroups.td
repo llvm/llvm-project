@@ -117,8 +117,9 @@ def ObjCSignedCharBoolImplicitIntConversion :
   DiagGroup<"objc-signed-char-bool-implicit-int-conversion">;
 def Shorten64To32 : DiagGroup<"shorten-64-to-32">;
 def ImplicitIntConversionOnNegation : DiagGroup<"implicit-int-conversion-on-negation">;
-def ImplicitIntConversion : DiagGroup<"implicit-int-conversion",
-                                     [Shorten64To32,
+def ImplicitIntConversion
+    : DiagGroup<
+          "implicit-int-conversion", [Shorten64To32,
                                       ObjCSignedCharBoolImplicitIntConversion,
                                       ImplicitIntConversionOnNegation]>;
 def ImplicitConstIntFloatConversion : DiagGroup<"implicit-const-int-float-conversion">;
@@ -130,6 +131,27 @@ def ImplicitFloatConversion : DiagGroup<"implicit-float-conversion",
   [ImplicitIntFloatConversion,
    ObjCSignedCharBoolImplicitFloatConversion]>;
 def ImplicitFixedPointConversion : DiagGroup<"implicit-fixed-point-conversion">;
+def ImplicitOverflowBehaviorConversionAssignment
+    : DiagGroup<"implicit-overflow-behavior-conversion-assignment">;
+def ImplicitOverflowBehaviorConversionAssignmentPedantic
+    : DiagGroup<"implicit-overflow-behavior-conversion-assignment-pedantic">;
+def ImplicitOverflowBehaviorConversionAtFunctionBoundary
+    : DiagGroup<"implicit-overflow-behavior-conversion-function-boundary">;
+def ImplicitOverflowBehaviorConversionAtFunctionBoundaryPedantic
+    : DiagGroup<
+          "implicit-overflow-behavior-conversion-function-boundary-pedantic">;
+def ImplicitOverflowBehaviorConversionPedantic
+    : DiagGroup<"implicit-overflow-behavior-conversion-pedantic">;
+def ImplicitOverflowBehaviorConversion
+    : DiagGroup<"implicit-overflow-behavior-conversion",
+                [ImplicitOverflowBehaviorConversionAssignment,
+                 ImplicitOverflowBehaviorConversionAssignmentPedantic,
+                 ImplicitOverflowBehaviorConversionPedantic,
+                 ImplicitOverflowBehaviorConversionAtFunctionBoundary,
+                 ImplicitOverflowBehaviorConversionAtFunctionBoundaryPedantic]>;
+def OverflowBehaviorConversion
+    : DiagGroup<
+          "overflow-behavior-conversion", [ImplicitOverflowBehaviorConversion]>;
 
 def FloatOverflowConversion : DiagGroup<"float-overflow-conversion">;
 def FloatZeroConversion : DiagGroup<"float-zero-conversion">;
@@ -148,6 +170,7 @@ def UnsupportedFPOpt : DiagGroup<"unsupported-floating-point-opt">;
 def UnsupportedCB : DiagGroup<"unsupported-cb">;
 def UnsupportedGPOpt : DiagGroup<"unsupported-gpopt">;
 def UnsupportedTargetOpt : DiagGroup<"unsupported-target-opt">;
+def RISCVBEExperimental : DiagGroup<"riscv-be-experimental">;
 def NonLiteralNullConversion : DiagGroup<"non-literal-null-conversion">;
 def NullConversion : DiagGroup<"null-conversion">;
 def ImplicitConversionFloatingPointToBool :
@@ -533,10 +556,110 @@ def Dangling : DiagGroup<"dangling", [DanglingAssignment,
                                       DanglingGsl,
                                       ReturnStackAddress]>;
 
-def LifetimeSafety : DiagGroup<"experimental-lifetime-safety">;
+// Use-After-Scope
+def LifetimeSafetyUseAfterScope : DiagGroup<"lifetime-safety-use-after-scope"> {
+  code Documentation = [{
+Warning to detect dangling references introduced by use-after-scope.
+  }];
+}
+def LifetimeSafetyUseAfterScopeMoved : DiagGroup<"lifetime-safety-use-after-scope-moved"> {
+  code Documentation = [{
+Warning to detect dangling references introduced by use-after-scope.
+This may contain false-positives, e.g. when the borrowed storage is potentially moved and is not destroyed at scope exit.
+  }];
+}
+
+// Return-Stack-Address (aka Use-After-Return)
+def LifetimeSafetyReturnStackAddr : DiagGroup<"lifetime-safety-return-stack-addr"> {
+  code Documentation = [{
+Warning to detect use-after-return introduced by returning stack address.
+  }];
+}
+def LifetimeSafetyReturnStackAddrMoved : DiagGroup<"lifetime-safety-return-stack-addr-moved"> {
+  code Documentation = [{
+Warning to detect use-after-return introduced by returning stack address.
+This may contain false-positives, e.g. when the borrowed storage is potentially moved and is not destroyed at function exit.
+  }];
+}
+
+// Dangling-Field (aka Escape-To-Field)
+def LifetimeSafetyDanglingField : DiagGroup<"lifetime-safety-dangling-field"> {
+  code Documentation = [{
+Warning to detect dangling field references.
+  }];
+}
+def LifetimeSafetyDanglingFieldMoved : DiagGroup<"lifetime-safety-dangling-field-moved"> {
+  code Documentation = [{
+Warning to detect dangling field references.
+This may contain false-positives, e.g. when the borrowed storage is potentially moved and is not destroyed at function exit.
+  }];
+}
+
+def LifetimeSafetyInvalidation : DiagGroup<"lifetime-safety-invalidation"> {
+  code Documentation = [{
+Warning to detect invalidation of references.
+  }];
+}
+
+def LifetimeSafetyPermissive : DiagGroup<"lifetime-safety-permissive",
+                                         [LifetimeSafetyUseAfterScope,
+                                         LifetimeSafetyReturnStackAddr,
+                                         LifetimeSafetyDanglingField]>;
+def LifetimeSafetyStrict : DiagGroup<"lifetime-safety-strict",
+                                    [LifetimeSafetyUseAfterScopeMoved,
+                                    LifetimeSafetyReturnStackAddrMoved,
+                                    LifetimeSafetyDanglingFieldMoved,
+                                    LifetimeSafetyInvalidation]>;
+
+def LifetimeSafety : DiagGroup<"lifetime-safety",
+                               [LifetimeSafetyPermissive, LifetimeSafetyStrict]> {
+  code Documentation = [{
+Warnings to detect use-after-free and related temporal safety bugs based on lifetime safety analysis.
+  }];
+}
+
+def LifetimeSafetyCrossTUSuggestions
+    : DiagGroup<"lifetime-safety-cross-tu-suggestions">;
+def LifetimeSafetyIntraTUSuggestions
+    : DiagGroup<"lifetime-safety-intra-tu-suggestions">;
+def LifetimeSafetySuggestions
+    : DiagGroup<"lifetime-safety-suggestions",
+                [LifetimeSafetyCrossTUSuggestions,
+                 LifetimeSafetyIntraTUSuggestions]> {
+  code Documentation = [{
+Lifetime annotation suggestions for function parameters that should be marked [[clang::lifetimebound]] based on lifetime analysis.
+  }];
+}
+
+def LifetimeSafetyNoescape
+    : DiagGroup<"lifetime-safety-noescape"> {
+  code Documentation = [{
+Detects misuse of [[clang::noescape]] annotation where the parameter escapes (for example, through return).
+  }];
+}
+
+def LifetimeSafetyValidations : DiagGroup<"lifetime-safety-validations",
+                                          [LifetimeSafetyNoescape]> {
+  code Documentation = [{
+Verify function implementations adhere to the annotated lifetime contracts through lifetime safety
+like verifying [[clang::noescape]] and [[clang::lifetimebound]] (upcoming).
+  }];
+}
+
+def LifetimeSafetyAll : DiagGroup<"lifetime-safety-all",
+                                  [LifetimeSafety,
+                                  LifetimeSafetySuggestions,
+                                  LifetimeSafetyValidations]> {
+  code Documentation = [{
+Turns on all the warnings in the lifetime-safety umbrella.
+  }];
+}
 
 def DistributedObjectModifiers : DiagGroup<"distributed-object-modifiers">;
 def DllexportExplicitInstantiationDecl : DiagGroup<"dllexport-explicit-instantiation-decl">;
+def DllexportExplicitInstantiation :
+  DiagGroup<"dllexport-explicit-instantiation",
+            [DllexportExplicitInstantiationDecl]>;
 def ExcessInitializers : DiagGroup<"excess-initializers">;
 def ExpansionToDefined : DiagGroup<"expansion-to-defined">;
 def FlagEnum : DiagGroup<"flag-enum">;
@@ -554,12 +677,15 @@ def IncompatibleMSStruct : DiagGroup<"incompatible-ms-struct">;
 def IncompatibleMSPragmaSection : DiagGroup<"incompatible-ms-pragma-section">;
 def IncompatiblePointerTypesDiscardsQualifiers
   : DiagGroup<"incompatible-pointer-types-discards-qualifiers">;
+def IncompatiblePointerTypesDiscardsOverflowBehavior
+    : DiagGroup<"incompatible-pointer-types-discards-overflow-behavior">;
 def IncompatibleFunctionPointerTypes
   : DiagGroup<"incompatible-function-pointer-types">;
 def IncompatiblePointerTypes
-  : DiagGroup<"incompatible-pointer-types",
-    [IncompatiblePointerTypesDiscardsQualifiers,
-     IncompatibleFunctionPointerTypes]>;
+    : DiagGroup<"incompatible-pointer-types",
+                [IncompatiblePointerTypesDiscardsQualifiers,
+                 IncompatiblePointerTypesDiscardsOverflowBehavior,
+                 IncompatibleFunctionPointerTypes]>;
 def IncompleteUmbrella : DiagGroup<"incomplete-umbrella">;
 def IncompleteFrameworkModuleDeclaration
   : DiagGroup<"incomplete-framework-module-declaration">;
@@ -600,7 +726,6 @@ def MainReturnType : DiagGroup<"main-return-type">;
 def MaxUnsignedZero : DiagGroup<"max-unsigned-zero">;
 def MissingBraces : DiagGroup<"missing-braces">;
 def MissingDeclarations: DiagGroup<"missing-declarations">;
-def : DiagGroup<"missing-format-attribute">;
 def MissingIncludeDirs : DiagGroup<"missing-include-dirs">;
 def MissingNoreturn : DiagGroup<"missing-noreturn">;
 def MultiChar : DiagGroup<"multichar">;
@@ -624,10 +749,12 @@ def MissingFieldInitializers : DiagGroup<"missing-field-initializers",
 def ModuleLock : DiagGroup<"module-lock">;
 def ModuleBuild : DiagGroup<"module-build">;
 def ModuleImport : DiagGroup<"module-import">;
+def ModuleValidation : DiagGroup<"module-validation">;
 def ModuleConflict : DiagGroup<"module-conflict">;
 def ModuleFileExtension : DiagGroup<"module-file-extension">;
 def ModuleIncludeDirectiveTranslation : DiagGroup<"module-include-translation">;
 def ModuleMap : DiagGroup<"module-map">;
+def ModulesDriver : DiagGroup<"modules-driver">;
 def RoundTripCC1Args : DiagGroup<"round-trip-cc1-args">;
 def NewlineEOF : DiagGroup<"newline-eof">;
 def Nullability : DiagGroup<"nullability">;
@@ -644,6 +771,7 @@ def NonNull : DiagGroup<"nonnull">;
 def NonPODVarargs : DiagGroup<"non-pod-varargs">;
 def ClassVarargs : DiagGroup<"class-varargs", [NonPODVarargs]>;
 def : DiagGroup<"nonportable-cfstrings">;
+def NonPortableSYCL : DiagGroup<"nonportable-sycl">;
 def NonVirtualDtor : DiagGroup<"non-virtual-dtor">;
 def GNUNullPointerArithmetic : DiagGroup<"gnu-null-pointer-arithmetic">;
 def NullPointerArithmetic
@@ -779,6 +907,8 @@ def ShadowFieldInConstructor : DiagGroup<"shadow-field-in-constructor",
                                          [ShadowFieldInConstructorModified]>;
 def ShadowIvar : DiagGroup<"shadow-ivar">;
 def ShadowUncapturedLocal : DiagGroup<"shadow-uncaptured-local">;
+
+def ShadowHeader : DiagGroup<"shadow-header">;
 
 // -Wshadow-all is a catch-all for all shadowing. -Wshadow is just the
 // shadowing that we think is unsafe.
@@ -977,7 +1107,8 @@ def NSReturnsMismatch : DiagGroup<"nsreturns-mismatch">;
 
 def IndependentClassAttribute : DiagGroup<"IndependentClass-attribute">;
 def UnknownAttributes : DiagGroup<"unknown-attributes">;
-def IgnoredAttributes : DiagGroup<"ignored-attributes">;
+def IgnoredAttributes : DiagGroup<"ignored-attributes",
+                                  [DllexportExplicitInstantiation]>;
 def Attributes : DiagGroup<"attributes", [UnknownAttributes,
                                           IgnoredAttributes]>;
 def UnknownSanitizers : DiagGroup<"unknown-sanitizers">;
@@ -1051,6 +1182,7 @@ def SuperSubClassMismatch : DiagGroup<"super-class-method-mismatch">;
 def OverridingMethodMismatch : DiagGroup<"overriding-method-mismatch">;
 def VariadicMacros : DiagGroup<"variadic-macros">;
 def VectorConversion : DiagGroup<"vector-conversion">;      // clang specific
+def MatrixConversion : DiagGroup<"matrix-conversion">;      // clang specific
 def VexingParse : DiagGroup<"vexing-parse">;
 def VLAUseStaticAssert : DiagGroup<"vla-extension-static-assert">;
 def VLACxxExtension : DiagGroup<"vla-cxx-extension", [VLAUseStaticAssert]>;
@@ -1137,23 +1269,16 @@ def Parentheses : DiagGroup<"parentheses",
 //   - conversion warnings for literals are on by default
 //   - bool-to-pointer conversion warnings are on by default
 //   - __null-to-integer conversion warnings are on by default
-def Conversion : DiagGroup<"conversion",
-                           [BoolConversion,
-                            CharacterConversion,
-                            ConstantConversion,
-                            EnumConversion,
-                            BitFieldEnumConversion,
-                            FloatConversion,
-                            IntConversion,
-                            ImplicitIntConversion,
-                            ImplicitFloatConversion,
-                            LiteralConversion,
-                            NonLiteralNullConversion, // (1-1)->pointer (etc)
-                            NullConversion, // NULL->non-pointer
-                            ObjCLiteralConversion,
-                            SignConversion,
-                            StringConversion]>,
-                 DiagCategory<"Value Conversion Issue">;
+def Conversion
+    : DiagGroup<"conversion",
+                [BoolConversion, CharacterConversion, ConstantConversion,
+                 EnumConversion, BitFieldEnumConversion, FloatConversion,
+                 IntConversion, ImplicitIntConversion, ImplicitFloatConversion,
+                 OverflowBehaviorConversion, LiteralConversion,
+                 NonLiteralNullConversion, // (1-1)->pointer (etc)
+                 NullConversion,           // NULL->non-pointer
+                 ObjCLiteralConversion, SignConversion, StringConversion]>,
+      DiagCategory<"Value Conversion Issue">;
 
 def Unused : DiagGroup<"unused",
                        [UnusedArgument, UnusedFunction, UnusedLabel,
@@ -1173,6 +1298,7 @@ def FormatY2K : DiagGroup<"format-y2k">;
 def FormatPedantic : DiagGroup<"format-pedantic">;
 def FormatSignedness : DiagGroup<"format-signedness">;
 def FormatTypeConfusion : DiagGroup<"format-type-confusion">;
+def MissingFormatAttribute : DiagGroup<"missing-format-attribute">;
 
 def FormatOverflowNonKprintf: DiagGroup<"format-overflow-non-kprintf">;
 def FormatOverflow: DiagGroup<"format-overflow", [FormatOverflowNonKprintf]>;
@@ -1184,7 +1310,7 @@ def Format : DiagGroup<"format",
                         FormatSecurity, FormatY2K, FormatInvalidSpecifier,
                         FormatInsufficientArgs, FormatOverflow, FormatTruncation]>,
              DiagCategory<"Format String Issue">;
-def FormatNonLiteral : DiagGroup<"format-nonliteral">;
+def FormatNonLiteral : DiagGroup<"format-nonliteral", [MissingFormatAttribute]>;
 def Format2 : DiagGroup<"format=2",
                         [FormatNonLiteral, FormatSecurity, FormatY2K]>;
 
@@ -1304,7 +1430,7 @@ def Consumed       : DiagGroup<"consumed">;
 // DefaultIgnore in addition to putting it here.
 def All : DiagGroup<"all", [Most, Parentheses, Switch, SwitchBool,
                             MisleadingIndentation, PackedNonPod,
-                            VLACxxExtension, PerfConstraintImpliesNoexcept]>;
+                            VLACxxExtension]>;
 
 // Warnings that should be in clang-cl /w4.
 def : DiagGroup<"CL4", [All, Extra]>;
@@ -1325,6 +1451,8 @@ def : DiagGroup<"int-conversions",
                 [IntConversion]>; // -Wint-conversions = -Wint-conversion
 def : DiagGroup<"vector-conversions",
                 [VectorConversion]>; // -Wvector-conversions = -Wvector-conversion
+def : DiagGroup<"matrix-conversions",
+                [MatrixConversion]>; // -Wmatrix-conversions = -Wmatrix-conversion
 def : DiagGroup<"unused-local-typedefs", [UnusedLocalTypedef]>;
                 // -Wunused-local-typedefs = -Wunused-local-typedef
 
@@ -1391,7 +1519,7 @@ def C23 : DiagGroup<"c23-extensions", [VariadicMacroArgumentsOmitted]>;
 def : DiagGroup<"c2x-extensions", [C23]>;
 
 // A warning group for warnings about using C2y features as extensions.
-def C2y : DiagGroup<"c2y-extensions">;
+def C2y : DiagGroup<"c2y-extensions", [StaticInInline]>;
 
 // Previously supported warning group which is no longer pertinent as binary
 // literals are a C++14 and C23 extension now instead of a GNU extension.
@@ -1426,6 +1554,7 @@ def MicrosoftDrectveSection : DiagGroup<"microsoft-drectve-section">;
 def MicrosoftInclude : DiagGroup<"microsoft-include">;
 def MicrosoftCppMacro : DiagGroup<"microsoft-cpp-macro">;
 def MicrosoftFixedEnum : DiagGroup<"microsoft-fixed-enum">;
+def MicrosoftEmptyEnum : DiagGroup<"microsoft-empty-enum">;
 def MicrosoftSealed : DiagGroup<"microsoft-sealed">;
 def MicrosoftAbstract : DiagGroup<"microsoft-abstract">;
 def MicrosoftUnqualifiedFriend : DiagGroup<"microsoft-unqualified-friend">;
@@ -1479,7 +1608,8 @@ def Microsoft : DiagGroup<"microsoft",
      MicrosoftConstInit, MicrosoftVoidPseudoDtor, MicrosoftAnonTag,
      MicrosoftCommentPaste, MicrosoftEndOfFile,
      MicrosoftInitFromPredefined, MicrosoftStringLiteralFromPredefined,
-     MicrosoftInconsistentDllImport, MicrosoftInlineOnNonFunction]>;
+     MicrosoftInconsistentDllImport, MicrosoftInlineOnNonFunction,
+     MicrosoftEmptyEnum]>;
 
 def ClangClPch : DiagGroup<"clang-cl-pch">;
 
@@ -1657,6 +1787,9 @@ def CTADMaybeUnsupported : DiagGroup<"ctad-maybe-unsupported">;
 
 def FortifySource : DiagGroup<"fortify-source", [FormatOverflow, FormatTruncation]>;
 
+def OverflowBehaviorAttributeIgnored
+    : DiagGroup<"overflow-behavior-attribute-ignored">;
+
 def MaxTokens : DiagGroup<"max-tokens"> {
   code Documentation = [{
 The warning is issued if the number of pre-processor tokens exceeds
@@ -1720,6 +1853,9 @@ def HLSLMixPackOffset : DiagGroup<"mix-packoffset">;
 // Warning for implicit resource bindings.
 def HLSLImplicitBinding : DiagGroup<"hlsl-implicit-binding">;
 
+// Warning for explicit resource bindings.
+def HLSLExplicitBinding : DiagGroup<"hlsl-explicit-binding">;
+
 // Warnings for DXIL validation
 def DXILValidation : DiagGroup<"dxil-validation">;
 
@@ -1741,7 +1877,10 @@ def ReadOnlyPlacementChecks : DiagGroup<"read-only-types">;
 // Warnings and fixes to support the "safe buffers" programming model.
 def UnsafeBufferUsageInContainer : DiagGroup<"unsafe-buffer-usage-in-container">;
 def UnsafeBufferUsageInLibcCall : DiagGroup<"unsafe-buffer-usage-in-libc-call">;
-def UnsafeBufferUsage : DiagGroup<"unsafe-buffer-usage", [UnsafeBufferUsageInContainer, UnsafeBufferUsageInLibcCall]>;
+def UnsafeBufferUsageInUniquePtrArrayAccess : DiagGroup<"unsafe-buffer-usage-in-unique-ptr-array-access">;
+def UnsafeBufferUsageInStaticSizedArray : DiagGroup<"unsafe-buffer-usage-in-static-sized-array">;
+def UnsafeBufferUsageInFormatAttrCall : DiagGroup<"unsafe-buffer-usage-in-format-attr-call">;
+def UnsafeBufferUsage : DiagGroup<"unsafe-buffer-usage", [UnsafeBufferUsageInContainer, UnsafeBufferUsageInLibcCall, UnsafeBufferUsageInUniquePtrArrayAccess, UnsafeBufferUsageInStaticSizedArray, UnsafeBufferUsageInFormatAttrCall]>;
 
 // Warnings and notes InstallAPI verification.
 def InstallAPIViolation : DiagGroup<"installapi-violation">;
@@ -1756,5 +1895,16 @@ def ExtractAPIMisuse : DiagGroup<"extractapi-misuse">;
 // with a storage class specifier.
 def ExplicitSpecializationStorageClass : DiagGroup<"explicit-specialization-storage-class">;
 
+// Warnings related to the simdlen intrinsic
+def SIMDLen : DiagGroup<"simdlen">;
+
+// Warnings related to PGO coverage limitations
+def PGOCoverage : DiagGroup<"pgo-coverage">;
+
+// Warnings related to -ftrivial-auto-var-init
+def TrivialAutoVarInit : DiagGroup<"trivial-auto-var-init">;
+
 // A warning for options that enable a feature that is not yet complete
 def ExperimentalOption : DiagGroup<"experimental-option">;
+
+def UnsafeBufferUsageInStringView : DiagGroup<"unsafe-buffer-usage-in-string-view">;

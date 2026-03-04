@@ -7,7 +7,6 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/Analysis/OptimizationRemarkEmitter.h"
-#include "llvm/Analysis/TargetTransformInfo.h"
 #include "llvm/AsmParser/Parser.h"
 #include "llvm/CodeGen/MachineModuleInfo.h"
 #include "llvm/CodeGen/TargetLowering.h"
@@ -29,9 +28,9 @@ protected:
 
   void SetUp() override {
     StringRef Assembly = "@g = global i32 0\n"
-                         "@g_alias = alias i32, i32* @g\n"
+                         "@g_alias = alias i32, ptr @g\n"
                          "define i32 @f() {\n"
-                         "  %1 = load i32, i32* @g\n"
+                         "  %1 = load i32, ptr @g\n"
                          "  ret i32 %1\n"
                          "}";
 
@@ -72,12 +71,8 @@ protected:
     if (!DAG)
       reportFatalUsageError("Failed to create SelectionDAG?");
     OptimizationRemarkEmitter ORE(F);
-    FunctionAnalysisManager FAM;
-    FAM.registerPass([&] { return TM->getTargetIRAnalysis(); });
-
-    TargetTransformInfo TTI = TM->getTargetIRAnalysis().run(*F, FAM);
-    DAG->init(*MF, ORE, nullptr, nullptr, nullptr, nullptr, nullptr, MMI,
-              nullptr, TTI.hasBranchDivergence(F));
+    DAG->init(*MF, ORE, nullptr, nullptr, nullptr, nullptr, nullptr, nullptr,
+              MMI, nullptr);
   }
 
   TargetLoweringBase::LegalizeTypeAction getTypeAction(EVT VT) {

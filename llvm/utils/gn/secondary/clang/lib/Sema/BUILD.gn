@@ -24,6 +24,7 @@ static_library("Sema") {
     "//clang/include/clang/Basic:riscv_vector_builtin_sema",
     "//clang/include/clang/Sema:AttrParsedAttrImpl",
     "//clang/include/clang/Sema:AttrParsedAttrKinds",
+    "//clang/include/clang/Sema:AttrIsTypeDependent",
     "//clang/include/clang/Sema:AttrSpellingListIndex",
     "//clang/include/clang/Sema:AttrTemplateInstantiate",
     "//clang/lib/APINotes",

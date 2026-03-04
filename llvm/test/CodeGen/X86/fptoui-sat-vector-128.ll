@@ -48,6 +48,43 @@ define <4 x i1> @test_unsigned_v4i1_v4f32(<4 x float> %f) nounwind {
   ret <4 x i1> %x
 }
 
+define <4 x i1> @test_freeze_unsigned_v4i1_v4f32(<4 x float> %f) nounwind {
+; CHECK-LABEL: test_freeze_unsigned_v4i1_v4f32:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    movaps %xmm0, %xmm1
+; CHECK-NEXT:    shufps {{.*#+}} xmm1 = xmm1[3,3],xmm0[3,3]
+; CHECK-NEXT:    xorps %xmm2, %xmm2
+; CHECK-NEXT:    maxss %xmm2, %xmm1
+; CHECK-NEXT:    movss {{.*#+}} xmm3 = [1.0E+0,0.0E+0,0.0E+0,0.0E+0]
+; CHECK-NEXT:    minss %xmm3, %xmm1
+; CHECK-NEXT:    cvttss2si %xmm1, %eax
+; CHECK-NEXT:    movd %eax, %xmm1
+; CHECK-NEXT:    movaps %xmm0, %xmm4
+; CHECK-NEXT:    unpckhpd {{.*#+}} xmm4 = xmm4[1],xmm0[1]
+; CHECK-NEXT:    maxss %xmm2, %xmm4
+; CHECK-NEXT:    minss %xmm3, %xmm4
+; CHECK-NEXT:    cvttss2si %xmm4, %eax
+; CHECK-NEXT:    movd %eax, %xmm4
+; CHECK-NEXT:    punpckldq {{.*#+}} xmm4 = xmm4[0],xmm1[0],xmm4[1],xmm1[1]
+; CHECK-NEXT:    movaps %xmm0, %xmm1
+; CHECK-NEXT:    maxss %xmm2, %xmm1
+; CHECK-NEXT:    minss %xmm3, %xmm1
+; CHECK-NEXT:    cvttss2si %xmm1, %eax
+; CHECK-NEXT:    movd %eax, %xmm1
+; CHECK-NEXT:    shufps {{.*#+}} xmm0 = xmm0[1,1,1,1]
+; CHECK-NEXT:    maxss %xmm2, %xmm0
+; CHECK-NEXT:    minss %xmm3, %xmm0
+; CHECK-NEXT:    cvttss2si %xmm0, %eax
+; CHECK-NEXT:    movd %eax, %xmm0
+; CHECK-NEXT:    punpckldq {{.*#+}} xmm1 = xmm1[0],xmm0[0],xmm1[1],xmm0[1]
+; CHECK-NEXT:    punpcklqdq {{.*#+}} xmm1 = xmm1[0],xmm4[0]
+; CHECK-NEXT:    movdqa %xmm1, %xmm0
+; CHECK-NEXT:    retq
+  %x = call <4 x i1> @llvm.fptoui.sat.v4i1.v4f32(<4 x float> %f)
+  %y = freeze <4 x i1> %x
+  ret <4 x i1> %y
+}
+
 define <4 x i8> @test_unsigned_v4i8_v4f32(<4 x float> %f) nounwind {
 ; CHECK-LABEL: test_unsigned_v4i8_v4f32:
 ; CHECK:       # %bb.0:
@@ -546,31 +583,23 @@ declare <8 x i128> @llvm.fptoui.sat.v8i128.v8f16(<8 x half>)
 define <8 x i1> @test_unsigned_v8i1_v8f16(<8 x half> %f) nounwind {
 ; CHECK-LABEL: test_unsigned_v8i1_v8f16:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    pushq %rbp
-; CHECK-NEXT:    pushq %rbx
 ; CHECK-NEXT:    subq $72, %rsp
 ; CHECK-NEXT:    movdqa %xmm0, (%rsp) # 16-byte Spill
 ; CHECK-NEXT:    psrldq {{.*#+}} xmm0 = xmm0[14,15],zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero
 ; CHECK-NEXT:    callq __extendhfsf2@PLT
-; CHECK-NEXT:    cvttss2si %xmm0, %eax
-; CHECK-NEXT:    xorl %ebx, %ebx
 ; CHECK-NEXT:    xorps %xmm1, %xmm1
-; CHECK-NEXT:    ucomiss %xmm1, %xmm0
-; CHECK-NEXT:    cmovbl %ebx, %eax
-; CHECK-NEXT:    ucomiss {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
-; CHECK-NEXT:    movl $1, %ebp
-; CHECK-NEXT:    cmoval %ebp, %eax
+; CHECK-NEXT:    maxss %xmm1, %xmm0
+; CHECK-NEXT:    minss {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
+; CHECK-NEXT:    cvttss2si %xmm0, %eax
 ; CHECK-NEXT:    movd %eax, %xmm0
 ; CHECK-NEXT:    movdqa %xmm0, {{[-0-9]+}}(%r{{[sb]}}p) # 16-byte Spill
 ; CHECK-NEXT:    movaps (%rsp), %xmm0 # 16-byte Reload
 ; CHECK-NEXT:    shufps {{.*#+}} xmm0 = xmm0[3,3,3,3]
 ; CHECK-NEXT:    callq __extendhfsf2@PLT
-; CHECK-NEXT:    cvttss2si %xmm0, %eax
 ; CHECK-NEXT:    xorps %xmm1, %xmm1
-; CHECK-NEXT:    ucomiss %xmm1, %xmm0
-; CHECK-NEXT:    cmovbl %ebx, %eax
-; CHECK-NEXT:    ucomiss {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
-; CHECK-NEXT:    cmoval %ebp, %eax
+; CHECK-NEXT:    maxss %xmm1, %xmm0
+; CHECK-NEXT:    minss {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
+; CHECK-NEXT:    cvttss2si %xmm0, %eax
 ; CHECK-NEXT:    movd %eax, %xmm0
 ; CHECK-NEXT:    punpcklwd {{[-0-9]+}}(%r{{[sb]}}p), %xmm0 # 16-byte Folded Reload
 ; CHECK-NEXT:    # xmm0 = xmm0[0],mem[0],xmm0[1],mem[1],xmm0[2],mem[2],xmm0[3],mem[3]
@@ -578,23 +607,19 @@ define <8 x i1> @test_unsigned_v8i1_v8f16(<8 x half> %f) nounwind {
 ; CHECK-NEXT:    movdqa (%rsp), %xmm0 # 16-byte Reload
 ; CHECK-NEXT:    psrldq {{.*#+}} xmm0 = xmm0[10,11,12,13,14,15],zero,zero,zero,zero,zero,zero,zero,zero,zero,zero
 ; CHECK-NEXT:    callq __extendhfsf2@PLT
-; CHECK-NEXT:    cvttss2si %xmm0, %eax
 ; CHECK-NEXT:    xorps %xmm1, %xmm1
-; CHECK-NEXT:    ucomiss %xmm1, %xmm0
-; CHECK-NEXT:    cmovbl %ebx, %eax
-; CHECK-NEXT:    ucomiss {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
-; CHECK-NEXT:    cmoval %ebp, %eax
+; CHECK-NEXT:    maxss %xmm1, %xmm0
+; CHECK-NEXT:    minss {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
+; CHECK-NEXT:    cvttss2si %xmm0, %eax
 ; CHECK-NEXT:    movd %eax, %xmm0
 ; CHECK-NEXT:    movdqa %xmm0, {{[-0-9]+}}(%r{{[sb]}}p) # 16-byte Spill
 ; CHECK-NEXT:    movaps (%rsp), %xmm0 # 16-byte Reload
 ; CHECK-NEXT:    movhlps {{.*#+}} xmm0 = xmm0[1,1]
 ; CHECK-NEXT:    callq __extendhfsf2@PLT
-; CHECK-NEXT:    cvttss2si %xmm0, %eax
 ; CHECK-NEXT:    xorps %xmm1, %xmm1
-; CHECK-NEXT:    ucomiss %xmm1, %xmm0
-; CHECK-NEXT:    cmovbl %ebx, %eax
-; CHECK-NEXT:    ucomiss {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
-; CHECK-NEXT:    cmoval %ebp, %eax
+; CHECK-NEXT:    maxss %xmm1, %xmm0
+; CHECK-NEXT:    minss {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
+; CHECK-NEXT:    cvttss2si %xmm0, %eax
 ; CHECK-NEXT:    movd %eax, %xmm0
 ; CHECK-NEXT:    punpcklwd {{[-0-9]+}}(%r{{[sb]}}p), %xmm0 # 16-byte Folded Reload
 ; CHECK-NEXT:    # xmm0 = xmm0[0],mem[0],xmm0[1],mem[1],xmm0[2],mem[2],xmm0[3],mem[3]
@@ -604,46 +629,38 @@ define <8 x i1> @test_unsigned_v8i1_v8f16(<8 x half> %f) nounwind {
 ; CHECK-NEXT:    movdqa (%rsp), %xmm0 # 16-byte Reload
 ; CHECK-NEXT:    psrlq $48, %xmm0
 ; CHECK-NEXT:    callq __extendhfsf2@PLT
-; CHECK-NEXT:    cvttss2si %xmm0, %eax
 ; CHECK-NEXT:    xorps %xmm1, %xmm1
-; CHECK-NEXT:    ucomiss %xmm1, %xmm0
-; CHECK-NEXT:    cmovbl %ebx, %eax
-; CHECK-NEXT:    ucomiss {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
-; CHECK-NEXT:    cmoval %ebp, %eax
+; CHECK-NEXT:    maxss %xmm1, %xmm0
+; CHECK-NEXT:    minss {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
+; CHECK-NEXT:    cvttss2si %xmm0, %eax
 ; CHECK-NEXT:    movd %eax, %xmm0
 ; CHECK-NEXT:    movdqa %xmm0, {{[-0-9]+}}(%r{{[sb]}}p) # 16-byte Spill
 ; CHECK-NEXT:    movaps (%rsp), %xmm0 # 16-byte Reload
 ; CHECK-NEXT:    shufps {{.*#+}} xmm0 = xmm0[1,1,1,1]
 ; CHECK-NEXT:    callq __extendhfsf2@PLT
-; CHECK-NEXT:    cvttss2si %xmm0, %eax
 ; CHECK-NEXT:    xorps %xmm1, %xmm1
-; CHECK-NEXT:    ucomiss %xmm1, %xmm0
-; CHECK-NEXT:    cmovbl %ebx, %eax
-; CHECK-NEXT:    ucomiss {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
-; CHECK-NEXT:    cmoval %ebp, %eax
+; CHECK-NEXT:    maxss %xmm1, %xmm0
+; CHECK-NEXT:    minss {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
+; CHECK-NEXT:    cvttss2si %xmm0, %eax
 ; CHECK-NEXT:    movd %eax, %xmm0
 ; CHECK-NEXT:    punpcklwd {{[-0-9]+}}(%r{{[sb]}}p), %xmm0 # 16-byte Folded Reload
 ; CHECK-NEXT:    # xmm0 = xmm0[0],mem[0],xmm0[1],mem[1],xmm0[2],mem[2],xmm0[3],mem[3]
 ; CHECK-NEXT:    movdqa %xmm0, {{[-0-9]+}}(%r{{[sb]}}p) # 16-byte Spill
 ; CHECK-NEXT:    movaps (%rsp), %xmm0 # 16-byte Reload
 ; CHECK-NEXT:    callq __extendhfsf2@PLT
-; CHECK-NEXT:    cvttss2si %xmm0, %eax
 ; CHECK-NEXT:    xorps %xmm1, %xmm1
-; CHECK-NEXT:    ucomiss %xmm1, %xmm0
-; CHECK-NEXT:    cmovbl %ebx, %eax
-; CHECK-NEXT:    ucomiss {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
-; CHECK-NEXT:    cmoval %ebp, %eax
+; CHECK-NEXT:    maxss %xmm1, %xmm0
+; CHECK-NEXT:    minss {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
+; CHECK-NEXT:    cvttss2si %xmm0, %eax
 ; CHECK-NEXT:    movd %eax, %xmm0
 ; CHECK-NEXT:    movdqa %xmm0, {{[-0-9]+}}(%r{{[sb]}}p) # 16-byte Spill
 ; CHECK-NEXT:    movdqa (%rsp), %xmm0 # 16-byte Reload
 ; CHECK-NEXT:    psrld $16, %xmm0
 ; CHECK-NEXT:    callq __extendhfsf2@PLT
-; CHECK-NEXT:    cvttss2si %xmm0, %eax
 ; CHECK-NEXT:    xorps %xmm1, %xmm1
-; CHECK-NEXT:    ucomiss %xmm1, %xmm0
-; CHECK-NEXT:    cmovbl %ebx, %eax
-; CHECK-NEXT:    ucomiss {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
-; CHECK-NEXT:    cmoval %ebp, %eax
+; CHECK-NEXT:    maxss %xmm1, %xmm0
+; CHECK-NEXT:    minss {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
+; CHECK-NEXT:    cvttss2si %xmm0, %eax
 ; CHECK-NEXT:    movd %eax, %xmm1
 ; CHECK-NEXT:    movdqa {{[-0-9]+}}(%r{{[sb]}}p), %xmm0 # 16-byte Reload
 ; CHECK-NEXT:    punpcklwd {{.*#+}} xmm0 = xmm0[0],xmm1[0],xmm0[1],xmm1[1],xmm0[2],xmm1[2],xmm0[3],xmm1[3]
@@ -652,8 +669,6 @@ define <8 x i1> @test_unsigned_v8i1_v8f16(<8 x half> %f) nounwind {
 ; CHECK-NEXT:    punpcklqdq {{[-0-9]+}}(%r{{[sb]}}p), %xmm0 # 16-byte Folded Reload
 ; CHECK-NEXT:    # xmm0 = xmm0[0],mem[0]
 ; CHECK-NEXT:    addq $72, %rsp
-; CHECK-NEXT:    popq %rbx
-; CHECK-NEXT:    popq %rbp
 ; CHECK-NEXT:    retq
   %x = call <8 x i1> @llvm.fptoui.sat.v8i1.v8f16(<8 x half> %f)
   ret <8 x i1> %x
@@ -663,109 +678,87 @@ define <8 x i8> @test_unsigned_v8i8_v8f16(<8 x half> %f) nounwind {
 ; CHECK-LABEL: test_unsigned_v8i8_v8f16:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    pushq %rbp
-; CHECK-NEXT:    pushq %r15
 ; CHECK-NEXT:    pushq %r14
-; CHECK-NEXT:    pushq %r12
 ; CHECK-NEXT:    pushq %rbx
 ; CHECK-NEXT:    subq $32, %rsp
 ; CHECK-NEXT:    movdqa %xmm0, (%rsp) # 16-byte Spill
 ; CHECK-NEXT:    psrldq {{.*#+}} xmm0 = xmm0[10,11,12,13,14,15],zero,zero,zero,zero,zero,zero,zero,zero,zero,zero
 ; CHECK-NEXT:    callq __extendhfsf2@PLT
-; CHECK-NEXT:    cvttss2si %xmm0, %r15d
-; CHECK-NEXT:    xorl %ebx, %ebx
 ; CHECK-NEXT:    xorps %xmm1, %xmm1
-; CHECK-NEXT:    ucomiss %xmm1, %xmm0
-; CHECK-NEXT:    cmovbl %ebx, %r15d
-; CHECK-NEXT:    ucomiss {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
-; CHECK-NEXT:    movl $255, %ebp
-; CHECK-NEXT:    cmoval %ebp, %r15d
-; CHECK-NEXT:    shll $8, %r15d
+; CHECK-NEXT:    maxss %xmm1, %xmm0
+; CHECK-NEXT:    minss {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
+; CHECK-NEXT:    cvttss2si %xmm0, %ebp
+; CHECK-NEXT:    shll $8, %ebp
 ; CHECK-NEXT:    movaps (%rsp), %xmm0 # 16-byte Reload
 ; CHECK-NEXT:    movhlps {{.*#+}} xmm0 = xmm0[1,1]
 ; CHECK-NEXT:    callq __extendhfsf2@PLT
-; CHECK-NEXT:    cvttss2si %xmm0, %eax
 ; CHECK-NEXT:    xorps %xmm1, %xmm1
-; CHECK-NEXT:    ucomiss %xmm1, %xmm0
-; CHECK-NEXT:    cmovbl %ebx, %eax
-; CHECK-NEXT:    ucomiss {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
-; CHECK-NEXT:    cmoval %ebp, %eax
-; CHECK-NEXT:    movzbl %al, %r14d
-; CHECK-NEXT:    orl %r15d, %r14d
+; CHECK-NEXT:    maxss %xmm1, %xmm0
+; CHECK-NEXT:    minss {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
+; CHECK-NEXT:    cvttss2si %xmm0, %eax
+; CHECK-NEXT:    movzbl %al, %ebx
+; CHECK-NEXT:    orl %ebp, %ebx
 ; CHECK-NEXT:    movaps (%rsp), %xmm0 # 16-byte Reload
 ; CHECK-NEXT:    callq __extendhfsf2@PLT
-; CHECK-NEXT:    cvttss2si %xmm0, %eax
 ; CHECK-NEXT:    xorps %xmm1, %xmm1
-; CHECK-NEXT:    ucomiss %xmm1, %xmm0
-; CHECK-NEXT:    cmovbl %ebx, %eax
-; CHECK-NEXT:    ucomiss {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
-; CHECK-NEXT:    cmoval %ebp, %eax
-; CHECK-NEXT:    movzbl %al, %r15d
+; CHECK-NEXT:    maxss %xmm1, %xmm0
+; CHECK-NEXT:    minss {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
+; CHECK-NEXT:    cvttss2si %xmm0, %eax
+; CHECK-NEXT:    movzbl %al, %ebp
 ; CHECK-NEXT:    movdqa (%rsp), %xmm0 # 16-byte Reload
 ; CHECK-NEXT:    psrld $16, %xmm0
 ; CHECK-NEXT:    callq __extendhfsf2@PLT
-; CHECK-NEXT:    cvttss2si %xmm0, %eax
 ; CHECK-NEXT:    xorps %xmm1, %xmm1
-; CHECK-NEXT:    ucomiss %xmm1, %xmm0
-; CHECK-NEXT:    cmovbl %ebx, %eax
-; CHECK-NEXT:    ucomiss {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
-; CHECK-NEXT:    cmoval %ebp, %eax
-; CHECK-NEXT:    movzbl %al, %r12d
-; CHECK-NEXT:    shll $8, %r12d
-; CHECK-NEXT:    orl %r15d, %r12d
+; CHECK-NEXT:    maxss %xmm1, %xmm0
+; CHECK-NEXT:    minss {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
+; CHECK-NEXT:    cvttss2si %xmm0, %eax
+; CHECK-NEXT:    movzbl %al, %r14d
+; CHECK-NEXT:    shll $8, %r14d
+; CHECK-NEXT:    orl %ebp, %r14d
 ; CHECK-NEXT:    movaps (%rsp), %xmm0 # 16-byte Reload
 ; CHECK-NEXT:    shufps {{.*#+}} xmm0 = xmm0[1,1,1,1]
 ; CHECK-NEXT:    callq __extendhfsf2@PLT
-; CHECK-NEXT:    cvttss2si %xmm0, %eax
 ; CHECK-NEXT:    xorps %xmm1, %xmm1
-; CHECK-NEXT:    ucomiss %xmm1, %xmm0
-; CHECK-NEXT:    cmovbl %ebx, %eax
-; CHECK-NEXT:    ucomiss {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
-; CHECK-NEXT:    cmoval %ebp, %eax
-; CHECK-NEXT:    movzbl %al, %r15d
-; CHECK-NEXT:    shll $16, %r15d
-; CHECK-NEXT:    orl %r12d, %r15d
+; CHECK-NEXT:    maxss %xmm1, %xmm0
+; CHECK-NEXT:    minss {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
+; CHECK-NEXT:    cvttss2si %xmm0, %eax
+; CHECK-NEXT:    movzbl %al, %ebp
+; CHECK-NEXT:    shll $16, %ebp
+; CHECK-NEXT:    orl %r14d, %ebp
 ; CHECK-NEXT:    movdqa (%rsp), %xmm0 # 16-byte Reload
 ; CHECK-NEXT:    psrlq $48, %xmm0
 ; CHECK-NEXT:    callq __extendhfsf2@PLT
-; CHECK-NEXT:    cvttss2si %xmm0, %eax
 ; CHECK-NEXT:    xorps %xmm1, %xmm1
-; CHECK-NEXT:    ucomiss %xmm1, %xmm0
-; CHECK-NEXT:    cmovbl %ebx, %eax
-; CHECK-NEXT:    ucomiss {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
-; CHECK-NEXT:    cmoval %ebp, %eax
+; CHECK-NEXT:    maxss %xmm1, %xmm0
+; CHECK-NEXT:    minss {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
+; CHECK-NEXT:    cvttss2si %xmm0, %eax
 ; CHECK-NEXT:    shll $24, %eax
-; CHECK-NEXT:    orl %r15d, %eax
+; CHECK-NEXT:    orl %ebp, %eax
 ; CHECK-NEXT:    movd %eax, %xmm0
-; CHECK-NEXT:    pinsrw $2, %r14d, %xmm0
+; CHECK-NEXT:    pinsrw $2, %ebx, %xmm0
 ; CHECK-NEXT:    movdqa %xmm0, {{[-0-9]+}}(%r{{[sb]}}p) # 16-byte Spill
 ; CHECK-NEXT:    movdqa (%rsp), %xmm0 # 16-byte Reload
 ; CHECK-NEXT:    psrldq {{.*#+}} xmm0 = xmm0[14,15],zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero
 ; CHECK-NEXT:    callq __extendhfsf2@PLT
-; CHECK-NEXT:    cvttss2si %xmm0, %r14d
 ; CHECK-NEXT:    xorps %xmm1, %xmm1
-; CHECK-NEXT:    ucomiss %xmm1, %xmm0
-; CHECK-NEXT:    cmovbl %ebx, %r14d
-; CHECK-NEXT:    ucomiss {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
-; CHECK-NEXT:    cmoval %ebp, %r14d
-; CHECK-NEXT:    shll $8, %r14d
+; CHECK-NEXT:    maxss %xmm1, %xmm0
+; CHECK-NEXT:    minss {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
+; CHECK-NEXT:    cvttss2si %xmm0, %ebx
+; CHECK-NEXT:    shll $8, %ebx
 ; CHECK-NEXT:    movaps (%rsp), %xmm0 # 16-byte Reload
 ; CHECK-NEXT:    shufps {{.*#+}} xmm0 = xmm0[3,3,3,3]
 ; CHECK-NEXT:    callq __extendhfsf2@PLT
-; CHECK-NEXT:    cvttss2si %xmm0, %eax
 ; CHECK-NEXT:    xorps %xmm1, %xmm1
-; CHECK-NEXT:    ucomiss %xmm1, %xmm0
-; CHECK-NEXT:    cmovbl %ebx, %eax
-; CHECK-NEXT:    ucomiss {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
-; CHECK-NEXT:    cmoval %ebp, %eax
+; CHECK-NEXT:    maxss %xmm1, %xmm0
+; CHECK-NEXT:    minss {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
+; CHECK-NEXT:    cvttss2si %xmm0, %eax
 ; CHECK-NEXT:    movzbl %al, %eax
-; CHECK-NEXT:    orl %r14d, %eax
+; CHECK-NEXT:    orl %ebx, %eax
 ; CHECK-NEXT:    movdqa {{[-0-9]+}}(%r{{[sb]}}p), %xmm0 # 16-byte Reload
 ; CHECK-NEXT:    pinsrw $3, %eax, %xmm0
 ; CHECK-NEXT:    addq $32, %rsp
 ; CHECK-NEXT:    popq %rbx
-; CHECK-NEXT:    popq %r12
 ; CHECK-NEXT:    popq %r14
-; CHECK-NEXT:    popq %r15
 ; CHECK-NEXT:    popq %rbp
 ; CHECK-NEXT:    retq
   %x = call <8 x i8> @llvm.fptoui.sat.v8i8.v8f16(<8 x half> %f)
@@ -775,31 +768,23 @@ define <8 x i8> @test_unsigned_v8i8_v8f16(<8 x half> %f) nounwind {
 define <8 x i16> @test_unsigned_v8i16_v8f16(<8 x half> %f) nounwind {
 ; CHECK-LABEL: test_unsigned_v8i16_v8f16:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    pushq %rbp
-; CHECK-NEXT:    pushq %rbx
 ; CHECK-NEXT:    subq $72, %rsp
 ; CHECK-NEXT:    movdqa %xmm0, (%rsp) # 16-byte Spill
 ; CHECK-NEXT:    psrldq {{.*#+}} xmm0 = xmm0[14,15],zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero
 ; CHECK-NEXT:    callq __extendhfsf2@PLT
-; CHECK-NEXT:    cvttss2si %xmm0, %eax
-; CHECK-NEXT:    xorl %ebx, %ebx
 ; CHECK-NEXT:    xorps %xmm1, %xmm1
-; CHECK-NEXT:    ucomiss %xmm1, %xmm0
-; CHECK-NEXT:    cmovbl %ebx, %eax
-; CHECK-NEXT:    ucomiss {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
-; CHECK-NEXT:    movl $65535, %ebp # imm = 0xFFFF
-; CHECK-NEXT:    cmoval %ebp, %eax
+; CHECK-NEXT:    maxss %xmm1, %xmm0
+; CHECK-NEXT:    minss {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
+; CHECK-NEXT:    cvttss2si %xmm0, %eax
 ; CHECK-NEXT:    movd %eax, %xmm0
 ; CHECK-NEXT:    movdqa %xmm0, {{[-0-9]+}}(%r{{[sb]}}p) # 16-byte Spill
 ; CHECK-NEXT:    movaps (%rsp), %xmm0 # 16-byte Reload
 ; CHECK-NEXT:    shufps {{.*#+}} xmm0 = xmm0[3,3,3,3]
 ; CHECK-NEXT:    callq __extendhfsf2@PLT
-; CHECK-NEXT:    cvttss2si %xmm0, %eax
 ; CHECK-NEXT:    xorps %xmm1, %xmm1
-; CHECK-NEXT:    ucomiss %xmm1, %xmm0
-; CHECK-NEXT:    cmovbl %ebx, %eax
-; CHECK-NEXT:    ucomiss {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
-; CHECK-NEXT:    cmoval %ebp, %eax
+; CHECK-NEXT:    maxss %xmm1, %xmm0
+; CHECK-NEXT:    minss {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
+; CHECK-NEXT:    cvttss2si %xmm0, %eax
 ; CHECK-NEXT:    movd %eax, %xmm0
 ; CHECK-NEXT:    punpcklwd {{[-0-9]+}}(%r{{[sb]}}p), %xmm0 # 16-byte Folded Reload
 ; CHECK-NEXT:    # xmm0 = xmm0[0],mem[0],xmm0[1],mem[1],xmm0[2],mem[2],xmm0[3],mem[3]
@@ -807,23 +792,19 @@ define <8 x i16> @test_unsigned_v8i16_v8f16(<8 x half> %f) nounwind {
 ; CHECK-NEXT:    movdqa (%rsp), %xmm0 # 16-byte Reload
 ; CHECK-NEXT:    psrldq {{.*#+}} xmm0 = xmm0[10,11,12,13,14,15],zero,zero,zero,zero,zero,zero,zero,zero,zero,zero
 ; CHECK-NEXT:    callq __extendhfsf2@PLT
-; CHECK-NEXT:    cvttss2si %xmm0, %eax
 ; CHECK-NEXT:    xorps %xmm1, %xmm1
-; CHECK-NEXT:    ucomiss %xmm1, %xmm0
-; CHECK-NEXT:    cmovbl %ebx, %eax
-; CHECK-NEXT:    ucomiss {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
-; CHECK-NEXT:    cmoval %ebp, %eax
+; CHECK-NEXT:    maxss %xmm1, %xmm0
+; CHECK-NEXT:    minss {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
+; CHECK-NEXT:    cvttss2si %xmm0, %eax
 ; CHECK-NEXT:    movd %eax, %xmm0
 ; CHECK-NEXT:    movdqa %xmm0, {{[-0-9]+}}(%r{{[sb]}}p) # 16-byte Spill
 ; CHECK-NEXT:    movaps (%rsp), %xmm0 # 16-byte Reload
 ; CHECK-NEXT:    movhlps {{.*#+}} xmm0 = xmm0[1,1]
 ; CHECK-NEXT:    callq __extendhfsf2@PLT
-; CHECK-NEXT:    cvttss2si %xmm0, %eax
 ; CHECK-NEXT:    xorps %xmm1, %xmm1
-; CHECK-NEXT:    ucomiss %xmm1, %xmm0
-; CHECK-NEXT:    cmovbl %ebx, %eax
-; CHECK-NEXT:    ucomiss {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
-; CHECK-NEXT:    cmoval %ebp, %eax
+; CHECK-NEXT:    maxss %xmm1, %xmm0
+; CHECK-NEXT:    minss {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
+; CHECK-NEXT:    cvttss2si %xmm0, %eax
 ; CHECK-NEXT:    movd %eax, %xmm0
 ; CHECK-NEXT:    punpcklwd {{[-0-9]+}}(%r{{[sb]}}p), %xmm0 # 16-byte Folded Reload
 ; CHECK-NEXT:    # xmm0 = xmm0[0],mem[0],xmm0[1],mem[1],xmm0[2],mem[2],xmm0[3],mem[3]
@@ -833,46 +814,38 @@ define <8 x i16> @test_unsigned_v8i16_v8f16(<8 x half> %f) nounwind {
 ; CHECK-NEXT:    movdqa (%rsp), %xmm0 # 16-byte Reload
 ; CHECK-NEXT:    psrlq $48, %xmm0
 ; CHECK-NEXT:    callq __extendhfsf2@PLT
-; CHECK-NEXT:    cvttss2si %xmm0, %eax
 ; CHECK-NEXT:    xorps %xmm1, %xmm1
-; CHECK-NEXT:    ucomiss %xmm1, %xmm0
-; CHECK-NEXT:    cmovbl %ebx, %eax
-; CHECK-NEXT:    ucomiss {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
-; CHECK-NEXT:    cmoval %ebp, %eax
+; CHECK-NEXT:    maxss %xmm1, %xmm0
+; CHECK-NEXT:    minss {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
+; CHECK-NEXT:    cvttss2si %xmm0, %eax
 ; CHECK-NEXT:    movd %eax, %xmm0
 ; CHECK-NEXT:    movdqa %xmm0, {{[-0-9]+}}(%r{{[sb]}}p) # 16-byte Spill
 ; CHECK-NEXT:    movaps (%rsp), %xmm0 # 16-byte Reload
 ; CHECK-NEXT:    shufps {{.*#+}} xmm0 = xmm0[1,1,1,1]
 ; CHECK-NEXT:    callq __extendhfsf2@PLT
-; CHECK-NEXT:    cvttss2si %xmm0, %eax
 ; CHECK-NEXT:    xorps %xmm1, %xmm1
-; CHECK-NEXT:    ucomiss %xmm1, %xmm0
-; CHECK-NEXT:    cmovbl %ebx, %eax
-; CHECK-NEXT:    ucomiss {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
-; CHECK-NEXT:    cmoval %ebp, %eax
+; CHECK-NEXT:    maxss %xmm1, %xmm0
+; CHECK-NEXT:    minss {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
+; CHECK-NEXT:    cvttss2si %xmm0, %eax
 ; CHECK-NEXT:    movd %eax, %xmm0
 ; CHECK-NEXT:    punpcklwd {{[-0-9]+}}(%r{{[sb]}}p), %xmm0 # 16-byte Folded Reload
 ; CHECK-NEXT:    # xmm0 = xmm0[0],mem[0],xmm0[1],mem[1],xmm0[2],mem[2],xmm0[3],mem[3]
 ; CHECK-NEXT:    movdqa %xmm0, {{[-0-9]+}}(%r{{[sb]}}p) # 16-byte Spill
 ; CHECK-NEXT:    movaps (%rsp), %xmm0 # 16-byte Reload
 ; CHECK-NEXT:    callq __extendhfsf2@PLT
-; CHECK-NEXT:    cvttss2si %xmm0, %eax
 ; CHECK-NEXT:    xorps %xmm1, %xmm1
-; CHECK-NEXT:    ucomiss %xmm1, %xmm0
-; CHECK-NEXT:    cmovbl %ebx, %eax
-; CHECK-NEXT:    ucomiss {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
-; CHECK-NEXT:    cmoval %ebp, %eax
+; CHECK-NEXT:    maxss %xmm1, %xmm0
+; CHECK-NEXT:    minss {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
+; CHECK-NEXT:    cvttss2si %xmm0, %eax
 ; CHECK-NEXT:    movd %eax, %xmm0
 ; CHECK-NEXT:    movdqa %xmm0, {{[-0-9]+}}(%r{{[sb]}}p) # 16-byte Spill
 ; CHECK-NEXT:    movdqa (%rsp), %xmm0 # 16-byte Reload
 ; CHECK-NEXT:    psrld $16, %xmm0
 ; CHECK-NEXT:    callq __extendhfsf2@PLT
-; CHECK-NEXT:    cvttss2si %xmm0, %eax
 ; CHECK-NEXT:    xorps %xmm1, %xmm1
-; CHECK-NEXT:    ucomiss %xmm1, %xmm0
-; CHECK-NEXT:    cmovbl %ebx, %eax
-; CHECK-NEXT:    ucomiss {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
-; CHECK-NEXT:    cmoval %ebp, %eax
+; CHECK-NEXT:    maxss %xmm1, %xmm0
+; CHECK-NEXT:    minss {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
+; CHECK-NEXT:    cvttss2si %xmm0, %eax
 ; CHECK-NEXT:    movd %eax, %xmm1
 ; CHECK-NEXT:    movdqa {{[-0-9]+}}(%r{{[sb]}}p), %xmm0 # 16-byte Reload
 ; CHECK-NEXT:    punpcklwd {{.*#+}} xmm0 = xmm0[0],xmm1[0],xmm0[1],xmm1[1],xmm0[2],xmm1[2],xmm0[3],xmm1[3]
@@ -881,8 +854,6 @@ define <8 x i16> @test_unsigned_v8i16_v8f16(<8 x half> %f) nounwind {
 ; CHECK-NEXT:    punpcklqdq {{[-0-9]+}}(%r{{[sb]}}p), %xmm0 # 16-byte Folded Reload
 ; CHECK-NEXT:    # xmm0 = xmm0[0],mem[0]
 ; CHECK-NEXT:    addq $72, %rsp
-; CHECK-NEXT:    popq %rbx
-; CHECK-NEXT:    popq %rbp
 ; CHECK-NEXT:    retq
   %x = call <8 x i16> @llvm.fptoui.sat.v8i16.v8f16(<8 x half> %f)
   ret <8 x i16> %x

@@ -1,5 +1,4 @@
-; REQUIRES: x86_64-linux
-; REQUIRES: asserts
+; REQUIRES: asserts && x86-registered-target
 ; RUN: opt < %s -passes=sample-profile -sample-profile-file=%S/Inputs/pseudo-probe-stale-profile-renaming.prof --salvage-stale-profile --salvage-unused-profile -report-profile-staleness -persist-profile-staleness -S --debug-only=sample-profile,sample-profile-matcher,sample-profile-impl -pass-remarks=inline --min-call-count-for-cg-matching=0 --min-func-count-for-cg-matching=0 --func-profile-similarity-threshold=70 2>&1 | FileCheck %s
 ; RUN: opt < %s -passes=sample-profile -sample-profile-file=%S/Inputs/pseudo-probe-stale-profile-renaming.prof --salvage-stale-profile --salvage-unused-profile -S --debug-only=sample-profile,sample-profile-matcher,sample-profile-impl --min-call-count-for-cg-matching=10 --min-func-count-for-cg-matching=10 2>&1 | FileCheck %s  --check-prefix=TINY-FUNC
 
@@ -30,9 +29,6 @@
 ; TINY-FUNC-NOT: Function:new_foo matches profile:foo
 ; TINY-FUNC-NOT: Function:new_block_only matches profile:block_only
 
-
-target datalayout = "e-m:e-p270:32:32-p271:32:32-p272:64:64-i64:64-i128:128-f80:128-n8:16:32:64-S128"
-target triple = "x86_64-unknown-linux-gnu"
 
 @x = dso_local global i32 0, align 4, !dbg !0
 
@@ -175,10 +171,10 @@ for.body:                                         ; preds = %for.cond
 }
 
 ; Function Attrs: mustprogress nocallback nofree nosync nounwind willreturn memory(argmem: readwrite)
-declare void @llvm.lifetime.start.p0(i64 immarg, ptr nocapture) #3
+declare void @llvm.lifetime.start.p0(ptr nocapture) #3
 
 ; Function Attrs: mustprogress nocallback nofree nosync nounwind willreturn memory(argmem: readwrite)
-declare void @llvm.lifetime.end.p0(i64 immarg, ptr nocapture) #3
+declare void @llvm.lifetime.end.p0(ptr nocapture) #3
 
 ; Function Attrs: mustprogress nocallback nofree nosync nounwind willreturn memory(inaccessiblemem: readwrite)
 declare void @llvm.pseudoprobe(i64, i64, i32, i64) #4

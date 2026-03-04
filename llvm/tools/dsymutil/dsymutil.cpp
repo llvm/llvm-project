@@ -23,6 +23,7 @@
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/ADT/StringRef.h"
+#include "llvm/ADT/StringSet.h"
 #include "llvm/DebugInfo/DIContext.h"
 #include "llvm/DebugInfo/DWARF/DWARFContext.h"
 #include "llvm/DebugInfo/DWARF/DWARFVerifier.h"
@@ -38,10 +39,12 @@
 #include "llvm/Support/FileSystem.h"
 #include "llvm/Support/FormatVariadic.h"
 #include "llvm/Support/LLVMDriver.h"
+#include "llvm/Support/MemoryBuffer.h"
 #include "llvm/Support/Path.h"
 #include "llvm/Support/TargetSelect.h"
 #include "llvm/Support/ThreadPool.h"
 #include "llvm/Support/WithColor.h"
+#include "llvm/Support/YAMLTraits.h"
 #include "llvm/Support/raw_ostream.h"
 #include "llvm/Support/thread.h"
 #include "llvm/TargetParser/Triple.h"
@@ -55,6 +58,33 @@ using namespace llvm;
 using namespace llvm::dsymutil;
 using namespace object;
 using namespace llvm::dwarf_linker;
+
+/// YAML structure for --allow / --disallow object list files.
+struct ObjectFileEntry {
+  std::string Filename;
+};
+
+struct ObjectFileList {
+  std::vector<ObjectFileEntry> Objects;
+};
+
+LLVM_YAML_IS_SEQUENCE_VECTOR(ObjectFileEntry)
+
+namespace llvm {
+namespace yaml {
+template <> struct MappingTraits<ObjectFileEntry> {
+  static void mapping(IO &IO, ObjectFileEntry &Entry) {
+    IO.mapRequired("filename", Entry.Filename);
+  }
+};
+
+template <> struct MappingTraits<ObjectFileList> {
+  static void mapping(IO &IO, ObjectFileList &List) {
+    IO.mapOptional("objects", List.Objects);
+  }
+};
+} // namespace yaml
+} // namespace llvm
 
 namespace {
 enum ID {
@@ -114,6 +144,8 @@ struct DsymutilOptions {
   std::string OutputFile;
   std::string Toolchain;
   std::string ReproducerPath;
+  std::string AllowFile;
+  std::string DisallowFile;
   std::vector<std::string> Archs;
   std::vector<std::string> InputFiles;
   unsigned NumThreads;
@@ -198,6 +230,17 @@ static Error verifyOptions(const DsymutilOptions &Options) {
       Options.ReproMode != ReproducerMode::Use)
     return make_error<StringError>(
         "cannot combine --gen-reproducer and --use-reproducer.",
+        errc::invalid_argument);
+
+  if (Options.InputIsYAMLDebugMap &&
+      (!Options.AllowFile.empty() || !Options.DisallowFile.empty()))
+    return make_error<StringError>(
+        "-y and --allow/--disallow cannot be specified together",
+        errc::invalid_argument);
+
+  if (!Options.AllowFile.empty() && !Options.DisallowFile.empty())
+    return make_error<StringError>(
+        "--allow and --disallow cannot be specified together",
         errc::invalid_argument);
 
   return Error::success();
@@ -315,6 +358,8 @@ static Expected<DsymutilOptions> getOptions(opt::InputArgList &Args) {
   Options.LinkOpts.Fat64 = Args.hasArg(OPT_fat64);
   Options.LinkOpts.KeepFunctionForStatic =
       Args.hasArg(OPT_keep_func_for_static);
+  Options.LinkOpts.AllowSectionHeaderOffsetOverflow =
+      Args.hasArg(OPT_allow_section_header_offset_overflow);
 
   if (opt::Arg *ReproducerPath = Args.getLastArg(OPT_use_reproducer)) {
     Options.ReproMode = ReproducerMode::Use;
@@ -391,11 +436,20 @@ static Expected<DsymutilOptions> getOptions(opt::InputArgList &Args) {
   Options.LinkOpts.RemarksKeepAll =
       !Args.hasArg(OPT_remarks_drop_without_debug);
 
+  Options.LinkOpts.IncludeSwiftModulesFromInterface =
+      Args.hasArg(OPT_include_swiftmodules_from_interface);
+
   if (opt::Arg *BuildVariantSuffix = Args.getLastArg(OPT_build_variant_suffix))
     Options.LinkOpts.BuildVariantSuffix = BuildVariantSuffix->getValue();
 
   for (auto *SearchPath : Args.filtered(OPT_dsym_search_path))
     Options.LinkOpts.DSYMSearchPaths.push_back(SearchPath->getValue());
+
+  if (opt::Arg *AllowArg = Args.getLastArg(OPT_allow))
+    Options.AllowFile = AllowArg->getValue();
+
+  if (opt::Arg *DisallowArg = Args.getLastArg(OPT_disallow))
+    Options.DisallowFile = DisallowArg->getValue();
 
   if (Error E = verifyOptions(Options))
     return std::move(E);
@@ -683,10 +737,63 @@ int dsymutil_main(int argc, char **argv, const llvm::ToolContext &) {
       continue;
     }
 
+    // Parse allow/disallow object list YAML files if specified.
+    std::optional<StringSet<>> ObjectFilter;
+    enum ObjectFilterType ObjectFilterType = Allow;
+
+    auto ParseAllowDisallowFile =
+        [&](const std::string &FilePath) -> Expected<StringSet<>> {
+      auto BufOrErr = MemoryBuffer::getFile(FilePath);
+      if (!BufOrErr)
+        return make_error<StringError>(
+            Twine("cannot open allow/disallow file '") + FilePath +
+                "': " + BufOrErr.getError().message(),
+            BufOrErr.getError());
+
+      StringSet<> Result;
+      StringRef Content = (*BufOrErr)->getBuffer();
+      if (!Content.trim().empty()) {
+        yaml::Input YAMLIn(Content);
+        ObjectFileList ObjList;
+        YAMLIn >> ObjList;
+        if (YAMLIn.error())
+          return make_error<StringError>(
+              Twine("cannot parse allow/disallow file '") + FilePath + "'",
+              YAMLIn.error());
+        for (const auto &Entry : ObjList.Objects) {
+          SmallString<80> Path(Options.LinkOpts.PrependPath);
+          sys::path::append(Path, Entry.Filename);
+          Result.insert(Path);
+        }
+      }
+      return Result;
+    };
+
+    if (!Options.AllowFile.empty()) {
+      auto AllowedOrErr = ParseAllowDisallowFile(Options.AllowFile);
+      if (!AllowedOrErr) {
+        WithColor::error() << toString(AllowedOrErr.takeError()) << '\n';
+        return EXIT_FAILURE;
+      }
+      ObjectFilter = std::move(*AllowedOrErr);
+      ObjectFilterType = Allow;
+    }
+
+    if (!Options.DisallowFile.empty()) {
+      auto DisallowedOrErr = ParseAllowDisallowFile(Options.DisallowFile);
+      if (!DisallowedOrErr) {
+        WithColor::error() << toString(DisallowedOrErr.takeError()) << '\n';
+        return EXIT_FAILURE;
+      }
+      ObjectFilter = std::move(*DisallowedOrErr);
+      ObjectFilterType = Disallow;
+    }
+
     auto DebugMapPtrsOrErr = parseDebugMap(
         BinHolder, InputFile, Options.Archs, Options.LinkOpts.DSYMSearchPaths,
         Options.LinkOpts.PrependPath, Options.LinkOpts.BuildVariantSuffix,
-        Options.LinkOpts.Verbose, Options.InputIsYAMLDebugMap);
+        Options.LinkOpts.Verbose, Options.InputIsYAMLDebugMap, ObjectFilter,
+        ObjectFilterType);
 
     if (auto EC = DebugMapPtrsOrErr.getError()) {
       WithColor::error() << "cannot parse the debug map for '" << InputFile
@@ -870,7 +977,6 @@ int dsymutil_main(int argc, char **argv, const llvm::ToolContext &) {
                 "-fat64 flag to force a 64-bit header and silence this "
                 "warning.",
                 FileOffset);
-            return EXIT_FAILURE;
           }
           FileOffset += stat->getSize();
         }

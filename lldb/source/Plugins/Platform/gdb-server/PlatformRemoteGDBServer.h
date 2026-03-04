@@ -180,6 +180,10 @@ protected:
   virtual std::string MakeUrl(const char *scheme, const char *hostname,
                               uint16_t port, const char *path);
 
+  virtual llvm::StringRef GetDefaultProcessPluginName() const {
+    return "gdb-remote";
+  }
+
 private:
   std::string MakeGdbServerUrl(const std::string &platform_scheme,
                                const std::string &platform_hostname,

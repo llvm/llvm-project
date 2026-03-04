@@ -398,7 +398,7 @@ def def8 : PatLeaf<(i8 GR8:$src), [{
 // In the case of a 8-bit def that is known to implicitly zero-extend,
 // we can use a SUBREG_TO_REG.
 def : Pat<(i16 (zext def8:$src)),
-          (SUBREG_TO_REG (i16 0), GR8:$src, subreg_8bit)>;
+          (SUBREG_TO_REG GR8:$src, subreg_8bit)>;
 
 def MOV8mc  : I8mc<0b0100,
                    (outs), (ins memdst:$dst, cg8imm:$imm),
@@ -909,7 +909,7 @@ def : Pat<(extloadi16i8 addr:$src), (MOVZX16rm8 addr:$src)>;
 
 // anyext
 def : Pat<(i16 (anyext GR8:$src)),
-          (SUBREG_TO_REG (i16 0), GR8:$src, subreg_8bit)>;
+          (SUBREG_TO_REG GR8:$src, subreg_8bit)>;
 
 // truncs
 def : Pat<(i8 (trunc GR16:$src)),

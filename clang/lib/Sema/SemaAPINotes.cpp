@@ -10,13 +10,14 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "CheckExprLifetime.h"
 #include "TypeLocBuilder.h"
 #include "clang/APINotes/APINotesReader.h"
+#include "clang/APINotes/Types.h"
 #include "clang/AST/Decl.h"
 #include "clang/AST/DeclCXX.h"
 #include "clang/AST/DeclObjC.h"
 #include "clang/AST/TypeLoc.h"
+#include "clang/Analysis/Analyses/LifetimeSafety/LifetimeAnnotations.h"
 #include "clang/Basic/SourceLocation.h"
 #include "clang/Lex/Lexer.h"
 #include "clang/Sema/SemaObjC.h"
@@ -291,6 +292,29 @@ static void ProcessAPINotes(Sema &S, Decl *D,
         });
   }
 
+  // swift_safety
+  if (auto SafetyKind = Info.getSwiftSafety()) {
+    bool Addition = *SafetyKind != api_notes::SwiftSafetyKind::Unspecified;
+    handleAPINotedAttribute<SwiftAttrAttr>(
+        S, D, Addition, Metadata,
+        [&] {
+          return SwiftAttrAttr::Create(
+              S.Context, *SafetyKind == api_notes::SwiftSafetyKind::Safe
+                             ? "safe"
+                             : "unsafe");
+        },
+        [](const Decl *D) {
+          return llvm::find_if(D->attrs(), [](const Attr *attr) {
+            if (const auto *swiftAttr = dyn_cast<SwiftAttrAttr>(attr)) {
+              if (swiftAttr->getAttribute() == "safe" ||
+                  swiftAttr->getAttribute() == "unsafe")
+                return true;
+            }
+            return false;
+          });
+        });
+  }
+
   // swift_name
   if (!Info.SwiftName.empty()) {
     handleAPINotedAttribute<SwiftNameAttr>(
@@ -336,6 +360,10 @@ static void ProcessAPINotes(Sema &S, Decl *D,
         });
   }
 
+  if (auto ConformsTo = Info.getSwiftConformance())
+    D->addAttr(
+        SwiftAttrAttr::Create(S.Context, "conforms_to:" + ConformsTo.value()));
+
   ProcessAPINotes(S, D, static_cast<const api_notes::CommonEntityInfo &>(Info),
                   Metadata);
 }
@@ -380,6 +408,12 @@ void Sema::ApplyAPINotesType(Decl *D, StringRef TypeString) {
         if (!checkAPINotesReplacementType(*this, property->getLocation(),
                                           property->getType(), Type)) {
           property->setType(Type, TypeInfo);
+        }
+      } else if (auto field = dyn_cast<FieldDecl>(D)) {
+        if (!checkAPINotesReplacementType(*this, field->getLocation(),
+                                          field->getType(), Type)) {
+          field->setType(Type);
+          field->setTypeSourceInfo(TypeInfo);
         }
       } else {
         llvm_unreachable("API notes allowed a type on an unknown declaration");
@@ -626,7 +660,7 @@ static void ProcessAPINotes(Sema &S, CXXMethodDecl *Method,
                             const api_notes::CXXMethodInfo &Info,
                             VersionedInfoMetadata Metadata) {
   if (Info.This && Info.This->isLifetimebound() &&
-      !sema::implicitObjectParamIsLifetimeBound(Method)) {
+      !lifetimes::implicitObjectParamIsLifetimeBound(Method)) {
     auto MethodType = Method->getType();
     auto *attr = ::new (S.Context)
         LifetimeBoundAttr(S.Context, getPlaceholderAttrInfo());
@@ -694,13 +728,12 @@ static void ProcessAPINotes(Sema &S, TagDecl *D, const api_notes::TagInfo &Info,
   if (auto ReleaseOp = Info.SwiftReleaseOp)
     D->addAttr(
         SwiftAttrAttr::Create(S.Context, "release:" + ReleaseOp.value()));
+  if (auto DestroyOp = Info.SwiftDestroyOp)
+    D->addAttr(
+        SwiftAttrAttr::Create(S.Context, "destroy:" + DestroyOp.value()));
   if (auto DefaultOwnership = Info.SwiftDefaultOwnership)
     D->addAttr(SwiftAttrAttr::Create(
         S.Context, "returned_as_" + DefaultOwnership.value() + "_by_default"));
-
-  if (auto ConformsTo = Info.SwiftConformance)
-    D->addAttr(
-        SwiftAttrAttr::Create(S.Context, "conforms_to:" + ConformsTo.value()));
 
   if (auto Copyable = Info.isSwiftCopyable()) {
     if (!*Copyable)
@@ -878,8 +911,8 @@ static void ProcessVersionedAPINotes(
     auto Active = (i == Selected) ? IsActive_t::Active : IsActive_t::Inactive;
     auto Replacement = IsSubstitution_t::Original;
 
-    // When collection all APINotes as version-independent,
-    // capture all as inactive and defer to the client select the
+    // When collecting all APINotes as version-independent,
+    // capture all as inactive and defer to the client to select the
     // right one.
     if (S.captureSwiftVersionIndependentAPINotes()) {
       Active = IsActive_t::Inactive;
@@ -960,8 +993,8 @@ void Sema::ProcessAPINotes(Decl *D) {
 
   auto *DC = D->getDeclContext();
   // Globals.
-  if (DC->isFileContext() || DC->isNamespace() || DC->isExternCContext() ||
-      DC->isExternCXXContext()) {
+  if (DC->isFileContext() || DC->isNamespace() ||
+      DC->getDeclKind() == Decl::LinkageSpec) {
     std::optional<api_notes::Context> APINotesContext =
         UnwindNamespaceContext(DC, APINotes);
     // Global variables.
@@ -1164,12 +1197,18 @@ void Sema::ProcessAPINotes(Decl *D) {
     if (auto CXXMethod = dyn_cast<CXXMethodDecl>(D)) {
       if (!isa<CXXConstructorDecl>(CXXMethod) &&
           !isa<CXXDestructorDecl>(CXXMethod) &&
-          !isa<CXXConversionDecl>(CXXMethod) &&
-          !CXXMethod->isOverloadedOperator()) {
+          !isa<CXXConversionDecl>(CXXMethod)) {
         for (auto Reader : APINotes.findAPINotes(D->getLocation())) {
           if (auto Context = UnwindTagContext(TagContext, APINotes)) {
-            auto Info =
-                Reader->lookupCXXMethod(Context->id, CXXMethod->getName());
+            std::string MethodName;
+            if (CXXMethod->isOverloadedOperator())
+              MethodName =
+                  std::string("operator") +
+                  getOperatorSpelling(CXXMethod->getOverloadedOperator());
+            else
+              MethodName = CXXMethod->getName();
+
+            auto Info = Reader->lookupCXXMethod(Context->id, MethodName);
             ProcessVersionedAPINotes(*this, CXXMethod, Info);
           }
         }

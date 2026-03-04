@@ -12,7 +12,6 @@
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/SetVector.h"
 #include "llvm/ADT/SmallPtrSet.h"
-#include "llvm/ADT/SmallSet.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Analysis/AliasAnalysis.h"
@@ -43,6 +42,7 @@
 #include "llvm/IR/Module.h"
 #include "llvm/IR/PassManager.h"
 #include "llvm/IR/PatternMatch.h"
+#include "llvm/IR/RuntimeLibcalls.h"
 #include "llvm/IR/Type.h"
 #include "llvm/IR/User.h"
 #include "llvm/IR/Value.h"
@@ -104,9 +104,6 @@ static cl::opt<bool> HexagonVolatileMemcpy(
 
 static cl::opt<unsigned> SimplifyLimit("hlir-simplify-limit", cl::init(10000),
   cl::Hidden, cl::desc("Maximum number of simplification steps in HLIR"));
-
-static const char *HexagonVolatileMemcpyName
-  = "hexagon_memcpy_forward_vp4cp4n2";
 
 namespace {
 
@@ -1722,6 +1719,29 @@ void PolynomialMultiplyRecognize::setupPreSimplifier(Simplifier &S) {
       return B.CreateBinOp(BitOp2->getOpcode(), X,
                 B.CreateBinOp(BitOp1->getOpcode(), CA, CB));
     });
+  S.addRule("select with trunc cond to select with icmp cond",
+            // select (trunc x to i1) -> select (icmp ne (and x, 1), 0)
+            // select (xor (trunc x to i1) 1) -> select (icmp eq (and x, 1), 0)
+            [](Instruction *I, LLVMContext &Ctx) -> Value * {
+              SelectInst *Sel = dyn_cast<SelectInst>(I);
+              if (!Sel)
+                return nullptr;
+              Value *C = Sel->getCondition();
+              Value *X;
+              using namespace PatternMatch;
+              if (!(match(C, m_Trunc(m_Value(X))) ||
+                    match(C, m_Not(m_Trunc(m_Value(X))))))
+                return nullptr;
+
+              IRBuilder<> B(Ctx);
+              Type *Ty = X->getType();
+              Value *And = B.CreateAnd(X, ConstantInt::get(Ty, 1));
+              Value *Icmp = B.CreateICmp(isa<TruncInst>(C) ? ICmpInst::ICMP_NE
+                                                           : ICmpInst::ICMP_EQ,
+                                         And, ConstantInt::get(Ty, 0));
+              return B.CreateSelect(Icmp, Sel->getTrueValue(),
+                                    Sel->getFalseValue());
+            });
 }
 
 void PolynomialMultiplyRecognize::setupPostSimplifier(Simplifier &S) {
@@ -2024,7 +2044,7 @@ bool HexagonLoopIdiomRecognize::processCopyingStore(Loop *CurLoop,
   BasicBlock *Preheader = CurLoop->getLoopPreheader();
   Instruction *ExpPt = Preheader->getTerminator();
   IRBuilder<> Builder(ExpPt);
-  SCEVExpander Expander(*SE, *DL, "hexagon-loop-idiom");
+  SCEVExpander Expander(*SE, "hexagon-loop-idiom");
 
   Type *IntPtrTy = Builder.getIntPtrTy(*DL, SI->getPointerAddressSpace());
 
@@ -2247,6 +2267,11 @@ CleanupAndExit:
       Type *PtrTy = PointerType::get(Ctx, 0);
       Type *VoidTy = Type::getVoidTy(Ctx);
       Module *M = Func->getParent();
+
+      // FIXME: This should check if the call is supported
+      StringRef HexagonVolatileMemcpyName =
+          RTLIB::RuntimeLibcallsInfo::getLibcallImplName(
+              RTLIB::impl_hexagon_memcpy_forward_vp4cp4n2);
       FunctionCallee Fn = M->getOrInsertFunction(
           HexagonVolatileMemcpyName, VoidTy, PtrTy, PtrTy, Int32Ty);
 
@@ -2289,7 +2314,7 @@ CleanupAndExit:
 // the instructions in Insts are removed.
 bool HexagonLoopIdiomRecognize::coverLoop(Loop *L,
       SmallVectorImpl<Instruction*> &Insts) const {
-  SmallSet<BasicBlock*,8> LoopBlocks;
+  SmallPtrSet<BasicBlock *, 8> LoopBlocks;
   LoopBlocks.insert_range(L->blocks());
 
   SetVector<Instruction *> Worklist(llvm::from_range, Insts);

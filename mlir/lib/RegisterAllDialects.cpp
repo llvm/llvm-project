@@ -14,7 +14,6 @@
 #include "mlir/InitAllDialects.h"
 
 #include "mlir/Dialect/AMDGPU/IR/AMDGPUDialect.h"
-#include "mlir/Dialect/AMX/AMXDialect.h"
 #include "mlir/Dialect/Affine/IR/AffineOps.h"
 #include "mlir/Dialect/Affine/IR/ValueBoundsOpInterfaceImpl.h"
 #include "mlir/Dialect/Arith/IR/Arith.h"
@@ -95,12 +94,14 @@
 #include "mlir/Dialect/Vector/IR/VectorOps.h"
 #include "mlir/Dialect/Vector/Transforms/BufferizableOpInterfaceImpl.h"
 #include "mlir/Dialect/Vector/Transforms/SubsetOpInterfaceImpl.h"
-#include "mlir/Dialect/X86Vector/X86VectorDialect.h"
+#include "mlir/Dialect/WasmSSA/IR/WasmSSA.h"
+#include "mlir/Dialect/X86/X86Dialect.h"
 #include "mlir/Dialect/XeGPU/IR/XeGPU.h"
 #include "mlir/IR/Dialect.h"
 #include "mlir/Interfaces/CastInterfaces.h"
 #include "mlir/Target/LLVM/NVVM/Target.h"
 #include "mlir/Target/LLVM/ROCDL/Target.h"
+#include "mlir/Target/LLVM/XeVM/Target.h"
 #include "mlir/Target/SPIRV/Target.h"
 
 /// Add all the MLIR dialects to the provided registry.
@@ -109,7 +110,6 @@ void mlir::registerAllDialects(DialectRegistry &registry) {
   registry.insert<acc::OpenACCDialect,
                   affine::AffineDialect,
                   amdgpu::AMDGPUDialect,
-                  amx::AMXDialect,
                   arith::ArithDialect,
                   arm_neon::ArmNeonDialect,
                   arm_sme::ArmSMEDialect,
@@ -149,7 +149,8 @@ void mlir::registerAllDialects(DialectRegistry &registry) {
                   transform::TransformDialect,
                   ub::UBDialect,
                   vector::VectorDialect,
-                  x86vector::X86VectorDialect,
+                  wasmssa::WasmSSADialect,
+                  x86::X86Dialect,
                   xegpu::XeGPUDialect,
                   xevm::XeVMDialect>();
   // clang-format on
@@ -197,6 +198,7 @@ void mlir::registerAllDialects(DialectRegistry &registry) {
   NVVM::registerNVVMTargetInterfaceExternalModels(registry);
   ROCDL::registerROCDLTargetInterfaceExternalModels(registry);
   spirv::registerSPIRVTargetInterfaceExternalModels(registry);
+  xevm::registerXeVMTargetInterfaceExternalModels(registry);
 }
 
 /// Append all the MLIR dialects to the registry contained in the given context.

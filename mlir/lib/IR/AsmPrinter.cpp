@@ -104,7 +104,7 @@ void OpAsmPrinter::printFunctionalType(Operation *op) {
   // it is a function (avoiding a grammar ambiguity).
   bool wrapped = op->getNumResults() != 1;
   if (!wrapped && op->getResult(0).getType() &&
-      llvm::isa<FunctionType>(op->getResult(0).getType()))
+      isa<FunctionType>(op->getResult(0).getType()))
     wrapped = true;
 
   if (wrapped)
@@ -418,6 +418,21 @@ public:
   /// Returns the output stream of the printer.
   raw_ostream &getStream() { return os; }
 
+  /// Print a newline and indent the printer to the start of the current
+  /// operation/attribute/type.
+  /// Note: For attributes and types this method should only be used in
+  /// custom dialects. Usage in MLIR dialects is disallowed.
+  void printNewline() {
+    os << newLine;
+    os.indent(currentIndent);
+  }
+
+  /// Increase indentation.
+  void increaseIndent() { currentIndent += indentWidth; }
+
+  /// Decrease indentation.
+  void decreaseIndent() { currentIndent -= indentWidth; }
+
   template <typename Container, typename UnaryFunctor>
   inline void interleaveComma(const Container &c, UnaryFunctor eachFn) const {
     llvm::interleaveComma(c, os, eachFn);
@@ -492,10 +507,17 @@ protected:
   /// Print a dense string elements attribute.
   void printDenseStringElementsAttr(DenseStringElementsAttr attr);
 
-  /// Print a dense elements attribute. If 'allowHex' is true, a hex string is
-  /// used instead of individual elements when the elements attr is large.
+  /// Print a dense elements attribute in the literal-first syntax. If
+  /// 'allowHex' is true, a hex string is used instead of individual elements
+  /// when the elements attr is large.
   void printDenseIntOrFPElementsAttr(DenseIntOrFPElementsAttr attr,
                                      bool allowHex);
+
+  /// Print a dense elements attribute using the type-first syntax and the
+  /// DenseElementTypeInterface, which provides the attribute printer for each
+  /// element.
+  void printTypeFirstDenseElementsAttr(DenseElementsAttr attr,
+                                       DenseElementType denseEltType);
 
   /// Print a dense array attribute.
   void printDenseArrayAttr(DenseArrayAttr attr);
@@ -532,6 +554,12 @@ protected:
 
   /// A tracker for the number of new lines emitted during printing.
   NewLineCounter newLine;
+
+  /// The number of spaces used as an indent.
+  const static unsigned indentWidth = 2;
+
+  /// This is the current indentation level for nested structures.
+  unsigned currentIndent = 0;
 };
 } // namespace mlir
 
@@ -1004,6 +1032,9 @@ private:
 
   /// The following are hooks of `DialectAsmPrinter` that are not necessary for
   /// determining potential aliases.
+  void printNewline() override {}
+  void increaseIndent() override {}
+  void decreaseIndent() override {}
   void printFloat(const APFloat &) override {}
   void printKeywordOrString(StringRef) override {}
   void printString(StringRef) override {}
@@ -1090,9 +1121,12 @@ unsigned AliasInitializer::uniqueAliasNameIndex(
   }
   // Otherwise, we had a conflict - probe until we find a unique name.
   SmallString<64> probeAlias(alias);
+  size_t probeSize = probeAlias.size();
   // alias with trailing digit will be printed as _N
-  if (isdigit(alias.back()))
+  if (isdigit(alias.back())) {
     probeAlias.push_back('_');
+    probeSize++;
+  }
   // nameCounts start from 1 because 0 is not printed in SymbolAlias.
   if (nameCounts[probeAlias] == 0)
     nameCounts[probeAlias] = 1;
@@ -1106,7 +1140,7 @@ unsigned AliasInitializer::uniqueAliasNameIndex(
       return nameIndex;
     }
     // Reset probeAlias to the original alias for the next iteration.
-    probeAlias.resize(alias.size() + isdigit(alias.back()) ? 1 : 0);
+    probeAlias.resize(probeSize);
   }
 }
 
@@ -2032,7 +2066,7 @@ private:
 };
 
 template <typename Range>
-void printDimensionList(raw_ostream &stream, Range &&shape) {
+static void printDimensionList(raw_ostream &stream, Range &&shape) {
   llvm::interleave(
       shape, stream,
       [&stream](const auto &dimSize) {
@@ -2130,16 +2164,16 @@ void AsmPrinter::Impl::printLocationInternal(LocationAttr loc, bool pretty,
     return;
 
   TypeSwitch<LocationAttr>(loc)
-      .Case<OpaqueLoc>([&](OpaqueLoc loc) {
+      .Case([&](OpaqueLoc loc) {
         printLocationInternal(loc.getFallbackLocation(), pretty);
       })
-      .Case<UnknownLoc>([&](UnknownLoc loc) {
+      .Case([&](UnknownLoc loc) {
         if (pretty)
           os << "[unknown]";
         else
           os << "unknown";
       })
-      .Case<FileLineColRange>([&](FileLineColRange loc) {
+      .Case([&](FileLineColRange loc) {
         if (pretty)
           os << loc.getFilename().getValue();
         else
@@ -2157,7 +2191,7 @@ void AsmPrinter::Impl::printLocationInternal(LocationAttr loc, bool pretty,
         os << ':' << loc.getStartLine() << ':' << loc.getStartColumn() << " to "
            << loc.getEndLine() << ':' << loc.getEndColumn();
       })
-      .Case<NameLoc>([&](NameLoc loc) {
+      .Case([&](NameLoc loc) {
         printEscapedString(loc.getName());
 
         // Print the child if it isn't unknown.
@@ -2168,7 +2202,7 @@ void AsmPrinter::Impl::printLocationInternal(LocationAttr loc, bool pretty,
           os << ')';
         }
       })
-      .Case<CallSiteLoc>([&](CallSiteLoc loc) {
+      .Case([&](CallSiteLoc loc) {
         Location caller = loc.getCaller();
         Location callee = loc.getCallee();
         if (!pretty)
@@ -2191,7 +2225,7 @@ void AsmPrinter::Impl::printLocationInternal(LocationAttr loc, bool pretty,
         if (!pretty)
           os << ")";
       })
-      .Case<FusedLoc>([&](FusedLoc loc) {
+      .Case([&](FusedLoc loc) {
         if (!pretty)
           os << "fused";
         if (Attribute metadata = loc.getMetadata()) {
@@ -2200,10 +2234,9 @@ void AsmPrinter::Impl::printLocationInternal(LocationAttr loc, bool pretty,
           os << '>';
         }
         os << '[';
-        interleave(
-            loc.getLocations(),
-            [&](Location loc) { printLocationInternal(loc, pretty); },
-            [&]() { os << ", "; });
+        interleaveComma(loc.getLocations(), [&](Location loc) {
+          printLocationInternal(loc, pretty);
+        });
         os << ']';
       })
       .Default([&](LocationAttr loc) {
@@ -2481,7 +2514,17 @@ void AsmPrinter::Impl::printAttributeImpl(Attribute attr,
       printElidedElementsAttr(os);
     } else {
       os << "dense<";
-      printDenseIntOrFPElementsAttr(intOrFpEltAttr, /*allowHex=*/true);
+      // Check if the element type implements DenseElementTypeInterface and is
+      // not a built-in type. Built-in types (int, float, index, complex) use
+      // the existing printing format for backwards compatibility.
+      Type eltType = intOrFpEltAttr.getElementType();
+      if (isa<FloatType, IntegerType, IndexType, ComplexType>(eltType)) {
+        printDenseIntOrFPElementsAttr(intOrFpEltAttr, /*allowHex=*/true);
+      } else {
+        printTypeFirstDenseElementsAttr(intOrFpEltAttr,
+                                        cast<DenseElementType>(eltType));
+        typeElision = AttrTypeElision::Must;
+      }
       os << '>';
     }
 
@@ -2679,6 +2722,27 @@ void AsmPrinter::Impl::printDenseStringElementsAttr(
   printDenseElementsAttrImpl(attr.isSplat(), attr.getType(), os, printFn);
 }
 
+void AsmPrinter::Impl::printTypeFirstDenseElementsAttr(
+    DenseElementsAttr attr, DenseElementType denseEltType) {
+  // Print the type first: dense<TYPE : [ELEMENTS]>
+  printType(attr.getType());
+  os << " : ";
+
+  ArrayRef<char> rawData = attr.getRawData();
+  // Storage is byte-aligned: align bit size up to next byte boundary.
+  size_t bitSize = denseEltType.getDenseElementBitSize();
+  size_t byteSize = llvm::divideCeil(bitSize, static_cast<size_t>(CHAR_BIT));
+
+  // Print elements: convert raw bytes to attribute, then print attribute.
+  printDenseElementsAttrImpl(
+      attr.isSplat(), attr.getType(), os, [&](unsigned index) {
+        size_t offset = attr.isSplat() ? 0 : index * byteSize;
+        ArrayRef<char> elemData = rawData.slice(offset, byteSize);
+        Attribute elemAttr = denseEltType.convertToAttribute(elemData);
+        printAttributeImpl(elemAttr);
+      });
+}
+
 void AsmPrinter::Impl::printDenseArrayAttr(DenseArrayAttr attr) {
   Type type = attr.getElementType();
   unsigned bitwidth = type.isInteger(1) ? 8 : type.getIntOrFloatBitWidth();
@@ -2718,7 +2782,7 @@ void AsmPrinter::Impl::printType(Type type) {
 
 void AsmPrinter::Impl::printTypeImpl(Type type) {
   TypeSwitch<Type>(type)
-      .Case<OpaqueType>([&](OpaqueType opaqueTy) {
+      .Case([&](OpaqueType opaqueTy) {
         printDialectSymbol(os, "!", opaqueTy.getDialectNamespace(),
                            opaqueTy.getTypeData());
       })
@@ -2741,14 +2805,14 @@ void AsmPrinter::Impl::printTypeImpl(Type type) {
       .Case<Float64Type>([&](Type) { os << "f64"; })
       .Case<Float80Type>([&](Type) { os << "f80"; })
       .Case<Float128Type>([&](Type) { os << "f128"; })
-      .Case<IntegerType>([&](IntegerType integerTy) {
+      .Case([&](IntegerType integerTy) {
         if (integerTy.isSigned())
           os << 's';
         else if (integerTy.isUnsigned())
           os << 'u';
         os << 'i' << integerTy.getWidth();
       })
-      .Case<FunctionType>([&](FunctionType funcTy) {
+      .Case([&](FunctionType funcTy) {
         os << '(';
         interleaveComma(funcTy.getInputs(), [&](Type ty) { printType(ty); });
         os << ") -> ";
@@ -2761,7 +2825,7 @@ void AsmPrinter::Impl::printTypeImpl(Type type) {
           os << ')';
         }
       })
-      .Case<VectorType>([&](VectorType vectorTy) {
+      .Case([&](VectorType vectorTy) {
         auto scalableDims = vectorTy.getScalableDims();
         os << "vector<";
         auto vShape = vectorTy.getShape();
@@ -2778,7 +2842,7 @@ void AsmPrinter::Impl::printTypeImpl(Type type) {
         printType(vectorTy.getElementType());
         os << '>';
       })
-      .Case<RankedTensorType>([&](RankedTensorType tensorTy) {
+      .Case([&](RankedTensorType tensorTy) {
         os << "tensor<";
         printDimensionList(tensorTy.getShape());
         if (!tensorTy.getShape().empty())
@@ -2791,12 +2855,12 @@ void AsmPrinter::Impl::printTypeImpl(Type type) {
         }
         os << '>';
       })
-      .Case<UnrankedTensorType>([&](UnrankedTensorType tensorTy) {
+      .Case([&](UnrankedTensorType tensorTy) {
         os << "tensor<*x";
         printType(tensorTy.getElementType());
         os << '>';
       })
-      .Case<MemRefType>([&](MemRefType memrefTy) {
+      .Case([&](MemRefType memrefTy) {
         os << "memref<";
         printDimensionList(memrefTy.getShape());
         if (!memrefTy.getShape().empty())
@@ -2814,7 +2878,7 @@ void AsmPrinter::Impl::printTypeImpl(Type type) {
         }
         os << '>';
       })
-      .Case<UnrankedMemRefType>([&](UnrankedMemRefType memrefTy) {
+      .Case([&](UnrankedMemRefType memrefTy) {
         os << "memref<*x";
         printType(memrefTy.getElementType());
         // Only print the memory space if it is the non-default one.
@@ -2824,18 +2888,31 @@ void AsmPrinter::Impl::printTypeImpl(Type type) {
         }
         os << '>';
       })
-      .Case<ComplexType>([&](ComplexType complexTy) {
+      .Case([&](ComplexType complexTy) {
         os << "complex<";
         printType(complexTy.getElementType());
         os << '>';
       })
-      .Case<TupleType>([&](TupleType tupleTy) {
+      .Case([&](TupleType tupleTy) {
         os << "tuple<";
         interleaveComma(tupleTy.getTypes(),
                         [&](Type type) { printType(type); });
         os << '>';
       })
       .Case<NoneType>([&](Type) { os << "none"; })
+      .Case([&](GraphType graphTy) {
+        os << '(';
+        interleaveComma(graphTy.getInputs(), [&](Type ty) { printType(ty); });
+        os << ") -> ";
+        ArrayRef<Type> results = graphTy.getResults();
+        if (results.size() == 1 && !isa<FunctionType, GraphType>(results[0])) {
+          printType(results[0]);
+        } else {
+          os << '(';
+          interleaveComma(results, [&](Type ty) { printType(ty); });
+          os << ')';
+        }
+      })
       .Default([&](Type type) { return printDialectType(type); });
 }
 
@@ -2892,6 +2969,13 @@ void AsmPrinter::Impl::printDialectAttribute(Attribute attr) {
   {
     llvm::raw_string_ostream attrNameStr(attrName);
     Impl subPrinter(attrNameStr, state);
+
+    // The values of currentIndent and newLine are assigned to the created
+    // subprinter, so that the indent level and number of printed lines can be
+    // tracked.
+    subPrinter.currentIndent = currentIndent;
+    subPrinter.newLine = newLine;
+
     DialectAsmPrinter printer(subPrinter);
     dialect.printAttribute(attr, printer);
   }
@@ -2906,6 +2990,13 @@ void AsmPrinter::Impl::printDialectType(Type type) {
   {
     llvm::raw_string_ostream typeNameStr(typeName);
     Impl subPrinter(typeNameStr, state);
+
+    // The values of currentIndent and newLine are assigned to the created
+    // subprinter, so that the indent level and number of printed lines can be
+    // tracked.
+    subPrinter.currentIndent = currentIndent;
+    subPrinter.newLine = newLine;
+
     DialectAsmPrinter printer(subPrinter);
     dialect.printType(type, printer);
   }
@@ -2944,6 +3035,21 @@ AsmPrinter::~AsmPrinter() = default;
 raw_ostream &AsmPrinter::getStream() const {
   assert(impl && "expected AsmPrinter::getStream to be overriden");
   return impl->getStream();
+}
+
+void AsmPrinter::printNewline() {
+  assert(impl && "expected AsmPrinter::printNewLine to be overriden");
+  impl->printNewline();
+}
+
+void AsmPrinter::increaseIndent() {
+  assert(impl && "expected AsmPrinter::increaseIndent to be overriden");
+  impl->increaseIndent();
+}
+
+void AsmPrinter::decreaseIndent() {
+  assert(impl && "expected AsmPrinter::decreaseIndent to be overriden");
+  impl->decreaseIndent();
 }
 
 /// Print the given floating point value in a stablized form.
@@ -3276,19 +3382,6 @@ public:
     printTrailingLocation(loc);
   }
 
-  /// Print a newline and indent the printer to the start of the current
-  /// operation.
-  void printNewline() override {
-    os << newLine;
-    os.indent(currentIndent);
-  }
-
-  /// Increase indentation.
-  void increaseIndent() override { currentIndent += indentWidth; }
-
-  /// Decrease indentation.
-  void decreaseIndent() override { currentIndent -= indentWidth; }
-
   /// Print a block argument in the usual format of:
   ///   %ssaName : type {attr1=42} loc("here")
   /// where location printing is controlled by the standard internal option.
@@ -3414,12 +3507,6 @@ private:
   // top-level we start with "builtin" as the default, so that the top-level
   // `module` operation prints as-is.
   SmallVector<StringRef> defaultDialectStack{"builtin"};
-
-  /// The number of spaces used for indenting nested operations.
-  const static unsigned indentWidth = 2;
-
-  // This is the current indentation level for nested structures.
-  unsigned currentIndent = 0;
 };
 } // namespace
 
@@ -3857,8 +3944,8 @@ void OperationPrinter::printRegion(Region &region, bool printEntryBlockArgs,
   }
   os << "{" << newLine;
   if (!region.empty()) {
-    auto restoreDefaultDialect =
-        llvm::make_scope_exit([&]() { defaultDialectStack.pop_back(); });
+    llvm::scope_exit restoreDefaultDialect(
+        [&]() { defaultDialectStack.pop_back(); });
     if (auto iface = dyn_cast<OpAsmOpInterface>(region.getParentOp()))
       defaultDialectStack.push_back(iface.getDefaultDialect());
     else

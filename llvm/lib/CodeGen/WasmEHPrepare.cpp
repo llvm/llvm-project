@@ -85,6 +85,7 @@
 #include "llvm/IR/IRBuilder.h"
 #include "llvm/IR/IntrinsicsWebAssembly.h"
 #include "llvm/IR/Module.h"
+#include "llvm/IR/RuntimeLibcalls.h"
 #include "llvm/InitializePasses.h"
 #include "llvm/Transforms/Utils/BasicBlockUtils.h"
 
@@ -273,8 +274,13 @@ bool WasmEHPrepareImpl::prepareEHPads(Function &F) {
   // instruction selection.
   CatchF = Intrinsic::getOrInsertDeclaration(&M, Intrinsic::wasm_catch);
 
+  // FIXME: Verify this is really supported for current module.
+  StringRef UnwindCallPersonalityName =
+      RTLIB::RuntimeLibcallsInfo::getLibcallImplName(
+          RTLIB::impl__Unwind_CallPersonality);
+
   // _Unwind_CallPersonality() wrapper function, which calls the personality
-  CallPersonalityF = M.getOrInsertFunction("_Unwind_CallPersonality",
+  CallPersonalityF = M.getOrInsertFunction(UnwindCallPersonalityName,
                                            IRB.getInt32Ty(), IRB.getPtrTy());
   if (Function *F = dyn_cast<Function>(CallPersonalityF.getCallee()))
     F->setDoesNotThrow();

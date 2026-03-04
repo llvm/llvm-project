@@ -21,9 +21,9 @@
 #include "clang/Driver/Driver.h"
 #include "clang/Driver/InputInfo.h"
 #include "clang/Driver/Job.h"
-#include "clang/Driver/Options.h"
 #include "clang/Driver/SanitizerArgs.h"
 #include "clang/Driver/XRayArgs.h"
+#include "clang/Options/Options.h"
 #include "llvm/ADT/SmallString.h"
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/ADT/StringRef.h"
@@ -229,8 +229,6 @@ static void getAArch64MultilibFlags(const Driver &D,
       break;
     }
   }
-
-  processMultilibCustomFlags(Result, Args);
 }
 
 static void getARMMultilibFlags(const Driver &D, const llvm::Triple &Triple,
@@ -319,13 +317,12 @@ static void getARMMultilibFlags(const Driver &D, const llvm::Triple &Triple,
       break;
     }
   }
-
-  processMultilibCustomFlags(Result, Args);
 }
 
 static void getRISCVMultilibFlags(const Driver &D, const llvm::Triple &Triple,
                                   const llvm::opt::ArgList &Args,
-                                  Multilib::flags_list &Result) {
+                                  Multilib::flags_list &Result,
+                                  bool hasShadowCallStack) {
   std::string Arch = riscv::getRISCVArch(Args, Triple);
   // Canonicalize arch for easier matching
   auto ISAInfo = llvm::RISCVISAInfo::parseArchString(
@@ -334,11 +331,16 @@ static void getRISCVMultilibFlags(const Driver &D, const llvm::Triple &Triple,
     Result.push_back("-march=" + (*ISAInfo)->toString());
 
   Result.push_back(("-mabi=" + riscv::getRISCVABI(Args, Triple)).str());
+
+  if (hasShadowCallStack)
+    Result.push_back("-fsanitize=shadow-call-stack");
+  else
+    Result.push_back("-fno-sanitize=shadow-call-stack");
 }
 
 Multilib::flags_list
 ToolChain::getMultilibFlags(const llvm::opt::ArgList &Args) const {
-  using namespace clang::driver::options;
+  using namespace clang::options;
 
   std::vector<std::string> Result;
   const llvm::Triple Triple(ComputeEffectiveClangTriple(Args));
@@ -370,11 +372,16 @@ ToolChain::getMultilibFlags(const llvm::opt::ArgList &Args) const {
     break;
   case llvm::Triple::riscv32:
   case llvm::Triple::riscv64:
-    getRISCVMultilibFlags(D, Triple, Args, Result);
+  case llvm::Triple::riscv32be:
+  case llvm::Triple::riscv64be:
+    getRISCVMultilibFlags(D, Triple, Args, Result,
+                          getSanitizerArgs(Args).hasShadowCallStack());
     break;
   default:
     break;
   }
+
+  processMultilibCustomFlags(Result, Args);
 
   // Include fno-exceptions and fno-rtti
   // to improve multilib selection
@@ -519,7 +526,9 @@ ToolChain::getTargetAndModeFromProgramName(StringRef PN) {
   StringRef Prefix(ProgName);
   Prefix = Prefix.slice(0, LastComponent);
   std::string IgnoredError;
-  bool IsRegistered = llvm::TargetRegistry::lookupTarget(Prefix, IgnoredError);
+
+  llvm::Triple Triple(Prefix);
+  bool IsRegistered = llvm::TargetRegistry::lookupTarget(Triple, IgnoredError);
   return ParsedClangName{std::string(Prefix), ModeSuffix, DS->ModeFlag,
                          IsRegistered};
 }
@@ -652,6 +661,7 @@ Tool *ToolChain::getTool(Action::ActionClass AC) const {
   case Action::VerifyDebugInfoJobClass:
   case Action::BinaryAnalyzeJobClass:
   case Action::BinaryTranslatorJobClass:
+  case Action::ObjcopyJobClass:
     llvm_unreachable("Invalid tool kind.");
 
   case Action::CompileJobClass:
@@ -848,24 +858,40 @@ void ToolChain::addFortranRuntimeLibs(const ArgList &Args,
                    options::OPT_fno_openmp, false)) {
     Driver::OpenMPRuntimeKind OMPRuntime = getDriver().getOpenMPRuntime(Args);
     ToolChain::RuntimeLibType RuntimeLib = GetRuntimeLibType(Args);
-    if (OMPRuntime == Driver::OMPRT_OMP && RuntimeLib == ToolChain::RLT_Libgcc)
+    if ((OMPRuntime == Driver::OMPRT_OMP &&
+         RuntimeLib == ToolChain::RLT_Libgcc) &&
+        !getTriple().isKnownWindowsMSVCEnvironment()) {
       CmdArgs.push_back("-latomic");
+    }
   }
 }
 
 void ToolChain::addFortranRuntimeLibraryPath(const llvm::opt::ArgList &Args,
                                              ArgStringList &CmdArgs) const {
-  // Default to the <driver-path>/../lib directory. This works fine on the
-  // platforms that we have tested so far. We will probably have to re-fine
-  // this in the future. In particular, on some platforms, we may need to use
-  // lib64 instead of lib.
+  auto AddLibSearchPathIfExists = [&](const Twine &Path) {
+    // Linker may emit warnings about non-existing directories
+    if (!llvm::sys::fs::is_directory(Path))
+      return;
+
+    if (getTriple().isKnownWindowsMSVCEnvironment())
+      CmdArgs.push_back(Args.MakeArgString("-libpath:" + Path));
+    else
+      CmdArgs.push_back(Args.MakeArgString("-L" + Path));
+  };
+
+  // Search for flang_rt.* at the same location as clang_rt.* with
+  // LLVM_ENABLE_PER_TARGET_RUNTIME_DIR=0. On most platforms, flang_rt is
+  // located at the path returned by getRuntimePath() which is already added to
+  // the library search path. This exception is for Apple-Darwin.
+  AddLibSearchPathIfExists(getCompilerRTPath());
+
+  // Fall back to the non-resource directory <driver-path>/../lib. We will
+  // probably have to refine this in the future. In particular, on some
+  // platforms, we may need to use lib64 instead of lib.
   SmallString<256> DefaultLibPath =
       llvm::sys::path::parent_path(getDriver().Dir);
   llvm::sys::path::append(DefaultLibPath, "lib");
-  if (getTriple().isKnownWindowsMSVCEnvironment())
-    CmdArgs.push_back(Args.MakeArgString("-libpath:" + DefaultLibPath));
-  else
-    CmdArgs.push_back(Args.MakeArgString("-L" + DefaultLibPath));
+  AddLibSearchPathIfExists(DefaultLibPath);
 }
 
 void ToolChain::addFlangRTLibPath(const ArgList &Args,
@@ -1237,7 +1263,6 @@ std::string ToolChain::ComputeLLVMTriple(const ArgList &Args,
   }
   case llvm::Triple::aarch64: {
     llvm::Triple Triple = getTriple();
-    tools::aarch64::setPAuthABIInTriple(getDriver(), Args, Triple);
     if (!Triple.isOSBinFormatMachO())
       return Triple.getTriple();
 
@@ -1396,13 +1421,6 @@ void ToolChain::addSystemFrameworkInclude(const llvm::opt::ArgList &DriverArgs,
   CC1Args.push_back(DriverArgs.MakeArgString(Path));
 }
 
-/// Utility function to add a system include directory to CC1 arguments.
-void ToolChain::addSystemInclude(const ArgList &DriverArgs,
-                                 ArgStringList &CC1Args, const Twine &Path) {
-  CC1Args.push_back("-internal-isystem");
-  CC1Args.push_back(DriverArgs.MakeArgString(Path));
-}
-
 /// Utility function to add a system include directory with extern "C"
 /// semantics to CC1 arguments.
 ///
@@ -1423,6 +1441,14 @@ void ToolChain::addExternCSystemIncludeIfExists(const ArgList &DriverArgs,
                                                 const Twine &Path) {
   if (llvm::sys::fs::exists(Path))
     addExternCSystemInclude(DriverArgs, CC1Args, Path);
+}
+
+/// Utility function to add a system include directory to CC1 arguments.
+/*static*/ void ToolChain::addSystemInclude(const ArgList &DriverArgs,
+                                            ArgStringList &CC1Args,
+                                            const Twine &Path) {
+  CC1Args.push_back("-internal-isystem");
+  CC1Args.push_back(DriverArgs.MakeArgString(Path));
 }
 
 /// Utility function to add a list of system framework directories to CC1.
@@ -1606,7 +1632,8 @@ SanitizerMask ToolChain::getSupportedSanitizers() const {
       SanitizerKind::CFICastStrict | SanitizerKind::FloatDivideByZero |
       SanitizerKind::KCFI | SanitizerKind::UnsignedIntegerOverflow |
       SanitizerKind::UnsignedShiftBase | SanitizerKind::ImplicitConversion |
-      SanitizerKind::Nullability | SanitizerKind::LocalBounds;
+      SanitizerKind::Nullability | SanitizerKind::LocalBounds |
+      SanitizerKind::AllocToken;
   if (getTriple().getArch() == llvm::Triple::x86 ||
       getTriple().getArch() == llvm::Triple::x86_64 ||
       getTriple().getArch() == llvm::Triple::arm ||
@@ -1619,6 +1646,8 @@ SanitizerMask ToolChain::getSupportedSanitizers() const {
     Res |= SanitizerKind::ShadowCallStack;
   if (getTriple().isAArch64(64))
     Res |= SanitizerKind::MemTag;
+  if (getTriple().isBPF())
+    Res |= SanitizerKind::KernelAddress;
   return Res;
 }
 
@@ -1785,7 +1814,7 @@ void ToolChain::TranslateXarchArgs(
   unsigned Index = BaseArgs.MakeIndex(A->getValue(ValuePos));
   unsigned Prev = Index;
   std::unique_ptr<llvm::opt::Arg> XarchArg(Opts.ParseOneArg(
-      Args, Index, llvm::opt::Visibility(clang::driver::options::ClangOption)));
+      Args, Index, llvm::opt::Visibility(options::ClangOption)));
 
   // If the argument parsing failed or more than one argument was
   // consumed, the -Xarch_ argument's parameter tried to consume

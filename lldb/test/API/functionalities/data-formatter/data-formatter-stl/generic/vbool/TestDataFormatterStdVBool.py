@@ -9,6 +9,8 @@ from lldbsuite.test import lldbutil
 
 
 class StdVBoolDataFormatterTestCase(TestBase):
+    TEST_WITH_PDB_DEBUG_INFO = True
+
     def setUp(self):
         # Call super's setUp().
         TestBase.setUp(self)
@@ -104,7 +106,7 @@ class StdVBoolDataFormatterTestCase(TestBase):
         self.do_test()
 
     @add_test_categories(["msvcstl"])
-    def test_libstdcxx(self):
+    def test_msvcstl(self):
         # No flags, because the "msvcstl" category checks that the MSVC STL is used by default.
         self.build()
         self.do_test()

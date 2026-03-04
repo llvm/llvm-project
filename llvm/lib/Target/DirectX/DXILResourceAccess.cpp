@@ -8,60 +8,119 @@
 
 #include "DXILResourceAccess.h"
 #include "DirectX.h"
+#include "llvm/ADT/SetVector.h"
 #include "llvm/Analysis/DXILResource.h"
+#include "llvm/Frontend/HLSL/HLSLResource.h"
+#include "llvm/IR/BasicBlock.h"
+#include "llvm/IR/DiagnosticInfo.h"
 #include "llvm/IR/Dominators.h"
 #include "llvm/IR/IRBuilder.h"
+#include "llvm/IR/Instruction.h"
 #include "llvm/IR/Instructions.h"
 #include "llvm/IR/IntrinsicInst.h"
 #include "llvm/IR/Intrinsics.h"
 #include "llvm/IR/IntrinsicsDirectX.h"
+#include "llvm/IR/LLVMContext.h"
+#include "llvm/IR/User.h"
 #include "llvm/InitializePasses.h"
+#include "llvm/Support/FormatVariadic.h"
+#include "llvm/Transforms/Utils/ValueMapper.h"
 
 #define DEBUG_TYPE "dxil-resource-access"
 
 using namespace llvm;
 
-static Value *calculateGEPOffset(GetElementPtrInst *GEP, Value *PrevOffset,
-                                 dxil::ResourceTypeInfo &RTI) {
-  assert(!PrevOffset && "Non-constant GEP chains not handled yet");
+static void diagnoseNonUniqueResourceAccess(Instruction *I,
+                                            ArrayRef<IntrinsicInst *> Handles) {
+  LLVMContext &Context = I->getContext();
+  std::string InstStr;
+  raw_string_ostream InstOS(InstStr);
+  I->print(InstOS);
+  Context.diagnose(
+      DiagnosticInfoGeneric("At resource access:" + Twine(InstStr), DS_Note));
 
-  const DataLayout &DL = GEP->getDataLayout();
+  for (auto *Handle : Handles) {
+    std::string HandleStr;
+    raw_string_ostream HandleOS(HandleStr);
+    Handle->print(HandleOS);
+    Context.diagnose(DiagnosticInfoGeneric(
+        "Uses resource handle:" + Twine(HandleStr), DS_Note));
+  }
+  Context.diagnose(DiagnosticInfoGeneric(
+      "Resource access is not guaranteed to map to a unique global resource"));
+}
 
-  uint64_t ScalarSize = 1;
-  if (RTI.isTyped()) {
-    Type *ContainedType = RTI.getHandleTy()->getTypeParameter(0);
-    // We need the size of an element in bytes so that we can calculate the
-    // offset in elements given a total offset in bytes.
-    Type *ScalarType = ContainedType->getScalarType();
-    ScalarSize = DL.getTypeSizeInBits(ScalarType) / 8;
+static Value *traverseGEPOffsets(const DataLayout &DL, IRBuilder<> &Builder,
+                                 Value *Ptr, uint64_t AccessSize) {
+  Value *Offset = nullptr;
+
+  while (Ptr) {
+    if (auto *II = dyn_cast<IntrinsicInst>(Ptr)) {
+      assert(II->getIntrinsicID() == Intrinsic::dx_resource_getpointer &&
+             "Resource access through unexpected intrinsic");
+      return Offset ? Offset : ConstantInt::get(Builder.getInt32Ty(), 0);
+    }
+
+    auto *GEP = dyn_cast<GetElementPtrInst>(Ptr);
+    assert(GEP && "Resource access through unexpected instruction");
+
+    unsigned NumIndices = GEP->getNumIndices();
+    uint64_t IndexScale = DL.getTypeAllocSize(GEP->getSourceElementType());
+    APInt ConstantOffset(DL.getIndexTypeSizeInBits(GEP->getType()), 0);
+    Value *GEPOffset;
+    if (GEP->accumulateConstantOffset(DL, ConstantOffset)) {
+      // We have a constant offset (in bytes).
+      GEPOffset =
+          ConstantInt::get(DL.getIndexType(GEP->getType()), ConstantOffset);
+      IndexScale = 1;
+    } else if (NumIndices == 1) {
+      // If we have a single index we're indexing into a top level array. This
+      // generally only happens with cbuffers.
+      GEPOffset = *GEP->idx_begin();
+    } else if (NumIndices == 2) {
+      // If we have two indices, this should be an access through a pointer.
+      auto *IndexIt = GEP->idx_begin();
+      assert(cast<ConstantInt>(IndexIt)->getZExtValue() == 0 &&
+             "GEP is not indexing through pointer");
+      GEPOffset = *(++IndexIt);
+    } else
+      llvm_unreachable("Unhandled GEP structure for resource access");
+
+    uint64_t ElemSize = AccessSize;
+    if (!(IndexScale % ElemSize)) {
+      // If our scale is an exact multiple of the access size, adjust the
+      // scaling to avoid an unnecessary division.
+      IndexScale /= ElemSize;
+      ElemSize = 1;
+    }
+    if (IndexScale != 1)
+      GEPOffset = Builder.CreateMul(
+          GEPOffset, ConstantInt::get(Builder.getInt32Ty(), IndexScale));
+    if (ElemSize != 1)
+      GEPOffset = Builder.CreateUDiv(
+          GEPOffset, ConstantInt::get(Builder.getInt32Ty(), ElemSize));
+
+    Offset = Offset ? Builder.CreateAdd(Offset, GEPOffset) : GEPOffset;
+    Ptr = GEP->getPointerOperand();
   }
 
-  APInt ConstantOffset(DL.getIndexTypeSizeInBits(GEP->getType()), 0);
-  if (GEP->accumulateConstantOffset(DL, ConstantOffset)) {
-    APInt Scaled = ConstantOffset.udiv(ScalarSize);
-    return ConstantInt::get(Type::getInt32Ty(GEP->getContext()), Scaled);
-  }
-
-  auto IndexIt = GEP->idx_begin();
-  assert(cast<ConstantInt>(IndexIt)->getZExtValue() == 0 &&
-         "GEP is not indexing through pointer");
-  ++IndexIt;
-  Value *Offset = *IndexIt;
-  assert(++IndexIt == GEP->idx_end() && "Too many indices in GEP");
-  return Offset;
+  llvm_unreachable("GEP of null pointer?");
 }
 
 static void createTypedBufferStore(IntrinsicInst *II, StoreInst *SI,
-                                   Value *Offset, dxil::ResourceTypeInfo &RTI) {
+                                   dxil::ResourceTypeInfo &RTI) {
+  const DataLayout &DL = SI->getDataLayout();
   IRBuilder<> Builder(SI);
   Type *ContainedType = RTI.getHandleTy()->getTypeParameter(0);
+  Type *ScalarType = ContainedType->getScalarType();
   Type *LoadType = StructType::get(ContainedType, Builder.getInt1Ty());
 
   Value *V = SI->getValueOperand();
   if (V->getType() == ContainedType) {
     // V is already the right type.
-    assert(!Offset && "store of whole element has offset?");
-  } else if (V->getType() == ContainedType->getScalarType()) {
+    assert(SI->getPointerOperand() == II &&
+           "Store of whole element has mismatched address to store to");
+  } else if (V->getType() == ScalarType) {
     // We're storing a scalar, so we need to load the current value and only
     // replace the relevant part.
     auto *Load = Builder.CreateIntrinsic(
@@ -69,9 +128,9 @@ static void createTypedBufferStore(IntrinsicInst *II, StoreInst *SI,
         {II->getOperand(0), II->getOperand(1)});
     auto *Struct = Builder.CreateExtractValue(Load, {0});
 
-    // If we have an offset from seeing a GEP earlier, use that. Otherwise, 0.
-    if (!Offset)
-      Offset = ConstantInt::get(Builder.getInt32Ty(), 0);
+    uint64_t AccessSize = DL.getTypeSizeInBits(ScalarType) / 8;
+    Value *Offset =
+        traverseGEPOffsets(DL, Builder, SI->getPointerOperand(), AccessSize);
     V = Builder.CreateInsertElement(Struct, V, Offset);
   } else {
     llvm_unreachable("Store to typed resource has invalid type");
@@ -83,27 +142,44 @@ static void createTypedBufferStore(IntrinsicInst *II, StoreInst *SI,
   SI->replaceAllUsesWith(Inst);
 }
 
-static void createRawStore(IntrinsicInst *II, StoreInst *SI, Value *Offset) {
+static void createRawStore(IntrinsicInst *II, StoreInst *SI,
+                           dxil::ResourceTypeInfo &RTI) {
+  const DataLayout &DL = SI->getDataLayout();
   IRBuilder<> Builder(SI);
 
-  if (!Offset)
-    Offset = ConstantInt::get(Builder.getInt32Ty(), 0);
   Value *V = SI->getValueOperand();
-  // TODO: break up larger types
-  auto *Inst = Builder.CreateIntrinsic(
-      Builder.getVoidTy(), Intrinsic::dx_resource_store_rawbuffer,
-      {II->getOperand(0), II->getOperand(1), Offset, V});
+  assert(!V->getType()->isAggregateType() &&
+         "Resource store should be scalar or vector type");
+
+  Value *Index = II->getOperand(1);
+  // The offset for the rawbuffer load and store ops is always in bytes.
+  uint64_t AccessSize = 1;
+  Value *Offset =
+      traverseGEPOffsets(DL, Builder, SI->getPointerOperand(), AccessSize);
+
+  // For raw buffer (ie, HLSL's ByteAddressBuffer), we need to fold the access
+  // entirely into the index.
+  if (!RTI.isStruct()) {
+    auto *ConstantOffset = dyn_cast<ConstantInt>(Offset);
+    if (!ConstantOffset || !ConstantOffset->isZero())
+      Index = Builder.CreateAdd(Index, Offset);
+    Offset = llvm::PoisonValue::get(Builder.getInt32Ty());
+  }
+
+  auto *Inst = Builder.CreateIntrinsic(Builder.getVoidTy(),
+                                       Intrinsic::dx_resource_store_rawbuffer,
+                                       {II->getOperand(0), Index, Offset, V});
   SI->replaceAllUsesWith(Inst);
 }
 
 static void createStoreIntrinsic(IntrinsicInst *II, StoreInst *SI,
-                                 Value *Offset, dxil::ResourceTypeInfo &RTI) {
+                                 dxil::ResourceTypeInfo &RTI) {
   switch (RTI.getResourceKind()) {
   case dxil::ResourceKind::TypedBuffer:
-    return createTypedBufferStore(II, SI, Offset, RTI);
+    return createTypedBufferStore(II, SI, RTI);
   case dxil::ResourceKind::RawBuffer:
   case dxil::ResourceKind::StructuredBuffer:
-    return createRawStore(II, SI, Offset);
+    return createRawStore(II, SI, RTI);
   case dxil::ResourceKind::Texture1D:
   case dxil::ResourceKind::Texture2D:
   case dxil::ResourceKind::Texture2DMS:
@@ -129,7 +205,8 @@ static void createStoreIntrinsic(IntrinsicInst *II, StoreInst *SI,
 }
 
 static void createTypedBufferLoad(IntrinsicInst *II, LoadInst *LI,
-                                  Value *Offset, dxil::ResourceTypeInfo &RTI) {
+                                  dxil::ResourceTypeInfo &RTI) {
+  const DataLayout &DL = LI->getDataLayout();
   IRBuilder<> Builder(LI);
   Type *ContainedType = RTI.getHandleTy()->getTypeParameter(0);
   Type *LoadType = StructType::get(ContainedType, Builder.getInt1Ty());
@@ -139,7 +216,12 @@ static void createTypedBufferLoad(IntrinsicInst *II, LoadInst *LI,
                               {II->getOperand(0), II->getOperand(1)});
   V = Builder.CreateExtractValue(V, {0});
 
-  if (Offset)
+  Type *ScalarType = ContainedType->getScalarType();
+  uint64_t AccessSize = DL.getTypeSizeInBits(ScalarType) / 8;
+  Value *Offset =
+      traverseGEPOffsets(DL, Builder, LI->getPointerOperand(), AccessSize);
+  auto *ConstantOffset = dyn_cast<ConstantInt>(Offset);
+  if (!ConstantOffset || !ConstantOffset->isZero())
     V = Builder.CreateExtractElement(V, Offset);
 
   // If we loaded a <1 x ...> instead of a scalar (presumably to feed a
@@ -152,28 +234,190 @@ static void createTypedBufferLoad(IntrinsicInst *II, LoadInst *LI,
   LI->replaceAllUsesWith(V);
 }
 
-static void createRawLoad(IntrinsicInst *II, LoadInst *LI, Value *Offset) {
+static void createRawLoad(IntrinsicInst *II, LoadInst *LI,
+                          dxil::ResourceTypeInfo &RTI) {
+  const DataLayout &DL = LI->getDataLayout();
   IRBuilder<> Builder(LI);
-  // TODO: break up larger types
+
   Type *LoadType = StructType::get(LI->getType(), Builder.getInt1Ty());
-  if (!Offset)
-    Offset = ConstantInt::get(Builder.getInt32Ty(), 0);
+  assert(!LI->getType()->isAggregateType() &&
+         "Resource load should be scalar or vector type");
+
+  Value *Index = II->getOperand(1);
+  // The offset for the rawbuffer load and store ops is always in bytes.
+  uint64_t AccessSize = 1;
+  Value *Offset =
+      traverseGEPOffsets(DL, Builder, LI->getPointerOperand(), AccessSize);
+
+  // For raw buffer (ie, HLSL's ByteAddressBuffer), we need to fold the access
+  // entirely into the index.
+  if (!RTI.isStruct()) {
+    auto *ConstantOffset = dyn_cast<ConstantInt>(Offset);
+    if (!ConstantOffset || !ConstantOffset->isZero())
+      Index = Builder.CreateAdd(Index, Offset);
+    Offset = llvm::PoisonValue::get(Builder.getInt32Ty());
+  }
+
   Value *V =
       Builder.CreateIntrinsic(LoadType, Intrinsic::dx_resource_load_rawbuffer,
-                              {II->getOperand(0), II->getOperand(1), Offset});
+                              {II->getOperand(0), Index, Offset});
   V = Builder.CreateExtractValue(V, {0});
 
   LI->replaceAllUsesWith(V);
 }
 
-static void createLoadIntrinsic(IntrinsicInst *II, LoadInst *LI, Value *Offset,
+namespace {
+/// Helper for building a `load.cbufferrow` intrinsic given a simple type.
+struct CBufferRowIntrin {
+  Intrinsic::ID IID;
+  Type *RetTy;
+  unsigned int EltSize;
+  unsigned int NumElts;
+
+  CBufferRowIntrin(const DataLayout &DL, Type *Ty) {
+    assert(Ty == Ty->getScalarType() && "Expected scalar type");
+
+    switch (DL.getTypeSizeInBits(Ty)) {
+    case 16:
+      IID = Intrinsic::dx_resource_load_cbufferrow_8;
+      RetTy = StructType::get(Ty, Ty, Ty, Ty, Ty, Ty, Ty, Ty);
+      EltSize = 2;
+      NumElts = 8;
+      break;
+    case 32:
+      IID = Intrinsic::dx_resource_load_cbufferrow_4;
+      RetTy = StructType::get(Ty, Ty, Ty, Ty);
+      EltSize = 4;
+      NumElts = 4;
+      break;
+    case 64:
+      IID = Intrinsic::dx_resource_load_cbufferrow_2;
+      RetTy = StructType::get(Ty, Ty);
+      EltSize = 8;
+      NumElts = 2;
+      break;
+    default:
+      llvm_unreachable("Only 16, 32, and 64 bit types supported");
+    }
+  }
+};
+} // namespace
+
+static void createCBufferLoad(IntrinsicInst *II, LoadInst *LI,
+                              dxil::ResourceTypeInfo &RTI) {
+  const DataLayout &DL = LI->getDataLayout();
+
+  Type *Ty = LI->getType();
+  assert(!isa<StructType>(Ty) && "Structs not handled yet");
+  CBufferRowIntrin Intrin(DL, Ty->getScalarType());
+
+  StringRef Name = LI->getName();
+  Value *Handle = II->getOperand(0);
+
+  IRBuilder<> Builder(LI);
+
+  ConstantInt *GlobalOffset = dyn_cast<ConstantInt>(II->getOperand(1));
+  assert(GlobalOffset && "CBuffer getpointer index must be constant");
+
+  uint64_t GlobalOffsetVal = GlobalOffset->getZExtValue();
+  Value *CurrentRow = ConstantInt::get(
+      Builder.getInt32Ty(), GlobalOffsetVal / hlsl::CBufferRowSizeInBytes);
+  unsigned int CurrentIndex =
+      (GlobalOffsetVal % hlsl::CBufferRowSizeInBytes) / Intrin.EltSize;
+
+  // Every object in a cbuffer either fits in a row or is aligned to a row. This
+  // means that only the very last pointer access can point into a row.
+  auto *LastGEP = dyn_cast<GEPOperator>(LI->getPointerOperand());
+  if (!LastGEP) {
+    // If we don't have a GEP at all we're just accessing the resource through
+    // the result of getpointer directly.
+    assert(LI->getPointerOperand() == II &&
+           "Unexpected indirect access to resource without GEP");
+  } else {
+    Value *GEPOffset = traverseGEPOffsets(
+        DL, Builder, LastGEP->getPointerOperand(), hlsl::CBufferRowSizeInBytes);
+    CurrentRow = Builder.CreateAdd(GEPOffset, CurrentRow);
+
+    APInt ConstantOffset(DL.getIndexTypeSizeInBits(LastGEP->getType()), 0);
+    if (LastGEP->accumulateConstantOffset(DL, ConstantOffset)) {
+      APInt Remainder(DL.getIndexTypeSizeInBits(LastGEP->getType()),
+                      hlsl::CBufferRowSizeInBytes);
+      APInt::udivrem(ConstantOffset, Remainder, ConstantOffset, Remainder);
+      CurrentRow = Builder.CreateAdd(
+          CurrentRow, ConstantInt::get(Builder.getInt32Ty(), ConstantOffset));
+      CurrentIndex += Remainder.udiv(Intrin.EltSize).getZExtValue();
+    } else {
+      assert(LastGEP->getNumIndices() == 1 &&
+             "Last GEP of cbuffer access is not array or struct access");
+      // We assume a non-constant access will be row-aligned. This is safe
+      // because arrays and structs are always row aligned, and accesses to
+      // vector elements will show up as a load of the vector followed by an
+      // extractelement.
+      CurrentRow = cast<ConstantInt>(CurrentRow)->isZero()
+                       ? *LastGEP->idx_begin()
+                       : Builder.CreateAdd(CurrentRow, *LastGEP->idx_begin());
+      CurrentIndex = 0;
+    }
+  }
+
+  auto *CBufLoad = Builder.CreateIntrinsic(
+      Intrin.RetTy, Intrin.IID, {Handle, CurrentRow}, nullptr, Name + ".load");
+  auto *Elt =
+      Builder.CreateExtractValue(CBufLoad, {CurrentIndex++}, Name + ".extract");
+
+  // At this point we've loaded the first scalar of our result, but our original
+  // type may have been a vector.
+  unsigned int Remaining =
+      ((DL.getTypeSizeInBits(Ty) / 8) / Intrin.EltSize) - 1;
+  if (Remaining == 0) {
+    // We only have a single element, so we're done.
+    Value *Result = Elt;
+
+    // However, if we loaded a <1 x T>, then we need to adjust the type.
+    if (auto *VT = dyn_cast<FixedVectorType>(Ty)) {
+      assert(VT->getNumElements() == 1 && "Can't have multiple elements here");
+      Result = Builder.CreateInsertElement(PoisonValue::get(VT), Result,
+                                           Builder.getInt32(0), Name);
+    }
+    LI->replaceAllUsesWith(Result);
+    return;
+  }
+
+  // Walk each element and extract it, wrapping to new rows as needed.
+  SmallVector<Value *> Extracts{Elt};
+  while (Remaining--) {
+    CurrentIndex %= Intrin.NumElts;
+
+    if (CurrentIndex == 0) {
+      CurrentRow = Builder.CreateAdd(CurrentRow,
+                                     ConstantInt::get(Builder.getInt32Ty(), 1));
+      CBufLoad = Builder.CreateIntrinsic(Intrin.RetTy, Intrin.IID,
+                                         {Handle, CurrentRow}, nullptr,
+                                         Name + ".load");
+    }
+
+    Extracts.push_back(Builder.CreateExtractValue(CBufLoad, {CurrentIndex++},
+                                                  Name + ".extract"));
+  }
+
+  // Finally, we build up the original loaded value.
+  Value *Result = PoisonValue::get(Ty);
+  for (int I = 0, E = Extracts.size(); I < E; ++I)
+    Result = Builder.CreateInsertElement(
+        Result, Extracts[I], Builder.getInt32(I), Name + formatv(".upto{}", I));
+  LI->replaceAllUsesWith(Result);
+}
+
+static void createLoadIntrinsic(IntrinsicInst *II, LoadInst *LI,
                                 dxil::ResourceTypeInfo &RTI) {
   switch (RTI.getResourceKind()) {
   case dxil::ResourceKind::TypedBuffer:
-    return createTypedBufferLoad(II, LI, Offset, RTI);
+    return createTypedBufferLoad(II, LI, RTI);
   case dxil::ResourceKind::RawBuffer:
   case dxil::ResourceKind::StructuredBuffer:
-    return createRawLoad(II, LI, Offset);
+    return createRawLoad(II, LI, RTI);
+  case dxil::ResourceKind::CBuffer:
+    return createCBufferLoad(II, LI, RTI);
   case dxil::ResourceKind::Texture1D:
   case dxil::ResourceKind::Texture2D:
   case dxil::ResourceKind::Texture2DMS:
@@ -185,9 +429,8 @@ static void createLoadIntrinsic(IntrinsicInst *II, LoadInst *LI, Value *Offset,
   case dxil::ResourceKind::TextureCubeArray:
   case dxil::ResourceKind::FeedbackTexture2D:
   case dxil::ResourceKind::FeedbackTexture2DArray:
-  case dxil::ResourceKind::CBuffer:
   case dxil::ResourceKind::TBuffer:
-    // TODO: handle these
+    reportFatalUsageError("Load not yet implemented for resource type");
     return;
   case dxil::ResourceKind::Sampler:
   case dxil::ResourceKind::RTAccelerationStructure:
@@ -198,38 +441,247 @@ static void createLoadIntrinsic(IntrinsicInst *II, LoadInst *LI, Value *Offset,
   llvm_unreachable("Unhandled case in switch");
 }
 
+static Instruction *getStoreLoadPointerOperand(Instruction *AI) {
+  if (auto *LI = dyn_cast<LoadInst>(AI))
+    return dyn_cast<Instruction>(LI->getPointerOperand());
+  if (auto *SI = dyn_cast<StoreInst>(AI))
+    return dyn_cast<Instruction>(SI->getPointerOperand());
+
+  return nullptr;
+}
+
+static const std::array<Intrinsic::ID, 2> HandleIntrins = {
+    Intrinsic::dx_resource_handlefrombinding,
+    Intrinsic::dx_resource_handlefromimplicitbinding,
+};
+
+static SmallVector<IntrinsicInst *> collectUsedHandles(Value *Ptr) {
+  SmallVector<Value *> Worklist = {Ptr};
+  SmallVector<IntrinsicInst *> Handles;
+
+  while (!Worklist.empty()) {
+    Value *X = Worklist.pop_back_val();
+
+    if (!X->getType()->isPointerTy() && !X->getType()->isTargetExtTy())
+      return {}; // Early exit on store/load into non-resource
+
+    if (auto *Phi = dyn_cast<PHINode>(X))
+      for (Use &V : Phi->incoming_values())
+        Worklist.push_back(V.get());
+    else if (auto *Select = dyn_cast<SelectInst>(X))
+      for (Value *V : {Select->getTrueValue(), Select->getFalseValue()})
+        Worklist.push_back(V);
+    else if (auto *II = dyn_cast<IntrinsicInst>(X)) {
+      Intrinsic::ID IID = II->getIntrinsicID();
+
+      if (IID == Intrinsic::dx_resource_getpointer)
+        Worklist.push_back(II->getArgOperand(/*Handle=*/0));
+
+      if (llvm::is_contained(HandleIntrins, IID))
+        Handles.push_back(II);
+    }
+  }
+
+  return Handles;
+}
+
+static hlsl::Binding getHandleIntrinsicBinding(IntrinsicInst *Handle,
+                                               DXILResourceTypeMap &DRTM) {
+  assert(llvm::is_contained(HandleIntrins, Handle->getIntrinsicID()) &&
+         "Only expects a Handle as determined from collectUsedHandles.");
+
+  auto *HandleTy = cast<TargetExtType>(Handle->getType());
+  dxil::ResourceClass Class = DRTM[HandleTy].getResourceClass();
+  uint32_t Space = cast<ConstantInt>(Handle->getArgOperand(0))->getZExtValue();
+  uint32_t LowerBound =
+      cast<ConstantInt>(Handle->getArgOperand(1))->getZExtValue();
+  uint32_t Size = cast<ConstantInt>(Handle->getArgOperand(2))->getZExtValue();
+  uint32_t UpperBound = Size == UINT32_MAX ? UINT32_MAX : LowerBound + Size - 1;
+
+  return hlsl::Binding(Class, Space, LowerBound, UpperBound, nullptr);
+}
+
+namespace {
+/// Helper for propagating the current handle and ptr indices.
+struct AccessIndices {
+  Value *GetPtrIdx;
+  Value *HandleIdx;
+
+  bool hasGetPtrIdx() { return GetPtrIdx != nullptr; }
+  bool hasHandleIdx() { return HandleIdx != nullptr; }
+};
+} // namespace
+
+// getAccessIndices traverses up the control flow that a ptr came from and
+// propagates back the indicies used to access the resource (AccessIndices):
+//
+//  - GetPtrIdx is the index of dx.resource.getpointer
+//  - HandleIdx is the index of dx.resource.handlefrom.*
+static AccessIndices
+getAccessIndices(Instruction *I, SmallSetVector<Instruction *, 16> &DeadInsts) {
+  if (auto *II = dyn_cast<IntrinsicInst>(I)) {
+    if (llvm::is_contained(HandleIntrins, II->getIntrinsicID())) {
+      DeadInsts.insert(II);
+      return {nullptr, II->getArgOperand(/*Index=*/3)};
+    }
+
+    if (II->getIntrinsicID() == Intrinsic::dx_resource_getpointer) {
+      auto *V = dyn_cast<Instruction>(II->getArgOperand(/*Handle=*/0));
+      auto AccessIdx = getAccessIndices(V, DeadInsts);
+      assert(!AccessIdx.hasGetPtrIdx() &&
+             "Encountered multiple dx.resource.getpointers in ptr chain?");
+      AccessIdx.GetPtrIdx = II->getArgOperand(1);
+
+      DeadInsts.insert(II);
+      return AccessIdx;
+    }
+  }
+
+  if (auto *Phi = dyn_cast<PHINode>(I)) {
+    unsigned NumEdges = Phi->getNumIncomingValues();
+    assert(NumEdges != 0 && "Malformed Phi Node");
+
+    IRBuilder<> Builder(Phi);
+    PHINode *GetPtrPhi = PHINode::Create(Builder.getInt32Ty(), NumEdges);
+    PHINode *HandlePhi = PHINode::Create(Builder.getInt32Ty(), NumEdges);
+
+    bool HasGetPtr = true;
+    for (unsigned Idx = 0; Idx < NumEdges; Idx++) {
+      auto *BB = Phi->getIncomingBlock(Idx);
+      auto *V = dyn_cast<Instruction>(Phi->getIncomingValue(Idx));
+      auto AccessIdx = getAccessIndices(V, DeadInsts);
+      HasGetPtr &= AccessIdx.hasGetPtrIdx();
+      if (HasGetPtr)
+        GetPtrPhi->addIncoming(AccessIdx.GetPtrIdx, BB);
+      HandlePhi->addIncoming(AccessIdx.HandleIdx, BB);
+    }
+
+    if (HasGetPtr)
+      Builder.Insert(GetPtrPhi);
+    else
+      GetPtrPhi = nullptr;
+
+    Builder.Insert(HandlePhi);
+
+    DeadInsts.insert(Phi);
+    return {GetPtrPhi, HandlePhi};
+  }
+
+  if (auto *Select = dyn_cast<SelectInst>(I)) {
+    auto *TrueV = dyn_cast<Instruction>(Select->getTrueValue());
+    auto TrueAccessIdx = getAccessIndices(TrueV, DeadInsts);
+
+    auto *FalseV = dyn_cast<Instruction>(Select->getFalseValue());
+    auto FalseAccessIdx = getAccessIndices(FalseV, DeadInsts);
+
+    IRBuilder<> Builder(Select);
+    Value *GetPtrSelect = nullptr;
+
+    if (TrueAccessIdx.hasGetPtrIdx() && FalseAccessIdx.hasGetPtrIdx())
+      GetPtrSelect =
+          Builder.CreateSelect(Select->getCondition(), TrueAccessIdx.GetPtrIdx,
+                               FalseAccessIdx.GetPtrIdx);
+
+    auto *HandleSelect =
+        Builder.CreateSelect(Select->getCondition(), TrueAccessIdx.HandleIdx,
+                             FalseAccessIdx.HandleIdx);
+    DeadInsts.insert(Select);
+    return {GetPtrSelect, HandleSelect};
+  }
+
+  llvm_unreachable("collectUsedHandles should assure this does not occur");
+}
+
+static void
+replaceHandleWithIndices(Instruction *Ptr, IntrinsicInst *OldHandle,
+                         SmallSetVector<Instruction *, 16> &DeadInsts) {
+  auto AccessIdx = getAccessIndices(Ptr, DeadInsts);
+  assert(AccessIdx.hasGetPtrIdx() && AccessIdx.hasHandleIdx() &&
+         "Couldn't retrieve indices. This is guaranteed by getAccessIndices");
+
+  IRBuilder<> Builder(Ptr);
+  IntrinsicInst *Handle = cast<IntrinsicInst>(OldHandle->clone());
+  Handle->setArgOperand(/*Index=*/3, AccessIdx.HandleIdx);
+  Builder.Insert(Handle);
+
+  auto *GetPtr =
+      Builder.CreateIntrinsic(Ptr->getType(), Intrinsic::dx_resource_getpointer,
+                              {Handle, AccessIdx.GetPtrIdx});
+
+  Ptr->replaceAllUsesWith(GetPtr);
+  DeadInsts.insert(Ptr);
+}
+
+// Try to legalize dx.resource.handlefrom.*.binding and dx.resource.getpointer
+// calls with their respective index values and propagate the index values to
+// be used at resource access.
+//
+// If it can't be transformed to be legal then:
+//
+// Reports an error if a resource access is not guaranteed into a unique global
+// resource.
+//
+// Returns true if any changes are made.
+static bool legalizeResourceHandles(Function &F, DXILResourceTypeMap &DRTM) {
+  SmallSetVector<Instruction *, 16> DeadInsts;
+  for (BasicBlock &BB : make_early_inc_range(F)) {
+    for (Instruction &I : BB) {
+      if (auto *PtrOp = getStoreLoadPointerOperand(&I)) {
+        SmallVector<IntrinsicInst *> Handles = collectUsedHandles(PtrOp);
+        unsigned NumHandles = Handles.size();
+        if (NumHandles <= 1)
+          continue; // Legal, no-replacement required
+
+        bool SameGlobalBinding = true;
+        hlsl::Binding B = getHandleIntrinsicBinding(Handles[0], DRTM);
+        for (unsigned Idx = 1; Idx < NumHandles; Idx++)
+          SameGlobalBinding &=
+              (B == getHandleIntrinsicBinding(Handles[Idx], DRTM));
+
+        if (!SameGlobalBinding) {
+          diagnoseNonUniqueResourceAccess(&I, Handles);
+          continue;
+        }
+
+        replaceHandleWithIndices(PtrOp, Handles[0], DeadInsts);
+      }
+    }
+  }
+
+  bool MadeChanges = false;
+
+  for (auto *I : llvm::reverse(DeadInsts))
+    if (I->hasNUses(0)) { // Handle can still be used outside of replaced path
+      I->eraseFromParent();
+      MadeChanges = true;
+    }
+
+  return MadeChanges;
+}
+
 static void replaceAccess(IntrinsicInst *II, dxil::ResourceTypeInfo &RTI) {
-  // Process users keeping track of indexing accumulated from GEPs.
-  struct AccessAndOffset {
-    User *Access;
-    Value *Offset;
-  };
-  SmallVector<AccessAndOffset> Worklist;
+  SmallVector<User *> Worklist;
   for (User *U : II->users())
-    Worklist.push_back({U, nullptr});
+    Worklist.push_back(U);
 
   SmallVector<Instruction *> DeadInsts;
   while (!Worklist.empty()) {
-    AccessAndOffset Current = Worklist.back();
+    User *U = Worklist.back();
     Worklist.pop_back();
 
-    if (auto *GEP = dyn_cast<GetElementPtrInst>(Current.Access)) {
-      IRBuilder<> Builder(GEP);
-
-      Value *Offset = calculateGEPOffset(GEP, Current.Offset, RTI);
+    if (auto *GEP = dyn_cast<GetElementPtrInst>(U)) {
       for (User *U : GEP->users())
-        Worklist.push_back({U, Offset});
+        Worklist.push_back(U);
       DeadInsts.push_back(GEP);
 
-    } else if (auto *SI = dyn_cast<StoreInst>(Current.Access)) {
+    } else if (auto *SI = dyn_cast<StoreInst>(U)) {
       assert(SI->getValueOperand() != II && "Pointer escaped!");
-      createStoreIntrinsic(II, SI, Current.Offset, RTI);
+      createStoreIntrinsic(II, SI, RTI);
       DeadInsts.push_back(SI);
 
-    } else if (auto *LI = dyn_cast<LoadInst>(Current.Access)) {
-      createLoadIntrinsic(II, LI, Current.Offset, RTI);
+    } else if (auto *LI = dyn_cast<LoadInst>(U)) {
+      createLoadIntrinsic(II, LI, RTI);
       DeadInsts.push_back(LI);
-
     } else
       llvm_unreachable("Unhandled instruction - pointer escaped?");
   }
@@ -242,7 +694,7 @@ static void replaceAccess(IntrinsicInst *II, dxil::ResourceTypeInfo &RTI) {
 
 static bool transformResourcePointers(Function &F, DXILResourceTypeMap &DRTM) {
   SmallVector<std::pair<IntrinsicInst *, dxil::ResourceTypeInfo>> Resources;
-  for (BasicBlock &BB : F)
+  for (BasicBlock &BB : make_early_inc_range(F))
     for (Instruction &I : BB)
       if (auto *II = dyn_cast<IntrinsicInst>(&I))
         if (II->getIntrinsicID() == Intrinsic::dx_resource_getpointer) {
@@ -263,8 +715,9 @@ PreservedAnalyses DXILResourceAccess::run(Function &F,
       MAMProxy.getCachedResult<DXILResourceTypeAnalysis>(*F.getParent());
   assert(DRTM && "DXILResourceTypeAnalysis must be available");
 
-  bool MadeChanges = transformResourcePointers(F, *DRTM);
-  if (!MadeChanges)
+  bool MadeHandleChanges = legalizeResourceHandles(F, *DRTM);
+  bool MadeResourceChanges = transformResourcePointers(F, *DRTM);
+  if (!(MadeHandleChanges || MadeResourceChanges))
     return PreservedAnalyses::all();
 
   PreservedAnalyses PA;
@@ -279,8 +732,9 @@ public:
   bool runOnFunction(Function &F) override {
     DXILResourceTypeMap &DRTM =
         getAnalysis<DXILResourceTypeWrapperPass>().getResourceTypeMap();
-
-    return transformResourcePointers(F, DRTM);
+    bool MadeHandleChanges = legalizeResourceHandles(F, DRTM);
+    bool MadeResourceChanges = transformResourcePointers(F, DRTM);
+    return MadeHandleChanges || MadeResourceChanges;
   }
   StringRef getPassName() const override { return "DXIL Resource Access"; }
   DXILResourceAccessLegacy() : FunctionPass(ID) {}

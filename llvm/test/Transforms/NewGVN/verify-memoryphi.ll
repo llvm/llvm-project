@@ -5,7 +5,7 @@
 ; REQUIRES: asserts
 
 
-declare void @llvm.lifetime.start.p0(i64, ptr nocapture)
+declare void @llvm.lifetime.start.p0(ptr nocapture)
 
 define void @tinkywinky() {
 ; CHECK-LABEL: define void @tinkywinky() {
@@ -20,11 +20,11 @@ define void @tinkywinky() {
 ;
 entry:
   %a = alloca i8
-  call void @llvm.lifetime.start.p0(i64 4, ptr %a)
+  call void @llvm.lifetime.start.p0(ptr %a)
   br i1 false, label %body, label %end
 
 body:
-  call void @llvm.lifetime.start.p0(i64 4, ptr %a)
+  call void @llvm.lifetime.start.p0(ptr %a)
   br label %end
 
 end:

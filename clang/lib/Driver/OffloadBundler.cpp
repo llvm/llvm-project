@@ -1523,7 +1523,7 @@ Error OffloadBundler::BundleFiles() {
     CompressedBuffer.assign(CompressedMemBuffer->getBufferStart(),
                             CompressedMemBuffer->getBufferEnd());
   } else
-    CompressedBuffer = Buffer;
+    CompressedBuffer = std::move(Buffer);
 
   OutputFile.write(CompressedBuffer.data(), CompressedBuffer.size());
 
@@ -1936,8 +1936,7 @@ Error OffloadBundler::UnbundleArchive() {
   /// Write out an archive for each target
   for (auto &Target : BundlerConfig.TargetNames) {
     StringRef FileName = TargetOutputFileNameMap[Target];
-    StringMapIterator<std::vector<llvm::NewArchiveMember>> CurArchiveMembers =
-        OutputArchivesMap.find(Target);
+    auto CurArchiveMembers = OutputArchivesMap.find(Target);
     if (CurArchiveMembers != OutputArchivesMap.end()) {
       if (Error WriteErr = writeArchive(FileName, CurArchiveMembers->getValue(),
                                         SymtabWritingMode::NormalSymtab,

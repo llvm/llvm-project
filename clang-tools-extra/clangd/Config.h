@@ -157,6 +157,12 @@ struct Config {
     None // Suggest none of the code patterns and snippets
   };
 
+  enum class MacroFilterPolicy {
+    ExactPrefix, // Suggest macros if the prefix matches exactly
+    FuzzyMatch,  // Fuzzy-match macros if they do not have "_" as prefix or
+                 // suffix
+  };
+
   /// Configures code completion feature.
   struct {
     /// Whether code completion includes results that are not visible in current
@@ -168,12 +174,17 @@ struct Config {
     HeaderInsertionPolicy HeaderInsertion = HeaderInsertionPolicy::IWYU;
     /// Enables code patterns & snippets suggestions
     CodePatternsPolicy CodePatterns = CodePatternsPolicy::All;
+    /// Controls how macros are filtered
+    MacroFilterPolicy MacroFilter = MacroFilterPolicy::ExactPrefix;
   } Completion;
 
   /// Configures hover feature.
   struct {
     /// Whether hover show a.k.a type.
     bool ShowAKA = true;
+    /// Limit the number of characters returned when hovering a macro;
+    /// 0 is no limit.
+    uint32_t MacroContentsLimit = 2048;
   } Hover;
 
   struct {

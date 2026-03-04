@@ -46,6 +46,7 @@
 #include "llvm/MC/MCSymbolMachO.h"
 #include "llvm/MC/MCTargetOptions.h"
 #include "llvm/MC/MCValue.h"
+#include "llvm/Support/Base64.h"
 #include "llvm/Support/Casting.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/ErrorHandling.h"
@@ -119,6 +120,7 @@ private:
   SourceMgr::DiagHandlerTy SavedDiagHandler;
   void *SavedDiagContext;
   std::unique_ptr<MCAsmParserExtension> PlatformParser;
+  std::unique_ptr<MCAsmParserExtension> LFIParser;
   SMLoc StartTokLoc;
   std::optional<SMLoc> CFIStartProcLoc;
 
@@ -206,7 +208,7 @@ public:
 
   void addDirectiveHandler(StringRef Directive,
                            ExtensionDirectiveHandler Handler) override {
-    ExtensionDirectiveMap[Directive] = Handler;
+    ExtensionDirectiveMap[Directive] = std::move(Handler);
   }
 
   void addAliasForDirective(StringRef Directive, StringRef Alias) override {
@@ -228,11 +230,9 @@ public:
     AssemblerDialect = i;
   }
 
-  void Note(SMLoc L, const Twine &Msg, SMRange Range = std::nullopt) override;
-  bool Warning(SMLoc L, const Twine &Msg,
-               SMRange Range = std::nullopt) override;
-  bool printError(SMLoc L, const Twine &Msg,
-                  SMRange Range = std::nullopt) override;
+  void Note(SMLoc L, const Twine &Msg, SMRange Range = {}) override;
+  bool Warning(SMLoc L, const Twine &Msg, SMRange Range = {}) override;
+  bool printError(SMLoc L, const Twine &Msg, SMRange Range = {}) override;
 
   const AsmToken &Lex() override;
 
@@ -312,7 +312,7 @@ private:
 
   void printMacroInstantiations();
   void printMessage(SMLoc Loc, SourceMgr::DiagKind Kind, const Twine &Msg,
-                    SMRange Range = std::nullopt) const {
+                    SMRange Range = {}) const {
     ArrayRef<SMRange> Ranges(Range);
     SrcMgr.PrintMessage(Loc, Kind, Msg, Ranges);
   }
@@ -418,6 +418,7 @@ private:
     DK_P2ALIGN,
     DK_P2ALIGNW,
     DK_P2ALIGNL,
+    DK_PREFALIGN,
     DK_ORG,
     DK_FILL,
     DK_ENDR,
@@ -530,6 +531,7 @@ private:
     DK_LTO_SET_CONDITIONAL,
     DK_CFI_MTE_TAGGED_FRAME,
     DK_MEMTAG,
+    DK_BASE64,
     DK_END
   };
 
@@ -552,6 +554,7 @@ private:
 
   // ".ascii", ".asciz", ".string"
   bool parseDirectiveAscii(StringRef IDVal, bool ZeroTerminated);
+  bool parseDirectiveBase64();                  // ".base64"
   bool parseDirectiveReloc(SMLoc DirectiveLoc); // ".reloc"
   bool parseDirectiveValue(StringRef IDVal,
                            unsigned Size);       // ".byte", ".long", ...
@@ -565,6 +568,7 @@ private:
   bool parseDirectiveOrg(); // ".org"
   // ".align{,32}", ".p2align{,w,l}"
   bool parseDirectiveAlign(bool IsPow2, uint8_t ValueSize);
+  bool parseDirectivePrefAlign();
 
   // ".file", ".line", ".loc", ".loc_label", ".stabs"
   bool parseDirectiveFile(SMLoc DirectiveLoc);
@@ -726,7 +730,7 @@ public:
     Lexer.setLexHLASMStrings(true);
   }
 
-  ~HLASMAsmParser() { Lexer.setSkipSpace(true); }
+  ~HLASMAsmParser() override { Lexer.setSkipSpace(true); }
 
   bool parseStatement(ParseStatementInfo &Info,
                       MCAsmParserSemaCallback *SI) override;
@@ -737,13 +741,6 @@ public:
 namespace llvm {
 
 extern cl::opt<unsigned> AsmMacroMaxNestingDepth;
-
-extern MCAsmParserExtension *createDarwinAsmParser();
-extern MCAsmParserExtension *createELFAsmParser();
-extern MCAsmParserExtension *createCOFFAsmParser();
-extern MCAsmParserExtension *createGOFFAsmParser();
-extern MCAsmParserExtension *createXCOFFAsmParser();
-extern MCAsmParserExtension *createWasmAsmParser();
 
 } // end namespace llvm
 
@@ -792,6 +789,10 @@ AsmParser::AsmParser(SourceMgr &SM, MCContext &Ctx, MCStreamer &Out,
   }
 
   PlatformParser->Initialize(*this);
+  if (Out.getLFIRewriter()) {
+    LFIParser.reset(createLFIAsmParser(Out.getLFIRewriter()));
+    LFIParser->Initialize(*this);
+  }
   initializeDirectiveKindMap();
   initializeCVDefRangeTypeMap();
 }
@@ -854,6 +855,10 @@ bool AsmParser::enterIncludeFile(const std::string &Filename) {
 /// returns true on failure.
 bool AsmParser::processIncbinFile(const std::string &Filename, int64_t Skip,
                                   const MCExpr *Count, SMLoc Loc) {
+  // The .incbin file cannot introduce new symbols.
+  if (SymbolScanningMode)
+    return false;
+
   std::string IncludedFile;
   unsigned NewBuf =
       SrcMgr.AddIncludeFile(Filename, Lexer.getLoc(), IncludedFile);
@@ -1213,8 +1218,8 @@ bool AsmParser::parsePrimaryExpr(const MCExpr *&Res, SMLoc &EndLoc,
 
     MCSymbol *Sym = getContext().getInlineAsmLabel(SymbolName);
     if (!Sym)
-      Sym = getContext().getOrCreateSymbol(MAI.isHLASM() ? SymbolName.upper()
-                                                         : SymbolName);
+      Sym = getContext().parseSymbol(MAI.isHLASM() ? SymbolName.upper()
+                                                   : SymbolName);
 
     // If this is an absolute variable reference, substitute it now to preserve
     // semantics in the face of reassignment.
@@ -1845,7 +1850,7 @@ bool AsmParser::parseStatement(ParseStatementInfo &Info,
                                        RewrittenLabel);
         IDVal = RewrittenLabel;
       }
-      Sym = getContext().getOrCreateSymbol(IDVal);
+      Sym = getContext().parseSymbol(IDVal);
     } else
       Sym = Ctx.createDirectionalLocalSymbol(LocalLabelVal);
     // End of Labels should be treated as end of line for lexing
@@ -1864,11 +1869,13 @@ bool AsmParser::parseStatement(ParseStatementInfo &Info,
       Lex();
     }
 
-    if (MAI.hasSubsectionsViaSymbols() && CFIStartProcLoc &&
-        Sym->isExternal() && !static_cast<MCSymbolMachO *>(Sym)->isAltEntry())
-      return Error(StartTokLoc, "non-private labels cannot appear between "
-                                ".cfi_startproc / .cfi_endproc pairs") &&
-             Error(*CFIStartProcLoc, "previous .cfi_startproc was here");
+    if (MAI.isMachO() && CFIStartProcLoc) {
+      auto *SymM = static_cast<MCSymbolMachO *>(Sym);
+      if (SymM->isExternal() && !SymM->isAltEntry())
+        return Error(StartTokLoc, "non-private labels cannot appear between "
+                                  ".cfi_startproc / .cfi_endproc pairs") &&
+               Error(*CFIStartProcLoc, "previous .cfi_startproc was here");
+    }
 
     if (discardLTOSymbol(IDVal))
       return false;
@@ -1951,6 +1958,8 @@ bool AsmParser::parseStatement(ParseStatementInfo &Info,
     case DK_ASCIZ:
     case DK_STRING:
       return parseDirectiveAscii(IDVal, true);
+    case DK_BASE64:
+      return parseDirectiveBase64();
     case DK_BYTE:
     case DK_DC_B:
       return parseDirectiveValue(IDVal, 1);
@@ -2000,6 +2009,8 @@ bool AsmParser::parseStatement(ParseStatementInfo &Info,
       return parseDirectiveAlign(/*IsPow2=*/true, /*ExprSize=*/2);
     case DK_P2ALIGNL:
       return parseDirectiveAlign(/*IsPow2=*/true, /*ExprSize=*/4);
+    case DK_PREFALIGN:
+      return parseDirectivePrefAlign();
     case DK_ORG:
       return parseDirectiveOrg();
     case DK_FILL:
@@ -3074,6 +3085,37 @@ bool AsmParser::parseDirectiveAscii(StringRef IDVal, bool ZeroTerminated) {
   return parseMany(parseOp);
 }
 
+/// parseDirectiveBase64:
+//    ::= .base64 "string" (, "string" )*
+bool AsmParser::parseDirectiveBase64() {
+  auto parseOp = [&]() -> bool {
+    if (checkForValidSection())
+      return true;
+
+    if (getTok().isNot(AsmToken::String)) {
+      return true;
+    }
+
+    std::vector<char> Decoded;
+    std::string const str = getTok().getStringContents().str();
+    if (check(str.empty(), "expected nonempty string")) {
+      return true;
+    }
+
+    llvm::Error e = decodeBase64(str, Decoded);
+    if (e) {
+      consumeError(std::move(e));
+      return Error(Lexer.getLoc(), "failed to base64 decode string data");
+    }
+
+    getStreamer().emitBytes(std::string(Decoded.begin(), Decoded.end()));
+    Lex();
+    return false;
+  };
+
+  return check(parseMany(parseOp), "expected string");
+}
+
 /// parseDirectiveReloc
 ///  ::= .reloc expression , identifier [ , expression ]
 bool AsmParser::parseDirectiveReloc(SMLoc DirectiveLoc) {
@@ -3423,6 +3465,21 @@ bool AsmParser::parseDirectiveAlign(bool IsPow2, uint8_t ValueSize) {
   }
 
   return ReturnVal;
+}
+
+bool AsmParser::parseDirectivePrefAlign() {
+  SMLoc AlignmentLoc = getLexer().getLoc();
+  int64_t Alignment;
+  if (checkForValidSection() || parseAbsoluteExpression(Alignment))
+    return true;
+  if (parseEOL())
+    return true;
+
+  if (!isPowerOf2_64(Alignment))
+    return Error(AlignmentLoc, "alignment must be a power of 2");
+  getStreamer().emitPrefAlign(Align(Alignment));
+
+  return false;
 }
 
 /// parseDirectiveFile
@@ -3874,19 +3931,14 @@ bool AsmParser::parseDirectiveCVLoc() {
 /// ::= .cv_linetable FunctionId, FnStart, FnEnd
 bool AsmParser::parseDirectiveCVLinetable() {
   int64_t FunctionId;
-  StringRef FnStartName, FnEndName;
+  MCSymbol *FnStartSym, *FnEndSym;
   SMLoc Loc = getTok().getLoc();
   if (parseCVFunctionId(FunctionId, ".cv_linetable") || parseComma() ||
       parseTokenLoc(Loc) ||
-      check(parseIdentifier(FnStartName), Loc,
-            "expected identifier in directive") ||
+      check(parseSymbol(FnStartSym), Loc, "expected identifier in directive") ||
       parseComma() || parseTokenLoc(Loc) ||
-      check(parseIdentifier(FnEndName), Loc,
-            "expected identifier in directive"))
+      check(parseSymbol(FnEndSym), Loc, "expected identifier in directive"))
     return true;
-
-  MCSymbol *FnStartSym = getContext().getOrCreateSymbol(FnStartName);
-  MCSymbol *FnEndSym = getContext().getOrCreateSymbol(FnEndName);
 
   getStreamer().emitCVLinetableDirective(FunctionId, FnStartSym, FnEndSym);
   return false;
@@ -3896,7 +3948,7 @@ bool AsmParser::parseDirectiveCVLinetable() {
 /// ::= .cv_inline_linetable PrimaryFunctionId FileId LineNum FnStart FnEnd
 bool AsmParser::parseDirectiveCVInlineLinetable() {
   int64_t PrimaryFunctionId, SourceFileId, SourceLineNum;
-  StringRef FnStartName, FnEndName;
+  MCSymbol *FnStartSym, *FnEndSym;
   SMLoc Loc = getTok().getLoc();
   if (parseCVFunctionId(PrimaryFunctionId, ".cv_inline_linetable") ||
       parseTokenLoc(Loc) ||
@@ -3906,16 +3958,14 @@ bool AsmParser::parseDirectiveCVInlineLinetable() {
       parseIntToken(SourceLineNum, "expected SourceLineNum") ||
       check(SourceLineNum < 0, Loc, "Line number less than zero") ||
       parseTokenLoc(Loc) ||
-      check(parseIdentifier(FnStartName), Loc, "expected identifier") ||
+      check(parseSymbol(FnStartSym), Loc, "expected identifier") ||
       parseTokenLoc(Loc) ||
-      check(parseIdentifier(FnEndName), Loc, "expected identifier"))
+      check(parseSymbol(FnEndSym), Loc, "expected identifier"))
     return true;
 
   if (parseEOL())
     return true;
 
-  MCSymbol *FnStartSym = getContext().getOrCreateSymbol(FnStartName);
-  MCSymbol *FnEndSym = getContext().getOrCreateSymbol(FnEndName);
   getStreamer().emitCVInlineLinetableDirective(PrimaryFunctionId, SourceFileId,
                                                SourceLineNum, FnStartSym,
                                                FnEndSym);
@@ -3936,16 +3986,14 @@ bool AsmParser::parseDirectiveCVDefRange() {
   std::vector<std::pair<const MCSymbol *, const MCSymbol *>> Ranges;
   while (getLexer().is(AsmToken::Identifier)) {
     Loc = getLexer().getLoc();
-    StringRef GapStartName;
-    if (parseIdentifier(GapStartName))
+    MCSymbol *GapStartSym;
+    if (parseSymbol(GapStartSym))
       return Error(Loc, "expected identifier in directive");
-    MCSymbol *GapStartSym = getContext().getOrCreateSymbol(GapStartName);
 
     Loc = getLexer().getLoc();
-    StringRef GapEndName;
-    if (parseIdentifier(GapEndName))
+    MCSymbol *GapEndSym;
+    if (parseSymbol(GapEndSym))
       return Error(Loc, "expected identifier in directive");
-    MCSymbol *GapEndSym = getContext().getOrCreateSymbol(GapEndName);
 
     Ranges.push_back({GapStartSym, GapEndSym});
   }
@@ -4082,12 +4130,11 @@ bool AsmParser::parseDirectiveCVFileChecksumOffset() {
 /// ::= .cv_fpo_data procsym
 bool AsmParser::parseDirectiveCVFPOData() {
   SMLoc DirLoc = getLexer().getLoc();
-  StringRef ProcName;
-  if (parseIdentifier(ProcName))
+  MCSymbol *ProcSym;
+  if (parseSymbol(ProcSym))
     return TokError("expected symbol name");
   if (parseEOL())
     return true;
-  MCSymbol *ProcSym = getContext().getOrCreateSymbol(ProcName);
   getStreamer().emitCVFPOData(ProcSym, DirLoc);
   return false;
 }
@@ -4309,14 +4356,11 @@ bool AsmParser::parseDirectiveCFIPersonalityOrLsda(bool IsPersonality) {
   if (Encoding == dwarf::DW_EH_PE_omit)
     return false;
 
-  StringRef Name;
+  MCSymbol *Sym;
   if (check(!isValidEncoding(Encoding), "unsupported encoding.") ||
       parseComma() ||
-      check(parseIdentifier(Name), "expected identifier in directive") ||
-      parseEOL())
+      check(parseSymbol(Sym), "expected identifier in directive") || parseEOL())
     return true;
-
-  MCSymbol *Sym = getContext().getOrCreateSymbol(Name);
 
   if (IsPersonality)
     getStreamer().emitCFIPersonality(Sym, Encoding);
@@ -4896,7 +4940,7 @@ bool AsmParser::parseDirectiveSymbolAttribute(MCSymbolAttr Attr) {
     if (discardLTOSymbol(Name))
       return false;
 
-    MCSymbol *Sym = getContext().getOrCreateSymbol(Name);
+    MCSymbol *Sym = getContext().parseSymbol(Name);
 
     // Assembler local symbols don't make any sense here, except for directives
     // that the symbol should be tagged.
@@ -4918,12 +4962,9 @@ bool AsmParser::parseDirectiveComm(bool IsLocal) {
     return true;
 
   SMLoc IDLoc = getLexer().getLoc();
-  StringRef Name;
-  if (parseIdentifier(Name))
+  MCSymbol *Sym;
+  if (parseSymbol(Sym))
     return TokError("expected identifier in directive");
-
-  // Handle the identifier as the key symbol.
-  MCSymbol *Sym = getContext().getOrCreateSymbol(Name);
 
   if (parseComma())
     return true;
@@ -5359,6 +5400,7 @@ void AsmParser::initializeDirectiveKindMap() {
   DirectiveKindMap[".asciz"] = DK_ASCIZ;
   DirectiveKindMap[".string"] = DK_STRING;
   DirectiveKindMap[".byte"] = DK_BYTE;
+  DirectiveKindMap[".base64"] = DK_BASE64;
   DirectiveKindMap[".short"] = DK_SHORT;
   DirectiveKindMap[".value"] = DK_VALUE;
   DirectiveKindMap[".2byte"] = DK_2BYTE;
@@ -5379,6 +5421,7 @@ void AsmParser::initializeDirectiveKindMap() {
   DirectiveKindMap[".p2align"] = DK_P2ALIGN;
   DirectiveKindMap[".p2alignw"] = DK_P2ALIGNW;
   DirectiveKindMap[".p2alignl"] = DK_P2ALIGNL;
+  DirectiveKindMap[".prefalign"] = DK_PREFALIGN;
   DirectiveKindMap[".org"] = DK_ORG;
   DirectiveKindMap[".fill"] = DK_FILL;
   DirectiveKindMap[".zero"] = DK_ZERO;
@@ -5754,10 +5797,9 @@ bool AsmParser::parseDirectiveAddrsig() {
 }
 
 bool AsmParser::parseDirectiveAddrsigSym() {
-  StringRef Name;
-  if (check(parseIdentifier(Name), "expected identifier") || parseEOL())
+  MCSymbol *Sym;
+  if (check(parseSymbol(Sym), "expected identifier") || parseEOL())
     return true;
-  MCSymbol *Sym = getContext().getOrCreateSymbol(Name);
   getStreamer().emitAddrsigSym(Sym);
   return false;
 }
@@ -6157,7 +6199,7 @@ bool HLASMAsmParser::parseAsHLASMLabel(ParseStatementInfo &Info,
     return Error(LabelLoc,
                  "Cannot have just a label for an HLASM inline asm statement");
 
-  MCSymbol *Sym = getContext().getOrCreateSymbol(
+  MCSymbol *Sym = getContext().parseSymbol(
       getContext().getAsmInfo()->isHLASM() ? LabelVal.upper() : LabelVal);
 
   // Emit the label.
@@ -6250,12 +6292,11 @@ bool HLASMAsmParser::parseStatement(ParseStatementInfo &Info,
   return parseAsMachineInstruction(Info, SI);
 }
 
-namespace llvm {
-namespace MCParserUtils {
-
-bool parseAssignmentExpression(StringRef Name, bool allow_redef,
-                               MCAsmParser &Parser, MCSymbol *&Sym,
-                               const MCExpr *&Value) {
+bool llvm::MCParserUtils::parseAssignmentExpression(StringRef Name,
+                                                    bool allow_redef,
+                                                    MCAsmParser &Parser,
+                                                    MCSymbol *&Sym,
+                                                    const MCExpr *&Value) {
 
   // FIXME: Use better location, we should use proper tokens.
   SMLoc EqualLoc = Parser.getTok().getLoc();
@@ -6285,15 +6326,12 @@ bool parseAssignmentExpression(StringRef Name, bool allow_redef,
     Parser.getStreamer().emitValueToOffset(Value, 0, EqualLoc);
     return false;
   } else
-    Sym = Parser.getContext().getOrCreateSymbol(Name);
+    Sym = Parser.getContext().parseSymbol(Name);
 
   Sym->setRedefinable(allow_redef);
 
   return false;
 }
-
-} // end namespace MCParserUtils
-} // end namespace llvm
 
 /// Create an MCAsmParser instance.
 MCAsmParser *llvm::createMCAsmParser(SourceMgr &SM, MCContext &C,

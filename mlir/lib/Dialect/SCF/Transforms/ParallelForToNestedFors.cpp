@@ -44,7 +44,6 @@ mlir::scf::parallelForToNestedFors(RewriterBase &rewriter,
          lowerBounds.size() == steps.size() &&
          "Mismatched parallel loop bounds");
 
-  SmallVector<Value> ivs;
   scf::LoopNest loopNest =
       scf::buildLoopNest(rewriter, loc, lowerBounds, upperBounds, steps);
 

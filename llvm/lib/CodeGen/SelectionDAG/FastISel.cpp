@@ -729,9 +729,7 @@ bool FastISel::lowerCallOperands(const CallInst *CI, unsigned ArgIdx,
 
     assert(!V->getType()->isEmptyTy() && "Empty type passed to intrinsic.");
 
-    ArgListEntry Entry;
-    Entry.Val = V;
-    Entry.Ty = V->getType();
+    ArgListEntry Entry(V);
     Entry.setAttributes(CI, ArgI);
     Args.push_back(Entry);
   }
@@ -978,9 +976,7 @@ bool FastISel::lowerCallTo(const CallInst *CI, MCSymbol *Symbol,
 
     assert(!V->getType()->isEmptyTy() && "Empty type passed to intrinsic.");
 
-    ArgListEntry Entry;
-    Entry.Val = V;
-    Entry.Ty = V->getType();
+    ArgListEntry Entry(V);
     Entry.setAttributes(CI, ArgI);
     Args.push_back(Entry);
   }
@@ -1012,17 +1008,16 @@ bool FastISel::lowerCallTo(CallLoweringInfo &CLI) {
     MVT RegisterVT = TLI.getRegisterType(CLI.RetTy->getContext(), VT);
     unsigned NumRegs = TLI.getNumRegisters(CLI.RetTy->getContext(), VT);
     for (unsigned i = 0; i != NumRegs; ++i) {
-      ISD::InputArg MyFlags;
-      MyFlags.VT = RegisterVT;
-      MyFlags.ArgVT = VT;
-      MyFlags.Used = CLI.IsReturnValueUsed;
+      ISD::ArgFlagsTy Flags;
       if (CLI.RetSExt)
-        MyFlags.Flags.setSExt();
+        Flags.setSExt();
       if (CLI.RetZExt)
-        MyFlags.Flags.setZExt();
+        Flags.setZExt();
       if (CLI.IsInReg)
-        MyFlags.Flags.setInReg();
-      CLI.Ins.push_back(MyFlags);
+        Flags.setInReg();
+      ISD::InputArg Ret(Flags, RegisterVT, VT, CLI.RetTy, CLI.IsReturnValueUsed,
+                        ISD::InputArg::NoArgIndex, 0);
+      CLI.Ins.push_back(Ret);
     }
   }
 
@@ -1117,7 +1112,6 @@ bool FastISel::lowerCall(const CallInst *CI) {
   Type *RetTy = CI->getType();
 
   ArgListTy Args;
-  ArgListEntry Entry;
   Args.reserve(CI->arg_size());
 
   for (auto i = CI->arg_begin(), e = CI->arg_end(); i != e; ++i) {
@@ -1127,9 +1121,7 @@ bool FastISel::lowerCall(const CallInst *CI) {
     if (V->getType()->isEmptyTy())
       continue;
 
-    Entry.Val = V;
-    Entry.Ty = V->getType();
-
+    ArgListEntry Entry(V);
     // Skip the first return-type Attribute to get to params.
     Entry.setAttributes(CI, i - CI->arg_begin());
     Args.push_back(Entry);
@@ -1148,9 +1140,12 @@ bool FastISel::lowerCall(const CallInst *CI) {
   CLI.setCallee(RetTy, FuncTy, CI->getCalledOperand(), std::move(Args), *CI)
       .setTailCall(IsTailCall);
 
-  diagnoseDontCall(*CI);
+  if (lowerCallTo(CLI)) {
+    diagnoseDontCall(*CI);
+    return true;
+  }
 
-  return lowerCallTo(CLI);
+  return false;
 }
 
 bool FastISel::selectCall(const User *I) {
@@ -1167,6 +1162,8 @@ bool FastISel::selectCall(const User *I) {
       ExtraInfo |= InlineAsm::Extra_HasSideEffects;
     if (IA->isAlignStack())
       ExtraInfo |= InlineAsm::Extra_IsAlignStack;
+    if (IA->canThrow())
+      ExtraInfo |= InlineAsm::Extra_MayUnwind;
     if (Call->isConvergent())
       ExtraInfo |= InlineAsm::Extra_IsConvergent;
     ExtraInfo |= IA->getDialect() * InlineAsm::Extra_AsmDialect;
@@ -1570,14 +1567,6 @@ bool FastISel::selectInstruction(const Instruction *I) {
 
   if (const auto *Call = dyn_cast<CallInst>(I)) {
     const Function *F = Call->getCalledFunction();
-    LibFunc Func;
-
-    // As a special case, don't handle calls to builtin library functions that
-    // may be translated directly to target instructions.
-    if (F && !F->hasLocalLinkage() && F->hasName() &&
-        LibInfo->getLibFunc(F->getName(), Func) &&
-        LibInfo->hasOptimizedCodeGen(Func))
-      return false;
 
     // Don't handle Intrinsic::trap if a trap function is specified.
     if (F && F->getIntrinsicID() == Intrinsic::trap &&
@@ -1848,7 +1837,8 @@ bool FastISel::selectOperator(const User *I, unsigned Opcode) {
     return selectCast(I, ISD::SINT_TO_FP);
 
   case Instruction::IntToPtr: // Deliberate fall-through.
-  case Instruction::PtrToInt: {
+  case Instruction::PtrToInt:
+  case Instruction::PtrToAddr: {
     EVT SrcVT = TLI.getValueType(DL, I->getOperand(0)->getType());
     EVT DstVT = TLI.getValueType(DL, I->getType());
     if (DstVT.bitsGT(SrcVT))
@@ -1879,6 +1869,7 @@ bool FastISel::selectOperator(const User *I, unsigned Opcode) {
 
 FastISel::FastISel(FunctionLoweringInfo &FuncInfo,
                    const TargetLibraryInfo *LibInfo,
+                   const LibcallLoweringInfo *LibcallLowering,
                    bool SkipTargetIndependentISel)
     : FuncInfo(FuncInfo), MF(FuncInfo.MF), MRI(FuncInfo.MF->getRegInfo()),
       MFI(FuncInfo.MF->getFrameInfo()), MCP(*FuncInfo.MF->getConstantPool()),
@@ -1886,6 +1877,7 @@ FastISel::FastISel(FunctionLoweringInfo &FuncInfo,
       TII(*MF->getSubtarget().getInstrInfo()),
       TLI(*MF->getSubtarget().getTargetLowering()),
       TRI(*MF->getSubtarget().getRegisterInfo()), LibInfo(LibInfo),
+      LibcallLowering(LibcallLowering),
       SkipTargetIndependentISel(SkipTargetIndependentISel) {}
 
 FastISel::~FastISel() = default;
@@ -1955,7 +1947,10 @@ Register FastISel::fastEmit_ri_(MVT VT, unsigned Opcode, Register Op0,
     // fast-isel, which would be very slow.
     IntegerType *ITy =
         IntegerType::get(FuncInfo.Fn->getContext(), VT.getSizeInBits());
-    MaterialReg = getRegForValue(ConstantInt::get(ITy, Imm));
+    // TODO: Avoid implicit trunc?
+    // See https://github.com/llvm/llvm-project/issues/112510.
+    MaterialReg = getRegForValue(
+        ConstantInt::get(ITy, Imm, /*IsSigned=*/false, /*ImplicitTrunc=*/true));
     if (!MaterialReg)
       return Register();
   }
@@ -1969,8 +1964,7 @@ Register FastISel::createResultReg(const TargetRegisterClass *RC) {
 Register FastISel::constrainOperandRegClass(const MCInstrDesc &II, Register Op,
                                             unsigned OpNum) {
   if (Op.isVirtual()) {
-    const TargetRegisterClass *RegClass =
-        TII.getRegClass(II, OpNum, &TRI, *FuncInfo.MF);
+    const TargetRegisterClass *RegClass = TII.getRegClass(II, OpNum);
     if (!MRI.constrainRegClass(Op, RegClass)) {
       // If it's not legal to COPY between the register classes, something
       // has gone very wrong before we got here.
@@ -2182,7 +2176,8 @@ Register FastISel::fastEmitInst_extractsubreg(MVT RetVT, Register Op0,
   const TargetRegisterClass *RC = MRI.getRegClass(Op0);
   MRI.constrainRegClass(Op0, TRI.getSubClassWithSubReg(RC, Idx));
   BuildMI(*FuncInfo.MBB, FuncInfo.InsertPt, MIMD, TII.get(TargetOpcode::COPY),
-          ResultReg).addReg(Op0, 0, Idx);
+          ResultReg)
+      .addReg(Op0, {}, Idx);
   return ResultReg;
 }
 

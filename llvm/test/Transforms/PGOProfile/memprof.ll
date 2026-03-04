@@ -38,7 +38,7 @@
 ; ALL-NOT: no profile data available for function
 
 ;; Using a memprof-only profile for memprof-use should only give memprof metadata
-; RUN: opt < %s -passes='memprof-use<profile-filename=%t.memprofdata>' -pgo-warn-missing-function -S -memprof-print-match-info -stats 2>&1 | FileCheck %s --check-prefixes=MEMPROF,ALL,MEMPROFONLY,MEMPROFMATCHINFO,MEMPROFSTATS
+; RUN: opt < %s -passes='memprof-use<profile-filename=%t.memprofdata>' -pgo-warn-missing-function -S -memprof-print-match-info -stats 2>&1 | FileCheck %s --check-prefixes=MEMPROF,ALL,MEMPROFONLY,MEMPROFMATCHINFO,MEMPROFSTATS,AMBIG
 ; There should not be any PGO metadata
 ; MEMPROFONLY-NOT: !prof
 
@@ -51,10 +51,10 @@
 ;; Test the same thing but by passing the memory profile through to a default
 ;; pipeline via -memory-profile-file=, which should cause the necessary field
 ;; of the PGOOptions structure to be populated with the profile filename.
-; RUN: opt < %s -passes='default<O2>' -memory-profile-file=%t.memprofdata -pgo-warn-missing-function -S 2>&1 | FileCheck %s --check-prefixes=MEMPROF,ALL,MEMPROFONLY
+; RUN: opt < %s -passes='default<O2>' -memory-profile-file=%t.memprofdata -pgo-warn-missing-function -S 2>&1 | FileCheck %s --check-prefixes=MEMPROF,ALL,MEMPROFONLY,AMBIG
 
 ;; Using a pgo+memprof profile for memprof-use should only give memprof metadata
-; RUN: opt < %s -passes='memprof-use<profile-filename=%t.pgomemprofdata>' -pgo-warn-missing-function -S 2>&1 | FileCheck %s --check-prefixes=MEMPROF,ALL,MEMPROFONLY
+; RUN: opt < %s -passes='memprof-use<profile-filename=%t.pgomemprofdata>' -pgo-warn-missing-function -S 2>&1 | FileCheck %s --check-prefixes=MEMPROF,ALL,MEMPROFONLY,AMBIG
 
 ;; Using a pgo-only profile for memprof-use should give an error
 ; RUN: not opt < %s -passes='memprof-use<profile-filename=%t.pgoprofdata>' -S 2>&1 | FileCheck %s --check-prefixes=MEMPROFWITHPGOONLY
@@ -72,19 +72,29 @@
 
 ;; Using a pgo+memprof profile for both memprof-use and pgo-instr-use should
 ;; give both memprof and pgo metadata.
-; RUN: opt < %s -passes='pgo-instr-use,memprof-use<profile-filename=%t.pgomemprofdata>' -pgo-test-profile-file=%t.pgomemprofdata -pgo-warn-missing-function -S 2>&1 | FileCheck %s --check-prefixes=MEMPROF,ALL,PGO
+; RUN: opt < %s -passes='pgo-instr-use,memprof-use<profile-filename=%t.pgomemprofdata>' -pgo-test-profile-file=%t.pgomemprofdata -pgo-warn-missing-function -S 2>&1 | FileCheck %s --check-prefixes=MEMPROF,ALL,PGO,AMBIG
 
 ;; Check that the total sizes are reported if requested. A message should be
 ;; emitted for the pruned context. Also check that remarks are emitted for the
 ;; allocations hinted without context sensitivity.
-; RUN: opt < %s -passes='memprof-use<profile-filename=%t.memprofdata>' -pgo-warn-missing-function -S -memprof-report-hinted-sizes -pass-remarks=memory-profile-info 2>&1 | FileCheck %s --check-prefixes=TOTALSIZESSINGLE,TOTALSIZES,TOTALSIZENOKEEPALL,REMARKSINGLE
+;; Per-context remarks with size info should be emitted when -memprof-report-hinted-sizes is enabled.
+; RUN: opt < %s -passes='memprof-use<profile-filename=%t.memprofdata>' -pgo-warn-missing-function -S -memprof-report-hinted-sizes -pass-remarks=memory-profile-info 2>&1 | FileCheck %s --check-prefixes=TOTALSIZESSINGLE,TOTALSIZES,TOTALSIZENOKEEPALL,REMARKSINGLESIZE
+;; Per-context remarks with size info should be emitted when -memprof-keep-context-size-info is enabled.
+; RUN: opt < %s -passes='memprof-use<profile-filename=%t.memprofdata>' -pgo-warn-missing-function -S -memprof-keep-context-size-info -pass-remarks=memory-profile-info 2>&1 | FileCheck %s --check-prefixes=REMARKSINGLESIZE
+;; Only per-allocation remarks should be emitted by default.
+; RUN: opt < %s -passes='memprof-use<profile-filename=%t.memprofdata>' -pgo-warn-missing-function -S -pass-remarks=memory-profile-info 2>&1 | FileCheck %s --check-prefixes=REMARKSINGLEBASIC
 
 ;; Check that the total sizes are reported if requested, and prevent pruning
 ;; via -memprof-keep-all-not-cold-contexts.
 ; RUN: opt < %s -passes='memprof-use<profile-filename=%t.memprofdata>' -pgo-warn-missing-function -S -memprof-report-hinted-sizes -memprof-keep-all-not-cold-contexts 2>&1 | FileCheck %s --check-prefixes=TOTALSIZESSINGLE,TOTALSIZES,TOTALSIZESKEEPALL
 
-;; Check that we hint additional allocations with a threshold < 100%
-; RUN: opt < %s -passes='memprof-use<profile-filename=%t.memprofdata>' -pgo-warn-missing-function -S -memprof-report-hinted-sizes -memprof-matching-cold-threshold=60 2>&1 | FileCheck %s --check-prefixes=TOTALSIZESSINGLE,TOTALSIZESTHRESH60
+;; Check that we hint additional allocations with a threshold < 100%.
+;; Per-context remarks with size info should be emitted when -memprof-report-hinted-sizes is enabled.
+; RUN: opt < %s -passes='memprof-use<profile-filename=%t.memprofdata>' -pgo-warn-missing-function -S -memprof-report-hinted-sizes -memprof-matching-cold-threshold=60 -pass-remarks=memory-profile-info 2>&1 | FileCheck %s --check-prefixes=TOTALSIZESSINGLE,TOTALSIZESTHRESH60,REMARKSINGLESIZE,REMARKDOMSIZE
+;; Per-context remarks with size info should be emitted when -memprof-keep-context-size-info is enabled.
+; RUN: opt < %s -passes='memprof-use<profile-filename=%t.memprofdata>' -pgo-warn-missing-function -S -memprof-matching-cold-threshold=60 -memprof-keep-context-size-info -pass-remarks=memory-profile-info 2>&1 | FileCheck %s --check-prefixes=REMARKSINGLESIZE,REMARKDOMSIZE
+;; Only per-allocation remarks should be emitted by default.
+; RUN: opt < %s -passes='memprof-use<profile-filename=%t.memprofdata>' -pgo-warn-missing-function -S -memprof-matching-cold-threshold=60 -pass-remarks=memory-profile-info 2>&1 | FileCheck %s --check-prefixes=REMARKSINGLEBASIC,REMARKDOMBASIC
 
 ;; Make sure that the -memprof-cloning-cold-threshold flag is enough to cause
 ;; the size metadata to be generated for the LTO link.
@@ -108,7 +118,11 @@
 
 ;; However, with the same threshold, but hot hints not enabled, it should be
 ;; notcold again.
-; RUN: opt < %s -passes='memprof-use<profile-filename=%t.memprofdata>' -pgo-warn-missing-function -S -memprof-min-ave-lifetime-access-density-hot-threshold=0 2>&1 | FileCheck %s --check-prefixes=MEMPROF,ALL
+; RUN: opt < %s -passes='memprof-use<profile-filename=%t.memprofdata>' -pgo-warn-missing-function -S -memprof-min-ave-lifetime-access-density-hot-threshold=0 2>&1 | FileCheck %s --check-prefixes=MEMPROF,ALL,AMBIG
+
+;; Test that we don't get an ambiguous memprof attribute when
+;; -memprof-ambiguous-attributes is disabled.
+; RUN: opt < %s -passes='memprof-use<profile-filename=%t.memprofdata>' -pgo-warn-missing-function -S -memprof-ambiguous-attributes=false 2>&1 | FileCheck %s --check-prefixes=MEMPROF,ALL,NOAMBIG
 
 ; MEMPROFMATCHINFO: MemProf notcold context with id 1093248920606587996 has total profiled size 10 is matched with 1 frames
 ; MEMPROFMATCHINFO: MemProf notcold context with id 5725971306423925017 has total profiled size 10 is matched with 1 frames
@@ -140,7 +154,7 @@ target triple = "x86_64-unknown-linux-gnu"
 ; PGO: !prof
 define dso_local noundef ptr @_Z3foov() #0 !dbg !10 {
 entry:
-  ; MEMPROF: call {{.*}} @_Znam{{.*}} !memprof ![[M1:[0-9]+]], !callsite ![[C1:[0-9]+]]
+  ; MEMPROF: call {{.*}} @_Znam{{.*}} #[[A0:[0-9]+]]{{.*}} !memprof ![[M1:[0-9]+]], !callsite ![[C1:[0-9]+]]
   ; MEMPROFNOCOLINFO: call {{.*}} @_Znam{{.*}} !memprof ![[M1:[0-9]+]], !callsite ![[C1:[0-9]+]]
   %call = call noalias noundef nonnull ptr @_Znam(i64 noundef 10) #6, !dbg !13
   ret ptr %call, !dbg !14
@@ -364,6 +378,9 @@ for.end:                                          ; preds = %for.cond
   ret i32 0, !dbg !103
 }
 
+;; We optionally apply an ambiguous memprof attribute to ambiguous allocations
+; AMBIG: #[[A0]] = { builtin allocsize(0) "memprof"="ambiguous" }
+; NOAMBIG: #[[A0]] = { builtin allocsize(0) }
 ; MEMPROF: #[[A1]] = { builtin allocsize(0) "memprof"="notcold" }
 ; MEMPROF: #[[A2]] = { builtin allocsize(0) "memprof"="cold" }
 ; MEMPROF: ![[M1]] = !{![[MIB1:[0-9]+]], ![[MIB2:[0-9]+]], ![[MIB3:[0-9]+]], ![[MIB4:[0-9]+]]}
@@ -392,15 +409,32 @@ for.end:                                          ; preds = %for.cond
 ;; For non-context sensitive allocations that get attributes we emit a message
 ;; with the full allocation context hash, type, and size in bytes.
 ; TOTALSIZESTHRESH60: Total size for full allocation context hash 8525406123785421946 and dominant alloc type cold: 10
+;; Per-context remark with size info.
+; REMARKDOMSIZE: remark: memprof.cc:5:10: call in function _Z3foov marked with memprof allocation attribute cold for full allocation context hash 8525406123785421946 with total size 10
+;; Per-allocation remark without size info.
+; REMARKDOMBASIC: remark: memprof.cc:5:10: call in function _Z3foov marked with memprof allocation attribute cold
 ; TOTALSIZESTHRESH60: Total size for full allocation context hash 11714230664165068698 and dominant alloc type cold: 10
-; TOTALSIZESTHRESH60: Total size for full allocation context hash 5725971306423925017 and dominant alloc type cold: 10
+;; Per-context remark with size info.
+; REMARKDOMSIZE: remark: memprof.cc:5:10: call in function _Z3foov marked with memprof allocation attribute cold for full allocation context hash 11714230664165068698 with total size 10
+; TOTALSIZESTHRESH60: Total size for ignored non-cold full allocation context hash 5725971306423925017: 10
 ; TOTALSIZESTHRESH60: Total size for full allocation context hash 16342802530253093571 and dominant alloc type cold: 10
+;; Per-context remark with size info.
+; REMARKDOMSIZE: remark: memprof.cc:5:10: call in function _Z3foov marked with memprof allocation attribute cold for full allocation context hash 16342802530253093571 with total size 10
 ; TOTALSIZESTHRESH60: Total size for full allocation context hash 18254812774972004394 and dominant alloc type cold: 10
-; TOTALSIZESTHRESH60: Total size for full allocation context hash 1093248920606587996 and dominant alloc type cold: 10
+;; Per-context remark with size info.
+; REMARKDOMSIZE: remark: memprof.cc:5:10: call in function _Z3foov marked with memprof allocation attribute cold for full allocation context hash 18254812774972004394 with total size 10
+; TOTALSIZESTHRESH60: Total size for ignored non-cold full allocation context hash 1093248920606587996: 10
 ; TOTALSIZESSINGLE: Total size for full allocation context hash 6792096022461663180 and single alloc type notcold: 10
-; REMARKSINGLE: remark: memprof.cc:25:13: call in function main marked with memprof allocation attribute notcold
+;; Per-context remark with size info.
+; REMARKSINGLESIZE: remark: memprof.cc:25:13: call in function main marked with memprof allocation attribute notcold for full allocation context hash 6792096022461663180 with total size 10
+;; Per-allocation remark without size info.
+; REMARKSINGLEBASIC: remark: memprof.cc:25:13: call in function main marked with memprof allocation attribute notcold
 ; TOTALSIZESSINGLE: Total size for full allocation context hash 15737101490731057601 and single alloc type cold: 10
-; REMARKSINGLE: remark: memprof.cc:26:13: call in function main marked with memprof allocation attribute cold
+;; Per-context remark with size info.
+; REMARKSINGLESIZE: remark: memprof.cc:26:13: call in function main marked with memprof allocation attribute cold for full allocation context hash 15737101490731057601 with total size 10
+;; Per-allocation remark without size info.
+; REMARKSINGLEBASIC: remark: memprof.cc:26:13: call in function main marked with memprof allocation attribute cold
+
 ;; For context sensitive allocations the full context hash and size in bytes
 ;; are in separate metadata nodes included on the MIB metadata.
 ; TOTALSIZES: !"cold", ![[CONTEXT1:[0-9]+]]}

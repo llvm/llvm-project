@@ -48,7 +48,7 @@ public:
                 raw_pwrite_stream &OutFile,
                 DWARFLinkerBase::MessageHandlerTy Warning)
       : OutFile(OutFile), OutFileType(OutFileType), WarningHandler(Warning) {}
-  virtual ~DwarfStreamer() = default;
+  ~DwarfStreamer() override = default;
 
   static Expected<std::unique_ptr<DwarfStreamer>> createStreamer(
       const Triple &TheTriple, DWARFLinkerBase::OutputFileType FileType,
@@ -280,6 +280,7 @@ private:
 
   /// \defgroup MCObjects MC layer objects constructed by the streamer
   /// @{
+  MCTargetOptions MCOptions;
   std::unique_ptr<MCRegisterInfo> MRI;
   std::unique_ptr<MCAsmInfo> MAI;
   std::unique_ptr<MCObjectFileInfo> MOFI;

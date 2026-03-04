@@ -44,7 +44,6 @@
 //===----------------------------------------------------------------------===//
 
 #include "polly/ScopDetection.h"
-#include "polly/LinkAllPasses.h"
 #include "polly/Options.h"
 #include "polly/ScopDetectionDiagnostic.h"
 #include "polly/Support/SCEVValidator.h"
@@ -73,10 +72,7 @@
 #include "llvm/IR/IntrinsicInst.h"
 #include "llvm/IR/Metadata.h"
 #include "llvm/IR/Module.h"
-#include "llvm/IR/PassManager.h"
 #include "llvm/IR/Value.h"
-#include "llvm/InitializePasses.h"
-#include "llvm/Pass.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/Regex.h"
 #include "llvm/Support/raw_ostream.h"
@@ -1208,6 +1204,17 @@ bool ScopDetection::isValidMemoryAccess(MemAccInst Inst,
   return isValidAccess(Inst, AccessFunction, BasePointer, Context);
 }
 
+bool ScopDetection::isCompatibleType(Instruction *Inst, Type *Ty,
+                                     DetectionContext &Context) {
+  if (!Ty)
+    return false;
+
+  if (isa<ScalableVectorType>(Ty))
+    return invalid<ReportIncompatibleType>(Context, /*Assert=*/true, Inst, Ty);
+
+  return true;
+}
+
 bool ScopDetection::isValidInstruction(Instruction &Inst,
                                        DetectionContext &Context) {
   for (auto &Op : Inst.operands()) {
@@ -1215,6 +1222,9 @@ bool ScopDetection::isValidInstruction(Instruction &Inst,
 
     if (!OpInst)
       continue;
+
+    if (!isCompatibleType(&Inst, Op->getType(), Context))
+      return false;
 
     if (isErrorBlock(*OpInst->getParent(), Context.CurRegion)) {
       auto *PHI = dyn_cast<PHINode>(OpInst);
@@ -1231,6 +1241,9 @@ bool ScopDetection::isValidInstruction(Instruction &Inst,
   }
 
   if (isa<LandingPadInst>(&Inst) || isa<ResumeInst>(&Inst))
+    return false;
+
+  if (!isCompatibleType(&Inst, Inst.getType(), Context))
     return false;
 
   // We only check the call instruction but not invoke instruction.
@@ -1983,52 +1996,11 @@ void ScopDetection::verifyAnalysis() {
     verifyRegion(*R);
 }
 
-bool ScopDetectionWrapperPass::runOnFunction(Function &F) {
-  auto &LI = getAnalysis<LoopInfoWrapperPass>().getLoopInfo();
-  auto &RI = getAnalysis<RegionInfoPass>().getRegionInfo();
-  auto &AA = getAnalysis<AAResultsWrapperPass>().getAAResults();
-  auto &SE = getAnalysis<ScalarEvolutionWrapperPass>().getSE();
-  auto &DT = getAnalysis<DominatorTreeWrapperPass>().getDomTree();
-  auto &ORE = getAnalysis<OptimizationRemarkEmitterWrapperPass>().getORE();
-
-  Result = std::make_unique<ScopDetection>(DT, SE, LI, RI, AA, ORE);
-  Result->detect(F);
-  return false;
-}
-
-void ScopDetectionWrapperPass::getAnalysisUsage(AnalysisUsage &AU) const {
-  AU.addRequired<LoopInfoWrapperPass>();
-  AU.addRequiredTransitive<ScalarEvolutionWrapperPass>();
-  AU.addRequired<DominatorTreeWrapperPass>();
-  AU.addRequired<OptimizationRemarkEmitterWrapperPass>();
-  // We also need AA and RegionInfo when we are verifying analysis.
-  AU.addRequiredTransitive<AAResultsWrapperPass>();
-  AU.addRequiredTransitive<RegionInfoPass>();
-  AU.setPreservesAll();
-}
-
-void ScopDetectionWrapperPass::print(raw_ostream &OS, const Module *) const {
-  for (const Region *R : Result->ValidRegions)
-    OS << "Valid Region for Scop: " << R->getNameStr() << '\n';
-
-  OS << "\n";
-}
-
-ScopDetectionWrapperPass::ScopDetectionWrapperPass() : FunctionPass(ID) {
-  // Disable runtime alias checks if we ignore aliasing all together.
-  if (IgnoreAliasing)
-    PollyUseRuntimeAliasChecks = false;
-}
-
 ScopAnalysis::ScopAnalysis() {
   // Disable runtime alias checks if we ignore aliasing all together.
   if (IgnoreAliasing)
     PollyUseRuntimeAliasChecks = false;
 }
-
-void ScopDetectionWrapperPass::releaseMemory() { Result.reset(); }
-
-char ScopDetectionWrapperPass::ID;
 
 AnalysisKey ScopAnalysis::Key;
 
@@ -2055,66 +2027,3 @@ PreservedAnalyses ScopAnalysisPrinterPass::run(Function &F,
   OS << "\n";
   return PreservedAnalyses::all();
 }
-
-Pass *polly::createScopDetectionWrapperPassPass() {
-  return new ScopDetectionWrapperPass();
-}
-
-INITIALIZE_PASS_BEGIN(ScopDetectionWrapperPass, "polly-detect",
-                      "Polly - Detect static control parts (SCoPs)", false,
-                      false);
-INITIALIZE_PASS_DEPENDENCY(AAResultsWrapperPass);
-INITIALIZE_PASS_DEPENDENCY(LoopInfoWrapperPass);
-INITIALIZE_PASS_DEPENDENCY(RegionInfoPass);
-INITIALIZE_PASS_DEPENDENCY(DominatorTreeWrapperPass);
-INITIALIZE_PASS_DEPENDENCY(ScalarEvolutionWrapperPass);
-INITIALIZE_PASS_DEPENDENCY(OptimizationRemarkEmitterWrapperPass);
-INITIALIZE_PASS_END(ScopDetectionWrapperPass, "polly-detect",
-                    "Polly - Detect static control parts (SCoPs)", false, false)
-
-//===----------------------------------------------------------------------===//
-
-namespace {
-/// Print result from ScopDetectionWrapperPass.
-class ScopDetectionPrinterLegacyPass final : public FunctionPass {
-public:
-  static char ID;
-
-  ScopDetectionPrinterLegacyPass() : ScopDetectionPrinterLegacyPass(outs()) {}
-
-  explicit ScopDetectionPrinterLegacyPass(llvm::raw_ostream &OS)
-      : FunctionPass(ID), OS(OS) {}
-
-  bool runOnFunction(Function &F) override {
-    ScopDetectionWrapperPass &P = getAnalysis<ScopDetectionWrapperPass>();
-
-    OS << "Printing analysis '" << P.getPassName() << "' for function '"
-       << F.getName() << "':\n";
-    P.print(OS);
-
-    return false;
-  }
-
-  void getAnalysisUsage(AnalysisUsage &AU) const override {
-    FunctionPass::getAnalysisUsage(AU);
-    AU.addRequired<ScopDetectionWrapperPass>();
-    AU.setPreservesAll();
-  }
-
-private:
-  llvm::raw_ostream &OS;
-};
-
-char ScopDetectionPrinterLegacyPass::ID = 0;
-} // namespace
-
-Pass *polly::createScopDetectionPrinterLegacyPass(raw_ostream &OS) {
-  return new ScopDetectionPrinterLegacyPass(OS);
-}
-
-INITIALIZE_PASS_BEGIN(ScopDetectionPrinterLegacyPass, "polly-print-detect",
-                      "Polly - Print static control parts (SCoPs)", false,
-                      false);
-INITIALIZE_PASS_DEPENDENCY(ScopDetectionWrapperPass);
-INITIALIZE_PASS_END(ScopDetectionPrinterLegacyPass, "polly-print-detect",
-                    "Polly - Print static control parts (SCoPs)", false, false)
