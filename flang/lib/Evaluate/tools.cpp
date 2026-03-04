@@ -2645,4 +2645,16 @@ const Symbol *FindAncestorModuleProcedure(const Symbol *symInSubmodule) {
   return nullptr;
 }
 
+const Symbol &GetCrayPointer(const Symbol &crayPointee) {
+  const Symbol *found{nullptr};
+  const Symbol &ultimate{crayPointee.GetUltimate()};
+  for (const auto &[pointee, pointer] : ultimate.owner().crayPointers()) {
+    if (pointee == ultimate.name()) {
+      found = &pointer.get();
+      break;
+    }
+  }
+  return DEREF(found);
+}
+
 } // namespace Fortran::semantics

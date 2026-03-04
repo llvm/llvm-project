@@ -1,4 +1,3 @@
-subnormal_config.cl
 ../generic/async/async_work_group_strided_copy.cl
 ../generic/async/wait_group_events.cl
 ../generic/common/degrees.cl
@@ -38,7 +37,6 @@ subnormal_config.cl
 ../generic/math/expm1.cl
 ../generic/math/exp2.cl
 ../generic/math/exp10.cl
-math/fma.cl
 ../generic/math/fmod.cl
 ../generic/math/fract.cl
 ../generic/math/frexp.cl

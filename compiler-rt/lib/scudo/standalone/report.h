@@ -52,6 +52,7 @@ void NORETURN reportDeleteSizeMismatch(const void *Ptr, uptr Size,
 void NORETURN reportAlignmentNotPowerOfTwo(uptr Alignment);
 void NORETURN reportInvalidPosixMemalignAlignment(uptr Alignment);
 void NORETURN reportCallocOverflow(uptr Count, uptr Size);
+void NORETURN reportReallocarrayOverflow(uptr Count, uptr Size);
 void NORETURN reportPvallocOverflow(uptr Size);
 void NORETURN reportInvalidAlignedAllocAlignment(uptr Size, uptr Alignment);
 

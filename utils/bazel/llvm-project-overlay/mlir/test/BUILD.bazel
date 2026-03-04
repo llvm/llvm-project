@@ -49,10 +49,11 @@ expand_template(
         "@MLIR_ENABLE_VULKAN_RUNNER@": "0",
         "@MLIR_ENABLE_BINDINGS_PYTHON@": "0",
         "@MLIR_ENABLE_XEVM_CONVERSIONS@": "0",
-        "@MLIR_RUN_AMX_TESTS@": "0",
+        "@MLIR_ENABLE_PYTHON_STABLE_ABI@": "0",
         "@MLIR_RUN_ARM_SVE_TESTS@": "0",
         "@MLIR_RUN_ARM_SME_TESTS@": "0",
-        "@MLIR_RUN_X86VECTOR_TESTS@": "0",
+        "@MLIR_RUN_X86_TESTS@": "0",
+        "@MLIR_RUN_X86_AMX_TESTS@": "0",
         "@MLIR_RUN_CUDA_TENSOR_CORE_TESTS@": "0",
         "@MLIR_RUN_CUDA_SM80_TESTS@": "0",
         "@MLIR_RUN_CUDA_SM80_LT_TESTS@": "0",
@@ -854,7 +855,7 @@ cc_library(
         "//mlir:TransformUtils",
         "//mlir:Transforms",
         "//mlir:VectorDialect",
-        "//mlir:X86VectorDialect",
+        "//mlir:X86Dialect",
     ],
 )
 
@@ -1152,7 +1153,7 @@ cc_library(
         "//mlir:VectorDialect",
         "//mlir:VectorToSCF",
         "//mlir:VectorTransforms",
-        "//mlir:X86VectorDialect",
+        "//mlir:X86Dialect",
     ],
 )
 

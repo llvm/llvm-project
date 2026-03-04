@@ -13,8 +13,10 @@
 #include "llvm/MC/MCContext.h"
 #include "llvm/MC/MCExpr.h"
 #include "llvm/MC/MCInst.h"
+#include "llvm/MC/MCSectionGOFF.h"
 #include "llvm/MC/MCStreamer.h"
 #include "llvm/MC/MCSymbol.h"
+#include "llvm/MC/MCSymbolGOFF.h"
 #include "llvm/Support/FormattedStream.h"
 #include <map>
 #include <utility>
@@ -58,6 +60,9 @@ public:
 
   virtual void emitMachine(StringRef CPUOrCommand) {};
 
+  virtual void emitExternalName(MCSymbol *Sym, StringRef Name) {}
+  virtual void emitExternalName(MCSection *Sec, StringRef Name) {}
+
   virtual const MCExpr *createWordDiffExpr(MCContext &Ctx, const MCSymbol *Hi,
                                            const MCSymbol *Lo) {
     return nullptr;
@@ -69,6 +74,12 @@ public:
   SystemZTargetGOFFStreamer(MCStreamer &S) : SystemZTargetStreamer(S) {}
   const MCExpr *createWordDiffExpr(MCContext &Ctx, const MCSymbol *Hi,
                                    const MCSymbol *Lo) override;
+  virtual void emitExternalName(MCSymbol *Sym, StringRef Name) override {
+    static_cast<MCSymbolGOFF *>(Sym)->setExternalName(Name);
+  }
+  virtual void emitExternalName(MCSection *Sec, StringRef Name) override {
+    static_cast<MCSectionGOFF *>(Sec)->setExternalName(Name);
+  }
 };
 
 class SystemZTargetHLASMStreamer : public SystemZTargetStreamer {
@@ -80,6 +91,12 @@ public:
   SystemZHLASMAsmStreamer &getHLASMStreamer();
   const MCExpr *createWordDiffExpr(MCContext &Ctx, const MCSymbol *Hi,
                                    const MCSymbol *Lo) override;
+  virtual void emitExternalName(MCSymbol *Sym, StringRef Name) override {
+    static_cast<MCSymbolGOFF *>(Sym)->setExternalName(Name);
+  }
+  virtual void emitExternalName(MCSection *Sec, StringRef Name) override {
+    static_cast<MCSectionGOFF *>(Sec)->setExternalName(Name);
+  }
 };
 
 class SystemZTargetELFStreamer : public SystemZTargetStreamer {

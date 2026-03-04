@@ -240,7 +240,7 @@ func.func @sparse_get_md(%arg0: !sparse_tensor.storage_specifier<#SparseVector>)
 
 #SparseVector = #sparse_tensor.encoding<{map = (d0) -> (d0 : compressed)}>
 
-func.func @sparse_get_md(%arg0: !sparse_tensor.storage_specifier<#SparseVector>) -> i64 {
+func.func @sparse_get_md(%arg0: !sparse_tensor.storage_specifier<#SparseVector>) -> index {
   // expected-error@+1 {{requested slice data on non-slice tensor}}
   %0 = sparse_tensor.storage_specifier.get %arg0 dim_offset at 0
        : !sparse_tensor.storage_specifier<#SparseVector>
@@ -626,6 +626,20 @@ func.func @invalid_reduce_wrong_yield(%arg0: f64, %arg1: f64) -> f64 {
         %cst = arith.constant 2 : i64
         tensor.yield %cst : i64
     }
+  return %r : f64
+}
+
+// -----
+
+func.func @invalid_reduce_wrong_terminator(%arg0: f64, %arg1: f64) -> f64 {
+  %cf1 = arith.constant 1.0 : f64
+  // expected-error@+1 {{reduce region must end with a terminator}}
+  %r = sparse_tensor.reduce %arg0, %arg1, %cf1 : f64 {
+  ^bb0(%arg2: f64, %arg3: f64):
+    %0 = arith.addf %arg2, %arg3 : f64
+    sparse_tensor.yield %0 : f64
+    %1 = arith.fptosi %0 : f64 to i32
+  }
   return %r : f64
 }
 

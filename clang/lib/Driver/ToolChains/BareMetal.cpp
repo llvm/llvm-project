@@ -672,11 +672,10 @@ void baremetal::Linker::ConstructJob(Compilation &C, const JobAction &JA,
     }
   }
 
-  Args.addAllArgs(CmdArgs,
-                  {options::OPT_L, options::OPT_u, options::OPT_T_Group,
-                   options::OPT_s, options::OPT_t, options::OPT_r});
-
+  Args.addAllArgs(CmdArgs, {options::OPT_L});
   TC.AddFilePathLibArgs(Args, CmdArgs);
+  Args.addAllArgs(CmdArgs, {options::OPT_u, options::OPT_T_Group,
+                            options::OPT_s, options::OPT_t, options::OPT_r});
 
   for (const auto &LibPath : TC.getLibraryPaths())
     CmdArgs.push_back(Args.MakeArgString(llvm::Twine("-L", LibPath)));
@@ -733,7 +732,7 @@ SanitizerMask BareMetal::getSupportedSanitizers() const {
   const bool IsX86_64 = getTriple().getArch() == llvm::Triple::x86_64;
   const bool IsAArch64 = getTriple().getArch() == llvm::Triple::aarch64 ||
                          getTriple().getArch() == llvm::Triple::aarch64_be;
-  const bool IsRISCV64 = getTriple().getArch() == llvm::Triple::riscv64;
+  const bool IsRISCV64 = getTriple().isRISCV64();
   SanitizerMask Res = ToolChain::getSupportedSanitizers();
   Res |= SanitizerKind::Address;
   Res |= SanitizerKind::KernelAddress;

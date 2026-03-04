@@ -208,11 +208,15 @@ is ``-std=c++20`` or newer.
 How to produce a BMI
 ~~~~~~~~~~~~~~~~~~~~
 
-To generate a BMI for an importable module unit, use either the ``--precompile``
-or ``-fmodule-output`` command line options.
+To generate a BMI for an importable module unit, use either the ``--precompile``,
+``--precompile-reduced-bmi``, or ``-fmodule-output`` command line options.
 
 The ``--precompile`` option generates the BMI as the output of the compilation
 with the output path specified using the ``-o`` option.
+
+The ``--precompile-reduced-bmi`` option generates a Reduced BMI (See the
+following section for the definition of Reduced BMI) as the output of
+the compilation with the output path specified using the ``-o`` option.
 
 The ``-fmodule-output`` option generates the BMI as a by-product of the
 compilation. If ``-fmodule-output=`` is specified, the BMI will be emitted to
@@ -604,8 +608,14 @@ unnecessary dependencies for the BMI. To mitigate the problem, Clang has a
 compiler option to reduce the information contained in the BMI. These two
 formats are known as Full BMI and Reduced BMI, respectively.
 
-Users can use the ``-fmodules-reduced-bmi`` option to produce a
-Reduced BMI.
+Users can use the ``-fmodules-reduced-bmi`` or ``--precompile-reduced-bmi``
+option to produce a Reduced BMI.
+
+The ``--precompile-reduced-bmi`` option will produce the reduced BMI
+to the location specified by ``-o``.
+
+Note that ``--precompile`` will always generate the full BMI. So that build
+system which may generate the BMI only should take care of this.
 
 For the one-phase compilation model (CMake implements this model), with
 ``-fmodules-reduced-bmi``, the generated BMI will be a Reduced
@@ -1139,6 +1149,189 @@ interface units now contain entities that do not belong to the interface.
 This can potentially be improved by introducing a module partition
 implementation unit. An internal module partition unit is an importable
 module unit which is internal to the module itself.
+
+The ABI of your library
+^^^^^^^^^^^^^^^^^^^^^^^
+
+You can skip this section your library doesn't ship ABI.
+
+With the ABI breaking style, for every ABI you shipped in your library, 
+you should provide a corresponding ABI within the modules version.
+
+For example, if this your library before provding modules,
+
+.. code-block:: c++
+
+  // header.h
+  #pragma once
+
+  #include <cstdint>
+
+  namespace example {
+  class C {
+  public:
+      std::size_t inline_get() { return 42; }
+      std::size_t get();
+  };
+  }
+
+  // src.cpp
+  #include "header.h"
+
+  std::size_t example::C::get() {
+      return 43 + inline_get();
+  }
+
+Then you will ship ABI may be like:
+
+.. code-block:: text
+
+  $nm -ACD libexample.so
+  libexample.so:0000000000001130 W example::C::inline_get()
+  libexample.so:0000000000001110 T example::C::get()
+
+Then with ABI breaking style, your code may look like:
+
+.. code-block:: c++
+
+  // example.cppm
+  export module example;
+  import std;
+  // and other third-party modules, if any
+  #define IN_MODULE_WRAPPER
+  #include "header.h" // omit changing of header.h for brevity
+
+  // src.module.cpp
+  module example;
+  #define IN_MODULE_IMPL
+  #include "src.cpp" // omit changing of src.cpp for brevity
+
+And your ABI should look like:
+
+.. code-block:: text
+
+  $llvm-nm -ACD libexample.so
+  libexample.so: 0000000000001060 T initializer for module example
+  libexample.so: 0000000000001150 W example::C::inline_get()
+  libexample.so: 0000000000001130 T example::C::get()
+  libexample.so: 0000000000001180 T example::C@example::inline_get()
+  libexample.so: 0000000000001160 T example::C@example::get()
+
+Here ``example::C@example::inline_get()`` and ``example::C@example::get()`` is
+the corresponding version for ``example::C::inline_get()`` and ``example::C::get()``
+in modules version.
+
+Which part of the ABI will be broken?
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+While your library keeps ABI compatible by providing both ABI versions.
+The users's ABI may be breaking if they used the ABI of modules' version.
+
+This is similar with 
+`the famous ABI break in GCC 5's libstdc++ for C++11 <https://gcc.gnu.org/onlinedocs/libstdc++/manual/using_dual_abi.html>`_.
+
+Although your library remains compatible with both ABIs, for your library's users,
+choosing the module-based ABI will also break their ABI. For example, if your user's
+code contains:
+
+.. code-block:: c++
+
+  #include "header.h"
+
+  namespace user {
+      void user_def(example::C& c) {
+          
+      }
+  }
+
+then, (if your user will ship ABI too), their shipped ABI may look like:
+
+.. code-block:: c++
+
+  $ llvm-nm -ACD libuser.so
+  libuser.so: 0000000000001100 T user::user_def(example::C&)
+
+But when your user switches to your ABI-breaking style module:
+
+.. code-block:: c++
+
+  import example;
+
+  namespace user {
+      void user_def(example::C& c) {
+          
+      }
+  }
+
+The corresponding ABI may look like:
+
+.. code-block:: text
+
+  $ llvm-nm -ACD libuser.so
+  libuser.so: 0000000000001100 T user::user_def(example::C@example&)
+
+Here we can find the ABI break from ``user::user_def(example::C&)`` to
+``user::user_def(example::C@example&)``.
+
+Less duplicated generated code
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+Another benefit of ABI breaking style is, it is more likely to modules native
+style. So that compiler can generate the previously implicitly inline entities
+(e.g., virtual tables, variables and functions)
+to the module unit instead of generating them in every translation unit used.
+
+e.g, for the above example, in header version, the definition of
+``example::C::inline_get()`` will be generated in every translation unit used.
+But in modules version, ``example::C::inline_get()`` will only be generated once
+in the module unit.
+
+This is helpful for the whole build process to generate less duplicated code,
+which will results in smaller binary size and faster compilation speed.
+
+Note that for compatibility, the explicitly inline entities will still be inline
+in modules. So that if you have explicitly inline entities and you're using
+ABI breaking style, it is suggestted to use a macro to control inliness of the entity.
+
+e.g.,
+
+.. code-block:: c++
+
+  // your_header.h
+  #include <cstdint>
+
+  inline void your_interface() {}
+
+within ABI breaking style, we suggest,
+
+.. code-block:: c++
+
+  // your_header.h
+  #ifndef IN_MODULE_WRAPPER
+  #include <cstdint>
+  #endif
+
+  #ifdef IN_MODULE_WRAPPER
+  #define MY_EXPORT export
+  #else
+  #define MY_EXPORT
+  #endif
+
+  #ifdef IN_MODULE_WRAPPER
+  #define MY_INLINE
+  #else
+  #define MY_INLINE inline
+  #endif
+
+  MY_EXPORT MY_INLINE void your_interface() {}
+
+  // your_module_interface.cppm
+  export module your_library;
+  import std;
+  #define IN_MODULE_WRAPPER
+  #include "your_header.h"
+
+So that ``your_interface()`` will not be inline in modules version.
 
 Providing a header to skip parsing redundant headers
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~

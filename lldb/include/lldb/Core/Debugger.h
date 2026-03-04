@@ -100,10 +100,6 @@ public:
   CreateInstance(lldb::LogOutputCallback log_callback = nullptr,
                  void *baton = nullptr);
 
-  static lldb::TargetSP FindTargetWithProcessID(lldb::pid_t pid);
-
-  static lldb::TargetSP FindTargetWithProcess(Process *process);
-
   static void Initialize(LoadPluginCallbackType load_plugin_callback);
 
   static void Terminate();
@@ -346,6 +342,8 @@ public:
   bool GetUseSourceCache() const;
 
   bool SetUseSourceCache(bool use_source_cache);
+
+  bool GetMarkHiddenFrames() const;
 
   bool GetHighlightSource() const;
 

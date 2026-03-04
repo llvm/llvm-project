@@ -133,8 +133,8 @@ static IndexMatchResult matchOperandMap(AffineMap map, unsigned rowDimIdx,
 
 // Replaces genericOp with `NamedOpTy` op, supplied as a template arg.
 // All the variants expressed as pseudo regular expression:
-// `linalg.{batch_}?matmul{_transpose_a | _transpose_b}?`
-// have same number of ins/out, so its easy to stamp different versions.
+// `linalg.{batch_}?matmul` have same number of ins/out, so it's easy to
+// stamp different versions.
 // `castTy` is an optional type function that indicates whether (and which) cast
 // attribute is needed for the named matmul op variant.
 template <typename NamedOpTy>
@@ -147,9 +147,15 @@ static LinalgOp replaceWithMatmulVariant(RewriterBase &rewriter, GenericOp op,
     castAttrVec = {rewriter.getNamedAttr(
         "cast", TypeFnAttr::get(rewriter.getContext(), *castTy))};
 
+  ArrayAttr indexingMaps = op.getIndexingMaps();
+
   LinalgOp namedOp = rewriter.replaceOpWithNewOp<NamedOpTy>(
       op, ValueRange{op.getDpsInputs()[0], op.getDpsInputs()[1]},
       ValueRange{op.getDpsInits()[0]}, castAttrVec);
+
+  // Set the original generic's maps to preserve transposed operand semantics.
+  namedOp->setAttr("indexing_maps", indexingMaps);
+
   return namedOp;
 }
 
@@ -284,10 +290,6 @@ static FailureOr<LinalgOp> specializeLinalgContractions(RewriterBase &rewriter,
       matchOperandMap(indexingMaps[2], numOfBatchDims, dims.m[0], dims.n[0]);
 
   if (llvm::is_contained({a, b, c}, IndexMatchResult::Mismatch))
-    return failure();
-
-  if (c != IndexMatchResult::Match ||
-      (a == IndexMatchResult::Transposed && b == IndexMatchResult::Transposed))
     return failure();
 
   // Determine the cast type for the named matmul op, or bail out if casts

@@ -30,6 +30,10 @@ def XSfmmVTypeOp : RISCVOp {
   }];
 }
 
+// TWiden operand should be named $twiden for getNamedOperandIdx.
+// ATK operand should be named $atk for getNamedOperandIdx.
+// ATM operand should be named $atm for getNamedOperandIdx.
+// ATN operand should be named $atn for getNamedOperandIdx.
 def twiden : RISCVOp {
   let OperandType = "OPERAND_XSFMM_TWIDEN";
 }

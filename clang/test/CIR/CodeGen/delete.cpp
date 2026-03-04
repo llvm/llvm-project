@@ -16,18 +16,18 @@ void test_sized_delete(SizedDelete *x) {
 }
 
 // SizedDelete::operator delete(void*, unsigned long)
-// CIR:  cir.func private @_ZN11SizedDeletedlEPvm(!cir.ptr<!void>, !u64i)
-// LLVM: declare void @_ZN11SizedDeletedlEPvm(ptr, i64)
+// CIR:  cir.func private @_ZN11SizedDeletedlEPvm(!cir.ptr<!void> {llvm.noundef}, !u64i {llvm.noundef})
+// LLVM: declare void @_ZN11SizedDeletedlEPvm(ptr noundef, i64 noundef)
 
 // CIR: cir.func {{.*}} @_Z17test_sized_deleteP11SizedDelete
 // CIR:   %[[X:.*]] = cir.load{{.*}} %{{.*}}
 // CIR:   %[[X_CAST:.*]] = cir.cast bitcast %[[X]] : !cir.ptr<!rec_SizedDelete> -> !cir.ptr<!void>
 // CIR:   %[[OBJ_SIZE:.*]] = cir.const #cir.int<4> : !u64i
-// CIR:   cir.call @_ZN11SizedDeletedlEPvm(%[[X_CAST]], %[[OBJ_SIZE]]) nothrow : (!cir.ptr<!void>, !u64i) -> ()
+// CIR:   cir.call @_ZN11SizedDeletedlEPvm(%[[X_CAST]], %[[OBJ_SIZE]]) nothrow : (!cir.ptr<!void> {llvm.noundef}, !u64i {llvm.noundef}) -> ()
 
 // LLVM: define dso_local void @_Z17test_sized_deleteP11SizedDelete
 // LLVM:   %[[X:.*]] = load ptr, ptr %{{.*}}
-// LLVM:   call void @_ZN11SizedDeletedlEPvm(ptr %[[X]], i64 4)
+// LLVM:   call void @_ZN11SizedDeletedlEPvm(ptr noundef %[[X]], i64 noundef 4)
 
 // OGCG: define dso_local void @_Z17test_sized_deleteP11SizedDelete
 // OGCG:   %[[X:.*]] = load ptr, ptr %{{.*}}
@@ -53,25 +53,25 @@ Container::~Container() { delete contents; }
 // LLVM: define linkonce_odr void @_ZN8ContentsD2Ev
 
 // operator delete(void*, unsigned long)
-// CIR: cir.func {{.*}} @_ZdlPvm(!cir.ptr<!void>, !u64i)
-// LLVM: declare void @_ZdlPvm(ptr, i64)
+// CIR: cir.func {{.*}} @_ZdlPvm(!cir.ptr<!void> {llvm.noundef}, !u64i {llvm.noundef})
+// LLVM: declare void @_ZdlPvm(ptr noundef, i64 noundef)
 
 // Container::~Container()
 // CIR: cir.func {{.*}} @_ZN9ContainerD2Ev
 // CIR:   %[[THIS:.*]] = cir.load %{{.*}}
 // CIR:   %[[CONTENTS_PTR_ADDR:.*]] = cir.get_member %[[THIS]][0] {name = "contents"} : !cir.ptr<!rec_Container> -> !cir.ptr<!cir.ptr<!rec_Contents>>
 // CIR:   %[[CONTENTS_PTR:.*]] = cir.load{{.*}} %[[CONTENTS_PTR_ADDR]]
-// CIR:   cir.call @_ZN8ContentsD2Ev(%[[CONTENTS_PTR]]) nothrow : (!cir.ptr<!rec_Contents>) -> ()
+// CIR:   cir.call @_ZN8ContentsD2Ev(%[[CONTENTS_PTR]]) nothrow : (!cir.ptr<!rec_Contents> {llvm.align = 1 : i64, llvm.dereferenceable = 1 : i64, llvm.nonnull, llvm.noundef}) -> ()
 // CIR:   %[[CONTENTS_CAST:.*]] = cir.cast bitcast %[[CONTENTS_PTR]] : !cir.ptr<!rec_Contents> -> !cir.ptr<!void>
 // CIR:   %[[OBJ_SIZE:.*]] = cir.const #cir.int<1> : !u64i
-// CIR:   cir.call @_ZdlPvm(%[[CONTENTS_CAST]], %[[OBJ_SIZE]]) nothrow : (!cir.ptr<!void>, !u64i) -> ()
+// CIR:   cir.call @_ZdlPvm(%[[CONTENTS_CAST]], %[[OBJ_SIZE]]) nothrow : (!cir.ptr<!void> {llvm.noundef}, !u64i {llvm.noundef}) -> ()
 
 // LLVM: define dso_local void @_ZN9ContainerD2Ev
 // LLVM:   %[[THIS:.*]] = load ptr, ptr %{{.*}}
 // LLVM:   %[[CONTENTS_PTR_ADDR:.*]] = getelementptr %struct.Container, ptr %[[THIS]], i32 0, i32 0
 // LLVM:   %[[CONTENTS_PTR:.*]] = load ptr, ptr %[[CONTENTS_PTR_ADDR]]
-// LLVM:   call void @_ZN8ContentsD2Ev(ptr %[[CONTENTS_PTR]])
-// LLVM:   call void @_ZdlPvm(ptr %[[CONTENTS_PTR]], i64 1)
+// LLVM:   call void @_ZN8ContentsD2Ev(ptr noundef nonnull align 1 dereferenceable(1) %[[CONTENTS_PTR]])
+// LLVM:   call void @_ZdlPvm(ptr noundef %[[CONTENTS_PTR]], i64 noundef 1)
 
 // OGCG: define dso_local void @_ZN9ContainerD2Ev
 // OGCG:   %[[THIS:.*]] = load ptr, ptr %{{.*}}
@@ -105,14 +105,14 @@ void destroy(StructWithVirtualDestructor *x) {
 // CIR:   %[[DTOR_FN_ADDR:.*]] = cir.load{{.*}} %[[DTOR_FN_ADDR_PTR]]
 // CIR:   cir.call %[[DTOR_FN_ADDR]](%[[X]])
 
-// LLVM: define {{.*}} void @_Z7destroyP27StructWithVirtualDestructor(ptr %[[X_ARG:.*]])
+// LLVM: define {{.*}} void @_Z7destroyP27StructWithVirtualDestructor(ptr {{.*}} %[[X_ARG:.*]])
 // LLVM:   %[[X_ADDR:.*]] = alloca ptr
 // LLVM:   store ptr %[[X_ARG]], ptr %[[X_ADDR]]
 // LLVM:   %[[X:.*]] = load ptr, ptr %[[X_ADDR]]
 // LLVM:   %[[VTABLE:.*]] = load ptr, ptr %[[X]]
 // LLVM:   %[[DTOR_FN_ADDR_PTR:.*]] = getelementptr inbounds ptr, ptr %[[VTABLE]], i32 1
 // LLVM:   %[[DTOR_FN_ADDR:.*]] = load ptr, ptr %[[DTOR_FN_ADDR_PTR]]
-// LLVM:   call void %[[DTOR_FN_ADDR]](ptr %[[X]])
+// LLVM:   call void %[[DTOR_FN_ADDR]](ptr {{.*}} %[[X]])
 
 // OGCG: define {{.*}} void @_Z7destroyP27StructWithVirtualDestructor(ptr {{.*}} %[[X_ARG:.*]])
 // OGCG:   %[[X_ADDR:.*]] = alloca ptr

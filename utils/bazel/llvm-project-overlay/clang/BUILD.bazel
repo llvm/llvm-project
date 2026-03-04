@@ -263,6 +263,12 @@ td_library(
 )
 
 td_library(
+    name = "BuiltinsAMDGPUDocsTdFiles",
+    srcs = ["include/clang/Basic/BuiltinsAMDGPUDocs.td"],
+    includes = ["include"],
+)
+
+td_library(
     name = "BuiltinsSPIRVBaseTdFiles",
     srcs = ["include/clang/Basic/BuiltinsSPIRVBase.td"],
     includes = ["include"],
@@ -297,7 +303,10 @@ gentbl_cc_library(
     tbl_outs = {"include/clang/Basic/BuiltinsAMDGPU.inc": ["-gen-clang-builtins"]},
     tblgen = ":clang-tblgen",
     td_file = "include/clang/Basic/BuiltinsAMDGPU.td",
-    deps = [":BuiltinsBaseTdFiles"],
+    deps = [
+        ":BuiltinsAMDGPUDocsTdFiles",
+        ":BuiltinsBaseTdFiles",
+    ],
 )
 
 gentbl_cc_library(
@@ -2250,6 +2259,7 @@ cc_library(
 
 llvm_driver_cc_binary(
     name = "clang",
+    needs_posix_utility_signal_handling = True,
     stamp = 0,
     deps = [":clang-driver"],
 )
@@ -2343,6 +2353,36 @@ cc_binary(
     deps = [
         ":ast-diff",
         ":tooling",
+        "//llvm:Support",
+    ],
+)
+
+gentbl_cc_library(
+    name = "nvlink_wrapper_opts_gen",
+    strip_include_prefix = "tools/clang-nvlink-wrapper",
+    tbl_outs = {"tools/clang-nvlink-wrapper/NVLinkOpts.inc": ["-gen-opt-parser-defs"]},
+    tblgen = "//llvm:llvm-tblgen",
+    td_file = "tools/clang-nvlink-wrapper/NVLinkOpts.td",
+    deps = ["//llvm:OptParserTdFiles"],
+)
+
+cc_binary(
+    name = "clang-nvlink-wrapper",
+    srcs = glob(["tools/clang-nvlink-wrapper/*.cpp"]),
+    stamp = 0,
+    deps = [
+        ":basic",
+        ":driver",
+        ":nvlink_wrapper_opts_gen",
+        ":tooling",
+        "//llvm:BinaryFormat",
+        "//llvm:BitWriter",
+        "//llvm:CodeGen",
+        "//llvm:Core",
+        "//llvm:LTO",
+        "//llvm:Object",
+        "//llvm:Option",
+        "//llvm:Remarks",
         "//llvm:Support",
     ],
 )

@@ -15,7 +15,7 @@ concept range = requires { end; };
 template <class _Tp>
 concept input_range = input_iterator<_Tp>;
 template <class>
-concept forward_range = false;
+concept forward_range = true;
 template <range _Rp> struct owning_view {
   _Rp __r_;
 };

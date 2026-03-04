@@ -206,14 +206,14 @@ v_fract_f64_e32 v[0:1], lit(1.0)
 v_wmma_i32_16x16x16_iu8 v[8:15], v[0:3], v[4:7], 1.0
 // GFX11: v_wmma_i32_16x16x16_iu8 v[8:15], v[0:3], v[4:7], 1.0 ; encoding: [0x08,0x40,0x44,0xcc,0x00,0x09,0xca,0x1b]
 // NOGFX12: :[[@LINE-2]]:1: error: operands are not valid for this GPU or mode
-// NOGFX1250: :[[@LINE-3]]:1: error: operands are not valid for this GPU or mode
+// NOGFX1250: :[[@LINE-3]]:1: error: instruction not supported on this GPU
 // NOGFX89: :[[@LINE-4]]:1: error: instruction not supported on this GPU
 // NOSICI: :[[@LINE-5]]:1: error: instruction not supported on this GPU
 
 v_wmma_i32_16x16x16_iu8 v[8:15], v[0:3], v[4:7], lit(1.0)
 // NOGFX11: :[[@LINE-1]]:54: error: invalid operand for instruction
 // NOGFX12: :[[@LINE-2]]:54: error: invalid operand for instruction
-// NOGFX1250: :[[@LINE-3]]:54: error: invalid operand for instruction
+// NOGFX1250: :[[@LINE-3]]:1: error: instruction not supported on this GPU
 // NOGFX89: :[[@LINE-4]]:1: error: instruction not supported on this GPU
 // NOSICI: :[[@LINE-5]]:1: error: instruction not supported on this GPU
 
@@ -658,14 +658,14 @@ v_fract_f64_e32 v[0:1], 0xffffffffffffffff
 v_wmma_i32_16x16x16_iu8 v[8:15], v[0:3], v[4:7], 1
 // GFX11: v_wmma_i32_16x16x16_iu8 v[8:15], v[0:3], v[4:7], 1 ; encoding: [0x08,0x40,0x44,0xcc,0x00,0x09,0x06,0x1a]
 // NOGFX12: :[[@LINE-2]]:1: error: operands are not valid for this GPU or mode
-// NOGFX1250: :[[@LINE-3]]:1: error: operands are not valid for this GPU or mode
+// NOGFX1250: :[[@LINE-3]]:1: error: instruction not supported on this GPU
 // NOGFX89: :[[@LINE-4]]:1: error: instruction not supported on this GPU
 // NOSICI: :[[@LINE-5]]:1: error: instruction not supported on this GPU
 
 v_wmma_i32_16x16x16_iu8 v[8:15], v[0:3], v[4:7], lit(1)
 // NOGFX11: :[[@LINE-1]]:54: error: invalid operand for instruction
 // NOGFX12: :[[@LINE-2]]:54: error: invalid operand for instruction
-// NOGFX1250: :[[@LINE-3]]:54: error: invalid operand for instruction
+// NOGFX1250: :[[@LINE-3]]:1: error: instruction not supported on this GPU
 // NOGFX89: :[[@LINE-4]]:1: error: instruction not supported on this GPU
 // NOSICI: :[[@LINE-5]]:1: error: instruction not supported on this GPU
 

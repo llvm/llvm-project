@@ -79,3 +79,145 @@ define i32 @PR75692_3(i32 %x, i32 %y) {
   %t4 = and i32 %t2, %t3
   ret i32 %t4
 }
+
+; ((X + C) & M) ^ M --> (~C − X) & M
+define i8 @add_and_xor_basic(i8 %x) {
+; CHECK-LABEL: @add_and_xor_basic(
+; CHECK-NEXT:    [[ADD:%.*]] = sub i8 10, [[X:%.*]]
+; CHECK-NEXT:    [[AND:%.*]] = and i8 [[ADD]], 15
+; CHECK-NEXT:    ret i8 [[AND]]
+;
+  %add = add i8 %x, 5
+  %and = and i8 %add, 15
+  %xor = xor i8 %and, 15
+  ret i8 %xor
+}
+
+define <4 x i32> @add_and_xor_vector_splat(<4 x i32> %x) {
+; CHECK-LABEL: @add_and_xor_vector_splat(
+; CHECK-NEXT:    [[ADD:%.*]] = sub <4 x i32> splat (i32 53), [[X:%.*]]
+; CHECK-NEXT:    [[AND:%.*]] = and <4 x i32> [[ADD]], splat (i32 63)
+; CHECK-NEXT:    ret <4 x i32> [[AND]]
+;
+  %add = add <4 x i32> %x, <i32 10, i32 10, i32 10, i32 10>
+  %and = and <4 x i32> %add, <i32 63, i32 63, i32 63, i32 63>
+  %xor = xor <4 x i32> %and, <i32 63, i32 63, i32 63, i32 63>
+  ret <4 x i32> %xor
+}
+
+define i32 @add_and_xor_overflow_addc(i32 %x) {
+; CHECK-LABEL: @add_and_xor_overflow_addc(
+; CHECK-NEXT:    [[ADD:%.*]] = sub i32 27, [[X:%.*]]
+; CHECK-NEXT:    [[AND:%.*]] = and i32 [[ADD]], 31
+; CHECK-NEXT:    ret i32 [[AND]]
+;
+  %add = add i32 %x, 100
+  %and = and i32 %add, 31
+  %xor = xor i32 %and, 31
+  ret i32 %xor
+}
+
+define i32 @add_and_xor_negative_addc(i32 %x) {
+; CHECK-LABEL: @add_and_xor_negative_addc(
+; CHECK-NEXT:    [[ADD:%.*]] = sub i32 1, [[X:%.*]]
+; CHECK-NEXT:    [[AND:%.*]] = and i32 [[ADD]], 255
+; CHECK-NEXT:    ret i32 [[AND]]
+;
+  %add = add i32 %x, -2
+  %and = and i32 %add, 255
+  %xor = xor i32 %and, 255
+  ret i32 %xor
+}
+
+define i8 @add_and_xor_not_low_mask(i8 %x) {
+; CHECK-LABEL: @add_and_xor_not_low_mask(
+; CHECK-NEXT:    [[TMP1:%.*]] = sub i8 1, [[X:%.*]]
+; CHECK-NEXT:    [[XOR:%.*]] = and i8 [[TMP1]], -18
+; CHECK-NEXT:    ret i8 [[XOR]]
+;
+  %add = add i8 %x, -2
+  %and = and i8 %add, 238
+  %xor = xor i8 %and, 238
+  ret i8 %xor
+}
+
+define i8 @add_and_xor_not_low_mask2(i8 %x) {
+; CHECK-LABEL: @add_and_xor_not_low_mask2(
+; CHECK-NEXT:    [[TMP1:%.*]] = sub i8 1, [[X:%.*]]
+; CHECK-NEXT:    [[XOR:%.*]] = and i8 [[TMP1]], 119
+; CHECK-NEXT:    ret i8 [[XOR]]
+;
+  %add = add i8 %x, -2
+  %and = and i8 %add, 119
+  %xor = xor i8 %and, 119
+  ret i8 %xor
+}
+
+define i8 @add_and_xor_not_low_mask3(i8 %x) {
+; CHECK-LABEL: @add_and_xor_not_low_mask3(
+; CHECK-NEXT:    [[TMP1:%.*]] = sub i8 1, [[X:%.*]]
+; CHECK-NEXT:    [[XOR:%.*]] = and i8 [[TMP1]], -91
+; CHECK-NEXT:    ret i8 [[XOR]]
+;
+  %add = add i8 %x, -2
+  %and = and i8 %add, 165
+  %xor = xor i8 %and, 165
+  ret i8 %xor
+}
+
+define i8 @add_and_xor_not_low_mask4(i8 %x) {
+; CHECK-LABEL: @add_and_xor_not_low_mask4(
+; CHECK-NEXT:    [[TMP1:%.*]] = sub i8 1, [[X:%.*]]
+; CHECK-NEXT:    [[XOR:%.*]] = and i8 [[TMP1]], -86
+; CHECK-NEXT:    ret i8 [[XOR]]
+;
+  %add = add i8 %x, -2
+  %and = and i8 %add, 170
+  %xor = xor i8 %and, 170
+  ret i8 %xor
+}
+
+; This test is trasformed to 'xor(and(add x, 11), 15), 15)' and being applied.
+define i8 @add_and_xor_sub_op(i8 %x) {
+; CHECK-LABEL: @add_and_xor_sub_op(
+; CHECK-NEXT:    [[SUB:%.*]] = sub i8 4, [[X:%.*]]
+; CHECK-NEXT:    [[AND:%.*]] = and i8 [[SUB]], 15
+; CHECK-NEXT:    ret i8 [[AND]]
+;
+  %sub = sub i8 %x, 5
+  %and = and i8 %sub, 15
+  %xor = xor i8 %and, 15
+  ret i8 %xor
+}
+
+; and_xor_mask negative tests
+
+define i8 @neg_add_and_xor_mask_mismatch(i8 %x) {
+; CHECK-LABEL: @neg_add_and_xor_mask_mismatch(
+; CHECK-NEXT:    [[ADD:%.*]] = add i8 [[X:%.*]], 5
+; CHECK-NEXT:    [[AND:%.*]] = and i8 [[ADD]], 15
+; CHECK-NEXT:    [[XOR:%.*]] = xor i8 [[AND]], 7
+; CHECK-NEXT:    ret i8 [[XOR]]
+;
+  %add = add i8 %x, 5
+  %and = and i8 %add, 15
+  %xor = xor i8 %and, 7
+  ret i8 %xor
+}
+
+define i8 @neg_add_and_xor_multi_use(i8 %x) {
+; CHECK-LABEL: @neg_add_and_xor_multi_use(
+; CHECK-NEXT:    [[ADD:%.*]] = add i8 [[X:%.*]], 5
+; CHECK-NEXT:    call void @use(i8 [[ADD]])
+; CHECK-NEXT:    [[AND:%.*]] = and i8 [[ADD]], 15
+; CHECK-NEXT:    [[XOR:%.*]] = xor i8 [[AND]], 15
+; CHECK-NEXT:    ret i8 [[XOR]]
+;
+  %add = add i8 %x, 5
+  call void @use(i8 %add)
+  %and = and i8 %add, 15
+  %xor = xor i8 %and, 15
+  ret i8 %xor
+}
+
+declare void @use(i8)

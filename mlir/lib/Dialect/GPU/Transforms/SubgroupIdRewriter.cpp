@@ -66,13 +66,13 @@ struct GpuSubgroupIdRewriter final : OpRewritePattern<gpu::SubgroupIdOp> {
         arith::AddIOp::create(rewriter, loc, indexType, dimYxIdZ, tidY);
     Value dimYxIdZPlusIdYTimesDimX =
         arith::MulIOp::create(rewriter, loc, indexType, dimX, dimYxIdZPlusIdY);
-    Value IdXPlusDimYxIdZPlusIdYTimesDimX = arith::AddIOp::create(
+    Value idXPlusDimYxIdZPlusIdYTimesDimX = arith::AddIOp::create(
         rewriter, loc, indexType, tidX, dimYxIdZPlusIdYTimesDimX);
     Value subgroupSize = gpu::SubgroupSizeOp::create(
         rewriter, loc, rewriter.getIndexType(), /*upper_bound = */ nullptr);
     Value subgroupIdOp =
         arith::DivUIOp::create(rewriter, loc, indexType,
-                               IdXPlusDimYxIdZPlusIdYTimesDimX, subgroupSize);
+                               idXPlusDimYxIdZPlusIdYTimesDimX, subgroupSize);
     rewriter.replaceOp(op, {subgroupIdOp});
     return success();
   }

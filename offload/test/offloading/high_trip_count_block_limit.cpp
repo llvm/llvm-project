@@ -2,10 +2,11 @@
 // RUN: %libomptarget-compilexx-generic && env LIBOMPTARGET_REUSE_BLOCKS_FOR_HIGH_TRIP_COUNT=False %libomptarget-run-generic 2>&1 | %fcheck-generic
 // RUN: %libomptarget-compilexx-generic && %libomptarget-run-generic 2>&1 | %fcheck-generic --check-prefix=DEFAULT
 
-// UNSUPPORTED: aarch64-unknown-linux-gnu 
-// UNSUPPORTED: x86_64-unknown-linux-gnu 
-// UNSUPPORTED: s390x-ibm-linux-gnu 
-// XFAIL: intelgpu
+// UNSUPPORTED: aarch64-unknown-linux-gnu
+// UNSUPPORTED: x86_64-unknown-linux-gnu
+// UNSUPPORTED: s390x-ibm-linux-gnu
+// https://github.com/llvm/llvm-project/issues/182119
+// UNSUPPORTED: intelgpu
 // clang-format on
 
 /*

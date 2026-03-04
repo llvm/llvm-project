@@ -229,8 +229,6 @@ static void getAArch64MultilibFlags(const Driver &D,
       break;
     }
   }
-
-  processMultilibCustomFlags(Result, Args);
 }
 
 static void getARMMultilibFlags(const Driver &D, const llvm::Triple &Triple,
@@ -319,13 +317,12 @@ static void getARMMultilibFlags(const Driver &D, const llvm::Triple &Triple,
       break;
     }
   }
-
-  processMultilibCustomFlags(Result, Args);
 }
 
 static void getRISCVMultilibFlags(const Driver &D, const llvm::Triple &Triple,
                                   const llvm::opt::ArgList &Args,
-                                  Multilib::flags_list &Result) {
+                                  Multilib::flags_list &Result,
+                                  bool hasShadowCallStack) {
   std::string Arch = riscv::getRISCVArch(Args, Triple);
   // Canonicalize arch for easier matching
   auto ISAInfo = llvm::RISCVISAInfo::parseArchString(
@@ -334,6 +331,11 @@ static void getRISCVMultilibFlags(const Driver &D, const llvm::Triple &Triple,
     Result.push_back("-march=" + (*ISAInfo)->toString());
 
   Result.push_back(("-mabi=" + riscv::getRISCVABI(Args, Triple)).str());
+
+  if (hasShadowCallStack)
+    Result.push_back("-fsanitize=shadow-call-stack");
+  else
+    Result.push_back("-fno-sanitize=shadow-call-stack");
 }
 
 Multilib::flags_list
@@ -370,11 +372,16 @@ ToolChain::getMultilibFlags(const llvm::opt::ArgList &Args) const {
     break;
   case llvm::Triple::riscv32:
   case llvm::Triple::riscv64:
-    getRISCVMultilibFlags(D, Triple, Args, Result);
+  case llvm::Triple::riscv32be:
+  case llvm::Triple::riscv64be:
+    getRISCVMultilibFlags(D, Triple, Args, Result,
+                          getSanitizerArgs(Args).hasShadowCallStack());
     break;
   default:
     break;
   }
+
+  processMultilibCustomFlags(Result, Args);
 
   // Include fno-exceptions and fno-rtti
   // to improve multilib selection

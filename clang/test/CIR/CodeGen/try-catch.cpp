@@ -134,7 +134,7 @@ void try_catch_with_alloca() {
 // CIR:   cir.try {
 // CIR:     %[[TMP_A:.*]] = cir.load{{.*}} %[[A_ADDR]] : !cir.ptr<!s32i>, !s32i
 // CIR:     %[[TMP_B:.*]] = cir.load{{.*}} %[[B_ADDR]] : !cir.ptr<!s32i>, !s32i
-// CIR:     %[[RESULT:.*]] = cir.binop(add, %[[TMP_A]], %[[TMP_B]]) nsw : !s32i
+// CIR:     %[[RESULT:.*]] = cir.add nsw %[[TMP_A]], %[[TMP_B]] : !s32i
 // CIR:     cir.store{{.*}} %[[RESULT]], %[[C_ADDR]] : !s32i, !cir.ptr<!s32i>
 // CIR:     cir.yield
 // CIR:   }

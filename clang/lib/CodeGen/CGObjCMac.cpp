@@ -2773,7 +2773,7 @@ llvm::Constant *CGObjCCommonMac::getBitmapBlockLayout(bool ComputeByrefLayout) {
     }
   }
 
-  auto *Entry = CreateCStringLiteral(BitMap, ObjCLabelType::ClassName,
+  auto *Entry = CreateCStringLiteral(BitMap, ObjCLabelType::LayoutBitMap,
                                      /*ForceNonFragileABI=*/true,
                                      /*NullTerminate=*/false);
   return getConstantGEP(VMContext, Entry, 0, 0);
@@ -7369,7 +7369,7 @@ CGObjCNonFragileABIMac::GetClassGlobalForClassRef(const ObjCInterfaceDecl *ID) {
   // Stub classes are pointer-aligned. Classrefs pointing at stub classes
   // must set the least significant bit set to 1.
   auto *Idx = llvm::ConstantInt::get(CGM.Int32Ty, 1);
-  return llvm::ConstantExpr::getGetElementPtr(CGM.Int8Ty, ClassGV, Idx);
+  return llvm::ConstantExpr::getPtrAdd(ClassGV, Idx);
 }
 
 llvm::Value *

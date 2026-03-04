@@ -20,6 +20,7 @@
 
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/StringRef.h"
+#include "llvm/Support/raw_ostream.h"
 #include <optional>
 #include <string>
 #include <vector>
@@ -27,10 +28,6 @@
 namespace clang::ssaf {
 
 enum class BuildNamespaceKind : unsigned short { CompilationUnit, LinkUnit };
-
-llvm::StringRef toString(BuildNamespaceKind BNK);
-
-std::optional<BuildNamespaceKind> parseBuildNamespaceKind(llvm::StringRef Str);
 
 /// Represents a single namespace in the build process.
 ///
@@ -62,7 +59,11 @@ public:
   bool operator!=(const BuildNamespace &Other) const;
   bool operator<(const BuildNamespace &Other) const;
 
+  friend class EntityLinker;
   friend class SerializationFormat;
+  friend class TestFixture;
+  friend llvm::raw_ostream &operator<<(llvm::raw_ostream &OS,
+                                       const BuildNamespace &BN);
 };
 
 /// Represents a hierarchical sequence of build namespaces.
@@ -75,8 +76,6 @@ public:
 /// For example, an entity might be qualified by a compilation unit namespace
 /// followed by a shared library namespace.
 class NestedBuildNamespace {
-  friend class SerializationFormat;
-
   std::vector<BuildNamespace> Namespaces;
 
 public:
@@ -114,9 +113,16 @@ public:
   bool operator!=(const NestedBuildNamespace &Other) const;
   bool operator<(const NestedBuildNamespace &Other) const;
 
-  friend class JSONWriter;
-  friend class LinkUnitResolution;
+  friend class SerializationFormat;
+  friend class TestFixture;
+  friend llvm::raw_ostream &operator<<(llvm::raw_ostream &OS,
+                                       const NestedBuildNamespace &NBN);
 };
+
+llvm::raw_ostream &operator<<(llvm::raw_ostream &OS, BuildNamespaceKind BNK);
+llvm::raw_ostream &operator<<(llvm::raw_ostream &OS, const BuildNamespace &BN);
+llvm::raw_ostream &operator<<(llvm::raw_ostream &OS,
+                              const NestedBuildNamespace &NBN);
 
 } // namespace clang::ssaf
 

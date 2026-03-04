@@ -52,7 +52,21 @@ program openacc_cache_validity
 
   end do
 
-  !ERROR: The CACHE directive must be inside a loop
   !$acc cache(a)
+
+  call routine_with_cache()
+
+contains
+
+  subroutine routine_with_cache()
+    real(8), dimension(N) :: local_arr
+    integer :: j
+    !$acc routine vector
+    !$acc cache(local_arr)
+    !$acc loop
+    do j = 1, N
+      local_arr(j) = a(j)
+    end do
+  end subroutine
 
 end program openacc_cache_validity

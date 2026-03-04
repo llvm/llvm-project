@@ -1003,16 +1003,6 @@ private:
       if (PartialPackDepthIndex ==
             std::make_pair(Info.getDeducedDepth(), Pack.Index)) {
         Pack.New.append(PartialPackArgs, PartialPackArgs + NumPartialPackArgs);
-        // We pre-populate the deduced value of the partially-substituted
-        // pack with the specified value. This is not entirely correct: the
-        // value is supposed to have been substituted, not deduced, but the
-        // cases where this is observable require an exact type match anyway.
-        //
-        // FIXME: If we could represent a "depth i, index j, pack elem k"
-        // parameter, we could substitute the partially-substituted pack
-        // everywhere and avoid this.
-        if (!FinishingDeduction && !IsPartiallyExpanded)
-          Deduced[Pack.Index] = Pack.New[PackElements];
       }
     }
   }
@@ -2550,6 +2540,7 @@ static TemplateDeductionResult DeduceTemplateArgumentsByTypeMatch(
     case Type::ArrayParameter:
     case Type::HLSLAttributedResource:
     case Type::HLSLInlineSpirv:
+    case Type::OverflowBehavior:
       // No template argument deduction for these types
       return TemplateDeductionResult::Success;
 
@@ -6501,6 +6492,8 @@ bool Sema::isTemplateTemplateParameterAtLeastAsSpecializedAs(
   if (Inst.isInvalid())
     return false;
 
+  LocalInstantiationScope Scope(*this);
+
   //   Given an invented class template X with the template parameter list of
   //   A (including default arguments):
   //    - Each function template has a single function parameter whose type is
@@ -7077,6 +7070,7 @@ MarkUsedTemplateParameters(ASTContext &Ctx, QualType T,
   case Type::Pipe:
   case Type::BitInt:
   case Type::HLSLInlineSpirv:
+  case Type::OverflowBehavior:
 #define TYPE(Class, Base)
 #define ABSTRACT_TYPE(Class, Base)
 #define DEPENDENT_TYPE(Class, Base)

@@ -145,6 +145,12 @@ template <unsigned Opcode> static VPInstruction *findUserOf(VPValue *V) {
 /// inserted for predicated reductions or tail folding.
 VPInstruction *findComputeReductionResult(VPReductionPHIRecipe *PhiR);
 
+/// Collect the header mask with the pattern:
+/// (ICMP_ULE, WideCanonicalIV, backedge-taken-count)
+/// TODO: Introduce explicit recipe for header-mask instead of searching
+/// the header-mask pattern manually.
+VPSingleDefRecipe *findHeaderMask(VPlan &Plan);
+
 } // namespace vputils
 
 //===----------------------------------------------------------------------===//

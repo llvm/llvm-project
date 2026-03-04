@@ -69,20 +69,6 @@ class TargetAPITestCase(TestBase):
         platform = target.platform
         self.assertTrue(platform, VALID_PLATFORM)
 
-    def test_get_data_byte_size(self):
-        d = {"EXE": "b.out"}
-        self.build(dictionary=d)
-        self.setTearDownCleanup(dictionary=d)
-        target = self.create_simple_target("b.out")
-        self.assertEqual(target.data_byte_size, 1)
-
-    def test_get_code_byte_size(self):
-        d = {"EXE": "b.out"}
-        self.build(dictionary=d)
-        self.setTearDownCleanup(dictionary=d)
-        target = self.create_simple_target("b.out")
-        self.assertEqual(target.code_byte_size, 1)
-
     def test_resolve_file_address(self):
         d = {"EXE": "b.out"}
         self.build(dictionary=d)

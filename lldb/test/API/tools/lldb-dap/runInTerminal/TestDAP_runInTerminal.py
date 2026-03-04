@@ -12,6 +12,8 @@ import json
 
 @skipIfBuildType(["debug"])
 class TestDAP_runInTerminal(lldbdap_testcase.DAPTestCaseBase):
+    SHARED_BUILD_TESTCASE = False
+
     def read_pid_message(self, fifo_file):
         with open(fifo_file, "r") as file:
             self.assertIn("pid", file.readline())
@@ -215,3 +217,15 @@ class TestDAP_runInTerminal(lldbdap_testcase.DAPTestCaseBase):
 
         _, stderr = proc.communicate()
         self.assertIn("Timed out trying to get messages from the debug adapter", stderr)
+
+    def test_client_missing_runInTerminal_feature(self):
+        program = self.getBuildArtifact("a.out")
+        self.build_and_create_debug_adapter()
+        response = self.launch_and_configurationDone(
+            program,
+            console="integratedTerminal",
+            client_features={"supportsRunInTerminalRequest": False},
+        )
+        self.assertFalse(response["success"], f"Expected failure got {response!r}")
+        error_message = response["body"]["error"]["format"]
+        self.assertIn("Client does not support RunInTerminal.", error_message)

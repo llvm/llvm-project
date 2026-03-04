@@ -32,8 +32,8 @@ if (MLIR_INCLUDE_INTEGRATION_TESTS)
       "The GPU compilation format used by the tests.")
   set(ARM_SME_ABI_ROUTINES_SHLIB "" CACHE STRING
       "Path to a shared library containing Arm SME ABI routines, required for Arm SME integration tests.")
-  option(MLIR_RUN_AMX_TESTS "Run AMX tests.")
-  option(MLIR_RUN_X86VECTOR_TESTS "Run X86Vector tests.")
+  option(MLIR_RUN_X86_TESTS "Run X86 tests.")
+  option(MLIR_RUN_X86_AMX_TESTS "Run X86 AMX tests.")
   option(MLIR_RUN_CUDA_TENSOR_CORE_TESTS "Run CUDA Tensor core WMMA tests.")
   option(MLIR_RUN_CUDA_SM80_TESTS "Run CUDA A100 tests.")
   option(MLIR_RUN_CUDA_SM80_LT_TESTS "Run CUDA A100 structured sparsity tests.")
@@ -70,15 +70,16 @@ llvm_canonicalize_cmake_booleans(
   LLVM_HAS_NVPTX_TARGET
   LLVM_INCLUDE_SPIRV_TOOLS_TESTS
   MLIR_ENABLE_BINDINGS_PYTHON
+  MLIR_ENABLE_PYTHON_STABLE_ABI
   MLIR_ENABLE_CUDA_RUNNER
   MLIR_ENABLE_ROCM_CONVERSIONS
   MLIR_ENABLE_ROCM_RUNNER
   MLIR_ENABLE_SPIRV_CPU_RUNNER
   MLIR_ENABLE_VULKAN_RUNNER
   MLIR_INCLUDE_INTEGRATION_TESTS
-  MLIR_RUN_AMX_TESTS
+  MLIR_RUN_X86_AMX_TESTS
   MLIR_RUN_CUDA_TENSOR_CORE_TESTS
-  MLIR_RUN_X86VECTOR_TESTS
+  MLIR_RUN_X86_TESTS
   MLIR_RUN_ARM_SVE_TESTS
   MLIR_RUN_ARM_SME_TESTS
   MLIR_RUN_CUDA_SM80_TESTS
@@ -101,6 +102,7 @@ configure_lit_site_cfg(
   )
 
 set(MLIR_TEST_DEPENDS
+  llvm-strings
   mlir-capi-ir-test
   mlir-capi-irdl-test
   mlir-capi-llvm-test

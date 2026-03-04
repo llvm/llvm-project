@@ -43,7 +43,7 @@ define i32 @test_cvt_pk_fp8_f32_word1(float %x, float %y, i32 %old) {
 ; GFX1250-TRUE16:       ; %bb.0:
 ; GFX1250-TRUE16-NEXT:    s_wait_loadcnt_dscnt 0x0
 ; GFX1250-TRUE16-NEXT:    s_wait_kmcnt 0x0
-; GFX1250-TRUE16-NEXT:    v_cvt_pk_fp8_f32 v2.h, v0, v1 op_sel:[0,0,1] clamp
+; GFX1250-TRUE16-NEXT:    v_cvt_pk_fp8_f32 v2.h, v0, v1 clamp
 ; GFX1250-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_1)
 ; GFX1250-TRUE16-NEXT:    v_mov_b32_e32 v0, v2
 ; GFX1250-TRUE16-NEXT:    s_set_pc_i64 s[30:31]
@@ -76,7 +76,7 @@ define amdgpu_cs void @test_cvt_pk_fp8_f32_word1_dpp(i32 %a, float %y, i32 %old,
 ; GFX1250-TRUE16-NEXT:    v_mov_b32_dpp v0, v0 quad_perm:[0,1,2,3] row_mask:0xf bank_mask:0xf bound_ctrl:1
 ; GFX1250-TRUE16-NEXT:    v_dual_mov_b32 v5, v4 :: v_dual_mov_b32 v4, v3
 ; GFX1250-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_2)
-; GFX1250-TRUE16-NEXT:    v_cvt_pk_fp8_f32 v2.h, v0, v1 op_sel:[0,0,1] clamp
+; GFX1250-TRUE16-NEXT:    v_cvt_pk_fp8_f32 v2.h, v0, v1 clamp
 ; GFX1250-TRUE16-NEXT:    global_store_b32 v[4:5], v2, off
 ; GFX1250-TRUE16-NEXT:    s_endpgm
 ;

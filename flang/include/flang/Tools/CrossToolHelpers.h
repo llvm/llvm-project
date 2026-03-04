@@ -110,6 +110,7 @@ struct MLIRToLLVMPassPipelineConfig : public FlangEPCallBacks {
     }
     DwarfVersion = opts.DwarfVersion;
     SplitDwarfFile = opts.SplitDwarfFile;
+    DwarfDebugFlags = opts.DwarfDebugFlags;
   }
 
   llvm::OptimizationLevel OptLevel; ///< optimisation level
@@ -123,7 +124,7 @@ struct MLIRToLLVMPassPipelineConfig : public FlangEPCallBacks {
       llvm::FramePointerKind::None; ///< Add frame pointer to functions.
   unsigned VScaleMin = 0; ///< SVE vector range minimum.
   unsigned VScaleMax = 0; ///< SVE vector range maximum.
-  bool NoInfsFPMath = false; ///< Set no-infs-fp-math attribute for functions.
+  bool NoInfsFPMath = false; ///< Set ninf flag for instructions.
   bool NoNaNsFPMath = false; ///< Set no-nans-fp-math attribute for functions.
   bool ApproxFuncFPMath = false; ///< Set afn flag for instructions.
   bool NoSignedZerosFPMath =
@@ -148,6 +149,7 @@ struct MLIRToLLVMPassPipelineConfig : public FlangEPCallBacks {
           CX_Full; ///< Method for calculating complex number division
   int32_t DwarfVersion = 0; ///< Version of DWARF debug info to generate
   std::string SplitDwarfFile = ""; ///< File name for the split debug info
+  std::string DwarfDebugFlags = ""; ///< Debug flags to append to DWARF producer
 };
 
 struct OffloadModuleOpts {

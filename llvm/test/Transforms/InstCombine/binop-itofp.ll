@@ -284,7 +284,7 @@ define half @test_ui_ui_i8_mul_C_fail_overlow(i8 noundef %x_in) {
 ; CHECK-LABEL: @test_ui_ui_i8_mul_C_fail_overlow(
 ; CHECK-NEXT:    [[X:%.*]] = and i8 [[X_IN:%.*]], 14
 ; CHECK-NEXT:    [[XF:%.*]] = uitofp nneg i8 [[X]] to half
-; CHECK-NEXT:    [[R:%.*]] = fmul half [[XF]], 0xH4CC0
+; CHECK-NEXT:    [[R:%.*]] = fmul nnan half [[XF]], 0xH4CC0
 ; CHECK-NEXT:    ret half [[R]]
 ;
   %x = and i8 %x_in, 14
@@ -317,7 +317,7 @@ define half @test_si_si_i8_mul_fail_maybe_zero(i8 noundef %x_in, i8 noundef %y_i
 ; CHECK-NEXT:    [[Y:%.*]] = or i8 [[Y_IN:%.*]], -8
 ; CHECK-NEXT:    [[XF:%.*]] = uitofp nneg i8 [[X]] to half
 ; CHECK-NEXT:    [[YF:%.*]] = sitofp i8 [[Y]] to half
-; CHECK-NEXT:    [[R:%.*]] = fmul half [[XF]], [[YF]]
+; CHECK-NEXT:    [[R:%.*]] = fmul nnan half [[XF]], [[YF]]
 ; CHECK-NEXT:    ret half [[R]]
 ;
   %x = and i8 %x_in, 7
@@ -333,7 +333,7 @@ define half @test_si_si_i8_mul_C_fail_no_repr(i8 noundef %x_in) {
 ; CHECK-NEXT:    [[XX:%.*]] = and i8 [[X_IN:%.*]], 6
 ; CHECK-NEXT:    [[X:%.*]] = or disjoint i8 [[XX]], 1
 ; CHECK-NEXT:    [[XF:%.*]] = uitofp nneg i8 [[X]] to half
-; CHECK-NEXT:    [[R:%.*]] = fmul half [[XF]], 0xHC780
+; CHECK-NEXT:    [[R:%.*]] = fmul nnan half [[XF]], 0xHC780
 ; CHECK-NEXT:    ret half [[R]]
 ;
   %xx = and i8 %x_in, 6
@@ -348,7 +348,7 @@ define half @test_si_si_i8_mul_C_fail_overflow(i8 noundef %x_in) {
 ; CHECK-NEXT:    [[XX:%.*]] = and i8 [[X_IN:%.*]], 6
 ; CHECK-NEXT:    [[X:%.*]] = or disjoint i8 [[XX]], 1
 ; CHECK-NEXT:    [[XF:%.*]] = uitofp nneg i8 [[X]] to half
-; CHECK-NEXT:    [[R:%.*]] = fmul half [[XF]], 0xHCCC0
+; CHECK-NEXT:    [[R:%.*]] = fmul nnan half [[XF]], 0xHCCC0
 ; CHECK-NEXT:    ret half [[R]]
 ;
   %xx = and i8 %x_in, 6
@@ -403,7 +403,7 @@ define half @test_ui_si_i8_mul_fail_signed(i8 noundef %x_in, i8 noundef %y_in) {
 ; CHECK-NEXT:    [[Y:%.*]] = or i8 [[Y_IN:%.*]], -4
 ; CHECK-NEXT:    [[XF:%.*]] = uitofp nneg i8 [[X]] to half
 ; CHECK-NEXT:    [[YF:%.*]] = uitofp i8 [[Y]] to half
-; CHECK-NEXT:    [[R:%.*]] = fmul half [[XF]], [[YF]]
+; CHECK-NEXT:    [[R:%.*]] = fmul nnan half [[XF]], [[YF]]
 ; CHECK-NEXT:    ret half [[R]]
 ;
   %xx = and i8 %x_in, 7
@@ -661,7 +661,7 @@ define half @test_si_si_i16_mul_C_fail_overflow(i16 noundef %x_in) {
 ; CHECK-LABEL: @test_si_si_i16_mul_C_fail_overflow(
 ; CHECK-NEXT:    [[X:%.*]] = or i16 [[X_IN:%.*]], -129
 ; CHECK-NEXT:    [[XF:%.*]] = sitofp i16 [[X]] to half
-; CHECK-NEXT:    [[R:%.*]] = fmul half [[XF]], 0xH5800
+; CHECK-NEXT:    [[R:%.*]] = fmul nnan half [[XF]], 0xH5800
 ; CHECK-NEXT:    ret half [[R]]
 ;
   %x = or i16 %x_in, -129
@@ -674,7 +674,7 @@ define half @test_si_si_i16_mul_C_fail_no_promotion(i16 noundef %x_in) {
 ; CHECK-LABEL: @test_si_si_i16_mul_C_fail_no_promotion(
 ; CHECK-NEXT:    [[X:%.*]] = or i16 [[X_IN:%.*]], -4097
 ; CHECK-NEXT:    [[XF:%.*]] = sitofp i16 [[X]] to half
-; CHECK-NEXT:    [[R:%.*]] = fmul half [[XF]], 0xH4500
+; CHECK-NEXT:    [[R:%.*]] = fmul nnan half [[XF]], 0xH4500
 ; CHECK-NEXT:    ret half [[R]]
 ;
   %x = or i16 %x_in, -4097
@@ -917,7 +917,7 @@ define half @test_si_si_i12_mul_fail_overflow(i12 noundef %x_in, i12 noundef %y_
 ; CHECK-NEXT:    [[Y:%.*]] = or i12 [[Y_IN:%.*]], -128
 ; CHECK-NEXT:    [[XF:%.*]] = uitofp nneg i12 [[X]] to half
 ; CHECK-NEXT:    [[YF:%.*]] = sitofp i12 [[Y]] to half
-; CHECK-NEXT:    [[R:%.*]] = fmul half [[XF]], [[YF]]
+; CHECK-NEXT:    [[R:%.*]] = fmul nnan half [[XF]], [[YF]]
 ; CHECK-NEXT:    ret half [[R]]
 ;
   %xx = and i12 %x_in, 30
@@ -935,7 +935,7 @@ define half @test_si_si_i12_mul_fail_maybe_non_zero(i12 noundef %x_in, i12 nound
 ; CHECK-NEXT:    [[Y:%.*]] = or i12 [[Y_IN:%.*]], -128
 ; CHECK-NEXT:    [[XF:%.*]] = uitofp nneg i12 [[X]] to half
 ; CHECK-NEXT:    [[YF:%.*]] = sitofp i12 [[Y]] to half
-; CHECK-NEXT:    [[R:%.*]] = fmul half [[XF]], [[YF]]
+; CHECK-NEXT:    [[R:%.*]] = fmul nnan half [[XF]], [[YF]]
 ; CHECK-NEXT:    ret half [[R]]
 ;
   %x = and i12 %x_in, 30
@@ -963,7 +963,7 @@ define half @test_si_si_i12_mul_C_fail_overflow(i12 noundef %x_in) {
 ; CHECK-LABEL: @test_si_si_i12_mul_C_fail_overflow(
 ; CHECK-NEXT:    [[X:%.*]] = or i12 [[X_IN:%.*]], -64
 ; CHECK-NEXT:    [[XF:%.*]] = sitofp i12 [[X]] to half
-; CHECK-NEXT:    [[R:%.*]] = fmul half [[XF]], 0xHD400
+; CHECK-NEXT:    [[R:%.*]] = fmul nnan half [[XF]], 0xHD400
 ; CHECK-NEXT:    ret half [[R]]
 ;
   %x = or i12 %x_in, -64
@@ -1071,7 +1071,7 @@ define <2 x half> @test_ui_ui_i8_mul_vec(<2 x i8> noundef %x_in, <2 x i8> nounde
 ; CHECK-NEXT:    [[Y:%.*]] = and <2 x i8> [[Y_IN:%.*]], splat (i8 15)
 ; CHECK-NEXT:    [[XF:%.*]] = uitofp nneg <2 x i8> [[X]] to <2 x half>
 ; CHECK-NEXT:    [[YF:%.*]] = uitofp nneg <2 x i8> [[Y]] to <2 x half>
-; CHECK-NEXT:    [[R:%.*]] = fmul <2 x half> [[XF]], [[YF]]
+; CHECK-NEXT:    [[R:%.*]] = fmul nnan <2 x half> [[XF]], [[YF]]
 ; CHECK-NEXT:    ret <2 x half> [[R]]
 ;
   %x = and <2 x i8> %x_in, splat (i8 15)
@@ -1110,7 +1110,7 @@ define <2 x float> @nonzero_check_on_constant_for_si_fmul_nz_vec_w_poison(i1 %c,
 ; CHECK-NEXT:    [[CONV_I_V:%.*]] = insertelement <2 x i16> poison, i16 [[CONV_I_S]], i64 0
 ; CHECK-NEXT:    [[CONV_I:%.*]] = shufflevector <2 x i16> [[CONV_I_V]], <2 x i16> poison, <2 x i32> zeroinitializer
 ; CHECK-NEXT:    [[MUL3_I_I:%.*]] = sitofp <2 x i16> [[CONV_I]] to <2 x float>
-; CHECK-NEXT:    [[MUL3_I_I1:%.*]] = fmul <2 x float> [[MUL3_I_I]], <float poison, float 1.000000e+00>
+; CHECK-NEXT:    [[MUL3_I_I1:%.*]] = fmul nnan <2 x float> [[MUL3_I_I]], <float poison, float 1.000000e+00>
 ; CHECK-NEXT:    store i32 [[SEL]], ptr [[G_2345:%.*]], align 4
 ; CHECK-NEXT:    ret <2 x float> [[MUL3_I_I1]]
 ;

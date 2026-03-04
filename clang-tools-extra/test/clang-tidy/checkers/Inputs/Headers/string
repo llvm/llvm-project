@@ -2,14 +2,13 @@
 #define _STRING_
 
 // For size_t
-#include <string.h>
+#include "string.h"
+#include "memory"
 
 typedef unsigned __INT16_TYPE__ char16;
 typedef unsigned __INT32_TYPE__ char32;
 
 namespace std {
-template <typename T>
-class allocator {};
 
 template <typename T>
 class char_traits {};
@@ -62,6 +61,11 @@ struct basic_string {
   size_type rfind(const C* s, size_type pos = npos) const;
   size_type rfind(C ch, size_type pos = npos) const;
 
+  size_type find_first_of(const C* s, size_type pos = 0) const;
+  size_type find_first_not_of(const C* s, size_type pos = 0) const;
+  size_type find_last_of(const C* s, size_type pos = npos) const;
+  size_type find_last_not_of(const C* s, size_type pos = npos) const;
+
   constexpr bool contains(std::basic_string_view<C, T> sv) const noexcept;
   constexpr bool contains(C ch) const noexcept;
   constexpr bool contains(const C* s) const;
@@ -80,13 +84,15 @@ struct basic_string {
   constexpr bool ends_with(C ch) const noexcept;
   constexpr bool ends_with(const C* s) const;
 
-  _Type& operator[](size_type);
-  const _Type& operator[](size_type) const;
+  C& operator[](size_type);
+  const C& operator[](size_type) const;
 
   _Type& operator+=(const _Type& str);
   _Type& operator+=(const C* s);
+  _Type& operator+=(C ch);
   _Type& operator=(const _Type& str);
   _Type& operator=(const C* s);
+  _Type& operator=(C ch);
 
   static constexpr size_t npos = -1;
 };
@@ -108,9 +114,13 @@ struct basic_string_view {
   typedef basic_string_view<C, T> _Type;
 
   const C *str;
+  constexpr basic_string_view() : str(nullptr) {}
   constexpr basic_string_view(const C* s) : str(s) {}
+  constexpr basic_string_view(const C* s, size_type) : str(s) {}
 
   const C *data() const;
+
+  constexpr const C &operator[](size_type pos) const;
 
   bool empty() const;
   size_type size() const;
@@ -125,6 +135,11 @@ struct basic_string_view {
   size_type rfind(C ch, size_type pos = npos) const;
   size_type rfind(const C* s, size_type pos, size_type count) const;
   size_type rfind(const C* s, size_type pos = npos) const;
+
+  size_type find_first_of(const C* s, size_type pos = 0) const;
+  size_type find_first_not_of(const C* s, size_type pos = 0) const;
+  size_type find_last_of(const C* s, size_type pos = npos) const;
+  size_type find_last_not_of(const C* s, size_type pos = npos) const;
 
   constexpr bool contains(basic_string_view sv) const noexcept;
   constexpr bool contains(C ch) const noexcept;
@@ -158,6 +173,10 @@ std::string operator+(const std::string&, const std::string&);
 std::string operator+(const std::string&, const char*);
 std::string operator+(const char*, const std::string&);
 
+std::wstring operator+(const std::wstring&, const std::wstring&);
+std::wstring operator+(const std::wstring&, const wchar_t*);
+std::wstring operator+(const wchar_t*, const std::wstring&);
+
 bool operator==(const std::string&, const std::string&);
 bool operator==(const std::string&, const char*);
 bool operator==(const char*, const std::string&);
@@ -182,11 +201,11 @@ bool operator!=(const char*, const std::string_view&);
 
 size_t strlen(const char* str);
 
-namespace literals {
-namespace string_literals {
+inline namespace literals {
+inline namespace string_literals {
   string operator""s(const char *, size_t);
 }
-namespace string_view_literals {
+inline namespace string_view_literals {
   string_view operator""sv(const char *, size_t);
 }
 }

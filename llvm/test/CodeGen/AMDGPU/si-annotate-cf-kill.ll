@@ -41,7 +41,7 @@ define amdgpu_ps float @uniform_kill(float %a, i32 %b, float %c) {
 ; SI-NEXT:    s_branch .LBB0_7
 ; SI-NEXT:  .LBB0_6:
 ; SI-NEXT:    s_mov_b64 exec, 0
-; SI-NEXT:    exp null off, off, off, off done vm
+; SI-NEXT:    exp null, off, off, off, off done vm
 ; SI-NEXT:    s_endpgm
 ; SI-NEXT:  .LBB0_7:
 ;
@@ -83,7 +83,7 @@ define amdgpu_ps float @uniform_kill(float %a, i32 %b, float %c) {
 ; FLAT-NEXT:    s_branch .LBB0_7
 ; FLAT-NEXT:  .LBB0_6:
 ; FLAT-NEXT:    s_mov_b64 exec, 0
-; FLAT-NEXT:    exp null off, off, off, off done vm
+; FLAT-NEXT:    exp null, off, off, off, off done vm
 ; FLAT-NEXT:    s_endpgm
 ; FLAT-NEXT:  .LBB0_7:
 entry:

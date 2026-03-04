@@ -1,4 +1,4 @@
-; RUN: llc -aarch64-load-store-renaming=true -verify-machineinstrs -mtriple=arm64-linux-gnu_ilp32 -pre-RA-sched=linearize -enable-misched=false -disable-post-ra < %s | FileCheck %s
+; RUN: llc -verify-machineinstrs -mtriple=arm64-linux-gnu_ilp32 -pre-RA-sched=linearize -enable-misched=false -disable-post-ra < %s | FileCheck %s
 
 %va_list = type {ptr, ptr, ptr, i32, i32}
 

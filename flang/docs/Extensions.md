@@ -481,6 +481,9 @@ end
 * A data object can be initialized multiple times by `DATA` statements
   and default component initialization, but only when all initializations
   are to the same value.  Distinct initializations remain errors.
+* A pointer component that has no default initialization or explicit value
+  in a structure constructor is defaulted to `NULL()`.
+* An assumed-rank entity is an acceptable `NAMELIST` group item.
 
 ### Extensions supported when enabled by options
 

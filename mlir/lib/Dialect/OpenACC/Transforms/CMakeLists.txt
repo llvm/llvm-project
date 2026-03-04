@@ -1,6 +1,8 @@
 add_mlir_dialect_library(MLIROpenACCTransforms
+  ACCDeclareGPUModuleInsertion.cpp
   ACCIfClauseLowering.cpp
   ACCImplicitData.cpp
+  ACCRecipeMaterialization.cpp
   ACCLoopTiling.cpp
   ACCImplicitDeclare.cpp
   ACCImplicitRoutine.cpp

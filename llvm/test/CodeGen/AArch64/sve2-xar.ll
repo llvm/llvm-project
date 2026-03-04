@@ -296,6 +296,73 @@ define <vscale x 2 x i64> @xar_nxv2i64_shifts_neg(<vscale x 2 x i64> %x, <vscale
     ret <vscale x 2 x i64> %or
 }
 
+; Don't use XAR if REV[BHW] can be used.
+
+define <vscale x 8 x i16> @revb_nxv8i16(<vscale x 8 x i16> %r) {
+; CHECK-LABEL: revb_nxv8i16:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    ptrue p0.h
+; CHECK-NEXT:    revb z0.h, p0/m, z0.h
+; CHECK-NEXT:    ret
+  %or = tail call <vscale x 8 x i16> @llvm.fshl(<vscale x 8 x i16> %r, <vscale x 8 x i16> %r, <vscale x 8 x i16> splat (i16 8))
+  ret <vscale x 8 x i16> %or
+}
+
+define <vscale x 4 x i32> @revh_nxv4i32(<vscale x 4 x i32> %r) {
+; CHECK-LABEL: revh_nxv4i32:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    ptrue p0.s
+; CHECK-NEXT:    revh z0.s, p0/m, z0.s
+; CHECK-NEXT:    ret
+  %or = tail call <vscale x 4 x i32> @llvm.fshl(<vscale x 4 x i32> %r, <vscale x 4 x i32> %r, <vscale x 4 x i32> splat (i32 16))
+  ret <vscale x 4 x i32> %or
+}
+
+define <vscale x 2 x i64> @revw_nx2i64(<vscale x 2 x i64> %r) {
+; CHECK-LABEL: revw_nx2i64:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    ptrue p0.d
+; CHECK-NEXT:    revw z0.d, p0/m, z0.d
+; CHECK-NEXT:    ret
+  %or = tail call <vscale x 2 x i64> @llvm.fshl(<vscale x 2 x i64> %r, <vscale x 2 x i64> %r, <vscale x 2 x i64> splat (i64 32))
+  ret <vscale x 2 x i64> %or
+}
+
+; As above, one test with rotate right.
+define <vscale x 2 x i64> @revw_nx2i64_r(<vscale x 2 x i64> %a) {
+; CHECK-LABEL: revw_nx2i64_r:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    ptrue p0.d
+; CHECK-NEXT:    revw z0.d, p0/m, z0.d
+; CHECK-NEXT:    ret
+  %r = tail call <vscale x 2 x i64> @llvm.fshr(<vscale x 2 x i64> %a, <vscale x 2 x i64> %a, <vscale x 2 x i64> splat (i64 32))
+  ret <vscale x 2 x i64> %r
+}
+
+; As above, one test with predicated shifts instead of rotate left.
+define <vscale x 4 x i32> @revh_nx4i32_shifts_l(<vscale x 4 x i1> %pg, <vscale x 4 x i32> %a) {
+; CHECK-LABEL: revh_nx4i32_shifts_l:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    revh z0.s, p0/m, z0.s
+; CHECK-NEXT:    ret
+  %shl = tail call <vscale x 4 x i32> @llvm.aarch64.sve.lsl.u(<vscale x 4 x i1> %pg, <vscale x 4 x i32> %a, <vscale x 4 x i32> splat (i32 16))
+  %shr = tail call <vscale x 4 x i32> @llvm.aarch64.sve.lsr.u(<vscale x 4 x i1> %pg, <vscale x 4 x i32> %a, <vscale x 4 x i32> splat (i32 16))
+  %or = or <vscale x 4 x i32> %shl, %shr
+  ret <vscale x 4 x i32> %or
+}
+
+; As above, one test with predicated shifts instead of rotate right.
+define <vscale x 8 x i16> @revb_nx8i16_shifts_r(<vscale x 8 x i1> %pg, <vscale x 8 x i16> %a) {
+; CHECK-LABEL: revb_nx8i16_shifts_r:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    revb z0.h, p0/m, z0.h
+; CHECK-NEXT:    ret
+  %shr = tail call <vscale x 8 x i16> @llvm.aarch64.sve.lsr.u(<vscale x 8 x i1> %pg, <vscale x 8 x i16> %a, <vscale x 8 x i16> splat (i16 8))
+  %shl = tail call <vscale x 8 x i16> @llvm.aarch64.sve.lsl.u(<vscale x 8 x i1> %pg, <vscale x 8 x i16> %a, <vscale x 8 x i16> splat (i16 8))
+  %or = or <vscale x 8 x i16> %shr, %shl
+  ret <vscale x 8 x i16> %or
+}
+
 declare <vscale x 2 x i64> @llvm.fshl.nxv2i64(<vscale x 2 x i64>, <vscale x 2 x i64>, <vscale x 2 x i64>)
 declare <vscale x 4 x i32> @llvm.fshl.nxv4i32(<vscale x 4 x i32>, <vscale x 4 x i32>, <vscale x 4 x i32>)
 declare <vscale x 8 x i16> @llvm.fshl.nxv8i16(<vscale x 8 x i16>, <vscale x 8 x i16>, <vscale x 8 x i16>)

@@ -65,6 +65,7 @@ static_library("Host") {
 
   if (current_os == "win") {
     sources += [
+      "windows/ConnectionConPTYWindows.cpp",
       "windows/ConnectionGenericFileWindows.cpp",
       "windows/FileSystem.cpp",
       "windows/Host.cpp",

@@ -59,8 +59,7 @@ define double @fold_addi_from_different_bb(i32 %k, i32 %n, ptr %a) nounwind {
 ; CHECK-NEXT:  .LBB2_3:
 ; CHECK-NEXT:    fmv.d s0, zero
 ; CHECK-NEXT:  .LBB2_4: # %for.cond.cleanup
-; CHECK-NEXT:    mv a0, s0
-; CHECK-NEXT:    mv a1, s1
+; CHECK-NEXT:    fmv.d a0, s0
 ; CHECK-NEXT:    lw ra, 28(sp) # 4-byte Folded Reload
 ; CHECK-NEXT:    lw s0, 24(sp) # 4-byte Folded Reload
 ; CHECK-NEXT:    lw s1, 20(sp) # 4-byte Folded Reload

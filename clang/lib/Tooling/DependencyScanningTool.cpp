@@ -14,18 +14,12 @@
 #include "clang/Frontend/Utils.h"
 #include "llvm/ADT/SmallVectorExtras.h"
 #include "llvm/ADT/iterator.h"
-#include "llvm/Support/VirtualFileSystem.h"
 #include "llvm/TargetParser/Host.h"
 #include <optional>
 
 using namespace clang;
 using namespace tooling;
 using namespace dependencies;
-
-DependencyScanningTool::DependencyScanningTool(
-    DependencyScanningService &Service,
-    llvm::IntrusiveRefCntPtr<llvm::vfs::FileSystem> FS)
-    : Worker(Service, std::move(FS)) {}
 
 namespace {
 /// Prints out all of the gathered dependencies into a string.
@@ -217,10 +211,10 @@ std::optional<P1689Rule> DependencyScanningTool::getP1689ModuleDependencyFile(
     void handleProvidedAndRequiredStdCXXModules(
         std::optional<P1689ModuleInfo> Provided,
         std::vector<P1689ModuleInfo> Requires) override {
-      Rule.Provides = Provided;
+      Rule.Provides = std::move(Provided);
       if (Rule.Provides)
         Rule.Provides->SourcePath = Filename.str();
-      Rule.Requires = Requires;
+      Rule.Requires = std::move(Requires);
     }
 
     StringRef getMakeFormatDependencyOutputPath() {
@@ -292,24 +286,19 @@ DependencyScanningTool::getModuleDependencies(
           initializeCompilerInstanceWithContextOrError(CWD, CommandLine))
     return Error;
 
-  auto Result = computeDependenciesByNameWithContextOrError(
-      ModuleName, AlreadySeen, LookupModuleOutput);
-
-  if (auto Error = finalizeCompilerInstanceWithContextOrError())
-    return Error;
-
-  return Result;
+  return computeDependenciesByNameWithContextOrError(ModuleName, AlreadySeen,
+                                                     LookupModuleOutput);
 }
 
 static std::optional<SmallVector<std::string, 0>> getFirstCC1CommandLine(
     ArrayRef<std::string> CommandLine, DiagnosticsEngine &Diags,
-    llvm::IntrusiveRefCntPtr<llvm::vfs::OverlayFileSystem> ScanFS) {
+    llvm::IntrusiveRefCntPtr<llvm::vfs::OverlayFileSystem> OverlayFS) {
   // Compilation holds a non-owning a reference to the Driver, hence we need to
   // keep the Driver alive when we use Compilation. Arguments to commands may be
   // owned by Alloc when expanded from response files.
   llvm::BumpPtrAllocator Alloc;
   const auto [Driver, Compilation] =
-      buildCompilation(CommandLine, Diags, ScanFS, Alloc);
+      buildCompilation(CommandLine, Diags, OverlayFS, Alloc);
   if (!Compilation)
     return std::nullopt;
 
@@ -376,12 +365,5 @@ DependencyScanningTool::computeDependenciesByNameWithContextOrError(
   if (Worker.computeDependenciesByNameWithContext(ModuleName, Consumer,
                                                   Controller))
     return Consumer.takeTranslationUnitDeps();
-  return makeErrorFromDiagnosticsOS(*DiagPrinterWithOS);
-}
-
-llvm::Error
-DependencyScanningTool::finalizeCompilerInstanceWithContextOrError() {
-  if (Worker.finalizeCompilerInstanceWithContext())
-    return llvm::Error::success();
   return makeErrorFromDiagnosticsOS(*DiagPrinterWithOS);
 }

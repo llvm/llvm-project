@@ -218,8 +218,12 @@ def XOrINotCmpI :
         (Arith_CmpIOp (InvertPredicate $pred), $a, $b)>;
 
 // xor extui(x), extui(y) -> extui(xor(x,y))
+// XOR preserves nneg only if both operands are non-negative: xor of two values
+// with sign bit 0 has sign bit 0.
 def XOrIOfExtUI :
-    Pat<(Arith_XOrIOp (Arith_ExtUIOp $x), (Arith_ExtUIOp $y)), (Arith_ExtUIOp (Arith_XOrIOp $x, $y)),
+    Pat<(Arith_XOrIOp (Arith_ExtUIOp $x, $nneg1), (Arith_ExtUIOp $y, $nneg2)),
+        (Arith_ExtUIOp (Arith_XOrIOp $x, $y),
+                       (NativeCodeCall<"($0 && $1) ? $0 : UnitAttr()"> $nneg1, $nneg2)),
       [(Constraint<CPred<"$0.getType() == $1.getType()">> $x, $y)]>;
 
 // xor extsi(x), extsi(y) -> extsi(xor(x,y))
@@ -245,8 +249,8 @@ def CmpIExtSI :
 // cmpi(== or !=, a ext iNN, b ext iNN) == cmpi(== or !=, a, b)
 def CmpIExtUI :
     Pat<(Arith_CmpIOp $pred,
-          (Arith_ExtUIOp $a),
-          (Arith_ExtUIOp $b)),
+          (Arith_ExtUIOp $a, $nneg1),
+          (Arith_ExtUIOp $b, $nneg2)),
         (Arith_CmpIOp $pred, $a, $b),
         [(Constraint<CPred<"$0.getType() == $1.getType()">> $a, $b),
          (Constraint<
@@ -284,30 +288,38 @@ def SelectI1ToNot :
 // IndexCastOp
 //===----------------------------------------------------------------------===//
 
-// index_cast(index_cast(x)) -> x, if dstType == srcType.
+// index_cast(index_cast(x, exact)) -> x, if dstType == srcType.
+// The inner exact guarantees the iN -> index conversion is lossless,
+// so the roundtrip through index preserves the value.
 def IndexCastOfIndexCast :
-    Pat<(Arith_IndexCastOp:$res (Arith_IndexCastOp $x)),
+    Pat<(Arith_IndexCastOp:$res (Arith_IndexCastOp $x, $exact1), $exact2),
         (replaceWithValue $x),
-        [(Constraint<CPred<"$0.getType() == $1.getType()">> $res, $x)]>;
+        [(Constraint<CPred<"$0.getType() == $1.getType()">> $res, $x),
+         (Constraint<CPred<"(bool)$0">> $exact1)]>;
 
 // index_cast(extsi(x)) -> index_cast(x)
 def IndexCastOfExtSI :
-    Pat<(Arith_IndexCastOp (Arith_ExtSIOp $x)), (Arith_IndexCastOp $x)>;
+    Pat<(Arith_IndexCastOp (Arith_ExtSIOp $x), $exact),
+        (Arith_IndexCastOp $x, $exact)>;
 
 //===----------------------------------------------------------------------===//
 // IndexCastUIOp
 //===----------------------------------------------------------------------===//
 
-// index_castui(index_castui(x)) -> x, if dstType == srcType.
+// index_castui(index_castui(x, exact)) -> x, if dstType == srcType.
+// The inner exact guarantees the iN -> index conversion is lossless,
+// so the roundtrip through index preserves the value.
 def IndexCastUIOfIndexCastUI :
-    Pat<(Arith_IndexCastUIOp:$res (Arith_IndexCastUIOp $x)),
+    Pat<(Arith_IndexCastUIOp:$res
+          (Arith_IndexCastUIOp $x, $nneg1, $exact1), $nneg2, $exact2),
         (replaceWithValue $x),
-        [(Constraint<CPred<"$0.getType() == $1.getType()">> $res, $x)]>;
+        [(Constraint<CPred<"$0.getType() == $1.getType()">> $res, $x),
+         (Constraint<CPred<"static_cast<bool>($0)">> $exact1)]>;
 
 // index_castui(extui(x)) -> index_castui(x)
 def IndexCastUIOfExtUI :
-    Pat<(Arith_IndexCastUIOp (Arith_ExtUIOp $x)), (Arith_IndexCastUIOp $x)>;
-
+    Pat<(Arith_IndexCastUIOp (Arith_ExtUIOp $x, $nneg1), $nneg2, $exact),
+        (Arith_IndexCastUIOp $x, $nneg1, $exact)>;
 
 //===----------------------------------------------------------------------===//
 // BitcastOp
@@ -323,16 +335,20 @@ def BitcastOfBitcast :
 
 // extsi(extui(x iN : iM) : iL) -> extui(x : iL)
 def ExtSIOfExtUI :
-    Pat<(Arith_ExtSIOp (Arith_ExtUIOp $x)), (Arith_ExtUIOp $x)>;
+    Pat<(Arith_ExtSIOp (Arith_ExtUIOp $x, $nneg)),
+        (Arith_ExtUIOp $x, $nneg)>;
 
 //===----------------------------------------------------------------------===//
 // AndIOp
 //===----------------------------------------------------------------------===//
 
 // and extui(x), extui(y) -> extui(and(x,y))
+// AND can only clear bits, so if either operand is non-negative (sign bit 0),
+// the result also has sign bit 0. Preserves nneg if either operand has it.
 def AndOfExtUI :
-    Pat<(Arith_AndIOp (Arith_ExtUIOp $x), (Arith_ExtUIOp $y)),
-        (Arith_ExtUIOp (Arith_AndIOp $x, $y)),
+    Pat<(Arith_AndIOp (Arith_ExtUIOp $x, $nneg1), (Arith_ExtUIOp $y, $nneg2)),
+        (Arith_ExtUIOp (Arith_AndIOp $x, $y),
+                       (NativeCodeCall<"$0 ? $0 : $1"> $nneg1, $nneg2)),
         [(Constraint<CPred<"$0.getType() == $1.getType()">> $x, $y)]>;
 
 // and extsi(x), extsi(y) -> extsi(and(x,y))
@@ -346,9 +362,12 @@ def AndOfExtSI :
 //===----------------------------------------------------------------------===//
 
 // or extui(x), extui(y) -> extui(or(x,y))
+// OR preserves nneg only if both operands are non-negative: or of two values
+// with sign bit 0 has sign bit 0.
 def OrOfExtUI :
-    Pat<(Arith_OrIOp (Arith_ExtUIOp $x), (Arith_ExtUIOp $y)),
-        (Arith_ExtUIOp (Arith_OrIOp $x, $y)),
+    Pat<(Arith_OrIOp (Arith_ExtUIOp $x, $nneg1), (Arith_ExtUIOp $y, $nneg2)),
+        (Arith_ExtUIOp (Arith_OrIOp $x, $y),
+                       (NativeCodeCall<"($0 && $1) ? $0 : UnitAttr()"> $nneg1, $nneg2)),
         [(Constraint<CPred<"$0.getType() == $1.getType()">> $x, $y)]>;
 
 // or extsi(x), extsi(y) -> extsi(or(x,y))
@@ -381,8 +400,8 @@ def TruncIExtSIToExtSI :
 
 // trunci(extui(x)) -> extui(x), when only the zero-extension bits are truncated
 def TruncIExtUIToExtUI :
-    Pat<(Arith_TruncIOp:$tr (Arith_ExtUIOp:$ext $x), $overflow),
-        (Arith_ExtUIOp $x),
+    Pat<(Arith_TruncIOp:$tr (Arith_ExtUIOp:$ext $x, $nneg), $overflow),
+        (Arith_ExtUIOp $x, $nneg),
         [(ValueWiderThan $ext, $tr),
          (ValueWiderThan $tr, $x)]>;
 
@@ -405,8 +424,8 @@ def TruncFSIToFPToSIToFP :
 
 // truncf(uitofp(x)) -> uitofp(x) if default rounding mode.
 def TruncFUIToFPToUIToFP :
-    Pat<(Arith_TruncFOp:$tr (Arith_UIToFPOp:$fp $x), $rmf, $fmf),
-        (Arith_UIToFPOp $x),
+    Pat<(Arith_TruncFOp:$tr (Arith_UIToFPOp:$fp $x, $nneg), $rmf, $fmf),
+        (Arith_UIToFPOp $x, $nneg),
         [(Constraint<CPred<"$0 == nullptr">, "default rounding mode"> $rmf)]>;
 
 //===----------------------------------------------------------------------===//

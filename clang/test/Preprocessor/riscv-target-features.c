@@ -140,6 +140,7 @@
 // CHECK-NOT: __riscv_zkt {{.*$}}
 // CHECK-NOT: __riscv_zmmul {{.*$}}
 // CHECK-NOT: __riscv_ztso {{.*$}}
+// CHECK-NOT: __riscv_zvabd {{.*$}}
 // CHECK-NOT: __riscv_zvbb {{.*$}}
 // CHECK-NOT: __riscv_zvbc {{.*$}}
 // CHECK-NOT: __riscv_zve32f {{.*$}}
@@ -185,7 +186,7 @@
 // CHECK-NOT: __riscv_zvfbfa {{.*$}}
 // CHECK-NOT: __riscv_zvfofp8min {{.*$}}
 // CHECK-NOT: __riscv_zvkgs {{.*$}}
-// CHECK-NOT: __riscv_zvqdotq {{.*$}}
+// CHECK-NOT: __riscv_zvdot4a8i {{.*$}}
 
 // RUN: %clang --target=riscv32-unknown-linux-gnu \
 // RUN:   -march=rv32ia -E -dM %s \
@@ -1382,6 +1383,14 @@
 // RUN:   -o - | FileCheck --check-prefix=CHECK-ZFA-EXT %s
 // CHECK-ZFA-EXT: __riscv_zfa 1000000{{$}}
 
+// RUN: %clang --target=riscv32 -menable-experimental-extensions \
+// RUN:   -march=rv32i_zve64x_zvabd0p7 -E -dM %s \
+// RUN:   -o - | FileCheck --check-prefix=CHECK-ZVABD-EXT %s
+// RUN: %clang --target=riscv64 -menable-experimental-extensions \
+// RUN:   -march=rv64i_zve64x_zvabd0p7 -E -dM %s \
+// RUN:   -o - | FileCheck --check-prefix=CHECK-ZVABD-EXT %s
+// CHECK-ZVABD-EXT: __riscv_zvabd  7000{{$}}
+
 // RUN: %clang --target=riscv32 \
 // RUN:   -march=rv32i_zve64x_zvbb1p0 -E -dM %s \
 // RUN:   -o - | FileCheck --check-prefix=CHECK-ZVBB-EXT %s
@@ -1636,12 +1645,12 @@
 // CHECK-ZVKGS-EXT: __riscv_zvkgs 7000{{$}}
 
 // RUN: %clang --target=riscv32 -menable-experimental-extensions \
-// RUN:   -march=rv32i_zve32x_zvqdotq0p0 -E -dM %s \
-// RUN:   -o - | FileCheck --check-prefix=CHECK-ZVQDOTQ-EXT %s
+// RUN:   -march=rv32i_zve32x_zvdot4a8i0p1 -E -dM %s \
+// RUN:   -o - | FileCheck --check-prefix=CHECK-ZVDOT4A8I-EXT %s
 // RUN: %clang --target=riscv64 -menable-experimental-extensions \
-// RUN:   -march=rv64i_zve32x_zvqdotq0p0 -E -dM %s \
-// RUN:   -o - | FileCheck --check-prefix=CHECK-ZVQDOTQ-EXT %s
-// CHECK-ZVQDOTQ-EXT: __riscv_zvqdotq 0{{$}}
+// RUN:   -march=rv64i_zve32x_zvdot4a8i0p1 -E -dM %s \
+// RUN:   -o - | FileCheck --check-prefix=CHECK-ZVDOT4A8I-EXT %s
+// CHECK-ZVDOT4A8I-EXT: __riscv_zvdot4a8i 1000{{$}}
 
 // RUN: %clang -target riscv32 -menable-experimental-extensions \
 // RUN:   -march=rv32izicfiss1p0 -E -dM %s \

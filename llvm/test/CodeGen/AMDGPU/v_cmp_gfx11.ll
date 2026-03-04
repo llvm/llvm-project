@@ -16,7 +16,7 @@ entry:
   %icmp.intr = tail call i64 @llvm.amdgcn.icmp.i64.i16(i16 0, i16 0, i32 32)
   %cmp0 = icmp eq i64 %icmp.intr, 0
   %zext0 = zext i1 %cmp0 to i32
-  store i32 %zext0, ptr addrspace(3) null, align 2147483648
+  store i32 %zext0, ptr addrspace(3) zeroinitializer, align 2147483648
   ret void
 }
 
@@ -38,7 +38,7 @@ entry:
   %fcmp.intr = tail call i64 @llvm.amdgcn.fcmp.i64.f16(half %x, half %y, i32 5)
   %cmp0 = icmp eq i64 %fcmp.intr, 0
   %zext0 = zext i1 %cmp0 to i32
-  store i32 %zext0, ptr addrspace(3) null, align 2147483648
+  store i32 %zext0, ptr addrspace(3) zeroinitializer, align 2147483648
   ret void
 }
 
@@ -58,7 +58,7 @@ define amdgpu_kernel void @ballot_test(half %x, half %y) {
 ; CHECK-NEXT:    s_endpgm
   %cmp = fcmp oeq half %x, %y
   %ballot = tail call i64 @llvm.amdgcn.ballot.i64(i1 %cmp)
-  store i64 %ballot, ptr addrspace(3) null, align 2147483648
+  store i64 %ballot, ptr addrspace(3) zeroinitializer, align 2147483648
   ret void
 }
 

@@ -943,28 +943,49 @@ be implemented by the Python class):
 .. code-block:: python
 
    class SyntheticChildrenProvider:
-      def __init__(self, valobj, internal_dict):
-         this call should initialize the Python object using valobj as the
-         variable to provide synthetic children for
-      def num_children(self, max_children):
-         this call should return the number of children that you want your
-         object to have[1]
-      def get_child_index(self,name):
-         this call should return the index of the synthetic child whose name is
-         given as argument
-      def get_child_at_index(self,index):
-         this call should return a new LLDB SBValue object representing the
-         child at the index given as argument
-      def update(self):
-         this call should be used to update the internal state of this Python
+      def __init__(self, valobj: lldb.SBValue, internal_dict):
+         """"
+         This call should initialize the Python object using valobj as the
+         variable to provide synthetic children for.
+         """"
+
+      def num_children(self, max_children: int) -> int:
+         """
+         This call should return the number of children that you want your
+         object to have[1].
+         """
+
+      def get_child_index(self, name: str) -> int:
+         """
+         This call should return the index of the synthetic child whose name is
+         given as the argument.
+         Return -1 if there is no child at the index.
+         """
+
+      def get_child_at_index(self, index: int) -> lldb.SBValue | None:
+         """"
+         This call should return a new LLDB SBValue object representing the
+         child at the index given as argument.
+         """
+
+      def update(self) -> bool:
+         """"
+         This call should be used to update the internal state of this Python
          object whenever the state of the variables in LLDB changes.[2]
          Also, this method is invoked before any other method in the interface.
-      def has_children(self):
-         this call should return True if this object might have children, and
+         """
+
+      def has_children(self) -> bool:
+         """
+         This call should return True if this object might have children, and
          False if this object can be guaranteed not to have children.[3]
-      def get_value(self):
-         this call can return an SBValue to be presented as the value of the
+         """
+
+      def get_value(self) -> lldb.SBValue | None:
+         """
+         This call can return an SBValue to be presented as the value of the
          synthetic value under consideration.[4]
+         """"
 
 As a warning, exceptions that are thrown by python formatters are caught
 silently by LLDB and should be handled appropriately by the formatter itself.
@@ -1012,13 +1033,15 @@ synthetic children in the UI:
 
       class SyntheticChildrenProvider:
           [...]
-          def num_children(self):
+          def num_children(self) -> int:
               return 0
-          def get_child_index(self, name):
+
+          def get_child_index(self, name: str) -> int:
               if name == '$$dereference$$':
                   return 0
               return -1
-          def get_child_at_index(self, index):
+
+          def get_child_at_index(self, index: int) -> lldb.SBValue | None:
               if index == 0:
                   return <valobj resulting from dereference>
               return None
@@ -1163,9 +1186,9 @@ formatter neither by name nor by regular expression.
 
 In that case, you can write a recognizer function like this:
 
-::
+.. code-block:: python
 
-   def is_generated_object(sbtype, internal_dict):
+   def is_generated_object(sbtype: lldb.SBType, internal_dict) -> bool:
      for base in sbtype.get_bases_array():
        if base.GetName() == "GeneratedObject"
          return True

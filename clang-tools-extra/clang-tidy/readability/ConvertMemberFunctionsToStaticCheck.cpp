@@ -84,9 +84,8 @@ void ConvertMemberFunctionsToStaticCheck::registerMatchers(
       cxxMethodDecl(
           isDefinition(), isUserProvided(),
           unless(anyOf(
-              isExpansionInSystemHeader(), isVirtual(), isStatic(),
-              hasTrivialBody(), isOverloadedOperator(), cxxConstructorDecl(),
-              cxxDestructorDecl(), cxxConversionDecl(),
+              isVirtual(), isStatic(), hasTrivialBody(), isOverloadedOperator(),
+              cxxConstructorDecl(), cxxDestructorDecl(), cxxConversionDecl(),
               isExplicitObjectMemberFunction(), isTemplate(),
               isDependentContext(),
               ofClass(anyOf(

@@ -224,9 +224,9 @@ void MakeMemberFunctionConstCheck::registerMatchers(MatchFinder *Finder) {
           cxxMethodDecl(
               isDefinition(), isUserProvided(),
               unless(anyOf(
-                  isExpansionInSystemHeader(), isVirtual(), isConst(),
-                  isStatic(), hasTrivialBody(), cxxConstructorDecl(),
-                  cxxDestructorDecl(), isTemplate(), isDependentContext(),
+                  isVirtual(), isConst(), isStatic(), hasTrivialBody(),
+                  cxxConstructorDecl(), cxxDestructorDecl(), isTemplate(),
+                  isDependentContext(),
                   ofClass(anyOf(isLambda(),
                                 hasAnyDependentBases()) // Method might become
                                                         // virtual depending on

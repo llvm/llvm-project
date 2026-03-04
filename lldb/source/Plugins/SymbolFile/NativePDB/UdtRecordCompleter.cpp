@@ -82,7 +82,7 @@ clang::QualType UdtRecordCompleter::AddBaseClassForTypeIndex(
 }
 
 void UdtRecordCompleter::AddMethod(llvm::StringRef name, TypeIndex type_idx,
-                                   MemberAccess access, MethodOptions options,
+                                   MethodOptions options,
                                    MemberAttributes attrs) {
   clang::QualType method_qt =
       m_ast_builder.GetOrCreateClangType(PdbTypeSymId(type_idx));
@@ -99,11 +99,10 @@ void UdtRecordCompleter::AddMethod(llvm::StringRef name, TypeIndex type_idx,
     }
   }
 
-  lldb::AccessType access_type = TranslateMemberAccess(access);
   bool is_artificial = (options & MethodOptions::CompilerGenerated) ==
                        MethodOptions::CompilerGenerated;
   m_ast_builder.clang().AddMethodToCXXRecordType(
-      derived_opaque_ty, name.data(), /*asm_label=*/{}, method_ct, access_type,
+      derived_opaque_ty, name.data(), /*asm_label=*/{}, method_ct,
       attrs.isVirtual(), attrs.isStatic(), false, false, false, is_artificial);
 
   m_cxx_record_map[derived_opaque_ty].insert({name, method_ct});
@@ -152,10 +151,8 @@ Error UdtRecordCompleter::visitKnownMember(
 
   CompilerType member_ct = m_ast_builder.ToCompilerType(member_type);
 
-  lldb::AccessType access =
-      TranslateMemberAccess(static_data_member.getAccess());
   auto decl = TypeSystemClang::AddVariableToRecordType(
-      m_derived_ct, static_data_member.Name, member_ct, access);
+      m_derived_ct, static_data_member.Name, member_ct);
 
   // Static constant members may be a const[expr] declaration.
   // Query the symbol's value as the variable initializer if valid.
@@ -293,8 +290,8 @@ Error UdtRecordCompleter::visitKnownMember(CVMemberRecord &cvr,
 
 Error UdtRecordCompleter::visitKnownMember(CVMemberRecord &cvr,
                                            OneMethodRecord &one_method) {
-  AddMethod(one_method.Name, one_method.Type, one_method.getAccess(),
-            one_method.getOptions(), one_method.Attrs);
+  AddMethod(one_method.Name, one_method.Type, one_method.getOptions(),
+            one_method.Attrs);
 
   return Error::success();
 }
@@ -311,8 +308,7 @@ Error UdtRecordCompleter::visitKnownMember(CVMemberRecord &cvr,
       method_list_type, method_list));
 
   for (const OneMethodRecord &method : method_list.Methods)
-    AddMethod(overloaded.Name, method.Type, method.getAccess(),
-              method.getOptions(), method.Attrs);
+    AddMethod(overloaded.Name, method.Type, method.getOptions(), method.Attrs);
 
   return Error::success();
 }
@@ -374,7 +370,7 @@ UdtRecordCompleter::AddMember(TypeSystemClang &clang, Member *field,
   case Member::Field: {
     field_decl = TypeSystemClang::AddFieldToRecordType(
         parent_ct, field->name, m_ast_builder.ToCompilerType(field->qt),
-        field->access, field->bitfield_width);
+        field->bitfield_width);
     bit_size = field->bit_size;
     break;
   };
@@ -387,8 +383,8 @@ UdtRecordCompleter::AddMember(TypeSystemClang &clang, Member *field,
     metadata.SetUserID(pdb->anonymous_id);
     metadata.SetIsDynamicCXXType(false);
     CompilerType record_ct = clang.CreateRecordType(
-        parent_decl_ctx, OptionalClangModuleID(), lldb::eAccessPublic, "",
-        llvm::to_underlying(kind), lldb::eLanguageTypeC_plus_plus, metadata);
+        parent_decl_ctx, OptionalClangModuleID(), "", llvm::to_underlying(kind),
+        lldb::eLanguageTypeC_plus_plus, metadata);
     TypeSystemClang::StartTagDeclarationDefinition(record_ct);
     ClangASTImporter::LayoutInfo layout;
     clang::DeclContext *decl_ctx = clang.GetDeclContextForType(record_ct);
@@ -407,8 +403,8 @@ UdtRecordCompleter::AddMember(TypeSystemClang &clang, Member *field,
     TypeSystemClang::CompleteTagDeclarationDefinition(record_ct);
     clang::RecordDecl *record_decl = clang.GetAsRecordDecl(record_ct);
     m_ast_builder.GetClangASTImporter().SetRecordLayout(record_decl, layout);
-    field_decl = TypeSystemClang::AddFieldToRecordType(
-        parent_ct, "", record_ct, lldb::eAccessPublic, 0);
+    field_decl =
+        TypeSystemClang::AddFieldToRecordType(parent_ct, "", record_ct, 0);
     // Mark this record decl as completed.
     DeclStatus status;
     status.resolved = true;

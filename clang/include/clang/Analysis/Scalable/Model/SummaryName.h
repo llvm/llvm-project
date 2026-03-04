@@ -10,6 +10,7 @@
 #define LLVM_CLANG_ANALYSIS_SCALABLE_MODEL_SUMMARYNAME_H
 
 #include "llvm/ADT/StringRef.h"
+#include "llvm/Support/raw_ostream.h"
 #include <string>
 
 namespace clang::ssaf {
@@ -31,8 +32,10 @@ public:
 
 private:
   std::string Name;
+  friend class TestFixture;
 };
 
+llvm::raw_ostream &operator<<(llvm::raw_ostream &OS, const SummaryName &SN);
 } // namespace clang::ssaf
 
 #endif // LLVM_CLANG_ANALYSIS_SCALABLE_MODEL_SUMMARYNAME_H

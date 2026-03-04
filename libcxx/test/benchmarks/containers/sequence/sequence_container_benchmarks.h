@@ -21,6 +21,7 @@
 
 #include "benchmark/benchmark.h"
 #include "test_iterators.h"
+#include "test_macros.h"
 #include "../../GenerateInput.h"
 
 namespace support {

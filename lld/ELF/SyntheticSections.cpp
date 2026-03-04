@@ -90,176 +90,6 @@ MergeInputSection *elf::createCommentSection(Ctx &ctx) {
   return sec;
 }
 
-// .MIPS.abiflags section.
-template <class ELFT>
-MipsAbiFlagsSection<ELFT>::MipsAbiFlagsSection(Ctx &ctx,
-                                               Elf_Mips_ABIFlags flags)
-    : SyntheticSection(ctx, ".MIPS.abiflags", SHT_MIPS_ABIFLAGS, SHF_ALLOC, 8),
-      flags(flags) {
-  this->entsize = sizeof(Elf_Mips_ABIFlags);
-}
-
-template <class ELFT> void MipsAbiFlagsSection<ELFT>::writeTo(uint8_t *buf) {
-  memcpy(buf, &flags, sizeof(flags));
-}
-
-template <class ELFT>
-std::unique_ptr<MipsAbiFlagsSection<ELFT>>
-MipsAbiFlagsSection<ELFT>::create(Ctx &ctx) {
-  Elf_Mips_ABIFlags flags = {};
-  bool create = false;
-
-  for (InputSectionBase *sec : ctx.inputSections) {
-    if (sec->type != SHT_MIPS_ABIFLAGS)
-      continue;
-    sec->markDead();
-    create = true;
-
-    const size_t size = sec->content().size();
-    // Older version of BFD (such as the default FreeBSD linker) concatenate
-    // .MIPS.abiflags instead of merging. To allow for this case (or potential
-    // zero padding) we ignore everything after the first Elf_Mips_ABIFlags
-    if (size < sizeof(Elf_Mips_ABIFlags)) {
-      Err(ctx) << sec->file << ": invalid size of .MIPS.abiflags section: got "
-               << size << " instead of " << sizeof(Elf_Mips_ABIFlags);
-      return nullptr;
-    }
-    auto *s =
-        reinterpret_cast<const Elf_Mips_ABIFlags *>(sec->content().data());
-    if (s->version != 0) {
-      Err(ctx) << sec->file << ": unexpected .MIPS.abiflags version "
-               << s->version;
-      return nullptr;
-    }
-
-    // LLD checks ISA compatibility in calcMipsEFlags(). Here we just
-    // select the highest number of ISA/Rev/Ext.
-    flags.isa_level = std::max(flags.isa_level, s->isa_level);
-    flags.isa_rev = std::max(flags.isa_rev, s->isa_rev);
-    flags.isa_ext = std::max(flags.isa_ext, s->isa_ext);
-    flags.gpr_size = std::max(flags.gpr_size, s->gpr_size);
-    flags.cpr1_size = std::max(flags.cpr1_size, s->cpr1_size);
-    flags.cpr2_size = std::max(flags.cpr2_size, s->cpr2_size);
-    flags.ases |= s->ases;
-    flags.flags1 |= s->flags1;
-    flags.flags2 |= s->flags2;
-    flags.fp_abi =
-        elf::getMipsFpAbiFlag(ctx, sec->file, flags.fp_abi, s->fp_abi);
-  };
-
-  if (create)
-    return std::make_unique<MipsAbiFlagsSection<ELFT>>(ctx, flags);
-  return nullptr;
-}
-
-// .MIPS.options section.
-template <class ELFT>
-MipsOptionsSection<ELFT>::MipsOptionsSection(Ctx &ctx, Elf_Mips_RegInfo reginfo)
-    : SyntheticSection(ctx, ".MIPS.options", SHT_MIPS_OPTIONS, SHF_ALLOC, 8),
-      reginfo(reginfo) {
-  this->entsize = sizeof(Elf_Mips_Options) + sizeof(Elf_Mips_RegInfo);
-}
-
-template <class ELFT> void MipsOptionsSection<ELFT>::writeTo(uint8_t *buf) {
-  auto *options = reinterpret_cast<Elf_Mips_Options *>(buf);
-  options->kind = ODK_REGINFO;
-  options->size = getSize();
-
-  if (!ctx.arg.relocatable)
-    reginfo.ri_gp_value = ctx.in.mipsGot->getGp();
-  memcpy(buf + sizeof(Elf_Mips_Options), &reginfo, sizeof(reginfo));
-}
-
-template <class ELFT>
-std::unique_ptr<MipsOptionsSection<ELFT>>
-MipsOptionsSection<ELFT>::create(Ctx &ctx) {
-  // N64 ABI only.
-  if (!ELFT::Is64Bits)
-    return nullptr;
-
-  SmallVector<InputSectionBase *, 0> sections;
-  for (InputSectionBase *sec : ctx.inputSections)
-    if (sec->type == SHT_MIPS_OPTIONS)
-      sections.push_back(sec);
-
-  if (sections.empty())
-    return nullptr;
-
-  Elf_Mips_RegInfo reginfo = {};
-  for (InputSectionBase *sec : sections) {
-    sec->markDead();
-
-    ArrayRef<uint8_t> d = sec->content();
-    while (!d.empty()) {
-      if (d.size() < sizeof(Elf_Mips_Options)) {
-        Err(ctx) << sec->file << ": invalid size of .MIPS.options section";
-        break;
-      }
-
-      auto *opt = reinterpret_cast<const Elf_Mips_Options *>(d.data());
-      if (opt->kind == ODK_REGINFO) {
-        reginfo.ri_gprmask |= opt->getRegInfo().ri_gprmask;
-        sec->getFile<ELFT>()->mipsGp0 = opt->getRegInfo().ri_gp_value;
-        break;
-      }
-
-      if (!opt->size) {
-        Err(ctx) << sec->file << ": zero option descriptor size";
-        break;
-      }
-      d = d.slice(opt->size);
-    }
-  };
-
-  return std::make_unique<MipsOptionsSection<ELFT>>(ctx, reginfo);
-}
-
-// MIPS .reginfo section.
-template <class ELFT>
-MipsReginfoSection<ELFT>::MipsReginfoSection(Ctx &ctx, Elf_Mips_RegInfo reginfo)
-    : SyntheticSection(ctx, ".reginfo", SHT_MIPS_REGINFO, SHF_ALLOC, 4),
-      reginfo(reginfo) {
-  this->entsize = sizeof(Elf_Mips_RegInfo);
-}
-
-template <class ELFT> void MipsReginfoSection<ELFT>::writeTo(uint8_t *buf) {
-  if (!ctx.arg.relocatable)
-    reginfo.ri_gp_value = ctx.in.mipsGot->getGp();
-  memcpy(buf, &reginfo, sizeof(reginfo));
-}
-
-template <class ELFT>
-std::unique_ptr<MipsReginfoSection<ELFT>>
-MipsReginfoSection<ELFT>::create(Ctx &ctx) {
-  // Section should be alive for O32 and N32 ABIs only.
-  if (ELFT::Is64Bits)
-    return nullptr;
-
-  SmallVector<InputSectionBase *, 0> sections;
-  for (InputSectionBase *sec : ctx.inputSections)
-    if (sec->type == SHT_MIPS_REGINFO)
-      sections.push_back(sec);
-
-  if (sections.empty())
-    return nullptr;
-
-  Elf_Mips_RegInfo reginfo = {};
-  for (InputSectionBase *sec : sections) {
-    sec->markDead();
-
-    if (sec->content().size() != sizeof(Elf_Mips_RegInfo)) {
-      Err(ctx) << sec->file << ": invalid size of .reginfo section";
-      return nullptr;
-    }
-
-    auto *r = reinterpret_cast<const Elf_Mips_RegInfo *>(sec->content().data());
-    reginfo.ri_gprmask |= r->ri_gprmask;
-    sec->getFile<ELFT>()->mipsGp0 = r->ri_gp_value;
-  };
-
-  return std::make_unique<MipsReginfoSection<ELFT>>(ctx, reginfo);
-}
-
 InputSection *elf::createInterpSection(Ctx &ctx) {
   // StringSaver guarantees that the returned string ends with '\0'.
   StringRef s = ctx.saver.save(ctx.arg.dynamicLinker);
@@ -540,43 +370,6 @@ void EhFrameSection::finalizeContents() {
   this->size = off;
 }
 
-static uint64_t readFdeAddr(Ctx &ctx, uint8_t *buf, int size) {
-  switch (size) {
-  case DW_EH_PE_udata2:
-    return read16(ctx, buf);
-  case DW_EH_PE_sdata2:
-    return (int16_t)read16(ctx, buf);
-  case DW_EH_PE_udata4:
-    return read32(ctx, buf);
-  case DW_EH_PE_sdata4:
-    return (int32_t)read32(ctx, buf);
-  case DW_EH_PE_udata8:
-  case DW_EH_PE_sdata8:
-    return read64(ctx, buf);
-  case DW_EH_PE_absptr:
-    return readUint(ctx, buf);
-  }
-  Err(ctx) << "unknown FDE size encoding";
-  return 0;
-}
-
-// Returns the VA to which a given FDE (on a mmap'ed buffer) is applied to.
-// We need it to create .eh_frame_hdr section.
-uint64_t EhFrameSection::getFdePc(uint8_t *buf, size_t fdeOff,
-                                  uint8_t enc) const {
-  // The starting address to which this FDE applies is
-  // stored at FDE + 8 byte. And this offset is within
-  // the .eh_frame section.
-  size_t off = fdeOff + 8;
-  uint64_t addr = readFdeAddr(ctx, buf + off, enc & 0xf);
-  if ((enc & 0x70) == DW_EH_PE_absptr)
-    return ctx.arg.is64 ? addr : uint32_t(addr);
-  if ((enc & 0x70) == DW_EH_PE_pcrel)
-    return addr + getParent()->addr + off + outSecOff;
-  Err(ctx) << "unknown FDE size relative encoding";
-  return 0;
-}
-
 void EhFrameSection::writeTo(uint8_t *buf) {
   // Write CIE and FDE records.
   for (CieRecord *rec : cieRecords) {
@@ -602,53 +395,31 @@ void EhFrameSection::writeTo(uint8_t *buf) {
   if (!hdr || !hdr->getParent())
     return;
 
-  // Write the .eh_frame_hdr section, which contains a binary search table of
-  // pointers to FDEs. This must be written after .eh_frame relocation since
-  // the content depends on relocated initial_location fields in FDEs.
-  using FdeData = EhFrameSection::FdeData;
-  SmallVector<FdeData, 0> fdes;
-  uint64_t va = hdr->getVA();
-  for (CieRecord *rec : cieRecords) {
-    uint8_t enc = getFdeEncoding(rec->cie);
-    for (EhSectionPiece *fde : rec->fdes) {
-      uint64_t pc = getFdePc(buf, fde->outputOff, enc);
-      uint64_t fdeVA = getParent()->addr + fde->outputOff;
-      if (!isInt<32>(pc - va)) {
-        Err(ctx) << fde->sec << ": PC offset is too large: 0x"
-                 << Twine::utohexstr(pc - va);
-        continue;
-      }
-      fdes.push_back({uint32_t(pc - va), uint32_t(fdeVA - va)});
-    }
-  }
+  // Write the .eh_frame_hdr section using cached FDE data from updateAllocSize.
+  bool large = hdr->large;
+  int64_t ehFramePtr = getParent()->addr - hdr->getVA() - 4;
+  auto writeField = [&](uint8_t *buf, uint64_t val) {
+    large ? write64(ctx, buf, val) : write32(ctx, buf, val);
+  };
 
-  // Sort the FDE list by their PC and uniqueify. Usually there is only
-  // one FDE for a PC (i.e. function), but if ICF merges two functions
-  // into one, there can be more than one FDEs pointing to the address.
-  llvm::stable_sort(fdes, [](const FdeData &a, const FdeData &b) {
-    return a.pcRel < b.pcRel;
-  });
-  fdes.erase(
-      llvm::unique(fdes, [](auto &a, auto &b) { return a.pcRel == b.pcRel; }),
-      fdes.end());
-
-  // Write header.
   uint8_t *hdrBuf = ctx.bufferStart + hdr->getParent()->offset + hdr->outSecOff;
-  hdrBuf[0] = 1;                                  // version
-  hdrBuf[1] = DW_EH_PE_pcrel | DW_EH_PE_sdata4;   // eh_frame_ptr_enc
-  hdrBuf[2] = DW_EH_PE_udata4;                    // fde_count_enc
-  hdrBuf[3] = DW_EH_PE_datarel | DW_EH_PE_sdata4; // table_enc
-  write32(ctx, hdrBuf + 4,
-          getParent()->addr - hdr->getVA() - 4); // eh_frame_ptr
-  write32(ctx, hdrBuf + 8, fdes.size());         // fde_count
-  hdrBuf += 12;
-
-  // Write binary search table. Each entry describes the starting PC and the FDE
-  // address.
-  for (FdeData &fde : fdes) {
-    write32(ctx, hdrBuf, fde.pcRel);
-    write32(ctx, hdrBuf + 4, fde.fdeVARel);
-    hdrBuf += 8;
+  // version
+  hdrBuf[0] = 1;
+  // eh_frame_ptr_enc
+  hdrBuf[1] = DW_EH_PE_pcrel | (large ? DW_EH_PE_sdata8 : DW_EH_PE_sdata4);
+  // fde_count_enc
+  hdrBuf[2] = DW_EH_PE_udata4;
+  // table_enc
+  hdrBuf[3] = DW_EH_PE_datarel | (large ? DW_EH_PE_sdata8 : DW_EH_PE_sdata4);
+  hdrBuf += 4;
+  writeField(hdrBuf, ehFramePtr);
+  hdrBuf += large ? 8 : 4;
+  write32(ctx, hdrBuf, hdr->fdes.size());
+  hdrBuf += 4;
+  for (const FdeData &fde : hdr->fdes) {
+    writeField(hdrBuf, fde.pcRel);
+    writeField(hdrBuf + (large ? 8 : 4), fde.fdeVARel);
+    hdrBuf += large ? 16 : 8;
   }
 }
 
@@ -659,13 +430,69 @@ void EhFrameHeader::writeTo(uint8_t *buf) {
   // The section content is written during EhFrameSection::writeTo.
 }
 
-size_t EhFrameHeader::getSize() const {
-  // .eh_frame_hdr has a 12 bytes header followed by an array of FDEs.
-  return 12 + getPartition(ctx).ehFrame->numFdes * 8;
-}
-
 bool EhFrameHeader::isNeeded() const {
   return isLive() && getPartition(ctx).ehFrame->isNeeded();
+}
+
+void EhFrameHeader::finalizeContents() {
+  // Compute size: 4-byte header + eh_frame_ptr + fde_count + FDE table.
+  // Initially `large` is false; updateAllocSize may set it to true if addresses
+  // exceed the 32-bit range, then call finalizeContents again.
+  auto numFdes = getPartition(ctx).ehFrame->numFdes;
+  size = 4 + (large ? 8 : 4) + 4 + numFdes * (large ? 16 : 8);
+}
+
+bool EhFrameHeader::updateAllocSize(Ctx &ctx) {
+  // This is called after `finalizeSynthetic`, so in the typical case without
+  // .relr.dyn, this function will not change the size and assignAddresses
+  // will not need another iteration.
+  EhFrameSection *ehFrame = getPartition(ctx).ehFrame.get();
+  uint64_t hdrVA = getVA();
+  int64_t ehFramePtr = ehFrame->getParent()->addr - hdrVA - 4;
+  // Determine if 64-bit encodings are needed.
+  bool newLarge = !isInt<32>(ehFramePtr);
+
+  // Collect FDE entries. For each FDE, compute pcRel and fdeVARel relative to
+  // .eh_frame_hdr's VA.
+  fdes.clear();
+  for (CieRecord *rec : ehFrame->getCieRecords()) {
+    uint8_t enc = getFdeEncoding(rec->cie);
+    if ((enc & 0x70) != DW_EH_PE_absptr && (enc & 0x70) != DW_EH_PE_pcrel) {
+      Err(ctx) << "unknown FDE size encoding";
+      continue;
+    }
+    for (EhSectionPiece *fde : rec->fdes) {
+      // The FDE has passed `isFdeLive`, so the first relocation's symbol is a
+      // live Defined.
+      auto *isec = cast<EhInputSection>(fde->sec);
+      auto &reloc = isec->rels[fde->firstRelocation];
+      assert(isa<Defined>(reloc.sym) && "isFdeLive should have checked this");
+      int64_t pcRel = reloc.sym->getVA(ctx) + reloc.addend - hdrVA;
+      int64_t fdeVARel = ehFrame->getParent()->addr + fde->outputOff - hdrVA;
+      fdes.push_back({pcRel, fdeVARel});
+      newLarge |= !isInt<32>(pcRel) || !isInt<32>(fdeVARel);
+    }
+  }
+
+  // Sort the FDE list by their PC and uniquify. Usually there is only one FDE
+  // at an address, but there can be more than one FDEs pointing to the address.
+  llvm::stable_sort(
+      fdes, [](const EhFrameSection::FdeData &a,
+               const EhFrameSection::FdeData &b) { return a.pcRel < b.pcRel; });
+  fdes.erase(llvm::unique(fdes,
+                          [](const EhFrameSection::FdeData &a,
+                             const EhFrameSection::FdeData &b) {
+                            return a.pcRel == b.pcRel;
+                          }),
+             fdes.end());
+  ehFrame->numFdes = fdes.size();
+
+  large = newLarge;
+
+  // Compute size.
+  size_t oldSize = size;
+  finalizeContents();
+  return size != oldSize;
 }
 
 GotSection::GotSection(Ctx &ctx)
@@ -4005,10 +3832,6 @@ void elf::combineEhSections(Ctx &ctx) {
   });
 }
 
-MipsRldMapSection::MipsRldMapSection(Ctx &ctx)
-    : SyntheticSection(ctx, ".rld_map", SHT_PROGBITS, SHF_ALLOC | SHF_WRITE,
-                       ctx.arg.wordsize) {}
-
 ARMExidxSyntheticSection::ARMExidxSyntheticSection(Ctx &ctx)
     : SyntheticSection(ctx, ".ARM.exidx", SHT_ARM_EXIDX,
                        SHF_ALLOC | SHF_LINK_ORDER, ctx.arg.wordsize) {}
@@ -4284,35 +4107,6 @@ bool ThunkSection::assignOffsets() {
     changed = true;
   size = off;
   return changed;
-}
-
-PPC32Got2Section::PPC32Got2Section(Ctx &ctx)
-    : SyntheticSection(ctx, ".got2", SHT_PROGBITS, SHF_ALLOC | SHF_WRITE, 4) {}
-
-bool PPC32Got2Section::isNeeded() const {
-  // See the comment below. This is not needed if there is no other
-  // InputSection.
-  for (SectionCommand *cmd : getParent()->commands)
-    if (auto *isd = dyn_cast<InputSectionDescription>(cmd))
-      for (InputSection *isec : isd->sections)
-        if (isec != this)
-          return true;
-  return false;
-}
-
-void PPC32Got2Section::finalizeContents() {
-  // PPC32 may create multiple GOT sections for -fPIC/-fPIE, one per file in
-  // .got2 . This function computes outSecOff of each .got2 to be used in
-  // PPC32PltCallStub::writeTo(). The purpose of this empty synthetic section is
-  // to collect input sections named ".got2".
-  for (SectionCommand *cmd : getParent()->commands)
-    if (auto *isd = dyn_cast<InputSectionDescription>(cmd)) {
-      for (InputSection *isec : isd->sections) {
-        // isec->file may be nullptr for MergeSyntheticSection.
-        if (isec != this && isec->file)
-          isec->file->ppc32Got2 = isec;
-      }
-    }
 }
 
 // If linking position-dependent code then the table will store the addresses
@@ -4694,19 +4488,7 @@ template <class ELFT> void elf::createSyntheticSections(Ctx &ctx) {
       ctx, hasDataRelRo ? ".data.rel.ro.bss" : ".bss.rel.ro", 0, 1);
   add(*ctx.in.bssRelRo);
 
-  // Add MIPS-specific sections.
-  if (ctx.arg.emachine == EM_MIPS) {
-    if (!ctx.arg.shared && ctx.hasDynsym) {
-      ctx.in.mipsRldMap = std::make_unique<MipsRldMapSection>(ctx);
-      add(*ctx.in.mipsRldMap);
-    }
-    if ((ctx.in.mipsAbiFlags = MipsAbiFlagsSection<ELFT>::create(ctx)))
-      add(*ctx.in.mipsAbiFlags);
-    if ((ctx.in.mipsOptions = MipsOptionsSection<ELFT>::create(ctx)))
-      add(*ctx.in.mipsOptions);
-    if ((ctx.in.mipsReginfo = MipsReginfoSection<ELFT>::create(ctx)))
-      add(*ctx.in.mipsReginfo);
-  }
+  ctx.target->initTargetSpecificSections();
 
   StringRef relaDynName = ctx.arg.isRela ? ".rela.dyn" : ".rel.dyn";
 
@@ -4841,17 +4623,6 @@ template <class ELFT> void elf::createSyntheticSections(Ctx &ctx) {
     add(*ctx.in.got);
   }
 
-  if (ctx.arg.emachine == EM_PPC) {
-    ctx.in.ppc32Got2 = std::make_unique<PPC32Got2Section>(ctx);
-    add(*ctx.in.ppc32Got2);
-  }
-
-  if (ctx.arg.emachine == EM_PPC64) {
-    ctx.in.ppc64LongBranchTarget =
-        std::make_unique<PPC64LongBranchTargetSection>(ctx);
-    add(*ctx.in.ppc64LongBranchTarget);
-  }
-
   ctx.in.gotPlt = std::make_unique<GotPltSection>(ctx);
   add(*ctx.in.gotPlt);
   ctx.in.igotPlt = std::make_unique<IgotPltSection>(ctx);
@@ -4863,11 +4634,6 @@ template <class ELFT> void elf::createSyntheticSections(Ctx &ctx) {
        ctx.script->seenRelroEnd)) {
     ctx.in.relroPadding = std::make_unique<RelroPaddingSection>(ctx);
     add(*ctx.in.relroPadding);
-  }
-
-  if (ctx.arg.emachine == EM_ARM) {
-    ctx.in.armCmseSGSection = std::make_unique<ArmCmseSGSection>(ctx);
-    add(*ctx.in.armCmseSGSection);
   }
 
   // _GLOBAL_OFFSET_TABLE_ is defined relative to either .got.plt or .got. Treat
@@ -4885,12 +4651,6 @@ template <class ELFT> void elf::createSyntheticSections(Ctx &ctx) {
       ctx, ctx.arg.isRela ? ".rela.plt" : ".rel.plt", /*sort=*/false,
       /*threadCount=*/1);
   add(*ctx.in.relaPlt);
-
-  if ((ctx.arg.emachine == EM_386 || ctx.arg.emachine == EM_X86_64) &&
-      (ctx.arg.andFeatures & GNU_PROPERTY_X86_FEATURE_1_IBT)) {
-    ctx.in.ibtPlt = std::make_unique<IBTPltSection>(ctx);
-    add(*ctx.in.ibtPlt);
-  }
 
   if (ctx.arg.emachine == EM_PPC)
     ctx.in.plt = std::make_unique<PPC32GlinkSection>(ctx);

@@ -193,7 +193,7 @@ LogicalResult ShapeDialect::verifyOperationAttribute(Operation *op,
           return op->emitError(
               "only SymbolRefAttr allowed in shape.lib attribute array");
 
-        auto shapeFnLib = dyn_cast<shape::FunctionLibraryOp>(
+        auto shapeFnLib = dyn_cast_or_null<shape::FunctionLibraryOp>(
             SymbolTable::lookupSymbolIn(op, llvm::cast<SymbolRefAttr>(it)));
         if (!shapeFnLib)
           return op->emitError()
@@ -1706,14 +1706,20 @@ struct ShapeOfOpToConstShapeOp : public OpRewritePattern<shape::ShapeOfOp> {
     auto type = llvm::dyn_cast<ShapedType>(op.getArg().getType());
     if (!type || !type.hasStaticShape())
       return failure();
+
+    Type resultType = op.getResult().getType();
     Location loc = op.getLoc();
+    Type constResType =
+        isa<ShapeType>(resultType)
+            ? resultType
+            : RankedTensorType::get({type.getRank()}, rewriter.getIndexType());
     Value constShape =
-        ConstShapeOp::create(rewriter, loc,
+        ConstShapeOp::create(rewriter, loc, constResType,
                              rewriter.getIndexTensorAttr(type.getShape()))
             .getResult();
-    if (constShape.getType() != op.getResult().getType())
-      constShape = tensor::CastOp::create(rewriter, loc,
-                                          op.getResult().getType(), constShape);
+    if (constShape.getType() != resultType)
+      constShape =
+          tensor::CastOp::create(rewriter, loc, resultType, constShape);
     rewriter.replaceOp(op, constShape);
     return success();
   }

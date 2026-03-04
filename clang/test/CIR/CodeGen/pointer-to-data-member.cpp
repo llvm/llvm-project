@@ -112,7 +112,7 @@ int test2(const Point &pt, int Point::*member) {
 // CIR-AFTER:        %[[RET:.*]] = cir.load{{.*}} %[[RETVAL_ADDR]] : !cir.ptr<!s32i>, !s32i
 // CIR-AFTER:        cir.return %[[RET]] : !s32i
 
-// LLVM: define {{.*}} i32 @_Z5test2RK5PointMS_i(ptr %[[PT_ARG:.*]], i64 %[[MEMBER_ARG:.*]])
+// LLVM: define {{.*}} i32 @_Z5test2RK5PointMS_i(ptr {{.*}} %[[PT_ARG:.*]], i64 %[[MEMBER_ARG:.*]])
 // LLVM:   %[[PT_ADDR:.*]] = alloca ptr
 // LLVM:   %[[MEMBER_ADDR:.*]] = alloca i64
 // LLVM:   %[[RETVAL_ADDR:.*]] = alloca i32
@@ -175,7 +175,7 @@ int test3(const Point *pt, int Point::*member) {
 // CIR-AFTER:        %[[RET:.*]] = cir.load{{.*}} %[[RETVAL_ADDR]] : !cir.ptr<!s32i>, !s32i
 // CIR-AFTER:        cir.return %[[RET]] : !s32i
 
-// LLVM: define {{.*}} i32 @_Z5test3PK5PointMS_i(ptr %[[PT_ARG:.*]], i64 %[[MEMBER_ARG:.*]])
+// LLVM: define {{.*}} i32 @_Z5test3PK5PointMS_i(ptr {{.*}} %[[PT_ARG:.*]], i64 %[[MEMBER_ARG:.*]])
 // LLVM:   %[[PT_ADDR:.*]] = alloca ptr
 // LLVM:   %[[MEMBER_ADDR:.*]] = alloca i64
 // LLVM:   %[[RETVAL_ADDR:.*]] = alloca i32
@@ -279,7 +279,7 @@ int test5(Incomplete *ic, int Incomplete::*member) {
 // CIR-AFTER:        %[[RET:.*]] = cir.load{{.*}} %[[RETVAL_ADDR]] : !cir.ptr<!s32i>, !s32i
 // CIR-AFTER:        cir.return %[[RET]] : !s32i
 
-// LLVM: define {{.*}} i32 @_Z5test5P10IncompleteMS_i(ptr %[[IC_ARG:.*]], i64 %[[MEMBER_ARG:.*]])
+// LLVM: define {{.*}} i32 @_Z5test5P10IncompleteMS_i(ptr {{.*}} %[[IC_ARG:.*]], i64 %[[MEMBER_ARG:.*]])
 // LLVM:   %[[IC_ADDR:.*]] = alloca ptr
 // LLVM:   %[[MEMBER_ADDR:.*]] = alloca i64
 // LLVM:   %[[RETVAL_ADDR:.*]] = alloca i32

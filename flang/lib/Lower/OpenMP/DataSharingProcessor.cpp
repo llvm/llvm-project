@@ -235,11 +235,6 @@ void DataSharingProcessor::collectSymbolsForPrivatization() {
   // Such cases are suggested to be clearly documented and explained
   // instead of being silently skipped
   auto isException = [&](const Fortran::semantics::Symbol *sym) -> bool {
-    // `OmpPreDetermined` symbols cannot be exceptions since
-    // their privatized symbols are heavily used in FIR.
-    if (sym->test(Fortran::semantics::Symbol::Flag::OmpPreDetermined))
-      return false;
-
     // The handling of linear clause is deferred to the OpenMP
     // IRBuilder which is responsible for all its aspects,
     // including privatization. Privatizing linear variables at this point would
@@ -263,6 +258,11 @@ void DataSharingProcessor::collectSymbolsForPrivatization() {
     // draw a relation between %linear and %arg0. Hence skip.
     if (sym->test(Fortran::semantics::Symbol::Flag::OmpLinear))
       return true;
+
+    // `OmpPreDetermined` symbols cannot be exceptions since
+    // their privatized symbols are heavily used in FIR.
+    if (sym->test(Fortran::semantics::Symbol::Flag::OmpPreDetermined))
+      return false;
     return false;
   };
 
@@ -347,7 +347,7 @@ void DataSharingProcessor::insertLastPrivateCompare(mlir::Operation *op) {
     mlir::omp::LoopRelatedClauseOps result;
     llvm::SmallVector<const semantics::Symbol *> iv;
     collectLoopRelatedInfo(converter, converter.getCurrentLocation(), eval,
-                           clauses, result, iv);
+                           getNestedDoConstruct(eval), clauses, result, iv);
 
     // Update the original variable just before exiting the worksharing
     // loop. Conversion as follows:
@@ -508,7 +508,10 @@ void DataSharingProcessor::collectSymbols(
            !sym.GetUltimate().has<semantics::DerivedTypeDetails>() &&
            !sym.GetUltimate().has<semantics::NamelistDetails>() &&
            !semantics::IsImpliedDoIndex(sym.GetUltimate()) &&
-           !semantics::IsStmtFunction(sym);
+           !semantics::IsStmtFunction(sym) &&
+           // Linear symbols are privatized by OpenMP IRBuilder. See comments
+           // in collectSymbolsForPrivatization() for more details.
+           !sym.test(semantics::Symbol::Flag::OmpLinear);
   };
 
   auto shouldCollectSymbol = [&](const semantics::Symbol *sym) {

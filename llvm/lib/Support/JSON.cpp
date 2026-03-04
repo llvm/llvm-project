@@ -688,7 +688,13 @@ Expected<Value> parse(StringRef JSON) {
         return std::move(E);
   return P.takeError();
 }
+
 char ParseError::ID = 0;
+
+// Defined out-of-line to place vtable in this compilation unit.
+void ParseError::log(llvm::raw_ostream &OS) const {
+  OS << llvm::formatv("[{0}:{1}, byte={2}]: {3}", Line, Column, Offset, Msg);
+}
 
 bool isUTF8(llvm::StringRef S, size_t *ErrOffset) {
   // Fast-path for ASCII, which is valid UTF-8.

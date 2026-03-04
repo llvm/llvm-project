@@ -11,6 +11,7 @@
 
 #include "TestingSupport/TestUtilities.h"
 #include "lldb/Expression/Expression.h"
+#include "lldb/Target/Target.h"
 #include "llvm/Testing/Support/Error.h"
 
 using namespace lldb_private;
@@ -127,3 +128,41 @@ TEST_P(ExpressionTestFixture, FunctionCallLabel) {
 
 INSTANTIATE_TEST_SUITE_P(FunctionCallLabelTest, ExpressionTestFixture,
                          testing::ValuesIn(g_label_test_cases));
+
+TEST(ExpressionTests, ExpressionOptions_Basic) {
+  EvaluateExpressionOptions options;
+
+  EXPECT_THAT_EXPECTED(options.GetBooleanLanguageOption("foo"),
+                       llvm::FailedWithMessage("option 'foo' does not exist"));
+  EXPECT_THAT_EXPECTED(options.GetBooleanLanguageOption("bar"),
+                       llvm::FailedWithMessage("option 'bar' does not exist"));
+
+  EXPECT_THAT_ERROR(options.SetBooleanLanguageOption("foo", true),
+                    llvm::Succeeded());
+  EXPECT_THAT_ERROR(options.SetBooleanLanguageOption("bar", false),
+                    llvm::Succeeded());
+
+  EXPECT_THAT_EXPECTED(options.GetBooleanLanguageOption("foo"),
+                       llvm::HasValue(true));
+  EXPECT_THAT_EXPECTED(options.GetBooleanLanguageOption("bar"),
+                       llvm::HasValue(false));
+
+  EXPECT_THAT_ERROR(options.SetBooleanLanguageOption("foo", false),
+                    llvm::Succeeded());
+  EXPECT_THAT_ERROR(options.SetBooleanLanguageOption("bar", true),
+                    llvm::Succeeded());
+
+  EXPECT_THAT_EXPECTED(options.GetBooleanLanguageOption("foo"),
+                       llvm::HasValue(false));
+  EXPECT_THAT_EXPECTED(options.GetBooleanLanguageOption("bar"),
+                       llvm::HasValue(true));
+
+  // Empty option names not allowed.
+  EXPECT_THAT_EXPECTED(options.GetBooleanLanguageOption(""),
+                       llvm::FailedWithMessage("option '' does not exist"));
+  EXPECT_THAT_ERROR(
+      options.SetBooleanLanguageOption("", true),
+      llvm::FailedWithMessage("can't set an option with an empty name"));
+  EXPECT_THAT_EXPECTED(options.GetBooleanLanguageOption(""),
+                       llvm::FailedWithMessage("option '' does not exist"));
+}

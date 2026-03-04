@@ -422,7 +422,7 @@ static bool linkFiles(const char *argv0, LLVMContext &Context, Linker &L,
       for (auto &I : *Index) {
         for (auto &S : I.second.getSummaryList()) {
           if (GlobalValue::isLocalLinkage(S->linkage()))
-            S->setLinkage(GlobalValue::ExternalLinkage);
+            S->setExternalLinkageForTest();
         }
       }
 

@@ -10,8 +10,6 @@ declare float @llvm.trunc.f32(float)
 declare float @llvm.arithmetic.fence.f32(float)
 declare float @llvm.minnum.f32(float, float)
 declare float @llvm.maxnum.f32(float, float)
-declare float @llvm.minimumnum.f32(float, float)
-declare float @llvm.maximumnum.f32(float, float)
 
 declare nofpclass(inf norm sub zero) float @nan_only()
 
@@ -51,7 +49,7 @@ define nofpclass(all) float @ret_nofpclass_all_undef() {
 ; Use + callsite implies no values, should fold undef to poison.
 define nofpclass(nan) float @undef_folds_to_poison_arg() {
 ; CHECK-LABEL: define nofpclass(nan) float @undef_folds_to_poison_arg() {
-; CHECK-NEXT:    [[FENCE:%.*]] = call float @llvm.arithmetic.fence.f32(float nofpclass(inf zero sub norm) poison)
+; CHECK-NEXT:    [[FENCE:%.*]] = call float @llvm.arithmetic.fence.f32(float nofpclass(inf zero sub norm) undef)
 ; CHECK-NEXT:    ret float [[FENCE]]
 ;
   %fence = call float @llvm.arithmetic.fence.f32(float nofpclass(inf sub norm zero) undef)
@@ -1571,7 +1569,7 @@ define nofpclass(nan inf) float @pow_f32(float nofpclass(nan inf) %arg, float no
 ; CHECK-NEXT:    [[I5:%.*]] = tail call nofpclass(ninf nzero nsub nnorm) float @llvm.fabs.f32(float noundef [[ARG1]])
 ; CHECK-NEXT:    [[I6:%.*]] = tail call float @llvm.trunc.f32(float noundef [[I5]])
 ; CHECK-NEXT:    [[I7:%.*]] = fcmp oeq float [[I6]], [[I5]]
-; CHECK-NEXT:    [[I8:%.*]] = fmul float [[I5]], 5.000000e-01
+; CHECK-NEXT:    [[I8:%.*]] = fmul nnan float [[I5]], 5.000000e-01
 ; CHECK-NEXT:    [[I9:%.*]] = tail call float @llvm.trunc.f32(float noundef [[I8]])
 ; CHECK-NEXT:    [[I10:%.*]] = fcmp une float [[I9]], [[I8]]
 ; CHECK-NEXT:    [[I11:%.*]] = and i1 [[I7]], [[I10]]
@@ -1867,7 +1865,8 @@ define nofpclass(inf) float @ret_nofpclass_inf__arithmetic_fence_select_pinf_rhs
 define nofpclass(snan) float @arithmetic_fence__noinf_callsite_param_attr_select_pinf_rhs(i1 %cond, float %x) {
 ; CHECK-LABEL: define nofpclass(snan) float @arithmetic_fence__noinf_callsite_param_attr_select_pinf_rhs
 ; CHECK-SAME: (i1 [[COND:%.*]], float [[X:%.*]]) {
-; CHECK-NEXT:    [[FENCE:%.*]] = call float @llvm.arithmetic.fence.f32(float nofpclass(inf) [[X]])
+; CHECK-NEXT:    [[SELECT:%.*]] = select i1 [[COND]], float [[X]], float 0x7FF0000000000000
+; CHECK-NEXT:    [[FENCE:%.*]] = call float @llvm.arithmetic.fence.f32(float nofpclass(inf) [[SELECT]])
 ; CHECK-NEXT:    ret float [[FENCE]]
 ;
   %select = select i1 %cond, float %x, float 0x7FF0000000000000
@@ -1892,7 +1891,7 @@ define nofpclass(pinf) float @ret_nofpclass_pinf__minnum_ninf(i1 %cond, float %x
 ; CHECK-SAME: (i1 [[COND:%.*]], float [[X:%.*]]) {
 ; CHECK-NEXT:    ret float 0xFFF0000000000000
 ;
-  %min = call float @llvm.minimumnum.f32(float %x, float 0xFFF0000000000000)
+  %min = call float @llvm.minnum.f32(float %x, float 0xFFF0000000000000)
   ret float %min
 }
 
@@ -1913,7 +1912,7 @@ define nofpclass(ninf) float @ret_nofpclass_ninf__maxnum_pinf(i1 %cond, float %x
 ; CHECK-SAME: (i1 [[COND:%.*]], float [[X:%.*]]) {
 ; CHECK-NEXT:    ret float 0x7FF0000000000000
 ;
-  %max = call float @llvm.maximumnum.f32(float %x, float 0x7FF0000000000000)
+  %max = call float @llvm.maxnum.f32(float %x, float 0x7FF0000000000000)
   ret float %max
 }
 
@@ -2690,3 +2689,21 @@ define nofpclass(nan zero) float @ret_no_nan_no_zero__copysign__src_known_positi
   store float %copysign, ptr %ptr
   ret float %copysign
 }
+
+define double @eigen_nofpclass_regression(ptr %ptr, double %arg) {
+; CHECK-LABEL: define double @eigen_nofpclass_regression
+; CHECK-SAME: (ptr [[PTR:%.*]], double [[ARG:%.*]]) {
+; CHECK-NEXT:    [[CALL2:%.*]] = call double @func(double 0.000000e+00, double 5.000000e+00, double -7.000000e+00)
+; CHECK-NEXT:    [[CALL4:%.*]] = call double @func(double 0.000000e+00, double 3.000000e+00, double -8.000000e+00)
+; CHECK-NEXT:    [[SUB:%.*]] = fsub double [[CALL2]], [[CALL4]]
+; CHECK-NEXT:    [[MUL:%.*]] = fmul double [[SUB]], [[ARG]]
+; CHECK-NEXT:    ret double [[MUL]]
+;
+  %call2 = call double @func(double 0.000000e+00, double 5.000000e+00, double -7.000000e+00) #6
+  %call4 = call double @func(double 0.000000e+00, double 3.000000e+00, double -8.000000e+00) #6
+  %sub = fsub double %call2, %call4
+  %mul = fmul double %sub, %arg
+  ret double %mul
+}
+
+declare double @func(double nofpclass(nan inf nzero sub norm) %x, double nofpclass(nan inf zero sub nnorm) %v, double nofpclass(nan inf zero sub pnorm) %a)

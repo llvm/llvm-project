@@ -6,6 +6,7 @@ add_mlir_upstream_c_api_library(MLIRCAPIIR
   BuiltinTypes.cpp
   Diagnostics.cpp
   DialectHandle.cpp
+  ExtensibleDialect.cpp
   IntegerSet.cpp
   IR.cpp
   Pass.cpp

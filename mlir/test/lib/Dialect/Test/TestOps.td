@@ -831,6 +831,13 @@ def OperandZeroAndResultHaveSameElementCount :
   let results = (outs AnyShaped:$res);
 }
 
+def OperandAndResultHaveSameElementCountAnyType :
+    TEST_Op<"operand_and_result_have_same_element_count_any_type",
+            [AllElementCountsMatch<["x", "res"]>]> {
+  let arguments = (ins AnyType:$x);
+  let results = (outs AnyType:$res);
+}
+
 def FourEqualsFive :
     TEST_Op<"four_equals_five", [AllMatch<["5", "4"], "4 equals 5">]>;
 
@@ -2231,6 +2238,17 @@ def TestReturnOp : TEST_Op<"return", [Pure, ReturnLike, Terminator]> {
   let builders = [OpBuilder<(ins),
     [{ build($_builder, $_state, {}); }]>
   ];
+}
+// A return-like terminator used to test FuncOp verifier ordering.
+// When 'valid' unit-attr is absent the op is malformed; its verifier
+// emits an error, but getMutableSuccessorOperands() calls report_fatal_error
+// to expose the fact that FuncOp::verify() runs before the region is checked.
+def TestCrashingReturnOp : TEST_Op<"crashing_return", [
+    DeclareOpInterfaceMethods<RegionBranchTerminatorOpInterface>,
+    Terminator]> {
+  let arguments = (ins Variadic<AnyType>:$args, UnitAttr:$valid);
+  let assemblyFormat = "($args^ `:` type($args))? attr-dict";
+  let hasVerifier = 1;
 }
 def TestCastOp : TEST_Op<"cast">,
   Arguments<(ins Variadic<AnyType>)>, Results<(outs AnyType)>;

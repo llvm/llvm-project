@@ -259,6 +259,7 @@ bool ClauseProcessor::processCollapse(
     llvm::SmallVectorImpl<const semantics::Symbol *> &iv) const {
 
   int64_t numCollapse = collectLoopRelatedInfo(converter, currentLocation, eval,
+                                               getNestedDoConstruct(eval),
                                                clauses, loopResult, iv);
   fir::FirOpBuilder &firOpBuilder = converter.getFirOpBuilder();
   collapseResult.collapseNumLoops = firOpBuilder.getI64IntegerAttr(numCollapse);
@@ -394,16 +395,42 @@ bool ClauseProcessor::processInitializer(
 
       for (const Object &object :
            std::get<StylizedInstance::Variables>(inst.t)) {
-        mlir::Value addr = builder.createTemporary(loc, ompOrig.getType());
-        fir::StoreOp::create(builder, loc, ompOrig, addr);
+        mlir::Value addr;
+        mlir::Type ompOrigType = ompOrig.getType();
+        // Check for unsupported dynamic-length character reductions
+        mlir::Type unwrappedType = fir::unwrapRefType(ompOrigType);
+        if (mlir::isa<fir::BoxCharType>(unwrappedType)) {
+          TODO(loc, "OpenMP reduction allocation for dynamic length character");
+        }
+        if (auto charTy = mlir::dyn_cast<fir::CharacterType>(unwrappedType)) {
+          if (!charTy.hasConstantLen()) {
+            TODO(loc,
+                 "OpenMP reduction allocation for dynamic length character");
+          }
+        }
+        // If ompOrig is already a reference, we can use it directly
+        if (fir::isa_ref_type(ompOrigType)) {
+          addr = ompOrig;
+        } else {
+          addr = builder.createTemporary(loc, ompOrigType);
+          fir::StoreOp::create(builder, loc, ompOrig, addr);
+        }
         fir::FortranVariableFlagsEnum extraFlags = {};
         fir::FortranVariableFlagsAttr attributes =
             Fortran::lower::translateSymbolAttributes(
                 builder.getContext(), *object.sym(), extraFlags);
         std::string name = object.sym()->name().ToString();
-        auto declareOp =
-            hlfir::DeclareOp::create(builder, loc, addr, name, nullptr, {},
-                                     nullptr, nullptr, 0, attributes);
+        // Get length parameters for types that need them (e.g., characters).
+        // Note: DeclareOp requires exactly one type parameter for non-boxed
+        // characters, unlike EmboxOp which doesn't allow them for constant-len.
+        llvm::SmallVector<mlir::Value> typeParams;
+        if (hlfir::isFortranEntity(addr)) {
+          hlfir::genLengthParameters(loc, builder, hlfir::Entity{addr},
+                                     typeParams);
+        }
+        auto declareOp = hlfir::DeclareOp::create(builder, loc, addr, name,
+                                                  nullptr, typeParams, nullptr,
+                                                  nullptr, 0, attributes);
         if (name == "omp_priv")
           ompPrivVar = declareOp.getResult(0);
         symMap.addVariableDefinition(*object.sym(), declareOp);
@@ -486,6 +513,21 @@ bool ClauseProcessor::processSizes(StatementContext &stmtCtx,
     for (const ExprTy &vv : clause->v)
       result.sizes.push_back(fir::getBase(converter.genExprValue(vv, stmtCtx)));
 
+    return true;
+  }
+
+  return false;
+}
+
+bool ClauseProcessor::processLooprange(StatementContext &stmtCtx,
+                                       mlir::omp::LooprangeClauseOps &result,
+                                       int64_t &count) const {
+  fir::FirOpBuilder &firOpBuilder = converter.getFirOpBuilder();
+  if (auto *clause = findUniqueClause<omp::clause::Looprange>()) {
+    int64_t first = evaluate::ToInt64(std::get<0>(clause->t)).value();
+    count = evaluate::ToInt64(std::get<1>(clause->t)).value();
+    result.first = firOpBuilder.getI64IntegerAttr(first);
+    result.count = firOpBuilder.getI64IntegerAttr(count);
     return true;
   }
 
@@ -676,6 +718,11 @@ bool ClauseProcessor::processSimdlen(
   return false;
 }
 
+bool ClauseProcessor::processSimd(
+    mlir::omp::OrderedRegionOperands &result) const {
+  return markClauseOccurrence<omp::clause::Simd>(result.parLevelSimd);
+}
+
 bool ClauseProcessor::processThreadLimit(
     lower::StatementContext &stmtCtx,
     mlir::omp::ThreadLimitClauseOps &result) const {
@@ -708,6 +755,23 @@ static llvm::StringMap<bool> getTargetFeatures(mlir::ModuleOp module) {
     }
   }
   return featuresMap;
+}
+
+bool ClauseProcessor::processAffinity(
+    mlir::omp::AffinityClauseOps &result) const {
+  return findRepeatableClause<omp::clause::Affinity>(
+      [&](const omp::clause::Affinity &clause, const parser::CharBlock &) {
+        if (std::get<std::optional<omp::clause::Iterator>>(clause.t)) {
+          TODO(converter.getCurrentLocation(),
+               "Support for iterator modifiers is not implemented yet");
+        }
+
+        const auto &objects = std::get<omp::ObjectList>(clause.t);
+        if (!objects.empty())
+          genObjectList(objects, converter, result.affinityVars);
+
+        return true;
+      });
 }
 
 static void
@@ -1254,10 +1318,7 @@ bool ClauseProcessor::processLinear(mlir::omp::LinearClauseOps &result) const {
       result.linearVars.push_back(variable);
       mlir::Type ty = converter.genType(*sym);
       typeAttrs.push_back(mlir::TypeAttr::get(ty));
-    }
-    result.linearVarTypes =
-        mlir::ArrayAttr::get(&converter.getMLIRContext(), typeAttrs);
-    if (objects.size()) {
+
       if (auto &mod =
               std::get<std::optional<omp::clause::Linear::StepComplexModifier>>(
                   clause.t)) {
@@ -1272,11 +1333,14 @@ bool ClauseProcessor::processLinear(mlir::omp::LinearClauseOps &result) const {
         // If nothing is present, add the default step of 1.
         fir::FirOpBuilder &firOpBuilder = converter.getFirOpBuilder();
         mlir::Location currentLocation = converter.getCurrentLocation();
-        mlir::Value operand = firOpBuilder.createIntegerConstant(
-            currentLocation, firOpBuilder.getI32Type(), 1);
+        mlir::Type integerTy = ty.isInteger() ? ty : firOpBuilder.getI32Type();
+        mlir::Value operand =
+            firOpBuilder.createIntegerConstant(currentLocation, integerTy, 1);
         result.linearStepVars.append(objects.size(), operand);
       }
     }
+    result.linearVarTypes =
+        mlir::ArrayAttr::get(&converter.getMLIRContext(), typeAttrs);
   });
 }
 
@@ -1421,9 +1485,21 @@ void ClauseProcessor::processMapObjects(
         mapperId = mlir::FlatSymbolRefAttr();
       } else if (objectTypeSpec) {
         std::string mapperIdName = getDefaultMapperID(objectTypeSpec);
+        bool isAllocOrPointer =
+            semantics::IsAllocatableOrObjectPointer(object.sym());
+        bool isPointer = semantics::IsPointer(*object.sym());
+        bool isImplicitMap =
+            (mapTypeBits & mlir::omp::ClauseMapFlags::implicit) ==
+            mlir::omp::ClauseMapFlags::implicit;
         bool needsDefaultMapper =
-            semantics::IsAllocatableOrObjectPointer(object.sym()) ||
+            isAllocOrPointer ||
             requiresImplicitDefaultDeclareMapper(*objectTypeSpec);
+        // For implicit captures, avoid synthesizing default mappers for pointer
+        // entities (which can over-map pointer payloads) and for plain
+        // non-allocatable/non-pointer entities. Keep implicit mapper support
+        // for allocatables.
+        if (isImplicitMap && (isPointer || !isAllocOrPointer))
+          needsDefaultMapper = false;
         if (!mapperIdName.empty())
           mapperId = addImplicitMapper(object, mapperIdName,
                                        /*allowGenerate=*/needsDefaultMapper);
@@ -1457,6 +1533,32 @@ void ClauseProcessor::processMapObjects(
   }
 }
 
+/// Extract and mangle the mapper identifier name from a mapper clause.
+/// Returns "__implicit_mapper" if no mapper is specified, or "default" if
+/// the default mapper is specified, otherwise returns the mangled mapper name.
+/// This handles both the Map clause (which uses a vector of mappers) and
+/// To/From clauses (which use a DefinedOperator).
+template <typename MapperType>
+static std::string
+getMapperIdentifier(lower::AbstractConverter &converter,
+                    const std::optional<MapperType> &mapper) {
+  if (!mapper)
+    return "__implicit_mapper";
+
+  // Handle mapper types (both have the same structure)
+  assert(mapper->size() == 1 && "more than one mapper");
+  const semantics::Symbol *mapperSym = mapper->front().v.id().symbol;
+
+  std::string mapperIdName = mapperSym->name().ToString();
+  if (mapperIdName != "default") {
+    // Mangle with the ultimate owner so that use-associated mapper
+    // identifiers resolve to the same symbol as their defining scope.
+    const semantics::Symbol &ultimate = mapperSym->GetUltimate();
+    mapperIdName = converter.mangleName(mapperIdName, ultimate.owner());
+  }
+  return mapperIdName;
+}
+
 bool ClauseProcessor::processMap(
     mlir::Location currentLocation, lower::StatementContext &stmtCtx,
     mlir::omp::MapClauseOps &result, llvm::omp::Directive directive,
@@ -1478,7 +1580,14 @@ bool ClauseProcessor::processMap(
     if (attachMod)
       TODO(currentLocation, "ATTACH modifier is not implemented yet");
     mlir::omp::ClauseMapFlags mapTypeBits = mlir::omp::ClauseMapFlags::none;
+    // For data-motion directives we avoid auto-attaching implicit default
+    // mappers. Deep recursive mapping there can conflict with explicit
+    // component enter/exit maps users commonly spell out.
     std::string mapperIdName = "__implicit_mapper";
+    if (directive == llvm::omp::Directive::OMPD_target_enter_data ||
+        directive == llvm::omp::Directive::OMPD_target_exit_data ||
+        directive == llvm::omp::Directive::OMPD_target_update)
+      mapperIdName.clear();
     // If the map type is specified, then process it else set the appropriate
     // default value
     Map::MapType type;
@@ -1525,17 +1634,7 @@ bool ClauseProcessor::processMap(
       TODO(currentLocation,
            "Support for iterator modifiers is not implemented yet");
     }
-    if (mappers) {
-      assert(mappers->size() == 1 && "more than one mapper");
-      const semantics::Symbol *mapperSym = mappers->front().v.id().symbol;
-      mapperIdName = mapperSym->name().ToString();
-      if (mapperIdName != "default") {
-        // Mangle with the ultimate owner so that use-associated mapper
-        // identifiers resolve to the same symbol as their defining scope.
-        const semantics::Symbol &ultimate = mapperSym->GetUltimate();
-        mapperIdName = converter.mangleName(mapperIdName, ultimate.owner());
-      }
-    }
+    mapperIdName = getMapperIdentifier(converter, mappers);
 
     processMapObjects(stmtCtx, clauseLocation,
                       std::get<omp::ObjectList>(clause.t), mapTypeBits,
@@ -1559,21 +1658,22 @@ bool ClauseProcessor::processMotionClauses(lower::StatementContext &stmtCtx,
     mlir::Location clauseLocation = converter.genLocation(source);
     const auto &[expectation, mapper, iterator, objects] = clause.t;
 
-    // TODO Support motion modifiers: mapper, iterator.
-    if (mapper) {
-      TODO(clauseLocation, "Mapper modifier is not supported yet");
-    } else if (iterator) {
-      TODO(clauseLocation, "Iterator modifier is not supported yet");
-    }
-
     mlir::omp::ClauseMapFlags mapTypeBits =
         std::is_same_v<llvm::remove_cvref_t<decltype(clause)>, omp::clause::To>
             ? mlir::omp::ClauseMapFlags::to
             : mlir::omp::ClauseMapFlags::from;
     if (expectation && *expectation == omp::clause::To::Expectation::Present)
       mapTypeBits |= mlir::omp::ClauseMapFlags::present;
+
+    // Support motion modifiers: mapper, iterator.
+    std::string mapperIdName = getMapperIdentifier(converter, mapper);
+    if (iterator) {
+      TODO(clauseLocation, "Iterator modifier is not supported yet");
+    }
+
     processMapObjects(stmtCtx, clauseLocation, objects, mapTypeBits,
-                      parentMemberIndices, result.mapVars, mapSymbols);
+                      parentMemberIndices, result.mapVars, mapSymbols,
+                      mapperIdName);
   };
 
   bool clauseFound = findRepeatableClause<omp::clause::To>(callbackFn);

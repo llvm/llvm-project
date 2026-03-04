@@ -31,3 +31,29 @@ body:             |
     RET_ReallyLR implicit $w0
 
 ...
+
+---
+name:            NotAPlusNegOne_vec
+alignment:       4
+frameInfo:
+  maxAlignment:    1
+machineFunctionInfo: {}
+body:             |
+  bb.0:
+    liveins: $x0
+    ; CHECK-LABEL: name: NotAPlusNegOne_vec
+    ; CHECK: liveins: $x0
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: %x:_(<4 x s16>) = COPY $x0
+    ; CHECK-NEXT: [[C:%[0-9]+]]:_(s16) = G_CONSTANT i16 0
+    ; CHECK-NEXT: [[BUILD_VECTOR:%[0-9]+]]:_(<4 x s16>) = G_BUILD_VECTOR [[C]](s16), [[C]](s16), [[C]](s16), [[C]](s16)
+    ; CHECK-NEXT: %xor:_(<4 x s16>) = G_SUB [[BUILD_VECTOR]], %x
+    ; CHECK-NEXT: $x0 = COPY %xor(<4 x s16>)
+    %x:_(<4 x s16>) = COPY $x0
+    %neg_one:_(s16) = G_CONSTANT i16 -1
+    %neg_one_vec:_(<4 x s16>) = G_BUILD_VECTOR %neg_one(s16), %neg_one(s16), %neg_one(s16), %neg_one(s16)
+    %add:_(<4 x s16>) = G_ADD %x, %neg_one_vec
+    %xor:_(<4 x s16>) = G_XOR %add, %neg_one_vec
+    $x0 = COPY %xor
+...
+

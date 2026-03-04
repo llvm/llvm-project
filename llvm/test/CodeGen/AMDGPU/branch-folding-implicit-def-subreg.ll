@@ -1002,7 +1002,7 @@ define amdgpu_kernel void @f1(ptr addrspace(1) %arg, ptr addrspace(1) %arg1, i64
 bb:
   %i = tail call i32 @llvm.amdgcn.workitem.id.x()
   %i11 = icmp eq i32 %i, 0
-  %i12 = load i32, ptr addrspace(3) null, align 8
+  %i12 = load i32, ptr addrspace(3) zeroinitializer, align 8
   %i13 = zext i32 %i12 to i64
   %i14 = getelementptr inbounds i32, ptr addrspace(1) %arg, i64 %i13
   br i1 %arg3, label %bb15, label %bb103
@@ -1014,7 +1014,7 @@ bb15:
   br i1 %arg4, label %bb19, label %bb20
 
 bb19:
-  store i64 %i18, ptr addrspace(5) null, align 8
+  store i64 %i18, ptr addrspace(5) zeroinitializer, align 8
   unreachable
 
 bb20:
@@ -1026,7 +1026,7 @@ bb20:
   br i1 %i25, label %bb26, label %bb27
 
 bb26:
-  store i64 %i22, ptr addrspace(5) null, align 8
+  store i64 %i22, ptr addrspace(5) zeroinitializer, align 8
   unreachable
 
 bb27:
@@ -1038,7 +1038,7 @@ bb27:
   br i1 %i32, label %bb33, label %bb34
 
 bb33:
-  store i64 %i29, ptr addrspace(5) null, align 8
+  store i64 %i29, ptr addrspace(5) zeroinitializer, align 8
   unreachable
 
 bb34:
@@ -1050,7 +1050,7 @@ bb34:
   br i1 %i39, label %bb40, label %bb41
 
 bb40:
-  store i64 %i36, ptr addrspace(5) null, align 8
+  store i64 %i36, ptr addrspace(5) zeroinitializer, align 8
   unreachable
 
 bb41:
@@ -1062,7 +1062,7 @@ bb41:
   br i1 %i46, label %bb47, label %bb48
 
 bb47:
-  store i64 %i43, ptr addrspace(5) null, align 8
+  store i64 %i43, ptr addrspace(5) zeroinitializer, align 8
   unreachable
 
 bb48:
@@ -1074,7 +1074,7 @@ bb48:
   br i1 %i53, label %bb54, label %bb55
 
 bb54:
-  store i64 %i50, ptr addrspace(5) null, align 8
+  store i64 %i50, ptr addrspace(5) zeroinitializer, align 8
   unreachable
 
 bb55:
@@ -1091,7 +1091,7 @@ bb61:
   br i1 %arg5, label %bb62, label %bb63
 
 bb62:
-  store i64 %i57, ptr addrspace(5) null, align 8
+  store i64 %i57, ptr addrspace(5) zeroinitializer, align 8
   unreachable
 
 bb63:
@@ -1105,7 +1105,7 @@ bb66:
   br i1 %arg5, label %bb67, label %bb68
 
 bb67:
-  store i64 %i64, ptr addrspace(5) null, align 8
+  store i64 %i64, ptr addrspace(5) zeroinitializer, align 8
   unreachable
 
 bb68:
@@ -1127,7 +1127,7 @@ bb73:
   br i1 %i78, label %bb79, label %bb80
 
 bb79:
-  store i64 %i75, ptr addrspace(5) null, align 8
+  store i64 %i75, ptr addrspace(5) zeroinitializer, align 8
   unreachable
 
 bb80:
@@ -1137,7 +1137,7 @@ bb80:
   br i1 %arg6, label %bb84, label %bb85
 
 bb84:
-  store i64 %i82, ptr addrspace(5) null, align 8
+  store i64 %i82, ptr addrspace(5) zeroinitializer, align 8
   unreachable
 
 bb85:
@@ -1147,11 +1147,11 @@ bb85:
   br i1 %i88, label %bb89, label %bb90
 
 bb89:
-  store i64 %i83, ptr addrspace(5) null, align 8
+  store i64 %i83, ptr addrspace(5) zeroinitializer, align 8
   unreachable
 
 bb90:
-  %i91 = load i64, ptr addrspace(3) null, align 8
+  %i91 = load i64, ptr addrspace(3) zeroinitializer, align 8
   %i92 = load i64, ptr addrspace(3) %arg8, align 8
   %i93 = load i64, ptr addrspace(3) %arg7, align 8
   %i94 = trunc i64 %i91 to i32
@@ -1172,7 +1172,7 @@ bb104:
   ret void
 
 bb105:
-  %i106 = load i64, ptr addrspace(3) null, align 8
+  %i106 = load i64, ptr addrspace(3) zeroinitializer, align 8
   %i107 = load i64, ptr addrspace(3) %arg9, align 8
   %i108 = load i64, ptr addrspace(3) %arg7, align 8
   %i109 = load i64, ptr addrspace(3) %arg10, align 8
@@ -1252,7 +1252,7 @@ bb161:
   %i171 = select i1 %i170, i32 0, i32 %i169
   %i172 = or i32 %i171, %i157
   %i173 = zext i32 %i172 to i64
-  store i64 %i173, ptr addrspace(3) null, align 4
+  store i64 %i173, ptr addrspace(3) zeroinitializer, align 4
   unreachable
 
 bb174:
@@ -1278,21 +1278,21 @@ bb186:
   %i192 = zext i32 %i178 to i64
   %i193 = zext i32 %i182 to i64
   %i194 = zext i32 %i181 to i64
-  store i64 %i187, ptr addrspace(3) null, align 8
+  store i64 %i187, ptr addrspace(3) zeroinitializer, align 8
   store i64 %i188, ptr addrspace(3) %arg7, align 8
   store i64 %i189, ptr addrspace(3) %arg8, align 8
-  store i64 %i190, ptr addrspace(3) null, align 8
+  store i64 %i190, ptr addrspace(3) zeroinitializer, align 8
   store i64 %i191, ptr addrspace(3) %arg7, align 8
-  store i64 %i192, ptr addrspace(3) null, align 8
+  store i64 %i192, ptr addrspace(3) zeroinitializer, align 8
   store i64 %i193, ptr addrspace(3) %arg7, align 8
-  store i64 %i194, ptr addrspace(3) null, align 8
+  store i64 %i194, ptr addrspace(3) zeroinitializer, align 8
   %i195 = ptrtoint ptr addrspace(1) %i185 to i64
-  store i64 %i195, ptr addrspace(5) null, align 8
+  store i64 %i195, ptr addrspace(5) zeroinitializer, align 8
   unreachable
 
 bb196:
   %i197 = zext i32 %i184 to i64
-  store i64 %i197, ptr addrspace(3) null, align 8
+  store i64 %i197, ptr addrspace(3) zeroinitializer, align 8
   unreachable
 }
 

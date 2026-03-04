@@ -966,11 +966,6 @@ bool CompilerInstance::ExecuteAction(FrontendAction &Act) {
   // DesiredStackSpace available.
   noteBottomOfStack();
 
-  llvm::scope_exit FinishDiagnosticClient([&]() {
-    // Notify the diagnostic client that all files were processed.
-    getDiagnosticClient().finish();
-  });
-
   raw_ostream &OS = getVerboseOutputStream();
 
   if (!Act.PrepareToExecute(*this))
@@ -1167,12 +1162,16 @@ std::unique_ptr<CompilerInstance> CompilerInstance::cloneForModuleCompileImpl(
              Invocation->computeContextHash() &&
          "Module hash mismatch!");
 
-  // Construct a compiler instance that will be used to actually create the
-  // module.  Since we're sharing an in-memory module cache,
-  // CompilerInstance::CompilerInstance is responsible for finalizing the
-  // buffers to prevent use-after-frees.
+  std::shared_ptr<ModuleCache> ModCache;
+  if (ThreadSafeConfig) {
+    ModCache = ThreadSafeConfig->getModuleCache();
+  } else {
+    ModCache = this->ModCache;
+  }
+
+  // Construct a compiler instance that will be used to create the module.
   auto InstancePtr = std::make_unique<CompilerInstance>(
-      std::move(Invocation), getPCHContainerOperations(), ModCache);
+      std::move(Invocation), getPCHContainerOperations(), std::move(ModCache));
   auto &Instance = *InstancePtr;
 
   auto &Inv = Instance.getInvocation();
@@ -1510,7 +1509,9 @@ static bool compileModuleAndReadASTBehindLock(
 
     // Someone else is responsible for building the module. Wait for them to
     // finish.
-    switch (Lock->waitForUnlockFor(std::chrono::seconds(90))) {
+    unsigned Timeout =
+        ImportingInstance.getFrontendOpts().ImplicitModulesLockTimeoutSeconds;
+    switch (Lock->waitForUnlockFor(std::chrono::seconds(Timeout))) {
     case llvm::WaitForUnlockResult::Success:
       break; // The interesting case.
     case llvm::WaitForUnlockResult::OwnerDied:
@@ -1518,11 +1519,11 @@ static bool compileModuleAndReadASTBehindLock(
     case llvm::WaitForUnlockResult::Timeout:
       // Since the InMemoryModuleCache takes care of correctness, we try waiting
       // for someone else to complete the build so that it does not happen
-      // twice. In case of timeout, build it ourselves.
+      // twice. In case of timeout, try to build it ourselves again.
       Diags.Report(ModuleNameLoc, diag::remark_module_lock_timeout)
           << Module->Name;
       // Clear the lock file so that future invocations can make progress.
-      Lock->unsafeMaybeUnlock();
+      Lock->unsafeUnlock();
       continue;
     }
 
@@ -1577,9 +1578,14 @@ static void checkConfigMacro(Preprocessor &PP, StringRef ConfigMacro,
   // Find the macro definition from the command line.
   MacroInfo *CmdLineDefinition = nullptr;
   for (auto *MD = LatestLocalMD; MD; MD = MD->getPrevious()) {
-    // We only care about the predefines buffer.
-    FileID FID = SourceMgr.getFileID(MD->getLocation());
-    if (FID.isInvalid() || FID != PP.getPredefinesFileID())
+    SourceLocation MDLoc = MD->getLocation();
+    FileID FID = SourceMgr.getFileID(MDLoc);
+    if (FID.isInvalid())
+      continue;
+    // We only care about the predefines buffer, or if the macro is defined
+    // over the command line transitively through a PCH.
+    if (FID != PP.getPredefinesFileID() &&
+        !SourceMgr.isWrittenInCommandLineFile(MDLoc))
       continue;
     if (auto *DMD = dyn_cast<DefMacroDirective>(MD))
       CmdLineDefinition = DMD->getMacroInfo();
@@ -1601,7 +1607,7 @@ static void checkConfigMacro(Preprocessor &PP, StringRef ConfigMacro,
       << true;
     return;
   } else if (!CmdLineDefinition) {
-    // There was no definition for this macro in the predefines buffer,
+    // There was no definition for this macro in the command line,
     // but there was a local definition. Complain.
     PP.Diag(ImportLoc, diag::warn_module_config_macro_undef)
       << false << ConfigMacro << Mod->getFullModuleName();
@@ -1985,6 +1991,25 @@ CompilerInstance::loadModule(SourceLocation ImportLoc,
     //   function as the `#include` or `#import` is textual.
 
     MM.cacheModuleLoad(*Path[0].getIdentifierInfo(), Module);
+  } else if (getPreprocessorOpts().SingleModuleParseMode) {
+    // This mimics how findOrCompileModuleAndReadAST() finds the module.
+    Module = getPreprocessor().getHeaderSearchInfo().lookupModule(
+        ModuleName, ImportLoc, true, !IsInclusionDirective);
+    if (Module) {
+      if (PPCallbacks *PPCb = getPreprocessor().getPPCallbacks())
+        PPCb->moduleLoadSkipped(Module);
+      // Mark the module and its submodules as if they were loaded from a PCM.
+      // This prevents emission of the "missing submodule" diagnostic below.
+      std::vector<clang::Module *> Worklist{Module};
+      while (!Worklist.empty()) {
+        clang::Module *M = Worklist.back();
+        Worklist.pop_back();
+        M->IsFromModuleFile = true;
+        for (auto *SubM : M->submodules())
+          Worklist.push_back(SubM);
+      }
+    }
+    MM.cacheModuleLoad(*Path[0].getIdentifierInfo(), Module);
   } else {
     SourceLocation ModuleNameEndLoc = Path.back().getLoc().getLocWithOffset(
         Path.back().getIdentifierInfo()->getLength());
@@ -2238,6 +2263,10 @@ GlobalModuleIndex *CompilerInstance::loadGlobalModuleIndex(
   // we need to make the global index cover all modules, so we do that here.
   if (!HaveFullGlobalModuleIndex && GlobalIndex && !buildingModule()) {
     ModuleMap &MMap = getPreprocessor().getHeaderSearchInfo().getModuleMap();
+
+    // Load modules that were parsed from module maps but not loaded yet.
+    MMap.loadAllParsedModules();
+
     bool RecreateIndex = false;
     for (ModuleMap::module_iterator I = MMap.module_begin(),
         E = MMap.module_end(); I != E; ++I) {

@@ -57,8 +57,7 @@ ReferenceToConstructedTemporaryCheck::getCheckTraversalKind() const {
 void ReferenceToConstructedTemporaryCheck::registerMatchers(
     MatchFinder *Finder) {
   Finder->addMatcher(
-      varDecl(unless(isExpansionInSystemHeader()),
-              hasType(qualType(references(qualType().bind("type")))),
+      varDecl(hasType(qualType(references(qualType().bind("type")))),
               decl().bind("var"),
               hasInitializer(expr(hasDescendant(
                   materializeTemporaryExpr(

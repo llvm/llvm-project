@@ -21,7 +21,6 @@
 ; GCN-O0-NEXT:Library Function Lowering Analysis
 ; GCN-O0-NEXT:Assumption Cache Tracker
 ; GCN-O0-NEXT:Profile summary info
-; GCN-O0-NEXT:Argument Register Usage Information Storage
 ; GCN-O0-NEXT:Create Garbage Collector Module Metadata
 ; GCN-O0-NEXT:Register Usage Information Storage
 ; GCN-O0-NEXT:Machine Branch Probability Analysis
@@ -95,7 +94,7 @@
 ; GCN-O0-NEXT:    Call Graph SCC Pass Manager
 ; GCN-O0-NEXT:      DummyCGSCCPass
 ; GCN-O0-NEXT:      FunctionPass Manager
-; GCN-O0-NEXT:        Prepare callbr
+; GCN-O0-NEXT:        Prepare inline asm insts
 ; GCN-O0-NEXT:        Safe Stack instrumentation pass
 ; GCN-O0-NEXT:        Insert stack protectors
 ; GCN-O0-NEXT:        Dominator Tree Construction
@@ -174,7 +173,6 @@
 ; GCN-O1-NEXT:External Alias Analysis
 ; GCN-O1-NEXT:Type-Based Alias Analysis
 ; GCN-O1-NEXT:Scoped NoAlias Alias Analysis
-; GCN-O1-NEXT:Argument Register Usage Information Storage
 ; GCN-O1-NEXT:Create Garbage Collector Module Metadata
 ; GCN-O1-NEXT:Machine Branch Probability Analysis
 ; GCN-O1-NEXT:Register Usage Information Storage
@@ -302,7 +300,7 @@
 ; GCN-O1-NEXT:        Basic Alias Analysis (stateless AA impl)
 ; GCN-O1-NEXT:        Function Alias Analysis Results
 ; GCN-O1-NEXT:        ObjC ARC contraction
-; GCN-O1-NEXT:        Prepare callbr
+; GCN-O1-NEXT:        Prepare inline asm insts
 ; GCN-O1-NEXT:        Safe Stack instrumentation pass
 ; GCN-O1-NEXT:        Insert stack protectors
 ; GCN-O1-NEXT:        Cycle Info Analysis
@@ -467,7 +465,6 @@
 ; GCN-O1-OPTS-NEXT:External Alias Analysis
 ; GCN-O1-OPTS-NEXT:Type-Based Alias Analysis
 ; GCN-O1-OPTS-NEXT:Scoped NoAlias Alias Analysis
-; GCN-O1-OPTS-NEXT:Argument Register Usage Information Storage
 ; GCN-O1-OPTS-NEXT:Create Garbage Collector Module Metadata
 ; GCN-O1-OPTS-NEXT:Machine Branch Probability Analysis
 ; GCN-O1-OPTS-NEXT:Register Usage Information Storage
@@ -615,7 +612,7 @@
 ; GCN-O1-OPTS-NEXT:        Basic Alias Analysis (stateless AA impl)
 ; GCN-O1-OPTS-NEXT:        Function Alias Analysis Results
 ; GCN-O1-OPTS-NEXT:        ObjC ARC contraction
-; GCN-O1-OPTS-NEXT:        Prepare callbr
+; GCN-O1-OPTS-NEXT:        Prepare inline asm insts
 ; GCN-O1-OPTS-NEXT:        Safe Stack instrumentation pass
 ; GCN-O1-OPTS-NEXT:        Insert stack protectors
 ; GCN-O1-OPTS-NEXT:        Cycle Info Analysis
@@ -787,7 +784,6 @@
 ; GCN-O2-NEXT:External Alias Analysis
 ; GCN-O2-NEXT:Type-Based Alias Analysis
 ; GCN-O2-NEXT:Scoped NoAlias Alias Analysis
-; GCN-O2-NEXT:Argument Register Usage Information Storage
 ; GCN-O2-NEXT:Create Garbage Collector Module Metadata
 ; GCN-O2-NEXT:Machine Branch Probability Analysis
 ; GCN-O2-NEXT:Register Usage Information Storage
@@ -939,7 +935,7 @@
 ; GCN-O2-NEXT:        Basic Alias Analysis (stateless AA impl)
 ; GCN-O2-NEXT:        Function Alias Analysis Results
 ; GCN-O2-NEXT:        ObjC ARC contraction
-; GCN-O2-NEXT:        Prepare callbr
+; GCN-O2-NEXT:        Prepare inline asm insts
 ; GCN-O2-NEXT:        Safe Stack instrumentation pass
 ; GCN-O2-NEXT:        Insert stack protectors
 ; GCN-O2-NEXT:        Cycle Info Analysis
@@ -1112,7 +1108,6 @@
 ; GCN-O3-NEXT:External Alias Analysis
 ; GCN-O3-NEXT:Type-Based Alias Analysis
 ; GCN-O3-NEXT:Scoped NoAlias Alias Analysis
-; GCN-O3-NEXT:Argument Register Usage Information Storage
 ; GCN-O3-NEXT:Create Garbage Collector Module Metadata
 ; GCN-O3-NEXT:Machine Branch Probability Analysis
 ; GCN-O3-NEXT:Register Usage Information Storage
@@ -1277,7 +1272,7 @@
 ; GCN-O3-NEXT:        Basic Alias Analysis (stateless AA impl)
 ; GCN-O3-NEXT:        Function Alias Analysis Results
 ; GCN-O3-NEXT:        ObjC ARC contraction
-; GCN-O3-NEXT:        Prepare callbr
+; GCN-O3-NEXT:        Prepare inline asm insts
 ; GCN-O3-NEXT:        Safe Stack instrumentation pass
 ; GCN-O3-NEXT:        Insert stack protectors
 ; GCN-O3-NEXT:        Cycle Info Analysis

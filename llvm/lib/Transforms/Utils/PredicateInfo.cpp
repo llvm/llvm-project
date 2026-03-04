@@ -365,7 +365,7 @@ void PredicateInfoBuilder::processAssume(
   if (II->hasOperandBundles()) {
     for (auto BOI : II->bundle_op_infos()) {
       if (RetainedKnowledge RK = getKnowledgeFromBundle(*II, BOI)) {
-        if (RK.AttrKind == Attribute::NonNull)
+        if (RK.AttrKind == Attribute::NonNull && shouldRename(RK.WasOn))
           addInfoFor(OpsToRename, RK.WasOn,
                      new (Allocator) PredicateBundleAssume(RK.WasOn, II,
                                                            Attribute::NonNull));

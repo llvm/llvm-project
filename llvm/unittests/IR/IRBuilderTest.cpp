@@ -1368,4 +1368,51 @@ TEST_F(IRBuilderTest, CTAD) {
   IRBuilder Builder7(BB, BB->end());
   static_assert(std::is_same_v<decltype(Builder7), IRBuilder<>>);
 }
+
+TEST_F(IRBuilderTest, finalizeSubprogram) {
+  IRBuilder<> Builder(BB);
+  DIBuilder DIB(*M);
+  auto File = DIB.createFile("main.c", "/");
+  auto CU = DIB.createCompileUnit(
+      DISourceLanguageName(dwarf::DW_LANG_C_plus_plus), File, "clang",
+      /*isOptimized=*/true, /*Flags=*/"",
+      /*Runtime Version=*/0);
+  auto FuncType = DIB.createSubroutineType(DIB.getOrCreateTypeArray({}));
+  auto FooSP = DIB.createFunction(
+      CU, "foo", /*LinkageName=*/"", File,
+      /*LineNo=*/1, FuncType, /*ScopeLine=*/2, DINode::FlagZero,
+      DISubprogram::SPFlagDefinition | DISubprogram::SPFlagOptimized);
+
+  F->setSubprogram(FooSP);
+  AllocaInst *I = Builder.CreateAlloca(Builder.getInt8Ty());
+  ReturnInst *R = Builder.CreateRetVoid();
+  I->setDebugLoc(DILocation::get(Ctx, 3, 2, FooSP));
+  R->setDebugLoc(DILocation::get(Ctx, 4, 2, FooSP));
+
+  auto BarSP = DIB.createFunction(
+      CU, "bar", /*LinkageName=*/"", File,
+      /*LineNo=*/1, FuncType, /*ScopeLine=*/2, DINode::FlagZero,
+      DISubprogram::SPFlagDefinition | DISubprogram::SPFlagOptimized);
+
+  // Create a temporary structure in scope of FooSP.
+  llvm::TempDIType ForwardDeclaredType =
+      llvm::TempDIType(DIB.createReplaceableCompositeType(
+          llvm::dwarf::DW_TAG_structure_type, "MyType", FooSP, File, 0, 0, 8, 8,
+          {}, "UniqueIdentifier"));
+
+  // Instantiate the real structure in scope of BarSP.
+  DICompositeType *Type = DIB.createStructType(
+      BarSP, "MyType", File, 0, 8, 8, {}, {}, {}, 0, {}, "UniqueIdentifier");
+  // Replace the temporary type with the real type.
+  DIB.replaceTemporary(std::move(ForwardDeclaredType), Type);
+
+  DIB.finalize();
+  EXPECT_FALSE(verifyModule(*M));
+
+  // After finalization, MyType should appear in retainedNodes of BarSP,
+  // not in FooSP's.
+  EXPECT_EQ(BarSP->getRetainedNodes().size(), 1u);
+  EXPECT_EQ(BarSP->getRetainedNodes()[0], Type);
+  EXPECT_TRUE(FooSP->getRetainedNodes().empty());
+}
 }

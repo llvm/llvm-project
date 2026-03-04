@@ -169,8 +169,9 @@ static NameLookup findDeclInBases(const CXXRecordDecl &Parent,
         Found = *Search;
         continue;
       }
-    } else
+    } else {
       return NameLookup(std::nullopt); // Propagate multiple resolution back up.
+    }
   }
   return NameLookup(Found); // If nullptr, decl wasn't found.
 }
