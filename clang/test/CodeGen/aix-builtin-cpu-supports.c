@@ -153,7 +153,7 @@
 // CHECKOP-NEXT:   %retval = alloca i32, align 4
 // CHECKOP-NEXT:   store i32 0, ptr %retval, align 4
 
-// SYSCONF-NEXT:   %0 = load i32, ptr getelementptr inbounds ({ i32, i32, i32, i32, i32, i32, i32, i32, i32, i32, i32, i32, i32, i32, i32, i32, i32, i32, i32, i32, i32, i32, i32, i32, i32, i32, i32, i32, i32, i32, i32, i32, i64, i32, i32, i32, i32, i64, i64, i64, i64, i32, i32, i32, i32, i32, i32, i64, i32, i8, i8, i8, i8, i32, i32, i16, i16, [3 x i32], i32 }, ptr @_system_configuration, i32 0, i32 [[POS]]), align 4
+// SYSCONF-NEXT:   %0 = load i32, ptr getelementptr inbounds nuw (i8, ptr @_system_configuration, i32 {{[0-9]+}}), align 4
 // SYSCALL-NEXT:  %0 = call i64 @getsystemcfg(i32 [[LABEL]])
 
 // OPRT-NEXT:  %1 = icmp [[OP]] [[BIT]] %0, [[VALUE]]

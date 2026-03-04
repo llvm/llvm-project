@@ -77,7 +77,7 @@ int &fn2(int &v) {
 // CHECK: br i1
 //
 // CHECK: getelementptr inbounds {{.*}}, i64 1
-// CHECK: icmp eq {{.*}}, getelementptr inbounds {{.*}}, i64 30
+// CHECK: icmp eq {{.*}}, getelementptr inbounds nuw (i8, ptr @_ZN14NonTrivialInit1bE, i64 600)
 // CHECK: br i1
 //
 // CHECK: call i32 @__cxa_atexit(
