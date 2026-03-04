@@ -566,7 +566,8 @@ struct TransferReadLowering : public OpRewritePattern<vector::TransferReadOp> {
 
     // Perform common data transfer checks.
     auto readMemTy = cast<MemRefType>(readOp.getShapedType());
-    if (failed(storeLoadPreconditions(rewriter, readOp, loadedVecTy, readMemTy)))
+    if (failed(
+            storeLoadPreconditions(rewriter, readOp, loadedVecTy, readMemTy)))
       return failure();
 
     bool isOutOfBounds = readOp.hasOutOfBoundsDim();
