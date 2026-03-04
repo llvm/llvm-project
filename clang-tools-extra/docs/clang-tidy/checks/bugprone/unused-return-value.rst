@@ -71,3 +71,4 @@ fixed and large set of standard library functions.
 :doc:`hicpp-ignored-remove-result <../hicpp/ignored-remove-result>` is an
 alias of this check that checks a restricted set of functions:
 ``std::remove``, ``std::remove_if``, and ``std::unique``.
+The `AllowCastToVoid` option is set to `true` by default.

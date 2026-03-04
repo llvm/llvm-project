@@ -114,7 +114,7 @@ public:
     ClangTidyOptions Options;
     ClangTidyOptions::OptionMap &Opts = Options.CheckOptions;
     Opts["hicpp-ignored-remove-result.CheckedFunctions"] =
-        "::std::remove$;::std::remove_if$;::std::unique$";
+        "^::std::remove$;^::std::remove_if$;^::std::unique$";
     Opts["hicpp-ignored-remove-result.CheckedReturnTypes"] = "";
     Opts["hicpp-ignored-remove-result.AllowCastToVoid"] = "true";
     return Options;
