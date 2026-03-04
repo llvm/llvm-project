@@ -1,0 +1,135 @@
+name: AOMP smoke test
+
+on:
+  workflow_dispatch:
+    inputs:
+      artifact_group:
+        type: string
+      artifact_run_id:
+        type: string
+        default: ""
+      amdgpu_families:
+        type: string
+        default: ""
+      amdgpu_targets:
+        type: string
+        default: ""
+      test_runs_on:
+        type: string
+      platform:
+        type: string
+  workflow_call:
+    inputs:
+      artifact_group:
+        type: string
+      artifact_run_id:
+        type: string
+        default: ""
+      amdgpu_families:
+        type: string
+        default: ""
+      amdgpu_targets:
+        type: string
+        default: ""
+      test_runs_on:
+        type: string
+      platform:
+        type: string
+  push:
+    branches:
+      - ADHOCBUILD
+
+permissions:
+  contents: read
+
+jobs:
+  aomp_smoke_test:
+    name: "aomp smoke test"
+    runs-on: ${{ inputs.test_runs_on }}
+    # Running docker with cap-add and -v /lib/modiles, by recommendation of Github: https://rocm.docs.amd.com/projects/amdsmi/en/amd-staging/how-to/setup-docker-container.html
+    container:
+      image: ${{ inputs.platform == 'linux' && 'ghcr.io/rocm/no_rocm_image_ubuntu24_04@sha256:4150afe4759d14822f0e3f8930e1124f26e11f68b5c7b91ec9a02b20b1ebbb98' || null }}
+      # --ulimit memlock=-1:-1 - Prevents memory allocation issues with ROCm inside container
+      # --security-opt seccomp=unconfined - enables memory mapping, and is recommended for containers running in HPC environments
+      # --env-file /etc/podinfo/gha-gpu-isolation-settings - Required for GPU isolation on OSSCI MIXXX runners
+      # --user 0:0 - Running as root, by recommendation of GitHub: https://docs.github.com/en/actions/reference/workflows-and-actions/dockerfile-support#user
+      options: --ipc host
+        --group-add video
+        --device /dev/kfd
+        --device /dev/dri
+        --group-add 992
+        --group-add 110
+        --cap-add SYS_MODULE
+        -v /lib/modules:/lib/modules
+        --ulimit memlock=-1:-1
+        --security-opt seccomp=unconfined
+        --env-file /etc/podinfo/gha-gpu-isolation-settings
+        --user 0:0
+    defaults:
+      run:
+        shell: bash
+    env:
+      VENV_DIR: ${{ github.workspace }}/.venv
+      ARTIFACT_RUN_ID: "${{ inputs.artifact_run_id != '' && inputs.artifact_run_id || github.run_id }}"
+      OUTPUT_ARTIFACTS_DIR: ${{ github.workspace }}/build
+      THEROCK_BIN_DIR: ${{ github.workspace }}/build/bin
+      AMDGPU_FAMILIES: ${{ inputs.amdgpu_families }}
+      AMDGPU_TARGETS: ${{ inputs.amdgpu_targets }}
+      ARTIFACT_GROUP: ${{ inputs.artifact_group }}
+    steps:
+      - name: "Fetch 'build_tools' from repository"
+        if: ${{ runner.os == 'Windows' }}
+        uses: actions/checkout@8e8c483db84b4bee98b60c0593521ed34d9990e8 # v6.0.1
+        with:
+          sparse-checkout: build_tools
+          path: prejob
+
+      - name: Pre-job cleanup processes on Windows
+        if: ${{ runner.os == 'Windows' }}
+        shell: powershell
+        run: . '${{ github.workspace }}\prejob\build_tools\github_actions\cleanup_processes.ps1'
+
+      - name: Checkout Repository
+        uses: actions/checkout@8e8c483db84b4bee98b60c0593521ed34d9990e8 # v6.0.1
+        with:
+          repository: "ROCm/TheRock"
+          ref: 'compiler/amd-staging'
+          fetch-depth: 1
+
+      - name: Pre-job cleanup Docker containers on Linux
+        if: ${{ runner.os == 'Linux' }}
+        shell: bash
+        run: |
+          # Remove any stopped containers
+          docker container prune -f || true
+          # Remove dangling networks
+          docker network prune -f || true
+          sudo apt-get update
+          sudo apt install -y build-essential pciutils libquadmath0
+
+      - name: Run setup test environment workflow
+        uses: './.github/actions/setup_test_environment'
+        with:
+          ARTIFACT_GROUP: ${{ inputs.artifact_group }}
+          AMDGPU_TARGETS: ${{ inputs.amdgpu_targets }}
+          ARTIFACT_RUN_ID: ${{ env.ARTIFACT_RUN_ID }}
+          OUTPUT_ARTIFACTS_DIR: ${{ env.OUTPUT_ARTIFACTS_DIR }}
+          VENV_DIR: ${{ env.VENV_DIR }}
+          IS_PR_FROM_FORK: ${{ github.event.pull_request.head.repo.fork }}
+
+      - name: Run aomp tests
+        timeout-minutes: 50
+        env:
+          AMD_LOG_LEVEL: 4
+        run: |
+          set -x
+          git clone https://github.com/ROCm/aomp -b aomp-dev --depth 1
+          cd aomp/bin
+          export AOMP=${OUTPUT_ARTIFACTS_DIR}/llvm
+          echo ${AOMP}
+          ./run_theRockCI.sh
+
+      - name: Post-job cleanup processes on Windows
+        if: ${{ always() && runner.os == 'Windows' }}
+        shell: powershell
+        run: . '${{ github.workspace }}\build_tools\github_actions\cleanup_processes.ps1'

@@ -117,6 +117,18 @@ jobs:
       test_runs_on: ${{ inputs.test_runs_on }}
       platform: ${{ needs.configure_test_matrix.outputs.platform }}
 
+  aomp_smoke_test:
+    name: 'AOMP smoke test'
+    needs: test_sanity_check
+    if: ${{ inputs.amdgpu_families == 'gfx94X-dcgpu' }}
+    uses: './.github/workflows/test_aomp_smoke.yml'
+    with:
+      artifact_group: ${{ inputs.artifact_group }}
+      artifact_run_id: ${{ inputs.artifact_run_id }}
+      amdgpu_families: ${{ inputs.amdgpu_families }}
+      test_runs_on: ${{ inputs.test_runs_on }}
+      platform: ${{ needs.configure_test_matrix.outputs.platform }}
+
   test_components:
     name: 'Test ${{ matrix.components.job_name }}'
     needs: [test_sanity_check, configure_test_matrix]
