@@ -123,7 +123,7 @@ size_type max_size() {
 // CHECK: cir.func{{.*}} @_Z8max_sizev() -> (!u64i {{.*}})
 // CHECK:   %[[NOT_ZERO:.*]] = cir.const #cir.int<18446744073709551615> : !u64i
 // CHECK:   %[[SIZE_OF_TP:.*]] = cir.const #cir.int<8> : !u64i
-// CHECK:   %[[RESULT:.*]] = cir.binop(div, %[[NOT_ZERO]], %[[SIZE_OF_TP]]) : !u64i
+// CHECK:   %[[RESULT:.*]] = cir.div %[[NOT_ZERO]], %[[SIZE_OF_TP]] : !u64i
 
 void ref_arg(int &x) {
   int y = x;

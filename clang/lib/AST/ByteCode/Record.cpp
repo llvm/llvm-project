@@ -14,19 +14,24 @@ using namespace clang::interp;
 
 Record::Record(const RecordDecl *Decl, BaseList &&SrcBases,
                FieldList &&SrcFields, VirtualBaseList &&SrcVirtualBases,
-               unsigned VirtualSize, unsigned BaseSize)
+               unsigned VirtualSize, unsigned BaseSize, bool HasPtrField)
     : Decl(Decl), Bases(std::move(SrcBases)), Fields(std::move(SrcFields)),
       BaseSize(BaseSize), VirtualSize(VirtualSize), IsUnion(Decl->isUnion()),
-      IsAnonymousUnion(IsUnion && Decl->isAnonymousStructOrUnion()) {
+      IsAnonymousUnion(IsUnion && Decl->isAnonymousStructOrUnion()),
+      HasPtrField(HasPtrField) {
   for (Base &V : SrcVirtualBases)
-    VirtualBases.push_back({V.Decl, V.Offset + BaseSize, V.Desc, V.R});
+    VirtualBases.emplace_back(V.Decl, V.Desc, V.R, V.Offset + BaseSize);
 
-  for (Base &B : Bases)
+  for (Base &B : Bases) {
     BaseMap[B.Decl] = &B;
-  for (Field &F : Fields)
-    FieldMap[F.Decl] = &F;
-  for (Base &V : VirtualBases)
+    if (!HasPtrField)
+      HasPtrField |= B.R->hasPtrField();
+  }
+  for (Base &V : VirtualBases) {
     VirtualBaseMap[V.Decl] = &V;
+    if (!HasPtrField)
+      HasPtrField |= V.R->hasPtrField();
+  }
 }
 
 std::string Record::getName() const {
@@ -42,12 +47,6 @@ bool Record::hasTrivialDtor() const {
     return true;
   const CXXDestructorDecl *Dtor = getDestructor();
   return !Dtor || Dtor->isTrivial();
-}
-
-const Record::Field *Record::getField(const FieldDecl *FD) const {
-  auto It = FieldMap.find(FD->getFirstDecl());
-  assert(It != FieldMap.end() && "Missing field");
-  return It->second;
 }
 
 const Record::Base *Record::getBase(const RecordDecl *FD) const {

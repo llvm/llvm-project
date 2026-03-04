@@ -1,11 +1,5 @@
-// RUN: %check_clang_tidy %s readability-else-after-return %t -- -- -fexceptions -std=c++17
-
-namespace std {
-struct string {
-  string(const char *);
-  ~string();
-};
-} // namespace std
+// RUN: %check_clang_tidy %s readability-else-after-return %t -- -- -isystem %clang_tidy_headers -fexceptions -std=c++17
+#include <string>
 
 struct my_exception {
   my_exception(const std::string &s);

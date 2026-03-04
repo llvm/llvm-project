@@ -365,3 +365,52 @@ module attributes {transform.with_named_sequence} {
 //   CHECK-DAG:   %[[C1:.+]] = arith.constant 1 : index
 //       CHECK:   scf.for %[[IV:.+]] = %[[C0]] to %[[ARG1]] step %[[C1]]
 //       CHECK:     "some_use"(%{{[a-zA-Z0-9]+}}, %[[C0]], %[[C0]], %[[IV]])
+
+// -----
+
+// Loops with operations between them that use the outer loop's induction variable.
+// The delinearization should be inserted early enough that these operations can 
+// use the delinearized IV.
+
+func.func @opsinbetween_nested_loops(%init: f32) -> f32 {
+  %c0 = arith.constant 0 : index
+  %c1 = arith.constant 1 : index
+  %c3 = arith.constant 3 : index
+  %c5 = arith.constant 5 : index
+
+  %result = scf.for %i = %c0 to %c3 step %c1 iter_args(%outer = %init) -> (f32) {
+    %computed = arith.addi %i, %c5 : index
+    %used = arith.muli %computed, %c3 : index
+
+    %inner_result = scf.for %j = %c0 to %c3 step %c1 iter_args(%inner = %outer) -> (f32) {
+      %updated = "use"(%inner, %i, %j, %computed, %used) : (f32, index, index, index, index) -> f32
+      scf.yield %updated : f32
+    }
+    scf.yield %inner_result : f32
+  } {coalesce_nested}
+  return %result : f32
+}
+
+module attributes {transform.with_named_sequence} {
+  transform.named_sequence @__transform_main(%arg1: !transform.any_op {transform.readonly}) {
+    %0 = transform.structured.match ops{["scf.for"]} attributes {coalesce_nested} in %arg1 : (!transform.any_op) -> !transform.any_op
+    %1 = transform.cast %0 : !transform.any_op to !transform.op<"scf.for">
+    %2 = transform.loop.coalesce_nested %1 : (!transform.op<"scf.for">) -> (!transform.op<"scf.for">)
+    transform.yield
+  }
+}
+// CHECK-LABEL: func @opsinbetween_nested_loops
+//  CHECK-SAME:     %[[INIT:.+]]: f32
+//   CHECK-DAG:   %[[C3:.+]] = arith.constant 3 : index
+//   CHECK-DAG:   %[[C5:.+]] = arith.constant 5 : index
+//   CHECK-DAG:   %[[C0:.+]] = arith.constant 0 : index
+//   CHECK-DAG:   %[[C1:.+]] = arith.constant 1 : index
+//   CHECK-DAG:   %[[C9:.+]] = arith.constant 9 : index
+//       CHECK:   %[[RESULT:.+]] = scf.for %[[IV:.+]] = %[[C0]] to %[[C9]] step %[[C1]] iter_args(%[[ARG:.+]] = %[[INIT]]) -> (f32) {
+//       CHECK:     %[[DELIN:.+]]:2 = affine.delinearize_index %[[IV]] into (3, 3)
+//       CHECK:     %[[COMPUTED:.+]] = arith.addi %[[DELIN]]#0, %[[C5]]
+//       CHECK:     %[[USED:.+]] = arith.muli %[[COMPUTED]], %[[C3]]
+//       CHECK:     %[[UPDATED:.+]] = "use"(%[[ARG]], %[[DELIN]]#0, %[[DELIN]]#1, %[[COMPUTED]], %[[USED]])
+//       CHECK:     scf.yield %[[UPDATED]]
+//       CHECK:   }
+//       CHECK:   return %[[RESULT]]
