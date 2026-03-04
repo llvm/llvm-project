@@ -468,6 +468,8 @@ def : Pat<(PPCtc_return (i64 texternalsym:$dst), imm:$imm),
 def : Pat<(PPCtc_return CTRRC8:$dst, imm:$imm),
           (TCRETURNri8 CTRRC8:$dst, imm:$imm)>;
 
+def : Pat<(PPCtc_return (i64 mcsym:$dst), imm:$imm),
+          (TCRETURNdi8 mcsym:$dst, imm:$imm)>;
 
 // 64-bit CR instructions
 let Interpretation64Bit = 1, isCodeGenOnly = 1 in {
