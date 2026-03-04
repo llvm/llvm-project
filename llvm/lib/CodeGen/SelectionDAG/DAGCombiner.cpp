@@ -12292,6 +12292,14 @@ static SDValue combineMinNumMaxNumImpl(const SDLoc &DL, EVT VT, SDValue LHS,
       Opcode = Max ? ISD::FMAXNUM : ISD::FMINNUM;
     }
     unsigned MinMaxOpc = getBestMinMaxOpc(TLI, VT, Max);
+    // See isLegalToCombineMinNumMaxNum: combineMinNumMaxNumImpl is only called
+    // if Not NaN and not signed zeroes. So we can set `nnan` and `nsz` here.
+    // For original Flags, in fact we have 3 ones:
+    //   Flags of LHS and True: we are only called if LHS == True
+    //   Flags of RHS and False: we are only called if RHS == False
+    //   Flags of SELECT Instruction
+    // They may be different, and may have complex Interrelationships. Let's
+    // ignore them.
     SDNodeFlags Flags;
     Flags.setNoNaNs(true);
     Flags.setNoSignedZeros(true);

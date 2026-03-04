@@ -2,7 +2,7 @@
 ; RUN: llc -mtriple i686-unknown-linux -mattr=+sse2 < %s | FileCheck --check-prefixes=CHECK,SSE2 %s
 ; RUN: llc -mtriple i686-unknown-linux -mattr=-sse2  < %s | FileCheck --check-prefixes=CHECK,SSE %s
 
-define float @maxf(float %a, float %b) {
+define float @maxf(float %a, float %b) nounwind {
 ; SSE2-LABEL: maxf:
 ; SSE2:       # %bb.0: # %entry
 ; SSE2-NEXT:    pushl %eax
@@ -37,7 +37,7 @@ entry:
   ret float %cond
 }
 
-define float @minf(float %a, float %b) {
+define float @minf(float %a, float %b) nounwind {
 ; SSE2-LABEL: minf:
 ; SSE2:       # %bb.0: # %entry
 ; SSE2-NEXT:    pushl %eax
@@ -72,7 +72,7 @@ entry:
   ret float %cond
 }
 
-define double @maxd(double %a, double %b) {
+define double @maxd(double %a, double %b) nounwind {
 ; SSE2-LABEL: maxd:
 ; SSE2:       # %bb.0: # %entry
 ; SSE2-NEXT:    subl $12, %esp
@@ -107,7 +107,7 @@ entry:
   ret double %cond
 }
 
-define double @mind(double %a, double %b) {
+define double @mind(double %a, double %b) nounwind {
 ; SSE2-LABEL: mind:
 ; SSE2:       # %bb.0: # %entry
 ; SSE2-NEXT:    subl $12, %esp
