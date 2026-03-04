@@ -1,10 +1,10 @@
 
 // RUN: %clang_cc1 -std=hlsl2021 -finclude-default-header -x hlsl -triple \
-// RUN:   dxil-pc-shadermodel6.3-library %s \
+// RUN:   dxil-pc-shadermodel6.3-library %s -Wno-error=groupshared-initializer \
 // RUN:   -emit-llvm -disable-llvm-passes -o - | FileCheck %s
 
 // RUN: %clang_cc1 -std=hlsl2021 -finclude-default-header -x hlsl -triple \
-// RUN:   spirv-unknown-vulkan1.3-compute %s \
+// RUN:   spirv-unknown-vulkan1.3-compute %s -Wno-error=groupshared-initializer \
 // RUN:   -emit-llvm -disable-llvm-passes -o - | FileCheck %s
 
 // Make sure groupshared translated into address space 3.

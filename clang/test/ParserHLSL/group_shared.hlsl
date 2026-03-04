@@ -9,7 +9,7 @@ extern float groupshared f; // Ok, redeclaration?
 auto l = []() groupshared  {}; // #gs_lambda
 
 float groupshared [[]] i = 12;
-// expected-warning@-1{{initializer of groupshared variable will be ignored}}
+// expected-error@-1{{initializer of groupshared variable will be ignored}}
 
 float groupshared const i2 = 12;
-// expected-warning@-1{{initializer of groupshared variable will be ignored}}
+// expected-error@-1{{initializer of groupshared variable will be ignored}}
