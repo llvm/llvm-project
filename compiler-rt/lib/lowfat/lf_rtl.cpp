@@ -29,6 +29,10 @@ namespace __lowfat {
 // Flag to track initialization state (not static — accessed by lf_interceptors.cpp)
 bool lowfat_inited = false;
 
+// Set to true when -fsanitize-recover=lowfat is active. Controls whether
+// interceptor-level OOB (memset/memcpy/memmove) warns-and-continues or aborts.
+bool lowfat_recover = false;
+
 // Region table - initialized in __lf_init
 // TODO: not actually needed, to use for convenience
 RegionInfo kRegions[kNumSizeClasses];
@@ -197,6 +201,11 @@ static void PrintWarning(uptr ptr, uptr base, uptr bound, int is_write) {
 // ---------------------- Interface Functions ----------------------
 
 extern "C" {
+
+SANITIZER_INTERFACE_ATTRIBUTE
+void __lf_set_recover(int recover) {
+  __lowfat::lowfat_recover = (recover != 0);
+}
 
 SANITIZER_INTERFACE_ATTRIBUTE
 void __lf_init() {

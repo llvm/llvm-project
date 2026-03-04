@@ -30,6 +30,11 @@ SANITIZER_INTERFACE_ATTRIBUTE void __lf_init();
 // Report a fatal out-of-bounds access and terminate.
 // ptr: the offending pointer, base: base of the allocation,
 // bound: size of the allocation, is_write: 1=write 0=read
+
+// Called from a compiler-generated module constructor to communicate
+// -fsanitize-recover=lowfat to the runtime interceptors.
+SANITIZER_INTERFACE_ATTRIBUTE void __lf_set_recover(int recover);
+
 SANITIZER_INTERFACE_ATTRIBUTE void __lf_report_oob(uptr ptr, uptr base,
                                                     uptr bound, int is_write);
 

@@ -27,6 +27,7 @@
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/ModRef.h"
 #include "llvm/Transforms/Utils/BasicBlockUtils.h"
+#include "llvm/Transforms/Utils/ModuleUtils.h"
 
 using namespace llvm;
 
@@ -286,6 +287,28 @@ bool LowFatSanitizer::run() {
       continue;
     Modified |= instrumentFunction(F);
   }
+
+  // Emit a module constructor that calls __lf_set_recover(Recover) so the
+  // runtime interceptors (memset/memcpy/memmove) know whether to warn or abort.
+  // This runs before main() via .init_array / __mod_init_func.
+  if (Options.Recover) {
+    LLVMContext &Ctx = M.getContext();
+    FunctionType *SetRecoverTy =
+        FunctionType::get(Type::getVoidTy(Ctx), {Type::getInt32Ty(Ctx)}, false);
+    FunctionCallee SetRecoverFn =
+        M.getOrInsertFunction("__lf_set_recover", SetRecoverTy);
+    Function *Ctor = Function::Create(
+        FunctionType::get(Type::getVoidTy(Ctx), false),
+        GlobalValue::InternalLinkage, "__lowfat_set_recover_ctor", &M);
+    BasicBlock *BB = BasicBlock::Create(Ctx, "entry", Ctor);
+    IRBuilder<> CtorBuilder(BB);
+    CtorBuilder.CreateCall(SetRecoverFn,
+                           {ConstantInt::get(Type::getInt32Ty(Ctx), 1)});
+    CtorBuilder.CreateRetVoid();
+    appendToGlobalCtors(M, Ctor, /*Priority=*/0);
+    Modified = true;
+  }
+
   return Modified;
 }
 

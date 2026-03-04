@@ -21,6 +21,7 @@ using namespace __sanitizer;
 
 namespace __lowfat {
 extern bool lowfat_inited;
+extern bool lowfat_recover;
 } // namespace __lowfat
 
 // DlsymAlloc handles allocations that happen before our runtime is initialized
@@ -150,7 +151,10 @@ static inline void check_bounds(const void *ptr, uptr access_size, int is_write)
     uptr start = (uptr)ptr;
     uptr size = __lowfat::GetSize(start);
     uptr base = __lowfat::GetBase(start);
-    __lf_report_oob(start + access_size, base, size, is_write);
+    if (__lowfat::lowfat_recover)
+      __lf_warn_oob(start + access_size, base, size, is_write);
+    else
+      __lf_report_oob(start + access_size, base, size, is_write);
   }
 }
 
