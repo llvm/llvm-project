@@ -3739,6 +3739,8 @@ libc_support_library(
     deps = [
         ":__support_fputil_basic_operations",
         ":__support_macros_config",
+        ":__support_macros_properties_compiler",
+        ":__support_macros_properties_optimization",
         ":llvm_libc_macros_float16_macros",
     ],
 )
