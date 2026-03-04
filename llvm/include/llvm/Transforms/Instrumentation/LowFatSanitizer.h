@@ -15,6 +15,14 @@ class Module;
 
 struct LowFatSanitizerOptions {
   bool Recover = false;
+
+  enum class LowFatMode {
+    Fast, /// instrument at OptimizerLastEP
+    Safe, /// Barrier at PipelineStartEP + instrument at OptimizerLastEP
+  };
+  LowFatMode Mode = LowFatMode::Fast;
+
+  bool InternalBarrierOnly_ = false;
 };
 
 class LowFatSanitizerPass : public PassInfoMixin<LowFatSanitizerPass> {

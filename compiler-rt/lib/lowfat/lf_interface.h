@@ -47,6 +47,11 @@ SANITIZER_INTERFACE_ATTRIBUTE uptr __lf_get_base(uptr ptr);
 // Returns the allocation size, or 0 if the pointer is not within a LowFat region.
 SANITIZER_INTERFACE_ATTRIBUTE uptr __lf_get_size(uptr ptr);
 
+// Allocate/Deallocate from LowFat regions.
+SANITIZER_INTERFACE_ATTRIBUTE void *__lf_malloc(uptr size);
+SANITIZER_INTERFACE_ATTRIBUTE void __lf_free(void *ptr);
+
+
 }  // extern "C"
 
 #endif  // LF_INTERFACE_H
