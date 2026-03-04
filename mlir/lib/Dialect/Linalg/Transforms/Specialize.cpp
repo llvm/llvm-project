@@ -150,7 +150,8 @@ static LinalgOp replaceWithMatmulVariant(RewriterBase &rewriter, GenericOp op,
     attributes.push_back(castAttr);
   }
 
-  // Set the original generic's maps to preserve transposed operand semantics.
+  // Set the original generic's maps to preserve operand indexing semantics like
+  // transposition.
   auto indexingMapsAttr = rewriter.getNamedAttr(
       "indexing_maps", rewriter.getArrayAttr(indexingMaps));
   attributes.push_back(indexingMapsAttr);
@@ -240,7 +241,7 @@ static FailureOr<LinalgOp> specializeLinalgContractions(RewriterBase &rewriter,
     return rewriter.notifyMatchFailure(
         genericOp, "contains invalid cast ops for the named matmul op");
 
-  // In case of category op, wider range of representation is supported.
+  // In case of category op, wider range of variants is supported.
   if (emitCategoryOp)
     return replaceWithMatmulVariant<ContractOp>(
         rewriter, genericOp, castTy, genericOp.getIndexingMapsArray());

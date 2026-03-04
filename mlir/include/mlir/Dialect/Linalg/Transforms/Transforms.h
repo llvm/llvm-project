@@ -1954,7 +1954,7 @@ void populateLinalgNamedOpsGeneralizationPatterns(RewritePatternSet &patterns);
 /// and complex computations for which equivalent linalg named op may not exist
 /// e.g. linalg.generic that takes a tensor and computes a polynomial such as:
 ///     p(x) = an*x^n + ... + a1x + a0
-/// There is no equivalent ops to convert to. Many such cases exist.
+/// There is no equivalent named op to convert to. Many such cases exist.
 void populateLinalgGenericOpsSpecializationPatterns(
     RewritePatternSet &patterns, const SpecializationOptions &options = {});
 
