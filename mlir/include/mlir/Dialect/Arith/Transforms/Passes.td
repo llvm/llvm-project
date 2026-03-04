@@ -117,19 +117,4 @@ def ArithEmulateWideInt : Pass<"arith-emulate-wide-int"> {
   let dependentDialects = ["vector::VectorDialect"];
 }
 
-def ArithInferExactFromDLTI : Pass<"arith-infer-exact-from-dlti"> {
-  let summary = "Infer exact flags on index casts using DLTI index bitwidth";
-  let description = [{
-    Uses the DLTI data layout to determine the target index bitwidth. For
-    `arith.index_cast` and `arith.index_castui` operations whose source type
-    is narrower than the destination type, the `exact` flag is added since the
-    cast is provably lossless (widening). This covers both `iN -> index`
-    (when `N <= index_bitwidth`) and `index -> iN` (when
-    `index_bitwidth <= N`).
-
-    This enables downstream canonicalization patterns such as
-    `IndexCastOfIndexCast` to fire in more cases.
-  }];
-}
-
 #endif // MLIR_DIALECT_ARITH_TRANSFORMS_PASSES

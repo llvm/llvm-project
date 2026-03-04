@@ -82,11 +82,6 @@ void populateUnsignedWhenEquivalentPatterns(RewritePatternSet &patterns,
 /// Create a pass which do optimizations based on integer range analysis.
 std::unique_ptr<Pass> createIntRangeOptimizationsPass();
 
-/// Add `exact` flag on index casts whose source type is narrower than the
-/// target type bitwidth.
-void populateInferExactFromDLTIPatterns(RewritePatternSet &patterns,
-                                        unsigned indexBitwidth);
-
 /// Add patterns for int range based narrowing.
 void populateIntRangeNarrowingPatterns(RewritePatternSet &patterns,
                                        DataFlowSolver &solver,
