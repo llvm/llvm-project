@@ -1,4 +1,4 @@
-// RUN: mlir-opt %s --mlir-disable-threading -test-block-is-in-loop 2>&1 | FileCheck %s
+// RUN: mlir-opt %s -test-block-is-in-loop 2>&1 | FileCheck %s
 
 module {
   // Test function with only one bb
