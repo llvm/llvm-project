@@ -447,7 +447,7 @@ static FailureOr<LinalgOp> specializeLinalgConvolutions(RewriterBase &rewriter,
 //===----------------------------------------------------------------------===//
 FailureOr<LinalgOp>
 mlir::linalg::specializeGenericOp(RewriterBase &rewriter, GenericOp genericOp,
-                                  const SpecializationOptions options) {
+                                  const SpecializationOptions &options) {
   // Contraction - e.g. matmul
   if (isaContractionOpInterface(genericOp)) {
     return specializeLinalgContractions(rewriter, genericOp,

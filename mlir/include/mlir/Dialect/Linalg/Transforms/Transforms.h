@@ -931,7 +931,7 @@ struct SpecializationOptions {
 /// Replace the given GenericOp with a namedOp or categoryOp.
 FailureOr<LinalgOp>
 specializeGenericOp(RewriterBase &rewriter, GenericOp genericOp,
-                    const SpecializationOptions options = {});
+                    const SpecializationOptions &options = {});
 
 /// Create a new buffer using the `allocationFn` provided. The size of this
 /// buffer is either the original subview size when 'useOriginalSubviewSize' is
