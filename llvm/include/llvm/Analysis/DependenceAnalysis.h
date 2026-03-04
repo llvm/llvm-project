@@ -472,12 +472,6 @@ private:
   /// in LoopNest.
   bool isLoopInvariant(const SCEV *Expression, const Loop *LoopNest) const;
 
-  /// Makes sure all subscript pairs share the same integer type by
-  /// sign-extending as necessary.
-  /// Sign-extending a subscript is safe because getelementptr assumes the
-  /// array subscripts are signed.
-  void unifySubscriptType(ArrayRef<Subscript *> Pairs);
-
   /// collectCommonLoops - Finds the set of loops from the LoopNest that
   /// have a level <= CommonLevels and are referred to by the SCEV Expression.
   void collectCommonLoops(const SCEV *Expression, const Loop *LoopNest,
@@ -549,7 +543,7 @@ private:
   bool testMIV(const SCEV *Src, const SCEV *Dst, const SmallBitVector &Loops,
                FullDependence &Result) const;
 
-  /// strongSIVtest - Tests the strong SIV subscript pair (Src and Dst)
+  /// strongSIVtest - Tests the strong SIV subscript pair (\p Src and \p Dst)
   /// for dependence.
   /// Things of the form [c1 + a*i] and [c2 + a*i],
   /// where i is an induction variable, c1 and c2 are loop invariant,
@@ -557,10 +551,9 @@ private:
   /// Returns true if any possible dependence is disproved.
   /// If there might be a dependence, returns false.
   /// Sets appropriate direction and distance.
-  bool strongSIVtest(const SCEV *Coeff, const SCEV *SrcConst,
-                     const SCEV *DstConst, const Loop *CurrentSrcLoop,
-                     const Loop *CurrentDstLoop, unsigned Level,
-                     FullDependence &Result, bool UnderRuntimeAssumptions);
+  bool strongSIVtest(const SCEVAddRecExpr *Src, const SCEVAddRecExpr *Dst,
+                     unsigned Level, FullDependence &Result,
+                     bool UnderRuntimeAssumptions);
 
   /// weakCrossingSIVtest - Tests the weak-crossing SIV subscript pair
   /// (Src and Dst) for dependence.

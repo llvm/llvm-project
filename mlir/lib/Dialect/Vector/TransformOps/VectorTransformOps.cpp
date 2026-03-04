@@ -18,7 +18,7 @@
 #include "mlir/Dialect/Vector/Transforms/LoweringPatterns.h"
 #include "mlir/Dialect/Vector/Transforms/VectorRewritePatterns.h"
 #include "mlir/Dialect/Vector/Transforms/VectorTransforms.h"
-#include "mlir/Dialect/X86Vector/Transforms.h"
+#include "mlir/Dialect/X86/Transforms.h"
 
 using namespace mlir;
 using namespace mlir::vector;
@@ -126,18 +126,9 @@ void transform::ApplyMaterializeMasksPatternsOp::populatePatterns(
                                             /*force32BitVectorIndices=*/false);
 }
 
-void transform::ApplyLowerMultiReductionPatternsOp::populatePatterns(
-    RewritePatternSet &patterns) {
-  vector::VectorTransformsOptions vectorTransformOptions;
-  vectorTransformOptions.setVectorMultiReductionLowering(getLoweringStrategy());
-  vector::populateVectorMultiReductionReorderAndExpandPatterns(
-      patterns, vectorTransformOptions.vectorMultiReductionLowering);
-  vector::populateVectorMultiReductionFlatteningPatterns(
-      patterns, vectorTransformOptions.vectorMultiReductionLowering);
-  vector::populateVectorMultiReductionUnrollingPatterns(
-      patterns, vectorTransformOptions.vectorMultiReductionLowering);
-}
-
+//===----------------------------------------------------------------------===//
+// Multi-reduction patterns
+//===----------------------------------------------------------------------===//
 void transform::ApplyReorderAndExpandMultiReductionPatternsOp::populatePatterns(
     RewritePatternSet &patterns) {
   vector::VectorTransformsOptions vectorTransformOptions;
@@ -151,6 +142,14 @@ void transform::ApplyMultiReductionFlatteningPatternsOp::populatePatterns(
   vector::VectorTransformsOptions vectorTransformOptions;
   vectorTransformOptions.setVectorMultiReductionLowering(getLoweringStrategy());
   vector::populateVectorMultiReductionFlatteningPatterns(
+      patterns, vectorTransformOptions.vectorMultiReductionLowering);
+}
+
+void transform::ApplyMultiReductionUnrollingPatternsOp::populatePatterns(
+    RewritePatternSet &patterns) {
+  vector::VectorTransformsOptions vectorTransformOptions;
+  vectorTransformOptions.setVectorMultiReductionLowering(getLoweringStrategy());
+  vector::populateVectorMultiReductionUnrollingPatterns(
       patterns, vectorTransformOptions.vectorMultiReductionLowering);
 }
 
@@ -195,12 +194,10 @@ void transform::ApplyLowerTransposePatternsOp::populatePatterns(
   vector::populateVectorTransposeLoweringPatterns(patterns,
                                                   getLoweringStrategy());
   if (getAvx2LoweringStrategy()) {
-    auto avx2LoweringOptions =
-        x86vector::avx2::LoweringOptions().setTransposeOptions(
-            x86vector::avx2::TransposeLoweringOptions()
-                .lower4x8xf32(true)
-                .lower8x8xf32(true));
-    x86vector::avx2::populateSpecializedTransposeLoweringPatterns(
+    auto avx2LoweringOptions = x86::avx2::LoweringOptions().setTransposeOptions(
+        x86::avx2::TransposeLoweringOptions().lower4x8xf32(true).lower8x8xf32(
+            true));
+    x86::avx2::populateSpecializedTransposeLoweringPatterns(
         patterns, avx2LoweringOptions, /*benefit=*/10);
   }
 }

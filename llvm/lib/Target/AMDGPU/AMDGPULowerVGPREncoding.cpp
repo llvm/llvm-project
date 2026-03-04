@@ -97,6 +97,18 @@ class AMDGPULowerVGPREncoding {
         V |= Op.MSBits.value_or(0) << (I * 2);
       return V;
     }
+
+    // Check if this mode is compatible with required \p NewMode without
+    // modification.
+    bool isCompatible(const ModeTy NewMode) const {
+      for (unsigned I : seq(OpNum)) {
+        if (!NewMode.Ops[I].MSBits.has_value())
+          continue;
+        if (Ops[I].MSBits.value_or(0) != NewMode.Ops[I].MSBits.value_or(0))
+          return false;
+      }
+      return true;
+    }
   };
 
 public:
@@ -276,6 +288,23 @@ bool AMDGPULowerVGPREncoding::runOnMachineInstr(MachineInstr &MI) {
   if (Ops.first) {
     ModeTy NewMode;
     computeMode(NewMode, MI, Ops.first, Ops.second);
+    if (!CurrentMode.isCompatible(NewMode) && MI.isCommutable() &&
+        TII->commuteInstruction(MI)) {
+      ModeTy NewModeCommuted;
+      computeMode(NewModeCommuted, MI, Ops.first, Ops.second);
+      if (CurrentMode.isCompatible(NewModeCommuted)) {
+        // Update CurrentMode with mode bits the commuted instruction relies on.
+        // This prevents later instructions from piggybacking and corrupting
+        // those bits (e.g., a nullopt src treated as 0 could be overwritten).
+        bool Unused = false;
+        CurrentMode.update(NewModeCommuted, Unused);
+        // MI was modified by the commute above.
+        return true;
+      }
+      // Commute back.
+      if (!TII->commuteInstruction(MI))
+        llvm_unreachable("Failed to restore commuted instruction.");
+    }
     return setMode(NewMode, MI.getIterator());
   }
   assert(!TII->hasVGPRUses(MI) || MI.isMetaInstruction() || MI.isPseudo());
