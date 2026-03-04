@@ -30,6 +30,7 @@
 #include <__type_traits/enable_if.h>
 #include <__type_traits/invoke.h>
 #include <__type_traits/is_const.h>
+#include <__type_traits/is_constant_evaluated.h>
 #include <__type_traits/is_constructible.h>
 #include <__type_traits/is_nothrow_assignable.h>
 #include <__type_traits/is_nothrow_constructible.h>
@@ -1458,23 +1459,8 @@ private:
   }
   _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX26 void __move_assign_alloc(__tree&, false_type) _NOEXCEPT {}
 
-  template <class _From, class _ValueT = _Tp>
-  _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX26 void
-  __assign_value_tag_dispatch(true_type, __get_node_value_type_t<value_type>& __lhs, _From&& __rhs) {
-    __node_allocator& __na = __node_alloc();
-    __node_traits::destroy(__na, std::addressof(__lhs));
-    __node_traits::construct(__na, std::addressof(__lhs), __rhs.first, std::move(__rhs.second));
-  }
-
-  template <class _From, class _ValueT = _Tp>
-  _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX26 void
-  __assign_value_tag_dispatch(false_type, __get_node_value_type_t<value_type>&, _From&&) {
-    // This method body should never be run. It only exists to allow for compilation. See note in __assign_value for
-    // more information.
-  }
-
   template <class _From, class _ValueT = _Tp, __enable_if_t<__is_tree_value_type_v<_ValueT>, int> = 0>
-  _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX26 void
+  _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX26 static void
   __assign_value(__get_node_value_type_t<value_type>& __lhs, _From&& __rhs) {
     using __key_type = __remove_const_t<typename value_type::first_type>;
 
@@ -1487,12 +1473,12 @@ private:
       // so we must copy it to not perform undefined behavior which
       // is disallowed during constant evaluation.
 
-      __assign_value_tag_dispatch(
-          std::integral_constant<bool, std::is_copy_constructible_v<decltype(__rhs.first)>>(),
-          std::forward<decltype(__lhs)>(__lhs),
-          std::forward<decltype(__rhs)>(__rhs));
-
-    } else
+      if consteval {
+        std::destroy_at(std::addressof(__lhs));
+        std::construct_at(std::addressof(__lhs), __rhs.first, std::forward<_From>(__rhs).second);
+        return;
+      }
+    }
 #endif
     {
       // This is technically UB, since the object was constructed as `const`.
@@ -1666,8 +1652,8 @@ private:
     return __assign_from_tree(
         __dest,
         __src,
-        [this](value_type& __lhs, const value_type& __rhs) { this->__assign_value(__lhs, __rhs); },
-        [this](__node_pointer __nd) { return __copy_construct_tree(__nd); });
+        [](value_type& __lhs, value_type& __rhs) { __assign_value(__lhs, std::move(__rhs)); },
+        [this](__node_pointer __nd) { return __move_construct_tree(__nd); });
   }
 
   _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX26 __node_pointer
@@ -1675,7 +1661,7 @@ private:
     return __assign_from_tree(
         __dest,
         __src,
-        [this](value_type& __lhs, value_type& __rhs) { this->__assign_value(__lhs, std::move(__rhs)); },
+        [](value_type& __lhs, value_type& __rhs) { __assign_value(__lhs, std::move(__rhs)); },
         [this](__node_pointer __nd) { return __move_construct_tree(__nd); });
   }
 
