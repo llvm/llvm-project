@@ -7,8 +7,8 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/Debuginfod/Debuginfod.h"
-#include "llvm/Support/HTTP/HTTPClient.h"
 #include "llvm/Support/FileSystem.h"
+#include "llvm/Support/HTTP/HTTPClient.h"
 #include "llvm/Support/Path.h"
 #include "llvm/Testing/Support/Error.h"
 #include "gtest/gtest.h"
