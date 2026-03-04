@@ -2453,6 +2453,73 @@ llvm.func @omp_atomic_capture_misc(
 
 // -----
 
+// CHECK-LABEL: @omp_atomic_compare
+// CHECK-SAME: (ptr %[[X:.*]], i32 %[[E:.*]], i32 %[[D:.*]], ptr %[[XF:.*]], float %[[EF:.*]], float %[[DF:.*]])
+llvm.func @omp_atomic_compare(
+  %x : !llvm.ptr, %e : i32, %d : i32,
+  %xf : !llvm.ptr, %ef : f32, %df : f32) {
+
+  // Integer equality  →  cmpxchg
+  // CHECK: cmpxchg ptr %[[X]], i32 %[[E]], i32 %[[D]] monotonic monotonic
+  omp.atomic.compare %x : !llvm.ptr {
+  ^bb0(%xval : i32):
+    %cmp0 = llvm.icmp "eq" %xval, %e : i32
+    %sel0 = llvm.select %cmp0, %d, %xval : i1, i32
+    omp.yield(%sel0 : i32)
+  }
+
+  // Float equality  →  bitcast + cmpxchg
+  // CHECK: %[[EBC:.*]] = bitcast float %[[EF]] to i32
+  // CHECK: %[[DBC:.*]] = bitcast float %[[DF]] to i32
+  // CHECK: cmpxchg ptr %[[XF]], i32 %[[EBC]], i32 %[[DBC]] monotonic monotonic
+  omp.atomic.compare %xf : !llvm.ptr {
+  ^bb0(%xval : f32):
+    %cmp1 = llvm.fcmp "oeq" %xval, %ef : f32
+    %sel1 = llvm.select %cmp1, %df, %xval : i1, f32
+    omp.yield(%sel1 : f32)
+  }
+
+  // Integer x < e  →  atomicrmw umax (reversed, unsigned)
+  // CHECK: atomicrmw umax ptr %[[X]], i32 %[[E]] monotonic
+  omp.atomic.compare %x : !llvm.ptr {
+  ^bb0(%xval : i32):
+    %cmp2 = llvm.icmp "slt" %xval, %e : i32
+    %sel2 = llvm.select %cmp2, %e, %xval : i1, i32
+    omp.yield(%sel2 : i32)
+  }
+
+  // Integer x > e  →  atomicrmw umin (reversed, unsigned)
+  // CHECK: atomicrmw umin ptr %[[X]], i32 %[[E]] monotonic
+  omp.atomic.compare %x : !llvm.ptr {
+  ^bb0(%xval : i32):
+    %cmp3 = llvm.icmp "sgt" %xval, %e : i32
+    %sel3 = llvm.select %cmp3, %e, %xval : i1, i32
+    omp.yield(%sel3 : i32)
+  }
+
+  // Float x < e  →  atomicrmw fmax (reversed)
+  // CHECK: atomicrmw fmax ptr %[[XF]], float %[[EF]] monotonic, align 4
+  omp.atomic.compare %xf : !llvm.ptr {
+  ^bb0(%xval : f32):
+    %cmp4 = llvm.fcmp "olt" %xval, %ef : f32
+    %sel4 = llvm.select %cmp4, %ef, %xval : i1, f32
+    omp.yield(%sel4 : f32)
+  }
+
+  // Float x > e  →  atomicrmw fmin (reversed)
+  // CHECK: atomicrmw fmin ptr %[[XF]], float %[[EF]] monotonic, align 4
+  omp.atomic.compare %xf : !llvm.ptr {
+  ^bb0(%xval : f32):
+    %cmp5 = llvm.fcmp "ogt" %xval, %ef : f32
+    %sel5 = llvm.select %cmp5, %ef, %xval : i1, f32
+    omp.yield(%sel5 : f32)
+  }
+
+  llvm.return
+}
+
+// -----
+
 // CHECK-LABEL: @omp_sections_empty
 llvm.func @omp_sections_empty() -> () {
   omp.sections {

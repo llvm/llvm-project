@@ -4043,6 +4043,30 @@ LogicalResult AtomicCaptureOp::verifyRegions() {
 }
 
 //===----------------------------------------------------------------------===//
+// AtomicCompareOp
+//===----------------------------------------------------------------------===//
+
+LogicalResult AtomicCompareOp::verify() {
+  return verifySynchronizationHint(*this, getHint());
+}
+
+LogicalResult AtomicCompareOp::verifyRegions() {
+  Region &region = getRegion();
+  if (region.empty())
+    return emitOpError("region for atomic compare must not be empty");
+
+  Block &block = region.front();
+  if (block.empty())
+    return emitOpError("region body for atomic compare must not be empty");
+
+  Operation *terminator = block.getTerminator();
+  if (!terminator || !isa<YieldOp>(terminator))
+    return emitOpError("region must be terminated with omp.yield");
+
+  return success();
+}
+
+//===----------------------------------------------------------------------===//
 // CancelOp
 //===----------------------------------------------------------------------===//
 
