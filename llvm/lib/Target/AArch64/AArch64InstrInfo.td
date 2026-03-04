@@ -1028,12 +1028,16 @@ def AArch64sqrshl:  SDNode<"AArch64ISD::SQRSHL",  SDTFPBinOp>;
 def AArch64sqshl:   SDNode<"AArch64ISD::SQSHL",   SDTFPBinOp>;
 def AArch64sqsub:   SDNode<"AArch64ISD::SQSUB",   SDTFPBinOp>;
 def AArch64uqadd:   SDNode<"AArch64ISD::UQADD",   SDTFPBinOp>;
+def AArch64suqadd:  SDNode<"AArch64ISD::SUQADD",  SDTFPBinOp>;
+def AArch64usqadd:  SDNode<"AArch64ISD::USQADD",  SDTFPBinOp>;
 def AArch64uqrshl:  SDNode<"AArch64ISD::UQRSHL",  SDTFPBinOp>;
 def AArch64uqshl:   SDNode<"AArch64ISD::UQSHL",   SDTFPBinOp>;
 def AArch64uqsub:   SDNode<"AArch64ISD::UQSUB",   SDTFPBinOp>;
 def AArch64sqdmull: SDNode<"AArch64ISD::SQDMULL",
                            SDTypeProfile<1, 2, [ SDTCisSameAs<1, 2>,
                            SDTCisFP<0>, SDTCisFP<1>]>>;
+def AArch64sqabs:   SDNode<"AArch64ISD::SQABS",   SDTFPUnaryOp>;
+def AArch64sqneg:   SDNode<"AArch64ISD::SQNEG",   SDTFPUnaryOp>;
 def AArch64sqshrun: SDNode<"AArch64ISD::SQSHRUN", SDTFPTruncRoundOp>;
 def AArch64sqrshrun: SDNode<"AArch64ISD::SQRSHRUN", SDTFPTruncRoundOp>;
 def AArch64sqshrn: SDNode<"AArch64ISD::SQSHRN", SDTFPTruncRoundOp>;
@@ -6645,15 +6649,15 @@ defm FRSQRTE : SIMDFPTwoScalar<  1, 1, 0b11101, "frsqrte">;
 defm NEG    : SIMDTwoScalarD<    1, 0b01011, "neg",
                                  UnOpFrag<(sub immAllZerosV, node:$LHS)> >;
 defm SCVTF  : SIMDFPTwoScalarCVT<   0, 0, 0b11101, "scvtf", AArch64sitof>;
-defm SQABS  : SIMDTwoScalarBHSD< 0, 0b00111, "sqabs", int_aarch64_neon_sqabs>;
-defm SQNEG  : SIMDTwoScalarBHSD< 1, 0b00111, "sqneg", int_aarch64_neon_sqneg>;
+defm SQABS  : SIMDTwoScalarBHSD< 0, 0b00111, "sqabs", AArch64sqabs, int_aarch64_neon_sqabs>;
+defm SQNEG  : SIMDTwoScalarBHSD< 1, 0b00111, "sqneg", AArch64sqneg, int_aarch64_neon_sqneg>;
 defm SQXTN  : SIMDTwoScalarMixedBHS< 0, 0b10100, "sqxtn", int_aarch64_neon_scalar_sqxtn>;
 defm SQXTUN : SIMDTwoScalarMixedBHS< 1, 0b10010, "sqxtun", int_aarch64_neon_scalar_sqxtun>;
-defm SUQADD : SIMDTwoScalarBHSDTied< 0, 0b00011, "suqadd",
+defm SUQADD : SIMDTwoScalarBHSDTied< 0, 0b00011, "suqadd", AArch64suqadd,
                                      int_aarch64_neon_suqadd>;
 defm UCVTF  : SIMDFPTwoScalarCVT<   1, 0, 0b11101, "ucvtf", AArch64uitof>;
 defm UQXTN  : SIMDTwoScalarMixedBHS<1, 0b10100, "uqxtn", int_aarch64_neon_scalar_uqxtn>;
-defm USQADD : SIMDTwoScalarBHSDTied< 1, 0b00011, "usqadd",
+defm USQADD : SIMDTwoScalarBHSDTied< 1, 0b00011, "usqadd", AArch64usqadd,
                                     int_aarch64_neon_usqadd>;
 
 // Floating-point conversion patterns.
