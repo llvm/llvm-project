@@ -381,6 +381,9 @@ void XeGPUBlockingPass::runOnOperation() {
   populateXeGPUUnrollPatterns(patterns, options);
   vector::populateVectorUnrollPatterns(patterns, vectorOptions);
 
+  // Note: This does op folding as well and clean up
+  // intermediate insert/extract strided slice ops,
+  // generated for pack/unpack emulation will get removed in this step.
   (void)applyPatternsGreedily(op, std::move(patterns));
 
   op->walk([](Operation *op) {

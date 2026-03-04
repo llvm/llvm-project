@@ -78,7 +78,7 @@ void buildGPUPassPipeline(OpPassManager &pm,
     pm.addNestedPass<gpu::GPUModuleOp>(
         xegpu::createXeGPUPropagateLayout(instDataOptions));
     pm.addNestedPass<gpu::GPUModuleOp>(xegpu::createXeGPUBlocking());
-    pm.addNestedPass<gpu::GPUModuleOp>(createCanonicalizerPass());
+    // pm.addNestedPass<gpu::GPUModuleOp>(createCanonicalizerPass());
     pm.addNestedPass<gpu::GPUModuleOp>(createCSEPass());
   }
   if (options.xegpuOpLevel == "subgroup" ||
@@ -86,7 +86,7 @@ void buildGPUPassPipeline(OpPassManager &pm,
     pm.addNestedPass<gpu::GPUModuleOp>(
         xegpu::createXeGPUPropagateLayout(laneLayoutOptions));
     pm.addNestedPass<gpu::GPUModuleOp>(xegpu::createXeGPUPeepHoleOptimizer());
-    pm.addNestedPass<gpu::GPUModuleOp>(createCanonicalizerPass());
+    // pm.addNestedPass<gpu::GPUModuleOp>(createCanonicalizerPass());
     pm.addNestedPass<gpu::GPUModuleOp>(createCSEPass());
     pm.addNestedPass<gpu::GPUModuleOp>(
         xegpu::createXeGPUPropagateLayout(laneLayoutOptions));
