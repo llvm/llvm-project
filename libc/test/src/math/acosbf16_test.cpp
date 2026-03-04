@@ -16,11 +16,11 @@ using LlvmLibcAcosBf16Test = LIBC_NAMESPACE::testing::FPTest<bfloat16>;
 
 namespace mpfr = LIBC_NAMESPACE::testing::mpfr;
 
-// Normal range: [+0, +int]
+// range: [+0, +inf]
 static constexpr uint16_t POS_START = 0x0000U;
 static constexpr uint16_t POS_STOP = 0x7f80U;
 
-// Normal range: [-0, -int]
+// range: [-0, -inf]
 static constexpr uint16_t NEG_START = 0x8000U;
 static constexpr uint16_t NEG_STOP = 0xff80U;
 
