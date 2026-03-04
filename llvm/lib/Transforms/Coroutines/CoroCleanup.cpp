@@ -185,6 +185,10 @@ void Lowerer::lowerCoroNoop(IntrinsicInst *II) {
         FnTy, GlobalValue::LinkageTypes::InternalLinkage,
         M.getDataLayout().getProgramAddressSpace(), "__NoopCoro_ResumeDestroy",
         &M);
+
+    // Because this function is a noop, we can set its entry count to 1.
+    NoopFn->setEntryCount(0);
+
     buildDebugInfoForNoopResumeDestroyFunc(NoopFn);
     auto *Entry = BasicBlock::Create(C, "entry", NoopFn);
     ReturnInst::Create(C, Entry);
