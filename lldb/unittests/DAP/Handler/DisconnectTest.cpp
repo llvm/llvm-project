@@ -38,10 +38,6 @@ TEST_F(DisconnectRequestHandlerTest, DisconnectTriggersTerminated) {
 #ifndef __linux__
 TEST_F(DisconnectRequestHandlerTest, DisconnectTriggersTerminateCommands) {
   CreateDebugger();
-
-  if (!GetDebuggerSupportsTarget("X86"))
-    GTEST_SKIP() << "Unsupported platform";
-
   LoadCore();
 
   DisconnectRequestHandler handler(*dap);

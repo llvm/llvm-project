@@ -72,25 +72,10 @@ void DAPTestBase::SetUpTestSuite() {
 }
 void DAPTestBase::TearDownTestSuite() { SBDebugger::Terminate(); }
 
-bool DAPTestBase::GetDebuggerSupportsTarget(StringRef platform) {
-  EXPECT_TRUE(dap->debugger);
-
-  lldb::SBStructuredData data = dap->debugger.GetBuildConfiguration()
-                                    .GetValueForKey("targets")
-                                    .GetValueForKey("value");
-  for (size_t i = 0; i < data.GetSize(); i++) {
-    char buf[100] = {0};
-    size_t size = data.GetItemAtIndex(i).GetStringValue(buf, sizeof(buf));
-    if (StringRef(buf, size) == platform)
-      return true;
-  }
-
-  return false;
-}
-
 void DAPTestBase::CreateDebugger() {
   dap->debugger = lldb::SBDebugger::Create();
   ASSERT_TRUE(dap->debugger);
+  SKIP_UNLESS_PLATFORM_SUPPORTED(dap->debugger, "X86");
   dap->target = dap->debugger.GetDummyTarget();
 
   Expected<lldb::FileUP> dev_null = FileSystem::Instance().Open(

@@ -59,7 +59,10 @@ protected:
   std::optional<llvm::sys::fs::TempFile> core;
   std::optional<llvm::sys::fs::TempFile> binary;
 
-  void CreateDebugger() { debugger = lldb::SBDebugger::Create(); }
+  void CreateDebugger() {
+    debugger = lldb::SBDebugger::Create();
+    SKIP_UNLESS_PLATFORM_SUPPORTED(debugger, "X86");
+  }
 
   void LoadCore() {
     ASSERT_TRUE(debugger);
