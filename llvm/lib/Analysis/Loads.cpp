@@ -827,13 +827,16 @@ static bool isPointerUseReplacable(const Use &U, bool HasNonAddressBits) {
   return Limit != 0;
 }
 
-// Returns true if `To` is a null pointer, constant dereferenceable pointer or
-// both pointers have the same underlying objects.
 static bool isPointerAlwaysReplaceable(const Value *From, const Value *To,
                                        const DataLayout &DL) {
   // This is not strictly correct, but we do it for now to retain important
   // optimizations.
   if (isa<ConstantPointerNull>(To))
+    return true;
+  // Conversely, replacing null in the default address space with destination
+  // pointer is always valid.
+  if (isa<ConstantPointerNull>(From) &&
+      From->getType()->getPointerAddressSpace() == 0)
     return true;
   if (isa<Constant>(To) && To->getType()->isPointerTy() &&
       isDereferenceablePointer(To, Type::getInt8Ty(To->getContext()), DL))

@@ -55,6 +55,7 @@ static_library("LLVMNVPTXCodeGen") {
     "NVPTXLowerArgs.cpp",
     "NVPTXLowerUnreachable.cpp",
     "NVPTXMCExpr.cpp",
+    "NVPTXMarkKernelPtrsGlobal.cpp",
     "NVPTXPeephole.cpp",
     "NVPTXPrologEpilogPass.cpp",
     "NVPTXProxyRegErasure.cpp",

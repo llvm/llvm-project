@@ -397,6 +397,7 @@ private:
   SDValue PromoteIntOp_TRUNCATE(SDNode *N);
   SDValue PromoteIntOp_UINT_TO_FP(SDNode *N);
   SDValue PromoteIntOp_STRICT_UINT_TO_FP(SDNode *N);
+  SDValue PromoteIntOp_CONVERT_FROM_ARBITRARY_FP(SDNode *N);
   SDValue PromoteIntOp_ZERO_EXTEND(SDNode *N);
   SDValue PromoteIntOp_VP_ZERO_EXTEND(SDNode *N);
   SDValue PromoteIntOp_MSTORE(MaskedStoreSDNode *N, unsigned OpNo);
@@ -787,6 +788,7 @@ private:
   SDValue SoftPromoteHalfRes_FNEG(SDNode *N);
   SDValue SoftPromoteHalfRes_AssertNoFPClass(SDNode *N);
   SDValue SoftPromoteHalfRes_XINT_TO_FP(SDNode *N);
+  SDValue SoftPromoteHalfRes_CONVERT_FROM_ARBITRARY_FP(SDNode *N);
   SDValue SoftPromoteHalfRes_UNDEF(SDNode *N);
   SDValue SoftPromoteHalfRes_VECREDUCE(SDNode *N);
   SDValue SoftPromoteHalfRes_VECREDUCE_SEQ(SDNode *N);
@@ -838,6 +840,7 @@ private:
   SDValue ScalarizeVecRes_BUILD_VECTOR(SDNode *N);
   SDValue ScalarizeVecRes_EXTRACT_SUBVECTOR(SDNode *N);
   SDValue ScalarizeVecRes_FP_ROUND(SDNode *N);
+  SDValue ScalarizeVecRes_CONVERT_FROM_ARBITRARY_FP(SDNode *N);
   SDValue ScalarizeVecRes_UnaryOpWithExtraInput(SDNode *N);
   SDValue ScalarizeVecRes_INSERT_VECTOR_ELT(SDNode *N);
   SDValue ScalarizeVecRes_LOAD(LoadSDNode *N);
