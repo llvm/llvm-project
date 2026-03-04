@@ -537,7 +537,7 @@ static mlir::Value genInlinedStructureCtorLitImpl(
     // derived type spec. Falling back to ctor.derivedTypeSpec() avoids the
     // crash, but may not always represent the correct parent type.
     if (!componentParentType)
-      componentParentType = &ctor.derivedTypeSpec();
+      TODO(loc, "parameterized derived types");
     assert(componentParentType && "failed to retrieve component parent type");
     if (!res) {
       mlir::Type parentType = converter.genType(*componentParentType);
