@@ -3352,6 +3352,14 @@ CINDEX_LINKAGE unsigned clang_Cursor_isMacroBuiltin(CXCursor C);
 CINDEX_LINKAGE unsigned clang_Cursor_isFunctionInlined(CXCursor C);
 
 /**
+ * Determine whether a cursor refers to a constexpr declaration.
+ *
+ * If the cursor does not refer to a constexpr variable or function
+ * declaration, 0 is returned.
+ */
+CINDEX_LINKAGE unsigned clang_Cursor_isConstexpr(CXCursor C);
+
+/**
  * Determine whether a CXType has the "volatile" qualifier set,
  * without looking through typedefs that may have added "volatile" at
  * a different level.
@@ -4882,6 +4890,26 @@ CINDEX_LINKAGE unsigned clang_EnumDecl_isScoped(CXCursor C);
  * declared 'const'.
  */
 CINDEX_LINKAGE unsigned clang_CXXMethod_isConst(CXCursor C);
+
+/**
+ * Set of qualifiers (const, volatile, __restrict) of a C++ member function
+ * or member function template.
+ */
+typedef struct {
+  unsigned Const : 1;
+  unsigned Volatile : 1;
+  unsigned Restrict : 1;
+  unsigned /*Reserved for other qualifiers*/ : 29;
+} CXQualifiers;
+
+/**
+ * Retrieve the set of qualifiers for a C++ member function or member
+ * function template.
+ *
+ * If the cursor does not refer to a C++ member function or member function
+ * template, a zero-initialized CXQualifiers is returned.
+ */
+CINDEX_LINKAGE CXQualifiers clang_CXXMethod_getQualifiers(CXCursor C);
 
 /**
  * Given a cursor that represents a template, determine
