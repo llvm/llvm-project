@@ -1154,7 +1154,7 @@ xegpu::DistributeLayoutAttr xegpu::getConsumerLayoutAt(OpOperand &operand) {
   }
 
   // For vector::TransposeOp, infer source layout from result layout using
-  // permutation..
+  // permutation.
   if (auto transpose = dyn_cast<vector::TransposeOp>(op)) {
     if (!resLayout)
       return xegpu::DistributeLayoutAttr();
