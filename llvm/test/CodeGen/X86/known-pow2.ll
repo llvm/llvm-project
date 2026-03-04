@@ -46,6 +46,53 @@ define <4 x i32> @pow2_non_splat_vec_fail0(<4 x i32> %x) {
   ret <4 x i32> %r
 }
 
+define i32 @pow2_extractelt_vec(<4 x i32> %a0, ptr %p1, i32 %a2) {
+; CHECK-LABEL: pow2_extractelt_vec:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    pxor %xmm1, %xmm1
+; CHECK-NEXT:    pcmpgtd %xmm0, %xmm1
+; CHECK-NEXT:    movdqa %xmm1, %xmm0
+; CHECK-NEXT:    pandn {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
+; CHECK-NEXT:    pand {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm1
+; CHECK-NEXT:    por %xmm0, %xmm1
+; CHECK-NEXT:    movdqa %xmm1, (%rdi)
+; CHECK-NEXT:    movd %xmm1, %eax
+; CHECK-NEXT:    decl %eax
+; CHECK-NEXT:    andl %esi, %eax
+; CHECK-NEXT:    retq
+  %cmp = icmp sgt <4 x i32> zeroinitializer, %a0
+  %sel = select <4 x i1> %cmp, <4 x i32> <i32 4, i32 2, i32 1, i32 0>, <4 x i32> <i32 8, i32 4, i32 2, i32 -1>
+  store <4 x i32> %sel, ptr %p1
+  %elt = extractelement <4 x i32> %sel, i32 0
+  %res = urem i32 %a2, %elt
+  ret i32 %res
+}
+
+define i32 @pow2_extractelt_vec_fail0(<4 x i32> %a0, ptr %p1, i32 %a2, i32 %a3) {
+; CHECK-LABEL: pow2_extractelt_vec_fail0:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    movl %edx, %ecx
+; CHECK-NEXT:    movl %esi, %eax
+; CHECK-NEXT:    pxor %xmm1, %xmm1
+; CHECK-NEXT:    pcmpgtd %xmm0, %xmm1
+; CHECK-NEXT:    movdqa %xmm1, %xmm0
+; CHECK-NEXT:    pandn {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
+; CHECK-NEXT:    pand {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm1
+; CHECK-NEXT:    por %xmm0, %xmm1
+; CHECK-NEXT:    movdqa %xmm1, (%rdi)
+; CHECK-NEXT:    andl $3, %ecx
+; CHECK-NEXT:    xorl %edx, %edx
+; CHECK-NEXT:    divl (%rdi,%rcx,4)
+; CHECK-NEXT:    movl %edx, %eax
+; CHECK-NEXT:    retq
+  %cmp = icmp sgt <4 x i32> zeroinitializer, %a0
+  %sel = select <4 x i1> %cmp, <4 x i32> <i32 4, i32 2, i32 1, i32 0>, <4 x i32> <i32 8, i32 4, i32 2, i32 -1>
+  store <4 x i32> %sel, ptr %p1
+  %elt = extractelement <4 x i32> %sel, i32 %a3
+  %res = urem i32 %a2, %elt
+  ret i32 %res
+}
+
 define i1 @pow2_shl(i32 %x, i32 %y) {
 ; CHECK-LABEL: pow2_shl:
 ; CHECK:       # %bb.0:
@@ -775,7 +822,6 @@ define i1 @pow2_and(i32 %x, i32 %y) {
   ret i1 %r
 }
 
-; FIXME: Missing isKnownToBeAPowerOfTwo DemandedElts handling
 define <4 x i32> @pow2_and_vector(<4 x i32> %x, <4 x i32> %y) {
 ; CHECK-LABEL: pow2_and_vector:
 ; CHECK:       # %bb.0:
@@ -783,16 +829,11 @@ define <4 x i32> @pow2_and_vector(<4 x i32> %x, <4 x i32> %y) {
 ; CHECK-NEXT:    paddd {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm1
 ; CHECK-NEXT:    cvttps2dq %xmm1, %xmm1
 ; CHECK-NEXT:    pshufd {{.*#+}} xmm2 = xmm1[1,1,3,3]
-; CHECK-NEXT:    pmuludq {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm1 # [1,2,4,9]
-; CHECK-NEXT:    pshufd {{.*#+}} xmm1 = xmm1[0,2,2,3]
-; CHECK-NEXT:    pmuludq {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm2 # [2,2,9,9]
-; CHECK-NEXT:    pshufd {{.*#+}} xmm2 = xmm2[0,2,2,3]
-; CHECK-NEXT:    punpckldq {{.*#+}} xmm1 = xmm1[0],xmm2[0],xmm1[1],xmm2[1]
-; CHECK-NEXT:    pxor %xmm2, %xmm2
-; CHECK-NEXT:    psubd %xmm1, %xmm2
-; CHECK-NEXT:    pand %xmm1, %xmm2
-; CHECK-NEXT:    pshufd {{.*#+}} xmm1 = xmm2[0,2,1,0]
-; CHECK-NEXT:    pand %xmm1, %xmm0
+; CHECK-NEXT:    pmuludq {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm1 # [1,2,4,u]
+; CHECK-NEXT:    pmuludq {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm2 # [2,2,u,u]
+; CHECK-NEXT:    punpcklqdq {{.*#+}} xmm2 = xmm2[0],xmm1[0]
+; CHECK-NEXT:    shufps {{.*#+}} xmm1 = xmm1[0,2],xmm2[0,2]
+; CHECK-NEXT:    andps %xmm1, %xmm0
 ; CHECK-NEXT:    pcmpeqd %xmm1, %xmm0
 ; CHECK-NEXT:    retq
   %yy = shl nuw nsw <4 x i32> <i32 1, i32 2, i32 4, i32 9>, %y
@@ -914,4 +955,54 @@ define i1 @pow2_and_i128(i128 %num, i128 %shift) {
   %bit = and i128 %mask, %num
   %bool = icmp eq i128 %bit, 0
   ret i1 %bool
+}
+
+; Negative test: Y = a | 1 is always odd/non-zero but not pow2, fold should not trigger.
+define i32 @pow2_blsi_add_fail(i32 %x, i32 %a) {
+; CHECK-LABEL: pow2_blsi_add_fail:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    # kill: def $esi killed $esi def $rsi
+; CHECK-NEXT:    # kill: def $edi killed $edi def $rdi
+; CHECK-NEXT:    orl $1, %esi
+; CHECK-NEXT:    leal (%rdi,%rsi), %eax
+; CHECK-NEXT:    andl %esi, %eax
+; CHECK-NEXT:    retq
+  %y = or i32 %a, 1
+  %x_add_y = add i32 %x, %y
+  %r = and i32 %x_add_y, %y
+  ret i32 %r
+}
+
+; Test that (X + Y) & Y --> ~X & Y when Y = a & -a (pow2-or-zero).
+define i32 @pow2_blsi_add(i32 %x, i32 %a) {
+; CHECK-LABEL: pow2_blsi_add:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    movl %esi, %eax
+; CHECK-NEXT:    negl %eax
+; CHECK-NEXT:    andl %esi, %eax
+; CHECK-NEXT:    notl %edi
+; CHECK-NEXT:    andl %edi, %eax
+; CHECK-NEXT:    retq
+  %neg_a = sub i32 0, %a
+  %y = and i32 %a, %neg_a
+  %x_add_y = add i32 %x, %y
+  %r = and i32 %x_add_y, %y
+  ret i32 %r
+}
+
+; Test that (X - Y) & Y --> ~X & Y when Y = a & -a (pow2-or-zero).
+define i32 @pow2_blsi_sub(i32 %x, i32 %a) {
+; CHECK-LABEL: pow2_blsi_sub:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    movl %esi, %eax
+; CHECK-NEXT:    negl %eax
+; CHECK-NEXT:    andl %esi, %eax
+; CHECK-NEXT:    notl %edi
+; CHECK-NEXT:    andl %edi, %eax
+; CHECK-NEXT:    retq
+  %neg_a = sub i32 0, %a
+  %y = and i32 %a, %neg_a
+  %x_sub_y = sub i32 %x, %y
+  %r = and i32 %x_sub_y, %y
+  ret i32 %r
 }
