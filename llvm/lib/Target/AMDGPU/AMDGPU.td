@@ -1916,7 +1916,10 @@ def FeatureISAVersion11_7_0 : FeatureSet<
      FeatureDPPSrc1SGPR,
      FeatureFP8ConversionInsts,
      FeatureDot11Insts,
-     FeatureWMMA128bInsts])>;
+     FeatureWMMA128bInsts,
+     FeatureIEEEMinimumMaximumInsts,
+     FeatureMinimum3Maximum3F32,
+     FeatureMinimum3Maximum3F16])>;
 
 def FeatureISAVersion12 : FeatureSet<
   [FeatureGFX12,
@@ -2421,6 +2424,21 @@ def isGFX8GFX9GFX10 :
 def isGFX11Only :
   Predicate<"Subtarget->getGeneration() == AMDGPUSubtarget::GFX11">,
   AssemblerPredicate<(all_of FeatureGFX11Insts, (not FeatureGFX12Insts))>;
+
+def isGFX11Not11_70 :
+  Predicate<"Subtarget->getGeneration() == AMDGPUSubtarget::GFX11 &&"
+            "!Subtarget->hasIEEEMinimumMaximumInsts()">,
+  AssemblerPredicate<(all_of FeatureGFX11Insts, (not FeatureIEEEMinimumMaximumInsts))>;
+
+def isGFX1170Only :
+  Predicate<"Subtarget->getGeneration() == AMDGPUSubtarget::GFX11 &&"
+            "Subtarget->hasIEEEMinimumMaximumInsts()">,
+  AssemblerPredicate<(all_of FeatureIEEEMinimumMaximumInsts, (not FeatureGFX12Insts))>;
+
+def isNotGFX1170Plus :
+  Predicate<"Subtarget->getGeneration() <= AMDGPUSubtarget::GFX11 &&"
+            "!Subtarget->hasIEEEMinimumMaximumInsts()">,
+  AssemblerPredicate<(all_of (not FeatureGFX12Insts), (not FeatureIEEEMinimumMaximumInsts))>;
 
 def isGFX11Plus :
   Predicate<"Subtarget->getGeneration() >= AMDGPUSubtarget::GFX11">,
