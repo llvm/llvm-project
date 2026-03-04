@@ -151,9 +151,9 @@ SPIRVTargetLowering::getRegForInlineAsmConstraint(const TargetRegisterInfo *TRI,
 }
 
 inline Register getTypeReg(MachineRegisterInfo *MRI, Register OpReg) {
-  SPIRVType *TypeInst = MRI->getVRegDef(OpReg);
-  return TypeInst && TypeInst->getOpcode() == SPIRV::OpFunctionParameter
-             ? TypeInst->getOperand(1).getReg()
+  const MachineInstr *Inst = MRI->getVRegDef(OpReg);
+  return Inst && Inst->getOpcode() == SPIRV::OpFunctionParameter
+             ? Inst->getOperand(1).getReg()
              : OpReg;
 }
 
@@ -198,7 +198,7 @@ static void validatePtrTypes(const SPIRVSubtarget &STI,
   MachineFunction *MF = I.getParent()->getParent();
   Register OpReg = I.getOperand(OpIdx).getReg();
   Register OpTypeReg = getTypeReg(MRI, OpReg);
-  SPIRVType *OpType = GR.getSPIRVTypeForVReg(OpTypeReg, MF);
+  const MachineInstr *OpType = GR.getSPIRVTypeForVReg(OpTypeReg, MF);
   if (!ResType || !OpType || OpType->getOpcode() != SPIRV::OpTypePointer)
     return;
   // Get operand's pointee type
@@ -403,7 +403,6 @@ void SPIRVTargetLowering::finalizeLowering(MachineFunction &MF) const {
   GR.setCurrentFunc(MF);
   for (MachineFunction::iterator I = MF.begin(), E = MF.end(); I != E; ++I) {
     MachineBasicBlock *MBB = &*I;
-    SmallPtrSet<MachineInstr *, 8> ToMove;
     for (MachineBasicBlock::iterator MBBI = MBB->begin(), MBBE = MBB->end();
          MBBI != MBBE;) {
       MachineInstr &MI = *MBBI++;
@@ -523,16 +522,6 @@ void SPIRVTargetLowering::finalizeLowering(MachineFunction &MF) const {
             MI.removeOperand(i);
         }
       } break;
-      case SPIRV::OpPhi: {
-        // Phi refers to a type definition that goes after the Phi
-        // instruction, so that the virtual register definition of the type
-        // doesn't dominate all uses. Let's place the type definition
-        // instruction at the end of the predecessor.
-        MachineBasicBlock *Curr = MI.getParent();
-        SPIRVTypeInst Type = GR.getSPIRVTypeForVReg(MI.getOperand(1).getReg());
-        if (Type->getParent() == Curr && !Curr->pred_empty())
-          ToMove.insert(const_cast<MachineInstr *>(&*Type));
-      } break;
       case SPIRV::OpExtInst: {
         // prefetch
         if (!MI.getOperand(2).isImm() || !MI.getOperand(3).isImm() ||
@@ -578,11 +567,6 @@ void SPIRVTargetLowering::finalizeLowering(MachineFunction &MF) const {
         }
       } break;
       }
-    }
-    for (MachineInstr *MI : ToMove) {
-      MachineBasicBlock *Curr = MI->getParent();
-      MachineBasicBlock *Pred = *Curr->pred_begin();
-      Pred->insert(Pred->getFirstTerminator(), Curr->remove_instr(MI));
     }
   }
   ProcessedMF.insert(&MF);

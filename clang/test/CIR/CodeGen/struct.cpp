@@ -60,7 +60,7 @@ char f2(CompleteS &s) {
 // CIR:   %[[S_ADDR2:.*]] = cir.get_member %[[S_REF]][1] {name = "b"}
 // CIR:   %[[S_B:.*]] = cir.load{{.*}} %[[S_ADDR2]]
 
-// LLVM: define{{.*}} i8 @_Z2f2R9CompleteS(ptr %[[ARG_S:.*]])
+// LLVM: define{{.*}} i8 @_Z2f2R9CompleteS(ptr{{.*}} %[[ARG_S:.*]])
 // LLVM:   %[[S_ADDR:.*]] = alloca ptr
 // LLVM:   store ptr %[[ARG_S]], ptr %[[S_ADDR]]
 // LLVM:   %[[S_REF:.*]] = load ptr, ptr %[[S_ADDR]], align 8
@@ -299,31 +299,23 @@ void struct_with_const_member_expr() {
 }
 
 // CIR: %[[A_ADDR:.*]] = cir.alloca !s32i, !cir.ptr<!s32i>, ["a", init]
-// CIR: %[[RESULT:.*]] = cir.scope {
-// CIR:   %[[REF_ADDR:.*]] = cir.alloca !rec_StructWithConstMember, !cir.ptr<!rec_StructWithConstMember>, ["ref.tmp0"]
-// CIR:   %[[ELEM_0_PTR:.*]] = cir.get_member %[[REF_ADDR]][0] {name = "a"} : !cir.ptr<!rec_StructWithConstMember> -> !cir.ptr<!u8i>
-// CIR:   %[[CONST_0:.*]] = cir.const #cir.int<0> : !s32i
-// CIR:   %[[SET_BF:.*]] = cir.set_bitfield{{.*}} (#bfi_a, %[[ELEM_0_PTR]] : !cir.ptr<!u8i>, %[[CONST_0]] : !s32i) -> !s32i
-// CIR:   %[[CONST_0:.*]] = cir.const #cir.int<0> : !s32i
-// CIR:   cir.yield %[[CONST_0]] : !s32i
-// CIR: } : !s32i
-// CIR: cir.store{{.*}} %[[RESULT]], %[[A_ADDR]] : !s32i, !cir.ptr<!s32i>
+// CIR: %[[REF_ADDR:.*]] = cir.alloca !rec_StructWithConstMember, !cir.ptr<!rec_StructWithConstMember>, ["ref.tmp0"]
+// CIR: %[[ELEM_0_PTR:.*]] = cir.get_member %[[REF_ADDR]][0] {name = "a"} : !cir.ptr<!rec_StructWithConstMember> -> !cir.ptr<!u8i>
+// CIR: %[[CONST_0:.*]] = cir.const #cir.int<0> : !s32i
+// CIR: %[[SET_BF:.*]] = cir.set_bitfield{{.*}} (#bfi_a, %[[ELEM_0_PTR]] : !cir.ptr<!u8i>, %[[CONST_0]] : !s32i) -> !s32i
+// CIR: %[[CONST_0:.*]] = cir.const #cir.int<0> : !s32i
+// CIR: cir.store{{.*}} %[[CONST_0]], %[[A_ADDR]] : !s32i, !cir.ptr<!s32i>
 
 // TODO(cir): zero-initialize the padding
 
-// LLVM:  %[[REF_ADDR:.*]] = alloca %struct.StructWithConstMember, i64 1, align 4
 // LLVM:  %[[A_ADDR:.*]] = alloca i32, i64 1, align 4
-// LLVM:  br label %[[BF_LABEL:.*]]
-// LLVM: [[BF_LABEL]]:
+// LLVM:  %[[REF_ADDR:.*]] = alloca %struct.StructWithConstMember, i64 1, align 4
 // LLVM:  %[[ELEM_0_PTR:.*]] = getelementptr %struct.StructWithConstMember, ptr %[[REF_ADDR]], i32 0, i32 0
 // LLVM:  %[[TMP_REF:.*]] = load i8, ptr %[[ELEM_0_PTR]], align 4
 // LLVM:  %[[BF_CLEAR:.*]] = and i8 %[[TMP_REF]], -2
 // LLVM:  %[[BF_SET:.*]] = or i8 %[[BF_CLEAR]], 0
 // LLVM:  store i8 %[[BF_SET]], ptr %[[ELEM_0_PTR]], align 4
-// LLVM:  br label %[[RESULT_LABEL:.*]]
-// LLVM: [[RESULT_LABEL]]:
-// LLVM:  %[[RESULT:.*]] = phi i32 [ 0, %[[BF_LABEL]] ]
-// LLVM:  store i32 %[[RESULT]], ptr %[[A_ADDR]], align 4
+// LLVM:  store i32 0, ptr %[[A_ADDR]], align 4
 
 // OGCG: %[[A_ADDR:.*]] = alloca i32, align 4
 // OGCG: %[[REF_ADDR:.*]] = alloca %struct.StructWithConstMember, align 4

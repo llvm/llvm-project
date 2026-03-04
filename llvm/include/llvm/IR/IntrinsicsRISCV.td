@@ -1930,7 +1930,6 @@ let TargetPrefix = "riscv" in {
   def int_riscv_vsm3me   : RISCVBinaryAAXUnMasked;
 } // TargetPrefix = "riscv"
 
-//===----------------------------------------------------------------------===//
 // Zvabd - Vector Absolute Difference
 //===----------------------------------------------------------------------===//
 let TargetPrefix = "riscv" in {
@@ -1942,7 +1941,7 @@ let TargetPrefix = "riscv" in {
 } // TargetPrefix = "riscv"
 
 //===----------------------------------------------------------------------===//
-// Zvqdotq - Vector quad widening 4D Dot Product
+// Zvdot4a8i - Vector 4-element Dot Product of packed 8-bit Integers
 //
 // 8-bit Integer dot-product instructions performing the dot product between two
 // 4-element vectors of 8-bit integer elements and accumulating it into a 32-bit
@@ -1951,7 +1950,7 @@ let TargetPrefix = "riscv" in {
   // We use llvm_anyvector_ty and llvm_anyint_ty for future extensibility
   // purpose but only EEW=32 is defined for now
   // Input: (vector_in, vector_in, vector_in/scalar_in, vl, policy)
-  class RISCVVQDOTUnMasked<bit HasVV>
+  class RISCVVDOTA4UnMasked<bit HasVV>
         : DefaultAttrsIntrinsic<[llvm_anyvector_ty],
                                 [LLVMMatchType<0>, llvm_anyvector_ty,
                                  !if(HasVV, llvm_any_ty, llvm_anyint_ty),
@@ -1962,7 +1961,7 @@ let TargetPrefix = "riscv" in {
     let VLOperand = 3;
   }
   // Input: (vector_in, vector_in, vector_in/scalar_in, mask, vl, policy)
-  class RISCVVQDOTMasked<bit HasVV>
+  class RISCVVDOTA4Masked<bit HasVV>
         : DefaultAttrsIntrinsic<[llvm_anyvector_ty],
                                 [LLVMMatchType<0>, llvm_anyvector_ty,
                                  !if(HasVV, llvm_any_ty, llvm_anyint_ty),
@@ -1974,15 +1973,15 @@ let TargetPrefix = "riscv" in {
     let VLOperand = 4;
   }
 
-  multiclass RISCVVQDOT<bit HasVV = 1> {
-    def "int_riscv_" # NAME : RISCVVQDOTUnMasked<HasVV=HasVV>;
-    def "int_riscv_" # NAME # "_mask" : RISCVVQDOTMasked<HasVV=HasVV>;
+  multiclass RISCVVDOTA4<bit HasVV = 1> {
+    def "int_riscv_" # NAME : RISCVVDOTA4UnMasked<HasVV=HasVV>;
+    def "int_riscv_" # NAME # "_mask" : RISCVVDOTA4Masked<HasVV=HasVV>;
   }
 
-  defm vqdot   : RISCVVQDOT;
-  defm vqdotu  : RISCVVQDOT;
-  defm vqdotsu : RISCVVQDOT;
-  defm vqdotus : RISCVVQDOT<HasVV=0>;
+  defm vdota4   : RISCVVDOTA4;
+  defm vdota4u  : RISCVVDOTA4;
+  defm vdota4su : RISCVVDOTA4;
+  defm vdota4us : RISCVVDOTA4<HasVV=0>;
 } // TargetPrefix = "riscv"
 
 
