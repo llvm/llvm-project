@@ -356,16 +356,16 @@ ValueObjectSynthetic::GetIndexOfChildWithName(llvm::StringRef name_ref) {
         // The child name was not of the form "[N]", return the original error.
         return index_or_err.takeError();
 
+      // Subscripting succeeded, ignore the original error.
+      llvm::consumeError(index_or_err.takeError());
       index = *maybe_index;
+
       // Prevent unnecessary work by limiting max to one past the index.
       uint32_t max = index + 1;
       auto num_children = GetNumChildrenIgnoringErrors(max);
       if (index >= num_children)
         return llvm::createStringError("Subscript index out of range: %zu",
                                        index);
-
-      // Subscripting succeeded, ignore the original error.
-      llvm::consumeError(index_or_err.takeError());
     }
     std::lock_guard<std::mutex> guard(m_child_mutex);
     m_name_toindex[name.GetCString()] = index;
