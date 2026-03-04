@@ -25,16 +25,16 @@ def Merge : SubCommand<"merge",
 def help : Flag<["--"], "help">, HelpText<"Display this help">;
 def version : Flag<["--"], "version">, HelpText<"Display the version">;
 
-def output : JoinedOrSeparate<["--"], "output",
+def output : JoinedOrSeparate<["-", "--"], "output",
                                [Show, Order, Overlap, Merge]>,
              MetaVarName<"<output>">,
              HelpText<"Output file">;
 def : JoinedOrSeparate<["-"], "o", [Show, Order, Overlap, Merge]>,
      Alias<output>, HelpText<"Alias for --output">;
 
-def instr : Flag<["--"], "instr", [Show, Overlap, Merge]>,
+def instr : Flag<["-", "--"], "instr", [Show, Overlap, Merge]>,
             HelpText<"Instrumentation profile (default)">;
-def sample : Flag<["--"], "sample", [Show, Overlap, Merge]>,
+def sample : Flag<["-", "--"], "sample", [Show, Overlap, Merge]>,
              HelpText<"Sample profile">;
 def memory : Flag<["--"], "memory", [Show]>,
              HelpText<"MemProf memory access profile">;
@@ -72,31 +72,31 @@ def correlate : JoinedOrSeparate<["--"], "correlate",
                 HelpText<"Use debug-info or binary correlation to correlate "
                          "profiles with build id fetcher">,
                 MetaVarName<"<mode>">;
-def function : JoinedOrSeparate<["--"], "function",
+def function : JoinedOrSeparate<["-", "--"], "function",
                                 [Show, Overlap, Merge]>,
                HelpText<"Only functions matching the filter are shown or "
                         "merged.">,
                MetaVarName<"<regex>">;
 
 def weighted_input
-    : JoinedOrSeparate<["--"], "weighted-input", [Merge]>,
+    : JoinedOrSeparate<["-", "--"], "weighted-input", [Merge]>,
       HelpText<"<weight>,<filename>">, MetaVarName<"<weight>,<file>">;
-def binary : Flag<["--"], "binary", [Merge]>,
+def binary : Flag<["-", "--"], "binary", [Merge]>,
              HelpText<"Binary encoding">;
-def extbinary : Flag<["--"], "extbinary", [Merge]>,
+def extbinary : Flag<["-", "--"], "extbinary", [Merge]>,
                 HelpText<"Extensible binary encoding (default)">;
-def text : Flag<["--"], "text", [Show, Merge]>,
+def text : Flag<["-", "--"], "text", [Show, Merge]>,
            HelpText<"Text output format">;
-def gcc : Flag<["--"], "gcc", [Merge]>,
+def gcc : Flag<["-", "--"], "gcc", [Merge]>,
           HelpText<"GCC encoding (only meaningful for -sample)">;
 def input_files
-    : JoinedOrSeparate<["--"], "input-files", [Merge]>,
+    : JoinedOrSeparate<["-", "--"], "input-files", [Merge]>,
       HelpText<"Path to file containing newline-separated "
                "[<weight>,]<filename> entries">,
       MetaVarName<"<file>">;
 def : JoinedOrSeparate<["-"], "f", [Merge]>, Alias<input_files>,
      HelpText<"Alias for --input-files">;
-def dump_input_file_list : Flag<["--"], "dump-input-file-list", [Merge]>,
+def dump_input_file_list : Flag<["-", "--"], "dump-input-file-list", [Merge]>,
                            HelpText<"Dump the list of input files and their "
                                     "weights, then exit">;
 
@@ -105,22 +105,22 @@ def remapping_file
       HelpText<"Symbol remapping file">, MetaVarName<"<file>">;
 def : JoinedOrSeparate<["-"], "r", [Merge]>, Alias<remapping_file>,
      HelpText<"Alias for --remapping-file">;
-def use_md5 : Flag<["--"], "use-md5", [Merge]>,
+def use_md5 : Flag<["-", "--"], "use-md5", [Merge]>,
               HelpText<"Use MD5 to represent strings in the name table "
                        "(only meaningful for -extbinary)">;
 
 def compress_all_sections
-    : Flag<["--"], "compress-all-sections", [Merge]>,
+    : Flag<["-", "--"], "compress-all-sections", [Merge]>,
       HelpText<"Compress all sections when writing the profile (only "
                "meaningful for -extbinary)">;
 
 def sample_merge_cold_context
-    : Flag<["--"], "sample-merge-cold-context", [Merge]>,
+    : Flag<["-", "--"], "sample-merge-cold-context", [Merge]>,
       HelpText<"Merge context sample profiles whose count is below cold "
                "threshold">;
 
 def sample_trim_cold_context
-    : Flag<["--"], "sample-trim-cold-context", [Merge]>,
+    : Flag<["-", "--"], "sample-trim-cold-context", [Merge]>,
       HelpText<"Trim context sample profiles whose count is below cold "
                "threshold">;
 
@@ -136,7 +136,7 @@ def output_size_limit
                "limit in bytes">,
       MetaVarName<"<bytes>">;
 def gen_partial_profile
-    : Flag<["--"], "gen-partial-profile", [Merge]>,
+    : Flag<["-", "--"], "gen-partial-profile", [Merge]>,
       HelpText<"Generate a partial profile (only meaningful for -extbinary)">;
 
 def split_layout : Flag<["--"], "split-layout", [Merge]>,
@@ -145,22 +145,22 @@ def split_layout : Flag<["--"], "split-layout", [Merge]>,
                             "-extbinary)">;
 
 def supplement_instr_with_sample
-    : JoinedOrSeparate<["--"], "supplement-instr-with-sample", [Merge]>,
+    : JoinedOrSeparate<["-", "--"], "supplement-instr-with-sample", [Merge]>,
       HelpText<"Supplement an instr profile with a sample profile. Output "
                "will be in instr format.">,
       MetaVarName<"<sample-profile>">;
 def zero_counter_threshold
-    : JoinedOrSeparate<["--"], "zero-counter-threshold", [Merge]>,
+    : JoinedOrSeparate<["-", "--"], "zero-counter-threshold", [Merge]>,
       HelpText<"Ratio of zero counters required to drop a function when "
                "supplementing instr profiles">,
       MetaVarName<"<ratio>">;
 def suppl_min_size_threshold
-    : JoinedOrSeparate<["--"], "suppl-min-size-threshold", [Merge]>,
+    : JoinedOrSeparate<["-", "--"], "suppl-min-size-threshold", [Merge]>,
       HelpText<"Assume functions smaller than this threshold can be inlined "
                "and will not be adjusted based on sample profile.">,
       MetaVarName<"<n>">;
 def instr_prof_cold_threshold
-    : JoinedOrSeparate<["--"], "instr-prof-cold-threshold", [Merge]>,
+    : JoinedOrSeparate<["-", "--"], "instr-prof-cold-threshold", [Merge]>,
       HelpText<"User specified cold threshold for instr profile to override "
                "the cold threshold from profile summary.">,
       MetaVarName<"<n>">;
@@ -181,19 +181,19 @@ def no_function : JoinedOrSeparate<["--"], "no-function", [Merge]>,
                            "output.">,
                   MetaVarName<"<regex>">;
 def failure_mode
-    : JoinedOrSeparate<["--"], "failure-mode", [Merge]>,
+    : JoinedOrSeparate<["-", "--"], "failure-mode", [Merge]>,
       HelpText<"Failure mode: warn, any, or all">,
       MetaVarName<"<mode>">;
 def sparse
-    : Flag<["--"], "sparse", [Merge]>,
+    : Flag<["-", "--"], "sparse", [Merge]>,
       HelpText<"Generate a sparse profile (only meaningful for -instr)">;
 
-def profile_isfs : Flag<["--"], "profile-isfs", [Show, Merge]>,
+def profile_isfs : Flag<["-", "--"], "profile-isfs", [Show, Merge]>,
                    HelpText<"Profile uses flow-sensitive discriminators">;
 
 
 def generate_merged_base_profiles
-    : Flag<["--"], "generate-merged-base-profiles", [Merge]>,
+    : Flag<["-", "--"], "generate-merged-base-profiles", [Merge]>,
       HelpText<"Generate merged base profiles when creating nested "
                "context-sensitive profiles">;
 
@@ -208,7 +208,7 @@ def profile_summary_cutoff_hot
       HelpText<"Percentile (times 10000) for determining hot threshold">;
 
 def profile_summary_cutoff_cold
-    : JoinedOrSeparate<["--"], "profile-summary-cutoff-cold",
+    : JoinedOrSeparate<["-", "--"], "profile-summary-cutoff-cold",
                        [Show, Merge]>,
       HelpText<"Percentile (times 10000) for determining cold threshold">;
 
@@ -218,7 +218,7 @@ def profile_summary_hot_count
       HelpText<"Override hot count derived from summary cutoffs">;
 
 def profile_summary_cold_count
-    : JoinedOrSeparate<["--"], "profile-summary-cold-count",
+    : JoinedOrSeparate<["-", "--"], "profile-summary-cold-count",
                        [Show, Merge]>,
       HelpText<"Override cold count derived from summary cutoffs">;
 
@@ -239,13 +239,13 @@ def profile_summary_large_working_set_size_threshold
                        [Show, Merge]>,
       HelpText<"Threshold for large working set size used in profile summary">;
 
-def num_threads : JoinedOrSeparate<["--"], "num-threads", [Merge]>,
+def num_threads : JoinedOrSeparate<["-", "--"], "num-threads", [Merge]>,
                   HelpText<"Number of merge threads to use (default: autodetect)">,
                   MetaVarName<"<n>">;
 def : JoinedOrSeparate<["-"], "j", [Merge]>, Alias<num_threads>,
      HelpText<"Alias for --num-threads">;
 def prof_sym_list
-    : JoinedOrSeparate<["--"], "prof-sym-list", [Merge]>,
+    : JoinedOrSeparate<["-", "--"], "prof-sym-list", [Merge]>,
       HelpText<"Path to file containing the list of function symbols used to "
                "populate profile symbol list">,
       MetaVarName<"<file>">;
@@ -276,11 +276,11 @@ def memprof_full_schema
       HelpText<"Use the full schema for serialization">;
 
 def memprof_random_hotness
-    : Flag<["--"], "memprof-random-hotness", [Merge]>,
+    : Flag<["-", "--"], "memprof-random-hotness", [Merge]>,
       HelpText<"Generate random hotness values">;
 
 def memprof_random_hotness_seed
-    : JoinedOrSeparate<["--"], "memprof-random-hotness-seed", [Merge]>,
+    : JoinedOrSeparate<["-", "--"], "memprof-random-hotness-seed", [Merge]>,
       HelpText<"Random hotness seed to use (0 to generate new seed)">,
       MetaVarName<"<n>">;
 
@@ -289,15 +289,15 @@ def similarity_cutoff
       HelpText<"List overlapped functions with similarities below the cutoff "
                "(percentage times 10000).">,
       MetaVarName<"<n>">;
-def cs : Flag<["--"], "cs", [Overlap]>,
+def cs : Flag<["-", "--"], "cs", [Overlap]>,
          HelpText<"For context sensitive PGO counts. Does not work with "
                   "CSSPGO.">;
 def value_cutoff
-    : JoinedOrSeparate<["--"], "value-cutoff", [Show, Overlap]>,
+    : JoinedOrSeparate<["-", "--"], "value-cutoff", [Show, Overlap]>,
       HelpText<"Cutoff value used for filtering. Meaning depends on subcommand">,
       MetaVarName<"<n>">;
 
-def counts : Flag<["--"], "counts", [Show]>,
+def counts : Flag<["-", "--"], "counts", [Show]>,
              HelpText<"Show counter values for shown functions">;
 def show_format
     : JoinedOrSeparate<["--"], "show-format", [Show]>,
@@ -306,17 +306,17 @@ def show_format
 def json : Flag<["--"], "json", [Show]>,
            HelpText<"Show sample profile data in JSON format "
                     "(deprecated, use --show-format=json)">;
-def ic_targets : Flag<["--"], "ic-targets", [Show]>,
+def ic_targets : Flag<["-", "--"], "ic-targets", [Show]>,
                  HelpText<"Show indirect call site target values">;
 def show_vtables : Flag<["--"], "show-vtables", [Show]>,
                    HelpText<"Show vtable names for shown functions">;
 def extbinary_write_vtable_type_prof
-    : Flag<["--"], "extbinary-write-vtable-type-prof", [Merge]>,
+    : Flag<["-", "--"], "extbinary-write-vtable-type-prof", [Merge]>,
       HelpText<"Include vtable type profile data in ext-binary sample profile">;
 
-def memop_sizes : Flag<["--"], "memop-sizes", [Show]>,
+def memop_sizes : Flag<["-", "--"], "memop-sizes", [Show]>,
                   HelpText<"Show profiled sizes of memory intrinsic calls">;
-def detailed_summary : Flag<["--"], "detailed-summary", [Show]>,
+def detailed_summary : Flag<["-", "--"], "detailed-summary", [Show]>,
                        HelpText<"Show detailed profile summary">;
 def detailed_summary_cutoffs
     : JoinedOrSeparate<["--"], "detailed-summary-cutoffs", [Show]>,
@@ -325,22 +325,22 @@ def detailed_summary_cutoffs
       MetaVarName<"<list>">;
 def hot_func_list : Flag<["--"], "hot-func-list", [Show]>,
                     HelpText<"Show profile summary of a list of hot functions">;
-def all_functions : Flag<["--"], "all-functions", [Show]>,
+def all_functions : Flag<["-", "--"], "all-functions", [Show]>,
                     HelpText<"Details for each and every function">;
-def showcs : Flag<["--"], "showcs", [Show]>,
+def showcs : Flag<["-", "--"], "showcs", [Show]>,
              HelpText<"Show context sensitive counts">;
 def topn : JoinedOrSeparate<["--"], "topn", [Show]>,
            HelpText<"Show the list of functions with the largest internal counts">,
            MetaVarName<"<n>">;
 def list_below_cutoff
-    : Flag<["--"], "list-below-cutoff", [Show]>,
+    : Flag<["-", "--"], "list-below-cutoff", [Show]>,
       HelpText<"Only output names of functions whose max count values are "
                "below the cutoff value">;
 def show_prof_sym_list
-    : Flag<["--"], "show-prof-sym-list", [Show]>,
+    : Flag<["-", "--"], "show-prof-sym-list", [Show]>,
       HelpText<"Show profile symbol list if it exists in the profile.">;
 def show_sec_info_only
-    : Flag<["--"], "show-sec-info-only", [Show]>,
+    : Flag<["-", "--"], "show-sec-info-only", [Show]>,
       HelpText<"Show the information of each section in the sample profile "
                "(extbinary sample profiles only)">;
 def binary_ids : Flag<["--"], "binary-ids", [Show]>,
@@ -360,7 +360,7 @@ def num_test_traces
       MetaVarName<"<n>">;
 
 def fs_discriminator_pass
-    : Joined<["--"], "fs-discriminator-pass=", [Show, Overlap, Merge]>,
+    : Joined<["-", "--"], "fs-discriminator-pass=", [Show, Overlap, Merge]>,
       Values<"base,pass1,pass2,pass3,passlast">,
       HelpText<"Zero out the discriminator bits for the FS discriminator "
                "pass beyond this value.">;

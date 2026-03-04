@@ -1,4 +1,4 @@
-# RUN: llvm-profdata merge --sparse %s -o %t.profdata
+# RUN: llvm-profdata merge -sparse %s -o %t.profdata
 
 # RUN: llvm-profdata merge %s -o %t.profdata.dense
 
