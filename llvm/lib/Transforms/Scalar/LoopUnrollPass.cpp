@@ -1049,9 +1049,8 @@ bool llvm::computeUnrollCount(
         return OptimizationRemarkMissed(DEBUG_TYPE,
                                         "FullUnrollAsDirectedTooLarge",
                                         L->getStartLoc(), L->getHeader())
-               << "Unable to fully unroll loop as directed by unroll pragma "
-                  "because "
-                  "unrolled size is too large.";
+               << "unable to fully unroll loop as directed by unroll metadata "
+                  "because unrolled size is too large";
       });
 
     if (UP.PartialThreshold != NoThreshold) {
@@ -1061,8 +1060,9 @@ bool llvm::computeUnrollCount(
             return OptimizationRemarkMissed(DEBUG_TYPE,
                                             "UnrollAsDirectedTooLarge",
                                             L->getStartLoc(), L->getHeader())
-                   << "unable to unroll loop as directed by enable unroll "
-                      "pragma because unrolled size is too large";
+                   << "unable to unroll loop as directed by "
+                      "llvm.loop.unroll.enable metadata because unrolled size "
+                      "is too large";
           });
       }
     }
@@ -1075,8 +1075,9 @@ bool llvm::computeUnrollCount(
       return OptimizationRemarkMissed(
                  DEBUG_TYPE, "CantFullUnrollAsDirectedRuntimeTripCount",
                  L->getStartLoc(), L->getHeader())
-             << "unable to fully unroll loop as directed by full unroll "
-                "pragma because loop has a runtime trip count";
+             << "unable to fully unroll loop as directed by "
+                "llvm.loop.unroll.full metadata because loop has a runtime "
+                "trip count";
     });
 
   // 7th priority is runtime unrolling.
@@ -1141,11 +1142,10 @@ bool llvm::computeUnrollCount(
                                         "DifferentUnrollCountFromDirected",
                                         L->getStartLoc(), L->getHeader())
                << "Unable to unroll loop the number of times directed by "
-                  "unroll_count pragma because remainder loop is restricted "
-                  "(that could architecture specific or because the loop "
-                  "contains a convergent instruction) and so must have an "
-                  "unroll "
-                  "count that divides the loop trip multiple of "
+                  "llvm.loop.unroll.count metadata because remainder loop is "
+                  "restricted (that could architecture specific or because the "
+                  "loop contains a convergent instruction) and so must have an "
+                  "unroll count that divides the loop trip multiple of "
                << NV("TripMultiple", TripMultiple) << ".  Unrolling instead "
                << NV("UnrollCount", UP.Count) << " time(s).";
       });
