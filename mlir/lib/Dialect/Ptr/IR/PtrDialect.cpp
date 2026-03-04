@@ -57,6 +57,25 @@ verifyAlignment(std::optional<int64_t> alignment,
   return success();
 }
 
+/// Verifies that the contiguity array has the right size, all the elements are
+/// positive and divide the corresponding shape dimension.
+static LogicalResult
+verifyContiguityProp(ArrayRef<int32_t> contiguity, ArrayRef<int64_t> shape,
+                     function_ref<InFlightDiagnostic()> emitError) {
+  if (contiguity.size() != shape.size()) {
+    return emitError() << "expected contiguity array with " << shape.size()
+                       << " elements";
+  }
+  if (!llvm::all_of(llvm::zip(contiguity, shape), [](auto cs) {
+        int32_t c = std::get<0>(cs);
+        return c > 0 && std::get<1>(cs) % c == 0;
+      })) {
+    return emitError()
+           << "expected contiguity values to be positive and divide the shape";
+  }
+  return success();
+}
+
 //===----------------------------------------------------------------------===//
 // ConstantOp
 //===----------------------------------------------------------------------===//
@@ -265,6 +284,49 @@ void MaskedStoreOp::build(OpBuilder &builder, OperationState &state,
 }
 
 //===----------------------------------------------------------------------===//
+// ReadOp
+//===----------------------------------------------------------------------===//
+
+void ReadOp::getEffects(
+    SmallVectorImpl<SideEffects::EffectInstance<MemoryEffects::Effect>>
+        &effects) {
+  effects.emplace_back(MemoryEffects::Read::get(), &getPtrMutable());
+}
+
+LogicalResult ReadOp::verify() {
+  auto emitDiag = [&]() -> InFlightDiagnostic { return emitError(); };
+
+  // Verify that the pointer type's memory space allows loads.
+  MemorySpaceAttrInterface ms =
+      cast<PtrType>(getPtr().getType().getElementType()).getMemorySpace();
+  DataLayout dataLayout = DataLayout::closest(*this);
+  if (!ms.isValidLoad(getResult().getType(), AtomicOrdering::not_atomic,
+                      getAlignment(), &dataLayout, emitDiag))
+    return failure();
+
+  // Verify the alignment.
+  if (failed(verifyAlignment(getAlignment(), emitDiag)))
+    return failure();
+
+  // Verify the contiguity array.
+  return verifyContiguityProp(getContiguity(), getShape(), emitDiag);
+}
+
+void ReadOp::build(OpBuilder &builder, OperationState &state, Value ptr,
+                   Value mask, Value passthrough, unsigned alignment,
+                   ArrayRef<int32_t> contiguity) {
+  if (!contiguity.empty()) {
+    build(builder, state, ptr, mask, passthrough,
+          alignment ? std::optional<int64_t>(alignment) : std::nullopt,
+          contiguity);
+    return;
+  }
+  build(builder, state, ptr, mask, passthrough,
+        alignment ? std::optional<int64_t>(alignment) : std::nullopt,
+        SmallVector<int32_t>(cast<ShapedType>(ptr.getType()).getRank(), 1));
+}
+
+//===----------------------------------------------------------------------===//
 // ScatterOp
 //===----------------------------------------------------------------------===//
 
@@ -468,6 +530,49 @@ llvm::TypeSize TypeOffsetOp::getTypeSize(std::optional<DataLayout> layout) {
     return layout->getTypeSize(getElementType());
   DataLayout dl = DataLayout::closest(*this);
   return dl.getTypeSize(getElementType());
+}
+
+//===----------------------------------------------------------------------===//
+// WriteOp
+//===----------------------------------------------------------------------===//
+
+void WriteOp::getEffects(
+    SmallVectorImpl<SideEffects::EffectInstance<MemoryEffects::Effect>>
+        &effects) {
+  effects.emplace_back(MemoryEffects::Write::get(), &getPtrMutable());
+}
+
+LogicalResult WriteOp::verify() {
+  auto emitDiag = [&]() -> InFlightDiagnostic { return emitError(); };
+
+  // Verify that the pointer type's memory space allows stores.
+  MemorySpaceAttrInterface ms =
+      cast<PtrType>(getPtr().getType().getElementType()).getMemorySpace();
+  DataLayout dataLayout = DataLayout::closest(*this);
+  if (!ms.isValidStore(getValue().getType(), AtomicOrdering::not_atomic,
+                       getAlignment(), &dataLayout, emitDiag))
+    return failure();
+
+  // Verify the alignment.
+  if (failed(verifyAlignment(getAlignment(), emitDiag)))
+    return failure();
+
+  // Verify the contiguity array.
+  return verifyContiguityProp(getContiguity(), getShape(), emitDiag);
+}
+
+void WriteOp::build(OpBuilder &builder, OperationState &state, Value value,
+                    Value ptr, Value mask, unsigned alignment,
+                    ArrayRef<int32_t> contiguity) {
+  if (!contiguity.empty()) {
+    build(builder, state, value, ptr, mask,
+          alignment ? std::optional<int64_t>(alignment) : std::nullopt,
+          contiguity);
+    return;
+  }
+  build(builder, state, value, ptr, mask,
+        alignment ? std::optional<int64_t>(alignment) : std::nullopt,
+        SmallVector<int32_t>(cast<ShapedType>(ptr.getType()).getRank(), 1));
 }
 
 //===----------------------------------------------------------------------===//
