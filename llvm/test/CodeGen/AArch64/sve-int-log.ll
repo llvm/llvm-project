@@ -363,3 +363,225 @@ define <vscale x 16 x i1> @xor_pred_b(<vscale x 16 x i1> %a, <vscale x 16 x i1> 
   %res = xor <vscale x 16 x i1> %a, %b
   ret <vscale x 16 x i1> %res
 }
+
+define void @array_and_not_nxv16i8(ptr %a, <vscale x 16 x i8> %m) {
+; CHECK-LABEL: array_and_not_nxv16i8:
+; CHECK:       // %bb.0: // %entry
+; CHECK-NEXT:    ptrue p0.b
+; CHECK-NEXT:    mov x8, xzr
+; CHECK-NEXT:    rdvl x9, #1
+; CHECK-NEXT:  .LBB39_1: // %vector.body
+; CHECK-NEXT:    // =>This Inner Loop Header: Depth=1
+; CHECK-NEXT:    ld1b { z1.b }, p0/z, [x0, x8]
+; CHECK-NEXT:    bic z1.d, z1.d, z0.d
+; CHECK-NEXT:    st1b { z1.b }, p0, [x0, x8]
+; CHECK-NEXT:    add x8, x8, x9
+; CHECK-NEXT:    cmp x8, #256
+; CHECK-NEXT:    b.ne .LBB39_1
+; CHECK-NEXT:  // %bb.2: // %for.cond.cleanup
+; CHECK-NEXT:    ret
+entry:
+  %not = xor <vscale x 16 x i8> %m, splat (i8 -1)
+  %0 = tail call i64 @llvm.vscale.i64()
+  %1 = shl nuw nsw i64 %0, 4
+  br label %vector.body
+
+vector.body:
+  %index = phi i64 [ 0, %entry ], [ %index.next, %vector.body ]
+  %2 = getelementptr inbounds nuw i8, ptr %a, i64 %index
+  %wide.load = load <vscale x 16 x i8>, ptr %2, align 1
+  %3 = and <vscale x 16 x i8> %wide.load, %not
+  store <vscale x 16 x i8> %3, ptr %2, align 1
+  %index.next = add nuw i64 %index, %1
+  %4 = icmp eq i64 %index.next, 256
+  br i1 %4, label %for.cond.cleanup, label %vector.body
+
+for.cond.cleanup:
+  ret void
+}
+
+define void @array_and_not_nxv8i16(ptr %a, <vscale x 8 x i16> %m) {
+; CHECK-LABEL: array_and_not_nxv8i16:
+; CHECK:       // %bb.0: // %entry
+; CHECK-NEXT:    ptrue p0.h
+; CHECK-NEXT:    mov x8, xzr
+; CHECK-NEXT:    cnth x9
+; CHECK-NEXT:  .LBB40_1: // %vector.body
+; CHECK-NEXT:    // =>This Inner Loop Header: Depth=1
+; CHECK-NEXT:    ld1h { z1.h }, p0/z, [x0, x8, lsl #1]
+; CHECK-NEXT:    bic z1.d, z1.d, z0.d
+; CHECK-NEXT:    st1h { z1.h }, p0, [x0, x8, lsl #1]
+; CHECK-NEXT:    add x8, x8, x9
+; CHECK-NEXT:    cmp x8, #256
+; CHECK-NEXT:    b.ne .LBB40_1
+; CHECK-NEXT:  // %bb.2: // %for.cond.cleanup
+; CHECK-NEXT:    ret
+entry:
+  %not = xor <vscale x 8 x i16> %m, splat (i16 -1)
+  %0 = tail call i64 @llvm.vscale.i64()
+  %1 = shl nuw nsw i64 %0, 3
+  br label %vector.body
+
+vector.body:
+  %index = phi i64 [ 0, %entry ], [ %index.next, %vector.body ]
+  %2 = getelementptr inbounds nuw i16, ptr %a, i64 %index
+  %wide.load = load <vscale x 8 x i16>, ptr %2, align 2
+  %3 = and <vscale x 8 x i16> %wide.load, %not
+  store <vscale x 8 x i16> %3, ptr %2, align 2
+  %index.next = add nuw i64 %index, %1
+  %4 = icmp eq i64 %index.next, 256
+  br i1 %4, label %for.cond.cleanup, label %vector.body
+
+for.cond.cleanup:
+  ret void
+}
+
+define void @array_and_not_nxv4i32(ptr %a, <vscale x 4 x i32> %m) {
+; CHECK-LABEL: array_and_not_nxv4i32:
+; CHECK:       // %bb.0: // %entry
+; CHECK-NEXT:    ptrue p0.s
+; CHECK-NEXT:    mov x8, xzr
+; CHECK-NEXT:    cntw x9
+; CHECK-NEXT:  .LBB41_1: // %vector.body
+; CHECK-NEXT:    // =>This Inner Loop Header: Depth=1
+; CHECK-NEXT:    ld1w { z1.s }, p0/z, [x0, x8, lsl #2]
+; CHECK-NEXT:    bic z1.d, z1.d, z0.d
+; CHECK-NEXT:    st1w { z1.s }, p0, [x0, x8, lsl #2]
+; CHECK-NEXT:    add x8, x8, x9
+; CHECK-NEXT:    cmp x8, #256
+; CHECK-NEXT:    b.ne .LBB41_1
+; CHECK-NEXT:  // %bb.2: // %for.cond.cleanup
+; CHECK-NEXT:    ret
+entry:
+  %not = xor <vscale x 4 x i32> %m, splat (i32 -1)
+  %0 = tail call i64 @llvm.vscale.i64()
+  %1 = shl nuw nsw i64 %0, 2
+  br label %vector.body
+
+vector.body:
+  %index = phi i64 [ 0, %entry ], [ %index.next, %vector.body ]
+  %2 = getelementptr inbounds nuw i32, ptr %a, i64 %index
+  %wide.load = load <vscale x 4 x i32>, ptr %2, align 4
+  %3 = and <vscale x 4 x i32> %wide.load, %not
+  store <vscale x 4 x i32> %3, ptr %2, align 4
+  %index.next = add nuw i64 %index, %1
+  %4 = icmp eq i64 %index.next, 256
+  br i1 %4, label %for.cond.cleanup, label %vector.body
+
+for.cond.cleanup:
+  ret void
+}
+
+define void @array_and_not_nxv2i64(ptr %a, <vscale x 2 x i64> %m) {
+; CHECK-LABEL: array_and_not_nxv2i64:
+; CHECK:       // %bb.0: // %entry
+; CHECK-NEXT:    ptrue p0.d
+; CHECK-NEXT:    mov x8, xzr
+; CHECK-NEXT:    cntd x9
+; CHECK-NEXT:  .LBB42_1: // %vector.body
+; CHECK-NEXT:    // =>This Inner Loop Header: Depth=1
+; CHECK-NEXT:    ld1d { z1.d }, p0/z, [x0, x8, lsl #3]
+; CHECK-NEXT:    bic z1.d, z1.d, z0.d
+; CHECK-NEXT:    st1d { z1.d }, p0, [x0, x8, lsl #3]
+; CHECK-NEXT:    add x8, x8, x9
+; CHECK-NEXT:    cmp x8, #256
+; CHECK-NEXT:    b.ne .LBB42_1
+; CHECK-NEXT:  // %bb.2: // %for.cond.cleanup
+; CHECK-NEXT:    ret
+entry:
+  %not = xor <vscale x 2 x i64> %m, splat (i64 -1)
+  %0 = tail call i64 @llvm.vscale.i64()
+  %1 = shl nuw nsw i64 %0, 1
+  br label %vector.body
+
+vector.body:
+  %index = phi i64 [ 0, %entry ], [ %index.next, %vector.body ]
+  %2 = getelementptr inbounds nuw i64, ptr %a, i64 %index
+  %wide.load = load <vscale x 2 x i64>, ptr %2, align 8
+  %3 = and <vscale x 2 x i64> %wide.load, %not
+  store <vscale x 2 x i64> %3, ptr %2, align 8
+  %index.next = add nuw i64 %index, %1
+  %4 = icmp eq i64 %index.next, 256
+  br i1 %4, label %for.cond.cleanup, label %vector.body
+
+for.cond.cleanup:
+  ret void
+}
+
+define void @array_or_not_nxv4i32(ptr %a, <vscale x 4 x i32> %m) {
+; CHECK-LABEL: array_or_not_nxv4i32:
+; CHECK:       // %bb.0: // %entry
+; CHECK-NEXT:    mov z1.s, #-1 // =0xffffffffffffffff
+; CHECK-NEXT:    ptrue p0.s
+; CHECK-NEXT:    mov x8, xzr
+; CHECK-NEXT:    cntw x9
+; CHECK-NEXT:    eor z0.d, z0.d, z1.d
+; CHECK-NEXT:  .LBB43_1: // %vector.body
+; CHECK-NEXT:    // =>This Inner Loop Header: Depth=1
+; CHECK-NEXT:    ld1w { z1.s }, p0/z, [x0, x8, lsl #2]
+; CHECK-NEXT:    orr z1.d, z1.d, z0.d
+; CHECK-NEXT:    st1w { z1.s }, p0, [x0, x8, lsl #2]
+; CHECK-NEXT:    add x8, x8, x9
+; CHECK-NEXT:    cmp x8, #256
+; CHECK-NEXT:    b.ne .LBB43_1
+; CHECK-NEXT:  // %bb.2: // %for.cond.cleanup
+; CHECK-NEXT:    ret
+entry:
+  %not = xor <vscale x 4 x i32> %m, splat (i32 -1)
+  %0 = tail call i64 @llvm.vscale.i64()
+  %1 = shl nuw nsw i64 %0, 2
+  br label %vector.body
+
+vector.body:
+  %index = phi i64 [ 0, %entry ], [ %index.next, %vector.body ]
+  %2 = getelementptr inbounds nuw i32, ptr %a, i64 %index
+  %wide.load = load <vscale x 4 x i32>, ptr %2, align 4
+  %3 = or <vscale x 4 x i32> %wide.load, %not
+  store <vscale x 4 x i32> %3, ptr %2, align 4
+  %index.next = add nuw i64 %index, %1
+  %4 = icmp eq i64 %index.next, 256
+  br i1 %4, label %for.cond.cleanup, label %vector.body
+
+for.cond.cleanup:
+  ret void
+}
+
+define void @array_xor_not_nxv4i32(ptr %a, <vscale x 4 x i32> %m) {
+; CHECK-LABEL: array_xor_not_nxv4i32:
+; CHECK:       // %bb.0: // %entry
+; CHECK-NEXT:    mov z1.s, #-1 // =0xffffffffffffffff
+; CHECK-NEXT:    ptrue p0.s
+; CHECK-NEXT:    mov x8, xzr
+; CHECK-NEXT:    cntw x9
+; CHECK-NEXT:    eor z0.d, z0.d, z1.d
+; CHECK-NEXT:  .LBB44_1: // %vector.body
+; CHECK-NEXT:    // =>This Inner Loop Header: Depth=1
+; CHECK-NEXT:    ld1w { z1.s }, p0/z, [x0, x8, lsl #2]
+; CHECK-NEXT:    eor z1.d, z1.d, z0.d
+; CHECK-NEXT:    st1w { z1.s }, p0, [x0, x8, lsl #2]
+; CHECK-NEXT:    add x8, x8, x9
+; CHECK-NEXT:    cmp x8, #256
+; CHECK-NEXT:    b.ne .LBB44_1
+; CHECK-NEXT:  // %bb.2: // %for.cond.cleanup
+; CHECK-NEXT:    ret
+entry:
+  %not = xor <vscale x 4 x i32> %m, splat (i32 -1)
+  %0 = tail call i64 @llvm.vscale.i64()
+  %1 = shl nuw nsw i64 %0, 2
+  br label %vector.body
+
+vector.body:
+  %index = phi i64 [ 0, %entry ], [ %index.next, %vector.body ]
+  %2 = getelementptr inbounds nuw i32, ptr %a, i64 %index
+  %wide.load = load <vscale x 4 x i32>, ptr %2, align 4
+  %3 = xor <vscale x 4 x i32> %wide.load, %not
+  store <vscale x 4 x i32> %3, ptr %2, align 4
+  %index.next = add nuw i64 %index, %1
+  %4 = icmp eq i64 %index.next, 256
+  br i1 %4, label %for.cond.cleanup, label %vector.body
+
+for.cond.cleanup:
+  ret void
+}
+
+declare i64 @llvm.vscale.i64()

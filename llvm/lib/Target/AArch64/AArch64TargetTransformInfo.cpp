@@ -6820,10 +6820,14 @@ bool AArch64TTIImpl::isProfitableToSinkOperands(
     break;
   case Instruction::Xor:
     if (I->getType()->isVectorTy() && ST->hasNEON())
-      break; // NEON has no eon instruction
+      break; // NEON and SVE have no EON instruction
     [[fallthrough]];
   case Instruction::And:
   case Instruction::Or:
+    // SVE has only BIC.
+    if (I->getOpcode() != Instruction::And &&
+        I->getType()->getTypeID() == Type::ScalableVectorTyID && ST->hasSVE())
+      break;
     // Shift can be fold into scalar AND/ORR/EOR,
     // but not the non-negated operand of BIC/ORN/EON.
     if (!(I->getType()->isVectorTy() && ST->hasNEON()) &&
