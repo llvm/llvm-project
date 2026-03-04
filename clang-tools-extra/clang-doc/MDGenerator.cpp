@@ -8,6 +8,7 @@
 
 #include "Generators.h"
 #include "Representation.h"
+#include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Support/FileSystem.h"
 #include "llvm/Support/FormatVariadic.h"
@@ -65,6 +66,44 @@ static void writeSourceFileRef(const ClangDocContext &CDCtx, const Location &L,
                   L.Filename, *CDCtx.RepositoryUrl);
   }
   OS << "\n\n";
+}
+
+static void extractChildComment(const CommentInfo &Comment,
+                                llvm::raw_ostream &OS, bool &FirstLine,
+                                bool &FirstParagraph, bool &ParagraphBreak) {
+  if (Comment.Kind == CommentKind::CK_ParagraphComment) {
+    if (!FirstParagraph)
+      ParagraphBreak = true;
+  }
+
+  if (!Comment.Text.empty()) {
+    if (FirstParagraph)
+      FirstParagraph = false;
+    if (ParagraphBreak) {
+      OS << "<br><br>";
+      ParagraphBreak = false;
+      FirstLine = true;
+    }
+
+    if (!FirstLine)
+      OS << "<br>";
+    else
+      FirstLine = false;
+
+    OS << Comment.Text;
+  }
+
+  for (const auto &Child : Comment.Children)
+    extractChildComment(*Child, OS, FirstLine, FirstParagraph, ParagraphBreak);
+}
+
+static void genCommentString(ArrayRef<CommentInfo> Comments,
+                             std::string &Buffer) {
+  llvm::raw_string_ostream OS(Buffer);
+  bool FirstLine = true, FirstParagraph = true, ParagraphBreak = false;
+
+  for (const auto &Child : Comments)
+    extractChildComment(Child, OS, FirstLine, FirstParagraph, ParagraphBreak);
 }
 
 static void maybeWriteSourceFileRef(llvm::raw_ostream &OS,
@@ -163,13 +202,38 @@ static void genMarkdown(const ClangDocContext &CDCtx, const EnumInfo &I,
   if (I.BaseType && !I.BaseType->Type.QualName.empty()) {
     OS << ": " << I.BaseType->Type.QualName << " ";
   }
-  OS << "|\n\n" << "--\n\n";
+  OS << "|\n\n";
 
   std::string Buffer;
   llvm::raw_string_ostream Members(Buffer);
-  if (!I.Members.empty())
-    for (const auto &N : I.Members)
-      Members << "| " << N.Name << " |\n";
+  Members << "| Name | Value |";
+  if (!I.Members.empty()) {
+    bool HasComments = false;
+    for (const auto &Member : I.Members) {
+      if (!Member.Description.empty()) {
+        HasComments = true;
+        Members << " Comments |";
+        break;
+      }
+    }
+    Members << "\n";
+    Members << "|:-:|:-:|";
+    if (HasComments)
+      Members << ":-:|";
+    Members << "\n";
+    for (const auto &N : I.Members) {
+      Members << "| " << N.Name << " ";
+      if (!N.Value.empty())
+        Members << "| " << N.Value << " ";
+      if (HasComments) {
+        std::string CommentString;
+        genCommentString(ArrayRef(N.Description), CommentString);
+        Members << "| " << (CommentString.empty() ? "--" : CommentString)
+                << " ";
+      }
+      Members << "|\n";
+    }
+  }
   writeLine(Members.str(), OS);
 
   maybeWriteSourceFileRef(OS, CDCtx, I.DefLoc);

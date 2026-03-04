@@ -69,9 +69,7 @@ TEST_F(MDGeneratorTest, emitNamespaceMD) {
 
 | enum OneEnum |
 
---
-
-
+| Name | Value |
 
 
 
@@ -136,9 +134,7 @@ ChildStruct
 
 | enum OneEnum |
 
---
-
-
+| Name | Value |
 
 
 
@@ -197,9 +193,9 @@ TEST_F(MDGeneratorTest, emitEnumMD) {
   assert(!Err);
   std::string Expected = R"raw(| enum class e |
 
---
-
-| X |
+| Name | Value |
+|:-:|:-:|
+| X | 0 |
 
 
 *Defined at test.cpp#10*
