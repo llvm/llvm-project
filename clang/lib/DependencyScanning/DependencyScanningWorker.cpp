@@ -166,7 +166,7 @@ dependencies::initVFSForTUBufferScanning(
 // unique source locations for the diagnostics. Therefore sharing
 // this global buffer across threads is ok.
 static const std::string
-    FakeInput(" ", CompilerInstanceWithContext::FakeInputBufferSize);
+    FakeInput(" ", CompilerInstanceWithContext::MaxNumOfQueries);
 
 std::pair<IntrusiveRefCntPtr<llvm::vfs::OverlayFileSystem>,
           std::vector<std::string>>

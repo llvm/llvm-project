@@ -869,6 +869,9 @@ bool CompilerInstanceWithContext::initialize(
 bool CompilerInstanceWithContext::computeDependencies(
     StringRef ModuleName, DependencyConsumer &Consumer,
     DependencyActionController &Controller) {
+  if (SrcLocOffset >= MaxNumOfQueries)
+    llvm::report_fatal_error("exceeded maximum by-name scans per worker");
+
   assert(CIPtr && "CIPtr must be initialized before calling this method");
   auto &CI = *CIPtr;
 
@@ -936,13 +939,6 @@ bool CompilerInstanceWithContext::computeDependencies(
   // FIXME: Scan modules asynchronously here as well.
 
   SrcLocOffset++;
-  if (SrcLocOffset >= FakeInputBufferSize) {
-    // This should never happen. We could have replaced this by an assert,
-    // but reporting a fatal error is more explicit, and we know
-    // immediately we are overflowing.
-    llvm::report_fatal_error("exceeded maximum by-name scans per worker; "
-                             "increase module-import-by-name.input's size");
-  }
 
   SmallVector<IdentifierLoc, 2> Path;
   IdentifierInfo *ModuleID = PP.getIdentifierInfo(ModuleName);
