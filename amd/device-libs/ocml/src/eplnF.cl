@@ -13,10 +13,11 @@
 CONSTATTR float2
 MATH_PRIVATE(epln)(float a)
 {
-    float m = BUILTIN_FREXP_MANT_F32(a);
+    int a_exp;
+    float m = BUILTIN_FREXP_F32(a, &a_exp);
     int b = m < (2.0f/3.0f);
     m = BUILTIN_FLDEXP_F32(m, b);
-    int e = BUILTIN_FREXP_EXP_F32(a) - b;
+    int e = a_exp - b;
 
     float2 x = div(m - 1.0f, fadd(1.0f, m));
     float2 s = sqr(x);

@@ -37,10 +37,14 @@ MATH_MANGLE(remainder)(double x, double y)
     if (ax > ay) {
         int ex, ey;
 
-        ex = BUILTIN_FREXP_EXP_F64(ax) - 1;
-        ax = BUILTIN_FLDEXP_F64(BUILTIN_FREXP_MANT_F64(ax), bits);
-        ey = BUILTIN_FREXP_EXP_F64(ay) - 1;
-        ay = BUILTIN_FLDEXP_F64(BUILTIN_FREXP_MANT_F64(ay), 1);
+        double mx = BUILTIN_FREXP_F64(ax, &ex);
+        --ex;
+
+        double my = BUILTIN_FREXP_F64(ay, &ey);
+        --ey;
+
+        ax = BUILTIN_FLDEXP_F64(mx, bits);
+        ay = BUILTIN_FLDEXP_F64(my, 1);
 
         int nb = ex - ey;
         double ayinv = MATH_RCP(ay);

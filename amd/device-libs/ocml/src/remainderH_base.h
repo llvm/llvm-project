@@ -35,10 +35,13 @@ MATH_MANGLE(remainder)(half x, half y)
     if (ax > ay) {
         int ex, ey;
 
-        ex = BUILTIN_FREXP_EXP_F32(ax) - 1;
-        ax = BUILTIN_FLDEXP_F32(BUILTIN_FREXP_MANT_F32(ax), bits);
-        ey = BUILTIN_FREXP_EXP_F32(ay) - 1;
-        ay = BUILTIN_FLDEXP_F32(BUILTIN_FREXP_MANT_F32(ay), 1);
+        float mx = BUILTIN_FREXP_F32(ax, &ex);
+        --ex;
+        float my = BUILTIN_FREXP_F32(ay, &ey);
+        --ey;
+
+        ax = BUILTIN_FLDEXP_F32(mx, bits);
+        ay = BUILTIN_FLDEXP_F32(my, 1);
 
         int nb = ex - ey;
 

@@ -13,8 +13,10 @@
 CONSTATTR float
 MATH_PRIVATE(lnep)(float2 a, int ea)
 {
-    int b = BUILTIN_FREXP_MANT_F32(a.hi) < (2.0f/3.0f);
-    int e = BUILTIN_FREXP_EXP_F32(a.hi) - b;
+    int a_hi_exp;
+    float a_hi_m = BUILTIN_FREXP_F32(a.hi, &a_hi_exp);
+    int b = a_hi_m < (2.0f/3.0f);
+    int e = a_hi_exp - b;
     float2 m = ldx(a, -e);
     float2 x = div(fadd(-1.0f, m), fadd(1.0f, m));
     float s = x.hi * x.hi;

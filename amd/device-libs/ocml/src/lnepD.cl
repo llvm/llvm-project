@@ -13,8 +13,11 @@
 CONSTATTR double
 MATH_PRIVATE(lnep)(double2 a, int ea)
 {
-    int b = BUILTIN_FREXP_MANT_F64(a.hi) < (2.0/3.0);
-    int e = BUILTIN_FREXP_EXP_F64(a.hi) - b;
+    int a_hi_exp;
+    double m_hi = BUILTIN_FREXP_F64(a.hi, &a_hi_exp);
+
+    int b = m_hi < (2.0/3.0);
+    int e = a_hi_exp - b;
     double2 m = ldx(a, -e);
     double2 x = div(fadd(-1.0, m), fadd(1.0, m));
     double s = x.hi * x.hi;

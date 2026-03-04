@@ -13,10 +13,11 @@
 CONSTATTR double2
 MATH_PRIVATE(epln)(double a)
 {
-    double m = BUILTIN_FREXP_MANT_F64(a);
+    int a_exp;
+    double m = BUILTIN_FREXP_F64(a, &a_exp);
     int b = m < (2.0/3.0);
     m = BUILTIN_FLDEXP_F64(m, b);
-    int e = BUILTIN_FREXP_EXP_F64(a) - b;
+    int e = a_exp - b;
 
     double2 x = div(m - 1.0, fadd(1.0, m));
     double2 s = sqr(x);

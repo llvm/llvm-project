@@ -260,24 +260,6 @@ static inline half __ocml_priv_rsqrt_f16(half x) {
         _exp;                                                                  \
     })
 
-#define BUILTIN_FREXP_MANT_F32(X)                                              \
-    ({                                                                         \
-        int _exp;                                                              \
-        __builtin_frexpf(X, &_exp);                                            \
-    })
-
-#define BUILTIN_FREXP_MANT_F64(X)                                              \
-    ({                                                                         \
-        int _exp;                                                              \
-        __builtin_frexp(X, &_exp);                                             \
-    })
-
-#define BUILTIN_FREXP_MANT_F16(X)                                              \
-    ({                                                                         \
-        int _exp;                                                              \
-        __builtin_frexpf16(X, &_exp);                                          \
-    })
-
 #define BUILTIN_CMAX_F32 __builtin_fmaxf
 #define BUILTIN_CMAX_F64 __builtin_fmax
 #define BUILTIN_CMAX_F16 __builtin_fmaxf16
