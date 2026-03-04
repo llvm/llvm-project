@@ -12722,8 +12722,7 @@ def note_unreachable_entity : Note<
   "is not %select{visible|reachable|reachable|reachable|reachable|reachable}0">;
 def ext_module_import_in_extern_c : ExtWarn<
   "import of C++ module '%0' appears within extern \"C\" language linkage "
-  "specification">, DefaultError,
-  InGroup<DiagGroup<"module-import-in-extern-c">>;
+  "specification">, InGroup<DiagGroup<"module-import-in-extern-c">>;
 def err_module_import_not_at_top_level_fatal : Error<
   "import of module '%0' appears within %1">, DefaultFatal;
 def ext_module_import_not_at_top_level_noop : ExtWarn<
