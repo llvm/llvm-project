@@ -143,7 +143,8 @@ public:
 
 class DebugMapObjectFilter {
 public:
-  StringRef getObjectFilename() const { return Filename; }
+  virtual ~DebugMapObjectFilter() = default;
+	StringRef getObjectFilename() const { return Filename; }
 
 protected:
   std::string Filename;
