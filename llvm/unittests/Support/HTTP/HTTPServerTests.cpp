@@ -1,4 +1,4 @@
-//===-- llvm/unittest/Support/HTTPServer.cpp - unit tests -------*- C++ -*-===//
+//===-- HTTPServerTests.cpp - unit tests ----------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -7,8 +7,8 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/ADT/StringExtras.h"
-#include "llvm/Debuginfod/HTTPClient.h"
-#include "llvm/Debuginfod/HTTPServer.h"
+#include "llvm/Support/HTTP/HTTPClient.h"
+#include "llvm/Support/HTTP/HTTPServer.h"
 #include "llvm/Support/Error.h"
 #include "llvm/Support/ThreadPool.h"
 #include "llvm/Testing/Support/Error.h"
