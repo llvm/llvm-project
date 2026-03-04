@@ -189,11 +189,21 @@ public:
   LLVMContext &getContext() const { return Ctx; }
   const DataLayout &getDataLayout() const { return DL; }
   const TargetLibraryInfoImpl &getTLIImpl() const { return TLIImpl; }
+  /// Get the effective vector length for a vector type.
   uint32_t getEVL(ElementCount EC) const {
     if (EC.isScalable())
       return VScale * EC.getKnownMinValue();
     return EC.getFixedValue();
   }
+  /// The result is multiplied by VScale for scalable type sizes.
+  uint64_t getEffectiveTypeSize(TypeSize Size) const {
+    if (Size.isScalable())
+      return VScale * Size.getKnownMinValue();
+    return Size.getFixedValue();
+  }
+  /// Returns DL.getTypeAllocSize/getTypeStoreSize for the given type.
+  /// An exception to this is that for scalable vector types, the size is
+  /// computed as if the vector has getEVL(ElementCount) elements.
   uint64_t getEffectiveTypeAllocSize(Type *Ty);
   uint64_t getEffectiveTypeStoreSize(Type *Ty);
 
@@ -205,8 +215,8 @@ public:
   /// Derive a pointer from a memory object with offset 0.
   /// Please use Pointer's interface for further manipulations.
   Pointer deriveFromMemoryObject(IntrusiveRefCntPtr<MemoryObject> Obj);
-  /// Convert byte sequence to an value of the given type. Uninitialized bits
-  /// are flushed according to the options.
+  /// Convert byte sequence to a value of the given type. Uninitialized bits are
+  /// flushed according to the options.
   AnyValue fromBytes(ArrayRef<Byte> Bytes, Type *Ty);
   /// Convert a value to byte sequence. Padding bits are set to zero.
   void toBytes(const AnyValue &Val, Type *Ty, MutableArrayRef<Byte> Bytes);

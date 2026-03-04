@@ -112,14 +112,17 @@ AnyValue Context::fromBytes(ArrayRef<Byte> Bytes, Type *Ty,
       NewOffsetInBits = alignTo(NewOffsetInBits, 8);
     bool NeedsPadding = NewOffsetInBits != OffsetInBits + NumBits;
     uint32_t NumBitsToExtract = NewOffsetInBits - OffsetInBits;
-    SmallVector<uint64_t> BitsData(alignTo(NumBitsToExtract, 8));
+    SmallVector<uint64_t> RawBits(alignTo(NumBitsToExtract, 8));
     for (uint32_t I = 0; I < NumBitsToExtract; I += 8) {
+      // Try to form a 'logical' byte that represents the bits in the range
+      // [BitsStart, BitsEnd].
       uint32_t NumBitsInByte = std::min(8U, NumBitsToExtract - I);
       uint32_t BitsStart =
           OffsetInBits +
           (DL.isLittleEndian() ? I : (NumBitsToExtract - NumBitsInByte - I));
       uint32_t BitsEnd = BitsStart + NumBitsInByte - 1;
       Byte LogicalByte;
+      // Check whether it is a cross-byte access.
       if (((BitsStart ^ BitsEnd) & ~7) == 0)
         LogicalByte = Bytes[BitsStart / 8].lshr(BitsStart % 8);
       else
@@ -142,11 +145,11 @@ AnyValue Context::fromBytes(ArrayRef<Byte> Bytes, Type *Ty,
       uint8_t ActualBits = ((LogicalByte.Value & LogicalByte.ConcreteMask) |
                             (RandomBits & ~LogicalByte.ConcreteMask)) &
                            Mask;
-      BitsData[I / 64] |= static_cast<APInt::WordType>(ActualBits) << (I % 64);
+      RawBits[I / 64] |= static_cast<APInt::WordType>(ActualBits) << (I % 64);
     }
     OffsetInBits = NewOffsetInBits;
 
-    APInt Bits(NumBitsToExtract, BitsData);
+    APInt Bits(NumBitsToExtract, RawBits);
 
     // Padding bits for non-byte-sized scalar types must be zero.
     if (NeedsPadding) {
@@ -167,14 +170,37 @@ AnyValue Context::fromBytes(ArrayRef<Byte> Bytes, Type *Ty,
   assert(OffsetInBits % 8 == 0 && "Missing padding bits.");
   if (auto *VecTy = dyn_cast<VectorType>(Ty)) {
     Type *ElemTy = VecTy->getElementType();
-    std::vector<AnyValue> ValVec;
+    uint32_t ElemBits = DL.getTypeSizeInBits(ElemTy).getFixedValue();
     uint32_t NumElements = getEVL(VecTy->getElementCount());
+    // Check padding bits. <N x iM> acts as if an integer type with N * M bits.
+    uint32_t NewOffsetInBits = OffsetInBits + ElemBits * NumElements;
+    uint32_t AlignedNewOffsetInBits = alignTo(NewOffsetInBits, 8);
+    if (NewOffsetInBits != AlignedNewOffsetInBits) {
+      assert(NewOffsetInBits % 8 != 0 &&
+             AlignedNewOffsetInBits - NewOffsetInBits < 8 &&
+             "Unexpected offset.");
+      // The padding bits are located in the last byte on little-endian systems.
+      // On big-endian systems, the padding bits are located in the first byte.
+      const Byte &PaddingByte =
+          Bytes[(DL.isBigEndian() ? OffsetInBits : NewOffsetInBits) / 8];
+      uint32_t Mask = (~0U << (NewOffsetInBits % 8)) & 255U;
+      // Make sure all high padding bits are zero.
+      if ((PaddingByte.ConcreteMask & ~PaddingByte.Value & Mask) != Mask) {
+        OffsetInBits = AlignedNewOffsetInBits;
+        return AnyValue::getPoisonValue(*this, Ty);
+      }
+      if (DL.isBigEndian())
+        OffsetInBits += AlignedNewOffsetInBits - NewOffsetInBits;
+    }
+
+    std::vector<AnyValue> ValVec;
     ValVec.reserve(NumElements);
     for (uint32_t I = 0; I != NumElements; ++I)
       ValVec.push_back(
           fromBytes(Bytes, ElemTy, OffsetInBits, /*CheckPaddingBits=*/false));
     if (DL.isBigEndian())
       std::reverse(ValVec.begin(), ValVec.end());
+    OffsetInBits = AlignedNewOffsetInBits;
     return AnyValue(std::move(ValVec));
   }
   if (auto *ArrTy = dyn_cast<ArrayType>(Ty)) {
@@ -196,11 +222,7 @@ AnyValue Context::fromBytes(ArrayRef<Byte> Bytes, Type *Ty,
     for (uint32_t I = 0; I != NumElements; ++I) {
       Type *ElemTy = StructTy->getElementType(I);
       TypeSize ElemOffset = Layout->getElementOffset(I);
-      OffsetInBits =
-          BaseOffsetInBits + (ElemOffset.isScalable()
-                                  ? ElemOffset.getKnownMinValue() * VScale
-                                  : ElemOffset.getFixedValue()) *
-                                 8;
+      OffsetInBits = BaseOffsetInBits + getEffectiveTypeSize(ElemOffset) * 8;
       ValVec.push_back(
           fromBytes(Bytes, ElemTy, OffsetInBits, /*CheckPaddingBits=*/true));
     }
@@ -234,7 +256,8 @@ void Context::toBytes(const AnyValue &Val, Type *Ty, uint32_t &OffsetInBits,
             static_cast<uint8_t>(((1U << NumBitsInByte) - 1)
                                  << (BitsStart % 8)),
             static_cast<uint8_t>(BitsVal << (BitsStart % 8)));
-        // Crosses the byte boundary.
+        // If it is a cross-byte access, write the remaining bits to the next
+        // byte.
         if (((BitsStart ^ BitsEnd) & ~7) != 0)
           Bytes[BitsEnd / 8].writeBits(
               static_cast<uint8_t>((1U << (BitsEnd % 8 + 1)) - 1),
@@ -291,8 +314,8 @@ void Context::toBytes(const AnyValue &Val, Type *Ty, uint32_t &OffsetInBits,
     if (NewOffsetInBits != OffsetInBits) {
       assert(OffsetInBits % 8 != 0 && NewOffsetInBits - OffsetInBits < 8 &&
              "Unexpected offset.");
-      // Fill remaining bits with undef.
-      Bytes[OffsetInBits / 8].undefBits(
+      // Fill remaining bits with zero.
+      Bytes[OffsetInBits / 8].zeroBits(
           static_cast<uint8_t>(~0U << (OffsetInBits % 8)));
     }
     OffsetInBits = NewOffsetInBits;
@@ -321,10 +344,7 @@ void Context::toBytes(const AnyValue &Val, Type *Ty, uint32_t &OffsetInBits,
       Type *ElemTy = StructTy->getElementType(I);
       TypeSize ElemOffset = Layout->getElementOffset(I);
       uint32_t NewOffsetInBits =
-          BaseOffsetInBits + (ElemOffset.isScalable()
-                                  ? ElemOffset.getKnownMinValue() * VScale
-                                  : ElemOffset.getFixedValue()) *
-                                 8;
+          BaseOffsetInBits + getEffectiveTypeSize(ElemOffset) * 8;
       FillUndefBytes(NewOffsetInBits);
       toBytes(Val.asAggregate()[I], ElemTy, OffsetInBits, Bytes,
               /*PaddingBits=*/true);
@@ -439,16 +459,11 @@ BasicBlock *Context::getTargetBlock(const Pointer &Ptr) {
 }
 
 uint64_t Context::getEffectiveTypeAllocSize(Type *Ty) {
-  TypeSize Size = DL.getTypeAllocSize(Ty);
-  if (Size.isScalable())
-    return Size.getKnownMinValue() * VScale;
-  return Size.getFixedValue();
+  // FIXME: It is incorrect for overaligned scalable vector types.
+  return getEffectiveTypeSize(DL.getTypeAllocSize(Ty));
 }
 uint64_t Context::getEffectiveTypeStoreSize(Type *Ty) {
-  TypeSize Size = DL.getTypeStoreSize(Ty);
-  if (Size.isScalable())
-    return Size.getKnownMinValue() * VScale;
-  return Size.getFixedValue();
+  return getEffectiveTypeSize(DL.getTypeStoreSize(Ty));
 }
 
 void MemoryObject::markAsFreed() {

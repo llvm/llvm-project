@@ -255,8 +255,8 @@ class InstExecutor : public InstVisitor<InstExecutor, void> {
   /// to the underlying object if it is valid.
   std::optional<uint64_t> verifyMemAccess(const MemoryObject &MO,
                                           const APInt &Address,
-                                          uint64_t AccessSize,
-                                          uint64_t Alignment, bool IsStore) {
+                                          uint64_t AccessSize, Align Alignment,
+                                          bool IsStore) {
     // Loading from a stack object outside its lifetime is not undefined
     // behavior and returns a poison value instead. Storing to it is still
     // undefined behavior.
@@ -266,8 +266,7 @@ class InstExecutor : public InstVisitor<InstExecutor, void> {
       return std::nullopt;
     }
 
-    assert(isPowerOf2_64(Alignment) && "Alignment should be a power of 2.");
-    if (Address.countr_zero() < Log2_64(Alignment)) {
+    if (Address.countr_zero() < Log2(Alignment)) {
       reportImmediateUB("Misaligned memory access.");
       return std::nullopt;
     }
@@ -287,7 +286,7 @@ class InstExecutor : public InstVisitor<InstExecutor, void> {
     return Offset.getZExtValue();
   }
 
-  AnyValue load(const AnyValue &Ptr, uint64_t Align, Type *ValTy) {
+  AnyValue load(const AnyValue &Ptr, Align Alignment, Type *ValTy) {
     if (Ptr.isPoison()) {
       reportImmediateUB("Invalid memory access with a poison pointer.");
       return AnyValue::getPoisonValue(Ctx, ValTy);
@@ -300,9 +299,10 @@ class InstExecutor : public InstVisitor<InstExecutor, void> {
       return AnyValue::getPoisonValue(Ctx, ValTy);
     }
     // TODO: pointer capability check
-    if (auto Offset = verifyMemAccess(
-            *MO, PtrVal.address(), Ctx.getEffectiveTypeStoreSize(ValTy), Align,
-            /*IsStore=*/false)) {
+    if (auto Offset =
+            verifyMemAccess(*MO, PtrVal.address(),
+                            Ctx.getEffectiveTypeStoreSize(ValTy), Alignment,
+                            /*IsStore=*/false)) {
       // Load from a dead stack object yields poison value.
       if (MO->getState() == MemoryObjectState::Dead)
         return AnyValue::getPoisonValue(Ctx, ValTy);
@@ -312,7 +312,7 @@ class InstExecutor : public InstVisitor<InstExecutor, void> {
     return AnyValue::getPoisonValue(Ctx, ValTy);
   }
 
-  void store(const AnyValue &Ptr, uint64_t Align, const AnyValue &Val,
+  void store(const AnyValue &Ptr, Align Alignment, const AnyValue &Val,
              Type *ValTy) {
     if (Ptr.isPoison()) {
       reportImmediateUB("Invalid memory access with a poison pointer.");
@@ -326,9 +326,10 @@ class InstExecutor : public InstVisitor<InstExecutor, void> {
       return;
     }
     // TODO: pointer capability check
-    if (auto Offset = verifyMemAccess(
-            *MO, PtrVal.address(), Ctx.getEffectiveTypeStoreSize(ValTy), Align,
-            /*IsStore=*/true))
+    if (auto Offset =
+            verifyMemAccess(*MO, PtrVal.address(),
+                            Ctx.getEffectiveTypeStoreSize(ValTy), Alignment,
+                            /*IsStore=*/true))
       Ctx.store(*MO, *Offset, Val, ValTy);
   }
 
@@ -1001,10 +1002,7 @@ public:
       // TODO: Should be documented in LangRef: GEPs with nowrap flags should
       // return poison when the type size exceeds index space.
       TypeSize Offset = GTI.getSequentialElementStride(DL);
-      APInt Scale(IndexBitWidth,
-                  Offset.isScalable()
-                      ? Offset.getKnownMinValue() * Ctx.getVScale()
-                      : Offset.getFixedValue(),
+      APInt Scale(IndexBitWidth, Ctx.getEffectiveTypeSize(Offset),
                   /*isSigned=*/false, /*implicitTrunc=*/true);
       if (!Scale.isZero())
         ApplyScaledOffset(getValue(V), Scale);
@@ -1025,8 +1023,8 @@ public:
   }
 
   void visitLoadInst(LoadInst &LI) {
-    auto RetVal = load(getValue(LI.getPointerOperand()), LI.getAlign().value(),
-                       LI.getType());
+    auto RetVal =
+        load(getValue(LI.getPointerOperand()), LI.getAlign(), LI.getType());
     // TODO: track volatile loads
     // TODO: handle metadata
     setResult(LI, std::move(RetVal));
@@ -1037,7 +1035,7 @@ public:
     auto &Val = getValue(SI.getValueOperand());
     // TODO: track volatile stores
     // TODO: handle metadata
-    store(Ptr, SI.getAlign().value(), Val, SI.getValueOperand()->getType());
+    store(Ptr, SI.getAlign(), Val, SI.getValueOperand()->getType());
     if (Status)
       Status &= Handler.onInstructionExecuted(SI, AnyValue());
   }
