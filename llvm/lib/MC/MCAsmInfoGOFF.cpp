@@ -13,6 +13,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/MC/MCAsmInfoGOFF.h"
+#include "llvm/ADT/StringExtras.h"
 #include "llvm/BinaryFormat/GOFF.h"
 #include "llvm/MC/MCSectionGOFF.h"
 #include "llvm/MC/MCSymbolGOFF.h"
