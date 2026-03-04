@@ -40,6 +40,7 @@ body: |
   ; FAST-NEXT:   [[ZEXT1:%[0-9]+]]:sgpr(s32) = G_ZEXT [[TRUNC3]](s1)
   ; FAST-NEXT:   [[SELECT:%[0-9]+]]:sgpr(s32) = G_SELECT [[ZEXT1]](s32), [[C]], [[COPY]]
   ; FAST-NEXT:   S_SETPC_B64 undef $sgpr30_sgpr31, implicit [[SELECT]](s32)
+  ;
   ; GREEDY-LABEL: name: phi_s1_scc_scc_sbranch
   ; GREEDY: bb.0:
   ; GREEDY-NEXT:   successors: %bb.1(0x40000000), %bb.2(0x40000000)
@@ -152,6 +153,7 @@ body: |
   ; FAST-NEXT:   [[ZEXT2:%[0-9]+]]:sgpr(s32) = G_ZEXT [[TRUNC5]](s1)
   ; FAST-NEXT:   [[SELECT:%[0-9]+]]:sgpr(s32) = G_SELECT [[ZEXT2]](s32), [[COPY]], [[COPY1]]
   ; FAST-NEXT:   S_SETPC_B64 undef $sgpr30_sgpr31, implicit [[SELECT]](s32)
+  ;
   ; GREEDY-LABEL: name: phi_s1_scc_scc_scc_sbranch
   ; GREEDY: bb.0:
   ; GREEDY-NEXT:   successors: %bb.1(0x40000000), %bb.3(0x40000000)
@@ -258,23 +260,27 @@ body: |
   ; FAST-NEXT:   [[ICMP1:%[0-9]+]]:sgpr(s32) = G_ICMP intpred(eq), [[COPY2]](s32), [[C]]
   ; FAST-NEXT:   [[TRUNC1:%[0-9]+]]:sgpr(s1) = G_TRUNC [[ICMP1]](s32)
   ; FAST-NEXT:   [[ZEXT:%[0-9]+]]:sgpr(s32) = G_ZEXT [[TRUNC1]](s1)
-  ; FAST-NEXT:   [[COPY3:%[0-9]+]]:vcc(s1) = COPY [[TRUNC]](s1)
+  ; FAST-NEXT:   [[ANYEXT:%[0-9]+]]:sgpr(s32) = G_ANYEXT [[TRUNC]](s1)
   ; FAST-NEXT:   G_BRCOND [[ZEXT]](s32), %bb.1
   ; FAST-NEXT:   G_BR %bb.2
   ; FAST-NEXT: {{  $}}
   ; FAST-NEXT: bb.1:
   ; FAST-NEXT:   successors: %bb.2(0x80000000)
   ; FAST-NEXT: {{  $}}
-  ; FAST-NEXT:   [[COPY4:%[0-9]+]]:vgpr(s32) = COPY [[C]](s32)
-  ; FAST-NEXT:   [[ICMP2:%[0-9]+]]:vcc(s1) = G_ICMP intpred(eq), [[COPY1]](s32), [[COPY4]]
+  ; FAST-NEXT:   [[COPY3:%[0-9]+]]:vgpr(s32) = COPY [[C]](s32)
+  ; FAST-NEXT:   [[ICMP2:%[0-9]+]]:vcc(s1) = G_ICMP intpred(eq), [[COPY1]](s32), [[COPY3]]
+  ; FAST-NEXT:   [[AMDGPU_COPY_SCC_VCC:%[0-9]+]]:sgpr(s32) = G_AMDGPU_COPY_SCC_VCC [[ICMP2]](s1)
+  ; FAST-NEXT:   [[TRUNC2:%[0-9]+]]:sgpr(s1) = G_TRUNC [[AMDGPU_COPY_SCC_VCC]](s32)
+  ; FAST-NEXT:   [[ANYEXT1:%[0-9]+]]:sgpr(s32) = G_ANYEXT [[TRUNC2]](s1)
   ; FAST-NEXT:   G_BR %bb.2
   ; FAST-NEXT: {{  $}}
   ; FAST-NEXT: bb.2:
-  ; FAST-NEXT:   [[PHI:%[0-9]+]]:vcc(s1) = G_PHI [[COPY3]](s1), %bb.0, [[ICMP2]](s1), %bb.1
-  ; FAST-NEXT:   [[COPY5:%[0-9]+]]:vgpr(s32) = COPY [[C]](s32)
-  ; FAST-NEXT:   [[COPY6:%[0-9]+]]:vgpr(s32) = COPY [[COPY]](s32)
-  ; FAST-NEXT:   [[SELECT:%[0-9]+]]:vgpr(s32) = G_SELECT [[PHI]](s1), [[COPY5]], [[COPY6]]
+  ; FAST-NEXT:   [[PHI:%[0-9]+]]:sgpr(s32) = G_PHI [[ANYEXT]](s32), %bb.0, [[ANYEXT1]](s32), %bb.1
+  ; FAST-NEXT:   [[TRUNC3:%[0-9]+]]:sgpr(s1) = G_TRUNC [[PHI]](s32)
+  ; FAST-NEXT:   [[ZEXT1:%[0-9]+]]:sgpr(s32) = G_ZEXT [[TRUNC3]](s1)
+  ; FAST-NEXT:   [[SELECT:%[0-9]+]]:sgpr(s32) = G_SELECT [[ZEXT1]](s32), [[C]], [[COPY]]
   ; FAST-NEXT:   S_SETPC_B64 undef $sgpr30_sgpr31, implicit [[SELECT]](s32)
+  ;
   ; GREEDY-LABEL: name: phi_s1_scc_vcc_sbranch
   ; GREEDY: bb.0:
   ; GREEDY-NEXT:   successors: %bb.1(0x40000000), %bb.2(0x40000000)
@@ -289,22 +295,25 @@ body: |
   ; GREEDY-NEXT:   [[ICMP1:%[0-9]+]]:sgpr(s32) = G_ICMP intpred(eq), [[COPY2]](s32), [[C]]
   ; GREEDY-NEXT:   [[TRUNC1:%[0-9]+]]:sgpr(s1) = G_TRUNC [[ICMP1]](s32)
   ; GREEDY-NEXT:   [[ZEXT:%[0-9]+]]:sgpr(s32) = G_ZEXT [[TRUNC1]](s1)
-  ; GREEDY-NEXT:   [[COPY3:%[0-9]+]]:vcc(s1) = COPY [[TRUNC]](s1)
+  ; GREEDY-NEXT:   [[ANYEXT:%[0-9]+]]:sgpr(s32) = G_ANYEXT [[TRUNC]](s1)
   ; GREEDY-NEXT:   G_BRCOND [[ZEXT]](s32), %bb.1
   ; GREEDY-NEXT:   G_BR %bb.2
   ; GREEDY-NEXT: {{  $}}
   ; GREEDY-NEXT: bb.1:
   ; GREEDY-NEXT:   successors: %bb.2(0x80000000)
   ; GREEDY-NEXT: {{  $}}
-  ; GREEDY-NEXT:   [[COPY4:%[0-9]+]]:vgpr(s32) = COPY [[C]](s32)
-  ; GREEDY-NEXT:   [[ICMP2:%[0-9]+]]:vcc(s1) = G_ICMP intpred(eq), [[COPY1]](s32), [[COPY4]]
+  ; GREEDY-NEXT:   [[COPY3:%[0-9]+]]:vgpr(s32) = COPY [[C]](s32)
+  ; GREEDY-NEXT:   [[ICMP2:%[0-9]+]]:vcc(s1) = G_ICMP intpred(eq), [[COPY1]](s32), [[COPY3]]
+  ; GREEDY-NEXT:   [[AMDGPU_COPY_SCC_VCC:%[0-9]+]]:sgpr(s32) = G_AMDGPU_COPY_SCC_VCC [[ICMP2]](s1)
+  ; GREEDY-NEXT:   [[TRUNC2:%[0-9]+]]:sgpr(s1) = G_TRUNC [[AMDGPU_COPY_SCC_VCC]](s32)
+  ; GREEDY-NEXT:   [[ANYEXT1:%[0-9]+]]:sgpr(s32) = G_ANYEXT [[TRUNC2]](s1)
   ; GREEDY-NEXT:   G_BR %bb.2
   ; GREEDY-NEXT: {{  $}}
   ; GREEDY-NEXT: bb.2:
-  ; GREEDY-NEXT:   [[PHI:%[0-9]+]]:vcc(s1) = G_PHI [[COPY3]](s1), %bb.0, [[ICMP2]](s1), %bb.1
-  ; GREEDY-NEXT:   [[COPY5:%[0-9]+]]:vgpr(s32) = COPY [[C]](s32)
-  ; GREEDY-NEXT:   [[COPY6:%[0-9]+]]:vgpr(s32) = COPY [[COPY]](s32)
-  ; GREEDY-NEXT:   [[SELECT:%[0-9]+]]:vgpr(s32) = G_SELECT [[PHI]](s1), [[COPY5]], [[COPY6]]
+  ; GREEDY-NEXT:   [[PHI:%[0-9]+]]:sgpr(s32) = G_PHI [[ANYEXT]](s32), %bb.0, [[ANYEXT1]](s32), %bb.1
+  ; GREEDY-NEXT:   [[TRUNC3:%[0-9]+]]:sgpr(s1) = G_TRUNC [[PHI]](s32)
+  ; GREEDY-NEXT:   [[ZEXT1:%[0-9]+]]:sgpr(s32) = G_ZEXT [[TRUNC3]](s1)
+  ; GREEDY-NEXT:   [[SELECT:%[0-9]+]]:sgpr(s32) = G_SELECT [[ZEXT1]](s32), [[C]], [[COPY]]
   ; GREEDY-NEXT:   S_SETPC_B64 undef $sgpr30_sgpr31, implicit [[SELECT]](s32)
   bb.0:
     successors: %bb.1, %bb.2
@@ -352,6 +361,9 @@ body: |
   ; FAST-NEXT:   [[ICMP1:%[0-9]+]]:sgpr(s32) = G_ICMP intpred(eq), [[COPY2]](s32), [[C]]
   ; FAST-NEXT:   [[TRUNC:%[0-9]+]]:sgpr(s1) = G_TRUNC [[ICMP1]](s32)
   ; FAST-NEXT:   [[ZEXT:%[0-9]+]]:sgpr(s32) = G_ZEXT [[TRUNC]](s1)
+  ; FAST-NEXT:   [[AMDGPU_COPY_SCC_VCC:%[0-9]+]]:sgpr(s32) = G_AMDGPU_COPY_SCC_VCC [[ICMP]](s1)
+  ; FAST-NEXT:   [[TRUNC1:%[0-9]+]]:sgpr(s1) = G_TRUNC [[AMDGPU_COPY_SCC_VCC]](s32)
+  ; FAST-NEXT:   [[ANYEXT:%[0-9]+]]:sgpr(s32) = G_ANYEXT [[TRUNC1]](s1)
   ; FAST-NEXT:   G_BRCOND [[ZEXT]](s32), %bb.1
   ; FAST-NEXT:   G_BR %bb.2
   ; FAST-NEXT: {{  $}}
@@ -359,16 +371,17 @@ body: |
   ; FAST-NEXT:   successors: %bb.2(0x80000000)
   ; FAST-NEXT: {{  $}}
   ; FAST-NEXT:   [[ICMP2:%[0-9]+]]:sgpr(s32) = G_ICMP intpred(eq), [[COPY1]](s32), [[C]]
-  ; FAST-NEXT:   [[TRUNC1:%[0-9]+]]:sgpr(s1) = G_TRUNC [[ICMP2]](s32)
-  ; FAST-NEXT:   [[COPY4:%[0-9]+]]:vcc(s1) = COPY [[TRUNC1]](s1)
+  ; FAST-NEXT:   [[TRUNC2:%[0-9]+]]:sgpr(s1) = G_TRUNC [[ICMP2]](s32)
+  ; FAST-NEXT:   [[ANYEXT1:%[0-9]+]]:sgpr(s32) = G_ANYEXT [[TRUNC2]](s1)
   ; FAST-NEXT:   G_BR %bb.2
   ; FAST-NEXT: {{  $}}
   ; FAST-NEXT: bb.2:
-  ; FAST-NEXT:   [[PHI:%[0-9]+]]:vcc(s1) = G_PHI [[ICMP]](s1), %bb.0, [[COPY4]](s1), %bb.1
-  ; FAST-NEXT:   [[COPY5:%[0-9]+]]:vgpr(s32) = COPY [[C]](s32)
-  ; FAST-NEXT:   [[COPY6:%[0-9]+]]:vgpr(s32) = COPY [[COPY1]](s32)
-  ; FAST-NEXT:   [[SELECT:%[0-9]+]]:vgpr(s32) = G_SELECT [[PHI]](s1), [[COPY5]], [[COPY6]]
+  ; FAST-NEXT:   [[PHI:%[0-9]+]]:sgpr(s32) = G_PHI [[ANYEXT]](s32), %bb.0, [[ANYEXT1]](s32), %bb.1
+  ; FAST-NEXT:   [[TRUNC3:%[0-9]+]]:sgpr(s1) = G_TRUNC [[PHI]](s32)
+  ; FAST-NEXT:   [[ZEXT1:%[0-9]+]]:sgpr(s32) = G_ZEXT [[TRUNC3]](s1)
+  ; FAST-NEXT:   [[SELECT:%[0-9]+]]:sgpr(s32) = G_SELECT [[ZEXT1]](s32), [[C]], [[COPY1]]
   ; FAST-NEXT:   S_SETPC_B64 undef $sgpr30_sgpr31, implicit [[SELECT]](s32)
+  ;
   ; GREEDY-LABEL: name: phi_s1_vcc_scc_sbranch
   ; GREEDY: bb.0:
   ; GREEDY-NEXT:   successors: %bb.1(0x40000000), %bb.2(0x40000000)
@@ -383,6 +396,9 @@ body: |
   ; GREEDY-NEXT:   [[ICMP1:%[0-9]+]]:sgpr(s32) = G_ICMP intpred(eq), [[COPY2]](s32), [[C]]
   ; GREEDY-NEXT:   [[TRUNC:%[0-9]+]]:sgpr(s1) = G_TRUNC [[ICMP1]](s32)
   ; GREEDY-NEXT:   [[ZEXT:%[0-9]+]]:sgpr(s32) = G_ZEXT [[TRUNC]](s1)
+  ; GREEDY-NEXT:   [[AMDGPU_COPY_SCC_VCC:%[0-9]+]]:sgpr(s32) = G_AMDGPU_COPY_SCC_VCC [[ICMP]](s1)
+  ; GREEDY-NEXT:   [[TRUNC1:%[0-9]+]]:sgpr(s1) = G_TRUNC [[AMDGPU_COPY_SCC_VCC]](s32)
+  ; GREEDY-NEXT:   [[ANYEXT:%[0-9]+]]:sgpr(s32) = G_ANYEXT [[TRUNC1]](s1)
   ; GREEDY-NEXT:   G_BRCOND [[ZEXT]](s32), %bb.1
   ; GREEDY-NEXT:   G_BR %bb.2
   ; GREEDY-NEXT: {{  $}}
@@ -390,15 +406,15 @@ body: |
   ; GREEDY-NEXT:   successors: %bb.2(0x80000000)
   ; GREEDY-NEXT: {{  $}}
   ; GREEDY-NEXT:   [[ICMP2:%[0-9]+]]:sgpr(s32) = G_ICMP intpred(eq), [[COPY1]](s32), [[C]]
-  ; GREEDY-NEXT:   [[TRUNC1:%[0-9]+]]:sgpr(s1) = G_TRUNC [[ICMP2]](s32)
-  ; GREEDY-NEXT:   [[COPY4:%[0-9]+]]:vcc(s1) = COPY [[TRUNC1]](s1)
+  ; GREEDY-NEXT:   [[TRUNC2:%[0-9]+]]:sgpr(s1) = G_TRUNC [[ICMP2]](s32)
+  ; GREEDY-NEXT:   [[ANYEXT1:%[0-9]+]]:sgpr(s32) = G_ANYEXT [[TRUNC2]](s1)
   ; GREEDY-NEXT:   G_BR %bb.2
   ; GREEDY-NEXT: {{  $}}
   ; GREEDY-NEXT: bb.2:
-  ; GREEDY-NEXT:   [[PHI:%[0-9]+]]:vcc(s1) = G_PHI [[ICMP]](s1), %bb.0, [[COPY4]](s1), %bb.1
-  ; GREEDY-NEXT:   [[COPY5:%[0-9]+]]:vgpr(s32) = COPY [[C]](s32)
-  ; GREEDY-NEXT:   [[COPY6:%[0-9]+]]:vgpr(s32) = COPY [[COPY1]](s32)
-  ; GREEDY-NEXT:   [[SELECT:%[0-9]+]]:vgpr(s32) = G_SELECT [[PHI]](s1), [[COPY5]], [[COPY6]]
+  ; GREEDY-NEXT:   [[PHI:%[0-9]+]]:sgpr(s32) = G_PHI [[ANYEXT]](s32), %bb.0, [[ANYEXT1]](s32), %bb.1
+  ; GREEDY-NEXT:   [[TRUNC3:%[0-9]+]]:sgpr(s1) = G_TRUNC [[PHI]](s32)
+  ; GREEDY-NEXT:   [[ZEXT1:%[0-9]+]]:sgpr(s32) = G_ZEXT [[TRUNC3]](s1)
+  ; GREEDY-NEXT:   [[SELECT:%[0-9]+]]:sgpr(s32) = G_SELECT [[ZEXT1]](s32), [[C]], [[COPY1]]
   ; GREEDY-NEXT:   S_SETPC_B64 undef $sgpr30_sgpr31, implicit [[SELECT]](s32)
   bb.0:
     successors: %bb.1, %bb.2
@@ -446,6 +462,9 @@ body: |
   ; FAST-NEXT:   [[ICMP1:%[0-9]+]]:sgpr(s32) = G_ICMP intpred(eq), [[COPY2]](s32), [[C]]
   ; FAST-NEXT:   [[TRUNC:%[0-9]+]]:sgpr(s1) = G_TRUNC [[ICMP1]](s32)
   ; FAST-NEXT:   [[ZEXT:%[0-9]+]]:sgpr(s32) = G_ZEXT [[TRUNC]](s1)
+  ; FAST-NEXT:   [[AMDGPU_COPY_SCC_VCC:%[0-9]+]]:sgpr(s32) = G_AMDGPU_COPY_SCC_VCC [[ICMP]](s1)
+  ; FAST-NEXT:   [[TRUNC1:%[0-9]+]]:sgpr(s1) = G_TRUNC [[AMDGPU_COPY_SCC_VCC]](s32)
+  ; FAST-NEXT:   [[ANYEXT:%[0-9]+]]:sgpr(s32) = G_ANYEXT [[TRUNC1]](s1)
   ; FAST-NEXT:   G_BRCOND [[ZEXT]](s32), %bb.1
   ; FAST-NEXT:   G_BR %bb.2
   ; FAST-NEXT: {{  $}}
@@ -454,13 +473,19 @@ body: |
   ; FAST-NEXT: {{  $}}
   ; FAST-NEXT:   [[COPY4:%[0-9]+]]:vgpr(s32) = COPY [[C]](s32)
   ; FAST-NEXT:   [[ICMP2:%[0-9]+]]:vcc(s1) = G_ICMP intpred(eq), [[COPY1]](s32), [[COPY4]]
+  ; FAST-NEXT:   [[AMDGPU_COPY_SCC_VCC1:%[0-9]+]]:sgpr(s32) = G_AMDGPU_COPY_SCC_VCC [[ICMP2]](s1)
+  ; FAST-NEXT:   [[TRUNC2:%[0-9]+]]:sgpr(s1) = G_TRUNC [[AMDGPU_COPY_SCC_VCC1]](s32)
+  ; FAST-NEXT:   [[ANYEXT1:%[0-9]+]]:sgpr(s32) = G_ANYEXT [[TRUNC2]](s1)
   ; FAST-NEXT:   G_BR %bb.2
   ; FAST-NEXT: {{  $}}
   ; FAST-NEXT: bb.2:
-  ; FAST-NEXT:   [[PHI:%[0-9]+]]:vcc(s1) = G_PHI [[ICMP]](s1), %bb.0, [[ICMP2]](s1), %bb.1
-  ; FAST-NEXT:   [[COPY5:%[0-9]+]]:vgpr(s32) = COPY [[C]](s32)
-  ; FAST-NEXT:   [[SELECT:%[0-9]+]]:vgpr(s32) = G_SELECT [[PHI]](s1), [[COPY5]], [[COPY]]
+  ; FAST-NEXT:   [[PHI:%[0-9]+]]:sgpr(s32) = G_PHI [[ANYEXT]](s32), %bb.0, [[ANYEXT1]](s32), %bb.1
+  ; FAST-NEXT:   [[TRUNC3:%[0-9]+]]:sgpr(s1) = G_TRUNC [[PHI]](s32)
+  ; FAST-NEXT:   [[COPY5:%[0-9]+]]:vcc(s1) = COPY [[TRUNC3]](s1)
+  ; FAST-NEXT:   [[COPY6:%[0-9]+]]:vgpr(s32) = COPY [[C]](s32)
+  ; FAST-NEXT:   [[SELECT:%[0-9]+]]:vgpr(s32) = G_SELECT [[COPY5]](s1), [[COPY6]], [[COPY]]
   ; FAST-NEXT:   S_SETPC_B64 undef $sgpr30_sgpr31, implicit [[SELECT]](s32)
+  ;
   ; GREEDY-LABEL: name: phi_s1_vcc_vcc_sbranch
   ; GREEDY: bb.0:
   ; GREEDY-NEXT:   successors: %bb.1(0x40000000), %bb.2(0x40000000)
@@ -475,6 +500,9 @@ body: |
   ; GREEDY-NEXT:   [[ICMP1:%[0-9]+]]:sgpr(s32) = G_ICMP intpred(eq), [[COPY2]](s32), [[C]]
   ; GREEDY-NEXT:   [[TRUNC:%[0-9]+]]:sgpr(s1) = G_TRUNC [[ICMP1]](s32)
   ; GREEDY-NEXT:   [[ZEXT:%[0-9]+]]:sgpr(s32) = G_ZEXT [[TRUNC]](s1)
+  ; GREEDY-NEXT:   [[AMDGPU_COPY_SCC_VCC:%[0-9]+]]:sgpr(s32) = G_AMDGPU_COPY_SCC_VCC [[ICMP]](s1)
+  ; GREEDY-NEXT:   [[TRUNC1:%[0-9]+]]:sgpr(s1) = G_TRUNC [[AMDGPU_COPY_SCC_VCC]](s32)
+  ; GREEDY-NEXT:   [[ANYEXT:%[0-9]+]]:sgpr(s32) = G_ANYEXT [[TRUNC1]](s1)
   ; GREEDY-NEXT:   G_BRCOND [[ZEXT]](s32), %bb.1
   ; GREEDY-NEXT:   G_BR %bb.2
   ; GREEDY-NEXT: {{  $}}
@@ -483,12 +511,17 @@ body: |
   ; GREEDY-NEXT: {{  $}}
   ; GREEDY-NEXT:   [[COPY4:%[0-9]+]]:vgpr(s32) = COPY [[C]](s32)
   ; GREEDY-NEXT:   [[ICMP2:%[0-9]+]]:vcc(s1) = G_ICMP intpred(eq), [[COPY1]](s32), [[COPY4]]
+  ; GREEDY-NEXT:   [[AMDGPU_COPY_SCC_VCC1:%[0-9]+]]:sgpr(s32) = G_AMDGPU_COPY_SCC_VCC [[ICMP2]](s1)
+  ; GREEDY-NEXT:   [[TRUNC2:%[0-9]+]]:sgpr(s1) = G_TRUNC [[AMDGPU_COPY_SCC_VCC1]](s32)
+  ; GREEDY-NEXT:   [[ANYEXT1:%[0-9]+]]:sgpr(s32) = G_ANYEXT [[TRUNC2]](s1)
   ; GREEDY-NEXT:   G_BR %bb.2
   ; GREEDY-NEXT: {{  $}}
   ; GREEDY-NEXT: bb.2:
-  ; GREEDY-NEXT:   [[PHI:%[0-9]+]]:vcc(s1) = G_PHI [[ICMP]](s1), %bb.0, [[ICMP2]](s1), %bb.1
-  ; GREEDY-NEXT:   [[COPY5:%[0-9]+]]:vgpr(s32) = COPY [[C]](s32)
-  ; GREEDY-NEXT:   [[SELECT:%[0-9]+]]:vgpr(s32) = G_SELECT [[PHI]](s1), [[COPY5]], [[COPY]]
+  ; GREEDY-NEXT:   [[PHI:%[0-9]+]]:sgpr(s32) = G_PHI [[ANYEXT]](s32), %bb.0, [[ANYEXT1]](s32), %bb.1
+  ; GREEDY-NEXT:   [[TRUNC3:%[0-9]+]]:sgpr(s1) = G_TRUNC [[PHI]](s32)
+  ; GREEDY-NEXT:   [[COPY5:%[0-9]+]]:vcc(s1) = COPY [[TRUNC3]](s1)
+  ; GREEDY-NEXT:   [[COPY6:%[0-9]+]]:vgpr(s32) = COPY [[C]](s32)
+  ; GREEDY-NEXT:   [[SELECT:%[0-9]+]]:vgpr(s32) = G_SELECT [[COPY5]](s1), [[COPY6]], [[COPY]]
   ; GREEDY-NEXT:   S_SETPC_B64 undef $sgpr30_sgpr31, implicit [[SELECT]](s32)
   bb.0:
     successors: %bb.1, %bb.2
@@ -553,6 +586,7 @@ body: |
   ; FAST-NEXT:   [[ZEXT1:%[0-9]+]]:sgpr(s32) = G_ZEXT [[TRUNC3]](s1)
   ; FAST-NEXT:   [[SELECT:%[0-9]+]]:sgpr(s32) = G_SELECT [[ZEXT1]](s32), [[C]], [[COPY]]
   ; FAST-NEXT:   S_SETPC_B64 undef $sgpr30_sgpr31, implicit [[SELECT]](s32)
+  ;
   ; GREEDY-LABEL: name: phi_s1_s_scc_sbranch
   ; GREEDY: bb.0:
   ; GREEDY-NEXT:   successors: %bb.1(0x40000000), %bb.2(0x40000000)
@@ -647,6 +681,7 @@ body: |
   ; FAST-NEXT:   [[ZEXT1:%[0-9]+]]:sgpr(s32) = G_ZEXT [[TRUNC3]](s1)
   ; FAST-NEXT:   [[SELECT:%[0-9]+]]:sgpr(s32) = G_SELECT [[ZEXT1]](s32), [[C]], [[COPY]]
   ; FAST-NEXT:   S_SETPC_B64 undef $sgpr30_sgpr31, implicit [[SELECT]](s32)
+  ;
   ; GREEDY-LABEL: name: phi_s1_scc_s_sbranch
   ; GREEDY: bb.0:
   ; GREEDY-NEXT:   successors: %bb.1(0x40000000), %bb.2(0x40000000)
@@ -743,6 +778,7 @@ body: |
   ; FAST-NEXT:   [[COPY5:%[0-9]+]]:vgpr(s32) = COPY [[COPY]](s32)
   ; FAST-NEXT:   [[SELECT:%[0-9]+]]:vgpr(s32) = G_SELECT [[COPY3]](s1), [[COPY4]], [[COPY5]]
   ; FAST-NEXT:   S_SETPC_B64 undef $sgpr30_sgpr31, implicit [[SELECT]](s32)
+  ;
   ; GREEDY-LABEL: name: phi_s1_scc_v_sbranch
   ; GREEDY: bb.0:
   ; GREEDY-NEXT:   successors: %bb.1(0x40000000), %bb.2(0x40000000)
@@ -840,6 +876,7 @@ body: |
   ; FAST-NEXT:   [[COPY4:%[0-9]+]]:vgpr(s32) = COPY [[C]](s32)
   ; FAST-NEXT:   [[SELECT:%[0-9]+]]:vgpr(s32) = G_SELECT [[COPY3]](s1), [[COPY4]], [[COPY]]
   ; FAST-NEXT:   S_SETPC_B64 undef $sgpr30_sgpr31, implicit [[SELECT]](s32)
+  ;
   ; GREEDY-LABEL: name: phi_s1_v_scc_sbranch
   ; GREEDY: bb.0:
   ; GREEDY-NEXT:   successors: %bb.1(0x40000000), %bb.2(0x40000000)
@@ -918,21 +955,27 @@ body: |
   ; FAST-NEXT:   [[ICMP1:%[0-9]+]]:sgpr(s32) = G_ICMP intpred(eq), [[COPY2]](s32), [[C]]
   ; FAST-NEXT:   [[TRUNC:%[0-9]+]]:sgpr(s1) = G_TRUNC [[ICMP1]](s32)
   ; FAST-NEXT:   [[ZEXT:%[0-9]+]]:sgpr(s32) = G_ZEXT [[TRUNC]](s1)
+  ; FAST-NEXT:   [[AMDGPU_COPY_SCC_VCC:%[0-9]+]]:sgpr(s32) = G_AMDGPU_COPY_SCC_VCC [[ICMP]](s1)
+  ; FAST-NEXT:   [[TRUNC1:%[0-9]+]]:sgpr(s1) = G_TRUNC [[AMDGPU_COPY_SCC_VCC]](s32)
+  ; FAST-NEXT:   [[ANYEXT:%[0-9]+]]:sgpr(s32) = G_ANYEXT [[TRUNC1]](s1)
   ; FAST-NEXT:   G_BRCOND [[ZEXT]](s32), %bb.1
   ; FAST-NEXT:   G_BR %bb.2
   ; FAST-NEXT: {{  $}}
   ; FAST-NEXT: bb.1:
   ; FAST-NEXT:   successors: %bb.2(0x80000000)
   ; FAST-NEXT: {{  $}}
-  ; FAST-NEXT:   [[TRUNC1:%[0-9]+]]:sgpr(s1) = G_TRUNC [[COPY1]](s32)
-  ; FAST-NEXT:   [[COPY4:%[0-9]+]]:vcc(s1) = COPY [[TRUNC1]](s1)
+  ; FAST-NEXT:   [[TRUNC2:%[0-9]+]]:sgpr(s1) = G_TRUNC [[COPY1]](s32)
+  ; FAST-NEXT:   [[ANYEXT1:%[0-9]+]]:sgpr(s32) = G_ANYEXT [[TRUNC2]](s1)
   ; FAST-NEXT:   G_BR %bb.2
   ; FAST-NEXT: {{  $}}
   ; FAST-NEXT: bb.2:
-  ; FAST-NEXT:   [[PHI:%[0-9]+]]:vcc(s1) = G_PHI [[ICMP]](s1), %bb.0, [[COPY4]](s1), %bb.1
+  ; FAST-NEXT:   [[PHI:%[0-9]+]]:sgpr(s32) = G_PHI [[ANYEXT]](s32), %bb.0, [[ANYEXT1]](s32), %bb.1
+  ; FAST-NEXT:   [[TRUNC3:%[0-9]+]]:sgpr(s1) = G_TRUNC [[PHI]](s32)
+  ; FAST-NEXT:   [[COPY4:%[0-9]+]]:vcc(s1) = COPY [[TRUNC3]](s1)
   ; FAST-NEXT:   [[COPY5:%[0-9]+]]:vgpr(s32) = COPY [[C]](s32)
-  ; FAST-NEXT:   [[SELECT:%[0-9]+]]:vgpr(s32) = G_SELECT [[PHI]](s1), [[COPY5]], [[COPY]]
+  ; FAST-NEXT:   [[SELECT:%[0-9]+]]:vgpr(s32) = G_SELECT [[COPY4]](s1), [[COPY5]], [[COPY]]
   ; FAST-NEXT:   S_SETPC_B64 undef $sgpr30_sgpr31, implicit [[SELECT]](s32)
+  ;
   ; GREEDY-LABEL: name: phi_s1_vcc_s_sbranch
   ; GREEDY: bb.0:
   ; GREEDY-NEXT:   successors: %bb.1(0x40000000), %bb.2(0x40000000)
@@ -947,20 +990,25 @@ body: |
   ; GREEDY-NEXT:   [[ICMP1:%[0-9]+]]:sgpr(s32) = G_ICMP intpred(eq), [[COPY2]](s32), [[C]]
   ; GREEDY-NEXT:   [[TRUNC:%[0-9]+]]:sgpr(s1) = G_TRUNC [[ICMP1]](s32)
   ; GREEDY-NEXT:   [[ZEXT:%[0-9]+]]:sgpr(s32) = G_ZEXT [[TRUNC]](s1)
+  ; GREEDY-NEXT:   [[AMDGPU_COPY_SCC_VCC:%[0-9]+]]:sgpr(s32) = G_AMDGPU_COPY_SCC_VCC [[ICMP]](s1)
+  ; GREEDY-NEXT:   [[TRUNC1:%[0-9]+]]:sgpr(s1) = G_TRUNC [[AMDGPU_COPY_SCC_VCC]](s32)
+  ; GREEDY-NEXT:   [[ANYEXT:%[0-9]+]]:sgpr(s32) = G_ANYEXT [[TRUNC1]](s1)
   ; GREEDY-NEXT:   G_BRCOND [[ZEXT]](s32), %bb.1
   ; GREEDY-NEXT:   G_BR %bb.2
   ; GREEDY-NEXT: {{  $}}
   ; GREEDY-NEXT: bb.1:
   ; GREEDY-NEXT:   successors: %bb.2(0x80000000)
   ; GREEDY-NEXT: {{  $}}
-  ; GREEDY-NEXT:   [[TRUNC1:%[0-9]+]]:sgpr(s1) = G_TRUNC [[COPY1]](s32)
-  ; GREEDY-NEXT:   [[COPY4:%[0-9]+]]:vcc(s1) = COPY [[TRUNC1]](s1)
+  ; GREEDY-NEXT:   [[TRUNC2:%[0-9]+]]:sgpr(s1) = G_TRUNC [[COPY1]](s32)
+  ; GREEDY-NEXT:   [[ANYEXT1:%[0-9]+]]:sgpr(s32) = G_ANYEXT [[TRUNC2]](s1)
   ; GREEDY-NEXT:   G_BR %bb.2
   ; GREEDY-NEXT: {{  $}}
   ; GREEDY-NEXT: bb.2:
-  ; GREEDY-NEXT:   [[PHI:%[0-9]+]]:vcc(s1) = G_PHI [[ICMP]](s1), %bb.0, [[COPY4]](s1), %bb.1
+  ; GREEDY-NEXT:   [[PHI:%[0-9]+]]:sgpr(s32) = G_PHI [[ANYEXT]](s32), %bb.0, [[ANYEXT1]](s32), %bb.1
+  ; GREEDY-NEXT:   [[TRUNC3:%[0-9]+]]:sgpr(s1) = G_TRUNC [[PHI]](s32)
+  ; GREEDY-NEXT:   [[COPY4:%[0-9]+]]:vcc(s1) = COPY [[TRUNC3]](s1)
   ; GREEDY-NEXT:   [[COPY5:%[0-9]+]]:vgpr(s32) = COPY [[C]](s32)
-  ; GREEDY-NEXT:   [[SELECT:%[0-9]+]]:vgpr(s32) = G_SELECT [[PHI]](s1), [[COPY5]], [[COPY]]
+  ; GREEDY-NEXT:   [[SELECT:%[0-9]+]]:vgpr(s32) = G_SELECT [[COPY4]](s1), [[COPY5]], [[COPY]]
   ; GREEDY-NEXT:   S_SETPC_B64 undef $sgpr30_sgpr31, implicit [[SELECT]](s32)
   bb.0:
     successors: %bb.1, %bb.2
@@ -1007,23 +1055,27 @@ body: |
   ; FAST-NEXT:   [[ICMP:%[0-9]+]]:sgpr(s32) = G_ICMP intpred(eq), [[COPY2]](s32), [[C]]
   ; FAST-NEXT:   [[TRUNC1:%[0-9]+]]:sgpr(s1) = G_TRUNC [[ICMP]](s32)
   ; FAST-NEXT:   [[ZEXT:%[0-9]+]]:sgpr(s32) = G_ZEXT [[TRUNC1]](s1)
-  ; FAST-NEXT:   [[COPY3:%[0-9]+]]:vcc(s1) = COPY [[TRUNC]](s1)
+  ; FAST-NEXT:   [[ANYEXT:%[0-9]+]]:sgpr(s32) = G_ANYEXT [[TRUNC]](s1)
   ; FAST-NEXT:   G_BRCOND [[ZEXT]](s32), %bb.1
   ; FAST-NEXT:   G_BR %bb.2
   ; FAST-NEXT: {{  $}}
   ; FAST-NEXT: bb.1:
   ; FAST-NEXT:   successors: %bb.2(0x80000000)
   ; FAST-NEXT: {{  $}}
-  ; FAST-NEXT:   [[COPY4:%[0-9]+]]:vgpr(s32) = COPY [[C]](s32)
-  ; FAST-NEXT:   [[ICMP1:%[0-9]+]]:vcc(s1) = G_ICMP intpred(eq), [[COPY1]](s32), [[COPY4]]
+  ; FAST-NEXT:   [[COPY3:%[0-9]+]]:vgpr(s32) = COPY [[C]](s32)
+  ; FAST-NEXT:   [[ICMP1:%[0-9]+]]:vcc(s1) = G_ICMP intpred(eq), [[COPY1]](s32), [[COPY3]]
+  ; FAST-NEXT:   [[AMDGPU_COPY_SCC_VCC:%[0-9]+]]:sgpr(s32) = G_AMDGPU_COPY_SCC_VCC [[ICMP1]](s1)
+  ; FAST-NEXT:   [[TRUNC2:%[0-9]+]]:sgpr(s1) = G_TRUNC [[AMDGPU_COPY_SCC_VCC]](s32)
+  ; FAST-NEXT:   [[ANYEXT1:%[0-9]+]]:sgpr(s32) = G_ANYEXT [[TRUNC2]](s1)
   ; FAST-NEXT:   G_BR %bb.2
   ; FAST-NEXT: {{  $}}
   ; FAST-NEXT: bb.2:
-  ; FAST-NEXT:   [[PHI:%[0-9]+]]:vcc(s1) = G_PHI [[COPY3]](s1), %bb.0, [[ICMP1]](s1), %bb.1
-  ; FAST-NEXT:   [[COPY5:%[0-9]+]]:vgpr(s32) = COPY [[C]](s32)
-  ; FAST-NEXT:   [[COPY6:%[0-9]+]]:vgpr(s32) = COPY [[COPY]](s32)
-  ; FAST-NEXT:   [[SELECT:%[0-9]+]]:vgpr(s32) = G_SELECT [[PHI]](s1), [[COPY5]], [[COPY6]]
+  ; FAST-NEXT:   [[PHI:%[0-9]+]]:sgpr(s32) = G_PHI [[ANYEXT]](s32), %bb.0, [[ANYEXT1]](s32), %bb.1
+  ; FAST-NEXT:   [[TRUNC3:%[0-9]+]]:sgpr(s1) = G_TRUNC [[PHI]](s32)
+  ; FAST-NEXT:   [[ZEXT1:%[0-9]+]]:sgpr(s32) = G_ZEXT [[TRUNC3]](s1)
+  ; FAST-NEXT:   [[SELECT:%[0-9]+]]:sgpr(s32) = G_SELECT [[ZEXT1]](s32), [[C]], [[COPY]]
   ; FAST-NEXT:   S_SETPC_B64 undef $sgpr30_sgpr31, implicit [[SELECT]](s32)
+  ;
   ; GREEDY-LABEL: name: phi_s1_s_vcc_sbranch
   ; GREEDY: bb.0:
   ; GREEDY-NEXT:   successors: %bb.1(0x40000000), %bb.2(0x40000000)
@@ -1037,22 +1089,25 @@ body: |
   ; GREEDY-NEXT:   [[ICMP:%[0-9]+]]:sgpr(s32) = G_ICMP intpred(eq), [[COPY2]](s32), [[C]]
   ; GREEDY-NEXT:   [[TRUNC1:%[0-9]+]]:sgpr(s1) = G_TRUNC [[ICMP]](s32)
   ; GREEDY-NEXT:   [[ZEXT:%[0-9]+]]:sgpr(s32) = G_ZEXT [[TRUNC1]](s1)
-  ; GREEDY-NEXT:   [[COPY3:%[0-9]+]]:vcc(s1) = COPY [[TRUNC]](s1)
+  ; GREEDY-NEXT:   [[ANYEXT:%[0-9]+]]:sgpr(s32) = G_ANYEXT [[TRUNC]](s1)
   ; GREEDY-NEXT:   G_BRCOND [[ZEXT]](s32), %bb.1
   ; GREEDY-NEXT:   G_BR %bb.2
   ; GREEDY-NEXT: {{  $}}
   ; GREEDY-NEXT: bb.1:
   ; GREEDY-NEXT:   successors: %bb.2(0x80000000)
   ; GREEDY-NEXT: {{  $}}
-  ; GREEDY-NEXT:   [[COPY4:%[0-9]+]]:vgpr(s32) = COPY [[C]](s32)
-  ; GREEDY-NEXT:   [[ICMP1:%[0-9]+]]:vcc(s1) = G_ICMP intpred(eq), [[COPY1]](s32), [[COPY4]]
+  ; GREEDY-NEXT:   [[COPY3:%[0-9]+]]:vgpr(s32) = COPY [[C]](s32)
+  ; GREEDY-NEXT:   [[ICMP1:%[0-9]+]]:vcc(s1) = G_ICMP intpred(eq), [[COPY1]](s32), [[COPY3]]
+  ; GREEDY-NEXT:   [[AMDGPU_COPY_SCC_VCC:%[0-9]+]]:sgpr(s32) = G_AMDGPU_COPY_SCC_VCC [[ICMP1]](s1)
+  ; GREEDY-NEXT:   [[TRUNC2:%[0-9]+]]:sgpr(s1) = G_TRUNC [[AMDGPU_COPY_SCC_VCC]](s32)
+  ; GREEDY-NEXT:   [[ANYEXT1:%[0-9]+]]:sgpr(s32) = G_ANYEXT [[TRUNC2]](s1)
   ; GREEDY-NEXT:   G_BR %bb.2
   ; GREEDY-NEXT: {{  $}}
   ; GREEDY-NEXT: bb.2:
-  ; GREEDY-NEXT:   [[PHI:%[0-9]+]]:vcc(s1) = G_PHI [[COPY3]](s1), %bb.0, [[ICMP1]](s1), %bb.1
-  ; GREEDY-NEXT:   [[COPY5:%[0-9]+]]:vgpr(s32) = COPY [[C]](s32)
-  ; GREEDY-NEXT:   [[COPY6:%[0-9]+]]:vgpr(s32) = COPY [[COPY]](s32)
-  ; GREEDY-NEXT:   [[SELECT:%[0-9]+]]:vgpr(s32) = G_SELECT [[PHI]](s1), [[COPY5]], [[COPY6]]
+  ; GREEDY-NEXT:   [[PHI:%[0-9]+]]:sgpr(s32) = G_PHI [[ANYEXT]](s32), %bb.0, [[ANYEXT1]](s32), %bb.1
+  ; GREEDY-NEXT:   [[TRUNC3:%[0-9]+]]:sgpr(s1) = G_TRUNC [[PHI]](s32)
+  ; GREEDY-NEXT:   [[ZEXT1:%[0-9]+]]:sgpr(s32) = G_ZEXT [[TRUNC3]](s1)
+  ; GREEDY-NEXT:   [[SELECT:%[0-9]+]]:sgpr(s32) = G_SELECT [[ZEXT1]](s32), [[C]], [[COPY]]
   ; GREEDY-NEXT:   S_SETPC_B64 undef $sgpr30_sgpr31, implicit [[SELECT]](s32)
   bb.0:
     successors: %bb.1, %bb.2
@@ -1120,6 +1175,7 @@ body: |
   ; FAST-NEXT:   [[COPY5:%[0-9]+]]:vgpr(s32) = COPY [[C]](s32)
   ; FAST-NEXT:   [[SELECT1:%[0-9]+]]:vgpr(s32) = G_SELECT [[COPY4]](s1), [[COPY5]], [[COPY]]
   ; FAST-NEXT:   S_SETPC_B64 undef $sgpr30_sgpr31, implicit [[SELECT1]](s32)
+  ;
   ; GREEDY-LABEL: name: phi_s1_vcc_v_sbranch
   ; GREEDY: bb.0:
   ; GREEDY-NEXT:   successors: %bb.1(0x40000000), %bb.2(0x40000000)
@@ -1220,6 +1276,7 @@ body: |
   ; FAST-NEXT:   [[COPY5:%[0-9]+]]:vgpr(s32) = COPY [[C]](s32)
   ; FAST-NEXT:   [[SELECT1:%[0-9]+]]:vgpr(s32) = G_SELECT [[COPY4]](s1), [[COPY5]], [[COPY]]
   ; FAST-NEXT:   S_SETPC_B64 undef $sgpr30_sgpr31, implicit [[SELECT1]](s32)
+  ;
   ; GREEDY-LABEL: name: phi_s1_v_vcc_sbranch
   ; GREEDY: bb.0:
   ; GREEDY-NEXT:   successors: %bb.1(0x40000000), %bb.2(0x40000000)
@@ -1317,6 +1374,7 @@ body: |
   ; FAST-NEXT:   [[COPY4:%[0-9]+]]:vgpr(s32) = COPY [[C]](s32)
   ; FAST-NEXT:   [[SELECT:%[0-9]+]]:vgpr(s32) = G_SELECT [[COPY3]](s1), [[COPY4]], [[COPY]]
   ; FAST-NEXT:   S_SETPC_B64 undef $sgpr30_sgpr31, implicit [[SELECT]](s32)
+  ;
   ; GREEDY-LABEL: name: phi_s1_v_s_sbranch
   ; GREEDY: bb.0:
   ; GREEDY-NEXT:   successors: %bb.1(0x40000000), %bb.2(0x40000000)
@@ -1412,6 +1470,7 @@ body: |
   ; FAST-NEXT:   [[COPY5:%[0-9]+]]:vgpr(s32) = COPY [[COPY]](s32)
   ; FAST-NEXT:   [[SELECT:%[0-9]+]]:vgpr(s32) = G_SELECT [[COPY3]](s1), [[COPY4]], [[COPY5]]
   ; FAST-NEXT:   S_SETPC_B64 undef $sgpr30_sgpr31, implicit [[SELECT]](s32)
+  ;
   ; GREEDY-LABEL: name: phi_s1_s_v_sbranch
   ; GREEDY: bb.0:
   ; GREEDY-NEXT:   successors: %bb.1(0x40000000), %bb.2(0x40000000)
@@ -1507,6 +1566,7 @@ body: |
   ; FAST-NEXT:   [[COPY4:%[0-9]+]]:vgpr(s32) = COPY [[C]](s32)
   ; FAST-NEXT:   [[SELECT:%[0-9]+]]:vgpr(s32) = G_SELECT [[COPY3]](s1), [[COPY4]], [[COPY]]
   ; FAST-NEXT:   S_SETPC_B64 undef $sgpr30_sgpr31, implicit [[SELECT]](s32)
+  ;
   ; GREEDY-LABEL: name: phi_s1_v_v_sbranch
   ; GREEDY: bb.0:
   ; GREEDY-NEXT:   successors: %bb.1(0x40000000), %bb.2(0x40000000)
@@ -1600,6 +1660,7 @@ body: |
   ; FAST-NEXT:   [[ZEXT1:%[0-9]+]]:sgpr(s32) = G_ZEXT [[TRUNC3]](s1)
   ; FAST-NEXT:   [[SELECT:%[0-9]+]]:sgpr(s32) = G_SELECT [[ZEXT1]](s32), [[C]], [[COPY]]
   ; FAST-NEXT:   S_SETPC_B64 undef $sgpr30_sgpr31, implicit [[SELECT]](s32)
+  ;
   ; GREEDY-LABEL: name: phi_s1_s_s_sbranch
   ; GREEDY: bb.0:
   ; GREEDY-NEXT:   successors: %bb.1(0x40000000), %bb.2(0x40000000)
@@ -1676,7 +1737,7 @@ body: |
   ; FAST-NEXT:   [[ICMP1:%[0-9]+]]:sgpr(s32) = G_ICMP intpred(eq), [[COPY2]](s32), [[C]]
   ; FAST-NEXT:   [[TRUNC1:%[0-9]+]]:sgpr(s1) = G_TRUNC [[ICMP1]](s32)
   ; FAST-NEXT:   [[ZEXT:%[0-9]+]]:sgpr(s32) = G_ZEXT [[TRUNC1]](s1)
-  ; FAST-NEXT:   [[COPY3:%[0-9]+]]:vcc(s1) = COPY [[TRUNC]](s1)
+  ; FAST-NEXT:   [[ANYEXT:%[0-9]+]]:sgpr(s32) = G_ANYEXT [[TRUNC]](s1)
   ; FAST-NEXT:   G_BRCOND [[ZEXT]](s32), %bb.1
   ; FAST-NEXT:   G_BR %bb.2
   ; FAST-NEXT: {{  $}}
@@ -1685,17 +1746,20 @@ body: |
   ; FAST-NEXT: {{  $}}
   ; FAST-NEXT:   [[ICMP2:%[0-9]+]]:sgpr(s32) = G_ICMP intpred(eq), [[COPY1]](s32), [[C]]
   ; FAST-NEXT:   [[TRUNC2:%[0-9]+]]:sgpr(s1) = G_TRUNC [[ICMP2]](s32)
-  ; FAST-NEXT:   [[COPY4:%[0-9]+]]:vcc(s1) = COPY [[TRUNC2]](s1)
+  ; FAST-NEXT:   [[ANYEXT1:%[0-9]+]]:sgpr(s32) = G_ANYEXT [[TRUNC2]](s1)
   ; FAST-NEXT:   G_BR %bb.2
   ; FAST-NEXT: {{  $}}
   ; FAST-NEXT: bb.2:
-  ; FAST-NEXT:   [[PHI:%[0-9]+]]:vcc(s1) = G_PHI [[COPY3]](s1), %bb.0, [[COPY4]](s1), %bb.1
+  ; FAST-NEXT:   [[PHI:%[0-9]+]]:sgpr(s32) = G_PHI [[ANYEXT]](s32), %bb.0, [[ANYEXT1]](s32), %bb.1
+  ; FAST-NEXT:   [[TRUNC3:%[0-9]+]]:sgpr(s1) = G_TRUNC [[PHI]](s32)
+  ; FAST-NEXT:   [[COPY3:%[0-9]+]]:vcc(s1) = COPY [[TRUNC3]](s1)
   ; FAST-NEXT:   [[C1:%[0-9]+]]:sgpr(s32) = G_CONSTANT i32 123
-  ; FAST-NEXT:   [[COPY5:%[0-9]+]]:vgpr(s32) = COPY [[C1]](s32)
+  ; FAST-NEXT:   [[COPY4:%[0-9]+]]:vgpr(s32) = COPY [[C1]](s32)
   ; FAST-NEXT:   [[C2:%[0-9]+]]:sgpr(s32) = G_CONSTANT i32 456
-  ; FAST-NEXT:   [[COPY6:%[0-9]+]]:vgpr(s32) = COPY [[C2]](s32)
-  ; FAST-NEXT:   [[SELECT:%[0-9]+]]:vgpr(s32) = G_SELECT [[PHI]](s1), [[COPY5]], [[COPY6]]
+  ; FAST-NEXT:   [[COPY5:%[0-9]+]]:vgpr(s32) = COPY [[C2]](s32)
+  ; FAST-NEXT:   [[SELECT:%[0-9]+]]:vgpr(s32) = G_SELECT [[COPY3]](s1), [[COPY4]], [[COPY5]]
   ; FAST-NEXT:   S_SETPC_B64 undef $sgpr30_sgpr31, implicit [[SELECT]](s32)
+  ;
   ; GREEDY-LABEL: name: phi_s1_vcc_result_scc_scc_sbranch
   ; GREEDY: bb.0:
   ; GREEDY-NEXT:   successors: %bb.1(0x40000000), %bb.2(0x40000000)
@@ -1710,7 +1774,7 @@ body: |
   ; GREEDY-NEXT:   [[ICMP1:%[0-9]+]]:sgpr(s32) = G_ICMP intpred(eq), [[COPY2]](s32), [[C]]
   ; GREEDY-NEXT:   [[TRUNC1:%[0-9]+]]:sgpr(s1) = G_TRUNC [[ICMP1]](s32)
   ; GREEDY-NEXT:   [[ZEXT:%[0-9]+]]:sgpr(s32) = G_ZEXT [[TRUNC1]](s1)
-  ; GREEDY-NEXT:   [[COPY3:%[0-9]+]]:vcc(s1) = COPY [[TRUNC]](s1)
+  ; GREEDY-NEXT:   [[ANYEXT:%[0-9]+]]:sgpr(s32) = G_ANYEXT [[TRUNC]](s1)
   ; GREEDY-NEXT:   G_BRCOND [[ZEXT]](s32), %bb.1
   ; GREEDY-NEXT:   G_BR %bb.2
   ; GREEDY-NEXT: {{  $}}
@@ -1719,14 +1783,16 @@ body: |
   ; GREEDY-NEXT: {{  $}}
   ; GREEDY-NEXT:   [[ICMP2:%[0-9]+]]:sgpr(s32) = G_ICMP intpred(eq), [[COPY1]](s32), [[C]]
   ; GREEDY-NEXT:   [[TRUNC2:%[0-9]+]]:sgpr(s1) = G_TRUNC [[ICMP2]](s32)
-  ; GREEDY-NEXT:   [[COPY4:%[0-9]+]]:vcc(s1) = COPY [[TRUNC2]](s1)
+  ; GREEDY-NEXT:   [[ANYEXT1:%[0-9]+]]:sgpr(s32) = G_ANYEXT [[TRUNC2]](s1)
   ; GREEDY-NEXT:   G_BR %bb.2
   ; GREEDY-NEXT: {{  $}}
   ; GREEDY-NEXT: bb.2:
-  ; GREEDY-NEXT:   [[PHI:%[0-9]+]]:vcc(s1) = G_PHI [[COPY3]](s1), %bb.0, [[COPY4]](s1), %bb.1
+  ; GREEDY-NEXT:   [[PHI:%[0-9]+]]:sgpr(s32) = G_PHI [[ANYEXT]](s32), %bb.0, [[ANYEXT1]](s32), %bb.1
+  ; GREEDY-NEXT:   [[TRUNC3:%[0-9]+]]:sgpr(s1) = G_TRUNC [[PHI]](s32)
+  ; GREEDY-NEXT:   [[COPY3:%[0-9]+]]:vcc(s1) = COPY [[TRUNC3]](s1)
   ; GREEDY-NEXT:   [[C1:%[0-9]+]]:vgpr(s32) = G_CONSTANT i32 123
   ; GREEDY-NEXT:   [[C2:%[0-9]+]]:vgpr(s32) = G_CONSTANT i32 456
-  ; GREEDY-NEXT:   [[SELECT:%[0-9]+]]:vgpr(s32) = G_SELECT [[PHI]](s1), [[C1]], [[C2]]
+  ; GREEDY-NEXT:   [[SELECT:%[0-9]+]]:vgpr(s32) = G_SELECT [[COPY3]](s1), [[C1]], [[C2]]
   ; GREEDY-NEXT:   S_SETPC_B64 undef $sgpr30_sgpr31, implicit [[SELECT]](s32)
   bb.0:
     successors: %bb.1, %bb.2

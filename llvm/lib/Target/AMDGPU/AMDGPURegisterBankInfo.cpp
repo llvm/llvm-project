@@ -2265,6 +2265,29 @@ void AMDGPURegisterBankInfo::applyMappingImpl(
     // Phi handling is strange and only considers the bank of the destination.
     substituteSimpleCopyRegs(OpdMapper, 0);
 
+    // Convert VCC S1 inputs to SGPR before widening to avoid incorrect
+    // VCC->VGPR conversion in ApplyRegBankMapping.
+    if (DstBank == &AMDGPU::SGPRRegBank) {
+      for (unsigned I = 1, E = MI.getNumOperands(); I != E; I += 2) {
+        Register SrcReg = MI.getOperand(I).getReg();
+        const RegisterBank *SrcBank = getRegBank(SrcReg, MRI, *TRI);
+
+        if (SrcBank == &AMDGPU::VCCRegBank) {
+          MachineBasicBlock *SrcMBB = MI.getOperand(I + 1).getMBB();
+          B.setInsertPt(*SrcMBB, SrcMBB->getFirstTerminator());
+
+          auto CopySccVcc =
+              B.buildInstr(AMDGPU::G_AMDGPU_COPY_SCC_VCC, {S32}, {SrcReg});
+          MRI.setRegBank(CopySccVcc.getReg(0), AMDGPU::SGPRRegBank);
+
+          // Truncate to S1 for phi input (widened to S32 later with SGPR bank)
+          auto Trunc = B.buildTrunc(LLT::scalar(1), CopySccVcc);
+          MRI.setRegBank(Trunc.getReg(0), AMDGPU::SGPRRegBank);
+          MI.getOperand(I).setReg(Trunc.getReg(0));
+        }
+      }
+    }
+
     // Promote SGPR/VGPR booleans to s32
     ApplyRegBankMapping ApplyBank(B, *this, MRI, DstBank);
     B.setInsertPt(B.getMBB(), MI);
@@ -3943,6 +3966,12 @@ AMDGPURegisterBankInfo::getInstrMapping(const MachineInstr &MI) const {
     assert(ResultBank != AMDGPU::InvalidRegBankID);
 
     unsigned Size = MRI.getType(DstReg).getSizeInBits();
+
+    // VCC S1 phis cannot be instruction-selected. Use SGPR bank instead,
+    // widened to S32 in applyMapping with VCC inputs converted via
+    // G_AMDGPU_COPY_SCC_VCC.
+    if (Size == 1 && ResultBank == AMDGPU::VCCRegBankID)
+      ResultBank = AMDGPU::SGPRRegBankID;
 
     const ValueMapping &ValMap =
         getValueMapping(0, Size, getRegBank(ResultBank));
