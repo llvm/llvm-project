@@ -3800,10 +3800,9 @@ bool SPIRVInstructionSelector::selectIntrinsic(Register ResVReg,
     return selectOpWithSrcs(ResVReg, ResType, I, {OpReg}, SPIRV::OpBitcast);
   }
   case Intrinsic::spv_ptrdiff:
-    return selectOpWithSrcs(ResVReg, ResType, I,
-                            {I.getOperand(2).getReg(),
-                             I.getOperand(3).getReg()},
-                            SPIRV::OpPtrDiff);
+    return selectOpWithSrcs(
+        ResVReg, ResType, I,
+        {I.getOperand(2).getReg(), I.getOperand(3).getReg()}, SPIRV::OpPtrDiff);
   case Intrinsic::spv_unref_global:
   case Intrinsic::spv_init_global: {
     MachineInstr *MI = MRI->getVRegDef(I.getOperand(1).getReg());

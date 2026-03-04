@@ -1741,8 +1741,7 @@ Instruction *SPIRVEmitIntrinsics::visitPtrToAddrInst(PtrToAddrInst &I) {
 
 // Recognize sub(ptrtoaddr(A), ptrtoaddr(B)) patterns and replace with
 // spv_ptrdiff intrinsic.
-void SPIRVEmitIntrinsics::preprocessPtrToAddrDiff(Function &F,
-                                                  IRBuilder<> &B) {
+void SPIRVEmitIntrinsics::preprocessPtrToAddrDiff(Function &F, IRBuilder<> &B) {
   // OpPtrDiff was added in SPIR-V 1.4, check for it.
   const SPIRVSubtarget *ST = TM->getSubtargetImpl(F);
   if (!ST->isAtLeastSPIRVVer(VersionTuple(1, 4)))
@@ -1765,9 +1764,9 @@ void SPIRVEmitIntrinsics::preprocessPtrToAddrDiff(Function &F,
     Value *Ptr2 = PtrToAddrB->getOperand(0);
 
     B.SetInsertPoint(Sub);
-    auto *PtrDiff = B.CreateIntrinsic(
-        Intrinsic::spv_ptrdiff, {Sub->getType(), Ptr1->getType()},
-        {Ptr1, Ptr2});
+    auto *PtrDiff =
+        B.CreateIntrinsic(Intrinsic::spv_ptrdiff,
+                          {Sub->getType(), Ptr1->getType()}, {Ptr1, Ptr2});
     Sub->replaceAllUsesWith(PtrDiff);
     Sub->eraseFromParent();
 
