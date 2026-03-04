@@ -6918,6 +6918,37 @@ static bool getFauxShuffleMask(SDValue N, const APInt &DemandedElts,
     }
     return true;
   }
+  case ISD::ROTL:
+  case ISD::ROTR: {
+    APInt UndefElts;
+    SmallVector<APInt, 32> EltBits;
+    if (!getTargetConstantBitsFromNode(N.getOperand(1), NumBitsPerElt,
+                                       UndefElts, EltBits,
+                                       /*AllowWholeUndefs*/ true,
+                                       /*AllowPartialUndefs*/ false))
+      return false;
+
+    // We can only decode 'whole byte' bit rotates as shuffles.
+    for (unsigned I = 0; I != NumElts; ++I)
+      if (DemandedElts[I] && !UndefElts[I] &&
+          (EltBits[I].urem(NumBitsPerElt) % 8) != 0)
+        return false;
+
+    Ops.push_back(N.getOperand(0));
+    for (unsigned I = 0; I != NumElts; ++I) {
+      if (!DemandedElts[I] || UndefElts[I]) {
+        Mask.append(NumBytesPerElt, SM_SentinelUndef);
+        continue;
+      }
+      int Offset = EltBits[I].urem(NumBitsPerElt) / 8;
+      Offset = (ISD::ROTL == Opcode ? NumBytesPerElt - Offset : Offset);
+      int BaseIdx = I * NumBytesPerElt;
+      for (int J = 0; J != (int)NumBytesPerElt; ++J) {
+        Mask.push_back(BaseIdx + ((Offset + J) % NumBytesPerElt));
+      }
+    }
+    return true;
+  }
   case X86ISD::VROTLI:
   case X86ISD::VROTRI: {
     // We can only decode 'whole byte' bit rotates as shuffles.
@@ -28732,6 +28763,9 @@ SDValue X86TargetLowering::LowerFRAMEADDR(SDValue Op, SelectionDAG &DAG) const {
   return FrameAddr;
 }
 
+#define GET_REGISTER_MATCHER
+#include "X86GenAsmMatcher.inc"
+
 // FIXME? Maybe this could be a TableGen attribute on some registers and
 // this table could be generated automatically from RegInfo.
 Register X86TargetLowering::getRegisterByName(const char* RegName, LLT VT,
@@ -28759,6 +28793,15 @@ Register X86TargetLowering::getRegisterByName(const char* RegName, LLT VT,
              "Invalid Frame Register!");
     }
 #endif
+  }
+
+  if (Reg)
+    return Reg;
+
+  if (Subtarget.is64Bit()) {
+    Reg = MatchRegisterName(RegName);
+    if (!Subtarget.isRegisterReservedByUser(Reg))
+      Reg = Register();
   }
 
   return Reg;
@@ -49161,20 +49204,20 @@ static SDValue combineSetCCAtomicArith(SDValue Cmp, X86::CondCode &CC,
     APInt IncComparison = Comparison + 1;
     if (IncComparison == NegAddend) {
       if (CC == X86::COND_A && !Comparison.isMaxValue()) {
-        Comparison = IncComparison;
+        Comparison = std::move(IncComparison);
         CC = X86::COND_AE;
       } else if (CC == X86::COND_LE && !Comparison.isMaxSignedValue()) {
-        Comparison = IncComparison;
+        Comparison = std::move(IncComparison);
         CC = X86::COND_L;
       }
     }
     APInt DecComparison = Comparison - 1;
     if (DecComparison == NegAddend) {
       if (CC == X86::COND_AE && !Comparison.isMinValue()) {
-        Comparison = DecComparison;
+        Comparison = std::move(DecComparison);
         CC = X86::COND_A;
       } else if (CC == X86::COND_L && !Comparison.isMinSignedValue()) {
-        Comparison = DecComparison;
+        Comparison = std::move(DecComparison);
         CC = X86::COND_LE;
       }
     }
