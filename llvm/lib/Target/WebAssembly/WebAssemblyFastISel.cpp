@@ -204,6 +204,8 @@ public:
   }
 
   bool fastSelectInstruction(const Instruction *I) override;
+  bool tryToFoldLoadIntoMI(MachineInstr *MI, unsigned OpNo,
+                           const LoadInst *LI) override;
 
 #include "WebAssemblyGenFastISel.inc"
 };
@@ -1264,6 +1266,52 @@ bool WebAssemblyFastISel::selectBitCast(const Instruction *I) {
   assert(Iter->isBitcast());
   Iter->setPhysRegsDeadExcept(ArrayRef<Register>(), TRI);
   updateValueMap(I, Reg);
+  return true;
+}
+
+static unsigned getSExtLoadOpcode(unsigned Opc, bool A64) {
+  switch (Opc) {
+  default:
+    return WebAssembly::INSTRUCTION_LIST_END;
+  case WebAssembly::I32_EXTEND8_S_I32:
+    Opc = A64 ? WebAssembly::LOAD8_S_I32_A64 : WebAssembly::LOAD8_S_I32_A32;
+    break;
+  case WebAssembly::I32_EXTEND16_S_I32:
+    Opc = A64 ? WebAssembly::LOAD16_S_I32_A64 : WebAssembly::LOAD16_S_I32_A32;
+    break;
+  case WebAssembly::I64_EXTEND8_S_I64:
+    Opc = A64 ? WebAssembly::LOAD8_S_I64_A64 : WebAssembly::LOAD8_S_I64_A32;
+    break;
+  case WebAssembly::I64_EXTEND16_S_I64:
+    Opc = A64 ? WebAssembly::LOAD16_S_I64_A64 : WebAssembly::LOAD16_S_I64_A32;
+    break;
+  case WebAssembly::I64_EXTEND32_S_I64:
+  case WebAssembly::I64_EXTEND_S_I32:
+    Opc = A64 ? WebAssembly::LOAD32_S_I64_A64 : WebAssembly::LOAD32_S_I64_A32;
+    break;
+  }
+
+  return Opc;
+}
+
+bool WebAssemblyFastISel::tryToFoldLoadIntoMI(MachineInstr *MI, unsigned OpNo,
+                                              const LoadInst *LI) {
+  bool A64 = Subtarget->hasAddr64();
+  unsigned NewOpc;
+  if ((NewOpc = getSExtLoadOpcode(MI->getOpcode(), A64)) ==
+      WebAssembly::INSTRUCTION_LIST_END)
+    return false;
+
+  Address Addr;
+  if (!computeAddress(LI->getPointerOperand(), Addr))
+    return false;
+
+  Register ResultReg = MI->getOperand(0).getReg();
+  MachineInstrBuilder MIB = BuildMI(*FuncInfo.MBB, FuncInfo.InsertPt, MIMD,
+                                    TII.get(NewOpc), ResultReg);
+  addLoadStoreOperands(Addr, MIB, createMachineMemOperandFor(LI));
+  MachineBasicBlock::iterator Iter(MI);
+  removeDeadCode(Iter, std::next(Iter));
   return true;
 }
 

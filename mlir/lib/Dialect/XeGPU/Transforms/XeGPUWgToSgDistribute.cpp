@@ -1683,14 +1683,20 @@ void XeGPUWgToSgDistributePass::runOnOperation() {
     converter.addConversion(
         [&](RankedTensorType type,
             SmallVectorImpl<Type> &result) -> std::optional<LogicalResult> {
+          // Only convert RankedTensorTypes that carry an XeGPU layout encoding.
+          // Plain tensors (e.g. tensor<?xi32>) have no XeGPU encoding and must
+          // not be converted: VectorType does not support dynamic dimensions.
+          auto encoding =
+              dyn_cast_if_present<xegpu::LayoutAttr>(type.getEncoding());
+          if (!encoding)
+            return std::nullopt;
+
           Type elemTy = type.getElementType();
           ArrayRef<int64_t> shape = type.getShape();
 
           int count;
           SmallVector<int64_t> subShape;
-          std::tie(subShape, count) = getSgShapeAndCount(
-              shape,
-              dyn_cast_if_present<xegpu::LayoutAttr>(type.getEncoding()));
+          std::tie(subShape, count) = getSgShapeAndCount(shape, encoding);
 
           auto newTy = VectorType::get(subShape, elemTy);
           result.append(count, newTy);

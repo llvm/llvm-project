@@ -33,7 +33,7 @@ class TestDAP_stopped_events(lldbdap_testcase.DAPTestCaseBase):
         for idx, expected_thread in enumerate(expected_threads):
             thread = threads[idx]
             self.assertTrue(
-                self.is_subdict(thread, expected_thread),
+                self.is_subdict(expected_thread, thread),
                 f"Invalid thread state in {threads_resp}",
             )
 

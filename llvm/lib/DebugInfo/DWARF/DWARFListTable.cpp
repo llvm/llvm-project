@@ -50,7 +50,7 @@ Error DWARFListTableHeader::extract(DWARFDataExtractor Data,
   HeaderData.OffsetEntryCount = Data.getU32(OffsetPtr);
 
   // Perform basic validation of the remaining header fields.
-  if (HeaderData.Version != 5)
+  if (HeaderData.Version < 5 || HeaderData.Version > 6)
     return createStringError(errc::invalid_argument,
                        "unrecognised %s table version %" PRIu16
                        " in table at offset 0x%" PRIx64,
