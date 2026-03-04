@@ -5354,8 +5354,8 @@ bool SPIRVInstructionSelector::selectGlobalValue(
       MIB3.constrainAllUses(TII, TRI, RBI);
       return true;
     }
-    assert(ResVReg != ResVReg);
-    return BuildCOPY(ResVReg, ResVReg, I);
+    assert(NewReg != ResVReg);
+    return BuildCOPY(ResVReg, NewReg, I);
   }
   auto GlobalVar = cast<GlobalVariable>(GV);
   assert(GlobalVar->getName() != "llvm.global.annotations");
