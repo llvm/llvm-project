@@ -130,8 +130,7 @@ _CLC_DEF _CLC_OVERLOAD double __clc_fmod(double x, double y) {
     w *= scale;
   }
 
-  // One more time
-  // Variable todd says whether the integer t is odd or not
+  // One more time: final iteration of the subtraction using floor instead of trunc
   t = __clc_floor(dx / w);
 
   p = w * t;
