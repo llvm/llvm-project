@@ -176,7 +176,7 @@ public:
                       unsigned CountOverwrite = 0) const;
 };
 
-LLVM_ABI bool
+LLVM_ABI void
 computeUnrollCount(Loop *L, const TargetTransformInfo &TTI, DominatorTree &DT,
                    LoopInfo *LI, AssumptionCache *AC, ScalarEvolution &SE,
                    const SmallPtrSetImpl<const Value *> &EphValues,
