@@ -530,34 +530,6 @@ bool RISCVVectorPeephole::convertToUnmasked(MachineInstr &MI) const {
   return true;
 }
 
-/// Check if it's safe to move From down to To, checking that no physical
-/// registers are clobbered.
-static bool isSafeToMove(const MachineInstr &From, const MachineInstr &To) {
-  assert(From.getParent() == To.getParent());
-  SmallVector<Register> PhysUses, PhysDefs;
-  for (const MachineOperand &MO : From.all_uses())
-    if (MO.getReg().isPhysical())
-      PhysUses.push_back(MO.getReg());
-  for (const MachineOperand &MO : From.all_defs())
-    if (MO.getReg().isPhysical())
-      PhysDefs.push_back(MO.getReg());
-  bool SawStore = false;
-  for (auto II = std::next(From.getIterator()); II != To.getIterator(); II++) {
-    for (Register PhysReg : PhysUses)
-      if (II->definesRegister(PhysReg, nullptr))
-        return false;
-    for (Register PhysReg : PhysDefs)
-      if (II->definesRegister(PhysReg, nullptr) ||
-          II->readsRegister(PhysReg, nullptr))
-        return false;
-    if (II->mayStore()) {
-      SawStore = true;
-      break;
-    }
-  }
-  return From.isSafeToMove(SawStore);
-}
-
 /// Given A and B are in the same MBB, returns true if A comes before B.
 static bool dominates(MachineBasicBlock::const_iterator A,
                       MachineBasicBlock::const_iterator B) {
@@ -585,7 +557,7 @@ bool RISCVVectorPeephole::ensureDominates(const MachineOperand &MO,
 
   MachineInstr *Def = MRI->getVRegDef(MO.getReg());
   if (Def->getParent() == Src.getParent() && !dominates(Def, Src)) {
-    if (!isSafeToMove(Src, *Def->getNextNode()))
+    if (!RISCVInstrInfo::isSafeToMove(Src, *Def->getNextNode()))
       return false;
     Src.moveBefore(Def->getNextNode());
   }
