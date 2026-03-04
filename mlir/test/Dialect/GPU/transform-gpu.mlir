@@ -792,12 +792,12 @@ func.func @simple_fill(%arg0: memref<128xf32>) -> memref<128xf32> {
       //       CHECK:     %[[LIN_W:.*]] = affine.apply #[[$MAP_LIN_W]]()[%[[TIDX]], %[[TIDY]]]
       //
       // Compute the active warps below using the mask + popcnt
-      //       CHECK:     %[[LIN_W_i64:.*]] = arith.index_castui %[[LIN_W]] : index to i64
+      //       CHECK:     %[[LIN_W_i64:.*]] = arith.index_castui %[[LIN_W]] exact : index to i64
       //       CHECK:     %[[TWO_POW_W:.*]] = arith.shli %[[C1_i64]], %[[LIN_W_i64]] : i64
       //       CHECK:     %[[FILTER_TILL_W:.*]] = arith.subi %[[TWO_POW_W]], %[[C1_i64]] : i64
       //       CHECK:     %[[ACTIVE_TILL_W:.*]] = arith.andi %[[FILTER_TILL_W]], %[[C753_i64]] : i64
       //       CHECK:     %[[LOGICAL_ID_W_i64:.*]] = math.ctpop %[[ACTIVE_TILL_W]] : i64
-      //       CHECK:     %[[LOGICAL_ID_W:.*]] = arith.index_castui %[[LOGICAL_ID_W_i64]] : i64 to index
+      //       CHECK:     %[[LOGICAL_ID_W:.*]] = arith.index_castui %[[LOGICAL_ID_W_i64]] exact : i64 to index
       //
       // Dynamically compute whether this warp is active below using the mask + popcnt
       //       CHECK:     %[[IS_ACTIVE_W_MASK:.*]] = arith.andi %[[TWO_POW_W]], %[[C753_i64]] : i64

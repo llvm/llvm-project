@@ -598,7 +598,7 @@ func.func @indexCastOfSignExtend_exact(%arg0: i8) -> index {
 }
 
 // CHECK-LABEL: @indexCastUIOfUnsignedExtend
-//       CHECK:   %[[res:.+]] = arith.index_castui %arg0 : i8 to index
+//       CHECK:   %[[res:.+]] = arith.index_castui %arg0 exact : i8 to index
 //       CHECK:   return %[[res]]
 func.func @indexCastUIOfUnsignedExtend(%arg0: i8) -> index {
   %ext = arith.extui %arg0 : i8 to i16
@@ -607,7 +607,7 @@ func.func @indexCastUIOfUnsignedExtend(%arg0: i8) -> index {
 }
 
 // CHECK-LABEL: @indexCastUIOfUnsignedExtend_nneg_on_extui
-//       CHECK:   %[[res:.+]] = arith.index_castui %arg0 nneg : i8 to index
+//       CHECK:   %[[res:.+]] = arith.index_castui %arg0 exact nneg : i8 to index
 //       CHECK:   return %[[res]]
 func.func @indexCastUIOfUnsignedExtend_nneg_on_extui(%arg0: i8) -> index {
   %ext = arith.extui %arg0 nneg : i8 to i16
@@ -616,7 +616,7 @@ func.func @indexCastUIOfUnsignedExtend_nneg_on_extui(%arg0: i8) -> index {
 }
 
 // CHECK-LABEL: @indexCastUIOfUnsignedExtend_nneg_on_castui
-//       CHECK:   %[[res:.+]] = arith.index_castui %arg0 : i8 to index
+//       CHECK:   %[[res:.+]] = arith.index_castui %arg0 exact : i8 to index
 //   CHECK-NOT:   nneg
 //       CHECK:   return %[[res]]
 func.func @indexCastUIOfUnsignedExtend_nneg_on_castui(%arg0: i8) -> index {
@@ -647,18 +647,18 @@ func.func @indexCastUIOfUnsignedExtend_nneg_exact(%arg0: i8) -> index {
 // CHECK-LABEL: @indexCastUIOfIndexCastUI_no_exact
 //       CHECK:   arith.index_castui
 //       CHECK:   arith.index_castui
-func.func @indexCastUIOfIndexCastUI_no_exact(%arg0: i32) -> i32 {
-  %idx = arith.index_castui %arg0 : i32 to index
-  %res = arith.index_castui %idx : index to i32
-  return %res : i32
+func.func @indexCastUIOfIndexCastUI_no_exact(%arg0: i128) -> i128 {
+  %idx = arith.index_castui %arg0 : i128 to index
+  %res = arith.index_castui %idx : index to i128
+  return %res : i128
 }
 
 // CHECK-LABEL: @indexCastUIOfIndexCastUI_exact_inner
-//       CHECK:   return %arg0 : i32
-func.func @indexCastUIOfIndexCastUI_exact_inner(%arg0: i32) -> i32 {
-  %idx = arith.index_castui %arg0 exact : i32 to index
-  %res = arith.index_castui %idx : index to i32
-  return %res : i32
+//       CHECK:   return %arg0 : i128
+func.func @indexCastUIOfIndexCastUI_exact_inner(%arg0: i128) -> i128 {
+  %idx = arith.index_castui %arg0 exact : i128 to index
+  %res = arith.index_castui %idx : index to i128
+  return %res : i128
 }
 
 // exact on outer only does NOT trigger the fold (outer exact on widening
@@ -666,10 +666,10 @@ func.func @indexCastUIOfIndexCastUI_exact_inner(%arg0: i32) -> i32 {
 // CHECK-LABEL: @indexCastUIOfIndexCastUI_exact_outer
 //       CHECK:   arith.index_castui
 //       CHECK:   arith.index_castui
-func.func @indexCastUIOfIndexCastUI_exact_outer(%arg0: i32) -> i32 {
-  %idx = arith.index_castui %arg0 : i32 to index
-  %res = arith.index_castui %idx exact : index to i32
-  return %res : i32
+func.func @indexCastUIOfIndexCastUI_exact_outer(%arg0: i128) -> i128 {
+  %idx = arith.index_castui %arg0 : i128 to index
+  %res = arith.index_castui %idx exact : index to i128
+  return %res : i128
 }
 
 // CHECK-LABEL: @indexCastUIOfIndexCastUI_exact_both

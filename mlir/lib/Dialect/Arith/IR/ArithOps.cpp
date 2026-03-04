@@ -1844,6 +1844,52 @@ bool arith::IndexCastOp::areCastCompatible(TypeRange inputs,
   return areIndexCastCompatible(inputs, outputs);
 }
 
+static unsigned getBitwidth(Type type, unsigned indexBitwidth) {
+  Type elemType = getElementTypeOrSelf(type);
+  if (isa<IndexType>(elemType))
+    return indexBitwidth;
+  return elemType.getIntOrFloatBitWidth();
+}
+
+template <typename CastOp>
+struct InferExactOnIndexCast final : OpRewritePattern<CastOp> {
+  InferExactOnIndexCast(MLIRContext *context)
+      : OpRewritePattern<CastOp>(context) {}
+
+  LogicalResult matchAndRewrite(CastOp op,
+                                PatternRewriter &rewriter) const override {
+    if (op.getExact())
+      return failure();
+
+    DataLayout layout = DataLayout::closest(op);
+    unsigned indexBitwidth =
+        layout.getTypeSizeInBits(IndexType::get(op.getContext()));
+    unsigned srcBW = getBitwidth(op.getIn().getType(), indexBitwidth);
+    unsigned dstBW = getBitwidth(op.getType(), indexBitwidth);
+    if (srcBW > dstBW)
+      return rewriter.notifyMatchFailure(op, "source is wider than dest");
+
+    rewriter.modifyOpInPlace(op, [&] { op.setExact(true); });
+    return success();
+  }
+};
+
+OpFoldResult arith::IndexCastUIOp::fold(FoldAdaptor adaptor) {
+  // index_castui(constant) -> constant
+  DataLayout layout = DataLayout::closest(*this);
+  // Sane defaults for index integer attributes.
+  unsigned resultBitwidth =
+      layout.getTypeSizeInBits(IndexType::get(this->getContext()));
+  if (auto intTy = dyn_cast<IntegerType>(getElementTypeOrSelf(getType())))
+    resultBitwidth = intTy.getWidth();
+
+  return constFoldCastOp<IntegerAttr, IntegerAttr>(
+      adaptor.getOperands(), getType(),
+      [resultBitwidth](const APInt &a, bool & /*castStatus*/) {
+        return a.zextOrTrunc(resultBitwidth);
+      });
+}
+
 OpFoldResult arith::IndexCastOp::fold(FoldAdaptor adaptor) {
   // index_cast(constant) -> constant
   unsigned resultBitwidth = 64; // Default for index integer attributes.
@@ -1860,6 +1906,7 @@ OpFoldResult arith::IndexCastOp::fold(FoldAdaptor adaptor) {
 void arith::IndexCastOp::getCanonicalizationPatterns(
     RewritePatternSet &patterns, MLIRContext *context) {
   patterns.add<IndexCastOfIndexCast, IndexCastOfExtSI>(context);
+  // InferExactOnIndexCast<IndexCastOp>>(context);
 }
 
 //===----------------------------------------------------------------------===//
@@ -1871,22 +1918,10 @@ bool arith::IndexCastUIOp::areCastCompatible(TypeRange inputs,
   return areIndexCastCompatible(inputs, outputs);
 }
 
-OpFoldResult arith::IndexCastUIOp::fold(FoldAdaptor adaptor) {
-  // index_castui(constant) -> constant
-  unsigned resultBitwidth = 64; // Default for index integer attributes.
-  if (auto intTy = dyn_cast<IntegerType>(getElementTypeOrSelf(getType())))
-    resultBitwidth = intTy.getWidth();
-
-  return constFoldCastOp<IntegerAttr, IntegerAttr>(
-      adaptor.getOperands(), getType(),
-      [resultBitwidth](const APInt &a, bool & /*castStatus*/) {
-        return a.zextOrTrunc(resultBitwidth);
-      });
-}
-
 void arith::IndexCastUIOp::getCanonicalizationPatterns(
     RewritePatternSet &patterns, MLIRContext *context) {
-  patterns.add<IndexCastUIOfIndexCastUI, IndexCastUIOfExtUI>(context);
+  patterns.add<IndexCastUIOfIndexCastUI, IndexCastUIOfExtUI,
+               InferExactOnIndexCast<IndexCastUIOp>>(context);
 }
 
 //===----------------------------------------------------------------------===//
