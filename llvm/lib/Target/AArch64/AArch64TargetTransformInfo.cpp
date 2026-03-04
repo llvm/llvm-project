@@ -1133,9 +1133,7 @@ AArch64TTIImpl::getIntrinsicInstrCost(const IntrinsicCostAttributes &ICA,
   case Intrinsic::minnum:
   case Intrinsic::maxnum:
   case Intrinsic::minimum:
-  case Intrinsic::maximum:
-  case Intrinsic::minimumnum:
-  case Intrinsic::maximumnum: {
+  case Intrinsic::maximum: {
     if (isa<ScalableVectorType>(RetTy) && ST->isSVEorStreamingSVEAvailable()) {
       auto LT = getTypeLegalizationCost(RetTy);
       return LT.first;
