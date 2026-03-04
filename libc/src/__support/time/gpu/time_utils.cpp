@@ -11,7 +11,7 @@
 
 namespace LIBC_NAMESPACE_DECL {
 
-#if defined(LIBC_TARGET_ARCH_IS_AMDGPU)
+#if defined(LIBC_TARGET_ARCH_IS_AMDGPU) || defined(__SPIRV__)
 // This is expected to be initialized by the runtime if the default value is
 // insufficient.
 // TODO: Once we have another use-case for this we should put it in a common

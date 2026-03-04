@@ -103,6 +103,7 @@ tools = [
     "clang-diff",
     "clang-format",
     "clang-repl",
+    "llvm-objdump",
     "llvm-offload-binary",
     "clang-tblgen",
     "clang-scan-deps",
@@ -223,8 +224,6 @@ if config.clang_staticanalyzer:
         config.available_features.add("z3")
         if config.clang_staticanalyzer_z3_mock:
             config.available_features.add("z3-mock")
-    else:
-        config.available_features.add("no-z3")
 
     check_analyzer_fixit_path = os.path.join(
         config.test_source_root, "Analysis", "check-analyzer-fixit.py"

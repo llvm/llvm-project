@@ -10,7 +10,7 @@ int x(int y) {
 }
 
 // CIR-LABEL: cir.func{{.*}} @_Z1xi(
-// CIR-SAME: %[[ARG0:.*]]: !s32i {{.*}}) -> !s32i{{.*}}{
+// CIR-SAME: %[[ARG0:.*]]: !s32i {{.*}}) -> (!s32i{{.*}}) {
 // CIR: [[Y:%.+]] = cir.alloca !s32i, !cir.ptr<!s32i>, ["y", init]
 // CIR: [[RETVAL:%.+]] = cir.alloca !s32i, !cir.ptr<!s32i>, ["__retval"]
 // CIR: cir.store %[[ARG0]], [[Y]] : !s32i, !cir.ptr<!s32i>
@@ -25,7 +25,7 @@ int x(int y) {
 // CIR: cir.return [[RETVAL_VAL]] : !s32i
 
 // LLVM-LABEL: define{{.*}} i32 @_Z1xi(
-// LLVM-SAME: i32 %[[ARG0:.+]])
+// LLVM-SAME: i32 {{.*}} %[[ARG0:.+]])
 // LLVM: %[[Y:.*]] = alloca i32
 // LLVM: %[[RETVAL:.*]] = alloca i32
 // LLVM: store i32 %[[ARG0]], ptr %[[Y]]
@@ -52,7 +52,7 @@ int foo(int a, int b) {
 }
 
 // CIR-LABEL: cir.func{{.*}} @_Z3fooii(
-// CIR-SAME: %[[ARG0:.*]]: !s32i {{.*}}, %[[ARG1:.*]]: !s32i {{.*}}) -> !s32i{{.*}}{
+// CIR-SAME: %[[ARG0:.*]]: !s32i {{.*}}, %[[ARG1:.*]]: !s32i {{.*}}) -> (!s32i{{.*}}) {
 // CIR: [[A:%.+]] = cir.alloca !s32i, !cir.ptr<!s32i>, ["a", init]
 // CIR: [[B:%.+]] = cir.alloca !s32i, !cir.ptr<!s32i>, ["b", init]
 // CIR: [[RETVAL:%.+]] = cir.alloca !s32i, !cir.ptr<!s32i>, ["__retval"]
@@ -83,7 +83,7 @@ int foo(int a, int b) {
 // CIR: cir.return [[RETVAL_VAL2]] : !s32i
 
 // LLVM-LABEL: define{{.*}} i32 @_Z3fooii(
-// LLVM-SAME: i32 %[[ARG0:.*]], i32 %[[ARG1:.*]])
+// LLVM-SAME: i32 {{.*}} %[[ARG0:.*]], i32 {{.*}} %[[ARG1:.*]])
 // LLVM: %[[A:.*]] = alloca i32
 // LLVM: %[[B:.*]] = alloca i32
 // LLVM: %[[RETVAL:.*]] = alloca i32
@@ -265,7 +265,7 @@ void test_cond_lvalue_compound(bool flag) {
 // CIR:   cir.yield %[[B]] : !cir.ptr<!s32i>
 // CIR: }) : (!cir.bool) -> !cir.ptr<!s32i>
 // CIR: %[[OLD_VAL:.*]] = cir.load{{.*}} %[[LVAL_PTR]]
-// CIR: %[[NEW_VAL:.*]] = cir.binop(add, %[[OLD_VAL]], %{{.*}})
+// CIR: %[[NEW_VAL:.*]] = cir.add nsw %[[OLD_VAL]], %{{.*}}
 // CIR: cir.store{{.*}} %[[NEW_VAL]], %[[LVAL_PTR]]
 
 // LLVM-LABEL: define{{.*}} void @_Z25test_cond_lvalue_compoundb(

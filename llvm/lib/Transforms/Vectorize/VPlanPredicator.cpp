@@ -32,21 +32,21 @@ class VPPredicator {
   using EdgeMaskCacheTy =
       DenseMap<std::pair<const VPBasicBlock *, const VPBasicBlock *>,
                VPValue *>;
-  using BlockMaskCacheTy = DenseMap<VPBasicBlock *, VPValue *>;
+  using BlockMaskCacheTy = DenseMap<const VPBasicBlock *, VPValue *>;
   EdgeMaskCacheTy EdgeMaskCache;
 
   BlockMaskCacheTy BlockMaskCache;
 
   /// Create an edge mask for every destination of cases and/or default.
-  void createSwitchEdgeMasks(VPInstruction *SI);
+  void createSwitchEdgeMasks(const VPInstruction *SI);
 
   /// Computes and return the predicate of the edge between \p Src and \p Dst,
   /// possibly inserting new recipes at \p Dst (using Builder's insertion point)
-  VPValue *createEdgeMask(VPBasicBlock *Src, VPBasicBlock *Dst);
+  VPValue *createEdgeMask(const VPBasicBlock *Src, const VPBasicBlock *Dst);
 
   /// Record \p Mask as the *entry* mask of \p VPBB, which is expected to not
   /// already have a mask.
-  void setBlockInMask(VPBasicBlock *VPBB, VPValue *Mask) {
+  void setBlockInMask(const VPBasicBlock *VPBB, VPValue *Mask) {
     // TODO: Include the masks as operands in the predicated VPlan directly to
     // avoid keeping the map of masks beyond the predication transform.
     assert(!getBlockInMask(VPBB) && "Mask already set");
@@ -64,7 +64,7 @@ class VPPredicator {
 
 public:
   /// Returns the *entry* mask for \p VPBB.
-  VPValue *getBlockInMask(VPBasicBlock *VPBB) const {
+  VPValue *getBlockInMask(const VPBasicBlock *VPBB) const {
     return BlockMaskCache.lookup(VPBB);
   }
 
@@ -85,7 +85,8 @@ public:
 };
 } // namespace
 
-VPValue *VPPredicator::createEdgeMask(VPBasicBlock *Src, VPBasicBlock *Dst) {
+VPValue *VPPredicator::createEdgeMask(const VPBasicBlock *Src,
+                                      const VPBasicBlock *Dst) {
   assert(is_contained(Dst->getPredecessors(), Src) && "Invalid edge");
 
   // Look for cached value.
@@ -175,8 +176,8 @@ void VPPredicator::createHeaderMask(VPBasicBlock *HeaderVPBB, bool FoldTail) {
   setBlockInMask(HeaderVPBB, BlockMask);
 }
 
-void VPPredicator::createSwitchEdgeMasks(VPInstruction *SI) {
-  VPBasicBlock *Src = SI->getParent();
+void VPPredicator::createSwitchEdgeMasks(const VPInstruction *SI) {
+  const VPBasicBlock *Src = SI->getParent();
 
   // Create masks where SI is a switch. We create masks for all edges from SI's
   // parent block at the same time. This is more efficient, as we can create and
@@ -241,10 +242,12 @@ void VPPredicator::convertPhisToBlends(VPBasicBlock *VPBB) {
     // be duplications since this is a simple recursive scan, but future
     // optimizations will clean it up.
 
-    if (all_equal(make_filter_range(PhiR->incoming_values(), [](VPValue *V) {
-          return !match(V, m_Poison());
-        }))) {
-      PhiR->replaceAllUsesWith(PhiR->getIncomingValue(0));
+    auto NotPoison = make_filter_range(PhiR->incoming_values(), [](VPValue *V) {
+      return !match(V, m_Poison());
+    });
+    if (all_equal(NotPoison)) {
+      PhiR->replaceAllUsesWith(NotPoison.empty() ? PhiR->getIncomingValue(0)
+                                                 : *NotPoison.begin());
       PhiR->eraseFromParent();
       continue;
     }
@@ -326,9 +329,7 @@ void VPlanTransforms::introduceMasksAndLinearize(VPlan &Plan, bool FoldTail) {
     VPBuilder B(Plan.getMiddleBlock()->getTerminator());
     for (VPRecipeBase &R : *Plan.getMiddleBlock()) {
       VPValue *Op;
-      if (!match(&R, m_CombineOr(
-                         m_ExitingIVValue(m_VPValue(), m_VPValue(Op)),
-                         m_ExtractLastLane(m_ExtractLastPart(m_VPValue(Op))))))
+      if (!match(&R, m_ExtractLastLane(m_ExtractLastPart(m_VPValue(Op)))))
         continue;
 
       // Compute the index of the last active lane.

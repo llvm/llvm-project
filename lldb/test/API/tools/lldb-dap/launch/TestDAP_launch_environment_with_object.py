@@ -7,9 +7,6 @@ import lldbdap_testcase
 
 
 class TestDAP_launch(lldbdap_testcase.DAPTestCaseBase):
-    @expectedFailureWindows(
-        bugnumber="https://github.com/llvm/llvm-project/issues/137599"
-    )
     def test_environment_with_object(self):
         """
         Tests launch of a simple program with environment variables
