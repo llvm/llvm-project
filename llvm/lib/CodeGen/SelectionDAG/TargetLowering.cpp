@@ -1472,6 +1472,17 @@ bool TargetLowering::SimplifyDemandedBits(
       }
     }
 
+    // (X +/- Y) & Y --> ~X & Y when Y is a power of 2 (or zero).
+    SDValue X, Y;
+    if (sd_match(Op,
+                 m_And(m_Value(Y),
+                       m_OneUse(m_AnyOf(m_Add(m_Value(X), m_Deferred(Y)),
+                                        m_Sub(m_Value(X), m_Deferred(Y)))))) &&
+        TLO.DAG.isKnownToBeAPowerOfTwo(Y, DemandedElts, /*OrZero=*/true)) {
+      return TLO.CombineTo(
+          Op, TLO.DAG.getNode(ISD::AND, dl, VT, TLO.DAG.getNOT(dl, X, VT), Y));
+    }
+
     // AND(INSERT_SUBVECTOR(C,X,I),M) -> INSERT_SUBVECTOR(AND(C,M),X,I)
     // iff 'C' is Undef/Constant and AND(X,M) == X (for DemandedBits).
     if (Op0.getOpcode() == ISD::INSERT_SUBVECTOR && !VT.isScalableVector() &&
@@ -8453,10 +8464,6 @@ SDValue TargetLowering::expandCLMUL(SDNode *Node, SelectionDAG &DAG) const {
   unsigned BW = VT.getScalarSizeInBits();
   unsigned Opcode = Node->getOpcode();
 
-  // Scalarize if the vector multiplication is unlikely to work.
-  if (VT.isVector() && !isOperationLegalOrCustom(ISD::MUL, VT))
-    return DAG.UnrollVectorOp(Node);
-
   switch (Opcode) {
   case ISD::CLMUL: {
     // NOTE: If you change this expansion, please update the cost model
@@ -8509,8 +8516,13 @@ SDValue TargetLowering::expandCLMUL(SDNode *Node, SelectionDAG &DAG) const {
         *DAG.getContext(), EVT::getIntegerVT(*DAG.getContext(), 2 * BW));
     // For example, ExtVT = i64 based operations aren't legal on a 32-bit
     // target; use bitreverse-based lowering in this case.
+    // Also prefer bitreverse-based lowering when CLMUL is legal on VT but
+    // not on ExtVT, to avoid expanding CLMUL on the wider type (e.g. v8i8
+    // on AArch64 where CLMUL v8i8 is legal via PMUL but CLMUL v8i16 is not).
     if (!isOperationLegalOrCustom(ISD::ZERO_EXTEND, ExtVT) ||
-        !isOperationLegalOrCustom(ISD::SRL, ExtVT)) {
+        !isOperationLegalOrCustom(ISD::SRL, ExtVT) ||
+        (!isOperationLegalOrCustom(ISD::CLMUL, ExtVT) &&
+         isOperationLegalOrCustom(ISD::CLMUL, VT))) {
       SDValue XRev = DAG.getNode(ISD::BITREVERSE, DL, VT, X);
       SDValue YRev = DAG.getNode(ISD::BITREVERSE, DL, VT, Y);
       SDValue ClMul = DAG.getNode(ISD::CLMUL, DL, VT, XRev, YRev);
@@ -10072,7 +10084,9 @@ SDValue TargetLowering::expandAVG(SDNode *N, SelectionDAG &DAG) const {
   }
 
   // avgflooru(lhs, rhs) -> or(lshr(add(lhs, rhs),1),shl(overflow, typesize-1))
-  if (Opc == ISD::AVGFLOORU && VT.isScalarInteger() && !isTypeLegal(VT)) {
+  if (Opc == ISD::AVGFLOORU && VT.isScalarInteger() && !isTypeLegal(VT) &&
+      isOperationLegalOrCustom(
+          ISD::UADDO, getLegalTypeToTransformTo(*DAG.getContext(), VT))) {
     SDValue UAddWithOverflow =
         DAG.getNode(ISD::UADDO, dl, DAG.getVTList(VT, MVT::i1), {RHS, LHS});
 

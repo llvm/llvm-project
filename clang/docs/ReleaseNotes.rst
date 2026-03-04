@@ -140,9 +140,13 @@ C2y Feature Support
 
 C23 Feature Support
 ^^^^^^^^^^^^^^^^^^^
+- Clang now allows C23 ``constexpr`` struct member access through the dot operator in constant expressions. (#GH178349)
 
 Non-comprehensive list of changes in this release
 -------------------------------------------------
+
+- Added support for floating point and pointer values in most ``__atomic_``
+  builtins.
 
 - Added ``__builtin_stdc_rotate_left`` and ``__builtin_stdc_rotate_right``
   for bit rotation of unsigned integers including ``_BitInt`` types. Rotation
@@ -153,6 +157,9 @@ Non-comprehensive list of changes in this release
 - A new generic bit-reverse builtin function ``__builtin_bitreverseg`` that
   extends bit-reversal support to all standard integers type, including
   ``_BitInt``
+
+- Deprecated float types support from ``__builtin_elementwise_max`` and
+  ``__builtin_elementwise_min``.
 
 New Compiler Flags
 ------------------
@@ -167,6 +174,10 @@ New Compiler Flags
 - New ``-cc1`` option ``-fexperimental-overflow-behavior-types`` added to
   enable parsing of the experimental ``overflow_behavior`` type attribute and
   type specifiers.
+
+- New ``-cl`` option ``/d2guardnochecks`` added to match MSVC. When Windows
+  Control Flow Guard (CFG) is enabled by other options, it will instruct Clang
+  to emit the CFG metadata, but disable adding checks.
 
 Deprecated Compiler Flags
 -------------------------
@@ -292,13 +303,15 @@ Bug Fixes in This Version
 - Fixes an assertion failure when evaluating ``__underlying_type`` on enum redeclarations. (#GH177943)
 - Fixed an assertion failure caused by nested macro expansion during header-name lexing (``__has_embed(__has_include)``). (#GH178635)
 - Clang now outputs relative paths of embeds for dependency output. (#GH161950)
+- Fix the result type of a binary operation where both operands are 'void' l-values. (#GH111300)
 - Fixed an assertion failure when evaluating ``_Countof`` on invalid ``void``-typed operands. (#GH180893)
-- Fixed a ``-Winvalid-noreturn`` false positive for unreachable ``try`` blocks following an unconditional ``throw``. (#GH174822)
 - Fixed an assertion failure in the serialized diagnostic printer when it is destroyed without calling ``finish()``. (#GH140433)
 - Fixed an assertion failure caused by error recovery while extending a nested name specifier with results from ordinary lookup. (#GH181470)
+- Fixed a crash when parsing ``#pragma clang attribute`` arguments for attributes that forbid arguments. (#GH182122)
 
 Bug Fixes to Compiler Builtins
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+- Fixed a crash when calling `__builtin_allow_sanitize_check` with no arguments. (#GH183927)
 
 Bug Fixes to Attribute Support
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -313,9 +326,13 @@ Bug Fixes to C++ Support
   template parameters when one of its parameters is also a pack. (#GH181166)
 - Fixed a crash when a default argument is passed to an explicit object parameter. (#GH176639)
 - Fixed a crash when diagnosing an invalid static member function with an explicit object parameter (#GH177741)
+- Fixed a crash when pack expansions are used as arguments for non-pack parameters of built-in templates. (#GH180307)
 - Fixed a bug where captured variables in non-mutable lambdas were incorrectly treated as mutable 
   when used inside decltype in the return type. (#GH180460)
 - Fixed a crash when evaluating uninitialized GCC vector/ext_vector_type vectors in ``constexpr``. (#GH180044)
+- Fixed a crash on ``typeid`` of incomplete local types during template instantiation. (#GH63242), (#GH176397)
+
+- Fix initialization of GRO when GRO-return type mismatches, as part of CWG2563. (#GH98744)
 
 Bug Fixes to AST Handling
 ^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -332,9 +349,11 @@ Miscellaneous Clang Crashes Fixed
 - Fixed a crash when using loop hint with a value dependent argument inside a
   generic lambda. (#GH172289)
 - Fixed a crash in C++ overload resolution with ``_Atomic``-qualified argument types. (#GH170433)
+- Fixed a crash when casting a parenthesized unresolved template-id or array section. (#GH183505)
 - Fixed a crash when initializing a ``constexpr`` pointer with a floating-point literal in C23. (#GH180313)
 - Fixed an assertion when diagnosing address-space qualified ``new``/``delete`` in language-defined address spaces such as OpenCL ``__local``. (#GH178319)
 - Fixed an assertion failure in ObjC++ ARC when binding a rvalue reference to reference with different lifetimes (#GH178524)
+- Fixed a crash when subscripting a vector type with large unsigned integer values. (#GH180563)
 
 OpenACC Specific Changes
 ------------------------
@@ -362,6 +381,9 @@ Android Support
 
 Windows Support
 ^^^^^^^^^^^^^^^
+
+- Clang now defines the ``_MSVC_TRADITIONAL`` macro as ``1`` when emulating MSVC
+  19.15 (Visual Studio 2017 version 15.8) and later. (#GH47114)
 
 LoongArch Support
 ^^^^^^^^^^^^^^^^^

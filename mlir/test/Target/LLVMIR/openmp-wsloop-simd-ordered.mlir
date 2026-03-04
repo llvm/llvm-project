@@ -39,7 +39,7 @@ module {
     // CHECK: %.linear_result = alloca i32
 
     omp.wsloop ordered(0) {
-      omp.simd linear(%i = %c1_i32 : !llvm.ptr) private(@i_private_i32 %i -> %arg0 : !llvm.ptr) {
+      omp.simd linear(%i : !llvm.ptr = %c1_i32 : i32) private(@i_private_i32 %i -> %arg0 : !llvm.ptr) {
         omp.loop_nest (%iv) : i32 = (%c1_i32) to (%c100_i32) inclusive step (%c1_i32) {
           // CHECK: omp.loop_nest.region:
           // CHECK: load i32, ptr %.linear_result

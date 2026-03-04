@@ -141,9 +141,9 @@ bool VPlanVerifier::verifyPhiRecipes(const VPBasicBlock *VPBB) {
 
 static bool isKnownMonotonic(VPValue *V) {
   VPValue *X, *Y;
-  // TODO: Check for hasNoUnsignedWrap() when we set nuw in VPlanUnroll
   if (match(V, m_Add(m_VPValue(X), m_VPValue(Y))))
-    return isKnownMonotonic(X) && isKnownMonotonic(Y);
+    return cast<VPRecipeWithIRFlags>(V)->hasNoUnsignedWrap() &&
+           isKnownMonotonic(X) && isKnownMonotonic(Y);
   if (match(V, m_StepVector()))
     return true;
   // Only handle a subset of IVs until we can guarantee there's no overflow.

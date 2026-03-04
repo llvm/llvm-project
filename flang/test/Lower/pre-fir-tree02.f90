@@ -82,15 +82,15 @@ program test_prog
       ! CHECK: CaseStmt
       case default
         ! Note: label-do-loop are canonicalized into do constructs
-        ! CHECK: <<DoConstruct!>>
-        ! CHECK: NonLabelDoStmt
+        ! CHECK: <<DoConstruct>>
+        ! CHECK: [[DO_HDR:[0-9]+]] NonLabelDoStmt -> [[DO_END:[0-9]+]]: do 22 while(l<=k)
         do 22 while(l<=k)
           ! CHECK: IfStmt
           if (p(l)<0.) p(l)=cos(p(l))
-          ! CHECK: CallStmt
+          ! CHECK: [[CALL_ID:[0-9]+]] CallStmt: 22 call incr(l)
 22        call incr(l)
-        ! CHECK: EndDoStmt
-       ! CHECK: <<End DoConstruct!>>
+        ! CHECK: [[DO_END]] EndDoStmt -> [[DO_HDR]]
+       ! CHECK: <<End DoConstruct>>
       ! CHECK: CaseStmt
       case (100:)
     ! CHECK: EndSelectStmt
