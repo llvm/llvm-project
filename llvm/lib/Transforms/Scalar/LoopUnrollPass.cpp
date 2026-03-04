@@ -1127,7 +1127,7 @@ bool llvm::computeUnrollCount(
     while (UP.Count != 0 && TripMultiple % UP.Count != 0)
       UP.Count >>= 1;
     LLVM_DEBUG(dbgs().indent(2)
-               << "Remainder loop is restricted (that could architecture "
+               << "Remainder loop is restricted (that could be architecture "
                   "specific or because the loop contains a convergent "
                   "instruction), so unroll count must divide the trip "
                   "multiple, "
@@ -1143,9 +1143,9 @@ bool llvm::computeUnrollCount(
                                         L->getStartLoc(), L->getHeader())
                << "Unable to unroll loop the number of times directed by "
                   "llvm.loop.unroll.count metadata because remainder loop is "
-                  "restricted (that could architecture specific or because the "
-                  "loop contains a convergent instruction) and so must have an "
-                  "unroll count that divides the loop trip multiple of "
+                  "restricted (that could be architecture specific or because "
+                  "the loop contains a convergent instruction) and so must "
+                  "have an unroll count that divides the loop trip multiple of "
                << NV("TripMultiple", TripMultiple) << ".  Unrolling instead "
                << NV("UnrollCount", UP.Count) << " time(s).";
       });
