@@ -510,6 +510,33 @@ void struct_ptr_param_modified(Bar** bp) {
   (*bp)->mutating_method();
 }
 
-void unnamed_parameters(int, char *, Bar, Bar&, int[5]) {
-    // Unnamed parameters are never reported.
+void unnamed_parameters(int&, char*, Bar, Bar&, int[5]) {
+  // Unnamed parameters are never reported.
+}
+
+void unnamed_and_named_irrelevant_params(const int& X, char*, Bar Z, Bar&, int[5]) {
+  // No report, all parameters are excluded for various reasons.
+}
+
+void unnamed_and_named_params(int& X, int&) {
+  // But a named parameter is reported even if it is next to an unnamed one.
+  // CHECK-MESSAGES: [[@LINE-2]]:31: warning: variable 'X' of type 'int &' can be declared 'const'
+  // CHECK-FIXES: void unnamed_and_named_params(int const& X, int&) {
+}
+
+// If the parameter is named in the definition, its type will be updated in all
+// declarations, inclunding ones where it is unnamed.
+void unnamed_in_decl_named_in_def(int&);
+// CHECK-FIXES: void unnamed_in_decl_named_in_def(int const&);
+
+void unnamed_in_decl_named_in_def(int& X) {
+  // CHECK-MESSAGES: [[@LINE-1]]:35: warning: variable 'X' of type 'int &' can be declared 'const'
+  // CHECK-FIXES: void unnamed_in_decl_named_in_def(int const& X) {
+}
+
+void named_in_decl_unnamed_in_def(int& X);
+
+void named_in_decl_unnamed_in_def(int&) {
+  // If the parameter is unnamed in the definition, it will not be reported, even
+  // if it is named in some declaration.
 }
