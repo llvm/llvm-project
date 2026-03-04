@@ -7530,12 +7530,12 @@ SIInstrInfo::legalizeOperands(MachineInstr &MI,
     return nullptr;
   }
 
-  // Legalize TENSOR_LOAD_TO_LDS, TENSOR_LOAD_TO_LDS_D2, TENSOR_STORE_FROM_LDS,
-  // TENSOR_STORE_FROM_LDS_D2. All their operands are scalar.
-  if (MI.getOpcode() == AMDGPU::TENSOR_LOAD_TO_LDS ||
-      MI.getOpcode() == AMDGPU::TENSOR_LOAD_TO_LDS_D2 ||
-      MI.getOpcode() == AMDGPU::TENSOR_STORE_FROM_LDS ||
-      MI.getOpcode() == AMDGPU::TENSOR_STORE_FROM_LDS_D2) {
+  // Legalize TENSOR_LOAD_TO_LDS_d2/_d4, TENSOR_STORE_FROM_LDS_d2/_d4. All their
+  // operands are scalar.
+  if (MI.getOpcode() == AMDGPU::TENSOR_LOAD_TO_LDS_d2 ||
+      MI.getOpcode() == AMDGPU::TENSOR_LOAD_TO_LDS_d4 ||
+      MI.getOpcode() == AMDGPU::TENSOR_STORE_FROM_LDS_d2 ||
+      MI.getOpcode() == AMDGPU::TENSOR_STORE_FROM_LDS_d4) {
     for (MachineOperand &Src : MI.explicit_operands()) {
       if (Src.isReg() && RI.hasVectorRegisters(MRI.getRegClass(Src.getReg())))
         Src.setReg(readlaneVGPRToSGPR(Src.getReg(), MI, MRI));
