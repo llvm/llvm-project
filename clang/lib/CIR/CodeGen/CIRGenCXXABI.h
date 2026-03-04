@@ -290,6 +290,9 @@ public:
       CIRGenFunction &cgf, const CXXRecordDecl *vtableClass, BaseSubobject base,
       const CXXRecordDecl *nearestVBase) = 0;
 
+  virtual llvm::StringRef getPureVirtualCallName() = 0;
+  virtual llvm::StringRef getDeletedVirtualCallName() = 0;
+
   /// Insert any ABI-specific implicit parameters into the parameter list for a
   /// function. This generally involves extra data for constructors and
   /// destructors.

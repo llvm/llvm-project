@@ -16,7 +16,7 @@ void acc_compute() {
 // CHECK-NEXT: ^bb0(%[[LHSARG:.*]]: !cir.ptr<!u32i> {{.*}}, %[[RHSARG:.*]]: !cir.ptr<!u32i> {{.*}})
 // CHECK-NEXT: %[[RHS_LOAD:.*]] = cir.load {{.*}} %[[RHSARG]] : !cir.ptr<!u32i>
 // CHECK-NEXT: %[[LHS_LOAD:.*]] = cir.load {{.*}} %[[LHSARG]] : !cir.ptr<!u32i>
-// CHECK-NEXT: %[[ADD:.*]] = cir.binop(add, %[[LHS_LOAD]], %[[RHS_LOAD]]) : !u32i
+// CHECK-NEXT: %[[ADD:.*]] = cir.add %[[LHS_LOAD]], %[[RHS_LOAD]] : !u32i
 // CHECK-NEXT: cir.store {{.*}} %[[ADD]], %[[LHSARG]]
 // CHECK-NEXT: acc.yield %[[LHSARG]] : !cir.ptr<!u32i>
 // CHECK-NEXT: }
@@ -33,7 +33,7 @@ void acc_compute() {
 // CHECK-NEXT: ^bb0(%[[LHSARG:.*]]: !cir.ptr<!u32i> {{.*}}, %[[RHSARG:.*]]: !cir.ptr<!u32i> {{.*}})
 // CHECK-NEXT: %[[RHS_LOAD:.*]] = cir.load {{.*}} %[[RHSARG]] : !cir.ptr<!u32i>
 // CHECK-NEXT: %[[LHS_LOAD:.*]] = cir.load {{.*}} %[[LHSARG]] : !cir.ptr<!u32i>
-// CHECK-NEXT: %[[MUL:.*]] = cir.binop(mul, %[[LHS_LOAD]], %[[RHS_LOAD]]) : !u32i
+// CHECK-NEXT: %[[MUL:.*]] = cir.mul %[[LHS_LOAD]], %[[RHS_LOAD]] : !u32i
 // CHECK-NEXT: cir.store {{.*}} %[[MUL]], %[[LHSARG]]
 // CHECK-NEXT: acc.yield %[[LHSARG]] : !cir.ptr<!u32i>
 // CHECK-NEXT: }
@@ -95,7 +95,7 @@ void acc_compute() {
 // CHECK-NEXT: ^bb0(%[[LHSARG:.*]]: !cir.ptr<!u32i> {{.*}}, %[[RHSARG:.*]]: !cir.ptr<!u32i> {{.*}})
 // CHECK-NEXT: %[[RHS_LOAD:.*]] = cir.load {{.*}} %[[RHSARG]] : !cir.ptr<!u32i>
 // CHECK-NEXT: %[[LHS_LOAD:.*]] = cir.load {{.*}} %[[LHSARG]] : !cir.ptr<!u32i>
-// CHECK-NEXT: %[[AND:.*]] = cir.binop(and, %[[LHS_LOAD]], %[[RHS_LOAD]]) : !u32i
+// CHECK-NEXT: %[[AND:.*]] = cir.and %[[LHS_LOAD]], %[[RHS_LOAD]] : !u32i
 // CHECK-NEXT: cir.store {{.*}} %[[AND]], %[[LHSARG]]
 // CHECK-NEXT: acc.yield %[[LHSARG]] : !cir.ptr<!u32i>
 // CHECK-NEXT: }
@@ -112,7 +112,7 @@ void acc_compute() {
 // CHECK-NEXT: ^bb0(%[[LHSARG:.*]]: !cir.ptr<!u32i> {{.*}}, %[[RHSARG:.*]]: !cir.ptr<!u32i> {{.*}})
 // CHECK-NEXT: %[[RHS_LOAD:.*]] = cir.load {{.*}} %[[RHSARG]] : !cir.ptr<!u32i>
 // CHECK-NEXT: %[[LHS_LOAD:.*]] = cir.load {{.*}} %[[LHSARG]] : !cir.ptr<!u32i>
-// CHECK-NEXT: %[[OR:.*]] = cir.binop(or, %[[LHS_LOAD]], %[[RHS_LOAD]]) : !u32i
+// CHECK-NEXT: %[[OR:.*]] = cir.or %[[LHS_LOAD]], %[[RHS_LOAD]] : !u32i
 // CHECK-NEXT: cir.store {{.*}} %[[OR]], %[[LHSARG]]
 // CHECK-NEXT: acc.yield %[[LHSARG]] : !cir.ptr<!u32i>
 // CHECK-NEXT: }
@@ -129,7 +129,7 @@ void acc_compute() {
 // CHECK-NEXT: ^bb0(%[[LHSARG:.*]]: !cir.ptr<!u32i> {{.*}}, %[[RHSARG:.*]]: !cir.ptr<!u32i> {{.*}})
 // CHECK-NEXT: %[[RHS_LOAD:.*]] = cir.load {{.*}} %[[RHSARG]] : !cir.ptr<!u32i>
 // CHECK-NEXT: %[[LHS_LOAD:.*]] = cir.load {{.*}} %[[LHSARG]] : !cir.ptr<!u32i>
-// CHECK-NEXT: %[[XOR:.*]] = cir.binop(xor, %[[LHS_LOAD]], %[[RHS_LOAD]]) : !u32i
+// CHECK-NEXT: %[[XOR:.*]] = cir.xor %[[LHS_LOAD]], %[[RHS_LOAD]] : !u32i
 // CHECK-NEXT: cir.store {{.*}} %[[XOR]], %[[LHSARG]]
 // CHECK-NEXT: acc.yield %[[LHSARG]] : !cir.ptr<!u32i>
 // CHECK-NEXT: }
@@ -213,7 +213,7 @@ void acc_compute() {
 // CHECK-NEXT: %[[RHS_STRIDE:.*]] = cir.ptr_stride %[[RHS_DECAY]], %[[ITR_LOAD]] : (!cir.ptr<!u32i>, !s64i) -> !cir.ptr<!u32i>
 // CHECK-NEXT: %[[RHS_LOAD:.*]] = cir.load {{.*}} %[[RHS_STRIDE]] : !cir.ptr<!u32i>, !u32i
 // CHECK-NEXT: %[[LHS_LOAD:.*]] = cir.load {{.*}} %[[LHS_STRIDE]] : !cir.ptr<!u32i>, !u32i
-// CHECK-NEXT: %[[ADD:.*]] = cir.binop(add, %[[LHS_LOAD]], %[[RHS_LOAD]]) : !u32i
+// CHECK-NEXT: %[[ADD:.*]] = cir.add %[[LHS_LOAD]], %[[RHS_LOAD]] : !u32i
 // CHECK-NEXT: cir.store {{.*}} %[[ADD]], %[[LHS_STRIDE]]
 // CHECK-NEXT: cir.yield
 // CHECK-NEXT: } step {
@@ -251,7 +251,7 @@ void acc_compute() {
 // CHECK-NEXT: %[[RHS_STRIDE:.*]] = cir.ptr_stride %[[RHS_DECAY]], %[[ITR_LOAD]] : (!cir.ptr<!u32i>, !s64i) -> !cir.ptr<!u32i>
 // CHECK-NEXT: %[[RHS_LOAD:.*]] = cir.load {{.*}} %[[RHS_STRIDE]] : !cir.ptr<!u32i>, !u32i
 // CHECK-NEXT: %[[LHS_LOAD:.*]] = cir.load {{.*}} %[[LHS_STRIDE]] : !cir.ptr<!u32i>, !u32i
-// CHECK-NEXT: %[[MUL:.*]] = cir.binop(mul, %[[LHS_LOAD]], %[[RHS_LOAD]]) : !u32i
+// CHECK-NEXT: %[[MUL:.*]] = cir.mul %[[LHS_LOAD]], %[[RHS_LOAD]] : !u32i
 // CHECK-NEXT: cir.store {{.*}} %[[MUL]], %[[LHS_STRIDE]]
 // CHECK-NEXT: cir.yield
 // CHECK-NEXT: } step {
@@ -379,7 +379,7 @@ void acc_compute() {
 // CHECK-NEXT: %[[RHS_STRIDE:.*]] = cir.ptr_stride %[[RHS_DECAY]], %[[ITR_LOAD]] : (!cir.ptr<!u32i>, !s64i) -> !cir.ptr<!u32i>
 // CHECK-NEXT: %[[RHS_LOAD:.*]] = cir.load {{.*}} %[[RHS_STRIDE]] : !cir.ptr<!u32i>, !u32i
 // CHECK-NEXT: %[[LHS_LOAD:.*]] = cir.load {{.*}} %[[LHS_STRIDE]] : !cir.ptr<!u32i>, !u32i
-// CHECK-NEXT: %[[AND:.*]] = cir.binop(and, %[[LHS_LOAD]], %[[RHS_LOAD]]) : !u32i
+// CHECK-NEXT: %[[AND:.*]] = cir.and %[[LHS_LOAD]], %[[RHS_LOAD]] : !u32i
 // CHECK-NEXT: cir.store {{.*}} %[[AND]], %[[LHS_STRIDE]]
 // CHECK-NEXT: cir.yield
 // CHECK-NEXT: } step {
@@ -417,7 +417,7 @@ void acc_compute() {
 // CHECK-NEXT: %[[RHS_STRIDE:.*]] = cir.ptr_stride %[[RHS_DECAY]], %[[ITR_LOAD]] : (!cir.ptr<!u32i>, !s64i) -> !cir.ptr<!u32i>
 // CHECK-NEXT: %[[RHS_LOAD:.*]] = cir.load {{.*}} %[[RHS_STRIDE]] : !cir.ptr<!u32i>, !u32i
 // CHECK-NEXT: %[[LHS_LOAD:.*]] = cir.load {{.*}} %[[LHS_STRIDE]] : !cir.ptr<!u32i>, !u32i
-// CHECK-NEXT: %[[OR:.*]] = cir.binop(or, %[[LHS_LOAD]], %[[RHS_LOAD]]) : !u32i
+// CHECK-NEXT: %[[OR:.*]] = cir.or %[[LHS_LOAD]], %[[RHS_LOAD]] : !u32i
 // CHECK-NEXT: cir.store {{.*}} %[[OR]], %[[LHS_STRIDE]]
 // CHECK-NEXT: cir.yield
 // CHECK-NEXT: } step {
@@ -455,7 +455,7 @@ void acc_compute() {
 // CHECK-NEXT: %[[RHS_STRIDE:.*]] = cir.ptr_stride %[[RHS_DECAY]], %[[ITR_LOAD]] : (!cir.ptr<!u32i>, !s64i) -> !cir.ptr<!u32i>
 // CHECK-NEXT: %[[RHS_LOAD:.*]] = cir.load {{.*}} %[[RHS_STRIDE]] : !cir.ptr<!u32i>, !u32i
 // CHECK-NEXT: %[[LHS_LOAD:.*]] = cir.load {{.*}} %[[LHS_STRIDE]] : !cir.ptr<!u32i>, !u32i
-// CHECK-NEXT: %[[XOR:.*]] = cir.binop(xor, %[[LHS_LOAD]], %[[RHS_LOAD]]) : !u32i
+// CHECK-NEXT: %[[XOR:.*]] = cir.xor %[[LHS_LOAD]], %[[RHS_LOAD]] : !u32i
 // CHECK-NEXT: cir.store {{.*}} %[[XOR]], %[[LHS_STRIDE]]
 // CHECK-NEXT: cir.yield
 // CHECK-NEXT: } step {
@@ -617,7 +617,7 @@ void acc_compute() {
 // CHECK-NEXT: %[[RHS_STRIDE:.*]] = cir.ptr_stride %[[RHS_DECAY]], %[[ITR_LOAD]] : (!cir.ptr<!u32i>, !u64i) -> !cir.ptr<!u32i>
 // CHECK-NEXT: %[[RHS_LOAD:.*]] = cir.load {{.*}} %[[RHS_STRIDE]] : !cir.ptr<!u32i>, !u32i
 // CHECK-NEXT: %[[LHS_LOAD:.*]] = cir.load {{.*}} %[[LHS_STRIDE]] : !cir.ptr<!u32i>, !u32i
-// CHECK-NEXT: %[[ADD:.*]] = cir.binop(add, %[[LHS_LOAD]], %[[RHS_LOAD]]) : !u32i
+// CHECK-NEXT: %[[ADD:.*]] = cir.add %[[LHS_LOAD]], %[[RHS_LOAD]] : !u32i
 // CHECK-NEXT: cir.store {{.*}} %[[ADD]], %[[LHS_STRIDE]]
 // CHECK-NEXT: cir.yield
 // CHECK-NEXT: } step {
@@ -681,7 +681,7 @@ void acc_compute() {
 // CHECK-NEXT: %[[RHS_STRIDE:.*]] = cir.ptr_stride %[[RHS_DECAY]], %[[ITR_LOAD]] : (!cir.ptr<!u32i>, !u64i) -> !cir.ptr<!u32i>
 // CHECK-NEXT: %[[RHS_LOAD:.*]] = cir.load {{.*}} %[[RHS_STRIDE]] : !cir.ptr<!u32i>, !u32i
 // CHECK-NEXT: %[[LHS_LOAD:.*]] = cir.load {{.*}} %[[LHS_STRIDE]] : !cir.ptr<!u32i>, !u32i
-// CHECK-NEXT: %[[MUL:.*]] = cir.binop(mul, %[[LHS_LOAD]], %[[RHS_LOAD]]) : !u32i
+// CHECK-NEXT: %[[MUL:.*]] = cir.mul %[[LHS_LOAD]], %[[RHS_LOAD]] : !u32i
 // CHECK-NEXT: cir.store {{.*}} %[[MUL]], %[[LHS_STRIDE]]
 // CHECK-NEXT: cir.yield
 // CHECK-NEXT: } step {
@@ -887,7 +887,7 @@ void acc_compute() {
 // CHECK-NEXT: %[[RHS_STRIDE:.*]] = cir.ptr_stride %[[RHS_DECAY]], %[[ITR_LOAD]] : (!cir.ptr<!u32i>, !u64i) -> !cir.ptr<!u32i>
 // CHECK-NEXT: %[[RHS_LOAD:.*]] = cir.load {{.*}} %[[RHS_STRIDE]] : !cir.ptr<!u32i>, !u32i
 // CHECK-NEXT: %[[LHS_LOAD:.*]] = cir.load {{.*}} %[[LHS_STRIDE]] : !cir.ptr<!u32i>, !u32i
-// CHECK-NEXT: %[[AND:.*]] = cir.binop(and, %[[LHS_LOAD]], %[[RHS_LOAD]]) : !u32i
+// CHECK-NEXT: %[[AND:.*]] = cir.and %[[LHS_LOAD]], %[[RHS_LOAD]] : !u32i
 // CHECK-NEXT: cir.store {{.*}} %[[AND]], %[[LHS_STRIDE]]
 // CHECK-NEXT: cir.yield
 // CHECK-NEXT: } step {
@@ -951,7 +951,7 @@ void acc_compute() {
 // CHECK-NEXT: %[[RHS_STRIDE:.*]] = cir.ptr_stride %[[RHS_DECAY]], %[[ITR_LOAD]] : (!cir.ptr<!u32i>, !u64i) -> !cir.ptr<!u32i>
 // CHECK-NEXT: %[[RHS_LOAD:.*]] = cir.load {{.*}} %[[RHS_STRIDE]] : !cir.ptr<!u32i>, !u32i
 // CHECK-NEXT: %[[LHS_LOAD:.*]] = cir.load {{.*}} %[[LHS_STRIDE]] : !cir.ptr<!u32i>, !u32i
-// CHECK-NEXT: %[[OR:.*]] = cir.binop(or, %[[LHS_LOAD]], %[[RHS_LOAD]]) : !u32i
+// CHECK-NEXT: %[[OR:.*]] = cir.or %[[LHS_LOAD]], %[[RHS_LOAD]] : !u32i
 // CHECK-NEXT: cir.store {{.*}} %[[OR]], %[[LHS_STRIDE]]
 // CHECK-NEXT: cir.yield
 // CHECK-NEXT: } step {
@@ -1015,7 +1015,7 @@ void acc_compute() {
 // CHECK-NEXT: %[[RHS_STRIDE:.*]] = cir.ptr_stride %[[RHS_DECAY]], %[[ITR_LOAD]] : (!cir.ptr<!u32i>, !u64i) -> !cir.ptr<!u32i>
 // CHECK-NEXT: %[[RHS_LOAD:.*]] = cir.load {{.*}} %[[RHS_STRIDE]] : !cir.ptr<!u32i>, !u32i
 // CHECK-NEXT: %[[LHS_LOAD:.*]] = cir.load {{.*}} %[[LHS_STRIDE]] : !cir.ptr<!u32i>, !u32i
-// CHECK-NEXT: %[[XOR:.*]] = cir.binop(xor, %[[LHS_LOAD]], %[[RHS_LOAD]]) : !u32i
+// CHECK-NEXT: %[[XOR:.*]] = cir.xor %[[LHS_LOAD]], %[[RHS_LOAD]] : !u32i
 // CHECK-NEXT: cir.store {{.*}} %[[XOR]], %[[LHS_STRIDE]]
 // CHECK-NEXT: cir.yield
 // CHECK-NEXT: } step {
