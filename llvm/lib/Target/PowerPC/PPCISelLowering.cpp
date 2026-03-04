@@ -12303,7 +12303,8 @@ SDValue PPCTargetLowering::LowerVectorStore(SDValue Op,
 
   // For v256i1 on ISA Future, let the store go through to instruction selection
   // where it will be matched to stxvp/pstxvp by the instruction patterns.
-  if (StoreVT == MVT::v256i1 && Subtarget.isISAFuture())
+  if (StoreVT == MVT::v256i1 && Subtarget.isISAFuture() &&
+      !DisableAutoPairedVecSt)
     return Op;
 
   // For other cases, create 2 or 4 v16i8 stores to store the pair or
