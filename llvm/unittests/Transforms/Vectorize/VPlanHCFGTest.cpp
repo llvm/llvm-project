@@ -50,7 +50,7 @@ TEST_F(VPlanHCFGTest, testBuildHCFGInnerLoop) {
   // Check that the region following the preheader consists of a block for the
   // original header and a separate latch.
   VPBasicBlock *VecBB = Plan->getVectorLoopRegion()->getEntryBasicBlock();
-  EXPECT_EQ(11u, VecBB->size());
+  EXPECT_EQ(10u, VecBB->size());
   EXPECT_EQ(0u, VecBB->getNumPredecessors());
   EXPECT_EQ(0u, VecBB->getNumSuccessors());
   EXPECT_EQ(VecBB->getParent()->getEntryBasicBlock(), VecBB);
@@ -113,13 +113,13 @@ compound=true
   N0 -> N2 [ label="F"]
   N1 [label =
     "scalar.ph:\l" +
-    "  EMIT-SCALAR vp\<%6\> = phi [ ir\<%indvars.iv\>, middle.block ], [ ir\<0\>, ir-bb\<entry\> ]\l" +
+    "  EMIT-SCALAR vp\<%5\> = phi [ ir\<%indvars.iv\>, middle.block ], [ ir\<0\>, ir-bb\<entry\> ]\l" +
     "Successor(s): ir-bb\<for.body\>\l"
   ]
   N1 -> N3 [ label=""]
   N3 [label =
     "ir-bb\<for.body\>:\l" +
-    "  IR   %indvars.iv = phi i64 [ 0, %entry ], [ %indvars.iv.next, %for.body ] (extra operand: vp\<%6\> from scalar.ph)\l" +
+    "  IR   %indvars.iv = phi i64 [ 0, %entry ], [ %indvars.iv.next, %for.body ] (extra operand: vp\<%5\> from scalar.ph)\l" +
     "  IR   %arr.idx = getelementptr inbounds i32, ptr %A, i64 %indvars.iv\l" +
     "  IR   %l1 = load i32, ptr %arr.idx, align 4\l" +
     "  IR   %res = add i32 %l1, 10\l" +
@@ -146,7 +146,6 @@ compound=true
       "  EMIT store ir\<%res\>, ir\<%arr.idx\>\l" +
       "  EMIT ir\<%indvars.iv.next\> = add ir\<%indvars.iv\>, ir\<1\>\l" +
       "  EMIT ir\<%exitcond\> = icmp ne ir\<%indvars.iv.next\>, ir\<%N\>\l" +
-      "  EMIT vp\<%3\> = not ir\<%exitcond\>\l" +
       "  EMIT vp\<%index.next\> = add nuw vp\<%2\>, vp\<%0\>\l" +
       "  EMIT branch-on-count vp\<%index.next\>, vp\<%1\>\l" +
       "No successors\l"
@@ -212,7 +211,7 @@ TEST_F(VPlanHCFGTest, testVPInstructionToVPRecipesInner) {
   // Check that the region following the preheader consists of a block for the
   // original header and a separate latch.
   VPBasicBlock *VecBB = Plan->getVectorLoopRegion()->getEntryBasicBlock();
-  EXPECT_EQ(12u, VecBB->size());
+  EXPECT_EQ(11u, VecBB->size());
   EXPECT_EQ(0u, VecBB->getNumPredecessors());
   EXPECT_EQ(0u, VecBB->getNumSuccessors());
   EXPECT_EQ(VecBB->getParent()->getEntryBasicBlock(), VecBB);
@@ -226,7 +225,6 @@ TEST_F(VPlanHCFGTest, testVPInstructionToVPRecipesInner) {
   EXPECT_NE(nullptr, dyn_cast<VPWidenMemoryRecipe>(&*Iter++));
   EXPECT_NE(nullptr, dyn_cast<VPWidenRecipe>(&*Iter++));
   EXPECT_NE(nullptr, dyn_cast<VPWidenRecipe>(&*Iter++));
-  EXPECT_NE(nullptr, dyn_cast<VPInstruction>(&*Iter++));
   EXPECT_NE(nullptr, dyn_cast<VPInstruction>(&*Iter++));
   EXPECT_NE(nullptr, dyn_cast<VPInstruction>(&*Iter++));
   EXPECT_NE(nullptr, dyn_cast<VPInstruction>(&*Iter++));
@@ -282,13 +280,13 @@ compound=true
   N0 -> N2 [ label="F"]
   N1 [label =
     "scalar.ph:\l" +
-    "  EMIT-SCALAR vp\<%6\> = phi [ ir\<%iv\>, middle.block ], [ ir\<0\>, ir-bb\<entry\> ]\l" +
+    "  EMIT-SCALAR vp\<%5\> = phi [ ir\<%iv\>, middle.block ], [ ir\<0\>, ir-bb\<entry\> ]\l" +
     "Successor(s): ir-bb\<loop.header\>\l"
   ]
   N1 -> N3 [ label=""]
   N3 [label =
     "ir-bb\<loop.header\>:\l" +
-    "  IR   %iv = phi i64 [ 0, %entry ], [ %iv.next, %loop.latch ] (extra operand: vp\<%6\> from scalar.ph)\l" +
+    "  IR   %iv = phi i64 [ 0, %entry ], [ %iv.next, %loop.latch ] (extra operand: vp\<%5\> from scalar.ph)\l" +
     "  IR   %arr.idx = getelementptr inbounds i32, ptr %A, i64 %iv\l" +
     "  IR   %l1 = load i32, ptr %arr.idx, align 4\l" +
     "  IR   %c = icmp eq i32 %l1, 0\l" +
@@ -318,7 +316,6 @@ compound=true
       "  EMIT store ir\<%res\>, ir\<%arr.idx\>\l" +
       "  EMIT ir\<%iv.next\> = add ir\<%iv\>, ir\<1\>\l" +
       "  EMIT ir\<%exitcond\> = icmp ne ir\<%iv.next\>, ir\<%N\>\l" +
-      "  EMIT vp\<%3\> = not ir\<%exitcond\>\l" +
       "  EMIT vp\<%index.next\> = add nuw vp\<%2\>, vp\<%0\>\l" +
       "  EMIT branch-on-count vp\<%index.next\>, vp\<%1\>\l" +
       "No successors\l"
