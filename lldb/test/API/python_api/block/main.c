@@ -1,6 +1,10 @@
 #include <stdio.h>
 
+#ifdef _WIN32
+__declspec(dllimport) int fn(int a, int b);
+#else
 extern int fn(int a, int b);
+#endif
 
 int main(int argc, char const *argv[]) {
   int a = 3;
