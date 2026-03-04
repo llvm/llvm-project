@@ -3429,7 +3429,8 @@ Instruction *InstCombinerImpl::visitGetElementPtrInst(GetElementPtrInst &GEP) {
       !FirstIdx->getType()->isVectorTy()) {
     gep_type_iterator GTI = gep_type_begin(GEP);
     ++GTI;
-    if (!GTI.isStruct())
+    if (!GTI.isStruct() && GTI.getSequentialElementStride(DL) ==
+                               DL.getTypeAllocSize(GTI.getIndexedType()))
       return replaceInstUsesWith(GEP, Builder.CreateGEP(GTI.getIndexedType(),
                                                         GEP.getPointerOperand(),
                                                         drop_begin(Indices), "",
