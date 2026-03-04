@@ -19,6 +19,7 @@
 
 #include "GCNSubtarget.h"
 #include "llvm/CodeGen/LiveIntervals.h"
+#include "llvm/CodeGen/LiveRegUnits.h"
 #include "llvm/CodeGen/RegisterPressure.h"
 #include <algorithm>
 #include <array>
@@ -129,6 +130,10 @@ struct GCNRegPressure {
            LaneBitmask PrevMask,
            LaneBitmask NewMask,
            const MachineRegisterInfo &MRI);
+
+  /// Update pressure for a physical register (add or remove). Used when
+  /// tracking physical registers.
+  void inc(MCRegister Reg, bool IsAdd, const MachineRegisterInfo &MRI);
 
   bool higherOccupancy(const GCNSubtarget &ST, const GCNRegPressure &O,
                        unsigned DynamicVGPRBlockSize) const {
@@ -327,8 +332,8 @@ protected:
 
   // Physical register tracking: Maintain clean separation between virtual and
   // physical registers. Tracking physical registers can be turned OFF with an
-  // option. Using llvm::LiveRegSet for consistency with the generic tracker.
-  llvm::LiveRegSet PhysLiveRegs;
+  // option. Uses LiveRegUnits (bit vector of live register units).
+  LiveRegUnits PhysLiveRegs;
   GCNRegPressure CurPhysPressure, MaxPhysPressure;
 
   // Flag to control whether physical register tracking is active.
@@ -342,7 +347,7 @@ protected:
       : LIS(LIS), MRI(&MRI) {
     setPhysRegTracking();
     if (TrackPhysRegs)
-      PhysLiveRegs.init(MRI);
+      PhysLiveRegs.init(*MRI.getTargetRegisterInfo());
   }
 
   // Copy constructor - PhysLiveRegs must be initialized then copied.
@@ -354,11 +359,10 @@ protected:
         MaxPhysPressure(Other.MaxPhysPressure),
         TrackPhysRegs(Other.TrackPhysRegs), LastTrackedMI(Other.LastTrackedMI),
         MRI(Other.MRI) {
-    // Initialize PhysLiveRegs with proper universe, then copy contents.
-    if (MRI) {
-      PhysLiveRegs.init(*MRI);
-      PhysLiveRegs =
-          Other.PhysLiveRegs; // Use assignment operator to copy live regs.
+    if (TrackPhysRegs) {
+      assert(MRI && "MRI not initialized");
+      PhysLiveRegs.init(*MRI->getTargetRegisterInfo());
+      PhysLiveRegs.addUnits(Other.PhysLiveRegs.getBitVector());
     }
   }
 
@@ -374,21 +378,21 @@ protected:
   bool isUnitLiveAt(MCRegUnit Unit, SlotIndex SI) const;
 
   // Check if all register units of Reg are currently live in PhysLiveRegs.
-  bool allRegUnitsLive(Register Reg) const;
+  bool allRegUnitsLive(MCRegister Reg) const;
 
   // Check if Reg has any killed units at the given slot index.
-  bool checkRegKilled(Register Reg, SlotIndex SI) const;
+  bool checkRegKilled(MCRegister Reg, SlotIndex SI) const;
 
   // Check if Reg has any killed units and erase them from PhysLiveRegs.
-  bool eraseKilledUnits(Register Reg, SlotIndex SI);
+  bool eraseKilledUnits(MCRegister Reg, SlotIndex SI);
 
   // Erase all live units of Reg from PhysLiveRegs.
   // Returns true if any unit was live (and thus erased).
-  bool eraseAllLiveUnits(Register Reg);
+  bool eraseAllLiveUnits(MCRegister Reg);
 
   // Insert all not-live units of Reg into PhysLiveRegs.
   // Returns true if any unit was not live (and thus inserted).
-  bool insertAllNotLiveUnits(Register Reg);
+  bool insertAllNotLiveUnits(MCRegister Reg);
 
 public:
   // Enable physical register tracking only if both GCNTrackers and

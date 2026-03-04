@@ -19,13 +19,14 @@
 ; SCHED: Pressure after scheduling: VGPRs: 0 AGPRs: 0, SGPRs: 97
 ;
 ; SCHED-GCNTRACKERS-LABEL: spill:%bb.0 entry
-; SCHED-GCNTRACKERS: Region register pressure: VGPRs: 0 AGPRs: 0, SGPRs: 99
+; SCHED-GCNTRACKERS: Region register pressure: VGPRs: 0 AGPRs: 0, SGPRs: 193
 ; SCHED-GCNTRACKERS: Pressure after scheduling: VGPRs: 0 AGPRs: 0, SGPRs: 98
 ;
 ; NOTE: GCN Trackers now track pressure from both virtual and physical registers.
 ; The GCN tracker now matches the generic tracker's VGPR count (1 VGPR).
-; The SGPR pressure is still slightly higher (98 vs 97) due to summing physical
-; register pressure from inline asm constraints with virtual register pressure.
+; When a live range is not found for a physical regunit, we conservatively
+; assume the unit is live, so Region SGPR pressure can be higher (193 vs 98).
+; Pressure after scheduling remains 98 vs 97 due to physical register tracking.
 
 define amdgpu_kernel void @spill(ptr addrspace(1) %arg, i32 %cnd) #0 {
 entry:
@@ -269,7 +270,7 @@ bb3:
 ; SCHED: Region register pressure: VGPRs: 0 AGPRs: 0, SGPRs: 97
 ;
 ; SCHED-GCNTRACKERS-LABEL: spill_func:%bb.0 entry
-; SCHED-GCNTRACKERS: Region register pressure: VGPRs: 0 AGPRs: 0, SGPRs: 98
+; SCHED-GCNTRACKERS: Region register pressure: VGPRs: 0 AGPRs: 0, SGPRs: 192
 
 define void @spill_func(ptr addrspace(1) %arg) #0 {
 entry:
