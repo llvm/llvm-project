@@ -1,4 +1,8 @@
+<<<<<<< HEAD
 //===-- Implementation for asinbf16(x) function ---------------------------===//
+=======
+//===-- Half-precision asinfb16(x) function -------------------------------===//
+>>>>>>> e1999663252e (feat: added smoke and exahaustive tests &  improved acosbf16(x))
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -6,8 +10,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "src/math/asinbf16.h"
 #include "src/__support/math/asinbf16.h"
+#include "src/math/asinfb16.h"
 
 namespace LIBC_NAMESPACE_DECL {
 
