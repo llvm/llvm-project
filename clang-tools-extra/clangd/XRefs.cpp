@@ -248,7 +248,7 @@ locateMacroReferent(const syntax::Token &TouchedIdentifier, ParsedAST &AST,
       LocatedSymbol Macro;
       Macro.Name = std::string(M->Name);
       Macro.PreferredDeclaration = *Loc;
-      Macro.Definition = Loc;
+      Macro.Definition = std::move(Loc);
       Macro.ID = getSymbolID(M->Name, M->Info, AST.getSourceManager());
       return Macro;
     }
@@ -1478,7 +1478,7 @@ maybeFindIncludeReferences(ParsedAST &AST, Position Pos,
   ReferencesResult::Reference Result;
   Result.Loc.range = rangeTillEOL(SM.getBufferData(SM.getMainFileID()),
                                   IncludeOnLine->HashOffset);
-  Result.Loc.uri = URIMainFile;
+  Result.Loc.uri = std::move(URIMainFile);
   Results.References.push_back(std::move(Result));
   return Results;
 }
