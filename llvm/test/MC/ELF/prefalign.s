@@ -2,6 +2,7 @@
 # RUN: llvm-mc -filetype=obj -triple x86_64 %s -o %t
 # RUN: llvm-readelf -SW %t | FileCheck --check-prefix=OBJ %s
 # RUN: llvm-objdump -d --no-show-raw-insn %t | FileCheck --check-prefix=DIS %s
+# RUN: llvm-objdump -s -j .text.f1 -j .text.f2 -j .text.f6 %t | FileCheck --check-prefix=HEX %s
 
 ## MinAlign >= PrefAlign: the three-way rule is bounded by MinAlign regardless
 ## of body size, so sh_addralign stays at MinAlign.
@@ -9,6 +10,8 @@
 # ASM: .p2align 2
 # ASM: .prefalign 2, .Lf1_end, 0
 # OBJ: .text.f1          PROGBITS        0000000000000000 {{[0-9a-f]+}} 000003 00  AX  0   0  4
+# HEX:      Contents of section .text.f1:
+# HEX-NEXT:  0000 f8f8f8 ...
 .section .text.f1,"ax",@progbits
 .p2align 2
 .prefalign 2, .Lf1_end, 0
@@ -23,6 +26,8 @@ clc
 # ASM: .prefalign 16, .Lf2_end, 0
 # ASM: .prefalign 8, .Lf2_end, 0
 # OBJ: .text.f2          PROGBITS        0000000000000000 {{[0-9a-f]+}} 000009 00  AX  0   0 16
+# HEX-NEXT: Contents of section .text.f2:
+# HEX-NEXT:  0000 f8f8f8f8 f8f8f8f8 f8 .........
 .section .text.f2,"ax",@progbits
 .p2align 2
 .prefalign 8, .Lf2_end, 0
@@ -107,6 +112,20 @@ retq
 clc
 .endr
 .Lf5_end:
+
+## body_size > PrefAlign: ComputedAlign is clamped to PrefAlign.
+## body=20, pref=8 => ComputedAlign=8, padding=7 zero bytes.
+# OBJ: .text.f6          PROGBITS        0000000000000000 {{[0-9a-f]+}} 00001c 00  AX  0   0  8
+# HEX-NEXT: Contents of section .text.f6:
+# HEX-NEXT:  0000 01000000 00000000 f8f8f8f8 f8f8f8f8 ................
+# HEX-NEXT:  0010 f8f8f8f8 f8f8f8f8 f8f8f8f8 ............
+.section .text.f6,"ax",@progbits
+.byte 1
+.prefalign 8, .Lf6_end, 0
+.rept 20
+clc
+.endr
+.Lf6_end:
 
 ## .prefalign in a BSS section with zero fill.
 # ASM: .bss
