@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<assembly xmlns="urn:schemas-microsoft-com:asm.v1" manifestVersion="1.0">
+  <assemblyIdentity
+    type="win32"
+    name="@COMGR_MANIFEST_NAME@"
+    version="@amd_comgr_VERSION_MAJOR@.@amd_comgr_VERSION_MINOR@.@amd_comgr_VERSION_PATCH@.0"
+    processorArchitecture="amd64"/>
+  <description>AMD Code Object Manager</description>
+  <file name="@COMGR_DLL_NAME@"/>
+</assembly>

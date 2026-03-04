@@ -1,0 +1,35 @@
+#include <windows.h>
+
+// Resource ID 2 is used for DLLs (1 is for EXEs)
+#define DLL_MANIFEST_ID 2
+
+DLL_MANIFEST_ID RT_MANIFEST "@COMGR_MANIFEST_NAME@.MANIFEST"
+
+VS_VERSION_INFO VERSIONINFO
+FILEVERSION     @amd_comgr_VERSION_MAJOR@,@amd_comgr_VERSION_MINOR@,@amd_comgr_VERSION_PATCH@,0
+PRODUCTVERSION  @amd_comgr_VERSION_MAJOR@,@amd_comgr_VERSION_MINOR@,@amd_comgr_VERSION_PATCH@,0
+FILEFLAGSMASK   VS_FFI_FILEFLAGSMASK
+FILEFLAGS       0
+FILEOS          VOS_NT_WINDOWS32
+FILETYPE        VFT_DLL
+FILESUBTYPE     VFT2_UNKNOWN
+BEGIN
+    BLOCK "StringFileInfo"
+    BEGIN
+        BLOCK "040904B0"
+        BEGIN
+            VALUE "CompanyName", "Advanced Micro Devices, Inc.\0"
+            VALUE "FileDescription", "AMD Code Object Manager (Commit Hash: @AMD_COMGR_GIT_COMMIT@, Build Type: @AMD_COMGR_BUILD_SOURCE@)\0"
+            VALUE "FileVersion", "@amd_comgr_VERSION_MAJOR@.@amd_comgr_VERSION_MINOR@.@amd_comgr_VERSION_PATCH@.0\0"
+            VALUE "InternalName", "amd_comgr\0"
+            VALUE "LegalCopyright", "Copyright (C) @COMGR_BUILD_YEAR@ Advanced Micro Devices, Inc.\0"
+            VALUE "OriginalFilename", "@COMGR_DLL_NAME@\0"
+            VALUE "ProductName", "AMD Comgr\0"
+            VALUE "ProductVersion", "@amd_comgr_VERSION_MAJOR@.@amd_comgr_VERSION_MINOR@.@amd_comgr_VERSION_PATCH@.0\0"
+        END
+    END
+    BLOCK "VarFileInfo"
+    BEGIN
+        VALUE "Translation", 0x409, 1200
+    END
+END

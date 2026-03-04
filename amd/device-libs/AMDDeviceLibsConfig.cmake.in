@@ -1,0 +1,17 @@
+if(COMMAND include_guard)
+    include_guard(DIRECTORY)
+else()
+string(MAKE_C_IDENTIFIER "${CMAKE_CURRENT_LIST_FILE}" _PACKAGE_ID)
+if(DEFINED ${_GUARD_FILE_${_PACKAGE_ID}})
+    return()
+endif()
+set(${_GUARD_FILE_${_PACKAGE_ID}} On)
+endif()
+
+@AMD_DEVICE_LIBS_PREFIX_CODE@
+@AMD_DEVICE_LIBS_TARGET_CODE@
+
+set_property(GLOBAL PROPERTY AMD_DEVICE_LIBS "@AMDGCN_LIB_LIST@")
+
+# List of exported target names.
+set(AMD_DEVICE_LIBS_TARGETS "@AMDGCN_LIB_LIST@")
