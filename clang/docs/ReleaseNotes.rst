@@ -145,6 +145,9 @@ C23 Feature Support
 Non-comprehensive list of changes in this release
 -------------------------------------------------
 
+- Added support for floating point and pointer values in most ``__atomic_``
+  builtins.
+
 - Added ``__builtin_stdc_rotate_left`` and ``__builtin_stdc_rotate_right``
   for bit rotation of unsigned integers including ``_BitInt`` types. Rotation
   counts are normalized modulo the bit-width and support negative values.
@@ -378,6 +381,9 @@ Android Support
 
 Windows Support
 ^^^^^^^^^^^^^^^
+
+- Clang now defines the ``_MSVC_TRADITIONAL`` macro as ``1`` when emulating MSVC
+  19.15 (Visual Studio 2017 version 15.8) and later. (#GH47114)
 
 LoongArch Support
 ^^^^^^^^^^^^^^^^^

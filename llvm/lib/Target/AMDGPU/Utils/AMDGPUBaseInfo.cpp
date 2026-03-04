@@ -773,8 +773,8 @@ bool isAsyncStore(unsigned Opc) {
 }
 
 bool isTensorStore(unsigned Opc) {
-  return Opc == TENSOR_STORE_FROM_LDS_gfx1250 ||
-         Opc == TENSOR_STORE_FROM_LDS_D2_gfx1250;
+  return Opc == TENSOR_STORE_FROM_LDS_d2_gfx1250 ||
+         Opc == TENSOR_STORE_FROM_LDS_d4_gfx1250;
 }
 
 unsigned getTemporalHintType(const MCInstrDesc TID) {
@@ -1135,7 +1135,7 @@ std::string AMDGPUTargetID::toString() const {
   std::string StringRep;
   raw_string_ostream StreamRep(StringRep);
 
-  auto TargetTriple = STI.getTargetTriple();
+  const Triple &TargetTriple = STI.getTargetTriple();
   auto Version = getIsaVersion(STI.getCPU());
 
   StreamRep << TargetTriple.getArchName() << '-' << TargetTriple.getVendorName()
@@ -1154,7 +1154,7 @@ std::string AMDGPUTargetID::toString() const {
                     .str();
 
   std::string Features;
-  if (STI.getTargetTriple().getOS() == Triple::AMDHSA) {
+  if (TargetTriple.getOS() == Triple::AMDHSA) {
     // sramecc.
     if (getSramEccSetting() == TargetIDSetting::Off)
       Features += ":sramecc-";

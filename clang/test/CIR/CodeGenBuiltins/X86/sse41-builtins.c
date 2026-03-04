@@ -36,7 +36,7 @@ __m128i test_mm_mul_epi32(__m128i x, __m128i y) {
   // CIR: [[ASHR_A:%.*]] = cir.shift(right, [[SHL_A]] : !cir.vector<2 x !s64i>, [[SV]] : !cir.vector<2 x !s64i>)
   // CIR: [[SHL_B:%.*]]  = cir.shift(left, [[B64]] : !cir.vector<2 x !s64i>, [[SV]] : !cir.vector<2 x !s64i>)
   // CIR: [[ASHR_B:%.*]] = cir.shift(right, [[SHL_B]] : !cir.vector<2 x !s64i>, [[SV]] : !cir.vector<2 x !s64i>)
-  // CIR: [[MUL:%.*]]    = cir.binop(mul, [[ASHR_A]], [[ASHR_B]])
+  // CIR: [[MUL:%.*]]    = cir.mul [[ASHR_A]], [[ASHR_B]]
 
   // LLVM-LABEL: _mm_mul_epi32
   // LLVM: shl <2 x i64> %{{.*}}, splat (i64 32)

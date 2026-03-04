@@ -41,6 +41,7 @@
 #include "llvm/Analysis/AssumptionCache.h"
 #include "llvm/Analysis/CaptureTracking.h"
 #include "llvm/Analysis/GlobalsModRef.h"
+#include "llvm/Analysis/Loads.h"
 #include "llvm/Analysis/LoopInfo.h"
 #include "llvm/Analysis/MemoryBuiltins.h"
 #include "llvm/Analysis/MemoryLocation.h"
@@ -2273,6 +2274,12 @@ bool DSEState::dominatingConditionImpliesValue(MemoryDef *Def) {
                                    m_Instruction(ICmpL)),
                       m_Specific(StoreVal))) ||
       !ICmpInst::isEquality(Pred))
+    return false;
+
+  // Ensure the replacement is allowed when comparing pointers, as
+  // the equality compares addresses only, not pointers' provenance.
+  if (StoreVal->getType()->isPointerTy() &&
+      !canReplacePointersIfEqual(StoreVal, ICmpL, DL))
     return false;
 
   // In case the else blocks also branches to the if block or the other way
