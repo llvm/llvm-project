@@ -104,6 +104,11 @@ static llvm::cl::opt<bool> enableFIRConvertOptimizations(
     llvm::cl::desc("enable emilinating redundant fir.convert in FIR-to-MemRef"),
     llvm::cl::init(false), llvm::cl::Hidden);
 
+static llvm::cl::opt<bool>
+    disableFIRToMemRef("disable-fir-to-memref",
+                       llvm::cl::desc("disable FIR-to-MemRef conversion pass"),
+                       llvm::cl::init(false), llvm::cl::Hidden);
+
 class FIRToMemRef : public fir::impl::FIRToMemRefBase<FIRToMemRef> {
 public:
   void runOnOperation() override;
@@ -1024,6 +1029,12 @@ void FIRToMemRef::rewriteStoreOp(fir::StoreOp store, PatternRewriter &rewriter,
 
 void FIRToMemRef::runOnOperation() {
   LLVM_DEBUG(llvm::dbgs() << "Enter FIRToMemRef()\n");
+
+  if (disableFIRToMemRef) {
+    LLVM_DEBUG(llvm::dbgs()
+               << "FIRToMemRef: disabled with -disable-fir-to-memref\n");
+    return;
+  }
 
   func::FuncOp op = getOperation();
   MLIRContext *context = op.getContext();
