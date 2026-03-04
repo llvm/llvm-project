@@ -283,6 +283,7 @@ add_llvm_component_library(LLVMSupport
   WithColor.cpp
   YAMLParser.cpp
   YAMLTraits.cpp
+  YAMLGenerateSchema.cpp
   raw_os_ostream.cpp
   raw_ostream.cpp
   raw_ostream_proxy.cpp

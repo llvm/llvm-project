@@ -113,6 +113,7 @@ add_llvm_unittest(SupportTests
   VirtualOutputFileTest.cpp
   WithColorTest.cpp
   YAMLIOTest.cpp
+  YAMLGenerateSchemaTest.cpp
   YAMLParserTest.cpp
   buffer_ostream_test.cpp
   formatted_raw_ostream_test.cpp
