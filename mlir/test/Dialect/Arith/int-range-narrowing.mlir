@@ -8,10 +8,10 @@
 // CHECK-LABEL: func @test_addi_neg
 //       CHECK:  %[[POS:.*]] = test.with_bounds {smax = 1 : index, smin = 0 : index, umax = 1 : index, umin = 0 : index} : index
 //       CHECK:  %[[NEG:.*]] = test.with_bounds {smax = 0 : index, smin = -1 : index, umax = -1 : index, umin = 0 : index} : index
-//       CHECK:  %[[POS_I8:.*]] = arith.index_castui %[[POS]] : index to i8
-//       CHECK:  %[[NEG_I8:.*]] = arith.index_cast %[[NEG]] : index to i8
+//       CHECK:  %[[POS_I8:.*]] = arith.index_castui %[[POS]] exact nneg : index to i8
+//       CHECK:  %[[NEG_I8:.*]] = arith.index_cast %[[NEG]] exact : index to i8
 //       CHECK:  %[[RES_I8:.*]] = arith.addi %[[POS_I8]], %[[NEG_I8]] : i8
-//       CHECK:  %[[RES:.*]] = arith.index_cast %[[RES_I8]] : i8 to index
+//       CHECK:  %[[RES:.*]] = arith.index_cast %[[RES_I8]] exact : i8 to index
 //       CHECK:  return %[[RES]] : index
 func.func @test_addi_neg() -> index {
   %0 = test.with_bounds { umin = 0 : index, umax = 1 : index, smin = 0 : index, smax = 1 : index } : index
@@ -23,10 +23,10 @@ func.func @test_addi_neg() -> index {
 // CHECK-LABEL: func @test_addi
 //       CHECK:  %[[A:.*]] = test.with_bounds {smax = 5 : index, smin = 4 : index, umax = 5 : index, umin = 4 : index} : index
 //       CHECK:  %[[B:.*]] = test.with_bounds {smax = 7 : index, smin = 6 : index, umax = 7 : index, umin = 6 : index} : index
-//       CHECK:  %[[A_CASTED:.*]] = arith.index_castui %[[A]] : index to i8
-//       CHECK:  %[[B_CASTED:.*]] = arith.index_castui %[[B]] : index to i8
+//       CHECK:  %[[A_CASTED:.*]] = arith.index_castui %[[A]] exact nneg : index to i8
+//       CHECK:  %[[B_CASTED:.*]] = arith.index_castui %[[B]] exact nneg : index to i8
 //       CHECK:  %[[RES:.*]] = arith.addi %[[A_CASTED]], %[[B_CASTED]] : i8
-//       CHECK:  %[[RES_CASTED:.*]] = arith.index_castui %[[RES]] : i8 to index
+//       CHECK:  %[[RES_CASTED:.*]] = arith.index_castui %[[RES]] exact nneg : i8 to index
 //       CHECK:  return %[[RES_CASTED]] : index
 func.func @test_addi() -> index {
   %0 = test.with_bounds { umin = 4 : index, umax = 5 : index, smin = 4 : index, smax = 5 : index } : index
@@ -38,10 +38,10 @@ func.func @test_addi() -> index {
 // CHECK-LABEL: func @test_addi_vec
 //       CHECK:  %[[A:.*]] = test.with_bounds {smax = 5 : index, smin = 4 : index, umax = 5 : index, umin = 4 : index} : vector<4xindex>
 //       CHECK:  %[[B:.*]] = test.with_bounds {smax = 7 : index, smin = 6 : index, umax = 7 : index, umin = 6 : index} : vector<4xindex>
-//       CHECK:  %[[A_CASTED:.*]] = arith.index_castui %[[A]] : vector<4xindex> to vector<4xi8>
-//       CHECK:  %[[B_CASTED:.*]] = arith.index_castui %[[B]] : vector<4xindex> to vector<4xi8>
+//       CHECK:  %[[A_CASTED:.*]] = arith.index_castui %[[A]] exact nneg : vector<4xindex> to vector<4xi8>
+//       CHECK:  %[[B_CASTED:.*]] = arith.index_castui %[[B]] exact nneg : vector<4xindex> to vector<4xi8>
 //       CHECK:  %[[RES:.*]] = arith.addi %[[A_CASTED]], %[[B_CASTED]] : vector<4xi8>
-//       CHECK:  %[[RES_CASTED:.*]] = arith.index_castui %[[RES]] : vector<4xi8> to vector<4xindex>
+//       CHECK:  %[[RES_CASTED:.*]] = arith.index_castui %[[RES]] exact nneg : vector<4xi8> to vector<4xindex>
 //       CHECK:  return %[[RES_CASTED]] : vector<4xindex>
 func.func @test_addi_vec() -> vector<4xindex> {
   %0 = test.with_bounds { umin = 4 : index, umax = 5 : index, smin = 4 : index, smax = 5 : index } : vector<4xindex>
@@ -56,7 +56,7 @@ func.func @test_addi_vec() -> vector<4xindex> {
 //       CHECK:  %[[A_CASTED:.*]] = arith.trunci %[[A]] : i64 to i8
 //       CHECK:  %[[B_CASTED:.*]] = arith.trunci %[[B]] : i64 to i8
 //       CHECK:  %[[RES:.*]] = arith.addi %[[A_CASTED]], %[[B_CASTED]] : i8
-//       CHECK:  %[[RES_CASTED:.*]] = arith.extui %[[RES]] : i8 to i64
+//       CHECK:  %[[RES_CASTED:.*]] = arith.extui %[[RES]] nneg : i8 to i64
 //       CHECK:  return %[[RES_CASTED]] : i64
 func.func @test_addi_i64() -> i64 {
   %0 = test.with_bounds { umin = 4 : i64, umax = 5 : i64, smin = 4 : i64, smax = 5 : i64 } : i64
@@ -68,8 +68,8 @@ func.func @test_addi_i64() -> i64 {
 // CHECK-LABEL: func @test_cmpi
 //       CHECK:  %[[A:.*]] = test.with_bounds {smax = 10 : index, smin = 0 : index, umax = 10 : index, umin = 0 : index} : index
 //       CHECK:  %[[B:.*]] = test.with_bounds {smax = 10 : index, smin = 0 : index, umax = 10 : index, umin = 0 : index} : index
-//       CHECK:  %[[A_CASTED:.*]] = arith.index_castui %[[A]] : index to i8
-//       CHECK:  %[[B_CASTED:.*]] = arith.index_castui %[[B]] : index to i8
+//       CHECK:  %[[A_CASTED:.*]] = arith.index_castui %[[A]] exact nneg : index to i8
+//       CHECK:  %[[B_CASTED:.*]] = arith.index_castui %[[B]] exact nneg : index to i8
 //       CHECK:  %[[RES:.*]] = arith.cmpi slt, %[[A_CASTED]], %[[B_CASTED]] : i8
 //       CHECK:  return %[[RES]] : i1
 func.func @test_cmpi() -> i1 {
@@ -82,8 +82,8 @@ func.func @test_cmpi() -> i1 {
 // CHECK-LABEL: func @test_cmpi_vec
 //       CHECK:  %[[A:.*]] = test.with_bounds {smax = 10 : index, smin = 0 : index, umax = 10 : index, umin = 0 : index} : vector<4xindex>
 //       CHECK:  %[[B:.*]] = test.with_bounds {smax = 10 : index, smin = 0 : index, umax = 10 : index, umin = 0 : index} : vector<4xindex>
-//       CHECK:  %[[A_CASTED:.*]] = arith.index_castui %[[A]] : vector<4xindex> to vector<4xi8>
-//       CHECK:  %[[B_CASTED:.*]] = arith.index_castui %[[B]] : vector<4xindex> to vector<4xi8>
+//       CHECK:  %[[A_CASTED:.*]] = arith.index_castui %[[A]] exact nneg : vector<4xindex> to vector<4xi8>
+//       CHECK:  %[[B_CASTED:.*]] = arith.index_castui %[[B]] exact nneg : vector<4xindex> to vector<4xi8>
 //       CHECK:  %[[RES:.*]] = arith.cmpi slt, %[[A_CASTED]], %[[B_CASTED]] : vector<4xi8>
 //       CHECK:  return %[[RES]] : vector<4xi1>
 func.func @test_cmpi_vec() -> vector<4xi1> {
@@ -97,10 +97,10 @@ func.func @test_cmpi_vec() -> vector<4xi1> {
 //       CHECK:  %[[A:.*]] = test.with_bounds {smax = 10 : index, smin = 0 : index, umax = 10 : index, umin = 0 : index} : index
 //       CHECK:  %[[B:.*]] = test.with_bounds {smax = 10 : index, smin = 0 : index, umax = 10 : index, umin = 0 : index} : index
 //       CHECK:  %[[C:.*]] = test.with_bounds {smax = 10 : index, smin = 0 : index, umax = 10 : index, umin = 0 : index} : index
-//       CHECK:  %[[A_CASTED:.*]] = arith.index_castui %[[A]] : index to i8
-//       CHECK:  %[[B_CASTED:.*]] = arith.index_castui %[[B]] : index to i8
+//       CHECK:  %[[A_CASTED:.*]] = arith.index_castui %[[A]] exact nneg : index to i8
+//       CHECK:  %[[B_CASTED:.*]] = arith.index_castui %[[B]] exact nneg : index to i8
 //       CHECK:  %[[RES1:.*]] = arith.addi %[[A_CASTED]], %[[B_CASTED]] : i8
-//       CHECK:  %[[C_CASTED:.*]] = arith.index_castui %[[C]] : index to i8
+//       CHECK:  %[[C_CASTED:.*]] = arith.index_castui %[[C]] exact nneg : index to i8
 //       CHECK:  %[[RES2:.*]] = arith.cmpi slt, %[[C_CASTED]], %[[RES1]] : i8
 //       CHECK:  return %[[RES2]] : i1
 func.func @test_add_cmpi() -> i1 {
@@ -142,7 +142,7 @@ func.func @test_add_cmpi_i64() -> i1 {
 // CHECK-NEXT:    %[[LHS:.+]]  = arith.trunci %[[EXT0]] : i32 to i16
 // CHECK-NEXT:    %[[RHS:.+]]  = arith.trunci %[[EXT1]] : i32 to i16
 // CHECK-NEXT:    %[[ADD:.+]]  = arith.addi %[[LHS]], %[[RHS]] : i16
-// CHECK-NEXT:    %[[RET:.+]]  = arith.extui %[[ADD]] : i16 to i32
+// CHECK-NEXT:    %[[RET:.+]]  = arith.extui %[[ADD]] nneg : i16 to i32
 // CHECK-NEXT:    return %[[RET]] : i32
 func.func @addi_extui_i8(%lhs: i8, %rhs: i8) -> i32 {
   %a = arith.extui %lhs : i8 to i32
@@ -323,16 +323,16 @@ func.func @i32_overflows_to_i64(%arg0: i32) -> i64 {
 // CHECK: %[[BOUND:.+]] = test.with_bounds
 // CHECK-SAME: umax = 112
 // Loop narrows to i16 (not i8) because indVar+step=[80,144] doesn't fit in signed i8.
-// CHECK: %[[BOUND_I16:.+]] = arith.index_castui %[[BOUND]] : index to i16
+// CHECK: %[[BOUND_I16:.+]] = arith.index_castui %[[BOUND]] exact nneg : index to i16
 // CHECK: scf.for %[[ARG0:.+]] = %[[C16_I16]] to %[[BOUND_I16]] step %[[C64_I16]]  : i16 {
-// CHECK:   %[[ARG0_INDEX:.+]] = arith.index_castui %[[ARG0]] : i16 to index
-// CHECK:   %[[BOUND_I8:.+]] = arith.index_castui %[[BOUND]] : index to i8
-// CHECK:   %[[ARG0_I8:.+]] = arith.index_castui %[[ARG0_INDEX]] : index to i8
+// CHECK:   %[[ARG0_INDEX:.+]] = arith.index_castui %[[ARG0]] exact nneg : i16 to index
+// CHECK:   %[[BOUND_I8:.+]] = arith.index_castui %[[BOUND]] exact nneg : index to i8
+// CHECK:   %[[ARG0_I8:.+]] = arith.index_castui %[[ARG0_INDEX]] exact nneg : index to i8
 // CHECK:   %[[V0_I8:.+]] = arith.subi %[[BOUND_I8]], %[[ARG0_I8]] : i8
 // CHECK:   %[[V1_I8:.+]] = arith.minsi %[[V0_I8]], %[[C64_I8]] : i8
-// CHECK:   %[[V1_INDEX:.+]] = arith.index_cast %[[V1_I8]] : i8 to index
-// CHECK:   %[[V1_I16:.+]] = arith.index_cast %[[V1_INDEX]] : index to i16
-// CHECK:   %[[TID_I16:.+]] = arith.index_castui %[[TID]] : index to i16
+// CHECK:   %[[V1_INDEX:.+]] = arith.index_cast %[[V1_I8]] exact : i8 to index
+// CHECK:   %[[V1_I16:.+]] = arith.index_cast %[[V1_INDEX]] exact : index to i16
+// CHECK:   %[[TID_I16:.+]] = arith.index_castui %[[TID]] exact nneg : index to i16
 // CHECK:   %[[V2_I16:.+]] = arith.subi %[[V1_I16]], %[[TID_I16]] : i16
 // CHECK:   %[[V3:.+]] = arith.cmpi slt, %[[V2_I16]], %[[C0_I16]] : i16
 // CHECK:   scf.if %[[V3]]
@@ -370,10 +370,10 @@ func.func @loop_with_iter_arg() {
 //       CHECK:  %[[NEG:.*]] = test.with_bounds {smax = 0 : index, smin = -1 : index, umax = -1 : index, umin = 0 : index} : index
 // Check iter args are still present
 //       CHECK:  scf.for {{.*}} iter_args({{.*}})
-//       CHECK:  %[[POS_I8:.*]] = arith.index_castui %[[POS]] : index to i8
-//       CHECK:  %[[NEG_I8:.*]] = arith.index_cast %[[NEG]] : index to i8
+//       CHECK:  %[[POS_I8:.*]] = arith.index_castui %[[POS]] exact nneg : index to i8
+//       CHECK:  %[[NEG_I8:.*]] = arith.index_cast %[[NEG]] exact : index to i8
 //       CHECK:  %[[RES_I8:.*]] = arith.addi %[[POS_I8]], %[[NEG_I8]] : i8
-//       CHECK:  %[[RES:.*]] = arith.index_cast %[[RES_I8]] : i8 to index
+//       CHECK:  %[[RES:.*]] = arith.index_cast %[[RES_I8]] exact : i8 to index
 //       CHECK:  call @use(%[[RES]])
 
   %0 = test.with_bounds { umin = 0 : index, umax = 1 : index, smin = 0 : index, smax = 1 : index } : index
@@ -409,7 +409,7 @@ func.func @narrow_loop_bounds() {
   // CHECK-DAG: %[[STEP_I8:.*]] = arith.trunci %[[STEP]] : i64 to i8
   // CHECK: scf.for %[[IV:.*]] = %[[LB_I8]] to %[[UB_I8]] step %[[STEP_I8]] : i8 {
   // CHECK:   %[[ADD_I8:.*]] = arith.addi %[[IV]], %[[C1_I8]] : i8
-  // CHECK:   %[[ADD_I64:.*]] = arith.extui %[[ADD_I8]] : i8 to i64
+  // CHECK:   %[[ADD_I64:.*]] = arith.extui %[[ADD_I8]] nneg : i8 to i64
   // CHECK:   call @use_i64(%[[ADD_I64]])
   scf.for %iv = %lb to %ub step %step : i64 {
     %add = arith.addi %iv, %c1_i64 : i64

@@ -643,6 +643,43 @@ func.func @indexCastUIOfUnsignedExtend_nneg_exact(%arg0: i8) -> index {
   return %idx : index
 }
 
+// index_cast(index_cast(x)) -> x only when exact is on the inner cast.
+// CHECK-LABEL: @indexCastOfIndexCast_no_exact
+//       CHECK:   arith.index_cast
+//       CHECK:   arith.index_cast
+func.func @indexCastOfIndexCast_no_exact(%arg0: i16) -> i16 {
+  %idx = arith.index_cast %arg0 : i16 to index
+  %res = arith.index_cast %idx : index to i16
+  return %res : i16
+}
+
+// CHECK-LABEL: @indexCastOfIndexCast_exact_inner
+//       CHECK:   return %arg0 : i16
+func.func @indexCastOfIndexCast_exact_inner(%arg0: i16) -> i16 {
+  %idx = arith.index_cast %arg0 exact : i16 to index
+  %res = arith.index_cast %idx : index to i16
+  return %res : i16
+}
+
+// exact on outer only does NOT trigger the fold (outer exact on widening
+// is vacuously true and does not guarantee the inner truncation is lossless).
+// CHECK-LABEL: @indexCastOfIndexCast_exact_outer
+//       CHECK:   arith.index_cast
+//       CHECK:   arith.index_cast
+func.func @indexCastOfIndexCast_exact_outer(%arg0: i16) -> i16 {
+  %idx = arith.index_cast %arg0 : i16 to index
+  %res = arith.index_cast %idx exact : index to i16
+  return %res : i16
+}
+
+// CHECK-LABEL: @indexCastOfIndexCast_exact_both
+//       CHECK:   return %arg0 : i16
+func.func @indexCastOfIndexCast_exact_both(%arg0: i16) -> i16 {
+  %idx = arith.index_cast %arg0 exact : i16 to index
+  %res = arith.index_cast %idx exact : index to i16
+  return %res : i16
+}
+
 // index_castui(index_castui(x)) -> x only when exact is on the inner cast.
 // CHECK-LABEL: @indexCastUIOfIndexCastUI_no_exact
 //       CHECK:   arith.index_castui

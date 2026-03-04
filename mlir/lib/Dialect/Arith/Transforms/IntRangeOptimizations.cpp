@@ -305,9 +305,20 @@ static Value doCast(OpBuilder &builder, Location loc, Value src, Type dstType,
     return src;
 
   if (isa<IndexType>(srcElemType) || isa<IndexType>(dstElemType)) {
-    if (castKind == CastKind::Signed)
-      return arith::IndexCastOp::create(builder, loc, dstType, src);
-    return arith::IndexCastUIOp::create(builder, loc, dstType, src);
+    if (castKind == CastKind::Signed) {
+      auto cast = arith::IndexCastOp::create(builder, loc, dstType, src);
+      cast.setExact(true);
+      return cast;
+    }
+    auto cast = arith::IndexCastUIOp::create(builder, loc, dstType, src);
+    cast.setExact(true);
+    // Narrowing (index -> iN): the unsigned range fits in N < index width
+    // bits, so the top bits including the MSB are all zero.
+    // Widening (iN -> index): the MSB is zero only when the iN value fits
+    // in both signed and unsigned (Both).
+    if (isa<IndexType>(srcElemType) || castKind == CastKind::Both)
+      cast.setNonNeg(true);
+    return cast;
   }
 
   auto srcInt = cast<IntegerType>(srcElemType);
@@ -317,7 +328,10 @@ static Value doCast(OpBuilder &builder, Location loc, Value src, Type dstType,
 
   if (castKind == CastKind::Signed)
     return arith::ExtSIOp::create(builder, loc, dstType, src);
-  return arith::ExtUIOp::create(builder, loc, dstType, src);
+  auto ext = arith::ExtUIOp::create(builder, loc, dstType, src);
+  if (castKind == CastKind::Both)
+    ext.setNonNeg(true);
+  return ext;
 }
 
 struct NarrowElementwise final : OpTraitRewritePattern<OpTrait::Elementwise> {
@@ -442,39 +456,6 @@ struct NarrowCmpI final : OpRewritePattern<arith::CmpIOp> {
 
 private:
   DataFlowSolver &solver;
-  SmallVector<unsigned, 4> targetBitwidths;
-};
-
-/// Fold index_cast(index_cast(%arg: i8, index), i8) -> %arg
-/// This pattern assumes all passed `targetBitwidths` are not wider than index
-/// type.
-template <typename CastOp>
-struct FoldIndexCastChain final : OpRewritePattern<CastOp> {
-  FoldIndexCastChain(MLIRContext *context, ArrayRef<unsigned> target)
-      : OpRewritePattern<CastOp>(context), targetBitwidths(target) {}
-
-  LogicalResult matchAndRewrite(CastOp op,
-                                PatternRewriter &rewriter) const override {
-    auto srcOp = op.getIn().template getDefiningOp<CastOp>();
-    if (!srcOp)
-      return rewriter.notifyMatchFailure(op, "doesn't come from an index cast");
-
-    Value src = srcOp.getIn();
-    if (src.getType() != op.getType())
-      return rewriter.notifyMatchFailure(op, "outer types don't match");
-
-    if (!srcOp.getType().isIndex())
-      return rewriter.notifyMatchFailure(op, "intermediate type isn't index");
-
-    auto intType = dyn_cast<IntegerType>(op.getType());
-    if (!intType || !llvm::is_contained(targetBitwidths, intType.getWidth()))
-      return failure();
-
-    rewriter.replaceOp(op, src);
-    return success();
-  }
-
-private:
   SmallVector<unsigned, 4> targetBitwidths;
 };
 
@@ -725,9 +706,6 @@ void mlir::arith::populateIntRangeNarrowingPatterns(
     ArrayRef<unsigned> bitwidthsSupported) {
   patterns.add<NarrowElementwise, NarrowCmpI>(patterns.getContext(), solver,
                                               bitwidthsSupported);
-  patterns.add<FoldIndexCastChain<arith::IndexCastUIOp>,
-               FoldIndexCastChain<arith::IndexCastOp>>(patterns.getContext(),
-                                                       bitwidthsSupported);
 }
 
 void mlir::arith::populateControlFlowValuesNarrowingPatterns(

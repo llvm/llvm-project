@@ -1845,6 +1845,14 @@ bool arith::IndexCastOp::areCastCompatible(TypeRange inputs,
 }
 
 OpFoldResult arith::IndexCastOp::fold(FoldAdaptor adaptor) {
+  // index_cast(index_cast(x, exact)) -> x, when result type matches x's type.
+  // The inner exact guarantees the iN -> index conversion is lossless,
+  // so the roundtrip through index preserves the value.
+  if (auto innerCast = getIn().getDefiningOp<IndexCastOp>()) {
+    if (innerCast.getIn().getType() == getType() && innerCast.getIsExact())
+      return innerCast.getIn();
+  }
+
   // index_cast(constant) -> constant
   unsigned resultBitwidth = 64; // Default for index integer attributes.
   if (auto intTy = dyn_cast<IntegerType>(getElementTypeOrSelf(getType())))
@@ -1859,7 +1867,7 @@ OpFoldResult arith::IndexCastOp::fold(FoldAdaptor adaptor) {
 
 void arith::IndexCastOp::getCanonicalizationPatterns(
     RewritePatternSet &patterns, MLIRContext *context) {
-  patterns.add<IndexCastOfIndexCast, IndexCastOfExtSI>(context);
+  patterns.add<IndexCastOfExtSI>(context);
 }
 
 //===----------------------------------------------------------------------===//
@@ -1872,6 +1880,12 @@ bool arith::IndexCastUIOp::areCastCompatible(TypeRange inputs,
 }
 
 OpFoldResult arith::IndexCastUIOp::fold(FoldAdaptor adaptor) {
+  // index_castui(index_castui(x, exact)) -> x
+  if (auto innerCast = getIn().getDefiningOp<IndexCastUIOp>()) {
+    if (innerCast.getIn().getType() == getType() && innerCast.getIsExact())
+      return innerCast.getIn();
+  }
+
   // index_castui(constant) -> constant
   unsigned resultBitwidth = 64; // Default for index integer attributes.
   if (auto intTy = dyn_cast<IntegerType>(getElementTypeOrSelf(getType())))
@@ -1886,7 +1900,7 @@ OpFoldResult arith::IndexCastUIOp::fold(FoldAdaptor adaptor) {
 
 void arith::IndexCastUIOp::getCanonicalizationPatterns(
     RewritePatternSet &patterns, MLIRContext *context) {
-  patterns.add<IndexCastUIOfIndexCastUI, IndexCastUIOfExtUI>(context);
+  patterns.add<IndexCastUIOfExtUI>(context);
 }
 
 //===----------------------------------------------------------------------===//
