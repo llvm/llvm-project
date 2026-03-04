@@ -517,7 +517,6 @@ static Expected<llvm::cas::CASID> scanAndUpdateCC1InlineWithTool(
     tooling::DependencyScanningTool &Tool, DiagnosticConsumer &DiagsConsumer,
     raw_ostream *VerboseOS, const char *Exec, ArrayRef<const char *> InputArgs,
     StringRef WorkingDirectory, SmallVectorImpl<const char *> &OutputArgs,
-    llvm::cas::ObjectStore &DB,
     llvm::function_ref<const char *(const Twine &)> SaveArg) {
   DiagnosticOptions DiagOpts;
   DiagnosticsEngine Diags(new DiagnosticIDs(), DiagOpts);
@@ -528,7 +527,7 @@ static Expected<llvm::cas::CASID> scanAndUpdateCC1InlineWithTool(
                                    "failed to create compiler invocation");
 
   Expected<llvm::cas::CASID> Root = scanAndUpdateCC1InlineWithTool(
-      Tool, DiagsConsumer, VerboseOS, *Invocation, WorkingDirectory, DB);
+      Tool, DiagsConsumer, VerboseOS, *Invocation, WorkingDirectory);
   if (!Root)
     return Root;
 
@@ -567,7 +566,7 @@ scanAndUpdateCC1Inline(const char *Exec, ArrayRef<const char *> InputArgs,
 
   auto E = scanAndUpdateCC1InlineWithTool(
                Tool, *DiagsConsumer, /*VerboseOS*/ nullptr, Exec, InputArgs,
-               WorkingDirectory, OutputArgs, *DB, SaveArg)
+               WorkingDirectory, OutputArgs, SaveArg)
                .moveInto(RootID);
   if (E) {
     Diag.Report(diag::err_cas_depscan_failed) << std::move(E);
@@ -1017,7 +1016,7 @@ int ScanServer::listen() {
 
   SharedStream SharedOS(llvm::errs());
 
-  auto ServiceLoop = [this, &CAS, &Service, &NumRunning, &Start,
+  auto ServiceLoop = [this, &Service, &NumRunning, &Start,
                       &SecondsSinceLastClose, &SharedOS,
                       &AcceptLock](unsigned I) {
     std::optional<tooling::DependencyScanningTool> Tool;
@@ -1122,7 +1121,7 @@ int ScanServer::listen() {
       SmallVector<const char *> NewArgs;
       auto RootID = scanAndUpdateCC1InlineWithTool(
           *Tool, *DiagsConsumer, &DiagsOS, Argv0, Args, WorkingDirectory,
-          NewArgs, *CAS, [&](const Twine &T) { return Saver.save(T).data(); });
+          NewArgs, [&](const Twine &T) { return Saver.save(T).data(); });
       if (!RootID) {
         consumeError(Comms.putScanResultFailed(toString(RootID.takeError()),
                                                DiagsOS.str()));

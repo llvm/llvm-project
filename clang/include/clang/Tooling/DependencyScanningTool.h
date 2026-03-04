@@ -88,8 +88,7 @@ public:
   }
 
   Expected<cas::IncludeTreeRoot>
-  getIncludeTree(cas::ObjectStore &DB,
-                 const std::vector<std::string> &CommandLine, StringRef CWD,
+  getIncludeTree(const std::vector<std::string> &CommandLine, StringRef CWD,
                  dependencies::LookupModuleOutputCallback LookupModuleOutput,
                  DiagnosticConsumer &DiagConsumer);
 
@@ -98,8 +97,7 @@ public:
   /// message and the serialized diagnostics file emitted if the
   /// \p DiagOpts.DiagnosticSerializationFile setting is set for the invocation.
   Expected<cas::IncludeTreeRoot> getIncludeTreeFromCompilerInvocation(
-      cas::ObjectStore &DB, std::shared_ptr<CompilerInvocation> Invocation,
-      StringRef CWD,
+      std::shared_ptr<CompilerInvocation> Invocation, StringRef CWD,
       clang::dependencies::LookupModuleOutputCallback LookupModuleOutput,
       DiagnosticConsumer &DiagsConsumer, raw_ostream *VerboseOS,
       bool DiagGenerationAsCompilation);
@@ -152,7 +150,8 @@ public:
   /// @param CommandLine The commandline used for the scan.
   /// @return Error if the initializaiton fails.
   llvm::Error initializeCompilerInstanceWithContextOrError(
-      StringRef CWD, ArrayRef<std::string> CommandLine);
+      StringRef CWD, ArrayRef<std::string> CommandLine,
+      dependencies::LookupModuleOutputCallback LookupModuleOutput);
 
   /// @brief Computes the dependeny for the module named ModuleName.
   /// @param ModuleName The name of the module for which this method computes
@@ -195,7 +194,9 @@ public:
   ///        fails.
   static bool initializeWorkerCIWithContextFromCommandline(
       clang::dependencies::DependencyScanningWorker &Worker, StringRef CWD,
-      ArrayRef<std::string> CommandLine, DiagnosticConsumer &DC);
+      ArrayRef<std::string> CommandLine,
+      dependencies::DependencyActionController &Controller,
+      DiagnosticConsumer &DC);
 
 private:
   std::unique_ptr<clang::dependencies::DependencyActionController>
@@ -232,8 +233,7 @@ bool computeDependencies(
 Expected<llvm::cas::CASID> scanAndUpdateCC1InlineWithTool(
     tooling::DependencyScanningTool &Tool,
     DiagnosticConsumer &DiagsConsumer, raw_ostream *VerboseOS,
-    CompilerInvocation &Invocation, StringRef WorkingDirectory,
-    llvm::cas::ObjectStore &DB);
+    CompilerInvocation &Invocation, StringRef WorkingDirectory);
 
 } // end namespace clang
 

@@ -1168,8 +1168,8 @@ int clang_scan_deps_main(int argc, char **argv, const llvm::ToolContext &) {
         else
           HadErrors = true;
       } else if (Format == ScanningOutputFormat::IncludeTree) {
-        auto MaybeTree = WorkerTool.getIncludeTree(
-            *CAS, Input->CommandLine, CWD, LookupOutput, DiagConsumer);
+        auto MaybeTree = WorkerTool.getIncludeTree(Input->CommandLine, CWD,
+                                                   LookupOutput, DiagConsumer);
         std::unique_lock<std::mutex> LockGuard(Lock);
         TreeResults.emplace_back(LocalIndex, std::move(Filename),
                                  std::move(MaybeTree));
@@ -1230,7 +1230,7 @@ int clang_scan_deps_main(int argc, char **argv, const llvm::ToolContext &) {
         } else {
           if (llvm::Error Err =
                   WorkerTool.initializeCompilerInstanceWithContextOrError(
-                      CWD, Input->CommandLine)) {
+                      CWD, Input->CommandLine, LookupOutput)) {
             handleErrorWithInfoString(
                 "Compiler instance with context setup error", std::move(Err),
                 DependencyOS, Errs);

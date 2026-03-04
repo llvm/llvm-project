@@ -358,7 +358,8 @@ enum CXErrorCode clang_experimental_DependencyScannerWorker_getDepGraph(
   if (ModuleName) {
     Result =
         DependencyScanningTool::initializeWorkerCIWithContextFromCommandline(
-            *Worker, WorkingDirectory, Compilation, *SerialDiagConsumer);
+            *Worker, WorkingDirectory, Compilation, *Controller,
+            *SerialDiagConsumer);
 
     if (!Result)
       return CXError_Failure;

@@ -37,11 +37,11 @@ public:
       DependencyConsumer &Consumer, DependencyActionController &Controller,
       llvm::IntrusiveRefCntPtr<DependencyScanningWorkerFilesystem> DepFS,
       bool EmitDependencyFile, bool DiagGenerationAsCompilation,
-      CASOptions CASOpts, std::optional<StringRef> ModuleName = std::nullopt,
+      std::optional<StringRef> ModuleName = std::nullopt,
       raw_ostream *VerboseOS = nullptr)
       : Service(Service), WorkingDirectory(WorkingDirectory),
         Consumer(Consumer), Controller(Controller), DepFS(std::move(DepFS)),
-        CASOpts(std::move(CASOpts)), EmitDependencyFile(EmitDependencyFile),
+        EmitDependencyFile(EmitDependencyFile),
         DiagGenerationAsCompilation(DiagGenerationAsCompilation),
         VerboseOS(VerboseOS) {}
   bool runInvocation(std::string Executable,
@@ -58,7 +58,6 @@ private:
   DependencyConsumer &Consumer;
   DependencyActionController &Controller;
   llvm::IntrusiveRefCntPtr<DependencyScanningWorkerFilesystem> DepFS;
-  CASOptions CASOpts;
   bool EmitDependencyFile = false;
   bool DiagGenerationAsCompilation;
   std::optional<StringRef> ModuleName;
@@ -160,6 +159,7 @@ public:
   // The two methods below returns false when they fail, with the detail
   // accumulated in \c DiagEngineWithDiagOpts's diagnostic consumer.
   bool initialize(
+      DependencyActionController &Controller,
       std::unique_ptr<DiagnosticsEngineWithDiagOpts> DiagEngineWithDiagOpts,
       IntrusiveRefCntPtr<llvm::vfs::OverlayFileSystem> OverlayFS);
   bool computeDependencies(StringRef ModuleName, DependencyConsumer &Consumer,

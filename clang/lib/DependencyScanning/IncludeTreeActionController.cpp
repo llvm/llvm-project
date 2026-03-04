@@ -26,15 +26,17 @@ class IncludeTreeBuilder;
 
 class IncludeTreeActionController : public CallbackActionController {
 public:
-  IncludeTreeActionController(cas::ObjectStore &DB,
+  IncludeTreeActionController(CASOptions CASOpts, cas::ObjectStore &DB,
                               LookupModuleOutputCallback LookupOutput)
-      : CallbackActionController(LookupOutput), DB(DB) {}
+      : CallbackActionController(LookupOutput), CASOpts(std::move(CASOpts)),
+        DB(DB) {}
 
   Expected<cas::IncludeTreeRoot> getIncludeTree();
 
 private:
   std::unique_ptr<DependencyActionController> clone() const override;
 
+  void initializeScanInvocation(CompilerInvocation &ScanInvocation) override;
   Error initialize(CompilerInstance &ScanInstance,
                    CompilerInvocation &NewInvocation) override;
   Error finalize(CompilerInstance &ScanInstance,
@@ -54,8 +56,8 @@ private:
   }
 
 private:
-  cas::ObjectStore &DB;
   CASOptions CASOpts;
+  cas::ObjectStore &DB;
   llvm::PrefixMapper PrefixMapper;
   // IncludeTreePPCallbacks keeps a pointer to the current builder, so use a
   // pointer so the builder cannot move when resizing.
@@ -301,7 +303,16 @@ Expected<cas::IncludeTreeRoot> IncludeTreeActionController::getIncludeTree() {
 
 std::unique_ptr<DependencyActionController>
 IncludeTreeActionController::clone() const {
-  return std::make_unique<IncludeTreeActionController>(DB, LookupModuleOutput);
+  return std::make_unique<IncludeTreeActionController>(CASOpts, DB,
+                                                       LookupModuleOutput);
+}
+
+void IncludeTreeActionController::initializeScanInvocation(
+    CompilerInvocation &ScanInvocation) {
+  // Enable include-tree in scanning PCMs and caching in the resulting commands.
+  ScanInvocation.getFrontendOpts().CacheCompileJob = true;
+  ScanInvocation.getFrontendOpts().ForIncludeTreeScan = true;
+  ScanInvocation.getCASOpts() = CASOpts;
 }
 
 Error IncludeTreeActionController::initialize(
@@ -340,11 +351,6 @@ Error IncludeTreeActionController::initialize(
         return std::make_unique<LookupPCHModulesListener>(R);
       });
   ScanInstance.addDependencyCollector(std::move(DC));
-
-  // Enable caching in the resulting commands.
-  ScanInstance.getFrontendOpts().CacheCompileJob = true;
-  ScanInstance.getFrontendOpts().ForIncludeTreeScan = true;
-  CASOpts = ScanInstance.getCASOpts();
 
   return Error::success();
 }
@@ -951,6 +957,8 @@ IncludeTreeBuilder::createIncludeFile(StringRef Filename,
 
 std::unique_ptr<DependencyActionController>
 dependencies::createIncludeTreeActionController(
-    LookupModuleOutputCallback LookupModuleOutput, cas::ObjectStore &DB) {
-  return std::make_unique<IncludeTreeActionController>(DB, LookupModuleOutput);
+    LookupModuleOutputCallback LookupModuleOutput, CASOptions CASOpts,
+    cas::ObjectStore &DB) {
+  return std::make_unique<IncludeTreeActionController>(std::move(CASOpts), DB,
+                                                       LookupModuleOutput);
 }

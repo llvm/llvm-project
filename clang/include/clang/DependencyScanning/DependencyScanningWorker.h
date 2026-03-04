@@ -83,6 +83,8 @@ public:
   virtual std::string lookupModuleOutput(const ModuleDeps &MD,
                                          ModuleOutputKind Kind) = 0;
 
+  virtual void initializeScanInvocation(CompilerInvocation &ScanInvocation) {}
+
   virtual llvm::Error initialize(CompilerInstance &ScanInstance,
                                  CompilerInvocation &NewInvocation) {
     return llvm::Error::success();
@@ -174,9 +176,9 @@ public:
   /// @param CWD The current working directory used during the scan.
   /// @param CommandLine The commandline used for the scan.
   /// @return False if the initializaiton fails.
-  bool initializeCompilerInstanceWithContext(StringRef CWD,
-                                             ArrayRef<std::string> CommandLine,
-                                             DiagnosticConsumer &DC);
+  bool initializeCompilerInstanceWithContext(
+      StringRef CWD, ArrayRef<std::string> CommandLine,
+      DependencyActionController &Controller, DiagnosticConsumer &DC);
 
   /// @brief Initializing the context and the compiler instance.
   /// @param CWD The current working directory used during the scan.
@@ -187,6 +189,7 @@ public:
   /// @return False if the initializaiton fails.
   bool initializeCompilerInstanceWithContext(
       StringRef CWD, ArrayRef<std::string> CommandLine,
+      DependencyActionController &Controller,
       std::unique_ptr<DiagnosticsEngineWithDiagOpts> DiagEngineWithCmdAndOpts,
       IntrusiveRefCntPtr<llvm::vfs::OverlayFileSystem> OverlayFS);
 

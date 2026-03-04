@@ -87,10 +87,10 @@ bool DependencyScanningWorker::computeDependencies(
     FS->setCurrentWorkingDirectory(WorkingDirectory);
   }
 
-  DependencyScanningAction Action(
-      Service, WorkingDirectory, DepConsumer, Controller, DepFS,
-      /*EmitDependencyFile=*/false,
-      /*DiagGenerationAsCompilation=*/false, getCASOpts());
+  DependencyScanningAction Action(Service, WorkingDirectory, DepConsumer,
+                                  Controller, DepFS,
+                                  /*EmitDependencyFile=*/false,
+                                  /*DiagGenerationAsCompilation=*/false);
 
   const bool Success = llvm::all_of(CommandLines, [&](const auto &Cmd) {
     if (StringRef(Cmd[1]) != "-cc1") {
@@ -142,11 +142,10 @@ void DependencyScanningWorker::computeDependenciesFromCompilerInvocation(
 
   // FIXME: EmitDependencyFile should only be set when it's for a real
   // compilation.
-  DependencyScanningAction Action(Service, WorkingDirectory, DepsConsumer,
-                                  Controller, DepFS,
-                                  /*EmitDependencyFile=*/!DepFile.empty(),
-                                  DiagGenerationAsCompilation, getCASOpts(),
-                                  /*ModuleName=*/std::nullopt, VerboseOS);
+  DependencyScanningAction Action(
+      Service, WorkingDirectory, DepsConsumer, Controller, DepFS,
+      /*EmitDependencyFile=*/!DepFile.empty(), DiagGenerationAsCompilation,
+      /*ModuleName=*/std::nullopt, VerboseOS);
 
   // Ignore result; we're just collecting dependencies.
   //
@@ -156,24 +155,27 @@ void DependencyScanningWorker::computeDependenciesFromCompilerInvocation(
 }
 
 bool DependencyScanningWorker::initializeCompilerInstanceWithContext(
-    StringRef CWD, ArrayRef<std::string> CommandLine, DiagnosticConsumer &DC) {
+    StringRef CWD, ArrayRef<std::string> CommandLine,
+    DependencyActionController &Controller, DiagnosticConsumer &DC) {
   auto [OverlayFS, ModifiedCommandLine] = initVFSForByNameScanning(
       DepFS, CommandLine, CWD, "ScanningByName", getCAS());
   auto DiagEngineWithCmdAndOpts =
       std::make_unique<DiagnosticsEngineWithDiagOpts>(ModifiedCommandLine,
                                                       OverlayFS, DC);
   return initializeCompilerInstanceWithContext(
-      CWD, ModifiedCommandLine, std::move(DiagEngineWithCmdAndOpts), OverlayFS);
+      CWD, ModifiedCommandLine, Controller, std::move(DiagEngineWithCmdAndOpts),
+      OverlayFS);
 }
 
 bool DependencyScanningWorker::initializeCompilerInstanceWithContext(
     StringRef CWD, ArrayRef<std::string> CommandLine,
+    DependencyActionController &Controller,
     std::unique_ptr<DiagnosticsEngineWithDiagOpts> DiagEngineWithDiagOpts,
     IntrusiveRefCntPtr<llvm::vfs::OverlayFileSystem> OverlayFS) {
   CIWithContext =
       std::make_unique<CompilerInstanceWithContext>(*this, CWD, CommandLine);
-  return CIWithContext->initialize(std::move(DiagEngineWithDiagOpts),
-                                   OverlayFS);
+  return CIWithContext->initialize(
+      Controller, std::move(DiagEngineWithDiagOpts), OverlayFS);
 }
 
 bool DependencyScanningWorker::computeDependenciesByNameWithContext(
