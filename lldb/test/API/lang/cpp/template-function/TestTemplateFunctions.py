@@ -8,6 +8,8 @@ from lldbsuite.test import lldbutil
 
 
 class TemplateFunctionsTestCase(TestBase):
+    SHARED_BUILD_TESTCASE = False
+
     def do_test_template_function(self, add_cast):
         self.build()
         lldbutil.run_to_source_breakpoint(

@@ -539,6 +539,24 @@ RTLIB::Libcall RTLIB::getPOWI(EVT RetVT) {
 }
 
 RTLIB::Libcall RTLIB::getPOW(EVT RetVT) {
+  // TODO: Tablegen should generate this function
+  if (RetVT.isVector()) {
+    if (!RetVT.isSimple())
+      return RTLIB::UNKNOWN_LIBCALL;
+    switch (RetVT.getSimpleVT().SimpleTy) {
+    case MVT::v4f32:
+      return RTLIB::POW_V4F32;
+    case MVT::v2f64:
+      return RTLIB::POW_V2F64;
+    case MVT::nxv4f32:
+      return RTLIB::POW_NXV4F32;
+    case MVT::nxv2f64:
+      return RTLIB::POW_NXV2F64;
+    default:
+      return RTLIB::UNKNOWN_LIBCALL;
+    }
+  }
+
   return getFPLibCall(RetVT, POW_F32, POW_F64, POW_F80, POW_F128, POW_PPCF128);
 }
 
@@ -631,6 +649,29 @@ RTLIB::Libcall RTLIB::getREM(EVT VT) {
   }
 
   return getFPLibCall(VT, REM_F32, REM_F64, REM_F80, REM_F128, REM_PPCF128);
+}
+
+RTLIB::Libcall RTLIB::getCBRT(EVT VT) {
+  // TODO: Tablegen should generate this function
+  if (VT.isVector()) {
+    if (!VT.isSimple())
+      return RTLIB::UNKNOWN_LIBCALL;
+    switch (VT.getSimpleVT().SimpleTy) {
+    case MVT::v4f32:
+      return RTLIB::CBRT_V4F32;
+    case MVT::v2f64:
+      return RTLIB::CBRT_V2F64;
+    case MVT::nxv4f32:
+      return RTLIB::CBRT_NXV4F32;
+    case MVT::nxv2f64:
+      return RTLIB::CBRT_NXV2F64;
+    default:
+      return RTLIB::UNKNOWN_LIBCALL;
+    }
+  }
+
+  return getFPLibCall(VT, CBRT_F32, CBRT_F64, CBRT_F80, CBRT_F128,
+                      CBRT_PPCF128);
 }
 
 RTLIB::Libcall RTLIB::getMODF(EVT RetVT) {
@@ -1015,6 +1056,7 @@ void TargetLoweringBase::initActions() {
   // All operations default to being supported.
   memset(OpActions, 0, sizeof(OpActions));
   memset(LoadExtActions, 0, sizeof(LoadExtActions));
+  memset(AtomicLoadExtActions, 0, sizeof(AtomicLoadExtActions));
   memset(TruncStoreActions, 0, sizeof(TruncStoreActions));
   memset(IndexedModeActions, 0, sizeof(IndexedModeActions));
   memset(CondCodeActions, 0, sizeof(CondCodeActions));
@@ -2257,7 +2299,14 @@ TargetLoweringBase::getDefaultSafeStackPointerLocation(IRBuilderBase &IRB,
   // compiler-rt provides a variable with a magic name.  Targets that do not
   // link with compiler-rt may also provide such a variable.
   Module *M = IRB.GetInsertBlock()->getParent()->getParent();
-  const char *UnsafeStackPtrVar = "__safestack_unsafe_stack_ptr";
+
+  RTLIB::LibcallImpl UnsafeStackPtrImpl =
+      Libcalls.getLibcallImpl(RTLIB::SAFESTACK_UNSAFE_STACK_PTR);
+  if (UnsafeStackPtrImpl == RTLIB::Unsupported)
+    return nullptr;
+
+  StringRef UnsafeStackPtrVar =
+      RTLIB::RuntimeLibcallsInfo::getLibcallImplName(UnsafeStackPtrImpl);
   auto UnsafeStackPtr =
       dyn_cast_or_null<GlobalVariable>(M->getNamedValue(UnsafeStackPtrVar));
 
@@ -2289,21 +2338,13 @@ TargetLoweringBase::getDefaultSafeStackPointerLocation(IRBuilderBase &IRB,
 
 Value *TargetLoweringBase::getSafeStackPointerLocation(
     IRBuilderBase &IRB, const LibcallLoweringInfo &Libcalls) const {
-  // FIXME: Can this triple check be replaced with SAFESTACK_POINTER_ADDRESS
-  // being available?
-  if (!TM.getTargetTriple().isAndroid())
+  RTLIB::LibcallImpl SafestackPointerAddressImpl =
+      Libcalls.getLibcallImpl(RTLIB::SAFESTACK_POINTER_ADDRESS);
+  if (SafestackPointerAddressImpl == RTLIB::Unsupported)
     return getDefaultSafeStackPointerLocation(IRB, true);
 
   Module *M = IRB.GetInsertBlock()->getParent()->getParent();
   auto *PtrTy = PointerType::getUnqual(M->getContext());
-
-  RTLIB::LibcallImpl SafestackPointerAddressImpl =
-      Libcalls.getLibcallImpl(RTLIB::SAFESTACK_POINTER_ADDRESS);
-  if (SafestackPointerAddressImpl == RTLIB::Unsupported) {
-    M->getContext().emitError(
-        "no libcall available for safestack pointer address");
-    return PoisonValue::get(PtrTy);
-  }
 
   // Android provides a libc function to retrieve the address of the current
   // thread's unsafe stack pointer.

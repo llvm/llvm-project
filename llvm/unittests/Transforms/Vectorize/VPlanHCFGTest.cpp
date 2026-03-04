@@ -141,7 +141,7 @@ compound=true
       "  EMIT vp\<%2\> = CANONICAL-INDUCTION ir\<0\>, vp\<%index.next\>\l" +
       "  EMIT-SCALAR ir\<%indvars.iv\> = phi [ ir\<0\>, vector.ph ], [ ir\<%indvars.iv.next\>, vector.body ]\l" +
       "  EMIT ir\<%arr.idx\> = getelementptr inbounds ir\<%A\>, ir\<%indvars.iv\>\l" +
-      "  EMIT ir\<%l1\> = load ir\<%arr.idx\>\l" +
+      "  EMIT-SCALAR ir\<%l1\> = load ir\<%arr.idx\>\l" +
       "  EMIT ir\<%res\> = add ir\<%l1\>, ir\<10\>\l" +
       "  EMIT store ir\<%res\>, ir\<%arr.idx\>\l" +
       "  EMIT ir\<%indvars.iv.next\> = add ir\<%indvars.iv\>, ir\<1\>\l" +
@@ -307,7 +307,7 @@ compound=true
       "  EMIT vp\<%2\> = CANONICAL-INDUCTION ir\<0\>, vp\<%index.next\>\l" +
       "  EMIT-SCALAR ir\<%iv\> = phi [ ir\<0\>, vector.ph ], [ ir\<%iv.next\>, loop.latch ]\l" +
       "  EMIT ir\<%arr.idx\> = getelementptr inbounds ir\<%A\>, ir\<%iv\>\l" +
-      "  EMIT ir\<%l1\> = load ir\<%arr.idx\>\l" +
+      "  EMIT-SCALAR ir\<%l1\> = load ir\<%arr.idx\>\l" +
       "  EMIT ir\<%c\> = icmp eq ir\<%l1\>, ir\<0\>\l" +
       "Successor(s): loop.latch\l"
     ]
