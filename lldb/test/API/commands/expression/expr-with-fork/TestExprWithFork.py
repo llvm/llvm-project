@@ -29,5 +29,21 @@ class ExprWithForkTestCase(TestBase):
         # The fork will generate a fork stop event which ThreadPlanCallFunction
         # must handle transparently for the expression to complete.
         self.expect_expr(
-            "fork_and_return(42)", result_type="int", result_value="42"
+            "fork_and_return(42, false)", result_type="int", result_value="42"
+        )
+
+    @skipIfWindows
+    @add_test_categories(["fork"])
+    def test_expr_with_vfork(self):
+        """Test that expression evaluation succeeds when the expression calls vfork()."""
+        self.build()
+        (target, process, thread, bkpt) = lldbutil.run_to_source_breakpoint(
+            self, "// break here", lldb.SBFileSpec("main.cpp")
+        )
+
+        # Evaluate an expression that calls fork() inside a user function.
+        # The fork will generate a fork stop event which ThreadPlanCallFunction
+        # must handle transparently for the expression to complete.
+        self.expect_expr(
+            "fork_and_return(42, true)", result_type="int", result_value="42"
         )
