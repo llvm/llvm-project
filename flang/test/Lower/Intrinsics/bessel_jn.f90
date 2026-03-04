@@ -1,4 +1,5 @@
 ! RUN: %flang_fc1 -emit-hlfir %s -o - -mllvm -math-runtime=fast | FileCheck %s
+! RUN: %flang_fc1 -emit-hlfir %s -o - -mllvm -math-runtime=relaxed | FileCheck %s
 ! RUN: %flang_fc1 -emit-hlfir %s -o - -mllvm -math-runtime=precise | FileCheck %s
 
 ! CHECK-LABEL: func.func @_QPtest_real4
