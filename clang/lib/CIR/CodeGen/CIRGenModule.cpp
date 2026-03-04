@@ -674,6 +674,49 @@ static void setLinkageForGV(cir::GlobalOp &gv, const NamedDecl *nd) {
     gv.setLinkage(cir::GlobalLinkageKind::ExternalWeakLinkage);
 }
 
+// We want to replace a global value, but because of CIR's typed pointers,
+// we need to update the existing uses to reflect the new type, not just replace
+// them directly.
+void CIRGenModule::replaceGlobal(cir::GlobalOp oldGV, cir::GlobalOp newGV) {
+  assert(oldGV.getSymName() == newGV.getSymName() && "symbol names must match");
+
+  mlir::Type oldTy = oldGV.getSymType();
+  mlir::Type newTy = newGV.getSymType();
+
+  assert(!cir::MissingFeatures::addressSpace());
+
+  // If the type didn't change, why are we here?
+  assert(oldTy != newTy && "expected type change in replaceGlobal");
+
+  // Otherwise, visit all uses and add handling to fix up the types.
+  std::optional<mlir::SymbolTable::UseRange> oldSymUses =
+      oldGV.getSymbolUses(theModule);
+  if (oldSymUses) {
+    for (mlir::SymbolTable::SymbolUse use : *oldSymUses) {
+      mlir::Operation *userOp = use.getUser();
+      assert((mlir::isa<cir::GetGlobalOp, cir::GlobalOp, cir::ConstantOp>(
+                 userOp)) &&
+             "Unexpected user for global op");
+
+      if (auto getGlobalOp = dyn_cast<cir::GetGlobalOp>(use.getUser())) {
+        mlir::Value useOpResultValue = getGlobalOp.getAddr();
+        useOpResultValue.setType(cir::PointerType::get(newTy));
+
+        mlir::OpBuilder::InsertionGuard guard(builder);
+        builder.setInsertionPointAfter(getGlobalOp);
+        mlir::Type ptrTy = builder.getPointerTo(oldTy);
+        mlir::Value cast = builder.createBitcast(getGlobalOp->getLoc(),
+                                                 useOpResultValue, ptrTy);
+        useOpResultValue.replaceAllUsesExcept(cast, cast.getDefiningOp());
+      } else {
+        errorNYI(userOp->getLoc(), "Replace global op use in global view attr");
+      }
+    }
+  }
+
+  oldGV.erase();
+}
+
 /// If the specified mangled name is not in the module,
 /// create and return an mlir GlobalOp with the specified type (TODO(cir):
 /// address space).
@@ -747,6 +790,11 @@ CIRGenModule::getOrCreateCIRGlobal(StringRef mangledName, mlir::Type ty,
   cir::GlobalOp gv =
       CIRGenModule::createGlobalOp(*this, loc, mangledName, ty, isConstant,
                                    /*insertPoint=*/entry.getOperation());
+
+  // If we already created a global with the same mangled name (but different
+  // type) before, remove it from its parent.
+  if (entry)
+    replaceGlobal(entry, gv);
 
   // This is the first use or definition of a mangled name.  If there is a
   // deferred decl with this name, remember that we need to emit it at the end
