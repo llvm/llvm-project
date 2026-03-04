@@ -24,7 +24,7 @@ static constexpr uint16_t POS_STOP = 0x7f80U;
 static constexpr uint16_t NEG_START = 0x8000U;
 static constexpr uint16_t NEG_STOP = 0xff80U;
 
-TEST_F(LlvmLibcAcosBf16Test, NormalPositiveRange) {
+TEST_F(LlvmLibcAcosBf16Test, PositiveRange) {
   for (uint16_t v1 = POS_START; v1 <= POS_STOP; v1++) {
 
     bfloat16 x = FPBits(v1).get_val();
@@ -34,7 +34,7 @@ TEST_F(LlvmLibcAcosBf16Test, NormalPositiveRange) {
   }
 }
 
-TEST_F(LlvmLibcAcosBf16Test, NormalNegativeRange) {
+TEST_F(LlvmLibcAcosBf16Test, NegativeRange) {
   for (uint16_t v1 = NEG_START; v1 <= NEG_STOP; v1++) {
 
     bfloat16 x = FPBits(v1).get_val();
