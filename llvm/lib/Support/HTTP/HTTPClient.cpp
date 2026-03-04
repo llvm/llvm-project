@@ -64,7 +64,7 @@ void HTTPClient::cleanup() {
 void HTTPClient::setTimeout(std::chrono::milliseconds Timeout) {
   if (Timeout < std::chrono::milliseconds(0))
     Timeout = std::chrono::milliseconds(0);
-  curl_easy_setopt(Curl, CURLOPT_TIMEOUT_MS, Timeout.count());
+  curl_easy_setopt(Handle, CURLOPT_TIMEOUT_MS, Timeout.count());
 }
 
 /// CurlHTTPRequest and the curl{Header,Write}Function are implementation
@@ -93,17 +93,17 @@ static size_t curlWriteFunction(char *Contents, size_t Size, size_t NMemb,
 HTTPClient::HTTPClient() {
   assert(IsInitialized &&
          "Must call HTTPClient::initialize() at the beginning of main().");
-  if (Curl)
+  if (Handle)
     return;
-  Curl = curl_easy_init();
-  assert(Curl && "Curl could not be initialized");
+  Handle = curl_easy_init();
+  assert(Handle && "Curl could not be initialized");
   // Set the callback hooks.
-  curl_easy_setopt(Curl, CURLOPT_WRITEFUNCTION, curlWriteFunction);
+  curl_easy_setopt(Handle, CURLOPT_WRITEFUNCTION, curlWriteFunction);
   // Detect supported compressed encodings and accept all.
-  curl_easy_setopt(Curl, CURLOPT_ACCEPT_ENCODING, "");
+  curl_easy_setopt(Handle, CURLOPT_ACCEPT_ENCODING, "");
 }
 
-HTTPClient::~HTTPClient() { curl_easy_cleanup(Curl); }
+HTTPClient::~HTTPClient() { curl_easy_cleanup(Handle); }
 
 Error HTTPClient::perform(const HTTPRequest &Request,
                           HTTPResponseHandler &Handler) {
@@ -112,17 +112,17 @@ Error HTTPClient::perform(const HTTPRequest &Request,
                              "Unsupported CURL request method.");
 
   SmallString<128> Url = Request.Url;
-  curl_easy_setopt(Curl, CURLOPT_URL, Url.c_str());
-  curl_easy_setopt(Curl, CURLOPT_FOLLOWLOCATION, Request.FollowRedirects);
+  curl_easy_setopt(Handle, CURLOPT_URL, Url.c_str());
+  curl_easy_setopt(Handle, CURLOPT_FOLLOWLOCATION, Request.FollowRedirects);
 
   curl_slist *Headers = nullptr;
   for (const std::string &Header : Request.Headers)
     Headers = curl_slist_append(Headers, Header.c_str());
-  curl_easy_setopt(Curl, CURLOPT_HTTPHEADER, Headers);
+  curl_easy_setopt(Handle, CURLOPT_HTTPHEADER, Headers);
 
   CurlHTTPRequest CurlRequest(Handler);
-  curl_easy_setopt(Curl, CURLOPT_WRITEDATA, &CurlRequest);
-  CURLcode CurlRes = curl_easy_perform(Curl);
+  curl_easy_setopt(Handle, CURLOPT_WRITEDATA, &CurlRequest);
+  CURLcode CurlRes = curl_easy_perform(Handle);
   curl_slist_free_all(Headers);
   if (CurlRes != CURLE_OK)
     return joinErrors(std::move(CurlRequest.ErrorState),
@@ -134,7 +134,7 @@ Error HTTPClient::perform(const HTTPRequest &Request,
 
 unsigned HTTPClient::responseCode() {
   long Code = 0;
-  curl_easy_getinfo(Curl, CURLINFO_RESPONSE_CODE, &Code);
+  curl_easy_getinfo(Handle, CURLINFO_RESPONSE_CODE, &Code);
   return Code;
 }
 
