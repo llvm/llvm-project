@@ -1272,13 +1272,13 @@ bool RISCVVLOptimizer::tryReduceVL(MachineInstr &MI,
     return true;
   }
   MachineInstr *VLMI = MRI->getVRegDef(CommonVL.getReg());
-  auto VLDominates = [this, &VLMI](MachineInstr &MI) {
+  auto VLDominates = [this, &VLMI](const MachineInstr &MI) {
     return MDT->dominates(VLMI, &MI);
   };
   if (!VLDominates(MI)) {
     assert(MI.getNumExplicitDefs() == 1);
     auto Uses = MRI->use_instructions(MI.getOperand(0).getReg());
-    auto UsesSameBB = make_filter_range(Uses, [&MI](MachineInstr &Use) {
+    auto UsesSameBB = make_filter_range(Uses, [&MI](const MachineInstr &Use) {
       return Use.getParent() == MI.getParent();
     });
     if (VLMI->getParent() == MI.getParent() &&
