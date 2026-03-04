@@ -477,7 +477,10 @@ class ConstraintSatisfactionChecker {
   ConstraintSatisfaction &Satisfaction;
   bool BuildExpression;
 
-  const ConceptReference *ParentConcept = nullptr;
+  // The most closest concept declaration when evaluating atomic constriants.
+  // This is to make sure that lambdas in the atomic expression live in the
+  // right context.
+  ConceptDecl *ParentConcept = nullptr;
 
 private:
   ExprResult
@@ -623,8 +626,11 @@ ConstraintSatisfactionChecker::SubstitutionInTemplateArguments(
     const MultiLevelTemplateArgumentList &MLTAL,
     llvm::SmallVector<TemplateArgument> &SubstitutedOutermost) {
 
-  if (!Constraint.hasParameterMapping())
-    return std::move(MLTAL);
+  if (!Constraint.hasParameterMapping()) {
+    if (MLTAL.getNumSubstitutedLevels())
+      SubstitutedOutermost.assign(MLTAL.getOutermost());
+    return MLTAL;
+  }
 
   // The mapping is empty, meaning no template arguments are needed for
   // evaluation.
@@ -708,19 +714,18 @@ ExprResult ConstraintSatisfactionChecker::EvaluateSlow(
     return ExprEmpty();
   }
 
-  // This is dumb: generic lambdas inside requires body require a lambda context
+  // Note that generic lambdas inside requires body require a lambda context
   // decl from which to fetch correct template arguments. But we don't have any
   // proper decls because the constraints are already normalized.
-  if (ParentConcept && SubstitutedArgs->getNumSubstitutedLevels()) {
-    auto *CD = ParentConcept->getNamedConcept();
+  if (ParentConcept) {
     // FIXME: the evaluation context should learn to track template arguments
     // separately from a Decl.
     EvaluationContext.emplace(
         S, Sema::ExpressionEvaluationContext::ConstantEvaluated,
         /*LambdaContextDecl=*/
         ImplicitConceptSpecializationDecl::Create(
-            S.Context, CD->getDeclContext(), CD->getBeginLoc(),
-            SubstitutedArgs->getOutermost()));
+            S.Context, ParentConcept->getDeclContext(),
+            ParentConcept->getBeginLoc(), SubstitutedOutermost));
   }
 
   Sema::ArgPackSubstIndexRAII SubstIndex(S, PackSubstitutionIndex);
@@ -1045,7 +1050,8 @@ ExprResult ConstraintSatisfactionChecker::Evaluate(
   if (InstTemplate.isInvalid())
     return ExprError();
 
-  llvm::SaveAndRestore PushConceptDecl(ParentConcept, ConceptId);
+  llvm::SaveAndRestore PushConceptDecl(
+      ParentConcept, cast<ConceptDecl>(ConceptId->getNamedConcept()));
 
   unsigned Size = Satisfaction.Details.size();
 
