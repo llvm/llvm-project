@@ -4,7 +4,7 @@
 ; Test the localizer did something and we don't materialize all
 ; constants in SGPRs in the entry block.
 
-define amdgpu_kernel void @localize_constants(i1 %cond) {
+define amdgpu_kernel void @localize_constants(i1 %cond) #0 {
 ; GFX9-LABEL: localize_constants:
 ; GFX9:       ; %bb.0: ; %entry
 ; GFX9-NEXT:    s_load_dword s1, s[8:9], 0x0
@@ -91,7 +91,7 @@ bb2:
 @gv2 = addrspace(1) global i32 poison, align 4
 @gv3 = addrspace(1) global i32 poison, align 4
 
-define amdgpu_kernel void @localize_globals(i1 %cond) {
+define amdgpu_kernel void @localize_globals(i1 %cond) #0 {
 ; GFX9-LABEL: localize_globals:
 ; GFX9:       ; %bb.0: ; %entry
 ; GFX9-NEXT:    s_load_dword s1, s[8:9], 0x0
@@ -162,7 +162,7 @@ bb2:
 @static.gv2 = internal addrspace(1) global i32 poison, align 4
 @static.gv3 = internal addrspace(1) global i32 poison, align 4
 
-define void @localize_internal_globals(i1 %cond) {
+define void @localize_internal_globals(i1 %cond) #0 {
 ; GFX9-LABEL: localize_internal_globals:
 ; GFX9:       ; %bb.0: ; %entry
 ; GFX9-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -226,7 +226,7 @@ bb2:
 }
 
 ; This would crash from using the wrong insert point
-define void @sink_null_insert_pt(ptr addrspace(4) %arg0) {
+define void @sink_null_insert_pt(ptr addrspace(4) %arg0) #0 {
 ; GFX9-LABEL: sink_null_insert_pt:
 ; GFX9:       ; %bb.0: ; %entry
 ; GFX9-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -262,3 +262,5 @@ bb1:
   call void null()
   ret void
 }
+
+attributes #0 = { nounwind }

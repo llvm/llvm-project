@@ -9,7 +9,7 @@
 ; The EXEC mask should be set to -1 for the duration of the function
 ; and restored to its original value in the epilogue.
 ; We will also need to restore the inactive lanes for any allocated VGPRs.
-define amdgpu_gfx_whole_wave i32 @basic_test(i1 %active, i32 %a, i32 %b) {
+define amdgpu_gfx_whole_wave i32 @basic_test(i1 %active, i32 %a, i32 %b) #0 {
 ; DAGISEL-LABEL: basic_test:
 ; DAGISEL:       ; %bb.0:
 ; DAGISEL-NEXT:    s_wait_loadcnt_dscnt 0x0
@@ -136,7 +136,7 @@ define amdgpu_gfx_whole_wave i32 @basic_test(i1 %active, i32 %a, i32 %b) {
 }
 
 ; Make sure we don't crash if there's only one use for %active.
-define amdgpu_gfx_whole_wave i32 @single_use_of_active(i1 %active, i32 %a, i32 %b) {
+define amdgpu_gfx_whole_wave i32 @single_use_of_active(i1 %active, i32 %a, i32 %b) #0 {
 ; DAGISEL-LABEL: single_use_of_active:
 ; DAGISEL:       ; %bb.0:
 ; DAGISEL-NEXT:    s_wait_loadcnt_dscnt 0x0
@@ -260,7 +260,7 @@ define amdgpu_gfx_whole_wave i32 @single_use_of_active(i1 %active, i32 %a, i32 %
 }
 
 ; Make sure we don't crash if %active is not used at all.
-define amdgpu_gfx_whole_wave i32 @unused_active(i1 %active, i32 %a, i32 %b) {
+define amdgpu_gfx_whole_wave i32 @unused_active(i1 %active, i32 %a, i32 %b) #0 {
 ; DAGISEL-LABEL: unused_active:
 ; DAGISEL:       ; %bb.0:
 ; DAGISEL-NEXT:    s_wait_loadcnt_dscnt 0x0
@@ -353,7 +353,7 @@ define amdgpu_gfx_whole_wave i32 @unused_active(i1 %active, i32 %a, i32 %b) {
 
 ; For any used VGPRs (including those used for SGPR spills), we need to restore the inactive lanes.
 ; For CSR VGPRs, we need to restore all lanes.
-define amdgpu_gfx_whole_wave i32 @csr(i1 %active, i32 %a, i32 %b) {
+define amdgpu_gfx_whole_wave i32 @csr(i1 %active, i32 %a, i32 %b) #0 {
 ; DAGISEL-LABEL: csr:
 ; DAGISEL:       ; %bb.0:
 ; DAGISEL-NEXT:    s_wait_loadcnt_dscnt 0x0
@@ -558,7 +558,7 @@ define amdgpu_gfx_whole_wave i32 @csr(i1 %active, i32 %a, i32 %b) {
 }
 
 ; Save and restore all lanes of v40.
-define amdgpu_gfx_whole_wave void @csr_vgpr_only(i1 %active, i32 %a, i32 %b) {
+define amdgpu_gfx_whole_wave void @csr_vgpr_only(i1 %active, i32 %a, i32 %b) #0 {
 ; DAGISEL-LABEL: csr_vgpr_only:
 ; DAGISEL:       ; %bb.0:
 ; DAGISEL-NEXT:    s_wait_loadcnt_dscnt 0x0
@@ -650,7 +650,7 @@ define amdgpu_gfx_whole_wave void @csr_vgpr_only(i1 %active, i32 %a, i32 %b) {
   ret void
 }
 
-define amdgpu_gfx_whole_wave void @sgpr_spill_only(i1 %active, i32 %a, i32 %b) {
+define amdgpu_gfx_whole_wave void @sgpr_spill_only(i1 %active, i32 %a, i32 %b) #0 {
 ; DAGISEL-LABEL: sgpr_spill_only:
 ; DAGISEL:       ; %bb.0:
 ; DAGISEL-NEXT:    s_wait_loadcnt_dscnt 0x0
@@ -767,7 +767,7 @@ define amdgpu_gfx_whole_wave void @sgpr_spill_only(i1 %active, i32 %a, i32 %b) {
   ret void
 }
 
-define amdgpu_gfx_whole_wave void @realign_stack(i1 %active, i32 %x) {
+define amdgpu_gfx_whole_wave void @realign_stack(i1 %active, i32 %x) #0 {
 ; DAGISEL-LABEL: realign_stack:
 ; DAGISEL:       ; %bb.0:
 ; DAGISEL-NEXT:    s_wait_loadcnt_dscnt 0x0
@@ -897,7 +897,7 @@ define amdgpu_gfx_whole_wave void @realign_stack(i1 %active, i32 %x) {
   ret void
 }
 
-define amdgpu_gfx_whole_wave i32 @multiple_blocks(i1 %active, i32 %a, i32 %b) {
+define amdgpu_gfx_whole_wave i32 @multiple_blocks(i1 %active, i32 %a, i32 %b) #0 {
 ; DAGISEL-LABEL: multiple_blocks:
 ; DAGISEL:       ; %bb.0:
 ; DAGISEL-NEXT:    s_wait_loadcnt_dscnt 0x0
@@ -1058,7 +1058,7 @@ if.end:
   ret i32 %e
 }
 
-define amdgpu_gfx_whole_wave i64 @ret_64(i1 %active, i64 %a, i64 %b) {
+define amdgpu_gfx_whole_wave i64 @ret_64(i1 %active, i64 %a, i64 %b) #0 {
 ; DAGISEL-LABEL: ret_64:
 ; DAGISEL:       ; %bb.0:
 ; DAGISEL-NEXT:    s_wait_loadcnt_dscnt 0x0
@@ -1216,7 +1216,7 @@ define amdgpu_gfx_whole_wave i64 @ret_64(i1 %active, i64 %a, i64 %b) {
   ret i64 %ret
 }
 
-define amdgpu_gfx_whole_wave void @inreg_args(i1 %active, i32 inreg %i32, <4 x i32> inreg %v4i32, float inreg %float, ptr addrspace(5) inreg %ptr, ptr addrspace(5) inreg %ptr2) {
+define amdgpu_gfx_whole_wave void @inreg_args(i1 %active, i32 inreg %i32, <4 x i32> inreg %v4i32, float inreg %float, ptr addrspace(5) inreg %ptr, ptr addrspace(5) inreg %ptr2) #0 {
 ; DAGISEL-LABEL: inreg_args:
 ; DAGISEL:       ; %bb.0:
 ; DAGISEL-NEXT:    s_wait_loadcnt_dscnt 0x0
@@ -1418,7 +1418,7 @@ define amdgpu_gfx_whole_wave void @inreg_args(i1 %active, i32 inreg %i32, <4 x i
 
 declare amdgpu_gfx <2 x half> @gfx_callee(<2 x half> %x, <2 x half> %y)
 
-define amdgpu_gfx_whole_wave <2 x half> @call_gfx_from_whole_wave(i1 %active, <2 x half> %x, <2 x half> %y) {
+define amdgpu_gfx_whole_wave <2 x half> @call_gfx_from_whole_wave(i1 %active, <2 x half> %x, <2 x half> %y) #0 {
 ; DAGISEL-LABEL: call_gfx_from_whole_wave:
 ; DAGISEL:       ; %bb.0:
 ; DAGISEL-NEXT:    s_wait_loadcnt_dscnt 0x0
@@ -4667,7 +4667,7 @@ define amdgpu_gfx_whole_wave <2 x half> @call_gfx_from_whole_wave(i1 %active, <2
   ret <2 x half> %ret
 }
 
-define amdgpu_gfx_whole_wave <2 x half> @tail_call_gfx_from_whole_wave(i1 %active, <2 x half> %x, <2 x half> %y) {
+define amdgpu_gfx_whole_wave <2 x half> @tail_call_gfx_from_whole_wave(i1 %active, <2 x half> %x, <2 x half> %y) #0 {
   ; This should not be turned into a tail call.
 ; DAGISEL-LABEL: tail_call_gfx_from_whole_wave:
 ; DAGISEL:       ; %bb.0:
@@ -7815,7 +7815,7 @@ define amdgpu_gfx_whole_wave <2 x half> @tail_call_gfx_from_whole_wave(i1 %activ
 
 declare amdgpu_gfx_whole_wave float @callee(i1 %active, <8 x float> %x)
 
-define amdgpu_cs void @call_from_entry(<8 x float> %x, ptr %p) {
+define amdgpu_cs void @call_from_entry(<8 x float> %x, ptr %p) #0 {
 ; DAGISEL-LABEL: call_from_entry:
 ; DAGISEL:       ; %bb.0:
 ; DAGISEL-NEXT:    s_mov_b32 s1, callee@abs32@hi
@@ -7872,7 +7872,7 @@ define amdgpu_cs void @call_from_entry(<8 x float> %x, ptr %p) {
   ret void
 }
 
-define amdgpu_gfx_whole_wave void @call_from_whole_wave(i1 %unused, <8 x float> %x, ptr %p) {
+define amdgpu_gfx_whole_wave void @call_from_whole_wave(i1 %unused, <8 x float> %x, ptr %p) #0 {
 ; DAGISEL-LABEL: call_from_whole_wave:
 ; DAGISEL:       ; %bb.0:
 ; DAGISEL-NEXT:    s_wait_loadcnt_dscnt 0x0
@@ -11149,3 +11149,5 @@ define amdgpu_gfx_whole_wave void @call_from_whole_wave(i1 %unused, <8 x float> 
   store float %ret, ptr %p
   ret void
 }
+
+attributes #0 = { nounwind }

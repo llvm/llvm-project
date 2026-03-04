@@ -13,6 +13,12 @@ body:             |
     ; GFX1250-LABEL: name: promote_async_load_offset
     ; GFX1250: liveins: $ttmp7, $vgpr0, $sgpr0_sgpr1
     ; GFX1250-NEXT: {{  $}}
+    ; GFX1250-NEXT: frame-setup CFI_INSTRUCTION llvm_def_aspace_cfa $sgpr32, 0, 6
+    ; GFX1250-NEXT: frame-setup CFI_INSTRUCTION llvm_register_pair $pc_reg, $sgpr30, 32, $sgpr31, 32
+    ; GFX1250-NEXT: frame-setup CFI_INSTRUCTION undefined $vgpr0
+    ; GFX1250-NEXT: frame-setup CFI_INSTRUCTION undefined $vgpr1
+    ; GFX1250-NEXT: frame-setup CFI_INSTRUCTION undefined $vgpr2
+    ; GFX1250-NEXT: frame-setup CFI_INSTRUCTION undefined $vgpr3
     ; GFX1250-NEXT: renamable $vgpr1 = V_LSHLREV_B32_e32 8, $vgpr0, implicit $exec
     ; GFX1250-NEXT: renamable $vgpr2, renamable $vcc_lo = V_ADD_CO_U32_e64 $vgpr0, 512, 0, implicit $exec
     ; GFX1250-NEXT: renamable $vgpr3, dead $sgpr_null = V_ADDC_U32_e64 0, killed $vgpr0, killed $vcc_lo, 0, implicit $exec
@@ -46,6 +52,12 @@ body:             |
     ; GFX1250-LABEL: name: promote_async_load_offset_two_offsets
     ; GFX1250: liveins: $ttmp7, $vgpr0, $sgpr0_sgpr1
     ; GFX1250-NEXT: {{  $}}
+    ; GFX1250-NEXT: frame-setup CFI_INSTRUCTION llvm_def_aspace_cfa $sgpr32, 0, 6
+    ; GFX1250-NEXT: frame-setup CFI_INSTRUCTION llvm_register_pair $pc_reg, $sgpr30, 32, $sgpr31, 32
+    ; GFX1250-NEXT: frame-setup CFI_INSTRUCTION undefined $vgpr0
+    ; GFX1250-NEXT: frame-setup CFI_INSTRUCTION undefined $vgpr1
+    ; GFX1250-NEXT: frame-setup CFI_INSTRUCTION undefined $vgpr2
+    ; GFX1250-NEXT: frame-setup CFI_INSTRUCTION undefined $vgpr3
     ; GFX1250-NEXT: renamable $vgpr1 = V_LSHLREV_B32_e32 8, $vgpr0, implicit $exec
     ; GFX1250-NEXT: renamable $vgpr2, renamable $vcc_lo = V_ADD_CO_U32_e64 $vgpr0, 516, 0, implicit $exec
     ; GFX1250-NEXT: renamable $vgpr3, dead $sgpr_null = V_ADDC_U32_e64 0, killed $vgpr0, killed $vcc_lo, 0, implicit $exec
@@ -85,6 +97,14 @@ body:             |
     ; GFX1250-LABEL: name: promote_async_load_u64
     ; GFX1250: liveins: $vgpr0, $sgpr4_sgpr5
     ; GFX1250-NEXT: {{  $}}
+    ; GFX1250-NEXT: frame-setup CFI_INSTRUCTION llvm_def_aspace_cfa $sgpr32, 0, 6
+    ; GFX1250-NEXT: frame-setup CFI_INSTRUCTION llvm_register_pair $pc_reg, $sgpr30, 32, $sgpr31, 32
+    ; GFX1250-NEXT: frame-setup CFI_INSTRUCTION undefined $vgpr0
+    ; GFX1250-NEXT: frame-setup CFI_INSTRUCTION undefined $vgpr1
+    ; GFX1250-NEXT: frame-setup CFI_INSTRUCTION undefined $vgpr2
+    ; GFX1250-NEXT: frame-setup CFI_INSTRUCTION undefined $vgpr3
+    ; GFX1250-NEXT: frame-setup CFI_INSTRUCTION undefined $sgpr0
+    ; GFX1250-NEXT: frame-setup CFI_INSTRUCTION undefined $sgpr1
     ; GFX1250-NEXT: early-clobber renamable $sgpr0_sgpr1 = S_LOAD_DWORDX2_IMM_ec killed renamable $sgpr4_sgpr5, 36, 32 :: (dereferenceable invariant load (s64), align 4, addrspace 4)
     ; GFX1250-NEXT: renamable $vgpr1 = V_MOV_B32_e32 0, implicit $exec
     ; GFX1250-NEXT: renamable $vgpr0 = V_AND_B32_e32 1023, killed $vgpr0, implicit $exec
@@ -125,6 +145,12 @@ body:             |
     ; GFX1250-LABEL: name: promote_async_store_offset
     ; GFX1250: liveins: $ttmp7, $vgpr0, $sgpr0_sgpr1
     ; GFX1250-NEXT: {{  $}}
+    ; GFX1250-NEXT: frame-setup CFI_INSTRUCTION llvm_def_aspace_cfa $sgpr32, 0, 6
+    ; GFX1250-NEXT: frame-setup CFI_INSTRUCTION llvm_register_pair $pc_reg, $sgpr30, 32, $sgpr31, 32
+    ; GFX1250-NEXT: frame-setup CFI_INSTRUCTION undefined $vgpr0
+    ; GFX1250-NEXT: frame-setup CFI_INSTRUCTION undefined $vgpr1
+    ; GFX1250-NEXT: frame-setup CFI_INSTRUCTION undefined $vgpr2
+    ; GFX1250-NEXT: frame-setup CFI_INSTRUCTION undefined $vgpr3
     ; GFX1250-NEXT: renamable $vgpr1 = V_LSHLREV_B32_e32 8, $vgpr0, implicit $exec
     ; GFX1250-NEXT: renamable $vgpr2, renamable $vcc_lo = V_ADD_CO_U32_e64 $vgpr0, 512, 0, implicit $exec
     ; GFX1250-NEXT: renamable $vgpr3, dead $sgpr_null = V_ADDC_U32_e64 0, killed $vgpr0, killed $vcc_lo, 0, implicit $exec

@@ -5,13 +5,15 @@
   declare amdgpu_cs_chain void @callee()
   declare amdgpu_gfx void @gfx_callee()
 
-  define amdgpu_cs_chain_preserve void @preserve_active_lanes_above_args() {ret void}
-  define amdgpu_cs_chain_preserve void @preserve_all_lanes_wwm_above_args() {ret void}
-  define amdgpu_cs_chain_preserve void @dont_preserve_args() {ret void}
-  define amdgpu_cs_chain_preserve void @preserve_inactive_lanes_wwm_args() {ret void}
-  define amdgpu_cs_chain_preserve void @dont_preserve_if_no_chain_calls() {ret void}
-  define amdgpu_cs_chain_preserve void @dont_preserve_v0_v7() {ret void}
-  define amdgpu_cs_chain_preserve void @dont_preserve_sgpr() {ret void}
+  define amdgpu_cs_chain_preserve void @preserve_active_lanes_above_args() #0 {ret void}
+  define amdgpu_cs_chain_preserve void @preserve_all_lanes_wwm_above_args() #0 {ret void}
+  define amdgpu_cs_chain_preserve void @dont_preserve_args() #0 {ret void}
+  define amdgpu_cs_chain_preserve void @preserve_inactive_lanes_wwm_args() #0 {ret void}
+  define amdgpu_cs_chain_preserve void @dont_preserve_if_no_chain_calls() #0 {ret void}
+  define amdgpu_cs_chain_preserve void @dont_preserve_v0_v7() #0 {ret void}
+  define amdgpu_cs_chain_preserve void @dont_preserve_sgpr() #0 {ret void}
+
+  attributes #0 = { nounwind }
 ...
 ---
 
