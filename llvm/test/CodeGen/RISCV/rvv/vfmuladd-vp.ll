@@ -352,8 +352,8 @@ define <vscale x 16 x half> @vfma_vf_nxv16f16_unmasked_commute(<vscale x 16 x ha
 define <vscale x 32 x half> @vfma_vv_nxv32f16(<vscale x 32 x half> %va, <vscale x 32 x half> %b, <vscale x 32 x half> %c, <vscale x 32 x i1> %m, i32 zeroext %evl) {
 ; CHECK-LABEL: vfma_vv_nxv32f16:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vl8re16.v v24, (a0)
 ; CHECK-NEXT:    vsetvli zero, a1, e16, m8, ta, ma
+; CHECK-NEXT:    vle16.v v24, (a0)
 ; CHECK-NEXT:    vfmadd.vv v16, v8, v24, v0.t
 ; CHECK-NEXT:    vmv.v.v v8, v16
 ; CHECK-NEXT:    ret
@@ -364,8 +364,8 @@ define <vscale x 32 x half> @vfma_vv_nxv32f16(<vscale x 32 x half> %va, <vscale 
 define <vscale x 32 x half> @vfma_vv_nxv32f16_unmasked(<vscale x 32 x half> %va, <vscale x 32 x half> %b, <vscale x 32 x half> %c, i32 zeroext %evl) {
 ; CHECK-LABEL: vfma_vv_nxv32f16_unmasked:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vl8re16.v v24, (a0)
 ; CHECK-NEXT:    vsetvli zero, a1, e16, m8, ta, ma
+; CHECK-NEXT:    vle16.v v24, (a0)
 ; CHECK-NEXT:    vfmadd.vv v8, v16, v24
 ; CHECK-NEXT:    ret
   %v = call <vscale x 32 x half> @llvm.vp.fmuladd.nxv32f16(<vscale x 32 x half> %va, <vscale x 32 x half> %b, <vscale x 32 x half> %c, <vscale x 32 x i1> splat (i1 true), i32 %evl)
@@ -699,8 +699,8 @@ define <vscale x 8 x float> @vfma_vf_nxv8f32_unmasked_commute(<vscale x 8 x floa
 define <vscale x 16 x float> @vfma_vv_nxv16f32(<vscale x 16 x float> %va, <vscale x 16 x float> %b, <vscale x 16 x float> %c, <vscale x 16 x i1> %m, i32 zeroext %evl) {
 ; CHECK-LABEL: vfma_vv_nxv16f32:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vl8re32.v v24, (a0)
 ; CHECK-NEXT:    vsetvli zero, a1, e32, m8, ta, ma
+; CHECK-NEXT:    vle32.v v24, (a0)
 ; CHECK-NEXT:    vfmadd.vv v16, v8, v24, v0.t
 ; CHECK-NEXT:    vmv.v.v v8, v16
 ; CHECK-NEXT:    ret
@@ -711,8 +711,8 @@ define <vscale x 16 x float> @vfma_vv_nxv16f32(<vscale x 16 x float> %va, <vscal
 define <vscale x 16 x float> @vfma_vv_nxv16f32_unmasked(<vscale x 16 x float> %va, <vscale x 16 x float> %b, <vscale x 16 x float> %c, i32 zeroext %evl) {
 ; CHECK-LABEL: vfma_vv_nxv16f32_unmasked:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vl8re32.v v24, (a0)
 ; CHECK-NEXT:    vsetvli zero, a1, e32, m8, ta, ma
+; CHECK-NEXT:    vle32.v v24, (a0)
 ; CHECK-NEXT:    vfmadd.vv v8, v16, v24
 ; CHECK-NEXT:    ret
   %v = call <vscale x 16 x float> @llvm.vp.fmuladd.nxv16f32(<vscale x 16 x float> %va, <vscale x 16 x float> %b, <vscale x 16 x float> %c, <vscale x 16 x i1> splat (i1 true), i32 %evl)
@@ -977,8 +977,8 @@ define <vscale x 4 x double> @vfma_vf_nxv4f64_unmasked_commute(<vscale x 4 x dou
 define <vscale x 7 x double> @vfma_vv_nxv7f64(<vscale x 7 x double> %va, <vscale x 7 x double> %b, <vscale x 7 x double> %c, <vscale x 7 x i1> %m, i32 zeroext %evl) {
 ; CHECK-LABEL: vfma_vv_nxv7f64:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vl8re64.v v24, (a0)
 ; CHECK-NEXT:    vsetvli zero, a1, e64, m8, ta, ma
+; CHECK-NEXT:    vle64.v v24, (a0)
 ; CHECK-NEXT:    vfmadd.vv v16, v8, v24, v0.t
 ; CHECK-NEXT:    vmv.v.v v8, v16
 ; CHECK-NEXT:    ret
@@ -989,8 +989,8 @@ define <vscale x 7 x double> @vfma_vv_nxv7f64(<vscale x 7 x double> %va, <vscale
 define <vscale x 7 x double> @vfma_vv_nxv7f64_unmasked(<vscale x 7 x double> %va, <vscale x 7 x double> %b, <vscale x 7 x double> %c, i32 zeroext %evl) {
 ; CHECK-LABEL: vfma_vv_nxv7f64_unmasked:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vl8re64.v v24, (a0)
 ; CHECK-NEXT:    vsetvli zero, a1, e64, m8, ta, ma
+; CHECK-NEXT:    vle64.v v24, (a0)
 ; CHECK-NEXT:    vfmadd.vv v8, v16, v24
 ; CHECK-NEXT:    ret
   %v = call <vscale x 7 x double> @llvm.vp.fmuladd.nxv7f64(<vscale x 7 x double> %va, <vscale x 7 x double> %b, <vscale x 7 x double> %c, <vscale x 7 x i1> splat (i1 true), i32 %evl)
@@ -1000,8 +1000,8 @@ define <vscale x 7 x double> @vfma_vv_nxv7f64_unmasked(<vscale x 7 x double> %va
 define <vscale x 8 x double> @vfma_vv_nxv8f64(<vscale x 8 x double> %va, <vscale x 8 x double> %b, <vscale x 8 x double> %c, <vscale x 8 x i1> %m, i32 zeroext %evl) {
 ; CHECK-LABEL: vfma_vv_nxv8f64:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vl8re64.v v24, (a0)
 ; CHECK-NEXT:    vsetvli zero, a1, e64, m8, ta, ma
+; CHECK-NEXT:    vle64.v v24, (a0)
 ; CHECK-NEXT:    vfmadd.vv v16, v8, v24, v0.t
 ; CHECK-NEXT:    vmv.v.v v8, v16
 ; CHECK-NEXT:    ret
@@ -1012,8 +1012,8 @@ define <vscale x 8 x double> @vfma_vv_nxv8f64(<vscale x 8 x double> %va, <vscale
 define <vscale x 8 x double> @vfma_vv_nxv8f64_unmasked(<vscale x 8 x double> %va, <vscale x 8 x double> %b, <vscale x 8 x double> %c, i32 zeroext %evl) {
 ; CHECK-LABEL: vfma_vv_nxv8f64_unmasked:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vl8re64.v v24, (a0)
 ; CHECK-NEXT:    vsetvli zero, a1, e64, m8, ta, ma
+; CHECK-NEXT:    vle64.v v24, (a0)
 ; CHECK-NEXT:    vfmadd.vv v8, v16, v24
 ; CHECK-NEXT:    ret
   %v = call <vscale x 8 x double> @llvm.vp.fmuladd.nxv8f64(<vscale x 8 x double> %va, <vscale x 8 x double> %b, <vscale x 8 x double> %c, <vscale x 8 x i1> splat (i1 true), i32 %evl)
@@ -1078,7 +1078,7 @@ define <vscale x 16 x double> @vfma_vv_nxv16f64(<vscale x 16 x double> %va, <vsc
 ; CHECK-NEXT:    mul a1, a1, a3
 ; CHECK-NEXT:    sub sp, sp, a1
 ; CHECK-NEXT:    .cfi_escape 0x0f, 0x0d, 0x72, 0x00, 0x11, 0x10, 0x22, 0x11, 0x30, 0x92, 0xa2, 0x38, 0x00, 0x1e, 0x22 # sp + 16 + 48 * vlenb
-; CHECK-NEXT:    vsetvli a1, zero, e8, mf4, ta, ma
+; CHECK-NEXT:    vsetivli zero, 1, e8, m1, ta, ma
 ; CHECK-NEXT:    vmv1r.v v7, v0
 ; CHECK-NEXT:    csrr a1, vlenb
 ; CHECK-NEXT:    li a3, 24
@@ -1092,55 +1092,57 @@ define <vscale x 16 x double> @vfma_vv_nxv16f64(<vscale x 16 x double> %va, <vsc
 ; CHECK-NEXT:    addi a1, a1, 16
 ; CHECK-NEXT:    vs8r.v v8, (a1) # vscale x 64-byte Folded Spill
 ; CHECK-NEXT:    csrr a1, vlenb
-; CHECK-NEXT:    srli a3, a1, 3
-; CHECK-NEXT:    slli a5, a1, 3
-; CHECK-NEXT:    sub a6, a4, a1
-; CHECK-NEXT:    add a7, a2, a5
-; CHECK-NEXT:    add a5, a0, a5
-; CHECK-NEXT:    vl8re64.v v8, (a7)
-; CHECK-NEXT:    csrr a7, vlenb
-; CHECK-NEXT:    slli a7, a7, 3
-; CHECK-NEXT:    add a7, sp, a7
-; CHECK-NEXT:    addi a7, a7, 16
-; CHECK-NEXT:    vs8r.v v8, (a7) # vscale x 64-byte Folded Spill
-; CHECK-NEXT:    sltu a7, a4, a6
-; CHECK-NEXT:    addi a7, a7, -1
-; CHECK-NEXT:    vl8re64.v v8, (a5)
-; CHECK-NEXT:    csrr a5, vlenb
-; CHECK-NEXT:    li t0, 40
-; CHECK-NEXT:    mul a5, a5, t0
-; CHECK-NEXT:    add a5, sp, a5
-; CHECK-NEXT:    addi a5, a5, 16
-; CHECK-NEXT:    vs8r.v v8, (a5) # vscale x 64-byte Folded Spill
+; CHECK-NEXT:    slli a3, a1, 3
+; CHECK-NEXT:    sub a5, a4, a1
+; CHECK-NEXT:    add a6, a0, a3
+; CHECK-NEXT:    vl8re64.v v8, (a6)
+; CHECK-NEXT:    csrr a6, vlenb
+; CHECK-NEXT:    li a7, 40
+; CHECK-NEXT:    mul a6, a6, a7
+; CHECK-NEXT:    add a6, sp, a6
+; CHECK-NEXT:    addi a6, a6, 16
+; CHECK-NEXT:    vs8r.v v8, (a6) # vscale x 64-byte Folded Spill
+; CHECK-NEXT:    sltu a6, a4, a5
+; CHECK-NEXT:    addi a6, a6, -1
+; CHECK-NEXT:    and a5, a6, a5
+; CHECK-NEXT:    srli a6, a1, 3
+; CHECK-NEXT:    add a3, a2, a3
 ; CHECK-NEXT:    vl8re64.v v8, (a2)
 ; CHECK-NEXT:    csrr a2, vlenb
 ; CHECK-NEXT:    slli a2, a2, 4
 ; CHECK-NEXT:    add a2, sp, a2
 ; CHECK-NEXT:    addi a2, a2, 16
 ; CHECK-NEXT:    vs8r.v v8, (a2) # vscale x 64-byte Folded Spill
-; CHECK-NEXT:    vl8re64.v v8, (a0)
-; CHECK-NEXT:    addi a0, sp, 16
-; CHECK-NEXT:    vs8r.v v8, (a0) # vscale x 64-byte Folded Spill
-; CHECK-NEXT:    vslidedown.vx v0, v0, a3
-; CHECK-NEXT:    and a0, a7, a6
-; CHECK-NEXT:    csrr a2, vlenb
-; CHECK-NEXT:    li a3, 24
-; CHECK-NEXT:    mul a2, a2, a3
-; CHECK-NEXT:    add a2, sp, a2
-; CHECK-NEXT:    addi a2, a2, 16
-; CHECK-NEXT:    vl8r.v v16, (a2) # vscale x 64-byte Folded Reload
+; CHECK-NEXT:    vsetvli zero, a5, e64, m8, ta, ma
+; CHECK-NEXT:    vle64.v v8, (a3)
 ; CHECK-NEXT:    csrr a2, vlenb
 ; CHECK-NEXT:    slli a2, a2, 3
 ; CHECK-NEXT:    add a2, sp, a2
 ; CHECK-NEXT:    addi a2, a2, 16
-; CHECK-NEXT:    vl8r.v v24, (a2) # vscale x 64-byte Folded Reload
-; CHECK-NEXT:    csrr a2, vlenb
-; CHECK-NEXT:    li a3, 40
-; CHECK-NEXT:    mul a2, a2, a3
-; CHECK-NEXT:    add a2, sp, a2
-; CHECK-NEXT:    addi a2, a2, 16
-; CHECK-NEXT:    vl8r.v v8, (a2) # vscale x 64-byte Folded Reload
-; CHECK-NEXT:    vsetvli zero, a0, e64, m8, ta, ma
+; CHECK-NEXT:    vs8r.v v8, (a2) # vscale x 64-byte Folded Spill
+; CHECK-NEXT:    vl8re64.v v8, (a0)
+; CHECK-NEXT:    addi a0, sp, 16
+; CHECK-NEXT:    vs8r.v v8, (a0) # vscale x 64-byte Folded Spill
+; CHECK-NEXT:    vsetvli a0, zero, e8, mf4, ta, ma
+; CHECK-NEXT:    vslidedown.vx v0, v0, a6
+; CHECK-NEXT:    csrr a0, vlenb
+; CHECK-NEXT:    li a2, 24
+; CHECK-NEXT:    mul a0, a0, a2
+; CHECK-NEXT:    add a0, sp, a0
+; CHECK-NEXT:    addi a0, a0, 16
+; CHECK-NEXT:    vl8r.v v16, (a0) # vscale x 64-byte Folded Reload
+; CHECK-NEXT:    csrr a0, vlenb
+; CHECK-NEXT:    slli a0, a0, 3
+; CHECK-NEXT:    add a0, sp, a0
+; CHECK-NEXT:    addi a0, a0, 16
+; CHECK-NEXT:    vl8r.v v24, (a0) # vscale x 64-byte Folded Reload
+; CHECK-NEXT:    csrr a0, vlenb
+; CHECK-NEXT:    li a2, 40
+; CHECK-NEXT:    mul a0, a0, a2
+; CHECK-NEXT:    add a0, sp, a0
+; CHECK-NEXT:    addi a0, a0, 16
+; CHECK-NEXT:    vl8r.v v8, (a0) # vscale x 64-byte Folded Reload
+; CHECK-NEXT:    vsetvli zero, a5, e64, m8, ta, ma
 ; CHECK-NEXT:    vfmadd.vv v8, v16, v24, v0.t
 ; CHECK-NEXT:    csrr a0, vlenb
 ; CHECK-NEXT:    li a2, 40
@@ -1191,69 +1193,47 @@ define <vscale x 16 x double> @vfma_vv_nxv16f64_unmasked(<vscale x 16 x double> 
 ; CHECK-NEXT:    addi sp, sp, -16
 ; CHECK-NEXT:    .cfi_def_cfa_offset 16
 ; CHECK-NEXT:    csrr a1, vlenb
-; CHECK-NEXT:    slli a1, a1, 5
-; CHECK-NEXT:    sub sp, sp, a1
-; CHECK-NEXT:    .cfi_escape 0x0f, 0x0d, 0x72, 0x00, 0x11, 0x10, 0x22, 0x11, 0x20, 0x92, 0xa2, 0x38, 0x00, 0x1e, 0x22 # sp + 16 + 32 * vlenb
-; CHECK-NEXT:    csrr a1, vlenb
 ; CHECK-NEXT:    slli a1, a1, 4
-; CHECK-NEXT:    add a1, sp, a1
-; CHECK-NEXT:    addi a1, a1, 16
-; CHECK-NEXT:    vs8r.v v16, (a1) # vscale x 64-byte Folded Spill
+; CHECK-NEXT:    sub sp, sp, a1
+; CHECK-NEXT:    .cfi_escape 0x0f, 0x0d, 0x72, 0x00, 0x11, 0x10, 0x22, 0x11, 0x10, 0x92, 0xa2, 0x38, 0x00, 0x1e, 0x22 # sp + 16 + 16 * vlenb
 ; CHECK-NEXT:    csrr a1, vlenb
-; CHECK-NEXT:    li a3, 24
-; CHECK-NEXT:    mul a1, a1, a3
+; CHECK-NEXT:    slli a1, a1, 3
 ; CHECK-NEXT:    add a1, sp, a1
 ; CHECK-NEXT:    addi a1, a1, 16
 ; CHECK-NEXT:    vs8r.v v8, (a1) # vscale x 64-byte Folded Spill
 ; CHECK-NEXT:    csrr a1, vlenb
-; CHECK-NEXT:    slli a3, a1, 3
-; CHECK-NEXT:    add a5, a2, a3
-; CHECK-NEXT:    vl8re64.v v8, (a5)
-; CHECK-NEXT:    csrr a5, vlenb
-; CHECK-NEXT:    slli a5, a5, 3
-; CHECK-NEXT:    add a5, sp, a5
-; CHECK-NEXT:    addi a5, a5, 16
-; CHECK-NEXT:    vs8r.v v8, (a5) # vscale x 64-byte Folded Spill
-; CHECK-NEXT:    sub a5, a4, a1
-; CHECK-NEXT:    add a3, a0, a3
-; CHECK-NEXT:    vl8re64.v v24, (a3)
-; CHECK-NEXT:    sltu a3, a4, a5
 ; CHECK-NEXT:    vl8re64.v v8, (a2)
-; CHECK-NEXT:    addi a2, sp, 16
-; CHECK-NEXT:    vs8r.v v8, (a2) # vscale x 64-byte Folded Spill
-; CHECK-NEXT:    vl8re64.v v0, (a0)
+; CHECK-NEXT:    addi a3, sp, 16
+; CHECK-NEXT:    vs8r.v v8, (a3) # vscale x 64-byte Folded Spill
+; CHECK-NEXT:    slli a3, a1, 3
+; CHECK-NEXT:    sub a5, a4, a1
+; CHECK-NEXT:    add a2, a2, a3
+; CHECK-NEXT:    add a3, a0, a3
+; CHECK-NEXT:    vl8re64.v v8, (a3)
+; CHECK-NEXT:    sltu a3, a4, a5
 ; CHECK-NEXT:    addi a3, a3, -1
 ; CHECK-NEXT:    and a3, a3, a5
-; CHECK-NEXT:    csrr a0, vlenb
-; CHECK-NEXT:    slli a0, a0, 4
-; CHECK-NEXT:    add a0, sp, a0
-; CHECK-NEXT:    addi a0, a0, 16
-; CHECK-NEXT:    vl8r.v v16, (a0) # vscale x 64-byte Folded Reload
-; CHECK-NEXT:    csrr a0, vlenb
-; CHECK-NEXT:    slli a0, a0, 3
-; CHECK-NEXT:    add a0, sp, a0
-; CHECK-NEXT:    addi a0, a0, 16
-; CHECK-NEXT:    vl8r.v v8, (a0) # vscale x 64-byte Folded Reload
 ; CHECK-NEXT:    vsetvli zero, a3, e64, m8, ta, ma
-; CHECK-NEXT:    vfmadd.vv v24, v16, v8
+; CHECK-NEXT:    vle64.v v24, (a2)
+; CHECK-NEXT:    vl8re64.v v0, (a0)
+; CHECK-NEXT:    vfmacc.vv v24, v16, v8
 ; CHECK-NEXT:    bltu a4, a1, .LBB93_2
 ; CHECK-NEXT:  # %bb.1:
 ; CHECK-NEXT:    mv a4, a1
 ; CHECK-NEXT:  .LBB93_2:
 ; CHECK-NEXT:    csrr a0, vlenb
-; CHECK-NEXT:    li a1, 24
-; CHECK-NEXT:    mul a0, a0, a1
+; CHECK-NEXT:    slli a0, a0, 3
 ; CHECK-NEXT:    add a0, sp, a0
 ; CHECK-NEXT:    addi a0, a0, 16
-; CHECK-NEXT:    vl8r.v v16, (a0) # vscale x 64-byte Folded Reload
-; CHECK-NEXT:    addi a0, sp, 16
 ; CHECK-NEXT:    vl8r.v v8, (a0) # vscale x 64-byte Folded Reload
+; CHECK-NEXT:    addi a0, sp, 16
+; CHECK-NEXT:    vl8r.v v16, (a0) # vscale x 64-byte Folded Reload
 ; CHECK-NEXT:    vsetvli zero, a4, e64, m8, ta, ma
-; CHECK-NEXT:    vfmadd.vv v0, v16, v8
+; CHECK-NEXT:    vfmadd.vv v0, v8, v16
 ; CHECK-NEXT:    vmv.v.v v8, v0
 ; CHECK-NEXT:    vmv8r.v v16, v24
 ; CHECK-NEXT:    csrr a0, vlenb
-; CHECK-NEXT:    slli a0, a0, 5
+; CHECK-NEXT:    slli a0, a0, 4
 ; CHECK-NEXT:    add sp, sp, a0
 ; CHECK-NEXT:    .cfi_def_cfa sp, 16
 ; CHECK-NEXT:    addi sp, sp, 16
@@ -3211,8 +3191,8 @@ define <vscale x 16 x half> @vfnmsub_vf_nxv16f16_neg_splat_unmasked_commute(<vsc
 define <vscale x 32 x half> @vfmsub_vv_nxv32f16(<vscale x 32 x half> %va, <vscale x 32 x half> %b, <vscale x 32 x half> %c, <vscale x 32 x i1> %m, i32 zeroext %evl) {
 ; CHECK-LABEL: vfmsub_vv_nxv32f16:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vl8re16.v v24, (a0)
 ; CHECK-NEXT:    vsetvli zero, a1, e16, m8, ta, ma
+; CHECK-NEXT:    vle16.v v24, (a0)
 ; CHECK-NEXT:    vfmsub.vv v16, v8, v24, v0.t
 ; CHECK-NEXT:    vmv.v.v v8, v16
 ; CHECK-NEXT:    ret
@@ -3224,8 +3204,8 @@ define <vscale x 32 x half> @vfmsub_vv_nxv32f16(<vscale x 32 x half> %va, <vscal
 define <vscale x 32 x half> @vfmsub_vv_nxv32f16_unmasked(<vscale x 32 x half> %va, <vscale x 32 x half> %b, <vscale x 32 x half> %c, i32 zeroext %evl) {
 ; CHECK-LABEL: vfmsub_vv_nxv32f16_unmasked:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vl8re16.v v24, (a0)
 ; CHECK-NEXT:    vsetvli zero, a1, e16, m8, ta, ma
+; CHECK-NEXT:    vle16.v v24, (a0)
 ; CHECK-NEXT:    vfmsub.vv v8, v16, v24
 ; CHECK-NEXT:    ret
   %negc = call <vscale x 32 x half> @llvm.vp.fneg.nxv32f16(<vscale x 32 x half> %c, <vscale x 32 x i1> splat (i1 true), i32 %evl)
@@ -3288,8 +3268,8 @@ define <vscale x 32 x half> @vfmsub_vf_nxv32f16_unmasked_commute(<vscale x 32 x 
 define <vscale x 32 x half> @vfnmadd_vv_nxv32f16(<vscale x 32 x half> %va, <vscale x 32 x half> %b, <vscale x 32 x half> %c, <vscale x 32 x i1> %m, i32 zeroext %evl) {
 ; CHECK-LABEL: vfnmadd_vv_nxv32f16:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vl8re16.v v24, (a0)
 ; CHECK-NEXT:    vsetvli zero, a1, e16, m8, ta, ma
+; CHECK-NEXT:    vle16.v v24, (a0)
 ; CHECK-NEXT:    vfnmadd.vv v16, v8, v24, v0.t
 ; CHECK-NEXT:    vmv.v.v v8, v16
 ; CHECK-NEXT:    ret
@@ -3302,8 +3282,8 @@ define <vscale x 32 x half> @vfnmadd_vv_nxv32f16(<vscale x 32 x half> %va, <vsca
 define <vscale x 32 x half> @vfnmadd_vv_nxv32f16_commuted(<vscale x 32 x half> %va, <vscale x 32 x half> %b, <vscale x 32 x half> %c, <vscale x 32 x i1> %m, i32 zeroext %evl) {
 ; CHECK-LABEL: vfnmadd_vv_nxv32f16_commuted:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vl8re16.v v24, (a0)
 ; CHECK-NEXT:    vsetvli zero, a1, e16, m8, ta, ma
+; CHECK-NEXT:    vle16.v v24, (a0)
 ; CHECK-NEXT:    vfnmadd.vv v8, v16, v24, v0.t
 ; CHECK-NEXT:    ret
   %negb = call <vscale x 32 x half> @llvm.vp.fneg.nxv32f16(<vscale x 32 x half> %b, <vscale x 32 x i1> %m, i32 %evl)
@@ -3315,8 +3295,8 @@ define <vscale x 32 x half> @vfnmadd_vv_nxv32f16_commuted(<vscale x 32 x half> %
 define <vscale x 32 x half> @vfnmadd_vv_nxv32f16_unmasked(<vscale x 32 x half> %va, <vscale x 32 x half> %b, <vscale x 32 x half> %c, i32 zeroext %evl) {
 ; CHECK-LABEL: vfnmadd_vv_nxv32f16_unmasked:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vl8re16.v v24, (a0)
 ; CHECK-NEXT:    vsetvli zero, a1, e16, m8, ta, ma
+; CHECK-NEXT:    vle16.v v24, (a0)
 ; CHECK-NEXT:    vfnmadd.vv v8, v16, v24
 ; CHECK-NEXT:    ret
   %negb = call <vscale x 32 x half> @llvm.vp.fneg.nxv32f16(<vscale x 32 x half> %b, <vscale x 32 x i1> splat (i1 true), i32 %evl)
@@ -3328,8 +3308,8 @@ define <vscale x 32 x half> @vfnmadd_vv_nxv32f16_unmasked(<vscale x 32 x half> %
 define <vscale x 32 x half> @vfnmadd_vv_nxv32f16_unmasked_commuted(<vscale x 32 x half> %va, <vscale x 32 x half> %b, <vscale x 32 x half> %c, i32 zeroext %evl) {
 ; CHECK-LABEL: vfnmadd_vv_nxv32f16_unmasked_commuted:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vl8re16.v v24, (a0)
 ; CHECK-NEXT:    vsetvli zero, a1, e16, m8, ta, ma
+; CHECK-NEXT:    vle16.v v24, (a0)
 ; CHECK-NEXT:    vfnmadd.vv v8, v16, v24
 ; CHECK-NEXT:    ret
   %negb = call <vscale x 32 x half> @llvm.vp.fneg.nxv32f16(<vscale x 32 x half> %b, <vscale x 32 x i1> splat (i1 true), i32 %evl)
@@ -3453,8 +3433,8 @@ define <vscale x 32 x half> @vfnmadd_vf_nxv32f16_neg_splat_unmasked_commute(<vsc
 define <vscale x 32 x half> @vfnmsub_vv_nxv32f16(<vscale x 32 x half> %va, <vscale x 32 x half> %b, <vscale x 32 x half> %c, <vscale x 32 x i1> %m, i32 zeroext %evl) {
 ; CHECK-LABEL: vfnmsub_vv_nxv32f16:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vl8re16.v v24, (a0)
 ; CHECK-NEXT:    vsetvli zero, a1, e16, m8, ta, ma
+; CHECK-NEXT:    vle16.v v24, (a0)
 ; CHECK-NEXT:    vfnmadd.vv v16, v8, v24, v0.t
 ; CHECK-NEXT:    vmv.v.v v8, v16
 ; CHECK-NEXT:    ret
@@ -3467,8 +3447,8 @@ define <vscale x 32 x half> @vfnmsub_vv_nxv32f16(<vscale x 32 x half> %va, <vsca
 define <vscale x 32 x half> @vfnmsub_vv_nxv32f16_commuted(<vscale x 32 x half> %va, <vscale x 32 x half> %b, <vscale x 32 x half> %c, <vscale x 32 x i1> %m, i32 zeroext %evl) {
 ; CHECK-LABEL: vfnmsub_vv_nxv32f16_commuted:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vl8re16.v v24, (a0)
 ; CHECK-NEXT:    vsetvli zero, a1, e16, m8, ta, ma
+; CHECK-NEXT:    vle16.v v24, (a0)
 ; CHECK-NEXT:    vfnmadd.vv v8, v16, v24, v0.t
 ; CHECK-NEXT:    ret
   %negb = call <vscale x 32 x half> @llvm.vp.fneg.nxv32f16(<vscale x 32 x half> %b, <vscale x 32 x i1> %m, i32 %evl)
@@ -3480,8 +3460,8 @@ define <vscale x 32 x half> @vfnmsub_vv_nxv32f16_commuted(<vscale x 32 x half> %
 define <vscale x 32 x half> @vfnmsub_vv_nxv32f16_unmasked(<vscale x 32 x half> %va, <vscale x 32 x half> %b, <vscale x 32 x half> %c, i32 zeroext %evl) {
 ; CHECK-LABEL: vfnmsub_vv_nxv32f16_unmasked:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vl8re16.v v24, (a0)
 ; CHECK-NEXT:    vsetvli zero, a1, e16, m8, ta, ma
+; CHECK-NEXT:    vle16.v v24, (a0)
 ; CHECK-NEXT:    vfnmadd.vv v8, v16, v24
 ; CHECK-NEXT:    ret
   %negb = call <vscale x 32 x half> @llvm.vp.fneg.nxv32f16(<vscale x 32 x half> %b, <vscale x 32 x i1> splat (i1 true), i32 %evl)
@@ -3493,8 +3473,8 @@ define <vscale x 32 x half> @vfnmsub_vv_nxv32f16_unmasked(<vscale x 32 x half> %
 define <vscale x 32 x half> @vfnmsub_vv_nxv32f16_unmasked_commuted(<vscale x 32 x half> %va, <vscale x 32 x half> %b, <vscale x 32 x half> %c, i32 zeroext %evl) {
 ; CHECK-LABEL: vfnmsub_vv_nxv32f16_unmasked_commuted:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vl8re16.v v24, (a0)
 ; CHECK-NEXT:    vsetvli zero, a1, e16, m8, ta, ma
+; CHECK-NEXT:    vle16.v v24, (a0)
 ; CHECK-NEXT:    vfnmadd.vv v8, v16, v24
 ; CHECK-NEXT:    ret
   %negb = call <vscale x 32 x half> @llvm.vp.fneg.nxv32f16(<vscale x 32 x half> %b, <vscale x 32 x i1> splat (i1 true), i32 %evl)
@@ -5166,8 +5146,8 @@ define <vscale x 8 x float> @vfnmsub_vf_nxv8f32_neg_splat_unmasked_commute(<vsca
 define <vscale x 16 x float> @vfmsub_vv_nxv16f32(<vscale x 16 x float> %va, <vscale x 16 x float> %b, <vscale x 16 x float> %c, <vscale x 16 x i1> %m, i32 zeroext %evl) {
 ; CHECK-LABEL: vfmsub_vv_nxv16f32:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vl8re32.v v24, (a0)
 ; CHECK-NEXT:    vsetvli zero, a1, e32, m8, ta, ma
+; CHECK-NEXT:    vle32.v v24, (a0)
 ; CHECK-NEXT:    vfmsub.vv v16, v8, v24, v0.t
 ; CHECK-NEXT:    vmv.v.v v8, v16
 ; CHECK-NEXT:    ret
@@ -5179,8 +5159,8 @@ define <vscale x 16 x float> @vfmsub_vv_nxv16f32(<vscale x 16 x float> %va, <vsc
 define <vscale x 16 x float> @vfmsub_vv_nxv16f32_unmasked(<vscale x 16 x float> %va, <vscale x 16 x float> %b, <vscale x 16 x float> %c, i32 zeroext %evl) {
 ; CHECK-LABEL: vfmsub_vv_nxv16f32_unmasked:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vl8re32.v v24, (a0)
 ; CHECK-NEXT:    vsetvli zero, a1, e32, m8, ta, ma
+; CHECK-NEXT:    vle32.v v24, (a0)
 ; CHECK-NEXT:    vfmsub.vv v8, v16, v24
 ; CHECK-NEXT:    ret
   %negc = call <vscale x 16 x float> @llvm.vp.fneg.nxv16f32(<vscale x 16 x float> %c, <vscale x 16 x i1> splat (i1 true), i32 %evl)
@@ -5243,8 +5223,8 @@ define <vscale x 16 x float> @vfmsub_vf_nxv16f32_unmasked_commute(<vscale x 16 x
 define <vscale x 16 x float> @vfnmadd_vv_nxv16f32(<vscale x 16 x float> %va, <vscale x 16 x float> %b, <vscale x 16 x float> %c, <vscale x 16 x i1> %m, i32 zeroext %evl) {
 ; CHECK-LABEL: vfnmadd_vv_nxv16f32:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vl8re32.v v24, (a0)
 ; CHECK-NEXT:    vsetvli zero, a1, e32, m8, ta, ma
+; CHECK-NEXT:    vle32.v v24, (a0)
 ; CHECK-NEXT:    vfnmadd.vv v16, v8, v24, v0.t
 ; CHECK-NEXT:    vmv.v.v v8, v16
 ; CHECK-NEXT:    ret
@@ -5257,8 +5237,8 @@ define <vscale x 16 x float> @vfnmadd_vv_nxv16f32(<vscale x 16 x float> %va, <vs
 define <vscale x 16 x float> @vfnmadd_vv_nxv16f32_commuted(<vscale x 16 x float> %va, <vscale x 16 x float> %b, <vscale x 16 x float> %c, <vscale x 16 x i1> %m, i32 zeroext %evl) {
 ; CHECK-LABEL: vfnmadd_vv_nxv16f32_commuted:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vl8re32.v v24, (a0)
 ; CHECK-NEXT:    vsetvli zero, a1, e32, m8, ta, ma
+; CHECK-NEXT:    vle32.v v24, (a0)
 ; CHECK-NEXT:    vfnmadd.vv v8, v16, v24, v0.t
 ; CHECK-NEXT:    ret
   %negb = call <vscale x 16 x float> @llvm.vp.fneg.nxv16f32(<vscale x 16 x float> %b, <vscale x 16 x i1> %m, i32 %evl)
@@ -5270,8 +5250,8 @@ define <vscale x 16 x float> @vfnmadd_vv_nxv16f32_commuted(<vscale x 16 x float>
 define <vscale x 16 x float> @vfnmadd_vv_nxv16f32_unmasked(<vscale x 16 x float> %va, <vscale x 16 x float> %b, <vscale x 16 x float> %c, i32 zeroext %evl) {
 ; CHECK-LABEL: vfnmadd_vv_nxv16f32_unmasked:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vl8re32.v v24, (a0)
 ; CHECK-NEXT:    vsetvli zero, a1, e32, m8, ta, ma
+; CHECK-NEXT:    vle32.v v24, (a0)
 ; CHECK-NEXT:    vfnmadd.vv v8, v16, v24
 ; CHECK-NEXT:    ret
   %negb = call <vscale x 16 x float> @llvm.vp.fneg.nxv16f32(<vscale x 16 x float> %b, <vscale x 16 x i1> splat (i1 true), i32 %evl)
@@ -5283,8 +5263,8 @@ define <vscale x 16 x float> @vfnmadd_vv_nxv16f32_unmasked(<vscale x 16 x float>
 define <vscale x 16 x float> @vfnmadd_vv_nxv16f32_unmasked_commuted(<vscale x 16 x float> %va, <vscale x 16 x float> %b, <vscale x 16 x float> %c, i32 zeroext %evl) {
 ; CHECK-LABEL: vfnmadd_vv_nxv16f32_unmasked_commuted:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vl8re32.v v24, (a0)
 ; CHECK-NEXT:    vsetvli zero, a1, e32, m8, ta, ma
+; CHECK-NEXT:    vle32.v v24, (a0)
 ; CHECK-NEXT:    vfnmadd.vv v8, v16, v24
 ; CHECK-NEXT:    ret
   %negb = call <vscale x 16 x float> @llvm.vp.fneg.nxv16f32(<vscale x 16 x float> %b, <vscale x 16 x i1> splat (i1 true), i32 %evl)
@@ -5408,8 +5388,8 @@ define <vscale x 16 x float> @vfnmadd_vf_nxv16f32_neg_splat_unmasked_commute(<vs
 define <vscale x 16 x float> @vfnmsub_vv_nxv16f32(<vscale x 16 x float> %va, <vscale x 16 x float> %b, <vscale x 16 x float> %c, <vscale x 16 x i1> %m, i32 zeroext %evl) {
 ; CHECK-LABEL: vfnmsub_vv_nxv16f32:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vl8re32.v v24, (a0)
 ; CHECK-NEXT:    vsetvli zero, a1, e32, m8, ta, ma
+; CHECK-NEXT:    vle32.v v24, (a0)
 ; CHECK-NEXT:    vfnmadd.vv v16, v8, v24, v0.t
 ; CHECK-NEXT:    vmv.v.v v8, v16
 ; CHECK-NEXT:    ret
@@ -5422,8 +5402,8 @@ define <vscale x 16 x float> @vfnmsub_vv_nxv16f32(<vscale x 16 x float> %va, <vs
 define <vscale x 16 x float> @vfnmsub_vv_nxv16f32_commuted(<vscale x 16 x float> %va, <vscale x 16 x float> %b, <vscale x 16 x float> %c, <vscale x 16 x i1> %m, i32 zeroext %evl) {
 ; CHECK-LABEL: vfnmsub_vv_nxv16f32_commuted:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vl8re32.v v24, (a0)
 ; CHECK-NEXT:    vsetvli zero, a1, e32, m8, ta, ma
+; CHECK-NEXT:    vle32.v v24, (a0)
 ; CHECK-NEXT:    vfnmadd.vv v8, v16, v24, v0.t
 ; CHECK-NEXT:    ret
   %negb = call <vscale x 16 x float> @llvm.vp.fneg.nxv16f32(<vscale x 16 x float> %b, <vscale x 16 x i1> %m, i32 %evl)
@@ -5435,8 +5415,8 @@ define <vscale x 16 x float> @vfnmsub_vv_nxv16f32_commuted(<vscale x 16 x float>
 define <vscale x 16 x float> @vfnmsub_vv_nxv16f32_unmasked(<vscale x 16 x float> %va, <vscale x 16 x float> %b, <vscale x 16 x float> %c, i32 zeroext %evl) {
 ; CHECK-LABEL: vfnmsub_vv_nxv16f32_unmasked:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vl8re32.v v24, (a0)
 ; CHECK-NEXT:    vsetvli zero, a1, e32, m8, ta, ma
+; CHECK-NEXT:    vle32.v v24, (a0)
 ; CHECK-NEXT:    vfnmadd.vv v8, v16, v24
 ; CHECK-NEXT:    ret
   %negb = call <vscale x 16 x float> @llvm.vp.fneg.nxv16f32(<vscale x 16 x float> %b, <vscale x 16 x i1> splat (i1 true), i32 %evl)
@@ -5448,8 +5428,8 @@ define <vscale x 16 x float> @vfnmsub_vv_nxv16f32_unmasked(<vscale x 16 x float>
 define <vscale x 16 x float> @vfnmsub_vv_nxv16f32_unmasked_commuted(<vscale x 16 x float> %va, <vscale x 16 x float> %b, <vscale x 16 x float> %c, i32 zeroext %evl) {
 ; CHECK-LABEL: vfnmsub_vv_nxv16f32_unmasked_commuted:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vl8re32.v v24, (a0)
 ; CHECK-NEXT:    vsetvli zero, a1, e32, m8, ta, ma
+; CHECK-NEXT:    vle32.v v24, (a0)
 ; CHECK-NEXT:    vfnmadd.vv v8, v16, v24
 ; CHECK-NEXT:    ret
   %negb = call <vscale x 16 x float> @llvm.vp.fneg.nxv16f32(<vscale x 16 x float> %b, <vscale x 16 x i1> splat (i1 true), i32 %evl)
@@ -6732,8 +6712,8 @@ define <vscale x 4 x double> @vfnmsub_vf_nxv4f64_neg_splat_unmasked_commute(<vsc
 define <vscale x 8 x double> @vfmsub_vv_nxv8f64(<vscale x 8 x double> %va, <vscale x 8 x double> %b, <vscale x 8 x double> %c, <vscale x 8 x i1> %m, i32 zeroext %evl) {
 ; CHECK-LABEL: vfmsub_vv_nxv8f64:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vl8re64.v v24, (a0)
 ; CHECK-NEXT:    vsetvli zero, a1, e64, m8, ta, ma
+; CHECK-NEXT:    vle64.v v24, (a0)
 ; CHECK-NEXT:    vfmsub.vv v16, v8, v24, v0.t
 ; CHECK-NEXT:    vmv.v.v v8, v16
 ; CHECK-NEXT:    ret
@@ -6745,8 +6725,8 @@ define <vscale x 8 x double> @vfmsub_vv_nxv8f64(<vscale x 8 x double> %va, <vsca
 define <vscale x 8 x double> @vfmsub_vv_nxv8f64_unmasked(<vscale x 8 x double> %va, <vscale x 8 x double> %b, <vscale x 8 x double> %c, i32 zeroext %evl) {
 ; CHECK-LABEL: vfmsub_vv_nxv8f64_unmasked:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vl8re64.v v24, (a0)
 ; CHECK-NEXT:    vsetvli zero, a1, e64, m8, ta, ma
+; CHECK-NEXT:    vle64.v v24, (a0)
 ; CHECK-NEXT:    vfmsub.vv v8, v16, v24
 ; CHECK-NEXT:    ret
   %negc = call <vscale x 8 x double> @llvm.vp.fneg.nxv8f64(<vscale x 8 x double> %c, <vscale x 8 x i1> splat (i1 true), i32 %evl)
@@ -6809,8 +6789,8 @@ define <vscale x 8 x double> @vfmsub_vf_nxv8f64_unmasked_commute(<vscale x 8 x d
 define <vscale x 8 x double> @vfnmadd_vv_nxv8f64(<vscale x 8 x double> %va, <vscale x 8 x double> %b, <vscale x 8 x double> %c, <vscale x 8 x i1> %m, i32 zeroext %evl) {
 ; CHECK-LABEL: vfnmadd_vv_nxv8f64:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vl8re64.v v24, (a0)
 ; CHECK-NEXT:    vsetvli zero, a1, e64, m8, ta, ma
+; CHECK-NEXT:    vle64.v v24, (a0)
 ; CHECK-NEXT:    vfnmadd.vv v16, v8, v24, v0.t
 ; CHECK-NEXT:    vmv.v.v v8, v16
 ; CHECK-NEXT:    ret
@@ -6823,8 +6803,8 @@ define <vscale x 8 x double> @vfnmadd_vv_nxv8f64(<vscale x 8 x double> %va, <vsc
 define <vscale x 8 x double> @vfnmadd_vv_nxv8f64_commuted(<vscale x 8 x double> %va, <vscale x 8 x double> %b, <vscale x 8 x double> %c, <vscale x 8 x i1> %m, i32 zeroext %evl) {
 ; CHECK-LABEL: vfnmadd_vv_nxv8f64_commuted:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vl8re64.v v24, (a0)
 ; CHECK-NEXT:    vsetvli zero, a1, e64, m8, ta, ma
+; CHECK-NEXT:    vle64.v v24, (a0)
 ; CHECK-NEXT:    vfnmadd.vv v8, v16, v24, v0.t
 ; CHECK-NEXT:    ret
   %negb = call <vscale x 8 x double> @llvm.vp.fneg.nxv8f64(<vscale x 8 x double> %b, <vscale x 8 x i1> %m, i32 %evl)
@@ -6836,8 +6816,8 @@ define <vscale x 8 x double> @vfnmadd_vv_nxv8f64_commuted(<vscale x 8 x double> 
 define <vscale x 8 x double> @vfnmadd_vv_nxv8f64_unmasked(<vscale x 8 x double> %va, <vscale x 8 x double> %b, <vscale x 8 x double> %c, i32 zeroext %evl) {
 ; CHECK-LABEL: vfnmadd_vv_nxv8f64_unmasked:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vl8re64.v v24, (a0)
 ; CHECK-NEXT:    vsetvli zero, a1, e64, m8, ta, ma
+; CHECK-NEXT:    vle64.v v24, (a0)
 ; CHECK-NEXT:    vfnmadd.vv v8, v16, v24
 ; CHECK-NEXT:    ret
   %negb = call <vscale x 8 x double> @llvm.vp.fneg.nxv8f64(<vscale x 8 x double> %b, <vscale x 8 x i1> splat (i1 true), i32 %evl)
@@ -6849,8 +6829,8 @@ define <vscale x 8 x double> @vfnmadd_vv_nxv8f64_unmasked(<vscale x 8 x double> 
 define <vscale x 8 x double> @vfnmadd_vv_nxv8f64_unmasked_commuted(<vscale x 8 x double> %va, <vscale x 8 x double> %b, <vscale x 8 x double> %c, i32 zeroext %evl) {
 ; CHECK-LABEL: vfnmadd_vv_nxv8f64_unmasked_commuted:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vl8re64.v v24, (a0)
 ; CHECK-NEXT:    vsetvli zero, a1, e64, m8, ta, ma
+; CHECK-NEXT:    vle64.v v24, (a0)
 ; CHECK-NEXT:    vfnmadd.vv v8, v16, v24
 ; CHECK-NEXT:    ret
   %negb = call <vscale x 8 x double> @llvm.vp.fneg.nxv8f64(<vscale x 8 x double> %b, <vscale x 8 x i1> splat (i1 true), i32 %evl)
@@ -6974,8 +6954,8 @@ define <vscale x 8 x double> @vfnmadd_vf_nxv8f64_neg_splat_unmasked_commute(<vsc
 define <vscale x 8 x double> @vfnmsub_vv_nxv8f64(<vscale x 8 x double> %va, <vscale x 8 x double> %b, <vscale x 8 x double> %c, <vscale x 8 x i1> %m, i32 zeroext %evl) {
 ; CHECK-LABEL: vfnmsub_vv_nxv8f64:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vl8re64.v v24, (a0)
 ; CHECK-NEXT:    vsetvli zero, a1, e64, m8, ta, ma
+; CHECK-NEXT:    vle64.v v24, (a0)
 ; CHECK-NEXT:    vfnmadd.vv v16, v8, v24, v0.t
 ; CHECK-NEXT:    vmv.v.v v8, v16
 ; CHECK-NEXT:    ret
@@ -6988,8 +6968,8 @@ define <vscale x 8 x double> @vfnmsub_vv_nxv8f64(<vscale x 8 x double> %va, <vsc
 define <vscale x 8 x double> @vfnmsub_vv_nxv8f64_commuted(<vscale x 8 x double> %va, <vscale x 8 x double> %b, <vscale x 8 x double> %c, <vscale x 8 x i1> %m, i32 zeroext %evl) {
 ; CHECK-LABEL: vfnmsub_vv_nxv8f64_commuted:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vl8re64.v v24, (a0)
 ; CHECK-NEXT:    vsetvli zero, a1, e64, m8, ta, ma
+; CHECK-NEXT:    vle64.v v24, (a0)
 ; CHECK-NEXT:    vfnmadd.vv v8, v16, v24, v0.t
 ; CHECK-NEXT:    ret
   %negb = call <vscale x 8 x double> @llvm.vp.fneg.nxv8f64(<vscale x 8 x double> %b, <vscale x 8 x i1> %m, i32 %evl)
@@ -7001,8 +6981,8 @@ define <vscale x 8 x double> @vfnmsub_vv_nxv8f64_commuted(<vscale x 8 x double> 
 define <vscale x 8 x double> @vfnmsub_vv_nxv8f64_unmasked(<vscale x 8 x double> %va, <vscale x 8 x double> %b, <vscale x 8 x double> %c, i32 zeroext %evl) {
 ; CHECK-LABEL: vfnmsub_vv_nxv8f64_unmasked:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vl8re64.v v24, (a0)
 ; CHECK-NEXT:    vsetvli zero, a1, e64, m8, ta, ma
+; CHECK-NEXT:    vle64.v v24, (a0)
 ; CHECK-NEXT:    vfnmadd.vv v8, v16, v24
 ; CHECK-NEXT:    ret
   %negb = call <vscale x 8 x double> @llvm.vp.fneg.nxv8f64(<vscale x 8 x double> %b, <vscale x 8 x i1> splat (i1 true), i32 %evl)
@@ -7014,8 +6994,8 @@ define <vscale x 8 x double> @vfnmsub_vv_nxv8f64_unmasked(<vscale x 8 x double> 
 define <vscale x 8 x double> @vfnmsub_vv_nxv8f64_unmasked_commuted(<vscale x 8 x double> %va, <vscale x 8 x double> %b, <vscale x 8 x double> %c, i32 zeroext %evl) {
 ; CHECK-LABEL: vfnmsub_vv_nxv8f64_unmasked_commuted:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vl8re64.v v24, (a0)
 ; CHECK-NEXT:    vsetvli zero, a1, e64, m8, ta, ma
+; CHECK-NEXT:    vle64.v v24, (a0)
 ; CHECK-NEXT:    vfnmadd.vv v8, v16, v24
 ; CHECK-NEXT:    ret
   %negb = call <vscale x 8 x double> @llvm.vp.fneg.nxv8f64(<vscale x 8 x double> %b, <vscale x 8 x i1> splat (i1 true), i32 %evl)

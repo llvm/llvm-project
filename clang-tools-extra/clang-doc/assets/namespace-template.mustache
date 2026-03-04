@@ -9,11 +9,13 @@
 <html lang="en-US">
 {{>HeadPartial}}
 <body>
-    {{>NavbarPartial}}
+    <header>
+        {{>NavbarPartial}}
+    </header>
     <main>
         <div class="container">
             <div class="sidebar">
-                <h2>{{#RecordType}}{{RecordType}} {{/RecordType}}{{Name}}</h2>
+                <h2>{{Name}}</h2>
                 <ul>
                     {{#HasEnums}}
                     <li>
@@ -35,7 +37,7 @@
                     <li>
                         <details open>
                             <summary class="sidebar-section">
-                                <a class="sidebar-item" href="#Classes">Inner Classes</a>
+                                <a class="sidebar-item" href="#Records">Records</a>
                             </summary>
                             <ul>
                                 {{#Records}}
@@ -111,6 +113,22 @@
                         </details>
                     </li>
                     {{/HasTypedefs}}
+                    {{#HasVariables}}
+                    <li>
+                        <details open>
+                            <summary class="sidebar-section">
+                                <a class="sidebar-item" href="#Variables">Variables</a>
+                            </summary>
+                            <ul>
+                                {{#Variables}}
+                                <li class="sidebar-item-container">
+                                    <a class="sidebar-item" href="#{{USR}}">{{Name}}</a>
+                                </li>
+                                {{/Variables}}
+                            </ul>
+                        </details>
+                    </li>
+                    {{/HasVariables}}
                 </ul>
             </div>
             <div class="resizer" id="resizer"></div>
@@ -140,8 +158,8 @@
                 </section>
                 {{/HasEnums}}
                 {{#HasRecords}}
-                <section id="Classes" class="section-container">
-                    <h2>Inner Classes</h2>
+                <section id="Records" class="section-container">
+                    <h2>Records</h2>
                     <ul class="class-container">
                         {{#Records}}
                         <li id="{{USR}}" style="max-height: 40px;">
@@ -169,14 +187,16 @@
                 <section id="Concepts" class="section-container">
                     <h2>Concepts</h2>
                     {{#Concepts}}
-                    <div id="{{ID}}" class="delimiter-container">
+                    <div id="{{USR}}" class="delimiter-container">
                         <div>
                             <pre><code class="language-cpp code-clang-doc">{{#Template}}template &lt;{{#Parameters}}{{Param}}{{^End}}, {{/End}}{{/Parameters}}&gt;{{/Template}} {{Name}} {{ConstraintExpression}}</code></pre> 
                         </div>
                         {{#Description}}
                         {{>Comments}}
                         {{/Description}}
-                        <p>Defined at line {{Location.LineNumber}} of file {{Location.Filename}}</p>
+                        {{#Location}}
+                        <p>Defined at line {{LineNumber}} of file {{^FileURL}}{{Filename}}{{/FileURL}}{{#FileURL}}<a href="{{FileURL}}">{{Filename}}</a>{{/FileURL}}</p>
+                        {{/Location}}
                     </div>
                     {{/Concepts}}
                 </section>
@@ -189,6 +209,21 @@
                     {{/Typedefs}}
                 </section>
                 {{/HasTypedefs}}
+                {{#HasVariables}}
+                <section id="Variables" class="section-container">
+                    <h2>Variables</h2>
+                    <div>
+                        {{#Variables}}
+                        <div id="{{USR}}" class="delimiter-container">
+                            <pre><code class="language-cpp code-clang-doc" >{{#IsStatic}}static {{/IsStatic}}{{Type.QualName}} {{Name}}</code></pre>
+                            {{#Location}}
+                            <p>Defined at line {{LineNumber}} of file {{^FileURL}}{{Filename}}{{/FileURL}}{{#FileURL}}<a href="{{FileURL}}">{{Filename}}</a>{{/FileURL}}</p>
+                            {{/Location}}
+                        </div>
+                        {{/Variables}}
+                    </div>
+                </section>
+                {{/HasVariables}}
             </div>
         </div>
     </main>

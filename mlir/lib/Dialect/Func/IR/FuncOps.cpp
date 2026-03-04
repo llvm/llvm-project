@@ -23,6 +23,7 @@
 #include "llvm/ADT/APFloat.h"
 #include "llvm/ADT/MapVector.h"
 #include "llvm/ADT/STLExtras.h"
+#include "llvm/ADT/SmallVectorExtras.h"
 
 #include "mlir/Dialect/Func/IR/FuncOpsDialect.cpp.inc"
 
@@ -221,10 +222,10 @@ void FuncOp::cloneInto(FuncOp dest, IRMapping &mapper) {
   for (const auto &attr : (*this)->getAttrs())
     newAttrMap.insert({attr.getName(), attr.getValue()});
 
-  auto newAttrs = llvm::to_vector(llvm::map_range(
+  auto newAttrs = llvm::map_to_vector(
       newAttrMap, [](std::pair<StringAttr, Attribute> attrPair) {
         return NamedAttribute(attrPair.first, attrPair.second);
-      }));
+      });
   dest->setAttrs(DictionaryAttr::get(getContext(), newAttrs));
 
   // Clone the body.
@@ -283,23 +284,37 @@ FuncOp FuncOp::clone() {
 // ReturnOp
 //===----------------------------------------------------------------------===//
 
-LogicalResult ReturnOp::verify() {
-  auto function = cast<FuncOp>((*this)->getParentOp());
+LogicalResult FuncOp::verify() {
+  // External declarations have no body to check.
+  if (isDeclaration())
+    return success();
+  // Hoist the result types once; they are the same for every return site.
+  auto resultTypes = getFunctionType().getResults();
+  for (Block &block : getBody()) {
+    if (block.empty())
+      continue;
+    // Check func.return or other return-like terminators ops (e.g.
+    // llvm.return, test.return).
+    auto returnOp = dyn_cast<RegionBranchTerminatorOpInterface>(&block.back());
+    if (!returnOp)
+      continue;
 
-  // The operand number and types must match the function signature.
-  const auto &results = function.getFunctionType().getResults();
-  if (getNumOperands() != results.size())
-    return emitOpError("has ")
-           << getNumOperands() << " operands, but enclosing function (@"
-           << function.getName() << ") returns " << results.size();
+    if (returnOp->getNumOperands() != resultTypes.size())
+      return returnOp->emitOpError("has ")
+             << returnOp->getNumOperands()
+             << " operands, but enclosing function (@" << getName()
+             << ") returns " << resultTypes.size();
 
-  for (unsigned i = 0, e = results.size(); i != e; ++i)
-    if (getOperand(i).getType() != results[i])
-      return emitError() << "type of return operand " << i << " ("
-                         << getOperand(i).getType()
-                         << ") doesn't match function result type ("
-                         << results[i] << ")"
-                         << " in function @" << function.getName();
+    for (auto [i, opType] :
+         llvm::enumerate(llvm::zip(returnOp->getOperandTypes(), resultTypes))) {
+      auto [opTy, resTy] = opType;
+      if (opTy != resTy)
+        return returnOp->emitError()
+               << "type of return operand " << i << " (" << opTy
+               << ") doesn't match function result type (" << resTy
+               << ") in function @" << getName();
+    }
+  }
 
   return success();
 }

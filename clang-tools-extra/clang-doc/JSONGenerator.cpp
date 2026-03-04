@@ -8,6 +8,9 @@ using namespace llvm::json;
 namespace clang {
 namespace doc {
 
+// FIXME: These static methods should be refactored into methods for
+// `JSONGenerator`. It's cumbersome to pass around important properties from
+// ClangDocContext using these static methods.
 class JSONGenerator : public Generator {
 public:
   static const char *Format;
@@ -25,14 +28,20 @@ const char *JSONGenerator::Format = "json";
 
 static void serializeInfo(const ConstraintInfo &I, Object &Obj);
 static void serializeInfo(const RecordInfo &I, Object &Obj,
-                          const std::optional<StringRef> &RepositoryUrl);
+                          const std::optional<StringRef> &RepositoryUrl,
+                          const std::optional<StringRef> &RepositoryLinePrefix);
 
 static void serializeReference(const Reference &Ref, Object &ReferenceObj);
 
 template <typename Container, typename SerializationFunc>
-static void serializeArray(const Container &Records, Object &Obj,
-                           const std::string &Key,
-                           SerializationFunc SerializeInfo);
+static void serializeArray(
+    const Container &Records, Object &Obj, const StringRef Key,
+    SerializationFunc SerializeInfo, const StringRef EndKey = "End",
+    function_ref<void(Object &)> UpdateJson = [](Object &Obj) {});
+
+// TODO(issue URL): Wrapping logic for HTML should probably use a more
+// sophisticated heuristic than number of parameters.
+constexpr static unsigned getMaxParamWrapLimit() { return 2; }
 
 // Convenience lambda to pass to serializeArray.
 // If a serializeInfo needs a RepositoryUrl, create a local lambda that captures
@@ -75,7 +84,8 @@ static std::string infoTypeToString(InfoType IT) {
 
 static json::Object
 serializeLocation(const Location &Loc,
-                  const std::optional<StringRef> RepositoryUrl) {
+                  const std::optional<StringRef> RepositoryUrl,
+                  const std::optional<StringRef> RepositoryLinePrefix) {
   Object LocationObj = Object();
   LocationObj["LineNumber"] = Loc.StartLineNumber;
   LocationObj["Filename"] = Loc.Filename;
@@ -84,7 +94,14 @@ serializeLocation(const Location &Loc,
     return LocationObj;
   SmallString<128> FileURL(*RepositoryUrl);
   sys::path::append(FileURL, sys::path::Style::posix, Loc.Filename);
-  FileURL += "#" + std::to_string(Loc.StartLineNumber);
+
+  std::string LinePrefix;
+  if (!RepositoryLinePrefix)
+    LinePrefix = "#L";
+  else
+    LinePrefix = *RepositoryLinePrefix;
+
+  FileURL += LinePrefix + std::to_string(Loc.StartLineNumber);
   LocationObj["FileURL"] = FileURL;
   return LocationObj;
 }
@@ -338,7 +355,8 @@ static void generateContext(const Info &I, Object &Obj) {
 
 static void
 serializeCommonAttributes(const Info &I, json::Object &Obj,
-                          const std::optional<StringRef> RepositoryUrl) {
+                          const std::optional<StringRef> RepositoryUrl,
+                          const std::optional<StringRef> RepositoryLinePrefix) {
   insertNonEmpty("Name", I.Name, Obj);
   Obj["USR"] = toHex(toStringRef(I.USR));
   Obj["InfoType"] = infoTypeToString(I.IT);
@@ -378,8 +396,8 @@ serializeCommonAttributes(const Info &I, json::Object &Obj,
   if (I.IT != InfoType::IT_namespace) {
     const auto *Symbol = static_cast<const SymbolInfo *>(&I);
     if (Symbol->DefLoc)
-      Obj["Location"] =
-          serializeLocation(Symbol->DefLoc.value(), RepositoryUrl);
+      Obj["Location"] = serializeLocation(Symbol->DefLoc.value(), RepositoryUrl,
+                                          RepositoryLinePrefix);
   }
 
   if (!I.Contexts.empty())
@@ -405,11 +423,12 @@ static void serializeReference(const Reference &Ref, Object &ReferenceObj) {
 // differently. Only enums, records, and typedefs are handled here.
 static void
 serializeCommonChildren(const ScopeChildren &Children, json::Object &Obj,
-                        const std::optional<StringRef> RepositoryUrl) {
-  static auto SerializeInfo = [RepositoryUrl](const auto &Info,
-                                              Object &Object) {
-    serializeInfo(Info, Object, RepositoryUrl);
-  };
+                        const std::optional<StringRef> RepositoryUrl,
+                        const std::optional<StringRef> RepositoryLinePrefix) {
+  static auto SerializeInfo =
+      [RepositoryUrl, RepositoryLinePrefix](const auto &Info, Object &Object) {
+        serializeInfo(Info, Object, RepositoryUrl, RepositoryLinePrefix);
+      };
 
   if (!Children.Enums.empty()) {
     serializeArray(Children.Enums, Obj, "Enums", SerializeInfo);
@@ -428,9 +447,9 @@ serializeCommonChildren(const ScopeChildren &Children, json::Object &Obj,
 }
 
 template <typename Container, typename SerializationFunc>
-static void serializeArray(const Container &Records, Object &Obj,
-                           const std::string &Key,
-                           SerializationFunc SerializeInfo) {
+static void serializeArray(const Container &Records, Object &Obj, StringRef Key,
+                           SerializationFunc SerializeInfo, StringRef EndKey,
+                           function_ref<void(Object &)> UpdateJson) {
   json::Value RecordsArray = Array();
   auto &RecordsArrayRef = *RecordsArray.getAsArray();
   RecordsArrayRef.reserve(Records.size());
@@ -439,10 +458,11 @@ static void serializeArray(const Container &Records, Object &Obj,
     auto &ItemObj = *ItemVal.getAsObject();
     SerializeInfo(Records[Index], ItemObj);
     if (Index == Records.size() - 1)
-      ItemObj["End"] = true;
+      ItemObj[EndKey] = true;
     RecordsArrayRef.push_back(ItemVal);
   }
   Obj[Key] = RecordsArray;
+  UpdateJson(Obj);
 }
 
 static void serializeInfo(const ConstraintInfo &I, Object &Obj) {
@@ -450,39 +470,39 @@ static void serializeInfo(const ConstraintInfo &I, Object &Obj) {
   Obj["Expression"] = I.ConstraintExpr;
 }
 
-static void serializeInfo(const ArrayRef<TemplateParamInfo> &Params,
-                          Object &Obj) {
-  json::Value ParamsArray = Array();
-  auto &ParamsArrayRef = *ParamsArray.getAsArray();
-  ParamsArrayRef.reserve(Params.size());
-  for (size_t Idx = 0; Idx < Params.size(); ++Idx) {
-    json::Value ParamObjVal = Object();
-    Object &ParamObj = *ParamObjVal.getAsObject();
-
-    ParamObj["Param"] = Params[Idx].Contents;
-    if (Idx == Params.size() - 1)
-      ParamObj["End"] = true;
-    ParamsArrayRef.push_back(ParamObjVal);
-  }
-  Obj["Parameters"] = ParamsArray;
-}
-
 static void serializeInfo(const TemplateInfo &Template, Object &Obj) {
   json::Value TemplateVal = Object();
   auto &TemplateObj = *TemplateVal.getAsObject();
+  auto SerializeTemplateParam = [](const TemplateParamInfo &Param,
+                                   Object &JsonObj) {
+    JsonObj["Param"] = Param.Contents;
+  };
 
   if (Template.Specialization) {
     json::Value TemplateSpecializationVal = Object();
     auto &TemplateSpecializationObj = *TemplateSpecializationVal.getAsObject();
     TemplateSpecializationObj["SpecializationOf"] =
         toHex(toStringRef(Template.Specialization->SpecializationOf));
-    if (!Template.Specialization->Params.empty())
-      serializeInfo(Template.Specialization->Params, TemplateSpecializationObj);
+    if (!Template.Specialization->Params.empty()) {
+      bool VerticalDisplay =
+          Template.Specialization->Params.size() > getMaxParamWrapLimit();
+      serializeArray(Template.Specialization->Params, TemplateSpecializationObj,
+                     "Parameters", SerializeTemplateParam, "End",
+                     [VerticalDisplay](Object &JsonObj) {
+                       JsonObj["VerticalDisplay"] = VerticalDisplay;
+                     });
+    }
     TemplateObj["Specialization"] = TemplateSpecializationVal;
   }
 
-  if (!Template.Params.empty())
-    serializeInfo(Template.Params, TemplateObj);
+  if (!Template.Params.empty()) {
+    bool VerticalDisplay = Template.Params.size() > getMaxParamWrapLimit();
+    serializeArray(Template.Params, TemplateObj, "Parameters",
+                   SerializeTemplateParam, "End",
+                   [VerticalDisplay](Object &JsonObj) {
+                     JsonObj["VerticalDisplay"] = VerticalDisplay;
+                   });
+  }
 
   if (!Template.Constraints.empty())
     serializeArray(Template.Constraints, TemplateObj, "Constraints",
@@ -492,8 +512,9 @@ static void serializeInfo(const TemplateInfo &Template, Object &Obj) {
 }
 
 static void serializeInfo(const ConceptInfo &I, Object &Obj,
-                          const std::optional<StringRef> &RepositoryUrl) {
-  serializeCommonAttributes(I, Obj, RepositoryUrl);
+                          const std::optional<StringRef> &RepositoryUrl,
+                          const std::optional<StringRef> &RepositoryLine) {
+  serializeCommonAttributes(I, Obj, RepositoryUrl, RepositoryLine);
   Obj["IsType"] = I.IsType;
   Obj["ConstraintExpression"] = I.ConstraintExpression;
   serializeInfo(I.Template, Obj);
@@ -517,16 +538,22 @@ static void serializeInfo(const FieldTypeInfo &I, Object &Obj) {
 }
 
 static void serializeInfo(const FunctionInfo &F, json::Object &Obj,
-                          const std::optional<StringRef> RepositoryURL) {
-  serializeCommonAttributes(F, Obj, RepositoryURL);
+                          const std::optional<StringRef> RepositoryURL,
+                          const std::optional<StringRef> RepositoryLine) {
+  serializeCommonAttributes(F, Obj, RepositoryURL, RepositoryLine);
   Obj["IsStatic"] = F.IsStatic;
 
   auto ReturnTypeObj = Object();
   serializeInfo(F.ReturnType, ReturnTypeObj);
   Obj["ReturnType"] = std::move(ReturnTypeObj);
 
-  if (!F.Params.empty())
-    serializeArray(F.Params, Obj, "Params", SerializeInfoLambda);
+  if (!F.Params.empty()) {
+    const bool VerticalDisplay = F.Params.size() > getMaxParamWrapLimit();
+    serializeArray(F.Params, Obj, "Params", SerializeInfoLambda, "ParamEnd",
+                   [VerticalDisplay](Object &JsonObj) {
+                     JsonObj["VerticalDisplay"] = VerticalDisplay;
+                   });
+  }
 
   if (F.Template)
     serializeInfo(F.Template.value(), Obj);
@@ -541,8 +568,9 @@ static void serializeInfo(const EnumValueInfo &I, Object &Obj) {
 }
 
 static void serializeInfo(const EnumInfo &I, json::Object &Obj,
-                          const std::optional<StringRef> &RepositoryUrl) {
-  serializeCommonAttributes(I, Obj, RepositoryUrl);
+                          const std::optional<StringRef> &RepositoryUrl,
+                          const std::optional<StringRef> &RepositoryLine) {
+  serializeCommonAttributes(I, Obj, RepositoryUrl, RepositoryLine);
   Obj["Scoped"] = I.Scoped;
 
   if (I.BaseType) {
@@ -558,9 +586,11 @@ static void serializeInfo(const EnumInfo &I, json::Object &Obj,
     serializeArray(I.Members, Obj, "Members", SerializeInfoLambda);
 }
 
-static void serializeInfo(const TypedefInfo &I, json::Object &Obj,
-                          const std::optional<StringRef> &RepositoryUrl) {
-  serializeCommonAttributes(I, Obj, RepositoryUrl);
+static void
+serializeInfo(const TypedefInfo &I, json::Object &Obj,
+              const std::optional<StringRef> &RepositoryUrl,
+              const std::optional<StringRef> &RepositoryLinePrefix) {
+  serializeCommonAttributes(I, Obj, RepositoryUrl, RepositoryLinePrefix);
   Obj["TypeDeclaration"] = I.TypeDeclaration;
   Obj["IsUsing"] = I.IsUsing;
   json::Value TypeVal = Object();
@@ -571,9 +601,12 @@ static void serializeInfo(const TypedefInfo &I, json::Object &Obj,
     serializeInfo(I.Template.value(), Obj);
 }
 
-static void serializeInfo(const BaseRecordInfo &I, Object &Obj,
-                          const std::optional<StringRef> &RepositoryUrl) {
-  serializeInfo(static_cast<const RecordInfo &>(I), Obj, RepositoryUrl);
+static void
+serializeInfo(const BaseRecordInfo &I, Object &Obj,
+              const std::optional<StringRef> &RepositoryUrl,
+              const std::optional<StringRef> &RepositoryLinePrefix) {
+  serializeInfo(static_cast<const RecordInfo &>(I), Obj, RepositoryUrl,
+                RepositoryLinePrefix);
   Obj["IsVirtual"] = I.IsVirtual;
   Obj["Access"] = getAccessSpelling(I.Access);
   Obj["IsParent"] = I.IsParent;
@@ -593,7 +626,7 @@ static void serializeInfo(const FriendInfo &I, Object &Obj) {
     serializeInfo(I.ReturnType.value(), ReturnTypeObj);
     Obj["ReturnType"] = std::move(ReturnTypeObj);
   }
-  serializeCommonAttributes(I, Obj, std::nullopt);
+  serializeCommonAttributes(I, Obj, std::nullopt, std::nullopt);
 }
 
 static void insertArray(Object &Obj, json::Value &Array, StringRef Key) {
@@ -601,9 +634,11 @@ static void insertArray(Object &Obj, json::Value &Array, StringRef Key) {
   Obj["Has" + Key.str()] = true;
 }
 
-static void serializeInfo(const RecordInfo &I, json::Object &Obj,
-                          const std::optional<StringRef> &RepositoryUrl) {
-  serializeCommonAttributes(I, Obj, RepositoryUrl);
+static void
+serializeInfo(const RecordInfo &I, json::Object &Obj,
+              const std::optional<StringRef> &RepositoryUrl,
+              const std::optional<StringRef> &RepositoryLinePrefix) {
+  serializeCommonAttributes(I, Obj, RepositoryUrl, RepositoryLinePrefix);
   Obj["TagType"] = getTagType(I.TagType);
   Obj["IsTypedef"] = I.IsTypeDef;
   Obj["MangledName"] = I.MangledName;
@@ -617,7 +652,7 @@ static void serializeInfo(const RecordInfo &I, json::Object &Obj,
     for (const auto &Function : I.Children.Functions) {
       json::Value FunctionVal = Object();
       auto &FunctionObj = *FunctionVal.getAsObject();
-      serializeInfo(Function, FunctionObj, RepositoryUrl);
+      serializeInfo(Function, FunctionObj, RepositoryUrl, RepositoryLinePrefix);
       AccessSpecifier Access = Function.Access;
       if (Access == AccessSpecifier::AS_public)
         PubFunctionsArrayRef.push_back(FunctionVal);
@@ -626,9 +661,9 @@ static void serializeInfo(const RecordInfo &I, json::Object &Obj,
     }
 
     if (!PubFunctionsArrayRef.empty())
-      insertArray(Obj, PubFunctionsArray, "PublicFunctions");
+      insertArray(Obj, PubFunctionsArray, "PublicMethods");
     if (!ProtFunctionsArrayRef.empty())
-      Obj["ProtectedFunctions"] = ProtFunctionsArray;
+      insertArray(Obj, ProtFunctionsArray, "ProtectedMethods");
   }
 
   if (!I.Members.empty()) {
@@ -663,11 +698,12 @@ static void serializeInfo(const RecordInfo &I, json::Object &Obj,
   }
 
   if (!I.Bases.empty())
-    serializeArray(
-        I.Bases, Obj, "Bases",
-        [&RepositoryUrl](const BaseRecordInfo &Base, Object &BaseObj) {
-          serializeInfo(Base, BaseObj, RepositoryUrl);
-        });
+    serializeArray(I.Bases, Obj, "Bases",
+                   [&RepositoryUrl, &RepositoryLinePrefix](
+                       const BaseRecordInfo &Base, Object &BaseObj) {
+                     serializeInfo(Base, BaseObj, RepositoryUrl,
+                                   RepositoryLinePrefix);
+                   });
 
   if (!I.Parents.empty()) {
     serializeArray(I.Parents, Obj, "Parents", SerializeReferenceLambda);
@@ -688,12 +724,14 @@ static void serializeInfo(const RecordInfo &I, json::Object &Obj,
     Obj["HasFriends"] = true;
   }
 
-  serializeCommonChildren(I.Children, Obj, RepositoryUrl);
+  serializeCommonChildren(I.Children, Obj, RepositoryUrl, RepositoryLinePrefix);
 }
 
-static void serializeInfo(const VarInfo &I, json::Object &Obj,
-                          const std::optional<StringRef> RepositoryUrl) {
-  serializeCommonAttributes(I, Obj, RepositoryUrl);
+static void
+serializeInfo(const VarInfo &I, json::Object &Obj,
+              const std::optional<StringRef> RepositoryUrl,
+              const std::optional<StringRef> RepositoryUrlLinePrefix) {
+  serializeCommonAttributes(I, Obj, RepositoryUrl, RepositoryUrlLinePrefix);
   Obj["IsStatic"] = I.IsStatic;
   auto TypeObj = Object();
   serializeInfo(I.Type, TypeObj);
@@ -701,8 +739,9 @@ static void serializeInfo(const VarInfo &I, json::Object &Obj,
 }
 
 static void serializeInfo(const NamespaceInfo &I, json::Object &Obj,
-                          const std::optional<StringRef> RepositoryUrl) {
-  serializeCommonAttributes(I, Obj, RepositoryUrl);
+                          const std::optional<StringRef> RepositoryUrl,
+                          const std::optional<StringRef> RepositoryLinePrefix) {
+  serializeCommonAttributes(I, Obj, RepositoryUrl, RepositoryLinePrefix);
   if (I.USR == GlobalNamespaceID)
     Obj["Name"] = "Global Namespace";
 
@@ -712,10 +751,10 @@ static void serializeInfo(const NamespaceInfo &I, json::Object &Obj,
     Obj["HasNamespaces"] = true;
   }
 
-  static auto SerializeInfo = [RepositoryUrl](const auto &Info,
-                                              Object &Object) {
-    serializeInfo(Info, Object, RepositoryUrl);
-  };
+  static auto SerializeInfo =
+      [RepositoryUrl, RepositoryLinePrefix](const auto &Info, Object &Object) {
+        serializeInfo(Info, Object, RepositoryUrl, RepositoryLinePrefix);
+      };
 
   if (!I.Children.Functions.empty()) {
     serializeArray(I.Children.Functions, Obj, "Functions", SerializeInfo);
@@ -727,10 +766,12 @@ static void serializeInfo(const NamespaceInfo &I, json::Object &Obj,
     Obj["HasConcepts"] = true;
   }
 
-  if (!I.Children.Variables.empty())
+  if (!I.Children.Variables.empty()) {
     serializeArray(I.Children.Variables, Obj, "Variables", SerializeInfo);
+    Obj["HasVariables"] = true;
+  }
 
-  serializeCommonChildren(I.Children, Obj, RepositoryUrl);
+  serializeCommonChildren(I.Children, Obj, RepositoryUrl, RepositoryLinePrefix);
 }
 
 static SmallString<16> determineFileName(Info *I, SmallString<128> &Path) {
@@ -764,19 +805,26 @@ static Error serializeIndex(const ClangDocContext &CDCtx, StringRef RootDir) {
 
   if (IndexCopy.Children.empty()) {
     // If the index is empty, default to displaying the global namespace.
-    IndexCopy.Children.emplace_back(GlobalNamespaceID, "",
-                                    InfoType::IT_namespace, "GlobalNamespace");
+    IndexCopy.Children.try_emplace(toStringRef(GlobalNamespaceID),
+                                   GlobalNamespaceID, "",
+                                   InfoType::IT_namespace, "GlobalNamespace");
   } else {
     IndexArrayRef.reserve(CDCtx.Idx.Children.size());
   }
 
-  for (auto &Idx : IndexCopy.Children) {
-    if (Idx.Children.empty())
+  llvm::SmallVector<const Index *> Children;
+  Children.reserve(IndexCopy.Children.size());
+  for (const auto &[_, Idx] : IndexCopy.Children)
+    Children.push_back(&Idx);
+  llvm::sort(Children, [](const Index *A, const Index *B) { return *A < *B; });
+
+  for (const auto *Idx : Children) {
+    if (Idx->Children.empty())
       continue;
-    std::string TypeStr = infoTypeToString(Idx.RefType);
+    std::string TypeStr = infoTypeToString(Idx->RefType);
     json::Value IdxVal = Object();
     auto &IdxObj = *IdxVal.getAsObject();
-    serializeReference(Idx, IdxObj);
+    serializeReference(*Idx, IdxObj);
     IndexArrayRef.push_back(IdxVal);
   }
   Obj["Index"] = IndexArray;
@@ -864,10 +912,12 @@ Error JSONGenerator::generateDocForInfo(Info *I, raw_ostream &OS,
 
   switch (I->IT) {
   case InfoType::IT_namespace:
-    serializeInfo(*static_cast<NamespaceInfo *>(I), Obj, CDCtx.RepositoryUrl);
+    serializeInfo(*static_cast<NamespaceInfo *>(I), Obj, CDCtx.RepositoryUrl,
+                  CDCtx.RepositoryLinePrefix);
     break;
   case InfoType::IT_record:
-    serializeInfo(*static_cast<RecordInfo *>(I), Obj, CDCtx.RepositoryUrl);
+    serializeInfo(*static_cast<RecordInfo *>(I), Obj, CDCtx.RepositoryUrl,
+                  CDCtx.RepositoryLinePrefix);
     break;
   case InfoType::IT_concept:
   case InfoType::IT_enum:

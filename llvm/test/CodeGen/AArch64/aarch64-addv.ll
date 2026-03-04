@@ -260,10 +260,9 @@ define i8 @addv_v3i8(<3 x i8> %a) {
 ; CHECK-GI-LABEL: addv_v3i8:
 ; CHECK-GI:       // %bb.0: // %entry
 ; CHECK-GI-NEXT:    fmov s0, w0
-; CHECK-GI-NEXT:    mov w8, #0 // =0x0
 ; CHECK-GI-NEXT:    mov v0.h[1], w1
 ; CHECK-GI-NEXT:    mov v0.h[2], w2
-; CHECK-GI-NEXT:    mov v0.h[3], w8
+; CHECK-GI-NEXT:    mov v0.h[3], wzr
 ; CHECK-GI-NEXT:    addv h0, v0.4h
 ; CHECK-GI-NEXT:    fmov w0, s0
 ; CHECK-GI-NEXT:    ret
@@ -329,22 +328,13 @@ entry:
 }
 
 define i16 @addv_v3i16(<3 x i16> %a) {
-; CHECK-SD-LABEL: addv_v3i16:
-; CHECK-SD:       // %bb.0: // %entry
-; CHECK-SD-NEXT:    // kill: def $d0 killed $d0 def $q0
-; CHECK-SD-NEXT:    mov v0.h[3], wzr
-; CHECK-SD-NEXT:    addv h0, v0.4h
-; CHECK-SD-NEXT:    fmov w0, s0
-; CHECK-SD-NEXT:    ret
-;
-; CHECK-GI-LABEL: addv_v3i16:
-; CHECK-GI:       // %bb.0: // %entry
-; CHECK-GI-NEXT:    // kill: def $d0 killed $d0 def $q0
-; CHECK-GI-NEXT:    mov w8, #0 // =0x0
-; CHECK-GI-NEXT:    mov v0.h[3], w8
-; CHECK-GI-NEXT:    addv h0, v0.4h
-; CHECK-GI-NEXT:    fmov w0, s0
-; CHECK-GI-NEXT:    ret
+; CHECK-LABEL: addv_v3i16:
+; CHECK:       // %bb.0: // %entry
+; CHECK-NEXT:    // kill: def $d0 killed $d0 def $q0
+; CHECK-NEXT:    mov v0.h[3], wzr
+; CHECK-NEXT:    addv h0, v0.4h
+; CHECK-NEXT:    fmov w0, s0
+; CHECK-NEXT:    ret
 entry:
   %arg1 = call i16 @llvm.vector.reduce.add.v3i16(<3 x i16> %a)
   ret i16 %arg1
@@ -555,6 +545,7 @@ define i8 @addv_zero_lanes_v16i8(ptr %arr)  {
 ; CHECK-SD:       // %bb.0:
 ; CHECK-SD-NEXT:    ldrb w8, [x0]
 ; CHECK-SD-NEXT:    fmov d0, x8
+; CHECK-SD-NEXT:    fmov d0, d0
 ; CHECK-SD-NEXT:    addv b0, v0.16b
 ; CHECK-SD-NEXT:    fmov w0, s0
 ; CHECK-SD-NEXT:    ret
@@ -579,6 +570,7 @@ define i16 @addv_zero_lanes_v8i16(ptr %arr)  {
 ; CHECK-SD:       // %bb.0:
 ; CHECK-SD-NEXT:    ldrh w8, [x0]
 ; CHECK-SD-NEXT:    fmov d0, x8
+; CHECK-SD-NEXT:    fmov d0, d0
 ; CHECK-SD-NEXT:    addv h0, v0.8h
 ; CHECK-SD-NEXT:    fmov w0, s0
 ; CHECK-SD-NEXT:    ret
@@ -603,6 +595,7 @@ define i32 @addv_zero_lanes_v4i32(ptr %arr)  {
 ; CHECK-SD:       // %bb.0:
 ; CHECK-SD-NEXT:    ldr w8, [x0]
 ; CHECK-SD-NEXT:    fmov d0, x8
+; CHECK-SD-NEXT:    fmov d0, d0
 ; CHECK-SD-NEXT:    addv s0, v0.4s
 ; CHECK-SD-NEXT:    fmov w0, s0
 ; CHECK-SD-NEXT:    ret

@@ -1,5 +1,4 @@
 // RUN: %offload-device-info | %fcheck-generic
-// XFAIL: intelgpu
 //
 // Just check any device was found and something is printed
 //

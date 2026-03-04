@@ -8,6 +8,8 @@
 
 #include "SelectionDAGTestBase.h"
 #include "llvm/CodeGen/SDPatternMatch.h"
+#include "llvm/IR/IntrinsicsWebAssembly.h"
+#include "llvm/IR/IntrinsicsX86.h"
 
 using namespace llvm;
 
@@ -19,9 +21,12 @@ TEST_F(SelectionDAGPatternMatchTest, matchValueType) {
   auto Float32VT = EVT::getFloatingPointVT(32);
   auto VInt32VT = EVT::getVectorVT(Context, Int32VT, 4);
 
-  SDValue Op0 = DAG->getCopyFromReg(DAG->getEntryNode(), DL, 1, Int32VT);
-  SDValue Op1 = DAG->getCopyFromReg(DAG->getEntryNode(), DL, 2, Float32VT);
-  SDValue Op2 = DAG->getCopyFromReg(DAG->getEntryNode(), DL, 2, VInt32VT);
+  SDValue Op0 = DAG->getCopyFromReg(DAG->getEntryNode(), DL,
+                                    Register::index2VirtReg(1), Int32VT);
+  SDValue Op1 = DAG->getCopyFromReg(DAG->getEntryNode(), DL,
+                                    Register::index2VirtReg(2), Float32VT);
+  SDValue Op2 = DAG->getCopyFromReg(DAG->getEntryNode(), DL,
+                                    Register::index2VirtReg(3), VInt32VT);
 
   using namespace SDPatternMatch;
   EXPECT_TRUE(sd_match(Op0, m_SpecificVT(Int32VT)));
@@ -50,8 +55,10 @@ TEST_F(SelectionDAGPatternMatchTest, matchVecShuffle) {
   const std::array<int, 4> OtherMaskData = {1, 2, 3, 4};
   ArrayRef<int> Mask;
 
-  SDValue V0 = DAG->getCopyFromReg(DAG->getEntryNode(), DL, 1, VInt32VT);
-  SDValue V1 = DAG->getCopyFromReg(DAG->getEntryNode(), DL, 2, VInt32VT);
+  SDValue V0 = DAG->getCopyFromReg(DAG->getEntryNode(), DL,
+                                   Register::index2VirtReg(1), VInt32VT);
+  SDValue V1 = DAG->getCopyFromReg(DAG->getEntryNode(), DL,
+                                   Register::index2VirtReg(2), VInt32VT);
   SDValue VecShuffleWithMask =
       DAG->getVectorShuffle(VInt32VT, DL, V0, V1, MaskData);
 
@@ -73,8 +80,10 @@ TEST_F(SelectionDAGPatternMatchTest, matchTernaryOp) {
   SDLoc DL;
   auto Int32VT = EVT::getIntegerVT(Context, 32);
 
-  SDValue Op0 = DAG->getCopyFromReg(DAG->getEntryNode(), DL, 1, Int32VT);
-  SDValue Op1 = DAG->getCopyFromReg(DAG->getEntryNode(), DL, 2, Int32VT);
+  SDValue Op0 = DAG->getCopyFromReg(DAG->getEntryNode(), DL,
+                                    Register::index2VirtReg(1), Int32VT);
+  SDValue Op1 = DAG->getCopyFromReg(DAG->getEntryNode(), DL,
+                                    Register::index2VirtReg(2), Int32VT);
   SDValue Op3 = DAG->getConstant(1, DL, Int32VT);
 
   SDValue ICMP_UGT = DAG->getSetCC(DL, MVT::i1, Op0, Op1, ISD::SETUGT);
@@ -82,18 +91,24 @@ TEST_F(SelectionDAGPatternMatchTest, matchTernaryOp) {
   SDValue ICMP_EQ10 = DAG->getSetCC(DL, MVT::i1, Op1, Op0, ISD::SETEQ);
 
   auto Int1VT = EVT::getIntegerVT(Context, 1);
-  SDValue Cond = DAG->getCopyFromReg(DAG->getEntryNode(), DL, 3, Int1VT);
-  SDValue T = DAG->getCopyFromReg(DAG->getEntryNode(), DL, 4, Int1VT);
-  SDValue F = DAG->getCopyFromReg(DAG->getEntryNode(), DL, 5, Int1VT);
+  SDValue Cond = DAG->getCopyFromReg(DAG->getEntryNode(), DL,
+                                     Register::index2VirtReg(3), Int1VT);
+  SDValue T = DAG->getCopyFromReg(DAG->getEntryNode(), DL,
+                                  Register::index2VirtReg(4), Int1VT);
+  SDValue F = DAG->getCopyFromReg(DAG->getEntryNode(), DL,
+                                  Register::index2VirtReg(5), Int1VT);
   SDValue Select = DAG->getSelect(DL, MVT::i1, Cond, T, F);
 
   auto VInt32VT = EVT::getVectorVT(Context, Int32VT, 4);
   auto SmallVInt32VT = EVT::getVectorVT(Context, Int32VT, 2);
   auto Idx0 = DAG->getVectorIdxConstant(0, DL);
   auto Idx3 = DAG->getVectorIdxConstant(3, DL);
-  SDValue V1 = DAG->getCopyFromReg(DAG->getEntryNode(), DL, 6, VInt32VT);
-  SDValue V2 = DAG->getCopyFromReg(DAG->getEntryNode(), DL, 7, VInt32VT);
-  SDValue V3 = DAG->getCopyFromReg(DAG->getEntryNode(), DL, 8, SmallVInt32VT);
+  SDValue V1 = DAG->getCopyFromReg(DAG->getEntryNode(), DL,
+                                   Register::index2VirtReg(6), VInt32VT);
+  SDValue V2 = DAG->getCopyFromReg(DAG->getEntryNode(), DL,
+                                   Register::index2VirtReg(7), VInt32VT);
+  SDValue V3 = DAG->getCopyFromReg(DAG->getEntryNode(), DL,
+                                   Register::index2VirtReg(8), SmallVInt32VT);
   SDValue VSelect = DAG->getNode(ISD::VSELECT, DL, VInt32VT, Cond, V1, V2);
   SDValue InsertSubvector =
       DAG->getNode(ISD::INSERT_SUBVECTOR, DL, VInt32VT, V2, V3, Idx0);
@@ -175,15 +190,28 @@ TEST_F(SelectionDAGPatternMatchTest, matchBinaryOp) {
   auto BigVInt32VT = EVT::getVectorVT(Context, Int32VT, 8);
   auto VInt32VT = EVT::getVectorVT(Context, Int32VT, 4);
 
-  SDValue V1 = DAG->getCopyFromReg(DAG->getEntryNode(), DL, 6, VInt32VT);
+  SDValue V1 = DAG->getCopyFromReg(DAG->getEntryNode(), DL,
+                                   Register::index2VirtReg(6), VInt32VT);
   auto Idx0 = DAG->getVectorIdxConstant(0, DL);
   auto Idx1 = DAG->getVectorIdxConstant(1, DL);
 
-  SDValue Op0 = DAG->getCopyFromReg(DAG->getEntryNode(), DL, 1, Int32VT);
-  SDValue Op1 = DAG->getCopyFromReg(DAG->getEntryNode(), DL, 2, Int32VT);
-  SDValue Op2 = DAG->getCopyFromReg(DAG->getEntryNode(), DL, 3, Float32VT);
-  SDValue Op3 = DAG->getCopyFromReg(DAG->getEntryNode(), DL, 8, Int32VT);
+  SDValue SignBit = DAG->getConstant(0x80000000u, DL, Int32VT);
+  SDValue NoSignBit = DAG->getConstant(0x7fffffffu, DL, Int32VT);
+
+  SDValue Op0 = DAG->getCopyFromReg(DAG->getEntryNode(), DL,
+                                    Register::index2VirtReg(1), Int32VT);
+  SDValue Op1 = DAG->getCopyFromReg(DAG->getEntryNode(), DL,
+                                    Register::index2VirtReg(2), Int32VT);
+  SDValue Op2 = DAG->getCopyFromReg(DAG->getEntryNode(), DL,
+                                    Register::index2VirtReg(3), Float32VT);
+  SDValue Op3 = DAG->getCopyFromReg(DAG->getEntryNode(), DL,
+                                    Register::index2VirtReg(8), Int32VT);
   SDValue Op4 = DAG->getConstant(1, DL, Int32VT);
+
+  SDValue NonNeg0 = DAG->getNode(ISD::AND, DL, Int32VT, Op0, NoSignBit);
+  SDValue NonNeg1 = DAG->getNode(ISD::AND, DL, Int32VT, Op1, NoSignBit);
+  SDValue Neg0 = DAG->getNode(ISD::OR, DL, Int32VT, Op0, SignBit);
+  SDValue Neg1 = DAG->getNode(ISD::OR, DL, Int32VT, Op1, SignBit);
 
   SDValue Add = DAG->getNode(ISD::ADD, DL, Int32VT, Op0, Op1);
   SDValue Sub = DAG->getNode(ISD::SUB, DL, Int32VT, Add, Op0);
@@ -239,10 +267,47 @@ TEST_F(SelectionDAGPatternMatchTest, matchBinaryOp) {
   SDValue CCUMinLikeULE = DAG->getSelectCC(DL, Op0, Op1, Op0, Op1, ISD::SETULE);
   SDValue CCUMinLikeUGE = DAG->getSelectCC(DL, Op0, Op1, Op1, Op0, ISD::SETUGE);
 
+  SDValue UMaxNonNeg = DAG->getNode(ISD::UMAX, DL, Int32VT, NonNeg0, NonNeg1);
+  SDValue UMinNonNeg = DAG->getNode(ISD::UMIN, DL, Int32VT, NonNeg0, NonNeg1);
+  SDValue SMaxNonNeg = DAG->getNode(ISD::SMAX, DL, Int32VT, NonNeg0, NonNeg1);
+  SDValue SMinNonNeg = DAG->getNode(ISD::SMIN, DL, Int32VT, NonNeg0, NonNeg1);
+  SDValue UMaxNeg = DAG->getNode(ISD::UMAX, DL, Int32VT, Neg0, Neg1);
+  SDValue UMinNeg = DAG->getNode(ISD::UMIN, DL, Int32VT, Neg0, Neg1);
+  SDValue SMaxNeg = DAG->getNode(ISD::SMAX, DL, Int32VT, Neg0, Neg1);
+  SDValue SMinNeg = DAG->getNode(ISD::SMIN, DL, Int32VT, Neg0, Neg1);
+  SDValue UMaxDiffSign = DAG->getNode(ISD::UMAX, DL, Int32VT, Neg0, NonNeg1);
+  SDValue UMinDiffSign = DAG->getNode(ISD::UMIN, DL, Int32VT, Neg0, NonNeg1);
+  SDValue SMaxDiffSign = DAG->getNode(ISD::SMAX, DL, Int32VT, Neg0, NonNeg1);
+  SDValue SMinDiffSign = DAG->getNode(ISD::SMIN, DL, Int32VT, Neg0, NonNeg1);
+
+  SDValue ICMP_NN_UGT =
+      DAG->getSetCC(DL, MVT::i1, NonNeg0, NonNeg1, ISD::SETUGT);
+  SDValue ICMP_NN_ULT =
+      DAG->getSetCC(DL, MVT::i1, NonNeg0, NonNeg1, ISD::SETULT);
+  SDValue ICMP_NN_GT = DAG->getSetCC(DL, MVT::i1, NonNeg0, NonNeg1, ISD::SETGT);
+  SDValue ICMP_NN_LT = DAG->getSetCC(DL, MVT::i1, NonNeg0, NonNeg1, ISD::SETLT);
+  SDValue ICMP_N_UGT = DAG->getSetCC(DL, MVT::i1, Neg0, Neg1, ISD::SETUGT);
+  SDValue ICMP_N_ULT = DAG->getSetCC(DL, MVT::i1, Neg0, Neg1, ISD::SETULT);
+  SDValue ICMP_N_GT = DAG->getSetCC(DL, MVT::i1, Neg0, Neg1, ISD::SETGT);
+  SDValue ICMP_N_LT = DAG->getSetCC(DL, MVT::i1, Neg0, Neg1, ISD::SETLT);
+  SDValue UMaxLikeNN_UGT =
+      DAG->getSelect(DL, MVT::i32, ICMP_NN_UGT, NonNeg0, NonNeg1);
+  SDValue UMinLikeNN_ULT =
+      DAG->getSelect(DL, MVT::i32, ICMP_NN_ULT, NonNeg0, NonNeg1);
+  SDValue SMaxLikeNN_GT =
+      DAG->getSelect(DL, MVT::i32, ICMP_NN_GT, NonNeg0, NonNeg1);
+  SDValue SMinLikeNN_LT =
+      DAG->getSelect(DL, MVT::i32, ICMP_NN_LT, NonNeg0, NonNeg1);
+  SDValue UMaxLikeN_UGT = DAG->getSelect(DL, MVT::i32, ICMP_N_UGT, Neg0, Neg1);
+  SDValue UMinLikeN_ULT = DAG->getSelect(DL, MVT::i32, ICMP_N_ULT, Neg0, Neg1);
+  SDValue SMaxLikeN_GT = DAG->getSelect(DL, MVT::i32, ICMP_N_GT, Neg0, Neg1);
+  SDValue SMinLikeN_LT = DAG->getSelect(DL, MVT::i32, ICMP_N_LT, Neg0, Neg1);
+
   SDValue SFAdd = DAG->getNode(ISD::STRICT_FADD, DL, {Float32VT, MVT::Other},
                                {DAG->getEntryNode(), Op2, Op2});
 
-  SDValue Vec = DAG->getCopyFromReg(DAG->getEntryNode(), DL, 9, BigVInt32VT);
+  SDValue Vec = DAG->getCopyFromReg(DAG->getEntryNode(), DL,
+                                    Register::index2VirtReg(9), BigVInt32VT);
   SDValue SubVec =
       DAG->getNode(ISD::EXTRACT_SUBVECTOR, DL, VInt32VT, Vec, Idx0);
 
@@ -273,11 +338,19 @@ TEST_F(SelectionDAGPatternMatchTest, matchBinaryOp) {
   EXPECT_TRUE(sd_match(Or, m_Or(m_Value(), m_Value())));
   EXPECT_TRUE(sd_match(Or, m_BitwiseLogic(m_Value(), m_Value())));
   EXPECT_FALSE(sd_match(Or, m_DisjointOr(m_Value(), m_Value())));
+  EXPECT_FALSE(sd_match(
+      Or, m_BinOp(ISD::OR, m_Value(), m_Value(), SDNodeFlags::Disjoint)));
+  EXPECT_FALSE(sd_match(
+      Or, m_c_BinOp(ISD::OR, m_Value(), m_Value(), SDNodeFlags::Disjoint)));
 
   EXPECT_TRUE(sd_match(DisOr, m_Or(m_Value(), m_Value())));
   EXPECT_TRUE(sd_match(DisOr, m_DisjointOr(m_Value(), m_Value())));
   EXPECT_FALSE(sd_match(DisOr, m_Add(m_Value(), m_Value())));
   EXPECT_TRUE(sd_match(DisOr, m_AddLike(m_Value(), m_Value())));
+  EXPECT_TRUE(sd_match(
+      DisOr, m_BinOp(ISD::OR, m_Value(), m_Value(), SDNodeFlags::Disjoint)));
+  EXPECT_TRUE(sd_match(
+      DisOr, m_c_BinOp(ISD::OR, m_Value(), m_Value(), SDNodeFlags::Disjoint)));
 
   EXPECT_TRUE(sd_match(Rotl, m_Rotl(m_Value(), m_Value())));
   EXPECT_TRUE(sd_match(Rotr, m_Rotr(m_Value(), m_Value())));
@@ -321,6 +394,78 @@ TEST_F(SelectionDAGPatternMatchTest, matchBinaryOp) {
   EXPECT_TRUE(sd_match(CCUMinLikeULT, m_UMinLike(m_Value(), m_Value())));
   EXPECT_TRUE(sd_match(CCUMinLikeULE, m_UMinLike(m_Value(), m_Value())));
 
+  EXPECT_TRUE(sd_match(UMaxNonNeg, DAG.get(),
+                       m_UMaxLike(m_Specific(NonNeg0), m_Specific(NonNeg1))));
+  EXPECT_TRUE(sd_match(UMaxNonNeg, DAG.get(),
+                       m_SMaxLike(m_Specific(NonNeg0), m_Specific(NonNeg1))));
+  EXPECT_TRUE(sd_match(UMinNonNeg, DAG.get(),
+                       m_UMinLike(m_Specific(NonNeg0), m_Specific(NonNeg1))));
+  EXPECT_TRUE(sd_match(UMinNonNeg, DAG.get(),
+                       m_SMinLike(m_Specific(NonNeg0), m_Specific(NonNeg1))));
+
+  EXPECT_TRUE(sd_match(SMaxNonNeg, DAG.get(),
+                       m_SMaxLike(m_Specific(NonNeg0), m_Specific(NonNeg1))));
+  EXPECT_TRUE(sd_match(SMaxNonNeg, DAG.get(),
+                       m_UMaxLike(m_Specific(NonNeg0), m_Specific(NonNeg1))));
+  EXPECT_TRUE(sd_match(SMinNonNeg, DAG.get(),
+                       m_SMinLike(m_Specific(NonNeg0), m_Specific(NonNeg1))));
+  EXPECT_TRUE(sd_match(SMinNonNeg, DAG.get(),
+                       m_UMinLike(m_Specific(NonNeg0), m_Specific(NonNeg1))));
+
+  EXPECT_TRUE(sd_match(UMaxNeg, DAG.get(),
+                       m_UMaxLike(m_Specific(Neg0), m_Specific(Neg1))));
+  EXPECT_TRUE(sd_match(UMaxNeg, DAG.get(),
+                       m_SMaxLike(m_Specific(Neg0), m_Specific(Neg1))));
+  EXPECT_TRUE(sd_match(UMinNeg, DAG.get(),
+                       m_UMinLike(m_Specific(Neg0), m_Specific(Neg1))));
+  EXPECT_TRUE(sd_match(UMinNeg, DAG.get(),
+                       m_SMinLike(m_Specific(Neg0), m_Specific(Neg1))));
+
+  EXPECT_TRUE(sd_match(SMaxNeg, DAG.get(),
+                       m_SMaxLike(m_Specific(Neg0), m_Specific(Neg1))));
+  EXPECT_TRUE(sd_match(SMaxNeg, DAG.get(),
+                       m_UMaxLike(m_Specific(Neg0), m_Specific(Neg1))));
+  EXPECT_TRUE(sd_match(SMinNeg, DAG.get(),
+                       m_SMinLike(m_Specific(Neg0), m_Specific(Neg1))));
+  EXPECT_TRUE(sd_match(SMinNeg, DAG.get(),
+                       m_UMinLike(m_Specific(Neg0), m_Specific(Neg1))));
+
+  EXPECT_TRUE(sd_match(UMaxLikeNN_UGT, DAG.get(),
+                       m_SMaxLike(m_Specific(NonNeg0), m_Specific(NonNeg1))));
+  EXPECT_TRUE(sd_match(UMinLikeNN_ULT, DAG.get(),
+                       m_SMinLike(m_Specific(NonNeg0), m_Specific(NonNeg1))));
+  EXPECT_TRUE(sd_match(SMaxLikeNN_GT, DAG.get(),
+                       m_UMaxLike(m_Specific(NonNeg0), m_Specific(NonNeg1))));
+  EXPECT_TRUE(sd_match(SMinLikeNN_LT, DAG.get(),
+                       m_UMinLike(m_Specific(NonNeg0), m_Specific(NonNeg1))));
+  EXPECT_TRUE(sd_match(UMaxLikeN_UGT, DAG.get(),
+                       m_SMaxLike(m_Specific(Neg0), m_Specific(Neg1))));
+  EXPECT_TRUE(sd_match(UMinLikeN_ULT, DAG.get(),
+                       m_SMinLike(m_Specific(Neg0), m_Specific(Neg1))));
+  EXPECT_TRUE(sd_match(SMaxLikeN_GT, DAG.get(),
+                       m_UMaxLike(m_Specific(Neg0), m_Specific(Neg1))));
+  EXPECT_TRUE(sd_match(SMinLikeN_LT, DAG.get(),
+                       m_UMinLike(m_Specific(Neg0), m_Specific(Neg1))));
+
+  EXPECT_FALSE(
+      sd_match(UMax, DAG.get(), m_SMaxLike(m_Specific(Op0), m_Specific(Op1))));
+  EXPECT_FALSE(
+      sd_match(UMin, DAG.get(), m_SMinLike(m_Specific(Op0), m_Specific(Op1))));
+  EXPECT_FALSE(
+      sd_match(SMax, DAG.get(), m_UMaxLike(m_Specific(Op0), m_Specific(Op1))));
+  EXPECT_FALSE(
+      sd_match(SMin, DAG.get(), m_UMinLike(m_Specific(Op0), m_Specific(Op1))));
+
+  EXPECT_FALSE(sd_match(UMaxDiffSign, DAG.get(),
+                        m_SMaxLike(m_Specific(Neg0), m_Specific(NonNeg1))));
+  EXPECT_FALSE(sd_match(UMinDiffSign, DAG.get(),
+                        m_SMinLike(m_Specific(Neg0), m_Specific(NonNeg1))));
+  EXPECT_FALSE(sd_match(SMaxDiffSign, DAG.get(),
+                        m_UMaxLike(m_Specific(Neg0), m_Specific(NonNeg1))));
+  EXPECT_FALSE(sd_match(SMinDiffSign, DAG.get(),
+                        m_UMinLike(m_Specific(Neg0), m_Specific(NonNeg1))));
+
+  SDValue BindVal;
   // By default, it matches any of the results.
   EXPECT_TRUE(
       sd_match(PartsDiff, m_Sub(m_Opc(ISD::SMUL_LOHI), m_Opc(ISD::SMUL_LOHI))));
@@ -330,11 +475,29 @@ TEST_F(SelectionDAGPatternMatchTest, matchBinaryOp) {
   EXPECT_FALSE(sd_match(PartsDiff, m_Sub(m_Opc(ISD::SMUL_LOHI),
                                          m_Result<0>(m_Opc(ISD::SMUL_LOHI)))));
 
-  SDValue BindVal;
+  // Conditionally bind the value from a certain sub-pattern.
+  EXPECT_TRUE(sd_match(PartsDiff, m_Sub(m_Value(BindVal, m_Opc(ISD::SMUL_LOHI)),
+                                        m_Opc(ISD::SMUL_LOHI))));
+  EXPECT_EQ(BindVal, SMulLoHi);
+  BindVal = SDValue();
+  EXPECT_FALSE(sd_match(PartsDiff, m_Sub(m_Value(BindVal, m_Opc(ISD::ADD)),
+                                         m_Opc(ISD::SMUL_LOHI))));
+  EXPECT_NE(BindVal, SMulLoHi);
+
+  BindVal = SDValue();
   EXPECT_TRUE(sd_match(SFAdd, m_ChainedBinOp(ISD::STRICT_FADD, m_Value(BindVal),
                                              m_Deferred(BindVal))));
   EXPECT_FALSE(sd_match(SFAdd, m_ChainedBinOp(ISD::STRICT_FADD, m_OtherVT(),
                                               m_SpecificVT(Float32VT))));
+  BindVal = SDValue();
+  EXPECT_TRUE(
+      sd_match(SFAdd, m_ChainedBinOp(ISD::STRICT_FADD,
+                                     m_Value(BindVal, m_SpecificVT(Float32VT)),
+                                     m_Deferred(BindVal))));
+  BindVal = SDValue();
+  EXPECT_FALSE(sd_match(SFAdd, m_ChainedBinOp(ISD::STRICT_FADD,
+                                              m_Value(BindVal, m_OtherVT()),
+                                              m_Deferred(BindVal))));
 
   EXPECT_TRUE(sd_match(SubVec, m_ExtractSubvector(m_Value(), m_Value())));
   EXPECT_TRUE(
@@ -358,8 +521,10 @@ TEST_F(SelectionDAGPatternMatchTest, matchSpecificFpOp) {
   SDLoc DL;
   APFloat Value(1.5f);
   auto Float32VT = EVT::getFloatingPointVT(32);
-  SDValue Op0 = DAG->getCopyFromReg(DAG->getEntryNode(), DL, 1, Float32VT);
-  SDValue Op1 = DAG->getCopyFromReg(DAG->getEntryNode(), DL, 2, Float32VT);
+  SDValue Op0 = DAG->getCopyFromReg(DAG->getEntryNode(), DL,
+                                    Register::index2VirtReg(1), Float32VT);
+  SDValue Op1 = DAG->getCopyFromReg(DAG->getEntryNode(), DL,
+                                    Register::index2VirtReg(2), Float32VT);
   SDValue Op2 = DAG->getConstantFP(Value, DL, Float32VT);
   SDValue FAdd0 = DAG->getNode(ISD::FADD, DL, Float32VT, Op0, Op1);
   SDValue FAdd1 = DAG->getNode(ISD::FADD, DL, Float32VT, Op1, Op2);
@@ -398,9 +563,12 @@ TEST_F(SelectionDAGPatternMatchTest, matchGenericTernaryOp) {
   SDLoc DL;
   auto Float32VT = EVT::getFloatingPointVT(32);
 
-  SDValue Op0 = DAG->getCopyFromReg(DAG->getEntryNode(), DL, 1, Float32VT);
-  SDValue Op1 = DAG->getCopyFromReg(DAG->getEntryNode(), DL, 2, Float32VT);
-  SDValue Op2 = DAG->getCopyFromReg(DAG->getEntryNode(), DL, 3, Float32VT);
+  SDValue Op0 = DAG->getCopyFromReg(DAG->getEntryNode(), DL,
+                                    Register::index2VirtReg(1), Float32VT);
+  SDValue Op1 = DAG->getCopyFromReg(DAG->getEntryNode(), DL,
+                                    Register::index2VirtReg(2), Float32VT);
+  SDValue Op2 = DAG->getCopyFromReg(DAG->getEntryNode(), DL,
+                                    Register::index2VirtReg(3), Float32VT);
 
   SDValue FMA = DAG->getNode(ISD::FMA, DL, Float32VT, Op0, Op1, Op2);
   SDValue FAdd = DAG->getNode(ISD::FADD, DL, Float32VT, Op0, Op1);
@@ -470,10 +638,14 @@ TEST_F(SelectionDAGPatternMatchTest, matchUnaryOp) {
   auto Int64VT = EVT::getIntegerVT(Context, 64);
   auto FloatVT = EVT::getFloatingPointVT(32);
 
-  SDValue Op0 = DAG->getCopyFromReg(DAG->getEntryNode(), DL, 1, Int32VT);
-  SDValue Op1 = DAG->getCopyFromReg(DAG->getEntryNode(), DL, 1, Int64VT);
-  SDValue Op2 = DAG->getCopyFromReg(DAG->getEntryNode(), DL, 1, FloatVT);  
-  SDValue Op3 = DAG->getCopyFromReg(DAG->getEntryNode(), DL, 3, Int32VT);
+  SDValue Op0 = DAG->getCopyFromReg(DAG->getEntryNode(), DL,
+                                    Register::index2VirtReg(1), Int32VT);
+  SDValue Op1 = DAG->getCopyFromReg(DAG->getEntryNode(), DL,
+                                    Register::index2VirtReg(2), Int64VT);
+  SDValue Op2 = DAG->getCopyFromReg(DAG->getEntryNode(), DL,
+                                    Register::index2VirtReg(3), FloatVT);
+  SDValue Op3 = DAG->getCopyFromReg(DAG->getEntryNode(), DL,
+                                    Register::index2VirtReg(4), Int32VT);
 
   SDValue ZExt = DAG->getNode(ISD::ZERO_EXTEND, DL, Int64VT, Op0);
   SDValue ZExtNNeg =
@@ -500,6 +672,19 @@ TEST_F(SelectionDAGPatternMatchTest, matchUnaryOp) {
   SDValue Ctlz = DAG->getNode(ISD::CTLZ, DL, Int32VT, Op0);
   SDValue Cttz = DAG->getNode(ISD::CTTZ, DL, Int32VT, Op0);
 
+  SDValue SignBit = DAG->getConstant(0x80000000u, DL, Int32VT);
+  SDValue LSB = DAG->getConstant(0x00000001u, DL, Int32VT);
+  SDValue NotSignBit = DAG->getNOT(DL, SignBit, Int32VT);
+
+  // Clear sign bit of Op0
+  SDValue NonNegativeValue =
+      DAG->getNode(ISD::AND, DL, Int32VT, Op0, NotSignBit);
+  // Set sign bit to Op0
+  SDValue NegativeValue = DAG->getNode(ISD::OR, DL, Int32VT, Op0, SignBit);
+  // Set LSB of Op0
+  SDValue PositiveValue =
+      DAG->getNode(ISD::OR, DL, Int32VT, NonNegativeValue, LSB);
+
   using namespace SDPatternMatch;
   EXPECT_TRUE(sd_match(ZExt, m_UnaryOp(ISD::ZERO_EXTEND, m_Value())));
   EXPECT_TRUE(sd_match(SExt, m_SExt(m_Value())));
@@ -525,6 +710,66 @@ TEST_F(SelectionDAGPatternMatchTest, matchUnaryOp) {
   EXPECT_FALSE(sd_match(ZExt, m_Neg(m_Value())));
   EXPECT_FALSE(sd_match(Sub, m_Neg(m_Value())));
   EXPECT_FALSE(sd_match(Neg, m_Not(m_Value())));
+
+  SDValue BindVal;
+
+  EXPECT_FALSE(sd_match(Abs, DAG.get(), m_Negative()));
+
+  EXPECT_FALSE(
+      sd_match(NonNegativeValue, DAG.get(), m_Negative(m_Value(BindVal))));
+  EXPECT_NE(BindVal, NonNegativeValue);
+  EXPECT_FALSE(
+      sd_match(NonNegativeValue, DAG.get(), m_NonZero(m_Value(BindVal))));
+  EXPECT_NE(BindVal, NonNegativeValue);
+  EXPECT_FALSE(sd_match(NonNegativeValue, DAG.get(),
+                        m_StrictlyPositive(m_Value(BindVal))));
+  EXPECT_NE(BindVal, NonNegativeValue);
+  EXPECT_FALSE(
+      sd_match(NonNegativeValue, DAG.get(), m_NonPositive(m_Value(BindVal))));
+  EXPECT_NE(BindVal, NonNegativeValue);
+
+  EXPECT_TRUE(
+      sd_match(NonNegativeValue, DAG.get(), m_NonNegative(m_Value(BindVal))));
+  EXPECT_EQ(BindVal, NonNegativeValue);
+
+  EXPECT_FALSE(
+      sd_match(NegativeValue, DAG.get(), m_NonNegative(m_Value(BindVal))));
+  EXPECT_NE(BindVal, NegativeValue);
+  EXPECT_FALSE(
+      sd_match(NegativeValue, DAG.get(), m_StrictlyPositive(m_Value(BindVal))));
+  EXPECT_NE(BindVal, NegativeValue);
+
+  EXPECT_TRUE(sd_match(NegativeValue, DAG.get(), m_Negative(m_Value(BindVal))));
+  EXPECT_EQ(BindVal, NegativeValue);
+  EXPECT_TRUE(sd_match(NegativeValue, DAG.get(), m_NonZero(m_Value(BindVal))));
+  EXPECT_EQ(BindVal, NegativeValue);
+  EXPECT_TRUE(
+      sd_match(NegativeValue, DAG.get(), m_NonPositive(m_Value(BindVal))));
+  EXPECT_EQ(BindVal, NegativeValue);
+
+  EXPECT_FALSE(
+      sd_match(PositiveValue, DAG.get(), m_Negative(m_Value(BindVal))));
+  EXPECT_NE(BindVal, PositiveValue);
+  EXPECT_FALSE(
+      sd_match(PositiveValue, DAG.get(), m_NonPositive(m_Value(BindVal))));
+  EXPECT_NE(BindVal, PositiveValue);
+
+  EXPECT_TRUE(sd_match(PositiveValue, DAG.get(), m_NonZero(m_Value(BindVal))));
+  EXPECT_EQ(BindVal, PositiveValue);
+  EXPECT_TRUE(
+      sd_match(PositiveValue, DAG.get(), m_NonNegative(m_Value(BindVal))));
+  EXPECT_EQ(BindVal, PositiveValue);
+  EXPECT_TRUE(
+      sd_match(PositiveValue, DAG.get(), m_StrictlyPositive(m_Value(BindVal))));
+  EXPECT_EQ(BindVal, PositiveValue);
+
+  // If DAG is not provided all matches fail regardless of the value
+  EXPECT_FALSE(sd_match(NegativeValue, m_Negative(m_Value(BindVal))));
+  EXPECT_FALSE(sd_match(NonNegativeValue, m_NonNegative(m_Value(BindVal))));
+  EXPECT_FALSE(sd_match(NegativeValue, m_NonZero(m_Value(BindVal))));
+  EXPECT_FALSE(sd_match(NegativeValue, m_NonPositive(m_Value(BindVal))));
+  EXPECT_FALSE(sd_match(PositiveValue, m_StrictlyPositive(m_Value(BindVal))));
+
   EXPECT_TRUE(sd_match(VScale, m_VScale(m_Value())));
 
   EXPECT_TRUE(sd_match(FPToUI, m_FPToUI(m_Value())));
@@ -554,14 +799,18 @@ TEST_F(SelectionDAGPatternMatchTest, matchConstants) {
   auto Int32VT = EVT::getIntegerVT(Context, 32);
   auto VInt32VT = EVT::getVectorVT(Context, Int32VT, 4);
 
-  SDValue Arg0 = DAG->getCopyFromReg(DAG->getEntryNode(), DL, 1, Int32VT);
+  SDValue Arg0 = DAG->getCopyFromReg(DAG->getEntryNode(), DL,
+                                     Register::index2VirtReg(1), Int32VT);
 
   SDValue Const3 = DAG->getConstant(3, DL, Int32VT);
   SDValue Const87 = DAG->getConstant(87, DL, Int32VT);
+  SDValue ConstNeg1 = DAG->getConstant(4294967295, DL, Int32VT);
   SDValue Splat = DAG->getSplat(VInt32VT, DL, Arg0);
   SDValue ConstSplat = DAG->getSplat(VInt32VT, DL, Const3);
   SDValue Zero = DAG->getConstant(0, DL, Int32VT);
   SDValue One = DAG->getConstant(1, DL, Int32VT);
+  SDValue MinusOne = DAG->getConstant(
+      APInt(Int32VT.getScalarSizeInBits(), -1, true), DL, Int32VT);
   SDValue AllOnes = DAG->getConstant(APInt::getAllOnes(32), DL, Int32VT);
   SDValue SetCC = DAG->getSetCC(DL, Int32VT, Arg0, Const3, ISD::SETULT);
 
@@ -571,6 +820,12 @@ TEST_F(SelectionDAGPatternMatchTest, matchConstants) {
   APInt ConstVal;
   EXPECT_TRUE(sd_match(ConstSplat, m_ConstInt(ConstVal)));
   EXPECT_EQ(ConstVal, 3);
+  uint64_t ConstUnsignedInt64Val;
+  EXPECT_TRUE(sd_match(ConstNeg1, m_ConstInt(ConstUnsignedInt64Val)));
+  EXPECT_EQ(ConstUnsignedInt64Val, 4294967295ull);
+  int64_t ConstSignedInt64Val;
+  EXPECT_TRUE(sd_match(ConstNeg1, m_ConstInt(ConstSignedInt64Val)));
+  EXPECT_EQ(ConstSignedInt64Val, -1);
   EXPECT_FALSE(sd_match(Splat, m_ConstInt()));
 
   EXPECT_TRUE(sd_match(Const87, m_SpecificInt(87)));
@@ -580,6 +835,31 @@ TEST_F(SelectionDAGPatternMatchTest, matchConstants) {
   EXPECT_TRUE(sd_match(Zero, DAG.get(), m_False()));
   EXPECT_TRUE(sd_match(One, DAG.get(), m_True()));
   EXPECT_FALSE(sd_match(AllOnes, DAG.get(), m_True()));
+
+  EXPECT_TRUE(sd_match(MinusOne, DAG.get(), m_Negative()));
+  EXPECT_FALSE(sd_match(MinusOne, DAG.get(), m_NonNegative()));
+  EXPECT_TRUE(sd_match(MinusOne, DAG.get(), m_NonZero()));
+  EXPECT_TRUE(sd_match(MinusOne, DAG.get(), m_NonPositive()));
+  EXPECT_FALSE(sd_match(MinusOne, DAG.get(), m_StrictlyPositive()));
+
+  EXPECT_FALSE(sd_match(Zero, DAG.get(), m_Negative()));
+  EXPECT_TRUE(sd_match(Zero, DAG.get(), m_NonNegative()));
+  EXPECT_FALSE(sd_match(Zero, DAG.get(), m_NonZero()));
+  EXPECT_TRUE(sd_match(Zero, DAG.get(), m_NonPositive()));
+  EXPECT_FALSE(sd_match(Zero, DAG.get(), m_StrictlyPositive()));
+
+  EXPECT_FALSE(sd_match(One, DAG.get(), m_Negative()));
+  EXPECT_TRUE(sd_match(One, DAG.get(), m_NonNegative()));
+  EXPECT_TRUE(sd_match(One, DAG.get(), m_NonZero()));
+  EXPECT_FALSE(sd_match(One, DAG.get(), m_NonPositive()));
+  EXPECT_TRUE(sd_match(One, DAG.get(), m_StrictlyPositive()));
+
+  // If DAG is not provided all matches would fail
+  EXPECT_FALSE(sd_match(MinusOne, m_Negative()));
+  EXPECT_FALSE(sd_match(Zero, m_NonNegative()));
+  EXPECT_FALSE(sd_match(One, m_NonZero()));
+  EXPECT_FALSE(sd_match(Zero, m_NonPositive()));
+  EXPECT_FALSE(sd_match(One, m_StrictlyPositive()));
 
   ISD::CondCode CC;
   EXPECT_TRUE(sd_match(
@@ -605,8 +885,10 @@ TEST_F(SelectionDAGPatternMatchTest, patternCombinators) {
   SDLoc DL;
   auto Int32VT = EVT::getIntegerVT(Context, 32);
 
-  SDValue Op0 = DAG->getCopyFromReg(DAG->getEntryNode(), DL, 1, Int32VT);
-  SDValue Op1 = DAG->getCopyFromReg(DAG->getEntryNode(), DL, 2, Int32VT);
+  SDValue Op0 = DAG->getCopyFromReg(DAG->getEntryNode(), DL,
+                                    Register::index2VirtReg(1), Int32VT);
+  SDValue Op1 = DAG->getCopyFromReg(DAG->getEntryNode(), DL,
+                                    Register::index2VirtReg(2), Int32VT);
 
   SDValue Add = DAG->getNode(ISD::ADD, DL, Int32VT, Op0, Op1);
   SDValue Sub = DAG->getNode(ISD::SUB, DL, Int32VT, Add, Op0);
@@ -623,8 +905,10 @@ TEST_F(SelectionDAGPatternMatchTest, optionalResizing) {
   auto Int32VT = EVT::getIntegerVT(Context, 32);
   auto Int64VT = EVT::getIntegerVT(Context, 64);
 
-  SDValue Op32 = DAG->getCopyFromReg(DAG->getEntryNode(), DL, 1, Int32VT);
-  SDValue Op64 = DAG->getCopyFromReg(DAG->getEntryNode(), DL, 1, Int64VT);
+  SDValue Op32 = DAG->getCopyFromReg(DAG->getEntryNode(), DL,
+                                     Register::index2VirtReg(1), Int32VT);
+  SDValue Op64 = DAG->getCopyFromReg(DAG->getEntryNode(), DL,
+                                     Register::index2VirtReg(2), Int64VT);
   SDValue ZExt = DAG->getNode(ISD::ZERO_EXTEND, DL, Int64VT, Op32);
   SDValue SExt = DAG->getNode(ISD::SIGN_EXTEND, DL, Int64VT, Op32);
   SDValue AExt = DAG->getNode(ISD::ANY_EXTEND, DL, Int64VT, Op32);
@@ -648,14 +932,18 @@ TEST_F(SelectionDAGPatternMatchTest, optionalResizing) {
   EXPECT_TRUE(A == Op64);
   EXPECT_TRUE(sd_match(Trunc, m_TruncOrSelf(m_Value(A))));
   EXPECT_TRUE(A == Op64);
+
+  EXPECT_TRUE(sd_match(ZExt, DAG.get(), m_NonNegative(m_Value())));
 }
 
 TEST_F(SelectionDAGPatternMatchTest, matchNode) {
   SDLoc DL;
   auto Int32VT = EVT::getIntegerVT(Context, 32);
 
-  SDValue Op0 = DAG->getCopyFromReg(DAG->getEntryNode(), DL, 1, Int32VT);
-  SDValue Op1 = DAG->getCopyFromReg(DAG->getEntryNode(), DL, 2, Int32VT);
+  SDValue Op0 = DAG->getCopyFromReg(DAG->getEntryNode(), DL,
+                                    Register::index2VirtReg(1), Int32VT);
+  SDValue Op1 = DAG->getCopyFromReg(DAG->getEntryNode(), DL,
+                                    Register::index2VirtReg(2), Int32VT);
 
   SDValue Add = DAG->getNode(ISD::ADD, DL, Int32VT, Op0, Op1);
 
@@ -673,13 +961,19 @@ TEST_F(SelectionDAGPatternMatchTest, matchSelectLike) {
   auto Int32VT = EVT::getIntegerVT(Context, 32);
   auto VInt32VT = EVT::getVectorVT(Context, Int32VT, 4);
 
-  SDValue Cond = DAG->getCopyFromReg(DAG->getEntryNode(), DL, 0, Int32VT);
-  SDValue TVal = DAG->getCopyFromReg(DAG->getEntryNode(), DL, 1, Int32VT);
-  SDValue FVal = DAG->getCopyFromReg(DAG->getEntryNode(), DL, 2, Int32VT);
+  SDValue Cond = DAG->getCopyFromReg(DAG->getEntryNode(), DL,
+                                     Register::index2VirtReg(0), Int32VT);
+  SDValue TVal = DAG->getCopyFromReg(DAG->getEntryNode(), DL,
+                                     Register::index2VirtReg(1), Int32VT);
+  SDValue FVal = DAG->getCopyFromReg(DAG->getEntryNode(), DL,
+                                     Register::index2VirtReg(2), Int32VT);
 
-  SDValue VCond = DAG->getCopyFromReg(DAG->getEntryNode(), DL, 0, VInt32VT);
-  SDValue VTVal = DAG->getCopyFromReg(DAG->getEntryNode(), DL, 1, VInt32VT);
-  SDValue VFVal = DAG->getCopyFromReg(DAG->getEntryNode(), DL, 2, VInt32VT);
+  SDValue VCond = DAG->getCopyFromReg(DAG->getEntryNode(), DL,
+                                      Register::index2VirtReg(4), VInt32VT);
+  SDValue VTVal = DAG->getCopyFromReg(DAG->getEntryNode(), DL,
+                                      Register::index2VirtReg(5), VInt32VT);
+  SDValue VFVal = DAG->getCopyFromReg(DAG->getEntryNode(), DL,
+                                      Register::index2VirtReg(6), VInt32VT);
 
   SDValue Select = DAG->getNode(ISD::SELECT, DL, Int32VT, Cond, TVal, FVal);
   SDValue VSelect =
@@ -691,6 +985,53 @@ TEST_F(SelectionDAGPatternMatchTest, matchSelectLike) {
   EXPECT_TRUE(
       sd_match(VSelect, m_SelectLike(m_Specific(VCond), m_Specific(VTVal),
                                      m_Specific(VFVal))));
+}
+
+TEST_F(SelectionDAGPatternMatchTest, matchIntrinsicWOChain) {
+  SDLoc DL;
+  auto Int32VT = EVT::getIntegerVT(Context, 32);
+  auto Int64VT = EVT::getIntegerVT(Context, 64);
+
+  SDValue WasmBitmaskIntrinsicId =
+      DAG->getConstant(Intrinsic::wasm_bitmask, DL, Int32VT);
+  SDValue X86Aadd32IntrinsicId =
+      DAG->getConstant(Intrinsic::x86_aadd32, DL, Int32VT);
+  SDValue Op0 = DAG->getCopyFromReg(DAG->getEntryNode(), DL,
+                                    Register::index2VirtReg(0), Int32VT);
+  SDValue Op1 = DAG->getCopyFromReg(DAG->getEntryNode(), DL,
+                                    Register::index2VirtReg(1), Int32VT);
+  SDValue Op2 = DAG->getCopyFromReg(DAG->getEntryNode(), DL,
+                                    Register::index2VirtReg(2), Int32VT);
+  SDValue PtrOp = DAG->getCopyFromReg(DAG->getEntryNode(), DL,
+                                      Register::index2VirtReg(3), Int64VT);
+  SDValue Op3 = DAG->getCopyFromReg(DAG->getEntryNode(), DL,
+                                    Register::index2VirtReg(4), Int32VT);
+
+  SDValue WasmBitmask = DAG->getNode(ISD::INTRINSIC_WO_CHAIN, DL, Int32VT,
+                                     WasmBitmaskIntrinsicId, Op0);
+  SDValue X86Aadd32 = DAG->getNode(ISD::INTRINSIC_WO_CHAIN, DL, MVT::Other,
+                                   X86Aadd32IntrinsicId, PtrOp, Op1);
+  SDValue Add = DAG->getNode(ISD::ADD, DL, Int32VT, Op2, Op3);
+
+  using namespace SDPatternMatch;
+  SDValue H0, H1, H2;
+
+  // Intrinsic operations should match
+  EXPECT_TRUE(sd_match(
+      WasmBitmask, m_IntrinsicWOChain<Intrinsic::wasm_bitmask>(m_Value(H0))));
+  EXPECT_TRUE(sd_match(X86Aadd32, m_IntrinsicWOChain<Intrinsic::x86_aadd32>(
+                                      m_Value(H1), m_Value(H2))));
+  EXPECT_TRUE(H0 == Op0);
+  EXPECT_TRUE(H1 == PtrOp);
+  EXPECT_TRUE(H2 == Op1);
+
+  // Intrinsic operations with incorrect IntrinsicId should not match
+  EXPECT_FALSE(sd_match(X86Aadd32, m_IntrinsicWOChain<Intrinsic::wasm_bitmask>(
+                                       m_Value(), m_Value())));
+
+  // Add operation shouldn't match
+  EXPECT_FALSE(sd_match(
+      Add, m_IntrinsicWOChain<Intrinsic::x86_aadd32>(m_Value(), m_Value())));
 }
 
 namespace {
@@ -717,9 +1058,12 @@ TEST_F(SelectionDAGPatternMatchTest, matchContext) {
   auto VInt32VT = EVT::getVectorVT(Context, Int32VT, 4);
   auto MaskVT = EVT::getVectorVT(Context, BoolVT, 4);
 
-  SDValue Scalar0 = DAG->getCopyFromReg(DAG->getEntryNode(), DL, 1, Int32VT);
-  SDValue Vector0 = DAG->getCopyFromReg(DAG->getEntryNode(), DL, 2, VInt32VT);
-  SDValue Mask0 = DAG->getCopyFromReg(DAG->getEntryNode(), DL, 3, MaskVT);
+  SDValue Scalar0 = DAG->getCopyFromReg(DAG->getEntryNode(), DL,
+                                        Register::index2VirtReg(1), Int32VT);
+  SDValue Vector0 = DAG->getCopyFromReg(DAG->getEntryNode(), DL,
+                                        Register::index2VirtReg(2), VInt32VT);
+  SDValue Mask0 = DAG->getCopyFromReg(DAG->getEntryNode(), DL,
+                                      Register::index2VirtReg(3), MaskVT);
 
   SDValue VPAdd = DAG->getNode(ISD::VP_ADD, DL, VInt32VT,
                                {Vector0, Vector0, Mask0, Scalar0});
@@ -762,9 +1106,12 @@ TEST_F(SelectionDAGPatternMatchTest, matchVPWithBasicContext) {
   auto VInt32VT = EVT::getVectorVT(Context, Int32VT, 4);
   auto MaskVT = EVT::getVectorVT(Context, BoolVT, 4);
 
-  SDValue Vector0 = DAG->getCopyFromReg(DAG->getEntryNode(), DL, 1, VInt32VT);
-  SDValue Mask = DAG->getCopyFromReg(DAG->getEntryNode(), DL, 2, MaskVT);
-  SDValue EL = DAG->getCopyFromReg(DAG->getEntryNode(), DL, 3, Int32VT);
+  SDValue Vector0 = DAG->getCopyFromReg(DAG->getEntryNode(), DL,
+                                        Register::index2VirtReg(1), VInt32VT);
+  SDValue Mask = DAG->getCopyFromReg(DAG->getEntryNode(), DL,
+                                     Register::index2VirtReg(2), MaskVT);
+  SDValue EL = DAG->getCopyFromReg(DAG->getEntryNode(), DL,
+                                   Register::index2VirtReg(3), Int32VT);
 
   SDValue VPAdd =
       DAG->getNode(ISD::VP_ADD, DL, VInt32VT, Vector0, Vector0, Mask, EL);
@@ -780,8 +1127,10 @@ TEST_F(SelectionDAGPatternMatchTest, matchAdvancedProperties) {
   auto Int16VT = EVT::getIntegerVT(Context, 16);
   auto Int64VT = EVT::getIntegerVT(Context, 64);
 
-  SDValue Op0 = DAG->getCopyFromReg(DAG->getEntryNode(), DL, 1, Int64VT);
-  SDValue Op1 = DAG->getCopyFromReg(DAG->getEntryNode(), DL, 2, Int16VT);
+  SDValue Op0 = DAG->getCopyFromReg(DAG->getEntryNode(), DL,
+                                    Register::index2VirtReg(1), Int64VT);
+  SDValue Op1 = DAG->getCopyFromReg(DAG->getEntryNode(), DL,
+                                    Register::index2VirtReg(2), Int16VT);
 
   SDValue Add = DAG->getNode(ISD::ADD, DL, Int64VT, Op0, Op0);
 
@@ -798,10 +1147,14 @@ TEST_F(SelectionDAGPatternMatchTest, matchReassociatableOp) {
   SDLoc DL;
   auto Int32VT = EVT::getIntegerVT(Context, 32);
 
-  SDValue Op0 = DAG->getCopyFromReg(DAG->getEntryNode(), DL, 1, Int32VT);
-  SDValue Op1 = DAG->getCopyFromReg(DAG->getEntryNode(), DL, 2, Int32VT);
-  SDValue Op2 = DAG->getCopyFromReg(DAG->getEntryNode(), DL, 3, Int32VT);
-  SDValue Op3 = DAG->getCopyFromReg(DAG->getEntryNode(), DL, 8, Int32VT);
+  SDValue Op0 = DAG->getCopyFromReg(DAG->getEntryNode(), DL,
+                                    Register::index2VirtReg(1), Int32VT);
+  SDValue Op1 = DAG->getCopyFromReg(DAG->getEntryNode(), DL,
+                                    Register::index2VirtReg(2), Int32VT);
+  SDValue Op2 = DAG->getCopyFromReg(DAG->getEntryNode(), DL,
+                                    Register::index2VirtReg(3), Int32VT);
+  SDValue Op3 = DAG->getCopyFromReg(DAG->getEntryNode(), DL,
+                                    Register::index2VirtReg(8), Int32VT);
 
   // (Op0 + Op1) + (Op2 + Op3)
   SDValue ADD01 = DAG->getNode(ISD::ADD, DL, Int32VT, Op0, Op1);
@@ -985,6 +1338,12 @@ TEST_F(SelectionDAGPatternMatchTest, MatchZeroOneAllOnes) {
     SDValue VecSplat = DAG->getSplatBuildVector(VecVT, DL, SplatVal);
     SDValue Bitcasted = DAG->getNode(ISD::BITCAST, DL, VecF32, VecSplat);
     EXPECT_TRUE(sd_match(Bitcasted, DAG.get(), m_Zero()));
+
+    EXPECT_FALSE(sd_match(Bitcasted, DAG.get(), m_Negative()));
+    EXPECT_TRUE(sd_match(Bitcasted, DAG.get(), m_NonNegative()));
+    EXPECT_FALSE(sd_match(Bitcasted, DAG.get(), m_NonZero()));
+    EXPECT_FALSE(sd_match(Bitcasted, DAG.get(), m_StrictlyPositive()));
+    EXPECT_TRUE(sd_match(Bitcasted, DAG.get(), m_NonPositive()));
   }
 
   // m_One: splat vector of 1 → bitcast
@@ -993,6 +1352,12 @@ TEST_F(SelectionDAGPatternMatchTest, MatchZeroOneAllOnes) {
     SDValue VecSplat = DAG->getSplatBuildVector(VecVT, DL, SplatVal);
     SDValue Bitcasted = DAG->getNode(ISD::BITCAST, DL, VecF32, VecSplat);
     EXPECT_FALSE(sd_match(Bitcasted, DAG.get(), m_One()));
+
+    EXPECT_FALSE(sd_match(Bitcasted, DAG.get(), m_Negative()));
+    EXPECT_TRUE(sd_match(Bitcasted, DAG.get(), m_NonNegative()));
+    EXPECT_TRUE(sd_match(Bitcasted, DAG.get(), m_NonZero()));
+    EXPECT_FALSE(sd_match(Bitcasted, DAG.get(), m_NonPositive()));
+    EXPECT_TRUE(sd_match(Bitcasted, DAG.get(), m_StrictlyPositive()));
   }
 
   // m_AllOnes: splat vector of -1 → bitcast
@@ -1001,6 +1366,12 @@ TEST_F(SelectionDAGPatternMatchTest, MatchZeroOneAllOnes) {
     SDValue VecSplat = DAG->getSplatBuildVector(VecVT, DL, SplatVal);
     SDValue Bitcasted = DAG->getNode(ISD::BITCAST, DL, VecF32, VecSplat);
     EXPECT_TRUE(sd_match(Bitcasted, DAG.get(), m_AllOnes()));
+
+    EXPECT_TRUE(sd_match(Bitcasted, DAG.get(), m_Negative()));
+    EXPECT_FALSE(sd_match(Bitcasted, DAG.get(), m_NonNegative()));
+    EXPECT_TRUE(sd_match(Bitcasted, DAG.get(), m_NonZero()));
+    EXPECT_TRUE(sd_match(Bitcasted, DAG.get(), m_NonPositive()));
+    EXPECT_FALSE(sd_match(Bitcasted, DAG.get(), m_StrictlyPositive()));
   }
 
   // splat vector with one undef → default should NOT match
@@ -1074,7 +1445,8 @@ TEST_F(SelectionDAGPatternMatchTest, MatchSpecificNeg) {
   auto Int32VT = EVT::getIntegerVT(Context, 32);
   auto VecVT = EVT::getVectorVT(Context, Int32VT, 4);
 
-  SDValue Op0 = DAG->getCopyFromReg(DAG->getEntryNode(), DL, 1, Int32VT);
+  SDValue Op0 = DAG->getCopyFromReg(DAG->getEntryNode(), DL,
+                                    Register::index2VirtReg(1), Int32VT);
 
   using namespace SDPatternMatch;
 
@@ -1082,7 +1454,8 @@ TEST_F(SelectionDAGPatternMatchTest, MatchSpecificNeg) {
   EXPECT_TRUE(sd_match(Neg, m_SpecificNeg(Op0)));
   EXPECT_TRUE(sd_match(Neg, m_Neg(m_Specific(Op0))));
 
-  SDValue Op1 = DAG->getCopyFromReg(DAG->getEntryNode(), DL, 2, Int32VT);
+  SDValue Op1 = DAG->getCopyFromReg(DAG->getEntryNode(), DL,
+                                    Register::index2VirtReg(2), Int32VT);
   EXPECT_FALSE(sd_match(Neg, m_SpecificNeg(Op1)));
 
   SDValue Const5 = DAG->getConstant(5, DL, Int32VT);
@@ -1128,4 +1501,87 @@ TEST_F(SelectionDAGPatternMatchTest, MatchSpecificNeg) {
 
   SDValue Zero = DAG->getConstant(0, DL, Int32VT);
   EXPECT_TRUE(sd_match(Zero, m_SpecificNeg(Zero)));
+}
+
+TEST_F(SelectionDAGPatternMatchTest, matchReassociatableFlags) {
+  SDLoc DL;
+  auto Int32VT = EVT::getIntegerVT(Context, 32);
+
+  SDValue Op0 = DAG->getCopyFromReg(DAG->getEntryNode(), DL,
+                                    Register::index2VirtReg(1), Int32VT);
+  SDValue Op1 = DAG->getCopyFromReg(DAG->getEntryNode(), DL,
+                                    Register::index2VirtReg(2), Int32VT);
+  SDValue Op2 = DAG->getCopyFromReg(DAG->getEntryNode(), DL,
+                                    Register::index2VirtReg(3), Int32VT);
+
+  SDNodeFlags NSWFlags;
+  NSWFlags.setNoSignedWrap(true);
+
+  // (Op0 +nsw Op1) +nsw Op2
+  SDValue Add0 = DAG->getNode(ISD::ADD, DL, Int32VT, Op0, Op1, NSWFlags);
+  SDValue Add1 = DAG->getNode(ISD::ADD, DL, Int32VT, Add0, Op2, NSWFlags);
+
+  SDValue Op3 = DAG->getCopyFromReg(DAG->getEntryNode(), DL,
+                                    Register::index2VirtReg(4), Int32VT);
+  SDValue Op4 = DAG->getCopyFromReg(DAG->getEntryNode(), DL,
+                                    Register::index2VirtReg(5), Int32VT);
+  SDValue Op5 = DAG->getCopyFromReg(DAG->getEntryNode(), DL,
+                                    Register::index2VirtReg(6), Int32VT);
+
+  // (Op3 + Op4) +nsw Op5
+  SDValue Add2 = DAG->getNode(ISD::ADD, DL, Int32VT, Op3, Op4);
+  SDValue Add3 = DAG->getNode(ISD::ADD, DL, Int32VT, Add2, Op5, NSWFlags);
+
+  SDValue Op6 = DAG->getCopyFromReg(DAG->getEntryNode(), DL,
+                                    Register::index2VirtReg(7), Int32VT);
+  SDValue Op7 = DAG->getCopyFromReg(DAG->getEntryNode(), DL,
+                                    Register::index2VirtReg(8), Int32VT);
+  SDValue Op8 = DAG->getCopyFromReg(DAG->getEntryNode(), DL,
+                                    Register::index2VirtReg(9), Int32VT);
+
+  SDNodeFlags NUWFlags;
+  NUWFlags.setNoUnsignedWrap(true);
+
+  // (Op6 +nuw Op7) +nuw Op8
+  SDValue Add4 = DAG->getNode(ISD::ADD, DL, Int32VT, Op6, Op7, NUWFlags);
+  SDValue Add5 = DAG->getNode(ISD::ADD, DL, Int32VT, Add4, Op8, NUWFlags);
+
+  // (Op0 +nsw+nuw Op1) +nsw+nuw Op2
+  SDNodeFlags BothFlags;
+  BothFlags.setNoSignedWrap(true);
+  BothFlags.setNoUnsignedWrap(true);
+
+  SDValue Op9 = DAG->getCopyFromReg(DAG->getEntryNode(), DL,
+                                    Register::index2VirtReg(10), Int32VT);
+  SDValue Op10 = DAG->getCopyFromReg(DAG->getEntryNode(), DL,
+                                     Register::index2VirtReg(11), Int32VT);
+  SDValue Op11 = DAG->getCopyFromReg(DAG->getEntryNode(), DL,
+                                     Register::index2VirtReg(12), Int32VT);
+
+  SDValue Add6 = DAG->getNode(ISD::ADD, DL, Int32VT, Op9, Op10, BothFlags);
+  SDValue Add7 = DAG->getNode(ISD::ADD, DL, Int32VT, Add6, Op11, BothFlags);
+
+  using namespace SDPatternMatch;
+
+  EXPECT_TRUE(
+      sd_match(Add1, m_ReassociatableNSWAdd(m_Specific(Op0), m_Specific(Op1),
+                                            m_Specific(Op2))));
+  EXPECT_FALSE(
+      sd_match(Add3, m_ReassociatableNSWAdd(m_Specific(Op3), m_Specific(Op4),
+                                            m_Specific(Op5))));
+  EXPECT_TRUE(sd_match(
+      Add3, m_ReassociatableNSWAdd(m_Specific(Add2), m_Specific(Op5))));
+
+  EXPECT_TRUE(
+      sd_match(Add5, m_ReassociatableNUWAdd(m_Specific(Op6), m_Specific(Op7),
+                                            m_Specific(Op8))));
+  EXPECT_FALSE(
+      sd_match(Add1, m_ReassociatableNUWAdd(m_Specific(Op0), m_Specific(Op1),
+                                            m_Specific(Op2))));
+  EXPECT_TRUE(
+      sd_match(Add7, m_ReassociatableNSWAdd(m_Specific(Op9), m_Specific(Op10),
+                                            m_Specific(Op11))));
+  EXPECT_TRUE(
+      sd_match(Add7, m_ReassociatableNUWAdd(m_Specific(Op9), m_Specific(Op10),
+                                            m_Specific(Op11))));
 }

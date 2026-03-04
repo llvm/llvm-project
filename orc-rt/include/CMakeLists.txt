@@ -1,5 +1,6 @@
 set(ORC_RT_HEADERS
     orc-rt-c/CoreTyspe.h
+    orc-rt-c/Error.h
     orc-rt-c/ExternC.h
     orc-rt-c/WrapperFunction.h
     orc-rt-c/orc-rt.h

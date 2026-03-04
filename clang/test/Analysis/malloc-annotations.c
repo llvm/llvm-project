@@ -278,3 +278,96 @@ void testNoUninitAttr(void) {
   user_free(p);
 }
 
+// Regression test for GH#183344 — crash when a function has both
+// ownership_returns and ownership_takes attributes.
+typedef struct GH183344_X GH183344_X;
+typedef struct GH183344_Y GH183344_Y;
+
+GH183344_Y *GH183344_X_to_Y(GH183344_X *x)
+    __attribute__((ownership_returns(GH183344_Y)))
+    __attribute__((ownership_takes(GH183344_X, 1)));
+
+void testGH183344(void) {
+  GH183344_Y *y = GH183344_X_to_Y(0); // no-crash
+  (void)y;
+} // expected-warning{{Potential leak of memory pointed to by 'y'}}
+
+// Extended regression tests for GH#183344 — additional combinations of
+// ownership_returns, ownership_takes, and ownership_holds.
+
+GH183344_X *GH183344_alloc_X(void)
+    __attribute__((ownership_returns(GH183344_X)));
+void GH183344_free_X(GH183344_X *)
+    __attribute__((ownership_takes(GH183344_X, 1)));
+void GH183344_free_Y(GH183344_Y *)
+    __attribute__((ownership_takes(GH183344_Y, 1)));
+
+// Returns + Holds variant: Y is allocated, X is held (not consumed) by callee.
+GH183344_Y *GH183344_X_to_Y_hold(GH183344_X *x)
+    __attribute__((ownership_returns(GH183344_Y)))
+    __attribute__((ownership_holds(GH183344_X, 1)));
+
+// Returns + two Takes (same pool): both X arguments are consumed, Y is
+// returned. Multiple arg indices in one attribute (same pool) is valid;
+// two ownership_takes attributes with *different* pool names are not.
+GH183344_Y *GH183344_combine_XX(GH183344_X *x1, GH183344_X *x2)
+    __attribute__((ownership_returns(GH183344_Y)))
+    __attribute__((ownership_takes(GH183344_X, 1, 2)));
+
+// No-crash for Returns+Holds with null input — same crash pattern as the
+// original GH183344 bug but with ownership_holds instead of ownership_takes.
+void testGH183344_ReturnsHolds_NullInput(void) {
+  GH183344_Y *y = GH183344_X_to_Y_hold(0); // no-crash
+  (void)y;
+} // expected-warning{{Potential leak of memory pointed to by 'y'}}
+
+// Returns+Takes: allocate X, convert to Y (X consumed), free Y — no warnings.
+void testGH183344_ReturnsTakes_CleanUse(void) {
+  GH183344_X *x = GH183344_alloc_X();
+  GH183344_Y *y = GH183344_X_to_Y(x);
+  GH183344_free_Y(y);
+} // no-warning
+
+// Returns+Takes: after the conversion X is consumed; freeing it again is a
+// double-free.
+void testGH183344_ReturnsTakes_DoubleFreeInput(void) {
+  GH183344_X *x = GH183344_alloc_X();
+  GH183344_Y *y = GH183344_X_to_Y(x);
+  GH183344_free_X(x); // expected-warning{{Attempt to release already released memory}}
+  GH183344_free_Y(y);
+}
+
+// Returns+Takes: X is consumed but Y is never freed — leak on Y.
+void testGH183344_ReturnsTakes_LeakRetval(void) {
+  GH183344_X *x = GH183344_alloc_X();
+  GH183344_Y *y = GH183344_X_to_Y(x);
+  (void)y;
+} // expected-warning{{Potential leak of memory pointed to by 'y'}}
+
+// Returns+Holds: after the hold, X is non-owned by the caller; freeing it
+// produces a "non-owned memory" warning (analogous to af3).
+void testGH183344_ReturnsHolds_FreeHeldInput(void) {
+  GH183344_X *x = GH183344_alloc_X();
+  GH183344_Y *y = GH183344_X_to_Y_hold(x);
+  GH183344_free_X(x); // expected-warning{{Attempt to release non-owned memory}}
+  GH183344_free_Y(y);
+}
+
+// Multiple Takes (same pool) + Returns: both X inputs are consumed, Y is
+// returned and freed — no warnings.
+void testGH183344_CombineXX_CleanUse(void) {
+  GH183344_X *x1 = GH183344_alloc_X();
+  GH183344_X *x2 = GH183344_alloc_X();
+  GH183344_Y *y = GH183344_combine_XX(x1, x2);
+  GH183344_free_Y(y);
+} // no-warning
+
+// Multiple Takes (same pool): after the combine, x2 is already consumed;
+// freeing it again is a double-free.
+void testGH183344_CombineXX_DoubleFreeSecondInput(void) {
+  GH183344_X *x1 = GH183344_alloc_X();
+  GH183344_X *x2 = GH183344_alloc_X();
+  GH183344_Y *y = GH183344_combine_XX(x1, x2);
+  GH183344_free_X(x2); // expected-warning{{Attempt to release already released memory}}
+  GH183344_free_Y(y);
+}

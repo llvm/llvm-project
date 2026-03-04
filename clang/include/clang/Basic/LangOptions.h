@@ -113,6 +113,25 @@ public:
     SOB_Trapping
   };
 
+  // Used by __attribute__((overflow_behavior())) to describe overflow behavior
+  // on a per-type basis.
+  enum OverflowBehaviorKind {
+    // Default C standard behavior (type dependent).
+    OB_Unset,
+
+    // __attribute__((overflow_behavior("wrap")))
+    OB_Wrap,
+
+    // __attribute__((overflow_behavior("trap")))
+    OB_Trap,
+
+    // Signed types defined as wrapping via -fwrapv can still be instrumented
+    // by sanitizers (PR82432). This field is needed to disambiguate canonical
+    // wrapping type behaviors from -fwrapv behaviors.
+    // -fwrapv
+    OB_SignedAndDefined
+  };
+
   // FIXME: Unify with TUKind.
   enum CompilingModuleKind {
     /// Not compiling a module interface at all.
@@ -458,6 +477,9 @@ public:
   SanitizerSet Sanitize;
   /// Is at least one coverage instrumentation type enabled.
   bool SanitizeCoverage = false;
+  /// Set of (UBSan) sanitizers that when enabled do not cause
+  /// `__has_feature(undefined_behavior_sanitizer)` to evaluate true.
+  SanitizerSet UBSanFeatureIgnoredSanitize;
 
   /// Paths to files specifying which objects
   /// (files, functions, variables) should not be instrumented.

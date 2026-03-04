@@ -79,7 +79,7 @@ public:
       const lldb::ProcessSP &process_sp, lldb::addr_t header_addr);
 
   static size_t GetModuleSpecifications(const lldb_private::FileSpec &file,
-                                        lldb::DataBufferSP &data_sp,
+                                        lldb::DataExtractorSP &extractor_sp,
                                         lldb::offset_t data_offset,
                                         lldb::offset_t file_offset,
                                         lldb::offset_t length,
@@ -89,7 +89,7 @@ public:
                        lldb_private::SaveCoreOptions &options,
                        lldb_private::Status &error);
 
-  static bool MagicBytesMatch(lldb::DataBufferSP data_sp);
+  static bool MagicBytesMatch(lldb::DataExtractorSP extractor_sp);
 
   static lldb::SymbolType MapSymbolType(uint16_t coff_symbol_type);
 

@@ -62,12 +62,12 @@ define amdgpu_kernel void @test(ptr addrspace(1) %src, ptr addrspace(1) %dst) {
 ; GFX11-NEXT:    s_load_b32 s6, s[4:5], 0x1c
 ; GFX11-NEXT:    s_load_b32 s7, s[4:5], 0x38
 ; GFX11-NEXT:    s_load_b128 s[0:3], s[4:5], 0x0
-; GFX11-NEXT:    v_dual_mov_b32 v0, 0 :: v_dual_and_b32 v1, 0x3ff, v0
+; GFX11-NEXT:    v_and_b32_e32 v1, 0x3ff, v0
+; GFX11-NEXT:    v_mov_b32_e32 v0, 0
 ; GFX11-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX11-NEXT:    s_and_b32 s4, s6, 0xffff
-; GFX11-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
+; GFX11-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(NEXT) | instid1(SALU_CYCLE_1)
 ; GFX11-NEXT:    s_mul_i32 s13, s13, s4
-; GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instid1(SALU_CYCLE_1)
 ; GFX11-NEXT:    v_add3_u32 v1, s7, s13, v1
 ; GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
 ; GFX11-NEXT:    v_ashrrev_i64 v[4:5], 28, v[0:1]

@@ -615,7 +615,7 @@ declare <vscale x 4 x float> @llvm.log.nxv4f32(<vscale x 4 x float>)
 declare <vscale x 4 x float> @llvm.log2.nxv4f32(<vscale x 4 x float>)
 declare <vscale x 4 x float> @llvm.log10.nxv4f32(<vscale x 4 x float>)
 
-define void @vector_splice() #0 {
+define void @vector_splice(i32 %offset) #0 {
 ; CHECK-VSCALE-1-LABEL: 'vector_splice'
 ; CHECK-VSCALE-1-NEXT:  Cost Model: Found costs of 1 for: %1 = call <vscale x 16 x i8> @llvm.vector.splice.left.nxv16i8(<vscale x 16 x i8> zeroinitializer, <vscale x 16 x i8> zeroinitializer, i32 1)
 ; CHECK-VSCALE-1-NEXT:  Cost Model: Found costs of 2 for: %2 = call <vscale x 32 x i8> @llvm.vector.splice.left.nxv32i8(<vscale x 32 x i8> zeroinitializer, <vscale x 32 x i8> zeroinitializer, i32 1)
@@ -640,10 +640,10 @@ define void @vector_splice() #0 {
 ; CHECK-VSCALE-1-NEXT:  Cost Model: Found costs of 1 for: %21 = call <vscale x 4 x bfloat> @llvm.vector.splice.left.nxv4bf16(<vscale x 4 x bfloat> zeroinitializer, <vscale x 4 x bfloat> zeroinitializer, i32 1)
 ; CHECK-VSCALE-1-NEXT:  Cost Model: Found costs of 1 for: %22 = call <vscale x 8 x bfloat> @llvm.vector.splice.left.nxv8bf16(<vscale x 8 x bfloat> zeroinitializer, <vscale x 8 x bfloat> zeroinitializer, i32 1)
 ; CHECK-VSCALE-1-NEXT:  Cost Model: Found costs of 2 for: %23 = call <vscale x 16 x bfloat> @llvm.vector.splice.left.nxv16bf16(<vscale x 16 x bfloat> zeroinitializer, <vscale x 16 x bfloat> zeroinitializer, i32 1)
-; CHECK-VSCALE-1-NEXT:  Cost Model: Found costs of RThru:4 CodeSize:3 Lat:3 SizeLat:3 for: %24 = call <vscale x 16 x i1> @llvm.vector.splice.left.nxv16i1(<vscale x 16 x i1> zeroinitializer, <vscale x 16 x i1> zeroinitializer, i32 1)
-; CHECK-VSCALE-1-NEXT:  Cost Model: Found costs of RThru:4 CodeSize:3 Lat:3 SizeLat:3 for: %25 = call <vscale x 8 x i1> @llvm.vector.splice.left.nxv8i1(<vscale x 8 x i1> zeroinitializer, <vscale x 8 x i1> zeroinitializer, i32 1)
-; CHECK-VSCALE-1-NEXT:  Cost Model: Found costs of RThru:4 CodeSize:3 Lat:3 SizeLat:3 for: %26 = call <vscale x 4 x i1> @llvm.vector.splice.left.nxv4i1(<vscale x 4 x i1> zeroinitializer, <vscale x 4 x i1> zeroinitializer, i32 1)
-; CHECK-VSCALE-1-NEXT:  Cost Model: Found costs of RThru:4 CodeSize:3 Lat:3 SizeLat:3 for: %27 = call <vscale x 2 x i1> @llvm.vector.splice.left.nxv2i1(<vscale x 2 x i1> zeroinitializer, <vscale x 2 x i1> zeroinitializer, i32 1)
+; CHECK-VSCALE-1-NEXT:  Cost Model: Found costs of 4 for: %24 = call <vscale x 16 x i1> @llvm.vector.splice.left.nxv16i1(<vscale x 16 x i1> zeroinitializer, <vscale x 16 x i1> zeroinitializer, i32 1)
+; CHECK-VSCALE-1-NEXT:  Cost Model: Found costs of 4 for: %25 = call <vscale x 8 x i1> @llvm.vector.splice.left.nxv8i1(<vscale x 8 x i1> zeroinitializer, <vscale x 8 x i1> zeroinitializer, i32 1)
+; CHECK-VSCALE-1-NEXT:  Cost Model: Found costs of 4 for: %26 = call <vscale x 4 x i1> @llvm.vector.splice.left.nxv4i1(<vscale x 4 x i1> zeroinitializer, <vscale x 4 x i1> zeroinitializer, i32 1)
+; CHECK-VSCALE-1-NEXT:  Cost Model: Found costs of 4 for: %27 = call <vscale x 2 x i1> @llvm.vector.splice.left.nxv2i1(<vscale x 2 x i1> zeroinitializer, <vscale x 2 x i1> zeroinitializer, i32 1)
 ; CHECK-VSCALE-1-NEXT:  Cost Model: Found costs of 3 for: %28 = call <vscale x 16 x i8> @llvm.vector.splice.right.nxv16i8(<vscale x 16 x i8> zeroinitializer, <vscale x 16 x i8> zeroinitializer, i32 1)
 ; CHECK-VSCALE-1-NEXT:  Cost Model: Found costs of 6 for: %29 = call <vscale x 32 x i8> @llvm.vector.splice.right.nxv32i8(<vscale x 32 x i8> zeroinitializer, <vscale x 32 x i8> zeroinitializer, i32 1)
 ; CHECK-VSCALE-1-NEXT:  Cost Model: Found costs of Invalid for: %30 = call <vscale x 1 x i16> @llvm.vector.splice.right.nxv1i16(<vscale x 1 x i16> zeroinitializer, <vscale x 1 x i16> zeroinitializer, i32 1)
@@ -673,11 +673,13 @@ define void @vector_splice() #0 {
 ; CHECK-VSCALE-1-NEXT:  Cost Model: Found costs of 3 for: %54 = call <vscale x 4 x bfloat> @llvm.vector.splice.right.nxv4bf16(<vscale x 4 x bfloat> zeroinitializer, <vscale x 4 x bfloat> zeroinitializer, i32 1)
 ; CHECK-VSCALE-1-NEXT:  Cost Model: Found costs of 3 for: %55 = call <vscale x 8 x bfloat> @llvm.vector.splice.right.nxv8bf16(<vscale x 8 x bfloat> zeroinitializer, <vscale x 8 x bfloat> zeroinitializer, i32 1)
 ; CHECK-VSCALE-1-NEXT:  Cost Model: Found costs of 6 for: %56 = call <vscale x 16 x bfloat> @llvm.vector.splice.right.nxv16bf16(<vscale x 16 x bfloat> zeroinitializer, <vscale x 16 x bfloat> zeroinitializer, i32 1)
-; CHECK-VSCALE-1-NEXT:  Cost Model: Found costs of RThru:6 CodeSize:5 Lat:5 SizeLat:5 for: %57 = call <vscale x 16 x i1> @llvm.vector.splice.right.nxv16i1(<vscale x 16 x i1> zeroinitializer, <vscale x 16 x i1> zeroinitializer, i32 1)
-; CHECK-VSCALE-1-NEXT:  Cost Model: Found costs of RThru:6 CodeSize:5 Lat:5 SizeLat:5 for: %58 = call <vscale x 8 x i1> @llvm.vector.splice.right.nxv8i1(<vscale x 8 x i1> zeroinitializer, <vscale x 8 x i1> zeroinitializer, i32 1)
-; CHECK-VSCALE-1-NEXT:  Cost Model: Found costs of RThru:6 CodeSize:5 Lat:5 SizeLat:5 for: %59 = call <vscale x 4 x i1> @llvm.vector.splice.right.nxv4i1(<vscale x 4 x i1> zeroinitializer, <vscale x 4 x i1> zeroinitializer, i32 1)
-; CHECK-VSCALE-1-NEXT:  Cost Model: Found costs of RThru:6 CodeSize:5 Lat:5 SizeLat:5 for: %60 = call <vscale x 2 x i1> @llvm.vector.splice.right.nxv2i1(<vscale x 2 x i1> zeroinitializer, <vscale x 2 x i1> zeroinitializer, i32 1)
+; CHECK-VSCALE-1-NEXT:  Cost Model: Found costs of 6 for: %57 = call <vscale x 16 x i1> @llvm.vector.splice.right.nxv16i1(<vscale x 16 x i1> zeroinitializer, <vscale x 16 x i1> zeroinitializer, i32 1)
+; CHECK-VSCALE-1-NEXT:  Cost Model: Found costs of 6 for: %58 = call <vscale x 8 x i1> @llvm.vector.splice.right.nxv8i1(<vscale x 8 x i1> zeroinitializer, <vscale x 8 x i1> zeroinitializer, i32 1)
+; CHECK-VSCALE-1-NEXT:  Cost Model: Found costs of 6 for: %59 = call <vscale x 4 x i1> @llvm.vector.splice.right.nxv4i1(<vscale x 4 x i1> zeroinitializer, <vscale x 4 x i1> zeroinitializer, i32 1)
+; CHECK-VSCALE-1-NEXT:  Cost Model: Found costs of 6 for: %60 = call <vscale x 2 x i1> @llvm.vector.splice.right.nxv2i1(<vscale x 2 x i1> zeroinitializer, <vscale x 2 x i1> zeroinitializer, i32 1)
 ; CHECK-VSCALE-1-NEXT:  Cost Model: Found costs of Invalid for: %61 = call <vscale x 1 x i1> @llvm.vector.splice.right.nxv1i1(<vscale x 1 x i1> zeroinitializer, <vscale x 1 x i1> zeroinitializer, i32 1)
+; CHECK-VSCALE-1-NEXT:  Cost Model: Found costs of Invalid for: %left.variable = call <vscale x 4 x i32> @llvm.vector.splice.left.nxv4i32(<vscale x 4 x i32> zeroinitializer, <vscale x 4 x i32> zeroinitializer, i32 %offset)
+; CHECK-VSCALE-1-NEXT:  Cost Model: Found costs of Invalid for: %right.variable = call <vscale x 4 x i32> @llvm.vector.splice.right.nxv4i32(<vscale x 4 x i32> zeroinitializer, <vscale x 4 x i32> zeroinitializer, i32 %offset)
 ; CHECK-VSCALE-1-NEXT:  Cost Model: Found costs of RThru:0 CodeSize:1 Lat:1 SizeLat:1 for: ret void
 ;
 ; CHECK-VSCALE-2-LABEL: 'vector_splice'
@@ -704,10 +706,10 @@ define void @vector_splice() #0 {
 ; CHECK-VSCALE-2-NEXT:  Cost Model: Found costs of 1 for: %21 = call <vscale x 4 x bfloat> @llvm.vector.splice.left.nxv4bf16(<vscale x 4 x bfloat> zeroinitializer, <vscale x 4 x bfloat> zeroinitializer, i32 1)
 ; CHECK-VSCALE-2-NEXT:  Cost Model: Found costs of 1 for: %22 = call <vscale x 8 x bfloat> @llvm.vector.splice.left.nxv8bf16(<vscale x 8 x bfloat> zeroinitializer, <vscale x 8 x bfloat> zeroinitializer, i32 1)
 ; CHECK-VSCALE-2-NEXT:  Cost Model: Found costs of 2 for: %23 = call <vscale x 16 x bfloat> @llvm.vector.splice.left.nxv16bf16(<vscale x 16 x bfloat> zeroinitializer, <vscale x 16 x bfloat> zeroinitializer, i32 1)
-; CHECK-VSCALE-2-NEXT:  Cost Model: Found costs of RThru:4 CodeSize:3 Lat:3 SizeLat:3 for: %24 = call <vscale x 16 x i1> @llvm.vector.splice.left.nxv16i1(<vscale x 16 x i1> zeroinitializer, <vscale x 16 x i1> zeroinitializer, i32 1)
-; CHECK-VSCALE-2-NEXT:  Cost Model: Found costs of RThru:4 CodeSize:3 Lat:3 SizeLat:3 for: %25 = call <vscale x 8 x i1> @llvm.vector.splice.left.nxv8i1(<vscale x 8 x i1> zeroinitializer, <vscale x 8 x i1> zeroinitializer, i32 1)
-; CHECK-VSCALE-2-NEXT:  Cost Model: Found costs of RThru:4 CodeSize:3 Lat:3 SizeLat:3 for: %26 = call <vscale x 4 x i1> @llvm.vector.splice.left.nxv4i1(<vscale x 4 x i1> zeroinitializer, <vscale x 4 x i1> zeroinitializer, i32 1)
-; CHECK-VSCALE-2-NEXT:  Cost Model: Found costs of RThru:4 CodeSize:3 Lat:3 SizeLat:3 for: %27 = call <vscale x 2 x i1> @llvm.vector.splice.left.nxv2i1(<vscale x 2 x i1> zeroinitializer, <vscale x 2 x i1> zeroinitializer, i32 1)
+; CHECK-VSCALE-2-NEXT:  Cost Model: Found costs of 4 for: %24 = call <vscale x 16 x i1> @llvm.vector.splice.left.nxv16i1(<vscale x 16 x i1> zeroinitializer, <vscale x 16 x i1> zeroinitializer, i32 1)
+; CHECK-VSCALE-2-NEXT:  Cost Model: Found costs of 4 for: %25 = call <vscale x 8 x i1> @llvm.vector.splice.left.nxv8i1(<vscale x 8 x i1> zeroinitializer, <vscale x 8 x i1> zeroinitializer, i32 1)
+; CHECK-VSCALE-2-NEXT:  Cost Model: Found costs of 4 for: %26 = call <vscale x 4 x i1> @llvm.vector.splice.left.nxv4i1(<vscale x 4 x i1> zeroinitializer, <vscale x 4 x i1> zeroinitializer, i32 1)
+; CHECK-VSCALE-2-NEXT:  Cost Model: Found costs of 4 for: %27 = call <vscale x 2 x i1> @llvm.vector.splice.left.nxv2i1(<vscale x 2 x i1> zeroinitializer, <vscale x 2 x i1> zeroinitializer, i32 1)
 ; CHECK-VSCALE-2-NEXT:  Cost Model: Found costs of 3 for: %28 = call <vscale x 16 x i8> @llvm.vector.splice.right.nxv16i8(<vscale x 16 x i8> zeroinitializer, <vscale x 16 x i8> zeroinitializer, i32 1)
 ; CHECK-VSCALE-2-NEXT:  Cost Model: Found costs of 6 for: %29 = call <vscale x 32 x i8> @llvm.vector.splice.right.nxv32i8(<vscale x 32 x i8> zeroinitializer, <vscale x 32 x i8> zeroinitializer, i32 1)
 ; CHECK-VSCALE-2-NEXT:  Cost Model: Found costs of Invalid for: %30 = call <vscale x 1 x i16> @llvm.vector.splice.right.nxv1i16(<vscale x 1 x i16> zeroinitializer, <vscale x 1 x i16> zeroinitializer, i32 1)
@@ -737,11 +739,13 @@ define void @vector_splice() #0 {
 ; CHECK-VSCALE-2-NEXT:  Cost Model: Found costs of 3 for: %54 = call <vscale x 4 x bfloat> @llvm.vector.splice.right.nxv4bf16(<vscale x 4 x bfloat> zeroinitializer, <vscale x 4 x bfloat> zeroinitializer, i32 1)
 ; CHECK-VSCALE-2-NEXT:  Cost Model: Found costs of 3 for: %55 = call <vscale x 8 x bfloat> @llvm.vector.splice.right.nxv8bf16(<vscale x 8 x bfloat> zeroinitializer, <vscale x 8 x bfloat> zeroinitializer, i32 1)
 ; CHECK-VSCALE-2-NEXT:  Cost Model: Found costs of 6 for: %56 = call <vscale x 16 x bfloat> @llvm.vector.splice.right.nxv16bf16(<vscale x 16 x bfloat> zeroinitializer, <vscale x 16 x bfloat> zeroinitializer, i32 1)
-; CHECK-VSCALE-2-NEXT:  Cost Model: Found costs of RThru:6 CodeSize:5 Lat:5 SizeLat:5 for: %57 = call <vscale x 16 x i1> @llvm.vector.splice.right.nxv16i1(<vscale x 16 x i1> zeroinitializer, <vscale x 16 x i1> zeroinitializer, i32 1)
-; CHECK-VSCALE-2-NEXT:  Cost Model: Found costs of RThru:6 CodeSize:5 Lat:5 SizeLat:5 for: %58 = call <vscale x 8 x i1> @llvm.vector.splice.right.nxv8i1(<vscale x 8 x i1> zeroinitializer, <vscale x 8 x i1> zeroinitializer, i32 1)
-; CHECK-VSCALE-2-NEXT:  Cost Model: Found costs of RThru:6 CodeSize:5 Lat:5 SizeLat:5 for: %59 = call <vscale x 4 x i1> @llvm.vector.splice.right.nxv4i1(<vscale x 4 x i1> zeroinitializer, <vscale x 4 x i1> zeroinitializer, i32 1)
-; CHECK-VSCALE-2-NEXT:  Cost Model: Found costs of RThru:6 CodeSize:5 Lat:5 SizeLat:5 for: %60 = call <vscale x 2 x i1> @llvm.vector.splice.right.nxv2i1(<vscale x 2 x i1> zeroinitializer, <vscale x 2 x i1> zeroinitializer, i32 1)
+; CHECK-VSCALE-2-NEXT:  Cost Model: Found costs of 6 for: %57 = call <vscale x 16 x i1> @llvm.vector.splice.right.nxv16i1(<vscale x 16 x i1> zeroinitializer, <vscale x 16 x i1> zeroinitializer, i32 1)
+; CHECK-VSCALE-2-NEXT:  Cost Model: Found costs of 6 for: %58 = call <vscale x 8 x i1> @llvm.vector.splice.right.nxv8i1(<vscale x 8 x i1> zeroinitializer, <vscale x 8 x i1> zeroinitializer, i32 1)
+; CHECK-VSCALE-2-NEXT:  Cost Model: Found costs of 6 for: %59 = call <vscale x 4 x i1> @llvm.vector.splice.right.nxv4i1(<vscale x 4 x i1> zeroinitializer, <vscale x 4 x i1> zeroinitializer, i32 1)
+; CHECK-VSCALE-2-NEXT:  Cost Model: Found costs of 6 for: %60 = call <vscale x 2 x i1> @llvm.vector.splice.right.nxv2i1(<vscale x 2 x i1> zeroinitializer, <vscale x 2 x i1> zeroinitializer, i32 1)
 ; CHECK-VSCALE-2-NEXT:  Cost Model: Found costs of Invalid for: %61 = call <vscale x 1 x i1> @llvm.vector.splice.right.nxv1i1(<vscale x 1 x i1> zeroinitializer, <vscale x 1 x i1> zeroinitializer, i32 1)
+; CHECK-VSCALE-2-NEXT:  Cost Model: Found costs of Invalid for: %left.variable = call <vscale x 4 x i32> @llvm.vector.splice.left.nxv4i32(<vscale x 4 x i32> zeroinitializer, <vscale x 4 x i32> zeroinitializer, i32 %offset)
+; CHECK-VSCALE-2-NEXT:  Cost Model: Found costs of Invalid for: %right.variable = call <vscale x 4 x i32> @llvm.vector.splice.right.nxv4i32(<vscale x 4 x i32> zeroinitializer, <vscale x 4 x i32> zeroinitializer, i32 %offset)
 ; CHECK-VSCALE-2-NEXT:  Cost Model: Found costs of RThru:0 CodeSize:1 Lat:1 SizeLat:1 for: ret void
 ;
 ; TYPE_BASED_ONLY-LABEL: 'vector_splice'
@@ -806,6 +810,8 @@ define void @vector_splice() #0 {
 ; TYPE_BASED_ONLY-NEXT:  Cost Model: Found costs of Invalid for: %59 = call <vscale x 4 x i1> @llvm.vector.splice.right.nxv4i1(<vscale x 4 x i1> zeroinitializer, <vscale x 4 x i1> zeroinitializer, i32 1)
 ; TYPE_BASED_ONLY-NEXT:  Cost Model: Found costs of Invalid for: %60 = call <vscale x 2 x i1> @llvm.vector.splice.right.nxv2i1(<vscale x 2 x i1> zeroinitializer, <vscale x 2 x i1> zeroinitializer, i32 1)
 ; TYPE_BASED_ONLY-NEXT:  Cost Model: Found costs of Invalid for: %61 = call <vscale x 1 x i1> @llvm.vector.splice.right.nxv1i1(<vscale x 1 x i1> zeroinitializer, <vscale x 1 x i1> zeroinitializer, i32 1)
+; TYPE_BASED_ONLY-NEXT:  Cost Model: Found costs of Invalid for: %left.variable = call <vscale x 4 x i32> @llvm.vector.splice.left.nxv4i32(<vscale x 4 x i32> zeroinitializer, <vscale x 4 x i32> zeroinitializer, i32 %offset)
+; TYPE_BASED_ONLY-NEXT:  Cost Model: Found costs of Invalid for: %right.variable = call <vscale x 4 x i32> @llvm.vector.splice.right.nxv4i32(<vscale x 4 x i32> zeroinitializer, <vscale x 4 x i32> zeroinitializer, i32 %offset)
 ; TYPE_BASED_ONLY-NEXT:  Cost Model: Found costs of RThru:0 CodeSize:1 Lat:1 SizeLat:1 for: ret void
 ;
 
@@ -871,6 +877,9 @@ define void @vector_splice() #0 {
   %splice_nxv4i1_neg = call <vscale x 4 x i1> @llvm.vector.splice.nxv4i1(<vscale x 4 x i1> zeroinitializer, <vscale x 4 x i1> zeroinitializer, i32 -1)
   %splice_nxv2i1_neg = call <vscale x 2 x i1> @llvm.vector.splice.nxv2i1(<vscale x 2 x i1> zeroinitializer, <vscale x 2 x i1> zeroinitializer, i32 -1)
   %splice_nxv1i1_neg = call <vscale x 1 x i1> @llvm.vector.splice.nxv1i1(<vscale x 1 x i1> zeroinitializer, <vscale x 1 x i1> zeroinitializer, i32 -1)
+
+  %left.variable = call <vscale x 4 x i32> @llvm.vector.splice.left(<vscale x 4 x i32> zeroinitializer, <vscale x 4 x i32> zeroinitializer, i32 %offset)
+  %right.variable = call <vscale x 4 x i32> @llvm.vector.splice.right(<vscale x 4 x i32> zeroinitializer, <vscale x 4 x i32> zeroinitializer, i32 %offset)
   ret void
 }
 

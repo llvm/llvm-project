@@ -311,18 +311,37 @@ function(build_nanobind_lib)
 
   # Only build in free-threaded mode if the Python ABI supports it.
   # See https://github.com/wjakob/nanobind/blob/4ba51fcf795971c5d603d875ae4184bc0c9bd8e6/cmake/nanobind-config.cmake#L363-L371.
-  if (NB_ABI MATCHES "[0-9]t")
+  if(NB_ABI MATCHES "[0-9]t")
     set(_ft "-ft")
+    set(_abi3 "")
+  else()
+    set(_ft "")
+    # Match nanobind_add_module's naming: with STABLE_ABI, the shared library
+    # name includes "-abi3" (e.g., "nanobind-abi3-mlir").
+    if(MLIR_ENABLE_PYTHON_STABLE_ABI)
+      set(_abi3 "-abi3")
+    else()
+      set(_abi3 "")
+    endif()
   endif()
   # nanobind does a string match on the suffix to figure out whether to build
   # the lib with free threading...
-  set(NB_LIBRARY_TARGET_NAME "nanobind${_ft}-${ARG_MLIR_BINDINGS_PYTHON_NB_DOMAIN}")
+  set(NB_LIBRARY_TARGET_NAME "nanobind${_ft}${_abi3}-${ARG_MLIR_BINDINGS_PYTHON_NB_DOMAIN}")
   set(NB_LIBRARY_TARGET_NAME "${NB_LIBRARY_TARGET_NAME}" PARENT_SCOPE)
   nanobind_build_library(${NB_LIBRARY_TARGET_NAME} AS_SYSINCLUDE)
   target_compile_definitions(${NB_LIBRARY_TARGET_NAME}
     PRIVATE
     NB_DOMAIN=${ARG_MLIR_BINDINGS_PYTHON_NB_DOMAIN}
   )
+  # Propagate stable ABI to the shared nanobind library. nanobind internally
+  # skips this when the interpreter is free-threaded.
+  if(MLIR_ENABLE_PYTHON_STABLE_ABI AND NOT (NB_ABI MATCHES "[0-9]t"))
+    target_compile_definitions(${NB_LIBRARY_TARGET_NAME}
+      PUBLIC
+      Py_LIMITED_API=0x030C0000
+    )
+    target_link_libraries(${NB_LIBRARY_TARGET_NAME} PRIVATE Python::SABIModule)
+  endif()
   if(CMAKE_SYSTEM_NAME STREQUAL "Linux")
     # nanobind handles this correctly for MacOS by explicitly setting -U for all the necessary Python symbols
     # (see https://github.com/wjakob/nanobind/blob/master/cmake/darwin-ld-cpython.sym)
@@ -393,13 +412,28 @@ function(add_mlir_python_modules name)
     set(ARG_MLIR_BINDINGS_PYTHON_NB_DOMAIN "mlir")
   endif()
 
+  # Collect up all the transitive extension targets.
+  _flatten_mlir_python_targets(_flat_targets ${ARG_DECLARED_SOURCES})
+
+  # Modules with only pure python sources shouldn't build libnanobind.
+  set(_needs_build_nanobind_lib OFF)
+  foreach(sources_target ${_flat_targets})
+    get_target_property(_source_type ${sources_target} mlir_python_SOURCES_TYPE)
+    if((_source_type STREQUAL "support") OR (_source_type STREQUAL "extension"))
+      set(_needs_build_nanobind_lib ON)
+      break()
+    endif()
+  endforeach()
+
   # This call sets NB_LIBRARY_TARGET_NAME.
-  build_nanobind_lib(
-    INSTALL_COMPONENT ${name}
-    INSTALL_DESTINATION "${ARG_INSTALL_PREFIX}/_mlir_libs"
-    OUTPUT_DIRECTORY "${ARG_ROOT_PREFIX}/_mlir_libs"
-    MLIR_BINDINGS_PYTHON_NB_DOMAIN ${ARG_MLIR_BINDINGS_PYTHON_NB_DOMAIN}
-  )
+  if(_needs_build_nanobind_lib)
+    build_nanobind_lib(
+      INSTALL_COMPONENT ${name}
+      INSTALL_DESTINATION "${ARG_INSTALL_PREFIX}/_mlir_libs"
+      OUTPUT_DIRECTORY "${ARG_ROOT_PREFIX}/_mlir_libs"
+      MLIR_BINDINGS_PYTHON_NB_DOMAIN ${ARG_MLIR_BINDINGS_PYTHON_NB_DOMAIN}
+    )
+  endif()
 
   # Helper to process an individual target.
   function(_process_target modules_target sources_target support_libs)
@@ -442,7 +476,6 @@ function(add_mlir_python_modules name)
 
   # Build the modules target.
   add_custom_target(${name} ALL)
-  _flatten_mlir_python_targets(_flat_targets ${ARG_DECLARED_SOURCES})
 
   # Build all support libs first.
   set(_mlir_python_support_libs)
@@ -460,7 +493,10 @@ function(add_mlir_python_modules name)
         MLIR_BINDINGS_PYTHON_NB_DOMAIN ${ARG_MLIR_BINDINGS_PYTHON_NB_DOMAIN}
         _PRIVATE_SUPPORT_LIB
         LINK_LIBS PRIVATE
-          LLVMSupport
+        # LLVMSupport is intentionally removed to avoid introducing an LLVM dependency
+        # for the mlir-python bindings. Do not add new dependencies on the C++ LLVM/MLIR
+        # libraries; use the C++ standard library instead, or wrap LLVM functionality in
+        # the C API first.
           ${sources_target}
           ${ARG_COMMON_CAPI_LINK_LIBS}
       )
@@ -896,9 +932,15 @@ function(add_mlir_python_extension libname extname nb_library_target_name)
       set_property(TARGET ${libname} PROPERTY WINDOWS_EXPORT_ALL_SYMBOLS ON)
     endif()
   else()
+    if(MLIR_ENABLE_PYTHON_STABLE_ABI)
+      set(_stable_abi_flag STABLE_ABI)
+    else()
+      set(_stable_abi_flag "")
+    endif()
     nanobind_add_module(${libname}
       NB_DOMAIN ${ARG_MLIR_BINDINGS_PYTHON_NB_DOMAIN}
       FREE_THREADED
+      ${_stable_abi_flag}
       NB_SHARED
       ${ARG_SOURCES}
     )
@@ -956,9 +998,15 @@ function(add_mlir_python_extension libname extname nb_library_target_name)
     # Same for the rest.
     target_link_options(${libname} PUBLIC
       "LINKER:-U,_PyClassMethod_New"
-      "LINKER:-U,_PyCode_Addr2Location"
-      "LINKER:-U,_PyFrame_GetLasti"
     )
+    if(NOT MLIR_ENABLE_PYTHON_STABLE_ABI)
+      # PyCode_Addr2Location and PyFrame_GetLasti are not part of the stable
+      # ABI and are not referenced when Py_LIMITED_API is defined.
+      target_link_options(${libname} PUBLIC
+        "LINKER:-U,_PyCode_Addr2Location"
+        "LINKER:-U,_PyFrame_GetLasti"
+      )
+    endif()
   endif()
 
   target_compile_options(${libname} PRIVATE ${eh_rtti_enable})

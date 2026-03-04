@@ -167,6 +167,11 @@ def CIR_AnyIntOrFloatType : AnyTypeOf<[CIR_AnyFloatType, CIR_AnyIntType],
     let cppFunctionName = "isAnyIntegerOrFloatingPointType";
 }
 
+def CIR_AnyIntOrBoolType
+    : AnyTypeOf<[CIR_AnyIntType, CIR_AnyBoolType], "integer or boolean type"> {
+  let cppFunctionName = "isIntOrBoolType";
+}
+
 def CIR_AnyIntOrBoolOrFloatType
     : AnyTypeOf<[CIR_AnyBoolType, CIR_AnyFloatType, CIR_AnyIntType],
                 "integer, boolean or floating point type"> {
@@ -190,6 +195,12 @@ def CIR_AnyComplexOrIntOrBoolOrFloatType
 //===----------------------------------------------------------------------===//
 
 def CIR_AnyRecordType : CIR_TypeBase<"::cir::RecordType", "record type">;
+
+//===----------------------------------------------------------------------===//
+// Function Type predicates
+//===----------------------------------------------------------------------===//
+
+def CIR_AnyFuncType : CIR_TypeBase<"::cir::FuncType", "function type">;
 
 //===----------------------------------------------------------------------===//
 // Array Type predicates
@@ -252,6 +263,8 @@ def CIR_PtrToIntOrFloatType : CIR_PtrToType<CIR_AnyIntOrFloatType>;
 def CIR_PtrToComplexType : CIR_PtrToType<CIR_AnyComplexType>;
 
 def CIR_PtrToRecordType : CIR_PtrToType<CIR_AnyRecordType>;
+
+def CIR_PtrToFunc : CIR_PtrToType<CIR_AnyFuncType>;
 
 def CIR_PtrToArray : CIR_PtrToType<CIR_AnyArrayType>;
 
@@ -322,6 +335,19 @@ def CIR_AnyFloatOrVecOfFloatType
         "floating point or vector of floating point type"> {
     let cppFunctionName = "isFPOrVectorOfFPType";
 }
+
+// Types valid for arithmetic ops (add/sub/mul/div/rem):
+// scalar or vector of integer or floating-point. 
+def CIR_AnyArithType
+    : AnyTypeOf<[CIR_AnyIntType, CIR_AnyFloatType,
+                 CIR_VectorOfIntType, CIR_VectorOfFloatType],
+                "integer, floating-point, or vector of integer/float">;
+
+// Types valid for bitwise ops (and/or/xor):
+// integer, boolean, or vector of integer (no floating-point).
+def CIR_AnyBitwiseType
+    : AnyTypeOf<[CIR_AnyIntType, CIR_AnyBoolType, CIR_VectorOfIntType],
+                "integer, boolean, or vector of integer">;
 
 //===----------------------------------------------------------------------===//
 // Data member type predicates

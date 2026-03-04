@@ -2,7 +2,6 @@
 Test lldb Python API for file handles.
 """
 
-
 import os
 import io
 import re
@@ -680,11 +679,18 @@ class FileHandleTestCase(lldbtest.TestBase):
             lines = [x for x in f.read().strip().split() if x != "7"]
             self.assertEqual(lines, ["foobar"])
 
+    @skipIf(hostoslist=["windows"])
     def test_stdout_file_interactive(self):
         """Ensure when we read stdin from a file, outputs from python goes to the right I/O stream."""
         with open(self.in_filename, "w") as f:
             f.write(
-                "script --language python --\nvalue = 250 + 5\nprint(value)\nprint(vel)"
+                """script --language python --
+import sys
+variable = 250 + 5
+print(variable)
+print("wrote to", "stderr", file=sys.stderr)
+quit
+"""
             )
 
         with open(self.out_filename, "w") as outf, open(
@@ -712,7 +718,7 @@ class FileHandleTestCase(lldbtest.TestBase):
             )
             self.dbg.GetOutputFile().Flush()
         expected_out_text = "255"
-        expected_err_text = "NameError"
+        expected_err_text = "wrote to stderr"
         # check stdout
         with open(self.out_filename, "r") as f:
             out_text = f.read()

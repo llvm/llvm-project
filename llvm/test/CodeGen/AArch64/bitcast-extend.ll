@@ -341,6 +341,7 @@ define <16 x i8> @load_zext_v16i8(ptr %p) {
 ; CHECK-SD:       // %bb.0:
 ; CHECK-SD-NEXT:    ldr w8, [x0]
 ; CHECK-SD-NEXT:    fmov d0, x8
+; CHECK-SD-NEXT:    fmov d0, d0
 ; CHECK-SD-NEXT:    ret
 ;
 ; CHECK-GI-LABEL: load_zext_v16i8:

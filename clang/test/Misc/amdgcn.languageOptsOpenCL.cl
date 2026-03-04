@@ -30,6 +30,11 @@
 #endif
 #pragma OPENCL EXTENSION __cl_clang_variadic_functions : enable
 
+#ifndef __cl_clang_function_scope_local_variables
+#error "Missing __cl_clang_function_scope_local_variables define"
+#endif
+#pragma OPENCL EXTENSION __cl_clang_function_scope_local_variables : enable
+
 #ifndef __cl_clang_non_portable_kernel_param_types
 #error "Missing __cl_clang_non_portable_kernel_param_types define"
 #endif
@@ -121,7 +126,7 @@
 #pragma OPENCL EXTENSION cl_khr_gl_msaa_sharing: enable
 // expected-warning@-1{{unsupported OpenCL extension 'cl_khr_gl_msaa_sharing' - ignoring}}
 
-#if (__OPENCL_C_VERSION__ >= 200)
+#if defined(__OPENCL_C_VERSION__)
 #ifndef cl_khr_mipmap_image
 #error "Missing cl_khr_mipmap_image define"
 #endif
@@ -139,7 +144,7 @@
 #pragma OPENCL EXTENSION cl_khr_srgb_image_writes: enable
 // expected-warning@-1{{unsupported OpenCL extension 'cl_khr_srgb_image_writes' - ignoring}}
 
-#if (__OPENCL_C_VERSION__ >= 200)
+#if defined(__OPENCL_C_VERSION__)
 #ifndef cl_khr_subgroups
 #error "Missing cl_khr_subgroups define"
 #endif

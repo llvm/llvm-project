@@ -11,12 +11,13 @@
 
 #include "llvm/MC/MCObjectStreamer.h"
 #include "llvm/MC/MCObjectWriter.h"
+#include "llvm/Support/Compiler.h"
 
 namespace llvm {
 class GOFFObjectWriter;
 class MCSymbolGOFF;
 
-class MCGOFFStreamer : public MCObjectStreamer {
+class LLVM_ABI MCGOFFStreamer : public MCObjectStreamer {
 
 public:
   MCGOFFStreamer(MCContext &Context, std::unique_ptr<MCAsmBackend> MAB,
@@ -30,6 +31,8 @@ public:
   void changeSection(MCSection *Section, uint32_t Subsection = 0) override;
 
   GOFFObjectWriter &getWriter();
+
+  void emitLabel(MCSymbol *Symbol, SMLoc Loc = SMLoc()) override;
 
   bool emitSymbolAttribute(MCSymbol *Symbol, MCSymbolAttr Attribute) override;
 

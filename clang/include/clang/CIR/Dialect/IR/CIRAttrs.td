@@ -14,10 +14,13 @@
 #define CLANG_CIR_DIALECT_IR_CIRATTRS_TD
 
 include "mlir/IR/BuiltinAttributeInterfaces.td"
+include "mlir/Dialect/Ptr/IR/MemorySpaceInterfaces.td"
 
 include "clang/CIR/Dialect/IR/CIRAttrConstraints.td"
 include "clang/CIR/Dialect/IR/CIRDialect.td"
 include "clang/CIR/Dialect/IR/CIREnumAttr.td"
+
+include "clang/CIR/Interfaces/ASTAttrInterfaces.td"
 
 //===----------------------------------------------------------------------===//
 // CIR Attrs
@@ -499,6 +502,78 @@ def CIR_DataMemberAttr : CIR_Attr<"DataMember", "data_member", [
 }
 
 //===----------------------------------------------------------------------===//
+// MethodAttr
+//===----------------------------------------------------------------------===//
+
+def CIR_MethodAttr : CIR_Attr<"Method", "method", [TypedAttrInterface]> {
+  let summary = "Holds a constant pointer-to-member-function value";
+  let description = [{
+    A method attribute is a literal attribute that represents a constant
+    pointer-to-member-function value.
+
+    If the member function is a non-virtual function, the `symbol` parameter
+    gives the global symbol for the non-virtual member function.
+
+    If the member function is a virtual function, the `vtable_offset` parameter
+    gives the offset of the vtable entry corresponding to the virtual member
+    function.
+
+    `symbol` and `vtable_offset` cannot be present at the same time. If both of
+    `symbol` and `vtable_offset` are not present, the attribute represents a
+    null pointer constant.
+
+    Examples:
+    ```
+    // Non-virtual method
+    %0 = cir.const #cir.method<@_ZN1S2m1Ei> :
+             !cir.method<!cir.func<(!s32i)> in !rec_S>
+
+    // Virtual method
+    %1 = cir.const #cir.method<vtable_offset = 8> :
+             !cir.method<!cir.func<(!s32i)> in !rec_S>
+
+    // Null method pointer
+    %0 = cir.const #cir.method<null> :
+             !cir.method<!cir.func<(!s32i)> in !rec_S>
+  }];
+
+  let parameters = (ins AttributeSelfTypeParameter<
+                            "", "cir::MethodType">:$type,
+                        OptionalParameter<
+                            "std::optional<mlir::FlatSymbolRefAttr>">:$symbol,
+                        OptionalParameter<
+                            "std::optional<uint64_t>">:$vtable_offset);
+
+  let builders = [
+    AttrBuilderWithInferredContext<(ins "cir::MethodType":$type), [{
+      return $_get(type.getContext(), type, std::nullopt, std::nullopt);
+    }]>,
+    AttrBuilderWithInferredContext<(ins "cir::MethodType":$type,
+                                        "mlir::FlatSymbolRefAttr":$symbol), [{
+      return $_get(type.getContext(), type, symbol, std::nullopt);
+    }]>,
+    AttrBuilderWithInferredContext<(ins "cir::MethodType":$type,
+                                        "uint64_t":$vtable_offset), [{
+      return $_get(type.getContext(), type, std::nullopt, vtable_offset);
+    }]>,
+  ];
+
+  let hasCustomAssemblyFormat = 1;
+
+  let genVerifyDecl = 1;
+
+  let extraClassDeclaration = [{
+    bool isNull() const {
+      return !getSymbol().has_value() && !getVtableOffset().has_value();
+    }
+
+    bool isVirtual() const {
+      return getVtableOffset().has_value();
+    }
+  }];
+}
+
+//===----------------------------------------------------------------------===//
 // GlobalViewAttr
 //===----------------------------------------------------------------------===//
 
@@ -710,15 +785,63 @@ def CIR_DynamicCastInfoAttr : CIR_Attr<"DynamicCastInfo", "dyn_cast_info"> {
 }
 
 //===----------------------------------------------------------------------===//
+// LangAddressSpaceAttr
+//===----------------------------------------------------------------------===//
+
+def CIR_LangAddressSpaceAttr : CIR_EnumAttr<CIR_LangAddressSpace,
+                                            "lang_address_space", [
+    DeclareAttrInterfaceMethods<MemorySpaceAttrInterface>
+]> {
+  let summary = "Represents a language address space";
+  let description = [{
+    Encodes the semantic address spaces defined by the front-end language
+    (e.g. `__shared__`, `__constant__`, `__local__`). Values are stored using the
+    `cir::LangAddressSpace` enum, keeping the representation compact and
+    preserving the qualifier until it is mapped onto target/LLVM address-space
+    numbers.
+
+    Example:
+    ```mlir
+    !cir.ptr<!s32i, lang_address_space(offload_local)>
+    cir.global constant external lang_address_space(offload_constant)
+    ```
+  }];
+
+  let builders = [
+    AttrBuilder<(ins "clang::LangAS":$langAS), [{
+      return $_get($_ctxt, cir::toCIRLangAddressSpace(langAS));
+    }]>
+  ];
+
+  let assemblyFormat = [{
+    `(` custom<AddressSpaceValue>($value) `)`
+  }];
+
+  let defaultValue = "cir::LangAddressSpace::Default";
+
+  let extraClassDeclaration = [{
+    unsigned getAsUnsignedValue() const;
+  }];
+
+  let extraClassDefinition = [{
+    unsigned $cppClass::getAsUnsignedValue() const {
+      return static_cast<unsigned>(getValue());
+    }
+  }];
+}
+
+//===----------------------------------------------------------------------===//
 // TargetAddressSpaceAttr
 //===----------------------------------------------------------------------===//
 
 def CIR_TargetAddressSpaceAttr : CIR_Attr< "TargetAddressSpace",
-                                         "target_address_space"> {
+                                         "target_address_space", [
+    DeclareAttrInterfaceMethods<MemorySpaceAttrInterface>
+  ]> {
   let summary = "Represents a target-specific numeric address space";
   let description = [{
     The TargetAddressSpaceAttr represents a target-specific numeric address space,
-    corresponding to the LLVM IR `addressspace` qualifier and the clang
+    corresponding to the LLVM IR `addrspace` qualifier and the clang
      `address_space` attribute.
     
     A value of zero represents the default address space. The semantics of non-zero
@@ -732,7 +855,7 @@ def CIR_TargetAddressSpaceAttr : CIR_Attr< "TargetAddressSpace",
     ```
   }];
 
-  let parameters = (ins "mlir::IntegerAttr":$value);
+  let parameters = (ins "unsigned":$value);
   let assemblyFormat = "`<` `target` `<` $value `>` `>`";
 }
 
@@ -1180,5 +1303,100 @@ def CIR_BlockAddrInfoAttr : CIR_Attr<"BlockAddrInfo", "block_addr_info"> {
     }]>
   ];
 }
+
+//===----------------------------------------------------------------------===//
+// Side Effect
+//===----------------------------------------------------------------------===//
+
+def CIR_SideEffect : CIR_I32EnumAttr<
+    "SideEffect", "allowed side effects of a function", [
+      I32EnumAttrCase<"All", 0, "all">,
+      I32EnumAttrCase<"Pure", 1, "pure">,
+      I32EnumAttrCase<"Const", 2, "const">
+]> {
+  let description = [{
+    The side effect attribute specifies the possible side effects of a function
+    or the target of a call operation.  This is an enumeration attribute with
+    the following possible values:
+
+    - all: The function or callee can have any side effects. This is the default
+      if no side effects are explicitly listed.
+    - pure: The function or callee may read data from memory, but it cannot
+      write data to memory. This has the same effect as the GNU C/C++ attribute
+      `__attribute__((pure))`.
+    - const: The function or callee may not read or write data from memory. This
+      has the same effect as the GNU C/C++ attribute `__attribute__((const))`.
+
+    Examples:
+
+    ```mlir
+    %2 = cir.call @add(%0, %1) : (!s32i, !s32i) -> !s32i
+    %2 = cir.call @add(%0, %1) : (!s32i, !s32i) -> !s32i side_effect(pure)
+    %2 = cir.call @add(%0, %1) : (!s32i, !s32i) -> !s32i side_effect(const)
+    ```
+  }];
+}
+
+//===----------------------------------------------------------------------===//
+// StaticLocalGuardAttr
+//===----------------------------------------------------------------------===//
+
+def CIR_StaticLocalGuardAttr : CIR_Attr<"StaticLocalGuard",
+                                         "static_local_guard"> {
+  let summary = "Guard variable name for static local variables";
+  let description = [{
+    Contains the mangled guard variable name for static local variable
+    initialization.
+
+    Example:
+    ```mlir
+    cir.global internal static_local_guard<"_ZGVZ3foovE1x"> @_ZZ3foovE1x = ...
+    ```
+  }];
+  let parameters = (ins "mlir::StringAttr":$name);
+  let assemblyFormat = "`<` $name `>`";
+}
+
+//===----------------------------------------------------------------------===//
+// AST Wrappers
+//===----------------------------------------------------------------------===//
+
+class CIR_AST<string name, string prefix, list<Trait> traits = []>
+    : CIR_Attr<!strconcat("AST", name), !strconcat(prefix, ".ast"), traits> {
+  string clang_name = !strconcat("const clang::", name, " *");
+
+  let summary = !strconcat("Wraps a '", clang_name, "' AST node.");
+  let description = [{
+    Operations optionally refer to this node, they could be available depending
+    on the CIR lowering stage. Whether it's attached to the appropriate
+    CIR operation is delegated to the operation verifier.
+
+    Note: the AST pointer can be null when CIR is parsed from text, since
+    there is no serialization support for AST nodes yet.
+  }];
+  let parameters = (ins clang_name:$ast);
+
+  // Printing and parsing available in CIRDialect.cpp
+  let hasCustomAssemblyFormat = 1;
+
+  let extraClassDefinition = [{
+    ::mlir::Attribute $cppClass::parse(::mlir::AsmParser &parser,
+                                       ::mlir::Type type) {
+      // We cannot really parse anything AST related at this point
+      // since we have no serialization/JSON story.
+      return $cppClass::get(parser.getContext(), nullptr);
+    }
+
+    void $cppClass::print(::mlir::AsmPrinter &printer) const {
+      // Nothing to print besides the mnemonics.
+    }
+  }];
+}
+
+def CIR_ASTVarDeclAttr : CIR_AST<"VarDecl", "var.decl", [
+  ASTVarDeclInterface
+]>;
+
+include "clang/CIR/Dialect/IR/CIRCUDAAttrs.td"
 
 #endif // CLANG_CIR_DIALECT_IR_CIRATTRS_TD

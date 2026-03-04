@@ -62,6 +62,19 @@ func.func @loop_for_single_index_argument(%arg0: index) {
   // expected-error@+1 {{expected induction variable to be same type as bounds}}
   "scf.for"(%arg0, %arg0, %arg0) (
     {
+    ^bb0(%i0 : i32):
+      scf.yield
+    }
+  ) : (index, index, index) -> ()
+  return
+}
+
+// -----
+
+func.func @loop_for_invalid_ind_type(%arg0: index) {
+  // expected-error@+1 {{0-th induction variable has invalid type: 'f32'}}
+  "scf.for"(%arg0, %arg0, %arg0) (
+    {
     ^bb0(%i0 : f32):
       scf.yield
     }
@@ -820,5 +833,20 @@ func.func @invalid_reference(%a: index) {
     %foo = "test.inner"() : () -> (tensor<?xf32>)
     scf.yield %foo : tensor<?xf32>
   }
+  return
+}
+
+// -----
+
+// Regression test for https://github.com/llvm/llvm-project/issues/159737
+// A scf.for whose body block has no arguments used to crash in
+// getRegionIterArgs() via verifyLoopLikeOpInterface instead of producing a
+// proper diagnostic.
+func.func @for_missing_induction_var(%arg0: index, %arg1: index) {
+  %c1 = arith.constant 1 : index
+  // expected-error@+1 {{expected body to have at least 1 argument(s) for the induction variable, but got 0}}
+  "scf.for"(%arg0, %arg1, %c1) ({
+    "scf.yield"() : () -> ()
+  }) : (index, index, index) -> ()
   return
 }

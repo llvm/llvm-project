@@ -218,6 +218,7 @@ public:
                          lowertypetests::DropTestKind::None)
       : ExportSummary(ExportSummary), ImportSummary(ImportSummary),
         DropTypeTests(DropTypeTests) {}
+  static bool isRequired() { return true; }
   LLVM_ABI PreservedAnalyses run(Module &M, ModuleAnalysisManager &AM);
 };
 

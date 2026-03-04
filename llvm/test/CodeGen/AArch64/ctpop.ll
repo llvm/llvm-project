@@ -602,6 +602,7 @@ define i128 @i128_mask(i128 %x) {
 ; CHECK-SD-NEXT:    and x8, x0, #0xff
 ; CHECK-SD-NEXT:    mov x1, xzr
 ; CHECK-SD-NEXT:    fmov d0, x8
+; CHECK-SD-NEXT:    fmov d0, d0
 ; CHECK-SD-NEXT:    cnt v0.16b, v0.16b
 ; CHECK-SD-NEXT:    addv b0, v0.16b
 ; CHECK-SD-NEXT:    fmov x0, d0

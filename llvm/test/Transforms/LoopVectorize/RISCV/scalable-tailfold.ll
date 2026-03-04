@@ -242,14 +242,9 @@ define i64 @uniform_load(ptr noalias nocapture %a, ptr noalias nocapture %b, i64
 ; CHECK-NEXT:    [[TMP6:%.*]] = icmp eq i64 [[AVL_NEXT]], 0
 ; CHECK-NEXT:    br i1 [[TMP6]], label [[MIDDLE_BLOCK:%.*]], label [[FOR_BODY]], !llvm.loop [[LOOP7:![0-9]+]]
 ; CHECK:       middle.block:
-; CHECK-NEXT:    [[TMP8:%.*]] = sub i64 [[TMP5]], 1
-; CHECK-NEXT:    [[TMP9:%.*]] = call i64 @llvm.vscale.i64()
-; CHECK-NEXT:    [[TMP10:%.*]] = mul nuw i64 [[TMP9]], 2
-; CHECK-NEXT:    [[TMP11:%.*]] = mul i64 [[TMP10]], 0
-; CHECK-NEXT:    [[TMP12:%.*]] = extractelement <vscale x 2 x i64> [[BROADCAST_SPLAT]], i64 [[TMP8]]
 ; CHECK-NEXT:    br label [[FOR_BODY1:%.*]]
 ; CHECK:       for.end:
-; CHECK-NEXT:    ret i64 [[TMP12]]
+; CHECK-NEXT:    ret i64 [[V]]
 ;
 entry:
   br label %for.body

@@ -5,8 +5,8 @@
 // CHECK-LABEL: define hidden noundef <6 x i32> @_Z22elementwise_type_cast0u11matrix_typeILm3ELm2EfE(
 // CHECK-SAME: <6 x float> noundef nofpclass(nan inf) [[F32:%.*]]) #[[ATTR0:[0-9]+]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
-// CHECK-NEXT:    [[F32_ADDR:%.*]] = alloca [6 x float], align 4
-// CHECK-NEXT:    [[I32:%.*]] = alloca [6 x i32], align 4
+// CHECK-NEXT:    [[F32_ADDR:%.*]] = alloca [2 x <3 x float>], align 4
+// CHECK-NEXT:    [[I32:%.*]] = alloca [2 x <3 x i32>], align 4
 // CHECK-NEXT:    store <6 x float> [[F32]], ptr [[F32_ADDR]], align 4
 // CHECK-NEXT:    [[TMP0:%.*]] = load <6 x float>, ptr [[F32_ADDR]], align 4
 // CHECK-NEXT:    [[CONV:%.*]] = fptosi <6 x float> [[TMP0]] to <6 x i32>
@@ -22,8 +22,8 @@ int3x2 elementwise_type_cast0(float3x2 f32) {
 // CHECK-LABEL: define hidden noundef <6 x i32> @_Z22elementwise_type_cast1u11matrix_typeILm3ELm2EsE(
 // CHECK-SAME: <6 x i16> noundef [[I16_32:%.*]]) #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
-// CHECK-NEXT:    [[I16_32_ADDR:%.*]] = alloca [6 x i16], align 2
-// CHECK-NEXT:    [[I32:%.*]] = alloca [6 x i32], align 4
+// CHECK-NEXT:    [[I16_32_ADDR:%.*]] = alloca [2 x <3 x i16>], align 2
+// CHECK-NEXT:    [[I32:%.*]] = alloca [2 x <3 x i32>], align 4
 // CHECK-NEXT:    store <6 x i16> [[I16_32]], ptr [[I16_32_ADDR]], align 2
 // CHECK-NEXT:    [[TMP0:%.*]] = load <6 x i16>, ptr [[I16_32_ADDR]], align 2
 // CHECK-NEXT:    [[CONV:%.*]] = sext <6 x i16> [[TMP0]] to <6 x i32>
@@ -39,8 +39,8 @@ int3x2 elementwise_type_cast1(int16_t3x2 i16_32) {
 // CHECK-LABEL: define hidden noundef <6 x i32> @_Z22elementwise_type_cast2u11matrix_typeILm3ELm2ElE(
 // CHECK-SAME: <6 x i64> noundef [[I64_32:%.*]]) #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
-// CHECK-NEXT:    [[I64_32_ADDR:%.*]] = alloca [6 x i64], align 8
-// CHECK-NEXT:    [[I32:%.*]] = alloca [6 x i32], align 4
+// CHECK-NEXT:    [[I64_32_ADDR:%.*]] = alloca [2 x <3 x i64>], align 8
+// CHECK-NEXT:    [[I32:%.*]] = alloca [2 x <3 x i32>], align 4
 // CHECK-NEXT:    store <6 x i64> [[I64_32]], ptr [[I64_32_ADDR]], align 8
 // CHECK-NEXT:    [[TMP0:%.*]] = load <6 x i64>, ptr [[I64_32_ADDR]], align 8
 // CHECK-NEXT:    [[CONV:%.*]] = trunc <6 x i64> [[TMP0]] to <6 x i32>
@@ -56,8 +56,8 @@ int3x2 elementwise_type_cast2(int64_t3x2 i64_32) {
 // CHECK-LABEL: define hidden noundef <6 x i16> @_Z22elementwise_type_cast3u11matrix_typeILm2ELm3EDhE(
 // CHECK-SAME: <6 x half> noundef nofpclass(nan inf) [[H23:%.*]]) #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
-// CHECK-NEXT:    [[H23_ADDR:%.*]] = alloca [6 x half], align 2
-// CHECK-NEXT:    [[I23:%.*]] = alloca [6 x i16], align 2
+// CHECK-NEXT:    [[H23_ADDR:%.*]] = alloca [3 x <2 x half>], align 2
+// CHECK-NEXT:    [[I23:%.*]] = alloca [3 x <2 x i16>], align 2
 // CHECK-NEXT:    store <6 x half> [[H23]], ptr [[H23_ADDR]], align 2
 // CHECK-NEXT:    [[TMP0:%.*]] = load <6 x half>, ptr [[H23_ADDR]], align 2
 // CHECK-NEXT:    [[CONV:%.*]] = fptosi <6 x half> [[TMP0]] to <6 x i16>
@@ -73,8 +73,8 @@ int16_t2x3 elementwise_type_cast3(half2x3 h23) {
 // CHECK-LABEL: define hidden noundef <6 x i32> @_Z22elementwise_type_cast4u11matrix_typeILm3ELm2EdE(
 // CHECK-SAME: <6 x double> noundef nofpclass(nan inf) [[D32:%.*]]) #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
-// CHECK-NEXT:    [[D32_ADDR:%.*]] = alloca [6 x double], align 8
-// CHECK-NEXT:    [[I32:%.*]] = alloca [6 x i32], align 4
+// CHECK-NEXT:    [[D32_ADDR:%.*]] = alloca [2 x <3 x double>], align 8
+// CHECK-NEXT:    [[I32:%.*]] = alloca [2 x <3 x i32>], align 4
 // CHECK-NEXT:    store <6 x double> [[D32]], ptr [[D32_ADDR]], align 8
 // CHECK-NEXT:    [[TMP0:%.*]] = load <6 x double>, ptr [[D32_ADDR]], align 8
 // CHECK-NEXT:    [[CONV:%.*]] = fptosi <6 x double> [[TMP0]] to <6 x i32>
@@ -91,7 +91,7 @@ int3x2 elementwise_type_cast4(double3x2 d32) {
 // CHECK-SAME: ) #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
 // CHECK-NEXT:    [[A:%.*]] = alloca [2 x [1 x i32]], align 4
-// CHECK-NEXT:    [[B:%.*]] = alloca [2 x i32], align 4
+// CHECK-NEXT:    [[B:%.*]] = alloca [1 x <2 x i32>], align 4
 // CHECK-NEXT:    [[AGG_TEMP:%.*]] = alloca [2 x [1 x i32]], align 4
 // CHECK-NEXT:    [[FLATCAST_TMP:%.*]] = alloca <2 x i32>, align 4
 // CHECK-NEXT:    call void @llvm.memcpy.p0.p0.i32(ptr align 4 [[A]], ptr align 4 @__const._Z5call2v.A, i32 8, i1 false)
@@ -120,7 +120,7 @@ struct S {
 // CHECK-SAME: ) #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
 // CHECK-NEXT:    [[S:%.*]] = alloca [[STRUCT_S:%.*]], align 1
-// CHECK-NEXT:    [[A:%.*]] = alloca [2 x i32], align 4
+// CHECK-NEXT:    [[A:%.*]] = alloca [1 x <2 x i32>], align 4
 // CHECK-NEXT:    [[AGG_TEMP:%.*]] = alloca [[STRUCT_S]], align 1
 // CHECK-NEXT:    [[FLATCAST_TMP:%.*]] = alloca <2 x i32>, align 4
 // CHECK-NEXT:    call void @llvm.memcpy.p0.p0.i32(ptr align 1 [[S]], ptr align 1 @__const._Z5call3v.s, i32 8, i1 false)
@@ -155,7 +155,7 @@ struct Derived : BFields {
 // CHECK-LABEL: define hidden void @_Z5call47Derived(
 // CHECK-SAME: ptr noundef byval([[STRUCT_DERIVED:%.*]]) align 1 [[D:%.*]]) #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
-// CHECK-NEXT:    [[A:%.*]] = alloca [4 x i32], align 4
+// CHECK-NEXT:    [[A:%.*]] = alloca [2 x <2 x i32>], align 4
 // CHECK-NEXT:    [[AGG_TEMP:%.*]] = alloca [[STRUCT_DERIVED]], align 1
 // CHECK-NEXT:    [[FLATCAST_TMP:%.*]] = alloca <4 x i32>, align 4
 // CHECK-NEXT:    call void @llvm.memcpy.p0.p0.i32(ptr align 1 [[AGG_TEMP]], ptr align 1 [[D]], i32 19, i1 false)
@@ -189,7 +189,7 @@ void call4(Derived D) {
 // CHECK-SAME: <4 x float> noundef nofpclass(nan inf) [[V:%.*]]) #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
 // CHECK-NEXT:    [[V_ADDR:%.*]] = alloca <4 x float>, align 16
-// CHECK-NEXT:    [[M:%.*]] = alloca [4 x float], align 4
+// CHECK-NEXT:    [[M:%.*]] = alloca [2 x <2 x float>], align 4
 // CHECK-NEXT:    [[HLSL_EWCAST_SRC:%.*]] = alloca <4 x float>, align 16
 // CHECK-NEXT:    [[FLATCAST_TMP:%.*]] = alloca <4 x float>, align 4
 // CHECK-NEXT:    store <4 x float> [[V]], ptr [[V_ADDR]], align 16

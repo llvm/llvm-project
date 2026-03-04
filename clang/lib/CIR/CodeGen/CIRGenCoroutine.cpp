@@ -215,6 +215,26 @@ CIRGenFunction::emitCoroBeginBuiltinCall(mlir::Location loc,
       mlir::ValueRange{curCoro.data->coroId.getResult(), coroframeAddr});
 }
 
+cir::CallOp CIRGenFunction::emitCoroEndBuiltinCall(mlir::Location loc,
+                                                   mlir::Value nullPtr) {
+  cir::BoolType boolTy = builder.getBoolTy();
+  mlir::Operation *builtin = cgm.getGlobalValue(cgm.builtinCoroEnd);
+
+  cir::FuncOp fnOp;
+  if (!builtin) {
+    fnOp = cgm.createCIRBuiltinFunction(
+        loc, cgm.builtinCoroEnd,
+        cir::FuncType::get({voidPtrTy, boolTy}, boolTy),
+        /*fd=*/nullptr);
+    assert(fnOp && "should always succeed");
+  } else {
+    fnOp = cast<cir::FuncOp>(builtin);
+  }
+
+  return builder.createCallOp(
+      loc, fnOp, mlir::ValueRange{nullPtr, builder.getBool(false, loc)});
+}
+
 mlir::LogicalResult
 CIRGenFunction::emitCoroutineBody(const CoroutineBodyStmt &s) {
   mlir::Location openCurlyLoc = getLoc(s.getBeginLoc());
@@ -418,14 +438,21 @@ emitSuspendExpression(CIRGenFunction &cgf, CGCoroData &coro,
         // FIXME(cir): the alloca for the resume expr should be placed in the
         // enclosing cir.scope instead.
         if (forLValue) {
-          assert(!cir::MissingFeatures::coroCoYield());
+          awaitRes.lv = cgf.emitLValue(s.getResumeExpr());
         } else {
           awaitRes.rv =
               cgf.emitAnyExpr(s.getResumeExpr(), aggSlot, ignoreResult);
-          if (!awaitRes.rv.isIgnored())
+          if (!awaitRes.rv.isIgnored()) {
             // Create the alloca in the block before the scope wrapping
             // cir.await.
-            assert(!cir::MissingFeatures::coroCoReturn());
+            tmpResumeRValAddr = cgf.emitAlloca(
+                "__coawait_resume_rval", awaitRes.rv.getValue().getType(), loc,
+                CharUnits::One(),
+                builder.getBestAllocaInsertPoint(scopeParentBlock));
+            // Store the rvalue so we can reload it before the promise call.
+            builder.CIRBaseBuilderTy::createStore(loc, awaitRes.rv.getValue(),
+                                                  tmpResumeRValAddr);
+          }
         }
 
         if (tryStmt)
@@ -483,6 +510,13 @@ RValue CIRGenFunction::emitCoawaitExpr(const CoawaitExpr &e,
                                        AggValueSlot aggSlot,
                                        bool ignoreResult) {
   return emitSuspendExpr(*this, e, curCoro.data->currentAwaitKind, aggSlot,
+                         ignoreResult);
+}
+
+RValue CIRGenFunction::emitCoyieldExpr(const CoyieldExpr &e,
+                                       AggValueSlot aggSlot,
+                                       bool ignoreResult) {
+  return emitSuspendExpr(*this, e, cir::AwaitKind::Yield, aggSlot,
                          ignoreResult);
 }
 
