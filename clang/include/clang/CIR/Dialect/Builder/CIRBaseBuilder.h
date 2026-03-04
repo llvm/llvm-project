@@ -56,6 +56,10 @@ constexpr OverflowBehavior &operator&=(OverflowBehavior &a,
   return a;
 }
 
+constexpr bool testFlag(OverflowBehavior ob, OverflowBehavior flag) {
+  return (ob & flag) != OverflowBehavior::None;
+}
+
 class CIRBaseBuilderTy : public mlir::OpBuilder {
 
 public:
@@ -547,11 +551,6 @@ public:
   // Binary Operators
   //===--------------------------------------------------------------------===//
 
-  mlir::Value createBinop(mlir::Location loc, mlir::Value lhs,
-                          cir::BinOpKind kind, mlir::Value rhs) {
-    return cir::BinOp::create(*this, loc, lhs.getType(), kind, lhs, rhs);
-  }
-
   mlir::Value createLowBitsSet(mlir::Location loc, unsigned size,
                                unsigned bits) {
     llvm::APInt val = llvm::APInt::getLowBitsSet(size, bits);
@@ -560,11 +559,11 @@ public:
   }
 
   mlir::Value createAnd(mlir::Location loc, mlir::Value lhs, mlir::Value rhs) {
-    return createBinop(loc, lhs, cir::BinOpKind::And, rhs);
+    return cir::AndOp::create(*this, loc, lhs, rhs);
   }
 
   mlir::Value createOr(mlir::Location loc, mlir::Value lhs, mlir::Value rhs) {
-    return createBinop(loc, lhs, cir::BinOpKind::Or, rhs);
+    return cir::OrOp::create(*this, loc, lhs, rhs);
   }
 
   mlir::Value createSelect(mlir::Location loc, mlir::Value condition,
@@ -587,12 +586,9 @@ public:
 
   mlir::Value createMul(mlir::Location loc, mlir::Value lhs, mlir::Value rhs,
                         OverflowBehavior ob = OverflowBehavior::None) {
-    auto op = cir::BinOp::create(*this, loc, lhs.getType(), cir::BinOpKind::Mul,
-                                 lhs, rhs);
-    op.setNoUnsignedWrap(
-        llvm::to_underlying(ob & OverflowBehavior::NoUnsignedWrap));
-    op.setNoSignedWrap(
-        llvm::to_underlying(ob & OverflowBehavior::NoSignedWrap));
+    auto op = cir::MulOp::create(*this, loc, lhs, rhs);
+    op.setNoUnsignedWrap(testFlag(ob, OverflowBehavior::NoUnsignedWrap));
+    op.setNoSignedWrap(testFlag(ob, OverflowBehavior::NoSignedWrap));
     return op;
   }
   mlir::Value createNSWMul(mlir::Location loc, mlir::Value lhs,
@@ -606,13 +602,10 @@ public:
 
   mlir::Value createSub(mlir::Location loc, mlir::Value lhs, mlir::Value rhs,
                         OverflowBehavior ob = OverflowBehavior::None) {
-    auto op = cir::BinOp::create(*this, loc, lhs.getType(), cir::BinOpKind::Sub,
-                                 lhs, rhs);
-    op.setNoUnsignedWrap(
-        llvm::to_underlying(ob & OverflowBehavior::NoUnsignedWrap));
-    op.setNoSignedWrap(
-        llvm::to_underlying(ob & OverflowBehavior::NoSignedWrap));
-    op.setSaturated(llvm::to_underlying(ob & OverflowBehavior::Saturated));
+    auto op = cir::SubOp::create(*this, loc, lhs, rhs);
+    op.setNoUnsignedWrap(testFlag(ob, OverflowBehavior::NoUnsignedWrap));
+    op.setNoSignedWrap(testFlag(ob, OverflowBehavior::NoSignedWrap));
+    op.setSaturated(testFlag(ob, OverflowBehavior::Saturated));
     return op;
   }
 
@@ -628,13 +621,10 @@ public:
 
   mlir::Value createAdd(mlir::Location loc, mlir::Value lhs, mlir::Value rhs,
                         OverflowBehavior ob = OverflowBehavior::None) {
-    auto op = cir::BinOp::create(*this, loc, lhs.getType(), cir::BinOpKind::Add,
-                                 lhs, rhs);
-    op.setNoUnsignedWrap(
-        llvm::to_underlying(ob & OverflowBehavior::NoUnsignedWrap));
-    op.setNoSignedWrap(
-        llvm::to_underlying(ob & OverflowBehavior::NoSignedWrap));
-    op.setSaturated(llvm::to_underlying(ob & OverflowBehavior::Saturated));
+    auto op = cir::AddOp::create(*this, loc, lhs, rhs);
+    op.setNoUnsignedWrap(testFlag(ob, OverflowBehavior::NoUnsignedWrap));
+    op.setNoSignedWrap(testFlag(ob, OverflowBehavior::NoSignedWrap));
+    op.setSaturated(testFlag(ob, OverflowBehavior::Saturated));
     return op;
   }
 
@@ -646,6 +636,22 @@ public:
   mlir::Value createNUWAdd(mlir::Location loc, mlir::Value lhs,
                            mlir::Value rhs) {
     return createAdd(loc, lhs, rhs, OverflowBehavior::NoUnsignedWrap);
+  }
+
+  mlir::Value createDiv(mlir::Location loc, mlir::Value lhs, mlir::Value rhs) {
+    return cir::DivOp::create(*this, loc, lhs, rhs);
+  }
+
+  mlir::Value createRem(mlir::Location loc, mlir::Value lhs, mlir::Value rhs) {
+    return cir::RemOp::create(*this, loc, lhs, rhs);
+  }
+
+  mlir::Value createXor(mlir::Location loc, mlir::Value lhs, mlir::Value rhs) {
+    return cir::XorOp::create(*this, loc, lhs, rhs);
+  }
+
+  mlir::Value createMax(mlir::Location loc, mlir::Value lhs, mlir::Value rhs) {
+    return cir::MaxOp::create(*this, loc, lhs, rhs);
   }
 
   cir::CmpOp createCompare(mlir::Location loc, cir::CmpOpKind kind,
