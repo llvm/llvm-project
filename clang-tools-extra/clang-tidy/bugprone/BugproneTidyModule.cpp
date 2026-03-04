@@ -16,6 +16,7 @@
 #include "BoolPointerImplicitConversionCheck.h"
 #include "BranchCloneCheck.h"
 #include "CapturingThisInMemberVariableCheck.h"
+#include "CastToStructCheck.h"
 #include "CastingThroughVoidCheck.h"
 #include "ChainedComparisonCheck.h"
 #include "CommandProcessorCheck.h"
@@ -137,6 +138,7 @@ public:
         "bugprone-capturing-this-in-member-variable");
     CheckFactories.registerCheck<CastingThroughVoidCheck>(
         "bugprone-casting-through-void");
+    CheckFactories.registerCheck<CastToStructCheck>("bugprone-cast-to-struct");
     CheckFactories.registerCheck<ChainedComparisonCheck>(
         "bugprone-chained-comparison");
     CheckFactories.registerCheck<CommandProcessorCheck>(
