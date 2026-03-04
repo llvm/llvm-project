@@ -1383,10 +1383,17 @@ static Operation *vectorizeAffineForOp(AffineForOp forOp,
     }
   }
 
+  // Replace bound operands with scalar replacements from the vector loop nest.
+  // This is required when the bounds reference an outer loop's induction
+  // variable, which will be erased once the scalar loop nest is removed.
+  SmallVector<Value, 8> lbOperands, ubOperands;
+  state.getScalarValueReplacementsFor(forOp.getLowerBoundOperands(),
+                                      lbOperands);
+  state.getScalarValueReplacementsFor(forOp.getUpperBoundOperands(),
+                                      ubOperands);
   auto vecForOp = AffineForOp::create(
-      state.builder, forOp.getLoc(), forOp.getLowerBoundOperands(),
-      forOp.getLowerBoundMap(), forOp.getUpperBoundOperands(),
-      forOp.getUpperBoundMap(), newStep, vecIterOperands,
+      state.builder, forOp.getLoc(), lbOperands, forOp.getLowerBoundMap(),
+      ubOperands, forOp.getUpperBoundMap(), newStep, vecIterOperands,
       /*bodyBuilder=*/[](OpBuilder &, Location, Value, ValueRange) {
         // Make sure we don't create a default terminator in the loop body as
         // the proper terminator will be added during vectorization.
