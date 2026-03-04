@@ -21,6 +21,7 @@
 #include "AMDGPU.h"
 #include "GCNSubtarget.h"
 #include "MCTargetDesc/AMDGPUMCTargetDesc.h"
+#include "SIMachineFunctionInfo.h"
 #include "llvm/ADT/SetVector.h"
 #include "llvm/CodeGen/MachineDominators.h"
 #include "llvm/CodeGen/MachineFunctionPass.h"
@@ -40,6 +41,7 @@ private:
   const SIRegisterInfo *TRI = nullptr;
   MachineLoopInfo *MLI = nullptr;
 
+  bool removeUnconditionalBranchBlocks(MachineFunction &MF);
   bool optimizeVccBranch(MachineInstr &MI) const;
   void updateMLIBeforeRemovingEdge(MachineBasicBlock *From,
                                    MachineBasicBlock *To) const;
@@ -763,6 +765,72 @@ MachineInstrBuilder SIPreEmitPeephole::createUnpackedMI(MachineInstr &I,
   return NewMI;
 }
 
+// Remove blocks that only have an unconditional branch.
+bool SIPreEmitPeephole::removeUnconditionalBranchBlocks(MachineFunction &MF) {
+  SIMachineFunctionInfo *FuncInfo = MF.getInfo<SIMachineFunctionInfo>();
+  SmallVector<MachineBasicBlock *, 2> ToRemoveMBB;
+  bool Changed = false;
+
+  for (MachineBasicBlock &MBB : MF) {
+    MachineBasicBlock *Succ = *MBB.succ_begin();
+    // Cannot remove entry block
+    if (&MBB == &MF.front())
+      continue;
+    // Cannot remove self-loops
+    if (Succ == &MBB)
+      continue;
+
+    // Find blocks that only contain an unconditional branch
+    const MachineInstr *firstMI = nullptr;
+    for (const MachineInstr &MI : MBB) {
+      if (MI.isMetaInstruction())
+        continue;
+      firstMI = &MI;
+      break;
+    }
+    if (firstMI && firstMI->isUnconditionalBranch()) {
+      MachineBasicBlock *FallThrough = nullptr;
+      SmallVector<MachineBasicBlock *, 2> PredecessorInRange;
+      for (MachineBasicBlock *Pred : MBB.predecessors()) {
+        // Ensure that re-directing a branch in Pred from MBB to Succ will
+        // not create a long branch. If a register has been reserved for long
+        // branching and Pred is too many basic blocks away from Succ a long
+        // branch may be created. Using the block difference is a crude but
+        // cheap estimate for the distance.  A very conservative limit has been
+        // chosen.
+        constexpr unsigned BlockNumDiffLimit = 20;
+        if (!FuncInfo->getLongBranchReservedReg() ||
+            std::abs(Pred->getNumber() - Succ->getNumber()) <
+                BlockNumDiffLimit) {
+          if (is_contained(PredecessorInRange, Pred))
+            continue;
+          PredecessorInRange.push_back(Pred);
+          if (Pred->getFallThrough(false) == &MBB)
+            FallThrough = Pred;
+        }
+      }
+      for (MachineBasicBlock *Pred : PredecessorInRange) {
+        Changed = true;
+        Pred->ReplaceUsesOfBlockWith(&MBB, Succ);
+      }
+      if (MBB.predecessors().empty()) {
+        MBB.removeSuccessor(Succ);
+        MBB.clear();
+        ToRemoveMBB.push_back(&MBB);
+      }
+      if (FallThrough && !FallThrough->isLayoutSuccessor(Succ))
+        BuildMI(*FallThrough, FallThrough->end(),
+                FallThrough->findBranchDebugLoc(), TII->get(AMDGPU::S_BRANCH))
+            .addMBB(Succ);
+    }
+  }
+
+  for (MachineBasicBlock *MBB : ToRemoveMBB)
+    MBB->eraseFromParent();
+
+  return Changed;
+}
+
 PreservedAnalyses
 llvm::SIPreEmitPeepholePass::run(MachineFunction &MF,
                                  MachineFunctionAnalysisManager &MFAM) {
@@ -841,6 +909,12 @@ bool SIPreEmitPeephole::run(MachineFunction &MF, MachineLoopInfo *LoopInfo) {
         SetGPRMI = &MI;
     }
   }
+
+  // Branch optimizations in optimizeVccBranch can create blocks that only have
+  // an unconditional branch. Opportunities may have also originated prior to
+  // optimizeVccBranch.
+  if (removeUnconditionalBranchBlocks(MF))
+    Changed = true;
 
   // TODO: Fold this into previous block, if possible. Evaluate and handle any
   // side effects.

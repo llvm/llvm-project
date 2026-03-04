@@ -15,16 +15,11 @@ entry:
 define amdgpu_ps float @test_return_to_epilog_into_end_block(i32 inreg %a, float %b) #0 {
   ; GCN-LABEL: name: test_return_to_epilog_into_end_block
   ; GCN: bb.0.entry:
-  ; GCN-NEXT:   successors: %bb.1(0x80000000), %bb.2(0x00000000)
+  ; GCN-NEXT:   successors: %bb.3(0x80000000), %bb.2(0x00000000)
   ; GCN-NEXT:   liveins: $sgpr2, $vgpr0
   ; GCN-NEXT: {{  $}}
   ; GCN-NEXT:   S_CMP_LT_I32 killed renamable $sgpr2, 1, implicit-def $scc
   ; GCN-NEXT:   S_CBRANCH_SCC1 %bb.2, implicit killed $scc
-  ; GCN-NEXT: {{  $}}
-  ; GCN-NEXT: bb.1.if:
-  ; GCN-NEXT:   successors: %bb.3(0x80000000)
-  ; GCN-NEXT:   liveins: $vgpr0
-  ; GCN-NEXT: {{  $}}
   ; GCN-NEXT:   S_BRANCH %bb.3
   ; GCN-NEXT: {{  $}}
   ; GCN-NEXT: bb.2.else:
@@ -48,16 +43,11 @@ else:                                             ; preds = %entry
 define amdgpu_ps float @test_unify_return_to_epilog_into_end_block(i32 inreg %a, i32 inreg %b, float %c, float %d) #0 {
   ; GCN-LABEL: name: test_unify_return_to_epilog_into_end_block
   ; GCN: bb.0.entry:
-  ; GCN-NEXT:   successors: %bb.1(0x50000000), %bb.2(0x30000000)
+  ; GCN-NEXT:   successors: %bb.5(0x50000000), %bb.2(0x30000000)
   ; GCN-NEXT:   liveins: $sgpr2, $sgpr3, $vgpr0, $vgpr1
   ; GCN-NEXT: {{  $}}
   ; GCN-NEXT:   S_CMP_LT_I32 killed renamable $sgpr2, 1, implicit-def $scc
   ; GCN-NEXT:   S_CBRANCH_SCC1 %bb.2, implicit killed $scc
-  ; GCN-NEXT: {{  $}}
-  ; GCN-NEXT: bb.1.if:
-  ; GCN-NEXT:   successors: %bb.5(0x80000000)
-  ; GCN-NEXT:   liveins: $vgpr0
-  ; GCN-NEXT: {{  $}}
   ; GCN-NEXT:   S_BRANCH %bb.5
   ; GCN-NEXT: {{  $}}
   ; GCN-NEXT: bb.2.else.if.cond:
