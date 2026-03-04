@@ -43,3 +43,7 @@ target_link_libraries(clangDoc
   )
 
 add_subdirectory(tool)
+
+if (LLVM_INCLUDE_BENCHMARKS)
+  add_subdirectory(benchmarks)
+endif()
