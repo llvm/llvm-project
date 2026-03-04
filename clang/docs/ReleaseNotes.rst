@@ -382,6 +382,9 @@ Android Support
 Windows Support
 ^^^^^^^^^^^^^^^
 
+- Clang now defines the ``_MSVC_TRADITIONAL`` macro as ``1`` when emulating MSVC
+  19.15 (Visual Studio 2017 version 15.8) and later. (#GH47114)
+
 LoongArch Support
 ^^^^^^^^^^^^^^^^^
 
