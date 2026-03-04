@@ -11,10 +11,11 @@ void test1(size_t n, float * C, float * A, float * B) {
   // CHECK: ripple.par.origin.LB = alloca i{{[0-9]+}}
   // CHECK-NEXT: ripple.par.block.size = alloca i{{[0-9]+}}
   // CHECK-NEXT: ripple.loop.iters = alloca i{{[0-9]+}}
-  // CHECK-NEXT: ripple.par.loop.iters = alloca i{{[0-9]+}}
+  // CHECK-NEXT: ripple.chunk.count = alloca i{{[0-9]+}}
   // CHECK-NEXT: ripple.par.init = alloca i{{[0-9]+}}
   // CHECK-NEXT: ripple.par.step = alloca i{{[0-9]+}}
   // CHECK-NEXT: ripple.iv.seq.exit.val = alloca i{{[0-9]+}}
+  // CHECK-NEXT: ripple.has.partial.chunk = alloca i{{[0-9]+}}
   // CHECK-NEXT: ripple.par.iv = alloca i{{[0-9]+}}
   // CHECK: br label %ripple.par.for.begin
 
@@ -23,16 +24,18 @@ void test1(size_t n, float * C, float * A, float * B) {
   // CHECK: store i{{[0-9]+}} 0, ptr %ripple.par.origin.LB
   // CHECK: store i{{[0-9]+}} %{{[0-9A-Za-z_]+}}, ptr %ripple.par.block.size
   // CHECK: store i{{[0-9]+}} %{{[0-9A-Za-z_]+}}, ptr %ripple.loop.iters
-  // CHECK: store i{{[0-9]+}} %{{[0-9A-Za-z_]+}}, ptr %ripple.par.loop.iters
+  // CHECK: store i{{[0-9]+}} %{{[0-9A-Za-z_]+}}, ptr %ripple.chunk.count
   // CHECK: store i{{[0-9]+}} %{{[0-9A-Za-z_]+}}, ptr %ripple.par.init
   // CHECK: store i{{[0-9]+}} %{{[0-9A-Za-z_]+}}, ptr %ripple.par.step
+  // CHECK: store i{{[0-9]+}} %{{[0-9A-Za-z_]+}}, ptr %ripple.iv.seq.exit.val
+  // CHECK: store i{{[0-9]+}} %{{[0-9A-Za-z_]+}}, ptr %ripple.has.partial.chunk
   // CHECK: store i{{[0-9]+}} 0, ptr %ripple.par.iv
   // CHECK: br label %for.cond
 
   // The condition is ripple_par_iv < ripple_par_loop_iters
   // CHECK: for.cond:
   // CHECK: %[[RippleIV:[A-Za-z0-9_]+]] = load i{{[0-9]+}}, ptr %ripple.par.iv
-  // CHECK: %[[RippleNumIters:[A-Za-z0-9_]+]] = load i{{[0-9]+}}, ptr %ripple.par.loop.iters
+  // CHECK: %[[RippleNumIters:[A-Za-z0-9_]+]] = load i{{[0-9]+}}, ptr %ripple.chunk.count
   // CHECK: %[[BranchCond:[A-Za-z0-9_]+]] = icmp ult i{{[0-9]+}} %[[RippleIV]], %[[RippleNumIters]]
   // CHECK: br i1 %[[BranchCond]], label %for.body, label %for.end
 
@@ -56,6 +59,12 @@ void test1(size_t n, float * C, float * A, float * B) {
   // Scalar precondition of the masked section
   // CHECK: for.end:
 
+  // Check if we executed all iterations, bypassing the remainder if true
+  // CHECK-NEXT: [[HasPartialChunk:%.*]] = load i{{[0-9]+}}, ptr %ripple.has.partial.chunk
+  // CHECK-NEXT: [[Cond:%.*]] = icmp ne i{{[0-9]+}} [[HasPartialChunk]], 0
+  // CHECK-NEXT: br i1 [[Cond]], label %ripple.par.for.remainder.cond, label %ripple.par.for.end
+
+  // CHECK: ripple.par.for.remainder.cond:
   // Update the IV
   // CHECK-NEXT: %[[RippleInit:[A-Za-z0-9_]+]] = load i{{[0-9]+}}, ptr %ripple.par.init
   // CHECK-NEXT: %[[RippleStep:[A-Za-z0-9_]+]] = load i{{[0-9]+}}, ptr %ripple.par.step
@@ -64,29 +73,20 @@ void test1(size_t n, float * C, float * A, float * B) {
   // CHECK-NEXT: %[[InitPlusOffset:[A-Za-z0-9_]+]] = add i{{[0-9]+}} %[[RippleInit]], %[[Offset]]
   // CHECK-NEXT: store i{{[0-9]+}} %[[InitPlusOffset]], ptr %{{[A-Za-z0-9_]+}}
 
-  // Check if we executed all iterations, bypassing the remainder if true
-  // CHECK-NEXT: %[[RippleIV:[A-Za-z0-9_]+]] = load i{{[0-9]+}}, ptr %ripple.par.iv
-  // CHECK-NEXT: %[[RippleBlockSize:[A-Za-z0-9_]+]] = load i{{[0-9]+}}, ptr %ripple.par.block.size
-  // CHECK-NEXT: %[[IVTimesBlock:[A-Za-z0-9_]+]] = mul i{{[0-9]+}} %[[RippleIV]], %[[RippleBlockSize]]
-  // CHECK-NEXT: %[[LoopIters:[A-Za-z0-9_]+]] = load i{{[0-9]+}}, ptr %ripple.loop.iters
-  // CHECK-NEXT: %[[Cond:[A-Za-z0-9_]+]] = icmp ne i{{[0-9]+}} %[[IVTimesBlock]], %[[LoopIters]]
-  // CHECK-NEXT: br i1 %[[Cond]], label %ripple.par.for.remainder.cond, label %ripple.par.for.end
-
-  // CHECK: ripple.par.for.remainder.cond:
   // Update the original loop induction var
   // CHECK: %[[OriginalCond:[A-Za-z0-9_]+]] = icmp ule i{{[0-9]+}}
   // CHECK: br i1 %[[OriginalCond]], label %ripple.par.for.remainder.body, label %ripple.par.for.end
 
   // CHECK: ripple.par.for.remainder.body:
-  // Update IV to the UB
-  // We are in the masked region (case where the number of iteration is not a multiple of the parallel region),
-  //   hence we compute the UB as-if we executed the loop sequentially (to get the real UB and not the next multiple of the parallel step),
-  //   i.e., IV = LB + Step * NumIter
-  // CHECK:      [[SeqExitValue:%.*]] = load i{{[0-9]+}}, ptr %ripple.iv.seq.exit.val
-  // CHECK-NEXT: store i{{[0-9]+}} [[SeqExitValue]], ptr %i
-  // CHECK-NEXT: br label %ripple.par.for.end
+  // CHECK: br label %ripple.par.for.end
 
   // CHECK: ripple.par.for.end:
+  // We need to fixup the induction variable to be scalar again. Since we don't
+  // allow non-sese region and the loop is a region by itself, we only are
+  // guaranteed that either we reached an unreachable or we executed the whole
+  // loop.
+  // CHECK:      [[SeqExitValue:%.*]] = load i{{[0-9]+}}, ptr %ripple.iv.seq.exit.val
+  // CHECK-NEXT: store i{{[0-9]+}} [[SeqExitValue]], ptr %i
   size_t i;
 #ifdef USE_PRAGMA
   #pragma ripple parallel Block(BS) Dims(0, 1)
@@ -109,10 +109,11 @@ void test2(size_t n, float * C, float * A, float * B) {
   // CHECK-NEXT: ripple.par.origin.LB = alloca i{{[0-9]+}}
   // CHECK-NEXT: ripple.par.block.size = alloca i{{[0-9]+}}
   // CHECK-NEXT: ripple.loop.iters = alloca i{{[0-9]+}}
-  // CHECK-NEXT: ripple.par.loop.iters = alloca i{{[0-9]+}}
+  // CHECK-NEXT: ripple.chunk.count = alloca i{{[0-9]+}}
   // CHECK-NEXT: ripple.par.init = alloca i{{[0-9]+}}
   // CHECK-NEXT: ripple.par.step = alloca i{{[0-9]+}}
   // CHECK-NEXT: ripple.iv.seq.exit.val = alloca i{{[0-9]+}}
+  // CHECK-NEXT: ripple.has.partial.chunk = alloca i{{[0-9]+}}
   // CHECK-NEXT: ripple.par.iv = alloca i{{[0-9]+}}
   // CHECK: br label %ripple.par.for.begin
 
@@ -123,16 +124,18 @@ void test2(size_t n, float * C, float * A, float * B) {
   // CHECK: store i{{[0-9]+}} [[I_LB]], ptr %ripple.par.origin.LB
   // CHECK: store i{{[0-9]+}} %{{[0-9A-Za-z_]+}}, ptr %ripple.par.block.size
   // CHECK: store i{{[0-9]+}} %{{[0-9A-Za-z_]+}}, ptr %ripple.loop.iters
-  // CHECK: store i{{[0-9]+}} %{{[0-9A-Za-z_]+}}, ptr %ripple.par.loop.iters
+  // CHECK: store i{{[0-9]+}} %{{[0-9A-Za-z_]+}}, ptr %ripple.chunk.count
   // CHECK: store i{{[0-9]+}} %{{[0-9A-Za-z_]+}}, ptr %ripple.par.init
   // CHECK: store i{{[0-9]+}} %{{[0-9A-Za-z_]+}}, ptr %ripple.par.step
+  // CHECK: store i{{[0-9]+}} %{{[0-9A-Za-z_]+}}, ptr %ripple.iv.seq.exit.val
+  // CHECK: store i{{[0-9]+}} %{{[0-9A-Za-z_]+}}, ptr %ripple.has.partial.chunk
   // CHECK: store i{{[0-9]+}} 0, ptr %ripple.par.iv
   // CHECK: br label %for.cond
 
   // The condition is ripple_par_iv < ripple_par_loop_iters
   // CHECK: for.cond:
   // CHECK: %[[RippleIV:[A-Za-z0-9_]+]] = load i{{[0-9]+}}, ptr %ripple.par.iv
-  // CHECK: %[[RippleNumIters:[A-Za-z0-9_]+]] = load i{{[0-9]+}}, ptr %ripple.par.loop.iters
+  // CHECK: %[[RippleNumIters:[A-Za-z0-9_]+]] = load i{{[0-9]+}}, ptr %ripple.chunk.count
   // CHECK: %[[BranchCond:[A-Za-z0-9_]+]] = icmp ult i{{[0-9]+}} %[[RippleIV]], %[[RippleNumIters]]
   // CHECK: br i1 %[[BranchCond]], label %for.body, label %for.end
 
@@ -155,12 +158,15 @@ void test2(size_t n, float * C, float * A, float * B) {
 
   // Scalar precondition of the masked section
   // CHECK: for.end:
-  // Update IV to the UB
-  // CHECK:      [[SeqExitValue:%.*]] = load i{{[0-9]+}}, ptr %ripple.iv.seq.exit.val
-  // CHECK-NEXT: store i{{[0-9]+}} [[SeqExitValue]], ptr %i
-  // CHECK-NEXT: br label %ripple.par.for.end
+  // CHECK: br label %ripple.par.for.end
 
   // CHECK: ripple.par.for.end:
+  // We need to fixup the induction variable to be scalar again. Since we don't
+  // allow non-sese region and the loop is a region by itself, we only are
+  // guaranteed that either we reached an unreachable or we executed the whole
+  // loop.
+  // CHECK:      [[SeqExitValue:%.*]] = load i{{[0-9]+}}, ptr %ripple.iv.seq.exit.val
+  // CHECK-NEXT: store i{{[0-9]+}} [[SeqExitValue]], ptr %i
 
 #ifdef USE_PRAGMA
   #pragma ripple parallel Block(BS) Dims(0, 1) NoRemainder
@@ -183,21 +189,25 @@ void test3(size_t n, float * C, float * A, float * B) {
   // CHECK: ripple.par.origin.LB = alloca i{{[0-9]+}}
   // CHECK-NEXT: ripple.par.block.size = alloca i{{[0-9]+}}
   // CHECK-NEXT: ripple.loop.iters = alloca i{{[0-9]+}}
-  // CHECK-NEXT: ripple.par.loop.iters = alloca i{{[0-9]+}}
+  // CHECK-NEXT: ripple.chunk.count = alloca i{{[0-9]+}}
   // CHECK-NEXT: ripple.par.init = alloca i{{[0-9]+}}
   // CHECK-NEXT: ripple.par.step = alloca i{{[0-9]+}}
   // CHECK-NEXT: ripple.iv.seq.exit.val = alloca i{{[0-9]+}}
+  // CHECK-NEXT: ripple.has.partial.chunk = alloca i{{[0-9]+}}
   // CHECK-NEXT: ripple.par.iv = alloca i{{[0-9]+}}
   // CHECK-NOT: i = alloca i{{[0-9]+}}
   // CHECK: br label %ripple.par.for.begin
 
   // CHECK: for.end:
-  // Update IV to the UB
-  // CHECK:      [[SeqExitValue:%.*]] = load i{{[0-9]+}}, ptr %ripple.iv.seq.exit.val
-  // CHECK-NEXT: store i{{[0-9]+}} [[SeqExitValue]], ptr %i
-  // CHECK-NEXT: br label %ripple.par.for.end
+  // CHECK: br label %ripple.par.for.end
 
   // CHECK: ripple.par.for.end:
+  // We need to fixup the induction variable to be scalar again. Since we don't
+  // allow non-sese region and the loop is a region by itself, we only are
+  // guaranteed that either we reached an unreachable or we executed the whole
+  // loop.
+  // CHECK:      [[SeqExitValue:%.*]] = load i{{[0-9]+}}, ptr %ripple.iv.seq.exit.val
+  // CHECK-NEXT: store i{{[0-9]+}} [[SeqExitValue]], ptr %i
 
   size_t i;
 #ifdef USE_PRAGMA
@@ -223,10 +233,11 @@ void test4(size_t n, float * C, float * A, float * B) {
   // CHECK: ripple.par.origin.LB = alloca i{{[0-9]+}}
   // CHECK-NEXT: ripple.par.block.size = alloca i{{[0-9]+}}
   // CHECK-NEXT: ripple.loop.iters = alloca i{{[0-9]+}}
-  // CHECK-NEXT: ripple.par.loop.iters = alloca i{{[0-9]+}}
+  // CHECK-NEXT: ripple.chunk.count = alloca i{{[0-9]+}}
   // CHECK-NEXT: ripple.par.init = alloca i{{[0-9]+}}
   // CHECK-NEXT: ripple.par.step = alloca i{{[0-9]+}}
   // CHECK-NEXT: ripple.iv.seq.exit.val = alloca i{{[0-9]+}}
+  // CHECK-NEXT: ripple.has.partial.chunk = alloca i{{[0-9]+}}
   // CHECK-NEXT: ripple.par.iv = alloca i{{[0-9]+}}
   // CHECK-NOT: i = alloca i{{[0-9]+}}
   // CHECK: br label %ripple.par.for.begin

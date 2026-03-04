@@ -24,7 +24,7 @@
  * Same as 'ripple_parallel_thd' but dynamically dispatched using an iteration
  * server.
  */
-#define ripple_parallel_thd_serv(BlockShape, ...)                              \
+#define ripple_parallel_thd_dyn(BlockShape, ...)                               \
   _Pragma(RIPPLE_PARALLEL_STRINGIFY(ripple parallel Block(BlockShape) Dims(    \
       __VA_ARGS__) IgnoreNullStmts Schedule(dynamic)))
 
@@ -41,7 +41,7 @@
  * Same as 'ripple_parallel_thd_chunk' but dynamically dispatched using an
  * iteration server.
  */
-#define ripple_parallel_thd_chunk_serv(BlockShape, Chunk, ...)                 \
+#define ripple_parallel_thd_chunk_dyn(BlockShape, Chunk, ...)                  \
   _Pragma(RIPPLE_PARALLEL_STRINGIFY(ripple parallel Block(BlockShape) Dims(    \
       __VA_ARGS__) IgnoreNullStmts ThreadChunk(Chunk) Schedule(dynamic)))
 
@@ -51,6 +51,10 @@
 #include_next <ripple/thread.h>
 
 #else
+
+#ifdef __cplusplus
+extern "C" {
+#endif
 
 typedef struct ripple_thread_block *ripple_thd_block_t;
 
@@ -70,5 +74,9 @@ extern void ripple_it_serv_init(ripple_thd_block_t, unsigned int,
                                 __INT32_TYPE__, __INT32_TYPE__, __INT32_TYPE__);
 extern void ripple_it_serv_exit(ripple_thd_block_t, unsigned int, int);
 extern ripple_opt_it ripple_it_serv_next(ripple_thd_block_t, unsigned int);
+
+#ifdef __cplusplus
+} // extern "C"
+#endif
 
 #endif

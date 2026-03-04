@@ -192,7 +192,7 @@ public:
   DeclRefExpr *buildCounterVar() const;
   /// Build reference expression to the private counter be used for
   /// codegen.
-  Expr *buildPrivateCounterVar() const;
+  Expr *buildPrivateCounterVar(QualType Type) const;
   /// Build initialization of the counter be used for codegen.
   Expr *buildCounterInit() const;
   /// Build step of the counter be used for codegen.
@@ -405,7 +405,8 @@ static bool checkRippleIterationSpace(ForStmt *For, Sema &SemaRef,
   ResultIterSpaces.PreCond = ISC.buildPreCond(S, For->getCond());
   ResultIterSpaces.NumIterations = ISC.buildNumIterations(S);
   ResultIterSpaces.CounterVar = ISC.buildCounterVar();
-  ResultIterSpaces.PrivateCounterVar = ISC.buildPrivateCounterVar();
+  ResultIterSpaces.PrivateCounterVar =
+      ISC.buildPrivateCounterVar(ResultIterSpaces.NumIterations->getType());
   ResultIterSpaces.CounterInit = ISC.buildCounterInit();
   ResultIterSpaces.CounterStep = ISC.buildCounterStep();
   ResultIterSpaces.InitSrcRange = ISC.getInitSrcRange();
@@ -1063,12 +1064,10 @@ static VarDecl *buildVarDecl(Sema &SemaRef, SourceLocation Loc, QualType Type,
   return Decl;
 }
 
-Expr *RippleIterationSpaceChecker::buildPrivateCounterVar() const {
+Expr *RippleIterationSpaceChecker::buildPrivateCounterVar(QualType Type) const {
   if (LCDecl && !LCDecl->isInvalidDecl()) {
-    QualType Type = LCDecl->getType().getNonReferenceType();
     VarDecl *PrivateVar =
-        buildVarDecl(SemaRef, DefaultLoc, Type, "ripple.par.iv",
-                     LCDecl->hasAttrs() ? &LCDecl->getAttrs() : nullptr);
+        buildVarDecl(SemaRef, DefaultLoc, Type, "ripple.par.iv", nullptr);
     if (PrivateVar->isInvalidDecl())
       return nullptr;
     return buildDeclRefExpr(SemaRef, PrivateVar, Type, DefaultLoc);
@@ -1247,9 +1246,6 @@ createIndexAndSizeExprs(Sema &SemaRef, SourceLocation Loc,
   Expr *BlockSizeExpr = ImplicitCastExpr::Create(
       SemaRef.getASTContext(), BSRef->getType(), CK_LValueToRValue, BSRef,
       nullptr, VK_LValue, FPOptionsOverride());
-  Expr *BlockSizeExprAsVoidPtr = ImplicitCastExpr::Create(
-      Context, Context.VoidPtrTy, CK_BitCast, BlockSizeExpr, nullptr,
-      VK_PRValue, FPOptionsOverride());
 
   ExprResult RippleIndexSum;
   ExprResult RippleSizeProduct;
@@ -1258,7 +1254,7 @@ createIndexAndSizeExprs(Sema &SemaRef, SourceLocation Loc,
         SemaRef.Context,
         llvm::APInt(SemaRef.Context.getTypeSize(SizeTType), DimId), SizeTType,
         Loc);
-    SmallVector<Expr *, 2> Args{BlockSizeExprAsVoidPtr, DimIdExpr};
+    SmallVector<Expr *, 2> Args{BlockSizeExpr, DimIdExpr};
     ExprResult CallGetIndex;
     ExprResult CallGetSize;
 
@@ -1508,29 +1504,51 @@ Expr *safeIntegerCeil(Sema &SemaRef, SourceLocation Loc, Expr *LHS, Expr *RHS) {
       .get();
 }
 
-Expr *createParallelNumIterVar(Sema &SemaRef, SourceLocation Loc,
-                               Expr *NumIterations, Expr *RippleSize, bool Ceil,
-                               StringRef Name) {
-  QualType T = NumIterations->getType();
-  VarDecl *PV = buildVarDecl(SemaRef, Loc, T, Name, nullptr);
-  assert(!PV->isInvalidDecl());
-  assert(SemaRef.Context.hasSameType(T, RippleSize->getType()));
-  Expr *NumParallelIters = nullptr;
-  if (Ceil)
-    NumParallelIters = safeIntegerCeil(SemaRef, Loc, NumIterations, RippleSize);
-  else
-    NumParallelIters =
-        SemaRef
-            .CreateBuiltinBinOp(Loc, BinaryOperator::Opcode::BO_Div,
-                                NumIterations, RippleSize)
-            .get();
-  LLVM_DEBUG(llvm::dbgs() << "Num ripple parallel iterations: ";
-             PV->print(llvm::dbgs(), SemaRef.Context.getPrintingPolicy());
-             llvm::dbgs() << " = "; NumParallelIters->printPretty(
-                 llvm::dbgs(), nullptr, SemaRef.Context.getPrintingPolicy());
-             llvm::dbgs() << "\n");
-  SemaRef.AddInitializerToDecl(PV, NumParallelIters, false);
-  return buildDeclRefExpr(SemaRef, PV, T, Loc);
+// Returns a DeclRefExpr containing the number of chunks, i.e.
+// ceil?(NumIterations / RippleSize), and a boolean DeclRefExpr
+std::pair<Expr *, Expr *> numChunksAndHasRemainderDeclRefs(Sema &SemaRef,
+                                                           SourceLocation Loc,
+                                                           Expr *NumIterations,
+                                                           Expr *RippleSize,
+                                                           bool Ceil) {
+  Expr *NumChunks = SemaRef
+                        .CreateBuiltinBinOp(Loc, BinaryOperator::Opcode::BO_Div,
+                                            NumIterations, RippleSize)
+                        .get();
+  Expr *Remainder = SemaRef
+                        .CreateBuiltinBinOp(Loc, BinaryOperator::Opcode::BO_Rem,
+                                            NumIterations, RippleSize)
+                        .get();
+  llvm::APInt Zero(SemaRef.Context.getIntWidth(Remainder->getType()), 0);
+  auto *ZeroAsLiteral =
+      IntegerLiteral::Create(SemaRef.Context, Zero, Remainder->getType(), Loc);
+  Expr *RemainderNotZero =
+      SemaRef
+          .CreateBuiltinBinOp(Loc, BinaryOperator::Opcode::BO_NE, Remainder,
+                              ZeroAsLiteral)
+          .get();
+  if (Ceil) {
+    NumChunks = SemaRef
+                    .CreateBuiltinBinOp(Loc, BinaryOperator::Opcode::BO_Add,
+                                        NumChunks, RemainderNotZero)
+                    .get();
+  }
+  VarDecl *NumChunksVar = buildVarDecl(SemaRef, Loc, NumIterations->getType(),
+                                       "ripple.chunk.count", nullptr);
+  SemaRef.AddInitializerToDecl(NumChunksVar, NumChunks, false);
+  VarDecl *HasPartialChunkVar =
+      buildVarDecl(SemaRef, Loc, RemainderNotZero->getType(),
+                   "ripple.has.partial.chunk", nullptr);
+  SemaRef.AddInitializerToDecl(HasPartialChunkVar, RemainderNotZero, false);
+  LLVM_DEBUG(
+      llvm::dbgs() << "Num ripple parallel chunks: ";
+      NumChunksVar->print(llvm::dbgs(), SemaRef.Context.getPrintingPolicy());
+      llvm::dbgs() << "\nHas remainder: ";
+      NumChunksVar->print(llvm::dbgs(), SemaRef.Context.getPrintingPolicy());
+      llvm::dbgs() << "\n");
+  return {buildDeclRefExpr(SemaRef, NumChunksVar, NumChunksVar->getType(), Loc),
+          buildDeclRefExpr(SemaRef, HasPartialChunkVar,
+                           HasPartialChunkVar->getType(), Loc)};
 }
 
 Expr *createParallelBlockSize(Sema &SemaRef, SourceLocation Loc,
@@ -1547,7 +1565,7 @@ Expr *createParallelBlockSize(Sema &SemaRef, SourceLocation Loc,
   return buildDeclRefExpr(SemaRef, PV, T, Loc);
 }
 
-Expr *createRippleIV(Sema &SemaRef, Expr *RippleIV) {
+Expr *initRippleIV(Sema &SemaRef, Expr *RippleIV) {
   // Start at zero
   LLVM_DEBUG(llvm::dbgs() << "Ripple IV: ";
              cast<DeclRefExpr>(RippleIV)->getDecl()->print(
@@ -1563,27 +1581,6 @@ Expr *createRippleIV(Sema &SemaRef, Expr *RippleIV) {
                                SemaRef.Context.getPrintingPolicy());
              llvm::dbgs() << "\n");
   return RippleIV;
-}
-
-Expr *createRemainderEntryCondition(Sema &SemaRef, SourceLocation Loc,
-                                    Expr *RippleIV, Expr *RippleSize,
-                                    Expr *LoopIters) {
-  Expr *RippleToLoopIter =
-      SemaRef
-          .CreateBuiltinBinOp(Loc, BinaryOperator::Opcode::BO_Mul, RippleIV,
-                              RippleSize)
-          .get();
-  // RippleToLoopIter != LoopIters
-  Expr *EnterRemainderCond =
-      SemaRef
-          .CreateBuiltinBinOp(Loc, BinaryOperator::Opcode::BO_NE,
-                              RippleToLoopIter, LoopIters)
-          .get();
-  LLVM_DEBUG(llvm::dbgs() << "EnterRemainderCond: ";
-             EnterRemainderCond->printPretty(
-                 llvm::dbgs(), nullptr, SemaRef.Context.getPrintingPolicy());
-             llvm::dbgs() << "\n");
-  return EnterRemainderCond;
 }
 
 Stmt *createRippleLoopBody(Sema &SemaRef, Expr *LoopIVUpdate, Stmt *LoopBody) {
@@ -1999,7 +1996,7 @@ void CreateVectorizationExpressions(Sema &SemaRef,
                                     Expr *RippleSize,
                                     RippleComputeConstruct &S) {
 
-  S.setLoopInit(createRippleIV(SemaRef, LIS.PrivateCounterVar));
+  S.setLoopInit(initRippleIV(SemaRef, LIS.PrivateCounterVar));
   S.setRippleStep(createRippleStep(SemaRef, LIS.InitSrcRange.getBegin(),
                                    S.getParallelBlockSize(), LIS.CounterStep));
 
@@ -2037,9 +2034,7 @@ void CreateVectorizationExpressions(Sema &SemaRef,
     if (!ClonedBody.isUsable())
       return;
     if (S.generateMaskedPostlude()) {
-      S.setRemainderRuntimeCond(createRemainderEntryCondition(
-          SemaRef, LIS.CondSrcRange.getBegin(), S.getLoopInit(),
-          S.getParallelBlockSize(), S.getAssociatedLoopIters()));
+      S.setRemainderRuntimeCond(S.getHasPartialChunk());
       S.setRemainderBody(ClonedBody.get());
     } else /* !S.generateMaskedPostlude() */ {
       S.setScalarLoopPostlude(createScalarPostludeLoop(
@@ -2070,7 +2065,9 @@ std::pair<Expr *, Stmt *> createDeclStmt(Sema &SemaRef, SourceLocation Loc,
 ///     loop_iv = BlockStartIdx + InnerBidx * loop_step
 ///     if (original_loop_cond) original_loop_body
 ///   }
-std::tuple<Stmt *, Stmt *, Expr *>
+/// Returns a tuple <GuardedLoop, InnerBidxDeclStmt, LoopCond, LoopInit,
+/// LoopInc, UpdateLoopIV>
+std::tuple<Stmt *, Stmt *, Expr *, Stmt *, Expr *, Expr *>
 buildInnerBlockLoop(Sema &SemaRef, SourceLocation Loc,
                     const LoopIterationSpace &LIS, RippleComputeConstruct &S,
                     Expr *BlockStartIdx) {
@@ -2131,7 +2128,8 @@ buildInnerBlockLoop(Sema &SemaRef, SourceLocation Loc,
                                     Loc, InnerBodyCompound.get())
                       .get();
 
-  return std::make_tuple(ForLoop, InnerBidxDeclStmt, InnerLoopCond.get());
+  return {ForLoop,           InnerBidxDeclStmt,  InnerLoopCond.get(),
+          InnerBidxInitStmt, InnerLoopInc.get(), UpdateLoopIV.get()};
 }
 
 /// Compute: begin + BlockIdx * CS * loop_step
@@ -2152,11 +2150,19 @@ ExprResult buildBlockStartIdx(Sema &SemaRef, SourceLocation Loc,
 ///   for (Bidx = 0; Bidx < NB; Bidx += ripple_get_size()) {
 ///     block_start_idx = begin + Bidx * CS * loop_step
 ///     InnerBidx;
-///     for (InnerBidx = 0; InnerBidx < CS; InnerBidx++) {
-///       loop_iv = BlockStartIdx + InnerBidx * loop_step
-///       if (!original_loop_cond) break;
-///       original_loop_body
-///     }
+///     if (PartialLast & Bidx == NB - 1)
+///       for (InnerBidx = 0; InnerBidx < CS; InnerBidx++) {
+///         loop_iv = BlockStartIdx + InnerBidx * loop_step
+///         if (!original_loop_cond) break;
+///         original_loop_body
+///       }
+///     else
+///       for (InnerBidx = 0; InnerBidx < CS; InnerBidx++) {
+///         loop_iv = BlockStartIdx + InnerBidx * loop_step
+///         clone(original_loop_body) // clone done using
+///         `VarDeclRedeclTransformer VDT(SemaRef); auto ClonedBody =
+///         VDT.TransformStmt(for->body);`
+///       }
 ///     if (InnerBidx < CS)
 ///       break;
 ///     // Necessary for stacking: know if we finished the loop vs break
@@ -2175,11 +2181,17 @@ ExprResult buildBlockStartIdx(Sema &SemaRef, SourceLocation Loc,
 ///     }
 ///     block_start_idx = begin + it.value * CS * loop_step
 ///     InnerBidx;
-///     for (InnerBidx = 0; InnerBidx < CS; InnerBidx++) {
-///       loop_iv = BlockStartIdx + InnerBidx * loop_step
-///       if (!original_loop_cond) break;
-///       original_loop_body
-///     }
+///     if (PartialLast & it.value == NB - 1)
+///       for (InnerBidx = 0; InnerBidx < CS; InnerBidx++) {
+///         loop_iv = BlockStartIdx + InnerBidx * loop_step
+///         if (!original_loop_cond) break;
+///         original_loop_body
+///       }
+///     else
+///       for (InnerBidx = 0; InnerBidx < CS; InnerBidx++) {
+///         loop_iv = BlockStartIdx + InnerBidx * loop_step
+///         clone(original_loop_body) // same way as static
+///       }
 ///     if (InnerBidx < CS) { ripple_it_serv_exit(BS, 0, 0); break; }
 ///   }
 void CreateMultiThreadExpressions(Sema &SemaRef, const LoopIterationSpace &LIS,
@@ -2188,7 +2200,7 @@ void CreateMultiThreadExpressions(Sema &SemaRef, const LoopIterationSpace &LIS,
   bool IsDynamic = S.dynamicThreadDispatch();
   bool IsStatic = S.staticThreadDispatch();
 
-  auto InductionVarType = LIS.NumIterations->getType();
+  auto InductionVarType = S.getAssociatedLoopIters()->getType();
   unsigned BitW = SemaRef.Context.getIntWidth(InductionVarType);
   auto *ZeroAsLiteral = IntegerLiteral::Create(
       SemaRef.Context, llvm::APInt(BitW, 0), InductionVarType, Loc);
@@ -2300,8 +2312,20 @@ void CreateMultiThreadExpressions(Sema &SemaRef, const LoopIterationSpace &LIS,
                                       SourceLocation(), ValueName, nullptr);
     if (ValueAccess.isInvalid())
       return;
-    BlockIdx = ValueAccess.get();
-
+    // Extract "value" as the induction variable type
+    TypeSourceInfo *TSI =
+        SemaRef.Context.getTrivialTypeSourceInfo(InductionVarType);
+    if (SemaRef.getLangOpts().CPlusPlus)
+      BlockIdx = SemaRef
+                     .BuildCXXNamedCast(SourceLocation(), tok::kw_static_cast,
+                                        TSI, ValueAccess.get(), SourceRange(),
+                                        SourceRange())
+                     .get();
+    else
+      BlockIdx = SemaRef
+                     .BuildCStyleCastExpr(SourceLocation(), TSI,
+                                          SourceLocation(), ValueAccess.get())
+                     .get();
   } else {
     // OuterInit = Bidx = 0
     auto [Bidx, BidxDeclStmt] = createDeclStmt(
@@ -2320,23 +2344,66 @@ void CreateMultiThreadExpressions(Sema &SemaRef, const LoopIterationSpace &LIS,
     BlockIdx = Bidx;
   }
 
-  // --- Shared: BlockStartIdx = begin + BlockIdx * CS * loop_step ---
+  // BlockStartIdx = begin + BlockIdx * CS * loop_step
   ExprResult BlockStartIdxExpr =
       buildBlockStartIdx(SemaRef, Loc, LIS, S, BlockIdx);
   auto [BlockStartIdx, BlockStartIdxDeclStmt] =
       createDeclStmt(SemaRef, Loc, BlockStartIdxExpr.get()->getType(),
                      "ripple.block.start.offset", BlockStartIdxExpr.get());
 
-  // --- Shared: inner block loop ---
-  auto [InnerLoop, InnerBidxDeclStmt, InnerLoopCond] =
+  // Inner block loop (guarded, for partial last block)
+  auto [GuardedLoop, InnerBidxDeclStmt, InnerLoopCond, InnerLoopInit,
+        InnerLoopInc, UpdateLoopIV] =
       buildInnerBlockLoop(SemaRef, Loc, LIS, S, BlockStartIdx);
 
-  // --- Shared: outer body ---
+  // full-block loop (no guard, cloned body)
+  VarDeclRedeclTransformer VDT(SemaRef);
+  auto ClonedBodyResult =
+      VDT.TransformStmt(S.getAssociatedForStmt()->getBody());
+  if (!ClonedBodyResult.isUsable())
+    return;
+  StmtResult FullBlockBody = SemaRef.ActOnCompoundStmt(
+      Loc, Loc, {UpdateLoopIV, ClonedBodyResult.get()}, false);
+  Stmt *FullBlockLoop =
+      SemaRef
+          .ActOnForStmt(Loc, Loc, InnerLoopInit,
+                        SemaRef.ActOnCondition(nullptr, Loc, InnerLoopCond,
+                                               Sema::ConditionKind::Boolean),
+                        SemaRef.MakeFullExpr(InnerLoopInc), Loc,
+                        FullBlockBody.get())
+          .get();
+
+  // if (ripple.has.partial.chunk & BlockIdx == NB - 1)
+  //   <guarded loop>   // partial last block: may exit early
+  // else
+  //   <full-block loop> // full block: no guard needed
+  auto *OneAsLiteral = IntegerLiteral::Create(
+      SemaRef.Context, llvm::APInt(BitW, 1), InductionVarType, Loc);
+  Expr *NBMinusOne =
+      SemaRef
+          .CreateBuiltinBinOp(Loc, BO_Sub, S.getRippleParallelBlocks(),
+                              OneAsLiteral)
+          .get();
+  Expr *IsLastBlock =
+      SemaRef.CreateBuiltinBinOp(Loc, BO_EQ, BlockIdx, NBMinusOne).get();
+  Expr *DispatchCond =
+      SemaRef
+          .CreateBuiltinBinOp(Loc, BO_And, S.getHasPartialChunk(), IsLastBlock)
+          .get();
+  Stmt *DispatchIf =
+      SemaRef
+          .ActOnIfStmt(Loc, IfStatementKind::Ordinary, Loc, nullptr,
+                       SemaRef.ActOnCondition(nullptr, Loc, DispatchCond,
+                                              Sema::ConditionKind::Boolean),
+                       Loc, GuardedLoop, Loc, FullBlockLoop)
+          .get();
+
+  // Outer body
   SmallVector<Stmt *, 6> OuterBodyStmts(OuterBodyPrefix.begin(),
                                         OuterBodyPrefix.end());
   OuterBodyStmts.push_back(BlockStartIdxDeclStmt);
   OuterBodyStmts.push_back(InnerBidxDeclStmt);
-  OuterBodyStmts.push_back(InnerLoop);
+  OuterBodyStmts.push_back(DispatchIf);
 
   // If the inner loop exited early (a break in the original loop body), break
   // out of the outer tiled loop too: if (InnerBidx < CS) { [exit;] break; }
@@ -2469,10 +2536,12 @@ void SemaRipple::ActOnRippleComputeConstruct(RippleComputeConstruct &S) {
 
   Expr *BlockSize =
       S.threadCodegen() ? S.getThreadChunkSize() : S.getParallelBlockSize();
-  S.setRippleParallelBlocks(createParallelNumIterVar(
+  auto [NumBlocks, HasRemainder] = numChunksAndHasRemainderDeclRefs(
       SemaRef, LIS.InitSrcRange.getBegin(), S.getAssociatedLoopIters(),
-      BlockSize, /* Ceil */ S.threadCodegen(),
-      S.threadCodegen() ? "ripple.par.num.chunks" : "ripple.par.loop.iters"));
+      BlockSize, /* Ceil */ S.threadCodegen());
+  S.setRippleParallelBlocks(NumBlocks);
+  S.setHasPartialChunk(HasRemainder);
+
   S.setOriginLowerBound(createOriginLB(SemaRef, LIS.InitSrcRange.getBegin(),
                                        LIS.CounterInit, LIS.CounterVar,
                                        LIS.IsDeclStmtInit));
@@ -2517,16 +2586,24 @@ void SemaRipple::ActOnRippleComputeConstruct(RippleComputeConstruct &S) {
       llvm_unreachable(
           "Unsupported nesting RippleComputeConstruct for vector of threads");
 
-    assert(S.getInnerThreadLoop());
-    auto *RPC = RippleComputeConstruct::Create(
-        getASTContext(), Nested->getPragmaRange(),
-        Nested->getProcessingElementRange(), Nested->getDimsRange(),
-        Nested->getBlockShape(), Nested->getDimensionIds(),
-        S.getInnerThreadLoop(), !Nested->generateRemainder(),
-        Nested->generateMaskedPostlude(), Nested->getThreadScheduleKind(),
-        Nested->getChunkDecl(), Nested->getChunkVal());
-    RPC->setNestedParallelConstruct(Nested->getNestedParallelConstruct());
-    ActOnRippleComputeConstruct(*RPC);
-    S.setInnerThreadLoop(RPC);
+    auto [GuardedLoop, FullBlockLoop] = S.getInnerThreadLoops();
+    assert(GuardedLoop && FullBlockLoop);
+
+    auto delegateRippleParallelToInner =
+        [&](ForStmt *InnerLoop) -> RippleComputeConstruct * {
+      auto *RPC = RippleComputeConstruct::Create(
+          getASTContext(), Nested->getPragmaRange(),
+          Nested->getProcessingElementRange(), Nested->getDimsRange(),
+          Nested->getBlockShape(), Nested->getDimensionIds(), InnerLoop,
+          !Nested->generateRemainder(), Nested->generateMaskedPostlude(),
+          Nested->getThreadScheduleKind(), Nested->getChunkDecl(),
+          Nested->getChunkVal());
+      RPC->setNestedParallelConstruct(Nested->getNestedParallelConstruct());
+      ActOnRippleComputeConstruct(*RPC);
+      return RPC;
+    };
+
+    S.setInnerThreadLoops({delegateRippleParallelToInner(GuardedLoop),
+                           delegateRippleParallelToInner(FullBlockLoop)});
   }
 }

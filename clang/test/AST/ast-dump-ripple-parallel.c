@@ -105,10 +105,11 @@ void test_five(int x, int y, int z) {
 //CHECK-NEXT: |     |-DeclRefExpr {{.*}} <line:10:35> 'int' lvalue Var {{.*}} 'ripple.par.block.size' 'int'
 //CHECK-NEXT: |     |-DeclRefExpr {{.*}} <line:11:8> 'int' lvalue Var {{.*}} 'ripple.loop.iters' 'int'
 //CHECK-NEXT: |     |-<<<NULL>>>
-//CHECK-NEXT: |     |-DeclRefExpr {{.*}} <col:8> 'int' lvalue Var {{.*}} 'ripple.par.loop.iters' 'int'
+//CHECK-NEXT: |     |-DeclRefExpr {{.*}} <col:8> 'int' lvalue Var {{.*}} 'ripple.chunk.count' 'int'
 //CHECK-NEXT: |     |-DeclRefExpr {{.*}} <col:8> 'int' lvalue Var {{.*}} 'ripple.par.init' 'int'
 //CHECK-NEXT: |     |-DeclRefExpr {{.*}} <col:8> 'int' lvalue Var {{.*}} 'ripple.par.step' 'int'
 //CHECK-NEXT: |     |-DeclRefExpr {{.*}} <col:8> 'int' lvalue Var {{.*}} 'ripple.iv.seq.exit.val' 'int'
+//CHECK-NEXT: |     |-DeclRefExpr {{.*}} <col:8> 'int' lvalue Var {{.*}} 'ripple.has.partial.chunk' 'int'
 //CHECK-NEXT: |     |-DeclRefExpr {{.*}} <col:3> 'int' lvalue Var {{.*}} 'ripple.par.iv' 'int'
 //CHECK-NEXT: |     |-BinaryOperator {{.*}} <col:8, col:17> 'int' '='
 //CHECK-NEXT: |     | |-DeclRefExpr {{.*}} <col:8> 'int' lvalue Var {{.*}} 'i' 'int'
@@ -128,7 +129,7 @@ void test_five(int x, int y, int z) {
 //CHECK-NEXT: |     | | |-ImplicitCastExpr {{.*}} <col:3> 'int' <LValueToRValue>
 //CHECK-NEXT: |     | | | `-DeclRefExpr {{.*}} <col:3> 'int' lvalue Var {{.*}} 'ripple.par.iv' 'int'
 //CHECK-NEXT: |     | | `-ImplicitCastExpr {{.*}} <col:8> 'int' <LValueToRValue>
-//CHECK-NEXT: |     | |   `-DeclRefExpr {{.*}} <col:8> 'int' lvalue Var {{.*}} 'ripple.par.loop.iters' 'int'
+//CHECK-NEXT: |     | |   `-DeclRefExpr {{.*}} <col:8> 'int' lvalue Var {{.*}} 'ripple.chunk.count' 'int'
 //CHECK-NEXT: |     | |-CompoundAssignOperator {{.*}} <col:3, col:26> 'int' '+=' ComputeLHSTy='int' ComputeResultTy='int'
 //CHECK-NEXT: |     | | |-DeclRefExpr {{.*}} <col:3> 'int' lvalue Var {{.*}} 'ripple.par.iv' 'int'
 //CHECK-NEXT: |     | | `-IntegerLiteral {{.*}} <col:26> 'int' 1
@@ -145,14 +146,7 @@ void test_five(int x, int y, int z) {
 //CHECK-NEXT: |     |   |       `-ImplicitCastExpr {{.*}} <col:3> 'int' <LValueToRValue>
 //CHECK-NEXT: |     |   |         `-DeclRefExpr {{.*}} <col:3> 'int' lvalue Var {{.*}} 'ripple.par.iv' 'int'
 //CHECK-NEXT: |     |   `-NullStmt {{.*}} <line:12:5>
-//CHECK-NEXT: |     |-BinaryOperator {{.*}} <line:11:3, col:8> 'int' '!='
-//CHECK-NEXT: |     | |-BinaryOperator {{.*}} <col:3, line:10:35> 'int' '*'
-//CHECK-NEXT: |     | | |-ImplicitCastExpr {{.*}} <line:11:3> 'int' <LValueToRValue>
-//CHECK-NEXT: |     | | | `-DeclRefExpr {{.*}} <col:3> 'int' lvalue Var {{.*}} 'ripple.par.iv' 'int'
-//CHECK-NEXT: |     | | `-ImplicitCastExpr {{.*}} <line:10:35> 'int' <LValueToRValue>
-//CHECK-NEXT: |     | |   `-DeclRefExpr {{.*}} <col:35> 'int' lvalue Var {{.*}} 'ripple.par.block.size' 'int'
-//CHECK-NEXT: |     | `-ImplicitCastExpr {{.*}} <line:11:8> 'int' <LValueToRValue>
-//CHECK-NEXT: |     |   `-DeclRefExpr {{.*}} <col:8> 'int' lvalue Var {{.*}} 'ripple.loop.iters' 'int'
+//CHECK-NEXT: |     |-DeclRefExpr {{.*}} <line:11:8> 'int' lvalue Var {{.*}} 'ripple.has.partial.chunk' 'int'
 //CHECK-NEXT: |     |-BinaryOperator {{.*}} <col:8> 'int' '='
 //CHECK-NEXT: |     | |-DeclRefExpr {{.*}} <col:8> 'int' lvalue Var {{.*}} 'i' 'int'
 //CHECK-NEXT: |     | `-ImplicitCastExpr {{.*}} <col:8> 'int' <LValueToRValue>
@@ -249,10 +243,11 @@ void test_five(int x, int y, int z) {
 //CHECK-NEXT: |     |-DeclRefExpr {{.*}} <line:17:35> 'int' lvalue Var {{.*}} 'ripple.par.block.size' 'int'
 //CHECK-NEXT: |     |-DeclRefExpr {{.*}} <line:18:8> 'int' lvalue Var {{.*}} 'ripple.loop.iters' 'int'
 //CHECK-NEXT: |     |-<<<NULL>>>
-//CHECK-NEXT: |     |-DeclRefExpr {{.*}} <col:8> 'int' lvalue Var {{.*}} 'ripple.par.loop.iters' 'int'
+//CHECK-NEXT: |     |-DeclRefExpr {{.*}} <col:8> 'int' lvalue Var {{.*}} 'ripple.chunk.count' 'int'
 //CHECK-NEXT: |     |-DeclRefExpr {{.*}} <col:8> 'int' lvalue Var {{.*}} 'ripple.par.init' 'int'
 //CHECK-NEXT: |     |-DeclRefExpr {{.*}} <col:8> 'int' lvalue Var {{.*}} 'ripple.par.step' 'int'
 //CHECK-NEXT: |     |-DeclRefExpr {{.*}} <col:8> 'int' lvalue Var {{.*}} 'ripple.iv.seq.exit.val' 'int'
+//CHECK-NEXT: |     |-DeclRefExpr {{.*}} <col:8> 'int' lvalue Var {{.*}} 'ripple.has.partial.chunk' 'int'
 //CHECK-NEXT: |     |-DeclRefExpr {{.*}} <col:3> 'int' lvalue Var {{.*}} 'ripple.par.iv' 'int'
 //CHECK-NEXT: |     |-BinaryOperator {{.*}} <col:8, col:17> 'int' '='
 //CHECK-NEXT: |     | |-DeclRefExpr {{.*}} <col:8> 'int' lvalue Var {{.*}} 'i' 'int'
@@ -272,7 +267,7 @@ void test_five(int x, int y, int z) {
 //CHECK-NEXT: |     | | |-ImplicitCastExpr {{.*}} <col:3> 'int' <LValueToRValue>
 //CHECK-NEXT: |     | | | `-DeclRefExpr {{.*}} <col:3> 'int' lvalue Var {{.*}} 'ripple.par.iv' 'int'
 //CHECK-NEXT: |     | | `-ImplicitCastExpr {{.*}} <col:8> 'int' <LValueToRValue>
-//CHECK-NEXT: |     | |   `-DeclRefExpr {{.*}} <col:8> 'int' lvalue Var {{.*}} 'ripple.par.loop.iters' 'int'
+//CHECK-NEXT: |     | |   `-DeclRefExpr {{.*}} <col:8> 'int' lvalue Var {{.*}} 'ripple.chunk.count' 'int'
 //CHECK-NEXT: |     | |-CompoundAssignOperator {{.*}} <col:3, col:26> 'int' '+=' ComputeLHSTy='int' ComputeResultTy='int'
 //CHECK-NEXT: |     | | |-DeclRefExpr {{.*}} <col:3> 'int' lvalue Var {{.*}} 'ripple.par.iv' 'int'
 //CHECK-NEXT: |     | | `-IntegerLiteral {{.*}} <col:26> 'int' 1
@@ -301,14 +296,7 @@ void test_five(int x, int y, int z) {
 //CHECK-NEXT: |     |     |-UnaryOperator {{.*}} <col:28, col:29> 'int' postfix '++'
 //CHECK-NEXT: |     |     | `-DeclRefExpr {{.*}} <col:28> 'int' lvalue Var {{.*}} 'i' 'int'
 //CHECK-NEXT: |     |     `-NullStmt {{.*}} <line:20:7>
-//CHECK-NEXT: |     |-BinaryOperator {{.*}} <line:18:3, col:8> 'int' '!='
-//CHECK-NEXT: |     | |-BinaryOperator {{.*}} <col:3, line:17:35> 'int' '*'
-//CHECK-NEXT: |     | | |-ImplicitCastExpr {{.*}} <line:18:3> 'int' <LValueToRValue>
-//CHECK-NEXT: |     | | | `-DeclRefExpr {{.*}} <col:3> 'int' lvalue Var {{.*}} 'ripple.par.iv' 'int'
-//CHECK-NEXT: |     | | `-ImplicitCastExpr {{.*}} <line:17:35> 'int' <LValueToRValue>
-//CHECK-NEXT: |     | |   `-DeclRefExpr {{.*}} <col:35> 'int' lvalue Var {{.*}} 'ripple.par.block.size' 'int'
-//CHECK-NEXT: |     | `-ImplicitCastExpr {{.*}} <line:18:8> 'int' <LValueToRValue>
-//CHECK-NEXT: |     |   `-DeclRefExpr {{.*}} <col:8> 'int' lvalue Var {{.*}} 'ripple.loop.iters' 'int'
+//CHECK-NEXT: |     |-DeclRefExpr {{.*}} <line:18:8> 'int' lvalue Var {{.*}} 'ripple.has.partial.chunk' 'int'
 //CHECK-NEXT: |     |-BinaryOperator {{.*}} <col:8> 'int' '='
 //CHECK-NEXT: |     | |-DeclRefExpr {{.*}} <col:8> 'int' lvalue Var {{.*}} 'i' 'int'
 //CHECK-NEXT: |     | `-ImplicitCastExpr {{.*}} <col:8> 'int' <LValueToRValue>
@@ -394,10 +382,11 @@ void test_five(int x, int y, int z) {
 //CHECK-NEXT: |     |   |-DeclRefExpr {{.*}} <line:27:35> 'int' lvalue Var {{.*}} 'ripple.par.block.size' 'int'
 //CHECK-NEXT: |     |   |-DeclRefExpr {{.*}} <line:28:10> 'int' lvalue Var {{.*}} 'ripple.loop.iters' 'int'
 //CHECK-NEXT: |     |   |-<<<NULL>>>
-//CHECK-NEXT: |     |   |-DeclRefExpr {{.*}} <col:10> 'int' lvalue Var {{.*}} 'ripple.par.loop.iters' 'int'
+//CHECK-NEXT: |     |   |-DeclRefExpr {{.*}} <col:10> 'int' lvalue Var {{.*}} 'ripple.chunk.count' 'int'
 //CHECK-NEXT: |     |   |-DeclRefExpr {{.*}} <col:10> 'int' lvalue Var {{.*}} 'ripple.par.init' 'int'
 //CHECK-NEXT: |     |   |-DeclRefExpr {{.*}} <col:10> 'int' lvalue Var {{.*}} 'ripple.par.step' 'int'
 //CHECK-NEXT: |     |   |-DeclRefExpr {{.*}} <col:10> 'int' lvalue Var {{.*}} 'ripple.iv.seq.exit.val' 'int'
+//CHECK-NEXT: |     |   |-DeclRefExpr {{.*}} <col:10> 'int' lvalue Var {{.*}} 'ripple.has.partial.chunk' 'int'
 //CHECK-NEXT: |     |   |-DeclRefExpr {{.*}} <col:5> 'int' lvalue Var {{.*}} 'ripple.par.iv' 'int'
 //CHECK-NEXT: |     |   |-BinaryOperator {{.*}} <col:10, col:19> 'int' '='
 //CHECK-NEXT: |     |   | |-DeclRefExpr {{.*}} <col:10> 'int' lvalue Var {{.*}} 'i' 'int'
@@ -417,7 +406,7 @@ void test_five(int x, int y, int z) {
 //CHECK-NEXT: |     |   | | |-ImplicitCastExpr {{.*}} <col:5> 'int' <LValueToRValue>
 //CHECK-NEXT: |     |   | | | `-DeclRefExpr {{.*}} <col:5> 'int' lvalue Var {{.*}} 'ripple.par.iv' 'int'
 //CHECK-NEXT: |     |   | | `-ImplicitCastExpr {{.*}} <col:10> 'int' <LValueToRValue>
-//CHECK-NEXT: |     |   | |   `-DeclRefExpr {{.*}} <col:10> 'int' lvalue Var {{.*}} 'ripple.par.loop.iters' 'int'
+//CHECK-NEXT: |     |   | |   `-DeclRefExpr {{.*}} <col:10> 'int' lvalue Var {{.*}} 'ripple.chunk.count' 'int'
 //CHECK-NEXT: |     |   | |-CompoundAssignOperator {{.*}} <col:5, col:28> 'int' '+=' ComputeLHSTy='int' ComputeResultTy='int'
 //CHECK-NEXT: |     |   | | |-DeclRefExpr {{.*}} <col:5> 'int' lvalue Var {{.*}} 'ripple.par.iv' 'int'
 //CHECK-NEXT: |     |   | | `-IntegerLiteral {{.*}} <col:28> 'int' 1
@@ -434,14 +423,7 @@ void test_five(int x, int y, int z) {
 //CHECK-NEXT: |     |   |   |       `-ImplicitCastExpr {{.*}} <col:5> 'int' <LValueToRValue>
 //CHECK-NEXT: |     |   |   |         `-DeclRefExpr {{.*}} <col:5> 'int' lvalue Var {{.*}} 'ripple.par.iv' 'int'
 //CHECK-NEXT: |     |   |   `-NullStmt {{.*}} <line:29:7>
-//CHECK-NEXT: |     |   |-BinaryOperator {{.*}} <line:28:5, col:10> 'int' '!='
-//CHECK-NEXT: |     |   | |-BinaryOperator {{.*}} <col:5, line:27:35> 'int' '*'
-//CHECK-NEXT: |     |   | | |-ImplicitCastExpr {{.*}} <line:28:5> 'int' <LValueToRValue>
-//CHECK-NEXT: |     |   | | | `-DeclRefExpr {{.*}} <col:5> 'int' lvalue Var {{.*}} 'ripple.par.iv' 'int'
-//CHECK-NEXT: |     |   | | `-ImplicitCastExpr {{.*}} <line:27:35> 'int' <LValueToRValue>
-//CHECK-NEXT: |     |   | |   `-DeclRefExpr {{.*}} <col:35> 'int' lvalue Var {{.*}} 'ripple.par.block.size' 'int'
-//CHECK-NEXT: |     |   | `-ImplicitCastExpr {{.*}} <line:28:10> 'int' <LValueToRValue>
-//CHECK-NEXT: |     |   |   `-DeclRefExpr {{.*}} <col:10> 'int' lvalue Var {{.*}} 'ripple.loop.iters' 'int'
+//CHECK-NEXT: |     |   |-DeclRefExpr {{.*}} <line:28:10> 'int' lvalue Var {{.*}} 'ripple.has.partial.chunk' 'int'
 //CHECK-NEXT: |     |   |-BinaryOperator {{.*}} <col:10> 'int' '='
 //CHECK-NEXT: |     |   | |-DeclRefExpr {{.*}} <col:10> 'int' lvalue Var {{.*}} 'i' 'int'
 //CHECK-NEXT: |     |   | `-ImplicitCastExpr {{.*}} <col:10> 'int' <LValueToRValue>
@@ -454,10 +436,11 @@ void test_five(int x, int y, int z) {
 //CHECK-NEXT: |     |-DeclRefExpr {{.*}} <line:25:35> 'int' lvalue Var {{.*}} 'ripple.par.block.size' 'int'
 //CHECK-NEXT: |     |-DeclRefExpr {{.*}} <line:26:8> 'int' lvalue Var {{.*}} 'ripple.loop.iters' 'int'
 //CHECK-NEXT: |     |-<<<NULL>>>
-//CHECK-NEXT: |     |-DeclRefExpr {{.*}} <col:8> 'int' lvalue Var {{.*}} 'ripple.par.loop.iters' 'int'
+//CHECK-NEXT: |     |-DeclRefExpr {{.*}} <col:8> 'int' lvalue Var {{.*}} 'ripple.chunk.count' 'int'
 //CHECK-NEXT: |     |-DeclRefExpr {{.*}} <col:8> 'int' lvalue Var {{.*}} 'ripple.par.init' 'int'
 //CHECK-NEXT: |     |-DeclRefExpr {{.*}} <col:8> 'int' lvalue Var {{.*}} 'ripple.par.step' 'int'
 //CHECK-NEXT: |     |-DeclRefExpr {{.*}} <col:8> 'int' lvalue Var {{.*}} 'ripple.iv.seq.exit.val' 'int'
+//CHECK-NEXT: |     |-DeclRefExpr {{.*}} <col:8> 'int' lvalue Var {{.*}} 'ripple.has.partial.chunk' 'int'
 //CHECK-NEXT: |     |-DeclRefExpr {{.*}} <col:3> 'int' lvalue Var {{.*}} 'ripple.par.iv' 'int'
 //CHECK-NEXT: |     |-BinaryOperator {{.*}} <col:8, col:17> 'int' '='
 //CHECK-NEXT: |     | |-DeclRefExpr {{.*}} <col:8> 'int' lvalue Var {{.*}} 'i' 'int'
@@ -477,7 +460,7 @@ void test_five(int x, int y, int z) {
 //CHECK-NEXT: |     | | |-ImplicitCastExpr {{.*}} <col:3> 'int' <LValueToRValue>
 //CHECK-NEXT: |     | | | `-DeclRefExpr {{.*}} <col:3> 'int' lvalue Var {{.*}} 'ripple.par.iv' 'int'
 //CHECK-NEXT: |     | | `-ImplicitCastExpr {{.*}} <col:8> 'int' <LValueToRValue>
-//CHECK-NEXT: |     | |   `-DeclRefExpr {{.*}} <col:8> 'int' lvalue Var {{.*}} 'ripple.par.loop.iters' 'int'
+//CHECK-NEXT: |     | |   `-DeclRefExpr {{.*}} <col:8> 'int' lvalue Var {{.*}} 'ripple.chunk.count' 'int'
 //CHECK-NEXT: |     | |-CompoundAssignOperator {{.*}} <col:3, col:26> 'int' '+=' ComputeLHSTy='int' ComputeResultTy='int'
 //CHECK-NEXT: |     | | |-DeclRefExpr {{.*}} <col:3> 'int' lvalue Var {{.*}} 'ripple.par.iv' 'int'
 //CHECK-NEXT: |     | | `-IntegerLiteral {{.*}} <col:26> 'int' 1
@@ -513,10 +496,11 @@ void test_five(int x, int y, int z) {
 //CHECK-NEXT: |     |     |-DeclRefExpr {{.*}} <line:27:35> 'int' lvalue Var {{.*}} 'ripple.par.block.size' 'int'
 //CHECK-NEXT: |     |     |-DeclRefExpr {{.*}} <line:28:10> 'int' lvalue Var {{.*}} 'ripple.loop.iters' 'int'
 //CHECK-NEXT: |     |     |-<<<NULL>>>
-//CHECK-NEXT: |     |     |-DeclRefExpr {{.*}} <col:10> 'int' lvalue Var {{.*}} 'ripple.par.loop.iters' 'int'
+//CHECK-NEXT: |     |     |-DeclRefExpr {{.*}} <col:10> 'int' lvalue Var {{.*}} 'ripple.chunk.count' 'int'
 //CHECK-NEXT: |     |     |-DeclRefExpr {{.*}} <col:10> 'int' lvalue Var {{.*}} 'ripple.par.init' 'int'
 //CHECK-NEXT: |     |     |-DeclRefExpr {{.*}} <col:10> 'int' lvalue Var {{.*}} 'ripple.par.step' 'int'
 //CHECK-NEXT: |     |     |-DeclRefExpr {{.*}} <col:10> 'int' lvalue Var {{.*}} 'ripple.iv.seq.exit.val' 'int'
+//CHECK-NEXT: |     |     |-DeclRefExpr {{.*}} <col:10> 'int' lvalue Var {{.*}} 'ripple.has.partial.chunk' 'int'
 //CHECK-NEXT: |     |     |-DeclRefExpr {{.*}} <col:5> 'int' lvalue Var {{.*}} 'ripple.par.iv' 'int'
 //CHECK-NEXT: |     |     |-BinaryOperator {{.*}} <col:10, col:19> 'int' '='
 //CHECK-NEXT: |     |     | |-DeclRefExpr {{.*}} <col:10> 'int' lvalue Var {{.*}} 'i' 'int'
@@ -536,7 +520,7 @@ void test_five(int x, int y, int z) {
 //CHECK-NEXT: |     |     | | |-ImplicitCastExpr {{.*}} <col:5> 'int' <LValueToRValue>
 //CHECK-NEXT: |     |     | | | `-DeclRefExpr {{.*}} <col:5> 'int' lvalue Var {{.*}} 'ripple.par.iv' 'int'
 //CHECK-NEXT: |     |     | | `-ImplicitCastExpr {{.*}} <col:10> 'int' <LValueToRValue>
-//CHECK-NEXT: |     |     | |   `-DeclRefExpr {{.*}} <col:10> 'int' lvalue Var {{.*}} 'ripple.par.loop.iters' 'int'
+//CHECK-NEXT: |     |     | |   `-DeclRefExpr {{.*}} <col:10> 'int' lvalue Var {{.*}} 'ripple.chunk.count' 'int'
 //CHECK-NEXT: |     |     | |-CompoundAssignOperator {{.*}} <col:5, col:28> 'int' '+=' ComputeLHSTy='int' ComputeResultTy='int'
 //CHECK-NEXT: |     |     | | |-DeclRefExpr {{.*}} <col:5> 'int' lvalue Var {{.*}} 'ripple.par.iv' 'int'
 //CHECK-NEXT: |     |     | | `-IntegerLiteral {{.*}} <col:28> 'int' 1
@@ -553,28 +537,14 @@ void test_five(int x, int y, int z) {
 //CHECK-NEXT: |     |     |   |       `-ImplicitCastExpr {{.*}} <col:5> 'int' <LValueToRValue>
 //CHECK-NEXT: |     |     |   |         `-DeclRefExpr {{.*}} <col:5> 'int' lvalue Var {{.*}} 'ripple.par.iv' 'int'
 //CHECK-NEXT: |     |     |   `-NullStmt {{.*}} <line:29:7>
-//CHECK-NEXT: |     |     |-BinaryOperator {{.*}} <line:28:5, col:10> 'int' '!='
-//CHECK-NEXT: |     |     | |-BinaryOperator {{.*}} <col:5, line:27:35> 'int' '*'
-//CHECK-NEXT: |     |     | | |-ImplicitCastExpr {{.*}} <line:28:5> 'int' <LValueToRValue>
-//CHECK-NEXT: |     |     | | | `-DeclRefExpr {{.*}} <col:5> 'int' lvalue Var {{.*}} 'ripple.par.iv' 'int'
-//CHECK-NEXT: |     |     | | `-ImplicitCastExpr {{.*}} <line:27:35> 'int' <LValueToRValue>
-//CHECK-NEXT: |     |     | |   `-DeclRefExpr {{.*}} <col:35> 'int' lvalue Var {{.*}} 'ripple.par.block.size' 'int'
-//CHECK-NEXT: |     |     | `-ImplicitCastExpr {{.*}} <line:28:10> 'int' <LValueToRValue>
-//CHECK-NEXT: |     |     |   `-DeclRefExpr {{.*}} <col:10> 'int' lvalue Var {{.*}} 'ripple.loop.iters' 'int'
+//CHECK-NEXT: |     |     |-DeclRefExpr {{.*}} <line:28:10> 'int' lvalue Var {{.*}} 'ripple.has.partial.chunk' 'int'
 //CHECK-NEXT: |     |     |-BinaryOperator {{.*}} <col:10> 'int' '='
 //CHECK-NEXT: |     |     | |-DeclRefExpr {{.*}} <col:10> 'int' lvalue Var {{.*}} 'i' 'int'
 //CHECK-NEXT: |     |     | `-ImplicitCastExpr {{.*}} <col:10> 'int' <LValueToRValue>
 //CHECK-NEXT: |     |     |   `-DeclRefExpr {{.*}} <col:10> 'int' lvalue Var {{.*}} 'ripple.iv.seq.exit.val' 'int'
 //CHECK-NEXT: |     |     |-<<<NULL>>>
 //CHECK-NEXT: |     |     `-NullStmt {{.*}} <line:29:7>
-//CHECK-NEXT: |     |-BinaryOperator {{.*}} <line:26:3, col:8> 'int' '!='
-//CHECK-NEXT: |     | |-BinaryOperator {{.*}} <col:3, line:25:35> 'int' '*'
-//CHECK-NEXT: |     | | |-ImplicitCastExpr {{.*}} <line:26:3> 'int' <LValueToRValue>
-//CHECK-NEXT: |     | | | `-DeclRefExpr {{.*}} <col:3> 'int' lvalue Var {{.*}} 'ripple.par.iv' 'int'
-//CHECK-NEXT: |     | | `-ImplicitCastExpr {{.*}} <line:25:35> 'int' <LValueToRValue>
-//CHECK-NEXT: |     | |   `-DeclRefExpr {{.*}} <col:35> 'int' lvalue Var {{.*}} 'ripple.par.block.size' 'int'
-//CHECK-NEXT: |     | `-ImplicitCastExpr {{.*}} <line:26:8> 'int' <LValueToRValue>
-//CHECK-NEXT: |     |   `-DeclRefExpr {{.*}} <col:8> 'int' lvalue Var {{.*}} 'ripple.loop.iters' 'int'
+//CHECK-NEXT: |     |-DeclRefExpr {{.*}} <line:26:8> 'int' lvalue Var {{.*}} 'ripple.has.partial.chunk' 'int'
 //CHECK-NEXT: |     |-BinaryOperator {{.*}} <col:8> 'int' '='
 //CHECK-NEXT: |     | |-DeclRefExpr {{.*}} <col:8> 'int' lvalue Var {{.*}} 'i' 'int'
 //CHECK-NEXT: |     | `-ImplicitCastExpr {{.*}} <col:8> 'int' <LValueToRValue>
@@ -600,10 +570,11 @@ void test_five(int x, int y, int z) {
 //CHECK-NEXT: |       |-DeclRefExpr {{.*}} <line:27:35> 'int' lvalue Var {{.*}} 'ripple.par.block.size' 'int'
 //CHECK-NEXT: |       |-DeclRefExpr {{.*}} <line:28:10> 'int' lvalue Var {{.*}} 'ripple.loop.iters' 'int'
 //CHECK-NEXT: |       |-<<<NULL>>>
-//CHECK-NEXT: |       |-DeclRefExpr {{.*}} <col:10> 'int' lvalue Var {{.*}} 'ripple.par.loop.iters' 'int'
+//CHECK-NEXT: |       |-DeclRefExpr {{.*}} <col:10> 'int' lvalue Var {{.*}} 'ripple.chunk.count' 'int'
 //CHECK-NEXT: |       |-DeclRefExpr {{.*}} <col:10> 'int' lvalue Var {{.*}} 'ripple.par.init' 'int'
 //CHECK-NEXT: |       |-DeclRefExpr {{.*}} <col:10> 'int' lvalue Var {{.*}} 'ripple.par.step' 'int'
 //CHECK-NEXT: |       |-DeclRefExpr {{.*}} <col:10> 'int' lvalue Var {{.*}} 'ripple.iv.seq.exit.val' 'int'
+//CHECK-NEXT: |       |-DeclRefExpr {{.*}} <col:10> 'int' lvalue Var {{.*}} 'ripple.has.partial.chunk' 'int'
 //CHECK-NEXT: |       |-DeclRefExpr {{.*}} <col:5> 'int' lvalue Var {{.*}} 'ripple.par.iv' 'int'
 //CHECK-NEXT: |       |-BinaryOperator {{.*}} <col:10, col:19> 'int' '='
 //CHECK-NEXT: |       | |-DeclRefExpr {{.*}} <col:10> 'int' lvalue Var {{.*}} 'i' 'int'
@@ -623,7 +594,7 @@ void test_five(int x, int y, int z) {
 //CHECK-NEXT: |       | | |-ImplicitCastExpr {{.*}} <col:5> 'int' <LValueToRValue>
 //CHECK-NEXT: |       | | | `-DeclRefExpr {{.*}} <col:5> 'int' lvalue Var {{.*}} 'ripple.par.iv' 'int'
 //CHECK-NEXT: |       | | `-ImplicitCastExpr {{.*}} <col:10> 'int' <LValueToRValue>
-//CHECK-NEXT: |       | |   `-DeclRefExpr {{.*}} <col:10> 'int' lvalue Var {{.*}} 'ripple.par.loop.iters' 'int'
+//CHECK-NEXT: |       | |   `-DeclRefExpr {{.*}} <col:10> 'int' lvalue Var {{.*}} 'ripple.chunk.count' 'int'
 //CHECK-NEXT: |       | |-CompoundAssignOperator {{.*}} <col:5, col:28> 'int' '+=' ComputeLHSTy='int' ComputeResultTy='int'
 //CHECK-NEXT: |       | | |-DeclRefExpr {{.*}} <col:5> 'int' lvalue Var {{.*}} 'ripple.par.iv' 'int'
 //CHECK-NEXT: |       | | `-IntegerLiteral {{.*}} <col:28> 'int' 1
@@ -640,14 +611,7 @@ void test_five(int x, int y, int z) {
 //CHECK-NEXT: |       |   |       `-ImplicitCastExpr {{.*}} <col:5> 'int' <LValueToRValue>
 //CHECK-NEXT: |       |   |         `-DeclRefExpr {{.*}} <col:5> 'int' lvalue Var {{.*}} 'ripple.par.iv' 'int'
 //CHECK-NEXT: |       |   `-NullStmt {{.*}} <line:29:7>
-//CHECK-NEXT: |       |-BinaryOperator {{.*}} <line:28:5, col:10> 'int' '!='
-//CHECK-NEXT: |       | |-BinaryOperator {{.*}} <col:5, line:27:35> 'int' '*'
-//CHECK-NEXT: |       | | |-ImplicitCastExpr {{.*}} <line:28:5> 'int' <LValueToRValue>
-//CHECK-NEXT: |       | | | `-DeclRefExpr {{.*}} <col:5> 'int' lvalue Var {{.*}} 'ripple.par.iv' 'int'
-//CHECK-NEXT: |       | | `-ImplicitCastExpr {{.*}} <line:27:35> 'int' <LValueToRValue>
-//CHECK-NEXT: |       | |   `-DeclRefExpr {{.*}} <col:35> 'int' lvalue Var {{.*}} 'ripple.par.block.size' 'int'
-//CHECK-NEXT: |       | `-ImplicitCastExpr {{.*}} <line:28:10> 'int' <LValueToRValue>
-//CHECK-NEXT: |       |   `-DeclRefExpr {{.*}} <col:10> 'int' lvalue Var {{.*}} 'ripple.loop.iters' 'int'
+//CHECK-NEXT: |       |-DeclRefExpr {{.*}} <line:28:10> 'int' lvalue Var {{.*}} 'ripple.has.partial.chunk' 'int'
 //CHECK-NEXT: |       |-BinaryOperator {{.*}} <col:10> 'int' '='
 //CHECK-NEXT: |       | |-DeclRefExpr {{.*}} <col:10> 'int' lvalue Var {{.*}} 'i' 'int'
 //CHECK-NEXT: |       | `-ImplicitCastExpr {{.*}} <col:10> 'int' <LValueToRValue>
@@ -720,10 +684,11 @@ void test_five(int x, int y, int z) {
 //CHECK-NEXT: |       |-DeclRefExpr {{.*}} <line:35:35> 'int' lvalue Var {{.*}} 'ripple.par.block.size' 'int'
 //CHECK-NEXT: |       |-DeclRefExpr {{.*}} <line:36:10> 'int' lvalue Var {{.*}} 'ripple.loop.iters' 'int'
 //CHECK-NEXT: |       |-<<<NULL>>>
-//CHECK-NEXT: |       |-DeclRefExpr {{.*}} <col:10> 'int' lvalue Var {{.*}} 'ripple.par.loop.iters' 'int'
+//CHECK-NEXT: |       |-DeclRefExpr {{.*}} <col:10> 'int' lvalue Var {{.*}} 'ripple.chunk.count' 'int'
 //CHECK-NEXT: |       |-DeclRefExpr {{.*}} <col:10> 'int' lvalue Var {{.*}} 'ripple.par.init' 'int'
 //CHECK-NEXT: |       |-DeclRefExpr {{.*}} <col:10> 'int' lvalue Var {{.*}} 'ripple.par.step' 'int'
 //CHECK-NEXT: |       |-DeclRefExpr {{.*}} <col:10> 'int' lvalue Var {{.*}} 'ripple.iv.seq.exit.val' 'int'
+//CHECK-NEXT: |       |-DeclRefExpr {{.*}} <col:10> 'int' lvalue Var {{.*}} 'ripple.has.partial.chunk' 'int'
 //CHECK-NEXT: |       |-DeclRefExpr {{.*}} <col:5> 'int' lvalue Var {{.*}} 'ripple.par.iv' 'int'
 //CHECK-NEXT: |       |-BinaryOperator {{.*}} <col:10, col:19> 'int' '='
 //CHECK-NEXT: |       | |-DeclRefExpr {{.*}} <col:10> 'int' lvalue Var {{.*}} 'i' 'int'
@@ -743,7 +708,7 @@ void test_five(int x, int y, int z) {
 //CHECK-NEXT: |       | | |-ImplicitCastExpr {{.*}} <col:5> 'int' <LValueToRValue>
 //CHECK-NEXT: |       | | | `-DeclRefExpr {{.*}} <col:5> 'int' lvalue Var {{.*}} 'ripple.par.iv' 'int'
 //CHECK-NEXT: |       | | `-ImplicitCastExpr {{.*}} <col:10> 'int' <LValueToRValue>
-//CHECK-NEXT: |       | |   `-DeclRefExpr {{.*}} <col:10> 'int' lvalue Var {{.*}} 'ripple.par.loop.iters' 'int'
+//CHECK-NEXT: |       | |   `-DeclRefExpr {{.*}} <col:10> 'int' lvalue Var {{.*}} 'ripple.chunk.count' 'int'
 //CHECK-NEXT: |       | |-CompoundAssignOperator {{.*}} <col:5, col:28> 'int' '+=' ComputeLHSTy='int' ComputeResultTy='int'
 //CHECK-NEXT: |       | | |-DeclRefExpr {{.*}} <col:5> 'int' lvalue Var {{.*}} 'ripple.par.iv' 'int'
 //CHECK-NEXT: |       | | `-IntegerLiteral {{.*}} <col:28> 'int' 1
@@ -760,14 +725,7 @@ void test_five(int x, int y, int z) {
 //CHECK-NEXT: |       |   |       `-ImplicitCastExpr {{.*}} <col:5> 'int' <LValueToRValue>
 //CHECK-NEXT: |       |   |         `-DeclRefExpr {{.*}} <col:5> 'int' lvalue Var {{.*}} 'ripple.par.iv' 'int'
 //CHECK-NEXT: |       |   `-NullStmt {{.*}} <line:37:7>
-//CHECK-NEXT: |       |-BinaryOperator {{.*}} <line:36:5, col:10> 'int' '!='
-//CHECK-NEXT: |       | |-BinaryOperator {{.*}} <col:5, line:35:35> 'int' '*'
-//CHECK-NEXT: |       | | |-ImplicitCastExpr {{.*}} <line:36:5> 'int' <LValueToRValue>
-//CHECK-NEXT: |       | | | `-DeclRefExpr {{.*}} <col:5> 'int' lvalue Var {{.*}} 'ripple.par.iv' 'int'
-//CHECK-NEXT: |       | | `-ImplicitCastExpr {{.*}} <line:35:35> 'int' <LValueToRValue>
-//CHECK-NEXT: |       | |   `-DeclRefExpr {{.*}} <col:35> 'int' lvalue Var {{.*}} 'ripple.par.block.size' 'int'
-//CHECK-NEXT: |       | `-ImplicitCastExpr {{.*}} <line:36:10> 'int' <LValueToRValue>
-//CHECK-NEXT: |       |   `-DeclRefExpr {{.*}} <col:10> 'int' lvalue Var {{.*}} 'ripple.loop.iters' 'int'
+//CHECK-NEXT: |       |-DeclRefExpr {{.*}} <line:36:10> 'int' lvalue Var {{.*}} 'ripple.has.partial.chunk' 'int'
 //CHECK-NEXT: |       |-BinaryOperator {{.*}} <col:10> 'int' '='
 //CHECK-NEXT: |       | |-DeclRefExpr {{.*}} <col:10> 'int' lvalue Var {{.*}} 'i' 'int'
 //CHECK-NEXT: |       | `-ImplicitCastExpr {{.*}} <col:10> 'int' <LValueToRValue>
@@ -853,10 +811,11 @@ void test_five(int x, int y, int z) {
 //CHECK-NEXT:       |-DeclRefExpr {{.*}} <line:42:35> 'int' lvalue Var {{.*}} 'ripple.par.block.size' 'int'
 //CHECK-NEXT:       |-DeclRefExpr {{.*}} <line:43:8> 'int' lvalue Var {{.*}} 'ripple.loop.iters' 'int'
 //CHECK-NEXT:       |-<<<NULL>>>
-//CHECK-NEXT:       |-DeclRefExpr {{.*}} <col:8> 'int' lvalue Var {{.*}} 'ripple.par.loop.iters' 'int'
+//CHECK-NEXT:       |-DeclRefExpr {{.*}} <col:8> 'int' lvalue Var {{.*}} 'ripple.chunk.count' 'int'
 //CHECK-NEXT:       |-DeclRefExpr {{.*}} <col:8> 'int' lvalue Var {{.*}} 'ripple.par.init' 'int'
 //CHECK-NEXT:       |-DeclRefExpr {{.*}} <col:8> 'int' lvalue Var {{.*}} 'ripple.par.step' 'int'
 //CHECK-NEXT:       |-DeclRefExpr {{.*}} <col:8> 'int' lvalue Var {{.*}} 'ripple.iv.seq.exit.val' 'int'
+//CHECK-NEXT:       |-DeclRefExpr {{.*}} <col:8> 'int' lvalue Var {{.*}} 'ripple.has.partial.chunk' 'int'
 //CHECK-NEXT:       |-DeclRefExpr {{.*}} <col:3> 'int' lvalue Var {{.*}} 'ripple.par.iv' 'int'
 //CHECK-NEXT:       |-BinaryOperator {{.*}} <col:8, col:17> 'int' '='
 //CHECK-NEXT:       | |-DeclRefExpr {{.*}} <col:8> 'int' lvalue Var {{.*}} 'i' 'int'
@@ -876,7 +835,7 @@ void test_five(int x, int y, int z) {
 //CHECK-NEXT:       | | |-ImplicitCastExpr {{.*}} <col:3> 'int' <LValueToRValue>
 //CHECK-NEXT:       | | | `-DeclRefExpr {{.*}} <col:3> 'int' lvalue Var {{.*}} 'ripple.par.iv' 'int'
 //CHECK-NEXT:       | | `-ImplicitCastExpr {{.*}} <col:8> 'int' <LValueToRValue>
-//CHECK-NEXT:       | |   `-DeclRefExpr {{.*}} <col:8> 'int' lvalue Var {{.*}} 'ripple.par.loop.iters' 'int'
+//CHECK-NEXT:       | |   `-DeclRefExpr {{.*}} <col:8> 'int' lvalue Var {{.*}} 'ripple.chunk.count' 'int'
 //CHECK-NEXT:       | |-CompoundAssignOperator {{.*}} <col:3, col:26> 'int' '+=' ComputeLHSTy='int' ComputeResultTy='int'
 //CHECK-NEXT:       | | |-DeclRefExpr {{.*}} <col:3> 'int' lvalue Var {{.*}} 'ripple.par.iv' 'int'
 //CHECK-NEXT:       | | `-IntegerLiteral {{.*}} <col:26> 'int' 1
@@ -917,14 +876,7 @@ void test_five(int x, int y, int z) {
 //CHECK-NEXT:       |       |-UnaryOperator {{.*}} <col:30, col:31> 'int' postfix '++'
 //CHECK-NEXT:       |       | `-DeclRefExpr {{.*}} <col:30> 'int' lvalue Var {{.*}} 'i' 'int'
 //CHECK-NEXT:       |       `-NullStmt {{.*}} <line:46:9>
-//CHECK-NEXT:       |-BinaryOperator {{.*}} <line:43:3, col:8> 'int' '!='
-//CHECK-NEXT:       | |-BinaryOperator {{.*}} <col:3, line:42:35> 'int' '*'
-//CHECK-NEXT:       | | |-ImplicitCastExpr {{.*}} <line:43:3> 'int' <LValueToRValue>
-//CHECK-NEXT:       | | | `-DeclRefExpr {{.*}} <col:3> 'int' lvalue Var {{.*}} 'ripple.par.iv' 'int'
-//CHECK-NEXT:       | | `-ImplicitCastExpr {{.*}} <line:42:35> 'int' <LValueToRValue>
-//CHECK-NEXT:       | |   `-DeclRefExpr {{.*}} <col:35> 'int' lvalue Var {{.*}} 'ripple.par.block.size' 'int'
-//CHECK-NEXT:       | `-ImplicitCastExpr {{.*}} <line:43:8> 'int' <LValueToRValue>
-//CHECK-NEXT:       |   `-DeclRefExpr {{.*}} <col:8> 'int' lvalue Var {{.*}} 'ripple.loop.iters' 'int'
+//CHECK-NEXT:       |-DeclRefExpr {{.*}} <line:43:8> 'int' lvalue Var {{.*}} 'ripple.has.partial.chunk' 'int'
 //CHECK-NEXT:       |-BinaryOperator {{.*}} <col:8> 'int' '='
 //CHECK-NEXT:       | |-DeclRefExpr {{.*}} <col:8> 'int' lvalue Var {{.*}} 'i' 'int'
 //CHECK-NEXT:       | `-ImplicitCastExpr {{.*}} <col:8> 'int' <LValueToRValue>

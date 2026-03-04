@@ -746,12 +746,11 @@ void CodeGenFunction::EmitRippleComputeConstruct(
 
   if (!S.threadCodegen() && S.generateRemainder()) {
     if (S.generateMaskedPostlude()) {
-      // Update the loop IV for the last time for the masked Postlude
-      EmitStmt(S.getLoopIVUpdate());
-
       llvm::BasicBlock *ForBodyRippleCond =
           createBasicBlock("ripple.par.for.remainder.cond");
 
+      // Bypass the vector masked section entirely whenever possible by
+      // evaluating if we executed the loop iterations
       Stmt::Likelihood LH = Stmt::LH_None;
       uint64_t RemainderCount = getProfileCount(S.getRemainderBody());
       if (!RemainderCount && !getCurrentProfileCount() &&
@@ -769,6 +768,10 @@ void CodeGenFunction::EmitRippleComputeConstruct(
 
       // Remainder tensor condition
       EmitBlock(ForBodyRippleCond);
+
+      // Update the loop IV one last time after the dispatch condition and
+      // before entering the partial block through the vector conditional
+      EmitStmt(S.getLoopIVUpdate());
 
       llvm::BasicBlock *ForBodyRemainder =
           createBasicBlock("ripple.par.for.remainder.body");
@@ -804,9 +807,12 @@ void CodeGenFunction::EmitRippleComputeConstruct(
     }
   }
 
+  EmitBlock(ExitBlock,
+            /*IsFinished*/ !RippleParallelForScope.requiresCleanups() &&
+                !S.getEndLoopIVUpdate());
+
+  // Update inside the exit block so that all paths leading to exit (including
+  // early breaks) execute this update
   if (S.getEndLoopIVUpdate())
     EmitStmt(S.getEndLoopIVUpdate());
-
-  EmitBlock(ExitBlock,
-            /*IsFinished*/ !RippleParallelForScope.requiresCleanups());
 }

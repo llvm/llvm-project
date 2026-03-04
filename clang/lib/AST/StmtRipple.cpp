@@ -54,15 +54,6 @@ RippleComputeConstruct::getRippleVarDecls() const {
       if (VarDecl *VD = cast<VarDecl>(DRE->getDecl()))
         Decls.push_back(VD);
 
-  if (threadCodegen())
-    // LOOP_IV_ORIGIN may be nullptr and STEP_RIPPLE, LOOP_INIT_RIPPLE aren't
-    // used in thread mode
-    assert(Decls.size() == NumVarDecls - 2 || Decls.size() == NumVarDecls - 3);
-  else
-    // LOOP_IV_ORIGIN may be nullptr and THREAD_CHUNK_SIZE isn't used in vector
-    // mode
-    assert(Decls.size() == NumVarDecls - 1 || Decls.size() == NumVarDecls - 2);
-
   return Decls;
 }
 
@@ -87,24 +78,42 @@ void RippleComputeConstruct::print(raw_ostream &OS) const {
      << For->getInc() << ")";
 }
 
-ForStmt *RippleComputeConstruct::getInnerThreadLoop() const {
+std::pair<ForStmt *, ForStmt *>
+RippleComputeConstruct::getInnerThreadLoops() const {
   if (!threadCodegen() || !getRippleLoopStmt())
-    return nullptr;
+    return {nullptr, nullptr};
   auto OuterLoopBody = cast<CompoundStmt>(getRippleLoopStmt()->getBody());
-  auto Res = llvm::find_if(OuterLoopBody->body(),
-                           [](auto *Stmt) { return isa<ForStmt>(Stmt); });
-  if (Res != OuterLoopBody->body_end())
-    return cast<ForStmt>(*Res);
-  return nullptr;
+  // Look for: if (...) for { full_iterations } else for { masked_remainder }
+  auto Res = llvm::find_if(OuterLoopBody->body(), [](auto *S) {
+    if (auto *If = dyn_cast<IfStmt>(S))
+      return isa_and_present<ForStmt>(If->getThen()) &&
+             isa_and_present<ForStmt>(If->getElse());
+    else
+      return false;
+  });
+  if (Res != OuterLoopBody->body_end()) {
+    auto *If = cast<IfStmt>(*Res);
+    return {cast<ForStmt>(If->getThen()), cast<ForStmt>(If->getElse())};
+  }
+  return {nullptr, nullptr};
 }
 
-void RippleComputeConstruct::setInnerThreadLoop(Stmt *NewInnerStmt) {
+void RippleComputeConstruct::setInnerThreadLoops(
+    std::pair<Stmt *, Stmt *> NewInnerStmts) {
   if (!threadCodegen() || !getRippleLoopStmt())
     return;
   auto OuterLoopBody = cast<CompoundStmt>(getRippleLoopStmt()->getBody());
-  auto Res = llvm::find_if(OuterLoopBody->body(),
-                           [](auto *Stmt) { return isa<ForStmt>(Stmt); });
+  // Look for: if (...) for { full_iterations } else for { masked_remainder }
+  auto Res = llvm::find_if(OuterLoopBody->body(), [](auto *S) {
+    if (auto *If = dyn_cast<IfStmt>(S))
+      return isa_and_present<ForStmt>(If->getThen()) &&
+             isa_and_present<ForStmt>(If->getElse());
+    else
+      return false;
+  });
   if (Res == OuterLoopBody->body_end())
-    llvm_unreachable("ripple thread loop expects a nested 'chunk' loop");
-  *Res = NewInnerStmt;
+    llvm_unreachable("ripple thread loop expects a dispatch IfStmt");
+  auto *If = cast<IfStmt>(*Res); // we searched for an IfStmt
+  If->setThen(NewInnerStmts.first);
+  If->setElse(NewInnerStmts.second);
 }

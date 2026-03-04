@@ -5266,7 +5266,7 @@ void Ripple::ifConvert() {
       for (auto &I : *BB)
         invalidateRippleDataFor(&I);
 
-    DeleteDeadBlocks(DeadBlocks, &DTU);
+    DeleteDeadBlocks(DeadBlocks, &DTU, /*KeepOneInputPhi*/ true);
     DTU.flush();
     LLVM_DEBUG(DTU.getDomTree().verify());
     LLVM_DEBUG(DTU.getPostDomTree().verify());
@@ -7079,8 +7079,10 @@ void Ripple::invalidateRippleDataFor(const Value *V) {
     SelectToMaskWhenIfConvert.erase(Select);
   else if (auto *Call = dyn_cast<CallInst>(I))
     MaskedCalls.erase(Call);
-  else if (auto *Alloca = dyn_cast<AllocaInst>(I))
+  else if (auto *Alloca = dyn_cast<AllocaInst>(I)) {
     PromotableAlloca.erase(Alloca);
+    NonPromotableAlloca.erase(Alloca);
+  }
 }
 
 bool Ripple::isRippleIntrinsics(const Instruction *I) {

@@ -77,6 +77,7 @@ private:
     LB_INIT_RIPPLE,
     STEP_RIPPLE,
     LOOP_IV_SEQ_EXIT_VAL,
+    HAS_PARTIAL_CHUNK,
     LOOP_INIT_RIPPLE,
     LOOP_IV_UPDATE,
     RIPPLE_LOOP_STMT,
@@ -248,6 +249,15 @@ public:
     SubStmts[LOOP_INIT_RIPPLE] = cast_if_present<Stmt>(E);
   }
 
+  /// A boolean variable that is true when the number of loop iterations is not
+  /// a multiple of the chunk size (i.e., the last block is partial).
+  Expr *getHasPartialChunk() const {
+    return cast_if_present<Expr>(SubStmts[HAS_PARTIAL_CHUNK]);
+  }
+  void setHasPartialChunk(Expr *E) {
+    SubStmts[HAS_PARTIAL_CHUNK] = cast_if_present<Stmt>(E);
+  }
+
   /// DeclRefExpr pointing to a variable holding the value the loop induction
   /// variable has when the loop exits normally (no early break), i.e. the
   /// lexicographically last (sequential) value of the IV.
@@ -323,8 +333,9 @@ public:
   ThreadScheduleKind getThreadScheduleKind() const { return ThreadSchedule; }
   ValueDecl *getChunkDecl() const { return ThreadChunkDecl; }
   std::optional<uint64_t> getChunkVal() const { return ThreadChunkVal; }
-  ForStmt *getInnerThreadLoop() const;
-  void setInnerThreadLoop(Stmt *NewInnerStmt);
+  // Set/get the pair of loops over <partial chunk, full chunk>
+  std::pair<ForStmt *, ForStmt *> getInnerThreadLoops() const;
+  void setInnerThreadLoops(std::pair<Stmt *, Stmt *> NewInnerStmts);
 
   // The thread block size
   Expr *getThreadChunkSize() const {
