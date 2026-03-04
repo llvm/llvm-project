@@ -23,7 +23,7 @@ define void @spillDMRreg(ptr %vop, ptr %vpp, ptr %vcp, ptr %resp) nounwind {
 ; CHECK-NEXT:    lxvp vsp36, 32(r3)
 ; CHECK-NEXT:    lxvp vsp32, 64(r3)
 ; CHECK-NEXT:    lxvp vsp38, 96(r3)
-; CHECK-NEXT:    lxvpx vsp40, 0, r4
+; CHECK-NEXT:    lxvp vsp40, 0(r4)
 ; CHECK-NEXT:    lxv vs0, 0(r5)
 ; CHECK-NEXT:    dmxxinstdmr512 wacc_hi0, vsp36, vsp34, 1
 ; CHECK-NEXT:    dmxxinstdmr512 wacc0, vsp38, vsp32, 0
@@ -64,7 +64,7 @@ define void @spillDMRreg(ptr %vop, ptr %vpp, ptr %vcp, ptr %resp) nounwind {
 ; AIX-NEXT:    lxvp vsp36, 64(r3)
 ; AIX-NEXT:    lxvp vsp32, 32(r3)
 ; AIX-NEXT:    lxvp vsp38, 0(r3)
-; AIX-NEXT:    lxvpx vsp40, 0, r4
+; AIX-NEXT:    lxvp vsp40, 0(r4)
 ; AIX-NEXT:    lxv vs0, 0(r5)
 ; AIX-NEXT:    dmxxinstdmr512 wacc_hi0, vsp36, vsp34, 1
 ; AIX-NEXT:    dmxxinstdmr512 wacc0, vsp38, vsp32, 0
@@ -106,7 +106,7 @@ define void @spillDMRreg(ptr %vop, ptr %vpp, ptr %vcp, ptr %resp) nounwind {
 ; AIX32-NEXT:    lxvp vsp36, 64(r3)
 ; AIX32-NEXT:    lxvp vsp32, 32(r3)
 ; AIX32-NEXT:    lxvp vsp38, 0(r3)
-; AIX32-NEXT:    lxvpx vsp40, 0, r4
+; AIX32-NEXT:    lxvp vsp40, 0(r4)
 ; AIX32-NEXT:    lxv vs0, 0(r5)
 ; AIX32-NEXT:    dmxxinstdmr512 wacc_hi0, vsp36, vsp34, 1
 ; AIX32-NEXT:    dmxxinstdmr512 wacc0, vsp38, vsp32, 0
