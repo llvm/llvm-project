@@ -93,3 +93,35 @@ func.func @dense_op_with_sp_dep(%169: tensor<2x10x8xf32>,
     } -> tensor<2x10x100xf32>
    return %179 : tensor<2x10x100xf32>
 }
+
+//
+// This kernel cannot be sparsified: the unsparsifiable op (math.exp) takes
+// a result of arith.subf whose first operand is a sparse tensor. Even though
+// arith.subf is a disjunctive op (result is 0 when LHS=0 regardless of RHS),
+// it still carries a sparse tensor dependency so kDenseOp wrapping is invalid.
+// Regression test for github.com/llvm/llvm-project/issues/114855.
+//
+#sparse3d = #sparse_tensor.encoding<{ map = (d0, d1, d2) -> (d0 : dense, d1 : compressed, d2 : dense) }>
+
+// CHECK-LABEL: func @dense_op_with_sparse_out_and_sp_dep
+// CHECK:       linalg.generic {{.*}}
+func.func @dense_op_with_sparse_out_and_sp_dep(
+    %arg0: tensor<2x3x4xf32, #sparse3d>,
+    %arg1: tensor<2x4xf32>) -> tensor<2x3x4xf32, #sparse3d> {
+  %0 = tensor.empty() : tensor<2x3x4xf32, #sparse3d>
+  %1 = linalg.generic {
+    indexing_maps = [
+      affine_map<(d0, d1, d2) -> (d0, d1, d2)>,
+      affine_map<(d0, d1, d2) -> (d0, d2)>,
+      affine_map<(d0, d1, d2) -> (d0, d1, d2)>
+    ],
+    iterator_types = ["parallel", "parallel", "parallel"]}
+    ins(%arg0, %arg1 : tensor<2x3x4xf32, #sparse3d>, tensor<2x4xf32>)
+    outs(%0 : tensor<2x3x4xf32, #sparse3d>) {
+  ^bb0(%in: f32, %in_0: f32, %out: f32):
+    %2 = arith.subf %in, %in_0 : f32
+    %3 = math.exp %2 : f32
+    linalg.yield %3 : f32
+  } -> tensor<2x3x4xf32, #sparse3d>
+  return %1 : tensor<2x3x4xf32, #sparse3d>
+}
