@@ -308,6 +308,7 @@ Bug Fixes in This Version
 - Fixed an assertion failure in the serialized diagnostic printer when it is destroyed without calling ``finish()``. (#GH140433)
 - Fixed an assertion failure caused by error recovery while extending a nested name specifier with results from ordinary lookup. (#GH181470)
 - Fixed a crash when parsing ``#pragma clang attribute`` arguments for attributes that forbid arguments. (#GH182122)
+- Fixed a bug with multiple-include optimization (MIOpt) state not being preserved in some cases during lexing, which could suppress header-guard mismatch diagnostics and interfere with include-guard optimization. (#GH180155)
 
 Bug Fixes to Compiler Builtins
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -381,6 +382,9 @@ Android Support
 
 Windows Support
 ^^^^^^^^^^^^^^^
+
+- Clang now defines the ``_MSVC_TRADITIONAL`` macro as ``1`` when emulating MSVC
+  19.15 (Visual Studio 2017 version 15.8) and later. (#GH47114)
 
 LoongArch Support
 ^^^^^^^^^^^^^^^^^
