@@ -67,3 +67,55 @@ v4i test_convertvector(v4f a) {
   // OGCG: fptosi <4 x float> %{{.*}} to <4 x i32>
   return __builtin_convertvector(a, v4i);
 }
+
+void foo();
+void test_conditional_bzero(void) {
+// CIR-LABEL: test_conditional_bzero
+// CIR: %[[ARR:.*]] = cir.alloca !cir.array<!s8i x 20>
+// CIR: %[[SIZE:.*]] = cir.alloca !s32i, !cir.ptr<!s32i>, ["len", init]
+// CIR: %[[ARR_DECAY:.*]] = cir.cast array_to_ptrdecay %[[ARR]] : !cir.ptr<!cir.array<!s8i x 20>> -> !cir.ptr<!s8i>
+// CIR: %[[ARR_TO_VOID_PTR:.*]] = cir.cast bitcast %[[ARR_DECAY]] : !cir.ptr<!s8i> -> !cir.ptr<!void>
+// CIR: %[[SIZE_LOAD:.*]] = cir.load {{.*}}%[[SIZE]] : !cir.ptr<!s32i>, !s32i
+// CIR: %[[SIZE_CAST:.*]] = cir.cast integral %[[SIZE_LOAD]] : !s32i -> !u64i
+// CIR: %[[ZERO:.*]] = cir.const #cir.int<0> : !u8i
+// CIR: cir.libc.memset %[[SIZE_CAST]] bytes at %[[ARR_TO_VOID_PTR]] to %[[ZERO]] : !cir.ptr<!void>, !u8i, !u64i
+//
+// CIR: %[[ARR_DECAY:.*]] = cir.cast array_to_ptrdecay %[[ARR]] : !cir.ptr<!cir.array<!s8i x 20>> -> !cir.ptr<!s8i>
+// CIR: %[[ARR_TO_VOID_PTR:.*]] = cir.cast bitcast %[[ARR_DECAY]] : !cir.ptr<!s8i> -> !cir.ptr<!void>
+// CIR: %[[SIZE_LOAD:.*]] = cir.load {{.*}}%[[SIZE]] : !cir.ptr<!s32i>, !s32i
+// CIR: %[[SIZE_CAST:.*]] = cir.cast integral %[[SIZE_LOAD]] : !s32i -> !u64i
+// CIR: %[[ZERO:.*]] = cir.const #cir.int<0> : !u8i
+// CIR: cir.libc.memset %[[SIZE_CAST]] bytes at %[[ARR_TO_VOID_PTR]] to %[[ZERO]] : !cir.ptr<!void>, !u8i, !u64i
+//
+// LLVM-LABEL: @test_conditional_bzero
+// LLVM: %[[ARR:.*]] = alloca [20 x i8]
+// LLVM: %[[ARR_DECAY:.*]] = getelementptr i8, ptr %[[ARR]], i32 0
+// LLVM: %[[SIZE_LOAD:.*]] = load i32, ptr %{{.*}}
+// LLVM: %[[SIZE_CAST:.*]] = sext i32 %[[SIZE_LOAD]] to i64
+// LLVM: call void @llvm.memset.p0.i64(ptr %[[ARR_DECAY]], i8 0, i64 %[[SIZE_CAST]], i1 false)
+//
+// LLVM: %[[ARR_DECAY:.*]] = getelementptr i8, ptr %[[ARR]], i32 0
+// LLVM: %[[SIZE_LOAD:.*]] = load i32, ptr %{{.*}}
+// LLVM: %[[SIZE_CAST:.*]] = sext i32 %[[SIZE_LOAD]] to i64
+// LLVM: call void @llvm.memset.p0.i64(ptr %[[ARR_DECAY]], i8 0, i64 %[[SIZE_CAST]], i1 false)
+//
+// OGCG-LABEL: @test_conditional_bzero
+// OGCG: %[[ARR:.*]] = alloca [20 x i8]
+// OGCG: %[[ARR_DECAY:.*]] = getelementptr inbounds [20 x i8], ptr %[[ARR]], i64 0
+// OGCG: %[[SIZE_LOAD:.*]] = load i32, ptr %{{.*}}
+// OGCG: %[[SIZE_CAST:.*]] = sext i32 %[[SIZE_LOAD]] to i64
+// OGCG: call void @llvm.memset.p0.i64(ptr {{.*}}%[[ARR_DECAY]], i8 0, i64 %[[SIZE_CAST]], i1 false)
+//
+// OGCG: %[[ARR_DECAY:.*]] = getelementptr inbounds [20 x i8], ptr %[[ARR]], i64 0
+// OGCG: %[[SIZE_LOAD:.*]] = load i32, ptr %{{.*}}
+// OGCG: %[[SIZE_CAST:.*]] = sext i32 %[[SIZE_LOAD]] to i64
+// OGCG: call void @llvm.memset.p0.i64(ptr {{.*}}%[[ARR_DECAY]], i8 0, i64 %[[SIZE_CAST]], i1 false)
+
+  char dst[20];
+  int _sz = 20, len = 20;
+  return (_sz
+          ? ((_sz >= len)
+              ? __builtin_bzero(dst, len)
+              : foo())
+          : __builtin_bzero(dst, len));
+}
