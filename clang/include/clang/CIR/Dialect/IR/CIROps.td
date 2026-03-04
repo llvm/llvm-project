@@ -3486,7 +3486,6 @@ def CIR_TryCallOp : CIR_CallOpBase<"try_call",[
   );
 
   let skipDefaultBuilders = 1;
-  let hasLLVMLowering = false;
 
   let builders = [
     OpBuilder<(ins "mlir::SymbolRefAttr":$callee,
