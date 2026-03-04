@@ -137,7 +137,7 @@ void VPPredicator::createBlockInMask(VPBasicBlock *VPBB) {
   // Start inserting after the block's phis, which be replaced by blends later.
   Builder.setInsertPoint(VPBB, VPBB->getFirstNonPhi());
 
-  // Reuse the mask of the header if VPBB is post-dominated by the header.
+  // Reuse the mask of the header if the VPBB post-dominates the header.
   // TODO: Generalize to reuse mask of immediate dominator.
   VPBasicBlock *Header =
       VPBB->getPlan()->getVectorLoopRegion()->getEntryBasicBlock();
