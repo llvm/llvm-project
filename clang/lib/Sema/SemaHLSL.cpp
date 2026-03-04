@@ -1012,7 +1012,8 @@ void SemaHLSL::checkSemanticAnnotation(
     return;
   }
   if (SemanticName == "SV_VERTEXID") {
-    diagnoseSemanticStageMismatch(SemanticAttr, ST, SC.CurrentIOType, {{llvm::Triple::Vertex, IOType::In}});
+    diagnoseSemanticStageMismatch(SemanticAttr, ST, SC.CurrentIOType,
+                                  {{llvm::Triple::Vertex, IOType::In}});
     return;
   }
 
