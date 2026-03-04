@@ -2036,7 +2036,8 @@ void AsmPrinter::emitPrefetchTargetSymbol(unsigned BaseID,
 
 /// Emit dangling prefetch targets that were not mapped to any basic block.
 void AsmPrinter::emitDanglingPrefetchTargets() {
-  const DenseMap<UniqueBBID, SmallVector<unsigned>> &MFPrefetchTargets = MF->getPrefetchTargets();
+  const DenseMap<UniqueBBID, SmallVector<unsigned>> &MFPrefetchTargets =
+      MF->getPrefetchTargets();
   if (MFPrefetchTargets.empty())
     return;
   DenseSet<UniqueBBID> MFBBIDs;
