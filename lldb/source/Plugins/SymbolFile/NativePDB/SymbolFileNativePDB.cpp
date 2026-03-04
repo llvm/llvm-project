@@ -59,9 +59,9 @@
 #include <optional>
 #include <string_view>
 
-// BEGIN SWIFT
+#if LLDB_ENABLE_SWIFT_SUPPORT
 #include "swift/Demangling/Demangle.h"
-// END SWIFT
+#endif
 
 using namespace lldb;
 using namespace lldb_private;
@@ -355,10 +355,10 @@ GetNestedTagDefinition(const NestedTypeRecord &Record,
   return std::move(child);
 }
 
-// BEGIN SWIFT
 // Uses a heuristic based on the mangled name to identify
 // Swift types. Needed since types are commingled in the type stream.
 static bool IsSwiftType(PdbTypeSymId type_id, PdbIndex& index) {
+#if LLDB_ENABLE_SWIFT_SUPPORT
   TypeIndex ti = type_id.index;
   if (ti.isSimple())
     return false;
@@ -375,8 +375,10 @@ static bool IsSwiftType(PdbTypeSymId type_id, PdbIndex& index) {
   ClassRecord cr;
   llvm::cantFail(TypeDeserializer::deserializeAs<ClassRecord>(cvt, cr));
   return cr.hasUniqueName() && swift::Demangle::isSwiftSymbol(cr.UniqueName);
+#else
+  return false;
+#endif
 }
-// END SWIFT
 
 
 void SymbolFileNativePDB::Initialize() {
