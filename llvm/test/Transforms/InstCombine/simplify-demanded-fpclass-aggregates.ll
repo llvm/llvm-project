@@ -116,7 +116,6 @@ entry:
   ret { float, float } { float 0x7FF0000000000000, float 0x7FF0000000000000 }
 }
 
-; FIXME (should be poison): Support computeKnownFPClass() for non-zero aggregates.
 define nofpclass(nzero) [ 1 x float ] @ret_nofpclass_multiple_elems_struct_ty_nzero_nzero() {
 ; CHECK-LABEL: define nofpclass(nzero) [1 x float] @ret_nofpclass_multiple_elems_struct_ty_nzero_nzero() {
 ; CHECK-NEXT:  [[ENTRY:.*:]]
