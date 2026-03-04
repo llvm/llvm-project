@@ -2071,23 +2071,29 @@ def Vector_GatherOp :
     3-D and the result is 2-D:
 
     ```mlir
-    func.func @gather_3D_to_2D(
-        %base: memref<?x10x?xf32>, %ofs_0: index, %ofs_1: index, %ofs_2: index,
-        %indices: vector<2x3xi32>, %mask: vector<2x3xi1>,
-        %fall_thru: vector<2x3xf32>) -> vector<2x3xf32> {
-            %result = vector.gather %base[%ofs_0, %ofs_1, %ofs_2]
-                                   [%indices], %mask, %fall_thru : [...]
-            return %result : vector<2x3xf32>
+      %base: memref<?x10x?xf32>, %ofs_0: index, %ofs_1: index, %ofs_2: index,
+      %indices: vector<2x3xi32>, %mask: vector<2x3xi1>,
+      %fall_thru: vector<2x3xf32>) -> vector<2x3xf32> {
+          %result = vector.gather %base[%ofs_0, %ofs_1, %ofs_2]
+                                 [%indices], %mask, %fall_thru : [...]
     }
     ```
 
     The indexing semantics are then,
 
     ```
-    result[i,j] := if mask[i,j] then base[i0, i1, i2 + indices[i,j]]
+    result[i,j] := if mask[i,j] then base[%ofs_0, %ofs_1, %ofs_2 + indices[i,j]]
                    else pass_thru[i,j]
     ```
-    The index into `base` only varies in the innermost ((k-1)-th) dimension.
+    Note, `indices` are element offsets - they are expressed in units of
+    elements (not bytes). Each element in `indices` represents a displacement
+    in units of elements from the starting element, i.e. `%base[%ofs_0, %ofs_1,
+    %ofs_2]` for the example above. If the resulting position exceeds the size
+    of a dimension, it naturally advances into the next row and/or plane
+    according to the identity (row-major) layout of `base`. Importantly, for
+    MemRefs, `indices` are interpreted assuming an identity (contiguous) MemRef
+    layout and do not account for non-identity strides.
+
 
     If a mask bit is set and the corresponding index is out-of-bounds for the
     given base, the behavior is undefined. If a mask bit is not set, the value
@@ -2179,6 +2185,29 @@ def Vector_ScatterOp
     given base, the behavior is undefined. If a mask bit is not set, no value
     is stored regardless of the index, and the index is allowed to be
     out-of-bounds.
+
+    ```mlir
+      %base: memref<?x10x?xf32>, %ofs_0: index, %ofs_1: index, %ofs_2: index,
+      %indices: vector<2x3xi32>, %mask: vector<2x3xi1>,
+      %src: vector<2x3xf32>) -> memref<?x10x?xf32> {
+          %result = vector.scatter %base[%ofs_0, %ofs_1, %ofs_2]
+                                   [%indices], %mask, %src : [...]
+    ```
+    The indexing semantics are then,
+
+    ```
+    if mask[i,j] then
+      base[%ofs_0, %ofs_1, %ofs_2 + indices[i,j]] := valueToStore[i,j]
+    ```
+
+    Note, `indices` are element offsets - they are expressed in units of
+    elements (not bytes). Each element in `indices` represents a displacement
+    in units of elements from the starting element, i.e. `%base[%ofs_0, %ofs_1,
+    %ofs_2]` for the example above. If the resulting position exceeds the size
+    of a dimension, it naturally advances into the next row and/or plane
+    according to the identity (row-major) layout of `base`. Importantly, for
+    MemRefs, `indices` are interpreted assuming an identity (contiguous) MemRef
+    layout and do not account for non-identity strides.
 
     If the index vector contains two or more duplicate indices, the behavior is
     undefined. Underlying implementation may enforce strict sequential
