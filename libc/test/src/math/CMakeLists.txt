@@ -2474,7 +2474,7 @@ add_fp_unittest(
   SRCS
     asinbf16_test.cpp
   DEPENDS
-    libc.src.math.asinbf16  
+    libc.src.math.asinbf16
     libc.src.__support.FPUtil.fp_bits
     libc.src.__support.FPUtil.bfloat16
 )
