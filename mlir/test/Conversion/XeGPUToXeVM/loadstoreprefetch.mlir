@@ -10,7 +10,7 @@ gpu.func @load_gather_i64_src_value_offset(%src: i64, %offset: vector<1xindex>, 
   // CHECK: %[[C2_I64:.*]] = arith.constant 2 : i64
   // CHECK: %[[VAR2:.*]] = vector.extract %[[ARG3]][0] : i1 from vector<1xi1>
   // CHECK: %[[VAR0:.*]] = vector.extract %[[ARG1]][0] : index from vector<1xindex>
-  // CHECK: %[[VAR1:.*]] = arith.index_castui %[[VAR0]] : index to i64
+  // CHECK: %[[VAR1:.*]] = arith.index_castui %[[VAR0]] exact : index to i64
   // CHECK: %[[VAR3:.*]] = arith.muli %[[VAR1]], %[[C2_I64]] : i64
   // CHECK: %[[VAR4:.*]] = arith.addi %[[ARG0]], %[[VAR3]] : i64
   // CHECK: %[[VAR5:.*]] = llvm.inttoptr %[[VAR4]] : i64 to !llvm.ptr<1>
@@ -56,7 +56,7 @@ gpu.func @store_scatter_i64_src_value_offset(%src: i64, %offset: vector<1xindex>
   // CHECK: %[[C4_I64:.*]] = arith.constant 4 : i64
   // CHECK: %[[VAR2:.*]] = vector.extract %[[ARG2]][0] : i1 from vector<1xi1>
   // CHECK: %[[VAR0:.*]] = vector.extract %[[ARG1]][0] : index from vector<1xindex>
-  // CHECK: %[[VAR1:.*]] = arith.index_castui %[[VAR0]] : index to i64
+  // CHECK: %[[VAR1:.*]] = arith.index_castui %[[VAR0]] exact : index to i64
   %0 = arith.constant dense<2.9>: vector<1xf32>
   // CHECK: %[[VAR4:.*]] = arith.muli %[[VAR1]], %[[C4_I64]] : i64
   // CHECK: %[[VAR5:.*]] = arith.addi %[[ARG0]], %[[VAR4]] : i64
@@ -77,7 +77,7 @@ gpu.module @test {
 gpu.func @prefetch_i64_src_value_offset(%src: i64, %offset: vector<1xindex>) {
   // CHECK: %[[C4_I64:.*]] = arith.constant 4 : i64
   // CHECK: %[[VAR0:.*]] = vector.extract %[[ARG1]][0] : index from vector<1xindex>
-  // CHECK: %[[VAR1:.*]] = arith.index_castui %[[VAR0]] : index to i64
+  // CHECK: %[[VAR1:.*]] = arith.index_castui %[[VAR0]] exact : index to i64
   // CHECK: %[[VAR2:.*]] = arith.muli %[[VAR1]], %[[C4_I64]] : i64
   // CHECK: %[[VAR3:.*]] = arith.addi %[[ARG0]], %[[VAR2]] : i64
   // CHECK: %[[VAR4:.*]] = llvm.inttoptr %[[VAR3]] : i64 to !llvm.ptr<1>
@@ -95,9 +95,9 @@ gpu.module @test {
 gpu.func @prefetch_memref_src_value_offset(%src: memref<256xf32>, %offset: vector<1xindex>) {
   // CHECK: %[[C4_I64:.*]] = arith.constant 4 : i64
   // CHECK: %[[VAR0:.*]] = vector.extract %[[ARG1]][0] : index from vector<1xindex>
-  // CHECK: %[[VAR1:.*]] = arith.index_castui %[[VAR0]] : index to i64
+  // CHECK: %[[VAR1:.*]] = arith.index_castui %[[VAR0]] exact : index to i64
   // CHECK: %[[INTPTR:.*]] = memref.extract_aligned_pointer_as_index %[[ARG0]] : memref<256xf32> -> index
-  // CHECK: %[[VAR2:.*]] = arith.index_castui %[[INTPTR]] : index to i64
+  // CHECK: %[[VAR2:.*]] = arith.index_castui %[[INTPTR]] exact : index to i64
   // CHECK: %[[VAR3:.*]] = arith.muli %[[VAR1]], %[[C4_I64]] : i64
   // CHECK: %[[VAR4:.*]] = arith.addi %[[VAR2]], %[[VAR3]] : i64
   // CHECK: %[[VAR5:.*]] = llvm.inttoptr %[[VAR4]] : i64 to !llvm.ptr<1>
@@ -118,8 +118,8 @@ gpu.func @load_gather_from_dyn_memref_subview(%dyn: memref<?xf16>, %offset: vect
 
   // CHECK: %[[BASE:.*]], %[[OFFSET:.*]], %[[SIZES:.*]], %[[STRIDES:.*]] = memref.extract_strided_metadata %{{.*}} : memref<16xf16, strided<[1], offset: ?>> -> memref<f16>, index, index, index
   // CHECK: %[[INTPTR:.*]] = memref.extract_aligned_pointer_as_index %[[BASE]] : memref<f16> -> index
-  // CHECK: %[[CAST1:.*]] = arith.index_castui %[[INTPTR]] : index to i64
-  // CHECK: %[[CAST2:.*]] = arith.index_castui %[[OFFSET]] : index to i64
+  // CHECK: %[[CAST1:.*]] = arith.index_castui %[[INTPTR]] exact : index to i64
+  // CHECK: %[[CAST2:.*]] = arith.index_castui %[[OFFSET]] exact : index to i64
   // CHECK: %[[MUL1:.*]] = arith.muli %[[CAST2]], %{{.*}} : i64
   // CHECK: %[[ADD1:.*]] = arith.addi %[[CAST1]], %[[MUL1]] : i64
   // CHECK: %[[MUL2:.*]] = arith.muli %{{.*}}, %{{.*}} : i64
