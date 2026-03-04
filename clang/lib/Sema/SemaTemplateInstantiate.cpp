@@ -4496,14 +4496,13 @@ ExprResult Sema::SubstConceptTemplateArguments(
             MLTAL.hasTemplateArgument(Depth, Pos)) {
           TemplateArgument Arg = MLTAL(Depth, Pos);
           assert(Arg.getKind() == TemplateArgument::Template);
-          ResolvedConcept = dyn_cast<ConceptDecl>(
-              Arg.getAsTemplate().getAsTemplateDecl());
+          ResolvedConcept =
+              dyn_cast<ConceptDecl>(Arg.getAsTemplate().getAsTemplateDecl());
         }
         if (ResolvedConcept == nullptr)
           return E;
       } else
         ResolvedConcept = dyn_cast<ConceptDecl>(D);
-
 
       TemplateArgumentListInfo TransArgs(E->getLAngleLoc(), E->getRAngleLoc());
       if (TransformTemplateArguments(E->getTemplateArgs(),
