@@ -1,15 +1,9 @@
 import("//llvm/utils/TableGen/tablegen.gni")
 
-tablegen("X86GenAsmMatcher") {
-  visibility = [ ":AsmParser" ]
-  args = [ "-gen-asm-matcher" ]
-  td_file = "../X86.td"
-}
-
 static_library("AsmParser") {
   output_name = "LLVMX86AsmParser"
   deps = [
-    ":X86GenAsmMatcher",
+    "..:X86GenAsmMatcher",
     "..:X86GenInstrMapping",
     "//llvm/lib/MC",
     "//llvm/lib/MC/MCParser",
