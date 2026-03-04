@@ -12,8 +12,8 @@ define <2 x double> @foo(<4 x i32> %s) {
 ;
 ; CHECK-BE-LABEL: foo:
 ; CHECK-BE:       # %bb.0: # %entry
-; CHECK-BE-NEXT:    xxsldwi 0, 34, 34, 1
-; CHECK-BE-NEXT:    xvcvsxwdp 34, 0
+; CHECK-BE-NEXT:    xxsldwi 34, 34, 34, 1
+; CHECK-BE-NEXT:    xvcvsxwdp 34, 34
 ; CHECK-BE-NEXT:    blr
 entry:
   %0 = shufflevector <4 x i32> %s, <4 x i32> undef, <2 x i32> <i32 1, i32 3>
@@ -29,8 +29,8 @@ define <2 x double> @bar(<4 x i32> %s) {
 ;
 ; CHECK-BE-LABEL: bar:
 ; CHECK-BE:       # %bb.0: # %entry
-; CHECK-BE-NEXT:    xxsldwi 0, 34, 34, 1
-; CHECK-BE-NEXT:    xvcvuxwdp 34, 0
+; CHECK-BE-NEXT:    xxsldwi 34, 34, 34, 1
+; CHECK-BE-NEXT:    xvcvuxwdp 34, 34
 ; CHECK-BE-NEXT:    blr
 entry:
   %0 = shufflevector <4 x i32> %s, <4 x i32> undef, <2 x i32> <i32 1, i32 3>
