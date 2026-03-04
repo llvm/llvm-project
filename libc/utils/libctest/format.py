@@ -15,11 +15,7 @@ and runs them. It extends lit's ExecutableTest format.
 The lit config sets test_source_root == test_exec_root (both to the build
 directory), following the pattern used by llvm/test/Unit/lit.cfg.py.
 
-Test executables are discovered by looking for files matching:
-  libc.test.src.<category>.<test_name>.__unit__.__build__
-  libc.test.src.<category>.<test_name>.__hermetic__.__build__
-
-These are created by the add_libc_test() infrastructure.
+Test executables are discovered by _isTestExecutable() and run by execute().
 """
 
 import os
@@ -34,10 +30,8 @@ class LibcTest(lit.formats.ExecutableTest):
     """
     Test format for libc unit tests.
 
-    Extends ExecutableTest to discover tests from the build directory
-    rather than the source directory. Test executables are named like:
-      libc.test.src.ctype.isalnum_test.__unit__.__build__
-    and return 0 on success.
+    Extends ExecutableTest to discover pre-built test executables in the
+    build directory rather than the source directory.
     """
 
     def getTestsInDirectory(self, testSuite, path_in_suite, litConfig, localConfig):
@@ -63,16 +57,28 @@ class LibcTest(lit.formats.ExecutableTest):
                 yield lit.Test.Test(testSuite, path_in_suite + (filename,), localConfig)
 
     def _isTestExecutable(self, filename, filepath):
-        """Check if a file is a test executable we should run."""
-        # Pattern: libc.test.src.*.__unit__.__build__ or .__hermetic__.__build__
-        if not filename.startswith("libc.test."):
+        """
+        Check if a file is a libc test executable we should run.
+
+        Recognized patterns (all must end with .__build__):
+          libc.test.src.<category>.<test_name>.__build__
+          libc.test.src.<category>.<test_name>.__unit__[.<opts>...].__build__
+          libc.test.src.<category>.<test_name>.__hermetic__[.<opts>...].__build__
+          libc.test.include.<test_name>.__unit__[.<opts>...].__build__
+          libc.test.include.<test_name>.__hermetic__[.<opts>...].__build__
+          libc.test.integration.<category>.<test_name>.__build__
+        """
+        if not filename.endswith(".__build__"):
             return False
-        if not (
-            filename.endswith(".__unit__.__build__")
-            or filename.endswith(".__hermetic__.__build__")
-        ):
+        if filename.startswith("libc.test.src."):
+            pass  # Accept all src tests ending in .__build__
+        elif filename.startswith("libc.test.include."):
+            if ".__unit__." not in filename and ".__hermetic__." not in filename:
+                return False
+        elif filename.startswith("libc.test.integration."):
+            pass  # Accept all integration tests ending in .__build__
+        else:
             return False
-        # Must be executable
         if not os.path.isfile(filepath):
             return False
         if not os.access(filepath, os.X_OK):
