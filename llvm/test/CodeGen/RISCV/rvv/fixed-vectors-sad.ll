@@ -199,8 +199,8 @@ define signext i32 @sad_2block_16xi8_as_i32(ptr %a, ptr %b, i32 signext %stridea
 ; ZVABD-NEXT:    vle8.v v15, (a1)
 ; ZVABD-NEXT:    add a0, a0, a2
 ; ZVABD-NEXT:    add a1, a1, a3
-; ZVABD-NEXT:    vle8.v v16, (a0)
-; ZVABD-NEXT:    vle8.v v17, (a1)
+; ZVABD-NEXT:    vle8.v v20, (a0)
+; ZVABD-NEXT:    vle8.v v18, (a1)
 ; ZVABD-NEXT:    vabdu.vv v8, v8, v9
 ; ZVABD-NEXT:    vsetvli zero, zero, e16, m2, ta, ma
 ; ZVABD-NEXT:    vzext.vf2 v12, v8
@@ -209,12 +209,10 @@ define signext i32 @sad_2block_16xi8_as_i32(ptr %a, ptr %b, i32 signext %stridea
 ; ZVABD-NEXT:    vabdu.vv v8, v14, v15
 ; ZVABD-NEXT:    vsetvli zero, zero, e16, m2, ta, ma
 ; ZVABD-NEXT:    vzext.vf2 v14, v8
-; ZVABD-NEXT:    vsetvli zero, zero, e8, m1, ta, ma
-; ZVABD-NEXT:    vabdu.vv v16, v16, v17
-; ZVABD-NEXT:    vsetvli zero, zero, e16, m2, ta, ma
+; ZVABD-NEXT:    vzext.vf2 v16, v18
+; ZVABD-NEXT:    vzext.vf2 v18, v20
 ; ZVABD-NEXT:    vwaddu.vv v8, v14, v12
-; ZVABD-NEXT:    vzext.vf2 v12, v16
-; ZVABD-NEXT:    vwaddu.wv v8, v8, v12
+; ZVABD-NEXT:    vwabdau.vv v8, v18, v16
 ; ZVABD-NEXT:    vsetvli zero, zero, e32, m4, ta, ma
 ; ZVABD-NEXT:    vmv.s.x v12, zero
 ; ZVABD-NEXT:    vredsum.vs v8, v8, v12
@@ -322,8 +320,8 @@ define signext i32 @sadu_2block_16xi8_as_i32(ptr %a, ptr %b, i32 signext %stride
 ; ZVABD-NEXT:    vle8.v v15, (a1)
 ; ZVABD-NEXT:    add a0, a0, a2
 ; ZVABD-NEXT:    add a1, a1, a3
-; ZVABD-NEXT:    vle8.v v16, (a0)
-; ZVABD-NEXT:    vle8.v v17, (a1)
+; ZVABD-NEXT:    vle8.v v20, (a0)
+; ZVABD-NEXT:    vle8.v v18, (a1)
 ; ZVABD-NEXT:    vabd.vv v8, v8, v9
 ; ZVABD-NEXT:    vsetvli zero, zero, e16, m2, ta, ma
 ; ZVABD-NEXT:    vzext.vf2 v12, v8
@@ -332,12 +330,10 @@ define signext i32 @sadu_2block_16xi8_as_i32(ptr %a, ptr %b, i32 signext %stride
 ; ZVABD-NEXT:    vabd.vv v8, v14, v15
 ; ZVABD-NEXT:    vsetvli zero, zero, e16, m2, ta, ma
 ; ZVABD-NEXT:    vzext.vf2 v14, v8
-; ZVABD-NEXT:    vsetvli zero, zero, e8, m1, ta, ma
-; ZVABD-NEXT:    vabd.vv v16, v16, v17
-; ZVABD-NEXT:    vsetvli zero, zero, e16, m2, ta, ma
+; ZVABD-NEXT:    vzext.vf2 v16, v18
+; ZVABD-NEXT:    vzext.vf2 v18, v20
 ; ZVABD-NEXT:    vwaddu.vv v8, v14, v12
-; ZVABD-NEXT:    vzext.vf2 v12, v16
-; ZVABD-NEXT:    vwaddu.wv v8, v8, v12
+; ZVABD-NEXT:    vwabdau.vv v8, v18, v16
 ; ZVABD-NEXT:    vsetvli zero, zero, e32, m4, ta, ma
 ; ZVABD-NEXT:    vmv.s.x v12, zero
 ; ZVABD-NEXT:    vredsum.vs v8, v8, v12
