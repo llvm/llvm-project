@@ -116,7 +116,6 @@ struct basic_string_view {
   const C *str;
   constexpr basic_string_view() : str(nullptr) {}
   constexpr basic_string_view(const C* s) : str(s) {}
-  constexpr basic_string_view(const C* s, size_type count) : str(s) {}
   constexpr basic_string_view(const C* s, size_type) : str(s) {}
 
   const C *data() const;
