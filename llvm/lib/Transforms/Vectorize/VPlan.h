@@ -759,12 +759,13 @@ private:
     FastMathFlagsTy FMFs;
     FCmpFlagsTy FCmpFlags;
     ReductionFlagsTy ReductionFlags;
+    uint8_t AllFlags[2];
   };
 
 public:
-  VPIRFlags() : OpType(OperationType::Other), CmpPredStorage(0) {}
+  VPIRFlags() : OpType(OperationType::Other), AllFlags() {}
 
-  VPIRFlags(Instruction &I) {
+  VPIRFlags(Instruction &I) : VPIRFlags() {
     if (auto *FCmp = dyn_cast<FCmpInst>(&I)) {
       OpType = OperationType::FCmp;
       Bitfield::set<CmpInst::PredicateField>(FCmpFlags.CmpPredStorage,
@@ -799,49 +800,65 @@ public:
     } else if (auto *Op = dyn_cast<FPMathOperator>(&I)) {
       OpType = OperationType::FPMathOp;
       FMFs = Op->getFastMathFlags();
-    } else {
-      OpType = OperationType::Other;
-      CmpPredStorage = 0;
     }
   }
 
-  VPIRFlags(CmpInst::Predicate Pred) : OpType(OperationType::Cmp) {
+  VPIRFlags(CmpInst::Predicate Pred) : OpType(OperationType::Cmp), AllFlags() {
     Bitfield::set<CmpInst::PredicateField>(CmpPredStorage, Pred);
     assert(getPredicate() == Pred && "predicate truncated");
   }
 
   VPIRFlags(CmpInst::Predicate Pred, FastMathFlags FMFs)
-      : OpType(OperationType::FCmp) {
+      : OpType(OperationType::FCmp), AllFlags() {
     Bitfield::set<CmpInst::PredicateField>(FCmpFlags.CmpPredStorage, Pred);
     assert(getPredicate() == Pred && "predicate truncated");
     FCmpFlags.FMFs = FMFs;
   }
 
   VPIRFlags(WrapFlagsTy WrapFlags)
-      : OpType(OperationType::OverflowingBinOp), WrapFlags(WrapFlags) {}
+      : OpType(OperationType::OverflowingBinOp), AllFlags() {
+    this->WrapFlags = WrapFlags;
+  }
 
   VPIRFlags(TruncFlagsTy TruncFlags)
-      : OpType(OperationType::Trunc), TruncFlags(TruncFlags) {}
+      : OpType(OperationType::Trunc), AllFlags() {
+    this->TruncFlags = TruncFlags;
+  }
 
-  VPIRFlags(FastMathFlags FMFs) : OpType(OperationType::FPMathOp), FMFs(FMFs) {}
+  VPIRFlags(FastMathFlags FMFs) : OpType(OperationType::FPMathOp), AllFlags() {
+    this->FMFs = FMFs;
+  }
 
   VPIRFlags(DisjointFlagsTy DisjointFlags)
-      : OpType(OperationType::DisjointOp), DisjointFlags(DisjointFlags) {}
+      : OpType(OperationType::DisjointOp), AllFlags() {
+    this->DisjointFlags = DisjointFlags;
+  }
 
   VPIRFlags(NonNegFlagsTy NonNegFlags)
-      : OpType(OperationType::NonNegOp), NonNegFlags(NonNegFlags) {}
+      : OpType(OperationType::NonNegOp), AllFlags() {
+    this->NonNegFlags = NonNegFlags;
+  }
 
   VPIRFlags(ExactFlagsTy ExactFlags)
-      : OpType(OperationType::PossiblyExactOp), ExactFlags(ExactFlags) {}
+      : OpType(OperationType::PossiblyExactOp), AllFlags() {
+    this->ExactFlags = ExactFlags;
+  }
 
   VPIRFlags(GEPNoWrapFlags GEPFlags)
-      : OpType(OperationType::GEPOp), GEPFlagsStorage(GEPFlags.getRaw()) {}
+      : OpType(OperationType::GEPOp), AllFlags() {
+    GEPFlagsStorage = GEPFlags.getRaw();
+  }
 
   VPIRFlags(RecurKind Kind, bool IsOrdered, bool IsInLoop, FastMathFlags FMFs)
-      : OpType(OperationType::ReductionOp),
-        ReductionFlags(Kind, IsOrdered, IsInLoop, FMFs) {}
+      : OpType(OperationType::ReductionOp), AllFlags() {
+    ReductionFlags = ReductionFlagsTy(Kind, IsOrdered, IsInLoop, FMFs);
+  }
 
-  void transferFlags(VPIRFlags &Other) { *this = Other; }
+  void transferFlags(VPIRFlags &Other) {
+    OpType = Other.OpType;
+    AllFlags[0] = Other.AllFlags[0];
+    AllFlags[1] = Other.AllFlags[1];
+  }
 
   /// Only keep flags also present in \p Other. \p Other must have the same
   /// OpType as the current object.
