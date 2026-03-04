@@ -1489,6 +1489,13 @@ RegBankLegalizeRules::RegBankLegalizeRules(const GCNSubtarget &_ST,
   addRulesForIOpcs({amdgcn_global_atomic_ordered_add_b64})
       .Any({{DivS64}, {{Vgpr64}, {IntrId, VgprP1, Vgpr64}}});
 
+  addRulesForIOpcs(
+      {amdgcn_global_atomic_fmin_num, amdgcn_global_atomic_fmax_num})
+      .Any({{DivS32}, {{Vgpr32}, {IntrId, VgprP1, Vgpr32}}});
+
+  addRulesForIOpcs({amdgcn_flat_atomic_fmin_num, amdgcn_flat_atomic_fmax_num})
+      .Any({{DivS32}, {{Vgpr32}, {IntrId, VgprP0, Vgpr32}}});
+
   addRulesForIOpcs({amdgcn_raw_buffer_load_lds})
       .Any({{_}, {{}, {IntrId, SgprV4S32, SgprP3, Imm, Vgpr32, Sgpr32}}});
 
