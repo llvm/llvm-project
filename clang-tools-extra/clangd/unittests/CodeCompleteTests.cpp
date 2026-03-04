@@ -666,10 +666,11 @@ TEST(CompletionTest, HeuristicsForMemberFunctionCompletion) {
     EXPECT_THAT(Results.Completions,
                 Contains(AllOf(named("method"), signature("(int name) const"),
                                snippetSuffix("(int name) const"))));
-    EXPECT_THAT(Results.Completions,
-                Contains(AllOf(named("generic"),
-                               signature("<typename T>(U nameU, V nameV)"),
-                               snippetSuffix("(U nameU, V nameV)"))));
+    EXPECT_THAT(
+        Results.Completions,
+        Contains(AllOf(named("generic"),
+                       signature("<typename T, typename U>(U nameU, V nameV)"),
+                       snippetSuffix("(U nameU, V nameV)"))));
     EXPECT_THAT(Results.Completions,
                 Contains(AllOf(named("staticMethod"), signature("(int name)"),
                                snippetSuffix("(int name)"))));

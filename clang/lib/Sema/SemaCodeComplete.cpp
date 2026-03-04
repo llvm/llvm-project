@@ -1507,9 +1507,8 @@ void ResultBuilder::AddResult(Result R, DeclContext *CurContext,
         OverloadSet.Add(Method, Results.size());
       }
   R.DeclaringEntity = IsInDeclarationContext;
-  R.IsAddressOfOperand = IsAddressOfOperand;
-  R.FunctionCanBeCall = canFunctionBeCalled(R.getDeclaration(), BaseExprType) ||
-                        IsInDeclarationContext;
+  R.FunctionCanBeCall = canFunctionBeCalled(R.getDeclaration(), BaseExprType) &&
+                        !IsAddressOfOperand;
 
   // We need to force IsAddressOfOperand when completing a ScopeSpecifier
   // for non static member function that could be a call.
@@ -1524,7 +1523,9 @@ void ResultBuilder::AddResult(Result R, DeclContext *CurContext,
     }
     if (Method) {
       // No call completion after :: for non static member function.
-      R.IsAddressOfOperand = !Method->isStatic() && BaseExprType.isNull();
+      if (!Method->isStatic() && BaseExprType.isNull()) {
+        R.FunctionCanBeCall = false;
+      }
     }
   }
 
@@ -3850,15 +3851,16 @@ CodeCompletionString *CodeCompletionResult::createCodeCompletionStringForDecl(
     AddQualifierToCompletionString(Result, Qualifier, QualifierIsInformative,
                                    Ctx, Policy);
     AddTypedNameChunk(Ctx, Policy, ND, Result);
-    if (!IsAddressOfOperand)
+    bool InsertParameters = FunctionCanBeCall || DeclaringEntity;
+    if (InsertParameters)
       Result.AddChunk(CodeCompletionString::CK_LeftParen);
     else
       Result.AddInformativeChunk("(");
     AddFunctionParameterChunks(PP, Policy, Function, Result, /*Start=*/0,
                                /*InOptional=*/false,
-                               /*AsInformativeChunk=*/IsAddressOfOperand,
+                               /*AsInformativeChunk=*/!InsertParameters,
                                /*IsInDeclarationContext=*/DeclaringEntity);
-    if (!IsAddressOfOperand)
+    if (InsertParameters)
       Result.AddChunk(CodeCompletionString::CK_RightParen);
     else
       Result.AddInformativeChunk(")");
@@ -3951,15 +3953,16 @@ CodeCompletionString *CodeCompletionResult::createCodeCompletionStringForDecl(
     }
 
     // Add the function parameters
-    if (!IsAddressOfOperand)
+    bool InsertParameters = FunctionCanBeCall || DeclaringEntity;
+    if (InsertParameters)
       Result.AddChunk(CodeCompletionString::CK_LeftParen);
     else
       Result.AddInformativeChunk("(");
     AddFunctionParameterChunks(PP, Policy, Function, Result, /*Start=*/0,
                                /*InOptional=*/false,
-                               /*AsInformativeChunk=*/IsAddressOfOperand,
+                               /*AsInformativeChunk=*/!InsertParameters,
                                /*IsInDeclarationContext=*/DeclaringEntity);
-    if (!IsAddressOfOperand)
+    if (InsertParameters)
       Result.AddChunk(CodeCompletionString::CK_RightParen);
     else
       Result.AddInformativeChunk(")");
