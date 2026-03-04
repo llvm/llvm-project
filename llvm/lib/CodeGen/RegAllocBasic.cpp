@@ -85,7 +85,7 @@ void RABasic::LRE_WillShrinkVirtReg(Register VirtReg) {
 }
 
 RABasic::RABasic(RegAllocFilterFunc F)
-    : MachineFunctionPass(ID), RegAllocBase(F) {}
+    : MachineFunctionPass(ID), RegAllocBase(std::move(F)) {}
 
 void RABasic::getAnalysisUsage(AnalysisUsage &AU) const {
   AU.setPreservesCFG();
