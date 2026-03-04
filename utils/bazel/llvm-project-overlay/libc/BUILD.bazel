@@ -2666,6 +2666,16 @@ libc_support_library(
 )
 
 libc_support_library(
+    name = "__support_math_bf16div",
+    hdrs = ["src/__support/math/bf16div.h"],
+    deps = [
+        ":__support_fputil_basic_operations",
+        ":__support_fputil_bfloat16",
+        ":__support_macros_config",
+    ],
+)
+
+libc_support_library(
     name = "__support_math_bf16divf",
     hdrs = ["src/__support/math/bf16divf.h"],
     deps = [
@@ -3339,16 +3349,6 @@ libc_support_library(
     deps = [
         ":__support_common",
         ":__support_fputil_manipulation_functions",
-        ":__support_macros_config",
-    ],
-)
-
-libc_support_library(
-    name = "__support_math_bf16div",
-    hdrs = ["src/__support/math/bf16div.h"],
-    deps = [
-        ":__support_fputil_bfloat16",
-        ":__support_fputil_basic_operations",
         ":__support_macros_config",
     ],
 )
@@ -4742,6 +4742,11 @@ libc_math_function(
 )
 
 libc_math_function(
+    name = "bf16div",
+    additional_deps = [":__support_math_bf16div"],
+)
+
+libc_math_function(
     name = "bf16divl",
     additional_deps = [":__support_math_bf16divl"],
 )
@@ -5364,13 +5369,6 @@ libc_math_function(name = "fminimum_numl")
 libc_math_function(name = "fminimum_numf128")
 
 libc_math_function(name = "fminimum_numf16")
-
-libc_math_function(
-    name = "bf16div",
-    additional_deps = [
-        ":__support_math_bf16div",
-    ],
-)
 
 libc_math_function(
     name = "fmod",
