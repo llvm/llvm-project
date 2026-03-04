@@ -2858,8 +2858,8 @@ def CIR_VTableGetTypeInfoOp : CIR_Op<"vtable.get_type_info", [
     type_info/rtti object from an object's vtable. This is an ABI independent
     abstraction of this operation.
 
-    The `vptr` operand must be a `!cir.ptr<!cir.vptr>` value, which would
-    have been returned by a previous call to `cir.vtable.get_vptr`.
+    The `vptr` operand must be a `!cir.vptr` value, which would have been
+    returned by a previous call to `cir.vtable.get_vptr`.
 
     The return type is a loadable pointer to a `type_info` struct.
 

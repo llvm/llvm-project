@@ -1009,7 +1009,6 @@ const char *vTableClassNameForType(const CIRGenModule &cgm, const Type *ty) {
   case Type::FunctionProto:
     // abi::__function_type_info.
     return "_ZTVN10__cxxabiv120__function_type_infoE";
-    break;
 
   case Type::Enum:
     return "_ZTVN10__cxxabiv116__enum_type_infoE";
@@ -1041,12 +1040,10 @@ const char *vTableClassNameForType(const CIRGenModule &cgm, const Type *ty) {
   case Type::Pointer:
     // abi::__pointer_type_info.
     return "_ZTVN10__cxxabiv119__pointer_type_infoE";
-    break;
 
   case Type::MemberPointer:
     // abi::__pointer_to_member_type_info.
     return "_ZTVN10__cxxabiv129__pointer_to_member_type_infoE";
-    break;
 
   case Type::HLSLAttributedResource:
   case Type::HLSLInlineSpirv:
@@ -1575,7 +1572,6 @@ void CIRGenItaniumCXXABI::emitBadTypeidCall(CIRGenFunction &cgf,
       loc, cgf.cgm.createRuntimeFunction(fnTy, "__cxa_bad_typeid", attrs), {},
       attrs);
   cir::UnreachableOp::create(cgf.getBuilder(), loc);
-  cgf.getBuilder().clearInsertionPoint();
 }
 
 mlir::Value CIRGenItaniumCXXABI::emitTypeid(CIRGenFunction &cgf, QualType srcTy,

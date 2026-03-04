@@ -1352,12 +1352,11 @@ static mlir::Value emitCXXTypeidFromVTable(CIRGenFunction &cgf, const Expr *e,
         cgf.getBuilder().createPtrIsNull(thisPtr.getPointer());
     // We don't really care about the value, we just want to make sure the
     // 'true' side calls bad-type-id.
-    auto ifOp = cir::IfOp::create(
+    cir::IfOp::create(
         cgf.getBuilder(), cgf.getLoc(e->getSourceRange()), isThisNull,
         /*withElseRegion=*/false, [&](mlir::OpBuilder &, mlir::Location loc) {
           cgf.cgm.getCXXABI().emitBadTypeidCall(cgf, loc);
         });
-    cgf.getBuilder().setInsertionPointAfter(ifOp);
   }
 
   return cgf.cgm.getCXXABI().emitTypeid(cgf, srcType, thisPtr, typeInfoPtrTy);
@@ -1368,6 +1367,11 @@ mlir::Value CIRGenFunction::emitCXXTypeidExpr(const CXXTypeidExpr *e) {
   mlir::Type resultType = cir::PointerType::get(convertType(e->getType()));
   QualType ty = e->isTypeOperand() ? e->getTypeOperand(getContext())
                                    : e->getExprOperand()->getType();
+
+  // If the non-default global var address space is not default, we need to do
+  // an address-space cast here.
+  assert(!cir::MissingFeatures::addressSpace());
+
   // C++ [expr.typeid]p2:
   //   When typeid is applied to a glvalue expression whose type is a
   //   polymorphic class type, the result refers to a std::type_info object
