@@ -89,6 +89,10 @@ private:
   llvm::Expected<CompilerType> ArithmeticConversion(lldb::ValueObjectSP &lhs,
                                                     lldb::ValueObjectSP &rhs,
                                                     uint32_t location);
+  /// Add the offset to the pointer according to the pointee type byte size.
+  /// \returns A new `ValueObject` with a new pointer value.
+  llvm::Expected<lldb::ValueObjectSP>
+  PointerAdd(lldb::ValueObjectSP ptr, int64_t offset, uint32_t location);
   llvm::Expected<lldb::ValueObjectSP> EvaluateScalarOp(BinaryOpKind kind,
                                                        lldb::ValueObjectSP lhs,
                                                        lldb::ValueObjectSP rhs,
