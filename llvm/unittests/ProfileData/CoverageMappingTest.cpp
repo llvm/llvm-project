@@ -106,6 +106,11 @@ struct CoverageMappingReaderMock : CoverageMappingReader {
 
     return Error::success();
   }
+
+  CoverageCapabilities coverageCapabilities() const override {
+    // TODO: Handle coverage capabilities in tests.
+    return CoverageCapabilities::all();
+  }
 };
 
 struct InputFunctionCoverageData {
