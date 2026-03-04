@@ -1040,6 +1040,85 @@ static void scalarizeMaskedVectorHistogram(const DataLayout &DL, CallInst *CI,
   ModifiedDT = true;
 }
 
+static void scalarizeMaskedFirstFaultingLoad(const DataLayout &DL, CallInst *CI,
+                                             DomTreeUpdater *DTU,
+                                             bool &ModifiedDT) {
+  // For a target without first-faulting load support, we can't actually
+  // scalarize accesses for all lanes. However, lanes beyond the first may be
+  // considered inactive due to reasons beyond a fault, so for generic
+  // 'scalarization' we can just load the first lane (if the corresponding
+  // input mask bit is active), then mark all other lanes as inactive in the
+  // output mask and embed the first lane into a vector of poison.
+  Value *Ptr = CI->getArgOperand(0);
+  MaybeAlign AlignVal = CI->getParamAlign(0);
+  Value *Mask = CI->getArgOperand(1);
+  StructType *RetTy = cast<StructType>(CI->getType());
+  VectorType *DataTy = cast<VectorType>(RetTy->getElementType(0));
+  VectorType *MaskTy = cast<VectorType>(RetTy->getElementType(1));
+  Type *ScalarTy = DataTy->getScalarType();
+
+  IRBuilder<> Builder(CI->getContext());
+  BasicBlock *IfBlock = CI->getParent();
+  Builder.SetInsertPoint(CI);
+  Builder.SetCurrentDebugLocation(CI->getDebugLoc());
+  Value *EmptyMask = Constant::getNullValue(MaskTy);
+  Value *PoisonData = PoisonValue::get(DataTy);
+
+  // First create a check to determine whether the first lane is active
+  //
+  // %first.active = extractelement <N x i1> %mask, i64 0
+  // br i1 %first.active, label %load.ff.first.lane, label %load.ff.result
+  Value *FirstActive =
+      Builder.CreateExtractElement(Mask, uint64_t(0ull), Twine("first.active"));
+  Instruction *ThenTerm =
+      SplitBlockAndInsertIfThen(FirstActive, CI,
+                                /*Unreachable=*/false,
+                                /*BranchWeights=*/nullptr, DTU);
+
+  // If the first mask lane was active, then we want a real load of one element
+  // into the first element of a vector, with the rest being poison.
+  //
+  // load.ff.first.lane:
+  // %ld.first = load ty, ptr %Ptr
+  // %lane = insertelement <N x ty> poison, ty %ld.first, i64 0
+  // br label %load.ff.result
+  BasicBlock *ThenBlock = ThenTerm->getParent();
+  ThenBlock->setName("load.ff.first.lane");
+  Builder.SetInsertPoint(ThenBlock->getTerminator());
+  LoadInst *Load = Builder.CreateAlignedLoad(ScalarTy, Ptr, AlignVal);
+  Value *OneLaneData =
+      Builder.CreateInsertElement(PoisonData, Load, uint64_t(0ull));
+  Value *OneLaneMask = Builder.CreateInsertElement(
+      EmptyMask, Constant::getAllOnesValue(MaskTy->getElementType()),
+      uint64_t(0ull));
+
+  // Now we just select between the two based on the check of the first lane
+  //
+  // load.ff.result:
+  // %data.res = phi <N x ty> [ poison, %orig ], [ %lane, %load.ff.first.lane ]
+  // %mask.res = phi <N x i1> [ false, %orig ], [ <true, fa...>, %ld.ff... ]
+  // %ins = insertvalue { <N x ty>, <N x i1> } poison, <N x ty> %data.res, 0
+  // %first.lane.only = insertvalue { <N x ty>, <N x i1> } %ins, <N x i1> ...,1
+  // ... replace all intrinsic uses with %first.lane.only
+  Builder.SetInsertPoint(CI);
+  PHINode *ResData = Builder.CreatePHI(DataTy, 2);
+  ResData->addIncoming(PoisonData, IfBlock);
+  ResData->addIncoming(OneLaneData, ThenBlock);
+  PHINode *ResMask = Builder.CreatePHI(MaskTy, 2);
+  ResMask->addIncoming(EmptyMask, IfBlock);
+  ResMask->addIncoming(OneLaneMask, ThenBlock);
+
+  Value *Result = PoisonValue::get(RetTy);
+  Result = Builder.CreateInsertValue(Result, ResData, 0ul);
+  Result = Builder.CreateInsertValue(Result, ResMask, 1ul);
+  if (CI->hasName())
+    Result->setName(CI->getName() + ".first.lane.only");
+  CI->getParent()->setName("load.ff.result");
+  CI->replaceAllUsesWith(Result);
+  CI->eraseFromParent();
+  ModifiedDT = true;
+}
+
 static bool runImpl(Function &F, const TargetTransformInfo &TTI,
                     DominatorTree *DT) {
   std::optional<DomTreeUpdater> DTU;
@@ -1110,11 +1189,18 @@ static bool optimizeCallInst(CallInst *CI, bool &ModifiedDT,
                              DomTreeUpdater *DTU) {
   IntrinsicInst *II = dyn_cast<IntrinsicInst>(CI);
   if (II) {
-    // The scalarization code below does not work for scalable vectors.
+    // The scalarization code below does not work for scalable vectors, except
+    // for first faulting loads, which only need to deal with the first element.
     if (isa<ScalableVectorType>(II->getType()) ||
-        any_of(II->args(),
-               [](Value *V) { return isa<ScalableVectorType>(V->getType()); }))
+        any_of(II->args(), [](Value *V) {
+          return isa<ScalableVectorType>(V->getType());
+        })) {
+      if (II->getIntrinsicID() == Intrinsic::masked_load_ff) {
+        scalarizeMaskedFirstFaultingLoad(DL, CI, DTU, ModifiedDT);
+        return true;
+      }
       return false;
+    }
     switch (II->getIntrinsicID()) {
     default:
       break;
@@ -1185,6 +1271,10 @@ static bool optimizeCallInst(CallInst *CI, bool &ModifiedDT,
       scalarizeMaskedCompressStore(DL, HasBranchDivergence, CI, DTU,
                                    ModifiedDT);
       return true;
+    case Intrinsic::masked_load_ff: {
+      scalarizeMaskedFirstFaultingLoad(DL, CI, DTU, ModifiedDT);
+      return true;
+    }
     }
   }
 

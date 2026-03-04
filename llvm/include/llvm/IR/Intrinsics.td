@@ -2598,6 +2598,13 @@ def int_masked_compressstore:
             [IntrWriteMem, IntrArgMemOnly,
              NoCapture<ArgIndex<1>>]>;
 
+def int_masked_load_ff:
+  DefaultAttrsIntrinsic<[llvm_anyvector_ty,
+                         LLVMScalarOrSameVectorWidth<0, llvm_i1_ty>],
+                         [llvm_anyptr_ty,
+                          LLVMScalarOrSameVectorWidth<0, llvm_i1_ty>],
+                         [IntrReadMem, IntrArgMemOnly, NoCapture<ArgIndex<0>>]>;
+
 def int_experimental_vector_compress:
     DefaultAttrsIntrinsic<[llvm_anyvector_ty],
               [LLVMMatchType<0>, LLVMScalarOrSameVectorWidth<0, llvm_i1_ty>, LLVMMatchType<0>],
