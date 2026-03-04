@@ -213,3 +213,13 @@ func.func @region_branch_term_count_mismatch(%arg: i32) {
   // expected-error @+1 {{'test.loop_block_term' op has 1 operands, but enclosing function (@region_branch_term_count_mismatch) returns 0}}
   test.loop_block_term iter %arg exit %0
 }
+
+// -----
+
+// After moving the return-type checks from FuncOp::verify() to
+// FuncOp::verifyRegions() (hasRegionVerifier=1), the terminator is verified
+// first and emits a clean diagnostic instead of crashing.
+func.func @func_verifier_runs_before_region() -> () {
+  // expected-error @below {{requires 'valid' unit attribute}}
+  test.crashing_return
+}
