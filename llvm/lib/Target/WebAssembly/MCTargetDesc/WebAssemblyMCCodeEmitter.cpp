@@ -47,10 +47,11 @@ class WebAssemblyMCCodeEmitter final : public MCCodeEmitter {
                          SmallVectorImpl<MCFixup> &Fixups,
                          const MCSubtargetInfo &STI) const override;
 
-  void encodeMemArgNoOffset(const MCInst &MI, unsigned P2AlignIdx,
-                            const MCInstrDesc &Desc, const MCSubtargetInfo &STI,
-                            raw_ostream &OS, SmallVectorImpl<MCFixup> &Fixups,
-                            uint64_t Start) const;
+  void encodeP2AlignAndMemOrder(const MCInst &MI, unsigned P2AlignIdx,
+                                const MCInstrDesc &Desc,
+                                const MCSubtargetInfo &STI, raw_ostream &OS,
+                                SmallVectorImpl<MCFixup> &Fixups,
+                                uint64_t Start) const;
 
   uint8_t getEncodedMemOrder(uint8_t Order, unsigned Opcode) const;
 
@@ -75,7 +76,7 @@ uint8_t WebAssemblyMCCodeEmitter::getEncodedMemOrder(uint8_t Order,
   return Order;
 }
 
-void WebAssemblyMCCodeEmitter::encodeMemArgNoOffset(
+void WebAssemblyMCCodeEmitter::encodeP2AlignAndMemOrder(
     const MCInst &MI, unsigned P2AlignIdx, const MCInstrDesc &Desc,
     const MCSubtargetInfo &STI, raw_ostream &OS,
     SmallVectorImpl<MCFixup> &Fixups, uint64_t Start) const {
@@ -152,7 +153,7 @@ void WebAssemblyMCCodeEmitter::encodeInstruction(
           encodeSLEB128(int32_t(MO.getImm()), OS);
           break;
         case WebAssembly::OPERAND_P2ALIGN:
-          encodeMemArgNoOffset(MI, I, Desc, STI, OS, Fixups, Start);
+          encodeP2AlignAndMemOrder(MI, I, Desc, STI, OS, Fixups, Start);
           break;
         case WebAssembly::OPERAND_OFFSET32:
           encodeULEB128(uint32_t(MO.getImm()), OS);
