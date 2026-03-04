@@ -60,6 +60,10 @@ bool isCheckedPtr(const clang::CXXRecordDecl *Class);
 /// \returns true if \p Class is a RetainPtr, false if not.
 bool isRetainPtrOrOSPtr(const clang::CXXRecordDecl *Class);
 
+/// \returns true if \p Class is a weak smart pointer (WeakPtr, InlineWeakPtr,
+/// etc...), false if not.
+bool isWeakPtr(const clang::CXXRecordDecl *Class);
+
 /// \returns true if \p Class is a smart pointer (RefPtr, WeakPtr, etc...),
 /// false if not.
 bool isSmartPtr(const clang::CXXRecordDecl *Class);
@@ -139,7 +143,7 @@ bool isCheckedPtr(const std::string &Name);
 /// \returns true if \p Name is RetainPtr or its variant, false if not.
 bool isRetainPtrOrOSPtr(const std::string &Name);
 
-/// \returns true if \p Name is an owning smar pointer such as Ref, CheckedPtr,
+/// \returns true if \p Name is an owning smart pointer such as Ref, CheckedPtr,
 /// and unique_ptr.
 bool isOwnerPtr(const std::string &Name);
 
