@@ -12,6 +12,7 @@ config.llvm_target_triple_env = "@LLVM_TARGET_TRIPLE_ENV@"
 config.lit_tools_dir = "@LLVM_LIT_TOOLS_DIR@"
 config.errc_messages = "@LLVM_LIT_ERRC_MESSAGES@"
 config.flang_obj_root = "@FLANG_BINARY_DIR@"
+config.clang_tools_dir = lit_config.substitute(path(r"@CURRENT_TOOLS_DIR@"))
 config.flang_tools_dir = lit_config.substitute("@FLANG_TOOLS_DIR@")
 config.flang_intrinsic_modules_dir = "@FLANG_INTRINSIC_MODULES_DIR@"
 config.flang_headers_dir = "@HEADER_BINARY_DIR@"
