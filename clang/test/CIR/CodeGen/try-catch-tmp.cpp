@@ -240,6 +240,57 @@ void call_function_inside_try_catch_with_ref_exception_type() {
 // CIR:   }
 // CIR: }
 
+// LLVM: define {{.*}} void @_Z54call_function_inside_try_catch_with_ref_exception_typev() {{.*}} personality ptr @__gxx_personality_v0
+// LLVM:   br label %[[TRY_SCOPE:.*]]
+// LLVM: [[TRY_SCOPE]]:
+// LLVM:   br label %[[TRY_BEGIN:.*]]
+// LLVM: [[TRY_BEGIN]]:
+// LLVM:   invoke i32 @_Z8divisionv()
+// LLVM:           to label %[[INVOKE_CONT:.*]] unwind label %[[LANDING_PAD:.*]]
+// LLVM: [[INVOKE_CONT:.*]]:
+// LLVM:   br label %[[TRY_CONT:.*]]
+// LLVM: [[LANDING_PAD]]:
+// LLVM:   %[[LP:.*]] = landingpad { ptr, i32 }
+// LLVM:           catch ptr @_ZTIi
+// LLVM:   %[[EXN_OBJ:.*]] = extractvalue { ptr, i32 } %[[LP]], 0
+// LLVM:   %[[EH_SELECTOR_VAL:.*]] = extractvalue { ptr, i32 } %[[LP]], 1
+// LLVM:   br label %[[CATCH:.*]]
+// LLVM: [[CATCH]]:
+// LLVM:   %[[EXN_OBJ_PHI:.*]] = phi ptr [ %[[EXN_OBJ:.*]], %[[LANDING_PAD:.*]] ]
+// LLVM:   %[[EH_SELECTOR_PHI:.*]] = phi i32 [ %[[EH_SELECTOR_VAL:.*]], %[[LANDING_PAD:.*]] ]
+// LLVM:   br label %[[DISPATCH:.*]]
+// LLVM: [[DISPATCH]]:
+// LLVM:   %[[EXN_OBJ_PHI1:.*]] = phi ptr [ %[[EXN_OBJ_PHI:.*]], %[[CATCH:.*]] ]
+// LLVM:   %[[EH_SELECTOR_PHI1:.*]] = phi i32 [ %[[EH_SELECTOR_PHI:.*]], %[[CATCH:.*]] ]
+// LLVM:   %[[EH_TYPE_ID:.*]] = call i32 @llvm.eh.typeid.for.p0(ptr @_ZTIi)
+// LLVM:   %[[TYPE_ID_EQ:.*]] = icmp eq i32 %[[EH_SELECTOR_PHI1]], %[[EH_TYPE_ID]]
+// LLVM:   br i1 %[[TYPE_ID_EQ]], label %[[BEGIN_CATCH:.*]], label %[[RESUME:.*]]
+// LLVM: [[BEGIN_CATCH]]:
+// LLVM:   %[[EXN_OBJ_PHI2:.*]] = phi ptr [ %[[EXN_OBJ_PHI1:.*]], %[[DISPATCH:.*]] ]
+// LLVM:   %[[EH_SELECTOR_PHI2:.*]] = phi i32 [ %[[EH_SELECTOR_PHI1:.*]], %[[DISPATCH:.*]] ]
+// LLVM:   %[[TOKEN:.*]] = call ptr @__cxa_begin_catch(ptr %[[EXN_OBJ_PHI2]])
+// LLVM:   br label %[[CATCH_BODY:.*]]
+// LLVM: [[CATCH_BODY]]:
+// LLVM:   store ptr %[[TOKEN]], ptr %{{.*}}, align 8
+// LLVM:   br label %[[END_CATCH:.*]]
+// LLVM: [[END_CATCH]]:
+// LLVM:   call void @__cxa_end_catch()
+// LLVM:   br label %[[END_DISPATCH:.*]]
+// LLVM: [[END_DISPATCH]]:
+// LLVM:   br label %[[END_TRY:.*]]
+// LLVM: [[END_TRY]]:
+// LLVM:   br label %[[TRY_CONT:.*]]
+// LLVM: [[RESUME]]:
+// LLVM:   %[[EXN_OBJ_PHI3:.*]] = phi ptr [ %[[EXN_OBJ_PHI1:.*]], %[[DISPATCH:.*]] ]
+// LLVM:   %[[EH_SELECTOR_PHI3:.*]] = phi i32 [ %[[EH_SELECTOR_PHI1:.*]], %[[DISPATCH:.*]] ]
+// LLVM:   %[[TMP_EXCEPTION_INFO:.*]] = insertvalue { ptr, i32 } poison, ptr %[[EXN_OBJ_PHI3]], 0
+// LLVM:   %[[EXCEPTION_INFO:.*]] = insertvalue { ptr, i32 } %[[TMP_EXCEPTION_INFO]], i32 %[[EH_SELECTOR_PHI3]], 1
+// LLVM:   resume { ptr, i32 } %[[EXCEPTION_INFO]]
+// LLVM: [[TRY_CONT]]:
+// LLVM:   br label %[[DONE:.*]]
+// LLVM: [[DONE]]:
+// LLVM:   ret void
+
 // OGCG: define {{.*}} void @_Z54call_function_inside_try_catch_with_ref_exception_typev() #0 personality ptr @__gxx_personality_v0
 // OGCG:   %[[EXCEPTION_ADDR:.*]] = alloca ptr, align 8
 // OGCG:   %[[EH_TYPE_ID_ADDR:.*]] = alloca i32, align 4
