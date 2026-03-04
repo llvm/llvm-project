@@ -229,7 +229,7 @@ def ApplyReorderMultiReductionPatternsOp: Op<Transform_Dialect,
   let description = [{
     Indicates that vector multi_reduction-like operations should be
     transformed such that all reduction dimensions become innermost or
-    outermost, and 1-D reductions are lifted to 2-D.
+    outermost, depending on `lowering_strategy`.
 
     This populates the patterns from
     `populateVectorMultiReductionReorderPatterns`, i.e.:
