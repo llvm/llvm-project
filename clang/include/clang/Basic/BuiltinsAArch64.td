@@ -20,7 +20,6 @@ let Attributes = [RuntimeLibraryFunction] in {
     def __clear_cache : AArch64NoPrefixBuiltin<"void (void *, void *)">;
 }
 
-
 let Attributes = [CustomTypeChecking] in {
 	def ldrex : AArch64Builtin<"void (...)">;
 	def ldaex : AArch64Builtin<"void (...)">;
