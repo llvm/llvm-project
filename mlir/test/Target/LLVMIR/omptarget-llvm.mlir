@@ -603,7 +603,7 @@ module attributes {omp.target_triples = ["amdgcn-amd-amdhsa"]} {
 // CHECK:         br label %[[VAL_42]]
 // CHECK:       omp.type.end:                                     ; preds = %[[VAL_59]], %[[VAL_56]], %[[VAL_55]], %[[VAL_51]]
 // CHECK:         %[[VAL_61:.*]] = phi i64 [ %[[VAL_53]], %[[VAL_51]] ], [ %[[VAL_57]], %[[VAL_55]] ], [ %[[VAL_60]], %[[VAL_59]] ], [ %[[VAL_48]], %[[VAL_56]] ]
-// CHECK:         call void @__tgt_push_mapper_component(ptr %[[VAL_37]], ptr %[[VAL_43]], ptr %[[VAL_45]], i64 4, i64 %[[VAL_61]], ptr @2)
+// CHECK:         call void @__tgt_push_mapper_component(ptr %[[VAL_37]], ptr %[[VAL_45]], ptr %[[VAL_45]], i64 4, i64 %[[VAL_61]], ptr @2)
 // CHECK:         %[[VAL_44]] = getelementptr %[[VAL_18]], ptr %[[VAL_43]], i32 1
 // CHECK:         %[[VAL_62:.*]] = icmp eq ptr %[[VAL_44]], %[[VAL_17]]
 // CHECK:         br i1 %[[VAL_62]], label %[[VAL_63:.*]], label %[[VAL_41]]

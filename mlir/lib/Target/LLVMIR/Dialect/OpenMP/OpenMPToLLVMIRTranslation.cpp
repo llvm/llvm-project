@@ -5205,9 +5205,6 @@ processIndividualMap(llvm::IRBuilderBase &builder,
                        llvm::omp::OpenMPOffloadMappingFlags::OMP_MAP_ATTACH) ==
                       llvm::omp::OpenMPOffloadMappingFlags::OMP_MAP_ATTACH);
 
-  if (isPtrTy && mapData.IsDeclareTarget[mapDataIdx])
-    mapFlag |= llvm::omp::OpenMPOffloadMappingFlags::OMP_MAP_PTR_AND_OBJ;
-
   if (isTargetParam &&
       (targetDirective == TargetDirectiveEnumTy::Target &&
        !mapData.IsDeclareTarget[mapDataIdx]) &&
@@ -5226,8 +5223,16 @@ processIndividualMap(llvm::IRBuilderBase &builder,
   // the host, and then expect it to not be updated in a subsequent impliict map
   // (such as an implicit map on a target).
   if (memberOfFlag != llvm::omp::OpenMPOffloadMappingFlags::OMP_MAP_NONE) {
-    if (!isPtrTy && !isAttachMap)
+    // If we are in a declare mapper, we apply MEMBER_OF even if it's an attach
+    // or pointer map, this is to make the MEMBER_OF flag uniform across all
+    // maps within the declare mapper, as even if we do not apply it here on
+    // nestings greater than the first layer we will have a member of flag
+    // applied automatically. So, we canonicalize it here, which keeps the
+    // behaviour of pointer/data maps consistent across layers.
+    if ((!isPtrTy && !isAttachMap) ||
+        mapInfoOp->getParentOfType<omp::DeclareMapperOp>()) {
       ompBuilder.setCorrectMemberOfFlag(mapFlag, memberOfFlag);
+    }
 
     // The return parameter should be the over-riding parent in cases where we
     // have a return parameter that is echoed to all members, the main case of
@@ -5237,13 +5242,25 @@ processIndividualMap(llvm::IRBuilderBase &builder,
     mapFlag &= ~llvm::omp::OpenMPOffloadMappingFlags::OMP_MAP_RETURN_PARAM;
   }
 
+  // We apply MAP_PTR_AND_OBJ when within a declare mapper object as it enforces
+  // MEMBER_OF mappings on maps that are passed the initial nesting depth, which
+  // includes pointed to data and attach members, both of which are technically
+  // not part of the main object. This has the side-affect of causing early
+  // map-backs in certain cases where an implicit declare mapepr has been
+  // emitted for a target region. Applying MAP_PTR_AND_OBJ in these situations
+  // circumvents this.
+  if (isPtrTy && !isAttachMap && (mapData.IsDeclareTarget[mapDataIdx] ||
+                  mapInfoOp->getParentOfType<omp::DeclareMapperOp>()))
+    mapFlag |= llvm::omp::OpenMPOffloadMappingFlags::OMP_MAP_PTR_AND_OBJ;
+
   // if we're provided a mapDataParentIdx, then the data being mapped is
   // part of a larger object (in a parent <-> member mapping) and in this
   // case our BasePointer should be the parent. Except in the edge case
   // where we are mapping pointee data, in this case we try stay close to
   // what Clang currently does and utilise the regular base pointer of the
   // data.
-  if (mapDataParentIdx >= 0 &&
+  if (!mapInfoOp->getParentOfType<omp::DeclareMapperOp>() &&
+      mapDataParentIdx >= 0 &&
       !(checkHasClauseMapFlag(mapInfoOp.getMapType(),
                               omp::ClauseMapFlags::ref_ptee) ||
         (checkHasClauseMapFlag(mapInfoOp.getMapType(),
