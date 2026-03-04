@@ -1097,79 +1097,76 @@ hasUnsafeFormatOrSArg(ASTContext &Ctx, const CallExpr *Call,
 //  The notation `CoreName[str/wcs]` means a new name obtained from replace
 //  string "wcs" with "str" in `CoreName`.
 static bool isPredefinedUnsafeLibcFunc(const FunctionDecl &Node) {
-  static std::unique_ptr<std::set<StringRef>> PredefinedNames = nullptr;
-  if (!PredefinedNames)
-    PredefinedNames =
-        std::make_unique<std::set<StringRef>, std::set<StringRef>>({
-            // numeric conversion:
-            "atof",
-            "atoi",
-            "atol",
-            "atoll",
-            "strtol",
-            "strtoll",
-            "strtoul",
-            "strtoull",
-            "strtof",
-            "strtod",
-            "strtold",
-            "strtoimax",
-            "strtoumax",
-            // "strfromf",  "strfromd", "strfroml", // C23?
-            // string manipulation:
-            "strcpy",
-            "strncpy",
-            "strlcpy",
-            "strcat",
-            "strncat",
-            "strlcat",
-            "strxfrm",
-            "strdup",
-            "strndup",
-            // string examination:
-            "strlen",
-            "strnlen",
-            "strcmp",
-            "strncmp",
-            "stricmp",
-            "strcasecmp",
-            "strcoll",
-            "strchr",
-            "strrchr",
-            "strspn",
-            "strcspn",
-            "strpbrk",
-            "strstr",
-            "strtok",
-            // "mem-" functions
-            "memchr",
-            "wmemchr",
-            "memcmp",
-            "wmemcmp",
-            "memcpy",
-            "memccpy",
-            "mempcpy",
-            "wmemcpy",
-            "memmove",
-            "wmemmove",
-            "wmemset",
-            // IO:
-            "fread",
-            "fwrite",
-            "fgets",
-            "fgetws",
-            "gets",
-            "fputs",
-            "fputws",
-            "puts",
-            // others
-            "strerror_s",
-            "strerror_r",
-            "bcopy",
-            "bzero",
-            "bsearch",
-            "qsort",
-        });
+  static const std::set<StringRef> PredefinedNames = {
+      // numeric conversion:
+      "atof",
+      "atoi",
+      "atol",
+      "atoll",
+      "strtol",
+      "strtoll",
+      "strtoul",
+      "strtoull",
+      "strtof",
+      "strtod",
+      "strtold",
+      "strtoimax",
+      "strtoumax",
+      // "strfromf",  "strfromd", "strfroml", // C23?
+      // string manipulation:
+      "strcpy",
+      "strncpy",
+      "strlcpy",
+      "strcat",
+      "strncat",
+      "strlcat",
+      "strxfrm",
+      "strdup",
+      "strndup",
+      // string examination:
+      "strlen",
+      "strnlen",
+      "strcmp",
+      "strncmp",
+      "stricmp",
+      "strcasecmp",
+      "strcoll",
+      "strchr",
+      "strrchr",
+      "strspn",
+      "strcspn",
+      "strpbrk",
+      "strstr",
+      "strtok",
+      // "mem-" functions
+      "memchr",
+      "wmemchr",
+      "memcmp",
+      "wmemcmp",
+      "memcpy",
+      "memccpy",
+      "mempcpy",
+      "wmemcpy",
+      "memmove",
+      "wmemmove",
+      "wmemset",
+      // IO:
+      "fread",
+      "fwrite",
+      "fgets",
+      "fgetws",
+      "gets",
+      "fputs",
+      "fputws",
+      "puts",
+      // others
+      "strerror_s",
+      "strerror_r",
+      "bcopy",
+      "bzero",
+      "bsearch",
+      "qsort",
+  };
 
   auto *II = Node.getIdentifier();
 
@@ -1179,7 +1176,7 @@ static bool isPredefinedUnsafeLibcFunc(const FunctionDecl &Node) {
   StringRef Name = matchName(II->getName(), Node.getBuiltinID());
 
   // Match predefined names:
-  if (PredefinedNames->find(Name) != PredefinedNames->end())
+  if (PredefinedNames.count(Name))
     return true;
 
   std::string NameWCS = Name.str();
@@ -1191,7 +1188,7 @@ static bool isPredefinedUnsafeLibcFunc(const FunctionDecl &Node) {
     NameWCS[WcsPos++] = 'r';
     WcsPos = NameWCS.find("wcs", WcsPos);
   }
-  if (PredefinedNames->find(NameWCS) != PredefinedNames->end())
+  if (PredefinedNames.count(NameWCS))
     return true;
   // All `scanf` functions are unsafe (including `sscanf`, `vsscanf`, etc.. They
   // all should end with "scanf"):
