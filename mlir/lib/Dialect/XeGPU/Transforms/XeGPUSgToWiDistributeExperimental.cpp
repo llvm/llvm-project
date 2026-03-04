@@ -723,8 +723,7 @@ struct SgToWiVectorExtract : public OpConversionPattern<vector::ExtractOp> {
 
 /// Distributes a subgroup-level vector.extract_strided_slice op to
 /// workitem-level. If the result is distributed, the offsets and sizes are
-/// adjusted to match the distributed types. Supports both distributed and
-/// non-distributed cases.
+/// adjusted to match the distributed types.
 struct SgToWiVectorExtractStridedSlice
     : public OpConversionPattern<vector::ExtractStridedSliceOp> {
   using OpConversionPattern<vector::ExtractStridedSliceOp>::OpConversionPattern;
@@ -741,7 +740,7 @@ struct SgToWiVectorExtractStridedSlice
     auto distResultTyOrFailure =
         xegpu::getDistVecTypeBasedOnLaneLayout(resultLayout, resultType);
     // If distribution fails (e.g., dimension smaller than lane layout),
-    // the type stays unchanged (same behavior as TypeConverter).
+    // the type stays unchanged.
     VectorType distResultTy =
         succeeded(distResultTyOrFailure) ? *distResultTyOrFailure : resultType;
 
@@ -815,8 +814,7 @@ struct SgToWiVectorExtractStridedSlice
 
 /// Distributes a subgroup-level vector.insert_strided_slice op to
 /// workitem-level. If the dest is distributed, the offsets are adjusted to
-/// match the distributed types. Supports both distributed and non-distributed
-/// cases.
+/// match the distributed types.
 struct SgToWiVectorInsertStridedSlice
     : public OpConversionPattern<vector::InsertStridedSliceOp> {
   using OpConversionPattern<vector::InsertStridedSliceOp>::OpConversionPattern;
@@ -833,7 +831,7 @@ struct SgToWiVectorInsertStridedSlice
     auto distDestTyOrFailure =
         xegpu::getDistVecTypeBasedOnLaneLayout(resultLayout, destType);
     // If distribution fails (e.g., dimension smaller than lane layout),
-    // the type stays unchanged (same behavior as TypeConverter).
+    // the type stays unchanged.
     VectorType distDestTy =
         succeeded(distDestTyOrFailure) ? *distDestTyOrFailure : destType;
 
@@ -1131,28 +1129,20 @@ void xegpu::populateXeGPUSgToWiDistributeTypeConversionAndLegality(
       [=](vector::MultiDimReductionOp op) -> bool {
         return !isValidSubgroupMultiReductionOp(op);
       });
-  // vector::ExtractOp is legal only if its result has no temporary layout
-  // attribute. Scalar extraction is always legal.
   target.addDynamicallyLegalOp<vector::ExtractOp>(
       [=](vector::ExtractOp op) -> bool {
         if (!isa<VectorType>(op.getType()))
           return true;
         return !xegpu::getTemporaryLayout(op->getOpResult(0));
       });
-  // vector::InsertOp is legal only if its result has no temporary layout
-  // attribute.
   target.addDynamicallyLegalOp<vector::InsertOp>(
       [=](vector::InsertOp op) -> bool {
         return !xegpu::getTemporaryLayout(op->getOpResult(0));
       });
-  // vector::ExtractStridedSliceOp is legal only if its result has no temporary
-  // layout attribute.
   target.addDynamicallyLegalOp<vector::ExtractStridedSliceOp>(
       [=](vector::ExtractStridedSliceOp op) -> bool {
         return !xegpu::getTemporaryLayout(op->getOpResult(0));
       });
-  // vector::InsertStridedSliceOp is legal only if its result has no temporary
-  // layout attribute.
   target.addDynamicallyLegalOp<vector::InsertStridedSliceOp>(
       [=](vector::InsertStridedSliceOp op) -> bool {
         return !xegpu::getTemporaryLayout(op->getOpResult(0));

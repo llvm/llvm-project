@@ -515,10 +515,6 @@ gpu.func @vector_insert_into_2d_idx2() {
   gpu.return
 }
 
-// extract_strided_slice: distributed dim fully extracted
-// Source: vector<24x16xf32> layout [1,16] → distributed to vector<24x1xf32>
-// Result: vector<8x16xf32> layout [1,16] → distributed to vector<8x1xf32>
-// Offsets [8,0] sizes [8,16] → [8,0] sizes [8,1]
 // CHECK-LABEL: gpu.func @vector_extract_strided_slice_distributed_dim_fully_extracted
 // CHECK: %[[ESS:.*]] = vector.extract_strided_slice %{{.*}} {offsets = [8, 0], sizes = [8, 1], strides = [1, 1]} : vector<24x1xf32> to vector<8x1xf32>
 gpu.func @vector_extract_strided_slice_distributed_dim_fully_extracted() {
@@ -533,10 +529,6 @@ gpu.func @vector_extract_strided_slice_distributed_dim_fully_extracted() {
   gpu.return
 }
 
-// extract_strided_slice: non-distributed (source already has unit dim)
-// Source: vector<24x1xf32> layout [1,16] → stays vector<24x1xf32>
-// Result: vector<8x1xf32> layout [1,16] → stays vector<8x1xf32>
-// Offsets and sizes unchanged
 // CHECK-LABEL: gpu.func @vector_extract_strided_slice_non_distributed
 // CHECK: %[[ESS:.*]] = vector.extract_strided_slice %{{.*}} {offsets = [8, 0], sizes = [8, 1], strides = [1, 1]} : vector<24x1xf32> to vector<8x1xf32>
 gpu.func @vector_extract_strided_slice_non_distributed() {
@@ -551,10 +543,6 @@ gpu.func @vector_extract_strided_slice_non_distributed() {
   gpu.return
 }
 
-// extract_strided_slice: inner distributed (dim 1 distributed)
-// Source: vector<24x64xf32> layout [1,16] → distributed to vector<24x4xf32>
-// Result: vector<8x16xf32> layout [1,16] → distributed to vector<8x1xf32>
-// Offsets [8,48] → [8, 48/16=3], sizes [8,16] → [8,1]
 // CHECK-LABEL: gpu.func @vector_extract_strided_slice_inner_distributed
 // CHECK: %[[ESS:.*]] = vector.extract_strided_slice %{{.*}} {offsets = [8, 3], sizes = [8, 1], strides = [1, 1]} : vector<24x4xf32> to vector<8x1xf32>
 gpu.func @vector_extract_strided_slice_inner_distributed() {
@@ -569,10 +557,6 @@ gpu.func @vector_extract_strided_slice_inner_distributed() {
   gpu.return
 }
 
-// extract_strided_slice: outer distributed (dim 0 distributed)
-// Source: vector<32x16xf32> layout [16,1] → distributed to vector<2x16xf32>
-// Result: vector<16x16xf32> layout [16,1] → distributed to vector<1x16xf32>
-// Offsets [16] padded to [16,0] → [16/16=1, 0], sizes [16] padded to [16,16] → [1,16]
 // CHECK-LABEL: gpu.func @vector_extract_strided_slice_outer_distributed
 // CHECK: %[[ESS:.*]] = vector.extract_strided_slice %{{.*}} {offsets = [1, 0], sizes = [1, 16], strides = [1, 1]} : vector<2x16xf32> to vector<1x16xf32>
 gpu.func @vector_extract_strided_slice_outer_distributed() {
@@ -587,10 +571,6 @@ gpu.func @vector_extract_strided_slice_outer_distributed() {
   gpu.return
 }
 
-// extract_strided_slice: 1D distributed
-// Source: vector<64xf32> layout [16] → distributed to vector<4xf32>
-// Result: vector<32xf32> layout [16] → distributed to vector<2xf32>
-// Offsets [16] → [16/16=1], sizes [32] → [2]
 // CHECK-LABEL: gpu.func @vector_extract_strided_slice_1d
 // CHECK: %[[ESS:.*]] = vector.extract_strided_slice %{{.*}} {offsets = [1], sizes = [2], strides = [1]} : vector<4xf32> to vector<2xf32>
 gpu.func @vector_extract_strided_slice_1d() {
@@ -605,10 +585,6 @@ gpu.func @vector_extract_strided_slice_1d() {
   gpu.return
 }
 
-// extract_strided_slice: partial offsets (offsets rank < source rank)
-// Source: vector<24x16xf32> layout [1,16] → distributed to vector<24x1xf32>
-// Result: vector<8x16xf32> layout [1,16] → distributed to vector<8x1xf32>
-// Offsets [8] padded to [8,0], sizes [8] padded to [8,16] → [8,1]
 // CHECK-LABEL: gpu.func @vector_extract_strided_slice_partial_offsets
 // CHECK: %[[ESS:.*]] = vector.extract_strided_slice %{{.*}} {offsets = [8, 0], sizes = [8, 1], strides = [1, 1]} : vector<24x1xf32> to vector<8x1xf32>
 gpu.func @vector_extract_strided_slice_partial_offsets() {
@@ -623,10 +599,6 @@ gpu.func @vector_extract_strided_slice_partial_offsets() {
   gpu.return
 }
 
-// insert_strided_slice: distributed dim fully inserted (dim 1 distributed)
-// Source: vector<16x16xf32> layout [1,16] → distributed to vector<16x1xf32>
-// Dest: vector<64x16xf32> layout [1,16] → distributed to vector<64x1xf32>
-// Offsets [24,0] → [24,0] (offset 0 / 16 = 0)
 // CHECK-LABEL: gpu.func @vector_insert_strided_slice_distributed_dim_fully_inserted
 // CHECK: %[[ISS:.*]] = vector.insert_strided_slice %{{.*}}, %{{.*}} {offsets = [24, 0], strides = [1, 1]} : vector<16x1xf32> into vector<64x1xf32>
 gpu.func @vector_insert_strided_slice_distributed_dim_fully_inserted() {
@@ -645,10 +617,6 @@ gpu.func @vector_insert_strided_slice_distributed_dim_fully_inserted() {
   gpu.return
 }
 
-// insert_strided_slice: non-distributed (types already have unit dim)
-// Source: vector<16x1xf32> layout [1,16] → stays vector<16x1xf32>
-// Dest: vector<64x1xf32> layout [1,16] → stays vector<64x1xf32>
-// Offsets unchanged
 // CHECK-LABEL: gpu.func @vector_insert_strided_slice_non_distributed
 // CHECK: %[[ISS:.*]] = vector.insert_strided_slice %{{.*}}, %{{.*}} {offsets = [24, 0], strides = [1, 1]} : vector<16x1xf32> into vector<64x1xf32>
 gpu.func @vector_insert_strided_slice_non_distributed() {
@@ -667,10 +635,6 @@ gpu.func @vector_insert_strided_slice_non_distributed() {
   gpu.return
 }
 
-// insert_strided_slice: inner distributed (dim 1 distributed)
-// Source: vector<16x16xf32> layout [1,16] → distributed to vector<16x1xf32>
-// Dest: vector<64x32xf32> layout [1,16] → distributed to vector<64x2xf32>
-// Offsets [24,16] → [24, 16/16=1]
 // CHECK-LABEL: gpu.func @vector_insert_strided_slice_inner_distributed
 // CHECK: %[[ISS:.*]] = vector.insert_strided_slice %{{.*}}, %{{.*}} {offsets = [24, 1], strides = [1, 1]} : vector<16x1xf32> into vector<64x2xf32>
 gpu.func @vector_insert_strided_slice_inner_distributed() {
@@ -689,10 +653,6 @@ gpu.func @vector_insert_strided_slice_inner_distributed() {
   gpu.return
 }
 
-// insert_strided_slice: outer distributed (dim 0 distributed)
-// Source: vector<16x16xf32> layout [16,1] → distributed to vector<1x16xf32>
-// Dest: vector<48x32xf32> layout [16,1] → distributed to vector<3x32xf32>
-// Offsets [32,4] → [32/16=2, 4]
 // CHECK-LABEL: gpu.func @vector_insert_strided_slice_outer_distributed
 // CHECK: %[[ISS:.*]] = vector.insert_strided_slice %{{.*}}, %{{.*}} {offsets = [2, 4], strides = [1, 1]} : vector<1x16xf32> into vector<3x32xf32>
 gpu.func @vector_insert_strided_slice_outer_distributed() {
@@ -711,10 +671,6 @@ gpu.func @vector_insert_strided_slice_outer_distributed() {
   gpu.return
 }
 
-// insert_strided_slice: 1D distributed
-// Source: vector<16xf32> layout [16] → distributed to vector<1xf32>
-// Dest: vector<48xf32> layout [16] → distributed to vector<3xf32>
-// Offsets [16] → [16/16=1]
 // CHECK-LABEL: gpu.func @vector_insert_strided_slice_1d
 // CHECK: %[[ISS:.*]] = vector.insert_strided_slice %{{.*}}, %{{.*}} {offsets = [1], strides = [1]} : vector<1xf32> into vector<3xf32>
 gpu.func @vector_insert_strided_slice_1d() {
@@ -733,11 +689,6 @@ gpu.func @vector_insert_strided_slice_1d() {
   gpu.return
 }
 
-// insert_strided_slice: different ranks (1D source into 2D dest)
-// Source: vector<16xf32> layout [16] → distributed to vector<1xf32>
-// Dest: vector<64x16xf32> layout [1,16] → distributed to vector<64x1xf32>
-// Distributed dim 1, sourceDistDim = 1 - (2-1) = 0
-// Offsets [13,0] → [13, 0/16=0]
 // CHECK-LABEL: gpu.func @vector_insert_strided_slice_different_ranks
 // CHECK: %[[ISS:.*]] = vector.insert_strided_slice %{{.*}}, %{{.*}} {offsets = [13, 0], strides = [1]} : vector<1xf32> into vector<64x1xf32>
 gpu.func @vector_insert_strided_slice_different_ranks() {
