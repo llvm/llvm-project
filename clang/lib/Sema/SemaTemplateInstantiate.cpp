@@ -4488,8 +4488,8 @@ ExprResult Sema::SubstConceptTemplateArguments(
       ConceptDecl *ResolvedConcept = nullptr;
 
       if (auto *TTP = dyn_cast<TemplateTemplateParmDecl>(D)) {
-        const auto Depth = TTP->getDepth();
-        const auto Pos = TTP->getPosition();
+        unsigned Depth = TTP->getDepth();
+        unsigned Pos = TTP->getPosition();
         if (Depth < MLTAL.getNumLevels() &&
             MLTAL.hasTemplateArgument(Depth, Pos)) {
           TemplateArgument Arg = MLTAL(Depth, Pos);
