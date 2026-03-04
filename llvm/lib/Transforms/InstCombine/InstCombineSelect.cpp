@@ -647,21 +647,6 @@ static Value *foldSelectICmpMinMax(const ICmpInst *Cmp, Value *TVal,
   const Value *CmpRHS = Cmp->getOperand(1);
   ICmpInst::Predicate Pred = Cmp->getPredicate();
 
-  if (Pred == CmpInst::ICMP_SLT && match(TVal, m_Zero()) &&
-      match(FVal, m_NSWSub(m_Specific(CmpLHS), m_Specific(CmpRHS)))) {
-    Value *LHS = const_cast<Value *>(CmpLHS);
-    Value *RHS = const_cast<Value *>(CmpRHS);
-    Value *SMin = Builder.CreateBinaryIntrinsic(Intrinsic::smin, LHS, RHS);
-    return Builder.CreateNSWSub(RHS, SMin);
-  }
-
-  if (Pred == CmpInst::ICMP_SGT && match(FVal, m_Zero()) &&
-      match(TVal, m_NSWSub(m_Specific(CmpLHS), m_Specific(CmpRHS)))) {
-    Value *LHS = const_cast<Value *>(CmpLHS);
-    Value *RHS = const_cast<Value *>(CmpRHS);
-    Value *SMin = Builder.CreateBinaryIntrinsic(Intrinsic::smin, LHS, RHS);
-    return Builder.CreateNSWSub(LHS, SMin);
-  }
   // (X > Y) ? X : (Y - 1) ==> MIN(X, Y - 1)
   // (X < Y) ? X : (Y + 1) ==> MAX(X, Y + 1)
   // This transformation is valid when overflow corresponding to the sign of

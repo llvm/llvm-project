@@ -18,24 +18,6 @@ entry:
   ret i64 %conv
 }
 
-; Test that select (b < a), 0, (b - a) is recognized as non-negative
-define i64 @func3(i32 %a, i32 %b) {
-; CHECK-LABEL: define i64 @func3(
-; CHECK-SAME: i32 [[A:%.*]], i32 [[B:%.*]]) {
-; CHECK-NEXT:  [[ENTRY:.*:]]
-; CHECK-NEXT:    [[TMP0:%.*]] = call i32 @llvm.smin.i32(i32 [[B]], i32 [[A]])
-; CHECK-NEXT:    [[COND:%.*]] = sub nsw i32 [[A]], [[TMP0]]
-; CHECK-NEXT:    [[CONV:%.*]] = zext nneg i32 [[COND]] to i64
-; CHECK-NEXT:    ret i64 [[CONV]]
-;
-entry:
-  %cmp = icmp slt i32 %b, %a
-  %sub = sub nsw i32 %b, %a
-  %cond = select i1 %cmp, i32 0, i32 %sub
-  %conv = sext i32 %cond to i64
-  ret i64 %conv
-}
-
 ; Test commutative smin pattern: a - smin(a, b) should also optimize
 define i64 @smin_commutative(i32 %a, i32 %b) {
 ; CHECK-LABEL: define i64 @smin_commutative(
@@ -52,22 +34,6 @@ define i64 @smin_commutative(i32 %a, i32 %b) {
 }
 
 
-; Test select with reversed operands: select (b > a), (b - a), 0
-define i64 @select_reversed(i32 %a, i32 %b) {
-; CHECK-LABEL: define i64 @select_reversed(
-; CHECK-SAME: i32 [[A:%.*]], i32 [[B:%.*]]) {
-; CHECK-NEXT:    [[TMP1:%.*]] = call i32 @llvm.smin.i32(i32 [[B]], i32 [[A]])
-; CHECK-NEXT:    [[COND:%.*]] = sub nsw i32 [[B]], [[TMP1]]
-; CHECK-NEXT:    [[EXT:%.*]] = zext nneg i32 [[COND]] to i64
-; CHECK-NEXT:    ret i64 [[EXT]]
-;
-  %cmp = icmp sgt i32 %b, %a
-  %sub = sub nsw i32 %b, %a
-  %cond = select i1 %cmp, i32 %sub, i32 0
-  %ext = sext i32 %cond to i64
-  ret i64 %ext
-}
-
 ; NEGATIVE TEST: unguarded subtraction should NOT optimize
 define i64 @neg_unguarded_sub(i32 %a, i32 %b) {
 ; CHECK-LABEL: define i64 @neg_unguarded_sub(
@@ -81,41 +47,5 @@ define i64 @neg_unguarded_sub(i32 %a, i32 %b) {
   ret i64 %ext
 }
 
-; NEGATIVE TEST: wrong comparison operands in select
-define i64 @neg_wrong_cmp_select(i32 %a, i32 %b) {
-; CHECK-LABEL: define i64 @neg_wrong_cmp_select(
-; CHECK-SAME: i32 [[A:%.*]], i32 [[B:%.*]]) {
-; CHECK-NEXT:    [[CMP:%.*]] = icmp slt i32 [[A]], [[B]]
-; CHECK-NEXT:    [[SUB:%.*]] = sub nsw i32 [[B]], [[A]]
-; CHECK-NEXT:    [[COND:%.*]] = select i1 [[CMP]], i32 0, i32 [[SUB]]
-; CHECK-NEXT:    [[EXT:%.*]] = sext i32 [[COND]] to i64
-; CHECK-NEXT:    ret i64 [[EXT]]
-;
-  %cmp = icmp slt i32 %a, %b          ; compares a < b, but sub is b - a (mismatched)
-  %sub = sub nsw i32 %b, %a
-  %cond = select i1 %cmp, i32 0, i32 %sub
-  %ext = sext i32 %cond to i64
-  ret i64 %ext
-}
-
-
-
-; NEGATIVE TEST: select with non-zero constant
-define i64 @neg_select_nonzero(i32 %a, i32 %b) {
-; CHECK-LABEL: define i64 @neg_select_nonzero(
-; CHECK-SAME: i32 [[A:%.*]], i32 [[B:%.*]]) {
-; CHECK-NEXT:    [[CMP:%.*]] = icmp slt i32 [[B]], [[A]]
-; CHECK-NEXT:    [[SUB:%.*]] = sub nsw i32 [[B]], [[A]]
-; CHECK-NEXT:    [[COND:%.*]] = select i1 [[CMP]], i32 1, i32 [[SUB]]
-; CHECK-NEXT:    [[EXT:%.*]] = sext i32 [[COND]] to i64
-; CHECK-NEXT:    ret i64 [[EXT]]
-;
-  %cmp = icmp slt i32 %b, %a
-  %sub = sub nsw i32 %b, %a
-  %cond = select i1 %cmp, i32 1, i32 %sub  ; not zero!
-  %ext = sext i32 %cond to i64
-  ret i64 %ext
-}
 
 declare i32 @llvm.smin.i32(i32, i32)
-

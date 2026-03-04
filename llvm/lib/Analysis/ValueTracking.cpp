@@ -483,36 +483,25 @@ static void computeKnownBitsFromLerpPattern(const Value *Op0, const Value *Op1,
   KnownOut.Zero.setHighBits(MinimumNumberOfLeadingZeros);
 }
 
-static bool isKnownNonNegativeICmpWithMinMax(bool Add, bool NSW, bool NUW,
-                                             const Value *Op0, const Value *Op1,
-                                             const Instruction *I,
-                                             KnownBits &KnownOut) {
-  if (Add)
-    return false;
-  // Match against A = smin(A , B) and A = smin(B, A)
-  {
-    Value *V;
-    if (NSW && match(Op1, m_SMin(m_Specific(Op0), m_Value(V))) ||
-        match(Op1, m_SMin(m_Value(V), m_Specific(Op0))))
-      return true;
-  }
+static bool isKnownNonNegativeFromMinOrGuardedSub(const Value *Op0,
+                                                  const Value *Op1) {
 
-  // Match against non-negative select
-  {
-    Value *A, *B;
-    if (match(I, m_Select(
-                     m_SpecificICmp(ICmpInst::ICMP_SLT, m_Value(A), m_Value(B)),
-                     m_Zero(), m_NSWSub(m_Deferred(A), m_Deferred(B)))) ||
-        match(I, m_Select(
-                     m_SpecificICmp(ICmpInst::ICMP_SGT, m_Value(A), m_Value(B)),
-                     m_Zero(), m_NSWSub(m_Deferred(B), m_Deferred(A)))) ||
-        match(I, m_Select(
-                     m_SpecificICmp(ICmpInst::ICMP_SGT, m_Value(A), m_Value(B)),
-                     m_NSWSub(m_Deferred(A), m_Deferred(B)), m_Zero()))) {
+  Value *V;
 
-      return true;
-    }
-  }
+  if (match(Op1, m_SMin(m_Specific(Op0), m_Value(V))) ||
+      match(Op1, m_SMin(m_Value(V), m_Specific(Op0))))
+    return true;
+
+  Value *A;
+  if (match(Op1,
+            m_Select(
+                m_SpecificICmp(ICmpInst::ICMP_SLT, m_Specific(Op0), m_Value(A)),
+                m_Zero(), m_NSWSub(m_Specific(Op0), m_Deferred(A)))) ||
+      match(Op1, m_Select(m_SpecificICmp(ICmpInst::ICMP_SGT, m_Specific(Op0),
+                                         m_Value(A)),
+                          m_NSWSub(m_Specific(Op0), m_Deferred(A)), m_Zero())))
+    return true;
+
   return false;
 }
 
@@ -534,8 +523,7 @@ static void computeKnownBitsAddSub(bool Add, const Value *Op0, const Value *Op1,
   if (!Add && NSW && !KnownOut.isNonNegative() &&
       (isImpliedByDomCondition(ICmpInst::ICMP_SLE, Op1, Op0, Q.CxtI, Q.DL)
            .value_or(false) ||
-       isKnownNonNegativeICmpWithMinMax(Add, NSW, NUW, Op0, Op1, Q.CxtI,
-                                        KnownOut)))
+       isKnownNonNegativeFromMinOrGuardedSub(Op0, Op1)))
     KnownOut.makeNonNegative();
 
   if (Add)
