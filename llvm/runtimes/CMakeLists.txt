@@ -608,7 +608,7 @@ if(build_runtimes)
 
   if(NOT LLVM_RUNTIME_TARGETS)
     runtime_default_target(
-      DEPENDS ${builtins_dep} ${extra_deps}
+      DEPENDS ${extra_deps}
       CMAKE_ARGS ${extra_cmake_args}
       PREFIXES ${prefixes}
       EXTRA_ARGS ${extra_args})
@@ -616,7 +616,7 @@ if(build_runtimes)
   else()
     if("default" IN_LIST LLVM_RUNTIME_TARGETS)
       runtime_default_target(
-        DEPENDS ${builtins_dep} ${extra_deps}
+        DEPENDS ${extra_deps}
         CMAKE_ARGS ${extra_cmake_args}
         PREFIXES ${prefixes}
         EXTRA_ARGS ${extra_args})
@@ -664,18 +664,10 @@ if(build_runtimes)
     endif()
 
     foreach(name ${LLVM_RUNTIME_TARGETS})
-      if(builtins_dep)
-        if (LLVM_BUILTIN_TARGETS)
-          set(builtins_dep_name "${builtins_dep}-${name}")
-        else()
-          set(builtins_dep_name ${builtins_dep})
-        endif()
-      endif()
-
       check_apple_target(${name} runtime)
 
       runtime_register_target(${name}
-        DEPENDS ${builtins_dep_name} ${extra_deps}
+        DEPENDS ${extra_deps}
         CMAKE_ARGS -DLLVM_DEFAULT_TARGET_TRIPLE=${name} ${extra_cmake_args}
         EXTRA_ARGS TARGET_TRIPLE ${name} ${extra_args})
     endforeach()
