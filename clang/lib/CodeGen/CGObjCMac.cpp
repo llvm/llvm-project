@@ -4149,10 +4149,6 @@ llvm::Function *CGObjCCommonMac::GetDirectMethodCallee(
     return Info.Thunk;
   };
 
-  assert(CGM.shouldHavePreconditionThunk(OMD) &&
-         "a method either has nil check thunk or have thunk inlined when "
-         "exposing its symbol");
-
   if (OMD->isInstanceMethod()) {
     // If we can prove instance methods receiver is not null, return the true
     // implementation
