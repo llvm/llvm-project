@@ -376,14 +376,16 @@ Record *Program::getOrCreateRecord(const RecordDecl *RD) {
       Desc = createDescriptor(FD, *T, nullptr, std::nullopt, IsConst,
                               /*isTemporary=*/false, IsMutable, IsVolatile);
       HasPtrField = HasPtrField || (T == PT_Ptr);
+    } else if ((Desc = createDescriptor(
+                    FD, FT.getTypePtr(), std::nullopt, IsConst,
+                    /*isTemporary=*/false, IsMutable, IsVolatile))) {
+      HasPtrField =
+          HasPtrField ||
+          (Desc->isPrimitiveArray() && Desc->getPrimType() == PT_Ptr) ||
+          (Desc->ElemRecord && Desc->ElemRecord->hasPtrField());
     } else {
-      Desc = createDescriptor(FD, FT.getTypePtr(), std::nullopt, IsConst,
-                              /*isTemporary=*/false, IsMutable, IsVolatile);
-      HasPtrField = HasPtrField || (Desc && Desc->isPrimitiveArray() &&
-                                    Desc->getPrimType() == PT_Ptr);
-    }
-    if (!Desc)
       return nullptr;
+    }
     Fields.emplace_back(FD, Desc, BaseSize);
     BaseSize += align(Desc->getAllocSize());
   }
