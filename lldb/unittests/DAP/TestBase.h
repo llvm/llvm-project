@@ -108,7 +108,8 @@ protected:
   static constexpr llvm::StringLiteral k_linux_core = "linux-x86_64.core.yaml";
 
   static void SetUpTestSuite();
-  static void TeatUpTestSuite();
+  static void TearDownTestSuite();
+  void SetUp() override;
   void TearDown() override;
 
   bool GetDebuggerSupportsTarget(llvm::StringRef platform);

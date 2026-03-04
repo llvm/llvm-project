@@ -74,13 +74,12 @@ class TestDAP_cancel(lldbdap_testcase.DAPTestCaseBase):
         Tests cancelling an inflight request.
         """
         program = self.getBuildArtifact("a.out")
-        busy_loop = os.path.join(os.path.dirname(__file__), "busy_loop.py")
+        busy_loop = self.getSourcePath("busy_loop.py")
         self.build_and_launch(
             program,
             initCommands=[f"command script import {busy_loop}"],
             stopOnEntry=True,
         )
-        self.verify_configuration_done()
         self.verify_stop_on_entry()
 
         blocking_seq = self.async_blocking_request(count=10)

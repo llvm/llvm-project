@@ -13,6 +13,7 @@
 #include "AMDGPUTargetStreamer.h"
 #include "AMDGPUMCExpr.h"
 #include "AMDGPUMCKernelDescriptor.h"
+#include "AMDGPUMCTargetDesc.h"
 #include "AMDGPUPTNote.h"
 #include "Utils/AMDGPUBaseInfo.h"
 #include "Utils/AMDKernelCodeTUtils.h"
@@ -126,6 +127,7 @@ StringRef AMDGPUTargetStreamer::getArchNameFromElfMach(unsigned ElfMach) {
   case ELF::EF_AMDGPU_MACH_AMDGCN_GFX10_3_GENERIC:  AK = GK_GFX10_3_GENERIC; break;
   case ELF::EF_AMDGPU_MACH_AMDGCN_GFX11_GENERIC:    AK = GK_GFX11_GENERIC; break;
   case ELF::EF_AMDGPU_MACH_AMDGCN_GFX12_GENERIC:    AK = GK_GFX12_GENERIC; break;
+  case ELF::EF_AMDGPU_MACH_AMDGCN_GFX12_5_GENERIC:  AK = GK_GFX12_5_GENERIC; break;
   case ELF::EF_AMDGPU_MACH_NONE:           AK = GK_NONE;    break;
   default:                                 AK = GK_NONE;    break;
   }
@@ -215,6 +217,7 @@ unsigned AMDGPUTargetStreamer::getElfMach(StringRef GPU) {
   case GK_GFX10_3_GENERIC:  return ELF::EF_AMDGPU_MACH_AMDGCN_GFX10_3_GENERIC;
   case GK_GFX11_GENERIC:    return ELF::EF_AMDGPU_MACH_AMDGCN_GFX11_GENERIC;
   case GK_GFX12_GENERIC:    return ELF::EF_AMDGPU_MACH_AMDGCN_GFX12_GENERIC;
+  case GK_GFX12_5_GENERIC:  return ELF::EF_AMDGPU_MACH_AMDGCN_GFX12_5_GENERIC;
   case GK_NONE:    return ELF::EF_AMDGPU_MACH_NONE;
   }
   // clang-format on
@@ -559,7 +562,7 @@ void AMDGPUTargetAsmStreamer::EmitAmdhsaKernelDescriptor(
              amdhsa::COMPUTE_PGM_RSRC1_FLOAT_DENORM_MODE_16_64_SHIFT,
              amdhsa::COMPUTE_PGM_RSRC1_FLOAT_DENORM_MODE_16_64,
              ".amdhsa_float_denorm_mode_16_64");
-  if (IVersion.Major < 12) {
+  if (STI.hasFeature(AMDGPU::FeatureDX10ClampAndIEEEMode)) {
     PrintField(KD.compute_pgm_rsrc1,
                amdhsa::COMPUTE_PGM_RSRC1_GFX6_GFX11_ENABLE_DX10_CLAMP_SHIFT,
                amdhsa::COMPUTE_PGM_RSRC1_GFX6_GFX11_ENABLE_DX10_CLAMP,
@@ -860,6 +863,9 @@ unsigned AMDGPUTargetELFStreamer::getEFlagsV6() {
       break;
     case AMDGPU::GK_GFX12_GENERIC:
       Version = GenericVersion::GFX12;
+      break;
+    case AMDGPU::GK_GFX12_5_GENERIC:
+      Version = GenericVersion::GFX12_5;
       break;
     default:
       break;

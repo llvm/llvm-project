@@ -4,9 +4,7 @@
 ; RUN: opt < %s -passes='cgscc(coro-split),simplifycfg,early-cse' -S | FileCheck %s
 
 ; %sp1 should be part of the frame (the i8 value).
-;
 ; If the coro resumes, %sp1 is set to 0.
-;
 ; In the coro destroy function, %sp1 is reloaded from the frame. Its value
 ; depends on whether the coroutine was resumed or not.
 define ptr @f(i32 %n) presplitcoroutine {
@@ -52,11 +50,11 @@ declare void @free(ptr)
 ; CHECK-NEXT:    [[ALLOC:%.*]] = call ptr @malloc(i32 24)
 ; CHECK-NEXT:    [[HDL:%.*]] = call noalias nonnull ptr @llvm.coro.begin(token [[ID]], ptr [[ALLOC]])
 ; CHECK-NEXT:    store ptr @f.resume, ptr [[HDL]], align 8
-; CHECK-NEXT:    [[DESTROY_ADDR:%.*]] = getelementptr inbounds nuw [[F_FRAME:%.*]], ptr [[HDL]], i32 0, i32 1
+; CHECK-NEXT:    [[DESTROY_ADDR:%.*]] = getelementptr inbounds i8, ptr [[HDL]], i64 8
 ; CHECK-NEXT:    store ptr @f.destroy, ptr [[DESTROY_ADDR]], align 8
-; CHECK-NEXT:    [[INDEX_ADDR4:%.*]] = getelementptr inbounds nuw [[F_FRAME]], ptr [[HDL]], i32 0, i32 2
+; CHECK-NEXT:    [[INDEX_ADDR4:%.*]] = getelementptr inbounds i8, ptr [[HDL]], i64 16
 ; CHECK-NEXT:    store i1 false, ptr [[INDEX_ADDR4]], align 1
-; CHECK-NEXT:    [[SP1_SPILL_ADDR:%.*]] = getelementptr inbounds [[F_FRAME]], ptr [[HDL]], i32 0, i32 3
+; CHECK-NEXT:    [[SP1_SPILL_ADDR:%.*]] = getelementptr inbounds i8, ptr [[HDL]], i64 17
 ; CHECK-NEXT:    store i8 -1, ptr [[SP1_SPILL_ADDR]], align 1
 ; CHECK-NEXT:    ret ptr [[HDL]]
 ;
@@ -64,14 +62,14 @@ declare void @free(ptr)
 ; CHECK-LABEL: define internal fastcc void @f.resume(
 ; CHECK-SAME: ptr noundef nonnull align 8 dereferenceable(24) [[HDL:%.*]]) {
 ; CHECK-NEXT:  [[ENTRY_RESUME:.*]]:
-; CHECK-NEXT:    [[INDEX_ADDR:%.*]] = getelementptr inbounds nuw [[F_FRAME:%.*]], ptr [[HDL]], i32 0, i32 2
+; CHECK-NEXT:    [[INDEX_ADDR:%.*]] = getelementptr inbounds i8, ptr [[HDL]], i64 16
 ; CHECK-NEXT:    [[INDEX:%.*]] = load i1, ptr [[INDEX_ADDR]], align 1
 ; CHECK-NEXT:    switch i1 [[INDEX]], label %[[UNREACHABLE:.*]] [
 ; CHECK-NEXT:      i1 false, label %[[AFTERCOROSUSPEND:.*]]
 ; CHECK-NEXT:      i1 true, label %[[AFTERCOROSUSPEND3:.*]]
 ; CHECK-NEXT:    ]
 ; CHECK:       [[AFTERCOROSUSPEND]]:
-; CHECK-NEXT:    [[SP1_SPILL_ADDR:%.*]] = getelementptr inbounds [[F_FRAME]], ptr [[HDL]], i32 0, i32 3
+; CHECK-NEXT:    [[SP1_SPILL_ADDR:%.*]] = getelementptr inbounds i8, ptr [[HDL]], i64 17
 ; CHECK-NEXT:    store i8 0, ptr [[SP1_SPILL_ADDR]], align 1
 ; CHECK-NEXT:    store i1 true, ptr [[INDEX_ADDR]], align 1
 ; CHECK-NEXT:    br label %[[AFTERCOROSUSPEND3]]
@@ -80,7 +78,7 @@ declare void @free(ptr)
 ; CHECK-NEXT:    [[COND:%.*]] = icmp eq i8 [[TMP0]], 0
 ; CHECK-NEXT:    br i1 [[COND]], label %[[CLEANUP:.*]], label %[[COROEND:.*]]
 ; CHECK:       [[CLEANUP]]:
-; CHECK-NEXT:    [[SP1_RELOAD_ADDR:%.*]] = getelementptr inbounds [[F_FRAME]], ptr [[HDL]], i32 0, i32 3
+; CHECK-NEXT:    [[SP1_RELOAD_ADDR:%.*]] = getelementptr inbounds i8, ptr [[HDL]], i64 17
 ; CHECK-NEXT:    [[SP1_RELOAD:%.*]] = load i8, ptr [[SP1_RELOAD_ADDR]], align 1
 ; CHECK-NEXT:    call void @print(i8 [[SP1_RELOAD]])
 ; CHECK-NEXT:    call void @free(ptr [[HDL]])
@@ -94,18 +92,18 @@ declare void @free(ptr)
 ; CHECK-LABEL: define internal fastcc void @f.destroy(
 ; CHECK-SAME: ptr noundef nonnull align 8 dereferenceable(24) [[HDL:%.*]]) {
 ; CHECK-NEXT:  [[ENTRY_DESTROY:.*:]]
-; CHECK-NEXT:    [[INDEX_ADDR:%.*]] = getelementptr inbounds nuw [[F_FRAME:%.*]], ptr [[HDL]], i32 0, i32 2
+; CHECK-NEXT:    [[INDEX_ADDR:%.*]] = getelementptr inbounds i8, ptr [[HDL]], i64 16
 ; CHECK-NEXT:    [[INDEX:%.*]] = load i1, ptr [[INDEX_ADDR]], align 1
 ; CHECK-NEXT:    switch i1 [[INDEX]], label %[[UNREACHABLE:.*]] [
 ; CHECK-NEXT:      i1 false, label %[[AFTERCOROSUSPEND:.*]]
 ; CHECK-NEXT:      i1 true, label %[[CLEANUP:.*]]
 ; CHECK-NEXT:    ]
 ; CHECK:       [[AFTERCOROSUSPEND]]:
-; CHECK-NEXT:    [[SP1_SPILL_ADDR:%.*]] = getelementptr inbounds [[F_FRAME]], ptr [[HDL]], i32 0, i32 3
+; CHECK-NEXT:    [[SP1_SPILL_ADDR:%.*]] = getelementptr inbounds i8, ptr [[HDL]], i64 17
 ; CHECK-NEXT:    store i8 1, ptr [[SP1_SPILL_ADDR]], align 1
 ; CHECK-NEXT:    br label %[[CLEANUP]]
 ; CHECK:       [[CLEANUP]]:
-; CHECK-NEXT:    [[SP1_RELOAD_ADDR:%.*]] = getelementptr inbounds [[F_FRAME]], ptr [[HDL]], i32 0, i32 3
+; CHECK-NEXT:    [[SP1_RELOAD_ADDR:%.*]] = getelementptr inbounds i8, ptr [[HDL]], i64 17
 ; CHECK-NEXT:    [[SP1_RELOAD:%.*]] = load i8, ptr [[SP1_RELOAD_ADDR]], align 1
 ; CHECK-NEXT:    call void @print(i8 [[SP1_RELOAD]])
 ; CHECK-NEXT:    call void @free(ptr [[HDL]])
@@ -117,18 +115,18 @@ declare void @free(ptr)
 ; CHECK-LABEL: define internal fastcc void @f.cleanup(
 ; CHECK-SAME: ptr noundef nonnull align 8 dereferenceable(24) [[HDL:%.*]]) {
 ; CHECK-NEXT:  [[ENTRY_CLEANUP:.*:]]
-; CHECK-NEXT:    [[INDEX_ADDR:%.*]] = getelementptr inbounds nuw [[F_FRAME:%.*]], ptr [[HDL]], i32 0, i32 2
+; CHECK-NEXT:    [[INDEX_ADDR:%.*]] = getelementptr inbounds i8, ptr [[HDL]], i64 16
 ; CHECK-NEXT:    [[INDEX:%.*]] = load i1, ptr [[INDEX_ADDR]], align 1
 ; CHECK-NEXT:    switch i1 [[INDEX]], label %[[UNREACHABLE:.*]] [
 ; CHECK-NEXT:      i1 false, label %[[AFTERCOROSUSPEND:.*]]
 ; CHECK-NEXT:      i1 true, label %[[CLEANUP:.*]]
 ; CHECK-NEXT:    ]
 ; CHECK:       [[AFTERCOROSUSPEND]]:
-; CHECK-NEXT:    [[SP1_SPILL_ADDR:%.*]] = getelementptr inbounds [[F_FRAME]], ptr [[HDL]], i32 0, i32 3
+; CHECK-NEXT:    [[SP1_SPILL_ADDR:%.*]] = getelementptr inbounds i8, ptr [[HDL]], i64 17
 ; CHECK-NEXT:    store i8 1, ptr [[SP1_SPILL_ADDR]], align 1
 ; CHECK-NEXT:    br label %[[CLEANUP]]
 ; CHECK:       [[CLEANUP]]:
-; CHECK-NEXT:    [[SP1_RELOAD_ADDR:%.*]] = getelementptr inbounds [[F_FRAME]], ptr [[HDL]], i32 0, i32 3
+; CHECK-NEXT:    [[SP1_RELOAD_ADDR:%.*]] = getelementptr inbounds i8, ptr [[HDL]], i64 17
 ; CHECK-NEXT:    [[SP1_RELOAD:%.*]] = load i8, ptr [[SP1_RELOAD_ADDR]], align 1
 ; CHECK-NEXT:    call void @print(i8 [[SP1_RELOAD]])
 ; CHECK-NEXT:    call void @free(ptr null)

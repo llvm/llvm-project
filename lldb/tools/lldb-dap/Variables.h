@@ -50,7 +50,7 @@ public:
   explicit VariableStore() = default;
   virtual ~VariableStore() = default;
 
-  virtual std::vector<protocol::Variable>
+  virtual llvm::Expected<std::vector<protocol::Variable>>
   GetVariables(VariableReferenceStorage &storage,
                const protocol::Configuration &config,
                const protocol::VariablesArguments &args) = 0;
@@ -84,6 +84,7 @@ struct VariableReferenceStorage {
   /// outputs.
   var_ref_t Insert(const lldb::SBValueList &values);
 
+  /// Insert a new frame into temporary storage.
   std::vector<protocol::Scope> Insert(const lldb::SBFrame &frame);
 
   lldb::SBValue FindVariable(var_ref_t var_ref, llvm::StringRef name);

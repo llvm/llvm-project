@@ -11,15 +11,10 @@
 #include "Protocol/DAPTypes.h"
 #include "Protocol/ProtocolTypes.h"
 #include "TestingSupport/TestUtilities.h"
-#include "lldb/API/SBCommandInterpreter.h"
 #include "lldb/API/SBDebugger.h"
-#include "lldb/API/SBEvent.h"
 #include "lldb/API/SBFrame.h"
-#include "lldb/API/SBListener.h"
-#include "lldb/API/SBStream.h"
 #include "lldb/API/SBThread.h"
 #include "lldb/API/SBValue.h"
-#include "lldb/Host/FileSystem.h"
 #include "llvm/Testing/Support/Error.h"
 #include "gtest/gtest.h"
 #include <optional>
@@ -38,7 +33,7 @@ public:
     lldb::SBError error = SBDebugger::InitializeWithErrorHandling();
     EXPECT_TRUE(error.Success());
   }
-  static void TeatUpTestSuite() { SBDebugger::Terminate(); }
+  static void TearDownTestSuite() { SBDebugger::Terminate(); }
 
   void TearDown() override {
     if (core)
@@ -187,21 +182,31 @@ TEST_F(VariablesTest, VariablesStore) {
 
   EXPECT_EQ(vars.GetVariableStore(var_ref_t(9999)), nullptr);
 
+  ASSERT_TRUE(vars.FindVariable(local_ref, "rect").IsValid());
+
   auto variables = locals_store->GetVariables(vars, {}, {});
-  ASSERT_EQ(variables.size(), 1u);
-  auto rect = variables[0];
+  ASSERT_THAT_EXPECTED(variables, Succeeded());
+  ASSERT_EQ(variables->size(), 1u);
+  auto rect = variables->at(0);
   ASSERT_EQ(rect.name, "rect");
-  auto *store = vars.GetVariableStore(rect.variablesReference);
-  ASSERT_NE(store, nullptr);
 
   VariablesArguments args;
   args.variablesReference = rect.variablesReference;
+
+  auto *store = vars.GetVariableStore(args.variablesReference);
+  ASSERT_NE(store, nullptr);
+
   variables = store->GetVariables(vars, {}, args);
-  ASSERT_EQ(variables.size(), 4u);
-  ASSERT_EQ(variables[0].name, "x");
-  ASSERT_EQ(variables[1].name, "y");
-  ASSERT_EQ(variables[2].name, "height");
-  ASSERT_EQ(variables[3].name, "width");
+  ASSERT_THAT_EXPECTED(variables, Succeeded());
+  ASSERT_EQ(variables->size(), 4u);
+  EXPECT_EQ(variables->at(0).name, "x");
+  EXPECT_EQ(variables->at(0).value, "5");
+  EXPECT_EQ(variables->at(1).name, "y");
+  EXPECT_EQ(variables->at(1).value, "5");
+  EXPECT_EQ(variables->at(2).name, "height");
+  EXPECT_EQ(variables->at(2).value, "25");
+  EXPECT_EQ(variables->at(3).name, "width");
+  EXPECT_EQ(variables->at(3).value, "30");
 }
 
 TEST_F(VariablesTest, FindVariable_LocalsByName) {

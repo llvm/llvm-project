@@ -99,6 +99,18 @@ StringRef mlir::sparse_tensor::overheadTypeFunctionSuffix(Type tp) {
   return overheadTypeFunctionSuffix(overheadTypeEncoding(tp));
 }
 
+bool mlir::sparse_tensor::isValidPrimaryType(Type elemTp) {
+  if (elemTp.isF64() || elemTp.isF32() || elemTp.isF16() || elemTp.isBF16() ||
+      elemTp.isInteger(64) || elemTp.isInteger(32) || elemTp.isInteger(16) ||
+      elemTp.isInteger(8))
+    return true;
+  if (auto complexTp = dyn_cast<ComplexType>(elemTp)) {
+    Type elt = complexTp.getElementType();
+    return elt.isF64() || elt.isF32();
+  }
+  return false;
+}
+
 PrimaryType mlir::sparse_tensor::primaryTypeEncoding(Type elemTp) {
   if (elemTp.isF64())
     return PrimaryType::kF64;
@@ -418,10 +430,8 @@ void mlir::sparse_tensor::sizesFromSrc(OpBuilder &builder,
 }
 
 Operation *mlir::sparse_tensor::getTop(Operation *op) {
-  for (; isa<scf::ForOp>(op->getParentOp()) ||
-         isa<scf::WhileOp>(op->getParentOp()) ||
-         isa<scf::ParallelOp>(op->getParentOp()) ||
-         isa<scf::IfOp>(op->getParentOp());
+  for (; isa<scf::ForOp, scf::WhileOp, scf::ParallelOp, scf::IfOp>(
+           op->getParentOp());
        op = op->getParentOp())
     ;
   return op;
