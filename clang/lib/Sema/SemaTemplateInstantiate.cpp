@@ -40,7 +40,6 @@
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/SaveAndRestore.h"
 #include "llvm/Support/TimeProfiler.h"
-#include <iterator>
 #include <optional>
 
 using namespace clang;
