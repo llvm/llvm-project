@@ -466,12 +466,12 @@ gpu.func @vector_multi_reduction_dim0_distributed_dim1_reduction(%laneid: index)
 // load_matrix and store_matrix with coordinate computation (offsets [0,0])
 gpu.module @xevm_module {
 // CHECK-LABEL: gpu.func @load_store_matrix_1
-// CHECK: %[[LANE_ID1:.*]] = gpu.lane_id
-// CHECK: %[[R1:.*]] = arith.remui %[[LANE_ID1]], %{{.*}} : index
-// CHECK: %[[D1:.*]] = arith.divui %[[LANE_ID1]], %{{.*}} : index
-// CHECK: %[[R2:.*]] = arith.remui %[[D1]], %{{.*}} : index
-// CHECK: %[[ROW:.*]] = arith.remui %[[R2]], %{{.*}} : index
-// CHECK: %[[COL:.*]] = arith.remui %[[R1]], %{{.*}} : index
+// CHECK-DAG: %[[LANE_ID1:.*]] = gpu.lane_id
+// CHECK-DAG: %[[R1:.*]] = arith.remui %[[LANE_ID1]], %{{.*}} : index
+// CHECK-DAG: %[[D1:.*]] = arith.divui %[[LANE_ID1]], %{{.*}} : index
+// CHECK-DAG: %[[R2:.*]] = arith.remui %[[D1]], %{{.*}} : index
+// CHECK-DAG: %[[ROW:.*]] = arith.remui %[[R2]], %{{.*}} : index
+// CHECK-DAG: %[[COL:.*]] = arith.remui %[[R1]], %{{.*}} : index
 // CHECK: %[[MAT:.*]] = xegpu.load_matrix %arg0[%[[ROW]], %[[COL]]] : !xegpu.mem_desc<32x32xf32>, index, index -> vector<1x1xf32>
 // CHECK: %[[LANE_ID2:.*]] = gpu.lane_id
 // CHECK: xegpu.store_matrix %[[MAT]], %arg0[%{{.*}}, %{{.*}}] : vector<1x1xf32>, !xegpu.mem_desc<32x32xf32>, index, index
@@ -487,14 +487,14 @@ gpu.func @load_store_matrix_1(%arg0: !xegpu.mem_desc<32x32xf32>) {
 // load_matrix and store_matrix with non-zero offsets [0,1]
 gpu.module @xevm_module {
 // CHECK-LABEL: gpu.func @load_store_matrix_2
-// CHECK: %[[LANE_ID1:.*]] = gpu.lane_id
-// CHECK: %[[R1:.*]] = arith.remui %[[LANE_ID1]], %{{.*}} : index
-// CHECK: %[[D1:.*]] = arith.divui %[[LANE_ID1]], %{{.*}} : index
-// CHECK: %[[R2:.*]] = arith.remui %[[D1]], %{{.*}} : index
-// CHECK: %[[MUL:.*]] = arith.muli %[[R2]], %{{.*}} : index
-// CHECK: %[[ROW:.*]] = arith.remui %[[MUL]], %{{.*}} : index
-// CHECK: %[[R3:.*]] = arith.remui %[[R1]], %{{.*}} : index
-// CHECK: %[[ADD:.*]] = arith.addi %[[R3]], %{{.*}} : index
+// CHECK-DAG: %[[LANE_ID1:.*]] = gpu.lane_id
+// CHECK-DAG: %[[R1:.*]] = arith.remui %[[LANE_ID1]], %{{.*}} : index
+// CHECK-DAG: %[[D1:.*]] = arith.divui %[[LANE_ID1]], %{{.*}} : index
+// CHECK-DAG: %[[R2:.*]] = arith.remui %[[D1]], %{{.*}} : index
+// CHECK-DAG: %[[MUL:.*]] = arith.muli %[[R2]], %{{.*}} : index
+// CHECK-DAG: %[[ROW:.*]] = arith.remui %[[MUL]], %{{.*}} : index
+// CHECK-DAG: %[[R3:.*]] = arith.remui %[[R1]], %{{.*}} : index
+// CHECK-DAG: %[[ADD:.*]] = arith.addi %[[R3]], %{{.*}} : index
 // CHECK: %[[MAT:.*]] = xegpu.load_matrix %arg0[%[[ROW]], %[[ADD]]] : !xegpu.mem_desc<32x32xf32>, index, index -> vector<2x1xf32>
 // CHECK: %[[LANE_ID2:.*]] = gpu.lane_id
 // CHECK: xegpu.store_matrix %[[MAT]], %arg0[%{{.*}}, %{{.*}}] : vector<2x1xf32>, !xegpu.mem_desc<32x32xf32>, index, index
