@@ -170,7 +170,7 @@ def WebAssemblyAsmParser : AsmParser {
 
 def WebAssemblyAsmWriter : AsmWriter {
   string AsmWriterClassName  = "InstPrinter";
-  int PassSubtarget = 0;
+  int PassSubtarget = 1;
   int Variant = 0;
   bit isMCAsmWriter = 1;
 }
