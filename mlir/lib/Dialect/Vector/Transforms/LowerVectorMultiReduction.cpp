@@ -375,7 +375,7 @@ struct TwoDimMultiReductionToElementWise
   }
 };
 
-/// Lowers 2D vector.multi_reduction to a sequence of vector.reduction ops.
+/// Lowers 2D vector.multi_reduction to a sequence of vector.reduction Ops.
 ///
 /// The reduction dimension must be the inner-most dimension.
 ///
