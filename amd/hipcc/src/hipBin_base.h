@@ -50,6 +50,7 @@ THE SOFTWARE.
 # define HIP_COMPILE_CXX_AS_HIP         "HIP_COMPILE_CXX_AS_HIP"
 # define HIPCC_VERBOSE                  "HIPCC_VERBOSE"
 # define HCC_AMDGPU_TARGET              "HCC_AMDGPU_TARGET"
+# define HIP_CLANG_LAUNCHER             "HIP_CLANG_LAUNCHER"
 
 # define HIP_BASE_VERSION_DEFAULT     "9999"
 
@@ -154,6 +155,7 @@ struct EnvVariables {
   string hipClangHccCompactModeEnv_ = "";
   string hipCompileCxxAsHipEnv_ = "";
   string hccAmdGpuTargetEnv_ = "";
+  string hipClangLauncher_ = "";
   friend std::ostream& operator <<(std::ostream& os, const EnvVariables& var) {
     os << "Path: "                           << var.path_ << endl;
     os << "Hip Path: "                       << var.hipPathEnv_ << endl;
@@ -178,6 +180,7 @@ struct EnvVariables {
     os << "Hip Compile Cxx as Hip: "         <<
            var.hipCompileCxxAsHipEnv_ << endl;
     os << "Hcc Amd Gpu Target: "             << var.hccAmdGpuTargetEnv_ << endl;
+    os << "Hip Clang launcher: "             << var.hipClangLauncher_ << endl;
     return os;
   }
 };
@@ -316,6 +319,8 @@ void HipBinBase::readEnvVariables() {
     envVariables_.hipClangHccCompactModeEnv_ = hipClangHccCompactMode;
   if (const char* hipCompileCxxAsHip = std::getenv(HIP_COMPILE_CXX_AS_HIP))
     envVariables_.hipCompileCxxAsHipEnv_ = hipCompileCxxAsHip;
+  if (const char* hipClangLuancher = std::getenv(HIP_CLANG_LAUNCHER))
+    envVariables_.hipClangLauncher_ = hipClangLuancher;
 }
 
 // constructs the HIP path
