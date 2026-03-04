@@ -9,11 +9,11 @@
 #ifndef _LIBSYCL___IMPL_USM_FUNCTIONS_HPP
 #define _LIBSYCL___IMPL_USM_FUNCTIONS_HPP
 
-#include <sycl/__impl/detail/config.hpp>
-
 #include <sycl/__impl/context.hpp>
 #include <sycl/__impl/queue.hpp>
 #include <sycl/__impl/usm_alloc_type.hpp>
+
+#include <sycl/__impl/detail/config.hpp>
 
 _LIBSYCL_BEGIN_NAMESPACE_SYCL
 

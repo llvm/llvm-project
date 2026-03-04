@@ -66,7 +66,7 @@ void *malloc_shared(std::size_t numBytes, const queue &syclQueue,
                        syclQueue.get_context(), propList);
 }
 
-// SYCL 2020 4.8.3.5. Parameterized allocation functions
+// SYCL 2020 4.8.3.5. Parameterized allocation functions.
 
 static aspect getAspectByAllocationKind(usm::alloc kind) {
   switch (kind) {
@@ -118,7 +118,7 @@ void *malloc(std::size_t numBytes, const queue &syclQueue, usm::alloc kind,
                 propList);
 }
 
-// SYCL 2020 4.8.3.6. Memory deallocation functions
+// SYCL 2020 4.8.3.6. Memory deallocation functions.
 
 void free(void *ptr, const context &ctxt) {
   std::ignore = ctxt;
