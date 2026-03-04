@@ -439,9 +439,14 @@ std::optional<std::string> PathResolver::readlinkCached(StringRef Path) {
     return Cache;
 
   // If result not in cache - call system function and cache result
-  char buf[PATH_MAX];
+  struct stat st;
+  if (lstat(Path.str().c_str(), &st) == -1)
+    return std::nullopt;
+
+  char buf[st.st_size + 1];
   ssize_t len;
-  if ((len = readlink(Path.str().c_str(), buf, sizeof(buf))) != -1) {
+  if ((len = readlink(Path.str().c_str(), buf, sizeof(buf))) != -1 &&
+      (size_t)len < sizeof(buf)) {
     buf[len] = '\0';
     std::string s(buf);
     LibPathCache->insert_link(Path, s);
