@@ -838,6 +838,7 @@ static std::vector<Index> preprocessCDCtxIndex(Index CDCtxIndex) {
     Processed.push_back(Entry.second);
   }
 
+  llvm::sort(Processed);
   return Processed;
 }
 
