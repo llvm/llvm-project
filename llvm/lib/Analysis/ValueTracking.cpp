@@ -5058,6 +5058,22 @@ void computeKnownFPClass(const Value *V, const APInt &DemandedElts,
     return;
   }
 
+  if (const auto *CA = dyn_cast<ConstantAggregate>(V)) {
+    // TODO: Handle complex aggregates
+    Known.KnownFPClasses = fcNone;
+    for (const Use &Op : CA->operands()) {
+      auto *CFP = dyn_cast<ConstantFP>(Op.get());
+      if (!CFP) {
+        Known = KnownFPClass();
+        return;
+      }
+
+      Known |= CFP->getValueAPF().classify();
+    }
+
+    return;
+  }
+
   FPClassTest KnownNotFromFlags = fcNone;
   if (const auto *CB = dyn_cast<CallBase>(V))
     KnownNotFromFlags |= CB->getRetNoFPClass();
