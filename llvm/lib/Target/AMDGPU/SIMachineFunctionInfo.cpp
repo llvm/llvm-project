@@ -566,7 +566,8 @@ bool SIMachineFunctionInfo::allocateVGPRSpillToAGPR(MachineFunction &MF,
 }
 
 bool SIMachineFunctionInfo::removeDeadFrameIndices(
-    MachineFrameInfo &MFI, bool ResetSGPRSpillStackIDs) {
+    MachineFunction &MF, bool ResetSGPRSpillStackIDs) {
+  MachineFrameInfo &MFI = MF.getFrameInfo();
   // Remove dead frame indices from function frame, however keep FP & BP since
   // spills for them haven't been inserted yet. And also make sure to remove the
   // frame indices from `SGPRSpillsToVirtualVGPRLanes` data structure,
