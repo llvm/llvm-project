@@ -28,6 +28,7 @@ runtimes="${3}"
 runtime_targets="${4}"
 runtime_targets_needs_reconfig="${5}"
 enable_cir="${6}"
+enable_z3="${7}"
 
 lit_args="-v --xunit-xml-output ${BUILD_DIR}/test-results.xml --use-unique-output-file-name --timeout=1200 --time-tests --succinct"
 
@@ -46,6 +47,7 @@ cmake -S "${MONOREPO_ROOT}"/llvm -B "${BUILD_DIR}" \
       -D CMAKE_PREFIX_PATH="${HOME}/.local" \
       -D CMAKE_BUILD_TYPE=Release \
       -D CLANG_ENABLE_CIR=${enable_cir} \
+      -D LLVM_ENABLE_Z3_SOLVER="${enable_z3}" \
       -D LLVM_ENABLE_ASSERTIONS=ON \
       -D LLVM_BUILD_EXAMPLES=ON \
       -D COMPILER_RT_BUILD_LIBFUZZER=OFF \
