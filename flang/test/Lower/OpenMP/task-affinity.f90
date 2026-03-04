@@ -294,6 +294,69 @@ end subroutine
 ! CHECK: } -> !omp.iterated<!omp.affinity_entry_ty<!fir.ref<i8>, i64>>
 ! CHECK: omp.task affinity(%{{.*}} : !omp.iterated<!omp.affinity_entry_ty<!fir.ref<i8>, i64>>) {
 
+subroutine task_affinity_iterator_nondefault_lb()
+  implicit none
+  integer, parameter :: n = 8
+  integer :: a(0:n)
+  integer :: i
+
+  !$omp parallel
+  !$omp single
+  !$omp task affinity(iterator(i = 0:n) : a(i))
+    a(0) = 1
+  !$omp end task
+  !$omp end single
+  !$omp end parallel
+end subroutine
+
+! CHECK-LABEL: func.func @_QPtask_affinity_iterator_nondefault_lb()
+! CHECK: %[[ITERATED_NDLB:.*]] = omp.iterator(%[[IV_NDLB:.*]]: index) = ({{.*}} to {{.*}} step {{.*}}) {
+! CHECK:   %[[IV_NDLB_I32:.*]] = fir.convert %[[IV_NDLB]] : (index) -> i32
+! CHECK:   %[[IV_NDLB_I64:.*]] = fir.convert %[[IV_NDLB_I32]] : (i32) -> i64
+! CHECK:   %[[IV_NDLB_IDX:.*]] = fir.convert %[[IV_NDLB_I64]] : (i64) -> index
+! CHECK:   %[[SHIFT_NDLB:.*]] = fir.shape_shift %c0, %c9 : (index, index) -> !fir.shapeshift<1>
+! CHECK:   %[[COOR_NDLB:.*]] = fir.array_coor {{.*}}(%[[SHIFT_NDLB]]) %[[IV_NDLB_IDX]] : (!fir.box<!fir.array<9xi32>>, !fir.shapeshift<1>, index) -> !fir.ref<i32>
+! CHECK:   %[[ELEM_NDLB:.*]] = fir.box_elesize %{{.*}} : (!fir.box<!fir.array<9xi32>>) -> index
+! CHECK:   %[[ELEM_NDLB_I64:.*]] = fir.convert %[[ELEM_NDLB]] : (index) -> i64
+! CHECK:   %[[ADDRI8_NDLB:.*]] = fir.convert %[[COOR_NDLB]] : (!fir.ref<i32>) -> !fir.ref<i8>
+! CHECK:   %[[ENTRY_NDLB:.*]] = omp.affinity_entry %[[ADDRI8_NDLB]], %[[ELEM_NDLB_I64]] : (!fir.ref<i8>, i64) -> !omp.affinity_entry_ty<!fir.ref<i8>, i64>
+! CHECK:   omp.yield(%[[ENTRY_NDLB]] : !omp.affinity_entry_ty<!fir.ref<i8>, i64>)
+! CHECK: } -> !omp.iterated<!omp.affinity_entry_ty<!fir.ref<i8>, i64>>
+! CHECK: omp.task affinity(%[[ITERATED_NDLB]] : !omp.iterated<!omp.affinity_entry_ty<!fir.ref<i8>, i64>>) {
+
+subroutine task_affinity_iterator_nondefault_lb_2d()
+  implicit none
+  integer, parameter :: n = 4, m = 6
+  integer :: a(0:n, -1:m)
+  integer :: i, j
+
+  !$omp parallel
+  !$omp single
+  !$omp task affinity(iterator(i = 0:n, j = -1:m) : a(i, j))
+    a(0, -1) = 1
+  !$omp end task
+  !$omp end single
+  !$omp end parallel
+end subroutine
+
+! CHECK-LABEL: func.func @_QPtask_affinity_iterator_nondefault_lb_2d()
+! CHECK: %[[ITERATED_NDLB2:.*]] = omp.iterator(%[[IV0_NDLB2:.*]]: index, %[[IV1_NDLB2:.*]]: index) = ({{.*}} to {{.*}} step {{.*}}, {{.*}} to {{.*}} step {{.*}}) {
+! CHECK:   %[[IV0_NDLB2_I32:.*]] = fir.convert %[[IV0_NDLB2]] : (index) -> i32
+! CHECK:   %[[IV1_NDLB2_I32:.*]] = fir.convert %[[IV1_NDLB2]] : (index) -> i32
+! CHECK:   %[[IV0_NDLB2_I64:.*]] = fir.convert %[[IV0_NDLB2_I32]] : (i32) -> i64
+! CHECK:   %[[IV0_NDLB2_IDX:.*]] = fir.convert %[[IV0_NDLB2_I64]] : (i64) -> index
+! CHECK:   %[[IV1_NDLB2_I64:.*]] = fir.convert %[[IV1_NDLB2_I32]] : (i32) -> i64
+! CHECK:   %[[IV1_NDLB2_IDX:.*]] = fir.convert %[[IV1_NDLB2_I64]] : (i64) -> index
+! CHECK:   %[[SHIFT_NDLB2:.*]] = fir.shape_shift %c0, %c5, %c-1, %c8 : (index, index, index, index) -> !fir.shapeshift<2>
+! CHECK:   %[[COOR_NDLB2:.*]] = fir.array_coor {{.*}}(%[[SHIFT_NDLB2]]) %[[IV0_NDLB2_IDX]], %[[IV1_NDLB2_IDX]] : (!fir.box<!fir.array<5x8xi32>>, !fir.shapeshift<2>, index, index) -> !fir.ref<i32>
+! CHECK:   %[[ELEM_NDLB2:.*]] = fir.box_elesize %{{.*}} : (!fir.box<!fir.array<5x8xi32>>) -> index
+! CHECK:   %[[ELEM_NDLB2_I64:.*]] = fir.convert %[[ELEM_NDLB2]] : (index) -> i64
+! CHECK:   %[[ADDRI8_NDLB2:.*]] = fir.convert %[[COOR_NDLB2]] : (!fir.ref<i32>) -> !fir.ref<i8>
+! CHECK:   %[[ENTRY_NDLB2:.*]] = omp.affinity_entry %[[ADDRI8_NDLB2]], %[[ELEM_NDLB2_I64]] : (!fir.ref<i8>, i64) -> !omp.affinity_entry_ty<!fir.ref<i8>, i64>
+! CHECK:   omp.yield(%[[ENTRY_NDLB2]] : !omp.affinity_entry_ty<!fir.ref<i8>, i64>)
+! CHECK: } -> !omp.iterated<!omp.affinity_entry_ty<!fir.ref<i8>, i64>>
+! CHECK: omp.task affinity(%[[ITERATED_NDLB2]] : !omp.iterated<!omp.affinity_entry_ty<!fir.ref<i8>, i64>>) {
+
 subroutine task_affinity_iterator_multi_dimension()
   integer, parameter :: n = 4, m = 6
   integer :: a(n, m)

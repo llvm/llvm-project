@@ -1195,11 +1195,20 @@ mlir::Value genIteratorCoordinate(Fortran::lower::AbstractConverter &converter,
   }
 
   // Build shape from the entity extents
+  mlir::Value shape;
   auto extents = hlfir::genExtentsVector(loc, builder, entity);
   assert(extents.size() == ivs.size() &&
          "expected the number of extents and iteration variables to match for "
          "iterator");
-  mlir::Value shape = fir::ShapeOp::create(builder, loc, extents);
+  if (entity.mayHaveNonDefaultLowerBounds()) {
+    llvm::SmallVector<mlir::Value> lowerBounds;
+    lowerBounds.reserve(ivs.size());
+    for (unsigned dim = 0; dim < ivs.size(); ++dim)
+      lowerBounds.push_back(hlfir::genLBound(loc, builder, entity, dim));
+    shape = builder.genShape(loc, lowerBounds, extents);
+  } else {
+    shape = fir::ShapeOp::create(builder, loc, extents);
+  }
 
   mlir::Type elementToRefTy =
       fir::ReferenceType::get(entity.getFortranElementType());
