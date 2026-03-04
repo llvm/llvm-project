@@ -243,9 +243,6 @@ static cl::opt<TailFoldingStyle> ForceTailFoldingStyle(
         clEnumValN(TailFoldingStyle::DataAndControlFlow, "data-and-control",
                    "Create lane mask using active.lane.mask intrinsic, and use "
                    "it for both data and control flow"),
-        clEnumValN(TailFoldingStyle::DataAndControlFlowWithoutRuntimeCheck,
-                   "data-and-control-without-rt-check",
-                   "Similar to data-and-control, but remove the runtime check"),
         clEnumValN(TailFoldingStyle::DataWithEVL, "data-with-evl",
                    "Use predicated EVL instructions for tail folding. If EVL "
                    "is unsupported, fallback to data-without-lane-mask.")));
@@ -1327,34 +1324,27 @@ public:
   }
 
   /// Returns the TailFoldingStyle that is best for the current loop.
-  TailFoldingStyle getTailFoldingStyle(bool IVUpdateMayOverflow = true) const {
-    if (!ChosenTailFoldingStyle)
-      return TailFoldingStyle::None;
-    return IVUpdateMayOverflow ? ChosenTailFoldingStyle->first
-                               : ChosenTailFoldingStyle->second;
+  TailFoldingStyle getTailFoldingStyle() const {
+    return ChosenTailFoldingStyle;
   }
 
-  /// Selects and saves TailFoldingStyle for 2 options - if IV update may
-  /// overflow or not.
+  /// Selects and saves TailFoldingStyle.
   /// \param IsScalableVF true if scalable vector factors enabled.
   /// \param UserIC User specific interleave count.
-  void setTailFoldingStyles(bool IsScalableVF, unsigned UserIC) {
-    assert(!ChosenTailFoldingStyle && "Tail folding must not be selected yet.");
+  void setTailFoldingStyle(bool IsScalableVF, unsigned UserIC) {
+    assert(ChosenTailFoldingStyle == TailFoldingStyle::None &&
+           "Tail folding must not be selected yet.");
     if (!Legal->canFoldTailByMasking()) {
-      ChosenTailFoldingStyle = {TailFoldingStyle::None, TailFoldingStyle::None};
+      ChosenTailFoldingStyle = TailFoldingStyle::None;
       return;
     }
 
     // Default to TTI preference, but allow command line override.
-    ChosenTailFoldingStyle = {
-        TTI.getPreferredTailFoldingStyle(/*IVUpdateMayOverflow=*/true),
-        TTI.getPreferredTailFoldingStyle(/*IVUpdateMayOverflow=*/false)};
+    ChosenTailFoldingStyle = TTI.getPreferredTailFoldingStyle();
     if (ForceTailFoldingStyle.getNumOccurrences())
-      ChosenTailFoldingStyle = {ForceTailFoldingStyle.getValue(),
-                                ForceTailFoldingStyle.getValue()};
+      ChosenTailFoldingStyle = ForceTailFoldingStyle.getValue();
 
-    if (ChosenTailFoldingStyle->first != TailFoldingStyle::DataWithEVL &&
-        ChosenTailFoldingStyle->second != TailFoldingStyle::DataWithEVL)
+    if (ChosenTailFoldingStyle != TailFoldingStyle::DataWithEVL)
       return;
     // Override EVL styles if needed.
     // FIXME: Investigate opportunity for fixed vector factor.
@@ -1366,10 +1356,9 @@ public:
     // if it's allowed, or DataWithoutLaneMask otherwise.
     if (ScalarEpilogueStatus == CM_ScalarEpilogueAllowed ||
         ScalarEpilogueStatus == CM_ScalarEpilogueNotNeededUsePredicate)
-      ChosenTailFoldingStyle = {TailFoldingStyle::None, TailFoldingStyle::None};
+      ChosenTailFoldingStyle = TailFoldingStyle::None;
     else
-      ChosenTailFoldingStyle = {TailFoldingStyle::DataWithoutLaneMask,
-                                TailFoldingStyle::DataWithoutLaneMask};
+      ChosenTailFoldingStyle = TailFoldingStyle::DataWithoutLaneMask;
 
     LLVM_DEBUG(
         dbgs() << "LV: Preference for VP intrinsics indicated. Will "
@@ -1381,8 +1370,6 @@ public:
 
   /// Returns true if all loop blocks should be masked to fold tail loop.
   bool foldTailByMasking() const {
-    // TODO: check if it is possible to check for None style independent of
-    // IVUpdateMayOverflow flag in getTailFoldingStyle.
     return getTailFoldingStyle() != TailFoldingStyle::None;
   }
 
@@ -1392,9 +1379,7 @@ public:
     if (!EnableWideActiveLaneMask)
       return false;
 
-    TailFoldingStyle TF = getTailFoldingStyle();
-    return TF == TailFoldingStyle::DataAndControlFlow ||
-           TF == TailFoldingStyle::DataAndControlFlowWithoutRuntimeCheck;
+    return getTailFoldingStyle() == TailFoldingStyle::DataAndControlFlow;
   }
 
   /// Return maximum safe number of elements to be processed per vector
@@ -1606,10 +1591,8 @@ private:
   /// iterations to execute in the scalar loop.
   ScalarEpilogueLowering ScalarEpilogueStatus = CM_ScalarEpilogueAllowed;
 
-  /// Control finally chosen tail folding style. The first element is used if
-  /// the IV update may overflow, the second element - if it does not.
-  std::optional<std::pair<TailFoldingStyle, TailFoldingStyle>>
-      ChosenTailFoldingStyle;
+  /// Control finally chosen tail folding style.
+  TailFoldingStyle ChosenTailFoldingStyle = TailFoldingStyle::None;
 
   /// true if scalable vectorization is supported and enabled.
   std::optional<bool> IsScalableVectorizationAllowed;
@@ -2098,13 +2081,11 @@ public:
 
 static bool useActiveLaneMask(TailFoldingStyle Style) {
   return Style == TailFoldingStyle::Data ||
-         Style == TailFoldingStyle::DataAndControlFlow ||
-         Style == TailFoldingStyle::DataAndControlFlowWithoutRuntimeCheck;
+         Style == TailFoldingStyle::DataAndControlFlow;
 }
 
 static bool useActiveLaneMaskForControlFlow(TailFoldingStyle Style) {
-  return Style == TailFoldingStyle::DataAndControlFlow ||
-         Style == TailFoldingStyle::DataAndControlFlowWithoutRuntimeCheck;
+  return Style == TailFoldingStyle::DataAndControlFlow;
 }
 
 // Return true if \p OuterLp is an outer loop annotated with hints for explicit
@@ -3727,7 +3708,7 @@ LoopVectorizationCostModel::computeMaxVF(ElementCount UserVF, unsigned UserIC) {
   // by masking.
   // FIXME: look for a smaller MaxVF that does divide TC rather than masking.
   bool ContainsScalableVF = MaxFactors.ScalableVF.isNonZero();
-  setTailFoldingStyles(ContainsScalableVF, UserIC);
+  setTailFoldingStyle(ContainsScalableVF, UserIC);
   if (foldTailByMasking()) {
     if (foldTailWithEVL()) {
       LLVM_DEBUG(
@@ -8228,7 +8209,7 @@ VPlanPtr LoopVectorizationPlanner::tryToBuildVPlanWithVPRecipes(
   for (ElementCount VF : Range)
     IVUpdateMayOverflow |= !isIndvarOverflowCheckKnownFalse(&CM, VF);
 
-  TailFoldingStyle Style = CM.getTailFoldingStyle(IVUpdateMayOverflow);
+  TailFoldingStyle Style = CM.getTailFoldingStyle();
   // Use NUW for the induction increment if we proved that it won't overflow in
   // the vector loop or when not folding the tail. In the later case, we know
   // that the canonical induction increment will not overflow as the vector trip
@@ -8441,10 +8422,7 @@ VPlanPtr LoopVectorizationPlanner::tryToBuildVPlanWithVPRecipes(
     // TODO: Move checks to VPlanTransforms::addActiveLaneMask once
     // TailFoldingStyle is visible there.
     bool ForControlFlow = useActiveLaneMaskForControlFlow(Style);
-    bool WithoutRuntimeCheck =
-        Style == TailFoldingStyle::DataAndControlFlowWithoutRuntimeCheck;
-    VPlanTransforms::addActiveLaneMask(*Plan, ForControlFlow,
-                                       WithoutRuntimeCheck);
+    VPlanTransforms::addActiveLaneMask(*Plan, ForControlFlow);
   }
   VPlanTransforms::optimizeInductionExitUsers(*Plan, IVEndValues, PSE);
 

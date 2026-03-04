@@ -1789,6 +1789,7 @@ AArch64TargetLowering::AArch64TargetLowering(const TargetMachine &TM,
       setOperationAction(ISD::FREM, VT, Expand);
       setOperationAction(ISD::FPOW, VT, Expand);
       setOperationAction(ISD::FPOWI, VT, Expand);
+      setOperationAction(ISD::FCBRT, VT, Expand);
       setOperationAction(ISD::FCOS, VT, Expand);
       setOperationAction(ISD::FSIN, VT, Expand);
       setOperationAction(ISD::FSINCOS, VT, Expand);
@@ -2175,6 +2176,7 @@ void AArch64TargetLowering::addTypeForNEON(MVT VT) {
     setOperationAction(ISD::FCOSH, VT, Expand);
     setOperationAction(ISD::FTANH, VT, Expand);
     setOperationAction(ISD::FPOW, VT, Expand);
+    setOperationAction(ISD::FCBRT, VT, Expand);
     setOperationAction(ISD::FLOG, VT, Expand);
     setOperationAction(ISD::FLOG2, VT, Expand);
     setOperationAction(ISD::FLOG10, VT, Expand);
@@ -24297,10 +24299,16 @@ static SDValue performZExtDeinterleaveShuffleCombine(SDNode *N,
   if (ExtOffset != 0 && ExtOffset != VT.getVectorNumElements())
     return SDValue();
 
-  EVT InVT = N->getOperand(0).getOperand(0).getValueType();
   auto *Shuffle = dyn_cast<ShuffleVectorSDNode>(N->getOperand(0).getOperand(0));
-  if (!Shuffle ||
-      InVT.getVectorNumElements() != VT.getVectorNumElements() * 2 ||
+  if (!Shuffle)
+    return SDValue();
+
+  // From here it is safe to assume InVT is a fixed-length vector. The only
+  // legal scalable vector shuffle is splat, and it should have been lowered to
+  // vector_splat.
+  EVT InVT = N->getOperand(0).getOperand(0).getValueType();
+  assert(InVT.isFixedLengthVector() && "Unexpected scalable shufflevector.");
+  if (InVT.getVectorNumElements() != VT.getVectorNumElements() * 2 ||
       InVT.getScalarSizeInBits() * 2 != VT.getScalarSizeInBits())
     return SDValue();
 
@@ -24356,6 +24364,9 @@ static SDValue performZExtUZPCombine(SDNode *N, SelectionDAG &DAG) {
   if (Op.getOpcode() == ISD::EXTRACT_SUBVECTOR) {
     ExtOffset = Op.getConstantOperandVal(1);
     Op = Op.getOperand(0);
+    // Avoid NVCAST from a scalable vector to a fixed-size one.
+    if (Op.getValueType().isScalableVector())
+      return SDValue();
   }
 
   unsigned Shift = 0;
@@ -24382,6 +24393,9 @@ static SDValue performZExtUZPCombine(SDNode *N, SelectionDAG &DAG) {
     if (Op.getOpcode() == ISD::EXTRACT_SUBVECTOR) {
       ExtOffset = Op.getConstantOperandVal(1);
       Op = Op.getOperand(0);
+      // Avoid NVCAST from a scalable vector to a fixed-size one.
+      if (Op.getValueType().isScalableVector())
+        return SDValue();
     } else
       return SDValue();
   }
@@ -27965,7 +27979,7 @@ static SDValue performSelectCombine(SDNode *N,
   // ruled out to prevent the creation of setcc that need to be scalarized.
   EVT SrcVT = N0.getOperand(0).getValueType();
   if (SrcVT == MVT::i1 ||
-      (SrcVT.isFloatingPoint() && SrcVT.getSizeInBits() <= 16))
+      (SrcVT.isFloatingPoint() && SrcVT != MVT::f32 && SrcVT != MVT::f64))
     return SDValue();
 
   // If NumMaskElts == 0, the comparison is larger than select result. The

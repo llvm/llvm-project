@@ -966,11 +966,6 @@ bool CompilerInstance::ExecuteAction(FrontendAction &Act) {
   // DesiredStackSpace available.
   noteBottomOfStack();
 
-  llvm::scope_exit FinishDiagnosticClient([&]() {
-    // Notify the diagnostic client that all files were processed.
-    getDiagnosticClient().finish();
-  });
-
   raw_ostream &OS = getVerboseOutputStream();
 
   if (!Act.PrepareToExecute(*this))
