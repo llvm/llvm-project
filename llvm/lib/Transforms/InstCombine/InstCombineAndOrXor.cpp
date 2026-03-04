@@ -1150,6 +1150,29 @@ static Value *foldUnsignedUnderflowCheck(ICmpInst *ZeroICmp,
   return nullptr;
 }
 
+/// Fold (X ule ~Y) & (Y ugt ~X) -> false
+/// These conditions contradict: first says X+Y won't overflow,
+/// second says X+Y will overflow.
+static Value *foldContradictoryUnsignedOverflowCheck(ICmpInst *LHS, 
+                                                      ICmpInst *RHS,
+                                                      bool IsAnd,
+                                                      InstCombiner::BuilderTy &Builder) {
+  if (!IsAnd)
+    return nullptr;
+
+  CmpPredicate Pred1, Pred2;
+  Value *A, *B;
+                                                        
+  if (match(LHS, m_ICmp(Pred1, m_Value(B), m_Not(m_Value(A)))) &&
+      match(RHS, m_ICmp(Pred2, m_Specific(A), m_Not(m_Specific(B)))) &&
+      Pred1 == ICmpInst::ICMP_ULE && 
+      Pred2 == ICmpInst::ICMP_UGT) {
+    return ConstantInt::getFalse(LHS->getType());
+  }
+  
+  return nullptr;
+}
+
 struct IntPart {
   Value *From;
   unsigned StartBit;
@@ -3451,6 +3474,11 @@ Value *InstCombinerImpl::foldAndOrOfICmps(ICmpInst *LHS, ICmpInst *RHS,
     if (Value *X = foldUnsignedUnderflowCheck(LHS, RHS, IsAnd, Q, Builder))
       return X;
     if (Value *X = foldUnsignedUnderflowCheck(RHS, LHS, IsAnd, Q, Builder))
+      return X;
+
+    if (Value *X = foldContradictoryUnsignedOverflowCheck(LHS, RHS, IsAnd, Builder))
+      return X;
+    if (Value *X = foldContradictoryUnsignedOverflowCheck(RHS, LHS, IsAnd, Builder))
       return X;
   }
 
