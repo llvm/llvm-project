@@ -574,6 +574,11 @@ static cl::opt<std::string>
                         cl::desc("Select custom AMDGPU scheduling strategy."),
                         cl::Hidden, cl::init(""));
 
+static cl::opt<std::string> AMDGPUPostSchedStrategy(
+    "amdgpu-post-sched-strategy",
+    cl::desc("Select custom AMDGPU post scheduling strategy."), cl::Hidden,
+    cl::init(""));
+
 static cl::opt<bool> EnableRewritePartialRegUses(
     "amdgpu-enable-rewrite-partial-reg-uses",
     cl::desc("Enable rewrite partial reg uses pass"), cl::init(true),
@@ -703,11 +708,10 @@ static ScheduleDAGInstrs *createSIMachineScheduler(MachineSchedContext *C) {
   return new SIScheduleDAGMI(C);
 }
 
-static ScheduleDAGInstrs *
-createGCNMaxOccupancyMachineScheduler(MachineSchedContext *C) {
+static ScheduleDAGInstrs *createGCNMaxOccupancyMachineSchedulerImpl(
+    MachineSchedContext *C, std::unique_ptr<GCNSchedStrategy> Scheduler) {
   const GCNSubtarget &ST = C->MF->getSubtarget<GCNSubtarget>();
-  ScheduleDAGMILive *DAG =
-    new GCNScheduleDAGMILive(C, std::make_unique<GCNMaxOccupancySchedStrategy>(C));
+  ScheduleDAGMILive *DAG = new GCNScheduleDAGMILive(C, std::move(Scheduler));
   DAG->addMutation(createLoadClusterDAGMutation(DAG->TII, DAG->TRI));
   if (ST.shouldClusterStores())
     DAG->addMutation(createStoreClusterDAGMutation(DAG->TII, DAG->TRI));
@@ -717,6 +721,18 @@ createGCNMaxOccupancyMachineScheduler(MachineSchedContext *C) {
   DAG->addMutation(createAMDGPUBarrierLatencyDAGMutation(C->MF));
   DAG->addMutation(createAMDGPUHazardLatencyDAGMutation(C->MF));
   return DAG;
+}
+
+static ScheduleDAGInstrs *
+createGCNMaxOccupancyMachineScheduler(MachineSchedContext *C) {
+  return createGCNMaxOccupancyMachineSchedulerImpl(
+      C, std::make_unique<GCNMaxOccupancySchedStrategy>(C));
+}
+
+static ScheduleDAGInstrs *
+createPreRACriticalResourceMachineScheduler(MachineSchedContext *C) {
+  return createGCNMaxOccupancyMachineSchedulerImpl(
+      C, std::make_unique<GCNPreRACriticalResource>(C));
 }
 
 static ScheduleDAGInstrs *
@@ -803,6 +819,10 @@ static MachineSchedRegistry GCNILPSchedRegistry(
     "gcn-iterative-ilp",
     "Run GCN iterative scheduler for ILP scheduling (experimental)",
     createIterativeILPMachineScheduler);
+
+static MachineSchedRegistry GCNPreRACriticalResourceSchedRegistry(
+    "gcn-pre-resource", "Run GCN scheduler to minimize resource bubble pre-ra",
+    createPreRACriticalResourceMachineScheduler);
 
 LLVM_READNONE
 static StringRef getGPUOrDefault(const Triple &TT, StringRef GPU) {
@@ -1262,27 +1282,56 @@ GCNTargetMachine::createMachineScheduler(MachineSchedContext *C) const {
   if (SchedStrategy == "iterative-maxocc")
     return createIterativeGCNMaxOccupancyMachineScheduler(C);
 
+  if (SchedStrategy == "resource")
+    return createPreRACriticalResourceMachineScheduler(C);
+
   return createGCNMaxOccupancyMachineScheduler(C);
 }
 
-ScheduleDAGInstrs *
-GCNTargetMachine::createPostMachineScheduler(MachineSchedContext *C) const {
-  ScheduleDAGMI *DAG =
-      new GCNPostScheduleDAGMILive(C, std::make_unique<PostGenericScheduler>(C),
-                                   /*RemoveKillFlags=*/true);
+static ScheduleDAGInstrs *
+createPostMachineSchedulerImpl(MachineSchedContext *C,
+                               std::unique_ptr<PostGenericScheduler> Scheduler,
+                               CodeGenOptLevel OptLevel) {
+  ScheduleDAGMI *DAG = new GCNPostScheduleDAGMILive(C, std::move(Scheduler),
+                                                    /*RemoveKillFlags=*/true);
   const GCNSubtarget &ST = C->MF->getSubtarget<GCNSubtarget>();
   DAG->addMutation(createLoadClusterDAGMutation(DAG->TII, DAG->TRI));
   if (ST.shouldClusterStores())
     DAG->addMutation(createStoreClusterDAGMutation(DAG->TII, DAG->TRI));
   DAG->addMutation(createIGroupLPDAGMutation(AMDGPU::SchedulingPhase::PostRA));
-  if ((EnableVOPD.getNumOccurrences() ||
-       getOptLevel() >= CodeGenOptLevel::Less) &&
+  if ((EnableVOPD.getNumOccurrences() || OptLevel >= CodeGenOptLevel::Less) &&
       EnableVOPD)
     DAG->addMutation(createVOPDPairingMutation());
   DAG->addMutation(createAMDGPUExportClusteringDAGMutation());
   DAG->addMutation(createAMDGPUBarrierLatencyDAGMutation(C->MF));
   DAG->addMutation(createAMDGPUHazardLatencyDAGMutation(C->MF));
   return DAG;
+}
+
+static ScheduleDAGInstrs *
+createPostMachineSchedulerDefault(MachineSchedContext *C,
+                                  CodeGenOptLevel OptLevel) {
+  return createPostMachineSchedulerImpl(
+      C, std::make_unique<PostGenericScheduler>(C), OptLevel);
+}
+
+static ScheduleDAGInstrs *
+createPostMachineSchedulerResource(MachineSchedContext *C,
+                                   CodeGenOptLevel OptLevel) {
+  return createPostMachineSchedulerImpl(
+      C, std::make_unique<GCNPostRACriticalResource>(C), OptLevel);
+}
+
+ScheduleDAGInstrs *
+GCNTargetMachine::createPostMachineScheduler(MachineSchedContext *C) const {
+  Attribute SchedStrategyAttr =
+      C->MF->getFunction().getFnAttribute("amdgpu-post-sched-strategy");
+  StringRef SchedStrategy = SchedStrategyAttr.isValid()
+                                ? SchedStrategyAttr.getValueAsString()
+                                : AMDGPUPostSchedStrategy;
+  if (SchedStrategy == "resouce")
+    return createPostMachineSchedulerResource(C, getOptLevel());
+  return createPostMachineSchedulerDefault(C, getOptLevel());
 }
 //===----------------------------------------------------------------------===//
 // AMDGPU Legacy Pass Setup

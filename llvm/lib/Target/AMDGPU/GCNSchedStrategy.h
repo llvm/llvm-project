@@ -126,6 +126,10 @@ public:
 
   unsigned VGPRLimitBias = 0;
 
+  bool TrackRemCriticalRes;
+
+  unsigned RemCriticalRes;
+
   GCNSchedStrategy(const MachineSchedContext *C);
 
   SUnit *pickNode(bool &IsTopNode) override;
@@ -150,11 +154,17 @@ public:
   GCNDownwardRPTracker *getDownwardTracker() { return &DownwardTracker; }
 
   GCNUpwardRPTracker *getUpwardTracker() { return &UpwardTracker; }
+
+  void setTrackRemainderCriticalRes(const GCNSubtarget &ST, bool B) {
+    TrackRemCriticalRes = B && ST.hasGFX940Insts();
+  }
+
+  void updateRemainderCriticalRes();
 };
 
 /// The goal of this scheduling strategy is to maximize kernel occupancy (i.e.
 /// maximum number of waves per simd).
-class GCNMaxOccupancySchedStrategy final : public GCNSchedStrategy {
+class GCNMaxOccupancySchedStrategy : public GCNSchedStrategy {
 public:
   GCNMaxOccupancySchedStrategy(const MachineSchedContext *C,
                                bool IsLegacyScheduler = false);
@@ -180,6 +190,46 @@ protected:
 
 public:
   GCNMaxMemoryClauseSchedStrategy(const MachineSchedContext *C);
+};
+
+class GCNPreRACriticalResource final : public GCNMaxOccupancySchedStrategy {
+protected:
+  bool tryCandidate(SchedCandidate &Cand, SchedCandidate &TryCand,
+                    SchedBoundary *Zone) const override;
+
+public:
+  GCNPreRACriticalResource(const MachineSchedContext *C,
+                           bool IsLegacyScheduler = false)
+      : GCNMaxOccupancySchedStrategy(C, IsLegacyScheduler) {}
+};
+
+class GCNPostRACriticalResource final : public PostGenericScheduler {
+  ScheduleDAGMutation *IGLPMutation = nullptr;
+
+protected:
+  bool tryCandidate(SchedCandidate &Cand, SchedCandidate &TryCand) override;
+
+public:
+  GCNPostRACriticalResource(const MachineSchedContext *C)
+      : PostGenericScheduler(C) {}
+
+  void initialize(ScheduleDAGMI *Dag) override;
+
+  void schedNode(SUnit *SU, bool IsTopNode) override;
+
+  bool TrackRemCriticalRes;
+
+  unsigned RemCriticalRes;
+
+  void setIGLPDAGMutation(ScheduleDAGMutation *Mutation) {
+    IGLPMutation = Mutation;
+  }
+
+  void setTrackRemainderCriticalRes(const GCNSubtarget &ST, bool B) {
+    TrackRemCriticalRes = B && ST.hasGFX940Insts();
+  }
+
+  void updateRemainderCriticalRes();
 };
 
 class ScheduleMetrics {
@@ -797,6 +847,8 @@ public:
   GCNPostScheduleDAGMILive(MachineSchedContext *C,
                            std::unique_ptr<MachineSchedStrategy> S,
                            bool RemoveKillFlags);
+
+  bool hasIGLPInstrs() const { return HasIGLPInstrs; }
 };
 
 } // End namespace llvm
