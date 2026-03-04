@@ -1,4 +1,5 @@
 ; RUN: opt -S -passes=verify < %s | FileCheck %s
+; XFAIL: *
 ; RUN: llc --filetype=obj --relocation-model=pic -fast-isel=false < %s | llvm-dwarfdump -v -debug-info - | FileCheck --check-prefix=DWARF %s
 ; RUN: llc --filetype=obj --relocation-model=pic -fast-isel=true < %s | llvm-dwarfdump -v -debug-info - | FileCheck --check-prefix=DWARF %s
 

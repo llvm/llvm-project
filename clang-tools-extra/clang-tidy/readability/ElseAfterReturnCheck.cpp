@@ -39,6 +39,12 @@ private:
   const SourceManager &SM;
 };
 
+AST_MATCHER_P(Stmt, stripLabelLikeStatements,
+              ast_matchers::internal::Matcher<Stmt>, InnerMatcher) {
+  const Stmt *S = Node.stripLabelLikeStatements();
+  return InnerMatcher.matches(*S, Finder, Builder);
+}
+
 } // namespace
 
 static constexpr char InterruptingStr[] = "interrupting";
@@ -169,16 +175,18 @@ void ElseAfterReturnCheck::registerMatchers(MatchFinder *Finder) {
   const auto InterruptsControlFlow = stmt(anyOf(
       returnStmt().bind(InterruptingStr), continueStmt().bind(InterruptingStr),
       breakStmt().bind(InterruptingStr), cxxThrowExpr().bind(InterruptingStr)));
-  Finder->addMatcher(
-      compoundStmt(
-          forEach(ifStmt(unless(isConstexpr()), unless(isConsteval()),
-                         hasThen(stmt(
-                             anyOf(InterruptsControlFlow,
-                                   compoundStmt(has(InterruptsControlFlow))))),
-                         hasElse(stmt().bind("else")))
-                      .bind("if")))
-          .bind("cs"),
-      this);
+
+  const auto IfWithInterruptingThenElse =
+      ifStmt(unless(isConstexpr()), unless(isConsteval()),
+             hasThen(stmt(anyOf(InterruptsControlFlow,
+                                compoundStmt(has(InterruptsControlFlow))))),
+             hasElse(stmt().bind("else")))
+          .bind("if");
+
+  Finder->addMatcher(compoundStmt(forEach(stripLabelLikeStatements(
+                                      IfWithInterruptingThenElse)))
+                         .bind("cs"),
+                     this);
 }
 
 static bool hasPreprocessorBranchEndBetweenLocations(

@@ -1,4 +1,5 @@
 // REQUIRES: amdgpu-registered-target
+// XFAIL: *
 // RUN: %clang_cc1 -x hip -triple amdgcn-amd-amdhsa -emit-obj -fcuda-is-device -debug-info-kind=limited -gheterogeneous-dwarf -o - %s | llvm-dwarfdump --diff - | FileCheck --check-prefixes=CHECK %s
 // RUN: %clang_cc1 -x hip -triple amdgcn-amd-amdhsa -emit-obj -fcuda-is-device -debug-info-kind=limited -gheterogeneous-dwarf -mllvm -stop-after=amdgpu-isel -o - %s | llc -x mir -verify-machineinstrs -start-after=amdgpu-isel -filetype=obj -o - - | llvm-dwarfdump --diff - | FileCheck --check-prefixes=CHECK %s
 

@@ -67,6 +67,44 @@ def simm10_unsigned : RISCVOp {
   }];
 }
 
+def SImm10PLI_HAsmOperand : SImmAsmOperand<10, "PLI_H"> {
+  let RenderMethod = "addSImm10UnsignedOperands";
+}
+
+def SImm10PLI_WAsmOperand : SImmAsmOperand<10, "PLI_W"> {
+  let RenderMethod = "addSImm10UnsignedOperands";
+}
+
+// A 10-bit signed immediate to be splatted to 16 bit elements allowing range
+// [-512, 511] and [65025,65535] but represented as [-512, 511].
+def simm10_pli_h : RISCVOp {
+  let ParserMatchClass = SImm10PLI_HAsmOperand;
+  let EncoderMethod = "getImmOpValue";
+  let DecoderMethod = "decodeSImmOperand<10>";
+  let OperandType = "OPERAND_SIMM10";
+  let MCOperandPredicate = [{
+    int64_t Imm;
+    if (!MCOp.evaluateAsConstantImm(Imm))
+      return false;
+    return isInt<10>(Imm);
+  }];
+}
+
+// A 10-bit signed immediate to be splatted to 32 bit elements allowing range
+// [-512, 511] and [4294966784,4294967295]
+def simm10_pli_w : RISCVOp {
+  let ParserMatchClass = SImm10PLI_WAsmOperand;
+  let EncoderMethod = "getImmOpValue";
+  let DecoderMethod = "decodeSImmOperand<10>";
+  let OperandType = "OPERAND_SIMM10";
+  let MCOperandPredicate = [{
+    int64_t Imm;
+    if (!MCOp.evaluateAsConstantImm(Imm))
+      return false;
+    return isInt<10>(Imm);
+  }];
+}
+
 //===----------------------------------------------------------------------===//
 // Instruction class templates
 //===----------------------------------------------------------------------===//
@@ -89,8 +127,8 @@ class RVPLoadImm_i<bits<7> funct7, dag ins, string opcodestr,
 }
 
 // Base for pli.h/w.
-class PLI_i<bits<7> funct7, string opcodestr>
-    : RVPLoadImm_i<funct7, (ins simm10:$imm10), opcodestr, "$rd, $imm10"> {
+class PLI_i<bits<7> funct7, string opcodestr, DAGOperand imm>
+    : RVPLoadImm_i<funct7, (ins imm:$imm10), opcodestr, "$rd, $imm10"> {
   bits<10> imm10;
 
   let Inst{24-16} = imm10{8-0};
@@ -517,9 +555,9 @@ let Predicates = [HasStdExtP, IsRV64] in {
 } // Predicates = [HasStdExtP, IsRV64]
 
 let Predicates = [HasStdExtP] in
-def PLI_H : PLI_i<0b1011000, "pli.h">;
+def PLI_H : PLI_i<0b1011000, "pli.h", simm10_pli_h>;
 let Predicates = [HasStdExtP, IsRV64] in
-def PLI_W : PLI_i<0b1011001, "pli.w">;
+def PLI_W : PLI_i<0b1011001, "pli.w", simm10_pli_w>;
 let Predicates = [HasStdExtP] in {
   def PLI_B : RVPLoadImm_i<0b1011010, (ins simm8_unsigned:$imm8), "pli.b",
                            "$rd, $imm8"> {
@@ -1190,7 +1228,7 @@ let Predicates = [HasStdExtP, IsRV64] in {
 } // Predicates = [HasStdExtP, IsRV64]
 
 let Predicates = [HasStdExtP, IsRV32] in {
-  def PLI_DH : RVPPairLoadImm_i<0b0011000, (ins simm10:$imm10), "pli.dh",
+  def PLI_DH : RVPPairLoadImm_i<0b0011000, (ins simm10_pli_h:$imm10), "pli.dh",
                                 "$rd, $imm10"> {
     bits<10> imm10;
 
