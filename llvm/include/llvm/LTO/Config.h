@@ -54,9 +54,9 @@ struct Config {
   // LTO will register both lists of plugins, but
   // if an LTO client has already loaded a set of plugins,
   // they should register them via LoadedPassPlugins.
-  // This is currently used by distributed thin-lto.
-  std::vector<std::string> PassPluginFilenames;
+  // LoadedPassPlugins is currently used by distributed thin-lto.
   std::vector<llvm::PassPlugin *> LoadedPassPlugins;
+  std::vector<std::string> PassPluginFilenames;
   /// For adding passes that run right before codegen.
   std::function<void(legacy::PassManager &)> PreCodeGenPassesHook;
   std::optional<Reloc::Model> RelocModel = Reloc::PIC_;
