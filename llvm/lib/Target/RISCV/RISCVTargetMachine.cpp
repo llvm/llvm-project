@@ -562,6 +562,9 @@ void RISCVPassConfig::addPreSched2() {
 
   // Emit KCFI checks for indirect calls.
   addPass(createKCFIPass());
+  // Running the make compressible pass here exposes more opportunities for the
+  // load/store optimizer pass.
+  addPass(createRISCVMakeCompressibleOptPass());
   if (TM->getOptLevel() != CodeGenOptLevel::None)
     addPass(createRISCVLoadStoreOptPass());
 }
@@ -582,7 +585,6 @@ void RISCVPassConfig::addPreEmitPass() {
   // prevent the adjusted offset exceeding the branch range.
   addPass(createRISCVIndirectBranchTrackingPass());
   addPass(&BranchRelaxationPassID);
-  addPass(createRISCVMakeCompressibleOptPass());
 }
 
 void RISCVPassConfig::addPreEmitPass2() {
