@@ -789,7 +789,7 @@ checkDependencies(Loop &Root, const BasicBlockSet &SubLoopBlocks,
 
     size_t NumInsts = CurrentLoadsAndStores.size();
     for (size_t I = 0; I < NumInsts; ++I) {
-      for (size_t J = I; J < NumInsts; ++J) {
+      for (size_t J = I + 1; J < NumInsts; ++J) {
         if (!checkDependency(CurrentLoadsAndStores[I], CurrentLoadsAndStores[J],
                              LoopDepth, CurLoopDepth, true, DI))
           return false;
