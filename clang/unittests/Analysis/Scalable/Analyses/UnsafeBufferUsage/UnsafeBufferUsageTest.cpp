@@ -460,7 +460,7 @@ TEST_F(UnsafeBufferUsageTest, UnsafePointerInGlobalVariableInitializer) {
 }
 
 TEST_F(UnsafeBufferUsageTest, UnsafePointerInFieldInitializer) {
-  auto Sum = setUpTest<>(R"cpp(
+  auto Sum = setUpTest(R"cpp(
       int *gp;
       struct Foo {
         int field = gp[5];
