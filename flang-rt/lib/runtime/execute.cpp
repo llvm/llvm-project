@@ -115,10 +115,10 @@ std::int64_t TerminationCheck(std::int64_t status, const Descriptor *cmdstat,
   if (status == 9009) {
     // cmd.exe returns status code 9009 for "command not found" error
     if (!cmdstat) {
-      Crash(sourceFile, line, "Command not found.");
+      terminator.Crash("Command not found.");
     } else {
-      StoreIntToDescriptor(cmdstat, COMMAND_NOT_FOUND_ERR, sourceFile, line);
-      CopyCharsToDescriptor(cmdmsg, "Command not found.", sourceFile, line);
+      StoreIntToDescriptor(cmdstat, COMMAND_NOT_FOUND_ERR, terminator);
+      CheckAndCopyCharsToDescriptor(cmdmsg, "Command not found.");
     }
   }
 #else
@@ -255,7 +255,6 @@ void RTNAME(ExecuteCommandLine)(const Descriptor &command, bool wait,
     if (std::mbstowcs(wcmd, newCmdWin, sizeNeeded) == static_cast<size_t>(-1)) {
       terminator.Crash("Char to wide char failed for newCmd");
     }
-    FreeMemory(newCmdWin);
 
     if (CreateProcessW(nullptr, wcmd, nullptr, nullptr, FALSE, 0, nullptr,
             nullptr, &si, &pi)) {
@@ -308,6 +307,11 @@ void RTNAME(ExecuteCommandLine)(const Descriptor &command, bool wait,
     }
 #endif
   }
+
+#ifdef _WIN32
+  FreeMemory(newCmdWin);
+#endif
+
   // Deallocate memory if EnsureNullTerminated dynamically allocated memory
   if (newCmd != command.OffsetElement()) {
     FreeMemory(newCmd);
