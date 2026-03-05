@@ -156,6 +156,11 @@ static bool isaGEP(const Value *V) {
   return isa<StructuredGEPInst>(V) || isa<GetElementPtrInst>(V);
 }
 
+static bool isVectorOfPointers(Type *Ty) {
+  auto *VecTy = dyn_cast<FixedVectorType>(Ty);
+  return VecTy && VecTy->getElementType()->isPointerTy();
+}
+
 class SPIRVEmitIntrinsics
     : public ModulePass,
       public InstVisitor<SPIRVEmitIntrinsics, Instruction *> {
@@ -298,6 +303,8 @@ class SPIRVEmitIntrinsics
   bool postprocessTypes(Module &M);
   bool processFunctionPointers(Module &M);
   void parseFunDeclarations(Module &M);
+  bool scalarizeVectorOfPointersArgs(Module &M);
+
   void useRoundingMode(ConstrainedFPIntrinsic *FPI, IRBuilder<> &B);
 
   void emitUnstructuredLoopControls(Function &F, IRBuilder<> &B);
@@ -357,6 +364,8 @@ public:
   Instruction *visitAtomicCmpXchgInst(AtomicCmpXchgInst &I);
   Instruction *visitUnreachableInst(UnreachableInst &I);
   Instruction *visitCallInst(CallInst &I);
+  Instruction *visitPtrToIntInst(PtrToIntInst &I);
+  Instruction *visitIntToPtrInst(IntToPtrInst &I);
 
   StringRef getPassName() const override { return "SPIRV emit intrinsics"; }
 
@@ -2106,6 +2115,58 @@ SPIRVEmitIntrinsics::visitExtractElementInst(ExtractElementInst &I) {
   return NewI;
 }
 
+Instruction *SPIRVEmitIntrinsics::visitPtrToIntInst(PtrToIntInst &I) {
+  // Scalarize ptrtoint on vectors of pointers, since SPIR-V does not support
+  // vectors of pointers.
+  Type *SrcTy = I.getOperand(0)->getType();
+  auto *VecTy = dyn_cast<FixedVectorType>(SrcTy);
+
+  if (!VecTy || !VecTy->getElementType()->isPointerTy())
+    return &I;
+
+  IRBuilder<> B(I.getParent());
+  B.SetInsertPoint(&I);
+
+  unsigned NumElems = VecTy->getNumElements();
+  Type *ElemIntTy = cast<VectorType>(I.getType())->getElementType();
+  Value *Result = PoisonValue::get(I.getType());
+
+  for (unsigned Idx = 0; Idx < NumElems; ++Idx) {
+    Value *Elem = B.CreateExtractElement(I.getOperand(0), B.getInt32(Idx));
+    Value *Conv = B.CreatePtrToInt(Elem, ElemIntTy);
+    Result = B.CreateInsertElement(Result, Conv, B.getInt32(Idx));
+  }
+
+  replaceAllUsesWithAndErase(B, &I, cast<Instruction>(Result));
+  return cast<Instruction>(Result);
+}
+
+Instruction *SPIRVEmitIntrinsics::visitIntToPtrInst(IntToPtrInst &I) {
+  // Scalarize inttoptr producing vectors of pointers, since SPIR-V does not
+  // support vectors of pointers.
+  Type *DstTy = I.getType();
+  auto *VecTy = dyn_cast<FixedVectorType>(DstTy);
+
+  if (!VecTy || !VecTy->getElementType()->isPointerTy())
+    return &I;
+
+  IRBuilder<> B(I.getParent());
+  B.SetInsertPoint(&I);
+
+  unsigned NumElems = VecTy->getNumElements();
+  Type *ElemPtrTy = VecTy->getElementType();
+  Value *Result = PoisonValue::get(I.getType());
+
+  for (unsigned Idx = 0; Idx < NumElems; ++Idx) {
+    Value *Elem = B.CreateExtractElement(I.getOperand(0), B.getInt32(Idx));
+    Value *Conv = B.CreateIntToPtr(Elem, ElemPtrTy);
+    Result = B.CreateInsertElement(Result, Conv, B.getInt32(Idx));
+  }
+
+  replaceAllUsesWithAndErase(B, &I, cast<Instruction>(Result));
+  return cast<Instruction>(Result);
+}
+
 Instruction *SPIRVEmitIntrinsics::visitInsertValueInst(InsertValueInst &I) {
   IRBuilder<> B(I.getParent());
   B.SetInsertPoint(&I);
@@ -3281,9 +3342,144 @@ void SPIRVEmitIntrinsics::parseFunDeclarations(Module &M) {
   }
 }
 
+bool SPIRVEmitIntrinsics::scalarizeVectorOfPointersArgs(Module &M) {
+  bool Changed = false;
+  SmallVector<Function *> FuncsToProcess;
+
+  for (auto &F : M) {
+    if (F.isDeclaration() || F.isIntrinsic())
+      continue;
+    for (auto &Arg : F.args()) {
+      if (isVectorOfPointers(Arg.getType())) {
+        FuncsToProcess.push_back(&F);
+        break;
+      }
+    }
+  }
+
+  for (Function *OldF : FuncsToProcess) {
+    // Build the new function type with scalarized vector-of-pointer arguments
+    SmallVector<Type *, 8> NewArgTypes;
+
+    for (unsigned I = 0; I < OldF->arg_size(); ++I) {
+      Type *ArgTy = OldF->getArg(I)->getType();
+      if (isVectorOfPointers(ArgTy)) {
+        auto *VecTy = cast<FixedVectorType>(ArgTy);
+        unsigned NumElems = VecTy->getNumElements();
+        Type *ElemTy = VecTy->getElementType();
+        for (unsigned J = 0; J < NumElems; ++J) {
+          NewArgTypes.push_back(ElemTy);
+        }
+      } else {
+        NewArgTypes.push_back(ArgTy);
+      }
+    }
+
+    FunctionType *NewFTy =
+        FunctionType::get(OldF->getReturnType(), NewArgTypes, OldF->isVarArg());
+    Function *NewF =
+        Function::Create(NewFTy, OldF->getLinkage(), OldF->getAddressSpace(),
+                         OldF->getName() + ".scalarized", &M);
+    NewF->setCallingConv(OldF->getCallingConv());
+    NewF->copyAttributesFrom(OldF);
+    // Clear parameter attributes since the signature changed
+    NewF->setAttributes(AttributeList());
+
+    // Move basic blocks from old function to new
+    NewF->splice(NewF->begin(), OldF);
+
+    // Build mapping from old arguments to new scalar arguments and transform
+    // uses of vector-of-pointer arguments inline
+    SmallVector<Instruction *, 8> ToErase;
+    unsigned NewArgI = 0;
+    for (unsigned I = 0; I < OldF->arg_size(); ++I) {
+      Argument *OldArg = OldF->getArg(I);
+      if (isVectorOfPointers(OldArg->getType())) {
+        auto *VecTy = cast<FixedVectorType>(OldArg->getType());
+        unsigned NumElems = VecTy->getNumElements();
+        SmallVector<Value *, 4> ScalarElems;
+        for (unsigned J = 0; J < NumElems; ++J) {
+          Argument *NewArg = NewF->getArg(NewArgI++);
+          NewArg->setName(OldArg->getName() + ".elem" + Twine(J));
+          ScalarElems.push_back(NewArg);
+        }
+        // Scalarize all uses of the old vector argument inline
+        for (User *U : make_early_inc_range(OldArg->users())) {
+          if (auto *EE = dyn_cast<ExtractElementInst>(U)) {
+            // extractelement <N x ptr> %v, i32 K -> scalar element K
+            if (auto *IdxC = dyn_cast<ConstantInt>(EE->getIndexOperand())) {
+              unsigned Idx = IdxC->getZExtValue();
+              if (Idx < NumElems) {
+                EE->replaceAllUsesWith(ScalarElems[Idx]);
+                ToErase.push_back(EE);
+              }
+            }
+          } else if (auto *PTI = dyn_cast<PtrToIntInst>(U)) {
+            // ptrtoint <N x ptr> %v to <N x iK> -> scalarize
+            auto *ResultTy = cast<FixedVectorType>(PTI->getType());
+            Type *ElemIntTy = ResultTy->getElementType();
+            IRBuilder<> B(PTI);
+            Value *Result = PoisonValue::get(ResultTy);
+            for (unsigned Idx = 0; Idx < NumElems; ++Idx) {
+              Value *Conv = B.CreatePtrToInt(ScalarElems[Idx], ElemIntTy);
+              Result = B.CreateInsertElement(Result, Conv, B.getInt32(Idx));
+            }
+            PTI->replaceAllUsesWith(Result);
+            ToErase.push_back(PTI);
+          }
+        }
+      } else {
+        Argument *NewArg = NewF->getArg(NewArgI++);
+        NewArg->setName(OldArg->getName());
+        OldArg->replaceAllUsesWith(NewArg);
+      }
+    }
+
+    for (Instruction *I : ToErase)
+      I->eraseFromParent();
+
+    SmallVector<CallInst *, 8> CallsToUpdate;
+    for (User *U : make_early_inc_range(OldF->users())) {
+      if (auto *CI = dyn_cast<CallInst>(U))
+        if (CI->getCalledFunction() == OldF)
+          CallsToUpdate.push_back(CI);
+    }
+
+    for (CallInst *CI : CallsToUpdate) {
+      SmallVector<Value *, 8> NewArgs;
+      IRBuilder<> CallB(CI);
+      for (unsigned I = 0; I < CI->arg_size(); ++I) {
+        Value *Arg = CI->getArgOperand(I);
+        if (isVectorOfPointers(Arg->getType())) {
+          auto *VecTy = cast<FixedVectorType>(Arg->getType());
+          unsigned NumElems = VecTy->getNumElements();
+          for (unsigned J = 0; J < NumElems; ++J) {
+            Value *Elem = CallB.CreateExtractElement(Arg, CallB.getInt32(J));
+            NewArgs.push_back(Elem);
+          }
+        } else {
+          NewArgs.push_back(Arg);
+        }
+      }
+      CallInst *NewCI = CallB.CreateCall(NewF, NewArgs);
+      NewCI->setCallingConv(NewF->getCallingConv());
+      if (!CI->getType()->isVoidTy())
+        CI->replaceAllUsesWith(NewCI);
+      CI->eraseFromParent();
+    }
+
+    NewF->takeName(OldF);
+    OldF->eraseFromParent();
+    Changed = true;
+  }
+
+  return Changed;
+}
+
 bool SPIRVEmitIntrinsics::runOnModule(Module &M) {
   bool Changed = false;
 
+  Changed |= scalarizeVectorOfPointersArgs(M);
   parseFunDeclarations(M);
   insertConstantsForFPFastMathDefault(M);
   GVUsers.init(M);
