@@ -423,17 +423,13 @@ CodeGenFunction::generateAwaitSuspendWrapper(Twine const &CoroName,
 
   ASTContext &C = getContext();
 
-  FunctionArgList args;
-
   auto *AwaiterDecl =
       ImplicitParamDecl::Create(C, C.VoidPtrTy, ImplicitParamKind::Other);
   auto *FrameDecl =
       ImplicitParamDecl::Create(C, C.VoidPtrTy, ImplicitParamKind::Other);
   QualType ReturnTy = S.getSuspendExpr()->getType();
 
-  args.push_back(AwaiterDecl);
-  args.push_back(FrameDecl);
-
+  FunctionArgList args{AwaiterDecl, FrameDecl};
   const CGFunctionInfo &FI =
       CGM.getTypes().arrangeBuiltinFunctionDeclaration(ReturnTy, args);
 

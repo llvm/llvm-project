@@ -4305,16 +4305,13 @@ void CodeGenFunction::EmitCfiCheckStub() {
   ASTContext &C = getContext();
   QualType QInt64Ty = C.getIntTypeForBitwidth(64, false);
 
-  FunctionArgList FnArgs;
   auto *ArgCallsiteTypeId =
       ImplicitParamDecl::Create(C, QInt64Ty, ImplicitParamKind::Other);
   auto *ArgAddr =
       ImplicitParamDecl::Create(C, C.VoidPtrTy, ImplicitParamKind::Other);
   auto *ArgCFICheckFailData =
       ImplicitParamDecl::Create(C, C.VoidPtrTy, ImplicitParamKind::Other);
-  FnArgs.push_back(ArgCallsiteTypeId);
-  FnArgs.push_back(ArgAddr);
-  FnArgs.push_back(ArgCFICheckFailData);
+  FunctionArgList FnArgs{ArgCallsiteTypeId, ArgAddr, ArgCFICheckFailData};
   const CGFunctionInfo &FI =
       CGM.getTypes().arrangeBuiltinFunctionDeclaration(C.VoidTy, FnArgs);
 
@@ -4353,14 +4350,12 @@ void CodeGenFunction::EmitCfiCheckFail() {
        SanitizerKind::SO_CFIDerivedCast, SanitizerKind::SO_CFIUnrelatedCast,
        SanitizerKind::SO_CFIICall},
       CheckHandler);
-  FunctionArgList Args;
   auto *ArgData = ImplicitParamDecl::Create(
       getContext(), getContext().VoidPtrTy, ImplicitParamKind::Other);
   auto *ArgAddr = ImplicitParamDecl::Create(
       getContext(), getContext().VoidPtrTy, ImplicitParamKind::Other);
-  Args.push_back(ArgData);
-  Args.push_back(ArgAddr);
 
+  FunctionArgList Args{ArgData, ArgAddr};
   const CGFunctionInfo &FI =
     CGM.getTypes().arrangeBuiltinFunctionDeclaration(getContext().VoidTy, Args);
 
