@@ -191,11 +191,11 @@ static bool isContiguousMemRef(MemRefType memType) {
 /// `tensor.extract`s. To avoid out-of-bounds memory accesses, these
 /// loads/extracts are made conditional using `scf.if` ops.
 ///
-/// When the source memref is non-contiguous (e.g., from a `memref.subview`),
-/// the 1-D gather offset is delinearized back into N-D indices using the
-/// memref's shape. This is necessary because the gather offset was linearized
-/// assuming dense row-major layout; on strided memrefs, adding the linear
-/// offset to the last index does not correctly wrap to the next row.
+/// When the source memref has a non-identity layout (e.g., from a
+/// `memref.subview`), the gather index is combined with the base offsets via
+/// linearize-then-delinearize to produce correct N-D load indices:
+///   flatIdx = linearize(baseOffsets) + gatherIndex
+///   loadIndices = delinearize(flatIdx, memrefShape)
 struct Gather1DToConditionalLoads : OpRewritePattern<vector::GatherOp> {
   using Base::Base;
 
@@ -216,8 +216,8 @@ struct Gather1DToConditionalLoads : OpRewritePattern<vector::GatherOp> {
     Value condMask = op.getMask();
     Value base = op.getBase();
 
-    // Check if the source memref has non-contiguous strides, requiring
-    // delinearization of the gather indices.
+    // Check if the source memref has a non-identity layout, requiring
+    // linearize/delinearize to compute correct N-D load indices.
     bool needsDelinearization = false;
     if (auto memType = dyn_cast<MemRefType>(base.getType())) {
       // vector.load requires the most minor memref dim to have unit stride
@@ -239,11 +239,15 @@ struct Gather1DToConditionalLoads : OpRewritePattern<vector::GatherOp> {
     auto baseOffsets = llvm::to_vector(op.getOffsets());
     Value lastBaseOffset = baseOffsets.back();
 
-    // Compute the delinearization basis once, outside the per-element loop.
-    SmallVector<Value> origBaseOffsets(baseOffsets);
+    // Compute the basis (memref shape) and linearized base offset once,
+    // outside the per-element loop.
     SmallVector<OpFoldResult> basis;
-    if (needsDelinearization)
+    Value linearizedBase;
+    if (needsDelinearization) {
       basis = memref::getMixedSizes(rewriter, loc, base);
+      linearizedBase = affine::AffineLinearizeIndexOp::create(
+          rewriter, loc, baseOffsets, basis, /*disjoint=*/false);
+    }
 
     Value result = op.getPassThru();
     BoolAttr nontemporalAttr = nullptr;
@@ -257,14 +261,17 @@ struct Gather1DToConditionalLoads : OpRewritePattern<vector::GatherOp> {
       Value index = vector::ExtractOp::create(rewriter, loc, indexVec, thisIdx);
 
       if (needsDelinearization) {
-        // The gather offset was linearized using dense row-major order:
-        //   offset = idx[0] * dim[1] * ... * dim[n] + ... + idx[n]
-        // Recover the N-D indices by delinearizing with the memref shape.
+        // The gather index offsets the innermost dimension. Combine with
+        // the base offsets by linearizing, adding the gather index, then
+        // delinearizing back to N-D indices:
+        //   flatIdx = linearize(baseOffsets, shape) + gatherIndex
+        //   loadIndices = delinearize(flatIdx, shape)
+        Value flatIdx =
+            rewriter.createOrFold<arith::AddIOp>(loc, linearizedBase, index);
         auto delinOp = affine::AffineDelinearizeIndexOp::create(
-            rewriter, loc, index, basis, /*hasOuterBound=*/true);
+            rewriter, loc, flatIdx, basis, /*hasOuterBound=*/true);
         for (int64_t d = 0, rank = baseOffsets.size(); d < rank; ++d)
-          baseOffsets[d] = rewriter.createOrFold<arith::AddIOp>(
-              loc, origBaseOffsets[d], delinOp.getResult(d));
+          baseOffsets[d] = delinOp.getResult(d);
       } else {
         baseOffsets.back() =
             rewriter.createOrFold<arith::AddIOp>(loc, lastBaseOffset, index);
