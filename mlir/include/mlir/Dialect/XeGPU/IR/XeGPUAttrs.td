@@ -254,7 +254,7 @@ def DistributeLayoutAttr: AttrInterface<"DistributeLayoutAttr"> {
                     "xegpu::DistributeLayoutAttr",
                     "collapseDims",
                     (ins "SmallVector<int64_t>": $dimGroup)>,
-    InterfaceMethod<[{Derive a new layout by trasposing it using `permutation`.}],
+    InterfaceMethod<[{Derive a new layout by trasnposing it using `permutation`.}],
                     "xegpu::DistributeLayoutAttr",
                     "transposeDims",
                     (ins "ArrayRef<int64_t>": $permutation)>,

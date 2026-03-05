@@ -713,7 +713,9 @@ bool LayoutAttr::isTransposeOf(const xegpu::DistributeLayoutAttr &other,
     return checkTranspose(getEffectiveSgLayoutAsInt(),
                           other.getEffectiveSgLayoutAsInt(), perm) &&
            checkTranspose(getEffectiveSgDataAsInt(),
-                          other.getEffectiveSgDataAsInt(), perm);
+                          other.getEffectiveSgDataAsInt(), perm) &&
+           checkTranspose(getEffectiveOrderAsInt(),
+                          other.getEffectiveOrderAsInt(), perm);
   if (kind == xegpu::LayoutKind::InstData)
     return checkTranspose(getEffectiveInstDataAsInt(),
                           other.getEffectiveInstDataAsInt(), perm);
@@ -721,7 +723,9 @@ bool LayoutAttr::isTransposeOf(const xegpu::DistributeLayoutAttr &other,
     return checkTranspose(getEffectiveLaneLayoutAsInt(),
                           other.getEffectiveLaneLayoutAsInt(), perm) &&
            checkTranspose(getEffectiveLaneDataAsInt(),
-                          other.getEffectiveLaneDataAsInt(), perm);
+                          other.getEffectiveLaneDataAsInt(), perm) &&
+           checkTranspose(getEffectiveOrderAsInt(),
+                          other.getEffectiveOrderAsInt(), perm);
 
   return false;
 }
