@@ -1011,11 +1011,12 @@ define i8 @pow2_trunc_fail(i32 %x, i32 %a){
 ; CHECK-LABEL: pow2_trunc_fail:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    movl %edi, %eax
+; CHECK-NEXT:    andb $78, %sil
 ; CHECK-NEXT:    subb %sil, %al
 ; CHECK-NEXT:    andb %sil, %al
 ; CHECK-NEXT:    # kill: def $al killed $al killed $eax
 ; CHECK-NEXT:    retq
-  %y = and i32 %a, 255
+  %y = and i32 %a, 78
   %x8 = trunc i32 %x to i8
   %y8 = trunc i32 %y to i8
   %x_sub_y = sub i8 %x8, %y8
@@ -1041,3 +1042,54 @@ define i8 @pow2_trunc(i32 %x, i32 %a){
   %r = and i8 %x_sub_y, %y8
   ret i8 %r
 }
+
+define <4 x i8> @pow2_trun_vec(<4 x i32> %x, <4 x i32> %a) {
+; CHECK-LABEL: pow2_trun_vec:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    pshufd {{.*#+}} xmm1 = xmm1[0,0,0,0]
+; CHECK-NEXT:    pxor %xmm2, %xmm2
+; CHECK-NEXT:    psubd %xmm1, %xmm2
+; CHECK-NEXT:    pand %xmm1, %xmm2
+; CHECK-NEXT:    movdqa {{.*#+}} xmm1 = [255,0,255,0,255,0,255,0]
+; CHECK-NEXT:    pand %xmm1, %xmm0
+; CHECK-NEXT:    packuswb %xmm0, %xmm0
+; CHECK-NEXT:    packuswb %xmm0, %xmm0
+; CHECK-NEXT:    pand %xmm1, %xmm2
+; CHECK-NEXT:    packuswb %xmm2, %xmm2
+; CHECK-NEXT:    packuswb %xmm2, %xmm2
+; CHECK-NEXT:    pandn %xmm2, %xmm0
+; CHECK-NEXT:    retq
+
+  %a.splat = shufflevector <4 x i32> %a, <4 x i32> poison, <4 x i32> zeroinitializer
+  %a.splat.neg = sub <4 x i32> zeroinitializer, %a.splat
+  %y = and <4 x i32> %a.splat, %a.splat.neg
+  %x8 = trunc <4 x i32> %x to <4 x i8>
+  %y8 = trunc <4 x i32> %y to <4 x i8>
+  %x_sub_y = sub <4 x i8> %x8, %y8
+  %r = and <4 x i8> %x_sub_y, %y8
+  ret <4 x i8> %r
+}
+
+define <4 x i8> @pow2_trunc_vec_fail(<4 x i32> %x, <4 x i32> %a) {
+; CHECK-LABEL: pow2_trunc_vec_fail:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    pshufd {{.*#+}} xmm1 = xmm1[0,0,0,0]
+; CHECK-NEXT:    pand {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm1
+; CHECK-NEXT:    pand {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
+; CHECK-NEXT:    packuswb %xmm0, %xmm0
+; CHECK-NEXT:    packuswb %xmm0, %xmm0
+; CHECK-NEXT:    packuswb %xmm1, %xmm1
+; CHECK-NEXT:    packuswb %xmm1, %xmm1
+; CHECK-NEXT:    psubb %xmm1, %xmm0
+; CHECK-NEXT:    pand %xmm1, %xmm0
+; CHECK-NEXT:    retq
+
+  %a.splat = shufflevector <4 x i32> %a, <4 x i32> poison, <4 x i32> zeroinitializer
+  %y = and <4 x i32> %a.splat, <i32 78, i32 69, i32 67, i32 100>
+  %x8 = trunc <4 x i32> %x to <4 x i8>
+  %y8 = trunc <4 x i32> %y to <4 x i8>
+  %x_sub_y = sub <4 x i8> %x8, %y8
+  %r = and <4 x i8> %x_sub_y, %y8
+  ret <4 x i8> %r
+}
+
