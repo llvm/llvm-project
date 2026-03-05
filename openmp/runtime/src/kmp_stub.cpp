@@ -454,20 +454,22 @@ void omp_free(void *ptr, omp_allocator_handle_t allocator) {
 #endif
 }
 
-void *omp_get_dyn_groupprivate_ptr(size_t offset, int *is_fallback,
-                                   omp_access_t access_group) {
+void *omp_get_dyn_gprivate_ptr(size_t offset, omp_access_t access_group) {
   i;
-  if (is_fallback)
-    is_fallback = 0;
   return NULL;
 }
 
-size_t omp_get_dyn_groupprivate_size(omp_access_t access_group) {
+void *omp_get_dyn_gprivate_nofb_ptr(size_t offset, omp_access_t access_group) {
+  i;
+  return NULL;
+}
+
+size_t omp_get_dyn_gprivate_size(omp_access_t access_group) {
   i;
   return 0;
 }
 
-size_t omp_get_groupprivate_limit(int device_num, omp_access_t access_group) {
+size_t omp_get_gprivate_limit(int device_num, omp_access_t access_group) {
   i;
   return 0;
 }

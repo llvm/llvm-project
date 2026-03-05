@@ -289,8 +289,8 @@ int omp_get_device_num(void);
 int omp_get_device_from_uid(const char *DeviceUid);
 const char *omp_get_uid_from_device(int DeviceNum);
 int omp_get_initial_device(void);
-size_t omp_get_groupprivate_limit(int DeviceNum,
-                                  omp_access_t AccessGroup = omp_access_cgroup);
+size_t omp_get_gprivate_limit(int DeviceNum,
+                              omp_access_t AccessGroup = omp_access_cgroup);
 void *omp_target_alloc(size_t Size, int DeviceNum);
 void omp_target_free(void *DevicePtr, int DeviceNum);
 int omp_target_is_present(const void *Ptr, int DeviceNum);

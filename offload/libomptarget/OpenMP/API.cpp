@@ -138,8 +138,7 @@ EXTERN int omp_get_initial_device(void) {
   return HostDevice;
 }
 
-EXTERN size_t omp_get_groupprivate_limit(int DeviceNum,
-                                         omp_access_t AccessGroup) {
+EXTERN size_t omp_get_gprivate_limit(int DeviceNum, omp_access_t AccessGroup) {
   TIMESCOPE();
   OMPT_IF_BUILT(ReturnAddressSetterRAII RA(__builtin_return_address(0)));
   if (DeviceNum == omp_get_initial_device())

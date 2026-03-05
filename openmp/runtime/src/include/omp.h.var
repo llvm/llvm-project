@@ -468,9 +468,10 @@
                                                    omp_allocator_handle_t allocator = omp_null_allocator,
                                                    omp_allocator_handle_t free_allocator = omp_null_allocator);
     extern void __KAI_KMPC_CONVENTION omp_free(void * ptr, omp_allocator_handle_t a = omp_null_allocator);
-    extern void *__KAI_KMPC_CONVENTION omp_get_dyn_groupprivate_ptr(size_t offset = 0, int *is_fallback = NULL, omp_access_t access_group = omp_access_cgroup);
-    extern size_t __KAI_KMPC_CONVENTION omp_get_dyn_groupprivate_size(omp_access_t access_group = omp_access_cgroup);
-    extern size_t __KAI_KMPC_CONVENTION omp_get_groupprivate_limit(int device_num, omp_access_t access_group = omp_access_cgroup);
+    extern void *__KAI_KMPC_CONVENTION omp_get_dyn_gprivate_ptr(size_t offset = 0, omp_access_t access_group = omp_access_cgroup);
+    extern void *__KAI_KMPC_CONVENTION omp_get_dyn_gprivate_nofb_ptr(size_t offset = 0, omp_access_t access_group = omp_access_cgroup);
+    extern size_t __KAI_KMPC_CONVENTION omp_get_dyn_gprivate_size(omp_access_t access_group = omp_access_cgroup);
+    extern size_t __KAI_KMPC_CONVENTION omp_get_gprivate_limit(int device_num, omp_access_t access_group = omp_access_cgroup);
 #   else
     extern void *__KAI_KMPC_CONVENTION omp_alloc(size_t size, omp_allocator_handle_t a);
     extern void *__KAI_KMPC_CONVENTION omp_aligned_alloc(size_t align, size_t size,
@@ -481,9 +482,10 @@
     extern void *__KAI_KMPC_CONVENTION omp_realloc(void *ptr, size_t size, omp_allocator_handle_t allocator,
                                                    omp_allocator_handle_t free_allocator);
     extern void __KAI_KMPC_CONVENTION omp_free(void *ptr, omp_allocator_handle_t a);
-    extern void *__KAI_KMPC_CONVENTION omp_get_dyn_groupprivate_ptr(size_t offset, int *is_fallback, omp_access_t access_group);
-    extern size_t __KAI_KMPC_CONVENTION omp_get_dyn_groupprivate_size(omp_access_t access_group);
-    extern size_t __KAI_KMPC_CONVENTION omp_get_groupprivate_limit(int device_num, omp_access_t access_group);
+    extern void *__KAI_KMPC_CONVENTION omp_get_dyn_gprivate_ptr(size_t offset, omp_access_t access_group);
+    extern void *__KAI_KMPC_CONVENTION omp_get_dyn_gprivate_nofb_ptr(size_t offset, omp_access_t access_group);
+    extern size_t __KAI_KMPC_CONVENTION omp_get_dyn_gprivate_size(omp_access_t access_group);
+    extern size_t __KAI_KMPC_CONVENTION omp_get_gprivate_limit(int device_num, omp_access_t access_group);
 #   endif
 
     /* OpenMP TR11 routines to get memory spaces and allocators */

@@ -20,7 +20,7 @@ int main() {
     int Buffer[N];
 #pragma omp parallel
     {
-      int *DynBuffer = (int *)omp_get_dyn_groupprivate_ptr();
+      int *DynBuffer = (int *)omp_get_dyn_gprivate_nofb_ptr();
       int TId = omp_get_thread_num();
       if (TId == 0)
         NumThreads = omp_get_num_threads();
@@ -47,25 +47,31 @@ int main() {
   }
 
   // Verify that the routines in the host returns NULL and zero.
-  if (omp_get_dyn_groupprivate_ptr())
+  if (omp_get_dyn_gprivate_ptr())
     ++Failed;
-  if (omp_get_dyn_groupprivate_size())
+  if (omp_get_dyn_gprivate_nofb_ptr())
+    ++Failed;
+  if (omp_get_dyn_gprivate_size())
     ++Failed;
 
-  size_t MaxSize = omp_get_groupprivate_limit(0, omp_access_cgroup);
+  size_t MaxSize = omp_get_gprivate_limit(0, omp_access_cgroup);
   size_t ExceededSize = MaxSize + 10;
 
 // Verify that the fallback(default_mem) modifier works.
 #pragma omp target dyn_groupprivate(fallback(default_mem) : ExceededSize)      \
     map(tofrom : Failed)
   {
-    int IsFallback;
-    if (!omp_get_dyn_groupprivate_ptr(0, &IsFallback))
+    if (!omp_get_dyn_gprivate_ptr(0))
       ++Failed;
-    if (!omp_get_dyn_groupprivate_size())
+    if (omp_get_dyn_gprivate_nofb_ptr(0))
       ++Failed;
-    if (omp_get_dyn_groupprivate_size() != ExceededSize)
+    if (omp_get_dyn_gprivate_ptr(0) == omp_get_dyn_gprivate_nofb_ptr(0))
       ++Failed;
+    if (!omp_get_dyn_gprivate_size())
+      ++Failed;
+    if (omp_get_dyn_gprivate_size() != ExceededSize)
+      ++Failed;
+    bool IsFallback = true; // FIX
     if (!IsFallback)
       ++Failed;
   }
@@ -74,11 +80,15 @@ int main() {
 #pragma omp target dyn_groupprivate(fallback(null) : ExceededSize)             \
     map(tofrom : Failed)
   {
-    int IsFallback;
-    if (omp_get_dyn_groupprivate_ptr(0, &IsFallback))
+    if (omp_get_dyn_gprivate_ptr(0))
       ++Failed;
-    if (omp_get_dyn_groupprivate_size())
+    if (omp_get_dyn_gprivate_nofb_ptr(0))
       ++Failed;
+    if (omp_get_dyn_gprivate_ptr(0) != omp_get_dyn_gprivate_nofb_ptr(0))
+      ++Failed;
+    if (omp_get_dyn_gprivate_size())
+      ++Failed;
+    bool IsFallback = true; // FIX
     if (!IsFallback)
       ++Failed;
   }
@@ -86,13 +96,17 @@ int main() {
 // Verify that the default modifier is fallback(default_mem).
 #pragma omp target dyn_groupprivate(ExceededSize)
   {
-    int IsFallback;
-    if (!omp_get_dyn_groupprivate_ptr(0, &IsFallback))
+    if (!omp_get_dyn_gprivate_ptr(0))
       ++Failed;
-    if (!omp_get_dyn_groupprivate_size())
+    if (omp_get_dyn_gprivate_nofb_ptr(0))
       ++Failed;
-    if (omp_get_dyn_groupprivate_size() != ExceededSize)
+    if (omp_get_dyn_gprivate_ptr(0) == omp_get_dyn_gprivate_nofb_ptr(0))
       ++Failed;
+    if (!omp_get_dyn_gprivate_size())
+      ++Failed;
+    if (omp_get_dyn_gprivate_size() != ExceededSize)
+      ++Failed;
+    bool IsFallback = true; // FIX
     if (!IsFallback)
       ++Failed;
   }
@@ -100,13 +114,19 @@ int main() {
 // Verify that the fallback(abort) modifier works.
 #pragma omp target dyn_groupprivate(fallback(abort) : N) map(tofrom : Failed)
   {
-    int IsFallback;
-    if (!omp_get_dyn_groupprivate_ptr(0, &IsFallback))
+    if (!omp_get_dyn_gprivate_ptr(0))
       ++Failed;
-    if (!omp_get_dyn_groupprivate_size())
+    if (!omp_get_dyn_gprivate_nofb_ptr(0))
       ++Failed;
-    if (omp_get_dyn_groupprivate_size() != N)
+    if (omp_get_dyn_gprivate_ptr(0) != omp_get_dyn_gprivate_nofb_ptr(0))
       ++Failed;
+    if (omp_get_dyn_gprivate_ptr(5) != omp_get_dyn_gprivate_nofb_ptr(5))
+      ++Failed;
+    if (!omp_get_dyn_gprivate_size())
+      ++Failed;
+    if (omp_get_dyn_gprivate_size() != N)
+      ++Failed;
+    bool IsFallback = false; // FIX
     if (IsFallback)
       ++Failed;
   }
@@ -115,13 +135,17 @@ int main() {
 #pragma omp target dyn_groupprivate(fallback(default_mem) : N)                 \
     map(tofrom : Failed)
   {
-    int IsFallback;
-    if (!omp_get_dyn_groupprivate_ptr(0, &IsFallback))
+    if (!omp_get_dyn_gprivate_ptr(0))
       ++Failed;
-    if (!omp_get_dyn_groupprivate_size())
+    if (!omp_get_dyn_gprivate_nofb_ptr(0))
       ++Failed;
-    if (omp_get_dyn_groupprivate_size() != N)
+    if (omp_get_dyn_gprivate_ptr(0) != omp_get_dyn_gprivate_nofb_ptr(0))
       ++Failed;
+    if (!omp_get_dyn_gprivate_size())
+      ++Failed;
+    if (omp_get_dyn_gprivate_size() != N)
+      ++Failed;
+    bool IsFallback = false; // FIX
     if (IsFallback)
       ++Failed;
   }
@@ -129,24 +153,33 @@ int main() {
 // Verify that the clause works when passing a zero size.
 #pragma omp target dyn_groupprivate(fallback(abort) : 0) map(tofrom : Failed)
   {
-    int IsFallback;
-    if (omp_get_dyn_groupprivate_ptr(0, &IsFallback))
+    if (omp_get_dyn_gprivate_ptr(0))
       ++Failed;
-    if (omp_get_dyn_groupprivate_size())
+    if (omp_get_dyn_gprivate_nofb_ptr(0))
       ++Failed;
+    if (omp_get_dyn_gprivate_ptr(0) != omp_get_dyn_gprivate_nofb_ptr(0))
+      ++Failed;
+    if (omp_get_dyn_gprivate_size())
+      ++Failed;
+    bool IsFallback = false; // FIX
     if (IsFallback)
       ++Failed;
   }
 
-// Verify that the clause works when passing a zero size.
+// Verify that the clause works when passing a zero size and
+// fallback(default_mem).
 #pragma omp target dyn_groupprivate(fallback(default_mem) : 0)                 \
     map(tofrom : Failed)
   {
-    int IsFallback;
-    if (omp_get_dyn_groupprivate_ptr(0, &IsFallback))
+    if (omp_get_dyn_gprivate_ptr(0))
       ++Failed;
-    if (omp_get_dyn_groupprivate_size())
+    if (omp_get_dyn_gprivate_nofb_ptr(0))
       ++Failed;
+    if (omp_get_dyn_gprivate_ptr(0) != omp_get_dyn_gprivate_nofb_ptr(0))
+      ++Failed;
+    if (omp_get_dyn_gprivate_size())
+      ++Failed;
+    bool IsFallback = false; // FIX
     if (IsFallback)
       ++Failed;
   }
@@ -154,11 +187,15 @@ int main() {
 // Verify that omitting the clause is the same as setting zero size.
 #pragma omp target map(tofrom : Failed)
   {
-    int IsFallback;
-    if (omp_get_dyn_groupprivate_ptr(0, &IsFallback))
+    if (omp_get_dyn_gprivate_ptr(0))
       ++Failed;
-    if (omp_get_dyn_groupprivate_size())
+    if (omp_get_dyn_gprivate_nofb_ptr(0))
       ++Failed;
+    if (omp_get_dyn_gprivate_ptr(0) != omp_get_dyn_gprivate_nofb_ptr(0))
+      ++Failed;
+    if (omp_get_dyn_gprivate_size())
+      ++Failed;
+    bool IsFallback = false; // FIX
     if (IsFallback)
       ++Failed;
   }
