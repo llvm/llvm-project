@@ -12277,6 +12277,36 @@ static SDValue combineMinNumMaxNumImpl(const SDLoc &DL, EVT VT, SDValue LHS,
   }
 }
 
+// Check whether sub(X, xor Y, C) matches the all_ones xor form:
+//   C := all_ones (after truncation to elt width) -> (xor Y, C) == ~Y,
+//   thus, sub (X, xor Y, c) == (X - ~Y) == (X + Y + 1).
+// Returns AVGCEILS if sext(X) and sext(Y),
+//         AVGCEILU if zext(X) and zext(Y),
+//         0 otherwise.
+static unsigned getAvgCeilFromXor(SDValue XorRHS, SDValue X, SDValue Y) {
+  auto *Splat = dyn_cast<ConstantSDNode>(XorRHS.getOperand(0));
+  if (!Splat)
+    return 0;
+
+  unsigned EltBits =
+      XorRHS.getValueType().getVectorElementType().getSizeInBits();
+  if (!Splat->getAPIntValue().trunc(EltBits).isAllOnes())
+    return 0;
+
+  auto IsSExt = [](SDValue V) {
+    return V.getOpcode() == ISD::SIGN_EXTEND ||
+           V.getOpcode() == ISD::SIGN_EXTEND_INREG;
+  };
+  auto IsZExt = [](SDValue V) {
+    return V.getOpcode() == ISD::ZERO_EXTEND ||
+           V.getOpcode() == ISD::ZERO_EXTEND_VECTOR_INREG;
+  };
+
+  return (IsSExt(X) && IsSExt(Y))   ? ISD::AVGCEILS
+         : (IsZExt(X) && IsZExt(Y)) ? ISD::AVGCEILU
+                                    : 0;
+}
+
 // Convert (sr[al] (add n[su]w x, y)) -> (avgfloor[su] x, y)
 SDValue DAGCombiner::foldShiftToAvg(SDNode *N, const SDLoc &DL) {
   const unsigned Opcode = N->getOpcode();
@@ -12286,20 +12316,37 @@ SDValue DAGCombiner::foldShiftToAvg(SDNode *N, const SDLoc &DL) {
   EVT VT = N->getValueType(0);
   bool IsUnsigned = Opcode == ISD::SRL;
 
-  // Captured values.
-  SDValue A, B;
-
-  // Match floor average as it is common to both floor/ceil avgs, ensure the add
-  // doesn't wrap.
-  SDNodeFlags Flags =
-      IsUnsigned ? SDNodeFlags::NoUnsignedWrap : SDNodeFlags::NoSignedWrap;
+  SDValue X, Y, XorRHS;
+  // Fold (sra/srl (x - (y ^ -1)), 1) -> avgceil[su](x, y)
+  // Since (y ^ -1) == ~y and (x - ~y) == (x + y + 1)
   if (sd_match(N, m_BinOp(Opcode,
-                          m_c_BinOp(ISD::ADD, m_Value(A), m_Value(B), Flags),
+                          m_Sub(m_Value(X), m_Xor(m_Value(Y), m_Value(XorRHS))),
+                          m_One()))) {
+    if (unsigned CeilISD = getAvgCeilFromXor(XorRHS, X, Y)) {
+      if (CeilISD != (IsUnsigned ? ISD::AVGCEILU : ISD::AVGCEILS))
+        return SDValue();
+
+      if (hasOperation(CeilISD, VT))
+        return DAG.getNode(CeilISD, DL, VT, Y, X);
+    }
+  }
+
+  // Match floor average as it is common to both floor/ceil avgs.
+  SDValue A, B, Add;
+  if (sd_match(N, m_BinOp(Opcode,
+                          m_AllOf(m_Value(Add), m_Add(m_Value(A), m_Value(B))),
                           m_One()))) {
     // Decide whether signed or unsigned.
     unsigned FloorISD = IsUnsigned ? ISD::AVGFLOORU : ISD::AVGFLOORS;
-    if (hasOperation(FloorISD, VT))
-      return DAG.getNode(FloorISD, DL, VT, {A, B});
+    if (!hasOperation(FloorISD, VT))
+      return SDValue();
+
+    // Can't optimize adds that may wrap.
+    if ((IsUnsigned && !Add->getFlags().hasNoUnsignedWrap()) ||
+        (!IsUnsigned && !Add->getFlags().hasNoSignedWrap()))
+      return SDValue();
+
+    return DAG.getNode(FloorISD, DL, N->getValueType(0), {A, B});
   }
 
   return SDValue();
@@ -16882,6 +16929,24 @@ SDValue DAGCombiner::visitTRUNCATE(SDNode *N) {
       unsigned Idx = isLE ? 0 : VecSrcVT.getVectorNumElements() - 1;
       return DAG.getNode(ISD::EXTRACT_VECTOR_ELT, DL, VT, VecSrc,
                          DAG.getVectorIdxConstant(Idx, DL));
+    }
+  }
+
+  // fold (trunc (sra/srl (sub (x, xor y, -1)), 1))) ->
+  // 			(avgceil[su] (trunc y, trunc x))
+  // Matched before SimplifyDemandedBits which can convert sra -> srl.
+  SDValue X, Y, XorRHS;
+  unsigned ShiftOpc = N0.getOpcode();
+  if ((ShiftOpc == ISD::SRA || ShiftOpc == ISD::SRL) && N0.hasOneUse() &&
+      sd_match(N0,
+               m_BinOp(ShiftOpc,
+                       m_Sub(m_Value(X), m_Xor(m_Value(Y), m_Value(XorRHS))),
+                       m_One()))) {
+    if (unsigned CeilISD = getAvgCeilFromXor(XorRHS, X, Y)) {
+      if (CeilISD && TLI.isOperationLegalOrCustom(CeilISD, VT))
+        return DAG.getNode(CeilISD, DL, VT,
+                           DAG.getNode(ISD::TRUNCATE, DL, VT, Y),
+                           DAG.getNode(ISD::TRUNCATE, DL, VT, X));
     }
   }
 
