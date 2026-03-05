@@ -148,7 +148,8 @@ std::vector<CallHierarchyItem>
 prepareCallHierarchy(ParsedAST &AST, Position Pos, PathRef TUPath);
 
 std::vector<CallHierarchyIncomingCall>
-incomingCalls(const CallHierarchyItem &Item, const SymbolIndex *Index);
+incomingCalls(const CallHierarchyItem &Item, const SymbolIndex *Index,
+              ParsedAST &AST);
 
 std::vector<CallHierarchyOutgoingCall>
 outgoingCalls(const CallHierarchyItem &Item, const SymbolIndex *Index);

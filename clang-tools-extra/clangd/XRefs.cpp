@@ -1788,6 +1788,107 @@ llvm::raw_ostream &operator<<(llvm::raw_ostream &OS,
   return OS;
 }
 
+// This would require a visitor pattern:
+class ParamUsageVisitor : public RecursiveASTVisitor<ParamUsageVisitor> {
+public:
+  bool HasWrite = false;
+  bool HasRead = false;
+  const ValueDecl *TargetParam;
+  llvm::SmallSet<const Expr *, 4> WriteOnlyExprs;
+
+  ParamUsageVisitor(const ValueDecl *P) : TargetParam(P) {}
+
+  // Identify write-only contexts before visiting children
+  bool TraverseBinaryOperator(BinaryOperator *BO) {
+    if (BO->isAssignmentOp()) {
+      auto *LHS = BO->getLHS()->IgnoreParenImpCasts();
+      if (auto *DRE = dyn_cast<DeclRefExpr>(LHS)) {
+        if (DRE->getDecl() == TargetParam) {
+          HasWrite = true;
+          // For pure assignment (=), LHS is write-only
+          if (BO->getOpcode() == BO_Assign)
+            WriteOnlyExprs.insert(DRE);
+        }
+      } else if (auto *ME = dyn_cast<MemberExpr>(LHS)) {
+        if (ME->getMemberDecl() == TargetParam) {
+          HasWrite = true;
+          if (BO->getOpcode() == BO_Assign)
+            WriteOnlyExprs.insert(ME);
+        }
+      }
+    }
+    // Continue with default traversal
+    return RecursiveASTVisitor::TraverseBinaryOperator(BO);
+  }
+
+  bool TraverseConstructorInitializer(CXXCtorInitializer *Init) {
+    if (Init) {
+      if (const FieldDecl *FD = Init->getMember()) {
+        if (FD == TargetParam)
+          HasWrite = true;
+      }
+    }
+    return RecursiveASTVisitor::TraverseConstructorInitializer(Init);
+  }
+
+  bool TraverseUnaryOperator(UnaryOperator *UO) {
+    if (UO->isIncrementDecrementOp()) {
+      auto *SubExpr = UO->getSubExpr()->IgnoreParenImpCasts();
+      if (auto *DRE = dyn_cast<DeclRefExpr>(SubExpr)) {
+        if (DRE->getDecl() == TargetParam) {
+          HasWrite = true;
+          // Inc/Dec is both read and write, don't add to WriteOnlyExprs
+        }
+      } else if (auto *ME = dyn_cast<MemberExpr>(SubExpr)) {
+        if (ME->getMemberDecl() == TargetParam) {
+          HasWrite = true;
+        }
+      }
+    }
+    return RecursiveASTVisitor::TraverseUnaryOperator(UO);
+  }
+
+  // Check for reads, excluding write-only contexts
+  bool VisitDeclRefExpr(DeclRefExpr *DRE) {
+    if (DRE->getDecl() == TargetParam) {
+      if (!WriteOnlyExprs.count(DRE))
+        HasRead = true;
+    }
+    return true;
+  }
+
+  // Handle member expressions
+  bool VisitMemberExpr(MemberExpr *ME) {
+    if (ME->getMemberDecl() == TargetParam) {
+      if (!WriteOnlyExprs.count(ME))
+        HasRead = true;
+    }
+    return true;
+  }
+};
+
+static std::vector<ReferenceTag> analyseParameterUsage(const FunctionDecl *FD,
+                                                       const ValueDecl *PVD) {
+  std::vector<ReferenceTag> Result;
+  ParamUsageVisitor Visitor(PVD);
+
+  if (const auto *Ctor = dyn_cast<CXXConstructorDecl>(FD)) {
+    Visitor.TraverseDecl(const_cast<CXXConstructorDecl *>(Ctor));
+  } else if (const Stmt *Body = FD->getBody()) {
+    // Walk the body and determine read/write usage of the referenced variable
+    // within this function.
+    Visitor.TraverseStmt(const_cast<Stmt *>(Body));
+  } else
+    return Result;
+
+  if (Visitor.HasWrite)
+    Result.push_back(ReferenceTag::Write);
+  if (Visitor.HasRead)
+    Result.push_back(ReferenceTag::Read);
+
+  return Result;
+}
+
 template <typename HierarchyItem>
 static std::optional<HierarchyItem>
 declToHierarchyItem(const NamedDecl &ND, llvm::StringRef TUPath) {
@@ -1818,7 +1919,7 @@ declToHierarchyItem(const NamedDecl &ND, llvm::StringRef TUPath) {
 
   HierarchyItem HI;
   HI.name = printName(Ctx, ND);
-  // FIXME: Populate HI.detail the way we do in symbolToHierarchyItem?
+  HI.detail = printQualifiedName(ND);
   HI.kind = SK;
   HI.range = Range{sourceLocToPosition(SM, DeclRange->getBegin()),
                    sourceLocToPosition(SM, DeclRange->getEnd())};
@@ -2136,15 +2237,15 @@ static QualType typeForNode(const ASTContext &Ctx, const HeuristicResolver *H,
   return QualType();
 }
 
-// Given a type targeted by the cursor, return one or more types that are more interesting
-// to target.
-static void unwrapFindType(
-    QualType T, const HeuristicResolver* H, llvm::SmallVector<QualType>& Out) {
+// Given a type targeted by the cursor, return one or more types that are more
+// interesting to target.
+static void unwrapFindType(QualType T, const HeuristicResolver *H,
+                           llvm::SmallVector<QualType> &Out) {
   if (T.isNull())
     return;
 
   // If there's a specific type alias, point at that rather than unwrapping.
-  if (const auto* TDT = T->getAs<TypedefType>())
+  if (const auto *TDT = T->getAs<TypedefType>())
     return Out.push_back(QualType(TDT, 0));
 
   // Pointers etc => pointee type.
@@ -2178,8 +2279,8 @@ static void unwrapFindType(
 }
 
 // Convenience overload, to allow calling this without the out-parameter
-static llvm::SmallVector<QualType> unwrapFindType(
-    QualType T, const HeuristicResolver* H) {
+static llvm::SmallVector<QualType> unwrapFindType(QualType T,
+                                                  const HeuristicResolver *H) {
   llvm::SmallVector<QualType> Result;
   unwrapFindType(T, H, Result);
   return Result;
@@ -2201,9 +2302,9 @@ std::vector<LocatedSymbol> findType(ParsedAST &AST, Position Pos,
     std::vector<LocatedSymbol> LocatedSymbols;
 
     // NOTE: unwrapFindType might return duplicates for something like
-    // unique_ptr<unique_ptr<T>>. Let's *not* remove them, because it gives you some
-    // information about the type you may have not known before
-    // (since unique_ptr<unique_ptr<T>> != unique_ptr<T>).
+    // unique_ptr<unique_ptr<T>>. Let's *not* remove them, because it gives you
+    // some information about the type you may have not known before (since
+    // unique_ptr<unique_ptr<T>> != unique_ptr<T>).
     for (const QualType &Type : unwrapFindType(
              typeForNode(AST.getASTContext(), AST.getHeuristicResolver(), N),
              AST.getHeuristicResolver()))
@@ -2376,8 +2477,39 @@ prepareCallHierarchy(ParsedAST &AST, Position Pos, PathRef TUPath) {
   return Result;
 }
 
+// Tries to find a NamedDecl in the AST that matches the given Symbol.
+// Returns nullptr if the symbol is not found in the current AST.
+const NamedDecl *getNamedDeclFromSymbol(const Symbol &Sym,
+                                        const ParsedAST &AST) {
+  // Try to convert the symbol to a location and find the decl at that location
+  auto SymLoc = symbolToLocation(Sym, AST.tuPath());
+  if (!SymLoc)
+    return nullptr;
+
+  // Check if the symbol location is in the main file
+  if (SymLoc->uri.file() != AST.tuPath())
+    return nullptr;
+
+  // Convert LSP position to source location
+  const auto &SM = AST.getSourceManager();
+  auto CurLoc = sourceLocationInMainFile(SM, SymLoc->range.start);
+  if (!CurLoc) {
+    llvm::consumeError(CurLoc.takeError());
+    return nullptr;
+  }
+
+  // Get all decls at this location
+  auto Decls = getDeclAtPosition(const_cast<ParsedAST &>(AST), *CurLoc, {});
+  if (Decls.empty())
+    return nullptr;
+
+  // Return the first decl (usually the most specific one)
+  return Decls[0];
+}
+
 std::vector<CallHierarchyIncomingCall>
-incomingCalls(const CallHierarchyItem &Item, const SymbolIndex *Index) {
+incomingCalls(const CallHierarchyItem &Item, const SymbolIndex *Index,
+              ParsedAST &AST) {
   std::vector<CallHierarchyIncomingCall> Results;
   if (!Index || Item.data.empty())
     return Results;
@@ -2386,6 +2518,26 @@ incomingCalls(const CallHierarchyItem &Item, const SymbolIndex *Index) {
     elog("incomingCalls failed to find symbol: {0}", ID.takeError());
     return Results;
   }
+
+  LookupRequest LR;
+  LR.IDs.insert(*ID);
+
+  std::optional<const NamedDecl *> Decl;
+  Index->lookup(LR, [&ID, &AST, &Decl](const Symbol &Sym) {
+    // This callback is called once per found symbol; here we expect exactly one
+    if (Sym.ID == *ID) {
+      Decl = getNamedDeclFromSymbol(Sym, AST);
+    }
+  });
+
+  // Note: Decl may be nullptr if the symbol is in a header file (not the main
+  // file). In that case, we still want to continue and use index-based
+  // resolution.
+  if (!Decl.has_value()) {
+    // Symbol not found in index
+    return Results;
+  }
+
   // In this function, we find incoming calls based on the index only.
   // In principle, the AST could have more up-to-date information about
   // occurrences within the current file. However, going from a SymbolID
@@ -2422,7 +2574,29 @@ incomingCalls(const CallHierarchyItem &Item, const SymbolIndex *Index) {
     Index->lookup(ContainerLookup, [&](const Symbol &Caller) {
       auto It = CallsIn.find(Caller.ID);
       assert(It != CallsIn.end());
-      if (auto CHI = symbolToCallHierarchyItem(Caller, Item.uri.file())) {
+
+      std::optional<CallHierarchyItem> CHI;
+      if (auto *ND = getNamedDeclFromSymbol(Caller, AST)) {
+        CHI = declToCallHierarchyItem(*ND, AST.tuPath());
+        if (const auto *FD = llvm::dyn_cast<clang::FunctionDecl>(ND)) {
+          if (Decl.has_value() && Decl.value() != nullptr) {
+            if (const auto *VD =
+                    llvm::dyn_cast<clang::ValueDecl>(Decl.value())) {
+              // Use the function definition if available, not just a
+              // declaration
+              const FunctionDecl *FuncDef = FD->getDefinition();
+              if (!FuncDef)
+                FuncDef = FD;
+              CHI->referenceTags = analyseParameterUsage(
+                  FuncDef, VD); // FuncDef is the caller of value decl VD
+            }
+          }
+        }
+      } else {
+        CHI = symbolToCallHierarchyItem(Caller, Item.uri.file());
+      }
+
+      if (CHI) {
         std::vector<Range> FromRanges;
         for (const Location &L : It->second) {
           if (L.uri != CHI->uri) {
