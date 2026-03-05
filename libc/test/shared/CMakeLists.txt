@@ -128,6 +128,9 @@ add_fp_unittest(
     libc.src.__support.math.floorf128
     libc.src.__support.math.floorf16
     libc.src.__support.math.floorl
+    libc.src.__support.math.fmaximum_mag_num
+    libc.src.__support.math.fmaximum_mag_numbf16
+    libc.src.__support.math.fmaximum_mag_numf
     libc.src.__support.math.fmax
     libc.src.__support.math.fmaxbf16
     libc.src.__support.math.fmaxf

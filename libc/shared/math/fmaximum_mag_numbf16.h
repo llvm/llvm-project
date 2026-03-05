@@ -1,4 +1,4 @@
-//===-- Implementation of fmaximum_mag_numbf16 function -------------------===//
+//===-- Shared fmaximum_mag_numbf16 function --------------------*- C++ -*-===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -6,13 +6,17 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "src/math/fmaximum_mag_numbf16.h"
+#ifndef LLVM_LIBC_SHARED_MATH_FMAXIMUM_MAG_NUMBF16_H
+#define LLVM_LIBC_SHARED_MATH_FMAXIMUM_MAG_NUMBF16_H
+
 #include "src/__support/math/fmaximum_mag_numbf16.h"
 
 namespace LIBC_NAMESPACE_DECL {
+namespace shared {
 
-LLVM_LIBC_FUNCTION(bfloat16, fmaximum_mag_numbf16, (bfloat16 x, bfloat16 y)) {
-  return math::fmaximum_mag_numbf16(x, y);
-}
+using math::fmaximum_mag_numbf16;
 
+} // namespace shared
 } // namespace LIBC_NAMESPACE_DECL
+
+#endif // LLVM_LIBC_SHARED_MATH_FMAXIMUM_MAG_NUMBF16_H
