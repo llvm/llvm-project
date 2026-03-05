@@ -68,6 +68,13 @@ static void processTypeDescriptor(fir::RecordType recTy,
   }
 }
 
+static void processAllocaOp(fir::AllocaOp allocaOp,
+                            mlir::SymbolTable &symbolTable,
+                            llvm::DenseSet<fir::GlobalOp> &candidates) {
+  if (auto recTy = mlir::dyn_cast<fir::RecordType>(allocaOp.getInType()))
+    processTypeDescriptor(recTy, symbolTable, candidates);
+}
+
 static void processEmboxOp(fir::EmboxOp emboxOp, mlir::SymbolTable &symbolTable,
                            llvm::DenseSet<fir::GlobalOp> &candidates) {
   if (auto recTy = mlir::dyn_cast<fir::RecordType>(
@@ -87,6 +94,9 @@ prepareImplicitDeviceGlobals(mlir::func::FuncOp funcOp,
     });
     funcOp.walk(
         [&](fir::EmboxOp op) { processEmboxOp(op, symbolTable, candidates); });
+    funcOp.walk([&](fir::AllocaOp op) {
+      processAllocaOp(op, symbolTable, candidates);
+    });
   }
 }
 

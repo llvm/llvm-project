@@ -875,6 +875,10 @@ inline llvm::raw_ostream &operator<<(llvm::raw_ostream &OS, const Pointer &P) {
     else
       OS << " index " << P.getIndex();
   }
+  if (P.isBlockPointer() && P.block() && P.block()->isDummy())
+    OS << " dummy";
+  if (!P.isLive())
+    OS << " dead";
   return OS;
 }
 

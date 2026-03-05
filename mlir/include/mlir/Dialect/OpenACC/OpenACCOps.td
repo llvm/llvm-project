@@ -2844,7 +2844,8 @@ def OpenACC_LoopOp
 // Yield operation for the acc.loop and acc.parallel operations.
 def OpenACC_YieldOp : OpenACC_Op<"yield", [Pure, ReturnLike, Terminator,
     ParentOneOf<["FirstprivateRecipeOp, LoopOp, ParallelOp, PrivateRecipeOp,"
-                 "ReductionRecipeOp, SerialOp, AtomicUpdateOp"]>]> {
+                 "ReductionRecipeOp, ReductionInitOp, ReductionCombineRegionOp,"
+                 "SerialOp, AtomicUpdateOp, ComputeRegionOp"]>]> {
   let summary = "Acc yield and termination operation";
 
   let description = [{
