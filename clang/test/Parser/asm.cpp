@@ -35,6 +35,9 @@ struct string_view {
 int foo1 asm ((string_view("test"))); // expected-error {{expected string literal in 'asm'}}
 int func() asm ((string_view("test"))); // expected-error {{expected string literal in 'asm'}}
 
+constexpr const char* getConstantString(const char* s) {
+  return s;
+}
 
 void f2() {
   asm(string_view("")); // expected-error {{expected string literal or parenthesized constant expression in 'asm'}}
@@ -43,6 +46,13 @@ void f2() {
   asm("" : : : string_view("")); // expected-error {{expected ')'}}
   asm("" :: string_view("")); // expected-error {{expected string literal or parenthesized constant expression in 'asm'}}
   asm(::string_view("")); // expected-error {{expected string literal or parenthesized constant expression in 'asm'}}
+
+  asm(getConstantString("")); // expected-error {{expected string literal or parenthesized constant expression in 'asm'}}
+  asm("" : getConstantString("")); // expected-error {{expected string literal or parenthesized constant expression in 'asm'}}
+  asm("" : : getConstantString("")); // expected-error {{expected string literal or parenthesized constant expression in 'asm'}}
+  asm("" : : : getConstantString("")); // expected-error {{expected ')'}}
+  asm("" :: getConstantString("")); // expected-error {{expected string literal or parenthesized constant expression in 'asm'}}
+  asm(::getConstantString("")); // expected-error {{expected string literal or parenthesized constant expression in 'asm'}}
 
   int i;
 
@@ -55,5 +65,22 @@ void f2() {
   asm("" : (::string_view("+g")) (i) : (::string_view("g")) (0) : (string_view("memory")));
 
 
-  asm((0)); // expected-error {{the expression in this asm operand must be a string literal or an object with 'data()' and 'size()' member functions}}
+  asm((getConstantString("")));
+  // expected-warning@-1 {{consteval string constants are an extension}}
+  asm((::getConstantString("")));
+  // expected-warning@-1 {{consteval string constants are an extension}}
+  asm("" : (::getConstantString("+g")) (i));
+  // expected-warning@-1 {{consteval string constants are an extension}}
+  asm("" : (::getConstantString("+g"))); // expected-error {{expected '(' after 'asm operand'}}
+  // expected-warning@-1 {{consteval string constants are an extension}}
+  asm("" : (::getConstantString("+g")) (i) : (::getConstantString("g")) (0));
+  // expected-warning@-1 2 {{consteval string constants are an extension}}
+  asm("" : (::getConstantString("+g")) (i) : (::getConstantString("g"))); // expected-error {{expected '(' after 'asm operand'}}
+  // expected-warning@-1 2 {{consteval string constants are an extension}}
+  asm("" : (::getConstantString("+g")) (i) : (::getConstantString("g")) (0) : (getConstantString("memory")));
+  // expected-warning@-1 3 {{consteval string constants are an extension}}
+
+
+
+  asm((0)); // expected-error {{the expression in this asm operand must be a null terminated constant string or an object with 'data()' and 'size()' member functions}}
 }
