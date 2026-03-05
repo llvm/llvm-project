@@ -1721,12 +1721,25 @@ RISCVTTIImpl::getIntrinsicInstrCost(const IntrinsicCostAttributes &ICA,
     // vmv.x.s a0, v8
     // exit:
     //   ...
-    unsigned Opcodes[] = {RISCV::VID_V, RISCV::VREDMAXU_VS, RISCV::VMV_X_S,
-                          RISCV::VSLIDEDOWN_VI, RISCV::VMV_X_S};
-    return MaskLT.first * getRISCVInstructionCost(RISCV::VCPOP_M, MaskLT.second,
-                                                  CostKind) +
-           ValLT.first *
-               getRISCVInstructionCost(Opcodes, ValLT.second, CostKind);
+    auto *Int8Ty = Type::getInt8Ty(ValTy->getContext());
+    auto *Int8VecTy =
+        VectorType::get(Int8Ty, cast<VectorType>(ValTy)->getElementCount());
+    auto Int8LT = getTypeLegalizationCost(Int8VecTy);
+    InstructionCost Cost = 0;
+    unsigned Opcodes[] = {RISCV::VID_V, RISCV::VREDMAXU_VS, RISCV::VMV_X_S};
+
+    Cost += MaskLT.first *
+            getRISCVInstructionCost(RISCV::VCPOP_M, MaskLT.second, CostKind);
+    Cost += getCFInstrCost(Instruction::Br, CostKind, nullptr);
+    Cost += Int8LT.first *
+            getRISCVInstructionCost(Opcodes, Int8LT.second, CostKind);
+    Cost += getCastInstrCost(Instruction::ZExt,
+                             Type::getInt64Ty(ValTy->getContext()), Int8Ty,
+                             TTI::CastContextHint::None, CostKind, nullptr);
+    Cost += ValLT.first *
+            getRISCVInstructionCost({RISCV::VSLIDEDOWN_VI, RISCV::VMV_X_S},
+                                    ValLT.second, CostKind);
+    return Cost;
   }
   }
 
