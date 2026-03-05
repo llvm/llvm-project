@@ -428,7 +428,8 @@ bool CompilerInstanceWithContext::initialize(
   std::shared_ptr<ModuleCache> ModCache =
       makeInProcessModuleCache(Worker.Service.getModuleCacheEntries());
   CIPtr = std::make_unique<CompilerInstance>(
-      createScanCompilerInvocation(*OriginalInvocation, Worker.Service, Controller),
+      createScanCompilerInvocation(*OriginalInvocation, Worker.Service,
+                                   Controller),
       Worker.PCHContainerOps, std::move(ModCache));
   auto &CI = *CIPtr;
 
