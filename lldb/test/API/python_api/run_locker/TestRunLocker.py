@@ -13,7 +13,7 @@ from lldbsuite.test.lldbtest import *
 class TestRunLocker(TestBase):
     NO_DEBUG_INFO_TESTCASE = True
 
-    @expectedFailureAll(oslist=["windows"])
+    @skipIfWindows # Windows doesn't have unistd.h
     # Is flaky on Linux AArch64 buildbot.
     @skipIf(oslist=["linux"], archs=["aarch64"])
     def test_run_locker(self):
@@ -21,7 +21,7 @@ class TestRunLocker(TestBase):
         self.build()
         self.runlocker_test(False)
 
-    @expectedFailureAll(oslist=["windows"])
+    @skipIfWindows # Windows doesn't have unistd.h
     # Is flaky on Linux AArch64 buildbot.
     @skipIf(oslist=["linux"], archs=["aarch64"])
     def test_run_locker_stop_at_entry(self):
@@ -29,6 +29,7 @@ class TestRunLocker(TestBase):
         self.build()
         self.runlocker_test(False)
 
+    @skipIfWindows # Windows doesn't have unistd.h
     def test_during_breakpoint_command(self):
         """Test that other threads don't see the process as stopped
         until we actually finish running the breakpoint callback."""
