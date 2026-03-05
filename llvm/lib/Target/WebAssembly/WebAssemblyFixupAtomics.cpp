@@ -9,11 +9,17 @@
 /// \file
 /// \brief Fixes memory ordering operands for atomic instructions.
 ///
+/// This is used because ISel selects atomics with a default value for the
+/// memory ordering immediate operand. Even though we run this pass early in
+/// the MI pass pipeline, MI passes should still use getMergedOrdering() on
+/// the MachineMemOperand to get the ordering rther than the immediate.
+///
 //===----------------------------------------------------------------------===//
 
 #include "MCTargetDesc/WebAssemblyMCTargetDesc.h"
 #include "WebAssembly.h"
 #include "WebAssemblySubtarget.h"
+#include "llvm/BinaryFormat/Wasm.h"
 #include "llvm/CodeGen/MachineFunctionPass.h"
 #include "llvm/CodeGen/MachineInstrBuilder.h"
 
@@ -62,17 +68,19 @@ bool WebAssemblyFixupAtomics::runOnMachineFunction(MachineFunction &MF) {
             Desc.operands()[I].OperandType == WebAssembly::OPERAND_MEMORDER) {
 
           if (HasRelaxedAtomics && !MI.memoperands_empty()) {
-            unsigned Order = 0; // seqcst
+            assert(MI.getOperand(I).getImm() == wasm::WASM_MEM_ORDER_SEQ_CST &&
+                   "Expected seqcst default atomics from ISel");
+            unsigned Order = wasm::WASM_MEM_ORDER_SEQ_CST;
             auto *MMO = *MI.memoperands_begin();
             switch (MMO->getMergedOrdering()) {
             case AtomicOrdering::Acquire:
             case AtomicOrdering::Release:
             case AtomicOrdering::AcquireRelease:
             case AtomicOrdering::Monotonic:
-              Order = 1; // acqrel
+              Order = wasm::WASM_MEM_ORDER_ACQ_REL;
               break;
             default:
-              Order = 0; // seqcst
+              Order = wasm::WASM_MEM_ORDER_SEQ_CST;
               break;
             }
             if (MI.getOperand(I).getImm() != Order) {
