@@ -783,9 +783,10 @@ struct TestVectorGatherLowering
            "loads";
   }
   void getDependentDialects(DialectRegistry &registry) const override {
-    registry.insert<arith::ArithDialect, func::FuncDialect,
-                    memref::MemRefDialect, scf::SCFDialect,
-                    tensor::TensorDialect, vector::VectorDialect>();
+    registry.insert<affine::AffineDialect, arith::ArithDialect,
+                    func::FuncDialect, memref::MemRefDialect,
+                    scf::SCFDialect, tensor::TensorDialect,
+                    vector::VectorDialect>();
   }
 
   void runOnOperation() override {

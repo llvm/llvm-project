@@ -290,24 +290,18 @@ func.func @scalable_gather_1d(%base: tensor<?xf32>, %v: vector<[2]xindex>, %mask
   return %0 : vector<[2]xf32>
 }
 
-// Verify that gather on a strided 2D memref delinearizes the 1-D gather offset
-// back into N-D indices via affine.delinearize_index.
+// Verify that gather on a strided 2D memref with zero base offsets
+// delinearizes the gather index directly (linearize and addi fold away).
 // CHECK-LABEL: @gather_strided_memref_2d
 // CHECK-SAME:    (%[[BASE:.+]]: memref<4x2xf32, strided<[4, 1]>>,
 // CHECK-SAME:     %[[IDXVEC:.+]]: vector<4xi32>,
 // CHECK-SAME:     %[[MASK:.+]]: vector<4xi1>,
 // CHECK-SAME:     %[[PASS:.+]]: vector<4xf32>)
 // CHECK-DAG:     %[[IDXS:.+]] = arith.index_cast %[[IDXVEC]]
-//
-// First element: delinearize the scalar offset into 2D indices.
-// CHECK-DAG:     %[[M0:.+]]   = vector.extract %[[MASK]][0]
 // CHECK-DAG:     %[[IDX0:.+]] = vector.extract %[[IDXS]][0]
 // CHECK:         %[[DL0:.+]]:2 = affine.delinearize_index %[[IDX0]] into (4, 2)
-// CHECK:         scf.if %[[M0]]
+// CHECK:         scf.if
 // CHECK:           vector.load %[[BASE]][%[[DL0]]#0, %[[DL0]]#1] : memref<4x2xf32, strided<[4, 1]>>, vector<1xf32>
-// CHECK:         else
-//
-// Remaining 3 elements follow the same pattern.
 // CHECK:         affine.delinearize_index %{{.+}} into (4, 2)
 // CHECK:         vector.load %[[BASE]][%{{.+}}, %{{.+}}] : memref<4x2xf32, strided<[4, 1]>>, vector<1xf32>
 // CHECK:         affine.delinearize_index %{{.+}} into (4, 2)
@@ -323,4 +317,32 @@ func.func @gather_strided_memref_2d(
     : memref<4x2xf32, strided<[4, 1]>>, vector<4xi32>,
       vector<4xi1>, vector<4xf32> into vector<4xf32>
   return %0 : vector<4xf32>
+}
+
+// -----
+
+// Verify that gather with non-zero base offsets on a strided memref correctly
+// incorporates the base offsets via linearize + add + delinearize.
+// CHECK-LABEL: @gather_strided_memref_2d_nonzero_base
+// CHECK-SAME:    (%[[BASE:.+]]: memref<4x2xf32, strided<[4, 1]>>,
+// CHECK-SAME:     %[[OFF0:.+]]: index, %[[OFF1:.+]]: index,
+// CHECK-SAME:     %[[IDXVEC:.+]]: vector<2xi32>,
+// CHECK-SAME:     %[[MASK:.+]]: vector<2xi1>,
+// CHECK-SAME:     %[[PASS:.+]]: vector<2xf32>)
+// CHECK-DAG:     %[[IDXS:.+]] = arith.index_cast %[[IDXVEC]]
+// CHECK:         %[[LIN:.+]] = affine.linearize_index [%[[OFF0]], %[[OFF1]]] by (4, 2)
+// CHECK:         %[[IDX0:.+]] = vector.extract %[[IDXS]][0]
+// CHECK:         %[[FLAT:.+]] = arith.addi %[[LIN]], %[[IDX0]]
+// CHECK:         %[[DL:.+]]:2 = affine.delinearize_index %[[FLAT]] into (4, 2)
+// CHECK:         scf.if
+// CHECK:           vector.load %[[BASE]][%[[DL]]#0, %[[DL]]#1]
+func.func @gather_strided_memref_2d_nonzero_base(
+    %base: memref<4x2xf32, strided<[4, 1]>>,
+    %off0: index, %off1: index,
+    %v: vector<2xi32>, %mask: vector<2xi1>,
+    %pass_thru: vector<2xf32>) -> vector<2xf32> {
+  %0 = vector.gather %base[%off0, %off1][%v], %mask, %pass_thru
+    : memref<4x2xf32, strided<[4, 1]>>, vector<2xi32>,
+      vector<2xi1>, vector<2xf32> into vector<2xf32>
+  return %0 : vector<2xf32>
 }
