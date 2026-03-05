@@ -311,7 +311,8 @@ public:
         stripAtomics(M);
     }
 
-    recordFeatures(M, WasmTM->getTargetCPU(), Features, StrippedAtomics || StrippedTLS);
+    recordFeatures(M, WasmTM->getTargetCPU(), Features,
+                   StrippedAtomics || StrippedTLS);
 
     // Conservatively assume we have made some change
     return true;
@@ -414,7 +415,8 @@ private:
     return Stripped;
   }
 
-  void recordFeatures(Module &M, StringRef CPU, const FeatureBitset &Features, bool Stripped) {
+  void recordFeatures(Module &M, StringRef CPU, const FeatureBitset &Features,
+                      bool Stripped) {
     for (const SubtargetFeatureKV &KV : WebAssemblyFeatureKV) {
       if (Features[KV.Value]) {
         // Mark features as used
@@ -435,8 +437,9 @@ private:
 
     // Mark component-model-thread-context as disallowed when not in use to
     // prevent linking object files with incompatible threading ABIs.
-    // This is implicit for MVP since the feature is not supported at all. 
-    if (CPU != "mvp" && !Features[WebAssembly::FeatureComponentModelThreadContext]) {
+    // This is implicit for MVP since the feature is not supported at all.
+    if (CPU != "mvp" &&
+        !Features[WebAssembly::FeatureComponentModelThreadContext]) {
       M.addModuleFlag(Module::ModFlagBehavior::Error,
                       "wasm-feature-component-model-thread-context",
                       wasm::WASM_FEATURE_PREFIX_DISALLOWED);

@@ -377,8 +377,8 @@ bool WebAssemblyLateEHPrepare::removeUnnecessaryUnreachables(
 }
 
 // After the stack is unwound due to a thrown exception, the __stack_pointer
-// global/context.get(0) can point to an invalid address. This inserts instructions
-// that restore the stack pointer state..
+// global/context.get(0) can point to an invalid address. This inserts
+// instructions that restore the stack pointer state..
 bool WebAssemblyLateEHPrepare::restoreStackPointer(MachineFunction &MF) {
   const auto *FrameLowering = static_cast<const WebAssemblyFrameLowering *>(
       MF.getSubtarget().getFrameLowering());
