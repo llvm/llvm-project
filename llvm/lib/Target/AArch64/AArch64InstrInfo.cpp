@@ -2005,6 +2005,10 @@ static unsigned sForm(MachineInstr &Instr) {
   case AArch64::BICSXrr:
   case AArch64::BICSWrs:
   case AArch64::BICSXrs:
+  case AArch64::ADCSWr:
+  case AArch64::ADCSXr:
+  case AArch64::SBCSWr:
+  case AArch64::SBCSXr:
     return Instr.getOpcode();
 
   case AArch64::ADDWrr:
