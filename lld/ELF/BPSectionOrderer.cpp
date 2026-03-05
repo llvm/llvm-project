@@ -32,9 +32,10 @@ struct BPOrdererELF : lld::BPOrderer<BPOrdererELF> {
   static bool isCodeSection(const Section &sec) {
     return sec.flags & ELF::SHF_EXECINSTR;
   }
-  // ELF handles cold functions via separate output sections (.text.unlikely,
-  // .text.split), so no cold splitting is needed within BP.
-  static bool isColdSection(const Section &sec) { return false; }
+  static bool isColdSection(const Section &sec) {
+    return sec.name.starts_with(".text.unlikely") ||
+           sec.name.starts_with(".text.split");
+  }
   ArrayRef<Defined *> getSymbols(const Section &sec) {
     auto it = secToSym.find(&sec);
     if (it == secToSym.end())
