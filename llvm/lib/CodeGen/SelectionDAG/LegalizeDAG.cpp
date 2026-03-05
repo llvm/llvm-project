@@ -3569,7 +3569,6 @@ bool SelectionDAGLegalize::ExpandNode(SDNode *Node) {
     const int SrcBias = 1 - APFloat::semanticsMinExponent(SrcSem);
 
     const fltNonfiniteBehavior NFBehavior = SrcSem.nonFiniteBehavior;
-    const fltNanEncoding NanEnc = SrcSem.nanEncoding;
 
     // Destination format parameters.
     const fltSemantics &DstSem = DstVT.getFltSemantics();
@@ -3632,7 +3631,7 @@ bool SelectionDAGLegalize::ExpandNode(SDNode *Node) {
       IsNaN = DAG.getNode(ISD::AND, dl, SetCCVT, IsExpAllOnes, IsMantNonZero);
     } else {
       // NanOnly + AllOnes (E4M3FN): NaN when all exp and mantissa bits are 1.
-      assert(NanEnc == fltNanEncoding::AllOnes);
+      assert(SrcSem.nanEncoding == fltNanEncoding::AllOnes);
       SDValue MantAllOnes = DAG.getConstant(MantMask, dl, IntVT);
       SDValue IsMantAllOnes =
           DAG.getSetCC(dl, SetCCVT, MantField, MantAllOnes, ISD::SETEQ);
