@@ -10366,6 +10366,7 @@ cc_library(
         ":BytecodeOpInterface",
         ":ControlFlowInterfaces",
         ":DataLayoutInterfaces",
+	":DialectUtils",
         ":GPUDialect",
         ":IR",
         ":LLVMDialect",
