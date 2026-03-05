@@ -645,19 +645,22 @@ TEST_F(PatternMatchTest, BooleanMap) {
   Constant *T, *F;
 
   Value *select = IRB.CreateSelect(SelectCond, C1, C2);
-  EXPECT_TRUE(m_BooleanMap(Cond, T, F).match(select));
+  EXPECT_TRUE(
+      m_SelectLike(m_Value(Cond), m_Constant(T), m_Constant(F)).match(select));
   EXPECT_EQ(Cond, SelectCond);
   EXPECT_EQ(T, C1);
   EXPECT_EQ(F, C2);
 
   Value *zext = IRB.CreateZExt(C1, IntegerType::getInt64Ty(Ctx));
-  EXPECT_TRUE(m_BooleanMap(Cond, T, F).match(zext));
+  EXPECT_TRUE(
+      m_SelectLike(m_Value(Cond), m_Constant(T), m_Constant(F)).match(zext));
   EXPECT_EQ(Cond, C1);
   EXPECT_EQ(T, IRB.getInt64(1));
   EXPECT_EQ(F, IRB.getInt64(0));
 
   Value *sext = IRB.CreateSExt(C1, IntegerType::getInt64Ty(Ctx));
-  EXPECT_TRUE(m_BooleanMap(Cond, T, F).match(sext));
+  EXPECT_TRUE(
+      m_SelectLike(m_Value(Cond), m_Constant(T), m_Constant(F)).match(sext));
   EXPECT_EQ(Cond, C1);
   EXPECT_EQ(T, IRB.getInt64(-1));
   EXPECT_EQ(F, IRB.getInt64(0));
@@ -665,13 +668,16 @@ TEST_F(PatternMatchTest, BooleanMap) {
   // Negative: zext/sext of non-i1 should not match
   Value *I8Val = IRB.getInt8(1);
   Value *ZExtI8 = IRB.CreateZExt(I8Val, IntegerType::getInt64Ty(Ctx));
-  EXPECT_FALSE(m_BooleanMap(Cond, T, F).match(ZExtI8));
+  EXPECT_FALSE(
+      m_SelectLike(m_Value(Cond), m_Constant(T), m_Constant(F)).match(ZExtI8));
   Value *SExtI8 = IRB.CreateSExt(I8Val, IntegerType::getInt64Ty(Ctx));
-  EXPECT_FALSE(m_BooleanMap(Cond, T, F).match(SExtI8));
+  EXPECT_FALSE(
+      m_SelectLike(m_Value(Cond), m_Constant(T), m_Constant(F)).match(SExtI8));
 
   // Negative: plain arithmetic instruction should not match
   Value *Add = IRB.CreateAdd(IRB.getInt32(1), IRB.getInt32(2));
-  EXPECT_FALSE(m_BooleanMap(Cond, T, F).match(Add));
+  EXPECT_FALSE(
+      m_SelectLike(m_Value(Cond), m_Constant(T), m_Constant(F)).match(Add));
 }
 
 TEST_F(PatternMatchTest, BitCast) {

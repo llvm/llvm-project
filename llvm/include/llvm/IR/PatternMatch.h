@@ -2380,48 +2380,45 @@ m_ZExtOrTruncOrSelf(const OpTy &Op) {
   return m_CombineOr(m_CombineOr(m_ZExt(Op), m_Trunc(Op)), Op);
 }
 
-struct BooleanMap_match {
-  Value *&Cond;
-  Constant *&TrueC;
-  Constant *&FalseC;
+template<typename CondTy, typename LTy, typename RTy>
+struct SelectLike_match {
+  CondTy Cond;
+  LTy TrueC;
+  RTy FalseC;
 
-  BooleanMap_match(Value *&C, Constant *&TC, Constant *&FC)
+  SelectLike_match(const CondTy &C, const LTy &TC, const RTy &FC)
       : Cond(C), TrueC(TC), FalseC(FC) {}
 
   template <typename OpTy> bool match(OpTy *V) const {
     // select(Cond, TrueC, FalseC) — captures both constants directly
-    if (PatternMatch::match(
-            V, m_Select(m_Value(Cond), m_Constant(TrueC), m_Constant(FalseC))))
+    if (PatternMatch::match(V, m_Select(Cond, TrueC, FalseC)))
       return true;
 
     Type *Ty = V->getType();
-    Value *CondV;
+    Value *CondV = nullptr;
 
     // zext(i1 Cond) is equivalent to select(Cond, 1, 0)
     if (PatternMatch::match(V, m_ZExt(m_Value(CondV))) &&
-        CondV->getType()->isIntOrIntVectorTy(1)) {
-      Cond = CondV;
-      TrueC = ConstantInt::get(Ty, 1);
-      FalseC = ConstantInt::get(Ty, 0);
+        CondV->getType()->isIntOrIntVectorTy(1) && Cond.match(CondV) &&
+        TrueC.match(ConstantInt::get(Ty, 1)) &&
+        FalseC.match(ConstantInt::get(Ty, 0)))
       return true;
-    }
 
     // sext(i1 Cond) is equivalent to select(Cond, -1, 0)
     if (PatternMatch::match(V, m_SExt(m_Value(CondV))) &&
-        CondV->getType()->isIntOrIntVectorTy(1)) {
-      Cond = CondV;
-      TrueC = Constant::getAllOnesValue(Ty);
-      FalseC = ConstantInt::get(Ty, 0);
+        CondV->getType()->isIntOrIntVectorTy(1) && Cond.match(CondV) &&
+        TrueC.match(Constant::getAllOnesValue(Ty)) &&
+        FalseC.match(ConstantInt::get(Ty, 0)))
       return true;
-    }
 
     return false;
   }
 };
 
-inline BooleanMap_match m_BooleanMap(Value *&C, Constant *&TrueC,
-                                     Constant *&FalseC) {
-  return BooleanMap_match(C, TrueC, FalseC);
+template <typename CondTy, typename LTy, typename RTy>
+inline SelectLike_match<CondTy, LTy, RTy>
+m_SelectLike(const CondTy &C, const LTy &TrueC, const RTy &FalseC) {
+  return SelectLike_match<CondTy, LTy, RTy>(C, TrueC, FalseC);
 }
 
 template <typename OpTy>

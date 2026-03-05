@@ -1105,9 +1105,11 @@ InstCombinerImpl::foldBinOpOfSelectAndCastOfSelectCondition(BinaryOperator &I) {
   Value *LHS = I.getOperand(0), *RHS = I.getOperand(1);
   Value *A, *CondVal, *TrueVal, *FalseVal;
   Value *CastOp;
+  Constant *CastTrueVal, *CastFalseVal;
 
   auto MatchSelectAndCast = [&](Value *CastOp, Value *SelectOp) {
-    return match(CastOp, m_ZExtOrSExt(m_Value(A))) &&
+    return match(CastOp, m_SelectLike(m_Value(A), m_Constant(CastTrueVal),
+                                      m_Constant(CastFalseVal))) &&
            A->getType()->getScalarSizeInBits() == 1 &&
            match(SelectOp, m_Select(m_Value(CondVal), m_Value(TrueVal),
                                     m_Value(FalseVal)));
@@ -1128,20 +1130,10 @@ InstCombinerImpl::foldBinOpOfSelectAndCastOfSelectCondition(BinaryOperator &I) {
 
   auto NewFoldedConst = [&](bool IsTrueArm, Value *V) {
     bool IsCastOpRHS = (CastOp == RHS);
-    bool IsZExt = isa<ZExtInst>(CastOp);
-    Constant *C;
+    Value *CastVal = IsTrueArm ? CastFalseVal : CastTrueVal;
 
-    if (IsTrueArm) {
-      C = Constant::getNullValue(V->getType());
-    } else if (IsZExt) {
-      unsigned BitWidth = V->getType()->getScalarSizeInBits();
-      C = Constant::getIntegerValue(V->getType(), APInt(BitWidth, 1));
-    } else {
-      C = Constant::getAllOnesValue(V->getType());
-    }
-
-    return IsCastOpRHS ? Builder.CreateBinOp(Opc, V, C)
-                       : Builder.CreateBinOp(Opc, C, V);
+    return IsCastOpRHS ? Builder.CreateBinOp(Opc, V, CastVal)
+                       : Builder.CreateBinOp(Opc, CastVal, V);
   };
 
   // If the value used in the zext/sext is the select condition, or the negated
@@ -1151,7 +1143,6 @@ InstCombinerImpl::foldBinOpOfSelectAndCastOfSelectCondition(BinaryOperator &I) {
     return SelectInst::Create(CondVal, NewTrueVal,
                               NewFoldedConst(true, FalseVal), "", nullptr, SI);
   }
-
   if (match(A, m_Not(m_Specific(CondVal)))) {
     Value *NewTrueVal = NewFoldedConst(true, TrueVal);
     return SelectInst::Create(CondVal, NewTrueVal,
