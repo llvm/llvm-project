@@ -109,17 +109,7 @@ static void VerifyDecl(clang::Decl *decl) {
 
 static inline bool
 TypeSystemClangSupportsLanguage(lldb::LanguageType language) {
-  return language == eLanguageTypeUnknown || // Clang is the default type system
-         lldb_private::Language::LanguageIsC(language) ||
-         lldb_private::Language::LanguageIsCPlusPlus(language) ||
-         lldb_private::Language::LanguageIsObjC(language) ||
-         lldb_private::Language::LanguageIsPascal(language) ||
-         // Use Clang for Rust until there is a proper language plugin for it
-         language == eLanguageTypeRust ||
-         // Use Clang for D until there is a proper language plugin for it
-         language == eLanguageTypeD ||
-         // Open Dylan compiler debug info is designed to be Clang-compatible
-         language == eLanguageTypeDylan;
+  return TypeSystemClang::GetSupportedLanguagesForTypes()[language];
 }
 
 // Checks whether m1 is an overload of m2 (as opposed to an override). This is
@@ -546,21 +536,28 @@ lldb::TypeSystemSP TypeSystemClang::CreateInstance(lldb::LanguageType language,
   return lldb::TypeSystemSP();
 }
 
-LanguageSet TypeSystemClang::GetSupportedLanguagesForTypes() {
-  LanguageSet languages;
-  languages.Insert(lldb::eLanguageTypeC89);
-  languages.Insert(lldb::eLanguageTypeC);
-  languages.Insert(lldb::eLanguageTypeC11);
-  languages.Insert(lldb::eLanguageTypeC_plus_plus);
-  languages.Insert(lldb::eLanguageTypeC99);
-  languages.Insert(lldb::eLanguageTypeObjC);
-  languages.Insert(lldb::eLanguageTypeObjC_plus_plus);
-  languages.Insert(lldb::eLanguageTypeC_plus_plus_03);
-  languages.Insert(lldb::eLanguageTypeC_plus_plus_11);
-  languages.Insert(lldb::eLanguageTypeC11);
-  languages.Insert(lldb::eLanguageTypeC_plus_plus_14);
-  languages.Insert(lldb::eLanguageTypeC_plus_plus_17);
-  languages.Insert(lldb::eLanguageTypeC_plus_plus_20);
+const LanguageSet &TypeSystemClang::GetSupportedLanguagesForTypes() {
+  static std::once_flag s_once_languages;
+  static LanguageSet languages;
+  std::call_once(s_once_languages, [] {
+    languages.Insert(lldb::eLanguageTypeUnknown);
+    languages.Insert(lldb::eLanguageTypeC89);
+    languages.Insert(lldb::eLanguageTypeC);
+    languages.Insert(lldb::eLanguageTypeC11);
+    languages.Insert(lldb::eLanguageTypeC_plus_plus);
+    languages.Insert(lldb::eLanguageTypeC99);
+    languages.Insert(lldb::eLanguageTypeObjC);
+    languages.Insert(lldb::eLanguageTypeObjC_plus_plus);
+    languages.Insert(lldb::eLanguageTypeC_plus_plus_03);
+    languages.Insert(lldb::eLanguageTypeC_plus_plus_11);
+    languages.Insert(lldb::eLanguageTypeC_plus_plus_14);
+    languages.Insert(lldb::eLanguageTypeC_plus_plus_17);
+    languages.Insert(lldb::eLanguageTypeC_plus_plus_20);
+    languages.Insert(lldb::eLanguageTypePascal83);
+    languages.Insert(lldb::eLanguageTypeRust);
+    languages.Insert(lldb::eLanguageTypeD);
+    languages.Insert(lldb::eLanguageTypeDylan);
+  });
   return languages;
 }
 
