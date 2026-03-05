@@ -13,7 +13,6 @@
 //===----------------------------------------------------------------------===//
 
 #include <cassert>
-#include <numeric>
 
 #include "mlir/ExecutionEngine/CRunnerUtils.h"
 #include "llvm/ADT/ArrayRef.h"
@@ -143,25 +142,32 @@ extern "C" void mgpuMemHostRegister(void *ptr, uint64_t sizeBytes) {
 
 // Allows to register a MemRef with the ROCm runtime. Helpful until we have
 // transfer functions implemented.
-extern "C" void
-mgpuMemHostRegisterMemRef(int64_t rank, StridedMemRefType<char, 1> *descriptor,
-                          int64_t elementSizeBytes) {
+extern "C" void mgpuMemHostRegisterMemRef(int64_t rank, void *descriptor,
+                                          int64_t elementSizeBytes) {
+  ::UnrankedMemRefType<char> unranked{rank, descriptor};
+  DynamicMemRefType<char> memRef(unranked);
+
+  // Rank-0 memref: single element.
+  if (rank == 0) {
+    auto ptr = memRef.data + memRef.offset * elementSizeBytes;
+    mgpuMemHostRegister(ptr, elementSizeBytes);
+    return;
+  }
 
   llvm::SmallVector<int64_t, 4> denseStrides(rank);
-  llvm::ArrayRef<int64_t> sizes(descriptor->sizes, rank);
-  llvm::ArrayRef<int64_t> strides(sizes.end(), rank);
+  llvm::ArrayRef<int64_t> sizes(memRef.sizes, rank);
+  llvm::ArrayRef<int64_t> strides(memRef.strides, rank);
 
-  std::partial_sum(sizes.rbegin(), sizes.rend(), denseStrides.rbegin(),
-                   std::multiplies<int64_t>());
-  auto sizeBytes = denseStrides.front() * elementSizeBytes;
+  for (int64_t i = rank - 1, runningStride = 1; i >= 0; --i) {
+    denseStrides[i] = runningStride;
+    runningStride *= sizes[i];
+  }
+  auto sizeBytes = sizes.front() * denseStrides.front() * elementSizeBytes;
 
   // Only densely packed tensors are currently supported.
-  std::rotate(denseStrides.begin(), denseStrides.begin() + 1,
-              denseStrides.end());
-  denseStrides.back() = 1;
   assert(strides == llvm::ArrayRef(denseStrides));
 
-  auto ptr = descriptor->data + descriptor->offset * elementSizeBytes;
+  auto ptr = memRef.data + memRef.offset * elementSizeBytes;
   mgpuMemHostRegister(ptr, sizeBytes);
 }
 
@@ -173,11 +179,11 @@ extern "C" void mgpuMemHostUnregister(void *ptr) {
 
 // Allows to unregister a MemRef with the ROCm runtime. Helpful until we have
 // transfer functions implemented.
-extern "C" void
-mgpuMemHostUnregisterMemRef(int64_t rank,
-                            StridedMemRefType<char, 1> *descriptor,
-                            int64_t elementSizeBytes) {
-  auto ptr = descriptor->data + descriptor->offset * elementSizeBytes;
+extern "C" void mgpuMemHostUnregisterMemRef(int64_t rank, void *descriptor,
+                                            int64_t elementSizeBytes) {
+  ::UnrankedMemRefType<char> unranked{rank, descriptor};
+  DynamicMemRefType<char> memRef(unranked);
+  auto ptr = memRef.data + memRef.offset * elementSizeBytes;
   mgpuMemHostUnregister(ptr);
 }
 

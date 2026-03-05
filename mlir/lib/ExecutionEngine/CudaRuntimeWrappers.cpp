@@ -284,31 +284,40 @@ mgpuMemHostRegister(void *ptr, uint64_t sizeBytes) {
   CUDA_REPORT_IF_ERROR(cuMemHostRegister(ptr, sizeBytes, /*flags=*/0));
 }
 
-/// Registers a memref with the CUDA runtime. `descriptor` is a pointer to a
-/// ranked memref descriptor struct of rank `rank`. Helpful until we have
+/// Registers a memref with the CUDA runtime. `descriptor` is a pointer to an
+/// unranked memref descriptor struct of rank `rank`. Helpful until we have
 /// transfer functions implemented.
 extern "C" MLIR_CUDA_WRAPPERS_EXPORT void
-mgpuMemHostRegisterMemRef(int64_t rank, StridedMemRefType<char, 1> *descriptor,
+mgpuMemHostRegisterMemRef(int64_t rank, void *descriptor,
                           int64_t elementSizeBytes) {
+  ::UnrankedMemRefType<char> unranked{rank, descriptor};
+  DynamicMemRefType<char> memRef(unranked);
+
+  // Rank-0 memref: single element.
+  if (rank == 0) {
+    auto *ptr = memRef.data + memRef.offset * elementSizeBytes;
+    mgpuMemHostRegister(ptr, elementSizeBytes);
+    return;
+  }
+
   // Only densely packed tensors are currently supported.
 #ifdef _WIN32
   int64_t *denseStrides = (int64_t *)_alloca(rank * sizeof(int64_t));
 #else
   int64_t *denseStrides = (int64_t *)alloca(rank * sizeof(int64_t));
 #endif // _WIN32
-  int64_t *sizes = descriptor->sizes;
+  const int64_t *sizes = memRef.sizes;
   for (int64_t i = rank - 1, runningStride = 1; i >= 0; i--) {
     denseStrides[i] = runningStride;
     runningStride *= sizes[i];
   }
   uint64_t sizeBytes = sizes[0] * denseStrides[0] * elementSizeBytes;
-  int64_t *strides = &sizes[rank];
-  (void)strides;
-  for (unsigned i = 0; i < rank; ++i)
+  const int64_t *strides = memRef.strides;
+  for (int64_t i = 0; i < rank; ++i)
     assert(strides[i] == denseStrides[i] &&
            "Mismatch in computed dense strides");
 
-  auto *ptr = descriptor->data + descriptor->offset * elementSizeBytes;
+  auto *ptr = memRef.data + memRef.offset * elementSizeBytes;
   mgpuMemHostRegister(ptr, sizeBytes);
 }
 
@@ -321,10 +330,11 @@ extern "C" MLIR_CUDA_WRAPPERS_EXPORT void mgpuMemHostUnregister(void *ptr) {
 /// Unregisters a memref with the CUDA runtime. `descriptor` is a pointer to a
 /// ranked memref descriptor struct of rank `rank`
 extern "C" MLIR_CUDA_WRAPPERS_EXPORT void
-mgpuMemHostUnregisterMemRef(int64_t rank,
-                            StridedMemRefType<char, 1> *descriptor,
+mgpuMemHostUnregisterMemRef(int64_t rank, void *descriptor,
                             int64_t elementSizeBytes) {
-  auto *ptr = descriptor->data + descriptor->offset * elementSizeBytes;
+  ::UnrankedMemRefType<char> unranked{rank, descriptor};
+  DynamicMemRefType<char> memRef(unranked);
+  auto *ptr = memRef.data + memRef.offset * elementSizeBytes;
   mgpuMemHostUnregister(ptr);
 }
 
