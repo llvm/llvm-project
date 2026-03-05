@@ -4373,6 +4373,20 @@ add_entrypoint_object(
 )
 
 add_entrypoint_object(
+  fmabf16
+  SRCS
+    fmabf16.cpp
+  HDRS
+    ../fmabf16.h
+  DEPENDS
+    libc.src.__support.common
+    libc.src.__support.FPUtil.bfloat16
+    libc.src.__support.FPUtil.fma
+    libc.src.__support.macros.config
+    libc.src.__support.macros.properties.types
+)
+
+add_entrypoint_object(
   totalorder
   SRCS
     totalorder.cpp

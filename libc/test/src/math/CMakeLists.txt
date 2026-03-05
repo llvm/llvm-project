@@ -1998,6 +1998,22 @@ add_fp_unittest(
 )
 
 add_fp_unittest(
+  fmabf16_test
+  NEED_MPFR
+  SUITE
+    libc-math-unittests
+  SRCS
+    fmabf16_test.cpp
+  HDRS
+    FmaTest.h
+  DEPENDS
+    libc.src.math.fmabf16
+    libc.src.stdlib.rand
+    libc.src.stdlib.srand
+    libc.src.__support.FPUtil.bfloat16
+)
+
+add_fp_unittest(
   fma_test
   NEED_MPFR
   SUITE
