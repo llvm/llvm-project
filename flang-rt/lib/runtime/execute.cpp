@@ -219,7 +219,9 @@ void RTNAME(ExecuteCommandLine)(const Descriptor &command, bool wait,
   //     Because delayed expansion is on, !ERRORLEVEL! is evaluated at
   //     execution time, so this cmd instance returns the same error
   //     code as mycommand.
-  //
+  // This allows cmd.exe to either return the exit code of mycommand, or
+  // to return its own exit code to the caller. The code 9009 is used
+  // by cmd.exe to indicate "not found" condition.
   const char prefix[]{"cmd.exe /v:on /c \""};
   const char suffix[]{" & exit /b !ERRORLEVEL!\""};
   const size_t newCmdWinLen{
