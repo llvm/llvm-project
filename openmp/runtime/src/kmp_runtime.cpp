@@ -3295,6 +3295,20 @@ static kmp_internal_control_t __kmp_get_global_icvs(void) {
 
   KMP_DEBUG_ASSERT(__kmp_nested_proc_bind.used > 0);
 
+  // When offload is disabled, default_device should be the initial device
+  // regardless of OMP_DEFAULT_DEVICE environment variable or explicit set
+  int default_device_icv = __kmp_default_device;
+  if (__kmp_target_offload == tgt_disabled) {
+    // Initial device is same as num_devices when offload is disabled
+    int (*fptr)();
+    if ((*(void **)(&fptr) = KMP_DLSYM("__tgt_get_num_devices"))) {
+      default_device_icv = (*fptr)();
+    } else {
+      default_device_icv = 0;
+    }
+  }
+
+  // clang-format off
   kmp_internal_control_t g_icvs = {
     0, // int serial_nesting_level; //corresponds to value of th_team_serialized
     (kmp_int8)__kmp_global.g.g_dynamic, // internal control for dynamic
@@ -3317,9 +3331,10 @@ static kmp_internal_control_t __kmp_get_global_icvs(void) {
     r_sched, // kmp_r_sched_t sched; //internal control for runtime schedule
     // {sched,chunk} pair
     __kmp_nested_proc_bind.bind_types[0],
-    __kmp_default_device,
+    default_device_icv,
     NULL // struct kmp_internal_control *next;
   };
+  // clang-format on
 
   return g_icvs;
 }
