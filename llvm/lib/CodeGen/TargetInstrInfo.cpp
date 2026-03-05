@@ -57,6 +57,10 @@ static cl::opt<unsigned int> MaxAccumulatorWidth(
     "acc-max-width", cl::Hidden, cl::init(3),
     cl::desc("Maximum number of branches in the accumulator tree"));
 
+static cl::opt<bool>
+    AllowNTRemat("allow-none-trival-remat", cl::init(true), cl::Hidden,
+                 cl::desc("Allow non-trivial rematerialization by default"));
+
 TargetInstrInfo::~TargetInstrInfo() = default;
 
 const TargetRegisterClass *TargetInstrInfo::getRegClass(const MCInstrDesc &MCID,
@@ -1654,6 +1658,14 @@ bool TargetInstrInfo::isReMaterializableImpl(
     // same virtual register, though.
     if (MO.isDef() && Reg != DefReg)
       return false;
+
+    // Don't allow any virtual-register uses. Rematting an instruction with
+    // virtual register uses would length the live ranges of the uses, which
+    // is not necessarily a good idea, certainly not "trivial".
+    if (!AllowNTRemat) {
+      if (MO.isUse())
+        return false;
+    }
   }
 
   // Everything checked out.
