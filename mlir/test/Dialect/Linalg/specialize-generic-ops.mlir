@@ -581,3 +581,162 @@ func.func @op_batch_matmul_non_canonical_loops(%A: tensor<2x16x8xf32>, %B: tenso
 // CHECK-NOT: linalg.generic
 // CHECK: linalg.batch_matmul ins(%[[A]], %[[B]] : tensor<2x16x8xf32>, tensor<2x8x16xf32>) outs(%[[Out]] : tensor<2x16x16xf32>) -> tensor<2x16x16xf32>
 
+// -----
+
+// Matmul with non-canonical loop ordering (d0=m, d1=k, d2=n) and B transposed.
+#map_nc_tb_a = affine_map<(d0, d1, d2) -> (d0, d1)>
+#map_nc_tb_b = affine_map<(d0, d1, d2) -> (d2, d1)>
+#map_nc_tb_c = affine_map<(d0, d1, d2) -> (d0, d2)>
+func.func @op_matmul_non_canonical_transpose_b(%A: tensor<?x?xf32>, %B: tensor<?x?xf32>,
+                                                %Out: tensor<?x?xf32>) -> tensor<?x?xf32> {
+  %0 = linalg.generic
+         {indexing_maps = [#map_nc_tb_a, #map_nc_tb_b, #map_nc_tb_c],
+          iterator_types = ["parallel", "reduction", "parallel"]}
+         ins(%A, %B : tensor<?x?xf32>, tensor<?x?xf32>) outs(%Out : tensor<?x?xf32>) {
+   ^bb0(%in: f32, %in_0: f32, %out: f32):
+     %1 = arith.mulf %in, %in_0 : f32
+     %2 = arith.addf %out, %1 : f32
+     linalg.yield %2 : f32
+   } -> tensor<?x?xf32>
+   return %0 : tensor<?x?xf32>
+}
+
+// CHECK-DAG: #[[$MAP_A:.+]] = affine_map<(d0, d1, d2) -> (d0, d2)>
+// CHECK-DAG: #[[$MAP_TB:.+]] = affine_map<(d0, d1, d2) -> (d1, d2)>
+// CHECK-DAG: #[[$MAP_C:.+]] = affine_map<(d0, d1, d2) -> (d0, d1)>
+// CHECK-LABEL: op_matmul_non_canonical_transpose_b
+// CHECK-SAME: %[[A:.+]]: tensor<?x?xf32>, %[[B:.+]]: tensor<?x?xf32>, %[[Out:.+]]: tensor<?x?xf32>
+// CHECK-NOT: linalg.generic
+// CHECK: linalg.matmul
+// CHECK-SAME: indexing_maps = [#[[$MAP_A]], #[[$MAP_TB]], #[[$MAP_C]]]
+// CHECK-SAME: ins(%[[A]], %[[B]] : tensor<?x?xf32>, tensor<?x?xf32>)
+// CHECK-SAME: outs(%[[Out]] : tensor<?x?xf32>) -> tensor<?x?xf32>
+
+// -----
+
+// Batch matmul with non-canonical loop ordering (d0=batch, d1=m, d2=k, d3=n)
+// and B Transposed.
+#map_bnc_tb_a = affine_map<(d0, d1, d2, d3) -> (d0, d1, d2)>
+#map_bnc_tb_b = affine_map<(d0, d1, d2, d3) -> (d0, d3, d2)>
+#map_bnc_tb_c = affine_map<(d0, d1, d2, d3) -> (d0, d1, d3)>
+func.func @op_batch_matmul_non_canonical_transpose_b(%A: tensor<2x16x8xf32>, %B: tensor<2x16x8xf32>,
+                                                      %Out: tensor<2x16x16xf32>) -> tensor<2x16x16xf32> {
+  %0 = linalg.generic
+           {indexing_maps = [#map_bnc_tb_a, #map_bnc_tb_b, #map_bnc_tb_c],
+            iterator_types = ["parallel", "parallel", "reduction", "parallel"]}
+           ins(%A, %B : tensor<2x16x8xf32>, tensor<2x16x8xf32>) outs(%Out : tensor<2x16x16xf32>) {
+  ^bb0(%in: f32, %in_0: f32, %out: f32):
+    %1 = arith.mulf %in, %in_0 : f32
+    %2 = arith.addf %out, %1 : f32
+    linalg.yield %2 : f32
+  } -> tensor<2x16x16xf32>
+  return %0 : tensor<2x16x16xf32>
+}
+
+// CHECK-DAG: #[[$MAP_A:.+]] = affine_map<(d0, d1, d2, d3) -> (d0, d1, d3)>
+// CHECK-DAG: #[[$MAP_TB:.+]] = affine_map<(d0, d1, d2, d3) -> (d0, d2, d3)>
+// CHECK-DAG: #[[$MAP_C:.+]] = affine_map<(d0, d1, d2, d3) -> (d0, d1, d2)>
+// CHECK-LABEL: op_batch_matmul_non_canonical_transpose_b
+// CHECK-SAME: %[[A:.+]]: tensor<2x16x8xf32>, %[[B:.+]]: tensor<2x16x8xf32>, %[[Out:.+]]: tensor<2x16x16xf32>
+// CHECK-NOT: linalg.generic
+// CHECK: linalg.batch_matmul
+// CHECK-SAME: indexing_maps = [#[[$MAP_A]], #[[$MAP_TB]], #[[$MAP_C]]]
+// CHECK-SAME: ins(%[[A]], %[[B]] : tensor<2x16x8xf32>, tensor<2x16x8xf32>)
+// CHECK-SAME: outs(%[[Out]] : tensor<2x16x16xf32>) -> tensor<2x16x16xf32>
+
+// -----
+
+// Matmul with fully permuted loop ordering.
+#map_fs_a = affine_map<(d0, d1, d2) -> (d1, d0)>
+#map_fs_b = affine_map<(d0, d1, d2) -> (d0, d2)>
+#map_fs_c = affine_map<(d0, d1, d2) -> (d1, d2)>
+func.func @op_matmul_fully_shuffled_loops(%A: tensor<?x?xf32>, %B: tensor<?x?xf32>,
+                                           %Out: tensor<?x?xf32>) -> tensor<?x?xf32> {
+  %0 = linalg.generic
+         {indexing_maps = [#map_fs_a, #map_fs_b, #map_fs_c],
+          iterator_types = ["reduction", "parallel", "parallel"]}
+         ins(%A, %B : tensor<?x?xf32>, tensor<?x?xf32>) outs(%Out : tensor<?x?xf32>) {
+   ^bb0(%in: f32, %in_0: f32, %out: f32):
+     %1 = arith.mulf %in, %in_0 : f32
+     %2 = arith.addf %out, %1 : f32
+     linalg.yield %2 : f32
+   } -> tensor<?x?xf32>
+   return %0 : tensor<?x?xf32>
+}
+
+// CHECK-LABEL: op_matmul_fully_shuffled_loops
+// CHECK-SAME: %[[A:.+]]: tensor<?x?xf32>, %[[B:.+]]: tensor<?x?xf32>, %[[Out:.+]]: tensor<?x?xf32>
+// CHECK-NOT: linalg.generic
+// CHECK: linalg.matmul ins(%[[A]], %[[B]] : tensor<?x?xf32>, tensor<?x?xf32>) outs(%[[Out]] : tensor<?x?xf32>) -> tensor<?x?xf32>
+
+// -----
+
+// TODO: this could also be specialized to a named matmul.
+#map_bcast_a = affine_map<(d0, d1, d2) -> (d2)>
+#map_bcast_b = affine_map<(d0, d1, d2) -> (d2, d1)>
+#map_bcast_c = affine_map<(d0, d1, d2) -> (d0, d1)>
+func.func @negative_matmul_broadcast_a(%A: tensor<?xf32>, %B: tensor<?x?xf32>,
+                                        %Out: tensor<?x?xf32>) -> tensor<?x?xf32> {
+  %0 = linalg.generic
+         {indexing_maps = [#map_bcast_a, #map_bcast_b, #map_bcast_c],
+          iterator_types = ["parallel", "parallel", "reduction"]}
+         ins(%A, %B : tensor<?xf32>, tensor<?x?xf32>) outs(%Out : tensor<?x?xf32>) {
+   ^bb0(%in: f32, %in_0: f32, %out: f32):
+     %1 = arith.mulf %in, %in_0 : f32
+     %2 = arith.addf %out, %1 : f32
+     linalg.yield %2 : f32
+   } -> tensor<?x?xf32>
+   return %0 : tensor<?x?xf32>
+}
+
+// CHECK-LABEL: negative_matmul_broadcast_a
+// CHECK: linalg.generic
+// CHECK-NOT: linalg.matmul
+
+// -----
+
+// TODO: this could also be specialized to a named batch_matmul.
+#map_bbcast_a = affine_map<(d0, d1, d2, d3) -> (d1, d3)>
+#map_bbcast_b = affine_map<(d0, d1, d2, d3) -> (d0, d3, d2)>
+#map_bbcast_c = affine_map<(d0, d1, d2, d3) -> (d0, d1, d2)>
+func.func @negative_batch_matmul_broadcast_a(%A: tensor<16x8xf32>, %B: tensor<2x8x16xf32>,
+                                              %Out: tensor<2x16x16xf32>) -> tensor<2x16x16xf32> {
+  %0 = linalg.generic
+           {indexing_maps = [#map_bbcast_a, #map_bbcast_b, #map_bbcast_c],
+            iterator_types = ["parallel", "parallel", "parallel", "reduction"]}
+           ins(%A, %B : tensor<16x8xf32>, tensor<2x8x16xf32>) outs(%Out : tensor<2x16x16xf32>) {
+  ^bb0(%in: f32, %in_0: f32, %out: f32):
+    %1 = arith.mulf %in, %in_0 : f32
+    %2 = arith.addf %out, %1 : f32
+    linalg.yield %2 : f32
+  } -> tensor<2x16x16xf32>
+  return %0 : tensor<2x16x16xf32>
+}
+
+// CHECK-LABEL: negative_batch_matmul_broadcast_a
+// CHECK: linalg.generic
+// CHECK-NOT: linalg.batch_matmul
+
+// -----
+
+// TODO: this could also be specialized to a named batch_matmul.
+#map_bbcast2_a = affine_map<(d0, d1, d2, d3) -> (d0, d1, d3)>
+#map_bbcast2_b = affine_map<(d0, d1, d2, d3) -> (d3)>
+#map_bbcast2_c = affine_map<(d0, d1, d2, d3) -> (d0, d1, d2)>
+func.func @negative_batch_matmul_broadcast_b(%A: tensor<2x16x8xf32>, %B: tensor<8xf32>,
+                                              %Out: tensor<2x16x16xf32>) -> tensor<2x16x16xf32> {
+  %0 = linalg.generic
+           {indexing_maps = [#map_bbcast2_a, #map_bbcast2_b, #map_bbcast2_c],
+            iterator_types = ["parallel", "parallel", "parallel", "reduction"]}
+           ins(%A, %B : tensor<2x16x8xf32>, tensor<8xf32>) outs(%Out : tensor<2x16x16xf32>) {
+  ^bb0(%in: f32, %in_0: f32, %out: f32):
+    %1 = arith.mulf %in, %in_0 : f32
+    %2 = arith.addf %out, %1 : f32
+    linalg.yield %2 : f32
+  } -> tensor<2x16x16xf32>
+  return %0 : tensor<2x16x16xf32>
+}
+
+// CHECK-LABEL: negative_batch_matmul_broadcast_b
+// CHECK: linalg.generic
+// CHECK-NOT: linalg.batch_matmul
