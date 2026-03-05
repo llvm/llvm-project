@@ -253,9 +253,8 @@ bool SPIRVEmitNonSemanticDI::emitGlobalDI(MachineFunction &MF) {
     const Register DebugInfoVersionReg =
         GR->buildConstantInt(DebugInfoVersion, MIRBuilder, I32Ty, false);
 
-    for (unsigned Idx = 0; Idx < CompileUnits.size(); ++Idx) {
-      const DICompileUnit *CompileUnit = CompileUnits[Idx];
-      DIFile *File = CompileUnit->getFile();
+    for (const DICompileUnit *CompileUnit : CompileUnits) {
+      const DIFile *File = CompileUnit->getFile();
       SmallString<128> FilePath;
       sys::path::append(FilePath, File->getDirectory(), File->getFilename());
       const Register FilePathStrReg = emitOpString(MRI, MIRBuilder, FilePath);
