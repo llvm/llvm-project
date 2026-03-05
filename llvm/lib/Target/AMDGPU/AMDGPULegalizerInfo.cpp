@@ -5380,18 +5380,34 @@ bool AMDGPULegalizerInfo::legalizeFastUnsafeFDIV64(MachineInstr &MI,
   if (!AllowInaccurateRcp)
     return false;
 
+  const ConstantFP *CLHS = getConstantFPVRegVal(X, MRI);
+  bool IsNegRcp = CLHS && CLHS->isExactlyValue(-1.0);
+
+  // Pull out the negation so it folds for free into the source modifiers.
+  if (IsNegRcp)
+    X = B.buildFConstant(ResTy, 1.0).getReg(0);
+
   auto NegY = B.buildFNeg(ResTy, Y);
   auto One = B.buildFConstant(ResTy, 1.0);
 
   auto R = B.buildIntrinsic(Intrinsic::amdgcn_rcp, {ResTy})
                .addUse(Y)
                .setMIFlags(Flags);
+  if (IsNegRcp)
+    R = B.buildFNeg(ResTy, R);
 
   auto Tmp0 = B.buildFMA(ResTy, NegY, R, One);
   R = B.buildFMA(ResTy, Tmp0, R, R);
 
   auto Tmp1 = B.buildFMA(ResTy, NegY, R, One);
   R = B.buildFMA(ResTy, Tmp1, R, R);
+
+  // Skip the last 2 correction terms for reciprocal.
+  if (IsNegRcp || (CLHS && CLHS->isExactlyValue(1.0))) {
+    B.buildCopy(Res, R);
+    MI.eraseFromParent();
+    return true;
+  }
 
   auto Ret = B.buildFMul(ResTy, X, R);
   auto Tmp2 = B.buildFMA(ResTy, NegY, Ret, X);

@@ -145,8 +145,6 @@ define amdgpu_kernel void @rcp_pat_f64(ptr addrspace(1) %out, double %src) #1 {
 ; SI: v_fma_f64
 ; SI: v_fma_f64
 ; SI: v_fma_f64
-; SI: v_fma_f64
-; SI: v_fma_f64
 define amdgpu_kernel void @unsafe_rcp_pat_f64(ptr addrspace(1) %out, double %src) #2 {
   %rcp = fdiv afn double 1.0, %src
   store double %rcp, ptr addrspace(1) %out, align 8
