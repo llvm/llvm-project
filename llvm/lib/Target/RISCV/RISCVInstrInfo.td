@@ -2057,7 +2057,7 @@ class WriteSysRegImm<SysReg SR, list<Register> Regs>
 
 class SwapSysReg<SysReg SR, list<Register> Regs>
   : Pseudo<(outs GPR:$rd), (ins GPR:$val),
-           [(set GPR:$rd, (riscv_swap_csr (XLenVT SR.Encoding), (XLenVT GPR:$val)))]>,
+           [(set GPR:$rd, (XLenVT (riscv_swap_csr (XLenVT SR.Encoding), (XLenVT GPR:$val))))]>,
     PseudoInstExpansion<(CSRRW GPR:$rd, SR.Encoding, GPR:$val)> {
   let hasSideEffects = 0;
   let Uses = Regs;
