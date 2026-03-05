@@ -454,7 +454,9 @@ public:
   ///          (e.g., a public and internal SDK).
   virtual llvm::Expected<std::pair<XcodeSDK, bool>>
   GetSDKPathFromDebugInfo(Module &module) {
-    return llvm::make_error<UnimplementedError>();
+    return llvm::make_error<UnimplementedError>(
+        llvm::formatv("{0} not implemented for '{1}' platform.",
+                      LLVM_PRETTY_FUNCTION, GetName()));
   }
 
   /// Returns the full path of the most appropriate SDK for the
@@ -468,7 +470,7 @@ public:
   ///          Xcode SDK.
   virtual llvm::Expected<std::string>
   ResolveSDKPathFromDebugInfo(Module &module) {
-    return llvm::createStringError(
+    return llvm::make_error<UnimplementedError>(
         llvm::formatv("{0} not implemented for '{1}' platform.",
                       LLVM_PRETTY_FUNCTION, GetName()));
   }
@@ -478,8 +480,11 @@ public:
   /// \param[in] unit The CU
   ///
   /// \returns A parsed XcodeSDK object if successful, an Error otherwise.
-  virtual llvm::Expected<XcodeSDK> GetSDKPathFromDebugInfo(CompileUnit &unit) {
-    return llvm::make_error<UnimplementedError>();
+  virtual llvm::Expected<XcodeSDK>
+  GetSDKPathFromDebugInfo(CompileUnit & /*unit*/) {
+    return llvm::make_error<UnimplementedError>(
+        llvm::formatv("{0} not implemented for '{1}' platform.",
+                      LLVM_PRETTY_FUNCTION, GetName()));
   }
 
   /// Returns the full path of the most appropriate SDK for the
@@ -492,7 +497,7 @@ public:
   ///          Xcode SDK.
   virtual llvm::Expected<std::string>
   ResolveSDKPathFromDebugInfo(CompileUnit &unit) {
-    return llvm::createStringError(
+    return llvm::make_error<UnimplementedError>(
         llvm::formatv("{0} not implemented for '{1}' platform.",
                       LLVM_PRETTY_FUNCTION, GetName()));
   }
