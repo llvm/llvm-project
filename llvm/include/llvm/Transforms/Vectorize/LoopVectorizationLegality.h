@@ -415,8 +415,8 @@ public:
   }
 
   /// Returns information about whether this loop contains at least one
-  ///  uncountable early  exits, and if so, if it also contains instructions
-  /// like stores that cause side-effects.
+  /// uncountable early exit, and if so, if it also contains instructions (such
+  /// as stores) that cause side-effects.
   UncountableEarlyExitDetail getUncountableEarlyExitDetail() const {
     return UncountableExitType;
   }
