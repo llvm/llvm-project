@@ -8,7 +8,7 @@
 # RUN: %lld -arch arm64 -lSystem %t.o -o %t.order-cold.exe -order_file %t/ord-cold
 # RUN: llvm-objdump -d %t.order-cold.exe | FileCheck %s --check-prefix=ORDER-COLD
 # RUN: %lld -arch arm64 -lSystem %t.o -o %t.exe
-# RUN: llvm-objdump --syms %t.exe | FileCheck %s --check-prefix=EXE
+# RUN: llvm-nm -m %t.exe | FileCheck %s --check-prefix=EXE
 # RUN: %lld -arch arm64 -lSystem --icf=all %t.o -o %t.icf.exe -map %t/icf.map
 # RUN: FileCheck %s --input-file %t/icf.map --check-prefix=ICF
 # RUN: %lld -arch arm64 -lSystem --icf=safe_thunks %t.o -o %t.safe.exe -map %t/safe.map
@@ -73,9 +73,7 @@ _main:
 # ORDER-COLD: <_main>:
 
 ## Check that N_COLD_FUNC is NOT preserved in the output executable.
-# EXE:      SYMBOL TABLE:
-# EXE-NOT:  0400 {{.*}} _cold
-# EXE:      {{.*}} g     F __TEXT,__text _cold
+# EXE: (__TEXT,__text) external _cold
 
 ## ICF + N_COLD_FUNC: _cold, _normal, and _ordered have identical bodies.
 ## After folding, the non-cold copy should be the master so the folded body
