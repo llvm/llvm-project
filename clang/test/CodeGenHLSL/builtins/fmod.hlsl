@@ -21,7 +21,7 @@
 // ---------- Native Half support test -----------
 //
 // RUN: %clang_cc1 -finclude-default-header -x hlsl -triple \
-// RUN:   spirv-unknown-vulkan-compute %s -fnative-half-type -fnative-int16-type \
+// RUN:   spirv-unknown-vulkan-library %s -fnative-half-type -fnative-int16-type \
 // RUN:   -emit-llvm -o - | FileCheck %s \
 // RUN:   -DFNATTRS="hidden spir_func noundef nofpclass(nan inf)" -DTYPE=half
 
@@ -29,7 +29,7 @@
 // ---------- No Native Half support test -----------
 //
 // RUN: %clang_cc1 -finclude-default-header -x hlsl -triple \
-// RUN:   spirv-unknown-vulkan-compute %s -emit-llvm \
+// RUN:   spirv-unknown-vulkan-library %s -emit-llvm \
 // RUN:   -o - | FileCheck %s \
 // RUN:   -DFNATTRS="hidden spir_func noundef nofpclass(nan inf)" -DTYPE=float
 

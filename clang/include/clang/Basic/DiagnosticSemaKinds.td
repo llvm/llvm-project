@@ -13650,6 +13650,9 @@ def err_hlsl_matrix_layout_non_matrix
 def err_hlsl_matrix_layout_conflict
     : Error<"%0 and %1 attributes are not compatible">;
 
+def err_hlsl_ambiguous_entry_point : Error<
+   "ambiguous entry point definition '%0'">;
+def err_hlsl_missing_entry_point : Error<"missing entry point definition '%0'">;
 def err_hlsl_entry_shader_attr_mismatch : Error<
    "%0 attribute on entry function does not match the target profile">;
 def err_hlsl_numthreads_argument_oor : Error<"argument '%select{X|Y|Z}0' to numthreads attribute cannot exceed %1">;

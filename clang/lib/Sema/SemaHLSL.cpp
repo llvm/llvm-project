@@ -2993,6 +2993,11 @@ void DiagnoseHLSLAvailability::HandleFunctionOrMethodRef(FunctionDecl *FD,
 
 void DiagnoseHLSLAvailability::RunOnTranslationUnit(
     const TranslationUnitDecl *TU) {
+  const TargetInfo &TargetInfo = SemaRef.getASTContext().getTargetInfo();
+  std::string &EntryName = TargetInfo.getTargetOpts().HLSLEntry;
+  bool IsLibraryShader = TargetInfo.getTriple().getEnvironment() ==
+                         llvm::Triple::EnvironmentType::Library;
+  SourceLocation EntryLoc{};
 
   // Iterate over all shader entry functions and library exports, and for those
   // that have a body (definiton), run diag scan on each, setting appropriate
@@ -3023,6 +3028,17 @@ void DiagnoseHLSLAvailability::RunOnTranslationUnit(
 
       // shader entry point
       if (HLSLShaderAttr *ShaderAttr = FD->getAttr<HLSLShaderAttr>()) {
+        if (!IsLibraryShader && FD->getName() == EntryName) {
+          if (EntryLoc.isValid()) {
+            SemaRef.Diag(FD->getLocation(),
+                         diag::err_hlsl_ambiguous_entry_point)
+                << EntryName;
+            SemaRef.Diag(EntryLoc, diag::note_previous_declaration_as)
+                << EntryName;
+            return;
+          }
+          EntryLoc = FD->getLocation();
+        }
         SetShaderStageContext(ShaderAttr->getType());
         RunOnFunction(FD);
         continue;
@@ -3045,6 +3061,12 @@ void DiagnoseHLSLAvailability::RunOnTranslationUnit(
         continue;
       }
     }
+  }
+
+  if (!IsLibraryShader && EntryLoc.isInvalid()) {
+    SemaRef.Diag(TU->getLocation(), diag::err_hlsl_missing_entry_point)
+        << EntryName;
+    return;
   }
 }
 

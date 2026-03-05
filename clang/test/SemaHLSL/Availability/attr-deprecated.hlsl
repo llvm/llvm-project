@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -triple dxil-pc-shadermodel6.2-compute -std=hlsl202x -verify %s
+// RUN: %clang_cc1 -triple dxil-pc-shadermodel6.2-library -std=hlsl202x -verify %s
 
 [[deprecated("Woah!")]] // expected-note{{'myFn' has been explicitly marked deprecated here}}
 void myFn() {}
