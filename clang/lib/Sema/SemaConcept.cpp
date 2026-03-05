@@ -381,9 +381,10 @@ public:
     return true;
   }
 
-  bool TraverseTypeLoc(TypeLoc TL, bool TraverseQualifier = true) {
+  bool TraverseTypeLoc(TypeLoc TL, bool /*TraverseQualifier*/ = true) {
     // We don't care about TypeLocs. So traverse Types instead.
-    return TraverseType(TL.getType().getCanonicalType(), TraverseQualifier);
+    return TraverseType(TL.getType().getCanonicalType(),
+                        /*TraverseQualifier=*/true);
   }
 
   bool TraverseTagType(const TagType *T, bool TraverseQualifier) {

@@ -278,3 +278,34 @@ namespace sugared_instantiation {
   static_assert(requires { { f() } -> C; });
   static_assert(requires { { f() } -> D; });
 } // namespace sugared_instantiation
+
+namespace GH184562 {
+
+template <typename T>
+struct tid {
+  using type = T;
+};
+template <typename T>
+using tid_t = tid<T>::type;
+
+template <class T, int N = ::tid_t<T>::value>
+concept req = N < 3 || requires { typename T::template as_two<3>; };
+
+struct two {
+  static constexpr int value = 2;
+};
+
+struct three {
+  static constexpr int value = 3;
+  template <int>
+  using as_two = two;
+};
+
+template <req T>
+struct test {
+  using type = test<typename T::template as_two<1>>;
+};
+
+test<three> x;
+
+}
