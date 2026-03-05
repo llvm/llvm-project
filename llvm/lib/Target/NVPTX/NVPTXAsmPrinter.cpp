@@ -2004,10 +2004,10 @@ void NVPTXAsmPrinter::emitInlineAsm(StringRef Str, const MCSubtargetInfo &STI,
   auto *NVDD = static_cast<NVPTXDwarfDebug *>(getDwarfDebug());
   MCSymbol *FuncNameSym = nullptr;
   unsigned FileIA = 0, LineIA = 0, ColIA = 0;
-  const auto *SubProg = InlinedAt && InlinedAt->getFile() && NVDD &&
-                                NVDD->isEnhancedLineinfo(MF)
-                            ? getDISubprogram(DL->getScope())
-                            : nullptr;
+  const auto *SubProg =
+      InlinedAt && InlinedAt->getFile() && NVDD && NVDD->isEnhancedLineinfo(MF)
+          ? getDISubprogram(DL->getScope())
+          : nullptr;
   if (SubProg) {
     FuncNameSym = NVDD->getOrCreateFuncNameSymbol(SubProg->getLinkageName());
     FileIA = OutStreamer->emitDwarfFileDirective(
@@ -2033,8 +2033,8 @@ void NVPTXAsmPrinter::emitInlineAsm(StringRef Str, const MCSubtargetInfo &STI,
             DWARF2_FLAG_IS_STMT, 0, 0, File->getFilename());
       } else {
         OutStreamer->emitDwarfLocDirective(FileNumber, Line, Column,
-                                          DWARF2_FLAG_IS_STMT, 0, 0,
-                                          File->getFilename());
+                                           DWARF2_FLAG_IS_STMT, 0, 0,
+                                           File->getFilename());
       }
     }
     OutStreamer->emitRawText(RTrimmed);
