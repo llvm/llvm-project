@@ -1580,8 +1580,7 @@ RValue CIRGenFunction::emitBuiltinExpr(const GlobalDecl &gd, unsigned builtinID,
   case Builtin::BI__builtin_bzero: {
     mlir::Location loc = getLoc(e->getSourceRange());
     Address destPtr = emitPointerWithAlignment(e->getArg(0));
-    mlir::Value destPtrCast =
-        builder.createPtrBitcast(destPtr.getPointer(), cgm.voidTy);
+    Address destPtrCast = destPtr.withElementType(builder, cgm.voidTy);
     mlir::Value size = emitScalarExpr(e->getArg(1));
     mlir::Value zero = builder.getNullValue(builder.getUInt8Ty(), loc);
     assert(!cir::MissingFeatures::sanitizers());
