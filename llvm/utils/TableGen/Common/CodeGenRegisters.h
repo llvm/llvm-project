@@ -628,6 +628,7 @@ class CodeGenRegBank {
   const CodeGenHwModes &CGH;
 
   const bool RegistersAreIntervals;
+  const bool CompactRegisterNames;
 
   std::deque<CodeGenSubRegIndex> SubRegIndices;
   DenseMap<const Record *, CodeGenSubRegIndex *> Def2SubRegIdx;
@@ -735,7 +736,7 @@ class CodeGenRegBank {
 
 public:
   CodeGenRegBank(const RecordKeeper &, const CodeGenHwModes &,
-                 const bool RegistersAreIntervals);
+                 bool RegistersAreIntervals, bool CompactRegisterNames);
   CodeGenRegBank(CodeGenRegBank &) = delete;
 
   SetTheory &getSets() { return Sets; }
