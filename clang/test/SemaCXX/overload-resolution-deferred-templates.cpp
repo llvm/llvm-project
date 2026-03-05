@@ -105,6 +105,51 @@ static_assert(__is_constructible(Movable, int));
 // expected-note@#err-self-constraint-1 3{{}}
 // expected-note@#Movable  {{'Movable' defined here}}
 
+// Test trivially default constructible type traits
+struct TriviallyDefaultConstructible {
+    // Trivial default constructor
+};
+
+struct NonTriviallyDefaultConstructible {
+    NonTriviallyDefaultConstructible() {} // User-provided constructor
+};
+
+struct VirtualBase {
+    virtual ~VirtualBase() {} // Virtual destructor
+};
+
+struct UnionWithNonTrivial {
+    UnionWithNonTrivial() {} // User-provided constructor
+};
+
+union UnionType {
+    int i;
+    UnionWithNonTrivial u; // Non-trivial member
+};
+
+static_assert(__is_trivially_default_constructible(TriviallyDefaultConstructible));
+static_assert(!__is_trivially_default_constructible(NonTriviallyDefaultConstructible));
+static_assert(!__is_trivially_default_constructible(VirtualBase));
+static_assert(!__is_trivially_default_constructible(UnionType));
+
+// Test in template constraints
+struct TriviallyDefaultConstructibleWrapper {
+    template <typename T>
+    requires __is_trivially_default_constructible(T)
+    explicit TriviallyDefaultConstructibleWrapper(T op) noexcept; // #1
+    TriviallyDefaultConstructibleWrapper() noexcept = default; // #2
+};
+
+static_assert(__is_trivially_default_constructible(TriviallyDefaultConstructibleWrapper));
+
+struct NonTriviallyDefaultConstructibleWrapper {
+    template <typename T>
+    requires __is_trivially_default_constructible(T)
+    explicit NonTriviallyDefaultConstructibleWrapper(T op) = delete; // #1
+};
+
+static_assert(!__is_trivially_default_constructible(NonTriviallyDefaultConstructibleWrapper));
+
 template <typename T>
 struct Members {
     constexpr auto f(auto) {

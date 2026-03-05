@@ -329,6 +329,125 @@ static_assert(__is_trivially_copyable(S12));
 // expected-note@#tc-S12 {{'S12' defined here}}
 }
 
+namespace trivially_default_constructible {
+
+struct TrivialBase {
+    // Trivial default constructor
+};
+
+struct NonTrivialBase {
+    NonTrivialBase() {} // User-provided constructor
+};
+
+struct VirtualBase {
+    virtual ~VirtualBase() {} // Virtual destructor
+};
+
+struct UnionWithNonTrivial {
+    UnionWithNonTrivial() {} // User-provided constructor
+};
+
+union UnionType {
+    int i;
+    UnionWithNonTrivial u; // Non-trivial member
+};
+
+struct S1 { // #tdc-S1
+    S1() {} // User-provided constructor
+};
+static_assert(__is_trivially_default_constructible(S1));
+// expected-error@-1 {{static assertion failed due to requirement '__is_trivially_default_constructible(trivially_default_constructible::S1)'}} \
+// expected-note@-1 {{'S1' is not trivially default constructible}} \
+// expected-note@-1 {{because it has a user-provided constructor}} \
+// expected-note@#tdc-S1 {{'S1' defined here}}
+
+struct S2 { // #tdc-S2
+    S2() = delete; // Deleted constructor
+};
+static_assert(__is_trivially_default_constructible(S2));
+// expected-error@-1 {{static assertion failed due to requirement '__is_trivially_default_constructible(trivially_default_constructible::S2)'}} \
+// expected-note@-1 {{'S2' is not trivially default constructible}} \
+// expected-note@-1 {{because it has a deleted constructor}} \
+// expected-note@#tdc-S2 {{'S2' defined here}}
+
+struct S3 : NonTrivialBase { // #tdc-S3
+    // Inherits non-trivial base
+};
+static_assert(__is_trivially_default_constructible(S3));
+// expected-error@-1 {{static assertion failed due to requirement '__is_trivially_default_constructible(trivially_default_constructible::S3)'}} \
+// expected-note@-1 {{'S3' is not trivially default constructible}} \
+// expected-note@-1 {{because it has a non-trivially-default-constructible base 'NonTrivialBase'}} \
+// expected-note@#tdc-S3 {{'S3' defined here}}
+
+struct S4 { // #tdc-S4
+    NonTrivialBase member; // Non-trivial member
+};
+static_assert(__is_trivially_default_constructible(S4));
+// expected-error@-1 {{static assertion failed due to requirement '__is_trivially_default_constructible(trivially_default_constructible::S4)'}} \
+// expected-note@-1 {{'S4' is not trivially default constructible}} \
+// expected-note@-1 {{because it has a non-trivially-default-constructible member 'member' of type 'NonTrivialBase'}} \
+// expected-note@#tdc-S4 {{'S4' defined here}}
+
+struct S5 : VirtualBase { // #tdc-S5
+    // Has virtual base class
+};
+static_assert(__is_trivially_default_constructible(S5));
+// expected-error@-1 {{static assertion failed due to requirement '__is_trivially_default_constructible(trivially_default_constructible::S5)'}} \
+// expected-note@-1 {{'S5' is not trivially default constructible}} \
+// expected-note@-1 {{because it has a virtual base 'VirtualBase'}} \
+// expected-note@#tdc-S5 {{'S5' defined here}}
+
+struct S6 { // #tdc-S6
+    UnionType member; // Union with non-trivial member
+};
+static_assert(__is_trivially_default_constructible(S6));
+// expected-error@-1 {{static assertion failed due to requirement '__is_trivially_default_constructible(trivially_default_constructible::S6)'}} \
+// expected-note@-1 {{'S6' is not trivially default constructible}} \
+// expected-note@-1 {{because it has a non-trivially-default-constructible member 'member' of type 'UnionType'}} \
+// expected-note@#tdc-S6 {{'S6' defined here}}
+
+struct S7 { // #tdc-S7
+    virtual void f() {} // Virtual function
+};
+static_assert(__is_trivially_default_constructible(S7));
+// expected-error@-1 {{static assertion failed due to requirement '__is_trivially_default_constructible(trivially_default_constructible::S7)'}} \
+// expected-note@-1 {{'S7' is not trivially default constructible}} \
+// expected-note@-1 {{because it has a virtual function 'f'}} \
+// expected-note@#tdc-S7 {{'S7' defined here}}
+
+// Test reference types
+static_assert(__is_trivially_default_constructible(int&));
+// expected-error@-1 {{static assertion failed due to requirement '__is_trivially_default_constructible(int &)'}} \
+// expected-note@-1 {{'int &' is not trivially default constructible}} \
+// expected-note@-1 {{because it is a reference type}}
+
+// Test variably modified types
+extern int vla_size;
+static_assert(__is_trivially_default_constructible(int[vla_size]));
+// expected-error@-1 {{static assertion failed due to requirement '__is_trivially_default_constructible(int[vla_size])'}} \
+// expected-note@-1 {{'int[vla_size]' is not trivially default constructible}} \
+// expected-note@-1 {{because it is a variably-modified type}}
+
+// Test incomplete types
+struct S8; // expected-note {{forward declaration of 'trivially_default_constructible::S8'}}
+static_assert(__is_trivially_default_constructible(S8));
+// expected-error@-1 {{incomplete type 'S8' used in type trait expression}}
+
+// Test valid cases
+static_assert(__is_trivially_default_constructible(int));
+static_assert(__is_trivially_default_constructible(TrivialBase));
+static_assert(__is_trivially_default_constructible(int[5]));
+static_assert(__is_trivially_default_constructible(int*));
+
+struct ValidClass {
+    int x;
+    // No user-provided constructor, no virtual functions, no virtual bases
+    // All members are trivially default constructible
+};
+static_assert(__is_trivially_default_constructible(ValidClass));
+
+}
+
 namespace constructible {
 
 struct S1 {  // #c-S1
