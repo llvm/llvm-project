@@ -13,14 +13,17 @@
 #ifndef LLVM_TRANSFORMS_VECTORIZE_LOOPREDUCEMOTION_H
 #define LLVM_TRANSFORMS_VECTORIZE_LOOPREDUCEMOTION_H
 
+#include "llvm/Analysis/LoopAnalysisManager.h"
 #include "llvm/Analysis/LoopInfo.h"
 #include "llvm/IR/PassManager.h"
+#include "llvm/Transforms/Scalar/LoopPassManager.h"
 
 namespace llvm {
 class LoopReduceMotionPass : public PassInfoMixin<LoopReduceMotionPass> {
 public:
-  PreservedAnalyses run(Function &F, FunctionAnalysisManager &FAM);
-  bool matchAndTransform(Loop &L, DominatorTree &DT, LoopInfo &LI);
+  bool matchAndTransform(Loop &L, DominatorTree *DT, LoopInfo *LI);
+  PreservedAnalyses run(Loop &L, LoopAnalysisManager &AM,
+                        LoopStandardAnalysisResults &AR, LPMUpdater &U);
 };
 } // namespace llvm
 #endif // LLVM_TRANSFORMS_VECTORIZE_LOOPREDUCEMOTION_H

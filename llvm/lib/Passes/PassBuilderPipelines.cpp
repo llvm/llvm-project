@@ -1419,8 +1419,11 @@ void PassBuilder::addVectorPasses(OptimizationLevel Level,
   }
   // Enhance/cleanup vector code.
   FPM.addPass(VectorCombinePass());
+
+  LoopPassManager LPM;
   // Try to sink ReduceCall out of loop
-  FPM.addPass(LoopReduceMotionPass());
+  LPM.addPass(LoopReduceMotionPass());
+  FPM.addPass(createFunctionToLoopPassAdaptor(std::move(LPM)));
 
   if (!IsFullLTO) {
     FPM.addPass(InstCombinePass());

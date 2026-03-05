@@ -15,8 +15,7 @@
 // ------                    | ------
 // loop:                     | loop:
 //   ...                     |   ...
-//   vc = vecbin va, vb      |   vc = vecbin va, vb
-//   d = reduce_add vc       |   vsum = vadd vsum, vc
+//   d = reduce_add v        |   vsum = vadd vsum, v
 //   sum = add sum, d        |   ...
 //   ...                     |   ...
 // exit:                     | exit:
@@ -35,6 +34,7 @@
 #include "llvm/IR/IRBuilder.h"
 #include "llvm/IR/Instructions.h"
 #include "llvm/IR/PassManager.h"
+#include "llvm/IR/PatternMatch.h"
 #include "llvm/Pass.h"
 #include "llvm/Passes/PassBuilder.h"
 #include "llvm/Plugins/PassPlugin.h"
@@ -45,68 +45,24 @@
 #define DEBUG_TYPE "loop-reduce-motion"
 
 using namespace llvm;
+PreservedAnalyses LoopReduceMotionPass::run(Loop &L, LoopAnalysisManager &LAM,
+                                            LoopStandardAnalysisResults &LAR,
+                                            LPMUpdater &Updater) {
 
-class LoopReduceMotionLegacy : public FunctionPass {
-  LoopReduceMotionPass Impl;
+  bool Changed = matchAndTransform(L, &LAR.DT, &LAR.LI);
 
-public:
-  static char ID;
-
-  LoopReduceMotionLegacy() : FunctionPass(ID) {}
-
-  StringRef getPassName() const override { return "Loop Reduce Motion Pass"; }
-
-  bool runOnFunction(Function &F) override;
-
-  void getAnalysisUsage(AnalysisUsage &AU) const override {
-    AU.addRequired<DominatorTreeWrapperPass>();
-    AU.addRequired<LoopInfoWrapperPass>();
-    AU.setPreservesCFG();
-  }
-};
-
-char LoopReduceMotionLegacy::ID = 0;
-
-PreservedAnalyses LoopReduceMotionPass::run(Function &F,
-                                            FunctionAnalysisManager &FAM) {
-  LoopInfo &LI = FAM.getResult<LoopAnalysis>(F);
-  DominatorTree &DT = FAM.getResult<DominatorTreeAnalysis>(F);
-  bool Changed = false;
-  for (Loop *L : LI) {
-    Changed |= matchAndTransform(*L, DT, LI);
-  }
   if (!Changed)
     return PreservedAnalyses::all();
   return PreservedAnalyses::none();
 }
 
-bool LoopReduceMotionLegacy::runOnFunction(Function &F) {
-  if (skipFunction(F))
-    return false;
-
-  auto *TPC = getAnalysisIfAvailable<TargetPassConfig>();
-  if (!TPC)
-    return false;
-
-  LLVM_DEBUG(dbgs() << "*** " << getPassName() << ": " << F.getName() << "\n");
-
-  DominatorTree &DT = getAnalysis<DominatorTreeWrapperPass>().getDomTree();
-  LoopInfo &LI = getAnalysis<LoopInfoWrapperPass>().getLoopInfo();
-  bool Changed = false;
-  for (Loop *L : LI) {
-    Changed |= Impl.matchAndTransform(*L, DT, LI);
-  }
-  if (!Changed)
-    return false;
-
-  return true;
-}
-
-bool LoopReduceMotionPass::matchAndTransform(Loop &L, DominatorTree &DT,
-                                             LoopInfo &LI) {
+bool LoopReduceMotionPass::matchAndTransform(Loop &L, DominatorTree *DT,
+                                             LoopInfo *LI) {
   BasicBlock *Header = L.getHeader();
   BasicBlock *Latch = L.getLoopLatch();
   BasicBlock *ExitBlock = L.getExitBlock();
+  BasicBlock *ExitingBlock = L.getExitingBlock();
+  BasicBlock *LandingPad = nullptr;
   if (!Header || !Latch || !ExitBlock) {
     LLVM_DEBUG(dbgs() << "LRM: Skipping loop " << Header->getName()
                       << " because it is not a valid loop.\n");
@@ -114,52 +70,70 @@ bool LoopReduceMotionPass::matchAndTransform(Loop &L, DominatorTree &DT,
   }
   BasicBlock *Preheader = L.getLoopPreheader();
   if (!Preheader) {
-    Preheader = InsertPreheaderForLoop(&L, &DT, &LI, nullptr, false);
+    Preheader = InsertPreheaderForLoop(&L, DT, LI, nullptr, false);
     if (!Preheader) {
       LLVM_DEBUG(dbgs() << "LRM: Failed to create a preheader for loop "
                         << Header->getName() << ".\n");
       return false;
     }
   }
+
+  bool transform_success = false;
+  SmallVector<Instruction *, 8> StackRecur;
+  SmallVector<PHINode *, 8> Stack;
+  int phi_count = 0;
   for (PHINode &PN : Header->phis()) {
-    if (!PN.getType()->isIntegerTy())
+    Stack.push_back(&PN);
+    phi_count++;
+    if (phi_count >= 8)
+      return false;
+  }
+
+  while (!Stack.empty()) {
+    PHINode *PN = Stack.pop_back_val();
+
+    if (!PN->getType()->isIntegerTy())
       continue;
 
     RecurrenceDescriptor RecDesc;
-    if (!RecurrenceDescriptor::isReductionPHI(&PN, &L, RecDesc))
+    if (!RecurrenceDescriptor::isReductionPHI(PN, &L, RecDesc))
       continue;
 
     if (RecDesc.getRecurrenceKind() != RecurKind::Add)
       continue;
 
-    Value *RecurrenceValueFromPHI = PN.getIncomingValueForBlock(Latch);
+    Value *RecurrenceValueFromPHI = PN->getIncomingValueForBlock(Latch);
     Instruction *RecurrenceInst = dyn_cast<Instruction>(RecurrenceValueFromPHI);
     if (!RecurrenceInst || RecurrenceInst->getNumOperands() != 2)
       continue;
 
-    Value *RecurrenceValue = RecurrenceInst->getOperand(0) == &PN
+    // Don't match if the Recurrence Value has other use in loop
+    for (User *U : RecurrenceValueFromPHI->users()) {
+      if (Instruction *Inst = dyn_cast<Instruction>(U)) {
+        BasicBlock *BB = Inst->getParent();
+        if (L.contains(BB)) {
+          continue;
+        }
+      }
+    }
+
+    Value *RecurrenceValue = RecurrenceInst->getOperand(0) == PN
                                  ? RecurrenceInst->getOperand(1)
                                  : RecurrenceInst->getOperand(0);
+    Value *ReduceOperand;
+    if (!llvm::PatternMatch::match(
+            RecurrenceValue,
+            llvm::PatternMatch::m_Intrinsic<Intrinsic::vector_reduce_add>(
+                llvm::PatternMatch::m_Value(ReduceOperand))))
+      continue;
 
     CallInst *ReduceCall = dyn_cast<CallInst>(RecurrenceValue);
-    if (!ReduceCall)
-      continue;
-    Function *CalledFunc = ReduceCall->getCalledFunction();
-
-    if (!CalledFunc || !CalledFunc->isIntrinsic() ||
-        !(CalledFunc->getIntrinsicID() == Intrinsic::vector_reduce_add))
-      continue;
-
-    Value *ReduceOperand = ReduceCall->getArgOperand(0);
-    Instruction *VecBin = dyn_cast<Instruction>(ReduceOperand);
-    if (!VecBin || (VecBin->getOpcode() != Instruction::Sub &&
-                    VecBin->getOpcode() != Instruction::Add))
-      continue;
+    Instruction *VecIn = dyn_cast<Instruction>(ReduceOperand);
     // pattern match success
     LLVM_DEBUG(dbgs() << "Found pattern to optimize in loop "
                       << Header->getName() << "!\n");
 
-    VectorType *VecTy = cast<VectorType>(VecBin->getType());
+    VectorType *VecTy = cast<VectorType>(VecIn->getType());
     Value *VecZero = ConstantInt::get(VecTy, 0);
 
     // build new Vector Add to replace Scalar Add
@@ -167,42 +141,53 @@ bool LoopReduceMotionPass::matchAndTransform(Loop &L, DominatorTree &DT,
     PHINode *VecSumPhi = HeaderBuilder.CreatePHI(VecTy, 2, "vec.sum.phi");
     VecSumPhi->addIncoming(VecZero, Preheader);
     IRBuilder<> BodyBuilder(RecurrenceInst);
-    Value *NewVecAdd = BodyBuilder.CreateAdd(VecSumPhi, VecBin, "vec.sum.next");
+    Value *NewVecAdd = BodyBuilder.CreateAdd(VecSumPhi, VecIn, "vec.sum.next");
     VecSumPhi->addIncoming(NewVecAdd, Latch);
 
     // build landingPad for reduce add out of loop
-    BasicBlock *ExitingBlock =
-        Latch->getTerminator()->getSuccessor(0) == Header ? Latch : Header;
-    if (!L.isLoopExiting(ExitingBlock)) {
-      ExitingBlock = Header;
+    if (!LandingPad) {
+      LandingPad = SplitEdge(ExitingBlock, ExitBlock, DT, LI);
+      LandingPad->setName("loop.exit.landing");
     }
-    BasicBlock *LandingPad = SplitEdge(ExitingBlock, ExitBlock, &DT, &LI);
-    LandingPad->setName("loop.exit.landing");
     IRBuilder<> LandingPadBuilder(LandingPad->getTerminator());
     Value *ScalarTotalSum = LandingPadBuilder.CreateCall(
         ReduceCall->getCalledFunction(), NewVecAdd, "scalar.total.sum");
-    Value *PreheaderValue = PN.getIncomingValueForBlock(Preheader);
+
+    Value *PreheaderValue = PN->getIncomingValueForBlock(Preheader);
     Value *LastAdd =
         PreheaderValue
             ? LandingPadBuilder.CreateAdd(PreheaderValue, ScalarTotalSum)
             : ScalarTotalSum;
-
-    // delete the dead PHI Node
-    if (!PN.use_empty())
-      PN.replaceAllUsesWith(PoisonValue::get(PN.getType()));
-    llvm::RecursivelyDeleteDeadPHINode(&PN);
     // replace the use of Recurrence Node and delete the dead Node
     Instruction *FinalNode = dyn_cast<Instruction>(LastAdd);
     if (!FinalNode)
-      return false;
-    RecurrenceInst->replaceAllUsesWith(FinalNode);
-    llvm::RecursivelyDeleteTriviallyDeadInstructions(RecurrenceInst);
+      continue;
 
+    // delete the dead PHI Node
+    if (!PN->use_empty())
+      PN->replaceAllUsesWith(PoisonValue::get(PN->getType()));
+    llvm::RecursivelyDeleteDeadPHINode(PN);
+
+    if (!RecurrenceInst->use_empty()) {
+      for (auto *U : RecurrenceInst->users()) {
+        auto *phi = llvm::dyn_cast<llvm::PHINode>(U);
+        if (phi && !phi->use_empty()) {
+          phi->replaceAllUsesWith(FinalNode);
+        }
+      }
+    }
+    transform_success = true;
+    StackRecur.push_back(RecurrenceInst);
+  }
+
+  if (transform_success) {
+    FoldSingleEntryPHINodes(LandingPad);
+    while (!StackRecur.empty()) {
+      Instruction *Rec = StackRecur.pop_back_val();
+      llvm::RecursivelyDeleteTriviallyDeadInstructions(Rec);
+    }
     return true;
   }
-  return false;
-}
 
-FunctionPass *llvm::createLoopReduceMotionPass() {
-  return new LoopReduceMotionLegacy();
+  return false;
 }
