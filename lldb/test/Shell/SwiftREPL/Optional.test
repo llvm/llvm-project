@@ -17,10 +17,7 @@ let x : Optional<Test> = nil
 
 let y : Optional<Test> = Test(a: 1, b: Patatino.first)
 
-// CHECK-NEXT: {{y}}: Test? = some {
-// CHECK-NEXT: a = 1
-// CHECK-NEXT: b = first
-// CHECK-NEXT: }
+// CHECK-NEXT: {{y}}: Test? = (a = 1, b = first)
 
 class A {
   var x : Int

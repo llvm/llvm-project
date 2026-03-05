@@ -20,4 +20,11 @@ class TestSwiftTuple(TestBase):
         good = self.frame().FindVariable("good")
         self.assertIn('hello', good.GetSummary())
         options = good.GetTypeSummary().GetOptions()
-        self.assertEqual(options & lldb.eTypeOptionHideChildren, lldb.eTypeOptionHideChildren, "String guts hidden")
+        self.assertEqual(
+            options & lldb.eTypeOptionHideChildren,
+            lldb.eTypeOptionHideChildren,
+            "String guts hidden",
+        )
+        self.assertEqual(
+            good.GetSyntheticValue().GetNumChildren(), 0, "String guts hidden"
+        )

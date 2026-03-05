@@ -92,13 +92,13 @@ class TestSwiftOptionalType(TestBase):
             self,
             optString_Some,
             use_dynamic=False,
-            num_children=1)
+            num_children=0)
         uoptString_Some = self.frame().FindVariable("uoptString_Some")
         lldbutil.check_variable(
             self,
             uoptString_Some,
             use_dynamic=False,
-            num_children=1)
+            num_children=0)
         uoptString_Some.GetChildAtIndex(99)
 
         optTrue = self.frame().FindVariable("optTrue")
