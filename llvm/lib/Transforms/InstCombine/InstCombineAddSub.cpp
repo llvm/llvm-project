@@ -1686,6 +1686,9 @@ Instruction *InstCombinerImpl::visitAdd(BinaryOperator &I) {
   WithCache<const Value *> LHSCache(LHS), RHSCache(RHS);
   if (haveNoCommonBitsSet(LHSCache, RHSCache, SQ.getWithInstruction(&I)))
     return BinaryOperator::CreateDisjointOr(LHS, RHS);
+  if (haveNoCommonBitsSet(LHSCache, RHSCache, SQ.getWithInstruction(&I),
+                          /*CheckNoUndef=*/false))
+    return BinaryOperator::CreateOr(LHS, RHS);
 
   if (Instruction *Ext = narrowMathIfNoOverflow(I))
     return Ext;
