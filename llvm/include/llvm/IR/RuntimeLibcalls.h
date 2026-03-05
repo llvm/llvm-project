@@ -176,7 +176,8 @@ private:
 
   /// Stores the CallingConv that should be used for each libcall
   /// implementation.;
-  CallingConv::ID LibcallImplCallingConvs[RTLIB::NumLibcallImpls] = {};
+  std::vector<CallingConv::ID> LibcallImplCallingConvs =
+      std::vector<CallingConv::ID>(RTLIB::NumLibcallImpls, CallingConv::C);
 
   /// Names of concrete implementations of runtime calls. e.g. __ashlsi3 for
   /// SHL_I32
