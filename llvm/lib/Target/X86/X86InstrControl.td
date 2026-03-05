@@ -18,7 +18,7 @@
 //
 // The X86retglue return instructions are variadic because we may add ST0 and
 // ST1 arguments when returning values on the x87 stack.
-let isTerminator = 1, isReturn = 1, isBarrier = 1,
+let isTerminator = 1, isReturn = 1, isBarrier = 1, hasSideEffects = 0,
     hasCtrlDep = 1, FPForm = SpecialFP, SchedRW = [WriteJumpLd] in {
   def RET32  : I   <0xC3, RawFrm, (outs), (ins variable_ops),
                     "ret{l}", []>, OpSize32, Requires<[Not64BitMode]>;
