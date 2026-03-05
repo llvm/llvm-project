@@ -265,7 +265,8 @@ def N1Write_9c_6L_6V : SchedWriteRes<[N1UnitL, N1UnitL, N1UnitL,
 // Define forwarded types
 
 def N1Wr_IM32 : SchedWriteRes<[N1UnitM]> { let Latency = 2; }
-def N1Wr_IM64 : SchedWriteRes<[N1UnitM]> { let Latency = 4; }
+def N1Wr_IM64 : SchedWriteRes<[N1UnitM]> { let Latency = 4;
+                                           let ReleaseAtCycles = [3]; }
 def N1Rd_IMA  : SchedReadAdvance<1, [N1Wr_IM32, N1Wr_IM64]>;
 
 def N1Wr_FMA : SchedWriteRes<[N1UnitV]> { let Latency = 4; }
@@ -275,9 +276,8 @@ def N1Wr_VA : SchedWriteRes<[N1UnitV1]> { let Latency = 4; }
 def N1Rd_VA : SchedReadAdvance<3, [N1Wr_VA]>;
 
 def N1Wr_VMA  : SchedWriteRes<[N1UnitV0]> { let Latency = 4; }
-def N1Wr_VMAQ : SchedWriteRes<[N1UnitV0, N1UnitV0]> {
-  let Latency = 5;
-  let NumMicroOps = 2;
+def N1Wr_VMAQ : SchedWriteRes<[N1UnitV0, N1UnitV0]> { let Latency = 5;
+                                                      let NumMicroOps = 2;
 }
 def N1Rd_VMA  : SchedReadAdvance<3, [N1Wr_VMA, N1Wr_VMAQ]>;
 
@@ -300,7 +300,8 @@ def N1Rd_VFMAL : SchedReadAdvance<3, [N1Wr_VFMAL]>;
 def N1Wr_CRC : SchedWriteRes<[N1UnitM]> { let Latency = 2; }
 def N1Rd_CRC : SchedReadAdvance<1, [N1Wr_CRC]>;
 
-def N1Wr_MH : SchedWriteRes<[N1UnitM]> { let Latency = 5; }
+def N1Wr_MH : SchedWriteRes<[N1UnitM]> { let Latency = 5;
+                                         let ReleaseAtCycles = [4]; }
 def N1Rd_MH : SchedReadAdvance<2, [N1Wr_MH]>;
 
 
