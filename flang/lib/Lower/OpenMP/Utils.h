@@ -137,10 +137,6 @@ mlir::Value createParentSymAndGenIntermediateMaps(
     OmpMapParentAndMemberData &parentMemberIndices, llvm::StringRef asFortran,
     mlir::omp::ClauseMapFlags mapTypeBits);
 
-mlir::FlatSymbolRefAttr getOrGenImplicitDefaultDeclareMapper(
-    Fortran::lower::AbstractConverter &converter, mlir::Location loc,
-    fir::RecordType recordType, llvm::StringRef mapperNameStr);
-
 bool requiresImplicitDefaultDeclareMapper(
     const semantics::DerivedTypeSpec &typeSpec);
 
