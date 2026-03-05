@@ -15,7 +15,7 @@
 
 #include "test_macros.h"
 
-int main(int, char**) {
+TEST_CONSTEXPR_CXX26 bool test() {
   std::queue<int> q;
   q.push(1);
   assert(q.size() == 1);
@@ -29,6 +29,15 @@ int main(int, char**) {
   assert(q.size() == 3);
   assert(q.front() == 1);
   assert(q.back() == 3);
+
+  return 0;
+}
+
+int main(int, char**) {
+  test();
+#if TEST_STD_VER >= 26
+  static_assert(test());
+#endif
 
   return 0;
 }

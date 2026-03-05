@@ -21,7 +21,7 @@
 #include "MoveOnly.h"
 
 template <class C>
-C make(int n) {
+TEST_CONSTEXPR_CXX26 C make(int n) {
   C c;
   for (int i = 0; i < n; ++i)
     c.push_back(MoveOnly(i));
@@ -43,11 +43,20 @@ struct test : public std::queue<T, C> {
   allocator_type get_allocator() { return this->c.get_allocator(); }
 };
 
-int main(int, char**) {
+TEST_CONSTEXPR bool test() {
   test<MoveOnly> q(make<C>(5), test_allocator<MoveOnly>(4));
   test<MoveOnly> q2(std::move(q), test_allocator<MoveOnly>(5));
   assert(q2.get_allocator() == test_allocator<MoveOnly>(5));
   assert(q2.size() == 5);
+
+  return true;
+}
+
+int main(int, char**) {
+  test();
+#if TEST_STD_VER >= 26
+  static_assert(test());
+#endif
 
   return 0;
 }

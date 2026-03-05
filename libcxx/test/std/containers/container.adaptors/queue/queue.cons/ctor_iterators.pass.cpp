@@ -38,7 +38,7 @@ struct alloc : test_allocator<T> {
 static_assert(
     std::is_constructible_v<std::queue<int, std::deque<int, alloc<int>>>, int*, int*, test_allocator_statistics*>);
 
-int main(int, char**) {
+TEST_CONSTEXPR_CXX26 bool test() {
   const int a[] = {4, 3, 2, 1};
   std::queue<int> queue(a, a + 4);
   assert(queue.front() == 4);
@@ -50,6 +50,15 @@ int main(int, char**) {
   assert(queue.front() == 1);
   queue.pop();
   assert(queue.empty());
+
+  return true;
+}
+
+int main(int, char**) {
+  test();
+#if TEST_STD_VER >= 26
+  static_assert(test());
+#endif
 
   return 0;
 }
