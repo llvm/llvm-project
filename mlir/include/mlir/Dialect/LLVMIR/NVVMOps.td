@@ -6368,6 +6368,37 @@ def NVVM_SubFOp : NVVM_FloatBinaryOp<"subf"> {
   let hasCanonicalizer = 1;
 }
 
+def NVVM_FmaOp : NVVM_Op<"fma", [Pure, SameOperandsAndResultType]> {
+  let summary = [{
+    Performs floating point fused multiply-add operation with support for mixed 
+    precision operands
+  }];
+  let description = [{
+    The `nvvm.fma` operation performs floating point fused multiply-add of three operands.
+  }];
+  let arguments = (ins
+    SIMTFloatType:$a,
+    SIMTFloatType:$b,
+    SIMTFloatType:$c,
+    FPArithRoundingMode:$rnd,
+    DefaultValuedAttr<SaturationModeSatOrNone, "SaturationMode::NONE">:$sat,
+    DefaultValuedAttr<BoolAttr, "false">:$ftz,
+    DefaultValuedAttr<BoolAttr, "false">:$relu,
+    DefaultValuedAttr<BoolAttr, "false">:$oob
+  );
+  let results = (outs SIMTFloatType:$res);
+  let assemblyFormat = "$a `,` $b `,` $c attr-dict `:` type($a)";
+  let hasVerifier = 1;
+
+  let extraClassDeclaration = [{
+    static void lowerFmaToLLVMIR(
+        Operation &op, LLVM::ModuleTranslation &mt, llvm::IRBuilderBase &builder);
+  }];
+  let llvmBuilder = [{
+    NVVM::FmaOp::lowerFmaToLLVMIR(*op, moduleTranslation, builder);
+  }];
+}
+
 //===----------------------------------------------------------------------===//
 // NVVM tensormap.replace Op
 //===----------------------------------------------------------------------===//
