@@ -546,7 +546,7 @@ public:
         collectFusionCandidates(LV);
         Changed |= fuseCandidates();
         // All loops in the candidate sets have a common parent (or no parent).
-        // Next loop vector, will correspond to a different parent. It is safe
+        // Next loop vector will correspond to a different parent. It is safe
         // to remove all the candidates currently in the set.
         FusionCandidates.clear();
       }
