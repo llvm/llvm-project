@@ -907,6 +907,17 @@ public:
   bool isSImm8Unsigned() const { return isSImm<8>() || isUImm<8>(); }
   bool isSImm10Unsigned() const { return isSImm<10>() || isUImm<10>(); }
 
+  bool isSImm10PLI_H() const {
+    return isSImm<10>() || isUImmPred([](int64_t Imm) {
+             return isUInt<16>(Imm) && isInt<10>(SignExtend64<16>(Imm));
+           });
+  }
+  bool isSImm10PLI_W() const {
+    return isSImm<10>() || isUImmPred([](int64_t Imm) {
+             return isUInt<32>(Imm) && isInt<10>(SignExtend64<32>(Imm));
+           });
+  }
+
   bool isUImm20LUI() const {
     if (!isExpr())
       return false;
@@ -1577,6 +1588,8 @@ bool RISCVAsmParser::matchAndEmitInstruction(SMLoc IDLoc, unsigned &Opcode,
     return generateImmOutOfRangeError(Operands, ErrorInfo, -(1 << 7),
                                       (1 << 8) - 1);
   case Match_InvalidSImm10:
+  case Match_InvalidSImm10PLI_H:
+  case Match_InvalidSImm10PLI_W:
     return generateImmOutOfRangeError(Operands, ErrorInfo, -(1 << 9),
                                       (1 << 9) - 1);
   case Match_InvalidSImm10Unsigned:

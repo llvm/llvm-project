@@ -3458,7 +3458,12 @@ Value *InstCombinerImpl::SimplifyDemandedUseFPClass(Instruction *I,
         }
       }
     }
-    [[fallthrough]];
+
+    KnownFPClass KnownSrc;
+    if (SimplifyDemandedFPClass(I, 0, DemandedMask, KnownSrc, Depth + 1))
+      return I;
+    Known = KnownSrc;
+    break;
   }
   default:
     Known = computeKnownFPClass(I, DemandedMask, SQ, Depth + 1);

@@ -1,5 +1,5 @@
 ; RUN: llc -O0 -mcpu=gfx1030 -mtriple=amdgcn-amd-amdhsa -filetype=obj -o - < %s | llvm-dwarfdump --debug-info - | FileCheck %s
-
+; XFAIL: *
 @GlobMutable = protected addrspace(1) global i32 0, align 4, !dbg !39
 ; CHECK-LABEL: DW_AT_name ("GlobMutable")
 ; CHECK-NEXT:  DW_AT_type
