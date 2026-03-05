@@ -1341,8 +1341,8 @@ define amdgpu_kernel void @fma_v4f16(
 ; SI-NEXT:    v_lshrrev_b32_e32 v7, 16, v6
 ; SI-NEXT:    v_lshrrev_b32_e32 v4, 16, v5
 ; SI-NEXT:    v_cvt_f32_f16_e32 v17, v9
-; SI-NEXT:    v_cvt_f32_f16_e32 v18, v8
-; SI-NEXT:    v_cvt_f32_f16_e32 v19, v7
+; SI-NEXT:    v_cvt_f32_f16_e32 v19, v8
+; SI-NEXT:    v_cvt_f32_f16_e32 v21, v7
 ; SI-NEXT:    v_cvt_f64_f32_e32 v[5:6], v3
 ; SI-NEXT:    v_cvt_f64_f32_e32 v[7:8], v1
 ; SI-NEXT:    v_cvt_f64_f32_e32 v[9:10], v10
@@ -1379,16 +1379,16 @@ define amdgpu_kernel void @fma_v4f16(
 ; SI-NEXT:    s_cselect_b32 s4, s4, s7
 ; SI-NEXT:    s_and_b32 s7, s4, 7
 ; SI-NEXT:    s_cmp_gt_i32 s7, 5
-; SI-NEXT:    v_cvt_f64_f32_e32 v[7:8], v17
-; SI-NEXT:    v_cvt_f64_f32_e32 v[9:10], v18
-; SI-NEXT:    v_cvt_f64_f32_e32 v[17:18], v19
+; SI-NEXT:    v_cvt_f64_f32_e32 v[17:18], v17
+; SI-NEXT:    v_cvt_f64_f32_e32 v[19:20], v19
+; SI-NEXT:    v_cvt_f64_f32_e32 v[7:8], v21
 ; SI-NEXT:    s_cselect_b32 s12, 1, 0
 ; SI-NEXT:    s_cmp_eq_u32 s7, 3
 ; SI-NEXT:    s_cselect_b32 s7, 1, 0
 ; SI-NEXT:    s_lshr_b32 s4, s4, 2
 ; SI-NEXT:    s_or_b32 s7, s7, s12
 ; SI-NEXT:    s_add_i32 s4, s4, s7
-; SI-NEXT:    v_fma_f64 v[7:8], v[17:18], v[9:10], v[7:8]
+; SI-NEXT:    v_fma_f64 v[7:8], v[7:8], v[19:20], v[17:18]
 ; SI-NEXT:    s_cmp_lt_i32 s5, 31
 ; SI-NEXT:    s_cselect_b32 s4, s4, 0x7c00
 ; SI-NEXT:    s_cmp_lg_u32 s3, 0
