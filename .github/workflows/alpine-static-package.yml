@@ -1,20 +1,9 @@
 name: Alpine Static LLVM Package
 
 on:
-  workflow_dispatch:
-    inputs:
-      commit_id:
-        description: 'LLVM commit SHA to build'
-        required: true
-        type: string
-      lto_mode:
-        description: 'LTO mode'
-        required: false
-        default: 'Thin'
-        type: choice
-        options:
-          - Thin
-          - Full
+  pull_request:
+    branches:
+      - main
 
 permissions:
   contents: read
@@ -28,6 +17,7 @@ jobs:
     env:
       SCCACHE_DIR: ${{ github.workspace }}/.cache/sccache
       CCACHE_BASEDIR: ${{ github.workspace }}/.cache/sccache
+      LTO_MODE: Thin
     defaults:
       run:
         shell: sh
@@ -61,20 +51,13 @@ jobs:
         with:
           fetch-depth: 0
 
-      - name: Checkout target commit
-        run: |
-          set -eux
-          COMMIT_ID="${{ inputs.commit_id }}"
-          git rev-parse --verify "${COMMIT_ID}^{commit}"
-          git checkout --detach "${COMMIT_ID}"
-
       - name: Restore sccache cache
         uses: actions/cache@v4
         with:
           path: ${{ env.SCCACHE_DIR }}
-          key: sccache-alpine-static-${{ runner.os }}-${{ inputs.lto_mode }}-${{ hashFiles('.github/workflows/alpine-static-package.yml') }}
+          key: sccache-alpine-static-${{ runner.os }}-${{ env.LTO_MODE }}-${{ hashFiles('.github/workflows/alpine-static-package.yml') }}
           restore-keys: |
-            sccache-alpine-static-${{ runner.os }}-${{ inputs.lto_mode }}-
+            sccache-alpine-static-${{ runner.os }}-${{ env.LTO_MODE }}-
             sccache-alpine-static-${{ runner.os }}-
 
       - name: Initialize sccache
@@ -100,7 +83,7 @@ jobs:
             -DCMAKE_SHARED_LINKER_FLAGS="-fuse-ld=lld" \
             -DCMAKE_MODULE_LINKER_FLAGS="-fuse-ld=lld" \
             -DLLVM_ENABLE_PROJECTS="clang;lld;lldb" \
-            -DLLVM_ENABLE_LTO="${{ inputs.lto_mode }}" \
+            -DLLVM_ENABLE_LTO="${LTO_MODE}" \
             -DLLVM_BUILD_LLVM_DYLIB=OFF \
             -DLLVM_LINK_LLVM_DYLIB=OFF \
             -DBUILD_SHARED_LIBS=OFF \
