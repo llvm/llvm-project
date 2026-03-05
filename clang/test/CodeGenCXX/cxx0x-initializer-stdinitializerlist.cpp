@@ -355,7 +355,7 @@ namespace partly_constant {
   // First init list.
   // CHECK-NOT: @[[PARTLY_CONSTANT_FIRST]],
   // CHECK: store ptr {{.*}}@[[PARTLY_CONSTANT_FIRST]]{{.*}}, ptr {{.*}}@[[PARTLY_CONSTANT_INNER]]{{.*}}
-  // CHECK: store i{{32|64}} 3, ptr getelementptr inbounds nuw (i8, ptr {{.*}}@[[PARTLY_CONSTANT_INNER]]{{.*}}, i{{32|64}} {{4|8}})
+  // CHECK: store i64 3, ptr getelementptr inbounds nuw (i8, ptr {{.*}}@[[PARTLY_CONSTANT_INNER]]{{.*}}, i64 8)
   // CHECK-NOT: @[[PARTLY_CONSTANT_FIRST]],
   //
   // Second init list array (non-constant).
