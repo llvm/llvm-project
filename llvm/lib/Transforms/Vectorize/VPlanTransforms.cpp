@@ -1664,7 +1664,7 @@ static void narrowToSingleScalarRecipes(VPlan &Plan) {
       if (RepR && (RepR->isSingleScalar() || RepR->isPredicated()))
         continue;
 
-      auto *RepOrWidenR = dyn_cast<VPRecipeWithIRFlags>(&R);
+      auto *RepOrWidenR = cast<VPRecipeWithIRFlags>(&R);
       if (RepR && isa<StoreInst>(RepR->getUnderlyingInstr()) &&
           vputils::isSingleScalar(RepR->getOperand(1))) {
         auto *Clone = new VPReplicateRecipe(
@@ -1685,7 +1685,7 @@ static void narrowToSingleScalarRecipes(VPlan &Plan) {
       }
 
       // Skip recipes that aren't single scalars.
-      if (!RepOrWidenR || !vputils::isSingleScalar(RepOrWidenR))
+      if (!vputils::isSingleScalar(RepOrWidenR))
         continue;
 
       // Predicate to check if a user of Op introduces extra broadcasts.
