@@ -168,23 +168,6 @@ f_nonx30_ret_ok:
         ret     x16
         .size f_nonx30_ret_ok, .-f_nonx30_ret_ok
 
-        .globl  f_detect_clobbered_x30_passed_to_other
-        .type   f_detect_clobbered_x30_passed_to_other,@function
-f_detect_clobbered_x30_passed_to_other:
-        str x30, [sp]
-        ldr x30, [sp]
-// FIXME: Ideally, the pac-ret scanner would report on the following instruction, which
-// performs a tail call, that x30 might be attacker-controlled.
-// CHECK-NOT: function f_detect_clobbered_x30_passed_to_other
-        b   f_tail_called
-        .size f_detect_clobbered_x30_passed_to_other, .-f_detect_clobbered_x30_passed_to_other
-
-        .globl  f_tail_called
-        .type   f_tail_called,@function
-f_tail_called:
-        ret
-        .size f_tail_called, .-f_tail_called
-
         .globl  f_nonx30_ret_non_auted
         .type   f_nonx30_ret_non_auted,@function
 f_nonx30_ret_non_auted:
@@ -271,6 +254,74 @@ lr_clobbered_nocfg:
 2:
         ret
         .size lr_clobbered_nocfg, .-lr_clobbered_nocfg
+
+// Verify that we can also detect gadgets across basic blocks
+
+        .globl f_crossbb1
+        .type   f_crossbb1,@function
+f_crossbb1:
+        paciasp
+        stp     x29, x30, [sp, #-16]!
+        ldp     x29, x30, [sp], #16
+        cbnz    x0, 1f
+        autiasp
+1:
+        ret
+        .size f_crossbb1, .-f_crossbb1
+// CHECK-LABEL: GS-PAUTH: non-protected ret found in function f_crossbb1, basic block {{[^,]+}}, at address
+// CHECK-NEXT:  The instruction is     {{[0-9a-f]+}}:       ret
+// CHECK-NEXT:  The 1 instructions that write to the affected registers after any authentication are:
+// CHECK-NEXT:  1.     {{[0-9a-f]+}}:      ldp     x29, x30, [sp], #0x10
+
+// A test that checks that the dataflow state tracking across when merging BBs
+// seems to work:
+        .globl f_mergebb1
+        .type   f_mergebb1,@function
+f_mergebb1:
+        paciasp
+2:
+        stp     x29, x30, [sp, #-16]!
+        ldp     x29, x30, [sp], #16
+        sub     x0, x0, #1
+        cbnz    x0, 1f
+        autiasp
+        b       2b
+1:
+        ret
+        .size f_mergebb1, .-f_mergebb1
+// CHECK-LABEL: GS-PAUTH: non-protected ret found in function f_mergebb1, basic block {{[^,]+}}, at address
+// CHECK-NEXT:    The instruction is     {{[0-9a-f]+}}:       ret
+// CHECK-NEXT:    The 1 instructions that write to the affected registers after any authentication are:
+// CHECK-NEXT:    1.     {{[0-9a-f]+}}:      ldp     x29, x30, [sp], #0x10
+
+        .globl f_shrinkwrapping
+        .type   f_shrinkwrapping,@function
+f_shrinkwrapping:
+        cbz     x0, 1f
+        paciasp
+        stp     x29, x30, [sp, #-16]!
+        ldp     x29, x30, [sp], #16
+        autiasp
+1:
+        ret
+        .size f_shrinkwrapping, .-f_shrinkwrapping
+// CHECK-NOT: f_shrinkwrapping
+
+        .globl f_multi_auth_insts
+        .type   f_multi_auth_insts,@function
+f_multi_auth_insts:
+        paciasp
+        stp     x29, x30, [sp, #-16]!
+        ldp     x29, x30, [sp], #16
+        cbnz x0, 1f
+        autibsp
+        b 2f
+1:
+        autiasp
+2:
+        ret
+        .size f_multi_auth_insts, .-f_multi_auth_insts
+// CHECK-NOT: f_multi_auth_insts
 
 /// Now do a basic sanity check on every different Authentication instruction:
 
