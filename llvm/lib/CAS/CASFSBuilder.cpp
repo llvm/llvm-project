@@ -17,17 +17,17 @@ CASFSBuilder::CASFSBuilder(ObjectStore &DB, ArrayRef<MappedPrefix> PrefixMaps)
 
 CASFSBuilder::~CASFSBuilder() {}
 
-static Error recursiveAccess(CachingOnDiskFileSystem &FS, const Twine &Path) {
+static Error recursiveAccess(CachingOnDiskFileSystem &FS, const Twine &Path, bool Recursive) {
   std::optional<llvm::cas::CASID> FileID;
   auto ST = FS.statusAndFileID(Path, FileID, /*FollowSymlinks=*/false);
   if (!ST)
     return createFileError(Path, ST.getError());
 
-  if (ST->isDirectory()) {
+  if (Recursive && ST->isDirectory()) {
     std::error_code EC;
     for (vfs::directory_iterator I = FS.dir_begin(Path, EC), IE; !EC && I != IE;
          I.increment(EC)) {
-      auto Err = recursiveAccess(FS, I->path());
+      auto Err = recursiveAccess(FS, I->path(), Recursive);
       if (Err)
         return Err;
     }
@@ -36,7 +36,7 @@ static Error recursiveAccess(CachingOnDiskFileSystem &FS, const Twine &Path) {
   return Error::success();
 }
 
-Error CASFSBuilder::ingestFileSystemPath(const Twine &Path) {
+Error CASFSBuilder::ingestFileSystemPath(const Twine &Path, bool Recursive) {
   if (!FS) {
     auto FS = createCachingOnDiskFileSystem(DB);
     if (!FS)
@@ -45,7 +45,7 @@ Error CASFSBuilder::ingestFileSystemPath(const Twine &Path) {
     this->FS = std::move(*FS);
   }
 
-  if (Error E = recursiveAccess(*FS, Path))
+  if (Error E = recursiveAccess(*FS, Path, Recursive))
     return E;
   return Error::success();
 }
