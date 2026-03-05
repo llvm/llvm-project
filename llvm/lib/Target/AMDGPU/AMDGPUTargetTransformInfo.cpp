@@ -1710,16 +1710,17 @@ InstructionCost GCNTTIImpl::getScalingFactorCost(Type *Ty, GlobalValue *BaseGV,
                                                  bool HasBaseReg, int64_t Scale,
                                                  unsigned AddrSpace) const {
   if (HasBaseReg && Scale != 0) {
-    // gfx1250+ can fold base+scale*index into the instruction when scale
-    // equals the memory access size (scale_offset bit). Supported address
-    // spaces: flat, global, constant, private (scratch).
+    // gfx1250+ can fold base+scale*index when scale matches the memory access
+    // size (scale_offset bit). Supported for flat/global/constant/scratch
+    // (VMEM, max 128 bits) and constant_32bit (SMRD, capped to 128 bits here).
     if (getST()->hasScaleOffset() && Ty && Ty->isSized() &&
         (AddrSpace == AMDGPUAS::FLAT_ADDRESS ||
          AddrSpace == AMDGPUAS::GLOBAL_ADDRESS ||
          AddrSpace == AMDGPUAS::CONSTANT_ADDRESS ||
+         AddrSpace == AMDGPUAS::CONSTANT_ADDRESS_32BIT ||
          AddrSpace == AMDGPUAS::PRIVATE_ADDRESS)) {
-      if (static_cast<int64_t>(
-              getDataLayout().getTypeStoreSize(Ty).getFixedValue()) == Scale)
+      unsigned StoreSize = getDataLayout().getTypeStoreSize(Ty).getFixedValue();
+      if (StoreSize <= 16 && static_cast<int64_t>(StoreSize) == Scale)
         return 0;
     }
     return 1;
