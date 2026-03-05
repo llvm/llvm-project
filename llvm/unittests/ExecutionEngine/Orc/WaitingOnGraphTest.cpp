@@ -481,7 +481,7 @@ TEST_F(WaitingOnGraphTest, Emit_ZigZag) {
   //   ^ -- At this point we expect two pending supernodes.
   // 3. (0, 1) -> (0, 2)
   //   ^ -- Resolution of (0, 1) should cause all three emitted nodes to coalsce
-  //        into one supernode defining (0, {1, 2, 3}).
+  //        into one supernode defining (0, {0, 1, 2}).
   // 4. (0, 3)
   //   ^ -- Should cause all four nodes to become ready.
 
