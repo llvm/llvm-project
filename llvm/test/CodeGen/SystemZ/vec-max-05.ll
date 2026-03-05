@@ -60,11 +60,8 @@ define double @f3(double %dummy, double %val1, double %val2) {
 define double @f4(double %dummy, double %val) {
 ; CHECK-LABEL: f4:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    ltdbr %f1, %f2
-; CHECK-NEXT:    ldr %f0, %f2
-; CHECK-NEXT:    bhr %r14
-; CHECK-NEXT:  .LBB3_1:
 ; CHECK-NEXT:    lzdr %f0
+; CHECK-NEXT:    wfmaxdb %f0, %f2, %f0, 4
 ; CHECK-NEXT:    br %r14
   %cmp = fcmp ogt double %val, 0.0
   %ret = select i1 %cmp, double %val, double 0.0
@@ -174,11 +171,8 @@ define float @f13(float %dummy, float %val1, float %val2) {
 define float @f14(float %dummy, float %val) {
 ; CHECK-LABEL: f14:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    ltebr %f1, %f2
-; CHECK-NEXT:    ldr %f0, %f2
-; CHECK-NEXT:    bhr %r14
-; CHECK-NEXT:  .LBB11_1:
 ; CHECK-NEXT:    lzer %f0
+; CHECK-NEXT:    wfmaxsb %f0, %f2, %f0, 4
 ; CHECK-NEXT:    br %r14
   %cmp = fcmp ogt float %val, 0.0
   %ret = select i1 %cmp, float %val, float 0.0
@@ -286,11 +280,7 @@ define void @f24(ptr %ptr, ptr %dst) {
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vl %v0, 0(%r2), 3
 ; CHECK-NEXT:    vzero %v1
-; CHECK-NEXT:    wfcxb %v0, %v1
-; CHECK-NEXT:    jh .LBB18_2
-; CHECK-NEXT:  # %bb.1:
-; CHECK-NEXT:    vzero %v0
-; CHECK-NEXT:  .LBB18_2:
+; CHECK-NEXT:    wfmaxxb %v0, %v0, %v1, 4
 ; CHECK-NEXT:    vst %v0, 0(%r3), 3
 ; CHECK-NEXT:    br %r14
   %val = load fp128, ptr %ptr
