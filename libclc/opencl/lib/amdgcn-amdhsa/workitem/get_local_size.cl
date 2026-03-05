@@ -6,17 +6,21 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include <amdhsa_abi.h>
 #include <clc/opencl/opencl-base.h>
 
 _CLC_DEF _CLC_OVERLOAD size_t get_local_size(uint dim) {
-  __constant uint *ptr = (__constant uint *)__builtin_amdgcn_dispatch_ptr();
-  switch (dim) {
-  case 0:
-    return ptr[1] & 0xffffu;
-  case 1:
-    return ptr[1] >> 16;
-  case 2:
-    return ptr[2] & 0xffffu;
-  }
-  return 1;
+  if (dim > 2)
+    return 1;
+
+  __constant amdhsa_implicit_kernarg_v5 *args =
+      (__constant amdhsa_implicit_kernarg_v5 *)
+          __builtin_amdgcn_implicitarg_ptr();
+
+  uint group_ids[3] = {__builtin_amdgcn_workgroup_id_x(),
+                       __builtin_amdgcn_workgroup_id_y(),
+                       __builtin_amdgcn_workgroup_id_z()};
+
+  return group_ids[dim] < args->block_count[dim] ? (size_t)args->group_size[dim]
+                                                 : (size_t)args->remainder[dim];
 }
