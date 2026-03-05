@@ -226,6 +226,9 @@ const T *GetFirstArgument(const OmpDirectiveSpecification &spec) {
   return nullptr;
 }
 
+const OmpClause *FindClause(
+    const OmpDirectiveSpecification &spec, llvm::omp::Clause clauseId);
+
 const BlockConstruct *GetFortranBlockConstruct(
     const ExecutionPartConstruct &epc);
 const Block &GetInnermostExecPart(const Block &block);
