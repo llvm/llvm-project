@@ -213,12 +213,17 @@ void Prescanner::Statement() {
     break;
   }
   case LineClassification::Kind::CompilerDirectiveAfterMacroExpansion:
+    directiveSentinel_ = line.sentinel;
+    CHECK(InCompilerDirective());
     BeginStatementAndAdvance();
-    SkipSpaces();
-    if (*at_ == '!') {
-      tokens.Put(at_++, 1, GetCurrentProvenance());
-      ++column_;
+    while (*at_ != '!' && *at_ != '\n') {
+      ++at_, ++column_;
     }
+    CHECK(*at_ == '!');
+    EmitChar(tokens, '!');
+    tokens.CloseToken();
+    ++at_;
+    ++column_;
     break;
   case LineClassification::Kind::Source: {
     BeginStatementAndAdvance();
@@ -267,6 +272,7 @@ void Prescanner::Statement() {
 
   while (NextToken(tokens)) {
   }
+
   if (continuationLines_ > 255) {
     if (features_.ShouldWarn(common::LanguageFeature::MiscSourceExtensions)) {
       Say(common::LanguageFeature::MiscSourceExtensions,
@@ -331,7 +337,9 @@ void Prescanner::Statement() {
           preprocessed->ToLowerCase().ClipComment(*this), newlineProvenance);
       break;
     }
-  } else if (line.kind == LineClassification::Kind::CompilerDirective) {
+  } else if (line.kind == LineClassification::Kind::CompilerDirective ||
+      line.kind ==
+          LineClassification::Kind::CompilerDirectiveAfterMacroExpansion) {
     while (CompilerDirectiveContinuation(tokens, line.sentinel)) {
       newlineProvenance = GetCurrentProvenance();
     }
@@ -1459,29 +1467,37 @@ const char *Prescanner::FreeFormContinuationLine(bool ampersand) {
   if (InCompilerDirective()) {
     if (InConditionalLine()) {
       if (preprocessingOnly_) {
-        // in -E mode, don't treat !$ as a continuation
+        // in -E mode, don't treat !$/!@acc/!@cuf as a continuation
         return nullptr;
-      } else if (p[0] == '!' && (p[1] == '$' || p[1] == '@')) {
-        p += 2;
-        if (InOpenACCOrCUDAConditionalLine()) {
-          if (IsDirective("acc", p) || IsDirective("cuf", p)) {
-            p += 3;
-          } else {
-            return nullptr;
+      } else if (*p == '!') {
+        if (auto lClass{IsCompilerDirectiveSentinelAfterKeywordMacro(p + 1)}) {
+          if (lClass->sentinel &&
+              ((IsOpenMPConditionalLine(lClass->sentinel) &&
+                   InOpenMPConditionalLine()) ||
+                  (IsOpenACCConditionalLine(lClass->sentinel) &&
+                      InOpenACCConditionalLine()) ||
+                  (IsCUDAConditionalLine(lClass->sentinel) &&
+                      InCUDAConditionalLine()))) {
+            p += 1 + lClass->payloadOffset;
           }
         }
         if (*p != '&' && !IsSpaceOrTab(p)) {
           return nullptr;
         }
       }
-    } else if (*p++ == '!') {
-      for (const char *s{directiveSentinel_}; *s != '\0'; ++p, ++s) {
-        if (*s != ToLowerCaseLetter(*p)) {
+    } else if (*p == '!') {
+      if (auto lClass{IsCompilerDirectiveSentinelAfterKeywordMacro(p + 1)}) {
+        if (lClass->sentinel &&
+            std::strcmp(directiveSentinel_, lClass->sentinel) == 0) {
+          p += 1 + lClass->payloadOffset;
+        } else {
           return nullptr; // not the same directive class
         }
+      } else {
+        return nullptr; // not a compiler directive
       }
     } else {
-      return nullptr;
+      return nullptr; // not a '!'
     }
     p = SkipWhiteSpace(p);
     if (*p == '&') {
@@ -1497,14 +1513,16 @@ const char *Prescanner::FreeFormContinuationLine(bool ampersand) {
   }
   if (p[0] == '!' && !preprocessingOnly_) {
     // Conditional lines can be continuations
-    if (p[1] == '$' && features_.IsEnabled(LanguageFeature::OpenMP)) {
-      p = lineStart = SkipWhiteSpace(p + 2);
-    } else if (IsDirective("@acc", p + 1) &&
-        features_.IsEnabled(LanguageFeature::OpenACC)) {
-      p = lineStart = SkipWhiteSpace(p + 5);
-    } else if (IsDirective("@cuf", p + 1) &&
-        features_.IsEnabled(LanguageFeature::CUDA)) {
-      p = lineStart = SkipWhiteSpace(p + 5);
+    if (auto lClass{IsCompilerDirectiveSentinelAfterKeywordMacro(p + 1)}) {
+      if (lClass->sentinel &&
+          ((IsOpenMPConditionalLine(lClass->sentinel) &&
+               features_.IsEnabled(LanguageFeature::OpenMP)) ||
+              (IsOpenACCConditionalLine(lClass->sentinel) &&
+                  features_.IsEnabled(LanguageFeature::OpenACC)) ||
+              (IsCUDAConditionalLine(lClass->sentinel) &&
+                  features_.IsEnabled(LanguageFeature::CUDA)))) {
+        lineStart = p = SkipWhiteSpace(p + 1 + lClass->payloadOffset);
+      }
     }
   }
   if (*p == '&') {
@@ -1775,18 +1793,16 @@ Prescanner::IsCompilerDirectiveSentinel(const char *p) const {
   for (std::size_t j{0}; j + 1 < sizeof sentinel; ++p, ++j) {
     if (int n{IsSpaceOrTab(p)};
         n || !(IsLetter(*p) || *p == '$' || *p == '@')) {
-      if (j > 0) {
-        if (j == 1 && sentinel[0] == '$' && n == 0 && *p != '&' && *p != '\n') {
-          // Free form OpenMP conditional compilation line sentinels have to
-          // be immediately followed by a space or &, not a digit
-          // or anything else.  A newline also works for an initial line.
-          break;
-        }
+      if (j <= 1 && sentinel[0] == '$' && n == 0 && *p != '&' && *p != '\n') {
+        // Free form OpenMP conditional compilation line sentinels have to
+        // be immediately followed by a space or &, not a digit
+        // or anything else.  A newline also works for an initial line.
+        break;
+      }
+      if (*p != '!') {
         sentinel[j] = '\0';
-        if (*p != '!') {
-          if (const char *sp{IsCompilerDirectiveSentinel(sentinel, j)}) {
-            return std::make_pair(sp, p);
-          }
+        if (const char *sp{IsCompilerDirectiveSentinel(sentinel, j)}) {
+          return std::make_pair(sp, p);
         }
       }
       break;

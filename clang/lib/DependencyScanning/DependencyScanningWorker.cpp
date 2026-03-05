@@ -20,8 +20,7 @@ using namespace clang;
 using namespace dependencies;
 
 DependencyScanningWorker::DependencyScanningWorker(
-    DependencyScanningService &Service,
-    llvm::IntrusiveRefCntPtr<llvm::vfs::FileSystem> BaseFS)
+    DependencyScanningService &Service)
     : Service(Service) {
   PCHContainerOps = std::make_shared<PCHContainerOperations>();
   // We need to read object files from PCH built outside the scanner.
@@ -30,7 +29,9 @@ DependencyScanningWorker::DependencyScanningWorker(
   // The scanner itself writes only raw ast files.
   PCHContainerOps->registerWriter(std::make_unique<RawPCHContainerWriter>());
 
-  if (Service.shouldTraceVFS())
+  auto BaseFS = Service.getOpts().MakeVFS();
+
+  if (Service.getOpts().TraceVFS)
     BaseFS = llvm::makeIntrusiveRefCnt<llvm::vfs::TracingFileSystem>(
         std::move(BaseFS));
 
@@ -105,10 +106,6 @@ bool DependencyScanningWorker::computeDependencies(
     return createAndRunToolInvocation(Cmd, Action, FS, PCHContainerOps, Diags);
   });
 
-  // Ensure finish() is called even if we never reached ExecuteAction().
-  if (!Action.hasDiagConsumerFinished())
-    DiagConsumer.finish();
-
   return Success && Action.hasScanned();
 }
 
@@ -138,10 +135,6 @@ bool DependencyScanningWorker::computeDependenciesByNameWithContext(
     DependencyActionController &Controller) {
   assert(CIWithContext && "CompilerInstance with context required!");
   return CIWithContext->computeDependencies(ModuleName, Consumer, Controller);
-}
-
-bool DependencyScanningWorker::finalizeCompilerInstanceWithContext() {
-  return CIWithContext->finalize();
 }
 
 std::pair<IntrusiveRefCntPtr<llvm::vfs::OverlayFileSystem>,

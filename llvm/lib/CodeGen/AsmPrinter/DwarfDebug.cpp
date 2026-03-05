@@ -959,6 +959,30 @@ void DwarfDebug::constructCallSiteEntryDIEs(const DISubprogram &SP,
     return true;
   };
 
+  // Create call_target connections for indirect calls.
+  auto addCallSiteTargetForIndirectCalls = [&](const MachineInstr *MI,
+                                               DIE &CallSiteDIE) {
+    const MachineFunction *MF = MI->getMF();
+    const auto &CalleesMap = MF->getCallSitesInfo();
+    auto CSInfo = CalleesMap.find(MI);
+    // Get the information for the call instruction.
+    if (CSInfo == CalleesMap.end() || !CSInfo->second.CallTarget)
+      return;
+
+    MDNode *CallTarget = CSInfo->second.CallTarget;
+    // Add DW_AT_LLVM_virtual_call_origin with the 'call_target' metadata.
+    assert(!CallSiteDIE.findAttribute(dwarf::DW_AT_LLVM_virtual_call_origin) &&
+           "DW_AT_LLVM_virtual_call_origin already exists");
+    const DISubprogram *CalleeSP = dyn_cast<DISubprogram>(CallTarget);
+    DIE *CalleeDIE = CU.getOrCreateSubprogramDIE(CalleeSP, nullptr);
+    assert(CalleeDIE && "Could not create DIE for call site entry origin");
+    CU.addDIEEntry(CallSiteDIE,
+                   CU.getDwarf5OrGNUAttr(dwarf::DW_AT_LLVM_virtual_call_origin),
+                   *CalleeDIE);
+    // Add DW_AT_linkage_name to the method declaration if needed.
+    CU.addLinkageNamesToDeclarations(*this, *CalleeSP, *CalleeDIE);
+  };
+
   // Emit call site entries for each call or tail call in the function.
   for (const MachineBasicBlock &MBB : MF) {
     for (const MachineInstr &MI : MBB.instrs()) {
@@ -1056,6 +1080,9 @@ void DwarfDebug::constructCallSiteEntryDIEs(const DISubprogram &SP,
           ScopeDIE, CalleeSP, CalleeDecl, IsTail, PCAddr, CallAddr, CallTarget,
           Offset, AllocSiteTy);
 
+      if (CallTarget.getReg())
+        addCallSiteTargetForIndirectCalls(TopLevelCallMI, CallSiteDIE);
+
       // Optionally emit call-site-param debug info.
       if (emitDebugEntryValues()) {
         ParamSet Params;
@@ -1147,20 +1174,27 @@ void DwarfDebug::finishUnitAttributes(const DICompileUnit *DIUnit,
     }
   }
 }
+
+DwarfCompileUnit *DwarfDebug::getDwarfCompileUnit(const DICompileUnit *DIUnit) {
+  if (auto *CU = CUMap.lookup(DIUnit))
+    return CU;
+
+  if (useSplitDwarf() && !shareAcrossDWOCUs() &&
+      (!DIUnit->getSplitDebugInlining() ||
+       DIUnit->getEmissionKind() == DICompileUnit::FullDebug) &&
+      !CUMap.empty())
+    return CUMap.begin()->second;
+
+  return nullptr;
+}
+
 // Create new DwarfCompileUnit for the given metadata node with tag
 // DW_TAG_compile_unit.
 DwarfCompileUnit &
 DwarfDebug::getOrCreateDwarfCompileUnit(const DICompileUnit *DIUnit) {
-  if (auto *CU = CUMap.lookup(DIUnit))
+  if (auto *CU = getDwarfCompileUnit(DIUnit))
     return *CU;
 
-  if (useSplitDwarf() &&
-      !shareAcrossDWOCUs() &&
-      (!DIUnit->getSplitDebugInlining() ||
-       DIUnit->getEmissionKind() == DICompileUnit::FullDebug) &&
-      !CUMap.empty()) {
-    return *CUMap.begin()->second;
-  }
   CompilationDir = DIUnit->getDirectory();
 
   auto OwnedUnit = std::make_unique<DwarfCompileUnit>(
@@ -1233,14 +1267,6 @@ void DwarfDebug::beginModule(Module *M) {
 
   assert(NumDebugCUs > 0 && "Asm unexpectedly initialized");
   SingleCU = NumDebugCUs == 1;
-  DenseMap<DIGlobalVariable *, SmallVector<DwarfCompileUnit::GlobalExpr, 1>>
-      GVMap;
-  for (const GlobalVariable &Global : M->globals()) {
-    SmallVector<DIGlobalVariableExpression *, 1> GVs;
-    Global.getDebugInfo(GVs);
-    for (auto *GVE : GVs)
-      GVMap[GVE->getVariable()].push_back({&Global, GVE->getExpression()});
-  }
 
   // Create the symbol that designates the start of the unit's contribution
   // to the string offsets table. In a split DWARF scenario, only the skeleton
@@ -1274,24 +1300,6 @@ void DwarfDebug::beginModule(Module *M) {
       continue;
 
     DwarfCompileUnit &CU = getOrCreateDwarfCompileUnit(CUNode);
-
-    // Global Variables.
-    for (auto *GVE : CUNode->getGlobalVariables()) {
-      // Don't bother adding DIGlobalVariableExpressions listed in the CU if we
-      // already know about the variable and it isn't adding a constant
-      // expression.
-      auto &GVMapEntry = GVMap[GVE->getVariable()];
-      auto *Expr = GVE->getExpression();
-      if (!GVMapEntry.size() || (Expr && Expr->isConstant()))
-        GVMapEntry.push_back({nullptr, Expr});
-    }
-
-    DenseSet<DIGlobalVariable *> Processed;
-    for (auto *GVE : CUNode->getGlobalVariables()) {
-      DIGlobalVariable *GV = GVE->getVariable();
-      if (Processed.insert(GV).second)
-        CU.getOrCreateGlobalVariableDIE(GV, sortGlobalExprs(GVMap[GV]));
-    }
 
     for (auto *Ty : CUNode->getEnumTypes()) {
       assert(!isa_and_nonnull<DILocalScope>(Ty->getScope()) &&
@@ -1464,7 +1472,7 @@ void DwarfDebug::finalizeModuleInfo() {
                             TLOF.getDwarfMacinfoSection()->getBeginSymbol());
       }
     }
-    }
+  }
 
   // Emit all frontend-produced Skeleton CUs, i.e., Clang modules.
   for (auto *CUNode : MMI->getModule()->debug_compile_units())
@@ -1490,9 +1498,41 @@ void DwarfDebug::endModule() {
   assert(CurFn == nullptr);
   assert(CurMI == nullptr);
 
-  for (const auto &P : CUMap) {
-    const auto *CUNode = cast<DICompileUnit>(P.first);
-    DwarfCompileUnit *CU = &*P.second;
+  const Module *M = MMI->getModule();
+
+  // Collect global variables info.
+  DenseMap<DIGlobalVariable *, SmallVector<DwarfCompileUnit::GlobalExpr, 1>>
+      GVMap;
+  for (const GlobalVariable &Global : M->globals()) {
+    SmallVector<DIGlobalVariableExpression *, 1> GVs;
+    Global.getDebugInfo(GVs);
+    for (auto *GVE : GVs)
+      GVMap[GVE->getVariable()].push_back({&Global, GVE->getExpression()});
+  }
+
+  for (DICompileUnit *CUNode : M->debug_compile_units()) {
+    DwarfCompileUnit *CU = getDwarfCompileUnit(CUNode);
+
+    // If the CU hasn't been emitted yet, it must be empty. Skip it.
+    if (!CU)
+      continue;
+
+    // Emit Global Variables.
+    for (auto *GVE : CUNode->getGlobalVariables()) {
+      // Don't bother adding DIGlobalVariableExpressions listed in the CU if we
+      // already know about the variable and it isn't adding a constant
+      // expression.
+      auto &GVMapEntry = GVMap[GVE->getVariable()];
+      auto *Expr = GVE->getExpression();
+      if (!GVMapEntry.size() || (Expr && Expr->isConstant()))
+        GVMapEntry.push_back({nullptr, Expr});
+    }
+    DenseSet<DIGlobalVariable *> Processed;
+    for (auto *GVE : CUNode->getGlobalVariables()) {
+      DIGlobalVariable *GV = GVE->getVariable();
+      if (Processed.insert(GV).second)
+        CU->getOrCreateGlobalVariableDIE(GV, sortGlobalExprs(GVMap[GV]));
+    }
 
     // Emit imported entities.
     for (auto *IE : CUNode->getImportedEntities()) {

@@ -1505,7 +1505,6 @@ void SelectionDAGBuilder::resolveDanglingDebugInfo(const Value *V,
   DanglingDebugInfoVector &DDIV = DanglingDbgInfoIt->second;
   for (auto &DDI : DDIV) {
     DebugLoc DL = DDI.getDebugLoc();
-    unsigned ValSDNodeOrder = Val.getNode()->getIROrder();
     unsigned DbgSDNodeOrder = DDI.getSDNodeOrder();
     DILocalVariable *Variable = DDI.getVariable();
     DIExpression *Expr = DDI.getExpression();
@@ -1519,6 +1518,7 @@ void SelectionDAGBuilder::resolveDanglingDebugInfo(const Value *V,
       // in the first place we should not be more successful here). Unless we
       // have some test case that prove this to be correct we should avoid
       // calling EmitFuncArgumentDbgValue here.
+      unsigned ValSDNodeOrder = Val.getNode()->getIROrder();
       if (!EmitFuncArgumentDbgValue(V, Variable, Expr, DL,
                                     FuncArgumentDbgValueKind::Value, Val)) {
         LLVM_DEBUG(dbgs() << "Resolve dangling debug info for "
@@ -3878,7 +3878,10 @@ void SelectionDAGBuilder::visitSelect(const User &I) {
       switch (SPR.NaNBehavior) {
       case SPNB_NA: llvm_unreachable("No NaN behavior for FP op?");
       case SPNB_RETURNS_NAN: break;
-      case SPNB_RETURNS_OTHER: Opc = ISD::FMINNUM; break;
+      case SPNB_RETURNS_OTHER:
+        Opc = ISD::FMINIMUMNUM;
+        Flags.setNoSignedZeros(true);
+        break;
       case SPNB_RETURNS_ANY:
         if (TLI.isOperationLegalOrCustom(ISD::FMINNUM, VT) ||
             (UseScalarMinMax &&
@@ -3891,7 +3894,10 @@ void SelectionDAGBuilder::visitSelect(const User &I) {
       switch (SPR.NaNBehavior) {
       case SPNB_NA: llvm_unreachable("No NaN behavior for FP op?");
       case SPNB_RETURNS_NAN: break;
-      case SPNB_RETURNS_OTHER: Opc = ISD::FMAXNUM; break;
+      case SPNB_RETURNS_OTHER:
+        Opc = ISD::FMAXIMUMNUM;
+        Flags.setNoSignedZeros(true);
+        break;
       case SPNB_RETURNS_ANY:
         if (TLI.isOperationLegalOrCustom(ISD::FMAXNUM, VT) ||
             (UseScalarMinMax &&
@@ -6555,8 +6561,12 @@ void SelectionDAGBuilder::visitVectorHistogram(const CallInst &I,
   }
 
   EVT IdxVT = Index.getValueType();
-  EVT EltTy = IdxVT.getVectorElementType();
-  if (TLI.shouldExtendGSIndex(IdxVT, EltTy)) {
+
+  // Avoid using e.g. i32 as index type when the increment must be performed
+  // on i64's.
+  bool MustExtendIndex = VT.getScalarSizeInBits() > IdxVT.getScalarSizeInBits();
+  EVT EltTy = MustExtendIndex ? VT : IdxVT.getVectorElementType();
+  if (MustExtendIndex || TLI.shouldExtendGSIndex(IdxVT, EltTy)) {
     EVT NewIdxVT = IdxVT.changeVectorElementType(*DAG.getContext(), EltTy);
     Index = DAG.getNode(ISD::SIGN_EXTEND, sdl, NewIdxVT, Index);
   }
@@ -7142,6 +7152,31 @@ void SelectionDAGBuilder::visitIntrinsicCall(const CallInst &I,
     setValue(&I, DAG.getNode(ISD::FP_TO_UINT_SAT, sdl, VT,
                              getValue(I.getArgOperand(0)),
                              DAG.getValueType(VT.getScalarType())));
+    return;
+  }
+  case Intrinsic::convert_from_arbitrary_fp: {
+    // Extract format metadata and convert to semantics enum.
+    EVT DstVT = TLI.getValueType(DAG.getDataLayout(), I.getType());
+    Metadata *MD = cast<MetadataAsValue>(I.getArgOperand(1))->getMetadata();
+    StringRef FormatStr = cast<MDString>(MD)->getString();
+    const fltSemantics *SrcSem =
+        APFloatBase::getArbitraryFPSemantics(FormatStr);
+    if (!SrcSem) {
+      DAG.getContext()->emitError(
+          "convert_from_arbitrary_fp: not implemented format '" + FormatStr +
+          "'");
+      setValue(&I, DAG.getPOISON(DstVT));
+      return;
+    }
+    APFloatBase::Semantics SemEnum = APFloatBase::SemanticsToEnum(*SrcSem);
+
+    SDValue IntVal = getValue(I.getArgOperand(0));
+
+    // Emit ISD::CONVERT_FROM_ARBITRARY_FP node.
+    SDValue SemConst =
+        DAG.getTargetConstant(static_cast<int>(SemEnum), sdl, MVT::i32);
+    setValue(&I, DAG.getNode(ISD::CONVERT_FROM_ARBITRARY_FP, sdl, DstVT, IntVal,
+                             SemConst));
     return;
   }
   case Intrinsic::set_rounding:
@@ -9395,6 +9430,26 @@ bool SelectionDAGBuilder::visitMemChrCall(const CallInst &I) {
   return false;
 }
 
+/// See if we can lower a memccpy call into an optimized form.  If so, return
+/// true and lower it, otherwise return false and it will be lowered like a
+/// normal call.
+/// The caller already checked that \p I calls the appropriate LibFunc with a
+/// correct prototype.
+bool SelectionDAGBuilder::visitMemCCpyCall(const CallInst &I) {
+  const SelectionDAGTargetInfo &TSI = DAG.getSelectionDAGInfo();
+  std::pair<SDValue, SDValue> Res = TSI.EmitTargetCodeForMemccpy(
+      DAG, getCurSDLoc(), DAG.getRoot(), getValue(I.getArgOperand(0)),
+      getValue(I.getArgOperand(1)), getValue(I.getArgOperand(2)),
+      getValue(I.getArgOperand(3)), &I);
+
+  if (Res.first) {
+    processIntegerCallValue(I, Res.first, true);
+    PendingLoads.push_back(Res.second);
+    return true;
+  }
+  return false;
+}
+
 /// See if we can lower a mempcpy call into an optimized form. If so, return
 /// true and lower it. Otherwise return false, and it will be lowered like a
 /// normal call.
@@ -9724,6 +9779,10 @@ void SelectionDAGBuilder::visitCall(const CallInst &I) {
         break;
       case LibFunc_memcmp:
         if (visitMemCmpBCmpCall(I))
+          return;
+        break;
+      case LibFunc_memccpy:
+        if (visitMemCCpyCall(I))
           return;
         break;
       case LibFunc_mempcpy:

@@ -147,7 +147,7 @@ public:
 ProcessExperimentalProperties::ProcessExperimentalProperties()
     : Properties(OptionValuePropertiesSP(
           new ProcessExperimentalOptionValueProperties())) {
-  m_collection_sp->Initialize(g_process_experimental_properties);
+  m_collection_sp->Initialize(g_process_experimental_properties_def);
 }
 
 ProcessProperties::ProcessProperties(lldb_private::Process *process)
@@ -157,7 +157,7 @@ ProcessProperties::ProcessProperties(lldb_private::Process *process)
   if (process == nullptr) {
     // Global process properties, set them up one time
     m_collection_sp = std::make_shared<ProcessOptionValueProperties>("process");
-    m_collection_sp->Initialize(g_process_properties);
+    m_collection_sp->Initialize(g_process_properties_def);
     m_collection_sp->AppendProperty(
         "thread", "Settings specific to threads.", true,
         Thread::GetGlobalProperties().GetValueProperties());
@@ -525,6 +525,8 @@ Process::~Process() {
   // explicitly clear the thread list here to ensure that the mutex is not
   // destroyed before the thread list.
   m_thread_list.Clear();
+  delete m_current_private_state_thread;
+  m_current_private_state_thread = nullptr;
 }
 
 ProcessProperties &Process::GetGlobalProperties() {
@@ -1098,36 +1100,6 @@ bool Process::IsAlive() {
   }
 }
 
-// This static callback can be used to watch for local child processes on the
-// current host. The child process exits, the process will be found in the
-// global target list (we want to be completely sure that the
-// lldb_private::Process doesn't go away before we can deliver the signal.
-bool Process::SetProcessExitStatus(
-    lldb::pid_t pid, bool exited,
-    int signo,      // Zero for no signal
-    int exit_status // Exit value of process if signal is zero
-    ) {
-  Log *log = GetLog(LLDBLog::Process);
-  LLDB_LOGF(log,
-            "Process::SetProcessExitStatus (pid=%" PRIu64
-            ", exited=%i, signal=%i, exit_status=%i)\n",
-            pid, exited, signo, exit_status);
-
-  if (exited) {
-    TargetSP target_sp(Debugger::FindTargetWithProcessID(pid));
-    if (target_sp) {
-      ProcessSP process_sp(target_sp->GetProcessSP());
-      if (process_sp) {
-        llvm::StringRef signal_str =
-            process_sp->GetUnixSignals()->GetSignalAsStringRef(signo);
-        process_sp->SetExitStatus(exit_status, signal_str);
-      }
-    }
-    return true;
-  }
-  return false;
-}
-
 bool Process::UpdateThreadList(ThreadList &old_thread_list,
                                ThreadList &new_thread_list) {
   m_thread_plans.ClearThreadCache();
@@ -1310,7 +1282,10 @@ void Process::SetPublicState(StateType new_state, bool restarted) {
   Log *log(GetLog(LLDBLog::State | LLDBLog::Process));
   LLDB_LOGF(log, "(plugin = %s, state = %s, restarted = %i)",
            GetPluginName().data(), StateAsCString(new_state), restarted);
-  const StateType old_state = GetPublicState();
+  // This is one instance where we don't want to obey the "who sees what state"
+  // decisions, we just want to see what's in the public state field.
+  const StateType old_state =
+      m_current_private_state_thread->m_public_state.GetValue();
   m_current_private_state_thread->SetPublicState(new_state);
 
   // On the transition from Run to Stopped, we unlock the writer end of the run
@@ -1324,7 +1299,8 @@ void Process::SetPublicState(StateType new_state, bool restarted) {
       SetPublicRunLockToStopped();
     } else {
       const bool old_state_is_stopped = StateIsStoppedState(old_state, false);
-      if ((old_state_is_stopped != new_state_is_stopped)) {
+      if ((old_state_is_stopped != new_state_is_stopped) ||
+          (new_state_is_stopped && GetRunLock().IsRunning())) {
         if (new_state_is_stopped && !restarted) {
           LLDB_LOGF(log, "(plugin = %s, state = %s) -- unlocking run lock",
                    GetPluginName().data(), StateAsCString(new_state));
@@ -3929,7 +3905,7 @@ bool Process::PrivateStateThread::StartupThread() {
   return true;
 }
 
-bool Process::PrivateStateThread::IsOnThread(const HostThread &thread) const {
+bool Process::PrivateStateThread::IsOnThread(lldb::thread_t thread) const {
   return m_private_state_thread.EqualsThread(thread);
 }
 
@@ -4419,7 +4395,14 @@ bool Process::ProcessEventData::ShouldStop(Event *event_ptr,
         this_thread_wants_to_stop =
             stop_info_sp->GetOverriddenShouldStopValue();
       } else {
+        // PerformAction can call arbitrary Python code but we're still in
+        // ShouldStop so we haven't switched the public state yet.  So we need
+        // to let this thread see the private state:
+        process_sp->m_current_private_state_thread->PushUsePrivateState(
+            Host::GetCurrentThread());
         stop_info_sp->PerformAction(event_ptr);
+        process_sp->m_current_private_state_thread->PopUsePrivateState();
+
         // The stop action might restart the target.  If it does, then we
         // want to mark that in the event so that whoever is receiving it
         // will know to wait for the running event and reflect that state
@@ -4483,9 +4466,6 @@ void Process::ProcessEventData::DoOnRemoval(Event *event_ptr) {
   if (m_update_state != 1)
     return;
 
-  process_sp->SetPublicState(
-      m_state, Process::ProcessEventData::GetRestartedFromEvent(event_ptr));
-
   if (m_state == eStateStopped && !m_restarted) {
     // Let process subclasses know we are about to do a public stop and do
     // anything they might need to in order to speed up register and memory
@@ -4497,16 +4477,18 @@ void Process::ProcessEventData::DoOnRemoval(Event *event_ptr) {
   // than a plain interrupt (e.g. we had already stopped for a breakpoint when
   // the halt request came through) don't do the StopInfo actions, as they may
   // end up restarting the process.
-  if (m_interrupted)
-    return;
-
-  // If we're not stopped or have restarted, then skip the StopInfo actions:
-  if (m_state != eStateStopped || m_restarted) {
+  if (m_interrupted || m_state != eStateStopped || m_restarted) {
+    process_sp->SetPublicState(
+        m_state, Process::ProcessEventData::GetRestartedFromEvent(event_ptr));
     return;
   }
 
   bool does_anybody_have_an_opinion = false;
   bool still_should_stop = ShouldStop(event_ptr, does_anybody_have_an_opinion);
+
+  // And now tell the world about the new state:
+  process_sp->SetPublicState(
+      m_state, Process::ProcessEventData::GetRestartedFromEvent(event_ptr));
 
   if (GetRestarted()) {
     return;

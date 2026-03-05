@@ -176,6 +176,7 @@ Clang-Tidy Checks
    :doc:`bugprone-unintended-char-ostream-output <bugprone/unintended-char-ostream-output>`, "Yes"
    :doc:`bugprone-unique-ptr-array-mismatch <bugprone/unique-ptr-array-mismatch>`, "Yes"
    :doc:`bugprone-unsafe-functions <bugprone/unsafe-functions>`,
+   :doc:`bugprone-unsafe-to-allow-exceptions <bugprone/unsafe-to-allow-exceptions>`,
    :doc:`bugprone-unused-local-non-trivial-variable <bugprone/unused-local-non-trivial-variable>`,
    :doc:`bugprone-unused-raii <bugprone/unused-raii>`, "Yes"
    :doc:`bugprone-unused-return-value <bugprone/unused-return-value>`,
@@ -368,6 +369,7 @@ Clang-Tidy Checks
    :doc:`performance-type-promotion-in-math-fn <performance/type-promotion-in-math-fn>`, "Yes"
    :doc:`performance-unnecessary-copy-initialization <performance/unnecessary-copy-initialization>`, "Yes"
    :doc:`performance-unnecessary-value-param <performance/unnecessary-value-param>`, "Yes"
+   :doc:`performance-use-std-move <performance/use-std-move>`, "Yes"
    :doc:`portability-avoid-pragma-once <portability/avoid-pragma-once>`,
    :doc:`portability-restrict-system-includes <portability/restrict-system-includes>`, "Yes"
    :doc:`portability-simd-intrinsics <portability/simd-intrinsics>`,

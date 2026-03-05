@@ -19,66 +19,74 @@
 
 using namespace llvm;
 
-#ifdef LLDB_PYTHON_DLL_RELATIVE_PATH
-/// Returns the full path to the lldb.exe executable.
-static std::wstring GetPathToExecutableW() {
+static std::string GetModulePath(HMODULE module) {
   std::vector<WCHAR> buffer(MAX_PATH);
   while (buffer.size() <= PATHCCH_MAX_CCH) {
-    DWORD len = GetModuleFileNameW(NULL, buffer.data(), buffer.size());
+    DWORD len = GetModuleFileNameW(module, buffer.data(), buffer.size());
     if (len == 0)
-      return L"";
-    if (len < buffer.size())
-      return std::wstring(buffer.data(), len);
+      return "";
+    if (len < buffer.size()) {
+      std::string buffer_utf8;
+      if (convertWideToUTF8(std::wstring(buffer.data(), len), buffer_utf8))
+        return buffer_utf8;
+      return "";
+    }
     if (::GetLastError() == ERROR_INSUFFICIENT_BUFFER)
       buffer.resize(buffer.size() * 2);
   }
-  return L"";
+  return "";
 }
 
+/// Returns the full path to the lldb.exe executable.
+static std::string GetPathToExecutable() { return GetModulePath(NULL); }
+
+#ifdef LLDB_PYTHON_DLL_RELATIVE_PATH
 bool AddPythonDLLToSearchPath() {
-  std::wstring modulePath = GetPathToExecutableW();
-  if (modulePath.empty())
+  std::string path_str = GetPathToExecutable();
+  if (path_str.empty())
     return false;
 
-  SmallVector<char, MAX_PATH> utf8Path;
-  if (sys::windows::UTF16ToUTF8(modulePath.c_str(), modulePath.length(),
-                                utf8Path))
-    return false;
-  sys::path::remove_filename(utf8Path);
-  sys::path::append(utf8Path, LLDB_PYTHON_DLL_RELATIVE_PATH);
-  sys::fs::make_absolute(utf8Path);
+  SmallVector<char, MAX_PATH> path(path_str.begin(), path_str.end());
+  sys::path::remove_filename(path);
+  sys::path::append(path, LLDB_PYTHON_DLL_RELATIVE_PATH);
+  sys::fs::make_absolute(path);
 
-  SmallVector<wchar_t, 1> widePath;
-  if (sys::windows::widenPath(utf8Path.data(), widePath))
+  SmallVector<wchar_t, 1> path_wide;
+  if (sys::windows::widenPath(path.data(), path_wide))
     return false;
 
-  if (sys::fs::exists(utf8Path))
-    return SetDllDirectoryW(widePath.data());
+  if (sys::fs::exists(path))
+    return SetDllDirectoryW(path_wide.data());
   return false;
 }
 #endif
 
 #ifdef LLDB_PYTHON_RUNTIME_LIBRARY_FILENAME
-bool IsPythonDLLInPath() {
+std::optional<std::string> GetPythonDLLPath() {
 #define WIDEN2(x) L##x
 #define WIDEN(x) WIDEN2(x)
   HMODULE h = LoadLibraryW(WIDEN(LLDB_PYTHON_RUNTIME_LIBRARY_FILENAME));
   if (!h)
-    return false;
+    return std::nullopt;
+
+  std::string path = GetModulePath(h);
   FreeLibrary(h);
-  return true;
+
+  return path;
 #undef WIDEN2
 #undef WIDEN
 }
 #endif
 
-llvm::Error SetupPythonRuntimeLibrary() {
+llvm::Expected<std::string> SetupPythonRuntimeLibrary() {
 #ifdef LLDB_PYTHON_RUNTIME_LIBRARY_FILENAME
-  if (IsPythonDLLInPath())
-    return Error::success();
+  if (std::optional<std::string> python_path = GetPythonDLLPath())
+    return *python_path;
 #ifdef LLDB_PYTHON_DLL_RELATIVE_PATH
-  if (AddPythonDLLToSearchPath() && IsPythonDLLInPath())
-    return Error::success();
+  if (AddPythonDLLToSearchPath()) {
+    if (std::optional<std::string> python_path = GetPythonDLLPath())
+      return *python_path;
+  }
 #endif
   return createStringError(
       inconvertibleErrorCode(),
@@ -88,5 +96,5 @@ llvm::Error SetupPythonRuntimeLibrary() {
     return createStringError(inconvertibleErrorCode(),
                              "unable to find the Python runtime library");
 #endif
-  return Error::success();
+  return "";
 }

@@ -70,6 +70,9 @@ Hover
 Code completion
 ^^^^^^^^^^^^^^^
 
+- Now also provides include files without extension, if they are in a directory
+  only called ``include``.
+
 Code actions
 ^^^^^^^^^^^^
 
@@ -94,8 +97,19 @@ Improvements to clang-query
 Improvements to clang-tidy
 --------------------------
 
+- Improved :program:`check_clang_tidy.py` script by adding the `-check-header`
+  argument to simplify testing of header files. This argument automatically
+  manages the creation of temporary header files and ensures that diagnostics
+  and fixes are verified for the specified headers.
+
 New checks
 ^^^^^^^^^^
+
+- New :doc:`bugprone-unsafe-to-allow-exceptions
+  <clang-tidy/checks/bugprone/unsafe-to-allow-exceptions>` check.
+
+  Finds functions where throwing exceptions is unsafe but the function is still
+  marked as potentially throwing.
 
 - New :doc:`llvm-type-switch-case-types
   <clang-tidy/checks/llvm/type-switch-case-types>` check.
@@ -128,6 +142,12 @@ New checks
   Finds and removes redundant conversions from ``std::[w|u8|u16|u32]string_view`` to
   ``std::[...]string`` in call expressions expecting ``std::[...]string_view``.
 
+- New :doc:`performance-use-std-move
+  <clang-tidy/checks/performance/use-std-move>` check.
+
+  Suggests insertion of ``std::move(...)`` to turn copy assignment operator
+  calls into move assignment ones, when deemed valid and profitable.
+
 - New :doc:`readability-trailing-comma
   <clang-tidy/checks/readability/trailing-comma>` check.
 
@@ -144,15 +164,33 @@ Changes in existing checks
   <clang-tidy/checks/bugprone/argument-comment>` to also check for C++11
   inherited constructors.
 
+- Improved :doc:`bugprone-bad-signal-to-kill-thread
+  <clang-tidy/checks/bugprone/bad-signal-to-kill-thread>` check by fixing false
+  negatives when the ``SIGTERM`` macro is obtained from a precompiled header.
+
+- Improved :doc:`bugprone-casting-through-void
+  <clang-tidy/checks/bugprone/casting-through-void>` check by running only on
+  C++ files because suggested ``reinterpret_cast`` is not available in pure C.
+
 - Improved :doc:`bugprone-exception-escape
   <clang-tidy/checks/bugprone/exception-escape>` check by adding
   `TreatFunctionsWithoutSpecificationAsThrowing` option to support reporting
   for unannotated functions, enabling reporting when no explicit ``throw``
   is seen and allowing separate tuning for known and unknown implementations.
 
+- Improved :doc:`bugprone-fold-init-type
+  <clang-tidy/checks/bugprone/fold-init-type>` check by detecting precision
+  loss in overloads with transparent standard functors (e.g. ``std::plus<>``)
+  for ``std::accumulate``, ``std::reduce``, and ``std::inner_product``.
+
 - Improved :doc:`bugprone-macro-parentheses
   <clang-tidy/checks/bugprone/macro-parentheses>` check by printing the macro
   definition in the warning message if the macro is defined on command line.
+
+- Improved :doc:`bugprone-std-namespace-modification
+  <clang-tidy/checks/bugprone/std-namespace-modification>` check by fixing
+  false positives when extending the standard library with a specialization of
+  user-defined type.
 
 - Improved :doc:`bugprone-string-constructor
   <clang-tidy/checks/bugprone/string-constructor>` check to detect suspicious
@@ -168,6 +206,10 @@ Changes in existing checks
   <clang-tidy/checks/bugprone/use-after-move>` check by including the name of
   the invalidating function in the warning message when a custom invalidation
   function is used (via the `InvalidationFunctions` option).
+
+- Improved :doc:`cppcoreguidelines-init-variables
+  <clang-tidy/checks/cppcoreguidelines/init-variables>` check by ensuring that
+  member pointers are correctly flagged as uninitialized.
 
 - Improved :doc:`cppcoreguidelines-pro-type-vararg
   <clang-tidy/checks/cppcoreguidelines/pro-type-vararg>` check by no longer
@@ -186,6 +228,34 @@ Changes in existing checks
   - Added support for analyzing function parameters with the `AnalyzeParameters`
     option.
 
+  - Fixed false positive where an array of pointers to ``const`` was
+    incorrectly diagnosed as allowing the pointee to be made ``const``.
+
+- Improved :doc:`misc-throw-by-value-catch-by-reference
+  <clang-tidy/checks/misc/throw-by-value-catch-by-reference>` check:
+
+  - Fixed the `WarnOnLargeObject` option to use the correct name when
+    storing the configuration.
+
+  - Fixed the `CheckThrowTemporaries` option to correctly reflect its
+    configured value in exported settings.
+
+- Improved :doc:`misc-unused-using-decls
+  <clang-tidy/checks/misc/unused-using-decls>` to not diagnose ``using``
+  declarations as unused if they're exported from a module.
+
+- Improved :doc:`modernize-pass-by-value
+  <clang-tidy/checks/modernize/pass-by-value>` check by adding `IgnoreMacros`
+  option to suppress warnings in macros.
+
+- Improved :doc:`modernize-redundant-void-arg
+  <clang-tidy/checks/modernize/redundant-void-arg>` check to work in C23.
+
+- Improved :doc:`modernize-use-equals-delete
+  <clang-tidy/checks/modernize/use-equals-delete>` check by only warning on
+  private deleted functions, if they do not have a public overload or are a
+  special member function.
+
 - Improved :doc:`modernize-use-std-format
   <clang-tidy/checks/modernize/use-std-format>` check by fixing a crash
   when an argument is part of a macro expansion.
@@ -201,9 +271,27 @@ Changes in existing checks
 
   - Improved the ignore list to correctly handle ``typedef`` and  ``enum``.
 
+- Improved :doc:`performance-faster-string-find
+  <clang-tidy/checks/performance/faster-string-find>` check to
+  analyze calls to the ``starts_with``, ``ends_with``, ``contains``,
+  and ``operator+=`` string member functions.
+
+- Improved :doc:`performance-inefficient-vector-operation
+  <clang-tidy/checks/performance/inefficient-vector-operation>` check by
+  correctly handling vector-like classes when ``push_back``/``emplace_back`` are
+  inherited.
+
 - Improved :doc:`performance-move-const-arg
   <clang-tidy/checks/performance/move-const-arg>` check by avoiding false
   positives on trivially copyable types with a non-public copy constructor.
+
+- Improved :doc:`readability-container-size-empty
+  <clang-tidy/checks/readability/container-size-empty>` check by fixing a crash
+  when a member expression has a non-identifier name.
+
+- Improved :doc:`readability-else-after-return
+  <clang-tidy/checks/readability/else-after-return>` check by fixing missed
+  diagnostics when ``if`` statements appear in unbraced ``switch`` case labels.
 
 - Improved :doc:`readability-enum-initial-value
   <clang-tidy/checks/readability/enum-initial-value>` check: the warning message
@@ -212,7 +300,17 @@ Changes in existing checks
 
 - Improved :doc:`readability-non-const-parameter
   <clang-tidy/checks/readability/non-const-parameter>` check by avoiding false
-  positives on parameters used in dependent expressions.
+  positives on parameters used in dependent expressions (e.g. inside generic
+  lambdas).
+
+- Improved :doc:`readability-redundant-preprocessor
+  <clang-tidy/checks/readability/redundant-preprocessor>` check by fixing a
+  false positive for nested ``#if`` directives using different builtin
+  expressions such as ``__has_builtin`` and ``__has_cpp_attribute``.
+
+- Improved :doc:`readability-simplify-boolean-expr
+  <clang-tidy/checks/readability/simplify-boolean-expr>` check to provide valid
+  fix suggestions for C23 and later by not using ``static_cast``.
 
 - Improved :doc:`readability-suspicious-call-argument
   <clang-tidy/checks/readability/suspicious-call-argument>` check by avoiding a

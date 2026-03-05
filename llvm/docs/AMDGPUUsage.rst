@@ -683,6 +683,12 @@ Generic processor code objects are versioned. See :ref:`amdgpu-generic-processor
                                                                               - Packed
                                                                                 work-item
                                                                                 IDs
+
+     ``gfx12-5-generic``  ``amdgcn``     - ``gfx1250``                        - Architected     Functionally equivalent to
+                                         - ``gfx1251``                          flat scratch    gfx1250.
+                                                                              - Packed
+                                                                                work-item
+                                                                                IDs
      ==================== ============== ================= ================== ================= =================================
 
 .. _amdgpu-generic-processor-versioning:
@@ -1373,6 +1379,12 @@ The AMDGPU backend implements the following LLVM IR intrinsics.
                                                    `buffer_load_* ... lds`, or `global_load__* ... lds` depending on address
                                                    space and architecture. `amdgcn.global.load.lds` has the same semantics as
                                                    `amdgcn.load.to.lds.p1`.
+
+  llvm.amdgcn.load.async.to.lds.p<1/7>             Same as `llvm.amdgcn.load.to.lds.p<1/7>`, but the completion of this
+                                                   :ref:`asynchronous version<amdgpu-async-operations>` is not automatically tracked
+                                                   by the compiler. The user must explicitly track the completion with `asyncmark`
+                                                   operations before using their side-effects.
+
   llvm.amdgcn.readfirstlane                        Provides direct access to v_readfirstlane_b32. Returns the value in
                                                    the lowest active lane of the input operand. Currently implemented
                                                    for i16, i32, float, half, bfloat, <2 x i16>, <2 x half>, <2 x bfloat>,
@@ -1986,11 +1998,11 @@ The AMDGPU backend supports the following LLVM IR attributes.
                                                       "amdgpu-flat-work-group-size" value, the implied occupancy
                                                       bounds by the workgroup size takes precedence.
 
-     "amdgpu-ieee" true/false.                        GFX6-GFX11 Only
+     "amdgpu-ieee" true/false.                        GFX6-GFX11 (Except GFX1170) Only
                                                       Specify whether the function expects the IEEE field of the
                                                       mode register to be set on entry. Overrides the default for
                                                       the calling convention.
-     "amdgpu-dx10-clamp" true/false.                  GFX6-GFX11 Only
+     "amdgpu-dx10-clamp" true/false.                  GFX6-GFX11 (Except GFX1170) Only
                                                       Specify whether the function expects the DX10_CLAMP field of
                                                       the mode register to be set on entry. Overrides the default
                                                       for the calling convention.
@@ -2188,6 +2200,10 @@ The AMDGPU backend supports the following LLVM IR attributes.
                                                       on a single counter type. This allows PC-sampling based profilers to
                                                       attribute wait cycles to specific counter types (e.g., VMEM, LDS, EXP).
 
+     "amdgpu-no-fwd-progress"                         Disable forward progress mode for wave priority
+                                                      (enabled by default).
+
+                                                      Relevant for GFX10+.
      ================================================ ==========================================================
 
 Calling Conventions
@@ -2741,8 +2757,11 @@ The AMDGPU backend uses the following ELF header:
      ``EF_AMDGPU_MACH_AMDGCN_GFX1153``          0x058      ``gfx1153``.
      ``EF_AMDGPU_MACH_AMDGCN_GFX12_GENERIC``    0x059      ``gfx12-generic``
      ``EF_AMDGPU_MACH_AMDGCN_GFX1251``          0x05a      ``gfx1251``
+     ``EF_AMDGPU_MACH_AMDGCN_GFX12_5_GENERIC``  0x05b      ``gfx12-5-generic``
      ``EF_AMDGPU_MACH_AMDGCN_GFX1170``          0x05d      ``gfx1170``
      ``EF_AMDGPU_MACH_AMDGCN_GFX9_4_GENERIC``   0x05f      ``gfx9-4-generic``
+     *reserved*                                 0x060      Reserved.
+     *reserved*                                 0x070      Reserved.
      ========================================== ========== =============================
 
 Sections
@@ -5768,7 +5787,7 @@ The fields used by CP for code objects before V3 also match those specified in
                                                      CP is responsible for
                                                      filling in
                                                      ``COMPUTE_PGM_RSRC1.PRIV``.
-     21      1 bit   ENABLE_DX10_CLAMP               GFX9-GFX11
+     21      1 bit   ENABLE_DX10_CLAMP               GFX9-GFX11 (except GFX1170)
                                                        Wavefront starts execution
                                                        with DX10 clamp mode
                                                        enabled. Used by the vector
@@ -5780,6 +5799,8 @@ The fields used by CP for code objects before V3 also match those specified in
 
                                                        Used by CP to set up
                                                        ``COMPUTE_PGM_RSRC1.DX10_CLAMP``.
+                                                     GFX1170
+                                                       Reserved. Must be 0.
                      WG_RR_EN                        GFX12
                                                        If 1, wavefronts are scheduled
                                                        in a round-robin fashion with
@@ -7095,6 +7116,14 @@ being loaded to registers and not to LDS, and so therefore support the same
 cache modifiers. They cannot be performed atomically. They implement volatile
 (via aux/cpol bit 31) and nontemporal (via metadata) as if they were loads
 from the global address space.
+
+The LDS DMA instructions are synchronous by default, which means that the
+compiler will automatically ensure that the corresponding operation has
+completed before its side-effects are used. The :ref:`asynchronous
+versions<amdgpu-async-operations>` of these same instructions perform the same
+operations, but without automatic tracking in the compiler; the user must
+explicitly track the completion of these instructions before using their
+side-effects.
 
 Private address space uses ``buffer_load/store`` using the scratch V#
 (GFX6-GFX8), or ``scratch_load/store`` (GFX9-GFX11). Since only a single thread
@@ -15920,7 +15949,7 @@ the instruction in the code sequence that references the table.
                                - wavefront    - local
                                               - generic
      store atomic release      - workgroup    - global   1. | ``s_wait_bvhcnt 0x0``
-                                                            | ``s_wait_samplecnt 0x0``
+                                              - generic     | ``s_wait_samplecnt 0x0``
                                                             | ``s_wait_storecnt 0x0``
                                                             | ``s_wait_loadcnt 0x0``
                                                             | ``s_wait_dscnt 0x0``
@@ -21502,9 +21531,11 @@ terminated by an ``.end_amdhsa_kernel`` directive.
                                                                                                Possible values are defined in
                                                                                                :ref:`amdgpu-amdhsa-floating-point-denorm-mode-enumeration-values-table`.
      ``.amdhsa_dx10_clamp``                                   1                   GFX6-GFX11   Controls ENABLE_DX10_CLAMP in
-                                                                                               :ref:`amdgpu-amdhsa-compute_pgm_rsrc1-gfx6-gfx12-table`.
+                                                                                  (except      :ref:`amdgpu-amdhsa-compute_pgm_rsrc1-gfx6-gfx12-table`.
+                                                                                  GFX1170)
      ``.amdhsa_ieee_mode``                                    1                   GFX6-GFX11   Controls ENABLE_IEEE_MODE in
-                                                                                               :ref:`amdgpu-amdhsa-compute_pgm_rsrc1-gfx6-gfx12-table`.
+                                                                                  (except      :ref:`amdgpu-amdhsa-compute_pgm_rsrc1-gfx6-gfx12-table`.
+                                                                                  GFX1170)
      ``.amdhsa_round_robin_scheduling``                       0                   GFX12        Controls ENABLE_WG_RR_EN in
                                                                                                :ref:`amdgpu-amdhsa-compute_pgm_rsrc1-gfx6-gfx12-table`.
      ``.amdhsa_fp16_overflow``                                0                   GFX9-GFX12   Controls FP16_OVFL in

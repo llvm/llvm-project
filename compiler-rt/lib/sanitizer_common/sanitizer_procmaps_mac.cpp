@@ -176,7 +176,7 @@ void MemoryMappingLayout::Reset() {
 // The dyld load address should be unchanged throughout process execution,
 // and it is expensive to compute once many libraries have been loaded,
 // so cache it here and do not reset.
-static mach_header *dyld_hdr = 0;
+static const mach_header* dyld_hdr = 0;
 static const char kDyldPath[] = "/usr/lib/dyld";
 static const int kDyldImageIdx = -1;
 
@@ -244,13 +244,17 @@ extern intptr_t _dyld_get_image_slide(const struct mach_header* mh);
 extern int dyld_shared_cache_iterate_text(
     const uuid_t cacheUuid,
     void (^callback)(const dyld_shared_cache_dylib_text_info *info));
+SANITIZER_WEAK_IMPORT const struct mach_header* _dyld_get_dyld_header(void);
 }  // extern "C"
 
-static mach_header *GetDyldImageHeaderViaSharedCache() {
+static const mach_header* GetDyldImageHeaderViaSharedCache() {
   uuid_t uuid;
   bool hasCache = _dyld_get_shared_cache_uuid(uuid);
   if (!hasCache)
     return nullptr;
+
+  if (&_dyld_get_dyld_header != nullptr)
+    return _dyld_get_dyld_header();
 
   size_t cacheLength;
   __block uptr cacheStart = (uptr)_dyld_get_shared_cache_range(&cacheLength);
