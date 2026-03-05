@@ -618,21 +618,13 @@ DistributeLayoutAttr LayoutAttr::collapseDims(SmallVector<int64_t> dimGroup) {
   SmallVector<int32_t> laneLayout32(laneLayout.begin(), laneLayout.end());
   SmallVector<int32_t> laneData32(laneData.begin(), laneData.end());
 
+  auto toAttr = [&](ArrayRef<int32_t> v) -> DenseI32ArrayAttr {
+    return v.empty() ? nullptr : DenseI32ArrayAttr::get(getContext(), v);
+  };
+
   auto collapsedLayout = xegpu::LayoutAttr::get(
-      getContext(),
-      sgLayout32.empty() ? DenseI32ArrayAttr()
-                         : DenseI32ArrayAttr::get(getContext(), sgLayout32),
-      sgData32.empty() ? DenseI32ArrayAttr()
-                       : DenseI32ArrayAttr::get(getContext(), sgData32),
-      instData32.empty() ? DenseI32ArrayAttr()
-                         : DenseI32ArrayAttr::get(getContext(), instData32),
-      laneLayout32.empty() ? DenseI32ArrayAttr()
-                           : DenseI32ArrayAttr::get(getContext(), laneLayout32),
-      laneData32.empty() ? DenseI32ArrayAttr()
-                         : DenseI32ArrayAttr::get(getContext(), laneData32),
-      collapsedOrder.empty()
-          ? DenseI32ArrayAttr()
-          : DenseI32ArrayAttr::get(getContext(), collapsedOrder));
+      getContext(), toAttr(sgLayout32), toAttr(sgData32), toAttr(instData32),
+      toAttr(laneLayout32), toAttr(laneData32), toAttr(collapsedOrder));
   return collapsedLayout;
 }
 
@@ -668,20 +660,13 @@ DistributeLayoutAttr LayoutAttr::transposeDims(ArrayRef<int64_t> permutation) {
   }
   if (origLaneLayout.empty() && origSgLayout.empty())
     order.clear();
-  return xegpu::LayoutAttr::get(
-      getContext(),
-      sgLayout.empty() ? DenseI32ArrayAttr()
-                       : DenseI32ArrayAttr::get(getContext(), sgLayout),
-      sgData.empty() ? DenseI32ArrayAttr()
-                     : DenseI32ArrayAttr::get(getContext(), sgData),
-      instData.empty() ? DenseI32ArrayAttr()
-                       : DenseI32ArrayAttr::get(getContext(), instData),
-      laneLayout.empty() ? DenseI32ArrayAttr()
-                         : DenseI32ArrayAttr::get(getContext(), laneLayout),
-      laneData.empty() ? DenseI32ArrayAttr()
-                       : DenseI32ArrayAttr::get(getContext(), laneData),
-      order.empty() ? DenseI32ArrayAttr()
-                    : DenseI32ArrayAttr::get(getContext(), order));
+
+  auto toAttr = [&](ArrayRef<int32_t> v) -> DenseI32ArrayAttr {
+    return v.empty() ? nullptr : DenseI32ArrayAttr::get(getContext(), v);
+  };
+  return xegpu::LayoutAttr::get(getContext(), toAttr(sgLayout), toAttr(sgData),
+                                toAttr(instData), toAttr(laneLayout),
+                                toAttr(laneData), toAttr(order));
 }
 
 /// Check if this layout is a transpose of another layout.
