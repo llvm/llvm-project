@@ -49,6 +49,7 @@
 #include "llvm/Support/Compression.h"
 #include "llvm/Support/Error.h"
 #include "llvm/Support/FileSystem.h"
+#include "llvm/Support/MathExtras.h"
 #include "llvm/Support/Path.h"
 #include "llvm/Support/Process.h"
 #include "llvm/Support/YAMLParser.h"
@@ -2435,6 +2436,7 @@ static void CollectArgsForIntegratedAssembler(Compilation &C,
   const llvm::Triple &Triple = C.getDefaultToolChain().getTriple();
   bool IsELF = Triple.isOSBinFormatELF();
   bool Crel = false, ExperimentalCrel = false;
+  StringRef RelocSectionSym;
   bool SFrame = false, ExperimentalSFrame = false;
   bool ImplicitMapSyms = false;
   bool UseRelaxRelocations = C.getDefaultToolChain().useRelaxRelocations();
@@ -2635,6 +2637,8 @@ static void CollectArgsForIntegratedAssembler(Compilation &C,
         Crel = false;
       } else if (Value == "--allow-experimental-crel") {
         ExperimentalCrel = true;
+      } else if (Value.starts_with("--reloc-section-sym=")) {
+        RelocSectionSym = Value.substr(strlen("--reloc-section-sym="));
       } else if (Value.starts_with("-I")) {
         CmdArgs.push_back(Value.data());
         // We need to consume the next argument if the current arg is a plain
@@ -2707,6 +2711,19 @@ static void CollectArgsForIntegratedAssembler(Compilation &C,
       D.Diag(diag::err_drv_unsupported_opt_for_target)
           << "-Wa,--crel" << D.getTargetTriple();
     }
+  }
+  if (!RelocSectionSym.empty()) {
+    if (RelocSectionSym != "all" && RelocSectionSym != "internal" &&
+        RelocSectionSym != "none")
+      D.Diag(diag::err_drv_invalid_value)
+          << ("-Wa,--reloc-section-sym=" + RelocSectionSym).str()
+          << RelocSectionSym;
+    else if (Triple.isOSBinFormatELF())
+      CmdArgs.push_back(
+          Args.MakeArgString("--reloc-section-sym=" + RelocSectionSym));
+    else
+      D.Diag(diag::err_drv_unsupported_opt_for_target)
+          << "-Wa,--reloc-section-sym" << D.getTargetTriple();
   }
   if (SFrame) {
     if (Triple.isOSBinFormatELF() && Triple.isX86()) {
@@ -3911,6 +3928,8 @@ static bool RenderModulesOptions(Compilation &C, const Driver &D,
       Path.insert(Path.begin(), Arg, Arg + strlen(Arg));
       CmdArgs.push_back(Args.MakeArgString(Path));
     }
+
+    Args.AddLastArg(CmdArgs, options::OPT_fimplicit_modules_lock_timeout_EQ);
   }
 
   if (HaveModules) {
@@ -5498,6 +5517,20 @@ void Clang::ConstructJob(Compilation &C, const JobAction &JA,
   if (FunctionAlignment) {
     CmdArgs.push_back("-function-alignment");
     CmdArgs.push_back(Args.MakeArgString(std::to_string(FunctionAlignment)));
+  }
+
+  if (const Arg *A =
+          Args.getLastArg(options::OPT_fpreferred_function_alignment_EQ)) {
+    unsigned Value = 0;
+    if (StringRef(A->getValue()).getAsInteger(10, Value) || Value > 65536)
+      TC.getDriver().Diag(diag::err_drv_invalid_int_value)
+          << A->getAsString(Args) << A->getValue();
+    else if (!llvm::isPowerOf2_32(Value))
+      TC.getDriver().Diag(diag::err_drv_alignment_not_power_of_two)
+          << A->getAsString(Args) << A->getValue();
+
+    CmdArgs.push_back(Args.MakeArgString("-fpreferred-function-alignment=" +
+                                         Twine(std::min(Value, 65536u))));
   }
 
   // We support -falign-loops=N where N is a power of 2. GCC supports more
@@ -8581,16 +8614,22 @@ void Clang::AddClangCLArgs(const ArgList &Args, types::ID InputType,
   else if (Args.hasArg(options::OPT__SLASH_d2epilogunwind))
     CmdArgs.push_back("-fwinx64-eh-unwindv2=best-effort");
 
+  // Handle the various /guard options. We don't immediately push back clang
+  // args since there are /d2 args that can modify the behavior of /guard:cf.
+  bool HasCFGuard = false;
+  bool HasCFGuardNoChecks = false;
   for (const Arg *A : Args.filtered(options::OPT__SLASH_guard)) {
     StringRef GuardArgs = A->getValue();
     // The only valid options are "cf", "cf,nochecks", "cf-", "ehcont" and
     // "ehcont-".
     if (GuardArgs.equals_insensitive("cf")) {
       // Emit CFG instrumentation and the table of address-taken functions.
-      CmdArgs.push_back("-cfguard");
+      HasCFGuard = true;
+      HasCFGuardNoChecks = false;
     } else if (GuardArgs.equals_insensitive("cf,nochecks")) {
       // Emit only the table of address-taken functions.
-      CmdArgs.push_back("-cfguard-no-checks");
+      HasCFGuard = false;
+      HasCFGuardNoChecks = true;
     } else if (GuardArgs.equals_insensitive("ehcont")) {
       // Emit EH continuation table.
       CmdArgs.push_back("-ehcontguard");
@@ -8602,6 +8641,20 @@ void Clang::AddClangCLArgs(const ArgList &Args, types::ID InputType,
     }
     A->claim();
   }
+
+  // /d2guardnochecks downgrades /guard:cf to /guard:cf,nochecks (table only).
+  // If CFG is not enabled, it is a no-op.
+  if (Args.hasArg(options::OPT__SLASH_d2guardnochecks)) {
+    if (HasCFGuard) {
+      HasCFGuard = false;
+      HasCFGuardNoChecks = true;
+    }
+  }
+
+  if (HasCFGuard)
+    CmdArgs.push_back("-cfguard");
+  else if (HasCFGuardNoChecks)
+    CmdArgs.push_back("-cfguard-no-checks");
 
   for (const auto &FuncOverride :
        Args.getAllArgValues(options::OPT__SLASH_funcoverride)) {
@@ -9240,7 +9293,7 @@ void OffloadPackager::ConstructJob(Compilation &C, const JobAction &JA,
   }
 
   C.addCommand(std::make_unique<Command>(
-      JA, *this, ResponseFileSupport::None(),
+      JA, *this, ResponseFileSupport::AtFileUTF8(),
       Args.MakeArgString(getToolChain().GetProgramPath(getShortName())),
       CmdArgs, Inputs, Output));
 }
@@ -9282,6 +9335,7 @@ void LinkerWrapper::ConstructJob(Compilation &C, const JobAction &JA,
       OPT_save_temps_EQ,
       OPT_mcode_object_version_EQ,
       OPT_load,
+      OPT_no_canonical_prefixes,
       OPT_fno_lto,
       OPT_flto,
       OPT_flto_partitions_EQ,
@@ -9339,8 +9393,11 @@ void LinkerWrapper::ConstructJob(Compilation &C, const JobAction &JA,
       // For SPIR-V, pass some extra flags to `spirv-link`, the out-of-tree
       // SPIR-V linker. `spirv-link` isn't called in LTO mode so restrict these
       // flags to normal compilation.
-      if (TC->getTriple().isSPIRV() && !C.getDriver().isUsingLTO() &&
-          !C.getDriver().isUsingOffloadLTO()) {
+      // SPIR-V for AMD doesn't use spirv-link and therefore doesn't need these
+      // flags.
+      if (TC->getTriple().isSPIRV() &&
+          TC->getTriple().getVendor() != llvm::Triple::VendorType::AMD &&
+          !C.getDriver().isUsingLTO() && !C.getDriver().isUsingOffloadLTO()) {
         // For SPIR-V some functions will be defined by the runtime so allow
         // unresolved symbols in `spirv-link`.
         LinkerArgs.emplace_back("--allow-partial-linkage");
@@ -9383,8 +9440,12 @@ void LinkerWrapper::ConstructJob(Compilation &C, const JobAction &JA,
     }
   }
 
-  CmdArgs.push_back(
-      Args.MakeArgString("--host-triple=" + getToolChain().getTripleString()));
+  if (const llvm::Triple *AuxTriple = getToolChain().getAuxTriple())
+    CmdArgs.push_back(
+        Args.MakeArgString("--host-triple=" + AuxTriple->getTriple()));
+  else
+    CmdArgs.push_back(Args.MakeArgString("--host-triple=" +
+                                         getToolChain().getTripleString()));
 
   // CMake hack, suppress passing verbose arguments for the special-case HIP
   // non-RDC mode compilation. This confuses default CMake implicit linker
@@ -9501,6 +9562,10 @@ void LinkerWrapper::ConstructJob(Compilation &C, const JobAction &JA,
       }
     }
   }
+
+  // Propagate -no-canonical-prefixes.
+  if (Args.hasArg(options::OPT_no_canonical_prefixes))
+    CmdArgs.push_back("--no-canonical-prefixes");
 
   const char *Exec =
       Args.MakeArgString(getToolChain().GetProgramPath("clang-linker-wrapper"));

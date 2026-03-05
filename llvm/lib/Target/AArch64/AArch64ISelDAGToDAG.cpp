@@ -548,14 +548,14 @@ static SDValue addBitcastHints(SelectionDAG &DAG, SDNode &N) {
     return VT.changeElementType(*(DAG.getContext()),
                                 ScalarVT == MVT::i32 ? MVT::f32 : MVT::f64);
   };
-  auto bitcastToFloat = [&](SDValue Val) {
-    return DAG.getBitcast(getFloatVT(Val.getValueType()), Val);
-  };
   SmallVector<SDValue, 2> NewOps;
   NewOps.reserve(N.getNumOperands());
 
-  for (unsigned I = 0, E = N.getNumOperands(); I < E; ++I)
-    NewOps.push_back(bitcastToFloat(N.getOperand(I)));
+  for (unsigned I = 0, E = N.getNumOperands(); I < E; ++I) {
+    auto bitcasted = DAG.getBitcast(getFloatVT(N.getOperand(I).getValueType()),
+                                    N.getOperand(I));
+    NewOps.push_back(bitcasted);
+  }
   EVT OrigVT = N.getValueType(0);
   SDValue OpNode = DAG.getNode(N.getOpcode(), DL, getFloatVT(OrigVT), NewOps);
   return DAG.getBitcast(OrigVT, OpNode);
@@ -1012,6 +1012,18 @@ bool AArch64DAGToDAGISel::SelectArithExtendedRegister(SDValue N, SDValue &Reg,
     Ext = getExtendTypeForNode(N);
     if (Ext == AArch64_AM::InvalidShiftExtend)
       return false;
+
+    // Don't match sext of vector extracts. These can use SMOV, but if we match
+    // this as an extended register, we'll always fold the extend into an ALU op
+    // user of the extend (which results in a UMOV).
+    if (AArch64_AM::isSignExtendShiftType(Ext)) {
+      SDValue Op = N.getOperand(0);
+      if (Op->getOpcode() == ISD::ANY_EXTEND)
+        Op = Op->getOperand(0);
+      if (Op.getOpcode() == ISD::EXTRACT_VECTOR_ELT &&
+          Op.getOperand(0).getValueType().isFixedLengthVector())
+        return false;
+    }
 
     Reg = N.getOperand(0);
 
