@@ -179,6 +179,8 @@ public:
 
   bool weakDefCanBeHidden : 1;
 
+  // Whether this symbol has the N_COLD_FUNC nlist flag set. Populated from the
+  // symbol table of input object files.
   bool cold : 1;
 
 private:
