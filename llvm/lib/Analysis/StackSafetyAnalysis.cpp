@@ -687,8 +687,7 @@ void StackSafetyDataFlowAnalysis<CalleeTy>::runDataFlow() {
       for (auto &CS : KV.second.Calls)
         Callees.push_back(CS.first.Callee);
 
-    llvm::sort(Callees);
-    Callees.erase(llvm::unique(Callees), Callees.end());
+    llvm::sort_and_unique(Callees);
 
     for (auto &Callee : Callees)
       Callers[Callee].push_back(F.first);

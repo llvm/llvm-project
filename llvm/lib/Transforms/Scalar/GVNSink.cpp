@@ -307,7 +307,7 @@ public:
 
     for (auto &U : I->uses())
       op_push_back(U.getUser());
-    llvm::sort(operands());
+    llvm::sort</*AllowPointers=*/true>(operands());
   }
 
   void setMemoryUseOrder(unsigned MUO) { MemoryUseOrder = MUO; }
