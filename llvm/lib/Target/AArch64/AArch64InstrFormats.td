@@ -2122,16 +2122,23 @@ class MSRpstateImm0_1
 }
 
 // SYS and SYSL generic system instructions.
-def SysCRAsmOperand : AsmOperandClass {
-  let Name = "SysCR";
+class SysCRAsmOperand<int Low, int High> : AsmOperandClass {
+  let Name = "SysCR" # Low # "_" # High;
+  let RenderMethod = "addSysCROperands";
   let ParserMethod = "tryParseSysCROperand";
+  let PredicateMethod = "isSysCRInRange<" # Low # "," # High # ">";
+  let DiagnosticType = "InvalidSysCR" # Low # "_" # High;
 }
+
+def SysCRm0_7AsmOperand : SysCRAsmOperand<0, 7>;
+def SysCRn8_9AsmOperand : SysCRAsmOperand<8, 9>;
+def SysCR0_15AsmOperand : SysCRAsmOperand<0, 15>;
 
 def sys_cr_op : Operand<i32>, TImmLeaf<i32, [{
   return ((uint32_t)Imm) < 16;
 }]> {
   let PrintMethod = "printSysCROperand";
-  let ParserMatchClass = SysCRAsmOperand;
+  let ParserMatchClass = SysCR0_15AsmOperand;
   let OperandType = "OPERAND_IMMEDIATE";
 }
 
@@ -2139,7 +2146,7 @@ def sysp_crn_op : Operand<i32>, ImmLeaf<i32, [{
   return Imm == 8 || Imm == 9;
 }]> {
   let PrintMethod = "printSysCROperand";
-  let ParserMatchClass = SysCRAsmOperand;
+  let ParserMatchClass = SysCRn8_9AsmOperand;
   let OperandType = "OPERAND_IMMEDIATE";
 }
 
@@ -2147,7 +2154,7 @@ def sysp_crm_op : Operand<i32>, ImmLeaf<i32, [{
   return Imm >= 0 && Imm <= 7;
 }]> {
   let PrintMethod = "printSysCROperand";
-  let ParserMatchClass = SysCRAsmOperand;
+  let ParserMatchClass = SysCRm0_7AsmOperand;
   let OperandType = "OPERAND_IMMEDIATE";
 }
 
