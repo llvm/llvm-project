@@ -2,7 +2,8 @@
 ; RUN: opt < %s -passes=reassociate -S -o - | FileCheck %s
 
 ; After reassociation m1 and m2 aren't calculated as m1=c*a and m2=c*b any longer.
-; So let's verify that the dbg.value nodes for m1 and m3 are invalidated.
+; So let's verify that the dbg.value nodes for m1 and m2 are salvaged
+; using DIArgList expressions that reference the original operands.
 
 source_filename = "reassociate_dbgvalue_discard.c"
 target datalayout = "e-m:e-i64:64-f80:128-n8:16:32:64-S128"
@@ -11,14 +12,14 @@ target triple = "x86_64-unknown-linux-gnu"
 define dso_local i32 @test1(i32 %a, i32 %b, i32 %c, i32 %d) local_unnamed_addr #0 !dbg !7 {
 ; CHECK-LABEL: @test1(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:      #dbg_value(i32 poison, [[META16:![0-9]+]], !DIExpression(), [[META20:![0-9]+]])
-; CHECK-NEXT:      #dbg_value(i32 poison, [[META17:![0-9]+]], !DIExpression(), [[META21:![0-9]+]])
-; CHECK-NEXT:    [[M1:%.*]] = mul i32 [[D:%.*]], [[C:%.*]], !dbg [[DBG22:![0-9]+]]
-; CHECK-NEXT:    [[M3:%.*]] = mul i32 [[M1]], [[A:%.*]], !dbg [[DBG23:![0-9]+]]
-; CHECK-NEXT:      #dbg_value(i32 [[M3]], [[META18:![0-9]+]], !DIExpression(), [[META24:![0-9]+]])
+; CHECK-NEXT:      #dbg_value(!DIArgList(i32 [[A:%.*]], i32 [[C:%.*]]), [[META16:![0-9]+]], !DIExpression(DW_OP_LLVM_arg, 0, DW_OP_LLVM_arg, 1, DW_OP_mul, DW_OP_stack_value), [[META20:![0-9]+]])
+; CHECK-NEXT:      #dbg_value(!DIArgList(i32 [[B:%.*]], i32 [[C]]), [[META17:![0-9]+]], !DIExpression(DW_OP_LLVM_arg, 0, DW_OP_LLVM_arg, 1, DW_OP_mul, DW_OP_stack_value), [[META21:![0-9]+]])
+; CHECK-NEXT:    [[M1:%.*]] = mul i32 [[D:%.*]], [[C]], !dbg [[DBG22:![0-9]+]]
+; CHECK-NEXT:    [[M3:%.*]] = mul i32 [[M1]], [[A]], !dbg [[DBG23:![0-9]+]]
+; CHECK-NEXT:      #dbg_value(!DIArgList(i32 [[A]], i32 [[D]], i32 [[C]]), [[META18:![0-9]+]], !DIExpression(DW_OP_LLVM_arg, 0, DW_OP_LLVM_arg, 2, DW_OP_mul, DW_OP_LLVM_arg, 1, DW_OP_mul, DW_OP_stack_value), [[META24:![0-9]+]])
 ; CHECK-NEXT:    [[M2:%.*]] = mul i32 [[D]], [[C]], !dbg [[DBG25:![0-9]+]]
-; CHECK-NEXT:    [[M4:%.*]] = mul i32 [[M2]], [[B:%.*]], !dbg [[DBG26:![0-9]+]]
-; CHECK-NEXT:      #dbg_value(i32 [[M4]], [[META19:![0-9]+]], !DIExpression(), [[META27:![0-9]+]])
+; CHECK-NEXT:    [[M4:%.*]] = mul i32 [[M2]], [[B]], !dbg [[DBG26:![0-9]+]]
+; CHECK-NEXT:      #dbg_value(!DIArgList(i32 [[B]], i32 [[D]], i32 [[C]]), [[META19:![0-9]+]], !DIExpression(DW_OP_LLVM_arg, 0, DW_OP_LLVM_arg, 2, DW_OP_mul, DW_OP_LLVM_arg, 1, DW_OP_mul, DW_OP_stack_value), [[META27:![0-9]+]])
 ; CHECK-NEXT:    [[RES:%.*]] = xor i32 [[M3]], [[M4]]
 ; CHECK-NEXT:    ret i32 [[RES]], !dbg [[DBG28:![0-9]+]]
 ;
