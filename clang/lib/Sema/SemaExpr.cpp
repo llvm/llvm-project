@@ -9192,6 +9192,9 @@ ExprResult Sema::ActOnConditionalOp(SourceLocation QuestionLoc,
       commonExpr = MatExpr.get();
     }
 
+    if (commonExpr->getDependence() & ExprDependence::UnexpandedPack)
+      return ExprError();
+
     opaqueValue = new (Context) OpaqueValueExpr(commonExpr->getExprLoc(),
                                                 commonExpr->getType(),
                                                 commonExpr->getValueKind(),
