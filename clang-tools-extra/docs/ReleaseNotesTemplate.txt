@@ -109,8 +109,8 @@ Removed checks
 Miscellaneous
 ^^^^^^^^^^^^^
 
-Improvements to include-fixer
------------------------------
+Improvements to clang-include-cleaner
+-------------------------------------
 
 Improvements to clang-include-fixer
 -----------------------------------

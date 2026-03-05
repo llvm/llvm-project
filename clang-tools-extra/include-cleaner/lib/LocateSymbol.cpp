@@ -56,10 +56,11 @@ std::vector<Hinted<SymbolLocation>> locateDecl(const Decl &D) {
 
 std::vector<Hinted<SymbolLocation>> locateMacro(const Macro &M,
                                                 const tooling::stdlib::Lang L) {
-  // FIXME: Should we also provide physical locations?
+  std::vector<Hinted<SymbolLocation>> Result;
+  Result.push_back({M.Definition, Hints::CompleteSymbol});
   if (auto SS = tooling::stdlib::Symbol::named("", M.Name->getName(), L))
-    return {{*SS, Hints::CompleteSymbol}};
-  return {{M.Definition, Hints::CompleteSymbol}};
+    Result.push_back({*SS, Hints::CompleteSymbol});
+  return Result;
 }
 } // namespace
 
