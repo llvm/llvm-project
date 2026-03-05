@@ -283,8 +283,16 @@ static void restoreByValRefArgumentType(
     Type resTy = typeConverter.convertType(
         cast<TypeAttr>(byValRefAttr->getValue()).getValue());
 
-    Value valueArg = LLVM::LoadOp::create(rewriter, arg.getLoc(), resTy, arg);
-    rewriter.replaceAllUsesWith(arg, valueArg);
+    auto loadOp = LLVM::LoadOp::create(rewriter, arg.getLoc(), resTy, arg);
+    if (!rewriter.getConfig().allowPatternRollback) {
+      rewriter.replaceAllUsesExcept(arg, loadOp, loadOp);
+    } else {
+      // replaceAllUsesExcept is not supported in rollback mode. The rollback
+      // mode implementation has a workaround: certain replacements that would
+      // cause a dominance violation are skipped.
+      // TODO: Remove workaround.
+      rewriter.replaceAllUsesWith(arg, loadOp);
+    }
   }
 }
 
