@@ -3376,6 +3376,15 @@ public:
                            llvm::Value *BoundsVal, QualType BoundsType,
                            bool Accessed);
 
+  /// Emit array bounds constraints using llvm.assume for optimization hints.
+  /// Emits assume statements for array bounds without duplicating side effects.
+  /// Takes the already-emitted index value to avoid re-evaluating expressions
+  /// with side effects. The Accessed parameter distinguishes:
+  /// - dereferenced use strict bounds: index < size vs.
+  /// - address-only allows one-past: index <= size.
+  void EmitArrayBoundsConstraints(const ArraySubscriptExpr *E,
+                                  llvm::Value *IndexVal, bool Accessed);
+
   /// Returns debug info, with additional annotation if
   /// CGM.getCodeGenOpts().SanitizeAnnotateDebugInfo[Ordinal] is enabled for
   /// any of the ordinals.
