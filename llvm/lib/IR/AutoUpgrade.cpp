@@ -5856,8 +5856,10 @@ static inline bool isXYZ(StringRef S) {
 bool static upgradeSingleNVVMAnnotation(GlobalValue *GV, StringRef K,
                                         const Metadata *V) {
   if (K == "kernel") {
-    if (!mdconst::extract<ConstantInt>(V)->isZero())
-      cast<Function>(GV)->setCallingConv(CallingConv::PTX_Kernel);
+    auto *F = cast<Function>(GV);
+    if (!mdconst::extract<ConstantInt>(V)->isZero() &&
+        !F->hasKernelCallingConv())
+      F->setCallingConv(CallingConv::PTX_Kernel);
     return true;
   }
   if (K == "align") {
