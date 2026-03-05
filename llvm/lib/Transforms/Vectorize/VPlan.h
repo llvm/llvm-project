@@ -668,16 +668,7 @@ public:
 };
 
 /// Class to record and manage LLVM IR flags.
-#if defined(_AIX) && (!defined(__GNUC__) || defined(__clang__))
-// Except for GCC; by default, AIX compilers store bit-fields in 4-byte words
-// and give the `pack` pragma push semantics.
-#define BEGIN_ONE_BYTE_PACK() _Pragma("pack(1)")
-#define END_ONE_BYTE_PACK() _Pragma("pack(pop)")
-#else
-#define BEGIN_ONE_BYTE_PACK()
-#define END_ONE_BYTE_PACK()
-#endif
-BEGIN_ONE_BYTE_PACK()
+LLVM_PACKED_START
 class VPIRFlags {
   enum class OperationType : unsigned char {
     Cmp,
@@ -1080,9 +1071,7 @@ public:
   void printFlags(raw_ostream &O) const;
 #endif
 };
-END_ONE_BYTE_PACK()
-#undef BEGIN_ONE_BYTE_PACK
-#undef END_ONE_BYTE_PACK
+LLVM_PACKED_END
 
 static_assert(sizeof(VPIRFlags) <= 3, "VPIRFlags should not grow");
 
