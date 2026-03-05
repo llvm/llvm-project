@@ -635,6 +635,8 @@ const MFMA_F8F6F4_Info *getWMMA_F8F6F4_WithFormatArgs(unsigned FmtA,
 }
 
 unsigned getVOPDEncodingFamily(const MCSubtargetInfo &ST) {
+  if (ST.hasFeature(AMDGPU::FeatureGFX13Insts))
+    return SIEncodingFamily::GFX13;
   if (ST.hasFeature(AMDGPU::FeatureGFX1250Insts))
     return SIEncodingFamily::GFX1250;
   if (ST.hasFeature(AMDGPU::FeatureGFX12Insts))
@@ -654,9 +656,18 @@ CanBeVOPD getCanBeVOPD(unsigned Opc, unsigned EncodingFamily, bool VOPD3) {
     // TODO: This can be optimized by creating tables of supported VOPDY
     // opcodes per encoding.
     unsigned VOPDMov = AMDGPU::getVOPDOpcode(AMDGPU::V_MOV_B32_e32, VOPD3);
+    bool CanBeVOPDX;
+    if (VOPD3) {
+      CanBeVOPDX = getVOPDFull(AMDGPU::getVOPDOpcode(Opc, VOPD3), VOPDMov,
+                               EncodingFamily, VOPD3) != -1;
+    } else {
+      // The list of VOPDX opcodes is currently the same in all encoding
+      // families, so we do not need a family-specific check.
+      CanBeVOPDX = Info->CanBeVOPDX;
+    }
     bool CanBeVOPDY = getVOPDFull(VOPDMov, AMDGPU::getVOPDOpcode(Opc, VOPD3),
                                   EncodingFamily, VOPD3) != -1;
-    return {VOPD3 ? Info->CanBeVOPD3X : Info->CanBeVOPDX, CanBeVOPDY};
+    return {CanBeVOPDX, CanBeVOPDY};
   }
 
   return {false, false};
@@ -682,9 +693,11 @@ bool isMAC(unsigned Opc) {
          Opc == AMDGPU::V_MAC_F16_e64_vi ||
          Opc == AMDGPU::V_FMAC_F64_e64_gfx90a ||
          Opc == AMDGPU::V_FMAC_F64_e64_gfx12 ||
+         Opc == AMDGPU::V_FMAC_F64_e64_gfx13 ||
          Opc == AMDGPU::V_FMAC_F32_e64_gfx10 ||
          Opc == AMDGPU::V_FMAC_F32_e64_gfx11 ||
          Opc == AMDGPU::V_FMAC_F32_e64_gfx12 ||
+         Opc == AMDGPU::V_FMAC_F32_e64_gfx13 ||
          Opc == AMDGPU::V_FMAC_F32_e64_vi ||
          Opc == AMDGPU::V_FMAC_LEGACY_F32_e64_gfx10 ||
          Opc == AMDGPU::V_FMAC_DX9_ZERO_F32_e64_gfx11 ||
@@ -693,6 +706,8 @@ bool isMAC(unsigned Opc) {
          Opc == AMDGPU::V_FMAC_F16_fake16_e64_gfx11 ||
          Opc == AMDGPU::V_FMAC_F16_t16_e64_gfx12 ||
          Opc == AMDGPU::V_FMAC_F16_fake16_e64_gfx12 ||
+         Opc == AMDGPU::V_FMAC_F16_t16_e64_gfx13 ||
+         Opc == AMDGPU::V_FMAC_F16_fake16_e64_gfx13 ||
          Opc == AMDGPU::V_DOT2C_F32_F16_e64_vi ||
          Opc == AMDGPU::V_DOT2C_F32_BF16_e64_vi ||
          Opc == AMDGPU::V_DOT2C_I32_I16_e64_vi ||
@@ -758,8 +773,8 @@ bool isAsyncStore(unsigned Opc) {
 }
 
 bool isTensorStore(unsigned Opc) {
-  return Opc == TENSOR_STORE_FROM_LDS_gfx1250 ||
-         Opc == TENSOR_STORE_FROM_LDS_D2_gfx1250;
+  return Opc == TENSOR_STORE_FROM_LDS_d2_gfx1250 ||
+         Opc == TENSOR_STORE_FROM_LDS_d4_gfx1250;
 }
 
 unsigned getTemporalHintType(const MCInstrDesc TID) {
@@ -1116,11 +1131,8 @@ void AMDGPUTargetID::setTargetIDFromTargetIDStream(StringRef TargetID) {
   }
 }
 
-std::string AMDGPUTargetID::toString() const {
-  std::string StringRep;
-  raw_string_ostream StreamRep(StringRep);
-
-  auto TargetTriple = STI.getTargetTriple();
+void AMDGPUTargetID::print(raw_ostream &StreamRep) const {
+  const Triple &TargetTriple = STI.getTargetTriple();
   auto Version = getIsaVersion(STI.getCPU());
 
   StreamRep << TargetTriple.getArchName() << '-' << TargetTriple.getVendorName()
@@ -1139,7 +1151,7 @@ std::string AMDGPUTargetID::toString() const {
                     .str();
 
   std::string Features;
-  if (STI.getTargetTriple().getOS() == Triple::AMDHSA) {
+  if (TargetTriple.getOS() == Triple::AMDHSA) {
     // sramecc.
     if (getSramEccSetting() == TargetIDSetting::Off)
       Features += ":sramecc-";
@@ -1153,8 +1165,13 @@ std::string AMDGPUTargetID::toString() const {
   }
 
   StreamRep << Processor << Features;
+}
 
-  return StringRep;
+std::string AMDGPUTargetID::toString() const {
+  std::string Str;
+  raw_string_ostream OS(Str);
+  OS << *this;
+  return Str;
 }
 
 unsigned getWavefrontSize(const MCSubtargetInfo *STI) {
@@ -3450,10 +3467,9 @@ std::optional<int64_t> getSMRDEncodedLiteralOffset32(const MCSubtargetInfo &ST,
 }
 
 unsigned getNumFlatOffsetBits(const MCSubtargetInfo &ST) {
-  if (AMDGPU::isGFX10(ST))
+  if (ST.getFeatureBits().test(FeatureFlatOffsetBits12))
     return 12;
-
-  if (AMDGPU::isGFX12(ST))
+  if (ST.getFeatureBits().test(FeatureFlatOffsetBits24))
     return 24;
   return 13;
 }

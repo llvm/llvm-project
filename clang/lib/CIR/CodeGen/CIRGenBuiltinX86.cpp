@@ -53,14 +53,15 @@ using namespace clang::CIRGen;
 // comparison
 // - Just emit the intrinsics call instead of calling this helper, see how the
 // LLVM lowering handles this.
-static mlir::Value emitVectorFCmp(CIRGenBuilderTy &builder,
+static mlir::Value emitVectorFCmp(CIRGenFunction &cgf, const CallExpr &expr,
                                   llvm::SmallVector<mlir::Value> &ops,
-                                  mlir::Location loc, cir::CmpOpKind pred,
-                                  bool shouldInvert) {
-  assert(!cir::MissingFeatures::cgFPOptionsRAII());
+                                  cir::CmpOpKind pred, bool shouldInvert) {
+  CIRGenFunction::CIRGenFPOptionsRAII FPOptsRAII(cgf, &expr);
   // TODO(cir): Add isSignaling boolean once emitConstrainedFPCall implemented
   assert(!cir::MissingFeatures::emitConstrainedFPCall());
-  mlir::Value cmp = builder.createVecCompare(loc, pred, ops[0], ops[1]);
+  clang::CIRGen::CIRGenBuilderTy &builder = cgf.getBuilder();
+  mlir::Value cmp = builder.createVecCompare(cgf.getLoc(expr.getExprLoc()),
+                                             pred, ops[0], ops[1]);
   mlir::Value bitCast = builder.createBitcast(
       shouldInvert ? builder.createNot(cmp) : cmp, ops[0].getType());
   return bitCast;
@@ -312,18 +313,17 @@ static mlir::Value emitX86MaskUnpack(CIRGenBuilderTy &builder,
   return builder.createBitcast(res, ops[0].getType());
 }
 
-static mlir::Value emitX86MaskLogic(CIRGenBuilderTy &builder,
-                                    mlir::Location loc,
-                                    cir::BinOpKind binOpKind,
-                                    SmallVectorImpl<mlir::Value> &ops,
-                                    bool invertLHS = false) {
+template <typename BinOp>
+static mlir::Value
+emitX86MaskLogic(CIRGenBuilderTy &builder, mlir::Location loc,
+                 SmallVectorImpl<mlir::Value> &ops, bool invertLHS = false) {
   unsigned numElts = cast<cir::IntType>(ops[0].getType()).getWidth();
   mlir::Value lhs = getMaskVecValue(builder, loc, ops[0], numElts);
   mlir::Value rhs = getMaskVecValue(builder, loc, ops[1], numElts);
 
   if (invertLHS)
     lhs = builder.createNot(lhs);
-  return builder.createBitcast(builder.createBinop(loc, lhs, binOpKind, rhs),
+  return builder.createBitcast(BinOp::create(builder, loc, lhs, rhs),
                                ops[0].getType());
 }
 
@@ -1950,7 +1950,7 @@ CIRGenFunction::emitX86BuiltinExpr(unsigned builtinID, const CallExpr *expr) {
     cir::IntType ty = cast<cir::IntType>(ops[0].getType());
     mlir::Value allOnesOp =
         builder.getConstAPInt(loc, ty, APInt::getAllOnes(ty.getWidth()));
-    mlir::Value orOp = emitX86MaskLogic(builder, loc, cir::BinOpKind::Or, ops);
+    mlir::Value orOp = emitX86MaskLogic<cir::OrOp>(builder, loc, ops);
     mlir::Value cmp =
         cir::CmpOp::create(builder, loc, cir::CmpOpKind::eq, orOp, allOnesOp);
     return builder.createCast(cir::CastKind::bool_to_int, cmp,
@@ -1963,7 +1963,7 @@ CIRGenFunction::emitX86BuiltinExpr(unsigned builtinID, const CallExpr *expr) {
     mlir::Location loc = getLoc(expr->getExprLoc());
     cir::IntType ty = cast<cir::IntType>(ops[0].getType());
     mlir::Value allZerosOp = builder.getNullValue(ty, loc).getResult();
-    mlir::Value orOp = emitX86MaskLogic(builder, loc, cir::BinOpKind::Or, ops);
+    mlir::Value orOp = emitX86MaskLogic<cir::OrOp>(builder, loc, ops);
     mlir::Value cmp =
         cir::CmpOp::create(builder, loc, cir::CmpOpKind::eq, orOp, allZerosOp);
     return builder.createCast(cir::CastKind::bool_to_int, cmp,
@@ -2009,32 +2009,32 @@ CIRGenFunction::emitX86BuiltinExpr(unsigned builtinID, const CallExpr *expr) {
   case X86::BI__builtin_ia32_kandhi:
   case X86::BI__builtin_ia32_kandsi:
   case X86::BI__builtin_ia32_kanddi:
-    return emitX86MaskLogic(builder, getLoc(expr->getExprLoc()),
-                            cir::BinOpKind::And, ops);
+    return emitX86MaskLogic<cir::AndOp>(builder, getLoc(expr->getExprLoc()),
+                                        ops);
   case X86::BI__builtin_ia32_kandnqi:
   case X86::BI__builtin_ia32_kandnhi:
   case X86::BI__builtin_ia32_kandnsi:
   case X86::BI__builtin_ia32_kandndi:
-    return emitX86MaskLogic(builder, getLoc(expr->getExprLoc()),
-                            cir::BinOpKind::And, ops, true);
+    return emitX86MaskLogic<cir::AndOp>(builder, getLoc(expr->getExprLoc()),
+                                        ops, /*invertLHS=*/true);
   case X86::BI__builtin_ia32_korqi:
   case X86::BI__builtin_ia32_korhi:
   case X86::BI__builtin_ia32_korsi:
   case X86::BI__builtin_ia32_kordi:
-    return emitX86MaskLogic(builder, getLoc(expr->getExprLoc()),
-                            cir::BinOpKind::Or, ops);
+    return emitX86MaskLogic<cir::OrOp>(builder, getLoc(expr->getExprLoc()),
+                                       ops);
   case X86::BI__builtin_ia32_kxnorqi:
   case X86::BI__builtin_ia32_kxnorhi:
   case X86::BI__builtin_ia32_kxnorsi:
   case X86::BI__builtin_ia32_kxnordi:
-    return emitX86MaskLogic(builder, getLoc(expr->getExprLoc()),
-                            cir::BinOpKind::Xor, ops, true);
+    return emitX86MaskLogic<cir::XorOp>(builder, getLoc(expr->getExprLoc()),
+                                        ops, /*invertLHS=*/true);
   case X86::BI__builtin_ia32_kxorqi:
   case X86::BI__builtin_ia32_kxorhi:
   case X86::BI__builtin_ia32_kxorsi:
   case X86::BI__builtin_ia32_kxordi:
-    return emitX86MaskLogic(builder, getLoc(expr->getExprLoc()),
-                            cir::BinOpKind::Xor, ops);
+    return emitX86MaskLogic<cir::XorOp>(builder, getLoc(expr->getExprLoc()),
+                                        ops);
   case X86::BI__builtin_ia32_knotqi:
   case X86::BI__builtin_ia32_knothi:
   case X86::BI__builtin_ia32_knotsi:
@@ -2315,12 +2315,12 @@ CIRGenFunction::emitX86BuiltinExpr(unsigned builtinID, const CallExpr *expr) {
     return mlir::Value{};
   case X86::BI__builtin_ia32_cmpnltps:
   case X86::BI__builtin_ia32_cmpnltpd:
-    return emitVectorFCmp(builder, ops, getLoc(expr->getExprLoc()),
-                          cir::CmpOpKind::lt, /*shouldInvert=*/true);
+    return emitVectorFCmp(*this, *expr, ops, cir::CmpOpKind::lt,
+                          /*shouldInvert=*/true);
   case X86::BI__builtin_ia32_cmpnleps:
   case X86::BI__builtin_ia32_cmpnlepd:
-    return emitVectorFCmp(builder, ops, getLoc(expr->getExprLoc()),
-                          cir::CmpOpKind::le, /*shouldInvert=*/true);
+    return emitVectorFCmp(*this, *expr, ops, cir::CmpOpKind::le,
+                          /*shouldInvert=*/true);
   case X86::BI__builtin_ia32_cmpordps:
   case X86::BI__builtin_ia32_cmpordpd:
   case X86::BI__builtin_ia32_cmpph128_mask:

@@ -4516,9 +4516,7 @@ TEST_P(UncheckedStatusOrAccessModelTest, NestedStatusOrInOptional) {
       )cc");
 }
 
-// TODO: this crashes with "Assertion `Children.size() == 1' failed." in
-// ResultObjectVisitor::PropagateResultObject.
-TEST_P(UncheckedStatusOrAccessModelTest, DISABLED_CoroutineCoAwait) {
+TEST_P(UncheckedStatusOrAccessModelTest, CoroutineCoAwait) {
   ExpectDiagnosticsFor(R"cc(
 #include "unchecked_statusor_access_test_defs.h"
 #include "task.h"
