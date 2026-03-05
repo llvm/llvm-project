@@ -220,6 +220,10 @@ void TargetCodeGenInfo::setBranchProtectionFnAttributes(
   if (BPI.SignReturnAddr != LangOptions::SignReturnAddressScopeKind::None) {
     F.addFnAttr("sign-return-address", BPI.getSignReturnAddrStr());
     F.addFnAttr("sign-return-address-key", BPI.getSignKeyStr());
+    if (BPI.SignReturnAddressHardening !=
+        LangOptions::SignReturnAddressHardeningKind::None)
+      F.addFnAttr("sign-return-address-harden",
+                  BPI.getSignReturnAddressHardeningStr());
   } else {
     if (F.hasFnAttribute("sign-return-address"))
       F.removeFnAttr("sign-return-address");

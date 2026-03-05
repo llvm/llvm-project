@@ -276,6 +276,17 @@ bool AArch64TargetInfo::validateBranchProtection(StringRef Spec, StringRef,
   return true;
 }
 
+std::optional<LangOptions::SignReturnAddressHardeningKind>
+AArch64TargetInfo::validateSignReturnAddressHardening(StringRef Spec) const {
+  assert(!Spec.empty() && "Spec must not be empty");
+  return llvm::StringSwitch<
+             std::optional<LangOptions::SignReturnAddressHardeningKind>>(Spec)
+      .Case("load-return-address",
+            LangOptions::SignReturnAddressHardeningKind::LoadReturnAddress)
+      .Case("none", LangOptions::SignReturnAddressHardeningKind::None)
+      .Default(std::nullopt);
+}
+
 bool AArch64TargetInfo::isValidCPUName(StringRef Name) const {
   return llvm::AArch64::parseCpu(Name).has_value();
 }
@@ -1367,6 +1378,11 @@ ParsedTargetAttr AArch64TargetInfo::parseTargetAttr(StringRef Features) const {
 
     if (Feature.starts_with("branch-protection=")) {
       Ret.BranchProtection = Feature.split('=').second.trim();
+      continue;
+    }
+
+    if (Feature.starts_with("harden-pac-ret=")) {
+      Ret.SignReturnAddrHardening = Feature.split('=').second.trim();
       continue;
     }
 

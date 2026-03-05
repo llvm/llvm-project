@@ -3394,6 +3394,11 @@ def err_invalid_branch_protection_spec : Error<
   "invalid or misplaced branch protection specification '%0'">;
 def warn_unsupported_branch_protection_spec : Warning<
   "unsupported branch protection specification '%0'">, InGroup<BranchProtection>;
+def warn_attribute_harden_pac_ret_requires_pac_ret: Warning<
+  "'harden-pac-ret' attribute requires 'branch-protection=pac-ret'; 'target' attribute ignored">,
+  InGroup<IgnoredAttributes>;
+def err_invalid_harden_pac_ret_spec : Error<
+  "invalid or misplaced pac-ret hardening specification '%0'">;
 def err_attribute_invalid_atomic_argument : Error<
   "invalid argument '%0' to atomic attribute; valid options are: "
   "'remote_memory', 'fine_grained_memory', 'ignore_denormal_mode' (optionally "
