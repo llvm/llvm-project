@@ -420,6 +420,17 @@ add_entrypoint_object(
 )
 
 add_entrypoint_object(
+  tanbf16
+  SRCS
+    tanbf16.cpp
+  HDRS
+    ../tanbf16.h
+  DEPENDS
+    libc.src.__support.math.tanbf16
+)
+
+
+add_entrypoint_object(
   tanf
   SRCS
     tanf.cpp

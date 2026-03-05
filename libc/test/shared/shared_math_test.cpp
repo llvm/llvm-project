@@ -450,4 +450,5 @@ TEST(LlvmLibcSharedMathTest, AllBFloat16) {
                LIBC_NAMESPACE::shared::nexttowardbf16(bfloat16(0.0), 0.0L));
   EXPECT_FP_EQ(bfloat16(0.0), LIBC_NAMESPACE::shared::nextafterbf16(
                                   bfloat16(0.0), bfloat16(0.0)));
+  EXPECT_FP_EQ(bfloat16(0.0), LIBC_NAMESPACE::shared::tanbf16(bfloat16(0.0)));
 }
