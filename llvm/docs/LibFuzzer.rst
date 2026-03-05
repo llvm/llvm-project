@@ -482,8 +482,8 @@ More examples
 -------------
 
 Examples of real-life fuzz targets and the bugs they find can be found
-at http://tutorial.libfuzzer.info. Among other things you can learn how
-to detect Heartbleed_ in one second.
+at https://github.com/google/fuzzing/blob/master/tutorial/libFuzzerTutorial.md.
+Among other things you can learn how to detect Heartbleed_ in one second.
 
 
 Advanced features
