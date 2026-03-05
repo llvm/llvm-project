@@ -8063,7 +8063,7 @@ template <> struct llvm::DenseMapInfo<const EqualBBWrapper *> {
     // time.
     BasicBlock *Succ = BI->getSuccessor(0);
     auto PhiValsForBB = map_range(
-        BB->phis(), [BB, &PhiPredIVs = *EBW->PhiPredIVs](PHINode &Phi) {
+        Succ->phis(), [BB, &PhiPredIVs = *EBW->PhiPredIVs](PHINode &Phi) {
           return PhiPredIVs[&Phi][BB];
         });
     return hash_combine(Succ, hash_combine_range(PhiValsForBB));
@@ -8218,7 +8218,7 @@ static bool mergeIdenticalBBs(ArrayRef<BasicBlock *> Candidates,
 bool SimplifyCFGOpt::simplifyDuplicateSwitchArms(SwitchInst *SI,
                                                  DomTreeUpdater *DTU) {
   // Collect candidate switch-arms top-down
-  SmallSetVector<BasicBlock *, 8> FilteredArms(
+  SmallSetVector<BasicBlock *, 16> FilteredArms(
       llvm::from_range,
       make_filter_range(successors(SI), EqualBBWrapper::canBeMerged));
   return mergeIdenticalBBs(FilteredArms.getArrayRef(), DTU);
@@ -8227,7 +8227,7 @@ bool SimplifyCFGOpt::simplifyDuplicateSwitchArms(SwitchInst *SI,
 bool SimplifyCFGOpt::simplifyDuplicatePredecessors(BasicBlock *BB,
                                                    DomTreeUpdater *DTU) {
   // Need at least 2 predecessors to do anything.
-  if (!BB || pred_empty(BB))
+  if (!BB || !BB->hasNPredecessorsOrMore(2))
     return false;
 
   // Compilation time consideration: retain the canonical loop, otherwise, we
