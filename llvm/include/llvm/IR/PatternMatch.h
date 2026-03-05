@@ -2380,14 +2380,6 @@ m_ZExtOrTruncOrSelf(const OpTy &Op) {
   return m_CombineOr(m_CombineOr(m_ZExt(Op), m_Trunc(Op)), Op);
 }
 
-/// Matches a value that behaves like a boolean-controlled select, i.e. one of:
-///   select i1 Cond, TrueC, FalseC
-///   zext i1 Cond             (equivalent to select i1 Cond, 1, 0)
-///   sext i1 Cond             (equivalent to select i1 Cond, -1, 0)
-///
-/// The condition is matched against \p Cond, and the true/false constants
-/// against \p TrueC and \p FalseC respectively. For zext/sext, the synthetic
-/// constants are bound to \p TrueC and \p FalseC via their matchers.
 template <typename CondTy, typename LTy, typename RTy> struct SelectLike_match {
   CondTy Cond;
   LTy TrueC;
@@ -2422,6 +2414,14 @@ template <typename CondTy, typename LTy, typename RTy> struct SelectLike_match {
   }
 };
 
+/// Matches a value that behaves like a boolean-controlled select, i.e. one of:
+///   select i1 Cond, TrueC, FalseC
+///   zext i1 Cond             (equivalent to select i1 Cond, 1, 0)
+///   sext i1 Cond             (equivalent to select i1 Cond, -1, 0)
+///
+/// The condition is matched against \p Cond, and the true/false constants
+/// against \p TrueC and \p FalseC respectively. For zext/sext, the synthetic
+/// constants are bound to \p TrueC and \p FalseC via their matchers.
 template <typename CondTy, typename LTy, typename RTy>
 inline SelectLike_match<CondTy, LTy, RTy>
 m_SelectLike(const CondTy &C, const LTy &TrueC, const RTy &FalseC) {
