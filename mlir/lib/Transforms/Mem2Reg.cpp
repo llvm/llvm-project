@@ -176,24 +176,12 @@ private:
       RegionBlockingUsesMap &userToBlockingUses,
       DenseMap<Region *, RegionPromotionInfo> &regionsToPromote);
 
-  /// Computes in which blocks the value stored in the slot is actually used,
-  /// meaning blocks leading to a load. This method uses `definingBlocks`, the
-  /// set of blocks containing a store to the slot (defining the value of the
-  /// slot).
-  /// The analysis is aware of regions and uses region promotion information
-  /// to determine the effect of nested regions on slot value liveness.
-  SmallPtrSet<Block *, 16> computeSlotLiveIn(
-      DenseMap<Region *, SmallPtrSet<Block *, 16>> &definingBlocksByRegion,
-      DenseMap<Region *, RegionPromotionInfo> &regionsToPromote);
-
   /// Computes the points in the provided region where multiple re-definitions
   /// of the slot's value (stores) may conflict.
   /// `definingBlocks` is the set of blocks containing a store to the slot,
   /// either directly or inherited from a nested region.
-  /// `slotLiveIn` is the set of blocks where the memory slot is live-in.
   void computeMergePoints(Region *region,
                           SmallPtrSetImpl<Block *> &definingBlocks,
-                          SmallPtrSetImpl<Block *> &slotLiveIn,
                           SmallPtrSetImpl<Block *> &mergePoints);
 
   /// Ensures predecessors of merge points can properly provide their current
@@ -255,6 +243,10 @@ private:
   /// Removes the blocking uses of the slot within the given region, in
   /// topological order.
   void removeBlockingUses(Region *region);
+
+  /// Links merge point block arguments to the terminators targeting the merge
+  /// point or remove the argument if it is not used.
+  void linkMergePoints();
 
   /// Lazily-constructed default value representing the content of the slot when
   /// no store has been executed. This function may mutate IR.
@@ -454,127 +446,15 @@ LogicalResult MemorySlotPromotionAnalyzer::computeBlockingUses(
   return success();
 }
 
-/// Returns true if the operation contains a store, whether itself or in a
-/// nested region.
-static bool
-isStoreLike(Operation *op, MemorySlot &slot,
-            DenseMap<Region *, RegionPromotionInfo> &regionsToPromote) {
-  auto promotableMemOp = dyn_cast<PromotableMemOpInterface>(op);
-  if (promotableMemOp && promotableMemOp.storesTo(slot))
-    return true;
-
-  auto promotableRegionOp = dyn_cast<PromotableRegionOpInterface>(op);
-  if (!promotableRegionOp)
-    return false;
-
-  for (Region &region : op->getRegions()) {
-    auto regionInfoIt = regionsToPromote.find(&region);
-    if (regionInfoIt == regionsToPromote.end())
-      continue;
-
-    if (regionInfoIt->second.hasValueStores)
-      return true;
-  }
-
-  return false;
-}
-
-SmallPtrSet<Block *, 16> MemorySlotPromotionAnalyzer::computeSlotLiveIn(
-    DenseMap<Region *, SmallPtrSet<Block *, 16>> &definingBlocksByRegion,
-    DenseMap<Region *, RegionPromotionInfo> &regionsToPromote) {
-  SmallPtrSet<Block *, 16> liveIn;
-
-  // The worklist contains blocks in which it is known that the slot value is
-  // live-in. The further blocks where this value is live-in will be inferred
-  // from these.
-  SmallVector<Block *> liveInWorkList;
-
-  SmallPtrSet<Operation *, 4> regionPredecessorScratch;
-
-  // Blocks with a load before any other store to the slot are the starting
-  // points of the analysis. The slot value is definitely live-in in those
-  // blocks.
-  SmallPtrSet<Block *, 16> visited;
-  for (Operation *user : slot.ptr.getUsers()) {
-    if (!visited.insert(user->getBlock()).second)
-      continue;
-
-    for (Operation &op : user->getBlock()->getOperations()) {
-      if (auto memOp = dyn_cast<PromotableMemOpInterface>(op)) {
-        // If this operation loads the slot, it is loading from it before
-        // ever writing to it, so the value is live-in in this block.
-        if (memOp.loadsFrom(slot)) {
-          liveInWorkList.push_back(user->getBlock());
-          break;
-        }
-
-        // If we store to the slot, further loads will see that value.
-        // Because we did not meet any load before, the value is not live-in.
-        if (memOp.storesTo(slot))
-          break;
-      }
-    }
-  }
-
-  // The information is then propagated to the predecessors until a def site
-  // (store) is found.
-  while (!liveInWorkList.empty()) {
-    Block *liveInBlock = liveInWorkList.pop_back_val();
-
-    if (!liveIn.insert(liveInBlock).second)
-      continue;
-
-    // If a predecessor is a defining block, either:
-    // - It has a load before its first store, in which case it is live-in but
-    // has already been processed in the initialisation step.
-    // - It has a store before any load, in which case it is not live-in.
-    // We can thus at this stage insert to the worklist only predecessors that
-    // are not defining blocks.
-    for (Block *pred : liveInBlock->getPredecessors())
-      if (!definingBlocksByRegion[pred->getParent()].contains(pred))
-        liveInWorkList.push_back(pred);
-
-    // The logic is a little more complicated for region predecessors as they
-    // could be in the middle of a block. We thus need to look for a store
-    // within the predecessor block specifically before the region predecessor
-    // operation.
-    if (liveInBlock->isEntryBlock() &&
-        liveInBlock->getParent() != slot.ptr.getParentRegion()) {
-      regionPredecessorScratch.clear();
-      auto parentOp =
-          cast<PromotableRegionOpInterface>(liveInBlock->getParentOp());
-      parentOp.propagateLiveIn(slot, liveInBlock->getParent(),
-                               regionPredecessorScratch);
-      for (Operation *pred : regionPredecessorScratch) {
-        if (liveIn.contains(pred->getBlock()))
-          continue;
-
-        Operation *storeCandidate = pred;
-        while (storeCandidate &&
-               !isStoreLike(storeCandidate, slot, regionsToPromote))
-          storeCandidate = storeCandidate->getPrevNode();
-
-        if (!storeCandidate)
-          liveInWorkList.push_back(pred->getBlock());
-      }
-    }
-  }
-
-  return liveIn;
-}
-
 using IDFCalculator = llvm::IDFCalculatorBase<Block, false>;
 void MemorySlotPromotionAnalyzer::computeMergePoints(
     Region *region, SmallPtrSetImpl<Block *> &definingBlocks,
-    SmallPtrSetImpl<Block *> &slotLiveIn,
     SmallPtrSetImpl<Block *> &mergePoints) {
   if (region->hasOneBlock())
     return;
 
   IDFCalculator idfCalculator(dominance.getDomTree(region));
-
   idfCalculator.setDefiningBlocks(definingBlocks);
-  idfCalculator.setLiveInBlocks(slotLiveIn);
 
   SmallVector<Block *> mergePointsVec;
   idfCalculator.calculate(mergePointsVec);
@@ -619,17 +499,11 @@ MemorySlotPromotionAnalyzer::computeInfo() {
       definingBlocks[region->getParentRegion()].insert(
           region->getParentOp()->getBlock());
 
-  // TODO: When all regions involved are single-block (fairly common in
-  // region-based control-flow), there cannot be any merge points, so we could
-  // skip this costly analysis and its dependencies.
-  SmallPtrSet<Block *, 16> slotLiveIn =
-      computeSlotLiveIn(definingBlocks, info.regionsToPromote);
-
   // Then, compute blocks in which two or more definitions of the allocated
   // variable may conflict. These blocks will need a new block argument to
   // accommodate this.
   for (auto &[region, defBlocks] : definingBlocks)
-    computeMergePoints(region, defBlocks, slotLiveIn, info.mergePoints);
+    computeMergePoints(region, defBlocks, info.mergePoints);
 
   // The slot can be promoted if the block arguments to be created can
   // actually be populated with values, which may not be possible depending
@@ -752,27 +626,10 @@ void MemorySlotPromoter::promoteInRegion(Region *region, Value reachingDef) {
     if (info.mergePoints.contains(block)) {
       BlockArgument blockArgument =
           block->addArgument(slot.elemType, slot.ptr.getLoc());
-      builder.setInsertionPointToStart(block);
-      allocator.handleBlockArgument(slot, blockArgument, builder);
       job.reachingDef = blockArgument;
-
-      if (statistics.newBlockArgumentAmount)
-        (*statistics.newBlockArgumentAmount)++;
     }
 
     job.reachingDef = promoteInBlock(block, job.reachingDef);
-
-    if (auto terminator = dyn_cast<BranchOpInterface>(block->getTerminator())) {
-      for (BlockOperand &blockOperand : terminator->getBlockOperands()) {
-        if (info.mergePoints.contains(blockOperand.get())) {
-          if (!job.reachingDef)
-            job.reachingDef = getOrCreateDefaultValue();
-
-          terminator.getSuccessorOperands(blockOperand.getOperandNumber())
-              .append(job.reachingDef);
-        }
-      }
-    }
 
     for (auto *child : job.block->children())
       dfsStack.emplace_back<DfsJob>({child, job.reachingDef});
@@ -861,6 +718,54 @@ void MemorySlotPromoter::removeBlockingUses(Region *region) {
   }
 }
 
+void MemorySlotPromoter::linkMergePoints() {
+  // We want to eliminate unused block arguments. In case connecting a block
+  // argument to its predecessor would trigger the use of the predecessor's
+  // unused block argument, we need to process merge points in an expanding
+  // worklist, mergePointsToProcess.
+
+  SmallPtrSet<BlockArgument, 8> mergePointArgsUnused;
+  SmallVector<BlockArgument> mergePointArgsToProcess;
+  for (Block *mergePoint : info.mergePoints) {
+    BlockArgument arg = mergePoint->getArguments().back();
+    if (arg.use_empty())
+      mergePointArgsUnused.insert(arg);
+    else
+      mergePointArgsToProcess.push_back(arg);
+  }
+
+  while (!mergePointArgsToProcess.empty()) {
+    BlockArgument arg = mergePointArgsToProcess.pop_back_val();
+    Block *mergePoint = arg.getOwner();
+
+    for (BlockOperand &use : mergePoint->getUses()) {
+      Value reachingDef = reachingAtBlockEnd[use.getOwner()->getBlock()];
+      if (!reachingDef)
+        reachingDef = getOrCreateDefaultValue();
+
+      // If the reaching definition is a block argument of an unused merge
+      // point, mark it as used and process it as such later.
+      auto reachingDefArgument = dyn_cast<BlockArgument>(reachingDef);
+      if (reachingDefArgument &&
+          mergePointArgsUnused.erase(reachingDefArgument))
+        mergePointArgsToProcess.push_back(reachingDefArgument);
+
+      BranchOpInterface user = cast<BranchOpInterface>(use.getOwner());
+      user.getSuccessorOperands(use.getOperandNumber()).append(reachingDef);
+    }
+
+    builder.setInsertionPointToStart(mergePoint);
+    allocator.handleBlockArgument(slot, arg, builder);
+    if (statistics.newBlockArgumentAmount)
+      (*statistics.newBlockArgumentAmount)++;
+  }
+
+  for (BlockArgument arg : mergePointArgsUnused) {
+    Block *mergePoint = arg.getOwner();
+    mergePoint->eraseArgument(mergePoint->getNumArguments() - 1);
+  }
+}
+
 std::optional<PromotableAllocationOpInterface>
 MemorySlotPromoter::promoteSlot() {
   // Perform the promotion recursively through nested regions. The reaching
@@ -876,25 +781,14 @@ MemorySlotPromoter::promoteSlot() {
     op.visitReplacedValues(replacedValues, builder);
   }
 
+  // Finally, connect merge points to their predecessor's reaching definitions.
+  linkMergePoints();
+
   for (Operation *toEraseOp : toErase)
     toEraseOp->erase();
 
   assert(slot.ptr.use_empty() &&
          "after promotion, the slot pointer should not be used anymore");
-
-  // Update terminators in dead branches to forward default if they are
-  // succeeded by a merge points.
-  for (Block *mergePoint : info.mergePoints) {
-    for (BlockOperand &use : mergePoint->getUses()) {
-      auto user = cast<BranchOpInterface>(use.getOwner());
-      SuccessorOperands succOperands =
-          user.getSuccessorOperands(use.getOperandNumber());
-      assert(succOperands.size() == mergePoint->getNumArguments() ||
-             succOperands.size() + 1 == mergePoint->getNumArguments());
-      if (succOperands.size() + 1 == mergePoint->getNumArguments())
-        succOperands.append(getOrCreateDefaultValue());
-    }
-  }
 
   LDBG() << "Promoted memory slot: " << slot.ptr;
 

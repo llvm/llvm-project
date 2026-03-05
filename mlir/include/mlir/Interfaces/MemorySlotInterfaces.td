@@ -53,6 +53,8 @@ def PromotableAllocationOpInterface
     InterfaceMethod<[{
         Hook triggered for every new block argument added to a block.
         This will only be called for slots declared by this operation.
+        This function is called after removal of blocking uses, meaning
+        only operations that will be deleted remain users of the slot.
 
         The builder is located at the beginning of the block on call. All IR
         mutations must happen through the builder.
@@ -283,19 +285,6 @@ def PromotableRegionOpInterface
         "const ::mlir::MemorySlot &":$slot,
         "::mlir::Region *":$region,
         "bool":$hasValueStores
-      )
-    >,
-    InterfaceMethod<[{
-        Specifies which operations should be marked as live-in with respect to
-        the value of the provided slot assuming the provided region is live-in.
-
-        In other words, specifies which operation immediately passes control to
-        the region without storing to the value of the slot.
-      }], "void", "propagateLiveIn",
-      (ins
-        "const ::mlir::MemorySlot &":$slot,
-        "::mlir::Region *":$regionLiveIn,
-        "::mlir::SmallPtrSetImpl<::mlir::Operation *> &":$operationsLiveIn
       )
     >,
     InterfaceMethod<[{

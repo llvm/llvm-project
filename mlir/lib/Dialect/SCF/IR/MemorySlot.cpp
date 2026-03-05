@@ -64,14 +64,6 @@ bool ExecuteRegionOp::isRegionPromotable(const MemorySlot &slot, Region *region,
   return true;
 }
 
-void ExecuteRegionOp::propagateLiveIn(
-    const MemorySlot &slot, Region *regionLiveIn,
-    SmallPtrSetImpl<Operation *> &operationsLiveIn) {
-  assert(regionLiveIn == &getRegion() &&
-         "regionLiveIn can only be the region of the ExecuteRegionOp");
-  operationsLiveIn.insert(getOperation());
-}
-
 void ExecuteRegionOp::setupPromotion(
     const MemorySlot &slot, Value reachingDef, bool hasValueStores,
     llvm::SmallMapVector<Region *, Value, 2> &regionsToProcess) {
@@ -105,14 +97,6 @@ Value ExecuteRegionOp::finalizePromotion(
 bool ForOp::isRegionPromotable(const MemorySlot &slot, Region *region,
                                bool hasValueStores) {
   return true;
-}
-
-void ForOp::propagateLiveIn(const MemorySlot &slot, Region *regionLiveIn,
-                            SmallPtrSetImpl<Operation *> &operationsLiveIn) {
-  assert(regionLiveIn == &getBodyRegion() &&
-         "regionLiveIn can only be the region of the ForOp");
-  operationsLiveIn.insert(getOperation());
-  operationsLiveIn.insert(getBody()->getTerminator());
 }
 
 void ForOp::setupPromotion(
@@ -156,16 +140,6 @@ bool ForallOp::isRegionPromotable(const MemorySlot &slot, Region *region,
   return !hasValueStores;
 }
 
-void ForallOp::propagateLiveIn(const MemorySlot &slot, Region *regionLiveIn,
-                               SmallPtrSetImpl<Operation *> &operationsLiveIn) {
-  assert(regionLiveIn == &getBodyRegion() &&
-         "regionLiveIn can only be the region of the ForallOp");
-  // Due to the parallel semantics of ForallOp, there is no liveness dependency
-  // on the body region as liveness cannot be influenced by neighboring
-  // iterations.
-  operationsLiveIn.insert(getOperation());
-}
-
 void ForallOp::setupPromotion(
     const MemorySlot &slot, Value reachingDef, bool hasValueStores,
     llvm::SmallMapVector<Region *, Value, 2> &regionsToProcess) {
@@ -187,12 +161,6 @@ Value ForallOp::finalizePromotion(
 bool IfOp::isRegionPromotable(const MemorySlot &slot, Region *region,
                               bool hasValueStores) {
   return true;
-}
-
-void IfOp::propagateLiveIn(const MemorySlot &slot, Region *regionLiveIn,
-                           SmallPtrSetImpl<Operation *> &operationsLiveIn) {
-  assert(regionLiveIn == &getThenRegion() || regionLiveIn == &getElseRegion());
-  operationsLiveIn.insert(getOperation());
 }
 
 void IfOp::setupPromotion(
@@ -240,28 +208,6 @@ bool IndexSwitchOp::isRegionPromotable(const MemorySlot &slot, Region *region,
   return true;
 }
 
-void IndexSwitchOp::propagateLiveIn(
-    const MemorySlot &slot, Region *regionLiveIn,
-    SmallPtrSetImpl<Operation *> &operationsLiveIn) {
-#ifndef NDEBUG
-  auto checkRegionValid = [&](IndexSwitchOp op) {
-    if (regionLiveIn == &op.getDefaultRegion())
-      return;
-
-    for (Region &caseRegion : op.getCaseRegions())
-      if (regionLiveIn == &caseRegion)
-        return;
-
-    assert(false && "regionLiveIn can only be the default region or a case "
-                    "region of the IndexSwitchOp");
-  };
-
-  checkRegionValid(*this);
-#endif
-
-  operationsLiveIn.insert(getOperation());
-}
-
 void IndexSwitchOp::setupPromotion(
     const MemorySlot &slot, Value reachingDef, bool hasValueStores,
     llvm::SmallMapVector<Region *, Value, 2> &regionsToProcess) {
@@ -305,17 +251,6 @@ bool ParallelOp::isRegionPromotable(const MemorySlot &slot, Region *region,
   return !hasValueStores;
 }
 
-void ParallelOp::propagateLiveIn(
-    const MemorySlot &slot, Region *regionLiveIn,
-    SmallPtrSetImpl<Operation *> &operationsLiveIn) {
-  assert(regionLiveIn == &getBodyRegion() &&
-         "regionLiveIn can only be the region of the ParallelOp");
-  // Due to the parallel semantics of ParallelOp, there is no liveness
-  // dependency on the body region as liveness cannot be influenced by
-  // neighboring iterations.
-  operationsLiveIn.insert(getOperation());
-}
-
 void ParallelOp::setupPromotion(
     const MemorySlot &slot, Value reachingDef, bool hasValueStores,
     llvm::SmallMapVector<Region *, Value, 2> &regionsToProcess) {
@@ -341,24 +276,6 @@ bool ReduceOp::isRegionPromotable(const MemorySlot &slot, Region *region,
   return !hasValueStores;
 }
 
-void ReduceOp::propagateLiveIn(const MemorySlot &slot, Region *regionLiveIn,
-                               SmallPtrSetImpl<Operation *> &operationsLiveIn) {
-#ifndef NDEBUG
-  auto checkRegionValid = [&](ReduceOp op) {
-    for (Region &reduction : op.getReductions())
-      if (regionLiveIn == &reduction)
-        return;
-
-    assert(false &&
-           "regionLiveIn can only be a reduction region of the ReduceOp");
-  };
-
-  checkRegionValid(*this);
-#endif
-
-  operationsLiveIn.insert(getOperation());
-}
-
 void ReduceOp::setupPromotion(
     const MemorySlot &slot, Value reachingDef, bool hasValueStores,
     llvm::SmallMapVector<Region *, Value, 2> &regionsToProcess) {
@@ -381,17 +298,6 @@ Value ReduceOp::finalizePromotion(
 bool WhileOp::isRegionPromotable(const MemorySlot &slot, Region *region,
                                  bool hasValueStores) {
   return true;
-}
-
-void WhileOp::propagateLiveIn(const MemorySlot &slot, Region *regionLiveIn,
-                              SmallPtrSetImpl<Operation *> &operationsLiveIn) {
-  if (regionLiveIn == &getBefore()) {
-    operationsLiveIn.insert(getOperation());
-    operationsLiveIn.insert(getAfterBody()->getTerminator());
-  }
-
-  assert(regionLiveIn == &getAfter());
-  operationsLiveIn.insert(getBeforeBody()->getTerminator());
 }
 
 void WhileOp::setupPromotion(
