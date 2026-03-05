@@ -2722,6 +2722,34 @@ struct XArrayCoorOpConversion
       mlir::Value lb =
           isShifted ? integerCast(loc, rewriter, idxTy, operands[shiftOffset])
                     : one;
+
+      // Emit array bounds assumes per Fortran 2018 standard section 9.5.3.3.2:
+      // "The value of each subscript expression shall be within the bounds for
+      // its dimension unless the array section has size zero."
+      // For non-boxed arrays with known shape, emit: assume(index >= lb) and
+      // assume(index <= lb + extent - 1).
+      // The llvm.array_bounds attribute marks these assumes for removal before
+      // vectorization to prevent IR bloat and avoid impacting cost models.
+      if (!baseIsBoxed && !coor.getShape().empty()) {
+        mlir::Value extent =
+            integerCast(loc, rewriter, idxTy, operands[shapeOffset]);
+        // Compute upper bound: ub = lb + extent - 1.
+        mlir::Value lbPlusExtent =
+            mlir::LLVM::AddOp::create(rewriter, loc, idxTy, lb, extent, nsw);
+        mlir::Value ub = mlir::LLVM::SubOp::create(rewriter, loc, idxTy,
+                                                   lbPlusExtent, one, nsw);
+        // Create bounds check conditions.
+        mlir::Value lbCheck = mlir::LLVM::ICmpOp::create(
+            rewriter, loc, mlir::LLVM::ICmpPredicate::sge, index, lb);
+        mlir::Value ubCheck = mlir::LLVM::ICmpOp::create(
+            rewriter, loc, mlir::LLVM::ICmpPredicate::sle, index, ub);
+        // Emit assumes for lower and upper bounds with array_bounds marker.
+        auto lbAssume = mlir::LLVM::AssumeOp::create(rewriter, loc, lbCheck);
+        lbAssume->setAttr("llvm.array_bounds", rewriter.getUnitAttr());
+        auto ubAssume = mlir::LLVM::AssumeOp::create(rewriter, loc, ubCheck);
+        ubAssume->setAttr("llvm.array_bounds", rewriter.getUnitAttr());
+      }
+
       mlir::Value step = one;
       bool normalSlice = isSliced;
       // Compute zero based index in dimension i of the element, applying
