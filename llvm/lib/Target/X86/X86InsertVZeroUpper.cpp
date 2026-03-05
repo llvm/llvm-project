@@ -1,4 +1,4 @@
-//===- X86VZeroUpper.cpp - AVX vzeroupper instruction inserter ------------===//
+//===---- X86InsertVZeroUpper.cpp - AVX vzeroupper instruction inserter ---===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -24,9 +24,11 @@
 #include "llvm/CodeGen/MachineInstr.h"
 #include "llvm/CodeGen/MachineInstrBuilder.h"
 #include "llvm/CodeGen/MachineOperand.h"
+#include "llvm/CodeGen/MachinePassManager.h"
 #include "llvm/CodeGen/MachineRegisterInfo.h"
 #include "llvm/CodeGen/TargetInstrInfo.h"
 #include "llvm/CodeGen/TargetRegisterInfo.h"
+#include "llvm/IR/Analysis.h"
 #include "llvm/IR/CallingConv.h"
 #include "llvm/IR/DebugLoc.h"
 #include "llvm/IR/Function.h"
@@ -37,91 +39,78 @@
 
 using namespace llvm;
 
-#define DEBUG_TYPE "x86-vzeroupper"
+#define DEBUG_TYPE "x86-insert-vzero-upper"
 
 static cl::opt<bool>
-UseVZeroUpper("x86-use-vzeroupper", cl::Hidden,
-  cl::desc("Minimize AVX to SSE transition penalty"),
-  cl::init(true));
+    UseVZeroUpper("x86-use-vzeroupper", cl::Hidden,
+                  cl::desc("Minimize AVX to SSE transition penalty"),
+                  cl::init(true));
 
 STATISTIC(NumVZU, "Number of vzeroupper instructions inserted");
 
 namespace {
+class X86InsertVZeroUpperLegacy : public MachineFunctionPass {
+public:
+  static char ID;
 
-  class VZeroUpperInserter : public MachineFunctionPass {
-  public:
-    VZeroUpperInserter() : MachineFunctionPass(ID) {}
+  X86InsertVZeroUpperLegacy() : MachineFunctionPass(ID) {}
 
-    bool runOnMachineFunction(MachineFunction &MF) override;
+  StringRef getPassName() const override { return "X86 vzeroupper inserter"; }
 
-    MachineFunctionProperties getRequiredProperties() const override {
-      return MachineFunctionProperties().setNoVRegs();
-    }
+  bool runOnMachineFunction(MachineFunction &MF) override;
 
-    StringRef getPassName() const override { return "X86 vzeroupper inserter"; }
+  MachineFunctionProperties getRequiredProperties() const override {
+    return MachineFunctionProperties().setNoVRegs();
+  }
+};
 
-  private:
-    void processBasicBlock(MachineBasicBlock &MBB);
-    void insertVZeroUpper(MachineBasicBlock::iterator I,
-                          MachineBasicBlock &MBB);
-    void addDirtySuccessor(MachineBasicBlock &MBB);
+enum BlockExitState { PASS_THROUGH, EXITS_CLEAN, EXITS_DIRTY };
 
-    enum BlockExitState { PASS_THROUGH, EXITS_CLEAN, EXITS_DIRTY };
+// Core algorithm state:
+// BlockState - Each block is either:
+//   - PASS_THROUGH: There are neither YMM/ZMM dirtying instructions nor
+//                   vzeroupper instructions in this block.
+//   - EXITS_CLEAN: There is (or will be) a vzeroupper instruction in this
+//                  block that will ensure that YMM/ZMM is clean on exit.
+//   - EXITS_DIRTY: An instruction in the block dirties YMM/ZMM and no
+//                  subsequent vzeroupper in the block clears it.
+//
+// AddedToDirtySuccessors - This flag is raised when a block is added to the
+//                          DirtySuccessors list to ensure that it's not
+//                          added multiple times.
+//
+// FirstUnguardedCall - Records the location of the first unguarded call in
+//                      each basic block that may need to be guarded by a
+//                      vzeroupper. We won't know whether it actually needs
+//                      to be guarded until we discover a predecessor that
+//                      is DIRTY_OUT.
+struct BlockState {
+  BlockExitState ExitState = PASS_THROUGH;
+  bool AddedToDirtySuccessors = false;
+  MachineBasicBlock::iterator FirstUnguardedCall;
 
-    static const char* getBlockExitStateName(BlockExitState ST);
+  BlockState() = default;
+};
 
-    // Core algorithm state:
-    // BlockState - Each block is either:
-    //   - PASS_THROUGH: There are neither YMM/ZMM dirtying instructions nor
-    //                   vzeroupper instructions in this block.
-    //   - EXITS_CLEAN: There is (or will be) a vzeroupper instruction in this
-    //                  block that will ensure that YMM/ZMM is clean on exit.
-    //   - EXITS_DIRTY: An instruction in the block dirties YMM/ZMM and no
-    //                  subsequent vzeroupper in the block clears it.
-    //
-    // AddedToDirtySuccessors - This flag is raised when a block is added to the
-    //                          DirtySuccessors list to ensure that it's not
-    //                          added multiple times.
-    //
-    // FirstUnguardedCall - Records the location of the first unguarded call in
-    //                      each basic block that may need to be guarded by a
-    //                      vzeroupper. We won't know whether it actually needs
-    //                      to be guarded until we discover a predecessor that
-    //                      is DIRTY_OUT.
-    struct BlockState {
-      BlockExitState ExitState = PASS_THROUGH;
-      bool AddedToDirtySuccessors = false;
-      MachineBasicBlock::iterator FirstUnguardedCall;
-
-      BlockState() = default;
-    };
-
-    using BlockStateMap = SmallVector<BlockState, 8>;
-    using DirtySuccessorsWorkList = SmallVector<MachineBasicBlock *, 8>;
-
-    BlockStateMap BlockStates;
-    DirtySuccessorsWorkList DirtySuccessors;
-    bool EverMadeChange;
-    bool IsX86INTR;
-    const TargetInstrInfo *TII;
-
-    static char ID;
-  };
-
+using BlockStateMap = SmallVector<BlockState, 8>;
+using DirtySuccessorsWorkList = SmallVector<MachineBasicBlock *, 8>;
 } // end anonymous namespace
 
-char VZeroUpperInserter::ID = 0;
+char X86InsertVZeroUpperLegacy::ID = 0;
 
-FunctionPass *llvm::createX86IssueVZeroUpperPass() {
-  return new VZeroUpperInserter();
+FunctionPass *llvm::createX86InsertVZeroUpperLegacyPass() {
+  return new X86InsertVZeroUpperLegacy();
 }
 
 #ifndef NDEBUG
-const char* VZeroUpperInserter::getBlockExitStateName(BlockExitState ST) {
+static const char *getBlockExitStateName(BlockExitState ST) {
   switch (ST) {
-    case PASS_THROUGH: return "Pass-through";
-    case EXITS_DIRTY: return "Exits-dirty";
-    case EXITS_CLEAN: return "Exits-clean";
+  case PASS_THROUGH:
+    return "Pass-through";
+  case EXITS_DIRTY:
+    return "Exits-dirty";
+  case EXITS_CLEAN:
+    return "Exits-clean";
   }
   llvm_unreachable("Invalid block exit state.");
 }
@@ -179,15 +168,18 @@ static bool callHasRegMask(MachineInstr &MI) {
 }
 
 /// Insert a vzeroupper instruction before I.
-void VZeroUpperInserter::insertVZeroUpper(MachineBasicBlock::iterator I,
-                                          MachineBasicBlock &MBB) {
+static void insertVZeroUpper(MachineBasicBlock::iterator I,
+                             MachineBasicBlock &MBB, const TargetInstrInfo *TII,
+                             bool &EverMadeChange) {
   BuildMI(MBB, I, I->getDebugLoc(), TII->get(X86::VZEROUPPER));
   ++NumVZU;
   EverMadeChange = true;
 }
 
 /// Add MBB to the DirtySuccessors list if it hasn't already been added.
-void VZeroUpperInserter::addDirtySuccessor(MachineBasicBlock &MBB) {
+static void addDirtySuccessor(MachineBasicBlock &MBB,
+                              BlockStateMap &BlockStates,
+                              DirtySuccessorsWorkList &DirtySuccessors) {
   if (!BlockStates[MBB.getNumber()].AddedToDirtySuccessors) {
     DirtySuccessors.push_back(&MBB);
     BlockStates[MBB.getNumber()].AddedToDirtySuccessors = true;
@@ -196,7 +188,11 @@ void VZeroUpperInserter::addDirtySuccessor(MachineBasicBlock &MBB) {
 
 /// Loop over all of the instructions in the basic block, inserting vzeroupper
 /// instructions before function calls.
-void VZeroUpperInserter::processBasicBlock(MachineBasicBlock &MBB) {
+static void processBasicBlock(MachineBasicBlock &MBB,
+                              BlockStateMap &BlockStates,
+                              DirtySuccessorsWorkList &DirtySuccessors,
+                              bool IsX86INTR, const TargetInstrInfo *TII,
+                              bool &EverMadeChange) {
   // Start by assuming that the block is PASS_THROUGH which implies no unguarded
   // calls.
   BlockExitState CurState = PASS_THROUGH;
@@ -253,7 +249,7 @@ void VZeroUpperInserter::processBasicBlock(MachineBasicBlock &MBB) {
       // After the inserted VZEROUPPER the state becomes clean again, but
       // other YMM/ZMM may appear before other subsequent calls or even before
       // the end of the BB.
-      insertVZeroUpper(MI, MBB);
+      insertVZeroUpper(MI, MBB, TII, EverMadeChange);
       CurState = EXITS_CLEAN;
     } else if (CurState == PASS_THROUGH) {
       // If this block is currently in pass-through state and we encounter a
@@ -271,24 +267,22 @@ void VZeroUpperInserter::processBasicBlock(MachineBasicBlock &MBB) {
 
   if (CurState == EXITS_DIRTY)
     for (MachineBasicBlock *Succ : MBB.successors())
-      addDirtySuccessor(*Succ);
+      addDirtySuccessor(*Succ, BlockStates, DirtySuccessors);
 
   BlockStates[MBB.getNumber()].ExitState = CurState;
 }
 
 /// Loop over all of the basic blocks, inserting vzeroupper instructions before
 /// function calls.
-bool VZeroUpperInserter::runOnMachineFunction(MachineFunction &MF) {
+static bool insertVZeroUpper(MachineFunction &MF) {
   if (!UseVZeroUpper)
     return false;
 
   const X86Subtarget &ST = MF.getSubtarget<X86Subtarget>();
   if (!ST.hasAVX() || !ST.insertVZEROUPPER())
     return false;
-  TII = ST.getInstrInfo();
+
   MachineRegisterInfo &MRI = MF.getRegInfo();
-  EverMadeChange = false;
-  IsX86INTR = MF.getFunction().getCallingConv() == CallingConv::X86_INTR;
 
   bool FnHasLiveInYmmOrZmm = checkFnHasLiveInYmmOrZmm(MRI);
 
@@ -309,20 +303,26 @@ bool VZeroUpperInserter::runOnMachineFunction(MachineFunction &MF) {
   if (!YmmOrZmmUsed)
     return false;
 
-  assert(BlockStates.empty() && DirtySuccessors.empty() &&
+  const TargetInstrInfo *TII = ST.getInstrInfo();
+  bool IsX86INTR = MF.getFunction().getCallingConv() == CallingConv::X86_INTR;
+  bool EverMadeChange = false;
+  BlockStateMap BlockStates(MF.getNumBlockIDs());
+  DirtySuccessorsWorkList DirtySuccessors;
+
+  assert(BlockStates.size() == MF.getNumBlockIDs() && DirtySuccessors.empty() &&
          "X86VZeroUpper state should be clear");
-  BlockStates.resize(MF.getNumBlockIDs());
 
   // Process all blocks. This will compute block exit states, record the first
   // unguarded call in each block, and add successors of dirty blocks to the
   // DirtySuccessors list.
   for (MachineBasicBlock &MBB : MF)
-    processBasicBlock(MBB);
+    processBasicBlock(MBB, BlockStates, DirtySuccessors, IsX86INTR, TII,
+                      EverMadeChange);
 
   // If any YMM/ZMM regs are live-in to this function, add the entry block to
   // the DirtySuccessors list
   if (FnHasLiveInYmmOrZmm)
-    addDirtySuccessor(MF.front());
+    addDirtySuccessor(MF.front(), BlockStates, DirtySuccessors);
 
   // Re-visit all blocks that are successors of EXITS_DIRTY blocks. Add
   // vzeroupper instructions to unguarded calls, and propagate EXITS_DIRTY
@@ -335,7 +335,7 @@ bool VZeroUpperInserter::runOnMachineFunction(MachineFunction &MF) {
     // MBB is a successor of a dirty block, so its first call needs to be
     // guarded.
     if (BBState.FirstUnguardedCall != MBB.end())
-      insertVZeroUpper(BBState.FirstUnguardedCall, MBB);
+      insertVZeroUpper(BBState.FirstUnguardedCall, MBB, TII, EverMadeChange);
 
     // If this successor was a pass-through block, then it is now dirty. Its
     // successors need to be added to the worklist (if they haven't been
@@ -344,10 +344,21 @@ bool VZeroUpperInserter::runOnMachineFunction(MachineFunction &MF) {
       LLVM_DEBUG(dbgs() << "MBB #" << MBB.getNumber()
                         << " was Pass-through, is now Dirty-out.\n");
       for (MachineBasicBlock *Succ : MBB.successors())
-        addDirtySuccessor(*Succ);
+        addDirtySuccessor(*Succ, BlockStates, DirtySuccessors);
     }
   }
 
-  BlockStates.clear();
   return EverMadeChange;
+}
+
+bool X86InsertVZeroUpperLegacy::runOnMachineFunction(MachineFunction &MF) {
+  return insertVZeroUpper(MF);
+}
+
+PreservedAnalyses
+X86InsertVZeroUpperPass::run(MachineFunction &MF,
+                             MachineFunctionAnalysisManager &MFAM) {
+  return insertVZeroUpper(MF) ? getMachineFunctionPassPreservedAnalyses()
+                                    .preserveSet<CFGAnalyses>()
+                              : PreservedAnalyses::all();
 }
