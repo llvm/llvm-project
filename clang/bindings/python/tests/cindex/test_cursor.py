@@ -1,6 +1,7 @@
 from clang.cindex import (
     AvailabilityKind,
     BinaryOperator,
+    CXQualifiers,
     Cursor,
     CursorKind,
     PrintingPolicy,
@@ -196,6 +197,64 @@ class TestCursor(unittest.TestCase):
 
         self.assertTrue(foo.is_const_method())
         self.assertFalse(bar.is_const_method())
+
+    def test_get_method_qualifiers(self):
+        """Ensure Cursor.get_method_qualifiers works."""
+        source = """
+        class X {
+            void unqualified();
+            void c() const;
+            void v() volatile;
+            void cv() const volatile;
+            void r() __restrict;
+            void cvr() const volatile __restrict;
+        };
+        """
+        tu = get_tu(source, lang="cpp")
+
+        unqualified = get_cursor(tu, "unqualified")
+        c = get_cursor(tu, "c")
+        v = get_cursor(tu, "v")
+        cv = get_cursor(tu, "cv")
+        r = get_cursor(tu, "r")
+        cvr = get_cursor(tu, "cvr")
+        self.assertIsNotNone(unqualified)
+        self.assertIsNotNone(c)
+        self.assertIsNotNone(v)
+        self.assertIsNotNone(cv)
+        self.assertIsNotNone(r)
+        self.assertIsNotNone(cvr)
+
+        q = unqualified.get_method_qualifiers()
+        self.assertIsInstance(q, CXQualifiers)
+        self.assertFalse(q.Const)
+        self.assertFalse(q.Volatile)
+        self.assertFalse(q.Restrict)
+
+        q = c.get_method_qualifiers()
+        self.assertTrue(q.Const)
+        self.assertFalse(q.Volatile)
+        self.assertFalse(q.Restrict)
+
+        q = v.get_method_qualifiers()
+        self.assertFalse(q.Const)
+        self.assertTrue(q.Volatile)
+        self.assertFalse(q.Restrict)
+
+        q = cv.get_method_qualifiers()
+        self.assertTrue(q.Const)
+        self.assertTrue(q.Volatile)
+        self.assertFalse(q.Restrict)
+
+        q = r.get_method_qualifiers()
+        self.assertFalse(q.Const)
+        self.assertFalse(q.Volatile)
+        self.assertTrue(q.Restrict)
+
+        q = cvr.get_method_qualifiers()
+        self.assertTrue(q.Const)
+        self.assertTrue(q.Volatile)
+        self.assertTrue(q.Restrict)
 
     def test_is_converting_constructor(self):
         """Ensure Cursor.is_converting_constructor works."""
@@ -564,6 +623,40 @@ class TestCursor(unittest.TestCase):
         self.assertFalse(cls.is_scoped_enum())
         self.assertFalse(regular_enum.is_scoped_enum())
         self.assertTrue(scoped_enum.is_scoped_enum())
+
+    def test_is_constexpr(self):
+        """Ensure Cursor.is_constexpr works."""
+        source = """
+        constexpr int x = 42;
+        int y = 1;
+        struct S {
+            constexpr int foo() { return 1; }
+            int bar() { return 2; }
+        };
+        template<typename T> constexpr T tmpl(T v) { return v; }
+        template<typename T> T tmpl_nc(T v) { return v; }
+        """
+        tu = get_tu(source, lang="cpp", flags=["--std=c++14"])
+
+        x = get_cursor(tu, "x")
+        y = get_cursor(tu, "y")
+        foo = get_cursor(tu, "foo")
+        bar = get_cursor(tu, "bar")
+        tmpl = get_cursor(tu, "tmpl")
+        tmpl_nc = get_cursor(tu, "tmpl_nc")
+        self.assertIsNotNone(x)
+        self.assertIsNotNone(y)
+        self.assertIsNotNone(foo)
+        self.assertIsNotNone(bar)
+        self.assertIsNotNone(tmpl)
+        self.assertIsNotNone(tmpl_nc)
+
+        self.assertTrue(x.is_constexpr())
+        self.assertFalse(y.is_constexpr())
+        self.assertTrue(foo.is_constexpr())
+        self.assertFalse(bar.is_constexpr())
+        self.assertTrue(tmpl.is_constexpr())
+        self.assertFalse(tmpl_nc.is_constexpr())
 
     def test_get_definition(self):
         """Ensure Cursor.get_definition works."""

@@ -1631,6 +1631,18 @@ def cursor_null_guard(func):
     return inner
 
 
+class CXQualifiers(Structure):
+    """Represents the set of qualifiers (const, volatile, __restrict)
+    of a C++ member function or member function template.
+    """
+
+    _fields_ = [
+        ("Const", c_uint, 1),
+        ("Volatile", c_uint, 1),
+        ("Restrict", c_uint, 1),
+    ]
+
+
 class Cursor(Structure):
     """
     The Cursor class represents a reference to an element within the AST. It
@@ -1679,6 +1691,14 @@ class Cursor(Structure):
         function template that is declared 'const'.
         """
         return bool(conf.lib.clang_CXXMethod_isConst(self))
+
+    @cursor_null_guard
+    def get_method_qualifiers(self) -> CXQualifiers:
+        """Returns the set of qualifiers for a C++ member function or member
+        function template. If the cursor does not refer to a C++ member function
+        or member function template, a zero-initialized CXQualifiers is returned.
+        """
+        return conf.lib.clang_CXXMethod_getQualifiers(self)
 
     @cursor_null_guard
     def is_converting_constructor(self) -> bool:
@@ -1851,6 +1871,11 @@ class Cursor(Structure):
     def is_scoped_enum(self) -> bool:
         """Returns True if the cursor refers to a scoped enum declaration."""
         return bool(conf.lib.clang_EnumDecl_isScoped(self))
+
+    @cursor_null_guard
+    def is_constexpr(self) -> bool:
+        """Returns True if the cursor refers to a constexpr declaration."""
+        return bool(conf.lib.clang_Cursor_isConstexpr(self))
 
     @cursor_null_guard
     def get_definition(self) -> Cursor | None:
@@ -4251,6 +4276,7 @@ FUNCTION_LIST: list[LibFunc] = [
     ("clang_CXXConstructor_isMoveConstructor", [Cursor], c_uint),
     ("clang_CXXField_isMutable", [Cursor], c_uint),
     ("clang_CXXMethod_isConst", [Cursor], c_uint),
+    ("clang_CXXMethod_getQualifiers", [Cursor], CXQualifiers),
     ("clang_CXXMethod_isDefaulted", [Cursor], c_uint),
     ("clang_CXXMethod_isDeleted", [Cursor], c_uint),
     ("clang_CXXMethod_isCopyAssignmentOperator", [Cursor], c_uint),
@@ -4436,6 +4462,7 @@ FUNCTION_LIST: list[LibFunc] = [
     ("clang_Cursor_isAnonymousRecordDecl", [Cursor], c_uint),
     ("clang_Cursor_isBitField", [Cursor], c_uint),
     ("clang_Cursor_isFunctionInlined", [Cursor], c_uint),
+    ("clang_Cursor_isConstexpr", [Cursor], c_uint),
     ("clang_Location_isInSystemHeader", [SourceLocation], c_int),
     ("clang_PrintingPolicy_dispose", [PrintingPolicy]),
     ("clang_PrintingPolicy_getProperty", [PrintingPolicy, c_int], c_uint),

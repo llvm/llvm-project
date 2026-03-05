@@ -459,6 +459,8 @@ libclang
 - Visit constraints of `auto` type to properly visit concept usages (#GH166580)
 - Visit switch initializer statements (https://bugs.kde.org/show_bug.cgi?id=415537#c2)
 - Fix crash in clang_getBinaryOperatorKindSpelling and clang_getUnaryOperatorKindSpelling
+- Added ``clang_CXXMethod_getQualifiers`` to query const/volatile/__restrict qualifiers of a member function.
+- Added ``clang_Cursor_isConstexpr`` to determine if a cursor refers to a constexpr declaration.
 
 Code Completion
 ---------------
@@ -497,6 +499,8 @@ Python Binding Changes
   ``CodeCompletionResults.results`` should be changed to directly use
   ``CodeCompletionResults``: it nows supports ``__len__`` and ``__getitem__``,
   so it can be used the same as ``CodeCompletionResults.results``.
+- Added ``Cursor.get_method_qualifiers``, a binding for ``clang_CXXMethod_getQualifiers``.
+- Added ``Cursor.is_constexpr``, a binding for ``clang_Cursor_isConstexpr``.
 
 OpenMP Support
 --------------
