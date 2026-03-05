@@ -278,6 +278,11 @@ struct Node {
   explicit Node(NodeKind K) : Kind(K) {}
   virtual ~Node() = default;
 
+  // Kind represents the node's dynamic type and must not be overwritten by
+  // copy/move assignment (e.g. when slicing a derived node into a base).
+  Node &operator=(const Node &) { return *this; }
+  Node &operator=(Node &&) { return *this; }
+
   NodeKind kind() const { return Kind; }
 
   virtual void output(OutputBuffer &OB, OutputFlags Flags) const = 0;
