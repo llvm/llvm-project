@@ -2372,10 +2372,10 @@ public:
 
   /// Inserts a code prefetch instruction before `InsertBefore` in block `MBB`
   /// targetting `GV`.
-  virtual bool insertCodePrefetchInstr(MachineBasicBlock &MBB,
+  virtual MachineInstr* insertCodePrefetchInstr(MachineBasicBlock &MBB,
                                        MachineBasicBlock::iterator InsertBefore,
                                        const GlobalValue *GV) const {
-    return false;
+    llvm_unreachable("target did not implement");
   }
 
 private:

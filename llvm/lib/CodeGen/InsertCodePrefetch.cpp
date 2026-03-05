@@ -33,6 +33,7 @@
 #include "llvm/CodeGen/Passes.h"
 #include "llvm/CodeGen/TargetInstrInfo.h"
 #include "llvm/InitializePasses.h"
+#include "llvm/MC/MCSymbolELF.h"
 
 using namespace llvm;
 #define DEBUG_TYPE "insert-code-prefetch"
@@ -99,6 +100,8 @@ static void setPrefetchTargets(MachineFunction &MF,
 static void
 insertPrefetchHints(MachineFunction &MF,
                     const SmallVector<PrefetchHint> &PrefetchHints) {
+  bool IsELF = MF.getTarget().getTargetTriple().isOSBinFormatELF();
+  const Module *M = MF.getFunction().getParent();
   DenseMap<UniqueBBID, SmallVector<PrefetchHint>> PrefetchHintsBySiteBBID;
   for (const auto &H : PrefetchHints)
     PrefetchHintsBySiteBBID[H.SiteID.BBID].push_back(H);
@@ -120,17 +123,30 @@ insertPrefetchHints(MachineFunction &MF,
     unsigned NumCallsInBB = 0;
     auto InstrIt = BB.begin();
     for (auto HintIt = BBHints.begin(); HintIt != BBHints.end();) {
+      bool TargetFunctionDefined = false;
+      if (Function *TargetFunction = M->getFunction(HintIt->TargetFunction))
+        TargetFunctionDefined = !TargetFunction->isDeclaration();
       auto NextInstrIt = InstrIt == BB.end() ? BB.end() : std::next(InstrIt);
       // Insert all the prefetch hints which must be placed after this call (or
       // at the beginning of the block if `NumCallsInBB` is zero.
       while (HintIt != BBHints.end() &&
              NumCallsInBB >= HintIt->SiteID.CallsiteIndex) {
-        auto *GV = MF.getFunction().getParent()->getOrInsertGlobal(
-            getPrefetchTargetSymbolName(HintIt->TargetFunction,
+        auto TargetSymbolName = getPrefetchTargetSymbolName(HintIt->TargetFunction,
                                         HintIt->TargetID.BBID,
-                                        HintIt->TargetID.CallsiteIndex),
+                                        HintIt->TargetID.CallsiteIndex);
+        auto *GV = MF.getFunction().getParent()->getOrInsertGlobal(TargetSymbolName,
             PtrTy);
-        TII->insertCodePrefetchInstr(BB, InstrIt, GV);
+        MachineInstr *PrefetchInstr = TII->insertCodePrefetchInstr(BB, InstrIt, GV);
+        if (!TargetFunctionDefined && IsELF) {
+          // If the target function is not defined in this module, we guard
+          // against undefined prefetch target symbol by emitting a fallback
+          // symbol with weak linkage right after the prefetch instruction. If
+          // there is no strong symbol, the fallback will be used and we
+          // prefetch the next address.
+          MCSymbolELF *WeakFallbackSym = static_cast<MCSymbolELF *>(MF.getContext().getOrCreateSymbol(TargetSymbolName));
+          WeakFallbackSym->setIsWeakref();
+          PrefetchInstr->setPostInstrSymbol(MF, WeakFallbackSym);
+        }
         ++HintIt;
       }
       if (InstrIt == BB.end())

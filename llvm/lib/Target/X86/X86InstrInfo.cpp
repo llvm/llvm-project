@@ -10785,7 +10785,7 @@ void X86InstrInfo::getFrameIndexOperands(SmallVectorImpl<MachineOperand> &Ops,
   M.getFullAddress(Ops);
 }
 
-bool X86InstrInfo::insertCodePrefetchInstr(
+MachineInstr* X86InstrInfo::insertCodePrefetchInstr(
     MachineBasicBlock &MBB, MachineBasicBlock::iterator InsertBefore,
     const GlobalValue *GV) const {
   MachineFunction &MF = *MBB.getParent();
@@ -10802,7 +10802,7 @@ bool X86InstrInfo::insertCodePrefetchInstr(
   MIB.addGlobalAddress(GV);
   MIB.addReg(X86::NoRegister);
   MBB.insert(InsertBefore, PrefetchInstr);
-  return true;
+  return PrefetchInstr;
 }
 
 #define GET_INSTRINFO_HELPERS

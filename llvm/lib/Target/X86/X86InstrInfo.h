@@ -767,7 +767,7 @@ private:
   /// fails to commute the operands, it will return \p Idx1.
   unsigned commuteOperandsForFold(MachineInstr &MI, unsigned Idx1) const;
 
-  bool insertCodePrefetchInstr(MachineBasicBlock &MBB,
+  MachineInstr* insertCodePrefetchInstr(MachineBasicBlock &MBB,
                                MachineBasicBlock::iterator InsertBefore,
                                const GlobalValue *GV) const override;
 };

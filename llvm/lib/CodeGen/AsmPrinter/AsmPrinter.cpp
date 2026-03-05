@@ -2020,13 +2020,12 @@ void AsmPrinter::handleCallsiteForCallgraph(
 
 /// Helper to emit a symbol for the prefetch target associated with the given
 /// BBID and callsite index.
-void AsmPrinter::emitPrefetchTargetSymbol(unsigned BaseID,
+void AsmPrinter::emitPrefetchTargetSymbol(const UniqueBBID &BBID,
                                           unsigned CallsiteIndex) {
   SmallString<128> FunctionName;
   getNameWithPrefix(FunctionName, &MF->getFunction());
   MCSymbol *PrefetchTargetSymbol = OutContext.getOrCreateSymbol(
-      "__llvm_prefetch_target_" + FunctionName + "_" + Twine(BaseID) + "_" +
-      Twine(CallsiteIndex));
+      getPrefetchTargetSymbolName(FunctionName, BBID, CallsiteIndex));
   // If the function is weak-linkage it may be replaced by a strong
   // version, in which case the prefetch targets should also be replaced.
   OutStreamer->emitSymbolAttribute(
@@ -2050,7 +2049,7 @@ void AsmPrinter::emitDanglingPrefetchTargets() {
     if (MFBBIDs.contains(BBID))
       continue;
     for (unsigned CallsiteIndex : CallsiteIndexes)
-      emitPrefetchTargetSymbol(BBID.BaseID, CallsiteIndex);
+      emitPrefetchTargetSymbol(BBID, CallsiteIndex);
   }
 }
 
@@ -2123,7 +2122,7 @@ void AsmPrinter::emitFunctionBody() {
     for (auto &MI : MBB) {
       if (PrefetchTargetIt != PrefetchTargetEnd &&
           *PrefetchTargetIt == LastCallsiteIndex) {
-        emitPrefetchTargetSymbol(MBB.getBBID()->BaseID, *PrefetchTargetIt);
+        emitPrefetchTargetSymbol(*MBB.getBBID(), *PrefetchTargetIt);
         ++PrefetchTargetIt;
       }
 
@@ -2274,15 +2273,19 @@ void AsmPrinter::emitFunctionBody() {
         handleCallsiteForCallgraph(FuncCGInfo, CallSitesInfoMap, MI);
 
       // If there is a post-instruction symbol, emit a label for it here.
-      if (MCSymbol *S = MI.getPostInstrSymbol())
+      if (MCSymbol *S = MI.getPostInstrSymbol()) {
+        if (MCSymbolELF *ESym = static_cast<MCSymbolELF*>(S))
+          if (ESym->isWeakref())
+            OutStreamer->emitSymbolAttribute(S, MCSA_Weak);
         OutStreamer->emitLabel(S);
+      }
 
       for (auto &Handler : Handlers)
         Handler->endInstruction();
     }
     // Emit the remaining prefetch targets for this block.
     while (PrefetchTargetIt != PrefetchTargetEnd) {
-      emitPrefetchTargetSymbol(MBB.getBBID()->BaseID, *PrefetchTargetIt);
+      emitPrefetchTargetSymbol(*MBB.getBBID(), *PrefetchTargetIt);
       ++PrefetchTargetIt;
     }
 
