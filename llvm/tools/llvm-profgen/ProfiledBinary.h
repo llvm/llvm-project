@@ -578,6 +578,9 @@ public:
   // Load the symbols from debug table and populate into symbol list.
   void populateSymbolListFromDWARF(ProfileSymbolList &SymbolList);
 
+  // Populate symbol list from pseudo probe descriptors (MD5 hashes).
+  void populateSymbolListFromProbes(ProfileSymbolList &SymbolList);
+
   SampleContextFrameVector
   getFrameLocationStack(uint64_t Address, bool UseProbeDiscriminator = false) {
     InstructionPointer IP(this, Address);

@@ -1091,6 +1091,17 @@ void ProfiledBinary::populateSymbolListFromDWARF(
     SymbolList.add(I.second.getFuncName());
 }
 
+void ProfiledBinary::populateSymbolListFromProbes(
+    ProfileSymbolList &SymbolList) {
+  // Pseudo probe descriptors contain all source functions including those
+  // that were fully inlined and have no outlined copy in the binary. Use
+  // them as they provide the most complete symbol list.
+  // Use MD5 hashes for efficiency.
+  SymbolList.setUseMD5(true);
+  for (const auto &I : ProbeDecoder.getGUID2FuncDescMap())
+    SymbolList.add(I.FuncGUID); // GUID = MD5Hash(FuncName)
+}
+
 symbolize::LLVMSymbolizer::Options ProfiledBinary::getSymbolizerOpts() const {
   symbolize::LLVMSymbolizer::Options SymbolizerOpts;
   SymbolizerOpts.PrintFunctions =

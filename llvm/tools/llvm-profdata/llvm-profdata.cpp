@@ -1655,8 +1655,17 @@ static void mergeSampleProfile(const WeightedFileVector &Inputs,
     if (!DropProfileSymbolList) {
       std::unique_ptr<sampleprof::ProfileSymbolList> ReaderList =
           Reader->getProfileSymbolList();
-      if (ReaderList)
+      if (ReaderList) {
+        if (WriterList.size() == 0) {
+          WriterList.setUseMD5(ReaderList->useMD5());
+        } else if (ReaderList->useMD5() != WriterList.useMD5()) {
+          exitWithError(
+              "cannot merge profile symbol lists with different formats "
+              "(MD5 vs string); use --drop-profile-symbol-list to drop them",
+              Input.Filename);
+        }
         WriterList.merge(*ReaderList);
+      }
     }
   }
 

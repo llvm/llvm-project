@@ -455,6 +455,78 @@ TEST_F(SampleProfTest, sample_overflow_saturation) {
   ASSERT_EQ(BodySamples.get(), Max);
 }
 
+TEST_F(SampleProfTest, md5_profile_symbol_list_roundtrip) {
+  // Test that an MD5-based ProfileSymbolList round-trips through
+  // write and read in ExtBinary format.
+  TempFile ProfileFile("profile", "", "", /*Unique*/ true);
+  createWriter(SampleProfileFormat::SPF_Ext_Binary, ProfileFile.path());
+
+  StringRef FooName("_Z3fooi");
+  FunctionSamples FooSamples;
+  FooSamples.setFunction(FunctionId(FooName));
+  FooSamples.addTotalSamples(100);
+  FooSamples.addHeadSamples(10);
+  FooSamples.addBodySamples(1, 0, 100);
+
+  SampleProfileMap Profiles;
+  Profiles[FooName] = std::move(FooSamples);
+
+  Module M("my_module", Context);
+  FunctionType *FnType = FunctionType::get(Type::getVoidTy(Context), {}, false);
+  M.getOrInsertFunction(FooName, FnType);
+
+  // Create an MD5-based ProfileSymbolList using pre-computed hashes,
+  // matching the path used by populateSymbolListFromProbes.
+  ProfileSymbolList List;
+  List.setUseMD5(true);
+  uint64_t ZooHash = MD5Hash("zoo");
+  uint64_t MooHash = MD5Hash("moo");
+  uint64_t FooHash = MD5Hash("_Z3fooi");
+  List.add(ZooHash);
+  List.add(MooHash);
+  List.add(FooHash);
+  Writer->setProfileSymbolList(&List);
+
+  std::error_code EC;
+  EC = Writer->write(Profiles);
+  ASSERT_TRUE(NoError(EC));
+  Writer->getOutputStream().flush();
+
+  // Read back and verify.
+  readProfile(M, ProfileFile.path());
+  EC = Reader->read();
+  ASSERT_TRUE(NoError(EC));
+
+  std::unique_ptr<ProfileSymbolList> ReaderList =
+      Reader->getProfileSymbolList();
+  ASSERT_TRUE(ReaderList != nullptr);
+  ASSERT_TRUE(ReaderList->useMD5());
+  ASSERT_EQ(3u, ReaderList->size());
+  ASSERT_TRUE(ReaderList->contains("zoo"));
+  ASSERT_TRUE(ReaderList->contains("moo"));
+  ASSERT_TRUE(ReaderList->contains("_Z3fooi"));
+  ASSERT_FALSE(ReaderList->contains("nonexistent"));
+}
+
+TEST_F(SampleProfTest, md5_profile_symbol_list_merge) {
+  // Test that merging two MD5-based ProfileSymbolLists works correctly.
+  ProfileSymbolList List1;
+  List1.setUseMD5(true);
+  List1.add("foo");
+  List1.add("bar");
+
+  ProfileSymbolList List2;
+  List2.setUseMD5(true);
+  List2.add("bar");
+  List2.add("baz");
+
+  List1.merge(List2);
+  ASSERT_EQ(3u, List1.size());
+  ASSERT_TRUE(List1.contains("foo"));
+  ASSERT_TRUE(List1.contains("bar"));
+  ASSERT_TRUE(List1.contains("baz"));
+}
+
 TEST_F(SampleProfTest, default_suffix_elision_text) {
   // Default suffix elision policy: strip everything after first dot.
   // This implies that all suffix variants will map to "foo", so
