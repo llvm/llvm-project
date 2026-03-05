@@ -642,11 +642,11 @@ OpType ReductionProcessor::createDeclareReduction(
 bool ReductionProcessor::doReductionByRef(mlir::Type reductionType) {
   if (forceByrefReduction)
     return true;
-
-  if (!fir::isa_trivial(fir::unwrapRefType(reductionType)) &&
-      !fir::isa_derived(fir::unwrapRefType(reductionType)))
+  // Non-trivial, non-derived types (e.g., boxes, arrays) must be by-ref.
+  // Derived types must also be by-ref because user-defined combiners
+  // operate on components via side-effects, not by producing a whole value.
+  if (!fir::isa_trivial(fir::unwrapRefType(reductionType)))
     return true;
-
   return false;
 }
 
@@ -798,6 +798,16 @@ bool ReductionProcessor::processReductionArguments(
         }
 
         reductionName = getReductionName(redId, kindMap, redType, isByRef);
+        // If a user-defined declare reduction already exists for this
+        // operator+type, reuse it instead of generating a new one
+        // (which would fail for non-predefined types like derived types).
+        mlir::ModuleOp module = builder.getModule();
+        if (auto existingDecl = module.lookupSymbol<OpType>(reductionName)) {
+          reductionDeclSymbols.push_back(mlir::SymbolRefAttr::get(
+              builder.getContext(), existingDecl.getSymName()));
+          ++idx;
+          continue;
+        }
       } else if (const auto *reductionIntrinsic =
                      std::get_if<omp::clause::ProcedureDesignator>(
                          &redOperator.u)) {

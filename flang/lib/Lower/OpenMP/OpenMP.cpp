@@ -3864,7 +3864,13 @@ static ReductionProcessor::GenCombinerCBTy processReductionCombiner(
         evalExpr.u);
     stmtCtx.finalizeAndPop();
     if (isByRef) {
-      fir::StoreOp::create(builder, loc, result, lhs);
+      // For user-defined combiners the assignment expression (e.g.
+      // "omp_out%x = omp_out%x + omp_in%x") already wrote into omp_out
+      // as a side-effect. We only need to yield the lhs reference.
+      // Only store result back if its type actually matches the element type.
+      mlir::Type eleTy = fir::unwrapRefType(lhs.getType());
+      if (result.getType() == eleTy)
+        fir::StoreOp::create(builder, loc, result, lhs);
       mlir::omp::YieldOp::create(builder, loc, lhs);
     } else {
       mlir::omp::YieldOp::create(builder, loc, result);
@@ -3957,41 +3963,56 @@ static void genOMP(lower::AbstractConverter &converter, lower::SymMap &symTable,
   const auto &identifier =
       std::get<parser::OmpReductionIdentifier>(specifier.t);
 
-  std::string reductionNameStr = Fortran::common::visit(
-      common::visitors{
-          [](const parser::ProcedureDesignator &pd) -> std::string {
-            return std::get<parser::Name>(pd.u).ToString();
-          },
-          [](const parser::DefinedOperator &defOp) -> std::string {
-            return Fortran::common::visit(
-                common::visitors{
-                    [](const parser::DefinedOpName &opName) -> std::string {
-                      return opName.v.ToString();
-                    },
-                    [](parser::DefinedOperator::IntrinsicOperator intrOp)
-                        -> std::string {
-                      return std::string(
-                          parser::DefinedOperator::EnumToString(intrOp));
-                    },
-                },
-                defOp.u);
-          },
-      },
-      identifier.u);
+  // Convert the parser-level reduction identifier to the clause-level
+  // representation, then use ReductionProcessor to derive the canonical name.
+  clause::ReductionOperator redOp =
+      clause::makeReductionOperator(identifier, semaCtx);
 
   for (const auto &typeSpec : typeNameList.v) {
     (void)typeSpec; // Currently unused
     mlir::Type reductionType = getReductionType(converter, specifier);
+    bool isByRef = ReductionProcessor::doReductionByRef(reductionType);
+    // Compute the canonical reduction name the same way
+    // processReductionArguments does.
+    std::string reductionNameStr = Fortran::common::visit(
+        common::visitors{
+            [&](const clause::DefinedOperator &defOp) -> std::string {
+              return Fortran::common::visit(
+                  common::visitors{
+                      [&](const clause::DefinedOperator::IntrinsicOperator
+                              &intrOp) -> std::string {
+                        ReductionProcessor::ReductionIdentifier redId =
+                            ReductionProcessor::getReductionType(intrOp);
+                        return ReductionProcessor::getReductionName(
+                            redId, converter.getFirOpBuilder().getKindMap(),
+                            reductionType, isByRef);
+                      },
+                      [&](const clause::DefinedOperator::DefinedOpName &opName)
+                          -> std::string {
+                        return opName.v.sym()->name().ToString();
+                      },
+                  },
+                  defOp.u);
+            },
+            [&](const clause::ProcedureDesignator &pd) -> std::string {
+              return pd.v.sym()->name().ToString();
+            },
+        },
+        redOp.u);
+
     ReductionProcessor::GenCombinerCBTy genCombinerCB =
         processReductionCombiner(converter, symTable, semaCtx, combiner);
     ReductionProcessor::GenInitValueCBTy genInitValueCB;
     ClauseProcessor cp(converter, semaCtx, clauses);
     cp.processInitializer(symTable, genInitValueCB);
-    bool isByRef = ReductionProcessor::doReductionByRef(reductionType);
+    mlir::Type redType =
+        isByRef
+            ? static_cast<mlir::Type>(fir::ReferenceType::get(reductionType))
+            : reductionType;
     ReductionProcessor::createDeclareReductionHelper<
-        mlir::omp::DeclareReductionOp>(
-        converter, reductionNameStr, reductionType,
-        converter.getCurrentLocation(), isByRef, genCombinerCB, genInitValueCB);
+        mlir::omp::DeclareReductionOp>(converter, reductionNameStr, redType,
+                                       converter.getCurrentLocation(), isByRef,
+                                       genCombinerCB, genInitValueCB);
   }
 }
 
