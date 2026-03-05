@@ -1,16 +1,17 @@
-// RUN: rm -rf %t.dir && mkdir %t.dir && cd %t.dir
+// RUN: %clang_cc1 -triple x86_64-win32 -fms-extensions -emit-llvm -o - %s | \
+// RUN:     FileCheck %s --check-prefixes=MSC
+// RUN: %clang_cc1 -triple x86_64-win32 -fms-extensions -emit-llvm -o - %s | \
+// RUN:     FileCheck %s --implicit-check-not=notToBeInstantiated
 //
-// RUN: %clang_cc1 -triple x86_64-win32 -fms-extensions -emit-llvm -o - %s > x86_64-win32.ll
-// RUN: FileCheck %s --check-prefixes=MSC                                  < x86_64-win32.ll
-// RUN: FileCheck %s --implicit-check-not=notToBeInstantiated              < x86_64-win32.ll
+// RUN: %clang_cc1 -triple x86_64-mingw                 -emit-llvm -o - %s | \
+// RUN:     FileCheck %s --check-prefixes=GNU
+// RUN: %clang_cc1 -triple x86_64-mingw                 -emit-llvm -o - %s | \
+// RUN:     FileCheck %s --implicit-check-not=notToBeInstantiated
 //
-// RUN: %clang_cc1 -triple x86_64-mingw                 -emit-llvm -o - %s > x86_64-mingw.ll
-// RUN: FileCheck %s --check-prefixes=GNU                                  < x86_64-mingw.ll
-// RUN: FileCheck %s --implicit-check-not=notToBeInstantiated              < x86_64-mingw.ll
-//
-// RUN: %clang_cc1 -triple x86_64-cygwin                -emit-llvm -o - %s > x86_64-cygwin.ll
-// RUN: FileCheck %s --check-prefixes=GNU                                  < x86_64-cygwin.ll
-// RUN: FileCheck %s --implicit-check-not=notToBeInstantiated              < x86_64-cygwin.ll
+// RUN: %clang_cc1 -triple x86_64-cygwin                -emit-llvm -o - %s | \
+// RUN:     FileCheck %s --check-prefixes=GNU
+// RUN: %clang_cc1 -triple x86_64-cygwin                -emit-llvm -o - %s | \
+// RUN:     FileCheck %s --implicit-check-not=notToBeInstantiated
 
 // Because --implicit-check-not doesn't work with -DAG checks, negative checks
 // are performed on another independent path.
