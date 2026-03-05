@@ -2916,9 +2916,14 @@ public:
     if (MovedExpr)
       S.Diag(MovedExpr->getExprLoc(), diag::note_lifetime_safety_moved_here)
           << MovedExpr->getSourceRange();
-    S.Diag(DanglingGlobal->getLocation(),
-           diag::note_lifetime_safety_dangling_global_here)
-        << DanglingGlobal->getEndLoc();
+    if (DanglingGlobal->isStaticLocal() || DanglingGlobal->isStaticDataMember())
+      S.Diag(DanglingGlobal->getLocation(),
+             diag::note_lifetime_safety_dangling_static_here)
+          << DanglingGlobal->getEndLoc();
+    else
+      S.Diag(DanglingGlobal->getLocation(),
+             diag::note_lifetime_safety_dangling_global_here)
+          << DanglingGlobal->getEndLoc();
   }
 
   void reportUseAfterInvalidation(const Expr *IssueExpr, const Expr *UseExpr,
@@ -3027,10 +3032,14 @@ public:
     S.Diag(ParmWithNoescape->getBeginLoc(),
            diag::warn_lifetime_safety_noescape_escapes)
         << ParmWithNoescape->getSourceRange();
-
-    S.Diag(EscapeGlobal->getLocation(),
-           diag::note_lifetime_safety_escapes_to_global_here)
-        << EscapeGlobal->getEndLoc();
+    if (EscapeGlobal->isStaticLocal() || EscapeGlobal->isStaticDataMember())
+      S.Diag(EscapeGlobal->getLocation(),
+             diag::note_lifetime_safety_escapes_to_static_storage_here)
+          << EscapeGlobal->getEndLoc();
+    else
+      S.Diag(EscapeGlobal->getLocation(),
+             diag::note_lifetime_safety_escapes_to_global_here)
+          << EscapeGlobal->getEndLoc();
   }
 
   void addLifetimeBoundToImplicitThis(const CXXMethodDecl *MD) override {
