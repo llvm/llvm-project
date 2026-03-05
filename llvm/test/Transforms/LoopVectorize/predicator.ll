@@ -22,7 +22,7 @@ define void @diamond_phi2(ptr %a, i1 %c1, i1 %c2) {
 ; CHECK-NEXT:    [[TMP4:%.*]] = select <4 x i1> [[TMP1]], <4 x i1> [[BROADCAST_SPLAT]], <4 x i1> zeroinitializer
 ; CHECK-NEXT:    [[TMP5:%.*]] = select <4 x i1> [[TMP0]], <4 x i1> [[BROADCAST_SPLAT2]], <4 x i1> zeroinitializer
 ; CHECK-NEXT:    [[TMP6:%.*]] = or <4 x i1> [[TMP4]], [[TMP5]]
-; CHECK-NEXT:    [[PREDPHI:%.*]] = select <4 x i1> [[TMP5]], <4 x i64> [[TMP3]], <4 x i64> [[TMP2]]
+; CHECK-NEXT:    [[PREDPHI:%.*]] = select <4 x i1> [[TMP0]], <4 x i64> [[TMP3]], <4 x i64> [[TMP2]]
 ; CHECK-NEXT:    [[TMP7:%.*]] = extractelement <4 x i1> [[TMP6]], i32 0
 ; CHECK-NEXT:    br i1 [[TMP7]], label %[[PRED_STORE_IF:.*]], label %[[PRED_STORE_CONTINUE:.*]]
 ; CHECK:       [[PRED_STORE_IF]]:
@@ -121,19 +121,9 @@ define void @optimized_mask(ptr %a) {
 ; CHECK-NEXT:    [[TMP2:%.*]] = xor <4 x i1> [[TMP1]], splat (i1 true)
 ; CHECK-NEXT:    [[TMP3:%.*]] = add <4 x i64> [[VEC_IND]], splat (i64 6)
 ; CHECK-NEXT:    [[TMP4:%.*]] = icmp sle <4 x i64> [[VEC_IND]], splat (i64 6)
-; CHECK-NEXT:    [[TMP12:%.*]] = icmp sle <4 x i64> [[VEC_IND]], splat (i64 1)
-; CHECK-NEXT:    [[TMP16:%.*]] = xor <4 x i1> [[TMP12]], splat (i1 true)
-; CHECK-NEXT:    [[TMP17:%.*]] = select <4 x i1> [[TMP1]], <4 x i1> [[TMP16]], <4 x i1> zeroinitializer
-; CHECK-NEXT:    [[TMP18:%.*]] = icmp sle <4 x i64> [[VEC_IND]], splat (i64 3)
-; CHECK-NEXT:    [[TMP9:%.*]] = select <4 x i1> [[TMP1]], <4 x i1> [[TMP12]], <4 x i1> zeroinitializer
-; CHECK-NEXT:    [[TMP10:%.*]] = select <4 x i1> [[TMP17]], <4 x i1> [[TMP18]], <4 x i1> zeroinitializer
-; CHECK-NEXT:    [[TMP11:%.*]] = or <4 x i1> [[TMP10]], [[TMP9]]
 ; CHECK-NEXT:    [[TMP5:%.*]] = select <4 x i1> [[TMP2]], <4 x i1> [[TMP4]], <4 x i1> zeroinitializer
-; CHECK-NEXT:    [[TMP13:%.*]] = or <4 x i1> [[TMP5]], [[TMP11]]
-; CHECK-NEXT:    [[TMP14:%.*]] = xor <4 x i1> [[TMP18]], splat (i1 true)
-; CHECK-NEXT:    [[TMP15:%.*]] = select <4 x i1> [[TMP17]], <4 x i1> [[TMP14]], <4 x i1> zeroinitializer
-; CHECK-NEXT:    [[TMP7:%.*]] = or <4 x i1> [[TMP13]], [[TMP15]]
 ; CHECK-NEXT:    [[TMP6:%.*]] = add <4 x i64> [[VEC_IND]], splat (i64 5)
+; CHECK-NEXT:    [[TMP7:%.*]] = or <4 x i1> [[TMP5]], [[TMP1]]
 ; CHECK-NEXT:    [[PREDPHI:%.*]] = select <4 x i1> [[TMP7]], <4 x i64> [[TMP6]], <4 x i64> [[TMP3]]
 ; CHECK-NEXT:    store <4 x i64> [[PREDPHI]], ptr [[TMP0]], align 4
 ; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 4

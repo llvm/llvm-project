@@ -207,7 +207,7 @@ template <typename BlockTy> class VPBlockShallowTraversalWrapper {
 
 public:
   VPBlockShallowTraversalWrapper(BlockTy Entry) : Entry(Entry) {}
-  BlockTy getEntry() { return Entry; }
+  BlockTy getEntry() const { return Entry; }
 };
 
 template <> struct GraphTraits<VPBlockShallowTraversalWrapper<VPBlockBase *>> {
@@ -246,6 +246,25 @@ struct GraphTraits<VPBlockShallowTraversalWrapper<const VPBlockBase *>> {
   }
 };
 
+template <>
+struct GraphTraits<Inverse<VPBlockShallowTraversalWrapper<VPBlockBase *>>> {
+  using NodeRef = VPBlockBase *;
+  using ChildIteratorType = SmallVectorImpl<VPBlockBase *>::const_iterator;
+
+  static NodeRef
+  getEntryNode(Inverse<VPBlockShallowTraversalWrapper<VPBlockBase *>> N) {
+    return N.Graph.getEntry();
+  }
+
+  static inline ChildIteratorType child_begin(NodeRef N) {
+    return N->getPredecessors().begin();
+  }
+
+  static inline ChildIteratorType child_end(NodeRef N) {
+    return N->getPredecessors().end();
+  }
+};
+
 /// Returns an iterator range to traverse the graph starting at \p G in
 /// depth-first order. The iterator won't traverse through region blocks.
 inline iterator_range<
@@ -257,6 +276,13 @@ inline iterator_range<
     df_iterator<VPBlockShallowTraversalWrapper<const VPBlockBase *>>>
 vp_depth_first_shallow(const VPBlockBase *G) {
   return depth_first(VPBlockShallowTraversalWrapper<const VPBlockBase *>(G));
+}
+
+/// Returns an iterator range to traverse the graph **upwards through
+/// predecessors** starting at \p G in depth-first order. The iterator won't
+/// traverse through region blocks.
+inline auto vp_inverse_depth_first_shallow(VPBlockBase *G) {
+  return inverse_depth_first(VPBlockShallowTraversalWrapper<VPBlockBase *>(G));
 }
 
 /// Returns an iterator range to traverse the graph starting at \p G in
