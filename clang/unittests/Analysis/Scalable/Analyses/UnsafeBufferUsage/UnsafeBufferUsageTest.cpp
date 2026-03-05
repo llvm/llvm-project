@@ -34,7 +34,7 @@ const SomeDecl *findDeclByName(StringRef Name, ASTContext &Ctx) {
     NamedDeclFinder(StringRef SearchingName) : SearchingName(SearchingName) {}
 
     bool VisitDecl(Decl *D) override {
-      if (const auto *ND = dyn_cast<NamedDecl>(D)) {
+      if (const auto *ND = dyn_cast<SomeDecl>(D)) {
         if (ND->getNameAsString() == SearchingName) {
           FoundDecl = ND;
           return false;
@@ -69,16 +69,21 @@ protected:
             BuildNamespace(BuildNamespaceKind::CompilationUnit, "Mock.cpp")),
         TUSummaryBuilder(TUSummary), Extractor(TUSummaryBuilder) {}
 
+  template <typename ContributorDecl = NamedDecl>
   std::unique_ptr<UnsafeBufferUsageEntitySummary>
   setUpTest(StringRef Code, StringRef ContributorName) {
     AST = tooling::buildASTFromCodeWithArgs(
-        Code, {"-Wno-unused-value -Wno-int-to-pointer-cast"});
+        Code, {"-Wno-unused-value", "-Wno-int-to-pointer-cast"});
 
     const auto *ContributorDefn =
-        findDeclByName(ContributorName, AST->getASTContext());
+        findDeclByName<ContributorDecl>(ContributorName, AST->getASTContext());
+
+    if (!ContributorDefn)
+      return nullptr;
+
     std::optional<EntityName> EN = getEntityName(ContributorDefn);
 
-    if (!ContributorDefn || !EN)
+    if (!EN)
       return nullptr;
 
     llvm::Error Error = llvm::ErrorSuccess();
@@ -442,4 +447,53 @@ TEST_F(UnsafeBufferUsageTest, PointerToArrayOfPointers) {
   EXPECT_NE(Sum, nullptr);
   EXPECT_EQ(*Sum, makeSet(__LINE__, {{"p", 3}}));
 }
+
+TEST_F(UnsafeBufferUsageTest, UnsafePointerInGlobalVariableInitializer) {
+  auto Sum = setUpTest(R"cpp(
+      int *gp;
+      int x = gp[5];
+    )cpp",
+                       {"x"});
+
+  EXPECT_NE(Sum, nullptr);
+  EXPECT_EQ(*Sum, makeSet(__LINE__, {{"gp", 1U}}));
+}
+
+TEST_F(UnsafeBufferUsageTest, UnsafePointerInFieldInitializer) {
+  auto Sum = setUpTest<>(R"cpp(
+      int *gp;
+      struct Foo {
+        int field = gp[5];
+      };
+    )cpp",
+                       {"Foo"});
+
+  EXPECT_NE(Sum, nullptr);
+  EXPECT_EQ(*Sum, makeSet(__LINE__, {{"gp", 1U}}));
+}
+
+TEST_F(UnsafeBufferUsageTest, UnsafePointerInCXXCtorInitializer) {
+  auto Sum = setUpTest<CXXConstructorDecl>(R"cpp(
+      struct Foo {
+        int member;
+        Foo(int *p) : member(p[5]) {}
+      };
+    )cpp",
+                                           {"Foo"});
+
+  EXPECT_NE(Sum, nullptr);
+  EXPECT_EQ(*Sum, makeSet(__LINE__, {{"p", 1U}}));
+}
+
+TEST_F(UnsafeBufferUsageTest, UnsafePointerInDefaultArg) {
+  auto Sum = setUpTest(R"cpp(
+    int * gp;
+    void foo(int x = gp[5]);
+    )cpp",
+                       {"foo"});
+
+  EXPECT_NE(Sum, nullptr);
+  EXPECT_EQ(*Sum, makeSet(__LINE__, {{"gp", 1U}}));
+}
+
 } // namespace
