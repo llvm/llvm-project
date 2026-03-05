@@ -1162,7 +1162,7 @@ bool IntegerRelation::gaussianEliminate() {
       equalities.normalizeRow(i);
     }
     for (unsigned i = 0, ineqs = getNumInequalities(); i < ineqs; ++i) {
-      eliminateFromConstraint(this, i, *pivotRow, firstVar, 0, false);
+      eliminateFromConstraint(this, i, *pivotRow, firstVar, firstVar, false);
       inequalities.normalizeRow(i);
     }
     gcdTightenInequalities();
