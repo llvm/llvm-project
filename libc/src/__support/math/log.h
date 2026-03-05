@@ -721,8 +721,7 @@ LIBC_INLINE_VAR constexpr Float128 BIG_COEFFS[3]{
 // Reuse the output of the fast pass range reduction.
 // -2^-8 <= m_x < 2^-7
 #ifndef LIBC_MATH_HAS_SKIP_ACCURATE_PASS
-LIBC_INLINE double log_accurate(int e_x, int index, double m_x) {
-
+LIBC_INLINE constexpr double log_accurate(int e_x, int index, double m_x) {
   Float128 e_x_f128(static_cast<float>(e_x));
   Float128 sum = fputil::quick_mul(LOG_2, e_x_f128);
   sum = fputil::quick_add(sum, LOG_TABLE.step_1[index]);
@@ -744,7 +743,7 @@ LIBC_INLINE double log_accurate(int e_x, int index, double m_x) {
 
 } // namespace log_internal
 
-LIBC_INLINE double log(double x) {
+LIBC_INLINE LIBC_CONSTEXPR double log(double x) {
   using namespace log_internal;
   using FPBits_t = typename fputil::FPBits<double>;
 
@@ -805,11 +804,12 @@ LIBC_INLINE double log(double x) {
   uint64_t x_m = (x_u & 0x000F'FFFF'FFFF'FFFFULL) | 0x3FF0'0000'0000'0000ULL;
   double m = FPBits_t(x_m).get_val();
 
-  double u, u_sq;
+  double u{}, u_sq{};
   fputil::DoubleDouble r1;
 
   // Perform exact range reduction
-#ifdef LIBC_TARGET_CPU_HAS_FMA_DOUBLE
+#if defined(LIBC_TARGET_CPU_HAS_FMA_DOUBLE) &&                                 \
+    !defined(LIBC_HAS_CONSTANT_EVALUATION)
   u = fputil::multiply_add(r, m, -1.0); // exact
 #else
   uint64_t c_m = x_m & 0x3FFF'E000'0000'0000ULL;
