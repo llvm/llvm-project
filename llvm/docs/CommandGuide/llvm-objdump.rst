@@ -271,7 +271,7 @@ OPTIONS
 
   When printing symbols, only print symbols with a value up to ``address``.
 
-.. option:: --symbolize-operands
+.. option:: --symbolize-operands, --no-symbolize-operands
 
   When disassembling, symbolize a branch target operand to print a label instead of a real address.
 

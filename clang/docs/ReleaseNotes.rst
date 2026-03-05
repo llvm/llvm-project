@@ -145,6 +145,9 @@ C23 Feature Support
 Non-comprehensive list of changes in this release
 -------------------------------------------------
 
+- Added support for floating point and pointer values in most ``__atomic_``
+  builtins.
+
 - Added ``__builtin_stdc_rotate_left`` and ``__builtin_stdc_rotate_right``
   for bit rotation of unsigned integers including ``_BitInt`` types. Rotation
   counts are normalized modulo the bit-width and support negative values.
@@ -308,6 +311,7 @@ Bug Fixes in This Version
 
 Bug Fixes to Compiler Builtins
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+- Fixed a crash when calling `__builtin_allow_sanitize_check` with no arguments. (#GH183927)
 
 Bug Fixes to Attribute Support
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -322,10 +326,13 @@ Bug Fixes to C++ Support
   template parameters when one of its parameters is also a pack. (#GH181166)
 - Fixed a crash when a default argument is passed to an explicit object parameter. (#GH176639)
 - Fixed a crash when diagnosing an invalid static member function with an explicit object parameter (#GH177741)
+- Fixed a crash when pack expansions are used as arguments for non-pack parameters of built-in templates. (#GH180307)
 - Fixed a bug where captured variables in non-mutable lambdas were incorrectly treated as mutable 
   when used inside decltype in the return type. (#GH180460)
 - Fixed a crash when evaluating uninitialized GCC vector/ext_vector_type vectors in ``constexpr``. (#GH180044)
 - Fixed a crash on ``typeid`` of incomplete local types during template instantiation. (#GH63242), (#GH176397)
+
+- Fix initialization of GRO when GRO-return type mismatches, as part of CWG2563. (#GH98744)
 
 Bug Fixes to AST Handling
 ^^^^^^^^^^^^^^^^^^^^^^^^^

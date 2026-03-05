@@ -17,6 +17,7 @@ include "mlir/Interfaces/InferTypeOpInterface.td"
 include "mlir/Interfaces/SideEffectInterfaces.td"
 include "mlir/Dialect/LLVMIR/LLVMOpBase.td"
 include "mlir/Dialect/X86/X86Interfaces.td"
+include "mlir/IR/BuiltinTypes.td"
 
 //===----------------------------------------------------------------------===//
 // X86 dialect definition
@@ -25,6 +26,8 @@ include "mlir/Dialect/X86/X86Interfaces.td"
 def X86_Dialect : Dialect {
   let name = "x86";
   let cppNamespace = "::mlir::x86";
+
+  let useDefaultTypePrinterParser = 1;
 }
 
 //===----------------------------------------------------------------------===//
@@ -673,4 +676,385 @@ def CvtPackedOddIndexedToF32Op
         ::mlir::RewriterBase &rewriter);
   }];
 }
+
+//===----------------------------------------------------------------------===//
+// AMX Tile definition
+//===----------------------------------------------------------------------===//
+
+class AMX_Type<string typeName, string typeMnemonic, list<Trait> traits = []>
+    : TypeDef<X86_Dialect, "AMX" # typeName, traits> {
+  let mnemonic = "amx." # typeMnemonic;
+}
+
+def AMX_TileTypeElementType : AnyTypeOf<[F32, F16, BF16, I32, I8]> {
+  let cppFunctionName = "isValidTileTypeElementType";
+}
+
+def AMX_TileType : AMX_Type<"Tile", "tile", [ShapedTypeInterface, ValueSemantics]> {
+  let summary = "AMX 2D tile to be used by AMX opertaions.";
+
+  let description = [{
+    This type is used to represent values in AMX tile registers. All AMX operations
+    work on AMX tiles and these tiles cannot be used in other operations directly.
+    LLVM IR type for AMX tile is a primitive type, but in MLIR we provide shape and
+    element type for IR verification and lowering to LLVMIR dialect.
+  }];
+
+  let parameters = (ins
+    ArrayRefParameter<"int64_t">:$shape,
+    AMX_TileTypeElementType:$elementType
+  );
+
+  let builders = [
+    TypeBuilderWithInferredContext<(ins
+      "ArrayRef<int64_t>":$shape, "Type":$elementType), [{
+      return $_get(elementType.getContext(), shape, elementType);
+    }]>
+  ];
+
+  let extraClassDeclaration = [{
+    /// Returns if this type is ranked (always true).
+    bool hasRank() const { return true; }
+
+    /// Clone this tile type with the given shape and element type. If the
+    /// provided shape is `std::nullopt`, the current shape of the type is used.
+    AMXTileType cloneWith(std::optional<ArrayRef<int64_t>> shape,
+                       Type elementType) const {
+      return get(shape.value_or(getShape()), elementType);
+    }
+  }];
+
+  let hasCustomAssemblyFormat = 1;
+  let skipDefaultBuilders = 1;
+}
+
+def IsAMXTilePred : And<[CPred<"::llvm::isa<::mlir::x86::AMXTileType>($_self)">,
+  CPred<[{::llvm::cast<::mlir::x86::AMXTileType>($_self).getRank() == 2}]>]>;
+
+class AMXTileOf<list<Type> allowedTypes> :
+  ShapedContainerType<allowedTypes, IsAMXTilePred, "tile",
+                      "::mlir::x86::AMXTileType">;
+
+def AnyAMXTile : AMXTileOf<[F32, F16, BF16, I32, I8]>;
+
+def AMXTileF32 : AMXTileOf<[F32]>;
+
+def AMXTileF16OrBF16 : AMXTileOf<[F16, BF16]>;
+
+def AMXTileI32 : AMXTileOf<[I32]>;
+
+def AMXTileI8 : AMXTileOf<[I8]>;
+
+//===----------------------------------------------------------------------===//
+// AMX Op definitions
+//===----------------------------------------------------------------------===//
+
+class AMX_Op<string mnemonic, list<Trait> traits = []>
+    : Op<X86_Dialect, "amx." # mnemonic, traits> {
+  let cppNamespace = X86_Dialect.cppNamespace # "::amx";
+}
+
+//===----------------------------------------------------------------------===//
+// AMX Tile Zero
+//===----------------------------------------------------------------------===//
+
+def TileZeroOp : AMX_Op<"tile_zero", [
+    X86IntrinsicOpInterface,
+    MemoryEffects<[MemWrite]>
+  ]> {
+  let summary = "tile zero operation";
+  let description = [{
+    Zeroes the destination tile, with the shape defined by the 2-dim
+    vector type of the result.
+    
+    The operation is eventually lowered into the "tilezero" instruction
+    with the corresponding tile configuration.
+    
+    With the write memory effect, each `x86.amx.tile_zero` operation serves as
+    a compilation hint to use a separate tile register.
+
+    Example:
+
+    ```mlir
+      %0 = x86.amx.tile_zero : !x86.amx.tile<16x16xbf16>
+    ```
+  }];
+  let results = (outs AnyAMXTile:$res);
+  let extraClassDeclaration = [{
+    AMXTileType getTileType() {
+      return ::llvm::cast<AMXTileType>(getRes().getType());
+    }
+
+    std::string getIntrinsicName() {
+      return "llvm.x86.tilezero.internal";
+    }
+    SmallVector<Value> getIntrinsicOperands(
+        ::mlir::ArrayRef<Value> operands,
+        const ::mlir::LLVMTypeConverter &typeConverter,
+        ::mlir::RewriterBase &rewriter);
+  }];
+  let assemblyFormat = "attr-dict `:` qualified(type($res))";
+  let hasVerifier = 1;
+}
+
+//===----------------------------------------------------------------------===//
+// AMX Tile Load
+//===----------------------------------------------------------------------===//
+
+def TileLoadOp : AMX_Op<"tile_load", [
+    X86IntrinsicOpInterface,
+    MemoryEffects<[MemWrite]>,
+    AttrSizedOperandSegments
+  ]> {
+  let summary = "tile load operation";
+  let description = [{
+    Loads a tile from memory defined by a `base` and `indices`, with the
+    shape defined by the 2-dim vector type of the result.
+    The tile's rows are populated by reading contiguous elements starting
+    at the `base`. For each tile row, the `base` is incremented by `stride`
+    number of elements.
+
+    The tile is loaded using the following indexing scheme:
+
+    ```
+    for row in enumerate(tile_rows):
+      mem_row = base[i0, i1, ..., iN + row * stride]
+      for col in enumerate(tile_cols):
+        tile[row, col] = mem_row[col]
+    ```
+
+    If the `stride` is not provided, then the `base` buffer must be at least
+    2-dimensional, and the `stride` is automatically inferred and corresponds
+    to the stride of the buffer's second innermost dimension.
+
+    The operation is eventually lowered into the "tileloadd" instruction
+    with the corresponding tile configuration.
+
+    With the write memory effect, each `x86.amx.tile_load` operation serves as
+    a compilation hint to use a separate tile register.
+
+    Example:
+
+    ```mlir
+      // Tile load from a 2-D memref with implicit stride.
+      %0 = x86.amx.tile_load %arg0[%c0, %c0] : memref<?x?xi8> into !x86.amx.tile<16x64xi8>
+
+      // Tile load from a 1-D memref with explicit stride.
+      %0 = x86.amx.tile_load %arg0[%c0], %stride : memref<?xi8> into !x86.amx.tile<16x64xi8>
+    ```
+  }];
+  let arguments = (ins Arg<AnyMemRef, "load base", [MemRead]>:$base,
+                   Variadic<Index>:$indices,
+                   Optional<Index>:$stride);
+  let results = (outs AnyAMXTile:$res);
+  let builders = [
+    OpBuilder<(ins "Type":$res, "Value":$base, "ValueRange":$indices)>
+  ];
+  let extraClassDeclaration = [{
+    MemRefType getMemRefType() {
+      return ::llvm::cast<MemRefType>(getBase().getType());
+    }
+    AMXTileType getTileType() {
+      return ::llvm::cast<AMXTileType>(getRes().getType());
+    }
+
+    std::string getIntrinsicName() {
+      return "llvm.x86.tileloadd64.internal";
+    }
+    SmallVector<Value> getIntrinsicOperands(
+        ::mlir::ArrayRef<Value> operands,
+        const ::mlir::LLVMTypeConverter &typeConverter,
+        ::mlir::RewriterBase &rewriter);
+  }];
+  let assemblyFormat = "$base `[` $indices `]` (`,` $stride^ )? attr-dict"
+                       "`:` type($base) `into` qualified(type($res))";
+  let hasVerifier = 1;
+}
+
+//===----------------------------------------------------------------------===//
+// AMX Tile Store
+//===----------------------------------------------------------------------===//
+
+def TileStoreOp : AMX_Op<"tile_store", [
+    X86IntrinsicOpInterface,
+    AttrSizedOperandSegments
+  ]> {
+  let summary = "tile store operation";
+  let description = [{
+    Stores a tile to memory defined by a `base` and `indices`, with the
+    shape defined by the 2-dim vector type of the value.
+    The tile's rows are written contiguously to the buffer starting at
+    the `base`. For each tile row, the `base` is incremented by `stride`
+    number of elements.
+
+    The tile is stored using the following indexing scheme:
+
+    ```
+    for row in enumerate(tile_rows):
+      mem_row = base[i0, i1, ..., iN + row * stride]
+      for col in enumerate(tile_cols):
+        mem_row[col] = tile[row, col]
+    ```
+
+    If the `stride` is not provided, then the `base` buffer must be at least
+    2-dimensional, and the `stride` is automatically inferred and corresponds
+    to the stride of the buffer's second innermost dimension.
+
+    The operation is eventually lowered into the "tilestored" instruction
+    with the corresponding tile configuration.
+
+    Example:
+
+    ```mlir
+      // Tile store to a 2-D memref with implicit stride.
+      x86.amx.tile_store %arg1[%c0, %c0], %0 : memref<?x?xi8>, !x86.amx.tile<16x64xi8>
+
+      // Tile store to a 1-D memref with explicit stride.
+      x86.amx.tile_store %arg1[%c0], %0, %stride : memref<?xi8>, !x86.amx.tile<16x64xi8>
+    ```
+  }];
+  let arguments = (ins Arg<AnyMemRef, "store base", [MemWrite]>:$base,
+                   Variadic<Index>:$indices,
+                   AnyAMXTile:$val,
+                   Optional<Index>:$stride);
+  let builders = [
+    OpBuilder<(ins "Value":$base, "ValueRange":$indices, "Value":$val)>
+  ];
+  let extraClassDeclaration = [{
+    MemRefType getMemRefType() {
+      return ::llvm::cast<MemRefType>(getBase().getType());
+    }
+    AMXTileType getTileType() {
+      return ::llvm::cast<AMXTileType>(getVal().getType());
+    }
+
+    std::string getIntrinsicName() {
+      return "llvm.x86.tilestored64.internal";
+    }
+    SmallVector<Value> getIntrinsicOperands(
+        ::mlir::ArrayRef<Value> operands,
+        const ::mlir::LLVMTypeConverter &typeConverter,
+        ::mlir::RewriterBase &rewriter);
+  }];
+  let assemblyFormat = "$base `[` $indices `]` `,` $val (`,` $stride^ )?"
+                       "attr-dict `:` type($base) `,` qualified(type($val))";
+  let hasVerifier = 1;
+}
+
+//===----------------------------------------------------------------------===//
+// AMX Tile Multiply
+//===----------------------------------------------------------------------===//
+
+def TileMulFOp : AMX_Op<"tile_mulf", [Pure,
+    X86IntrinsicOpInterface,
+    AllTypesMatch<["acc", "res"]>
+  ]> {
+  let summary = "tile multiplication operation (floating-point)";
+  let description = [{
+    Multiplies a "m x k" tile with a "k x n" tile and accumulates the results
+    into a "m x n" destination tile. Supports "f32 <- bf16 x bf16" (with
+    pairs of "bf16").
+    
+    The operation is eventually lowered into the "tdpbf16ps" instruction with
+    the corresponding tile configuration.
+
+    Example:
+
+    ```mlir
+      %0 = x86.amx.tile_mulf %a, %b, %c
+        : !x86.amx.tile<16x32xbf16>, !x86.amx.tile<16x32xbf16>, !x86.amx.tile<16x16xf32>
+    ```
+  }];
+  let arguments = (ins AMXTileF16OrBF16:$lhs,
+                       AMXTileF16OrBF16:$rhs,
+                       AMXTileF32:$acc);
+  let results = (outs AMXTileF32:$res);
+  let extraClassDeclaration = [{
+    AMXTileType getLhsTileType() {
+      return ::llvm::cast<AMXTileType>(getLhs().getType());
+    }
+    AMXTileType getRhsTileType() {
+      return ::llvm::cast<AMXTileType>(getRhs().getType());
+    }
+    AMXTileType getTileType() {
+      return ::llvm::cast<AMXTileType>(getRes().getType());
+    }
+
+    std::string getIntrinsicName() {
+      std::string intr = "llvm.x86.tdp";
+      auto elementType =
+        getLhsTileType().getElementType();
+      intr += elementType.isF16() ? "fp16" : "bf16";
+      intr += "ps.internal";
+      return intr;
+    }
+    SmallVector<Value> getIntrinsicOperands(
+        ::mlir::ArrayRef<Value> operands,
+        const ::mlir::LLVMTypeConverter &typeConverter,
+        ::mlir::RewriterBase &rewriter);
+  }];
+  let assemblyFormat = "$lhs `,` $rhs `,` $acc attr-dict `:` "
+                       "qualified(type($lhs)) `,` qualified(type($rhs))"
+                       " `,` qualified(type($acc)) ";
+  let hasVerifier = 1;
+}
+
+def TileMulIOp : AMX_Op<"tile_muli", [Pure,
+    X86IntrinsicOpInterface,
+    AllTypesMatch<["acc", "res"]>
+  ]> {
+  let summary = "tile multiplication operation (integer)";
+  let description = [{
+    Multiplies a "m x k" tile with a "k x n" tile and accumulates the results
+    into a "m x n" destination tile. Supports all "si32 <- s/ui8 x s/ui8"
+    combinations (4 bytes packed into dwords in the columns of both the
+    source operand tiles; the zero or sign extension is specified with
+    the attributes and default to sign extended).
+    
+    The operation is eventually lowered into one of the "tdpbssd",
+    "tdpbsud", "tdpbusd", or "tdpbuud" instructions with the corresponding
+    tile configuration.
+
+    Example:
+
+    ```mlir
+      %0 = x86.amx.tile_muli %a zext, %b zext, %c
+        : !x86.amx.tile<16x64xi8>, !x86.amx.tile<16x64xi8>, !x86.amx.tile<16x16xi32>
+    ```
+  }];
+  let arguments = (ins AMXTileI8:$lhs,
+                       AMXTileI8:$rhs,
+                       AMXTileI32:$acc,
+                       UnitAttr:$isZextLhs,
+                       UnitAttr:$isZextRhs
+                       );
+  let results = (outs AMXTileI32:$res);
+  let extraClassDeclaration = [{
+    AMXTileType getLhsTileType() {
+      return ::llvm::cast<AMXTileType>(getLhs().getType());
+    }
+    AMXTileType getRhsTileType() {
+      return ::llvm::cast<AMXTileType>(getRhs().getType());
+    }
+    AMXTileType getTileType() {
+      return ::llvm::cast<AMXTileType>(getRes().getType());
+    }
+
+    std::string getIntrinsicName() {
+      std::string intr = "llvm.x86.tdpb";
+      intr += getIsZextLhs() ? "u" : "s";
+      intr += getIsZextRhs() ? "u" : "s";
+      intr += "d.internal";
+      return intr;
+    }
+    SmallVector<Value> getIntrinsicOperands(
+        ::mlir::ArrayRef<Value> operands,
+        const ::mlir::LLVMTypeConverter &typeConverter,
+        ::mlir::RewriterBase &rewriter);
+  }];
+  let assemblyFormat = "$lhs (`zext` $isZextLhs^)? `,` $rhs (`zext` $isZextRhs^)? `,` $acc attr-dict `:` "
+                       "qualified(type($lhs)) `,` qualified(type($rhs)) `,` qualified(type($acc)) ";
+  let hasVerifier = 1;
+}
+
 #endif // X86_OPS
