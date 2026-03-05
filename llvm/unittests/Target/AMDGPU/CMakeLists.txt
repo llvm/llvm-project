@@ -25,4 +25,5 @@ add_llvm_target_unittest(AMDGPUTests
   ExecMayBeModifiedBeforeAnyUse.cpp
   LiveRegUnits.cpp
   PALMetadata.cpp
+  AMDGPURewriteAGPRCopyMFMATest.cpp
   )
