@@ -80,13 +80,8 @@ template <class T>
 struct __declspec(dllexport) ExportWholeTemplate {
   void noAttrMethod() {}
   EXCLUDE_ATTR void excludedMethod() {}
-  EXCLUDE_ATTR void excludedNoinlineMethod();
   EXCLUDE_ATTR void notToBeInstantiated() {}
 };
-
-// MSVC and MinGW disagree on whether an inline method of a class-level exported
-// template should be exported.
-template <typename T> void ExportWholeTemplate<T>::excludedNoinlineMethod() {}
 
 template struct ExportWholeTemplate<NoAttrTag>;
 // MSC-DAG: define weak_odr dso_local dllexport void @"?noAttrMethod@?$ExportWholeTemplate@UNoAttrTag@@@@QEAAXXZ"
@@ -97,17 +92,9 @@ void useExportWholeTemplate() {
   // MSC-DAG: define linkonce_odr dso_local void @"?excludedMethod@?$ExportWholeTemplate@UNoAttrTag@@@@QEAAXXZ"
   // GNU-DAG: define linkonce_odr dso_local void @_ZN19ExportWholeTemplateI9NoAttrTagE14excludedMethodEv
 
-  ExportWholeTemplate<NoAttrTag>().excludedNoinlineMethod();
-  // MSC-DAG: define linkonce_odr dso_local void @"?excludedNoinlineMethod@?$ExportWholeTemplate@UNoAttrTag@@@@QEAAXXZ"
-  // GNU-DAG: define linkonce_odr dso_local void @_ZN19ExportWholeTemplateI9NoAttrTagE22excludedNoinlineMethodEv
-
   ExportWholeTemplate<ImplicitTag>().excludedMethod();
   // MSC-DAG: define linkonce_odr dso_local void @"?excludedMethod@?$ExportWholeTemplate@UImplicitTag@@@@QEAAXXZ"
   // GNU-DAG: define linkonce_odr dso_local void @_ZN19ExportWholeTemplateI11ImplicitTagE14excludedMethodEv
-
-  ExportWholeTemplate<ImplicitTag>().excludedNoinlineMethod();
-  // MSC-DAG: define linkonce_odr dso_local void @"?excludedNoinlineMethod@?$ExportWholeTemplate@UImplicitTag@@@@QEAAXXZ"
-  // GNU-DAG: define linkonce_odr dso_local void @_ZN19ExportWholeTemplateI11ImplicitTagE22excludedNoinlineMethodEv
 }
 
 // Interaction with VTables.

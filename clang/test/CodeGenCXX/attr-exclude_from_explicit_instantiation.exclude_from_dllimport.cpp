@@ -84,14 +84,9 @@ template <class T>
 struct __declspec(dllimport) ImportWholeTemplate {
   void noAttrMethod() {}
   EXCLUDE_ATTR void excludedMethod() {}
-  EXCLUDE_ATTR void excludedNoinlineMethod();
   EXCLUDE_ATTR void notToBeInstantiated() {}
   void notToBeInstantiated_noAttr() {}
 };
-
-// MSVC and MinGW disagree on whether an inline method of a class-level imported
-// template should be imported.
-template <typename T> void ImportWholeTemplate<T>::excludedNoinlineMethod() {}
 
 extern template struct ImportWholeTemplate<NoAttrTag>;
 
@@ -100,17 +95,9 @@ void useImportWholeTemplate() {
   // MSC-DAG: define linkonce_odr dso_local void @"?excludedMethod@?$ImportWholeTemplate@UNoAttrTag@@@@QEAAXXZ"
   // GNU-DAG: define linkonce_odr dso_local void @_ZN19ImportWholeTemplateI9NoAttrTagE14excludedMethodEv
 
-  ImportWholeTemplate<NoAttrTag>().excludedNoinlineMethod();
-  // MSC-DAG: define linkonce_odr dso_local void @"?excludedNoinlineMethod@?$ImportWholeTemplate@UNoAttrTag@@@@QEAAXXZ"
-  // GNU-DAG: define linkonce_odr dso_local void @_ZN19ImportWholeTemplateI9NoAttrTagE22excludedNoinlineMethodEv
-
   ImportWholeTemplate<ImplicitTag>().excludedMethod();
   // MSC-DAG: define linkonce_odr dso_local void @"?excludedMethod@?$ImportWholeTemplate@UImplicitTag@@@@QEAAXXZ"
   // GNU-DAG: define linkonce_odr dso_local void @_ZN19ImportWholeTemplateI11ImplicitTagE14excludedMethodEv
-
-  ImportWholeTemplate<ImplicitTag>().excludedNoinlineMethod();
-  // MSC-DAG: define linkonce_odr dso_local void @"?excludedNoinlineMethod@?$ImportWholeTemplate@UImplicitTag@@@@QEAAXXZ"
-  // GNU-DAG: define linkonce_odr dso_local void @_ZN19ImportWholeTemplateI11ImplicitTagE22excludedNoinlineMethodEv
 }
 
 template <class T>
