@@ -1085,15 +1085,13 @@ emitCombinerOrInitializer(CodeGenModule &CGM, QualType Ty,
   // void .omp_combiner.(Ty *in, Ty *out);
   ASTContext &C = CGM.getContext();
   QualType PtrTy = C.getPointerType(Ty).withRestrict();
-  FunctionArgList Args;
   auto *OmpOutParm = ImplicitParamDecl::Create(
       C, /*DC=*/nullptr, Out->getLocation(),
       /*Id=*/nullptr, PtrTy, ImplicitParamKind::Other);
   auto *OmpInParm = ImplicitParamDecl::Create(
       C, /*DC=*/nullptr, In->getLocation(),
       /*Id=*/nullptr, PtrTy, ImplicitParamKind::Other);
-  Args.push_back(OmpOutParm);
-  Args.push_back(OmpInParm);
+  FunctionArgList Args{OmpOutParm, OmpInParm};
   const CGFunctionInfo &FnInfo =
       CGM.getTypes().arrangeBuiltinFunctionDeclaration(C.VoidTy, Args);
   llvm::FunctionType *FnTy = CGM.getTypes().GetFunctionType(FnInfo);
@@ -1657,12 +1655,11 @@ llvm::Function *CGOpenMPRuntime::emitThreadPrivateVarDefinition(
       // Generate function that re-emits the declaration's initializer into the
       // threadprivate copy of the variable VD
       CodeGenFunction CtorCGF(CGM);
-      FunctionArgList Args;
       auto *Dst = ImplicitParamDecl::Create(
           CGM.getContext(), /*DC=*/nullptr, Loc,
           /*Id=*/nullptr, CGM.getContext().VoidPtrTy, ImplicitParamKind::Other);
-      Args.push_back(Dst);
 
+      FunctionArgList Args{Dst};
       const auto &FI = CGM.getTypes().arrangeBuiltinFunctionDeclaration(
           CGM.getContext().VoidPtrTy, Args);
       llvm::FunctionType *FTy = CGM.getTypes().GetFunctionType(FI);
@@ -1689,12 +1686,11 @@ llvm::Function *CGOpenMPRuntime::emitThreadPrivateVarDefinition(
       // Generate function that emits destructor call for the threadprivate copy
       // of the variable VD
       CodeGenFunction DtorCGF(CGM);
-      FunctionArgList Args;
       auto *Dst = ImplicitParamDecl::Create(
           CGM.getContext(), /*DC=*/nullptr, Loc,
           /*Id=*/nullptr, CGM.getContext().VoidPtrTy, ImplicitParamKind::Other);
-      Args.push_back(Dst);
 
+      FunctionArgList Args{Dst};
       const auto &FI = CGM.getTypes().arrangeBuiltinFunctionDeclaration(
           CGM.getContext().VoidTy, Args);
       llvm::FunctionType *FTy = CGM.getTypes().GetFunctionType(FI);
@@ -2261,7 +2257,6 @@ static llvm::Value *emitCopyprivateCopyFunction(
     SourceLocation Loc) {
   ASTContext &C = CGM.getContext();
   // void copy_func(void *LHSArg, void *RHSArg);
-  FunctionArgList Args;
 
   auto *LHSArg =
       ImplicitParamDecl::Create(C, /*DC=*/nullptr, Loc, /*Id=*/nullptr,
@@ -2269,8 +2264,7 @@ static llvm::Value *emitCopyprivateCopyFunction(
   auto *RHSArg =
       ImplicitParamDecl::Create(C, /*DC=*/nullptr, Loc, /*Id=*/nullptr,
                                 C.VoidPtrTy, ImplicitParamKind::Other);
-  Args.push_back(LHSArg);
-  Args.push_back(RHSArg);
+  FunctionArgList Args{LHSArg, RHSArg};
   const auto &CGFI =
       CGM.getTypes().arrangeBuiltinFunctionDeclaration(C.VoidTy, Args);
   std::string Name =
@@ -3139,15 +3133,13 @@ emitProxyTaskFunction(CodeGenModule &CGM, SourceLocation Loc,
                       QualType SharedsPtrTy, llvm::Function *TaskFunction,
                       llvm::Value *TaskPrivatesMap) {
   ASTContext &C = CGM.getContext();
-  FunctionArgList Args;
   auto *GtidArg =
       ImplicitParamDecl::Create(C, /*DC=*/nullptr, Loc, /*Id=*/nullptr,
                                 KmpInt32Ty, ImplicitParamKind::Other);
   auto *TaskTypeArg = ImplicitParamDecl::Create(
       C, /*DC=*/nullptr, Loc, /*Id=*/nullptr,
       KmpTaskTWithPrivatesPtrQTy.withRestrict(), ImplicitParamKind::Other);
-  Args.push_back(GtidArg);
-  Args.push_back(TaskTypeArg);
+  FunctionArgList Args{GtidArg, TaskTypeArg};
   const auto &TaskEntryFnInfo =
       CGM.getTypes().arrangeBuiltinFunctionDeclaration(KmpInt32Ty, Args);
   llvm::FunctionType *TaskEntryTy =
@@ -3244,15 +3236,13 @@ static llvm::Value *emitDestructorsFunction(CodeGenModule &CGM,
                                             QualType KmpTaskTWithPrivatesPtrQTy,
                                             QualType KmpTaskTWithPrivatesQTy) {
   ASTContext &C = CGM.getContext();
-  FunctionArgList Args;
   auto *GtidArg =
       ImplicitParamDecl::Create(C, /*DC=*/nullptr, Loc, /*Id=*/nullptr,
                                 KmpInt32Ty, ImplicitParamKind::Other);
   auto *TaskTypeArg = ImplicitParamDecl::Create(
       C, /*DC=*/nullptr, Loc, /*Id=*/nullptr,
       KmpTaskTWithPrivatesPtrQTy.withRestrict(), ImplicitParamKind::Other);
-  Args.push_back(GtidArg);
-  Args.push_back(TaskTypeArg);
+  FunctionArgList Args{GtidArg, TaskTypeArg};
   const auto &DestructorFnInfo =
       CGM.getTypes().arrangeBuiltinFunctionDeclaration(KmpInt32Ty, Args);
   llvm::FunctionType *DestructorFnTy =
@@ -3557,7 +3547,6 @@ emitTaskDupFunction(CodeGenModule &CGM, SourceLocation Loc,
                     QualType SharedsPtrTy, const OMPTaskDataTy &Data,
                     ArrayRef<PrivateDataTy> Privates, bool WithLastIter) {
   ASTContext &C = CGM.getContext();
-  FunctionArgList Args;
   auto *DstArg = ImplicitParamDecl::Create(
       C, /*DC=*/nullptr, Loc, /*Id=*/nullptr, KmpTaskTWithPrivatesPtrQTy,
       ImplicitParamKind::Other);
@@ -3567,9 +3556,7 @@ emitTaskDupFunction(CodeGenModule &CGM, SourceLocation Loc,
   auto *LastprivArg =
       ImplicitParamDecl::Create(C, /*DC=*/nullptr, Loc, /*Id=*/nullptr, C.IntTy,
                                 ImplicitParamKind::Other);
-  Args.push_back(DstArg);
-  Args.push_back(SrcArg);
-  Args.push_back(LastprivArg);
+  FunctionArgList Args{DstArg, SrcArg, LastprivArg};
   const auto &TaskDupFnInfo =
       CGM.getTypes().arrangeBuiltinFunctionDeclaration(C.VoidTy, Args);
   llvm::FunctionType *TaskDupTy = CGM.getTypes().GetFunctionType(TaskDupFnInfo);
@@ -4979,15 +4966,13 @@ llvm::Function *CGOpenMPRuntime::emitReductionFunction(
   ASTContext &C = CGM.getContext();
 
   // void reduction_func(void *LHSArg, void *RHSArg);
-  FunctionArgList Args;
   auto *LHSArg =
       ImplicitParamDecl::Create(C, /*DC=*/nullptr, Loc, /*Id=*/nullptr,
                                 C.VoidPtrTy, ImplicitParamKind::Other);
   auto *RHSArg =
       ImplicitParamDecl::Create(C, /*DC=*/nullptr, Loc, /*Id=*/nullptr,
                                 C.VoidPtrTy, ImplicitParamKind::Other);
-  Args.push_back(LHSArg);
-  Args.push_back(RHSArg);
+  FunctionArgList Args{LHSArg, RHSArg};
   const auto &CGFI =
       CGM.getTypes().arrangeBuiltinFunctionDeclaration(C.VoidTy, Args);
   std::string Name = getReductionFuncName(ReducerName);

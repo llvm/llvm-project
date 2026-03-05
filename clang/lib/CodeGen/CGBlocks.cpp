@@ -1934,14 +1934,12 @@ CodeGenFunction::GenerateCopyHelperFunction(const CGBlockInfo &blockInfo) {
 
   QualType ReturnTy = C.VoidTy;
 
-  FunctionArgList args;
   auto *DstDecl =
       ImplicitParamDecl::Create(C, C.VoidPtrTy, ImplicitParamKind::Other);
-  args.push_back(DstDecl);
   auto *SrcDecl =
       ImplicitParamDecl::Create(C, C.VoidPtrTy, ImplicitParamKind::Other);
-  args.push_back(SrcDecl);
 
+  FunctionArgList args{DstDecl, SrcDecl};
   const CGFunctionInfo &FI =
       CGM.getTypes().arrangeBuiltinFunctionDeclaration(ReturnTy, args);
 
@@ -1954,10 +1952,6 @@ CodeGenFunction::GenerateCopyHelperFunction(const CGBlockInfo &blockInfo) {
                            FuncName, &CGM.getModule());
   if (CGM.supportsCOMDAT())
     Fn->setComdat(CGM.getModule().getOrInsertComdat(FuncName));
-
-  SmallVector<QualType, 2> ArgTys;
-  ArgTys.push_back(C.VoidPtrTy);
-  ArgTys.push_back(C.VoidPtrTy);
 
   setBlockHelperAttributesVisibility(blockInfo.CapturesNonExternalType, Fn, FI,
                                      CGM);
@@ -2133,11 +2127,10 @@ CodeGenFunction::GenerateDestroyHelperFunction(const CGBlockInfo &blockInfo) {
 
   QualType ReturnTy = C.VoidTy;
 
-  FunctionArgList args;
   auto *SrcDecl =
       ImplicitParamDecl::Create(C, C.VoidPtrTy, ImplicitParamKind::Other);
-  args.push_back(SrcDecl);
 
+  FunctionArgList args{SrcDecl};
   const CGFunctionInfo &FI =
       CGM.getTypes().arrangeBuiltinFunctionDeclaration(ReturnTy, args);
 
@@ -2150,9 +2143,6 @@ CodeGenFunction::GenerateDestroyHelperFunction(const CGBlockInfo &blockInfo) {
                            FuncName, &CGM.getModule());
   if (CGM.supportsCOMDAT())
     Fn->setComdat(CGM.getModule().getOrInsertComdat(FuncName));
-
-  SmallVector<QualType, 1> ArgTys;
-  ArgTys.push_back(C.VoidPtrTy);
 
   setBlockHelperAttributesVisibility(blockInfo.CapturesNonExternalType, Fn, FI,
                                      CGM);
@@ -2403,15 +2393,12 @@ generateByrefCopyHelper(CodeGenFunction &CGF, const BlockByrefInfo &byrefInfo,
 
   QualType ReturnTy = Context.VoidTy;
 
-  FunctionArgList args;
   auto *Dst = ImplicitParamDecl::Create(Context, Context.VoidPtrTy,
                                         ImplicitParamKind::Other);
-  args.push_back(Dst);
-
   auto *Src = ImplicitParamDecl::Create(Context, Context.VoidPtrTy,
                                         ImplicitParamKind::Other);
-  args.push_back(Src);
 
+  FunctionArgList args{Dst, Src};
   const CGFunctionInfo &FI =
       CGF.CGM.getTypes().arrangeBuiltinFunctionDeclaration(ReturnTy, args);
 
@@ -2422,10 +2409,6 @@ generateByrefCopyHelper(CodeGenFunction &CGF, const BlockByrefInfo &byrefInfo,
   llvm::Function *Fn =
     llvm::Function::Create(LTy, llvm::GlobalValue::InternalLinkage,
                            "__Block_byref_object_copy_", &CGF.CGM.getModule());
-
-  SmallVector<QualType, 2> ArgTys;
-  ArgTys.push_back(Context.VoidPtrTy);
-  ArgTys.push_back(Context.VoidPtrTy);
 
   CGF.CGM.SetInternalFunctionAttributes(GlobalDecl(), Fn, FI);
 
@@ -2472,11 +2455,10 @@ generateByrefDisposeHelper(CodeGenFunction &CGF,
   ASTContext &Context = CGF.getContext();
   QualType R = Context.VoidTy;
 
-  FunctionArgList args;
   auto *Src = ImplicitParamDecl::Create(CGF.getContext(), Context.VoidPtrTy,
                                         ImplicitParamKind::Other);
-  args.push_back(Src);
 
+  FunctionArgList args{Src};
   const CGFunctionInfo &FI =
     CGF.CGM.getTypes().arrangeBuiltinFunctionDeclaration(R, args);
 
@@ -2488,9 +2470,6 @@ generateByrefDisposeHelper(CodeGenFunction &CGF,
     llvm::Function::Create(LTy, llvm::GlobalValue::InternalLinkage,
                            "__Block_byref_object_dispose_",
                            &CGF.CGM.getModule());
-
-  SmallVector<QualType, 1> ArgTys;
-  ArgTys.push_back(Context.VoidPtrTy);
 
   CGF.CGM.SetInternalFunctionAttributes(GlobalDecl(), Fn, FI);
 
