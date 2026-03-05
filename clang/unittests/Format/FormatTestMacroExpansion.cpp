@@ -309,6 +309,102 @@ TEST_F(FormatTestMacroExpansion, IndentChildrenWithinMacroCall) {
                Style);
 }
 
+TEST_F(FormatTestMacroExpansion, TryMacroOnly) {
+  FormatStyle Style = getLLVMStyle();
+  Style.Macros.push_back("TRY_MACRO=try");
+  verifyFormat("TRY_MACRO {\n"
+               "  f();\n"
+               "} catch (int e) {\n"
+               "  g();\n"
+               "}",
+               Style);
+}
+
+TEST_F(FormatTestMacroExpansion, TryCatchMacros) {
+  FormatStyle Style = getLLVMStyle();
+  Style.Macros.push_back("TRY_MACRO=try");
+  Style.Macros.push_back("CATCH_MACRO_ARG(e)=catch(e)");
+  verifyFormat("TRY_MACRO {\n"
+               "  f();\n"
+               "} CATCH_MACRO_ARG(int e) {\n"
+               "  g();\n"
+               "}",
+               Style);
+}
+
+TEST_F(FormatTestMacroExpansion, TryCatchMacrosObjectLike) {
+  FormatStyle Style = getLLVMStyle();
+  Style.Macros.push_back("TRY_MACRO=try");
+  Style.Macros.push_back("CATCH_MACRO=catch(...)");
+  verifyFormat("TRY_MACRO {\n"
+               "  f();\n"
+               "} CATCH_MACRO {\n"
+               "  g();\n"
+               "}",
+               Style);
+}
+
+TEST_F(FormatTestMacroExpansion, TryMacroFuncLike) {
+  FormatStyle Style = getLLVMStyle();
+  Style.Macros.push_back("TRY_MACRO_ARG(r)=try");
+  verifyFormat("TRY_MACRO_ARG(result) {\n"
+               "  f();\n"
+               "} catch (int e) {\n"
+               "  g();\n"
+               "}",
+               Style);
+}
+
+TEST_F(FormatTestMacroExpansion, TryCatchMacrosFuncLike) {
+  FormatStyle Style = getLLVMStyle();
+  Style.Macros.push_back("TRY_MACRO_ARG(r)=try");
+  Style.Macros.push_back("CATCH_MACRO_ARG(e)=catch(e)");
+  verifyFormat("TRY_MACRO_ARG(result) {\n"
+               "  f();\n"
+               "} CATCH_MACRO_ARG(int e) {\n"
+               "  g();\n"
+               "}",
+               Style);
+}
+
+TEST_F(FormatTestMacroExpansion, TryCatchMacroSpaceBeforeParens) {
+  FormatStyle Style = getLLVMStyle();
+  Style.Macros.push_back("TRY_MACRO=try");
+  Style.Macros.push_back("CATCH_MACRO_ARG(e)=catch(e)");
+
+  verifyFormat("TRY_MACRO {\n"
+               "  f();\n"
+               "} CATCH_MACRO_ARG(int e) {\n"
+               "  g();\n"
+               "}",
+               Style);
+
+  Style.SpaceBeforeParens = FormatStyle::SBPO_Never;
+  verifyFormat("TRY_MACRO {\n"
+               "  f();\n"
+               "} CATCH_MACRO_ARG(int e) {\n"
+               "  g();\n"
+               "}",
+               Style);
+
+  Style.SpaceBeforeParens =
+      FormatStyle::SBPO_ControlStatementsExceptControlMacros;
+  verifyFormat("TRY_MACRO {\n"
+               "  f();\n"
+               "} CATCH_MACRO_ARG(int e) {\n"
+               "  g();\n"
+               "}",
+               Style);
+
+  Style.SpaceBeforeParens = FormatStyle::SBPO_Always;
+  verifyFormat("TRY_MACRO {\n"
+               "  f ();\n"
+               "} CATCH_MACRO_ARG (int e) {\n"
+               "  g ();\n"
+               "}",
+               Style);
+}
+
 } // namespace
 } // namespace test
 } // namespace format

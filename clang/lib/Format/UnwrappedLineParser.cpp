@@ -1593,6 +1593,12 @@ void UnwrappedLineParser::parseStructuralElement(
       // field/method declaration.
       break;
     }
+    // In C, `try` is not a keyword; treat it as an identifier.
+    if (Style.isCpp() && FormatTok->is(tok::kw_try) &&
+        !Tokens->peekNextToken(/*SkipComment=*/true)
+             ->isOneOf(tok::l_brace, tok::colon, tok::hash)) {
+      break;
+    }
     parseTryCatch();
     return;
   case tok::kw_extern:
@@ -1952,6 +1958,13 @@ void UnwrappedLineParser::parseStructuralElement(
     case tok::kw_try:
       if (Style.isJavaScript() && Line->MustBeDeclaration) {
         // field/method declaration.
+        nextToken();
+        break;
+      }
+      // In C, `try` is not a keyword; treat it as an identifier.
+      if (Style.isCpp() &&
+          !Tokens->peekNextToken(/*SkipComment=*/true)
+               ->isOneOf(tok::l_brace, tok::colon, tok::hash)) {
         nextToken();
         break;
       }
