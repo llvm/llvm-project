@@ -802,6 +802,12 @@ static int64_t getTlsTpOffset(Ctx &ctx, const Symbol &s) {
 
 uint64_t InputSectionBase::getRelocTargetVA(Ctx &ctx, const Relocation &r,
                                             uint64_t p) const {
+  // Resolve undefined prefetch targets to zero, to effectively prefetch the
+  // next instruction.
+  if (r.sym->isUndefined() &&
+      r.sym->getName().starts_with(prefetchSymbolPrefix)) {
+    return 0;
+  }
   int64_t a = r.addend;
   switch (r.expr) {
   case R_ABS:
