@@ -11105,7 +11105,8 @@ bool AArch64InstrInfo::isFunctionSafeToSplit(const MachineFunction &MF) const {
   // a red zone. This is because relaxing a cross-section branch may require
   // incrementing the stack pointer to spill a register, which would overwrite
   // the red zone.
-  if (MF.getInfo<AArch64FunctionInfo>()->hasRedZone().value_or(true))
+  if (MF.getInfo<AArch64FunctionInfo>()->hasRedZone().value_or(
+          !MF.getSubtarget<AArch64Subtarget>().isTargetMachO()))
     return false;
 
   return TargetInstrInfo::isFunctionSafeToSplit(MF);
