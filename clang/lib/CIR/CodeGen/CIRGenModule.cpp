@@ -2343,6 +2343,13 @@ void CIRGenModule::setFunctionAttributes(GlobalDecl globalDecl,
                       "available body!");
     assert(!cir::MissingFeatures::attributeNoBuiltin());
   }
+
+  if (fd->isReplaceableGlobalAllocationFunction()) {
+    // A replaceable global allocation function does not act like a builtin by
+    // default, only if it is invoked by a new-expression or delete-expression.
+    func->setAttr(cir::CIRDialect::getNoBuiltinAttrName(),
+                  mlir::UnitAttr::get(&getMLIRContext()));
+  }
 }
 
 void CIRGenModule::setCIRFunctionAttributesForDefinition(
