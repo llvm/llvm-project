@@ -634,7 +634,7 @@ define <4 x i8> @test_pslli_b(<4 x i8> %a) {
   ret <4 x i8> %res
 }
 
-; Test arithmetic saturation shift left immediate for v2i16
+; Test saturating shift left arithmetic with splat immediate shift amount for v2i16
 define <2 x i16> @test_psslai_h(<2 x i16> %a) {
 ; CHECK-LABEL: test_psslai_h:
 ; CHECK:       # %bb.0:
@@ -644,7 +644,7 @@ define <2 x i16> @test_psslai_h(<2 x i16> %a) {
   ret <2 x i16> %res
 }
 
-; Test arithmetic saturation shift left immediate for v4i8
+; Test saturating shift left arithmetic with splat immediate shift amount for v4i8
 define <4 x i8> @test_psslai_b(<4 x i8> %a) {
 ; CHECK-LABEL: test_psslai_b:
 ; CHECK:       # %bb.0:
@@ -661,6 +661,93 @@ define <4 x i8> @test_psslai_b(<4 x i8> %a) {
 ; CHECK-NEXT:    ret
   %res = call <4 x i8> @llvm.sshl.sat.v4i8(<4 x i8> %a, <4 x i8> splat(i8 2))
   ret <4 x i8> %res
+}
+
+; Test saturating shift left arithmetic with splat shift amount for v2i16
+define <2 x i16> @test_pssla_hs(<2 x i16> %a, i16 %shamt) {
+; CHECK-LABEL: test_pssla_hs:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    pli.h a2, 0
+; CHECK-NEXT:    lui a3, 8
+; CHECK-NEXT:    pmslt.h a2, a0, a2
+; CHECK-NEXT:    padd.hs a4, zero, a3
+; CHECK-NEXT:    addi a3, a3, -1
+; CHECK-NEXT:    padd.hs a3, zero, a3
+; CHECK-NEXT:    merge a2, a3, a4
+; CHECK-NEXT:    psll.hs a3, a0, a1
+; CHECK-NEXT:    psra.hs a1, a3, a1
+; CHECK-NEXT:    pmseq.h a0, a0, a1
+; CHECK-NEXT:    merge a0, a2, a3
+; CHECK-NEXT:    ret
+  %insert = insertelement <2 x i16> poison, i16 %shamt, i32 0
+  %b = shufflevector <2 x i16> %insert, <2 x i16> poison, <2 x i32> zeroinitializer
+  %res = call <2 x i16> @llvm.sshl.sat.v2i16(<2 x i16> %a, <2 x i16> %b)
+  ret <2 x i16> %res
+}
+
+; Test saturating shift left arithmetic with non-splat shift amount for v2i16
+define <2 x i16> @test_pssla_h(<2 x i16> %a, <2 x i16> %b) {
+; CHECK-RV32-LABEL: test_pssla_h:
+; CHECK-RV32:       # %bb.0:
+; CHECK-RV32-NEXT:    sll a2, a0, a1
+; CHECK-RV32-NEXT:    srli a3, a1, 16
+; CHECK-RV32-NEXT:    srli a4, a0, 16
+; CHECK-RV32-NEXT:    sext.h a5, a2
+; CHECK-RV32-NEXT:    sra a1, a5, a1
+; CHECK-RV32-NEXT:    pli.h a5, 0
+; CHECK-RV32-NEXT:    sll a4, a4, a3
+; CHECK-RV32-NEXT:    pack a2, a2, a4
+; CHECK-RV32-NEXT:    sext.h a4, a4
+; CHECK-RV32-NEXT:    sra a3, a4, a3
+; CHECK-RV32-NEXT:    lui a4, 8
+; CHECK-RV32-NEXT:    pmslt.h a5, a0, a5
+; CHECK-RV32-NEXT:    pack a1, a1, a3
+; CHECK-RV32-NEXT:    padd.hs a3, zero, a4
+; CHECK-RV32-NEXT:    addi a4, a4, -1
+; CHECK-RV32-NEXT:    padd.hs a4, zero, a4
+; CHECK-RV32-NEXT:    pmseq.h a0, a0, a1
+; CHECK-RV32-NEXT:    merge a5, a4, a3
+; CHECK-RV32-NEXT:    merge a0, a5, a2
+; CHECK-RV32-NEXT:    ret
+;
+; CHECK-RV64-LABEL: test_pssla_h:
+; CHECK-RV64:       # %bb.0:
+; CHECK-RV64-NEXT:    srli a2, a1, 48
+; CHECK-RV64-NEXT:    srli a3, a0, 48
+; CHECK-RV64-NEXT:    srli a4, a1, 32
+; CHECK-RV64-NEXT:    srli a5, a0, 32
+; CHECK-RV64-NEXT:    sll a6, a0, a1
+; CHECK-RV64-NEXT:    srli a7, a1, 16
+; CHECK-RV64-NEXT:    srli t0, a0, 16
+; CHECK-RV64-NEXT:    pli.h t1, 0
+; CHECK-RV64-NEXT:    sll a3, a3, a2
+; CHECK-RV64-NEXT:    sll a5, a5, a4
+; CHECK-RV64-NEXT:    sll t0, t0, a7
+; CHECK-RV64-NEXT:    sext.h t2, a6
+; CHECK-RV64-NEXT:    sra a1, t2, a1
+; CHECK-RV64-NEXT:    ppaire.h t2, a5, a3
+; CHECK-RV64-NEXT:    ppaire.h a6, a6, t0
+; CHECK-RV64-NEXT:    pack a6, a6, t2
+; CHECK-RV64-NEXT:    lui t2, 8
+; CHECK-RV64-NEXT:    pmslt.h t1, a0, t1
+; CHECK-RV64-NEXT:    sext.h a3, a3
+; CHECK-RV64-NEXT:    sra a2, a3, a2
+; CHECK-RV64-NEXT:    padd.hs a3, zero, t2
+; CHECK-RV64-NEXT:    addi t2, t2, -1
+; CHECK-RV64-NEXT:    sext.h a5, a5
+; CHECK-RV64-NEXT:    sext.h t0, t0
+; CHECK-RV64-NEXT:    padd.hs t2, zero, t2
+; CHECK-RV64-NEXT:    sra a4, a5, a4
+; CHECK-RV64-NEXT:    sra a5, t0, a7
+; CHECK-RV64-NEXT:    ppaire.h a2, a4, a2
+; CHECK-RV64-NEXT:    ppaire.h a1, a1, a5
+; CHECK-RV64-NEXT:    pack a1, a1, a2
+; CHECK-RV64-NEXT:    pmseq.h a0, a0, a1
+; CHECK-RV64-NEXT:    merge t1, t2, a3
+; CHECK-RV64-NEXT:    merge a0, t1, a6
+; CHECK-RV64-NEXT:    ret
+  %res = call <2 x i16> @llvm.sshl.sat.v2i16(<2 x i16> %a, <2 x i16> %b)
+  ret <2 x i16> %res
 }
 
 ; Test logical shift right immediate
@@ -1718,10 +1805,10 @@ define <2 x i16> @test_select_v2i16(i1 %cond, <2 x i16> %a, <2 x i16> %b) {
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    andi a3, a0, 1
 ; CHECK-NEXT:    mv a0, a1
-; CHECK-NEXT:    bnez a3, .LBB120_2
+; CHECK-NEXT:    bnez a3, .LBB122_2
 ; CHECK-NEXT:  # %bb.1:
 ; CHECK-NEXT:    mv a0, a2
-; CHECK-NEXT:  .LBB120_2:
+; CHECK-NEXT:  .LBB122_2:
 ; CHECK-NEXT:    ret
   %res = select i1 %cond, <2 x i16> %a, <2 x i16> %b
   ret <2 x i16> %res
@@ -1732,10 +1819,10 @@ define <4 x i8> @test_select_v4i8(i1 %cond, <4 x i8> %a, <4 x i8> %b) {
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    andi a3, a0, 1
 ; CHECK-NEXT:    mv a0, a1
-; CHECK-NEXT:    bnez a3, .LBB121_2
+; CHECK-NEXT:    bnez a3, .LBB123_2
 ; CHECK-NEXT:  # %bb.1:
 ; CHECK-NEXT:    mv a0, a2
-; CHECK-NEXT:  .LBB121_2:
+; CHECK-NEXT:  .LBB123_2:
 ; CHECK-NEXT:    ret
   %res = select i1 %cond, <4 x i8> %a, <4 x i8> %b
   ret <4 x i8> %res
