@@ -346,6 +346,12 @@ std::error_code create_symlink(const Twine &to, const Twine &from) {
   if (std::error_code ec = widenPath(to, wide_to))
     return ec;
 
+  // The Win32 API normally allows forward slashes, but under some cases it does
+  // not correctly handle them in the target of a symlink.
+  for (wchar_t &C : wide_to)
+    if (C == L'/')
+      C = L'\\';
+
   // Windows requires SYMBOLIC_LINK_FLAG_DIRECTORY for directory symlinks.
   DWORD Flags = 0;
   DWORD Attr = ::GetFileAttributesW(wide_to.begin());

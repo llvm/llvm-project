@@ -830,6 +830,40 @@ TEST_F(FileSystemTest, ReadlinkRelative) {
   ASSERT_NO_ERROR(fs::remove(Target));
 }
 
+TEST_F(FileSystemTest, ReadlinkRelativeWithSlash) {
+  // Verify that a symlink target created with forward slashes is read back
+  // with the native separator. On Windows, create_symlink normalizes forward
+  // slashes to backslashes.
+  SmallString<128> SubDir(TestDirectory);
+  path::append(SubDir, "subdir");
+  ASSERT_NO_ERROR(fs::create_directory(SubDir));
+
+  int FD;
+  SmallString<128> Target(SubDir);
+  path::append(Target, "target");
+  ASSERT_NO_ERROR(fs::openFileForWrite(Target, FD, fs::CD_CreateNew));
+  ::close(FD);
+
+  SmallString<128> Link(TestDirectory);
+  path::append(Link, "link");
+  std::error_code EC = fs::create_symlink("subdir/target", Link);
+  if (EC) {
+    ASSERT_NO_ERROR(fs::remove(Target));
+    ASSERT_NO_ERROR(fs::remove(SubDir));
+    GTEST_SKIP() << "Symlinks not supported: " << EC.message();
+  }
+
+  SmallString<128> Result;
+  ASSERT_NO_ERROR(fs::readlink(Link, Result));
+  SmallString<128> Expected("subdir/target");
+  path::native(Expected);
+  EXPECT_EQ(Expected, Result);
+
+  ASSERT_NO_ERROR(fs::remove(Link));
+  ASSERT_NO_ERROR(fs::remove(Target));
+  ASSERT_NO_ERROR(fs::remove(SubDir));
+}
+
 TEST_F(FileSystemTest, ReadlinkNonSymlink) {
   int FD;
   SmallString<128> Regular(TestDirectory);
