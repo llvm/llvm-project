@@ -38,6 +38,7 @@ void registerLazyLoadingTestPasses();
 void registerLoopLikeInterfaceTestPasses();
 void registerPassManagerTestPass();
 void registerPrintSpirvAvailabilityPass();
+void registerRegionBranchOpInterfaceTestPasses();
 void registerRegionTestPasses();
 void registerPrintTosaAvailabilityPass();
 void registerShapeFunctionTestPasses();
@@ -189,6 +190,7 @@ static void registerTestPasses() {
   registerPassManagerTestPass();
   registerPrintSpirvAvailabilityPass();
   registerRegionTestPasses();
+  registerRegionBranchOpInterfaceTestPasses();
   registerShapeFunctionTestPasses();
   registerSideEffectTestPasses();
   registerSliceAnalysisTestPass();

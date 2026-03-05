@@ -681,7 +681,8 @@ namespace {
 namespace {
 /// Conversion pass.
 class ConvertShapeToStandardPass
-    : public impl::ConvertShapeToStandardPassBase<ConvertShapeToStandardPass> {
+    : public ::mlir::impl::ConvertShapeToStandardPassBase<
+          ConvertShapeToStandardPass> {
 
   void runOnOperation() override;
 };

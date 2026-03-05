@@ -98,6 +98,10 @@ def SameOperandsAndResultElementType :
   NativeOpTrait<"SameOperandsAndResultElementType">;
 // Op is a terminator.
 def Terminator : NativeOpTrait<"IsTerminator">;
+// Op is a region terminator for the immediate region only.
+def ImmediateRegionTerminator : NativeOpTrait<"RegionTerminator", [Terminator]>;
+// Op is a region terminator, potentially breaking multiple regions
+def RegionTerminator : NativeOpTrait<"RegionTerminator", [Terminator]>;
 // Op can be safely normalized in the presence of MemRefs with
 // non-identity maps.
 def MemRefsNormalizable : NativeOpTrait<"MemRefsNormalizable">;
@@ -129,6 +133,13 @@ class SingleBlockImplicitTerminatorImpl<string op>
 // Op's regions have a single block with the specified terminator.
 class SingleBlockImplicitTerminator<string op>
     : TraitList<[SingleBlock, SingleBlockImplicitTerminatorImpl<op>]>;
+
+// This operation has nested regions with the supplied list of `RegionTerminator`
+// operations.
+class HasNestedTerminator<list<string> ops>
+    : ParamNativeOpTrait<"HasNestedTerminators", !interleave(ops, ", ")>,
+      StructuralOpTrait;
+
 
 // Op's regions don't have terminator.
 def NoTerminator : NativeOpTrait<"NoTerminator">, StructuralOpTrait;

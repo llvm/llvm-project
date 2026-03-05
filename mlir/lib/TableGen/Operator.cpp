@@ -747,12 +747,10 @@ void Operator::populateOpStructure() {
       auto *dependentTraits = trait->getValueAsListInit("dependentTraits");
       for (auto *traitInit : *dependentTraits)
         if (!traitSet.contains(traitInit))
-          PrintFatalError(
-              def.getLoc(),
-              trait->getValueAsString("trait") + " requires " +
-                  cast<DefInit>(traitInit)->getDef()->getValueAsString(
-                      "trait") +
-                  " to precede it in traits list");
+          PrintFatalError(def.getLoc(),
+                          trait->getName() + " requires " +
+                              cast<DefInit>(traitInit)->getDef()->getName() +
+                              " to precede it in traits list");
     };
 
     std::function<void(const ListInit *)> insert;

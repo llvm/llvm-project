@@ -891,7 +891,8 @@ public:
       // Non-empty regions must contain a single basic block.
       if (!region.hasOneBlock())
         return op->emitOpError("expects region #")
-               << i << " to have 0 or 1 blocks";
+               << i << " to have 0 or 1 blocks, found "
+               << llvm::range_size(region) << " blocks";
 
       if (!ConcreteType::template hasTrait<NoTerminator>()) {
         Block &block = region.front();
@@ -1319,6 +1320,19 @@ struct HasParent {
     getParentOp() {
       Operation *parent = this->getOperation()->getParentOp();
       return llvm::cast<ParentOpType>(parent);
+    }
+  };
+};
+
+/// This class provides a verifier for ops that are expecting to have nested
+/// predecessors.
+template <typename... NestedPredecessorOpTypes>
+struct HasNestedTerminators {
+  template <typename ConcreteType>
+  class Impl : public TraitBase<ConcreteType, Impl> {
+  public:
+    static bool acceptsTerminator(Operation *predecessor) {
+      return llvm::isa_and_nonnull<NestedPredecessorOpTypes...>(predecessor);
     }
   };
 };

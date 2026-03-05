@@ -13,6 +13,7 @@
 #include "mlir/IR/Dialect.h"
 #include "mlir/IR/IRMapping.h"
 #include "mlir/IR/Matchers.h"
+#include "mlir/IR/OpDefinition.h"
 #include "mlir/IR/OpImplementation.h"
 #include "mlir/IR/OperationSupport.h"
 #include "mlir/IR/PatternMatch.h"
@@ -32,10 +33,10 @@ using namespace mlir;
 
 /// Create a new Operation from operation state.
 Operation *Operation::create(const OperationState &state) {
-  Operation *op =
-      create(state.location, state.name, state.types, state.operands,
-             state.attributes.getDictionary(state.getContext()),
-             state.properties, state.successors, state.regions);
+  Operation *op = create(
+      state.location, state.name, state.types, state.operands,
+      state.attributes.getDictionary(state.getContext()), state.properties,
+      state.successors, state.regions, state.numBreakingControlRegions);
   if (LLVM_UNLIKELY(state.propertiesAttr)) {
     assert(!state.properties);
     LogicalResult result =
@@ -52,11 +53,12 @@ Operation *Operation::create(Location location, OperationName name,
                              TypeRange resultTypes, ValueRange operands,
                              NamedAttrList &&attributes,
                              OpaqueProperties properties, BlockRange successors,
-                             RegionRange regions) {
+                             RegionRange regions,
+                             int numBreakingControlRegions) {
   unsigned numRegions = regions.size();
   Operation *op =
       create(location, name, resultTypes, operands, std::move(attributes),
-             properties, successors, numRegions);
+             properties, successors, numRegions, numBreakingControlRegions);
   for (unsigned i = 0; i < numRegions; ++i)
     if (regions[i])
       op->getRegion(i).takeBody(*regions[i]);
@@ -68,13 +70,14 @@ Operation *Operation::create(Location location, OperationName name,
                              TypeRange resultTypes, ValueRange operands,
                              NamedAttrList &&attributes,
                              OpaqueProperties properties, BlockRange successors,
-                             unsigned numRegions) {
+                             unsigned numRegions,
+                             int numBreakingControlRegions) {
   // Populate default attributes.
   name.populateDefaultAttrs(attributes);
 
   return create(location, name, resultTypes, operands,
                 attributes.getDictionary(location.getContext()), properties,
-                successors, numRegions);
+                successors, numRegions, numBreakingControlRegions);
 }
 
 /// Overload of create that takes an existing DictionaryAttr to avoid
@@ -83,7 +86,8 @@ Operation *Operation::create(Location location, OperationName name,
                              TypeRange resultTypes, ValueRange operands,
                              DictionaryAttr attributes,
                              OpaqueProperties properties, BlockRange successors,
-                             unsigned numRegions) {
+                             unsigned numRegions,
+                             int numBreakingControlRegions) {
   assert(llvm::all_of(resultTypes, [](Type t) { return t; }) &&
          "unexpected null result type");
 
@@ -93,7 +97,10 @@ Operation *Operation::create(Location location, OperationName name,
   unsigned numSuccessors = successors.size();
   unsigned numOperands = operands.size();
   unsigned numResults = resultTypes.size();
-  int opPropertiesAllocSize = llvm::alignTo<8>(name.getOpPropertyByteSize());
+  size_t opPropertiesByteSize = name.getOpPropertyByteSize();
+  if (numBreakingControlRegions)
+    opPropertiesByteSize += 8;
+  int opPropertiesAllocSize = llvm::alignTo<8>(opPropertiesByteSize);
 
   // If the operation is known to have no operands, don't allocate an operand
   // storage.
@@ -115,12 +122,16 @@ Operation *Operation::create(Location location, OperationName name,
   void *rawMem = mallocMem + prefixByteSize;
 
   // Create the new Operation.
-  Operation *op = ::new (rawMem) Operation(
-      location, name, numResults, numSuccessors, numRegions,
-      opPropertiesAllocSize, attributes, properties, needsOperandStorage);
+  Operation *op = ::new (rawMem)
+      Operation(location, name, numResults, numSuccessors, numRegions,
+                numBreakingControlRegions, opPropertiesAllocSize, attributes,
+                properties, needsOperandStorage);
 
   assert((numSuccessors == 0 || op->mightHaveTrait<OpTrait::IsTerminator>()) &&
          "unexpected successors in a non-terminator operation");
+  assert((numBreakingControlRegions == 0 ||
+          op->mightHaveTrait<OpTrait::IsTerminator>()) &&
+         "unexpected breaking control regions in a non-terminator operation");
 
   // Initialize the results.
   auto resultTypeIt = resultTypes.begin();
@@ -154,10 +165,12 @@ Operation *Operation::create(Location location, OperationName name,
 
 Operation::Operation(Location location, OperationName name, unsigned numResults,
                      unsigned numSuccessors, unsigned numRegions,
+                     int numBreakingControlRegions,
                      int fullPropertiesStorageSize, DictionaryAttr attributes,
                      OpaqueProperties properties, bool hasOperandStorage)
     : location(location), numResults(numResults), numSuccs(numSuccessors),
       numRegions(numRegions), hasOperandStorage(hasOperandStorage),
+      isBreakingControlFlowFlag(numBreakingControlRegions),
       propertiesStorageSize((fullPropertiesStorageSize + 7) / 8), name(name) {
   assert(attributes && "unexpected null attribute dictionary");
   assert(fullPropertiesStorageSize <= propertiesCapacity &&
@@ -170,6 +183,9 @@ Operation::Operation(Location location, OperationName name, unsigned numResults,
         "allowUnregisteredDialects() on the MLIRContext, or use "
         "-allow-unregistered-dialect with the MLIR tool used.");
 #endif
+  if (numBreakingControlRegions)
+    *reinterpret_cast<unsigned *>(getTrailingObjects<detail::OpProperties>()) =
+        numBreakingControlRegions;
   if (fullPropertiesStorageSize)
     name.initOpProperties(getPropertiesStorage(), properties);
 }
@@ -729,7 +745,8 @@ Operation *Operation::clone(IRMapping &mapper, CloneOptions options) {
 
   // Create the new operation.
   auto *newOp = create(getLoc(), getName(), getResultTypes(), operands, attrs,
-                       getPropertiesStorage(), successors, getNumRegions());
+                       getPropertiesStorage(), successors, getNumRegions(),
+                       getNumBreakingControlRegions());
   mapper.map(this, newOp);
 
   // Clone the regions.
