@@ -91,6 +91,19 @@ void Preprocessor::appendMacroDirective(IdentifierInfo *II, MacroDirective *MD){
     II->setChangedSinceDeserialization();
 }
 
+void Preprocessor::removeMacro(IdentifierInfo *II, MacroDirective *MD) {
+  assert(II && MD);
+  II->setHasMacroDefinition(false);
+  CurSubmoduleState->Macros.erase(II);
+  if (MacroDirective *prevMD = MD->getPrevious()) {
+    // Avoid assertion in appendMacroDirective.
+    MacroDirective *prevPrevMD = prevMD->getPrevious();
+    prevMD->setPrevious(0);
+    appendMacroDirective(II, prevMD);
+    prevMD->setPrevious(prevPrevMD);
+  }
+}
+
 void Preprocessor::setLoadedMacroDirective(IdentifierInfo *II,
                                            MacroDirective *ED,
                                            MacroDirective *MD) {

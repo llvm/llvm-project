@@ -30,6 +30,7 @@ class Parser;
 class Sema;
 class TranslationUnitDecl;
 class IncrementalAction;
+class IncrementalPreProcessorTracker;
 struct PartialTranslationUnit;
 
 /// Provides support for incremental compilation. Keeps track of the state
@@ -54,6 +55,9 @@ protected:
 
   std::list<PartialTranslationUnit> &PTUs;
 
+  /// Tracks the include files during parsing
+  IncrementalPreProcessorTracker *PreProcessorTracker;
+
 public:
   IncrementalParser(CompilerInstance &Instance, IncrementalAction *Act,
                     llvm::Error &Err, std::list<PartialTranslationUnit> &PTUs);
@@ -64,8 +68,9 @@ public:
   /// \c TranslationUnitDecl.
   virtual llvm::Expected<TranslationUnitDecl *> Parse(llvm::StringRef Input);
 
-  void CleanUpPTU(TranslationUnitDecl *MostRecentTU);
+  void CleanUpTU(TranslationUnitDecl *MostRecentTU);
 
+  void CleanUpPTU(const PartialTranslationUnit &MostRecentPTU);
   /// Register a PTU produced by Parse.
   PartialTranslationUnit &RegisterPTU(TranslationUnitDecl *TU,
                                       std::unique_ptr<llvm::Module> M = {});

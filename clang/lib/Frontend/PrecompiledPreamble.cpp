@@ -544,6 +544,32 @@ llvm::ErrorOr<PrecompiledPreamble> PrecompiledPreamble::Build(
   // so we can verify whether they have changed or not.
   llvm::StringMap<PrecompiledPreamble::PreambleFileHash> FilesInPreamble;
 
+  // Build a map of overridden file UniqueIDs to their expected hashes,
+  // mirroring exactly what CanReuse computes from PreprocessorOpts.  This
+  // ensures that a file remapped via a buffer — which may also exist in VFS
+  // with a non-zero modtime — is recorded with a buffer-content hash rather
+  // than VFS file metadata, so the CanReuse comparison succeeds on the next
+  // reparse instead of always returning false.
+  std::map<llvm::sys::fs::UniqueID, PrecompiledPreamble::PreambleFileHash>
+      OverriddenByUID;
+  {
+    FileManager &FileMgr = Clang->getFileManager();
+    llvm::vfs::FileSystem &BVFS = FileMgr.getVirtualFileSystem();
+    const PreprocessorOptions &PPOpts = Clang->getPreprocessorOpts();
+    for (const auto &R : PPOpts.RemappedFiles) {
+      if (auto S = BVFS.status(R.second))
+        OverriddenByUID[S->getUniqueID()] =
+            PrecompiledPreamble::PreambleFileHash::createForFile(
+                S->getSize(), llvm::sys::toTimeT(S->getLastModificationTime()));
+    }
+    for (const auto &RB : PPOpts.RemappedFileBuffers) {
+      if (auto MaybeFile = FileMgr.getOptionalFileRef(RB.first))
+        OverriddenByUID[MaybeFile->getUniqueID()] =
+            PrecompiledPreamble::PreambleFileHash::createForMemoryBuffer(
+                RB.second->getMemBufferRef());
+    }
+  }
+
   SourceManager &SourceMgr = Clang->getSourceManager();
   for (auto &Filename : PreambleDepCollector->getDependencies()) {
     auto MaybeFile = Clang->getFileManager().getOptionalFileRef(Filename);
@@ -551,7 +577,13 @@ llvm::ErrorOr<PrecompiledPreamble> PrecompiledPreamble::Build(
         MaybeFile == SourceMgr.getFileEntryRefForID(SourceMgr.getMainFileID()))
       continue;
     auto File = *MaybeFile;
-    if (time_t ModTime = File.getModificationTime()) {
+    // If this file was remapped (buffer or file override), record the same
+    // hash that CanReuse will compute from OverriddenFiles so the two sides
+    // of the comparison always use the same format.
+    auto OverriddenIt = OverriddenByUID.find(File.getUniqueID());
+    if (OverriddenIt != OverriddenByUID.end()) {
+      FilesInPreamble[File.getName()] = OverriddenIt->second;
+    } else if (time_t ModTime = File.getModificationTime()) {
       FilesInPreamble[File.getName()] =
           PrecompiledPreamble::PreambleFileHash::createForFile(File.getSize(),
                                                                ModTime);

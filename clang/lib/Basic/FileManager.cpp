@@ -217,7 +217,25 @@ llvm::Expected<FileEntryRef> FileManager::getFileRef(StringRef Filename,
   // See if there is already an entry in the map.
   auto SeenFileInsertResult =
       SeenFileEntries.insert({Filename, std::errc::no_such_file_or_directory});
-  if (!SeenFileInsertResult.second) {
+
+  auto *NamedFileEnt = &*SeenFileInsertResult.first;
+
+  const FileEntry *StaleFileEntry = 0;
+  bool needsRereading = false;
+  if (NamedFileEnt && NamedFileEnt->getValue()) {
+    FileEntryRef::MapValue Value = *NamedFileEnt->getValue();
+    if (isa<FileEntry *>(Value.V)) {
+      auto found = FileEntriesToReread.find(cast<FileEntry *>(Value.V));
+      if (found != FileEntriesToReread.end()) {
+        needsRereading = true;
+        StaleFileEntry = *found;
+        FileEntriesToReread.erase(found);
+      }
+    }
+  }
+
+  // See if there is already an entry in the map.
+  if (!SeenFileInsertResult.second && !needsRereading) {
     if (!SeenFileInsertResult.first->second)
       return llvm::errorCodeToError(
           SeenFileInsertResult.first->second.getError());
@@ -226,8 +244,6 @@ llvm::Expected<FileEntryRef> FileManager::getFileRef(StringRef Filename,
 
   // We've not seen this before. Fill it in.
   ++NumFileCacheMisses;
-  auto *NamedFileEnt = &*SeenFileInsertResult.first;
-  assert(!NamedFileEnt->second && "should be newly-created");
 
   // Get the null-terminated file name as stored as the key of the
   // SeenFileEntries map.
@@ -253,11 +269,15 @@ llvm::Expected<FileEntryRef> FileManager::getFileRef(StringRef Filename,
   // FIXME: Use the directory info to prune this, before doing the stat syscall.
   // FIXME: This will reduce the # syscalls.
 
-  // Check to see if the file exists.
+  // Check to see if the file exists.  Stat without opening first; we only
+  // open the file after confirming that the entry needs to be populated (i.e.
+  // the inode is new or the modtime has changed).  This avoids calling
+  // openFileForRead() on an aliased path whose inode is already cached and
+  // up-to-date, which would waste a VFS call and produce a misleading read
+  // count in tests that instrument openFileForRead().
   std::unique_ptr<llvm::vfs::File> F;
   llvm::vfs::Status Status;
-  auto statError = getStatValue(InterndFileName, Status, true,
-                                openFile ? &F : nullptr, IsText);
+  auto statError = getStatValue(InterndFileName, Status, true, nullptr, IsText);
   if (statError) {
     // There's no real file at the given path.
     if (CacheFailure)
@@ -268,7 +288,7 @@ llvm::Expected<FileEntryRef> FileManager::getFileRef(StringRef Filename,
     return llvm::errorCodeToError(statError);
   }
 
-  assert((openFile || !F) && "undesired open file");
+  assert(!F && "stat-only call must not open a file");
 
   // It exists.  See if we have already opened a file with the same inode.
   // This occurs when one dir is symlinked to another, for example.
@@ -331,8 +351,27 @@ llvm::Expected<FileEntryRef> FileManager::getFileRef(StringRef Filename,
   }
 
   FileEntryRef ReturnedRef(*NamedFileEnt);
-  if (ReusingEntry) { // Already have an entry with this inode, return it.
+  if (ReusingEntry &&
+      (!needsRereading ||
+       llvm::sys::toTimeT(Status.getLastModificationTime()) == UFE->ModTime)) {
+    // Already have an entry with this inode.  Take the early return when:
+    // - no re-read was requested (covers alias paths and virtual files whose
+    //   modtime may differ from the stat cache), or
+    // - a re-read was requested but the file's modtime is unchanged, meaning
+    //   the on-disk content is the same and re-populating would be wasteful.
     return ReturnedRef;
+  }
+
+  // The entry needs to be (re-)populated.  Open the file now if requested.
+  if (openFile) {
+    if (auto openErr =
+            getStatValue(InterndFileName, Status, true, &F, IsText)) {
+      if (CacheFailure)
+        NamedFileEnt->second = openErr;
+      else
+        SeenFileEntries.erase(Filename);
+      return llvm::errorCodeToError(openErr);
+    }
   }
 
   // Otherwise, we don't have this file yet, add it.
@@ -353,6 +392,20 @@ llvm::Expected<FileEntryRef> FileManager::getFileRef(StringRef Filename,
     // We should still fill the path even if we aren't opening the file.
     fillRealPathName(UFE, InterndFileName);
   }
+
+  if (StaleFileEntry) {
+    // Find occurrences of old FileEntry; update with new one:
+    for (auto &fe : SeenFileEntries) {
+      if (fe.getValue()) {
+        FileEntryRef::MapValue Value = *fe.getValue();
+        if (isa<FileEntry *>(Value.V) &&
+            cast<FileEntry *>(Value.V) == StaleFileEntry) {
+          fe.setValue(FileEntryRef::MapValue(*UFE, DirInfo));
+        }
+      }
+    }
+  }
+
   return ReturnedRef;
 }
 
@@ -612,6 +665,11 @@ FileManager::getNoncachedStatValue(StringRef Path,
     return S.getError();
   Result = *S;
   return std::error_code();
+}
+
+void FileManager::invalidateCache(FileEntryRef Entry) {
+  assert(Entry && "Cannot invalidate a NULL FileEntry");
+  FileEntriesToReread.insert(Entry);
 }
 
 void FileManager::GetUniqueIDMapping(
