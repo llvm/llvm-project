@@ -323,7 +323,7 @@ private:
   // Pair of LoopBlocks representing an edge from first to second block.
   using LoopEdge = std::pair<const LoopBlock &, const LoopBlock &>;
 
-  DenseSet<BasicBlockCallbackVH, DenseMapInfo<Value*>> Handles;
+  DenseSet<BasicBlockCallbackVH, DenseMapInfo<Value *>> Handles;
 
   // Since we allow duplicate edges from one basic block to another, we use
   // a pair (PredBlock and an index in the successors) to specify an edge.
