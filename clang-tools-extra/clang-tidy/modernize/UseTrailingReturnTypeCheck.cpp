@@ -14,7 +14,6 @@
 #include "clang/Tooling/FixIt.h"
 #include "llvm/ADT/StringExtras.h"
 
-#include <cctype>
 #include <optional>
 
 namespace clang::tidy {
