@@ -29,11 +29,15 @@
 <hans@hanshq.net> <hans@chromium.org>
 <i@maskray.me> <maskray@google.com>
 <JCTremoulet@gmail.com> <jotrem@microsoft.com>
-Min Hsu <min.hsu@sifive.com> <min@myhsu.dev>
-Min Hsu <min.hsu@sifive.com> <minyihh@uci.edu>
 <qcf@ecnelises.com> <qiucofan@cn.ibm.com> <qiucf@cn.ibm.com>
 <rnk@llvm.org> <rnk@nvidia.com> <rnk@google.com> <reid@kleckner.net>
 <thakis@chromium.org> <nicolasweber@gmx.de>
+Brian Cain <brian.cain@oss.qualcomm.com> <bcain@quicinc.com>
+Eli Friedman <efriedma@qti.qualcomm.com> <efriedma@quicinc.com>
+Fateme Hosseini <Fhossein@qti.qualcomm.com> <quic_fhossein@quicinc.com>
+Garvit Gupta <garvgupt@qti.qualcomm.com> <quic_garvgupt@quicinc.com>
+Ikhlas Ajbar <iajbar@qti.qualcomm.com> <iajbar@codeaurora.org>
+Ikhlas Ajbar <iajbar@qti.qualcomm.com> <iajbar@quicinc.com>
 Jianjian GUAN <jacquesguan@me.com>
 Jianjian GUAN <jacquesguan@me.com> <Jianjian.Guan@streamcomputing.com>
 Jon Roelofs <jonathan_roelofs@apple.com> <jonathan@codesourcery.com>
@@ -45,10 +49,19 @@ LLVM GN Syncbot <llvmgnsyncbot@gmail.com>
 Martin Storsjö <martin@martin.st>
 Med Ismail Bennani <ismail@bennani.ma> <m.i.b@apple.com>
 Med Ismail Bennani <ismail@bennani.ma> <medismail.bennani@gmail.com>
-Ramkumar Ramachandra <r@artagnon.com> <artagnon@gmail.com>
-Ramkumar Ramachandra <r@artagnon.com> <Ramkumar.Ramachandra@imgtec.com>
-Saleem Abdulrasool <compnerd@compnerd.org>
-Tommy Chiang <ty1208chiang@gmail.com> <oToToT@users.noreply.github.com>
+Min Hsu <min.hsu@sifive.com> <min@myhsu.dev>
+Min Hsu <min.hsu@sifive.com> <minyihh@uci.edu>
 Pengcheng Wang <wangpengcheng.pp@bytedance.com>
 Pengcheng Wang <wangpengcheng.pp@bytedance.com> <137158460+wangpc-pp@users.noreply.github.com>
 Pengcheng Wang <wangpengcheng.pp@bytedance.com> <pc.wang@linux.alibaba.com>
+Adarsha Regmi <aregmi@qti.qualcomm.com> <aregmi@quicinc.com>
+Harsh Chandel <hchandel@qti.qualcomm.com> <quic_hchandel@quicinc.com>
+Ramkumar Ramachandra <r@artagnon.com> <artagnon@gmail.com>
+Ramkumar Ramachandra <r@artagnon.com> <Ramkumar.Ramachandra@imgtec.com>
+Saleem Abdulrasool <compnerd@compnerd.org>
+Sam Elliott <aelliott@qti.qualcomm.com> <quic_aelliott@quicinc.com>
+Sudharsan Veeravalli <svs@qti.qualcomm.com> <quic_svs@quicinc.com>
+Sumanth Gundapaneni <sgundapa@qti.qualcomm.com> <sgundapa@quicinc.com>
+Tommy Chiang <ty1208chiang@gmail.com> <oToToT@users.noreply.github.com>
+Usman Nadeem <mnadeem@qti.qualcomm.com> <mnadeem@quicinc.com>
+Venkata Ramanaiah Nalamothu <vnalamot@qti.qualcomm.com> <quic_vnalamot@quicinc.com>
