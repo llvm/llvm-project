@@ -16,12 +16,24 @@
 #include "flang/Common/template.h"
 #include "flang/Common/visit.h"
 #include "flang/Parser/tools.h"
+#include "llvm/ADT/StringRef.h"
+#include "llvm/Frontend/OpenMP/OMP.h"
 
 #include <tuple>
 #include <type_traits>
 #include <variant>
 
 namespace Fortran::parser::omp {
+
+std::string GetUpperName(llvm::omp::Clause id, unsigned version) {
+  llvm::StringRef name{llvm::omp::getOpenMPClauseName(id, version)};
+  return parser::ToUpperCaseLetters(name);
+}
+
+std::string GetUpperName(llvm::omp::Directive id, unsigned version) {
+  llvm::StringRef name{llvm::omp::getOpenMPDirectiveName(id, version)};
+  return parser::ToUpperCaseLetters(name);
+}
 
 const OpenMPDeclarativeConstruct *GetOmp(const DeclarationConstruct &x) {
   if (auto *y = std::get_if<SpecificationConstruct>(&x.u)) {
