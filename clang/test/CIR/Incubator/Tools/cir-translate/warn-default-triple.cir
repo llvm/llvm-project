@@ -1,0 +1,8 @@
+// RUN: cir-translate -verify-diagnostics --cir-to-llvmir --disable-cc-lowering %s
+
+// expected-warning@below {{no target triple provided, assuming x86_64-unknown-linux-gnu}}
+module {
+  cir.func @foo() {
+    cir.return
+  }
+}

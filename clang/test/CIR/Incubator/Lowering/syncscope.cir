@@ -1,0 +1,29 @@
+// RUN: cir-translate %s -cir-to-llvmir --disable-cc-lowering -o -  | FileCheck %s -check-prefix=LLVM
+
+!s32i = !cir.int<s, 32>
+#fn_attr = #cir<extra({nothrow = #cir.nothrow})>
+module {
+  cir.func no_inline optnone @test(%ptr: !cir.ptr<!s32i>, %expected: !s32i, %desired: !s32i) -> !cir.bool extra(#fn_attr) {
+    %old, %cmp = cir.atomic.cmp_xchg(%ptr : !cir.ptr<!s32i>, %expected : !s32i, %desired : !s32i, success = acquire, failure = acquire) syncscope(single_thread) align(4) : (!s32i, !cir.bool)
+    cir.return %cmp: !cir.bool
+  }
+
+  cir.func no_inline @load(%ptr: !cir.ptr<!s32i>) -> !s32i extra(#fn_attr) {
+    %val = cir.load syncscope(single_thread) atomic(relaxed) %ptr : !cir.ptr<!s32i>, !s32i
+    cir.return %val : !s32i
+  }
+
+
+  // System scope should not materialize a syncscope attribute.
+  cir.func no_inline @system_load(%ptr: !cir.ptr<!s32i>) -> !s32i extra(#fn_attr) {
+    %val = cir.load atomic(seq_cst) %ptr : !cir.ptr<!s32i>, !s32i
+    cir.return %val : !s32i
+  }
+
+}
+
+// LLVM: {{%.*}} = cmpxchg ptr {{%.*}}, i32 {{%.*}}, i32 {{%.*}} syncscope("singlethread") acquire acquire, align 4
+// LLVM: load atomic i32, ptr {{%.*}} syncscope("singlethread") monotonic, align 4
+// LLVM-LABEL: @system_load
+// LLVM: load atomic i32, ptr {{%.*}} seq_cst, align 4
+// LLVM-NOT: syncscope(

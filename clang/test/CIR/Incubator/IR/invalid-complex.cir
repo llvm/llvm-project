@@ -1,0 +1,23 @@
+// RUN: cir-opt %s -verify-diagnostics -split-input-file
+
+module {
+  cir.func @complex_real_invalid_result_type() -> !cir.double {
+    %0 = cir.alloca !cir.complex<!cir.double>, !cir.ptr<!cir.complex<!cir.double>>, ["c"]
+    %2 = cir.load align(8) %0 : !cir.ptr<!cir.complex<!cir.double>>, !cir.complex<!cir.double>
+    // expected-error @below {{op : result type does not match operand type}}
+    %3 = cir.complex.real %2 : !cir.complex<!cir.double> -> !cir.float
+    cir.return
+  }
+}
+
+// -----
+
+module {
+  cir.func @complex_imag_invalid_result_type() -> !cir.double {
+    %0 = cir.alloca !cir.complex<!cir.double>, !cir.ptr<!cir.complex<!cir.double>>, ["c"]
+    %2 = cir.load align(8) %0 : !cir.ptr<!cir.complex<!cir.double>>, !cir.complex<!cir.double>
+    // expected-error @below {{op : result type does not match operand type}}
+    %3 = cir.complex.imag %2 : !cir.complex<!cir.double> -> !cir.float
+    cir.return
+  }
+}

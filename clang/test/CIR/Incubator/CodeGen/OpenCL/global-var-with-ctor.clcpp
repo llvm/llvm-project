@@ -1,0 +1,37 @@
+// RUN: %clang_cc1 -cl-std=clc++ -O0 -fclangir -emit-cir \
+// RUN:            -triple spirv64-unknown-unknown %s -o %t.cir
+// RUN: FileCheck --check-prefix=CIR --input-file=%t.cir %s
+
+// RUN: %clang_cc1 -cl-std=clc++ -O0 -fclangir -emit-llvm \
+// RUN:            -triple spirv64-unknown-unknown %s -o %t.ll
+// RUN: FileCheck --check-prefix=LLVM --input-file=%t.ll %s
+
+// RUN: %clang_cc1 -cl-std=clc++ -O0 -emit-llvm \
+// RUN:            -triple spirv64-unknown-unknown %s -o %t.ll
+// RUN: FileCheck --check-prefix=OGCG --input-file=%t.ll %s
+
+struct S {
+  int x;
+  S() { x = 42; }
+};
+
+// Global variable in global address space - constructor expects generic AS
+__global S globalVar;
+
+kernel void foo() {
+  int y = globalVar.x;
+}
+
+// CIR: cir.global external lang_address_space(offload_global) @globalVar
+// CIR: cir.func internal private @__cxx_global_var_init()
+// CIR:   %[[GLOBAL:.*]] = cir.get_global @globalVar : !cir.ptr<!rec_S, lang_address_space(offload_global)>
+// CIR:   %[[ASCAST:.*]] = cir.cast address_space %[[GLOBAL]] : !cir.ptr<!rec_S, lang_address_space(offload_global)> -> !cir.ptr<{{.*}}, lang_address_space(offload_generic)>
+// CIR:   cir.call @_ZNU3AS41SC1Ev(%{{.*}}) : (!cir.ptr<!rec_S, lang_address_space(offload_generic)>)
+
+// LLVM: @globalVar = addrspace(1) global %struct.S zeroinitializer
+// LLVM: define internal void @__cxx_global_var_init()
+// LLVM:   call spir_func void @_ZNU3AS41SC1Ev(ptr addrspace(4) addrspacecast (ptr addrspace(1) @globalVar to ptr addrspace(4)))
+
+// OGCG: @globalVar = addrspace(1) global %struct.S zeroinitializer
+// OGCG: define internal spir_func void @__cxx_global_var_init()
+// OGCG:   call spir_func void @_ZNU3AS41SC1Ev(ptr addrspace(4) {{.*}}addrspacecast (ptr addrspace(1) @globalVar to ptr addrspace(4)))

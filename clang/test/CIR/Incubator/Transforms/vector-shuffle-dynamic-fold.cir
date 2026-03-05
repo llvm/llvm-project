@@ -1,0 +1,30 @@
+// RUN: cir-opt %s -cir-canonicalize -o - | FileCheck %s
+
+!s32i = !cir.int<s, 32>
+
+module {
+  cir.func @fold_shuffle_dynamic_vector_op_test() -> !cir.vector<!s32i x 4> {
+    %vec = cir.const #cir.const_vector<[#cir.int<1> : !s32i, #cir.int<2> : !s32i, #cir.int<3> : !s32i, #cir.int<4> : !s32i]> : !cir.vector<!s32i x 4>
+    %indices = cir.const #cir.const_vector<[#cir.int<8> : !s32i, #cir.int<7> : !s32i, #cir.int<6> : !s32i, #cir.int<5> : !s32i]> : !cir.vector<!s32i x 4>
+    %new_vec = cir.vec.shuffle.dynamic %vec : !cir.vector<!s32i x 4>, %indices : !cir.vector<!s32i x 4>
+    cir.return %new_vec : !cir.vector<!s32i x 4>
+  }
+
+  // Masking indices [8, 7, 6, 5] AND 3 = [0, 3, 2, 1]
+  // CHECK: cir.func @fold_shuffle_dynamic_vector_op_test() -> !cir.vector<!s32i x 4> {
+  // CHECK-NEXT: %[[NEW_VEC:.*]] = cir.const #cir.const_vector<[#cir.int<1> : !s32i, #cir.int<4> : !s32i, #cir.int<3> : !s32i, #cir.int<2> : !s32i]> : !cir.vector<!s32i x 4>
+  // CHECK-NEXT: cir.return %[[NEW_VEC:.*]] : !cir.vector<!s32i x 4>
+
+  cir.func @fold_shuffle_dynamic_vector_op_test_2() -> !cir.vector<!s32i x 4> {
+    %vec = cir.const #cir.const_vector<[#cir.int<1> : !s32i, #cir.int<2> : !s32i, #cir.int<3> : !s32i, #cir.int<4> : !s32i]> : !cir.vector<!s32i x 4>
+    %indices = cir.const #cir.const_vector<[#cir.int<3> : !s32i, #cir.int<2> : !s32i, #cir.int<1> : !s32i, #cir.int<0> : !s32i]> : !cir.vector<!s32i x 4>
+    %new_vec = cir.vec.shuffle.dynamic %vec : !cir.vector<!s32i x 4>, %indices : !cir.vector<!s32i x 4>
+    cir.return %new_vec : !cir.vector<!s32i x 4>
+  }
+
+  // Masking indices [3, 2, 1, 0] AND 3 = [3, 2, 1, 0]
+  // CHECK: cir.func @fold_shuffle_dynamic_vector_op_test_2() -> !cir.vector<!s32i x 4> {
+  // CHECK-NEXT: %[[NEW_VEC:.*]] = cir.const #cir.const_vector<[#cir.int<4> : !s32i, #cir.int<3> : !s32i, #cir.int<2> : !s32i, #cir.int<1> : !s32i]> : !cir.vector<!s32i x 4>
+  // CHECK-NEXT: cir.return %[[NEW_VEC:.*]] : !cir.vector<!s32i x 4>
+}
+

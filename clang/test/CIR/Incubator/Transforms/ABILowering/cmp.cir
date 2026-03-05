@@ -1,0 +1,41 @@
+// RUN: cir-opt --cir-abi-lowering -o %t.cir %s
+// RUN: FileCheck --input-file %t.cir %s
+
+!s32i = !cir.int<s, 32>
+!S = !cir.record<struct "S" {!s32i, !s32i, !s32i}>
+!Field = !cir.data_member<!s32i in !S>
+!Method = !cir.method<!cir.func<(!s32i)> in !S>
+
+module attributes {
+  cir.triple = "x86_64-unknown-linux-gnu",
+  dlti.dl_spec = #dlti.dl_spec<i128 = dense<128> : vector<2xi64>, f80 = dense<128> : vector<2xi64>, !llvm.ptr<271> = dense<32> : vector<4xi64>, !llvm.ptr<272> = dense<64> : vector<4xi64>, i64 = dense<64> : vector<2xi64>, f16 = dense<16> : vector<2xi64>, i32 = dense<32> : vector<2xi64>, f128 = dense<128> : vector<2xi64>, !llvm.ptr<270> = dense<32> : vector<4xi64>, f64 = dense<64> : vector<2xi64>, !llvm.ptr = dense<64> : vector<4xi64>, i1 = dense<8> : vector<2xi64>, i8 = dense<8> : vector<2xi64>, i16 = dense<16> : vector<2xi64>, "dlti.stack_alignment" = 128 : i64, "dlti.endianness" = "little">
+} {
+  cir.func @cmp_data_member(%arg0: !Field, %arg1: !Field) -> !cir.bool {
+    %0 = cir.cmp(eq, %arg0, %arg1) : !Field, !cir.bool
+    cir.return %0 : !cir.bool
+  }
+  // CHECK:      @cmp_data_member(%[[ARG0:.+]]: !s64i, %[[ARG1:.+]]: !s64i) -> !cir.bool
+  // CHECK-NEXT:   %[[RES:.+]] = cir.cmp(eq, %[[ARG0]], %[[ARG1]]) : !s64i, !cir.bool
+  // CHECK-NEXT:   cir.return %[[RES]] : !cir.bool
+  // CHECK-NEXT: }
+
+  cir.func @cmp_method(%arg0: !Method, %arg1: !Method) -> !cir.bool {
+    %0 = cir.cmp(eq, %arg0, %arg1) : !Method, !cir.bool
+    cir.return %0 : !cir.bool
+  }
+  // CHECK:      @cmp_method(%[[ARG0:.+]]: ![[ABI_TY:.+]], %[[ARG1:.+]]: ![[ABI_TY]]) -> !cir.bool
+  // CHECK-NEXT:   %[[ZERO:.+]] = cir.const #cir.int<0> : !s64i
+  // CHECK-NEXT:   %[[ARG0_PTR:.+]] = cir.extract_member %[[ARG0]][0] : ![[ABI_TY]] -> !s64i
+  // CHECK-NEXT:   %[[ARG1_PTR:.+]] = cir.extract_member %[[ARG1]][0] : ![[ABI_TY]] -> !s64i
+  // CHECK-NEXT:   %[[PTR_EQ:.+]] = cir.cmp(eq, %[[ARG0_PTR]], %[[ARG1_PTR]]) : !s64i, !cir.bool
+  // CHECK-NEXT:   %[[ARG0_PTR_NULL:.+]] = cir.cmp(eq, %[[ARG0_PTR]], %[[ZERO]]) : !s64i, !cir.bool
+  // CHECK-NEXT:   %[[ARG0_OFFSET:.+]] = cir.extract_member %[[ARG0]][1] : ![[ABI_TY]] -> !s64i
+  // CHECK-NEXT:   %[[ARG1_OFFSET:.+]] = cir.extract_member %[[ARG1]][1] : ![[ABI_TY]] -> !s64i
+  // CHECK-NEXT:   %[[OFFSET_EQ:.+]] = cir.cmp(eq, %[[ARG0_OFFSET]], %[[ARG1_OFFSET]]) : !s64i, !cir.bool
+  // CHECK-NEXT:   %[[TRUE:.+]] = cir.const #true
+  // CHECK-NEXT:   %[[FALSE:.+]] = cir.const #false
+  // CHECK-NEXT:   %[[X:.+]] = cir.select if %[[ARG0_PTR_NULL]] then %[[TRUE]] else %[[OFFSET_EQ]] : (!cir.bool, !cir.bool, !cir.bool) -> !cir.bool
+  // CHECK-NEXT:   %[[RES:.+]] = cir.select if %[[X]] then %[[PTR_EQ]] else %[[FALSE]] : (!cir.bool, !cir.bool, !cir.bool) -> !cir.bool
+  // CHECK-NEXT:   cir.return %[[RES]] : !cir.bool
+  // CHECK-NEXT: }
+}

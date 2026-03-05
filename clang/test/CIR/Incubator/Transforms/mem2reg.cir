@@ -1,0 +1,31 @@
+// RUN: cir-opt %s -cir-flatten-cfg -mem2reg -o - | FileCheck %s
+
+!s32i = !cir.int<s, 32>
+!u64i = !cir.int<u, 64>
+!u8i = !cir.int<u, 8>
+!void = !cir.void
+
+module {
+
+  //  ====   Simple case
+  // C code
+  // int return_42() {
+  //   int y = 42;
+  //   return y;  
+  // }
+  cir.func @return_42() -> !s32i {
+    %0 = cir.alloca !s32i, !cir.ptr<!s32i>, ["__retval"] {alignment = 4 : i64}
+    %1 = cir.alloca !s32i, !cir.ptr<!s32i>, ["y", init] {alignment = 4 : i64}
+    %2 = cir.const #cir.int<42> : !s32i
+    cir.store %2, %1 : !s32i, !cir.ptr<!s32i> 
+    %3 = cir.load %1 : !cir.ptr<!s32i>, !s32i
+    cir.store %3, %0 : !s32i, !cir.ptr<!s32i>
+    %4 = cir.load %0 : !cir.ptr<!s32i>, !s32i
+    cir.return %4 : !s32i
+  }
+  // CHECK:  cir.func @return_42() -> !s32i {
+  // CHECK:    %0 = cir.const #cir.int<42> : !s32i
+  // CHECK:    cir.return %0 : !s32i
+  // CHECK:  }
+
+} //module

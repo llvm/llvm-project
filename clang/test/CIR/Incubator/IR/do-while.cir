@@ -1,0 +1,17 @@
+// RUN: cir-opt %s --verify-roundtrip | FileCheck %s
+
+cir.func @testPrintingAndParsing (%arg0 : !cir.bool) -> !cir.void {
+  cir.do {
+    cir.yield
+  } while {
+    cir.condition(%arg0)
+  }
+  cir.return
+}
+
+// CHECK: testPrintingAndParsing
+// CHECK: cir.do {
+// CHECK:   cir.yield
+// CHECK: } while {
+// CHECK:   cir.condition(%arg0)
+// CHECK: }

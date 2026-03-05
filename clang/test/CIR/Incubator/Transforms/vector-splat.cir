@@ -1,0 +1,16 @@
+// RUN: cir-opt %s -cir-simplify -o - | FileCheck %s
+
+!s32i = !cir.int<s, 32>
+
+module  {
+  cir.func @fold_splat_vector_op_test() -> !cir.vector<!s32i x 4> {
+    %v = cir.const #cir.int<3> : !s32i
+    %vec = cir.vec.splat %v : !s32i, !cir.vector<!s32i x 4>
+    cir.return %vec : !cir.vector<!s32i x 4>
+  }
+
+  // CHECK: cir.func @fold_splat_vector_op_test() -> !cir.vector<!s32i x 4> {
+  // CHECK-NEXT: %0 = cir.const #cir.const_vector<[#cir.int<3> : !s32i, #cir.int<3> : !s32i,
+  // CHECK-SAME: #cir.int<3> : !s32i, #cir.int<3> : !s32i]> : !cir.vector<!s32i x 4>
+  // CHECK-NEXT: cir.return %0 : !cir.vector<!s32i x 4>
+}

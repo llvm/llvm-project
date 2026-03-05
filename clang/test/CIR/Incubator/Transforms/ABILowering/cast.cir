@@ -1,0 +1,53 @@
+// RUN: cir-opt --cir-abi-lowering -o %t.cir %s
+// RUN: FileCheck --input-file %t.cir %s
+
+!s32i = !cir.int<s, 32>
+!s64i = !cir.int<s, 64>
+!S1 = !cir.record<struct "S1" {!s32i, !s32i, !s32i}>
+!S2 = !cir.record<struct "S2" {!s32i, !s32i, !s32i}>
+!Field1 = !cir.data_member<!s32i in !S1>
+!Field2 = !cir.data_member<!s32i in !S2>
+!Method1 = !cir.method<!cir.func<(!s32i)> in !S1>
+!Method2 = !cir.method<!cir.func<(!s32i)> in !S2>
+
+module attributes {
+  cir.triple = "x86_64-unknown-linux-gnu",
+  dlti.dl_spec = #dlti.dl_spec<i128 = dense<128> : vector<2xi64>, f80 = dense<128> : vector<2xi64>, !llvm.ptr<271> = dense<32> : vector<4xi64>, !llvm.ptr<272> = dense<64> : vector<4xi64>, i64 = dense<64> : vector<2xi64>, f16 = dense<16> : vector<2xi64>, i32 = dense<32> : vector<2xi64>, f128 = dense<128> : vector<2xi64>, !llvm.ptr<270> = dense<32> : vector<4xi64>, f64 = dense<64> : vector<2xi64>, !llvm.ptr = dense<64> : vector<4xi64>, i1 = dense<8> : vector<2xi64>, i8 = dense<8> : vector<2xi64>, i16 = dense<16> : vector<2xi64>, "dlti.stack_alignment" = 128 : i64, "dlti.endianness" = "little">
+} {
+  cir.func @bitcast_data_member(%arg0 : !Field1) -> !Field2 {
+    %0 = cir.cast bitcast %arg0: !Field1 -> !Field2
+    cir.return %0 : !Field2
+  }
+  // CHECK:      @bitcast_data_member(%[[ARG:.+]]: !s64i) -> !s64i
+  // CHECK-NEXT:   cir.return %[[ARG]] : !s64i
+  // CHECK-NEXT: }
+
+  cir.func @bitcast_method(%arg0 : !Method1) -> !Method2 {
+    %0 = cir.cast bitcast %arg0: !Method1 -> !Method2
+    cir.return %0 : !Method2
+  }
+  // CHECK:      @bitcast_method(%[[ARG:.+]]: ![[ABI_TY:.+]]) -> ![[ABI_TY]]
+  // CHECK-NEXT:   cir.return %[[ARG]] : ![[ABI_TY]]
+  // CHECK-NEXT: }
+
+  cir.func @data_member_to_bool(%arg0 : !Field1) -> !cir.bool {
+    %0 = cir.cast member_ptr_to_bool %arg0: !Field1 -> !cir.bool
+    cir.return %0 : !cir.bool
+  }
+  // CHECK:      @data_member_to_bool(%[[ARG:.+]]: !s64i) -> !cir.bool
+  // CHECK-NEXT:   %[[NULL:.+]] = cir.const #cir.int<-1> : !s64i
+  // CHECK-NEXT:   %[[RES:.+]] = cir.cmp(ne, %[[ARG]], %[[NULL]]) : !s64i, !cir.bool
+  // CHECK-NEXT:   cir.return %[[RES]] : !cir.bool
+  // CHECK-NEXT: }
+
+  cir.func @method_to_bool(%arg0 : !Method1) -> !cir.bool {
+    %0 = cir.cast member_ptr_to_bool %arg0: !Method1 -> !cir.bool
+    cir.return %0 : !cir.bool
+  }
+  // CHECK:      @method_to_bool(%[[ARG:.+]]: ![[ABI_TY:.+]]) -> !cir.bool
+  // CHECK-NEXT:   %[[NULL:.+]] = cir.const #cir.int<0> : !s64i
+  // CHECK-NEXT:   %[[PTR:.+]] = cir.extract_member %[[ARG]][0] : ![[ABI_TY]] -> !s64i
+  // CHECK-NEXT:   %[[RES:.+]] = cir.cmp(ne, %[[PTR]], %[[NULL]]) : !s64i, !cir.bool
+  // CHECK-NEXT:   cir.return %[[RES]] : !cir.bool
+  // CHECK-NEXT: }
+}
