@@ -1874,6 +1874,19 @@ namespace Invalid {
                               // both-note {{in call to}}
 }
 
+namespace Fma {
+  static_assert(__builtin_fma(2.0, 3.0, 4.0) == 10.0);
+  static_assert(__builtin_fma(200.0, 300.0, 400.0) == 60400.0);
+  static_assert(__builtin_fmal(2.0, 3.0, 4.0) == 10.0);
+  static_assert(__builtin_fmal(200.0, 300.0, 400.0) == 60400.0);
+  static_assert(__builtin_fmaf(2.0, 3.0, 4.0) == 10.0);
+  static_assert(__builtin_fmaf(200.0, 300.0, 400.0) == 60400.0);
+  static_assert(__builtin_fmaf16(2.0, 3.0, 4.0) == 10.0);
+  static_assert(__builtin_fmaf16(200.0, 300.0, 400.0) == 60416.0);
+  static_assert(__builtin_fmaf128(2.0, 3.0, 4.0) == 10.0);
+  static_assert(__builtin_fmaf128(200.0, 300.0, 400.0) == 60400.0);
+}
+
 #if __cplusplus >= 202002L
 namespace WithinLifetime {
   constexpr int a = 10;
