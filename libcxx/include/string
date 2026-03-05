@@ -1213,7 +1213,7 @@ public:
   // TODO(boomanaiden154): Once we mark this in destructors as dead on return,
   // we can use a normal call to __reset_internal_buffer and remove the extra
   // __rep constructor.
-  inline _LIBCPP_CONSTEXPR_SINCE_CXX20 ~basic_string() { 
+  inline _LIBCPP_CONSTEXPR_SINCE_CXX20 ~basic_string() {
     if (__libcpp_is_constant_evaluated())
       return;
     __reset_internal_buffer(__rep(__uninitialized_tag()));
