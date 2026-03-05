@@ -3081,11 +3081,30 @@ bool SPIRVInstructionSelector::selectWaveExclusiveScan(
 bool SPIRVInstructionSelector::selectBitreverse(Register ResVReg,
                                                 SPIRVTypeInst ResType,
                                                 MachineInstr &I) const {
+  Register OpReg = I.getOperand(1).getReg();
+
+  if (GR.getScalarOrVectorBitWidth(ResType) == 16) {
+    SPIRVTypeInst IntType = GR.getOrCreateSPIRVIntegerType(32, I, TII);
+    unsigned N = GR.getScalarOrVectorComponentCount(ResType);
+    if (N > 1)
+      IntType = GR.getOrCreateSPIRVVectorType(ResType, N, I, TII);
+
+    OpReg = MRI->createVirtualRegister(GR.getRegClass(ResType));
+    unsigned ExtendOpcode =
+        sampledTypeIsSignedInteger(GR.getTypeForSPIRVType(ResType))
+            ? SPIRV::OpSConvert
+            : SPIRV::OpUConvert;
+    if (!selectOpWithSrcs(OpReg, IntType, I, {I.getOperand(1).getReg()},
+                          ExtendOpcode))
+      return false;
+    ResType = IntType;
+  }
+
   MachineBasicBlock &BB = *I.getParent();
   BuildMI(BB, I, I.getDebugLoc(), TII.get(SPIRV::OpBitReverse))
       .addDef(ResVReg)
       .addUse(GR.getSPIRVTypeID(ResType))
-      .addUse(I.getOperand(1).getReg())
+      .addUse(OpReg)
       .constrainAllUses(TII, TRI, RBI);
   return true;
 }
