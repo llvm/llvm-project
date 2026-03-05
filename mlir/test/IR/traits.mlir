@@ -303,6 +303,48 @@ func.func @failedParentOneOf_wrong_parent1() {
    }) : () -> ()
 }
 
+// -----
+
+func.func @failedParentNotOf() {
+  "test.parent"() ({
+   // expected-error@+1 {{expects parent op to not be 'test.parent'}}
+    "test.not_child"() : () -> ()
+  }) : () -> ()
+}
+
+// -----
+
+// CHECK: succeededChildWithParentNotOf
+func.func @succeededChildWithParentNotOf() {
+  "test.not_child"() : () -> ()
+  return
+}
+
+// -----
+
+// CHECK: succeededChildWithParentNotOneOf
+func.func @succeededChildWithParentNotOneOf() {
+  "test.child_with_parent_not_one_of"() : () -> ()
+  return
+}
+
+// -----
+
+func.func @failedParent1NotOneOf() {
+  "test.parent1"() ({
+   // expected-error@+1 {{expects parent op to not be one of 'test.parent, test.parent1'}}
+    "test.child_with_parent_not_one_of"() : () -> ()
+   }) : () -> ()
+}
+
+// -----
+
+func.func @failedParentNotOneOf() {
+  "test.parent"() ({
+   // expected-error@+1 {{expects parent op to not be one of 'test.parent, test.parent1'}}
+    "test.child_with_parent_not_one_of"() : () -> ()
+   }) : () -> ()
+}
 
 // -----
 

@@ -1323,6 +1323,27 @@ struct HasParent {
   };
 };
 
+/// This class provides a verifier for ops that are expecting their parent
+/// to not be one of the given parent ops
+template <typename... ParentOpTypes>
+struct HasParentNotOf {
+  template <typename ConcreteType>
+  class Impl : public TraitBase<ConcreteType, Impl> {
+  public:
+    static LogicalResult verifyTrait(Operation *op) {
+      if (Operation *parentOp = op->getParentOp();
+          !parentOp || !llvm::isa<ParentOpTypes...>(parentOp))
+        return success();
+
+      return op->emitOpError()
+             << "expects parent op "
+             << (sizeof...(ParentOpTypes) != 1 ? "to not be one of '"
+                                               : "to not be '")
+             << llvm::ArrayRef({ParentOpTypes::getOperationName()...}) << "'";
+    }
+  };
+};
+
 /// A trait for operations that have an attribute specifying operand segments.
 ///
 /// Certain operations can have multiple variadic operands and their size

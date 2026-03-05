@@ -141,6 +141,14 @@ class ParentOneOf<list<string> ops>
     : ParamNativeOpTrait<"HasParent", !interleave(ops, ", ")>,
       StructuralOpTrait;
 
+// Op's parent operation is not the provided one.
+class HasParentNotOf<string op>
+    : ParamNativeOpTrait<"HasParentNotOf", op>, StructuralOpTrait;
+
+class ParentNotOneOf<list<string> ops>
+    : ParamNativeOpTrait<"HasParentNotOf", !interleave(ops, ", ")>,
+      StructuralOpTrait;
+
 // Op result type is derived from the first attribute. If the attribute is an
 // subclass of `TypeAttrBase`, its value is used, otherwise, the type of the
 // attribute content is used.
