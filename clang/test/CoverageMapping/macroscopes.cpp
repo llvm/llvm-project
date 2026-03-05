@@ -37,49 +37,49 @@
 // CHECK-NEXT: File 0, [[@LINE+1]]:12 -> {{[0-9]+}}:2 = #0
 int main() {
   int x = 0;
-  // CHECK-NEXT: Expansion,File 0, [[@LINE+2]]:3 -> [[@LINE+2]]:17 = #0
+  // CHECK-NEXT: Expansion,File 0, [[@LINE+2]]:3 -> [[@LINE+2]]:17 = 0
   // CHECK-NEXT: File 0, [[@LINE+1]]:17 -> [[@LINE+7]]:15 = #1
   starts_a_scope
     x = x;
-    // CHECK-NEXT: Expansion,File 0, [[@LINE+1]]:5 -> [[@LINE+1]]:14 = #1
+    // CHECK-NEXT: Expansion,File 0, [[@LINE+1]]:5 -> [[@LINE+1]]:14 = 0
     some_code
     x = x;
-  // CHECK-NEXT: Expansion,File 0, [[@LINE+1]]:3 -> [[@LINE+1]]:15 = #1
+  // CHECK-NEXT: Expansion,File 0, [[@LINE+1]]:3 -> [[@LINE+1]]:15 = 0
   ends_a_scope
 
-  // CHECK-NEXT: Expansion,File 0, [[@LINE+4]]:3 -> [[@LINE+4]]:17 = #0
+  // CHECK-NEXT: Expansion,File 0, [[@LINE+4]]:3 -> [[@LINE+4]]:17 = 0
   // CHECK-NEXT: File 0, [[@LINE+3]]:17 -> [[@LINE+5]]:15 = #4
-  // CHECK-NEXT: Expansion,File 0, [[@LINE+3]]:5 -> [[@LINE+3]]:14 = #4
-  // CHECK-NEXT: Expansion,File 0, [[@LINE+3]]:3 -> [[@LINE+3]]:15 = #4
+  // CHECK-NEXT: Expansion,File 0, [[@LINE+3]]:5 -> [[@LINE+3]]:14 = 0
+  // CHECK-NEXT: Expansion,File 0, [[@LINE+3]]:3 -> [[@LINE+3]]:15 = 0
   starts_a_scope
     some_code
   ends_a_scope
 
-  // CHECK-NEXT: Expansion,File 0, [[@LINE+3]]:3 -> [[@LINE+3]]:17 = #0
+  // CHECK-NEXT: Expansion,File 0, [[@LINE+3]]:3 -> [[@LINE+3]]:17 = 0
   // CHECK-NEXT: File 0, [[@LINE+2]]:17 -> [[@LINE+3]]:15 = #7
-  // CHECK-NEXT: Expansion,File 0, [[@LINE+2]]:3 -> [[@LINE+2]]:15 = #7
+  // CHECK-NEXT: Expansion,File 0, [[@LINE+2]]:3 -> [[@LINE+2]]:15 = 0
   starts_a_scope
   ends_a_scope
 
-  // CHECK-NEXT: Expansion,File 0, [[@LINE+3]]:3 -> [[@LINE+3]]:17 = #0
+  // CHECK-NEXT: Expansion,File 0, [[@LINE+3]]:3 -> [[@LINE+3]]:17 = 0
   // CHECK-NEXT: Gap,File 0, [[@LINE+2]]:17 -> [[@LINE+3]]:5 = #8
-  // CHECK-NEXT: Expansion,File 0, [[@LINE+2]]:5 -> [[@LINE+2]]:16 = #8
+  // CHECK-NEXT: Expansion,File 0, [[@LINE+2]]:5 -> [[@LINE+2]]:16 = 0
   starts_a_while
     simple_stmt;
 
   x = 0;
-  // CHECK-NEXT: Expansion,File 0, [[@LINE+5]]:3 -> [[@LINE+5]]:17 = #0
+  // CHECK-NEXT: Expansion,File 0, [[@LINE+5]]:3 -> [[@LINE+5]]:17 = 0
   // CHECK-NEXT: Gap,File 0, [[@LINE+4]]:17 -> [[@LINE+4]]:18 = #9
   // CHECK-NEXT: File 0, [[@LINE+3]]:18 -> [[@LINE+5]]:15 = #9
-  // CHECK-NEXT: Expansion,File 0, [[@LINE+3]]:5 -> [[@LINE+3]]:16 = #9
-  // CHECK-NEXT: Expansion,File 0, [[@LINE+3]]:3 -> [[@LINE+3]]:15 = #9
+  // CHECK-NEXT: Expansion,File 0, [[@LINE+3]]:5 -> [[@LINE+3]]:16 = 0
+  // CHECK-NEXT: Expansion,File 0, [[@LINE+3]]:3 -> [[@LINE+3]]:15 = 0
   starts_a_while {
     simple_stmt;
   ends_a_scope
 
-  // CHECK-NEXT: Expansion,File 0, [[@LINE+1]]:3 -> [[@LINE+1]]:17 = #0
+  // CHECK-NEXT: Expansion,File 0, [[@LINE+1]]:3 -> [[@LINE+1]]:17 = 0
   macro_with_for
-  // CHECK-NEXT: Expansion,File 0, [[@LINE+1]]:3 -> [[@LINE+1]]:19 = #0
+  // CHECK-NEXT: Expansion,File 0, [[@LINE+1]]:3 -> [[@LINE+1]]:19 = 0
   macro_with_while
 
   return 0;
