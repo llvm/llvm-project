@@ -185,10 +185,10 @@ v1i32 f_vec_tiny_v1i32_ret(void) {
 }
 
 // ILP32-ILP32F-ILP32D-LABEL: define dso_local void @f_vec_tiny_v2i8
-// ILP32-ILP32F-ILP32D-SAME: (i32 noundef [[X_COERCE:%.*]]) #[[ATTR0]] {
+// ILP32-ILP32F-ILP32D-SAME: (i16 noundef [[X_COERCE:%.*]]) #[[ATTR0]] {
 // ILP32-ILP32F-ILP32D:  entry:
 //
-void f_vec_tiny_v2i8(v4i8 x) {
+void f_vec_tiny_v2i8(v2i8 x) {
   x[0] = x[1];
 }
 
