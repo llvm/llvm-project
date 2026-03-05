@@ -340,3 +340,34 @@ func.func @test_convert_alloca_remat() {
 // CHECK: acc.parallel {
 // CHECK:   %[[CVT_INNER:.*]] = fir.convert %[[ALLOCA]]
 // CHECK:   fir.call @use_i64(%[[CVT_INNER]])
+
+// -----
+
+// Test that an intermediate fir.convert in a trace chain
+// (declare -> convert -> unboxchar) does not get rematerialized,
+// while a direct ptr-to-int fir.convert is correctly sunk.
+func.func private @use_i64(i64) -> ()
+func.func private @use_ref(!fir.ref<!fir.char<1,10>>) -> ()
+
+func.func @test_convert_chain_and_direct(%arg0: !fir.boxchar<1>, %arg1: !fir.ref<i32>) {
+  %c10 = arith.constant 10 : index
+  %0:2 = fir.unboxchar %arg0 : (!fir.boxchar<1>) -> (!fir.ref<!fir.char<1,?>>, index)
+  %1 = fir.convert %0#0 : (!fir.ref<!fir.char<1,?>>) -> !fir.ref<!fir.char<1,10>>
+  %2 = fir.declare %1 typeparams %c10 {uniq_name = "scalar"} : (!fir.ref<!fir.char<1,10>>, index) -> !fir.ref<!fir.char<1,10>>
+  %3 = fir.convert %arg1 : (!fir.ref<i32>) -> i64
+  acc.parallel {
+    fir.call @use_ref(%2) : (!fir.ref<!fir.char<1,10>>) -> ()
+    fir.call @use_i64(%3) : (i64) -> ()
+    acc.yield
+  }
+  return
+}
+
+// CHECK-LABEL: @test_convert_chain_and_direct
+// CHECK: %[[UNBOX:.*]]:2 = fir.unboxchar %arg0
+// CHECK: %[[CVT_REF:.*]] = fir.convert %[[UNBOX]]#0
+// CHECK: %[[DECL:.*]] = fir.declare %[[CVT_REF]]
+// CHECK: acc.parallel {
+// CHECK:   %[[CVT_INT:.*]] = fir.convert %arg1
+// CHECK:   fir.call @use_ref(%[[DECL]])
+// CHECK:   fir.call @use_i64(%[[CVT_INT]])
