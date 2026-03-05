@@ -8019,9 +8019,7 @@ struct EqualBBWrapper {
 
     // Avoid blocks that are "address-taken" (blockaddress) or have unusual
     // uses.
-    if (BB->hasAddressTaken())
-      return false;
-    if (BB->isLandingPad())
+    if (BB->hasAddressTaken() || BB->isLandingPad())
       return false;
 
     // TODO: relax this condition to merge equal blocks with >1 instructions?
@@ -8058,9 +8056,8 @@ template <> struct llvm::DenseMapInfo<const EqualBBWrapper *> {
     // PHIs. Initially, we tried to just use the successor BB as the hash, but
     // including the incoming PHI values leads to better performance.
     // We also tried to build a map from BB -> Succs.IncomingValues ahead of
-    // time and passing it in SwitchSuccWrapper, but this slowed down the
-    // average compile time without having any impact on the worst case compile
-    // time.
+    // time and passing it in EqualBBWrapper, but this slowed down the average
+    // compile time without having any impact on the worst case compile time.
     BasicBlock *Succ = BI->getSuccessor(0);
     auto PhiValsForBB = map_range(
         Succ->phis(), [BB, &PhiPredIVs = *EBW->PhiPredIVs](PHINode &Phi) {
