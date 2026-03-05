@@ -4,6 +4,79 @@ import { isDeepStrictEqual } from "util";
 import * as vscode from "vscode";
 
 /**
+ * The information needed to spawn a lldb-dap process: e.g. arguments, binary
+ * path, etc.
+ */
+class ServerSpawnInfo {
+  constructor(
+    readonly path: string,
+    readonly args: string[],
+    readonly env: { [key: string]: string },
+  ) {}
+
+  static create(
+    path: string,
+    args: string[],
+    env: NodeJS.ProcessEnv | { [key: string]: string } | undefined,
+  ): ServerSpawnInfo {
+    // Convert env to a plain object for later comparison. We filter out
+    // `LLDBDAP_LOG` because we ignore it when considering reusing lldb-dap
+    // server.
+    const normalizedEnv: { [key: string]: string } = {};
+    for (const [key, value] of Object.entries(env ?? {})) {
+      if (key !== "LLDBDAP_LOG") {
+        normalizedEnv[key] = String(value);
+      }
+    }
+    return new ServerSpawnInfo(path, args, normalizedEnv);
+  }
+
+  /**
+   * Compares this spawn info with another for equality.
+   */
+  equals(other: ServerSpawnInfo): boolean {
+    return isDeepStrictEqual(
+      [this.path, this.args, this.env],
+      [other.path, other.args, other.env],
+    );
+  }
+
+  /**
+   * Returns a human-readable string representation of this spawn info.
+   */
+  toDisplay(): string {
+    const cmd = [this.path, ...this.args];
+
+    const env = Object.entries(this.env)
+      .map(([k, v]) => `${k}=${v}`)
+      // Sort to make it easier to compare. Sorting isn't necessary for the
+      // `isDeepStrictEqual` check.
+      .sort()
+      // Joining with newlines makes it difficult to truncate by string length,
+      // so we opt for space.
+      .join(" ");
+
+    let display = cmd.join(" ");
+    if (env) {
+      display += `\n${env}`;
+    }
+
+    return display;
+  }
+
+  /**
+   * Returns a truncated representation of `toDisplay`.
+   */
+  toDisplayTruncated(maxLength: number = 300): string {
+    const full = this.toDisplay();
+    if (full.length <= maxLength) {
+      return full;
+    }
+    return full.substring(0, maxLength) + "...";
+  }
+}
+
+/**
  * Represents a running lldb-dap process that is accepting connections (i.e. in "server mode").
  *
  * Handles startup of the process if it isn't running already as well as prompting the user
@@ -12,7 +85,7 @@ import * as vscode from "vscode";
 export class LLDBDapServer implements vscode.Disposable {
   private serverProcess?: child_process.ChildProcessWithoutNullStreams;
   private serverInfo?: Promise<{ host: string; port: number }>;
-  private serverSpawnInfo?: string[];
+  private serverSpawnInfo?: ServerSpawnInfo;
   // Detects changes to the lldb-dap executable file since the server's startup.
   private serverFileWatcher?: FSWatcher;
   // Indicates whether the lldb-dap executable file has changed since the server's startup.
@@ -87,7 +160,7 @@ export class LLDBDapServer implements vscode.Disposable {
         }
       });
       this.serverProcess = process;
-      this.serverSpawnInfo = this.getSpawnInfo(dapPath, dapArgs, options?.env);
+      this.serverSpawnInfo = ServerSpawnInfo.create(dapPath, dapArgs, options?.env);
       this.serverFileChanged = false;
       this.serverFileWatcher = chokidarWatch(dapPath);
       this.serverFileWatcher
@@ -127,17 +200,17 @@ export class LLDBDapServer implements vscode.Disposable {
       changeTLDR.push("an old binary");
     }
 
-    const newSpawnInfo = this.getSpawnInfo(dapPath, args, env);
-    if (!isDeepStrictEqual(this.serverSpawnInfo, newSpawnInfo)) {
+    const newSpawnInfo = ServerSpawnInfo.create(dapPath, args, env);
+    if (!this.serverSpawnInfo.equals(newSpawnInfo)) {
       changeTLDR.push("different arguments");
       changeDetails.push(`
 The previous lldb-dap server was started with:
 
-${this.serverSpawnInfo.join(" ")}
+${this.serverSpawnInfo.toDisplayTruncated()}
 
 The new lldb-dap server will be started with:
 
-${newSpawnInfo.join(" ")}
+${newSpawnInfo.toDisplayTruncated()}
 `);
     }
 
@@ -157,6 +230,7 @@ Restarting the server will interrupt any existing debug sessions and start a new
       },
       "Restart",
       "Use Existing",
+      "Show Full Details",
     );
     switch (userInput) {
       case "Restart":
@@ -164,6 +238,9 @@ Restarting the server will interrupt any existing debug sessions and start a new
         return true;
       case "Use Existing":
         return true;
+      case "Show Full Details":
+        await this.showFullSpawnInfoComparison(this.serverSpawnInfo, newSpawnInfo);
+        return false;
       case undefined:
         return false;
     }
@@ -191,20 +268,27 @@ Restarting the server will interrupt any existing debug sessions and start a new
     }
   }
 
-  getSpawnInfo(
-    path: string,
-    args: string[],
-    env: NodeJS.ProcessEnv | { [key: string]: string } | undefined,
-  ): string[] {
-    return [
-      path,
-      ...args,
-      ...Object.entries(env ?? {})
-        // Filter and sort to avoid restarting the server just because the
-        // order of env changed or the log path changed.
-        .filter((entry) => String(entry[0]) !== "LLDBDAP_LOG")
-        .sort()
-        .map((entry) => String(entry[0]) + "=" + String(entry[1])),
-    ];
+  private async showFullSpawnInfoComparison(
+    oldSpawnInfo: ServerSpawnInfo,
+    newSpawnInfo: ServerSpawnInfo,
+  ): Promise<void> {
+    const content = `Comparing lldb-dap env and args
+===============================
+Each section contains the binary and args on the first line, and then env on the
+following lines.
+
+Existing
+--------
+${oldSpawnInfo.toDisplay()}
+
+New
+--------
+${newSpawnInfo.toDisplay()}
+`;
+    const doc = await vscode.workspace.openTextDocument({
+      content,
+      language: "text",
+    });
+    await vscode.window.showTextDocument(doc, { preview: true });
   }
 }
