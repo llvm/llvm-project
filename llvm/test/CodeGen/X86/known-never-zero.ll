@@ -1759,6 +1759,30 @@ define i32 @add_maybe_zero(i32 %xx, i32 %y) {
   ret i32 %r
 }
 
+define i32 @add_nuw_known_nonzero_vec(<4 x i32> %xx, ptr %p) {
+; X86-LABEL: add_nuw_known_nonzero_vec:
+; X86:       # %bb.0:
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; X86-NEXT:    paddd {{\.?LCPI[0-9]+_[0-9]+}}, %xmm0
+; X86-NEXT:    movdqa %xmm0, (%eax)
+; X86-NEXT:    movd %xmm0, %eax
+; X86-NEXT:    rep bsfl %eax, %eax
+; X86-NEXT:    retl
+;
+; X64-LABEL: add_nuw_known_nonzero_vec:
+; X64:       # %bb.0:
+; X64-NEXT:    vpaddd {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm0
+; X64-NEXT:    vmovdqa %xmm0, (%rdi)
+; X64-NEXT:    vmovd %xmm0, %eax
+; X64-NEXT:    rep bsfl %eax, %eax
+; X64-NEXT:    retq
+  %z = add nuw <4 x i32> %xx, <i32 1, i32 0, i32 0, i32 0>
+  store <4 x i32> %z, ptr %p
+  %e = extractelement <4 x i32> %z, i32 0
+  %r = call i32 @llvm.cttz.i32(i32 %e, i1 false)
+  ret i32 %r
+}
+
 define i32 @sub_known_nonzero_neg_case(i32 %xx) {
 ; X86-LABEL: sub_known_nonzero_neg_case:
 ; X86:       # %bb.0:
@@ -1854,6 +1878,35 @@ define i32 @sub_maybe_zero2(i32 %x) {
 ; X64-NEXT:    retq
   %z = sub i32 0, %x
   %r = call i32 @llvm.cttz.i32(i32 %z, i1 false)
+  ret i32 %r
+}
+
+define i32 @sub_known_nonzero_ne_vec(<4 x i32> %xx, ptr %p) {
+; X86-LABEL: sub_known_nonzero_ne_vec:
+; X86:       # %bb.0:
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; X86-NEXT:    por {{\.?LCPI[0-9]+_[0-9]+}}, %xmm0
+; X86-NEXT:    movd {{.*#+}} xmm1 = [2,0,0,0]
+; X86-NEXT:    psubd %xmm0, %xmm1
+; X86-NEXT:    movdqa %xmm1, (%eax)
+; X86-NEXT:    movd %xmm1, %eax
+; X86-NEXT:    rep bsfl %eax, %eax
+; X86-NEXT:    retl
+;
+; X64-LABEL: sub_known_nonzero_ne_vec:
+; X64:       # %bb.0:
+; X64-NEXT:    vpor {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm0
+; X64-NEXT:    vpmovsxbq {{.*#+}} xmm1 = [2,0]
+; X64-NEXT:    vpsubd %xmm0, %xmm1, %xmm0
+; X64-NEXT:    vmovdqa %xmm0, (%rdi)
+; X64-NEXT:    vmovd %xmm0, %eax
+; X64-NEXT:    rep bsfl %eax, %eax
+; X64-NEXT:    retq
+  %u = or <4 x i32> %xx, <i32 1, i32 0, i32 0, i32 0>
+  %z = sub <4 x i32> <i32 2, i32 0, i32 0, i32 0>, %u
+  store <4 x i32> %z, ptr %p
+  %e = extractelement <4 x i32> %z, i32 0
+  %r = call i32 @llvm.cttz.i32(i32 %e, i1 false)
   ret i32 %r
 }
 
