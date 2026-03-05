@@ -722,11 +722,7 @@ ABIArgInfo RISCVABIInfo::classifyArgumentType(QualType Ty, bool IsFixed,
     unsigned Alignment = getContext().getTypeAlign(Ty);
 
     if (Size <= XLen) {
-      // For big endian, we need to extend the type to XLen.
-      if (getDataLayout().isBigEndian())
-        return ABIArgInfo::getDirect(
-            llvm::IntegerType::get(getVMContext(), XLen));
-      // Otherwise use the smallest integer type we can.
+      // Use the smallest integer type we can.
       return ABIArgInfo::getDirect(
           llvm::IntegerType::get(getVMContext(), Size));
     }
