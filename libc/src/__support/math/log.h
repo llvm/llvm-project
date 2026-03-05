@@ -808,7 +808,7 @@ LIBC_INLINE LIBC_CONSTEXPR double log(double x) {
   fputil::DoubleDouble r1;
 
   // Perform exact range reduction
-#if defined(LIBC_TARGET_CPU_HAS_FMA_DOUBLE)
+#ifdef LIBC_TARGET_CPU_HAS_FMA_DOUBLE
   u = fputil::multiply_add(r, m, -1.0); // exact
 #else
   uint64_t c_m = x_m & 0x3FFF'E000'0000'0000ULL;
