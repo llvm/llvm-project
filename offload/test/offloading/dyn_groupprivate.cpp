@@ -71,6 +71,8 @@ int main() {
       ++Failed;
     if (omp_get_dyn_gprivate_size() != ExceededSize)
       ++Failed;
+    if (omp_get_dyn_gprivate_memspace() != omp_default_mem_space)
+      ++Failed;
     bool IsFallback = true; // FIX
     if (!IsFallback)
       ++Failed;
@@ -87,6 +89,8 @@ int main() {
     if (omp_get_dyn_gprivate_ptr(0) != omp_get_dyn_gprivate_nofb_ptr(0))
       ++Failed;
     if (omp_get_dyn_gprivate_size())
+      ++Failed;
+    if (omp_get_dyn_gprivate_memspace() != omp_null_mem_space)
       ++Failed;
     bool IsFallback = true; // FIX
     if (!IsFallback)
@@ -105,6 +109,8 @@ int main() {
     if (!omp_get_dyn_gprivate_size())
       ++Failed;
     if (omp_get_dyn_gprivate_size() != ExceededSize)
+      ++Failed;
+    if (omp_get_dyn_gprivate_memspace() != omp_default_mem_space)
       ++Failed;
     bool IsFallback = true; // FIX
     if (!IsFallback)
@@ -126,6 +132,8 @@ int main() {
       ++Failed;
     if (omp_get_dyn_gprivate_size() != N)
       ++Failed;
+    if (omp_get_dyn_gprivate_memspace() != omp_cgroup_mem_space)
+      ++Failed;
     bool IsFallback = false; // FIX
     if (IsFallback)
       ++Failed;
@@ -145,6 +153,8 @@ int main() {
       ++Failed;
     if (omp_get_dyn_gprivate_size() != N)
       ++Failed;
+    if (omp_get_dyn_gprivate_memspace() != omp_cgroup_mem_space)
+      ++Failed;
     bool IsFallback = false; // FIX
     if (IsFallback)
       ++Failed;
@@ -160,6 +170,8 @@ int main() {
     if (omp_get_dyn_gprivate_ptr(0) != omp_get_dyn_gprivate_nofb_ptr(0))
       ++Failed;
     if (omp_get_dyn_gprivate_size())
+      ++Failed;
+    if (omp_get_dyn_gprivate_memspace() != omp_null_mem_space)
       ++Failed;
     bool IsFallback = false; // FIX
     if (IsFallback)
@@ -179,6 +191,8 @@ int main() {
       ++Failed;
     if (omp_get_dyn_gprivate_size())
       ++Failed;
+    if (omp_get_dyn_gprivate_memspace() != omp_null_mem_space)
+      ++Failed;
     bool IsFallback = false; // FIX
     if (IsFallback)
       ++Failed;
@@ -194,6 +208,8 @@ int main() {
     if (omp_get_dyn_gprivate_ptr(0) != omp_get_dyn_gprivate_nofb_ptr(0))
       ++Failed;
     if (omp_get_dyn_gprivate_size())
+      ++Failed;
+    if (omp_get_dyn_gprivate_memspace() != omp_null_mem_space)
       ++Failed;
     bool IsFallback = false; // FIX
     if (IsFallback)

@@ -160,16 +160,22 @@ struct DynCGroupMemTy {
                     Size * mapping::getBlockIdInKernel();
   }
 
-  bool isFallback() const { return Fallback != DynCGroupMemFallbackType::None; }
-  bool isDefaultMemFallback() const {
-    return Fallback == DynCGroupMemFallbackType::DefaultMem;
+  omp_memspace_handle_t getMemSpace() const {
+    if (Size == 0)
+      return omp_null_mem_space;
+    if (Fallback == DynCGroupMemFallbackType::None)
+      return omp_cgroup_mem_space;
+    return omp_default_mem_space;
   }
+
   size_t getSize() const { return Size; }
 
   SharedMemPtrTy getNativeOrNullPtr() const { return NativeOrNullPtr; }
 
   unsigned char *getNativeOrFallbackPtr() const {
-    return (isDefaultMemFallback()) ? FallbackPtr : getNativeOrNullPtr();
+    return (Fallback == DynCGroupMemFallbackType::DefaultMem)
+               ? FallbackPtr
+               : getNativeOrNullPtr();
   }
 
 private:
@@ -478,6 +484,10 @@ void *omp_get_dyn_gprivate_nofb_ptr(size_t Offset, omp_access_t) {
 
 size_t omp_get_dyn_gprivate_size(omp_access_t) {
   return DynCGroupMem.getSize();
+}
+
+omp_memspace_handle_t omp_get_dyn_gprivate_memspace(omp_access_t) {
+  return DynCGroupMem.getMemSpace();
 }
 }
 

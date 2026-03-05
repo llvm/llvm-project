@@ -171,6 +171,12 @@ typedef enum omp_allocator_handle_t {
   KMP_ALLOCATOR_MAX_HANDLE = ~(0LU)
 } omp_allocator_handle_t;
 
+typedef enum omp_memspace_handle_t {
+  omp_null_mem_space = 0,
+  omp_cgroup_mem_space = 5,
+  omp_default_mem_space = 99
+} omp_memspace_handle_t;
+
 #define __PRAGMA(STR) _Pragma(#STR)
 #define OMP_PRAGMA(STR) __PRAGMA(omp STR)
 

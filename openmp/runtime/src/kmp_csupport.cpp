@@ -4525,6 +4525,10 @@ void *omp_get_dyn_gprivate_nofb_ptr(size_t offset, omp_access_t access_group) {
 
 size_t omp_get_dyn_gprivate_size(omp_access_t access_group) { return 0; }
 
+omp_memspace_handle_t omp_get_dyn_gprivate_memspace(omp_access_t access_group) {
+  return omp_null_mem_space;
+}
+
 int __kmpc_get_target_offload(void) {
   if (!__kmp_init_serial) {
     __kmp_serial_initialize();
