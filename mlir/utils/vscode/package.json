@@ -5,7 +5,6 @@
   "version": "0.0.14",
   "publisher": "llvm-vs-code-extensions",
   "homepage": "https://mlir.llvm.org/",
-  "icon": "icon.png",
   "engines": {
     "vscode": "^1.75.0"
   },
@@ -219,6 +218,10 @@
       {
         "command": "mlir.viewPDLLOutput",
         "title": "mlir-pdll: View PDLL output"
+      },
+      {
+        "command": "mlir.runLitWithIRDump",
+        "title": "mlir:Run with IR Dump"
       }
     ],
     "menus": {
@@ -227,6 +230,11 @@
           "command": "mlir.viewPDLLOutput",
           "group": "z_commands",
           "when": "editorLangId == pdll"
+        },
+        {
+          "command": "mlir.runLitWithIRDump",
+          "group": "z_commands",
+          "when": "editorLangId == mlir"
         }
       ]
     }
