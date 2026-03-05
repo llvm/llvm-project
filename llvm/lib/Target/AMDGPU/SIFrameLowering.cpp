@@ -1216,14 +1216,13 @@ void SIFrameLowering::emitPrologue(MachineFunction &MF,
   // to determine the end of the prologue.
   DebugLoc DL;
 
-
   bool HasFP = false;
   bool HasBP = false;
   uint32_t NumBytes = MFI.getStackSize();
   uint32_t RoundedSize = NumBytes;
 
-  // Chain functions always tail call, so there's no need to save and restore
-  // the FP or BP.
+  // Chain functions never return, so there's no need to save and restore the FP
+  // or BP.
   bool SavesStackRegs = !FuncInfo->isChainFunction();
 
   if (TRI.hasStackRealignment(MF))
