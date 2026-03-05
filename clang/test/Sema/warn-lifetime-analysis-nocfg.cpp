@@ -1326,4 +1326,20 @@ void test_unique_ptr_arrow_non_temporary() {
   const char* p = up->data();
   use(p);
 }
+
+void test_optional_view_arrow_data() {
+  const char* p;
+  p = std::optional<std::string_view>()->data();
+  (void)*p;
+}
+
+void test_optional_view_arrow() {
+  // FIXME: Sema analysis doesn't warn here because we suppress operator->
+  // tracking when the pointee is a GSL Pointer to avoid false positives (see
+  // test_optional_view_arrow_data). The CFG-based lifetime safety analysis
+  // handles this correctly.
+  std::string_view* p = std::optional<std::string_view>().operator->(); // cfg-warning {{object whose reference is captured does not live long enough}} \
+                                                                        // cfg-note {{destroyed here}}
+  (void)*p;                                                             // cfg-note {{later used here}}
+}
 } // namespace owner_arrow

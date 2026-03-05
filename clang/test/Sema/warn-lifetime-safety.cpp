@@ -1774,4 +1774,13 @@ void test_unique_ptr_arrow() {
   }                  // expected-note {{destroyed here}}
   (void)*p;          // expected-note {{later used here}}
 }
+
+void test_optional_view_arrow() {
+    const char* p;
+    {
+        std::optional<std::string_view> opt;
+        p = opt->data();
+    }
+    (void)*p;
+}
 } // namespace OwnerArrowOperator

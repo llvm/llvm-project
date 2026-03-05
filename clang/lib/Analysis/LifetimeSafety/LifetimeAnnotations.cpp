@@ -153,9 +153,17 @@ bool shouldTrackImplicitObjectArg(const CXXMethodDecl *Callee,
 
   if (isPointerLikeType(Callee->getReturnType())) {
     if (!Callee->getIdentifier()) {
-      return Callee->getParent()->hasAttr<OwnerAttr>() &&
-             Callee->getOverloadedOperator() ==
-                 OverloadedOperatorKind::OO_Arrow;
+      // e.g., std::optional<T>::operator->() returns T*.
+      if (Callee->getParent()->hasAttr<OwnerAttr>() &&
+          Callee->getOverloadedOperator() == OverloadedOperatorKind::OO_Arrow) {
+        if (RunningUnderLifetimeSafety)
+          return true;
+        // For Sema analysis, don't track operator-> when the pointee is a GSL
+        // Pointer (e.g., optional<string_view>), as Sema can't distinguish the
+        // Pointer object's lifetime from the data it observes.
+        return !isGslPointerType(Callee->getReturnType()->getPointeeType());
+      }
+      return false;
     }
     return IteratorMembers.contains(Callee->getName()) ||
            InnerPointerGetters.contains(Callee->getName()) ||
