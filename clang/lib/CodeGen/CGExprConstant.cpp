@@ -2561,8 +2561,7 @@ ConstantEmitter::tryEmitPrivate(const APValue &Value, QualType DestType,
     for (unsigned Row = 0; Row != NumRows; ++Row) {
       for (unsigned Col = 0; Col != NumCols; ++Col) {
         const APValue &Elt = Value.getMatrixElt(Row, Col);
-        // Compute flat index based on memory layout.
-        unsigned Idx = IsRowMajor ? Row * NumCols + Col : Col * NumRows + Row;
+        unsigned Idx = MT->getFlattenedIndex(Row, Col, IsRowMajor);
         if (Elt.isInt())
           Inits[Idx] =
               llvm::ConstantInt::get(CGM.getLLVMContext(), Elt.getInt());

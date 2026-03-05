@@ -617,7 +617,7 @@ public:
     assert(Col < getMatrixNumColumns() && "Column index out of range");
     // Matrix elements are stored in row-major order.
     unsigned I = Row * getMatrixNumColumns() + Col;
-    return ((Mat *)(char *)&Data)->Elts[I];
+    return getMatrixElt(I);
   }
   const APValue &getMatrixElt(unsigned Row, unsigned Col) const {
     return const_cast<APValue *>(this)->getMatrixElt(Row, Col);
@@ -820,10 +820,11 @@ private:
   MutableArrayRef<APValue> setMatrixUninit(unsigned NumRows, unsigned NumCols) {
     assert(isMatrix() && "Invalid accessor");
     Mat *M = ((Mat *)(char *)&Data);
-    M->Elts = new APValue[NumRows * NumCols];
+    unsigned NumElts = NumRows * NumCols;
+    M->Elts = new APValue[NumElts];
     M->NumRows = NumRows;
     M->NumCols = NumCols;
-    return {M->Elts, NumRows * NumCols};
+    return {M->Elts, NumElts};
   }
   MutableArrayRef<LValuePathEntry>
   setLValueUninit(LValueBase B, const CharUnits &O, unsigned Size,

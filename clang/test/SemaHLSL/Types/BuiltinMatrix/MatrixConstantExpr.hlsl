@@ -115,4 +115,13 @@ export void fn() {
     _Static_assert(BV4.z == true, "Woo!");
   }
 
+  // Matrix cast to vector with type conversion
+  {
+    constexpr float2x2 FM2x2 = {1.5, 2.5, 3.5, 4.5};
+    constexpr int4 IV4 = (int4)FM2x2;
+    _Static_assert(IV4.x == 1, "Woo!");
+    _Static_assert(IV4.y == 2, "Woo!");
+    _Static_assert(IV4.z == 3, "Woo!");
+    _Static_assert(IV4.w == 4, "Woo!");
+  }
 }
