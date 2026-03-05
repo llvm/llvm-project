@@ -5178,6 +5178,20 @@ void OmpStructureChecker::CheckArraySection(
   }
 }
 
+void OmpStructureChecker::CheckLastPartRefForArraySection(
+    const parser::Designator &designator, llvm::omp::Clause clauseId) {
+  if (!designator.EndsInBareName()) {
+    return;
+  }
+  if (MaybeExpr expr{AnalyzeExpr(context_, designator)}) {
+    if (evaluate::IsArraySection(*expr)) {
+      context_.Say(designator.source,
+          "If a list item is an array section, the last part-ref of the list item must have a section subscript list in %s clause"_err_en_US,
+          parser::ToUpperCaseLetters(getClauseName(clauseId).str()));
+    }
+  }
+}
+
 void OmpStructureChecker::CheckIntentInPointer(
     SymbolSourceMap &symbols, llvm::omp::Clause clauseId) {
   for (auto &[symbol, source] : symbols) {
@@ -5687,12 +5701,45 @@ void OmpStructureChecker::Leave(const parser::OpenMPInvalidDirective &x) {
     RequiresPositiveParameter(llvm::omp::Clause::Y, c.v); \
   }
 
+void OmpStructureChecker::Enter(const parser::OmpClause::Affinity &x) {
+  CheckAllowedClause(llvm::omp::Clause::OMPC_affinity);
+
+  auto &modifiers{OmpGetModifiers(x.v)};
+  if (auto *iter{OmpGetUniqueModifier<parser::OmpIterator>(modifiers)})
+    CheckIteratorModifier(*iter);
+
+  const auto &objects{std::get<parser::OmpObjectList>(x.v.t)};
+  for (const parser::OmpObject &object : objects.v) {
+    if (const parser::Designator *designator{
+            omp::GetDesignatorFromObj(object)}) {
+      if (const auto *dataRef{GetDataRefFromObj(object)}) {
+        if (const auto *arrayElement{GetArrayElementFromObj(object)}) {
+          CheckArraySection(*arrayElement, GetLastName(*dataRef),
+              llvm::omp::Clause::OMPC_affinity);
+        }
+      }
+
+      // CheckArraySection handles ArrayElement cases,
+      // but true substrings (e.g. a(2)(2:4)) are parser::Substring and bypass
+      // CheckArraySection.
+      if (std::holds_alternative<parser::Substring>(designator->u)) {
+        context_.Say(designator->source,
+            "Substrings are not allowed on AFFINITY clause"_err_en_US);
+      }
+
+      // OpenMP 5.2 5.2.5 Array section: if a list item is an array section, the
+      // last part-ref of the list item must have a section subscript list.
+      CheckLastPartRefForArraySection(
+          *designator, llvm::omp::Clause::OMPC_affinity);
+    }
+  }
+}
+
 // Following clauses do not have a separate node in parse-tree.h.
 CHECK_SIMPLE_CLAUSE(Absent, OMPC_absent)
 CHECK_SIMPLE_CLAUSE(AcqRel, OMPC_acq_rel)
 CHECK_SIMPLE_CLAUSE(Acquire, OMPC_acquire)
 CHECK_SIMPLE_CLAUSE(AdjustArgs, OMPC_adjust_args)
-CHECK_SIMPLE_CLAUSE(Affinity, OMPC_affinity)
 CHECK_SIMPLE_CLAUSE(AppendArgs, OMPC_append_args)
 CHECK_SIMPLE_CLAUSE(Apply, OMPC_apply)
 CHECK_SIMPLE_CLAUSE(Bind, OMPC_bind)
