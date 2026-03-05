@@ -435,7 +435,7 @@ CompilerInstanceWithContext::initializeFromCommandline(
     if (!CIWithContext.initialize(
             Controller, std::move(DiagEngineWithCmdAndOpts), OverlayFS))
       return std::nullopt;
-    return CIWithContext;
+    return std::move(CIWithContext);
   }
 
   // The input command line is either a driver-style command line, or
@@ -453,7 +453,7 @@ CompilerInstanceWithContext::initializeFromCommandline(
   if (!CIWithContext.initialize(Controller, std::move(DiagEngineWithCmdAndOpts),
                                 OverlayFS))
     return std::nullopt;
-  return CIWithContext;
+  return std::move(CIWithContext);
 }
 
 llvm::Expected<CompilerInstanceWithContext>
