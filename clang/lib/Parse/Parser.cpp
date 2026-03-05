@@ -29,6 +29,7 @@
 #include "llvm/ADT/STLForwardCompat.h"
 #include "llvm/Support/Path.h"
 #include "llvm/Support/TimeProfiler.h"
+#include "clang/Lex/Lexer.h"
 using namespace clang;
 
 
@@ -1293,6 +1294,7 @@ Decl *Parser::ParseFunctionDefinition(ParsingDeclarator &D,
   StringLiteral *DeletedMessage = nullptr;
   Sema::FnBodyKind BodyKind = Sema::FnBodyKind::Other;
   SourceLocation KWLoc;
+  SourceLocation FuncRangeEnd;
   if (TryConsumeToken(tok::equal)) {
     assert(getLangOpts().CPlusPlus && "Only C++ function definitions have '='");
 
@@ -1303,12 +1305,15 @@ Decl *Parser::ParseFunctionDefinition(ParsingDeclarator &D,
           << 1 /* deleted */;
       BodyKind = Sema::FnBodyKind::Delete;
       DeletedMessage = ParseCXXDeletedFunctionMessage();
+      FuncRangeEnd = clang::Lexer::getLocForEndOfToken(KWLoc, 0, PP.getSourceManager(), getLangOpts()).getLocWithOffset(-1);
+
     } else if (TryConsumeToken(tok::kw_default, KWLoc)) {
       Diag(KWLoc, getLangOpts().CPlusPlus11
                       ? diag::warn_cxx98_compat_defaulted_deleted_function
                       : diag::ext_defaulted_deleted_function)
           << 0 /* defaulted */;
       BodyKind = Sema::FnBodyKind::Default;
+      FuncRangeEnd = clang::Lexer::getLocForEndOfToken(KWLoc, 0, PP.getSourceManager(), getLangOpts()).getLocWithOffset(-1);
     } else {
       llvm_unreachable("function definition after = not 'delete' or 'default'");
     }
@@ -1336,6 +1341,18 @@ Decl *Parser::ParseFunctionDefinition(ParsingDeclarator &D,
                                                   : MultiTemplateParamsArg(),
                                               &SkipBody, BodyKind);
 
+  auto updateFuncRangeEnd = [&](Decl *D) {
+    if (!FuncRangeEnd.isValid() || !D)
+      return;
+    if (auto *FD = dyn_cast<FunctionDecl>(D)) {
+      FD->setRangeEnd(FuncRangeEnd);
+    } else if (auto *FT = dyn_cast<FunctionTemplateDecl>(D)) {
+      if (auto *InnerFD = FT->getTemplatedDecl())
+        InnerFD->setRangeEnd(FuncRangeEnd);
+    }
+  };
+
+
   if (SkipBody.ShouldSkip) {
     // Do NOT enter SkipFunctionBody if we already consumed the tokens.
     if (BodyKind == Sema::FnBodyKind::Other)
@@ -1352,6 +1369,8 @@ Decl *Parser::ParseFunctionDefinition(ParsingDeclarator &D,
     // and PopExpressionEvaluationContext().
     if (!isLambdaCallOperator(dyn_cast_if_present<FunctionDecl>(Res)))
       Actions.PopExpressionEvaluationContext();
+
+      updateFuncRangeEnd(Res);
     return Res;
   }
 
@@ -1366,6 +1385,7 @@ Decl *Parser::ParseFunctionDefinition(ParsingDeclarator &D,
     Actions.SetFunctionBodyKind(Res, KWLoc, BodyKind, DeletedMessage);
     Stmt *GeneratedBody = Res ? Res->getBody() : nullptr;
     Actions.ActOnFinishFunctionBody(Res, GeneratedBody, false);
+    updateFuncRangeEnd(Res);
     return Res;
   }
 
@@ -1386,12 +1406,15 @@ Decl *Parser::ParseFunctionDefinition(ParsingDeclarator &D,
   if (SkipFunctionBodies && (!Res || Actions.canSkipFunctionBody(Res)) &&
       trySkippingFunctionBody()) {
     BodyScope.Exit();
+    updateFuncRangeEnd(Res);
     Actions.ActOnSkippedFunctionBody(Res);
     return Actions.ActOnFinishFunctionBody(Res, nullptr, false);
   }
 
-  if (Tok.is(tok::kw_try))
+  if (Tok.is(tok::kw_try)){
+    updateFuncRangeEnd(Res);
     return ParseFunctionTryBlock(Res, BodyScope);
+  }
 
   // If we have a colon, then we're probably parsing a C++
   // ctor-initializer.
@@ -1401,12 +1424,14 @@ Decl *Parser::ParseFunctionDefinition(ParsingDeclarator &D,
     // Recover from error.
     if (!Tok.is(tok::l_brace)) {
       BodyScope.Exit();
+      updateFuncRangeEnd(Res);
       Actions.ActOnFinishFunctionBody(Res, nullptr);
       return Res;
     }
   } else
     Actions.ActOnDefaultCtorInitializers(Res);
 
+  updateFuncRangeEnd(Res);
   return ParseFunctionStatementBody(Res, BodyScope);
 }
 
