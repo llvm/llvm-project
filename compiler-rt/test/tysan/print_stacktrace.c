@@ -10,7 +10,7 @@ void zero_array() {
   for (i = 0; i < 1; ++i)
     P[i] = 0.0f;
   // CHECK: ERROR: TypeSanitizer: type-aliasing-violation
-  // CHECK: WRITE of size 4 at {{.*}} with type float accesses an existing object of type p1 float
+  // CHECK: WRITE of size 4 at {{.*}} with type float accesses an existing object of type float*
   // CHECK: {{#0 0x.* in zero_array .*print_stacktrace.c:}}[[@LINE-3]]
   // CHECK-SHORT-NOT: {{#1 0x.* in main .*print_stacktrace.c}}
   // CHECK-LONG-NEXT: {{#1 0x.* in main .*print_stacktrace.c}}
