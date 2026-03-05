@@ -767,7 +767,7 @@ static VPValue *
 scalarizeVPWidenPointerInduction(VPWidenPointerInductionRecipe *PtrIV,
                                  VPlan &Plan, VPBuilder &Builder) {
   const InductionDescriptor &ID = PtrIV->getInductionDescriptor();
-  VPIRValue *StartV = Plan.getConstantInt(ID.getStep()->getType(), 0);
+  VPIRValue *StartV = Plan.getZero(ID.getStep()->getType());
   VPValue *StepV = PtrIV->getOperand(1);
   VPScalarIVStepsRecipe *Steps = createScalarIVSteps(
       Plan, InductionDescriptor::IK_IntInduction, Instruction::Add, nullptr,
@@ -1016,7 +1016,7 @@ static VPValue *optimizeLatchExitInductionUser(
     return B.createSub(EndValue, Step, DebugLoc::getUnknown(), "ind.escape");
   if (ScalarTy->isPointerTy()) {
     Type *StepTy = TypeInfo.inferScalarType(Step);
-    auto *Zero = Plan.getConstantInt(StepTy, 0);
+    auto *Zero = Plan.getZero(StepTy);
     return B.createPtrAdd(EndValue, B.createSub(Zero, Step),
                           DebugLoc::getUnknown(), "ind.escape");
   }
@@ -1910,7 +1910,7 @@ static bool optimizeVectorInductionWidthForTCAndVFUF(VPlan &Plan,
       continue;
 
     // Update IV operands and comparison bound to use new narrower type.
-    auto *NewStart = Plan.getConstantInt(NewIVTy, 0);
+    auto *NewStart = Plan.getZero(NewIVTy);
     WideIV->setStartValue(NewStart);
     auto *NewStep = Plan.getConstantInt(NewIVTy, 1);
     WideIV->setStepValue(NewStep);
@@ -3386,8 +3386,8 @@ void VPlanTransforms::convertEVLExitCond(VPlan &Plan) {
 
   Type *AVLTy = VPTypeAnalysis(Plan).inferScalarType(AVLNext);
   VPBuilder Builder(LatchBr);
-  LatchBr->setOperand(0, Builder.createICmp(CmpInst::ICMP_EQ, AVLNext,
-                                            Plan.getConstantInt(AVLTy, 0)));
+  LatchBr->setOperand(
+      0, Builder.createICmp(CmpInst::ICMP_EQ, AVLNext, Plan.getZero(AVLTy)));
 }
 
 void VPlanTransforms::replaceSymbolicStrides(
@@ -5048,7 +5048,7 @@ void VPlanTransforms::materializeVectorTripCount(VPlan &Plan,
     assert(!TailByMasking &&
            "requiring scalar epilogue is not supported with fail folding");
     VPValue *IsZero =
-        Builder.createICmp(CmpInst::ICMP_EQ, R, Plan.getConstantInt(TCTy, 0));
+        Builder.createICmp(CmpInst::ICMP_EQ, R, Plan.getZero(TCTy));
     R = Builder.createSelect(IsZero, Step, R);
   }
 
@@ -5924,7 +5924,7 @@ static void transformToPartialReduction(const VPPartialReductionChain &Chain,
       Chain.RK != RecurKind::Sub) {
     VPBuilder Builder(WidenRecipe);
     Type *ElemTy = TypeInfo.inferScalarType(BinOp);
-    auto *Zero = Plan.getConstantInt(ElemTy, 0);
+    auto *Zero = Plan.getZero(ElemTy);
     VPIRFlags Flags = WidenRecipe->getUnderlyingInstr()
                           ? VPIRFlags(*WidenRecipe->getUnderlyingInstr())
                           : VPIRFlags();
