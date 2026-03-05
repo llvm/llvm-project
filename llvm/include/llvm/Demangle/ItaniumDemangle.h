@@ -4881,9 +4881,23 @@ Node *AbstractManglingParser<Derived, Alloc>::parseExprPrimary() {
     return nullptr;
   }
   case 'D':
-    if (consumeIf("Dn") && (consumeIf('0'), consumeIf('E')))
-      return make<NameType>("nullptr");
-    return nullptr;
+    switch (look(1)) {
+    case 'i': // char32_t
+      First += 2;
+      return getDerived().parseIntegerLiteral("char32_t");
+    case 's': // char16_t
+      First += 2;
+      return getDerived().parseIntegerLiteral("char16_t");
+    case 'u': // char8_t
+      First += 2;
+      return getDerived().parseIntegerLiteral("char8_t");
+    case 'n':
+      if (consumeIf("Dn") && (consumeIf('0'), consumeIf('E')))
+        return make<NameType>("nullptr");
+      return nullptr;
+    default:
+      return nullptr;
+    }
   case 'T':
     // Invalid mangled name per
     //   http://sourcerytools.com/pipermail/cxx-abi-dev/2011-August/002422.html
