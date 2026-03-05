@@ -5919,6 +5919,44 @@ static unsigned selectUmullSmull(SDValue &N0, SDValue &N1, SelectionDAG &DAG,
   return 0;
 }
 
+// Transform mul<v2i64, splat(2^n +-1)> into a SHL and ADD/SUB
+// this transormation is much faster when vector mul is not supported
+static SDValue convertMulToShlAdd(SDNode *N, SelectionDAG &DAG) {
+  const SDNode *Operand = N->getOperand(1).getNode();
+  APInt SplatValue;
+  ISD::isConstantSplatVector(Operand, SplatValue);
+
+  // Not a constant splat so should just stay as a mulitplcation operation
+  if (!SplatValue.getBoolValue())
+    return SDValue();
+
+  // If (Value - 1) is a power of 2, we need an ADD (e.g., 257)
+  bool NeedsAdd = (SplatValue - 1).isPowerOf2();
+  bool NeedsSub = (SplatValue + 1).isPowerOf2();
+
+  // If the constant is not (2^n + 1) or (2^n - 1), it would require
+  // more than one addition/subtraction. For v2i64, the cost of
+  // multiple vector adds/shifts often exceeds the cost of
+  // scalarization (moving to GPRs to use a single MUL).
+  if (!NeedsSub && !NeedsAdd)
+    return SDValue();
+
+  SDLoc DL(N);
+  EVT VT = N->getValueType(0);
+  SDValue LHS = N->getOperand(0);
+
+  unsigned ShiftAmt =
+      NeedsAdd ? (SplatValue - 1).logBase2() : (SplatValue + 1).logBase2();
+  SDValue VecShiftAmt = DAG.getConstant(ShiftAmt, DL, VT);
+  SDValue ShiftNode = DAG.getNode(ISD::SHL, DL, VT, LHS, VecShiftAmt);
+
+  // Emit: (LHS << ShiftAmt) +- LHS
+  if (NeedsAdd) {
+    return DAG.getNode(ISD::ADD, DL, VT, ShiftNode, LHS);
+  }
+  return DAG.getNode(ISD::SUB, DL, VT, ShiftNode, LHS);
+}
+
 SDValue AArch64TargetLowering::LowerMUL(SDValue Op, SelectionDAG &DAG) const {
   EVT VT = Op.getValueType();
 
@@ -5965,7 +6003,8 @@ SDValue AArch64TargetLowering::LowerMUL(SDValue Op, SelectionDAG &DAG) const {
       // legal.
       if (Subtarget->hasSVE())
         return LowerToPredicatedOp(Op, DAG, AArch64ISD::MUL_PRED);
-      // Fall through to expand this.  It is not legal.
+      if (SDValue ShlAdd = convertMulToShlAdd(Op.getNode(), DAG))
+        return ShlAdd;
       return SDValue();
     } else
       // Other vector multiplications are legal.
@@ -20434,44 +20473,6 @@ static SDValue performVectorExtCombine(SDNode *N, SelectionDAG &DAG) {
   return SDValue();
 }
 
-// Transform mul<v2i64, splat(2^n +-1)> into a SHL and ADD/SUB
-// this transormation is much faster when vector mul is not supported
-static SDValue convertMulToShlAdd(SDNode *N, SelectionDAG &DAG) {
-  const SDNode *Operand = N->getOperand(1).getNode();
-  APInt SplatValue;
-  ISD::isConstantSplatVector(Operand, SplatValue);
-
-  // Not a constant splat so should just stay as a mulitplcation operation
-  if (!SplatValue.getBoolValue())
-    return SDValue();
-
-  // If (Value - 1) is a power of 2, we need an ADD (e.g., 257)
-  bool NeedsAdd = (SplatValue - 1).isPowerOf2();
-  bool NeedsSub = (SplatValue + 1).isPowerOf2();
-
-  // If the constant is not (2^n + 1) or (2^n - 1), it would require
-  // more than one addition/subtraction. For v2i64, the cost of
-  // multiple vector adds/shifts often exceeds the cost of
-  // scalarization (moving to GPRs to use a single MUL).
-  if (!NeedsSub && !NeedsAdd)
-    return SDValue();
-
-  SDLoc DL(N);
-  EVT VT = N->getValueType(0);
-  SDValue LHS = N->getOperand(0);
-
-  unsigned ShiftAmt =
-      NeedsAdd ? (SplatValue - 1).logBase2() : (SplatValue + 1).logBase2();
-  SDValue VecShiftAmt = DAG.getConstant(ShiftAmt, DL, VT);
-  SDValue ShiftNode = DAG.getNode(ISD::SHL, DL, VT, LHS, VecShiftAmt);
-
-  // Emit: (LHS << ShiftAmt) +- LHS
-  if (NeedsAdd) {
-    return DAG.getNode(ISD::ADD, DL, VT, ShiftNode, LHS);
-  }
-  return DAG.getNode(ISD::SUB, DL, VT, ShiftNode, LHS);
-}
-
 static SDValue performMulCombine(SDNode *N, SelectionDAG &DAG,
                                  TargetLowering::DAGCombinerInfo &DCI,
                                  const AArch64Subtarget *Subtarget) {
@@ -20482,11 +20483,6 @@ static SDValue performMulCombine(SDNode *N, SelectionDAG &DAG,
     return Ext;
   if (SDValue Ext = performVectorExtCombine(N, DAG))
     return Ext;
-  if (Subtarget->isNeonAvailable() && N->getValueType(0) == MVT::v2i64) {
-    if (SDValue Ext = convertMulToShlAdd(N, DAG))
-        return Ext;
-  }
-
   if (DCI.isBeforeLegalizeOps())
     return SDValue();
 
