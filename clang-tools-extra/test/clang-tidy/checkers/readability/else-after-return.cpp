@@ -10,14 +10,14 @@ void f(int a) {
     return;
   else // comment-0
   // CHECK-MESSAGES: :[[@LINE-1]]:3: warning: do not use 'else' after 'return'
-  // CHECK-FIXES: {{^}}  // comment-0
+  // CHECK-FIXES: // comment-0
     return;
 
   if (a > 0) {
     return;
   } else { // comment-1
   // CHECK-MESSAGES: :[[@LINE-1]]:5: warning: do not use 'else' after 'return'
-  // CHECK-FIXES: {{^}}  } // comment-1
+  // CHECK-FIXES: } // comment-1
     return;
   }
 
@@ -34,20 +34,20 @@ void f(int a) {
   else if (a > 10)
     return;
   else // comment-2
-  // CHECK-FIXES-NOT: {{^}}  // comment-2
+  // CHECK-FIXES-NOT: // comment-2
     f(0);
 
   if (a > 0)
     if (a < 10)
       return;
     else // comment-3
-    // CHECK-FIXES-NOT: {{^}}    // comment-3
+    // CHECK-FIXES-NOT: // comment-3
       f(0);
   else
     if (a > 10)
       return;
     else // comment-4
-    // CHECK-FIXES-NOT: {{^}}    // comment-4
+    // CHECK-FIXES-NOT: // comment-4
       f(0);
 
   if (a > 0) {
@@ -55,14 +55,14 @@ void f(int a) {
       return;
     else // comment-5
     // CHECK-MESSAGES: :[[@LINE-1]]:5: warning: do not use 'else' after 'return'
-    // CHECK-FIXES: {{^}}    // comment-5
+    // CHECK-FIXES: // comment-5
       f(0);
   } else {
     if (a > 10)
       return;
     else // comment-6
     // CHECK-MESSAGES: :[[@LINE-1]]:5: warning: do not use 'else' after 'return'
-    // CHECK-FIXES: {{^}}    // comment-6
+    // CHECK-FIXES: // comment-6
       f(0);
   }
 }
@@ -73,28 +73,28 @@ void foo() {
       continue;
     } else { // comment-7
     // CHECK-MESSAGES: :[[@LINE-1]]:7: warning: do not use 'else' after 'continue'
-    // CHECK-FIXES: {{^}}    } // comment-7
+    // CHECK-FIXES: } // comment-7
       x++;
     }
     if (x) {
       break;
     } else { // comment-8
     // CHECK-MESSAGES: :[[@LINE-1]]:7: warning: do not use 'else' after 'break'
-    // CHECK-FIXES: {{^}}    } // comment-8
+    // CHECK-FIXES: } // comment-8
       x++;
     }
     if (x) {
       throw 42;
     } else { // comment-9
     // CHECK-MESSAGES: :[[@LINE-1]]:7: warning: do not use 'else' after 'throw'
-    // CHECK-FIXES: {{^}}    } // comment-9
+    // CHECK-FIXES: } // comment-9
       x++;
     }
     if (x) {
       throw my_exception("foo");
     } else { // comment-10
     // CHECK-MESSAGES: :[[@LINE-1]]:7: warning: do not use 'else' after 'throw'
-    // CHECK-FIXES: {{^}}    } // comment-10
+    // CHECK-FIXES: } // comment-10
       x++;
     }
   }
@@ -105,12 +105,12 @@ int h(int);
 
 int declInConditionUsedInElse() {
   if (int X = g()) { // comment-11
-    // CHECK-FIXES: {{^}}  int X = g();
-    // CHECK-FIXES-NEXT: {{^}}if (X) { // comment-11
+    // CHECK-FIXES: int X = g();
+    // CHECK-FIXES-NEXT: if (X) { // comment-11
     return X;
   } else { // comment-11
            // CHECK-MESSAGES: :[[@LINE-1]]:5: warning: do not use 'else' after 'return'
-           // CHECK-FIXES: {{^}}  } // comment-11
+           // CHECK-FIXES: } // comment-11
     return h(X);
   }
 }
@@ -119,19 +119,19 @@ int declInConditionUnusedInElse() {
     return h(X);
   } else { // comment-12
            // CHECK-MESSAGES: :[[@LINE-1]]:5: warning: do not use 'else' after 'return'
-           // CHECK-FIXES: {{^}}  } // comment-12
+           // CHECK-FIXES: } // comment-12
     return 0;
   }
 }
 
 int varInitAndCondition() {
   if (int X = g(); X != 0) { // comment-13
-    // CHECK-FIXES: {{^}}  int X = g();
-    // CHECK-FIXES-NEXT: {{^}}if ( X != 0) { // comment-13
+    // CHECK-FIXES: int X = g();
+    // CHECK-FIXES-NEXT: if ( X != 0) { // comment-13
     return X;
   } else { // comment-13
            // CHECK-MESSAGES: :[[@LINE-1]]:5: warning: do not use 'else' after 'return'
-           // CHECK-FIXES: {{^}}  } // comment-13
+           // CHECK-FIXES: } // comment-13
     return h(X);
   }
 }
@@ -141,7 +141,7 @@ int varInitAndConditionUnusedInElse() {
     return X;
   } else { // comment-14
            // CHECK-MESSAGES: :[[@LINE-1]]:5: warning: do not use 'else' after 'return'
-           // CHECK-FIXES: {{^}}  } // comment-14
+           // CHECK-FIXES: } // comment-14
     return 0;
   }
 }
@@ -152,7 +152,7 @@ int initAndCondition() {
     return X;
   } else { // comment-15
            // CHECK-MESSAGES: :[[@LINE-1]]:5: warning: do not use 'else' after 'return'
-           // CHECK-FIXES: {{^}}  } // comment-15
+           // CHECK-FIXES: } // comment-15
     return h(X);
   }
 }
@@ -163,7 +163,7 @@ int varInitAndConditionUnusedInElseWithDecl() {
     return X;
   } else { // comment-16
            // CHECK-MESSAGES: :[[@LINE-1]]:5: warning: do not use 'else' after 'return'
-           // CHECK-FIXES-NOT: {{^}}  } //comment-16
+           // CHECK-FIXES-NOT: } // comment-16
     int Y = g();
     h(Y);
   }
@@ -172,13 +172,13 @@ int varInitAndConditionUnusedInElseWithDecl() {
 
 int varInitAndCondVarUsedInElse() {
   if (int X = g(); int Y = g()) { // comment-17
-    // CHECK-FIXES:      {{^}}  int X = g();
-    // CHECK-FIXES-NEXT: {{^}}int Y = g();
-    // CHECK-FIXES-NEXT: {{^}}if ( Y) { // comment-17
+    // CHECK-FIXES:      int X = g();
+    // CHECK-FIXES-NEXT: int Y = g();
+    // CHECK-FIXES-NEXT: if ( Y) { // comment-17
     return X ? X : Y;
   } else { // comment-17
            // CHECK-MESSAGES: :[[@LINE-1]]:5: warning: do not use 'else' after 'return'
-           // CHECK-FIXES: {{^}}  } // comment-17
+           // CHECK-FIXES: } // comment-17
     return X ? X : h(Y);
   }
 }
@@ -198,12 +198,12 @@ int lifeTimeExtensionTests(int a) {
     b++;
   }
   if (int b = a; b > 1) { // comment-18
-    // CHECK-FIXES:      {{^}}  int b = a;
-    // CHECK-FIXES-NEXT: {{^}}if ( b > 1) { // comment-18
+    // CHECK-FIXES:      int b = a;
+    // CHECK-FIXES-NEXT: if ( b > 1) { // comment-18
     return a;
   } else { // comment-18
            // CHECK-MESSAGES: :[[@LINE-1]]:5: warning: do not use 'else' after 'return'
-           // CHECK-FIXES: {{^}}  } // comment-18
+           // CHECK-FIXES: } // comment-18
     return b;
   }
 }
@@ -315,7 +315,7 @@ void testSwitchCases(int i, bool b, bool b2) {
       return;
     } else { // comment-18
       // CHECK-MESSAGES: :[[@LINE-1]]:7: warning: do not use 'else' after 'return'
-      // CHECK-FIXES: {{^}}    } // comment-18
+      // CHECK-FIXES: } // comment-18
       f(1);
     }
   }
@@ -329,7 +329,7 @@ void testSwitchCases(int i, bool b, bool b2) {
       return;
     else // comment-19
       // CHECK-MESSAGES: :[[@LINE-1]]:5: warning: do not use 'else' after 'return'
-      // CHECK-FIXES: {{^}} // comment-19
+      // CHECK-FIXES: // comment-19
       return;
   }
 
@@ -341,7 +341,7 @@ void testSwitchCases(int i, bool b, bool b2) {
     else if (b2)
       return;
     else // comment-20
-      // CHECK-FIXES-NOT: {{^}}  // comment-20
+      // CHECK-FIXES-NOT: // comment-20
       f(1);
   }
 
@@ -352,14 +352,14 @@ void testSwitchCases(int i, bool b, bool b2) {
         return;
       else // comment-21
         // CHECK-MESSAGES: :[[@LINE-1]]:7: warning: do not use 'else' after 'return'
-        // CHECK-FIXES: {{^}}    // comment-21
+        // CHECK-FIXES: // comment-21
         f(0);
     } else {
       if (b && b2)
         return;
       else // comment-22
         // CHECK-MESSAGES: :[[@LINE-1]]:7: warning: do not use 'else' after 'return'
-        // CHECK-FIXES: {{^}}    // comment-22
+        // CHECK-FIXES: // comment-22
         f(0);
     }
   }
@@ -374,7 +374,7 @@ void testSwitchCases(int i, bool b, bool b2) {
         return;
       } else { // comment-23
         // CHECK-MESSAGES: :[[@LINE-1]]:9: warning: do not use 'else' after 'return'
-        // CHECK-FIXES: {{^}}      } // comment-23
+        // CHECK-FIXES: } // comment-23
         f(0);
       }
       break;
@@ -392,7 +392,7 @@ void testSwitchCases(int i, bool b, bool b2) {
       return;
     else // comment-24
       // CHECK-MESSAGES: :[[@LINE-1]]:5: warning: do not use 'else' after 'return'
-      // CHECK-FIXES-NOT: {{^}}   // comment-24
+      // CHECK-FIXES-NOT: // comment-24
       int _ = 20;
     break;
   case 2:
@@ -408,7 +408,7 @@ void testSwitchCases(int i, bool b, bool b2) {
       return;
     } else { // comment-25
       // CHECK-MESSAGES: :[[@LINE-1]]:7: warning: do not use 'else' after 'return'
-      // CHECK-FIXES: {{^}}      } // comment-25
+      // CHECK-FIXES: } // comment-25
         f(0);
     }
   }
@@ -423,7 +423,7 @@ LABEL:
     return;
   else // comment-26
     // CHECK-MESSAGES: :[[@LINE-1]]:3: warning: do not use 'else' after 'return'
-    // CHECK-FIXES: {{^}} // comment-26
+    // CHECK-FIXES: // comment-26
     return;
 
   switch ((int)b) {
@@ -434,7 +434,7 @@ LABEL:
       return;
     else  // comment-27
       // CHECK-MESSAGES: :[[@LINE-1]]:5: warning: do not use 'else' after 'return'
-      // CHECK-FIXES: {{^}} // comment-27
+      // CHECK-FIXES: // comment-27
       f(0);
   }
 }

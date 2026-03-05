@@ -157,10 +157,10 @@ struct A1 {
   // CHECK-FIXES: int Value; // A1
   int GetValue() const { return value; } // A1
   // CHECK-MESSAGES: :[[@LINE-1]]:7: warning: invalid case style for method 'GetValue'
-  // CHECK-FIXES {{^}}  int getValue() const { return Value; } // A1
+  // CHECK-FIXES int getValue() const { return Value; } // A1
   void SetValue(int Value) { this->value = Value; } // A1
   // CHECK-MESSAGES: :[[@LINE-1]]:8: warning: invalid case style for method 'SetValue'
-  // CHECK-FIXES {{^}}  void setValue(int Value) { this->Value = Value; } // A1
+  // CHECK-FIXES void setValue(int Value) { this->Value = Value; } // A1
   A1 &operator=(const A1 &Other) {
     this->SetValue(Other.GetValue()); // A1
     this->value = Other.value;        // A1
