@@ -1641,14 +1641,11 @@ void DynamicLoaderDarwinKernel::Terminate() {
 
 void DynamicLoaderDarwinKernel::DebuggerInitialize(
     lldb_private::Debugger &debugger) {
-  if (!PluginManager::GetSettingForDynamicLoaderPlugin(
-          debugger, DynamicLoaderDarwinKernelProperties::GetSettingName())) {
-    const bool is_global_setting = true;
-    PluginManager::CreateSettingForDynamicLoaderPlugin(
-        debugger, GetGlobalProperties().GetValueProperties(),
-        "Properties for the DynamicLoaderDarwinKernel plug-in.",
-        is_global_setting);
-  }
+  debugger.SetPropertiesAtPathIfNotExists(
+      g_dynamicloaderdarwinkernel_properties_def.expected_path,
+      GetGlobalProperties().GetValueProperties(),
+      "Properties for the DynamicLoaderDarwinKernel plug-in.",
+      /*is_global_property=*/true);
 }
 
 llvm::StringRef DynamicLoaderDarwinKernel::GetPluginDescriptionStatic() {

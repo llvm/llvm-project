@@ -9,6 +9,7 @@
 #include "Plugins/Platform/WebAssembly/PlatformWasm.h"
 #include "Plugins/Platform/WebAssembly/PlatformWasmRemoteGDBServer.h"
 #include "Plugins/Process/wasm/ProcessWasm.h"
+#include "lldb/Core/Debugger.h"
 #include "lldb/Core/PluginManager.h"
 #include "lldb/Host/FileSystem.h"
 #include "lldb/Host/ProcessLaunchInfo.h"
@@ -81,13 +82,10 @@ void PlatformWasm::Terminate() {
 }
 
 void PlatformWasm::DebuggerInitialize(Debugger &debugger) {
-  if (!PluginManager::GetSettingForPlatformPlugin(debugger,
-                                                  GetPluginNameStatic())) {
-    PluginManager::CreateSettingForPlatformPlugin(
-        debugger, GetGlobalProperties().GetValueProperties(),
-        "Properties for the wasm platform plugin.",
-        /*is_global_property=*/true);
-  }
+  debugger.SetPropertiesAtPathIfNotExists(
+      g_platformwasm_properties_def.expected_path,
+      GetGlobalProperties().GetValueProperties(),
+      "Properties for the wasm platform plugin.", /*is_global_property=*/true);
 }
 
 PlatformSP PlatformWasm::CreateInstance(bool force, const ArchSpec *arch) {

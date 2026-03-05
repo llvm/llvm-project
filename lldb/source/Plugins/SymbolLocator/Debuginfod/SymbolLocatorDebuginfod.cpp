@@ -117,14 +117,11 @@ void SymbolLocatorDebuginfod::Initialize() {
 }
 
 void SymbolLocatorDebuginfod::DebuggerInitialize(Debugger &debugger) {
-  if (!PluginManager::GetSettingForSymbolLocatorPlugin(
-          debugger, PluginProperties::GetSettingName())) {
-    const bool is_global_setting = true;
-    PluginManager::CreateSettingForSymbolLocatorPlugin(
-        debugger, GetGlobalPluginProperties().GetValueProperties(),
-        "Properties for the Debuginfod Symbol Locator plug-in.",
-        is_global_setting);
-  }
+  debugger.SetPropertiesAtPathIfNotExists(
+      g_symbollocatordebuginfod_properties_def.expected_path,
+      GetGlobalPluginProperties().GetValueProperties(),
+      "Properties for the Debuginfod Symbol Locator plug-in.",
+      /*is_global_property=*/true);
 }
 
 void SymbolLocatorDebuginfod::Terminate() {

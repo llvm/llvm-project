@@ -10,6 +10,7 @@
 #include "PECallFrameInfo.h"
 #include "WindowsMiniDump.h"
 
+#include "lldb/Core/Debugger.h"
 #include "lldb/Core/Module.h"
 #include "lldb/Core/ModuleSpec.h"
 #include "lldb/Core/PluginManager.h"
@@ -184,13 +185,11 @@ void ObjectFilePECOFF::Initialize() {
 }
 
 void ObjectFilePECOFF::DebuggerInitialize(Debugger &debugger) {
-  if (!PluginManager::GetSettingForObjectFilePlugin(
-          debugger, PluginProperties::GetSettingName())) {
-    const bool is_global_setting = true;
-    PluginManager::CreateSettingForObjectFilePlugin(
-        debugger, GetGlobalPluginProperties().GetValueProperties(),
-        "Properties for the PE/COFF object-file plug-in.", is_global_setting);
-  }
+  debugger.SetPropertiesAtPathIfNotExists(
+      g_objectfilepecoff_properties_def.expected_path,
+      GetGlobalPluginProperties().GetValueProperties(),
+      "Properties for the PE/COFF object-file plug-in.",
+      /*is_global_property=*/true);
 }
 
 void ObjectFilePECOFF::Terminate() {

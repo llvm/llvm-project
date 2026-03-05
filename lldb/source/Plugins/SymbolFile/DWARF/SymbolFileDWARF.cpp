@@ -20,6 +20,7 @@
 #include "llvm/Support/FormatAdapters.h"
 #include "llvm/Support/Threading.h"
 
+#include "lldb/Core/Debugger.h"
 #include "lldb/Core/Module.h"
 #include "lldb/Core/ModuleList.h"
 #include "lldb/Core/ModuleSpec.h"
@@ -316,13 +317,11 @@ void SymbolFileDWARF::Initialize() {
 }
 
 void SymbolFileDWARF::DebuggerInitialize(Debugger &debugger) {
-  if (!PluginManager::GetSettingForSymbolFilePlugin(
-          debugger, PluginProperties::GetSettingName())) {
-    const bool is_global_setting = true;
-    PluginManager::CreateSettingForSymbolFilePlugin(
-        debugger, GetGlobalPluginProperties().GetValueProperties(),
-        "Properties for the dwarf symbol-file plug-in.", is_global_setting);
-  }
+  debugger.SetPropertiesAtPathIfNotExists(
+      g_symbolfiledwarf_properties_def.expected_path,
+      GetGlobalPluginProperties().GetValueProperties(),
+      "Properties for the dwarf symbol-file plug-in.",
+      /*is_global_property=*/true);
 }
 
 void SymbolFileDWARF::Terminate() {

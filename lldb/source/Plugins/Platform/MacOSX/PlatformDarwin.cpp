@@ -165,15 +165,13 @@ static PlatformDarwinProperties &GetGlobalProperties() {
 
 void PlatformDarwin::DebuggerInitialize(
     lldb_private::Debugger &debugger) {
-  if (!PluginManager::GetSettingForPlatformPlugin(
-          debugger, PlatformDarwinProperties::GetSettingName())) {
-    const bool is_global_setting = false;
-    PluginManager::CreateSettingForPlatformPlugin(
-        debugger, GetGlobalProperties().GetValueProperties(),
-        "Properties for the Darwin platform plug-in.", is_global_setting);
-    OptionValueString *value = GetGlobalProperties().GetIgnoredExceptionValue();
-    value->SetValidator(ExceptionMaskValidator);
-  }
+  debugger.SetPropertiesAtPathIfNotExists(
+      g_platformdarwin_properties_def.expected_path,
+      GetGlobalProperties().GetValueProperties(),
+      "Properties for the Darwin platform plug-in.",
+      /*is_global_property=*/false);
+  OptionValueString *value = GetGlobalProperties().GetIgnoredExceptionValue();
+  value->SetValidator(ExceptionMaskValidator);
 }
 
 Args

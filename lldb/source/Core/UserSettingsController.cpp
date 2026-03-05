@@ -95,3 +95,45 @@ bool Properties::IsSettingExperimental(llvm::StringRef setting) {
   size_t dot_pos = setting.find_first_of('.');
   return setting.take_front(dot_pos) == experimental;
 }
+
+void Properties::SetPropertiesAtPathIfNotExists(
+    llvm::StringRef path, const lldb::OptionValuePropertiesSP &properties_sp,
+    llvm::StringRef description, bool is_global_property) {
+  assert(!path.empty());
+  assert(m_collection_sp != nullptr);
+
+  llvm::SmallVector<llvm::StringRef, 3> segments;
+  path.split(segments, '.');
+  llvm::StringRef last_segment = segments.pop_back_val();
+
+  OptionValuePropertiesSP collection_sp = m_collection_sp;
+  for (llvm::StringRef segment : segments) {
+    const Property *inner = collection_sp->GetProperty(segment);
+    if (!inner) {
+      auto inner_sp = std::make_shared<OptionValueProperties>(segment);
+      // `segment` is a substring of `path`, so `segment.end()` includes
+      // everything up until and including the current segment.
+      inner_sp->SetExpectedPath(std::string(path.begin(), segment.end()));
+
+      collection_sp->AppendProperty(segment, ("Settings for " + segment).str(),
+                                    /*is_global=*/true, inner_sp);
+      collection_sp = inner_sp;
+      continue;
+    }
+
+    OptionValueProperties *inner_properties =
+        inner->GetValue()->GetAsProperties();
+    if (!inner_properties) {
+      assert(false && "Intermediate properties must be OptionValueProperties");
+      return;
+    }
+    collection_sp = inner_properties->shared_from_this();
+  }
+
+  const Property *last_property = collection_sp->GetProperty(last_segment);
+  if (last_property)
+    return; // already exists
+
+  collection_sp->AppendProperty(last_segment, description, is_global_property,
+                                properties_sp);
+}

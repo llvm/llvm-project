@@ -6,6 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "lldb/Core/Debugger.h"
 #include "lldb/Core/Module.h"
 #include "lldb/Core/PluginManager.h"
 #include "lldb/Core/Section.h"
@@ -156,13 +157,11 @@ PlatformSP PlatformAndroid::CreateInstance(bool force, const ArchSpec *arch) {
 }
 
 void PlatformAndroid::DebuggerInitialize(Debugger &debugger) {
-  if (!PluginManager::GetSettingForPlatformPlugin(debugger,
-                                                  GetPluginNameStatic(false))) {
-    PluginManager::CreateSettingForPlatformPlugin(
-        debugger, GetGlobalProperties().GetValueProperties(),
-        "Properties for the Android platform plugin.",
-        /*is_global_property=*/true);
-  }
+  debugger.SetPropertiesAtPathIfNotExists(
+      g_android_properties_def.expected_path,
+      GetGlobalProperties().GetValueProperties(),
+      "Properties for the Android platform plugin.",
+      /*is_global_property=*/true);
 }
 
 PlatformAndroid::PlatformAndroid(bool is_host)

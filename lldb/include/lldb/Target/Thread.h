@@ -155,6 +155,8 @@ public:
 
   static void SettingsTerminate();
 
+  static void AppendGlobalPropertiesTo(Debugger &debugger);
+
   static ThreadProperties &GetGlobalProperties();
 
   lldb::ProcessSP GetProcess() const { return m_process_wp.lock(); }

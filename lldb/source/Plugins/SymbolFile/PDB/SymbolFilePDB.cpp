@@ -207,12 +207,11 @@ bool SymbolFilePDB::UseNativePDB() {
 }
 
 void SymbolFilePDB::DebuggerInitialize(lldb_private::Debugger &debugger) {
-  if (!PluginManager::GetSettingForSymbolFilePlugin(
-          debugger, PluginProperties::GetSettingName())) {
-    PluginManager::CreateSettingForSymbolFilePlugin(
-        debugger, GetGlobalPluginProperties().GetValueProperties(),
-        "Properties for the PDB symbol-file plug-in.", true);
-  }
+  debugger.SetPropertiesAtPathIfNotExists(
+      g_symbolfilepdb_properties_def.expected_path,
+      GetGlobalPluginProperties().GetValueProperties(),
+      "Properties for the PDB symbol-file plug-in.",
+      /*is_global_property=*/true);
 }
 
 llvm::StringRef SymbolFilePDB::GetPluginDescriptionStatic() {

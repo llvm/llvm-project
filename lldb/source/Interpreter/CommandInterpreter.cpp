@@ -151,6 +151,13 @@ CommandInterpreter::CommandInterpreter(Debugger &debugger,
   m_collection_sp->Initialize(g_interpreter_properties_def);
 }
 
+void CommandInterpreter::AppendGlobalPropertiesTo(Debugger &debugger) const {
+  debugger.SetPropertiesAtPathIfNotExists(
+      g_interpreter_properties_def.expected_path, m_collection_sp,
+      "Settings specify to the debugger's command interpreter.",
+      /*is_global_property=*/true);
+}
+
 bool CommandInterpreter::GetExpandRegexAliases() const {
   const uint32_t idx = ePropertyExpandRegexAliases;
   return GetPropertyAtIndexAs<bool>(

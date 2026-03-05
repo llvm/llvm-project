@@ -93,14 +93,11 @@ void ProcessFreeBSDKernelCore::Initialize() {
 }
 
 void ProcessFreeBSDKernelCore::DebuggerInitialize(Debugger &debugger) {
-  if (!PluginManager::GetSettingForProcessPlugin(
-          debugger, PluginProperties::GetSettingName())) {
-    const bool is_global_setting = true;
-    PluginManager::CreateSettingForProcessPlugin(
-        debugger, GetGlobalPluginProperties().GetValueProperties(),
-        "Properties for the freebsd-kernel process plug-in.",
-        is_global_setting);
-  }
+  debugger.SetPropertiesAtPathIfNotExists(
+      g_processfreebsdkernelcore_properties_def.expected_path,
+      GetGlobalPluginProperties().GetValueProperties(),
+      "Properties for the freebsd-kernel process plug-in.",
+      /*is_global_property=*/true);
 }
 
 void ProcessFreeBSDKernelCore::Terminate() {
