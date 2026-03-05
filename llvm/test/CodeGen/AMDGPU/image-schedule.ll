@@ -28,7 +28,7 @@ define dllexport amdgpu_cs void @_amdgpu_cs_main(i32 inreg %arg, i32 inreg %arg1
   %tmp16 = load <8 x i32>, ptr addrspace(4) %tmp15, align 16
   call void @llvm.amdgcn.image.store.2d.v4f32.i32(<4 x float> %tmp14, i32 15, i32 %tmp13.0, i32 %tmp13.1, <8 x i32> %tmp16, i32 0, i32 0) #0
   %tmp17 = load <8 x i32>, ptr addrspace(4) %tmp15, align 16
-  %tmp18 = call <4 x float> @llvm.amdgcn.image.load.2d.v4f32.i32(i32 165, i32 %tmp13.0, i32 %tmp13.1, <8 x i32> %tmp17, i32 0, i32 0) #0
+  %tmp18 = call <4 x float> @llvm.amdgcn.image.load.2d.v4f32.i32(i32 15, i32 %tmp13.0, i32 %tmp13.1, <8 x i32> %tmp17, i32 0, i32 0) #0
   %tmp19 = getelementptr [4294967295 x i8], ptr addrspace(4) %tmp8, i64 0, i64 64
   %tmp21 = load <8 x i32>, ptr addrspace(4) %tmp19, align 16
   call void @llvm.amdgcn.image.store.2d.v4f32.i32(<4 x float> %tmp18, i32 15, i32 %tmp13.0, i32 %tmp13.1, <8 x i32> %tmp21, i32 0, i32 0) #0
