@@ -144,6 +144,8 @@ public:
 
   bool isOffsetFoldingLegal(const GlobalAddressSDNode *GA) const override;
 
+  bool isFPImmLegalAsFMov(const APFloat &Imm, EVT VT) const;
+
   bool isFPImmLegal(const APFloat &Imm, EVT VT,
                     bool ForCodeSize) const override;
 
@@ -208,8 +210,8 @@ public:
   EmitInstrWithCustomInserter(MachineInstr &MI,
                               MachineBasicBlock *MBB) const override;
 
-  bool getTgtMemIntrinsic(IntrinsicInfo &Info, const CallBase &I,
-                          MachineFunction &MF,
+  void getTgtMemIntrinsic(SmallVectorImpl<IntrinsicInfo> &Infos,
+                          const CallBase &I, MachineFunction &MF,
                           unsigned Intrinsic) const override;
 
   bool shouldReduceLoadWidth(SDNode *Load, ISD::LoadExtType ExtTy, EVT NewVT,
@@ -563,7 +565,12 @@ public:
                               SDValue Chain, SDValue InGlue, unsigned Condition,
                               bool InsertVectorLengthCheck = false) const;
 
-  bool isVScaleKnownToBeAPowerOfTwo() const override { return true; }
+  /// Returns true if \p RdxOp should be lowered to a SVE reduction. If a SVE2
+  /// pairwise operation can be used for the reduction \p PairwiseOpIID is set
+  /// to its intrinsic ID.
+  bool
+  shouldLowerReductionToSVE(SDValue RdxOp,
+                            std::optional<Intrinsic::ID> &PairwiseOpIID) const;
 
   // Normally SVE is only used for byte size vectors that do not fit within a
   // NEON vector. This changes when OverrideNEON is true, allowing SVE to be
@@ -790,8 +797,7 @@ private:
   SDValue LowerFixedLengthVectorMLoadToSVE(SDValue Op, SelectionDAG &DAG) const;
   SDValue LowerVECREDUCE_SEQ_FADD(SDValue ScalarOp, SelectionDAG &DAG) const;
   SDValue LowerPredReductionToSVE(SDValue ScalarOp, SelectionDAG &DAG) const;
-  SDValue LowerReductionToSVE(unsigned Opcode, SDValue ScalarOp,
-                              SelectionDAG &DAG) const;
+  SDValue LowerReductionToSVE(SDValue Op, SelectionDAG &DAG) const;
   SDValue LowerFixedLengthVectorSelectToSVE(SDValue Op, SelectionDAG &DAG) const;
   SDValue LowerFixedLengthVectorSetccToSVE(SDValue Op, SelectionDAG &DAG) const;
   SDValue LowerFixedLengthVectorStoreToSVE(SDValue Op, SelectionDAG &DAG) const;
@@ -824,7 +830,8 @@ private:
   SDValue getRecipEstimate(SDValue Operand, SelectionDAG &DAG, int Enabled,
                            int &ExtraSteps) const override;
   SDValue getSqrtInputTest(SDValue Operand, SelectionDAG &DAG,
-                           const DenormalMode &Mode) const override;
+                           const DenormalMode &Mode,
+                           SDNodeFlags Flags = {}) const override;
   SDValue getSqrtResultForDenormInput(SDValue Operand,
                                       SelectionDAG &DAG) const override;
   unsigned combineRepeatedFPDivisors() const override;

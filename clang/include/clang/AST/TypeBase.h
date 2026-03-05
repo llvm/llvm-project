@@ -1149,6 +1149,12 @@ public:
   /// Returns true if it is a WebAssembly Funcref Type.
   bool isWebAssemblyFuncrefType() const;
 
+  /// Returns true if it is a OverflowBehaviorType of Wrap kind.
+  bool isWrapType() const;
+
+  /// Returns true if it is a OverflowBehaviorType of Trap kind.
+  bool isTrapType() const;
+
   // Don't promise in the API that anything besides 'const' can be
   // easily added.
 
@@ -2644,6 +2650,7 @@ public:
   bool isSubscriptableVectorType() const;
   bool isMatrixType() const;                    // Matrix type.
   bool isConstantMatrixType() const;            // Constant matrix type.
+  bool isOverflowBehaviorType() const;          // Overflow behavior type.
   bool isDependentAddressSpaceType() const;     // value-dependent address space qualifier
   bool isObjCObjectPointerType() const;         // pointer to ObjC object
   bool isObjCRetainableType() const;            // ObjC object or block pointer
@@ -4409,6 +4416,45 @@ public:
   /// Returns the number of elements required to embed the matrix into a vector.
   unsigned getNumElementsFlattened() const {
     return getNumRows() * getNumColumns();
+  }
+
+  /// Returns the row-major flattened index of a matrix element located at row
+  /// \p Row, and column \p Column
+  unsigned getRowMajorFlattenedIndex(unsigned Row, unsigned Column) const {
+    return Row * NumColumns + Column;
+  }
+
+  /// Returns the column-major flattened index of a matrix element located at
+  /// row \p Row, and column \p Column
+  unsigned getColumnMajorFlattenedIndex(unsigned Row, unsigned Column) const {
+    return Column * NumRows + Row;
+  }
+
+  /// Returns the flattened index of a matrix element located at
+  /// row \p Row, and column \p Column. If \p IsRowMajor is true, returns the
+  /// row-major order flattened index. Otherwise, returns the column-major order
+  /// flattened index.
+  unsigned getFlattenedIndex(unsigned Row, unsigned Column,
+                             bool IsRowMajor = false) {
+    return IsRowMajor ? getRowMajorFlattenedIndex(Row, Column)
+                      : getColumnMajorFlattenedIndex(Row, Column);
+  }
+
+  /// Given a column-major flattened index \p ColumnMajorIdx, return the
+  /// equivalent row-major flattened index.
+  unsigned
+  mapColumnMajorToRowMajorFlattenedIndex(unsigned ColumnMajorIdx) const {
+    unsigned Column = ColumnMajorIdx / NumRows;
+    unsigned Row = ColumnMajorIdx % NumRows;
+    return Row * NumColumns + Column;
+  }
+
+  /// Given a row-major flattened index \p RowMajorIdx, return the equivalent
+  /// column-major flattened index.
+  unsigned mapRowMajorToColumnMajorFlattenedIndex(unsigned RowMajorIdx) const {
+    unsigned Row = RowMajorIdx / NumColumns;
+    unsigned Column = RowMajorIdx % NumColumns;
+    return Column * NumRows + Row;
   }
 
   void Profile(llvm::FoldingSetNodeID &ID) {
@@ -6693,6 +6739,44 @@ public:
   }
 };
 
+class OverflowBehaviorType : public Type, public llvm::FoldingSetNode {
+public:
+  enum OverflowBehaviorKind { Wrap, Trap };
+
+private:
+  friend class ASTContext; // ASTContext creates these
+
+  QualType UnderlyingType;
+  OverflowBehaviorKind BehaviorKind;
+
+  OverflowBehaviorType(QualType Canon, QualType Underlying,
+                       OverflowBehaviorKind Kind);
+
+public:
+  QualType getUnderlyingType() const { return UnderlyingType; }
+  OverflowBehaviorKind getBehaviorKind() const { return BehaviorKind; }
+
+  bool isWrapKind() const { return BehaviorKind == OverflowBehaviorKind::Wrap; }
+  bool isTrapKind() const { return BehaviorKind == OverflowBehaviorKind::Trap; }
+
+  bool isSugared() const { return false; }
+  QualType desugar() const { return getUnderlyingType(); }
+
+  void Profile(llvm::FoldingSetNodeID &ID) {
+    Profile(ID, UnderlyingType, BehaviorKind);
+  }
+
+  static void Profile(llvm::FoldingSetNodeID &ID, QualType Underlying,
+                      OverflowBehaviorKind Kind) {
+    ID.AddPointer(Underlying.getAsOpaquePtr());
+    ID.AddInteger((int)Kind);
+  }
+
+  static bool classof(const Type *T) {
+    return T->getTypeClass() == OverflowBehavior;
+  }
+};
+
 class HLSLAttributedResourceType : public Type, public llvm::FoldingSetNode {
 public:
   struct Attributes {
@@ -6754,6 +6838,8 @@ public:
   QualType getContainedType() const { return ContainedType; }
   bool hasContainedType() const { return !ContainedType.isNull(); }
   const Attributes &getAttrs() const { return Attrs; }
+  bool isRaw() const { return Attrs.RawBuffer; }
+  bool isStructured() const { return !ContainedType->isChar8Type(); }
 
   bool isSugared() const { return false; }
   QualType desugar() const { return QualType(this, 0); }
@@ -8707,6 +8793,10 @@ inline bool Type::isConstantMatrixType() const {
   return isa<ConstantMatrixType>(CanonicalType);
 }
 
+inline bool Type::isOverflowBehaviorType() const {
+  return isa<OverflowBehaviorType>(CanonicalType);
+}
+
 inline bool Type::isDependentAddressSpaceType() const {
   return isa<DependentAddressSpaceType>(CanonicalType);
 }
@@ -8951,6 +9041,10 @@ inline bool Type::isIntegerType() const {
     return IsEnumDeclComplete(ET->getDecl()) &&
            !IsEnumDeclScoped(ET->getDecl());
   }
+
+  if (const auto *OT = dyn_cast<OverflowBehaviorType>(CanonicalType))
+    return OT->getUnderlyingType()->isIntegerType();
+
   return isBitIntType();
 }
 
@@ -9013,7 +9107,7 @@ inline bool Type::isScalarType() const {
          isa<MemberPointerType>(CanonicalType) ||
          isa<ComplexType>(CanonicalType) ||
          isa<ObjCObjectPointerType>(CanonicalType) ||
-         isBitIntType();
+         isOverflowBehaviorType() || isBitIntType();
 }
 
 inline bool Type::isIntegralOrEnumerationType() const {
@@ -9024,6 +9118,9 @@ inline bool Type::isIntegralOrEnumerationType() const {
   // enumeration type in the sense required here.
   if (const auto *ET = dyn_cast<EnumType>(CanonicalType))
     return IsEnumDeclComplete(ET->getDecl());
+
+  if (const auto *OBT = dyn_cast<OverflowBehaviorType>(CanonicalType))
+    return OBT->getUnderlyingType()->isIntegralOrEnumerationType();
 
   return isBitIntType();
 }

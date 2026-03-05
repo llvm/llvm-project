@@ -21,6 +21,7 @@
 namespace llvm {
 class APFloat;
 struct fltSemantics;
+struct KnownBits;
 
 struct KnownFPClass {
   /// Floating-point classes the value could be one of.
@@ -255,6 +256,10 @@ struct KnownFPClass {
     return Known;
   }
 
+  LLVM_ABI static KnownFPClass
+  fmul(const KnownFPClass &LHS, const APFloat &RHS,
+       DenormalMode Mode = DenormalMode::getDynamic());
+
   /// Report known values for fdiv
   LLVM_ABI static KnownFPClass
   fdiv(const KnownFPClass &LHS, const KnownFPClass &RHS,
@@ -389,6 +394,15 @@ struct KnownFPClass {
   /// Propagate known class for mantissa component of frexp
   static LLVM_ABI KnownFPClass frexp_mant(
       const KnownFPClass &Src, DenormalMode Mode = DenormalMode::getDynamic());
+
+  /// Propagate known class for ldexp
+  static LLVM_ABI KnownFPClass
+  ldexp(const KnownFPClass &Src, const KnownBits &N, const fltSemantics &Flt,
+        DenormalMode Mode = DenormalMode::getDynamic());
+
+  /// Propagate known class for powi
+  static LLVM_ABI KnownFPClass powi(const KnownFPClass &Src,
+                                    const KnownBits &N);
 
   void resetAll() { *this = KnownFPClass(); }
 };

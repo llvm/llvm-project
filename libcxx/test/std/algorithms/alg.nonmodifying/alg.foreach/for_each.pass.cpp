@@ -20,6 +20,7 @@
 
 #include "test_macros.h"
 #include "test_iterators.h"
+#include "type_algorithms.h"
 
 struct for_each_test {
   TEST_CONSTEXPR for_each_test(int c) : count(c) {}

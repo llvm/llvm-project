@@ -14,6 +14,7 @@
 #include "CIRGenConstantEmitter.h"
 #include "CIRGenFunction.h"
 
+#include "clang/AST/CharUnits.h"
 #include "clang/AST/DeclCXX.h"
 #include "clang/AST/ExprCXX.h"
 #include "clang/AST/ExprObjC.h"
@@ -264,6 +265,14 @@ CIRGenFunction::emitCXXOperatorMemberCallExpr(const CXXOperatorCallExpr *e,
       /*IsArrow=*/false, e->getArg(0));
 }
 
+RValue CIRGenFunction::emitCUDAKernelCallExpr(const CUDAKernelCallExpr *expr,
+                                              ReturnValueSlot returnValue) {
+  // Emit as a device kernel call if CUDA device code is to be generated.
+  if (!getLangOpts().HIP && getLangOpts().CUDAIsDevice)
+    cgm.errorNYI("CUDA Device side kernel call");
+  return cgm.getCUDARuntime().emitCUDAKernelCallExpr(*this, expr, returnValue);
+}
+
 RValue CIRGenFunction::emitCXXMemberOrOperatorCall(
     const CXXMethodDecl *md, const CIRGenCallee &callee,
     ReturnValueSlot returnValue, mlir::Value thisPtr, mlir::Value implicitParam,
@@ -466,7 +475,7 @@ static mlir::Value emitCXXNewAllocSize(CIRGenFunction &cgf, const CXXNewExpr *e,
   const Expr *arraySize = *e->getArraySize();
   mlir::Attribute constNumElements =
       ConstantEmitter(cgf.cgm, &cgf)
-          .emitAbstract(arraySize, arraySize->getType());
+          .tryEmitAbstract(arraySize, arraySize->getType());
   if (constNumElements) {
     // Get an APInt from the constant
     const llvm::APInt &count =
@@ -521,9 +530,113 @@ static mlir::Value emitCXXNewAllocSize(CIRGenFunction &cgf, const CXXNewExpr *e,
       size = cgf.getBuilder().getConstInt(loc, allocationSize);
     }
   } else {
-    // TODO: Handle the variable size case
-    cgf.cgm.errorNYI(e->getSourceRange(),
-                     "emitCXXNewAllocSize: variable array size");
+    // Create a value for the variable number of elements
+    numElements = cgf.emitScalarExpr(*e->getArraySize());
+    auto numElementsType = mlir::cast<cir::IntType>(numElements.getType());
+    [[maybe_unused]] unsigned numElementsWidth = numElementsType.getWidth();
+
+    // We might need check for overflow.
+
+    mlir::Value hasOverflow;
+    // Classic codegen checks for the size variable being signed, having a
+    // smaller width than size_t, and having a larger width than size_t.
+    // However, the AST implicitly casts the size variable to size_t so none of
+    // these conditions will ever be met.
+    assert(
+        !(*e->getArraySize())->getType()->isSignedIntegerOrEnumerationType() &&
+        (numElementsWidth == sizeWidth) &&
+        (numElements.getType() == cgf.sizeTy) &&
+        "Expected array size to be implicitly cast to size_t!");
+
+    // There are up to three conditions we need to test for:
+    // 1) if minElements > 0, we need to check whether numElements is smaller
+    //    than that.
+    // 2) we need to compute
+    //      sizeWithoutCookie := numElements * typeSizeMultiplier
+    //    and check whether it overflows; and
+    // 3) if we need a cookie, we need to compute
+    //      size := sizeWithoutCookie + cookieSize
+    //    and check whether it overflows.
+
+    if (minElements) {
+      // Don't allow allocation of fewer elements than we have initializers.
+      if (!hasOverflow) {
+        // FIXME: Avoid creating this twice. It may happen above.
+        mlir::Value minElementsV = cgf.getBuilder().getConstInt(
+            loc, llvm::APInt(sizeWidth, minElements));
+        hasOverflow = cgf.getBuilder().createCompare(loc, cir::CmpOpKind::lt,
+                                                     numElements, minElementsV);
+      }
+    }
+
+    size = numElements;
+
+    // Multiply by the type size if necessary.  This multiplier
+    // includes all the factors for nested arrays.
+    //
+    // This step also causes numElements to be scaled up by the
+    // nested-array factor if necessary.  Overflow on this computation
+    // can be ignored because the result shouldn't be used if
+    // allocation fails.
+    if (typeSizeMultiplier != 1) {
+      mlir::Value tsmV = cgf.getBuilder().getConstInt(loc, typeSizeMultiplier);
+      auto mulOp = cir::BinOpOverflowOp::create(
+          cgf.getBuilder(), loc, mlir::cast<cir::IntType>(cgf.sizeTy),
+          cir::BinOpOverflowKind::Mul, size, tsmV);
+
+      if (hasOverflow)
+        hasOverflow =
+            cgf.getBuilder().createOr(loc, hasOverflow, mulOp.getOverflow());
+      else
+        hasOverflow = mulOp.getOverflow();
+
+      size = mulOp.getResult();
+
+      // Also scale up numElements by the array size multiplier.
+      if (arraySizeMultiplier != 1) {
+        // If the base element type size is 1, then we can re-use the
+        // multiply we just did.
+        if (typeSize.isOne()) {
+          assert(arraySizeMultiplier == typeSizeMultiplier);
+          numElements = size;
+
+          // Otherwise we need a separate multiply.
+        } else {
+          mlir::Value asmV =
+              cgf.getBuilder().getConstInt(loc, arraySizeMultiplier);
+          numElements = cgf.getBuilder().createMul(loc, numElements, asmV);
+        }
+      }
+    } else {
+      // numElements doesn't need to be scaled.
+      assert(arraySizeMultiplier == 1);
+    }
+
+    // Add in the cookie size if necessary.
+    if (cookieSize != 0) {
+      sizeWithoutCookie = size;
+      mlir::Value cookieSizeV = cgf.getBuilder().getConstInt(loc, cookieSize);
+      auto addOp = cir::BinOpOverflowOp::create(
+          cgf.getBuilder(), loc, mlir::cast<cir::IntType>(cgf.sizeTy),
+          cir::BinOpOverflowKind::Add, size, cookieSizeV);
+
+      if (hasOverflow)
+        hasOverflow =
+            cgf.getBuilder().createOr(loc, hasOverflow, addOp.getOverflow());
+      else
+        hasOverflow = addOp.getOverflow();
+
+      size = addOp.getResult();
+    }
+
+    // If we had any possibility of dynamic overflow, make a select to
+    // overwrite 'size' with an all-ones value, which should cause
+    // operator new to throw.
+    if (hasOverflow) {
+      mlir::Value allOnes =
+          cgf.getBuilder().getConstInt(loc, llvm::APInt::getAllOnes(sizeWidth));
+      size = cgf.getBuilder().createSelect(loc, hasOverflow, allOnes, size);
+    }
   }
 
   if (cookieSize == 0)
@@ -574,6 +687,7 @@ void CIRGenFunction::emitNewArrayInitializer(
   unsigned initListElements = 0;
 
   const Expr *init = e->getInitializer();
+  Address endOfInit = Address::invalid();
   QualType::DestructionKind dtorKind = elementType.isDestructedType();
   assert(!cir::MissingFeatures::cleanupDeactivationScope());
 
@@ -652,10 +766,30 @@ void CIRGenFunction::emitNewArrayInitializer(
       return;
     }
 
-    if (!initExprs.empty()) {
-      cgm.errorNYI(ile->getSourceRange(),
-                   "emitNewArrayInitializer: non-empty init list");
-      return;
+    CharUnits elementSize = getContext().getTypeSizeInChars(elementType);
+    CharUnits startAlign = curPtr.getAlignment();
+    unsigned i = 0;
+    for (const Expr *ie : initExprs) {
+      // Tell the cleanup that it needs to destroy up to this
+      // element.  TODO: some of these stores can be trivially
+      // observed to be unnecessary.
+      if (endOfInit.isValid()) {
+        cgm.errorNYI(ie->getSourceRange(),
+                     "emitNewArrayInitializer: update dtor cleanup ptr");
+        return;
+      }
+      // FIXME: If the last initializer is an incomplete initializer list for
+      // an array, and we have an array filler, we can fold together the two
+      // initialization loops.
+      storeAnyExprIntoOneUnit(*this, ie, ie->getType(), curPtr,
+                              AggValueSlot::DoesNotOverlap);
+      mlir::Location loc = getLoc(ie->getExprLoc());
+      mlir::Value castOp = builder.createPtrBitcast(
+          curPtr.getPointer(), convertTypeForMem(allocType));
+      mlir::Value offsetOp = builder.getSignedInt(loc, 1, /*width=*/32);
+      mlir::Value dataPtr = builder.createPtrStride(loc, castOp, offsetOp);
+      curPtr = Address(dataPtr, curPtr.getElementType(),
+                       startAlign.alignmentAtOffset((++i) * elementSize));
     }
 
     // The remaining elements are filled with the array filler expression.
@@ -954,6 +1088,16 @@ mlir::Value CIRGenFunction::emitCXXNewExpr(const CXXNewExpr *e) {
 
   // If there is a brace-initializer, cannot allocate fewer elements than inits.
   unsigned minElements = 0;
+  if (e->isArray() && e->hasInitializer()) {
+    const InitListExpr *ile = dyn_cast<InitListExpr>(e->getInitializer());
+    if (ile && ile->isStringLiteralInit())
+      minElements =
+          cast<ConstantArrayType>(ile->getType()->getAsArrayTypeUnsafe())
+              ->getSize()
+              .getZExtValue();
+    else if (ile)
+      minElements = ile->getNumInits();
+  }
 
   mlir::Value numElements = nullptr;
   mlir::Value allocSizeWithoutCookie = nullptr;
@@ -1189,4 +1333,68 @@ mlir::Value CIRGenFunction::emitDynamicCast(Address thisAddr,
   auto destCirTy = mlir::cast<cir::PointerType>(convertType(destTy));
   return cgm.getCXXABI().emitDynamicCast(*this, loc, srcRecordTy, destRecordTy,
                                          destCirTy, isRefCast, thisAddr);
+}
+
+static mlir::Value emitCXXTypeidFromVTable(CIRGenFunction &cgf, const Expr *e,
+                                           mlir::Type typeInfoPtrTy,
+                                           bool hasNullCheck) {
+  Address thisPtr = cgf.emitLValue(e).getAddress();
+  QualType srcType = e->getType();
+
+  // C++ [class.cdtor]p4:
+  //   If the operand of typeid refers to the object under construction or
+  //   destruction and the static type of the operand is neither the constructor
+  //   or destructor’s class nor one of its bases, the behavior is undefined.
+  assert(!cir::MissingFeatures::sanitizers());
+
+  if (hasNullCheck && cgf.cgm.getCXXABI().shouldTypeidBeNullChecked(srcType)) {
+    mlir::Value isThisNull =
+        cgf.getBuilder().createPtrIsNull(thisPtr.getPointer());
+    // We don't really care about the value, we just want to make sure the
+    // 'true' side calls bad-type-id.
+    cir::IfOp::create(
+        cgf.getBuilder(), cgf.getLoc(e->getSourceRange()), isThisNull,
+        /*withElseRegion=*/false, [&](mlir::OpBuilder &, mlir::Location loc) {
+          cgf.cgm.getCXXABI().emitBadTypeidCall(cgf, loc);
+        });
+  }
+
+  return cgf.cgm.getCXXABI().emitTypeid(cgf, srcType, thisPtr, typeInfoPtrTy);
+}
+
+mlir::Value CIRGenFunction::emitCXXTypeidExpr(const CXXTypeidExpr *e) {
+  mlir::Location loc = getLoc(e->getSourceRange());
+  mlir::Type resultType = cir::PointerType::get(convertType(e->getType()));
+  QualType ty = e->isTypeOperand() ? e->getTypeOperand(getContext())
+                                   : e->getExprOperand()->getType();
+
+  // If the non-default global var address space is not default, we need to do
+  // an address-space cast here.
+  assert(!cir::MissingFeatures::addressSpace());
+
+  // C++ [expr.typeid]p2:
+  //   When typeid is applied to a glvalue expression whose type is a
+  //   polymorphic class type, the result refers to a std::type_info object
+  //   representing the type of the most derived object (that is, the dynamic
+  //   type) to which the glvalue refers.
+  // If the operand is already most derived object, no need to look up vtable.
+  if (!e->isTypeOperand() && e->isPotentiallyEvaluated() &&
+      !e->isMostDerived(getContext()))
+    return emitCXXTypeidFromVTable(*this, e->getExprOperand(), resultType,
+                                   e->hasNullCheck());
+
+  auto typeInfo =
+      cast<cir::GlobalViewAttr>(cgm.getAddrOfRTTIDescriptor(loc, ty));
+  // `getAddrOfRTTIDescriptor` lies to us and always gives us a uint8ptr as its
+  // type, however we need the value of the actual global to call the
+  // get-global-op, so look it up here.
+  auto typeInfoGlobal =
+      cast<cir::GlobalOp>(cgm.getGlobalValue(typeInfo.getSymbol().getValue()));
+  auto getTypeInfo = cir::GetGlobalOp::create(
+      builder, loc, builder.getPointerTo(typeInfoGlobal.getSymType()),
+      typeInfoGlobal.getSymName());
+  // The ABI is just generating these sometimes as ptr to u8, but they are
+  // simply a representation of the type_info. So we have to cast this, if
+  // necessary (createBitcast is a noop if the types match).
+  return builder.createBitcast(getTypeInfo, resultType);
 }

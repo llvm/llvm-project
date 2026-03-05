@@ -44,7 +44,10 @@ class TestDAP_exception_objc(lldbdap_testcase.DAPTestCaseBase):
         if response:
             self.assertTrue(response["success"])
 
-        self.continue_to_exception_breakpoint("Objective-C Throw")
+        self.continue_to_exception_breakpoint(
+            expected_description="hit Objective-C exception",
+            expected_text="Objective-C Throw",
+        )
 
         # FIXME: Catching objc exceptions do not appear to be working.
         # Xcode appears to set a breakpoint on '__cxa_begin_catch' for objc

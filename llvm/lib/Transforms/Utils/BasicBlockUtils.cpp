@@ -1054,50 +1054,6 @@ BasicBlock *llvm::SplitBlock(BasicBlock *Old, BasicBlock::iterator SplitPt,
   return SplitBlockImpl(Old, SplitPt, DTU, /*DT=*/nullptr, LI, MSSAU, BBName);
 }
 
-BasicBlock *llvm::splitBlockBefore(BasicBlock *Old, BasicBlock::iterator SplitPt,
-                                   DomTreeUpdater *DTU, LoopInfo *LI,
-                                   MemorySSAUpdater *MSSAU,
-                                   const Twine &BBName) {
-
-  BasicBlock::iterator SplitIt = SplitPt;
-  while (isa<PHINode>(SplitIt) || SplitIt->isEHPad())
-    ++SplitIt;
-  std::string Name = BBName.str();
-  BasicBlock *New = Old->splitBasicBlockBefore(
-      SplitIt, Name.empty() ? Old->getName() + ".split" : Name);
-
-  // The new block lives in whichever loop the old one did. This preserves
-  // LCSSA as well, because we force the split point to be after any PHI nodes.
-  if (LI)
-    if (Loop *L = LI->getLoopFor(Old))
-      L->addBasicBlockToLoop(New, *LI);
-
-  if (DTU) {
-    SmallVector<DominatorTree::UpdateType, 8> DTUpdates;
-    // New dominates Old. The predecessor nodes of the Old node dominate
-    // New node.
-    SmallPtrSet<BasicBlock *, 8> UniquePredecessorsOfOld;
-    DTUpdates.push_back({DominatorTree::Insert, New, Old});
-    DTUpdates.reserve(DTUpdates.size() + 2 * pred_size(New));
-    for (BasicBlock *PredecessorOfOld : predecessors(New))
-      if (UniquePredecessorsOfOld.insert(PredecessorOfOld).second) {
-        DTUpdates.push_back({DominatorTree::Insert, PredecessorOfOld, New});
-        DTUpdates.push_back({DominatorTree::Delete, PredecessorOfOld, Old});
-      }
-
-    DTU->applyUpdates(DTUpdates);
-
-    // Move MemoryAccesses still tracked in Old, but part of New now.
-    // Update accesses in successor blocks accordingly.
-    if (MSSAU) {
-      MSSAU->applyUpdates(DTUpdates, DTU->getDomTree());
-      if (VerifyMemorySSA)
-        MSSAU->getMemorySSA()->verifyMemorySSA();
-    }
-  }
-  return New;
-}
-
 /// Update DominatorTree, LoopInfo, and LCCSA analysis information.
 /// Invalidates DFS Numbering when DTU or DT is provided.
 static void UpdateAnalysisInformation(BasicBlock *OldBB, BasicBlock *NewBB,
@@ -1210,6 +1166,25 @@ static void UpdateAnalysisInformation(BasicBlock *OldBB, BasicBlock *NewBB,
     if (SplitMakesNewLoopHeader)
       L->moveToHeader(NewBB);
   }
+}
+
+BasicBlock *llvm::splitBlockBefore(BasicBlock *Old,
+                                   BasicBlock::iterator SplitPt,
+                                   DomTreeUpdater *DTU, LoopInfo *LI,
+                                   MemorySSAUpdater *MSSAU,
+                                   const Twine &BBName) {
+  BasicBlock::iterator SplitIt = SplitPt;
+  while (isa<PHINode>(SplitIt) || SplitIt->isEHPad())
+    ++SplitIt;
+  SmallVector<BasicBlock *, 4> Preds(predecessors(Old));
+  BasicBlock *New = Old->splitBasicBlockBefore(
+      SplitIt, BBName.isTriviallyEmpty() ? Old->getName() + ".split" : BBName);
+
+  bool HasLoopExit = false;
+  UpdateAnalysisInformation(Old, New, Preds, DTU, nullptr, LI, MSSAU, false,
+                            HasLoopExit);
+
+  return New;
 }
 
 /// Update the PHI nodes in OrigBB to include the values coming from NewBB.

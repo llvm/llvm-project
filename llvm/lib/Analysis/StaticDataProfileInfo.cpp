@@ -12,6 +12,14 @@
 using namespace llvm;
 
 namespace llvm {
+// FIXME: This option is added for incremental rollout purposes.
+// After the option, string literal partitioning should be implied by
+// AnnotateStaticDataSectionPrefix in MemProfUse.cpp and this option should be
+// cleaned up.
+cl::opt<bool> AnnotateStringLiteralSectionPrefix(
+    "memprof-annotate-string-literal-section-prefix", cl::init(false),
+    cl::Hidden,
+    cl::desc("If true, annotate the string literal data section prefix"));
 namespace memprof {
 // Returns true iff the global variable has custom section either by
 // __attribute__((section("name")))
@@ -124,11 +132,23 @@ StringRef StaticDataProfileInfo::getConstantSectionPrefix(
 #endif
 
   if (EnableDataAccessProf) {
-    // Module flag `HasDataAccessProf` is 1 -> empty section prefix means
-    // unknown hotness except for string literals.
+    // Both data access profiles and PGO counters are available. Use the
+    // hotter one to be conservative.  Basically, we want the non-unlikely
+    // sections to have max coverage of accessed symbols and meanwhile can
+    // tolerant some cold symbols in it, and the unlikely section variant to not
+    // have potentially hot symbols if possible, to avoid the penalty of access
+    // cold pages.
     if (const GlobalVariable *GV = dyn_cast<GlobalVariable>(C);
         GV && llvm::memprof::IsAnnotationOK(*GV) &&
-        !GV->getName().starts_with(".str")) {
+        (AnnotateStringLiteralSectionPrefix ||
+         !GV->getName().starts_with(".str"))) {
+      // Note a global var is covered by data access profiles iff the
+      // symbol name is preserved in the symbol table; most notably, a string
+      // literal with private linkage (e.g., those not externalized by ThinLTO
+      // and with insignificant address) won't have an entry in the symbol
+      // table (unless there is another string with identical content that
+      // gets a symbol table entry). For the private-linkage string literals,
+      // their hotness will be at least lukewarm (i.e., empty prefix).
       auto HotnessFromDataAccessProf =
           getSectionHotnessUsingDataAccessProfile(GV->getSectionPrefix());
 
@@ -140,8 +160,6 @@ StringRef StaticDataProfileInfo::getConstantSectionPrefix(
         return Prefix;
       }
 
-      // Both data access profiles and PGO counters are available. Use the
-      // hotter one.
       auto HotnessFromPGO = getConstantHotnessUsingProfileCount(C, PSI, *Count);
       StaticDataHotness GlobalVarHotness = StaticDataHotness::LukewarmOrUnknown;
       if (HotnessFromDataAccessProf == StaticDataHotness::Hot ||

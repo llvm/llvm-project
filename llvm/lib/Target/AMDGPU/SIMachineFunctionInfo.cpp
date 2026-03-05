@@ -109,7 +109,7 @@ SIMachineFunctionInfo::SIMachineFunctionInfo(const Function &F,
   } else if (!isEntryFunction()) {
     if (CC != CallingConv::AMDGPU_Gfx &&
         CC != CallingConv::AMDGPU_Gfx_WholeWave)
-      ArgInfo = AMDGPUArgumentUsageInfo::FixedABIFunctionInfo;
+      ArgInfo = AMDGPUFunctionArgInfo::FixedABIFunctionInfo;
 
     FrameOffsetReg = AMDGPU::SGPR33;
     StackPtrOffsetReg = AMDGPU::SGPR32;
@@ -692,7 +692,7 @@ convertArgumentInfo(const AMDGPUFunctionArgInfo &ArgInfo,
     if (Arg.isMasked())
       SA.Mask = Arg.getMask();
 
-    A = SA;
+    A = std::move(SA);
     return true;
   };
 

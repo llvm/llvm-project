@@ -87,9 +87,7 @@ public:
   /// Construct a dependency scanning worker.
   ///
   /// @param Service The parent service. Must outlive the worker.
-  /// @param BaseFS The filesystem for the worker to use.
-  DependencyScanningWorker(DependencyScanningService &Service,
-                           IntrusiveRefCntPtr<llvm::vfs::FileSystem> BaseFS);
+  DependencyScanningWorker(DependencyScanningService &Service);
 
   ~DependencyScanningWorker();
 
@@ -127,7 +125,7 @@ public:
       llvm::IntrusiveRefCntPtr<llvm::vfs::OverlayFileSystem> OverlayFS =
           nullptr);
 
-  /// The three method below implements a new interface for by name
+  /// The two method below implements a new interface for by name
   /// dependency scanning. They together enable the dependency scanning worker
   /// to more effectively perform scanning for a sequence of modules
   /// by name when the CWD and CommandLine do not change across the queries.
@@ -165,10 +163,6 @@ public:
   computeDependenciesByNameWithContext(StringRef ModuleName,
                                        DependencyConsumer &Consumer,
                                        DependencyActionController &Controller);
-
-  /// @brief Finalizes the diagnostics engine and deletes the compiler instance.
-  /// @return False if errors occur during finalization.
-  bool finalizeCompilerInstanceWithContext();
 
   llvm::vfs::FileSystem &getVFS() const { return *DepFS; }
 

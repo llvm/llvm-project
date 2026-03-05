@@ -639,13 +639,14 @@ runClangTidy(clang::tidy::ClangTidyContext &Context,
     class Action : public ASTFrontendAction {
     public:
       Action(ClangTidyASTConsumerFactory *Factory) : Factory(Factory) {}
+
+    private:
+      ClangTidyASTConsumerFactory *Factory;
+
       std::unique_ptr<ASTConsumer> CreateASTConsumer(CompilerInstance &Compiler,
                                                      StringRef File) override {
         return Factory->createASTConsumer(Compiler, File);
       }
-
-    private:
-      ClangTidyASTConsumerFactory *Factory;
     };
 
     ClangTidyASTConsumerFactory ConsumerFactory;

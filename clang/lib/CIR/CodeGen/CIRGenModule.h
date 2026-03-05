@@ -14,6 +14,7 @@
 #define LLVM_CLANG_LIB_CIR_CODEGEN_CIRGENMODULE_H
 
 #include "CIRGenBuilder.h"
+#include "CIRGenCUDARuntime.h"
 #include "CIRGenCall.h"
 #include "CIRGenTypeCache.h"
 #include "CIRGenTypes.h"
@@ -90,11 +91,36 @@ private:
   /// Holds information about C++ vtables.
   CIRGenVTables vtables;
 
+  /// Holds the CUDA runtime
+  std::unique_ptr<CIRGenCUDARuntime> cudaRuntime;
+
   /// Per-function codegen information. Updated everytime emitCIR is called
   /// for FunctionDecls's.
   CIRGenFunction *curCGF = nullptr;
 
   llvm::SmallVector<mlir::Attribute> globalScopeAsm;
+
+  llvm::DenseSet<clang::GlobalDecl> diagnosedConflictingDefinitions;
+
+  void createCUDARuntime();
+
+  /// A helper for constructAttributeList that handles return attributes.
+  void constructFunctionReturnAttributes(const CIRGenFunctionInfo &info,
+                                         const Decl *targetDecl, bool isThunk,
+                                         mlir::NamedAttrList &retAttrs);
+  /// A helper for constructAttributeList that handles argument attributes.
+  void constructFunctionArgumentAttributes(
+      const CIRGenFunctionInfo &info, bool isThunk,
+      llvm::MutableArrayRef<mlir::NamedAttrList> argAttrs);
+  /// A helper function for constructAttributeList that determines whether a
+  /// return value might have been discarded.
+  bool mayDropFunctionReturn(const ASTContext &context, QualType retTy);
+  /// A helper function for constructAttributeList that determines whether
+  /// `noundef` on a return is possible.
+  bool hasStrictReturn(QualType retTy, const Decl *targetDecl);
+
+  llvm::DenseMap<const Expr *, mlir::Operation *>
+      materializedGlobalTemporaryMap;
 
 public:
   mlir::ModuleOp getModule() const { return theModule; }
@@ -249,6 +275,9 @@ public:
   getAddrOfGlobalVar(const VarDecl *d, mlir::Type ty = {},
                      ForDefinition_t isForDefinition = NotForDefinition);
 
+  /// Get or create a thunk function with the given name and type.
+  cir::FuncOp getAddrOfThunk(StringRef name, mlir::Type fnTy, GlobalDecl gd);
+
   /// Return the mlir::GlobalViewAttr for the address of the given global.
   cir::GlobalViewAttr getAddrOfGlobalVarAttr(const VarDecl *d);
 
@@ -270,13 +299,18 @@ public:
   /// attributes.
   /// \param attrOnCallSite - Whether or not the attributes are on a call site.
   /// \param isThunk - Whether the function is a thunk.
-  void constructAttributeList(llvm::StringRef name,
-                              const CIRGenFunctionInfo &info,
-                              CIRGenCalleeInfo calleeInfo,
-                              mlir::NamedAttrList &attrs,
-                              cir::CallingConv &callingConv,
-                              cir::SideEffect &sideEffect, bool attrOnCallSite,
-                              bool isThunk);
+  void constructAttributeList(
+      llvm::StringRef name, const CIRGenFunctionInfo &info,
+      CIRGenCalleeInfo calleeInfo, mlir::NamedAttrList &attrs,
+      llvm::MutableArrayRef<mlir::NamedAttrList> argAttrs,
+      mlir::NamedAttrList &retAttrs, cir::CallingConv &callingConv,
+      cir::SideEffect &sideEffect, bool attrOnCallSite, bool isThunk);
+  /// Helper function for constructAttributeList/others.  Builds a set of
+  /// function attributes to add to a function based on language opts, codegen
+  /// opts, and some small properties.
+  void addDefaultFunctionAttributes(StringRef name, bool hasOptNoneAttr,
+                                    bool attrOnCallSite,
+                                    mlir::NamedAttrList &attrs);
 
   /// Will return a global variable of the given type. If a variable with a
   /// different type already exists then a new variable with the right type
@@ -356,7 +390,18 @@ public:
   /// FIXME: this could likely be a common helper and not necessarily related
   /// with codegen.
   clang::CharUnits getNaturalTypeAlignment(clang::QualType t,
-                                           LValueBaseInfo *baseInfo);
+                                           LValueBaseInfo *baseInfo = nullptr);
+
+  /// Returns the minimum object size for an object of the given class type
+  /// (or a class derived from it).
+  CharUnits getMinimumClassObjectSize(const CXXRecordDecl *cd);
+
+  /// Returns the minimum object size for an object of the given type.
+  CharUnits getMinimumObjectSize(QualType ty) {
+    if (CXXRecordDecl *rd = ty->getAsCXXRecordDecl())
+      return getMinimumClassObjectSize(rd);
+    return getASTContext().getTypeSizeInChars(ty);
+  }
 
   /// TODO: Add TBAAAccessInfo
   CharUnits getDynamicOffsetAlignment(CharUnits actualBaseAlign,
@@ -556,10 +601,21 @@ public:
   // or if they are alias to each other.
   cir::FuncOp codegenCXXStructor(clang::GlobalDecl gd);
 
+  bool lookupRepresentativeDecl(llvm::StringRef mangledName,
+                                clang::GlobalDecl &gd) const;
+
   bool supportsCOMDAT() const;
   void maybeSetTrivialComdat(const clang::Decl &d, mlir::Operation *op);
 
   static void setInitializer(cir::GlobalOp &op, mlir::Attribute value);
+
+  // Whether a global variable should be emitted by CUDA/HIP host/device
+  // related attributes.
+  bool shouldEmitCUDAGlobalVar(const VarDecl *global) const;
+
+  /// Replace all uses of the old global with the new global, updating types
+  /// and references as needed. Erases the old global when done.
+  void replaceGlobal(cir::GlobalOp oldGV, cir::GlobalOp newGV);
 
   void replaceUsesOfNonProtoTypeWithRealFunction(mlir::Operation *old,
                                                  cir::FuncOp newFn);
@@ -569,7 +625,16 @@ public:
                          clang::GlobalDecl gd, bool forVTable,
                          bool dontDefer = false, bool isThunk = false,
                          ForDefinition_t isForDefinition = NotForDefinition,
-                         mlir::ArrayAttr extraAttrs = {});
+                         mlir::NamedAttrList extraAttrs = {});
+
+  cir::FuncOp getOrCreateCIRFunction(llvm::StringRef mangledName,
+                                     mlir::Type funcType, clang::GlobalDecl gd,
+                                     bool forVTable,
+                                     mlir::NamedAttrList extraAttrs) {
+    return getOrCreateCIRFunction(mangledName, funcType, gd, forVTable,
+                                  /*dontDefer=*/false, /*isThunk=*/false,
+                                  NotForDefinition, extraAttrs);
+  }
 
   cir::FuncOp createCIRFunction(mlir::Location loc, llvm::StringRef name,
                                 cir::FuncType funcType,
@@ -585,7 +650,8 @@ public:
                                const clang::FunctionDecl *funcDecl);
 
   cir::FuncOp createRuntimeFunction(cir::FuncType ty, llvm::StringRef name,
-                                    mlir::ArrayAttr = {}, bool isLocal = false,
+                                    mlir::NamedAttrList extraAttrs = {},
+                                    bool isLocal = false,
                                     bool assumeConvergent = false);
 
   static constexpr const char *builtinCoroId = "__builtin_coro_id";
@@ -596,6 +662,11 @@ public:
   /// Given a builtin id for a function like "__builtin_fabsf", return a
   /// Function* for "fabsf".
   cir::FuncOp getBuiltinLibFunction(const FunctionDecl *fd, unsigned builtinID);
+
+  CIRGenCUDARuntime &getCUDARuntime() {
+    assert(cudaRuntime != nullptr);
+    return *cudaRuntime;
+  }
 
   mlir::IntegerAttr getSize(CharUnits size) {
     return builder.getSizeFromCharUnits(size);
@@ -611,6 +682,11 @@ public:
 
   // Finalize CIR code generation.
   void release();
+
+  /// Returns a pointer to a global variable representing a temporary with
+  /// static or thread storage duration.
+  mlir::Operation *getAddrOfGlobalTemporary(const MaterializeTemporaryExpr *mte,
+                                            const Expr *init);
 
   /// -------
   /// Visibility and Linkage
@@ -687,8 +763,7 @@ private:
   llvm::StringMap<clang::GlobalDecl, llvm::BumpPtrAllocator> manglings;
 
   // FIXME: should we use llvm::TrackingVH<mlir::Operation> here?
-  typedef llvm::StringMap<mlir::Operation *> ReplacementsTy;
-  ReplacementsTy replacements;
+  llvm::MapVector<StringRef, mlir::Operation *> replacements;
   /// Call replaceAllUsesWith on all pairs in replacements.
   void applyReplacements();
 

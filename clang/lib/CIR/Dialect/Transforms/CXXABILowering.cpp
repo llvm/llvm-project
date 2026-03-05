@@ -368,6 +368,15 @@ mlir::LogicalResult CIRGetRuntimeMemberOpABILowering::matchAndRewrite(
   return mlir::success();
 }
 
+mlir::LogicalResult CIRVTableGetTypeInfoOpABILowering::matchAndRewrite(
+    cir::VTableGetTypeInfoOp op, OpAdaptor adaptor,
+    mlir::ConversionPatternRewriter &rewriter) const {
+  mlir::Value loweredResult =
+      lowerModule->getCXXABI().lowerVTableGetTypeInfo(op, rewriter);
+  rewriter.replaceOp(op, loweredResult);
+  return mlir::success();
+}
+
 // Prepare the type converter for the CXXABI lowering pass.
 // Even though this is a CIR-to-CIR pass, we are eliminating some CIR types.
 static void prepareCXXABITypeConverter(mlir::TypeConverter &converter,
@@ -446,6 +455,7 @@ populateCXXABIConversionTarget(mlir::ConversionTarget &target,
         return typeConverter.isLegal(op.getSymType());
       });
   target.addIllegalOp<cir::DynamicCastOp>();
+  target.addIllegalOp<cir::VTableGetTypeInfoOp>();
 }
 
 //===----------------------------------------------------------------------===//
@@ -453,21 +463,18 @@ populateCXXABIConversionTarget(mlir::ConversionTarget &target,
 //===----------------------------------------------------------------------===//
 
 void CXXABILoweringPass::runOnOperation() {
-  auto module = mlir::cast<mlir::ModuleOp>(getOperation());
-  mlir::MLIRContext *ctx = module.getContext();
+  auto mod = mlir::cast<mlir::ModuleOp>(getOperation());
+  mlir::MLIRContext *ctx = mod.getContext();
 
-  // If the triple is not present, e.g. CIR modules parsed from text, we
-  // cannot init LowerModule properly.
-  assert(!cir::MissingFeatures::makeTripleAlwaysPresent());
-  // If no target triple is available, skip the ABI lowering pass.
-  if (!module->hasAttr(cir::CIRDialect::getTripleAttrName()))
+  std::unique_ptr<cir::LowerModule> lowerModule = cir::createLowerModule(mod);
+  // If lower module is not available, skip the ABI lowering pass.
+  if (!lowerModule) {
+    mod.emitWarning("Cannot create a CIR lower module, skipping the ")
+        << getName() << " pass";
     return;
+  }
 
-  mlir::PatternRewriter rewriter(ctx);
-  std::unique_ptr<cir::LowerModule> lowerModule =
-      cir::createLowerModule(module, rewriter);
-
-  mlir::DataLayout dataLayout(module);
+  mlir::DataLayout dataLayout(mod);
   mlir::TypeConverter typeConverter;
   prepareCXXABITypeConverter(typeConverter, dataLayout, *lowerModule);
 
@@ -483,7 +490,7 @@ void CXXABILoweringPass::runOnOperation() {
   mlir::ConversionTarget target(*ctx);
   populateCXXABIConversionTarget(target, typeConverter);
 
-  if (failed(mlir::applyPartialConversion(module, target, std::move(patterns))))
+  if (failed(mlir::applyPartialConversion(mod, target, std::move(patterns))))
     signalPassFailure();
 }
 

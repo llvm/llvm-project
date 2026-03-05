@@ -1748,6 +1748,26 @@ TEST(TripleTest, Normalization) {
             Triple::normalize("wasm32-wasi")); // wasm32-unknown-wasi
   EXPECT_EQ("wasm64-unknown-wasi",
             Triple::normalize("wasm64-wasi")); // wasm64-unknown-wasi
+
+  // Firmware should only be allowed for the Apple vendor
+  EXPECT_DEATH(Triple::normalize("arm-none-firmware"), "");
+  EXPECT_DEATH(Triple::normalize("arm-unknown-firmware"), "");
+  EXPECT_EQ("arm-apple-firmware", Triple::normalize("arm-apple-firmware"));
+  EXPECT_DEATH(Triple::normalize("arm-pc-firmware"), "");
+  EXPECT_DEATH(Triple::normalize("arm-scei-firmware"), "");
+  EXPECT_DEATH(Triple::normalize("arm-sie-firmware"), "");
+  EXPECT_DEATH(Triple::normalize("arm-fsl-firmware"), "");
+  EXPECT_DEATH(Triple::normalize("arm-ibm-firmware"), "");
+  EXPECT_DEATH(Triple::normalize("arm-img-firmware"), "");
+  EXPECT_DEATH(Triple::normalize("arm-mti-firmware"), "");
+  EXPECT_DEATH(Triple::normalize("arm-nvidia-firmware"), "");
+  EXPECT_DEATH(Triple::normalize("arm-csr-firmware"), "");
+  EXPECT_DEATH(Triple::normalize("arm-amd-firmware"), "");
+  EXPECT_DEATH(Triple::normalize("arm-mesa-firmware"), "");
+  EXPECT_DEATH(Triple::normalize("arm-suse-firmware"), "");
+  EXPECT_DEATH(Triple::normalize("arm-oe-firmware"), "");
+  EXPECT_DEATH(Triple::normalize("arm-intel-firmware"), "");
+  EXPECT_DEATH(Triple::normalize("arm-meta-firmware"), "");
 }
 
 TEST(TripleTest, MutateName) {
@@ -3371,6 +3391,28 @@ TEST(DataLayoutTest, UEFI) {
 
   // Test UEFI X86_64 Mangling Component.
   EXPECT_THAT(TT.computeDataLayout(), testing::HasSubstr("-m:w-"));
+}
+
+TEST(TripleTest, DefaultWCharSize) {
+  EXPECT_EQ(4u, Triple("x86_64-unknown-linux-gnu").getDefaultWCharSize());
+  EXPECT_EQ(4u, Triple("aarch64-unknown-linux-gnu").getDefaultWCharSize());
+  EXPECT_EQ(4u, Triple("riscv64-unknown-linux-gnu").getDefaultWCharSize());
+  EXPECT_EQ(4u, Triple("amdgcn-amd-amdhsa").getDefaultWCharSize());
+  EXPECT_EQ(4u, Triple("nvptx64-nvidia-cuda").getDefaultWCharSize());
+  EXPECT_EQ(4u, Triple("armv7-unknown-linux-gnueabi").getDefaultWCharSize());
+  EXPECT_EQ(4u, Triple("s390x-none-zos").getDefaultWCharSize());
+  EXPECT_EQ(4u, Triple("powerpc64-ibm-aix").getDefaultWCharSize());
+  EXPECT_EQ(4u, Triple("").getDefaultWCharSize());
+
+  EXPECT_EQ(2u, Triple("x86_64-pc-windows-msvc").getDefaultWCharSize());
+  EXPECT_EQ(2u, Triple("aarch64-pc-windows-msvc").getDefaultWCharSize());
+  EXPECT_EQ(2u, Triple("x86_64-w64-windows-gnu").getDefaultWCharSize());
+  EXPECT_EQ(2u, Triple("x86_64-unknown-uefi").getDefaultWCharSize());
+  EXPECT_EQ(2u, Triple("x86_64-scei-ps4").getDefaultWCharSize());
+  EXPECT_EQ(2u, Triple("x86_64-scei-ps5").getDefaultWCharSize());
+  EXPECT_EQ(2u, Triple("powerpc-ibm-aix").getDefaultWCharSize());
+
+  EXPECT_EQ(1u, Triple("xcore-unknown-unknown").getDefaultWCharSize());
 }
 
 } // end anonymous namespace
