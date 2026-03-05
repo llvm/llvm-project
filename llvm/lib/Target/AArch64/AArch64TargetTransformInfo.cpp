@@ -6828,8 +6828,8 @@ bool AArch64TTIImpl::isProfitableToSinkOperands(
     // SVE has only BIC.
     // SVE2 and SME implement "or not" and "xor not" with BSL2N.
     if (I->getOpcode() != Instruction::And &&
-        isa<ScalableVectorType>(I->getType()) &&
-        !ST->hasSVE2() && !ST->hasSME())
+        isa<ScalableVectorType>(I->getType()) && !ST->hasSVE2() &&
+        !ST->hasSME())
       break;
     // Shift can be fold into scalar AND/ORR/EOR,
     // but not the non-negated operand of BIC/ORN/EON.
