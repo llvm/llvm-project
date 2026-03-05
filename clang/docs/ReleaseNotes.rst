@@ -207,6 +207,10 @@ Attribute Changes in Clang
   type-level control over overflow behavior. There is also an accompanying type
   specifier for each behavior kind via `__ob_wrap` and `__ob_trap`.
 
+- The malloc attribute can now be applied to functions returning span-like structures (structs
+  containing a pointer field and a size integer field). Currently, this is primarily used for
+  Allocation Token instrumentation.
+
 Improvements to Clang's diagnostics
 -----------------------------------
 - Added ``-Wlifetime-safety`` to enable lifetime safety analysis,
