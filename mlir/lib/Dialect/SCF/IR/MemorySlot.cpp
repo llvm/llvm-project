@@ -20,22 +20,22 @@ using namespace mlir::scf;
 /// the terminator is of the provided type.
 template <typename TermTy>
 static void
-updateTerminator(Block *block, Value reachingDef,
+updateTerminator(Block *block, Value defaultReachingDef,
                  llvm::DenseMap<Block *, Value> &reachingAtBlockEnd) {
   Operation *terminator = block->getTerminator();
   if (!isa<TermTy>(terminator))
     return;
   Value blockReachingDef = reachingAtBlockEnd[block];
   if (!blockReachingDef) {
-    // Block is dead code or the region is not using the slot, so the reaching
-    // definition is the entry reaching definition.
-    blockReachingDef = reachingDef;
+    // Block is dead code or the region is not using the slot, so we use the
+    // default provided reaching definition.
+    blockReachingDef = defaultReachingDef;
   }
   terminator->insertOperands(terminator->getNumOperands(), {blockReachingDef});
 }
 
-/// Creates a shallow copy of an operation with new result types moving the
-/// regions out of the original operation, then deletes the original operation.
+/// Creates a shallow copy of an operation with new result types, moving the
+/// regions out of the original operation and deleting the original operation.
 static Operation *replaceWithNewResults(RewriterBase &rewriter, Operation *op,
                                         TypeRange resultTypes) {
   RewriterBase::InsertionGuard guard(rewriter);
@@ -103,9 +103,12 @@ void ForOp::setupPromotion(
     const MemorySlot &slot, Value reachingDef, bool hasValueStores,
     llvm::SmallMapVector<Region *, Value, 2> &regionsToProcess) {
   Region &bodyRegion = getBodyRegion();
-  if (!hasValueStores)
+  if (!hasValueStores) {
     regionsToProcess.insert({&bodyRegion, reachingDef});
+    return;
+  }
 
+  getInitArgsMutable().append(reachingDef);
   bodyRegion.addArgument(slot.elemType, slot.ptr.getLoc());
   regionsToProcess.insert({&bodyRegion, bodyRegion.getArguments().back()});
 }
@@ -311,6 +314,8 @@ void WhileOp::setupPromotion(
     return;
   }
 
+  getInitsMutable().append(reachingDef);
+
   beforeRegion.addArgument(slot.elemType, slot.ptr.getLoc());
   regionsToProcess.insert({&beforeRegion, beforeRegion.getArguments().back()});
 
@@ -326,10 +331,11 @@ Value WhileOp::finalizePromotion(
 
   // Update the yield terminators to return the newly defined reaching
   // definition.
-  updateTerminator<ConditionOp>(&getBefore().back(), reachingDef,
+  updateTerminator<ConditionOp>(&getBefore().back(),
+                                getBefore().getArguments().back(),
                                 reachingAtBlockEnd);
-  updateTerminator<YieldOp>(&getAfter().back(), reachingDef,
-                            reachingAtBlockEnd);
+  updateTerminator<YieldOp>(
+      &getAfter().back(), getAfter().getArguments().back(), reachingAtBlockEnd);
 
   SmallVector<Type> resultTypes(getResultTypes());
   resultTypes.push_back(slot.elemType);

@@ -90,3 +90,26 @@ func.func @merge_point_arg_not_confused(%cond: i1, %a: i32, %b: i32) -> i32 {
   %load = memref.load %alloca[] : memref<i32>
   return %load : i32
 }
+
+// -----
+
+// Check that a load inside an unknown region-bearing op prevents promotion.
+
+// CHECK-LABEL: func.func @unknown_region_op_load
+// CHECK: %[[C5:.*]] = arith.constant 5 : i32
+// CHECK: %[[ALLOCA:.*]] = memref.alloca() : memref<i32>
+// CHECK: memref.store %[[C5]], %[[ALLOCA]][]
+// CHECK: "test.one_region_op"() ({
+// CHECK:   %[[LOAD:.*]] = memref.load %[[ALLOCA]][]
+// CHECK:   "test.finish"() : () -> ()
+// CHECK: }) : () -> ()
+func.func @unknown_region_op_load() {
+  %c5 = arith.constant 5 : i32
+  %alloca = memref.alloca() : memref<i32>
+  memref.store %c5, %alloca[] : memref<i32>
+  "test.one_region_op"() ({
+    %load = memref.load %alloca[] : memref<i32>
+    "test.finish"() : () -> ()
+  }) : () -> ()
+  return
+}
