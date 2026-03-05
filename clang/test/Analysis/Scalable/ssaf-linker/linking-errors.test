@@ -1,0 +1,9 @@
+// Tests for EntityLinker error conditions.
+
+// RUN: rm -rf %t
+// RUN: mkdir -p %t
+
+// Linking the same TU namespace twice produces an error.
+// RUN: not ssaf-linker %S/Inputs/tu-empty.json %S/Inputs/tu-empty.json -o %t/lu.json 2>&1 \
+// RUN:   | FileCheck %s --check-prefix=DUP-NS -DPATH=%S/Inputs/tu-empty.json
+// DUP-NS: ssaf-linker: error: Failed to link input summary '[[PATH]]': failed to link TU summary: duplicate BuildNamespace(CompilationUnit, empty.cpp).

@@ -166,7 +166,13 @@ void EntityLinker::patch(
     const std::map<EntityId, EntityId> &EntityResolutionTable) {
   for (auto *PatchTarget : PatchTargets) {
     assert(PatchTarget && "EntityLinker::patch: Patch target cannot be null");
-    PatchTarget->patch(EntityResolutionTable);
+
+    if (auto Err = PatchTarget->patch(EntityResolutionTable)) {
+      std::string PatchingErrorMessage = llvm::toString(std::move(Err));
+      ErrorBuilder::fatal("{0} - {1}",
+                          ErrorMessages::EntityLinkerFatalErrorPrefix,
+                          PatchingErrorMessage);
+    }
   }
 }
 

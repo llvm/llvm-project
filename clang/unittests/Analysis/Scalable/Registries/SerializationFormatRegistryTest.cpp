@@ -54,7 +54,7 @@ TEST(SerializationFormatRegistryTest, isFormatRegistered) {
 
 TEST(SerializationFormatRegistryTest, EnumeratingRegistryEntries) {
   auto Formats = SerializationFormatRegistry::entries();
-  ASSERT_EQ(std::distance(Formats.begin(), Formats.end()), 1U);
+  ASSERT_EQ(std::distance(Formats.begin(), Formats.end()), 2U);
   EXPECT_EQ(Formats.begin()->getName(), "MockSerializationFormat");
 }
 

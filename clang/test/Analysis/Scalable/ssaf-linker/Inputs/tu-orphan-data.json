@@ -1,0 +1,30 @@
+{
+  "tu_namespace": {
+    "kind": "CompilationUnit",
+    "name": "tu-orphan-data.cpp"
+  },
+  "id_table": [
+    {
+      "id": 0,
+      "name": {
+        "namespace": [{ "kind": "CompilationUnit", "name": "tu-orphan-data.cpp" }],
+        "suffix": "",
+        "usr": "c:@F@foo#"
+      }
+    }
+  ],
+  "linkage_table": [
+    { "id": 0, "linkage": { "type": "External" } }
+  ],
+  "data": [
+    {
+      "summary_name": "TestAnalysis",
+      "summary_data": [
+        {
+          "entity_id": 99,
+          "entity_summary": {}
+        }
+      ]
+    }
+  ]
+}

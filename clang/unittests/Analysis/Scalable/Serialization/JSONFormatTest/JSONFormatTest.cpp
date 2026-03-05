@@ -207,7 +207,7 @@ llvm::Error normalizeIDTable(json::Array &IDTable,
       return createStringError(
           inconvertibleErrorCode(),
           "Cannot normalize %s JSON: id_table entry at index %zu "
-          "does not contain a valid 'id' uint64_t field",
+          "'id' field is not a valid entity id integer",
           SummaryClassName.data(), Index);
     }
   }
@@ -246,7 +246,7 @@ llvm::Error normalizeLinkageTable(json::Array &LinkageTable,
       return createStringError(
           inconvertibleErrorCode(),
           "Cannot normalize %s JSON: linkage_table entry at index "
-          "%zu does not contain a valid 'id' uint64_t field",
+          "%zu 'id' field is not a valid entity id integer",
           SummaryClassName.data(), Index);
     }
   }
@@ -287,8 +287,8 @@ llvm::Error normalizeSummaryData(json::Array &SummaryData, size_t DataIndex,
       return createStringError(
           inconvertibleErrorCode(),
           "Cannot normalize %s JSON: data entry at index %zu, "
-          "summary_data entry at index %zu does not contain a valid "
-          "'entity_id' uint64_t field",
+          "summary_data entry at index %zu 'entity_id' field is not "
+          "a valid entity id integer",
           SummaryClassName.data(), DataIndex, SummaryIndex);
     }
   }
@@ -458,15 +458,14 @@ namespace {
 // ============================================================================
 
 json::Object serializePairsEntitySummaryForJSONFormatTest(
-    const EntitySummary &Summary,
-    const JSONFormat::EntityIdConverter &Converter) {
+    const EntitySummary &Summary, JSONFormat::EntityIdToJSONFn ToJSON) {
   const auto &TA =
       static_cast<const PairsEntitySummaryForJSONFormatTest &>(Summary);
   json::Array PairsArray;
   for (const auto &[First, Second] : TA.Pairs) {
     PairsArray.push_back(json::Object{
-        {"first", Converter.toJSON(First)},
-        {"second", Converter.toJSON(Second)},
+        {"first", ToJSON(First)},
+        {"second", ToJSON(Second)},
     });
   }
   return json::Object{{"pairs", std::move(PairsArray)}};
@@ -475,7 +474,7 @@ json::Object serializePairsEntitySummaryForJSONFormatTest(
 Expected<std::unique_ptr<EntitySummary>>
 deserializePairsEntitySummaryForJSONFormatTest(
     const json::Object &Obj, EntityIdTable &IdTable,
-    const JSONFormat::EntityIdConverter &Converter) {
+    JSONFormat::EntityIdFromJSONFn FromJSON) {
   auto Result = std::make_unique<PairsEntitySummaryForJSONFormatTest>();
   const json::Array *PairsArray = Obj.getArray("pairs");
   if (!PairsArray) {
@@ -489,20 +488,33 @@ deserializePairsEntitySummaryForJSONFormatTest(
           inconvertibleErrorCode(),
           "pairs element at index %zu is not a JSON object", Index);
     }
-    auto FirstOpt = Pair->getInteger("first");
-    if (!FirstOpt) {
+    const json::Object *FirstObj = Pair->getObject("first");
+    if (!FirstObj) {
       return createStringError(
           inconvertibleErrorCode(),
           "missing or invalid 'first' field at index '%zu'", Index);
     }
-    auto SecondOpt = Pair->getInteger("second");
-    if (!SecondOpt) {
+    const json::Object *SecondObj = Pair->getObject("second");
+    if (!SecondObj) {
       return createStringError(
           inconvertibleErrorCode(),
           "missing or invalid 'second' field at index '%zu'", Index);
     }
-    Result->Pairs.emplace_back(Converter.fromJSON(*FirstOpt),
-                               Converter.fromJSON(*SecondOpt));
+    auto ExpectedFirst = FromJSON(*FirstObj);
+    if (!ExpectedFirst) {
+      return createStringError(inconvertibleErrorCode(),
+                               "invalid 'first' entity id at index '%zu': %s",
+                               Index,
+                               toString(ExpectedFirst.takeError()).c_str());
+    }
+    auto ExpectedSecond = FromJSON(*SecondObj);
+    if (!ExpectedSecond) {
+      return createStringError(inconvertibleErrorCode(),
+                               "invalid 'second' entity id at index '%zu': %s",
+                               Index,
+                               toString(ExpectedSecond.takeError()).c_str());
+    }
+    Result->Pairs.emplace_back(*ExpectedFirst, *ExpectedSecond);
   }
   return std::move(Result);
 }
@@ -526,8 +538,9 @@ llvm::Registry<JSONFormat::FormatInfo>::Add<
 // Second Test Analysis - Simple analysis for multi-summary round-trip tests.
 // ============================================================================
 
-json::Object serializeTagsEntitySummaryForJSONFormatTest(
-    const EntitySummary &Summary, const JSONFormat::EntityIdConverter &) {
+json::Object
+serializeTagsEntitySummaryForJSONFormatTest(const EntitySummary &Summary,
+                                            JSONFormat::EntityIdToJSONFn) {
   const auto &TA =
       static_cast<const TagsEntitySummaryForJSONFormatTest &>(Summary);
   json::Array TagsArray;
@@ -538,9 +551,9 @@ json::Object serializeTagsEntitySummaryForJSONFormatTest(
 }
 
 Expected<std::unique_ptr<EntitySummary>>
-deserializeTagsEntitySummaryForJSONFormatTest(
-    const json::Object &Obj, EntityIdTable &,
-    const JSONFormat::EntityIdConverter &) {
+deserializeTagsEntitySummaryForJSONFormatTest(const json::Object &Obj,
+                                              EntityIdTable &,
+                                              JSONFormat::EntityIdFromJSONFn) {
   auto Result = std::make_unique<TagsEntitySummaryForJSONFormatTest>();
   const json::Array *TagsArray = Obj.getArray("tags");
   if (!TagsArray) {
@@ -583,10 +596,10 @@ struct NullEntitySummaryForJSONFormatTestFormatInfo final
   NullEntitySummaryForJSONFormatTestFormatInfo()
       : JSONFormat::FormatInfo(
             SummaryName("NullEntitySummaryForJSONFormatTest"),
-            [](const EntitySummary &, const JSONFormat::EntityIdConverter &)
+            [](const EntitySummary &, JSONFormat::EntityIdToJSONFn)
                 -> json::Object { return json::Object{}; },
             [](const json::Object &, EntityIdTable &,
-               const JSONFormat::EntityIdConverter &)
+               JSONFormat::EntityIdFromJSONFn)
                 -> llvm::Expected<std::unique_ptr<EntitySummary>> {
               return nullptr;
             }) {}
@@ -607,10 +620,10 @@ struct MismatchedEntitySummaryForJSONFormatTestFormatInfo final
   MismatchedEntitySummaryForJSONFormatTestFormatInfo()
       : JSONFormat::FormatInfo(
             SummaryName("MismatchedEntitySummaryForJSONFormatTest"),
-            [](const EntitySummary &, const JSONFormat::EntityIdConverter &)
+            [](const EntitySummary &, JSONFormat::EntityIdToJSONFn)
                 -> json::Object { return json::Object{}; },
             [](const json::Object &, EntityIdTable &,
-               const JSONFormat::EntityIdConverter &)
+               JSONFormat::EntityIdFromJSONFn)
                 -> llvm::Expected<std::unique_ptr<EntitySummary>> {
               return std::make_unique<
                   MismatchedEntitySummaryForJSONFormatTest>();

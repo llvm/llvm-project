@@ -1,0 +1,49 @@
+// Tests for EntityLinker error cases.
+
+// RUN: mkdir -p %t
+
+// No extension on output.
+// RUN: not ssaf-linker %S/Inputs/tu-empty.json -o lu 2>&1 \
+// RUN:   | FileCheck %s --check-prefix=NO-EXT-OUTPUT
+// NO-EXT-OUTPUT: ssaf-linker: error: Failed to validate summary 'lu': Extension not supplied.
+
+// No extension on input.
+// RUN: not ssaf-linker %S/Inputs/tu-noext -o %t/lu.json 2>&1 \
+// RUN:   | FileCheck %s --check-prefix=NO-EXT-INPUT -DPATH=%S/Inputs/tu-noext
+// NO-EXT-INPUT: ssaf-linker: error: Failed to validate summary '[[PATH]]': Extension not supplied.
+
+// Invalid extension on output.
+// RUN: not ssaf-linker %S/Inputs/tu-empty.json -o lu.txt 2>&1 \
+// RUN:   | FileCheck %s --check-prefix=BAD-EXT-OUTPUT
+// BAD-EXT-OUTPUT: ssaf-linker: error: Failed to validate summary 'lu.txt': Format not registered for extension 'txt'.
+
+// Invalid extension on input.
+// RUN: not ssaf-linker %S/Inputs/tu-badext.txt -o %t/lu.json 2>&1 \
+// RUN:   | FileCheck %s --check-prefix=BAD-EXT-INPUT -DPATH=%S/Inputs/tu-badext.txt
+// BAD-EXT-INPUT: ssaf-linker: error: Failed to validate summary '[[PATH]]': Format not registered for extension 'txt'.
+
+// Output directory does not exist.
+// RUN: not ssaf-linker %S/Inputs/tu-empty.json -o %S/Outputs/NonExistentDirectory/lu.json 2>&1 \
+// RUN:   | FileCheck %s --check-prefix=OUTPUT-PARENT-DIR-MISSING -DPATH=%S/Outputs/NonExistentDirectory/lu.json
+// OUTPUT-PARENT-DIR-MISSING: ssaf-linker: error: Failed to validate summary '[[PATH]]': Parent directory does not exist.
+
+// Output parent directory exists but is not writable.
+// UNSUPPORTED: system-windows
+// RUN: mkdir -p %t/output-dir
+// RUN: chmod -w %t/output-dir
+// RUN: not ssaf-linker %S/Inputs/tu-empty.json -o %t/output-dir/output.json 2>&1 \
+// RUN:   | FileCheck %s --check-prefix=NO-WRITE-PERM -DPATH=%t/output-dir/output.json
+// RUN: chmod +w %t/output-dir
+// NO-WRITE-PERM: ssaf-linker: error: Failed to validate summary '[[PATH]]': Parent directory is not writable.
+
+// Input summary does not exist.
+// RUN: not ssaf-linker %S/Inputs/tu-nonexistent.json -o %t/lu.json 2>&1 \
+// RUN:   | FileCheck %s --check-prefix=NO-INPUT-FILE -DPATH=%S/Inputs/tu-nonexistent.json
+// NO-INPUT-FILE: ssaf-linker: error: Failed to validate summary '[[PATH]]': No such file or directory.
+
+// Input summary is a broken symlink.
+// RUN: ln -sf %t/tu-nonexistent %t/tu-dangling.json
+// RUN: not ssaf-linker %t/tu-dangling.json -o %t/lu.json 2>&1 \
+// RUN:   | FileCheck %s --check-prefix=BROKEN-SYMLINK -DPATH=%t/tu-dangling.json
+// BROKEN-SYMLINK: ssaf-linker: error: Failed to validate summary '[[PATH]]': No such file or directory.
+

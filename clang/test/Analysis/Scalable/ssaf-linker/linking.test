@@ -1,0 +1,30 @@
+// Tests for successful ssaf-linker linking behaviour.
+// See linking-errors.test for error cases.
+
+// RUN: rm -rf %t
+// RUN: mkdir -p %t
+
+// Single empty TU produces valid output.
+// RUN: ssaf-linker %S/Inputs/tu-empty.json -o %t/lu-empty.json
+// RUN: diff %S/Outputs/lu-empty.json %t/lu-empty.json
+// RUN: rm %t/lu-empty.json
+
+// Single non-empty TU produces valid output.
+// RUN: ssaf-linker %S/Inputs/tu-1.json -o %t/lu-1.json
+// RUN: diff %S/Outputs/lu-1.json %t/lu-1.json
+// RUN: rm %t/lu-1.json
+
+// Linking empty and non-empty TU is equivalent to just linking non-empty TU
+// RUN: ssaf-linker %S/Inputs/tu-empty.json %S/Inputs/tu-1.json -o %t/lu-1.json
+// RUN: diff %S/Outputs/lu-1.json %t/lu-1.json
+// RUN: rm %t/lu-1.json
+
+// Linking non-empty and empty TU is equivalent to just linking non-empty TU
+// RUN: ssaf-linker %S/Inputs/tu-2.json %S/Inputs/tu-empty.json -o %t/lu-2.json
+// RUN: diff %S/Outputs/lu-2.json %t/lu-2.json
+// RUN: rm %t/lu-2.json
+
+// Linking two TUs correctly resolves and patches data.
+// RUN: ssaf-linker %S/Inputs/tu-1.json %S/Inputs/tu-2.json -o %t/lu-1+2.json
+// RUN: diff %S/Outputs/lu-1+2.json %t/lu-1+2.json
+// RUN: rm %t/lu-1+2.json
