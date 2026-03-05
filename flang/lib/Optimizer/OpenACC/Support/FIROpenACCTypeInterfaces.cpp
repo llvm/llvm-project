@@ -1025,11 +1025,35 @@ static mlir::Value genScalarCombiner(fir::FirOpBuilder &builder,
     TODO(loc, "reduction mul type");
   }
 
-  if (op == mlir::acc::ReductionOperator::AccMin)
-    return fir::genMin(builder, loc, {value1, value2});
+  if (op == mlir::acc::ReductionOperator::AccMin ||
+      op == mlir::acc::ReductionOperator::AccMinimumf ||
+      op == mlir::acc::ReductionOperator::AccMinnumf) {
+    Fortran::common::FPMaxminBehavior savedMode = builder.getFPMaxminBehavior();
+    if (op == mlir::acc::ReductionOperator::AccMinimumf)
+      builder.setFPMaxminBehavior(Fortran::common::FPMaxminBehavior::Extremum);
+    else if (op == mlir::acc::ReductionOperator::AccMinnumf)
+      builder.setFPMaxminBehavior(
+          Fortran::common::FPMaxminBehavior::Extremenum);
 
-  if (op == mlir::acc::ReductionOperator::AccMax)
-    return fir::genMax(builder, loc, {value1, value2});
+    mlir::Value result = fir::genMin(builder, loc, {value1, value2});
+    builder.setFPMaxminBehavior(savedMode);
+    return result;
+  }
+
+  if (op == mlir::acc::ReductionOperator::AccMax ||
+      op == mlir::acc::ReductionOperator::AccMaximumf ||
+      op == mlir::acc::ReductionOperator::AccMaxnumf) {
+    Fortran::common::FPMaxminBehavior savedMode = builder.getFPMaxminBehavior();
+    if (op == mlir::acc::ReductionOperator::AccMaximumf)
+      builder.setFPMaxminBehavior(Fortran::common::FPMaxminBehavior::Extremum);
+    else if (op == mlir::acc::ReductionOperator::AccMaxnumf)
+      builder.setFPMaxminBehavior(
+          Fortran::common::FPMaxminBehavior::Extremenum);
+
+    mlir::Value result = fir::genMax(builder, loc, {value1, value2});
+    builder.setFPMaxminBehavior(savedMode);
+    return result;
+  }
 
   if (op == mlir::acc::ReductionOperator::AccIand)
     return mlir::arith::AndIOp::create(builder, loc, value1, value2);

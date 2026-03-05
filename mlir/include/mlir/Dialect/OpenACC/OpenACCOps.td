@@ -38,6 +38,11 @@ class OpenACC_Op<string mnemonic, list<Trait> traits = []> :
 def OpenACC_ReductionOperatorNone    : I32EnumAttrCase<"AccNone", 0, "none">;
 def OpenACC_ReductionOperatorAdd     : I32EnumAttrCase<"AccAdd", 1, "add">;
 def OpenACC_ReductionOperatorMul     : I32EnumAttrCase<"AccMul", 2, "mul">;
+// When NaNs or signed zeros are possible, AccMax and AccMin parallel reductions
+// cannot guarantee stable results for floating-point values.
+// As such, auto-parallelization of such reductions cannot be done.
+// The FrontEnds can use alternative max/min reduction kinds (see below)
+// to enable auto-parallelization.
 def OpenACC_ReductionOperatorMax     : I32EnumAttrCase<"AccMax", 3, "max">;
 def OpenACC_ReductionOperatorMin     : I32EnumAttrCase<"AccMin", 4, "min">;
 def OpenACC_ReductionOperatorAnd     : I32EnumAttrCase<"AccIand", 5, "iand">;
@@ -47,16 +52,30 @@ def OpenACC_ReductionOperatorLogEqv  : I32EnumAttrCase<"AccEqv", 8, "eqv">;
 def OpenACC_ReductionOperatorLogNeqv : I32EnumAttrCase<"AccNeqv", 9, "neqv">;
 def OpenACC_ReductionOperatorLogAnd  : I32EnumAttrCase<"AccLand", 10, "land">;
 def OpenACC_ReductionOperatorLogOr   : I32EnumAttrCase<"AccLor", 11, "lor">;
+// The following reduction operators correspond to arith::AtomicRMWKind kinds
+// named alike. They can only be applied to floating-point types.
+// These reductions can be auto-parallelized.
+def OpenACC_ReductionOperatorMaximum
+    : I32EnumAttrCase<"AccMaximumf", 12, "maximumf">;
+def OpenACC_ReductionOperatorMinimum
+    : I32EnumAttrCase<"AccMinimumf", 13, "minimumf">;
+def OpenACC_ReductionOperatorMaxnum
+    : I32EnumAttrCase<"AccMaxnumf", 14, "maxnumf">;
+def OpenACC_ReductionOperatorMinnum
+    : I32EnumAttrCase<"AccMinnumf", 15, "minnumf">;
 
-def OpenACC_ReductionOperator : I32EnumAttr<"ReductionOperator",
-    "built-in reduction operations supported by OpenACC",
-    [OpenACC_ReductionOperatorNone, OpenACC_ReductionOperatorAdd, 
-     OpenACC_ReductionOperatorMul, OpenACC_ReductionOperatorMax, OpenACC_ReductionOperatorMin,
-     OpenACC_ReductionOperatorAnd, OpenACC_ReductionOperatorOr,
-     OpenACC_ReductionOperatorXor, OpenACC_ReductionOperatorLogEqv,
-     OpenACC_ReductionOperatorLogNeqv, OpenACC_ReductionOperatorLogAnd,
-     OpenACC_ReductionOperatorLogOr
-    ]> {
+def OpenACC_ReductionOperator
+    : I32EnumAttr<
+          "ReductionOperator",
+          "built-in reduction operations supported by OpenACC",
+          [OpenACC_ReductionOperatorNone, OpenACC_ReductionOperatorAdd,
+           OpenACC_ReductionOperatorMul, OpenACC_ReductionOperatorMax,
+           OpenACC_ReductionOperatorMin, OpenACC_ReductionOperatorAnd,
+           OpenACC_ReductionOperatorOr, OpenACC_ReductionOperatorXor,
+           OpenACC_ReductionOperatorLogEqv, OpenACC_ReductionOperatorLogNeqv,
+           OpenACC_ReductionOperatorLogAnd, OpenACC_ReductionOperatorLogOr,
+           OpenACC_ReductionOperatorMaximum, OpenACC_ReductionOperatorMinimum,
+           OpenACC_ReductionOperatorMaxnum, OpenACC_ReductionOperatorMinnum]> {
   let genSpecializedAttr = 0;
   let cppNamespace = "::mlir::acc";
 }
@@ -1651,6 +1670,9 @@ def OpenACC_ReductionRecipeOp
     (`destroy` $destroyRegion^)?
   }];
 
+  // TODO: we need to verify that reduction operators
+  // maxnumf, maximumf, minnumf anf minimumf are only applied
+  // to FloatType element types.
   let hasRegionVerifier = 1;
 }
 
