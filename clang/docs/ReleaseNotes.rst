@@ -285,6 +285,8 @@ Improvements to Clang's diagnostics
 - ``-Wunsafe-buffer-usage`` now warns about unsafe two-parameter constructors of
   ``std::string_view`` (pointer and size), consistent with the existing warning for ``std::span``.
 
+- Clang now doesn't throw assertion errors when comparing unsigned vectors (#GH173614).
+
 Improvements to Clang's time-trace
 ----------------------------------
 
