@@ -207,17 +207,32 @@ void WebAssemblyDAGToDAGISel::Select(SDNode *Node) {
                                      Node->getOperand(0) // inchain
       );
       break;
-    case SyncScope::System:
-      // Currently wasm only supports sequentially consistent atomics, so we
-      // always set the order to 0 (sequentially consistent).
+    case SyncScope::System: {
+      unsigned Order = 0;
+      if (MF.getSubtarget<WebAssemblySubtarget>().hasRelaxedAtomics()) {
+        auto Ordering =
+            static_cast<AtomicOrdering>(Node->getConstantOperandVal(1));
+        switch (Ordering) {
+        case AtomicOrdering::Acquire:
+        case AtomicOrdering::Release:
+        case AtomicOrdering::AcquireRelease:
+        case AtomicOrdering::Monotonic:
+          Order = 1; // acqrel
+          break;
+        default:
+          Order = 0; // seqcst
+          break;
+        }
+      }
       Fence = CurDAG->getMachineNode(
           WebAssembly::ATOMIC_FENCE,
-          DL,                                         // debug loc
-          MVT::Other,                                 // outchain type
-          CurDAG->getTargetConstant(0, DL, MVT::i32), // order
-          Node->getOperand(0)                         // inchain
+          DL,                                             // debug loc
+          MVT::Other,                                     // outchain type
+          CurDAG->getTargetConstant(Order, DL, MVT::i32), // order
+          Node->getOperand(0)                             // inchain
       );
       break;
+    }
     default:
       llvm_unreachable("Unknown scope!");
     }
