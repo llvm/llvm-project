@@ -577,15 +577,7 @@ struct TransferReadLowering : public OpRewritePattern<vector::TransferReadOp> {
 
     AffineMap readMap = readOp.getPermutationMap();
     bool isTransposeLoad = !readMap.isMinorIdentity();
-
-    Type elementType = loadedVecTy.getElementType();
-    unsigned minTransposeBitWidth = 32;
-    // Here we separate two transpose cases:
-    // 1. With transpose attribute in xegpu.load_nd for larger element types
-    // 2. With separate vector.transpose after load_nd for smaller element types
-    bool shouldUseTransposeAttr =
-        isTransposeLoad &&
-        elementType.getIntOrFloatBitWidth() >= minTransposeBitWidth;
+    auto elementType = loadedVecTy.getElementType();
 
     SmallVector<int64_t> descShape(loadedVecTy.getShape());
     if (isTransposeLoad) {
@@ -594,24 +586,11 @@ struct TransferReadLowering : public OpRewritePattern<vector::TransferReadOp> {
       // to get the reversive shape.
       auto inversedMap = inversePermutation(readMap);
       descShape = applyPermutationMap(inversedMap, loadedVecTy.getShape());
-      if (!shouldUseTransposeAttr) {
-        // If we're using a separate vector.transpose instead of the
-        // xegpu.load_nd-transpose_attr, then the loaded vector will be
-        // non-transposed, and the inversive permutation needs to be applied
-        // to the type as well.
-        auto newShape =
-            applyPermutationMap(inversedMap, loadedVecTy.getShape());
-        loadedVecTy = VectorType::get(newShape, loadedVecTy.getElementType());
-      }
+      loadedVecTy = VectorType::get(descShape, elementType);
     }
     auto descType = xegpu::TensorDescType::get(
         descShape, elementType, /*array_length=*/1,
         /*boundary_check=*/isOutOfBounds, xegpu::MemorySpace::Global);
-    DenseI64ArrayAttr transposeAttr =
-        !shouldUseTransposeAttr
-            ? nullptr
-            : DenseI64ArrayAttr::get(rewriter.getContext(),
-                                     ArrayRef<int64_t>{1, 0});
     auto [src, indices] = convertMemrefAndOffsetsToTargetRank(
         rewriter, loc, readOp.getBase(), getAsOpFoldResult(readOp.getIndices()),
         loadedVecTy.getRank());
@@ -622,11 +601,11 @@ struct TransferReadLowering : public OpRewritePattern<vector::TransferReadOp> {
 
     Operation *loadedOp =
         xegpu::LoadNdOp::create(rewriter, loc, loadedVecTy, ndDesc, indices,
-                                /*packed=*/nullptr, transposeAttr,
+                                /*packed=*/nullptr, /*transpose=*/nullptr,
                                 /*l1_hint=*/hint,
                                 /*l2_hint=*/hint, /*l3_hint=*/hint,
                                 /*layout=*/nullptr);
-    if (isTransposeLoad && !shouldUseTransposeAttr) {
+    if (isTransposeLoad) {
       // Transposing the loaded vector with a separate vector.transpose
       // operation
       auto range = llvm::seq<int64_t>(0, readMap.getResults().size());
