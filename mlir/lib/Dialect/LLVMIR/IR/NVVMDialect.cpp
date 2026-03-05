@@ -5240,7 +5240,7 @@ mlir::NVVM::IDArgPair Tcgen05MMABlockScaleOp::getIntrinsicIDAndArgs(
   auto kind = thisOp.getKind();
   auto blockScale = thisOp.getBlockScale();
   llvm::Intrinsic::ID ID = [&]() {
-    if (kind == NVVM::MMABlockScaleKind::MXF8F6F4) {
+    if (kind == NVVM::Tcgen05MMAKind::MXF8F6F4) {
       if (blockScale == NVVM::Tcgen05MMABlockScale::DEFAULT) {
         return isATensor ? llvm::Intrinsic::
                                nvvm_tcgen05_mma_tensor_mxf8f6f4_block_scale
@@ -5253,7 +5253,7 @@ mlir::NVVM::IDArgPair Tcgen05MMABlockScaleOp::getIntrinsicIDAndArgs(
                    : llvm::Intrinsic::
                          nvvm_tcgen05_mma_shared_mxf8f6f4_block_scale_block32;
       }
-    } else if (kind == NVVM::MMABlockScaleKind::MXF4) {
+    } else if (kind == NVVM::Tcgen05MMAKind::MXF4) {
       if (blockScale == NVVM::Tcgen05MMABlockScale::DEFAULT) {
         return isATensor
                    ? llvm::Intrinsic::nvvm_tcgen05_mma_tensor_mxf4_block_scale
@@ -5264,7 +5264,7 @@ mlir::NVVM::IDArgPair Tcgen05MMABlockScaleOp::getIntrinsicIDAndArgs(
                          : llvm::Intrinsic::
                                nvvm_tcgen05_mma_shared_mxf4_block_scale_block32;
       }
-    } else if (kind == NVVM::MMABlockScaleKind::MXF4NVF4) {
+    } else if (kind == NVVM::Tcgen05MMAKind::MXF4NVF4) {
       if (blockScale == NVVM::Tcgen05MMABlockScale::BLOCK32) {
         return isATensor
                    ? llvm::Intrinsic::
@@ -5287,15 +5287,14 @@ mlir::NVVM::IDArgPair Tcgen05MMABlockScaleOp::getIntrinsicIDAndArgs(
 }
 
 static LogicalResult verifyTcgen05MMABlockScaleOp(
-    NVVM::Tcgen05MMACollectorOp collectorOp, NVVM::MMABlockScaleKind kind,
+    NVVM::Tcgen05MMACollectorOp collectorOp, NVVM::Tcgen05MMAKind kind,
     NVVM::Tcgen05MMABlockScale blockScale, Location loc) {
-
   if (blockScale == NVVM::Tcgen05MMABlockScale::DEFAULT &&
-      kind == MMABlockScaleKind::MXF4NVF4)
+      kind == NVVM::Tcgen05MMAKind::MXF4NVF4)
     return emitError(loc, "mxf4nvf4 requires block scale attribute");
 
   if (blockScale == NVVM::Tcgen05MMABlockScale::BLOCK16 &&
-      kind != MMABlockScaleKind::MXF4NVF4)
+      kind != NVVM::Tcgen05MMAKind::MXF4NVF4)
     return emitError(loc,
                      llvm::formatv("{} kind does not support block16 attribute",
                                    stringifyEnum(kind)));
@@ -5338,7 +5337,7 @@ mlir::NVVM::IDArgPair Tcgen05MMASparseBlockScaleOp::getIntrinsicIDAndArgs(
   auto kind = thisOp.getKind();
   auto blockScale = thisOp.getBlockScale();
   llvm::Intrinsic::ID ID = [&]() {
-    if (kind == NVVM::MMABlockScaleKind::MXF8F6F4) {
+    if (kind == NVVM::Tcgen05MMAKind::MXF8F6F4) {
       if (blockScale == NVVM::Tcgen05MMABlockScale::DEFAULT) {
         return isATensor ? llvm::Intrinsic::
                                nvvm_tcgen05_mma_sp_tensor_mxf8f6f4_block_scale
@@ -5351,7 +5350,7 @@ mlir::NVVM::IDArgPair Tcgen05MMASparseBlockScaleOp::getIntrinsicIDAndArgs(
                    : llvm::Intrinsic::
                          nvvm_tcgen05_mma_sp_shared_mxf8f6f4_block_scale_block32;
       }
-    } else if (kind == NVVM::MMABlockScaleKind::MXF4) {
+    } else if (kind == NVVM::Tcgen05MMAKind::MXF4) {
       if (blockScale == NVVM::Tcgen05MMABlockScale::DEFAULT) {
         return isATensor ? llvm::Intrinsic::
                                nvvm_tcgen05_mma_sp_tensor_mxf4_block_scale
@@ -5364,7 +5363,7 @@ mlir::NVVM::IDArgPair Tcgen05MMASparseBlockScaleOp::getIntrinsicIDAndArgs(
                    : llvm::Intrinsic::
                          nvvm_tcgen05_mma_sp_shared_mxf4_block_scale_block32;
       }
-    } else if (kind == NVVM::MMABlockScaleKind::MXF4NVF4) {
+    } else if (kind == NVVM::Tcgen05MMAKind::MXF4NVF4) {
       if (blockScale == NVVM::Tcgen05MMABlockScale::BLOCK32) {
         return isATensor
                    ? llvm::Intrinsic::
