@@ -3591,7 +3591,8 @@ MachineBasicBlock *AArch64TargetLowering::EmitInstrWithCustomInserter(
 
 // Forward declarations of SVE fixed length lowering helpers
 static EVT getContainerForFixedLengthVector(SelectionDAG &DAG, EVT VT);
-static SDValue convertToScalableVector(SelectionDAG &DAG, EVT VT, SDValue V);
+static SDValue convertToScalableVector(SelectionDAG &DAG, EVT VT, SDValue V,
+                                       bool clearUnused = false);
 static SDValue convertFromScalableVector(SelectionDAG &DAG, EVT VT, SDValue V);
 static SDValue convertFixedMaskToScalableVector(SDValue Mask,
                                                 SelectionDAG &DAG);
@@ -31416,14 +31417,18 @@ static SDValue getPredicateForVector(SelectionDAG &DAG, SDLoc &DL, EVT VT) {
 }
 
 // Grow V to consume an entire SVE register.
-static SDValue convertToScalableVector(SelectionDAG &DAG, EVT VT, SDValue V) {
+static SDValue convertToScalableVector(SelectionDAG &DAG, EVT VT, SDValue V,
+                                       bool clearUnused) {
   assert(VT.isScalableVector() &&
          "Expected to convert into a scalable vector!");
   assert(V.getValueType().isFixedLengthVector() &&
          "Expected a fixed length vector operand!");
   SDLoc DL(V);
   SDValue Zero = DAG.getConstant(0, DL, MVT::i64);
-  return DAG.getNode(ISD::INSERT_SUBVECTOR, DL, VT, DAG.getPOISON(VT), V, Zero);
+  SDValue ZeroVec = VT.isFloatingPoint() ? DAG.getConstantFP(0, DL, VT)
+                                         : DAG.getConstant(0, DL, VT);
+  return DAG.getNode(ISD::INSERT_SUBVECTOR, DL, VT,
+                     clearUnused ? ZeroVec : DAG.getPOISON(VT), V, Zero);
 }
 
 // Shrink V so it's just big enough to maintain a VT's worth of data.
@@ -32590,9 +32595,10 @@ AArch64TargetLowering::LowerPARTIAL_REDUCE_MLA(SDValue Op,
   if (ConvertToScalable) {
     ResultVT = getContainerForFixedLengthVector(DAG, ResultVT);
     OpVT = getContainerForFixedLengthVector(DAG, LHS.getValueType());
-    Acc = convertToScalableVector(DAG, ResultVT, Acc);
-    LHS = convertToScalableVector(DAG, OpVT, LHS);
-    RHS = convertToScalableVector(DAG, OpVT, RHS);
+    Acc =
+        convertToScalableVector(DAG, ResultVT, Acc, ResultVT.isFloatingPoint());
+    LHS = convertToScalableVector(DAG, OpVT, LHS, OpVT.isFloatingPoint());
+    RHS = convertToScalableVector(DAG, OpVT, RHS, OpVT.isFloatingPoint());
     Op = DAG.getNode(Op.getOpcode(), DL, ResultVT, {Acc, LHS, RHS});
   }
 

@@ -23,11 +23,17 @@ define void @fdot_v4f32(ptr %accptr, ptr %aptr, ptr %bptr) {
 ;
 ; SVE2P1-LABEL: fdot_v4f32:
 ; SVE2P1:       // %bb.0: // %entry
-; SVE2P1-NEXT:    ldr q0, [x0]
-; SVE2P1-NEXT:    ldr q1, [x1]
-; SVE2P1-NEXT:    ldr q2, [x2]
-; SVE2P1-NEXT:    fdot z0.s, z1.h, z2.h
-; SVE2P1-NEXT:    str q0, [x0]
+; SVE2P1-NEXT:    movi v0.2d, #0000000000000000
+; SVE2P1-NEXT:    ldr q1, [x0]
+; SVE2P1-NEXT:    ptrue p0.s, vl4
+; SVE2P1-NEXT:    ldr q2, [x1]
+; SVE2P1-NEXT:    ptrue p1.h, vl8
+; SVE2P1-NEXT:    ldr q3, [x2]
+; SVE2P1-NEXT:    sel z1.s, p0, z1.s, z0.s
+; SVE2P1-NEXT:    sel z2.h, p1, z2.h, z0.h
+; SVE2P1-NEXT:    mov z0.h, p1/m, z3.h
+; SVE2P1-NEXT:    fdot z1.s, z2.h, z0.h
+; SVE2P1-NEXT:    str q1, [x0]
 ; SVE2P1-NEXT:    ret
 entry:
   %acc = load <4 x float>, ptr %accptr
@@ -65,12 +71,16 @@ define void @fdot_wide_v8f32(ptr %accptr, ptr %aptr, ptr %bptr) vscale_range(2,0
 ; SVE2P1-LABEL: fdot_wide_v8f32:
 ; SVE2P1:       // %bb.0: // %entry
 ; SVE2P1-NEXT:    ptrue p0.s, vl8
+; SVE2P1-NEXT:    movi v0.2d, #0000000000000000
 ; SVE2P1-NEXT:    ptrue p1.h, vl16
-; SVE2P1-NEXT:    ld1w { z0.s }, p0/z, [x0]
-; SVE2P1-NEXT:    ld1h { z1.h }, p1/z, [x1]
-; SVE2P1-NEXT:    ld1h { z2.h }, p1/z, [x2]
-; SVE2P1-NEXT:    fdot z0.s, z1.h, z2.h
-; SVE2P1-NEXT:    st1w { z0.s }, p0, [x0]
+; SVE2P1-NEXT:    ld1w { z1.s }, p0/z, [x0]
+; SVE2P1-NEXT:    ld1h { z2.h }, p1/z, [x1]
+; SVE2P1-NEXT:    ld1h { z3.h }, p1/z, [x2]
+; SVE2P1-NEXT:    sel z1.s, p0, z1.s, z0.s
+; SVE2P1-NEXT:    sel z2.h, p1, z2.h, z0.h
+; SVE2P1-NEXT:    mov z0.h, p1/m, z3.h
+; SVE2P1-NEXT:    fdot z1.s, z2.h, z0.h
+; SVE2P1-NEXT:    st1w { z1.s }, p0, [x0]
 ; SVE2P1-NEXT:    ret
 entry:
   %acc = load <8 x float>, ptr %accptr
@@ -108,12 +118,16 @@ define void @fdot_wide_v16f32(ptr %accptr, ptr %aptr, ptr %bptr) vscale_range(4,
 ; SVE2P1-LABEL: fdot_wide_v16f32:
 ; SVE2P1:       // %bb.0: // %entry
 ; SVE2P1-NEXT:    ptrue p0.s, vl16
+; SVE2P1-NEXT:    movi v0.2d, #0000000000000000
 ; SVE2P1-NEXT:    ptrue p1.h, vl32
-; SVE2P1-NEXT:    ld1w { z0.s }, p0/z, [x0]
-; SVE2P1-NEXT:    ld1h { z1.h }, p1/z, [x1]
-; SVE2P1-NEXT:    ld1h { z2.h }, p1/z, [x2]
-; SVE2P1-NEXT:    fdot z0.s, z1.h, z2.h
-; SVE2P1-NEXT:    st1w { z0.s }, p0, [x0]
+; SVE2P1-NEXT:    ld1w { z1.s }, p0/z, [x0]
+; SVE2P1-NEXT:    ld1h { z2.h }, p1/z, [x1]
+; SVE2P1-NEXT:    ld1h { z3.h }, p1/z, [x2]
+; SVE2P1-NEXT:    sel z1.s, p0, z1.s, z0.s
+; SVE2P1-NEXT:    sel z2.h, p1, z2.h, z0.h
+; SVE2P1-NEXT:    mov z0.h, p1/m, z3.h
+; SVE2P1-NEXT:    fdot z1.s, z2.h, z0.h
+; SVE2P1-NEXT:    st1w { z1.s }, p0, [x0]
 ; SVE2P1-NEXT:    ret
 entry:
   %acc = load <16 x float>, ptr %accptr
@@ -151,12 +165,16 @@ define void @fdot_wide_v32f32(ptr %accptr, ptr %aptr, ptr %bptr) vscale_range(8,
 ; SVE2P1-LABEL: fdot_wide_v32f32:
 ; SVE2P1:       // %bb.0: // %entry
 ; SVE2P1-NEXT:    ptrue p0.s, vl32
+; SVE2P1-NEXT:    movi v0.2d, #0000000000000000
 ; SVE2P1-NEXT:    ptrue p1.h, vl64
-; SVE2P1-NEXT:    ld1w { z0.s }, p0/z, [x0]
-; SVE2P1-NEXT:    ld1h { z1.h }, p1/z, [x1]
-; SVE2P1-NEXT:    ld1h { z2.h }, p1/z, [x2]
-; SVE2P1-NEXT:    fdot z0.s, z1.h, z2.h
-; SVE2P1-NEXT:    st1w { z0.s }, p0, [x0]
+; SVE2P1-NEXT:    ld1w { z1.s }, p0/z, [x0]
+; SVE2P1-NEXT:    ld1h { z2.h }, p1/z, [x1]
+; SVE2P1-NEXT:    ld1h { z3.h }, p1/z, [x2]
+; SVE2P1-NEXT:    sel z1.s, p0, z1.s, z0.s
+; SVE2P1-NEXT:    sel z2.h, p1, z2.h, z0.h
+; SVE2P1-NEXT:    mov z0.h, p1/m, z3.h
+; SVE2P1-NEXT:    fdot z1.s, z2.h, z0.h
+; SVE2P1-NEXT:    st1w { z1.s }, p0, [x0]
 ; SVE2P1-NEXT:    ret
 entry:
   %acc = load <32 x float>, ptr %accptr
@@ -194,12 +212,16 @@ define void @fdot_wide_v64f32(ptr %accptr, ptr %aptr, ptr %bptr) vscale_range(16
 ; SVE2P1-LABEL: fdot_wide_v64f32:
 ; SVE2P1:       // %bb.0: // %entry
 ; SVE2P1-NEXT:    ptrue p0.s, vl64
+; SVE2P1-NEXT:    movi v0.2d, #0000000000000000
 ; SVE2P1-NEXT:    ptrue p1.h, vl128
-; SVE2P1-NEXT:    ld1w { z0.s }, p0/z, [x0]
-; SVE2P1-NEXT:    ld1h { z1.h }, p1/z, [x1]
-; SVE2P1-NEXT:    ld1h { z2.h }, p1/z, [x2]
-; SVE2P1-NEXT:    fdot z0.s, z1.h, z2.h
-; SVE2P1-NEXT:    st1w { z0.s }, p0, [x0]
+; SVE2P1-NEXT:    ld1w { z1.s }, p0/z, [x0]
+; SVE2P1-NEXT:    ld1h { z2.h }, p1/z, [x1]
+; SVE2P1-NEXT:    ld1h { z3.h }, p1/z, [x2]
+; SVE2P1-NEXT:    sel z1.s, p0, z1.s, z0.s
+; SVE2P1-NEXT:    sel z2.h, p1, z2.h, z0.h
+; SVE2P1-NEXT:    mov z0.h, p1/m, z3.h
+; SVE2P1-NEXT:    fdot z1.s, z2.h, z0.h
+; SVE2P1-NEXT:    st1w { z1.s }, p0, [x0]
 ; SVE2P1-NEXT:    ret
 entry:
   %acc = load <64 x float>, ptr %accptr
@@ -228,9 +250,15 @@ define <4 x float> @fixed_fdot_wide(<4 x float> %acc, <8 x half> %a, <8 x half> 
 ;
 ; SVE2P1-LABEL: fixed_fdot_wide:
 ; SVE2P1:       // %bb.0: // %entry
-; SVE2P1-NEXT:    // kill: def $q0 killed $q0 def $z0
+; SVE2P1-NEXT:    movi v3.2d, #0000000000000000
+; SVE2P1-NEXT:    ptrue p0.h, vl8
 ; SVE2P1-NEXT:    // kill: def $q2 killed $q2 def $z2
 ; SVE2P1-NEXT:    // kill: def $q1 killed $q1 def $z1
+; SVE2P1-NEXT:    // kill: def $q0 killed $q0 def $z0
+; SVE2P1-NEXT:    ptrue p1.s, vl4
+; SVE2P1-NEXT:    sel z2.h, p0, z2.h, z3.h
+; SVE2P1-NEXT:    sel z1.h, p0, z1.h, z3.h
+; SVE2P1-NEXT:    sel z0.s, p1, z0.s, z3.s
 ; SVE2P1-NEXT:    fdot z0.s, z1.h, z2.h
 ; SVE2P1-NEXT:    // kill: def $q0 killed $q0 killed $z0
 ; SVE2P1-NEXT:    ret
@@ -240,6 +268,33 @@ entry:
   %mult = fmul <8 x float> %a.wide, %b.wide
   %partial.reduce = call <4 x float> @llvm.vector.partial.reduce.fadd(<4 x float> %acc, <8 x float> %mult)
   ret <4 x float> %partial.reduce
+}
+
+define <2 x float> @fixed_fdot(<2 x float> %acc, <4 x half> %a, <4 x half> %b) {
+; SVE2-LABEL: fixed_fdot:
+; SVE2:       // %bb.0: // %entry
+; SVE2-NEXT:    fcvtl v1.4s, v1.4h
+; SVE2-NEXT:    fcvtl v2.4s, v2.4h
+; SVE2-NEXT:    fmul v1.4s, v1.4s, v2.4s
+; SVE2-NEXT:    fadd v0.2s, v0.2s, v1.2s
+; SVE2-NEXT:    ext v1.16b, v1.16b, v1.16b, #8
+; SVE2-NEXT:    fadd v0.2s, v1.2s, v0.2s
+; SVE2-NEXT:    ret
+;
+; SVE2P1-LABEL: fixed_fdot:
+; SVE2P1:       // %bb.0: // %entry
+; SVE2P1-NEXT:    // kill: def $d0 killed $d0 def $z0
+; SVE2P1-NEXT:    // kill: def $d2 killed $d2 def $z2
+; SVE2P1-NEXT:    // kill: def $d1 killed $d1 def $z1
+; SVE2P1-NEXT:    fdot z0.s, z1.h, z2.h
+; SVE2P1-NEXT:    // kill: def $d0 killed $d0 killed $z0
+; SVE2P1-NEXT:    ret
+entry:
+  %a.wide = fpext <4 x half> %a to <4 x float>
+  %b.wide = fpext <4 x half> %b to <4 x float>
+  %mult = fmul <4 x float> %a.wide, %b.wide
+  %partial.reduce = call <2 x float> @llvm.vector.partial.reduce.fadd(<2 x float> %acc, <4 x float> %mult)
+  ret <2 x float> %partial.reduce
 }
 
 define <8 x half> @partial_reduce_half(<8 x half> %acc, <16 x half> %a) {

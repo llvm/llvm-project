@@ -12,12 +12,12 @@ define void @foo(ptr %a) #0 {
 ; CHECK:       SelectionDAG has 13 nodes:
 ; CHECK-NEXT:    t0: ch,glue = EntryToken
 ; CHECK-NEXT:    t2: i64,ch = CopyFromReg t0, Register:i64 %0
-; CHECK-NEXT:    t22: nxv2i64,ch = LDR_ZXI<Mem:(volatile load (<vscale x 1 x s128>) from %ir.a, align 64)> t2, TargetConstant:i64<0>, t0
+; CHECK-NEXT:    t23: nxv2i64,ch = LDR_ZXI<Mem:(volatile load (<vscale x 1 x s128>) from %ir.a, align 64)> t2, TargetConstant:i64<0>, t0
 ; CHECK-NEXT:    t8: i64 = ADDXri TargetFrameIndex:i64<1>, TargetConstant:i32<0>, TargetConstant:i32<0>
 ; CHECK-NEXT:    t6: i64 = ADDXri TargetFrameIndex:i64<0>, TargetConstant:i32<0>, TargetConstant:i32<0>
-; CHECK-NEXT:    t23: ch = STR_ZXI<Mem:(volatile store (<vscale x 1 x s128>) into %ir.r0, align 64)> t22, t6, TargetConstant:i64<0>, t22:1
-; CHECK-NEXT:    t24: ch = STR_ZXI<Mem:(volatile store (<vscale x 1 x s128>) into %ir.r1, align 64)> t22, t8, TargetConstant:i64<0>, t23
-; CHECK-NEXT:    t10: ch = RET_ReallyLR t24
+; CHECK-NEXT:    t24: ch = STR_ZXI<Mem:(volatile store (<vscale x 1 x s128>) into %ir.r0, align 64)> t23, t6, TargetConstant:i64<0>, t23:1
+; CHECK-NEXT:    t25: ch = STR_ZXI<Mem:(volatile store (<vscale x 1 x s128>) into %ir.r1, align 64)> t23, t8, TargetConstant:i64<0>, t24
+; CHECK-NEXT:    t10: ch = RET_ReallyLR t25
 ; CHECK-EMPTY:
 entry:
   %r0 = alloca <8 x i64>
