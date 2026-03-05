@@ -33,13 +33,13 @@ parseOutputFileFormatAndPathOrReportError(DiagnosticsEngine &Diags,
   StringRef FilePath = SSAFTUSummaryFile.drop_back(Ext.size());
 
   if (!Ext.consume_front(".") || FilePath.empty()) {
-    Diags.Report(diag::err__ssaf_extract_tu_summary_file_unknown_format)
+    Diags.Report(diag::warn__ssaf_extract_tu_summary_file_unknown_format)
         << SSAFTUSummaryFile;
     return std::nullopt;
   }
 
   if (!isFormatRegistered(Ext)) {
-    Diags.Report(diag::err__ssaf_extract_tu_summary_file_unknown_output_format)
+    Diags.Report(diag::warn__ssaf_extract_tu_summary_file_unknown_output_format)
         << Ext << SSAFTUSummaryFile;
     return std::nullopt;
   }
@@ -52,7 +52,7 @@ static bool
 reportUnrecognizedExtractorNames(DiagnosticsEngine &Diags,
                                  ArrayRef<std::string> SSAFExtractSummaries) {
   if (SSAFExtractSummaries.empty()) {
-    Diags.Report(diag::err__ssaf_must_enable_summary_extractors);
+    Diags.Report(diag::warn__ssaf_must_enable_summary_extractors);
     return true;
   }
 
@@ -62,7 +62,7 @@ reportUnrecognizedExtractorNames(DiagnosticsEngine &Diags,
       UnrecognizedExtractorNames.push_back(Name);
 
   if (!UnrecognizedExtractorNames.empty()) {
-    Diags.Report(diag::err__ssaf_extract_summary_unknown_extractor_name)
+    Diags.Report(diag::warn__ssaf_extract_summary_unknown_extractor_name)
         << UnrecognizedExtractorNames.size()
         << llvm::join(UnrecognizedExtractorNames, ", ");
     return true;
@@ -152,7 +152,7 @@ void TUSummaryRunner::HandleTranslationUnit(ASTContext &Ctx) {
 
   // Then serialize the result.
   if (auto Err = Format->writeTUSummary(Summary, Opts.SSAFTUSummaryFile)) {
-    Ctx.getDiagnostics().Report(diag::err__ssaf_write_tu_summary_failed)
+    Ctx.getDiagnostics().Report(diag::warn__ssaf_write_tu_summary_failed)
         << Opts.SSAFTUSummaryFile << llvm::toString(std::move(Err));
   }
 }
