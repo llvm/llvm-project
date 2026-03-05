@@ -37,7 +37,10 @@ define void @test_fill_with_foreach([2 x i64] %elems.coerce) {
 ; CHECK-NEXT:    tail call void @error()
 ; CHECK-NEXT:    br label %[[COMMON_RET]]
 ; CHECK:       [[FOR_BODY]]:
-; CHECK-NEXT:    [[__BEGIN1_SROA_0_03:%.*]] = phi ptr [ [[INCDEC_PTR_I:%.*]], %[[FOR_BODY]] ], [ [[TMP0]], %[[FOR_COND_PREHEADER_SPLIT]] ]
+; CHECK-NEXT:    [[__BEGIN1_SROA_0_03:%.*]] = phi ptr [ [[INCDEC_PTR_I:%.*]], %[[FOR_LATCH:.*]] ], [ [[TMP0]], %[[FOR_COND_PREHEADER_SPLIT]] ]
+; CHECK-NEXT:    [[CMP2_I_I:%.*]] = icmp ult ptr [[__BEGIN1_SROA_0_03]], [[ADD_PTR_I]]
+; CHECK-NEXT:    br i1 [[CMP2_I_I]], label %[[FOR_LATCH]], label %[[ERROR]]
+; CHECK:       [[FOR_LATCH]]:
 ; CHECK-NEXT:    tail call void @use(ptr noundef nonnull align 4 dereferenceable(4) [[__BEGIN1_SROA_0_03]])
 ; CHECK-NEXT:    [[INCDEC_PTR_I]] = getelementptr inbounds nuw i8, ptr [[__BEGIN1_SROA_0_03]], i64 4
 ; CHECK-NEXT:    [[CMP_I_NOT:%.*]] = icmp eq ptr [[INCDEC_PTR_I]], [[ADD_PTR_I]]
@@ -147,7 +150,8 @@ define void @foo(ptr noundef nonnull align 8 dereferenceable(24) noalias %vec) #
 ; CHECK-NEXT:    ret void
 ; CHECK:       [[FOR_BODY]]:
 ; CHECK-NEXT:    [[I_010:%.*]] = phi i64 [ [[INC:%.*]], %[[FOR_BODY]] ], [ 0, %[[ENTRY]] ]
-; CHECK-NEXT:    [[ADD_PTR_I:%.*]] = getelementptr inbounds double, ptr [[TMP1]], i64 [[I_010]]
+; CHECK-NEXT:    [[TMP3:%.*]] = shl nsw i64 [[I_010]], 3
+; CHECK-NEXT:    [[ADD_PTR_I:%.*]] = getelementptr inbounds i8, ptr [[TMP1]], i64 [[TMP3]]
 ; CHECK-NEXT:    [[TMP2:%.*]] = load double, ptr [[ADD_PTR_I]], align 8
 ; CHECK-NEXT:    [[ADD:%.*]] = fadd double [[TMP2]], 1.000000e+00
 ; CHECK-NEXT:    store double [[ADD]], ptr [[ADD_PTR_I]], align 8
@@ -286,7 +290,8 @@ define void @loop_with_signed_induction(ptr noundef nonnull align 8 dereferencea
 ; CHECK-NEXT:    ret void
 ; CHECK:       [[FOR_BODY]]:
 ; CHECK-NEXT:    [[I_010:%.*]] = phi i64 [ [[INC:%.*]], %[[FOR_BODY]] ], [ 0, %[[ENTRY]] ]
-; CHECK-NEXT:    [[ADD_PTR_I:%.*]] = getelementptr inbounds nuw double, ptr [[TMP1]], i64 [[I_010]]
+; CHECK-NEXT:    [[TMP3:%.*]] = shl nsw i64 [[I_010]], 3
+; CHECK-NEXT:    [[ADD_PTR_I:%.*]] = getelementptr inbounds nuw i8, ptr [[TMP1]], i64 [[TMP3]]
 ; CHECK-NEXT:    [[TMP2:%.*]] = load double, ptr [[ADD_PTR_I]], align 8, !tbaa [[DOUBLE_TBAA6:![0-9]+]]
 ; CHECK-NEXT:    [[ADD:%.*]] = fadd double [[TMP2]], 1.000000e+00
 ; CHECK-NEXT:    store double [[ADD]], ptr [[ADD_PTR_I]], align 8, !tbaa [[DOUBLE_TBAA6]]
@@ -360,7 +365,8 @@ define void @monkey(ptr noundef %arr, i32 noundef %len) {
 ; CHECK:       [[FOR_BODY4]]:
 ; CHECK-NEXT:    [[K_07:%.*]] = phi i32 [ [[DEC:%.*]], %[[FOR_BODY4]] ], [ [[I_09]], %[[FOR_BODY4_PREHEADER]] ]
 ; CHECK-NEXT:    [[IDX_EXT_I:%.*]] = zext i32 [[K_07]] to i64
-; CHECK-NEXT:    [[ADD_PTR_I:%.*]] = getelementptr inbounds nuw i32, ptr [[ARR]], i64 [[IDX_EXT_I]]
+; CHECK-NEXT:    [[TMP1:%.*]] = shl nuw nsw i64 [[IDX_EXT_I]], 2
+; CHECK-NEXT:    [[ADD_PTR_I:%.*]] = getelementptr inbounds nuw i8, ptr [[ARR]], i64 [[TMP1]]
 ; CHECK-NEXT:    [[TMP0:%.*]] = load i32, ptr [[ADD_PTR_I]], align 4
 ; CHECK-NEXT:    [[ADD:%.*]] = add nsw i32 [[TMP0]], 1
 ; CHECK-NEXT:    store i32 [[ADD]], ptr [[ADD_PTR_I]], align 4

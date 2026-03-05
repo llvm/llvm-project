@@ -59,7 +59,13 @@ define i1 @ult_2_use(i32 %x) {
 
 define i1 @PR52260(i32 %x) {
 ; CHECK-LABEL: @PR52260(
-; CHECK-NEXT:    ret i1 true
+; CHECK-NEXT:    [[IDXPROM:%.*]] = sext i32 [[X:%.*]] to i64
+; CHECK-NEXT:    [[TMP1:%.*]] = shl nsw i64 [[IDXPROM]], 2
+; CHECK-NEXT:    [[IDX:%.*]] = getelementptr inbounds i8, ptr @a, i64 [[TMP1]]
+; CHECK-NEXT:    [[T1:%.*]] = load i32, ptr [[IDX]], align 4
+; CHECK-NEXT:    [[TMP2:%.*]] = and i32 [[T1]], 254
+; CHECK-NEXT:    [[TOBOOL:%.*]] = icmp eq i32 [[TMP2]], 0
+; CHECK-NEXT:    ret i1 [[TOBOOL]]
 ;
   %idxprom = sext i32 %x to i64
   %idx = getelementptr inbounds [3 x i32], ptr @a, i64 0, i64 %idxprom

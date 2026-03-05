@@ -14,14 +14,16 @@ define void @test_uniform(ptr noalias %dst, ptr readonly %src, i64 %uniform , i6
 ; CHECK-NEXT:    br label [[VECTOR_BODY:%.*]]
 ; CHECK:       vector.body:
 ; CHECK-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, [[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], [[VECTOR_BODY]] ]
-; CHECK-NEXT:    [[TMP0:%.*]] = getelementptr double, ptr [[SRC]], i64 [[INDEX]]
-; CHECK-NEXT:    [[WIDE_LOAD:%.*]] = load <2 x double>, ptr [[TMP0]], align 8
-; CHECK-NEXT:    [[TMP1:%.*]] = call <2 x double> @foo_uniform(<2 x double> [[WIDE_LOAD]], i64 [[UNIFORM]])
-; CHECK-NEXT:    [[TMP2:%.*]] = getelementptr inbounds double, ptr [[DST]], i64 [[INDEX]]
-; CHECK-NEXT:    store <2 x double> [[TMP1]], ptr [[TMP2]], align 8
+; CHECK-NEXT:    [[TMP0:%.*]] = shl i64 [[INDEX]], 3
+; CHECK-NEXT:    [[TMP1:%.*]] = getelementptr i8, ptr [[SRC]], i64 [[TMP0]]
+; CHECK-NEXT:    [[WIDE_LOAD:%.*]] = load <2 x double>, ptr [[TMP1]], align 8
+; CHECK-NEXT:    [[TMP2:%.*]] = call <2 x double> @foo_uniform(<2 x double> [[WIDE_LOAD]], i64 [[UNIFORM]])
+; CHECK-NEXT:    [[TMP3:%.*]] = shl nsw i64 [[INDEX]], 3
+; CHECK-NEXT:    [[TMP4:%.*]] = getelementptr inbounds i8, ptr [[DST]], i64 [[TMP3]]
+; CHECK-NEXT:    store <2 x double> [[TMP2]], ptr [[TMP4]], align 8
 ; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 2
-; CHECK-NEXT:    [[TMP3:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[N_VEC]]
-; CHECK-NEXT:    br i1 [[TMP3]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP0:![0-9]+]]
+; CHECK-NEXT:    [[TMP5:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[N_VEC]]
+; CHECK-NEXT:    br i1 [[TMP5]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP0:![0-9]+]]
 ; CHECK:       middle.block:
 ; CHECK-NEXT:    [[CMP_N:%.*]] = icmp eq i64 [[N]], [[N_VEC]]
 ; CHECK-NEXT:    br i1 [[CMP_N]], label [[FOR_COND_CLEANUP:%.*]], label [[SCALAR_PH]]
@@ -30,10 +32,12 @@ define void @test_uniform(ptr noalias %dst, ptr readonly %src, i64 %uniform , i6
 ; CHECK-NEXT:    br label [[FOR_BODY:%.*]]
 ; CHECK:       for.body:
 ; CHECK-NEXT:    [[INDVARS_IV:%.*]] = phi i64 [ [[BC_RESUME_VAL]], [[SCALAR_PH]] ], [ [[INDVARS_IV_NEXT:%.*]], [[FOR_BODY]] ]
-; CHECK-NEXT:    [[GEPSRC:%.*]] = getelementptr double, ptr [[SRC]], i64 [[INDVARS_IV]]
+; CHECK-NEXT:    [[TMP6:%.*]] = shl i64 [[INDVARS_IV]], 3
+; CHECK-NEXT:    [[GEPSRC:%.*]] = getelementptr i8, ptr [[SRC]], i64 [[TMP6]]
 ; CHECK-NEXT:    [[DATA:%.*]] = load double, ptr [[GEPSRC]], align 8
 ; CHECK-NEXT:    [[CALL:%.*]] = call double @foo(double [[DATA]], i64 [[UNIFORM]]) #[[ATTR0:[0-9]+]]
-; CHECK-NEXT:    [[GEPDST:%.*]] = getelementptr inbounds double, ptr [[DST]], i64 [[INDVARS_IV]]
+; CHECK-NEXT:    [[TMP7:%.*]] = shl nsw i64 [[INDVARS_IV]], 3
+; CHECK-NEXT:    [[GEPDST:%.*]] = getelementptr inbounds i8, ptr [[DST]], i64 [[TMP7]]
 ; CHECK-NEXT:    store double [[CALL]], ptr [[GEPDST]], align 8
 ; CHECK-NEXT:    [[INDVARS_IV_NEXT]] = add nuw nsw i64 [[INDVARS_IV]], 1
 ; CHECK-NEXT:    [[EXITCOND:%.*]] = icmp eq i64 [[INDVARS_IV_NEXT]], [[N]]
@@ -73,19 +77,21 @@ define void @test_uniform_not_invariant(ptr noalias %dst, ptr readonly %src, i64
 ; CHECK:       vector.body:
 ; CHECK-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, [[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], [[VECTOR_BODY]] ]
 ; CHECK-NEXT:    [[TMP0:%.*]] = or disjoint i64 [[INDEX]], 1
-; CHECK-NEXT:    [[TMP1:%.*]] = getelementptr double, ptr [[SRC]], i64 [[INDEX]]
-; CHECK-NEXT:    [[WIDE_LOAD:%.*]] = load <2 x double>, ptr [[TMP1]], align 8
-; CHECK-NEXT:    [[TMP2:%.*]] = extractelement <2 x double> [[WIDE_LOAD]], i64 0
-; CHECK-NEXT:    [[TMP3:%.*]] = extractelement <2 x double> [[WIDE_LOAD]], i64 1
-; CHECK-NEXT:    [[TMP4:%.*]] = call double @foo(double [[TMP2]], i64 [[INDEX]]) #[[ATTR0]]
-; CHECK-NEXT:    [[TMP5:%.*]] = call double @foo(double [[TMP3]], i64 [[TMP0]]) #[[ATTR0]]
-; CHECK-NEXT:    [[TMP6:%.*]] = insertelement <2 x double> poison, double [[TMP4]], i64 0
-; CHECK-NEXT:    [[TMP7:%.*]] = insertelement <2 x double> [[TMP6]], double [[TMP5]], i64 1
-; CHECK-NEXT:    [[TMP8:%.*]] = getelementptr inbounds double, ptr [[DST]], i64 [[INDEX]]
-; CHECK-NEXT:    store <2 x double> [[TMP7]], ptr [[TMP8]], align 8
+; CHECK-NEXT:    [[TMP1:%.*]] = shl i64 [[INDEX]], 3
+; CHECK-NEXT:    [[TMP2:%.*]] = getelementptr i8, ptr [[SRC]], i64 [[TMP1]]
+; CHECK-NEXT:    [[WIDE_LOAD:%.*]] = load <2 x double>, ptr [[TMP2]], align 8
+; CHECK-NEXT:    [[TMP3:%.*]] = extractelement <2 x double> [[WIDE_LOAD]], i64 0
+; CHECK-NEXT:    [[TMP4:%.*]] = extractelement <2 x double> [[WIDE_LOAD]], i64 1
+; CHECK-NEXT:    [[TMP5:%.*]] = call double @foo(double [[TMP3]], i64 [[INDEX]]) #[[ATTR0]]
+; CHECK-NEXT:    [[TMP6:%.*]] = call double @foo(double [[TMP4]], i64 [[TMP0]]) #[[ATTR0]]
+; CHECK-NEXT:    [[TMP7:%.*]] = insertelement <2 x double> poison, double [[TMP5]], i64 0
+; CHECK-NEXT:    [[TMP8:%.*]] = insertelement <2 x double> [[TMP7]], double [[TMP6]], i64 1
+; CHECK-NEXT:    [[TMP9:%.*]] = shl nsw i64 [[INDEX]], 3
+; CHECK-NEXT:    [[TMP10:%.*]] = getelementptr inbounds i8, ptr [[DST]], i64 [[TMP9]]
+; CHECK-NEXT:    store <2 x double> [[TMP8]], ptr [[TMP10]], align 8
 ; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 2
-; CHECK-NEXT:    [[TMP9:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[N_VEC]]
-; CHECK-NEXT:    br i1 [[TMP9]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP4:![0-9]+]]
+; CHECK-NEXT:    [[TMP11:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[N_VEC]]
+; CHECK-NEXT:    br i1 [[TMP11]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP4:![0-9]+]]
 ; CHECK:       middle.block:
 ; CHECK-NEXT:    [[CMP_N:%.*]] = icmp eq i64 [[N]], [[N_VEC]]
 ; CHECK-NEXT:    br i1 [[CMP_N]], label [[FOR_COND_CLEANUP:%.*]], label [[SCALAR_PH]]
@@ -94,10 +100,12 @@ define void @test_uniform_not_invariant(ptr noalias %dst, ptr readonly %src, i64
 ; CHECK-NEXT:    br label [[FOR_BODY:%.*]]
 ; CHECK:       for.body:
 ; CHECK-NEXT:    [[INDVARS_IV:%.*]] = phi i64 [ [[BC_RESUME_VAL]], [[SCALAR_PH]] ], [ [[INDVARS_IV_NEXT:%.*]], [[FOR_BODY]] ]
-; CHECK-NEXT:    [[GEPSRC:%.*]] = getelementptr double, ptr [[SRC]], i64 [[INDVARS_IV]]
+; CHECK-NEXT:    [[TMP12:%.*]] = shl i64 [[INDVARS_IV]], 3
+; CHECK-NEXT:    [[GEPSRC:%.*]] = getelementptr i8, ptr [[SRC]], i64 [[TMP12]]
 ; CHECK-NEXT:    [[DATA:%.*]] = load double, ptr [[GEPSRC]], align 8
 ; CHECK-NEXT:    [[CALL:%.*]] = call double @foo(double [[DATA]], i64 [[INDVARS_IV]]) #[[ATTR0]]
-; CHECK-NEXT:    [[GEPDST:%.*]] = getelementptr inbounds double, ptr [[DST]], i64 [[INDVARS_IV]]
+; CHECK-NEXT:    [[TMP13:%.*]] = shl nsw i64 [[INDVARS_IV]], 3
+; CHECK-NEXT:    [[GEPDST:%.*]] = getelementptr inbounds i8, ptr [[DST]], i64 [[TMP13]]
 ; CHECK-NEXT:    store double [[CALL]], ptr [[GEPDST]], align 8
 ; CHECK-NEXT:    [[INDVARS_IV_NEXT]] = add nuw nsw i64 [[INDVARS_IV]], 1
 ; CHECK-NEXT:    [[EXITCOND:%.*]] = icmp eq i64 [[INDVARS_IV_NEXT]], [[N]]

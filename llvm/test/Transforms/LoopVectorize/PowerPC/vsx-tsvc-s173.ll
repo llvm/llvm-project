@@ -24,7 +24,8 @@ define signext i32 @s173() #0 {
 ; CHECK-NEXT:    br label %[[VECTOR_BODY:.*]]
 ; CHECK:       [[VECTOR_BODY]]:
 ; CHECK-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[VECTOR_BODY]] ]
-; CHECK-NEXT:    [[TMP1:%.*]] = getelementptr inbounds float, ptr @global_data, i64 [[INDEX]]
+; CHECK-NEXT:    [[TMP36:%.*]] = shl nsw i64 [[INDEX]], 2
+; CHECK-NEXT:    [[TMP1:%.*]] = getelementptr inbounds i8, ptr @global_data, i64 [[TMP36]]
 ; CHECK-NEXT:    [[TMP2:%.*]] = getelementptr inbounds nuw i8, ptr [[TMP1]], i64 16
 ; CHECK-NEXT:    [[TMP3:%.*]] = getelementptr inbounds nuw i8, ptr [[TMP1]], i64 32
 ; CHECK-NEXT:    [[TMP4:%.*]] = getelementptr inbounds nuw i8, ptr [[TMP1]], i64 48
@@ -40,7 +41,8 @@ define signext i32 @s173() #0 {
 ; CHECK-NEXT:    [[WIDE_LOAD5:%.*]] = load <4 x float>, ptr [[TMP6]], align 4
 ; CHECK-NEXT:    [[WIDE_LOAD6:%.*]] = load <4 x float>, ptr [[TMP7]], align 4
 ; CHECK-NEXT:    [[WIDE_LOAD7:%.*]] = load <4 x float>, ptr [[TMP8]], align 4
-; CHECK-NEXT:    [[TMP9:%.*]] = getelementptr inbounds float, ptr getelementptr inbounds nuw (i8, ptr @global_data, i64 128016), i64 [[INDEX]]
+; CHECK-NEXT:    [[TMP37:%.*]] = shl nsw i64 [[INDEX]], 2
+; CHECK-NEXT:    [[TMP9:%.*]] = getelementptr inbounds i8, ptr getelementptr inbounds nuw (i8, ptr @global_data, i64 128016), i64 [[TMP37]]
 ; CHECK-NEXT:    [[TMP10:%.*]] = getelementptr inbounds nuw i8, ptr [[TMP9]], i64 16
 ; CHECK-NEXT:    [[TMP11:%.*]] = getelementptr inbounds nuw i8, ptr [[TMP9]], i64 32
 ; CHECK-NEXT:    [[TMP12:%.*]] = getelementptr inbounds nuw i8, ptr [[TMP9]], i64 48
@@ -64,7 +66,8 @@ define signext i32 @s173() #0 {
 ; CHECK-NEXT:    [[TMP22:%.*]] = fadd <4 x float> [[WIDE_LOAD5]], [[WIDE_LOAD13]]
 ; CHECK-NEXT:    [[TMP23:%.*]] = fadd <4 x float> [[WIDE_LOAD6]], [[WIDE_LOAD14]]
 ; CHECK-NEXT:    [[TMP24:%.*]] = fadd <4 x float> [[WIDE_LOAD7]], [[WIDE_LOAD15]]
-; CHECK-NEXT:    [[TMP25:%.*]] = getelementptr float, ptr @global_data, i64 [[INDEX]]
+; CHECK-NEXT:    [[TMP38:%.*]] = shl i64 [[INDEX]], 2
+; CHECK-NEXT:    [[TMP25:%.*]] = getelementptr i8, ptr @global_data, i64 [[TMP38]]
 ; CHECK-NEXT:    [[TMP26:%.*]] = getelementptr i8, ptr [[TMP25]], i64 64000
 ; CHECK-NEXT:    [[TMP27:%.*]] = getelementptr i8, ptr [[TMP25]], i64 64016
 ; CHECK-NEXT:    [[TMP28:%.*]] = getelementptr i8, ptr [[TMP25]], i64 64032

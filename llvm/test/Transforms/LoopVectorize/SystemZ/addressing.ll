@@ -14,9 +14,9 @@ define void @foo(ptr nocapture %A) {
 ; CHECK-NEXT:    br label [[VECTOR_BODY:%.*]]
 ; CHECK:       vector.body:
 ; CHECK-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, [[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], [[VECTOR_BODY]] ]
+; CHECK-NEXT:    [[DOTIDX1:%.*]] = shl i64 [[INDEX]], 4
 ; CHECK-NEXT:    [[DOTIDX:%.*]] = shl nsw i64 [[INDEX]], 4
 ; CHECK-NEXT:    [[TMP2:%.*]] = getelementptr inbounds i8, ptr [[A:%.*]], i64 [[DOTIDX]]
-; CHECK-NEXT:    [[DOTIDX1:%.*]] = shl i64 [[INDEX]], 4
 ; CHECK-NEXT:    [[TMP1:%.*]] = getelementptr i8, ptr [[A]], i64 [[DOTIDX1]]
 ; CHECK-NEXT:    [[TMP3:%.*]] = getelementptr i8, ptr [[TMP1]], i64 16
 ; CHECK-NEXT:    store i32 4, ptr [[TMP2]], align 4
@@ -57,8 +57,10 @@ define void @foo1(ptr nocapture noalias %A, ptr nocapture %PtrPtr) {
 ; CHECK-NEXT:    br label [[VECTOR_BODY:%.*]]
 ; CHECK:       vector.body:
 ; CHECK-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, [[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], [[VECTOR_BODY]] ]
-; CHECK-NEXT:    [[TMP1:%.*]] = getelementptr inbounds ptr, ptr [[PTRPTR:%.*]], i64 [[INDEX]]
-; CHECK-NEXT:    [[TMP11:%.*]] = getelementptr ptr, ptr [[PTRPTR]], i64 [[INDEX]]
+; CHECK-NEXT:    [[TMP0:%.*]] = shl nsw i64 [[INDEX]], 3
+; CHECK-NEXT:    [[TMP1:%.*]] = getelementptr inbounds i8, ptr [[PTRPTR:%.*]], i64 [[TMP0]]
+; CHECK-NEXT:    [[TMP12:%.*]] = shl i64 [[INDEX]], 3
+; CHECK-NEXT:    [[TMP11:%.*]] = getelementptr i8, ptr [[PTRPTR]], i64 [[TMP12]]
 ; CHECK-NEXT:    [[TMP2:%.*]] = getelementptr i8, ptr [[TMP11]], i64 8
 ; CHECK-NEXT:    [[TMP3:%.*]] = load ptr, ptr [[TMP1]], align 8
 ; CHECK-NEXT:    [[TMP4:%.*]] = load ptr, ptr [[TMP2]], align 8
@@ -66,7 +68,8 @@ define void @foo1(ptr nocapture noalias %A, ptr nocapture %PtrPtr) {
 ; CHECK-NEXT:    [[TMP6:%.*]] = load i32, ptr [[TMP4]], align 4
 ; CHECK-NEXT:    [[TMP7:%.*]] = insertelement <2 x i32> poison, i32 [[TMP5]], i64 0
 ; CHECK-NEXT:    [[TMP8:%.*]] = insertelement <2 x i32> [[TMP7]], i32 [[TMP6]], i64 1
-; CHECK-NEXT:    [[TMP9:%.*]] = getelementptr inbounds i32, ptr [[A:%.*]], i64 [[INDEX]]
+; CHECK-NEXT:    [[TMP13:%.*]] = shl nsw i64 [[INDEX]], 2
+; CHECK-NEXT:    [[TMP9:%.*]] = getelementptr inbounds i8, ptr [[A:%.*]], i64 [[TMP13]]
 ; CHECK-NEXT:    store <2 x i32> [[TMP8]], ptr [[TMP9]], align 4
 ; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 2
 ; CHECK-NEXT:    [[TMP10:%.*]] = icmp eq i64 [[INDEX_NEXT]], 10000

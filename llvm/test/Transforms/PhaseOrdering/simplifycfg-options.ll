@@ -70,8 +70,9 @@ declare void @foo()
 define double @max_of_loads(ptr %x, ptr %y, i64 %i) {
 ; CHECK-LABEL: @max_of_loads(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[XI_PTR:%.*]] = getelementptr double, ptr [[X:%.*]], i64 [[I:%.*]]
-; CHECK-NEXT:    [[YI_PTR:%.*]] = getelementptr double, ptr [[Y:%.*]], i64 [[I]]
+; CHECK-NEXT:    [[TMP0:%.*]] = shl i64 [[I:%.*]], 3
+; CHECK-NEXT:    [[XI_PTR:%.*]] = getelementptr i8, ptr [[X:%.*]], i64 [[TMP0]]
+; CHECK-NEXT:    [[YI_PTR:%.*]] = getelementptr i8, ptr [[Y:%.*]], i64 [[TMP0]]
 ; CHECK-NEXT:    [[XI:%.*]] = load double, ptr [[XI_PTR]], align 8
 ; CHECK-NEXT:    [[YI:%.*]] = load double, ptr [[YI_PTR]], align 8
 ; CHECK-NEXT:    [[CMP:%.*]] = fcmp ogt double [[XI]], [[YI]]

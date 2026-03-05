@@ -1692,7 +1692,8 @@ define i177 @lshr_out_of_range(i177 %Y, ptr %A2, ptr %ptr) {
 ; CHECK-NEXT:    [[B4:%.*]] = sext i1 [[TMP1]] to i177
 ; CHECK-NEXT:    [[C8:%.*]] = icmp ugt i177 [[Y]], [[B4]]
 ; CHECK-NEXT:    [[TMP2:%.*]] = sext i1 [[C8]] to i64
-; CHECK-NEXT:    [[G18:%.*]] = getelementptr ptr, ptr [[A2:%.*]], i64 [[TMP2]]
+; CHECK-NEXT:    [[TMP3:%.*]] = shl nsw i64 [[TMP2]], 3
+; CHECK-NEXT:    [[G18:%.*]] = getelementptr i8, ptr [[A2:%.*]], i64 [[TMP3]]
 ; CHECK-NEXT:    store ptr [[G18]], ptr [[PTR:%.*]], align 8
 ; CHECK-NEXT:    ret i177 0
 ;
@@ -1716,7 +1717,8 @@ define i177 @lshr_out_of_range2(i177 %Y, ptr %A2, ptr %ptr) {
 ; CHECK-LABEL: @lshr_out_of_range2(
 ; CHECK-NEXT:    [[C8:%.*]] = icmp ne i177 [[Y:%.*]], 0
 ; CHECK-NEXT:    [[TMP1:%.*]] = sext i1 [[C8]] to i64
-; CHECK-NEXT:    [[G18:%.*]] = getelementptr ptr, ptr [[A2:%.*]], i64 [[TMP1]]
+; CHECK-NEXT:    [[TMP2:%.*]] = shl nsw i64 [[TMP1]], 3
+; CHECK-NEXT:    [[G18:%.*]] = getelementptr i8, ptr [[A2:%.*]], i64 [[TMP2]]
 ; CHECK-NEXT:    store ptr [[G18]], ptr [[PTR:%.*]], align 8
 ; CHECK-NEXT:    ret i177 0
 ;
@@ -1742,14 +1744,14 @@ define void @ashr_out_of_range(ptr %A) "instcombine-no-verify-fixpoint" {
 ; CHECK-LABEL: @ashr_out_of_range(
 ; CHECK-NEXT:    [[L:%.*]] = load i177, ptr [[A:%.*]], align 4
 ; CHECK-NEXT:    [[TMP1:%.*]] = icmp eq i177 [[L]], -1
-; CHECK-NEXT:    [[TMP2:%.*]] = select i1 [[TMP1]], i64 -1, i64 -2
-; CHECK-NEXT:    [[G11:%.*]] = getelementptr i177, ptr [[A]], i64 [[TMP2]]
+; CHECK-NEXT:    [[TMP2:%.*]] = select i1 [[TMP1]], i64 -24, i64 -48
+; CHECK-NEXT:    [[G11:%.*]] = getelementptr i8, ptr [[A]], i64 [[TMP2]]
 ; CHECK-NEXT:    [[L7:%.*]] = load i177, ptr [[G11]], align 4
 ; CHECK-NEXT:    [[L7_FROZEN:%.*]] = freeze i177 [[L7]]
 ; CHECK-NEXT:    [[C171:%.*]] = icmp slt i177 [[L7_FROZEN]], 0
 ; CHECK-NEXT:    [[C17:%.*]] = select i1 [[TMP1]], i1 [[C171]], i1 false
-; CHECK-NEXT:    [[TMP3:%.*]] = sext i1 [[C17]] to i64
-; CHECK-NEXT:    [[G62:%.*]] = getelementptr i177, ptr [[G11]], i64 [[TMP3]]
+; CHECK-NEXT:    [[TMP3:%.*]] = select i1 [[C17]], i64 -24, i64 0
+; CHECK-NEXT:    [[G62:%.*]] = getelementptr i8, ptr [[G11]], i64 [[TMP3]]
 ; CHECK-NEXT:    [[TMP4:%.*]] = icmp eq i177 [[L7_FROZEN]], -1
 ; CHECK-NEXT:    [[B28:%.*]] = select i1 [[TMP4]], i177 0, i177 [[L7_FROZEN]]
 ; CHECK-NEXT:    store i177 [[B28]], ptr [[G62]], align 4
@@ -1779,11 +1781,11 @@ define void @ashr_out_of_range_1(ptr %A) {
 ; CHECK-NEXT:    [[L_FROZEN:%.*]] = freeze i177 [[L]]
 ; CHECK-NEXT:    [[TMP1:%.*]] = icmp eq i177 [[L_FROZEN]], -1
 ; CHECK-NEXT:    [[TMP2:%.*]] = trunc i177 [[L_FROZEN]] to i64
-; CHECK-NEXT:    [[TMP3:%.*]] = select i1 [[TMP1]], i64 0, i64 [[TMP2]]
-; CHECK-NEXT:    [[TMP4:%.*]] = getelementptr i177, ptr [[A]], i64 [[TMP3]]
-; CHECK-NEXT:    [[G11:%.*]] = getelementptr i8, ptr [[TMP4]], i64 -24
-; CHECK-NEXT:    [[TMP5:%.*]] = sext i1 [[TMP1]] to i64
-; CHECK-NEXT:    [[G62:%.*]] = getelementptr i177, ptr [[G11]], i64 [[TMP5]]
+; CHECK-NEXT:    [[TMP3:%.*]] = mul i64 [[TMP2]], 24
+; CHECK-NEXT:    [[TMP4:%.*]] = select i1 [[TMP1]], i64 0, i64 [[TMP3]]
+; CHECK-NEXT:    [[TMP5:%.*]] = getelementptr i8, ptr [[A]], i64 [[TMP4]]
+; CHECK-NEXT:    [[TMP7:%.*]] = select i1 [[TMP1]], i64 -48, i64 -24
+; CHECK-NEXT:    [[G62:%.*]] = getelementptr i8, ptr [[TMP5]], i64 [[TMP7]]
 ; CHECK-NEXT:    [[TMP6:%.*]] = icmp eq i177 [[L_FROZEN]], -1
 ; CHECK-NEXT:    [[B28:%.*]] = select i1 [[TMP6]], i177 0, i177 [[L_FROZEN]]
 ; CHECK-NEXT:    store i177 [[B28]], ptr [[G62]], align 4

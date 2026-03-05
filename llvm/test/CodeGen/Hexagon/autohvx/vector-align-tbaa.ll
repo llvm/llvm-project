@@ -12,10 +12,12 @@ target triple = "hexagon"
 define <64 x i16> @f0(ptr %a0, i32 %a1) #0 {
 ; CHECK-LABEL: @f0(
 ; CHECK-NEXT:  b0:
-; CHECK-NEXT:    [[TMP0:%.*]] = getelementptr i16, ptr [[A0:%.*]], i32 [[A1:%.*]]
+; CHECK-NEXT:    [[V0:%.*]] = shl i32 [[A1:%.*]], 1
+; CHECK-NEXT:    [[TMP0:%.*]] = getelementptr i8, ptr [[A0:%.*]], i32 [[V0]]
 ; CHECK-NEXT:    [[V1:%.*]] = getelementptr i8, ptr [[TMP0]], i32 128
 ; CHECK-NEXT:    [[CST12:%.*]] = load <64 x i16>, ptr [[V1]], align 2, !tbaa [[TBAA0:![0-9]+]]
-; CHECK-NEXT:    [[ITP:%.*]] = getelementptr i16, ptr [[A0]], i32 [[A1]]
+; CHECK-NEXT:    [[V4:%.*]] = shl i32 [[A1]], 1
+; CHECK-NEXT:    [[ITP:%.*]] = getelementptr i8, ptr [[A0]], i32 [[V4]]
 ; CHECK-NEXT:    [[GEP3:%.*]] = getelementptr i8, ptr [[ITP]], i32 256
 ; CHECK-NEXT:    [[CST13:%.*]] = load <64 x i16>, ptr [[GEP3]], align 2, !tbaa [[TBAA0]]
 ; CHECK-NEXT:    [[V8:%.*]] = add <64 x i16> [[CST12]], [[CST13]]
@@ -37,10 +39,12 @@ b0:
 define <64 x i16> @f1(ptr %a0, i32 %a1) #0 {
 ; CHECK-LABEL: @f1(
 ; CHECK-NEXT:  b0:
-; CHECK-NEXT:    [[TMP0:%.*]] = getelementptr i16, ptr [[A0:%.*]], i32 [[A1:%.*]]
+; CHECK-NEXT:    [[V0:%.*]] = shl i32 [[A1:%.*]], 1
+; CHECK-NEXT:    [[TMP0:%.*]] = getelementptr i8, ptr [[A0:%.*]], i32 [[V0]]
 ; CHECK-NEXT:    [[V1:%.*]] = getelementptr i8, ptr [[TMP0]], i32 128
 ; CHECK-NEXT:    [[CST12:%.*]] = load <64 x i16>, ptr [[V1]], align 2, !tbaa [[TBAA0]]
-; CHECK-NEXT:    [[ITP:%.*]] = getelementptr i16, ptr [[A0]], i32 [[A1]]
+; CHECK-NEXT:    [[V4:%.*]] = shl i32 [[A1]], 1
+; CHECK-NEXT:    [[ITP:%.*]] = getelementptr i8, ptr [[A0]], i32 [[V4]]
 ; CHECK-NEXT:    [[GEP3:%.*]] = getelementptr i8, ptr [[ITP]], i32 256
 ; CHECK-NEXT:    [[CST13:%.*]] = load <64 x i16>, ptr [[GEP3]], align 2
 ; CHECK-NEXT:    [[V8:%.*]] = add <64 x i16> [[CST12]], [[CST13]]
@@ -62,10 +66,12 @@ b0:
 define <64 x i16> @f2(ptr %a0, i32 %a1) #0 {
 ; CHECK-LABEL: @f2(
 ; CHECK-NEXT:  b0:
-; CHECK-NEXT:    [[TMP0:%.*]] = getelementptr i16, ptr [[A0:%.*]], i32 [[A1:%.*]]
+; CHECK-NEXT:    [[V0:%.*]] = shl i32 [[A1:%.*]], 1
+; CHECK-NEXT:    [[TMP0:%.*]] = getelementptr i8, ptr [[A0:%.*]], i32 [[V0]]
 ; CHECK-NEXT:    [[V1:%.*]] = getelementptr i8, ptr [[TMP0]], i32 128
 ; CHECK-NEXT:    [[CST12:%.*]] = load <64 x i16>, ptr [[V1]], align 2, !tbaa [[TBAA0]]
-; CHECK-NEXT:    [[ITP:%.*]] = getelementptr i16, ptr [[A0]], i32 [[A1]]
+; CHECK-NEXT:    [[V4:%.*]] = shl i32 [[A1]], 1
+; CHECK-NEXT:    [[ITP:%.*]] = getelementptr i8, ptr [[A0]], i32 [[V4]]
 ; CHECK-NEXT:    [[GEP3:%.*]] = getelementptr i8, ptr [[ITP]], i32 256
 ; CHECK-NEXT:    [[CST13:%.*]] = load <64 x i16>, ptr [[GEP3]], align 2, !tbaa [[TBAA3:![0-9]+]]
 ; CHECK-NEXT:    [[V8:%.*]] = add <64 x i16> [[CST12]], [[CST13]]
@@ -87,7 +93,8 @@ b0:
 define void @f3(ptr %a0, i32 %a1, <64 x i16> %a2, <64 x i16> %a3) #0 {
 ; CHECK-LABEL: @f3(
 ; CHECK-NEXT:  b0:
-; CHECK-NEXT:    [[TMP0:%.*]] = getelementptr i16, ptr [[A0:%.*]], i32 [[A1:%.*]]
+; CHECK-NEXT:    [[V0:%.*]] = shl i32 [[A1:%.*]], 1
+; CHECK-NEXT:    [[TMP0:%.*]] = getelementptr i8, ptr [[A0:%.*]], i32 [[V0]]
 ; CHECK-NEXT:    [[V1:%.*]] = getelementptr i8, ptr [[TMP0]], i32 128
 ; CHECK-NEXT:    [[PTI:%.*]] = ptrtoint ptr [[V1]] to i32
 ; CHECK-NEXT:    [[AND:%.*]] = and i32 [[PTI]], -128
@@ -140,7 +147,8 @@ b0:
 define void @f4(ptr %a0, i32 %a1, <64 x i16> %a2, <64 x i16> %a3) #0 {
 ; CHECK-LABEL: @f4(
 ; CHECK-NEXT:  b0:
-; CHECK-NEXT:    [[TMP0:%.*]] = getelementptr i16, ptr [[A0:%.*]], i32 [[A1:%.*]]
+; CHECK-NEXT:    [[V0:%.*]] = shl i32 [[A1:%.*]], 1
+; CHECK-NEXT:    [[TMP0:%.*]] = getelementptr i8, ptr [[A0:%.*]], i32 [[V0]]
 ; CHECK-NEXT:    [[V1:%.*]] = getelementptr i8, ptr [[TMP0]], i32 128
 ; CHECK-NEXT:    [[PTI:%.*]] = ptrtoint ptr [[V1]] to i32
 ; CHECK-NEXT:    [[AND:%.*]] = and i32 [[PTI]], -128
@@ -193,7 +201,8 @@ b0:
 define void @f5(ptr %a0, i32 %a1, <64 x i16> %a2, <64 x i16> %a3) #0 {
 ; CHECK-LABEL: @f5(
 ; CHECK-NEXT:  b0:
-; CHECK-NEXT:    [[TMP0:%.*]] = getelementptr i16, ptr [[A0:%.*]], i32 [[A1:%.*]]
+; CHECK-NEXT:    [[V0:%.*]] = shl i32 [[A1:%.*]], 1
+; CHECK-NEXT:    [[TMP0:%.*]] = getelementptr i8, ptr [[A0:%.*]], i32 [[V0]]
 ; CHECK-NEXT:    [[V1:%.*]] = getelementptr i8, ptr [[TMP0]], i32 128
 ; CHECK-NEXT:    [[PTI:%.*]] = ptrtoint ptr [[V1]] to i32
 ; CHECK-NEXT:    [[AND:%.*]] = and i32 [[PTI]], -128

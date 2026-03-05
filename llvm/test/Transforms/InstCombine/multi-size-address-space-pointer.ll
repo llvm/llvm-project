@@ -120,7 +120,8 @@ define ptr addrspace(3) @shrink_gep_constant_index_64_as3(ptr addrspace(3) %p) {
 define ptr addrspace(2) @shrink_gep_variable_index_64_as2(ptr addrspace(2) %p, i64 %idx) {
 ; CHECK-LABEL: @shrink_gep_variable_index_64_as2(
 ; CHECK-NEXT:    [[TMP1:%.*]] = trunc i64 [[IDX:%.*]] to i8
-; CHECK-NEXT:    [[RET:%.*]] = getelementptr i32, ptr addrspace(2) [[P:%.*]], i8 [[TMP1]]
+; CHECK-NEXT:    [[TMP2:%.*]] = shl i8 [[TMP1]], 2
+; CHECK-NEXT:    [[RET:%.*]] = getelementptr i8, ptr addrspace(2) [[P:%.*]], i8 [[TMP2]]
 ; CHECK-NEXT:    ret ptr addrspace(2) [[RET]]
 ;
   %ret = getelementptr i32, ptr addrspace(2) %p, i64 %idx
@@ -130,7 +131,8 @@ define ptr addrspace(2) @shrink_gep_variable_index_64_as2(ptr addrspace(2) %p, i
 define ptr addrspace(1) @grow_gep_variable_index_8_as1(ptr addrspace(1) %p, i8 %idx) {
 ; CHECK-LABEL: @grow_gep_variable_index_8_as1(
 ; CHECK-NEXT:    [[TMP1:%.*]] = sext i8 [[IDX:%.*]] to i64
-; CHECK-NEXT:    [[RET:%.*]] = getelementptr i32, ptr addrspace(1) [[P:%.*]], i64 [[TMP1]]
+; CHECK-NEXT:    [[TMP2:%.*]] = shl nsw i64 [[TMP1]], 2
+; CHECK-NEXT:    [[RET:%.*]] = getelementptr i8, ptr addrspace(1) [[P:%.*]], i64 [[TMP2]]
 ; CHECK-NEXT:    ret ptr addrspace(1) [[RET]]
 ;
   %ret = getelementptr i32, ptr addrspace(1) %p, i8 %idx

@@ -41,7 +41,8 @@ define void @PR31671(float %x, ptr %d) #0 {
 ; CHECK-NEXT:    [[WIDE_VEC:%.*]] = load <80 x float>, ptr [[TMP0]], align 4
 ; CHECK-NEXT:    [[STRIDED_VEC:%.*]] = shufflevector <80 x float> [[WIDE_VEC]], <80 x float> poison, <16 x i32> <i32 0, i32 5, i32 10, i32 15, i32 20, i32 25, i32 30, i32 35, i32 40, i32 45, i32 50, i32 55, i32 60, i32 65, i32 70, i32 75>
 ; CHECK-NEXT:    [[TMP1:%.*]] = fmul <16 x float> [[BROADCAST_SPLAT]], [[STRIDED_VEC]]
-; CHECK-NEXT:    [[TMP2:%.*]] = getelementptr inbounds float, ptr [[D]], <16 x i64> [[VEC_IND]]
+; CHECK-NEXT:    [[TMP6:%.*]] = shl nsw <16 x i64> [[VEC_IND]], splat (i64 2)
+; CHECK-NEXT:    [[TMP2:%.*]] = getelementptr inbounds i8, ptr [[D]], <16 x i64> [[TMP6]]
 ; CHECK-NEXT:    [[TMP3:%.*]] = extractelement <16 x ptr> [[TMP2]], i64 0
 ; CHECK-NEXT:    [[WIDE_VEC1:%.*]] = load <80 x float>, ptr [[TMP3]], align 4
 ; CHECK-NEXT:    [[STRIDED_VEC2:%.*]] = shufflevector <80 x float> [[WIDE_VEC1]], <80 x float> poison, <16 x i32> <i32 0, i32 5, i32 10, i32 15, i32 20, i32 25, i32 30, i32 35, i32 40, i32 45, i32 50, i32 55, i32 60, i32 65, i32 70, i32 75>
@@ -179,7 +180,11 @@ define void @PR40816() #1 {
 ; CHECK:       [[FOR_BODY]]:
 ; CHECK-NEXT:    [[TMP0:%.*]] = phi i32 [ 0, %[[ENTRY]] ], [ [[INC:%.*]], %[[FOR_BODY]] ]
 ; CHECK-NEXT:    store i32 [[TMP0]], ptr @b, align 1
-; CHECK-NEXT:    [[CMP2:%.*]] = icmp eq i32 [[TMP0]], 2
+; CHECK-NEXT:    [[TMP1:%.*]] = zext nneg i32 [[TMP0]] to i64
+; CHECK-NEXT:    [[TMP2:%.*]] = shl nuw nsw i64 [[TMP1]], 2
+; CHECK-NEXT:    [[ARRAYIDX1:%.*]] = getelementptr inbounds nuw i8, ptr @a, i64 [[TMP2]]
+; CHECK-NEXT:    [[TMP3:%.*]] = load i32, ptr [[ARRAYIDX1]], align 1
+; CHECK-NEXT:    [[CMP2:%.*]] = icmp eq i32 [[TMP3]], 0
 ; CHECK-NEXT:    [[INC]] = add nuw nsw i32 [[TMP0]], 1
 ; CHECK-NEXT:    br i1 [[CMP2]], label %[[RETURN:.*]], label %[[FOR_BODY]]
 ; CHECK:       [[RETURN]]:
