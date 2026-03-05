@@ -1,0 +1,12 @@
+## Check that llvm-bolt detects bad profile data and aborts
+
+## This test uses the clang driver without target flags and will only succeed
+## on Linux systems where the host triple matches the target.
+REQUIRES: system-linux
+
+RUN: %clang %S/Inputs/hello.c -o %t
+RUN: touch %t.empty.fdata
+RUN: not llvm-bolt %t -o %t.bolt --data %t.empty.fdata 2>&1 | FileCheck %s
+
+CHECK: WARNING: empty profile data file
+CHECK-NEXT: BOLT-ERROR: {{.*}}Input/output error
