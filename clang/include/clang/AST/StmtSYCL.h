@@ -112,10 +112,8 @@ private:
       : Stmt(UnresolvedSYCLKernelCallStmtClass), OriginalStmt(CS),
         KernelLaunchIdExpr(IdExpr) {}
 
-  /// Set the original statement.
   void setOriginalStmt(CompoundStmt *CS) { OriginalStmt = CS; }
 
-  /// Set the kernel launch ID expression.
   void setKernelLaunchIdExpr(Expr *IdExpr) { KernelLaunchIdExpr = IdExpr; }
 
 public:
@@ -128,13 +126,11 @@ public:
     return new (C) UnresolvedSYCLKernelCallStmt(nullptr, nullptr);
   }
 
-  /// Retrieve the original statement.
   CompoundStmt *getOriginalStmt() { return cast<CompoundStmt>(OriginalStmt); }
   const CompoundStmt *getOriginalStmt() const {
     return cast<CompoundStmt>(OriginalStmt);
   }
 
-  /// Retrieve the kernel launch ID expression.
   Expr *getKernelLaunchIdExpr() { return KernelLaunchIdExpr; }
   const Expr *getKernelLaunchIdExpr() const { return KernelLaunchIdExpr; }
 
