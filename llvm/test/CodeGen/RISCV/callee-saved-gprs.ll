@@ -35,6 +35,10 @@
 ; RUN:   | FileCheck %s -check-prefix=RV32I-ZILSD
 ; RUN: llc -mtriple=riscv32 -mattr=+zilsd -verify-machineinstrs -frame-pointer=all < %s \
 ; RUN:   | FileCheck %s -check-prefix=RV32I-ZILSD-WITH-FP
+; RUN: llc -mtriple=riscv32 -mattr=+zilsd -target-abi ilp32e -verify-machineinstrs < %s \
+; RUN:   | FileCheck %s -check-prefix=RV32I-ZILSD-ILP32E
+; RUN: llc -mtriple=riscv32 -mattr=+zilsd,+zilsd-4byte-align -target-abi ilp32e -verify-machineinstrs < %s \
+; RUN:   | FileCheck %s -check-prefix=RV32I-ZILSD-ILP32E-4BYTE
 
 @var = global [32 x i32] zeroinitializer
 
@@ -1490,6 +1494,174 @@ define void @callee() {
 ; RV32I-ZILSD-WITH-FP-NEXT:    addi sp, sp, 80
 ; RV32I-ZILSD-WITH-FP-NEXT:    .cfi_def_cfa_offset 0
 ; RV32I-ZILSD-WITH-FP-NEXT:    ret
+;
+; RV32I-ZILSD-ILP32E-LABEL: callee:
+; RV32I-ZILSD-ILP32E:       # %bb.0:
+; RV32I-ZILSD-ILP32E-NEXT:    addi sp, sp, -32
+; RV32I-ZILSD-ILP32E-NEXT:    .cfi_def_cfa_offset 32
+; RV32I-ZILSD-ILP32E-NEXT:    sw ra, 28(sp) # 4-byte Folded Spill
+; RV32I-ZILSD-ILP32E-NEXT:    sw s0, 24(sp) # 4-byte Folded Spill
+; RV32I-ZILSD-ILP32E-NEXT:    sw s1, 20(sp) # 4-byte Folded Spill
+; RV32I-ZILSD-ILP32E-NEXT:    .cfi_offset ra, -4
+; RV32I-ZILSD-ILP32E-NEXT:    .cfi_offset s0, -8
+; RV32I-ZILSD-ILP32E-NEXT:    .cfi_offset s1, -12
+; RV32I-ZILSD-ILP32E-NEXT:    lui a0, %hi(var)
+; RV32I-ZILSD-ILP32E-NEXT:    addi a0, a0, %lo(var)
+; RV32I-ZILSD-ILP32E-NEXT:    lw a1, 0(a0)
+; RV32I-ZILSD-ILP32E-NEXT:    lw a2, 4(a0)
+; RV32I-ZILSD-ILP32E-NEXT:    sw a2, 12(sp) # 4-byte Folded Spill
+; RV32I-ZILSD-ILP32E-NEXT:    sw a1, 16(sp) # 4-byte Folded Spill
+; RV32I-ZILSD-ILP32E-NEXT:    lw a1, 8(a0)
+; RV32I-ZILSD-ILP32E-NEXT:    lw a2, 12(a0)
+; RV32I-ZILSD-ILP32E-NEXT:    sw a2, 4(sp) # 4-byte Folded Spill
+; RV32I-ZILSD-ILP32E-NEXT:    sw a1, 8(sp) # 4-byte Folded Spill
+; RV32I-ZILSD-ILP32E-NEXT:    lw a1, 16(a0)
+; RV32I-ZILSD-ILP32E-NEXT:    lw a6, 20(a0)
+; RV32I-ZILSD-ILP32E-NEXT:    sw a1, 0(sp) # 4-byte Folded Spill
+; RV32I-ZILSD-ILP32E-NEXT:    ld t1, 24(a0)
+; RV32I-ZILSD-ILP32E-NEXT:    ld t3, 32(a0)
+; RV32I-ZILSD-ILP32E-NEXT:    ld t5, 40(a0)
+; RV32I-ZILSD-ILP32E-NEXT:    ld s2, 48(a0)
+; RV32I-ZILSD-ILP32E-NEXT:    ld s4, 56(a0)
+; RV32I-ZILSD-ILP32E-NEXT:    ld s6, 64(a0)
+; RV32I-ZILSD-ILP32E-NEXT:    ld s8, 72(a0)
+; RV32I-ZILSD-ILP32E-NEXT:    ld s10, 80(a0)
+; RV32I-ZILSD-ILP32E-NEXT:    ld s0, 88(a0)
+; RV32I-ZILSD-ILP32E-NEXT:    lw a1, 120(a0)
+; RV32I-ZILSD-ILP32E-NEXT:    lw t0, 124(a0)
+; RV32I-ZILSD-ILP32E-NEXT:    lw ra, 96(a0)
+; RV32I-ZILSD-ILP32E-NEXT:    lw a7, 100(a0)
+; RV32I-ZILSD-ILP32E-NEXT:    ld a2, 112(a0)
+; RV32I-ZILSD-ILP32E-NEXT:    ld a4, 104(a0)
+; RV32I-ZILSD-ILP32E-NEXT:    sw t0, 124(a0)
+; RV32I-ZILSD-ILP32E-NEXT:    sw a1, 120(a0)
+; RV32I-ZILSD-ILP32E-NEXT:    sw a3, 116(a0)
+; RV32I-ZILSD-ILP32E-NEXT:    sw a2, 112(a0)
+; RV32I-ZILSD-ILP32E-NEXT:    sw a5, 108(a0)
+; RV32I-ZILSD-ILP32E-NEXT:    sw a4, 104(a0)
+; RV32I-ZILSD-ILP32E-NEXT:    sw a7, 100(a0)
+; RV32I-ZILSD-ILP32E-NEXT:    sw ra, 96(a0)
+; RV32I-ZILSD-ILP32E-NEXT:    sw s1, 92(a0)
+; RV32I-ZILSD-ILP32E-NEXT:    sw s0, 88(a0)
+; RV32I-ZILSD-ILP32E-NEXT:    sw s11, 84(a0)
+; RV32I-ZILSD-ILP32E-NEXT:    sw s10, 80(a0)
+; RV32I-ZILSD-ILP32E-NEXT:    sw s9, 76(a0)
+; RV32I-ZILSD-ILP32E-NEXT:    sw s8, 72(a0)
+; RV32I-ZILSD-ILP32E-NEXT:    sw s7, 68(a0)
+; RV32I-ZILSD-ILP32E-NEXT:    sw s6, 64(a0)
+; RV32I-ZILSD-ILP32E-NEXT:    sw s5, 60(a0)
+; RV32I-ZILSD-ILP32E-NEXT:    sw s4, 56(a0)
+; RV32I-ZILSD-ILP32E-NEXT:    sw s3, 52(a0)
+; RV32I-ZILSD-ILP32E-NEXT:    sw s2, 48(a0)
+; RV32I-ZILSD-ILP32E-NEXT:    sw t6, 44(a0)
+; RV32I-ZILSD-ILP32E-NEXT:    sw t5, 40(a0)
+; RV32I-ZILSD-ILP32E-NEXT:    sw t4, 36(a0)
+; RV32I-ZILSD-ILP32E-NEXT:    sw t3, 32(a0)
+; RV32I-ZILSD-ILP32E-NEXT:    sw t2, 28(a0)
+; RV32I-ZILSD-ILP32E-NEXT:    sw t1, 24(a0)
+; RV32I-ZILSD-ILP32E-NEXT:    sw a6, 20(a0)
+; RV32I-ZILSD-ILP32E-NEXT:    lw a1, 0(sp) # 4-byte Folded Reload
+; RV32I-ZILSD-ILP32E-NEXT:    sw a1, 16(a0)
+; RV32I-ZILSD-ILP32E-NEXT:    lw a1, 4(sp) # 4-byte Folded Reload
+; RV32I-ZILSD-ILP32E-NEXT:    sw a1, 12(a0)
+; RV32I-ZILSD-ILP32E-NEXT:    lw a1, 8(sp) # 4-byte Folded Reload
+; RV32I-ZILSD-ILP32E-NEXT:    sw a1, 8(a0)
+; RV32I-ZILSD-ILP32E-NEXT:    lw a1, 12(sp) # 4-byte Folded Reload
+; RV32I-ZILSD-ILP32E-NEXT:    sw a1, 4(a0)
+; RV32I-ZILSD-ILP32E-NEXT:    lw a1, 16(sp) # 4-byte Folded Reload
+; RV32I-ZILSD-ILP32E-NEXT:    sw a1, 0(a0)
+; RV32I-ZILSD-ILP32E-NEXT:    lw ra, 28(sp) # 4-byte Folded Reload
+; RV32I-ZILSD-ILP32E-NEXT:    lw s0, 24(sp) # 4-byte Folded Reload
+; RV32I-ZILSD-ILP32E-NEXT:    lw s1, 20(sp) # 4-byte Folded Reload
+; RV32I-ZILSD-ILP32E-NEXT:    .cfi_restore ra
+; RV32I-ZILSD-ILP32E-NEXT:    .cfi_restore s0
+; RV32I-ZILSD-ILP32E-NEXT:    .cfi_restore s1
+; RV32I-ZILSD-ILP32E-NEXT:    addi sp, sp, 32
+; RV32I-ZILSD-ILP32E-NEXT:    .cfi_def_cfa_offset 0
+; RV32I-ZILSD-ILP32E-NEXT:    ret
+;
+; RV32I-ZILSD-ILP32E-4BYTE-LABEL: callee:
+; RV32I-ZILSD-ILP32E-4BYTE:       # %bb.0:
+; RV32I-ZILSD-ILP32E-4BYTE-NEXT:    addi sp, sp, -32
+; RV32I-ZILSD-ILP32E-4BYTE-NEXT:    .cfi_def_cfa_offset 32
+; RV32I-ZILSD-ILP32E-4BYTE-NEXT:    sw ra, 28(sp) # 4-byte Folded Spill
+; RV32I-ZILSD-ILP32E-4BYTE-NEXT:    sd s0, 20(sp) # 8-byte Folded Spill
+; RV32I-ZILSD-ILP32E-4BYTE-NEXT:    .cfi_offset ra, -4
+; RV32I-ZILSD-ILP32E-4BYTE-NEXT:    .cfi_offset s0, -12
+; RV32I-ZILSD-ILP32E-4BYTE-NEXT:    .cfi_offset s1, -8
+; RV32I-ZILSD-ILP32E-4BYTE-NEXT:    lui a0, %hi(var)
+; RV32I-ZILSD-ILP32E-4BYTE-NEXT:    addi a0, a0, %lo(var)
+; RV32I-ZILSD-ILP32E-4BYTE-NEXT:    lw a1, 0(a0)
+; RV32I-ZILSD-ILP32E-4BYTE-NEXT:    lw a2, 4(a0)
+; RV32I-ZILSD-ILP32E-4BYTE-NEXT:    sw a2, 12(sp) # 4-byte Folded Spill
+; RV32I-ZILSD-ILP32E-4BYTE-NEXT:    sw a1, 16(sp) # 4-byte Folded Spill
+; RV32I-ZILSD-ILP32E-4BYTE-NEXT:    lw a1, 8(a0)
+; RV32I-ZILSD-ILP32E-4BYTE-NEXT:    lw a2, 12(a0)
+; RV32I-ZILSD-ILP32E-4BYTE-NEXT:    sw a2, 4(sp) # 4-byte Folded Spill
+; RV32I-ZILSD-ILP32E-4BYTE-NEXT:    sw a1, 8(sp) # 4-byte Folded Spill
+; RV32I-ZILSD-ILP32E-4BYTE-NEXT:    lw a1, 16(a0)
+; RV32I-ZILSD-ILP32E-4BYTE-NEXT:    lw a6, 20(a0)
+; RV32I-ZILSD-ILP32E-4BYTE-NEXT:    sw a1, 0(sp) # 4-byte Folded Spill
+; RV32I-ZILSD-ILP32E-4BYTE-NEXT:    ld t1, 24(a0)
+; RV32I-ZILSD-ILP32E-4BYTE-NEXT:    ld t3, 32(a0)
+; RV32I-ZILSD-ILP32E-4BYTE-NEXT:    ld t5, 40(a0)
+; RV32I-ZILSD-ILP32E-4BYTE-NEXT:    ld s2, 48(a0)
+; RV32I-ZILSD-ILP32E-4BYTE-NEXT:    ld s4, 56(a0)
+; RV32I-ZILSD-ILP32E-4BYTE-NEXT:    ld s6, 64(a0)
+; RV32I-ZILSD-ILP32E-4BYTE-NEXT:    ld s8, 72(a0)
+; RV32I-ZILSD-ILP32E-4BYTE-NEXT:    ld s10, 80(a0)
+; RV32I-ZILSD-ILP32E-4BYTE-NEXT:    ld s0, 88(a0)
+; RV32I-ZILSD-ILP32E-4BYTE-NEXT:    lw a1, 120(a0)
+; RV32I-ZILSD-ILP32E-4BYTE-NEXT:    lw t0, 124(a0)
+; RV32I-ZILSD-ILP32E-4BYTE-NEXT:    lw ra, 96(a0)
+; RV32I-ZILSD-ILP32E-4BYTE-NEXT:    lw a7, 100(a0)
+; RV32I-ZILSD-ILP32E-4BYTE-NEXT:    ld a2, 112(a0)
+; RV32I-ZILSD-ILP32E-4BYTE-NEXT:    ld a4, 104(a0)
+; RV32I-ZILSD-ILP32E-4BYTE-NEXT:    sw t0, 124(a0)
+; RV32I-ZILSD-ILP32E-4BYTE-NEXT:    sw a1, 120(a0)
+; RV32I-ZILSD-ILP32E-4BYTE-NEXT:    sw a3, 116(a0)
+; RV32I-ZILSD-ILP32E-4BYTE-NEXT:    sw a2, 112(a0)
+; RV32I-ZILSD-ILP32E-4BYTE-NEXT:    sw a5, 108(a0)
+; RV32I-ZILSD-ILP32E-4BYTE-NEXT:    sw a4, 104(a0)
+; RV32I-ZILSD-ILP32E-4BYTE-NEXT:    sw a7, 100(a0)
+; RV32I-ZILSD-ILP32E-4BYTE-NEXT:    sw ra, 96(a0)
+; RV32I-ZILSD-ILP32E-4BYTE-NEXT:    sw s1, 92(a0)
+; RV32I-ZILSD-ILP32E-4BYTE-NEXT:    sw s0, 88(a0)
+; RV32I-ZILSD-ILP32E-4BYTE-NEXT:    sw s11, 84(a0)
+; RV32I-ZILSD-ILP32E-4BYTE-NEXT:    sw s10, 80(a0)
+; RV32I-ZILSD-ILP32E-4BYTE-NEXT:    sw s9, 76(a0)
+; RV32I-ZILSD-ILP32E-4BYTE-NEXT:    sw s8, 72(a0)
+; RV32I-ZILSD-ILP32E-4BYTE-NEXT:    sw s7, 68(a0)
+; RV32I-ZILSD-ILP32E-4BYTE-NEXT:    sw s6, 64(a0)
+; RV32I-ZILSD-ILP32E-4BYTE-NEXT:    sw s5, 60(a0)
+; RV32I-ZILSD-ILP32E-4BYTE-NEXT:    sw s4, 56(a0)
+; RV32I-ZILSD-ILP32E-4BYTE-NEXT:    sw s3, 52(a0)
+; RV32I-ZILSD-ILP32E-4BYTE-NEXT:    sw s2, 48(a0)
+; RV32I-ZILSD-ILP32E-4BYTE-NEXT:    sw t6, 44(a0)
+; RV32I-ZILSD-ILP32E-4BYTE-NEXT:    sw t5, 40(a0)
+; RV32I-ZILSD-ILP32E-4BYTE-NEXT:    sw t4, 36(a0)
+; RV32I-ZILSD-ILP32E-4BYTE-NEXT:    sw t3, 32(a0)
+; RV32I-ZILSD-ILP32E-4BYTE-NEXT:    sw t2, 28(a0)
+; RV32I-ZILSD-ILP32E-4BYTE-NEXT:    sw t1, 24(a0)
+; RV32I-ZILSD-ILP32E-4BYTE-NEXT:    sw a6, 20(a0)
+; RV32I-ZILSD-ILP32E-4BYTE-NEXT:    lw a1, 0(sp) # 4-byte Folded Reload
+; RV32I-ZILSD-ILP32E-4BYTE-NEXT:    sw a1, 16(a0)
+; RV32I-ZILSD-ILP32E-4BYTE-NEXT:    lw a1, 4(sp) # 4-byte Folded Reload
+; RV32I-ZILSD-ILP32E-4BYTE-NEXT:    sw a1, 12(a0)
+; RV32I-ZILSD-ILP32E-4BYTE-NEXT:    lw a1, 8(sp) # 4-byte Folded Reload
+; RV32I-ZILSD-ILP32E-4BYTE-NEXT:    sw a1, 8(a0)
+; RV32I-ZILSD-ILP32E-4BYTE-NEXT:    lw a1, 12(sp) # 4-byte Folded Reload
+; RV32I-ZILSD-ILP32E-4BYTE-NEXT:    sw a1, 4(a0)
+; RV32I-ZILSD-ILP32E-4BYTE-NEXT:    lw a1, 16(sp) # 4-byte Folded Reload
+; RV32I-ZILSD-ILP32E-4BYTE-NEXT:    sw a1, 0(a0)
+; RV32I-ZILSD-ILP32E-4BYTE-NEXT:    lw ra, 28(sp) # 4-byte Folded Reload
+; RV32I-ZILSD-ILP32E-4BYTE-NEXT:    ld s0, 20(sp) # 8-byte Folded Reload
+; RV32I-ZILSD-ILP32E-4BYTE-NEXT:    .cfi_restore ra
+; RV32I-ZILSD-ILP32E-4BYTE-NEXT:    .cfi_restore s0
+; RV32I-ZILSD-ILP32E-4BYTE-NEXT:    .cfi_restore s1
+; RV32I-ZILSD-ILP32E-4BYTE-NEXT:    addi sp, sp, 32
+; RV32I-ZILSD-ILP32E-4BYTE-NEXT:    .cfi_def_cfa_offset 0
+; RV32I-ZILSD-ILP32E-4BYTE-NEXT:    ret
   %val = load [32 x i32], ptr @var
   store volatile [32 x i32] %val, ptr @var
   ret void
@@ -3382,6 +3554,272 @@ define void @caller() {
 ; RV32I-ZILSD-WITH-FP-NEXT:    addi sp, sp, 144
 ; RV32I-ZILSD-WITH-FP-NEXT:    .cfi_def_cfa_offset 0
 ; RV32I-ZILSD-WITH-FP-NEXT:    ret
+;
+; RV32I-ZILSD-ILP32E-LABEL: caller:
+; RV32I-ZILSD-ILP32E:       # %bb.0:
+; RV32I-ZILSD-ILP32E-NEXT:    addi sp, sp, -136
+; RV32I-ZILSD-ILP32E-NEXT:    .cfi_def_cfa_offset 136
+; RV32I-ZILSD-ILP32E-NEXT:    sw ra, 132(sp) # 4-byte Folded Spill
+; RV32I-ZILSD-ILP32E-NEXT:    sw s0, 128(sp) # 4-byte Folded Spill
+; RV32I-ZILSD-ILP32E-NEXT:    sw s1, 124(sp) # 4-byte Folded Spill
+; RV32I-ZILSD-ILP32E-NEXT:    .cfi_offset ra, -4
+; RV32I-ZILSD-ILP32E-NEXT:    .cfi_offset s0, -8
+; RV32I-ZILSD-ILP32E-NEXT:    .cfi_offset s1, -12
+; RV32I-ZILSD-ILP32E-NEXT:    lui s0, %hi(var)
+; RV32I-ZILSD-ILP32E-NEXT:    addi s0, s0, %lo(var)
+; RV32I-ZILSD-ILP32E-NEXT:    ld a0, 0(s0)
+; RV32I-ZILSD-ILP32E-NEXT:    sw a1, 116(sp) # 4-byte Folded Spill
+; RV32I-ZILSD-ILP32E-NEXT:    sw a0, 120(sp) # 4-byte Folded Spill
+; RV32I-ZILSD-ILP32E-NEXT:    ld a0, 8(s0)
+; RV32I-ZILSD-ILP32E-NEXT:    sw a1, 108(sp) # 4-byte Folded Spill
+; RV32I-ZILSD-ILP32E-NEXT:    sw a0, 112(sp) # 4-byte Folded Spill
+; RV32I-ZILSD-ILP32E-NEXT:    ld a0, 16(s0)
+; RV32I-ZILSD-ILP32E-NEXT:    sw a1, 100(sp) # 4-byte Folded Spill
+; RV32I-ZILSD-ILP32E-NEXT:    sw a0, 104(sp) # 4-byte Folded Spill
+; RV32I-ZILSD-ILP32E-NEXT:    ld a0, 24(s0)
+; RV32I-ZILSD-ILP32E-NEXT:    sw a1, 92(sp) # 4-byte Folded Spill
+; RV32I-ZILSD-ILP32E-NEXT:    sw a0, 96(sp) # 4-byte Folded Spill
+; RV32I-ZILSD-ILP32E-NEXT:    ld a0, 32(s0)
+; RV32I-ZILSD-ILP32E-NEXT:    sw a1, 84(sp) # 4-byte Folded Spill
+; RV32I-ZILSD-ILP32E-NEXT:    sw a0, 88(sp) # 4-byte Folded Spill
+; RV32I-ZILSD-ILP32E-NEXT:    ld a0, 40(s0)
+; RV32I-ZILSD-ILP32E-NEXT:    sw a1, 76(sp) # 4-byte Folded Spill
+; RV32I-ZILSD-ILP32E-NEXT:    sw a0, 80(sp) # 4-byte Folded Spill
+; RV32I-ZILSD-ILP32E-NEXT:    ld a0, 48(s0)
+; RV32I-ZILSD-ILP32E-NEXT:    sw a1, 68(sp) # 4-byte Folded Spill
+; RV32I-ZILSD-ILP32E-NEXT:    sw a0, 72(sp) # 4-byte Folded Spill
+; RV32I-ZILSD-ILP32E-NEXT:    ld a0, 56(s0)
+; RV32I-ZILSD-ILP32E-NEXT:    sw a1, 60(sp) # 4-byte Folded Spill
+; RV32I-ZILSD-ILP32E-NEXT:    sw a0, 64(sp) # 4-byte Folded Spill
+; RV32I-ZILSD-ILP32E-NEXT:    ld a0, 64(s0)
+; RV32I-ZILSD-ILP32E-NEXT:    sw a1, 52(sp) # 4-byte Folded Spill
+; RV32I-ZILSD-ILP32E-NEXT:    sw a0, 56(sp) # 4-byte Folded Spill
+; RV32I-ZILSD-ILP32E-NEXT:    ld a0, 72(s0)
+; RV32I-ZILSD-ILP32E-NEXT:    sw a1, 44(sp) # 4-byte Folded Spill
+; RV32I-ZILSD-ILP32E-NEXT:    sw a0, 48(sp) # 4-byte Folded Spill
+; RV32I-ZILSD-ILP32E-NEXT:    ld a0, 80(s0)
+; RV32I-ZILSD-ILP32E-NEXT:    sw a1, 36(sp) # 4-byte Folded Spill
+; RV32I-ZILSD-ILP32E-NEXT:    sw a0, 40(sp) # 4-byte Folded Spill
+; RV32I-ZILSD-ILP32E-NEXT:    ld a0, 88(s0)
+; RV32I-ZILSD-ILP32E-NEXT:    sw a1, 28(sp) # 4-byte Folded Spill
+; RV32I-ZILSD-ILP32E-NEXT:    sw a0, 32(sp) # 4-byte Folded Spill
+; RV32I-ZILSD-ILP32E-NEXT:    ld a0, 96(s0)
+; RV32I-ZILSD-ILP32E-NEXT:    sw a1, 20(sp) # 4-byte Folded Spill
+; RV32I-ZILSD-ILP32E-NEXT:    sw a0, 24(sp) # 4-byte Folded Spill
+; RV32I-ZILSD-ILP32E-NEXT:    ld a0, 104(s0)
+; RV32I-ZILSD-ILP32E-NEXT:    sw a1, 12(sp) # 4-byte Folded Spill
+; RV32I-ZILSD-ILP32E-NEXT:    sw a0, 16(sp) # 4-byte Folded Spill
+; RV32I-ZILSD-ILP32E-NEXT:    ld a0, 112(s0)
+; RV32I-ZILSD-ILP32E-NEXT:    sw a1, 4(sp) # 4-byte Folded Spill
+; RV32I-ZILSD-ILP32E-NEXT:    sw a0, 8(sp) # 4-byte Folded Spill
+; RV32I-ZILSD-ILP32E-NEXT:    lw a0, 120(s0)
+; RV32I-ZILSD-ILP32E-NEXT:    lw s1, 124(s0)
+; RV32I-ZILSD-ILP32E-NEXT:    sw a0, 0(sp) # 4-byte Folded Spill
+; RV32I-ZILSD-ILP32E-NEXT:    call callee
+; RV32I-ZILSD-ILP32E-NEXT:    sw s1, 124(s0)
+; RV32I-ZILSD-ILP32E-NEXT:    lw a0, 0(sp) # 4-byte Folded Reload
+; RV32I-ZILSD-ILP32E-NEXT:    sw a0, 120(s0)
+; RV32I-ZILSD-ILP32E-NEXT:    lw a0, 4(sp) # 4-byte Folded Reload
+; RV32I-ZILSD-ILP32E-NEXT:    sw a0, 116(s0)
+; RV32I-ZILSD-ILP32E-NEXT:    lw a0, 8(sp) # 4-byte Folded Reload
+; RV32I-ZILSD-ILP32E-NEXT:    sw a0, 112(s0)
+; RV32I-ZILSD-ILP32E-NEXT:    lw a0, 12(sp) # 4-byte Folded Reload
+; RV32I-ZILSD-ILP32E-NEXT:    sw a0, 108(s0)
+; RV32I-ZILSD-ILP32E-NEXT:    lw a0, 16(sp) # 4-byte Folded Reload
+; RV32I-ZILSD-ILP32E-NEXT:    sw a0, 104(s0)
+; RV32I-ZILSD-ILP32E-NEXT:    lw a0, 20(sp) # 4-byte Folded Reload
+; RV32I-ZILSD-ILP32E-NEXT:    sw a0, 100(s0)
+; RV32I-ZILSD-ILP32E-NEXT:    lw a0, 24(sp) # 4-byte Folded Reload
+; RV32I-ZILSD-ILP32E-NEXT:    sw a0, 96(s0)
+; RV32I-ZILSD-ILP32E-NEXT:    lw a0, 28(sp) # 4-byte Folded Reload
+; RV32I-ZILSD-ILP32E-NEXT:    sw a0, 92(s0)
+; RV32I-ZILSD-ILP32E-NEXT:    lw a0, 32(sp) # 4-byte Folded Reload
+; RV32I-ZILSD-ILP32E-NEXT:    sw a0, 88(s0)
+; RV32I-ZILSD-ILP32E-NEXT:    lw a0, 36(sp) # 4-byte Folded Reload
+; RV32I-ZILSD-ILP32E-NEXT:    sw a0, 84(s0)
+; RV32I-ZILSD-ILP32E-NEXT:    lw a0, 40(sp) # 4-byte Folded Reload
+; RV32I-ZILSD-ILP32E-NEXT:    sw a0, 80(s0)
+; RV32I-ZILSD-ILP32E-NEXT:    lw a0, 44(sp) # 4-byte Folded Reload
+; RV32I-ZILSD-ILP32E-NEXT:    sw a0, 76(s0)
+; RV32I-ZILSD-ILP32E-NEXT:    lw a0, 48(sp) # 4-byte Folded Reload
+; RV32I-ZILSD-ILP32E-NEXT:    sw a0, 72(s0)
+; RV32I-ZILSD-ILP32E-NEXT:    lw a0, 52(sp) # 4-byte Folded Reload
+; RV32I-ZILSD-ILP32E-NEXT:    sw a0, 68(s0)
+; RV32I-ZILSD-ILP32E-NEXT:    lw a0, 56(sp) # 4-byte Folded Reload
+; RV32I-ZILSD-ILP32E-NEXT:    sw a0, 64(s0)
+; RV32I-ZILSD-ILP32E-NEXT:    lw a0, 60(sp) # 4-byte Folded Reload
+; RV32I-ZILSD-ILP32E-NEXT:    sw a0, 60(s0)
+; RV32I-ZILSD-ILP32E-NEXT:    lw a0, 64(sp) # 4-byte Folded Reload
+; RV32I-ZILSD-ILP32E-NEXT:    sw a0, 56(s0)
+; RV32I-ZILSD-ILP32E-NEXT:    lw a0, 68(sp) # 4-byte Folded Reload
+; RV32I-ZILSD-ILP32E-NEXT:    sw a0, 52(s0)
+; RV32I-ZILSD-ILP32E-NEXT:    lw a0, 72(sp) # 4-byte Folded Reload
+; RV32I-ZILSD-ILP32E-NEXT:    sw a0, 48(s0)
+; RV32I-ZILSD-ILP32E-NEXT:    lw a0, 76(sp) # 4-byte Folded Reload
+; RV32I-ZILSD-ILP32E-NEXT:    sw a0, 44(s0)
+; RV32I-ZILSD-ILP32E-NEXT:    lw a0, 80(sp) # 4-byte Folded Reload
+; RV32I-ZILSD-ILP32E-NEXT:    sw a0, 40(s0)
+; RV32I-ZILSD-ILP32E-NEXT:    lw a0, 84(sp) # 4-byte Folded Reload
+; RV32I-ZILSD-ILP32E-NEXT:    sw a0, 36(s0)
+; RV32I-ZILSD-ILP32E-NEXT:    lw a0, 88(sp) # 4-byte Folded Reload
+; RV32I-ZILSD-ILP32E-NEXT:    sw a0, 32(s0)
+; RV32I-ZILSD-ILP32E-NEXT:    lw a0, 92(sp) # 4-byte Folded Reload
+; RV32I-ZILSD-ILP32E-NEXT:    sw a0, 28(s0)
+; RV32I-ZILSD-ILP32E-NEXT:    lw a0, 96(sp) # 4-byte Folded Reload
+; RV32I-ZILSD-ILP32E-NEXT:    sw a0, 24(s0)
+; RV32I-ZILSD-ILP32E-NEXT:    lw a0, 100(sp) # 4-byte Folded Reload
+; RV32I-ZILSD-ILP32E-NEXT:    sw a0, 20(s0)
+; RV32I-ZILSD-ILP32E-NEXT:    lw a0, 104(sp) # 4-byte Folded Reload
+; RV32I-ZILSD-ILP32E-NEXT:    sw a0, 16(s0)
+; RV32I-ZILSD-ILP32E-NEXT:    lw a0, 108(sp) # 4-byte Folded Reload
+; RV32I-ZILSD-ILP32E-NEXT:    sw a0, 12(s0)
+; RV32I-ZILSD-ILP32E-NEXT:    lw a0, 112(sp) # 4-byte Folded Reload
+; RV32I-ZILSD-ILP32E-NEXT:    sw a0, 8(s0)
+; RV32I-ZILSD-ILP32E-NEXT:    lw a0, 116(sp) # 4-byte Folded Reload
+; RV32I-ZILSD-ILP32E-NEXT:    sw a0, 4(s0)
+; RV32I-ZILSD-ILP32E-NEXT:    lw a0, 120(sp) # 4-byte Folded Reload
+; RV32I-ZILSD-ILP32E-NEXT:    sw a0, 0(s0)
+; RV32I-ZILSD-ILP32E-NEXT:    lw ra, 132(sp) # 4-byte Folded Reload
+; RV32I-ZILSD-ILP32E-NEXT:    lw s0, 128(sp) # 4-byte Folded Reload
+; RV32I-ZILSD-ILP32E-NEXT:    lw s1, 124(sp) # 4-byte Folded Reload
+; RV32I-ZILSD-ILP32E-NEXT:    .cfi_restore ra
+; RV32I-ZILSD-ILP32E-NEXT:    .cfi_restore s0
+; RV32I-ZILSD-ILP32E-NEXT:    .cfi_restore s1
+; RV32I-ZILSD-ILP32E-NEXT:    addi sp, sp, 136
+; RV32I-ZILSD-ILP32E-NEXT:    .cfi_def_cfa_offset 0
+; RV32I-ZILSD-ILP32E-NEXT:    ret
+;
+; RV32I-ZILSD-ILP32E-4BYTE-LABEL: caller:
+; RV32I-ZILSD-ILP32E-4BYTE:       # %bb.0:
+; RV32I-ZILSD-ILP32E-4BYTE-NEXT:    addi sp, sp, -136
+; RV32I-ZILSD-ILP32E-4BYTE-NEXT:    .cfi_def_cfa_offset 136
+; RV32I-ZILSD-ILP32E-4BYTE-NEXT:    sw ra, 132(sp) # 4-byte Folded Spill
+; RV32I-ZILSD-ILP32E-4BYTE-NEXT:    sd s0, 124(sp) # 8-byte Folded Spill
+; RV32I-ZILSD-ILP32E-4BYTE-NEXT:    .cfi_offset ra, -4
+; RV32I-ZILSD-ILP32E-4BYTE-NEXT:    .cfi_offset s0, -12
+; RV32I-ZILSD-ILP32E-4BYTE-NEXT:    .cfi_offset s1, -8
+; RV32I-ZILSD-ILP32E-4BYTE-NEXT:    lui s0, %hi(var)
+; RV32I-ZILSD-ILP32E-4BYTE-NEXT:    addi s0, s0, %lo(var)
+; RV32I-ZILSD-ILP32E-4BYTE-NEXT:    ld a0, 0(s0)
+; RV32I-ZILSD-ILP32E-4BYTE-NEXT:    sw a1, 116(sp) # 4-byte Folded Spill
+; RV32I-ZILSD-ILP32E-4BYTE-NEXT:    sw a0, 120(sp) # 4-byte Folded Spill
+; RV32I-ZILSD-ILP32E-4BYTE-NEXT:    ld a0, 8(s0)
+; RV32I-ZILSD-ILP32E-4BYTE-NEXT:    sw a1, 108(sp) # 4-byte Folded Spill
+; RV32I-ZILSD-ILP32E-4BYTE-NEXT:    sw a0, 112(sp) # 4-byte Folded Spill
+; RV32I-ZILSD-ILP32E-4BYTE-NEXT:    ld a0, 16(s0)
+; RV32I-ZILSD-ILP32E-4BYTE-NEXT:    sw a1, 100(sp) # 4-byte Folded Spill
+; RV32I-ZILSD-ILP32E-4BYTE-NEXT:    sw a0, 104(sp) # 4-byte Folded Spill
+; RV32I-ZILSD-ILP32E-4BYTE-NEXT:    ld a0, 24(s0)
+; RV32I-ZILSD-ILP32E-4BYTE-NEXT:    sw a1, 92(sp) # 4-byte Folded Spill
+; RV32I-ZILSD-ILP32E-4BYTE-NEXT:    sw a0, 96(sp) # 4-byte Folded Spill
+; RV32I-ZILSD-ILP32E-4BYTE-NEXT:    ld a0, 32(s0)
+; RV32I-ZILSD-ILP32E-4BYTE-NEXT:    sw a1, 84(sp) # 4-byte Folded Spill
+; RV32I-ZILSD-ILP32E-4BYTE-NEXT:    sw a0, 88(sp) # 4-byte Folded Spill
+; RV32I-ZILSD-ILP32E-4BYTE-NEXT:    ld a0, 40(s0)
+; RV32I-ZILSD-ILP32E-4BYTE-NEXT:    sw a1, 76(sp) # 4-byte Folded Spill
+; RV32I-ZILSD-ILP32E-4BYTE-NEXT:    sw a0, 80(sp) # 4-byte Folded Spill
+; RV32I-ZILSD-ILP32E-4BYTE-NEXT:    ld a0, 48(s0)
+; RV32I-ZILSD-ILP32E-4BYTE-NEXT:    sw a1, 68(sp) # 4-byte Folded Spill
+; RV32I-ZILSD-ILP32E-4BYTE-NEXT:    sw a0, 72(sp) # 4-byte Folded Spill
+; RV32I-ZILSD-ILP32E-4BYTE-NEXT:    ld a0, 56(s0)
+; RV32I-ZILSD-ILP32E-4BYTE-NEXT:    sw a1, 60(sp) # 4-byte Folded Spill
+; RV32I-ZILSD-ILP32E-4BYTE-NEXT:    sw a0, 64(sp) # 4-byte Folded Spill
+; RV32I-ZILSD-ILP32E-4BYTE-NEXT:    ld a0, 64(s0)
+; RV32I-ZILSD-ILP32E-4BYTE-NEXT:    sw a1, 52(sp) # 4-byte Folded Spill
+; RV32I-ZILSD-ILP32E-4BYTE-NEXT:    sw a0, 56(sp) # 4-byte Folded Spill
+; RV32I-ZILSD-ILP32E-4BYTE-NEXT:    ld a0, 72(s0)
+; RV32I-ZILSD-ILP32E-4BYTE-NEXT:    sw a1, 44(sp) # 4-byte Folded Spill
+; RV32I-ZILSD-ILP32E-4BYTE-NEXT:    sw a0, 48(sp) # 4-byte Folded Spill
+; RV32I-ZILSD-ILP32E-4BYTE-NEXT:    ld a0, 80(s0)
+; RV32I-ZILSD-ILP32E-4BYTE-NEXT:    sw a1, 36(sp) # 4-byte Folded Spill
+; RV32I-ZILSD-ILP32E-4BYTE-NEXT:    sw a0, 40(sp) # 4-byte Folded Spill
+; RV32I-ZILSD-ILP32E-4BYTE-NEXT:    ld a0, 88(s0)
+; RV32I-ZILSD-ILP32E-4BYTE-NEXT:    sw a1, 28(sp) # 4-byte Folded Spill
+; RV32I-ZILSD-ILP32E-4BYTE-NEXT:    sw a0, 32(sp) # 4-byte Folded Spill
+; RV32I-ZILSD-ILP32E-4BYTE-NEXT:    ld a0, 96(s0)
+; RV32I-ZILSD-ILP32E-4BYTE-NEXT:    sw a1, 20(sp) # 4-byte Folded Spill
+; RV32I-ZILSD-ILP32E-4BYTE-NEXT:    sw a0, 24(sp) # 4-byte Folded Spill
+; RV32I-ZILSD-ILP32E-4BYTE-NEXT:    ld a0, 104(s0)
+; RV32I-ZILSD-ILP32E-4BYTE-NEXT:    sw a1, 12(sp) # 4-byte Folded Spill
+; RV32I-ZILSD-ILP32E-4BYTE-NEXT:    sw a0, 16(sp) # 4-byte Folded Spill
+; RV32I-ZILSD-ILP32E-4BYTE-NEXT:    ld a0, 112(s0)
+; RV32I-ZILSD-ILP32E-4BYTE-NEXT:    sw a1, 4(sp) # 4-byte Folded Spill
+; RV32I-ZILSD-ILP32E-4BYTE-NEXT:    sw a0, 8(sp) # 4-byte Folded Spill
+; RV32I-ZILSD-ILP32E-4BYTE-NEXT:    lw a0, 120(s0)
+; RV32I-ZILSD-ILP32E-4BYTE-NEXT:    lw s1, 124(s0)
+; RV32I-ZILSD-ILP32E-4BYTE-NEXT:    sw a0, 0(sp) # 4-byte Folded Spill
+; RV32I-ZILSD-ILP32E-4BYTE-NEXT:    call callee
+; RV32I-ZILSD-ILP32E-4BYTE-NEXT:    sw s1, 124(s0)
+; RV32I-ZILSD-ILP32E-4BYTE-NEXT:    lw a0, 0(sp) # 4-byte Folded Reload
+; RV32I-ZILSD-ILP32E-4BYTE-NEXT:    sw a0, 120(s0)
+; RV32I-ZILSD-ILP32E-4BYTE-NEXT:    lw a0, 4(sp) # 4-byte Folded Reload
+; RV32I-ZILSD-ILP32E-4BYTE-NEXT:    sw a0, 116(s0)
+; RV32I-ZILSD-ILP32E-4BYTE-NEXT:    lw a0, 8(sp) # 4-byte Folded Reload
+; RV32I-ZILSD-ILP32E-4BYTE-NEXT:    sw a0, 112(s0)
+; RV32I-ZILSD-ILP32E-4BYTE-NEXT:    lw a0, 12(sp) # 4-byte Folded Reload
+; RV32I-ZILSD-ILP32E-4BYTE-NEXT:    sw a0, 108(s0)
+; RV32I-ZILSD-ILP32E-4BYTE-NEXT:    lw a0, 16(sp) # 4-byte Folded Reload
+; RV32I-ZILSD-ILP32E-4BYTE-NEXT:    sw a0, 104(s0)
+; RV32I-ZILSD-ILP32E-4BYTE-NEXT:    lw a0, 20(sp) # 4-byte Folded Reload
+; RV32I-ZILSD-ILP32E-4BYTE-NEXT:    sw a0, 100(s0)
+; RV32I-ZILSD-ILP32E-4BYTE-NEXT:    lw a0, 24(sp) # 4-byte Folded Reload
+; RV32I-ZILSD-ILP32E-4BYTE-NEXT:    sw a0, 96(s0)
+; RV32I-ZILSD-ILP32E-4BYTE-NEXT:    lw a0, 28(sp) # 4-byte Folded Reload
+; RV32I-ZILSD-ILP32E-4BYTE-NEXT:    sw a0, 92(s0)
+; RV32I-ZILSD-ILP32E-4BYTE-NEXT:    lw a0, 32(sp) # 4-byte Folded Reload
+; RV32I-ZILSD-ILP32E-4BYTE-NEXT:    sw a0, 88(s0)
+; RV32I-ZILSD-ILP32E-4BYTE-NEXT:    lw a0, 36(sp) # 4-byte Folded Reload
+; RV32I-ZILSD-ILP32E-4BYTE-NEXT:    sw a0, 84(s0)
+; RV32I-ZILSD-ILP32E-4BYTE-NEXT:    lw a0, 40(sp) # 4-byte Folded Reload
+; RV32I-ZILSD-ILP32E-4BYTE-NEXT:    sw a0, 80(s0)
+; RV32I-ZILSD-ILP32E-4BYTE-NEXT:    lw a0, 44(sp) # 4-byte Folded Reload
+; RV32I-ZILSD-ILP32E-4BYTE-NEXT:    sw a0, 76(s0)
+; RV32I-ZILSD-ILP32E-4BYTE-NEXT:    lw a0, 48(sp) # 4-byte Folded Reload
+; RV32I-ZILSD-ILP32E-4BYTE-NEXT:    sw a0, 72(s0)
+; RV32I-ZILSD-ILP32E-4BYTE-NEXT:    lw a0, 52(sp) # 4-byte Folded Reload
+; RV32I-ZILSD-ILP32E-4BYTE-NEXT:    sw a0, 68(s0)
+; RV32I-ZILSD-ILP32E-4BYTE-NEXT:    lw a0, 56(sp) # 4-byte Folded Reload
+; RV32I-ZILSD-ILP32E-4BYTE-NEXT:    sw a0, 64(s0)
+; RV32I-ZILSD-ILP32E-4BYTE-NEXT:    lw a0, 60(sp) # 4-byte Folded Reload
+; RV32I-ZILSD-ILP32E-4BYTE-NEXT:    sw a0, 60(s0)
+; RV32I-ZILSD-ILP32E-4BYTE-NEXT:    lw a0, 64(sp) # 4-byte Folded Reload
+; RV32I-ZILSD-ILP32E-4BYTE-NEXT:    sw a0, 56(s0)
+; RV32I-ZILSD-ILP32E-4BYTE-NEXT:    lw a0, 68(sp) # 4-byte Folded Reload
+; RV32I-ZILSD-ILP32E-4BYTE-NEXT:    sw a0, 52(s0)
+; RV32I-ZILSD-ILP32E-4BYTE-NEXT:    lw a0, 72(sp) # 4-byte Folded Reload
+; RV32I-ZILSD-ILP32E-4BYTE-NEXT:    sw a0, 48(s0)
+; RV32I-ZILSD-ILP32E-4BYTE-NEXT:    lw a0, 76(sp) # 4-byte Folded Reload
+; RV32I-ZILSD-ILP32E-4BYTE-NEXT:    sw a0, 44(s0)
+; RV32I-ZILSD-ILP32E-4BYTE-NEXT:    lw a0, 80(sp) # 4-byte Folded Reload
+; RV32I-ZILSD-ILP32E-4BYTE-NEXT:    sw a0, 40(s0)
+; RV32I-ZILSD-ILP32E-4BYTE-NEXT:    lw a0, 84(sp) # 4-byte Folded Reload
+; RV32I-ZILSD-ILP32E-4BYTE-NEXT:    sw a0, 36(s0)
+; RV32I-ZILSD-ILP32E-4BYTE-NEXT:    lw a0, 88(sp) # 4-byte Folded Reload
+; RV32I-ZILSD-ILP32E-4BYTE-NEXT:    sw a0, 32(s0)
+; RV32I-ZILSD-ILP32E-4BYTE-NEXT:    lw a0, 92(sp) # 4-byte Folded Reload
+; RV32I-ZILSD-ILP32E-4BYTE-NEXT:    sw a0, 28(s0)
+; RV32I-ZILSD-ILP32E-4BYTE-NEXT:    lw a0, 96(sp) # 4-byte Folded Reload
+; RV32I-ZILSD-ILP32E-4BYTE-NEXT:    sw a0, 24(s0)
+; RV32I-ZILSD-ILP32E-4BYTE-NEXT:    lw a0, 100(sp) # 4-byte Folded Reload
+; RV32I-ZILSD-ILP32E-4BYTE-NEXT:    sw a0, 20(s0)
+; RV32I-ZILSD-ILP32E-4BYTE-NEXT:    lw a0, 104(sp) # 4-byte Folded Reload
+; RV32I-ZILSD-ILP32E-4BYTE-NEXT:    sw a0, 16(s0)
+; RV32I-ZILSD-ILP32E-4BYTE-NEXT:    lw a0, 108(sp) # 4-byte Folded Reload
+; RV32I-ZILSD-ILP32E-4BYTE-NEXT:    sw a0, 12(s0)
+; RV32I-ZILSD-ILP32E-4BYTE-NEXT:    lw a0, 112(sp) # 4-byte Folded Reload
+; RV32I-ZILSD-ILP32E-4BYTE-NEXT:    sw a0, 8(s0)
+; RV32I-ZILSD-ILP32E-4BYTE-NEXT:    lw a0, 116(sp) # 4-byte Folded Reload
+; RV32I-ZILSD-ILP32E-4BYTE-NEXT:    sw a0, 4(s0)
+; RV32I-ZILSD-ILP32E-4BYTE-NEXT:    lw a0, 120(sp) # 4-byte Folded Reload
+; RV32I-ZILSD-ILP32E-4BYTE-NEXT:    sw a0, 0(s0)
+; RV32I-ZILSD-ILP32E-4BYTE-NEXT:    lw ra, 132(sp) # 4-byte Folded Reload
+; RV32I-ZILSD-ILP32E-4BYTE-NEXT:    ld s0, 124(sp) # 8-byte Folded Reload
+; RV32I-ZILSD-ILP32E-4BYTE-NEXT:    .cfi_restore ra
+; RV32I-ZILSD-ILP32E-4BYTE-NEXT:    .cfi_restore s0
+; RV32I-ZILSD-ILP32E-4BYTE-NEXT:    .cfi_restore s1
+; RV32I-ZILSD-ILP32E-4BYTE-NEXT:    addi sp, sp, 136
+; RV32I-ZILSD-ILP32E-4BYTE-NEXT:    .cfi_def_cfa_offset 0
+; RV32I-ZILSD-ILP32E-4BYTE-NEXT:    ret
   %val = load [32 x i32], ptr @var
   call void @callee()
   store volatile [32 x i32] %val, ptr @var
@@ -3599,6 +4037,20 @@ define void @foo() {
 ; RV32I-ZILSD-WITH-FP-NEXT:    addi sp, sp, 16
 ; RV32I-ZILSD-WITH-FP-NEXT:    .cfi_def_cfa_offset 0
 ; RV32I-ZILSD-WITH-FP-NEXT:    ret
+;
+; RV32I-ZILSD-ILP32E-LABEL: foo:
+; RV32I-ZILSD-ILP32E:       # %bb.0: # %entry
+; RV32I-ZILSD-ILP32E-NEXT:    #APP
+; RV32I-ZILSD-ILP32E-NEXT:    li s4, 0
+; RV32I-ZILSD-ILP32E-NEXT:    #NO_APP
+; RV32I-ZILSD-ILP32E-NEXT:    ret
+;
+; RV32I-ZILSD-ILP32E-4BYTE-LABEL: foo:
+; RV32I-ZILSD-ILP32E-4BYTE:       # %bb.0: # %entry
+; RV32I-ZILSD-ILP32E-4BYTE-NEXT:    #APP
+; RV32I-ZILSD-ILP32E-4BYTE-NEXT:    li s4, 0
+; RV32I-ZILSD-ILP32E-4BYTE-NEXT:    #NO_APP
+; RV32I-ZILSD-ILP32E-4BYTE-NEXT:    ret
 entry:
   tail call void asm sideeffect "li s4, 0", "~{s4}"()
   ret void
@@ -3814,6 +4266,20 @@ define void @bar() {
 ; RV32I-ZILSD-WITH-FP-NEXT:    addi sp, sp, 16
 ; RV32I-ZILSD-WITH-FP-NEXT:    .cfi_def_cfa_offset 0
 ; RV32I-ZILSD-WITH-FP-NEXT:    ret
+;
+; RV32I-ZILSD-ILP32E-LABEL: bar:
+; RV32I-ZILSD-ILP32E:       # %bb.0: # %entry
+; RV32I-ZILSD-ILP32E-NEXT:    #APP
+; RV32I-ZILSD-ILP32E-NEXT:    li s11, 0
+; RV32I-ZILSD-ILP32E-NEXT:    #NO_APP
+; RV32I-ZILSD-ILP32E-NEXT:    ret
+;
+; RV32I-ZILSD-ILP32E-4BYTE-LABEL: bar:
+; RV32I-ZILSD-ILP32E-4BYTE:       # %bb.0: # %entry
+; RV32I-ZILSD-ILP32E-4BYTE-NEXT:    #APP
+; RV32I-ZILSD-ILP32E-4BYTE-NEXT:    li s11, 0
+; RV32I-ZILSD-ILP32E-4BYTE-NEXT:    #NO_APP
+; RV32I-ZILSD-ILP32E-4BYTE-NEXT:    ret
 entry:
   tail call void asm sideeffect "li s11, 0", "~{s11}"()
   ret void
@@ -4094,6 +4560,41 @@ define void @varargs(...) {
 ; RV32I-ZILSD-WITH-FP-NEXT:    addi sp, sp, 48
 ; RV32I-ZILSD-WITH-FP-NEXT:    .cfi_def_cfa_offset 0
 ; RV32I-ZILSD-WITH-FP-NEXT:    ret
+;
+; RV32I-ZILSD-ILP32E-LABEL: varargs:
+; RV32I-ZILSD-ILP32E:       # %bb.0:
+; RV32I-ZILSD-ILP32E-NEXT:    addi sp, sp, -28
+; RV32I-ZILSD-ILP32E-NEXT:    .cfi_def_cfa_offset 28
+; RV32I-ZILSD-ILP32E-NEXT:    sw ra, 0(sp) # 4-byte Folded Spill
+; RV32I-ZILSD-ILP32E-NEXT:    .cfi_offset ra, -28
+; RV32I-ZILSD-ILP32E-NEXT:    sw a4, 20(sp)
+; RV32I-ZILSD-ILP32E-NEXT:    sw a5, 24(sp)
+; RV32I-ZILSD-ILP32E-NEXT:    sw a0, 4(sp)
+; RV32I-ZILSD-ILP32E-NEXT:    sw a1, 8(sp)
+; RV32I-ZILSD-ILP32E-NEXT:    sw a2, 12(sp)
+; RV32I-ZILSD-ILP32E-NEXT:    sw a3, 16(sp)
+; RV32I-ZILSD-ILP32E-NEXT:    call callee
+; RV32I-ZILSD-ILP32E-NEXT:    lw ra, 0(sp) # 4-byte Folded Reload
+; RV32I-ZILSD-ILP32E-NEXT:    .cfi_restore ra
+; RV32I-ZILSD-ILP32E-NEXT:    addi sp, sp, 28
+; RV32I-ZILSD-ILP32E-NEXT:    .cfi_def_cfa_offset 0
+; RV32I-ZILSD-ILP32E-NEXT:    ret
+;
+; RV32I-ZILSD-ILP32E-4BYTE-LABEL: varargs:
+; RV32I-ZILSD-ILP32E-4BYTE:       # %bb.0:
+; RV32I-ZILSD-ILP32E-4BYTE-NEXT:    addi sp, sp, -28
+; RV32I-ZILSD-ILP32E-4BYTE-NEXT:    .cfi_def_cfa_offset 28
+; RV32I-ZILSD-ILP32E-4BYTE-NEXT:    sw ra, 0(sp) # 4-byte Folded Spill
+; RV32I-ZILSD-ILP32E-4BYTE-NEXT:    .cfi_offset ra, -28
+; RV32I-ZILSD-ILP32E-4BYTE-NEXT:    sd a4, 20(sp)
+; RV32I-ZILSD-ILP32E-4BYTE-NEXT:    sd a2, 12(sp)
+; RV32I-ZILSD-ILP32E-4BYTE-NEXT:    sd a0, 4(sp)
+; RV32I-ZILSD-ILP32E-4BYTE-NEXT:    call callee
+; RV32I-ZILSD-ILP32E-4BYTE-NEXT:    lw ra, 0(sp) # 4-byte Folded Reload
+; RV32I-ZILSD-ILP32E-4BYTE-NEXT:    .cfi_restore ra
+; RV32I-ZILSD-ILP32E-4BYTE-NEXT:    addi sp, sp, 28
+; RV32I-ZILSD-ILP32E-4BYTE-NEXT:    .cfi_def_cfa_offset 0
+; RV32I-ZILSD-ILP32E-4BYTE-NEXT:    ret
   call void @callee()
   ret void
 }
