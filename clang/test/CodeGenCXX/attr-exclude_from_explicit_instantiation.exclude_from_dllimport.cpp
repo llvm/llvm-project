@@ -150,10 +150,10 @@ void usePolymorphic() {
   // MSC-DAG: declare dllimport void @"?noAttrVirtualMethod@?$Polymorphic@UWithImportTag@@@@UEAAXXZ"
   // NEGATIVE-GNU-NOT: @_ZN11PolymorphicI13WithImportTagE19noAttrVirtualMethodEv
 
-  // MSC-DAG: declare dso_local void @"?excludedVirtualMethod@?$Polymorphic@UWithImportTag@@@@UEAAXXZ"
+  // MSC-DAG: define linkonce_odr dso_local void @"?excludedVirtualMethod@?$Polymorphic@UWithImportTag@@@@UEAAXXZ"
   // NEGATIVE-GNU-NOT: @_ZN11PolymorphicI13WithImportTagE21excludedVirtualMethodEv
 
-  // MSC-DAG: declare dso_local void @"?excludedImportedVirtualMethod@?$Polymorphic@UWithImportTag@@@@UEAAXXZ"
+  // MSC-DAG: define linkonce_odr dso_local void @"?excludedImportedVirtualMethod@?$Polymorphic@UWithImportTag@@@@UEAAXXZ"
   // NEGATIVE-GNU-NOT: @_ZN11PolymorphicI13WithImportTagE29excludedImportedVirtualMethodEv
 
   new Polymorphic<NoAttrTag>();
@@ -163,10 +163,10 @@ void usePolymorphic() {
   // MSC-DAG: declare dso_local void @"?noAttrVirtualMethod@?$Polymorphic@UNoAttrTag@@@@UEAAXXZ"
   // NEGATIVE-GNU-NOT: @_ZN11PolymorphicI9NoAttrTagE19noAttrVirtualMethodEv
 
-  // MSC-DAG: declare dso_local void @"?excludedVirtualMethod@?$Polymorphic@UNoAttrTag@@@@UEAAXXZ"
+  // MSC-DAG: define linkonce_odr dso_local void @"?excludedVirtualMethod@?$Polymorphic@UNoAttrTag@@@@UEAAXXZ"
   // NEGATIVE-GNU-NOT: @_ZN11PolymorphicI9NoAttrTagE21excludedVirtualMethodEv
 
-  // MSC-DAG: declare dso_local void @"?excludedImportedVirtualMethod@?$Polymorphic@UNoAttrTag@@@@UEAAXXZ"
+  // MSC-DAG: define linkonce_odr dso_local void @"?excludedImportedVirtualMethod@?$Polymorphic@UNoAttrTag@@@@UEAAXXZ"
   // NEGATIVE-GNU-NOT: @_ZN11PolymorphicI9NoAttrTagE29excludedImportedVirtualMethodEv
 
   new Polymorphic<ImplicitTag>();
