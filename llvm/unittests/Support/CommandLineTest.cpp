@@ -2348,4 +2348,85 @@ TEST(CommandLineTest, HelpWithEmptyCategory) {
   cl::ResetCommandLineParser();
 }
 
+class CopyableClass {
+public:
+  int Val;
+};
+TEST(CommandLineTest, ResetOptionsToInitialValue) {
+  // Option of scalar type.
+  StackOption<int> O1("opt1", cl::init(12));
+  O1.setValue(13);
+  O1.reset();
+  EXPECT_EQ(O1.getValue(), 12)
+      << "Option should be reset to its initial value.";
+
+  // Option of copyable class type.
+  CopyableClass InitialValue{42};
+  StackOption<CopyableClass> O2("opt2", cl::init(InitialValue));
+  O2.setValue(CopyableClass{404});
+  O2.reset();
+  EXPECT_EQ(O2.getValue().Val, InitialValue.Val)
+      << "Option should be reset to its initial value.";
+
+  // Option of string type (most important case of copyable class).
+  StackOption<std::string> O3("opt3", cl::init("hello"));
+  O3.setValue("goodbye");
+  O3.reset();
+  EXPECT_EQ(O3.getValue(), "hello")
+      << "Option should be reset to its initial value.";
+
+  cl::ResetCommandLineParser();
+}
+
+class WithEqualityComparison {
+public:
+  bool operator==(const WithEqualityComparison &Other) const {
+    return Val == Other.Val;
+  }
+
+  int Val;
+};
+
+class NoEqualityComparison {
+public:
+  int Val;
+};
+
+TEST(CommandLineTest, CompareOptionValues) {
+  // Scalar option.
+  {
+    StackOption<int> O1("opt1", cl::init(42));
+    StackOption<int> O2("opt2", cl::init(42));
+    StackOption<int> O3("opt3", cl::init(3));
+    EXPECT_TRUE(O1.Default.compare(O2.Default));
+    EXPECT_FALSE(O1.Default.compare(O3.Default));
+    cl::ResetCommandLineParser();
+  }
+
+  // Class with equality comparison operator.
+  {
+    StackOption<WithEqualityComparison> O1(
+        "opt1", cl::init(WithEqualityComparison{42}));
+    StackOption<WithEqualityComparison> O2(
+        "opt2", cl::init(WithEqualityComparison{42}));
+    StackOption<WithEqualityComparison> O3("opt3",
+                                           cl::init(WithEqualityComparison{3}));
+    EXPECT_TRUE(O1.Default.compare(O2.Default));
+    EXPECT_FALSE(O1.Default.compare(O3.Default));
+    cl::ResetCommandLineParser();
+  }
+
+  // Class with no equality comparison operator.
+  {
+    StackOption<NoEqualityComparison> O1("opt1",
+                                         cl::init(NoEqualityComparison{42}));
+    StackOption<NoEqualityComparison> O2("opt2",
+                                         cl::init(NoEqualityComparison{42}));
+    StackOption<NoEqualityComparison> O3("opt3",
+                                         cl::init(NoEqualityComparison{3}));
+    EXPECT_FALSE(O1.Default.compare(O2.Default));
+    EXPECT_FALSE(O1.Default.compare(O3.Default));
+    cl::ResetCommandLineParser();
+  }
+}
 } // anonymous namespace
