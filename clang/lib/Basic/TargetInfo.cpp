@@ -179,8 +179,6 @@ TargetInfo::TargetInfo(const llvm::Triple &T) : Triple(T) {
                     ? TargetCXXABI::Microsoft
                     : TargetCXXABI::GenericItanium);
 
-  HasMicrosoftRecordLayout = TheCXXABI.isMicrosoft();
-
   // Default to an empty address space map.
   AddrSpaceMap = &DefaultAddrSpaceMap;
   UseAddrSpaceMapMangling = false;
@@ -559,8 +557,8 @@ void TargetInfo::adjust(DiagnosticsEngine &Diags, LangOptions &Opts,
     AddrSpaceMap = &FakeAddrSpaceMap;
 
   // Check if it's CUDA device compilation; ensure layout consistency with host.
-  if (Opts.CUDA && Opts.CUDAIsDevice && Aux && !HasMicrosoftRecordLayout)
-    HasMicrosoftRecordLayout = Aux->getCXXABI().isMicrosoft();
+  if (Opts.CUDA && Opts.CUDAIsDevice && Aux && !ForceMicrosoftRecordLayout)
+    ForceMicrosoftRecordLayout = Aux->getCXXABI().isMicrosoft();
 }
 
 bool TargetInfo::initFeatureMap(
