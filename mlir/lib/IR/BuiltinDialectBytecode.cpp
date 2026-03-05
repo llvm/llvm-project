@@ -151,6 +151,17 @@ static void writeFileLineColRangeLocs(DialectBytecodeWriter &writer,
 static LogicalResult
 readDenseIntOrFPElementsAttr(DialectBytecodeReader &reader, ShapedType type,
                              SmallVectorImpl<char> &rawData) {
+  // Validate that the element type implements DenseElementTypeInterface.
+  // Without this check, downstream code unconditionally calls
+  // getDenseElementBitWidth() which asserts on unsupported types.
+  if (!llvm::isa<DenseElementType>(type.getElementType())) {
+    reader.emitError()
+        << "DenseIntOrFPElementsAttr element type must implement "
+           "DenseElementTypeInterface, but got: "
+        << type.getElementType();
+    return failure();
+  }
+
   ArrayRef<char> blob;
   if (failed(reader.readBlob(blob)))
     return failure();
