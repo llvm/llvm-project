@@ -1435,10 +1435,10 @@ static void LoadLibStdcppFormatters(lldb::TypeCategoryImplSP cpp_category_sp) {
   stl_summary_flags.SetDontShowChildren(false);
   stl_summary_flags.SetSkipPointers(false);
 
-  AddCXXSummary(
-      cpp_category_sp, lldb_private::formatters::ContainerSizeSummaryProvider,
-      "libstdc++ std::bitset summary provider",
-      "^std::(__debug::)?bitset<.+>(( )?&)?$", stl_summary_flags, true);
+  AddCXXSummary(cpp_category_sp,
+                lldb_private::formatters::ContainerSizeSummaryProvider,
+                "libstdc++ std::bitset summary provider",
+                "^std::__debug::bitset<.+>(( )?&)?$", stl_summary_flags, true);
 
   AddCXXSummary(cpp_category_sp,
                 lldb_private::formatters::ContainerSizeSummaryProvider,
@@ -1515,7 +1515,7 @@ static void LoadLibStdcppFormatters(lldb::TypeCategoryImplSP cpp_category_sp) {
   AddCXXSynthetic(
       cpp_category_sp,
       lldb_private::formatters::LibStdcppBitsetSyntheticFrontEndCreator,
-      "std::bitset synthetic child", "^std::(__debug::)?bitset<.+>(( )?&)?$",
+      "std::bitset synthetic child", "^std::__debug::bitset<.+>(( )?&)?$",
       stl_deref_flags, true);
 
   AddCXXSummary(cpp_category_sp,
@@ -1713,6 +1713,17 @@ GenericStrongOrderingSummaryProvider(ValueObject &valobj, Stream &stream,
   return LibStdcppStrongOrderingSummaryProvider(valobj, stream, options);
 }
 
+static SyntheticChildrenFrontEnd *
+GenericBitsetSyntheticFrontEndCreator(CXXSyntheticChildren *children,
+                                      ValueObjectSP valobj_sp) {
+  if (!valobj_sp)
+    return nullptr;
+
+  if (IsMsvcStlBitset(*valobj_sp))
+    return MsvcStlBitsetSyntheticFrontEndCreator(children, valobj_sp);
+  return LibStdcppBitsetSyntheticFrontEndCreator(children, valobj_sp);
+}
+
 /// Load formatters that are formatting types from more than one STL
 static void LoadCommonStlFormatters(lldb::TypeCategoryImplSP cpp_category_sp) {
   if (!cpp_category_sp)
@@ -1873,6 +1884,9 @@ static void LoadCommonStlFormatters(lldb::TypeCategoryImplSP cpp_category_sp) {
                   "std::(multi)?map/set synthetic children",
                   "^std::(multi)?(map|set)<.+>(( )?&)?$", stl_synth_flags,
                   true);
+  AddCXXSynthetic(cpp_category_sp, GenericBitsetSyntheticFrontEndCreator,
+                  "std::bitset synthetic children", "^std::bitset<.+>(( )?&)?$",
+                  stl_deref_flags, true);
 
   AddCXXSummary(cpp_category_sp, ContainerSizeSummaryProvider,
                 "std::initializer_list summary provider",
@@ -1935,6 +1949,9 @@ static void LoadCommonStlFormatters(lldb::TypeCategoryImplSP cpp_category_sp) {
                 "MSVC STL/libstdc++ std::strong_ordering summary provider",
                 "std::strong_ordering",
                 eTypeOptionHideChildren | eTypeOptionHideValue, false);
+  AddCXXSummary(cpp_category_sp, ContainerSizeSummaryProvider,
+                "MSVC STL/libstdc++ std::bitset summary provider",
+                "^std::bitset<.+>(( )?&)?$", stl_summary_flags, true);
 }
 
 static void LoadMsvcStlFormatters(lldb::TypeCategoryImplSP cpp_category_sp) {
