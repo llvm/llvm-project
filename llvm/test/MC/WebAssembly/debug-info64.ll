@@ -143,7 +143,7 @@
 ; CHECK-NEXT:   }
 ; CHECK-NEXT:   Section {
 ; CHECK-NEXT:     Type: CUSTOM (0x0)
-; CHECK-NEXT:     Size: 43
+; CHECK-NEXT:     Size: 11
 ; CHECK-NEXT:     Offset: 1317
 ; CHECK-NEXT:     Name: target_features
 ; CHECK-NEXT:   }

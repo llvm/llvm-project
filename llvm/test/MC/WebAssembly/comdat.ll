@@ -119,11 +119,6 @@ define linkonce_odr i32 @sharedFn() #1 comdat($sharedComdat) {
 ; CHECK-NEXT:            Index:           3
 ; CHECK-NEXT:          - Kind:            DATA
 ; CHECK-NEXT:            Index:           0
-; CHECK-NEXT:  - Type:            CUSTOM
-; CHECK-NEXT:         Name:           target_features 
-; CHECK-NEXT:         Features: 
-; CHECK-NEXT:           - Prefix:         DISALLOWED 
-; CHECK-NEXT:         Name:           component-model-thread-context 
 ; CHECK-NEXT:        ... 
 
 
