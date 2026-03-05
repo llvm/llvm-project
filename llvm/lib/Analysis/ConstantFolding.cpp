@@ -2316,15 +2316,22 @@ static bool getConstIntOrUndef(Value *Op, const APInt *&C) {
 ///
 /// \param CI Constrained intrinsic call.
 /// \param St Exception flags raised during constant evaluation.
-static bool mayFoldConstrained(ConstrainedFPIntrinsic *CI,
-                               APFloat::opStatus St) {
+/// \param Res Result of constant evaluation (if available).
+static bool mayFoldConstrained(const ConstrainedFPIntrinsic *CI,
+                               APFloat::opStatus St,
+                               std::optional<APFloat> Res = std::nullopt) {
   std::optional<RoundingMode> ORM = CI->getRoundingMode();
   std::optional<fp::ExceptionBehavior> EB = CI->getExceptionBehavior();
 
   // If the operation does not change exception status flags, it is safe
-  // to fold.
-  if (St == APFloat::opStatus::opOK)
+  // to fold. However, if the result is zero and the rounding mode is dynamic,
+  // the sign of zero depends on the rounding mode (IEEE 754, section 6.3),
+  // so we cannot fold.
+  if (St == APFloat::opStatus::opOK) {
+    if (Res && Res->isZero() && ORM == RoundingMode::Dynamic)
+      return false;
     return true;
+  }
 
   // If evaluation raised FP exception, the result can depend on rounding
   // mode. If the latter is unknown, folding is not possible.
@@ -3170,7 +3177,7 @@ static Constant *evaluateCompare(const APFloat &Op1, const APFloat &Op2,
       St = APFloat::opInvalidOp;
   }
   bool Result = FCmpInst::compare(Op1, Op2, Cond);
-  if (mayFoldConstrained(const_cast<ConstrainedFPCmpIntrinsic *>(FCmp), St))
+  if (mayFoldConstrained(FCmp, St))
     return ConstantInt::get(Call->getType()->getScalarType(), Result);
   return nullptr;
 }
@@ -3337,8 +3344,7 @@ static Constant *ConstantFoldIntrinsicCall2(Intrinsic::ID IntrinsicID, Type *Ty,
         case Intrinsic::experimental_constrained_fcmps:
           return evaluateCompare(Op1V, Op2V, ConstrIntr);
         }
-        if (mayFoldConstrained(const_cast<ConstrainedFPIntrinsic *>(ConstrIntr),
-                               St))
+        if (mayFoldConstrained(ConstrIntr, St, Res))
           return ConstantFP::get(Ty, Res);
         return nullptr;
       }
@@ -3917,8 +3923,7 @@ static Constant *ConstantFoldScalarCall3(StringRef Name,
             St = Res.fusedMultiplyAdd(C2, C3, RM);
             break;
           }
-          if (mayFoldConstrained(
-                  const_cast<ConstrainedFPIntrinsic *>(ConstrIntr), St))
+          if (mayFoldConstrained(ConstrIntr, St))
             return ConstantFP::get(Ty, Res);
           return nullptr;
         }
