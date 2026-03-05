@@ -1,6 +1,3 @@
-#ifndef CLC_FLOAT_DEFINITIONS_H
-#define CLC_FLOAT_DEFINITIONS_H
-
 //===----------------------------------------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
@@ -8,6 +5,9 @@
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
+
+#ifndef CLC_FLOAT_DEFINITIONS_H
+#define CLC_FLOAT_DEFINITIONS_H
 
 #define FLT_DIG 6
 #define FLT_MANT_DIG 24

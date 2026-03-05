@@ -1,6 +1,3 @@
-#ifndef CLC_LIB_GENERIC_MATH_CLC_LOG_BASE_H
-#define CLC_LIB_GENERIC_MATH_CLC_LOG_BASE_H
-
 //===----------------------------------------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
@@ -8,6 +5,9 @@
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
+
+#ifndef CLC_LIB_GENERIC_MATH_CLC_LOG_BASE_H
+#define CLC_LIB_GENERIC_MATH_CLC_LOG_BASE_H
 
 #include <clc/math/clc_fabs.h>
 #include <clc/math/clc_fma.h>
