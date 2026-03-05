@@ -229,7 +229,13 @@ def err_vla_in_coroutine_unsupported : Error<
   "variable length arrays in a coroutine are not supported">;
 def note_vla_unsupported : Note<
   "variable length arrays are not supported for the current target">;
-
+def warn_vla_size_expr_shadow : Warning<
+  "variable length array size expression refers to declaration from an outer "
+  "scope">, InGroup<VLASizeConfusion>;
+def note_vla_size_expr_shadow_param : Note<
+  "does not refer to this declaration">;
+def note_vla_size_expr_shadow_actual : Note<
+  "refers to this declaration instead">;
 // C99 variably modified types
 def err_variably_modified_template_arg : Error<
   "variably modified type %0 cannot be used as a template argument">;

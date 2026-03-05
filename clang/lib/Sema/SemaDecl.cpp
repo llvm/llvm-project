@@ -20,6 +20,7 @@
 #include "clang/AST/DeclCXX.h"
 #include "clang/AST/DeclObjC.h"
 #include "clang/AST/DeclTemplate.h"
+#include "clang/AST/DynamicRecursiveASTVisitor.h"
 #include "clang/AST/EvaluatedExprVisitor.h"
 #include "clang/AST/Expr.h"
 #include "clang/AST/ExprCXX.h"
@@ -10057,6 +10058,77 @@ static bool isStdBuiltin(ASTContext &Ctx, FunctionDecl *FD,
   }
 }
 
+void Sema::DiagnoseVlaSizeParameter(const ArrayRef<ParmVarDecl *> &Params) {
+  // Loop over the parameters to see if any of the size expressions contains
+  // a DeclRefExpr which refers to a variable from an outer scope that is
+  // also named later in the parameter list.
+  // e.g., int n; void func(int array[n], int n);
+  SmallVector<const DeclRefExpr *, 2> DRESizeExprs;
+  llvm::for_each(Params, [&](const ParmVarDecl *Param) {
+    // If we have any size expressions we need to check against, check them
+    // now.
+    for (const auto *DRE : DRESizeExprs) {
+      // Check to see if this parameter has the same name as one of the
+      // DeclRefExprs we wanted to test against. If so, then we found a
+      // situation where an earlier parameter refers to the name of a later
+      // parameter, which is (currently) only valid if there's a variable
+      // from an outer scope with the same name.
+      if (const auto *SizeExprND = dyn_cast<NamedDecl>(DRE->getDecl());
+          SizeExprND && SizeExprND->getIdentifier() == Param->getIdentifier()) {
+        // Diagnose the DeclRefExpr from the parameter with the size
+        // expression.
+        Diag(DRE->getLocation(), diag::warn_vla_size_expr_shadow);
+        // Note the parameter that a user could be confused into thinking
+        // they're referring to.
+        Diag(Param->getLocation(), diag::note_vla_size_expr_shadow_param);
+        // Note the DeclRefExpr that's actually being used.
+        Diag(DRE->getDecl()->getLocation(),
+             diag::note_vla_size_expr_shadow_actual);
+      }
+    }
+
+    // To check whether its size expression is a simple DeclRefExpr, we first
+    // have to walk through pointers or references, but array types always
+    // decay to a pointer, so skip if this is a DecayedType.
+    QualType QT = Param->getType();
+    while (!isa<DecayedType>(QT.getTypePtr()) &&
+           (QT->isPointerType() || QT->isReferenceType()))
+      QT = QT->getPointeeType();
+
+    // An array type is always decayed to a pointer, so we need to get the
+    // original type in that case.
+    if (const auto *DT = QT->getAs<DecayedType>())
+      QT = DT->getOriginalType();
+
+    // Now we can see if it's a VLA type with a size expression.
+    // FIXME: it would be nice to handle constant-sized arrays as well,
+    // e.g., constexpr int n = 12; void foo(int array[n], int n);
+    // however, the constant expression is replaced by its value at the time
+    // we form the type, so we've lost that information here.
+    if (!QT->hasSizedVLAType())
+      return;
+
+    const VariableArrayType *VAT = getASTContext().getAsVariableArrayType(QT);
+    if (!VAT)
+      return;
+
+    class DeclRefFinder : public ConstDynamicRecursiveASTVisitor {
+      SmallVectorImpl<const DeclRefExpr *> &Found;
+
+    public:
+      DeclRefFinder(SmallVectorImpl<const DeclRefExpr *> &Found)
+          : Found(Found) {}
+      bool VisitDeclRefExpr(const DeclRefExpr *DRE) override {
+        // Do not warn if expr has a NestedNameSpecifier
+        if (!DRE->hasQualifier())
+          Found.push_back(DRE);
+        return true;
+      }
+    } Finder(DRESizeExprs);
+    Finder.TraverseStmt(VAT->getSizeExpr());
+  });
+}
+
 NamedDecl*
 Sema::ActOnFunctionDeclarator(Scope *S, Declarator &D, DeclContext *DC,
                               TypeSourceInfo *TInfo, LookupResult &Previous,
@@ -10564,6 +10636,10 @@ Sema::ActOnFunctionDeclarator(Scope *S, Declarator &D, DeclContext *DC,
         if (Param->isInvalidDecl())
           NewFD->setInvalidDecl();
       }
+    }
+
+    if (getLangOpts().BoundsSafety) {
+      DiagnoseVlaSizeParameter(Params);
     }
 
     if (!getLangOpts().CPlusPlus) {
