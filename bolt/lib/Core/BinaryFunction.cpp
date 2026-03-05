@@ -104,7 +104,7 @@ JumpTables("jump-tables",
   cl::ZeroOrMore,
   cl::cat(BoltOptCategory));
 
-static cl::opt<bool> NoScan(
+cl::opt<bool> NoScan(
     "no-scan",
     cl::desc(
         "do not scan cold functions for external references (may result in "
@@ -456,6 +456,8 @@ void BinaryFunction::print(raw_ostream &OS, std::string Annotation) {
     OS << "\n  Personality : " << getPersonalityFunction()->getName();
   if (IsFragment)
     OS << "\n  IsFragment  : true";
+  if (HasCloneAtOrigin)
+    OS << "\n  HasCloneAtOrigin : true";
   if (isFolded())
     OS << "\n  FoldedInto  : " << *getFoldedIntoFunction();
   for (BinaryFunction *ParentFragment : ParentFragments)
