@@ -340,7 +340,9 @@ add_entrypoint_object(
   HDRS
     ../sin.h
   DEPENDS
+    libc.src.__support.macros.properties.cpu_features
     libc.src.__support.math.sin
+    libc.src.__support.math.sin_integer_eval
 )
 
 add_entrypoint_object(

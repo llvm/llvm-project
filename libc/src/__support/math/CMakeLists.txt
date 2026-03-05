@@ -2740,6 +2740,21 @@ add_header_library(
 )
 
 add_header_library(
+  sin_integer_eval
+  HDRS
+    sin_integer_eval.h
+  DEPENDS
+    libc.src.__support.CPP.bit
+    libc.src.__support.FPUtil.fp_bits
+    libc.src.__support.FPUtil.multiply_add
+    libc.src.__support.FPUtil.polyeval
+    libc.src.__support.macros.config
+    libc.src.__support.macros.optimization
+    libc.src.__support.big_int
+    libc.src.__support.math_extras
+)
+
+add_header_library(
   sin
   HDRS
     sin.h
