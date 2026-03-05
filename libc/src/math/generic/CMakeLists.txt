@@ -4941,7 +4941,7 @@ add_entrypoint_object(
   HDRS
     ../dmull.h
   DEPENDS
-    libc.src.__support.FPUtil.generic.mul
+    libc.src.__support.math.dmull
 )
 
 add_entrypoint_object(
@@ -4951,8 +4951,7 @@ add_entrypoint_object(
   HDRS
     ../dmulf128.h
   DEPENDS
-    libc.src.__support.macros.properties.types
-    libc.src.__support.FPUtil.generic.mul
+    libc.src.__support.math.dmulf128
 )
 
 add_entrypoint_object(
