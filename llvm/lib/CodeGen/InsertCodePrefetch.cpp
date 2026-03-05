@@ -131,19 +131,21 @@ insertPrefetchHints(MachineFunction &MF,
       // at the beginning of the block if `NumCallsInBB` is zero.
       while (HintIt != BBHints.end() &&
              NumCallsInBB >= HintIt->SiteID.CallsiteIndex) {
-        auto TargetSymbolName = getPrefetchTargetSymbolName(HintIt->TargetFunction,
-                                        HintIt->TargetID.BBID,
-                                        HintIt->TargetID.CallsiteIndex);
-        auto *GV = MF.getFunction().getParent()->getOrInsertGlobal(TargetSymbolName,
-            PtrTy);
-        MachineInstr *PrefetchInstr = TII->insertCodePrefetchInstr(BB, InstrIt, GV);
+        auto TargetSymbolName = getPrefetchTargetSymbolName(
+            HintIt->TargetFunction, HintIt->TargetID.BBID,
+            HintIt->TargetID.CallsiteIndex);
+        auto *GV = MF.getFunction().getParent()->getOrInsertGlobal(
+            TargetSymbolName, PtrTy);
+        MachineInstr *PrefetchInstr =
+            TII->insertCodePrefetchInstr(BB, InstrIt, GV);
         if (!TargetFunctionDefined && IsELF) {
           // If the target function is not defined in this module, we guard
           // against undefined prefetch target symbol by emitting a fallback
           // symbol with weak linkage right after the prefetch instruction. If
           // there is no strong symbol, the fallback will be used and we
           // prefetch the next address.
-          MCSymbolELF *WeakFallbackSym = static_cast<MCSymbolELF *>(MF.getContext().getOrCreateSymbol(TargetSymbolName));
+          MCSymbolELF *WeakFallbackSym = static_cast<MCSymbolELF *>(
+              MF.getContext().getOrCreateSymbol(TargetSymbolName));
           WeakFallbackSym->setIsWeakref();
           PrefetchInstr->setPostInstrSymbol(MF, WeakFallbackSym);
         }
