@@ -8,7 +8,7 @@
 
 #include "src/stdio/vprintf.h"
 
-#include "hdr/stdio_macros.h"
+#include "src/__support/File/baremetal/file.h"
 #include "src/__support/arg_list.h"
 #include "src/__support/common.h"
 #include "src/__support/macros/config.h"
