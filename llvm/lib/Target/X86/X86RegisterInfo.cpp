@@ -52,6 +52,9 @@ static cl::opt<bool>
 
 extern cl::opt<bool> X86EnableAPXForRelocation;
 
+static cl::opt<unsigned> ApxEgprCSR("apx-egpr-csr", cl::init(0),
+    cl::desc("Set N egpr as callee-saved register for APX calling convention"));
+
 X86RegisterInfo::X86RegisterInfo(const Triple &TT)
     : X86GenRegisterInfo((TT.isX86_64() ? X86::RIP : X86::EIP),
                          X86_MC::getDwarfRegFlavour(TT, false),
@@ -245,6 +248,7 @@ X86RegisterInfo::getCalleeSavedRegs(const MachineFunction *MF) const {
   bool HasAVX = Subtarget.hasAVX();
   bool HasAVX512 = Subtarget.hasAVX512();
   bool CallsEHReturn = MF->callsEHReturn();
+  bool HasEGPR = Subtarget.hasEGPR();
 
   CallingConv::ID CC = F.getCallingConv();
 
@@ -257,6 +261,32 @@ X86RegisterInfo::getCalleeSavedRegs(const MachineFunction *MF) const {
   // calling convention and use the empty set instead.
   if (MF->getFunction().hasFnAttribute("no_callee_saved_registers"))
     return CSR_NoRegs_SaveList;
+
+  auto CSR_Win64_Or_EGPR_SaveList = [HasEGPR]() {
+    if (!HasEGPR)
+      return CSR_Win64_SaveList;
+
+    switch (ApxEgprCSR) {
+    case 0: return CSR_Win64_SaveList;
+    case 1: return CSR_Win64_EGPR1_SaveList;
+    case 2: return CSR_Win64_EGPR2_SaveList;
+    case 3: return CSR_Win64_EGPR3_SaveList;
+    case 4: return CSR_Win64_EGPR4_SaveList;
+    case 5: return CSR_Win64_EGPR5_SaveList;
+    case 6: return CSR_Win64_EGPR6_SaveList;
+    case 7: return CSR_Win64_EGPR7_SaveList;
+    case 8: return CSR_Win64_EGPR8_SaveList;
+    case 9: return CSR_Win64_EGPR9_SaveList;
+    case 10: return CSR_Win64_EGPR10_SaveList;
+    case 11: return CSR_Win64_EGPR11_SaveList;
+    case 12: return CSR_Win64_EGPR12_SaveList;
+    case 13: return CSR_Win64_EGPR13_SaveList;
+    case 14: return CSR_Win64_EGPR14_SaveList;
+    case 15: return CSR_Win64_EGPR15_SaveList;
+    case 16: return CSR_Win64_EGPR16_SaveList;
+    default: llvm_unreachable("Invalid reg number!");
+    }
+  };
 
   switch (CC) {
   case CallingConv::GHC:
@@ -317,7 +347,7 @@ X86RegisterInfo::getCalleeSavedRegs(const MachineFunction *MF) const {
   case CallingConv::Win64:
     if (!HasSSE)
       return CSR_Win64_NoSSE_SaveList;
-    return CSR_Win64_SaveList;
+    return CSR_Win64_Or_EGPR_SaveList();
   case CallingConv::SwiftTail:
     if (!Is64Bit)
       return CSR_32_SaveList;
@@ -356,7 +386,7 @@ X86RegisterInfo::getCalleeSavedRegs(const MachineFunction *MF) const {
                      : CSR_64_SwiftError_SaveList;
 
     if (IsWin64 || IsUEFI64)
-      return HasSSE ? CSR_Win64_SaveList : CSR_Win64_NoSSE_SaveList;
+      return HasSSE ? CSR_Win64_Or_EGPR_SaveList() : CSR_Win64_NoSSE_SaveList;
     if (CallsEHReturn)
       return CSR_64EHRet_SaveList;
     return CSR_64_SaveList;
@@ -386,6 +416,33 @@ X86RegisterInfo::getCallPreservedMask(const MachineFunction &MF,
   bool HasSSE = Subtarget.hasSSE1();
   bool HasAVX = Subtarget.hasAVX();
   bool HasAVX512 = Subtarget.hasAVX512();
+  bool HasEGPR = Subtarget.hasEGPR();
+
+  auto CSR_Win64_Or_EGPR_RegMask = [HasEGPR]() {
+    if (!HasEGPR)
+      return CSR_Win64_RegMask;
+
+    switch (ApxEgprCSR) {
+    case 0: return CSR_Win64_RegMask;
+    case 1: return CSR_Win64_EGPR1_RegMask;
+    case 2: return CSR_Win64_EGPR2_RegMask;
+    case 3: return CSR_Win64_EGPR3_RegMask;
+    case 4: return CSR_Win64_EGPR4_RegMask;
+    case 5: return CSR_Win64_EGPR5_RegMask;
+    case 6: return CSR_Win64_EGPR6_RegMask;
+    case 7: return CSR_Win64_EGPR7_RegMask;
+    case 8: return CSR_Win64_EGPR8_RegMask;
+    case 9: return CSR_Win64_EGPR9_RegMask;
+    case 10: return CSR_Win64_EGPR10_RegMask;
+    case 11: return CSR_Win64_EGPR11_RegMask;
+    case 12: return CSR_Win64_EGPR12_RegMask;
+    case 13: return CSR_Win64_EGPR13_RegMask;
+    case 14: return CSR_Win64_EGPR14_RegMask;
+    case 15: return CSR_Win64_EGPR15_RegMask;
+    case 16: return CSR_Win64_EGPR16_RegMask;
+    default: llvm_unreachable("Invalid reg number!");
+    }
+  };
 
   switch (CC) {
   case CallingConv::GHC:
@@ -442,7 +499,7 @@ X86RegisterInfo::getCallPreservedMask(const MachineFunction &MF,
       return CSR_64_MostRegs_RegMask;
     break;
   case CallingConv::Win64:
-    return CSR_Win64_RegMask;
+    return CSR_Win64_Or_EGPR_RegMask();
   case CallingConv::SwiftTail:
     if (!Is64Bit)
       return CSR_32_RegMask;
@@ -480,7 +537,7 @@ X86RegisterInfo::getCallPreservedMask(const MachineFunction &MF,
     if (IsSwiftCC)
       return IsWin64 ? CSR_Win64_SwiftError_RegMask : CSR_64_SwiftError_RegMask;
 
-    return (IsWin64 || IsUEFI64) ? CSR_Win64_RegMask : CSR_64_RegMask;
+    return (IsWin64 || IsUEFI64) ? CSR_Win64_Or_EGPR_RegMask() : CSR_64_RegMask;
   }
 
   return CSR_32_RegMask;
