@@ -3063,7 +3063,7 @@ Value *LibCallSimplifier::optimizeSymmetric(CallInst *CI, LibFunc Func,
 }
 
 Value *LibCallSimplifier::optimizeSinCosPi(CallInst *CI, bool IsSin,
-                                            IRBuilderBase &B) {
+                                           IRBuilderBase &B) {
   return optimizeSinCos(CI, IsSin, B, /*IsPi=*/true);
 }
 
@@ -3133,11 +3133,11 @@ Value *LibCallSimplifier::optimizeSinCos(CallInst *CI, bool IsSin,
   return IsSin ? Sin : Cos;
 }
 
-void LibCallSimplifier::classifyArgUse(
-    Value *Val, Function *F, bool IsFloat,
-    SmallVectorImpl<CallInst *> &SinCalls,
-    SmallVectorImpl<CallInst *> &CosCalls,
-    SmallVectorImpl<CallInst *> &SinCosCalls, bool IsPi) {
+void LibCallSimplifier::classifyArgUse(Value *Val, Function *F, bool IsFloat,
+                                       SmallVectorImpl<CallInst *> &SinCalls,
+                                       SmallVectorImpl<CallInst *> &CosCalls,
+                                       SmallVectorImpl<CallInst *> &SinCosCalls,
+                                       bool IsPi) {
   auto *CI = dyn_cast<CallInst>(Val);
   if (!CI || CI->use_empty())
     return;
@@ -3171,8 +3171,7 @@ void LibCallSimplifier::classifyArgUse(
         SinCosCalls.push_back(CI);
     }
   } else {
-    if (Func == LibFunc_sin || Func == LibFunc_sinf ||
-        Func == LibFunc_sinl)
+    if (Func == LibFunc_sin || Func == LibFunc_sinf || Func == LibFunc_sinl)
       SinCalls.push_back(CI);
     else if (Func == LibFunc_cos || Func == LibFunc_cosf ||
              Func == LibFunc_cosl)
@@ -4081,10 +4080,10 @@ Value *LibCallSimplifier::optimizeFloatingPointLibCall(CallInst *CI,
     return optimizeSinCosPi(CI, /*IsSin*/false, Builder);
   case LibFunc_sinf:
   case LibFunc_sinl:
-    return optimizeSinCos(CI, /*IsSin*/true, Builder);
+    return optimizeSinCos(CI, /*IsSin*/ true, Builder);
   case LibFunc_cosf:
   case LibFunc_cosl:
-    return optimizeSinCos(CI, /*IsSin*/false, Builder);
+    return optimizeSinCos(CI, /*IsSin*/ false, Builder);
   case LibFunc_powf:
   case LibFunc_pow:
   case LibFunc_powl:
@@ -4163,7 +4162,8 @@ Value *LibCallSimplifier::optimizeFloatingPointLibCall(CallInst *CI,
   case LibFunc_cos:
     if (Value *V = optimizeSinCos(CI, Func == LibFunc_sin, Builder))
       return V;
-    if (UnsafeFPShrink && hasFloatVersion(M, CI->getCalledFunction()->getName()))
+    if (UnsafeFPShrink &&
+        hasFloatVersion(M, CI->getCalledFunction()->getName()))
       return optimizeUnaryDoubleFP(CI, Builder, TLI, true);
     return nullptr;
   case LibFunc_tanh:
