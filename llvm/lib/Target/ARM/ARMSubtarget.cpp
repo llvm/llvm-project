@@ -429,7 +429,7 @@ bool ARMSubtarget::enableMachinePipeliner() const {
   return getSchedModel().hasInstrSchedModel() && useMachinePipeliner();
 }
 
-bool ARMSubtarget::useDFForSMS() const { return false; }
+bool ARMSubtarget::useDFAforSMS() const { return false; }
 
 // This overrides the PostRAScheduler bit in the SchedModel for any CPU.
 bool ARMSubtarget::enablePostRAScheduler() const {
