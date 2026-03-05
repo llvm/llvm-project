@@ -40,6 +40,8 @@ struct LLVMTargetMachineOptions {
   std::optional<Reloc::Model> RM;
   std::optional<CodeModel::Model> CM;
   bool JIT;
+  std::optional<bool> EmulatedTLS;
+  std::optional<bool> EnableTLSDESC;
 };
 
 } // namespace llvm
@@ -197,15 +199,30 @@ void LLVMTargetMachineOptionsSetCodeModel(LLVMTargetMachineOptionsRef Options,
   unwrap(Options)->CM = CM;
 }
 
+void LLVMTargetMachineOptionsSetEmulatedTLS(LLVMTargetMachineOptionsRef Options,
+                                            LLVMBool EmulatedTLS) {
+  unwrap(Options)->EmulatedTLS = EmulatedTLS;
+}
+
+void LLVMTargetMachineOptionsSetEnableTLSDESC(
+    LLVMTargetMachineOptionsRef Options, LLVMBool EnableTLSDESC) {
+  unwrap(Options)->EnableTLSDESC = EnableTLSDESC;
+}
+
 LLVMTargetMachineRef
 LLVMCreateTargetMachineWithOptions(LLVMTargetRef T, const char *TripleStr,
                                    LLVMTargetMachineOptionsRef Options) {
   auto *Opt = unwrap(Options);
+  auto Triple = llvm::Triple(TripleStr);
+
   TargetOptions TO;
   TO.MCOptions.ABIName = Opt->ABI;
-  return wrap(unwrap(T)->createTargetMachine(Triple(TripleStr), Opt->CPU,
-                                             Opt->Features, TO, Opt->RM,
-                                             Opt->CM, Opt->OL, Opt->JIT));
+  TO.EmulatedTLS = Opt->EmulatedTLS.value_or(Triple.hasDefaultEmulatedTLS());
+  TO.EnableTLSDESC = Opt->EnableTLSDESC.value_or(Triple.hasDefaultTLSDESC());
+
+  return wrap(unwrap(T)->createTargetMachine(Triple, Opt->CPU, Opt->Features,
+                                             TO, Opt->RM, Opt->CM, Opt->OL,
+                                             Opt->JIT));
 }
 
 LLVMTargetMachineRef
