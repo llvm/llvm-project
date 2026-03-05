@@ -8088,11 +8088,11 @@ template <> struct llvm::DenseMapInfo<const EqualBBWrapper *> {
     if (ABI->getSuccessor(0) != BBI->getSuccessor(0))
       return false;
 
-    // Need to check that PHIs in successor have matching values
+    // Need to check that PHIs in successor have matching values.
     BasicBlock *Succ = ABI->getSuccessor(0);
     auto IfPhiIVMatch = [A, B, &PhiPredIVs = *LHS->PhiPredIVs](PHINode &Phi) {
       // Replace O(|Pred|) Phi.getIncomingValueForBlock with this O(1) hashmap
-      // query
+      // query.
       auto &PredIVs = PhiPredIVs[&Phi];
       return PredIVs[A] == PredIVs[B];
     };
@@ -8163,7 +8163,7 @@ static bool mergeIdenticalBBs(ArrayRef<BasicBlock *> Candidates,
       SmallPtrSet<BasicBlock *, 16> LivePreds(llvm::from_range,
                                               predecessors(Live));
       for (BasicBlock *PredOfDead : DeadPreds) {
-        // Do not modify those common predecessors of DeadPred and LivePred
+        // Do not modify those common predecessors of DeadPred and LivePred.
         if (!LivePreds.contains(PredOfDead))
           Updates.push_back({DominatorTree::Insert, PredOfDead, Live});
         Updates.push_back({DominatorTree::Delete, PredOfDead, Dead});
@@ -8185,7 +8185,7 @@ static bool mergeIdenticalBBs(ArrayRef<BasicBlock *> Candidates,
   for (const auto &EBW : BBs2Merge) {
     // Pred is a candidate for simplification. If we find a duplicate BB,
     // replace it.
-    const auto [It, Inserted] = Keep.insert(&EBW);
+    const auto &[It, Inserted] = Keep.insert(&EBW);
     if (Inserted)
       continue;
 
@@ -8203,6 +8203,7 @@ static bool mergeIdenticalBBs(ArrayRef<BasicBlock *> Candidates,
     // Now DeadBB should become unreachable; leave DCE to later,
     // but we can try to simplify it if it only branches to Succ.
     // (We won't erase here to keep the routine simple and DT-safe.)
+    assert(DeadBB->hasNPredecessors(0) && "DeadBB shoud be unreachable.");
     MadeChange = true;
   }
 
@@ -8214,7 +8215,7 @@ static bool mergeIdenticalBBs(ArrayRef<BasicBlock *> Candidates,
 
 bool SimplifyCFGOpt::simplifyDuplicateSwitchArms(SwitchInst *SI,
                                                  DomTreeUpdater *DTU) {
-  // Collect candidate switch-arms top-down
+  // Collect candidate switch-arms top-down.
   SmallSetVector<BasicBlock *, 16> FilteredArms(
       llvm::from_range,
       make_filter_range(successors(SI), EqualBBWrapper::canBeMerged));
@@ -8232,7 +8233,7 @@ bool SimplifyCFGOpt::simplifyDuplicatePredecessors(BasicBlock *BB,
   if (Options.NeedCanonicalLoop && is_contained(LoopHeaders, BB))
     return false;
 
-  // Collect candidate predecessors bottom-up
+  // Collect candidate predecessors bottom-up.
   SmallSetVector<BasicBlock *, 8> FilteredPreds(
       llvm::from_range,
       make_filter_range(predecessors(BB), EqualBBWrapper::canBeMerged));
@@ -8299,7 +8300,7 @@ bool SimplifyCFGOpt::simplifySwitch(SwitchInst *SI, IRBuilder<> &Builder) {
     return requestResimplify();
 
   // We can merge identical switch arms early to enhance more aggressive
-  // optimization on switch
+  // optimization on switch.
   if (simplifyDuplicateSwitchArms(SI, DTU))
     return requestResimplify();
 
@@ -8992,7 +8993,7 @@ bool SimplifyCFGOpt::simplifyOnce(BasicBlock *BB) {
       // after which we'd need a whole EarlyCSE pass run to cleanup them.
       return true;
     }
-    // Merge identical predecessors of this block
+    // Merge identical predecessors of this block.
     if (simplifyDuplicatePredecessors(BB, DTU))
       return true;
   }
