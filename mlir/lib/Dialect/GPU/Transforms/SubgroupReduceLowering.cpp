@@ -432,22 +432,36 @@ createSubgroupDPPReduction(PatternRewriter &rewriter, gpu::SubgroupReduceOp op,
       // If subgroup size is 64 and cluster size is 64, we don't need lanes [0,
       // 16) and [32, 48) to have the correct cluster-32 reduction values at
       // this point, because only lane 63's value will ultimately be read in
-      // this full-cluster case.
+      // this clusterSize=subgroupSize case.
       //
       // If subgroup size is 64 and cluster size is 32, we need to ensure that
       // lanes [0, 16) and [32, 48) have the correct final cluster-32 reduction
       // values (subgroup_reduce guarantees that all lanes within each cluster
       // contain the final reduction value). We do this by broadcasting lane
       // 31's value to lanes [0, 16) and lanes 63's value to lanes [32, 48).
-      //
-      // See https://gpuopen.com/learn/amd-gcn-assembly-cross-lane-operations
-      // for an illustration of how this within-cluster broadcast works with a
-      // swizzle.
       if (ci.subgroupSize == 64 && ci.clusterSize == 32) {
-        res =
-            amdgpu::SwizzleBitModeOp::create(rewriter, loc, res, /*and_mask=*/0,
-                                             /*or_mask=*/31,
-                                             /*xor_mask=*/0);
+
+        Value c31 =
+            arith::ConstantOp::create(rewriter, loc, rewriter.getI32Type(),
+                                      rewriter.getI32IntegerAttr(31));
+        Value lane31 =
+            ROCDL::ReadlaneOp::create(rewriter, loc, res.getType(), res, c31);
+
+        Value c63 =
+            arith::ConstantOp::create(rewriter, loc, rewriter.getI32Type(),
+                                      rewriter.getI32IntegerAttr(63));
+        Value lane63 =
+            ROCDL::ReadlaneOp::create(rewriter, loc, res.getType(), res, c63);
+
+        Value laneId =
+            gpu::LaneIdOp::create(rewriter, loc, rewriter.getIndexAttr(64));
+
+        // If laneId < 32, select lane31, else select lane63:
+        Value lowerHalf = arith::CmpIOp::create(
+            rewriter, loc, arith::CmpIPredicate::ule, laneId,
+            arith::ConstantIndexOp::create(rewriter, loc, 31));
+
+        res = arith::SelectOp::create(rewriter, loc, lowerHalf, lane31, lane63);
       }
     } else if (chipset.majorVersion <= 12) {
       // Use a permute lane to cross rows (row 1 <-> row 0, row 3 <-> row 2).
