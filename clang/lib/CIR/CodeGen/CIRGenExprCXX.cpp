@@ -20,6 +20,7 @@
 #include "clang/AST/ExprObjC.h"
 #include "clang/Basic/OperatorKinds.h"
 #include "clang/CIR/MissingFeatures.h"
+#include "llvm/Support/TrailingObjects.h"
 
 using namespace clang;
 using namespace clang::CIRGen;
@@ -701,19 +702,29 @@ RValue CIRGenFunction::emitNewOrDeleteBuiltinCall(const FunctionProtoType *type,
 }
 
 namespace {
+template <typename Traits>
+struct PlacementArg {
+  typename Traits::RValueTy argValue;
+  QualType argType;
+};
+
 /// A cleanup to call the given 'operator delete' function upon abnormal
 /// exit from a new expression. Templated on a traits type that deals with
 /// ensuring that the arguments dominate the cleanup if necessary.
 template <typename Traits>
-class CallDeleteDuringNew final : public EHScopeStack::Cleanup {
+class CallDeleteDuringNew final
+    : public EHScopeStack::Cleanup,
+      private llvm::TrailingObjects<CallDeleteDuringNew<Traits>,
+                                    PlacementArg<Traits>> {
+  using TrailingObj =
+      llvm::TrailingObjects<CallDeleteDuringNew<Traits>, PlacementArg<Traits>>;
+  friend TrailingObj;
+  using TrailingObj::getTrailingObjects;
+
   /// Type used to hold llvm::Value*s.
   typedef typename Traits::ValueTy ValueTy;
   /// Type used to hold RValues.
   typedef typename Traits::RValueTy RValueTy;
-  struct PlacementArg {
-    RValueTy argValue;
-    QualType argType;
-  };
 
   unsigned numPlacementArgs : 30;
   LLVM_PREFERRED_TYPE(AlignedAllocationMode)
@@ -723,13 +734,14 @@ class CallDeleteDuringNew final : public EHScopeStack::Cleanup {
   ValueTy allocSize;
   CharUnits allocAlign;
 
-  PlacementArg *getPlacementArgs() {
-    return reinterpret_cast<PlacementArg *>(this + 1);
+  PlacementArg<Traits> *getPlacementArgs() {
+    return getTrailingObjects();
   }
 
 public:
   static size_t getExtraSize(size_t numPlacementArgs) {
-    return numPlacementArgs * sizeof(PlacementArg);
+    return TrailingObj::template additionalSizeToAlloc<PlacementArg<Traits>>(
+        numPlacementArgs);
   }
 
   CallDeleteDuringNew(size_t numPlacementArgs,
