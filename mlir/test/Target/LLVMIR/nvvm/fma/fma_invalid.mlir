@@ -35,7 +35,7 @@ llvm.func @fma_invalid_oob_sat(%a : f16, %b : f16, %c : f16) -> f16 {
 // -----
 
 llvm.func @fma_invalid_oob_f64(%a : f64, %b : f64, %c : f64) -> f64 {
-  // expected-error@+1 {{oob is supported only for f16 and bf16 fused multiply-add operations}}
+  // expected-error@+1 {{relu and oob are only supported for f16 and bf16 fused multiply-add operations}}
   %f1 = nvvm.fma %a, %b, %c {oob = true, rnd = #nvvm.fp_rnd_mode<rn>} : f64
   llvm.return %f1 : f64
 }
