@@ -16,6 +16,7 @@
 
 #include "mlir/Dialect/GPU/IR/GPUDialect.h"
 #include "mlir/Dialect/OpenACC/OpenACC.h"
+#include "mlir/Dialect/Utils/StaticValueUtils.h"
 #include "mlir/IR/BuiltinAttributes.h"
 #include "mlir/IR/BuiltinTypes.h"
 #include "mlir/IR/Region.h"
@@ -323,6 +324,248 @@ void ReductionCombineOp::getEffects(
                        SideEffects::DefaultResource::get());
   effects.emplace_back(MemoryEffects::Write::get(), &getDestMemrefMutable(),
                        SideEffects::DefaultResource::get());
+}
+
+//===----------------------------------------------------------------------===//
+// ComputeRegionOp
+//===----------------------------------------------------------------------===//
+
+static ParWidthOp getParWidthOpForLaunchArg(ComputeRegionOp op,
+                                            GPUParallelDimAttr parDim) {
+  for (auto launchArg : op.getLaunchArgs()) {
+    auto parOp = launchArg.getDefiningOp<ParWidthOp>();
+    if (!parOp)
+      continue;
+    auto launchArgDim = cast<GPUParallelDimAttr>(parOp.getParDim());
+    if (launchArgDim == parDim)
+      return parOp;
+  }
+  return nullptr;
+}
+
+std::optional<Value>
+ComputeRegionOp::getLaunchArg(GPUParallelDimAttr parDim) {
+  if (auto parWidthOp = getParWidthOpForLaunchArg(*this, parDim))
+    return parWidthOp.getResult();
+  return {};
+}
+
+std::optional<Value>
+ComputeRegionOp::getKnownLaunchArg(GPUParallelDimAttr parDim) {
+  if (auto parWidthOp = getParWidthOpForLaunchArg(*this, parDim))
+    if (parWidthOp.getLaunchArg())
+      return parWidthOp.getLaunchArg();
+  return {};
+}
+
+std::optional<uint64_t>
+ComputeRegionOp::getKnownConstantLaunchArg(GPUParallelDimAttr parDim) {
+  auto knownParWidth = getKnownLaunchArg(parDim);
+  if (knownParWidth.has_value())
+    return getConstantIntValue(knownParWidth.value());
+  return {};
+}
+
+BlockArgument ComputeRegionOp::appendInputArg(Value value) {
+  getInputArgsMutable().append(value);
+  return getBody()->addArgument(value.getType(), getLoc());
+}
+
+bool ComputeRegionOp::isEffectivelySerial() {
+  auto *ctx = getContext();
+
+  if (getLaunchArg(GPUParallelDimAttr::seqDim(ctx)))
+    return true;
+
+  auto checkDim = [&](GPUParallelDimAttr dim) -> bool {
+    auto val = getKnownConstantLaunchArg(dim);
+    return val && *val == 1;
+  };
+
+  return checkDim(GPUParallelDimAttr::threadXDim(ctx)) &&
+         checkDim(GPUParallelDimAttr::threadYDim(ctx)) &&
+         checkDim(GPUParallelDimAttr::threadZDim(ctx)) &&
+         checkDim(GPUParallelDimAttr::blockXDim(ctx)) &&
+         checkDim(GPUParallelDimAttr::blockYDim(ctx)) &&
+         checkDim(GPUParallelDimAttr::blockZDim(ctx));
+}
+
+BlockArgument ComputeRegionOp::parDimToWidth(GPUParallelDimAttr parDim) {
+  for (auto [pos, launchArg] : llvm::enumerate(getLaunchArgs())) {
+    auto parOp = launchArg.getDefiningOp<ParWidthOp>();
+    assert(parOp);
+    auto launchArgDim = cast<GPUParallelDimAttr>(parOp.getParDim());
+    if (launchArgDim == parDim) {
+      assert(pos < getRegion().front().getNumArguments() &&
+             "launch arg position out of range");
+      return getRegion().front().getArgument(pos);
+    }
+  }
+  llvm_unreachable("attempting to get unspecified parDim");
+}
+
+SmallVector<GPUParallelDimAttr> ComputeRegionOp::getLaunchParDims() {
+  SmallVector<GPUParallelDimAttr> parDims;
+  for (auto launchArg : getLaunchArgs()) {
+    auto parOp = launchArg.getDefiningOp<ParWidthOp>();
+    auto launchArgDim = cast<GPUParallelDimAttr>(parOp.getParDim());
+    int64_t dimInt = launchArgDim.getValue().getInt();
+    parDims.push_back(intToParDim(getContext(), dimInt));
+  }
+  return parDims;
+}
+
+Value ComputeRegionOp::getOperand(BlockArgument blockArg) {
+  unsigned argNumber = blockArg.getArgNumber();
+  unsigned numLaunchArgs = getLaunchArgs().size();
+  unsigned numInputArgs = getInputArgs().size();
+  assert(argNumber < (numLaunchArgs + numInputArgs) &&
+         "invalid block argument");
+  if (argNumber < numLaunchArgs)
+    return getLaunchArgs()[argNumber];
+  return getInputArgs()[argNumber - numLaunchArgs];
+}
+
+BlockArgument ComputeRegionOp::gpuParWidth(gpu::Processor processor) {
+  return parDimToWidth(GPUParallelDimAttr::get(getContext(), processor));
+}
+
+LogicalResult ComputeRegionOp::verify() {
+  for (auto op : getLaunchArgs())
+    if (!op.getDefiningOp<acc::ParWidthOp>())
+      return emitOpError(
+          "launch arguments must be results of acc.par_width operations");
+
+  unsigned expectedBlockArgs =
+      getLaunchArgs().size() + getInputArgs().size();
+  unsigned actualBlockArgs = getRegion().front().getNumArguments();
+  if (expectedBlockArgs != actualBlockArgs)
+    return emitOpError("expected ")
+           << expectedBlockArgs << " block arguments (launch + input), got "
+           << actualBlockArgs;
+
+  return success();
+}
+
+void ComputeRegionOp::print(OpAsmPrinter &p) {
+  ValueRange regionArgs = getBody()->getArguments();
+  ValueRange launchArgs = getLaunchArgs();
+  ValueRange inputArgs = getInputArgs();
+
+  assert(regionArgs.size() == (launchArgs.size() + inputArgs.size()) &&
+         "region args mismatch");
+
+  if (getStream())
+    p << " stream(" << getStream() << " : " << getStream().getType() << ")";
+
+  size_t i = 0;
+  if (!launchArgs.empty()) {
+    p << " launch(";
+    for (size_t j = 0; j < launchArgs.size(); ++j, ++i) {
+      p << regionArgs[i] << " = " << launchArgs[j];
+      if (j < launchArgs.size() - 1)
+        p << ", ";
+    }
+    p << ")";
+  }
+  if (!inputArgs.empty()) {
+    p << " ins(";
+    for (size_t j = 0; j < inputArgs.size(); ++j, ++i) {
+      p << regionArgs[i] << " = " << inputArgs[j];
+      if (j < inputArgs.size() - 1)
+        p << ", ";
+    }
+    p << ") : (";
+    for (size_t j = 0; j < inputArgs.size(); ++j) {
+      p << inputArgs[j].getType();
+      if (j < inputArgs.size() - 1)
+        p << ", ";
+    }
+    p << ")";
+  }
+  p.printOptionalArrowTypeList(getResultTypes());
+  p << " ";
+  p.printRegion(getRegion(), /*printEntryBlockArgs=*/false);
+  p.printOptionalAttrDict((*this)->getAttrs(),
+                          /*elidedAttrs=*/getOperandSegmentSizeAttr());
+}
+
+ParseResult ComputeRegionOp::parse(OpAsmParser &parser,
+                                   OperationState &result) {
+  auto &builder = parser.getBuilder();
+
+  SmallVector<OpAsmParser::Argument> regionArgs;
+  OpAsmParser::UnresolvedOperand streamOperand;
+  Type streamType;
+  SmallVector<OpAsmParser::UnresolvedOperand> launchOperands;
+  SmallVector<OpAsmParser::UnresolvedOperand> inputOperands;
+  SmallVector<Type> types;
+
+  bool hasStream = false;
+  if (succeeded(parser.parseOptionalKeyword("stream"))) {
+    hasStream = true;
+    if (parser.parseLParen() || parser.parseOperand(streamOperand) ||
+        parser.parseColon() || parser.parseType(streamType) ||
+        parser.parseRParen())
+      return failure();
+  }
+
+  if (succeeded(parser.parseOptionalKeyword("launch"))) {
+    if (parser.parseAssignmentList(regionArgs, launchOperands))
+      return failure();
+    Type indexType = builder.getIndexType();
+    for (size_t i = 0; i < regionArgs.size(); ++i)
+      types.push_back(indexType);
+  }
+
+  if (succeeded(parser.parseOptionalKeyword("ins"))) {
+    if (parser.parseAssignmentList(regionArgs, inputOperands) ||
+        parser.parseColon() || parser.parseLParen() ||
+        parser.parseTypeList(types) || parser.parseRParen())
+      return failure();
+  }
+
+  if (parser.parseOptionalArrowTypeList(result.types))
+    return failure();
+
+  for (auto [iterArg, type] : llvm::zip_equal(regionArgs, types))
+    iterArg.type = type;
+
+  Region *body = result.addRegion();
+  if (parser.parseRegion(*body, regionArgs))
+    return failure();
+
+  const size_t numLaunchOperands = launchOperands.size();
+  const size_t numInputOperands = inputOperands.size();
+  assert(numLaunchOperands + numInputOperands == regionArgs.size() &&
+         "compute region args mismatch");
+
+  result.addAttribute(ComputeRegionOp::getOperandSegmentSizeAttr(),
+                      builder.getDenseI32ArrayAttr(
+                          {static_cast<int32_t>(numLaunchOperands),
+                           static_cast<int32_t>(numInputOperands),
+                           hasStream ? 1 : 0}));
+
+  for (size_t i = 0; i < numLaunchOperands; ++i) {
+    if (parser.resolveOperand(launchOperands[i], types[i], result.operands))
+      return failure();
+  }
+
+  for (size_t i = numLaunchOperands; i < regionArgs.size(); ++i) {
+    if (parser.resolveOperand(inputOperands[i - numLaunchOperands], types[i],
+                              result.operands))
+      return failure();
+  }
+
+  if (hasStream) {
+    if (parser.resolveOperand(streamOperand, streamType, result.operands))
+      return failure();
+  }
+
+  if (parser.parseOptionalAttrDict(result.attributes))
+    return failure();
+
+  return success();
 }
 
 //===----------------------------------------------------------------------===//

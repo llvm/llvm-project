@@ -210,4 +210,157 @@ def OpenACC_FirstprivateMapInitialOp
   let extraClassDeclaration = extraClassDeclarationBase;
 }
 
+//===----------------------------------------------------------------------===//
+// acc.par_width
+//===----------------------------------------------------------------------===//
+
+def OpenACC_ParWidthOp
+    : OpenACC_Op<"par_width", [NoMemoryEffect, AlwaysSpeculatable]> {
+  let summary = "Specify parallel width for a GPU dimension";
+  let description = [{
+    The `acc.par_width` operation specifies the parallel width for a
+    given GPU parallel dimension. It is used as an input to
+    `acc.compute_region` to define the launch configuration.
+
+    The optional `launchArg` operand provides a known width value. When
+    absent, the width is unknown and must be determined later (either at
+    compile time by analysis or at runtime).
+
+    Examples:
+
+    ```mlir
+    // Known width from SSA value
+    %w1 = acc.par_width %vector_len {par_dim = #acc.par_dim<thread_x>}
+
+    // Unknown width (to be computed later)
+    %w2 = acc.par_width {par_dim = #acc.par_dim<block_x>}
+    ```
+  }];
+  let arguments = (ins Optional<Index>:$launchArg,
+                       OpenACC_GPUParallelDimAttr:$par_dim);
+  let results = (outs Index:$output);
+  let assemblyFormat = [{
+    ($launchArg^)? attr-dict
+  }];
+}
+
+//===----------------------------------------------------------------------===//
+// acc.compute_region
+//===----------------------------------------------------------------------===//
+
+// Local type constraint for gpu::AsyncTokenType.
+def OpenACC_GPUAsyncTokenType : Type<
+  CPred<"::llvm::isa<::mlir::gpu::AsyncTokenType>($_self)">,
+  "GPU async token type">;
+
+def OpenACC_ComputeRegionOp
+    : OpenACC_Op<"compute_region",
+                 [OffloadRegionOpInterface, AffineScope,
+                  RecursiveMemoryEffects,
+                  SingleBlockImplicitTerminator<"YieldOp">,
+                  IsolatedFromAbove, AttrSizedOperandSegments]> {
+  let summary = "Compute region for GPU execution";
+  let description = [{
+    The `acc.compute_region` operation wraps a region of code that will be
+    compiled and executed on a GPU. It is typically produced by lowering
+    OpenACC compute constructs (`acc.parallel`, `acc.kernels`, `acc.serial`)
+    but can also be targeted directly by other frontends or lowered from
+    other constructs that benefit from the automatic parallelization and data
+    mapping facilities that the `acc` dialect provides. It serves as the
+    bridge between the high-level representation and the `gpu.launch`
+    operation.
+
+    The operation is `IsolatedFromAbove`: all values used inside the
+    region must be explicitly captured. Values are captured in two ways:
+
+    - Launch arguments (`launch`): Results of `acc.par_width`
+      operations that define the parallel launch configuration. These
+      become `index`-typed block arguments representing the parallel
+      width for each dimension.
+
+    - Input arguments (`ins`): Arbitrary values captured from outside
+      the region (data pointers, scalars, etc.). These become block
+      arguments with their original types.
+
+    The `origin` attribute records which construct produced this compute
+    region (e.g., `"acc.parallel"`, `"acc.kernels"`). This is intended to
+    be solely informational.
+
+    Example:
+
+    ```mlir
+    %w0 = acc.par_width %c128 {par_dim = #acc.par_dim<thread_x>}
+    %w1 = acc.par_width %c8 {par_dim = #acc.par_dim<block_x>}
+    acc.compute_region launch(%arg0 = %w0, %arg1 = %w1)
+        ins(%arg2 = %data) : (memref<1024xf32>) {
+      %c0 = arith.constant 0 : index
+      %c1 = arith.constant 1 : index
+      %c1024 = arith.constant 1024 : index
+      scf.parallel (%iv) = (%c0) to (%c1024) step (%c1) {
+        %v = memref.load %arg2[%iv] : memref<1024xf32>
+        scf.reduce
+      } {acc.par_dims = #acc<par_dims[thread_x]>}
+      acc.yield
+    } {origin = "acc.parallel"}
+    ```
+  }];
+
+  let arguments = (ins Variadic<Index>:$launchArgs,
+                       Variadic<AnyType>:$inputArgs,
+                       Optional<OpenACC_GPUAsyncTokenType>:$stream,
+                       StrAttr:$origin,
+                       OptionalAttr<FlatSymbolRefAttr>:$kernel_func_name,
+                       OptionalAttr<FlatSymbolRefAttr>:$kernel_module_name);
+
+  let results = (outs Variadic<AnyType>:$results);
+
+  let regions = (region AnyRegion:$region);
+
+  let extraClassDeclaration = [{
+    /// Look up the par_width op for the given dimension among launch args.
+    std::optional<mlir::Value> getLaunchArg(
+        ::mlir::acc::GPUParallelDimAttr parDim);
+
+    /// Get the known (non-empty) launch value for a dimension.
+    std::optional<mlir::Value> getKnownLaunchArg(
+        ::mlir::acc::GPUParallelDimAttr parDim);
+
+    /// Get the known constant launch value for a dimension.
+    std::optional<uint64_t> getKnownConstantLaunchArg(
+        ::mlir::acc::GPUParallelDimAttr parDim);
+
+    /// Add a new input argument, appending to both the operand list and
+    /// the region block arguments. Returns the new block argument.
+    ::mlir::BlockArgument appendInputArg(::mlir::Value);
+
+    /// Check whether all parallel dimensions have width 1.
+    bool isEffectivelySerial();
+
+    /// Get the block argument representing the width for a given dimension.
+    ::mlir::BlockArgument parDimToWidth(
+        ::mlir::acc::GPUParallelDimAttr parDim);
+
+    /// Get the block argument for a specific gpu::Processor.
+    ::mlir::BlockArgument gpuParWidth(::mlir::gpu::Processor);
+
+    /// Collect all GPU parallel dimensions present in the launch config.
+    llvm::SmallVector<::mlir::acc::GPUParallelDimAttr> getLaunchParDims();
+
+    /// Get the body block of the compute region.
+    ::mlir::Block *getBody() { return &getRegion().front(); }
+
+    /// Get the terminator of the compute region.
+    ::mlir::Operation *getTerminator() {
+      return &getRegion().back().back();
+    }
+
+    /// Map a block argument back to its corresponding operand
+    /// ($launchArgs or $inputArgs).
+    ::mlir::Value getOperand(::mlir::BlockArgument blockArg);
+  }];
+
+  let hasVerifier = 1;
+  let hasCustomAssemblyFormat = 1;
+}
+
 #endif // OPENACC_CG_OPS
