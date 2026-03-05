@@ -120,6 +120,7 @@ public:
   void DeclarationMarkedUsed(const Decl *D) override;
   void DeclarationMarkedOpenMPThreadPrivate(const Decl *D) override;
   void DeclarationMarkedOpenMPAllocate(const Decl *D, const Attr *A) override;
+  void DeclarationMarkedOpenMPIndirectCall(const Decl *D) override;
   void DeclarationMarkedOpenMPDeclareTarget(const Decl *D,
                                             const Attr *Attr) override;
   void RedefinedHiddenDefinition(const NamedDecl *D, Module *M) override;
@@ -239,6 +240,11 @@ void MultiplexASTMutationListener::DeclarationMarkedOpenMPAllocate(
     const Decl *D, const Attr *A) {
   for (ASTMutationListener *L : Listeners)
     L->DeclarationMarkedOpenMPAllocate(D, A);
+}
+void MultiplexASTMutationListener::DeclarationMarkedOpenMPIndirectCall(
+    const Decl *D) {
+  for (ASTMutationListener *L : Listeners)
+    L->DeclarationMarkedOpenMPIndirectCall(D);
 }
 void MultiplexASTMutationListener::DeclarationMarkedOpenMPDeclareTarget(
     const Decl *D, const Attr *Attr) {
