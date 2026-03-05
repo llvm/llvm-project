@@ -1,3 +1,5 @@
+// REQUIRES: cir
+// REQUIRES: nvptx-registered-target
 // RUN: %clang_cc1 -triple x86_64-unknown-linux-gnu -fclangir -x cuda -emit-cir -target-sdk-version=12.3 %s -o %t.cir
 // RUN: FileCheck --check-prefix=CIR-HOST --input-file=%t.cir %s
 // RUN: %clang_cc1 -triple nvptx64-nvidia-cuda -fclangir -fcuda-is-device -emit-cir -target-sdk-version=12.3 %s -o %t.cir
