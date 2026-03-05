@@ -1,0 +1,153 @@
+name: Alpine Static LLVM Package
+
+on:
+  workflow_dispatch:
+    inputs:
+      commit_id:
+        description: 'LLVM commit SHA to build'
+        required: true
+        type: string
+      lto_mode:
+        description: 'LTO mode'
+        required: false
+        default: 'Thin'
+        type: choice
+        options:
+          - Thin
+          - Full
+
+permissions:
+  contents: read
+
+jobs:
+  build-and-package:
+    name: Build clang/lld/lldb (alpine static)
+    runs-on: ubuntu-24.04
+    container:
+      image: alpine:3.20
+    env:
+      SCCACHE_DIR: ${{ github.workspace }}/.cache/sccache
+      CCACHE_BASEDIR: ${{ github.workspace }}/.cache/sccache
+    defaults:
+      run:
+        shell: sh
+    steps:
+      - name: Install build dependencies
+        run: |
+          set -eux
+          apk add --no-cache \
+            bash \
+            build-base \
+            ca-certificates \
+            clang \
+            cmake \
+            git \
+            lld \
+            linux-headers \
+            ninja \
+            perl \
+            python3 \
+            sccache \
+            swig \
+            zstd \
+            zstd-static \
+            zstd-dev \
+            xz \
+            xz-dev \
+            zlib-dev
+
+      - name: Checkout source
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Checkout target commit
+        run: |
+          set -eux
+          COMMIT_ID="${{ inputs.commit_id }}"
+          git rev-parse --verify "${COMMIT_ID}^{commit}"
+          git checkout --detach "${COMMIT_ID}"
+
+      - name: Restore sccache cache
+        uses: actions/cache@v4
+        with:
+          path: ${{ env.SCCACHE_DIR }}
+          key: sccache-alpine-static-${{ runner.os }}-${{ inputs.lto_mode }}-${{ hashFiles('.github/workflows/alpine-static-package.yml') }}
+          restore-keys: |
+            sccache-alpine-static-${{ runner.os }}-${{ inputs.lto_mode }}-
+            sccache-alpine-static-${{ runner.os }}-
+
+      - name: Initialize sccache
+        run: |
+          set -eux
+          mkdir -p "${SCCACHE_DIR}"
+          sccache --version
+          sccache --zero-stats || true
+
+      - name: Configure (Release + LTO + static)
+        env:
+          CC: clang
+          CXX: clang++
+        run: |
+          set -eux
+          cmake -G Ninja -S llvm -B build \
+            -DCMAKE_BUILD_TYPE=Release \
+            -DCMAKE_C_COMPILER=clang \
+            -DCMAKE_CXX_COMPILER=clang++ \
+            -DCMAKE_C_COMPILER_LAUNCHER=sccache \
+            -DCMAKE_CXX_COMPILER_LAUNCHER=sccache \
+            -DCMAKE_EXE_LINKER_FLAGS="-static -fuse-ld=lld" \
+            -DCMAKE_SHARED_LINKER_FLAGS="-fuse-ld=lld" \
+            -DCMAKE_MODULE_LINKER_FLAGS="-fuse-ld=lld" \
+            -DLLVM_ENABLE_PROJECTS="clang;lld;lldb" \
+            -DLLVM_ENABLE_LTO="${{ inputs.lto_mode }}" \
+            -DLLVM_BUILD_LLVM_DYLIB=OFF \
+            -DLLVM_LINK_LLVM_DYLIB=OFF \
+            -DBUILD_SHARED_LIBS=OFF \
+            -DLLDB_ENABLE_PYTHON=OFF \
+            -DLLVM_ENABLE_TERMINFO=OFF \
+            -DLLVM_ENABLE_LIBEDIT=OFF \
+            -DLLVM_ENABLE_LIBXML2=OFF \
+            -DLLVM_ENABLE_ZSTD=FORCE_ON \
+            -DLLVM_INCLUDE_TESTS=OFF \
+            -DLLVM_INCLUDE_BENCHMARKS=OFF \
+            -DLLVM_INCLUDE_EXAMPLES=OFF
+
+      - name: Build
+        run: |
+          set -eux
+          ninja -C build clang lld lldb
+
+      - name: Show sccache stats
+        if: always()
+        run: |
+          set -eux
+          sccache --show-stats || true
+
+      - name: Install
+        run: |
+          set -eux
+          cmake --install build --prefix "$PWD/package"
+
+      - name: Verify static linkage (best effort)
+        run: |
+          set -eux
+          file package/bin/clang || true
+          file package/bin/ld.lld || true
+          file package/bin/lldb || true
+
+      - name: Create package
+        id: package
+        run: |
+          set -eux
+          SHORT_SHA=$(git rev-parse --short HEAD)
+          PKG_NAME="llvm-alpine-static-${SHORT_SHA}.tar.xz"
+          tar -C package -cJf "${PKG_NAME}" .
+          echo "pkg_name=${PKG_NAME}" >> "$GITHUB_OUTPUT"
+
+      - name: Upload artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: ${{ steps.package.outputs.pkg_name }}
+          path: ${{ steps.package.outputs.pkg_name }}
+          if-no-files-found: error
