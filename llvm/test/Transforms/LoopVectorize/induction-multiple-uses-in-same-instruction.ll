@@ -11,14 +11,12 @@ define void @multiple_iv_uses_in_same_instruction(ptr %ptr) {
 ; CHECK-NEXT:    br label [[VECTOR_BODY:%.*]]
 ; CHECK:       vector.body:
 ; CHECK-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, [[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], [[VECTOR_BODY]] ]
-; CHECK-NEXT:    [[TMP0:%.*]] = add i64 [[INDEX]], 0
 ; CHECK-NEXT:    [[TMP1:%.*]] = add i64 [[INDEX]], 1
 ; CHECK-NEXT:    [[TMP2:%.*]] = trunc i64 [[INDEX]] to i32
-; CHECK-NEXT:    [[TMP3:%.*]] = add i32 [[TMP2]], 0
 ; CHECK-NEXT:    [[TMP4:%.*]] = add i32 [[TMP2]], 1
-; CHECK-NEXT:    [[TMP5:%.*]] = getelementptr inbounds [100 x [100 x i32]], ptr [[PTR:%.*]], i64 0, i64 [[TMP0]], i64 [[TMP0]]
+; CHECK-NEXT:    [[TMP3:%.*]] = getelementptr inbounds [100 x [100 x i32]], ptr [[PTR:%.*]], i64 0, i64 [[INDEX]], i64 [[INDEX]]
 ; CHECK-NEXT:    [[TMP6:%.*]] = getelementptr inbounds [100 x [100 x i32]], ptr [[PTR]], i64 0, i64 [[TMP1]], i64 [[TMP1]]
-; CHECK-NEXT:    store i32 [[TMP3]], ptr [[TMP5]], align 4
+; CHECK-NEXT:    store i32 [[TMP2]], ptr [[TMP3]], align 4
 ; CHECK-NEXT:    store i32 [[TMP4]], ptr [[TMP6]], align 4
 ; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 2
 ; CHECK-NEXT:    [[TMP7:%.*]] = icmp eq i64 [[INDEX_NEXT]], 100

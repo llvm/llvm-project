@@ -548,34 +548,34 @@ static Slab *find_slab(uint32_t chunk_size, uint64_t lane_mask,
   // We start at the index of the last successful allocation for this kind.
   uint32_t chunk_id = impl::get_chunk_id(chunk_size);
   uint32_t start = indices[chunk_id].load(cpp::MemoryOrder::RELAXED);
+  uint32_t usable = Slab::usable_bits(chunk_size);
+  uint32_t base = impl::get_start_index(chunk_size);
+  uint64_t id = impl::id_in_mask();
 
   Slab *result = nullptr;
   for (uint32_t offset = 0;
        gpu::ballot(lane_mask, !result) && offset <= ARRAY_SIZE; ++offset) {
-    uint32_t index =
-        !offset ? start
-                : (impl::get_start_index(chunk_size) + offset - 1) % ARRAY_SIZE;
+    uint32_t index = !offset ? start : (base + offset - 1) % ARRAY_SIZE;
 
-    bool available =
-        !offset || slots[index].use_count() < Slab::usable_bits(chunk_size);
+    bool available = !offset || slots[index].use_count() < usable;
     uint64_t slab_mask = gpu::ballot(lane_mask, !result && available);
-    if (slab_mask & impl::id_in_mask()) {
+    if (slab_mask & id) {
       Slab *slab = slots[index].try_lock(slab_mask, uniform & slab_mask,
                                          reserved, chunk_size, index);
 
       // If we find a slab with a matching chunk size then we store the result.
       // Otherwise, we need to free the claimed lock and continue. In the case
       // of out-of-memory we receive a sentinel value and return a failure.
-      uint64_t locked_mask = gpu::ballot(
-          slab_mask, slab && reserved < Slab::usable_bits(chunk_size) &&
-                         slab->get_chunk_size() == chunk_size);
+      uint64_t locked_mask =
+          gpu::ballot(slab_mask, slab && reserved < usable &&
+                                     slab->get_chunk_size() == chunk_size);
       uint64_t failed_mask = gpu::ballot(slab_mask, slab) & ~locked_mask;
-      if (locked_mask & impl::id_in_mask()) {
+      if (locked_mask & id) {
         if (index != start)
           indices[chunk_id].store(index, cpp::MemoryOrder::RELAXED);
         uniform = uniform & locked_mask;
         result = slab;
-      } else if (failed_mask & impl::id_in_mask()) {
+      } else if (failed_mask & id) {
         slots[index].unlock(failed_mask & uniform);
       } else if (!slab && impl::is_sentinel(reserved)) {
         result =
