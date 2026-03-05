@@ -29255,8 +29255,10 @@ static SDValue performCTPOPCombine(SDNode *N,
     return SDValue();
 
   // ctpop(zext(bitcast(vector_mask))) -> neg(signed_reduce_add(vector_mask))
+  EVT SrcVT;
   SDValue Mask;
-  if (!sd_match(N->getOperand(0), m_ZExtOrSelf(m_BitCast(m_Value(Mask)))))
+  if (!sd_match(N->getOperand(0),
+                m_ZExtOrSelf(m_VT(SrcVT, m_BitCast(m_Value(Mask))))))
     return SDValue();
 
   EVT VT = N->getValueType(0);
@@ -29266,14 +29268,24 @@ static SDValue performCTPOPCombine(SDNode *N,
       MaskVT.getVectorElementType() != MVT::i1)
     return SDValue();
 
-  EVT ReduceInVT =
-      EVT::getVectorVT(*DAG.getContext(), VT, MaskVT.getVectorElementCount());
+  EVT ReduceInVT = EVT::getVectorVT(*DAG.getContext(), SrcVT,
+                                    MaskVT.getVectorElementCount());
+
+  EVT CmpVT;
+  // Use the same VT as the SETcc if -CTPOP would not overflow.
+  if (sd_match(Mask, m_SetCC(m_VT(CmpVT), m_Value(), m_Value()))) {
+    CmpVT = CmpVT.changeVectorElementTypeToInteger();
+    if (Log2_64_Ceil(MaskVT.getSizeInBits()) <= CmpVT.getScalarSizeInBits() - 1)
+      ReduceInVT = CmpVT;
+  }
 
   SDLoc DL(N);
+  EVT PopVT = ReduceInVT.getScalarType();
   // Sign extend to best fit ZeroOrNegativeOneBooleanContent.
   SDValue ExtMask = DAG.getNode(ISD::SIGN_EXTEND, DL, ReduceInVT, Mask);
-  SDValue NegPopCount = DAG.getNode(ISD::VECREDUCE_ADD, DL, VT, ExtMask);
-  return DAG.getNegative(NegPopCount, DL, VT);
+  SDValue NegPopCount = DAG.getNode(ISD::VECREDUCE_ADD, DL, PopVT, ExtMask);
+  SDValue ExtPopCount = DAG.getSExtOrTrunc(NegPopCount, DL, VT);
+  return DAG.getNegative(ExtPopCount, DL, VT);
 }
 
 static unsigned getReductionForOpcode(unsigned Op) {
