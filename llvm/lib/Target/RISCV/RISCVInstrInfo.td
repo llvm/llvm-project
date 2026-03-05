@@ -91,6 +91,16 @@ def riscv_brcc      : RVSDNode<"BR_CC", SDT_RISCVBrCC,
 def riscv_sw_guarded_brind : RVSDNode<"SW_GUARDED_BRIND",
                                       SDTBrind, [SDNPHasChain]>;
 
+// NonX7 variants for cf-protection-branch. These avoid using X7 for indirect
+// branches/calls since X7 is used for landing pad labels.
+def riscv_brind_nonx7 : RVSDNode<"BRIND_NONX7", SDTBrind, [SDNPHasChain]>;
+def riscv_call_nonx7  : RVSDNode<"CALL_NONX7", SDT_RISCVCall,
+                                 [SDNPHasChain, SDNPOptInGlue, SDNPOutGlue,
+                                  SDNPVariadic]>;
+def riscv_tail_nonx7  : RVSDNode<"TAIL_NONX7", SDT_RISCVCall,
+                                 [SDNPHasChain, SDNPOptInGlue, SDNPOutGlue,
+                                  SDNPVariadic]>;
+
 // RV64I shifts, directly matching the semantics of the named RISC-V
 // instructions.
 def riscv_sllw      : RVSDNode<"SLLW", SDT_RISCVIntBinOpW>;
@@ -1761,36 +1771,27 @@ let isBarrier = 1, isBranch = 1, isTerminator = 1 in
 def PseudoBR : Pseudo<(outs), (ins simm21_lsb0_jal:$imm20), [(br bb:$imm20)]>,
                PseudoInstExpansion<(JAL X0, simm21_lsb0_jal:$imm20)>;
 
-let Predicates = [NoStdExtZicfilp],
-    isBarrier = 1, isBranch = 1, isIndirectBranch = 1, isTerminator = 1 in
+let isBarrier = 1, isBranch = 1, isIndirectBranch = 1, isTerminator = 1 in {
 def PseudoBRIND : Pseudo<(outs), (ins GPRJALR:$rs1, simm12_lo:$imm12), []>,
                   PseudoInstExpansion<(JALR X0, GPR:$rs1, simm12_lo:$imm12)>;
-
-let Predicates = [HasStdExtZicfilp],
-    isBarrier = 1, isBranch = 1, isIndirectBranch = 1, isTerminator = 1 in {
 def PseudoBRINDNonX7 : Pseudo<(outs), (ins GPRJALRNonX7:$rs1, simm12_lo:$imm12), []>,
                        PseudoInstExpansion<(JALR X0, GPR:$rs1, simm12_lo:$imm12)>;
 def PseudoBRINDX7 : Pseudo<(outs), (ins GPRX7:$rs1, simm12_lo:$imm12), []>,
                     PseudoInstExpansion<(JALR X0, GPR:$rs1, simm12_lo:$imm12)>;
 }
 
-// For Zicfilp, need to avoid using X7/T2 for indirect branches which need
-// landing pad.
-let Predicates = [HasStdExtZicfilp] in {
-def : Pat<(brind GPRJALRNonX7:$rs1), (PseudoBRINDNonX7 GPRJALRNonX7:$rs1, 0)>;
-def : Pat<(brind (add GPRJALRNonX7:$rs1, simm12_lo:$imm12)),
+def : Pat<(riscv_brind_nonx7 GPRJALRNonX7:$rs1),
+          (PseudoBRINDNonX7 GPRJALRNonX7:$rs1, 0)>;
+def : Pat<(riscv_brind_nonx7 (add GPRJALRNonX7:$rs1, simm12_lo:$imm12)),
           (PseudoBRINDNonX7 GPRJALRNonX7:$rs1, simm12_lo:$imm12)>;
 
 def : Pat<(riscv_sw_guarded_brind GPRX7:$rs1), (PseudoBRINDX7 GPRX7:$rs1, 0)>;
 def : Pat<(riscv_sw_guarded_brind (add GPRX7:$rs1, simm12_lo:$imm12)),
           (PseudoBRINDX7 GPRX7:$rs1, simm12_lo:$imm12)>;
-}
 
-let Predicates = [NoStdExtZicfilp] in {
 def : Pat<(brind GPRJALR:$rs1), (PseudoBRIND GPRJALR:$rs1, 0)>;
 def : Pat<(brind (add GPRJALR:$rs1, simm12_lo:$imm12)),
           (PseudoBRIND GPRJALR:$rs1, simm12_lo:$imm12)>;
-}
 
 // PseudoCALLReg is a generic pseudo instruction for calls which will eventually
 // expand to auipc and jalr while encoding, with any given register used as the
@@ -1823,19 +1824,15 @@ let Predicates = [HasStdExtSmrnmi] in
 def : Pat<(riscv_mnret_glue), (MNRET)>;
 
 let isCall = 1, Defs = [X1] in {
-let Predicates = [NoStdExtZicfilp] in
 def PseudoCALLIndirect : Pseudo<(outs), (ins GPRJALR:$rs1),
                                 [(riscv_call GPRJALR:$rs1)]>,
                          PseudoInstExpansion<(JALR X1, GPR:$rs1, 0)>;
-let Predicates = [HasStdExtZicfilp] in {
 def PseudoCALLIndirectNonX7 : Pseudo<(outs), (ins GPRJALRNonX7:$rs1),
-                                     [(riscv_call GPRJALRNonX7:$rs1)]>,
+                                     [(riscv_call_nonx7 GPRJALRNonX7:$rs1)]>,
                               PseudoInstExpansion<(JALR X1, GPR:$rs1, 0)>;
-// For large code model, non-indirect calls could be software-guarded
 def PseudoCALLIndirectX7 : Pseudo<(outs), (ins GPRX7:$rs1),
                                   [(riscv_sw_guarded_call GPRX7:$rs1)]>,
                            PseudoInstExpansion<(JALR X1, GPR:$rs1, 0)>;
-}
 }
 
 let isBarrier = 1, isReturn = 1, isTerminator = 1 in
@@ -1852,19 +1849,15 @@ def PseudoTAIL : Pseudo<(outs), (ins call_symbol:$dst), [],
                  Sched<[WriteIALU, WriteJalr, ReadJalr]>;
 
 let isCall = 1, isTerminator = 1, isReturn = 1, isBarrier = 1, Uses = [X2] in {
-let Predicates = [NoStdExtZicfilp] in
 def PseudoTAILIndirect : Pseudo<(outs), (ins GPRTC:$rs1),
                                 [(riscv_tail GPRTC:$rs1)]>,
                          PseudoInstExpansion<(JALR X0, GPR:$rs1, 0)>;
-let Predicates = [HasStdExtZicfilp] in {
 def PseudoTAILIndirectNonX7 : Pseudo<(outs), (ins GPRTCNonX7:$rs1),
-                                     [(riscv_tail GPRTCNonX7:$rs1)]>,
+                                     [(riscv_tail_nonx7 GPRTCNonX7:$rs1)]>,
                               PseudoInstExpansion<(JALR X0, GPR:$rs1, 0)>;
-// For large code model, non-indirect calls could be software-guarded
 def PseudoTAILIndirectX7 : Pseudo<(outs), (ins GPRX7:$rs1),
                                   [(riscv_sw_guarded_tail GPRX7:$rs1)]>,
                            PseudoInstExpansion<(JALR X0, GPR:$rs1, 0)>;
-}
 }
 
 def : Pat<(riscv_tail (iPTR tglobaladdr:$dst)),

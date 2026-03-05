@@ -11,6 +11,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "RISCVCallingConv.h"
+#include "RISCVMachineFunctionInfo.h"
 #include "RISCVSubtarget.h"
 #include "llvm/IR/DataLayout.h"
 #include "llvm/IR/Module.h"
@@ -338,8 +339,7 @@ bool llvm::CC_RISCV(unsigned ValNo, MVT ValVT, MVT LocVT,
     // so we assign t2/t3 for it as done in GCC's
     // __builtin_call_with_static_chain
     bool HasCFBranch =
-        Subtarget.hasStdExtZicfilp() &&
-        MF.getFunction().getParent()->getModuleFlag("cf-protection-branch");
+        MF.getInfo<RISCVMachineFunctionInfo>()->hasCFProtectionBranch();
 
     // Normal: t2, Branch control flow protection: t3
     const auto StaticChainReg = HasCFBranch ? RISCV::X28 : RISCV::X7;
