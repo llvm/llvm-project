@@ -152,8 +152,8 @@ private:
 
   /// Default values are 'nothing happened a long time ago'.
   static constexpr int ReachingDefDefaultVal = -(1 << 21);
-  /// Special values for function live-ins.
-  static constexpr int FunctionLiveInMarker = -1;
+  /// Clearance of live-in registers
+  static constexpr int LiveInClearance = 1;
 
   using InstSet = SmallPtrSetImpl<MachineInstr*>;
   using BlockSet = SmallPtrSetImpl<MachineBasicBlock*>;
@@ -193,8 +193,10 @@ public:
 
   /// Return the local MI that produces the live out value for Reg, or
   /// nullptr for a non-live out or non-local def.
-  MachineInstr *getLocalLiveOutMIDef(MachineBasicBlock *MBB,
-                                     Register Reg) const;
+  /// Sets IsFunctionLiveIn to `true` if `MBB` is an entry block, `Reg` is a
+  /// function live-in and it does not get defined in `MBB`.
+  MachineInstr *getLocalLiveOutMIDef(MachineBasicBlock *MBB, Register Reg,
+                                     bool &IsFunctionLiveIn) const;
 
   /// If a single MachineInstr creates the reaching definition, then return it.
   /// Otherwise return null.
@@ -230,9 +232,13 @@ public:
 
   /// Search MBB for a definition of Reg and insert it into Defs. If no
   /// definition is found, recursively search the predecessor blocks for them.
+  /// HasLiveInPath is set to `true` if `Reg` is live-in on function entry and
+  /// there is at least one path from function entry to the end of `MBB` along
+  /// which `Reg` is not modified.
   void getLiveOuts(MachineBasicBlock *MBB, Register Reg, InstSet &Defs,
-                   BlockSet &VisitedBBs) const;
-  void getLiveOuts(MachineBasicBlock *MBB, Register Reg, InstSet &Defs) const;
+                   BlockSet &VisitedBBs, bool &HasLiveInPath) const;
+  void getLiveOuts(MachineBasicBlock *MBB, Register Reg, InstSet &Defs,
+                   bool &HasLiveInPath) const;
 
   /// For the given block, collect the instructions that use the live-in
   /// value of the provided register. Return whether the value is still
@@ -245,8 +251,11 @@ public:
 
   /// Collect all possible definitions of the value stored in Reg, which is
   /// used by MI.
-  void getGlobalReachingDefs(MachineInstr *MI, Register Reg,
-                             InstSet &Defs) const;
+  /// HasLiveInPath set to `true` if `Reg` is live-in on function entry and
+  /// there is at least one path from function entry to MI along which `Reg` is
+  /// not modified.
+  void getGlobalReachingDefs(MachineInstr *MI, Register Reg, InstSet &Defs,
+                             bool &HasLiveInPath) const;
 
   /// Return whether From can be moved forwards to just before To.
   bool isSafeToMoveForwards(MachineInstr *From, MachineInstr *To) const;
