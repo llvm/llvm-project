@@ -194,7 +194,7 @@ void Case6(half2x2 H, float2x2 F, double2x2 D) {
   // CHECK: CallExpr {{.*}} 'void'
   // CHECK-NEXT: ImplicitCastExpr {{.*}} 'void (*)(float2x2)' <FunctionToPointerDecay>
   // CHECK-NEXT: DeclRefExpr {{.*}} 'void (float2x2)' lvalue Function {{.*}} 'Float' 'void (float2x2)'
-  Float(D); // expected-warning{{implicit conversion loses floating-point precision: 'double2x2' (aka 'matrix<double, 2, 2>') to 'float2x2' (aka 'matrix<float, 2, 2>')}}
+  Float(D); // expected-warning{{implicit conversion loses floating-point precision: 'double2x2' (aka 'matrix<double, 2, 2>') to 'matrix<float, 2, 2>'}}
 }
 
 // Case 7: A function declared with only a half overload.
@@ -215,12 +215,12 @@ void Case7(half2x2 H, float2x2 F, double2x2 D) {
   // CHECK: CallExpr {{.*}} 'void'
   // CHECK-NEXT: ImplicitCastExpr {{.*}} 'void (*)(half2x2)' <FunctionToPointerDecay>
   // CHECK-NEXT: DeclRefExpr {{.*}} 'void (half2x2)' lvalue Function {{.*}} 'Half' 'void (half2x2)'
-  Half(F); // expected-warning{{implicit conversion loses floating-point precision: 'float2x2' (aka 'matrix<float, 2, 2>') to 'half2x2' (aka 'matrix<half, 2, 2>')}}
+  Half(F); // expected-warning{{implicit conversion loses floating-point precision: 'float2x2' (aka 'matrix<float, 2, 2>') to 'matrix<half, 2, 2>'}}
 
   // CHECK: CallExpr {{.*}} 'void'
   // CHECK-NEXT: ImplicitCastExpr {{.*}} 'void (*)(half2x2)' <FunctionToPointerDecay>
   // CHECK-NEXT: DeclRefExpr {{.*}} 'void (half2x2)' lvalue Function {{.*}} 'Half' 'void (half2x2)'
-  Half(D); // expected-warning{{implicit conversion loses floating-point precision: 'double2x2' (aka 'matrix<double, 2, 2>') to 'half2x2' (aka 'matrix<half, 2, 2>')}}
+  Half(D); // expected-warning{{implicit conversion loses floating-point precision: 'double2x2' (aka 'matrix<double, 2, 2>') to 'matrix<half, 2, 2>'}}
 }
 
 void fn3x2(float3x2) {} // expected-note{{candidate function}}
@@ -239,7 +239,7 @@ void matOrVec3(float4x4 F) {}
 export void Case8(float2x3 f23, float4x4 f44, float3x3 f33, float3x2 f32) {
   int2x2 i22 = f23;
   // expected-warning@-1{{implicit conversion truncates matrix: 'float2x3' (aka 'matrix<float, 2, 3>') to 'matrix<int, 2, 2>'}}
-  // expected-warning@-2{{implicit conversion turns floating-point number into integer: 'float2x3' (aka 'matrix<float, 2, 3>') to 'int2x2' (aka 'matrix<int, 2, 2>')}}
+  // expected-warning@-2{{implicit conversion turns floating-point number into integer: 'float2x3' (aka 'matrix<float, 2, 3>') to 'matrix<int, 2, 2>'}}
   //CHECK: VarDecl {{.*}} i22 'int2x2':'matrix<int, 2, 2>' cinit
   //CHECK-NEXT: ImplicitCastExpr {{.*}} 'matrix<int, 2, 2>' <HLSLMatrixTruncation>
   //CHECK-NEXT: ImplicitCastExpr {{.*}} 'matrix<int, 2, 3>' <FloatingToIntegral>
