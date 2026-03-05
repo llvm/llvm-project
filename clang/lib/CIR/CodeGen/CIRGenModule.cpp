@@ -1650,7 +1650,10 @@ mlir::Value CIRGenModule::emitMemberPointerConstant(const UnaryOperator *e) {
       return cir::ConstantOp::create(
           builder, loc, getCXXABI().buildVirtualMethodAttr(ty, methodDecl));
 
-    cir::FuncOp methodFuncOp = getAddrOfFunction(methodDecl);
+    const CIRGenFunctionInfo &fi =
+        getTypes().arrangeCXXMethodDeclaration(methodDecl);
+    cir::FuncType funcTy = getTypes().getFunctionType(fi);
+    cir::FuncOp methodFuncOp = getAddrOfFunction(methodDecl, funcTy);
     return cir::ConstantOp::create(builder, loc,
                                    builder.getMethodAttr(ty, methodFuncOp));
   }
