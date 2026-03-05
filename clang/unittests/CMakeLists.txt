@@ -58,6 +58,11 @@ define_property(GLOBAL PROPERTY CLANG_UNITTEST_LINK_LIBS ${doc_opts})
 # Adds unittests to the combined AllClangUnitTests binary. The unittest binary
 # is defined after adding all unittest subdirectories.
 function(add_clang_unittest test_name)
+  if (NOT CLANG_UNITTEST_SINGLE_BINARY)
+    add_distinct_clang_unittest(${ARGV})
+    return()
+  endif()
+
   cmake_parse_arguments(ARG
     ""
     ""
@@ -110,22 +115,24 @@ if (CLANG_ENABLE_CIR)
   add_subdirectory(CIR)
 endif()
 
-# If we're doing a single merged clang unit test binary, add that target after
-# all the previous subdirectories have been processed.
-get_property(SRCS GLOBAL PROPERTY CLANG_UNITTEST_SRCS)
-get_property(CLANG_LIBS GLOBAL PROPERTY CLANG_UNITTEST_CLANG_LIBS)
-get_property(LINK_LIBS GLOBAL PROPERTY CLANG_UNITTEST_LINK_LIBS)
-get_property(LLVM_COMPONENTS GLOBAL PROPERTY CLANG_UNITTEST_LLVM_COMPONENTS)
-add_distinct_clang_unittest(AllClangUnitTests
-  ${SRCS}
-  AllClangUnitTests.cpp
-  CLANG_LIBS
-  ${CLANG_LIBS}
-  LINK_LIBS
-  ${LINK_LIBS}
-  LLVM_COMPONENTS
-  ${LLVM_COMPONENTS}
-)
+if (CLANG_UNITTEST_SINGLE_BINARY)
+  # If we're doing a single merged clang unit test binary, add that target after
+  # all the previous subdirectories have been processed.
+  get_property(SRCS GLOBAL PROPERTY CLANG_UNITTEST_SRCS)
+  get_property(CLANG_LIBS GLOBAL PROPERTY CLANG_UNITTEST_CLANG_LIBS)
+  get_property(LINK_LIBS GLOBAL PROPERTY CLANG_UNITTEST_LINK_LIBS)
+  get_property(LLVM_COMPONENTS GLOBAL PROPERTY CLANG_UNITTEST_LLVM_COMPONENTS)
+  add_distinct_clang_unittest(AllClangUnitTests
+    ${SRCS}
+    AllClangUnitTests.cpp
+    CLANG_LIBS
+    ${CLANG_LIBS}
+    LINK_LIBS
+    ${LINK_LIBS}
+    LLVM_COMPONENTS
+    ${LLVM_COMPONENTS}
+  )
+endif()
 
 # The Tooling library has some internal headers. Make those work. If we like
 # the merged clang unit test binary, we can update the include paths and make
