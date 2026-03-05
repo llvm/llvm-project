@@ -1,8 +1,0 @@
-// RUN: cir-opt %s --verify-roundtrip | FileCheck %s
-
-cir.func @test() {
-  cir.unreachable
-}
-
-//      CHECK: cir.func @test
-// CHECK-NEXT:   cir.unreachable
