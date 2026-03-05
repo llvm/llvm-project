@@ -304,6 +304,7 @@ static FailureOr<LinalgOp> specializeLinalgContractions(RewriterBase &rewriter,
   unsigned nIdx = mIdx + 1;
   unsigned kIdx = mIdx + 2;
 
+  // TODO: add support for indexing_maps with broadcasts.
   auto makeMap = [&](IndexMatchResult match, unsigned rowIdx, unsigned colIdx) {
     SmallVector<unsigned> tensorDims;
     for (unsigned i = 0; i < numOfBatchDims; ++i)
