@@ -6193,8 +6193,8 @@ getScaledReductions(VPReductionPHIRecipe *RedPhiR, VPValue *ExitValue,
     CurrentValue = PrevValue;
   }
 
-  // The chains were collected by traversing the chain backwards from the exit
-  // value. Reverse them to they are in program order.
+  // The chains were collected by traversing backwards from the exit value.
+  // Reverse the chains so they are in program order.
   std::reverse(Chains.begin(), Chains.end());
   return true;
 }
