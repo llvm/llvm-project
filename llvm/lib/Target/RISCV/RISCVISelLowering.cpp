@@ -575,7 +575,9 @@ RISCVTargetLowering::RISCVTargetLowering(const TargetMachine &TM,
     setOperationAction(ISD::SSUBSAT, VTs, Legal);
     setOperationAction(ISD::SSHLSAT, VTs, Legal);
     setOperationAction({ISD::AVGFLOORS, ISD::AVGFLOORU}, VTs, Legal);
-    setOperationAction({ISD::ABDS, ISD::ABDU}, VTs, Legal);
+    for (MVT VT : VTs)
+      if (VT != MVT::v2i32)
+        setOperationAction({ISD::ABDS, ISD::ABDU}, VT, Legal);
     setOperationAction(ISD::SPLAT_VECTOR, VTs, Legal);
     setOperationAction(ISD::BUILD_VECTOR, VTs, Legal);
     setOperationAction(ISD::SCALAR_TO_VECTOR, VTs, Legal);
