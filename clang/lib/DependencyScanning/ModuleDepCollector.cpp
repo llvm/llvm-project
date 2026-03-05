@@ -8,7 +8,6 @@
 
 #include "clang/DependencyScanning/ModuleDepCollector.h"
 
-#include "clang/Basic/DiagnosticCAS.h"
 #include "clang/Basic/MakeSupport.h"
 #include "clang/DependencyScanning/DependencyScanningWorker.h"
 #include "clang/Frontend/CompileJobCacheKey.h"
@@ -875,14 +874,12 @@ ModuleDepCollectorPP::handleTopLevelModule(const Module *M) {
             }
           });
 
-  auto &Diags = MDC.ScanInstance.getDiagnostics();
-
-  if (auto E = MDC.Controller.finalizeModuleInvocation(CI, MD))
-    Diags.Report(diag::err_cas_depscan_failed) << std::move(E);
+  MDC.Controller.finalizeModuleInvocation(MDC.ScanInstance, CI, MD);
 
   // Compute the cache key, if needed. Requires dependencies.
   if (MDC.ScanInstance.getFrontendOpts().CacheCompileJob) {
     auto &CAS = MDC.ScanInstance.getOrCreateObjectStore();
+    auto &Diags = MDC.ScanInstance.getDiagnostics();
     if (auto Key = createCompileJobCacheKey(CAS, Diags, CI))
       MD.ModuleCacheKey = Key->toString();
   }
@@ -904,6 +901,7 @@ ModuleDepCollectorPP::handleTopLevelModule(const Module *M) {
   // Verify the key has not changed with final arguments.
   if (MD.ModuleCacheKey) {
     auto &CAS = MDC.ScanInstance.getOrCreateObjectStore();
+    auto &Diags = MDC.ScanInstance.getDiagnostics();
     auto Key = createCompileJobCacheKey(CAS, Diags, CI);
     assert(Key);
     checkCompileCacheKeyMatch(CAS, *MD.ModuleCacheKey, *Key);

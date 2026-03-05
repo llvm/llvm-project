@@ -8,6 +8,7 @@
 
 #include "clang/APINotes/APINotesManager.h"
 #include "clang/APINotes/APINotesReader.h"
+#include "clang/Basic/DiagnosticCAS.h"
 #include "clang/CAS/IncludeTree.h"
 #include "clang/DependencyScanning/CachingActions.h"
 #include "clang/DependencyScanning/ScanAndUpdateArgs.h"
@@ -37,17 +38,18 @@ private:
   std::unique_ptr<DependencyActionController> clone() const override;
 
   void initializeScanInvocation(CompilerInvocation &ScanInvocation) override;
-  Error initialize(CompilerInstance &ScanInstance,
-                   CompilerInvocation &NewInvocation) override;
-  Error finalize(CompilerInstance &ScanInstance,
-                 CompilerInvocation &NewInvocation) override;
+  bool initialize(CompilerInstance &ScanInstance,
+                  CompilerInvocation &NewInvocation) override;
+  bool finalize(CompilerInstance &ScanInstance,
+                CompilerInvocation &NewInvocation) override;
   std::optional<std::string>
   getCacheKey(const CompilerInvocation &NewInvocation) override;
 
-  Error initializeModuleBuild(CompilerInstance &ModuleScanInstance) override;
-  Error finalizeModuleBuild(CompilerInstance &ModuleScanInstance) override;
-  Error finalizeModuleInvocation(CowCompilerInvocation &CI,
-                                 const ModuleDeps &MD) override;
+  bool initializeModuleBuild(CompilerInstance &ModuleScanInstance) override;
+  bool finalizeModuleBuild(CompilerInstance &ModuleScanInstance) override;
+  bool finalizeModuleInvocation(CompilerInstance &ScanInstance,
+                                CowCompilerInvocation &CI,
+                                const ModuleDeps &MD) override;
 
 private:
   IncludeTreeBuilder &current() {
@@ -315,7 +317,7 @@ void IncludeTreeActionController::initializeScanInvocation(
   ScanInvocation.getCASOpts() = CASOpts;
 }
 
-Error IncludeTreeActionController::initialize(
+bool IncludeTreeActionController::initialize(
     CompilerInstance &ScanInstance, CompilerInvocation &NewInvocation) {
   DepscanPrefixMapping::configurePrefixMapper(NewInvocation, PrefixMapper);
 
@@ -352,11 +354,11 @@ Error IncludeTreeActionController::initialize(
       });
   ScanInstance.addDependencyCollector(std::move(DC));
 
-  return Error::success();
+  return true;
 }
 
-Error IncludeTreeActionController::finalize(CompilerInstance &ScanInstance,
-                                            CompilerInvocation &NewInvocation) {
+bool IncludeTreeActionController::finalize(CompilerInstance &ScanInstance,
+                                           CompilerInvocation &NewInvocation) {
   auto GetInputCacheKey = [&]() -> std::optional<StringRef> {
     if (NewInvocation.getFrontendOpts().Inputs.size() != 1)
       return {};
@@ -381,8 +383,11 @@ Error IncludeTreeActionController::finalize(CompilerInstance &ScanInstance,
     auto Builder = BuilderStack.pop_back_val();
     Error E = Builder->finishIncludeTree(ScanInstance, NewInvocation)
                   .moveInto(IncludeTreeResult);
-    if (E)
-      return E;
+    if (E) {
+      ScanInstance.getDiagnostics().Report(diag::err_cas_depscan_failed)
+          << std::move(E);
+      return false;
+    }
     InputID = IncludeTreeResult->getID().toString();
     InputKind = CachingInputKind::IncludeTree;
   }
@@ -400,7 +405,7 @@ Error IncludeTreeActionController::finalize(CompilerInstance &ScanInstance,
   if (Key)
     OutputToCacheKey[NewInvocation.getFrontendOpts().OutputFile] =
         Key->toString();
-  return Error::success();
+  return true;
 }
 
 std::optional<std::string> IncludeTreeActionController::getCacheKey(
@@ -412,7 +417,7 @@ std::optional<std::string> IncludeTreeActionController::getCacheKey(
   return It->second;
 }
 
-Error IncludeTreeActionController::initializeModuleBuild(
+bool IncludeTreeActionController::initializeModuleBuild(
     CompilerInstance &ModuleScanInstance) {
   BuilderStack.push_back(
       std::make_unique<IncludeTreeBuilder>(DB, PrefixMapper));
@@ -429,10 +434,10 @@ Error IncludeTreeActionController::initializeModuleBuild(
   ModuleScanInstance.addDependencyCollector(std::move(DC));
   ModuleScanInstance.setPrefixMapper(PrefixMapper);
 
-  return Error::success();
+  return true;
 }
 
-Error IncludeTreeActionController::finalizeModuleBuild(
+bool IncludeTreeActionController::finalizeModuleBuild(
     CompilerInstance &ModuleScanInstance) {
   // FIXME: the scan invocation is incorrect here; we need the `NewInvocation`
   // from `finalizeModuleInvocation` to finish the tree.
@@ -446,25 +451,31 @@ Error IncludeTreeActionController::finalizeModuleBuild(
   // inconsistent since there is no guarantee that exitedInclude or
   // finalizeModuleBuild have been called for all imports.
   if (ModuleScanInstance.getDiagnostics().hasUnrecoverableErrorOccurred())
-    return Error::success(); // Already reported.
+    return true; // Already reported.
 
   auto Tree = Builder->finishIncludeTree(ModuleScanInstance,
                                          ModuleScanInstance.getInvocation());
-  if (!Tree)
-    return Tree.takeError();
+  if (Error E = Tree.takeError()) {
+    ModuleScanInstance.getDiagnostics().Report(diag::err_cas_depscan_failed)
+        << std::move(E);
+    return false;
+  }
 
   ModuleScanInstance.getPreprocessor().setCASIncludeTreeID(
       Tree->getID().toString());
 
-  return Error::success();
+  return true;
 }
 
-Error IncludeTreeActionController::finalizeModuleInvocation(
-    CowCompilerInvocation &CowCI, const ModuleDeps &MD) {
-  if (!MD.IncludeTreeID)
-    return llvm::createStringError(llvm::inconvertibleErrorCode(),
-                                   "missing include-tree for module '%s'",
-                                   MD.ID.ModuleName.c_str());
+bool IncludeTreeActionController::finalizeModuleInvocation(
+    CompilerInstance &ScanInstance, CowCompilerInvocation &CowCI,
+    const ModuleDeps &MD) {
+  if (!MD.IncludeTreeID) {
+    ScanInstance.getDiagnostics().Report(diag::err_cas_depscan_failed)
+        << llvm::format("missing include-tree for module '%s'",
+                        MD.ID.ModuleName.c_str());
+    return false;
+  }
 
   // TODO: Avoid this copy.
   CompilerInvocation CI(CowCI);
@@ -476,7 +487,7 @@ Error IncludeTreeActionController::finalizeModuleInvocation(
   DepscanPrefixMapping::remapInvocationPaths(CI, PrefixMapper);
 
   CowCI = CI;
-  return Error::success();
+  return true;
 }
 
 void IncludeTreeBuilder::enteredInclude(Preprocessor &PP, FileID FID) {

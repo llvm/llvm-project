@@ -8,7 +8,6 @@
 
 #include "clang/Tooling/DependencyScanningTool.h"
 #include "clang/Basic/Diagnostic.h"
-#include "clang/Basic/DiagnosticCAS.h"
 #include "clang/Basic/DiagnosticFrontend.h"
 #include "clang/CAS/IncludeTree.h"
 #include "clang/DependencyScanning/CachingActions.h"
@@ -638,11 +637,8 @@ bool CompilerInstanceWithContext::computeDependencies(
       *OriginalInvocation, Controller, PrebuiltModuleASTMap, StableDirs, false);
 
   CompilerInvocation ModuleInvocation(*OriginalInvocation);
-  if (Error E = Controller.initialize(CI, ModuleInvocation)) {
-    CI.getDiagnostics().Report(diag::err_cas_depscan_failed) << std::move(E);
-    llvm::consumeError(std::move(E));
+  if (!Controller.initialize(CI, ModuleInvocation))
     return false;
-  }
 
   if (!SrcLocOffset) {
     // When SrcLocOffset is zero, we are at the beginning of the fake source
@@ -704,11 +700,8 @@ bool CompilerInstanceWithContext::computeDependencies(
 
   MDC->applyDiscoveredDependencies(ModuleInvocation);
 
-  if (Error E = Controller.finalize(CI, ModuleInvocation)) {
-    CI.getDiagnostics().Report(diag::err_cas_depscan_failed) << std::move(E);
-    llvm::consumeError(std::move(E));
+  if (!Controller.finalize(CI, ModuleInvocation))
     return false;
-  }
 
   std::string ID = ModuleInvocation.getFrontendOpts().CASIncludeTreeID;
   if (!ID.empty())

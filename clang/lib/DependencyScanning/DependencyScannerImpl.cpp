@@ -7,7 +7,6 @@
 //===----------------------------------------------------------------------===//
 
 #include "clang/DependencyScanning/DependencyScannerImpl.h"
-#include "clang/Basic/DiagnosticCAS.h"
 #include "clang/Basic/DiagnosticFrontend.h"
 #include "clang/Basic/DiagnosticSerialization.h"
 #include "clang/DependencyScanning/DependencyScanningFilesystem.h"
@@ -388,8 +387,7 @@ public:
       : CI(CI), Controller(Controller) {}
 
   void HandleTranslationUnit(ASTContext &Ctx) override {
-    if (auto E = Controller.finalizeModuleBuild(CI))
-      Ctx.getDiagnostics().Report(diag::err_cas_depscan_failed) << std::move(E);
+    Controller.finalizeModuleBuild(CI);
   }
 
 private:
@@ -407,10 +405,8 @@ public:
 
 private:
   bool BeginInvocation(CompilerInstance &CI) override {
-    if (auto E = Controller.initializeModuleBuild(CI)) {
-      CI.getDiagnostics().Report(diag::err_cas_depscan_failed) << std::move(E);
+    if (!Controller.initializeModuleBuild(CI))
       return false;
-    }
     return WrapperFrontendAction::BeginInvocation(CI);
   }
 
@@ -889,11 +885,6 @@ bool DependencyScanningAction::runInvocation(
 
   if (Scanned) {
     CompilerInstance &ScanInstance = *ScanInstanceStorage;
-    auto reportError = [&ScanInstance](Error &&E) -> bool {
-      ScanInstance.getDiagnostics().Report(diag::err_cas_depscan_failed)
-          << std::move(E);
-      return false;
-    };
 
     // Scanning runs once for the first -cc1 invocation in a chain of driver
     // jobs. For any dependent jobs, reuse the scanning result and just
@@ -902,8 +893,8 @@ bool DependencyScanningAction::runInvocation(
     if (MDC)
       MDC->applyDiscoveredDependencies(*OriginalInvocation);
 
-    if (Error E = Controller.finalize(ScanInstance, *OriginalInvocation))
-      return reportError(std::move(E));
+    if (!Controller.finalize(ScanInstance, *OriginalInvocation))
+      return false;
 
     std::optional<std::string> CacheKey =
         Controller.getCacheKey(*OriginalInvocation);
@@ -980,14 +971,8 @@ bool DependencyScanningAction::runInvocation(
   if (ScanInstance.getFrontendOpts().ProgramAction == frontend::GeneratePCH)
     ScanInstance.getLangOpts().CompilingPCH = true;
 
-  auto reportError = [&ScanInstance](Error &&E) -> bool {
-    ScanInstance.getDiagnostics().Report(diag::err_cas_depscan_failed)
-        << std::move(E);
+  if (!Controller.initialize(ScanInstance, *OriginalInvocation))
     return false;
-  };
-
-  if (Error E = Controller.initialize(ScanInstance, *OriginalInvocation))
-    return reportError(std::move(E));
 
   if (ScanInstance.getDiagnostics().hasErrorOccurred())
     return false;
@@ -998,8 +983,8 @@ bool DependencyScanningAction::runInvocation(
     if (MDC)
       MDC->applyDiscoveredDependencies(*OriginalInvocation);
 
-    if (Error E = Controller.finalize(ScanInstance, *OriginalInvocation))
-      return reportError(std::move(E));
+    if (!Controller.finalize(ScanInstance, *OriginalInvocation))
+      return false;
 
     // Forward any CAS results to consumer.
     std::string ID = OriginalInvocation->getFrontendOpts().CASIncludeTreeID;
