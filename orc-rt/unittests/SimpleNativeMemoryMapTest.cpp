@@ -289,7 +289,7 @@ TEST(SimpleNativeMemoryMap, ReserveInitializeShutdown) {
   EXPECT_EQ(SentinelValue, 0U);
 
   std::future<Error> ShutdownResult;
-  SNMM->shutdown(waitFor(ShutdownResult));
+  SNMM->onShutdown(waitFor(ShutdownResult));
   cantFail(ShutdownResult.get());
 
   EXPECT_EQ(SentinelValue, 42);
@@ -326,13 +326,13 @@ TEST(SimpleNativeMemoryMap, ReserveInitializeDetachShutdown) {
   EXPECT_EQ(SentinelValue, 0U);
 
   std::future<Error> DetachResult;
-  SNMM->detach(waitFor(DetachResult));
+  SNMM->onDetach(waitFor(DetachResult));
   cantFail(DetachResult.get());
 
   EXPECT_EQ(SentinelValue, 0);
 
   std::future<Error> ShutdownResult;
-  SNMM->shutdown(waitFor(ShutdownResult));
+  SNMM->onShutdown(waitFor(ShutdownResult));
   cantFail(ShutdownResult.get());
 
   EXPECT_EQ(SentinelValue, 42);

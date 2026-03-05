@@ -29,7 +29,7 @@ struct foo test0(int expr) {
 // CIR:   %[[EXPR:.*]] = cir.load{{.*}} %[[EXPR_ADDR]]
 // CIR:   %[[IS_CONSTANT:.*]] = cir.is_constant %[[EXPR]] : !s32i -> !cir.bool
 
-// LLVM: define{{.*}} %struct.foo @test0(i32 %[[ARG0:.*]])
+// LLVM: define{{.*}} %struct.foo @test0(i32 {{.*}} %[[ARG0:.*]])
 // LLVM:   %[[EXPR_ADDR:.*]] = alloca i32
 // LLVM:   store i32 %[[ARG0]], ptr %[[EXPR_ADDR]]
 // LLVM:   %[[EXPR:.*]] = load i32, ptr %[[EXPR_ADDR]]

@@ -2597,6 +2597,10 @@ let Predicates = [HasBF16, HasSVE_or_SME] in {
                 (nxv4f32 (AArch64fcvte_mt (SVEAllActive), nxv4bf16:$Zm, (undef))))),
             (BFMLALB_ZZZ nxv4f32:$acc, ZPR:$Zn, ZPR:$Zm)>;
 
+  def : Pat<(nxv4f32 (partial_reduce_fmla nxv4f32:$acc, nxv8bf16:$LHS, nxv8bf16:$RHS)),
+            (BFMLALT_ZZZ (BFMLALB_ZZZ nxv4f32:$acc, ZPR:$LHS, ZPR:$RHS),
+                ZPR:$LHS, ZPR:$RHS)>;
+
   defm BFCVT_ZPmZ   : sve_bfloat_convert<"bfcvt", int_aarch64_sve_fcvt_bf16f32_v2, AArch64fcvtr_mt>;
   defm BFCVTNT_ZPmZ : sve_bfloat_convert_top<"bfcvtnt", int_aarch64_sve_fcvtnt_bf16f32_v2>;
 } // End HasBF16, HasSVE_or_SME
@@ -3615,7 +3619,7 @@ let Predicates = [HasSVE_or_SME] in {
   def : Pat<(v1f64 (scalar_to_vector
                      (f64 (vector_extract nxv2f64:$vec, VectorIndexD:$index)))),
             (DUPi64 (EXTRACT_SUBREG nxv2f64:$vec, zsub), VectorIndexD:$index)>;
-  def : Pat<(v1i64 (scalar_to_vector
+  def : Pat<(v1i64 (scalar_to_vector_v1f64
                      (i64 (vector_extract nxv2i64:$vec, VectorIndexD:$index)))),
             (DUPi64 (EXTRACT_SUBREG nxv2i64:$vec, zsub), VectorIndexD:$index)>;
   } // End HasNEON
