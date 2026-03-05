@@ -45,8 +45,8 @@
 #define CLANG_TEMPLATE_ABI
 #define CLANG_EXPORT_TEMPLATE __declspec(dllexport)
 #else
-#define CLANG_ABI __declspec(dllimport)
-#define CLANG_TEMPLATE_ABI __declspec(dllimport)
+#define CLANG_ABI
+#define CLANG_TEMPLATE_ABI
 #define CLANG_EXPORT_TEMPLATE
 #endif
 #elif defined(__ELF__) || defined(__MINGW32__) || defined(_AIX) ||             \
