@@ -170,6 +170,78 @@ func.func @pow_0_75_fast(%arg0: f32, %arg1 : vector<4xf32>) -> (f32, vector<4xf3
   return %0, %1 : f32, vector<4xf32>
 }
 
+// CHECK-LABEL: @pow_of_two
+func.func @pow_of_two(%arg0: f32, %arg1 : vector<4xf32>) -> (f32, vector<4xf32>) {
+  // CHECK: %[[SCALAR:.*]] = math.exp2 %arg0
+  // CHECK: %[[VECTOR:.*]] = math.exp2 %arg1
+  // CHECK: return %[[SCALAR]], %[[VECTOR]]
+  %c = arith.constant 2.0 : f32
+  %v = arith.constant dense <2.0> : vector<4xf32>
+  %0 = math.powf %c, %arg0 : f32
+  %1 = math.powf %v, %arg1 : vector<4xf32>
+  return %0, %1 : f32, vector<4xf32>
+}
+
+// CHECK-LABEL: @pow_of_two_fast
+func.func @pow_of_two_fast(%arg0: f32, %arg1 : vector<4xf32>) -> (f32, vector<4xf32>) {
+  // CHECK: %[[SCALAR:.*]] = math.exp2 %arg0 fastmath<fast>
+  // CHECK: %[[VECTOR:.*]] = math.exp2 %arg1 fastmath<fast>
+  // CHECK: return %[[SCALAR]], %[[VECTOR]]
+  %c = arith.constant 2.0 : f32
+  %v = arith.constant dense <2.0> : vector<4xf32>
+  %0 = math.powf %c, %arg0 fastmath<fast> : f32
+  %1 = math.powf %v, %arg1 fastmath<fast> : vector<4xf32>
+  return %0, %1 : f32, vector<4xf32>
+}
+
+// CHECK-LABEL: @pow_of_four
+func.func @pow_of_four(%arg0: f32, %arg1 : vector<4xf32>) -> (f32, vector<4xf32>) {
+  // CHECK-DAG: %[[CST_V:.*]] = arith.constant dense<2.000000e+00> : vector<4xf32>
+  // CHECK-DAG: %[[CST_S:.*]] = arith.constant 2.000000e+00 : f32
+  // CHECK: %[[MUL_S:.*]] = arith.mulf %arg0, %[[CST_S]]
+  // CHECK: %[[SCALAR:.*]] = math.exp2 %[[MUL_S]]
+  // CHECK: %[[MUL_V:.*]] = arith.mulf %arg1, %[[CST_V]]
+  // CHECK: %[[VECTOR:.*]] = math.exp2 %[[MUL_V]]
+  // CHECK: return %[[SCALAR]], %[[VECTOR]]
+  %c = arith.constant 4.0 : f32
+  %v = arith.constant dense <4.0> : vector<4xf32>
+  %0 = math.powf %c, %arg0 : f32
+  %1 = math.powf %v, %arg1 : vector<4xf32>
+  return %0, %1 : f32, vector<4xf32>
+}
+
+// CHECK-LABEL: @pow_of_half
+func.func @pow_of_half(%arg0: f32, %arg1 : vector<4xf32>) -> (f32, vector<4xf32>) {
+  // CHECK-DAG: %[[CST_V:.*]] = arith.constant dense<-1.000000e+00> : vector<4xf32>
+  // CHECK-DAG: %[[CST_S:.*]] = arith.constant -1.000000e+00 : f32
+  // CHECK: %[[MUL_S:.*]] = arith.mulf %arg0, %[[CST_S]]
+  // CHECK: %[[SCALAR:.*]] = math.exp2 %[[MUL_S]]
+  // CHECK: %[[MUL_V:.*]] = arith.mulf %arg1, %[[CST_V]]
+  // CHECK: %[[VECTOR:.*]] = math.exp2 %[[MUL_V]]
+  // CHECK: return %[[SCALAR]], %[[VECTOR]]
+  %c = arith.constant 0.5 : f32
+  %v = arith.constant dense <0.5> : vector<4xf32>
+  %0 = math.powf %c, %arg0 : f32
+  %1 = math.powf %v, %arg1 : vector<4xf32>
+  return %0, %1 : f32, vector<4xf32>
+}
+
+// CHECK-LABEL: @pow_of_quarter
+func.func @pow_of_quarter(%arg0: f32, %arg1 : vector<4xf32>) -> (f32, vector<4xf32>) {
+  // CHECK-DAG: %[[CST_V:.*]] = arith.constant dense<-2.000000e+00> : vector<4xf32>
+  // CHECK-DAG: %[[CST_S:.*]] = arith.constant -2.000000e+00 : f32
+  // CHECK: %[[MUL_S:.*]] = arith.mulf %arg0, %[[CST_S]]
+  // CHECK: %[[SCALAR:.*]] = math.exp2 %[[MUL_S]]
+  // CHECK: %[[MUL_V:.*]] = arith.mulf %arg1, %[[CST_V]]
+  // CHECK: %[[VECTOR:.*]] = math.exp2 %[[MUL_V]]
+  // CHECK: return %[[SCALAR]], %[[VECTOR]]
+  %c = arith.constant 0.25 : f32
+  %v = arith.constant dense <0.25> : vector<4xf32>
+  %0 = math.powf %c, %arg0 : f32
+  %1 = math.powf %v, %arg1 : vector<4xf32>
+  return %0, %1 : f32, vector<4xf32>
+}
+
 // CHECK-LABEL: @ipowi_zero_exp(
 // CHECK-SAME: %[[ARG0:.+]]: i32
 // CHECK-SAME: %[[ARG1:.+]]: vector<4xi32>
