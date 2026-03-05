@@ -25,6 +25,7 @@
 #define LLVM_TRANSFORMS_VECTORIZE_VPLAN_H
 
 #include "VPlanValue.h"
+#include "llvm/ADT/Bitfields.h"
 #include "llvm/ADT/MapVector.h"
 #include "llvm/ADT/SmallPtrSet.h"
 #include "llvm/ADT/SmallVector.h"
@@ -726,7 +727,7 @@ private:
   /// Holds both the predicate and fast-math flags for floating-point
   /// comparisons.
   struct FCmpFlagsTy {
-    CmpInst::Predicate Pred;
+    uint8_t CmpPredStorage;
     FastMathFlagsTy FMFs;
   };
   /// Holds reduction-specific flags: RecurKind, IsOrdered, IsInLoop, and FMFs.
@@ -748,30 +749,34 @@ private:
   OperationType OpType;
 
   union {
-    CmpInst::Predicate CmpPredicate;
+    uint8_t CmpPredStorage;
     WrapFlagsTy WrapFlags;
     TruncFlagsTy TruncFlags;
     DisjointFlagsTy DisjointFlags;
     ExactFlagsTy ExactFlags;
-    GEPNoWrapFlags GEPFlags;
+    uint8_t GEPFlagsStorage;
     NonNegFlagsTy NonNegFlags;
     FastMathFlagsTy FMFs;
     FCmpFlagsTy FCmpFlags;
     ReductionFlagsTy ReductionFlags;
-    unsigned AllFlags;
+    uint8_t AllFlags[2];
   };
 
 public:
-  VPIRFlags() : OpType(OperationType::Other), AllFlags(0) {}
+  VPIRFlags() : OpType(OperationType::Other), AllFlags() {}
 
-  VPIRFlags(Instruction &I) {
+  VPIRFlags(Instruction &I) : VPIRFlags() {
     if (auto *FCmp = dyn_cast<FCmpInst>(&I)) {
       OpType = OperationType::FCmp;
-      FCmpFlags.Pred = FCmp->getPredicate();
+      Bitfield::set<CmpInst::PredicateField>(FCmpFlags.CmpPredStorage,
+                                             FCmp->getPredicate());
+      assert(getPredicate() == FCmp->getPredicate() && "predicate truncated");
       FCmpFlags.FMFs = FCmp->getFastMathFlags();
     } else if (auto *Op = dyn_cast<CmpInst>(&I)) {
       OpType = OperationType::Cmp;
-      CmpPredicate = Op->getPredicate();
+      Bitfield::set<CmpInst::PredicateField>(CmpPredStorage,
+                                             Op->getPredicate());
+      assert(getPredicate() == Op->getPredicate() && "predicate truncated");
     } else if (auto *Op = dyn_cast<PossiblyDisjointInst>(&I)) {
       OpType = OperationType::DisjointOp;
       DisjointFlags.IsDisjoint = Op->isDisjoint();
@@ -786,55 +791,73 @@ public:
       ExactFlags.IsExact = Op->isExact();
     } else if (auto *GEP = dyn_cast<GetElementPtrInst>(&I)) {
       OpType = OperationType::GEPOp;
-      GEPFlags = GEP->getNoWrapFlags();
+      GEPFlagsStorage = GEP->getNoWrapFlags().getRaw();
+      assert(getGEPNoWrapFlags() == GEP->getNoWrapFlags() &&
+             "wrap flags truncated");
     } else if (auto *PNNI = dyn_cast<PossiblyNonNegInst>(&I)) {
       OpType = OperationType::NonNegOp;
       NonNegFlags.NonNeg = PNNI->hasNonNeg();
     } else if (auto *Op = dyn_cast<FPMathOperator>(&I)) {
       OpType = OperationType::FPMathOp;
       FMFs = Op->getFastMathFlags();
-    } else {
-      OpType = OperationType::Other;
-      AllFlags = 0;
     }
   }
 
-  VPIRFlags(CmpInst::Predicate Pred)
-      : OpType(OperationType::Cmp), CmpPredicate(Pred) {}
+  VPIRFlags(CmpInst::Predicate Pred) : OpType(OperationType::Cmp), AllFlags() {
+    Bitfield::set<CmpInst::PredicateField>(CmpPredStorage, Pred);
+    assert(getPredicate() == Pred && "predicate truncated");
+  }
 
   VPIRFlags(CmpInst::Predicate Pred, FastMathFlags FMFs)
-      : OpType(OperationType::FCmp) {
-    FCmpFlags.Pred = Pred;
+      : OpType(OperationType::FCmp), AllFlags() {
+    Bitfield::set<CmpInst::PredicateField>(FCmpFlags.CmpPredStorage, Pred);
+    assert(getPredicate() == Pred && "predicate truncated");
     FCmpFlags.FMFs = FMFs;
   }
 
   VPIRFlags(WrapFlagsTy WrapFlags)
-      : OpType(OperationType::OverflowingBinOp), WrapFlags(WrapFlags) {}
+      : OpType(OperationType::OverflowingBinOp), AllFlags() {
+    this->WrapFlags = WrapFlags;
+  }
 
   VPIRFlags(TruncFlagsTy TruncFlags)
-      : OpType(OperationType::Trunc), TruncFlags(TruncFlags) {}
+      : OpType(OperationType::Trunc), AllFlags() {
+    this->TruncFlags = TruncFlags;
+  }
 
-  VPIRFlags(FastMathFlags FMFs) : OpType(OperationType::FPMathOp), FMFs(FMFs) {}
+  VPIRFlags(FastMathFlags FMFs) : OpType(OperationType::FPMathOp), AllFlags() {
+    this->FMFs = FMFs;
+  }
 
   VPIRFlags(DisjointFlagsTy DisjointFlags)
-      : OpType(OperationType::DisjointOp), DisjointFlags(DisjointFlags) {}
+      : OpType(OperationType::DisjointOp), AllFlags() {
+    this->DisjointFlags = DisjointFlags;
+  }
 
   VPIRFlags(NonNegFlagsTy NonNegFlags)
-      : OpType(OperationType::NonNegOp), NonNegFlags(NonNegFlags) {}
+      : OpType(OperationType::NonNegOp), AllFlags() {
+    this->NonNegFlags = NonNegFlags;
+  }
 
   VPIRFlags(ExactFlagsTy ExactFlags)
-      : OpType(OperationType::PossiblyExactOp), ExactFlags(ExactFlags) {}
+      : OpType(OperationType::PossiblyExactOp), AllFlags() {
+    this->ExactFlags = ExactFlags;
+  }
 
   VPIRFlags(GEPNoWrapFlags GEPFlags)
-      : OpType(OperationType::GEPOp), GEPFlags(GEPFlags) {}
+      : OpType(OperationType::GEPOp), AllFlags() {
+    GEPFlagsStorage = GEPFlags.getRaw();
+  }
 
   VPIRFlags(RecurKind Kind, bool IsOrdered, bool IsInLoop, FastMathFlags FMFs)
-      : OpType(OperationType::ReductionOp),
-        ReductionFlags(Kind, IsOrdered, IsInLoop, FMFs) {}
+      : OpType(OperationType::ReductionOp), AllFlags() {
+    ReductionFlags = ReductionFlagsTy(Kind, IsOrdered, IsInLoop, FMFs);
+  }
 
   void transferFlags(VPIRFlags &Other) {
     OpType = Other.OpType;
-    AllFlags = Other.AllFlags;
+    AllFlags[0] = Other.AllFlags[0];
+    AllFlags[1] = Other.AllFlags[1];
   }
 
   /// Only keep flags also present in \p Other. \p Other must have the same
@@ -861,7 +884,7 @@ public:
       ExactFlags.IsExact = false;
       break;
     case OperationType::GEPOp:
-      GEPFlags = GEPNoWrapFlags::none();
+      GEPFlagsStorage = 0;
       break;
     case OperationType::FPMathOp:
     case OperationType::FCmp:
@@ -896,7 +919,8 @@ public:
       I.setIsExact(ExactFlags.IsExact);
       break;
     case OperationType::GEPOp:
-      cast<GetElementPtrInst>(&I)->setNoWrapFlags(GEPFlags);
+      cast<GetElementPtrInst>(&I)->setNoWrapFlags(
+          GEPNoWrapFlags::fromRaw(GEPFlagsStorage));
       break;
     case OperationType::FPMathOp:
     case OperationType::FCmp: {
@@ -924,19 +948,24 @@ public:
   CmpInst::Predicate getPredicate() const {
     assert((OpType == OperationType::Cmp || OpType == OperationType::FCmp) &&
            "recipe doesn't have a compare predicate");
-    return OpType == OperationType::FCmp ? FCmpFlags.Pred : CmpPredicate;
+    uint8_t Storage = OpType == OperationType::FCmp ? FCmpFlags.CmpPredStorage
+                                                    : CmpPredStorage;
+    return Bitfield::get<CmpInst::PredicateField>(Storage);
   }
 
   void setPredicate(CmpInst::Predicate Pred) {
     assert((OpType == OperationType::Cmp || OpType == OperationType::FCmp) &&
            "recipe doesn't have a compare predicate");
     if (OpType == OperationType::FCmp)
-      FCmpFlags.Pred = Pred;
+      Bitfield::set<CmpInst::PredicateField>(FCmpFlags.CmpPredStorage, Pred);
     else
-      CmpPredicate = Pred;
+      Bitfield::set<CmpInst::PredicateField>(CmpPredStorage, Pred);
+    assert(getPredicate() == Pred && "predicate truncated");
   }
 
-  GEPNoWrapFlags getGEPNoWrapFlags() const { return GEPFlags; }
+  GEPNoWrapFlags getGEPNoWrapFlags() const {
+    return GEPNoWrapFlags::fromRaw(GEPFlagsStorage);
+  }
 
   /// Returns true if the recipe has a comparison predicate.
   bool hasPredicate() const {
@@ -1041,6 +1070,8 @@ public:
   void printFlags(raw_ostream &O) const;
 #endif
 };
+
+static_assert(sizeof(VPIRFlags) <= 3, "VPIRFlags should not grow");
 
 /// A pure-virtual common base class for recipes defining a single VPValue and
 /// using IR flags.
@@ -4020,9 +4051,12 @@ public:
   ~VPScalarIVStepsRecipe() override = default;
 
   VPScalarIVStepsRecipe *clone() override {
-    return new VPScalarIVStepsRecipe(getOperand(0), getOperand(1),
-                                     getOperand(2), InductionOpcode,
-                                     getFastMathFlags(), getDebugLoc());
+    auto *NewR = new VPScalarIVStepsRecipe(getOperand(0), getOperand(1),
+                                           getOperand(2), InductionOpcode,
+                                           getFastMathFlags(), getDebugLoc());
+    if (VPValue *StartIndex = getStartIndex())
+      NewR->setStartIndex(StartIndex);
+    return NewR;
   }
 
   VP_CLASSOF_IMPL(VPRecipeBase::VPScalarIVStepsSC)
@@ -4049,12 +4083,22 @@ public:
     return getNumOperands() == 4 ? getOperand(3) : nullptr;
   }
 
+  /// Set or add the StartIndex operand.
+  void setStartIndex(VPValue *StartIndex) {
+    if (getNumOperands() == 4)
+      setOperand(3, StartIndex);
+    else
+      addOperand(StartIndex);
+  }
+
   /// Returns true if the recipe only uses the first lane of operand \p Op.
   bool usesFirstLaneOnly(const VPValue *Op) const override {
     assert(is_contained(operands(), Op) &&
            "Op must be an operand of the recipe");
     return true;
   }
+
+  Instruction::BinaryOps getInductionOpcode() const { return InductionOpcode; }
 
 protected:
 #if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
