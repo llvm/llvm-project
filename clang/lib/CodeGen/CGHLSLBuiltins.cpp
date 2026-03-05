@@ -1012,85 +1012,29 @@ Value *CodeGenFunction::EmitHLSLBuiltinExpr(unsigned BuiltinID,
     Value *Op1 = EmitScalarExpr(E->getArg(1));
     QualType QTy0 = E->getArg(0)->getType();
     QualType QTy1 = E->getArg(1)->getType();
-    llvm::Type *T0 = Op0->getType();
 
-    bool IsScalar0 = QTy0->isScalarType();
     bool IsVec0 = QTy0->isVectorType();
     bool IsMat0 = QTy0->isConstantMatrixType();
-    bool IsScalar1 = QTy1->isScalarType();
-    bool IsVec1 = QTy1->isVectorType();
     bool IsMat1 = QTy1->isConstantMatrixType();
-    bool IsFP =
-        QTy0->hasFloatingRepresentation() || QTy1->hasFloatingRepresentation();
 
-    // Cases 1-4, 7: scalar * scalar/vector/matrix or vector/matrix * scalar
-    if (IsScalar0 || IsScalar1) {
-      // Splat scalar to match the other operand's type
-      Value *Scalar = IsScalar0 ? Op0 : Op1;
-      Value *Other = IsScalar0 ? Op1 : Op0;
-      llvm::Type *OtherTy = Other->getType();
-
-      // Note: Matrices are flat vectors in the IR, so the following
-      // if-condition is also true when Other is a matrix, not just a vector.
-      if (OtherTy->isVectorTy()) {
-        unsigned NumElts = cast<FixedVectorType>(OtherTy)->getNumElements();
-        Scalar = Builder.CreateVectorSplat(NumElts, Scalar);
-      }
-
-      if (IsFP)
-        return Builder.CreateFMul(Scalar, Other, "hlsl.mul");
-      return Builder.CreateMul(Scalar, Other, "hlsl.mul");
-    }
-
-    // Case 5: vector * vector -> scalar (dot product)
-    if (IsVec0 && IsVec1) {
-      auto *VecTy0 = E->getArg(0)->getType()->castAs<VectorType>();
-      QualType EltQTy = VecTy0->getElementType();
-
-      // DXIL doesn't have a dot product intrinsic for double vectors,
-      // so expand to scalar multiply-add for DXIL.
-      if (CGM.getTarget().getTriple().isDXIL() &&
-          EltQTy->isSpecificBuiltinType(BuiltinType::Double)) {
-        unsigned NumElts = cast<FixedVectorType>(T0)->getNumElements();
-        Value *Sum = nullptr;
-        for (unsigned I = 0; I < NumElts; ++I) {
-          Value *L = Builder.CreateExtractElement(Op0, I);
-          Value *R = Builder.CreateExtractElement(Op1, I);
-          if (Sum)
-            Sum = Builder.CreateIntrinsic(Sum->getType(), Intrinsic::fmuladd,
-                                          {L, R, Sum});
-          else
-            Sum = Builder.CreateFMul(L, R);
-        }
-        return Sum;
-      }
-
-      return Builder.CreateIntrinsic(
-          /*ReturnType=*/T0->getScalarType(),
-          getDotProductIntrinsic(CGM.getHLSLRuntime(), EltQTy),
-          ArrayRef<Value *>{Op0, Op1}, nullptr, "hlsl.mul");
-    }
-
-    // Cases 6, 8, 9: matrix involved -> use llvm.matrix.multiply
+    // Only matrix-involved cases reach the builtin (cases 6, 8, 9).
     llvm::MatrixBuilder MB(Builder);
     if (IsVec0 && IsMat1) {
-      // vector<N> * matrix<N,M> -> vector<M>
-      // Treat vector as 1×N matrix
+      // Case 6: vector<N> * matrix<N,M> -> vector<M>
       unsigned N = QTy0->castAs<VectorType>()->getNumElements();
       auto *MatTy = QTy1->castAs<ConstantMatrixType>();
       unsigned M = MatTy->getNumColumns();
       return MB.CreateMatrixMultiply(Op0, Op1, 1, N, M, "hlsl.mul");
     }
-    if (IsMat0 && IsVec1) {
-      // matrix<M,N> * vector<N> -> vector<M>
-      // Treat vector as N×1 matrix
+    if (IsMat0 && !IsMat1) {
+      // Case 8: matrix<M,N> * vector<N> -> vector<M>
       auto *MatTy = QTy0->castAs<ConstantMatrixType>();
       unsigned Rows = MatTy->getNumRows();
       unsigned Cols = MatTy->getNumColumns();
       return MB.CreateMatrixMultiply(Op0, Op1, Rows, Cols, 1, "hlsl.mul");
     }
+    // Case 9: matrix<M,K> * matrix<K,N> -> matrix<M,N>
     assert(IsMat0 && IsMat1);
-    // matrix<M,K> * matrix<K,N> -> matrix<M,N>
     auto *MatTy0 = QTy0->castAs<ConstantMatrixType>();
     auto *MatTy1 = QTy1->castAs<ConstantMatrixType>();
     return MB.CreateMatrixMultiply(Op0, Op1, MatTy0->getNumRows(),

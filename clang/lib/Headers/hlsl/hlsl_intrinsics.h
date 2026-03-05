@@ -790,5 +790,54 @@ fwidth(__detail::HLSL_FIXED_VECTOR<float, N> input) {
   return __detail::fwidth_impl(input);
 }
 
+//===----------------------------------------------------------------------===//
+// mul builtins
+//===----------------------------------------------------------------------===//
+
+/// \fn R mul(X x, Y y)
+/// \brief Multiplies x and y using matrix math.
+/// \param x [in] The first input value. If x is a vector, it is treated as a
+///   row vector.
+/// \param y [in] The second input value. If y is a vector, it is treated as a
+///   column vector.
+///
+/// The inner dimension x-columns and y-rows must be equal. The result has the
+/// dimension x-rows x y-columns. When both x and y are vectors, the result is
+/// a dot product (scalar). Scalar operands are multiplied element-wise.
+
+// Case 1: scalar * scalar -> scalar
+template <typename T>
+constexpr __detail::enable_if_t<__detail::is_arithmetic<T>::Value, T> mul(T x,
+                                                                          T y) {
+  return x * y;
+}
+
+// Case 2: scalar * vector -> vector
+template <typename T, int N> constexpr vector<T, N> mul(T x, vector<T, N> y) {
+  return x * y;
+}
+
+// Case 3: scalar * matrix -> matrix
+template <typename T, int R, int C>
+constexpr matrix<T, R, C> mul(T x, matrix<T, R, C> y) {
+  return x * y;
+}
+
+// Case 4: vector * scalar -> vector
+template <typename T, int N> constexpr vector<T, N> mul(vector<T, N> x, T y) {
+  return x * y;
+}
+
+// Case 5: vector * vector -> scalar (dot product)
+template <typename T, int N> T mul(vector<T, N> x, vector<T, N> y) {
+  return __detail::mul_vec_impl(x, y);
+}
+
+// Case 7: matrix * scalar -> matrix
+template <typename T, int R, int C>
+constexpr matrix<T, R, C> mul(matrix<T, R, C> x, T y) {
+  return x * y;
+}
+
 } // namespace hlsl
 #endif //_HLSL_HLSL_INTRINSICS_H_

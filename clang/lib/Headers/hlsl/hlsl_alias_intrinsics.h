@@ -1829,11 +1829,6 @@ template <typename T, int R, int C>
 _HLSL_BUILTIN_ALIAS(__builtin_hlsl_mul)
 vector<T, C> mul(vector<T, R>, matrix<T, R, C>);
 
-// Case 7: matrix * scalar -> matrix
-template <typename T, int R, int C>
-_HLSL_BUILTIN_ALIAS(__builtin_hlsl_mul)
-matrix<T, R, C> mul(matrix<T, R, C>, T);
-
 // Case 8: matrix * vector -> vector
 template <typename T, int R, int C>
 _HLSL_BUILTIN_ALIAS(__builtin_hlsl_mul)
