@@ -8023,7 +8023,7 @@ struct EqualBBWrapper {
       return false;
 
     // TODO: relax this condition to merge equal blocks with >1 instructions?
-    // Here, we use a O(1) form of the O(n) comparison size() != 1
+    // Here, we use a O(1) form of the O(n) comparison of `size() != 1`.
     if (&BB->front() != &BB->back())
       return false;
 
