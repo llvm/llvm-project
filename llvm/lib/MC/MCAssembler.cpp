@@ -140,25 +140,17 @@ bool MCAssembler::isThumbFunc(const MCSymbol *Symbol) const {
   return true;
 }
 
-bool MCAssembler::evaluateFixup(const MCFragment &F, MCFixup &Fixup,
-                                MCValue &Target, uint64_t &Value,
-                                bool RecordReloc, uint8_t *Data) const {
-  if (RecordReloc)
-    ++stats::Fixups;
-
-  // FIXME: This code has some duplication with recordRelocation. We should
-  // probably merge the two into a single callback that tries to evaluate a
-  // fixup and records a relocation if one is needed.
-
+std::pair<bool, uint64_t>
+MCAssembler::evaluateFixup(const MCFragment &F, MCFixup &Fixup,
+                           MCValue &Target) const {
   // On error claim to have completely evaluated the fixup, to prevent any
   // further processing from being done.
-  const MCExpr *Expr = Fixup.getValue();
-  Value = 0;
-  if (!Expr->evaluateAsRelocatable(Target, this)) {
+  if (!Fixup.getValue()->evaluateAsRelocatable(Target, this)) {
     reportError(Fixup.getLoc(), "expected relocatable expression");
-    return true;
+    return {true, 0};
   }
 
+  uint64_t Value = 0;
   bool IsResolved = false;
   if (auto State = getBackend().evaluateFixup(F, Fixup, Target, Value)) {
     IsResolved = *State;
@@ -177,8 +169,6 @@ bool MCAssembler::evaluateFixup(const MCFragment &F, MCFixup &Fixup,
       // targets are stale. Add Stretch so that the displacement equals
       // target_old - source_old, preventing premature relaxation.
       if (Stretch) {
-        assert(!RecordReloc &&
-               "Stretch should only be applied during relaxation");
         MCFragment *AF = Add ? Add->getFragment() : nullptr;
         if (AF && AF->getLayoutOrder() > F.getLayoutOrder())
           Value += Stretch;
@@ -195,13 +185,7 @@ bool MCAssembler::evaluateFixup(const MCFragment &F, MCFixup &Fixup,
     }
   }
 
-  if (!RecordReloc)
-    return IsResolved;
-
-  if (IsResolved && mc::isRelocRelocation(Fixup.getKind()))
-    IsResolved = false;
-  getBackend().applyFixup(F, Fixup, Target, Data, Value, IsResolved);
-  return true;
+  return {IsResolved, Value};
 }
 
 uint64_t MCAssembler::computeFragmentSize(const MCFragment &F) const {
@@ -712,32 +696,34 @@ void MCAssembler::layout() {
   }
 
   // Evaluate and apply the fixups, generating relocation entries as necessary.
+  auto handleFixup = [&](MCFragment &F, MCFixup &Fixup, uint8_t *Data) {
+    ++stats::Fixups;
+    MCValue Target;
+    auto [IsResolved, Value] = evaluateFixup(F, Fixup, Target);
+    if (IsResolved && mc::isRelocRelocation(Fixup.getKind()))
+      IsResolved = false;
+    getBackend().applyFixup(F, Fixup, Target, Data, Value, IsResolved);
+  };
   for (MCSection &Sec : *this) {
     for (MCFragment &F : Sec) {
-      // Process fragments with fixups here.
       auto Contents = F.getContents();
       for (MCFixup &Fixup : F.getFixups()) {
-        uint64_t FixedValue;
-        MCValue Target;
         assert(mc::isRelocRelocation(Fixup.getKind()) ||
                Fixup.getOffset() <= F.getFixedSize());
-        auto *Data =
-            reinterpret_cast<uint8_t *>(Contents.data() + Fixup.getOffset());
-        evaluateFixup(F, Fixup, Target, FixedValue,
-                      /*RecordReloc=*/true, Data);
+        handleFixup(
+            F, Fixup,
+            reinterpret_cast<uint8_t *>(Contents.data() + Fixup.getOffset()));
       }
       // In the variable part, fixup offsets are relative to the fixed part's
       // start.
       for (MCFixup &Fixup : F.getVarFixups()) {
-        uint64_t FixedValue;
-        MCValue Target;
         assert(mc::isRelocRelocation(Fixup.getKind()) ||
                (Fixup.getOffset() >= F.getFixedSize() &&
                 Fixup.getOffset() <= F.getSize()));
-        auto *Data = reinterpret_cast<uint8_t *>(
-            F.getVarContents().data() + (Fixup.getOffset() - F.getFixedSize()));
-        evaluateFixup(F, Fixup, Target, FixedValue,
-                      /*RecordReloc=*/true, Data);
+        handleFixup(F, Fixup,
+                    reinterpret_cast<uint8_t *>(
+                        F.getVarContents().data() +
+                        (Fixup.getOffset() - F.getFixedSize())));
       }
     }
   }
@@ -778,9 +764,8 @@ bool MCAssembler::fixupNeedsRelaxation(const MCFragment &F,
                                        const MCFixup &Fixup) const {
   ++stats::FixupEvalForRelax;
   MCValue Target;
-  uint64_t Value;
-  bool Resolved = evaluateFixup(F, const_cast<MCFixup &>(Fixup), Target, Value,
-                                /*RecordReloc=*/false, {});
+  auto [Resolved, Value] =
+      evaluateFixup(F, const_cast<MCFixup &>(Fixup), Target);
   return getBackend().fixupNeedsRelaxationAdvanced(F, Fixup, Target, Value,
                                                    Resolved);
 }
