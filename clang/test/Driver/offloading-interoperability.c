@@ -5,7 +5,7 @@
 // RUN:   | FileCheck %s --check-prefix NO-OPENMP-FLAGS-FOR-CUDA-DEVICE
 //
 // NO-OPENMP-FLAGS-FOR-CUDA-DEVICE:      "-cc1" "-triple" "nvptx64-nvidia-cuda"
-// NO-OPENMP-FLAGS-FOR-CUDA-DEVICE-NOT:  -fopenmp
+// NO-OPENMP-FLAGS-FOR-CUDA-DEVICE:      -fopenmp-macros
 // NO-OPENMP-FLAGS-FOR-CUDA-DEVICE-NEXT: ptxas" "-m64"
 // NO-OPENMP-FLAGS-FOR-CUDA-DEVICE-NEXT: fatbinary"{{( "--cuda")?}} "-64"
 // NO-OPENMP-FLAGS-FOR-CUDA-DEVICE-NEXT: "-cc1" "-triple" "powerpc64le-unknown-linux-gnu"
