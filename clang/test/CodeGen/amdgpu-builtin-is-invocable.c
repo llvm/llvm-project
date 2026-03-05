@@ -51,14 +51,11 @@ void foo() {
 // AMDGCNSPIRV: attributes #[[ATTR1:[0-9]+]] = { cold noreturn nounwind memory(inaccessiblemem: write) }
 //.
 // AMDGCN-GFX900: [[META0:![0-9]+]] = !{i32 1, !"amdhsa_code_object_version", i32 600}
-// AMDGCN-GFX900: [[META1:![0-9]+]] = !{i32 1, !"wchar_size", i32 4}
-// AMDGCN-GFX900: [[META2:![0-9]+]] = !{!"{{.*}}clang version {{.*}}"}
+// AMDGCN-GFX900: [[META1:![0-9]+]] = !{!"{{.*}}clang version {{.*}}"}
 //.
 // AMDGCN-GFX1010: [[META0:![0-9]+]] = !{i32 1, !"amdhsa_code_object_version", i32 600}
-// AMDGCN-GFX1010: [[META1:![0-9]+]] = !{i32 1, !"wchar_size", i32 4}
-// AMDGCN-GFX1010: [[META2:![0-9]+]] = !{!"{{.*}}clang version {{.*}}"}
+// AMDGCN-GFX1010: [[META1:![0-9]+]] = !{!"{{.*}}clang version {{.*}}"}
 //.
 // AMDGCNSPIRV: [[META0:![0-9]+]] = !{i32 1, !"amdhsa_code_object_version", i32 600}
-// AMDGCNSPIRV: [[META1:![0-9]+]] = !{i32 1, !"wchar_size", i32 4}
-// AMDGCNSPIRV: [[META2:![0-9]+]] = !{!"{{.*}}clang version {{.*}}"}
+// AMDGCNSPIRV: [[META1:![0-9]+]] = !{!"{{.*}}clang version {{.*}}"}
 //.
