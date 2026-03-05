@@ -1264,8 +1264,6 @@ ARMTargetLowering::ARMTargetLowering(const TargetMachine &TM_,
     }
 
     // Strict floating-point comparisons need custom lowering.
-    setOperationAction(ISD::STRICT_FSETCC,  MVT::f16, Custom);
-    setOperationAction(ISD::STRICT_FSETCCS, MVT::f16, Custom);
     setOperationAction(ISD::STRICT_FSETCC,  MVT::f32, Custom);
     setOperationAction(ISD::STRICT_FSETCCS, MVT::f32, Custom);
     setOperationAction(ISD::STRICT_FSETCC,  MVT::f64, Custom);
@@ -1299,34 +1297,33 @@ ARMTargetLowering::ARMTargetLowering(const TargetMachine &TM_,
   }
 
   // FP16 often need to be promoted to call lib functions
-  // clang-format off
+  setOperationAction(ISD::LRINT, MVT::f16, Expand);
+  setOperationAction(ISD::LROUND, MVT::f16, Expand);
+  setOperationAction(ISD::FCOPYSIGN, MVT::f16, Expand);
+
+  for (auto Op : {ISD::FREM,          ISD::FPOW,         ISD::FPOWI,
+                ISD::FCOS,          ISD::FSIN,         ISD::FSINCOS,
+                ISD::FSINCOSPI,     ISD::FMODF,        ISD::FACOS,
+                ISD::FASIN,         ISD::FATAN,        ISD::FATAN2,
+                ISD::FCOSH,         ISD::FSINH,        ISD::FTANH,
+                ISD::FTAN,          ISD::FEXP,         ISD::FEXP2,
+                ISD::FEXP10,        ISD::FLOG,         ISD::FLOG2,
+                ISD::FLOG10,        ISD::STRICT_FREM,  ISD::STRICT_FPOW,
+                ISD::STRICT_FPOWI,  ISD::STRICT_FCOS,  ISD::STRICT_FSIN,
+                ISD::STRICT_FACOS,  ISD::STRICT_FASIN, ISD::STRICT_FATAN,
+                ISD::STRICT_FATAN2, ISD::STRICT_FCOSH, ISD::STRICT_FSINH,
+                ISD::STRICT_FTANH,  ISD::STRICT_FEXP,  ISD::STRICT_FEXP2,
+                ISD::STRICT_FLOG,   ISD::STRICT_FLOG2, ISD::STRICT_FLOG10,
+                ISD::STRICT_FTAN}) {
+      setOperationAction(Op, MVT::f16, Promote);
+  }
+
+  // Round-to-integer need custom lowering for fp16, as Promote doesn't work
+  // because the result type is integer.
+  for (auto Op : {ISD::STRICT_LROUND, ISD::STRICT_LLROUND, ISD::STRICT_LRINT, ISD::STRICT_LLRINT})
+    setOperationAction(Op, MVT::f16, Custom);
+
   if (Subtarget->hasFullFP16()) {
-    setOperationAction(ISD::LRINT, MVT::f16, Expand);
-    setOperationAction(ISD::LROUND, MVT::f16, Expand);
-    setOperationAction(ISD::FCOPYSIGN, MVT::f16, Expand);
-
-    for (auto Op : {ISD::FREM,          ISD::FPOW,         ISD::FPOWI,
-                  ISD::FCOS,          ISD::FSIN,         ISD::FSINCOS,
-                  ISD::FSINCOSPI,     ISD::FMODF,        ISD::FACOS,
-                  ISD::FASIN,         ISD::FATAN,        ISD::FATAN2,
-                  ISD::FCOSH,         ISD::FSINH,        ISD::FTANH,
-                  ISD::FTAN,          ISD::FEXP,         ISD::FEXP2,
-                  ISD::FEXP10,        ISD::FLOG,         ISD::FLOG2,
-                  ISD::FLOG10,        ISD::STRICT_FREM,  ISD::STRICT_FPOW,
-                  ISD::STRICT_FPOWI,  ISD::STRICT_FCOS,  ISD::STRICT_FSIN,
-                  ISD::STRICT_FACOS,  ISD::STRICT_FASIN, ISD::STRICT_FATAN,
-                  ISD::STRICT_FATAN2, ISD::STRICT_FCOSH, ISD::STRICT_FSINH,
-                  ISD::STRICT_FTANH,  ISD::STRICT_FEXP,  ISD::STRICT_FEXP2,
-                  ISD::STRICT_FLOG,   ISD::STRICT_FLOG2, ISD::STRICT_FLOG10,
-                  ISD::STRICT_FTAN}) {
-        setOperationAction(Op, MVT::f16, Promote);
-    }
-
-    // Round-to-integer need custom lowering for fp16, as Promote doesn't work
-    // because the result type is integer.
-    for (auto Op : {ISD::STRICT_LROUND, ISD::STRICT_LLROUND, ISD::STRICT_LRINT, ISD::STRICT_LLRINT})
-      setOperationAction(Op, MVT::f16, Custom);
-
     for (auto Op : {ISD::FROUND,         ISD::FROUNDEVEN,        ISD::FTRUNC,
                     ISD::FNEARBYINT,     ISD::FRINT,             ISD::FFLOOR,
                     ISD::FCEIL,          ISD::STRICT_FROUND,     ISD::STRICT_FROUNDEVEN,
@@ -1334,7 +1331,12 @@ ARMTargetLowering::ARMTargetLowering(const TargetMachine &TM_,
                     ISD::STRICT_FFLOOR,  ISD::STRICT_FCEIL}) {
       setOperationAction(Op, MVT::f16, Legal);
     }
-    // clang-format on
+
+    setOperationAction(ISD::STRICT_FSETCC,  MVT::f16, Custom);
+    setOperationAction(ISD::STRICT_FSETCCS, MVT::f16, Custom);
+  } else {
+    setOperationAction(ISD::STRICT_FSETCC,  MVT::f16, Promote);
+    setOperationAction(ISD::STRICT_FSETCCS, MVT::f16, Promote);
   }
 
   if (Subtarget->hasNEON()) {
