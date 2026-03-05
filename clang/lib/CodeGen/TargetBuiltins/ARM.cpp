@@ -5278,8 +5278,8 @@ Value *CodeGenFunction::EmitAArch64BuiltinExpr(unsigned BuiltinID,
     Value *StoreAddr = EmitScalarExpr(E->getArg(0));
     Value *StoreValue = EmitScalarExpr(E->getArg(1));
 
-    auto *OrderC = cast<llvm::ConstantInt>(EmitScalarExpr(E->getArg(2)));
-    auto *PolicyC = cast<llvm::ConstantInt>(EmitScalarExpr(E->getArg(3)));
+    auto *OrderC = cast<ConstantInt>(EmitScalarExpr(E->getArg(2)));
+    auto *PolicyC = cast<ConstantInt>(EmitScalarExpr(E->getArg(3)));
 
     // Compute pointee bit-width from arg0 and create as i32 constant
     QualType ValQT =
