@@ -130,7 +130,7 @@ static bool fromJSON(const json::Value &params, RuntimeInstrumentReport &report,
 
 } // end namespace
 
-static raw_ostream &operator<<(raw_ostream &OS, UBSanReport &report) {
+static raw_ostream &operator<<(raw_ostream &OS, const UBSanReport &report) {
   if (!report.filename.empty()) {
     OS << report.filename;
     if (report.line != LLDB_INVALID_LINE_NUMBER) {
@@ -151,7 +151,7 @@ static raw_ostream &operator<<(raw_ostream &OS, UBSanReport &report) {
 }
 
 static raw_ostream &operator<<(raw_ostream &OS,
-                               MainThreadCheckerReport &report) {
+                               const MainThreadCheckerReport &report) {
   if (!report.description.empty())
     OS << report.description << "\n";
 
@@ -163,7 +163,7 @@ static raw_ostream &operator<<(raw_ostream &OS,
   return OS;
 }
 
-static raw_ostream &operator<<(raw_ostream &OS, ASanReport &report) {
+static raw_ostream &operator<<(raw_ostream &OS, const ASanReport &report) {
   if (!report.stop_type.empty())
     OS << report.stop_type << ": ";
   if (!report.description.empty())
@@ -183,8 +183,8 @@ static raw_ostream &operator<<(raw_ostream &OS, ASanReport &report) {
 }
 
 static raw_ostream &operator<<(raw_ostream &OS,
-                               RuntimeInstrumentReport &report) {
-  std::visit([&](auto &r) { OS << r; }, report);
+                               const RuntimeInstrumentReport &report) {
+  std::visit([&](const auto &r) { OS << r; }, report);
   return OS;
 }
 
