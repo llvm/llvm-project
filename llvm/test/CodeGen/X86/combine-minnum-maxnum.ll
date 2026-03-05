@@ -6,13 +6,11 @@ define float @maxf(float %a, float %b) nounwind {
 ; SSE2-LABEL: maxf:
 ; SSE2:       # %bb.0: # %entry
 ; SSE2-NEXT:    pushl %eax
-; SSE2-NEXT:    .cfi_def_cfa_offset 8
 ; SSE2-NEXT:    movss {{.*#+}} xmm0 = mem[0],zero,zero,zero
 ; SSE2-NEXT:    maxss {{[0-9]+}}(%esp), %xmm0
 ; SSE2-NEXT:    movss %xmm0, (%esp)
 ; SSE2-NEXT:    flds (%esp)
 ; SSE2-NEXT:    popl %eax
-; SSE2-NEXT:    .cfi_def_cfa_offset 4
 ; SSE2-NEXT:    retl
 ;
 ; SSE-LABEL: maxf:
@@ -41,13 +39,11 @@ define float @minf(float %a, float %b) nounwind {
 ; SSE2-LABEL: minf:
 ; SSE2:       # %bb.0: # %entry
 ; SSE2-NEXT:    pushl %eax
-; SSE2-NEXT:    .cfi_def_cfa_offset 8
 ; SSE2-NEXT:    movss {{.*#+}} xmm0 = mem[0],zero,zero,zero
 ; SSE2-NEXT:    minss {{[0-9]+}}(%esp), %xmm0
 ; SSE2-NEXT:    movss %xmm0, (%esp)
 ; SSE2-NEXT:    flds (%esp)
 ; SSE2-NEXT:    popl %eax
-; SSE2-NEXT:    .cfi_def_cfa_offset 4
 ; SSE2-NEXT:    retl
 ;
 ; SSE-LABEL: minf:
@@ -76,13 +72,11 @@ define double @maxd(double %a, double %b) nounwind {
 ; SSE2-LABEL: maxd:
 ; SSE2:       # %bb.0: # %entry
 ; SSE2-NEXT:    subl $12, %esp
-; SSE2-NEXT:    .cfi_def_cfa_offset 16
 ; SSE2-NEXT:    movsd {{.*#+}} xmm0 = mem[0],zero
 ; SSE2-NEXT:    maxsd {{[0-9]+}}(%esp), %xmm0
 ; SSE2-NEXT:    movsd %xmm0, (%esp)
 ; SSE2-NEXT:    fldl (%esp)
 ; SSE2-NEXT:    addl $12, %esp
-; SSE2-NEXT:    .cfi_def_cfa_offset 4
 ; SSE2-NEXT:    retl
 ;
 ; SSE-LABEL: maxd:
@@ -111,13 +105,11 @@ define double @mind(double %a, double %b) nounwind {
 ; SSE2-LABEL: mind:
 ; SSE2:       # %bb.0: # %entry
 ; SSE2-NEXT:    subl $12, %esp
-; SSE2-NEXT:    .cfi_def_cfa_offset 16
 ; SSE2-NEXT:    movsd {{.*#+}} xmm0 = mem[0],zero
 ; SSE2-NEXT:    minsd {{[0-9]+}}(%esp), %xmm0
 ; SSE2-NEXT:    movsd %xmm0, (%esp)
 ; SSE2-NEXT:    fldl (%esp)
 ; SSE2-NEXT:    addl $12, %esp
-; SSE2-NEXT:    .cfi_def_cfa_offset 4
 ; SSE2-NEXT:    retl
 ;
 ; SSE-LABEL: mind:
