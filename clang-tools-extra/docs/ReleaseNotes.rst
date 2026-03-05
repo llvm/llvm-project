@@ -157,6 +157,12 @@ New checks
 New check aliases
 ^^^^^^^^^^^^^^^^^
 
+- Renamed :doc:`hicpp-ignored-remove-result
+  <clang-tidy/checks/hicpp/ignored-remove-result>`
+  to :doc:`bugprone-unused-return-value
+  <clang-tidy/checks/bugprone/unused-return-value>`.
+  The `hicpp-ignored-remove-result` name is kept as an alias.
+
 Changes in existing checks
 ^^^^^^^^^^^^^^^^^^^^^^^^^^
 

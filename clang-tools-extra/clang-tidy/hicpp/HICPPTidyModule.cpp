@@ -9,6 +9,7 @@
 #include "../ClangTidy.h"
 #include "../ClangTidyModule.h"
 #include "../bugprone/UndelegatedConstructorCheck.h"
+#include "../bugprone/UnusedReturnValueCheck.h"
 #include "../bugprone/UseAfterMoveCheck.h"
 #include "../cppcoreguidelines/AvoidGotoCheck.h"
 #include "../cppcoreguidelines/NoMallocCheck.h"
@@ -35,7 +36,6 @@
 #include "../readability/NamedParameterCheck.h"
 #include "../readability/UppercaseLiteralSuffixCheck.h"
 #include "ExceptionBaseclassCheck.h"
-#include "IgnoredRemoveResultCheck.h"
 #include "MultiwayPathsCoveredCheck.h"
 #include "NoAssemblerCheck.h"
 #include "SignedBitwiseCheck.h"
@@ -57,7 +57,7 @@ public:
         "hicpp-deprecated-headers");
     CheckFactories.registerCheck<ExceptionBaseclassCheck>(
         "hicpp-exception-baseclass");
-    CheckFactories.registerCheck<IgnoredRemoveResultCheck>(
+    CheckFactories.registerCheck<bugprone::UnusedReturnValueCheck>(
         "hicpp-ignored-remove-result");
     CheckFactories.registerCheck<MultiwayPathsCoveredCheck>(
         "hicpp-multiway-paths-covered");
@@ -108,6 +108,16 @@ public:
         "hicpp-uppercase-literal-suffix");
     CheckFactories.registerCheck<cppcoreguidelines::ProTypeVarargCheck>(
         "hicpp-vararg");
+  }
+
+  ClangTidyOptions getModuleOptions() override {
+    ClangTidyOptions Options;
+    ClangTidyOptions::OptionMap &Opts = Options.CheckOptions;
+    Opts["hicpp-ignored-remove-result.CheckedFunctions"] =
+        "^::std::remove$;^::std::remove_if$;^::std::unique$";
+    Opts["hicpp-ignored-remove-result.CheckedReturnTypes"] = "";
+    Opts["hicpp-ignored-remove-result.AllowCastToVoid"] = "true";
+    return Options;
   }
 };
 
