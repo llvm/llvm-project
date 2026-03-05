@@ -1252,16 +1252,15 @@ define <2 x i128> @loaddup_str_v2i128(ptr %p) {
 ;
 ; CHECK-GI-LABEL: loaddup_str_v2i128:
 ; CHECK-GI:       // %bb.0: // %entry
-; CHECK-GI-NEXT:    ldr q1, [x0]
-; CHECK-GI-NEXT:    mov v0.d[0], xzr
+; CHECK-GI-NEXT:    ldr q0, [x0]
 ; CHECK-GI-NEXT:    mov x8, x0
-; CHECK-GI-NEXT:    mov d2, v1.d[1]
-; CHECK-GI-NEXT:    fmov x0, d1
-; CHECK-GI-NEXT:    fmov x2, d1
-; CHECK-GI-NEXT:    mov v0.d[1], xzr
-; CHECK-GI-NEXT:    fmov x1, d2
-; CHECK-GI-NEXT:    fmov x3, d2
-; CHECK-GI-NEXT:    str q0, [x8]
+; CHECK-GI-NEXT:    str xzr, [x0]
+; CHECK-GI-NEXT:    str xzr, [x8, #8]
+; CHECK-GI-NEXT:    mov d1, v0.d[1]
+; CHECK-GI-NEXT:    fmov x0, d0
+; CHECK-GI-NEXT:    fmov x2, d0
+; CHECK-GI-NEXT:    fmov x1, d1
+; CHECK-GI-NEXT:    fmov x3, d1
 ; CHECK-GI-NEXT:    ret
 entry:
   %a = load i128, ptr %p
@@ -1340,18 +1339,17 @@ define <3 x i128> @loaddup_str_v3i128(ptr %p) {
 ;
 ; CHECK-GI-LABEL: loaddup_str_v3i128:
 ; CHECK-GI:       // %bb.0: // %entry
-; CHECK-GI-NEXT:    ldr q1, [x0]
-; CHECK-GI-NEXT:    mov v0.d[0], xzr
+; CHECK-GI-NEXT:    ldr q0, [x0]
 ; CHECK-GI-NEXT:    mov x8, x0
-; CHECK-GI-NEXT:    mov d2, v1.d[1]
-; CHECK-GI-NEXT:    fmov x0, d1
-; CHECK-GI-NEXT:    fmov x2, d1
-; CHECK-GI-NEXT:    fmov x4, d1
-; CHECK-GI-NEXT:    mov v0.d[1], xzr
-; CHECK-GI-NEXT:    fmov x1, d2
-; CHECK-GI-NEXT:    fmov x3, d2
-; CHECK-GI-NEXT:    fmov x5, d2
-; CHECK-GI-NEXT:    str q0, [x8]
+; CHECK-GI-NEXT:    str xzr, [x0]
+; CHECK-GI-NEXT:    str xzr, [x8, #8]
+; CHECK-GI-NEXT:    mov d1, v0.d[1]
+; CHECK-GI-NEXT:    fmov x0, d0
+; CHECK-GI-NEXT:    fmov x2, d0
+; CHECK-GI-NEXT:    fmov x4, d0
+; CHECK-GI-NEXT:    fmov x1, d1
+; CHECK-GI-NEXT:    fmov x3, d1
+; CHECK-GI-NEXT:    fmov x5, d1
 ; CHECK-GI-NEXT:    ret
 entry:
   %a = load i128, ptr %p
@@ -1440,20 +1438,19 @@ define <4 x i128> @loaddup_str_v4i128(ptr %p) {
 ;
 ; CHECK-GI-LABEL: loaddup_str_v4i128:
 ; CHECK-GI:       // %bb.0: // %entry
-; CHECK-GI-NEXT:    ldr q1, [x0]
-; CHECK-GI-NEXT:    mov v0.d[0], xzr
+; CHECK-GI-NEXT:    ldr q0, [x0]
 ; CHECK-GI-NEXT:    mov x8, x0
-; CHECK-GI-NEXT:    mov d2, v1.d[1]
-; CHECK-GI-NEXT:    fmov x0, d1
-; CHECK-GI-NEXT:    fmov x2, d1
-; CHECK-GI-NEXT:    fmov x4, d1
-; CHECK-GI-NEXT:    fmov x6, d1
-; CHECK-GI-NEXT:    mov v0.d[1], xzr
-; CHECK-GI-NEXT:    fmov x1, d2
-; CHECK-GI-NEXT:    fmov x3, d2
-; CHECK-GI-NEXT:    fmov x5, d2
-; CHECK-GI-NEXT:    fmov x7, d2
-; CHECK-GI-NEXT:    str q0, [x8]
+; CHECK-GI-NEXT:    str xzr, [x0]
+; CHECK-GI-NEXT:    str xzr, [x8, #8]
+; CHECK-GI-NEXT:    mov d1, v0.d[1]
+; CHECK-GI-NEXT:    fmov x0, d0
+; CHECK-GI-NEXT:    fmov x2, d0
+; CHECK-GI-NEXT:    fmov x4, d0
+; CHECK-GI-NEXT:    fmov x6, d0
+; CHECK-GI-NEXT:    fmov x1, d1
+; CHECK-GI-NEXT:    fmov x3, d1
+; CHECK-GI-NEXT:    fmov x5, d1
+; CHECK-GI-NEXT:    fmov x7, d1
 ; CHECK-GI-NEXT:    ret
 entry:
   %a = load i128, ptr %p

@@ -1119,6 +1119,69 @@ void applyFormTruncstore(MachineInstr &MI, MachineRegisterInfo &MRI,
   Observer.changedInstr(MI);
 }
 
+/// Optimize i128 stores by splitting into two i64 stores for STP pairing
+bool matchSplitStore128(MachineInstr &MI, MachineRegisterInfo &MRI,
+                        std::pair<Register, Register> &Parts) {
+  assert(MI.getOpcode() == TargetOpcode::G_STORE);
+  GStore &Store = cast<GStore>(MI);
+
+  Register ValueReg = Store.getValueReg();
+  LLT ValueTy = MRI.getType(ValueReg);
+
+  // Only handle scalar types
+  if (!ValueTy.isScalar())
+    return false;
+
+  if (ValueTy.getSizeInBits() != 128)
+    return false;
+
+  // Check if the value comes from G_MERGE_VALUES
+  MachineInstr *DefMI = MRI.getVRegDef(ValueReg);
+  if (!DefMI || DefMI->getOpcode() != TargetOpcode::G_MERGE_VALUES)
+    return false;
+
+  // Get the two i64 parts
+  if (DefMI->getNumOperands() != 3) // Dst + 2 sources
+    return false;
+
+  Register Part0 = DefMI->getOperand(1).getReg();
+  Register Part1 = DefMI->getOperand(2).getReg();
+
+  if (MRI.getType(Part0) != LLT::scalar(64) ||
+      MRI.getType(Part1) != LLT::scalar(64))
+    return false;
+
+  Parts = {Part0, Part1};
+  return true;
+}
+
+void applySplitStore128(MachineInstr &MI, MachineRegisterInfo &MRI,
+                        MachineIRBuilder &B, GISelChangeObserver &Observer,
+                        std::pair<Register, Register> &Parts) {
+  assert(MI.getOpcode() == TargetOpcode::G_STORE);
+  GStore &Store = cast<GStore>(MI);
+
+  B.setInstrAndDebugLoc(MI);
+
+  Register PtrReg = Store.getPointerReg();
+  MachineMemOperand &MMO = Store.getMMO();
+
+  // Create two i64 stores
+  // Store low part at [ptr]
+  B.buildStore(Parts.first, PtrReg, MMO.getPointerInfo(), MMO.getAlign(),
+               MMO.getFlags());
+
+  // Calculate offset for high part: ptr + 8
+  auto Offset = B.buildConstant(LLT::scalar(64), 8);
+  auto PtrHi = B.buildPtrAdd(MRI.getType(PtrReg), PtrReg, Offset);
+
+  // Store high part at [ptr + 8]
+  B.buildStore(Parts.second, PtrHi, MMO.getPointerInfo().getWithOffset(8),
+               commonAlignment(MMO.getAlign(), 8), MMO.getFlags());
+
+  MI.eraseFromParent();
+}
+
 // Lower vector G_SEXT_INREG back to shifts for selection. We allowed them to
 // form in the first place for combine opportunities, so any remaining ones
 // at this stage need be lowered back.

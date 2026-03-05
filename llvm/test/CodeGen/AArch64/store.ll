@@ -339,11 +339,8 @@ define void @store_v2i128(<2 x i128> %a, ptr %p) {
 ;
 ; CHECK-GI-LABEL: store_v2i128:
 ; CHECK-GI:       // %bb.0:
-; CHECK-GI-NEXT:    mov v0.d[0], x0
-; CHECK-GI-NEXT:    mov v1.d[0], x2
-; CHECK-GI-NEXT:    mov v0.d[1], x1
-; CHECK-GI-NEXT:    mov v1.d[1], x3
-; CHECK-GI-NEXT:    stp q0, q1, [x4]
+; CHECK-GI-NEXT:    stp x0, x1, [x4]
+; CHECK-GI-NEXT:    stp x2, x3, [x4, #16]
 ; CHECK-GI-NEXT:    ret
     store <2 x i128> %a, ptr %p
     ret void
