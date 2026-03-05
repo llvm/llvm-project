@@ -64,12 +64,12 @@ func.func @step_1(%A : memref<?x?x?x?xf32>, %B : memref<?x?x?x?xf32>) {
           // CHECK-22-NEXT:   %[[jj:.*]] = arith.addi %{{.*}}, %{{.*}} : index
 
           // Using remapped values instead of loop iterators.
-          // CHECK-11:        {{.*}} = memref.load %{{.*}}[%[[i]], %[[j]], %[[ii]], %[[jj]]] : memref<?x?x?x?xf32>
-          // CHECK-22:        {{.*}} = memref.load %{{.*}}[%[[i]], %[[j]], %[[ii]], %[[jj]]] : memref<?x?x?x?xf32>
-          %0 = memref.load %A[%i, %j, %ii, %jj] : memref<?x?x?x?xf32>
-          // CHECK-11-NEXT:   memref.store {{.*}}, %{{.*}}[%[[i]], %[[j]], %[[ii]], %[[jj]]] : memref<?x?x?x?xf32>
-          // CHECK-22-NEXT:   memref.store {{.*}}, %{{.*}}[%[[i]], %[[j]], %[[ii]], %[[jj]]] : memref<?x?x?x?xf32>
-          memref.store %0, %B[%i, %j, %ii, %jj] : memref<?x?x?x?xf32>
+          // CHECK-11:        {{.*}} = affine.load %{{.*}}[%[[i]], %[[j]], %[[ii]], %[[jj]]] : memref<?x?x?x?xf32>
+          // CHECK-22:        {{.*}} = affine.load %{{.*}}[%[[i]], %[[j]], %[[ii]], %[[jj]]] : memref<?x?x?x?xf32>
+          %0 = affine.load %A[%i, %j, %ii, %jj] : memref<?x?x?x?xf32>
+          // CHECK-11-NEXT:   affine.store {{.*}}, %{{.*}}[%[[i]], %[[j]], %[[ii]], %[[jj]]] : memref<?x?x?x?xf32>
+          // CHECK-22-NEXT:   affine.store {{.*}}, %{{.*}}[%[[i]], %[[j]], %[[ii]], %[[jj]]] : memref<?x?x?x?xf32>
+          affine.store %0, %B[%i, %j, %ii, %jj] : memref<?x?x?x?xf32>
 
           // CHECK-11: gpu.terminator
           // CHECK-22: gpu.terminator
@@ -79,4 +79,3 @@ func.func @step_1(%A : memref<?x?x?x?xf32>, %B : memref<?x?x?x?xf32>) {
   }
   return
 }
-
