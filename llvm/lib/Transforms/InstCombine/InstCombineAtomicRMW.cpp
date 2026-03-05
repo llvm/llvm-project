@@ -14,7 +14,6 @@
 #include "llvm/IR/Instructions.h"
 
 using namespace llvm;
-using namespace llvm::PatternMatch;
 
 /// Return true if and only if the given instruction does not modify the memory
 /// location referenced.  Note that an idemptent atomicrmw may still have
@@ -121,13 +120,12 @@ Instruction *InstCombinerImpl::visitAtomicRMWInst(AtomicRMWInst &RMWI) {
 
   // Canonicalize atomicrmw add(ptr, neg(X)) -> atomicrmw sub(ptr, X).
   // old + (-X) == old - X; the returned old value is identical.
-  // This allows strength reduction on targets where atomic sub is cheaper,
-  // e.g. lock sub instead of lock xadd on x86.
-  Value *X;
-  if (RMWI.getOperation() == AtomicRMWInst::Add &&
-      match(RMWI.getValOperand(), m_Neg(m_Value(X)))) {
-    RMWI.setOperation(AtomicRMWInst::Sub);
-    return replaceOperand(RMWI, 1, X);
+  if (RMWI.getOperation() == AtomicRMWInst::Add) {
+    if (Value *X = Negator::Negate(/*LHSIsZero=*/true, /*IsNSW=*/false,
+                                   RMWI.getValOperand(), *this)) {
+      RMWI.setOperation(AtomicRMWInst::Sub);
+      return replaceOperand(RMWI, 1, X);
+    }
   }
 
   if (!isIdempotentRMW(RMWI))
