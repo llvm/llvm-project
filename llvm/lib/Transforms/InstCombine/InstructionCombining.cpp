@@ -1110,7 +1110,6 @@ InstCombinerImpl::foldBinOpOfSelectAndCastOfSelectCondition(BinaryOperator &I) {
   auto MatchSelectAndCast = [&](Value *CastOp, Value *SelectOp) {
     return match(CastOp, m_SelectLike(m_Value(A), m_Constant(CastTrueVal),
                                       m_Constant(CastFalseVal))) &&
-           A->getType()->getScalarSizeInBits() == 1 &&
            match(SelectOp, m_Select(m_Value(CondVal), m_Value(TrueVal),
                                     m_Value(FalseVal)));
   };
