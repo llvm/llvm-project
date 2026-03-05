@@ -47,6 +47,10 @@ public:
 
   virtual lldb::ValueObjectSP GetChildAtIndex(uint32_t idx) = 0;
 
+  /// Determine the index of a named child. Subscript names ("[N]") are, by
+  /// default, handled automatically. For data types which need custom
+  /// subscripting behavior - for example a sparse array, disable automatic
+  /// subscripting with TypeOptions::eTypeOptionCustomSubscripting.
   virtual llvm::Expected<size_t> GetIndexOfChildWithName(ConstString name) {
     return llvm::createStringError("Type has no child named '%s'",
                                    name.AsCString());
