@@ -1031,6 +1031,20 @@ void Sema::InstantiateAttrs(const MultiLevelTemplateArgumentList &TemplateArgs,
       continue;
     }
 
+    // Check address space sizes for CUDA/HIP variable attributes now that we
+    // know the type of the instantiation.
+    if (auto *NewVar = dyn_cast<VarDecl>(New)) {
+      if ((isa<CUDADeviceAttr>(TmplAttr) || isa<HIPManagedAttr>(TmplAttr)) &&
+          !CheckVarDeclSizeAddressSpace(NewVar, LangAS::cuda_device))
+        return;
+      if (isa<CUDASharedAttr>(TmplAttr) &&
+          !CheckVarDeclSizeAddressSpace(NewVar, LangAS::cuda_shared))
+        return;
+      if (isa<CUDAConstantAttr>(TmplAttr) &&
+          !CheckVarDeclSizeAddressSpace(NewVar, LangAS::cuda_constant))
+        return;
+    }
+
     assert(!TmplAttr->isPackExpansion());
     if (TmplAttr->isLateParsed() && LateAttrs) {
       // Late parsed attributes must be instantiated and attached after the
