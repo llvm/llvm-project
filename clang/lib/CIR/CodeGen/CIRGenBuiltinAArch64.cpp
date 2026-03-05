@@ -50,7 +50,7 @@ static mlir::Value genVscaleTimesFactor(mlir::Location loc,
 static bool aarch64SVEIntrinsicsProvenSorted = false;
 
 namespace {
-struct armVectorIntrinsicInfo {
+struct ARMVectorIntrinsicInfo {
   unsigned builtinID;
   unsigned llvmIntrinsic;
   uint64_t typeModifier;
@@ -58,7 +58,7 @@ struct armVectorIntrinsicInfo {
   bool operator<(unsigned rhsBuiltinID) const {
     return builtinID < rhsBuiltinID;
   }
-  bool operator<(const armVectorIntrinsicInfo &te) const {
+  bool operator<(const ARMVectorIntrinsicInfo &te) const {
     return builtinID < te.builtinID;
   }
 };
@@ -69,7 +69,7 @@ struct armVectorIntrinsicInfo {
 
 #define SVEMAP2(NameBase, TypeModifier)                                        \
   {SVE::BI__builtin_sve_##NameBase, 0, TypeModifier}
-static const armVectorIntrinsicInfo aarch64SVEIntrinsicMap[] = {
+static const ARMVectorIntrinsicInfo aarch64SVEIntrinsicMap[] = {
 #define GET_SVE_LLVM_INTRINSIC_MAP
 #include "clang/Basic/arm_sve_builtin_cg.inc"
 #undef GET_SVE_LLVM_INTRINSIC_MAP
@@ -77,8 +77,8 @@ static const armVectorIntrinsicInfo aarch64SVEIntrinsicMap[] = {
 
 // Check if Builtin `builtinId` is present in `intrinsicMap`. If yes, returns
 // the corresponding info struct.
-static const armVectorIntrinsicInfo *
-findARMVectorIntrinsicInMap(ArrayRef<armVectorIntrinsicInfo> intrinsicMap,
+static const ARMVectorIntrinsicInfo *
+findARMVectorIntrinsicInMap(ArrayRef<ARMVectorIntrinsicInfo> intrinsicMap,
                             unsigned builtinID, bool &mapProvenSorted) {
 
 #ifndef NDEBUG
@@ -88,7 +88,7 @@ findARMVectorIntrinsicInMap(ArrayRef<armVectorIntrinsicInfo> intrinsicMap,
   }
 #endif
 
-  const armVectorIntrinsicInfo *info =
+  const ARMVectorIntrinsicInfo *info =
       llvm::lower_bound(intrinsicMap, builtinID);
 
   if (info != intrinsicMap.end() && info->builtinID == builtinID)
