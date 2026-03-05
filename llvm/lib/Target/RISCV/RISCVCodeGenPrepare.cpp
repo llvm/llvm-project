@@ -22,6 +22,7 @@
 #include "llvm/IR/IRBuilder.h"
 #include "llvm/IR/InstVisitor.h"
 #include "llvm/IR/Intrinsics.h"
+#include "llvm/IR/IntrinsicsRISCV.h"
 #include "llvm/IR/PatternMatch.h"
 #include "llvm/InitializePasses.h"
 #include "llvm/Pass.h"
@@ -48,6 +49,7 @@ public:
   bool visitAnd(BinaryOperator &BO);
   bool visitIntrinsicInst(IntrinsicInst &I);
   bool expandVPStrideLoad(IntrinsicInst &I);
+  bool convertVFirstPattern(IntrinsicInst &I);
   bool widenVPMerge(IntrinsicInst &I);
 };
 } // namespace
@@ -213,6 +215,9 @@ bool RISCVCodeGenPrepare::widenVPMerge(IntrinsicInst &II) {
 // Which eliminates the scalar -> vector -> scalar crossing during instruction
 // selection.
 bool RISCVCodeGenPrepare::visitIntrinsicInst(IntrinsicInst &I) {
+  if (convertVFirstPattern(I))
+    return true;
+
   if (expandVPStrideLoad(I))
     return true;
 
@@ -278,6 +283,100 @@ bool RISCVCodeGenPrepare::expandVPStrideLoad(IntrinsicInst &II) {
 
   II.replaceAllUsesWith(Res);
   II.eraseFromParent();
+  return true;
+}
+
+// Convert vector.reduce.or + cttz.elts into riscv.vfirst.
+//
+// The RISC-V vfirst instruction natively provides the functionality of both
+// vector.reduce.or (checking if any element is set) and cttz.elts (finding
+// the first set element). This function matches the following pattern and
+// replaces it with a single vfirst intrinsic:
+//
+// Before:
+//   block1:
+//     %ffload = call {<vTy>, i32} @llvm.vp.load.ff(ptr, <mask>, i32)
+//     %evl = extractvalue %ffload, 1
+//     %alm = call @llvm.get.active.lane.mask(0, %evl)
+//     %cond = ...
+//     %select = select %alm, %cond, zeroinitializer
+//     %reduce = call @llvm.vector.reduce.or(%select)
+//     br i1 %reduce, label %early.exit, label %continue
+//   early.exit:
+//     %idx = call @llvm.experimental.cttz.elts(%cond)
+//     ...
+//
+// After:
+//   block1:
+//     %vfirst = call @llvm.riscv.vfirst.mask(%cond, %mask, %evl)
+//     %found = icmp sge %vfirst, 0
+//     br i1 %found, label %early.exit, label %continue
+//   early.exit:
+//     ; uses of cttz.elts replaced with %vfirst
+//     ...
+bool RISCVCodeGenPrepare::convertVFirstPattern(IntrinsicInst &II) {
+  using namespace PatternMatch;
+  Value *Select, *ALM, *Cond, *EVL, *FFLoad, *Mask;
+
+  // Match the reduce.or pattern with freeze, select, active lane mask,
+  // and vp.load.ff.
+  bool MatchReduceOr =
+      match(&II, m_Intrinsic<Intrinsic::vector_reduce_or>(
+                     m_Freeze(m_Value(Select)))) &&
+      match(Select, m_Select(m_Value(ALM), m_Value(Cond), m_Zero())) &&
+      Cond->getNumUses() == 2 &&
+      match(ALM, m_Intrinsic<Intrinsic::get_active_lane_mask>(
+                     m_Zero(), m_ZExtOrSelf(m_Value(EVL)))) &&
+      match(EVL, m_ExtractValue<1>(m_Value(FFLoad))) &&
+      match(FFLoad, m_Intrinsic<Intrinsic::vp_load_ff>(m_Value(), m_Value(Mask),
+                                                       m_Value()));
+  if (!MatchReduceOr)
+    return false;
+
+  // Find the cttz.elts user of Cond.
+  IntrinsicInst *CttzElts = nullptr;
+  for (User *U : Cond->users()) {
+    if (auto *Intr = dyn_cast<IntrinsicInst>(U)) {
+      if (Intr->getIntrinsicID() == Intrinsic::experimental_cttz_elts) {
+        CttzElts = Intr;
+        break;
+      }
+    }
+  }
+  if (!CttzElts)
+    return false;
+
+  // Verify that cttz.elts is in a block whose single predecessor branches
+  // on the reduce.or result.
+  BasicBlock *CttzBB = CttzElts->getParent();
+  BasicBlock *PredBB = CttzBB->getSinglePredecessor();
+  if (!PredBB)
+    return false;
+  auto *BI = dyn_cast<BranchInst>(PredBB->getTerminator());
+  if (!BI || !BI->isConditional() || BI->getCondition() != &II)
+    return false;
+
+  // Generate the vfirst intrinsic and replacement instructions.
+  IRBuilder<> Builder(&II);
+  Type *XLenTy = IntegerType::get(II.getContext(), ST->getXLen());
+  if (EVL->getType() != XLenTy)
+    EVL = Builder.CreateZExt(EVL, XLenTy);
+
+  Value *VFirst =
+      Builder.CreateIntrinsic(Intrinsic::riscv_vfirst_mask,
+                              {Cond->getType(), XLenTy}, {Cond, Mask, EVL});
+
+  // Replace reduce.or with (icmp sge (vfirst), 0)
+  // vfirst returns -1 if no element is set.
+  Value *Found = Builder.CreateICmpSGE(VFirst, ConstantInt::get(XLenTy, 0));
+  II.replaceAllUsesWith(Found);
+
+  // Replace cttz.elts with the vfirst.
+  Value *VFirstCasted = Builder.CreateZExtOrTrunc(VFirst, CttzElts->getType());
+  CttzElts->replaceAllUsesWith(VFirstCasted);
+
+  II.eraseFromParent();
+  CttzElts->eraseFromParent();
   return true;
 }
 
