@@ -11,6 +11,13 @@
 //
 //===----------------------------------------------------------------------===//
 
+// Define STI for use in SchedPredicate code snippets.
+def : PredicateProlog<[{
+  const AArch64Subtarget *STI =
+    static_cast<const AArch64Subtarget*>(SchedModel->getSubtargetInfo());
+  (void)STI;
+}]>;
+
 // Function mappers.
 
 // Check the extension type in arithmetic instructions.
@@ -59,7 +66,6 @@ let FunctionMapper = "AArch64_AM::getShiftType" in {
 }
 
 // Generic predicates.
-
 // Check for ZR in a register operand.
 foreach I = {1-3} in {
   def CheckIsReg#I#Zero : CheckAll<
@@ -343,3 +349,38 @@ def IsZeroFPIdiomPred : MCSchedPredicate<IsZeroFPIdiomFn>;
 def IsRORImmIdiomPred : MCSchedPredicate< // EXTR Rd, Rs, Rs, #Imm
                           CheckAll<[CheckOpcode<[EXTRWrri, EXTRXrri]>,
                                     CheckSameRegOperand<1, 2>]>>;
+def CheckIsZRegOp0 : CheckAll<[
+  CheckIsRegOperand<0>,
+  CheckAny<[
+    CheckRegOperand<0, Z0>,  CheckRegOperand<0, Z1>,  CheckRegOperand<0, Z2>,
+    CheckRegOperand<0, Z3>,  CheckRegOperand<0, Z4>,  CheckRegOperand<0, Z5>,
+    CheckRegOperand<0, Z6>,  CheckRegOperand<0, Z7>,  CheckRegOperand<0, Z8>,
+    CheckRegOperand<0, Z9>,  CheckRegOperand<0, Z10>, CheckRegOperand<0, Z11>,
+    CheckRegOperand<0, Z12>, CheckRegOperand<0, Z13>, CheckRegOperand<0, Z14>,
+    CheckRegOperand<0, Z15>, CheckRegOperand<0, Z16>, CheckRegOperand<0, Z17>,
+    CheckRegOperand<0, Z18>, CheckRegOperand<0, Z19>, CheckRegOperand<0, Z20>,
+    CheckRegOperand<0, Z21>, CheckRegOperand<0, Z22>, CheckRegOperand<0, Z23>,
+    CheckRegOperand<0, Z24>, CheckRegOperand<0, Z25>, CheckRegOperand<0, Z26>,
+    CheckRegOperand<0, Z27>, CheckRegOperand<0, Z28>, CheckRegOperand<0, Z29>,
+    CheckRegOperand<0, Z30>, CheckRegOperand<0, Z31>
+  ]>
+]>;
+
+// Check if destination and source are the same Z register (Zn == Zm)
+def SameZRegDstSrcPred : MCSchedPredicate<
+  CheckAll<[CheckSameRegOperand<0, 1>, CheckIsZRegOp0]>
+>;
+
+// Identify LDR/STR Q-form scaled (and potentially extended) FP instructions
+def FPIsQForm : MCSchedPredicate<
+                       CheckAll<[
+                         CheckAny<[CheckQForm]>,
+                         CheckImmOperand<4, 1>]>>;
+
+// Check whether the subtarget enables SME.
+def SMESchedPred : FeatureSchedPredicate<FeatureSME>;
+
+// Check whether the subtarget enables SME and is in streaming mode.
+def SMEStreamingSchedPred : SchedPredicate<[{STI->hasSME() && STI->isStreaming()}]>;
+
+
