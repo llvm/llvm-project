@@ -20,14 +20,11 @@ struct Bar varargs_aggregate(int count, ...) {
 }
 
 // CIR-LABEL: cir.func {{.*}} @varargs_aggregate(
-// CIR:   %[[COUNT_ADDR:.+]] = cir.alloca !s32i, !cir.ptr<!s32i>, ["count", init]
 // CIR:   %[[RET_ADDR:.+]] = cir.alloca !rec_Bar, !cir.ptr<!rec_Bar>, ["__retval", init]
 // CIR:   %[[VAAREA:.+]] = cir.alloca !cir.array<!rec___va_list_tag x 1>, !cir.ptr<!cir.array<!rec___va_list_tag x 1>>, ["args"]
 // CIR:   %[[TMP_ADDR:.+]] = cir.alloca !rec_Bar, !cir.ptr<!rec_Bar>, ["vaarg.tmp"]
-// CIR:   cir.store %arg0, %[[COUNT_ADDR]] : !s32i, !cir.ptr<!s32i>
 // CIR:   %[[VA_PTR0:.+]] = cir.cast array_to_ptrdecay %[[VAAREA]] : !cir.ptr<!cir.array<!rec___va_list_tag x 1>> -> !cir.ptr<!rec___va_list_tag>
-// CIR:   %[[COUNT_VAL:.+]] = cir.load{{.*}} %[[COUNT_ADDR]] : !cir.ptr<!s32i>, !s32i
-// CIR:   cir.va_start %[[VA_PTR0]] %[[COUNT_VAL]] : !cir.ptr<!rec___va_list_tag>, !s32i
+// CIR:   cir.va_start %[[VA_PTR0]] : !cir.ptr<!rec___va_list_tag>
 // CIR:   %[[VA_PTR1:.+]] = cir.cast array_to_ptrdecay %[[VAAREA]] : !cir.ptr<!cir.array<!rec___va_list_tag x 1>> -> !cir.ptr<!rec___va_list_tag>
 // CIR:   %[[VA_ARG:.+]] = cir.va_arg %[[VA_PTR1]] : (!cir.ptr<!rec___va_list_tag>) -> !rec_Bar
 // CIR:   cir.store{{.*}} %[[VA_ARG]], %[[TMP_ADDR]] : !rec_Bar, !cir.ptr<!rec_Bar>

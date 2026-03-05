@@ -314,7 +314,8 @@ static void genMarkdown(const ClangDocContext &CDCtx, const TypedefInfo &I,
   // TODO support typedefs in markdown.
 }
 
-static void serializeReference(llvm::raw_fd_ostream &OS, Index &I, int Level) {
+static void serializeReference(llvm::raw_fd_ostream &OS, const Index &I,
+                               int Level) {
   // Write out the heading level starting at ##
   OS << "##" << std::string(Level, '#') << " ";
   writeNameLink("", I, OS);
@@ -338,8 +339,9 @@ static llvm::Error serializeIndex(ClangDocContext &CDCtx) {
     OS << " for " << CDCtx.ProjectName;
   OS << "\n\n";
 
-  for (auto C : CDCtx.Idx.Children)
-    serializeReference(OS, C, 0);
+  std::vector<const Index *> Children = CDCtx.Idx.getSortedChildren();
+  for (const auto *C : Children)
+    serializeReference(OS, *C, 0);
 
   return llvm::Error::success();
 }
@@ -356,10 +358,11 @@ static llvm::Error genIndex(ClangDocContext &CDCtx) {
                                        FileErr.message());
   CDCtx.Idx.sort();
   OS << "# " << CDCtx.ProjectName << " C/C++ Reference\n\n";
-  for (auto C : CDCtx.Idx.Children) {
-    if (!C.Children.empty()) {
+  std::vector<const Index *> Children = CDCtx.Idx.getSortedChildren();
+  for (const auto *C : Children) {
+    if (!C->Children.empty()) {
       const char *Type;
-      switch (C.RefType) {
+      switch (C->RefType) {
       case InfoType::IT_namespace:
         Type = "Namespace";
         break;
@@ -387,10 +390,10 @@ static llvm::Error genIndex(ClangDocContext &CDCtx) {
       case InfoType::IT_default:
         Type = "Other";
       }
-      OS << "* " << Type << ": [" << C.Name << "](";
-      if (!C.Path.empty())
-        OS << C.Path << "/";
-      OS << C.Name << ")\n";
+      OS << "* " << Type << ": [" << C->Name << "](";
+      if (!C->Path.empty())
+        OS << C->Path << "/";
+      OS << C->Name << ")\n";
     }
   }
   return llvm::Error::success();

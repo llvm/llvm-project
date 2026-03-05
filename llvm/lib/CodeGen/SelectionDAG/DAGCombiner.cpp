@@ -19355,8 +19355,11 @@ SDValue DAGCombiner::visitFPOW(SDNode *N) {
   // TODO: Since we're approximating, we don't need an exact 1/3 exponent.
   //       Some range near 1/3 should be fine.
   EVT VT = N->getValueType(0);
-  if ((VT == MVT::f32 && ExponentC->getValueAPF().isExactlyValue(1.0f/3.0f)) ||
-      (VT == MVT::f64 && ExponentC->getValueAPF().isExactlyValue(1.0/3.0))) {
+  EVT ScalarVT = VT.getScalarType();
+  if ((ScalarVT == MVT::f32 &&
+       ExponentC->getValueAPF().isExactlyValue(1.0f / 3.0f)) ||
+      (ScalarVT == MVT::f64 &&
+       ExponentC->getValueAPF().isExactlyValue(1.0 / 3.0))) {
     // pow(-0.0, 1/3) = +0.0; cbrt(-0.0) = -0.0.
     // pow(-inf, 1/3) = +inf; cbrt(-inf) = -inf.
     // pow(-val, 1/3) =  nan; cbrt(-val) = -num.
@@ -19370,7 +19373,10 @@ SDValue DAGCombiner::visitFPOW(SDNode *N) {
 
     // Do not create a cbrt() libcall if the target does not have it, and do not
     // turn a pow that has lowering support into a cbrt() libcall.
-    if (!DAG.getLibInfo().has(LibFunc_cbrt) ||
+    RTLIB::Libcall LC = RTLIB::getCBRT(VT);
+    bool HasLibCall =
+        DAG.getLibcalls().getLibcallImpl(LC) != RTLIB::Unsupported;
+    if (!HasLibCall ||
         (!DAG.getTargetLoweringInfo().isOperationExpand(ISD::FPOW, VT) &&
          DAG.getTargetLoweringInfo().isOperationExpand(ISD::FCBRT, VT)))
       return SDValue();
@@ -19952,8 +19958,7 @@ SDValue DAGCombiner::visitFMinMax(SDNode *N) {
   const SDNodeFlags Flags = N->getFlags();
   unsigned Opc = N->getOpcode();
   bool PropAllNaNsToQNaNs = Opc == ISD::FMINIMUM || Opc == ISD::FMAXIMUM;
-  bool ReturnsOtherForAllNaNs =
-      Opc == ISD::FMINIMUMNUM || Opc == ISD::FMAXIMUMNUM;
+  bool PropOnlySNaNsToQNaNs = Opc == ISD::FMINNUM || Opc == ISD::FMAXNUM;
   bool IsMin =
       Opc == ISD::FMINNUM || Opc == ISD::FMINIMUM || Opc == ISD::FMINIMUMNUM;
   SelectionDAG::FlagInserter FlagsInserter(DAG, N);
@@ -19972,30 +19977,32 @@ SDValue DAGCombiner::visitFMinMax(SDNode *N) {
 
     // minnum(X, qnan) -> X
     // maxnum(X, qnan) -> X
+    // minnum(X, snan) -> qnan
+    // maxnum(X, snan) -> qnan
     // minimum(X, nan) -> qnan
     // maximum(X, nan) -> qnan
     // minimumnum(X, nan) -> X
     // maximumnum(X, nan) -> X
     if (AF.isNaN()) {
-      if (PropAllNaNsToQNaNs) {
+      if (PropAllNaNsToQNaNs || (AF.isSignaling() && PropOnlySNaNsToQNaNs)) {
         if (AF.isSignaling())
           return DAG.getConstantFP(AF.makeQuiet(), SDLoc(N), VT);
         return N->getOperand(1);
-      } else if (ReturnsOtherForAllNaNs || !AF.isSignaling()) {
-        return N->getOperand(0);
       }
-      return SDValue();
+      return N->getOperand(0);
     }
 
     // In the following folds, inf can be replaced with the largest finite
     // float, if the ninf flag is set.
     if (AF.isInfinity() || (Flags.hasNoInfs() && AF.isLargest())) {
+      // minnum(X, -inf) -> -inf (ignoring sNaN -> qNaN propagation)
+      // maxnum(X, +inf) -> +inf (ignoring sNaN -> qNaN propagation)
       // minimum(X, -inf) -> -inf if nnan
       // maximum(X, +inf) -> +inf if nnan
       // minimumnum(X, -inf) -> -inf
       // maximumnum(X, +inf) -> +inf
       if (IsMin == AF.isNegative() &&
-          (ReturnsOtherForAllNaNs || Flags.hasNoNaNs()))
+          (!PropAllNaNsToQNaNs || Flags.hasNoNaNs()))
         return N->getOperand(1);
 
       // minnum(X, +inf) -> X if nnan
@@ -26185,9 +26192,8 @@ static SDValue combineConcatVectorOfCasts(SDNode *N, SelectionDAG &DAG) {
   // the operation support type parameter depends on the opcode. In addition,
   // check the other type in the cast to make sure this is really legal.
   EVT VT = N->getValueType(0);
-  EVT SrcEltVT = SrcVT.getVectorElementType();
   ElementCount NumElts = SrcVT.getVectorElementCount() * N->getNumOperands();
-  EVT ConcatSrcVT = EVT::getVectorVT(*DAG.getContext(), SrcEltVT, NumElts);
+  EVT ConcatSrcVT = SrcVT.changeVectorElementCount(*DAG.getContext(), NumElts);
   const TargetLowering &TLI = DAG.getTargetLoweringInfo();
   switch (CastOpcode) {
   case ISD::SINT_TO_FP:
