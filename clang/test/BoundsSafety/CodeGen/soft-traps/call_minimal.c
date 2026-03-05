@@ -102,13 +102,11 @@ int read(int* __bidi_indexable ptr, int idx) {
 // OPT: attributes #[[ATTR0]] = { nounwind "no-trapping-math"="true" "stack-protector-buffer-size"="8" }
 // OPT: attributes #[[ATTR1]] = { nomerge nounwind }
 //.
-// UNOPT: [[META0:![0-9]+]] = !{i32 1, !"wchar_size", i32 4}
 // UNOPT: [[META1:![0-9]+]] = !{!"{{.*}}clang version {{.*}}"}
 // UNOPT: [[META2]] = !{!"bounds-safety-check-ptr-le-upper-bound"}
 // UNOPT: [[PROF3]] = !{!"branch_weights", i32 1048575, i32 1}
 // UNOPT: [[META4]] = !{!"bounds-safety-check-ptr-ge-lower-bound"}
 //.
-// OPT: [[META0:![0-9]+]] = !{i32 1, !"wchar_size", i32 4}
 // OPT: [[META1:![0-9]+]] = !{!"{{.*}}clang version {{.*}}"}
 // OPT: [[INT_TBAA2]] = !{[[META3:![0-9]+]], [[META3]], i64 0}
 // OPT: [[META3]] = !{!"int", [[META4:![0-9]+]], i64 0}

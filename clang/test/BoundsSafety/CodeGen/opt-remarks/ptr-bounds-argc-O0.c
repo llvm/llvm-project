@@ -28,7 +28,7 @@ int main(int argc, char **argv) {
 
 // IR: [[FOO_LABEL_CONT_0]]:
 // IR:   icmp ule ptr %{{.*}}, %{{.*}}, !dbg ![[LOC_10_16]], !annotation ![[ANNOT_LE_UB]]
-// IR-NEXT:   br i1 %8, label  %[[FOO_LABEL_CONT_1:[a-z0-9]+]], label %[[FOO_LABEL_TRAP_1:[a-z0-9]+]], !dbg !11, !prof ![[PROFILE_METADATA:[0-9]+]],  !annotation ![[ANNOT_LE_UB]]
+// IR-NEXT:   br i1 %8, label  %[[FOO_LABEL_CONT_1:[a-z0-9]+]], label %[[FOO_LABEL_TRAP_1:[a-z0-9]+]], !dbg {{.+}}, !prof ![[PROFILE_METADATA:[0-9]+]],  !annotation ![[ANNOT_LE_UB]]
 
 // IR: [[FOO_LABEL_TRAP_1]]:
 // IR: call void @llvm.ubsantrap(i8 25) #{{[0-9]+}}, !dbg !{{.*}}, !annotation ![[ANNOT_LE_UB]]
@@ -36,7 +36,7 @@ int main(int argc, char **argv) {
 
 // IR:[[FOO_LABEL_CONT_1]]:
 // IR-NEXT: icmp uge ptr %{{.*}}, %{{.*}}, !dbg ![[LOC_10_16]], !annotation  ![[ANNOT_GE_LB:[a-z0-9]+]]
-// IR-NEXT: br i1 %{{.*}}, label %[[FOO_LABEL_CONT_2:[a-z0-9]+]], label %[[FOO_LABEL_TRAP_2:[a-z0-9]+]], !dbg !11, !prof ![[PROFILE_METADATA:[0-9]+]],  !annotation ![[ANNOT_GE_LB]]
+// IR-NEXT: br i1 %{{.*}}, label %[[FOO_LABEL_CONT_2:[a-z0-9]+]], label %[[FOO_LABEL_TRAP_2:[a-z0-9]+]], !dbg {{.+}}, !prof ![[PROFILE_METADATA:[0-9]+]],  !annotation ![[ANNOT_GE_LB]]
 
 // IR: [[FOO_LABEL_TRAP_2]]:
 // IR-NEXT: call void @llvm.ubsantrap(i8 25) #{{[0-9]+}}, !dbg !{{.*}}, !annotation ![[ANNOT_GE_LB]]

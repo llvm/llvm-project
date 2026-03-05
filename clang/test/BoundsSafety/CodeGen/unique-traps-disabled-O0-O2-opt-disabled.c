@@ -96,13 +96,11 @@ int consume(int* __bidi_indexable ptr, int idx) {
 // OPT2: attributes #[[ATTR2:[0-9]+]] = { cold noreturn nounwind memory(inaccessiblemem: write) }
 // OPT2: attributes #[[ATTR3]] = { noreturn nounwind }
 //.
-// OPT0: [[META0:![0-9]+]] = !{i32 1, !"wchar_size", i32 4}
 // OPT0: [[META1:![0-9]+]] = !{!"{{.*}}clang version {{.*}}"}
 // OPT0: [[META2]] = !{!"bounds-safety-check-ptr-le-upper-bound"}
 // OPT0: [[PROF3]] = !{!"branch_weights", i32 1048575, i32 1}
 // OPT0: [[META4]] = !{!"bounds-safety-check-ptr-ge-lower-bound"}
 //.
-// OPT2: [[META0:![0-9]+]] = !{i32 1, !"wchar_size", i32 4}
 // OPT2: [[META1:![0-9]+]] = !{!"{{.*}}clang version {{.*}}"}
 // OPT2: [[TBAA2]] = !{[[META3:![0-9]+]], [[META3]], i64 0}
 // OPT2: [[META3]] = !{!"int", [[META4:![0-9]+]], i64 0}

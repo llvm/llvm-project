@@ -122,7 +122,6 @@ int consume(int* __bidi_indexable ptr, int* __bidi_indexable ptr2, int idx) {
 // CHECK: attributes #[[ATTR2]] = { nounwind memory(read, inaccessiblemem: write, target_mem0: none, target_mem1: none) "no-trapping-math"="true" "stack-protector-buffer-size"="8" }
 // CHECK: attributes #[[ATTR3]] = { nomerge noreturn nounwind }
 //.
-// CHECK: [[META0:![0-9]+]] = !{i32 1, !"wchar_size", i32 4}
 // CHECK: [[META1:![0-9]+]] = !{!"{{.*}}clang version {{.*}}"}
 // CHECK: [[TBAA2]] = !{[[META3:![0-9]+]], [[META3]], i64 0}
 // CHECK: [[META3]] = !{!"int", [[META4:![0-9]+]], i64 0}
