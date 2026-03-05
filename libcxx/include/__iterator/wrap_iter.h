@@ -47,6 +47,8 @@ public:
 private:
   iterator_type __i_;
 
+  friend struct pointer_traits<__wrap_iter<_Iter> >;
+
 public:
   _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX14 __wrap_iter() _NOEXCEPT : __i_() {}
   template <class _OtherIter,
@@ -100,8 +102,6 @@ public:
     return __i_[__n];
   }
 
-  _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX14 iterator_type base() const _NOEXCEPT { return __i_; }
-
 private:
   _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX14 explicit __wrap_iter(iterator_type __x) _NOEXCEPT : __i_(__x) {}
 
@@ -122,24 +122,24 @@ private:
 
   _LIBCPP_HIDE_FROM_ABI friend _LIBCPP_CONSTEXPR bool
   operator==(const __wrap_iter& __x, const __wrap_iter& __y) _NOEXCEPT {
-    return __x.base() == __y.base();
+    return __x.__i_ == __y.__i_;
   }
 
   template <class _Iter2>
   _LIBCPP_HIDE_FROM_ABI friend _LIBCPP_CONSTEXPR bool
   operator==(const __wrap_iter& __x, const __wrap_iter<_Iter2>& __y) _NOEXCEPT {
-    return __x.base() == __y.base();
+    return __x.__i_ == __y.__i_;
   }
 
   _LIBCPP_HIDE_FROM_ABI friend _LIBCPP_CONSTEXPR_SINCE_CXX14 bool
   operator<(const __wrap_iter& __x, const __wrap_iter& __y) _NOEXCEPT {
-    return __x.base() < __y.base();
+    return __x.__i_ < __y.__i_;
   }
 
   template <class _Iter2>
   _LIBCPP_HIDE_FROM_ABI friend _LIBCPP_CONSTEXPR_SINCE_CXX14 bool
   operator<(const __wrap_iter& __x, const __wrap_iter<_Iter2>& __y) _NOEXCEPT {
-    return __x.base() < __y.base();
+    return __x.__i_ < __y.__i_;
   }
 
 #if _LIBCPP_STD_VER <= 17
@@ -192,12 +192,12 @@ private:
   _LIBCPP_HIDE_FROM_ABI friend constexpr strong_ordering
   operator<=>(const __wrap_iter& __x, const __wrap_iter<_Iter2>& __y) noexcept {
     if constexpr (three_way_comparable_with<_Iter, _Iter2, strong_ordering>) {
-      return __x.base() <=> __y.base();
+      return __x.__i_ <=> __y.__i_;
     } else {
-      if (__x.base() < __y.base())
+      if (__x.__i_ < __y.__i_)
         return strong_ordering::less;
 
-      if (__x.base() == __y.base())
+      if (__x.__i_ == __y.__i_)
         return strong_ordering::equal;
 
       return strong_ordering::greater;
@@ -208,14 +208,14 @@ private:
 #ifndef _LIBCPP_CXX03_LANG
   template <class _Iter2>
   _LIBCPP_HIDE_FROM_ABI friend _LIBCPP_CONSTEXPR_SINCE_CXX14 auto
-  operator-(const __wrap_iter& __x, const __wrap_iter<_Iter2>& __y) _NOEXCEPT->decltype(__x.base() - __y.base())
+  operator-(const __wrap_iter& __x, const __wrap_iter<_Iter2>& __y) _NOEXCEPT->decltype(__x.__i_ - __y.__i_)
 #else
   template <class _Iter2>
   _LIBCPP_HIDE_FROM_ABI friend _LIBCPP_CONSTEXPR_SINCE_CXX14
   typename __wrap_iter::difference_type operator-(const __wrap_iter& __x, const __wrap_iter<_Iter2>& __y) _NOEXCEPT
 #endif // C++03
   {
-    return __x.base() - __y.base();
+    return __x.__i_ - __y.__i_;
   }
 
   _LIBCPP_HIDE_FROM_ABI friend _LIBCPP_CONSTEXPR_SINCE_CXX14 __wrap_iter
@@ -237,7 +237,7 @@ struct pointer_traits<__wrap_iter<_It> > {
   typedef typename pointer_traits<_It>::difference_type difference_type;
 
   _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR static element_type* to_address(pointer __w) _NOEXCEPT {
-    return std::__to_address(__w.base());
+    return std::__to_address(__w.__i_);
   }
 };
 

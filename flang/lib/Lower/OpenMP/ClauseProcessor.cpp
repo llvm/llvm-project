@@ -1699,7 +1699,7 @@ bool ClauseProcessor::processMotionClauses(lower::StatementContext &stmtCtx,
 
     processMapObjects(stmtCtx, clauseLocation, objects, mapTypeBits,
                       parentMemberIndices, result.mapVars, mapSymbols,
-                      mapperIdName, true);
+                      mapperIdName, /*isMotionModifier=*/true);
   };
 
   bool clauseFound = findRepeatableClause<omp::clause::To>(callbackFn);
