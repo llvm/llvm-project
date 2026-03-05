@@ -249,8 +249,7 @@ private:
   void classifyArgUse(Value *Val, Function *F, bool IsFloat,
                       SmallVectorImpl<CallInst *> &SinCalls,
                       SmallVectorImpl<CallInst *> &CosCalls,
-                      SmallVectorImpl<CallInst *> &SinCosCalls,
-                      bool IsPi);
+                      SmallVectorImpl<CallInst *> &SinCosCalls, bool IsPi);
   Value *optimizePrintFString(CallInst *CI, IRBuilderBase &B);
   Value *optimizeSPrintFString(CallInst *CI, IRBuilderBase &B);
   Value *optimizeSnPrintFString(CallInst *CI, IRBuilderBase &B);
