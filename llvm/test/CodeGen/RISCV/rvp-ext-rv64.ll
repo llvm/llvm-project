@@ -927,7 +927,6 @@ define <8 x i8> @test_psrai_b(<8 x i8> %a) {
   ret <8 x i8> %res
 }
 
-
 ; Test arithmetic saturation shift left immediate for v2i32
 define <2 x i32> @test_psslai_w(<2 x i32> %a) {
 ; CHECK-LABEL: test_psslai_w:
@@ -936,6 +935,35 @@ define <2 x i32> @test_psslai_w(<2 x i32> %a) {
 ; CHECK-NEXT:    ret
   %res = call <2 x i32> @llvm.sshl.sat.v2i32(<2 x i32> %a, <2 x i32> splat(i32 2))
   ret <2 x i32> %res
+}
+
+; Test arithmetic saturation shift left immediate for v4i16
+define <4 x i16> @test_psslai_h(<4 x i16> %a) {
+; CHECK-LABEL: test_psslai_h:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    psslai.h a0, a0, 2
+; CHECK-NEXT:    ret
+  %res = call <4 x i16> @llvm.sshl.sat.v4i16(<4 x i16> %a, <4 x i16> splat(i16 2))
+  ret <4 x i16> %res
+}
+
+; Test arithmetic saturation shift left immediate for v8i8
+define <8 x i8> @test_psslai_b(<8 x i8> %a) {
+; CHECK-LABEL: test_psslai_b:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    pli.b a1, 0
+; CHECK-NEXT:    li a2, 128
+; CHECK-NEXT:    pli.b a3, 127
+; CHECK-NEXT:    pmslt.b a1, a0, a1
+; CHECK-NEXT:    padd.bs a2, zero, a2
+; CHECK-NEXT:    merge a1, a3, a2
+; CHECK-NEXT:    pslli.b a2, a0, 2
+; CHECK-NEXT:    psrai.b a3, a2, 2
+; CHECK-NEXT:    pmseq.b a0, a0, a3
+; CHECK-NEXT:    merge a0, a1, a2
+; CHECK-NEXT:    ret
+  %res = call <8 x i8> @llvm.sshl.sat.v8i8(<8 x i8> %a, <8 x i8> splat(i8 2))
+  ret <8 x i8> %res
 }
 
 ; Test logical shift left(scalar shamt)
@@ -2064,10 +2092,10 @@ define <4 x i16> @test_select_v4i16(i1 %cond, <4 x i16> %a, <4 x i16> %b) {
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    andi a3, a0, 1
 ; CHECK-NEXT:    mv a0, a1
-; CHECK-NEXT:    bnez a3, .LBB166_2
+; CHECK-NEXT:    bnez a3, .LBB168_2
 ; CHECK-NEXT:  # %bb.1:
 ; CHECK-NEXT:    mv a0, a2
-; CHECK-NEXT:  .LBB166_2:
+; CHECK-NEXT:  .LBB168_2:
 ; CHECK-NEXT:    ret
   %res = select i1 %cond, <4 x i16> %a, <4 x i16> %b
   ret <4 x i16> %res
@@ -2078,10 +2106,10 @@ define <8 x i8> @test_select_v8i8(i1 %cond, <8 x i8> %a, <8 x i8> %b) {
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    andi a3, a0, 1
 ; CHECK-NEXT:    mv a0, a1
-; CHECK-NEXT:    bnez a3, .LBB167_2
+; CHECK-NEXT:    bnez a3, .LBB169_2
 ; CHECK-NEXT:  # %bb.1:
 ; CHECK-NEXT:    mv a0, a2
-; CHECK-NEXT:  .LBB167_2:
+; CHECK-NEXT:  .LBB169_2:
 ; CHECK-NEXT:    ret
   %res = select i1 %cond, <8 x i8> %a, <8 x i8> %b
   ret <8 x i8> %res
@@ -2092,10 +2120,10 @@ define <2 x i32> @test_select_v2i32(i1 %cond, <2 x i32> %a, <2 x i32> %b) {
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    andi a3, a0, 1
 ; CHECK-NEXT:    mv a0, a1
-; CHECK-NEXT:    bnez a3, .LBB168_2
+; CHECK-NEXT:    bnez a3, .LBB170_2
 ; CHECK-NEXT:  # %bb.1:
 ; CHECK-NEXT:    mv a0, a2
-; CHECK-NEXT:  .LBB168_2:
+; CHECK-NEXT:  .LBB170_2:
 ; CHECK-NEXT:    ret
   %res = select i1 %cond, <2 x i32> %a, <2 x i32> %b
   ret <2 x i32> %res

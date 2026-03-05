@@ -40,10 +40,17 @@ static mlir::Value genVscaleTimesFactor(mlir::Location loc,
                                builder.getUInt64(scalingFactor, loc));
 }
 
+//===----------------------------------------------------------------------===//
+//  Intrinsics maps
+//
+//  Maps that help automate code-generation.
+//
+// TODO(cir): Share this code with ARM.cpp
+//===----------------------------------------------------------------------===//
 static bool aarch64SVEIntrinsicsProvenSorted = false;
 
 namespace {
-struct AArch64BuiltinInfo {
+struct ARMVectorIntrinsicInfo {
   unsigned builtinID;
   unsigned llvmIntrinsic;
   uint64_t typeModifier;
@@ -51,7 +58,7 @@ struct AArch64BuiltinInfo {
   bool operator<(unsigned rhsBuiltinID) const {
     return builtinID < rhsBuiltinID;
   }
-  bool operator<(const AArch64BuiltinInfo &te) const {
+  bool operator<(const ARMVectorIntrinsicInfo &te) const {
     return builtinID < te.builtinID;
   }
 };
@@ -62,14 +69,16 @@ struct AArch64BuiltinInfo {
 
 #define SVEMAP2(NameBase, TypeModifier)                                        \
   {SVE::BI__builtin_sve_##NameBase, 0, TypeModifier}
-static const AArch64BuiltinInfo aarch64SVEIntrinsicMap[] = {
+static const ARMVectorIntrinsicInfo aarch64SVEIntrinsicMap[] = {
 #define GET_SVE_LLVM_INTRINSIC_MAP
 #include "clang/Basic/arm_sve_builtin_cg.inc"
 #undef GET_SVE_LLVM_INTRINSIC_MAP
 };
 
-static const AArch64BuiltinInfo *
-findARMVectorIntrinsicInMap(ArrayRef<AArch64BuiltinInfo> intrinsicMap,
+// Check if Builtin `builtinId` is present in `intrinsicMap`. If yes, returns
+// the corresponding info struct.
+static const ARMVectorIntrinsicInfo *
+findARMVectorIntrinsicInMap(ArrayRef<ARMVectorIntrinsicInfo> intrinsicMap,
                             unsigned builtinID, bool &mapProvenSorted) {
 
 #ifndef NDEBUG
@@ -79,7 +88,8 @@ findARMVectorIntrinsicInMap(ArrayRef<AArch64BuiltinInfo> intrinsicMap,
   }
 #endif
 
-  const AArch64BuiltinInfo *info = llvm::lower_bound(intrinsicMap, builtinID);
+  const ARMVectorIntrinsicInfo *info =
+      llvm::lower_bound(intrinsicMap, builtinID);
 
   if (info != intrinsicMap.end() && info->builtinID == builtinID)
     return info;
@@ -97,28 +107,26 @@ emitAArch64CompareBuiltinExpr(CIRGenFunction &cgf, CIRGenBuilderTy &builder,
 
   bool scalarCmp = !isa<cir::VectorType>(src.getType());
   if (!scalarCmp) {
-    assert(cast<cir::VectorType>(retTy).getIsScalable() &&
+    assert(!cast<cir::VectorType>(retTy).getIsScalable() &&
            "This is only intended for fixed-width vectors");
-    // Vector retTypes are cast to i8 vectors. Recover original retType.
+    // Vector types are cast to i8 vectors. Recover original type.
     cgf.cgm.errorNYI(loc, std::string("unimplemented vector compare"));
   }
 
   mlir::Value zero = builder.getNullValue(src.getType(), loc);
-  mlir::Value cmp;
   if (cir::isFPOrVectorOfFPType(src.getType())) {
     cgf.cgm.errorNYI(loc, std::string("unimplemented FP compare"));
-  } else {
-    if (scalarCmp)
-      // For scalars, cast !cir.bool to !cir.int<s, 1> so that the compare
-      // result is sign- rather zero-extended when casting to the output
-      // retType.
-      cmp = builder.createCast(
-          loc, cir::CastKind::bool_to_int,
-          builder.createCompare(loc, cir::CmpOpKind::eq, src, zero),
-          builder.getSIntNTy(1));
-    else
-      cgf.cgm.errorNYI(loc, std::string("unimplemented vector compare"));
   }
+
+  if (!scalarCmp)
+    cgf.cgm.errorNYI(loc, std::string("unimplemented vector compare"));
+
+  // For scalars, cast !cir.bool to !cir.int<s, 1> so that the compare
+  // result is sign- rather zero-extended when casting to the output
+  // retType.
+  mlir::Value cmp = builder.createCast(
+      loc, cir::CastKind::bool_to_int,
+      builder.createCompare(loc, kind, src, zero), builder.getSIntNTy(1));
 
   return builder.createCast(loc, cir::CastKind::integral, cmp, retTy);
 }
@@ -243,7 +251,7 @@ static unsigned getSVEMinEltCount(clang::SVETypeFlags::EltType sveType) {
   }
 }
 
-// TODO: Share with OGCG
+// TODO(cir): Share with OGCG
 constexpr unsigned sveBitsPerBlock = 128;
 
 static cir::VectorType getSVEVectorForElementType(CIRGenModule &cgm,
@@ -261,7 +269,7 @@ static cir::VectorType getSVEVectorForElementType(CIRGenModule &cgm,
 /// for Sema checking (see `CheckNeonBuiltinFunctionCall`) and this function
 /// should be kept consistent with the logic in Sema.
 /// TODO: Make this return false for SISD builtins.
-/// TODO: Share this with ARM.cpp
+/// TODO(cir): Share this with ARM.cpp
 static bool hasExtraNeonArgument(unsigned builtinID) {
   // Required by the headers included below, but not in this particular
   // function.
@@ -1212,6 +1220,13 @@ CIRGenFunction::emitAArch64BuiltinExpr(unsigned builtinID, const CallExpr *expr,
       builtinID == clang::AArch64::BI__builtin_arm_st64b ||
       builtinID == clang::AArch64::BI__builtin_arm_st64bv ||
       builtinID == clang::AArch64::BI__builtin_arm_st64bv0) {
+    cgm.errorNYI(expr->getSourceRange(),
+                 std::string("unimplemented AArch64 builtin call: ") +
+                     getContext().BuiltinInfo.getName(builtinID));
+    return mlir::Value{};
+  }
+
+  if (builtinID == clang::AArch64::BI__builtin_arm_atomic_store_with_stshh) {
     cgm.errorNYI(expr->getSourceRange(),
                  std::string("unimplemented AArch64 builtin call: ") +
                      getContext().BuiltinInfo.getName(builtinID));

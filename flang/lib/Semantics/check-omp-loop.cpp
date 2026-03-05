@@ -784,7 +784,7 @@ void OmpStructureChecker::Enter(const parser::OmpClause::Linear &x) {
         if (dir != llvm::omp::Directive::OMPD_declare_simd) {
           context_.Say(modSource,
               "A modifier may not be specified in a LINEAR clause on the %s directive"_err_en_US,
-              parser::ToUpperCaseLetters(getDirectiveName(dir)));
+              parser::omp::GetUpperName(dir, version));
           valid = false;
         }
       } else {
@@ -793,8 +793,7 @@ void OmpStructureChecker::Enter(const parser::OmpClause::Linear &x) {
           if (dir != llvm::omp::Directive::OMPD_declare_simd) {
             context_.Say(modSource,
                 "A REF or UVAL '%s' may not be specified in a LINEAR clause on the %s directive"_err_en_US,
-                desc.name.str(),
-                parser::ToUpperCaseLetters(getDirectiveName(dir)));
+                desc.name.str(), parser::omp::GetUpperName(dir, version));
             valid = false;
           }
         }

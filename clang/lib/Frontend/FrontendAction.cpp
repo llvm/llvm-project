@@ -706,8 +706,9 @@ static bool loadModuleMapForModuleBuild(CompilerInstance &CI, bool IsSystem,
   }
 
   // Load the module map file.
-  if (HS.parseAndLoadModuleMapFile(*ModuleMap, IsSystem, ModuleMapID, &Offset,
-                                   PresumedModuleMapFile))
+  if (HS.parseAndLoadModuleMapFile(*ModuleMap, IsSystem,
+                                   /*ImplicitlyDiscovered=*/false, ModuleMapID,
+                                   &Offset, PresumedModuleMapFile))
     return true;
 
   if (SrcMgr.getBufferOrFake(ModuleMapID).getBufferSize() == Offset)
@@ -1176,7 +1177,7 @@ bool FrontendAction::BeginSourceFile(CompilerInstance &CI,
   for (const auto &Filename : CI.getFrontendOpts().ModuleMapFiles) {
     if (auto File = CI.getFileManager().getOptionalFileRef(Filename))
       CI.getPreprocessor().getHeaderSearchInfo().parseAndLoadModuleMapFile(
-          *File, /*IsSystem*/ false);
+          *File, /*IsSystem*/ false, /*ImplicitlyDiscovered=*/false);
     else
       CI.getDiagnostics().Report(diag::err_module_map_not_found) << Filename;
   }
