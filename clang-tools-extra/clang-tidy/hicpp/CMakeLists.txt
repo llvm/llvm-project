@@ -18,6 +18,7 @@ add_clang_library(clangTidyHICPPModule STATIC
   clangTidyMiscModule
   clangTidyModernizeModule
   clangTidyPerformanceModule
+  clangTidyPortabilityModule
   clangTidyReadabilityModule
   clangTidyUtils
 
