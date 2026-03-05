@@ -122,36 +122,36 @@ define void @sqrt_bf16() {
 ; BASE-NEXT:  Cost Model: Found an estimated cost of 10 for instruction: ret void
 ;
 ; GFX8-LABEL: 'sqrt_bf16'
-; GFX8-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %bf16 = call bfloat @llvm.sqrt.bf16(bfloat undef)
-; GFX8-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: %v2bf16 = call <2 x bfloat> @llvm.sqrt.v2bf16(<2 x bfloat> undef)
-; GFX8-NEXT:  Cost Model: Found an estimated cost of 5 for instruction: %v3bf16 = call <3 x bfloat> @llvm.sqrt.v3bf16(<3 x bfloat> undef)
-; GFX8-NEXT:  Cost Model: Found an estimated cost of 7 for instruction: %v4bf16 = call <4 x bfloat> @llvm.sqrt.v4bf16(<4 x bfloat> undef)
-; GFX8-NEXT:  Cost Model: Found an estimated cost of 9 for instruction: %v5bf16 = call <5 x bfloat> @llvm.sqrt.v5bf16(<5 x bfloat> undef)
-; GFX8-NEXT:  Cost Model: Found an estimated cost of 15 for instruction: %v8bf16 = call <8 x bfloat> @llvm.sqrt.v8bf16(<8 x bfloat> undef)
-; GFX8-NEXT:  Cost Model: Found an estimated cost of 31 for instruction: %v16bf16 = call <16 x bfloat> @llvm.sqrt.v16bf16(<16 x bfloat> undef)
-; GFX8-NEXT:  Cost Model: Found an estimated cost of 33 for instruction: %v17bf16 = call <17 x bfloat> @llvm.sqrt.v17bf16(<17 x bfloat> undef)
+; GFX8-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %bf16 = call bfloat @llvm.sqrt.bf16(bfloat undef)
+; GFX8-NEXT:  Cost Model: Found an estimated cost of 5 for instruction: %v2bf16 = call <2 x bfloat> @llvm.sqrt.v2bf16(<2 x bfloat> undef)
+; GFX8-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: %v3bf16 = call <3 x bfloat> @llvm.sqrt.v3bf16(<3 x bfloat> undef)
+; GFX8-NEXT:  Cost Model: Found an estimated cost of 11 for instruction: %v4bf16 = call <4 x bfloat> @llvm.sqrt.v4bf16(<4 x bfloat> undef)
+; GFX8-NEXT:  Cost Model: Found an estimated cost of 14 for instruction: %v5bf16 = call <5 x bfloat> @llvm.sqrt.v5bf16(<5 x bfloat> undef)
+; GFX8-NEXT:  Cost Model: Found an estimated cost of 23 for instruction: %v8bf16 = call <8 x bfloat> @llvm.sqrt.v8bf16(<8 x bfloat> undef)
+; GFX8-NEXT:  Cost Model: Found an estimated cost of 47 for instruction: %v16bf16 = call <16 x bfloat> @llvm.sqrt.v16bf16(<16 x bfloat> undef)
+; GFX8-NEXT:  Cost Model: Found an estimated cost of 50 for instruction: %v17bf16 = call <17 x bfloat> @llvm.sqrt.v17bf16(<17 x bfloat> undef)
 ; GFX8-NEXT:  Cost Model: Found an estimated cost of 10 for instruction: ret void
 ;
 ; GFX9-LABEL: 'sqrt_bf16'
-; GFX9-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %bf16 = call bfloat @llvm.sqrt.bf16(bfloat undef)
-; GFX9-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: %v2bf16 = call <2 x bfloat> @llvm.sqrt.v2bf16(<2 x bfloat> undef)
-; GFX9-NEXT:  Cost Model: Found an estimated cost of 5 for instruction: %v3bf16 = call <3 x bfloat> @llvm.sqrt.v3bf16(<3 x bfloat> undef)
-; GFX9-NEXT:  Cost Model: Found an estimated cost of 7 for instruction: %v4bf16 = call <4 x bfloat> @llvm.sqrt.v4bf16(<4 x bfloat> undef)
-; GFX9-NEXT:  Cost Model: Found an estimated cost of 9 for instruction: %v5bf16 = call <5 x bfloat> @llvm.sqrt.v5bf16(<5 x bfloat> undef)
-; GFX9-NEXT:  Cost Model: Found an estimated cost of 15 for instruction: %v8bf16 = call <8 x bfloat> @llvm.sqrt.v8bf16(<8 x bfloat> undef)
-; GFX9-NEXT:  Cost Model: Found an estimated cost of 31 for instruction: %v16bf16 = call <16 x bfloat> @llvm.sqrt.v16bf16(<16 x bfloat> undef)
-; GFX9-NEXT:  Cost Model: Found an estimated cost of 33 for instruction: %v17bf16 = call <17 x bfloat> @llvm.sqrt.v17bf16(<17 x bfloat> undef)
+; GFX9-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %bf16 = call bfloat @llvm.sqrt.bf16(bfloat undef)
+; GFX9-NEXT:  Cost Model: Found an estimated cost of 5 for instruction: %v2bf16 = call <2 x bfloat> @llvm.sqrt.v2bf16(<2 x bfloat> undef)
+; GFX9-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: %v3bf16 = call <3 x bfloat> @llvm.sqrt.v3bf16(<3 x bfloat> undef)
+; GFX9-NEXT:  Cost Model: Found an estimated cost of 11 for instruction: %v4bf16 = call <4 x bfloat> @llvm.sqrt.v4bf16(<4 x bfloat> undef)
+; GFX9-NEXT:  Cost Model: Found an estimated cost of 14 for instruction: %v5bf16 = call <5 x bfloat> @llvm.sqrt.v5bf16(<5 x bfloat> undef)
+; GFX9-NEXT:  Cost Model: Found an estimated cost of 23 for instruction: %v8bf16 = call <8 x bfloat> @llvm.sqrt.v8bf16(<8 x bfloat> undef)
+; GFX9-NEXT:  Cost Model: Found an estimated cost of 47 for instruction: %v16bf16 = call <16 x bfloat> @llvm.sqrt.v16bf16(<16 x bfloat> undef)
+; GFX9-NEXT:  Cost Model: Found an estimated cost of 50 for instruction: %v17bf16 = call <17 x bfloat> @llvm.sqrt.v17bf16(<17 x bfloat> undef)
 ; GFX9-NEXT:  Cost Model: Found an estimated cost of 10 for instruction: ret void
 ;
 ; GFX10-LABEL: 'sqrt_bf16'
-; GFX10-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %bf16 = call bfloat @llvm.sqrt.bf16(bfloat undef)
-; GFX10-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: %v2bf16 = call <2 x bfloat> @llvm.sqrt.v2bf16(<2 x bfloat> undef)
-; GFX10-NEXT:  Cost Model: Found an estimated cost of 5 for instruction: %v3bf16 = call <3 x bfloat> @llvm.sqrt.v3bf16(<3 x bfloat> undef)
-; GFX10-NEXT:  Cost Model: Found an estimated cost of 7 for instruction: %v4bf16 = call <4 x bfloat> @llvm.sqrt.v4bf16(<4 x bfloat> undef)
-; GFX10-NEXT:  Cost Model: Found an estimated cost of 9 for instruction: %v5bf16 = call <5 x bfloat> @llvm.sqrt.v5bf16(<5 x bfloat> undef)
-; GFX10-NEXT:  Cost Model: Found an estimated cost of 15 for instruction: %v8bf16 = call <8 x bfloat> @llvm.sqrt.v8bf16(<8 x bfloat> undef)
-; GFX10-NEXT:  Cost Model: Found an estimated cost of 31 for instruction: %v16bf16 = call <16 x bfloat> @llvm.sqrt.v16bf16(<16 x bfloat> undef)
-; GFX10-NEXT:  Cost Model: Found an estimated cost of 33 for instruction: %v17bf16 = call <17 x bfloat> @llvm.sqrt.v17bf16(<17 x bfloat> undef)
+; GFX10-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %bf16 = call bfloat @llvm.sqrt.bf16(bfloat undef)
+; GFX10-NEXT:  Cost Model: Found an estimated cost of 5 for instruction: %v2bf16 = call <2 x bfloat> @llvm.sqrt.v2bf16(<2 x bfloat> undef)
+; GFX10-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: %v3bf16 = call <3 x bfloat> @llvm.sqrt.v3bf16(<3 x bfloat> undef)
+; GFX10-NEXT:  Cost Model: Found an estimated cost of 11 for instruction: %v4bf16 = call <4 x bfloat> @llvm.sqrt.v4bf16(<4 x bfloat> undef)
+; GFX10-NEXT:  Cost Model: Found an estimated cost of 14 for instruction: %v5bf16 = call <5 x bfloat> @llvm.sqrt.v5bf16(<5 x bfloat> undef)
+; GFX10-NEXT:  Cost Model: Found an estimated cost of 23 for instruction: %v8bf16 = call <8 x bfloat> @llvm.sqrt.v8bf16(<8 x bfloat> undef)
+; GFX10-NEXT:  Cost Model: Found an estimated cost of 47 for instruction: %v16bf16 = call <16 x bfloat> @llvm.sqrt.v16bf16(<16 x bfloat> undef)
+; GFX10-NEXT:  Cost Model: Found an estimated cost of 50 for instruction: %v17bf16 = call <17 x bfloat> @llvm.sqrt.v17bf16(<17 x bfloat> undef)
 ; GFX10-NEXT:  Cost Model: Found an estimated cost of 10 for instruction: ret void
 ;
 ; BASE-SIZE-LABEL: 'sqrt_bf16'
@@ -166,36 +166,36 @@ define void @sqrt_bf16() {
 ; BASE-SIZE-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: ret void
 ;
 ; GFX8-SIZE-LABEL: 'sqrt_bf16'
-; GFX8-SIZE-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %bf16 = call bfloat @llvm.sqrt.bf16(bfloat undef)
-; GFX8-SIZE-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: %v2bf16 = call <2 x bfloat> @llvm.sqrt.v2bf16(<2 x bfloat> undef)
-; GFX8-SIZE-NEXT:  Cost Model: Found an estimated cost of 5 for instruction: %v3bf16 = call <3 x bfloat> @llvm.sqrt.v3bf16(<3 x bfloat> undef)
-; GFX8-SIZE-NEXT:  Cost Model: Found an estimated cost of 7 for instruction: %v4bf16 = call <4 x bfloat> @llvm.sqrt.v4bf16(<4 x bfloat> undef)
-; GFX8-SIZE-NEXT:  Cost Model: Found an estimated cost of 9 for instruction: %v5bf16 = call <5 x bfloat> @llvm.sqrt.v5bf16(<5 x bfloat> undef)
-; GFX8-SIZE-NEXT:  Cost Model: Found an estimated cost of 15 for instruction: %v8bf16 = call <8 x bfloat> @llvm.sqrt.v8bf16(<8 x bfloat> undef)
-; GFX8-SIZE-NEXT:  Cost Model: Found an estimated cost of 31 for instruction: %v16bf16 = call <16 x bfloat> @llvm.sqrt.v16bf16(<16 x bfloat> undef)
-; GFX8-SIZE-NEXT:  Cost Model: Found an estimated cost of 33 for instruction: %v17bf16 = call <17 x bfloat> @llvm.sqrt.v17bf16(<17 x bfloat> undef)
+; GFX8-SIZE-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %bf16 = call bfloat @llvm.sqrt.bf16(bfloat undef)
+; GFX8-SIZE-NEXT:  Cost Model: Found an estimated cost of 5 for instruction: %v2bf16 = call <2 x bfloat> @llvm.sqrt.v2bf16(<2 x bfloat> undef)
+; GFX8-SIZE-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: %v3bf16 = call <3 x bfloat> @llvm.sqrt.v3bf16(<3 x bfloat> undef)
+; GFX8-SIZE-NEXT:  Cost Model: Found an estimated cost of 11 for instruction: %v4bf16 = call <4 x bfloat> @llvm.sqrt.v4bf16(<4 x bfloat> undef)
+; GFX8-SIZE-NEXT:  Cost Model: Found an estimated cost of 14 for instruction: %v5bf16 = call <5 x bfloat> @llvm.sqrt.v5bf16(<5 x bfloat> undef)
+; GFX8-SIZE-NEXT:  Cost Model: Found an estimated cost of 23 for instruction: %v8bf16 = call <8 x bfloat> @llvm.sqrt.v8bf16(<8 x bfloat> undef)
+; GFX8-SIZE-NEXT:  Cost Model: Found an estimated cost of 47 for instruction: %v16bf16 = call <16 x bfloat> @llvm.sqrt.v16bf16(<16 x bfloat> undef)
+; GFX8-SIZE-NEXT:  Cost Model: Found an estimated cost of 50 for instruction: %v17bf16 = call <17 x bfloat> @llvm.sqrt.v17bf16(<17 x bfloat> undef)
 ; GFX8-SIZE-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: ret void
 ;
 ; GFX9-SIZE-LABEL: 'sqrt_bf16'
-; GFX9-SIZE-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %bf16 = call bfloat @llvm.sqrt.bf16(bfloat undef)
-; GFX9-SIZE-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: %v2bf16 = call <2 x bfloat> @llvm.sqrt.v2bf16(<2 x bfloat> undef)
-; GFX9-SIZE-NEXT:  Cost Model: Found an estimated cost of 5 for instruction: %v3bf16 = call <3 x bfloat> @llvm.sqrt.v3bf16(<3 x bfloat> undef)
-; GFX9-SIZE-NEXT:  Cost Model: Found an estimated cost of 7 for instruction: %v4bf16 = call <4 x bfloat> @llvm.sqrt.v4bf16(<4 x bfloat> undef)
-; GFX9-SIZE-NEXT:  Cost Model: Found an estimated cost of 9 for instruction: %v5bf16 = call <5 x bfloat> @llvm.sqrt.v5bf16(<5 x bfloat> undef)
-; GFX9-SIZE-NEXT:  Cost Model: Found an estimated cost of 15 for instruction: %v8bf16 = call <8 x bfloat> @llvm.sqrt.v8bf16(<8 x bfloat> undef)
-; GFX9-SIZE-NEXT:  Cost Model: Found an estimated cost of 31 for instruction: %v16bf16 = call <16 x bfloat> @llvm.sqrt.v16bf16(<16 x bfloat> undef)
-; GFX9-SIZE-NEXT:  Cost Model: Found an estimated cost of 33 for instruction: %v17bf16 = call <17 x bfloat> @llvm.sqrt.v17bf16(<17 x bfloat> undef)
+; GFX9-SIZE-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %bf16 = call bfloat @llvm.sqrt.bf16(bfloat undef)
+; GFX9-SIZE-NEXT:  Cost Model: Found an estimated cost of 5 for instruction: %v2bf16 = call <2 x bfloat> @llvm.sqrt.v2bf16(<2 x bfloat> undef)
+; GFX9-SIZE-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: %v3bf16 = call <3 x bfloat> @llvm.sqrt.v3bf16(<3 x bfloat> undef)
+; GFX9-SIZE-NEXT:  Cost Model: Found an estimated cost of 11 for instruction: %v4bf16 = call <4 x bfloat> @llvm.sqrt.v4bf16(<4 x bfloat> undef)
+; GFX9-SIZE-NEXT:  Cost Model: Found an estimated cost of 14 for instruction: %v5bf16 = call <5 x bfloat> @llvm.sqrt.v5bf16(<5 x bfloat> undef)
+; GFX9-SIZE-NEXT:  Cost Model: Found an estimated cost of 23 for instruction: %v8bf16 = call <8 x bfloat> @llvm.sqrt.v8bf16(<8 x bfloat> undef)
+; GFX9-SIZE-NEXT:  Cost Model: Found an estimated cost of 47 for instruction: %v16bf16 = call <16 x bfloat> @llvm.sqrt.v16bf16(<16 x bfloat> undef)
+; GFX9-SIZE-NEXT:  Cost Model: Found an estimated cost of 50 for instruction: %v17bf16 = call <17 x bfloat> @llvm.sqrt.v17bf16(<17 x bfloat> undef)
 ; GFX9-SIZE-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: ret void
 ;
 ; GFX10-SIZE-LABEL: 'sqrt_bf16'
-; GFX10-SIZE-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %bf16 = call bfloat @llvm.sqrt.bf16(bfloat undef)
-; GFX10-SIZE-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: %v2bf16 = call <2 x bfloat> @llvm.sqrt.v2bf16(<2 x bfloat> undef)
-; GFX10-SIZE-NEXT:  Cost Model: Found an estimated cost of 5 for instruction: %v3bf16 = call <3 x bfloat> @llvm.sqrt.v3bf16(<3 x bfloat> undef)
-; GFX10-SIZE-NEXT:  Cost Model: Found an estimated cost of 7 for instruction: %v4bf16 = call <4 x bfloat> @llvm.sqrt.v4bf16(<4 x bfloat> undef)
-; GFX10-SIZE-NEXT:  Cost Model: Found an estimated cost of 9 for instruction: %v5bf16 = call <5 x bfloat> @llvm.sqrt.v5bf16(<5 x bfloat> undef)
-; GFX10-SIZE-NEXT:  Cost Model: Found an estimated cost of 15 for instruction: %v8bf16 = call <8 x bfloat> @llvm.sqrt.v8bf16(<8 x bfloat> undef)
-; GFX10-SIZE-NEXT:  Cost Model: Found an estimated cost of 31 for instruction: %v16bf16 = call <16 x bfloat> @llvm.sqrt.v16bf16(<16 x bfloat> undef)
-; GFX10-SIZE-NEXT:  Cost Model: Found an estimated cost of 33 for instruction: %v17bf16 = call <17 x bfloat> @llvm.sqrt.v17bf16(<17 x bfloat> undef)
+; GFX10-SIZE-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %bf16 = call bfloat @llvm.sqrt.bf16(bfloat undef)
+; GFX10-SIZE-NEXT:  Cost Model: Found an estimated cost of 5 for instruction: %v2bf16 = call <2 x bfloat> @llvm.sqrt.v2bf16(<2 x bfloat> undef)
+; GFX10-SIZE-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: %v3bf16 = call <3 x bfloat> @llvm.sqrt.v3bf16(<3 x bfloat> undef)
+; GFX10-SIZE-NEXT:  Cost Model: Found an estimated cost of 11 for instruction: %v4bf16 = call <4 x bfloat> @llvm.sqrt.v4bf16(<4 x bfloat> undef)
+; GFX10-SIZE-NEXT:  Cost Model: Found an estimated cost of 14 for instruction: %v5bf16 = call <5 x bfloat> @llvm.sqrt.v5bf16(<5 x bfloat> undef)
+; GFX10-SIZE-NEXT:  Cost Model: Found an estimated cost of 23 for instruction: %v8bf16 = call <8 x bfloat> @llvm.sqrt.v8bf16(<8 x bfloat> undef)
+; GFX10-SIZE-NEXT:  Cost Model: Found an estimated cost of 47 for instruction: %v16bf16 = call <16 x bfloat> @llvm.sqrt.v16bf16(<16 x bfloat> undef)
+; GFX10-SIZE-NEXT:  Cost Model: Found an estimated cost of 50 for instruction: %v17bf16 = call <17 x bfloat> @llvm.sqrt.v17bf16(<17 x bfloat> undef)
 ; GFX10-SIZE-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: ret void
 ;
   %bf16 = call bfloat @llvm.sqrt.bf16(bfloat undef)
