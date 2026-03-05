@@ -6,6 +6,11 @@ bugprone-std-exception-baseclass
 Ensure that every value that in a ``throw`` expression is an instance of
 ``std::exception``.
 
+Exception types should inherit from ``std::exception`` so they can be
+handled consistently and caught as ``std::exception``.
+Exception objects exist to propagate error information
+and must not be created without being thrown.
+
 .. code-block:: c++
 
   class custom_exception {};
