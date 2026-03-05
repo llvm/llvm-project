@@ -1,5 +1,5 @@
 ; REQUIRES: asserts
-; RUN: llc -mtriple=x86_64-unknown-unknown -mattr=avx512f -debug-only=isel < %s -o /dev/null 2>&1 | FileCheck %s
+; RUN: llc -mtriple=x86_64-unknown-unknown -mattr=avx512f,avx512fp16 -debug-only=isel < %s -o /dev/null 2>&1 | FileCheck %s
 
 ; This tests the propagation of fast-math-flags from IR instructions to SDNodeFlags.
 
@@ -45,7 +45,6 @@ define float @fmf_setcc_canon(float %x, float %y) {
   ret float %ret
 }
 
-declare <16 x float> @llvm.x86.avx512.vfmadd.ps.512(<16 x float>, <16 x float>, <16 x float>, i32)
 
 ; Check that FMF are propagated twice: from IR to x86-specific node and from x86-specific node to generic node.
 
@@ -62,3 +61,32 @@ define <16 x float> @fmf_target_intrinsic(<16 x float> %a, <16 x float> %b, <16 
   %t1 = tail call nsz <16 x float> @llvm.x86.avx512.vfmadd.ps.512(<16 x float> %t0, <16 x float> %b, <16 x float> %c, i32 4)
   ret <16 x float> %t1
 }
+
+; FADD(acc, FMA(a, b, +0.0)) -> FMA(a, b, acc) 
+; CHECK-LABEL: === test1
+define dso_local <32 x half> @test1(<32 x half> %acc, <32 x half> %a, <32 x half> %b) {
+entry:
+; CHECK:   Morphed node: [[T:t[0-9]+]]: v16f32 = VFCMADDCPHZr arcp contract
+; CHECK-NOT: afn
+; CHECK-NOT: nsz
+  %0 = bitcast <32 x half> %a to <16 x float>
+  %1 = bitcast <32 x half> %b to <16 x float>
+  %2 = tail call nsz contract afn arcp <16 x float> @llvm.x86.avx512fp16.mask.vfcmadd.cph.512(<16 x float> %0, <16 x float> %1, <16 x float> zeroinitializer, i16 -1, i32 4)
+  %3 = bitcast <16 x float> %2 to <32 x half>
+  %add.i = fadd contract arcp <32 x half> %3, %acc
+  ret <32 x half> %add.i
+}
+
+; FNEG(FMUL(x, y)) -> FMSUB(x, y, 0)
+; CHECK-LABEL: === test2
+define double @test2(double %x, double %y) {
+; CHECK:   Morphed node: [[T:t[0-9]+]]: f64 = VFNMSUB213SDZr contract afn
+; CHECK-NOT: nsz
+  %m = fmul contract nsz afn double %x, %y
+  %n = fneg contract afn double %m
+  ret double %n
+}
+
+declare <16 x float> @llvm.x86.avx512.vfmadd.ps.512(<16 x float>, <16 x float>, <16 x float>, i32)
+declare <16 x float> @llvm.x86.avx512fp16.mask.vfcmadd.cph.512(<16 x float>, <16 x float>, <16 x float>, i16, i32 immarg)
+
