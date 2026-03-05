@@ -3809,6 +3809,31 @@ bool SemaHLSL::CheckBuiltinFunctionCall(unsigned BuiltinID, CallExpr *TheCall) {
     TheCall->setType(ArgTyA);
     break;
   }
+  case Builtin::BI__builtin_hlsl_wave_active_all_equal: {
+    if (SemaRef.checkArgCount(TheCall, 1))
+      return true;
+
+    // Ensure input expr type is a scalar/vector
+    if (CheckAnyScalarOrVector(&SemaRef, TheCall, 0))
+      return true;
+
+    QualType InputTy = TheCall->getArg(0)->getType();
+    ASTContext &Ctx = getASTContext();
+
+    QualType RetTy;
+
+    // If vector, construct bool vector of same size
+    if (const auto *VecTy = InputTy->getAs<ExtVectorType>()) {
+      unsigned NumElts = VecTy->getNumElements();
+      RetTy = Ctx.getExtVectorType(Ctx.BoolTy, NumElts);
+    } else {
+      // Scalar case
+      RetTy = Ctx.BoolTy;
+    }
+
+    TheCall->setType(RetTy);
+    break;
+  }
   case Builtin::BI__builtin_hlsl_wave_active_max:
   case Builtin::BI__builtin_hlsl_wave_active_min:
   case Builtin::BI__builtin_hlsl_wave_active_sum: {
@@ -4686,7 +4711,67 @@ bool SemaHLSL::ActOnUninitializedVarDecl(VarDecl *VD) {
   return false;
 }
 
-// Return true if everything is ok; returns false if there was an error.
+std::optional<const DeclBindingInfo *> SemaHLSL::inferGlobalBinding(Expr *E) {
+  if (auto *Ternary = dyn_cast<ConditionalOperator>(E)) {
+    auto TrueInfo = inferGlobalBinding(Ternary->getTrueExpr());
+    auto FalseInfo = inferGlobalBinding(Ternary->getFalseExpr());
+    if (!TrueInfo || !FalseInfo)
+      return std::nullopt;
+    if (*TrueInfo != *FalseInfo)
+      return std::nullopt;
+    return TrueInfo;
+  }
+
+  if (auto *ASE = dyn_cast<ArraySubscriptExpr>(E))
+    E = ASE->getBase()->IgnoreParenImpCasts();
+
+  if (DeclRefExpr *DRE = dyn_cast<DeclRefExpr>(E->IgnoreParens()))
+    if (VarDecl *VD = dyn_cast<VarDecl>(DRE->getDecl())) {
+      const Type *Ty = VD->getType()->getUnqualifiedDesugaredType();
+      if (Ty->isArrayType())
+        Ty = Ty->getArrayElementTypeNoTypeQual();
+
+      if (const auto *AttrResType =
+              HLSLAttributedResourceType::findHandleTypeOnResource(Ty)) {
+        ResourceClass RC = AttrResType->getAttrs().ResourceClass;
+        return Bindings.getDeclBindingInfo(VD, RC);
+      }
+    }
+
+  return nullptr;
+}
+
+void SemaHLSL::trackLocalResource(VarDecl *VD, Expr *E) {
+  std::optional<const DeclBindingInfo *> ExprBinding = inferGlobalBinding(E);
+  if (!ExprBinding) {
+    SemaRef.Diag(E->getBeginLoc(),
+                 diag::warn_hlsl_assigning_local_resource_is_not_unique)
+        << E << VD;
+    return; // Expr use multiple resources
+  }
+
+  if (*ExprBinding == nullptr)
+    return; // No binding could be inferred to track, return without error
+
+  auto PrevBinding = Assigns.find(VD);
+  if (PrevBinding == Assigns.end()) {
+    // No previous binding recorded, simply record the new assignment
+    Assigns.insert({VD, *ExprBinding});
+    return;
+  }
+
+  // Otherwise, warn if the assignment implies different resource bindings
+  if (*ExprBinding != PrevBinding->second) {
+    SemaRef.Diag(E->getBeginLoc(),
+                 diag::warn_hlsl_assigning_local_resource_is_not_unique)
+        << E << VD;
+    SemaRef.Diag(VD->getLocation(), diag::note_var_declared_here) << VD;
+    return;
+  }
+
+  return;
+}
+
 bool SemaHLSL::CheckResourceBinOp(BinaryOperatorKind Opc, Expr *LHSExpr,
                                   Expr *RHSExpr, SourceLocation Loc) {
   assert((LHSExpr->getType()->isHLSLResourceRecord() ||
@@ -4709,6 +4794,8 @@ bool SemaHLSL::CheckResourceBinOp(BinaryOperatorKind Opc, Expr *LHSExpr,
         SemaRef.Diag(VD->getLocation(), diag::note_var_declared_here) << VD;
         return false;
       }
+
+      trackLocalResource(VD, RHSExpr);
     }
   }
   return true;
@@ -5315,6 +5402,10 @@ QualType SemaHLSL::checkMatrixComponent(Sema &S, QualType baseType,
 }
 
 bool SemaHLSL::handleInitialization(VarDecl *VDecl, Expr *&Init) {
+  // If initializing a local resource, track the resource binding it is using
+  if (VDecl->getType()->isHLSLResourceRecord() && !VDecl->hasGlobalStorage())
+    trackLocalResource(VDecl, Init);
+
   const HLSLVkConstantIdAttr *ConstIdAttr =
       VDecl->getAttr<HLSLVkConstantIdAttr>();
   if (!ConstIdAttr)

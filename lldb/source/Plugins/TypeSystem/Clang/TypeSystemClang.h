@@ -326,9 +326,8 @@ public:
 
   CompilerType
   CreateRecordType(clang::DeclContext *decl_ctx,
-                   OptionalClangModuleID owning_module,
-                   lldb::AccessType access_type, llvm::StringRef name, int kind,
-                   lldb::LanguageType language,
+                   OptionalClangModuleID owning_module, llvm::StringRef name,
+                   int kind, lldb::LanguageType language,
                    std::optional<ClangASTMetadata> metadata = std::nullopt,
                    bool exports_symbols = false);
 
@@ -424,10 +423,11 @@ public:
       clang::FunctionDecl *func_decl, clang::FunctionTemplateDecl *Template,
       const TemplateParameterInfos &infos);
 
-  clang::ClassTemplateDecl *CreateClassTemplateDecl(
-      clang::DeclContext *decl_ctx, OptionalClangModuleID owning_module,
-      lldb::AccessType access_type, llvm::StringRef class_name, int kind,
-      const TemplateParameterInfos &infos);
+  clang::ClassTemplateDecl *
+  CreateClassTemplateDecl(clang::DeclContext *decl_ctx,
+                          OptionalClangModuleID owning_module,
+                          llvm::StringRef class_name, int kind,
+                          const TemplateParameterInfos &infos);
 
   clang::TemplateTemplateParmDecl *
   CreateTemplateTemplateParmDecl(const char *template_name);
@@ -955,7 +955,6 @@ public:
   static clang::FieldDecl *AddFieldToRecordType(const CompilerType &type,
                                                 llvm::StringRef name,
                                                 const CompilerType &field_type,
-                                                lldb::AccessType access,
                                                 uint32_t bitfield_bit_size);
 
   static void BuildIndirectFields(const CompilerType &type);
@@ -964,8 +963,7 @@ public:
 
   static clang::VarDecl *AddVariableToRecordType(const CompilerType &type,
                                                  llvm::StringRef name,
-                                                 const CompilerType &var_type,
-                                                 lldb::AccessType access);
+                                                 const CompilerType &var_type);
 
   /// Initializes a variable with an integer value.
   /// \param var The variable to initialize. Must not already have an
@@ -1003,11 +1001,12 @@ public:
       clang::FunctionDecl *context, const clang::FunctionProtoType &prototype,
       const llvm::SmallVector<llvm::StringRef> &param_names);
 
-  clang::CXXMethodDecl *AddMethodToCXXRecordType(
-      lldb::opaque_compiler_type_t type, llvm::StringRef name,
-      llvm::StringRef asm_label, const CompilerType &method_type,
-      lldb::AccessType access, bool is_virtual, bool is_static, bool is_inline,
-      bool is_explicit, bool is_attr_used, bool is_artificial);
+  clang::CXXMethodDecl *
+  AddMethodToCXXRecordType(lldb::opaque_compiler_type_t type,
+                           llvm::StringRef name, llvm::StringRef asm_label,
+                           const CompilerType &method_type, bool is_virtual,
+                           bool is_static, bool is_inline, bool is_explicit,
+                           bool is_attr_used, bool is_artificial);
 
   void AddMethodOverridesForCXXRecordType(lldb::opaque_compiler_type_t type);
 
@@ -1121,7 +1120,7 @@ public:
 
   clang::ClassTemplateDecl *ParseClassTemplateDecl(
       clang::DeclContext *decl_ctx, OptionalClangModuleID owning_module,
-      lldb::AccessType access_type, const char *parent_name, int tag_decl_kind,
+      const char *parent_name, int tag_decl_kind,
       const TypeSystemClang::TemplateParameterInfos &template_param_infos);
 
   clang::BlockDecl *CreateBlockDeclaration(clang::DeclContext *ctx,

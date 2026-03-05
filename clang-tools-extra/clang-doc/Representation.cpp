@@ -473,8 +473,7 @@ bool Index::operator<(const Index &Other) const {
 }
 
 void Index::sort() {
-  llvm::sort(Children);
-  for (auto &C : Children)
+  for (auto &[_, C] : Children)
     C.sort();
 }
 
@@ -485,10 +484,11 @@ ClangDocContext::ClangDocContext(tooling::ExecutionContext *ECtx,
                                  StringRef RepositoryLinePrefix, StringRef Base,
                                  std::vector<std::string> UserStylesheets,
                                  clang::DiagnosticsEngine &Diags,
-                                 bool FTimeTrace)
+                                 OutputFormatTy Format, bool FTimeTrace)
     : ECtx(ECtx), ProjectName(ProjectName), OutDirectory(OutDirectory),
       SourceRoot(std::string(SourceRoot)), UserStylesheets(UserStylesheets),
-      Base(Base), Diags(Diags), PublicOnly(PublicOnly), FTimeTrace(FTimeTrace) {
+      Base(Base), Diags(Diags), Format(Format), PublicOnly(PublicOnly),
+      FTimeTrace(FTimeTrace) {
   llvm::SmallString<128> SourceRootDir(SourceRoot);
   if (SourceRoot.empty())
     // If no SourceRoot was provided the current path is used as the default

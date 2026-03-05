@@ -3847,6 +3847,24 @@ define [4 x float] @infer_return_from_load_nofpclass_md_array(ptr %ptr) {
   ret [4 x float] %load
 }
 
+define [2 x float] @constant_data_array_0() {
+; CHECK: Function Attrs: mustprogress nofree norecurse nosync nounwind willreturn memory(none)
+; CHECK-LABEL: define nofpclass(nan inf nzero sub nnorm) [2 x float] @constant_data_array_0
+; CHECK-SAME: () #[[ATTR3]] {
+; CHECK-NEXT:    ret [2 x float] [float 0.000000e+00, float 1.000000e+00]
+;
+  ret [2 x float] [float 0.0, float 1.0]
+}
+
+define [2 x float] @constant_data_array_1() {
+; CHECK: Function Attrs: mustprogress nofree norecurse nosync nounwind willreturn memory(none)
+; CHECK-LABEL: define nofpclass(snan inf zero sub norm) [2 x float] @constant_data_array_1
+; CHECK-SAME: () #[[ATTR3]] {
+; CHECK-NEXT:    ret [2 x float] [float 0x7FF8000000000000, float 0x7FF8000000000000]
+;
+  ret [2 x float] [float 0x7FF8000000000000, float 0x7FF8000000000000]
+}
+
 declare i64 @_Z13get_global_idj(i32 noundef)
 
 attributes #0 = { denormal_fpenv(preservesign) }
