@@ -1501,11 +1501,11 @@ public:
     // Only external storage options can have their location set. For these we
     // also need to set the default value.
     if constexpr (ExternalStorage) {
-      if (opt_storage<DataType, ExternalStorage,
-                      std::is_class_v<DataType>>::setLocation(O, L))
-        return true;
-      Default = L;
-      return false;
+      if (!opt_storage<DataType, ExternalStorage,
+                       std::is_class_v<DataType>>::setLocation(O, L)) {
+        Default = L;
+        return false;
+      }
     }
     return true;
   }
@@ -1723,6 +1723,7 @@ class list : public Option, public list_storage<DataType, StorageClass> {
   }
 
 protected:
+  // MLIR pass option classes uses these to manage default values.
   bool isDefaultAssigned() const { return DefaultAssigned; }
   void overwriteDefault() { DefaultAssigned = false; }
   ArrayRef<OptionValue<DataType>> getDefault() const { return Default; }
