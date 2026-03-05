@@ -1,0 +1,20 @@
+# RUN: llc -mtriple=aarch64 -run-pass=machine-cse -debug-counter=machine-cse=0-1 -o - %s | FileCheck %s
+
+---
+name:             debug_counter_machine_cse
+body:             |
+  bb.0:
+    ; CHECK-LABEL: name: debug_counter_machine_cse
+    ; CHECK: %0:gpr32 = MOVi32imm 1
+    ; CHECK-NEXT: %1:gpr32 = ADDWrr %0, %0
+    ; CHECK-NEXT: %4:gpr32 = ADDWrr %0, %0
+    ; CHECK-NEXT: $w0 = COPY %4
+    ; CHECK-NEXT: RET_ReallyLR implicit $w0
+    %0:gpr32 = MOVi32imm 1
+    %1:gpr32 = ADDWrr %0, %0
+    %2:gpr32 = ADDWrr %0, %0
+    %3:gpr32 = ADDWrr %0, %0
+    %4:gpr32 = ADDWrr %0, %0
+    $w0 = COPY %4
+    RET_ReallyLR implicit $w0
+...
