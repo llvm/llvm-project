@@ -11544,39 +11544,29 @@ void OpenMPIRBuilder::loadOffloadInfoMetadata(vfs::FileSystem &VFS,
 OpenMPIRBuilder::InsertPointOrErrorTy OpenMPIRBuilder::createIteratorLoop(
     LocationDescription Loc, llvm::Value *TripCount, IteratorBodyGenTy BodyGen,
     llvm::StringRef Name) {
-  IRBuilderBase &B = Builder;
-  B.restoreIP(Loc.IP);
+  Builder.restoreIP(Loc.IP);
 
   BasicBlock *CurBB = Builder.GetInsertBlock();
   assert(CurBB &&
          "expected a valid insertion block for creating an iterator loop");
   Function *F = CurBB->getParent();
-  LLVMContext &Ctx = F->getContext();
 
-  // If splitting at end but CurBB has no terminator, make it well-formed first.
-  if (B.GetInsertPoint() == CurBB->end() && !CurBB->getTerminator()) {
-    BasicBlock *TmpCont = BasicBlock::Create(Ctx, "omp.it.tmp.cont", F);
-    B.SetInsertPoint(CurBB);
-    B.CreateBr(TmpCont);
-
-    // The terminator we just inserted is now the end of CurBB. To split after
-    // it, set insertion point to CurBB->end() (which is fine now).
-    B.SetInsertPoint(CurBB->end());
-  }
+  InsertPointTy SplitIP = Builder.saveIP();
+  if (SplitIP.getPoint() == CurBB->end())
+    if (Instruction *Terminator = CurBB->getTerminator())
+      SplitIP = InsertPointTy(CurBB, Terminator->getIterator());
 
   BasicBlock *ContBB =
-      CurBB->splitBasicBlock(Builder.GetInsertPoint(), "omp.it.cont");
-  // Remove the branch to contBB since we will branch to contBB after the loop
-  CurBB->getTerminator()->eraseFromParent();
+      splitBB(SplitIP, /*CreateBranch=*/false,
+              Builder.getCurrentDebugLocation(), "omp.it.cont");
 
   CanonicalLoopInfo *CLI =
-      createLoopSkeleton(B.getCurrentDebugLocation(), TripCount, F,
+      createLoopSkeleton(Builder.getCurrentDebugLocation(), TripCount, F,
                          /*PreInsertBefore=*/ContBB,
                          /*PostInsertBefore=*/ContBB, Name);
 
   // Enter loop from original block.
-  B.SetInsertPoint(CurBB);
-  B.CreateBr(CLI->getPreheader());
+  redirectTo(CurBB, CLI->getPreheader(), Builder.getCurrentDebugLocation());
 
   // Remove the unconditional branch inserted by createLoopSkeleton in the body
   if (Instruction *T = CLI->getBody()->getTerminator())
@@ -11588,14 +11578,14 @@ OpenMPIRBuilder::InsertPointOrErrorTy OpenMPIRBuilder::createIteratorLoop(
 
   // Ensure we end the loop body by jumping to the latch
   if (!CLI->getBody()->getTerminator()) {
-    B.SetInsertPoint(CLI->getBody());
-    B.CreateBr(CLI->getLatch());
+    Builder.SetInsertPoint(CLI->getBody());
+    Builder.CreateBr(CLI->getLatch());
   }
 
   // Link After -> ContBB
-  B.SetInsertPoint(CLI->getAfter(), CLI->getAfter()->begin());
+  Builder.SetInsertPoint(CLI->getAfter(), CLI->getAfter()->begin());
   if (!CLI->getAfter()->getTerminator())
-    B.CreateBr(ContBB);
+    Builder.CreateBr(ContBB);
 
   return InsertPointTy{ContBB, ContBB->begin()};
 }
