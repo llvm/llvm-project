@@ -97,7 +97,8 @@ void canonicalizeDefines(PreprocessorOptions &PPOpts);
 /// Creates a CompilerInvocation suitable for the dependency scanner.
 std::shared_ptr<CompilerInvocation>
 createScanCompilerInvocation(const CompilerInvocation &Invocation,
-                             const DependencyScanningService &Service);
+                             const DependencyScanningService &Service,
+                             DependencyActionController &Controller);
 
 /// Creates dependency output options to be reported to the dependency consumer,
 /// deducing missing information if necessary.
