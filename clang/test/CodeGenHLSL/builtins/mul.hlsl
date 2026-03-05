@@ -60,22 +60,14 @@ export int test_vec_vec_muli(int3 a, int3 b) { return mul(a, b); }
 // CHECK: ret i32 %hlsl.dot.i
 export uint test_vec_vec_mulu(uint3 a, uint3 b) { return mul(a, b); }
 
-// Double vector dot product: no dot intrinsic for double vectors
+// Double vector dot product: no dot intrinsic for double vectors.
+// The checks for this test are less precise because the scalar loop may be vectorized depending on the build configuration.
 // CHECK-LABEL: test_vec_vec_muld
 // CHECK-NOT: @llvm.dx.fdot
 // CHECK-NOT: @llvm.spv.fdot
-// CHECK: [[A0:%.*]] = extractelement <3 x double> %{{[ab]}}, i64 0
-// CHECK: [[B0:%.*]] = extractelement <3 x double> %{{[ab]}}, i64 0
-// CHECK: %mul.i = fmul {{.*}} double [[A0]], [[B0]]
-// CHECK: [[A1:%.*]] = extractelement <3 x double> %a, i64 1
-// CHECK: [[B1:%.*]] = extractelement <3 x double> %b, i64 1
-// CHECK: [[MUL1:%.*]] = fmul {{.*}} double [[A1]], [[B1]]
-// CHECK: [[ADD1:%.*]] = fadd {{.*}} double [[MUL1]], %mul.i
-// CHECK: [[A2:%.*]] = extractelement <3 x double> %a, i64 2
-// CHECK: [[B2:%.*]] = extractelement <3 x double> %b, i64 2
-// CHECK: [[MUL2:%.*]] = fmul {{.*}} double [[A2]], [[B2]]
-// CHECK: [[ADD2:%.*]] = fadd {{.*}} double [[MUL2]], [[ADD1]]
-// CHECK: ret double [[ADD2]]
+// CHECK: fmul {{.*}} double
+// CHECK: fadd {{.*}} double
+// CHECK: ret double %{{.*}}
 export double test_vec_vec_muld(double3 a, double3 b) { return mul(a, b); }
 
 // -- Case 6: vector * matrix -> vector --
