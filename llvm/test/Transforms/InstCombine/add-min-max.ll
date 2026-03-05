@@ -83,3 +83,33 @@ entry:
   %res = add nuw nsw i32 %min, %max
   ret i32 %res
 }
+
+
+define i32 @sadd_min_neg(i32 %x, i32 %a) {
+; CHECK-LABEL: @sadd_min_neg(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[RES:%.*]] = call i32 @llvm.smin.i32(i32 [[X:%.*]], i32 0)
+; CHECK-NEXT:    ret i32 [[RES]]
+;
+entry:
+  %neg_a = sub nsw i32 0, %a
+  %x_minus_a = sub nsw i32 %x, %a
+  %smin = call i32 @llvm.smin.i32(i32 %neg_a, i32 %x_minus_a)
+  %res = add nsw i32 %smin, %a
+  ret i32 %res
+}
+
+define i32 @sadd_min_neg_2(i32 %x, i32 %a) {
+; CHECK-LABEL: @sadd_min_neg_2(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[TMP0:%.*]] = add i32 [[A:%.*]], 128
+; CHECK-NEXT:    [[RES:%.*]] = call i32 @llvm.smin.i32(i32 [[X:%.*]], i32 [[TMP0]])
+; CHECK-NEXT:    ret i32 [[RES]]
+;
+entry:
+  %other = add i32 0, 128
+  %x_minus_a = sub nsw i32 %x, %a
+  %smin = call i32 @llvm.smin.i32(i32 %other, i32 %x_minus_a)
+  %res = add nsw i32 %smin, %a
+  ret i32 %res
+}
