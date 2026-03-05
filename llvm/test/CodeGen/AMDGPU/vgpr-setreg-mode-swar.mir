@@ -6,8 +6,8 @@
 # S_SET_VGPR_MSB format: (src0_msb[0-1], src1_msb[2-3], src2_msb[4-5], dst_msb[6-7])
 # MODE register format:  (dst_msb[0-1], src0_msb[2-3], src1_msb[4-5], src2_msb[6-7])
 # vgpr256/257 (both MSB=1): S_SET_VGPR_MSB mode = (1 << 0) | (1 << 6) = 65
-#                           MODE register mode = (1 << 0) | (1 << 2) = 5
-# New setreg imm = 0x5 | (5 << 12) = 0x5005 = 20485
+# Setreg (Size=4 <= 12) resets the mode scope and clears bits[12:19] to 0.
+# No VGPR instruction follows, so bits[12:19] remain 0. Setreg imm = 5.
 name:            setreg_size_lt_12
 tracksRegLiveness: true
 body:             |
@@ -15,7 +15,7 @@ body:             |
     ; CHECK-LABEL: name: setreg_size_lt_12
     ; CHECK: S_SET_VGPR_MSB 65, implicit-def $mode
     ; CHECK-NEXT: $vgpr256 = V_MOV_B32_e32 $vgpr257, implicit $exec
-    ; CHECK-NEXT: S_SETREG_IMM32_B32 20485, 6145, implicit-def $mode, implicit $mode
+    ; CHECK-NEXT: S_SETREG_IMM32_B32 5, 6145, implicit-def $mode, implicit $mode
     ; CHECK-NEXT: S_ENDPGM 0
     $vgpr256 = V_MOV_B32_e32 $vgpr257, implicit $exec
     ; size=4, offset=0, hwreg=MODE: simm16 = 0x1801 = 6145
@@ -25,8 +25,8 @@ body:             |
 
 ---
 # Case 1b: Size == 12 (boundary), imm32[12:19]=0
-# vgpr256/257: S_SET_VGPR_MSB mode = 65, MODE register mode = 5
-# New setreg imm = 0xABC | (5 << 12) = 0x5ABC = 23228
+# Setreg (Size=12 <= 12) resets the mode scope and clears bits[12:19] to 0.
+# No VGPR instruction follows, so bits[12:19] remain 0. Setreg imm = 0xABC = 2748.
 name:            setreg_size_eq_12
 tracksRegLiveness: true
 body:             |
@@ -34,7 +34,7 @@ body:             |
     ; CHECK-LABEL: name: setreg_size_eq_12
     ; CHECK: S_SET_VGPR_MSB 65, implicit-def $mode
     ; CHECK-NEXT: $vgpr256 = V_MOV_B32_e32 $vgpr257, implicit $exec
-    ; CHECK-NEXT: S_SETREG_IMM32_B32 23228, 22529, implicit-def $mode, implicit $mode
+    ; CHECK-NEXT: S_SETREG_IMM32_B32 2748, 22529, implicit-def $mode, implicit $mode
     ; CHECK-NEXT: S_ENDPGM 0
     $vgpr256 = V_MOV_B32_e32 $vgpr257, implicit $exec
     ; size=12, offset=0, hwreg=MODE: simm16 = 0x5801 = 22529
@@ -44,8 +44,8 @@ body:             |
 
 ---
 # Case 1c: Size <= 12 with existing non-zero bits in imm32[12:19]
-# vgpr256/257: S_SET_VGPR_MSB mode = 65, MODE register mode = 5
-# imm32 = 0x23005 (bits 12:19 = 0x23), result = 0x5005 = 20485 (bits 12:19 replaced with 5)
+# imm32 = 0x23005 (bits 12:19 = 0x23). Setreg resets mode scope and clears
+# bits[12:19] to 0. No VGPR instruction follows, so result = 0x00005 = 5.
 name:            setreg_size_lt_12_nonzero_upper
 tracksRegLiveness: true
 body:             |
@@ -53,7 +53,7 @@ body:             |
     ; CHECK-LABEL: name: setreg_size_lt_12_nonzero_upper
     ; CHECK: S_SET_VGPR_MSB 65, implicit-def $mode
     ; CHECK-NEXT: $vgpr256 = V_MOV_B32_e32 $vgpr257, implicit $exec
-    ; CHECK-NEXT: S_SETREG_IMM32_B32 20485, 6145, implicit-def $mode, implicit $mode
+    ; CHECK-NEXT: S_SETREG_IMM32_B32 5, 6145, implicit-def $mode, implicit $mode
     ; CHECK-NEXT: S_ENDPGM 0
     $vgpr256 = V_MOV_B32_e32 $vgpr257, implicit $exec
     ; size=4, offset=0, hwreg=MODE: simm16 = 0x1801 = 6145
@@ -123,9 +123,9 @@ body:             |
 ...
 
 ---
-# Case 5: Size <= 12 but VGPR MSBs already present (no change needed)
-# vgpr256/257: S_SET_VGPR_MSB mode = 65, MODE register mode = 5
-# imm32 = 0x5005 = 20485 (bits 12:19 = 5 = MODE register mode)
+# Case 5: Size <= 12 with VGPR MSBs already present in imm32[12:19]
+# imm32 = 0x5005 = 20485 (bits 12:19 = 5). Setreg resets mode scope and clears
+# bits[12:19] to 0, regardless of prior content. Result = 5.
 name:            setreg_size_lt_12_already_correct
 tracksRegLiveness: true
 body:             |
@@ -133,7 +133,7 @@ body:             |
     ; CHECK-LABEL: name: setreg_size_lt_12_already_correct
     ; CHECK: S_SET_VGPR_MSB 65, implicit-def $mode
     ; CHECK-NEXT: $vgpr256 = V_MOV_B32_e32 $vgpr257, implicit $exec
-    ; CHECK-NEXT: S_SETREG_IMM32_B32 20485, 6145, implicit-def $mode, implicit $mode
+    ; CHECK-NEXT: S_SETREG_IMM32_B32 5, 6145, implicit-def $mode, implicit $mode
     ; CHECK-NEXT: S_ENDPGM 0
     $vgpr256 = V_MOV_B32_e32 $vgpr257, implicit $exec
     ; size=4, offset=0, hwreg=MODE: simm16 = 0x1801 = 6145
@@ -145,8 +145,7 @@ body:             |
 ---
 # Case 6: Different VGPR MSB value (using different high VGPRs)
 # vgpr512/513 (both MSB=2): S_SET_VGPR_MSB mode = (2 << 0) | (2 << 6) = 130
-#                           MODE register mode = (2 << 0) | (2 << 2) = 10
-# New setreg imm = 0x5 | (10 << 12) = 0xA005 = 40965
+# Setreg resets mode scope and clears bits[12:19] to 0. No VGPR follows. Result = 5.
 name:            setreg_different_vgpr_msb
 tracksRegLiveness: true
 body:             |
@@ -154,7 +153,7 @@ body:             |
     ; CHECK-LABEL: name: setreg_different_vgpr_msb
     ; CHECK: S_SET_VGPR_MSB 130, implicit-def $mode
     ; CHECK-NEXT: $vgpr512 = V_MOV_B32_e32 $vgpr513, implicit $exec
-    ; CHECK-NEXT: S_SETREG_IMM32_B32 40965, 6145, implicit-def $mode, implicit $mode
+    ; CHECK-NEXT: S_SETREG_IMM32_B32 5, 6145, implicit-def $mode, implicit $mode
     ; CHECK-NEXT: S_ENDPGM 0
     $vgpr512 = V_MOV_B32_e32 $vgpr513, implicit $exec
     ; size=4, offset=0, hwreg=MODE: simm16 = 0x1801 = 6145
@@ -168,7 +167,7 @@ body:             |
 # Second VGPR (V_ADD_U32 vgpr256, vgpr257, vgpr512):
 #   S_SET_VGPR_MSB mode = (1 << 0) | (2 << 2) | (1 << 6) = 73 (src0=1, src1=2, dst=1)
 #   MODE register mode = (1 << 0) | (1 << 2) | (2 << 4) = 37 (dst=1, src0=1, src1=2)
-# Piggybacking updates setreg imm32[12:19] from 5 to 37.
+# Piggybacking updates setreg imm32[12:19] from 0 to 37.
 # Final setreg imm = 5 | (37 << 12) = 151557
 name:            setreg_size_le_12_piggyback_superset
 tracksRegLiveness: true
@@ -191,9 +190,10 @@ body:             |
 ---
 # Case 8: s_setreg_imm32_b32 (Size <= 12) followed by VGPR with different mode bits
 # First VGPR (V_MOV vgpr256, vgpr0): S_SET_VGPR_MSB mode = 64, MODE register mode = 1
-# Second VGPR (V_MOV vgpr256, vgpr256): S_SET_VGPR_MSB mode = 65, MODE register mode = 5
-# Setreg gets MODE mode = 1 from first VGPR. Second VGPR needs different src0 bits,
-# so a new S_SET_VGPR_MSB is inserted. The new S_SET_VGPR_MSB has mode = 65 | (64 << 8) = 16449.
+# Second VGPR (V_MOV vgpr256, vgpr256): needs mode = 65, MODE register mode = 5
+# The setreg (Size=4 <= 12) resets the mode scope. Its bits[12:19] are cleared to 0.
+# The second VGPR's setMode piggybacks mode = 65 into the setreg's bits[12:19],
+# giving imm32 = 5 | (5 << 12) = 20485 = 0x5005. No separate S_SET_VGPR_MSB needed.
 name:            setreg_size_le_12_then_different_vgpr
 tracksRegLiveness: true
 body:             |
@@ -205,8 +205,7 @@ body:             |
     ; CHECK-NEXT: {{  $}}
     ; CHECK-NEXT: S_SET_VGPR_MSB 64, implicit-def $mode
     ; CHECK-NEXT: $vgpr256 = V_MOV_B32_e32 $vgpr0, implicit $exec
-    ; CHECK-NEXT: S_SETREG_IMM32_B32 4101, 6145, implicit-def $mode, implicit $mode
-    ; CHECK-NEXT: S_SET_VGPR_MSB 16449, implicit-def $mode
+    ; CHECK-NEXT: S_SETREG_IMM32_B32 20485, 6145, implicit-def $mode, implicit $mode
     ; CHECK-NEXT: $vgpr256 = V_MOV_B32_e32 $vgpr256, implicit $exec
     ; CHECK-NEXT: S_ENDPGM 0
     $vgpr256 = V_MOV_B32_e32 $vgpr0, implicit $exec
