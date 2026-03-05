@@ -735,8 +735,8 @@ ABIArgInfo RISCVABIInfo::classifyArgumentType(QualType Ty, bool IsFixed,
       return ABIArgInfo::getDirect(
           llvm::IntegerType::get(getVMContext(), 2 * XLen));
     // Use 2-element XLen array if only XLen alignment is required.
-    return ABIArgInfo::getDirect(llvm::ArrayType::get(
-        llvm::IntegerType::get(getVMContext(), XLen), 2));
+    return ABIArgInfo::getDirect(
+        llvm::ArrayType::get(llvm::IntegerType::get(getVMContext(), XLen), 2));
   }
   return getNaturalAlignIndirect(
       Ty, /*AddrSpace=*/getDataLayout().getAllocaAddrSpace(),
