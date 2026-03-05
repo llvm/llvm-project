@@ -367,6 +367,8 @@ foreach( t ${LIBCLC_TARGETS_TO_BUILD} )
       -include opencl-c-base.h
       # Error on undefined macros
       -Werror=undef
+      -Wall
+      -Wextra
       -fdiscard-value-names
       -ffp-contract=fast-honor-pragmas
       -fdenormal-fp-math=dynamic

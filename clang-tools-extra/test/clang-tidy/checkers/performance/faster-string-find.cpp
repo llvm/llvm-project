@@ -1,44 +1,9 @@
-// RUN: %check_clang_tidy %s performance-faster-string-find %t
+// RUN: %check_clang_tidy %s performance-faster-string-find %t -- -- -isystem %clang_tidy_headers
 // RUN: %check_clang_tidy -check-suffix=CUSTOM %s performance-faster-string-find %t -- \
 // RUN:   -config="{CheckOptions: \
 // RUN:             {performance-faster-string-find.StringLikeClasses: \
-// RUN:                '::llvm::StringRef;'}}"
-
-namespace std {
-template <typename Char>
-struct basic_string {
-  int find(const Char *, int = 0) const;
-  int find(const Char *, int, int) const;
-  int rfind(const Char *) const;
-  int find_first_of(const Char *) const;
-  int find_first_not_of(const Char *) const;
-  int find_last_of(const Char *) const;
-  int find_last_not_of(const Char *) const;
-  bool starts_with(const Char *) const;
-  bool ends_with(const Char *) const;
-  bool contains(const Char *) const;
-};
-
-typedef basic_string<char> string;
-typedef basic_string<wchar_t> wstring;
-
-template <typename Char>
-struct basic_string_view {
-  int find(const Char *, int = 0) const;
-  int find(const Char *, int, int) const;
-  int rfind(const Char *) const;
-  int find_first_of(const Char *) const;
-  int find_first_not_of(const Char *) const;
-  int find_last_of(const Char *) const;
-  int find_last_not_of(const Char *) const;
-  bool starts_with(const Char *) const;
-  bool ends_with(const Char *) const;
-  bool contains(const Char *) const;
-};
-
-typedef basic_string_view<char> string_view;
-typedef basic_string_view<wchar_t> wstring_view;
-}  // namespace std
+// RUN:                '::llvm::StringRef;'}}" -- -isystem %clang_tidy_headers
+#include <string>
 
 namespace llvm {
 struct StringRef {
@@ -102,6 +67,17 @@ void StringFind() {
   Str.contains("a");
   // CHECK-MESSAGES: [[@LINE-1]]:16: warning: 'contains' called with a
   // CHECK-FIXES: Str.contains('a');
+  Str += "a";
+  // CHECK-MESSAGES: [[@LINE-1]]:10: warning: 'operator+=' called with a
+  // CHECK-FIXES: Str += 'a';
+  ((Str += "a") += "b") += "c";
+  // CHECK-MESSAGES: [[@LINE-1]]:12: warning: 'operator+=' called with a
+  // CHECK-MESSAGES: [[@LINE-2]]:20: warning: 'operator+=' called with a
+  // CHECK-MESSAGES: [[@LINE-3]]:28: warning: 'operator+=' called with a
+  // CHECK-FIXES: ((Str += 'a') += 'b') += 'c';
+  Str.operator+=("a");
+  // CHECK-MESSAGES: [[@LINE-1]]:18: warning: 'operator+=' called with a
+  // CHECK-FIXES: Str.operator+=('a');
 
   // std::wstring should work.
   std::wstring WStr;
