@@ -5,7 +5,6 @@ Prerequisites
 -------------
 
 * OCaml 4.00.0+.
-* ctypes 0.4+.
 * CMake (to build LLVM).
 
 Building the bindings

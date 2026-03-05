@@ -30,7 +30,7 @@ package "bitwriter" (
 )
 
 package "executionengine" (
-    requires = "llvm,llvm.target,ctypes"
+    requires = "llvm,llvm.target"
     version = "@PACKAGE_VERSION@"
     description = "JIT and Interpreter for LLVM"
     archive(byte) = "llvm_executionengine.cma"

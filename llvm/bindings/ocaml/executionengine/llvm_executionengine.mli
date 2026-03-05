@@ -73,20 +73,18 @@ val data_layout : llexecutionengine -> Llvm_target.DataLayout.t
     the global [gv] is at the specified location [ptr], which must outlive
     [gv] and [ee].
     All uses of [gv] in the compiled code will refer to [ptr]. *)
-val add_global_mapping : Llvm.llvalue -> 'a Ctypes.ptr -> llexecutionengine -> unit
+val add_global_mapping : Llvm.llvalue -> nativeint -> llexecutionengine -> unit
 
-(** [get_global_value_address id typ ee] returns a pointer to the
-    identifier [id] as type [typ], which will be a pointer type for a
-    value, and which will be live as long as [id] and [ee]
+(** [get_global_value_address id ee] returns a pointer to the
+    identifier [id], and which will be live as long as [id] and [ee]
     are. Caution: this function finalizes, i.e. forces code
     generation, all loaded modules.  Further modifications to the
     modules will not have any effect. *)
-val get_global_value_address : string -> 'a Ctypes.typ -> llexecutionengine -> 'a
+val get_global_value_address : string -> llexecutionengine -> nativeint
 
-(** [get_function_address fn typ ee] returns a pointer to the function
-    [fn] as type [typ], which will be a pointer type for a function
-    (e.g. [(int -> int) typ]), and which will be live as long as [fn]
-    and [ee] are. Caution: this function finalizes, i.e. forces code
+(** [get_function_address fn ee] returns a pointer to the function
+    [fn], and which will be live as long as [fn] and [ee] are.
+    Caution: this function finalizes, i.e. forces code
     generation, all loaded modules.  Further modifications to the
     modules will not have any effect. *)
-val get_function_address : string -> 'a Ctypes.typ -> llexecutionengine -> 'a
+val get_function_address : string -> llexecutionengine -> nativeint
