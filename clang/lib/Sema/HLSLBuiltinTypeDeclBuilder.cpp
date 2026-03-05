@@ -1638,7 +1638,6 @@ BuiltinTypeDeclBuilder::addGatherMethods(ResourceDimension Dim) {
         .callBuiltin("__builtin_hlsl_resource_gather", ReturnType, PH::Handle,
                      PH::LastStmt, PH::_1,
                      getConstantUnsignedIntExpr(V.Component))
-        .returnValue(PH::LastStmt)
         .finalize();
 
     // ret GatherVariant(SamplerState s, float2 location, int2 offset)
@@ -1650,7 +1649,6 @@ BuiltinTypeDeclBuilder::addGatherMethods(ResourceDimension Dim) {
         .callBuiltin("__builtin_hlsl_resource_gather", ReturnType, PH::Handle,
                      PH::LastStmt, PH::_1,
                      getConstantUnsignedIntExpr(V.Component), PH::_2)
-        .returnValue(PH::LastStmt)
         .finalize();
   }
 
@@ -1708,7 +1706,6 @@ BuiltinTypeDeclBuilder::addGatherCmpMethods(ResourceDimension Dim) {
         .callBuiltin("__builtin_hlsl_resource_gather_cmp", ReturnType,
                      PH::Handle, PH::LastStmt, PH::_1, PH::_2,
                      getConstantUnsignedIntExpr(V.Component), PH::_3)
-        .returnValue(PH::LastStmt)
         .finalize();
   }
 
