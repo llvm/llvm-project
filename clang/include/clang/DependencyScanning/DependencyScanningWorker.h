@@ -75,8 +75,55 @@ class DependencyActionController {
 public:
   virtual ~DependencyActionController();
 
+  /// Creates a thread-safe copy of the controller.
+  virtual std::unique_ptr<DependencyActionController> clone() const = 0;
+
+  /// Provides output path for a given module dependency. Must be thread-safe.
   virtual std::string lookupModuleOutput(const ModuleDeps &MD,
                                          ModuleOutputKind Kind) = 0;
+
+  /// Initializes the scan invocation.
+  virtual void initializeScanInvocation(CompilerInvocation &ScanInvocation) {}
+
+  /// Initializes the scan instance and modifies the resulting TU invocation.
+  /// Returns true on success, false on failure.
+  virtual bool initialize(CompilerInstance &ScanInstance,
+                          CompilerInvocation &NewInvocation) {
+    return true;
+  }
+
+  /// Finalizes the scan instance and modifies the resulting TU invocation.
+  /// Returns true on success, false on failure.
+  virtual bool finalize(CompilerInstance &ScanInstance,
+                        CompilerInvocation &NewInvocation) {
+    return true;
+  }
+
+  /// Returns the cache key for the resulting invocation, or nullopt.
+  virtual std::optional<std::string>
+  getCacheKey(const CompilerInvocation &NewInvocation) {
+    return std::nullopt;
+  }
+
+  /// Initializes the module scan instance.
+  /// Returns true on success, false on failure.
+  virtual bool initializeModuleBuild(CompilerInstance &ModuleScanInstance) {
+    return true;
+  }
+
+  /// Finalizes the module scan instance.
+  /// Returns true on success, false on failure.
+  virtual bool finalizeModuleBuild(CompilerInstance &ModuleScanInstance) {
+    return true;
+  }
+
+  /// Modifies the resulting module invocation and the associated structure.
+  /// Returns true on success, false on failure.
+  virtual bool finalizeModuleInvocation(CompilerInstance &ScanInstance,
+                                        CowCompilerInvocation &CI,
+                                        const ModuleDeps &MD) {
+    return true;
+  }
 };
 
 /// An individual dependency scanning worker that is able to run on its own

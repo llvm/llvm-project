@@ -1072,7 +1072,7 @@ int clang_scan_deps_main(int argc, char **argv, const llvm::ToolContext &) {
             HadErrors = true;
         } else {
           auto CIWithCtx = CompilerInstanceWithContext::initializeOrError(
-              WorkerTool, CWD, Input->CommandLine);
+              WorkerTool, CWD, Input->CommandLine, LookupOutput);
           if (llvm::Error Err = CIWithCtx.takeError()) {
             handleErrorWithInfoString(
                 "Compiler instance with context setup error", std::move(Err),
