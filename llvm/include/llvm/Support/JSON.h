@@ -94,9 +94,9 @@ class Value;
 template <typename T> Value toJSON(const std::optional<T> &Opt);
 
 /// An Object is a JSON object, which maps strings to heterogenous JSON values.
-/// It simulates DenseMap<ObjectKey, Value>. ObjectKey is a maybe-owned string.
+/// ObjectKey is a maybe-owned string.
 class Object {
-  using Storage = DenseMap<ObjectKey, Value, llvm::DenseMapInfo<StringRef>>;
+  using Storage = std::map<ObjectKey, Value>;
   Storage M;
 
 public:
@@ -133,8 +133,8 @@ public:
   bool erase(StringRef K);
   void erase(iterator I) { M.erase(I); }
 
-  iterator find(StringRef K) { return M.find_as(K); }
-  const_iterator find(StringRef K) const { return M.find_as(K); }
+  iterator find(const ObjectKey &K) { return M.find(K); }
+  const_iterator find(const ObjectKey &K) const { return M.find(K); }
   // operator[] acts as if Value was default-constructible as null.
   LLVM_ABI Value &operator[](const ObjectKey &K);
   LLVM_ABI Value &operator[](ObjectKey &&K);
@@ -646,7 +646,7 @@ inline Object::Object(std::initializer_list<KV> Properties) {
   for (const auto &P : Properties) {
     auto R = try_emplace(P.K, nullptr);
     if (R.second)
-      R.first->getSecond().moveFrom(std::move(P.V));
+      R.first->second.moveFrom(std::move(P.V));
   }
 }
 inline std::pair<Object::iterator, bool> Object::insert(KV E) {
