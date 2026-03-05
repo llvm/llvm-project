@@ -13,8 +13,8 @@ func.func @ldmatrix(%arg0: memref<?x?xf16, 3>, %x: index, %y: index) {
 func.func @mma_sync(%arg0: vector<4x2xf16>,
                %arg1: vector<2x2xf16>,
                %arg2: vector<2x2xf16>) -> vector<2x2xf16> {
-//       CHECK: nvgpu.mma.sync(%{{.*}}, %{{.*}}, %{{.*}}) {mmaShape = [16, 8, 16]} : (vector<4x2xf16>, vector<2x2xf16>, vector<2x2xf16>) -> vector<2x2xf16>
-  %d = nvgpu.mma.sync(%arg0, %arg1, %arg2) {mmaShape = [16, 8, 16]} :
+//       CHECK: nvgpu.mma.sync(%{{.*}}, %{{.*}}, %{{.*}}) {mmaShape = array<i64: 16, 8, 16>} : (vector<4x2xf16>, vector<2x2xf16>, vector<2x2xf16>) -> vector<2x2xf16>
+  %d = nvgpu.mma.sync(%arg0, %arg1, %arg2) {mmaShape = array<i64: 16, 8, 16>} :
     (vector<4x2xf16>, vector<2x2xf16>, vector<2x2xf16>) -> vector<2x2xf16>
   return %d : vector<2x2xf16>
 }
@@ -25,9 +25,9 @@ func.func @mma_sp_sync_f16_16832(%arg0: vector<4x2xf16>,
                                  %arg2: vector<2x2xf16>,
                                  %arg3: vector<2xi16>) -> vector<2x2xf16> {
   //      CHECK: nvgpu.mma.sp.sync(%{{.*}}, %{{.*}}, %{{.*}}) metadata(%{{.+}}) {
-  // CHECK-SAME:   mmaShape = [16, 8, 32]
+  // CHECK-SAME:   mmaShape = array<i64: 16, 8, 32>
   // CHECK-SAME: (vector<4x2xf16>, vector<4x2xf16>, vector<2x2xf16>) -> vector<2x2xf16>
-  %d = nvgpu.mma.sp.sync(%arg0, %arg1, %arg2) metadata(%arg3) {mmaShape = [16, 8, 32]} :
+  %d = nvgpu.mma.sp.sync(%arg0, %arg1, %arg2) metadata(%arg3) {mmaShape = array<i64: 16, 8, 32>} :
     (vector<4x2xf16>, vector<4x2xf16>, vector<2x2xf16>) -> vector<2x2xf16>
   return %d : vector<2x2xf16>
 }
@@ -38,9 +38,9 @@ func.func @mma_sp_sync_f16_16816(%arg0: vector<2x2xf16>,
                                  %arg2: vector<2x2xf16>,
                                  %arg3: vector<2xi16>) -> vector<2x2xf16> {
   //      CHECK: nvgpu.mma.sp.sync(%{{.*}}, %{{.*}}, %{{.*}}) metadata(%{{.+}}) {
-  // CHECK-SAME:   mmaShape = [16, 8, 16]
+  // CHECK-SAME:   mmaShape = array<i64: 16, 8, 16>
   // CHECK-SAME: (vector<2x2xf16>, vector<2x2xf16>, vector<2x2xf16>) -> vector<2x2xf16>
-  %d = nvgpu.mma.sp.sync(%arg0, %arg1, %arg2) metadata(%arg3) {mmaShape = [16, 8, 16]} :
+  %d = nvgpu.mma.sp.sync(%arg0, %arg1, %arg2) metadata(%arg3) {mmaShape = array<i64: 16, 8, 16>} :
     (vector<2x2xf16>, vector<2x2xf16>, vector<2x2xf16>) -> vector<2x2xf16>
   return %d : vector<2x2xf16>
 }
@@ -51,9 +51,9 @@ func.func @mma_sp_sync_i8_16864(%arg0: vector<4x4xi8>,
                                 %arg2: vector<2x2xi32>,
                                 %arg3: vector<2xi16>) -> vector<2x2xi32> {
   //      CHECK: nvgpu.mma.sp.sync(%{{.*}}, %{{.*}}, %{{.*}}) metadata(%{{.+}}) {
-  // CHECK-SAME:   mmaShape = [16, 8, 64]
+  // CHECK-SAME:   mmaShape = array<i64: 16, 8, 64>
   // CHECK-SAME: (vector<4x4xi8>, vector<4x4xi8>, vector<2x2xi32>) -> vector<2x2xi32>
-  %d = nvgpu.mma.sp.sync(%arg0, %arg1, %arg2) metadata(%arg3) {mmaShape = [16, 8, 64]} :
+  %d = nvgpu.mma.sp.sync(%arg0, %arg1, %arg2) metadata(%arg3) {mmaShape = array<i64: 16, 8, 64>} :
     (vector<4x4xi8>, vector<4x4xi8>, vector<2x2xi32>) -> vector<2x2xi32>
   return %d : vector<2x2xi32>
 }

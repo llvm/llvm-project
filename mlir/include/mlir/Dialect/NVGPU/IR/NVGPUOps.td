@@ -66,16 +66,6 @@ class NVGPU_MmaSyncOp<string mnemonic> :
         NVGPU_Op<mnemonic,  [Pure,
                              PredOpTrait<"matrixA and matrixB have same element type",
                                          TCopVTEtIsSameAs<0, 1>>]> {
-  code extraBaseClassDeclaration = [{
-    std::array<int64_t, 3> getMmaShapeAsArray() {
-      ArrayAttr mmaShape = this->getMmaShape();
-      assert(mmaShape.size() == 3 && "mmaShape should be three integers");
-      return {::llvm::cast<IntegerAttr>(mmaShape[0]).getInt(),
-              ::llvm::cast<IntegerAttr>(mmaShape[1]).getInt(),
-              ::llvm::cast<IntegerAttr>(mmaShape[2]).getInt()};
-    }
-  }];
-
   let hasVerifier = 1;
 }
 
@@ -96,14 +86,14 @@ def NVGPU_MmaSyncOp : NVGPU_MmaSyncOp<"mma.sync"> {
     Example:
 
     ```mlir
-    %res = nvgpu.mma.sync (%matrixA, %matrixB, %matrixC) {mmaShape = [16, 8, 16]} :
+    %res = nvgpu.mma.sync (%matrixA, %matrixB, %matrixC) {mmaShape = array<i64: 16, 8, 16>} :
         (vector<4x2xf16>, vector<2x2xf16>, vector<2x2xf32>) -> vector<2x2xf32>
     ```
   }];
   let arguments = (ins AnyVectorOfNonZeroRank:$matrixA,
                        AnyVectorOfNonZeroRank:$matrixB,
                        AnyVectorOfNonZeroRank:$matrixC,
-                       I64ArrayAttr:$mmaShape,
+                       DenseI64ArrayAttr:$mmaShape,
                        OptionalAttr<UnitAttr>:$tf32Enabled);
 
   let results = (outs AnyVectorOfNonZeroRank:$res);
@@ -112,7 +102,7 @@ def NVGPU_MmaSyncOp : NVGPU_MmaSyncOp<"mma.sync"> {
     OpBuilder<(ins "Value":$matrixA,
                    "Value":$matrixB,
                    "Value":$matrixC,
-                   "ArrayAttr":$mmaShape)>,
+                   "DenseI64ArrayAttr":$mmaShape)>,
     OpBuilder<(ins "Value":$matrixA,
                    "Value":$matrixB,
                    "Value":$matrixC,
@@ -124,8 +114,6 @@ def NVGPU_MmaSyncOp : NVGPU_MmaSyncOp<"mma.sync"> {
     `(` $matrixA`,` $matrixB`,` $matrixC `)` attr-dict
     `:` `(` type($matrixA) `,` type($matrixB) `,` type($matrixC) `)` `->` type($res)
   }];
-
-  let extraClassDeclaration = extraBaseClassDeclaration;
 }
 
 def NVGPU_MmaSparseSyncMetadataType : FixedVectorOfLengthAndType<[2], [I16]>,
@@ -151,7 +139,7 @@ def NVGPU_MmaSparseSyncOp : NVGPU_MmaSyncOp<"mma.sp.sync"> {
   Example (targetingthe f16 16x8x32 `mma.sp` PTX instruction):
 
   ```mlir
-  nvgpu.mma.sp.sync (%a, %b, %c) metadata (%meta) {mmaShape = [16, 8, 32]} :
+  nvgpu.mma.sp.sync (%a, %b, %c) metadata (%meta) {mmaShape = array<i64: 16, 8, 32>} :
     (vector<4x2xf16>, vector<2x2xf16>, vector<2x2xf16>) -> vector<2x2xf16>
   ```
   }];
@@ -160,7 +148,7 @@ def NVGPU_MmaSparseSyncOp : NVGPU_MmaSyncOp<"mma.sp.sync"> {
                        AnyVectorOfNonZeroRank:$matrixB,
                        AnyVectorOfNonZeroRank:$matrixC,
                        NVGPU_MmaSparseSyncMetadataType:$sparseMetadata,
-                       I64ArrayAttr:$mmaShape,
+                       DenseI64ArrayAttr:$mmaShape,
                        DefaultValuedAttr<I32Attr, "0">:$sparsitySelector,
                        OptionalAttr<UnitAttr>:$tf32Enabled
                        );
@@ -179,8 +167,6 @@ def NVGPU_MmaSparseSyncOp : NVGPU_MmaSyncOp<"mma.sp.sync"> {
     `(` $matrixA`,` $matrixB`,` $matrixC `)` `metadata` `(` $sparseMetadata `)` attr-dict
     `:` `(` type($matrixA) `,` type($matrixB) `,` type($matrixC) `)` `->` type($res)
   }];
-
-  let extraClassDeclaration = extraBaseClassDeclaration;
 }
 
 def NVGPU_DeviceAsyncCopyOp : NVGPU_Op<"device_async_copy", [

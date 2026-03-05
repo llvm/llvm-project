@@ -48,7 +48,7 @@ func.func @matmul_16x8x4xf32_global(
 // CHECK:           %[[VAL_33:.*]] = vector.insert %[[VAL_26]], %[[VAL_32]] [1, 0] : f32 into vector<2x2xf32>
 // CHECK:           %[[RES:.*]] = vector.insert %[[VAL_29]], %[[VAL_33]] [1, 1] : f32 into vector<2x2xf32>
 //
-// CHECK:           %[[VAL_35:.*]] = nvgpu.mma.sync(%[[LHS]], %[[RHS]], %[[RES]]) {mmaShape = [16, 8, 4], tf32Enabled} : (vector<2x1xf32>, vector<1x1xf32>, vector<2x2xf32>) -> vector<2x2xf32>
+// CHECK:           %[[VAL_35:.*]] = nvgpu.mma.sync(%[[LHS]], %[[RHS]], %[[RES]]) {mmaShape = array<i64: 16, 8, 4>, tf32Enabled} : (vector<2x1xf32>, vector<1x1xf32>, vector<2x2xf32>) -> vector<2x2xf32>
 //
 // CHECK:           %[[VAL_36:.*]] = vector.extract %[[VAL_35]][0, 0] : f32 from vector<2x2xf32>
 // CHECK:           %[[VAL_37:.*]] = vector.extract %[[VAL_35]][0, 1] : f32 from vector<2x2xf32>
@@ -96,7 +96,7 @@ func.func @matmul_16x8x16xf16_global(
   // CHECK-COUNT-4: memref.load {{.*}} : memref<16x8xf16>
   // CHECK-COUNT-4: vector.insert {{.*}} : f16 into vector<2x2xf16>
   //
-  //         CHECK: nvgpu.mma.sync(%{{.*}}) {mmaShape = [16, 8, 16]}
+  //         CHECK: nvgpu.mma.sync(%{{.*}}) {mmaShape = array<i64: 16, 8, 16>}
   //    CHECK-SAME:   : (vector<4x2xf16>, vector<2x2xf16>, vector<2x2xf16>) -> vector<2x2xf16>
   //
   // CHECK-COUNT-4: vector.extract %{{.*}} : f16 from vector<2x2xf16>
