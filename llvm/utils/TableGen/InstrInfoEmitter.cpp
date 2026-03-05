@@ -1403,13 +1403,26 @@ void InstrInfoEmitter::emitRecord(
   const BitsInit *TSF = Inst.TheDef->getValueAsBitsInit("TSFlags");
   if (!TSF)
     PrintFatalError(Inst.TheDef->getLoc(), "no TSFlags?");
-  std::optional<uint64_t> Value = TSF->convertInitializerToInt();
-  if (!Value)
-    PrintFatalError(Inst.TheDef, "Invalid TSFlags bit in " + Inst.getName());
-
+  uint64_t Value = 0, Value2 = 0;
+  unsigned NumBits = TSF->getNumBits();
+  if (NumBits > 128)
+    PrintFatalError(Inst.TheDef->getLoc(),
+                    "TSFlags exceeds 128 bits in " + Inst.TheDef->getName());
+  for (unsigned i = 0; i != NumBits; ++i) {
+    if (const auto *Bit = dyn_cast<BitInit>(TSF->getBit(i))) {
+      if (i < 64)
+        Value |= uint64_t(Bit->getValue()) << i;
+      else
+        Value2 |= uint64_t(Bit->getValue()) << (i - 64);
+    } else
+      PrintFatalError(Inst.TheDef->getLoc(),
+                      "Invalid TSFlags bit in " + Inst.TheDef->getName());
+  }
   OS << ", 0x";
-  OS.write_hex(*Value);
-  OS << "ULL";
+  OS.write_hex(Value);
+  OS << "ULL, 0x";
+  OS.write_hex(Value2);
+  OS << "ULL, ";
 
   OS << " },  // " << Inst.getName() << '\n';
 }

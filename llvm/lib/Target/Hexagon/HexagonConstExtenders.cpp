@@ -861,8 +861,8 @@ unsigned HCE::getRegOffOpcode(unsigned ExtOpc) const {
   }
   const MCInstrDesc &D = HII->get(ExtOpc);
   if (D.mayLoad() || D.mayStore()) {
-    uint64_t F = D.TSFlags;
-    unsigned AM = (F >> HexagonII::AddrModePos) & HexagonII::AddrModeMask;
+    unsigned AM = HexagonII::getTSFlags(D, HexagonII::AddrModePos,
+                                        HexagonII::AddrModeMask);
     switch (AM) {
       case HexagonII::Absolute:
       case HexagonII::AbsoluteSet:
@@ -1061,9 +1061,10 @@ OffsetRange HCE::getOffsetRange(Register Rb, const MachineInstr &MI) const {
       !MI.getOperand(OffP).isImm())
     return OffsetRange::zero();
 
-  uint64_t F = (D.TSFlags >> HexagonII::MemAccessSizePos) &
-                  HexagonII::MemAccesSizeMask;
-  uint8_t A = HexagonII::getMemAccessSizeInBytes(HexagonII::MemAccessSize(F));
+  auto SizeEnum = HexagonII::getMemAccessEnum(D);
+  uint8_t A = HexagonII::getMemAccessSizeInBytesNoVector(SizeEnum);
+  if (A == 0)
+    return OffsetRange::zero();
   unsigned L = Log2_32(A);
   unsigned S = 10+L;  // sint11_L
   int32_t Min = -alignDown((1<<S)-1, A);
@@ -1101,9 +1102,10 @@ OffsetRange HCE::getOffsetRange(const ExtDesc &ED) const {
   if (!ED.UseMI->mayLoad() && !ED.UseMI->mayStore())
     return OffsetRange::zero();
   const MCInstrDesc &D = HII->get(IdxOpc);
-  uint64_t F = (D.TSFlags >> HexagonII::MemAccessSizePos) &
-                  HexagonII::MemAccesSizeMask;
-  uint8_t A = HexagonII::getMemAccessSizeInBytes(HexagonII::MemAccessSize(F));
+  uint8_t A = HexagonII::getMemAccessSizeInBytesNoVector(
+      HexagonII::getMemAccessEnum(D));
+  if (A == 0)
+    return OffsetRange::zero();
   unsigned L = Log2_32(A);
   unsigned S = 10+L;  // sint11_L
   int32_t Min = -alignDown((1<<S)-1, A);

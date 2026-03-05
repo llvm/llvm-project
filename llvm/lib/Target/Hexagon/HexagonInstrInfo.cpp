@@ -1683,8 +1683,9 @@ bool HexagonInstrInfo::isPostIncrement(const MachineInstr &MI) const {
 // Note: New-value stores are not included here as in the current
 // implementation, we don't need to check their predicate sense.
 bool HexagonInstrInfo::isPredicated(const MachineInstr &MI) const {
-  const uint64_t F = MI.getDesc().TSFlags;
-  return (F >> HexagonII::PredicatedPos) & HexagonII::PredicatedMask;
+  const auto &MID = MI.getDesc();
+  return HexagonII::getTSFlags(MID, HexagonII::PredicatedPos,
+                               HexagonII::PredicatedMask);
 }
 
 bool HexagonInstrInfo::PredicateInstruction(
@@ -2153,8 +2154,9 @@ bool HexagonInstrInfo::isAbsoluteSet(const MachineInstr &MI) const {
 }
 
 bool HexagonInstrInfo::isAccumulator(const MachineInstr &MI) const {
-  const uint64_t F = MI.getDesc().TSFlags;
-  return((F >> HexagonII::AccumulatorPos) & HexagonII::AccumulatorMask);
+  const auto &MID = MI.getDesc();
+  return HexagonII::getTSFlags(MID, HexagonII::AccumulatorPos,
+                               HexagonII::AccumulatorMask);
 }
 
 bool HexagonInstrInfo::isBaseImmOffset(const MachineInstr &MI) const {
@@ -2177,13 +2179,14 @@ bool HexagonInstrInfo::isCompoundBranchInstr(const MachineInstr &MI) const {
 // TODO: In order to have isExtendable for fpimm/f32Ext, we need to handle
 // isFPImm and later getFPImm as well.
 bool HexagonInstrInfo::isConstExtended(const MachineInstr &MI) const {
-  const uint64_t F = MI.getDesc().TSFlags;
-  unsigned isExtended = (F >> HexagonII::ExtendedPos) & HexagonII::ExtendedMask;
+  const auto &MID = MI.getDesc();
+  unsigned isExtended = HexagonII::getTSFlags(MID, HexagonII::ExtendedPos,
+                                              HexagonII::ExtendedMask);
   if (isExtended) // Instruction must be extended.
     return true;
 
-  unsigned isExtendable =
-    (F >> HexagonII::ExtendablePos) & HexagonII::ExtendableMask;
+  unsigned isExtendable = HexagonII::getTSFlags(MID, HexagonII::ExtendablePos,
+                                                HexagonII::ExtendableMask);
   if (!isExtendable)
     return false;
 
@@ -2213,7 +2216,9 @@ bool HexagonInstrInfo::isConstExtended(const MachineInstr &MI) const {
   assert(MO.isImm() && "Extendable operand must be Immediate type");
 
   int64_t Value = MO.getImm();
-  if ((F >> HexagonII::ExtentSignedPos) & HexagonII::ExtentSignedMask) {
+  unsigned isExtSigned = HexagonII::getTSFlags(MID, HexagonII::ExtentSignedPos,
+                                               HexagonII::ExtentSignedMask);
+  if (isExtSigned) {
     int32_t SValue = Value;
     int32_t MinValue = getMinValue(MI);
     int32_t MaxValue = getMaxValue(MI);
@@ -2317,9 +2322,9 @@ bool HexagonInstrInfo::isExpr(unsigned OpType) const {
 }
 
 bool HexagonInstrInfo::isExtendable(const MachineInstr &MI) const {
-  const MCInstrDesc &MID = MI.getDesc();
-  const uint64_t F = MID.TSFlags;
-  if ((F >> HexagonII::ExtendablePos) & HexagonII::ExtendableMask)
+  const auto &MID = MI.getDesc();
+  if (HexagonII::getTSFlags(MID, HexagonII::ExtendablePos,
+                            HexagonII::ExtendableMask))
     return true;
 
   // TODO: This is largely obsolete now. Will need to be removed
@@ -2340,8 +2345,9 @@ bool HexagonInstrInfo::isExtendable(const MachineInstr &MI) const {
 // - One of MOs has been marked with HMOTF_ConstExtended flag.
 bool HexagonInstrInfo::isExtended(const MachineInstr &MI) const {
   // First check if this is permanently extended op code.
-  const uint64_t F = MI.getDesc().TSFlags;
-  if ((F >> HexagonII::ExtendedPos) & HexagonII::ExtendedMask)
+  const auto &MID = MI.getDesc();
+  if (HexagonII::getTSFlags(MID, HexagonII::ExtendedPos,
+                            HexagonII::ExtendedMask))
     return true;
   // Use MO operand flags to determine if one of MI's operands
   // has HMOTF_ConstExtended flag set.
@@ -2353,8 +2359,8 @@ bool HexagonInstrInfo::isExtended(const MachineInstr &MI) const {
 
 bool HexagonInstrInfo::isFloat(const MachineInstr &MI) const {
   unsigned Opcode = MI.getOpcode();
-  const uint64_t F = get(Opcode).TSFlags;
-  return (F >> HexagonII::FPPos) & HexagonII::FPMask;
+  const auto &MID = get(Opcode);
+  return HexagonII::getTSFlags(MID, HexagonII::FPPos, HexagonII::FPMask);
 }
 
 // No V60 HVX VMEM with A_INDIRECT.
@@ -2503,13 +2509,15 @@ bool HexagonInstrInfo::isMemOp(const MachineInstr &MI) const {
 }
 
 bool HexagonInstrInfo::isNewValue(const MachineInstr &MI) const {
-  const uint64_t F = MI.getDesc().TSFlags;
-  return (F >> HexagonII::NewValuePos) & HexagonII::NewValueMask;
+  const auto &MID = MI.getDesc();
+  return HexagonII::getTSFlags(MID, HexagonII::NewValuePos,
+                               HexagonII::NewValueMask);
 }
 
 bool HexagonInstrInfo::isNewValue(unsigned Opcode) const {
-  const uint64_t F = get(Opcode).TSFlags;
-  return (F >> HexagonII::NewValuePos) & HexagonII::NewValueMask;
+  const auto &MID = get(Opcode);
+  return HexagonII::getTSFlags(MID, HexagonII::NewValuePos,
+                               HexagonII::NewValueMask);
 }
 
 bool HexagonInstrInfo::isNewValueInst(const MachineInstr &MI) const {
@@ -2525,64 +2533,71 @@ bool HexagonInstrInfo::isNewValueJump(unsigned Opcode) const {
 }
 
 bool HexagonInstrInfo::isNewValueStore(const MachineInstr &MI) const {
-  const uint64_t F = MI.getDesc().TSFlags;
-  return (F >> HexagonII::NVStorePos) & HexagonII::NVStoreMask;
+  const auto &MID = MI.getDesc();
+  return HexagonII::getTSFlags(MID, HexagonII::NVStorePos,
+                               HexagonII::NVStoreMask);
 }
 
 bool HexagonInstrInfo::isNewValueStore(unsigned Opcode) const {
-  const uint64_t F = get(Opcode).TSFlags;
-  return (F >> HexagonII::NVStorePos) & HexagonII::NVStoreMask;
+  const auto &MID = get(Opcode);
+  return HexagonII::getTSFlags(MID, HexagonII::NVStorePos,
+                               HexagonII::NVStoreMask);
 }
 
 // Returns true if a particular operand is extendable for an instruction.
 bool HexagonInstrInfo::isOperandExtended(const MachineInstr &MI,
     unsigned OperandNum) const {
-  const uint64_t F = MI.getDesc().TSFlags;
-  return ((F >> HexagonII::ExtendableOpPos) & HexagonII::ExtendableOpMask)
-          == OperandNum;
+  const auto &MID = MI.getDesc();
+  return HexagonII::getTSFlags(MID, HexagonII::ExtendableOpPos,
+                               HexagonII::ExtendableOpMask) == OperandNum;
 }
 
 bool HexagonInstrInfo::isPredicatedNew(const MachineInstr &MI) const {
-  const uint64_t F = MI.getDesc().TSFlags;
   assert(isPredicated(MI));
-  return (F >> HexagonII::PredicatedNewPos) & HexagonII::PredicatedNewMask;
+  const auto &MID = MI.getDesc();
+  return HexagonII::getTSFlags(MID, HexagonII::PredicatedNewPos,
+                               HexagonII::PredicatedNewMask);
 }
 
 bool HexagonInstrInfo::isPredicatedNew(unsigned Opcode) const {
-  const uint64_t F = get(Opcode).TSFlags;
   assert(isPredicated(Opcode));
-  return (F >> HexagonII::PredicatedNewPos) & HexagonII::PredicatedNewMask;
+  const auto &MID = get(Opcode);
+  return HexagonII::getTSFlags(MID, HexagonII::PredicatedNewPos,
+                               HexagonII::PredicatedNewMask);
 }
 
 bool HexagonInstrInfo::isPredicatedTrue(const MachineInstr &MI) const {
-  const uint64_t F = MI.getDesc().TSFlags;
-  return !((F >> HexagonII::PredicatedFalsePos) &
-           HexagonII::PredicatedFalseMask);
+  const auto &MID = MI.getDesc();
+  return !HexagonII::getTSFlags(MID, HexagonII::PredicatedFalsePos,
+                                HexagonII::PredicatedFalseMask);
 }
 
 bool HexagonInstrInfo::isPredicatedTrue(unsigned Opcode) const {
-  const uint64_t F = get(Opcode).TSFlags;
+  const auto &MID = get(Opcode);
   // Make sure that the instruction is predicated.
-  assert((F>> HexagonII::PredicatedPos) & HexagonII::PredicatedMask);
-  return !((F >> HexagonII::PredicatedFalsePos) &
-           HexagonII::PredicatedFalseMask);
+  assert(HexagonII::getTSFlags(MID, HexagonII::PredicatedPos,
+                               HexagonII::PredicatedMask));
+  return !HexagonII::getTSFlags(MID, HexagonII::PredicatedFalsePos,
+                                HexagonII::PredicatedFalseMask);
 }
 
 bool HexagonInstrInfo::isPredicated(unsigned Opcode) const {
-  const uint64_t F = get(Opcode).TSFlags;
-  return (F >> HexagonII::PredicatedPos) & HexagonII::PredicatedMask;
+  const auto &MID = get(Opcode);
+  return HexagonII::getTSFlags(MID, HexagonII::PredicatedPos,
+                               HexagonII::PredicatedMask);
 }
 
 bool HexagonInstrInfo::isPredicateLate(unsigned Opcode) const {
-  const uint64_t F = get(Opcode).TSFlags;
-  return (F >> HexagonII::PredicateLatePos) & HexagonII::PredicateLateMask;
+  const auto &MID = get(Opcode);
+  return HexagonII::getTSFlags(MID, HexagonII::PredicateLatePos,
+                               HexagonII::PredicateLateMask);
 }
 
 bool HexagonInstrInfo::isPredictedTaken(unsigned Opcode) const {
-  const uint64_t F = get(Opcode).TSFlags;
+  const auto &MID = get(Opcode);
   assert(get(Opcode).isBranch() &&
          (isPredicatedNew(Opcode) || isNewValue(Opcode)));
-  return (F >> HexagonII::TakenPos) & HexagonII::TakenMask;
+  return HexagonII::getTSFlags(MID, HexagonII::TakenPos, HexagonII::TakenMask);
 }
 
 bool HexagonInstrInfo::isSaveCalleeSavedRegsCall(const MachineInstr &MI) const {
@@ -2671,8 +2686,8 @@ bool HexagonInstrInfo::isSignExtendingLoad(const MachineInstr &MI) const {
 }
 
 bool HexagonInstrInfo::isSolo(const MachineInstr &MI) const {
-  const uint64_t F = MI.getDesc().TSFlags;
-  return (F >> HexagonII::SoloPos) & HexagonII::SoloMask;
+  const auto &MID = MI.getDesc();
+  return HexagonII::getTSFlags(MID, HexagonII::SoloPos, HexagonII::SoloMask);
 }
 
 bool HexagonInstrInfo::isSpillPredRegOp(const MachineInstr &MI) const {
@@ -2995,8 +3010,8 @@ bool HexagonInstrInfo::isVecAcc(const MachineInstr &MI) const {
 }
 
 bool HexagonInstrInfo::isVecALU(const MachineInstr &MI) const {
-  const uint64_t F = get(MI.getOpcode()).TSFlags;
-  const uint64_t V = ((F >> HexagonII::TypePos) & HexagonII::TypeMask);
+  const auto &MID = get(MI.getOpcode());
+  const auto V = HexagonII::getType(MID);
   return
     V == HexagonII::TypeCVI_VA         ||
     V == HexagonII::TypeCVI_VA_DV;
@@ -3209,9 +3224,9 @@ bool HexagonInstrInfo::hasUncondBranch(const MachineBasicBlock *B)
 
 // Returns true, if a LD insn can be promoted to a cur load.
 bool HexagonInstrInfo::mayBeCurLoad(const MachineInstr &MI) const {
-  const uint64_t F = MI.getDesc().TSFlags;
-  return ((F >> HexagonII::mayCVLoadPos) & HexagonII::mayCVLoadMask) &&
-         Subtarget.hasV60Ops();
+  const auto &MID = MI.getDesc();
+  return HexagonII::getTSFlags(MID, HexagonII::mayCVLoadPos,
+                               HexagonII::mayCVLoadMask);
 }
 
 // Returns true, if a ST insn can be promoted to a new-value store.
@@ -3219,8 +3234,9 @@ bool HexagonInstrInfo::mayBeNewStore(const MachineInstr &MI) const {
   if (MI.mayStore() && !Subtarget.useNewValueStores())
     return false;
 
-  const uint64_t F = MI.getDesc().TSFlags;
-  return (F >> HexagonII::mayNVStorePos) & HexagonII::mayNVStoreMask;
+  const auto &MID = MI.getDesc();
+  return HexagonII::getTSFlags(MID, HexagonII::mayNVStorePos,
+                               HexagonII::mayNVStoreMask);
 }
 
 bool HexagonInstrInfo::producesStall(const MachineInstr &ProdMI,
@@ -3314,8 +3330,9 @@ bool HexagonInstrInfo::predOpcodeHasNot(ArrayRef<MachineOperand> Cond) const {
 }
 
 unsigned HexagonInstrInfo::getAddrMode(const MachineInstr &MI) const {
-  const uint64_t F = MI.getDesc().TSFlags;
-  return (F >> HexagonII::AddrModePos) & HexagonII::AddrModeMask;
+  const auto &MID = MI.getDesc();
+  return HexagonII::getTSFlags(MID, HexagonII::AddrModePos,
+                               HexagonII::AddrModeMask);
 }
 
 // Returns the base register in a memory access (load/store). The offset is
@@ -3451,8 +3468,9 @@ SmallVector<MachineInstr*, 2> HexagonInstrInfo::getBranchingInstrs(
 
 // Returns Operand Index for the constant extended instruction.
 unsigned HexagonInstrInfo::getCExtOpNum(const MachineInstr &MI) const {
-  const uint64_t F = MI.getDesc().TSFlags;
-  return (F >> HexagonII::ExtendableOpPos) & HexagonII::ExtendableOpMask;
+  const auto &MID = MI.getDesc();
+  return HexagonII::getTSFlags(MID, HexagonII::ExtendableOpPos,
+                               HexagonII::ExtendableOpMask);
 }
 
 // See if instruction could potentially be a duplex candidate.
@@ -4424,11 +4442,11 @@ unsigned HexagonInstrInfo::getInvertedPredicatedOpcode(const int Opc) const {
 
 // Returns the max value that doesn't need to be extended.
 int HexagonInstrInfo::getMaxValue(const MachineInstr &MI) const {
-  const uint64_t F = MI.getDesc().TSFlags;
-  unsigned isSigned = (F >> HexagonII::ExtentSignedPos)
-                    & HexagonII::ExtentSignedMask;
-  unsigned bits =  (F >> HexagonII::ExtentBitsPos)
-                    & HexagonII::ExtentBitsMask;
+  const auto &MID = MI.getDesc();
+  unsigned isSigned = HexagonII::getTSFlags(MID, HexagonII::ExtentSignedPos,
+                                            HexagonII::ExtentSignedMask);
+  unsigned bits = HexagonII::getTSFlags(MID, HexagonII::ExtentBitsPos,
+                                        HexagonII::ExtentBitsMask);
 
   if (isSigned) // if value is signed
     return ~(-1U << (bits - 1));
@@ -4455,9 +4473,9 @@ bool HexagonInstrInfo::isAddrModeWithOffset(const MachineInstr &MI) const {
   case Hexagon::S2_storerfgp:
     return true;
   }
-  const uint64_t F = MI.getDesc().TSFlags;
-  unsigned addrMode =
-    ((F >> HexagonII::AddrModePos) & HexagonII::AddrModeMask);
+  const auto &MID = MI.getDesc();
+  unsigned addrMode = HexagonII::getTSFlags(MID, HexagonII::AddrModePos,
+                                            HexagonII::AddrModeMask);
   // Disallow any base+offset instruction. The assembler does not yet reorder
   // based up any zero offset instruction.
   return (addrMode == HexagonII::BaseRegOffset ||
@@ -4478,9 +4496,9 @@ bool HexagonInstrInfo::isPureSlot0(const MachineInstr &MI) const {
 }
 
 bool HexagonInstrInfo::isRestrictNoSlot1Store(const MachineInstr &MI) const {
-  const uint64_t F = MI.getDesc().TSFlags;
-  return ((F >> HexagonII::RestrictNoSlot1StorePos) &
-          HexagonII::RestrictNoSlot1StoreMask);
+  const auto &MID = MI.getDesc();
+  return HexagonII::getTSFlags(MID, HexagonII::RestrictNoSlot1StorePos,
+                               HexagonII::RestrictNoSlot1StoreMask);
 }
 
 void HexagonInstrInfo::changeDuplexOpcode(MachineBasicBlock::instr_iterator MII,
@@ -4521,11 +4539,10 @@ void HexagonInstrInfo::translateInstrsForDup(
 }
 
 unsigned HexagonInstrInfo::getMemAccessSize(const MachineInstr &MI) const {
-  using namespace HexagonII;
 
-  const uint64_t F = MI.getDesc().TSFlags;
-  unsigned S = (F >> MemAccessSizePos) & MemAccesSizeMask;
-  unsigned Size = getMemAccessSizeInBytes(MemAccessSize(S));
+  const auto &MID = MI.getDesc();
+  auto SizeEnum = HexagonII::getMemAccessEnum(MID);
+  unsigned Size = HexagonII::getMemAccessSizeInBytesNoVector(SizeEnum);
   if (Size != 0)
     return Size;
   // Y2_dcfetchbo is special
@@ -4533,22 +4550,22 @@ unsigned HexagonInstrInfo::getMemAccessSize(const MachineInstr &MI) const {
     return HexagonII::DoubleWordAccess;
 
   // Handle vector access sizes.
-  const HexagonRegisterInfo &HRI = *Subtarget.getRegisterInfo();
-  switch (S) {
-    case HexagonII::HVXVectorAccess:
-      return HRI.getSpillSize(Hexagon::HvxVRRegClass);
-    default:
-      llvm_unreachable("Unexpected instruction");
+  const auto &HRI = *Subtarget.getRegisterInfo();
+  switch (SizeEnum) {
+  case HexagonII::HVXVectorAccess:
+    return HRI.getSpillSize(Hexagon::HvxVRRegClass);
+  default:
+    llvm_unreachable("Unexpected instruction");
   }
 }
 
 // Returns the min value that doesn't need to be extended.
 int HexagonInstrInfo::getMinValue(const MachineInstr &MI) const {
-  const uint64_t F = MI.getDesc().TSFlags;
-  unsigned isSigned = (F >> HexagonII::ExtentSignedPos)
-                    & HexagonII::ExtentSignedMask;
-  unsigned bits =  (F >> HexagonII::ExtentBitsPos)
-                    & HexagonII::ExtentBitsMask;
+  const auto &MID = MI.getDesc();
+  unsigned isSigned = HexagonII::getTSFlags(MID, HexagonII::ExtentSignedPos,
+                                            HexagonII::ExtentSignedMask);
+  unsigned bits = HexagonII::getTSFlags(MID, HexagonII::ExtentBitsPos,
+                                        HexagonII::ExtentBitsMask);
 
   if (isSigned) // if value is signed
     return -1U << (bits - 1);
@@ -4649,8 +4666,8 @@ unsigned HexagonInstrInfo::getSize(const MachineInstr &MI) const {
 }
 
 uint64_t HexagonInstrInfo::getType(const MachineInstr &MI) const {
-  const uint64_t F = MI.getDesc().TSFlags;
-  return (F >> HexagonII::TypePos) & HexagonII::TypeMask;
+  const auto &MID = MI.getDesc();
+  return HexagonII::getType(MID);
 }
 
 InstrStage::FuncUnits HexagonInstrInfo::getUnits(const MachineInstr &MI) const {

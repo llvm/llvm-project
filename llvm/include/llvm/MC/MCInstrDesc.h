@@ -214,6 +214,7 @@ public:
   uint16_t ImplicitOffset; // Offset to start of implicit op list
   uint64_t Flags;          // Flags identifying machine instr class
   uint64_t TSFlags;        // Target Specific Flag values
+  uint64_t TSFlags2;       // Extension of Target Specific Flag values
 
   /// Returns the value of the specified operand constraint if
   /// it is present. Returns -1 if it is not present.

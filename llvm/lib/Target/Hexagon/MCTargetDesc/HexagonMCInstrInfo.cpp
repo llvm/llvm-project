@@ -238,17 +238,10 @@ void HexagonMCInstrInfo::extendIfNeeded(MCContext &Context,
     addConstExtender(Context, MCII, MCB, MCI);
 }
 
-unsigned HexagonMCInstrInfo::getMemAccessSize(MCInstrInfo const &MCII,
-      MCInst const &MCI) {
-  uint64_t F = HexagonMCInstrInfo::getDesc(MCII, MCI).TSFlags;
-  unsigned S = (F >> HexagonII::MemAccessSizePos) & HexagonII::MemAccesSizeMask;
-  return HexagonII::getMemAccessSizeInBytes(HexagonII::MemAccessSize(S));
-}
-
 unsigned HexagonMCInstrInfo::getAddrMode(MCInstrInfo const &MCII,
                                          MCInst const &MCI) {
-  const uint64_t F = HexagonMCInstrInfo::getDesc(MCII, MCI).TSFlags;
-  return static_cast<unsigned>((F >> HexagonII::AddrModePos) &
+  const auto &MID = HexagonMCInstrInfo::getDesc(MCII, MCI);
+  return HexagonII::getTSFlags(MID, HexagonII::AddrModePos,
                                HexagonII::AddrModeMask);
 }
 
@@ -315,8 +308,9 @@ MCExpr const &HexagonMCInstrInfo::getExpr(MCExpr const &Expr) {
 
 unsigned short HexagonMCInstrInfo::getExtendableOp(MCInstrInfo const &MCII,
                                                    MCInst const &MCI) {
-  const uint64_t F = HexagonMCInstrInfo::getDesc(MCII, MCI).TSFlags;
-  return ((F >> HexagonII::ExtendableOpPos) & HexagonII::ExtendableOpMask);
+  const auto &MID = HexagonMCInstrInfo::getDesc(MCII, MCI);
+  return HexagonII::getTSFlags(MID, HexagonII::ExtendableOpPos,
+                               HexagonII::ExtendableOpMask);
 }
 
 MCOperand const &
@@ -333,20 +327,23 @@ HexagonMCInstrInfo::getExtendableOperand(MCInstrInfo const &MCII,
 
 unsigned HexagonMCInstrInfo::getExtentAlignment(MCInstrInfo const &MCII,
                                                 MCInst const &MCI) {
-  const uint64_t F = HexagonMCInstrInfo::getDesc(MCII, MCI).TSFlags;
-  return ((F >> HexagonII::ExtentAlignPos) & HexagonII::ExtentAlignMask);
+  const auto &MID = HexagonMCInstrInfo::getDesc(MCII, MCI);
+  return HexagonII::getTSFlags(MID, HexagonII::ExtentAlignPos,
+                               HexagonII::ExtentAlignMask);
 }
 
 unsigned HexagonMCInstrInfo::getExtentBits(MCInstrInfo const &MCII,
                                            MCInst const &MCI) {
-  const uint64_t F = HexagonMCInstrInfo::getDesc(MCII, MCI).TSFlags;
-  return ((F >> HexagonII::ExtentBitsPos) & HexagonII::ExtentBitsMask);
+  const auto &MID = HexagonMCInstrInfo::getDesc(MCII, MCI);
+  return HexagonII::getTSFlags(MID, HexagonII::ExtentBitsPos,
+                               HexagonII::ExtentBitsMask);
 }
 
 bool HexagonMCInstrInfo::isExtentSigned(MCInstrInfo const &MCII,
                                         MCInst const &MCI) {
-  const uint64_t F = HexagonMCInstrInfo::getDesc(MCII, MCI).TSFlags;
-  return (F >> HexagonII::ExtentSignedPos) & HexagonII::ExtentSignedMask;
+  const auto &MID = HexagonMCInstrInfo::getDesc(MCII, MCI);
+  return HexagonII::getTSFlags(MID, HexagonII::ExtentSignedPos,
+                               HexagonII::ExtentSignedMask);
 }
 
 /// Return the maximum value of an extendable operand.
@@ -378,8 +375,9 @@ StringRef HexagonMCInstrInfo::getName(MCInstrInfo const &MCII,
 
 unsigned short HexagonMCInstrInfo::getNewValueOp(MCInstrInfo const &MCII,
                                                  MCInst const &MCI) {
-  const uint64_t F = HexagonMCInstrInfo::getDesc(MCII, MCI).TSFlags;
-  return ((F >> HexagonII::NewValueOpPos) & HexagonII::NewValueOpMask);
+  const auto &MID = HexagonMCInstrInfo::getDesc(MCII, MCI);
+  return HexagonII::getTSFlags(MID, HexagonII::NewValueOpPos,
+                               HexagonII::NewValueOpMask);
 }
 
 MCOperand const &HexagonMCInstrInfo::getNewValueOperand(MCInstrInfo const &MCII,
@@ -403,8 +401,9 @@ MCOperand const &HexagonMCInstrInfo::getNewValueOperand(MCInstrInfo const &MCII,
 /// Return the new value or the newly produced value.
 unsigned short HexagonMCInstrInfo::getNewValueOp2(MCInstrInfo const &MCII,
                                                   MCInst const &MCI) {
-  const uint64_t F = HexagonMCInstrInfo::getDesc(MCII, MCI).TSFlags;
-  return ((F >> HexagonII::NewValueOpPos2) & HexagonII::NewValueOpMask2);
+  const auto &MID = HexagonMCInstrInfo::getDesc(MCII, MCI);
+  return HexagonII::getTSFlags(MID, HexagonII::NewValueOpPos2,
+                               HexagonII::NewValueOpMask2);
 }
 
 MCOperand const &
@@ -422,8 +421,8 @@ HexagonMCInstrInfo::getNewValueOperand2(MCInstrInfo const &MCII,
 /// Return the Hexagon ISA class for the insn.
 unsigned HexagonMCInstrInfo::getType(MCInstrInfo const &MCII,
                                      MCInst const &MCI) {
-  const uint64_t F = MCII.get(MCI.getOpcode()).TSFlags;
-  return ((F >> HexagonII::TypePos) & HexagonII::TypeMask);
+  const auto &MID = MCII.get(MCI.getOpcode());
+  return HexagonII::getType(MID);
 }
 
 /// Return the resources used by this instruction
@@ -512,15 +511,17 @@ bool HexagonMCInstrInfo::hasImmExt(MCInst const &MCI) {
 /// Return whether the insn produces a value.
 bool HexagonMCInstrInfo::hasNewValue(MCInstrInfo const &MCII,
                                      MCInst const &MCI) {
-  const uint64_t F = HexagonMCInstrInfo::getDesc(MCII, MCI).TSFlags;
-  return ((F >> HexagonII::hasNewValuePos) & HexagonII::hasNewValueMask);
+  const auto &MID = HexagonMCInstrInfo::getDesc(MCII, MCI);
+  return HexagonII::getTSFlags(MID, HexagonII::hasNewValuePos,
+                               HexagonII::hasNewValueMask);
 }
 
 /// Return whether the insn produces a second value.
 bool HexagonMCInstrInfo::hasNewValue2(MCInstrInfo const &MCII,
                                       MCInst const &MCI) {
-  const uint64_t F = HexagonMCInstrInfo::getDesc(MCII, MCI).TSFlags;
-  return ((F >> HexagonII::hasNewValuePos2) & HexagonII::hasNewValueMask2);
+  const auto &MID = HexagonMCInstrInfo::getDesc(MCII, MCI);
+  return HexagonII::getTSFlags(MID, HexagonII::hasNewValuePos2,
+                               HexagonII::hasNewValueMask2);
 }
 
 MCInst const &HexagonMCInstrInfo::instruction(MCInst const &MCB, size_t Index) {
@@ -532,8 +533,9 @@ MCInst const &HexagonMCInstrInfo::instruction(MCInst const &MCB, size_t Index) {
 /// Return where the instruction is an accumulator.
 bool HexagonMCInstrInfo::isAccumulator(MCInstrInfo const &MCII,
                                        MCInst const &MCI) {
-  const uint64_t F = HexagonMCInstrInfo::getDesc(MCII, MCI).TSFlags;
-  return ((F >> HexagonII::AccumulatorPos) & HexagonII::AccumulatorMask);
+  const auto &MID = HexagonMCInstrInfo::getDesc(MCII, MCI);
+  return HexagonII::getTSFlags(MID, HexagonII::AccumulatorPos,
+                               HexagonII::AccumulatorMask);
 }
 
 bool HexagonMCInstrInfo::isBundle(MCInst const &MCI) {
@@ -590,20 +592,23 @@ bool HexagonMCInstrInfo::isCanon(MCInstrInfo const &MCII, MCInst const &MCI) {
 }
 
 bool HexagonMCInstrInfo::isCofMax1(MCInstrInfo const &MCII, MCInst const &MCI) {
-  const uint64_t F = HexagonMCInstrInfo::getDesc(MCII, MCI).TSFlags;
-  return ((F >> HexagonII::CofMax1Pos) & HexagonII::CofMax1Mask);
+  const auto &MID = HexagonMCInstrInfo::getDesc(MCII, MCI);
+  return HexagonII::getTSFlags(MID, HexagonII::CofMax1Pos,
+                               HexagonII::CofMax1Mask);
 }
 
 bool HexagonMCInstrInfo::isCofRelax1(MCInstrInfo const &MCII,
                                      MCInst const &MCI) {
-  const uint64_t F = HexagonMCInstrInfo::getDesc(MCII, MCI).TSFlags;
-  return ((F >> HexagonII::CofRelax1Pos) & HexagonII::CofRelax1Mask);
+  const auto &MID = HexagonMCInstrInfo::getDesc(MCII, MCI);
+  return HexagonII::getTSFlags(MID, HexagonII::CofRelax1Pos,
+                               HexagonII::CofRelax1Mask);
 }
 
 bool HexagonMCInstrInfo::isCofRelax2(MCInstrInfo const &MCII,
                                      MCInst const &MCI) {
-  const uint64_t F = HexagonMCInstrInfo::getDesc(MCII, MCI).TSFlags;
-  return ((F >> HexagonII::CofRelax2Pos) & HexagonII::CofRelax2Mask);
+  const auto &MID = HexagonMCInstrInfo::getDesc(MCII, MCI);
+  return HexagonII::getTSFlags(MID, HexagonII::CofRelax2Pos,
+                               HexagonII::CofRelax2Mask);
 }
 
 bool HexagonMCInstrInfo::isCompound(MCInstrInfo const &MCII,
@@ -612,8 +617,9 @@ bool HexagonMCInstrInfo::isCompound(MCInstrInfo const &MCII,
 }
 
 bool HexagonMCInstrInfo::isCVINew(MCInstrInfo const &MCII, MCInst const &MCI) {
-  const uint64_t F = HexagonMCInstrInfo::getDesc(MCII, MCI).TSFlags;
-  return ((F >> HexagonII::CVINewPos) & HexagonII::CVINewMask);
+  const auto &MID = HexagonMCInstrInfo::getDesc(MCII, MCI);
+  return HexagonII::getTSFlags(MID, HexagonII::CVINewPos,
+                               HexagonII::CVINewMask);
 }
 
 bool HexagonMCInstrInfo::isDblRegForSubInst(MCRegister Reg) {
@@ -627,19 +633,21 @@ bool HexagonMCInstrInfo::isDuplex(MCInstrInfo const &MCII, MCInst const &MCI) {
 
 bool HexagonMCInstrInfo::isExtendable(MCInstrInfo const &MCII,
                                       MCInst const &MCI) {
-  uint64_t const F = HexagonMCInstrInfo::getDesc(MCII, MCI).TSFlags;
-  return (F >> HexagonII::ExtendablePos) & HexagonII::ExtendableMask;
+  const auto &MID = HexagonMCInstrInfo::getDesc(MCII, MCI);
+  return HexagonII::getTSFlags(MID, HexagonII::ExtendablePos,
+                               HexagonII::ExtendableMask);
 }
 
 bool HexagonMCInstrInfo::isExtended(MCInstrInfo const &MCII,
                                     MCInst const &MCI) {
-  uint64_t const F = HexagonMCInstrInfo::getDesc(MCII, MCI).TSFlags;
-  return (F >> HexagonII::ExtendedPos) & HexagonII::ExtendedMask;
+  const auto &MID = HexagonMCInstrInfo::getDesc(MCII, MCI);
+  return HexagonII::getTSFlags(MID, HexagonII::ExtendedPos,
+                               HexagonII::ExtendedMask);
 }
 
 bool HexagonMCInstrInfo::isFloat(MCInstrInfo const &MCII, MCInst const &MCI) {
-  const uint64_t F = HexagonMCInstrInfo::getDesc(MCII, MCI).TSFlags;
-  return ((F >> HexagonII::FPPos) & HexagonII::FPMask);
+  const auto &MID = HexagonMCInstrInfo::getDesc(MCII, MCI);
+  return HexagonII::getTSFlags(MID, HexagonII::FPPos, HexagonII::FPMask);
 }
 
 bool HexagonMCInstrInfo::isHVX(MCInstrInfo const &MCII, MCInst const &MCI) {
@@ -669,14 +677,16 @@ bool HexagonMCInstrInfo::isIntRegForSubInst(MCRegister Reg) {
 /// Return whether the insn expects newly produced value.
 bool HexagonMCInstrInfo::isNewValue(MCInstrInfo const &MCII,
                                     MCInst const &MCI) {
-  const uint64_t F = HexagonMCInstrInfo::getDesc(MCII, MCI).TSFlags;
-  return ((F >> HexagonII::NewValuePos) & HexagonII::NewValueMask);
+  const auto &MID = HexagonMCInstrInfo::getDesc(MCII, MCI);
+  return HexagonII::getTSFlags(MID, HexagonII::NewValuePos,
+                               HexagonII::NewValueMask);
 }
 
 bool HexagonMCInstrInfo::isNewValueStore(MCInstrInfo const &MCII,
                                          MCInst const &MCI) {
-  const uint64_t F = HexagonMCInstrInfo::getDesc(MCII, MCI).TSFlags;
-  return (F >> HexagonII::NVStorePos) & HexagonII::NVStoreMask;
+  const auto &MID = HexagonMCInstrInfo::getDesc(MCII, MCI);
+  return HexagonII::getTSFlags(MID, HexagonII::NVStorePos,
+                               HexagonII::NVStoreMask);
 }
 
 /// Return whether the operand is extendable.
@@ -732,8 +742,9 @@ bool HexagonMCInstrInfo::IsSingleConsumerRefPairProducer(MCRegister Producer,
 
 bool HexagonMCInstrInfo::isPredicated(MCInstrInfo const &MCII,
                                       MCInst const &MCI) {
-  const uint64_t F = HexagonMCInstrInfo::getDesc(MCII, MCI).TSFlags;
-  return ((F >> HexagonII::PredicatedPos) & HexagonII::PredicatedMask);
+  const auto &MID = HexagonMCInstrInfo::getDesc(MCII, MCI);
+  return HexagonII::getTSFlags(MID, HexagonII::PredicatedPos,
+                               HexagonII::PredicatedMask);
 }
 
 bool HexagonMCInstrInfo::isPrefix(MCInstrInfo const &MCII, MCInst const &MCI) {
@@ -742,22 +753,24 @@ bool HexagonMCInstrInfo::isPrefix(MCInstrInfo const &MCII, MCInst const &MCI) {
 
 bool HexagonMCInstrInfo::isPredicateLate(MCInstrInfo const &MCII,
                                          MCInst const &MCI) {
-  const uint64_t F = HexagonMCInstrInfo::getDesc(MCII, MCI).TSFlags;
-  return (F >> HexagonII::PredicateLatePos & HexagonII::PredicateLateMask);
+  const auto &MID = HexagonMCInstrInfo::getDesc(MCII, MCI);
+  return HexagonII::getTSFlags(MID, HexagonII::PredicateLatePos,
+                               HexagonII::PredicateLateMask);
 }
 
 /// Return whether the insn is newly predicated.
 bool HexagonMCInstrInfo::isPredicatedNew(MCInstrInfo const &MCII,
                                          MCInst const &MCI) {
-  const uint64_t F = HexagonMCInstrInfo::getDesc(MCII, MCI).TSFlags;
-  return ((F >> HexagonII::PredicatedNewPos) & HexagonII::PredicatedNewMask);
+  const auto &MID = HexagonMCInstrInfo::getDesc(MCII, MCI);
+  return HexagonII::getTSFlags(MID, HexagonII::PredicatedNewPos,
+                               HexagonII::PredicatedNewMask);
 }
 
 bool HexagonMCInstrInfo::isPredicatedTrue(MCInstrInfo const &MCII,
                                           MCInst const &MCI) {
-  const uint64_t F = HexagonMCInstrInfo::getDesc(MCII, MCI).TSFlags;
-  return (
-      !((F >> HexagonII::PredicatedFalsePos) & HexagonII::PredicatedFalseMask));
+  const auto &MID = HexagonMCInstrInfo::getDesc(MCII, MCI);
+  return !HexagonII::getTSFlags(MID, HexagonII::PredicatedFalsePos,
+                                HexagonII::PredicatedFalseMask);
 }
 
 bool HexagonMCInstrInfo::isPredReg(MCRegisterInfo const &MRI, MCRegister Reg) {
@@ -775,29 +788,30 @@ bool HexagonMCInstrInfo::isPredRegister(MCInstrInfo const &MCII,
 
 /// Return whether the insn can be packaged only with A and X-type insns.
 bool HexagonMCInstrInfo::isSoloAX(MCInstrInfo const &MCII, MCInst const &MCI) {
-  const uint64_t F = HexagonMCInstrInfo::getDesc(MCII, MCI).TSFlags;
-  return ((F >> HexagonII::SoloAXPos) & HexagonII::SoloAXMask);
+  const auto &MID = HexagonMCInstrInfo::getDesc(MCII, MCI);
+  return HexagonII::getTSFlags(MID, HexagonII::SoloAXPos,
+                               HexagonII::SoloAXMask);
 }
 
 /// Return whether the insn can be packaged only with an A-type insn in slot #1.
 bool HexagonMCInstrInfo::isRestrictSlot1AOK(MCInstrInfo const &MCII,
                                             MCInst const &MCI) {
-  const uint64_t F = HexagonMCInstrInfo::getDesc(MCII, MCI).TSFlags;
-  return ((F >> HexagonII::RestrictSlot1AOKPos) &
-          HexagonII::RestrictSlot1AOKMask);
+  const auto &MID = HexagonMCInstrInfo::getDesc(MCII, MCI);
+  return HexagonII::getTSFlags(MID, HexagonII::RestrictSlot1AOKPos,
+                               HexagonII::RestrictSlot1AOKMask);
 }
 
 bool HexagonMCInstrInfo::isRestrictNoSlot1Store(MCInstrInfo const &MCII,
                                                 MCInst const &MCI) {
-  const uint64_t F = HexagonMCInstrInfo::getDesc(MCII, MCI).TSFlags;
-  return ((F >> HexagonII::RestrictNoSlot1StorePos) &
-          HexagonII::RestrictNoSlot1StoreMask);
+  const auto &MID = HexagonMCInstrInfo::getDesc(MCII, MCI);
+  return HexagonII::getTSFlags(MID, HexagonII::RestrictNoSlot1StorePos,
+                               HexagonII::RestrictNoSlot1StoreMask);
 }
 
 /// Return whether the insn is solo, i.e., cannot be in a packet.
 bool HexagonMCInstrInfo::isSolo(MCInstrInfo const &MCII, MCInst const &MCI) {
-  const uint64_t F = MCII.get(MCI.getOpcode()).TSFlags;
-  return ((F >> HexagonII::SoloPos) & HexagonII::SoloMask);
+  const auto &MID = MCII.get(MCI.getOpcode());
+  return HexagonII::getTSFlags(MID, HexagonII::SoloPos, HexagonII::SoloMask);
 }
 
 bool HexagonMCInstrInfo::isMemReorderDisabled(MCInst const &MCI) {
@@ -867,8 +881,8 @@ bool HexagonMCInstrInfo::isSubInstruction(MCInst const &MCI) {
 }
 
 bool HexagonMCInstrInfo::isVector(MCInstrInfo const &MCII, MCInst const &MCI) {
-  const uint64_t F = HexagonMCInstrInfo::getDesc(MCII, MCI).TSFlags;
-  return (F >> HexagonII::isCVIPos) & HexagonII::isCVIMask;
+  const auto &MID = HexagonMCInstrInfo::getDesc(MCII, MCI);
+  return HexagonII::isCVI(MID);
 }
 
 int64_t HexagonMCInstrInfo::minConstant(MCInst const &MCI, size_t Index) {
@@ -947,8 +961,9 @@ HexagonMCInstrInfo::predicateInfo(MCInstrInfo const &MCII, MCInst const &MCI) {
 
 bool HexagonMCInstrInfo::prefersSlot3(MCInstrInfo const &MCII,
                                       MCInst const &MCI) {
-  const uint64_t F = HexagonMCInstrInfo::getDesc(MCII, MCI).TSFlags;
-  return (F >> HexagonII::PrefersSlot3Pos) & HexagonII::PrefersSlot3Mask;
+  const auto &MID = HexagonMCInstrInfo::getDesc(MCII, MCI);
+  return HexagonII::getTSFlags(MID, HexagonII::PrefersSlot3Pos,
+                               HexagonII::PrefersSlot3Mask);
 }
 
 bool HexagonMCInstrInfo::hasTmpDst(MCInstrInfo const &MCII, MCInst const &MCI) {
@@ -967,8 +982,9 @@ bool HexagonMCInstrInfo::hasTmpDst(MCInstrInfo const &MCII, MCInst const &MCI) {
 }
 
 bool HexagonMCInstrInfo::hasHvxTmp(MCInstrInfo const &MCII, MCInst const &MCI) {
-  const uint64_t F = HexagonMCInstrInfo::getDesc(MCII, MCI).TSFlags;
-  return (F >> HexagonII::HasHvxTmpPos) & HexagonII::HasHvxTmpMask;
+  const auto &MID = HexagonMCInstrInfo::getDesc(MCII, MCI);
+  return HexagonII::getTSFlags(MID, HexagonII::HasHvxTmpPos,
+                               HexagonII::HasHvxTmpMask);
 }
 
 bool HexagonMCInstrInfo::requiresSlot(MCSubtargetInfo const &STI,

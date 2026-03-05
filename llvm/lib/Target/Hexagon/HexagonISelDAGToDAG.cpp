@@ -229,10 +229,9 @@ SDNode *HexagonDAGToDAGISel::StoreInstrForLoadIntrinsic(MachineSDNode *LoadN,
   // The "LoadN" is just a machine load instruction. The intrinsic also
   // involves storing it. Generate an appropriate store to the location
   // given in the intrinsic's operand(3).
-  uint64_t F = HII->get(LoadN->getMachineOpcode()).TSFlags;
-  unsigned SizeBits = (F >> HexagonII::MemAccessSizePos) &
-                      HexagonII::MemAccesSizeMask;
-  unsigned Size = 1U << (SizeBits-1);
+  const auto &MID = HII->get(LoadN->getMachineOpcode());
+  auto SizeBits = HexagonII::getMemAccessEnum(MID);
+  unsigned Size = 1U << (SizeBits - 1);
 
   SDLoc dl(IntN);
   MachinePointerInfo PI;
