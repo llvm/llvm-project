@@ -9,6 +9,11 @@
 // RUN: not %clang -c --target=arm-unknown-linux -fbasic-block-sections=all %s -S 2>&1 | FileCheck -check-prefix=CHECK-TRIPLE %s
 // RUN: %clang -### --target=arm-unknown-linux -fbasic-block-sections=all -fbasic-block-sections=none %s -S 2>&1 \
 // RUN:   | FileCheck -check-prefix=CHECK-NOOPT %s
+// RUN: %clang -### --target=riscv64 -fbasic-block-sections=none %s -S 2>&1 | FileCheck -check-prefix=CHECK-OPT-NONE %s
+// RUN: %clang -### --target=riscv64 -fbasic-block-sections=list=%s %s -S 2>&1 | FileCheck -check-prefix=CHECK-OPT-LIST %s
+// RUN: %clang -### --target=riscv64 -fbasic-block-sections=labels %s -S 2>&1 | FileCheck -check-prefix=CHECK-OPT-LABELS %s
+// RUN: not %clang -### --target=riscv64 -fbasic-block-sections=all %s -S 2>&1 | FileCheck -check-prefix=CHECK-INVALID-VALUE %s
+// RUN: not %clang -c --target=riscv64-unknown-linux -fbasic-block-sections=all %s -S 2>&1 | FileCheck -check-prefix=CHECK-INVALID-VALUE %s
 // RUN: not %clang -c --target=x86_64-apple-darwin10 -fbasic-block-sections=all %s -S 2>&1 | FileCheck -check-prefix=CHECK-TRIPLE %s
 // RUN: not %clang -### --target=x86_64 -fbasic-block-sections=alll %s -S 2>&1 | FileCheck -check-prefix=CHECK-INVALID-VALUE %s
 // RUN: not %clang -### --target=x86_64 -fbasic-block-sections=list %s -S 2>&1 | FileCheck -check-prefix=CHECK-INVALID-VALUE %s
