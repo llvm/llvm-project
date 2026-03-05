@@ -772,26 +772,27 @@ Entry:
 define i32 @ctpop_into_extract(ptr %p) {
 ; CHECKO0-LABEL: ctpop_into_extract:
 ; CHECKO0:       // %bb.0:
-; CHECKO0-NEXT:    mov w8, #-1 // =0xffffffff
+; CHECKO0-NEXT:    mov x8, x0
+; CHECKO0-NEXT:    mov w9, #-1 // =0xffffffff
 ; CHECKO0-NEXT:    // implicit-def: $d2
-; CHECKO0-NEXT:    fmov s2, w8
-; CHECKO0-NEXT:    ldr d0, [x0]
+; CHECKO0-NEXT:    fmov s2, w9
+; CHECKO0-NEXT:    mov w0, wzr
+; CHECKO0-NEXT:    ldr d0, [x8]
 ; CHECKO0-NEXT:    fmov s1, s0
-; CHECKO0-NEXT:    fmov w8, s1
-; CHECKO0-NEXT:    fmov s1, w8
+; CHECKO0-NEXT:    fmov w9, s1
+; CHECKO0-NEXT:    fmov s1, w9
 ; CHECKO0-NEXT:    // kill: def $d1 killed $s1
 ; CHECKO0-NEXT:    cnt v1.8b, v1.8b
 ; CHECKO0-NEXT:    uaddlv h1, v1.8b
 ; CHECKO0-NEXT:    // kill: def $q1 killed $h1
 ; CHECKO0-NEXT:    // kill: def $s1 killed $s1 killed $q1
-; CHECKO0-NEXT:    fmov w8, s1
+; CHECKO0-NEXT:    fmov w9, s1
 ; CHECKO0-NEXT:    // implicit-def: $q1
 ; CHECKO0-NEXT:    fmov d1, d2
-; CHECKO0-NEXT:    mov v1.s[1], w8
+; CHECKO0-NEXT:    mov v1.s[1], w9
 ; CHECKO0-NEXT:    // kill: def $d1 killed $d1 killed $q1
 ; CHECKO0-NEXT:    sub v0.2s, v0.2s, v1.2s
-; CHECKO0-NEXT:    str d0, [x0]
-; CHECKO0-NEXT:    mov w0, wzr
+; CHECKO0-NEXT:    str d0, [x8]
 ; CHECKO0-NEXT:    ret
 ;
 ; NEON-LABEL: ctpop_into_extract:
@@ -871,26 +872,27 @@ define i32 @ctpop_into_extract(ptr %p) {
 ;
 ; GISELO0-LABEL: ctpop_into_extract:
 ; GISELO0:       // %bb.0:
-; GISELO0-NEXT:    mov w8, #-1 // =0xffffffff
+; GISELO0-NEXT:    mov x8, x0
+; GISELO0-NEXT:    mov w9, #-1 // =0xffffffff
 ; GISELO0-NEXT:    // implicit-def: $d2
-; GISELO0-NEXT:    fmov s2, w8
-; GISELO0-NEXT:    ldr d0, [x0]
+; GISELO0-NEXT:    fmov s2, w9
+; GISELO0-NEXT:    mov w0, wzr
+; GISELO0-NEXT:    ldr d0, [x8]
 ; GISELO0-NEXT:    fmov s1, s0
-; GISELO0-NEXT:    fmov w8, s1
-; GISELO0-NEXT:    fmov s1, w8
+; GISELO0-NEXT:    fmov w9, s1
+; GISELO0-NEXT:    fmov s1, w9
 ; GISELO0-NEXT:    // kill: def $d1 killed $s1
 ; GISELO0-NEXT:    cnt v1.8b, v1.8b
 ; GISELO0-NEXT:    uaddlv h1, v1.8b
 ; GISELO0-NEXT:    // kill: def $q1 killed $h1
 ; GISELO0-NEXT:    // kill: def $s1 killed $s1 killed $q1
-; GISELO0-NEXT:    fmov w8, s1
+; GISELO0-NEXT:    fmov w9, s1
 ; GISELO0-NEXT:    // implicit-def: $q1
 ; GISELO0-NEXT:    fmov d1, d2
-; GISELO0-NEXT:    mov v1.s[1], w8
+; GISELO0-NEXT:    mov v1.s[1], w9
 ; GISELO0-NEXT:    // kill: def $d1 killed $d1 killed $q1
 ; GISELO0-NEXT:    sub v0.2s, v0.2s, v1.2s
-; GISELO0-NEXT:    str d0, [x0]
-; GISELO0-NEXT:    mov w0, wzr
+; GISELO0-NEXT:    str d0, [x8]
 ; GISELO0-NEXT:    ret
   %1 = load <2 x i32>, ptr %p, align 4
   %2 = extractelement <2 x i32> %1, i64 0

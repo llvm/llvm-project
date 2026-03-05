@@ -16,40 +16,49 @@ target triple = "arm64-apple-ios5.0.0"
 
 define i32 @foo() {
   ; CHECK-LABEL: name: foo
-  ; CHECK: bb.1.entry:
-  ; CHECK-NEXT:   successors: %bb.2(0x40000000), %bb.3(0x40000000)
+  ; CHECK: bb.0.entry:
+  ; CHECK-NEXT:   successors: %bb.1(0x40000000), %bb.2(0x40000000)
   ; CHECK-NEXT: {{  $}}
-  ; CHECK-NEXT:   [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 2
-  ; CHECK-NEXT:   [[GV:%[0-9]+]]:_(p0) = G_GLOBAL_VALUE @var2
-  ; CHECK-NEXT:   [[C1:%[0-9]+]]:_(s32) = G_CONSTANT i32 3
-  ; CHECK-NEXT:   [[GV1:%[0-9]+]]:_(p0) = G_GLOBAL_VALUE @var3
-  ; CHECK-NEXT:   [[C2:%[0-9]+]]:_(s32) = G_CONSTANT i32 0
-  ; CHECK-NEXT:   [[GV2:%[0-9]+]]:_(p0) = G_GLOBAL_VALUE @var1
-  ; CHECK-NEXT:   [[LOAD:%[0-9]+]]:_(s32) = G_LOAD [[GV2]](p0) :: (dereferenceable load (s32) from @var1)
-  ; CHECK-NEXT:   [[C3:%[0-9]+]]:_(s32) = G_CONSTANT i32 1
-  ; CHECK-NEXT:   [[ICMP:%[0-9]+]]:_(s1) = G_ICMP intpred(ne), [[LOAD]](s32), [[C3]]
-  ; CHECK-NEXT:   [[C4:%[0-9]+]]:_(s1) = G_CONSTANT i1 true
-  ; CHECK-NEXT:   G_BRCOND [[ICMP]](s1), %bb.3
-  ; CHECK-NEXT:   G_BR %bb.2
+  ; CHECK-NEXT:   $sp = frame-setup SUBXri $sp, 48, 0
+  ; CHECK-NEXT:   frame-setup CFI_INSTRUCTION def_cfa_offset <mcsymbol >48
+  ; CHECK-NEXT:   $x8 = ADRP target-flags(aarch64-page, aarch64-got) @var1
+  ; CHECK-NEXT:   renamable $x8 = LDRXui killed $x8, target-flags(aarch64-pageoff, aarch64-got, aarch64-nc) @var1
+  ; CHECK-NEXT:   STRXui $x8, $sp, 0 :: (store (s64) into %stack.5)
+  ; CHECK-NEXT:   renamable $w9 = MOVZWi 2, 0
+  ; CHECK-NEXT:   STRWui killed $w9, $sp, 3 :: (store (s32) into %stack.4)
+  ; CHECK-NEXT:   $x9 = ADRP target-flags(aarch64-page, aarch64-got) @var2
+  ; CHECK-NEXT:   renamable $x9 = LDRXui killed $x9, target-flags(aarch64-pageoff, aarch64-got, aarch64-nc) @var2
+  ; CHECK-NEXT:   STRXui killed $x9, $sp, 2 :: (store (s64) into %stack.3)
+  ; CHECK-NEXT:   renamable $w9 = MOVZWi 3, 0
+  ; CHECK-NEXT:   STRWui killed $w9, $sp, 7 :: (store (s32) into %stack.2)
+  ; CHECK-NEXT:   $x9 = ADRP target-flags(aarch64-page, aarch64-got) @var3
+  ; CHECK-NEXT:   renamable $x9 = LDRXui killed $x9, target-flags(aarch64-pageoff, aarch64-got, aarch64-nc) @var3
+  ; CHECK-NEXT:   STRXui killed $x9, $sp, 4 :: (store (s64) into %stack.1)
+  ; CHECK-NEXT:   $w9 = ORRWrs $wzr, $wzr, 0
+  ; CHECK-NEXT:   STRWui killed $w9, $sp, 11 :: (store (s32) into %stack.0)
+  ; CHECK-NEXT:   renamable $w8 = LDRWui renamable $x8, 0 :: (dereferenceable load (s32) from @var1)
+  ; CHECK-NEXT:   dead renamable $w8 = SUBSWri killed renamable $w8, 1, 0, implicit-def $nzcv
+  ; CHECK-NEXT:   Bcc 1, %bb.2, implicit killed $nzcv
+  ; CHECK-NEXT:   B %bb.1
   ; CHECK-NEXT: {{  $}}
-  ; CHECK-NEXT: bb.2.if.then:
-  ; CHECK-NEXT:   successors: %bb.3(0x80000000)
+  ; CHECK-NEXT: bb.1.if.then:
+  ; CHECK-NEXT:   successors: %bb.2(0x80000000)
   ; CHECK-NEXT: {{  $}}
-  ; CHECK-NEXT:   [[GV3:%[0-9]+]]:_(p0) = G_GLOBAL_VALUE @var2
-  ; CHECK-NEXT:   [[C5:%[0-9]+]]:_(s32) = G_CONSTANT i32 2
-  ; CHECK-NEXT:   G_STORE [[C5]](s32), [[GV3]](p0) :: (store (s32) into @var2)
-  ; CHECK-NEXT:   [[C6:%[0-9]+]]:_(s32) = G_CONSTANT i32 3
-  ; CHECK-NEXT:   [[GV4:%[0-9]+]]:_(p0) = G_GLOBAL_VALUE @var1
-  ; CHECK-NEXT:   G_STORE [[C6]](s32), [[GV4]](p0) :: (store (s32) into @var1)
-  ; CHECK-NEXT:   [[GV5:%[0-9]+]]:_(p0) = G_GLOBAL_VALUE @var3
-  ; CHECK-NEXT:   G_STORE [[C5]](s32), [[GV5]](p0) :: (store (s32) into @var3)
-  ; CHECK-NEXT:   G_STORE [[C6]](s32), [[GV4]](p0) :: (store (s32) into @var1)
-  ; CHECK-NEXT:   G_BR %bb.3
+  ; CHECK-NEXT:   $w8 = LDRWui $sp, 7 :: (load (s32) from %stack.2)
+  ; CHECK-NEXT:   $x9 = LDRXui $sp, 0 :: (load (s64) from %stack.5)
+  ; CHECK-NEXT:   $w10 = LDRWui $sp, 3 :: (load (s32) from %stack.4)
+  ; CHECK-NEXT:   $x11 = LDRXui $sp, 4 :: (load (s64) from %stack.1)
+  ; CHECK-NEXT:   $x12 = LDRXui $sp, 2 :: (load (s64) from %stack.3)
+  ; CHECK-NEXT:   STRWui renamable $w10, renamable $x12, 0 :: (store (s32) into @var2)
+  ; CHECK-NEXT:   STRWui renamable $w8, renamable $x9, 0 :: (store (s32) into @var1)
+  ; CHECK-NEXT:   STRWui renamable $w10, renamable $x11, 0 :: (store (s32) into @var3)
+  ; CHECK-NEXT:   STRWui renamable $w8, renamable $x9, 0 :: (store (s32) into @var1)
+  ; CHECK-NEXT:   B %bb.2
   ; CHECK-NEXT: {{  $}}
-  ; CHECK-NEXT: bb.3.if.end:
-  ; CHECK-NEXT:   [[C7:%[0-9]+]]:_(s32) = G_CONSTANT i32 0
-  ; CHECK-NEXT:   $w0 = COPY [[C7]](s32)
-  ; CHECK-NEXT:   RET_ReallyLR implicit $w0
+  ; CHECK-NEXT: bb.2.if.end:
+  ; CHECK-NEXT:   $w0 = LDRWui $sp, 11 :: (load (s32) from %stack.0)
+  ; CHECK-NEXT:   $sp = frame-destroy ADDXri $sp, 48, 0
+  ; CHECK-NEXT:   RET undef $lr, implicit killed $w0
 entry:
   %0 = load i32, ptr @var1, align 4
   %cmp = icmp eq i32 %0, 1
@@ -75,32 +84,46 @@ if.end:
 ; we don't localize into the middle of a call sequence instead.
 define i32 @darwin_tls() {
   ; CHECK-LABEL: name: darwin_tls
-  ; CHECK: bb.1.entry:
-  ; CHECK-NEXT:   successors: %bb.2(0x40000000), %bb.3(0x40000000)
+  ; CHECK: bb.0.entry:
+  ; CHECK-NEXT:   successors: %bb.1(0x40000000), %bb.2(0x40000000)
+  ; CHECK-NEXT:   liveins: $lr
   ; CHECK-NEXT: {{  $}}
-  ; CHECK-NEXT:   [[GV:%[0-9]+]]:_(p0) = G_GLOBAL_VALUE @tls_gv
-  ; CHECK-NEXT:   [[GV1:%[0-9]+]]:_(p0) = G_GLOBAL_VALUE @var2
-  ; CHECK-NEXT:   [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 0
-  ; CHECK-NEXT:   [[GV2:%[0-9]+]]:_(p0) = G_GLOBAL_VALUE @var1
-  ; CHECK-NEXT:   [[LOAD:%[0-9]+]]:_(s32) = G_LOAD [[GV2]](p0) :: (dereferenceable load (s32) from @var1)
-  ; CHECK-NEXT:   [[C1:%[0-9]+]]:_(s32) = G_CONSTANT i32 1
-  ; CHECK-NEXT:   [[ICMP:%[0-9]+]]:_(s1) = G_ICMP intpred(ne), [[LOAD]](s32), [[C1]]
-  ; CHECK-NEXT:   [[C2:%[0-9]+]]:_(s1) = G_CONSTANT i1 true
-  ; CHECK-NEXT:   G_BRCOND [[ICMP]](s1), %bb.3
-  ; CHECK-NEXT:   G_BR %bb.2
+  ; CHECK-NEXT:   $sp = frame-setup SUBXri $sp, 48, 0
+  ; CHECK-NEXT:   frame-setup STPXi killed $fp, killed $lr, $sp, 4 :: (store (s64) into %stack.4), (store (s64) into %stack.3)
+  ; CHECK-NEXT:   frame-setup CFI_INSTRUCTION def_cfa_offset 48
+  ; CHECK-NEXT:   frame-setup CFI_INSTRUCTION offset $w30, -8
+  ; CHECK-NEXT:   frame-setup CFI_INSTRUCTION offset $w29, -16
+  ; CHECK-NEXT:   $x8 = ADRP target-flags(aarch64-page, aarch64-got) @var1
+  ; CHECK-NEXT:   renamable $x8 = LDRXui killed $x8, target-flags(aarch64-pageoff, aarch64-got, aarch64-nc) @var1
+  ; CHECK-NEXT:   $x0 = ADRP target-flags(aarch64-page, aarch64-tls) @tls_gv
+  ; CHECK-NEXT:   renamable $x0 = LDRXui killed $x0, target-flags(aarch64-pageoff, aarch64-nc, aarch64-tls) @tls_gv
+  ; CHECK-NEXT:   renamable $x9 = LDRXui renamable $x0, 0
+  ; CHECK-NEXT:   BLR killed renamable $x9, csr_darwin_aarch64_tls, implicit-def dead $lr, implicit $sp, implicit killed $x0, implicit-def $x0
+  ; CHECK-NEXT:   STRXui killed $x0, $sp, 1 :: (store (s64) into %stack.2)
+  ; CHECK-NEXT:   $x9 = ADRP target-flags(aarch64-page, aarch64-got) @var2
+  ; CHECK-NEXT:   renamable $x9 = LDRXui killed $x9, target-flags(aarch64-pageoff, aarch64-got, aarch64-nc) @var2
+  ; CHECK-NEXT:   STRXui killed $x9, $sp, 2 :: (store (s64) into %stack.1)
+  ; CHECK-NEXT:   $w9 = ORRWrs $wzr, $wzr, 0
+  ; CHECK-NEXT:   STRWui killed $w9, $sp, 7 :: (store (s32) into %stack.0)
+  ; CHECK-NEXT:   renamable $w8 = LDRWui killed renamable $x8, 0 :: (dereferenceable load (s32) from @var1)
+  ; CHECK-NEXT:   dead renamable $w8 = SUBSWri killed renamable $w8, 1, 0, implicit-def $nzcv
+  ; CHECK-NEXT:   Bcc 1, %bb.2, implicit killed $nzcv
+  ; CHECK-NEXT:   B %bb.1
   ; CHECK-NEXT: {{  $}}
-  ; CHECK-NEXT: bb.2.if.then:
-  ; CHECK-NEXT:   successors: %bb.3(0x80000000)
+  ; CHECK-NEXT: bb.1.if.then:
+  ; CHECK-NEXT:   successors: %bb.2(0x80000000)
   ; CHECK-NEXT: {{  $}}
-  ; CHECK-NEXT:   [[LOAD1:%[0-9]+]]:_(s32) = G_LOAD [[GV]](p0) :: (dereferenceable load (s32) from @tls_gv)
-  ; CHECK-NEXT:   [[GV3:%[0-9]+]]:_(p0) = G_GLOBAL_VALUE @var2
-  ; CHECK-NEXT:   G_STORE [[LOAD1]](s32), [[GV3]](p0) :: (store (s32) into @var2)
-  ; CHECK-NEXT:   G_BR %bb.3
+  ; CHECK-NEXT:   $x9 = LDRXui $sp, 2 :: (load (s64) from %stack.1)
+  ; CHECK-NEXT:   $x8 = LDRXui $sp, 1 :: (load (s64) from %stack.2)
+  ; CHECK-NEXT:   renamable $w8 = LDRWui renamable $x8, 0 :: (dereferenceable load (s32) from @tls_gv)
+  ; CHECK-NEXT:   STRWui killed renamable $w8, renamable $x9, 0 :: (store (s32) into @var2)
+  ; CHECK-NEXT:   B %bb.2
   ; CHECK-NEXT: {{  $}}
-  ; CHECK-NEXT: bb.3.if.end:
-  ; CHECK-NEXT:   [[C3:%[0-9]+]]:_(s32) = G_CONSTANT i32 0
-  ; CHECK-NEXT:   $w0 = COPY [[C3]](s32)
-  ; CHECK-NEXT:   RET_ReallyLR implicit $w0
+  ; CHECK-NEXT: bb.2.if.end:
+  ; CHECK-NEXT:   $w0 = LDRWui $sp, 7 :: (load (s32) from %stack.0)
+  ; CHECK-NEXT:   $fp, $lr = frame-destroy LDPXi $sp, 4 :: (load (s64) from %stack.4), (load (s64) from %stack.3)
+  ; CHECK-NEXT:   $sp = frame-destroy ADDXri $sp, 48, 0
+  ; CHECK-NEXT:   RET undef $lr, implicit killed $w0
 entry:
   %0 = load i32, ptr @var1, align 4
   %cmp = icmp eq i32 %0, 1
@@ -117,42 +140,53 @@ if.end:
 
 define i32 @imm_cost_too_large_cost_of_2() {
   ; CHECK-LABEL: name: imm_cost_too_large_cost_of_2
-  ; CHECK: bb.1.entry:
-  ; CHECK-NEXT:   successors: %bb.2(0x40000000), %bb.4(0x40000000)
+  ; CHECK: bb.0.entry:
+  ; CHECK-NEXT:   successors: %bb.1(0x40000000), %bb.3(0x40000000)
   ; CHECK-NEXT: {{  $}}
-  ; CHECK-NEXT:   [[GV:%[0-9]+]]:_(p0) = G_GLOBAL_VALUE @var2
-  ; CHECK-NEXT:   [[GV1:%[0-9]+]]:_(p0) = G_GLOBAL_VALUE @var3
-  ; CHECK-NEXT:   [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 0
-  ; CHECK-NEXT:   [[GV2:%[0-9]+]]:_(p0) = G_GLOBAL_VALUE @var1
-  ; CHECK-NEXT:   [[LOAD:%[0-9]+]]:_(s32) = G_LOAD [[GV2]](p0) :: (dereferenceable load (s32) from @var1)
-  ; CHECK-NEXT:   [[C1:%[0-9]+]]:_(s32) = G_CONSTANT i32 -2228259
-  ; CHECK-NEXT:   [[CONSTANT_FOLD_BARRIER:%[0-9]+]]:_(s32) = G_CONSTANT_FOLD_BARRIER [[C1]]
-  ; CHECK-NEXT:   [[C2:%[0-9]+]]:_(s32) = G_CONSTANT i32 1
-  ; CHECK-NEXT:   [[ICMP:%[0-9]+]]:_(s1) = G_ICMP intpred(ne), [[LOAD]](s32), [[C2]]
-  ; CHECK-NEXT:   [[C3:%[0-9]+]]:_(s1) = G_CONSTANT i1 true
-  ; CHECK-NEXT:   G_BRCOND [[ICMP]](s1), %bb.4
-  ; CHECK-NEXT:   G_BR %bb.2
+  ; CHECK-NEXT:   $sp = frame-setup SUBXri $sp, 48, 0
+  ; CHECK-NEXT:   frame-setup CFI_INSTRUCTION def_cfa_offset <mcsymbol >48
+  ; CHECK-NEXT:   $x8 = ADRP target-flags(aarch64-page, aarch64-got) @var1
+  ; CHECK-NEXT:   renamable $x8 = LDRXui killed $x8, target-flags(aarch64-pageoff, aarch64-got, aarch64-nc) @var1
+  ; CHECK-NEXT:   STRXui $x8, $sp, 1 :: (store (s64) into %stack.4)
+  ; CHECK-NEXT:   renamable $w9 = MOVZWi 65501, 0
+  ; CHECK-NEXT:   renamable $w9 = MOVKWi $w9, 65501, 16
+  ; CHECK-NEXT:   STRWui killed $w9, $sp, 5 :: (store (s32) into %stack.3)
+  ; CHECK-NEXT:   $x9 = ADRP target-flags(aarch64-page, aarch64-got) @var2
+  ; CHECK-NEXT:   renamable $x9 = LDRXui killed $x9, target-flags(aarch64-pageoff, aarch64-got, aarch64-nc) @var2
+  ; CHECK-NEXT:   STRXui killed $x9, $sp, 3 :: (store (s64) into %stack.2)
+  ; CHECK-NEXT:   $x9 = ADRP target-flags(aarch64-page, aarch64-got) @var3
+  ; CHECK-NEXT:   renamable $x9 = LDRXui killed $x9, target-flags(aarch64-pageoff, aarch64-got, aarch64-nc) @var3
+  ; CHECK-NEXT:   STRXui killed $x9, $sp, 4 :: (store (s64) into %stack.1)
+  ; CHECK-NEXT:   $w9 = ORRWrs $wzr, $wzr, 0
+  ; CHECK-NEXT:   STRWui killed $w9, $sp, 11 :: (store (s32) into %stack.0)
+  ; CHECK-NEXT:   renamable $w8 = LDRWui renamable $x8, 0 :: (dereferenceable load (s32) from @var1)
+  ; CHECK-NEXT:   dead renamable $w8 = SUBSWri killed renamable $w8, 1, 0, implicit-def $nzcv
+  ; CHECK-NEXT:   Bcc 1, %bb.3, implicit killed $nzcv
+  ; CHECK-NEXT:   B %bb.1
   ; CHECK-NEXT: {{  $}}
-  ; CHECK-NEXT: bb.2.if.then:
+  ; CHECK-NEXT: bb.1.if.then:
+  ; CHECK-NEXT:   successors: %bb.2(0x80000000)
+  ; CHECK-NEXT: {{  $}}
+  ; CHECK-NEXT:   $w8 = LDRWui $sp, 5 :: (load (s32) from %stack.3)
+  ; CHECK-NEXT:   $x9 = LDRXui $sp, 3 :: (load (s64) from %stack.2)
+  ; CHECK-NEXT:   STRWui renamable $w8, renamable $x9, 0 :: (store (s32) into @var2)
+  ; CHECK-NEXT:   B %bb.2
+  ; CHECK-NEXT: {{  $}}
+  ; CHECK-NEXT: bb.2.if.then2:
   ; CHECK-NEXT:   successors: %bb.3(0x80000000)
   ; CHECK-NEXT: {{  $}}
-  ; CHECK-NEXT:   [[GV3:%[0-9]+]]:_(p0) = G_GLOBAL_VALUE @var2
-  ; CHECK-NEXT:   G_STORE [[CONSTANT_FOLD_BARRIER]](s32), [[GV3]](p0) :: (store (s32) into @var2)
-  ; CHECK-NEXT:   G_BR %bb.3
+  ; CHECK-NEXT:   $w8 = LDRWui $sp, 5 :: (load (s32) from %stack.3)
+  ; CHECK-NEXT:   $x9 = LDRXui $sp, 1 :: (load (s64) from %stack.4)
+  ; CHECK-NEXT:   STRWui renamable $w8, renamable $x9, 0 :: (store (s32) into @var1)
+  ; CHECK-NEXT:   B %bb.3
   ; CHECK-NEXT: {{  $}}
-  ; CHECK-NEXT: bb.3.if.then2:
-  ; CHECK-NEXT:   successors: %bb.4(0x80000000)
-  ; CHECK-NEXT: {{  $}}
-  ; CHECK-NEXT:   [[GV4:%[0-9]+]]:_(p0) = G_GLOBAL_VALUE @var1
-  ; CHECK-NEXT:   G_STORE [[CONSTANT_FOLD_BARRIER]](s32), [[GV4]](p0) :: (store (s32) into @var1)
-  ; CHECK-NEXT:   G_BR %bb.4
-  ; CHECK-NEXT: {{  $}}
-  ; CHECK-NEXT: bb.4.if.end:
-  ; CHECK-NEXT:   [[GV5:%[0-9]+]]:_(p0) = G_GLOBAL_VALUE @var3
-  ; CHECK-NEXT:   G_STORE [[CONSTANT_FOLD_BARRIER]](s32), [[GV5]](p0) :: (store (s32) into @var3)
-  ; CHECK-NEXT:   [[C4:%[0-9]+]]:_(s32) = G_CONSTANT i32 0
-  ; CHECK-NEXT:   $w0 = COPY [[C4]](s32)
-  ; CHECK-NEXT:   RET_ReallyLR implicit $w0
+  ; CHECK-NEXT: bb.3.if.end:
+  ; CHECK-NEXT:   $w0 = LDRWui $sp, 11 :: (load (s32) from %stack.0)
+  ; CHECK-NEXT:   $w8 = LDRWui $sp, 5 :: (load (s32) from %stack.3)
+  ; CHECK-NEXT:   $x9 = LDRXui $sp, 4 :: (load (s64) from %stack.1)
+  ; CHECK-NEXT:   STRWui killed renamable $w8, killed renamable $x9, 0 :: (store (s32) into @var3)
+  ; CHECK-NEXT:   $sp = frame-destroy ADDXri $sp, 48, 0
+  ; CHECK-NEXT:   RET undef $lr, implicit killed $w0
 entry:
   %0 = load i32, ptr @var1, align 4
   %cst1 = bitcast i32 -2228259 to i32
@@ -174,42 +208,53 @@ if.end:
 
 define i64 @imm_cost_too_large_cost_of_4() {
   ; CHECK-LABEL: name: imm_cost_too_large_cost_of_4
-  ; CHECK: bb.1.entry:
-  ; CHECK-NEXT:   successors: %bb.2(0x40000000), %bb.4(0x40000000)
+  ; CHECK: bb.0.entry:
+  ; CHECK-NEXT:   successors: %bb.1(0x40000000), %bb.3(0x40000000)
   ; CHECK-NEXT: {{  $}}
-  ; CHECK-NEXT:   [[GV:%[0-9]+]]:_(p0) = G_GLOBAL_VALUE @var2_64
-  ; CHECK-NEXT:   [[GV1:%[0-9]+]]:_(p0) = G_GLOBAL_VALUE @var3_64
-  ; CHECK-NEXT:   [[C:%[0-9]+]]:_(s64) = G_CONSTANT i64 0
-  ; CHECK-NEXT:   [[GV2:%[0-9]+]]:_(p0) = G_GLOBAL_VALUE @var1_64
-  ; CHECK-NEXT:   [[LOAD:%[0-9]+]]:_(s64) = G_LOAD [[GV2]](p0) :: (dereferenceable load (s64) from @var1_64, align 4)
-  ; CHECK-NEXT:   [[C1:%[0-9]+]]:_(s64) = G_CONSTANT i64 -2228259
-  ; CHECK-NEXT:   [[CONSTANT_FOLD_BARRIER:%[0-9]+]]:_(s64) = G_CONSTANT_FOLD_BARRIER [[C1]]
-  ; CHECK-NEXT:   [[C2:%[0-9]+]]:_(s64) = G_CONSTANT i64 1
-  ; CHECK-NEXT:   [[ICMP:%[0-9]+]]:_(s1) = G_ICMP intpred(ne), [[LOAD]](s64), [[C2]]
-  ; CHECK-NEXT:   [[C3:%[0-9]+]]:_(s1) = G_CONSTANT i1 true
-  ; CHECK-NEXT:   G_BRCOND [[ICMP]](s1), %bb.4
-  ; CHECK-NEXT:   G_BR %bb.2
+  ; CHECK-NEXT:   $sp = frame-setup SUBXri $sp, 48, 0
+  ; CHECK-NEXT:   frame-setup CFI_INSTRUCTION def_cfa_offset <mcsymbol >48
+  ; CHECK-NEXT:   $x8 = ADRP target-flags(aarch64-page, aarch64-got) @var1_64
+  ; CHECK-NEXT:   renamable $x8 = LDRXui killed $x8, target-flags(aarch64-pageoff, aarch64-got, aarch64-nc) @var1_64
+  ; CHECK-NEXT:   STRXui $x8, $sp, 1 :: (store (s64) into %stack.4)
+  ; CHECK-NEXT:   renamable $x9 = MOVNXi 34, 0
+  ; CHECK-NEXT:   renamable $x9 = MOVKXi $x9, 65501, 16
+  ; CHECK-NEXT:   STRXui killed $x9, $sp, 2 :: (store (s64) into %stack.3)
+  ; CHECK-NEXT:   $x9 = ADRP target-flags(aarch64-page, aarch64-got) @var2_64
+  ; CHECK-NEXT:   renamable $x9 = LDRXui killed $x9, target-flags(aarch64-pageoff, aarch64-got, aarch64-nc) @var2_64
+  ; CHECK-NEXT:   STRXui killed $x9, $sp, 3 :: (store (s64) into %stack.2)
+  ; CHECK-NEXT:   $x9 = ADRP target-flags(aarch64-page, aarch64-got) @var3_64
+  ; CHECK-NEXT:   renamable $x9 = LDRXui killed $x9, target-flags(aarch64-pageoff, aarch64-got, aarch64-nc) @var3_64
+  ; CHECK-NEXT:   STRXui killed $x9, $sp, 4 :: (store (s64) into %stack.1)
+  ; CHECK-NEXT:   $x9 = ORRXrs $xzr, $xzr, 0
+  ; CHECK-NEXT:   STRXui killed $x9, $sp, 5 :: (store (s64) into %stack.0)
+  ; CHECK-NEXT:   renamable $x8 = LDRXui renamable $x8, 0 :: (dereferenceable load (s64) from @var1_64, align 4)
+  ; CHECK-NEXT:   dead renamable $x8 = SUBSXri killed renamable $x8, 1, 0, implicit-def $nzcv
+  ; CHECK-NEXT:   Bcc 1, %bb.3, implicit killed $nzcv
+  ; CHECK-NEXT:   B %bb.1
   ; CHECK-NEXT: {{  $}}
-  ; CHECK-NEXT: bb.2.if.then:
+  ; CHECK-NEXT: bb.1.if.then:
+  ; CHECK-NEXT:   successors: %bb.2(0x80000000)
+  ; CHECK-NEXT: {{  $}}
+  ; CHECK-NEXT:   $x8 = LDRXui $sp, 2 :: (load (s64) from %stack.3)
+  ; CHECK-NEXT:   $x9 = LDRXui $sp, 3 :: (load (s64) from %stack.2)
+  ; CHECK-NEXT:   STRXui renamable $x8, renamable $x9, 0 :: (store (s64) into @var2_64)
+  ; CHECK-NEXT:   B %bb.2
+  ; CHECK-NEXT: {{  $}}
+  ; CHECK-NEXT: bb.2.if.then2:
   ; CHECK-NEXT:   successors: %bb.3(0x80000000)
   ; CHECK-NEXT: {{  $}}
-  ; CHECK-NEXT:   [[GV3:%[0-9]+]]:_(p0) = G_GLOBAL_VALUE @var2_64
-  ; CHECK-NEXT:   G_STORE [[CONSTANT_FOLD_BARRIER]](s64), [[GV3]](p0) :: (store (s64) into @var2_64)
-  ; CHECK-NEXT:   G_BR %bb.3
+  ; CHECK-NEXT:   $x8 = LDRXui $sp, 2 :: (load (s64) from %stack.3)
+  ; CHECK-NEXT:   $x9 = LDRXui $sp, 1 :: (load (s64) from %stack.4)
+  ; CHECK-NEXT:   STRXui renamable $x8, renamable $x9, 0 :: (store (s64) into @var1_64)
+  ; CHECK-NEXT:   B %bb.3
   ; CHECK-NEXT: {{  $}}
-  ; CHECK-NEXT: bb.3.if.then2:
-  ; CHECK-NEXT:   successors: %bb.4(0x80000000)
-  ; CHECK-NEXT: {{  $}}
-  ; CHECK-NEXT:   [[GV4:%[0-9]+]]:_(p0) = G_GLOBAL_VALUE @var1_64
-  ; CHECK-NEXT:   G_STORE [[CONSTANT_FOLD_BARRIER]](s64), [[GV4]](p0) :: (store (s64) into @var1_64)
-  ; CHECK-NEXT:   G_BR %bb.4
-  ; CHECK-NEXT: {{  $}}
-  ; CHECK-NEXT: bb.4.if.end:
-  ; CHECK-NEXT:   [[GV5:%[0-9]+]]:_(p0) = G_GLOBAL_VALUE @var3_64
-  ; CHECK-NEXT:   G_STORE [[CONSTANT_FOLD_BARRIER]](s64), [[GV5]](p0) :: (store (s64) into @var3_64)
-  ; CHECK-NEXT:   [[C4:%[0-9]+]]:_(s64) = G_CONSTANT i64 0
-  ; CHECK-NEXT:   $x0 = COPY [[C4]](s64)
-  ; CHECK-NEXT:   RET_ReallyLR implicit $x0
+  ; CHECK-NEXT: bb.3.if.end:
+  ; CHECK-NEXT:   $x0 = LDRXui $sp, 5 :: (load (s64) from %stack.0)
+  ; CHECK-NEXT:   $x8 = LDRXui $sp, 2 :: (load (s64) from %stack.3)
+  ; CHECK-NEXT:   $x9 = LDRXui $sp, 4 :: (load (s64) from %stack.1)
+  ; CHECK-NEXT:   STRXui killed renamable $x8, killed renamable $x9, 0 :: (store (s64) into @var3_64)
+  ; CHECK-NEXT:   $sp = frame-destroy ADDXri $sp, 48, 0
+  ; CHECK-NEXT:   RET undef $lr, implicit killed $x0
 entry:
   %0 = load i64, ptr @var1_64, align 4
   %cst1 = bitcast i64 -2228259 to i64
@@ -231,42 +276,56 @@ if.end:
 
 define i64 @f64_imm_cost_too_high(double %a) {
   ; CHECK-LABEL: name: f64_imm_cost_too_high
-  ; CHECK: bb.1.entry:
-  ; CHECK-NEXT:   successors: %bb.2(0x40000000), %bb.4(0x40000000)
+  ; CHECK: bb.0.entry:
+  ; CHECK-NEXT:   successors: %bb.1(0x40000000), %bb.3(0x40000000)
   ; CHECK-NEXT:   liveins: $d0
   ; CHECK-NEXT: {{  $}}
-  ; CHECK-NEXT:   [[C:%[0-9]+]]:_(s64) = G_FCONSTANT double 1.000000e-02
-  ; CHECK-NEXT:   [[GV:%[0-9]+]]:_(p0) = G_GLOBAL_VALUE @var2_64
-  ; CHECK-NEXT:   [[GV1:%[0-9]+]]:_(p0) = G_GLOBAL_VALUE @var3_64
-  ; CHECK-NEXT:   [[C1:%[0-9]+]]:_(s64) = G_CONSTANT i64 0
-  ; CHECK-NEXT:   [[GV2:%[0-9]+]]:_(p0) = G_GLOBAL_VALUE @var1_64
-  ; CHECK-NEXT:   [[LOAD:%[0-9]+]]:_(s64) = G_LOAD [[GV2]](p0) :: (dereferenceable load (s64) from @var1_64, align 4)
-  ; CHECK-NEXT:   [[C2:%[0-9]+]]:_(s64) = G_CONSTANT i64 1
-  ; CHECK-NEXT:   [[ICMP:%[0-9]+]]:_(s1) = G_ICMP intpred(ne), [[LOAD]](s64), [[C2]]
-  ; CHECK-NEXT:   [[C3:%[0-9]+]]:_(s1) = G_CONSTANT i1 true
-  ; CHECK-NEXT:   G_BRCOND [[ICMP]](s1), %bb.4
-  ; CHECK-NEXT:   G_BR %bb.2
+  ; CHECK-NEXT:   $sp = frame-setup SUBXri $sp, 48, 0
+  ; CHECK-NEXT:   frame-setup CFI_INSTRUCTION def_cfa_offset <mcsymbol >48
+  ; CHECK-NEXT:   $x8 = ADRP target-flags(aarch64-page, aarch64-got) @var1_64
+  ; CHECK-NEXT:   renamable $x8 = LDRXui killed $x8, target-flags(aarch64-pageoff, aarch64-got, aarch64-nc) @var1_64
+  ; CHECK-NEXT:   STRXui $x8, $sp, 1 :: (store (s64) into %stack.4)
+  ; CHECK-NEXT:   renamable $x9 = MOVZXi 5243, 0
+  ; CHECK-NEXT:   renamable $x9 = MOVKXi $x9, 18350, 16
+  ; CHECK-NEXT:   renamable $x9 = MOVKXi $x9, 31457, 32
+  ; CHECK-NEXT:   renamable $x9 = MOVKXi $x9, 16260, 48
+  ; CHECK-NEXT:   STRXui killed $x9, $sp, 2 :: (store (s64) into %stack.3)
+  ; CHECK-NEXT:   $x9 = ADRP target-flags(aarch64-page, aarch64-got) @var2_64
+  ; CHECK-NEXT:   renamable $x9 = LDRXui killed $x9, target-flags(aarch64-pageoff, aarch64-got, aarch64-nc) @var2_64
+  ; CHECK-NEXT:   STRXui killed $x9, $sp, 3 :: (store (s64) into %stack.2)
+  ; CHECK-NEXT:   $x9 = ADRP target-flags(aarch64-page, aarch64-got) @var3_64
+  ; CHECK-NEXT:   renamable $x9 = LDRXui killed $x9, target-flags(aarch64-pageoff, aarch64-got, aarch64-nc) @var3_64
+  ; CHECK-NEXT:   STRXui killed $x9, $sp, 4 :: (store (s64) into %stack.1)
+  ; CHECK-NEXT:   $x9 = ORRXrs $xzr, $xzr, 0
+  ; CHECK-NEXT:   STRXui killed $x9, $sp, 5 :: (store (s64) into %stack.0)
+  ; CHECK-NEXT:   renamable $x8 = LDRXui renamable $x8, 0 :: (dereferenceable load (s64) from @var1_64, align 4)
+  ; CHECK-NEXT:   dead renamable $x8 = SUBSXri killed renamable $x8, 1, 0, implicit-def $nzcv
+  ; CHECK-NEXT:   Bcc 1, %bb.3, implicit killed $nzcv
+  ; CHECK-NEXT:   B %bb.1
   ; CHECK-NEXT: {{  $}}
-  ; CHECK-NEXT: bb.2.if.then:
+  ; CHECK-NEXT: bb.1.if.then:
+  ; CHECK-NEXT:   successors: %bb.2(0x80000000)
+  ; CHECK-NEXT: {{  $}}
+  ; CHECK-NEXT:   $x8 = LDRXui $sp, 2 :: (load (s64) from %stack.3)
+  ; CHECK-NEXT:   $x9 = LDRXui $sp, 3 :: (load (s64) from %stack.2)
+  ; CHECK-NEXT:   STRXui renamable $x8, renamable $x9, 0 :: (store (s64) into @var2_64)
+  ; CHECK-NEXT:   B %bb.2
+  ; CHECK-NEXT: {{  $}}
+  ; CHECK-NEXT: bb.2.if.then2:
   ; CHECK-NEXT:   successors: %bb.3(0x80000000)
   ; CHECK-NEXT: {{  $}}
-  ; CHECK-NEXT:   [[GV3:%[0-9]+]]:_(p0) = G_GLOBAL_VALUE @var2_64
-  ; CHECK-NEXT:   G_STORE [[C]](s64), [[GV3]](p0) :: (store (s64) into @var2_64)
-  ; CHECK-NEXT:   G_BR %bb.3
+  ; CHECK-NEXT:   $x8 = LDRXui $sp, 2 :: (load (s64) from %stack.3)
+  ; CHECK-NEXT:   $x9 = LDRXui $sp, 1 :: (load (s64) from %stack.4)
+  ; CHECK-NEXT:   STRXui renamable $x8, renamable $x9, 0 :: (store (s64) into @var1_64)
+  ; CHECK-NEXT:   B %bb.3
   ; CHECK-NEXT: {{  $}}
-  ; CHECK-NEXT: bb.3.if.then2:
-  ; CHECK-NEXT:   successors: %bb.4(0x80000000)
-  ; CHECK-NEXT: {{  $}}
-  ; CHECK-NEXT:   [[GV4:%[0-9]+]]:_(p0) = G_GLOBAL_VALUE @var1_64
-  ; CHECK-NEXT:   G_STORE [[C]](s64), [[GV4]](p0) :: (store (s64) into @var1_64)
-  ; CHECK-NEXT:   G_BR %bb.4
-  ; CHECK-NEXT: {{  $}}
-  ; CHECK-NEXT: bb.4.if.end:
-  ; CHECK-NEXT:   [[GV5:%[0-9]+]]:_(p0) = G_GLOBAL_VALUE @var3_64
-  ; CHECK-NEXT:   G_STORE [[C]](s64), [[GV5]](p0) :: (store (s64) into @var3_64)
-  ; CHECK-NEXT:   [[C4:%[0-9]+]]:_(s64) = G_CONSTANT i64 0
-  ; CHECK-NEXT:   $x0 = COPY [[C4]](s64)
-  ; CHECK-NEXT:   RET_ReallyLR implicit $x0
+  ; CHECK-NEXT: bb.3.if.end:
+  ; CHECK-NEXT:   $x0 = LDRXui $sp, 5 :: (load (s64) from %stack.0)
+  ; CHECK-NEXT:   $x8 = LDRXui $sp, 2 :: (load (s64) from %stack.3)
+  ; CHECK-NEXT:   $x9 = LDRXui $sp, 4 :: (load (s64) from %stack.1)
+  ; CHECK-NEXT:   STRXui killed renamable $x8, killed renamable $x9, 0 :: (store (s64) into @var3_64)
+  ; CHECK-NEXT:   $sp = frame-destroy ADDXri $sp, 48, 0
+  ; CHECK-NEXT:   RET undef $lr, implicit killed $x0
 entry:
   %0 = load i64, ptr @var1_64, align 4
   %cmp = icmp eq i64 %0, 1
@@ -287,45 +346,48 @@ if.end:
 
 define i64 @f64_imm_cheap(double %a) {
   ; CHECK-LABEL: name: f64_imm_cheap
-  ; CHECK: bb.1.entry:
-  ; CHECK-NEXT:   successors: %bb.2(0x40000000), %bb.4(0x40000000)
+  ; CHECK: bb.0.entry:
+  ; CHECK-NEXT:   successors: %bb.1(0x40000000), %bb.3(0x40000000)
   ; CHECK-NEXT:   liveins: $d0
   ; CHECK-NEXT: {{  $}}
-  ; CHECK-NEXT:   [[C:%[0-9]+]]:_(s64) = G_FCONSTANT double 0.000000e+00
-  ; CHECK-NEXT:   [[GV:%[0-9]+]]:_(p0) = G_GLOBAL_VALUE @var2_64
-  ; CHECK-NEXT:   [[GV1:%[0-9]+]]:_(p0) = G_GLOBAL_VALUE @var3_64
-  ; CHECK-NEXT:   [[C1:%[0-9]+]]:_(s64) = G_CONSTANT i64 0
-  ; CHECK-NEXT:   [[GV2:%[0-9]+]]:_(p0) = G_GLOBAL_VALUE @var1_64
-  ; CHECK-NEXT:   [[LOAD:%[0-9]+]]:_(s64) = G_LOAD [[GV2]](p0) :: (dereferenceable load (s64) from @var1_64, align 4)
-  ; CHECK-NEXT:   [[C2:%[0-9]+]]:_(s64) = G_CONSTANT i64 1
-  ; CHECK-NEXT:   [[ICMP:%[0-9]+]]:_(s1) = G_ICMP intpred(ne), [[LOAD]](s64), [[C2]]
-  ; CHECK-NEXT:   [[C3:%[0-9]+]]:_(s1) = G_CONSTANT i1 true
-  ; CHECK-NEXT:   G_BRCOND [[ICMP]](s1), %bb.4
-  ; CHECK-NEXT:   G_BR %bb.2
+  ; CHECK-NEXT:   $sp = frame-setup SUBXri $sp, 32, 0
+  ; CHECK-NEXT:   frame-setup CFI_INSTRUCTION def_cfa_offset <mcsymbol >32
+  ; CHECK-NEXT:   $x8 = ADRP target-flags(aarch64-page, aarch64-got) @var1_64
+  ; CHECK-NEXT:   renamable $x8 = LDRXui killed $x8, target-flags(aarch64-pageoff, aarch64-got, aarch64-nc) @var1_64
+  ; CHECK-NEXT:   STRXui $x8, $sp, 0 :: (store (s64) into %stack.3)
+  ; CHECK-NEXT:   $x9 = ADRP target-flags(aarch64-page, aarch64-got) @var2_64
+  ; CHECK-NEXT:   renamable $x9 = LDRXui killed $x9, target-flags(aarch64-pageoff, aarch64-got, aarch64-nc) @var2_64
+  ; CHECK-NEXT:   STRXui killed $x9, $sp, 1 :: (store (s64) into %stack.2)
+  ; CHECK-NEXT:   $x9 = ADRP target-flags(aarch64-page, aarch64-got) @var3_64
+  ; CHECK-NEXT:   renamable $x9 = LDRXui killed $x9, target-flags(aarch64-pageoff, aarch64-got, aarch64-nc) @var3_64
+  ; CHECK-NEXT:   STRXui killed $x9, $sp, 2 :: (store (s64) into %stack.1)
+  ; CHECK-NEXT:   $x9 = ORRXrs $xzr, $xzr, 0
+  ; CHECK-NEXT:   STRXui killed $x9, $sp, 3 :: (store (s64) into %stack.0)
+  ; CHECK-NEXT:   renamable $x8 = LDRXui renamable $x8, 0 :: (dereferenceable load (s64) from @var1_64, align 4)
+  ; CHECK-NEXT:   dead renamable $x8 = SUBSXri killed renamable $x8, 1, 0, implicit-def $nzcv
+  ; CHECK-NEXT:   Bcc 1, %bb.3, implicit killed $nzcv
+  ; CHECK-NEXT:   B %bb.1
   ; CHECK-NEXT: {{  $}}
-  ; CHECK-NEXT: bb.2.if.then:
+  ; CHECK-NEXT: bb.1.if.then:
+  ; CHECK-NEXT:   successors: %bb.2(0x80000000)
+  ; CHECK-NEXT: {{  $}}
+  ; CHECK-NEXT:   $x8 = LDRXui $sp, 1 :: (load (s64) from %stack.2)
+  ; CHECK-NEXT:   STRXui $xzr, renamable $x8, 0 :: (store (s64) into @var2_64)
+  ; CHECK-NEXT:   B %bb.2
+  ; CHECK-NEXT: {{  $}}
+  ; CHECK-NEXT: bb.2.if.then2:
   ; CHECK-NEXT:   successors: %bb.3(0x80000000)
   ; CHECK-NEXT: {{  $}}
-  ; CHECK-NEXT:   [[GV3:%[0-9]+]]:_(p0) = G_GLOBAL_VALUE @var2_64
-  ; CHECK-NEXT:   [[C4:%[0-9]+]]:_(s64) = G_FCONSTANT double 0.000000e+00
-  ; CHECK-NEXT:   G_STORE [[C4]](s64), [[GV3]](p0) :: (store (s64) into @var2_64)
-  ; CHECK-NEXT:   G_BR %bb.3
+  ; CHECK-NEXT:   $x8 = LDRXui $sp, 0 :: (load (s64) from %stack.3)
+  ; CHECK-NEXT:   STRXui $xzr, renamable $x8, 0 :: (store (s64) into @var1_64)
+  ; CHECK-NEXT:   B %bb.3
   ; CHECK-NEXT: {{  $}}
-  ; CHECK-NEXT: bb.3.if.then2:
-  ; CHECK-NEXT:   successors: %bb.4(0x80000000)
-  ; CHECK-NEXT: {{  $}}
-  ; CHECK-NEXT:   [[C5:%[0-9]+]]:_(s64) = G_FCONSTANT double 0.000000e+00
-  ; CHECK-NEXT:   [[GV4:%[0-9]+]]:_(p0) = G_GLOBAL_VALUE @var1_64
-  ; CHECK-NEXT:   G_STORE [[C5]](s64), [[GV4]](p0) :: (store (s64) into @var1_64)
-  ; CHECK-NEXT:   G_BR %bb.4
-  ; CHECK-NEXT: {{  $}}
-  ; CHECK-NEXT: bb.4.if.end:
-  ; CHECK-NEXT:   [[GV5:%[0-9]+]]:_(p0) = G_GLOBAL_VALUE @var3_64
-  ; CHECK-NEXT:   [[C6:%[0-9]+]]:_(s64) = G_FCONSTANT double 0.000000e+00
-  ; CHECK-NEXT:   G_STORE [[C6]](s64), [[GV5]](p0) :: (store (s64) into @var3_64)
-  ; CHECK-NEXT:   [[C7:%[0-9]+]]:_(s64) = G_CONSTANT i64 0
-  ; CHECK-NEXT:   $x0 = COPY [[C7]](s64)
-  ; CHECK-NEXT:   RET_ReallyLR implicit $x0
+  ; CHECK-NEXT: bb.3.if.end:
+  ; CHECK-NEXT:   $x0 = LDRXui $sp, 3 :: (load (s64) from %stack.0)
+  ; CHECK-NEXT:   $x8 = LDRXui $sp, 2 :: (load (s64) from %stack.1)
+  ; CHECK-NEXT:   STRXui $xzr, killed renamable $x8, 0 :: (store (s64) into @var3_64)
+  ; CHECK-NEXT:   $sp = frame-destroy ADDXri $sp, 32, 0
+  ; CHECK-NEXT:   RET undef $lr, implicit killed $x0
 entry:
   %0 = load i64, ptr @var1_64, align 4
   %cmp = icmp eq i64 %0, 1

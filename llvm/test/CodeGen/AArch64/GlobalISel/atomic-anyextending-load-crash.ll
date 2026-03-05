@@ -11,10 +11,10 @@ define void @test(ptr %0) {
 ; CHECK-NEXT:    .cfi_def_cfa_offset 144
 ; CHECK-NEXT:    .cfi_offset w30, -8
 ; CHECK-NEXT:    .cfi_offset w29, -16
-; CHECK-NEXT:    ldar w8, [x0]
-; CHECK-NEXT:    str w8, [sp, #116] ; 4-byte Spill
 ; CHECK-NEXT:    mov x8, #0 ; =0x0
 ; CHECK-NEXT:    str x8, [sp, #120] ; 8-byte Spill
+; CHECK-NEXT:    ldar w9, [x0]
+; CHECK-NEXT:    str w9, [sp, #116] ; 4-byte Spill
 ; CHECK-NEXT:    blr x8
 ; CHECK-NEXT:    ldr w11, [sp, #116] ; 4-byte Reload
 ; CHECK-NEXT:    ldr x8, [sp, #120] ; 8-byte Reload
