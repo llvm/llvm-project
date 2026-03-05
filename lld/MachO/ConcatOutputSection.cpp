@@ -9,6 +9,7 @@
 #include "ConcatOutputSection.h"
 #include "Config.h"
 #include "OutputSegment.h"
+#include "Sections.h"
 #include "SymbolTable.h"
 #include "Symbols.h"
 #include "SyntheticSections.h"
@@ -114,39 +115,57 @@ void ConcatOutputSection::addInput(ConcatInputSection *input) {
 
 DenseMap<Symbol *, ThunkInfo> lld::macho::thunkMap;
 
-// Determine whether we need thunks, which depends on the target arch -- RISC
-// (i.e., ARM) generally does because it has limited-range branch/call
-// instructions, whereas CISC (i.e., x86) generally doesn't. RISC only needs
-// thunks for programs so large that branch source & destination addresses
-// might differ more than the range of branch instruction(s).
-bool TextOutputSection::needsThunks() const {
-  if (!target->usesThunks())
-    return false;
-  uint64_t isecAddr = addr;
+// Returns true if `osec` can be the target of a BRANCH relocation.
+// Branch targets include code sections and stub sections for dynamic calls.
+static bool isBranchTargetSection(const OutputSection *osec) {
+  assert(osec->parent && "section must be in a segment");
+  return sections::isCodeSection(osec->name, osec->parent->name, osec->flags) ||
+         osec->name == section_names::stubs ||
+         osec->name == section_names::objcStubs;
+}
+
+uint64_t TextOutputSection::estimateEndVA(uint64_t startVA) const {
+  uint64_t endVA = startVA;
   for (ConcatInputSection *isec : inputs)
-    isecAddr = alignToPowerOf2(isecAddr, isec->align) + isec->getSize();
-  // Other sections besides __text might be small enough to pass this
-  // test but nevertheless need thunks for calling into other sections.
-  // An imperfect heuristic to use in this case is that if a section
-  // we've already processed in this segment needs thunks, so do the
-  // rest.
-  bool needsThunks = parent && parent->needsThunks;
+    endVA = alignToPowerOf2(endVA, isec->align) + isec->getSize();
+  return endVA;
+}
 
-  // Calculate the total size of all branch target sections
-  uint64_t branchTargetsSize = in.stubs->getSize();
+uint64_t TextOutputSection::estimateFurthestBranchTargetEndVA() const {
+  uint64_t curVA = estimateEndVA(addr);
+  uint64_t furthestTargetEndVA = isBranchTargetSection(this) ? curVA : addr;
 
-  // Add the size of __objc_stubs section if it exists
-  if (in.objcStubs && in.objcStubs->isNeeded())
-    branchTargetsSize += in.objcStubs->getSize();
+  // Find this section in the segment's section list and get subsequent
+  // sections.
+  ArrayRef<OutputSection *> sections = parent->getSections();
+  ArrayRef<OutputSection *> fromThis =
+      sections.drop_until([this](const OutputSection *s) { return s == this; });
+  assert(!fromThis.empty() && "section not found in parent segment");
+  ArrayRef<OutputSection *> subsequentSections = fromThis.drop_front();
 
-  if (!needsThunks &&
-      isecAddr - addr + branchTargetsSize <=
-          std::min(target->backwardBranchRange, target->forwardBranchRange))
-    return false;
-  // Yes, this program is large enough to need thunks.
-  if (parent) {
-    parent->needsThunks = true;
+  // Walk sections after this one, simulating layout (alignment + size).
+  // Track the end VA of the furthest branch target section.
+  for (OutputSection *osec : subsequentSections) {
+    if (!osec->isNeeded())
+      continue;
+
+    curVA = alignToPowerOf2(curVA, osec->align);
+    uint64_t endVA;
+    if (auto *textOsec = dyn_cast<TextOutputSection>(osec))
+      endVA = textOsec->estimateEndVA(curVA);
+    else
+      endVA = curVA + osec->getSize();
+
+    if (isBranchTargetSection(osec))
+      furthestTargetEndVA = endVA;
+
+    curVA = endVA;
   }
+
+  return furthestTargetEndVA;
+}
+
+void TextOutputSection::recordCallSites() const {
   for (ConcatInputSection *isec : inputs) {
     for (Relocation &r : isec->relocs) {
       if (!target->hasAttr(r.type, RelocAttrBits::BRANCH))
@@ -164,6 +183,40 @@ bool TextOutputSection::needsThunks() const {
       isec->hasCallSites = true;
     }
   }
+}
+
+// Determine whether we might need thunks in the linked output binary.
+bool TextOutputSection::needsThunks() const {
+  if (!target->usesThunks())
+    return false;
+
+  assert(parent && "output section must be in a segment");
+
+  // If an earlier section in this segment needed thunks, conservatively assume
+  // this one does too. This handles backward branches without computing the
+  // distance to the earliest branch target. In theory, a middle section might
+  // not need thunks if all its branches (forward and backward) are in range,
+  // but this heuristic is simpler and the extra thunk processing is low cost.
+  if (parent->needsThunks) {
+    recordCallSites();
+    return true;
+  }
+
+  // Check if any forward branch from this section could be out of range.
+  // We compute the distance from the start of this section to the end of the
+  // furthest possible branch target in the segment.
+  uint64_t branchRange =
+      std::min(target->backwardBranchRange, target->forwardBranchRange);
+  uint64_t maxForwardDistance = estimateFurthestBranchTargetEndVA() - addr;
+
+  if (maxForwardDistance <= branchRange)
+    return false;
+
+  // This section needs thunks. Mark the segment so subsequent sections
+  // conservatively enable thunk processing too.
+  parent->needsThunks = true;
+
+  recordCallSites();
   return true;
 }
 
@@ -352,15 +405,19 @@ void TextOutputSection::finalize() {
       // Calculate our call referent address
       auto *funcSym = cast<Symbol *>(r.referent);
       ThunkInfo &thunkInfo = thunkMap[funcSym];
-      // The referent is not reachable, so we need to use a thunk ...
-      if ((funcSym->isInStubs() ||
-           (in.objcStubs && in.objcStubs->isNeeded() &&
-            ObjCStubsSection::isObjCStubSymbol(funcSym))) &&
+      bool isStubSymbol =
+          funcSym->isInStubs() || (in.objcStubs && in.objcStubs->isNeeded() &&
+                                   ObjCStubsSection::isObjCStubSymbol(funcSym));
+      // Only skip stub symbol thunk creation if:
+      // 1. The threshold is valid (>= section base address), AND
+      // 2. The call site is beyond the threshold (close enough to stubs)
+      // If the threshold is below the section's base address, it means the
+      // code segment is so large that early call sites can never reach stubs
+      // directly, so we must not skip thunk creation for any stub symbols.
+      if (isStubSymbol && branchTargetThresholdVA >= addr &&
           callVA >= branchTargetThresholdVA) {
-        assert(callVA != TargetInfo::outOfRangeVA);
-        // ... Oh, wait! We are close enough to the end that branch target
-        // sections (__stubs, __objc_stubs) are now within range of a simple
-        // forward branch.
+        // We are close enough to the end that branch target sections
+        // (__stubs, __objc_stubs) are within range of a simple forward branch.
         continue;
       }
       uint64_t funcVA = funcSym->resolveBranchVA();
