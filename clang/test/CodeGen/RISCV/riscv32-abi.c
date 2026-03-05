@@ -124,8 +124,32 @@ struct tiny f_agg_tiny_ret(void) {
   return (struct tiny){1, 2, 3, 4};
 }
 
+// Aggregates <= 2*xlen may be passed in registers, so will be coerced to
+// integer arguments. The rules for return are the same.
+
+struct tinier {
+  uint8_t a, b;
+};
+
+// ILP32-ILP32F-ILP32D-LABEL: define dso_local void @f_agg_tinier
+// ILP32-ILP32F-ILP32D-SAME: (i16 [[X_COERCE:%.*]]) #[[ATTR0]] {
+// ILP32-ILP32F-ILP32D:  entry:
+//
+void f_agg_tinier(struct tinier x) {
+  x.a += x.b;
+}
+
+// ILP32-ILP32F-ILP32D-LABEL: define dso_local i16 @f_agg_tinier_ret
+// ILP32-ILP32F-ILP32D-SAME: () #[[ATTR0]] {
+// ILP32-ILP32F-ILP32D:  entry:
+//
+struct tinier f_agg_tinier_ret(void) {
+  return (struct tinier){1, 2};
+}
+
 typedef uint8_t v4i8 __attribute__((vector_size(4)));
 typedef int32_t v1i32 __attribute__((vector_size(4)));
+typedef uint8_t v2i8 __attribute__((vector_size(2)));
 
 // ILP32-ILP32F-ILP32D-LABEL: define dso_local void @f_vec_tiny_v4i8
 // ILP32-ILP32F-ILP32D-SAME: (i32 noundef [[X_COERCE:%.*]]) #[[ATTR0]] {
@@ -158,6 +182,22 @@ void f_vec_tiny_v1i32(v1i32 x) {
 //
 v1i32 f_vec_tiny_v1i32_ret(void) {
   return (v1i32){1};
+}
+
+// ILP32-ILP32F-ILP32D-LABEL: define dso_local void @f_vec_tiny_v2i8
+// ILP32-ILP32F-ILP32D-SAME: (i32 noundef [[X_COERCE:%.*]]) #[[ATTR0]] {
+// ILP32-ILP32F-ILP32D:  entry:
+//
+void f_vec_tiny_v2i8(v4i8 x) {
+  x[0] = x[1];
+}
+
+// ILP32-ILP32F-ILP32D-LABEL: define dso_local i16 @f_vec_tiny_v2i8_ret
+// ILP32-ILP32F-ILP32D-SAME: () #[[ATTR0]] {
+// ILP32-ILP32F-ILP32D:  entry:
+//
+v2i8 f_vec_tiny_v2i8_ret(void) {
+  return (v2i8){1, 2};
 }
 
 struct small {

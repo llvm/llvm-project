@@ -120,8 +120,29 @@ struct tiny f_agg_tiny_ret(void) {
   return (struct tiny){1, 2, 3, 4};
 }
 
+struct tinier {
+  uint16_t a, b;
+};
+
+// LP64-LP64F-LP64D-LABEL: define dso_local void @f_agg_tinier
+// LP64-LP64F-LP64D-SAME: (i32 [[X_COERCE:%.*]]) #[[ATTR0]] {
+// LP64-LP64F-LP64D:  entry:
+//
+void f_agg_tinier(struct tinier x) {
+  x.a += x.b;
+}
+
+// LP64-LP64F-LP64D-LABEL: define dso_local i32 @f_agg_tinier_ret
+// LP64-LP64F-LP64D-SAME: () #[[ATTR0]] {
+// LP64-LP64F-LP64D:  entry:
+//
+struct tinier f_agg_tinier_ret(void) {
+  return (struct tinier){1, 2};
+}
+
 typedef uint16_t v4i16 __attribute__((vector_size(8)));
 typedef int64_t v1i64 __attribute__((vector_size(8)));
+typedef uint16_t v2i16 __attribute__((vector_size(4)));
 
 // LP64-LP64F-LP64D-LABEL: define dso_local void @f_vec_tiny_v4i16
 // LP64-LP64F-LP64D-SAME: (i64 noundef [[X_COERCE:%.*]]) #[[ATTR0]] {
@@ -154,6 +175,22 @@ void f_vec_tiny_v1i64(v1i64 x) {
 //
 v1i64 f_vec_tiny_v1i64_ret(void) {
   return (v1i64){1};
+}
+
+// LP64-LP64F-LP64D-LABEL: define dso_local void @f_vec_tiny_v2i16
+// LP64-LP64F-LP64D-SAME: (i32 noundef [[X_COERCE:%.*]]) #[[ATTR0]] {
+// LP64-LP64F-LP64D:  entry:
+//
+void f_vec_tiny_v2i16(v2i16 x) {
+  x[0] = x[1];
+}
+
+// LP64-LP64F-LP64D-LABEL: define dso_local i32 @f_vec_tiny_v2i16_ret
+// LP64-LP64F-LP64D-SAME: () #[[ATTR0]] {
+// LP64-LP64F-LP64D:  entry:
+//
+v2i16 f_vec_tiny_v2i16_ret(void) {
+  return (v2i16){1, 2};
 }
 
 struct small {
