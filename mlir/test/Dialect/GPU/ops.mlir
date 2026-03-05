@@ -188,6 +188,20 @@ module attributes {gpu.container_module} {
       gpu.barrier memfence [#gpu.address_space<private>]
       gpu.barrier memfence []
 
+      // CHECK: gpu.barrier_arrive
+      // CHECK: gpu.barrier_arrive memfence [#gpu.address_space<workgroup>]
+      // CHECK: gpu.barrier_arrive memfence []
+      gpu.barrier_arrive
+      gpu.barrier_arrive memfence [#gpu.address_space<workgroup>]
+      gpu.barrier_arrive memfence []
+
+      // CHECK: gpu.barrier_wait
+      // CHECK: gpu.barrier_wait memfence [#gpu.address_space<workgroup>]
+      // CHECK: gpu.barrier_wait memfence []
+      gpu.barrier_wait
+      gpu.barrier_wait memfence [#gpu.address_space<workgroup>]
+      gpu.barrier_wait memfence []
+
       "some_op"(%bIdX, %tIdX) : (index, index) -> ()
       %42 = memref.load %arg1[%bIdX] : memref<?xf32, 1>
       gpu.return
