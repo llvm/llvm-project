@@ -93,24 +93,20 @@ LivenessAnalysis::visitOperation(Operation *op, ArrayRef<Liveness *> operands,
   }
 
   // This marks values of type (3) liveness as "live".
-  bool foundLiveResult = false;
   for (const Liveness *r : results) {
-    if (r->isLive && !foundLiveResult) {
-      LDBG() << "[visitOperation] Found live result, "
-                "meeting all operands with result: "
-             << r;
-      // It is assumed that each operand is used to compute each result of an
-      // op. Thus, if at least one result is live, each operand is live.
-      for (Liveness *operand : operands) {
-        LDBG() << " [visitOperation] Meeting operand: " << operand
-               << " with result: " << r;
-        meet(operand, *r);
-      }
-      foundLiveResult = true;
+    if (!r->isLive)
+      continue;
+    LDBG() << "[visitOperation] Found live result, meeting all operands with "
+              "result: "
+           << r;
+    // It is assumed that each operand is used to compute each result of an op.
+    // Thus, if at least one result is live, each operand is live.
+    for (Liveness *operand : operands) {
+      LDBG() << " [visitOperation] Meeting operand: " << operand
+             << " with result: " << r;
+      meet(operand, *r);
     }
-    LDBG() << "[visitOperation] Adding dependency for result: " << r
-           << " after op: " << OpWithFlags(op, OpPrintingFlags().skipRegions());
-    addDependency(const_cast<Liveness *>(r), getProgramPointAfter(op));
+    break;
   }
   return success();
 }
