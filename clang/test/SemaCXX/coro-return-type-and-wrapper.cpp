@@ -59,16 +59,17 @@ Co<int> non_marked_wrapper(int b) { return foo_coro(b); }
 namespace lambdas {
 
 void foo() {
-  auto coro_lambda = []() -> Gen<int> {
+  auto coro_lambda [[maybe_unused]] = []() -> Gen<int> {
     co_return 1;
   };
   // expected-error@+1 {{neither a coroutine nor a coroutine wrapper}}
-  auto not_allowed_wrapper = []() -> Gen<int> {
+  auto not_allowed_wrapper [[maybe_unused]] = []() -> Gen<int> {
     return foo_coro(1);
   };
-  auto allowed_wrapper = [] [[clang::coro_wrapper]] () -> Gen<int> {
-    return foo_coro(1);
-  };
+  auto allowed_wrapper [[maybe_unused]] =
+      [] [[clang::coro_wrapper]] () -> Gen<int> {
+        return foo_coro(1);
+      };
 }
 
 Gen<int> coro_containing_lambda() {
