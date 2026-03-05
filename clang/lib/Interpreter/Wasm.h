@@ -31,7 +31,7 @@ public:
   llvm::Error removeModule(PartialTranslationUnit &PTU) override;
   llvm::Error runCtors() const override;
   llvm::Error cleanUp() override;
-  llvm::Expected<llvm::orc::ExecutorAddr>
+  llvm::Expected<clang::ExecutorAddress>
   getSymbolAddress(llvm::StringRef Name,
                    SymbolNameKind NameKind) const override;
   llvm::Error LoadDynamicLibrary(const char *name) override;

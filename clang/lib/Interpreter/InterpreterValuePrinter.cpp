@@ -349,14 +349,14 @@ std::string Interpreter::ValueTypeToString(const Value &V) const {
   return QTStr;
 }
 
-llvm::Expected<llvm::orc::ExecutorAddr>
+llvm::Expected<clang::ExecutorAddress>
 Interpreter::CompileDtorCall(CXXRecordDecl *CXXRD) const {
   assert(CXXRD && "Cannot compile a destructor for a nullptr");
   if (auto Dtor = Dtors.find(CXXRD); Dtor != Dtors.end())
     return Dtor->getSecond();
 
   if (CXXRD->hasIrrelevantDestructor())
-    return llvm::orc::ExecutorAddr{};
+    return clang::ExecutorAddress{};
 
   CXXDestructorDecl *DtorRD =
       getCompilerInstance()->getSema().LookupDestructor(CXXRD);
