@@ -2903,142 +2903,527 @@ define void @frintz_v4f64(ptr %a) {
   ret void
 }
 
-declare <2 x half> @llvm.ceil.v2f16(<2 x half>)
-declare <4 x half> @llvm.ceil.v4f16(<4 x half>)
-declare <8 x half> @llvm.ceil.v8f16(<8 x half>)
-declare <16 x half> @llvm.ceil.v16f16(<16 x half>)
-declare <32 x half> @llvm.ceil.v32f16(<32 x half>)
-declare <64 x half> @llvm.ceil.v64f16(<64 x half>)
-declare <128 x half> @llvm.ceil.v128f16(<128 x half>)
-declare <2 x float> @llvm.ceil.v2f32(<2 x float>)
-declare <4 x float> @llvm.ceil.v4f32(<4 x float>)
-declare <8 x float> @llvm.ceil.v8f32(<8 x float>)
-declare <16 x float> @llvm.ceil.v16f32(<16 x float>)
-declare <32 x float> @llvm.ceil.v32f32(<32 x float>)
-declare <64 x float> @llvm.ceil.v64f32(<64 x float>)
-declare <1 x double> @llvm.ceil.v1f64(<1 x double>)
-declare <2 x double> @llvm.ceil.v2f64(<2 x double>)
-declare <4 x double> @llvm.ceil.v4f64(<4 x double>)
-declare <8 x double> @llvm.ceil.v8f64(<8 x double>)
-declare <16 x double> @llvm.ceil.v16f64(<16 x double>)
-declare <32 x double> @llvm.ceil.v32f64(<32 x double>)
+;
+; FCANONICALIZE -> FMINNM
+;
 
-declare <2 x half> @llvm.floor.v2f16(<2 x half>)
-declare <4 x half> @llvm.floor.v4f16(<4 x half>)
-declare <8 x half> @llvm.floor.v8f16(<8 x half>)
-declare <16 x half> @llvm.floor.v16f16(<16 x half>)
-declare <32 x half> @llvm.floor.v32f16(<32 x half>)
-declare <64 x half> @llvm.floor.v64f16(<64 x half>)
-declare <128 x half> @llvm.floor.v128f16(<128 x half>)
-declare <2 x float> @llvm.floor.v2f32(<2 x float>)
-declare <4 x float> @llvm.floor.v4f32(<4 x float>)
-declare <8 x float> @llvm.floor.v8f32(<8 x float>)
-declare <16 x float> @llvm.floor.v16f32(<16 x float>)
-declare <32 x float> @llvm.floor.v32f32(<32 x float>)
-declare <64 x float> @llvm.floor.v64f32(<64 x float>)
-declare <1 x double> @llvm.floor.v1f64(<1 x double>)
-declare <2 x double> @llvm.floor.v2f64(<2 x double>)
-declare <4 x double> @llvm.floor.v4f64(<4 x double>)
-declare <8 x double> @llvm.floor.v8f64(<8 x double>)
-declare <16 x double> @llvm.floor.v16f64(<16 x double>)
-declare <32 x double> @llvm.floor.v32f64(<32 x double>)
+define <2 x half> @fcanonicalize_v2f16(<2 x half> %op) {
+; CHECK-LABEL: fcanonicalize_v2f16:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    mov z1.h, z0.h[3]
+; CHECK-NEXT:    mov z2.h, z0.h[2]
+; CHECK-NEXT:    mov z3.h, z0.h[1]
+; CHECK-NEXT:    fminnm h0, h0, h0
+; CHECK-NEXT:    fminnm h1, h1, h1
+; CHECK-NEXT:    fminnm h2, h2, h2
+; CHECK-NEXT:    fminnm h3, h3, h3
+; CHECK-NEXT:    zip1 z1.h, z2.h, z1.h
+; CHECK-NEXT:    zip1 z0.h, z0.h, z3.h
+; CHECK-NEXT:    zip1 z0.s, z0.s, z1.s
+; CHECK-NEXT:    ret
+;
+; NONEON-NOSVE-LABEL: fcanonicalize_v2f16:
+; NONEON-NOSVE:       // %bb.0:
+; NONEON-NOSVE-NEXT:    str d0, [sp, #-16]!
+; NONEON-NOSVE-NEXT:    .cfi_def_cfa_offset 16
+; NONEON-NOSVE-NEXT:    ldr h0, [sp, #6]
+; NONEON-NOSVE-NEXT:    fcvt s0, h0
+; NONEON-NOSVE-NEXT:    fminnm s0, s0, s0
+; NONEON-NOSVE-NEXT:    fcvt h0, s0
+; NONEON-NOSVE-NEXT:    str h0, [sp, #14]
+; NONEON-NOSVE-NEXT:    ldr h0, [sp, #4]
+; NONEON-NOSVE-NEXT:    fcvt s0, h0
+; NONEON-NOSVE-NEXT:    fminnm s0, s0, s0
+; NONEON-NOSVE-NEXT:    fcvt h0, s0
+; NONEON-NOSVE-NEXT:    str h0, [sp, #12]
+; NONEON-NOSVE-NEXT:    ldr h0, [sp, #2]
+; NONEON-NOSVE-NEXT:    fcvt s0, h0
+; NONEON-NOSVE-NEXT:    fminnm s0, s0, s0
+; NONEON-NOSVE-NEXT:    fcvt h0, s0
+; NONEON-NOSVE-NEXT:    str h0, [sp, #10]
+; NONEON-NOSVE-NEXT:    ldr h0, [sp]
+; NONEON-NOSVE-NEXT:    fcvt s0, h0
+; NONEON-NOSVE-NEXT:    fminnm s0, s0, s0
+; NONEON-NOSVE-NEXT:    fcvt h0, s0
+; NONEON-NOSVE-NEXT:    str h0, [sp, #8]
+; NONEON-NOSVE-NEXT:    ldr d0, [sp, #8]
+; NONEON-NOSVE-NEXT:    add sp, sp, #16
+; NONEON-NOSVE-NEXT:    ret
+  %res = call <2 x half> @llvm.canonicalize.v2f16(<2 x half> %op)
+  ret <2 x half> %res
+}
 
-declare <2 x half> @llvm.nearbyint.v2f16(<2 x half>)
-declare <4 x half> @llvm.nearbyint.v4f16(<4 x half>)
-declare <8 x half> @llvm.nearbyint.v8f16(<8 x half>)
-declare <16 x half> @llvm.nearbyint.v16f16(<16 x half>)
-declare <32 x half> @llvm.nearbyint.v32f16(<32 x half>)
-declare <64 x half> @llvm.nearbyint.v64f16(<64 x half>)
-declare <128 x half> @llvm.nearbyint.v128f16(<128 x half>)
-declare <2 x float> @llvm.nearbyint.v2f32(<2 x float>)
-declare <4 x float> @llvm.nearbyint.v4f32(<4 x float>)
-declare <8 x float> @llvm.nearbyint.v8f32(<8 x float>)
-declare <16 x float> @llvm.nearbyint.v16f32(<16 x float>)
-declare <32 x float> @llvm.nearbyint.v32f32(<32 x float>)
-declare <64 x float> @llvm.nearbyint.v64f32(<64 x float>)
-declare <1 x double> @llvm.nearbyint.v1f64(<1 x double>)
-declare <2 x double> @llvm.nearbyint.v2f64(<2 x double>)
-declare <4 x double> @llvm.nearbyint.v4f64(<4 x double>)
-declare <8 x double> @llvm.nearbyint.v8f64(<8 x double>)
-declare <16 x double> @llvm.nearbyint.v16f64(<16 x double>)
-declare <32 x double> @llvm.nearbyint.v32f64(<32 x double>)
+define <4 x half> @fcanonicalize_v4f16(<4 x half> %op) {
+; CHECK-LABEL: fcanonicalize_v4f16:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    mov z1.h, z0.h[3]
+; CHECK-NEXT:    mov z2.h, z0.h[2]
+; CHECK-NEXT:    mov z3.h, z0.h[1]
+; CHECK-NEXT:    fminnm h0, h0, h0
+; CHECK-NEXT:    fminnm h1, h1, h1
+; CHECK-NEXT:    fminnm h2, h2, h2
+; CHECK-NEXT:    fminnm h3, h3, h3
+; CHECK-NEXT:    zip1 z1.h, z2.h, z1.h
+; CHECK-NEXT:    zip1 z0.h, z0.h, z3.h
+; CHECK-NEXT:    zip1 z0.s, z0.s, z1.s
+; CHECK-NEXT:    ret
+;
+; NONEON-NOSVE-LABEL: fcanonicalize_v4f16:
+; NONEON-NOSVE:       // %bb.0:
+; NONEON-NOSVE-NEXT:    str d0, [sp, #-16]!
+; NONEON-NOSVE-NEXT:    .cfi_def_cfa_offset 16
+; NONEON-NOSVE-NEXT:    ldr h0, [sp, #6]
+; NONEON-NOSVE-NEXT:    fcvt s0, h0
+; NONEON-NOSVE-NEXT:    fminnm s0, s0, s0
+; NONEON-NOSVE-NEXT:    fcvt h0, s0
+; NONEON-NOSVE-NEXT:    str h0, [sp, #14]
+; NONEON-NOSVE-NEXT:    ldr h0, [sp, #4]
+; NONEON-NOSVE-NEXT:    fcvt s0, h0
+; NONEON-NOSVE-NEXT:    fminnm s0, s0, s0
+; NONEON-NOSVE-NEXT:    fcvt h0, s0
+; NONEON-NOSVE-NEXT:    str h0, [sp, #12]
+; NONEON-NOSVE-NEXT:    ldr h0, [sp, #2]
+; NONEON-NOSVE-NEXT:    fcvt s0, h0
+; NONEON-NOSVE-NEXT:    fminnm s0, s0, s0
+; NONEON-NOSVE-NEXT:    fcvt h0, s0
+; NONEON-NOSVE-NEXT:    str h0, [sp, #10]
+; NONEON-NOSVE-NEXT:    ldr h0, [sp]
+; NONEON-NOSVE-NEXT:    fcvt s0, h0
+; NONEON-NOSVE-NEXT:    fminnm s0, s0, s0
+; NONEON-NOSVE-NEXT:    fcvt h0, s0
+; NONEON-NOSVE-NEXT:    str h0, [sp, #8]
+; NONEON-NOSVE-NEXT:    ldr d0, [sp, #8]
+; NONEON-NOSVE-NEXT:    add sp, sp, #16
+; NONEON-NOSVE-NEXT:    ret
+  %res = call <4 x half> @llvm.canonicalize.v4f16(<4 x half> %op)
+  ret <4 x half> %res
+}
 
-declare <2 x half> @llvm.rint.v2f16(<2 x half>)
-declare <4 x half> @llvm.rint.v4f16(<4 x half>)
-declare <8 x half> @llvm.rint.v8f16(<8 x half>)
-declare <16 x half> @llvm.rint.v16f16(<16 x half>)
-declare <32 x half> @llvm.rint.v32f16(<32 x half>)
-declare <64 x half> @llvm.rint.v64f16(<64 x half>)
-declare <128 x half> @llvm.rint.v128f16(<128 x half>)
-declare <2 x float> @llvm.rint.v2f32(<2 x float>)
-declare <4 x float> @llvm.rint.v4f32(<4 x float>)
-declare <8 x float> @llvm.rint.v8f32(<8 x float>)
-declare <16 x float> @llvm.rint.v16f32(<16 x float>)
-declare <32 x float> @llvm.rint.v32f32(<32 x float>)
-declare <64 x float> @llvm.rint.v64f32(<64 x float>)
-declare <1 x double> @llvm.rint.v1f64(<1 x double>)
-declare <2 x double> @llvm.rint.v2f64(<2 x double>)
-declare <4 x double> @llvm.rint.v4f64(<4 x double>)
-declare <8 x double> @llvm.rint.v8f64(<8 x double>)
-declare <16 x double> @llvm.rint.v16f64(<16 x double>)
-declare <32 x double> @llvm.rint.v32f64(<32 x double>)
+define <8 x half> @fcanonicalize_v8f16(<8 x half> %op) {
+; CHECK-LABEL: fcanonicalize_v8f16:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    mov z1.h, z0.h[7]
+; CHECK-NEXT:    mov z2.h, z0.h[6]
+; CHECK-NEXT:    mov z3.h, z0.h[5]
+; CHECK-NEXT:    mov z4.h, z0.h[4]
+; CHECK-NEXT:    mov z5.h, z0.h[3]
+; CHECK-NEXT:    mov z6.h, z0.h[2]
+; CHECK-NEXT:    mov z7.h, z0.h[1]
+; CHECK-NEXT:    fminnm h0, h0, h0
+; CHECK-NEXT:    fminnm h1, h1, h1
+; CHECK-NEXT:    fminnm h2, h2, h2
+; CHECK-NEXT:    fminnm h3, h3, h3
+; CHECK-NEXT:    fminnm h4, h4, h4
+; CHECK-NEXT:    fminnm h5, h5, h5
+; CHECK-NEXT:    fminnm h6, h6, h6
+; CHECK-NEXT:    fminnm h7, h7, h7
+; CHECK-NEXT:    zip1 z1.h, z2.h, z1.h
+; CHECK-NEXT:    zip1 z2.h, z4.h, z3.h
+; CHECK-NEXT:    zip1 z3.h, z6.h, z5.h
+; CHECK-NEXT:    zip1 z0.h, z0.h, z7.h
+; CHECK-NEXT:    zip1 z1.s, z2.s, z1.s
+; CHECK-NEXT:    zip1 z0.s, z0.s, z3.s
+; CHECK-NEXT:    zip1 z0.d, z0.d, z1.d
+; CHECK-NEXT:    ret
+;
+; NONEON-NOSVE-LABEL: fcanonicalize_v8f16:
+; NONEON-NOSVE:       // %bb.0:
+; NONEON-NOSVE-NEXT:    str q0, [sp, #-32]!
+; NONEON-NOSVE-NEXT:    .cfi_def_cfa_offset 32
+; NONEON-NOSVE-NEXT:    ldr h0, [sp, #14]
+; NONEON-NOSVE-NEXT:    fcvt s0, h0
+; NONEON-NOSVE-NEXT:    fminnm s0, s0, s0
+; NONEON-NOSVE-NEXT:    fcvt h0, s0
+; NONEON-NOSVE-NEXT:    str h0, [sp, #30]
+; NONEON-NOSVE-NEXT:    ldr h0, [sp, #12]
+; NONEON-NOSVE-NEXT:    fcvt s0, h0
+; NONEON-NOSVE-NEXT:    fminnm s0, s0, s0
+; NONEON-NOSVE-NEXT:    fcvt h0, s0
+; NONEON-NOSVE-NEXT:    str h0, [sp, #28]
+; NONEON-NOSVE-NEXT:    ldr h0, [sp, #10]
+; NONEON-NOSVE-NEXT:    fcvt s0, h0
+; NONEON-NOSVE-NEXT:    fminnm s0, s0, s0
+; NONEON-NOSVE-NEXT:    fcvt h0, s0
+; NONEON-NOSVE-NEXT:    str h0, [sp, #26]
+; NONEON-NOSVE-NEXT:    ldr h0, [sp, #8]
+; NONEON-NOSVE-NEXT:    fcvt s0, h0
+; NONEON-NOSVE-NEXT:    fminnm s0, s0, s0
+; NONEON-NOSVE-NEXT:    fcvt h0, s0
+; NONEON-NOSVE-NEXT:    str h0, [sp, #24]
+; NONEON-NOSVE-NEXT:    ldr h0, [sp, #6]
+; NONEON-NOSVE-NEXT:    fcvt s0, h0
+; NONEON-NOSVE-NEXT:    fminnm s0, s0, s0
+; NONEON-NOSVE-NEXT:    fcvt h0, s0
+; NONEON-NOSVE-NEXT:    str h0, [sp, #22]
+; NONEON-NOSVE-NEXT:    ldr h0, [sp, #4]
+; NONEON-NOSVE-NEXT:    fcvt s0, h0
+; NONEON-NOSVE-NEXT:    fminnm s0, s0, s0
+; NONEON-NOSVE-NEXT:    fcvt h0, s0
+; NONEON-NOSVE-NEXT:    str h0, [sp, #20]
+; NONEON-NOSVE-NEXT:    ldr h0, [sp, #2]
+; NONEON-NOSVE-NEXT:    fcvt s0, h0
+; NONEON-NOSVE-NEXT:    fminnm s0, s0, s0
+; NONEON-NOSVE-NEXT:    fcvt h0, s0
+; NONEON-NOSVE-NEXT:    str h0, [sp, #18]
+; NONEON-NOSVE-NEXT:    ldr h0, [sp]
+; NONEON-NOSVE-NEXT:    fcvt s0, h0
+; NONEON-NOSVE-NEXT:    fminnm s0, s0, s0
+; NONEON-NOSVE-NEXT:    fcvt h0, s0
+; NONEON-NOSVE-NEXT:    str h0, [sp, #16]
+; NONEON-NOSVE-NEXT:    ldr q0, [sp, #16]
+; NONEON-NOSVE-NEXT:    add sp, sp, #32
+; NONEON-NOSVE-NEXT:    ret
+  %res = call <8 x half> @llvm.canonicalize.v8f16(<8 x half> %op)
+  ret <8 x half> %res
+}
 
-declare <2 x half> @llvm.round.v2f16(<2 x half>)
-declare <4 x half> @llvm.round.v4f16(<4 x half>)
-declare <8 x half> @llvm.round.v8f16(<8 x half>)
-declare <16 x half> @llvm.round.v16f16(<16 x half>)
-declare <32 x half> @llvm.round.v32f16(<32 x half>)
-declare <64 x half> @llvm.round.v64f16(<64 x half>)
-declare <128 x half> @llvm.round.v128f16(<128 x half>)
-declare <2 x float> @llvm.round.v2f32(<2 x float>)
-declare <4 x float> @llvm.round.v4f32(<4 x float>)
-declare <8 x float> @llvm.round.v8f32(<8 x float>)
-declare <16 x float> @llvm.round.v16f32(<16 x float>)
-declare <32 x float> @llvm.round.v32f32(<32 x float>)
-declare <64 x float> @llvm.round.v64f32(<64 x float>)
-declare <1 x double> @llvm.round.v1f64(<1 x double>)
-declare <2 x double> @llvm.round.v2f64(<2 x double>)
-declare <4 x double> @llvm.round.v4f64(<4 x double>)
-declare <8 x double> @llvm.round.v8f64(<8 x double>)
-declare <16 x double> @llvm.round.v16f64(<16 x double>)
-declare <32 x double> @llvm.round.v32f64(<32 x double>)
+define void @fcanonicalize_v16f16(ptr %a) {
+; CHECK-LABEL: fcanonicalize_v16f16:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    ldp q1, q0, [x0]
+; CHECK-NEXT:    mov z2.h, z0.h[7]
+; CHECK-NEXT:    mov z3.h, z0.h[6]
+; CHECK-NEXT:    mov z4.h, z0.h[5]
+; CHECK-NEXT:    mov z5.h, z0.h[4]
+; CHECK-NEXT:    mov z6.h, z0.h[3]
+; CHECK-NEXT:    mov z7.h, z1.h[7]
+; CHECK-NEXT:    mov z16.h, z1.h[6]
+; CHECK-NEXT:    mov z17.h, z1.h[5]
+; CHECK-NEXT:    mov z18.h, z1.h[4]
+; CHECK-NEXT:    mov z19.h, z1.h[3]
+; CHECK-NEXT:    mov z20.h, z0.h[2]
+; CHECK-NEXT:    mov z21.h, z1.h[2]
+; CHECK-NEXT:    mov z22.h, z1.h[1]
+; CHECK-NEXT:    mov z23.h, z0.h[1]
+; CHECK-NEXT:    fminnm h2, h2, h2
+; CHECK-NEXT:    fminnm h3, h3, h3
+; CHECK-NEXT:    fminnm h4, h4, h4
+; CHECK-NEXT:    fminnm h5, h5, h5
+; CHECK-NEXT:    fminnm h6, h6, h6
+; CHECK-NEXT:    fminnm h7, h7, h7
+; CHECK-NEXT:    fminnm h16, h16, h16
+; CHECK-NEXT:    fminnm h17, h17, h17
+; CHECK-NEXT:    fminnm h18, h18, h18
+; CHECK-NEXT:    fminnm h19, h19, h19
+; CHECK-NEXT:    fminnm h21, h21, h21
+; CHECK-NEXT:    fminnm h1, h1, h1
+; CHECK-NEXT:    fminnm h22, h22, h22
+; CHECK-NEXT:    fminnm h20, h20, h20
+; CHECK-NEXT:    fminnm h0, h0, h0
+; CHECK-NEXT:    fminnm h23, h23, h23
+; CHECK-NEXT:    zip1 z2.h, z3.h, z2.h
+; CHECK-NEXT:    zip1 z3.h, z16.h, z7.h
+; CHECK-NEXT:    zip1 z4.h, z5.h, z4.h
+; CHECK-NEXT:    zip1 z7.h, z18.h, z17.h
+; CHECK-NEXT:    zip1 z16.h, z21.h, z19.h
+; CHECK-NEXT:    zip1 z1.h, z1.h, z22.h
+; CHECK-NEXT:    zip1 z5.h, z20.h, z6.h
+; CHECK-NEXT:    zip1 z0.h, z0.h, z23.h
+; CHECK-NEXT:    zip1 z2.s, z4.s, z2.s
+; CHECK-NEXT:    zip1 z3.s, z7.s, z3.s
+; CHECK-NEXT:    zip1 z1.s, z1.s, z16.s
+; CHECK-NEXT:    zip1 z0.s, z0.s, z5.s
+; CHECK-NEXT:    zip1 z1.d, z1.d, z3.d
+; CHECK-NEXT:    zip1 z0.d, z0.d, z2.d
+; CHECK-NEXT:    stp q1, q0, [x0]
+; CHECK-NEXT:    ret
+;
+; NONEON-NOSVE-LABEL: fcanonicalize_v16f16:
+; NONEON-NOSVE:       // %bb.0:
+; NONEON-NOSVE-NEXT:    ldp q1, q0, [x0]
+; NONEON-NOSVE-NEXT:    stp q1, q0, [sp, #-64]!
+; NONEON-NOSVE-NEXT:    .cfi_def_cfa_offset 64
+; NONEON-NOSVE-NEXT:    ldr h0, [sp, #30]
+; NONEON-NOSVE-NEXT:    fcvt s0, h0
+; NONEON-NOSVE-NEXT:    fminnm s0, s0, s0
+; NONEON-NOSVE-NEXT:    fcvt h0, s0
+; NONEON-NOSVE-NEXT:    str h0, [sp, #62]
+; NONEON-NOSVE-NEXT:    ldr h0, [sp, #28]
+; NONEON-NOSVE-NEXT:    fcvt s0, h0
+; NONEON-NOSVE-NEXT:    fminnm s0, s0, s0
+; NONEON-NOSVE-NEXT:    fcvt h0, s0
+; NONEON-NOSVE-NEXT:    str h0, [sp, #60]
+; NONEON-NOSVE-NEXT:    ldr h0, [sp, #26]
+; NONEON-NOSVE-NEXT:    fcvt s0, h0
+; NONEON-NOSVE-NEXT:    fminnm s0, s0, s0
+; NONEON-NOSVE-NEXT:    fcvt h0, s0
+; NONEON-NOSVE-NEXT:    str h0, [sp, #58]
+; NONEON-NOSVE-NEXT:    ldr h0, [sp, #24]
+; NONEON-NOSVE-NEXT:    fcvt s0, h0
+; NONEON-NOSVE-NEXT:    fminnm s0, s0, s0
+; NONEON-NOSVE-NEXT:    fcvt h0, s0
+; NONEON-NOSVE-NEXT:    str h0, [sp, #56]
+; NONEON-NOSVE-NEXT:    ldr h0, [sp, #22]
+; NONEON-NOSVE-NEXT:    fcvt s0, h0
+; NONEON-NOSVE-NEXT:    fminnm s0, s0, s0
+; NONEON-NOSVE-NEXT:    fcvt h0, s0
+; NONEON-NOSVE-NEXT:    str h0, [sp, #54]
+; NONEON-NOSVE-NEXT:    ldr h0, [sp, #20]
+; NONEON-NOSVE-NEXT:    fcvt s0, h0
+; NONEON-NOSVE-NEXT:    fminnm s0, s0, s0
+; NONEON-NOSVE-NEXT:    fcvt h0, s0
+; NONEON-NOSVE-NEXT:    str h0, [sp, #52]
+; NONEON-NOSVE-NEXT:    ldr h0, [sp, #18]
+; NONEON-NOSVE-NEXT:    fcvt s0, h0
+; NONEON-NOSVE-NEXT:    fminnm s0, s0, s0
+; NONEON-NOSVE-NEXT:    fcvt h0, s0
+; NONEON-NOSVE-NEXT:    str h0, [sp, #50]
+; NONEON-NOSVE-NEXT:    ldr h0, [sp, #16]
+; NONEON-NOSVE-NEXT:    fcvt s0, h0
+; NONEON-NOSVE-NEXT:    fminnm s0, s0, s0
+; NONEON-NOSVE-NEXT:    fcvt h0, s0
+; NONEON-NOSVE-NEXT:    str h0, [sp, #48]
+; NONEON-NOSVE-NEXT:    ldr h0, [sp, #14]
+; NONEON-NOSVE-NEXT:    fcvt s0, h0
+; NONEON-NOSVE-NEXT:    fminnm s0, s0, s0
+; NONEON-NOSVE-NEXT:    fcvt h0, s0
+; NONEON-NOSVE-NEXT:    str h0, [sp, #46]
+; NONEON-NOSVE-NEXT:    ldr h0, [sp, #12]
+; NONEON-NOSVE-NEXT:    fcvt s0, h0
+; NONEON-NOSVE-NEXT:    fminnm s0, s0, s0
+; NONEON-NOSVE-NEXT:    fcvt h0, s0
+; NONEON-NOSVE-NEXT:    str h0, [sp, #44]
+; NONEON-NOSVE-NEXT:    ldr h0, [sp, #10]
+; NONEON-NOSVE-NEXT:    fcvt s0, h0
+; NONEON-NOSVE-NEXT:    fminnm s0, s0, s0
+; NONEON-NOSVE-NEXT:    fcvt h0, s0
+; NONEON-NOSVE-NEXT:    str h0, [sp, #42]
+; NONEON-NOSVE-NEXT:    ldr h0, [sp, #8]
+; NONEON-NOSVE-NEXT:    fcvt s0, h0
+; NONEON-NOSVE-NEXT:    fminnm s0, s0, s0
+; NONEON-NOSVE-NEXT:    fcvt h0, s0
+; NONEON-NOSVE-NEXT:    str h0, [sp, #40]
+; NONEON-NOSVE-NEXT:    ldr h0, [sp, #6]
+; NONEON-NOSVE-NEXT:    fcvt s0, h0
+; NONEON-NOSVE-NEXT:    fminnm s0, s0, s0
+; NONEON-NOSVE-NEXT:    fcvt h0, s0
+; NONEON-NOSVE-NEXT:    str h0, [sp, #38]
+; NONEON-NOSVE-NEXT:    ldr h0, [sp, #4]
+; NONEON-NOSVE-NEXT:    fcvt s0, h0
+; NONEON-NOSVE-NEXT:    fminnm s0, s0, s0
+; NONEON-NOSVE-NEXT:    fcvt h0, s0
+; NONEON-NOSVE-NEXT:    str h0, [sp, #36]
+; NONEON-NOSVE-NEXT:    ldr h0, [sp, #2]
+; NONEON-NOSVE-NEXT:    fcvt s0, h0
+; NONEON-NOSVE-NEXT:    fminnm s0, s0, s0
+; NONEON-NOSVE-NEXT:    fcvt h0, s0
+; NONEON-NOSVE-NEXT:    str h0, [sp, #34]
+; NONEON-NOSVE-NEXT:    ldr h0, [sp]
+; NONEON-NOSVE-NEXT:    fcvt s0, h0
+; NONEON-NOSVE-NEXT:    fminnm s0, s0, s0
+; NONEON-NOSVE-NEXT:    fcvt h0, s0
+; NONEON-NOSVE-NEXT:    str h0, [sp, #32]
+; NONEON-NOSVE-NEXT:    ldp q0, q1, [sp, #32]
+; NONEON-NOSVE-NEXT:    stp q0, q1, [x0]
+; NONEON-NOSVE-NEXT:    add sp, sp, #64
+; NONEON-NOSVE-NEXT:    ret
+  %op = load <16 x half>, ptr %a
+  %res = call <16 x half> @llvm.canonicalize.v16f16(<16 x half> %op)
+  store <16 x half> %res, ptr %a
+  ret void
+}
 
-declare <2 x half> @llvm.roundeven.v2f16(<2 x half>)
-declare <4 x half> @llvm.roundeven.v4f16(<4 x half>)
-declare <8 x half> @llvm.roundeven.v8f16(<8 x half>)
-declare <16 x half> @llvm.roundeven.v16f16(<16 x half>)
-declare <32 x half> @llvm.roundeven.v32f16(<32 x half>)
-declare <64 x half> @llvm.roundeven.v64f16(<64 x half>)
-declare <128 x half> @llvm.roundeven.v128f16(<128 x half>)
-declare <2 x float> @llvm.roundeven.v2f32(<2 x float>)
-declare <4 x float> @llvm.roundeven.v4f32(<4 x float>)
-declare <8 x float> @llvm.roundeven.v8f32(<8 x float>)
-declare <16 x float> @llvm.roundeven.v16f32(<16 x float>)
-declare <32 x float> @llvm.roundeven.v32f32(<32 x float>)
-declare <64 x float> @llvm.roundeven.v64f32(<64 x float>)
-declare <1 x double> @llvm.roundeven.v1f64(<1 x double>)
-declare <2 x double> @llvm.roundeven.v2f64(<2 x double>)
-declare <4 x double> @llvm.roundeven.v4f64(<4 x double>)
-declare <8 x double> @llvm.roundeven.v8f64(<8 x double>)
-declare <16 x double> @llvm.roundeven.v16f64(<16 x double>)
-declare <32 x double> @llvm.roundeven.v32f64(<32 x double>)
+define <2 x float> @fcanonicalize_v2f32(<2 x float> %op) {
+; CHECK-LABEL: fcanonicalize_v2f32:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    mov z1.s, z0.s[1]
+; CHECK-NEXT:    fminnm s0, s0, s0
+; CHECK-NEXT:    fminnm s1, s1, s1
+; CHECK-NEXT:    zip1 z0.s, z0.s, z1.s
+; CHECK-NEXT:    ret
+;
+; NONEON-NOSVE-LABEL: fcanonicalize_v2f32:
+; NONEON-NOSVE:       // %bb.0:
+; NONEON-NOSVE-NEXT:    str d0, [sp, #-16]!
+; NONEON-NOSVE-NEXT:    .cfi_def_cfa_offset 16
+; NONEON-NOSVE-NEXT:    ldr s0, [sp, #4]
+; NONEON-NOSVE-NEXT:    fminnm s1, s0, s0
+; NONEON-NOSVE-NEXT:    ldr s0, [sp]
+; NONEON-NOSVE-NEXT:    fminnm s0, s0, s0
+; NONEON-NOSVE-NEXT:    stp s0, s1, [sp, #8]
+; NONEON-NOSVE-NEXT:    ldr d0, [sp, #8]
+; NONEON-NOSVE-NEXT:    add sp, sp, #16
+; NONEON-NOSVE-NEXT:    ret
+  %res = call <2 x float> @llvm.canonicalize.v2f32(<2 x float> %op)
+  ret <2 x float> %res
+}
 
-declare <2 x half> @llvm.trunc.v2f16(<2 x half>)
-declare <4 x half> @llvm.trunc.v4f16(<4 x half>)
-declare <8 x half> @llvm.trunc.v8f16(<8 x half>)
-declare <16 x half> @llvm.trunc.v16f16(<16 x half>)
-declare <32 x half> @llvm.trunc.v32f16(<32 x half>)
-declare <64 x half> @llvm.trunc.v64f16(<64 x half>)
-declare <128 x half> @llvm.trunc.v128f16(<128 x half>)
-declare <2 x float> @llvm.trunc.v2f32(<2 x float>)
-declare <4 x float> @llvm.trunc.v4f32(<4 x float>)
-declare <8 x float> @llvm.trunc.v8f32(<8 x float>)
-declare <16 x float> @llvm.trunc.v16f32(<16 x float>)
-declare <32 x float> @llvm.trunc.v32f32(<32 x float>)
-declare <64 x float> @llvm.trunc.v64f32(<64 x float>)
-declare <1 x double> @llvm.trunc.v1f64(<1 x double>)
-declare <2 x double> @llvm.trunc.v2f64(<2 x double>)
-declare <4 x double> @llvm.trunc.v4f64(<4 x double>)
-declare <8 x double> @llvm.trunc.v8f64(<8 x double>)
-declare <16 x double> @llvm.trunc.v16f64(<16 x double>)
-declare <32 x double> @llvm.trunc.v32f64(<32 x double>)
+define <4 x float> @fcanonicalize_v4f32(<4 x float> %op) {
+; CHECK-LABEL: fcanonicalize_v4f32:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    mov z1.s, z0.s[3]
+; CHECK-NEXT:    mov z2.s, z0.s[2]
+; CHECK-NEXT:    mov z3.s, z0.s[1]
+; CHECK-NEXT:    fminnm s0, s0, s0
+; CHECK-NEXT:    fminnm s1, s1, s1
+; CHECK-NEXT:    fminnm s2, s2, s2
+; CHECK-NEXT:    fminnm s3, s3, s3
+; CHECK-NEXT:    zip1 z1.s, z2.s, z1.s
+; CHECK-NEXT:    zip1 z0.s, z0.s, z3.s
+; CHECK-NEXT:    zip1 z0.d, z0.d, z1.d
+; CHECK-NEXT:    ret
+;
+; NONEON-NOSVE-LABEL: fcanonicalize_v4f32:
+; NONEON-NOSVE:       // %bb.0:
+; NONEON-NOSVE-NEXT:    str q0, [sp, #-32]!
+; NONEON-NOSVE-NEXT:    .cfi_def_cfa_offset 32
+; NONEON-NOSVE-NEXT:    ldr s0, [sp, #12]
+; NONEON-NOSVE-NEXT:    fminnm s1, s0, s0
+; NONEON-NOSVE-NEXT:    ldr s0, [sp, #8]
+; NONEON-NOSVE-NEXT:    fminnm s0, s0, s0
+; NONEON-NOSVE-NEXT:    stp s0, s1, [sp, #24]
+; NONEON-NOSVE-NEXT:    ldr s0, [sp, #4]
+; NONEON-NOSVE-NEXT:    fminnm s1, s0, s0
+; NONEON-NOSVE-NEXT:    ldr s0, [sp]
+; NONEON-NOSVE-NEXT:    fminnm s0, s0, s0
+; NONEON-NOSVE-NEXT:    stp s0, s1, [sp, #16]
+; NONEON-NOSVE-NEXT:    ldr q0, [sp, #16]
+; NONEON-NOSVE-NEXT:    add sp, sp, #32
+; NONEON-NOSVE-NEXT:    ret
+  %res = call <4 x float> @llvm.canonicalize.v4f32(<4 x float> %op)
+  ret <4 x float> %res
+}
+
+define void @fcanonicalize_v8f32(ptr %a) {
+; CHECK-LABEL: fcanonicalize_v8f32:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    ldp q0, q1, [x0]
+; CHECK-NEXT:    mov z2.s, z0.s[3]
+; CHECK-NEXT:    mov z3.s, z0.s[2]
+; CHECK-NEXT:    mov z4.s, z0.s[1]
+; CHECK-NEXT:    mov z5.s, z1.s[3]
+; CHECK-NEXT:    mov z6.s, z1.s[2]
+; CHECK-NEXT:    mov z7.s, z1.s[1]
+; CHECK-NEXT:    fminnm s1, s1, s1
+; CHECK-NEXT:    fminnm s0, s0, s0
+; CHECK-NEXT:    fminnm s2, s2, s2
+; CHECK-NEXT:    fminnm s3, s3, s3
+; CHECK-NEXT:    fminnm s4, s4, s4
+; CHECK-NEXT:    fminnm s5, s5, s5
+; CHECK-NEXT:    fminnm s6, s6, s6
+; CHECK-NEXT:    fminnm s7, s7, s7
+; CHECK-NEXT:    zip1 z2.s, z3.s, z2.s
+; CHECK-NEXT:    zip1 z0.s, z0.s, z4.s
+; CHECK-NEXT:    zip1 z3.s, z6.s, z5.s
+; CHECK-NEXT:    zip1 z1.s, z1.s, z7.s
+; CHECK-NEXT:    zip1 z0.d, z0.d, z2.d
+; CHECK-NEXT:    zip1 z1.d, z1.d, z3.d
+; CHECK-NEXT:    stp q0, q1, [x0]
+; CHECK-NEXT:    ret
+;
+; NONEON-NOSVE-LABEL: fcanonicalize_v8f32:
+; NONEON-NOSVE:       // %bb.0:
+; NONEON-NOSVE-NEXT:    ldp q1, q0, [x0]
+; NONEON-NOSVE-NEXT:    stp q1, q0, [sp, #-64]!
+; NONEON-NOSVE-NEXT:    .cfi_def_cfa_offset 64
+; NONEON-NOSVE-NEXT:    ldr s0, [sp, #28]
+; NONEON-NOSVE-NEXT:    fminnm s1, s0, s0
+; NONEON-NOSVE-NEXT:    ldr s0, [sp, #24]
+; NONEON-NOSVE-NEXT:    fminnm s0, s0, s0
+; NONEON-NOSVE-NEXT:    stp s0, s1, [sp, #56]
+; NONEON-NOSVE-NEXT:    ldr s0, [sp, #20]
+; NONEON-NOSVE-NEXT:    fminnm s1, s0, s0
+; NONEON-NOSVE-NEXT:    ldr s0, [sp, #16]
+; NONEON-NOSVE-NEXT:    fminnm s0, s0, s0
+; NONEON-NOSVE-NEXT:    stp s0, s1, [sp, #48]
+; NONEON-NOSVE-NEXT:    ldr s0, [sp, #12]
+; NONEON-NOSVE-NEXT:    fminnm s1, s0, s0
+; NONEON-NOSVE-NEXT:    ldr s0, [sp, #8]
+; NONEON-NOSVE-NEXT:    fminnm s0, s0, s0
+; NONEON-NOSVE-NEXT:    stp s0, s1, [sp, #40]
+; NONEON-NOSVE-NEXT:    ldr s0, [sp, #4]
+; NONEON-NOSVE-NEXT:    fminnm s1, s0, s0
+; NONEON-NOSVE-NEXT:    ldr s0, [sp]
+; NONEON-NOSVE-NEXT:    fminnm s0, s0, s0
+; NONEON-NOSVE-NEXT:    stp s0, s1, [sp, #32]
+; NONEON-NOSVE-NEXT:    ldp q0, q1, [sp, #32]
+; NONEON-NOSVE-NEXT:    stp q0, q1, [x0]
+; NONEON-NOSVE-NEXT:    add sp, sp, #64
+; NONEON-NOSVE-NEXT:    ret
+  %op = load <8 x float>, ptr %a
+  %res = call <8 x float> @llvm.canonicalize.v8f32(<8 x float> %op)
+  store <8 x float> %res, ptr %a
+  ret void
+}
+
+define <1 x double> @fcanonicalize_v1f64(<1 x double> %op) {
+; CHECK-LABEL: fcanonicalize_v1f64:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    fminnm d0, d0, d0
+; CHECK-NEXT:    ret
+;
+; NONEON-NOSVE-LABEL: fcanonicalize_v1f64:
+; NONEON-NOSVE:       // %bb.0:
+; NONEON-NOSVE-NEXT:    sub sp, sp, #16
+; NONEON-NOSVE-NEXT:    .cfi_def_cfa_offset 16
+; NONEON-NOSVE-NEXT:    fminnm d0, d0, d0
+; NONEON-NOSVE-NEXT:    add sp, sp, #16
+; NONEON-NOSVE-NEXT:    ret
+  %res = call <1 x double> @llvm.canonicalize.v1f64(<1 x double> %op)
+  ret <1 x double> %res
+}
+
+define <2 x double> @fcanonicalize_v2f64(<2 x double> %op) {
+; CHECK-LABEL: fcanonicalize_v2f64:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    mov z1.d, z0.d[1]
+; CHECK-NEXT:    fminnm d0, d0, d0
+; CHECK-NEXT:    fminnm d1, d1, d1
+; CHECK-NEXT:    zip1 z0.d, z0.d, z1.d
+; CHECK-NEXT:    ret
+;
+; NONEON-NOSVE-LABEL: fcanonicalize_v2f64:
+; NONEON-NOSVE:       // %bb.0:
+; NONEON-NOSVE-NEXT:    str q0, [sp, #-32]!
+; NONEON-NOSVE-NEXT:    .cfi_def_cfa_offset 32
+; NONEON-NOSVE-NEXT:    ldr d0, [sp, #8]
+; NONEON-NOSVE-NEXT:    fminnm d1, d0, d0
+; NONEON-NOSVE-NEXT:    ldr d0, [sp]
+; NONEON-NOSVE-NEXT:    fminnm d0, d0, d0
+; NONEON-NOSVE-NEXT:    stp d0, d1, [sp, #16]
+; NONEON-NOSVE-NEXT:    ldr q0, [sp, #16]
+; NONEON-NOSVE-NEXT:    add sp, sp, #32
+; NONEON-NOSVE-NEXT:    ret
+  %res = call <2 x double> @llvm.canonicalize.v2f64(<2 x double> %op)
+  ret <2 x double> %res
+}
+
+define void @fcanonicalize_v4f64(ptr %a) {
+; CHECK-LABEL: fcanonicalize_v4f64:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    ldp q0, q1, [x0]
+; CHECK-NEXT:    mov z2.d, z0.d[1]
+; CHECK-NEXT:    mov z3.d, z1.d[1]
+; CHECK-NEXT:    fminnm d0, d0, d0
+; CHECK-NEXT:    fminnm d1, d1, d1
+; CHECK-NEXT:    fminnm d2, d2, d2
+; CHECK-NEXT:    fminnm d3, d3, d3
+; CHECK-NEXT:    zip1 z0.d, z0.d, z2.d
+; CHECK-NEXT:    zip1 z1.d, z1.d, z3.d
+; CHECK-NEXT:    stp q0, q1, [x0]
+; CHECK-NEXT:    ret
+;
+; NONEON-NOSVE-LABEL: fcanonicalize_v4f64:
+; NONEON-NOSVE:       // %bb.0:
+; NONEON-NOSVE-NEXT:    ldp q1, q0, [x0]
+; NONEON-NOSVE-NEXT:    stp q1, q0, [sp, #-64]!
+; NONEON-NOSVE-NEXT:    .cfi_def_cfa_offset 64
+; NONEON-NOSVE-NEXT:    ldr d0, [sp, #24]
+; NONEON-NOSVE-NEXT:    fminnm d1, d0, d0
+; NONEON-NOSVE-NEXT:    ldr d0, [sp, #16]
+; NONEON-NOSVE-NEXT:    fminnm d0, d0, d0
+; NONEON-NOSVE-NEXT:    stp d0, d1, [sp, #48]
+; NONEON-NOSVE-NEXT:    ldr d0, [sp, #8]
+; NONEON-NOSVE-NEXT:    fminnm d1, d0, d0
+; NONEON-NOSVE-NEXT:    ldr d0, [sp]
+; NONEON-NOSVE-NEXT:    fminnm d0, d0, d0
+; NONEON-NOSVE-NEXT:    stp d0, d1, [sp, #32]
+; NONEON-NOSVE-NEXT:    ldp q0, q1, [sp, #32]
+; NONEON-NOSVE-NEXT:    stp q0, q1, [x0]
+; NONEON-NOSVE-NEXT:    add sp, sp, #64
+; NONEON-NOSVE-NEXT:    ret
+  %op = load <4 x double>, ptr %a
+  %res = call <4 x double> @llvm.canonicalize.v4f64(<4 x double> %op)
+  store <4 x double> %res, ptr %a
+  ret void
+}

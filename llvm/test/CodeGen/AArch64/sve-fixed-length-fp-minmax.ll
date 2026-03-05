@@ -1197,80 +1197,15468 @@ define void @fmin_v32f64(ptr %a, ptr %b) vscale_range(16,0) #0 {
   ret void
 }
 
+;
+; FMAXIMUMNUM
+;
+
+; Don't use SVE for 64-bit vectors.
+define <4 x half> @fmaximumnum_v4f16(<4 x half> %op1, <4 x half> %op2) vscale_range(2,0) #0 {
+; CHECK-LABEL: fmaximumnum_v4f16:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    fminnm v1.4h, v1.4h, v1.4h
+; CHECK-NEXT:    fminnm v0.4h, v0.4h, v0.4h
+; CHECK-NEXT:    fmaxnm v0.4h, v0.4h, v1.4h
+; CHECK-NEXT:    ret
+  %res = call <4 x half> @llvm.maximumnum.v4f16(<4 x half> %op1, <4 x half> %op2)
+  ret <4 x half> %res
+}
+
+; Don't use SVE for 128-bit vectors.
+define <8 x half> @fmaximumnum_v8f16(<8 x half> %op1, <8 x half> %op2) vscale_range(2,0) #0 {
+; CHECK-LABEL: fmaximumnum_v8f16:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    fminnm v1.8h, v1.8h, v1.8h
+; CHECK-NEXT:    fminnm v0.8h, v0.8h, v0.8h
+; CHECK-NEXT:    fmaxnm v0.8h, v0.8h, v1.8h
+; CHECK-NEXT:    ret
+  %res = call <8 x half> @llvm.maximumnum.v8f16(<8 x half> %op1, <8 x half> %op2)
+  ret <8 x half> %res
+}
+
+define void @fmaximumnum_v16f16(ptr %a, ptr %b) vscale_range(2,0) #0 {
+; CHECK-LABEL: fmaximumnum_v16f16:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    stp d15, d14, [sp, #-80]! // 16-byte Folded Spill
+; CHECK-NEXT:    sub x9, sp, #80
+; CHECK-NEXT:    stp d13, d12, [sp, #16] // 16-byte Folded Spill
+; CHECK-NEXT:    stp d11, d10, [sp, #32] // 16-byte Folded Spill
+; CHECK-NEXT:    stp d9, d8, [sp, #48] // 16-byte Folded Spill
+; CHECK-NEXT:    stp x29, x30, [sp, #64] // 16-byte Folded Spill
+; CHECK-NEXT:    add x29, sp, #64
+; CHECK-NEXT:    and sp, x9, #0xffffffffffffffe0
+; CHECK-NEXT:    .cfi_def_cfa w29, 16
+; CHECK-NEXT:    .cfi_offset w30, -8
+; CHECK-NEXT:    .cfi_offset w29, -16
+; CHECK-NEXT:    .cfi_offset b8, -24
+; CHECK-NEXT:    .cfi_offset b9, -32
+; CHECK-NEXT:    .cfi_offset b10, -40
+; CHECK-NEXT:    .cfi_offset b11, -48
+; CHECK-NEXT:    .cfi_offset b12, -56
+; CHECK-NEXT:    .cfi_offset b13, -64
+; CHECK-NEXT:    .cfi_offset b14, -72
+; CHECK-NEXT:    .cfi_offset b15, -80
+; CHECK-NEXT:    ptrue p0.h, vl16
+; CHECK-NEXT:    adrp x8, .LCPI74_0
+; CHECK-NEXT:    add x8, x8, :lo12:.LCPI74_0
+; CHECK-NEXT:    mov x9, sp
+; CHECK-NEXT:    ld1h { z17.h }, p0/z, [x0]
+; CHECK-NEXT:    ld1h { z6.h }, p0/z, [x1]
+; CHECK-NEXT:    fcmp h17, h17
+; CHECK-NEXT:    mov z1.h, z17.h[15]
+; CHECK-NEXT:    mov z7.h, z6.h[15]
+; CHECK-NEXT:    mov z2.h, z17.h[14]
+; CHECK-NEXT:    mov z18.h, z6.h[14]
+; CHECK-NEXT:    mov z3.h, z17.h[13]
+; CHECK-NEXT:    mov z19.h, z6.h[13]
+; CHECK-NEXT:    mov z4.h, z17.h[12]
+; CHECK-NEXT:    mov z21.h, z6.h[12]
+; CHECK-NEXT:    fcsel h0, h6, h17, vs
+; CHECK-NEXT:    fcmp h1, h1
+; CHECK-NEXT:    mov z5.h, z17.h[11]
+; CHECK-NEXT:    mov z23.h, z6.h[11]
+; CHECK-NEXT:    mov z16.h, z17.h[10]
+; CHECK-NEXT:    mov z24.h, z6.h[10]
+; CHECK-NEXT:    mov z20.h, z17.h[9]
+; CHECK-NEXT:    mov z26.h, z6.h[9]
+; CHECK-NEXT:    mov z22.h, z17.h[8]
+; CHECK-NEXT:    fcsel h1, h7, h1, vs
+; CHECK-NEXT:    fcmp h2, h2
+; CHECK-NEXT:    mov z27.h, z6.h[8]
+; CHECK-NEXT:    mov z25.h, z17.h[7]
+; CHECK-NEXT:    mov z29.h, z6.h[7]
+; CHECK-NEXT:    mov z28.h, z17.h[6]
+; CHECK-NEXT:    mov z8.h, z6.h[6]
+; CHECK-NEXT:    mov z30.h, z17.h[5]
+; CHECK-NEXT:    mov z10.h, z6.h[5]
+; CHECK-NEXT:    fcsel h2, h18, h2, vs
+; CHECK-NEXT:    fcmp h3, h3
+; CHECK-NEXT:    str h0, [sp]
+; CHECK-NEXT:    mov z31.h, z17.h[4]
+; CHECK-NEXT:    mov z14.h, z6.h[4]
+; CHECK-NEXT:    str h1, [sp, #30]
+; CHECK-NEXT:    mov z9.h, z17.h[3]
+; CHECK-NEXT:    mov z15.h, z6.h[3]
+; CHECK-NEXT:    mov z13.h, z17.h[2]
+; CHECK-NEXT:    fcsel h3, h19, h3, vs
+; CHECK-NEXT:    str h2, [sp, #28]
+; CHECK-NEXT:    fcmp h4, h4
+; CHECK-NEXT:    mov z12.h, z6.h[2]
+; CHECK-NEXT:    mov z17.h, z17.h[1]
+; CHECK-NEXT:    fcsel h4, h21, h4, vs
+; CHECK-NEXT:    fcmp h5, h5
+; CHECK-NEXT:    str h3, [sp, #26]
+; CHECK-NEXT:    fcsel h5, h23, h5, vs
+; CHECK-NEXT:    fcmp h16, h16
+; CHECK-NEXT:    str h4, [sp, #24]
+; CHECK-NEXT:    fcsel h16, h24, h16, vs
+; CHECK-NEXT:    fcmp h20, h20
+; CHECK-NEXT:    str h5, [sp, #22]
+; CHECK-NEXT:    fcsel h20, h26, h20, vs
+; CHECK-NEXT:    fcmp h22, h22
+; CHECK-NEXT:    str h16, [sp, #20]
+; CHECK-NEXT:    fcsel h22, h27, h22, vs
+; CHECK-NEXT:    fcmp h25, h25
+; CHECK-NEXT:    str h20, [sp, #18]
+; CHECK-NEXT:    fcsel h25, h29, h25, vs
+; CHECK-NEXT:    fcmp h28, h28
+; CHECK-NEXT:    str h22, [sp, #16]
+; CHECK-NEXT:    fcsel h28, h8, h28, vs
+; CHECK-NEXT:    fcmp h30, h30
+; CHECK-NEXT:    str h25, [sp, #14]
+; CHECK-NEXT:    fcsel h30, h10, h30, vs
+; CHECK-NEXT:    fcmp h31, h31
+; CHECK-NEXT:    str h28, [sp, #12]
+; CHECK-NEXT:    fcsel h31, h14, h31, vs
+; CHECK-NEXT:    fcmp h9, h9
+; CHECK-NEXT:    str h30, [sp, #10]
+; CHECK-NEXT:    fcsel h11, h15, h9, vs
+; CHECK-NEXT:    fcmp h13, h13
+; CHECK-NEXT:    mov z9.h, z6.h[1]
+; CHECK-NEXT:    str h31, [sp, #8]
+; CHECK-NEXT:    fcsel h13, h12, h13, vs
+; CHECK-NEXT:    fcmp h17, h17
+; CHECK-NEXT:    str h11, [sp, #6]
+; CHECK-NEXT:    fcsel h17, h9, h17, vs
+; CHECK-NEXT:    fcmp h6, h6
+; CHECK-NEXT:    str h13, [sp, #4]
+; CHECK-NEXT:    fcsel h6, h0, h6, vs
+; CHECK-NEXT:    str h17, [sp, #2]
+; CHECK-NEXT:    fcmp h0, h6
+; CHECK-NEXT:    fcsel h6, h0, h6, gt
+; CHECK-NEXT:    fcmp h7, h7
+; CHECK-NEXT:    fcsel h7, h1, h7, vs
+; CHECK-NEXT:    str h6, [sp, #32]
+; CHECK-NEXT:    fcmp h1, h7
+; CHECK-NEXT:    fcsel h7, h1, h7, gt
+; CHECK-NEXT:    fcmp h18, h18
+; CHECK-NEXT:    fcsel h18, h2, h18, vs
+; CHECK-NEXT:    str h7, [sp, #62]
+; CHECK-NEXT:    fcmp h2, h18
+; CHECK-NEXT:    fcsel h18, h2, h18, gt
+; CHECK-NEXT:    fcmp h19, h19
+; CHECK-NEXT:    fcsel h19, h3, h19, vs
+; CHECK-NEXT:    str h18, [sp, #60]
+; CHECK-NEXT:    fcmp h3, h19
+; CHECK-NEXT:    fcsel h19, h3, h19, gt
+; CHECK-NEXT:    fcmp h21, h21
+; CHECK-NEXT:    fcsel h21, h4, h21, vs
+; CHECK-NEXT:    str h19, [sp, #58]
+; CHECK-NEXT:    fcmp h4, h21
+; CHECK-NEXT:    fcsel h21, h4, h21, gt
+; CHECK-NEXT:    fcmp h23, h23
+; CHECK-NEXT:    fcsel h23, h5, h23, vs
+; CHECK-NEXT:    str h21, [sp, #56]
+; CHECK-NEXT:    fcmp h5, h23
+; CHECK-NEXT:    fcsel h23, h5, h23, gt
+; CHECK-NEXT:    fcmp h24, h24
+; CHECK-NEXT:    fcsel h24, h16, h24, vs
+; CHECK-NEXT:    str h23, [sp, #54]
+; CHECK-NEXT:    fcmp h16, h24
+; CHECK-NEXT:    fcsel h24, h16, h24, gt
+; CHECK-NEXT:    fcmp h26, h26
+; CHECK-NEXT:    fcsel h26, h20, h26, vs
+; CHECK-NEXT:    str h24, [sp, #52]
+; CHECK-NEXT:    fcmp h20, h26
+; CHECK-NEXT:    fcsel h26, h20, h26, gt
+; CHECK-NEXT:    fcmp h27, h27
+; CHECK-NEXT:    fcsel h27, h22, h27, vs
+; CHECK-NEXT:    str h26, [sp, #50]
+; CHECK-NEXT:    fcmp h22, h27
+; CHECK-NEXT:    fcsel h27, h22, h27, gt
+; CHECK-NEXT:    fcmp h29, h29
+; CHECK-NEXT:    fcsel h29, h25, h29, vs
+; CHECK-NEXT:    str h27, [sp, #48]
+; CHECK-NEXT:    fcmp h25, h29
+; CHECK-NEXT:    fcsel h29, h25, h29, gt
+; CHECK-NEXT:    fcmp h8, h8
+; CHECK-NEXT:    fcsel h8, h28, h8, vs
+; CHECK-NEXT:    str h29, [sp, #46]
+; CHECK-NEXT:    fcmp h28, h8
+; CHECK-NEXT:    fcsel h8, h28, h8, gt
+; CHECK-NEXT:    fcmp h10, h10
+; CHECK-NEXT:    fcsel h10, h30, h10, vs
+; CHECK-NEXT:    str h8, [sp, #44]
+; CHECK-NEXT:    fcmp h30, h10
+; CHECK-NEXT:    fcsel h10, h30, h10, gt
+; CHECK-NEXT:    fcmp h14, h14
+; CHECK-NEXT:    fcsel h14, h31, h14, vs
+; CHECK-NEXT:    str h10, [sp, #42]
+; CHECK-NEXT:    fcmp h31, h14
+; CHECK-NEXT:    fcsel h0, h31, h14, gt
+; CHECK-NEXT:    fcmp h15, h15
+; CHECK-NEXT:    fcsel h1, h11, h15, vs
+; CHECK-NEXT:    str h0, [sp, #40]
+; CHECK-NEXT:    fcmp h11, h1
+; CHECK-NEXT:    fcsel h1, h11, h1, gt
+; CHECK-NEXT:    fcmp h12, h12
+; CHECK-NEXT:    fcsel h2, h13, h12, vs
+; CHECK-NEXT:    str h1, [sp, #38]
+; CHECK-NEXT:    fcmp h13, h2
+; CHECK-NEXT:    fcsel h2, h13, h2, gt
+; CHECK-NEXT:    fcmp h9, h9
+; CHECK-NEXT:    fcsel h3, h17, h9, vs
+; CHECK-NEXT:    str h2, [sp, #36]
+; CHECK-NEXT:    fcmp h17, h3
+; CHECK-NEXT:    fcsel h0, h17, h3, gt
+; CHECK-NEXT:    str h0, [sp, #34]
+; CHECK-NEXT:    ld1h { z0.h }, p0/z, [x8]
+; CHECK-NEXT:    add x8, sp, #32
+; CHECK-NEXT:    ld1h { z1.h }, p0/z, [x9]
+; CHECK-NEXT:    cmpeq p1.h, p0/z, z1.h, z0.h
+; CHECK-NEXT:    mov z0.h, p1/z, #-1 // =0xffffffffffffffff
+; CHECK-NEXT:    ptrue p1.h
+; CHECK-NEXT:    and z0.h, z0.h, #0x1
+; CHECK-NEXT:    cmpne p1.h, p1/z, z0.h, #0
+; CHECK-NEXT:    ld1h { z0.h }, p0/z, [x8]
+; CHECK-NEXT:    fcmeq p2.h, p0/z, z0.h, #0.0
+; CHECK-NEXT:    sel z1.h, p1, z1.h, z0.h
+; CHECK-NEXT:    mov z0.h, p2/m, z1.h
+; CHECK-NEXT:    st1h { z0.h }, p0, [x0]
+; CHECK-NEXT:    sub sp, x29, #64
+; CHECK-NEXT:    ldp x29, x30, [sp, #64] // 16-byte Folded Reload
+; CHECK-NEXT:    ldp d9, d8, [sp, #48] // 16-byte Folded Reload
+; CHECK-NEXT:    ldp d11, d10, [sp, #32] // 16-byte Folded Reload
+; CHECK-NEXT:    ldp d13, d12, [sp, #16] // 16-byte Folded Reload
+; CHECK-NEXT:    ldp d15, d14, [sp], #80 // 16-byte Folded Reload
+; CHECK-NEXT:    ret
+  %op1 = load <16 x half>, ptr %a
+  %op2 = load <16 x half>, ptr %b
+  %res = call <16 x half> @llvm.maximumnum.v16f16(<16 x half> %op1, <16 x half> %op2)
+  store <16 x half> %res, ptr %a
+  ret void
+}
+
+define void @fmaximumnum_v32f16(ptr %a, ptr %b) #0 {
+; VBITS_EQ_256-LABEL: fmaximumnum_v32f16:
+; VBITS_EQ_256:       // %bb.0:
+; VBITS_EQ_256-NEXT:    stp d15, d14, [sp, #-80]! // 16-byte Folded Spill
+; VBITS_EQ_256-NEXT:    sub x9, sp, #240
+; VBITS_EQ_256-NEXT:    stp d13, d12, [sp, #16] // 16-byte Folded Spill
+; VBITS_EQ_256-NEXT:    stp d11, d10, [sp, #32] // 16-byte Folded Spill
+; VBITS_EQ_256-NEXT:    stp d9, d8, [sp, #48] // 16-byte Folded Spill
+; VBITS_EQ_256-NEXT:    stp x29, x30, [sp, #64] // 16-byte Folded Spill
+; VBITS_EQ_256-NEXT:    add x29, sp, #64
+; VBITS_EQ_256-NEXT:    and sp, x9, #0xffffffffffffffe0
+; VBITS_EQ_256-NEXT:    .cfi_def_cfa w29, 16
+; VBITS_EQ_256-NEXT:    .cfi_offset w30, -8
+; VBITS_EQ_256-NEXT:    .cfi_offset w29, -16
+; VBITS_EQ_256-NEXT:    .cfi_offset b8, -24
+; VBITS_EQ_256-NEXT:    .cfi_offset b9, -32
+; VBITS_EQ_256-NEXT:    .cfi_offset b10, -40
+; VBITS_EQ_256-NEXT:    .cfi_offset b11, -48
+; VBITS_EQ_256-NEXT:    .cfi_offset b12, -56
+; VBITS_EQ_256-NEXT:    .cfi_offset b13, -64
+; VBITS_EQ_256-NEXT:    .cfi_offset b14, -72
+; VBITS_EQ_256-NEXT:    .cfi_offset b15, -80
+; VBITS_EQ_256-NEXT:    ptrue p0.h, vl16
+; VBITS_EQ_256-NEXT:    mov x8, #16 // =0x10
+; VBITS_EQ_256-NEXT:    adrp x9, .LCPI75_0
+; VBITS_EQ_256-NEXT:    add x9, x9, :lo12:.LCPI75_0
+; VBITS_EQ_256-NEXT:    add x10, sp, #128
+; VBITS_EQ_256-NEXT:    ld1h { z2.h }, p0/z, [x0]
+; VBITS_EQ_256-NEXT:    ld1h { z0.h }, p0/z, [x1]
+; VBITS_EQ_256-NEXT:    fcmp h2, h2
+; VBITS_EQ_256-NEXT:    mov z4.h, z2.h[15]
+; VBITS_EQ_256-NEXT:    mov z1.h, z0.h[15]
+; VBITS_EQ_256-NEXT:    mov z5.h, z2.h[14]
+; VBITS_EQ_256-NEXT:    mov z3.h, z0.h[14]
+; VBITS_EQ_256-NEXT:    mov z6.h, z2.h[13]
+; VBITS_EQ_256-NEXT:    mov z7.h, z2.h[12]
+; VBITS_EQ_256-NEXT:    mov z16.h, z2.h[11]
+; VBITS_EQ_256-NEXT:    mov z17.h, z2.h[10]
+; VBITS_EQ_256-NEXT:    fcsel h27, h0, h2, vs
+; VBITS_EQ_256-NEXT:    fcmp h4, h4
+; VBITS_EQ_256-NEXT:    mov z18.h, z2.h[9]
+; VBITS_EQ_256-NEXT:    mov z19.h, z2.h[8]
+; VBITS_EQ_256-NEXT:    mov z20.h, z2.h[7]
+; VBITS_EQ_256-NEXT:    mov z21.h, z2.h[6]
+; VBITS_EQ_256-NEXT:    mov z22.h, z2.h[5]
+; VBITS_EQ_256-NEXT:    mov z23.h, z2.h[4]
+; VBITS_EQ_256-NEXT:    mov z24.h, z2.h[3]
+; VBITS_EQ_256-NEXT:    fcsel h28, h1, h4, vs
+; VBITS_EQ_256-NEXT:    fcmp h5, h5
+; VBITS_EQ_256-NEXT:    mov z4.h, z0.h[13]
+; VBITS_EQ_256-NEXT:    mov z25.h, z2.h[2]
+; VBITS_EQ_256-NEXT:    mov z26.h, z2.h[1]
+; VBITS_EQ_256-NEXT:    mov z2.h, z0.h[1]
+; VBITS_EQ_256-NEXT:    str h27, [sp, #78] // 2-byte Spill
+; VBITS_EQ_256-NEXT:    fcsel h29, h3, h5, vs
+; VBITS_EQ_256-NEXT:    fcmp h6, h6
+; VBITS_EQ_256-NEXT:    mov z5.h, z0.h[12]
+; VBITS_EQ_256-NEXT:    str h28, [sp, #76] // 2-byte Spill
+; VBITS_EQ_256-NEXT:    fcsel h30, h4, h6, vs
+; VBITS_EQ_256-NEXT:    fcmp h7, h7
+; VBITS_EQ_256-NEXT:    mov z6.h, z0.h[11]
+; VBITS_EQ_256-NEXT:    str h29, [sp, #70] // 2-byte Spill
+; VBITS_EQ_256-NEXT:    fcsel h31, h5, h7, vs
+; VBITS_EQ_256-NEXT:    fcmp h16, h16
+; VBITS_EQ_256-NEXT:    mov z7.h, z0.h[10]
+; VBITS_EQ_256-NEXT:    str h30, [sp, #66] // 2-byte Spill
+; VBITS_EQ_256-NEXT:    fcsel h8, h6, h16, vs
+; VBITS_EQ_256-NEXT:    fcmp h17, h17
+; VBITS_EQ_256-NEXT:    mov z16.h, z0.h[9]
+; VBITS_EQ_256-NEXT:    str h31, [sp, #62] // 2-byte Spill
+; VBITS_EQ_256-NEXT:    fcsel h9, h7, h17, vs
+; VBITS_EQ_256-NEXT:    fcmp h18, h18
+; VBITS_EQ_256-NEXT:    mov z17.h, z0.h[8]
+; VBITS_EQ_256-NEXT:    str h8, [sp, #58] // 2-byte Spill
+; VBITS_EQ_256-NEXT:    fcsel h10, h16, h18, vs
+; VBITS_EQ_256-NEXT:    fcmp h19, h19
+; VBITS_EQ_256-NEXT:    mov z18.h, z0.h[7]
+; VBITS_EQ_256-NEXT:    str h9, [sp, #54] // 2-byte Spill
+; VBITS_EQ_256-NEXT:    fcsel h11, h17, h19, vs
+; VBITS_EQ_256-NEXT:    fcmp h20, h20
+; VBITS_EQ_256-NEXT:    mov z19.h, z0.h[6]
+; VBITS_EQ_256-NEXT:    str h10, [sp, #52] // 2-byte Spill
+; VBITS_EQ_256-NEXT:    fcsel h12, h18, h20, vs
+; VBITS_EQ_256-NEXT:    fcmp h21, h21
+; VBITS_EQ_256-NEXT:    mov z20.h, z0.h[5]
+; VBITS_EQ_256-NEXT:    str h11, [sp, #48] // 2-byte Spill
+; VBITS_EQ_256-NEXT:    fcsel h13, h19, h21, vs
+; VBITS_EQ_256-NEXT:    fcmp h22, h22
+; VBITS_EQ_256-NEXT:    mov z21.h, z0.h[4]
+; VBITS_EQ_256-NEXT:    str h12, [sp, #44] // 2-byte Spill
+; VBITS_EQ_256-NEXT:    fcsel h14, h20, h22, vs
+; VBITS_EQ_256-NEXT:    fcmp h23, h23
+; VBITS_EQ_256-NEXT:    mov z22.h, z0.h[3]
+; VBITS_EQ_256-NEXT:    str h13, [sp, #42] // 2-byte Spill
+; VBITS_EQ_256-NEXT:    fcsel h15, h21, h23, vs
+; VBITS_EQ_256-NEXT:    fcmp h24, h24
+; VBITS_EQ_256-NEXT:    mov z23.h, z0.h[2]
+; VBITS_EQ_256-NEXT:    str h14, [sp, #40] // 2-byte Spill
+; VBITS_EQ_256-NEXT:    fcsel h24, h22, h24, vs
+; VBITS_EQ_256-NEXT:    fcmp h25, h25
+; VBITS_EQ_256-NEXT:    str h15, [sp, #38] // 2-byte Spill
+; VBITS_EQ_256-NEXT:    fcsel h25, h23, h25, vs
+; VBITS_EQ_256-NEXT:    fcmp h26, h26
+; VBITS_EQ_256-NEXT:    str h24, [sp, #36] // 2-byte Spill
+; VBITS_EQ_256-NEXT:    fcsel h26, h2, h26, vs
+; VBITS_EQ_256-NEXT:    fcmp h0, h0
+; VBITS_EQ_256-NEXT:    str h25, [sp, #34] // 2-byte Spill
+; VBITS_EQ_256-NEXT:    fcsel h0, h27, h0, vs
+; VBITS_EQ_256-NEXT:    str h26, [sp, #32] // 2-byte Spill
+; VBITS_EQ_256-NEXT:    fcmp h27, h0
+; VBITS_EQ_256-NEXT:    fcsel h0, h27, h0, gt
+; VBITS_EQ_256-NEXT:    fcmp h1, h1
+; VBITS_EQ_256-NEXT:    str h0, [sp, #94] // 2-byte Spill
+; VBITS_EQ_256-NEXT:    fcsel h0, h28, h1, vs
+; VBITS_EQ_256-NEXT:    fcmp h28, h0
+; VBITS_EQ_256-NEXT:    fcsel h0, h28, h0, gt
+; VBITS_EQ_256-NEXT:    fcmp h3, h3
+; VBITS_EQ_256-NEXT:    str h0, [sp, #92] // 2-byte Spill
+; VBITS_EQ_256-NEXT:    fcsel h0, h29, h3, vs
+; VBITS_EQ_256-NEXT:    fcmp h29, h0
+; VBITS_EQ_256-NEXT:    fcsel h0, h29, h0, gt
+; VBITS_EQ_256-NEXT:    fcmp h4, h4
+; VBITS_EQ_256-NEXT:    str h0, [sp, #90] // 2-byte Spill
+; VBITS_EQ_256-NEXT:    fcsel h0, h30, h4, vs
+; VBITS_EQ_256-NEXT:    fcmp h30, h0
+; VBITS_EQ_256-NEXT:    fcsel h0, h30, h0, gt
+; VBITS_EQ_256-NEXT:    fcmp h5, h5
+; VBITS_EQ_256-NEXT:    str h0, [sp, #88] // 2-byte Spill
+; VBITS_EQ_256-NEXT:    fcsel h0, h31, h5, vs
+; VBITS_EQ_256-NEXT:    fcmp h31, h0
+; VBITS_EQ_256-NEXT:    fcsel h0, h31, h0, gt
+; VBITS_EQ_256-NEXT:    fcmp h6, h6
+; VBITS_EQ_256-NEXT:    str h0, [sp, #86] // 2-byte Spill
+; VBITS_EQ_256-NEXT:    fcsel h0, h8, h6, vs
+; VBITS_EQ_256-NEXT:    fcmp h8, h0
+; VBITS_EQ_256-NEXT:    fcsel h0, h8, h0, gt
+; VBITS_EQ_256-NEXT:    fcmp h7, h7
+; VBITS_EQ_256-NEXT:    str h0, [sp, #84] // 2-byte Spill
+; VBITS_EQ_256-NEXT:    fcsel h0, h9, h7, vs
+; VBITS_EQ_256-NEXT:    fcmp h9, h0
+; VBITS_EQ_256-NEXT:    fcsel h0, h9, h0, gt
+; VBITS_EQ_256-NEXT:    fcmp h16, h16
+; VBITS_EQ_256-NEXT:    str h0, [sp, #82] // 2-byte Spill
+; VBITS_EQ_256-NEXT:    fcsel h0, h10, h16, vs
+; VBITS_EQ_256-NEXT:    fcmp h10, h0
+; VBITS_EQ_256-NEXT:    fcsel h0, h10, h0, gt
+; VBITS_EQ_256-NEXT:    fcmp h17, h17
+; VBITS_EQ_256-NEXT:    str h0, [sp, #80] // 2-byte Spill
+; VBITS_EQ_256-NEXT:    fcsel h0, h11, h17, vs
+; VBITS_EQ_256-NEXT:    fcmp h11, h0
+; VBITS_EQ_256-NEXT:    fcsel h0, h11, h0, gt
+; VBITS_EQ_256-NEXT:    fcmp h18, h18
+; VBITS_EQ_256-NEXT:    str h0, [sp, #74] // 2-byte Spill
+; VBITS_EQ_256-NEXT:    fcsel h0, h12, h18, vs
+; VBITS_EQ_256-NEXT:    fcmp h12, h0
+; VBITS_EQ_256-NEXT:    fcsel h0, h12, h0, gt
+; VBITS_EQ_256-NEXT:    fcmp h19, h19
+; VBITS_EQ_256-NEXT:    str h0, [sp, #72] // 2-byte Spill
+; VBITS_EQ_256-NEXT:    fcsel h0, h13, h19, vs
+; VBITS_EQ_256-NEXT:    fcmp h13, h0
+; VBITS_EQ_256-NEXT:    fcsel h0, h13, h0, gt
+; VBITS_EQ_256-NEXT:    fcmp h20, h20
+; VBITS_EQ_256-NEXT:    str h0, [sp, #68] // 2-byte Spill
+; VBITS_EQ_256-NEXT:    fcsel h0, h14, h20, vs
+; VBITS_EQ_256-NEXT:    fcmp h14, h0
+; VBITS_EQ_256-NEXT:    fcsel h0, h14, h0, gt
+; VBITS_EQ_256-NEXT:    fcmp h21, h21
+; VBITS_EQ_256-NEXT:    str h0, [sp, #64] // 2-byte Spill
+; VBITS_EQ_256-NEXT:    fcsel h0, h15, h21, vs
+; VBITS_EQ_256-NEXT:    fcmp h15, h0
+; VBITS_EQ_256-NEXT:    fcsel h0, h15, h0, gt
+; VBITS_EQ_256-NEXT:    fcmp h22, h22
+; VBITS_EQ_256-NEXT:    str h0, [sp, #60] // 2-byte Spill
+; VBITS_EQ_256-NEXT:    fcsel h0, h24, h22, vs
+; VBITS_EQ_256-NEXT:    fcmp h24, h0
+; VBITS_EQ_256-NEXT:    fcsel h0, h24, h0, gt
+; VBITS_EQ_256-NEXT:    fcmp h23, h23
+; VBITS_EQ_256-NEXT:    str h0, [sp, #56] // 2-byte Spill
+; VBITS_EQ_256-NEXT:    fcsel h0, h25, h23, vs
+; VBITS_EQ_256-NEXT:    fcmp h25, h0
+; VBITS_EQ_256-NEXT:    fcsel h0, h25, h0, gt
+; VBITS_EQ_256-NEXT:    fcmp h2, h2
+; VBITS_EQ_256-NEXT:    str h0, [sp, #50] // 2-byte Spill
+; VBITS_EQ_256-NEXT:    fcsel h0, h26, h2, vs
+; VBITS_EQ_256-NEXT:    ld1h { z2.h }, p0/z, [x0, x8, lsl #1]
+; VBITS_EQ_256-NEXT:    fcmp h26, h0
+; VBITS_EQ_256-NEXT:    mov z1.h, z2.h[15]
+; VBITS_EQ_256-NEXT:    mov z3.h, z2.h[14]
+; VBITS_EQ_256-NEXT:    mov z4.h, z2.h[6]
+; VBITS_EQ_256-NEXT:    mov z25.h, z2.h[3]
+; VBITS_EQ_256-NEXT:    mov z5.h, z2.h[2]
+; VBITS_EQ_256-NEXT:    fcsel h0, h26, h0, gt
+; VBITS_EQ_256-NEXT:    fcmp h2, h2
+; VBITS_EQ_256-NEXT:    str h0, [sp, #46] // 2-byte Spill
+; VBITS_EQ_256-NEXT:    ld1h { z0.h }, p0/z, [x1, x8, lsl #1]
+; VBITS_EQ_256-NEXT:    fcsel h15, h0, h2, vs
+; VBITS_EQ_256-NEXT:    fcmp h1, h1
+; VBITS_EQ_256-NEXT:    mov z8.h, z0.h[15]
+; VBITS_EQ_256-NEXT:    mov z29.h, z0.h[14]
+; VBITS_EQ_256-NEXT:    mov z27.h, z0.h[13]
+; VBITS_EQ_256-NEXT:    mov z24.h, z0.h[12]
+; VBITS_EQ_256-NEXT:    mov z21.h, z0.h[11]
+; VBITS_EQ_256-NEXT:    mov z19.h, z0.h[10]
+; VBITS_EQ_256-NEXT:    mov z16.h, z0.h[9]
+; VBITS_EQ_256-NEXT:    fcsel h14, h8, h1, vs
+; VBITS_EQ_256-NEXT:    fcmp h3, h3
+; VBITS_EQ_256-NEXT:    mov z1.h, z2.h[13]
+; VBITS_EQ_256-NEXT:    mov z6.h, z0.h[8]
+; VBITS_EQ_256-NEXT:    mov z7.h, z0.h[6]
+; VBITS_EQ_256-NEXT:    mov z18.h, z0.h[5]
+; VBITS_EQ_256-NEXT:    mov z22.h, z0.h[4]
+; VBITS_EQ_256-NEXT:    mov z26.h, z0.h[3]
+; VBITS_EQ_256-NEXT:    mov z30.h, z0.h[1]
+; VBITS_EQ_256-NEXT:    fcsel h13, h29, h3, vs
+; VBITS_EQ_256-NEXT:    fcmp h1, h1
+; VBITS_EQ_256-NEXT:    mov z3.h, z2.h[12]
+; VBITS_EQ_256-NEXT:    str h15, [sp, #128]
+; VBITS_EQ_256-NEXT:    str h14, [sp, #158]
+; VBITS_EQ_256-NEXT:    fcsel h12, h27, h1, vs
+; VBITS_EQ_256-NEXT:    fcmp h3, h3
+; VBITS_EQ_256-NEXT:    mov z1.h, z2.h[11]
+; VBITS_EQ_256-NEXT:    str h13, [sp, #156]
+; VBITS_EQ_256-NEXT:    fcsel h11, h24, h3, vs
+; VBITS_EQ_256-NEXT:    fcmp h1, h1
+; VBITS_EQ_256-NEXT:    mov z3.h, z2.h[10]
+; VBITS_EQ_256-NEXT:    str h12, [sp, #154]
+; VBITS_EQ_256-NEXT:    fcsel h10, h21, h1, vs
+; VBITS_EQ_256-NEXT:    fcmp h3, h3
+; VBITS_EQ_256-NEXT:    mov z1.h, z2.h[9]
+; VBITS_EQ_256-NEXT:    str h11, [sp, #152]
+; VBITS_EQ_256-NEXT:    fcsel h9, h19, h3, vs
+; VBITS_EQ_256-NEXT:    fcmp h1, h1
+; VBITS_EQ_256-NEXT:    mov z3.h, z2.h[8]
+; VBITS_EQ_256-NEXT:    str h10, [sp, #150]
+; VBITS_EQ_256-NEXT:    fcsel h31, h16, h1, vs
+; VBITS_EQ_256-NEXT:    fcmp h3, h3
+; VBITS_EQ_256-NEXT:    mov z1.h, z2.h[7]
+; VBITS_EQ_256-NEXT:    str h9, [sp, #148]
+; VBITS_EQ_256-NEXT:    fcsel h28, h6, h3, vs
+; VBITS_EQ_256-NEXT:    fcmp h1, h1
+; VBITS_EQ_256-NEXT:    mov z3.h, z0.h[7]
+; VBITS_EQ_256-NEXT:    str h31, [sp, #146]
+; VBITS_EQ_256-NEXT:    fcsel h23, h3, h1, vs
+; VBITS_EQ_256-NEXT:    fcmp h4, h4
+; VBITS_EQ_256-NEXT:    mov z1.h, z2.h[5]
+; VBITS_EQ_256-NEXT:    str h28, [sp, #144]
+; VBITS_EQ_256-NEXT:    fcsel h20, h7, h4, vs
+; VBITS_EQ_256-NEXT:    fcmp h1, h1
+; VBITS_EQ_256-NEXT:    mov z4.h, z2.h[4]
+; VBITS_EQ_256-NEXT:    str h23, [sp, #142]
+; VBITS_EQ_256-NEXT:    fcsel h17, h18, h1, vs
+; VBITS_EQ_256-NEXT:    fcmp h4, h4
+; VBITS_EQ_256-NEXT:    mov z1.h, z2.h[1]
+; VBITS_EQ_256-NEXT:    str h20, [sp, #140]
+; VBITS_EQ_256-NEXT:    fcsel h4, h22, h4, vs
+; VBITS_EQ_256-NEXT:    fcmp h25, h25
+; VBITS_EQ_256-NEXT:    str h17, [sp, #138]
+; VBITS_EQ_256-NEXT:    fcsel h2, h26, h25, vs
+; VBITS_EQ_256-NEXT:    fcmp h5, h5
+; VBITS_EQ_256-NEXT:    mov z25.h, z0.h[2]
+; VBITS_EQ_256-NEXT:    str h4, [sp, #136]
+; VBITS_EQ_256-NEXT:    fcsel h5, h25, h5, vs
+; VBITS_EQ_256-NEXT:    fcmp h1, h1
+; VBITS_EQ_256-NEXT:    str h2, [sp, #134]
+; VBITS_EQ_256-NEXT:    fcsel h1, h30, h1, vs
+; VBITS_EQ_256-NEXT:    fcmp h0, h0
+; VBITS_EQ_256-NEXT:    str h5, [sp, #132]
+; VBITS_EQ_256-NEXT:    fcsel h0, h15, h0, vs
+; VBITS_EQ_256-NEXT:    str h1, [sp, #130]
+; VBITS_EQ_256-NEXT:    fcmp h15, h0
+; VBITS_EQ_256-NEXT:    fcsel h0, h15, h0, gt
+; VBITS_EQ_256-NEXT:    fcmp h8, h8
+; VBITS_EQ_256-NEXT:    fcsel h8, h14, h8, vs
+; VBITS_EQ_256-NEXT:    str h0, [sp, #30] // 2-byte Spill
+; VBITS_EQ_256-NEXT:    ldr h0, [sp, #78] // 2-byte Reload
+; VBITS_EQ_256-NEXT:    str h0, [sp, #96]
+; VBITS_EQ_256-NEXT:    ldr h0, [sp, #76] // 2-byte Reload
+; VBITS_EQ_256-NEXT:    fcmp h14, h8
+; VBITS_EQ_256-NEXT:    str h0, [sp, #126]
+; VBITS_EQ_256-NEXT:    ldr h0, [sp, #70] // 2-byte Reload
+; VBITS_EQ_256-NEXT:    fcsel h8, h14, h8, gt
+; VBITS_EQ_256-NEXT:    fcmp h29, h29
+; VBITS_EQ_256-NEXT:    str h0, [sp, #124]
+; VBITS_EQ_256-NEXT:    ldr h0, [sp, #66] // 2-byte Reload
+; VBITS_EQ_256-NEXT:    fcsel h29, h13, h29, vs
+; VBITS_EQ_256-NEXT:    str h0, [sp, #122]
+; VBITS_EQ_256-NEXT:    ldr h0, [sp, #62] // 2-byte Reload
+; VBITS_EQ_256-NEXT:    str h8, [sp, #222]
+; VBITS_EQ_256-NEXT:    str h0, [sp, #120]
+; VBITS_EQ_256-NEXT:    ldr h0, [sp, #58] // 2-byte Reload
+; VBITS_EQ_256-NEXT:    fcmp h13, h29
+; VBITS_EQ_256-NEXT:    str h0, [sp, #118]
+; VBITS_EQ_256-NEXT:    ldr h0, [sp, #54] // 2-byte Reload
+; VBITS_EQ_256-NEXT:    fcsel h29, h13, h29, gt
+; VBITS_EQ_256-NEXT:    fcmp h27, h27
+; VBITS_EQ_256-NEXT:    str h0, [sp, #116]
+; VBITS_EQ_256-NEXT:    ldr h0, [sp, #52] // 2-byte Reload
+; VBITS_EQ_256-NEXT:    fcsel h27, h12, h27, vs
+; VBITS_EQ_256-NEXT:    str h0, [sp, #114]
+; VBITS_EQ_256-NEXT:    ldr h0, [sp, #48] // 2-byte Reload
+; VBITS_EQ_256-NEXT:    str h29, [sp, #220]
+; VBITS_EQ_256-NEXT:    str h0, [sp, #112]
+; VBITS_EQ_256-NEXT:    ldr h0, [sp, #44] // 2-byte Reload
+; VBITS_EQ_256-NEXT:    fcmp h12, h27
+; VBITS_EQ_256-NEXT:    str h0, [sp, #110]
+; VBITS_EQ_256-NEXT:    ldr h0, [sp, #42] // 2-byte Reload
+; VBITS_EQ_256-NEXT:    fcsel h27, h12, h27, gt
+; VBITS_EQ_256-NEXT:    fcmp h24, h24
+; VBITS_EQ_256-NEXT:    str h0, [sp, #108]
+; VBITS_EQ_256-NEXT:    ldr h0, [sp, #40] // 2-byte Reload
+; VBITS_EQ_256-NEXT:    fcsel h24, h11, h24, vs
+; VBITS_EQ_256-NEXT:    str h0, [sp, #106]
+; VBITS_EQ_256-NEXT:    ldr h0, [sp, #38] // 2-byte Reload
+; VBITS_EQ_256-NEXT:    str h27, [sp, #218]
+; VBITS_EQ_256-NEXT:    str h0, [sp, #104]
+; VBITS_EQ_256-NEXT:    ldr h0, [sp, #36] // 2-byte Reload
+; VBITS_EQ_256-NEXT:    fcmp h11, h24
+; VBITS_EQ_256-NEXT:    str h0, [sp, #102]
+; VBITS_EQ_256-NEXT:    ldr h0, [sp, #34] // 2-byte Reload
+; VBITS_EQ_256-NEXT:    fcsel h24, h11, h24, gt
+; VBITS_EQ_256-NEXT:    fcmp h21, h21
+; VBITS_EQ_256-NEXT:    str h0, [sp, #100]
+; VBITS_EQ_256-NEXT:    ldr h0, [sp, #32] // 2-byte Reload
+; VBITS_EQ_256-NEXT:    fcsel h21, h10, h21, vs
+; VBITS_EQ_256-NEXT:    str h0, [sp, #98]
+; VBITS_EQ_256-NEXT:    ldr h0, [sp, #94] // 2-byte Reload
+; VBITS_EQ_256-NEXT:    str h24, [sp, #216]
+; VBITS_EQ_256-NEXT:    str h0, [sp, #160]
+; VBITS_EQ_256-NEXT:    ldr h0, [sp, #92] // 2-byte Reload
+; VBITS_EQ_256-NEXT:    fcmp h10, h21
+; VBITS_EQ_256-NEXT:    str h0, [sp, #190]
+; VBITS_EQ_256-NEXT:    ldr h0, [sp, #90] // 2-byte Reload
+; VBITS_EQ_256-NEXT:    fcsel h21, h10, h21, gt
+; VBITS_EQ_256-NEXT:    fcmp h19, h19
+; VBITS_EQ_256-NEXT:    str h0, [sp, #188]
+; VBITS_EQ_256-NEXT:    ldr h0, [sp, #88] // 2-byte Reload
+; VBITS_EQ_256-NEXT:    fcsel h19, h9, h19, vs
+; VBITS_EQ_256-NEXT:    str h0, [sp, #186]
+; VBITS_EQ_256-NEXT:    ldr h0, [sp, #86] // 2-byte Reload
+; VBITS_EQ_256-NEXT:    str h21, [sp, #214]
+; VBITS_EQ_256-NEXT:    str h0, [sp, #184]
+; VBITS_EQ_256-NEXT:    ldr h0, [sp, #84] // 2-byte Reload
+; VBITS_EQ_256-NEXT:    fcmp h9, h19
+; VBITS_EQ_256-NEXT:    str h0, [sp, #182]
+; VBITS_EQ_256-NEXT:    ldr h0, [sp, #82] // 2-byte Reload
+; VBITS_EQ_256-NEXT:    fcsel h19, h9, h19, gt
+; VBITS_EQ_256-NEXT:    fcmp h16, h16
+; VBITS_EQ_256-NEXT:    str h0, [sp, #180]
+; VBITS_EQ_256-NEXT:    ldr h0, [sp, #80] // 2-byte Reload
+; VBITS_EQ_256-NEXT:    fcsel h16, h31, h16, vs
+; VBITS_EQ_256-NEXT:    str h0, [sp, #178]
+; VBITS_EQ_256-NEXT:    ldr h0, [sp, #74] // 2-byte Reload
+; VBITS_EQ_256-NEXT:    str h19, [sp, #212]
+; VBITS_EQ_256-NEXT:    str h0, [sp, #176]
+; VBITS_EQ_256-NEXT:    ldr h0, [sp, #72] // 2-byte Reload
+; VBITS_EQ_256-NEXT:    fcmp h31, h16
+; VBITS_EQ_256-NEXT:    str h0, [sp, #174]
+; VBITS_EQ_256-NEXT:    ldr h0, [sp, #68] // 2-byte Reload
+; VBITS_EQ_256-NEXT:    fcsel h16, h31, h16, gt
+; VBITS_EQ_256-NEXT:    fcmp h6, h6
+; VBITS_EQ_256-NEXT:    str h0, [sp, #172]
+; VBITS_EQ_256-NEXT:    ldr h0, [sp, #64] // 2-byte Reload
+; VBITS_EQ_256-NEXT:    fcsel h6, h28, h6, vs
+; VBITS_EQ_256-NEXT:    str h0, [sp, #170]
+; VBITS_EQ_256-NEXT:    ldr h0, [sp, #60] // 2-byte Reload
+; VBITS_EQ_256-NEXT:    str h16, [sp, #210]
+; VBITS_EQ_256-NEXT:    str h0, [sp, #168]
+; VBITS_EQ_256-NEXT:    ldr h0, [sp, #56] // 2-byte Reload
+; VBITS_EQ_256-NEXT:    fcmp h28, h6
+; VBITS_EQ_256-NEXT:    str h0, [sp, #166]
+; VBITS_EQ_256-NEXT:    ldr h0, [sp, #50] // 2-byte Reload
+; VBITS_EQ_256-NEXT:    fcsel h6, h28, h6, gt
+; VBITS_EQ_256-NEXT:    fcmp h3, h3
+; VBITS_EQ_256-NEXT:    str h0, [sp, #164]
+; VBITS_EQ_256-NEXT:    ldr h0, [sp, #46] // 2-byte Reload
+; VBITS_EQ_256-NEXT:    fcsel h3, h23, h3, vs
+; VBITS_EQ_256-NEXT:    str h0, [sp, #162]
+; VBITS_EQ_256-NEXT:    ldr h0, [sp, #30] // 2-byte Reload
+; VBITS_EQ_256-NEXT:    str h6, [sp, #208]
+; VBITS_EQ_256-NEXT:    str h0, [sp, #192]
+; VBITS_EQ_256-NEXT:    fcmp h23, h3
+; VBITS_EQ_256-NEXT:    fcsel h3, h23, h3, gt
+; VBITS_EQ_256-NEXT:    fcmp h7, h7
+; VBITS_EQ_256-NEXT:    fcsel h7, h20, h7, vs
+; VBITS_EQ_256-NEXT:    str h3, [sp, #206]
+; VBITS_EQ_256-NEXT:    fcmp h20, h7
+; VBITS_EQ_256-NEXT:    fcsel h7, h20, h7, gt
+; VBITS_EQ_256-NEXT:    fcmp h18, h18
+; VBITS_EQ_256-NEXT:    fcsel h18, h17, h18, vs
+; VBITS_EQ_256-NEXT:    str h7, [sp, #204]
+; VBITS_EQ_256-NEXT:    fcmp h17, h18
+; VBITS_EQ_256-NEXT:    fcsel h18, h17, h18, gt
+; VBITS_EQ_256-NEXT:    fcmp h22, h22
+; VBITS_EQ_256-NEXT:    fcsel h22, h4, h22, vs
+; VBITS_EQ_256-NEXT:    str h18, [sp, #202]
+; VBITS_EQ_256-NEXT:    fcmp h4, h22
+; VBITS_EQ_256-NEXT:    fcsel h22, h4, h22, gt
+; VBITS_EQ_256-NEXT:    fcmp h26, h26
+; VBITS_EQ_256-NEXT:    fcsel h26, h2, h26, vs
+; VBITS_EQ_256-NEXT:    str h22, [sp, #200]
+; VBITS_EQ_256-NEXT:    fcmp h2, h26
+; VBITS_EQ_256-NEXT:    fcsel h20, h2, h26, gt
+; VBITS_EQ_256-NEXT:    fcmp h25, h25
+; VBITS_EQ_256-NEXT:    fcsel h2, h5, h25, vs
+; VBITS_EQ_256-NEXT:    str h20, [sp, #198]
+; VBITS_EQ_256-NEXT:    fcmp h5, h2
+; VBITS_EQ_256-NEXT:    fcsel h0, h5, h2, gt
+; VBITS_EQ_256-NEXT:    fcmp h30, h30
+; VBITS_EQ_256-NEXT:    fcsel h2, h1, h30, vs
+; VBITS_EQ_256-NEXT:    str h0, [sp, #196]
+; VBITS_EQ_256-NEXT:    ld1h { z0.h }, p0/z, [x9]
+; VBITS_EQ_256-NEXT:    add x9, sp, #96
+; VBITS_EQ_256-NEXT:    fcmp h1, h2
+; VBITS_EQ_256-NEXT:    fcsel h1, h1, h2, gt
+; VBITS_EQ_256-NEXT:    str h1, [sp, #194]
+; VBITS_EQ_256-NEXT:    ld1h { z1.h }, p0/z, [x10]
+; VBITS_EQ_256-NEXT:    ld1h { z2.h }, p0/z, [x9]
+; VBITS_EQ_256-NEXT:    add x9, sp, #192
+; VBITS_EQ_256-NEXT:    cmpeq p1.h, p0/z, z1.h, z0.h
+; VBITS_EQ_256-NEXT:    cmpeq p2.h, p0/z, z2.h, z0.h
+; VBITS_EQ_256-NEXT:    mov z0.h, p1/z, #-1 // =0xffffffffffffffff
+; VBITS_EQ_256-NEXT:    mov z3.h, p2/z, #-1 // =0xffffffffffffffff
+; VBITS_EQ_256-NEXT:    ptrue p1.h
+; VBITS_EQ_256-NEXT:    and z0.h, z0.h, #0x1
+; VBITS_EQ_256-NEXT:    and z3.h, z3.h, #0x1
+; VBITS_EQ_256-NEXT:    cmpne p2.h, p1/z, z0.h, #0
+; VBITS_EQ_256-NEXT:    ld1h { z0.h }, p0/z, [x9]
+; VBITS_EQ_256-NEXT:    add x9, sp, #160
+; VBITS_EQ_256-NEXT:    cmpne p1.h, p1/z, z3.h, #0
+; VBITS_EQ_256-NEXT:    ld1h { z3.h }, p0/z, [x9]
+; VBITS_EQ_256-NEXT:    fcmeq p3.h, p0/z, z0.h, #0.0
+; VBITS_EQ_256-NEXT:    sel z1.h, p2, z1.h, z0.h
+; VBITS_EQ_256-NEXT:    fcmeq p2.h, p0/z, z3.h, #0.0
+; VBITS_EQ_256-NEXT:    sel z2.h, p1, z2.h, z3.h
+; VBITS_EQ_256-NEXT:    mov z0.h, p3/m, z1.h
+; VBITS_EQ_256-NEXT:    sel z1.h, p2, z2.h, z3.h
+; VBITS_EQ_256-NEXT:    st1h { z0.h }, p0, [x0, x8, lsl #1]
+; VBITS_EQ_256-NEXT:    st1h { z1.h }, p0, [x0]
+; VBITS_EQ_256-NEXT:    sub sp, x29, #64
+; VBITS_EQ_256-NEXT:    ldp x29, x30, [sp, #64] // 16-byte Folded Reload
+; VBITS_EQ_256-NEXT:    ldp d9, d8, [sp, #48] // 16-byte Folded Reload
+; VBITS_EQ_256-NEXT:    ldp d11, d10, [sp, #32] // 16-byte Folded Reload
+; VBITS_EQ_256-NEXT:    ldp d13, d12, [sp, #16] // 16-byte Folded Reload
+; VBITS_EQ_256-NEXT:    ldp d15, d14, [sp], #80 // 16-byte Folded Reload
+; VBITS_EQ_256-NEXT:    ret
+;
+; VBITS_GE_512-LABEL: fmaximumnum_v32f16:
+; VBITS_GE_512:       // %bb.0:
+; VBITS_GE_512-NEXT:    stp d15, d14, [sp, #-80]! // 16-byte Folded Spill
+; VBITS_GE_512-NEXT:    sub x9, sp, #304
+; VBITS_GE_512-NEXT:    stp d13, d12, [sp, #16] // 16-byte Folded Spill
+; VBITS_GE_512-NEXT:    addvl x9, x9, #-16
+; VBITS_GE_512-NEXT:    stp d11, d10, [sp, #32] // 16-byte Folded Spill
+; VBITS_GE_512-NEXT:    stp d9, d8, [sp, #48] // 16-byte Folded Spill
+; VBITS_GE_512-NEXT:    stp x29, x30, [sp, #64] // 16-byte Folded Spill
+; VBITS_GE_512-NEXT:    add x29, sp, #64
+; VBITS_GE_512-NEXT:    and sp, x9, #0xffffffffffffffc0
+; VBITS_GE_512-NEXT:    .cfi_def_cfa w29, 16
+; VBITS_GE_512-NEXT:    .cfi_offset w30, -8
+; VBITS_GE_512-NEXT:    .cfi_offset w29, -16
+; VBITS_GE_512-NEXT:    .cfi_offset b8, -24
+; VBITS_GE_512-NEXT:    .cfi_offset b9, -32
+; VBITS_GE_512-NEXT:    .cfi_offset b10, -40
+; VBITS_GE_512-NEXT:    .cfi_offset b11, -48
+; VBITS_GE_512-NEXT:    .cfi_offset b12, -56
+; VBITS_GE_512-NEXT:    .cfi_offset b13, -64
+; VBITS_GE_512-NEXT:    .cfi_offset b14, -72
+; VBITS_GE_512-NEXT:    .cfi_offset b15, -80
+; VBITS_GE_512-NEXT:    ptrue p0.h, vl32
+; VBITS_GE_512-NEXT:    sub x9, x29, #64
+; VBITS_GE_512-NEXT:    adrp x8, .LCPI75_0
+; VBITS_GE_512-NEXT:    add x8, x8, :lo12:.LCPI75_0
+; VBITS_GE_512-NEXT:    ld1h { z25.h }, p0/z, [x0]
+; VBITS_GE_512-NEXT:    ld1h { z21.h }, p0/z, [x1]
+; VBITS_GE_512-NEXT:    fcmp h25, h25
+; VBITS_GE_512-NEXT:    mov z0.h, z25.h[31]
+; VBITS_GE_512-NEXT:    mov z6.h, z21.h[31]
+; VBITS_GE_512-NEXT:    mov z1.h, z25.h[30]
+; VBITS_GE_512-NEXT:    mov z23.h, z21.h[30]
+; VBITS_GE_512-NEXT:    mov z4.h, z21.h[29]
+; VBITS_GE_512-NEXT:    mov z3.h, z21.h[28]
+; VBITS_GE_512-NEXT:    mov z30.h, z21.h[26]
+; VBITS_GE_512-NEXT:    mov z5.h, z21.h[19]
+; VBITS_GE_512-NEXT:    fcsel h2, h21, h25, vs
+; VBITS_GE_512-NEXT:    fcmp h0, h0
+; VBITS_GE_512-NEXT:    mov z14.h, z21.h[16]
+; VBITS_GE_512-NEXT:    str z4, [x9, #-3, mul vl] // 16-byte Folded Spill
+; VBITS_GE_512-NEXT:    mov z11.h, z21.h[15]
+; VBITS_GE_512-NEXT:    mov z8.h, z21.h[14]
+; VBITS_GE_512-NEXT:    str z3, [x9, #-1, mul vl] // 16-byte Folded Spill
+; VBITS_GE_512-NEXT:    mov z31.h, z21.h[13]
+; VBITS_GE_512-NEXT:    mov z28.h, z21.h[12]
+; VBITS_GE_512-NEXT:    str h2, [sp, #126] // 2-byte Spill
+; VBITS_GE_512-NEXT:    mov z2.h, z25.h[29]
+; VBITS_GE_512-NEXT:    fcsel h0, h6, h0, vs
+; VBITS_GE_512-NEXT:    fcmp h1, h1
+; VBITS_GE_512-NEXT:    mov z26.h, z21.h[11]
+; VBITS_GE_512-NEXT:    mov z24.h, z21.h[10]
+; VBITS_GE_512-NEXT:    mov z20.h, z21.h[9]
+; VBITS_GE_512-NEXT:    mov z18.h, z21.h[8]
+; VBITS_GE_512-NEXT:    mov z16.h, z21.h[7]
+; VBITS_GE_512-NEXT:    str h0, [sp, #124] // 2-byte Spill
+; VBITS_GE_512-NEXT:    mov z0.h, z25.h[28]
+; VBITS_GE_512-NEXT:    mov z19.h, z21.h[6]
+; VBITS_GE_512-NEXT:    fcsel h1, h23, h1, vs
+; VBITS_GE_512-NEXT:    fcmp h2, h2
+; VBITS_GE_512-NEXT:    str z5, [x9, #-10, mul vl] // 16-byte Folded Spill
+; VBITS_GE_512-NEXT:    mov z9.h, z25.h[2]
+; VBITS_GE_512-NEXT:    str h1, [sp, #122] // 2-byte Spill
+; VBITS_GE_512-NEXT:    mov z1.h, z25.h[27]
+; VBITS_GE_512-NEXT:    fcsel h2, h4, h2, vs
+; VBITS_GE_512-NEXT:    fcmp h0, h0
+; VBITS_GE_512-NEXT:    mov z4.h, z21.h[27]
+; VBITS_GE_512-NEXT:    str h2, [sp, #120] // 2-byte Spill
+; VBITS_GE_512-NEXT:    mov z2.h, z25.h[26]
+; VBITS_GE_512-NEXT:    fcsel h0, h3, h0, vs
+; VBITS_GE_512-NEXT:    fcmp h1, h1
+; VBITS_GE_512-NEXT:    mov z3.h, z21.h[25]
+; VBITS_GE_512-NEXT:    str z4, [x9, #-2, mul vl] // 16-byte Folded Spill
+; VBITS_GE_512-NEXT:    str h0, [sp, #118] // 2-byte Spill
+; VBITS_GE_512-NEXT:    mov z0.h, z25.h[25]
+; VBITS_GE_512-NEXT:    fcsel h1, h4, h1, vs
+; VBITS_GE_512-NEXT:    fcmp h2, h2
+; VBITS_GE_512-NEXT:    mov z4.h, z21.h[24]
+; VBITS_GE_512-NEXT:    str z3, [x9, #-4, mul vl] // 16-byte Folded Spill
+; VBITS_GE_512-NEXT:    str h1, [sp, #116] // 2-byte Spill
+; VBITS_GE_512-NEXT:    mov z1.h, z25.h[24]
+; VBITS_GE_512-NEXT:    fcsel h2, h30, h2, vs
+; VBITS_GE_512-NEXT:    fcmp h0, h0
+; VBITS_GE_512-NEXT:    str z4, [x9, #-5, mul vl] // 16-byte Folded Spill
+; VBITS_GE_512-NEXT:    str h2, [sp, #114] // 2-byte Spill
+; VBITS_GE_512-NEXT:    mov z2.h, z25.h[23]
+; VBITS_GE_512-NEXT:    fcsel h0, h3, h0, vs
+; VBITS_GE_512-NEXT:    fcmp h1, h1
+; VBITS_GE_512-NEXT:    mov z3.h, z21.h[23]
+; VBITS_GE_512-NEXT:    str h0, [sp, #112] // 2-byte Spill
+; VBITS_GE_512-NEXT:    mov z0.h, z25.h[22]
+; VBITS_GE_512-NEXT:    fcsel h1, h4, h1, vs
+; VBITS_GE_512-NEXT:    fcmp h2, h2
+; VBITS_GE_512-NEXT:    mov z4.h, z21.h[22]
+; VBITS_GE_512-NEXT:    str z3, [x9, #-6, mul vl] // 16-byte Folded Spill
+; VBITS_GE_512-NEXT:    str h1, [sp, #110] // 2-byte Spill
+; VBITS_GE_512-NEXT:    mov z1.h, z25.h[21]
+; VBITS_GE_512-NEXT:    fcsel h2, h3, h2, vs
+; VBITS_GE_512-NEXT:    fcmp h0, h0
+; VBITS_GE_512-NEXT:    mov z3.h, z21.h[21]
+; VBITS_GE_512-NEXT:    str z4, [x9, #-7, mul vl] // 16-byte Folded Spill
+; VBITS_GE_512-NEXT:    str h2, [sp, #108] // 2-byte Spill
+; VBITS_GE_512-NEXT:    mov z2.h, z25.h[20]
+; VBITS_GE_512-NEXT:    fcsel h0, h4, h0, vs
+; VBITS_GE_512-NEXT:    fcmp h1, h1
+; VBITS_GE_512-NEXT:    mov z4.h, z21.h[20]
+; VBITS_GE_512-NEXT:    str h0, [sp, #106] // 2-byte Spill
+; VBITS_GE_512-NEXT:    mov z0.h, z25.h[19]
+; VBITS_GE_512-NEXT:    fcsel h1, h3, h1, vs
+; VBITS_GE_512-NEXT:    fcmp h2, h2
+; VBITS_GE_512-NEXT:    str z4, [x9, #-8, mul vl] // 16-byte Folded Spill
+; VBITS_GE_512-NEXT:    str h1, [sp, #104] // 2-byte Spill
+; VBITS_GE_512-NEXT:    mov z1.h, z25.h[18]
+; VBITS_GE_512-NEXT:    fcsel h2, h4, h2, vs
+; VBITS_GE_512-NEXT:    fcmp h0, h0
+; VBITS_GE_512-NEXT:    mov z4.h, z21.h[18]
+; VBITS_GE_512-NEXT:    fcsel h0, h5, h0, vs
+; VBITS_GE_512-NEXT:    fcmp h1, h1
+; VBITS_GE_512-NEXT:    str h2, [sp, #102] // 2-byte Spill
+; VBITS_GE_512-NEXT:    mov z2.h, z25.h[17]
+; VBITS_GE_512-NEXT:    str z4, [x9, #-9, mul vl] // 16-byte Folded Spill
+; VBITS_GE_512-NEXT:    str h0, [sp, #98] // 2-byte Spill
+; VBITS_GE_512-NEXT:    fcsel h0, h4, h1, vs
+; VBITS_GE_512-NEXT:    mov z1.h, z21.h[17]
+; VBITS_GE_512-NEXT:    fcmp h2, h2
+; VBITS_GE_512-NEXT:    mov z4.h, z25.h[3]
+; VBITS_GE_512-NEXT:    str h0, [sp, #100] // 2-byte Spill
+; VBITS_GE_512-NEXT:    mov z0.h, z25.h[16]
+; VBITS_GE_512-NEXT:    fcsel h2, h1, h2, vs
+; VBITS_GE_512-NEXT:    str z1, [x9, #-11, mul vl] // 16-byte Folded Spill
+; VBITS_GE_512-NEXT:    mov z1.h, z25.h[15]
+; VBITS_GE_512-NEXT:    fcmp h0, h0
+; VBITS_GE_512-NEXT:    str h2, [sp, #96] // 2-byte Spill
+; VBITS_GE_512-NEXT:    mov z2.h, z25.h[4]
+; VBITS_GE_512-NEXT:    fcsel h0, h14, h0, vs
+; VBITS_GE_512-NEXT:    fcmp h1, h1
+; VBITS_GE_512-NEXT:    str h0, [sp, #94] // 2-byte Spill
+; VBITS_GE_512-NEXT:    mov z0.h, z25.h[14]
+; VBITS_GE_512-NEXT:    fcsel h1, h11, h1, vs
+; VBITS_GE_512-NEXT:    fcmp h0, h0
+; VBITS_GE_512-NEXT:    str h1, [sp, #92] // 2-byte Spill
+; VBITS_GE_512-NEXT:    mov z1.h, z25.h[13]
+; VBITS_GE_512-NEXT:    fcsel h0, h8, h0, vs
+; VBITS_GE_512-NEXT:    fcmp h1, h1
+; VBITS_GE_512-NEXT:    str h0, [sp, #90] // 2-byte Spill
+; VBITS_GE_512-NEXT:    mov z0.h, z25.h[12]
+; VBITS_GE_512-NEXT:    fcsel h1, h31, h1, vs
+; VBITS_GE_512-NEXT:    fcmp h0, h0
+; VBITS_GE_512-NEXT:    str h1, [sp, #88] // 2-byte Spill
+; VBITS_GE_512-NEXT:    mov z1.h, z25.h[11]
+; VBITS_GE_512-NEXT:    fcsel h0, h28, h0, vs
+; VBITS_GE_512-NEXT:    fcmp h1, h1
+; VBITS_GE_512-NEXT:    str h0, [sp, #86] // 2-byte Spill
+; VBITS_GE_512-NEXT:    mov z0.h, z25.h[10]
+; VBITS_GE_512-NEXT:    fcsel h15, h26, h1, vs
+; VBITS_GE_512-NEXT:    mov z1.h, z25.h[9]
+; VBITS_GE_512-NEXT:    fcmp h0, h0
+; VBITS_GE_512-NEXT:    fcsel h13, h24, h0, vs
+; VBITS_GE_512-NEXT:    fcmp h1, h1
+; VBITS_GE_512-NEXT:    mov z0.h, z25.h[8]
+; VBITS_GE_512-NEXT:    fcsel h12, h20, h1, vs
+; VBITS_GE_512-NEXT:    fcmp h0, h0
+; VBITS_GE_512-NEXT:    mov z1.h, z25.h[7]
+; VBITS_GE_512-NEXT:    fcsel h10, h18, h0, vs
+; VBITS_GE_512-NEXT:    fcmp h1, h1
+; VBITS_GE_512-NEXT:    mov z0.h, z25.h[6]
+; VBITS_GE_512-NEXT:    fcsel h29, h16, h1, vs
+; VBITS_GE_512-NEXT:    fcmp h0, h0
+; VBITS_GE_512-NEXT:    mov z1.h, z25.h[5]
+; VBITS_GE_512-NEXT:    mov z25.h, z25.h[1]
+; VBITS_GE_512-NEXT:    fcsel h22, h19, h0, vs
+; VBITS_GE_512-NEXT:    fcmp h1, h1
+; VBITS_GE_512-NEXT:    mov z0.h, z21.h[5]
+; VBITS_GE_512-NEXT:    str z0, [x9, #-16, mul vl] // 16-byte Folded Spill
+; VBITS_GE_512-NEXT:    fcsel h7, h0, h1, vs
+; VBITS_GE_512-NEXT:    fcmp h2, h2
+; VBITS_GE_512-NEXT:    mov z0.h, z21.h[4]
+; VBITS_GE_512-NEXT:    str z0, [x9, #-15, mul vl] // 16-byte Folded Spill
+; VBITS_GE_512-NEXT:    fcsel h5, h0, h2, vs
+; VBITS_GE_512-NEXT:    fcmp h4, h4
+; VBITS_GE_512-NEXT:    mov z0.h, z21.h[3]
+; VBITS_GE_512-NEXT:    ldr h2, [sp, #90] // 2-byte Reload
+; VBITS_GE_512-NEXT:    str z0, [x9, #-14, mul vl] // 16-byte Folded Spill
+; VBITS_GE_512-NEXT:    fcsel h17, h0, h4, vs
+; VBITS_GE_512-NEXT:    fcmp h9, h9
+; VBITS_GE_512-NEXT:    mov z0.h, z21.h[2]
+; VBITS_GE_512-NEXT:    ldr z4, [x9, #-1, mul vl] // 16-byte Folded Reload
+; VBITS_GE_512-NEXT:    str z0, [x9, #-13, mul vl] // 16-byte Folded Spill
+; VBITS_GE_512-NEXT:    fcsel h27, h0, h9, vs
+; VBITS_GE_512-NEXT:    fcmp h25, h25
+; VBITS_GE_512-NEXT:    mov z0.h, z21.h[1]
+; VBITS_GE_512-NEXT:    ldr h9, [sp, #102] // 2-byte Reload
+; VBITS_GE_512-NEXT:    fcsel h25, h0, h25, vs
+; VBITS_GE_512-NEXT:    fcmp h21, h21
+; VBITS_GE_512-NEXT:    str z0, [x9, #-12, mul vl] // 16-byte Folded Spill
+; VBITS_GE_512-NEXT:    ldr h0, [sp, #126] // 2-byte Reload
+; VBITS_GE_512-NEXT:    fcsel h21, h0, h21, vs
+; VBITS_GE_512-NEXT:    fcmp h0, h21
+; VBITS_GE_512-NEXT:    fcsel h1, h0, h21, gt
+; VBITS_GE_512-NEXT:    fcmp h6, h6
+; VBITS_GE_512-NEXT:    ldr h0, [sp, #124] // 2-byte Reload
+; VBITS_GE_512-NEXT:    fcsel h21, h0, h6, vs
+; VBITS_GE_512-NEXT:    str h1, [sp, #84] // 2-byte Spill
+; VBITS_GE_512-NEXT:    ldr h6, [sp, #96] // 2-byte Reload
+; VBITS_GE_512-NEXT:    fcmp h0, h21
+; VBITS_GE_512-NEXT:    fcsel h1, h0, h21, gt
+; VBITS_GE_512-NEXT:    fcmp h23, h23
+; VBITS_GE_512-NEXT:    ldr h0, [sp, #122] // 2-byte Reload
+; VBITS_GE_512-NEXT:    fcsel h21, h0, h23, vs
+; VBITS_GE_512-NEXT:    str h1, [sp, #82] // 2-byte Spill
+; VBITS_GE_512-NEXT:    ldr h23, [sp, #100] // 2-byte Reload
+; VBITS_GE_512-NEXT:    fcmp h0, h21
+; VBITS_GE_512-NEXT:    fcsel h1, h0, h21, gt
+; VBITS_GE_512-NEXT:    ldr h0, [sp, #120] // 2-byte Reload
+; VBITS_GE_512-NEXT:    str h1, [sp, #80] // 2-byte Spill
+; VBITS_GE_512-NEXT:    ldr z1, [x9, #-3, mul vl] // 16-byte Folded Reload
+; VBITS_GE_512-NEXT:    fcmp h1, h1
+; VBITS_GE_512-NEXT:    fcsel h21, h0, h1, vs
+; VBITS_GE_512-NEXT:    fcmp h0, h21
+; VBITS_GE_512-NEXT:    fcsel h1, h0, h21, gt
+; VBITS_GE_512-NEXT:    fcmp h4, h4
+; VBITS_GE_512-NEXT:    ldr h0, [sp, #118] // 2-byte Reload
+; VBITS_GE_512-NEXT:    fcsel h21, h0, h4, vs
+; VBITS_GE_512-NEXT:    ldr z4, [x9, #-2, mul vl] // 16-byte Folded Reload
+; VBITS_GE_512-NEXT:    str h1, [sp, #78] // 2-byte Spill
+; VBITS_GE_512-NEXT:    fcmp h0, h21
+; VBITS_GE_512-NEXT:    fcsel h1, h0, h21, gt
+; VBITS_GE_512-NEXT:    fcmp h4, h4
+; VBITS_GE_512-NEXT:    ldr h0, [sp, #116] // 2-byte Reload
+; VBITS_GE_512-NEXT:    fcsel h21, h0, h4, vs
+; VBITS_GE_512-NEXT:    str h1, [sp, #76] // 2-byte Spill
+; VBITS_GE_512-NEXT:    ldr h4, [sp, #94] // 2-byte Reload
+; VBITS_GE_512-NEXT:    fcmp h0, h21
+; VBITS_GE_512-NEXT:    fcsel h1, h0, h21, gt
+; VBITS_GE_512-NEXT:    fcmp h30, h30
+; VBITS_GE_512-NEXT:    ldr h0, [sp, #114] // 2-byte Reload
+; VBITS_GE_512-NEXT:    fcsel h21, h0, h30, vs
+; VBITS_GE_512-NEXT:    str h1, [sp, #74] // 2-byte Spill
+; VBITS_GE_512-NEXT:    ldr h30, [sp, #98] // 2-byte Reload
+; VBITS_GE_512-NEXT:    fcmp h0, h21
+; VBITS_GE_512-NEXT:    fcsel h1, h0, h21, gt
+; VBITS_GE_512-NEXT:    ldr h0, [sp, #112] // 2-byte Reload
+; VBITS_GE_512-NEXT:    str h1, [sp, #72] // 2-byte Spill
+; VBITS_GE_512-NEXT:    ldr z1, [x9, #-4, mul vl] // 16-byte Folded Reload
+; VBITS_GE_512-NEXT:    fcmp h1, h1
+; VBITS_GE_512-NEXT:    fcsel h21, h0, h1, vs
+; VBITS_GE_512-NEXT:    fcmp h0, h21
+; VBITS_GE_512-NEXT:    fcsel h1, h0, h21, gt
+; VBITS_GE_512-NEXT:    ldr h0, [sp, #110] // 2-byte Reload
+; VBITS_GE_512-NEXT:    str h1, [sp, #70] // 2-byte Spill
+; VBITS_GE_512-NEXT:    ldr z1, [x9, #-5, mul vl] // 16-byte Folded Reload
+; VBITS_GE_512-NEXT:    fcmp h1, h1
+; VBITS_GE_512-NEXT:    fcsel h21, h0, h1, vs
+; VBITS_GE_512-NEXT:    fcmp h0, h21
+; VBITS_GE_512-NEXT:    fcsel h1, h0, h21, gt
+; VBITS_GE_512-NEXT:    ldr h0, [sp, #108] // 2-byte Reload
+; VBITS_GE_512-NEXT:    str h1, [sp, #68] // 2-byte Spill
+; VBITS_GE_512-NEXT:    ldr z1, [x9, #-6, mul vl] // 16-byte Folded Reload
+; VBITS_GE_512-NEXT:    fcmp h1, h1
+; VBITS_GE_512-NEXT:    fcsel h21, h0, h1, vs
+; VBITS_GE_512-NEXT:    fcmp h0, h21
+; VBITS_GE_512-NEXT:    fcsel h1, h0, h21, gt
+; VBITS_GE_512-NEXT:    ldr h0, [sp, #106] // 2-byte Reload
+; VBITS_GE_512-NEXT:    str h1, [sp, #66] // 2-byte Spill
+; VBITS_GE_512-NEXT:    ldr z1, [x9, #-7, mul vl] // 16-byte Folded Reload
+; VBITS_GE_512-NEXT:    fcmp h1, h1
+; VBITS_GE_512-NEXT:    fcsel h21, h0, h1, vs
+; VBITS_GE_512-NEXT:    fcmp h0, h21
+; VBITS_GE_512-NEXT:    fcsel h1, h0, h21, gt
+; VBITS_GE_512-NEXT:    fcmp h3, h3
+; VBITS_GE_512-NEXT:    ldr h0, [sp, #104] // 2-byte Reload
+; VBITS_GE_512-NEXT:    fcsel h21, h0, h3, vs
+; VBITS_GE_512-NEXT:    str h1, [sp, #64] // 2-byte Spill
+; VBITS_GE_512-NEXT:    ldr h3, [sp, #92] // 2-byte Reload
+; VBITS_GE_512-NEXT:    fcmp h0, h21
+; VBITS_GE_512-NEXT:    fcsel h1, h0, h21, gt
+; VBITS_GE_512-NEXT:    ldr h0, [sp, #86] // 2-byte Reload
+; VBITS_GE_512-NEXT:    str h1, [sp, #62] // 2-byte Spill
+; VBITS_GE_512-NEXT:    ldr z1, [x9, #-8, mul vl] // 16-byte Folded Reload
+; VBITS_GE_512-NEXT:    fcmp h1, h1
+; VBITS_GE_512-NEXT:    fcsel h21, h9, h1, vs
+; VBITS_GE_512-NEXT:    fcmp h9, h21
+; VBITS_GE_512-NEXT:    fcsel h1, h9, h21, gt
+; VBITS_GE_512-NEXT:    str h1, [sp, #60] // 2-byte Spill
+; VBITS_GE_512-NEXT:    ldr z1, [x9, #-10, mul vl] // 16-byte Folded Reload
+; VBITS_GE_512-NEXT:    fcmp h1, h1
+; VBITS_GE_512-NEXT:    fcsel h21, h30, h1, vs
+; VBITS_GE_512-NEXT:    fcmp h30, h21
+; VBITS_GE_512-NEXT:    fcsel h1, h30, h21, gt
+; VBITS_GE_512-NEXT:    str h1, [sp, #58] // 2-byte Spill
+; VBITS_GE_512-NEXT:    ldr z1, [x9, #-9, mul vl] // 16-byte Folded Reload
+; VBITS_GE_512-NEXT:    fcmp h1, h1
+; VBITS_GE_512-NEXT:    fcsel h21, h23, h1, vs
+; VBITS_GE_512-NEXT:    fcmp h23, h21
+; VBITS_GE_512-NEXT:    fcsel h1, h23, h21, gt
+; VBITS_GE_512-NEXT:    str h1, [sp, #56] // 2-byte Spill
+; VBITS_GE_512-NEXT:    ldr z1, [x9, #-11, mul vl] // 16-byte Folded Reload
+; VBITS_GE_512-NEXT:    str h9, [sp, #168]
+; VBITS_GE_512-NEXT:    str h30, [sp, #166]
+; VBITS_GE_512-NEXT:    fcmp h1, h1
+; VBITS_GE_512-NEXT:    str h23, [sp, #164]
+; VBITS_GE_512-NEXT:    str h6, [sp, #162]
+; VBITS_GE_512-NEXT:    fcsel h21, h6, h1, vs
+; VBITS_GE_512-NEXT:    fcmp h6, h21
+; VBITS_GE_512-NEXT:    fcsel h1, h6, h21, gt
+; VBITS_GE_512-NEXT:    fcmp h14, h14
+; VBITS_GE_512-NEXT:    ldr h21, [sp, #126] // 2-byte Reload
+; VBITS_GE_512-NEXT:    str h21, [sp, #128]
+; VBITS_GE_512-NEXT:    ldr h21, [sp, #124] // 2-byte Reload
+; VBITS_GE_512-NEXT:    fcsel h14, h4, h14, vs
+; VBITS_GE_512-NEXT:    str h1, [sp, #54] // 2-byte Spill
+; VBITS_GE_512-NEXT:    ldr h1, [sp, #88] // 2-byte Reload
+; VBITS_GE_512-NEXT:    str h21, [sp, #190]
+; VBITS_GE_512-NEXT:    ldr h21, [sp, #122] // 2-byte Reload
+; VBITS_GE_512-NEXT:    fcmp h4, h14
+; VBITS_GE_512-NEXT:    str h21, [sp, #188]
+; VBITS_GE_512-NEXT:    ldr h21, [sp, #120] // 2-byte Reload
+; VBITS_GE_512-NEXT:    str h21, [sp, #186]
+; VBITS_GE_512-NEXT:    ldr h21, [sp, #118] // 2-byte Reload
+; VBITS_GE_512-NEXT:    fcsel h14, h4, h14, gt
+; VBITS_GE_512-NEXT:    fcmp h11, h11
+; VBITS_GE_512-NEXT:    str h21, [sp, #184]
+; VBITS_GE_512-NEXT:    ldr h21, [sp, #116] // 2-byte Reload
+; VBITS_GE_512-NEXT:    fcsel h11, h3, h11, vs
+; VBITS_GE_512-NEXT:    str h21, [sp, #182]
+; VBITS_GE_512-NEXT:    ldr h21, [sp, #114] // 2-byte Reload
+; VBITS_GE_512-NEXT:    str h21, [sp, #180]
+; VBITS_GE_512-NEXT:    ldr h21, [sp, #112] // 2-byte Reload
+; VBITS_GE_512-NEXT:    fcmp h3, h11
+; VBITS_GE_512-NEXT:    str h21, [sp, #178]
+; VBITS_GE_512-NEXT:    ldr h21, [sp, #110] // 2-byte Reload
+; VBITS_GE_512-NEXT:    fcsel h11, h3, h11, gt
+; VBITS_GE_512-NEXT:    fcmp h8, h8
+; VBITS_GE_512-NEXT:    str h21, [sp, #176]
+; VBITS_GE_512-NEXT:    ldr h21, [sp, #108] // 2-byte Reload
+; VBITS_GE_512-NEXT:    fcsel h8, h2, h8, vs
+; VBITS_GE_512-NEXT:    str h21, [sp, #174]
+; VBITS_GE_512-NEXT:    ldr h21, [sp, #106] // 2-byte Reload
+; VBITS_GE_512-NEXT:    str h21, [sp, #172]
+; VBITS_GE_512-NEXT:    ldr h21, [sp, #104] // 2-byte Reload
+; VBITS_GE_512-NEXT:    fcmp h2, h8
+; VBITS_GE_512-NEXT:    str h21, [sp, #170]
+; VBITS_GE_512-NEXT:    ldr z6, [x9, #-16, mul vl] // 16-byte Folded Reload
+; VBITS_GE_512-NEXT:    str h1, [sp, #154]
+; VBITS_GE_512-NEXT:    fcsel h8, h2, h8, gt
+; VBITS_GE_512-NEXT:    fcmp h31, h31
+; VBITS_GE_512-NEXT:    str h4, [sp, #160]
+; VBITS_GE_512-NEXT:    str h3, [sp, #158]
+; VBITS_GE_512-NEXT:    ldr h3, [sp, #62] // 2-byte Reload
+; VBITS_GE_512-NEXT:    str h2, [sp, #156]
+; VBITS_GE_512-NEXT:    ldr h2, [sp, #80] // 2-byte Reload
+; VBITS_GE_512-NEXT:    fcsel h31, h1, h31, vs
+; VBITS_GE_512-NEXT:    str h0, [sp, #152]
+; VBITS_GE_512-NEXT:    str h15, [sp, #150]
+; VBITS_GE_512-NEXT:    str h13, [sp, #148]
+; VBITS_GE_512-NEXT:    fcmp h1, h31
+; VBITS_GE_512-NEXT:    str h12, [sp, #146]
+; VBITS_GE_512-NEXT:    str h10, [sp, #144]
+; VBITS_GE_512-NEXT:    fcsel h31, h1, h31, gt
+; VBITS_GE_512-NEXT:    fcmp h28, h28
+; VBITS_GE_512-NEXT:    ldr h1, [sp, #84] // 2-byte Reload
+; VBITS_GE_512-NEXT:    fcsel h28, h0, h28, vs
+; VBITS_GE_512-NEXT:    fcmp h0, h28
+; VBITS_GE_512-NEXT:    fcsel h28, h0, h28, gt
+; VBITS_GE_512-NEXT:    fcmp h26, h26
+; VBITS_GE_512-NEXT:    ldr z0, [x9, #-15, mul vl] // 16-byte Folded Reload
+; VBITS_GE_512-NEXT:    str h1, [sp, #192]
+; VBITS_GE_512-NEXT:    ldr h1, [sp, #82] // 2-byte Reload
+; VBITS_GE_512-NEXT:    str h29, [sp, #142]
+; VBITS_GE_512-NEXT:    fcsel h26, h15, h26, vs
+; VBITS_GE_512-NEXT:    str h22, [sp, #140]
+; VBITS_GE_512-NEXT:    str h7, [sp, #138]
+; VBITS_GE_512-NEXT:    str h5, [sp, #136]
+; VBITS_GE_512-NEXT:    fcmp h15, h26
+; VBITS_GE_512-NEXT:    str h17, [sp, #134]
+; VBITS_GE_512-NEXT:    str h27, [sp, #132]
+; VBITS_GE_512-NEXT:    str h25, [sp, #130]
+; VBITS_GE_512-NEXT:    fcsel h26, h15, h26, gt
+; VBITS_GE_512-NEXT:    fcmp h24, h24
+; VBITS_GE_512-NEXT:    str h1, [sp, #254]
+; VBITS_GE_512-NEXT:    ldr z1, [x9, #-14, mul vl] // 16-byte Folded Reload
+; VBITS_GE_512-NEXT:    str h2, [sp, #252]
+; VBITS_GE_512-NEXT:    ldr h2, [sp, #78] // 2-byte Reload
+; VBITS_GE_512-NEXT:    fcsel h24, h13, h24, vs
+; VBITS_GE_512-NEXT:    str h2, [sp, #250]
+; VBITS_GE_512-NEXT:    ldr h2, [sp, #76] // 2-byte Reload
+; VBITS_GE_512-NEXT:    str h2, [sp, #248]
+; VBITS_GE_512-NEXT:    ldr h2, [sp, #74] // 2-byte Reload
+; VBITS_GE_512-NEXT:    fcmp h13, h24
+; VBITS_GE_512-NEXT:    str h2, [sp, #246]
+; VBITS_GE_512-NEXT:    ldr h2, [sp, #72] // 2-byte Reload
+; VBITS_GE_512-NEXT:    fcsel h24, h13, h24, gt
+; VBITS_GE_512-NEXT:    fcmp h20, h20
+; VBITS_GE_512-NEXT:    str h2, [sp, #244]
+; VBITS_GE_512-NEXT:    ldr h2, [sp, #70] // 2-byte Reload
+; VBITS_GE_512-NEXT:    fcsel h20, h12, h20, vs
+; VBITS_GE_512-NEXT:    str h2, [sp, #242]
+; VBITS_GE_512-NEXT:    ldr h2, [sp, #68] // 2-byte Reload
+; VBITS_GE_512-NEXT:    str h2, [sp, #240]
+; VBITS_GE_512-NEXT:    ldr h2, [sp, #66] // 2-byte Reload
+; VBITS_GE_512-NEXT:    fcmp h12, h20
+; VBITS_GE_512-NEXT:    str h2, [sp, #238]
+; VBITS_GE_512-NEXT:    ldr h2, [sp, #64] // 2-byte Reload
+; VBITS_GE_512-NEXT:    fcsel h20, h12, h20, gt
+; VBITS_GE_512-NEXT:    fcmp h18, h18
+; VBITS_GE_512-NEXT:    str h2, [sp, #236]
+; VBITS_GE_512-NEXT:    ldr z2, [x9, #-13, mul vl] // 16-byte Folded Reload
+; VBITS_GE_512-NEXT:    str h3, [sp, #234]
+; VBITS_GE_512-NEXT:    ldr h3, [sp, #60] // 2-byte Reload
+; VBITS_GE_512-NEXT:    str h14, [sp, #224]
+; VBITS_GE_512-NEXT:    fcsel h18, h10, h18, vs
+; VBITS_GE_512-NEXT:    str h3, [sp, #232]
+; VBITS_GE_512-NEXT:    ldr h3, [sp, #58] // 2-byte Reload
+; VBITS_GE_512-NEXT:    str h11, [sp, #222]
+; VBITS_GE_512-NEXT:    str h3, [sp, #230]
+; VBITS_GE_512-NEXT:    ldr h3, [sp, #56] // 2-byte Reload
+; VBITS_GE_512-NEXT:    fcmp h10, h18
+; VBITS_GE_512-NEXT:    str h8, [sp, #220]
+; VBITS_GE_512-NEXT:    str h3, [sp, #228]
+; VBITS_GE_512-NEXT:    ldr h3, [sp, #54] // 2-byte Reload
+; VBITS_GE_512-NEXT:    str h31, [sp, #218]
+; VBITS_GE_512-NEXT:    fcsel h18, h10, h18, gt
+; VBITS_GE_512-NEXT:    fcmp h16, h16
+; VBITS_GE_512-NEXT:    str h3, [sp, #226]
+; VBITS_GE_512-NEXT:    ldr z3, [x9, #-12, mul vl] // 16-byte Folded Reload
+; VBITS_GE_512-NEXT:    str h28, [sp, #216]
+; VBITS_GE_512-NEXT:    add x9, sp, #128
+; VBITS_GE_512-NEXT:    str h26, [sp, #214]
+; VBITS_GE_512-NEXT:    fcsel h16, h29, h16, vs
+; VBITS_GE_512-NEXT:    str h24, [sp, #212]
+; VBITS_GE_512-NEXT:    str h20, [sp, #210]
+; VBITS_GE_512-NEXT:    str h18, [sp, #208]
+; VBITS_GE_512-NEXT:    fcmp h29, h16
+; VBITS_GE_512-NEXT:    fcsel h16, h29, h16, gt
+; VBITS_GE_512-NEXT:    fcmp h19, h19
+; VBITS_GE_512-NEXT:    fcsel h19, h22, h19, vs
+; VBITS_GE_512-NEXT:    str h16, [sp, #206]
+; VBITS_GE_512-NEXT:    fcmp h22, h19
+; VBITS_GE_512-NEXT:    fcsel h19, h22, h19, gt
+; VBITS_GE_512-NEXT:    fcmp h6, h6
+; VBITS_GE_512-NEXT:    fcsel h23, h7, h6, vs
+; VBITS_GE_512-NEXT:    str h19, [sp, #204]
+; VBITS_GE_512-NEXT:    fcmp h7, h23
+; VBITS_GE_512-NEXT:    fcsel h6, h7, h23, gt
+; VBITS_GE_512-NEXT:    fcmp h0, h0
+; VBITS_GE_512-NEXT:    fcsel h0, h5, h0, vs
+; VBITS_GE_512-NEXT:    str h6, [sp, #202]
+; VBITS_GE_512-NEXT:    fcmp h5, h0
+; VBITS_GE_512-NEXT:    fcsel h0, h5, h0, gt
+; VBITS_GE_512-NEXT:    fcmp h1, h1
+; VBITS_GE_512-NEXT:    fcsel h1, h17, h1, vs
+; VBITS_GE_512-NEXT:    str h0, [sp, #200]
+; VBITS_GE_512-NEXT:    fcmp h17, h1
+; VBITS_GE_512-NEXT:    fcsel h1, h17, h1, gt
+; VBITS_GE_512-NEXT:    fcmp h2, h2
+; VBITS_GE_512-NEXT:    fcsel h2, h27, h2, vs
+; VBITS_GE_512-NEXT:    str h1, [sp, #198]
+; VBITS_GE_512-NEXT:    fcmp h27, h2
+; VBITS_GE_512-NEXT:    fcsel h2, h27, h2, gt
+; VBITS_GE_512-NEXT:    fcmp h3, h3
+; VBITS_GE_512-NEXT:    fcsel h3, h25, h3, vs
+; VBITS_GE_512-NEXT:    str h2, [sp, #196]
+; VBITS_GE_512-NEXT:    fcmp h25, h3
+; VBITS_GE_512-NEXT:    fcsel h0, h25, h3, gt
+; VBITS_GE_512-NEXT:    str h0, [sp, #194]
+; VBITS_GE_512-NEXT:    ld1h { z0.h }, p0/z, [x8]
+; VBITS_GE_512-NEXT:    add x8, sp, #192
+; VBITS_GE_512-NEXT:    ld1h { z1.h }, p0/z, [x9]
+; VBITS_GE_512-NEXT:    cmpeq p1.h, p0/z, z1.h, z0.h
+; VBITS_GE_512-NEXT:    mov z0.h, p1/z, #-1 // =0xffffffffffffffff
+; VBITS_GE_512-NEXT:    ptrue p1.h
+; VBITS_GE_512-NEXT:    and z0.h, z0.h, #0x1
+; VBITS_GE_512-NEXT:    cmpne p1.h, p1/z, z0.h, #0
+; VBITS_GE_512-NEXT:    ld1h { z0.h }, p0/z, [x8]
+; VBITS_GE_512-NEXT:    fcmeq p2.h, p0/z, z0.h, #0.0
+; VBITS_GE_512-NEXT:    sel z1.h, p1, z1.h, z0.h
+; VBITS_GE_512-NEXT:    mov z0.h, p2/m, z1.h
+; VBITS_GE_512-NEXT:    st1h { z0.h }, p0, [x0]
+; VBITS_GE_512-NEXT:    sub sp, x29, #64
+; VBITS_GE_512-NEXT:    ldp x29, x30, [sp, #64] // 16-byte Folded Reload
+; VBITS_GE_512-NEXT:    ldp d9, d8, [sp, #48] // 16-byte Folded Reload
+; VBITS_GE_512-NEXT:    ldp d11, d10, [sp, #32] // 16-byte Folded Reload
+; VBITS_GE_512-NEXT:    ldp d13, d12, [sp, #16] // 16-byte Folded Reload
+; VBITS_GE_512-NEXT:    ldp d15, d14, [sp], #80 // 16-byte Folded Reload
+; VBITS_GE_512-NEXT:    ret
+  %op1 = load <32 x half>, ptr %a
+  %op2 = load <32 x half>, ptr %b
+  %res = call <32 x half> @llvm.maximumnum.v32f16(<32 x half> %op1, <32 x half> %op2)
+  store <32 x half> %res, ptr %a
+  ret void
+}
+
+define void @fmaximumnum_v64f16(ptr %a, ptr %b) vscale_range(8,0) #0 {
+; CHECK-LABEL: fmaximumnum_v64f16:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    stp d15, d14, [sp, #-80]! // 16-byte Folded Spill
+; CHECK-NEXT:    sub x9, sp, #560
+; CHECK-NEXT:    stp d13, d12, [sp, #16] // 16-byte Folded Spill
+; CHECK-NEXT:    addvl x9, x9, #-22
+; CHECK-NEXT:    stp d11, d10, [sp, #32] // 16-byte Folded Spill
+; CHECK-NEXT:    stp d9, d8, [sp, #48] // 16-byte Folded Spill
+; CHECK-NEXT:    stp x29, x30, [sp, #64] // 16-byte Folded Spill
+; CHECK-NEXT:    add x29, sp, #64
+; CHECK-NEXT:    and sp, x9, #0xffffffffffffff80
+; CHECK-NEXT:    .cfi_def_cfa w29, 16
+; CHECK-NEXT:    .cfi_offset w30, -8
+; CHECK-NEXT:    .cfi_offset w29, -16
+; CHECK-NEXT:    .cfi_offset b8, -24
+; CHECK-NEXT:    .cfi_offset b9, -32
+; CHECK-NEXT:    .cfi_offset b10, -40
+; CHECK-NEXT:    .cfi_offset b11, -48
+; CHECK-NEXT:    .cfi_offset b12, -56
+; CHECK-NEXT:    .cfi_offset b13, -64
+; CHECK-NEXT:    .cfi_offset b14, -72
+; CHECK-NEXT:    .cfi_offset b15, -80
+; CHECK-NEXT:    ptrue p0.h, vl64
+; CHECK-NEXT:    mov w8, #63 // =0x3f
+; CHECK-NEXT:    add x9, sp, #256
+; CHECK-NEXT:    ld1h { z0.h }, p0/z, [x0]
+; CHECK-NEXT:    ld1h { z13.h }, p0/z, [x1]
+; CHECK-NEXT:    fcmp h0, h0
+; CHECK-NEXT:    mov z4.h, z13.h[28]
+; CHECK-NEXT:    mov z17.h, z13.h[25]
+; CHECK-NEXT:    mov z7.h, z13.h[24]
+; CHECK-NEXT:    mov z11.h, z13.h[18]
+; CHECK-NEXT:    mov z9.h, z13.h[17]
+; CHECK-NEXT:    mov z31.h, z13.h[16]
+; CHECK-NEXT:    mov z28.h, z13.h[15]
+; CHECK-NEXT:    mov z26.h, z13.h[14]
+; CHECK-NEXT:    fcsel h1, h13, h0, vs
+; CHECK-NEXT:    whilels p1.h, xzr, x8
+; CHECK-NEXT:    mov w8, #62 // =0x3e
+; CHECK-NEXT:    mov z29.h, z13.h[13]
+; CHECK-NEXT:    mov z5.h, z0.h[6]
+; CHECK-NEXT:    mov z6.h, z0.h[5]
+; CHECK-NEXT:    lastb h24, p1, z13.h
+; CHECK-NEXT:    mov z16.h, z0.h[4]
+; CHECK-NEXT:    mov z18.h, z0.h[3]
+; CHECK-NEXT:    str h1, [sp, #202] // 2-byte Spill
+; CHECK-NEXT:    lastb h1, p1, z0.h
+; CHECK-NEXT:    mov z21.h, z0.h[2]
+; CHECK-NEXT:    fcmp h1, h1
+; CHECK-NEXT:    fcsel h1, h24, h1, vs
+; CHECK-NEXT:    whilels p1.h, xzr, x8
+; CHECK-NEXT:    mov w8, #61 // =0x3d
+; CHECK-NEXT:    lastb h27, p1, z13.h
+; CHECK-NEXT:    str h1, [sp, #248] // 2-byte Spill
+; CHECK-NEXT:    lastb h1, p1, z0.h
+; CHECK-NEXT:    fcmp h1, h1
+; CHECK-NEXT:    fcsel h1, h27, h1, vs
+; CHECK-NEXT:    whilels p1.h, xzr, x8
+; CHECK-NEXT:    mov w8, #60 // =0x3c
+; CHECK-NEXT:    lastb h8, p1, z13.h
+; CHECK-NEXT:    str h1, [sp, #244] // 2-byte Spill
+; CHECK-NEXT:    lastb h1, p1, z0.h
+; CHECK-NEXT:    fcmp h1, h1
+; CHECK-NEXT:    fcsel h1, h8, h1, vs
+; CHECK-NEXT:    whilels p1.h, xzr, x8
+; CHECK-NEXT:    mov w8, #59 // =0x3b
+; CHECK-NEXT:    lastb h15, p1, z13.h
+; CHECK-NEXT:    str h1, [sp, #254] // 2-byte Spill
+; CHECK-NEXT:    lastb h1, p1, z0.h
+; CHECK-NEXT:    fcmp h1, h1
+; CHECK-NEXT:    fcsel h1, h15, h1, vs
+; CHECK-NEXT:    whilels p1.h, xzr, x8
+; CHECK-NEXT:    mov w8, #58 // =0x3a
+; CHECK-NEXT:    lastb h25, p1, z13.h
+; CHECK-NEXT:    str h1, [sp, #252] // 2-byte Spill
+; CHECK-NEXT:    lastb h1, p1, z0.h
+; CHECK-NEXT:    fcmp h1, h1
+; CHECK-NEXT:    fcsel h1, h25, h1, vs
+; CHECK-NEXT:    whilels p1.h, xzr, x8
+; CHECK-NEXT:    mov w8, #57 // =0x39
+; CHECK-NEXT:    lastb h10, p1, z13.h
+; CHECK-NEXT:    str h1, [sp, #250] // 2-byte Spill
+; CHECK-NEXT:    lastb h1, p1, z0.h
+; CHECK-NEXT:    fcmp h1, h1
+; CHECK-NEXT:    fcsel h1, h10, h1, vs
+; CHECK-NEXT:    whilels p1.h, xzr, x8
+; CHECK-NEXT:    mov w8, #56 // =0x38
+; CHECK-NEXT:    lastb h30, p1, z13.h
+; CHECK-NEXT:    str h1, [sp, #246] // 2-byte Spill
+; CHECK-NEXT:    lastb h1, p1, z0.h
+; CHECK-NEXT:    fcmp h1, h1
+; CHECK-NEXT:    fcsel h1, h30, h1, vs
+; CHECK-NEXT:    whilels p1.h, xzr, x8
+; CHECK-NEXT:    mov w8, #55 // =0x37
+; CHECK-NEXT:    lastb h12, p1, z13.h
+; CHECK-NEXT:    str h1, [sp, #242] // 2-byte Spill
+; CHECK-NEXT:    lastb h1, p1, z0.h
+; CHECK-NEXT:    fcmp h1, h1
+; CHECK-NEXT:    fcsel h1, h12, h1, vs
+; CHECK-NEXT:    whilels p1.h, xzr, x8
+; CHECK-NEXT:    mov w8, #54 // =0x36
+; CHECK-NEXT:    lastb h2, p1, z13.h
+; CHECK-NEXT:    str h1, [sp, #240] // 2-byte Spill
+; CHECK-NEXT:    lastb h1, p1, z0.h
+; CHECK-NEXT:    str h2, [sp, #142] // 2-byte Spill
+; CHECK-NEXT:    fcmp h1, h1
+; CHECK-NEXT:    fcsel h1, h2, h1, vs
+; CHECK-NEXT:    whilels p1.h, xzr, x8
+; CHECK-NEXT:    mov w8, #53 // =0x35
+; CHECK-NEXT:    lastb h2, p1, z13.h
+; CHECK-NEXT:    str h1, [sp, #238] // 2-byte Spill
+; CHECK-NEXT:    lastb h1, p1, z0.h
+; CHECK-NEXT:    str h2, [sp, #138] // 2-byte Spill
+; CHECK-NEXT:    fcmp h1, h1
+; CHECK-NEXT:    fcsel h1, h2, h1, vs
+; CHECK-NEXT:    whilels p1.h, xzr, x8
+; CHECK-NEXT:    mov w8, #52 // =0x34
+; CHECK-NEXT:    lastb h2, p1, z13.h
+; CHECK-NEXT:    str h1, [sp, #236] // 2-byte Spill
+; CHECK-NEXT:    lastb h1, p1, z0.h
+; CHECK-NEXT:    str h2, [sp, #200] // 2-byte Spill
+; CHECK-NEXT:    fcmp h1, h1
+; CHECK-NEXT:    fcsel h1, h2, h1, vs
+; CHECK-NEXT:    whilels p1.h, xzr, x8
+; CHECK-NEXT:    mov w8, #51 // =0x33
+; CHECK-NEXT:    lastb h2, p1, z13.h
+; CHECK-NEXT:    str h1, [sp, #234] // 2-byte Spill
+; CHECK-NEXT:    lastb h1, p1, z0.h
+; CHECK-NEXT:    str h2, [sp, #198] // 2-byte Spill
+; CHECK-NEXT:    fcmp h1, h1
+; CHECK-NEXT:    fcsel h1, h2, h1, vs
+; CHECK-NEXT:    whilels p1.h, xzr, x8
+; CHECK-NEXT:    mov w8, #50 // =0x32
+; CHECK-NEXT:    lastb h2, p1, z13.h
+; CHECK-NEXT:    str h1, [sp, #232] // 2-byte Spill
+; CHECK-NEXT:    lastb h1, p1, z0.h
+; CHECK-NEXT:    str h2, [sp, #196] // 2-byte Spill
+; CHECK-NEXT:    fcmp h1, h1
+; CHECK-NEXT:    fcsel h1, h2, h1, vs
+; CHECK-NEXT:    whilels p1.h, xzr, x8
+; CHECK-NEXT:    mov w8, #49 // =0x31
+; CHECK-NEXT:    lastb h2, p1, z13.h
+; CHECK-NEXT:    str h1, [sp, #230] // 2-byte Spill
+; CHECK-NEXT:    lastb h1, p1, z0.h
+; CHECK-NEXT:    str h2, [sp, #194] // 2-byte Spill
+; CHECK-NEXT:    fcmp h1, h1
+; CHECK-NEXT:    fcsel h1, h2, h1, vs
+; CHECK-NEXT:    whilels p1.h, xzr, x8
+; CHECK-NEXT:    mov w8, #48 // =0x30
+; CHECK-NEXT:    lastb h2, p1, z13.h
+; CHECK-NEXT:    str h1, [sp, #228] // 2-byte Spill
+; CHECK-NEXT:    lastb h1, p1, z0.h
+; CHECK-NEXT:    str h2, [sp, #192] // 2-byte Spill
+; CHECK-NEXT:    fcmp h1, h1
+; CHECK-NEXT:    fcsel h1, h2, h1, vs
+; CHECK-NEXT:    whilels p1.h, xzr, x8
+; CHECK-NEXT:    mov w8, #47 // =0x2f
+; CHECK-NEXT:    lastb h2, p1, z13.h
+; CHECK-NEXT:    str h1, [sp, #226] // 2-byte Spill
+; CHECK-NEXT:    lastb h1, p1, z0.h
+; CHECK-NEXT:    str h2, [sp, #190] // 2-byte Spill
+; CHECK-NEXT:    fcmp h1, h1
+; CHECK-NEXT:    fcsel h1, h2, h1, vs
+; CHECK-NEXT:    whilels p1.h, xzr, x8
+; CHECK-NEXT:    mov w8, #46 // =0x2e
+; CHECK-NEXT:    lastb h19, p1, z13.h
+; CHECK-NEXT:    str h1, [sp, #224] // 2-byte Spill
+; CHECK-NEXT:    lastb h1, p1, z0.h
+; CHECK-NEXT:    fcmp h1, h1
+; CHECK-NEXT:    fcsel h1, h19, h1, vs
+; CHECK-NEXT:    whilels p1.h, xzr, x8
+; CHECK-NEXT:    mov w8, #45 // =0x2d
+; CHECK-NEXT:    lastb h20, p1, z13.h
+; CHECK-NEXT:    str h1, [sp, #222] // 2-byte Spill
+; CHECK-NEXT:    lastb h1, p1, z0.h
+; CHECK-NEXT:    fcmp h1, h1
+; CHECK-NEXT:    fcsel h1, h20, h1, vs
+; CHECK-NEXT:    whilels p1.h, xzr, x8
+; CHECK-NEXT:    mov w8, #44 // =0x2c
+; CHECK-NEXT:    lastb h2, p1, z13.h
+; CHECK-NEXT:    str h1, [sp, #220] // 2-byte Spill
+; CHECK-NEXT:    lastb h1, p1, z0.h
+; CHECK-NEXT:    str h2, [sp, #188] // 2-byte Spill
+; CHECK-NEXT:    fcmp h1, h1
+; CHECK-NEXT:    fcsel h1, h2, h1, vs
+; CHECK-NEXT:    whilels p1.h, xzr, x8
+; CHECK-NEXT:    mov w8, #43 // =0x2b
+; CHECK-NEXT:    lastb h2, p1, z13.h
+; CHECK-NEXT:    str h1, [sp, #218] // 2-byte Spill
+; CHECK-NEXT:    lastb h1, p1, z0.h
+; CHECK-NEXT:    str h2, [sp, #186] // 2-byte Spill
+; CHECK-NEXT:    fcmp h1, h1
+; CHECK-NEXT:    fcsel h1, h2, h1, vs
+; CHECK-NEXT:    whilels p1.h, xzr, x8
+; CHECK-NEXT:    mov w8, #42 // =0x2a
+; CHECK-NEXT:    lastb h22, p1, z13.h
+; CHECK-NEXT:    str h1, [sp, #216] // 2-byte Spill
+; CHECK-NEXT:    lastb h1, p1, z0.h
+; CHECK-NEXT:    fcmp h1, h1
+; CHECK-NEXT:    fcsel h1, h22, h1, vs
+; CHECK-NEXT:    whilels p1.h, xzr, x8
+; CHECK-NEXT:    mov w8, #41 // =0x29
+; CHECK-NEXT:    lastb h2, p1, z13.h
+; CHECK-NEXT:    str h1, [sp, #214] // 2-byte Spill
+; CHECK-NEXT:    lastb h1, p1, z0.h
+; CHECK-NEXT:    str h2, [sp, #184] // 2-byte Spill
+; CHECK-NEXT:    fcmp h1, h1
+; CHECK-NEXT:    fcsel h1, h2, h1, vs
+; CHECK-NEXT:    whilels p1.h, xzr, x8
+; CHECK-NEXT:    mov w8, #40 // =0x28
+; CHECK-NEXT:    lastb h23, p1, z13.h
+; CHECK-NEXT:    str h1, [sp, #212] // 2-byte Spill
+; CHECK-NEXT:    lastb h1, p1, z0.h
+; CHECK-NEXT:    fcmp h1, h1
+; CHECK-NEXT:    fcsel h1, h23, h1, vs
+; CHECK-NEXT:    whilels p1.h, xzr, x8
+; CHECK-NEXT:    mov w8, #39 // =0x27
+; CHECK-NEXT:    lastb h2, p1, z13.h
+; CHECK-NEXT:    str h1, [sp, #210] // 2-byte Spill
+; CHECK-NEXT:    lastb h1, p1, z0.h
+; CHECK-NEXT:    str h2, [sp, #182] // 2-byte Spill
+; CHECK-NEXT:    fcmp h1, h1
+; CHECK-NEXT:    fcsel h1, h2, h1, vs
+; CHECK-NEXT:    whilels p1.h, xzr, x8
+; CHECK-NEXT:    mov w8, #38 // =0x26
+; CHECK-NEXT:    lastb h2, p1, z13.h
+; CHECK-NEXT:    str h1, [sp, #208] // 2-byte Spill
+; CHECK-NEXT:    lastb h1, p1, z0.h
+; CHECK-NEXT:    str h2, [sp, #180] // 2-byte Spill
+; CHECK-NEXT:    fcmp h1, h1
+; CHECK-NEXT:    fcsel h1, h2, h1, vs
+; CHECK-NEXT:    whilels p1.h, xzr, x8
+; CHECK-NEXT:    mov w8, #37 // =0x25
+; CHECK-NEXT:    lastb h2, p1, z13.h
+; CHECK-NEXT:    str h1, [sp, #206] // 2-byte Spill
+; CHECK-NEXT:    lastb h1, p1, z0.h
+; CHECK-NEXT:    str h2, [sp, #178] // 2-byte Spill
+; CHECK-NEXT:    fcmp h1, h1
+; CHECK-NEXT:    fcsel h1, h2, h1, vs
+; CHECK-NEXT:    whilels p1.h, xzr, x8
+; CHECK-NEXT:    mov w8, #36 // =0x24
+; CHECK-NEXT:    lastb h2, p1, z13.h
+; CHECK-NEXT:    str h1, [sp, #204] // 2-byte Spill
+; CHECK-NEXT:    lastb h1, p1, z0.h
+; CHECK-NEXT:    str h2, [sp, #174] // 2-byte Spill
+; CHECK-NEXT:    fcmp h1, h1
+; CHECK-NEXT:    fcsel h1, h2, h1, vs
+; CHECK-NEXT:    whilels p1.h, xzr, x8
+; CHECK-NEXT:    mov w8, #35 // =0x23
+; CHECK-NEXT:    lastb h2, p1, z13.h
+; CHECK-NEXT:    str h1, [sp, #176] // 2-byte Spill
+; CHECK-NEXT:    lastb h1, p1, z0.h
+; CHECK-NEXT:    str h2, [sp, #170] // 2-byte Spill
+; CHECK-NEXT:    fcmp h1, h1
+; CHECK-NEXT:    fcsel h1, h2, h1, vs
+; CHECK-NEXT:    whilels p1.h, xzr, x8
+; CHECK-NEXT:    mov w8, #34 // =0x22
+; CHECK-NEXT:    lastb h2, p1, z13.h
+; CHECK-NEXT:    str h1, [sp, #172] // 2-byte Spill
+; CHECK-NEXT:    lastb h1, p1, z0.h
+; CHECK-NEXT:    str h2, [sp, #166] // 2-byte Spill
+; CHECK-NEXT:    fcmp h1, h1
+; CHECK-NEXT:    fcsel h1, h2, h1, vs
+; CHECK-NEXT:    whilels p1.h, xzr, x8
+; CHECK-NEXT:    mov w8, #33 // =0x21
+; CHECK-NEXT:    lastb h2, p1, z13.h
+; CHECK-NEXT:    str h1, [sp, #168] // 2-byte Spill
+; CHECK-NEXT:    lastb h1, p1, z0.h
+; CHECK-NEXT:    str h2, [sp, #162] // 2-byte Spill
+; CHECK-NEXT:    fcmp h1, h1
+; CHECK-NEXT:    fcsel h1, h2, h1, vs
+; CHECK-NEXT:    whilels p1.h, xzr, x8
+; CHECK-NEXT:    mov w8, #32 // =0x20
+; CHECK-NEXT:    lastb h2, p1, z13.h
+; CHECK-NEXT:    str h1, [sp, #164] // 2-byte Spill
+; CHECK-NEXT:    lastb h1, p1, z0.h
+; CHECK-NEXT:    str h2, [sp, #158] // 2-byte Spill
+; CHECK-NEXT:    fcmp h1, h1
+; CHECK-NEXT:    fcsel h1, h2, h1, vs
+; CHECK-NEXT:    whilels p1.h, xzr, x8
+; CHECK-NEXT:    mov z2.h, z0.h[31]
+; CHECK-NEXT:    sub x8, x29, #64
+; CHECK-NEXT:    lastb h3, p1, z13.h
+; CHECK-NEXT:    str h1, [sp, #160] // 2-byte Spill
+; CHECK-NEXT:    lastb h1, p1, z0.h
+; CHECK-NEXT:    str h3, [sp, #154] // 2-byte Spill
+; CHECK-NEXT:    fcmp h1, h1
+; CHECK-NEXT:    fcsel h1, h3, h1, vs
+; CHECK-NEXT:    fcmp h2, h2
+; CHECK-NEXT:    mov z3.h, z13.h[31]
+; CHECK-NEXT:    str h1, [sp, #156] // 2-byte Spill
+; CHECK-NEXT:    mov z1.h, z0.h[30]
+; CHECK-NEXT:    fcsel h2, h3, h2, vs
+; CHECK-NEXT:    str z3, [x8, #-1, mul vl] // 16-byte Folded Spill
+; CHECK-NEXT:    mov z3.h, z13.h[30]
+; CHECK-NEXT:    str h2, [sp, #152] // 2-byte Spill
+; CHECK-NEXT:    fcmp h1, h1
+; CHECK-NEXT:    mov z2.h, z0.h[29]
+; CHECK-NEXT:    str z3, [x8, #-3, mul vl] // 16-byte Folded Spill
+; CHECK-NEXT:    fcsel h1, h3, h1, vs
+; CHECK-NEXT:    fcmp h2, h2
+; CHECK-NEXT:    mov z3.h, z13.h[29]
+; CHECK-NEXT:    str h1, [sp, #150] // 2-byte Spill
+; CHECK-NEXT:    mov z1.h, z0.h[28]
+; CHECK-NEXT:    fcsel h2, h3, h2, vs
+; CHECK-NEXT:    str z3, [x8, #-4, mul vl] // 16-byte Folded Spill
+; CHECK-NEXT:    mov z3.h, z13.h[27]
+; CHECK-NEXT:    str h2, [sp, #148] // 2-byte Spill
+; CHECK-NEXT:    fcmp h1, h1
+; CHECK-NEXT:    mov z2.h, z0.h[27]
+; CHECK-NEXT:    str z3, [x8, #-6, mul vl] // 16-byte Folded Spill
+; CHECK-NEXT:    fcsel h1, h4, h1, vs
+; CHECK-NEXT:    fcmp h2, h2
+; CHECK-NEXT:    str h1, [sp, #146] // 2-byte Spill
+; CHECK-NEXT:    mov z1.h, z0.h[26]
+; CHECK-NEXT:    fcsel h2, h3, h2, vs
+; CHECK-NEXT:    mov z3.h, z13.h[26]
+; CHECK-NEXT:    str h2, [sp, #144] // 2-byte Spill
+; CHECK-NEXT:    fcmp h1, h1
+; CHECK-NEXT:    mov z2.h, z0.h[25]
+; CHECK-NEXT:    str z3, [x8, #-8, mul vl] // 16-byte Folded Spill
+; CHECK-NEXT:    fcsel h1, h3, h1, vs
+; CHECK-NEXT:    fcmp h2, h2
+; CHECK-NEXT:    mov z3.h, z13.h[23]
+; CHECK-NEXT:    str h1, [sp, #140] // 2-byte Spill
+; CHECK-NEXT:    mov z1.h, z0.h[24]
+; CHECK-NEXT:    fcsel h2, h17, h2, vs
+; CHECK-NEXT:    str z3, [x8, #-12, mul vl] // 16-byte Folded Spill
+; CHECK-NEXT:    str h2, [sp, #136] // 2-byte Spill
+; CHECK-NEXT:    fcmp h1, h1
+; CHECK-NEXT:    mov z2.h, z0.h[23]
+; CHECK-NEXT:    fcsel h1, h7, h1, vs
+; CHECK-NEXT:    fcmp h2, h2
+; CHECK-NEXT:    str h1, [sp, #134] // 2-byte Spill
+; CHECK-NEXT:    mov z1.h, z0.h[22]
+; CHECK-NEXT:    fcsel h2, h3, h2, vs
+; CHECK-NEXT:    mov z3.h, z13.h[22]
+; CHECK-NEXT:    str h2, [sp, #132] // 2-byte Spill
+; CHECK-NEXT:    fcmp h1, h1
+; CHECK-NEXT:    mov z2.h, z0.h[21]
+; CHECK-NEXT:    str z3, [x8, #-14, mul vl] // 16-byte Folded Spill
+; CHECK-NEXT:    fcsel h1, h3, h1, vs
+; CHECK-NEXT:    fcmp h2, h2
+; CHECK-NEXT:    mov z3.h, z13.h[21]
+; CHECK-NEXT:    str h1, [sp, #130] // 2-byte Spill
+; CHECK-NEXT:    mov z1.h, z0.h[20]
+; CHECK-NEXT:    fcsel h2, h3, h2, vs
+; CHECK-NEXT:    str z3, [x8, #-16, mul vl] // 16-byte Folded Spill
+; CHECK-NEXT:    mov z3.h, z13.h[20]
+; CHECK-NEXT:    str h2, [sp, #128] // 2-byte Spill
+; CHECK-NEXT:    fcmp h1, h1
+; CHECK-NEXT:    mov z2.h, z0.h[19]
+; CHECK-NEXT:    str z3, [x8, #-18, mul vl] // 16-byte Folded Spill
+; CHECK-NEXT:    fcsel h1, h3, h1, vs
+; CHECK-NEXT:    fcmp h2, h2
+; CHECK-NEXT:    mov z3.h, z13.h[19]
+; CHECK-NEXT:    str h1, [sp, #122] // 2-byte Spill
+; CHECK-NEXT:    mov z1.h, z0.h[18]
+; CHECK-NEXT:    fcsel h2, h3, h2, vs
+; CHECK-NEXT:    str z3, [x8, #-19, mul vl] // 16-byte Folded Spill
+; CHECK-NEXT:    mov z3.h, z13.h[12]
+; CHECK-NEXT:    str h2, [sp, #118] // 2-byte Spill
+; CHECK-NEXT:    fcmp h1, h1
+; CHECK-NEXT:    mov z2.h, z0.h[17]
+; CHECK-NEXT:    str z3, [x8, #-22, mul vl] // 16-byte Folded Spill
+; CHECK-NEXT:    fcsel h1, h11, h1, vs
+; CHECK-NEXT:    fcmp h2, h2
+; CHECK-NEXT:    str h1, [sp, #112] // 2-byte Spill
+; CHECK-NEXT:    mov z1.h, z0.h[16]
+; CHECK-NEXT:    fcsel h2, h9, h2, vs
+; CHECK-NEXT:    str h2, [sp, #110] // 2-byte Spill
+; CHECK-NEXT:    fcmp h1, h1
+; CHECK-NEXT:    mov z2.h, z0.h[15]
+; CHECK-NEXT:    fcsel h1, h31, h1, vs
+; CHECK-NEXT:    fcmp h2, h2
+; CHECK-NEXT:    str h1, [sp, #104] // 2-byte Spill
+; CHECK-NEXT:    mov z1.h, z0.h[14]
+; CHECK-NEXT:    fcsel h2, h28, h2, vs
+; CHECK-NEXT:    str h2, [sp, #100] // 2-byte Spill
+; CHECK-NEXT:    fcmp h1, h1
+; CHECK-NEXT:    mov z2.h, z0.h[13]
+; CHECK-NEXT:    fcsel h1, h26, h1, vs
+; CHECK-NEXT:    fcmp h2, h2
+; CHECK-NEXT:    str h1, [sp, #98] // 2-byte Spill
+; CHECK-NEXT:    mov z1.h, z0.h[12]
+; CHECK-NEXT:    fcsel h2, h29, h2, vs
+; CHECK-NEXT:    str h2, [sp, #102] // 2-byte Spill
+; CHECK-NEXT:    fcmp h1, h1
+; CHECK-NEXT:    mov z2.h, z0.h[11]
+; CHECK-NEXT:    fcsel h1, h3, h1, vs
+; CHECK-NEXT:    fcmp h2, h2
+; CHECK-NEXT:    mov z3.h, z13.h[11]
+; CHECK-NEXT:    str h1, [sp, #108] // 2-byte Spill
+; CHECK-NEXT:    mov z1.h, z0.h[10]
+; CHECK-NEXT:    fcsel h2, h3, h2, vs
+; CHECK-NEXT:    str z3, [x8, #-21, mul vl] // 16-byte Folded Spill
+; CHECK-NEXT:    mov z3.h, z13.h[10]
+; CHECK-NEXT:    str h2, [sp, #116] // 2-byte Spill
+; CHECK-NEXT:    fcmp h1, h1
+; CHECK-NEXT:    mov z2.h, z0.h[9]
+; CHECK-NEXT:    str z3, [x8, #-20, mul vl] // 16-byte Folded Spill
+; CHECK-NEXT:    fcsel h1, h3, h1, vs
+; CHECK-NEXT:    fcmp h2, h2
+; CHECK-NEXT:    mov z3.h, z13.h[9]
+; CHECK-NEXT:    str h1, [sp, #120] // 2-byte Spill
+; CHECK-NEXT:    mov z1.h, z0.h[8]
+; CHECK-NEXT:    fcsel h2, h3, h2, vs
+; CHECK-NEXT:    str z3, [x8, #-17, mul vl] // 16-byte Folded Spill
+; CHECK-NEXT:    mov z3.h, z0.h[7]
+; CHECK-NEXT:    mov z0.h, z0.h[1]
+; CHECK-NEXT:    str h2, [sp, #126] // 2-byte Spill
+; CHECK-NEXT:    fcmp h1, h1
+; CHECK-NEXT:    mov z2.h, z13.h[8]
+; CHECK-NEXT:    fcsel h14, h2, h1, vs
+; CHECK-NEXT:    fcmp h3, h3
+; CHECK-NEXT:    mov z1.h, z13.h[7]
+; CHECK-NEXT:    str z2, [x8, #-15, mul vl] // 16-byte Folded Spill
+; CHECK-NEXT:    ldr h2, [sp, #202] // 2-byte Reload
+; CHECK-NEXT:    str z1, [x8, #-13, mul vl] // 16-byte Folded Spill
+; CHECK-NEXT:    fcsel h1, h1, h3, vs
+; CHECK-NEXT:    fcmp h5, h5
+; CHECK-NEXT:    ldr h3, [sp, #100] // 2-byte Reload
+; CHECK-NEXT:    str h1, [sp, #124] // 2-byte Spill
+; CHECK-NEXT:    mov z1.h, z13.h[6]
+; CHECK-NEXT:    str z1, [x8, #-11, mul vl] // 16-byte Folded Spill
+; CHECK-NEXT:    fcsel h1, h1, h5, vs
+; CHECK-NEXT:    fcmp h6, h6
+; CHECK-NEXT:    ldr h5, [sp, #112] // 2-byte Reload
+; CHECK-NEXT:    str h1, [sp, #114] // 2-byte Spill
+; CHECK-NEXT:    mov z1.h, z13.h[5]
+; CHECK-NEXT:    str z1, [x8, #-10, mul vl] // 16-byte Folded Spill
+; CHECK-NEXT:    fcsel h1, h1, h6, vs
+; CHECK-NEXT:    fcmp h16, h16
+; CHECK-NEXT:    ldr h6, [sp, #118] // 2-byte Reload
+; CHECK-NEXT:    str h1, [sp, #106] // 2-byte Spill
+; CHECK-NEXT:    mov z1.h, z13.h[4]
+; CHECK-NEXT:    str z1, [x8, #-7, mul vl] // 16-byte Folded Spill
+; CHECK-NEXT:    fcsel h1, h1, h16, vs
+; CHECK-NEXT:    fcmp h18, h18
+; CHECK-NEXT:    ldr h16, [sp, #128] // 2-byte Reload
+; CHECK-NEXT:    str h1, [sp, #96] // 2-byte Spill
+; CHECK-NEXT:    mov z1.h, z13.h[3]
+; CHECK-NEXT:    str z1, [x8, #-9, mul vl] // 16-byte Folded Spill
+; CHECK-NEXT:    fcsel h1, h1, h18, vs
+; CHECK-NEXT:    fcmp h21, h21
+; CHECK-NEXT:    ldr h18, [sp, #132] // 2-byte Reload
+; CHECK-NEXT:    str h1, [sp, #92] // 2-byte Spill
+; CHECK-NEXT:    mov z1.h, z13.h[2]
+; CHECK-NEXT:    str z1, [x8, #-5, mul vl] // 16-byte Folded Spill
+; CHECK-NEXT:    fcsel h1, h1, h21, vs
+; CHECK-NEXT:    fcmp h0, h0
+; CHECK-NEXT:    ldr h21, [sp, #140] // 2-byte Reload
+; CHECK-NEXT:    str h1, [sp, #94] // 2-byte Spill
+; CHECK-NEXT:    mov z1.h, z13.h[1]
+; CHECK-NEXT:    fcsel h0, h1, h0, vs
+; CHECK-NEXT:    fcmp h13, h13
+; CHECK-NEXT:    str z1, [x8, #-2, mul vl] // 16-byte Folded Spill
+; CHECK-NEXT:    fcsel h13, h2, h13, vs
+; CHECK-NEXT:    str h0, [sp, #90] // 2-byte Spill
+; CHECK-NEXT:    fcmp h2, h13
+; CHECK-NEXT:    fcsel h1, h2, h13, gt
+; CHECK-NEXT:    fcmp h24, h24
+; CHECK-NEXT:    ldr h13, [sp, #172] // 2-byte Reload
+; CHECK-NEXT:    str h1, [sp, #88] // 2-byte Spill
+; CHECK-NEXT:    ldr h1, [sp, #248] // 2-byte Reload
+; CHECK-NEXT:    fcsel h0, h1, h24, vs
+; CHECK-NEXT:    ldr h24, [sp, #148] // 2-byte Reload
+; CHECK-NEXT:    fcmp h1, h0
+; CHECK-NEXT:    fcsel h0, h1, h0, gt
+; CHECK-NEXT:    fcmp h27, h27
+; CHECK-NEXT:    ldr h1, [sp, #244] // 2-byte Reload
+; CHECK-NEXT:    str h0, [sp, #86] // 2-byte Spill
+; CHECK-NEXT:    fcsel h0, h1, h27, vs
+; CHECK-NEXT:    ldr h27, [sp, #152] // 2-byte Reload
+; CHECK-NEXT:    fcmp h1, h0
+; CHECK-NEXT:    fcsel h0, h1, h0, gt
+; CHECK-NEXT:    fcmp h8, h8
+; CHECK-NEXT:    ldr h1, [sp, #254] // 2-byte Reload
+; CHECK-NEXT:    str h0, [sp, #84] // 2-byte Spill
+; CHECK-NEXT:    fcsel h0, h1, h8, vs
+; CHECK-NEXT:    ldr h8, [sp, #160] // 2-byte Reload
+; CHECK-NEXT:    fcmp h1, h0
+; CHECK-NEXT:    fcsel h0, h1, h0, gt
+; CHECK-NEXT:    fcmp h15, h15
+; CHECK-NEXT:    ldr h1, [sp, #252] // 2-byte Reload
+; CHECK-NEXT:    str h0, [sp, #82] // 2-byte Spill
+; CHECK-NEXT:    fcsel h0, h1, h15, vs
+; CHECK-NEXT:    ldr h15, [sp, #176] // 2-byte Reload
+; CHECK-NEXT:    fcmp h1, h0
+; CHECK-NEXT:    fcsel h0, h1, h0, gt
+; CHECK-NEXT:    fcmp h25, h25
+; CHECK-NEXT:    ldr h1, [sp, #250] // 2-byte Reload
+; CHECK-NEXT:    str h0, [sp, #80] // 2-byte Spill
+; CHECK-NEXT:    fcsel h0, h1, h25, vs
+; CHECK-NEXT:    ldr h25, [sp, #150] // 2-byte Reload
+; CHECK-NEXT:    fcmp h1, h0
+; CHECK-NEXT:    fcsel h0, h1, h0, gt
+; CHECK-NEXT:    fcmp h10, h10
+; CHECK-NEXT:    ldr h1, [sp, #246] // 2-byte Reload
+; CHECK-NEXT:    str h0, [sp, #78] // 2-byte Spill
+; CHECK-NEXT:    fcsel h0, h1, h10, vs
+; CHECK-NEXT:    ldr h10, [sp, #164] // 2-byte Reload
+; CHECK-NEXT:    fcmp h1, h0
+; CHECK-NEXT:    fcsel h0, h1, h0, gt
+; CHECK-NEXT:    fcmp h30, h30
+; CHECK-NEXT:    ldr h1, [sp, #242] // 2-byte Reload
+; CHECK-NEXT:    str h0, [sp, #76] // 2-byte Spill
+; CHECK-NEXT:    fcsel h0, h1, h30, vs
+; CHECK-NEXT:    ldr h30, [sp, #156] // 2-byte Reload
+; CHECK-NEXT:    fcmp h1, h0
+; CHECK-NEXT:    fcsel h0, h1, h0, gt
+; CHECK-NEXT:    fcmp h12, h12
+; CHECK-NEXT:    ldr h1, [sp, #240] // 2-byte Reload
+; CHECK-NEXT:    str h0, [sp, #74] // 2-byte Spill
+; CHECK-NEXT:    fcsel h0, h1, h12, vs
+; CHECK-NEXT:    ldr h12, [sp, #168] // 2-byte Reload
+; CHECK-NEXT:    fcmp h1, h0
+; CHECK-NEXT:    fcsel h0, h1, h0, gt
+; CHECK-NEXT:    ldr h1, [sp, #238] // 2-byte Reload
+; CHECK-NEXT:    str h0, [sp, #72] // 2-byte Spill
+; CHECK-NEXT:    ldr h0, [sp, #142] // 2-byte Reload
+; CHECK-NEXT:    fcmp h0, h0
+; CHECK-NEXT:    fcsel h0, h1, h0, vs
+; CHECK-NEXT:    fcmp h1, h0
+; CHECK-NEXT:    fcsel h0, h1, h0, gt
+; CHECK-NEXT:    ldr h1, [sp, #236] // 2-byte Reload
+; CHECK-NEXT:    str h0, [sp, #142] // 2-byte Spill
+; CHECK-NEXT:    ldr h0, [sp, #138] // 2-byte Reload
+; CHECK-NEXT:    fcmp h0, h0
+; CHECK-NEXT:    fcsel h0, h1, h0, vs
+; CHECK-NEXT:    fcmp h1, h0
+; CHECK-NEXT:    fcsel h0, h1, h0, gt
+; CHECK-NEXT:    ldr h1, [sp, #234] // 2-byte Reload
+; CHECK-NEXT:    str h0, [sp, #138] // 2-byte Spill
+; CHECK-NEXT:    ldr h0, [sp, #200] // 2-byte Reload
+; CHECK-NEXT:    fcmp h0, h0
+; CHECK-NEXT:    fcsel h0, h1, h0, vs
+; CHECK-NEXT:    fcmp h1, h0
+; CHECK-NEXT:    fcsel h0, h1, h0, gt
+; CHECK-NEXT:    ldr h1, [sp, #232] // 2-byte Reload
+; CHECK-NEXT:    str h0, [sp, #200] // 2-byte Spill
+; CHECK-NEXT:    ldr h0, [sp, #198] // 2-byte Reload
+; CHECK-NEXT:    fcmp h0, h0
+; CHECK-NEXT:    fcsel h0, h1, h0, vs
+; CHECK-NEXT:    fcmp h1, h0
+; CHECK-NEXT:    fcsel h0, h1, h0, gt
+; CHECK-NEXT:    ldr h1, [sp, #230] // 2-byte Reload
+; CHECK-NEXT:    str h0, [sp, #198] // 2-byte Spill
+; CHECK-NEXT:    ldr h0, [sp, #196] // 2-byte Reload
+; CHECK-NEXT:    fcmp h0, h0
+; CHECK-NEXT:    fcsel h0, h1, h0, vs
+; CHECK-NEXT:    fcmp h1, h0
+; CHECK-NEXT:    fcsel h0, h1, h0, gt
+; CHECK-NEXT:    ldr h1, [sp, #228] // 2-byte Reload
+; CHECK-NEXT:    str h0, [sp, #196] // 2-byte Spill
+; CHECK-NEXT:    ldr h0, [sp, #194] // 2-byte Reload
+; CHECK-NEXT:    fcmp h0, h0
+; CHECK-NEXT:    fcsel h0, h1, h0, vs
+; CHECK-NEXT:    fcmp h1, h0
+; CHECK-NEXT:    fcsel h0, h1, h0, gt
+; CHECK-NEXT:    ldr h1, [sp, #226] // 2-byte Reload
+; CHECK-NEXT:    str h0, [sp, #194] // 2-byte Spill
+; CHECK-NEXT:    ldr h0, [sp, #192] // 2-byte Reload
+; CHECK-NEXT:    fcmp h0, h0
+; CHECK-NEXT:    fcsel h0, h1, h0, vs
+; CHECK-NEXT:    fcmp h1, h0
+; CHECK-NEXT:    fcsel h0, h1, h0, gt
+; CHECK-NEXT:    ldr h1, [sp, #224] // 2-byte Reload
+; CHECK-NEXT:    str h0, [sp, #192] // 2-byte Spill
+; CHECK-NEXT:    ldr h0, [sp, #190] // 2-byte Reload
+; CHECK-NEXT:    fcmp h0, h0
+; CHECK-NEXT:    fcsel h0, h1, h0, vs
+; CHECK-NEXT:    fcmp h1, h0
+; CHECK-NEXT:    fcsel h0, h1, h0, gt
+; CHECK-NEXT:    fcmp h19, h19
+; CHECK-NEXT:    ldr h1, [sp, #222] // 2-byte Reload
+; CHECK-NEXT:    str h0, [sp, #190] // 2-byte Spill
+; CHECK-NEXT:    fcsel h0, h1, h19, vs
+; CHECK-NEXT:    ldr h19, [sp, #134] // 2-byte Reload
+; CHECK-NEXT:    fcmp h1, h0
+; CHECK-NEXT:    fcsel h0, h1, h0, gt
+; CHECK-NEXT:    fcmp h20, h20
+; CHECK-NEXT:    ldr h1, [sp, #220] // 2-byte Reload
+; CHECK-NEXT:    str h0, [sp, #70] // 2-byte Spill
+; CHECK-NEXT:    fcsel h0, h1, h20, vs
+; CHECK-NEXT:    ldr h20, [sp, #136] // 2-byte Reload
+; CHECK-NEXT:    fcmp h1, h0
+; CHECK-NEXT:    fcsel h0, h1, h0, gt
+; CHECK-NEXT:    ldr h1, [sp, #218] // 2-byte Reload
+; CHECK-NEXT:    str h0, [sp, #68] // 2-byte Spill
+; CHECK-NEXT:    ldr h0, [sp, #188] // 2-byte Reload
+; CHECK-NEXT:    fcmp h0, h0
+; CHECK-NEXT:    fcsel h0, h1, h0, vs
+; CHECK-NEXT:    fcmp h1, h0
+; CHECK-NEXT:    fcsel h0, h1, h0, gt
+; CHECK-NEXT:    ldr h1, [sp, #216] // 2-byte Reload
+; CHECK-NEXT:    str h0, [sp, #188] // 2-byte Spill
+; CHECK-NEXT:    ldr h0, [sp, #186] // 2-byte Reload
+; CHECK-NEXT:    fcmp h0, h0
+; CHECK-NEXT:    fcsel h0, h1, h0, vs
+; CHECK-NEXT:    fcmp h1, h0
+; CHECK-NEXT:    fcsel h0, h1, h0, gt
+; CHECK-NEXT:    fcmp h22, h22
+; CHECK-NEXT:    ldr h1, [sp, #214] // 2-byte Reload
+; CHECK-NEXT:    str h0, [sp, #186] // 2-byte Spill
+; CHECK-NEXT:    fcsel h0, h1, h22, vs
+; CHECK-NEXT:    ldr h22, [sp, #144] // 2-byte Reload
+; CHECK-NEXT:    fcmp h1, h0
+; CHECK-NEXT:    fcsel h0, h1, h0, gt
+; CHECK-NEXT:    ldr h1, [sp, #212] // 2-byte Reload
+; CHECK-NEXT:    str h0, [sp, #66] // 2-byte Spill
+; CHECK-NEXT:    ldr h0, [sp, #184] // 2-byte Reload
+; CHECK-NEXT:    fcmp h0, h0
+; CHECK-NEXT:    fcsel h0, h1, h0, vs
+; CHECK-NEXT:    fcmp h1, h0
+; CHECK-NEXT:    fcsel h0, h1, h0, gt
+; CHECK-NEXT:    fcmp h23, h23
+; CHECK-NEXT:    ldr h1, [sp, #210] // 2-byte Reload
+; CHECK-NEXT:    str h0, [sp, #184] // 2-byte Spill
+; CHECK-NEXT:    fcsel h0, h1, h23, vs
+; CHECK-NEXT:    ldr h23, [sp, #146] // 2-byte Reload
+; CHECK-NEXT:    fcmp h1, h0
+; CHECK-NEXT:    fcsel h0, h1, h0, gt
+; CHECK-NEXT:    ldr h1, [sp, #208] // 2-byte Reload
+; CHECK-NEXT:    str h0, [sp, #64] // 2-byte Spill
+; CHECK-NEXT:    ldr h0, [sp, #182] // 2-byte Reload
+; CHECK-NEXT:    fcmp h0, h0
+; CHECK-NEXT:    fcsel h0, h1, h0, vs
+; CHECK-NEXT:    fcmp h1, h0
+; CHECK-NEXT:    fcsel h0, h1, h0, gt
+; CHECK-NEXT:    ldr h1, [sp, #206] // 2-byte Reload
+; CHECK-NEXT:    str h0, [sp, #182] // 2-byte Spill
+; CHECK-NEXT:    ldr h0, [sp, #180] // 2-byte Reload
+; CHECK-NEXT:    fcmp h0, h0
+; CHECK-NEXT:    fcsel h0, h1, h0, vs
+; CHECK-NEXT:    fcmp h1, h0
+; CHECK-NEXT:    fcsel h0, h1, h0, gt
+; CHECK-NEXT:    ldr h1, [sp, #204] // 2-byte Reload
+; CHECK-NEXT:    str h0, [sp, #180] // 2-byte Spill
+; CHECK-NEXT:    ldr h0, [sp, #178] // 2-byte Reload
+; CHECK-NEXT:    fcmp h0, h0
+; CHECK-NEXT:    fcsel h0, h1, h0, vs
+; CHECK-NEXT:    fcmp h1, h0
+; CHECK-NEXT:    fcsel h0, h1, h0, gt
+; CHECK-NEXT:    ldr z1, [x8, #-19, mul vl] // 16-byte Folded Reload
+; CHECK-NEXT:    str h0, [sp, #178] // 2-byte Spill
+; CHECK-NEXT:    ldr h0, [sp, #174] // 2-byte Reload
+; CHECK-NEXT:    fcmp h0, h0
+; CHECK-NEXT:    fcsel h0, h15, h0, vs
+; CHECK-NEXT:    fcmp h15, h0
+; CHECK-NEXT:    fcsel h0, h15, h0, gt
+; CHECK-NEXT:    str h0, [sp, #174] // 2-byte Spill
+; CHECK-NEXT:    ldr h0, [sp, #170] // 2-byte Reload
+; CHECK-NEXT:    fcmp h0, h0
+; CHECK-NEXT:    fcsel h0, h13, h0, vs
+; CHECK-NEXT:    fcmp h13, h0
+; CHECK-NEXT:    fcsel h0, h13, h0, gt
+; CHECK-NEXT:    str h0, [sp, #170] // 2-byte Spill
+; CHECK-NEXT:    ldr h0, [sp, #166] // 2-byte Reload
+; CHECK-NEXT:    fcmp h0, h0
+; CHECK-NEXT:    fcsel h0, h12, h0, vs
+; CHECK-NEXT:    fcmp h12, h0
+; CHECK-NEXT:    fcsel h0, h12, h0, gt
+; CHECK-NEXT:    str h0, [sp, #166] // 2-byte Spill
+; CHECK-NEXT:    ldr h0, [sp, #162] // 2-byte Reload
+; CHECK-NEXT:    fcmp h0, h0
+; CHECK-NEXT:    fcsel h0, h10, h0, vs
+; CHECK-NEXT:    fcmp h10, h0
+; CHECK-NEXT:    fcsel h0, h10, h0, gt
+; CHECK-NEXT:    str h0, [sp, #162] // 2-byte Spill
+; CHECK-NEXT:    ldr h0, [sp, #158] // 2-byte Reload
+; CHECK-NEXT:    fcmp h0, h0
+; CHECK-NEXT:    fcsel h0, h8, h0, vs
+; CHECK-NEXT:    fcmp h8, h0
+; CHECK-NEXT:    fcsel h0, h8, h0, gt
+; CHECK-NEXT:    str h0, [sp, #158] // 2-byte Spill
+; CHECK-NEXT:    ldr h0, [sp, #154] // 2-byte Reload
+; CHECK-NEXT:    fcmp h0, h0
+; CHECK-NEXT:    fcsel h0, h30, h0, vs
+; CHECK-NEXT:    fcmp h30, h0
+; CHECK-NEXT:    fcsel h0, h30, h0, gt
+; CHECK-NEXT:    str h0, [sp, #154] // 2-byte Spill
+; CHECK-NEXT:    ldr z0, [x8, #-1, mul vl] // 16-byte Folded Reload
+; CHECK-NEXT:    fcmp h0, h0
+; CHECK-NEXT:    fcsel h0, h27, h0, vs
+; CHECK-NEXT:    fcmp h27, h0
+; CHECK-NEXT:    fcsel h0, h27, h0, gt
+; CHECK-NEXT:    str h0, [sp, #62] // 2-byte Spill
+; CHECK-NEXT:    ldr z0, [x8, #-3, mul vl] // 16-byte Folded Reload
+; CHECK-NEXT:    fcmp h0, h0
+; CHECK-NEXT:    fcsel h0, h25, h0, vs
+; CHECK-NEXT:    fcmp h25, h0
+; CHECK-NEXT:    fcsel h0, h25, h0, gt
+; CHECK-NEXT:    str h0, [sp, #60] // 2-byte Spill
+; CHECK-NEXT:    ldr z0, [x8, #-4, mul vl] // 16-byte Folded Reload
+; CHECK-NEXT:    fcmp h0, h0
+; CHECK-NEXT:    fcsel h0, h24, h0, vs
+; CHECK-NEXT:    fcmp h24, h0
+; CHECK-NEXT:    fcsel h0, h24, h0, gt
+; CHECK-NEXT:    fcmp h4, h4
+; CHECK-NEXT:    str h0, [sp, #58] // 2-byte Spill
+; CHECK-NEXT:    fcsel h0, h23, h4, vs
+; CHECK-NEXT:    ldr h4, [sp, #104] // 2-byte Reload
+; CHECK-NEXT:    fcmp h23, h0
+; CHECK-NEXT:    fcsel h0, h23, h0, gt
+; CHECK-NEXT:    str h0, [sp, #56] // 2-byte Spill
+; CHECK-NEXT:    ldr z0, [x8, #-6, mul vl] // 16-byte Folded Reload
+; CHECK-NEXT:    fcmp h0, h0
+; CHECK-NEXT:    fcsel h0, h22, h0, vs
+; CHECK-NEXT:    fcmp h22, h0
+; CHECK-NEXT:    fcsel h0, h22, h0, gt
+; CHECK-NEXT:    str h0, [sp, #54] // 2-byte Spill
+; CHECK-NEXT:    ldr z0, [x8, #-8, mul vl] // 16-byte Folded Reload
+; CHECK-NEXT:    fcmp h0, h0
+; CHECK-NEXT:    fcsel h0, h21, h0, vs
+; CHECK-NEXT:    fcmp h21, h0
+; CHECK-NEXT:    fcsel h0, h21, h0, gt
+; CHECK-NEXT:    fcmp h17, h17
+; CHECK-NEXT:    str h0, [sp, #52] // 2-byte Spill
+; CHECK-NEXT:    fcsel h0, h20, h17, vs
+; CHECK-NEXT:    ldr h17, [sp, #130] // 2-byte Reload
+; CHECK-NEXT:    fcmp h20, h0
+; CHECK-NEXT:    fcsel h0, h20, h0, gt
+; CHECK-NEXT:    fcmp h7, h7
+; CHECK-NEXT:    str h0, [sp, #50] // 2-byte Spill
+; CHECK-NEXT:    fcsel h0, h19, h7, vs
+; CHECK-NEXT:    ldr h7, [sp, #122] // 2-byte Reload
+; CHECK-NEXT:    fcmp h19, h0
+; CHECK-NEXT:    fcsel h0, h19, h0, gt
+; CHECK-NEXT:    str h0, [sp, #48] // 2-byte Spill
+; CHECK-NEXT:    ldr z0, [x8, #-12, mul vl] // 16-byte Folded Reload
+; CHECK-NEXT:    fcmp h0, h0
+; CHECK-NEXT:    fcsel h0, h18, h0, vs
+; CHECK-NEXT:    fcmp h18, h0
+; CHECK-NEXT:    fcsel h0, h18, h0, gt
+; CHECK-NEXT:    str h0, [sp, #46] // 2-byte Spill
+; CHECK-NEXT:    ldr z0, [x8, #-14, mul vl] // 16-byte Folded Reload
+; CHECK-NEXT:    fcmp h0, h0
+; CHECK-NEXT:    fcsel h0, h17, h0, vs
+; CHECK-NEXT:    fcmp h17, h0
+; CHECK-NEXT:    fcsel h0, h17, h0, gt
+; CHECK-NEXT:    str h0, [sp, #44] // 2-byte Spill
+; CHECK-NEXT:    ldr z0, [x8, #-16, mul vl] // 16-byte Folded Reload
+; CHECK-NEXT:    fcmp h0, h0
+; CHECK-NEXT:    fcsel h0, h16, h0, vs
+; CHECK-NEXT:    fcmp h16, h0
+; CHECK-NEXT:    fcsel h0, h16, h0, gt
+; CHECK-NEXT:    str h0, [sp, #42] // 2-byte Spill
+; CHECK-NEXT:    ldr z0, [x8, #-18, mul vl] // 16-byte Folded Reload
+; CHECK-NEXT:    str h2, [sp, #256]
+; CHECK-NEXT:    ldr h2, [sp, #98] // 2-byte Reload
+; CHECK-NEXT:    fcmp h0, h0
+; CHECK-NEXT:    fcsel h0, h7, h0, vs
+; CHECK-NEXT:    fcmp h7, h0
+; CHECK-NEXT:    fcsel h0, h7, h0, gt
+; CHECK-NEXT:    fcmp h1, h1
+; CHECK-NEXT:    fcsel h1, h6, h1, vs
+; CHECK-NEXT:    str h0, [sp, #40] // 2-byte Spill
+; CHECK-NEXT:    fcmp h6, h1
+; CHECK-NEXT:    fcsel h1, h6, h1, gt
+; CHECK-NEXT:    fcmp h11, h11
+; CHECK-NEXT:    fcsel h11, h5, h11, vs
+; CHECK-NEXT:    str h1, [sp, #38] // 2-byte Spill
+; CHECK-NEXT:    fcmp h5, h11
+; CHECK-NEXT:    fcsel h0, h5, h11, gt
+; CHECK-NEXT:    fcmp h9, h9
+; CHECK-NEXT:    ldr h11, [sp, #110] // 2-byte Reload
+; CHECK-NEXT:    fcsel h9, h11, h9, vs
+; CHECK-NEXT:    str h0, [sp, #36] // 2-byte Spill
+; CHECK-NEXT:    fcmp h11, h9
+; CHECK-NEXT:    fcsel h0, h11, h9, gt
+; CHECK-NEXT:    fcmp h31, h31
+; CHECK-NEXT:    ldr h9, [sp, #204] // 2-byte Reload
+; CHECK-NEXT:    fcsel h31, h4, h31, vs
+; CHECK-NEXT:    str h0, [sp, #34] // 2-byte Spill
+; CHECK-NEXT:    ldr h0, [sp, #248] // 2-byte Reload
+; CHECK-NEXT:    str h0, [sp, #382]
+; CHECK-NEXT:    ldr h0, [sp, #240] // 2-byte Reload
+; CHECK-NEXT:    fcmp h4, h31
+; CHECK-NEXT:    str h0, [sp, #368]
+; CHECK-NEXT:    ldr h0, [sp, #238] // 2-byte Reload
+; CHECK-NEXT:    fcsel h1, h4, h31, gt
+; CHECK-NEXT:    fcmp h28, h28
+; CHECK-NEXT:    str h0, [sp, #366]
+; CHECK-NEXT:    ldr h0, [sp, #236] // 2-byte Reload
+; CHECK-NEXT:    fcsel h28, h3, h28, vs
+; CHECK-NEXT:    str h1, [sp, #32] // 2-byte Spill
+; CHECK-NEXT:    str h0, [sp, #364]
+; CHECK-NEXT:    ldr h0, [sp, #102] // 2-byte Reload
+; CHECK-NEXT:    fcmp h3, h28
+; CHECK-NEXT:    fcsel h1, h3, h28, gt
+; CHECK-NEXT:    fcmp h26, h26
+; CHECK-NEXT:    str h1, [sp, #30] // 2-byte Spill
+; CHECK-NEXT:    ldr h1, [sp, #244] // 2-byte Reload
+; CHECK-NEXT:    fcsel h26, h2, h26, vs
+; CHECK-NEXT:    str h1, [sp, #380]
+; CHECK-NEXT:    ldr h1, [sp, #254] // 2-byte Reload
+; CHECK-NEXT:    fcmp h2, h26
+; CHECK-NEXT:    str h1, [sp, #378]
+; CHECK-NEXT:    ldr h1, [sp, #252] // 2-byte Reload
+; CHECK-NEXT:    str h1, [sp, #376]
+; CHECK-NEXT:    ldr h1, [sp, #250] // 2-byte Reload
+; CHECK-NEXT:    fcsel h31, h2, h26, gt
+; CHECK-NEXT:    fcmp h29, h29
+; CHECK-NEXT:    ldr h26, [sp, #222] // 2-byte Reload
+; CHECK-NEXT:    str h1, [sp, #374]
+; CHECK-NEXT:    ldr h1, [sp, #246] // 2-byte Reload
+; CHECK-NEXT:    str h1, [sp, #372]
+; CHECK-NEXT:    ldr h1, [sp, #242] // 2-byte Reload
+; CHECK-NEXT:    fcsel h28, h0, h29, vs
+; CHECK-NEXT:    ldr h29, [sp, #108] // 2-byte Reload
+; CHECK-NEXT:    str h1, [sp, #370]
+; CHECK-NEXT:    ldr h1, [sp, #234] // 2-byte Reload
+; CHECK-NEXT:    fcmp h0, h28
+; CHECK-NEXT:    str h1, [sp, #362]
+; CHECK-NEXT:    ldr h1, [sp, #232] // 2-byte Reload
+; CHECK-NEXT:    str h1, [sp, #360]
+; CHECK-NEXT:    ldr h1, [sp, #230] // 2-byte Reload
+; CHECK-NEXT:    fcsel h28, h0, h28, gt
+; CHECK-NEXT:    str h1, [sp, #358]
+; CHECK-NEXT:    ldr h1, [sp, #228] // 2-byte Reload
+; CHECK-NEXT:    str h1, [sp, #356]
+; CHECK-NEXT:    ldr h1, [sp, #226] // 2-byte Reload
+; CHECK-NEXT:    str h1, [sp, #354]
+; CHECK-NEXT:    ldr h1, [sp, #224] // 2-byte Reload
+; CHECK-NEXT:    str h1, [sp, #352]
+; CHECK-NEXT:    fmov s1, s0
+; CHECK-NEXT:    ldr z0, [x8, #-22, mul vl] // 16-byte Folded Reload
+; CHECK-NEXT:    str h26, [sp, #350]
+; CHECK-NEXT:    ldr h26, [sp, #220] // 2-byte Reload
+; CHECK-NEXT:    str h26, [sp, #348]
+; CHECK-NEXT:    ldr h26, [sp, #218] // 2-byte Reload
+; CHECK-NEXT:    fcmp h0, h0
+; CHECK-NEXT:    str h26, [sp, #346]
+; CHECK-NEXT:    fcsel h26, h29, h0, vs
+; CHECK-NEXT:    ldr h0, [sp, #216] // 2-byte Reload
+; CHECK-NEXT:    str h0, [sp, #344]
+; CHECK-NEXT:    ldr h0, [sp, #214] // 2-byte Reload
+; CHECK-NEXT:    fcmp h29, h26
+; CHECK-NEXT:    str h0, [sp, #342]
+; CHECK-NEXT:    ldr h0, [sp, #212] // 2-byte Reload
+; CHECK-NEXT:    str h0, [sp, #340]
+; CHECK-NEXT:    ldr h0, [sp, #210] // 2-byte Reload
+; CHECK-NEXT:    fcsel h26, h29, h26, gt
+; CHECK-NEXT:    str h0, [sp, #338]
+; CHECK-NEXT:    ldr h0, [sp, #208] // 2-byte Reload
+; CHECK-NEXT:    str h0, [sp, #336]
+; CHECK-NEXT:    ldr h0, [sp, #206] // 2-byte Reload
+; CHECK-NEXT:    str h0, [sp, #334]
+; CHECK-NEXT:    fmov s0, s29
+; CHECK-NEXT:    ldr z29, [x8, #-21, mul vl] // 16-byte Folded Reload
+; CHECK-NEXT:    str h13, [sp, #328]
+; CHECK-NEXT:    ldr h13, [sp, #116] // 2-byte Reload
+; CHECK-NEXT:    str h9, [sp, #332]
+; CHECK-NEXT:    str h15, [sp, #330]
+; CHECK-NEXT:    fcmp h29, h29
+; CHECK-NEXT:    str h12, [sp, #326]
+; CHECK-NEXT:    str h10, [sp, #324]
+; CHECK-NEXT:    str h8, [sp, #322]
+; CHECK-NEXT:    fcsel h29, h13, h29, vs
+; CHECK-NEXT:    str h30, [sp, #320]
+; CHECK-NEXT:    str h27, [sp, #318]
+; CHECK-NEXT:    str h25, [sp, #316]
+; CHECK-NEXT:    fcmp h13, h29
+; CHECK-NEXT:    ldr z27, [x8, #-20, mul vl] // 16-byte Folded Reload
+; CHECK-NEXT:    str h22, [sp, #310]
+; CHECK-NEXT:    ldr h22, [sp, #120] // 2-byte Reload
+; CHECK-NEXT:    str h24, [sp, #314]
+; CHECK-NEXT:    str h23, [sp, #312]
+; CHECK-NEXT:    fcsel h25, h13, h29, gt
+; CHECK-NEXT:    fcmp h27, h27
+; CHECK-NEXT:    str h21, [sp, #308]
+; CHECK-NEXT:    str h20, [sp, #306]
+; CHECK-NEXT:    str h19, [sp, #304]
+; CHECK-NEXT:    fcsel h29, h22, h27, vs
+; CHECK-NEXT:    str h18, [sp, #302]
+; CHECK-NEXT:    ldr h18, [sp, #92] // 2-byte Reload
+; CHECK-NEXT:    str h17, [sp, #300]
+; CHECK-NEXT:    str h16, [sp, #298]
+; CHECK-NEXT:    fcmp h22, h29
+; CHECK-NEXT:    ldr z16, [x8, #-17, mul vl] // 16-byte Folded Reload
+; CHECK-NEXT:    str h5, [sp, #292]
+; CHECK-NEXT:    ldr h5, [sp, #126] // 2-byte Reload
+; CHECK-NEXT:    str h7, [sp, #296]
+; CHECK-NEXT:    ldr h7, [sp, #94] // 2-byte Reload
+; CHECK-NEXT:    str h6, [sp, #294]
+; CHECK-NEXT:    ldr h6, [sp, #96] // 2-byte Reload
+; CHECK-NEXT:    fcsel h12, h22, h29, gt
+; CHECK-NEXT:    fcmp h16, h16
+; CHECK-NEXT:    str h11, [sp, #290]
+; CHECK-NEXT:    str h4, [sp, #288]
+; CHECK-NEXT:    ldr h4, [sp, #114] // 2-byte Reload
+; CHECK-NEXT:    str h3, [sp, #286]
+; CHECK-NEXT:    ldr h3, [sp, #88] // 2-byte Reload
+; CHECK-NEXT:    fcsel h27, h5, h16, vs
+; CHECK-NEXT:    str h2, [sp, #284]
+; CHECK-NEXT:    ldr h16, [sp, #90] // 2-byte Reload
+; CHECK-NEXT:    str h1, [sp, #282]
+; CHECK-NEXT:    str h0, [sp, #280]
+; CHECK-NEXT:    fcmp h5, h27
+; CHECK-NEXT:    ldr z0, [x8, #-15, mul vl] // 16-byte Folded Reload
+; CHECK-NEXT:    str h5, [sp, #274]
+; CHECK-NEXT:    str h13, [sp, #278]
+; CHECK-NEXT:    str h22, [sp, #276]
+; CHECK-NEXT:    fcsel h17, h5, h27, gt
+; CHECK-NEXT:    fcmp h0, h0
+; CHECK-NEXT:    ldr h5, [sp, #106] // 2-byte Reload
+; CHECK-NEXT:    str h14, [sp, #272]
+; CHECK-NEXT:    str h4, [sp, #268]
+; CHECK-NEXT:    fcsel h2, h14, h0, vs
+; CHECK-NEXT:    ldr h0, [sp, #124] // 2-byte Reload
+; CHECK-NEXT:    str h5, [sp, #266]
+; CHECK-NEXT:    str h6, [sp, #264]
+; CHECK-NEXT:    str h0, [sp, #270]
+; CHECK-NEXT:    fcmp h14, h2
+; CHECK-NEXT:    str h18, [sp, #262]
+; CHECK-NEXT:    fcsel h1, h14, h2, gt
+; CHECK-NEXT:    ldr z2, [x8, #-13, mul vl] // 16-byte Folded Reload
+; CHECK-NEXT:    str h3, [sp, #384]
+; CHECK-NEXT:    ldr h3, [sp, #86] // 2-byte Reload
+; CHECK-NEXT:    str h7, [sp, #260]
+; CHECK-NEXT:    str h16, [sp, #258]
+; CHECK-NEXT:    str h3, [sp, #510]
+; CHECK-NEXT:    ldr h3, [sp, #84] // 2-byte Reload
+; CHECK-NEXT:    fcmp h2, h2
+; CHECK-NEXT:    str h3, [sp, #508]
+; CHECK-NEXT:    ldr h3, [sp, #82] // 2-byte Reload
+; CHECK-NEXT:    fcsel h2, h0, h2, vs
+; CHECK-NEXT:    str h3, [sp, #506]
+; CHECK-NEXT:    ldr h3, [sp, #80] // 2-byte Reload
+; CHECK-NEXT:    str h3, [sp, #504]
+; CHECK-NEXT:    ldr h3, [sp, #78] // 2-byte Reload
+; CHECK-NEXT:    fcmp h0, h2
+; CHECK-NEXT:    str h3, [sp, #502]
+; CHECK-NEXT:    ldr h3, [sp, #76] // 2-byte Reload
+; CHECK-NEXT:    fcsel h2, h0, h2, gt
+; CHECK-NEXT:    ldr h0, [sp, #74] // 2-byte Reload
+; CHECK-NEXT:    str h3, [sp, #500]
+; CHECK-NEXT:    ldr z3, [x8, #-11, mul vl] // 16-byte Folded Reload
+; CHECK-NEXT:    str h0, [sp, #498]
+; CHECK-NEXT:    ldr h0, [sp, #72] // 2-byte Reload
+; CHECK-NEXT:    str h0, [sp, #496]
+; CHECK-NEXT:    ldr h0, [sp, #142] // 2-byte Reload
+; CHECK-NEXT:    fcmp h3, h3
+; CHECK-NEXT:    str h0, [sp, #494]
+; CHECK-NEXT:    fmov s0, s4
+; CHECK-NEXT:    fcsel h3, h4, h3, vs
+; CHECK-NEXT:    ldr h4, [sp, #138] // 2-byte Reload
+; CHECK-NEXT:    str h4, [sp, #492]
+; CHECK-NEXT:    ldr h4, [sp, #200] // 2-byte Reload
+; CHECK-NEXT:    fcmp h0, h3
+; CHECK-NEXT:    str h4, [sp, #490]
+; CHECK-NEXT:    ldr h4, [sp, #198] // 2-byte Reload
+; CHECK-NEXT:    str h4, [sp, #488]
+; CHECK-NEXT:    ldr h4, [sp, #196] // 2-byte Reload
+; CHECK-NEXT:    fcsel h3, h0, h3, gt
+; CHECK-NEXT:    ldr h0, [sp, #190] // 2-byte Reload
+; CHECK-NEXT:    str h4, [sp, #486]
+; CHECK-NEXT:    ldr h4, [sp, #194] // 2-byte Reload
+; CHECK-NEXT:    str h4, [sp, #484]
+; CHECK-NEXT:    ldr h4, [sp, #192] // 2-byte Reload
+; CHECK-NEXT:    str h4, [sp, #482]
+; CHECK-NEXT:    ldr z4, [x8, #-10, mul vl] // 16-byte Folded Reload
+; CHECK-NEXT:    str h0, [sp, #480]
+; CHECK-NEXT:    ldr h0, [sp, #70] // 2-byte Reload
+; CHECK-NEXT:    str h0, [sp, #478]
+; CHECK-NEXT:    ldr h0, [sp, #68] // 2-byte Reload
+; CHECK-NEXT:    fcmp h4, h4
+; CHECK-NEXT:    str h0, [sp, #476]
+; CHECK-NEXT:    fmov s0, s5
+; CHECK-NEXT:    fcsel h4, h5, h4, vs
+; CHECK-NEXT:    ldr h5, [sp, #188] // 2-byte Reload
+; CHECK-NEXT:    str h5, [sp, #474]
+; CHECK-NEXT:    ldr h5, [sp, #186] // 2-byte Reload
+; CHECK-NEXT:    fcmp h0, h4
+; CHECK-NEXT:    str h5, [sp, #472]
+; CHECK-NEXT:    ldr h5, [sp, #66] // 2-byte Reload
+; CHECK-NEXT:    str h5, [sp, #470]
+; CHECK-NEXT:    ldr h5, [sp, #184] // 2-byte Reload
+; CHECK-NEXT:    fcsel h4, h0, h4, gt
+; CHECK-NEXT:    ldr h0, [sp, #180] // 2-byte Reload
+; CHECK-NEXT:    str h5, [sp, #468]
+; CHECK-NEXT:    ldr h5, [sp, #64] // 2-byte Reload
+; CHECK-NEXT:    str h5, [sp, #466]
+; CHECK-NEXT:    ldr h5, [sp, #182] // 2-byte Reload
+; CHECK-NEXT:    str h5, [sp, #464]
+; CHECK-NEXT:    ldr z5, [x8, #-7, mul vl] // 16-byte Folded Reload
+; CHECK-NEXT:    str h0, [sp, #462]
+; CHECK-NEXT:    ldr h0, [sp, #178] // 2-byte Reload
+; CHECK-NEXT:    str h0, [sp, #460]
+; CHECK-NEXT:    ldr h0, [sp, #174] // 2-byte Reload
+; CHECK-NEXT:    fcmp h5, h5
+; CHECK-NEXT:    str h0, [sp, #458]
+; CHECK-NEXT:    fmov s0, s6
+; CHECK-NEXT:    fcsel h5, h6, h5, vs
+; CHECK-NEXT:    ldr h6, [sp, #170] // 2-byte Reload
+; CHECK-NEXT:    str h6, [sp, #456]
+; CHECK-NEXT:    ldr h6, [sp, #166] // 2-byte Reload
+; CHECK-NEXT:    fcmp h0, h5
+; CHECK-NEXT:    str h6, [sp, #454]
+; CHECK-NEXT:    ldr h6, [sp, #162] // 2-byte Reload
+; CHECK-NEXT:    str h6, [sp, #452]
+; CHECK-NEXT:    ldr h6, [sp, #158] // 2-byte Reload
+; CHECK-NEXT:    fcsel h5, h0, h5, gt
+; CHECK-NEXT:    str h6, [sp, #450]
+; CHECK-NEXT:    ldr h6, [sp, #154] // 2-byte Reload
+; CHECK-NEXT:    str h6, [sp, #448]
+; CHECK-NEXT:    ldr h6, [sp, #62] // 2-byte Reload
+; CHECK-NEXT:    str h6, [sp, #446]
+; CHECK-NEXT:    ldr h6, [sp, #60] // 2-byte Reload
+; CHECK-NEXT:    ldr z0, [x8, #-9, mul vl] // 16-byte Folded Reload
+; CHECK-NEXT:    str h6, [sp, #444]
+; CHECK-NEXT:    ldr h6, [sp, #58] // 2-byte Reload
+; CHECK-NEXT:    fcmp h0, h0
+; CHECK-NEXT:    str h6, [sp, #442]
+; CHECK-NEXT:    ldr h6, [sp, #56] // 2-byte Reload
+; CHECK-NEXT:    str h6, [sp, #440]
+; CHECK-NEXT:    fcsel h6, h18, h0, vs
+; CHECK-NEXT:    ldr h0, [sp, #54] // 2-byte Reload
+; CHECK-NEXT:    str h0, [sp, #438]
+; CHECK-NEXT:    ldr h0, [sp, #52] // 2-byte Reload
+; CHECK-NEXT:    fcmp h18, h6
+; CHECK-NEXT:    str h0, [sp, #436]
+; CHECK-NEXT:    ldr h0, [sp, #50] // 2-byte Reload
+; CHECK-NEXT:    str h0, [sp, #434]
+; CHECK-NEXT:    ldr h0, [sp, #48] // 2-byte Reload
+; CHECK-NEXT:    fcsel h6, h18, h6, gt
+; CHECK-NEXT:    ldr h18, [sp, #42] // 2-byte Reload
+; CHECK-NEXT:    str h0, [sp, #432]
+; CHECK-NEXT:    ldr h0, [sp, #46] // 2-byte Reload
+; CHECK-NEXT:    str h0, [sp, #430]
+; CHECK-NEXT:    ldr h0, [sp, #44] // 2-byte Reload
+; CHECK-NEXT:    str h0, [sp, #428]
+; CHECK-NEXT:    ldr z0, [x8, #-5, mul vl] // 16-byte Folded Reload
+; CHECK-NEXT:    str h18, [sp, #426]
+; CHECK-NEXT:    ldr h18, [sp, #40] // 2-byte Reload
+; CHECK-NEXT:    str h31, [sp, #412]
+; CHECK-NEXT:    str h18, [sp, #424]
+; CHECK-NEXT:    ldr h18, [sp, #38] // 2-byte Reload
+; CHECK-NEXT:    fcmp h0, h0
+; CHECK-NEXT:    str h28, [sp, #410]
+; CHECK-NEXT:    str h18, [sp, #422]
+; CHECK-NEXT:    ldr h18, [sp, #36] // 2-byte Reload
+; CHECK-NEXT:    str h18, [sp, #420]
+; CHECK-NEXT:    ldr h18, [sp, #34] // 2-byte Reload
+; CHECK-NEXT:    fcsel h0, h7, h0, vs
+; CHECK-NEXT:    str h18, [sp, #418]
+; CHECK-NEXT:    ldr h18, [sp, #32] // 2-byte Reload
+; CHECK-NEXT:    fcmp h7, h0
+; CHECK-NEXT:    str h18, [sp, #416]
+; CHECK-NEXT:    ldr h18, [sp, #30] // 2-byte Reload
+; CHECK-NEXT:    str h18, [sp, #414]
+; CHECK-NEXT:    fcsel h0, h7, h0, gt
+; CHECK-NEXT:    ldr z7, [x8, #-2, mul vl] // 16-byte Folded Reload
+; CHECK-NEXT:    str h1, [sp, #400]
+; CHECK-NEXT:    adrp x8, .LCPI76_0
+; CHECK-NEXT:    add x8, x8, :lo12:.LCPI76_0
+; CHECK-NEXT:    str h26, [sp, #408]
+; CHECK-NEXT:    str h25, [sp, #406]
+; CHECK-NEXT:    fcmp h7, h7
+; CHECK-NEXT:    str h12, [sp, #404]
+; CHECK-NEXT:    str h17, [sp, #402]
+; CHECK-NEXT:    str h2, [sp, #398]
+; CHECK-NEXT:    fcsel h7, h16, h7, vs
+; CHECK-NEXT:    str h3, [sp, #396]
+; CHECK-NEXT:    str h4, [sp, #394]
+; CHECK-NEXT:    str h5, [sp, #392]
+; CHECK-NEXT:    fcmp h16, h7
+; CHECK-NEXT:    str h6, [sp, #390]
+; CHECK-NEXT:    str h0, [sp, #388]
+; CHECK-NEXT:    ld1h { z0.h }, p0/z, [x8]
+; CHECK-NEXT:    add x8, sp, #384
+; CHECK-NEXT:    fcsel h1, h16, h7, gt
+; CHECK-NEXT:    str h1, [sp, #386]
+; CHECK-NEXT:    ld1h { z1.h }, p0/z, [x9]
+; CHECK-NEXT:    cmpeq p1.h, p0/z, z1.h, z0.h
+; CHECK-NEXT:    mov z0.h, p1/z, #-1 // =0xffffffffffffffff
+; CHECK-NEXT:    ptrue p1.h
+; CHECK-NEXT:    and z0.h, z0.h, #0x1
+; CHECK-NEXT:    cmpne p1.h, p1/z, z0.h, #0
+; CHECK-NEXT:    ld1h { z0.h }, p0/z, [x8]
+; CHECK-NEXT:    fcmeq p2.h, p0/z, z0.h, #0.0
+; CHECK-NEXT:    sel z1.h, p1, z1.h, z0.h
+; CHECK-NEXT:    mov z0.h, p2/m, z1.h
+; CHECK-NEXT:    st1h { z0.h }, p0, [x0]
+; CHECK-NEXT:    sub sp, x29, #64
+; CHECK-NEXT:    ldp x29, x30, [sp, #64] // 16-byte Folded Reload
+; CHECK-NEXT:    ldp d9, d8, [sp, #48] // 16-byte Folded Reload
+; CHECK-NEXT:    ldp d11, d10, [sp, #32] // 16-byte Folded Reload
+; CHECK-NEXT:    ldp d13, d12, [sp, #16] // 16-byte Folded Reload
+; CHECK-NEXT:    ldp d15, d14, [sp], #80 // 16-byte Folded Reload
+; CHECK-NEXT:    ret
+  %op1 = load <64 x half>, ptr %a
+  %op2 = load <64 x half>, ptr %b
+  %res = call <64 x half> @llvm.maximumnum.v64f16(<64 x half> %op1, <64 x half> %op2)
+  store <64 x half> %res, ptr %a
+  ret void
+}
+
+define void @fmaximumnum_v128f16(ptr %a, ptr %b) vscale_range(16,0) #0 {
+; CHECK-LABEL: fmaximumnum_v128f16:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    stp d15, d14, [sp, #-80]! // 16-byte Folded Spill
+; CHECK-NEXT:    sub x9, sp, #1200
+; CHECK-NEXT:    stp d13, d12, [sp, #16] // 16-byte Folded Spill
+; CHECK-NEXT:    addvl x9, x9, #-31
+; CHECK-NEXT:    stp d11, d10, [sp, #32] // 16-byte Folded Spill
+; CHECK-NEXT:    stp d9, d8, [sp, #48] // 16-byte Folded Spill
+; CHECK-NEXT:    stp x29, x30, [sp, #64] // 16-byte Folded Spill
+; CHECK-NEXT:    add x29, sp, #64
+; CHECK-NEXT:    and sp, x9, #0xffffffffffffff00
+; CHECK-NEXT:    .cfi_def_cfa w29, 16
+; CHECK-NEXT:    .cfi_offset w30, -8
+; CHECK-NEXT:    .cfi_offset w29, -16
+; CHECK-NEXT:    .cfi_offset b8, -24
+; CHECK-NEXT:    .cfi_offset b9, -32
+; CHECK-NEXT:    .cfi_offset b10, -40
+; CHECK-NEXT:    .cfi_offset b11, -48
+; CHECK-NEXT:    .cfi_offset b12, -56
+; CHECK-NEXT:    .cfi_offset b13, -64
+; CHECK-NEXT:    .cfi_offset b14, -72
+; CHECK-NEXT:    .cfi_offset b15, -80
+; CHECK-NEXT:    ptrue p0.h, vl128
+; CHECK-NEXT:    mov w8, #127 // =0x7f
+; CHECK-NEXT:    add x9, sp, #512
+; CHECK-NEXT:    ld1h { z0.h }, p0/z, [x0]
+; CHECK-NEXT:    ld1h { z1.h }, p0/z, [x1]
+; CHECK-NEXT:    fcmp h0, h0
+; CHECK-NEXT:    fcsel h2, h1, h0, vs
+; CHECK-NEXT:    whilels p1.h, xzr, x8
+; CHECK-NEXT:    mov w8, #126 // =0x7e
+; CHECK-NEXT:    lastb h5, p1, z1.h
+; CHECK-NEXT:    str h2, [sp, #262] // 2-byte Spill
+; CHECK-NEXT:    lastb h2, p1, z0.h
+; CHECK-NEXT:    fcmp h2, h2
+; CHECK-NEXT:    fcsel h2, h5, h2, vs
+; CHECK-NEXT:    whilels p1.h, xzr, x8
+; CHECK-NEXT:    mov w8, #125 // =0x7d
+; CHECK-NEXT:    lastb h3, p1, z1.h
+; CHECK-NEXT:    str h2, [sp, #396] // 2-byte Spill
+; CHECK-NEXT:    lastb h2, p1, z0.h
+; CHECK-NEXT:    str h3, [sp, #282] // 2-byte Spill
+; CHECK-NEXT:    fcmp h2, h2
+; CHECK-NEXT:    fcsel h2, h3, h2, vs
+; CHECK-NEXT:    whilels p1.h, xzr, x8
+; CHECK-NEXT:    mov w8, #124 // =0x7c
+; CHECK-NEXT:    lastb h3, p1, z1.h
+; CHECK-NEXT:    str h2, [sp, #510] // 2-byte Spill
+; CHECK-NEXT:    lastb h2, p1, z0.h
+; CHECK-NEXT:    str h3, [sp, #280] // 2-byte Spill
+; CHECK-NEXT:    fcmp h2, h2
+; CHECK-NEXT:    fcsel h2, h3, h2, vs
+; CHECK-NEXT:    whilels p1.h, xzr, x8
+; CHECK-NEXT:    mov w8, #123 // =0x7b
+; CHECK-NEXT:    lastb h3, p1, z1.h
+; CHECK-NEXT:    str h2, [sp, #508] // 2-byte Spill
+; CHECK-NEXT:    lastb h2, p1, z0.h
+; CHECK-NEXT:    str h3, [sp, #276] // 2-byte Spill
+; CHECK-NEXT:    fcmp h2, h2
+; CHECK-NEXT:    fcsel h2, h3, h2, vs
+; CHECK-NEXT:    whilels p1.h, xzr, x8
+; CHECK-NEXT:    mov w8, #122 // =0x7a
+; CHECK-NEXT:    lastb h3, p1, z1.h
+; CHECK-NEXT:    str h2, [sp, #504] // 2-byte Spill
+; CHECK-NEXT:    lastb h2, p1, z0.h
+; CHECK-NEXT:    str h3, [sp, #278] // 2-byte Spill
+; CHECK-NEXT:    fcmp h2, h2
+; CHECK-NEXT:    fcsel h2, h3, h2, vs
+; CHECK-NEXT:    whilels p1.h, xzr, x8
+; CHECK-NEXT:    mov w8, #121 // =0x79
+; CHECK-NEXT:    lastb h3, p1, z1.h
+; CHECK-NEXT:    str h2, [sp, #506] // 2-byte Spill
+; CHECK-NEXT:    lastb h2, p1, z0.h
+; CHECK-NEXT:    str h3, [sp, #272] // 2-byte Spill
+; CHECK-NEXT:    fcmp h2, h2
+; CHECK-NEXT:    fcsel h2, h3, h2, vs
+; CHECK-NEXT:    whilels p1.h, xzr, x8
+; CHECK-NEXT:    mov w8, #120 // =0x78
+; CHECK-NEXT:    lastb h3, p1, z1.h
+; CHECK-NEXT:    str h2, [sp, #356] // 2-byte Spill
+; CHECK-NEXT:    lastb h2, p1, z0.h
+; CHECK-NEXT:    str h3, [sp, #274] // 2-byte Spill
+; CHECK-NEXT:    fcmp h2, h2
+; CHECK-NEXT:    fcsel h2, h3, h2, vs
+; CHECK-NEXT:    whilels p1.h, xzr, x8
+; CHECK-NEXT:    mov w8, #119 // =0x77
+; CHECK-NEXT:    lastb h17, p1, z1.h
+; CHECK-NEXT:    str h2, [sp, #496] // 2-byte Spill
+; CHECK-NEXT:    lastb h2, p1, z0.h
+; CHECK-NEXT:    fcmp h2, h2
+; CHECK-NEXT:    fcsel h2, h17, h2, vs
+; CHECK-NEXT:    whilels p1.h, xzr, x8
+; CHECK-NEXT:    mov w8, #118 // =0x76
+; CHECK-NEXT:    lastb h18, p1, z1.h
+; CHECK-NEXT:    str h2, [sp, #360] // 2-byte Spill
+; CHECK-NEXT:    lastb h2, p1, z0.h
+; CHECK-NEXT:    fcmp h2, h2
+; CHECK-NEXT:    fcsel h2, h18, h2, vs
+; CHECK-NEXT:    whilels p1.h, xzr, x8
+; CHECK-NEXT:    mov w8, #117 // =0x75
+; CHECK-NEXT:    lastb h25, p1, z1.h
+; CHECK-NEXT:    str h2, [sp, #358] // 2-byte Spill
+; CHECK-NEXT:    lastb h2, p1, z0.h
+; CHECK-NEXT:    fcmp h2, h2
+; CHECK-NEXT:    fcsel h2, h25, h2, vs
+; CHECK-NEXT:    whilels p1.h, xzr, x8
+; CHECK-NEXT:    mov w8, #116 // =0x74
+; CHECK-NEXT:    lastb h20, p1, z1.h
+; CHECK-NEXT:    str h2, [sp, #502] // 2-byte Spill
+; CHECK-NEXT:    lastb h2, p1, z0.h
+; CHECK-NEXT:    fcmp h2, h2
+; CHECK-NEXT:    fcsel h2, h20, h2, vs
+; CHECK-NEXT:    whilels p1.h, xzr, x8
+; CHECK-NEXT:    mov w8, #115 // =0x73
+; CHECK-NEXT:    lastb h30, p1, z1.h
+; CHECK-NEXT:    str h2, [sp, #500] // 2-byte Spill
+; CHECK-NEXT:    lastb h2, p1, z0.h
+; CHECK-NEXT:    fcmp h2, h2
+; CHECK-NEXT:    fcsel h2, h30, h2, vs
+; CHECK-NEXT:    whilels p1.h, xzr, x8
+; CHECK-NEXT:    mov w8, #114 // =0x72
+; CHECK-NEXT:    lastb h3, p1, z1.h
+; CHECK-NEXT:    str h2, [sp, #498] // 2-byte Spill
+; CHECK-NEXT:    lastb h2, p1, z0.h
+; CHECK-NEXT:    str h3, [sp, #268] // 2-byte Spill
+; CHECK-NEXT:    fcmp h2, h2
+; CHECK-NEXT:    fcsel h2, h3, h2, vs
+; CHECK-NEXT:    whilels p1.h, xzr, x8
+; CHECK-NEXT:    mov w8, #113 // =0x71
+; CHECK-NEXT:    lastb h8, p1, z1.h
+; CHECK-NEXT:    str h2, [sp, #494] // 2-byte Spill
+; CHECK-NEXT:    lastb h2, p1, z0.h
+; CHECK-NEXT:    fcmp h2, h2
+; CHECK-NEXT:    fcsel h2, h8, h2, vs
+; CHECK-NEXT:    whilels p1.h, xzr, x8
+; CHECK-NEXT:    mov w8, #112 // =0x70
+; CHECK-NEXT:    lastb h3, p1, z1.h
+; CHECK-NEXT:    str h2, [sp, #492] // 2-byte Spill
+; CHECK-NEXT:    lastb h2, p1, z0.h
+; CHECK-NEXT:    str h3, [sp, #264] // 2-byte Spill
+; CHECK-NEXT:    fcmp h2, h2
+; CHECK-NEXT:    fcsel h2, h3, h2, vs
+; CHECK-NEXT:    whilels p1.h, xzr, x8
+; CHECK-NEXT:    mov w8, #111 // =0x6f
+; CHECK-NEXT:    lastb h9, p1, z1.h
+; CHECK-NEXT:    str h2, [sp, #490] // 2-byte Spill
+; CHECK-NEXT:    lastb h2, p1, z0.h
+; CHECK-NEXT:    fcmp h2, h2
+; CHECK-NEXT:    fcsel h2, h9, h2, vs
+; CHECK-NEXT:    whilels p1.h, xzr, x8
+; CHECK-NEXT:    mov w8, #110 // =0x6e
+; CHECK-NEXT:    lastb h3, p1, z1.h
+; CHECK-NEXT:    str h2, [sp, #488] // 2-byte Spill
+; CHECK-NEXT:    lastb h2, p1, z0.h
+; CHECK-NEXT:    str h3, [sp, #260] // 2-byte Spill
+; CHECK-NEXT:    fcmp h2, h2
+; CHECK-NEXT:    fcsel h2, h3, h2, vs
+; CHECK-NEXT:    whilels p1.h, xzr, x8
+; CHECK-NEXT:    mov w8, #109 // =0x6d
+; CHECK-NEXT:    lastb h3, p1, z1.h
+; CHECK-NEXT:    str h2, [sp, #486] // 2-byte Spill
+; CHECK-NEXT:    lastb h2, p1, z0.h
+; CHECK-NEXT:    str h3, [sp, #354] // 2-byte Spill
+; CHECK-NEXT:    fcmp h2, h2
+; CHECK-NEXT:    fcsel h2, h3, h2, vs
+; CHECK-NEXT:    whilels p1.h, xzr, x8
+; CHECK-NEXT:    mov w8, #108 // =0x6c
+; CHECK-NEXT:    lastb h3, p1, z1.h
+; CHECK-NEXT:    str h2, [sp, #484] // 2-byte Spill
+; CHECK-NEXT:    lastb h2, p1, z0.h
+; CHECK-NEXT:    str h3, [sp, #352] // 2-byte Spill
+; CHECK-NEXT:    fcmp h2, h2
+; CHECK-NEXT:    fcsel h2, h3, h2, vs
+; CHECK-NEXT:    whilels p1.h, xzr, x8
+; CHECK-NEXT:    mov w8, #107 // =0x6b
+; CHECK-NEXT:    lastb h3, p1, z1.h
+; CHECK-NEXT:    str h2, [sp, #482] // 2-byte Spill
+; CHECK-NEXT:    lastb h2, p1, z0.h
+; CHECK-NEXT:    str h3, [sp, #256] // 2-byte Spill
+; CHECK-NEXT:    fcmp h2, h2
+; CHECK-NEXT:    fcsel h2, h3, h2, vs
+; CHECK-NEXT:    whilels p1.h, xzr, x8
+; CHECK-NEXT:    mov w8, #106 // =0x6a
+; CHECK-NEXT:    lastb h3, p1, z1.h
+; CHECK-NEXT:    str h2, [sp, #480] // 2-byte Spill
+; CHECK-NEXT:    lastb h2, p1, z0.h
+; CHECK-NEXT:    str h3, [sp, #350] // 2-byte Spill
+; CHECK-NEXT:    fcmp h2, h2
+; CHECK-NEXT:    fcsel h2, h3, h2, vs
+; CHECK-NEXT:    whilels p1.h, xzr, x8
+; CHECK-NEXT:    mov w8, #105 // =0x69
+; CHECK-NEXT:    lastb h3, p1, z1.h
+; CHECK-NEXT:    str h2, [sp, #478] // 2-byte Spill
+; CHECK-NEXT:    lastb h2, p1, z0.h
+; CHECK-NEXT:    str h3, [sp, #252] // 2-byte Spill
+; CHECK-NEXT:    fcmp h2, h2
+; CHECK-NEXT:    fcsel h2, h3, h2, vs
+; CHECK-NEXT:    whilels p1.h, xzr, x8
+; CHECK-NEXT:    mov w8, #104 // =0x68
+; CHECK-NEXT:    lastb h3, p1, z1.h
+; CHECK-NEXT:    str h2, [sp, #476] // 2-byte Spill
+; CHECK-NEXT:    lastb h2, p1, z0.h
+; CHECK-NEXT:    str h3, [sp, #348] // 2-byte Spill
+; CHECK-NEXT:    fcmp h2, h2
+; CHECK-NEXT:    fcsel h2, h3, h2, vs
+; CHECK-NEXT:    whilels p1.h, xzr, x8
+; CHECK-NEXT:    mov w8, #103 // =0x67
+; CHECK-NEXT:    lastb h14, p1, z1.h
+; CHECK-NEXT:    str h2, [sp, #474] // 2-byte Spill
+; CHECK-NEXT:    lastb h2, p1, z0.h
+; CHECK-NEXT:    fcmp h2, h2
+; CHECK-NEXT:    fcsel h2, h14, h2, vs
+; CHECK-NEXT:    whilels p1.h, xzr, x8
+; CHECK-NEXT:    mov w8, #102 // =0x66
+; CHECK-NEXT:    lastb h11, p1, z1.h
+; CHECK-NEXT:    str h2, [sp, #472] // 2-byte Spill
+; CHECK-NEXT:    lastb h2, p1, z0.h
+; CHECK-NEXT:    fcmp h2, h2
+; CHECK-NEXT:    fcsel h2, h11, h2, vs
+; CHECK-NEXT:    whilels p1.h, xzr, x8
+; CHECK-NEXT:    mov w8, #101 // =0x65
+; CHECK-NEXT:    lastb h3, p1, z1.h
+; CHECK-NEXT:    str h2, [sp, #470] // 2-byte Spill
+; CHECK-NEXT:    lastb h2, p1, z0.h
+; CHECK-NEXT:    str h3, [sp, #346] // 2-byte Spill
+; CHECK-NEXT:    fcmp h2, h2
+; CHECK-NEXT:    fcsel h2, h3, h2, vs
+; CHECK-NEXT:    whilels p1.h, xzr, x8
+; CHECK-NEXT:    mov w8, #100 // =0x64
+; CHECK-NEXT:    lastb h10, p1, z1.h
+; CHECK-NEXT:    str h2, [sp, #468] // 2-byte Spill
+; CHECK-NEXT:    lastb h2, p1, z0.h
+; CHECK-NEXT:    fcmp h2, h2
+; CHECK-NEXT:    fcsel h2, h10, h2, vs
+; CHECK-NEXT:    whilels p1.h, xzr, x8
+; CHECK-NEXT:    mov w8, #99 // =0x63
+; CHECK-NEXT:    lastb h3, p1, z1.h
+; CHECK-NEXT:    str h2, [sp, #466] // 2-byte Spill
+; CHECK-NEXT:    lastb h2, p1, z0.h
+; CHECK-NEXT:    str h3, [sp, #344] // 2-byte Spill
+; CHECK-NEXT:    fcmp h2, h2
+; CHECK-NEXT:    fcsel h2, h3, h2, vs
+; CHECK-NEXT:    whilels p1.h, xzr, x8
+; CHECK-NEXT:    mov w8, #98 // =0x62
+; CHECK-NEXT:    lastb h28, p1, z1.h
+; CHECK-NEXT:    str h2, [sp, #464] // 2-byte Spill
+; CHECK-NEXT:    lastb h2, p1, z0.h
+; CHECK-NEXT:    fcmp h2, h2
+; CHECK-NEXT:    fcsel h2, h28, h2, vs
+; CHECK-NEXT:    whilels p1.h, xzr, x8
+; CHECK-NEXT:    mov w8, #97 // =0x61
+; CHECK-NEXT:    lastb h3, p1, z1.h
+; CHECK-NEXT:    str h2, [sp, #462] // 2-byte Spill
+; CHECK-NEXT:    lastb h2, p1, z0.h
+; CHECK-NEXT:    str h3, [sp, #230] // 2-byte Spill
+; CHECK-NEXT:    fcmp h2, h2
+; CHECK-NEXT:    fcsel h2, h3, h2, vs
+; CHECK-NEXT:    whilels p1.h, xzr, x8
+; CHECK-NEXT:    mov w8, #96 // =0x60
+; CHECK-NEXT:    lastb h3, p1, z1.h
+; CHECK-NEXT:    str h2, [sp, #460] // 2-byte Spill
+; CHECK-NEXT:    lastb h2, p1, z0.h
+; CHECK-NEXT:    str h3, [sp, #342] // 2-byte Spill
+; CHECK-NEXT:    fcmp h2, h2
+; CHECK-NEXT:    fcsel h2, h3, h2, vs
+; CHECK-NEXT:    whilels p1.h, xzr, x8
+; CHECK-NEXT:    mov w8, #95 // =0x5f
+; CHECK-NEXT:    lastb h3, p1, z1.h
+; CHECK-NEXT:    str h2, [sp, #458] // 2-byte Spill
+; CHECK-NEXT:    lastb h2, p1, z0.h
+; CHECK-NEXT:    str h3, [sp, #340] // 2-byte Spill
+; CHECK-NEXT:    fcmp h2, h2
+; CHECK-NEXT:    fcsel h2, h3, h2, vs
+; CHECK-NEXT:    whilels p1.h, xzr, x8
+; CHECK-NEXT:    mov w8, #94 // =0x5e
+; CHECK-NEXT:    lastb h3, p1, z1.h
+; CHECK-NEXT:    str h2, [sp, #456] // 2-byte Spill
+; CHECK-NEXT:    lastb h2, p1, z0.h
+; CHECK-NEXT:    str h3, [sp, #338] // 2-byte Spill
+; CHECK-NEXT:    fcmp h2, h2
+; CHECK-NEXT:    fcsel h2, h3, h2, vs
+; CHECK-NEXT:    whilels p1.h, xzr, x8
+; CHECK-NEXT:    mov w8, #93 // =0x5d
+; CHECK-NEXT:    lastb h3, p1, z1.h
+; CHECK-NEXT:    str h2, [sp, #454] // 2-byte Spill
+; CHECK-NEXT:    lastb h2, p1, z0.h
+; CHECK-NEXT:    str h3, [sp, #336] // 2-byte Spill
+; CHECK-NEXT:    fcmp h2, h2
+; CHECK-NEXT:    fcsel h2, h3, h2, vs
+; CHECK-NEXT:    whilels p1.h, xzr, x8
+; CHECK-NEXT:    mov w8, #92 // =0x5c
+; CHECK-NEXT:    lastb h13, p1, z1.h
+; CHECK-NEXT:    str h2, [sp, #452] // 2-byte Spill
+; CHECK-NEXT:    lastb h2, p1, z0.h
+; CHECK-NEXT:    fcmp h2, h2
+; CHECK-NEXT:    fcsel h2, h13, h2, vs
+; CHECK-NEXT:    whilels p1.h, xzr, x8
+; CHECK-NEXT:    mov w8, #91 // =0x5b
+; CHECK-NEXT:    lastb h3, p1, z1.h
+; CHECK-NEXT:    str h2, [sp, #450] // 2-byte Spill
+; CHECK-NEXT:    lastb h2, p1, z0.h
+; CHECK-NEXT:    str h3, [sp, #334] // 2-byte Spill
+; CHECK-NEXT:    fcmp h2, h2
+; CHECK-NEXT:    fcsel h2, h3, h2, vs
+; CHECK-NEXT:    whilels p1.h, xzr, x8
+; CHECK-NEXT:    mov w8, #90 // =0x5a
+; CHECK-NEXT:    lastb h3, p1, z1.h
+; CHECK-NEXT:    str h2, [sp, #448] // 2-byte Spill
+; CHECK-NEXT:    lastb h2, p1, z0.h
+; CHECK-NEXT:    str h3, [sp, #332] // 2-byte Spill
+; CHECK-NEXT:    fcmp h2, h2
+; CHECK-NEXT:    fcsel h2, h3, h2, vs
+; CHECK-NEXT:    whilels p1.h, xzr, x8
+; CHECK-NEXT:    mov w8, #89 // =0x59
+; CHECK-NEXT:    lastb h3, p1, z1.h
+; CHECK-NEXT:    str h2, [sp, #446] // 2-byte Spill
+; CHECK-NEXT:    lastb h2, p1, z0.h
+; CHECK-NEXT:    str h3, [sp, #330] // 2-byte Spill
+; CHECK-NEXT:    fcmp h2, h2
+; CHECK-NEXT:    fcsel h2, h3, h2, vs
+; CHECK-NEXT:    whilels p1.h, xzr, x8
+; CHECK-NEXT:    mov w8, #88 // =0x58
+; CHECK-NEXT:    lastb h15, p1, z1.h
+; CHECK-NEXT:    str h2, [sp, #444] // 2-byte Spill
+; CHECK-NEXT:    lastb h2, p1, z0.h
+; CHECK-NEXT:    fcmp h2, h2
+; CHECK-NEXT:    fcsel h2, h15, h2, vs
+; CHECK-NEXT:    whilels p1.h, xzr, x8
+; CHECK-NEXT:    mov w8, #87 // =0x57
+; CHECK-NEXT:    lastb h3, p1, z1.h
+; CHECK-NEXT:    str h2, [sp, #442] // 2-byte Spill
+; CHECK-NEXT:    lastb h2, p1, z0.h
+; CHECK-NEXT:    str h3, [sp, #328] // 2-byte Spill
+; CHECK-NEXT:    fcmp h2, h2
+; CHECK-NEXT:    fcsel h2, h3, h2, vs
+; CHECK-NEXT:    whilels p1.h, xzr, x8
+; CHECK-NEXT:    mov w8, #86 // =0x56
+; CHECK-NEXT:    lastb h3, p1, z1.h
+; CHECK-NEXT:    str h2, [sp, #440] // 2-byte Spill
+; CHECK-NEXT:    lastb h2, p1, z0.h
+; CHECK-NEXT:    str h3, [sp, #326] // 2-byte Spill
+; CHECK-NEXT:    fcmp h2, h2
+; CHECK-NEXT:    fcsel h2, h3, h2, vs
+; CHECK-NEXT:    whilels p1.h, xzr, x8
+; CHECK-NEXT:    mov w8, #85 // =0x55
+; CHECK-NEXT:    lastb h3, p1, z1.h
+; CHECK-NEXT:    str h2, [sp, #438] // 2-byte Spill
+; CHECK-NEXT:    lastb h2, p1, z0.h
+; CHECK-NEXT:    str h3, [sp, #324] // 2-byte Spill
+; CHECK-NEXT:    fcmp h2, h2
+; CHECK-NEXT:    fcsel h2, h3, h2, vs
+; CHECK-NEXT:    whilels p1.h, xzr, x8
+; CHECK-NEXT:    mov w8, #84 // =0x54
+; CHECK-NEXT:    lastb h3, p1, z1.h
+; CHECK-NEXT:    str h2, [sp, #436] // 2-byte Spill
+; CHECK-NEXT:    lastb h2, p1, z0.h
+; CHECK-NEXT:    str h3, [sp, #322] // 2-byte Spill
+; CHECK-NEXT:    fcmp h2, h2
+; CHECK-NEXT:    fcsel h2, h3, h2, vs
+; CHECK-NEXT:    whilels p1.h, xzr, x8
+; CHECK-NEXT:    mov w8, #83 // =0x53
+; CHECK-NEXT:    lastb h3, p1, z1.h
+; CHECK-NEXT:    str h2, [sp, #434] // 2-byte Spill
+; CHECK-NEXT:    lastb h2, p1, z0.h
+; CHECK-NEXT:    str h3, [sp, #320] // 2-byte Spill
+; CHECK-NEXT:    fcmp h2, h2
+; CHECK-NEXT:    fcsel h2, h3, h2, vs
+; CHECK-NEXT:    whilels p1.h, xzr, x8
+; CHECK-NEXT:    mov w8, #82 // =0x52
+; CHECK-NEXT:    lastb h3, p1, z1.h
+; CHECK-NEXT:    str h2, [sp, #432] // 2-byte Spill
+; CHECK-NEXT:    lastb h2, p1, z0.h
+; CHECK-NEXT:    str h3, [sp, #318] // 2-byte Spill
+; CHECK-NEXT:    fcmp h2, h2
+; CHECK-NEXT:    fcsel h2, h3, h2, vs
+; CHECK-NEXT:    whilels p1.h, xzr, x8
+; CHECK-NEXT:    mov w8, #81 // =0x51
+; CHECK-NEXT:    lastb h3, p1, z1.h
+; CHECK-NEXT:    str h2, [sp, #430] // 2-byte Spill
+; CHECK-NEXT:    lastb h2, p1, z0.h
+; CHECK-NEXT:    str h3, [sp, #316] // 2-byte Spill
+; CHECK-NEXT:    fcmp h2, h2
+; CHECK-NEXT:    fcsel h2, h3, h2, vs
+; CHECK-NEXT:    whilels p1.h, xzr, x8
+; CHECK-NEXT:    mov w8, #80 // =0x50
+; CHECK-NEXT:    lastb h3, p1, z1.h
+; CHECK-NEXT:    str h2, [sp, #428] // 2-byte Spill
+; CHECK-NEXT:    lastb h2, p1, z0.h
+; CHECK-NEXT:    str h3, [sp, #314] // 2-byte Spill
+; CHECK-NEXT:    fcmp h2, h2
+; CHECK-NEXT:    fcsel h2, h3, h2, vs
+; CHECK-NEXT:    whilels p1.h, xzr, x8
+; CHECK-NEXT:    mov w8, #79 // =0x4f
+; CHECK-NEXT:    lastb h3, p1, z1.h
+; CHECK-NEXT:    str h2, [sp, #426] // 2-byte Spill
+; CHECK-NEXT:    lastb h2, p1, z0.h
+; CHECK-NEXT:    str h3, [sp, #312] // 2-byte Spill
+; CHECK-NEXT:    fcmp h2, h2
+; CHECK-NEXT:    fcsel h2, h3, h2, vs
+; CHECK-NEXT:    whilels p1.h, xzr, x8
+; CHECK-NEXT:    mov w8, #78 // =0x4e
+; CHECK-NEXT:    lastb h3, p1, z1.h
+; CHECK-NEXT:    str h2, [sp, #424] // 2-byte Spill
+; CHECK-NEXT:    lastb h2, p1, z0.h
+; CHECK-NEXT:    str h3, [sp, #310] // 2-byte Spill
+; CHECK-NEXT:    fcmp h2, h2
+; CHECK-NEXT:    fcsel h2, h3, h2, vs
+; CHECK-NEXT:    whilels p1.h, xzr, x8
+; CHECK-NEXT:    mov w8, #77 // =0x4d
+; CHECK-NEXT:    lastb h3, p1, z1.h
+; CHECK-NEXT:    str h2, [sp, #422] // 2-byte Spill
+; CHECK-NEXT:    lastb h2, p1, z0.h
+; CHECK-NEXT:    str h3, [sp, #308] // 2-byte Spill
+; CHECK-NEXT:    fcmp h2, h2
+; CHECK-NEXT:    fcsel h2, h3, h2, vs
+; CHECK-NEXT:    whilels p1.h, xzr, x8
+; CHECK-NEXT:    mov w8, #76 // =0x4c
+; CHECK-NEXT:    lastb h3, p1, z1.h
+; CHECK-NEXT:    str h2, [sp, #420] // 2-byte Spill
+; CHECK-NEXT:    lastb h2, p1, z0.h
+; CHECK-NEXT:    str h3, [sp, #306] // 2-byte Spill
+; CHECK-NEXT:    fcmp h2, h2
+; CHECK-NEXT:    fcsel h2, h3, h2, vs
+; CHECK-NEXT:    whilels p1.h, xzr, x8
+; CHECK-NEXT:    mov w8, #75 // =0x4b
+; CHECK-NEXT:    lastb h3, p1, z1.h
+; CHECK-NEXT:    str h2, [sp, #418] // 2-byte Spill
+; CHECK-NEXT:    lastb h2, p1, z0.h
+; CHECK-NEXT:    str h3, [sp, #304] // 2-byte Spill
+; CHECK-NEXT:    fcmp h2, h2
+; CHECK-NEXT:    fcsel h2, h3, h2, vs
+; CHECK-NEXT:    whilels p1.h, xzr, x8
+; CHECK-NEXT:    mov w8, #74 // =0x4a
+; CHECK-NEXT:    lastb h3, p1, z1.h
+; CHECK-NEXT:    str h2, [sp, #416] // 2-byte Spill
+; CHECK-NEXT:    lastb h2, p1, z0.h
+; CHECK-NEXT:    str h3, [sp, #302] // 2-byte Spill
+; CHECK-NEXT:    fcmp h2, h2
+; CHECK-NEXT:    fcsel h2, h3, h2, vs
+; CHECK-NEXT:    whilels p1.h, xzr, x8
+; CHECK-NEXT:    mov w8, #73 // =0x49
+; CHECK-NEXT:    lastb h3, p1, z1.h
+; CHECK-NEXT:    str h2, [sp, #414] // 2-byte Spill
+; CHECK-NEXT:    lastb h2, p1, z0.h
+; CHECK-NEXT:    str h3, [sp, #300] // 2-byte Spill
+; CHECK-NEXT:    fcmp h2, h2
+; CHECK-NEXT:    fcsel h2, h3, h2, vs
+; CHECK-NEXT:    whilels p1.h, xzr, x8
+; CHECK-NEXT:    mov w8, #72 // =0x48
+; CHECK-NEXT:    lastb h3, p1, z1.h
+; CHECK-NEXT:    str h2, [sp, #412] // 2-byte Spill
+; CHECK-NEXT:    lastb h2, p1, z0.h
+; CHECK-NEXT:    str h3, [sp, #298] // 2-byte Spill
+; CHECK-NEXT:    fcmp h2, h2
+; CHECK-NEXT:    fcsel h2, h3, h2, vs
+; CHECK-NEXT:    whilels p1.h, xzr, x8
+; CHECK-NEXT:    mov w8, #71 // =0x47
+; CHECK-NEXT:    lastb h3, p1, z1.h
+; CHECK-NEXT:    str h2, [sp, #410] // 2-byte Spill
+; CHECK-NEXT:    lastb h2, p1, z0.h
+; CHECK-NEXT:    str h3, [sp, #296] // 2-byte Spill
+; CHECK-NEXT:    fcmp h2, h2
+; CHECK-NEXT:    fcsel h2, h3, h2, vs
+; CHECK-NEXT:    whilels p1.h, xzr, x8
+; CHECK-NEXT:    mov w8, #70 // =0x46
+; CHECK-NEXT:    lastb h3, p1, z1.h
+; CHECK-NEXT:    str h2, [sp, #408] // 2-byte Spill
+; CHECK-NEXT:    lastb h2, p1, z0.h
+; CHECK-NEXT:    str h3, [sp, #294] // 2-byte Spill
+; CHECK-NEXT:    fcmp h2, h2
+; CHECK-NEXT:    fcsel h2, h3, h2, vs
+; CHECK-NEXT:    whilels p1.h, xzr, x8
+; CHECK-NEXT:    mov w8, #69 // =0x45
+; CHECK-NEXT:    lastb h3, p1, z1.h
+; CHECK-NEXT:    str h2, [sp, #406] // 2-byte Spill
+; CHECK-NEXT:    lastb h2, p1, z0.h
+; CHECK-NEXT:    str h3, [sp, #292] // 2-byte Spill
+; CHECK-NEXT:    fcmp h2, h2
+; CHECK-NEXT:    fcsel h2, h3, h2, vs
+; CHECK-NEXT:    whilels p1.h, xzr, x8
+; CHECK-NEXT:    mov w8, #68 // =0x44
+; CHECK-NEXT:    lastb h3, p1, z1.h
+; CHECK-NEXT:    str h2, [sp, #404] // 2-byte Spill
+; CHECK-NEXT:    lastb h2, p1, z0.h
+; CHECK-NEXT:    str h3, [sp, #290] // 2-byte Spill
+; CHECK-NEXT:    fcmp h2, h2
+; CHECK-NEXT:    fcsel h2, h3, h2, vs
+; CHECK-NEXT:    whilels p1.h, xzr, x8
+; CHECK-NEXT:    mov w8, #67 // =0x43
+; CHECK-NEXT:    lastb h3, p1, z1.h
+; CHECK-NEXT:    str h2, [sp, #402] // 2-byte Spill
+; CHECK-NEXT:    lastb h2, p1, z0.h
+; CHECK-NEXT:    str h3, [sp, #288] // 2-byte Spill
+; CHECK-NEXT:    fcmp h2, h2
+; CHECK-NEXT:    fcsel h2, h3, h2, vs
+; CHECK-NEXT:    whilels p1.h, xzr, x8
+; CHECK-NEXT:    mov w8, #66 // =0x42
+; CHECK-NEXT:    lastb h3, p1, z1.h
+; CHECK-NEXT:    str h2, [sp, #400] // 2-byte Spill
+; CHECK-NEXT:    lastb h2, p1, z0.h
+; CHECK-NEXT:    str h3, [sp, #286] // 2-byte Spill
+; CHECK-NEXT:    fcmp h2, h2
+; CHECK-NEXT:    fcsel h2, h3, h2, vs
+; CHECK-NEXT:    whilels p1.h, xzr, x8
+; CHECK-NEXT:    mov w8, #65 // =0x41
+; CHECK-NEXT:    lastb h3, p1, z1.h
+; CHECK-NEXT:    str h2, [sp, #398] // 2-byte Spill
+; CHECK-NEXT:    lastb h2, p1, z0.h
+; CHECK-NEXT:    str h3, [sp, #284] // 2-byte Spill
+; CHECK-NEXT:    fcmp h2, h2
+; CHECK-NEXT:    fcsel h2, h3, h2, vs
+; CHECK-NEXT:    whilels p1.h, xzr, x8
+; CHECK-NEXT:    mov w8, #64 // =0x40
+; CHECK-NEXT:    lastb h6, p1, z1.h
+; CHECK-NEXT:    str h2, [sp, #394] // 2-byte Spill
+; CHECK-NEXT:    lastb h2, p1, z0.h
+; CHECK-NEXT:    fcmp h2, h2
+; CHECK-NEXT:    fcsel h2, h6, h2, vs
+; CHECK-NEXT:    whilels p1.h, xzr, x8
+; CHECK-NEXT:    mov w8, #63 // =0x3f
+; CHECK-NEXT:    lastb h7, p1, z1.h
+; CHECK-NEXT:    str h2, [sp, #392] // 2-byte Spill
+; CHECK-NEXT:    lastb h2, p1, z0.h
+; CHECK-NEXT:    fcmp h2, h2
+; CHECK-NEXT:    fcsel h2, h7, h2, vs
+; CHECK-NEXT:    whilels p1.h, xzr, x8
+; CHECK-NEXT:    mov w8, #62 // =0x3e
+; CHECK-NEXT:    lastb h16, p1, z1.h
+; CHECK-NEXT:    str h2, [sp, #390] // 2-byte Spill
+; CHECK-NEXT:    lastb h2, p1, z0.h
+; CHECK-NEXT:    fcmp h2, h2
+; CHECK-NEXT:    fcsel h2, h16, h2, vs
+; CHECK-NEXT:    whilels p1.h, xzr, x8
+; CHECK-NEXT:    mov w8, #61 // =0x3d
+; CHECK-NEXT:    lastb h19, p1, z1.h
+; CHECK-NEXT:    str h2, [sp, #388] // 2-byte Spill
+; CHECK-NEXT:    lastb h2, p1, z0.h
+; CHECK-NEXT:    fcmp h2, h2
+; CHECK-NEXT:    fcsel h2, h19, h2, vs
+; CHECK-NEXT:    whilels p1.h, xzr, x8
+; CHECK-NEXT:    mov w8, #60 // =0x3c
+; CHECK-NEXT:    lastb h21, p1, z1.h
+; CHECK-NEXT:    str h2, [sp, #386] // 2-byte Spill
+; CHECK-NEXT:    lastb h2, p1, z0.h
+; CHECK-NEXT:    fcmp h2, h2
+; CHECK-NEXT:    fcsel h2, h21, h2, vs
+; CHECK-NEXT:    whilels p1.h, xzr, x8
+; CHECK-NEXT:    mov w8, #59 // =0x3b
+; CHECK-NEXT:    lastb h22, p1, z1.h
+; CHECK-NEXT:    str h2, [sp, #384] // 2-byte Spill
+; CHECK-NEXT:    lastb h2, p1, z0.h
+; CHECK-NEXT:    fcmp h2, h2
+; CHECK-NEXT:    fcsel h2, h22, h2, vs
+; CHECK-NEXT:    whilels p1.h, xzr, x8
+; CHECK-NEXT:    mov w8, #58 // =0x3a
+; CHECK-NEXT:    lastb h29, p1, z1.h
+; CHECK-NEXT:    str h2, [sp, #382] // 2-byte Spill
+; CHECK-NEXT:    lastb h2, p1, z0.h
+; CHECK-NEXT:    fcmp h2, h2
+; CHECK-NEXT:    fcsel h2, h29, h2, vs
+; CHECK-NEXT:    whilels p1.h, xzr, x8
+; CHECK-NEXT:    mov w8, #57 // =0x39
+; CHECK-NEXT:    lastb h3, p1, z1.h
+; CHECK-NEXT:    str h2, [sp, #380] // 2-byte Spill
+; CHECK-NEXT:    lastb h2, p1, z0.h
+; CHECK-NEXT:    str h3, [sp, #270] // 2-byte Spill
+; CHECK-NEXT:    fcmp h2, h2
+; CHECK-NEXT:    fcsel h2, h3, h2, vs
+; CHECK-NEXT:    whilels p1.h, xzr, x8
+; CHECK-NEXT:    mov w8, #56 // =0x38
+; CHECK-NEXT:    lastb h3, p1, z1.h
+; CHECK-NEXT:    str h2, [sp, #378] // 2-byte Spill
+; CHECK-NEXT:    lastb h2, p1, z0.h
+; CHECK-NEXT:    str h3, [sp, #266] // 2-byte Spill
+; CHECK-NEXT:    fcmp h2, h2
+; CHECK-NEXT:    fcsel h2, h3, h2, vs
+; CHECK-NEXT:    whilels p1.h, xzr, x8
+; CHECK-NEXT:    mov w8, #55 // =0x37
+; CHECK-NEXT:    lastb h23, p1, z1.h
+; CHECK-NEXT:    str h2, [sp, #376] // 2-byte Spill
+; CHECK-NEXT:    lastb h2, p1, z0.h
+; CHECK-NEXT:    fcmp h2, h2
+; CHECK-NEXT:    fcsel h2, h23, h2, vs
+; CHECK-NEXT:    whilels p1.h, xzr, x8
+; CHECK-NEXT:    mov w8, #54 // =0x36
+; CHECK-NEXT:    lastb h24, p1, z1.h
+; CHECK-NEXT:    str h2, [sp, #374] // 2-byte Spill
+; CHECK-NEXT:    lastb h2, p1, z0.h
+; CHECK-NEXT:    fcmp h2, h2
+; CHECK-NEXT:    fcsel h2, h24, h2, vs
+; CHECK-NEXT:    whilels p1.h, xzr, x8
+; CHECK-NEXT:    mov w8, #53 // =0x35
+; CHECK-NEXT:    lastb h3, p1, z1.h
+; CHECK-NEXT:    str h2, [sp, #372] // 2-byte Spill
+; CHECK-NEXT:    lastb h2, p1, z0.h
+; CHECK-NEXT:    str h3, [sp, #258] // 2-byte Spill
+; CHECK-NEXT:    fcmp h2, h2
+; CHECK-NEXT:    fcsel h2, h3, h2, vs
+; CHECK-NEXT:    whilels p1.h, xzr, x8
+; CHECK-NEXT:    mov w8, #52 // =0x34
+; CHECK-NEXT:    lastb h26, p1, z1.h
+; CHECK-NEXT:    str h2, [sp, #370] // 2-byte Spill
+; CHECK-NEXT:    lastb h2, p1, z0.h
+; CHECK-NEXT:    fcmp h2, h2
+; CHECK-NEXT:    fcsel h2, h26, h2, vs
+; CHECK-NEXT:    whilels p1.h, xzr, x8
+; CHECK-NEXT:    mov w8, #51 // =0x33
+; CHECK-NEXT:    lastb h3, p1, z1.h
+; CHECK-NEXT:    str h2, [sp, #368] // 2-byte Spill
+; CHECK-NEXT:    lastb h2, p1, z0.h
+; CHECK-NEXT:    str h3, [sp, #254] // 2-byte Spill
+; CHECK-NEXT:    fcmp h2, h2
+; CHECK-NEXT:    fcsel h2, h3, h2, vs
+; CHECK-NEXT:    whilels p1.h, xzr, x8
+; CHECK-NEXT:    mov w8, #50 // =0x32
+; CHECK-NEXT:    lastb h12, p1, z1.h
+; CHECK-NEXT:    str h2, [sp, #366] // 2-byte Spill
+; CHECK-NEXT:    lastb h2, p1, z0.h
+; CHECK-NEXT:    fcmp h2, h2
+; CHECK-NEXT:    fcsel h2, h12, h2, vs
+; CHECK-NEXT:    whilels p1.h, xzr, x8
+; CHECK-NEXT:    mov w8, #49 // =0x31
+; CHECK-NEXT:    lastb h27, p1, z1.h
+; CHECK-NEXT:    str h2, [sp, #364] // 2-byte Spill
+; CHECK-NEXT:    lastb h2, p1, z0.h
+; CHECK-NEXT:    fcmp h2, h2
+; CHECK-NEXT:    fcsel h2, h27, h2, vs
+; CHECK-NEXT:    whilels p1.h, xzr, x8
+; CHECK-NEXT:    mov w8, #48 // =0x30
+; CHECK-NEXT:    lastb h3, p1, z1.h
+; CHECK-NEXT:    str h2, [sp, #362] // 2-byte Spill
+; CHECK-NEXT:    lastb h2, p1, z0.h
+; CHECK-NEXT:    str h3, [sp, #248] // 2-byte Spill
+; CHECK-NEXT:    fcmp h2, h2
+; CHECK-NEXT:    fcsel h2, h3, h2, vs
+; CHECK-NEXT:    whilels p1.h, xzr, x8
+; CHECK-NEXT:    mov w8, #47 // =0x2f
+; CHECK-NEXT:    lastb h3, p1, z1.h
+; CHECK-NEXT:    str h2, [sp, #250] // 2-byte Spill
+; CHECK-NEXT:    lastb h2, p1, z0.h
+; CHECK-NEXT:    str h3, [sp, #244] // 2-byte Spill
+; CHECK-NEXT:    fcmp h2, h2
+; CHECK-NEXT:    fcsel h2, h3, h2, vs
+; CHECK-NEXT:    whilels p1.h, xzr, x8
+; CHECK-NEXT:    mov w8, #46 // =0x2e
+; CHECK-NEXT:    lastb h3, p1, z1.h
+; CHECK-NEXT:    str h2, [sp, #246] // 2-byte Spill
+; CHECK-NEXT:    lastb h2, p1, z0.h
+; CHECK-NEXT:    str h3, [sp, #240] // 2-byte Spill
+; CHECK-NEXT:    fcmp h2, h2
+; CHECK-NEXT:    fcsel h2, h3, h2, vs
+; CHECK-NEXT:    whilels p1.h, xzr, x8
+; CHECK-NEXT:    mov w8, #45 // =0x2d
+; CHECK-NEXT:    lastb h3, p1, z1.h
+; CHECK-NEXT:    str h2, [sp, #242] // 2-byte Spill
+; CHECK-NEXT:    lastb h2, p1, z0.h
+; CHECK-NEXT:    str h3, [sp, #236] // 2-byte Spill
+; CHECK-NEXT:    fcmp h2, h2
+; CHECK-NEXT:    fcsel h2, h3, h2, vs
+; CHECK-NEXT:    whilels p1.h, xzr, x8
+; CHECK-NEXT:    mov w8, #44 // =0x2c
+; CHECK-NEXT:    lastb h3, p1, z1.h
+; CHECK-NEXT:    str h2, [sp, #238] // 2-byte Spill
+; CHECK-NEXT:    lastb h2, p1, z0.h
+; CHECK-NEXT:    str h3, [sp, #232] // 2-byte Spill
+; CHECK-NEXT:    fcmp h2, h2
+; CHECK-NEXT:    fcsel h2, h3, h2, vs
+; CHECK-NEXT:    whilels p1.h, xzr, x8
+; CHECK-NEXT:    mov w8, #43 // =0x2b
+; CHECK-NEXT:    lastb h3, p1, z1.h
+; CHECK-NEXT:    str h2, [sp, #234] // 2-byte Spill
+; CHECK-NEXT:    lastb h2, p1, z0.h
+; CHECK-NEXT:    str h3, [sp, #226] // 2-byte Spill
+; CHECK-NEXT:    fcmp h2, h2
+; CHECK-NEXT:    fcsel h2, h3, h2, vs
+; CHECK-NEXT:    whilels p1.h, xzr, x8
+; CHECK-NEXT:    mov w8, #42 // =0x2a
+; CHECK-NEXT:    lastb h31, p1, z1.h
+; CHECK-NEXT:    str h2, [sp, #228] // 2-byte Spill
+; CHECK-NEXT:    lastb h2, p1, z0.h
+; CHECK-NEXT:    fcmp h2, h2
+; CHECK-NEXT:    fcsel h2, h31, h2, vs
+; CHECK-NEXT:    whilels p1.h, xzr, x8
+; CHECK-NEXT:    mov w8, #41 // =0x29
+; CHECK-NEXT:    lastb h3, p1, z1.h
+; CHECK-NEXT:    str h2, [sp, #224] // 2-byte Spill
+; CHECK-NEXT:    lastb h2, p1, z0.h
+; CHECK-NEXT:    str h3, [sp, #220] // 2-byte Spill
+; CHECK-NEXT:    fcmp h2, h2
+; CHECK-NEXT:    fcsel h2, h3, h2, vs
+; CHECK-NEXT:    whilels p1.h, xzr, x8
+; CHECK-NEXT:    mov w8, #40 // =0x28
+; CHECK-NEXT:    lastb h3, p1, z1.h
+; CHECK-NEXT:    str h2, [sp, #222] // 2-byte Spill
+; CHECK-NEXT:    lastb h2, p1, z0.h
+; CHECK-NEXT:    str h3, [sp, #214] // 2-byte Spill
+; CHECK-NEXT:    fcmp h2, h2
+; CHECK-NEXT:    fcsel h2, h3, h2, vs
+; CHECK-NEXT:    whilels p1.h, xzr, x8
+; CHECK-NEXT:    mov w8, #39 // =0x27
+; CHECK-NEXT:    lastb h3, p1, z1.h
+; CHECK-NEXT:    str h2, [sp, #216] // 2-byte Spill
+; CHECK-NEXT:    lastb h2, p1, z0.h
+; CHECK-NEXT:    str h3, [sp, #206] // 2-byte Spill
+; CHECK-NEXT:    fcmp h2, h2
+; CHECK-NEXT:    fcsel h2, h3, h2, vs
+; CHECK-NEXT:    whilels p1.h, xzr, x8
+; CHECK-NEXT:    mov w8, #38 // =0x26
+; CHECK-NEXT:    lastb h3, p1, z1.h
+; CHECK-NEXT:    str h2, [sp, #210] // 2-byte Spill
+; CHECK-NEXT:    lastb h2, p1, z0.h
+; CHECK-NEXT:    str h3, [sp, #200] // 2-byte Spill
+; CHECK-NEXT:    fcmp h2, h2
+; CHECK-NEXT:    fcsel h2, h3, h2, vs
+; CHECK-NEXT:    whilels p1.h, xzr, x8
+; CHECK-NEXT:    mov w8, #37 // =0x25
+; CHECK-NEXT:    lastb h3, p1, z1.h
+; CHECK-NEXT:    str h2, [sp, #202] // 2-byte Spill
+; CHECK-NEXT:    lastb h2, p1, z0.h
+; CHECK-NEXT:    str h3, [sp, #192] // 2-byte Spill
+; CHECK-NEXT:    fcmp h2, h2
+; CHECK-NEXT:    fcsel h2, h3, h2, vs
+; CHECK-NEXT:    whilels p1.h, xzr, x8
+; CHECK-NEXT:    mov w8, #36 // =0x24
+; CHECK-NEXT:    lastb h3, p1, z1.h
+; CHECK-NEXT:    str h2, [sp, #194] // 2-byte Spill
+; CHECK-NEXT:    lastb h2, p1, z0.h
+; CHECK-NEXT:    str h3, [sp, #184] // 2-byte Spill
+; CHECK-NEXT:    fcmp h2, h2
+; CHECK-NEXT:    fcsel h2, h3, h2, vs
+; CHECK-NEXT:    whilels p1.h, xzr, x8
+; CHECK-NEXT:    mov w8, #35 // =0x23
+; CHECK-NEXT:    lastb h3, p1, z1.h
+; CHECK-NEXT:    str h2, [sp, #188] // 2-byte Spill
+; CHECK-NEXT:    lastb h2, p1, z0.h
+; CHECK-NEXT:    str h3, [sp, #178] // 2-byte Spill
+; CHECK-NEXT:    fcmp h2, h2
+; CHECK-NEXT:    fcsel h2, h3, h2, vs
+; CHECK-NEXT:    whilels p1.h, xzr, x8
+; CHECK-NEXT:    mov w8, #34 // =0x22
+; CHECK-NEXT:    lastb h3, p1, z1.h
+; CHECK-NEXT:    str h2, [sp, #180] // 2-byte Spill
+; CHECK-NEXT:    lastb h2, p1, z0.h
+; CHECK-NEXT:    str h3, [sp, #170] // 2-byte Spill
+; CHECK-NEXT:    fcmp h2, h2
+; CHECK-NEXT:    fcsel h2, h3, h2, vs
+; CHECK-NEXT:    whilels p1.h, xzr, x8
+; CHECK-NEXT:    mov w8, #33 // =0x21
+; CHECK-NEXT:    lastb h3, p1, z1.h
+; CHECK-NEXT:    str h2, [sp, #172] // 2-byte Spill
+; CHECK-NEXT:    lastb h2, p1, z0.h
+; CHECK-NEXT:    str h3, [sp, #162] // 2-byte Spill
+; CHECK-NEXT:    fcmp h2, h2
+; CHECK-NEXT:    fcsel h2, h3, h2, vs
+; CHECK-NEXT:    whilels p1.h, xzr, x8
+; CHECK-NEXT:    mov w8, #32 // =0x20
+; CHECK-NEXT:    lastb h3, p1, z1.h
+; CHECK-NEXT:    str h2, [sp, #166] // 2-byte Spill
+; CHECK-NEXT:    lastb h2, p1, z0.h
+; CHECK-NEXT:    str h3, [sp, #156] // 2-byte Spill
+; CHECK-NEXT:    fcmp h2, h2
+; CHECK-NEXT:    fcsel h2, h3, h2, vs
+; CHECK-NEXT:    whilels p1.h, xzr, x8
+; CHECK-NEXT:    mov z3.h, z0.h[31]
+; CHECK-NEXT:    sub x8, x29, #64
+; CHECK-NEXT:    lastb h4, p1, z1.h
+; CHECK-NEXT:    str h2, [sp, #158] // 2-byte Spill
+; CHECK-NEXT:    lastb h2, p1, z0.h
+; CHECK-NEXT:    str h4, [sp, #148] // 2-byte Spill
+; CHECK-NEXT:    fcmp h2, h2
+; CHECK-NEXT:    fcsel h2, h4, h2, vs
+; CHECK-NEXT:    fcmp h3, h3
+; CHECK-NEXT:    mov z4.h, z1.h[31]
+; CHECK-NEXT:    str h2, [sp, #150] // 2-byte Spill
+; CHECK-NEXT:    mov z2.h, z0.h[30]
+; CHECK-NEXT:    fcsel h3, h4, h3, vs
+; CHECK-NEXT:    str z4, [x8, #-26, mul vl] // 16-byte Folded Spill
+; CHECK-NEXT:    mov z4.h, z1.h[30]
+; CHECK-NEXT:    str h3, [sp, #142] // 2-byte Spill
+; CHECK-NEXT:    fcmp h2, h2
+; CHECK-NEXT:    mov z3.h, z0.h[29]
+; CHECK-NEXT:    str z4, [x8, #-28, mul vl] // 16-byte Folded Spill
+; CHECK-NEXT:    fcsel h2, h4, h2, vs
+; CHECK-NEXT:    fcmp h3, h3
+; CHECK-NEXT:    mov z4.h, z1.h[29]
+; CHECK-NEXT:    str h2, [sp, #138] // 2-byte Spill
+; CHECK-NEXT:    mov z2.h, z0.h[28]
+; CHECK-NEXT:    fcsel h3, h4, h3, vs
+; CHECK-NEXT:    str z4, [x8, #-30, mul vl] // 16-byte Folded Spill
+; CHECK-NEXT:    mov z4.h, z1.h[28]
+; CHECK-NEXT:    str h3, [sp, #134] // 2-byte Spill
+; CHECK-NEXT:    fcmp h2, h2
+; CHECK-NEXT:    mov z3.h, z0.h[27]
+; CHECK-NEXT:    str z4, [x8, #-31, mul vl] // 16-byte Folded Spill
+; CHECK-NEXT:    fcsel h2, h4, h2, vs
+; CHECK-NEXT:    fcmp h3, h3
+; CHECK-NEXT:    mov z4.h, z1.h[27]
+; CHECK-NEXT:    str h2, [sp, #132] // 2-byte Spill
+; CHECK-NEXT:    mov z2.h, z0.h[26]
+; CHECK-NEXT:    fcsel h3, h4, h3, vs
+; CHECK-NEXT:    str z4, [x8, #-29, mul vl] // 16-byte Folded Spill
+; CHECK-NEXT:    mov z4.h, z1.h[26]
+; CHECK-NEXT:    str h3, [sp, #140] // 2-byte Spill
+; CHECK-NEXT:    fcmp h2, h2
+; CHECK-NEXT:    mov z3.h, z0.h[25]
+; CHECK-NEXT:    str z4, [x8, #-27, mul vl] // 16-byte Folded Spill
+; CHECK-NEXT:    fcsel h2, h4, h2, vs
+; CHECK-NEXT:    fcmp h3, h3
+; CHECK-NEXT:    mov z4.h, z1.h[25]
+; CHECK-NEXT:    str h2, [sp, #146] // 2-byte Spill
+; CHECK-NEXT:    mov z2.h, z0.h[24]
+; CHECK-NEXT:    fcsel h3, h4, h3, vs
+; CHECK-NEXT:    str z4, [x8, #-25, mul vl] // 16-byte Folded Spill
+; CHECK-NEXT:    mov z4.h, z1.h[24]
+; CHECK-NEXT:    str h3, [sp, #152] // 2-byte Spill
+; CHECK-NEXT:    fcmp h2, h2
+; CHECK-NEXT:    mov z3.h, z0.h[23]
+; CHECK-NEXT:    str z4, [x8, #-24, mul vl] // 16-byte Folded Spill
+; CHECK-NEXT:    fcsel h2, h4, h2, vs
+; CHECK-NEXT:    fcmp h3, h3
+; CHECK-NEXT:    mov z4.h, z1.h[23]
+; CHECK-NEXT:    str h2, [sp, #160] // 2-byte Spill
+; CHECK-NEXT:    mov z2.h, z0.h[22]
+; CHECK-NEXT:    fcsel h3, h4, h3, vs
+; CHECK-NEXT:    str z4, [x8, #-23, mul vl] // 16-byte Folded Spill
+; CHECK-NEXT:    mov z4.h, z1.h[22]
+; CHECK-NEXT:    str h3, [sp, #168] // 2-byte Spill
+; CHECK-NEXT:    fcmp h2, h2
+; CHECK-NEXT:    mov z3.h, z0.h[21]
+; CHECK-NEXT:    str z4, [x8, #-22, mul vl] // 16-byte Folded Spill
+; CHECK-NEXT:    fcsel h2, h4, h2, vs
+; CHECK-NEXT:    fcmp h3, h3
+; CHECK-NEXT:    mov z4.h, z1.h[21]
+; CHECK-NEXT:    str h2, [sp, #176] // 2-byte Spill
+; CHECK-NEXT:    mov z2.h, z0.h[20]
+; CHECK-NEXT:    fcsel h3, h4, h3, vs
+; CHECK-NEXT:    str z4, [x8, #-21, mul vl] // 16-byte Folded Spill
+; CHECK-NEXT:    mov z4.h, z1.h[20]
+; CHECK-NEXT:    str h3, [sp, #182] // 2-byte Spill
+; CHECK-NEXT:    fcmp h2, h2
+; CHECK-NEXT:    mov z3.h, z0.h[19]
+; CHECK-NEXT:    str z4, [x8, #-20, mul vl] // 16-byte Folded Spill
+; CHECK-NEXT:    fcsel h2, h4, h2, vs
+; CHECK-NEXT:    fcmp h3, h3
+; CHECK-NEXT:    mov z4.h, z1.h[19]
+; CHECK-NEXT:    str h2, [sp, #190] // 2-byte Spill
+; CHECK-NEXT:    mov z2.h, z0.h[18]
+; CHECK-NEXT:    fcsel h3, h4, h3, vs
+; CHECK-NEXT:    str z4, [x8, #-19, mul vl] // 16-byte Folded Spill
+; CHECK-NEXT:    mov z4.h, z1.h[18]
+; CHECK-NEXT:    str h3, [sp, #198] // 2-byte Spill
+; CHECK-NEXT:    fcmp h2, h2
+; CHECK-NEXT:    mov z3.h, z0.h[17]
+; CHECK-NEXT:    str z4, [x8, #-18, mul vl] // 16-byte Folded Spill
+; CHECK-NEXT:    fcsel h2, h4, h2, vs
+; CHECK-NEXT:    fcmp h3, h3
+; CHECK-NEXT:    mov z4.h, z1.h[17]
+; CHECK-NEXT:    str h2, [sp, #204] // 2-byte Spill
+; CHECK-NEXT:    mov z2.h, z0.h[16]
+; CHECK-NEXT:    fcsel h3, h4, h3, vs
+; CHECK-NEXT:    str z4, [x8, #-17, mul vl] // 16-byte Folded Spill
+; CHECK-NEXT:    mov z4.h, z1.h[16]
+; CHECK-NEXT:    str h3, [sp, #212] // 2-byte Spill
+; CHECK-NEXT:    fcmp h2, h2
+; CHECK-NEXT:    mov z3.h, z0.h[15]
+; CHECK-NEXT:    str z4, [x8, #-16, mul vl] // 16-byte Folded Spill
+; CHECK-NEXT:    fcsel h2, h4, h2, vs
+; CHECK-NEXT:    fcmp h3, h3
+; CHECK-NEXT:    mov z4.h, z1.h[15]
+; CHECK-NEXT:    str h2, [sp, #218] // 2-byte Spill
+; CHECK-NEXT:    mov z2.h, z0.h[14]
+; CHECK-NEXT:    fcsel h3, h4, h3, vs
+; CHECK-NEXT:    str z4, [x8, #-15, mul vl] // 16-byte Folded Spill
+; CHECK-NEXT:    mov z4.h, z1.h[14]
+; CHECK-NEXT:    str h3, [sp, #208] // 2-byte Spill
+; CHECK-NEXT:    fcmp h2, h2
+; CHECK-NEXT:    mov z3.h, z0.h[13]
+; CHECK-NEXT:    str z4, [x8, #-14, mul vl] // 16-byte Folded Spill
+; CHECK-NEXT:    fcsel h2, h4, h2, vs
+; CHECK-NEXT:    fcmp h3, h3
+; CHECK-NEXT:    mov z4.h, z1.h[13]
+; CHECK-NEXT:    str h2, [sp, #196] // 2-byte Spill
+; CHECK-NEXT:    mov z2.h, z0.h[12]
+; CHECK-NEXT:    fcsel h3, h4, h3, vs
+; CHECK-NEXT:    str z4, [x8, #-13, mul vl] // 16-byte Folded Spill
+; CHECK-NEXT:    mov z4.h, z1.h[12]
+; CHECK-NEXT:    str h3, [sp, #186] // 2-byte Spill
+; CHECK-NEXT:    fcmp h2, h2
+; CHECK-NEXT:    mov z3.h, z0.h[11]
+; CHECK-NEXT:    str z4, [x8, #-12, mul vl] // 16-byte Folded Spill
+; CHECK-NEXT:    fcsel h2, h4, h2, vs
+; CHECK-NEXT:    fcmp h3, h3
+; CHECK-NEXT:    mov z4.h, z1.h[11]
+; CHECK-NEXT:    str h2, [sp, #174] // 2-byte Spill
+; CHECK-NEXT:    mov z2.h, z0.h[10]
+; CHECK-NEXT:    fcsel h3, h4, h3, vs
+; CHECK-NEXT:    str z4, [x8, #-11, mul vl] // 16-byte Folded Spill
+; CHECK-NEXT:    mov z4.h, z1.h[10]
+; CHECK-NEXT:    str h3, [sp, #164] // 2-byte Spill
+; CHECK-NEXT:    fcmp h2, h2
+; CHECK-NEXT:    mov z3.h, z0.h[9]
+; CHECK-NEXT:    str z4, [x8, #-10, mul vl] // 16-byte Folded Spill
+; CHECK-NEXT:    fcsel h2, h4, h2, vs
+; CHECK-NEXT:    fcmp h3, h3
+; CHECK-NEXT:    mov z4.h, z1.h[9]
+; CHECK-NEXT:    str h2, [sp, #154] // 2-byte Spill
+; CHECK-NEXT:    mov z2.h, z0.h[8]
+; CHECK-NEXT:    fcsel h3, h4, h3, vs
+; CHECK-NEXT:    str z4, [x8, #-9, mul vl] // 16-byte Folded Spill
+; CHECK-NEXT:    mov z4.h, z1.h[8]
+; CHECK-NEXT:    str h3, [sp, #144] // 2-byte Spill
+; CHECK-NEXT:    fcmp h2, h2
+; CHECK-NEXT:    mov z3.h, z0.h[7]
+; CHECK-NEXT:    str z4, [x8, #-8, mul vl] // 16-byte Folded Spill
+; CHECK-NEXT:    fcsel h2, h4, h2, vs
+; CHECK-NEXT:    fcmp h3, h3
+; CHECK-NEXT:    mov z4.h, z1.h[7]
+; CHECK-NEXT:    str h2, [sp, #136] // 2-byte Spill
+; CHECK-NEXT:    mov z2.h, z0.h[6]
+; CHECK-NEXT:    fcsel h3, h4, h3, vs
+; CHECK-NEXT:    str z4, [x8, #-7, mul vl] // 16-byte Folded Spill
+; CHECK-NEXT:    mov z4.h, z1.h[6]
+; CHECK-NEXT:    str h3, [sp, #130] // 2-byte Spill
+; CHECK-NEXT:    fcmp h2, h2
+; CHECK-NEXT:    mov z3.h, z0.h[5]
+; CHECK-NEXT:    str z4, [x8, #-6, mul vl] // 16-byte Folded Spill
+; CHECK-NEXT:    fcsel h2, h4, h2, vs
+; CHECK-NEXT:    fcmp h3, h3
+; CHECK-NEXT:    mov z4.h, z1.h[5]
+; CHECK-NEXT:    str h2, [sp, #128] // 2-byte Spill
+; CHECK-NEXT:    mov z2.h, z0.h[4]
+; CHECK-NEXT:    fcsel h3, h4, h3, vs
+; CHECK-NEXT:    str z4, [x8, #-5, mul vl] // 16-byte Folded Spill
+; CHECK-NEXT:    mov z4.h, z0.h[3]
+; CHECK-NEXT:    str h3, [sp, #126] // 2-byte Spill
+; CHECK-NEXT:    fcmp h2, h2
+; CHECK-NEXT:    mov z3.h, z1.h[4]
+; CHECK-NEXT:    str z3, [x8, #-3, mul vl] // 16-byte Folded Spill
+; CHECK-NEXT:    fcsel h2, h3, h2, vs
+; CHECK-NEXT:    fcmp h4, h4
+; CHECK-NEXT:    mov z3.h, z1.h[3]
+; CHECK-NEXT:    str h2, [sp, #124] // 2-byte Spill
+; CHECK-NEXT:    mov z2.h, z0.h[2]
+; CHECK-NEXT:    mov z0.h, z0.h[1]
+; CHECK-NEXT:    str z3, [x8, #-4, mul vl] // 16-byte Folded Spill
+; CHECK-NEXT:    fcsel h3, h3, h4, vs
+; CHECK-NEXT:    ldr h4, [sp, #262] // 2-byte Reload
+; CHECK-NEXT:    fcmp h2, h2
+; CHECK-NEXT:    str h3, [sp, #122] // 2-byte Spill
+; CHECK-NEXT:    mov z3.h, z1.h[2]
+; CHECK-NEXT:    fcsel h2, h3, h2, vs
+; CHECK-NEXT:    fcmp h0, h0
+; CHECK-NEXT:    str z3, [x8, #-2, mul vl] // 16-byte Folded Spill
+; CHECK-NEXT:    ldr h3, [sp, #358] // 2-byte Reload
+; CHECK-NEXT:    str h2, [sp, #120] // 2-byte Spill
+; CHECK-NEXT:    mov z2.h, z1.h[1]
+; CHECK-NEXT:    fcsel h0, h2, h0, vs
+; CHECK-NEXT:    fcmp h1, h1
+; CHECK-NEXT:    str z2, [x8, #-1, mul vl] // 16-byte Folded Spill
+; CHECK-NEXT:    ldr h2, [sp, #360] // 2-byte Reload
+; CHECK-NEXT:    str h0, [sp, #118] // 2-byte Spill
+; CHECK-NEXT:    fcsel h0, h4, h1, vs
+; CHECK-NEXT:    ldr h1, [sp, #396] // 2-byte Reload
+; CHECK-NEXT:    fcmp h4, h0
+; CHECK-NEXT:    fcsel h0, h4, h0, gt
+; CHECK-NEXT:    fcmp h5, h5
+; CHECK-NEXT:    str h0, [sp, #116] // 2-byte Spill
+; CHECK-NEXT:    fcsel h0, h1, h5, vs
+; CHECK-NEXT:    ldr h5, [sp, #356] // 2-byte Reload
+; CHECK-NEXT:    fcmp h1, h0
+; CHECK-NEXT:    fcsel h0, h1, h0, gt
+; CHECK-NEXT:    ldr h1, [sp, #510] // 2-byte Reload
+; CHECK-NEXT:    str h0, [sp, #114] // 2-byte Spill
+; CHECK-NEXT:    ldr h0, [sp, #282] // 2-byte Reload
+; CHECK-NEXT:    fcmp h0, h0
+; CHECK-NEXT:    fcsel h0, h1, h0, vs
+; CHECK-NEXT:    fcmp h1, h0
+; CHECK-NEXT:    fcsel h0, h1, h0, gt
+; CHECK-NEXT:    ldr h1, [sp, #508] // 2-byte Reload
+; CHECK-NEXT:    str h0, [sp, #282] // 2-byte Spill
+; CHECK-NEXT:    ldr h0, [sp, #280] // 2-byte Reload
+; CHECK-NEXT:    fcmp h0, h0
+; CHECK-NEXT:    fcsel h0, h1, h0, vs
+; CHECK-NEXT:    fcmp h1, h0
+; CHECK-NEXT:    fcsel h0, h1, h0, gt
+; CHECK-NEXT:    ldr h1, [sp, #504] // 2-byte Reload
+; CHECK-NEXT:    str h0, [sp, #280] // 2-byte Spill
+; CHECK-NEXT:    ldr h0, [sp, #276] // 2-byte Reload
+; CHECK-NEXT:    fcmp h0, h0
+; CHECK-NEXT:    fcsel h0, h1, h0, vs
+; CHECK-NEXT:    fcmp h1, h0
+; CHECK-NEXT:    fcsel h0, h1, h0, gt
+; CHECK-NEXT:    ldr h1, [sp, #506] // 2-byte Reload
+; CHECK-NEXT:    str h0, [sp, #276] // 2-byte Spill
+; CHECK-NEXT:    ldr h0, [sp, #278] // 2-byte Reload
+; CHECK-NEXT:    fcmp h0, h0
+; CHECK-NEXT:    fcsel h0, h1, h0, vs
+; CHECK-NEXT:    fcmp h1, h0
+; CHECK-NEXT:    fcsel h0, h1, h0, gt
+; CHECK-NEXT:    ldr h1, [sp, #496] // 2-byte Reload
+; CHECK-NEXT:    str h0, [sp, #278] // 2-byte Spill
+; CHECK-NEXT:    ldr h0, [sp, #272] // 2-byte Reload
+; CHECK-NEXT:    fcmp h0, h0
+; CHECK-NEXT:    fcsel h0, h5, h0, vs
+; CHECK-NEXT:    fcmp h5, h0
+; CHECK-NEXT:    fcsel h0, h5, h0, gt
+; CHECK-NEXT:    str h0, [sp, #272] // 2-byte Spill
+; CHECK-NEXT:    ldr h0, [sp, #274] // 2-byte Reload
+; CHECK-NEXT:    fcmp h0, h0
+; CHECK-NEXT:    fcsel h0, h1, h0, vs
+; CHECK-NEXT:    fcmp h1, h0
+; CHECK-NEXT:    fcsel h0, h1, h0, gt
+; CHECK-NEXT:    fcmp h17, h17
+; CHECK-NEXT:    ldr h1, [sp, #502] // 2-byte Reload
+; CHECK-NEXT:    str h0, [sp, #274] // 2-byte Spill
+; CHECK-NEXT:    fcsel h0, h2, h17, vs
+; CHECK-NEXT:    fmov s17, s2
+; CHECK-NEXT:    fcmp h2, h0
+; CHECK-NEXT:    fcsel h0, h2, h0, gt
+; CHECK-NEXT:    fcmp h18, h18
+; CHECK-NEXT:    ldr h2, [sp, #504] // 2-byte Reload
+; CHECK-NEXT:    str h0, [sp, #112] // 2-byte Spill
+; CHECK-NEXT:    fcsel h0, h3, h18, vs
+; CHECK-NEXT:    ldr h18, [sp, #134] // 2-byte Reload
+; CHECK-NEXT:    fcmp h3, h0
+; CHECK-NEXT:    fcsel h0, h3, h0, gt
+; CHECK-NEXT:    fcmp h25, h25
+; CHECK-NEXT:    str h0, [sp, #110] // 2-byte Spill
+; CHECK-NEXT:    fcsel h0, h1, h25, vs
+; CHECK-NEXT:    ldr h25, [sp, #180] // 2-byte Reload
+; CHECK-NEXT:    fcmp h1, h0
+; CHECK-NEXT:    fcsel h0, h1, h0, gt
+; CHECK-NEXT:    fcmp h20, h20
+; CHECK-NEXT:    ldr h1, [sp, #500] // 2-byte Reload
+; CHECK-NEXT:    str h0, [sp, #108] // 2-byte Spill
+; CHECK-NEXT:    fcsel h0, h1, h20, vs
+; CHECK-NEXT:    ldr h20, [sp, #142] // 2-byte Reload
+; CHECK-NEXT:    fcmp h1, h0
+; CHECK-NEXT:    fcsel h0, h1, h0, gt
+; CHECK-NEXT:    fcmp h30, h30
+; CHECK-NEXT:    ldr h1, [sp, #498] // 2-byte Reload
+; CHECK-NEXT:    str h0, [sp, #106] // 2-byte Spill
+; CHECK-NEXT:    fcsel h0, h1, h30, vs
+; CHECK-NEXT:    ldr h30, [sp, #216] // 2-byte Reload
+; CHECK-NEXT:    fcmp h1, h0
+; CHECK-NEXT:    fcsel h0, h1, h0, gt
+; CHECK-NEXT:    ldr h1, [sp, #494] // 2-byte Reload
+; CHECK-NEXT:    str h0, [sp, #104] // 2-byte Spill
+; CHECK-NEXT:    ldr h0, [sp, #268] // 2-byte Reload
+; CHECK-NEXT:    fcmp h0, h0
+; CHECK-NEXT:    fcsel h0, h1, h0, vs
+; CHECK-NEXT:    fcmp h1, h0
+; CHECK-NEXT:    fcsel h0, h1, h0, gt
+; CHECK-NEXT:    fcmp h8, h8
+; CHECK-NEXT:    ldr h1, [sp, #492] // 2-byte Reload
+; CHECK-NEXT:    str h0, [sp, #268] // 2-byte Spill
+; CHECK-NEXT:    fcsel h0, h1, h8, vs
+; CHECK-NEXT:    ldr h8, [sp, #224] // 2-byte Reload
+; CHECK-NEXT:    fcmp h1, h0
+; CHECK-NEXT:    fcsel h0, h1, h0, gt
+; CHECK-NEXT:    ldr h1, [sp, #490] // 2-byte Reload
+; CHECK-NEXT:    str h0, [sp, #102] // 2-byte Spill
+; CHECK-NEXT:    ldr h0, [sp, #264] // 2-byte Reload
+; CHECK-NEXT:    fcmp h0, h0
+; CHECK-NEXT:    fcsel h0, h1, h0, vs
+; CHECK-NEXT:    fcmp h1, h0
+; CHECK-NEXT:    fcsel h0, h1, h0, gt
+; CHECK-NEXT:    fcmp h9, h9
+; CHECK-NEXT:    ldr h1, [sp, #488] // 2-byte Reload
+; CHECK-NEXT:    str h0, [sp, #264] // 2-byte Spill
+; CHECK-NEXT:    fcsel h0, h1, h9, vs
+; CHECK-NEXT:    ldr h9, [sp, #228] // 2-byte Reload
+; CHECK-NEXT:    fcmp h1, h0
+; CHECK-NEXT:    fcsel h0, h1, h0, gt
+; CHECK-NEXT:    ldr h1, [sp, #486] // 2-byte Reload
+; CHECK-NEXT:    str h0, [sp, #100] // 2-byte Spill
+; CHECK-NEXT:    ldr h0, [sp, #260] // 2-byte Reload
+; CHECK-NEXT:    fcmp h0, h0
+; CHECK-NEXT:    fcsel h0, h1, h0, vs
+; CHECK-NEXT:    fcmp h1, h0
+; CHECK-NEXT:    fcsel h0, h1, h0, gt
+; CHECK-NEXT:    ldr h1, [sp, #484] // 2-byte Reload
+; CHECK-NEXT:    str h0, [sp, #260] // 2-byte Spill
+; CHECK-NEXT:    ldr h0, [sp, #354] // 2-byte Reload
+; CHECK-NEXT:    fcmp h0, h0
+; CHECK-NEXT:    fcsel h0, h1, h0, vs
+; CHECK-NEXT:    fcmp h1, h0
+; CHECK-NEXT:    fcsel h0, h1, h0, gt
+; CHECK-NEXT:    ldr h1, [sp, #482] // 2-byte Reload
+; CHECK-NEXT:    str h0, [sp, #354] // 2-byte Spill
+; CHECK-NEXT:    ldr h0, [sp, #352] // 2-byte Reload
+; CHECK-NEXT:    fcmp h0, h0
+; CHECK-NEXT:    fcsel h0, h1, h0, vs
+; CHECK-NEXT:    fcmp h1, h0
+; CHECK-NEXT:    fcsel h0, h1, h0, gt
+; CHECK-NEXT:    ldr h1, [sp, #480] // 2-byte Reload
+; CHECK-NEXT:    str h0, [sp, #352] // 2-byte Spill
+; CHECK-NEXT:    ldr h0, [sp, #256] // 2-byte Reload
+; CHECK-NEXT:    fcmp h0, h0
+; CHECK-NEXT:    fcsel h0, h1, h0, vs
+; CHECK-NEXT:    fcmp h1, h0
+; CHECK-NEXT:    fcsel h0, h1, h0, gt
+; CHECK-NEXT:    ldr h1, [sp, #478] // 2-byte Reload
+; CHECK-NEXT:    str h0, [sp, #256] // 2-byte Spill
+; CHECK-NEXT:    ldr h0, [sp, #350] // 2-byte Reload
+; CHECK-NEXT:    fcmp h0, h0
+; CHECK-NEXT:    fcsel h0, h1, h0, vs
+; CHECK-NEXT:    fcmp h1, h0
+; CHECK-NEXT:    fcsel h0, h1, h0, gt
+; CHECK-NEXT:    ldr h1, [sp, #476] // 2-byte Reload
+; CHECK-NEXT:    str h0, [sp, #350] // 2-byte Spill
+; CHECK-NEXT:    ldr h0, [sp, #252] // 2-byte Reload
+; CHECK-NEXT:    fcmp h0, h0
+; CHECK-NEXT:    fcsel h0, h1, h0, vs
+; CHECK-NEXT:    fcmp h1, h0
+; CHECK-NEXT:    fcsel h0, h1, h0, gt
+; CHECK-NEXT:    ldr h1, [sp, #474] // 2-byte Reload
+; CHECK-NEXT:    str h0, [sp, #252] // 2-byte Spill
+; CHECK-NEXT:    ldr h0, [sp, #348] // 2-byte Reload
+; CHECK-NEXT:    fcmp h0, h0
+; CHECK-NEXT:    fcsel h0, h1, h0, vs
+; CHECK-NEXT:    fcmp h1, h0
+; CHECK-NEXT:    fcsel h0, h1, h0, gt
+; CHECK-NEXT:    fcmp h14, h14
+; CHECK-NEXT:    ldr h1, [sp, #472] // 2-byte Reload
+; CHECK-NEXT:    str h0, [sp, #348] // 2-byte Spill
+; CHECK-NEXT:    fcsel h0, h1, h14, vs
+; CHECK-NEXT:    ldr h14, [sp, #250] // 2-byte Reload
+; CHECK-NEXT:    fcmp h1, h0
+; CHECK-NEXT:    fcsel h0, h1, h0, gt
+; CHECK-NEXT:    fcmp h11, h11
+; CHECK-NEXT:    ldr h1, [sp, #470] // 2-byte Reload
+; CHECK-NEXT:    str h0, [sp, #98] // 2-byte Spill
+; CHECK-NEXT:    fcsel h0, h1, h11, vs
+; CHECK-NEXT:    ldr h11, [sp, #238] // 2-byte Reload
+; CHECK-NEXT:    fcmp h1, h0
+; CHECK-NEXT:    fcsel h0, h1, h0, gt
+; CHECK-NEXT:    ldr h1, [sp, #468] // 2-byte Reload
+; CHECK-NEXT:    str h0, [sp, #96] // 2-byte Spill
+; CHECK-NEXT:    ldr h0, [sp, #346] // 2-byte Reload
+; CHECK-NEXT:    fcmp h0, h0
+; CHECK-NEXT:    fcsel h0, h1, h0, vs
+; CHECK-NEXT:    fcmp h1, h0
+; CHECK-NEXT:    fcsel h0, h1, h0, gt
+; CHECK-NEXT:    fcmp h10, h10
+; CHECK-NEXT:    ldr h1, [sp, #466] // 2-byte Reload
+; CHECK-NEXT:    str h0, [sp, #346] // 2-byte Spill
+; CHECK-NEXT:    fcsel h0, h1, h10, vs
+; CHECK-NEXT:    ldr h10, [sp, #234] // 2-byte Reload
+; CHECK-NEXT:    fcmp h1, h0
+; CHECK-NEXT:    fcsel h0, h1, h0, gt
+; CHECK-NEXT:    ldr h1, [sp, #464] // 2-byte Reload
+; CHECK-NEXT:    str h0, [sp, #94] // 2-byte Spill
+; CHECK-NEXT:    ldr h0, [sp, #344] // 2-byte Reload
+; CHECK-NEXT:    fcmp h0, h0
+; CHECK-NEXT:    fcsel h0, h1, h0, vs
+; CHECK-NEXT:    fcmp h1, h0
+; CHECK-NEXT:    fcsel h0, h1, h0, gt
+; CHECK-NEXT:    fcmp h28, h28
+; CHECK-NEXT:    ldr h1, [sp, #462] // 2-byte Reload
+; CHECK-NEXT:    str h0, [sp, #344] // 2-byte Spill
+; CHECK-NEXT:    fcsel h0, h1, h28, vs
+; CHECK-NEXT:    ldr h28, [sp, #202] // 2-byte Reload
+; CHECK-NEXT:    fcmp h1, h0
+; CHECK-NEXT:    fcsel h0, h1, h0, gt
+; CHECK-NEXT:    ldr h1, [sp, #460] // 2-byte Reload
+; CHECK-NEXT:    str h0, [sp, #92] // 2-byte Spill
+; CHECK-NEXT:    ldr h0, [sp, #230] // 2-byte Reload
+; CHECK-NEXT:    fcmp h0, h0
+; CHECK-NEXT:    fcsel h0, h1, h0, vs
+; CHECK-NEXT:    fcmp h1, h0
+; CHECK-NEXT:    fcsel h0, h1, h0, gt
+; CHECK-NEXT:    ldr h1, [sp, #458] // 2-byte Reload
+; CHECK-NEXT:    str h0, [sp, #230] // 2-byte Spill
+; CHECK-NEXT:    ldr h0, [sp, #342] // 2-byte Reload
+; CHECK-NEXT:    fcmp h0, h0
+; CHECK-NEXT:    fcsel h0, h1, h0, vs
+; CHECK-NEXT:    fcmp h1, h0
+; CHECK-NEXT:    fcsel h0, h1, h0, gt
+; CHECK-NEXT:    ldr h1, [sp, #456] // 2-byte Reload
+; CHECK-NEXT:    str h0, [sp, #342] // 2-byte Spill
+; CHECK-NEXT:    ldr h0, [sp, #340] // 2-byte Reload
+; CHECK-NEXT:    fcmp h0, h0
+; CHECK-NEXT:    fcsel h0, h1, h0, vs
+; CHECK-NEXT:    fcmp h1, h0
+; CHECK-NEXT:    fcsel h0, h1, h0, gt
+; CHECK-NEXT:    ldr h1, [sp, #454] // 2-byte Reload
+; CHECK-NEXT:    str h0, [sp, #340] // 2-byte Spill
+; CHECK-NEXT:    ldr h0, [sp, #338] // 2-byte Reload
+; CHECK-NEXT:    fcmp h0, h0
+; CHECK-NEXT:    fcsel h0, h1, h0, vs
+; CHECK-NEXT:    fcmp h1, h0
+; CHECK-NEXT:    fcsel h0, h1, h0, gt
+; CHECK-NEXT:    ldr h1, [sp, #452] // 2-byte Reload
+; CHECK-NEXT:    str h0, [sp, #338] // 2-byte Spill
+; CHECK-NEXT:    ldr h0, [sp, #336] // 2-byte Reload
+; CHECK-NEXT:    fcmp h0, h0
+; CHECK-NEXT:    fcsel h0, h1, h0, vs
+; CHECK-NEXT:    fcmp h1, h0
+; CHECK-NEXT:    fcsel h0, h1, h0, gt
+; CHECK-NEXT:    fcmp h13, h13
+; CHECK-NEXT:    ldr h1, [sp, #450] // 2-byte Reload
+; CHECK-NEXT:    str h0, [sp, #336] // 2-byte Spill
+; CHECK-NEXT:    fcsel h0, h1, h13, vs
+; CHECK-NEXT:    ldr h13, [sp, #246] // 2-byte Reload
+; CHECK-NEXT:    fcmp h1, h0
+; CHECK-NEXT:    fcsel h0, h1, h0, gt
+; CHECK-NEXT:    ldr h1, [sp, #448] // 2-byte Reload
+; CHECK-NEXT:    str h0, [sp, #90] // 2-byte Spill
+; CHECK-NEXT:    ldr h0, [sp, #334] // 2-byte Reload
+; CHECK-NEXT:    fcmp h0, h0
+; CHECK-NEXT:    fcsel h0, h1, h0, vs
+; CHECK-NEXT:    fcmp h1, h0
+; CHECK-NEXT:    fcsel h0, h1, h0, gt
+; CHECK-NEXT:    ldr h1, [sp, #446] // 2-byte Reload
+; CHECK-NEXT:    str h0, [sp, #334] // 2-byte Spill
+; CHECK-NEXT:    ldr h0, [sp, #332] // 2-byte Reload
+; CHECK-NEXT:    fcmp h0, h0
+; CHECK-NEXT:    fcsel h0, h1, h0, vs
+; CHECK-NEXT:    fcmp h1, h0
+; CHECK-NEXT:    fcsel h0, h1, h0, gt
+; CHECK-NEXT:    ldr h1, [sp, #444] // 2-byte Reload
+; CHECK-NEXT:    str h0, [sp, #332] // 2-byte Spill
+; CHECK-NEXT:    ldr h0, [sp, #330] // 2-byte Reload
+; CHECK-NEXT:    fcmp h0, h0
+; CHECK-NEXT:    fcsel h0, h1, h0, vs
+; CHECK-NEXT:    fcmp h1, h0
+; CHECK-NEXT:    fcsel h0, h1, h0, gt
+; CHECK-NEXT:    fcmp h15, h15
+; CHECK-NEXT:    ldr h1, [sp, #442] // 2-byte Reload
+; CHECK-NEXT:    str h0, [sp, #330] // 2-byte Spill
+; CHECK-NEXT:    fcsel h0, h1, h15, vs
+; CHECK-NEXT:    ldr h15, [sp, #366] // 2-byte Reload
+; CHECK-NEXT:    fcmp h1, h0
+; CHECK-NEXT:    fcsel h0, h1, h0, gt
+; CHECK-NEXT:    ldr h1, [sp, #440] // 2-byte Reload
+; CHECK-NEXT:    str h0, [sp, #88] // 2-byte Spill
+; CHECK-NEXT:    ldr h0, [sp, #328] // 2-byte Reload
+; CHECK-NEXT:    fcmp h0, h0
+; CHECK-NEXT:    fcsel h0, h1, h0, vs
+; CHECK-NEXT:    fcmp h1, h0
+; CHECK-NEXT:    fcsel h0, h1, h0, gt
+; CHECK-NEXT:    ldr h1, [sp, #438] // 2-byte Reload
+; CHECK-NEXT:    str h0, [sp, #328] // 2-byte Spill
+; CHECK-NEXT:    ldr h0, [sp, #326] // 2-byte Reload
+; CHECK-NEXT:    fcmp h0, h0
+; CHECK-NEXT:    fcsel h0, h1, h0, vs
+; CHECK-NEXT:    fcmp h1, h0
+; CHECK-NEXT:    fcsel h0, h1, h0, gt
+; CHECK-NEXT:    ldr h1, [sp, #436] // 2-byte Reload
+; CHECK-NEXT:    str h0, [sp, #326] // 2-byte Spill
+; CHECK-NEXT:    ldr h0, [sp, #324] // 2-byte Reload
+; CHECK-NEXT:    fcmp h0, h0
+; CHECK-NEXT:    fcsel h0, h1, h0, vs
+; CHECK-NEXT:    fcmp h1, h0
+; CHECK-NEXT:    fcsel h0, h1, h0, gt
+; CHECK-NEXT:    ldr h1, [sp, #434] // 2-byte Reload
+; CHECK-NEXT:    str h0, [sp, #324] // 2-byte Spill
+; CHECK-NEXT:    ldr h0, [sp, #322] // 2-byte Reload
+; CHECK-NEXT:    fcmp h0, h0
+; CHECK-NEXT:    fcsel h0, h1, h0, vs
+; CHECK-NEXT:    fcmp h1, h0
+; CHECK-NEXT:    fcsel h0, h1, h0, gt
+; CHECK-NEXT:    ldr h1, [sp, #432] // 2-byte Reload
+; CHECK-NEXT:    str h0, [sp, #322] // 2-byte Spill
+; CHECK-NEXT:    ldr h0, [sp, #320] // 2-byte Reload
+; CHECK-NEXT:    fcmp h0, h0
+; CHECK-NEXT:    fcsel h0, h1, h0, vs
+; CHECK-NEXT:    fcmp h1, h0
+; CHECK-NEXT:    fcsel h0, h1, h0, gt
+; CHECK-NEXT:    ldr h1, [sp, #430] // 2-byte Reload
+; CHECK-NEXT:    str h0, [sp, #320] // 2-byte Spill
+; CHECK-NEXT:    ldr h0, [sp, #318] // 2-byte Reload
+; CHECK-NEXT:    fcmp h0, h0
+; CHECK-NEXT:    fcsel h0, h1, h0, vs
+; CHECK-NEXT:    fcmp h1, h0
+; CHECK-NEXT:    fcsel h0, h1, h0, gt
+; CHECK-NEXT:    ldr h1, [sp, #428] // 2-byte Reload
+; CHECK-NEXT:    str h0, [sp, #318] // 2-byte Spill
+; CHECK-NEXT:    ldr h0, [sp, #316] // 2-byte Reload
+; CHECK-NEXT:    fcmp h0, h0
+; CHECK-NEXT:    fcsel h0, h1, h0, vs
+; CHECK-NEXT:    fcmp h1, h0
+; CHECK-NEXT:    fcsel h0, h1, h0, gt
+; CHECK-NEXT:    ldr h1, [sp, #426] // 2-byte Reload
+; CHECK-NEXT:    str h0, [sp, #316] // 2-byte Spill
+; CHECK-NEXT:    ldr h0, [sp, #314] // 2-byte Reload
+; CHECK-NEXT:    fcmp h0, h0
+; CHECK-NEXT:    fcsel h0, h1, h0, vs
+; CHECK-NEXT:    fcmp h1, h0
+; CHECK-NEXT:    fcsel h0, h1, h0, gt
+; CHECK-NEXT:    ldr h1, [sp, #424] // 2-byte Reload
+; CHECK-NEXT:    str h0, [sp, #314] // 2-byte Spill
+; CHECK-NEXT:    ldr h0, [sp, #312] // 2-byte Reload
+; CHECK-NEXT:    fcmp h0, h0
+; CHECK-NEXT:    fcsel h0, h1, h0, vs
+; CHECK-NEXT:    fcmp h1, h0
+; CHECK-NEXT:    fcsel h0, h1, h0, gt
+; CHECK-NEXT:    ldr h1, [sp, #422] // 2-byte Reload
+; CHECK-NEXT:    str h0, [sp, #312] // 2-byte Spill
+; CHECK-NEXT:    ldr h0, [sp, #310] // 2-byte Reload
+; CHECK-NEXT:    fcmp h0, h0
+; CHECK-NEXT:    fcsel h0, h1, h0, vs
+; CHECK-NEXT:    fcmp h1, h0
+; CHECK-NEXT:    fcsel h0, h1, h0, gt
+; CHECK-NEXT:    ldr h1, [sp, #420] // 2-byte Reload
+; CHECK-NEXT:    str h0, [sp, #310] // 2-byte Spill
+; CHECK-NEXT:    ldr h0, [sp, #308] // 2-byte Reload
+; CHECK-NEXT:    fcmp h0, h0
+; CHECK-NEXT:    fcsel h0, h1, h0, vs
+; CHECK-NEXT:    fcmp h1, h0
+; CHECK-NEXT:    fcsel h0, h1, h0, gt
+; CHECK-NEXT:    ldr h1, [sp, #418] // 2-byte Reload
+; CHECK-NEXT:    str h0, [sp, #308] // 2-byte Spill
+; CHECK-NEXT:    ldr h0, [sp, #306] // 2-byte Reload
+; CHECK-NEXT:    fcmp h0, h0
+; CHECK-NEXT:    fcsel h0, h1, h0, vs
+; CHECK-NEXT:    fcmp h1, h0
+; CHECK-NEXT:    fcsel h0, h1, h0, gt
+; CHECK-NEXT:    ldr h1, [sp, #416] // 2-byte Reload
+; CHECK-NEXT:    str h0, [sp, #306] // 2-byte Spill
+; CHECK-NEXT:    ldr h0, [sp, #304] // 2-byte Reload
+; CHECK-NEXT:    fcmp h0, h0
+; CHECK-NEXT:    fcsel h0, h1, h0, vs
+; CHECK-NEXT:    fcmp h1, h0
+; CHECK-NEXT:    fcsel h0, h1, h0, gt
+; CHECK-NEXT:    ldr h1, [sp, #414] // 2-byte Reload
+; CHECK-NEXT:    str h0, [sp, #304] // 2-byte Spill
+; CHECK-NEXT:    ldr h0, [sp, #302] // 2-byte Reload
+; CHECK-NEXT:    fcmp h0, h0
+; CHECK-NEXT:    fcsel h0, h1, h0, vs
+; CHECK-NEXT:    fcmp h1, h0
+; CHECK-NEXT:    fcsel h0, h1, h0, gt
+; CHECK-NEXT:    ldr h1, [sp, #412] // 2-byte Reload
+; CHECK-NEXT:    str h0, [sp, #302] // 2-byte Spill
+; CHECK-NEXT:    ldr h0, [sp, #300] // 2-byte Reload
+; CHECK-NEXT:    fcmp h0, h0
+; CHECK-NEXT:    fcsel h0, h1, h0, vs
+; CHECK-NEXT:    fcmp h1, h0
+; CHECK-NEXT:    fcsel h0, h1, h0, gt
+; CHECK-NEXT:    ldr h1, [sp, #410] // 2-byte Reload
+; CHECK-NEXT:    str h0, [sp, #300] // 2-byte Spill
+; CHECK-NEXT:    ldr h0, [sp, #298] // 2-byte Reload
+; CHECK-NEXT:    fcmp h0, h0
+; CHECK-NEXT:    fcsel h0, h1, h0, vs
+; CHECK-NEXT:    fcmp h1, h0
+; CHECK-NEXT:    fcsel h0, h1, h0, gt
+; CHECK-NEXT:    ldr h1, [sp, #408] // 2-byte Reload
+; CHECK-NEXT:    str h0, [sp, #298] // 2-byte Spill
+; CHECK-NEXT:    ldr h0, [sp, #296] // 2-byte Reload
+; CHECK-NEXT:    fcmp h0, h0
+; CHECK-NEXT:    fcsel h0, h1, h0, vs
+; CHECK-NEXT:    fcmp h1, h0
+; CHECK-NEXT:    fcsel h0, h1, h0, gt
+; CHECK-NEXT:    ldr h1, [sp, #406] // 2-byte Reload
+; CHECK-NEXT:    str h0, [sp, #296] // 2-byte Spill
+; CHECK-NEXT:    ldr h0, [sp, #294] // 2-byte Reload
+; CHECK-NEXT:    fcmp h0, h0
+; CHECK-NEXT:    fcsel h0, h1, h0, vs
+; CHECK-NEXT:    fcmp h1, h0
+; CHECK-NEXT:    fcsel h0, h1, h0, gt
+; CHECK-NEXT:    ldr h1, [sp, #404] // 2-byte Reload
+; CHECK-NEXT:    str h0, [sp, #294] // 2-byte Spill
+; CHECK-NEXT:    ldr h0, [sp, #292] // 2-byte Reload
+; CHECK-NEXT:    fcmp h0, h0
+; CHECK-NEXT:    fcsel h0, h1, h0, vs
+; CHECK-NEXT:    fcmp h1, h0
+; CHECK-NEXT:    fcsel h0, h1, h0, gt
+; CHECK-NEXT:    ldr h1, [sp, #402] // 2-byte Reload
+; CHECK-NEXT:    str h0, [sp, #292] // 2-byte Spill
+; CHECK-NEXT:    ldr h0, [sp, #290] // 2-byte Reload
+; CHECK-NEXT:    fcmp h0, h0
+; CHECK-NEXT:    fcsel h0, h1, h0, vs
+; CHECK-NEXT:    fcmp h1, h0
+; CHECK-NEXT:    fcsel h0, h1, h0, gt
+; CHECK-NEXT:    ldr h1, [sp, #400] // 2-byte Reload
+; CHECK-NEXT:    str h0, [sp, #290] // 2-byte Spill
+; CHECK-NEXT:    ldr h0, [sp, #288] // 2-byte Reload
+; CHECK-NEXT:    fcmp h0, h0
+; CHECK-NEXT:    fcsel h0, h1, h0, vs
+; CHECK-NEXT:    fcmp h1, h0
+; CHECK-NEXT:    fcsel h0, h1, h0, gt
+; CHECK-NEXT:    ldr h1, [sp, #398] // 2-byte Reload
+; CHECK-NEXT:    str h0, [sp, #288] // 2-byte Spill
+; CHECK-NEXT:    ldr h0, [sp, #286] // 2-byte Reload
+; CHECK-NEXT:    fcmp h0, h0
+; CHECK-NEXT:    fcsel h0, h1, h0, vs
+; CHECK-NEXT:    fcmp h1, h0
+; CHECK-NEXT:    fcsel h0, h1, h0, gt
+; CHECK-NEXT:    ldr h1, [sp, #394] // 2-byte Reload
+; CHECK-NEXT:    str h0, [sp, #286] // 2-byte Spill
+; CHECK-NEXT:    ldr h0, [sp, #284] // 2-byte Reload
+; CHECK-NEXT:    fcmp h0, h0
+; CHECK-NEXT:    fcsel h0, h1, h0, vs
+; CHECK-NEXT:    fcmp h1, h0
+; CHECK-NEXT:    fcsel h0, h1, h0, gt
+; CHECK-NEXT:    fcmp h6, h6
+; CHECK-NEXT:    ldr h1, [sp, #392] // 2-byte Reload
+; CHECK-NEXT:    str h0, [sp, #284] // 2-byte Spill
+; CHECK-NEXT:    fcsel h0, h1, h6, vs
+; CHECK-NEXT:    ldr h6, [sp, #152] // 2-byte Reload
+; CHECK-NEXT:    fcmp h1, h0
+; CHECK-NEXT:    fcsel h0, h1, h0, gt
+; CHECK-NEXT:    fcmp h7, h7
+; CHECK-NEXT:    ldr h1, [sp, #390] // 2-byte Reload
+; CHECK-NEXT:    str h0, [sp, #86] // 2-byte Spill
+; CHECK-NEXT:    fcsel h0, h1, h7, vs
+; CHECK-NEXT:    ldr h7, [sp, #146] // 2-byte Reload
+; CHECK-NEXT:    fcmp h1, h0
+; CHECK-NEXT:    fcsel h0, h1, h0, gt
+; CHECK-NEXT:    fcmp h16, h16
+; CHECK-NEXT:    ldr h1, [sp, #388] // 2-byte Reload
+; CHECK-NEXT:    str h0, [sp, #84] // 2-byte Spill
+; CHECK-NEXT:    fcsel h0, h1, h16, vs
+; CHECK-NEXT:    ldr h16, [sp, #140] // 2-byte Reload
+; CHECK-NEXT:    fcmp h1, h0
+; CHECK-NEXT:    fcsel h0, h1, h0, gt
+; CHECK-NEXT:    fcmp h19, h19
+; CHECK-NEXT:    ldr h1, [sp, #386] // 2-byte Reload
+; CHECK-NEXT:    str h0, [sp, #82] // 2-byte Spill
+; CHECK-NEXT:    fcsel h0, h1, h19, vs
+; CHECK-NEXT:    ldr h19, [sp, #138] // 2-byte Reload
+; CHECK-NEXT:    fcmp h1, h0
+; CHECK-NEXT:    fcsel h0, h1, h0, gt
+; CHECK-NEXT:    fcmp h21, h21
+; CHECK-NEXT:    ldr h1, [sp, #384] // 2-byte Reload
+; CHECK-NEXT:    str h0, [sp, #80] // 2-byte Spill
+; CHECK-NEXT:    fcsel h0, h1, h21, vs
+; CHECK-NEXT:    ldr h21, [sp, #150] // 2-byte Reload
+; CHECK-NEXT:    fcmp h1, h0
+; CHECK-NEXT:    fcsel h0, h1, h0, gt
+; CHECK-NEXT:    fcmp h22, h22
+; CHECK-NEXT:    ldr h1, [sp, #382] // 2-byte Reload
+; CHECK-NEXT:    str h0, [sp, #78] // 2-byte Spill
+; CHECK-NEXT:    fcsel h0, h1, h22, vs
+; CHECK-NEXT:    ldr h22, [sp, #158] // 2-byte Reload
+; CHECK-NEXT:    fcmp h1, h0
+; CHECK-NEXT:    fcsel h0, h1, h0, gt
+; CHECK-NEXT:    fcmp h29, h29
+; CHECK-NEXT:    ldr h1, [sp, #380] // 2-byte Reload
+; CHECK-NEXT:    str h0, [sp, #76] // 2-byte Spill
+; CHECK-NEXT:    fcsel h0, h1, h29, vs
+; CHECK-NEXT:    ldr h29, [sp, #210] // 2-byte Reload
+; CHECK-NEXT:    fcmp h1, h0
+; CHECK-NEXT:    fcsel h0, h1, h0, gt
+; CHECK-NEXT:    ldr h1, [sp, #378] // 2-byte Reload
+; CHECK-NEXT:    str h0, [sp, #74] // 2-byte Spill
+; CHECK-NEXT:    ldr h0, [sp, #270] // 2-byte Reload
+; CHECK-NEXT:    fcmp h0, h0
+; CHECK-NEXT:    fcsel h0, h1, h0, vs
+; CHECK-NEXT:    fcmp h1, h0
+; CHECK-NEXT:    fcsel h0, h1, h0, gt
+; CHECK-NEXT:    ldr h1, [sp, #376] // 2-byte Reload
+; CHECK-NEXT:    str h0, [sp, #270] // 2-byte Spill
+; CHECK-NEXT:    ldr h0, [sp, #266] // 2-byte Reload
+; CHECK-NEXT:    fcmp h0, h0
+; CHECK-NEXT:    fcsel h0, h1, h0, vs
+; CHECK-NEXT:    fcmp h1, h0
+; CHECK-NEXT:    fcsel h0, h1, h0, gt
+; CHECK-NEXT:    fcmp h23, h23
+; CHECK-NEXT:    ldr h1, [sp, #374] // 2-byte Reload
+; CHECK-NEXT:    str h0, [sp, #266] // 2-byte Spill
+; CHECK-NEXT:    fcsel h0, h1, h23, vs
+; CHECK-NEXT:    ldr h23, [sp, #166] // 2-byte Reload
+; CHECK-NEXT:    fcmp h1, h0
+; CHECK-NEXT:    fcsel h0, h1, h0, gt
+; CHECK-NEXT:    fcmp h24, h24
+; CHECK-NEXT:    ldr h1, [sp, #372] // 2-byte Reload
+; CHECK-NEXT:    str h0, [sp, #72] // 2-byte Spill
+; CHECK-NEXT:    fcsel h0, h1, h24, vs
+; CHECK-NEXT:    ldr h24, [sp, #172] // 2-byte Reload
+; CHECK-NEXT:    fcmp h1, h0
+; CHECK-NEXT:    fcsel h0, h1, h0, gt
+; CHECK-NEXT:    ldr h1, [sp, #370] // 2-byte Reload
+; CHECK-NEXT:    str h0, [sp, #70] // 2-byte Spill
+; CHECK-NEXT:    ldr h0, [sp, #258] // 2-byte Reload
+; CHECK-NEXT:    fcmp h0, h0
+; CHECK-NEXT:    fcsel h0, h1, h0, vs
+; CHECK-NEXT:    fcmp h1, h0
+; CHECK-NEXT:    fcsel h0, h1, h0, gt
+; CHECK-NEXT:    fcmp h26, h26
+; CHECK-NEXT:    ldr h1, [sp, #368] // 2-byte Reload
+; CHECK-NEXT:    str h0, [sp, #258] // 2-byte Spill
+; CHECK-NEXT:    fcsel h0, h1, h26, vs
+; CHECK-NEXT:    ldr h26, [sp, #188] // 2-byte Reload
+; CHECK-NEXT:    fcmp h1, h0
+; CHECK-NEXT:    fcsel h0, h1, h0, gt
+; CHECK-NEXT:    ldr h1, [sp, #366] // 2-byte Reload
+; CHECK-NEXT:    str h0, [sp, #68] // 2-byte Spill
+; CHECK-NEXT:    ldr h0, [sp, #254] // 2-byte Reload
+; CHECK-NEXT:    fcmp h0, h0
+; CHECK-NEXT:    fcsel h0, h1, h0, vs
+; CHECK-NEXT:    fcmp h1, h0
+; CHECK-NEXT:    fcsel h0, h1, h0, gt
+; CHECK-NEXT:    fcmp h12, h12
+; CHECK-NEXT:    ldr h1, [sp, #364] // 2-byte Reload
+; CHECK-NEXT:    str h0, [sp, #254] // 2-byte Spill
+; CHECK-NEXT:    fcsel h0, h1, h12, vs
+; CHECK-NEXT:    ldr h12, [sp, #242] // 2-byte Reload
+; CHECK-NEXT:    fcmp h1, h0
+; CHECK-NEXT:    fcsel h0, h1, h0, gt
+; CHECK-NEXT:    fcmp h27, h27
+; CHECK-NEXT:    ldr h1, [sp, #362] // 2-byte Reload
+; CHECK-NEXT:    str h0, [sp, #66] // 2-byte Spill
+; CHECK-NEXT:    fcsel h0, h1, h27, vs
+; CHECK-NEXT:    ldr h27, [sp, #194] // 2-byte Reload
+; CHECK-NEXT:    fcmp h1, h0
+; CHECK-NEXT:    fcsel h0, h1, h0, gt
+; CHECK-NEXT:    ldr h1, [sp, #396] // 2-byte Reload
+; CHECK-NEXT:    str h0, [sp, #64] // 2-byte Spill
+; CHECK-NEXT:    ldr h0, [sp, #248] // 2-byte Reload
+; CHECK-NEXT:    fcmp h0, h0
+; CHECK-NEXT:    fcsel h0, h14, h0, vs
+; CHECK-NEXT:    fcmp h14, h0
+; CHECK-NEXT:    fcsel h0, h14, h0, gt
+; CHECK-NEXT:    str h0, [sp, #248] // 2-byte Spill
+; CHECK-NEXT:    ldr h0, [sp, #244] // 2-byte Reload
+; CHECK-NEXT:    fcmp h0, h0
+; CHECK-NEXT:    fcsel h0, h13, h0, vs
+; CHECK-NEXT:    fcmp h13, h0
+; CHECK-NEXT:    fcsel h0, h13, h0, gt
+; CHECK-NEXT:    str h0, [sp, #244] // 2-byte Spill
+; CHECK-NEXT:    ldr h0, [sp, #240] // 2-byte Reload
+; CHECK-NEXT:    fcmp h0, h0
+; CHECK-NEXT:    fcsel h0, h12, h0, vs
+; CHECK-NEXT:    fcmp h12, h0
+; CHECK-NEXT:    fcsel h0, h12, h0, gt
+; CHECK-NEXT:    str h0, [sp, #240] // 2-byte Spill
+; CHECK-NEXT:    ldr h0, [sp, #236] // 2-byte Reload
+; CHECK-NEXT:    fcmp h0, h0
+; CHECK-NEXT:    fcsel h0, h11, h0, vs
+; CHECK-NEXT:    fcmp h11, h0
+; CHECK-NEXT:    fcsel h0, h11, h0, gt
+; CHECK-NEXT:    str h0, [sp, #236] // 2-byte Spill
+; CHECK-NEXT:    ldr h0, [sp, #232] // 2-byte Reload
+; CHECK-NEXT:    fcmp h0, h0
+; CHECK-NEXT:    fcsel h0, h10, h0, vs
+; CHECK-NEXT:    fcmp h10, h0
+; CHECK-NEXT:    fcsel h0, h10, h0, gt
+; CHECK-NEXT:    str h0, [sp, #232] // 2-byte Spill
+; CHECK-NEXT:    ldr h0, [sp, #226] // 2-byte Reload
+; CHECK-NEXT:    fcmp h0, h0
+; CHECK-NEXT:    fcsel h0, h9, h0, vs
+; CHECK-NEXT:    fcmp h9, h0
+; CHECK-NEXT:    fcsel h0, h9, h0, gt
+; CHECK-NEXT:    fcmp h31, h31
+; CHECK-NEXT:    str h0, [sp, #226] // 2-byte Spill
+; CHECK-NEXT:    fcsel h0, h8, h31, vs
+; CHECK-NEXT:    ldr h31, [sp, #222] // 2-byte Reload
+; CHECK-NEXT:    fcmp h8, h0
+; CHECK-NEXT:    fcsel h0, h8, h0, gt
+; CHECK-NEXT:    str h0, [sp, #62] // 2-byte Spill
+; CHECK-NEXT:    ldr h0, [sp, #220] // 2-byte Reload
+; CHECK-NEXT:    fcmp h0, h0
+; CHECK-NEXT:    fcsel h0, h31, h0, vs
+; CHECK-NEXT:    fcmp h31, h0
+; CHECK-NEXT:    fcsel h0, h31, h0, gt
+; CHECK-NEXT:    str h0, [sp, #220] // 2-byte Spill
+; CHECK-NEXT:    ldr h0, [sp, #214] // 2-byte Reload
+; CHECK-NEXT:    fcmp h0, h0
+; CHECK-NEXT:    fcsel h0, h30, h0, vs
+; CHECK-NEXT:    fcmp h30, h0
+; CHECK-NEXT:    fcsel h0, h30, h0, gt
+; CHECK-NEXT:    str h0, [sp, #214] // 2-byte Spill
+; CHECK-NEXT:    ldr h0, [sp, #206] // 2-byte Reload
+; CHECK-NEXT:    fcmp h0, h0
+; CHECK-NEXT:    fcsel h0, h29, h0, vs
+; CHECK-NEXT:    fcmp h29, h0
+; CHECK-NEXT:    fcsel h0, h29, h0, gt
+; CHECK-NEXT:    str h0, [sp, #206] // 2-byte Spill
+; CHECK-NEXT:    ldr h0, [sp, #200] // 2-byte Reload
+; CHECK-NEXT:    fcmp h0, h0
+; CHECK-NEXT:    fcsel h0, h28, h0, vs
+; CHECK-NEXT:    fcmp h28, h0
+; CHECK-NEXT:    fcsel h0, h28, h0, gt
+; CHECK-NEXT:    str h0, [sp, #200] // 2-byte Spill
+; CHECK-NEXT:    ldr h0, [sp, #192] // 2-byte Reload
+; CHECK-NEXT:    fcmp h0, h0
+; CHECK-NEXT:    fcsel h0, h27, h0, vs
+; CHECK-NEXT:    fcmp h27, h0
+; CHECK-NEXT:    fcsel h0, h27, h0, gt
+; CHECK-NEXT:    str h0, [sp, #192] // 2-byte Spill
+; CHECK-NEXT:    ldr h0, [sp, #184] // 2-byte Reload
+; CHECK-NEXT:    fcmp h0, h0
+; CHECK-NEXT:    fcsel h0, h26, h0, vs
+; CHECK-NEXT:    fcmp h26, h0
+; CHECK-NEXT:    fcsel h0, h26, h0, gt
+; CHECK-NEXT:    str h0, [sp, #184] // 2-byte Spill
+; CHECK-NEXT:    ldr h0, [sp, #178] // 2-byte Reload
+; CHECK-NEXT:    fcmp h0, h0
+; CHECK-NEXT:    fcsel h0, h25, h0, vs
+; CHECK-NEXT:    fcmp h25, h0
+; CHECK-NEXT:    fcsel h0, h25, h0, gt
+; CHECK-NEXT:    str h0, [sp, #178] // 2-byte Spill
+; CHECK-NEXT:    ldr h0, [sp, #170] // 2-byte Reload
+; CHECK-NEXT:    fcmp h0, h0
+; CHECK-NEXT:    fcsel h0, h24, h0, vs
+; CHECK-NEXT:    fcmp h24, h0
+; CHECK-NEXT:    fcsel h0, h24, h0, gt
+; CHECK-NEXT:    str h0, [sp, #170] // 2-byte Spill
+; CHECK-NEXT:    ldr h0, [sp, #162] // 2-byte Reload
+; CHECK-NEXT:    fcmp h0, h0
+; CHECK-NEXT:    fcsel h0, h23, h0, vs
+; CHECK-NEXT:    fcmp h23, h0
+; CHECK-NEXT:    fcsel h0, h23, h0, gt
+; CHECK-NEXT:    str h0, [sp, #162] // 2-byte Spill
+; CHECK-NEXT:    ldr h0, [sp, #156] // 2-byte Reload
+; CHECK-NEXT:    fcmp h0, h0
+; CHECK-NEXT:    fcsel h0, h22, h0, vs
+; CHECK-NEXT:    fcmp h22, h0
+; CHECK-NEXT:    fcsel h0, h22, h0, gt
+; CHECK-NEXT:    str h0, [sp, #156] // 2-byte Spill
+; CHECK-NEXT:    ldr h0, [sp, #148] // 2-byte Reload
+; CHECK-NEXT:    fcmp h0, h0
+; CHECK-NEXT:    fcsel h0, h21, h0, vs
+; CHECK-NEXT:    fcmp h21, h0
+; CHECK-NEXT:    fcsel h0, h21, h0, gt
+; CHECK-NEXT:    str h0, [sp, #148] // 2-byte Spill
+; CHECK-NEXT:    ldr z0, [x8, #-26, mul vl] // 16-byte Folded Reload
+; CHECK-NEXT:    fcmp h0, h0
+; CHECK-NEXT:    fcsel h0, h20, h0, vs
+; CHECK-NEXT:    fcmp h20, h0
+; CHECK-NEXT:    fcsel h0, h20, h0, gt
+; CHECK-NEXT:    str h0, [sp, #60] // 2-byte Spill
+; CHECK-NEXT:    ldr z0, [x8, #-28, mul vl] // 16-byte Folded Reload
+; CHECK-NEXT:    fcmp h0, h0
+; CHECK-NEXT:    fcsel h0, h19, h0, vs
+; CHECK-NEXT:    fcmp h19, h0
+; CHECK-NEXT:    fcsel h0, h19, h0, gt
+; CHECK-NEXT:    str h0, [sp, #58] // 2-byte Spill
+; CHECK-NEXT:    ldr z0, [x8, #-30, mul vl] // 16-byte Folded Reload
+; CHECK-NEXT:    str h4, [sp, #512]
+; CHECK-NEXT:    ldr h4, [sp, #168] // 2-byte Reload
+; CHECK-NEXT:    fcmp h0, h0
+; CHECK-NEXT:    fcsel h0, h18, h0, vs
+; CHECK-NEXT:    fcmp h18, h0
+; CHECK-NEXT:    fcsel h0, h18, h0, gt
+; CHECK-NEXT:    str h0, [sp, #262] // 2-byte Spill
+; CHECK-NEXT:    ldr z0, [x8, #-31, mul vl] // 16-byte Folded Reload
+; CHECK-NEXT:    str h1, [sp, #766]
+; CHECK-NEXT:    ldr h1, [sp, #510] // 2-byte Reload
+; CHECK-NEXT:    str h2, [sp, #760]
+; CHECK-NEXT:    ldr h2, [sp, #506] // 2-byte Reload
+; CHECK-NEXT:    str h1, [sp, #764]
+; CHECK-NEXT:    ldr h1, [sp, #508] // 2-byte Reload
+; CHECK-NEXT:    fcmp h0, h0
+; CHECK-NEXT:    str h2, [sp, #758]
+; CHECK-NEXT:    ldr h2, [sp, #496] // 2-byte Reload
+; CHECK-NEXT:    str h1, [sp, #762]
+; CHECK-NEXT:    ldr h1, [sp, #132] // 2-byte Reload
+; CHECK-NEXT:    str h5, [sp, #756]
+; CHECK-NEXT:    ldr h5, [sp, #160] // 2-byte Reload
+; CHECK-NEXT:    fcsel h0, h1, h0, vs
+; CHECK-NEXT:    str h2, [sp, #754]
+; CHECK-NEXT:    ldr h2, [sp, #494] // 2-byte Reload
+; CHECK-NEXT:    str h17, [sp, #752]
+; CHECK-NEXT:    fmov s17, s1
+; CHECK-NEXT:    str h3, [sp, #750]
+; CHECK-NEXT:    ldr h3, [sp, #176] // 2-byte Reload
+; CHECK-NEXT:    fcmp h1, h0
+; CHECK-NEXT:    fcsel h0, h1, h0, gt
+; CHECK-NEXT:    ldr h1, [sp, #502] // 2-byte Reload
+; CHECK-NEXT:    str h0, [sp, #510] // 2-byte Spill
+; CHECK-NEXT:    ldr z0, [x8, #-29, mul vl] // 16-byte Folded Reload
+; CHECK-NEXT:    str h2, [sp, #742]
+; CHECK-NEXT:    ldr h2, [sp, #492] // 2-byte Reload
+; CHECK-NEXT:    str h1, [sp, #748]
+; CHECK-NEXT:    ldr h1, [sp, #500] // 2-byte Reload
+; CHECK-NEXT:    fcmp h0, h0
+; CHECK-NEXT:    str h2, [sp, #740]
+; CHECK-NEXT:    ldr h2, [sp, #490] // 2-byte Reload
+; CHECK-NEXT:    str h1, [sp, #746]
+; CHECK-NEXT:    ldr h1, [sp, #498] // 2-byte Reload
+; CHECK-NEXT:    str h2, [sp, #738]
+; CHECK-NEXT:    ldr h2, [sp, #488] // 2-byte Reload
+; CHECK-NEXT:    fcsel h0, h16, h0, vs
+; CHECK-NEXT:    str h1, [sp, #744]
+; CHECK-NEXT:    ldr h1, [sp, #482] // 2-byte Reload
+; CHECK-NEXT:    str h2, [sp, #736]
+; CHECK-NEXT:    ldr h2, [sp, #486] // 2-byte Reload
+; CHECK-NEXT:    fcmp h16, h0
+; CHECK-NEXT:    str h2, [sp, #734]
+; CHECK-NEXT:    ldr h2, [sp, #484] // 2-byte Reload
+; CHECK-NEXT:    str h2, [sp, #732]
+; CHECK-NEXT:    ldr h2, [sp, #476] // 2-byte Reload
+; CHECK-NEXT:    fcsel h0, h16, h0, gt
+; CHECK-NEXT:    str h0, [sp, #508] // 2-byte Spill
+; CHECK-NEXT:    ldr z0, [x8, #-27, mul vl] // 16-byte Folded Reload
+; CHECK-NEXT:    str h2, [sp, #724]
+; CHECK-NEXT:    ldr h2, [sp, #474] // 2-byte Reload
+; CHECK-NEXT:    str h1, [sp, #730]
+; CHECK-NEXT:    ldr h1, [sp, #480] // 2-byte Reload
+; CHECK-NEXT:    fcmp h0, h0
+; CHECK-NEXT:    str h2, [sp, #722]
+; CHECK-NEXT:    ldr h2, [sp, #472] // 2-byte Reload
+; CHECK-NEXT:    str h1, [sp, #728]
+; CHECK-NEXT:    ldr h1, [sp, #478] // 2-byte Reload
+; CHECK-NEXT:    str h2, [sp, #720]
+; CHECK-NEXT:    ldr h2, [sp, #470] // 2-byte Reload
+; CHECK-NEXT:    fcsel h0, h7, h0, vs
+; CHECK-NEXT:    str h1, [sp, #726]
+; CHECK-NEXT:    ldr h1, [sp, #464] // 2-byte Reload
+; CHECK-NEXT:    str h2, [sp, #718]
+; CHECK-NEXT:    ldr h2, [sp, #468] // 2-byte Reload
+; CHECK-NEXT:    fcmp h7, h0
+; CHECK-NEXT:    str h2, [sp, #716]
+; CHECK-NEXT:    ldr h2, [sp, #466] // 2-byte Reload
+; CHECK-NEXT:    str h2, [sp, #714]
+; CHECK-NEXT:    ldr h2, [sp, #458] // 2-byte Reload
+; CHECK-NEXT:    fcsel h0, h7, h0, gt
+; CHECK-NEXT:    str h0, [sp, #506] // 2-byte Spill
+; CHECK-NEXT:    ldr z0, [x8, #-25, mul vl] // 16-byte Folded Reload
+; CHECK-NEXT:    str h2, [sp, #706]
+; CHECK-NEXT:    ldr h2, [sp, #456] // 2-byte Reload
+; CHECK-NEXT:    str h1, [sp, #712]
+; CHECK-NEXT:    ldr h1, [sp, #462] // 2-byte Reload
+; CHECK-NEXT:    fcmp h0, h0
+; CHECK-NEXT:    str h2, [sp, #704]
+; CHECK-NEXT:    ldr h2, [sp, #454] // 2-byte Reload
+; CHECK-NEXT:    str h1, [sp, #710]
+; CHECK-NEXT:    ldr h1, [sp, #460] // 2-byte Reload
+; CHECK-NEXT:    str h2, [sp, #702]
+; CHECK-NEXT:    ldr h2, [sp, #452] // 2-byte Reload
+; CHECK-NEXT:    fcsel h0, h6, h0, vs
+; CHECK-NEXT:    str h1, [sp, #708]
+; CHECK-NEXT:    ldr h1, [sp, #446] // 2-byte Reload
+; CHECK-NEXT:    str h2, [sp, #700]
+; CHECK-NEXT:    ldr h2, [sp, #450] // 2-byte Reload
+; CHECK-NEXT:    fcmp h6, h0
+; CHECK-NEXT:    str h2, [sp, #698]
+; CHECK-NEXT:    ldr h2, [sp, #448] // 2-byte Reload
+; CHECK-NEXT:    str h2, [sp, #696]
+; CHECK-NEXT:    ldr h2, [sp, #440] // 2-byte Reload
+; CHECK-NEXT:    fcsel h0, h6, h0, gt
+; CHECK-NEXT:    str h0, [sp, #504] // 2-byte Spill
+; CHECK-NEXT:    ldr z0, [x8, #-24, mul vl] // 16-byte Folded Reload
+; CHECK-NEXT:    str h2, [sp, #688]
+; CHECK-NEXT:    ldr h2, [sp, #438] // 2-byte Reload
+; CHECK-NEXT:    str h1, [sp, #694]
+; CHECK-NEXT:    ldr h1, [sp, #444] // 2-byte Reload
+; CHECK-NEXT:    fcmp h0, h0
+; CHECK-NEXT:    str h2, [sp, #686]
+; CHECK-NEXT:    ldr h2, [sp, #436] // 2-byte Reload
+; CHECK-NEXT:    str h1, [sp, #692]
+; CHECK-NEXT:    ldr h1, [sp, #442] // 2-byte Reload
+; CHECK-NEXT:    str h2, [sp, #684]
+; CHECK-NEXT:    ldr h2, [sp, #434] // 2-byte Reload
+; CHECK-NEXT:    fcsel h0, h5, h0, vs
+; CHECK-NEXT:    str h1, [sp, #690]
+; CHECK-NEXT:    ldr h1, [sp, #428] // 2-byte Reload
+; CHECK-NEXT:    str h2, [sp, #682]
+; CHECK-NEXT:    ldr h2, [sp, #432] // 2-byte Reload
+; CHECK-NEXT:    fcmp h5, h0
+; CHECK-NEXT:    str h2, [sp, #680]
+; CHECK-NEXT:    ldr h2, [sp, #430] // 2-byte Reload
+; CHECK-NEXT:    str h2, [sp, #678]
+; CHECK-NEXT:    ldr h2, [sp, #422] // 2-byte Reload
+; CHECK-NEXT:    fcsel h0, h5, h0, gt
+; CHECK-NEXT:    str h0, [sp, #502] // 2-byte Spill
+; CHECK-NEXT:    ldr z0, [x8, #-23, mul vl] // 16-byte Folded Reload
+; CHECK-NEXT:    str h2, [sp, #670]
+; CHECK-NEXT:    ldr h2, [sp, #420] // 2-byte Reload
+; CHECK-NEXT:    str h1, [sp, #676]
+; CHECK-NEXT:    ldr h1, [sp, #426] // 2-byte Reload
+; CHECK-NEXT:    fcmp h0, h0
+; CHECK-NEXT:    str h2, [sp, #668]
+; CHECK-NEXT:    ldr h2, [sp, #418] // 2-byte Reload
+; CHECK-NEXT:    str h1, [sp, #674]
+; CHECK-NEXT:    ldr h1, [sp, #424] // 2-byte Reload
+; CHECK-NEXT:    str h2, [sp, #666]
+; CHECK-NEXT:    ldr h2, [sp, #416] // 2-byte Reload
+; CHECK-NEXT:    fcsel h0, h4, h0, vs
+; CHECK-NEXT:    str h1, [sp, #672]
+; CHECK-NEXT:    ldr h1, [sp, #410] // 2-byte Reload
+; CHECK-NEXT:    str h2, [sp, #664]
+; CHECK-NEXT:    ldr h2, [sp, #414] // 2-byte Reload
+; CHECK-NEXT:    fcmp h4, h0
+; CHECK-NEXT:    str h2, [sp, #662]
+; CHECK-NEXT:    ldr h2, [sp, #412] // 2-byte Reload
+; CHECK-NEXT:    str h2, [sp, #660]
+; CHECK-NEXT:    ldr h2, [sp, #404] // 2-byte Reload
+; CHECK-NEXT:    fcsel h0, h4, h0, gt
+; CHECK-NEXT:    str h0, [sp, #500] // 2-byte Spill
+; CHECK-NEXT:    ldr z0, [x8, #-22, mul vl] // 16-byte Folded Reload
+; CHECK-NEXT:    str h2, [sp, #652]
+; CHECK-NEXT:    ldr h2, [sp, #402] // 2-byte Reload
+; CHECK-NEXT:    str h1, [sp, #658]
+; CHECK-NEXT:    ldr h1, [sp, #408] // 2-byte Reload
+; CHECK-NEXT:    fcmp h0, h0
+; CHECK-NEXT:    str h2, [sp, #650]
+; CHECK-NEXT:    ldr h2, [sp, #400] // 2-byte Reload
+; CHECK-NEXT:    str h1, [sp, #656]
+; CHECK-NEXT:    ldr h1, [sp, #406] // 2-byte Reload
+; CHECK-NEXT:    str h2, [sp, #648]
+; CHECK-NEXT:    ldr h2, [sp, #398] // 2-byte Reload
+; CHECK-NEXT:    fcsel h0, h3, h0, vs
+; CHECK-NEXT:    str h1, [sp, #654]
+; CHECK-NEXT:    str h2, [sp, #646]
+; CHECK-NEXT:    ldr h2, [sp, #394] // 2-byte Reload
+; CHECK-NEXT:    fcmp h3, h0
+; CHECK-NEXT:    str h2, [sp, #644]
+; CHECK-NEXT:    ldr h2, [sp, #392] // 2-byte Reload
+; CHECK-NEXT:    str h2, [sp, #642]
+; CHECK-NEXT:    ldr h2, [sp, #384] // 2-byte Reload
+; CHECK-NEXT:    fcsel h0, h3, h0, gt
+; CHECK-NEXT:    ldr z1, [x8, #-21, mul vl] // 16-byte Folded Reload
+; CHECK-NEXT:    str h2, [sp, #634]
+; CHECK-NEXT:    ldr h2, [sp, #382] // 2-byte Reload
+; CHECK-NEXT:    str h0, [sp, #498] // 2-byte Spill
+; CHECK-NEXT:    ldr h0, [sp, #390] // 2-byte Reload
+; CHECK-NEXT:    fcmp h1, h1
+; CHECK-NEXT:    str h2, [sp, #632]
+; CHECK-NEXT:    ldr h2, [sp, #380] // 2-byte Reload
+; CHECK-NEXT:    str h0, [sp, #640]
+; CHECK-NEXT:    ldr h0, [sp, #388] // 2-byte Reload
+; CHECK-NEXT:    str h2, [sp, #630]
+; CHECK-NEXT:    ldr h2, [sp, #378] // 2-byte Reload
+; CHECK-NEXT:    str h0, [sp, #638]
+; CHECK-NEXT:    ldr h0, [sp, #386] // 2-byte Reload
+; CHECK-NEXT:    str h2, [sp, #628]
+; CHECK-NEXT:    ldr h2, [sp, #376] // 2-byte Reload
+; CHECK-NEXT:    str h0, [sp, #636]
+; CHECK-NEXT:    ldr h0, [sp, #182] // 2-byte Reload
+; CHECK-NEXT:    str h2, [sp, #626]
+; CHECK-NEXT:    ldr h2, [sp, #374] // 2-byte Reload
+; CHECK-NEXT:    fcsel h1, h0, h1, vs
+; CHECK-NEXT:    str h2, [sp, #624]
+; CHECK-NEXT:    fmov s2, s0
+; CHECK-NEXT:    fcmp h0, h1
+; CHECK-NEXT:    fcsel h1, h0, h1, gt
+; CHECK-NEXT:    ldr h0, [sp, #372] // 2-byte Reload
+; CHECK-NEXT:    str h1, [sp, #496] // 2-byte Spill
+; CHECK-NEXT:    ldr z1, [x8, #-20, mul vl] // 16-byte Folded Reload
+; CHECK-NEXT:    str h0, [sp, #622]
+; CHECK-NEXT:    ldr h0, [sp, #370] // 2-byte Reload
+; CHECK-NEXT:    str h15, [sp, #616]
+; CHECK-NEXT:    ldr h15, [sp, #364] // 2-byte Reload
+; CHECK-NEXT:    str h0, [sp, #620]
+; CHECK-NEXT:    ldr h0, [sp, #368] // 2-byte Reload
+; CHECK-NEXT:    fcmp h1, h1
+; CHECK-NEXT:    str h15, [sp, #614]
+; CHECK-NEXT:    ldr h15, [sp, #362] // 2-byte Reload
+; CHECK-NEXT:    str h0, [sp, #618]
+; CHECK-NEXT:    ldr h0, [sp, #190] // 2-byte Reload
+; CHECK-NEXT:    str h15, [sp, #612]
+; CHECK-NEXT:    fcsel h1, h0, h1, vs
+; CHECK-NEXT:    str h14, [sp, #610]
+; CHECK-NEXT:    str h13, [sp, #608]
+; CHECK-NEXT:    str h12, [sp, #606]
+; CHECK-NEXT:    fcmp h0, h1
+; CHECK-NEXT:    fcsel h12, h0, h1, gt
+; CHECK-NEXT:    fmov s1, s0
+; CHECK-NEXT:    ldr z0, [x8, #-19, mul vl] // 16-byte Folded Reload
+; CHECK-NEXT:    str h9, [sp, #600]
+; CHECK-NEXT:    ldr h9, [sp, #198] // 2-byte Reload
+; CHECK-NEXT:    str h11, [sp, #604]
+; CHECK-NEXT:    fcmp h0, h0
+; CHECK-NEXT:    str h10, [sp, #602]
+; CHECK-NEXT:    str h8, [sp, #598]
+; CHECK-NEXT:    str h31, [sp, #596]
+; CHECK-NEXT:    fcsel h0, h9, h0, vs
+; CHECK-NEXT:    str h30, [sp, #594]
+; CHECK-NEXT:    str h29, [sp, #592]
+; CHECK-NEXT:    str h28, [sp, #590]
+; CHECK-NEXT:    fcmp h9, h0
+; CHECK-NEXT:    str h27, [sp, #588]
+; CHECK-NEXT:    ldr h27, [sp, #130] // 2-byte Reload
+; CHECK-NEXT:    fcsel h29, h9, h0, gt
+; CHECK-NEXT:    ldr z0, [x8, #-18, mul vl] // 16-byte Folded Reload
+; CHECK-NEXT:    str h24, [sp, #582]
+; CHECK-NEXT:    ldr h24, [sp, #204] // 2-byte Reload
+; CHECK-NEXT:    str h26, [sp, #586]
+; CHECK-NEXT:    ldr h26, [sp, #116] // 2-byte Reload
+; CHECK-NEXT:    str h25, [sp, #584]
+; CHECK-NEXT:    fcmp h0, h0
+; CHECK-NEXT:    str h23, [sp, #580]
+; CHECK-NEXT:    ldr h23, [sp, #154] // 2-byte Reload
+; CHECK-NEXT:    str h22, [sp, #578]
+; CHECK-NEXT:    ldr h22, [sp, #164] // 2-byte Reload
+; CHECK-NEXT:    str h21, [sp, #576]
+; CHECK-NEXT:    fcsel h0, h24, h0, vs
+; CHECK-NEXT:    str h20, [sp, #574]
+; CHECK-NEXT:    ldr h20, [sp, #174] // 2-byte Reload
+; CHECK-NEXT:    str h19, [sp, #572]
+; CHECK-NEXT:    ldr h19, [sp, #186] // 2-byte Reload
+; CHECK-NEXT:    str h18, [sp, #570]
+; CHECK-NEXT:    ldr h18, [sp, #196] // 2-byte Reload
+; CHECK-NEXT:    fcmp h24, h0
+; CHECK-NEXT:    fcsel h21, h24, h0, gt
+; CHECK-NEXT:    ldr z0, [x8, #-17, mul vl] // 16-byte Folded Reload
+; CHECK-NEXT:    str h7, [sp, #564]
+; CHECK-NEXT:    ldr h7, [sp, #212] // 2-byte Reload
+; CHECK-NEXT:    str h17, [sp, #568]
+; CHECK-NEXT:    str h16, [sp, #566]
+; CHECK-NEXT:    fcmp h0, h0
+; CHECK-NEXT:    str h6, [sp, #562]
+; CHECK-NEXT:    ldr h6, [sp, #128] // 2-byte Reload
+; CHECK-NEXT:    str h5, [sp, #560]
+; CHECK-NEXT:    ldr h5, [sp, #124] // 2-byte Reload
+; CHECK-NEXT:    str h4, [sp, #558]
+; CHECK-NEXT:    ldr h4, [sp, #118] // 2-byte Reload
+; CHECK-NEXT:    fcsel h0, h7, h0, vs
+; CHECK-NEXT:    str h3, [sp, #556]
+; CHECK-NEXT:    ldr h3, [sp, #126] // 2-byte Reload
+; CHECK-NEXT:    str h2, [sp, #554]
+; CHECK-NEXT:    ldr h2, [sp, #208] // 2-byte Reload
+; CHECK-NEXT:    str h1, [sp, #552]
+; CHECK-NEXT:    ldr h1, [sp, #218] // 2-byte Reload
+; CHECK-NEXT:    fcmp h7, h0
+; CHECK-NEXT:    fcsel h25, h7, h0, gt
+; CHECK-NEXT:    ldr z0, [x8, #-16, mul vl] // 16-byte Folded Reload
+; CHECK-NEXT:    str h9, [sp, #550]
+; CHECK-NEXT:    str h24, [sp, #548]
+; CHECK-NEXT:    ldr h24, [sp, #144] // 2-byte Reload
+; CHECK-NEXT:    str h7, [sp, #546]
+; CHECK-NEXT:    ldr h7, [sp, #122] // 2-byte Reload
+; CHECK-NEXT:    fcmp h0, h0
+; CHECK-NEXT:    str h1, [sp, #544]
+; CHECK-NEXT:    str h2, [sp, #542]
+; CHECK-NEXT:    str h18, [sp, #540]
+; CHECK-NEXT:    fcsel h0, h1, h0, vs
+; CHECK-NEXT:    str h19, [sp, #538]
+; CHECK-NEXT:    str h20, [sp, #536]
+; CHECK-NEXT:    str h22, [sp, #534]
+; CHECK-NEXT:    fcmp h1, h0
+; CHECK-NEXT:    fcsel h16, h1, h0, gt
+; CHECK-NEXT:    ldr z0, [x8, #-15, mul vl] // 16-byte Folded Reload
+; CHECK-NEXT:    ldr h1, [sp, #136] // 2-byte Reload
+; CHECK-NEXT:    str h23, [sp, #532]
+; CHECK-NEXT:    str h24, [sp, #530]
+; CHECK-NEXT:    fcmp h0, h0
+; CHECK-NEXT:    str h1, [sp, #528]
+; CHECK-NEXT:    str h27, [sp, #526]
+; CHECK-NEXT:    str h6, [sp, #524]
+; CHECK-NEXT:    fcsel h0, h2, h0, vs
+; CHECK-NEXT:    str h3, [sp, #522]
+; CHECK-NEXT:    str h5, [sp, #520]
+; CHECK-NEXT:    str h7, [sp, #518]
+; CHECK-NEXT:    fcmp h2, h0
+; CHECK-NEXT:    fcsel h17, h2, h0, gt
+; CHECK-NEXT:    ldr h2, [sp, #120] // 2-byte Reload
+; CHECK-NEXT:    str h2, [sp, #516]
+; CHECK-NEXT:    ldr z0, [x8, #-14, mul vl] // 16-byte Folded Reload
+; CHECK-NEXT:    str h26, [sp, #768]
+; CHECK-NEXT:    ldr h26, [sp, #114] // 2-byte Reload
+; CHECK-NEXT:    str h4, [sp, #514]
+; CHECK-NEXT:    str h26, [sp, #1022]
+; CHECK-NEXT:    ldr h26, [sp, #282] // 2-byte Reload
+; CHECK-NEXT:    fcmp h0, h0
+; CHECK-NEXT:    str h26, [sp, #1020]
+; CHECK-NEXT:    ldr h26, [sp, #280] // 2-byte Reload
+; CHECK-NEXT:    str h26, [sp, #1018]
+; CHECK-NEXT:    ldr h26, [sp, #276] // 2-byte Reload
+; CHECK-NEXT:    fcsel h0, h18, h0, vs
+; CHECK-NEXT:    str h26, [sp, #1016]
+; CHECK-NEXT:    ldr h26, [sp, #278] // 2-byte Reload
+; CHECK-NEXT:    fcmp h18, h0
+; CHECK-NEXT:    str h26, [sp, #1014]
+; CHECK-NEXT:    ldr h26, [sp, #272] // 2-byte Reload
+; CHECK-NEXT:    str h26, [sp, #1012]
+; CHECK-NEXT:    ldr h26, [sp, #274] // 2-byte Reload
+; CHECK-NEXT:    fcsel h18, h18, h0, gt
+; CHECK-NEXT:    str h26, [sp, #1010]
+; CHECK-NEXT:    ldr h26, [sp, #112] // 2-byte Reload
+; CHECK-NEXT:    ldr z0, [x8, #-13, mul vl] // 16-byte Folded Reload
+; CHECK-NEXT:    str h26, [sp, #1008]
+; CHECK-NEXT:    ldr h26, [sp, #110] // 2-byte Reload
+; CHECK-NEXT:    str h26, [sp, #1006]
+; CHECK-NEXT:    ldr h26, [sp, #108] // 2-byte Reload
+; CHECK-NEXT:    fcmp h0, h0
+; CHECK-NEXT:    str h26, [sp, #1004]
+; CHECK-NEXT:    ldr h26, [sp, #106] // 2-byte Reload
+; CHECK-NEXT:    fcsel h0, h19, h0, vs
+; CHECK-NEXT:    str h26, [sp, #1002]
+; CHECK-NEXT:    ldr h26, [sp, #104] // 2-byte Reload
+; CHECK-NEXT:    str h26, [sp, #1000]
+; CHECK-NEXT:    ldr h26, [sp, #268] // 2-byte Reload
+; CHECK-NEXT:    fcmp h19, h0
+; CHECK-NEXT:    str h26, [sp, #998]
+; CHECK-NEXT:    ldr h26, [sp, #102] // 2-byte Reload
+; CHECK-NEXT:    fcsel h19, h19, h0, gt
+; CHECK-NEXT:    str h26, [sp, #996]
+; CHECK-NEXT:    ldr h26, [sp, #264] // 2-byte Reload
+; CHECK-NEXT:    str h26, [sp, #994]
+; CHECK-NEXT:    ldr h26, [sp, #100] // 2-byte Reload
+; CHECK-NEXT:    str h26, [sp, #992]
+; CHECK-NEXT:    ldr h26, [sp, #260] // 2-byte Reload
+; CHECK-NEXT:    ldr z0, [x8, #-12, mul vl] // 16-byte Folded Reload
+; CHECK-NEXT:    str h26, [sp, #990]
+; CHECK-NEXT:    ldr h26, [sp, #354] // 2-byte Reload
+; CHECK-NEXT:    str h26, [sp, #988]
+; CHECK-NEXT:    ldr h26, [sp, #352] // 2-byte Reload
+; CHECK-NEXT:    fcmp h0, h0
+; CHECK-NEXT:    str h26, [sp, #986]
+; CHECK-NEXT:    ldr h26, [sp, #256] // 2-byte Reload
+; CHECK-NEXT:    fcsel h0, h20, h0, vs
+; CHECK-NEXT:    str h26, [sp, #984]
+; CHECK-NEXT:    ldr h26, [sp, #350] // 2-byte Reload
+; CHECK-NEXT:    str h26, [sp, #982]
+; CHECK-NEXT:    ldr h26, [sp, #252] // 2-byte Reload
+; CHECK-NEXT:    fcmp h20, h0
+; CHECK-NEXT:    str h26, [sp, #980]
+; CHECK-NEXT:    ldr h26, [sp, #348] // 2-byte Reload
+; CHECK-NEXT:    fcsel h20, h20, h0, gt
+; CHECK-NEXT:    str h26, [sp, #978]
+; CHECK-NEXT:    ldr h26, [sp, #98] // 2-byte Reload
+; CHECK-NEXT:    str h26, [sp, #976]
+; CHECK-NEXT:    ldr h26, [sp, #96] // 2-byte Reload
+; CHECK-NEXT:    str h26, [sp, #974]
+; CHECK-NEXT:    ldr h26, [sp, #346] // 2-byte Reload
+; CHECK-NEXT:    ldr z0, [x8, #-11, mul vl] // 16-byte Folded Reload
+; CHECK-NEXT:    str h26, [sp, #972]
+; CHECK-NEXT:    ldr h26, [sp, #94] // 2-byte Reload
+; CHECK-NEXT:    str h26, [sp, #970]
+; CHECK-NEXT:    ldr h26, [sp, #344] // 2-byte Reload
+; CHECK-NEXT:    fcmp h0, h0
+; CHECK-NEXT:    str h26, [sp, #968]
+; CHECK-NEXT:    ldr h26, [sp, #92] // 2-byte Reload
+; CHECK-NEXT:    fcsel h0, h22, h0, vs
+; CHECK-NEXT:    str h26, [sp, #966]
+; CHECK-NEXT:    ldr h26, [sp, #230] // 2-byte Reload
+; CHECK-NEXT:    str h26, [sp, #964]
+; CHECK-NEXT:    ldr h26, [sp, #342] // 2-byte Reload
+; CHECK-NEXT:    fcmp h22, h0
+; CHECK-NEXT:    str h26, [sp, #962]
+; CHECK-NEXT:    ldr h26, [sp, #340] // 2-byte Reload
+; CHECK-NEXT:    fcsel h22, h22, h0, gt
+; CHECK-NEXT:    str h26, [sp, #960]
+; CHECK-NEXT:    ldr h26, [sp, #338] // 2-byte Reload
+; CHECK-NEXT:    str h26, [sp, #958]
+; CHECK-NEXT:    ldr h26, [sp, #336] // 2-byte Reload
+; CHECK-NEXT:    str h26, [sp, #956]
+; CHECK-NEXT:    ldr h26, [sp, #90] // 2-byte Reload
+; CHECK-NEXT:    ldr z0, [x8, #-10, mul vl] // 16-byte Folded Reload
+; CHECK-NEXT:    str h26, [sp, #954]
+; CHECK-NEXT:    ldr h26, [sp, #334] // 2-byte Reload
+; CHECK-NEXT:    str h26, [sp, #952]
+; CHECK-NEXT:    ldr h26, [sp, #332] // 2-byte Reload
+; CHECK-NEXT:    fcmp h0, h0
+; CHECK-NEXT:    str h26, [sp, #950]
+; CHECK-NEXT:    ldr h26, [sp, #330] // 2-byte Reload
+; CHECK-NEXT:    fcsel h0, h23, h0, vs
+; CHECK-NEXT:    str h26, [sp, #948]
+; CHECK-NEXT:    ldr h26, [sp, #88] // 2-byte Reload
+; CHECK-NEXT:    str h26, [sp, #946]
+; CHECK-NEXT:    ldr h26, [sp, #328] // 2-byte Reload
+; CHECK-NEXT:    fcmp h23, h0
+; CHECK-NEXT:    str h26, [sp, #944]
+; CHECK-NEXT:    ldr h26, [sp, #326] // 2-byte Reload
+; CHECK-NEXT:    fcsel h23, h23, h0, gt
+; CHECK-NEXT:    str h26, [sp, #942]
+; CHECK-NEXT:    ldr h26, [sp, #324] // 2-byte Reload
+; CHECK-NEXT:    str h26, [sp, #940]
+; CHECK-NEXT:    ldr h26, [sp, #322] // 2-byte Reload
+; CHECK-NEXT:    str h26, [sp, #938]
+; CHECK-NEXT:    ldr h26, [sp, #320] // 2-byte Reload
+; CHECK-NEXT:    ldr z0, [x8, #-9, mul vl] // 16-byte Folded Reload
+; CHECK-NEXT:    str h26, [sp, #936]
+; CHECK-NEXT:    ldr h26, [sp, #318] // 2-byte Reload
+; CHECK-NEXT:    str h26, [sp, #934]
+; CHECK-NEXT:    ldr h26, [sp, #316] // 2-byte Reload
+; CHECK-NEXT:    fcmp h0, h0
+; CHECK-NEXT:    str h26, [sp, #932]
+; CHECK-NEXT:    ldr h26, [sp, #314] // 2-byte Reload
+; CHECK-NEXT:    fcsel h0, h24, h0, vs
+; CHECK-NEXT:    str h26, [sp, #930]
+; CHECK-NEXT:    ldr h26, [sp, #312] // 2-byte Reload
+; CHECK-NEXT:    str h26, [sp, #928]
+; CHECK-NEXT:    ldr h26, [sp, #310] // 2-byte Reload
+; CHECK-NEXT:    fcmp h24, h0
+; CHECK-NEXT:    str h26, [sp, #926]
+; CHECK-NEXT:    ldr h26, [sp, #308] // 2-byte Reload
+; CHECK-NEXT:    fcsel h24, h24, h0, gt
+; CHECK-NEXT:    str h26, [sp, #924]
+; CHECK-NEXT:    ldr h26, [sp, #306] // 2-byte Reload
+; CHECK-NEXT:    str h26, [sp, #922]
+; CHECK-NEXT:    ldr h26, [sp, #304] // 2-byte Reload
+; CHECK-NEXT:    str h26, [sp, #920]
+; CHECK-NEXT:    ldr h26, [sp, #302] // 2-byte Reload
+; CHECK-NEXT:    ldr z0, [x8, #-8, mul vl] // 16-byte Folded Reload
+; CHECK-NEXT:    str h26, [sp, #918]
+; CHECK-NEXT:    ldr h26, [sp, #300] // 2-byte Reload
+; CHECK-NEXT:    str h26, [sp, #916]
+; CHECK-NEXT:    ldr h26, [sp, #298] // 2-byte Reload
+; CHECK-NEXT:    fcmp h0, h0
+; CHECK-NEXT:    str h26, [sp, #914]
+; CHECK-NEXT:    ldr h26, [sp, #296] // 2-byte Reload
+; CHECK-NEXT:    fcsel h0, h1, h0, vs
+; CHECK-NEXT:    str h26, [sp, #912]
+; CHECK-NEXT:    ldr h26, [sp, #294] // 2-byte Reload
+; CHECK-NEXT:    str h26, [sp, #910]
+; CHECK-NEXT:    ldr h26, [sp, #292] // 2-byte Reload
+; CHECK-NEXT:    fcmp h1, h0
+; CHECK-NEXT:    str h26, [sp, #908]
+; CHECK-NEXT:    ldr h26, [sp, #290] // 2-byte Reload
+; CHECK-NEXT:    str h26, [sp, #906]
+; CHECK-NEXT:    ldr h26, [sp, #288] // 2-byte Reload
+; CHECK-NEXT:    str h26, [sp, #904]
+; CHECK-NEXT:    ldr h26, [sp, #286] // 2-byte Reload
+; CHECK-NEXT:    str h26, [sp, #902]
+; CHECK-NEXT:    fcsel h26, h1, h0, gt
+; CHECK-NEXT:    ldr h1, [sp, #284] // 2-byte Reload
+; CHECK-NEXT:    ldr z0, [x8, #-7, mul vl] // 16-byte Folded Reload
+; CHECK-NEXT:    str h1, [sp, #900]
+; CHECK-NEXT:    ldr h1, [sp, #86] // 2-byte Reload
+; CHECK-NEXT:    fcmp h0, h0
+; CHECK-NEXT:    str h1, [sp, #898]
+; CHECK-NEXT:    ldr h1, [sp, #84] // 2-byte Reload
+; CHECK-NEXT:    str h1, [sp, #896]
+; CHECK-NEXT:    fmov s1, s27
+; CHECK-NEXT:    fcsel h0, h27, h0, vs
+; CHECK-NEXT:    ldr h27, [sp, #82] // 2-byte Reload
+; CHECK-NEXT:    str h27, [sp, #894]
+; CHECK-NEXT:    ldr h27, [sp, #80] // 2-byte Reload
+; CHECK-NEXT:    fcmp h1, h0
+; CHECK-NEXT:    str h27, [sp, #892]
+; CHECK-NEXT:    ldr h27, [sp, #78] // 2-byte Reload
+; CHECK-NEXT:    str h27, [sp, #890]
+; CHECK-NEXT:    ldr h27, [sp, #76] // 2-byte Reload
+; CHECK-NEXT:    str h27, [sp, #888]
+; CHECK-NEXT:    ldr h27, [sp, #74] // 2-byte Reload
+; CHECK-NEXT:    str h27, [sp, #886]
+; CHECK-NEXT:    ldr h27, [sp, #270] // 2-byte Reload
+; CHECK-NEXT:    str h27, [sp, #884]
+; CHECK-NEXT:    fcsel h27, h1, h0, gt
+; CHECK-NEXT:    ldr h1, [sp, #266] // 2-byte Reload
+; CHECK-NEXT:    ldr z0, [x8, #-6, mul vl] // 16-byte Folded Reload
+; CHECK-NEXT:    str h1, [sp, #882]
+; CHECK-NEXT:    ldr h1, [sp, #72] // 2-byte Reload
+; CHECK-NEXT:    fcmp h0, h0
+; CHECK-NEXT:    str h1, [sp, #880]
+; CHECK-NEXT:    ldr h1, [sp, #70] // 2-byte Reload
+; CHECK-NEXT:    str h1, [sp, #878]
+; CHECK-NEXT:    fmov s1, s6
+; CHECK-NEXT:    fcsel h0, h6, h0, vs
+; CHECK-NEXT:    ldr h6, [sp, #258] // 2-byte Reload
+; CHECK-NEXT:    str h6, [sp, #876]
+; CHECK-NEXT:    ldr h6, [sp, #68] // 2-byte Reload
+; CHECK-NEXT:    fcmp h1, h0
+; CHECK-NEXT:    str h6, [sp, #874]
+; CHECK-NEXT:    ldr h6, [sp, #254] // 2-byte Reload
+; CHECK-NEXT:    str h6, [sp, #872]
+; CHECK-NEXT:    ldr h6, [sp, #66] // 2-byte Reload
+; CHECK-NEXT:    fcsel h28, h1, h0, gt
+; CHECK-NEXT:    ldr h1, [sp, #244] // 2-byte Reload
+; CHECK-NEXT:    str h6, [sp, #870]
+; CHECK-NEXT:    ldr h6, [sp, #64] // 2-byte Reload
+; CHECK-NEXT:    str h6, [sp, #868]
+; CHECK-NEXT:    ldr h6, [sp, #248] // 2-byte Reload
+; CHECK-NEXT:    str h6, [sp, #866]
+; CHECK-NEXT:    ldr z0, [x8, #-5, mul vl] // 16-byte Folded Reload
+; CHECK-NEXT:    str h1, [sp, #864]
+; CHECK-NEXT:    ldr h1, [sp, #240] // 2-byte Reload
+; CHECK-NEXT:    str h1, [sp, #862]
+; CHECK-NEXT:    ldr h1, [sp, #236] // 2-byte Reload
+; CHECK-NEXT:    fcmp h0, h0
+; CHECK-NEXT:    str h1, [sp, #860]
+; CHECK-NEXT:    fmov s1, s3
+; CHECK-NEXT:    fcsel h0, h3, h0, vs
+; CHECK-NEXT:    ldr h3, [sp, #232] // 2-byte Reload
+; CHECK-NEXT:    str h3, [sp, #858]
+; CHECK-NEXT:    ldr h3, [sp, #226] // 2-byte Reload
+; CHECK-NEXT:    fcmp h1, h0
+; CHECK-NEXT:    str h3, [sp, #856]
+; CHECK-NEXT:    ldr h3, [sp, #62] // 2-byte Reload
+; CHECK-NEXT:    str h3, [sp, #854]
+; CHECK-NEXT:    ldr h3, [sp, #220] // 2-byte Reload
+; CHECK-NEXT:    fcsel h0, h1, h0, gt
+; CHECK-NEXT:    ldr h1, [sp, #200] // 2-byte Reload
+; CHECK-NEXT:    str h3, [sp, #852]
+; CHECK-NEXT:    ldr h3, [sp, #214] // 2-byte Reload
+; CHECK-NEXT:    str h3, [sp, #850]
+; CHECK-NEXT:    ldr h3, [sp, #206] // 2-byte Reload
+; CHECK-NEXT:    str h3, [sp, #848]
+; CHECK-NEXT:    ldr z3, [x8, #-3, mul vl] // 16-byte Folded Reload
+; CHECK-NEXT:    str h1, [sp, #846]
+; CHECK-NEXT:    ldr h1, [sp, #192] // 2-byte Reload
+; CHECK-NEXT:    str h1, [sp, #844]
+; CHECK-NEXT:    ldr h1, [sp, #184] // 2-byte Reload
+; CHECK-NEXT:    fcmp h3, h3
+; CHECK-NEXT:    str h1, [sp, #842]
+; CHECK-NEXT:    fcsel h30, h5, h3, vs
+; CHECK-NEXT:    ldr h3, [sp, #178] // 2-byte Reload
+; CHECK-NEXT:    str h3, [sp, #840]
+; CHECK-NEXT:    ldr h3, [sp, #170] // 2-byte Reload
+; CHECK-NEXT:    fcmp h5, h30
+; CHECK-NEXT:    str h3, [sp, #838]
+; CHECK-NEXT:    ldr h3, [sp, #162] // 2-byte Reload
+; CHECK-NEXT:    str h3, [sp, #836]
+; CHECK-NEXT:    ldr h3, [sp, #156] // 2-byte Reload
+; CHECK-NEXT:    fcsel h30, h5, h30, gt
+; CHECK-NEXT:    str h3, [sp, #834]
+; CHECK-NEXT:    ldr h3, [sp, #148] // 2-byte Reload
+; CHECK-NEXT:    str h3, [sp, #832]
+; CHECK-NEXT:    ldr h3, [sp, #60] // 2-byte Reload
+; CHECK-NEXT:    str h3, [sp, #830]
+; CHECK-NEXT:    ldr h3, [sp, #58] // 2-byte Reload
+; CHECK-NEXT:    ldr z1, [x8, #-4, mul vl] // 16-byte Folded Reload
+; CHECK-NEXT:    str h3, [sp, #828]
+; CHECK-NEXT:    ldr h3, [sp, #262] // 2-byte Reload
+; CHECK-NEXT:    fcmp h1, h1
+; CHECK-NEXT:    str h3, [sp, #826]
+; CHECK-NEXT:    ldr h3, [sp, #510] // 2-byte Reload
+; CHECK-NEXT:    str h3, [sp, #824]
+; CHECK-NEXT:    fcsel h31, h7, h1, vs
+; CHECK-NEXT:    ldr h1, [sp, #508] // 2-byte Reload
+; CHECK-NEXT:    str h1, [sp, #822]
+; CHECK-NEXT:    ldr h1, [sp, #506] // 2-byte Reload
+; CHECK-NEXT:    fcmp h7, h31
+; CHECK-NEXT:    str h1, [sp, #820]
+; CHECK-NEXT:    ldr h1, [sp, #504] // 2-byte Reload
+; CHECK-NEXT:    str h1, [sp, #818]
+; CHECK-NEXT:    ldr h1, [sp, #502] // 2-byte Reload
+; CHECK-NEXT:    fcsel h5, h7, h31, gt
+; CHECK-NEXT:    str h1, [sp, #816]
+; CHECK-NEXT:    ldr h1, [sp, #500] // 2-byte Reload
+; CHECK-NEXT:    str h1, [sp, #814]
+; CHECK-NEXT:    ldr h1, [sp, #498] // 2-byte Reload
+; CHECK-NEXT:    str h1, [sp, #812]
+; CHECK-NEXT:    ldr h1, [sp, #496] // 2-byte Reload
+; CHECK-NEXT:    ldr z3, [x8, #-2, mul vl] // 16-byte Folded Reload
+; CHECK-NEXT:    str h12, [sp, #808]
+; CHECK-NEXT:    str h1, [sp, #810]
+; CHECK-NEXT:    fmov s1, s2
+; CHECK-NEXT:    str h29, [sp, #806]
+; CHECK-NEXT:    fcmp h3, h3
+; CHECK-NEXT:    str h21, [sp, #804]
+; CHECK-NEXT:    str h25, [sp, #802]
+; CHECK-NEXT:    str h16, [sp, #800]
+; CHECK-NEXT:    fcsel h2, h2, h3, vs
+; CHECK-NEXT:    str h17, [sp, #798]
+; CHECK-NEXT:    str h18, [sp, #796]
+; CHECK-NEXT:    str h19, [sp, #794]
+; CHECK-NEXT:    fcmp h1, h2
+; CHECK-NEXT:    fcsel h1, h1, h2, gt
+; CHECK-NEXT:    ldr z2, [x8, #-1, mul vl] // 16-byte Folded Reload
+; CHECK-NEXT:    str h0, [sp, #778]
+; CHECK-NEXT:    str h20, [sp, #792]
+; CHECK-NEXT:    adrp x8, .LCPI77_0
+; CHECK-NEXT:    add x8, x8, :lo12:.LCPI77_0
+; CHECK-NEXT:    str h22, [sp, #790]
+; CHECK-NEXT:    fcmp h2, h2
+; CHECK-NEXT:    str h23, [sp, #788]
+; CHECK-NEXT:    str h24, [sp, #786]
+; CHECK-NEXT:    str h26, [sp, #784]
+; CHECK-NEXT:    fcsel h2, h4, h2, vs
+; CHECK-NEXT:    str h27, [sp, #782]
+; CHECK-NEXT:    str h28, [sp, #780]
+; CHECK-NEXT:    str h30, [sp, #776]
+; CHECK-NEXT:    fcmp h4, h2
+; CHECK-NEXT:    str h5, [sp, #774]
+; CHECK-NEXT:    str h1, [sp, #772]
+; CHECK-NEXT:    fcsel h0, h4, h2, gt
+; CHECK-NEXT:    str h0, [sp, #770]
+; CHECK-NEXT:    ld1h { z0.h }, p0/z, [x8]
+; CHECK-NEXT:    add x8, sp, #768
+; CHECK-NEXT:    ld1h { z1.h }, p0/z, [x9]
+; CHECK-NEXT:    cmpeq p1.h, p0/z, z1.h, z0.h
+; CHECK-NEXT:    mov z0.h, p1/z, #-1 // =0xffffffffffffffff
+; CHECK-NEXT:    ptrue p1.h
+; CHECK-NEXT:    and z0.h, z0.h, #0x1
+; CHECK-NEXT:    cmpne p1.h, p1/z, z0.h, #0
+; CHECK-NEXT:    ld1h { z0.h }, p0/z, [x8]
+; CHECK-NEXT:    fcmeq p2.h, p0/z, z0.h, #0.0
+; CHECK-NEXT:    sel z1.h, p1, z1.h, z0.h
+; CHECK-NEXT:    mov z0.h, p2/m, z1.h
+; CHECK-NEXT:    st1h { z0.h }, p0, [x0]
+; CHECK-NEXT:    sub sp, x29, #64
+; CHECK-NEXT:    ldp x29, x30, [sp, #64] // 16-byte Folded Reload
+; CHECK-NEXT:    ldp d9, d8, [sp, #48] // 16-byte Folded Reload
+; CHECK-NEXT:    ldp d11, d10, [sp, #32] // 16-byte Folded Reload
+; CHECK-NEXT:    ldp d13, d12, [sp, #16] // 16-byte Folded Reload
+; CHECK-NEXT:    ldp d15, d14, [sp], #80 // 16-byte Folded Reload
+; CHECK-NEXT:    ret
+  %op1 = load <128 x half>, ptr %a
+  %op2 = load <128 x half>, ptr %b
+  %res = call <128 x half> @llvm.maximumnum.v128f16(<128 x half> %op1, <128 x half> %op2)
+  store <128 x half> %res, ptr %a
+  ret void
+}
+
+; Don't use SVE for 64-bit vectors.
+define <2 x float> @fmaximumnum_v2f32(<2 x float> %op1, <2 x float> %op2) vscale_range(2,0) #0 {
+; CHECK-LABEL: fmaximumnum_v2f32:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    fminnm v1.2s, v1.2s, v1.2s
+; CHECK-NEXT:    fminnm v0.2s, v0.2s, v0.2s
+; CHECK-NEXT:    fmaxnm v0.2s, v0.2s, v1.2s
+; CHECK-NEXT:    ret
+  %res = call <2 x float> @llvm.maximumnum.v2f32(<2 x float> %op1, <2 x float> %op2)
+  ret <2 x float> %res
+}
+
+; Don't use SVE for 128-bit vectors.
+define <4 x float> @fmaximumnum_v4f32(<4 x float> %op1, <4 x float> %op2) vscale_range(2,0) #0 {
+; CHECK-LABEL: fmaximumnum_v4f32:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    fminnm v1.4s, v1.4s, v1.4s
+; CHECK-NEXT:    fminnm v0.4s, v0.4s, v0.4s
+; CHECK-NEXT:    fmaxnm v0.4s, v0.4s, v1.4s
+; CHECK-NEXT:    ret
+  %res = call <4 x float> @llvm.maximumnum.v4f32(<4 x float> %op1, <4 x float> %op2)
+  ret <4 x float> %res
+}
+
+define void @fmaximumnum_v8f32(ptr %a, ptr %b) vscale_range(2,0) #0 {
+; CHECK-LABEL: fmaximumnum_v8f32:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    stp x29, x30, [sp, #-16]! // 16-byte Folded Spill
+; CHECK-NEXT:    sub x9, sp, #80
+; CHECK-NEXT:    mov x29, sp
+; CHECK-NEXT:    and sp, x9, #0xffffffffffffffe0
+; CHECK-NEXT:    .cfi_def_cfa w29, 16
+; CHECK-NEXT:    .cfi_offset w30, -8
+; CHECK-NEXT:    .cfi_offset w29, -16
+; CHECK-NEXT:    ptrue p0.s, vl8
+; CHECK-NEXT:    adrp x8, .LCPI80_0
+; CHECK-NEXT:    add x8, x8, :lo12:.LCPI80_0
+; CHECK-NEXT:    mov x9, sp
+; CHECK-NEXT:    ld1w { z5.s }, p0/z, [x0]
+; CHECK-NEXT:    ld1w { z2.s }, p0/z, [x1]
+; CHECK-NEXT:    fcmp s5, s5
+; CHECK-NEXT:    mov z1.s, z5.s[7]
+; CHECK-NEXT:    mov z3.s, z2.s[7]
+; CHECK-NEXT:    mov z4.s, z5.s[6]
+; CHECK-NEXT:    mov z6.s, z2.s[6]
+; CHECK-NEXT:    mov z7.s, z5.s[5]
+; CHECK-NEXT:    mov z16.s, z2.s[5]
+; CHECK-NEXT:    mov z17.s, z5.s[4]
+; CHECK-NEXT:    mov z18.s, z2.s[4]
+; CHECK-NEXT:    fcsel s0, s2, s5, vs
+; CHECK-NEXT:    fcmp s1, s1
+; CHECK-NEXT:    mov z19.s, z5.s[3]
+; CHECK-NEXT:    mov z20.s, z2.s[3]
+; CHECK-NEXT:    mov z21.s, z5.s[2]
+; CHECK-NEXT:    mov z22.s, z2.s[2]
+; CHECK-NEXT:    mov z5.s, z5.s[1]
+; CHECK-NEXT:    mov z23.s, z2.s[1]
+; CHECK-NEXT:    fcsel s1, s3, s1, vs
+; CHECK-NEXT:    fcmp s4, s4
+; CHECK-NEXT:    fcsel s4, s6, s4, vs
+; CHECK-NEXT:    fcmp s7, s7
+; CHECK-NEXT:    fcsel s7, s16, s7, vs
+; CHECK-NEXT:    fcmp s17, s17
+; CHECK-NEXT:    stp s4, s1, [sp, #24]
+; CHECK-NEXT:    fcsel s17, s18, s17, vs
+; CHECK-NEXT:    fcmp s19, s19
+; CHECK-NEXT:    fcsel s19, s20, s19, vs
+; CHECK-NEXT:    fcmp s21, s21
+; CHECK-NEXT:    stp s17, s7, [sp, #16]
+; CHECK-NEXT:    fcsel s21, s22, s21, vs
+; CHECK-NEXT:    fcmp s5, s5
+; CHECK-NEXT:    fcsel s5, s23, s5, vs
+; CHECK-NEXT:    fcmp s2, s2
+; CHECK-NEXT:    stp s21, s19, [sp, #8]
+; CHECK-NEXT:    fcsel s2, s0, s2, vs
+; CHECK-NEXT:    stp s0, s5, [sp]
+; CHECK-NEXT:    fcmp s0, s2
+; CHECK-NEXT:    fcsel s2, s0, s2, gt
+; CHECK-NEXT:    fcmp s3, s3
+; CHECK-NEXT:    fcsel s3, s1, s3, vs
+; CHECK-NEXT:    fcmp s1, s3
+; CHECK-NEXT:    fcsel s3, s1, s3, gt
+; CHECK-NEXT:    fcmp s6, s6
+; CHECK-NEXT:    fcsel s6, s4, s6, vs
+; CHECK-NEXT:    fcmp s4, s6
+; CHECK-NEXT:    fcsel s6, s4, s6, gt
+; CHECK-NEXT:    fcmp s16, s16
+; CHECK-NEXT:    fcsel s16, s7, s16, vs
+; CHECK-NEXT:    stp s6, s3, [sp, #56]
+; CHECK-NEXT:    fcmp s7, s16
+; CHECK-NEXT:    fcsel s16, s7, s16, gt
+; CHECK-NEXT:    fcmp s18, s18
+; CHECK-NEXT:    fcsel s18, s17, s18, vs
+; CHECK-NEXT:    fcmp s17, s18
+; CHECK-NEXT:    fcsel s18, s17, s18, gt
+; CHECK-NEXT:    fcmp s20, s20
+; CHECK-NEXT:    fcsel s20, s19, s20, vs
+; CHECK-NEXT:    stp s18, s16, [sp, #48]
+; CHECK-NEXT:    fcmp s19, s20
+; CHECK-NEXT:    fcsel s20, s19, s20, gt
+; CHECK-NEXT:    fcmp s22, s22
+; CHECK-NEXT:    fcsel s22, s21, s22, vs
+; CHECK-NEXT:    fcmp s21, s22
+; CHECK-NEXT:    fcsel s1, s21, s22, gt
+; CHECK-NEXT:    fcmp s23, s23
+; CHECK-NEXT:    fcsel s4, s5, s23, vs
+; CHECK-NEXT:    stp s1, s20, [sp, #40]
+; CHECK-NEXT:    fcmp s5, s4
+; CHECK-NEXT:    fcsel s0, s5, s4, gt
+; CHECK-NEXT:    stp s2, s0, [sp, #32]
+; CHECK-NEXT:    ld1w { z0.s }, p0/z, [x8]
+; CHECK-NEXT:    add x8, sp, #32
+; CHECK-NEXT:    ld1w { z1.s }, p0/z, [x9]
+; CHECK-NEXT:    cmpeq p1.s, p0/z, z1.s, z0.s
+; CHECK-NEXT:    mov z0.s, p1/z, #-1 // =0xffffffffffffffff
+; CHECK-NEXT:    ptrue p1.s
+; CHECK-NEXT:    and z0.s, z0.s, #0x1
+; CHECK-NEXT:    cmpne p1.s, p1/z, z0.s, #0
+; CHECK-NEXT:    ld1w { z0.s }, p0/z, [x8]
+; CHECK-NEXT:    fcmeq p2.s, p0/z, z0.s, #0.0
+; CHECK-NEXT:    sel z1.s, p1, z1.s, z0.s
+; CHECK-NEXT:    mov z0.s, p2/m, z1.s
+; CHECK-NEXT:    st1w { z0.s }, p0, [x0]
+; CHECK-NEXT:    mov sp, x29
+; CHECK-NEXT:    ldp x29, x30, [sp], #16 // 16-byte Folded Reload
+; CHECK-NEXT:    ret
+  %op1 = load <8 x float>, ptr %a
+  %op2 = load <8 x float>, ptr %b
+  %res = call <8 x float> @llvm.maximumnum.v8f32(<8 x float> %op1, <8 x float> %op2)
+  store <8 x float> %res, ptr %a
+  ret void
+}
+
+define void @fmaximumnum_v16f32(ptr %a, ptr %b) #0 {
+; VBITS_EQ_256-LABEL: fmaximumnum_v16f32:
+; VBITS_EQ_256:       // %bb.0:
+; VBITS_EQ_256-NEXT:    stp d15, d14, [sp, #-80]! // 16-byte Folded Spill
+; VBITS_EQ_256-NEXT:    sub x9, sp, #144
+; VBITS_EQ_256-NEXT:    stp d13, d12, [sp, #16] // 16-byte Folded Spill
+; VBITS_EQ_256-NEXT:    stp d11, d10, [sp, #32] // 16-byte Folded Spill
+; VBITS_EQ_256-NEXT:    stp d9, d8, [sp, #48] // 16-byte Folded Spill
+; VBITS_EQ_256-NEXT:    stp x29, x30, [sp, #64] // 16-byte Folded Spill
+; VBITS_EQ_256-NEXT:    add x29, sp, #64
+; VBITS_EQ_256-NEXT:    and sp, x9, #0xffffffffffffffe0
+; VBITS_EQ_256-NEXT:    .cfi_def_cfa w29, 16
+; VBITS_EQ_256-NEXT:    .cfi_offset w30, -8
+; VBITS_EQ_256-NEXT:    .cfi_offset w29, -16
+; VBITS_EQ_256-NEXT:    .cfi_offset b8, -24
+; VBITS_EQ_256-NEXT:    .cfi_offset b9, -32
+; VBITS_EQ_256-NEXT:    .cfi_offset b10, -40
+; VBITS_EQ_256-NEXT:    .cfi_offset b11, -48
+; VBITS_EQ_256-NEXT:    .cfi_offset b12, -56
+; VBITS_EQ_256-NEXT:    .cfi_offset b13, -64
+; VBITS_EQ_256-NEXT:    .cfi_offset b14, -72
+; VBITS_EQ_256-NEXT:    .cfi_offset b15, -80
+; VBITS_EQ_256-NEXT:    ptrue p0.s, vl8
+; VBITS_EQ_256-NEXT:    mov x8, #8 // =0x8
+; VBITS_EQ_256-NEXT:    adrp x9, .LCPI81_0
+; VBITS_EQ_256-NEXT:    add x9, x9, :lo12:.LCPI81_0
+; VBITS_EQ_256-NEXT:    add x10, sp, #32
+; VBITS_EQ_256-NEXT:    ld1w { z6.s }, p0/z, [x0]
+; VBITS_EQ_256-NEXT:    ld1w { z5.s }, p0/z, [x1]
+; VBITS_EQ_256-NEXT:    ld1w { z29.s }, p0/z, [x0, x8, lsl #2]
+; VBITS_EQ_256-NEXT:    ld1w { z27.s }, p0/z, [x1, x8, lsl #2]
+; VBITS_EQ_256-NEXT:    fcmp s6, s6
+; VBITS_EQ_256-NEXT:    mov z1.s, z6.s[7]
+; VBITS_EQ_256-NEXT:    mov z17.s, z5.s[7]
+; VBITS_EQ_256-NEXT:    mov z2.s, z6.s[6]
+; VBITS_EQ_256-NEXT:    mov z18.s, z5.s[6]
+; VBITS_EQ_256-NEXT:    mov z3.s, z6.s[5]
+; VBITS_EQ_256-NEXT:    mov z19.s, z5.s[5]
+; VBITS_EQ_256-NEXT:    mov z4.s, z6.s[4]
+; VBITS_EQ_256-NEXT:    mov z20.s, z5.s[4]
+; VBITS_EQ_256-NEXT:    fcsel s0, s5, s6, vs
+; VBITS_EQ_256-NEXT:    fcmp s1, s1
+; VBITS_EQ_256-NEXT:    mov z7.s, z6.s[3]
+; VBITS_EQ_256-NEXT:    mov z21.s, z5.s[3]
+; VBITS_EQ_256-NEXT:    mov z16.s, z6.s[2]
+; VBITS_EQ_256-NEXT:    mov z22.s, z5.s[2]
+; VBITS_EQ_256-NEXT:    mov z23.s, z6.s[1]
+; VBITS_EQ_256-NEXT:    mov z24.s, z5.s[1]
+; VBITS_EQ_256-NEXT:    mov z25.s, z29.s[7]
+; VBITS_EQ_256-NEXT:    fcsel s1, s17, s1, vs
+; VBITS_EQ_256-NEXT:    fcmp s2, s2
+; VBITS_EQ_256-NEXT:    mov z30.s, z27.s[7]
+; VBITS_EQ_256-NEXT:    mov z26.s, z29.s[6]
+; VBITS_EQ_256-NEXT:    mov z8.s, z27.s[6]
+; VBITS_EQ_256-NEXT:    mov z28.s, z29.s[5]
+; VBITS_EQ_256-NEXT:    mov z9.s, z27.s[5]
+; VBITS_EQ_256-NEXT:    mov z31.s, z29.s[4]
+; VBITS_EQ_256-NEXT:    mov z10.s, z27.s[4]
+; VBITS_EQ_256-NEXT:    fcsel s2, s18, s2, vs
+; VBITS_EQ_256-NEXT:    fcmp s3, s3
+; VBITS_EQ_256-NEXT:    mov z11.s, z29.s[3]
+; VBITS_EQ_256-NEXT:    mov z12.s, z27.s[3]
+; VBITS_EQ_256-NEXT:    mov z13.s, z29.s[2]
+; VBITS_EQ_256-NEXT:    mov z14.s, z27.s[2]
+; VBITS_EQ_256-NEXT:    mov z15.s, z27.s[1]
+; VBITS_EQ_256-NEXT:    fcsel s3, s19, s3, vs
+; VBITS_EQ_256-NEXT:    stp s2, s1, [sp, #24]
+; VBITS_EQ_256-NEXT:    fcmp s4, s4
+; VBITS_EQ_256-NEXT:    fcsel s4, s20, s4, vs
+; VBITS_EQ_256-NEXT:    fcmp s7, s7
+; VBITS_EQ_256-NEXT:    fcsel s6, s21, s7, vs
+; VBITS_EQ_256-NEXT:    fcmp s16, s16
+; VBITS_EQ_256-NEXT:    stp s4, s3, [sp, #16]
+; VBITS_EQ_256-NEXT:    fcsel s7, s22, s16, vs
+; VBITS_EQ_256-NEXT:    fcmp s23, s23
+; VBITS_EQ_256-NEXT:    fcsel s16, s24, s23, vs
+; VBITS_EQ_256-NEXT:    fcmp s5, s5
+; VBITS_EQ_256-NEXT:    stp s7, s6, [sp, #8]
+; VBITS_EQ_256-NEXT:    fcsel s5, s0, s5, vs
+; VBITS_EQ_256-NEXT:    stp s0, s16, [sp]
+; VBITS_EQ_256-NEXT:    fcmp s0, s5
+; VBITS_EQ_256-NEXT:    fcsel s5, s0, s5, gt
+; VBITS_EQ_256-NEXT:    fcmp s17, s17
+; VBITS_EQ_256-NEXT:    fcsel s17, s1, s17, vs
+; VBITS_EQ_256-NEXT:    fcmp s1, s17
+; VBITS_EQ_256-NEXT:    fcsel s17, s1, s17, gt
+; VBITS_EQ_256-NEXT:    fcmp s18, s18
+; VBITS_EQ_256-NEXT:    fcsel s18, s2, s18, vs
+; VBITS_EQ_256-NEXT:    fcmp s2, s18
+; VBITS_EQ_256-NEXT:    fcsel s18, s2, s18, gt
+; VBITS_EQ_256-NEXT:    fcmp s19, s19
+; VBITS_EQ_256-NEXT:    fcsel s19, s3, s19, vs
+; VBITS_EQ_256-NEXT:    stp s18, s17, [sp, #88]
+; VBITS_EQ_256-NEXT:    fcmp s3, s19
+; VBITS_EQ_256-NEXT:    fcsel s19, s3, s19, gt
+; VBITS_EQ_256-NEXT:    fcmp s20, s20
+; VBITS_EQ_256-NEXT:    fcsel s20, s4, s20, vs
+; VBITS_EQ_256-NEXT:    fcmp s4, s20
+; VBITS_EQ_256-NEXT:    fcsel s20, s4, s20, gt
+; VBITS_EQ_256-NEXT:    fcmp s21, s21
+; VBITS_EQ_256-NEXT:    fcsel s21, s6, s21, vs
+; VBITS_EQ_256-NEXT:    stp s20, s19, [sp, #80]
+; VBITS_EQ_256-NEXT:    fcmp s6, s21
+; VBITS_EQ_256-NEXT:    fcsel s21, s6, s21, gt
+; VBITS_EQ_256-NEXT:    fcmp s22, s22
+; VBITS_EQ_256-NEXT:    fcsel s22, s7, s22, vs
+; VBITS_EQ_256-NEXT:    fcmp s7, s22
+; VBITS_EQ_256-NEXT:    fcsel s22, s7, s22, gt
+; VBITS_EQ_256-NEXT:    fcmp s24, s24
+; VBITS_EQ_256-NEXT:    fcsel s23, s16, s24, vs
+; VBITS_EQ_256-NEXT:    stp s22, s21, [sp, #72]
+; VBITS_EQ_256-NEXT:    fcmp s16, s23
+; VBITS_EQ_256-NEXT:    fcsel s24, s16, s23, gt
+; VBITS_EQ_256-NEXT:    fcmp s29, s29
+; VBITS_EQ_256-NEXT:    fcsel s23, s27, s29, vs
+; VBITS_EQ_256-NEXT:    fcmp s25, s25
+; VBITS_EQ_256-NEXT:    mov z29.s, z29.s[1]
+; VBITS_EQ_256-NEXT:    stp s5, s24, [sp, #64]
+; VBITS_EQ_256-NEXT:    fcsel s25, s30, s25, vs
+; VBITS_EQ_256-NEXT:    fcmp s26, s26
+; VBITS_EQ_256-NEXT:    fcsel s26, s8, s26, vs
+; VBITS_EQ_256-NEXT:    fcmp s28, s28
+; VBITS_EQ_256-NEXT:    fcsel s28, s9, s28, vs
+; VBITS_EQ_256-NEXT:    fcmp s31, s31
+; VBITS_EQ_256-NEXT:    stp s26, s25, [sp, #56]
+; VBITS_EQ_256-NEXT:    fcsel s31, s10, s31, vs
+; VBITS_EQ_256-NEXT:    fcmp s11, s11
+; VBITS_EQ_256-NEXT:    fcsel s11, s12, s11, vs
+; VBITS_EQ_256-NEXT:    fcmp s13, s13
+; VBITS_EQ_256-NEXT:    stp s31, s28, [sp, #48]
+; VBITS_EQ_256-NEXT:    fcsel s13, s14, s13, vs
+; VBITS_EQ_256-NEXT:    fcmp s29, s29
+; VBITS_EQ_256-NEXT:    fcsel s29, s15, s29, vs
+; VBITS_EQ_256-NEXT:    fcmp s27, s27
+; VBITS_EQ_256-NEXT:    stp s13, s11, [sp, #40]
+; VBITS_EQ_256-NEXT:    fcsel s27, s23, s27, vs
+; VBITS_EQ_256-NEXT:    stp s23, s29, [sp, #32]
+; VBITS_EQ_256-NEXT:    fcmp s23, s27
+; VBITS_EQ_256-NEXT:    fcsel s27, s23, s27, gt
+; VBITS_EQ_256-NEXT:    fcmp s30, s30
+; VBITS_EQ_256-NEXT:    fcsel s30, s25, s30, vs
+; VBITS_EQ_256-NEXT:    fcmp s25, s30
+; VBITS_EQ_256-NEXT:    fcsel s30, s25, s30, gt
+; VBITS_EQ_256-NEXT:    fcmp s8, s8
+; VBITS_EQ_256-NEXT:    fcsel s8, s26, s8, vs
+; VBITS_EQ_256-NEXT:    fcmp s26, s8
+; VBITS_EQ_256-NEXT:    fcsel s8, s26, s8, gt
+; VBITS_EQ_256-NEXT:    fcmp s9, s9
+; VBITS_EQ_256-NEXT:    fcsel s9, s28, s9, vs
+; VBITS_EQ_256-NEXT:    stp s8, s30, [sp, #120]
+; VBITS_EQ_256-NEXT:    fcmp s28, s9
+; VBITS_EQ_256-NEXT:    fcsel s9, s28, s9, gt
+; VBITS_EQ_256-NEXT:    fcmp s10, s10
+; VBITS_EQ_256-NEXT:    fcsel s10, s31, s10, vs
+; VBITS_EQ_256-NEXT:    fcmp s31, s10
+; VBITS_EQ_256-NEXT:    fcsel s1, s31, s10, gt
+; VBITS_EQ_256-NEXT:    fcmp s12, s12
+; VBITS_EQ_256-NEXT:    fcsel s2, s11, s12, vs
+; VBITS_EQ_256-NEXT:    stp s1, s9, [sp, #112]
+; VBITS_EQ_256-NEXT:    fcmp s11, s2
+; VBITS_EQ_256-NEXT:    fcsel s0, s11, s2, gt
+; VBITS_EQ_256-NEXT:    fcmp s14, s14
+; VBITS_EQ_256-NEXT:    fcsel s2, s13, s14, vs
+; VBITS_EQ_256-NEXT:    fcmp s13, s2
+; VBITS_EQ_256-NEXT:    fcsel s2, s13, s2, gt
+; VBITS_EQ_256-NEXT:    fcmp s15, s15
+; VBITS_EQ_256-NEXT:    fcsel s3, s29, s15, vs
+; VBITS_EQ_256-NEXT:    stp s2, s0, [sp, #104]
+; VBITS_EQ_256-NEXT:    ld1w { z0.s }, p0/z, [x9]
+; VBITS_EQ_256-NEXT:    mov x9, sp
+; VBITS_EQ_256-NEXT:    fcmp s29, s3
+; VBITS_EQ_256-NEXT:    fcsel s1, s29, s3, gt
+; VBITS_EQ_256-NEXT:    stp s27, s1, [sp, #96]
+; VBITS_EQ_256-NEXT:    ld1w { z1.s }, p0/z, [x10]
+; VBITS_EQ_256-NEXT:    ld1w { z2.s }, p0/z, [x9]
+; VBITS_EQ_256-NEXT:    add x9, sp, #96
+; VBITS_EQ_256-NEXT:    cmpeq p1.s, p0/z, z1.s, z0.s
+; VBITS_EQ_256-NEXT:    cmpeq p2.s, p0/z, z2.s, z0.s
+; VBITS_EQ_256-NEXT:    mov z0.s, p1/z, #-1 // =0xffffffffffffffff
+; VBITS_EQ_256-NEXT:    mov z3.s, p2/z, #-1 // =0xffffffffffffffff
+; VBITS_EQ_256-NEXT:    ptrue p1.s
+; VBITS_EQ_256-NEXT:    and z0.s, z0.s, #0x1
+; VBITS_EQ_256-NEXT:    and z3.s, z3.s, #0x1
+; VBITS_EQ_256-NEXT:    cmpne p2.s, p1/z, z0.s, #0
+; VBITS_EQ_256-NEXT:    ld1w { z0.s }, p0/z, [x9]
+; VBITS_EQ_256-NEXT:    add x9, sp, #64
+; VBITS_EQ_256-NEXT:    ld1w { z4.s }, p0/z, [x9]
+; VBITS_EQ_256-NEXT:    cmpne p1.s, p1/z, z3.s, #0
+; VBITS_EQ_256-NEXT:    fcmeq p3.s, p0/z, z0.s, #0.0
+; VBITS_EQ_256-NEXT:    sel z1.s, p2, z1.s, z0.s
+; VBITS_EQ_256-NEXT:    fcmeq p2.s, p0/z, z4.s, #0.0
+; VBITS_EQ_256-NEXT:    sel z2.s, p1, z2.s, z4.s
+; VBITS_EQ_256-NEXT:    mov z0.s, p3/m, z1.s
+; VBITS_EQ_256-NEXT:    sel z1.s, p2, z2.s, z4.s
+; VBITS_EQ_256-NEXT:    st1w { z0.s }, p0, [x0, x8, lsl #2]
+; VBITS_EQ_256-NEXT:    st1w { z1.s }, p0, [x0]
+; VBITS_EQ_256-NEXT:    sub sp, x29, #64
+; VBITS_EQ_256-NEXT:    ldp x29, x30, [sp, #64] // 16-byte Folded Reload
+; VBITS_EQ_256-NEXT:    ldp d9, d8, [sp, #48] // 16-byte Folded Reload
+; VBITS_EQ_256-NEXT:    ldp d11, d10, [sp, #32] // 16-byte Folded Reload
+; VBITS_EQ_256-NEXT:    ldp d13, d12, [sp, #16] // 16-byte Folded Reload
+; VBITS_EQ_256-NEXT:    ldp d15, d14, [sp], #80 // 16-byte Folded Reload
+; VBITS_EQ_256-NEXT:    ret
+;
+; VBITS_GE_512-LABEL: fmaximumnum_v16f32:
+; VBITS_GE_512:       // %bb.0:
+; VBITS_GE_512-NEXT:    stp d15, d14, [sp, #-80]! // 16-byte Folded Spill
+; VBITS_GE_512-NEXT:    sub x9, sp, #176
+; VBITS_GE_512-NEXT:    stp d13, d12, [sp, #16] // 16-byte Folded Spill
+; VBITS_GE_512-NEXT:    stp d11, d10, [sp, #32] // 16-byte Folded Spill
+; VBITS_GE_512-NEXT:    stp d9, d8, [sp, #48] // 16-byte Folded Spill
+; VBITS_GE_512-NEXT:    stp x29, x30, [sp, #64] // 16-byte Folded Spill
+; VBITS_GE_512-NEXT:    add x29, sp, #64
+; VBITS_GE_512-NEXT:    and sp, x9, #0xffffffffffffffc0
+; VBITS_GE_512-NEXT:    .cfi_def_cfa w29, 16
+; VBITS_GE_512-NEXT:    .cfi_offset w30, -8
+; VBITS_GE_512-NEXT:    .cfi_offset w29, -16
+; VBITS_GE_512-NEXT:    .cfi_offset b8, -24
+; VBITS_GE_512-NEXT:    .cfi_offset b9, -32
+; VBITS_GE_512-NEXT:    .cfi_offset b10, -40
+; VBITS_GE_512-NEXT:    .cfi_offset b11, -48
+; VBITS_GE_512-NEXT:    .cfi_offset b12, -56
+; VBITS_GE_512-NEXT:    .cfi_offset b13, -64
+; VBITS_GE_512-NEXT:    .cfi_offset b14, -72
+; VBITS_GE_512-NEXT:    .cfi_offset b15, -80
+; VBITS_GE_512-NEXT:    ptrue p0.s, vl16
+; VBITS_GE_512-NEXT:    adrp x8, .LCPI81_0
+; VBITS_GE_512-NEXT:    add x8, x8, :lo12:.LCPI81_0
+; VBITS_GE_512-NEXT:    mov x9, sp
+; VBITS_GE_512-NEXT:    ld1w { z17.s }, p0/z, [x0]
+; VBITS_GE_512-NEXT:    ld1w { z6.s }, p0/z, [x1]
+; VBITS_GE_512-NEXT:    fcmp s17, s17
+; VBITS_GE_512-NEXT:    mov z1.s, z17.s[15]
+; VBITS_GE_512-NEXT:    mov z7.s, z6.s[15]
+; VBITS_GE_512-NEXT:    mov z2.s, z17.s[14]
+; VBITS_GE_512-NEXT:    mov z18.s, z6.s[14]
+; VBITS_GE_512-NEXT:    mov z3.s, z17.s[13]
+; VBITS_GE_512-NEXT:    mov z19.s, z6.s[13]
+; VBITS_GE_512-NEXT:    mov z4.s, z17.s[12]
+; VBITS_GE_512-NEXT:    mov z21.s, z6.s[12]
+; VBITS_GE_512-NEXT:    fcsel s0, s6, s17, vs
+; VBITS_GE_512-NEXT:    fcmp s1, s1
+; VBITS_GE_512-NEXT:    mov z5.s, z17.s[11]
+; VBITS_GE_512-NEXT:    mov z22.s, z6.s[11]
+; VBITS_GE_512-NEXT:    mov z16.s, z17.s[10]
+; VBITS_GE_512-NEXT:    mov z24.s, z6.s[10]
+; VBITS_GE_512-NEXT:    mov z20.s, z17.s[9]
+; VBITS_GE_512-NEXT:    mov z26.s, z6.s[9]
+; VBITS_GE_512-NEXT:    mov z23.s, z17.s[8]
+; VBITS_GE_512-NEXT:    fcsel s1, s7, s1, vs
+; VBITS_GE_512-NEXT:    fcmp s2, s2
+; VBITS_GE_512-NEXT:    mov z27.s, z6.s[8]
+; VBITS_GE_512-NEXT:    mov z25.s, z17.s[7]
+; VBITS_GE_512-NEXT:    mov z29.s, z6.s[7]
+; VBITS_GE_512-NEXT:    mov z28.s, z17.s[6]
+; VBITS_GE_512-NEXT:    mov z31.s, z6.s[6]
+; VBITS_GE_512-NEXT:    mov z30.s, z17.s[5]
+; VBITS_GE_512-NEXT:    mov z10.s, z6.s[5]
+; VBITS_GE_512-NEXT:    fcsel s2, s18, s2, vs
+; VBITS_GE_512-NEXT:    fcmp s3, s3
+; VBITS_GE_512-NEXT:    mov z8.s, z17.s[4]
+; VBITS_GE_512-NEXT:    mov z14.s, z6.s[4]
+; VBITS_GE_512-NEXT:    mov z9.s, z17.s[3]
+; VBITS_GE_512-NEXT:    mov z15.s, z6.s[3]
+; VBITS_GE_512-NEXT:    mov z12.s, z17.s[2]
+; VBITS_GE_512-NEXT:    mov z11.s, z6.s[2]
+; VBITS_GE_512-NEXT:    mov z17.s, z17.s[1]
+; VBITS_GE_512-NEXT:    stp s2, s1, [sp, #56]
+; VBITS_GE_512-NEXT:    fcsel s3, s19, s3, vs
+; VBITS_GE_512-NEXT:    fcmp s4, s4
+; VBITS_GE_512-NEXT:    fcsel s4, s21, s4, vs
+; VBITS_GE_512-NEXT:    fcmp s5, s5
+; VBITS_GE_512-NEXT:    fcsel s5, s22, s5, vs
+; VBITS_GE_512-NEXT:    fcmp s16, s16
+; VBITS_GE_512-NEXT:    stp s4, s3, [sp, #48]
+; VBITS_GE_512-NEXT:    fcsel s16, s24, s16, vs
+; VBITS_GE_512-NEXT:    fcmp s20, s20
+; VBITS_GE_512-NEXT:    fcsel s20, s26, s20, vs
+; VBITS_GE_512-NEXT:    fcmp s23, s23
+; VBITS_GE_512-NEXT:    stp s16, s5, [sp, #40]
+; VBITS_GE_512-NEXT:    fcsel s23, s27, s23, vs
+; VBITS_GE_512-NEXT:    fcmp s25, s25
+; VBITS_GE_512-NEXT:    fcsel s25, s29, s25, vs
+; VBITS_GE_512-NEXT:    fcmp s28, s28
+; VBITS_GE_512-NEXT:    stp s23, s20, [sp, #32]
+; VBITS_GE_512-NEXT:    fcsel s28, s31, s28, vs
+; VBITS_GE_512-NEXT:    fcmp s30, s30
+; VBITS_GE_512-NEXT:    fcsel s30, s10, s30, vs
+; VBITS_GE_512-NEXT:    fcmp s8, s8
+; VBITS_GE_512-NEXT:    stp s28, s25, [sp, #24]
+; VBITS_GE_512-NEXT:    fcsel s8, s14, s8, vs
+; VBITS_GE_512-NEXT:    fcmp s9, s9
+; VBITS_GE_512-NEXT:    fcsel s13, s15, s9, vs
+; VBITS_GE_512-NEXT:    fcmp s12, s12
+; VBITS_GE_512-NEXT:    mov z9.s, z6.s[1]
+; VBITS_GE_512-NEXT:    stp s8, s30, [sp, #16]
+; VBITS_GE_512-NEXT:    fcsel s12, s11, s12, vs
+; VBITS_GE_512-NEXT:    fcmp s17, s17
+; VBITS_GE_512-NEXT:    fcsel s17, s9, s17, vs
+; VBITS_GE_512-NEXT:    fcmp s6, s6
+; VBITS_GE_512-NEXT:    stp s12, s13, [sp, #8]
+; VBITS_GE_512-NEXT:    fcsel s6, s0, s6, vs
+; VBITS_GE_512-NEXT:    stp s0, s17, [sp]
+; VBITS_GE_512-NEXT:    fcmp s0, s6
+; VBITS_GE_512-NEXT:    fcsel s6, s0, s6, gt
+; VBITS_GE_512-NEXT:    fcmp s7, s7
+; VBITS_GE_512-NEXT:    fcsel s7, s1, s7, vs
+; VBITS_GE_512-NEXT:    fcmp s1, s7
+; VBITS_GE_512-NEXT:    fcsel s7, s1, s7, gt
+; VBITS_GE_512-NEXT:    fcmp s18, s18
+; VBITS_GE_512-NEXT:    fcsel s18, s2, s18, vs
+; VBITS_GE_512-NEXT:    fcmp s2, s18
+; VBITS_GE_512-NEXT:    fcsel s18, s2, s18, gt
+; VBITS_GE_512-NEXT:    fcmp s19, s19
+; VBITS_GE_512-NEXT:    fcsel s19, s3, s19, vs
+; VBITS_GE_512-NEXT:    stp s18, s7, [sp, #120]
+; VBITS_GE_512-NEXT:    fcmp s3, s19
+; VBITS_GE_512-NEXT:    fcsel s19, s3, s19, gt
+; VBITS_GE_512-NEXT:    fcmp s21, s21
+; VBITS_GE_512-NEXT:    fcsel s21, s4, s21, vs
+; VBITS_GE_512-NEXT:    fcmp s4, s21
+; VBITS_GE_512-NEXT:    fcsel s21, s4, s21, gt
+; VBITS_GE_512-NEXT:    fcmp s22, s22
+; VBITS_GE_512-NEXT:    fcsel s22, s5, s22, vs
+; VBITS_GE_512-NEXT:    stp s21, s19, [sp, #112]
+; VBITS_GE_512-NEXT:    fcmp s5, s22
+; VBITS_GE_512-NEXT:    fcsel s22, s5, s22, gt
+; VBITS_GE_512-NEXT:    fcmp s24, s24
+; VBITS_GE_512-NEXT:    fcsel s24, s16, s24, vs
+; VBITS_GE_512-NEXT:    fcmp s16, s24
+; VBITS_GE_512-NEXT:    fcsel s24, s16, s24, gt
+; VBITS_GE_512-NEXT:    fcmp s26, s26
+; VBITS_GE_512-NEXT:    fcsel s26, s20, s26, vs
+; VBITS_GE_512-NEXT:    stp s24, s22, [sp, #104]
+; VBITS_GE_512-NEXT:    fcmp s20, s26
+; VBITS_GE_512-NEXT:    fcsel s26, s20, s26, gt
+; VBITS_GE_512-NEXT:    fcmp s27, s27
+; VBITS_GE_512-NEXT:    fcsel s27, s23, s27, vs
+; VBITS_GE_512-NEXT:    fcmp s23, s27
+; VBITS_GE_512-NEXT:    fcsel s27, s23, s27, gt
+; VBITS_GE_512-NEXT:    fcmp s29, s29
+; VBITS_GE_512-NEXT:    fcsel s29, s25, s29, vs
+; VBITS_GE_512-NEXT:    stp s27, s26, [sp, #96]
+; VBITS_GE_512-NEXT:    fcmp s25, s29
+; VBITS_GE_512-NEXT:    fcsel s29, s25, s29, gt
+; VBITS_GE_512-NEXT:    fcmp s31, s31
+; VBITS_GE_512-NEXT:    fcsel s31, s28, s31, vs
+; VBITS_GE_512-NEXT:    fcmp s28, s31
+; VBITS_GE_512-NEXT:    fcsel s31, s28, s31, gt
+; VBITS_GE_512-NEXT:    fcmp s10, s10
+; VBITS_GE_512-NEXT:    fcsel s10, s30, s10, vs
+; VBITS_GE_512-NEXT:    stp s31, s29, [sp, #88]
+; VBITS_GE_512-NEXT:    fcmp s30, s10
+; VBITS_GE_512-NEXT:    fcsel s10, s30, s10, gt
+; VBITS_GE_512-NEXT:    fcmp s14, s14
+; VBITS_GE_512-NEXT:    fcsel s14, s8, s14, vs
+; VBITS_GE_512-NEXT:    fcmp s8, s14
+; VBITS_GE_512-NEXT:    fcsel s1, s8, s14, gt
+; VBITS_GE_512-NEXT:    fcmp s15, s15
+; VBITS_GE_512-NEXT:    fcsel s2, s13, s15, vs
+; VBITS_GE_512-NEXT:    stp s1, s10, [sp, #80]
+; VBITS_GE_512-NEXT:    fcmp s13, s2
+; VBITS_GE_512-NEXT:    fcsel s2, s13, s2, gt
+; VBITS_GE_512-NEXT:    fcmp s11, s11
+; VBITS_GE_512-NEXT:    fcsel s3, s12, s11, vs
+; VBITS_GE_512-NEXT:    fcmp s12, s3
+; VBITS_GE_512-NEXT:    fcsel s0, s12, s3, gt
+; VBITS_GE_512-NEXT:    fcmp s9, s9
+; VBITS_GE_512-NEXT:    fcsel s3, s17, s9, vs
+; VBITS_GE_512-NEXT:    stp s0, s2, [sp, #72]
+; VBITS_GE_512-NEXT:    ld1w { z0.s }, p0/z, [x8]
+; VBITS_GE_512-NEXT:    add x8, sp, #64
+; VBITS_GE_512-NEXT:    fcmp s17, s3
+; VBITS_GE_512-NEXT:    fcsel s1, s17, s3, gt
+; VBITS_GE_512-NEXT:    stp s6, s1, [sp, #64]
+; VBITS_GE_512-NEXT:    ld1w { z1.s }, p0/z, [x9]
+; VBITS_GE_512-NEXT:    cmpeq p1.s, p0/z, z1.s, z0.s
+; VBITS_GE_512-NEXT:    mov z0.s, p1/z, #-1 // =0xffffffffffffffff
+; VBITS_GE_512-NEXT:    ptrue p1.s
+; VBITS_GE_512-NEXT:    and z0.s, z0.s, #0x1
+; VBITS_GE_512-NEXT:    cmpne p1.s, p1/z, z0.s, #0
+; VBITS_GE_512-NEXT:    ld1w { z0.s }, p0/z, [x8]
+; VBITS_GE_512-NEXT:    fcmeq p2.s, p0/z, z0.s, #0.0
+; VBITS_GE_512-NEXT:    sel z1.s, p1, z1.s, z0.s
+; VBITS_GE_512-NEXT:    mov z0.s, p2/m, z1.s
+; VBITS_GE_512-NEXT:    st1w { z0.s }, p0, [x0]
+; VBITS_GE_512-NEXT:    sub sp, x29, #64
+; VBITS_GE_512-NEXT:    ldp x29, x30, [sp, #64] // 16-byte Folded Reload
+; VBITS_GE_512-NEXT:    ldp d9, d8, [sp, #48] // 16-byte Folded Reload
+; VBITS_GE_512-NEXT:    ldp d11, d10, [sp, #32] // 16-byte Folded Reload
+; VBITS_GE_512-NEXT:    ldp d13, d12, [sp, #16] // 16-byte Folded Reload
+; VBITS_GE_512-NEXT:    ldp d15, d14, [sp], #80 // 16-byte Folded Reload
+; VBITS_GE_512-NEXT:    ret
+  %op1 = load <16 x float>, ptr %a
+  %op2 = load <16 x float>, ptr %b
+  %res = call <16 x float> @llvm.maximumnum.v16f32(<16 x float> %op1, <16 x float> %op2)
+  store <16 x float> %res, ptr %a
+  ret void
+}
+
+define void @fmaximumnum_v32f32(ptr %a, ptr %b) vscale_range(8,0) #0 {
+; CHECK-LABEL: fmaximumnum_v32f32:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    stp d15, d14, [sp, #-80]! // 16-byte Folded Spill
+; CHECK-NEXT:    sub x9, sp, #560
+; CHECK-NEXT:    stp d13, d12, [sp, #16] // 16-byte Folded Spill
+; CHECK-NEXT:    addvl x9, x9, #-5
+; CHECK-NEXT:    stp d11, d10, [sp, #32] // 16-byte Folded Spill
+; CHECK-NEXT:    stp d9, d8, [sp, #48] // 16-byte Folded Spill
+; CHECK-NEXT:    stp x29, x30, [sp, #64] // 16-byte Folded Spill
+; CHECK-NEXT:    add x29, sp, #64
+; CHECK-NEXT:    and sp, x9, #0xffffffffffffff80
+; CHECK-NEXT:    .cfi_def_cfa w29, 16
+; CHECK-NEXT:    .cfi_offset w30, -8
+; CHECK-NEXT:    .cfi_offset w29, -16
+; CHECK-NEXT:    .cfi_offset b8, -24
+; CHECK-NEXT:    .cfi_offset b9, -32
+; CHECK-NEXT:    .cfi_offset b10, -40
+; CHECK-NEXT:    .cfi_offset b11, -48
+; CHECK-NEXT:    .cfi_offset b12, -56
+; CHECK-NEXT:    .cfi_offset b13, -64
+; CHECK-NEXT:    .cfi_offset b14, -72
+; CHECK-NEXT:    .cfi_offset b15, -80
+; CHECK-NEXT:    ptrue p0.s, vl32
+; CHECK-NEXT:    mov w8, #31 // =0x1f
+; CHECK-NEXT:    add x9, sp, #256
+; CHECK-NEXT:    ld1w { z25.s }, p0/z, [x0]
+; CHECK-NEXT:    ld1w { z22.s }, p0/z, [x1]
+; CHECK-NEXT:    fcmp s25, s25
+; CHECK-NEXT:    mov z12.s, z22.s[15]
+; CHECK-NEXT:    mov z8.s, z22.s[14]
+; CHECK-NEXT:    mov z31.s, z22.s[13]
+; CHECK-NEXT:    mov z29.s, z22.s[12]
+; CHECK-NEXT:    mov z27.s, z22.s[11]
+; CHECK-NEXT:    mov z24.s, z22.s[10]
+; CHECK-NEXT:    mov z21.s, z22.s[9]
+; CHECK-NEXT:    mov z18.s, z22.s[8]
+; CHECK-NEXT:    fcsel s1, s22, s25, vs
+; CHECK-NEXT:    whilels p1.s, xzr, x8
+; CHECK-NEXT:    mov w8, #30 // =0x1e
+; CHECK-NEXT:    mov z17.s, z22.s[7]
+; CHECK-NEXT:    mov z19.s, z22.s[6]
+; CHECK-NEXT:    mov z9.s, z25.s[2]
+; CHECK-NEXT:    lastb s0, p1, z25.s
+; CHECK-NEXT:    lastb s2, p1, z22.s
+; CHECK-NEXT:    fcmp s0, s0
+; CHECK-NEXT:    fcsel s4, s2, s0, vs
+; CHECK-NEXT:    whilels p1.s, xzr, x8
+; CHECK-NEXT:    mov w8, #29 // =0x1d
+; CHECK-NEXT:    lastb s0, p1, z25.s
+; CHECK-NEXT:    lastb s3, p1, z22.s
+; CHECK-NEXT:    fcmp s0, s0
+; CHECK-NEXT:    fcsel s0, s3, s0, vs
+; CHECK-NEXT:    whilels p1.s, xzr, x8
+; CHECK-NEXT:    mov w8, #28 // =0x1c
+; CHECK-NEXT:    lastb s23, p1, z22.s
+; CHECK-NEXT:    stp s0, s1, [sp, #248] // 8-byte Folded Spill
+; CHECK-NEXT:    lastb s0, p1, z25.s
+; CHECK-NEXT:    fcmp s0, s0
+; CHECK-NEXT:    fcsel s0, s23, s0, vs
+; CHECK-NEXT:    whilels p1.s, xzr, x8
+; CHECK-NEXT:    mov w8, #27 // =0x1b
+; CHECK-NEXT:    lastb s30, p1, z22.s
+; CHECK-NEXT:    stp s0, s4, [sp, #240] // 8-byte Folded Spill
+; CHECK-NEXT:    lastb s0, p1, z25.s
+; CHECK-NEXT:    fcmp s0, s0
+; CHECK-NEXT:    fcsel s4, s30, s0, vs
+; CHECK-NEXT:    whilels p1.s, xzr, x8
+; CHECK-NEXT:    mov w8, #26 // =0x1a
+; CHECK-NEXT:    lastb s0, p1, z25.s
+; CHECK-NEXT:    lastb s1, p1, z22.s
+; CHECK-NEXT:    fcmp s0, s0
+; CHECK-NEXT:    str s1, [sp, #208] // 4-byte Spill
+; CHECK-NEXT:    fcsel s0, s1, s0, vs
+; CHECK-NEXT:    whilels p1.s, xzr, x8
+; CHECK-NEXT:    mov w8, #25 // =0x19
+; CHECK-NEXT:    lastb s1, p1, z22.s
+; CHECK-NEXT:    stp s0, s4, [sp, #232] // 8-byte Folded Spill
+; CHECK-NEXT:    lastb s0, p1, z25.s
+; CHECK-NEXT:    str s1, [sp, #204] // 4-byte Spill
+; CHECK-NEXT:    fcmp s0, s0
+; CHECK-NEXT:    fcsel s4, s1, s0, vs
+; CHECK-NEXT:    whilels p1.s, xzr, x8
+; CHECK-NEXT:    mov w8, #24 // =0x18
+; CHECK-NEXT:    lastb s0, p1, z25.s
+; CHECK-NEXT:    lastb s5, p1, z22.s
+; CHECK-NEXT:    fcmp s0, s0
+; CHECK-NEXT:    fcsel s0, s5, s0, vs
+; CHECK-NEXT:    whilels p1.s, xzr, x8
+; CHECK-NEXT:    mov w8, #23 // =0x17
+; CHECK-NEXT:    lastb s1, p1, z22.s
+; CHECK-NEXT:    stp s0, s4, [sp, #224] // 8-byte Folded Spill
+; CHECK-NEXT:    lastb s0, p1, z25.s
+; CHECK-NEXT:    str s1, [sp, #200] // 4-byte Spill
+; CHECK-NEXT:    fcmp s0, s0
+; CHECK-NEXT:    fcsel s4, s1, s0, vs
+; CHECK-NEXT:    whilels p1.s, xzr, x8
+; CHECK-NEXT:    mov w8, #22 // =0x16
+; CHECK-NEXT:    lastb s0, p1, z25.s
+; CHECK-NEXT:    lastb s1, p1, z22.s
+; CHECK-NEXT:    fcmp s0, s0
+; CHECK-NEXT:    str s1, [sp, #196] // 4-byte Spill
+; CHECK-NEXT:    fcsel s0, s1, s0, vs
+; CHECK-NEXT:    whilels p1.s, xzr, x8
+; CHECK-NEXT:    mov w8, #21 // =0x15
+; CHECK-NEXT:    lastb s14, p1, z22.s
+; CHECK-NEXT:    stp s0, s4, [sp, #216] // 8-byte Folded Spill
+; CHECK-NEXT:    lastb s0, p1, z25.s
+; CHECK-NEXT:    fcmp s0, s0
+; CHECK-NEXT:    fcsel s0, s14, s0, vs
+; CHECK-NEXT:    whilels p1.s, xzr, x8
+; CHECK-NEXT:    mov w8, #20 // =0x14
+; CHECK-NEXT:    lastb s1, p1, z22.s
+; CHECK-NEXT:    str s0, [sp, #212] // 4-byte Spill
+; CHECK-NEXT:    lastb s0, p1, z25.s
+; CHECK-NEXT:    fcmp s0, s0
+; CHECK-NEXT:    fcsel s0, s1, s0, vs
+; CHECK-NEXT:    whilels p1.s, xzr, x8
+; CHECK-NEXT:    mov w8, #19 // =0x13
+; CHECK-NEXT:    stp s1, s0, [sp, #188] // 8-byte Folded Spill
+; CHECK-NEXT:    lastb s0, p1, z25.s
+; CHECK-NEXT:    lastb s1, p1, z22.s
+; CHECK-NEXT:    fcmp s0, s0
+; CHECK-NEXT:    fcsel s0, s1, s0, vs
+; CHECK-NEXT:    whilels p1.s, xzr, x8
+; CHECK-NEXT:    mov w8, #18 // =0x12
+; CHECK-NEXT:    stp s1, s0, [sp, #180] // 8-byte Folded Spill
+; CHECK-NEXT:    lastb s0, p1, z25.s
+; CHECK-NEXT:    lastb s1, p1, z22.s
+; CHECK-NEXT:    fcmp s0, s0
+; CHECK-NEXT:    fcsel s0, s1, s0, vs
+; CHECK-NEXT:    whilels p1.s, xzr, x8
+; CHECK-NEXT:    mov w8, #17 // =0x11
+; CHECK-NEXT:    stp s1, s0, [sp, #172] // 8-byte Folded Spill
+; CHECK-NEXT:    lastb s0, p1, z25.s
+; CHECK-NEXT:    lastb s1, p1, z22.s
+; CHECK-NEXT:    fcmp s0, s0
+; CHECK-NEXT:    fcsel s0, s1, s0, vs
+; CHECK-NEXT:    whilels p1.s, xzr, x8
+; CHECK-NEXT:    mov w8, #16 // =0x10
+; CHECK-NEXT:    stp s1, s0, [sp, #164] // 8-byte Folded Spill
+; CHECK-NEXT:    lastb s0, p1, z25.s
+; CHECK-NEXT:    lastb s1, p1, z22.s
+; CHECK-NEXT:    fcmp s0, s0
+; CHECK-NEXT:    fcsel s0, s1, s0, vs
+; CHECK-NEXT:    whilels p1.s, xzr, x8
+; CHECK-NEXT:    sub x8, x29, #64
+; CHECK-NEXT:    lastb s4, p1, z22.s
+; CHECK-NEXT:    stp s1, s0, [sp, #156] // 8-byte Folded Spill
+; CHECK-NEXT:    lastb s0, p1, z25.s
+; CHECK-NEXT:    mov z1.s, z25.s[15]
+; CHECK-NEXT:    fcmp s0, s0
+; CHECK-NEXT:    fcsel s0, s4, s0, vs
+; CHECK-NEXT:    fcmp s1, s1
+; CHECK-NEXT:    stp s4, s0, [sp, #144] // 8-byte Folded Spill
+; CHECK-NEXT:    mov z0.s, z25.s[14]
+; CHECK-NEXT:    fcsel s6, s12, s1, vs
+; CHECK-NEXT:    mov z1.s, z25.s[13]
+; CHECK-NEXT:    mov z4.s, z22.s[5]
+; CHECK-NEXT:    fcmp s0, s0
+; CHECK-NEXT:    str z4, [x8, #-5, mul vl] // 16-byte Folded Spill
+; CHECK-NEXT:    fcsel s0, s8, s0, vs
+; CHECK-NEXT:    fcmp s1, s1
+; CHECK-NEXT:    stp s0, s6, [sp, #136] // 8-byte Folded Spill
+; CHECK-NEXT:    mov z0.s, z25.s[12]
+; CHECK-NEXT:    fcsel s6, s31, s1, vs
+; CHECK-NEXT:    mov z1.s, z25.s[11]
+; CHECK-NEXT:    fcmp s0, s0
+; CHECK-NEXT:    fcsel s0, s29, s0, vs
+; CHECK-NEXT:    fcmp s1, s1
+; CHECK-NEXT:    stp s0, s6, [sp, #128] // 8-byte Folded Spill
+; CHECK-NEXT:    mov z0.s, z25.s[10]
+; CHECK-NEXT:    fcsel s15, s27, s1, vs
+; CHECK-NEXT:    mov z1.s, z25.s[9]
+; CHECK-NEXT:    fcmp s0, s0
+; CHECK-NEXT:    fcsel s13, s24, s0, vs
+; CHECK-NEXT:    fcmp s1, s1
+; CHECK-NEXT:    mov z0.s, z25.s[8]
+; CHECK-NEXT:    fcsel s11, s21, s1, vs
+; CHECK-NEXT:    fcmp s0, s0
+; CHECK-NEXT:    mov z1.s, z25.s[7]
+; CHECK-NEXT:    fcsel s10, s18, s0, vs
+; CHECK-NEXT:    fcmp s1, s1
+; CHECK-NEXT:    mov z0.s, z25.s[6]
+; CHECK-NEXT:    fcsel s28, s17, s1, vs
+; CHECK-NEXT:    fcmp s0, s0
+; CHECK-NEXT:    mov z1.s, z25.s[5]
+; CHECK-NEXT:    fcsel s20, s19, s0, vs
+; CHECK-NEXT:    fcmp s1, s1
+; CHECK-NEXT:    mov z0.s, z25.s[4]
+; CHECK-NEXT:    fcsel s7, s4, s1, vs
+; CHECK-NEXT:    fcmp s0, s0
+; CHECK-NEXT:    mov z1.s, z22.s[4]
+; CHECK-NEXT:    mov z4.s, z25.s[3]
+; CHECK-NEXT:    mov z25.s, z25.s[1]
+; CHECK-NEXT:    fcsel s16, s1, s0, vs
+; CHECK-NEXT:    mov z0.s, z22.s[3]
+; CHECK-NEXT:    str z1, [x8, #-3, mul vl] // 16-byte Folded Spill
+; CHECK-NEXT:    fcmp s4, s4
+; CHECK-NEXT:    str z0, [x8, #-4, mul vl] // 16-byte Folded Spill
+; CHECK-NEXT:    fcsel s6, s0, s4, vs
+; CHECK-NEXT:    fcmp s9, s9
+; CHECK-NEXT:    mov z0.s, z22.s[2]
+; CHECK-NEXT:    ldr s4, [sp, #208] // 4-byte Reload
+; CHECK-NEXT:    str z0, [x8, #-2, mul vl] // 16-byte Folded Spill
+; CHECK-NEXT:    fcsel s26, s0, s9, vs
+; CHECK-NEXT:    fcmp s25, s25
+; CHECK-NEXT:    mov z0.s, z22.s[1]
+; CHECK-NEXT:    fcsel s25, s0, s25, vs
+; CHECK-NEXT:    fcmp s22, s22
+; CHECK-NEXT:    str z0, [x8, #-1, mul vl] // 16-byte Folded Spill
+; CHECK-NEXT:    ldr s0, [sp, #252] // 4-byte Reload
+; CHECK-NEXT:    fcsel s22, s0, s22, vs
+; CHECK-NEXT:    fcmp s0, s22
+; CHECK-NEXT:    fcsel s1, s0, s22, gt
+; CHECK-NEXT:    fcmp s2, s2
+; CHECK-NEXT:    ldr s0, [sp, #244] // 4-byte Reload
+; CHECK-NEXT:    fcsel s22, s0, s2, vs
+; CHECK-NEXT:    str s1, [sp, #152] // 4-byte Spill
+; CHECK-NEXT:    fcmp s0, s22
+; CHECK-NEXT:    fcsel s2, s0, s22, gt
+; CHECK-NEXT:    fcmp s3, s3
+; CHECK-NEXT:    ldr s0, [sp, #248] // 4-byte Reload
+; CHECK-NEXT:    fcsel s22, s0, s3, vs
+; CHECK-NEXT:    fcmp s0, s22
+; CHECK-NEXT:    fcsel s1, s0, s22, gt
+; CHECK-NEXT:    fcmp s23, s23
+; CHECK-NEXT:    stp s1, s2, [sp, #120] // 8-byte Folded Spill
+; CHECK-NEXT:    ldp s0, s2, [sp, #236] // 8-byte Folded Reload
+; CHECK-NEXT:    fcsel s22, s2, s23, vs
+; CHECK-NEXT:    fcmp s2, s22
+; CHECK-NEXT:    fcsel s3, s2, s22, gt
+; CHECK-NEXT:    fcmp s30, s30
+; CHECK-NEXT:    fcsel s22, s0, s30, vs
+; CHECK-NEXT:    fcmp s0, s22
+; CHECK-NEXT:    fcsel s1, s0, s22, gt
+; CHECK-NEXT:    fcmp s4, s4
+; CHECK-NEXT:    ldp s0, s2, [sp, #228] // 8-byte Folded Reload
+; CHECK-NEXT:    stp s1, s3, [sp, #112] // 8-byte Folded Spill
+; CHECK-NEXT:    ldr s1, [sp, #204] // 4-byte Reload
+; CHECK-NEXT:    fcsel s22, s2, s4, vs
+; CHECK-NEXT:    fcmp s2, s22
+; CHECK-NEXT:    fcsel s3, s2, s22, gt
+; CHECK-NEXT:    fcmp s1, s1
+; CHECK-NEXT:    fcsel s22, s0, s1, vs
+; CHECK-NEXT:    fcmp s0, s22
+; CHECK-NEXT:    fcsel s1, s0, s22, gt
+; CHECK-NEXT:    fcmp s5, s5
+; CHECK-NEXT:    ldp s0, s2, [sp, #220] // 8-byte Folded Reload
+; CHECK-NEXT:    stp s1, s3, [sp, #204] // 8-byte Folded Spill
+; CHECK-NEXT:    ldr s1, [sp, #200] // 4-byte Reload
+; CHECK-NEXT:    fcsel s22, s2, s5, vs
+; CHECK-NEXT:    fcmp s2, s22
+; CHECK-NEXT:    fcsel s3, s2, s22, gt
+; CHECK-NEXT:    fcmp s1, s1
+; CHECK-NEXT:    fcsel s22, s0, s1, vs
+; CHECK-NEXT:    ldr s1, [sp, #196] // 4-byte Reload
+; CHECK-NEXT:    fcmp s0, s22
+; CHECK-NEXT:    fcsel s2, s0, s22, gt
+; CHECK-NEXT:    fcmp s1, s1
+; CHECK-NEXT:    ldp s0, s4, [sp, #212] // 8-byte Folded Reload
+; CHECK-NEXT:    fcsel s22, s4, s1, vs
+; CHECK-NEXT:    fcmp s4, s22
+; CHECK-NEXT:    fcsel s1, s4, s22, gt
+; CHECK-NEXT:    fcmp s14, s14
+; CHECK-NEXT:    fcsel s22, s0, s14, vs
+; CHECK-NEXT:    stp s1, s2, [sp, #196] // 8-byte Folded Spill
+; CHECK-NEXT:    fcmp s0, s22
+; CHECK-NEXT:    fcsel s1, s0, s22, gt
+; CHECK-NEXT:    stp s1, s3, [sp, #104] // 8-byte Folded Spill
+; CHECK-NEXT:    ldp s1, s14, [sp, #188] // 8-byte Folded Reload
+; CHECK-NEXT:    ldp s2, s3, [sp, #136] // 8-byte Folded Reload
+; CHECK-NEXT:    fcmp s1, s1
+; CHECK-NEXT:    str s14, [sp, #340]
+; CHECK-NEXT:    fcsel s22, s14, s1, vs
+; CHECK-NEXT:    fcmp s14, s22
+; CHECK-NEXT:    fcsel s1, s14, s22, gt
+; CHECK-NEXT:    str s1, [sp, #188] // 4-byte Spill
+; CHECK-NEXT:    ldp s1, s9, [sp, #180] // 8-byte Folded Reload
+; CHECK-NEXT:    fcmp s1, s1
+; CHECK-NEXT:    str s9, [sp, #336]
+; CHECK-NEXT:    fcsel s22, s9, s1, vs
+; CHECK-NEXT:    fcmp s9, s22
+; CHECK-NEXT:    fcsel s1, s9, s22, gt
+; CHECK-NEXT:    str s1, [sp, #180] // 4-byte Spill
+; CHECK-NEXT:    ldp s1, s30, [sp, #172] // 8-byte Folded Reload
+; CHECK-NEXT:    fcmp s1, s1
+; CHECK-NEXT:    str s30, [sp, #332]
+; CHECK-NEXT:    fcsel s22, s30, s1, vs
+; CHECK-NEXT:    fcmp s30, s22
+; CHECK-NEXT:    fcsel s1, s30, s22, gt
+; CHECK-NEXT:    str s1, [sp, #172] // 4-byte Spill
+; CHECK-NEXT:    ldp s1, s23, [sp, #164] // 8-byte Folded Reload
+; CHECK-NEXT:    fcmp s1, s1
+; CHECK-NEXT:    str s23, [sp, #328]
+; CHECK-NEXT:    fcsel s22, s23, s1, vs
+; CHECK-NEXT:    fcmp s23, s22
+; CHECK-NEXT:    fcsel s1, s23, s22, gt
+; CHECK-NEXT:    str s1, [sp, #164] // 4-byte Spill
+; CHECK-NEXT:    ldp s1, s5, [sp, #156] // 8-byte Folded Reload
+; CHECK-NEXT:    fcmp s1, s1
+; CHECK-NEXT:    str s5, [sp, #324]
+; CHECK-NEXT:    fcsel s22, s5, s1, vs
+; CHECK-NEXT:    fcmp s5, s22
+; CHECK-NEXT:    fcsel s1, s5, s22, gt
+; CHECK-NEXT:    str s1, [sp, #156] // 4-byte Spill
+; CHECK-NEXT:    ldp s1, s4, [sp, #144] // 8-byte Folded Reload
+; CHECK-NEXT:    fcmp s1, s1
+; CHECK-NEXT:    str s4, [sp, #320]
+; CHECK-NEXT:    fcsel s22, s4, s1, vs
+; CHECK-NEXT:    fcmp s4, s22
+; CHECK-NEXT:    fcsel s1, s4, s22, gt
+; CHECK-NEXT:    fcmp s12, s12
+; CHECK-NEXT:    ldr s22, [sp, #244] // 4-byte Reload
+; CHECK-NEXT:    str s22, [sp, #380]
+; CHECK-NEXT:    ldr s22, [sp, #248] // 4-byte Reload
+; CHECK-NEXT:    fcsel s12, s3, s12, vs
+; CHECK-NEXT:    str s1, [sp, #144] // 4-byte Spill
+; CHECK-NEXT:    ldp s0, s1, [sp, #128] // 8-byte Folded Reload
+; CHECK-NEXT:    str s22, [sp, #376]
+; CHECK-NEXT:    ldr s22, [sp, #240] // 4-byte Reload
+; CHECK-NEXT:    fcmp s3, s12
+; CHECK-NEXT:    str s22, [sp, #372]
+; CHECK-NEXT:    ldr s22, [sp, #236] // 4-byte Reload
+; CHECK-NEXT:    fcsel s12, s3, s12, gt
+; CHECK-NEXT:    fcmp s8, s8
+; CHECK-NEXT:    str s22, [sp, #368]
+; CHECK-NEXT:    ldr s22, [sp, #232] // 4-byte Reload
+; CHECK-NEXT:    fcsel s8, s2, s8, vs
+; CHECK-NEXT:    str s22, [sp, #364]
+; CHECK-NEXT:    ldr s22, [sp, #228] // 4-byte Reload
+; CHECK-NEXT:    str s22, [sp, #360]
+; CHECK-NEXT:    ldr s22, [sp, #224] // 4-byte Reload
+; CHECK-NEXT:    fcmp s2, s8
+; CHECK-NEXT:    str s22, [sp, #356]
+; CHECK-NEXT:    ldr s22, [sp, #220] // 4-byte Reload
+; CHECK-NEXT:    fcsel s8, s2, s8, gt
+; CHECK-NEXT:    fcmp s31, s31
+; CHECK-NEXT:    str s22, [sp, #352]
+; CHECK-NEXT:    ldr s22, [sp, #216] // 4-byte Reload
+; CHECK-NEXT:    fcsel s31, s1, s31, vs
+; CHECK-NEXT:    str s22, [sp, #348]
+; CHECK-NEXT:    ldr s22, [sp, #212] // 4-byte Reload
+; CHECK-NEXT:    str s22, [sp, #344]
+; CHECK-NEXT:    fcmp s1, s31
+; CHECK-NEXT:    ldr z4, [x8, #-5, mul vl] // 16-byte Folded Reload
+; CHECK-NEXT:    str s3, [sp, #316]
+; CHECK-NEXT:    str s2, [sp, #312]
+; CHECK-NEXT:    str s1, [sp, #308]
+; CHECK-NEXT:    fcsel s31, s1, s31, gt
+; CHECK-NEXT:    fcmp s29, s29
+; CHECK-NEXT:    str s0, [sp, #304]
+; CHECK-NEXT:    str s15, [sp, #300]
+; CHECK-NEXT:    ldr s1, [sp, #252] // 4-byte Reload
+; CHECK-NEXT:    str s13, [sp, #296]
+; CHECK-NEXT:    fcsel s29, s0, s29, vs
+; CHECK-NEXT:    str s11, [sp, #292]
+; CHECK-NEXT:    str s10, [sp, #288]
+; CHECK-NEXT:    str s28, [sp, #284]
+; CHECK-NEXT:    fcmp s0, s29
+; CHECK-NEXT:    fcsel s29, s0, s29, gt
+; CHECK-NEXT:    fcmp s27, s27
+; CHECK-NEXT:    ldr z0, [x8, #-3, mul vl] // 16-byte Folded Reload
+; CHECK-NEXT:    str s1, [sp, #256]
+; CHECK-NEXT:    str s20, [sp, #280]
+; CHECK-NEXT:    fcsel s27, s15, s27, vs
+; CHECK-NEXT:    str s7, [sp, #276]
+; CHECK-NEXT:    str s16, [sp, #272]
+; CHECK-NEXT:    str s6, [sp, #268]
+; CHECK-NEXT:    fcmp s15, s27
+; CHECK-NEXT:    str s26, [sp, #264]
+; CHECK-NEXT:    str s25, [sp, #260]
+; CHECK-NEXT:    fcsel s27, s15, s27, gt
+; CHECK-NEXT:    fcmp s24, s24
+; CHECK-NEXT:    fcsel s24, s13, s24, vs
+; CHECK-NEXT:    fcmp s13, s24
+; CHECK-NEXT:    fcsel s24, s13, s24, gt
+; CHECK-NEXT:    fcmp s21, s21
+; CHECK-NEXT:    fcsel s21, s11, s21, vs
+; CHECK-NEXT:    fcmp s11, s21
+; CHECK-NEXT:    fcsel s21, s11, s21, gt
+; CHECK-NEXT:    fcmp s18, s18
+; CHECK-NEXT:    fcsel s18, s10, s18, vs
+; CHECK-NEXT:    fcmp s10, s18
+; CHECK-NEXT:    fcsel s18, s10, s18, gt
+; CHECK-NEXT:    fcmp s17, s17
+; CHECK-NEXT:    fcsel s17, s28, s17, vs
+; CHECK-NEXT:    fcmp s28, s17
+; CHECK-NEXT:    fcsel s17, s28, s17, gt
+; CHECK-NEXT:    fcmp s19, s19
+; CHECK-NEXT:    fcsel s19, s20, s19, vs
+; CHECK-NEXT:    fcmp s20, s19
+; CHECK-NEXT:    fcsel s19, s20, s19, gt
+; CHECK-NEXT:    fcmp s4, s4
+; CHECK-NEXT:    fcsel s23, s7, s4, vs
+; CHECK-NEXT:    fcmp s7, s23
+; CHECK-NEXT:    fcsel s5, s7, s23, gt
+; CHECK-NEXT:    fcmp s0, s0
+; CHECK-NEXT:    fcsel s1, s16, s0, vs
+; CHECK-NEXT:    ldp s0, s2, [sp, #120] // 8-byte Folded Reload
+; CHECK-NEXT:    str s2, [sp, #508]
+; CHECK-NEXT:    fcmp s16, s1
+; CHECK-NEXT:    str s0, [sp, #504]
+; CHECK-NEXT:    ldp s2, s3, [sp, #112] // 8-byte Folded Reload
+; CHECK-NEXT:    ldr z0, [x8, #-4, mul vl] // 16-byte Folded Reload
+; CHECK-NEXT:    fcsel s1, s16, s1, gt
+; CHECK-NEXT:    str s2, [sp, #496]
+; CHECK-NEXT:    ldr s2, [sp, #208] // 4-byte Reload
+; CHECK-NEXT:    fcmp s0, s0
+; CHECK-NEXT:    str s3, [sp, #500]
+; CHECK-NEXT:    str s2, [sp, #492]
+; CHECK-NEXT:    fcsel s2, s6, s0, vs
+; CHECK-NEXT:    ldr s0, [sp, #204] // 4-byte Reload
+; CHECK-NEXT:    str s0, [sp, #488]
+; CHECK-NEXT:    ldr s0, [sp, #108] // 4-byte Reload
+; CHECK-NEXT:    fcmp s6, s2
+; CHECK-NEXT:    str s0, [sp, #484]
+; CHECK-NEXT:    ldp s0, s3, [sp, #196] // 8-byte Folded Reload
+; CHECK-NEXT:    str s0, [sp, #476]
+; CHECK-NEXT:    ldr s0, [sp, #104] // 4-byte Reload
+; CHECK-NEXT:    str s3, [sp, #480]
+; CHECK-NEXT:    ldr s3, [sp, #180] // 4-byte Reload
+; CHECK-NEXT:    str s0, [sp, #472]
+; CHECK-NEXT:    ldr s0, [sp, #188] // 4-byte Reload
+; CHECK-NEXT:    str s0, [sp, #468]
+; CHECK-NEXT:    fcsel s0, s6, s2, gt
+; CHECK-NEXT:    ldr z2, [x8, #-2, mul vl] // 16-byte Folded Reload
+; CHECK-NEXT:    str s3, [sp, #464]
+; CHECK-NEXT:    ldr s3, [sp, #172] // 4-byte Reload
+; CHECK-NEXT:    str s12, [sp, #444]
+; CHECK-NEXT:    str s3, [sp, #460]
+; CHECK-NEXT:    ldr s3, [sp, #164] // 4-byte Reload
+; CHECK-NEXT:    fcmp s2, s2
+; CHECK-NEXT:    str s8, [sp, #440]
+; CHECK-NEXT:    str s3, [sp, #456]
+; CHECK-NEXT:    ldr s3, [sp, #156] // 4-byte Reload
+; CHECK-NEXT:    str s31, [sp, #436]
+; CHECK-NEXT:    fcsel s2, s26, s2, vs
+; CHECK-NEXT:    str s3, [sp, #452]
+; CHECK-NEXT:    ldr s3, [sp, #144] // 4-byte Reload
+; CHECK-NEXT:    str s29, [sp, #432]
+; CHECK-NEXT:    str s3, [sp, #448]
+; CHECK-NEXT:    fcmp s26, s2
+; CHECK-NEXT:    ldr z3, [x8, #-1, mul vl] // 16-byte Folded Reload
+; CHECK-NEXT:    str s1, [sp, #400]
+; CHECK-NEXT:    str s0, [sp, #396]
+; CHECK-NEXT:    ldr s0, [sp, #152] // 4-byte Reload
+; CHECK-NEXT:    adrp x8, .LCPI82_0
+; CHECK-NEXT:    add x8, x8, :lo12:.LCPI82_0
+; CHECK-NEXT:    str s27, [sp, #428]
+; CHECK-NEXT:    fcsel s2, s26, s2, gt
+; CHECK-NEXT:    fcmp s3, s3
+; CHECK-NEXT:    str s24, [sp, #424]
+; CHECK-NEXT:    str s21, [sp, #420]
+; CHECK-NEXT:    str s18, [sp, #416]
+; CHECK-NEXT:    fcsel s3, s25, s3, vs
+; CHECK-NEXT:    str s17, [sp, #412]
+; CHECK-NEXT:    str s19, [sp, #408]
+; CHECK-NEXT:    str s5, [sp, #404]
+; CHECK-NEXT:    fcmp s25, s3
+; CHECK-NEXT:    str s2, [sp, #392]
+; CHECK-NEXT:    str s0, [sp, #384]
+; CHECK-NEXT:    ld1w { z0.s }, p0/z, [x8]
+; CHECK-NEXT:    add x8, sp, #384
+; CHECK-NEXT:    fcsel s1, s25, s3, gt
+; CHECK-NEXT:    str s1, [sp, #388]
+; CHECK-NEXT:    ld1w { z1.s }, p0/z, [x9]
+; CHECK-NEXT:    cmpeq p1.s, p0/z, z1.s, z0.s
+; CHECK-NEXT:    mov z0.s, p1/z, #-1 // =0xffffffffffffffff
+; CHECK-NEXT:    ptrue p1.s
+; CHECK-NEXT:    and z0.s, z0.s, #0x1
+; CHECK-NEXT:    cmpne p1.s, p1/z, z0.s, #0
+; CHECK-NEXT:    ld1w { z0.s }, p0/z, [x8]
+; CHECK-NEXT:    fcmeq p2.s, p0/z, z0.s, #0.0
+; CHECK-NEXT:    sel z1.s, p1, z1.s, z0.s
+; CHECK-NEXT:    mov z0.s, p2/m, z1.s
+; CHECK-NEXT:    st1w { z0.s }, p0, [x0]
+; CHECK-NEXT:    sub sp, x29, #64
+; CHECK-NEXT:    ldp x29, x30, [sp, #64] // 16-byte Folded Reload
+; CHECK-NEXT:    ldp d9, d8, [sp, #48] // 16-byte Folded Reload
+; CHECK-NEXT:    ldp d11, d10, [sp, #32] // 16-byte Folded Reload
+; CHECK-NEXT:    ldp d13, d12, [sp, #16] // 16-byte Folded Reload
+; CHECK-NEXT:    ldp d15, d14, [sp], #80 // 16-byte Folded Reload
+; CHECK-NEXT:    ret
+  %op1 = load <32 x float>, ptr %a
+  %op2 = load <32 x float>, ptr %b
+  %res = call <32 x float> @llvm.maximumnum.v32f32(<32 x float> %op1, <32 x float> %op2)
+  store <32 x float> %res, ptr %a
+  ret void
+}
+
+define void @fmaximumnum_v64f32(ptr %a, ptr %b) vscale_range(16,0) #0 {
+; CHECK-LABEL: fmaximumnum_v64f32:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    stp d15, d14, [sp, #-80]! // 16-byte Folded Spill
+; CHECK-NEXT:    sub x9, sp, #1200
+; CHECK-NEXT:    stp d13, d12, [sp, #16] // 16-byte Folded Spill
+; CHECK-NEXT:    addvl x9, x9, #-12
+; CHECK-NEXT:    stp d11, d10, [sp, #32] // 16-byte Folded Spill
+; CHECK-NEXT:    stp d9, d8, [sp, #48] // 16-byte Folded Spill
+; CHECK-NEXT:    stp x29, x30, [sp, #64] // 16-byte Folded Spill
+; CHECK-NEXT:    add x29, sp, #64
+; CHECK-NEXT:    and sp, x9, #0xffffffffffffff00
+; CHECK-NEXT:    .cfi_def_cfa w29, 16
+; CHECK-NEXT:    .cfi_offset w30, -8
+; CHECK-NEXT:    .cfi_offset w29, -16
+; CHECK-NEXT:    .cfi_offset b8, -24
+; CHECK-NEXT:    .cfi_offset b9, -32
+; CHECK-NEXT:    .cfi_offset b10, -40
+; CHECK-NEXT:    .cfi_offset b11, -48
+; CHECK-NEXT:    .cfi_offset b12, -56
+; CHECK-NEXT:    .cfi_offset b13, -64
+; CHECK-NEXT:    .cfi_offset b14, -72
+; CHECK-NEXT:    .cfi_offset b15, -80
+; CHECK-NEXT:    ptrue p0.s, vl64
+; CHECK-NEXT:    mov w8, #63 // =0x3f
+; CHECK-NEXT:    add x9, sp, #512
+; CHECK-NEXT:    ld1w { z0.s }, p0/z, [x0]
+; CHECK-NEXT:    ld1w { z13.s }, p0/z, [x1]
+; CHECK-NEXT:    fcmp s0, s0
+; CHECK-NEXT:    mov z27.s, z13.s[15]
+; CHECK-NEXT:    mov z25.s, z13.s[14]
+; CHECK-NEXT:    mov z28.s, z13.s[13]
+; CHECK-NEXT:    mov z7.s, z0.s[6]
+; CHECK-NEXT:    mov z16.s, z0.s[5]
+; CHECK-NEXT:    mov z19.s, z0.s[4]
+; CHECK-NEXT:    mov z21.s, z0.s[3]
+; CHECK-NEXT:    fcsel s1, s13, s0, vs
+; CHECK-NEXT:    whilels p1.s, xzr, x8
+; CHECK-NEXT:    mov w8, #62 // =0x3e
+; CHECK-NEXT:    lastb s30, p1, z13.s
+; CHECK-NEXT:    str s1, [sp, #508] // 4-byte Spill
+; CHECK-NEXT:    lastb s1, p1, z0.s
+; CHECK-NEXT:    fcmp s1, s1
+; CHECK-NEXT:    fcsel s1, s30, s1, vs
+; CHECK-NEXT:    whilels p1.s, xzr, x8
+; CHECK-NEXT:    mov w8, #61 // =0x3d
+; CHECK-NEXT:    lastb s31, p1, z13.s
+; CHECK-NEXT:    str s1, [sp, #396] // 4-byte Spill
+; CHECK-NEXT:    lastb s1, p1, z0.s
+; CHECK-NEXT:    fcmp s1, s1
+; CHECK-NEXT:    fcsel s1, s31, s1, vs
+; CHECK-NEXT:    whilels p1.s, xzr, x8
+; CHECK-NEXT:    mov w8, #60 // =0x3c
+; CHECK-NEXT:    lastb s10, p1, z13.s
+; CHECK-NEXT:    str s1, [sp, #392] // 4-byte Spill
+; CHECK-NEXT:    lastb s1, p1, z0.s
+; CHECK-NEXT:    fcmp s1, s1
+; CHECK-NEXT:    fcsel s1, s10, s1, vs
+; CHECK-NEXT:    whilels p1.s, xzr, x8
+; CHECK-NEXT:    mov w8, #59 // =0x3b
+; CHECK-NEXT:    lastb s24, p1, z13.s
+; CHECK-NEXT:    str s1, [sp, #504] // 4-byte Spill
+; CHECK-NEXT:    lastb s1, p1, z0.s
+; CHECK-NEXT:    fcmp s1, s1
+; CHECK-NEXT:    fcsel s1, s24, s1, vs
+; CHECK-NEXT:    whilels p1.s, xzr, x8
+; CHECK-NEXT:    mov w8, #58 // =0x3a
+; CHECK-NEXT:    lastb s9, p1, z13.s
+; CHECK-NEXT:    str s1, [sp, #500] // 4-byte Spill
+; CHECK-NEXT:    lastb s1, p1, z0.s
+; CHECK-NEXT:    fcmp s1, s1
+; CHECK-NEXT:    fcsel s1, s9, s1, vs
+; CHECK-NEXT:    whilels p1.s, xzr, x8
+; CHECK-NEXT:    mov w8, #57 // =0x39
+; CHECK-NEXT:    lastb s12, p1, z13.s
+; CHECK-NEXT:    str s1, [sp, #496] // 4-byte Spill
+; CHECK-NEXT:    lastb s1, p1, z0.s
+; CHECK-NEXT:    fcmp s1, s1
+; CHECK-NEXT:    fcsel s1, s12, s1, vs
+; CHECK-NEXT:    whilels p1.s, xzr, x8
+; CHECK-NEXT:    mov w8, #56 // =0x38
+; CHECK-NEXT:    lastb s2, p1, z13.s
+; CHECK-NEXT:    str s1, [sp, #492] // 4-byte Spill
+; CHECK-NEXT:    lastb s1, p1, z0.s
+; CHECK-NEXT:    str s2, [sp, #388] // 4-byte Spill
+; CHECK-NEXT:    fcmp s1, s1
+; CHECK-NEXT:    fcsel s1, s2, s1, vs
+; CHECK-NEXT:    whilels p1.s, xzr, x8
+; CHECK-NEXT:    mov w8, #55 // =0x37
+; CHECK-NEXT:    lastb s4, p1, z13.s
+; CHECK-NEXT:    str s1, [sp, #488] // 4-byte Spill
+; CHECK-NEXT:    lastb s1, p1, z0.s
+; CHECK-NEXT:    fcmp s1, s1
+; CHECK-NEXT:    fcsel s1, s4, s1, vs
+; CHECK-NEXT:    whilels p1.s, xzr, x8
+; CHECK-NEXT:    mov w8, #54 // =0x36
+; CHECK-NEXT:    lastb s2, p1, z13.s
+; CHECK-NEXT:    str s1, [sp, #384] // 4-byte Spill
+; CHECK-NEXT:    lastb s1, p1, z0.s
+; CHECK-NEXT:    str s2, [sp, #380] // 4-byte Spill
+; CHECK-NEXT:    fcmp s1, s1
+; CHECK-NEXT:    fcsel s1, s2, s1, vs
+; CHECK-NEXT:    whilels p1.s, xzr, x8
+; CHECK-NEXT:    mov w8, #53 // =0x35
+; CHECK-NEXT:    lastb s2, p1, z13.s
+; CHECK-NEXT:    str s1, [sp, #484] // 4-byte Spill
+; CHECK-NEXT:    lastb s1, p1, z0.s
+; CHECK-NEXT:    str s2, [sp, #376] // 4-byte Spill
+; CHECK-NEXT:    fcmp s1, s1
+; CHECK-NEXT:    fcsel s1, s2, s1, vs
+; CHECK-NEXT:    whilels p1.s, xzr, x8
+; CHECK-NEXT:    mov w8, #52 // =0x34
+; CHECK-NEXT:    lastb s2, p1, z13.s
+; CHECK-NEXT:    str s1, [sp, #480] // 4-byte Spill
+; CHECK-NEXT:    lastb s1, p1, z0.s
+; CHECK-NEXT:    str s2, [sp, #372] // 4-byte Spill
+; CHECK-NEXT:    fcmp s1, s1
+; CHECK-NEXT:    fcsel s1, s2, s1, vs
+; CHECK-NEXT:    whilels p1.s, xzr, x8
+; CHECK-NEXT:    mov w8, #51 // =0x33
+; CHECK-NEXT:    lastb s2, p1, z13.s
+; CHECK-NEXT:    str s1, [sp, #476] // 4-byte Spill
+; CHECK-NEXT:    lastb s1, p1, z0.s
+; CHECK-NEXT:    str s2, [sp, #368] // 4-byte Spill
+; CHECK-NEXT:    fcmp s1, s1
+; CHECK-NEXT:    fcsel s1, s2, s1, vs
+; CHECK-NEXT:    whilels p1.s, xzr, x8
+; CHECK-NEXT:    mov w8, #50 // =0x32
+; CHECK-NEXT:    lastb s2, p1, z13.s
+; CHECK-NEXT:    str s1, [sp, #472] // 4-byte Spill
+; CHECK-NEXT:    lastb s1, p1, z0.s
+; CHECK-NEXT:    str s2, [sp, #364] // 4-byte Spill
+; CHECK-NEXT:    fcmp s1, s1
+; CHECK-NEXT:    fcsel s1, s2, s1, vs
+; CHECK-NEXT:    whilels p1.s, xzr, x8
+; CHECK-NEXT:    mov w8, #49 // =0x31
+; CHECK-NEXT:    lastb s2, p1, z13.s
+; CHECK-NEXT:    str s1, [sp, #468] // 4-byte Spill
+; CHECK-NEXT:    lastb s1, p1, z0.s
+; CHECK-NEXT:    str s2, [sp, #360] // 4-byte Spill
+; CHECK-NEXT:    fcmp s1, s1
+; CHECK-NEXT:    fcsel s1, s2, s1, vs
+; CHECK-NEXT:    whilels p1.s, xzr, x8
+; CHECK-NEXT:    mov w8, #48 // =0x30
+; CHECK-NEXT:    lastb s2, p1, z13.s
+; CHECK-NEXT:    str s1, [sp, #464] // 4-byte Spill
+; CHECK-NEXT:    lastb s1, p1, z0.s
+; CHECK-NEXT:    str s2, [sp, #356] // 4-byte Spill
+; CHECK-NEXT:    fcmp s1, s1
+; CHECK-NEXT:    fcsel s1, s2, s1, vs
+; CHECK-NEXT:    whilels p1.s, xzr, x8
+; CHECK-NEXT:    mov w8, #47 // =0x2f
+; CHECK-NEXT:    lastb s14, p1, z13.s
+; CHECK-NEXT:    str s1, [sp, #460] // 4-byte Spill
+; CHECK-NEXT:    lastb s1, p1, z0.s
+; CHECK-NEXT:    fcmp s1, s1
+; CHECK-NEXT:    fcsel s1, s14, s1, vs
+; CHECK-NEXT:    whilels p1.s, xzr, x8
+; CHECK-NEXT:    mov w8, #46 // =0x2e
+; CHECK-NEXT:    lastb s2, p1, z13.s
+; CHECK-NEXT:    str s1, [sp, #456] // 4-byte Spill
+; CHECK-NEXT:    lastb s1, p1, z0.s
+; CHECK-NEXT:    str s2, [sp, #352] // 4-byte Spill
+; CHECK-NEXT:    fcmp s1, s1
+; CHECK-NEXT:    fcsel s1, s2, s1, vs
+; CHECK-NEXT:    whilels p1.s, xzr, x8
+; CHECK-NEXT:    mov w8, #45 // =0x2d
+; CHECK-NEXT:    lastb s18, p1, z13.s
+; CHECK-NEXT:    str s1, [sp, #452] // 4-byte Spill
+; CHECK-NEXT:    lastb s1, p1, z0.s
+; CHECK-NEXT:    fcmp s1, s1
+; CHECK-NEXT:    fcsel s1, s18, s1, vs
+; CHECK-NEXT:    whilels p1.s, xzr, x8
+; CHECK-NEXT:    mov w8, #44 // =0x2c
+; CHECK-NEXT:    lastb s2, p1, z13.s
+; CHECK-NEXT:    str s1, [sp, #448] // 4-byte Spill
+; CHECK-NEXT:    lastb s1, p1, z0.s
+; CHECK-NEXT:    str s2, [sp, #348] // 4-byte Spill
+; CHECK-NEXT:    fcmp s1, s1
+; CHECK-NEXT:    fcsel s1, s2, s1, vs
+; CHECK-NEXT:    whilels p1.s, xzr, x8
+; CHECK-NEXT:    mov w8, #43 // =0x2b
+; CHECK-NEXT:    lastb s2, p1, z13.s
+; CHECK-NEXT:    str s1, [sp, #444] // 4-byte Spill
+; CHECK-NEXT:    lastb s1, p1, z0.s
+; CHECK-NEXT:    str s2, [sp, #340] // 4-byte Spill
+; CHECK-NEXT:    fcmp s1, s1
+; CHECK-NEXT:    fcsel s1, s2, s1, vs
+; CHECK-NEXT:    whilels p1.s, xzr, x8
+; CHECK-NEXT:    mov w8, #42 // =0x2a
+; CHECK-NEXT:    lastb s20, p1, z13.s
+; CHECK-NEXT:    str s1, [sp, #344] // 4-byte Spill
+; CHECK-NEXT:    lastb s1, p1, z0.s
+; CHECK-NEXT:    fcmp s1, s1
+; CHECK-NEXT:    fcsel s1, s20, s1, vs
+; CHECK-NEXT:    whilels p1.s, xzr, x8
+; CHECK-NEXT:    mov w8, #41 // =0x29
+; CHECK-NEXT:    lastb s2, p1, z13.s
+; CHECK-NEXT:    str s1, [sp, #440] // 4-byte Spill
+; CHECK-NEXT:    lastb s1, p1, z0.s
+; CHECK-NEXT:    str s2, [sp, #336] // 4-byte Spill
+; CHECK-NEXT:    fcmp s1, s1
+; CHECK-NEXT:    fcsel s1, s2, s1, vs
+; CHECK-NEXT:    whilels p1.s, xzr, x8
+; CHECK-NEXT:    mov w8, #40 // =0x28
+; CHECK-NEXT:    lastb s2, p1, z13.s
+; CHECK-NEXT:    str s1, [sp, #436] // 4-byte Spill
+; CHECK-NEXT:    lastb s1, p1, z0.s
+; CHECK-NEXT:    str s2, [sp, #332] // 4-byte Spill
+; CHECK-NEXT:    fcmp s1, s1
+; CHECK-NEXT:    fcsel s1, s2, s1, vs
+; CHECK-NEXT:    whilels p1.s, xzr, x8
+; CHECK-NEXT:    mov w8, #39 // =0x27
+; CHECK-NEXT:    lastb s2, p1, z13.s
+; CHECK-NEXT:    str s1, [sp, #432] // 4-byte Spill
+; CHECK-NEXT:    lastb s1, p1, z0.s
+; CHECK-NEXT:    str s2, [sp, #328] // 4-byte Spill
+; CHECK-NEXT:    fcmp s1, s1
+; CHECK-NEXT:    fcsel s1, s2, s1, vs
+; CHECK-NEXT:    whilels p1.s, xzr, x8
+; CHECK-NEXT:    mov w8, #38 // =0x26
+; CHECK-NEXT:    lastb s22, p1, z13.s
+; CHECK-NEXT:    str s1, [sp, #428] // 4-byte Spill
+; CHECK-NEXT:    lastb s1, p1, z0.s
+; CHECK-NEXT:    fcmp s1, s1
+; CHECK-NEXT:    fcsel s1, s22, s1, vs
+; CHECK-NEXT:    whilels p1.s, xzr, x8
+; CHECK-NEXT:    mov w8, #37 // =0x25
+; CHECK-NEXT:    lastb s2, p1, z13.s
+; CHECK-NEXT:    str s1, [sp, #424] // 4-byte Spill
+; CHECK-NEXT:    lastb s1, p1, z0.s
+; CHECK-NEXT:    str s2, [sp, #324] // 4-byte Spill
+; CHECK-NEXT:    fcmp s1, s1
+; CHECK-NEXT:    fcsel s1, s2, s1, vs
+; CHECK-NEXT:    whilels p1.s, xzr, x8
+; CHECK-NEXT:    mov w8, #36 // =0x24
+; CHECK-NEXT:    lastb s23, p1, z13.s
+; CHECK-NEXT:    str s1, [sp, #420] // 4-byte Spill
+; CHECK-NEXT:    lastb s1, p1, z0.s
+; CHECK-NEXT:    fcmp s1, s1
+; CHECK-NEXT:    fcsel s1, s23, s1, vs
+; CHECK-NEXT:    whilels p1.s, xzr, x8
+; CHECK-NEXT:    mov w8, #35 // =0x23
+; CHECK-NEXT:    lastb s2, p1, z13.s
+; CHECK-NEXT:    str s1, [sp, #416] // 4-byte Spill
+; CHECK-NEXT:    lastb s1, p1, z0.s
+; CHECK-NEXT:    str s2, [sp, #320] // 4-byte Spill
+; CHECK-NEXT:    fcmp s1, s1
+; CHECK-NEXT:    fcsel s1, s2, s1, vs
+; CHECK-NEXT:    whilels p1.s, xzr, x8
+; CHECK-NEXT:    mov w8, #34 // =0x22
+; CHECK-NEXT:    lastb s26, p1, z13.s
+; CHECK-NEXT:    str s1, [sp, #412] // 4-byte Spill
+; CHECK-NEXT:    lastb s1, p1, z0.s
+; CHECK-NEXT:    fcmp s1, s1
+; CHECK-NEXT:    fcsel s1, s26, s1, vs
+; CHECK-NEXT:    whilels p1.s, xzr, x8
+; CHECK-NEXT:    mov w8, #33 // =0x21
+; CHECK-NEXT:    lastb s2, p1, z13.s
+; CHECK-NEXT:    str s1, [sp, #316] // 4-byte Spill
+; CHECK-NEXT:    lastb s1, p1, z0.s
+; CHECK-NEXT:    str s2, [sp, #312] // 4-byte Spill
+; CHECK-NEXT:    fcmp s1, s1
+; CHECK-NEXT:    fcsel s1, s2, s1, vs
+; CHECK-NEXT:    whilels p1.s, xzr, x8
+; CHECK-NEXT:    mov w8, #32 // =0x20
+; CHECK-NEXT:    lastb s2, p1, z13.s
+; CHECK-NEXT:    str s1, [sp, #408] // 4-byte Spill
+; CHECK-NEXT:    lastb s1, p1, z0.s
+; CHECK-NEXT:    str s2, [sp, #308] // 4-byte Spill
+; CHECK-NEXT:    fcmp s1, s1
+; CHECK-NEXT:    fcsel s1, s2, s1, vs
+; CHECK-NEXT:    whilels p1.s, xzr, x8
+; CHECK-NEXT:    mov w8, #31 // =0x1f
+; CHECK-NEXT:    lastb s6, p1, z13.s
+; CHECK-NEXT:    str s1, [sp, #404] // 4-byte Spill
+; CHECK-NEXT:    lastb s1, p1, z0.s
+; CHECK-NEXT:    fcmp s1, s1
+; CHECK-NEXT:    fcsel s1, s6, s1, vs
+; CHECK-NEXT:    whilels p1.s, xzr, x8
+; CHECK-NEXT:    mov w8, #30 // =0x1e
+; CHECK-NEXT:    lastb s2, p1, z13.s
+; CHECK-NEXT:    str s1, [sp, #400] // 4-byte Spill
+; CHECK-NEXT:    lastb s1, p1, z0.s
+; CHECK-NEXT:    str s2, [sp, #300] // 4-byte Spill
+; CHECK-NEXT:    fcmp s1, s1
+; CHECK-NEXT:    fcsel s1, s2, s1, vs
+; CHECK-NEXT:    whilels p1.s, xzr, x8
+; CHECK-NEXT:    mov w8, #29 // =0x1d
+; CHECK-NEXT:    lastb s2, p1, z13.s
+; CHECK-NEXT:    str s1, [sp, #304] // 4-byte Spill
+; CHECK-NEXT:    lastb s1, p1, z0.s
+; CHECK-NEXT:    str s2, [sp, #292] // 4-byte Spill
+; CHECK-NEXT:    fcmp s1, s1
+; CHECK-NEXT:    fcsel s1, s2, s1, vs
+; CHECK-NEXT:    whilels p1.s, xzr, x8
+; CHECK-NEXT:    mov w8, #28 // =0x1c
+; CHECK-NEXT:    lastb s2, p1, z13.s
+; CHECK-NEXT:    str s1, [sp, #296] // 4-byte Spill
+; CHECK-NEXT:    lastb s1, p1, z0.s
+; CHECK-NEXT:    str s2, [sp, #280] // 4-byte Spill
+; CHECK-NEXT:    fcmp s1, s1
+; CHECK-NEXT:    fcsel s1, s2, s1, vs
+; CHECK-NEXT:    whilels p1.s, xzr, x8
+; CHECK-NEXT:    mov w8, #27 // =0x1b
+; CHECK-NEXT:    lastb s2, p1, z13.s
+; CHECK-NEXT:    str s1, [sp, #284] // 4-byte Spill
+; CHECK-NEXT:    lastb s1, p1, z0.s
+; CHECK-NEXT:    str s2, [sp, #272] // 4-byte Spill
+; CHECK-NEXT:    fcmp s1, s1
+; CHECK-NEXT:    fcsel s1, s2, s1, vs
+; CHECK-NEXT:    whilels p1.s, xzr, x8
+; CHECK-NEXT:    mov w8, #26 // =0x1a
+; CHECK-NEXT:    lastb s2, p1, z13.s
+; CHECK-NEXT:    str s1, [sp, #276] // 4-byte Spill
+; CHECK-NEXT:    lastb s1, p1, z0.s
+; CHECK-NEXT:    str s2, [sp, #264] // 4-byte Spill
+; CHECK-NEXT:    fcmp s1, s1
+; CHECK-NEXT:    fcsel s1, s2, s1, vs
+; CHECK-NEXT:    whilels p1.s, xzr, x8
+; CHECK-NEXT:    mov w8, #25 // =0x19
+; CHECK-NEXT:    lastb s2, p1, z13.s
+; CHECK-NEXT:    str s1, [sp, #268] // 4-byte Spill
+; CHECK-NEXT:    lastb s1, p1, z0.s
+; CHECK-NEXT:    str s2, [sp, #256] // 4-byte Spill
+; CHECK-NEXT:    fcmp s1, s1
+; CHECK-NEXT:    fcsel s1, s2, s1, vs
+; CHECK-NEXT:    whilels p1.s, xzr, x8
+; CHECK-NEXT:    mov w8, #24 // =0x18
+; CHECK-NEXT:    lastb s2, p1, z13.s
+; CHECK-NEXT:    str s1, [sp, #260] // 4-byte Spill
+; CHECK-NEXT:    lastb s1, p1, z0.s
+; CHECK-NEXT:    fcmp s1, s1
+; CHECK-NEXT:    fcsel s1, s2, s1, vs
+; CHECK-NEXT:    whilels p1.s, xzr, x8
+; CHECK-NEXT:    mov w8, #23 // =0x17
+; CHECK-NEXT:    stp s2, s1, [sp, #248] // 8-byte Folded Spill
+; CHECK-NEXT:    lastb s1, p1, z0.s
+; CHECK-NEXT:    lastb s2, p1, z13.s
+; CHECK-NEXT:    fcmp s1, s1
+; CHECK-NEXT:    fcsel s1, s2, s1, vs
+; CHECK-NEXT:    whilels p1.s, xzr, x8
+; CHECK-NEXT:    mov w8, #22 // =0x16
+; CHECK-NEXT:    stp s2, s1, [sp, #240] // 8-byte Folded Spill
+; CHECK-NEXT:    lastb s1, p1, z0.s
+; CHECK-NEXT:    lastb s2, p1, z13.s
+; CHECK-NEXT:    fcmp s1, s1
+; CHECK-NEXT:    fcsel s1, s2, s1, vs
+; CHECK-NEXT:    whilels p1.s, xzr, x8
+; CHECK-NEXT:    mov w8, #21 // =0x15
+; CHECK-NEXT:    stp s2, s1, [sp, #232] // 8-byte Folded Spill
+; CHECK-NEXT:    lastb s1, p1, z0.s
+; CHECK-NEXT:    lastb s2, p1, z13.s
+; CHECK-NEXT:    fcmp s1, s1
+; CHECK-NEXT:    fcsel s1, s2, s1, vs
+; CHECK-NEXT:    whilels p1.s, xzr, x8
+; CHECK-NEXT:    mov w8, #20 // =0x14
+; CHECK-NEXT:    stp s2, s1, [sp, #224] // 8-byte Folded Spill
+; CHECK-NEXT:    lastb s1, p1, z0.s
+; CHECK-NEXT:    lastb s2, p1, z13.s
+; CHECK-NEXT:    fcmp s1, s1
+; CHECK-NEXT:    fcsel s1, s2, s1, vs
+; CHECK-NEXT:    whilels p1.s, xzr, x8
+; CHECK-NEXT:    mov w8, #19 // =0x13
+; CHECK-NEXT:    lastb s17, p1, z13.s
+; CHECK-NEXT:    stp s2, s1, [sp, #216] // 8-byte Folded Spill
+; CHECK-NEXT:    lastb s1, p1, z0.s
+; CHECK-NEXT:    mov z2.s, z0.s[15]
+; CHECK-NEXT:    fcmp s1, s1
+; CHECK-NEXT:    fcsel s1, s17, s1, vs
+; CHECK-NEXT:    whilels p1.s, xzr, x8
+; CHECK-NEXT:    mov w8, #18 // =0x12
+; CHECK-NEXT:    lastb s15, p1, z13.s
+; CHECK-NEXT:    str s1, [sp, #208] // 4-byte Spill
+; CHECK-NEXT:    lastb s1, p1, z0.s
+; CHECK-NEXT:    fcmp s1, s1
+; CHECK-NEXT:    fcsel s1, s15, s1, vs
+; CHECK-NEXT:    whilels p1.s, xzr, x8
+; CHECK-NEXT:    mov w8, #17 // =0x11
+; CHECK-NEXT:    lastb s11, p1, z13.s
+; CHECK-NEXT:    str s1, [sp, #200] // 4-byte Spill
+; CHECK-NEXT:    lastb s1, p1, z0.s
+; CHECK-NEXT:    fcmp s1, s1
+; CHECK-NEXT:    fcsel s1, s11, s1, vs
+; CHECK-NEXT:    whilels p1.s, xzr, x8
+; CHECK-NEXT:    mov w8, #16 // =0x10
+; CHECK-NEXT:    lastb s8, p1, z13.s
+; CHECK-NEXT:    str s1, [sp, #188] // 4-byte Spill
+; CHECK-NEXT:    lastb s1, p1, z0.s
+; CHECK-NEXT:    fcmp s1, s1
+; CHECK-NEXT:    fcsel s1, s8, s1, vs
+; CHECK-NEXT:    whilels p1.s, xzr, x8
+; CHECK-NEXT:    sub x8, x29, #64
+; CHECK-NEXT:    lastb s29, p1, z13.s
+; CHECK-NEXT:    str s1, [sp, #176] // 4-byte Spill
+; CHECK-NEXT:    lastb s1, p1, z0.s
+; CHECK-NEXT:    fcmp s1, s1
+; CHECK-NEXT:    fcsel s3, s29, s1, vs
+; CHECK-NEXT:    fcmp s2, s2
+; CHECK-NEXT:    mov z1.s, z0.s[14]
+; CHECK-NEXT:    fcsel s5, s27, s2, vs
+; CHECK-NEXT:    fcmp s1, s1
+; CHECK-NEXT:    mov z2.s, z0.s[13]
+; CHECK-NEXT:    fcsel s1, s25, s1, vs
+; CHECK-NEXT:    fcmp s2, s2
+; CHECK-NEXT:    stp s1, s5, [sp, #152] // 8-byte Folded Spill
+; CHECK-NEXT:    mov z1.s, z0.s[12]
+; CHECK-NEXT:    fcsel s2, s28, s2, vs
+; CHECK-NEXT:    mov z5.s, z0.s[7]
+; CHECK-NEXT:    stp s2, s3, [sp, #160] // 8-byte Folded Spill
+; CHECK-NEXT:    fcmp s1, s1
+; CHECK-NEXT:    mov z3.s, z13.s[12]
+; CHECK-NEXT:    mov z2.s, z0.s[11]
+; CHECK-NEXT:    fcsel s1, s3, s1, vs
+; CHECK-NEXT:    str z3, [x8, #-12, mul vl] // 16-byte Folded Spill
+; CHECK-NEXT:    mov z3.s, z13.s[11]
+; CHECK-NEXT:    fcmp s2, s2
+; CHECK-NEXT:    str s1, [sp, #172] // 4-byte Spill
+; CHECK-NEXT:    mov z1.s, z0.s[10]
+; CHECK-NEXT:    str z3, [x8, #-11, mul vl] // 16-byte Folded Spill
+; CHECK-NEXT:    fcsel s2, s3, s2, vs
+; CHECK-NEXT:    mov z3.s, z13.s[10]
+; CHECK-NEXT:    fcmp s1, s1
+; CHECK-NEXT:    str s2, [sp, #184] // 4-byte Spill
+; CHECK-NEXT:    mov z2.s, z0.s[9]
+; CHECK-NEXT:    str z3, [x8, #-10, mul vl] // 16-byte Folded Spill
+; CHECK-NEXT:    fcsel s1, s3, s1, vs
+; CHECK-NEXT:    mov z3.s, z0.s[8]
+; CHECK-NEXT:    fcmp s2, s2
+; CHECK-NEXT:    str s1, [sp, #192] // 4-byte Spill
+; CHECK-NEXT:    mov z1.s, z13.s[9]
+; CHECK-NEXT:    str z1, [x8, #-9, mul vl] // 16-byte Folded Spill
+; CHECK-NEXT:    fcsel s2, s1, s2, vs
+; CHECK-NEXT:    fcmp s3, s3
+; CHECK-NEXT:    mov z1.s, z13.s[8]
+; CHECK-NEXT:    str s2, [sp, #204] // 4-byte Spill
+; CHECK-NEXT:    str z1, [x8, #-8, mul vl] // 16-byte Folded Spill
+; CHECK-NEXT:    fcsel s2, s1, s3, vs
+; CHECK-NEXT:    fcmp s5, s5
+; CHECK-NEXT:    mov z1.s, z13.s[7]
+; CHECK-NEXT:    ldr s3, [sp, #392] // 4-byte Reload
+; CHECK-NEXT:    str s2, [sp, #212] // 4-byte Spill
+; CHECK-NEXT:    ldr s2, [sp, #396] // 4-byte Reload
+; CHECK-NEXT:    str z1, [x8, #-7, mul vl] // 16-byte Folded Spill
+; CHECK-NEXT:    fcsel s1, s1, s5, vs
+; CHECK-NEXT:    fcmp s7, s7
+; CHECK-NEXT:    str s1, [sp, #196] // 4-byte Spill
+; CHECK-NEXT:    mov z1.s, z13.s[6]
+; CHECK-NEXT:    str z1, [x8, #-6, mul vl] // 16-byte Folded Spill
+; CHECK-NEXT:    fcsel s1, s1, s7, vs
+; CHECK-NEXT:    fcmp s16, s16
+; CHECK-NEXT:    ldr s7, [sp, #176] // 4-byte Reload
+; CHECK-NEXT:    str s1, [sp, #180] // 4-byte Spill
+; CHECK-NEXT:    mov z1.s, z13.s[5]
+; CHECK-NEXT:    str z1, [x8, #-5, mul vl] // 16-byte Folded Spill
+; CHECK-NEXT:    fcsel s1, s1, s16, vs
+; CHECK-NEXT:    fcmp s19, s19
+; CHECK-NEXT:    ldr s16, [sp, #188] // 4-byte Reload
+; CHECK-NEXT:    str s1, [sp, #168] // 4-byte Spill
+; CHECK-NEXT:    mov z1.s, z13.s[4]
+; CHECK-NEXT:    str z1, [x8, #-3, mul vl] // 16-byte Folded Spill
+; CHECK-NEXT:    fcsel s1, s1, s19, vs
+; CHECK-NEXT:    fcmp s21, s21
+; CHECK-NEXT:    mov z19.s, z0.s[2]
+; CHECK-NEXT:    mov z0.s, z0.s[1]
+; CHECK-NEXT:    str s1, [sp, #148] // 4-byte Spill
+; CHECK-NEXT:    mov z1.s, z13.s[3]
+; CHECK-NEXT:    str z1, [x8, #-4, mul vl] // 16-byte Folded Spill
+; CHECK-NEXT:    fcsel s1, s1, s21, vs
+; CHECK-NEXT:    fcmp s19, s19
+; CHECK-NEXT:    str s1, [sp, #144] // 4-byte Spill
+; CHECK-NEXT:    mov z1.s, z13.s[2]
+; CHECK-NEXT:    str z1, [x8, #-2, mul vl] // 16-byte Folded Spill
+; CHECK-NEXT:    fcsel s1, s1, s19, vs
+; CHECK-NEXT:    fcmp s0, s0
+; CHECK-NEXT:    str s1, [sp, #140] // 4-byte Spill
+; CHECK-NEXT:    mov z1.s, z13.s[1]
+; CHECK-NEXT:    fcsel s0, s1, s0, vs
+; CHECK-NEXT:    fcmp s13, s13
+; CHECK-NEXT:    str z1, [x8, #-1, mul vl] // 16-byte Folded Spill
+; CHECK-NEXT:    str s3, [sp, #760]
+; CHECK-NEXT:    str s2, [sp, #764]
+; CHECK-NEXT:    str s0, [sp, #136] // 4-byte Spill
+; CHECK-NEXT:    ldr s0, [sp, #508] // 4-byte Reload
+; CHECK-NEXT:    fcsel s13, s0, s13, vs
+; CHECK-NEXT:    fcmp s0, s13
+; CHECK-NEXT:    fcsel s1, s0, s13, gt
+; CHECK-NEXT:    fcmp s30, s30
+; CHECK-NEXT:    fcsel s13, s2, s30, vs
+; CHECK-NEXT:    str s1, [sp, #288] // 4-byte Spill
+; CHECK-NEXT:    ldr s30, [sp, #284] // 4-byte Reload
+; CHECK-NEXT:    fcmp s2, s13
+; CHECK-NEXT:    fcsel s0, s2, s13, gt
+; CHECK-NEXT:    fcmp s31, s31
+; CHECK-NEXT:    ldr s2, [sp, #172] // 4-byte Reload
+; CHECK-NEXT:    fcsel s13, s3, s31, vs
+; CHECK-NEXT:    ldr s31, [sp, #344] // 4-byte Reload
+; CHECK-NEXT:    fcmp s3, s13
+; CHECK-NEXT:    fcsel s1, s3, s13, gt
+; CHECK-NEXT:    fcmp s10, s10
+; CHECK-NEXT:    ldr s3, [sp, #160] // 4-byte Reload
+; CHECK-NEXT:    stp s1, s0, [sp, #128] // 8-byte Folded Spill
+; CHECK-NEXT:    ldr s0, [sp, #504] // 4-byte Reload
+; CHECK-NEXT:    fcsel s13, s0, s10, vs
+; CHECK-NEXT:    ldr s10, [sp, #316] // 4-byte Reload
+; CHECK-NEXT:    fcmp s0, s13
+; CHECK-NEXT:    fcsel s1, s0, s13, gt
+; CHECK-NEXT:    fcmp s24, s24
+; CHECK-NEXT:    ldr s0, [sp, #500] // 4-byte Reload
+; CHECK-NEXT:    fcsel s13, s0, s24, vs
+; CHECK-NEXT:    str s1, [sp, #124] // 4-byte Spill
+; CHECK-NEXT:    fcmp s0, s13
+; CHECK-NEXT:    fcsel s1, s0, s13, gt
+; CHECK-NEXT:    fcmp s9, s9
+; CHECK-NEXT:    ldr s0, [sp, #496] // 4-byte Reload
+; CHECK-NEXT:    fcsel s13, s0, s9, vs
+; CHECK-NEXT:    str s1, [sp, #120] // 4-byte Spill
+; CHECK-NEXT:    ldr s9, [sp, #276] // 4-byte Reload
+; CHECK-NEXT:    fcmp s0, s13
+; CHECK-NEXT:    fcsel s1, s0, s13, gt
+; CHECK-NEXT:    fcmp s12, s12
+; CHECK-NEXT:    ldr s0, [sp, #492] // 4-byte Reload
+; CHECK-NEXT:    fcsel s13, s0, s12, vs
+; CHECK-NEXT:    str s1, [sp, #116] // 4-byte Spill
+; CHECK-NEXT:    ldr s12, [sp, #296] // 4-byte Reload
+; CHECK-NEXT:    fcmp s0, s13
+; CHECK-NEXT:    fcsel s1, s0, s13, gt
+; CHECK-NEXT:    ldr s0, [sp, #488] // 4-byte Reload
+; CHECK-NEXT:    str s1, [sp, #112] // 4-byte Spill
+; CHECK-NEXT:    ldr s1, [sp, #388] // 4-byte Reload
+; CHECK-NEXT:    fcmp s1, s1
+; CHECK-NEXT:    fcsel s13, s0, s1, vs
+; CHECK-NEXT:    fcmp s0, s13
+; CHECK-NEXT:    fcsel s1, s0, s13, gt
+; CHECK-NEXT:    fcmp s4, s4
+; CHECK-NEXT:    ldr s0, [sp, #384] // 4-byte Reload
+; CHECK-NEXT:    fcsel s13, s0, s4, vs
+; CHECK-NEXT:    str s1, [sp, #388] // 4-byte Spill
+; CHECK-NEXT:    fmov s4, s0
+; CHECK-NEXT:    fcmp s0, s13
+; CHECK-NEXT:    str s4, [sp, #736]
+; CHECK-NEXT:    fcsel s1, s0, s13, gt
+; CHECK-NEXT:    ldr s0, [sp, #484] // 4-byte Reload
+; CHECK-NEXT:    str s1, [sp, #108] // 4-byte Spill
+; CHECK-NEXT:    ldr s1, [sp, #380] // 4-byte Reload
+; CHECK-NEXT:    fcmp s1, s1
+; CHECK-NEXT:    fcsel s13, s0, s1, vs
+; CHECK-NEXT:    fcmp s0, s13
+; CHECK-NEXT:    fcsel s1, s0, s13, gt
+; CHECK-NEXT:    ldr s0, [sp, #480] // 4-byte Reload
+; CHECK-NEXT:    str s1, [sp, #380] // 4-byte Spill
+; CHECK-NEXT:    ldr s1, [sp, #376] // 4-byte Reload
+; CHECK-NEXT:    fcmp s1, s1
+; CHECK-NEXT:    fcsel s13, s0, s1, vs
+; CHECK-NEXT:    fcmp s0, s13
+; CHECK-NEXT:    fcsel s1, s0, s13, gt
+; CHECK-NEXT:    ldr s0, [sp, #476] // 4-byte Reload
+; CHECK-NEXT:    str s1, [sp, #376] // 4-byte Spill
+; CHECK-NEXT:    ldr s1, [sp, #372] // 4-byte Reload
+; CHECK-NEXT:    fcmp s1, s1
+; CHECK-NEXT:    fcsel s13, s0, s1, vs
+; CHECK-NEXT:    fcmp s0, s13
+; CHECK-NEXT:    fcsel s1, s0, s13, gt
+; CHECK-NEXT:    ldr s0, [sp, #472] // 4-byte Reload
+; CHECK-NEXT:    str s1, [sp, #372] // 4-byte Spill
+; CHECK-NEXT:    ldr s1, [sp, #368] // 4-byte Reload
+; CHECK-NEXT:    fcmp s1, s1
+; CHECK-NEXT:    fcsel s13, s0, s1, vs
+; CHECK-NEXT:    fcmp s0, s13
+; CHECK-NEXT:    fcsel s1, s0, s13, gt
+; CHECK-NEXT:    ldr s0, [sp, #468] // 4-byte Reload
+; CHECK-NEXT:    str s1, [sp, #368] // 4-byte Spill
+; CHECK-NEXT:    ldr s1, [sp, #364] // 4-byte Reload
+; CHECK-NEXT:    fcmp s1, s1
+; CHECK-NEXT:    fcsel s13, s0, s1, vs
+; CHECK-NEXT:    fcmp s0, s13
+; CHECK-NEXT:    fcsel s1, s0, s13, gt
+; CHECK-NEXT:    ldr s0, [sp, #464] // 4-byte Reload
+; CHECK-NEXT:    str s1, [sp, #364] // 4-byte Spill
+; CHECK-NEXT:    ldr s1, [sp, #360] // 4-byte Reload
+; CHECK-NEXT:    fcmp s1, s1
+; CHECK-NEXT:    fcsel s13, s0, s1, vs
+; CHECK-NEXT:    fcmp s0, s13
+; CHECK-NEXT:    fcsel s1, s0, s13, gt
+; CHECK-NEXT:    ldr s0, [sp, #460] // 4-byte Reload
+; CHECK-NEXT:    str s1, [sp, #360] // 4-byte Spill
+; CHECK-NEXT:    ldr s1, [sp, #356] // 4-byte Reload
+; CHECK-NEXT:    fcmp s1, s1
+; CHECK-NEXT:    fcsel s13, s0, s1, vs
+; CHECK-NEXT:    fcmp s0, s13
+; CHECK-NEXT:    fcsel s1, s0, s13, gt
+; CHECK-NEXT:    fcmp s14, s14
+; CHECK-NEXT:    ldr s0, [sp, #456] // 4-byte Reload
+; CHECK-NEXT:    fcsel s13, s0, s14, vs
+; CHECK-NEXT:    str s1, [sp, #356] // 4-byte Spill
+; CHECK-NEXT:    ldr s14, [sp, #304] // 4-byte Reload
+; CHECK-NEXT:    fcmp s0, s13
+; CHECK-NEXT:    fcsel s1, s0, s13, gt
+; CHECK-NEXT:    ldr s0, [sp, #452] // 4-byte Reload
+; CHECK-NEXT:    str s1, [sp, #104] // 4-byte Spill
+; CHECK-NEXT:    ldr s1, [sp, #352] // 4-byte Reload
+; CHECK-NEXT:    fcmp s1, s1
+; CHECK-NEXT:    fcsel s13, s0, s1, vs
+; CHECK-NEXT:    fcmp s0, s13
+; CHECK-NEXT:    fcsel s1, s0, s13, gt
+; CHECK-NEXT:    fcmp s18, s18
+; CHECK-NEXT:    ldr s0, [sp, #448] // 4-byte Reload
+; CHECK-NEXT:    fcsel s13, s0, s18, vs
+; CHECK-NEXT:    str s1, [sp, #352] // 4-byte Spill
+; CHECK-NEXT:    ldr s18, [sp, #200] // 4-byte Reload
+; CHECK-NEXT:    fcmp s0, s13
+; CHECK-NEXT:    fcsel s1, s0, s13, gt
+; CHECK-NEXT:    ldr s0, [sp, #444] // 4-byte Reload
+; CHECK-NEXT:    str s1, [sp, #100] // 4-byte Spill
+; CHECK-NEXT:    ldr s1, [sp, #348] // 4-byte Reload
+; CHECK-NEXT:    fcmp s1, s1
+; CHECK-NEXT:    fcsel s13, s0, s1, vs
+; CHECK-NEXT:    fcmp s0, s13
+; CHECK-NEXT:    fcsel s1, s0, s13, gt
+; CHECK-NEXT:    ldr s0, [sp, #440] // 4-byte Reload
+; CHECK-NEXT:    str s1, [sp, #348] // 4-byte Spill
+; CHECK-NEXT:    ldr s1, [sp, #340] // 4-byte Reload
+; CHECK-NEXT:    fcmp s1, s1
+; CHECK-NEXT:    fcsel s13, s31, s1, vs
+; CHECK-NEXT:    fcmp s31, s13
+; CHECK-NEXT:    fcsel s1, s31, s13, gt
+; CHECK-NEXT:    fcmp s20, s20
+; CHECK-NEXT:    fcsel s13, s0, s20, vs
+; CHECK-NEXT:    str s1, [sp, #340] // 4-byte Spill
+; CHECK-NEXT:    fcmp s0, s13
+; CHECK-NEXT:    fcsel s1, s0, s13, gt
+; CHECK-NEXT:    ldr s0, [sp, #436] // 4-byte Reload
+; CHECK-NEXT:    str s1, [sp, #96] // 4-byte Spill
+; CHECK-NEXT:    ldr s1, [sp, #336] // 4-byte Reload
+; CHECK-NEXT:    fcmp s1, s1
+; CHECK-NEXT:    fcsel s13, s0, s1, vs
+; CHECK-NEXT:    fcmp s0, s13
+; CHECK-NEXT:    fcsel s1, s0, s13, gt
+; CHECK-NEXT:    ldr s0, [sp, #432] // 4-byte Reload
+; CHECK-NEXT:    str s1, [sp, #336] // 4-byte Spill
+; CHECK-NEXT:    ldr s1, [sp, #332] // 4-byte Reload
+; CHECK-NEXT:    fcmp s1, s1
+; CHECK-NEXT:    fcsel s13, s0, s1, vs
+; CHECK-NEXT:    fcmp s0, s13
+; CHECK-NEXT:    fcsel s1, s0, s13, gt
+; CHECK-NEXT:    ldr s0, [sp, #428] // 4-byte Reload
+; CHECK-NEXT:    str s1, [sp, #332] // 4-byte Spill
+; CHECK-NEXT:    ldr s1, [sp, #328] // 4-byte Reload
+; CHECK-NEXT:    fcmp s1, s1
+; CHECK-NEXT:    fcsel s13, s0, s1, vs
+; CHECK-NEXT:    fcmp s0, s13
+; CHECK-NEXT:    fcsel s1, s0, s13, gt
+; CHECK-NEXT:    fcmp s22, s22
+; CHECK-NEXT:    ldr s0, [sp, #424] // 4-byte Reload
+; CHECK-NEXT:    fcsel s13, s0, s22, vs
+; CHECK-NEXT:    str s1, [sp, #328] // 4-byte Spill
+; CHECK-NEXT:    fcmp s0, s13
+; CHECK-NEXT:    fcsel s1, s0, s13, gt
+; CHECK-NEXT:    ldr s0, [sp, #420] // 4-byte Reload
+; CHECK-NEXT:    str s1, [sp, #92] // 4-byte Spill
+; CHECK-NEXT:    ldr s1, [sp, #324] // 4-byte Reload
+; CHECK-NEXT:    fcmp s1, s1
+; CHECK-NEXT:    fcsel s13, s0, s1, vs
+; CHECK-NEXT:    fcmp s0, s13
+; CHECK-NEXT:    fcsel s1, s0, s13, gt
+; CHECK-NEXT:    fcmp s23, s23
+; CHECK-NEXT:    ldr s0, [sp, #416] // 4-byte Reload
+; CHECK-NEXT:    fcsel s13, s0, s23, vs
+; CHECK-NEXT:    str s1, [sp, #324] // 4-byte Spill
+; CHECK-NEXT:    ldr s23, [sp, #260] // 4-byte Reload
+; CHECK-NEXT:    fcmp s0, s13
+; CHECK-NEXT:    fcsel s1, s0, s13, gt
+; CHECK-NEXT:    ldr s0, [sp, #412] // 4-byte Reload
+; CHECK-NEXT:    str s1, [sp, #88] // 4-byte Spill
+; CHECK-NEXT:    ldr s1, [sp, #320] // 4-byte Reload
+; CHECK-NEXT:    fcmp s1, s1
+; CHECK-NEXT:    fcsel s13, s0, s1, vs
+; CHECK-NEXT:    fcmp s0, s13
+; CHECK-NEXT:    fcsel s1, s0, s13, gt
+; CHECK-NEXT:    fcmp s26, s26
+; CHECK-NEXT:    ldr s0, [sp, #408] // 4-byte Reload
+; CHECK-NEXT:    fcsel s13, s10, s26, vs
+; CHECK-NEXT:    str s1, [sp, #320] // 4-byte Spill
+; CHECK-NEXT:    ldr s26, [sp, #268] // 4-byte Reload
+; CHECK-NEXT:    fcmp s10, s13
+; CHECK-NEXT:    fcsel s1, s10, s13, gt
+; CHECK-NEXT:    str s1, [sp, #84] // 4-byte Spill
+; CHECK-NEXT:    ldr s1, [sp, #312] // 4-byte Reload
+; CHECK-NEXT:    fcmp s1, s1
+; CHECK-NEXT:    fcsel s13, s0, s1, vs
+; CHECK-NEXT:    fcmp s0, s13
+; CHECK-NEXT:    fcsel s1, s0, s13, gt
+; CHECK-NEXT:    ldr s0, [sp, #404] // 4-byte Reload
+; CHECK-NEXT:    str s1, [sp, #312] // 4-byte Spill
+; CHECK-NEXT:    ldr s1, [sp, #308] // 4-byte Reload
+; CHECK-NEXT:    fcmp s1, s1
+; CHECK-NEXT:    fcsel s13, s0, s1, vs
+; CHECK-NEXT:    fcmp s0, s13
+; CHECK-NEXT:    fcsel s1, s0, s13, gt
+; CHECK-NEXT:    fcmp s6, s6
+; CHECK-NEXT:    ldr s0, [sp, #400] // 4-byte Reload
+; CHECK-NEXT:    fcsel s13, s0, s6, vs
+; CHECK-NEXT:    str s1, [sp, #308] // 4-byte Spill
+; CHECK-NEXT:    ldr s6, [sp, #164] // 4-byte Reload
+; CHECK-NEXT:    fcmp s0, s13
+; CHECK-NEXT:    fcsel s1, s0, s13, gt
+; CHECK-NEXT:    ldr s0, [sp, #208] // 4-byte Reload
+; CHECK-NEXT:    str s1, [sp, #80] // 4-byte Spill
+; CHECK-NEXT:    ldr s1, [sp, #300] // 4-byte Reload
+; CHECK-NEXT:    fcmp s1, s1
+; CHECK-NEXT:    fcsel s13, s14, s1, vs
+; CHECK-NEXT:    fcmp s14, s13
+; CHECK-NEXT:    fcsel s1, s14, s13, gt
+; CHECK-NEXT:    str s1, [sp, #300] // 4-byte Spill
+; CHECK-NEXT:    ldr s1, [sp, #292] // 4-byte Reload
+; CHECK-NEXT:    fcmp s1, s1
+; CHECK-NEXT:    fcsel s13, s12, s1, vs
+; CHECK-NEXT:    fcmp s12, s13
+; CHECK-NEXT:    fcsel s1, s12, s13, gt
+; CHECK-NEXT:    str s1, [sp, #292] // 4-byte Spill
+; CHECK-NEXT:    ldr s1, [sp, #280] // 4-byte Reload
+; CHECK-NEXT:    fcmp s1, s1
+; CHECK-NEXT:    fcsel s13, s30, s1, vs
+; CHECK-NEXT:    fcmp s30, s13
+; CHECK-NEXT:    fcsel s1, s30, s13, gt
+; CHECK-NEXT:    str s1, [sp, #280] // 4-byte Spill
+; CHECK-NEXT:    ldr s1, [sp, #272] // 4-byte Reload
+; CHECK-NEXT:    fcmp s1, s1
+; CHECK-NEXT:    fcsel s13, s9, s1, vs
+; CHECK-NEXT:    fcmp s9, s13
+; CHECK-NEXT:    fcsel s1, s9, s13, gt
+; CHECK-NEXT:    str s1, [sp, #272] // 4-byte Spill
+; CHECK-NEXT:    ldr s1, [sp, #264] // 4-byte Reload
+; CHECK-NEXT:    fcmp s1, s1
+; CHECK-NEXT:    fcsel s13, s26, s1, vs
+; CHECK-NEXT:    fcmp s26, s13
+; CHECK-NEXT:    fcsel s1, s26, s13, gt
+; CHECK-NEXT:    str s1, [sp, #264] // 4-byte Spill
+; CHECK-NEXT:    ldp s24, s1, [sp, #252] // 8-byte Folded Reload
+; CHECK-NEXT:    fcmp s1, s1
+; CHECK-NEXT:    fcsel s13, s23, s1, vs
+; CHECK-NEXT:    fcmp s23, s13
+; CHECK-NEXT:    fcsel s1, s23, s13, gt
+; CHECK-NEXT:    str s1, [sp, #256] // 4-byte Spill
+; CHECK-NEXT:    ldp s22, s1, [sp, #244] // 8-byte Folded Reload
+; CHECK-NEXT:    fcmp s1, s1
+; CHECK-NEXT:    fcsel s13, s24, s1, vs
+; CHECK-NEXT:    fcmp s24, s13
+; CHECK-NEXT:    fcsel s1, s24, s13, gt
+; CHECK-NEXT:    str s1, [sp, #248] // 4-byte Spill
+; CHECK-NEXT:    ldp s21, s1, [sp, #236] // 8-byte Folded Reload
+; CHECK-NEXT:    fcmp s1, s1
+; CHECK-NEXT:    fcsel s13, s22, s1, vs
+; CHECK-NEXT:    fcmp s22, s13
+; CHECK-NEXT:    fcsel s1, s22, s13, gt
+; CHECK-NEXT:    str s1, [sp, #240] // 4-byte Spill
+; CHECK-NEXT:    ldp s20, s1, [sp, #228] // 8-byte Folded Reload
+; CHECK-NEXT:    fcmp s1, s1
+; CHECK-NEXT:    fcsel s13, s21, s1, vs
+; CHECK-NEXT:    fcmp s21, s13
+; CHECK-NEXT:    fcsel s1, s21, s13, gt
+; CHECK-NEXT:    str s1, [sp, #232] // 4-byte Spill
+; CHECK-NEXT:    ldp s19, s1, [sp, #220] // 8-byte Folded Reload
+; CHECK-NEXT:    fcmp s1, s1
+; CHECK-NEXT:    fcsel s13, s20, s1, vs
+; CHECK-NEXT:    fcmp s20, s13
+; CHECK-NEXT:    fcsel s1, s20, s13, gt
+; CHECK-NEXT:    str s1, [sp, #224] // 4-byte Spill
+; CHECK-NEXT:    ldr s1, [sp, #216] // 4-byte Reload
+; CHECK-NEXT:    fcmp s1, s1
+; CHECK-NEXT:    fcsel s13, s19, s1, vs
+; CHECK-NEXT:    fcmp s19, s13
+; CHECK-NEXT:    fcsel s1, s19, s13, gt
+; CHECK-NEXT:    fcmp s17, s17
+; CHECK-NEXT:    fcsel s13, s0, s17, vs
+; CHECK-NEXT:    fmov s17, s0
+; CHECK-NEXT:    str s1, [sp, #216] // 4-byte Spill
+; CHECK-NEXT:    ldr s1, [sp, #504] // 4-byte Reload
+; CHECK-NEXT:    fcmp s0, s13
+; CHECK-NEXT:    str s1, [sp, #756]
+; CHECK-NEXT:    ldr s1, [sp, #500] // 4-byte Reload
+; CHECK-NEXT:    str s1, [sp, #752]
+; CHECK-NEXT:    ldr s1, [sp, #496] // 4-byte Reload
+; CHECK-NEXT:    fcsel s13, s0, s13, gt
+; CHECK-NEXT:    fcmp s15, s15
+; CHECK-NEXT:    ldp s0, s5, [sp, #152] // 8-byte Folded Reload
+; CHECK-NEXT:    str s1, [sp, #748]
+; CHECK-NEXT:    ldr s1, [sp, #492] // 4-byte Reload
+; CHECK-NEXT:    fcsel s15, s18, s15, vs
+; CHECK-NEXT:    str s1, [sp, #744]
+; CHECK-NEXT:    ldr s1, [sp, #488] // 4-byte Reload
+; CHECK-NEXT:    fmov s4, s0
+; CHECK-NEXT:    fcmp s18, s15
+; CHECK-NEXT:    str s1, [sp, #740]
+; CHECK-NEXT:    ldr s1, [sp, #472] // 4-byte Reload
+; CHECK-NEXT:    str s1, [sp, #720]
+; CHECK-NEXT:    ldr s1, [sp, #468] // 4-byte Reload
+; CHECK-NEXT:    fcsel s15, s18, s15, gt
+; CHECK-NEXT:    fcmp s11, s11
+; CHECK-NEXT:    str s1, [sp, #716]
+; CHECK-NEXT:    ldr s1, [sp, #464] // 4-byte Reload
+; CHECK-NEXT:    fcsel s11, s16, s11, vs
+; CHECK-NEXT:    str s1, [sp, #712]
+; CHECK-NEXT:    ldr s1, [sp, #460] // 4-byte Reload
+; CHECK-NEXT:    str s1, [sp, #708]
+; CHECK-NEXT:    ldr s1, [sp, #456] // 4-byte Reload
+; CHECK-NEXT:    fcmp s16, s11
+; CHECK-NEXT:    str s1, [sp, #704]
+; CHECK-NEXT:    ldr s1, [sp, #452] // 4-byte Reload
+; CHECK-NEXT:    fcsel s11, s16, s11, gt
+; CHECK-NEXT:    fcmp s8, s8
+; CHECK-NEXT:    str s1, [sp, #700]
+; CHECK-NEXT:    fcsel s8, s7, s8, vs
+; CHECK-NEXT:    fcmp s7, s8
+; CHECK-NEXT:    fcsel s8, s7, s8, gt
+; CHECK-NEXT:    fcmp s29, s29
+; CHECK-NEXT:    fcsel s29, s6, s29, vs
+; CHECK-NEXT:    fcmp s6, s29
+; CHECK-NEXT:    fcsel s29, s6, s29, gt
+; CHECK-NEXT:    fcmp s27, s27
+; CHECK-NEXT:    fcsel s27, s5, s27, vs
+; CHECK-NEXT:    fcmp s5, s27
+; CHECK-NEXT:    fcsel s27, s5, s27, gt
+; CHECK-NEXT:    fcmp s25, s25
+; CHECK-NEXT:    fcsel s25, s0, s25, vs
+; CHECK-NEXT:    fcmp s0, s25
+; CHECK-NEXT:    fcsel s25, s0, s25, gt
+; CHECK-NEXT:    ldr s0, [sp, #484] // 4-byte Reload
+; CHECK-NEXT:    fcmp s28, s28
+; CHECK-NEXT:    str s0, [sp, #732]
+; CHECK-NEXT:    ldr s0, [sp, #480] // 4-byte Reload
+; CHECK-NEXT:    fcsel s28, s3, s28, vs
+; CHECK-NEXT:    str s0, [sp, #728]
+; CHECK-NEXT:    ldr s0, [sp, #476] // 4-byte Reload
+; CHECK-NEXT:    str s0, [sp, #724]
+; CHECK-NEXT:    fcmp s3, s28
+; CHECK-NEXT:    ldr s0, [sp, #448] // 4-byte Reload
+; CHECK-NEXT:    ldr z1, [x8, #-12, mul vl] // 16-byte Folded Reload
+; CHECK-NEXT:    str s31, [sp, #688]
+; CHECK-NEXT:    str s0, [sp, #696]
+; CHECK-NEXT:    ldr s0, [sp, #444] // 4-byte Reload
+; CHECK-NEXT:    fcsel s28, s3, s28, gt
+; CHECK-NEXT:    fcmp s1, s1
+; CHECK-NEXT:    str s0, [sp, #692]
+; CHECK-NEXT:    ldr s0, [sp, #416] // 4-byte Reload
+; CHECK-NEXT:    fcsel s31, s2, s1, vs
+; CHECK-NEXT:    ldr s1, [sp, #440] // 4-byte Reload
+; CHECK-NEXT:    str s1, [sp, #684]
+; CHECK-NEXT:    ldr s1, [sp, #436] // 4-byte Reload
+; CHECK-NEXT:    fcmp s2, s31
+; CHECK-NEXT:    str s1, [sp, #680]
+; CHECK-NEXT:    ldr s1, [sp, #432] // 4-byte Reload
+; CHECK-NEXT:    str s1, [sp, #676]
+; CHECK-NEXT:    ldr s1, [sp, #428] // 4-byte Reload
+; CHECK-NEXT:    fcsel s31, s2, s31, gt
+; CHECK-NEXT:    str s1, [sp, #672]
+; CHECK-NEXT:    ldr s1, [sp, #424] // 4-byte Reload
+; CHECK-NEXT:    str s1, [sp, #668]
+; CHECK-NEXT:    ldr s1, [sp, #420] // 4-byte Reload
+; CHECK-NEXT:    str s1, [sp, #664]
+; CHECK-NEXT:    ldr z1, [x8, #-11, mul vl] // 16-byte Folded Reload
+; CHECK-NEXT:    str s0, [sp, #660]
+; CHECK-NEXT:    ldr s0, [sp, #412] // 4-byte Reload
+; CHECK-NEXT:    str s10, [sp, #652]
+; CHECK-NEXT:    str s0, [sp, #656]
+; CHECK-NEXT:    ldr s0, [sp, #184] // 4-byte Reload
+; CHECK-NEXT:    fcmp s1, s1
+; CHECK-NEXT:    str s14, [sp, #636]
+; CHECK-NEXT:    str s12, [sp, #632]
+; CHECK-NEXT:    str s30, [sp, #628]
+; CHECK-NEXT:    fcsel s10, s0, s1, vs
+; CHECK-NEXT:    ldr s1, [sp, #408] // 4-byte Reload
+; CHECK-NEXT:    str s1, [sp, #648]
+; CHECK-NEXT:    ldr s1, [sp, #404] // 4-byte Reload
+; CHECK-NEXT:    fcmp s0, s10
+; CHECK-NEXT:    str s1, [sp, #644]
+; CHECK-NEXT:    ldr s1, [sp, #400] // 4-byte Reload
+; CHECK-NEXT:    str s1, [sp, #640]
+; CHECK-NEXT:    fcsel s10, s0, s10, gt
+; CHECK-NEXT:    ldr z30, [x8, #-10, mul vl] // 16-byte Folded Reload
+; CHECK-NEXT:    str s23, [sp, #616]
+; CHECK-NEXT:    ldr s23, [sp, #192] // 4-byte Reload
+; CHECK-NEXT:    str s9, [sp, #624]
+; CHECK-NEXT:    str s26, [sp, #620]
+; CHECK-NEXT:    fcmp s30, s30
+; CHECK-NEXT:    str s24, [sp, #612]
+; CHECK-NEXT:    str s22, [sp, #608]
+; CHECK-NEXT:    str s21, [sp, #604]
+; CHECK-NEXT:    fcsel s12, s23, s30, vs
+; CHECK-NEXT:    str s20, [sp, #600]
+; CHECK-NEXT:    str s19, [sp, #596]
+; CHECK-NEXT:    str s17, [sp, #592]
+; CHECK-NEXT:    fcmp s23, s12
+; CHECK-NEXT:    ldr z17, [x8, #-9, mul vl] // 16-byte Folded Reload
+; CHECK-NEXT:    str s7, [sp, #580]
+; CHECK-NEXT:    ldr s7, [sp, #204] // 4-byte Reload
+; CHECK-NEXT:    str s18, [sp, #588]
+; CHECK-NEXT:    str s16, [sp, #584]
+; CHECK-NEXT:    ldp s18, s19, [sp, #128] // 8-byte Folded Reload
+; CHECK-NEXT:    fcsel s9, s23, s12, gt
+; CHECK-NEXT:    fcmp s17, s17
+; CHECK-NEXT:    str s6, [sp, #576]
+; CHECK-NEXT:    str s5, [sp, #572]
+; CHECK-NEXT:    ldr s5, [sp, #168] // 4-byte Reload
+; CHECK-NEXT:    str s4, [sp, #568]
+; CHECK-NEXT:    ldr s4, [sp, #180] // 4-byte Reload
+; CHECK-NEXT:    fcsel s24, s7, s17, vs
+; CHECK-NEXT:    str s3, [sp, #564]
+; CHECK-NEXT:    ldr s3, [sp, #196] // 4-byte Reload
+; CHECK-NEXT:    str s2, [sp, #560]
+; CHECK-NEXT:    str s0, [sp, #556]
+; CHECK-NEXT:    ldr s0, [sp, #508] // 4-byte Reload
+; CHECK-NEXT:    fcmp s7, s24
+; CHECK-NEXT:    ldr z1, [x8, #-8, mul vl] // 16-byte Folded Reload
+; CHECK-NEXT:    str s7, [sp, #548]
+; CHECK-NEXT:    str s0, [sp, #512]
+; CHECK-NEXT:    ldr s0, [sp, #212] // 4-byte Reload
+; CHECK-NEXT:    str s23, [sp, #552]
+; CHECK-NEXT:    fcsel s6, s7, s24, gt
+; CHECK-NEXT:    fcmp s1, s1
+; CHECK-NEXT:    str s0, [sp, #544]
+; CHECK-NEXT:    ldp s16, s7, [sp, #144] // 8-byte Folded Reload
+; CHECK-NEXT:    str s3, [sp, #540]
+; CHECK-NEXT:    str s4, [sp, #536]
+; CHECK-NEXT:    fcsel s1, s0, s1, vs
+; CHECK-NEXT:    str s5, [sp, #532]
+; CHECK-NEXT:    str s7, [sp, #528]
+; CHECK-NEXT:    ldr z2, [x8, #-7, mul vl] // 16-byte Folded Reload
+; CHECK-NEXT:    str s19, [sp, #1020]
+; CHECK-NEXT:    fcmp s0, s1
+; CHECK-NEXT:    str s18, [sp, #1016]
+; CHECK-NEXT:    ldp s18, s19, [sp, #120] // 8-byte Folded Reload
+; CHECK-NEXT:    str s16, [sp, #524]
+; CHECK-NEXT:    fcsel s1, s0, s1, gt
+; CHECK-NEXT:    fcmp s2, s2
+; CHECK-NEXT:    str s19, [sp, #1012]
+; CHECK-NEXT:    ldp s0, s17, [sp, #136] // 8-byte Folded Reload
+; CHECK-NEXT:    str s18, [sp, #1008]
+; CHECK-NEXT:    ldp s18, s19, [sp, #112] // 8-byte Folded Reload
+; CHECK-NEXT:    fcsel s2, s3, s2, vs
+; CHECK-NEXT:    str s17, [sp, #520]
+; CHECK-NEXT:    str s18, [sp, #1000]
+; CHECK-NEXT:    ldr s18, [sp, #388] // 4-byte Reload
+; CHECK-NEXT:    fcmp s3, s2
+; CHECK-NEXT:    str s0, [sp, #516]
+; CHECK-NEXT:    str s18, [sp, #996]
+; CHECK-NEXT:    ldr s18, [sp, #108] // 4-byte Reload
+; CHECK-NEXT:    str s19, [sp, #1004]
+; CHECK-NEXT:    fcsel s2, s3, s2, gt
+; CHECK-NEXT:    ldr z3, [x8, #-6, mul vl] // 16-byte Folded Reload
+; CHECK-NEXT:    str s18, [sp, #992]
+; CHECK-NEXT:    ldr s18, [sp, #380] // 4-byte Reload
+; CHECK-NEXT:    str s18, [sp, #988]
+; CHECK-NEXT:    ldr s18, [sp, #376] // 4-byte Reload
+; CHECK-NEXT:    fcmp s3, s3
+; CHECK-NEXT:    str s18, [sp, #984]
+; CHECK-NEXT:    ldr s18, [sp, #372] // 4-byte Reload
+; CHECK-NEXT:    fcsel s3, s4, s3, vs
+; CHECK-NEXT:    str s18, [sp, #980]
+; CHECK-NEXT:    ldr s18, [sp, #368] // 4-byte Reload
+; CHECK-NEXT:    str s18, [sp, #976]
+; CHECK-NEXT:    ldr s18, [sp, #364] // 4-byte Reload
+; CHECK-NEXT:    fcmp s4, s3
+; CHECK-NEXT:    str s18, [sp, #972]
+; CHECK-NEXT:    ldr s18, [sp, #360] // 4-byte Reload
+; CHECK-NEXT:    fcsel s3, s4, s3, gt
+; CHECK-NEXT:    str s18, [sp, #968]
+; CHECK-NEXT:    ldr s18, [sp, #356] // 4-byte Reload
+; CHECK-NEXT:    str s18, [sp, #964]
+; CHECK-NEXT:    ldr s18, [sp, #104] // 4-byte Reload
+; CHECK-NEXT:    str s18, [sp, #960]
+; CHECK-NEXT:    ldr s18, [sp, #352] // 4-byte Reload
+; CHECK-NEXT:    ldr z4, [x8, #-5, mul vl] // 16-byte Folded Reload
+; CHECK-NEXT:    str s18, [sp, #956]
+; CHECK-NEXT:    ldr s18, [sp, #100] // 4-byte Reload
+; CHECK-NEXT:    str s18, [sp, #952]
+; CHECK-NEXT:    ldr s18, [sp, #348] // 4-byte Reload
+; CHECK-NEXT:    fcmp s4, s4
+; CHECK-NEXT:    str s18, [sp, #948]
+; CHECK-NEXT:    ldr s18, [sp, #340] // 4-byte Reload
+; CHECK-NEXT:    fcsel s4, s5, s4, vs
+; CHECK-NEXT:    str s18, [sp, #944]
+; CHECK-NEXT:    ldr s18, [sp, #96] // 4-byte Reload
+; CHECK-NEXT:    str s18, [sp, #940]
+; CHECK-NEXT:    ldr s18, [sp, #336] // 4-byte Reload
+; CHECK-NEXT:    fcmp s5, s4
+; CHECK-NEXT:    str s18, [sp, #936]
+; CHECK-NEXT:    ldr s18, [sp, #332] // 4-byte Reload
+; CHECK-NEXT:    fcsel s4, s5, s4, gt
+; CHECK-NEXT:    str s18, [sp, #932]
+; CHECK-NEXT:    ldr s18, [sp, #328] // 4-byte Reload
+; CHECK-NEXT:    str s18, [sp, #928]
+; CHECK-NEXT:    ldr s18, [sp, #92] // 4-byte Reload
+; CHECK-NEXT:    str s18, [sp, #924]
+; CHECK-NEXT:    ldr s18, [sp, #324] // 4-byte Reload
+; CHECK-NEXT:    ldr z5, [x8, #-3, mul vl] // 16-byte Folded Reload
+; CHECK-NEXT:    str s18, [sp, #920]
+; CHECK-NEXT:    ldr s18, [sp, #88] // 4-byte Reload
+; CHECK-NEXT:    str s18, [sp, #916]
+; CHECK-NEXT:    ldr s18, [sp, #320] // 4-byte Reload
+; CHECK-NEXT:    fcmp s5, s5
+; CHECK-NEXT:    str s18, [sp, #912]
+; CHECK-NEXT:    ldr s18, [sp, #84] // 4-byte Reload
+; CHECK-NEXT:    fcsel s5, s7, s5, vs
+; CHECK-NEXT:    str s18, [sp, #908]
+; CHECK-NEXT:    ldr s18, [sp, #312] // 4-byte Reload
+; CHECK-NEXT:    str s18, [sp, #904]
+; CHECK-NEXT:    ldr s18, [sp, #308] // 4-byte Reload
+; CHECK-NEXT:    fcmp s7, s5
+; CHECK-NEXT:    str s18, [sp, #900]
+; CHECK-NEXT:    ldr s18, [sp, #80] // 4-byte Reload
+; CHECK-NEXT:    fcsel s5, s7, s5, gt
+; CHECK-NEXT:    str s18, [sp, #896]
+; CHECK-NEXT:    ldr s18, [sp, #300] // 4-byte Reload
+; CHECK-NEXT:    str s18, [sp, #892]
+; CHECK-NEXT:    ldr s18, [sp, #292] // 4-byte Reload
+; CHECK-NEXT:    str s18, [sp, #888]
+; CHECK-NEXT:    ldr s18, [sp, #280] // 4-byte Reload
+; CHECK-NEXT:    ldr z7, [x8, #-4, mul vl] // 16-byte Folded Reload
+; CHECK-NEXT:    str s18, [sp, #884]
+; CHECK-NEXT:    ldr s18, [sp, #272] // 4-byte Reload
+; CHECK-NEXT:    str s18, [sp, #880]
+; CHECK-NEXT:    ldr s18, [sp, #264] // 4-byte Reload
+; CHECK-NEXT:    fcmp s7, s7
+; CHECK-NEXT:    str s18, [sp, #876]
+; CHECK-NEXT:    ldr s18, [sp, #256] // 4-byte Reload
+; CHECK-NEXT:    fcsel s7, s16, s7, vs
+; CHECK-NEXT:    str s18, [sp, #872]
+; CHECK-NEXT:    ldr s18, [sp, #248] // 4-byte Reload
+; CHECK-NEXT:    str s18, [sp, #868]
+; CHECK-NEXT:    ldr s18, [sp, #240] // 4-byte Reload
+; CHECK-NEXT:    fcmp s16, s7
+; CHECK-NEXT:    str s18, [sp, #864]
+; CHECK-NEXT:    ldr s18, [sp, #232] // 4-byte Reload
+; CHECK-NEXT:    fcsel s7, s16, s7, gt
+; CHECK-NEXT:    str s18, [sp, #860]
+; CHECK-NEXT:    ldr s18, [sp, #224] // 4-byte Reload
+; CHECK-NEXT:    str s18, [sp, #856]
+; CHECK-NEXT:    ldr s18, [sp, #216] // 4-byte Reload
+; CHECK-NEXT:    str s18, [sp, #852]
+; CHECK-NEXT:    ldr z16, [x8, #-2, mul vl] // 16-byte Folded Reload
+; CHECK-NEXT:    str s13, [sp, #848]
+; CHECK-NEXT:    str s15, [sp, #844]
+; CHECK-NEXT:    str s11, [sp, #840]
+; CHECK-NEXT:    fcmp s16, s16
+; CHECK-NEXT:    str s8, [sp, #836]
+; CHECK-NEXT:    str s29, [sp, #832]
+; CHECK-NEXT:    str s27, [sp, #828]
+; CHECK-NEXT:    fcsel s16, s17, s16, vs
+; CHECK-NEXT:    str s25, [sp, #824]
+; CHECK-NEXT:    str s28, [sp, #820]
+; CHECK-NEXT:    str s31, [sp, #816]
+; CHECK-NEXT:    fcmp s17, s16
+; CHECK-NEXT:    fcsel s16, s17, s16, gt
+; CHECK-NEXT:    ldr z17, [x8, #-1, mul vl] // 16-byte Folded Reload
+; CHECK-NEXT:    str s6, [sp, #804]
+; CHECK-NEXT:    str s1, [sp, #800]
+; CHECK-NEXT:    ldr s1, [sp, #288] // 4-byte Reload
+; CHECK-NEXT:    adrp x8, .LCPI83_0
+; CHECK-NEXT:    add x8, x8, :lo12:.LCPI83_0
+; CHECK-NEXT:    str s10, [sp, #812]
+; CHECK-NEXT:    fcmp s17, s17
+; CHECK-NEXT:    str s9, [sp, #808]
+; CHECK-NEXT:    str s2, [sp, #796]
+; CHECK-NEXT:    str s3, [sp, #792]
+; CHECK-NEXT:    fcsel s6, s0, s17, vs
+; CHECK-NEXT:    str s4, [sp, #788]
+; CHECK-NEXT:    str s5, [sp, #784]
+; CHECK-NEXT:    str s7, [sp, #780]
+; CHECK-NEXT:    fcmp s0, s6
+; CHECK-NEXT:    str s16, [sp, #776]
+; CHECK-NEXT:    str s1, [sp, #768]
+; CHECK-NEXT:    fcsel s0, s0, s6, gt
+; CHECK-NEXT:    str s0, [sp, #772]
+; CHECK-NEXT:    ld1w { z0.s }, p0/z, [x8]
+; CHECK-NEXT:    add x8, sp, #768
+; CHECK-NEXT:    ld1w { z1.s }, p0/z, [x9]
+; CHECK-NEXT:    cmpeq p1.s, p0/z, z1.s, z0.s
+; CHECK-NEXT:    mov z0.s, p1/z, #-1 // =0xffffffffffffffff
+; CHECK-NEXT:    ptrue p1.s
+; CHECK-NEXT:    and z0.s, z0.s, #0x1
+; CHECK-NEXT:    cmpne p1.s, p1/z, z0.s, #0
+; CHECK-NEXT:    ld1w { z0.s }, p0/z, [x8]
+; CHECK-NEXT:    fcmeq p2.s, p0/z, z0.s, #0.0
+; CHECK-NEXT:    sel z1.s, p1, z1.s, z0.s
+; CHECK-NEXT:    mov z0.s, p2/m, z1.s
+; CHECK-NEXT:    st1w { z0.s }, p0, [x0]
+; CHECK-NEXT:    sub sp, x29, #64
+; CHECK-NEXT:    ldp x29, x30, [sp, #64] // 16-byte Folded Reload
+; CHECK-NEXT:    ldp d9, d8, [sp, #48] // 16-byte Folded Reload
+; CHECK-NEXT:    ldp d11, d10, [sp, #32] // 16-byte Folded Reload
+; CHECK-NEXT:    ldp d13, d12, [sp, #16] // 16-byte Folded Reload
+; CHECK-NEXT:    ldp d15, d14, [sp], #80 // 16-byte Folded Reload
+; CHECK-NEXT:    ret
+  %op1 = load <64 x float>, ptr %a
+  %op2 = load <64 x float>, ptr %b
+  %res = call <64 x float> @llvm.maximumnum.v64f32(<64 x float> %op1, <64 x float> %op2)
+  store <64 x float> %res, ptr %a
+  ret void
+}
+
+; Don't use SVE for 64-bit vectors.
+define <1 x double> @fmaximumnum_v1f64(<1 x double> %op1, <1 x double> %op2) vscale_range(2,0) #0 {
+; CHECK-LABEL: fmaximumnum_v1f64:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    fminnm d1, d1, d1
+; CHECK-NEXT:    fminnm d0, d0, d0
+; CHECK-NEXT:    fmaxnm d0, d0, d1
+; CHECK-NEXT:    ret
+  %res = call <1 x double> @llvm.maximumnum.v1f64(<1 x double> %op1, <1 x double> %op2)
+  ret <1 x double> %res
+}
+
+; Don't use SVE for 128-bit vectors.
+define <2 x double> @fmaximumnum_v2f64(<2 x double> %op1, <2 x double> %op2) vscale_range(2,0) #0 {
+; CHECK-LABEL: fmaximumnum_v2f64:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    fminnm v1.2d, v1.2d, v1.2d
+; CHECK-NEXT:    fminnm v0.2d, v0.2d, v0.2d
+; CHECK-NEXT:    fmaxnm v0.2d, v0.2d, v1.2d
+; CHECK-NEXT:    ret
+  %res = call <2 x double> @llvm.maximumnum.v2f64(<2 x double> %op1, <2 x double> %op2)
+  ret <2 x double> %res
+}
+
+define void @fmaximumnum_v4f64(ptr %a, ptr %b) vscale_range(2,0) #0 {
+; CHECK-LABEL: fmaximumnum_v4f64:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    stp x29, x30, [sp, #-16]! // 16-byte Folded Spill
+; CHECK-NEXT:    sub x9, sp, #80
+; CHECK-NEXT:    mov x29, sp
+; CHECK-NEXT:    and sp, x9, #0xffffffffffffffe0
+; CHECK-NEXT:    .cfi_def_cfa w29, 16
+; CHECK-NEXT:    .cfi_offset w30, -8
+; CHECK-NEXT:    .cfi_offset w29, -16
+; CHECK-NEXT:    ptrue p0.d, vl4
+; CHECK-NEXT:    adrp x8, .LCPI86_0
+; CHECK-NEXT:    add x8, x8, :lo12:.LCPI86_0
+; CHECK-NEXT:    mov x9, sp
+; CHECK-NEXT:    ld1d { z0.d }, p0/z, [x0]
+; CHECK-NEXT:    ld1d { z1.d }, p0/z, [x1]
+; CHECK-NEXT:    fcmp d0, d0
+; CHECK-NEXT:    mov z2.d, z0.d[3]
+; CHECK-NEXT:    mov z3.d, z1.d[3]
+; CHECK-NEXT:    mov z5.d, z0.d[2]
+; CHECK-NEXT:    mov z6.d, z1.d[2]
+; CHECK-NEXT:    mov z7.d, z1.d[1]
+; CHECK-NEXT:    fcsel d4, d1, d0, vs
+; CHECK-NEXT:    fcmp d2, d2
+; CHECK-NEXT:    mov z0.d, z0.d[1]
+; CHECK-NEXT:    fcsel d2, d3, d2, vs
+; CHECK-NEXT:    fcmp d5, d5
+; CHECK-NEXT:    fcsel d5, d6, d5, vs
+; CHECK-NEXT:    fcmp d0, d0
+; CHECK-NEXT:    fcsel d0, d7, d0, vs
+; CHECK-NEXT:    fcmp d1, d1
+; CHECK-NEXT:    stp d5, d2, [sp, #16]
+; CHECK-NEXT:    fcsel d1, d4, d1, vs
+; CHECK-NEXT:    stp d4, d0, [sp]
+; CHECK-NEXT:    fcmp d4, d1
+; CHECK-NEXT:    fcsel d1, d4, d1, gt
+; CHECK-NEXT:    fcmp d3, d3
+; CHECK-NEXT:    fcsel d3, d2, d3, vs
+; CHECK-NEXT:    fcmp d2, d3
+; CHECK-NEXT:    fcsel d3, d2, d3, gt
+; CHECK-NEXT:    fcmp d6, d6
+; CHECK-NEXT:    fcsel d6, d5, d6, vs
+; CHECK-NEXT:    fcmp d5, d6
+; CHECK-NEXT:    fcsel d6, d5, d6, gt
+; CHECK-NEXT:    fcmp d7, d7
+; CHECK-NEXT:    fcsel d7, d0, d7, vs
+; CHECK-NEXT:    stp d6, d3, [sp, #48]
+; CHECK-NEXT:    fcmp d0, d7
+; CHECK-NEXT:    fcsel d0, d0, d7, gt
+; CHECK-NEXT:    stp d1, d0, [sp, #32]
+; CHECK-NEXT:    ld1d { z0.d }, p0/z, [x8]
+; CHECK-NEXT:    add x8, sp, #32
+; CHECK-NEXT:    ld1d { z1.d }, p0/z, [x9]
+; CHECK-NEXT:    cmpeq p1.d, p0/z, z1.d, z0.d
+; CHECK-NEXT:    mov z0.d, p1/z, #-1 // =0xffffffffffffffff
+; CHECK-NEXT:    ptrue p1.d
+; CHECK-NEXT:    and z0.d, z0.d, #0x1
+; CHECK-NEXT:    cmpne p1.d, p1/z, z0.d, #0
+; CHECK-NEXT:    ld1d { z0.d }, p0/z, [x8]
+; CHECK-NEXT:    fcmeq p2.d, p0/z, z0.d, #0.0
+; CHECK-NEXT:    sel z1.d, p1, z1.d, z0.d
+; CHECK-NEXT:    mov z0.d, p2/m, z1.d
+; CHECK-NEXT:    st1d { z0.d }, p0, [x0]
+; CHECK-NEXT:    mov sp, x29
+; CHECK-NEXT:    ldp x29, x30, [sp], #16 // 16-byte Folded Reload
+; CHECK-NEXT:    ret
+  %op1 = load <4 x double>, ptr %a
+  %op2 = load <4 x double>, ptr %b
+  %res = call <4 x double> @llvm.maximumnum.v4f64(<4 x double> %op1, <4 x double> %op2)
+  store <4 x double> %res, ptr %a
+  ret void
+}
+
+define void @fmaximumnum_v8f64(ptr %a, ptr %b) #0 {
+; VBITS_EQ_256-LABEL: fmaximumnum_v8f64:
+; VBITS_EQ_256:       // %bb.0:
+; VBITS_EQ_256-NEXT:    stp x29, x30, [sp, #-16]! // 16-byte Folded Spill
+; VBITS_EQ_256-NEXT:    sub x9, sp, #144
+; VBITS_EQ_256-NEXT:    mov x29, sp
+; VBITS_EQ_256-NEXT:    and sp, x9, #0xffffffffffffffe0
+; VBITS_EQ_256-NEXT:    .cfi_def_cfa w29, 16
+; VBITS_EQ_256-NEXT:    .cfi_offset w30, -8
+; VBITS_EQ_256-NEXT:    .cfi_offset w29, -16
+; VBITS_EQ_256-NEXT:    ptrue p0.d, vl4
+; VBITS_EQ_256-NEXT:    mov x8, #4 // =0x4
+; VBITS_EQ_256-NEXT:    adrp x9, .LCPI87_0
+; VBITS_EQ_256-NEXT:    add x9, x9, :lo12:.LCPI87_0
+; VBITS_EQ_256-NEXT:    add x10, sp, #32
+; VBITS_EQ_256-NEXT:    ld1d { z1.d }, p0/z, [x0]
+; VBITS_EQ_256-NEXT:    ld1d { z2.d }, p0/z, [x1]
+; VBITS_EQ_256-NEXT:    ld1d { z17.d }, p0/z, [x1, x8, lsl #3]
+; VBITS_EQ_256-NEXT:    fcmp d1, d1
+; VBITS_EQ_256-NEXT:    mov z3.d, z1.d[3]
+; VBITS_EQ_256-NEXT:    mov z5.d, z2.d[3]
+; VBITS_EQ_256-NEXT:    mov z4.d, z1.d[2]
+; VBITS_EQ_256-NEXT:    mov z6.d, z2.d[2]
+; VBITS_EQ_256-NEXT:    mov z7.d, z1.d[1]
+; VBITS_EQ_256-NEXT:    mov z16.d, z2.d[1]
+; VBITS_EQ_256-NEXT:    mov z19.d, z17.d[3]
+; VBITS_EQ_256-NEXT:    mov z22.d, z17.d[2]
+; VBITS_EQ_256-NEXT:    fcsel d0, d2, d1, vs
+; VBITS_EQ_256-NEXT:    fcmp d3, d3
+; VBITS_EQ_256-NEXT:    mov z23.d, z17.d[1]
+; VBITS_EQ_256-NEXT:    fcsel d1, d5, d3, vs
+; VBITS_EQ_256-NEXT:    fcmp d4, d4
+; VBITS_EQ_256-NEXT:    fcsel d3, d6, d4, vs
+; VBITS_EQ_256-NEXT:    fcmp d7, d7
+; VBITS_EQ_256-NEXT:    fcsel d4, d16, d7, vs
+; VBITS_EQ_256-NEXT:    fcmp d2, d2
+; VBITS_EQ_256-NEXT:    fcsel d2, d0, d2, vs
+; VBITS_EQ_256-NEXT:    fcmp d0, d2
+; VBITS_EQ_256-NEXT:    fcsel d2, d0, d2, gt
+; VBITS_EQ_256-NEXT:    fcmp d5, d5
+; VBITS_EQ_256-NEXT:    fcsel d5, d1, d5, vs
+; VBITS_EQ_256-NEXT:    fcmp d1, d5
+; VBITS_EQ_256-NEXT:    fcsel d5, d1, d5, gt
+; VBITS_EQ_256-NEXT:    fcmp d6, d6
+; VBITS_EQ_256-NEXT:    fcsel d6, d3, d6, vs
+; VBITS_EQ_256-NEXT:    fcmp d3, d6
+; VBITS_EQ_256-NEXT:    fcsel d6, d3, d6, gt
+; VBITS_EQ_256-NEXT:    fcmp d16, d16
+; VBITS_EQ_256-NEXT:    fcsel d7, d4, d16, vs
+; VBITS_EQ_256-NEXT:    ld1d { z16.d }, p0/z, [x0, x8, lsl #3]
+; VBITS_EQ_256-NEXT:    stp d0, d4, [sp]
+; VBITS_EQ_256-NEXT:    stp d3, d1, [sp, #16]
+; VBITS_EQ_256-NEXT:    stp d6, d5, [sp, #80]
+; VBITS_EQ_256-NEXT:    fcmp d4, d7
+; VBITS_EQ_256-NEXT:    mov z18.d, z16.d[3]
+; VBITS_EQ_256-NEXT:    mov z20.d, z16.d[2]
+; VBITS_EQ_256-NEXT:    fcsel d7, d4, d7, gt
+; VBITS_EQ_256-NEXT:    fcmp d16, d16
+; VBITS_EQ_256-NEXT:    fcsel d21, d17, d16, vs
+; VBITS_EQ_256-NEXT:    fcmp d18, d18
+; VBITS_EQ_256-NEXT:    mov z16.d, z16.d[1]
+; VBITS_EQ_256-NEXT:    stp d2, d7, [sp, #64]
+; VBITS_EQ_256-NEXT:    fcsel d18, d19, d18, vs
+; VBITS_EQ_256-NEXT:    fcmp d20, d20
+; VBITS_EQ_256-NEXT:    fcsel d20, d22, d20, vs
+; VBITS_EQ_256-NEXT:    fcmp d16, d16
+; VBITS_EQ_256-NEXT:    fcsel d16, d23, d16, vs
+; VBITS_EQ_256-NEXT:    fcmp d17, d17
+; VBITS_EQ_256-NEXT:    stp d20, d18, [sp, #48]
+; VBITS_EQ_256-NEXT:    fcsel d17, d21, d17, vs
+; VBITS_EQ_256-NEXT:    stp d21, d16, [sp, #32]
+; VBITS_EQ_256-NEXT:    fcmp d21, d17
+; VBITS_EQ_256-NEXT:    fcsel d17, d21, d17, gt
+; VBITS_EQ_256-NEXT:    fcmp d19, d19
+; VBITS_EQ_256-NEXT:    fcsel d19, d18, d19, vs
+; VBITS_EQ_256-NEXT:    fcmp d18, d19
+; VBITS_EQ_256-NEXT:    fcsel d19, d18, d19, gt
+; VBITS_EQ_256-NEXT:    fcmp d22, d22
+; VBITS_EQ_256-NEXT:    fcsel d22, d20, d22, vs
+; VBITS_EQ_256-NEXT:    fcmp d20, d22
+; VBITS_EQ_256-NEXT:    fcsel d0, d20, d22, gt
+; VBITS_EQ_256-NEXT:    fcmp d23, d23
+; VBITS_EQ_256-NEXT:    fcsel d1, d16, d23, vs
+; VBITS_EQ_256-NEXT:    stp d0, d19, [sp, #112]
+; VBITS_EQ_256-NEXT:    ld1d { z0.d }, p0/z, [x9]
+; VBITS_EQ_256-NEXT:    mov x9, sp
+; VBITS_EQ_256-NEXT:    fcmp d16, d1
+; VBITS_EQ_256-NEXT:    fcsel d1, d16, d1, gt
+; VBITS_EQ_256-NEXT:    stp d17, d1, [sp, #96]
+; VBITS_EQ_256-NEXT:    ld1d { z1.d }, p0/z, [x10]
+; VBITS_EQ_256-NEXT:    ld1d { z2.d }, p0/z, [x9]
+; VBITS_EQ_256-NEXT:    add x9, sp, #96
+; VBITS_EQ_256-NEXT:    cmpeq p1.d, p0/z, z1.d, z0.d
+; VBITS_EQ_256-NEXT:    cmpeq p2.d, p0/z, z2.d, z0.d
+; VBITS_EQ_256-NEXT:    mov z0.d, p1/z, #-1 // =0xffffffffffffffff
+; VBITS_EQ_256-NEXT:    mov z3.d, p2/z, #-1 // =0xffffffffffffffff
+; VBITS_EQ_256-NEXT:    ptrue p1.d
+; VBITS_EQ_256-NEXT:    and z0.d, z0.d, #0x1
+; VBITS_EQ_256-NEXT:    and z3.d, z3.d, #0x1
+; VBITS_EQ_256-NEXT:    cmpne p2.d, p1/z, z0.d, #0
+; VBITS_EQ_256-NEXT:    ld1d { z0.d }, p0/z, [x9]
+; VBITS_EQ_256-NEXT:    add x9, sp, #64
+; VBITS_EQ_256-NEXT:    ld1d { z4.d }, p0/z, [x9]
+; VBITS_EQ_256-NEXT:    cmpne p1.d, p1/z, z3.d, #0
+; VBITS_EQ_256-NEXT:    fcmeq p3.d, p0/z, z0.d, #0.0
+; VBITS_EQ_256-NEXT:    sel z1.d, p2, z1.d, z0.d
+; VBITS_EQ_256-NEXT:    fcmeq p2.d, p0/z, z4.d, #0.0
+; VBITS_EQ_256-NEXT:    sel z2.d, p1, z2.d, z4.d
+; VBITS_EQ_256-NEXT:    mov z0.d, p3/m, z1.d
+; VBITS_EQ_256-NEXT:    sel z1.d, p2, z2.d, z4.d
+; VBITS_EQ_256-NEXT:    st1d { z0.d }, p0, [x0, x8, lsl #3]
+; VBITS_EQ_256-NEXT:    st1d { z1.d }, p0, [x0]
+; VBITS_EQ_256-NEXT:    mov sp, x29
+; VBITS_EQ_256-NEXT:    ldp x29, x30, [sp], #16 // 16-byte Folded Reload
+; VBITS_EQ_256-NEXT:    ret
+;
+; VBITS_GE_512-LABEL: fmaximumnum_v8f64:
+; VBITS_GE_512:       // %bb.0:
+; VBITS_GE_512-NEXT:    stp x29, x30, [sp, #-16]! // 16-byte Folded Spill
+; VBITS_GE_512-NEXT:    sub x9, sp, #176
+; VBITS_GE_512-NEXT:    mov x29, sp
+; VBITS_GE_512-NEXT:    and sp, x9, #0xffffffffffffffc0
+; VBITS_GE_512-NEXT:    .cfi_def_cfa w29, 16
+; VBITS_GE_512-NEXT:    .cfi_offset w30, -8
+; VBITS_GE_512-NEXT:    .cfi_offset w29, -16
+; VBITS_GE_512-NEXT:    ptrue p0.d, vl8
+; VBITS_GE_512-NEXT:    adrp x8, .LCPI87_0
+; VBITS_GE_512-NEXT:    add x8, x8, :lo12:.LCPI87_0
+; VBITS_GE_512-NEXT:    mov x9, sp
+; VBITS_GE_512-NEXT:    ld1d { z5.d }, p0/z, [x0]
+; VBITS_GE_512-NEXT:    ld1d { z2.d }, p0/z, [x1]
+; VBITS_GE_512-NEXT:    fcmp d5, d5
+; VBITS_GE_512-NEXT:    mov z1.d, z5.d[7]
+; VBITS_GE_512-NEXT:    mov z3.d, z2.d[7]
+; VBITS_GE_512-NEXT:    mov z4.d, z5.d[6]
+; VBITS_GE_512-NEXT:    mov z6.d, z2.d[6]
+; VBITS_GE_512-NEXT:    mov z7.d, z5.d[5]
+; VBITS_GE_512-NEXT:    mov z16.d, z2.d[5]
+; VBITS_GE_512-NEXT:    mov z17.d, z5.d[4]
+; VBITS_GE_512-NEXT:    mov z18.d, z2.d[4]
+; VBITS_GE_512-NEXT:    fcsel d0, d2, d5, vs
+; VBITS_GE_512-NEXT:    fcmp d1, d1
+; VBITS_GE_512-NEXT:    mov z19.d, z5.d[3]
+; VBITS_GE_512-NEXT:    mov z20.d, z2.d[3]
+; VBITS_GE_512-NEXT:    mov z21.d, z5.d[2]
+; VBITS_GE_512-NEXT:    mov z22.d, z2.d[2]
+; VBITS_GE_512-NEXT:    mov z5.d, z5.d[1]
+; VBITS_GE_512-NEXT:    mov z23.d, z2.d[1]
+; VBITS_GE_512-NEXT:    fcsel d1, d3, d1, vs
+; VBITS_GE_512-NEXT:    fcmp d4, d4
+; VBITS_GE_512-NEXT:    fcsel d4, d6, d4, vs
+; VBITS_GE_512-NEXT:    fcmp d7, d7
+; VBITS_GE_512-NEXT:    fcsel d7, d16, d7, vs
+; VBITS_GE_512-NEXT:    fcmp d17, d17
+; VBITS_GE_512-NEXT:    stp d4, d1, [sp, #48]
+; VBITS_GE_512-NEXT:    fcsel d17, d18, d17, vs
+; VBITS_GE_512-NEXT:    fcmp d19, d19
+; VBITS_GE_512-NEXT:    fcsel d19, d20, d19, vs
+; VBITS_GE_512-NEXT:    fcmp d21, d21
+; VBITS_GE_512-NEXT:    stp d17, d7, [sp, #32]
+; VBITS_GE_512-NEXT:    fcsel d21, d22, d21, vs
+; VBITS_GE_512-NEXT:    fcmp d5, d5
+; VBITS_GE_512-NEXT:    fcsel d5, d23, d5, vs
+; VBITS_GE_512-NEXT:    fcmp d2, d2
+; VBITS_GE_512-NEXT:    stp d21, d19, [sp, #16]
+; VBITS_GE_512-NEXT:    fcsel d2, d0, d2, vs
+; VBITS_GE_512-NEXT:    stp d0, d5, [sp]
+; VBITS_GE_512-NEXT:    fcmp d0, d2
+; VBITS_GE_512-NEXT:    fcsel d2, d0, d2, gt
+; VBITS_GE_512-NEXT:    fcmp d3, d3
+; VBITS_GE_512-NEXT:    fcsel d3, d1, d3, vs
+; VBITS_GE_512-NEXT:    fcmp d1, d3
+; VBITS_GE_512-NEXT:    fcsel d3, d1, d3, gt
+; VBITS_GE_512-NEXT:    fcmp d6, d6
+; VBITS_GE_512-NEXT:    fcsel d6, d4, d6, vs
+; VBITS_GE_512-NEXT:    fcmp d4, d6
+; VBITS_GE_512-NEXT:    fcsel d6, d4, d6, gt
+; VBITS_GE_512-NEXT:    fcmp d16, d16
+; VBITS_GE_512-NEXT:    fcsel d16, d7, d16, vs
+; VBITS_GE_512-NEXT:    stp d6, d3, [sp, #112]
+; VBITS_GE_512-NEXT:    fcmp d7, d16
+; VBITS_GE_512-NEXT:    fcsel d16, d7, d16, gt
+; VBITS_GE_512-NEXT:    fcmp d18, d18
+; VBITS_GE_512-NEXT:    fcsel d18, d17, d18, vs
+; VBITS_GE_512-NEXT:    fcmp d17, d18
+; VBITS_GE_512-NEXT:    fcsel d18, d17, d18, gt
+; VBITS_GE_512-NEXT:    fcmp d20, d20
+; VBITS_GE_512-NEXT:    fcsel d20, d19, d20, vs
+; VBITS_GE_512-NEXT:    stp d18, d16, [sp, #96]
+; VBITS_GE_512-NEXT:    fcmp d19, d20
+; VBITS_GE_512-NEXT:    fcsel d20, d19, d20, gt
+; VBITS_GE_512-NEXT:    fcmp d22, d22
+; VBITS_GE_512-NEXT:    fcsel d22, d21, d22, vs
+; VBITS_GE_512-NEXT:    fcmp d21, d22
+; VBITS_GE_512-NEXT:    fcsel d1, d21, d22, gt
+; VBITS_GE_512-NEXT:    fcmp d23, d23
+; VBITS_GE_512-NEXT:    fcsel d4, d5, d23, vs
+; VBITS_GE_512-NEXT:    stp d1, d20, [sp, #80]
+; VBITS_GE_512-NEXT:    fcmp d5, d4
+; VBITS_GE_512-NEXT:    fcsel d0, d5, d4, gt
+; VBITS_GE_512-NEXT:    stp d2, d0, [sp, #64]
+; VBITS_GE_512-NEXT:    ld1d { z0.d }, p0/z, [x8]
+; VBITS_GE_512-NEXT:    add x8, sp, #64
+; VBITS_GE_512-NEXT:    ld1d { z1.d }, p0/z, [x9]
+; VBITS_GE_512-NEXT:    cmpeq p1.d, p0/z, z1.d, z0.d
+; VBITS_GE_512-NEXT:    mov z0.d, p1/z, #-1 // =0xffffffffffffffff
+; VBITS_GE_512-NEXT:    ptrue p1.d
+; VBITS_GE_512-NEXT:    and z0.d, z0.d, #0x1
+; VBITS_GE_512-NEXT:    cmpne p1.d, p1/z, z0.d, #0
+; VBITS_GE_512-NEXT:    ld1d { z0.d }, p0/z, [x8]
+; VBITS_GE_512-NEXT:    fcmeq p2.d, p0/z, z0.d, #0.0
+; VBITS_GE_512-NEXT:    sel z1.d, p1, z1.d, z0.d
+; VBITS_GE_512-NEXT:    mov z0.d, p2/m, z1.d
+; VBITS_GE_512-NEXT:    st1d { z0.d }, p0, [x0]
+; VBITS_GE_512-NEXT:    mov sp, x29
+; VBITS_GE_512-NEXT:    ldp x29, x30, [sp], #16 // 16-byte Folded Reload
+; VBITS_GE_512-NEXT:    ret
+  %op1 = load <8 x double>, ptr %a
+  %op2 = load <8 x double>, ptr %b
+  %res = call <8 x double> @llvm.maximumnum.v8f64(<8 x double> %op1, <8 x double> %op2)
+  store <8 x double> %res, ptr %a
+  ret void
+}
+
+define void @fmaximumnum_v16f64(ptr %a, ptr %b) vscale_range(8,0) #0 {
+; CHECK-LABEL: fmaximumnum_v16f64:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    stp d15, d14, [sp, #-80]! // 16-byte Folded Spill
+; CHECK-NEXT:    sub x9, sp, #432
+; CHECK-NEXT:    stp d13, d12, [sp, #16] // 16-byte Folded Spill
+; CHECK-NEXT:    stp d11, d10, [sp, #32] // 16-byte Folded Spill
+; CHECK-NEXT:    stp d9, d8, [sp, #48] // 16-byte Folded Spill
+; CHECK-NEXT:    stp x29, x30, [sp, #64] // 16-byte Folded Spill
+; CHECK-NEXT:    add x29, sp, #64
+; CHECK-NEXT:    and sp, x9, #0xffffffffffffff80
+; CHECK-NEXT:    .cfi_def_cfa w29, 16
+; CHECK-NEXT:    .cfi_offset w30, -8
+; CHECK-NEXT:    .cfi_offset w29, -16
+; CHECK-NEXT:    .cfi_offset b8, -24
+; CHECK-NEXT:    .cfi_offset b9, -32
+; CHECK-NEXT:    .cfi_offset b10, -40
+; CHECK-NEXT:    .cfi_offset b11, -48
+; CHECK-NEXT:    .cfi_offset b12, -56
+; CHECK-NEXT:    .cfi_offset b13, -64
+; CHECK-NEXT:    .cfi_offset b14, -72
+; CHECK-NEXT:    .cfi_offset b15, -80
+; CHECK-NEXT:    ptrue p0.d, vl16
+; CHECK-NEXT:    mov w8, #15 // =0xf
+; CHECK-NEXT:    add x9, sp, #128
+; CHECK-NEXT:    ld1d { z18.d }, p0/z, [x0]
+; CHECK-NEXT:    ld1d { z0.d }, p0/z, [x1]
+; CHECK-NEXT:    fcmp d18, d18
+; CHECK-NEXT:    mov z25.d, z18.d[7]
+; CHECK-NEXT:    mov z29.d, z0.d[7]
+; CHECK-NEXT:    mov z28.d, z18.d[6]
+; CHECK-NEXT:    mov z31.d, z0.d[6]
+; CHECK-NEXT:    mov z30.d, z18.d[5]
+; CHECK-NEXT:    mov z9.d, z0.d[5]
+; CHECK-NEXT:    mov z8.d, z18.d[4]
+; CHECK-NEXT:    mov z13.d, z0.d[4]
+; CHECK-NEXT:    fcsel d1, d0, d18, vs
+; CHECK-NEXT:    whilels p1.d, xzr, x8
+; CHECK-NEXT:    mov w8, #14 // =0xe
+; CHECK-NEXT:    mov z12.d, z18.d[3]
+; CHECK-NEXT:    mov z14.d, z0.d[3]
+; CHECK-NEXT:    mov z7.d, z18.d[2]
+; CHECK-NEXT:    lastb d17, p1, z0.d
+; CHECK-NEXT:    mov z10.d, z0.d[2]
+; CHECK-NEXT:    str d1, [sp, #120] // 8-byte Spill
+; CHECK-NEXT:    lastb d1, p1, z18.d
+; CHECK-NEXT:    fcmp d1, d1
+; CHECK-NEXT:    fcsel d1, d17, d1, vs
+; CHECK-NEXT:    whilels p1.d, xzr, x8
+; CHECK-NEXT:    mov w8, #13 // =0xd
+; CHECK-NEXT:    lastb d2, p1, z18.d
+; CHECK-NEXT:    lastb d19, p1, z0.d
+; CHECK-NEXT:    fcmp d2, d2
+; CHECK-NEXT:    fcsel d2, d19, d2, vs
+; CHECK-NEXT:    whilels p1.d, xzr, x8
+; CHECK-NEXT:    mov w8, #12 // =0xc
+; CHECK-NEXT:    lastb d3, p1, z18.d
+; CHECK-NEXT:    lastb d20, p1, z0.d
+; CHECK-NEXT:    stp d2, d1, [sp, #240]
+; CHECK-NEXT:    fcmp d3, d3
+; CHECK-NEXT:    fcsel d3, d20, d3, vs
+; CHECK-NEXT:    whilels p1.d, xzr, x8
+; CHECK-NEXT:    mov w8, #11 // =0xb
+; CHECK-NEXT:    lastb d4, p1, z18.d
+; CHECK-NEXT:    lastb d21, p1, z0.d
+; CHECK-NEXT:    fcmp d4, d4
+; CHECK-NEXT:    fcsel d4, d21, d4, vs
+; CHECK-NEXT:    whilels p1.d, xzr, x8
+; CHECK-NEXT:    mov w8, #10 // =0xa
+; CHECK-NEXT:    lastb d5, p1, z18.d
+; CHECK-NEXT:    lastb d23, p1, z0.d
+; CHECK-NEXT:    stp d4, d3, [sp, #224]
+; CHECK-NEXT:    fcmp d5, d5
+; CHECK-NEXT:    fcsel d5, d23, d5, vs
+; CHECK-NEXT:    whilels p1.d, xzr, x8
+; CHECK-NEXT:    mov w8, #9 // =0x9
+; CHECK-NEXT:    lastb d6, p1, z18.d
+; CHECK-NEXT:    lastb d24, p1, z0.d
+; CHECK-NEXT:    fcmp d6, d6
+; CHECK-NEXT:    fcsel d6, d24, d6, vs
+; CHECK-NEXT:    whilels p1.d, xzr, x8
+; CHECK-NEXT:    mov w8, #8 // =0x8
+; CHECK-NEXT:    lastb d16, p1, z18.d
+; CHECK-NEXT:    lastb d26, p1, z0.d
+; CHECK-NEXT:    stp d6, d5, [sp, #208]
+; CHECK-NEXT:    fcmp d16, d16
+; CHECK-NEXT:    fcsel d16, d26, d16, vs
+; CHECK-NEXT:    whilels p1.d, xzr, x8
+; CHECK-NEXT:    adrp x8, .LCPI88_0
+; CHECK-NEXT:    add x8, x8, :lo12:.LCPI88_0
+; CHECK-NEXT:    lastb d22, p1, z18.d
+; CHECK-NEXT:    lastb d27, p1, z0.d
+; CHECK-NEXT:    mov z18.d, z18.d[1]
+; CHECK-NEXT:    fcmp d22, d22
+; CHECK-NEXT:    fcsel d22, d27, d22, vs
+; CHECK-NEXT:    fcmp d25, d25
+; CHECK-NEXT:    fcsel d25, d29, d25, vs
+; CHECK-NEXT:    fcmp d28, d28
+; CHECK-NEXT:    stp d22, d16, [sp, #192]
+; CHECK-NEXT:    fcsel d28, d31, d28, vs
+; CHECK-NEXT:    fcmp d30, d30
+; CHECK-NEXT:    fcsel d30, d9, d30, vs
+; CHECK-NEXT:    fcmp d8, d8
+; CHECK-NEXT:    stp d28, d25, [sp, #176]
+; CHECK-NEXT:    fcsel d11, d13, d8, vs
+; CHECK-NEXT:    fcmp d12, d12
+; CHECK-NEXT:    mov z8.d, z0.d[1]
+; CHECK-NEXT:    fcsel d15, d14, d12, vs
+; CHECK-NEXT:    fcmp d7, d7
+; CHECK-NEXT:    stp d11, d30, [sp, #160]
+; CHECK-NEXT:    fcsel d12, d10, d7, vs
+; CHECK-NEXT:    fcmp d18, d18
+; CHECK-NEXT:    ldr d7, [sp, #120] // 8-byte Reload
+; CHECK-NEXT:    fcsel d18, d8, d18, vs
+; CHECK-NEXT:    fcmp d0, d0
+; CHECK-NEXT:    stp d12, d15, [sp, #144]
+; CHECK-NEXT:    fcsel d0, d7, d0, vs
+; CHECK-NEXT:    stp d7, d18, [sp, #128]
+; CHECK-NEXT:    fcmp d7, d0
+; CHECK-NEXT:    fcsel d0, d7, d0, gt
+; CHECK-NEXT:    fcmp d17, d17
+; CHECK-NEXT:    str d0, [sp, #112] // 8-byte Spill
+; CHECK-NEXT:    fcsel d0, d1, d17, vs
+; CHECK-NEXT:    fcmp d1, d0
+; CHECK-NEXT:    fcsel d17, d1, d0, gt
+; CHECK-NEXT:    fcmp d19, d19
+; CHECK-NEXT:    fcsel d0, d2, d19, vs
+; CHECK-NEXT:    fcmp d2, d0
+; CHECK-NEXT:    fcsel d19, d2, d0, gt
+; CHECK-NEXT:    fcmp d20, d20
+; CHECK-NEXT:    fcsel d0, d3, d20, vs
+; CHECK-NEXT:    stp d19, d17, [sp, #368]
+; CHECK-NEXT:    fcmp d3, d0
+; CHECK-NEXT:    fcsel d20, d3, d0, gt
+; CHECK-NEXT:    fcmp d21, d21
+; CHECK-NEXT:    fcsel d0, d4, d21, vs
+; CHECK-NEXT:    fcmp d4, d0
+; CHECK-NEXT:    fcsel d21, d4, d0, gt
+; CHECK-NEXT:    fcmp d23, d23
+; CHECK-NEXT:    fcsel d0, d5, d23, vs
+; CHECK-NEXT:    stp d21, d20, [sp, #352]
+; CHECK-NEXT:    fcmp d5, d0
+; CHECK-NEXT:    fcsel d23, d5, d0, gt
+; CHECK-NEXT:    fcmp d24, d24
+; CHECK-NEXT:    fcsel d0, d6, d24, vs
+; CHECK-NEXT:    fcmp d6, d0
+; CHECK-NEXT:    fcsel d0, d6, d0, gt
+; CHECK-NEXT:    fcmp d26, d26
+; CHECK-NEXT:    fcsel d24, d16, d26, vs
+; CHECK-NEXT:    stp d0, d23, [sp, #336]
+; CHECK-NEXT:    fcmp d16, d24
+; CHECK-NEXT:    fcsel d24, d16, d24, gt
+; CHECK-NEXT:    fcmp d27, d27
+; CHECK-NEXT:    fcsel d26, d22, d27, vs
+; CHECK-NEXT:    fcmp d22, d26
+; CHECK-NEXT:    fcsel d26, d22, d26, gt
+; CHECK-NEXT:    fcmp d29, d29
+; CHECK-NEXT:    fcsel d27, d25, d29, vs
+; CHECK-NEXT:    stp d26, d24, [sp, #320]
+; CHECK-NEXT:    fcmp d25, d27
+; CHECK-NEXT:    fcsel d27, d25, d27, gt
+; CHECK-NEXT:    fcmp d31, d31
+; CHECK-NEXT:    fcsel d29, d28, d31, vs
+; CHECK-NEXT:    fcmp d28, d29
+; CHECK-NEXT:    fcsel d29, d28, d29, gt
+; CHECK-NEXT:    fcmp d9, d9
+; CHECK-NEXT:    fcsel d31, d30, d9, vs
+; CHECK-NEXT:    stp d29, d27, [sp, #304]
+; CHECK-NEXT:    fcmp d30, d31
+; CHECK-NEXT:    fcsel d31, d30, d31, gt
+; CHECK-NEXT:    fcmp d13, d13
+; CHECK-NEXT:    fcsel d9, d11, d13, vs
+; CHECK-NEXT:    fcmp d11, d9
+; CHECK-NEXT:    fcsel d1, d11, d9, gt
+; CHECK-NEXT:    fcmp d14, d14
+; CHECK-NEXT:    fcsel d2, d15, d14, vs
+; CHECK-NEXT:    stp d1, d31, [sp, #288]
+; CHECK-NEXT:    ldr d1, [sp, #112] // 8-byte Reload
+; CHECK-NEXT:    fcmp d15, d2
+; CHECK-NEXT:    fcsel d2, d15, d2, gt
+; CHECK-NEXT:    fcmp d10, d10
+; CHECK-NEXT:    fcsel d3, d12, d10, vs
+; CHECK-NEXT:    fcmp d12, d3
+; CHECK-NEXT:    fcsel d3, d12, d3, gt
+; CHECK-NEXT:    fcmp d8, d8
+; CHECK-NEXT:    fcsel d0, d18, d8, vs
+; CHECK-NEXT:    stp d3, d2, [sp, #272]
+; CHECK-NEXT:    fcmp d18, d0
+; CHECK-NEXT:    fcsel d0, d18, d0, gt
+; CHECK-NEXT:    stp d1, d0, [sp, #256]
+; CHECK-NEXT:    ld1d { z0.d }, p0/z, [x8]
+; CHECK-NEXT:    add x8, sp, #256
+; CHECK-NEXT:    ld1d { z1.d }, p0/z, [x9]
+; CHECK-NEXT:    cmpeq p1.d, p0/z, z1.d, z0.d
+; CHECK-NEXT:    mov z0.d, p1/z, #-1 // =0xffffffffffffffff
+; CHECK-NEXT:    ptrue p1.d
+; CHECK-NEXT:    and z0.d, z0.d, #0x1
+; CHECK-NEXT:    cmpne p1.d, p1/z, z0.d, #0
+; CHECK-NEXT:    ld1d { z0.d }, p0/z, [x8]
+; CHECK-NEXT:    fcmeq p2.d, p0/z, z0.d, #0.0
+; CHECK-NEXT:    sel z1.d, p1, z1.d, z0.d
+; CHECK-NEXT:    mov z0.d, p2/m, z1.d
+; CHECK-NEXT:    st1d { z0.d }, p0, [x0]
+; CHECK-NEXT:    sub sp, x29, #64
+; CHECK-NEXT:    ldp x29, x30, [sp, #64] // 16-byte Folded Reload
+; CHECK-NEXT:    ldp d9, d8, [sp, #48] // 16-byte Folded Reload
+; CHECK-NEXT:    ldp d11, d10, [sp, #32] // 16-byte Folded Reload
+; CHECK-NEXT:    ldp d13, d12, [sp, #16] // 16-byte Folded Reload
+; CHECK-NEXT:    ldp d15, d14, [sp], #80 // 16-byte Folded Reload
+; CHECK-NEXT:    ret
+  %op1 = load <16 x double>, ptr %a
+  %op2 = load <16 x double>, ptr %b
+  %res = call <16 x double> @llvm.maximumnum.v16f64(<16 x double> %op1, <16 x double> %op2)
+  store <16 x double> %res, ptr %a
+  ret void
+}
+
+define void @fmaximumnum_v32f64(ptr %a, ptr %b) vscale_range(16,0) #0 {
+; CHECK-LABEL: fmaximumnum_v32f64:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    stp d15, d14, [sp, #-80]! // 16-byte Folded Spill
+; CHECK-NEXT:    sub x9, sp, #1200
+; CHECK-NEXT:    stp d13, d12, [sp, #16] // 16-byte Folded Spill
+; CHECK-NEXT:    addvl x9, x9, #-5
+; CHECK-NEXT:    stp d11, d10, [sp, #32] // 16-byte Folded Spill
+; CHECK-NEXT:    stp d9, d8, [sp, #48] // 16-byte Folded Spill
+; CHECK-NEXT:    stp x29, x30, [sp, #64] // 16-byte Folded Spill
+; CHECK-NEXT:    add x29, sp, #64
+; CHECK-NEXT:    and sp, x9, #0xffffffffffffff00
+; CHECK-NEXT:    .cfi_def_cfa w29, 16
+; CHECK-NEXT:    .cfi_offset w30, -8
+; CHECK-NEXT:    .cfi_offset w29, -16
+; CHECK-NEXT:    .cfi_offset b8, -24
+; CHECK-NEXT:    .cfi_offset b9, -32
+; CHECK-NEXT:    .cfi_offset b10, -40
+; CHECK-NEXT:    .cfi_offset b11, -48
+; CHECK-NEXT:    .cfi_offset b12, -56
+; CHECK-NEXT:    .cfi_offset b13, -64
+; CHECK-NEXT:    .cfi_offset b14, -72
+; CHECK-NEXT:    .cfi_offset b15, -80
+; CHECK-NEXT:    ptrue p0.d, vl32
+; CHECK-NEXT:    mov w8, #31 // =0x1f
+; CHECK-NEXT:    add x9, sp, #512
+; CHECK-NEXT:    ld1d { z25.d }, p0/z, [x0]
+; CHECK-NEXT:    ld1d { z22.d }, p0/z, [x1]
+; CHECK-NEXT:    fcmp d25, d25
+; CHECK-NEXT:    mov z16.d, z22.d[7]
+; CHECK-NEXT:    mov z19.d, z22.d[6]
+; CHECK-NEXT:    mov z9.d, z25.d[2]
+; CHECK-NEXT:    fcsel d1, d22, d25, vs
+; CHECK-NEXT:    whilels p1.d, xzr, x8
+; CHECK-NEXT:    mov w8, #30 // =0x1e
+; CHECK-NEXT:    lastb d0, p1, z25.d
+; CHECK-NEXT:    lastb d2, p1, z22.d
+; CHECK-NEXT:    fcmp d0, d0
+; CHECK-NEXT:    fcsel d0, d2, d0, vs
+; CHECK-NEXT:    whilels p1.d, xzr, x8
+; CHECK-NEXT:    mov w8, #29 // =0x1d
+; CHECK-NEXT:    lastb d3, p1, z22.d
+; CHECK-NEXT:    stp d0, d1, [sp, #488] // 16-byte Folded Spill
+; CHECK-NEXT:    lastb d0, p1, z25.d
+; CHECK-NEXT:    fcmp d0, d0
+; CHECK-NEXT:    fcsel d0, d3, d0, vs
+; CHECK-NEXT:    whilels p1.d, xzr, x8
+; CHECK-NEXT:    mov w8, #28 // =0x1c
+; CHECK-NEXT:    lastb d23, p1, z22.d
+; CHECK-NEXT:    str d0, [sp, #504] // 8-byte Spill
+; CHECK-NEXT:    lastb d0, p1, z25.d
+; CHECK-NEXT:    fcmp d0, d0
+; CHECK-NEXT:    fcsel d1, d23, d0, vs
+; CHECK-NEXT:    whilels p1.d, xzr, x8
+; CHECK-NEXT:    mov w8, #27 // =0x1b
+; CHECK-NEXT:    lastb d0, p1, z25.d
+; CHECK-NEXT:    lastb d30, p1, z22.d
+; CHECK-NEXT:    fcmp d0, d0
+; CHECK-NEXT:    fcsel d0, d30, d0, vs
+; CHECK-NEXT:    whilels p1.d, xzr, x8
+; CHECK-NEXT:    mov w8, #26 // =0x1a
+; CHECK-NEXT:    stp d0, d1, [sp, #472] // 16-byte Folded Spill
+; CHECK-NEXT:    lastb d0, p1, z25.d
+; CHECK-NEXT:    lastb d1, p1, z22.d
+; CHECK-NEXT:    fcmp d0, d0
+; CHECK-NEXT:    str d1, [sp, #416] // 8-byte Spill
+; CHECK-NEXT:    fcsel d4, d1, d0, vs
+; CHECK-NEXT:    whilels p1.d, xzr, x8
+; CHECK-NEXT:    mov w8, #25 // =0x19
+; CHECK-NEXT:    lastb d0, p1, z25.d
+; CHECK-NEXT:    lastb d1, p1, z22.d
+; CHECK-NEXT:    fcmp d0, d0
+; CHECK-NEXT:    str d1, [sp, #408] // 8-byte Spill
+; CHECK-NEXT:    fcsel d0, d1, d0, vs
+; CHECK-NEXT:    whilels p1.d, xzr, x8
+; CHECK-NEXT:    mov w8, #24 // =0x18
+; CHECK-NEXT:    lastb d5, p1, z22.d
+; CHECK-NEXT:    stp d0, d4, [sp, #456] // 16-byte Folded Spill
+; CHECK-NEXT:    lastb d0, p1, z25.d
+; CHECK-NEXT:    fcmp d0, d0
+; CHECK-NEXT:    fcsel d4, d5, d0, vs
+; CHECK-NEXT:    whilels p1.d, xzr, x8
+; CHECK-NEXT:    mov w8, #23 // =0x17
+; CHECK-NEXT:    lastb d0, p1, z25.d
+; CHECK-NEXT:    lastb d1, p1, z22.d
+; CHECK-NEXT:    fcmp d0, d0
+; CHECK-NEXT:    str d1, [sp, #400] // 8-byte Spill
+; CHECK-NEXT:    fcsel d0, d1, d0, vs
+; CHECK-NEXT:    whilels p1.d, xzr, x8
+; CHECK-NEXT:    mov w8, #22 // =0x16
+; CHECK-NEXT:    lastb d21, p1, z22.d
+; CHECK-NEXT:    stp d0, d4, [sp, #440] // 16-byte Folded Spill
+; CHECK-NEXT:    lastb d0, p1, z25.d
+; CHECK-NEXT:    fcmp d0, d0
+; CHECK-NEXT:    fcsel d4, d21, d0, vs
+; CHECK-NEXT:    whilels p1.d, xzr, x8
+; CHECK-NEXT:    mov w8, #21 // =0x15
+; CHECK-NEXT:    lastb d0, p1, z25.d
+; CHECK-NEXT:    lastb d1, p1, z22.d
+; CHECK-NEXT:    fcmp d0, d0
+; CHECK-NEXT:    str d1, [sp, #392] // 8-byte Spill
+; CHECK-NEXT:    fcsel d0, d1, d0, vs
+; CHECK-NEXT:    whilels p1.d, xzr, x8
+; CHECK-NEXT:    mov w8, #20 // =0x14
+; CHECK-NEXT:    lastb d1, p1, z22.d
+; CHECK-NEXT:    stp d0, d4, [sp, #424] // 16-byte Folded Spill
+; CHECK-NEXT:    lastb d0, p1, z25.d
+; CHECK-NEXT:    str d1, [sp, #384] // 8-byte Spill
+; CHECK-NEXT:    fcmp d0, d0
+; CHECK-NEXT:    fcsel d15, d1, d0, vs
+; CHECK-NEXT:    whilels p1.d, xzr, x8
+; CHECK-NEXT:    mov w8, #19 // =0x13
+; CHECK-NEXT:    lastb d0, p1, z25.d
+; CHECK-NEXT:    lastb d1, p1, z22.d
+; CHECK-NEXT:    fcmp d0, d0
+; CHECK-NEXT:    fcsel d0, d1, d0, vs
+; CHECK-NEXT:    whilels p1.d, xzr, x8
+; CHECK-NEXT:    mov w8, #18 // =0x12
+; CHECK-NEXT:    stp d1, d0, [sp, #368] // 16-byte Folded Spill
+; CHECK-NEXT:    lastb d0, p1, z25.d
+; CHECK-NEXT:    lastb d1, p1, z22.d
+; CHECK-NEXT:    fcmp d0, d0
+; CHECK-NEXT:    fcsel d0, d1, d0, vs
+; CHECK-NEXT:    whilels p1.d, xzr, x8
+; CHECK-NEXT:    mov w8, #17 // =0x11
+; CHECK-NEXT:    stp d1, d0, [sp, #352] // 16-byte Folded Spill
+; CHECK-NEXT:    lastb d0, p1, z25.d
+; CHECK-NEXT:    lastb d1, p1, z22.d
+; CHECK-NEXT:    fcmp d0, d0
+; CHECK-NEXT:    fcsel d0, d1, d0, vs
+; CHECK-NEXT:    whilels p1.d, xzr, x8
+; CHECK-NEXT:    mov w8, #16 // =0x10
+; CHECK-NEXT:    stp d1, d0, [sp, #336] // 16-byte Folded Spill
+; CHECK-NEXT:    lastb d0, p1, z25.d
+; CHECK-NEXT:    lastb d1, p1, z22.d
+; CHECK-NEXT:    fcmp d0, d0
+; CHECK-NEXT:    fcsel d0, d1, d0, vs
+; CHECK-NEXT:    whilels p1.d, xzr, x8
+; CHECK-NEXT:    mov w8, #15 // =0xf
+; CHECK-NEXT:    stp d1, d0, [sp, #320] // 16-byte Folded Spill
+; CHECK-NEXT:    lastb d0, p1, z25.d
+; CHECK-NEXT:    lastb d1, p1, z22.d
+; CHECK-NEXT:    fcmp d0, d0
+; CHECK-NEXT:    fcsel d0, d1, d0, vs
+; CHECK-NEXT:    whilels p1.d, xzr, x8
+; CHECK-NEXT:    mov w8, #14 // =0xe
+; CHECK-NEXT:    lastb d14, p1, z22.d
+; CHECK-NEXT:    stp d1, d0, [sp, #304] // 16-byte Folded Spill
+; CHECK-NEXT:    lastb d0, p1, z25.d
+; CHECK-NEXT:    mov z1.d, z25.d[7]
+; CHECK-NEXT:    fcmp d0, d0
+; CHECK-NEXT:    fcsel d0, d14, d0, vs
+; CHECK-NEXT:    whilels p1.d, xzr, x8
+; CHECK-NEXT:    mov w8, #13 // =0xd
+; CHECK-NEXT:    lastb d11, p1, z22.d
+; CHECK-NEXT:    str d0, [sp, #296] // 8-byte Spill
+; CHECK-NEXT:    lastb d0, p1, z25.d
+; CHECK-NEXT:    fcmp d0, d0
+; CHECK-NEXT:    fcsel d4, d11, d0, vs
+; CHECK-NEXT:    whilels p1.d, xzr, x8
+; CHECK-NEXT:    mov w8, #12 // =0xc
+; CHECK-NEXT:    lastb d0, p1, z25.d
+; CHECK-NEXT:    lastb d8, p1, z22.d
+; CHECK-NEXT:    fcmp d0, d0
+; CHECK-NEXT:    fcsel d0, d8, d0, vs
+; CHECK-NEXT:    whilels p1.d, xzr, x8
+; CHECK-NEXT:    mov w8, #11 // =0xb
+; CHECK-NEXT:    lastb d31, p1, z22.d
+; CHECK-NEXT:    stp d0, d4, [sp, #272] // 16-byte Folded Spill
+; CHECK-NEXT:    lastb d0, p1, z25.d
+; CHECK-NEXT:    fcmp d0, d0
+; CHECK-NEXT:    fcsel d4, d31, d0, vs
+; CHECK-NEXT:    whilels p1.d, xzr, x8
+; CHECK-NEXT:    mov w8, #10 // =0xa
+; CHECK-NEXT:    lastb d0, p1, z25.d
+; CHECK-NEXT:    lastb d28, p1, z22.d
+; CHECK-NEXT:    fcmp d0, d0
+; CHECK-NEXT:    fcsel d0, d28, d0, vs
+; CHECK-NEXT:    whilels p1.d, xzr, x8
+; CHECK-NEXT:    mov w8, #9 // =0x9
+; CHECK-NEXT:    lastb d24, p1, z22.d
+; CHECK-NEXT:    stp d0, d4, [sp, #256] // 16-byte Folded Spill
+; CHECK-NEXT:    lastb d0, p1, z25.d
+; CHECK-NEXT:    mov z4.d, z22.d[5]
+; CHECK-NEXT:    fcmp d0, d0
+; CHECK-NEXT:    fcsel d13, d24, d0, vs
+; CHECK-NEXT:    whilels p1.d, xzr, x8
+; CHECK-NEXT:    mov w8, #8 // =0x8
+; CHECK-NEXT:    lastb d0, p1, z25.d
+; CHECK-NEXT:    lastb d20, p1, z22.d
+; CHECK-NEXT:    fcmp d0, d0
+; CHECK-NEXT:    fcsel d12, d20, d0, vs
+; CHECK-NEXT:    whilels p1.d, xzr, x8
+; CHECK-NEXT:    sub x8, x29, #64
+; CHECK-NEXT:    str z4, [x8, #-5, mul vl] // 16-byte Folded Spill
+; CHECK-NEXT:    lastb d0, p1, z25.d
+; CHECK-NEXT:    lastb d18, p1, z22.d
+; CHECK-NEXT:    fcmp d0, d0
+; CHECK-NEXT:    fcsel d10, d18, d0, vs
+; CHECK-NEXT:    fcmp d1, d1
+; CHECK-NEXT:    mov z0.d, z25.d[6]
+; CHECK-NEXT:    fcsel d29, d16, d1, vs
+; CHECK-NEXT:    fcmp d0, d0
+; CHECK-NEXT:    mov z1.d, z25.d[5]
+; CHECK-NEXT:    fcsel d26, d19, d0, vs
+; CHECK-NEXT:    fcmp d1, d1
+; CHECK-NEXT:    mov z0.d, z25.d[4]
+; CHECK-NEXT:    fcsel d7, d4, d1, vs
+; CHECK-NEXT:    fcmp d0, d0
+; CHECK-NEXT:    mov z1.d, z22.d[4]
+; CHECK-NEXT:    mov z4.d, z25.d[3]
+; CHECK-NEXT:    mov z25.d, z25.d[1]
+; CHECK-NEXT:    fcsel d17, d1, d0, vs
+; CHECK-NEXT:    mov z0.d, z22.d[3]
+; CHECK-NEXT:    str z1, [x8, #-3, mul vl] // 16-byte Folded Spill
+; CHECK-NEXT:    fcmp d4, d4
+; CHECK-NEXT:    str z0, [x8, #-4, mul vl] // 16-byte Folded Spill
+; CHECK-NEXT:    fcsel d6, d0, d4, vs
+; CHECK-NEXT:    fcmp d9, d9
+; CHECK-NEXT:    mov z0.d, z22.d[2]
+; CHECK-NEXT:    str z0, [x8, #-2, mul vl] // 16-byte Folded Spill
+; CHECK-NEXT:    fcsel d27, d0, d9, vs
+; CHECK-NEXT:    fcmp d25, d25
+; CHECK-NEXT:    mov z0.d, z22.d[1]
+; CHECK-NEXT:    fcsel d25, d0, d25, vs
+; CHECK-NEXT:    fcmp d22, d22
+; CHECK-NEXT:    str z0, [x8, #-1, mul vl] // 16-byte Folded Spill
+; CHECK-NEXT:    ldr d0, [sp, #496] // 8-byte Reload
+; CHECK-NEXT:    str d15, [sp, #680]
+; CHECK-NEXT:    fcsel d22, d0, d22, vs
+; CHECK-NEXT:    fcmp d0, d22
+; CHECK-NEXT:    fcsel d1, d0, d22, gt
+; CHECK-NEXT:    fcmp d2, d2
+; CHECK-NEXT:    ldr d0, [sp, #488] // 8-byte Reload
+; CHECK-NEXT:    fcsel d22, d0, d2, vs
+; CHECK-NEXT:    str d1, [sp, #288] // 8-byte Spill
+; CHECK-NEXT:    fcmp d0, d22
+; CHECK-NEXT:    fcsel d2, d0, d22, gt
+; CHECK-NEXT:    fcmp d3, d3
+; CHECK-NEXT:    ldr d0, [sp, #504] // 8-byte Reload
+; CHECK-NEXT:    fcsel d22, d0, d3, vs
+; CHECK-NEXT:    fcmp d0, d22
+; CHECK-NEXT:    fcsel d1, d0, d22, gt
+; CHECK-NEXT:    fcmp d23, d23
+; CHECK-NEXT:    stp d1, d2, [sp, #240] // 16-byte Folded Spill
+; CHECK-NEXT:    ldp d0, d2, [sp, #472] // 16-byte Folded Reload
+; CHECK-NEXT:    fcsel d22, d2, d23, vs
+; CHECK-NEXT:    fcmp d2, d22
+; CHECK-NEXT:    fcsel d3, d2, d22, gt
+; CHECK-NEXT:    fcmp d30, d30
+; CHECK-NEXT:    fcsel d22, d0, d30, vs
+; CHECK-NEXT:    fcmp d0, d22
+; CHECK-NEXT:    fcsel d1, d0, d22, gt
+; CHECK-NEXT:    ldp d0, d2, [sp, #456] // 16-byte Folded Reload
+; CHECK-NEXT:    stp d1, d3, [sp, #224] // 16-byte Folded Spill
+; CHECK-NEXT:    ldr d1, [sp, #416] // 8-byte Reload
+; CHECK-NEXT:    fcmp d1, d1
+; CHECK-NEXT:    fcsel d22, d2, d1, vs
+; CHECK-NEXT:    ldr d1, [sp, #408] // 8-byte Reload
+; CHECK-NEXT:    fcmp d2, d22
+; CHECK-NEXT:    fcsel d3, d2, d22, gt
+; CHECK-NEXT:    fcmp d1, d1
+; CHECK-NEXT:    fcsel d22, d0, d1, vs
+; CHECK-NEXT:    fcmp d0, d22
+; CHECK-NEXT:    fcsel d1, d0, d22, gt
+; CHECK-NEXT:    fcmp d5, d5
+; CHECK-NEXT:    ldp d0, d2, [sp, #440] // 16-byte Folded Reload
+; CHECK-NEXT:    stp d1, d3, [sp, #408] // 16-byte Folded Spill
+; CHECK-NEXT:    ldr d1, [sp, #400] // 8-byte Reload
+; CHECK-NEXT:    fcsel d22, d2, d5, vs
+; CHECK-NEXT:    fcmp d2, d22
+; CHECK-NEXT:    fcsel d3, d2, d22, gt
+; CHECK-NEXT:    fcmp d1, d1
+; CHECK-NEXT:    fcsel d22, d0, d1, vs
+; CHECK-NEXT:    fcmp d0, d22
+; CHECK-NEXT:    fcsel d2, d0, d22, gt
+; CHECK-NEXT:    fcmp d21, d21
+; CHECK-NEXT:    ldp d0, d5, [sp, #424] // 16-byte Folded Reload
+; CHECK-NEXT:    fcsel d22, d5, d21, vs
+; CHECK-NEXT:    fcmp d5, d22
+; CHECK-NEXT:    fcsel d1, d5, d22, gt
+; CHECK-NEXT:    stp d1, d3, [sp, #208] // 16-byte Folded Spill
+; CHECK-NEXT:    ldr d1, [sp, #392] // 8-byte Reload
+; CHECK-NEXT:    fcmp d1, d1
+; CHECK-NEXT:    fcsel d22, d0, d1, vs
+; CHECK-NEXT:    fcmp d0, d22
+; CHECK-NEXT:    fcsel d1, d0, d22, gt
+; CHECK-NEXT:    stp d1, d2, [sp, #392] // 16-byte Folded Spill
+; CHECK-NEXT:    ldp d9, d1, [sp, #376] // 16-byte Folded Reload
+; CHECK-NEXT:    ldp d2, d3, [sp, #272] // 16-byte Folded Reload
+; CHECK-NEXT:    fcmp d1, d1
+; CHECK-NEXT:    str d9, [sp, #672]
+; CHECK-NEXT:    fcsel d22, d15, d1, vs
+; CHECK-NEXT:    fcmp d15, d22
+; CHECK-NEXT:    fcsel d1, d15, d22, gt
+; CHECK-NEXT:    str d1, [sp, #384] // 8-byte Spill
+; CHECK-NEXT:    ldp d30, d1, [sp, #360] // 16-byte Folded Reload
+; CHECK-NEXT:    fcmp d1, d1
+; CHECK-NEXT:    str d30, [sp, #664]
+; CHECK-NEXT:    fcsel d22, d9, d1, vs
+; CHECK-NEXT:    fcmp d9, d22
+; CHECK-NEXT:    fcsel d1, d9, d22, gt
+; CHECK-NEXT:    str d1, [sp, #368] // 8-byte Spill
+; CHECK-NEXT:    ldp d23, d1, [sp, #344] // 16-byte Folded Reload
+; CHECK-NEXT:    fcmp d1, d1
+; CHECK-NEXT:    str d23, [sp, #656]
+; CHECK-NEXT:    fcsel d22, d30, d1, vs
+; CHECK-NEXT:    fcmp d30, d22
+; CHECK-NEXT:    fcsel d1, d30, d22, gt
+; CHECK-NEXT:    str d1, [sp, #352] // 8-byte Spill
+; CHECK-NEXT:    ldp d21, d1, [sp, #328] // 16-byte Folded Reload
+; CHECK-NEXT:    fcmp d1, d1
+; CHECK-NEXT:    str d21, [sp, #648]
+; CHECK-NEXT:    fcsel d22, d23, d1, vs
+; CHECK-NEXT:    fcmp d23, d22
+; CHECK-NEXT:    fcsel d1, d23, d22, gt
+; CHECK-NEXT:    str d1, [sp, #336] // 8-byte Spill
+; CHECK-NEXT:    ldp d5, d1, [sp, #312] // 16-byte Folded Reload
+; CHECK-NEXT:    fcmp d1, d1
+; CHECK-NEXT:    str d5, [sp, #640]
+; CHECK-NEXT:    fcsel d22, d21, d1, vs
+; CHECK-NEXT:    fcmp d21, d22
+; CHECK-NEXT:    fcsel d1, d21, d22, gt
+; CHECK-NEXT:    str d1, [sp, #320] // 8-byte Spill
+; CHECK-NEXT:    ldp d4, d1, [sp, #296] // 16-byte Folded Reload
+; CHECK-NEXT:    fcmp d1, d1
+; CHECK-NEXT:    fcsel d22, d5, d1, vs
+; CHECK-NEXT:    fcmp d5, d22
+; CHECK-NEXT:    fcsel d1, d5, d22, gt
+; CHECK-NEXT:    fcmp d14, d14
+; CHECK-NEXT:    ldr d22, [sp, #488] // 8-byte Reload
+; CHECK-NEXT:    str d22, [sp, #760]
+; CHECK-NEXT:    ldr d22, [sp, #504] // 8-byte Reload
+; CHECK-NEXT:    fcsel d14, d4, d14, vs
+; CHECK-NEXT:    str d1, [sp, #304] // 8-byte Spill
+; CHECK-NEXT:    ldp d0, d1, [sp, #256] // 16-byte Folded Reload
+; CHECK-NEXT:    str d22, [sp, #752]
+; CHECK-NEXT:    ldr d22, [sp, #480] // 8-byte Reload
+; CHECK-NEXT:    fcmp d4, d14
+; CHECK-NEXT:    str d22, [sp, #744]
+; CHECK-NEXT:    ldr d22, [sp, #472] // 8-byte Reload
+; CHECK-NEXT:    fcsel d14, d4, d14, gt
+; CHECK-NEXT:    fcmp d11, d11
+; CHECK-NEXT:    str d22, [sp, #736]
+; CHECK-NEXT:    ldr d22, [sp, #464] // 8-byte Reload
+; CHECK-NEXT:    fcsel d11, d3, d11, vs
+; CHECK-NEXT:    str d22, [sp, #728]
+; CHECK-NEXT:    ldr d22, [sp, #456] // 8-byte Reload
+; CHECK-NEXT:    str d22, [sp, #720]
+; CHECK-NEXT:    ldr d22, [sp, #448] // 8-byte Reload
+; CHECK-NEXT:    fcmp d3, d11
+; CHECK-NEXT:    str d22, [sp, #712]
+; CHECK-NEXT:    ldr d22, [sp, #440] // 8-byte Reload
+; CHECK-NEXT:    fcsel d11, d3, d11, gt
+; CHECK-NEXT:    fcmp d8, d8
+; CHECK-NEXT:    str d22, [sp, #704]
+; CHECK-NEXT:    ldr d22, [sp, #432] // 8-byte Reload
+; CHECK-NEXT:    fcsel d8, d2, d8, vs
+; CHECK-NEXT:    str d22, [sp, #696]
+; CHECK-NEXT:    ldr d22, [sp, #424] // 8-byte Reload
+; CHECK-NEXT:    str d22, [sp, #688]
+; CHECK-NEXT:    fcmp d2, d8
+; CHECK-NEXT:    ldr z5, [x8, #-5, mul vl] // 16-byte Folded Reload
+; CHECK-NEXT:    str d4, [sp, #632]
+; CHECK-NEXT:    str d3, [sp, #624]
+; CHECK-NEXT:    str d2, [sp, #616]
+; CHECK-NEXT:    fcsel d8, d2, d8, gt
+; CHECK-NEXT:    fcmp d31, d31
+; CHECK-NEXT:    str d1, [sp, #608]
+; CHECK-NEXT:    str d0, [sp, #600]
+; CHECK-NEXT:    str d13, [sp, #592]
+; CHECK-NEXT:    fcsel d31, d1, d31, vs
+; CHECK-NEXT:    str d12, [sp, #584]
+; CHECK-NEXT:    str d10, [sp, #576]
+; CHECK-NEXT:    str d29, [sp, #568]
+; CHECK-NEXT:    fcmp d1, d31
+; CHECK-NEXT:    fcsel d31, d1, d31, gt
+; CHECK-NEXT:    fcmp d28, d28
+; CHECK-NEXT:    ldr d1, [sp, #496] // 8-byte Reload
+; CHECK-NEXT:    fcsel d28, d0, d28, vs
+; CHECK-NEXT:    fcmp d0, d28
+; CHECK-NEXT:    fcsel d28, d0, d28, gt
+; CHECK-NEXT:    fcmp d24, d24
+; CHECK-NEXT:    ldr z0, [x8, #-3, mul vl] // 16-byte Folded Reload
+; CHECK-NEXT:    str d1, [sp, #512]
+; CHECK-NEXT:    str d26, [sp, #560]
+; CHECK-NEXT:    fcsel d24, d13, d24, vs
+; CHECK-NEXT:    str d7, [sp, #552]
+; CHECK-NEXT:    str d17, [sp, #544]
+; CHECK-NEXT:    str d6, [sp, #536]
+; CHECK-NEXT:    fcmp d13, d24
+; CHECK-NEXT:    str d27, [sp, #528]
+; CHECK-NEXT:    str d25, [sp, #520]
+; CHECK-NEXT:    fcsel d24, d13, d24, gt
+; CHECK-NEXT:    fcmp d20, d20
+; CHECK-NEXT:    fcsel d20, d12, d20, vs
+; CHECK-NEXT:    fcmp d12, d20
+; CHECK-NEXT:    fcsel d20, d12, d20, gt
+; CHECK-NEXT:    fcmp d18, d18
+; CHECK-NEXT:    fcsel d18, d10, d18, vs
+; CHECK-NEXT:    fcmp d10, d18
+; CHECK-NEXT:    fcsel d18, d10, d18, gt
+; CHECK-NEXT:    fcmp d16, d16
+; CHECK-NEXT:    fcsel d16, d29, d16, vs
+; CHECK-NEXT:    fcmp d29, d16
+; CHECK-NEXT:    fcsel d16, d29, d16, gt
+; CHECK-NEXT:    fcmp d19, d19
+; CHECK-NEXT:    fcsel d19, d26, d19, vs
+; CHECK-NEXT:    fcmp d26, d19
+; CHECK-NEXT:    fcsel d19, d26, d19, gt
+; CHECK-NEXT:    fcmp d5, d5
+; CHECK-NEXT:    fcsel d23, d7, d5, vs
+; CHECK-NEXT:    fcmp d7, d23
+; CHECK-NEXT:    fcsel d5, d7, d23, gt
+; CHECK-NEXT:    fcmp d0, d0
+; CHECK-NEXT:    fcsel d1, d17, d0, vs
+; CHECK-NEXT:    ldp d0, d2, [sp, #240] // 16-byte Folded Reload
+; CHECK-NEXT:    str d2, [sp, #1016]
+; CHECK-NEXT:    fcmp d17, d1
+; CHECK-NEXT:    str d0, [sp, #1008]
+; CHECK-NEXT:    ldp d2, d3, [sp, #224] // 16-byte Folded Reload
+; CHECK-NEXT:    ldr z0, [x8, #-4, mul vl] // 16-byte Folded Reload
+; CHECK-NEXT:    fcsel d1, d17, d1, gt
+; CHECK-NEXT:    str d2, [sp, #992]
+; CHECK-NEXT:    ldr d2, [sp, #416] // 8-byte Reload
+; CHECK-NEXT:    fcmp d0, d0
+; CHECK-NEXT:    str d3, [sp, #1000]
+; CHECK-NEXT:    str d2, [sp, #984]
+; CHECK-NEXT:    fcsel d2, d6, d0, vs
+; CHECK-NEXT:    ldr d0, [sp, #408] // 8-byte Reload
+; CHECK-NEXT:    str d0, [sp, #976]
+; CHECK-NEXT:    ldr d0, [sp, #216] // 8-byte Reload
+; CHECK-NEXT:    fcmp d6, d2
+; CHECK-NEXT:    str d0, [sp, #968]
+; CHECK-NEXT:    ldr d0, [sp, #400] // 8-byte Reload
+; CHECK-NEXT:    str d0, [sp, #960]
+; CHECK-NEXT:    ldr d0, [sp, #208] // 8-byte Reload
+; CHECK-NEXT:    str d0, [sp, #952]
+; CHECK-NEXT:    ldp d0, d3, [sp, #384] // 16-byte Folded Reload
+; CHECK-NEXT:    str d3, [sp, #944]
+; CHECK-NEXT:    ldr d3, [sp, #368] // 8-byte Reload
+; CHECK-NEXT:    str d0, [sp, #936]
+; CHECK-NEXT:    fcsel d0, d6, d2, gt
+; CHECK-NEXT:    ldr z2, [x8, #-2, mul vl] // 16-byte Folded Reload
+; CHECK-NEXT:    str d3, [sp, #928]
+; CHECK-NEXT:    ldr d3, [sp, #352] // 8-byte Reload
+; CHECK-NEXT:    str d14, [sp, #888]
+; CHECK-NEXT:    str d3, [sp, #920]
+; CHECK-NEXT:    ldr d3, [sp, #336] // 8-byte Reload
+; CHECK-NEXT:    fcmp d2, d2
+; CHECK-NEXT:    str d11, [sp, #880]
+; CHECK-NEXT:    str d3, [sp, #912]
+; CHECK-NEXT:    ldr d3, [sp, #320] // 8-byte Reload
+; CHECK-NEXT:    str d8, [sp, #872]
+; CHECK-NEXT:    fcsel d2, d27, d2, vs
+; CHECK-NEXT:    str d3, [sp, #904]
+; CHECK-NEXT:    ldr d3, [sp, #304] // 8-byte Reload
+; CHECK-NEXT:    str d31, [sp, #864]
+; CHECK-NEXT:    str d3, [sp, #896]
+; CHECK-NEXT:    fcmp d27, d2
+; CHECK-NEXT:    ldr z3, [x8, #-1, mul vl] // 16-byte Folded Reload
+; CHECK-NEXT:    str d1, [sp, #800]
+; CHECK-NEXT:    str d0, [sp, #792]
+; CHECK-NEXT:    ldr d0, [sp, #288] // 8-byte Reload
+; CHECK-NEXT:    adrp x8, .LCPI89_0
+; CHECK-NEXT:    add x8, x8, :lo12:.LCPI89_0
+; CHECK-NEXT:    str d28, [sp, #856]
+; CHECK-NEXT:    fcsel d2, d27, d2, gt
+; CHECK-NEXT:    fcmp d3, d3
+; CHECK-NEXT:    str d24, [sp, #848]
+; CHECK-NEXT:    str d20, [sp, #840]
+; CHECK-NEXT:    str d18, [sp, #832]
+; CHECK-NEXT:    fcsel d3, d25, d3, vs
+; CHECK-NEXT:    str d16, [sp, #824]
+; CHECK-NEXT:    str d19, [sp, #816]
+; CHECK-NEXT:    str d5, [sp, #808]
+; CHECK-NEXT:    fcmp d25, d3
+; CHECK-NEXT:    str d2, [sp, #784]
+; CHECK-NEXT:    str d0, [sp, #768]
+; CHECK-NEXT:    ld1d { z0.d }, p0/z, [x8]
+; CHECK-NEXT:    add x8, sp, #768
+; CHECK-NEXT:    fcsel d1, d25, d3, gt
+; CHECK-NEXT:    str d1, [sp, #776]
+; CHECK-NEXT:    ld1d { z1.d }, p0/z, [x9]
+; CHECK-NEXT:    cmpeq p1.d, p0/z, z1.d, z0.d
+; CHECK-NEXT:    mov z0.d, p1/z, #-1 // =0xffffffffffffffff
+; CHECK-NEXT:    ptrue p1.d
+; CHECK-NEXT:    and z0.d, z0.d, #0x1
+; CHECK-NEXT:    cmpne p1.d, p1/z, z0.d, #0
+; CHECK-NEXT:    ld1d { z0.d }, p0/z, [x8]
+; CHECK-NEXT:    fcmeq p2.d, p0/z, z0.d, #0.0
+; CHECK-NEXT:    sel z1.d, p1, z1.d, z0.d
+; CHECK-NEXT:    mov z0.d, p2/m, z1.d
+; CHECK-NEXT:    st1d { z0.d }, p0, [x0]
+; CHECK-NEXT:    sub sp, x29, #64
+; CHECK-NEXT:    ldp x29, x30, [sp, #64] // 16-byte Folded Reload
+; CHECK-NEXT:    ldp d9, d8, [sp, #48] // 16-byte Folded Reload
+; CHECK-NEXT:    ldp d11, d10, [sp, #32] // 16-byte Folded Reload
+; CHECK-NEXT:    ldp d13, d12, [sp, #16] // 16-byte Folded Reload
+; CHECK-NEXT:    ldp d15, d14, [sp], #80 // 16-byte Folded Reload
+; CHECK-NEXT:    ret
+  %op1 = load <32 x double>, ptr %a
+  %op2 = load <32 x double>, ptr %b
+  %res = call <32 x double> @llvm.maximumnum.v32f64(<32 x double> %op1, <32 x double> %op2)
+  store <32 x double> %res, ptr %a
+  ret void
+}
+
+;
+; FMINIMUMNUM
+;
+
+; Don't use SVE for 64-bit vectors.
+define <4 x half> @fminimumnum_v4f16(<4 x half> %op1, <4 x half> %op2) vscale_range(2,0) #0 {
+; CHECK-LABEL: fminimumnum_v4f16:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    fminnm v1.4h, v1.4h, v1.4h
+; CHECK-NEXT:    fminnm v0.4h, v0.4h, v0.4h
+; CHECK-NEXT:    fminnm v0.4h, v0.4h, v1.4h
+; CHECK-NEXT:    ret
+  %res = call <4 x half> @llvm.minimumnum.v4f16(<4 x half> %op1, <4 x half> %op2)
+  ret <4 x half> %res
+}
+
+; Don't use SVE for 128-bit vectors.
+define <8 x half> @fminimumnum_v8f16(<8 x half> %op1, <8 x half> %op2) vscale_range(2,0) #0 {
+; CHECK-LABEL: fminimumnum_v8f16:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    fminnm v1.8h, v1.8h, v1.8h
+; CHECK-NEXT:    fminnm v0.8h, v0.8h, v0.8h
+; CHECK-NEXT:    fminnm v0.8h, v0.8h, v1.8h
+; CHECK-NEXT:    ret
+  %res = call <8 x half> @llvm.minimumnum.v8f16(<8 x half> %op1, <8 x half> %op2)
+  ret <8 x half> %res
+}
+
+define void @fminimumnum_v16f16(ptr %a, ptr %b) vscale_range(2,0) #0 {
+; CHECK-LABEL: fminimumnum_v16f16:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    stp d15, d14, [sp, #-80]! // 16-byte Folded Spill
+; CHECK-NEXT:    sub x9, sp, #80
+; CHECK-NEXT:    stp d13, d12, [sp, #16] // 16-byte Folded Spill
+; CHECK-NEXT:    stp d11, d10, [sp, #32] // 16-byte Folded Spill
+; CHECK-NEXT:    stp d9, d8, [sp, #48] // 16-byte Folded Spill
+; CHECK-NEXT:    stp x29, x30, [sp, #64] // 16-byte Folded Spill
+; CHECK-NEXT:    add x29, sp, #64
+; CHECK-NEXT:    and sp, x9, #0xffffffffffffffe0
+; CHECK-NEXT:    .cfi_def_cfa w29, 16
+; CHECK-NEXT:    .cfi_offset w30, -8
+; CHECK-NEXT:    .cfi_offset w29, -16
+; CHECK-NEXT:    .cfi_offset b8, -24
+; CHECK-NEXT:    .cfi_offset b9, -32
+; CHECK-NEXT:    .cfi_offset b10, -40
+; CHECK-NEXT:    .cfi_offset b11, -48
+; CHECK-NEXT:    .cfi_offset b12, -56
+; CHECK-NEXT:    .cfi_offset b13, -64
+; CHECK-NEXT:    .cfi_offset b14, -72
+; CHECK-NEXT:    .cfi_offset b15, -80
+; CHECK-NEXT:    ptrue p0.h, vl16
+; CHECK-NEXT:    adrp x8, .LCPI92_0
+; CHECK-NEXT:    add x8, x8, :lo12:.LCPI92_0
+; CHECK-NEXT:    mov x9, sp
+; CHECK-NEXT:    ld1h { z17.h }, p0/z, [x0]
+; CHECK-NEXT:    ld1h { z6.h }, p0/z, [x1]
+; CHECK-NEXT:    fcmp h17, h17
+; CHECK-NEXT:    mov z1.h, z17.h[15]
+; CHECK-NEXT:    mov z7.h, z6.h[15]
+; CHECK-NEXT:    mov z2.h, z17.h[14]
+; CHECK-NEXT:    mov z18.h, z6.h[14]
+; CHECK-NEXT:    mov z3.h, z17.h[13]
+; CHECK-NEXT:    mov z19.h, z6.h[13]
+; CHECK-NEXT:    mov z4.h, z17.h[12]
+; CHECK-NEXT:    mov z21.h, z6.h[12]
+; CHECK-NEXT:    fcsel h0, h6, h17, vs
+; CHECK-NEXT:    fcmp h1, h1
+; CHECK-NEXT:    mov z5.h, z17.h[11]
+; CHECK-NEXT:    mov z23.h, z6.h[11]
+; CHECK-NEXT:    mov z16.h, z17.h[10]
+; CHECK-NEXT:    mov z24.h, z6.h[10]
+; CHECK-NEXT:    mov z20.h, z17.h[9]
+; CHECK-NEXT:    mov z26.h, z6.h[9]
+; CHECK-NEXT:    mov z22.h, z17.h[8]
+; CHECK-NEXT:    fcsel h1, h7, h1, vs
+; CHECK-NEXT:    fcmp h2, h2
+; CHECK-NEXT:    mov z27.h, z6.h[8]
+; CHECK-NEXT:    mov z25.h, z17.h[7]
+; CHECK-NEXT:    mov z29.h, z6.h[7]
+; CHECK-NEXT:    mov z28.h, z17.h[6]
+; CHECK-NEXT:    mov z8.h, z6.h[6]
+; CHECK-NEXT:    mov z30.h, z17.h[5]
+; CHECK-NEXT:    mov z10.h, z6.h[5]
+; CHECK-NEXT:    fcsel h2, h18, h2, vs
+; CHECK-NEXT:    fcmp h3, h3
+; CHECK-NEXT:    str h0, [sp]
+; CHECK-NEXT:    mov z31.h, z17.h[4]
+; CHECK-NEXT:    mov z14.h, z6.h[4]
+; CHECK-NEXT:    str h1, [sp, #30]
+; CHECK-NEXT:    mov z9.h, z17.h[3]
+; CHECK-NEXT:    mov z15.h, z6.h[3]
+; CHECK-NEXT:    mov z13.h, z17.h[2]
+; CHECK-NEXT:    fcsel h3, h19, h3, vs
+; CHECK-NEXT:    str h2, [sp, #28]
+; CHECK-NEXT:    fcmp h4, h4
+; CHECK-NEXT:    mov z12.h, z6.h[2]
+; CHECK-NEXT:    mov z17.h, z17.h[1]
+; CHECK-NEXT:    fcsel h4, h21, h4, vs
+; CHECK-NEXT:    fcmp h5, h5
+; CHECK-NEXT:    str h3, [sp, #26]
+; CHECK-NEXT:    fcsel h5, h23, h5, vs
+; CHECK-NEXT:    fcmp h16, h16
+; CHECK-NEXT:    str h4, [sp, #24]
+; CHECK-NEXT:    fcsel h16, h24, h16, vs
+; CHECK-NEXT:    fcmp h20, h20
+; CHECK-NEXT:    str h5, [sp, #22]
+; CHECK-NEXT:    fcsel h20, h26, h20, vs
+; CHECK-NEXT:    fcmp h22, h22
+; CHECK-NEXT:    str h16, [sp, #20]
+; CHECK-NEXT:    fcsel h22, h27, h22, vs
+; CHECK-NEXT:    fcmp h25, h25
+; CHECK-NEXT:    str h20, [sp, #18]
+; CHECK-NEXT:    fcsel h25, h29, h25, vs
+; CHECK-NEXT:    fcmp h28, h28
+; CHECK-NEXT:    str h22, [sp, #16]
+; CHECK-NEXT:    fcsel h28, h8, h28, vs
+; CHECK-NEXT:    fcmp h30, h30
+; CHECK-NEXT:    str h25, [sp, #14]
+; CHECK-NEXT:    fcsel h30, h10, h30, vs
+; CHECK-NEXT:    fcmp h31, h31
+; CHECK-NEXT:    str h28, [sp, #12]
+; CHECK-NEXT:    fcsel h31, h14, h31, vs
+; CHECK-NEXT:    fcmp h9, h9
+; CHECK-NEXT:    str h30, [sp, #10]
+; CHECK-NEXT:    fcsel h11, h15, h9, vs
+; CHECK-NEXT:    fcmp h13, h13
+; CHECK-NEXT:    mov z9.h, z6.h[1]
+; CHECK-NEXT:    str h31, [sp, #8]
+; CHECK-NEXT:    fcsel h13, h12, h13, vs
+; CHECK-NEXT:    fcmp h17, h17
+; CHECK-NEXT:    str h11, [sp, #6]
+; CHECK-NEXT:    fcsel h17, h9, h17, vs
+; CHECK-NEXT:    fcmp h6, h6
+; CHECK-NEXT:    str h13, [sp, #4]
+; CHECK-NEXT:    fcsel h6, h0, h6, vs
+; CHECK-NEXT:    str h17, [sp, #2]
+; CHECK-NEXT:    fcmp h0, h6
+; CHECK-NEXT:    fcsel h6, h0, h6, lt
+; CHECK-NEXT:    fcmp h7, h7
+; CHECK-NEXT:    fcsel h7, h1, h7, vs
+; CHECK-NEXT:    str h6, [sp, #32]
+; CHECK-NEXT:    fcmp h1, h7
+; CHECK-NEXT:    fcsel h7, h1, h7, lt
+; CHECK-NEXT:    fcmp h18, h18
+; CHECK-NEXT:    fcsel h18, h2, h18, vs
+; CHECK-NEXT:    str h7, [sp, #62]
+; CHECK-NEXT:    fcmp h2, h18
+; CHECK-NEXT:    fcsel h18, h2, h18, lt
+; CHECK-NEXT:    fcmp h19, h19
+; CHECK-NEXT:    fcsel h19, h3, h19, vs
+; CHECK-NEXT:    str h18, [sp, #60]
+; CHECK-NEXT:    fcmp h3, h19
+; CHECK-NEXT:    fcsel h19, h3, h19, lt
+; CHECK-NEXT:    fcmp h21, h21
+; CHECK-NEXT:    fcsel h21, h4, h21, vs
+; CHECK-NEXT:    str h19, [sp, #58]
+; CHECK-NEXT:    fcmp h4, h21
+; CHECK-NEXT:    fcsel h21, h4, h21, lt
+; CHECK-NEXT:    fcmp h23, h23
+; CHECK-NEXT:    fcsel h23, h5, h23, vs
+; CHECK-NEXT:    str h21, [sp, #56]
+; CHECK-NEXT:    fcmp h5, h23
+; CHECK-NEXT:    fcsel h23, h5, h23, lt
+; CHECK-NEXT:    fcmp h24, h24
+; CHECK-NEXT:    fcsel h24, h16, h24, vs
+; CHECK-NEXT:    str h23, [sp, #54]
+; CHECK-NEXT:    fcmp h16, h24
+; CHECK-NEXT:    fcsel h24, h16, h24, lt
+; CHECK-NEXT:    fcmp h26, h26
+; CHECK-NEXT:    fcsel h26, h20, h26, vs
+; CHECK-NEXT:    str h24, [sp, #52]
+; CHECK-NEXT:    fcmp h20, h26
+; CHECK-NEXT:    fcsel h26, h20, h26, lt
+; CHECK-NEXT:    fcmp h27, h27
+; CHECK-NEXT:    fcsel h27, h22, h27, vs
+; CHECK-NEXT:    str h26, [sp, #50]
+; CHECK-NEXT:    fcmp h22, h27
+; CHECK-NEXT:    fcsel h27, h22, h27, lt
+; CHECK-NEXT:    fcmp h29, h29
+; CHECK-NEXT:    fcsel h29, h25, h29, vs
+; CHECK-NEXT:    str h27, [sp, #48]
+; CHECK-NEXT:    fcmp h25, h29
+; CHECK-NEXT:    fcsel h29, h25, h29, lt
+; CHECK-NEXT:    fcmp h8, h8
+; CHECK-NEXT:    fcsel h8, h28, h8, vs
+; CHECK-NEXT:    str h29, [sp, #46]
+; CHECK-NEXT:    fcmp h28, h8
+; CHECK-NEXT:    fcsel h8, h28, h8, lt
+; CHECK-NEXT:    fcmp h10, h10
+; CHECK-NEXT:    fcsel h10, h30, h10, vs
+; CHECK-NEXT:    str h8, [sp, #44]
+; CHECK-NEXT:    fcmp h30, h10
+; CHECK-NEXT:    fcsel h10, h30, h10, lt
+; CHECK-NEXT:    fcmp h14, h14
+; CHECK-NEXT:    fcsel h14, h31, h14, vs
+; CHECK-NEXT:    str h10, [sp, #42]
+; CHECK-NEXT:    fcmp h31, h14
+; CHECK-NEXT:    fcsel h0, h31, h14, lt
+; CHECK-NEXT:    fcmp h15, h15
+; CHECK-NEXT:    fcsel h1, h11, h15, vs
+; CHECK-NEXT:    str h0, [sp, #40]
+; CHECK-NEXT:    fcmp h11, h1
+; CHECK-NEXT:    fcsel h1, h11, h1, lt
+; CHECK-NEXT:    fcmp h12, h12
+; CHECK-NEXT:    fcsel h2, h13, h12, vs
+; CHECK-NEXT:    str h1, [sp, #38]
+; CHECK-NEXT:    fcmp h13, h2
+; CHECK-NEXT:    fcsel h2, h13, h2, lt
+; CHECK-NEXT:    fcmp h9, h9
+; CHECK-NEXT:    fcsel h3, h17, h9, vs
+; CHECK-NEXT:    str h2, [sp, #36]
+; CHECK-NEXT:    fcmp h17, h3
+; CHECK-NEXT:    fcsel h0, h17, h3, lt
+; CHECK-NEXT:    str h0, [sp, #34]
+; CHECK-NEXT:    ld1h { z0.h }, p0/z, [x8]
+; CHECK-NEXT:    add x8, sp, #32
+; CHECK-NEXT:    ld1h { z1.h }, p0/z, [x9]
+; CHECK-NEXT:    cmpeq p1.h, p0/z, z1.h, z0.h
+; CHECK-NEXT:    mov z0.h, p1/z, #-1 // =0xffffffffffffffff
+; CHECK-NEXT:    ptrue p1.h
+; CHECK-NEXT:    and z0.h, z0.h, #0x1
+; CHECK-NEXT:    cmpne p1.h, p1/z, z0.h, #0
+; CHECK-NEXT:    ld1h { z0.h }, p0/z, [x8]
+; CHECK-NEXT:    fcmeq p2.h, p0/z, z0.h, #0.0
+; CHECK-NEXT:    sel z1.h, p1, z1.h, z0.h
+; CHECK-NEXT:    mov z0.h, p2/m, z1.h
+; CHECK-NEXT:    st1h { z0.h }, p0, [x0]
+; CHECK-NEXT:    sub sp, x29, #64
+; CHECK-NEXT:    ldp x29, x30, [sp, #64] // 16-byte Folded Reload
+; CHECK-NEXT:    ldp d9, d8, [sp, #48] // 16-byte Folded Reload
+; CHECK-NEXT:    ldp d11, d10, [sp, #32] // 16-byte Folded Reload
+; CHECK-NEXT:    ldp d13, d12, [sp, #16] // 16-byte Folded Reload
+; CHECK-NEXT:    ldp d15, d14, [sp], #80 // 16-byte Folded Reload
+; CHECK-NEXT:    ret
+  %op1 = load <16 x half>, ptr %a
+  %op2 = load <16 x half>, ptr %b
+  %res = call <16 x half> @llvm.minimumnum.v16f16(<16 x half> %op1, <16 x half> %op2)
+  store <16 x half> %res, ptr %a
+  ret void
+}
+
+define void @fminimumnum_v32f16(ptr %a, ptr %b) #0 {
+; VBITS_EQ_256-LABEL: fminimumnum_v32f16:
+; VBITS_EQ_256:       // %bb.0:
+; VBITS_EQ_256-NEXT:    stp d15, d14, [sp, #-80]! // 16-byte Folded Spill
+; VBITS_EQ_256-NEXT:    sub x9, sp, #240
+; VBITS_EQ_256-NEXT:    stp d13, d12, [sp, #16] // 16-byte Folded Spill
+; VBITS_EQ_256-NEXT:    stp d11, d10, [sp, #32] // 16-byte Folded Spill
+; VBITS_EQ_256-NEXT:    stp d9, d8, [sp, #48] // 16-byte Folded Spill
+; VBITS_EQ_256-NEXT:    stp x29, x30, [sp, #64] // 16-byte Folded Spill
+; VBITS_EQ_256-NEXT:    add x29, sp, #64
+; VBITS_EQ_256-NEXT:    and sp, x9, #0xffffffffffffffe0
+; VBITS_EQ_256-NEXT:    .cfi_def_cfa w29, 16
+; VBITS_EQ_256-NEXT:    .cfi_offset w30, -8
+; VBITS_EQ_256-NEXT:    .cfi_offset w29, -16
+; VBITS_EQ_256-NEXT:    .cfi_offset b8, -24
+; VBITS_EQ_256-NEXT:    .cfi_offset b9, -32
+; VBITS_EQ_256-NEXT:    .cfi_offset b10, -40
+; VBITS_EQ_256-NEXT:    .cfi_offset b11, -48
+; VBITS_EQ_256-NEXT:    .cfi_offset b12, -56
+; VBITS_EQ_256-NEXT:    .cfi_offset b13, -64
+; VBITS_EQ_256-NEXT:    .cfi_offset b14, -72
+; VBITS_EQ_256-NEXT:    .cfi_offset b15, -80
+; VBITS_EQ_256-NEXT:    ptrue p0.h, vl16
+; VBITS_EQ_256-NEXT:    mov x8, #16 // =0x10
+; VBITS_EQ_256-NEXT:    adrp x9, .LCPI93_0
+; VBITS_EQ_256-NEXT:    add x9, x9, :lo12:.LCPI93_0
+; VBITS_EQ_256-NEXT:    add x10, sp, #128
+; VBITS_EQ_256-NEXT:    ld1h { z2.h }, p0/z, [x0]
+; VBITS_EQ_256-NEXT:    ld1h { z0.h }, p0/z, [x1]
+; VBITS_EQ_256-NEXT:    fcmp h2, h2
+; VBITS_EQ_256-NEXT:    mov z4.h, z2.h[15]
+; VBITS_EQ_256-NEXT:    mov z1.h, z0.h[15]
+; VBITS_EQ_256-NEXT:    mov z5.h, z2.h[14]
+; VBITS_EQ_256-NEXT:    mov z3.h, z0.h[14]
+; VBITS_EQ_256-NEXT:    mov z6.h, z2.h[13]
+; VBITS_EQ_256-NEXT:    mov z7.h, z2.h[12]
+; VBITS_EQ_256-NEXT:    mov z16.h, z2.h[11]
+; VBITS_EQ_256-NEXT:    mov z17.h, z2.h[10]
+; VBITS_EQ_256-NEXT:    fcsel h27, h0, h2, vs
+; VBITS_EQ_256-NEXT:    fcmp h4, h4
+; VBITS_EQ_256-NEXT:    mov z18.h, z2.h[9]
+; VBITS_EQ_256-NEXT:    mov z19.h, z2.h[8]
+; VBITS_EQ_256-NEXT:    mov z20.h, z2.h[7]
+; VBITS_EQ_256-NEXT:    mov z21.h, z2.h[6]
+; VBITS_EQ_256-NEXT:    mov z22.h, z2.h[5]
+; VBITS_EQ_256-NEXT:    mov z23.h, z2.h[4]
+; VBITS_EQ_256-NEXT:    mov z24.h, z2.h[3]
+; VBITS_EQ_256-NEXT:    fcsel h28, h1, h4, vs
+; VBITS_EQ_256-NEXT:    fcmp h5, h5
+; VBITS_EQ_256-NEXT:    mov z4.h, z0.h[13]
+; VBITS_EQ_256-NEXT:    mov z25.h, z2.h[2]
+; VBITS_EQ_256-NEXT:    mov z26.h, z2.h[1]
+; VBITS_EQ_256-NEXT:    mov z2.h, z0.h[1]
+; VBITS_EQ_256-NEXT:    str h27, [sp, #78] // 2-byte Spill
+; VBITS_EQ_256-NEXT:    fcsel h29, h3, h5, vs
+; VBITS_EQ_256-NEXT:    fcmp h6, h6
+; VBITS_EQ_256-NEXT:    mov z5.h, z0.h[12]
+; VBITS_EQ_256-NEXT:    str h28, [sp, #76] // 2-byte Spill
+; VBITS_EQ_256-NEXT:    fcsel h30, h4, h6, vs
+; VBITS_EQ_256-NEXT:    fcmp h7, h7
+; VBITS_EQ_256-NEXT:    mov z6.h, z0.h[11]
+; VBITS_EQ_256-NEXT:    str h29, [sp, #70] // 2-byte Spill
+; VBITS_EQ_256-NEXT:    fcsel h31, h5, h7, vs
+; VBITS_EQ_256-NEXT:    fcmp h16, h16
+; VBITS_EQ_256-NEXT:    mov z7.h, z0.h[10]
+; VBITS_EQ_256-NEXT:    str h30, [sp, #66] // 2-byte Spill
+; VBITS_EQ_256-NEXT:    fcsel h8, h6, h16, vs
+; VBITS_EQ_256-NEXT:    fcmp h17, h17
+; VBITS_EQ_256-NEXT:    mov z16.h, z0.h[9]
+; VBITS_EQ_256-NEXT:    str h31, [sp, #62] // 2-byte Spill
+; VBITS_EQ_256-NEXT:    fcsel h9, h7, h17, vs
+; VBITS_EQ_256-NEXT:    fcmp h18, h18
+; VBITS_EQ_256-NEXT:    mov z17.h, z0.h[8]
+; VBITS_EQ_256-NEXT:    str h8, [sp, #58] // 2-byte Spill
+; VBITS_EQ_256-NEXT:    fcsel h10, h16, h18, vs
+; VBITS_EQ_256-NEXT:    fcmp h19, h19
+; VBITS_EQ_256-NEXT:    mov z18.h, z0.h[7]
+; VBITS_EQ_256-NEXT:    str h9, [sp, #54] // 2-byte Spill
+; VBITS_EQ_256-NEXT:    fcsel h11, h17, h19, vs
+; VBITS_EQ_256-NEXT:    fcmp h20, h20
+; VBITS_EQ_256-NEXT:    mov z19.h, z0.h[6]
+; VBITS_EQ_256-NEXT:    str h10, [sp, #52] // 2-byte Spill
+; VBITS_EQ_256-NEXT:    fcsel h12, h18, h20, vs
+; VBITS_EQ_256-NEXT:    fcmp h21, h21
+; VBITS_EQ_256-NEXT:    mov z20.h, z0.h[5]
+; VBITS_EQ_256-NEXT:    str h11, [sp, #48] // 2-byte Spill
+; VBITS_EQ_256-NEXT:    fcsel h13, h19, h21, vs
+; VBITS_EQ_256-NEXT:    fcmp h22, h22
+; VBITS_EQ_256-NEXT:    mov z21.h, z0.h[4]
+; VBITS_EQ_256-NEXT:    str h12, [sp, #44] // 2-byte Spill
+; VBITS_EQ_256-NEXT:    fcsel h14, h20, h22, vs
+; VBITS_EQ_256-NEXT:    fcmp h23, h23
+; VBITS_EQ_256-NEXT:    mov z22.h, z0.h[3]
+; VBITS_EQ_256-NEXT:    str h13, [sp, #42] // 2-byte Spill
+; VBITS_EQ_256-NEXT:    fcsel h15, h21, h23, vs
+; VBITS_EQ_256-NEXT:    fcmp h24, h24
+; VBITS_EQ_256-NEXT:    mov z23.h, z0.h[2]
+; VBITS_EQ_256-NEXT:    str h14, [sp, #40] // 2-byte Spill
+; VBITS_EQ_256-NEXT:    fcsel h24, h22, h24, vs
+; VBITS_EQ_256-NEXT:    fcmp h25, h25
+; VBITS_EQ_256-NEXT:    str h15, [sp, #38] // 2-byte Spill
+; VBITS_EQ_256-NEXT:    fcsel h25, h23, h25, vs
+; VBITS_EQ_256-NEXT:    fcmp h26, h26
+; VBITS_EQ_256-NEXT:    str h24, [sp, #36] // 2-byte Spill
+; VBITS_EQ_256-NEXT:    fcsel h26, h2, h26, vs
+; VBITS_EQ_256-NEXT:    fcmp h0, h0
+; VBITS_EQ_256-NEXT:    str h25, [sp, #34] // 2-byte Spill
+; VBITS_EQ_256-NEXT:    fcsel h0, h27, h0, vs
+; VBITS_EQ_256-NEXT:    str h26, [sp, #32] // 2-byte Spill
+; VBITS_EQ_256-NEXT:    fcmp h27, h0
+; VBITS_EQ_256-NEXT:    fcsel h0, h27, h0, lt
+; VBITS_EQ_256-NEXT:    fcmp h1, h1
+; VBITS_EQ_256-NEXT:    str h0, [sp, #94] // 2-byte Spill
+; VBITS_EQ_256-NEXT:    fcsel h0, h28, h1, vs
+; VBITS_EQ_256-NEXT:    fcmp h28, h0
+; VBITS_EQ_256-NEXT:    fcsel h0, h28, h0, lt
+; VBITS_EQ_256-NEXT:    fcmp h3, h3
+; VBITS_EQ_256-NEXT:    str h0, [sp, #92] // 2-byte Spill
+; VBITS_EQ_256-NEXT:    fcsel h0, h29, h3, vs
+; VBITS_EQ_256-NEXT:    fcmp h29, h0
+; VBITS_EQ_256-NEXT:    fcsel h0, h29, h0, lt
+; VBITS_EQ_256-NEXT:    fcmp h4, h4
+; VBITS_EQ_256-NEXT:    str h0, [sp, #90] // 2-byte Spill
+; VBITS_EQ_256-NEXT:    fcsel h0, h30, h4, vs
+; VBITS_EQ_256-NEXT:    fcmp h30, h0
+; VBITS_EQ_256-NEXT:    fcsel h0, h30, h0, lt
+; VBITS_EQ_256-NEXT:    fcmp h5, h5
+; VBITS_EQ_256-NEXT:    str h0, [sp, #88] // 2-byte Spill
+; VBITS_EQ_256-NEXT:    fcsel h0, h31, h5, vs
+; VBITS_EQ_256-NEXT:    fcmp h31, h0
+; VBITS_EQ_256-NEXT:    fcsel h0, h31, h0, lt
+; VBITS_EQ_256-NEXT:    fcmp h6, h6
+; VBITS_EQ_256-NEXT:    str h0, [sp, #86] // 2-byte Spill
+; VBITS_EQ_256-NEXT:    fcsel h0, h8, h6, vs
+; VBITS_EQ_256-NEXT:    fcmp h8, h0
+; VBITS_EQ_256-NEXT:    fcsel h0, h8, h0, lt
+; VBITS_EQ_256-NEXT:    fcmp h7, h7
+; VBITS_EQ_256-NEXT:    str h0, [sp, #84] // 2-byte Spill
+; VBITS_EQ_256-NEXT:    fcsel h0, h9, h7, vs
+; VBITS_EQ_256-NEXT:    fcmp h9, h0
+; VBITS_EQ_256-NEXT:    fcsel h0, h9, h0, lt
+; VBITS_EQ_256-NEXT:    fcmp h16, h16
+; VBITS_EQ_256-NEXT:    str h0, [sp, #82] // 2-byte Spill
+; VBITS_EQ_256-NEXT:    fcsel h0, h10, h16, vs
+; VBITS_EQ_256-NEXT:    fcmp h10, h0
+; VBITS_EQ_256-NEXT:    fcsel h0, h10, h0, lt
+; VBITS_EQ_256-NEXT:    fcmp h17, h17
+; VBITS_EQ_256-NEXT:    str h0, [sp, #80] // 2-byte Spill
+; VBITS_EQ_256-NEXT:    fcsel h0, h11, h17, vs
+; VBITS_EQ_256-NEXT:    fcmp h11, h0
+; VBITS_EQ_256-NEXT:    fcsel h0, h11, h0, lt
+; VBITS_EQ_256-NEXT:    fcmp h18, h18
+; VBITS_EQ_256-NEXT:    str h0, [sp, #74] // 2-byte Spill
+; VBITS_EQ_256-NEXT:    fcsel h0, h12, h18, vs
+; VBITS_EQ_256-NEXT:    fcmp h12, h0
+; VBITS_EQ_256-NEXT:    fcsel h0, h12, h0, lt
+; VBITS_EQ_256-NEXT:    fcmp h19, h19
+; VBITS_EQ_256-NEXT:    str h0, [sp, #72] // 2-byte Spill
+; VBITS_EQ_256-NEXT:    fcsel h0, h13, h19, vs
+; VBITS_EQ_256-NEXT:    fcmp h13, h0
+; VBITS_EQ_256-NEXT:    fcsel h0, h13, h0, lt
+; VBITS_EQ_256-NEXT:    fcmp h20, h20
+; VBITS_EQ_256-NEXT:    str h0, [sp, #68] // 2-byte Spill
+; VBITS_EQ_256-NEXT:    fcsel h0, h14, h20, vs
+; VBITS_EQ_256-NEXT:    fcmp h14, h0
+; VBITS_EQ_256-NEXT:    fcsel h0, h14, h0, lt
+; VBITS_EQ_256-NEXT:    fcmp h21, h21
+; VBITS_EQ_256-NEXT:    str h0, [sp, #64] // 2-byte Spill
+; VBITS_EQ_256-NEXT:    fcsel h0, h15, h21, vs
+; VBITS_EQ_256-NEXT:    fcmp h15, h0
+; VBITS_EQ_256-NEXT:    fcsel h0, h15, h0, lt
+; VBITS_EQ_256-NEXT:    fcmp h22, h22
+; VBITS_EQ_256-NEXT:    str h0, [sp, #60] // 2-byte Spill
+; VBITS_EQ_256-NEXT:    fcsel h0, h24, h22, vs
+; VBITS_EQ_256-NEXT:    fcmp h24, h0
+; VBITS_EQ_256-NEXT:    fcsel h0, h24, h0, lt
+; VBITS_EQ_256-NEXT:    fcmp h23, h23
+; VBITS_EQ_256-NEXT:    str h0, [sp, #56] // 2-byte Spill
+; VBITS_EQ_256-NEXT:    fcsel h0, h25, h23, vs
+; VBITS_EQ_256-NEXT:    fcmp h25, h0
+; VBITS_EQ_256-NEXT:    fcsel h0, h25, h0, lt
+; VBITS_EQ_256-NEXT:    fcmp h2, h2
+; VBITS_EQ_256-NEXT:    str h0, [sp, #50] // 2-byte Spill
+; VBITS_EQ_256-NEXT:    fcsel h0, h26, h2, vs
+; VBITS_EQ_256-NEXT:    ld1h { z2.h }, p0/z, [x0, x8, lsl #1]
+; VBITS_EQ_256-NEXT:    fcmp h26, h0
+; VBITS_EQ_256-NEXT:    mov z1.h, z2.h[15]
+; VBITS_EQ_256-NEXT:    mov z3.h, z2.h[14]
+; VBITS_EQ_256-NEXT:    mov z4.h, z2.h[6]
+; VBITS_EQ_256-NEXT:    mov z25.h, z2.h[3]
+; VBITS_EQ_256-NEXT:    mov z5.h, z2.h[2]
+; VBITS_EQ_256-NEXT:    fcsel h0, h26, h0, lt
+; VBITS_EQ_256-NEXT:    fcmp h2, h2
+; VBITS_EQ_256-NEXT:    str h0, [sp, #46] // 2-byte Spill
+; VBITS_EQ_256-NEXT:    ld1h { z0.h }, p0/z, [x1, x8, lsl #1]
+; VBITS_EQ_256-NEXT:    fcsel h15, h0, h2, vs
+; VBITS_EQ_256-NEXT:    fcmp h1, h1
+; VBITS_EQ_256-NEXT:    mov z8.h, z0.h[15]
+; VBITS_EQ_256-NEXT:    mov z29.h, z0.h[14]
+; VBITS_EQ_256-NEXT:    mov z27.h, z0.h[13]
+; VBITS_EQ_256-NEXT:    mov z24.h, z0.h[12]
+; VBITS_EQ_256-NEXT:    mov z21.h, z0.h[11]
+; VBITS_EQ_256-NEXT:    mov z19.h, z0.h[10]
+; VBITS_EQ_256-NEXT:    mov z16.h, z0.h[9]
+; VBITS_EQ_256-NEXT:    fcsel h14, h8, h1, vs
+; VBITS_EQ_256-NEXT:    fcmp h3, h3
+; VBITS_EQ_256-NEXT:    mov z1.h, z2.h[13]
+; VBITS_EQ_256-NEXT:    mov z6.h, z0.h[8]
+; VBITS_EQ_256-NEXT:    mov z7.h, z0.h[6]
+; VBITS_EQ_256-NEXT:    mov z18.h, z0.h[5]
+; VBITS_EQ_256-NEXT:    mov z22.h, z0.h[4]
+; VBITS_EQ_256-NEXT:    mov z26.h, z0.h[3]
+; VBITS_EQ_256-NEXT:    mov z30.h, z0.h[1]
+; VBITS_EQ_256-NEXT:    fcsel h13, h29, h3, vs
+; VBITS_EQ_256-NEXT:    fcmp h1, h1
+; VBITS_EQ_256-NEXT:    mov z3.h, z2.h[12]
+; VBITS_EQ_256-NEXT:    str h15, [sp, #128]
+; VBITS_EQ_256-NEXT:    str h14, [sp, #158]
+; VBITS_EQ_256-NEXT:    fcsel h12, h27, h1, vs
+; VBITS_EQ_256-NEXT:    fcmp h3, h3
+; VBITS_EQ_256-NEXT:    mov z1.h, z2.h[11]
+; VBITS_EQ_256-NEXT:    str h13, [sp, #156]
+; VBITS_EQ_256-NEXT:    fcsel h11, h24, h3, vs
+; VBITS_EQ_256-NEXT:    fcmp h1, h1
+; VBITS_EQ_256-NEXT:    mov z3.h, z2.h[10]
+; VBITS_EQ_256-NEXT:    str h12, [sp, #154]
+; VBITS_EQ_256-NEXT:    fcsel h10, h21, h1, vs
+; VBITS_EQ_256-NEXT:    fcmp h3, h3
+; VBITS_EQ_256-NEXT:    mov z1.h, z2.h[9]
+; VBITS_EQ_256-NEXT:    str h11, [sp, #152]
+; VBITS_EQ_256-NEXT:    fcsel h9, h19, h3, vs
+; VBITS_EQ_256-NEXT:    fcmp h1, h1
+; VBITS_EQ_256-NEXT:    mov z3.h, z2.h[8]
+; VBITS_EQ_256-NEXT:    str h10, [sp, #150]
+; VBITS_EQ_256-NEXT:    fcsel h31, h16, h1, vs
+; VBITS_EQ_256-NEXT:    fcmp h3, h3
+; VBITS_EQ_256-NEXT:    mov z1.h, z2.h[7]
+; VBITS_EQ_256-NEXT:    str h9, [sp, #148]
+; VBITS_EQ_256-NEXT:    fcsel h28, h6, h3, vs
+; VBITS_EQ_256-NEXT:    fcmp h1, h1
+; VBITS_EQ_256-NEXT:    mov z3.h, z0.h[7]
+; VBITS_EQ_256-NEXT:    str h31, [sp, #146]
+; VBITS_EQ_256-NEXT:    fcsel h23, h3, h1, vs
+; VBITS_EQ_256-NEXT:    fcmp h4, h4
+; VBITS_EQ_256-NEXT:    mov z1.h, z2.h[5]
+; VBITS_EQ_256-NEXT:    str h28, [sp, #144]
+; VBITS_EQ_256-NEXT:    fcsel h20, h7, h4, vs
+; VBITS_EQ_256-NEXT:    fcmp h1, h1
+; VBITS_EQ_256-NEXT:    mov z4.h, z2.h[4]
+; VBITS_EQ_256-NEXT:    str h23, [sp, #142]
+; VBITS_EQ_256-NEXT:    fcsel h17, h18, h1, vs
+; VBITS_EQ_256-NEXT:    fcmp h4, h4
+; VBITS_EQ_256-NEXT:    mov z1.h, z2.h[1]
+; VBITS_EQ_256-NEXT:    str h20, [sp, #140]
+; VBITS_EQ_256-NEXT:    fcsel h4, h22, h4, vs
+; VBITS_EQ_256-NEXT:    fcmp h25, h25
+; VBITS_EQ_256-NEXT:    str h17, [sp, #138]
+; VBITS_EQ_256-NEXT:    fcsel h2, h26, h25, vs
+; VBITS_EQ_256-NEXT:    fcmp h5, h5
+; VBITS_EQ_256-NEXT:    mov z25.h, z0.h[2]
+; VBITS_EQ_256-NEXT:    str h4, [sp, #136]
+; VBITS_EQ_256-NEXT:    fcsel h5, h25, h5, vs
+; VBITS_EQ_256-NEXT:    fcmp h1, h1
+; VBITS_EQ_256-NEXT:    str h2, [sp, #134]
+; VBITS_EQ_256-NEXT:    fcsel h1, h30, h1, vs
+; VBITS_EQ_256-NEXT:    fcmp h0, h0
+; VBITS_EQ_256-NEXT:    str h5, [sp, #132]
+; VBITS_EQ_256-NEXT:    fcsel h0, h15, h0, vs
+; VBITS_EQ_256-NEXT:    str h1, [sp, #130]
+; VBITS_EQ_256-NEXT:    fcmp h15, h0
+; VBITS_EQ_256-NEXT:    fcsel h0, h15, h0, lt
+; VBITS_EQ_256-NEXT:    fcmp h8, h8
+; VBITS_EQ_256-NEXT:    fcsel h8, h14, h8, vs
+; VBITS_EQ_256-NEXT:    str h0, [sp, #30] // 2-byte Spill
+; VBITS_EQ_256-NEXT:    ldr h0, [sp, #78] // 2-byte Reload
+; VBITS_EQ_256-NEXT:    str h0, [sp, #96]
+; VBITS_EQ_256-NEXT:    ldr h0, [sp, #76] // 2-byte Reload
+; VBITS_EQ_256-NEXT:    fcmp h14, h8
+; VBITS_EQ_256-NEXT:    str h0, [sp, #126]
+; VBITS_EQ_256-NEXT:    ldr h0, [sp, #70] // 2-byte Reload
+; VBITS_EQ_256-NEXT:    fcsel h8, h14, h8, lt
+; VBITS_EQ_256-NEXT:    fcmp h29, h29
+; VBITS_EQ_256-NEXT:    str h0, [sp, #124]
+; VBITS_EQ_256-NEXT:    ldr h0, [sp, #66] // 2-byte Reload
+; VBITS_EQ_256-NEXT:    fcsel h29, h13, h29, vs
+; VBITS_EQ_256-NEXT:    str h0, [sp, #122]
+; VBITS_EQ_256-NEXT:    ldr h0, [sp, #62] // 2-byte Reload
+; VBITS_EQ_256-NEXT:    str h8, [sp, #222]
+; VBITS_EQ_256-NEXT:    str h0, [sp, #120]
+; VBITS_EQ_256-NEXT:    ldr h0, [sp, #58] // 2-byte Reload
+; VBITS_EQ_256-NEXT:    fcmp h13, h29
+; VBITS_EQ_256-NEXT:    str h0, [sp, #118]
+; VBITS_EQ_256-NEXT:    ldr h0, [sp, #54] // 2-byte Reload
+; VBITS_EQ_256-NEXT:    fcsel h29, h13, h29, lt
+; VBITS_EQ_256-NEXT:    fcmp h27, h27
+; VBITS_EQ_256-NEXT:    str h0, [sp, #116]
+; VBITS_EQ_256-NEXT:    ldr h0, [sp, #52] // 2-byte Reload
+; VBITS_EQ_256-NEXT:    fcsel h27, h12, h27, vs
+; VBITS_EQ_256-NEXT:    str h0, [sp, #114]
+; VBITS_EQ_256-NEXT:    ldr h0, [sp, #48] // 2-byte Reload
+; VBITS_EQ_256-NEXT:    str h29, [sp, #220]
+; VBITS_EQ_256-NEXT:    str h0, [sp, #112]
+; VBITS_EQ_256-NEXT:    ldr h0, [sp, #44] // 2-byte Reload
+; VBITS_EQ_256-NEXT:    fcmp h12, h27
+; VBITS_EQ_256-NEXT:    str h0, [sp, #110]
+; VBITS_EQ_256-NEXT:    ldr h0, [sp, #42] // 2-byte Reload
+; VBITS_EQ_256-NEXT:    fcsel h27, h12, h27, lt
+; VBITS_EQ_256-NEXT:    fcmp h24, h24
+; VBITS_EQ_256-NEXT:    str h0, [sp, #108]
+; VBITS_EQ_256-NEXT:    ldr h0, [sp, #40] // 2-byte Reload
+; VBITS_EQ_256-NEXT:    fcsel h24, h11, h24, vs
+; VBITS_EQ_256-NEXT:    str h0, [sp, #106]
+; VBITS_EQ_256-NEXT:    ldr h0, [sp, #38] // 2-byte Reload
+; VBITS_EQ_256-NEXT:    str h27, [sp, #218]
+; VBITS_EQ_256-NEXT:    str h0, [sp, #104]
+; VBITS_EQ_256-NEXT:    ldr h0, [sp, #36] // 2-byte Reload
+; VBITS_EQ_256-NEXT:    fcmp h11, h24
+; VBITS_EQ_256-NEXT:    str h0, [sp, #102]
+; VBITS_EQ_256-NEXT:    ldr h0, [sp, #34] // 2-byte Reload
+; VBITS_EQ_256-NEXT:    fcsel h24, h11, h24, lt
+; VBITS_EQ_256-NEXT:    fcmp h21, h21
+; VBITS_EQ_256-NEXT:    str h0, [sp, #100]
+; VBITS_EQ_256-NEXT:    ldr h0, [sp, #32] // 2-byte Reload
+; VBITS_EQ_256-NEXT:    fcsel h21, h10, h21, vs
+; VBITS_EQ_256-NEXT:    str h0, [sp, #98]
+; VBITS_EQ_256-NEXT:    ldr h0, [sp, #94] // 2-byte Reload
+; VBITS_EQ_256-NEXT:    str h24, [sp, #216]
+; VBITS_EQ_256-NEXT:    str h0, [sp, #160]
+; VBITS_EQ_256-NEXT:    ldr h0, [sp, #92] // 2-byte Reload
+; VBITS_EQ_256-NEXT:    fcmp h10, h21
+; VBITS_EQ_256-NEXT:    str h0, [sp, #190]
+; VBITS_EQ_256-NEXT:    ldr h0, [sp, #90] // 2-byte Reload
+; VBITS_EQ_256-NEXT:    fcsel h21, h10, h21, lt
+; VBITS_EQ_256-NEXT:    fcmp h19, h19
+; VBITS_EQ_256-NEXT:    str h0, [sp, #188]
+; VBITS_EQ_256-NEXT:    ldr h0, [sp, #88] // 2-byte Reload
+; VBITS_EQ_256-NEXT:    fcsel h19, h9, h19, vs
+; VBITS_EQ_256-NEXT:    str h0, [sp, #186]
+; VBITS_EQ_256-NEXT:    ldr h0, [sp, #86] // 2-byte Reload
+; VBITS_EQ_256-NEXT:    str h21, [sp, #214]
+; VBITS_EQ_256-NEXT:    str h0, [sp, #184]
+; VBITS_EQ_256-NEXT:    ldr h0, [sp, #84] // 2-byte Reload
+; VBITS_EQ_256-NEXT:    fcmp h9, h19
+; VBITS_EQ_256-NEXT:    str h0, [sp, #182]
+; VBITS_EQ_256-NEXT:    ldr h0, [sp, #82] // 2-byte Reload
+; VBITS_EQ_256-NEXT:    fcsel h19, h9, h19, lt
+; VBITS_EQ_256-NEXT:    fcmp h16, h16
+; VBITS_EQ_256-NEXT:    str h0, [sp, #180]
+; VBITS_EQ_256-NEXT:    ldr h0, [sp, #80] // 2-byte Reload
+; VBITS_EQ_256-NEXT:    fcsel h16, h31, h16, vs
+; VBITS_EQ_256-NEXT:    str h0, [sp, #178]
+; VBITS_EQ_256-NEXT:    ldr h0, [sp, #74] // 2-byte Reload
+; VBITS_EQ_256-NEXT:    str h19, [sp, #212]
+; VBITS_EQ_256-NEXT:    str h0, [sp, #176]
+; VBITS_EQ_256-NEXT:    ldr h0, [sp, #72] // 2-byte Reload
+; VBITS_EQ_256-NEXT:    fcmp h31, h16
+; VBITS_EQ_256-NEXT:    str h0, [sp, #174]
+; VBITS_EQ_256-NEXT:    ldr h0, [sp, #68] // 2-byte Reload
+; VBITS_EQ_256-NEXT:    fcsel h16, h31, h16, lt
+; VBITS_EQ_256-NEXT:    fcmp h6, h6
+; VBITS_EQ_256-NEXT:    str h0, [sp, #172]
+; VBITS_EQ_256-NEXT:    ldr h0, [sp, #64] // 2-byte Reload
+; VBITS_EQ_256-NEXT:    fcsel h6, h28, h6, vs
+; VBITS_EQ_256-NEXT:    str h0, [sp, #170]
+; VBITS_EQ_256-NEXT:    ldr h0, [sp, #60] // 2-byte Reload
+; VBITS_EQ_256-NEXT:    str h16, [sp, #210]
+; VBITS_EQ_256-NEXT:    str h0, [sp, #168]
+; VBITS_EQ_256-NEXT:    ldr h0, [sp, #56] // 2-byte Reload
+; VBITS_EQ_256-NEXT:    fcmp h28, h6
+; VBITS_EQ_256-NEXT:    str h0, [sp, #166]
+; VBITS_EQ_256-NEXT:    ldr h0, [sp, #50] // 2-byte Reload
+; VBITS_EQ_256-NEXT:    fcsel h6, h28, h6, lt
+; VBITS_EQ_256-NEXT:    fcmp h3, h3
+; VBITS_EQ_256-NEXT:    str h0, [sp, #164]
+; VBITS_EQ_256-NEXT:    ldr h0, [sp, #46] // 2-byte Reload
+; VBITS_EQ_256-NEXT:    fcsel h3, h23, h3, vs
+; VBITS_EQ_256-NEXT:    str h0, [sp, #162]
+; VBITS_EQ_256-NEXT:    ldr h0, [sp, #30] // 2-byte Reload
+; VBITS_EQ_256-NEXT:    str h6, [sp, #208]
+; VBITS_EQ_256-NEXT:    str h0, [sp, #192]
+; VBITS_EQ_256-NEXT:    fcmp h23, h3
+; VBITS_EQ_256-NEXT:    fcsel h3, h23, h3, lt
+; VBITS_EQ_256-NEXT:    fcmp h7, h7
+; VBITS_EQ_256-NEXT:    fcsel h7, h20, h7, vs
+; VBITS_EQ_256-NEXT:    str h3, [sp, #206]
+; VBITS_EQ_256-NEXT:    fcmp h20, h7
+; VBITS_EQ_256-NEXT:    fcsel h7, h20, h7, lt
+; VBITS_EQ_256-NEXT:    fcmp h18, h18
+; VBITS_EQ_256-NEXT:    fcsel h18, h17, h18, vs
+; VBITS_EQ_256-NEXT:    str h7, [sp, #204]
+; VBITS_EQ_256-NEXT:    fcmp h17, h18
+; VBITS_EQ_256-NEXT:    fcsel h18, h17, h18, lt
+; VBITS_EQ_256-NEXT:    fcmp h22, h22
+; VBITS_EQ_256-NEXT:    fcsel h22, h4, h22, vs
+; VBITS_EQ_256-NEXT:    str h18, [sp, #202]
+; VBITS_EQ_256-NEXT:    fcmp h4, h22
+; VBITS_EQ_256-NEXT:    fcsel h22, h4, h22, lt
+; VBITS_EQ_256-NEXT:    fcmp h26, h26
+; VBITS_EQ_256-NEXT:    fcsel h26, h2, h26, vs
+; VBITS_EQ_256-NEXT:    str h22, [sp, #200]
+; VBITS_EQ_256-NEXT:    fcmp h2, h26
+; VBITS_EQ_256-NEXT:    fcsel h20, h2, h26, lt
+; VBITS_EQ_256-NEXT:    fcmp h25, h25
+; VBITS_EQ_256-NEXT:    fcsel h2, h5, h25, vs
+; VBITS_EQ_256-NEXT:    str h20, [sp, #198]
+; VBITS_EQ_256-NEXT:    fcmp h5, h2
+; VBITS_EQ_256-NEXT:    fcsel h0, h5, h2, lt
+; VBITS_EQ_256-NEXT:    fcmp h30, h30
+; VBITS_EQ_256-NEXT:    fcsel h2, h1, h30, vs
+; VBITS_EQ_256-NEXT:    str h0, [sp, #196]
+; VBITS_EQ_256-NEXT:    ld1h { z0.h }, p0/z, [x9]
+; VBITS_EQ_256-NEXT:    add x9, sp, #96
+; VBITS_EQ_256-NEXT:    fcmp h1, h2
+; VBITS_EQ_256-NEXT:    fcsel h1, h1, h2, lt
+; VBITS_EQ_256-NEXT:    str h1, [sp, #194]
+; VBITS_EQ_256-NEXT:    ld1h { z1.h }, p0/z, [x10]
+; VBITS_EQ_256-NEXT:    ld1h { z2.h }, p0/z, [x9]
+; VBITS_EQ_256-NEXT:    add x9, sp, #192
+; VBITS_EQ_256-NEXT:    cmpeq p1.h, p0/z, z1.h, z0.h
+; VBITS_EQ_256-NEXT:    cmpeq p2.h, p0/z, z2.h, z0.h
+; VBITS_EQ_256-NEXT:    mov z0.h, p1/z, #-1 // =0xffffffffffffffff
+; VBITS_EQ_256-NEXT:    mov z3.h, p2/z, #-1 // =0xffffffffffffffff
+; VBITS_EQ_256-NEXT:    ptrue p1.h
+; VBITS_EQ_256-NEXT:    and z0.h, z0.h, #0x1
+; VBITS_EQ_256-NEXT:    and z3.h, z3.h, #0x1
+; VBITS_EQ_256-NEXT:    cmpne p2.h, p1/z, z0.h, #0
+; VBITS_EQ_256-NEXT:    ld1h { z0.h }, p0/z, [x9]
+; VBITS_EQ_256-NEXT:    add x9, sp, #160
+; VBITS_EQ_256-NEXT:    cmpne p1.h, p1/z, z3.h, #0
+; VBITS_EQ_256-NEXT:    ld1h { z3.h }, p0/z, [x9]
+; VBITS_EQ_256-NEXT:    fcmeq p3.h, p0/z, z0.h, #0.0
+; VBITS_EQ_256-NEXT:    sel z1.h, p2, z1.h, z0.h
+; VBITS_EQ_256-NEXT:    fcmeq p2.h, p0/z, z3.h, #0.0
+; VBITS_EQ_256-NEXT:    sel z2.h, p1, z2.h, z3.h
+; VBITS_EQ_256-NEXT:    mov z0.h, p3/m, z1.h
+; VBITS_EQ_256-NEXT:    sel z1.h, p2, z2.h, z3.h
+; VBITS_EQ_256-NEXT:    st1h { z0.h }, p0, [x0, x8, lsl #1]
+; VBITS_EQ_256-NEXT:    st1h { z1.h }, p0, [x0]
+; VBITS_EQ_256-NEXT:    sub sp, x29, #64
+; VBITS_EQ_256-NEXT:    ldp x29, x30, [sp, #64] // 16-byte Folded Reload
+; VBITS_EQ_256-NEXT:    ldp d9, d8, [sp, #48] // 16-byte Folded Reload
+; VBITS_EQ_256-NEXT:    ldp d11, d10, [sp, #32] // 16-byte Folded Reload
+; VBITS_EQ_256-NEXT:    ldp d13, d12, [sp, #16] // 16-byte Folded Reload
+; VBITS_EQ_256-NEXT:    ldp d15, d14, [sp], #80 // 16-byte Folded Reload
+; VBITS_EQ_256-NEXT:    ret
+;
+; VBITS_GE_512-LABEL: fminimumnum_v32f16:
+; VBITS_GE_512:       // %bb.0:
+; VBITS_GE_512-NEXT:    stp d15, d14, [sp, #-80]! // 16-byte Folded Spill
+; VBITS_GE_512-NEXT:    sub x9, sp, #304
+; VBITS_GE_512-NEXT:    stp d13, d12, [sp, #16] // 16-byte Folded Spill
+; VBITS_GE_512-NEXT:    addvl x9, x9, #-16
+; VBITS_GE_512-NEXT:    stp d11, d10, [sp, #32] // 16-byte Folded Spill
+; VBITS_GE_512-NEXT:    stp d9, d8, [sp, #48] // 16-byte Folded Spill
+; VBITS_GE_512-NEXT:    stp x29, x30, [sp, #64] // 16-byte Folded Spill
+; VBITS_GE_512-NEXT:    add x29, sp, #64
+; VBITS_GE_512-NEXT:    and sp, x9, #0xffffffffffffffc0
+; VBITS_GE_512-NEXT:    .cfi_def_cfa w29, 16
+; VBITS_GE_512-NEXT:    .cfi_offset w30, -8
+; VBITS_GE_512-NEXT:    .cfi_offset w29, -16
+; VBITS_GE_512-NEXT:    .cfi_offset b8, -24
+; VBITS_GE_512-NEXT:    .cfi_offset b9, -32
+; VBITS_GE_512-NEXT:    .cfi_offset b10, -40
+; VBITS_GE_512-NEXT:    .cfi_offset b11, -48
+; VBITS_GE_512-NEXT:    .cfi_offset b12, -56
+; VBITS_GE_512-NEXT:    .cfi_offset b13, -64
+; VBITS_GE_512-NEXT:    .cfi_offset b14, -72
+; VBITS_GE_512-NEXT:    .cfi_offset b15, -80
+; VBITS_GE_512-NEXT:    ptrue p0.h, vl32
+; VBITS_GE_512-NEXT:    sub x9, x29, #64
+; VBITS_GE_512-NEXT:    adrp x8, .LCPI93_0
+; VBITS_GE_512-NEXT:    add x8, x8, :lo12:.LCPI93_0
+; VBITS_GE_512-NEXT:    ld1h { z25.h }, p0/z, [x0]
+; VBITS_GE_512-NEXT:    ld1h { z21.h }, p0/z, [x1]
+; VBITS_GE_512-NEXT:    fcmp h25, h25
+; VBITS_GE_512-NEXT:    mov z0.h, z25.h[31]
+; VBITS_GE_512-NEXT:    mov z6.h, z21.h[31]
+; VBITS_GE_512-NEXT:    mov z1.h, z25.h[30]
+; VBITS_GE_512-NEXT:    mov z23.h, z21.h[30]
+; VBITS_GE_512-NEXT:    mov z4.h, z21.h[29]
+; VBITS_GE_512-NEXT:    mov z3.h, z21.h[28]
+; VBITS_GE_512-NEXT:    mov z30.h, z21.h[26]
+; VBITS_GE_512-NEXT:    mov z5.h, z21.h[19]
+; VBITS_GE_512-NEXT:    fcsel h2, h21, h25, vs
+; VBITS_GE_512-NEXT:    fcmp h0, h0
+; VBITS_GE_512-NEXT:    mov z14.h, z21.h[16]
+; VBITS_GE_512-NEXT:    str z4, [x9, #-3, mul vl] // 16-byte Folded Spill
+; VBITS_GE_512-NEXT:    mov z11.h, z21.h[15]
+; VBITS_GE_512-NEXT:    mov z8.h, z21.h[14]
+; VBITS_GE_512-NEXT:    str z3, [x9, #-1, mul vl] // 16-byte Folded Spill
+; VBITS_GE_512-NEXT:    mov z31.h, z21.h[13]
+; VBITS_GE_512-NEXT:    mov z28.h, z21.h[12]
+; VBITS_GE_512-NEXT:    str h2, [sp, #126] // 2-byte Spill
+; VBITS_GE_512-NEXT:    mov z2.h, z25.h[29]
+; VBITS_GE_512-NEXT:    fcsel h0, h6, h0, vs
+; VBITS_GE_512-NEXT:    fcmp h1, h1
+; VBITS_GE_512-NEXT:    mov z26.h, z21.h[11]
+; VBITS_GE_512-NEXT:    mov z24.h, z21.h[10]
+; VBITS_GE_512-NEXT:    mov z20.h, z21.h[9]
+; VBITS_GE_512-NEXT:    mov z18.h, z21.h[8]
+; VBITS_GE_512-NEXT:    mov z16.h, z21.h[7]
+; VBITS_GE_512-NEXT:    str h0, [sp, #124] // 2-byte Spill
+; VBITS_GE_512-NEXT:    mov z0.h, z25.h[28]
+; VBITS_GE_512-NEXT:    mov z19.h, z21.h[6]
+; VBITS_GE_512-NEXT:    fcsel h1, h23, h1, vs
+; VBITS_GE_512-NEXT:    fcmp h2, h2
+; VBITS_GE_512-NEXT:    str z5, [x9, #-10, mul vl] // 16-byte Folded Spill
+; VBITS_GE_512-NEXT:    mov z9.h, z25.h[2]
+; VBITS_GE_512-NEXT:    str h1, [sp, #122] // 2-byte Spill
+; VBITS_GE_512-NEXT:    mov z1.h, z25.h[27]
+; VBITS_GE_512-NEXT:    fcsel h2, h4, h2, vs
+; VBITS_GE_512-NEXT:    fcmp h0, h0
+; VBITS_GE_512-NEXT:    mov z4.h, z21.h[27]
+; VBITS_GE_512-NEXT:    str h2, [sp, #120] // 2-byte Spill
+; VBITS_GE_512-NEXT:    mov z2.h, z25.h[26]
+; VBITS_GE_512-NEXT:    fcsel h0, h3, h0, vs
+; VBITS_GE_512-NEXT:    fcmp h1, h1
+; VBITS_GE_512-NEXT:    mov z3.h, z21.h[25]
+; VBITS_GE_512-NEXT:    str z4, [x9, #-2, mul vl] // 16-byte Folded Spill
+; VBITS_GE_512-NEXT:    str h0, [sp, #118] // 2-byte Spill
+; VBITS_GE_512-NEXT:    mov z0.h, z25.h[25]
+; VBITS_GE_512-NEXT:    fcsel h1, h4, h1, vs
+; VBITS_GE_512-NEXT:    fcmp h2, h2
+; VBITS_GE_512-NEXT:    mov z4.h, z21.h[24]
+; VBITS_GE_512-NEXT:    str z3, [x9, #-4, mul vl] // 16-byte Folded Spill
+; VBITS_GE_512-NEXT:    str h1, [sp, #116] // 2-byte Spill
+; VBITS_GE_512-NEXT:    mov z1.h, z25.h[24]
+; VBITS_GE_512-NEXT:    fcsel h2, h30, h2, vs
+; VBITS_GE_512-NEXT:    fcmp h0, h0
+; VBITS_GE_512-NEXT:    str z4, [x9, #-5, mul vl] // 16-byte Folded Spill
+; VBITS_GE_512-NEXT:    str h2, [sp, #114] // 2-byte Spill
+; VBITS_GE_512-NEXT:    mov z2.h, z25.h[23]
+; VBITS_GE_512-NEXT:    fcsel h0, h3, h0, vs
+; VBITS_GE_512-NEXT:    fcmp h1, h1
+; VBITS_GE_512-NEXT:    mov z3.h, z21.h[23]
+; VBITS_GE_512-NEXT:    str h0, [sp, #112] // 2-byte Spill
+; VBITS_GE_512-NEXT:    mov z0.h, z25.h[22]
+; VBITS_GE_512-NEXT:    fcsel h1, h4, h1, vs
+; VBITS_GE_512-NEXT:    fcmp h2, h2
+; VBITS_GE_512-NEXT:    mov z4.h, z21.h[22]
+; VBITS_GE_512-NEXT:    str z3, [x9, #-6, mul vl] // 16-byte Folded Spill
+; VBITS_GE_512-NEXT:    str h1, [sp, #110] // 2-byte Spill
+; VBITS_GE_512-NEXT:    mov z1.h, z25.h[21]
+; VBITS_GE_512-NEXT:    fcsel h2, h3, h2, vs
+; VBITS_GE_512-NEXT:    fcmp h0, h0
+; VBITS_GE_512-NEXT:    mov z3.h, z21.h[21]
+; VBITS_GE_512-NEXT:    str z4, [x9, #-7, mul vl] // 16-byte Folded Spill
+; VBITS_GE_512-NEXT:    str h2, [sp, #108] // 2-byte Spill
+; VBITS_GE_512-NEXT:    mov z2.h, z25.h[20]
+; VBITS_GE_512-NEXT:    fcsel h0, h4, h0, vs
+; VBITS_GE_512-NEXT:    fcmp h1, h1
+; VBITS_GE_512-NEXT:    mov z4.h, z21.h[20]
+; VBITS_GE_512-NEXT:    str h0, [sp, #106] // 2-byte Spill
+; VBITS_GE_512-NEXT:    mov z0.h, z25.h[19]
+; VBITS_GE_512-NEXT:    fcsel h1, h3, h1, vs
+; VBITS_GE_512-NEXT:    fcmp h2, h2
+; VBITS_GE_512-NEXT:    str z4, [x9, #-8, mul vl] // 16-byte Folded Spill
+; VBITS_GE_512-NEXT:    str h1, [sp, #104] // 2-byte Spill
+; VBITS_GE_512-NEXT:    mov z1.h, z25.h[18]
+; VBITS_GE_512-NEXT:    fcsel h2, h4, h2, vs
+; VBITS_GE_512-NEXT:    fcmp h0, h0
+; VBITS_GE_512-NEXT:    mov z4.h, z21.h[18]
+; VBITS_GE_512-NEXT:    fcsel h0, h5, h0, vs
+; VBITS_GE_512-NEXT:    fcmp h1, h1
+; VBITS_GE_512-NEXT:    str h2, [sp, #102] // 2-byte Spill
+; VBITS_GE_512-NEXT:    mov z2.h, z25.h[17]
+; VBITS_GE_512-NEXT:    str z4, [x9, #-9, mul vl] // 16-byte Folded Spill
+; VBITS_GE_512-NEXT:    str h0, [sp, #98] // 2-byte Spill
+; VBITS_GE_512-NEXT:    fcsel h0, h4, h1, vs
+; VBITS_GE_512-NEXT:    mov z1.h, z21.h[17]
+; VBITS_GE_512-NEXT:    fcmp h2, h2
+; VBITS_GE_512-NEXT:    mov z4.h, z25.h[3]
+; VBITS_GE_512-NEXT:    str h0, [sp, #100] // 2-byte Spill
+; VBITS_GE_512-NEXT:    mov z0.h, z25.h[16]
+; VBITS_GE_512-NEXT:    fcsel h2, h1, h2, vs
+; VBITS_GE_512-NEXT:    str z1, [x9, #-11, mul vl] // 16-byte Folded Spill
+; VBITS_GE_512-NEXT:    mov z1.h, z25.h[15]
+; VBITS_GE_512-NEXT:    fcmp h0, h0
+; VBITS_GE_512-NEXT:    str h2, [sp, #96] // 2-byte Spill
+; VBITS_GE_512-NEXT:    mov z2.h, z25.h[4]
+; VBITS_GE_512-NEXT:    fcsel h0, h14, h0, vs
+; VBITS_GE_512-NEXT:    fcmp h1, h1
+; VBITS_GE_512-NEXT:    str h0, [sp, #94] // 2-byte Spill
+; VBITS_GE_512-NEXT:    mov z0.h, z25.h[14]
+; VBITS_GE_512-NEXT:    fcsel h1, h11, h1, vs
+; VBITS_GE_512-NEXT:    fcmp h0, h0
+; VBITS_GE_512-NEXT:    str h1, [sp, #92] // 2-byte Spill
+; VBITS_GE_512-NEXT:    mov z1.h, z25.h[13]
+; VBITS_GE_512-NEXT:    fcsel h0, h8, h0, vs
+; VBITS_GE_512-NEXT:    fcmp h1, h1
+; VBITS_GE_512-NEXT:    str h0, [sp, #90] // 2-byte Spill
+; VBITS_GE_512-NEXT:    mov z0.h, z25.h[12]
+; VBITS_GE_512-NEXT:    fcsel h1, h31, h1, vs
+; VBITS_GE_512-NEXT:    fcmp h0, h0
+; VBITS_GE_512-NEXT:    str h1, [sp, #88] // 2-byte Spill
+; VBITS_GE_512-NEXT:    mov z1.h, z25.h[11]
+; VBITS_GE_512-NEXT:    fcsel h0, h28, h0, vs
+; VBITS_GE_512-NEXT:    fcmp h1, h1
+; VBITS_GE_512-NEXT:    str h0, [sp, #86] // 2-byte Spill
+; VBITS_GE_512-NEXT:    mov z0.h, z25.h[10]
+; VBITS_GE_512-NEXT:    fcsel h15, h26, h1, vs
+; VBITS_GE_512-NEXT:    mov z1.h, z25.h[9]
+; VBITS_GE_512-NEXT:    fcmp h0, h0
+; VBITS_GE_512-NEXT:    fcsel h13, h24, h0, vs
+; VBITS_GE_512-NEXT:    fcmp h1, h1
+; VBITS_GE_512-NEXT:    mov z0.h, z25.h[8]
+; VBITS_GE_512-NEXT:    fcsel h12, h20, h1, vs
+; VBITS_GE_512-NEXT:    fcmp h0, h0
+; VBITS_GE_512-NEXT:    mov z1.h, z25.h[7]
+; VBITS_GE_512-NEXT:    fcsel h10, h18, h0, vs
+; VBITS_GE_512-NEXT:    fcmp h1, h1
+; VBITS_GE_512-NEXT:    mov z0.h, z25.h[6]
+; VBITS_GE_512-NEXT:    fcsel h29, h16, h1, vs
+; VBITS_GE_512-NEXT:    fcmp h0, h0
+; VBITS_GE_512-NEXT:    mov z1.h, z25.h[5]
+; VBITS_GE_512-NEXT:    mov z25.h, z25.h[1]
+; VBITS_GE_512-NEXT:    fcsel h22, h19, h0, vs
+; VBITS_GE_512-NEXT:    fcmp h1, h1
+; VBITS_GE_512-NEXT:    mov z0.h, z21.h[5]
+; VBITS_GE_512-NEXT:    str z0, [x9, #-16, mul vl] // 16-byte Folded Spill
+; VBITS_GE_512-NEXT:    fcsel h7, h0, h1, vs
+; VBITS_GE_512-NEXT:    fcmp h2, h2
+; VBITS_GE_512-NEXT:    mov z0.h, z21.h[4]
+; VBITS_GE_512-NEXT:    str z0, [x9, #-15, mul vl] // 16-byte Folded Spill
+; VBITS_GE_512-NEXT:    fcsel h5, h0, h2, vs
+; VBITS_GE_512-NEXT:    fcmp h4, h4
+; VBITS_GE_512-NEXT:    mov z0.h, z21.h[3]
+; VBITS_GE_512-NEXT:    ldr h2, [sp, #90] // 2-byte Reload
+; VBITS_GE_512-NEXT:    str z0, [x9, #-14, mul vl] // 16-byte Folded Spill
+; VBITS_GE_512-NEXT:    fcsel h17, h0, h4, vs
+; VBITS_GE_512-NEXT:    fcmp h9, h9
+; VBITS_GE_512-NEXT:    mov z0.h, z21.h[2]
+; VBITS_GE_512-NEXT:    ldr z4, [x9, #-1, mul vl] // 16-byte Folded Reload
+; VBITS_GE_512-NEXT:    str z0, [x9, #-13, mul vl] // 16-byte Folded Spill
+; VBITS_GE_512-NEXT:    fcsel h27, h0, h9, vs
+; VBITS_GE_512-NEXT:    fcmp h25, h25
+; VBITS_GE_512-NEXT:    mov z0.h, z21.h[1]
+; VBITS_GE_512-NEXT:    ldr h9, [sp, #102] // 2-byte Reload
+; VBITS_GE_512-NEXT:    fcsel h25, h0, h25, vs
+; VBITS_GE_512-NEXT:    fcmp h21, h21
+; VBITS_GE_512-NEXT:    str z0, [x9, #-12, mul vl] // 16-byte Folded Spill
+; VBITS_GE_512-NEXT:    ldr h0, [sp, #126] // 2-byte Reload
+; VBITS_GE_512-NEXT:    fcsel h21, h0, h21, vs
+; VBITS_GE_512-NEXT:    fcmp h0, h21
+; VBITS_GE_512-NEXT:    fcsel h1, h0, h21, lt
+; VBITS_GE_512-NEXT:    fcmp h6, h6
+; VBITS_GE_512-NEXT:    ldr h0, [sp, #124] // 2-byte Reload
+; VBITS_GE_512-NEXT:    fcsel h21, h0, h6, vs
+; VBITS_GE_512-NEXT:    str h1, [sp, #84] // 2-byte Spill
+; VBITS_GE_512-NEXT:    ldr h6, [sp, #96] // 2-byte Reload
+; VBITS_GE_512-NEXT:    fcmp h0, h21
+; VBITS_GE_512-NEXT:    fcsel h1, h0, h21, lt
+; VBITS_GE_512-NEXT:    fcmp h23, h23
+; VBITS_GE_512-NEXT:    ldr h0, [sp, #122] // 2-byte Reload
+; VBITS_GE_512-NEXT:    fcsel h21, h0, h23, vs
+; VBITS_GE_512-NEXT:    str h1, [sp, #82] // 2-byte Spill
+; VBITS_GE_512-NEXT:    ldr h23, [sp, #100] // 2-byte Reload
+; VBITS_GE_512-NEXT:    fcmp h0, h21
+; VBITS_GE_512-NEXT:    fcsel h1, h0, h21, lt
+; VBITS_GE_512-NEXT:    ldr h0, [sp, #120] // 2-byte Reload
+; VBITS_GE_512-NEXT:    str h1, [sp, #80] // 2-byte Spill
+; VBITS_GE_512-NEXT:    ldr z1, [x9, #-3, mul vl] // 16-byte Folded Reload
+; VBITS_GE_512-NEXT:    fcmp h1, h1
+; VBITS_GE_512-NEXT:    fcsel h21, h0, h1, vs
+; VBITS_GE_512-NEXT:    fcmp h0, h21
+; VBITS_GE_512-NEXT:    fcsel h1, h0, h21, lt
+; VBITS_GE_512-NEXT:    fcmp h4, h4
+; VBITS_GE_512-NEXT:    ldr h0, [sp, #118] // 2-byte Reload
+; VBITS_GE_512-NEXT:    fcsel h21, h0, h4, vs
+; VBITS_GE_512-NEXT:    ldr z4, [x9, #-2, mul vl] // 16-byte Folded Reload
+; VBITS_GE_512-NEXT:    str h1, [sp, #78] // 2-byte Spill
+; VBITS_GE_512-NEXT:    fcmp h0, h21
+; VBITS_GE_512-NEXT:    fcsel h1, h0, h21, lt
+; VBITS_GE_512-NEXT:    fcmp h4, h4
+; VBITS_GE_512-NEXT:    ldr h0, [sp, #116] // 2-byte Reload
+; VBITS_GE_512-NEXT:    fcsel h21, h0, h4, vs
+; VBITS_GE_512-NEXT:    str h1, [sp, #76] // 2-byte Spill
+; VBITS_GE_512-NEXT:    ldr h4, [sp, #94] // 2-byte Reload
+; VBITS_GE_512-NEXT:    fcmp h0, h21
+; VBITS_GE_512-NEXT:    fcsel h1, h0, h21, lt
+; VBITS_GE_512-NEXT:    fcmp h30, h30
+; VBITS_GE_512-NEXT:    ldr h0, [sp, #114] // 2-byte Reload
+; VBITS_GE_512-NEXT:    fcsel h21, h0, h30, vs
+; VBITS_GE_512-NEXT:    str h1, [sp, #74] // 2-byte Spill
+; VBITS_GE_512-NEXT:    ldr h30, [sp, #98] // 2-byte Reload
+; VBITS_GE_512-NEXT:    fcmp h0, h21
+; VBITS_GE_512-NEXT:    fcsel h1, h0, h21, lt
+; VBITS_GE_512-NEXT:    ldr h0, [sp, #112] // 2-byte Reload
+; VBITS_GE_512-NEXT:    str h1, [sp, #72] // 2-byte Spill
+; VBITS_GE_512-NEXT:    ldr z1, [x9, #-4, mul vl] // 16-byte Folded Reload
+; VBITS_GE_512-NEXT:    fcmp h1, h1
+; VBITS_GE_512-NEXT:    fcsel h21, h0, h1, vs
+; VBITS_GE_512-NEXT:    fcmp h0, h21
+; VBITS_GE_512-NEXT:    fcsel h1, h0, h21, lt
+; VBITS_GE_512-NEXT:    ldr h0, [sp, #110] // 2-byte Reload
+; VBITS_GE_512-NEXT:    str h1, [sp, #70] // 2-byte Spill
+; VBITS_GE_512-NEXT:    ldr z1, [x9, #-5, mul vl] // 16-byte Folded Reload
+; VBITS_GE_512-NEXT:    fcmp h1, h1
+; VBITS_GE_512-NEXT:    fcsel h21, h0, h1, vs
+; VBITS_GE_512-NEXT:    fcmp h0, h21
+; VBITS_GE_512-NEXT:    fcsel h1, h0, h21, lt
+; VBITS_GE_512-NEXT:    ldr h0, [sp, #108] // 2-byte Reload
+; VBITS_GE_512-NEXT:    str h1, [sp, #68] // 2-byte Spill
+; VBITS_GE_512-NEXT:    ldr z1, [x9, #-6, mul vl] // 16-byte Folded Reload
+; VBITS_GE_512-NEXT:    fcmp h1, h1
+; VBITS_GE_512-NEXT:    fcsel h21, h0, h1, vs
+; VBITS_GE_512-NEXT:    fcmp h0, h21
+; VBITS_GE_512-NEXT:    fcsel h1, h0, h21, lt
+; VBITS_GE_512-NEXT:    ldr h0, [sp, #106] // 2-byte Reload
+; VBITS_GE_512-NEXT:    str h1, [sp, #66] // 2-byte Spill
+; VBITS_GE_512-NEXT:    ldr z1, [x9, #-7, mul vl] // 16-byte Folded Reload
+; VBITS_GE_512-NEXT:    fcmp h1, h1
+; VBITS_GE_512-NEXT:    fcsel h21, h0, h1, vs
+; VBITS_GE_512-NEXT:    fcmp h0, h21
+; VBITS_GE_512-NEXT:    fcsel h1, h0, h21, lt
+; VBITS_GE_512-NEXT:    fcmp h3, h3
+; VBITS_GE_512-NEXT:    ldr h0, [sp, #104] // 2-byte Reload
+; VBITS_GE_512-NEXT:    fcsel h21, h0, h3, vs
+; VBITS_GE_512-NEXT:    str h1, [sp, #64] // 2-byte Spill
+; VBITS_GE_512-NEXT:    ldr h3, [sp, #92] // 2-byte Reload
+; VBITS_GE_512-NEXT:    fcmp h0, h21
+; VBITS_GE_512-NEXT:    fcsel h1, h0, h21, lt
+; VBITS_GE_512-NEXT:    ldr h0, [sp, #86] // 2-byte Reload
+; VBITS_GE_512-NEXT:    str h1, [sp, #62] // 2-byte Spill
+; VBITS_GE_512-NEXT:    ldr z1, [x9, #-8, mul vl] // 16-byte Folded Reload
+; VBITS_GE_512-NEXT:    fcmp h1, h1
+; VBITS_GE_512-NEXT:    fcsel h21, h9, h1, vs
+; VBITS_GE_512-NEXT:    fcmp h9, h21
+; VBITS_GE_512-NEXT:    fcsel h1, h9, h21, lt
+; VBITS_GE_512-NEXT:    str h1, [sp, #60] // 2-byte Spill
+; VBITS_GE_512-NEXT:    ldr z1, [x9, #-10, mul vl] // 16-byte Folded Reload
+; VBITS_GE_512-NEXT:    fcmp h1, h1
+; VBITS_GE_512-NEXT:    fcsel h21, h30, h1, vs
+; VBITS_GE_512-NEXT:    fcmp h30, h21
+; VBITS_GE_512-NEXT:    fcsel h1, h30, h21, lt
+; VBITS_GE_512-NEXT:    str h1, [sp, #58] // 2-byte Spill
+; VBITS_GE_512-NEXT:    ldr z1, [x9, #-9, mul vl] // 16-byte Folded Reload
+; VBITS_GE_512-NEXT:    fcmp h1, h1
+; VBITS_GE_512-NEXT:    fcsel h21, h23, h1, vs
+; VBITS_GE_512-NEXT:    fcmp h23, h21
+; VBITS_GE_512-NEXT:    fcsel h1, h23, h21, lt
+; VBITS_GE_512-NEXT:    str h1, [sp, #56] // 2-byte Spill
+; VBITS_GE_512-NEXT:    ldr z1, [x9, #-11, mul vl] // 16-byte Folded Reload
+; VBITS_GE_512-NEXT:    str h9, [sp, #168]
+; VBITS_GE_512-NEXT:    str h30, [sp, #166]
+; VBITS_GE_512-NEXT:    fcmp h1, h1
+; VBITS_GE_512-NEXT:    str h23, [sp, #164]
+; VBITS_GE_512-NEXT:    str h6, [sp, #162]
+; VBITS_GE_512-NEXT:    fcsel h21, h6, h1, vs
+; VBITS_GE_512-NEXT:    fcmp h6, h21
+; VBITS_GE_512-NEXT:    fcsel h1, h6, h21, lt
+; VBITS_GE_512-NEXT:    fcmp h14, h14
+; VBITS_GE_512-NEXT:    ldr h21, [sp, #126] // 2-byte Reload
+; VBITS_GE_512-NEXT:    str h21, [sp, #128]
+; VBITS_GE_512-NEXT:    ldr h21, [sp, #124] // 2-byte Reload
+; VBITS_GE_512-NEXT:    fcsel h14, h4, h14, vs
+; VBITS_GE_512-NEXT:    str h1, [sp, #54] // 2-byte Spill
+; VBITS_GE_512-NEXT:    ldr h1, [sp, #88] // 2-byte Reload
+; VBITS_GE_512-NEXT:    str h21, [sp, #190]
+; VBITS_GE_512-NEXT:    ldr h21, [sp, #122] // 2-byte Reload
+; VBITS_GE_512-NEXT:    fcmp h4, h14
+; VBITS_GE_512-NEXT:    str h21, [sp, #188]
+; VBITS_GE_512-NEXT:    ldr h21, [sp, #120] // 2-byte Reload
+; VBITS_GE_512-NEXT:    str h21, [sp, #186]
+; VBITS_GE_512-NEXT:    ldr h21, [sp, #118] // 2-byte Reload
+; VBITS_GE_512-NEXT:    fcsel h14, h4, h14, lt
+; VBITS_GE_512-NEXT:    fcmp h11, h11
+; VBITS_GE_512-NEXT:    str h21, [sp, #184]
+; VBITS_GE_512-NEXT:    ldr h21, [sp, #116] // 2-byte Reload
+; VBITS_GE_512-NEXT:    fcsel h11, h3, h11, vs
+; VBITS_GE_512-NEXT:    str h21, [sp, #182]
+; VBITS_GE_512-NEXT:    ldr h21, [sp, #114] // 2-byte Reload
+; VBITS_GE_512-NEXT:    str h21, [sp, #180]
+; VBITS_GE_512-NEXT:    ldr h21, [sp, #112] // 2-byte Reload
+; VBITS_GE_512-NEXT:    fcmp h3, h11
+; VBITS_GE_512-NEXT:    str h21, [sp, #178]
+; VBITS_GE_512-NEXT:    ldr h21, [sp, #110] // 2-byte Reload
+; VBITS_GE_512-NEXT:    fcsel h11, h3, h11, lt
+; VBITS_GE_512-NEXT:    fcmp h8, h8
+; VBITS_GE_512-NEXT:    str h21, [sp, #176]
+; VBITS_GE_512-NEXT:    ldr h21, [sp, #108] // 2-byte Reload
+; VBITS_GE_512-NEXT:    fcsel h8, h2, h8, vs
+; VBITS_GE_512-NEXT:    str h21, [sp, #174]
+; VBITS_GE_512-NEXT:    ldr h21, [sp, #106] // 2-byte Reload
+; VBITS_GE_512-NEXT:    str h21, [sp, #172]
+; VBITS_GE_512-NEXT:    ldr h21, [sp, #104] // 2-byte Reload
+; VBITS_GE_512-NEXT:    fcmp h2, h8
+; VBITS_GE_512-NEXT:    str h21, [sp, #170]
+; VBITS_GE_512-NEXT:    ldr z6, [x9, #-16, mul vl] // 16-byte Folded Reload
+; VBITS_GE_512-NEXT:    str h1, [sp, #154]
+; VBITS_GE_512-NEXT:    fcsel h8, h2, h8, lt
+; VBITS_GE_512-NEXT:    fcmp h31, h31
+; VBITS_GE_512-NEXT:    str h4, [sp, #160]
+; VBITS_GE_512-NEXT:    str h3, [sp, #158]
+; VBITS_GE_512-NEXT:    ldr h3, [sp, #62] // 2-byte Reload
+; VBITS_GE_512-NEXT:    str h2, [sp, #156]
+; VBITS_GE_512-NEXT:    ldr h2, [sp, #80] // 2-byte Reload
+; VBITS_GE_512-NEXT:    fcsel h31, h1, h31, vs
+; VBITS_GE_512-NEXT:    str h0, [sp, #152]
+; VBITS_GE_512-NEXT:    str h15, [sp, #150]
+; VBITS_GE_512-NEXT:    str h13, [sp, #148]
+; VBITS_GE_512-NEXT:    fcmp h1, h31
+; VBITS_GE_512-NEXT:    str h12, [sp, #146]
+; VBITS_GE_512-NEXT:    str h10, [sp, #144]
+; VBITS_GE_512-NEXT:    fcsel h31, h1, h31, lt
+; VBITS_GE_512-NEXT:    fcmp h28, h28
+; VBITS_GE_512-NEXT:    ldr h1, [sp, #84] // 2-byte Reload
+; VBITS_GE_512-NEXT:    fcsel h28, h0, h28, vs
+; VBITS_GE_512-NEXT:    fcmp h0, h28
+; VBITS_GE_512-NEXT:    fcsel h28, h0, h28, lt
+; VBITS_GE_512-NEXT:    fcmp h26, h26
+; VBITS_GE_512-NEXT:    ldr z0, [x9, #-15, mul vl] // 16-byte Folded Reload
+; VBITS_GE_512-NEXT:    str h1, [sp, #192]
+; VBITS_GE_512-NEXT:    ldr h1, [sp, #82] // 2-byte Reload
+; VBITS_GE_512-NEXT:    str h29, [sp, #142]
+; VBITS_GE_512-NEXT:    fcsel h26, h15, h26, vs
+; VBITS_GE_512-NEXT:    str h22, [sp, #140]
+; VBITS_GE_512-NEXT:    str h7, [sp, #138]
+; VBITS_GE_512-NEXT:    str h5, [sp, #136]
+; VBITS_GE_512-NEXT:    fcmp h15, h26
+; VBITS_GE_512-NEXT:    str h17, [sp, #134]
+; VBITS_GE_512-NEXT:    str h27, [sp, #132]
+; VBITS_GE_512-NEXT:    str h25, [sp, #130]
+; VBITS_GE_512-NEXT:    fcsel h26, h15, h26, lt
+; VBITS_GE_512-NEXT:    fcmp h24, h24
+; VBITS_GE_512-NEXT:    str h1, [sp, #254]
+; VBITS_GE_512-NEXT:    ldr z1, [x9, #-14, mul vl] // 16-byte Folded Reload
+; VBITS_GE_512-NEXT:    str h2, [sp, #252]
+; VBITS_GE_512-NEXT:    ldr h2, [sp, #78] // 2-byte Reload
+; VBITS_GE_512-NEXT:    fcsel h24, h13, h24, vs
+; VBITS_GE_512-NEXT:    str h2, [sp, #250]
+; VBITS_GE_512-NEXT:    ldr h2, [sp, #76] // 2-byte Reload
+; VBITS_GE_512-NEXT:    str h2, [sp, #248]
+; VBITS_GE_512-NEXT:    ldr h2, [sp, #74] // 2-byte Reload
+; VBITS_GE_512-NEXT:    fcmp h13, h24
+; VBITS_GE_512-NEXT:    str h2, [sp, #246]
+; VBITS_GE_512-NEXT:    ldr h2, [sp, #72] // 2-byte Reload
+; VBITS_GE_512-NEXT:    fcsel h24, h13, h24, lt
+; VBITS_GE_512-NEXT:    fcmp h20, h20
+; VBITS_GE_512-NEXT:    str h2, [sp, #244]
+; VBITS_GE_512-NEXT:    ldr h2, [sp, #70] // 2-byte Reload
+; VBITS_GE_512-NEXT:    fcsel h20, h12, h20, vs
+; VBITS_GE_512-NEXT:    str h2, [sp, #242]
+; VBITS_GE_512-NEXT:    ldr h2, [sp, #68] // 2-byte Reload
+; VBITS_GE_512-NEXT:    str h2, [sp, #240]
+; VBITS_GE_512-NEXT:    ldr h2, [sp, #66] // 2-byte Reload
+; VBITS_GE_512-NEXT:    fcmp h12, h20
+; VBITS_GE_512-NEXT:    str h2, [sp, #238]
+; VBITS_GE_512-NEXT:    ldr h2, [sp, #64] // 2-byte Reload
+; VBITS_GE_512-NEXT:    fcsel h20, h12, h20, lt
+; VBITS_GE_512-NEXT:    fcmp h18, h18
+; VBITS_GE_512-NEXT:    str h2, [sp, #236]
+; VBITS_GE_512-NEXT:    ldr z2, [x9, #-13, mul vl] // 16-byte Folded Reload
+; VBITS_GE_512-NEXT:    str h3, [sp, #234]
+; VBITS_GE_512-NEXT:    ldr h3, [sp, #60] // 2-byte Reload
+; VBITS_GE_512-NEXT:    str h14, [sp, #224]
+; VBITS_GE_512-NEXT:    fcsel h18, h10, h18, vs
+; VBITS_GE_512-NEXT:    str h3, [sp, #232]
+; VBITS_GE_512-NEXT:    ldr h3, [sp, #58] // 2-byte Reload
+; VBITS_GE_512-NEXT:    str h11, [sp, #222]
+; VBITS_GE_512-NEXT:    str h3, [sp, #230]
+; VBITS_GE_512-NEXT:    ldr h3, [sp, #56] // 2-byte Reload
+; VBITS_GE_512-NEXT:    fcmp h10, h18
+; VBITS_GE_512-NEXT:    str h8, [sp, #220]
+; VBITS_GE_512-NEXT:    str h3, [sp, #228]
+; VBITS_GE_512-NEXT:    ldr h3, [sp, #54] // 2-byte Reload
+; VBITS_GE_512-NEXT:    str h31, [sp, #218]
+; VBITS_GE_512-NEXT:    fcsel h18, h10, h18, lt
+; VBITS_GE_512-NEXT:    fcmp h16, h16
+; VBITS_GE_512-NEXT:    str h3, [sp, #226]
+; VBITS_GE_512-NEXT:    ldr z3, [x9, #-12, mul vl] // 16-byte Folded Reload
+; VBITS_GE_512-NEXT:    str h28, [sp, #216]
+; VBITS_GE_512-NEXT:    add x9, sp, #128
+; VBITS_GE_512-NEXT:    str h26, [sp, #214]
+; VBITS_GE_512-NEXT:    fcsel h16, h29, h16, vs
+; VBITS_GE_512-NEXT:    str h24, [sp, #212]
+; VBITS_GE_512-NEXT:    str h20, [sp, #210]
+; VBITS_GE_512-NEXT:    str h18, [sp, #208]
+; VBITS_GE_512-NEXT:    fcmp h29, h16
+; VBITS_GE_512-NEXT:    fcsel h16, h29, h16, lt
+; VBITS_GE_512-NEXT:    fcmp h19, h19
+; VBITS_GE_512-NEXT:    fcsel h19, h22, h19, vs
+; VBITS_GE_512-NEXT:    str h16, [sp, #206]
+; VBITS_GE_512-NEXT:    fcmp h22, h19
+; VBITS_GE_512-NEXT:    fcsel h19, h22, h19, lt
+; VBITS_GE_512-NEXT:    fcmp h6, h6
+; VBITS_GE_512-NEXT:    fcsel h23, h7, h6, vs
+; VBITS_GE_512-NEXT:    str h19, [sp, #204]
+; VBITS_GE_512-NEXT:    fcmp h7, h23
+; VBITS_GE_512-NEXT:    fcsel h6, h7, h23, lt
+; VBITS_GE_512-NEXT:    fcmp h0, h0
+; VBITS_GE_512-NEXT:    fcsel h0, h5, h0, vs
+; VBITS_GE_512-NEXT:    str h6, [sp, #202]
+; VBITS_GE_512-NEXT:    fcmp h5, h0
+; VBITS_GE_512-NEXT:    fcsel h0, h5, h0, lt
+; VBITS_GE_512-NEXT:    fcmp h1, h1
+; VBITS_GE_512-NEXT:    fcsel h1, h17, h1, vs
+; VBITS_GE_512-NEXT:    str h0, [sp, #200]
+; VBITS_GE_512-NEXT:    fcmp h17, h1
+; VBITS_GE_512-NEXT:    fcsel h1, h17, h1, lt
+; VBITS_GE_512-NEXT:    fcmp h2, h2
+; VBITS_GE_512-NEXT:    fcsel h2, h27, h2, vs
+; VBITS_GE_512-NEXT:    str h1, [sp, #198]
+; VBITS_GE_512-NEXT:    fcmp h27, h2
+; VBITS_GE_512-NEXT:    fcsel h2, h27, h2, lt
+; VBITS_GE_512-NEXT:    fcmp h3, h3
+; VBITS_GE_512-NEXT:    fcsel h3, h25, h3, vs
+; VBITS_GE_512-NEXT:    str h2, [sp, #196]
+; VBITS_GE_512-NEXT:    fcmp h25, h3
+; VBITS_GE_512-NEXT:    fcsel h0, h25, h3, lt
+; VBITS_GE_512-NEXT:    str h0, [sp, #194]
+; VBITS_GE_512-NEXT:    ld1h { z0.h }, p0/z, [x8]
+; VBITS_GE_512-NEXT:    add x8, sp, #192
+; VBITS_GE_512-NEXT:    ld1h { z1.h }, p0/z, [x9]
+; VBITS_GE_512-NEXT:    cmpeq p1.h, p0/z, z1.h, z0.h
+; VBITS_GE_512-NEXT:    mov z0.h, p1/z, #-1 // =0xffffffffffffffff
+; VBITS_GE_512-NEXT:    ptrue p1.h
+; VBITS_GE_512-NEXT:    and z0.h, z0.h, #0x1
+; VBITS_GE_512-NEXT:    cmpne p1.h, p1/z, z0.h, #0
+; VBITS_GE_512-NEXT:    ld1h { z0.h }, p0/z, [x8]
+; VBITS_GE_512-NEXT:    fcmeq p2.h, p0/z, z0.h, #0.0
+; VBITS_GE_512-NEXT:    sel z1.h, p1, z1.h, z0.h
+; VBITS_GE_512-NEXT:    mov z0.h, p2/m, z1.h
+; VBITS_GE_512-NEXT:    st1h { z0.h }, p0, [x0]
+; VBITS_GE_512-NEXT:    sub sp, x29, #64
+; VBITS_GE_512-NEXT:    ldp x29, x30, [sp, #64] // 16-byte Folded Reload
+; VBITS_GE_512-NEXT:    ldp d9, d8, [sp, #48] // 16-byte Folded Reload
+; VBITS_GE_512-NEXT:    ldp d11, d10, [sp, #32] // 16-byte Folded Reload
+; VBITS_GE_512-NEXT:    ldp d13, d12, [sp, #16] // 16-byte Folded Reload
+; VBITS_GE_512-NEXT:    ldp d15, d14, [sp], #80 // 16-byte Folded Reload
+; VBITS_GE_512-NEXT:    ret
+  %op1 = load <32 x half>, ptr %a
+  %op2 = load <32 x half>, ptr %b
+  %res = call <32 x half> @llvm.minimumnum.v32f16(<32 x half> %op1, <32 x half> %op2)
+  store <32 x half> %res, ptr %a
+  ret void
+}
+
+define void @fminimumnum_v64f16(ptr %a, ptr %b) vscale_range(8,0) #0 {
+; CHECK-LABEL: fminimumnum_v64f16:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    stp d15, d14, [sp, #-80]! // 16-byte Folded Spill
+; CHECK-NEXT:    sub x9, sp, #560
+; CHECK-NEXT:    stp d13, d12, [sp, #16] // 16-byte Folded Spill
+; CHECK-NEXT:    addvl x9, x9, #-22
+; CHECK-NEXT:    stp d11, d10, [sp, #32] // 16-byte Folded Spill
+; CHECK-NEXT:    stp d9, d8, [sp, #48] // 16-byte Folded Spill
+; CHECK-NEXT:    stp x29, x30, [sp, #64] // 16-byte Folded Spill
+; CHECK-NEXT:    add x29, sp, #64
+; CHECK-NEXT:    and sp, x9, #0xffffffffffffff80
+; CHECK-NEXT:    .cfi_def_cfa w29, 16
+; CHECK-NEXT:    .cfi_offset w30, -8
+; CHECK-NEXT:    .cfi_offset w29, -16
+; CHECK-NEXT:    .cfi_offset b8, -24
+; CHECK-NEXT:    .cfi_offset b9, -32
+; CHECK-NEXT:    .cfi_offset b10, -40
+; CHECK-NEXT:    .cfi_offset b11, -48
+; CHECK-NEXT:    .cfi_offset b12, -56
+; CHECK-NEXT:    .cfi_offset b13, -64
+; CHECK-NEXT:    .cfi_offset b14, -72
+; CHECK-NEXT:    .cfi_offset b15, -80
+; CHECK-NEXT:    ptrue p0.h, vl64
+; CHECK-NEXT:    mov w8, #63 // =0x3f
+; CHECK-NEXT:    add x9, sp, #256
+; CHECK-NEXT:    ld1h { z0.h }, p0/z, [x0]
+; CHECK-NEXT:    ld1h { z13.h }, p0/z, [x1]
+; CHECK-NEXT:    fcmp h0, h0
+; CHECK-NEXT:    mov z4.h, z13.h[28]
+; CHECK-NEXT:    mov z17.h, z13.h[25]
+; CHECK-NEXT:    mov z7.h, z13.h[24]
+; CHECK-NEXT:    mov z11.h, z13.h[18]
+; CHECK-NEXT:    mov z9.h, z13.h[17]
+; CHECK-NEXT:    mov z31.h, z13.h[16]
+; CHECK-NEXT:    mov z28.h, z13.h[15]
+; CHECK-NEXT:    mov z26.h, z13.h[14]
+; CHECK-NEXT:    fcsel h1, h13, h0, vs
+; CHECK-NEXT:    whilels p1.h, xzr, x8
+; CHECK-NEXT:    mov w8, #62 // =0x3e
+; CHECK-NEXT:    mov z29.h, z13.h[13]
+; CHECK-NEXT:    mov z5.h, z0.h[6]
+; CHECK-NEXT:    mov z6.h, z0.h[5]
+; CHECK-NEXT:    lastb h24, p1, z13.h
+; CHECK-NEXT:    mov z16.h, z0.h[4]
+; CHECK-NEXT:    mov z18.h, z0.h[3]
+; CHECK-NEXT:    str h1, [sp, #202] // 2-byte Spill
+; CHECK-NEXT:    lastb h1, p1, z0.h
+; CHECK-NEXT:    mov z21.h, z0.h[2]
+; CHECK-NEXT:    fcmp h1, h1
+; CHECK-NEXT:    fcsel h1, h24, h1, vs
+; CHECK-NEXT:    whilels p1.h, xzr, x8
+; CHECK-NEXT:    mov w8, #61 // =0x3d
+; CHECK-NEXT:    lastb h27, p1, z13.h
+; CHECK-NEXT:    str h1, [sp, #248] // 2-byte Spill
+; CHECK-NEXT:    lastb h1, p1, z0.h
+; CHECK-NEXT:    fcmp h1, h1
+; CHECK-NEXT:    fcsel h1, h27, h1, vs
+; CHECK-NEXT:    whilels p1.h, xzr, x8
+; CHECK-NEXT:    mov w8, #60 // =0x3c
+; CHECK-NEXT:    lastb h8, p1, z13.h
+; CHECK-NEXT:    str h1, [sp, #244] // 2-byte Spill
+; CHECK-NEXT:    lastb h1, p1, z0.h
+; CHECK-NEXT:    fcmp h1, h1
+; CHECK-NEXT:    fcsel h1, h8, h1, vs
+; CHECK-NEXT:    whilels p1.h, xzr, x8
+; CHECK-NEXT:    mov w8, #59 // =0x3b
+; CHECK-NEXT:    lastb h15, p1, z13.h
+; CHECK-NEXT:    str h1, [sp, #254] // 2-byte Spill
+; CHECK-NEXT:    lastb h1, p1, z0.h
+; CHECK-NEXT:    fcmp h1, h1
+; CHECK-NEXT:    fcsel h1, h15, h1, vs
+; CHECK-NEXT:    whilels p1.h, xzr, x8
+; CHECK-NEXT:    mov w8, #58 // =0x3a
+; CHECK-NEXT:    lastb h25, p1, z13.h
+; CHECK-NEXT:    str h1, [sp, #252] // 2-byte Spill
+; CHECK-NEXT:    lastb h1, p1, z0.h
+; CHECK-NEXT:    fcmp h1, h1
+; CHECK-NEXT:    fcsel h1, h25, h1, vs
+; CHECK-NEXT:    whilels p1.h, xzr, x8
+; CHECK-NEXT:    mov w8, #57 // =0x39
+; CHECK-NEXT:    lastb h10, p1, z13.h
+; CHECK-NEXT:    str h1, [sp, #250] // 2-byte Spill
+; CHECK-NEXT:    lastb h1, p1, z0.h
+; CHECK-NEXT:    fcmp h1, h1
+; CHECK-NEXT:    fcsel h1, h10, h1, vs
+; CHECK-NEXT:    whilels p1.h, xzr, x8
+; CHECK-NEXT:    mov w8, #56 // =0x38
+; CHECK-NEXT:    lastb h30, p1, z13.h
+; CHECK-NEXT:    str h1, [sp, #246] // 2-byte Spill
+; CHECK-NEXT:    lastb h1, p1, z0.h
+; CHECK-NEXT:    fcmp h1, h1
+; CHECK-NEXT:    fcsel h1, h30, h1, vs
+; CHECK-NEXT:    whilels p1.h, xzr, x8
+; CHECK-NEXT:    mov w8, #55 // =0x37
+; CHECK-NEXT:    lastb h12, p1, z13.h
+; CHECK-NEXT:    str h1, [sp, #242] // 2-byte Spill
+; CHECK-NEXT:    lastb h1, p1, z0.h
+; CHECK-NEXT:    fcmp h1, h1
+; CHECK-NEXT:    fcsel h1, h12, h1, vs
+; CHECK-NEXT:    whilels p1.h, xzr, x8
+; CHECK-NEXT:    mov w8, #54 // =0x36
+; CHECK-NEXT:    lastb h2, p1, z13.h
+; CHECK-NEXT:    str h1, [sp, #240] // 2-byte Spill
+; CHECK-NEXT:    lastb h1, p1, z0.h
+; CHECK-NEXT:    str h2, [sp, #142] // 2-byte Spill
+; CHECK-NEXT:    fcmp h1, h1
+; CHECK-NEXT:    fcsel h1, h2, h1, vs
+; CHECK-NEXT:    whilels p1.h, xzr, x8
+; CHECK-NEXT:    mov w8, #53 // =0x35
+; CHECK-NEXT:    lastb h2, p1, z13.h
+; CHECK-NEXT:    str h1, [sp, #238] // 2-byte Spill
+; CHECK-NEXT:    lastb h1, p1, z0.h
+; CHECK-NEXT:    str h2, [sp, #138] // 2-byte Spill
+; CHECK-NEXT:    fcmp h1, h1
+; CHECK-NEXT:    fcsel h1, h2, h1, vs
+; CHECK-NEXT:    whilels p1.h, xzr, x8
+; CHECK-NEXT:    mov w8, #52 // =0x34
+; CHECK-NEXT:    lastb h2, p1, z13.h
+; CHECK-NEXT:    str h1, [sp, #236] // 2-byte Spill
+; CHECK-NEXT:    lastb h1, p1, z0.h
+; CHECK-NEXT:    str h2, [sp, #200] // 2-byte Spill
+; CHECK-NEXT:    fcmp h1, h1
+; CHECK-NEXT:    fcsel h1, h2, h1, vs
+; CHECK-NEXT:    whilels p1.h, xzr, x8
+; CHECK-NEXT:    mov w8, #51 // =0x33
+; CHECK-NEXT:    lastb h2, p1, z13.h
+; CHECK-NEXT:    str h1, [sp, #234] // 2-byte Spill
+; CHECK-NEXT:    lastb h1, p1, z0.h
+; CHECK-NEXT:    str h2, [sp, #198] // 2-byte Spill
+; CHECK-NEXT:    fcmp h1, h1
+; CHECK-NEXT:    fcsel h1, h2, h1, vs
+; CHECK-NEXT:    whilels p1.h, xzr, x8
+; CHECK-NEXT:    mov w8, #50 // =0x32
+; CHECK-NEXT:    lastb h2, p1, z13.h
+; CHECK-NEXT:    str h1, [sp, #232] // 2-byte Spill
+; CHECK-NEXT:    lastb h1, p1, z0.h
+; CHECK-NEXT:    str h2, [sp, #196] // 2-byte Spill
+; CHECK-NEXT:    fcmp h1, h1
+; CHECK-NEXT:    fcsel h1, h2, h1, vs
+; CHECK-NEXT:    whilels p1.h, xzr, x8
+; CHECK-NEXT:    mov w8, #49 // =0x31
+; CHECK-NEXT:    lastb h2, p1, z13.h
+; CHECK-NEXT:    str h1, [sp, #230] // 2-byte Spill
+; CHECK-NEXT:    lastb h1, p1, z0.h
+; CHECK-NEXT:    str h2, [sp, #194] // 2-byte Spill
+; CHECK-NEXT:    fcmp h1, h1
+; CHECK-NEXT:    fcsel h1, h2, h1, vs
+; CHECK-NEXT:    whilels p1.h, xzr, x8
+; CHECK-NEXT:    mov w8, #48 // =0x30
+; CHECK-NEXT:    lastb h2, p1, z13.h
+; CHECK-NEXT:    str h1, [sp, #228] // 2-byte Spill
+; CHECK-NEXT:    lastb h1, p1, z0.h
+; CHECK-NEXT:    str h2, [sp, #192] // 2-byte Spill
+; CHECK-NEXT:    fcmp h1, h1
+; CHECK-NEXT:    fcsel h1, h2, h1, vs
+; CHECK-NEXT:    whilels p1.h, xzr, x8
+; CHECK-NEXT:    mov w8, #47 // =0x2f
+; CHECK-NEXT:    lastb h2, p1, z13.h
+; CHECK-NEXT:    str h1, [sp, #226] // 2-byte Spill
+; CHECK-NEXT:    lastb h1, p1, z0.h
+; CHECK-NEXT:    str h2, [sp, #190] // 2-byte Spill
+; CHECK-NEXT:    fcmp h1, h1
+; CHECK-NEXT:    fcsel h1, h2, h1, vs
+; CHECK-NEXT:    whilels p1.h, xzr, x8
+; CHECK-NEXT:    mov w8, #46 // =0x2e
+; CHECK-NEXT:    lastb h19, p1, z13.h
+; CHECK-NEXT:    str h1, [sp, #224] // 2-byte Spill
+; CHECK-NEXT:    lastb h1, p1, z0.h
+; CHECK-NEXT:    fcmp h1, h1
+; CHECK-NEXT:    fcsel h1, h19, h1, vs
+; CHECK-NEXT:    whilels p1.h, xzr, x8
+; CHECK-NEXT:    mov w8, #45 // =0x2d
+; CHECK-NEXT:    lastb h20, p1, z13.h
+; CHECK-NEXT:    str h1, [sp, #222] // 2-byte Spill
+; CHECK-NEXT:    lastb h1, p1, z0.h
+; CHECK-NEXT:    fcmp h1, h1
+; CHECK-NEXT:    fcsel h1, h20, h1, vs
+; CHECK-NEXT:    whilels p1.h, xzr, x8
+; CHECK-NEXT:    mov w8, #44 // =0x2c
+; CHECK-NEXT:    lastb h2, p1, z13.h
+; CHECK-NEXT:    str h1, [sp, #220] // 2-byte Spill
+; CHECK-NEXT:    lastb h1, p1, z0.h
+; CHECK-NEXT:    str h2, [sp, #188] // 2-byte Spill
+; CHECK-NEXT:    fcmp h1, h1
+; CHECK-NEXT:    fcsel h1, h2, h1, vs
+; CHECK-NEXT:    whilels p1.h, xzr, x8
+; CHECK-NEXT:    mov w8, #43 // =0x2b
+; CHECK-NEXT:    lastb h2, p1, z13.h
+; CHECK-NEXT:    str h1, [sp, #218] // 2-byte Spill
+; CHECK-NEXT:    lastb h1, p1, z0.h
+; CHECK-NEXT:    str h2, [sp, #186] // 2-byte Spill
+; CHECK-NEXT:    fcmp h1, h1
+; CHECK-NEXT:    fcsel h1, h2, h1, vs
+; CHECK-NEXT:    whilels p1.h, xzr, x8
+; CHECK-NEXT:    mov w8, #42 // =0x2a
+; CHECK-NEXT:    lastb h22, p1, z13.h
+; CHECK-NEXT:    str h1, [sp, #216] // 2-byte Spill
+; CHECK-NEXT:    lastb h1, p1, z0.h
+; CHECK-NEXT:    fcmp h1, h1
+; CHECK-NEXT:    fcsel h1, h22, h1, vs
+; CHECK-NEXT:    whilels p1.h, xzr, x8
+; CHECK-NEXT:    mov w8, #41 // =0x29
+; CHECK-NEXT:    lastb h2, p1, z13.h
+; CHECK-NEXT:    str h1, [sp, #214] // 2-byte Spill
+; CHECK-NEXT:    lastb h1, p1, z0.h
+; CHECK-NEXT:    str h2, [sp, #184] // 2-byte Spill
+; CHECK-NEXT:    fcmp h1, h1
+; CHECK-NEXT:    fcsel h1, h2, h1, vs
+; CHECK-NEXT:    whilels p1.h, xzr, x8
+; CHECK-NEXT:    mov w8, #40 // =0x28
+; CHECK-NEXT:    lastb h23, p1, z13.h
+; CHECK-NEXT:    str h1, [sp, #212] // 2-byte Spill
+; CHECK-NEXT:    lastb h1, p1, z0.h
+; CHECK-NEXT:    fcmp h1, h1
+; CHECK-NEXT:    fcsel h1, h23, h1, vs
+; CHECK-NEXT:    whilels p1.h, xzr, x8
+; CHECK-NEXT:    mov w8, #39 // =0x27
+; CHECK-NEXT:    lastb h2, p1, z13.h
+; CHECK-NEXT:    str h1, [sp, #210] // 2-byte Spill
+; CHECK-NEXT:    lastb h1, p1, z0.h
+; CHECK-NEXT:    str h2, [sp, #182] // 2-byte Spill
+; CHECK-NEXT:    fcmp h1, h1
+; CHECK-NEXT:    fcsel h1, h2, h1, vs
+; CHECK-NEXT:    whilels p1.h, xzr, x8
+; CHECK-NEXT:    mov w8, #38 // =0x26
+; CHECK-NEXT:    lastb h2, p1, z13.h
+; CHECK-NEXT:    str h1, [sp, #208] // 2-byte Spill
+; CHECK-NEXT:    lastb h1, p1, z0.h
+; CHECK-NEXT:    str h2, [sp, #180] // 2-byte Spill
+; CHECK-NEXT:    fcmp h1, h1
+; CHECK-NEXT:    fcsel h1, h2, h1, vs
+; CHECK-NEXT:    whilels p1.h, xzr, x8
+; CHECK-NEXT:    mov w8, #37 // =0x25
+; CHECK-NEXT:    lastb h2, p1, z13.h
+; CHECK-NEXT:    str h1, [sp, #206] // 2-byte Spill
+; CHECK-NEXT:    lastb h1, p1, z0.h
+; CHECK-NEXT:    str h2, [sp, #178] // 2-byte Spill
+; CHECK-NEXT:    fcmp h1, h1
+; CHECK-NEXT:    fcsel h1, h2, h1, vs
+; CHECK-NEXT:    whilels p1.h, xzr, x8
+; CHECK-NEXT:    mov w8, #36 // =0x24
+; CHECK-NEXT:    lastb h2, p1, z13.h
+; CHECK-NEXT:    str h1, [sp, #204] // 2-byte Spill
+; CHECK-NEXT:    lastb h1, p1, z0.h
+; CHECK-NEXT:    str h2, [sp, #174] // 2-byte Spill
+; CHECK-NEXT:    fcmp h1, h1
+; CHECK-NEXT:    fcsel h1, h2, h1, vs
+; CHECK-NEXT:    whilels p1.h, xzr, x8
+; CHECK-NEXT:    mov w8, #35 // =0x23
+; CHECK-NEXT:    lastb h2, p1, z13.h
+; CHECK-NEXT:    str h1, [sp, #176] // 2-byte Spill
+; CHECK-NEXT:    lastb h1, p1, z0.h
+; CHECK-NEXT:    str h2, [sp, #170] // 2-byte Spill
+; CHECK-NEXT:    fcmp h1, h1
+; CHECK-NEXT:    fcsel h1, h2, h1, vs
+; CHECK-NEXT:    whilels p1.h, xzr, x8
+; CHECK-NEXT:    mov w8, #34 // =0x22
+; CHECK-NEXT:    lastb h2, p1, z13.h
+; CHECK-NEXT:    str h1, [sp, #172] // 2-byte Spill
+; CHECK-NEXT:    lastb h1, p1, z0.h
+; CHECK-NEXT:    str h2, [sp, #166] // 2-byte Spill
+; CHECK-NEXT:    fcmp h1, h1
+; CHECK-NEXT:    fcsel h1, h2, h1, vs
+; CHECK-NEXT:    whilels p1.h, xzr, x8
+; CHECK-NEXT:    mov w8, #33 // =0x21
+; CHECK-NEXT:    lastb h2, p1, z13.h
+; CHECK-NEXT:    str h1, [sp, #168] // 2-byte Spill
+; CHECK-NEXT:    lastb h1, p1, z0.h
+; CHECK-NEXT:    str h2, [sp, #162] // 2-byte Spill
+; CHECK-NEXT:    fcmp h1, h1
+; CHECK-NEXT:    fcsel h1, h2, h1, vs
+; CHECK-NEXT:    whilels p1.h, xzr, x8
+; CHECK-NEXT:    mov w8, #32 // =0x20
+; CHECK-NEXT:    lastb h2, p1, z13.h
+; CHECK-NEXT:    str h1, [sp, #164] // 2-byte Spill
+; CHECK-NEXT:    lastb h1, p1, z0.h
+; CHECK-NEXT:    str h2, [sp, #158] // 2-byte Spill
+; CHECK-NEXT:    fcmp h1, h1
+; CHECK-NEXT:    fcsel h1, h2, h1, vs
+; CHECK-NEXT:    whilels p1.h, xzr, x8
+; CHECK-NEXT:    mov z2.h, z0.h[31]
+; CHECK-NEXT:    sub x8, x29, #64
+; CHECK-NEXT:    lastb h3, p1, z13.h
+; CHECK-NEXT:    str h1, [sp, #160] // 2-byte Spill
+; CHECK-NEXT:    lastb h1, p1, z0.h
+; CHECK-NEXT:    str h3, [sp, #154] // 2-byte Spill
+; CHECK-NEXT:    fcmp h1, h1
+; CHECK-NEXT:    fcsel h1, h3, h1, vs
+; CHECK-NEXT:    fcmp h2, h2
+; CHECK-NEXT:    mov z3.h, z13.h[31]
+; CHECK-NEXT:    str h1, [sp, #156] // 2-byte Spill
+; CHECK-NEXT:    mov z1.h, z0.h[30]
+; CHECK-NEXT:    fcsel h2, h3, h2, vs
+; CHECK-NEXT:    str z3, [x8, #-1, mul vl] // 16-byte Folded Spill
+; CHECK-NEXT:    mov z3.h, z13.h[30]
+; CHECK-NEXT:    str h2, [sp, #152] // 2-byte Spill
+; CHECK-NEXT:    fcmp h1, h1
+; CHECK-NEXT:    mov z2.h, z0.h[29]
+; CHECK-NEXT:    str z3, [x8, #-3, mul vl] // 16-byte Folded Spill
+; CHECK-NEXT:    fcsel h1, h3, h1, vs
+; CHECK-NEXT:    fcmp h2, h2
+; CHECK-NEXT:    mov z3.h, z13.h[29]
+; CHECK-NEXT:    str h1, [sp, #150] // 2-byte Spill
+; CHECK-NEXT:    mov z1.h, z0.h[28]
+; CHECK-NEXT:    fcsel h2, h3, h2, vs
+; CHECK-NEXT:    str z3, [x8, #-4, mul vl] // 16-byte Folded Spill
+; CHECK-NEXT:    mov z3.h, z13.h[27]
+; CHECK-NEXT:    str h2, [sp, #148] // 2-byte Spill
+; CHECK-NEXT:    fcmp h1, h1
+; CHECK-NEXT:    mov z2.h, z0.h[27]
+; CHECK-NEXT:    str z3, [x8, #-6, mul vl] // 16-byte Folded Spill
+; CHECK-NEXT:    fcsel h1, h4, h1, vs
+; CHECK-NEXT:    fcmp h2, h2
+; CHECK-NEXT:    str h1, [sp, #146] // 2-byte Spill
+; CHECK-NEXT:    mov z1.h, z0.h[26]
+; CHECK-NEXT:    fcsel h2, h3, h2, vs
+; CHECK-NEXT:    mov z3.h, z13.h[26]
+; CHECK-NEXT:    str h2, [sp, #144] // 2-byte Spill
+; CHECK-NEXT:    fcmp h1, h1
+; CHECK-NEXT:    mov z2.h, z0.h[25]
+; CHECK-NEXT:    str z3, [x8, #-8, mul vl] // 16-byte Folded Spill
+; CHECK-NEXT:    fcsel h1, h3, h1, vs
+; CHECK-NEXT:    fcmp h2, h2
+; CHECK-NEXT:    mov z3.h, z13.h[23]
+; CHECK-NEXT:    str h1, [sp, #140] // 2-byte Spill
+; CHECK-NEXT:    mov z1.h, z0.h[24]
+; CHECK-NEXT:    fcsel h2, h17, h2, vs
+; CHECK-NEXT:    str z3, [x8, #-12, mul vl] // 16-byte Folded Spill
+; CHECK-NEXT:    str h2, [sp, #136] // 2-byte Spill
+; CHECK-NEXT:    fcmp h1, h1
+; CHECK-NEXT:    mov z2.h, z0.h[23]
+; CHECK-NEXT:    fcsel h1, h7, h1, vs
+; CHECK-NEXT:    fcmp h2, h2
+; CHECK-NEXT:    str h1, [sp, #134] // 2-byte Spill
+; CHECK-NEXT:    mov z1.h, z0.h[22]
+; CHECK-NEXT:    fcsel h2, h3, h2, vs
+; CHECK-NEXT:    mov z3.h, z13.h[22]
+; CHECK-NEXT:    str h2, [sp, #132] // 2-byte Spill
+; CHECK-NEXT:    fcmp h1, h1
+; CHECK-NEXT:    mov z2.h, z0.h[21]
+; CHECK-NEXT:    str z3, [x8, #-14, mul vl] // 16-byte Folded Spill
+; CHECK-NEXT:    fcsel h1, h3, h1, vs
+; CHECK-NEXT:    fcmp h2, h2
+; CHECK-NEXT:    mov z3.h, z13.h[21]
+; CHECK-NEXT:    str h1, [sp, #130] // 2-byte Spill
+; CHECK-NEXT:    mov z1.h, z0.h[20]
+; CHECK-NEXT:    fcsel h2, h3, h2, vs
+; CHECK-NEXT:    str z3, [x8, #-16, mul vl] // 16-byte Folded Spill
+; CHECK-NEXT:    mov z3.h, z13.h[20]
+; CHECK-NEXT:    str h2, [sp, #128] // 2-byte Spill
+; CHECK-NEXT:    fcmp h1, h1
+; CHECK-NEXT:    mov z2.h, z0.h[19]
+; CHECK-NEXT:    str z3, [x8, #-18, mul vl] // 16-byte Folded Spill
+; CHECK-NEXT:    fcsel h1, h3, h1, vs
+; CHECK-NEXT:    fcmp h2, h2
+; CHECK-NEXT:    mov z3.h, z13.h[19]
+; CHECK-NEXT:    str h1, [sp, #122] // 2-byte Spill
+; CHECK-NEXT:    mov z1.h, z0.h[18]
+; CHECK-NEXT:    fcsel h2, h3, h2, vs
+; CHECK-NEXT:    str z3, [x8, #-19, mul vl] // 16-byte Folded Spill
+; CHECK-NEXT:    mov z3.h, z13.h[12]
+; CHECK-NEXT:    str h2, [sp, #118] // 2-byte Spill
+; CHECK-NEXT:    fcmp h1, h1
+; CHECK-NEXT:    mov z2.h, z0.h[17]
+; CHECK-NEXT:    str z3, [x8, #-22, mul vl] // 16-byte Folded Spill
+; CHECK-NEXT:    fcsel h1, h11, h1, vs
+; CHECK-NEXT:    fcmp h2, h2
+; CHECK-NEXT:    str h1, [sp, #112] // 2-byte Spill
+; CHECK-NEXT:    mov z1.h, z0.h[16]
+; CHECK-NEXT:    fcsel h2, h9, h2, vs
+; CHECK-NEXT:    str h2, [sp, #110] // 2-byte Spill
+; CHECK-NEXT:    fcmp h1, h1
+; CHECK-NEXT:    mov z2.h, z0.h[15]
+; CHECK-NEXT:    fcsel h1, h31, h1, vs
+; CHECK-NEXT:    fcmp h2, h2
+; CHECK-NEXT:    str h1, [sp, #104] // 2-byte Spill
+; CHECK-NEXT:    mov z1.h, z0.h[14]
+; CHECK-NEXT:    fcsel h2, h28, h2, vs
+; CHECK-NEXT:    str h2, [sp, #100] // 2-byte Spill
+; CHECK-NEXT:    fcmp h1, h1
+; CHECK-NEXT:    mov z2.h, z0.h[13]
+; CHECK-NEXT:    fcsel h1, h26, h1, vs
+; CHECK-NEXT:    fcmp h2, h2
+; CHECK-NEXT:    str h1, [sp, #98] // 2-byte Spill
+; CHECK-NEXT:    mov z1.h, z0.h[12]
+; CHECK-NEXT:    fcsel h2, h29, h2, vs
+; CHECK-NEXT:    str h2, [sp, #102] // 2-byte Spill
+; CHECK-NEXT:    fcmp h1, h1
+; CHECK-NEXT:    mov z2.h, z0.h[11]
+; CHECK-NEXT:    fcsel h1, h3, h1, vs
+; CHECK-NEXT:    fcmp h2, h2
+; CHECK-NEXT:    mov z3.h, z13.h[11]
+; CHECK-NEXT:    str h1, [sp, #108] // 2-byte Spill
+; CHECK-NEXT:    mov z1.h, z0.h[10]
+; CHECK-NEXT:    fcsel h2, h3, h2, vs
+; CHECK-NEXT:    str z3, [x8, #-21, mul vl] // 16-byte Folded Spill
+; CHECK-NEXT:    mov z3.h, z13.h[10]
+; CHECK-NEXT:    str h2, [sp, #116] // 2-byte Spill
+; CHECK-NEXT:    fcmp h1, h1
+; CHECK-NEXT:    mov z2.h, z0.h[9]
+; CHECK-NEXT:    str z3, [x8, #-20, mul vl] // 16-byte Folded Spill
+; CHECK-NEXT:    fcsel h1, h3, h1, vs
+; CHECK-NEXT:    fcmp h2, h2
+; CHECK-NEXT:    mov z3.h, z13.h[9]
+; CHECK-NEXT:    str h1, [sp, #120] // 2-byte Spill
+; CHECK-NEXT:    mov z1.h, z0.h[8]
+; CHECK-NEXT:    fcsel h2, h3, h2, vs
+; CHECK-NEXT:    str z3, [x8, #-17, mul vl] // 16-byte Folded Spill
+; CHECK-NEXT:    mov z3.h, z0.h[7]
+; CHECK-NEXT:    mov z0.h, z0.h[1]
+; CHECK-NEXT:    str h2, [sp, #126] // 2-byte Spill
+; CHECK-NEXT:    fcmp h1, h1
+; CHECK-NEXT:    mov z2.h, z13.h[8]
+; CHECK-NEXT:    fcsel h14, h2, h1, vs
+; CHECK-NEXT:    fcmp h3, h3
+; CHECK-NEXT:    mov z1.h, z13.h[7]
+; CHECK-NEXT:    str z2, [x8, #-15, mul vl] // 16-byte Folded Spill
+; CHECK-NEXT:    ldr h2, [sp, #202] // 2-byte Reload
+; CHECK-NEXT:    str z1, [x8, #-13, mul vl] // 16-byte Folded Spill
+; CHECK-NEXT:    fcsel h1, h1, h3, vs
+; CHECK-NEXT:    fcmp h5, h5
+; CHECK-NEXT:    ldr h3, [sp, #100] // 2-byte Reload
+; CHECK-NEXT:    str h1, [sp, #124] // 2-byte Spill
+; CHECK-NEXT:    mov z1.h, z13.h[6]
+; CHECK-NEXT:    str z1, [x8, #-11, mul vl] // 16-byte Folded Spill
+; CHECK-NEXT:    fcsel h1, h1, h5, vs
+; CHECK-NEXT:    fcmp h6, h6
+; CHECK-NEXT:    ldr h5, [sp, #112] // 2-byte Reload
+; CHECK-NEXT:    str h1, [sp, #114] // 2-byte Spill
+; CHECK-NEXT:    mov z1.h, z13.h[5]
+; CHECK-NEXT:    str z1, [x8, #-10, mul vl] // 16-byte Folded Spill
+; CHECK-NEXT:    fcsel h1, h1, h6, vs
+; CHECK-NEXT:    fcmp h16, h16
+; CHECK-NEXT:    ldr h6, [sp, #118] // 2-byte Reload
+; CHECK-NEXT:    str h1, [sp, #106] // 2-byte Spill
+; CHECK-NEXT:    mov z1.h, z13.h[4]
+; CHECK-NEXT:    str z1, [x8, #-7, mul vl] // 16-byte Folded Spill
+; CHECK-NEXT:    fcsel h1, h1, h16, vs
+; CHECK-NEXT:    fcmp h18, h18
+; CHECK-NEXT:    ldr h16, [sp, #128] // 2-byte Reload
+; CHECK-NEXT:    str h1, [sp, #96] // 2-byte Spill
+; CHECK-NEXT:    mov z1.h, z13.h[3]
+; CHECK-NEXT:    str z1, [x8, #-9, mul vl] // 16-byte Folded Spill
+; CHECK-NEXT:    fcsel h1, h1, h18, vs
+; CHECK-NEXT:    fcmp h21, h21
+; CHECK-NEXT:    ldr h18, [sp, #132] // 2-byte Reload
+; CHECK-NEXT:    str h1, [sp, #92] // 2-byte Spill
+; CHECK-NEXT:    mov z1.h, z13.h[2]
+; CHECK-NEXT:    str z1, [x8, #-5, mul vl] // 16-byte Folded Spill
+; CHECK-NEXT:    fcsel h1, h1, h21, vs
+; CHECK-NEXT:    fcmp h0, h0
+; CHECK-NEXT:    ldr h21, [sp, #140] // 2-byte Reload
+; CHECK-NEXT:    str h1, [sp, #94] // 2-byte Spill
+; CHECK-NEXT:    mov z1.h, z13.h[1]
+; CHECK-NEXT:    fcsel h0, h1, h0, vs
+; CHECK-NEXT:    fcmp h13, h13
+; CHECK-NEXT:    str z1, [x8, #-2, mul vl] // 16-byte Folded Spill
+; CHECK-NEXT:    fcsel h13, h2, h13, vs
+; CHECK-NEXT:    str h0, [sp, #90] // 2-byte Spill
+; CHECK-NEXT:    fcmp h2, h13
+; CHECK-NEXT:    fcsel h1, h2, h13, lt
+; CHECK-NEXT:    fcmp h24, h24
+; CHECK-NEXT:    ldr h13, [sp, #172] // 2-byte Reload
+; CHECK-NEXT:    str h1, [sp, #88] // 2-byte Spill
+; CHECK-NEXT:    ldr h1, [sp, #248] // 2-byte Reload
+; CHECK-NEXT:    fcsel h0, h1, h24, vs
+; CHECK-NEXT:    ldr h24, [sp, #148] // 2-byte Reload
+; CHECK-NEXT:    fcmp h1, h0
+; CHECK-NEXT:    fcsel h0, h1, h0, lt
+; CHECK-NEXT:    fcmp h27, h27
+; CHECK-NEXT:    ldr h1, [sp, #244] // 2-byte Reload
+; CHECK-NEXT:    str h0, [sp, #86] // 2-byte Spill
+; CHECK-NEXT:    fcsel h0, h1, h27, vs
+; CHECK-NEXT:    ldr h27, [sp, #152] // 2-byte Reload
+; CHECK-NEXT:    fcmp h1, h0
+; CHECK-NEXT:    fcsel h0, h1, h0, lt
+; CHECK-NEXT:    fcmp h8, h8
+; CHECK-NEXT:    ldr h1, [sp, #254] // 2-byte Reload
+; CHECK-NEXT:    str h0, [sp, #84] // 2-byte Spill
+; CHECK-NEXT:    fcsel h0, h1, h8, vs
+; CHECK-NEXT:    ldr h8, [sp, #160] // 2-byte Reload
+; CHECK-NEXT:    fcmp h1, h0
+; CHECK-NEXT:    fcsel h0, h1, h0, lt
+; CHECK-NEXT:    fcmp h15, h15
+; CHECK-NEXT:    ldr h1, [sp, #252] // 2-byte Reload
+; CHECK-NEXT:    str h0, [sp, #82] // 2-byte Spill
+; CHECK-NEXT:    fcsel h0, h1, h15, vs
+; CHECK-NEXT:    ldr h15, [sp, #176] // 2-byte Reload
+; CHECK-NEXT:    fcmp h1, h0
+; CHECK-NEXT:    fcsel h0, h1, h0, lt
+; CHECK-NEXT:    fcmp h25, h25
+; CHECK-NEXT:    ldr h1, [sp, #250] // 2-byte Reload
+; CHECK-NEXT:    str h0, [sp, #80] // 2-byte Spill
+; CHECK-NEXT:    fcsel h0, h1, h25, vs
+; CHECK-NEXT:    ldr h25, [sp, #150] // 2-byte Reload
+; CHECK-NEXT:    fcmp h1, h0
+; CHECK-NEXT:    fcsel h0, h1, h0, lt
+; CHECK-NEXT:    fcmp h10, h10
+; CHECK-NEXT:    ldr h1, [sp, #246] // 2-byte Reload
+; CHECK-NEXT:    str h0, [sp, #78] // 2-byte Spill
+; CHECK-NEXT:    fcsel h0, h1, h10, vs
+; CHECK-NEXT:    ldr h10, [sp, #164] // 2-byte Reload
+; CHECK-NEXT:    fcmp h1, h0
+; CHECK-NEXT:    fcsel h0, h1, h0, lt
+; CHECK-NEXT:    fcmp h30, h30
+; CHECK-NEXT:    ldr h1, [sp, #242] // 2-byte Reload
+; CHECK-NEXT:    str h0, [sp, #76] // 2-byte Spill
+; CHECK-NEXT:    fcsel h0, h1, h30, vs
+; CHECK-NEXT:    ldr h30, [sp, #156] // 2-byte Reload
+; CHECK-NEXT:    fcmp h1, h0
+; CHECK-NEXT:    fcsel h0, h1, h0, lt
+; CHECK-NEXT:    fcmp h12, h12
+; CHECK-NEXT:    ldr h1, [sp, #240] // 2-byte Reload
+; CHECK-NEXT:    str h0, [sp, #74] // 2-byte Spill
+; CHECK-NEXT:    fcsel h0, h1, h12, vs
+; CHECK-NEXT:    ldr h12, [sp, #168] // 2-byte Reload
+; CHECK-NEXT:    fcmp h1, h0
+; CHECK-NEXT:    fcsel h0, h1, h0, lt
+; CHECK-NEXT:    ldr h1, [sp, #238] // 2-byte Reload
+; CHECK-NEXT:    str h0, [sp, #72] // 2-byte Spill
+; CHECK-NEXT:    ldr h0, [sp, #142] // 2-byte Reload
+; CHECK-NEXT:    fcmp h0, h0
+; CHECK-NEXT:    fcsel h0, h1, h0, vs
+; CHECK-NEXT:    fcmp h1, h0
+; CHECK-NEXT:    fcsel h0, h1, h0, lt
+; CHECK-NEXT:    ldr h1, [sp, #236] // 2-byte Reload
+; CHECK-NEXT:    str h0, [sp, #142] // 2-byte Spill
+; CHECK-NEXT:    ldr h0, [sp, #138] // 2-byte Reload
+; CHECK-NEXT:    fcmp h0, h0
+; CHECK-NEXT:    fcsel h0, h1, h0, vs
+; CHECK-NEXT:    fcmp h1, h0
+; CHECK-NEXT:    fcsel h0, h1, h0, lt
+; CHECK-NEXT:    ldr h1, [sp, #234] // 2-byte Reload
+; CHECK-NEXT:    str h0, [sp, #138] // 2-byte Spill
+; CHECK-NEXT:    ldr h0, [sp, #200] // 2-byte Reload
+; CHECK-NEXT:    fcmp h0, h0
+; CHECK-NEXT:    fcsel h0, h1, h0, vs
+; CHECK-NEXT:    fcmp h1, h0
+; CHECK-NEXT:    fcsel h0, h1, h0, lt
+; CHECK-NEXT:    ldr h1, [sp, #232] // 2-byte Reload
+; CHECK-NEXT:    str h0, [sp, #200] // 2-byte Spill
+; CHECK-NEXT:    ldr h0, [sp, #198] // 2-byte Reload
+; CHECK-NEXT:    fcmp h0, h0
+; CHECK-NEXT:    fcsel h0, h1, h0, vs
+; CHECK-NEXT:    fcmp h1, h0
+; CHECK-NEXT:    fcsel h0, h1, h0, lt
+; CHECK-NEXT:    ldr h1, [sp, #230] // 2-byte Reload
+; CHECK-NEXT:    str h0, [sp, #198] // 2-byte Spill
+; CHECK-NEXT:    ldr h0, [sp, #196] // 2-byte Reload
+; CHECK-NEXT:    fcmp h0, h0
+; CHECK-NEXT:    fcsel h0, h1, h0, vs
+; CHECK-NEXT:    fcmp h1, h0
+; CHECK-NEXT:    fcsel h0, h1, h0, lt
+; CHECK-NEXT:    ldr h1, [sp, #228] // 2-byte Reload
+; CHECK-NEXT:    str h0, [sp, #196] // 2-byte Spill
+; CHECK-NEXT:    ldr h0, [sp, #194] // 2-byte Reload
+; CHECK-NEXT:    fcmp h0, h0
+; CHECK-NEXT:    fcsel h0, h1, h0, vs
+; CHECK-NEXT:    fcmp h1, h0
+; CHECK-NEXT:    fcsel h0, h1, h0, lt
+; CHECK-NEXT:    ldr h1, [sp, #226] // 2-byte Reload
+; CHECK-NEXT:    str h0, [sp, #194] // 2-byte Spill
+; CHECK-NEXT:    ldr h0, [sp, #192] // 2-byte Reload
+; CHECK-NEXT:    fcmp h0, h0
+; CHECK-NEXT:    fcsel h0, h1, h0, vs
+; CHECK-NEXT:    fcmp h1, h0
+; CHECK-NEXT:    fcsel h0, h1, h0, lt
+; CHECK-NEXT:    ldr h1, [sp, #224] // 2-byte Reload
+; CHECK-NEXT:    str h0, [sp, #192] // 2-byte Spill
+; CHECK-NEXT:    ldr h0, [sp, #190] // 2-byte Reload
+; CHECK-NEXT:    fcmp h0, h0
+; CHECK-NEXT:    fcsel h0, h1, h0, vs
+; CHECK-NEXT:    fcmp h1, h0
+; CHECK-NEXT:    fcsel h0, h1, h0, lt
+; CHECK-NEXT:    fcmp h19, h19
+; CHECK-NEXT:    ldr h1, [sp, #222] // 2-byte Reload
+; CHECK-NEXT:    str h0, [sp, #190] // 2-byte Spill
+; CHECK-NEXT:    fcsel h0, h1, h19, vs
+; CHECK-NEXT:    ldr h19, [sp, #134] // 2-byte Reload
+; CHECK-NEXT:    fcmp h1, h0
+; CHECK-NEXT:    fcsel h0, h1, h0, lt
+; CHECK-NEXT:    fcmp h20, h20
+; CHECK-NEXT:    ldr h1, [sp, #220] // 2-byte Reload
+; CHECK-NEXT:    str h0, [sp, #70] // 2-byte Spill
+; CHECK-NEXT:    fcsel h0, h1, h20, vs
+; CHECK-NEXT:    ldr h20, [sp, #136] // 2-byte Reload
+; CHECK-NEXT:    fcmp h1, h0
+; CHECK-NEXT:    fcsel h0, h1, h0, lt
+; CHECK-NEXT:    ldr h1, [sp, #218] // 2-byte Reload
+; CHECK-NEXT:    str h0, [sp, #68] // 2-byte Spill
+; CHECK-NEXT:    ldr h0, [sp, #188] // 2-byte Reload
+; CHECK-NEXT:    fcmp h0, h0
+; CHECK-NEXT:    fcsel h0, h1, h0, vs
+; CHECK-NEXT:    fcmp h1, h0
+; CHECK-NEXT:    fcsel h0, h1, h0, lt
+; CHECK-NEXT:    ldr h1, [sp, #216] // 2-byte Reload
+; CHECK-NEXT:    str h0, [sp, #188] // 2-byte Spill
+; CHECK-NEXT:    ldr h0, [sp, #186] // 2-byte Reload
+; CHECK-NEXT:    fcmp h0, h0
+; CHECK-NEXT:    fcsel h0, h1, h0, vs
+; CHECK-NEXT:    fcmp h1, h0
+; CHECK-NEXT:    fcsel h0, h1, h0, lt
+; CHECK-NEXT:    fcmp h22, h22
+; CHECK-NEXT:    ldr h1, [sp, #214] // 2-byte Reload
+; CHECK-NEXT:    str h0, [sp, #186] // 2-byte Spill
+; CHECK-NEXT:    fcsel h0, h1, h22, vs
+; CHECK-NEXT:    ldr h22, [sp, #144] // 2-byte Reload
+; CHECK-NEXT:    fcmp h1, h0
+; CHECK-NEXT:    fcsel h0, h1, h0, lt
+; CHECK-NEXT:    ldr h1, [sp, #212] // 2-byte Reload
+; CHECK-NEXT:    str h0, [sp, #66] // 2-byte Spill
+; CHECK-NEXT:    ldr h0, [sp, #184] // 2-byte Reload
+; CHECK-NEXT:    fcmp h0, h0
+; CHECK-NEXT:    fcsel h0, h1, h0, vs
+; CHECK-NEXT:    fcmp h1, h0
+; CHECK-NEXT:    fcsel h0, h1, h0, lt
+; CHECK-NEXT:    fcmp h23, h23
+; CHECK-NEXT:    ldr h1, [sp, #210] // 2-byte Reload
+; CHECK-NEXT:    str h0, [sp, #184] // 2-byte Spill
+; CHECK-NEXT:    fcsel h0, h1, h23, vs
+; CHECK-NEXT:    ldr h23, [sp, #146] // 2-byte Reload
+; CHECK-NEXT:    fcmp h1, h0
+; CHECK-NEXT:    fcsel h0, h1, h0, lt
+; CHECK-NEXT:    ldr h1, [sp, #208] // 2-byte Reload
+; CHECK-NEXT:    str h0, [sp, #64] // 2-byte Spill
+; CHECK-NEXT:    ldr h0, [sp, #182] // 2-byte Reload
+; CHECK-NEXT:    fcmp h0, h0
+; CHECK-NEXT:    fcsel h0, h1, h0, vs
+; CHECK-NEXT:    fcmp h1, h0
+; CHECK-NEXT:    fcsel h0, h1, h0, lt
+; CHECK-NEXT:    ldr h1, [sp, #206] // 2-byte Reload
+; CHECK-NEXT:    str h0, [sp, #182] // 2-byte Spill
+; CHECK-NEXT:    ldr h0, [sp, #180] // 2-byte Reload
+; CHECK-NEXT:    fcmp h0, h0
+; CHECK-NEXT:    fcsel h0, h1, h0, vs
+; CHECK-NEXT:    fcmp h1, h0
+; CHECK-NEXT:    fcsel h0, h1, h0, lt
+; CHECK-NEXT:    ldr h1, [sp, #204] // 2-byte Reload
+; CHECK-NEXT:    str h0, [sp, #180] // 2-byte Spill
+; CHECK-NEXT:    ldr h0, [sp, #178] // 2-byte Reload
+; CHECK-NEXT:    fcmp h0, h0
+; CHECK-NEXT:    fcsel h0, h1, h0, vs
+; CHECK-NEXT:    fcmp h1, h0
+; CHECK-NEXT:    fcsel h0, h1, h0, lt
+; CHECK-NEXT:    ldr z1, [x8, #-19, mul vl] // 16-byte Folded Reload
+; CHECK-NEXT:    str h0, [sp, #178] // 2-byte Spill
+; CHECK-NEXT:    ldr h0, [sp, #174] // 2-byte Reload
+; CHECK-NEXT:    fcmp h0, h0
+; CHECK-NEXT:    fcsel h0, h15, h0, vs
+; CHECK-NEXT:    fcmp h15, h0
+; CHECK-NEXT:    fcsel h0, h15, h0, lt
+; CHECK-NEXT:    str h0, [sp, #174] // 2-byte Spill
+; CHECK-NEXT:    ldr h0, [sp, #170] // 2-byte Reload
+; CHECK-NEXT:    fcmp h0, h0
+; CHECK-NEXT:    fcsel h0, h13, h0, vs
+; CHECK-NEXT:    fcmp h13, h0
+; CHECK-NEXT:    fcsel h0, h13, h0, lt
+; CHECK-NEXT:    str h0, [sp, #170] // 2-byte Spill
+; CHECK-NEXT:    ldr h0, [sp, #166] // 2-byte Reload
+; CHECK-NEXT:    fcmp h0, h0
+; CHECK-NEXT:    fcsel h0, h12, h0, vs
+; CHECK-NEXT:    fcmp h12, h0
+; CHECK-NEXT:    fcsel h0, h12, h0, lt
+; CHECK-NEXT:    str h0, [sp, #166] // 2-byte Spill
+; CHECK-NEXT:    ldr h0, [sp, #162] // 2-byte Reload
+; CHECK-NEXT:    fcmp h0, h0
+; CHECK-NEXT:    fcsel h0, h10, h0, vs
+; CHECK-NEXT:    fcmp h10, h0
+; CHECK-NEXT:    fcsel h0, h10, h0, lt
+; CHECK-NEXT:    str h0, [sp, #162] // 2-byte Spill
+; CHECK-NEXT:    ldr h0, [sp, #158] // 2-byte Reload
+; CHECK-NEXT:    fcmp h0, h0
+; CHECK-NEXT:    fcsel h0, h8, h0, vs
+; CHECK-NEXT:    fcmp h8, h0
+; CHECK-NEXT:    fcsel h0, h8, h0, lt
+; CHECK-NEXT:    str h0, [sp, #158] // 2-byte Spill
+; CHECK-NEXT:    ldr h0, [sp, #154] // 2-byte Reload
+; CHECK-NEXT:    fcmp h0, h0
+; CHECK-NEXT:    fcsel h0, h30, h0, vs
+; CHECK-NEXT:    fcmp h30, h0
+; CHECK-NEXT:    fcsel h0, h30, h0, lt
+; CHECK-NEXT:    str h0, [sp, #154] // 2-byte Spill
+; CHECK-NEXT:    ldr z0, [x8, #-1, mul vl] // 16-byte Folded Reload
+; CHECK-NEXT:    fcmp h0, h0
+; CHECK-NEXT:    fcsel h0, h27, h0, vs
+; CHECK-NEXT:    fcmp h27, h0
+; CHECK-NEXT:    fcsel h0, h27, h0, lt
+; CHECK-NEXT:    str h0, [sp, #62] // 2-byte Spill
+; CHECK-NEXT:    ldr z0, [x8, #-3, mul vl] // 16-byte Folded Reload
+; CHECK-NEXT:    fcmp h0, h0
+; CHECK-NEXT:    fcsel h0, h25, h0, vs
+; CHECK-NEXT:    fcmp h25, h0
+; CHECK-NEXT:    fcsel h0, h25, h0, lt
+; CHECK-NEXT:    str h0, [sp, #60] // 2-byte Spill
+; CHECK-NEXT:    ldr z0, [x8, #-4, mul vl] // 16-byte Folded Reload
+; CHECK-NEXT:    fcmp h0, h0
+; CHECK-NEXT:    fcsel h0, h24, h0, vs
+; CHECK-NEXT:    fcmp h24, h0
+; CHECK-NEXT:    fcsel h0, h24, h0, lt
+; CHECK-NEXT:    fcmp h4, h4
+; CHECK-NEXT:    str h0, [sp, #58] // 2-byte Spill
+; CHECK-NEXT:    fcsel h0, h23, h4, vs
+; CHECK-NEXT:    ldr h4, [sp, #104] // 2-byte Reload
+; CHECK-NEXT:    fcmp h23, h0
+; CHECK-NEXT:    fcsel h0, h23, h0, lt
+; CHECK-NEXT:    str h0, [sp, #56] // 2-byte Spill
+; CHECK-NEXT:    ldr z0, [x8, #-6, mul vl] // 16-byte Folded Reload
+; CHECK-NEXT:    fcmp h0, h0
+; CHECK-NEXT:    fcsel h0, h22, h0, vs
+; CHECK-NEXT:    fcmp h22, h0
+; CHECK-NEXT:    fcsel h0, h22, h0, lt
+; CHECK-NEXT:    str h0, [sp, #54] // 2-byte Spill
+; CHECK-NEXT:    ldr z0, [x8, #-8, mul vl] // 16-byte Folded Reload
+; CHECK-NEXT:    fcmp h0, h0
+; CHECK-NEXT:    fcsel h0, h21, h0, vs
+; CHECK-NEXT:    fcmp h21, h0
+; CHECK-NEXT:    fcsel h0, h21, h0, lt
+; CHECK-NEXT:    fcmp h17, h17
+; CHECK-NEXT:    str h0, [sp, #52] // 2-byte Spill
+; CHECK-NEXT:    fcsel h0, h20, h17, vs
+; CHECK-NEXT:    ldr h17, [sp, #130] // 2-byte Reload
+; CHECK-NEXT:    fcmp h20, h0
+; CHECK-NEXT:    fcsel h0, h20, h0, lt
+; CHECK-NEXT:    fcmp h7, h7
+; CHECK-NEXT:    str h0, [sp, #50] // 2-byte Spill
+; CHECK-NEXT:    fcsel h0, h19, h7, vs
+; CHECK-NEXT:    ldr h7, [sp, #122] // 2-byte Reload
+; CHECK-NEXT:    fcmp h19, h0
+; CHECK-NEXT:    fcsel h0, h19, h0, lt
+; CHECK-NEXT:    str h0, [sp, #48] // 2-byte Spill
+; CHECK-NEXT:    ldr z0, [x8, #-12, mul vl] // 16-byte Folded Reload
+; CHECK-NEXT:    fcmp h0, h0
+; CHECK-NEXT:    fcsel h0, h18, h0, vs
+; CHECK-NEXT:    fcmp h18, h0
+; CHECK-NEXT:    fcsel h0, h18, h0, lt
+; CHECK-NEXT:    str h0, [sp, #46] // 2-byte Spill
+; CHECK-NEXT:    ldr z0, [x8, #-14, mul vl] // 16-byte Folded Reload
+; CHECK-NEXT:    fcmp h0, h0
+; CHECK-NEXT:    fcsel h0, h17, h0, vs
+; CHECK-NEXT:    fcmp h17, h0
+; CHECK-NEXT:    fcsel h0, h17, h0, lt
+; CHECK-NEXT:    str h0, [sp, #44] // 2-byte Spill
+; CHECK-NEXT:    ldr z0, [x8, #-16, mul vl] // 16-byte Folded Reload
+; CHECK-NEXT:    fcmp h0, h0
+; CHECK-NEXT:    fcsel h0, h16, h0, vs
+; CHECK-NEXT:    fcmp h16, h0
+; CHECK-NEXT:    fcsel h0, h16, h0, lt
+; CHECK-NEXT:    str h0, [sp, #42] // 2-byte Spill
+; CHECK-NEXT:    ldr z0, [x8, #-18, mul vl] // 16-byte Folded Reload
+; CHECK-NEXT:    str h2, [sp, #256]
+; CHECK-NEXT:    ldr h2, [sp, #98] // 2-byte Reload
+; CHECK-NEXT:    fcmp h0, h0
+; CHECK-NEXT:    fcsel h0, h7, h0, vs
+; CHECK-NEXT:    fcmp h7, h0
+; CHECK-NEXT:    fcsel h0, h7, h0, lt
+; CHECK-NEXT:    fcmp h1, h1
+; CHECK-NEXT:    fcsel h1, h6, h1, vs
+; CHECK-NEXT:    str h0, [sp, #40] // 2-byte Spill
+; CHECK-NEXT:    fcmp h6, h1
+; CHECK-NEXT:    fcsel h1, h6, h1, lt
+; CHECK-NEXT:    fcmp h11, h11
+; CHECK-NEXT:    fcsel h11, h5, h11, vs
+; CHECK-NEXT:    str h1, [sp, #38] // 2-byte Spill
+; CHECK-NEXT:    fcmp h5, h11
+; CHECK-NEXT:    fcsel h0, h5, h11, lt
+; CHECK-NEXT:    fcmp h9, h9
+; CHECK-NEXT:    ldr h11, [sp, #110] // 2-byte Reload
+; CHECK-NEXT:    fcsel h9, h11, h9, vs
+; CHECK-NEXT:    str h0, [sp, #36] // 2-byte Spill
+; CHECK-NEXT:    fcmp h11, h9
+; CHECK-NEXT:    fcsel h0, h11, h9, lt
+; CHECK-NEXT:    fcmp h31, h31
+; CHECK-NEXT:    ldr h9, [sp, #204] // 2-byte Reload
+; CHECK-NEXT:    fcsel h31, h4, h31, vs
+; CHECK-NEXT:    str h0, [sp, #34] // 2-byte Spill
+; CHECK-NEXT:    ldr h0, [sp, #248] // 2-byte Reload
+; CHECK-NEXT:    str h0, [sp, #382]
+; CHECK-NEXT:    ldr h0, [sp, #240] // 2-byte Reload
+; CHECK-NEXT:    fcmp h4, h31
+; CHECK-NEXT:    str h0, [sp, #368]
+; CHECK-NEXT:    ldr h0, [sp, #238] // 2-byte Reload
+; CHECK-NEXT:    fcsel h1, h4, h31, lt
+; CHECK-NEXT:    fcmp h28, h28
+; CHECK-NEXT:    str h0, [sp, #366]
+; CHECK-NEXT:    ldr h0, [sp, #236] // 2-byte Reload
+; CHECK-NEXT:    fcsel h28, h3, h28, vs
+; CHECK-NEXT:    str h1, [sp, #32] // 2-byte Spill
+; CHECK-NEXT:    str h0, [sp, #364]
+; CHECK-NEXT:    ldr h0, [sp, #102] // 2-byte Reload
+; CHECK-NEXT:    fcmp h3, h28
+; CHECK-NEXT:    fcsel h1, h3, h28, lt
+; CHECK-NEXT:    fcmp h26, h26
+; CHECK-NEXT:    str h1, [sp, #30] // 2-byte Spill
+; CHECK-NEXT:    ldr h1, [sp, #244] // 2-byte Reload
+; CHECK-NEXT:    fcsel h26, h2, h26, vs
+; CHECK-NEXT:    str h1, [sp, #380]
+; CHECK-NEXT:    ldr h1, [sp, #254] // 2-byte Reload
+; CHECK-NEXT:    fcmp h2, h26
+; CHECK-NEXT:    str h1, [sp, #378]
+; CHECK-NEXT:    ldr h1, [sp, #252] // 2-byte Reload
+; CHECK-NEXT:    str h1, [sp, #376]
+; CHECK-NEXT:    ldr h1, [sp, #250] // 2-byte Reload
+; CHECK-NEXT:    fcsel h31, h2, h26, lt
+; CHECK-NEXT:    fcmp h29, h29
+; CHECK-NEXT:    ldr h26, [sp, #222] // 2-byte Reload
+; CHECK-NEXT:    str h1, [sp, #374]
+; CHECK-NEXT:    ldr h1, [sp, #246] // 2-byte Reload
+; CHECK-NEXT:    str h1, [sp, #372]
+; CHECK-NEXT:    ldr h1, [sp, #242] // 2-byte Reload
+; CHECK-NEXT:    fcsel h28, h0, h29, vs
+; CHECK-NEXT:    ldr h29, [sp, #108] // 2-byte Reload
+; CHECK-NEXT:    str h1, [sp, #370]
+; CHECK-NEXT:    ldr h1, [sp, #234] // 2-byte Reload
+; CHECK-NEXT:    fcmp h0, h28
+; CHECK-NEXT:    str h1, [sp, #362]
+; CHECK-NEXT:    ldr h1, [sp, #232] // 2-byte Reload
+; CHECK-NEXT:    str h1, [sp, #360]
+; CHECK-NEXT:    ldr h1, [sp, #230] // 2-byte Reload
+; CHECK-NEXT:    fcsel h28, h0, h28, lt
+; CHECK-NEXT:    str h1, [sp, #358]
+; CHECK-NEXT:    ldr h1, [sp, #228] // 2-byte Reload
+; CHECK-NEXT:    str h1, [sp, #356]
+; CHECK-NEXT:    ldr h1, [sp, #226] // 2-byte Reload
+; CHECK-NEXT:    str h1, [sp, #354]
+; CHECK-NEXT:    ldr h1, [sp, #224] // 2-byte Reload
+; CHECK-NEXT:    str h1, [sp, #352]
+; CHECK-NEXT:    fmov s1, s0
+; CHECK-NEXT:    ldr z0, [x8, #-22, mul vl] // 16-byte Folded Reload
+; CHECK-NEXT:    str h26, [sp, #350]
+; CHECK-NEXT:    ldr h26, [sp, #220] // 2-byte Reload
+; CHECK-NEXT:    str h26, [sp, #348]
+; CHECK-NEXT:    ldr h26, [sp, #218] // 2-byte Reload
+; CHECK-NEXT:    fcmp h0, h0
+; CHECK-NEXT:    str h26, [sp, #346]
+; CHECK-NEXT:    fcsel h26, h29, h0, vs
+; CHECK-NEXT:    ldr h0, [sp, #216] // 2-byte Reload
+; CHECK-NEXT:    str h0, [sp, #344]
+; CHECK-NEXT:    ldr h0, [sp, #214] // 2-byte Reload
+; CHECK-NEXT:    fcmp h29, h26
+; CHECK-NEXT:    str h0, [sp, #342]
+; CHECK-NEXT:    ldr h0, [sp, #212] // 2-byte Reload
+; CHECK-NEXT:    str h0, [sp, #340]
+; CHECK-NEXT:    ldr h0, [sp, #210] // 2-byte Reload
+; CHECK-NEXT:    fcsel h26, h29, h26, lt
+; CHECK-NEXT:    str h0, [sp, #338]
+; CHECK-NEXT:    ldr h0, [sp, #208] // 2-byte Reload
+; CHECK-NEXT:    str h0, [sp, #336]
+; CHECK-NEXT:    ldr h0, [sp, #206] // 2-byte Reload
+; CHECK-NEXT:    str h0, [sp, #334]
+; CHECK-NEXT:    fmov s0, s29
+; CHECK-NEXT:    ldr z29, [x8, #-21, mul vl] // 16-byte Folded Reload
+; CHECK-NEXT:    str h13, [sp, #328]
+; CHECK-NEXT:    ldr h13, [sp, #116] // 2-byte Reload
+; CHECK-NEXT:    str h9, [sp, #332]
+; CHECK-NEXT:    str h15, [sp, #330]
+; CHECK-NEXT:    fcmp h29, h29
+; CHECK-NEXT:    str h12, [sp, #326]
+; CHECK-NEXT:    str h10, [sp, #324]
+; CHECK-NEXT:    str h8, [sp, #322]
+; CHECK-NEXT:    fcsel h29, h13, h29, vs
+; CHECK-NEXT:    str h30, [sp, #320]
+; CHECK-NEXT:    str h27, [sp, #318]
+; CHECK-NEXT:    str h25, [sp, #316]
+; CHECK-NEXT:    fcmp h13, h29
+; CHECK-NEXT:    ldr z27, [x8, #-20, mul vl] // 16-byte Folded Reload
+; CHECK-NEXT:    str h22, [sp, #310]
+; CHECK-NEXT:    ldr h22, [sp, #120] // 2-byte Reload
+; CHECK-NEXT:    str h24, [sp, #314]
+; CHECK-NEXT:    str h23, [sp, #312]
+; CHECK-NEXT:    fcsel h25, h13, h29, lt
+; CHECK-NEXT:    fcmp h27, h27
+; CHECK-NEXT:    str h21, [sp, #308]
+; CHECK-NEXT:    str h20, [sp, #306]
+; CHECK-NEXT:    str h19, [sp, #304]
+; CHECK-NEXT:    fcsel h29, h22, h27, vs
+; CHECK-NEXT:    str h18, [sp, #302]
+; CHECK-NEXT:    ldr h18, [sp, #92] // 2-byte Reload
+; CHECK-NEXT:    str h17, [sp, #300]
+; CHECK-NEXT:    str h16, [sp, #298]
+; CHECK-NEXT:    fcmp h22, h29
+; CHECK-NEXT:    ldr z16, [x8, #-17, mul vl] // 16-byte Folded Reload
+; CHECK-NEXT:    str h5, [sp, #292]
+; CHECK-NEXT:    ldr h5, [sp, #126] // 2-byte Reload
+; CHECK-NEXT:    str h7, [sp, #296]
+; CHECK-NEXT:    ldr h7, [sp, #94] // 2-byte Reload
+; CHECK-NEXT:    str h6, [sp, #294]
+; CHECK-NEXT:    ldr h6, [sp, #96] // 2-byte Reload
+; CHECK-NEXT:    fcsel h12, h22, h29, lt
+; CHECK-NEXT:    fcmp h16, h16
+; CHECK-NEXT:    str h11, [sp, #290]
+; CHECK-NEXT:    str h4, [sp, #288]
+; CHECK-NEXT:    ldr h4, [sp, #114] // 2-byte Reload
+; CHECK-NEXT:    str h3, [sp, #286]
+; CHECK-NEXT:    ldr h3, [sp, #88] // 2-byte Reload
+; CHECK-NEXT:    fcsel h27, h5, h16, vs
+; CHECK-NEXT:    str h2, [sp, #284]
+; CHECK-NEXT:    ldr h16, [sp, #90] // 2-byte Reload
+; CHECK-NEXT:    str h1, [sp, #282]
+; CHECK-NEXT:    str h0, [sp, #280]
+; CHECK-NEXT:    fcmp h5, h27
+; CHECK-NEXT:    ldr z0, [x8, #-15, mul vl] // 16-byte Folded Reload
+; CHECK-NEXT:    str h5, [sp, #274]
+; CHECK-NEXT:    str h13, [sp, #278]
+; CHECK-NEXT:    str h22, [sp, #276]
+; CHECK-NEXT:    fcsel h17, h5, h27, lt
+; CHECK-NEXT:    fcmp h0, h0
+; CHECK-NEXT:    ldr h5, [sp, #106] // 2-byte Reload
+; CHECK-NEXT:    str h14, [sp, #272]
+; CHECK-NEXT:    str h4, [sp, #268]
+; CHECK-NEXT:    fcsel h2, h14, h0, vs
+; CHECK-NEXT:    ldr h0, [sp, #124] // 2-byte Reload
+; CHECK-NEXT:    str h5, [sp, #266]
+; CHECK-NEXT:    str h6, [sp, #264]
+; CHECK-NEXT:    str h0, [sp, #270]
+; CHECK-NEXT:    fcmp h14, h2
+; CHECK-NEXT:    str h18, [sp, #262]
+; CHECK-NEXT:    fcsel h1, h14, h2, lt
+; CHECK-NEXT:    ldr z2, [x8, #-13, mul vl] // 16-byte Folded Reload
+; CHECK-NEXT:    str h3, [sp, #384]
+; CHECK-NEXT:    ldr h3, [sp, #86] // 2-byte Reload
+; CHECK-NEXT:    str h7, [sp, #260]
+; CHECK-NEXT:    str h16, [sp, #258]
+; CHECK-NEXT:    str h3, [sp, #510]
+; CHECK-NEXT:    ldr h3, [sp, #84] // 2-byte Reload
+; CHECK-NEXT:    fcmp h2, h2
+; CHECK-NEXT:    str h3, [sp, #508]
+; CHECK-NEXT:    ldr h3, [sp, #82] // 2-byte Reload
+; CHECK-NEXT:    fcsel h2, h0, h2, vs
+; CHECK-NEXT:    str h3, [sp, #506]
+; CHECK-NEXT:    ldr h3, [sp, #80] // 2-byte Reload
+; CHECK-NEXT:    str h3, [sp, #504]
+; CHECK-NEXT:    ldr h3, [sp, #78] // 2-byte Reload
+; CHECK-NEXT:    fcmp h0, h2
+; CHECK-NEXT:    str h3, [sp, #502]
+; CHECK-NEXT:    ldr h3, [sp, #76] // 2-byte Reload
+; CHECK-NEXT:    fcsel h2, h0, h2, lt
+; CHECK-NEXT:    ldr h0, [sp, #74] // 2-byte Reload
+; CHECK-NEXT:    str h3, [sp, #500]
+; CHECK-NEXT:    ldr z3, [x8, #-11, mul vl] // 16-byte Folded Reload
+; CHECK-NEXT:    str h0, [sp, #498]
+; CHECK-NEXT:    ldr h0, [sp, #72] // 2-byte Reload
+; CHECK-NEXT:    str h0, [sp, #496]
+; CHECK-NEXT:    ldr h0, [sp, #142] // 2-byte Reload
+; CHECK-NEXT:    fcmp h3, h3
+; CHECK-NEXT:    str h0, [sp, #494]
+; CHECK-NEXT:    fmov s0, s4
+; CHECK-NEXT:    fcsel h3, h4, h3, vs
+; CHECK-NEXT:    ldr h4, [sp, #138] // 2-byte Reload
+; CHECK-NEXT:    str h4, [sp, #492]
+; CHECK-NEXT:    ldr h4, [sp, #200] // 2-byte Reload
+; CHECK-NEXT:    fcmp h0, h3
+; CHECK-NEXT:    str h4, [sp, #490]
+; CHECK-NEXT:    ldr h4, [sp, #198] // 2-byte Reload
+; CHECK-NEXT:    str h4, [sp, #488]
+; CHECK-NEXT:    ldr h4, [sp, #196] // 2-byte Reload
+; CHECK-NEXT:    fcsel h3, h0, h3, lt
+; CHECK-NEXT:    ldr h0, [sp, #190] // 2-byte Reload
+; CHECK-NEXT:    str h4, [sp, #486]
+; CHECK-NEXT:    ldr h4, [sp, #194] // 2-byte Reload
+; CHECK-NEXT:    str h4, [sp, #484]
+; CHECK-NEXT:    ldr h4, [sp, #192] // 2-byte Reload
+; CHECK-NEXT:    str h4, [sp, #482]
+; CHECK-NEXT:    ldr z4, [x8, #-10, mul vl] // 16-byte Folded Reload
+; CHECK-NEXT:    str h0, [sp, #480]
+; CHECK-NEXT:    ldr h0, [sp, #70] // 2-byte Reload
+; CHECK-NEXT:    str h0, [sp, #478]
+; CHECK-NEXT:    ldr h0, [sp, #68] // 2-byte Reload
+; CHECK-NEXT:    fcmp h4, h4
+; CHECK-NEXT:    str h0, [sp, #476]
+; CHECK-NEXT:    fmov s0, s5
+; CHECK-NEXT:    fcsel h4, h5, h4, vs
+; CHECK-NEXT:    ldr h5, [sp, #188] // 2-byte Reload
+; CHECK-NEXT:    str h5, [sp, #474]
+; CHECK-NEXT:    ldr h5, [sp, #186] // 2-byte Reload
+; CHECK-NEXT:    fcmp h0, h4
+; CHECK-NEXT:    str h5, [sp, #472]
+; CHECK-NEXT:    ldr h5, [sp, #66] // 2-byte Reload
+; CHECK-NEXT:    str h5, [sp, #470]
+; CHECK-NEXT:    ldr h5, [sp, #184] // 2-byte Reload
+; CHECK-NEXT:    fcsel h4, h0, h4, lt
+; CHECK-NEXT:    ldr h0, [sp, #180] // 2-byte Reload
+; CHECK-NEXT:    str h5, [sp, #468]
+; CHECK-NEXT:    ldr h5, [sp, #64] // 2-byte Reload
+; CHECK-NEXT:    str h5, [sp, #466]
+; CHECK-NEXT:    ldr h5, [sp, #182] // 2-byte Reload
+; CHECK-NEXT:    str h5, [sp, #464]
+; CHECK-NEXT:    ldr z5, [x8, #-7, mul vl] // 16-byte Folded Reload
+; CHECK-NEXT:    str h0, [sp, #462]
+; CHECK-NEXT:    ldr h0, [sp, #178] // 2-byte Reload
+; CHECK-NEXT:    str h0, [sp, #460]
+; CHECK-NEXT:    ldr h0, [sp, #174] // 2-byte Reload
+; CHECK-NEXT:    fcmp h5, h5
+; CHECK-NEXT:    str h0, [sp, #458]
+; CHECK-NEXT:    fmov s0, s6
+; CHECK-NEXT:    fcsel h5, h6, h5, vs
+; CHECK-NEXT:    ldr h6, [sp, #170] // 2-byte Reload
+; CHECK-NEXT:    str h6, [sp, #456]
+; CHECK-NEXT:    ldr h6, [sp, #166] // 2-byte Reload
+; CHECK-NEXT:    fcmp h0, h5
+; CHECK-NEXT:    str h6, [sp, #454]
+; CHECK-NEXT:    ldr h6, [sp, #162] // 2-byte Reload
+; CHECK-NEXT:    str h6, [sp, #452]
+; CHECK-NEXT:    ldr h6, [sp, #158] // 2-byte Reload
+; CHECK-NEXT:    fcsel h5, h0, h5, lt
+; CHECK-NEXT:    str h6, [sp, #450]
+; CHECK-NEXT:    ldr h6, [sp, #154] // 2-byte Reload
+; CHECK-NEXT:    str h6, [sp, #448]
+; CHECK-NEXT:    ldr h6, [sp, #62] // 2-byte Reload
+; CHECK-NEXT:    str h6, [sp, #446]
+; CHECK-NEXT:    ldr h6, [sp, #60] // 2-byte Reload
+; CHECK-NEXT:    ldr z0, [x8, #-9, mul vl] // 16-byte Folded Reload
+; CHECK-NEXT:    str h6, [sp, #444]
+; CHECK-NEXT:    ldr h6, [sp, #58] // 2-byte Reload
+; CHECK-NEXT:    fcmp h0, h0
+; CHECK-NEXT:    str h6, [sp, #442]
+; CHECK-NEXT:    ldr h6, [sp, #56] // 2-byte Reload
+; CHECK-NEXT:    str h6, [sp, #440]
+; CHECK-NEXT:    fcsel h6, h18, h0, vs
+; CHECK-NEXT:    ldr h0, [sp, #54] // 2-byte Reload
+; CHECK-NEXT:    str h0, [sp, #438]
+; CHECK-NEXT:    ldr h0, [sp, #52] // 2-byte Reload
+; CHECK-NEXT:    fcmp h18, h6
+; CHECK-NEXT:    str h0, [sp, #436]
+; CHECK-NEXT:    ldr h0, [sp, #50] // 2-byte Reload
+; CHECK-NEXT:    str h0, [sp, #434]
+; CHECK-NEXT:    ldr h0, [sp, #48] // 2-byte Reload
+; CHECK-NEXT:    fcsel h6, h18, h6, lt
+; CHECK-NEXT:    ldr h18, [sp, #42] // 2-byte Reload
+; CHECK-NEXT:    str h0, [sp, #432]
+; CHECK-NEXT:    ldr h0, [sp, #46] // 2-byte Reload
+; CHECK-NEXT:    str h0, [sp, #430]
+; CHECK-NEXT:    ldr h0, [sp, #44] // 2-byte Reload
+; CHECK-NEXT:    str h0, [sp, #428]
+; CHECK-NEXT:    ldr z0, [x8, #-5, mul vl] // 16-byte Folded Reload
+; CHECK-NEXT:    str h18, [sp, #426]
+; CHECK-NEXT:    ldr h18, [sp, #40] // 2-byte Reload
+; CHECK-NEXT:    str h31, [sp, #412]
+; CHECK-NEXT:    str h18, [sp, #424]
+; CHECK-NEXT:    ldr h18, [sp, #38] // 2-byte Reload
+; CHECK-NEXT:    fcmp h0, h0
+; CHECK-NEXT:    str h28, [sp, #410]
+; CHECK-NEXT:    str h18, [sp, #422]
+; CHECK-NEXT:    ldr h18, [sp, #36] // 2-byte Reload
+; CHECK-NEXT:    str h18, [sp, #420]
+; CHECK-NEXT:    ldr h18, [sp, #34] // 2-byte Reload
+; CHECK-NEXT:    fcsel h0, h7, h0, vs
+; CHECK-NEXT:    str h18, [sp, #418]
+; CHECK-NEXT:    ldr h18, [sp, #32] // 2-byte Reload
+; CHECK-NEXT:    fcmp h7, h0
+; CHECK-NEXT:    str h18, [sp, #416]
+; CHECK-NEXT:    ldr h18, [sp, #30] // 2-byte Reload
+; CHECK-NEXT:    str h18, [sp, #414]
+; CHECK-NEXT:    fcsel h0, h7, h0, lt
+; CHECK-NEXT:    ldr z7, [x8, #-2, mul vl] // 16-byte Folded Reload
+; CHECK-NEXT:    str h1, [sp, #400]
+; CHECK-NEXT:    adrp x8, .LCPI94_0
+; CHECK-NEXT:    add x8, x8, :lo12:.LCPI94_0
+; CHECK-NEXT:    str h26, [sp, #408]
+; CHECK-NEXT:    str h25, [sp, #406]
+; CHECK-NEXT:    fcmp h7, h7
+; CHECK-NEXT:    str h12, [sp, #404]
+; CHECK-NEXT:    str h17, [sp, #402]
+; CHECK-NEXT:    str h2, [sp, #398]
+; CHECK-NEXT:    fcsel h7, h16, h7, vs
+; CHECK-NEXT:    str h3, [sp, #396]
+; CHECK-NEXT:    str h4, [sp, #394]
+; CHECK-NEXT:    str h5, [sp, #392]
+; CHECK-NEXT:    fcmp h16, h7
+; CHECK-NEXT:    str h6, [sp, #390]
+; CHECK-NEXT:    str h0, [sp, #388]
+; CHECK-NEXT:    ld1h { z0.h }, p0/z, [x8]
+; CHECK-NEXT:    add x8, sp, #384
+; CHECK-NEXT:    fcsel h1, h16, h7, lt
+; CHECK-NEXT:    str h1, [sp, #386]
+; CHECK-NEXT:    ld1h { z1.h }, p0/z, [x9]
+; CHECK-NEXT:    cmpeq p1.h, p0/z, z1.h, z0.h
+; CHECK-NEXT:    mov z0.h, p1/z, #-1 // =0xffffffffffffffff
+; CHECK-NEXT:    ptrue p1.h
+; CHECK-NEXT:    and z0.h, z0.h, #0x1
+; CHECK-NEXT:    cmpne p1.h, p1/z, z0.h, #0
+; CHECK-NEXT:    ld1h { z0.h }, p0/z, [x8]
+; CHECK-NEXT:    fcmeq p2.h, p0/z, z0.h, #0.0
+; CHECK-NEXT:    sel z1.h, p1, z1.h, z0.h
+; CHECK-NEXT:    mov z0.h, p2/m, z1.h
+; CHECK-NEXT:    st1h { z0.h }, p0, [x0]
+; CHECK-NEXT:    sub sp, x29, #64
+; CHECK-NEXT:    ldp x29, x30, [sp, #64] // 16-byte Folded Reload
+; CHECK-NEXT:    ldp d9, d8, [sp, #48] // 16-byte Folded Reload
+; CHECK-NEXT:    ldp d11, d10, [sp, #32] // 16-byte Folded Reload
+; CHECK-NEXT:    ldp d13, d12, [sp, #16] // 16-byte Folded Reload
+; CHECK-NEXT:    ldp d15, d14, [sp], #80 // 16-byte Folded Reload
+; CHECK-NEXT:    ret
+  %op1 = load <64 x half>, ptr %a
+  %op2 = load <64 x half>, ptr %b
+  %res = call <64 x half> @llvm.minimumnum.v64f16(<64 x half> %op1, <64 x half> %op2)
+  store <64 x half> %res, ptr %a
+  ret void
+}
+
+define void @fminimumnum_v128f16(ptr %a, ptr %b) vscale_range(16,0) #0 {
+; CHECK-LABEL: fminimumnum_v128f16:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    stp d15, d14, [sp, #-80]! // 16-byte Folded Spill
+; CHECK-NEXT:    sub x9, sp, #1200
+; CHECK-NEXT:    stp d13, d12, [sp, #16] // 16-byte Folded Spill
+; CHECK-NEXT:    addvl x9, x9, #-31
+; CHECK-NEXT:    stp d11, d10, [sp, #32] // 16-byte Folded Spill
+; CHECK-NEXT:    stp d9, d8, [sp, #48] // 16-byte Folded Spill
+; CHECK-NEXT:    stp x29, x30, [sp, #64] // 16-byte Folded Spill
+; CHECK-NEXT:    add x29, sp, #64
+; CHECK-NEXT:    and sp, x9, #0xffffffffffffff00
+; CHECK-NEXT:    .cfi_def_cfa w29, 16
+; CHECK-NEXT:    .cfi_offset w30, -8
+; CHECK-NEXT:    .cfi_offset w29, -16
+; CHECK-NEXT:    .cfi_offset b8, -24
+; CHECK-NEXT:    .cfi_offset b9, -32
+; CHECK-NEXT:    .cfi_offset b10, -40
+; CHECK-NEXT:    .cfi_offset b11, -48
+; CHECK-NEXT:    .cfi_offset b12, -56
+; CHECK-NEXT:    .cfi_offset b13, -64
+; CHECK-NEXT:    .cfi_offset b14, -72
+; CHECK-NEXT:    .cfi_offset b15, -80
+; CHECK-NEXT:    ptrue p0.h, vl128
+; CHECK-NEXT:    mov w8, #127 // =0x7f
+; CHECK-NEXT:    add x9, sp, #512
+; CHECK-NEXT:    ld1h { z0.h }, p0/z, [x0]
+; CHECK-NEXT:    ld1h { z1.h }, p0/z, [x1]
+; CHECK-NEXT:    fcmp h0, h0
+; CHECK-NEXT:    fcsel h2, h1, h0, vs
+; CHECK-NEXT:    whilels p1.h, xzr, x8
+; CHECK-NEXT:    mov w8, #126 // =0x7e
+; CHECK-NEXT:    lastb h5, p1, z1.h
+; CHECK-NEXT:    str h2, [sp, #262] // 2-byte Spill
+; CHECK-NEXT:    lastb h2, p1, z0.h
+; CHECK-NEXT:    fcmp h2, h2
+; CHECK-NEXT:    fcsel h2, h5, h2, vs
+; CHECK-NEXT:    whilels p1.h, xzr, x8
+; CHECK-NEXT:    mov w8, #125 // =0x7d
+; CHECK-NEXT:    lastb h3, p1, z1.h
+; CHECK-NEXT:    str h2, [sp, #396] // 2-byte Spill
+; CHECK-NEXT:    lastb h2, p1, z0.h
+; CHECK-NEXT:    str h3, [sp, #282] // 2-byte Spill
+; CHECK-NEXT:    fcmp h2, h2
+; CHECK-NEXT:    fcsel h2, h3, h2, vs
+; CHECK-NEXT:    whilels p1.h, xzr, x8
+; CHECK-NEXT:    mov w8, #124 // =0x7c
+; CHECK-NEXT:    lastb h3, p1, z1.h
+; CHECK-NEXT:    str h2, [sp, #510] // 2-byte Spill
+; CHECK-NEXT:    lastb h2, p1, z0.h
+; CHECK-NEXT:    str h3, [sp, #280] // 2-byte Spill
+; CHECK-NEXT:    fcmp h2, h2
+; CHECK-NEXT:    fcsel h2, h3, h2, vs
+; CHECK-NEXT:    whilels p1.h, xzr, x8
+; CHECK-NEXT:    mov w8, #123 // =0x7b
+; CHECK-NEXT:    lastb h3, p1, z1.h
+; CHECK-NEXT:    str h2, [sp, #508] // 2-byte Spill
+; CHECK-NEXT:    lastb h2, p1, z0.h
+; CHECK-NEXT:    str h3, [sp, #276] // 2-byte Spill
+; CHECK-NEXT:    fcmp h2, h2
+; CHECK-NEXT:    fcsel h2, h3, h2, vs
+; CHECK-NEXT:    whilels p1.h, xzr, x8
+; CHECK-NEXT:    mov w8, #122 // =0x7a
+; CHECK-NEXT:    lastb h3, p1, z1.h
+; CHECK-NEXT:    str h2, [sp, #504] // 2-byte Spill
+; CHECK-NEXT:    lastb h2, p1, z0.h
+; CHECK-NEXT:    str h3, [sp, #278] // 2-byte Spill
+; CHECK-NEXT:    fcmp h2, h2
+; CHECK-NEXT:    fcsel h2, h3, h2, vs
+; CHECK-NEXT:    whilels p1.h, xzr, x8
+; CHECK-NEXT:    mov w8, #121 // =0x79
+; CHECK-NEXT:    lastb h3, p1, z1.h
+; CHECK-NEXT:    str h2, [sp, #506] // 2-byte Spill
+; CHECK-NEXT:    lastb h2, p1, z0.h
+; CHECK-NEXT:    str h3, [sp, #272] // 2-byte Spill
+; CHECK-NEXT:    fcmp h2, h2
+; CHECK-NEXT:    fcsel h2, h3, h2, vs
+; CHECK-NEXT:    whilels p1.h, xzr, x8
+; CHECK-NEXT:    mov w8, #120 // =0x78
+; CHECK-NEXT:    lastb h3, p1, z1.h
+; CHECK-NEXT:    str h2, [sp, #356] // 2-byte Spill
+; CHECK-NEXT:    lastb h2, p1, z0.h
+; CHECK-NEXT:    str h3, [sp, #274] // 2-byte Spill
+; CHECK-NEXT:    fcmp h2, h2
+; CHECK-NEXT:    fcsel h2, h3, h2, vs
+; CHECK-NEXT:    whilels p1.h, xzr, x8
+; CHECK-NEXT:    mov w8, #119 // =0x77
+; CHECK-NEXT:    lastb h17, p1, z1.h
+; CHECK-NEXT:    str h2, [sp, #496] // 2-byte Spill
+; CHECK-NEXT:    lastb h2, p1, z0.h
+; CHECK-NEXT:    fcmp h2, h2
+; CHECK-NEXT:    fcsel h2, h17, h2, vs
+; CHECK-NEXT:    whilels p1.h, xzr, x8
+; CHECK-NEXT:    mov w8, #118 // =0x76
+; CHECK-NEXT:    lastb h18, p1, z1.h
+; CHECK-NEXT:    str h2, [sp, #360] // 2-byte Spill
+; CHECK-NEXT:    lastb h2, p1, z0.h
+; CHECK-NEXT:    fcmp h2, h2
+; CHECK-NEXT:    fcsel h2, h18, h2, vs
+; CHECK-NEXT:    whilels p1.h, xzr, x8
+; CHECK-NEXT:    mov w8, #117 // =0x75
+; CHECK-NEXT:    lastb h25, p1, z1.h
+; CHECK-NEXT:    str h2, [sp, #358] // 2-byte Spill
+; CHECK-NEXT:    lastb h2, p1, z0.h
+; CHECK-NEXT:    fcmp h2, h2
+; CHECK-NEXT:    fcsel h2, h25, h2, vs
+; CHECK-NEXT:    whilels p1.h, xzr, x8
+; CHECK-NEXT:    mov w8, #116 // =0x74
+; CHECK-NEXT:    lastb h20, p1, z1.h
+; CHECK-NEXT:    str h2, [sp, #502] // 2-byte Spill
+; CHECK-NEXT:    lastb h2, p1, z0.h
+; CHECK-NEXT:    fcmp h2, h2
+; CHECK-NEXT:    fcsel h2, h20, h2, vs
+; CHECK-NEXT:    whilels p1.h, xzr, x8
+; CHECK-NEXT:    mov w8, #115 // =0x73
+; CHECK-NEXT:    lastb h30, p1, z1.h
+; CHECK-NEXT:    str h2, [sp, #500] // 2-byte Spill
+; CHECK-NEXT:    lastb h2, p1, z0.h
+; CHECK-NEXT:    fcmp h2, h2
+; CHECK-NEXT:    fcsel h2, h30, h2, vs
+; CHECK-NEXT:    whilels p1.h, xzr, x8
+; CHECK-NEXT:    mov w8, #114 // =0x72
+; CHECK-NEXT:    lastb h3, p1, z1.h
+; CHECK-NEXT:    str h2, [sp, #498] // 2-byte Spill
+; CHECK-NEXT:    lastb h2, p1, z0.h
+; CHECK-NEXT:    str h3, [sp, #268] // 2-byte Spill
+; CHECK-NEXT:    fcmp h2, h2
+; CHECK-NEXT:    fcsel h2, h3, h2, vs
+; CHECK-NEXT:    whilels p1.h, xzr, x8
+; CHECK-NEXT:    mov w8, #113 // =0x71
+; CHECK-NEXT:    lastb h8, p1, z1.h
+; CHECK-NEXT:    str h2, [sp, #494] // 2-byte Spill
+; CHECK-NEXT:    lastb h2, p1, z0.h
+; CHECK-NEXT:    fcmp h2, h2
+; CHECK-NEXT:    fcsel h2, h8, h2, vs
+; CHECK-NEXT:    whilels p1.h, xzr, x8
+; CHECK-NEXT:    mov w8, #112 // =0x70
+; CHECK-NEXT:    lastb h3, p1, z1.h
+; CHECK-NEXT:    str h2, [sp, #492] // 2-byte Spill
+; CHECK-NEXT:    lastb h2, p1, z0.h
+; CHECK-NEXT:    str h3, [sp, #264] // 2-byte Spill
+; CHECK-NEXT:    fcmp h2, h2
+; CHECK-NEXT:    fcsel h2, h3, h2, vs
+; CHECK-NEXT:    whilels p1.h, xzr, x8
+; CHECK-NEXT:    mov w8, #111 // =0x6f
+; CHECK-NEXT:    lastb h9, p1, z1.h
+; CHECK-NEXT:    str h2, [sp, #490] // 2-byte Spill
+; CHECK-NEXT:    lastb h2, p1, z0.h
+; CHECK-NEXT:    fcmp h2, h2
+; CHECK-NEXT:    fcsel h2, h9, h2, vs
+; CHECK-NEXT:    whilels p1.h, xzr, x8
+; CHECK-NEXT:    mov w8, #110 // =0x6e
+; CHECK-NEXT:    lastb h3, p1, z1.h
+; CHECK-NEXT:    str h2, [sp, #488] // 2-byte Spill
+; CHECK-NEXT:    lastb h2, p1, z0.h
+; CHECK-NEXT:    str h3, [sp, #260] // 2-byte Spill
+; CHECK-NEXT:    fcmp h2, h2
+; CHECK-NEXT:    fcsel h2, h3, h2, vs
+; CHECK-NEXT:    whilels p1.h, xzr, x8
+; CHECK-NEXT:    mov w8, #109 // =0x6d
+; CHECK-NEXT:    lastb h3, p1, z1.h
+; CHECK-NEXT:    str h2, [sp, #486] // 2-byte Spill
+; CHECK-NEXT:    lastb h2, p1, z0.h
+; CHECK-NEXT:    str h3, [sp, #354] // 2-byte Spill
+; CHECK-NEXT:    fcmp h2, h2
+; CHECK-NEXT:    fcsel h2, h3, h2, vs
+; CHECK-NEXT:    whilels p1.h, xzr, x8
+; CHECK-NEXT:    mov w8, #108 // =0x6c
+; CHECK-NEXT:    lastb h3, p1, z1.h
+; CHECK-NEXT:    str h2, [sp, #484] // 2-byte Spill
+; CHECK-NEXT:    lastb h2, p1, z0.h
+; CHECK-NEXT:    str h3, [sp, #352] // 2-byte Spill
+; CHECK-NEXT:    fcmp h2, h2
+; CHECK-NEXT:    fcsel h2, h3, h2, vs
+; CHECK-NEXT:    whilels p1.h, xzr, x8
+; CHECK-NEXT:    mov w8, #107 // =0x6b
+; CHECK-NEXT:    lastb h3, p1, z1.h
+; CHECK-NEXT:    str h2, [sp, #482] // 2-byte Spill
+; CHECK-NEXT:    lastb h2, p1, z0.h
+; CHECK-NEXT:    str h3, [sp, #256] // 2-byte Spill
+; CHECK-NEXT:    fcmp h2, h2
+; CHECK-NEXT:    fcsel h2, h3, h2, vs
+; CHECK-NEXT:    whilels p1.h, xzr, x8
+; CHECK-NEXT:    mov w8, #106 // =0x6a
+; CHECK-NEXT:    lastb h3, p1, z1.h
+; CHECK-NEXT:    str h2, [sp, #480] // 2-byte Spill
+; CHECK-NEXT:    lastb h2, p1, z0.h
+; CHECK-NEXT:    str h3, [sp, #350] // 2-byte Spill
+; CHECK-NEXT:    fcmp h2, h2
+; CHECK-NEXT:    fcsel h2, h3, h2, vs
+; CHECK-NEXT:    whilels p1.h, xzr, x8
+; CHECK-NEXT:    mov w8, #105 // =0x69
+; CHECK-NEXT:    lastb h3, p1, z1.h
+; CHECK-NEXT:    str h2, [sp, #478] // 2-byte Spill
+; CHECK-NEXT:    lastb h2, p1, z0.h
+; CHECK-NEXT:    str h3, [sp, #252] // 2-byte Spill
+; CHECK-NEXT:    fcmp h2, h2
+; CHECK-NEXT:    fcsel h2, h3, h2, vs
+; CHECK-NEXT:    whilels p1.h, xzr, x8
+; CHECK-NEXT:    mov w8, #104 // =0x68
+; CHECK-NEXT:    lastb h3, p1, z1.h
+; CHECK-NEXT:    str h2, [sp, #476] // 2-byte Spill
+; CHECK-NEXT:    lastb h2, p1, z0.h
+; CHECK-NEXT:    str h3, [sp, #348] // 2-byte Spill
+; CHECK-NEXT:    fcmp h2, h2
+; CHECK-NEXT:    fcsel h2, h3, h2, vs
+; CHECK-NEXT:    whilels p1.h, xzr, x8
+; CHECK-NEXT:    mov w8, #103 // =0x67
+; CHECK-NEXT:    lastb h14, p1, z1.h
+; CHECK-NEXT:    str h2, [sp, #474] // 2-byte Spill
+; CHECK-NEXT:    lastb h2, p1, z0.h
+; CHECK-NEXT:    fcmp h2, h2
+; CHECK-NEXT:    fcsel h2, h14, h2, vs
+; CHECK-NEXT:    whilels p1.h, xzr, x8
+; CHECK-NEXT:    mov w8, #102 // =0x66
+; CHECK-NEXT:    lastb h11, p1, z1.h
+; CHECK-NEXT:    str h2, [sp, #472] // 2-byte Spill
+; CHECK-NEXT:    lastb h2, p1, z0.h
+; CHECK-NEXT:    fcmp h2, h2
+; CHECK-NEXT:    fcsel h2, h11, h2, vs
+; CHECK-NEXT:    whilels p1.h, xzr, x8
+; CHECK-NEXT:    mov w8, #101 // =0x65
+; CHECK-NEXT:    lastb h3, p1, z1.h
+; CHECK-NEXT:    str h2, [sp, #470] // 2-byte Spill
+; CHECK-NEXT:    lastb h2, p1, z0.h
+; CHECK-NEXT:    str h3, [sp, #346] // 2-byte Spill
+; CHECK-NEXT:    fcmp h2, h2
+; CHECK-NEXT:    fcsel h2, h3, h2, vs
+; CHECK-NEXT:    whilels p1.h, xzr, x8
+; CHECK-NEXT:    mov w8, #100 // =0x64
+; CHECK-NEXT:    lastb h10, p1, z1.h
+; CHECK-NEXT:    str h2, [sp, #468] // 2-byte Spill
+; CHECK-NEXT:    lastb h2, p1, z0.h
+; CHECK-NEXT:    fcmp h2, h2
+; CHECK-NEXT:    fcsel h2, h10, h2, vs
+; CHECK-NEXT:    whilels p1.h, xzr, x8
+; CHECK-NEXT:    mov w8, #99 // =0x63
+; CHECK-NEXT:    lastb h3, p1, z1.h
+; CHECK-NEXT:    str h2, [sp, #466] // 2-byte Spill
+; CHECK-NEXT:    lastb h2, p1, z0.h
+; CHECK-NEXT:    str h3, [sp, #344] // 2-byte Spill
+; CHECK-NEXT:    fcmp h2, h2
+; CHECK-NEXT:    fcsel h2, h3, h2, vs
+; CHECK-NEXT:    whilels p1.h, xzr, x8
+; CHECK-NEXT:    mov w8, #98 // =0x62
+; CHECK-NEXT:    lastb h28, p1, z1.h
+; CHECK-NEXT:    str h2, [sp, #464] // 2-byte Spill
+; CHECK-NEXT:    lastb h2, p1, z0.h
+; CHECK-NEXT:    fcmp h2, h2
+; CHECK-NEXT:    fcsel h2, h28, h2, vs
+; CHECK-NEXT:    whilels p1.h, xzr, x8
+; CHECK-NEXT:    mov w8, #97 // =0x61
+; CHECK-NEXT:    lastb h3, p1, z1.h
+; CHECK-NEXT:    str h2, [sp, #462] // 2-byte Spill
+; CHECK-NEXT:    lastb h2, p1, z0.h
+; CHECK-NEXT:    str h3, [sp, #230] // 2-byte Spill
+; CHECK-NEXT:    fcmp h2, h2
+; CHECK-NEXT:    fcsel h2, h3, h2, vs
+; CHECK-NEXT:    whilels p1.h, xzr, x8
+; CHECK-NEXT:    mov w8, #96 // =0x60
+; CHECK-NEXT:    lastb h3, p1, z1.h
+; CHECK-NEXT:    str h2, [sp, #460] // 2-byte Spill
+; CHECK-NEXT:    lastb h2, p1, z0.h
+; CHECK-NEXT:    str h3, [sp, #342] // 2-byte Spill
+; CHECK-NEXT:    fcmp h2, h2
+; CHECK-NEXT:    fcsel h2, h3, h2, vs
+; CHECK-NEXT:    whilels p1.h, xzr, x8
+; CHECK-NEXT:    mov w8, #95 // =0x5f
+; CHECK-NEXT:    lastb h3, p1, z1.h
+; CHECK-NEXT:    str h2, [sp, #458] // 2-byte Spill
+; CHECK-NEXT:    lastb h2, p1, z0.h
+; CHECK-NEXT:    str h3, [sp, #340] // 2-byte Spill
+; CHECK-NEXT:    fcmp h2, h2
+; CHECK-NEXT:    fcsel h2, h3, h2, vs
+; CHECK-NEXT:    whilels p1.h, xzr, x8
+; CHECK-NEXT:    mov w8, #94 // =0x5e
+; CHECK-NEXT:    lastb h3, p1, z1.h
+; CHECK-NEXT:    str h2, [sp, #456] // 2-byte Spill
+; CHECK-NEXT:    lastb h2, p1, z0.h
+; CHECK-NEXT:    str h3, [sp, #338] // 2-byte Spill
+; CHECK-NEXT:    fcmp h2, h2
+; CHECK-NEXT:    fcsel h2, h3, h2, vs
+; CHECK-NEXT:    whilels p1.h, xzr, x8
+; CHECK-NEXT:    mov w8, #93 // =0x5d
+; CHECK-NEXT:    lastb h3, p1, z1.h
+; CHECK-NEXT:    str h2, [sp, #454] // 2-byte Spill
+; CHECK-NEXT:    lastb h2, p1, z0.h
+; CHECK-NEXT:    str h3, [sp, #336] // 2-byte Spill
+; CHECK-NEXT:    fcmp h2, h2
+; CHECK-NEXT:    fcsel h2, h3, h2, vs
+; CHECK-NEXT:    whilels p1.h, xzr, x8
+; CHECK-NEXT:    mov w8, #92 // =0x5c
+; CHECK-NEXT:    lastb h13, p1, z1.h
+; CHECK-NEXT:    str h2, [sp, #452] // 2-byte Spill
+; CHECK-NEXT:    lastb h2, p1, z0.h
+; CHECK-NEXT:    fcmp h2, h2
+; CHECK-NEXT:    fcsel h2, h13, h2, vs
+; CHECK-NEXT:    whilels p1.h, xzr, x8
+; CHECK-NEXT:    mov w8, #91 // =0x5b
+; CHECK-NEXT:    lastb h3, p1, z1.h
+; CHECK-NEXT:    str h2, [sp, #450] // 2-byte Spill
+; CHECK-NEXT:    lastb h2, p1, z0.h
+; CHECK-NEXT:    str h3, [sp, #334] // 2-byte Spill
+; CHECK-NEXT:    fcmp h2, h2
+; CHECK-NEXT:    fcsel h2, h3, h2, vs
+; CHECK-NEXT:    whilels p1.h, xzr, x8
+; CHECK-NEXT:    mov w8, #90 // =0x5a
+; CHECK-NEXT:    lastb h3, p1, z1.h
+; CHECK-NEXT:    str h2, [sp, #448] // 2-byte Spill
+; CHECK-NEXT:    lastb h2, p1, z0.h
+; CHECK-NEXT:    str h3, [sp, #332] // 2-byte Spill
+; CHECK-NEXT:    fcmp h2, h2
+; CHECK-NEXT:    fcsel h2, h3, h2, vs
+; CHECK-NEXT:    whilels p1.h, xzr, x8
+; CHECK-NEXT:    mov w8, #89 // =0x59
+; CHECK-NEXT:    lastb h3, p1, z1.h
+; CHECK-NEXT:    str h2, [sp, #446] // 2-byte Spill
+; CHECK-NEXT:    lastb h2, p1, z0.h
+; CHECK-NEXT:    str h3, [sp, #330] // 2-byte Spill
+; CHECK-NEXT:    fcmp h2, h2
+; CHECK-NEXT:    fcsel h2, h3, h2, vs
+; CHECK-NEXT:    whilels p1.h, xzr, x8
+; CHECK-NEXT:    mov w8, #88 // =0x58
+; CHECK-NEXT:    lastb h15, p1, z1.h
+; CHECK-NEXT:    str h2, [sp, #444] // 2-byte Spill
+; CHECK-NEXT:    lastb h2, p1, z0.h
+; CHECK-NEXT:    fcmp h2, h2
+; CHECK-NEXT:    fcsel h2, h15, h2, vs
+; CHECK-NEXT:    whilels p1.h, xzr, x8
+; CHECK-NEXT:    mov w8, #87 // =0x57
+; CHECK-NEXT:    lastb h3, p1, z1.h
+; CHECK-NEXT:    str h2, [sp, #442] // 2-byte Spill
+; CHECK-NEXT:    lastb h2, p1, z0.h
+; CHECK-NEXT:    str h3, [sp, #328] // 2-byte Spill
+; CHECK-NEXT:    fcmp h2, h2
+; CHECK-NEXT:    fcsel h2, h3, h2, vs
+; CHECK-NEXT:    whilels p1.h, xzr, x8
+; CHECK-NEXT:    mov w8, #86 // =0x56
+; CHECK-NEXT:    lastb h3, p1, z1.h
+; CHECK-NEXT:    str h2, [sp, #440] // 2-byte Spill
+; CHECK-NEXT:    lastb h2, p1, z0.h
+; CHECK-NEXT:    str h3, [sp, #326] // 2-byte Spill
+; CHECK-NEXT:    fcmp h2, h2
+; CHECK-NEXT:    fcsel h2, h3, h2, vs
+; CHECK-NEXT:    whilels p1.h, xzr, x8
+; CHECK-NEXT:    mov w8, #85 // =0x55
+; CHECK-NEXT:    lastb h3, p1, z1.h
+; CHECK-NEXT:    str h2, [sp, #438] // 2-byte Spill
+; CHECK-NEXT:    lastb h2, p1, z0.h
+; CHECK-NEXT:    str h3, [sp, #324] // 2-byte Spill
+; CHECK-NEXT:    fcmp h2, h2
+; CHECK-NEXT:    fcsel h2, h3, h2, vs
+; CHECK-NEXT:    whilels p1.h, xzr, x8
+; CHECK-NEXT:    mov w8, #84 // =0x54
+; CHECK-NEXT:    lastb h3, p1, z1.h
+; CHECK-NEXT:    str h2, [sp, #436] // 2-byte Spill
+; CHECK-NEXT:    lastb h2, p1, z0.h
+; CHECK-NEXT:    str h3, [sp, #322] // 2-byte Spill
+; CHECK-NEXT:    fcmp h2, h2
+; CHECK-NEXT:    fcsel h2, h3, h2, vs
+; CHECK-NEXT:    whilels p1.h, xzr, x8
+; CHECK-NEXT:    mov w8, #83 // =0x53
+; CHECK-NEXT:    lastb h3, p1, z1.h
+; CHECK-NEXT:    str h2, [sp, #434] // 2-byte Spill
+; CHECK-NEXT:    lastb h2, p1, z0.h
+; CHECK-NEXT:    str h3, [sp, #320] // 2-byte Spill
+; CHECK-NEXT:    fcmp h2, h2
+; CHECK-NEXT:    fcsel h2, h3, h2, vs
+; CHECK-NEXT:    whilels p1.h, xzr, x8
+; CHECK-NEXT:    mov w8, #82 // =0x52
+; CHECK-NEXT:    lastb h3, p1, z1.h
+; CHECK-NEXT:    str h2, [sp, #432] // 2-byte Spill
+; CHECK-NEXT:    lastb h2, p1, z0.h
+; CHECK-NEXT:    str h3, [sp, #318] // 2-byte Spill
+; CHECK-NEXT:    fcmp h2, h2
+; CHECK-NEXT:    fcsel h2, h3, h2, vs
+; CHECK-NEXT:    whilels p1.h, xzr, x8
+; CHECK-NEXT:    mov w8, #81 // =0x51
+; CHECK-NEXT:    lastb h3, p1, z1.h
+; CHECK-NEXT:    str h2, [sp, #430] // 2-byte Spill
+; CHECK-NEXT:    lastb h2, p1, z0.h
+; CHECK-NEXT:    str h3, [sp, #316] // 2-byte Spill
+; CHECK-NEXT:    fcmp h2, h2
+; CHECK-NEXT:    fcsel h2, h3, h2, vs
+; CHECK-NEXT:    whilels p1.h, xzr, x8
+; CHECK-NEXT:    mov w8, #80 // =0x50
+; CHECK-NEXT:    lastb h3, p1, z1.h
+; CHECK-NEXT:    str h2, [sp, #428] // 2-byte Spill
+; CHECK-NEXT:    lastb h2, p1, z0.h
+; CHECK-NEXT:    str h3, [sp, #314] // 2-byte Spill
+; CHECK-NEXT:    fcmp h2, h2
+; CHECK-NEXT:    fcsel h2, h3, h2, vs
+; CHECK-NEXT:    whilels p1.h, xzr, x8
+; CHECK-NEXT:    mov w8, #79 // =0x4f
+; CHECK-NEXT:    lastb h3, p1, z1.h
+; CHECK-NEXT:    str h2, [sp, #426] // 2-byte Spill
+; CHECK-NEXT:    lastb h2, p1, z0.h
+; CHECK-NEXT:    str h3, [sp, #312] // 2-byte Spill
+; CHECK-NEXT:    fcmp h2, h2
+; CHECK-NEXT:    fcsel h2, h3, h2, vs
+; CHECK-NEXT:    whilels p1.h, xzr, x8
+; CHECK-NEXT:    mov w8, #78 // =0x4e
+; CHECK-NEXT:    lastb h3, p1, z1.h
+; CHECK-NEXT:    str h2, [sp, #424] // 2-byte Spill
+; CHECK-NEXT:    lastb h2, p1, z0.h
+; CHECK-NEXT:    str h3, [sp, #310] // 2-byte Spill
+; CHECK-NEXT:    fcmp h2, h2
+; CHECK-NEXT:    fcsel h2, h3, h2, vs
+; CHECK-NEXT:    whilels p1.h, xzr, x8
+; CHECK-NEXT:    mov w8, #77 // =0x4d
+; CHECK-NEXT:    lastb h3, p1, z1.h
+; CHECK-NEXT:    str h2, [sp, #422] // 2-byte Spill
+; CHECK-NEXT:    lastb h2, p1, z0.h
+; CHECK-NEXT:    str h3, [sp, #308] // 2-byte Spill
+; CHECK-NEXT:    fcmp h2, h2
+; CHECK-NEXT:    fcsel h2, h3, h2, vs
+; CHECK-NEXT:    whilels p1.h, xzr, x8
+; CHECK-NEXT:    mov w8, #76 // =0x4c
+; CHECK-NEXT:    lastb h3, p1, z1.h
+; CHECK-NEXT:    str h2, [sp, #420] // 2-byte Spill
+; CHECK-NEXT:    lastb h2, p1, z0.h
+; CHECK-NEXT:    str h3, [sp, #306] // 2-byte Spill
+; CHECK-NEXT:    fcmp h2, h2
+; CHECK-NEXT:    fcsel h2, h3, h2, vs
+; CHECK-NEXT:    whilels p1.h, xzr, x8
+; CHECK-NEXT:    mov w8, #75 // =0x4b
+; CHECK-NEXT:    lastb h3, p1, z1.h
+; CHECK-NEXT:    str h2, [sp, #418] // 2-byte Spill
+; CHECK-NEXT:    lastb h2, p1, z0.h
+; CHECK-NEXT:    str h3, [sp, #304] // 2-byte Spill
+; CHECK-NEXT:    fcmp h2, h2
+; CHECK-NEXT:    fcsel h2, h3, h2, vs
+; CHECK-NEXT:    whilels p1.h, xzr, x8
+; CHECK-NEXT:    mov w8, #74 // =0x4a
+; CHECK-NEXT:    lastb h3, p1, z1.h
+; CHECK-NEXT:    str h2, [sp, #416] // 2-byte Spill
+; CHECK-NEXT:    lastb h2, p1, z0.h
+; CHECK-NEXT:    str h3, [sp, #302] // 2-byte Spill
+; CHECK-NEXT:    fcmp h2, h2
+; CHECK-NEXT:    fcsel h2, h3, h2, vs
+; CHECK-NEXT:    whilels p1.h, xzr, x8
+; CHECK-NEXT:    mov w8, #73 // =0x49
+; CHECK-NEXT:    lastb h3, p1, z1.h
+; CHECK-NEXT:    str h2, [sp, #414] // 2-byte Spill
+; CHECK-NEXT:    lastb h2, p1, z0.h
+; CHECK-NEXT:    str h3, [sp, #300] // 2-byte Spill
+; CHECK-NEXT:    fcmp h2, h2
+; CHECK-NEXT:    fcsel h2, h3, h2, vs
+; CHECK-NEXT:    whilels p1.h, xzr, x8
+; CHECK-NEXT:    mov w8, #72 // =0x48
+; CHECK-NEXT:    lastb h3, p1, z1.h
+; CHECK-NEXT:    str h2, [sp, #412] // 2-byte Spill
+; CHECK-NEXT:    lastb h2, p1, z0.h
+; CHECK-NEXT:    str h3, [sp, #298] // 2-byte Spill
+; CHECK-NEXT:    fcmp h2, h2
+; CHECK-NEXT:    fcsel h2, h3, h2, vs
+; CHECK-NEXT:    whilels p1.h, xzr, x8
+; CHECK-NEXT:    mov w8, #71 // =0x47
+; CHECK-NEXT:    lastb h3, p1, z1.h
+; CHECK-NEXT:    str h2, [sp, #410] // 2-byte Spill
+; CHECK-NEXT:    lastb h2, p1, z0.h
+; CHECK-NEXT:    str h3, [sp, #296] // 2-byte Spill
+; CHECK-NEXT:    fcmp h2, h2
+; CHECK-NEXT:    fcsel h2, h3, h2, vs
+; CHECK-NEXT:    whilels p1.h, xzr, x8
+; CHECK-NEXT:    mov w8, #70 // =0x46
+; CHECK-NEXT:    lastb h3, p1, z1.h
+; CHECK-NEXT:    str h2, [sp, #408] // 2-byte Spill
+; CHECK-NEXT:    lastb h2, p1, z0.h
+; CHECK-NEXT:    str h3, [sp, #294] // 2-byte Spill
+; CHECK-NEXT:    fcmp h2, h2
+; CHECK-NEXT:    fcsel h2, h3, h2, vs
+; CHECK-NEXT:    whilels p1.h, xzr, x8
+; CHECK-NEXT:    mov w8, #69 // =0x45
+; CHECK-NEXT:    lastb h3, p1, z1.h
+; CHECK-NEXT:    str h2, [sp, #406] // 2-byte Spill
+; CHECK-NEXT:    lastb h2, p1, z0.h
+; CHECK-NEXT:    str h3, [sp, #292] // 2-byte Spill
+; CHECK-NEXT:    fcmp h2, h2
+; CHECK-NEXT:    fcsel h2, h3, h2, vs
+; CHECK-NEXT:    whilels p1.h, xzr, x8
+; CHECK-NEXT:    mov w8, #68 // =0x44
+; CHECK-NEXT:    lastb h3, p1, z1.h
+; CHECK-NEXT:    str h2, [sp, #404] // 2-byte Spill
+; CHECK-NEXT:    lastb h2, p1, z0.h
+; CHECK-NEXT:    str h3, [sp, #290] // 2-byte Spill
+; CHECK-NEXT:    fcmp h2, h2
+; CHECK-NEXT:    fcsel h2, h3, h2, vs
+; CHECK-NEXT:    whilels p1.h, xzr, x8
+; CHECK-NEXT:    mov w8, #67 // =0x43
+; CHECK-NEXT:    lastb h3, p1, z1.h
+; CHECK-NEXT:    str h2, [sp, #402] // 2-byte Spill
+; CHECK-NEXT:    lastb h2, p1, z0.h
+; CHECK-NEXT:    str h3, [sp, #288] // 2-byte Spill
+; CHECK-NEXT:    fcmp h2, h2
+; CHECK-NEXT:    fcsel h2, h3, h2, vs
+; CHECK-NEXT:    whilels p1.h, xzr, x8
+; CHECK-NEXT:    mov w8, #66 // =0x42
+; CHECK-NEXT:    lastb h3, p1, z1.h
+; CHECK-NEXT:    str h2, [sp, #400] // 2-byte Spill
+; CHECK-NEXT:    lastb h2, p1, z0.h
+; CHECK-NEXT:    str h3, [sp, #286] // 2-byte Spill
+; CHECK-NEXT:    fcmp h2, h2
+; CHECK-NEXT:    fcsel h2, h3, h2, vs
+; CHECK-NEXT:    whilels p1.h, xzr, x8
+; CHECK-NEXT:    mov w8, #65 // =0x41
+; CHECK-NEXT:    lastb h3, p1, z1.h
+; CHECK-NEXT:    str h2, [sp, #398] // 2-byte Spill
+; CHECK-NEXT:    lastb h2, p1, z0.h
+; CHECK-NEXT:    str h3, [sp, #284] // 2-byte Spill
+; CHECK-NEXT:    fcmp h2, h2
+; CHECK-NEXT:    fcsel h2, h3, h2, vs
+; CHECK-NEXT:    whilels p1.h, xzr, x8
+; CHECK-NEXT:    mov w8, #64 // =0x40
+; CHECK-NEXT:    lastb h6, p1, z1.h
+; CHECK-NEXT:    str h2, [sp, #394] // 2-byte Spill
+; CHECK-NEXT:    lastb h2, p1, z0.h
+; CHECK-NEXT:    fcmp h2, h2
+; CHECK-NEXT:    fcsel h2, h6, h2, vs
+; CHECK-NEXT:    whilels p1.h, xzr, x8
+; CHECK-NEXT:    mov w8, #63 // =0x3f
+; CHECK-NEXT:    lastb h7, p1, z1.h
+; CHECK-NEXT:    str h2, [sp, #392] // 2-byte Spill
+; CHECK-NEXT:    lastb h2, p1, z0.h
+; CHECK-NEXT:    fcmp h2, h2
+; CHECK-NEXT:    fcsel h2, h7, h2, vs
+; CHECK-NEXT:    whilels p1.h, xzr, x8
+; CHECK-NEXT:    mov w8, #62 // =0x3e
+; CHECK-NEXT:    lastb h16, p1, z1.h
+; CHECK-NEXT:    str h2, [sp, #390] // 2-byte Spill
+; CHECK-NEXT:    lastb h2, p1, z0.h
+; CHECK-NEXT:    fcmp h2, h2
+; CHECK-NEXT:    fcsel h2, h16, h2, vs
+; CHECK-NEXT:    whilels p1.h, xzr, x8
+; CHECK-NEXT:    mov w8, #61 // =0x3d
+; CHECK-NEXT:    lastb h19, p1, z1.h
+; CHECK-NEXT:    str h2, [sp, #388] // 2-byte Spill
+; CHECK-NEXT:    lastb h2, p1, z0.h
+; CHECK-NEXT:    fcmp h2, h2
+; CHECK-NEXT:    fcsel h2, h19, h2, vs
+; CHECK-NEXT:    whilels p1.h, xzr, x8
+; CHECK-NEXT:    mov w8, #60 // =0x3c
+; CHECK-NEXT:    lastb h21, p1, z1.h
+; CHECK-NEXT:    str h2, [sp, #386] // 2-byte Spill
+; CHECK-NEXT:    lastb h2, p1, z0.h
+; CHECK-NEXT:    fcmp h2, h2
+; CHECK-NEXT:    fcsel h2, h21, h2, vs
+; CHECK-NEXT:    whilels p1.h, xzr, x8
+; CHECK-NEXT:    mov w8, #59 // =0x3b
+; CHECK-NEXT:    lastb h22, p1, z1.h
+; CHECK-NEXT:    str h2, [sp, #384] // 2-byte Spill
+; CHECK-NEXT:    lastb h2, p1, z0.h
+; CHECK-NEXT:    fcmp h2, h2
+; CHECK-NEXT:    fcsel h2, h22, h2, vs
+; CHECK-NEXT:    whilels p1.h, xzr, x8
+; CHECK-NEXT:    mov w8, #58 // =0x3a
+; CHECK-NEXT:    lastb h29, p1, z1.h
+; CHECK-NEXT:    str h2, [sp, #382] // 2-byte Spill
+; CHECK-NEXT:    lastb h2, p1, z0.h
+; CHECK-NEXT:    fcmp h2, h2
+; CHECK-NEXT:    fcsel h2, h29, h2, vs
+; CHECK-NEXT:    whilels p1.h, xzr, x8
+; CHECK-NEXT:    mov w8, #57 // =0x39
+; CHECK-NEXT:    lastb h3, p1, z1.h
+; CHECK-NEXT:    str h2, [sp, #380] // 2-byte Spill
+; CHECK-NEXT:    lastb h2, p1, z0.h
+; CHECK-NEXT:    str h3, [sp, #270] // 2-byte Spill
+; CHECK-NEXT:    fcmp h2, h2
+; CHECK-NEXT:    fcsel h2, h3, h2, vs
+; CHECK-NEXT:    whilels p1.h, xzr, x8
+; CHECK-NEXT:    mov w8, #56 // =0x38
+; CHECK-NEXT:    lastb h3, p1, z1.h
+; CHECK-NEXT:    str h2, [sp, #378] // 2-byte Spill
+; CHECK-NEXT:    lastb h2, p1, z0.h
+; CHECK-NEXT:    str h3, [sp, #266] // 2-byte Spill
+; CHECK-NEXT:    fcmp h2, h2
+; CHECK-NEXT:    fcsel h2, h3, h2, vs
+; CHECK-NEXT:    whilels p1.h, xzr, x8
+; CHECK-NEXT:    mov w8, #55 // =0x37
+; CHECK-NEXT:    lastb h23, p1, z1.h
+; CHECK-NEXT:    str h2, [sp, #376] // 2-byte Spill
+; CHECK-NEXT:    lastb h2, p1, z0.h
+; CHECK-NEXT:    fcmp h2, h2
+; CHECK-NEXT:    fcsel h2, h23, h2, vs
+; CHECK-NEXT:    whilels p1.h, xzr, x8
+; CHECK-NEXT:    mov w8, #54 // =0x36
+; CHECK-NEXT:    lastb h24, p1, z1.h
+; CHECK-NEXT:    str h2, [sp, #374] // 2-byte Spill
+; CHECK-NEXT:    lastb h2, p1, z0.h
+; CHECK-NEXT:    fcmp h2, h2
+; CHECK-NEXT:    fcsel h2, h24, h2, vs
+; CHECK-NEXT:    whilels p1.h, xzr, x8
+; CHECK-NEXT:    mov w8, #53 // =0x35
+; CHECK-NEXT:    lastb h3, p1, z1.h
+; CHECK-NEXT:    str h2, [sp, #372] // 2-byte Spill
+; CHECK-NEXT:    lastb h2, p1, z0.h
+; CHECK-NEXT:    str h3, [sp, #258] // 2-byte Spill
+; CHECK-NEXT:    fcmp h2, h2
+; CHECK-NEXT:    fcsel h2, h3, h2, vs
+; CHECK-NEXT:    whilels p1.h, xzr, x8
+; CHECK-NEXT:    mov w8, #52 // =0x34
+; CHECK-NEXT:    lastb h26, p1, z1.h
+; CHECK-NEXT:    str h2, [sp, #370] // 2-byte Spill
+; CHECK-NEXT:    lastb h2, p1, z0.h
+; CHECK-NEXT:    fcmp h2, h2
+; CHECK-NEXT:    fcsel h2, h26, h2, vs
+; CHECK-NEXT:    whilels p1.h, xzr, x8
+; CHECK-NEXT:    mov w8, #51 // =0x33
+; CHECK-NEXT:    lastb h3, p1, z1.h
+; CHECK-NEXT:    str h2, [sp, #368] // 2-byte Spill
+; CHECK-NEXT:    lastb h2, p1, z0.h
+; CHECK-NEXT:    str h3, [sp, #254] // 2-byte Spill
+; CHECK-NEXT:    fcmp h2, h2
+; CHECK-NEXT:    fcsel h2, h3, h2, vs
+; CHECK-NEXT:    whilels p1.h, xzr, x8
+; CHECK-NEXT:    mov w8, #50 // =0x32
+; CHECK-NEXT:    lastb h12, p1, z1.h
+; CHECK-NEXT:    str h2, [sp, #366] // 2-byte Spill
+; CHECK-NEXT:    lastb h2, p1, z0.h
+; CHECK-NEXT:    fcmp h2, h2
+; CHECK-NEXT:    fcsel h2, h12, h2, vs
+; CHECK-NEXT:    whilels p1.h, xzr, x8
+; CHECK-NEXT:    mov w8, #49 // =0x31
+; CHECK-NEXT:    lastb h27, p1, z1.h
+; CHECK-NEXT:    str h2, [sp, #364] // 2-byte Spill
+; CHECK-NEXT:    lastb h2, p1, z0.h
+; CHECK-NEXT:    fcmp h2, h2
+; CHECK-NEXT:    fcsel h2, h27, h2, vs
+; CHECK-NEXT:    whilels p1.h, xzr, x8
+; CHECK-NEXT:    mov w8, #48 // =0x30
+; CHECK-NEXT:    lastb h3, p1, z1.h
+; CHECK-NEXT:    str h2, [sp, #362] // 2-byte Spill
+; CHECK-NEXT:    lastb h2, p1, z0.h
+; CHECK-NEXT:    str h3, [sp, #248] // 2-byte Spill
+; CHECK-NEXT:    fcmp h2, h2
+; CHECK-NEXT:    fcsel h2, h3, h2, vs
+; CHECK-NEXT:    whilels p1.h, xzr, x8
+; CHECK-NEXT:    mov w8, #47 // =0x2f
+; CHECK-NEXT:    lastb h3, p1, z1.h
+; CHECK-NEXT:    str h2, [sp, #250] // 2-byte Spill
+; CHECK-NEXT:    lastb h2, p1, z0.h
+; CHECK-NEXT:    str h3, [sp, #244] // 2-byte Spill
+; CHECK-NEXT:    fcmp h2, h2
+; CHECK-NEXT:    fcsel h2, h3, h2, vs
+; CHECK-NEXT:    whilels p1.h, xzr, x8
+; CHECK-NEXT:    mov w8, #46 // =0x2e
+; CHECK-NEXT:    lastb h3, p1, z1.h
+; CHECK-NEXT:    str h2, [sp, #246] // 2-byte Spill
+; CHECK-NEXT:    lastb h2, p1, z0.h
+; CHECK-NEXT:    str h3, [sp, #240] // 2-byte Spill
+; CHECK-NEXT:    fcmp h2, h2
+; CHECK-NEXT:    fcsel h2, h3, h2, vs
+; CHECK-NEXT:    whilels p1.h, xzr, x8
+; CHECK-NEXT:    mov w8, #45 // =0x2d
+; CHECK-NEXT:    lastb h3, p1, z1.h
+; CHECK-NEXT:    str h2, [sp, #242] // 2-byte Spill
+; CHECK-NEXT:    lastb h2, p1, z0.h
+; CHECK-NEXT:    str h3, [sp, #236] // 2-byte Spill
+; CHECK-NEXT:    fcmp h2, h2
+; CHECK-NEXT:    fcsel h2, h3, h2, vs
+; CHECK-NEXT:    whilels p1.h, xzr, x8
+; CHECK-NEXT:    mov w8, #44 // =0x2c
+; CHECK-NEXT:    lastb h3, p1, z1.h
+; CHECK-NEXT:    str h2, [sp, #238] // 2-byte Spill
+; CHECK-NEXT:    lastb h2, p1, z0.h
+; CHECK-NEXT:    str h3, [sp, #232] // 2-byte Spill
+; CHECK-NEXT:    fcmp h2, h2
+; CHECK-NEXT:    fcsel h2, h3, h2, vs
+; CHECK-NEXT:    whilels p1.h, xzr, x8
+; CHECK-NEXT:    mov w8, #43 // =0x2b
+; CHECK-NEXT:    lastb h3, p1, z1.h
+; CHECK-NEXT:    str h2, [sp, #234] // 2-byte Spill
+; CHECK-NEXT:    lastb h2, p1, z0.h
+; CHECK-NEXT:    str h3, [sp, #226] // 2-byte Spill
+; CHECK-NEXT:    fcmp h2, h2
+; CHECK-NEXT:    fcsel h2, h3, h2, vs
+; CHECK-NEXT:    whilels p1.h, xzr, x8
+; CHECK-NEXT:    mov w8, #42 // =0x2a
+; CHECK-NEXT:    lastb h31, p1, z1.h
+; CHECK-NEXT:    str h2, [sp, #228] // 2-byte Spill
+; CHECK-NEXT:    lastb h2, p1, z0.h
+; CHECK-NEXT:    fcmp h2, h2
+; CHECK-NEXT:    fcsel h2, h31, h2, vs
+; CHECK-NEXT:    whilels p1.h, xzr, x8
+; CHECK-NEXT:    mov w8, #41 // =0x29
+; CHECK-NEXT:    lastb h3, p1, z1.h
+; CHECK-NEXT:    str h2, [sp, #224] // 2-byte Spill
+; CHECK-NEXT:    lastb h2, p1, z0.h
+; CHECK-NEXT:    str h3, [sp, #220] // 2-byte Spill
+; CHECK-NEXT:    fcmp h2, h2
+; CHECK-NEXT:    fcsel h2, h3, h2, vs
+; CHECK-NEXT:    whilels p1.h, xzr, x8
+; CHECK-NEXT:    mov w8, #40 // =0x28
+; CHECK-NEXT:    lastb h3, p1, z1.h
+; CHECK-NEXT:    str h2, [sp, #222] // 2-byte Spill
+; CHECK-NEXT:    lastb h2, p1, z0.h
+; CHECK-NEXT:    str h3, [sp, #214] // 2-byte Spill
+; CHECK-NEXT:    fcmp h2, h2
+; CHECK-NEXT:    fcsel h2, h3, h2, vs
+; CHECK-NEXT:    whilels p1.h, xzr, x8
+; CHECK-NEXT:    mov w8, #39 // =0x27
+; CHECK-NEXT:    lastb h3, p1, z1.h
+; CHECK-NEXT:    str h2, [sp, #216] // 2-byte Spill
+; CHECK-NEXT:    lastb h2, p1, z0.h
+; CHECK-NEXT:    str h3, [sp, #206] // 2-byte Spill
+; CHECK-NEXT:    fcmp h2, h2
+; CHECK-NEXT:    fcsel h2, h3, h2, vs
+; CHECK-NEXT:    whilels p1.h, xzr, x8
+; CHECK-NEXT:    mov w8, #38 // =0x26
+; CHECK-NEXT:    lastb h3, p1, z1.h
+; CHECK-NEXT:    str h2, [sp, #210] // 2-byte Spill
+; CHECK-NEXT:    lastb h2, p1, z0.h
+; CHECK-NEXT:    str h3, [sp, #200] // 2-byte Spill
+; CHECK-NEXT:    fcmp h2, h2
+; CHECK-NEXT:    fcsel h2, h3, h2, vs
+; CHECK-NEXT:    whilels p1.h, xzr, x8
+; CHECK-NEXT:    mov w8, #37 // =0x25
+; CHECK-NEXT:    lastb h3, p1, z1.h
+; CHECK-NEXT:    str h2, [sp, #202] // 2-byte Spill
+; CHECK-NEXT:    lastb h2, p1, z0.h
+; CHECK-NEXT:    str h3, [sp, #192] // 2-byte Spill
+; CHECK-NEXT:    fcmp h2, h2
+; CHECK-NEXT:    fcsel h2, h3, h2, vs
+; CHECK-NEXT:    whilels p1.h, xzr, x8
+; CHECK-NEXT:    mov w8, #36 // =0x24
+; CHECK-NEXT:    lastb h3, p1, z1.h
+; CHECK-NEXT:    str h2, [sp, #194] // 2-byte Spill
+; CHECK-NEXT:    lastb h2, p1, z0.h
+; CHECK-NEXT:    str h3, [sp, #184] // 2-byte Spill
+; CHECK-NEXT:    fcmp h2, h2
+; CHECK-NEXT:    fcsel h2, h3, h2, vs
+; CHECK-NEXT:    whilels p1.h, xzr, x8
+; CHECK-NEXT:    mov w8, #35 // =0x23
+; CHECK-NEXT:    lastb h3, p1, z1.h
+; CHECK-NEXT:    str h2, [sp, #188] // 2-byte Spill
+; CHECK-NEXT:    lastb h2, p1, z0.h
+; CHECK-NEXT:    str h3, [sp, #178] // 2-byte Spill
+; CHECK-NEXT:    fcmp h2, h2
+; CHECK-NEXT:    fcsel h2, h3, h2, vs
+; CHECK-NEXT:    whilels p1.h, xzr, x8
+; CHECK-NEXT:    mov w8, #34 // =0x22
+; CHECK-NEXT:    lastb h3, p1, z1.h
+; CHECK-NEXT:    str h2, [sp, #180] // 2-byte Spill
+; CHECK-NEXT:    lastb h2, p1, z0.h
+; CHECK-NEXT:    str h3, [sp, #170] // 2-byte Spill
+; CHECK-NEXT:    fcmp h2, h2
+; CHECK-NEXT:    fcsel h2, h3, h2, vs
+; CHECK-NEXT:    whilels p1.h, xzr, x8
+; CHECK-NEXT:    mov w8, #33 // =0x21
+; CHECK-NEXT:    lastb h3, p1, z1.h
+; CHECK-NEXT:    str h2, [sp, #172] // 2-byte Spill
+; CHECK-NEXT:    lastb h2, p1, z0.h
+; CHECK-NEXT:    str h3, [sp, #162] // 2-byte Spill
+; CHECK-NEXT:    fcmp h2, h2
+; CHECK-NEXT:    fcsel h2, h3, h2, vs
+; CHECK-NEXT:    whilels p1.h, xzr, x8
+; CHECK-NEXT:    mov w8, #32 // =0x20
+; CHECK-NEXT:    lastb h3, p1, z1.h
+; CHECK-NEXT:    str h2, [sp, #166] // 2-byte Spill
+; CHECK-NEXT:    lastb h2, p1, z0.h
+; CHECK-NEXT:    str h3, [sp, #156] // 2-byte Spill
+; CHECK-NEXT:    fcmp h2, h2
+; CHECK-NEXT:    fcsel h2, h3, h2, vs
+; CHECK-NEXT:    whilels p1.h, xzr, x8
+; CHECK-NEXT:    mov z3.h, z0.h[31]
+; CHECK-NEXT:    sub x8, x29, #64
+; CHECK-NEXT:    lastb h4, p1, z1.h
+; CHECK-NEXT:    str h2, [sp, #158] // 2-byte Spill
+; CHECK-NEXT:    lastb h2, p1, z0.h
+; CHECK-NEXT:    str h4, [sp, #148] // 2-byte Spill
+; CHECK-NEXT:    fcmp h2, h2
+; CHECK-NEXT:    fcsel h2, h4, h2, vs
+; CHECK-NEXT:    fcmp h3, h3
+; CHECK-NEXT:    mov z4.h, z1.h[31]
+; CHECK-NEXT:    str h2, [sp, #150] // 2-byte Spill
+; CHECK-NEXT:    mov z2.h, z0.h[30]
+; CHECK-NEXT:    fcsel h3, h4, h3, vs
+; CHECK-NEXT:    str z4, [x8, #-26, mul vl] // 16-byte Folded Spill
+; CHECK-NEXT:    mov z4.h, z1.h[30]
+; CHECK-NEXT:    str h3, [sp, #142] // 2-byte Spill
+; CHECK-NEXT:    fcmp h2, h2
+; CHECK-NEXT:    mov z3.h, z0.h[29]
+; CHECK-NEXT:    str z4, [x8, #-28, mul vl] // 16-byte Folded Spill
+; CHECK-NEXT:    fcsel h2, h4, h2, vs
+; CHECK-NEXT:    fcmp h3, h3
+; CHECK-NEXT:    mov z4.h, z1.h[29]
+; CHECK-NEXT:    str h2, [sp, #138] // 2-byte Spill
+; CHECK-NEXT:    mov z2.h, z0.h[28]
+; CHECK-NEXT:    fcsel h3, h4, h3, vs
+; CHECK-NEXT:    str z4, [x8, #-30, mul vl] // 16-byte Folded Spill
+; CHECK-NEXT:    mov z4.h, z1.h[28]
+; CHECK-NEXT:    str h3, [sp, #134] // 2-byte Spill
+; CHECK-NEXT:    fcmp h2, h2
+; CHECK-NEXT:    mov z3.h, z0.h[27]
+; CHECK-NEXT:    str z4, [x8, #-31, mul vl] // 16-byte Folded Spill
+; CHECK-NEXT:    fcsel h2, h4, h2, vs
+; CHECK-NEXT:    fcmp h3, h3
+; CHECK-NEXT:    mov z4.h, z1.h[27]
+; CHECK-NEXT:    str h2, [sp, #132] // 2-byte Spill
+; CHECK-NEXT:    mov z2.h, z0.h[26]
+; CHECK-NEXT:    fcsel h3, h4, h3, vs
+; CHECK-NEXT:    str z4, [x8, #-29, mul vl] // 16-byte Folded Spill
+; CHECK-NEXT:    mov z4.h, z1.h[26]
+; CHECK-NEXT:    str h3, [sp, #140] // 2-byte Spill
+; CHECK-NEXT:    fcmp h2, h2
+; CHECK-NEXT:    mov z3.h, z0.h[25]
+; CHECK-NEXT:    str z4, [x8, #-27, mul vl] // 16-byte Folded Spill
+; CHECK-NEXT:    fcsel h2, h4, h2, vs
+; CHECK-NEXT:    fcmp h3, h3
+; CHECK-NEXT:    mov z4.h, z1.h[25]
+; CHECK-NEXT:    str h2, [sp, #146] // 2-byte Spill
+; CHECK-NEXT:    mov z2.h, z0.h[24]
+; CHECK-NEXT:    fcsel h3, h4, h3, vs
+; CHECK-NEXT:    str z4, [x8, #-25, mul vl] // 16-byte Folded Spill
+; CHECK-NEXT:    mov z4.h, z1.h[24]
+; CHECK-NEXT:    str h3, [sp, #152] // 2-byte Spill
+; CHECK-NEXT:    fcmp h2, h2
+; CHECK-NEXT:    mov z3.h, z0.h[23]
+; CHECK-NEXT:    str z4, [x8, #-24, mul vl] // 16-byte Folded Spill
+; CHECK-NEXT:    fcsel h2, h4, h2, vs
+; CHECK-NEXT:    fcmp h3, h3
+; CHECK-NEXT:    mov z4.h, z1.h[23]
+; CHECK-NEXT:    str h2, [sp, #160] // 2-byte Spill
+; CHECK-NEXT:    mov z2.h, z0.h[22]
+; CHECK-NEXT:    fcsel h3, h4, h3, vs
+; CHECK-NEXT:    str z4, [x8, #-23, mul vl] // 16-byte Folded Spill
+; CHECK-NEXT:    mov z4.h, z1.h[22]
+; CHECK-NEXT:    str h3, [sp, #168] // 2-byte Spill
+; CHECK-NEXT:    fcmp h2, h2
+; CHECK-NEXT:    mov z3.h, z0.h[21]
+; CHECK-NEXT:    str z4, [x8, #-22, mul vl] // 16-byte Folded Spill
+; CHECK-NEXT:    fcsel h2, h4, h2, vs
+; CHECK-NEXT:    fcmp h3, h3
+; CHECK-NEXT:    mov z4.h, z1.h[21]
+; CHECK-NEXT:    str h2, [sp, #176] // 2-byte Spill
+; CHECK-NEXT:    mov z2.h, z0.h[20]
+; CHECK-NEXT:    fcsel h3, h4, h3, vs
+; CHECK-NEXT:    str z4, [x8, #-21, mul vl] // 16-byte Folded Spill
+; CHECK-NEXT:    mov z4.h, z1.h[20]
+; CHECK-NEXT:    str h3, [sp, #182] // 2-byte Spill
+; CHECK-NEXT:    fcmp h2, h2
+; CHECK-NEXT:    mov z3.h, z0.h[19]
+; CHECK-NEXT:    str z4, [x8, #-20, mul vl] // 16-byte Folded Spill
+; CHECK-NEXT:    fcsel h2, h4, h2, vs
+; CHECK-NEXT:    fcmp h3, h3
+; CHECK-NEXT:    mov z4.h, z1.h[19]
+; CHECK-NEXT:    str h2, [sp, #190] // 2-byte Spill
+; CHECK-NEXT:    mov z2.h, z0.h[18]
+; CHECK-NEXT:    fcsel h3, h4, h3, vs
+; CHECK-NEXT:    str z4, [x8, #-19, mul vl] // 16-byte Folded Spill
+; CHECK-NEXT:    mov z4.h, z1.h[18]
+; CHECK-NEXT:    str h3, [sp, #198] // 2-byte Spill
+; CHECK-NEXT:    fcmp h2, h2
+; CHECK-NEXT:    mov z3.h, z0.h[17]
+; CHECK-NEXT:    str z4, [x8, #-18, mul vl] // 16-byte Folded Spill
+; CHECK-NEXT:    fcsel h2, h4, h2, vs
+; CHECK-NEXT:    fcmp h3, h3
+; CHECK-NEXT:    mov z4.h, z1.h[17]
+; CHECK-NEXT:    str h2, [sp, #204] // 2-byte Spill
+; CHECK-NEXT:    mov z2.h, z0.h[16]
+; CHECK-NEXT:    fcsel h3, h4, h3, vs
+; CHECK-NEXT:    str z4, [x8, #-17, mul vl] // 16-byte Folded Spill
+; CHECK-NEXT:    mov z4.h, z1.h[16]
+; CHECK-NEXT:    str h3, [sp, #212] // 2-byte Spill
+; CHECK-NEXT:    fcmp h2, h2
+; CHECK-NEXT:    mov z3.h, z0.h[15]
+; CHECK-NEXT:    str z4, [x8, #-16, mul vl] // 16-byte Folded Spill
+; CHECK-NEXT:    fcsel h2, h4, h2, vs
+; CHECK-NEXT:    fcmp h3, h3
+; CHECK-NEXT:    mov z4.h, z1.h[15]
+; CHECK-NEXT:    str h2, [sp, #218] // 2-byte Spill
+; CHECK-NEXT:    mov z2.h, z0.h[14]
+; CHECK-NEXT:    fcsel h3, h4, h3, vs
+; CHECK-NEXT:    str z4, [x8, #-15, mul vl] // 16-byte Folded Spill
+; CHECK-NEXT:    mov z4.h, z1.h[14]
+; CHECK-NEXT:    str h3, [sp, #208] // 2-byte Spill
+; CHECK-NEXT:    fcmp h2, h2
+; CHECK-NEXT:    mov z3.h, z0.h[13]
+; CHECK-NEXT:    str z4, [x8, #-14, mul vl] // 16-byte Folded Spill
+; CHECK-NEXT:    fcsel h2, h4, h2, vs
+; CHECK-NEXT:    fcmp h3, h3
+; CHECK-NEXT:    mov z4.h, z1.h[13]
+; CHECK-NEXT:    str h2, [sp, #196] // 2-byte Spill
+; CHECK-NEXT:    mov z2.h, z0.h[12]
+; CHECK-NEXT:    fcsel h3, h4, h3, vs
+; CHECK-NEXT:    str z4, [x8, #-13, mul vl] // 16-byte Folded Spill
+; CHECK-NEXT:    mov z4.h, z1.h[12]
+; CHECK-NEXT:    str h3, [sp, #186] // 2-byte Spill
+; CHECK-NEXT:    fcmp h2, h2
+; CHECK-NEXT:    mov z3.h, z0.h[11]
+; CHECK-NEXT:    str z4, [x8, #-12, mul vl] // 16-byte Folded Spill
+; CHECK-NEXT:    fcsel h2, h4, h2, vs
+; CHECK-NEXT:    fcmp h3, h3
+; CHECK-NEXT:    mov z4.h, z1.h[11]
+; CHECK-NEXT:    str h2, [sp, #174] // 2-byte Spill
+; CHECK-NEXT:    mov z2.h, z0.h[10]
+; CHECK-NEXT:    fcsel h3, h4, h3, vs
+; CHECK-NEXT:    str z4, [x8, #-11, mul vl] // 16-byte Folded Spill
+; CHECK-NEXT:    mov z4.h, z1.h[10]
+; CHECK-NEXT:    str h3, [sp, #164] // 2-byte Spill
+; CHECK-NEXT:    fcmp h2, h2
+; CHECK-NEXT:    mov z3.h, z0.h[9]
+; CHECK-NEXT:    str z4, [x8, #-10, mul vl] // 16-byte Folded Spill
+; CHECK-NEXT:    fcsel h2, h4, h2, vs
+; CHECK-NEXT:    fcmp h3, h3
+; CHECK-NEXT:    mov z4.h, z1.h[9]
+; CHECK-NEXT:    str h2, [sp, #154] // 2-byte Spill
+; CHECK-NEXT:    mov z2.h, z0.h[8]
+; CHECK-NEXT:    fcsel h3, h4, h3, vs
+; CHECK-NEXT:    str z4, [x8, #-9, mul vl] // 16-byte Folded Spill
+; CHECK-NEXT:    mov z4.h, z1.h[8]
+; CHECK-NEXT:    str h3, [sp, #144] // 2-byte Spill
+; CHECK-NEXT:    fcmp h2, h2
+; CHECK-NEXT:    mov z3.h, z0.h[7]
+; CHECK-NEXT:    str z4, [x8, #-8, mul vl] // 16-byte Folded Spill
+; CHECK-NEXT:    fcsel h2, h4, h2, vs
+; CHECK-NEXT:    fcmp h3, h3
+; CHECK-NEXT:    mov z4.h, z1.h[7]
+; CHECK-NEXT:    str h2, [sp, #136] // 2-byte Spill
+; CHECK-NEXT:    mov z2.h, z0.h[6]
+; CHECK-NEXT:    fcsel h3, h4, h3, vs
+; CHECK-NEXT:    str z4, [x8, #-7, mul vl] // 16-byte Folded Spill
+; CHECK-NEXT:    mov z4.h, z1.h[6]
+; CHECK-NEXT:    str h3, [sp, #130] // 2-byte Spill
+; CHECK-NEXT:    fcmp h2, h2
+; CHECK-NEXT:    mov z3.h, z0.h[5]
+; CHECK-NEXT:    str z4, [x8, #-6, mul vl] // 16-byte Folded Spill
+; CHECK-NEXT:    fcsel h2, h4, h2, vs
+; CHECK-NEXT:    fcmp h3, h3
+; CHECK-NEXT:    mov z4.h, z1.h[5]
+; CHECK-NEXT:    str h2, [sp, #128] // 2-byte Spill
+; CHECK-NEXT:    mov z2.h, z0.h[4]
+; CHECK-NEXT:    fcsel h3, h4, h3, vs
+; CHECK-NEXT:    str z4, [x8, #-5, mul vl] // 16-byte Folded Spill
+; CHECK-NEXT:    mov z4.h, z0.h[3]
+; CHECK-NEXT:    str h3, [sp, #126] // 2-byte Spill
+; CHECK-NEXT:    fcmp h2, h2
+; CHECK-NEXT:    mov z3.h, z1.h[4]
+; CHECK-NEXT:    str z3, [x8, #-3, mul vl] // 16-byte Folded Spill
+; CHECK-NEXT:    fcsel h2, h3, h2, vs
+; CHECK-NEXT:    fcmp h4, h4
+; CHECK-NEXT:    mov z3.h, z1.h[3]
+; CHECK-NEXT:    str h2, [sp, #124] // 2-byte Spill
+; CHECK-NEXT:    mov z2.h, z0.h[2]
+; CHECK-NEXT:    mov z0.h, z0.h[1]
+; CHECK-NEXT:    str z3, [x8, #-4, mul vl] // 16-byte Folded Spill
+; CHECK-NEXT:    fcsel h3, h3, h4, vs
+; CHECK-NEXT:    ldr h4, [sp, #262] // 2-byte Reload
+; CHECK-NEXT:    fcmp h2, h2
+; CHECK-NEXT:    str h3, [sp, #122] // 2-byte Spill
+; CHECK-NEXT:    mov z3.h, z1.h[2]
+; CHECK-NEXT:    fcsel h2, h3, h2, vs
+; CHECK-NEXT:    fcmp h0, h0
+; CHECK-NEXT:    str z3, [x8, #-2, mul vl] // 16-byte Folded Spill
+; CHECK-NEXT:    ldr h3, [sp, #358] // 2-byte Reload
+; CHECK-NEXT:    str h2, [sp, #120] // 2-byte Spill
+; CHECK-NEXT:    mov z2.h, z1.h[1]
+; CHECK-NEXT:    fcsel h0, h2, h0, vs
+; CHECK-NEXT:    fcmp h1, h1
+; CHECK-NEXT:    str z2, [x8, #-1, mul vl] // 16-byte Folded Spill
+; CHECK-NEXT:    ldr h2, [sp, #360] // 2-byte Reload
+; CHECK-NEXT:    str h0, [sp, #118] // 2-byte Spill
+; CHECK-NEXT:    fcsel h0, h4, h1, vs
+; CHECK-NEXT:    ldr h1, [sp, #396] // 2-byte Reload
+; CHECK-NEXT:    fcmp h4, h0
+; CHECK-NEXT:    fcsel h0, h4, h0, lt
+; CHECK-NEXT:    fcmp h5, h5
+; CHECK-NEXT:    str h0, [sp, #116] // 2-byte Spill
+; CHECK-NEXT:    fcsel h0, h1, h5, vs
+; CHECK-NEXT:    ldr h5, [sp, #356] // 2-byte Reload
+; CHECK-NEXT:    fcmp h1, h0
+; CHECK-NEXT:    fcsel h0, h1, h0, lt
+; CHECK-NEXT:    ldr h1, [sp, #510] // 2-byte Reload
+; CHECK-NEXT:    str h0, [sp, #114] // 2-byte Spill
+; CHECK-NEXT:    ldr h0, [sp, #282] // 2-byte Reload
+; CHECK-NEXT:    fcmp h0, h0
+; CHECK-NEXT:    fcsel h0, h1, h0, vs
+; CHECK-NEXT:    fcmp h1, h0
+; CHECK-NEXT:    fcsel h0, h1, h0, lt
+; CHECK-NEXT:    ldr h1, [sp, #508] // 2-byte Reload
+; CHECK-NEXT:    str h0, [sp, #282] // 2-byte Spill
+; CHECK-NEXT:    ldr h0, [sp, #280] // 2-byte Reload
+; CHECK-NEXT:    fcmp h0, h0
+; CHECK-NEXT:    fcsel h0, h1, h0, vs
+; CHECK-NEXT:    fcmp h1, h0
+; CHECK-NEXT:    fcsel h0, h1, h0, lt
+; CHECK-NEXT:    ldr h1, [sp, #504] // 2-byte Reload
+; CHECK-NEXT:    str h0, [sp, #280] // 2-byte Spill
+; CHECK-NEXT:    ldr h0, [sp, #276] // 2-byte Reload
+; CHECK-NEXT:    fcmp h0, h0
+; CHECK-NEXT:    fcsel h0, h1, h0, vs
+; CHECK-NEXT:    fcmp h1, h0
+; CHECK-NEXT:    fcsel h0, h1, h0, lt
+; CHECK-NEXT:    ldr h1, [sp, #506] // 2-byte Reload
+; CHECK-NEXT:    str h0, [sp, #276] // 2-byte Spill
+; CHECK-NEXT:    ldr h0, [sp, #278] // 2-byte Reload
+; CHECK-NEXT:    fcmp h0, h0
+; CHECK-NEXT:    fcsel h0, h1, h0, vs
+; CHECK-NEXT:    fcmp h1, h0
+; CHECK-NEXT:    fcsel h0, h1, h0, lt
+; CHECK-NEXT:    ldr h1, [sp, #496] // 2-byte Reload
+; CHECK-NEXT:    str h0, [sp, #278] // 2-byte Spill
+; CHECK-NEXT:    ldr h0, [sp, #272] // 2-byte Reload
+; CHECK-NEXT:    fcmp h0, h0
+; CHECK-NEXT:    fcsel h0, h5, h0, vs
+; CHECK-NEXT:    fcmp h5, h0
+; CHECK-NEXT:    fcsel h0, h5, h0, lt
+; CHECK-NEXT:    str h0, [sp, #272] // 2-byte Spill
+; CHECK-NEXT:    ldr h0, [sp, #274] // 2-byte Reload
+; CHECK-NEXT:    fcmp h0, h0
+; CHECK-NEXT:    fcsel h0, h1, h0, vs
+; CHECK-NEXT:    fcmp h1, h0
+; CHECK-NEXT:    fcsel h0, h1, h0, lt
+; CHECK-NEXT:    fcmp h17, h17
+; CHECK-NEXT:    ldr h1, [sp, #502] // 2-byte Reload
+; CHECK-NEXT:    str h0, [sp, #274] // 2-byte Spill
+; CHECK-NEXT:    fcsel h0, h2, h17, vs
+; CHECK-NEXT:    fmov s17, s2
+; CHECK-NEXT:    fcmp h2, h0
+; CHECK-NEXT:    fcsel h0, h2, h0, lt
+; CHECK-NEXT:    fcmp h18, h18
+; CHECK-NEXT:    ldr h2, [sp, #504] // 2-byte Reload
+; CHECK-NEXT:    str h0, [sp, #112] // 2-byte Spill
+; CHECK-NEXT:    fcsel h0, h3, h18, vs
+; CHECK-NEXT:    ldr h18, [sp, #134] // 2-byte Reload
+; CHECK-NEXT:    fcmp h3, h0
+; CHECK-NEXT:    fcsel h0, h3, h0, lt
+; CHECK-NEXT:    fcmp h25, h25
+; CHECK-NEXT:    str h0, [sp, #110] // 2-byte Spill
+; CHECK-NEXT:    fcsel h0, h1, h25, vs
+; CHECK-NEXT:    ldr h25, [sp, #180] // 2-byte Reload
+; CHECK-NEXT:    fcmp h1, h0
+; CHECK-NEXT:    fcsel h0, h1, h0, lt
+; CHECK-NEXT:    fcmp h20, h20
+; CHECK-NEXT:    ldr h1, [sp, #500] // 2-byte Reload
+; CHECK-NEXT:    str h0, [sp, #108] // 2-byte Spill
+; CHECK-NEXT:    fcsel h0, h1, h20, vs
+; CHECK-NEXT:    ldr h20, [sp, #142] // 2-byte Reload
+; CHECK-NEXT:    fcmp h1, h0
+; CHECK-NEXT:    fcsel h0, h1, h0, lt
+; CHECK-NEXT:    fcmp h30, h30
+; CHECK-NEXT:    ldr h1, [sp, #498] // 2-byte Reload
+; CHECK-NEXT:    str h0, [sp, #106] // 2-byte Spill
+; CHECK-NEXT:    fcsel h0, h1, h30, vs
+; CHECK-NEXT:    ldr h30, [sp, #216] // 2-byte Reload
+; CHECK-NEXT:    fcmp h1, h0
+; CHECK-NEXT:    fcsel h0, h1, h0, lt
+; CHECK-NEXT:    ldr h1, [sp, #494] // 2-byte Reload
+; CHECK-NEXT:    str h0, [sp, #104] // 2-byte Spill
+; CHECK-NEXT:    ldr h0, [sp, #268] // 2-byte Reload
+; CHECK-NEXT:    fcmp h0, h0
+; CHECK-NEXT:    fcsel h0, h1, h0, vs
+; CHECK-NEXT:    fcmp h1, h0
+; CHECK-NEXT:    fcsel h0, h1, h0, lt
+; CHECK-NEXT:    fcmp h8, h8
+; CHECK-NEXT:    ldr h1, [sp, #492] // 2-byte Reload
+; CHECK-NEXT:    str h0, [sp, #268] // 2-byte Spill
+; CHECK-NEXT:    fcsel h0, h1, h8, vs
+; CHECK-NEXT:    ldr h8, [sp, #224] // 2-byte Reload
+; CHECK-NEXT:    fcmp h1, h0
+; CHECK-NEXT:    fcsel h0, h1, h0, lt
+; CHECK-NEXT:    ldr h1, [sp, #490] // 2-byte Reload
+; CHECK-NEXT:    str h0, [sp, #102] // 2-byte Spill
+; CHECK-NEXT:    ldr h0, [sp, #264] // 2-byte Reload
+; CHECK-NEXT:    fcmp h0, h0
+; CHECK-NEXT:    fcsel h0, h1, h0, vs
+; CHECK-NEXT:    fcmp h1, h0
+; CHECK-NEXT:    fcsel h0, h1, h0, lt
+; CHECK-NEXT:    fcmp h9, h9
+; CHECK-NEXT:    ldr h1, [sp, #488] // 2-byte Reload
+; CHECK-NEXT:    str h0, [sp, #264] // 2-byte Spill
+; CHECK-NEXT:    fcsel h0, h1, h9, vs
+; CHECK-NEXT:    ldr h9, [sp, #228] // 2-byte Reload
+; CHECK-NEXT:    fcmp h1, h0
+; CHECK-NEXT:    fcsel h0, h1, h0, lt
+; CHECK-NEXT:    ldr h1, [sp, #486] // 2-byte Reload
+; CHECK-NEXT:    str h0, [sp, #100] // 2-byte Spill
+; CHECK-NEXT:    ldr h0, [sp, #260] // 2-byte Reload
+; CHECK-NEXT:    fcmp h0, h0
+; CHECK-NEXT:    fcsel h0, h1, h0, vs
+; CHECK-NEXT:    fcmp h1, h0
+; CHECK-NEXT:    fcsel h0, h1, h0, lt
+; CHECK-NEXT:    ldr h1, [sp, #484] // 2-byte Reload
+; CHECK-NEXT:    str h0, [sp, #260] // 2-byte Spill
+; CHECK-NEXT:    ldr h0, [sp, #354] // 2-byte Reload
+; CHECK-NEXT:    fcmp h0, h0
+; CHECK-NEXT:    fcsel h0, h1, h0, vs
+; CHECK-NEXT:    fcmp h1, h0
+; CHECK-NEXT:    fcsel h0, h1, h0, lt
+; CHECK-NEXT:    ldr h1, [sp, #482] // 2-byte Reload
+; CHECK-NEXT:    str h0, [sp, #354] // 2-byte Spill
+; CHECK-NEXT:    ldr h0, [sp, #352] // 2-byte Reload
+; CHECK-NEXT:    fcmp h0, h0
+; CHECK-NEXT:    fcsel h0, h1, h0, vs
+; CHECK-NEXT:    fcmp h1, h0
+; CHECK-NEXT:    fcsel h0, h1, h0, lt
+; CHECK-NEXT:    ldr h1, [sp, #480] // 2-byte Reload
+; CHECK-NEXT:    str h0, [sp, #352] // 2-byte Spill
+; CHECK-NEXT:    ldr h0, [sp, #256] // 2-byte Reload
+; CHECK-NEXT:    fcmp h0, h0
+; CHECK-NEXT:    fcsel h0, h1, h0, vs
+; CHECK-NEXT:    fcmp h1, h0
+; CHECK-NEXT:    fcsel h0, h1, h0, lt
+; CHECK-NEXT:    ldr h1, [sp, #478] // 2-byte Reload
+; CHECK-NEXT:    str h0, [sp, #256] // 2-byte Spill
+; CHECK-NEXT:    ldr h0, [sp, #350] // 2-byte Reload
+; CHECK-NEXT:    fcmp h0, h0
+; CHECK-NEXT:    fcsel h0, h1, h0, vs
+; CHECK-NEXT:    fcmp h1, h0
+; CHECK-NEXT:    fcsel h0, h1, h0, lt
+; CHECK-NEXT:    ldr h1, [sp, #476] // 2-byte Reload
+; CHECK-NEXT:    str h0, [sp, #350] // 2-byte Spill
+; CHECK-NEXT:    ldr h0, [sp, #252] // 2-byte Reload
+; CHECK-NEXT:    fcmp h0, h0
+; CHECK-NEXT:    fcsel h0, h1, h0, vs
+; CHECK-NEXT:    fcmp h1, h0
+; CHECK-NEXT:    fcsel h0, h1, h0, lt
+; CHECK-NEXT:    ldr h1, [sp, #474] // 2-byte Reload
+; CHECK-NEXT:    str h0, [sp, #252] // 2-byte Spill
+; CHECK-NEXT:    ldr h0, [sp, #348] // 2-byte Reload
+; CHECK-NEXT:    fcmp h0, h0
+; CHECK-NEXT:    fcsel h0, h1, h0, vs
+; CHECK-NEXT:    fcmp h1, h0
+; CHECK-NEXT:    fcsel h0, h1, h0, lt
+; CHECK-NEXT:    fcmp h14, h14
+; CHECK-NEXT:    ldr h1, [sp, #472] // 2-byte Reload
+; CHECK-NEXT:    str h0, [sp, #348] // 2-byte Spill
+; CHECK-NEXT:    fcsel h0, h1, h14, vs
+; CHECK-NEXT:    ldr h14, [sp, #250] // 2-byte Reload
+; CHECK-NEXT:    fcmp h1, h0
+; CHECK-NEXT:    fcsel h0, h1, h0, lt
+; CHECK-NEXT:    fcmp h11, h11
+; CHECK-NEXT:    ldr h1, [sp, #470] // 2-byte Reload
+; CHECK-NEXT:    str h0, [sp, #98] // 2-byte Spill
+; CHECK-NEXT:    fcsel h0, h1, h11, vs
+; CHECK-NEXT:    ldr h11, [sp, #238] // 2-byte Reload
+; CHECK-NEXT:    fcmp h1, h0
+; CHECK-NEXT:    fcsel h0, h1, h0, lt
+; CHECK-NEXT:    ldr h1, [sp, #468] // 2-byte Reload
+; CHECK-NEXT:    str h0, [sp, #96] // 2-byte Spill
+; CHECK-NEXT:    ldr h0, [sp, #346] // 2-byte Reload
+; CHECK-NEXT:    fcmp h0, h0
+; CHECK-NEXT:    fcsel h0, h1, h0, vs
+; CHECK-NEXT:    fcmp h1, h0
+; CHECK-NEXT:    fcsel h0, h1, h0, lt
+; CHECK-NEXT:    fcmp h10, h10
+; CHECK-NEXT:    ldr h1, [sp, #466] // 2-byte Reload
+; CHECK-NEXT:    str h0, [sp, #346] // 2-byte Spill
+; CHECK-NEXT:    fcsel h0, h1, h10, vs
+; CHECK-NEXT:    ldr h10, [sp, #234] // 2-byte Reload
+; CHECK-NEXT:    fcmp h1, h0
+; CHECK-NEXT:    fcsel h0, h1, h0, lt
+; CHECK-NEXT:    ldr h1, [sp, #464] // 2-byte Reload
+; CHECK-NEXT:    str h0, [sp, #94] // 2-byte Spill
+; CHECK-NEXT:    ldr h0, [sp, #344] // 2-byte Reload
+; CHECK-NEXT:    fcmp h0, h0
+; CHECK-NEXT:    fcsel h0, h1, h0, vs
+; CHECK-NEXT:    fcmp h1, h0
+; CHECK-NEXT:    fcsel h0, h1, h0, lt
+; CHECK-NEXT:    fcmp h28, h28
+; CHECK-NEXT:    ldr h1, [sp, #462] // 2-byte Reload
+; CHECK-NEXT:    str h0, [sp, #344] // 2-byte Spill
+; CHECK-NEXT:    fcsel h0, h1, h28, vs
+; CHECK-NEXT:    ldr h28, [sp, #202] // 2-byte Reload
+; CHECK-NEXT:    fcmp h1, h0
+; CHECK-NEXT:    fcsel h0, h1, h0, lt
+; CHECK-NEXT:    ldr h1, [sp, #460] // 2-byte Reload
+; CHECK-NEXT:    str h0, [sp, #92] // 2-byte Spill
+; CHECK-NEXT:    ldr h0, [sp, #230] // 2-byte Reload
+; CHECK-NEXT:    fcmp h0, h0
+; CHECK-NEXT:    fcsel h0, h1, h0, vs
+; CHECK-NEXT:    fcmp h1, h0
+; CHECK-NEXT:    fcsel h0, h1, h0, lt
+; CHECK-NEXT:    ldr h1, [sp, #458] // 2-byte Reload
+; CHECK-NEXT:    str h0, [sp, #230] // 2-byte Spill
+; CHECK-NEXT:    ldr h0, [sp, #342] // 2-byte Reload
+; CHECK-NEXT:    fcmp h0, h0
+; CHECK-NEXT:    fcsel h0, h1, h0, vs
+; CHECK-NEXT:    fcmp h1, h0
+; CHECK-NEXT:    fcsel h0, h1, h0, lt
+; CHECK-NEXT:    ldr h1, [sp, #456] // 2-byte Reload
+; CHECK-NEXT:    str h0, [sp, #342] // 2-byte Spill
+; CHECK-NEXT:    ldr h0, [sp, #340] // 2-byte Reload
+; CHECK-NEXT:    fcmp h0, h0
+; CHECK-NEXT:    fcsel h0, h1, h0, vs
+; CHECK-NEXT:    fcmp h1, h0
+; CHECK-NEXT:    fcsel h0, h1, h0, lt
+; CHECK-NEXT:    ldr h1, [sp, #454] // 2-byte Reload
+; CHECK-NEXT:    str h0, [sp, #340] // 2-byte Spill
+; CHECK-NEXT:    ldr h0, [sp, #338] // 2-byte Reload
+; CHECK-NEXT:    fcmp h0, h0
+; CHECK-NEXT:    fcsel h0, h1, h0, vs
+; CHECK-NEXT:    fcmp h1, h0
+; CHECK-NEXT:    fcsel h0, h1, h0, lt
+; CHECK-NEXT:    ldr h1, [sp, #452] // 2-byte Reload
+; CHECK-NEXT:    str h0, [sp, #338] // 2-byte Spill
+; CHECK-NEXT:    ldr h0, [sp, #336] // 2-byte Reload
+; CHECK-NEXT:    fcmp h0, h0
+; CHECK-NEXT:    fcsel h0, h1, h0, vs
+; CHECK-NEXT:    fcmp h1, h0
+; CHECK-NEXT:    fcsel h0, h1, h0, lt
+; CHECK-NEXT:    fcmp h13, h13
+; CHECK-NEXT:    ldr h1, [sp, #450] // 2-byte Reload
+; CHECK-NEXT:    str h0, [sp, #336] // 2-byte Spill
+; CHECK-NEXT:    fcsel h0, h1, h13, vs
+; CHECK-NEXT:    ldr h13, [sp, #246] // 2-byte Reload
+; CHECK-NEXT:    fcmp h1, h0
+; CHECK-NEXT:    fcsel h0, h1, h0, lt
+; CHECK-NEXT:    ldr h1, [sp, #448] // 2-byte Reload
+; CHECK-NEXT:    str h0, [sp, #90] // 2-byte Spill
+; CHECK-NEXT:    ldr h0, [sp, #334] // 2-byte Reload
+; CHECK-NEXT:    fcmp h0, h0
+; CHECK-NEXT:    fcsel h0, h1, h0, vs
+; CHECK-NEXT:    fcmp h1, h0
+; CHECK-NEXT:    fcsel h0, h1, h0, lt
+; CHECK-NEXT:    ldr h1, [sp, #446] // 2-byte Reload
+; CHECK-NEXT:    str h0, [sp, #334] // 2-byte Spill
+; CHECK-NEXT:    ldr h0, [sp, #332] // 2-byte Reload
+; CHECK-NEXT:    fcmp h0, h0
+; CHECK-NEXT:    fcsel h0, h1, h0, vs
+; CHECK-NEXT:    fcmp h1, h0
+; CHECK-NEXT:    fcsel h0, h1, h0, lt
+; CHECK-NEXT:    ldr h1, [sp, #444] // 2-byte Reload
+; CHECK-NEXT:    str h0, [sp, #332] // 2-byte Spill
+; CHECK-NEXT:    ldr h0, [sp, #330] // 2-byte Reload
+; CHECK-NEXT:    fcmp h0, h0
+; CHECK-NEXT:    fcsel h0, h1, h0, vs
+; CHECK-NEXT:    fcmp h1, h0
+; CHECK-NEXT:    fcsel h0, h1, h0, lt
+; CHECK-NEXT:    fcmp h15, h15
+; CHECK-NEXT:    ldr h1, [sp, #442] // 2-byte Reload
+; CHECK-NEXT:    str h0, [sp, #330] // 2-byte Spill
+; CHECK-NEXT:    fcsel h0, h1, h15, vs
+; CHECK-NEXT:    ldr h15, [sp, #366] // 2-byte Reload
+; CHECK-NEXT:    fcmp h1, h0
+; CHECK-NEXT:    fcsel h0, h1, h0, lt
+; CHECK-NEXT:    ldr h1, [sp, #440] // 2-byte Reload
+; CHECK-NEXT:    str h0, [sp, #88] // 2-byte Spill
+; CHECK-NEXT:    ldr h0, [sp, #328] // 2-byte Reload
+; CHECK-NEXT:    fcmp h0, h0
+; CHECK-NEXT:    fcsel h0, h1, h0, vs
+; CHECK-NEXT:    fcmp h1, h0
+; CHECK-NEXT:    fcsel h0, h1, h0, lt
+; CHECK-NEXT:    ldr h1, [sp, #438] // 2-byte Reload
+; CHECK-NEXT:    str h0, [sp, #328] // 2-byte Spill
+; CHECK-NEXT:    ldr h0, [sp, #326] // 2-byte Reload
+; CHECK-NEXT:    fcmp h0, h0
+; CHECK-NEXT:    fcsel h0, h1, h0, vs
+; CHECK-NEXT:    fcmp h1, h0
+; CHECK-NEXT:    fcsel h0, h1, h0, lt
+; CHECK-NEXT:    ldr h1, [sp, #436] // 2-byte Reload
+; CHECK-NEXT:    str h0, [sp, #326] // 2-byte Spill
+; CHECK-NEXT:    ldr h0, [sp, #324] // 2-byte Reload
+; CHECK-NEXT:    fcmp h0, h0
+; CHECK-NEXT:    fcsel h0, h1, h0, vs
+; CHECK-NEXT:    fcmp h1, h0
+; CHECK-NEXT:    fcsel h0, h1, h0, lt
+; CHECK-NEXT:    ldr h1, [sp, #434] // 2-byte Reload
+; CHECK-NEXT:    str h0, [sp, #324] // 2-byte Spill
+; CHECK-NEXT:    ldr h0, [sp, #322] // 2-byte Reload
+; CHECK-NEXT:    fcmp h0, h0
+; CHECK-NEXT:    fcsel h0, h1, h0, vs
+; CHECK-NEXT:    fcmp h1, h0
+; CHECK-NEXT:    fcsel h0, h1, h0, lt
+; CHECK-NEXT:    ldr h1, [sp, #432] // 2-byte Reload
+; CHECK-NEXT:    str h0, [sp, #322] // 2-byte Spill
+; CHECK-NEXT:    ldr h0, [sp, #320] // 2-byte Reload
+; CHECK-NEXT:    fcmp h0, h0
+; CHECK-NEXT:    fcsel h0, h1, h0, vs
+; CHECK-NEXT:    fcmp h1, h0
+; CHECK-NEXT:    fcsel h0, h1, h0, lt
+; CHECK-NEXT:    ldr h1, [sp, #430] // 2-byte Reload
+; CHECK-NEXT:    str h0, [sp, #320] // 2-byte Spill
+; CHECK-NEXT:    ldr h0, [sp, #318] // 2-byte Reload
+; CHECK-NEXT:    fcmp h0, h0
+; CHECK-NEXT:    fcsel h0, h1, h0, vs
+; CHECK-NEXT:    fcmp h1, h0
+; CHECK-NEXT:    fcsel h0, h1, h0, lt
+; CHECK-NEXT:    ldr h1, [sp, #428] // 2-byte Reload
+; CHECK-NEXT:    str h0, [sp, #318] // 2-byte Spill
+; CHECK-NEXT:    ldr h0, [sp, #316] // 2-byte Reload
+; CHECK-NEXT:    fcmp h0, h0
+; CHECK-NEXT:    fcsel h0, h1, h0, vs
+; CHECK-NEXT:    fcmp h1, h0
+; CHECK-NEXT:    fcsel h0, h1, h0, lt
+; CHECK-NEXT:    ldr h1, [sp, #426] // 2-byte Reload
+; CHECK-NEXT:    str h0, [sp, #316] // 2-byte Spill
+; CHECK-NEXT:    ldr h0, [sp, #314] // 2-byte Reload
+; CHECK-NEXT:    fcmp h0, h0
+; CHECK-NEXT:    fcsel h0, h1, h0, vs
+; CHECK-NEXT:    fcmp h1, h0
+; CHECK-NEXT:    fcsel h0, h1, h0, lt
+; CHECK-NEXT:    ldr h1, [sp, #424] // 2-byte Reload
+; CHECK-NEXT:    str h0, [sp, #314] // 2-byte Spill
+; CHECK-NEXT:    ldr h0, [sp, #312] // 2-byte Reload
+; CHECK-NEXT:    fcmp h0, h0
+; CHECK-NEXT:    fcsel h0, h1, h0, vs
+; CHECK-NEXT:    fcmp h1, h0
+; CHECK-NEXT:    fcsel h0, h1, h0, lt
+; CHECK-NEXT:    ldr h1, [sp, #422] // 2-byte Reload
+; CHECK-NEXT:    str h0, [sp, #312] // 2-byte Spill
+; CHECK-NEXT:    ldr h0, [sp, #310] // 2-byte Reload
+; CHECK-NEXT:    fcmp h0, h0
+; CHECK-NEXT:    fcsel h0, h1, h0, vs
+; CHECK-NEXT:    fcmp h1, h0
+; CHECK-NEXT:    fcsel h0, h1, h0, lt
+; CHECK-NEXT:    ldr h1, [sp, #420] // 2-byte Reload
+; CHECK-NEXT:    str h0, [sp, #310] // 2-byte Spill
+; CHECK-NEXT:    ldr h0, [sp, #308] // 2-byte Reload
+; CHECK-NEXT:    fcmp h0, h0
+; CHECK-NEXT:    fcsel h0, h1, h0, vs
+; CHECK-NEXT:    fcmp h1, h0
+; CHECK-NEXT:    fcsel h0, h1, h0, lt
+; CHECK-NEXT:    ldr h1, [sp, #418] // 2-byte Reload
+; CHECK-NEXT:    str h0, [sp, #308] // 2-byte Spill
+; CHECK-NEXT:    ldr h0, [sp, #306] // 2-byte Reload
+; CHECK-NEXT:    fcmp h0, h0
+; CHECK-NEXT:    fcsel h0, h1, h0, vs
+; CHECK-NEXT:    fcmp h1, h0
+; CHECK-NEXT:    fcsel h0, h1, h0, lt
+; CHECK-NEXT:    ldr h1, [sp, #416] // 2-byte Reload
+; CHECK-NEXT:    str h0, [sp, #306] // 2-byte Spill
+; CHECK-NEXT:    ldr h0, [sp, #304] // 2-byte Reload
+; CHECK-NEXT:    fcmp h0, h0
+; CHECK-NEXT:    fcsel h0, h1, h0, vs
+; CHECK-NEXT:    fcmp h1, h0
+; CHECK-NEXT:    fcsel h0, h1, h0, lt
+; CHECK-NEXT:    ldr h1, [sp, #414] // 2-byte Reload
+; CHECK-NEXT:    str h0, [sp, #304] // 2-byte Spill
+; CHECK-NEXT:    ldr h0, [sp, #302] // 2-byte Reload
+; CHECK-NEXT:    fcmp h0, h0
+; CHECK-NEXT:    fcsel h0, h1, h0, vs
+; CHECK-NEXT:    fcmp h1, h0
+; CHECK-NEXT:    fcsel h0, h1, h0, lt
+; CHECK-NEXT:    ldr h1, [sp, #412] // 2-byte Reload
+; CHECK-NEXT:    str h0, [sp, #302] // 2-byte Spill
+; CHECK-NEXT:    ldr h0, [sp, #300] // 2-byte Reload
+; CHECK-NEXT:    fcmp h0, h0
+; CHECK-NEXT:    fcsel h0, h1, h0, vs
+; CHECK-NEXT:    fcmp h1, h0
+; CHECK-NEXT:    fcsel h0, h1, h0, lt
+; CHECK-NEXT:    ldr h1, [sp, #410] // 2-byte Reload
+; CHECK-NEXT:    str h0, [sp, #300] // 2-byte Spill
+; CHECK-NEXT:    ldr h0, [sp, #298] // 2-byte Reload
+; CHECK-NEXT:    fcmp h0, h0
+; CHECK-NEXT:    fcsel h0, h1, h0, vs
+; CHECK-NEXT:    fcmp h1, h0
+; CHECK-NEXT:    fcsel h0, h1, h0, lt
+; CHECK-NEXT:    ldr h1, [sp, #408] // 2-byte Reload
+; CHECK-NEXT:    str h0, [sp, #298] // 2-byte Spill
+; CHECK-NEXT:    ldr h0, [sp, #296] // 2-byte Reload
+; CHECK-NEXT:    fcmp h0, h0
+; CHECK-NEXT:    fcsel h0, h1, h0, vs
+; CHECK-NEXT:    fcmp h1, h0
+; CHECK-NEXT:    fcsel h0, h1, h0, lt
+; CHECK-NEXT:    ldr h1, [sp, #406] // 2-byte Reload
+; CHECK-NEXT:    str h0, [sp, #296] // 2-byte Spill
+; CHECK-NEXT:    ldr h0, [sp, #294] // 2-byte Reload
+; CHECK-NEXT:    fcmp h0, h0
+; CHECK-NEXT:    fcsel h0, h1, h0, vs
+; CHECK-NEXT:    fcmp h1, h0
+; CHECK-NEXT:    fcsel h0, h1, h0, lt
+; CHECK-NEXT:    ldr h1, [sp, #404] // 2-byte Reload
+; CHECK-NEXT:    str h0, [sp, #294] // 2-byte Spill
+; CHECK-NEXT:    ldr h0, [sp, #292] // 2-byte Reload
+; CHECK-NEXT:    fcmp h0, h0
+; CHECK-NEXT:    fcsel h0, h1, h0, vs
+; CHECK-NEXT:    fcmp h1, h0
+; CHECK-NEXT:    fcsel h0, h1, h0, lt
+; CHECK-NEXT:    ldr h1, [sp, #402] // 2-byte Reload
+; CHECK-NEXT:    str h0, [sp, #292] // 2-byte Spill
+; CHECK-NEXT:    ldr h0, [sp, #290] // 2-byte Reload
+; CHECK-NEXT:    fcmp h0, h0
+; CHECK-NEXT:    fcsel h0, h1, h0, vs
+; CHECK-NEXT:    fcmp h1, h0
+; CHECK-NEXT:    fcsel h0, h1, h0, lt
+; CHECK-NEXT:    ldr h1, [sp, #400] // 2-byte Reload
+; CHECK-NEXT:    str h0, [sp, #290] // 2-byte Spill
+; CHECK-NEXT:    ldr h0, [sp, #288] // 2-byte Reload
+; CHECK-NEXT:    fcmp h0, h0
+; CHECK-NEXT:    fcsel h0, h1, h0, vs
+; CHECK-NEXT:    fcmp h1, h0
+; CHECK-NEXT:    fcsel h0, h1, h0, lt
+; CHECK-NEXT:    ldr h1, [sp, #398] // 2-byte Reload
+; CHECK-NEXT:    str h0, [sp, #288] // 2-byte Spill
+; CHECK-NEXT:    ldr h0, [sp, #286] // 2-byte Reload
+; CHECK-NEXT:    fcmp h0, h0
+; CHECK-NEXT:    fcsel h0, h1, h0, vs
+; CHECK-NEXT:    fcmp h1, h0
+; CHECK-NEXT:    fcsel h0, h1, h0, lt
+; CHECK-NEXT:    ldr h1, [sp, #394] // 2-byte Reload
+; CHECK-NEXT:    str h0, [sp, #286] // 2-byte Spill
+; CHECK-NEXT:    ldr h0, [sp, #284] // 2-byte Reload
+; CHECK-NEXT:    fcmp h0, h0
+; CHECK-NEXT:    fcsel h0, h1, h0, vs
+; CHECK-NEXT:    fcmp h1, h0
+; CHECK-NEXT:    fcsel h0, h1, h0, lt
+; CHECK-NEXT:    fcmp h6, h6
+; CHECK-NEXT:    ldr h1, [sp, #392] // 2-byte Reload
+; CHECK-NEXT:    str h0, [sp, #284] // 2-byte Spill
+; CHECK-NEXT:    fcsel h0, h1, h6, vs
+; CHECK-NEXT:    ldr h6, [sp, #152] // 2-byte Reload
+; CHECK-NEXT:    fcmp h1, h0
+; CHECK-NEXT:    fcsel h0, h1, h0, lt
+; CHECK-NEXT:    fcmp h7, h7
+; CHECK-NEXT:    ldr h1, [sp, #390] // 2-byte Reload
+; CHECK-NEXT:    str h0, [sp, #86] // 2-byte Spill
+; CHECK-NEXT:    fcsel h0, h1, h7, vs
+; CHECK-NEXT:    ldr h7, [sp, #146] // 2-byte Reload
+; CHECK-NEXT:    fcmp h1, h0
+; CHECK-NEXT:    fcsel h0, h1, h0, lt
+; CHECK-NEXT:    fcmp h16, h16
+; CHECK-NEXT:    ldr h1, [sp, #388] // 2-byte Reload
+; CHECK-NEXT:    str h0, [sp, #84] // 2-byte Spill
+; CHECK-NEXT:    fcsel h0, h1, h16, vs
+; CHECK-NEXT:    ldr h16, [sp, #140] // 2-byte Reload
+; CHECK-NEXT:    fcmp h1, h0
+; CHECK-NEXT:    fcsel h0, h1, h0, lt
+; CHECK-NEXT:    fcmp h19, h19
+; CHECK-NEXT:    ldr h1, [sp, #386] // 2-byte Reload
+; CHECK-NEXT:    str h0, [sp, #82] // 2-byte Spill
+; CHECK-NEXT:    fcsel h0, h1, h19, vs
+; CHECK-NEXT:    ldr h19, [sp, #138] // 2-byte Reload
+; CHECK-NEXT:    fcmp h1, h0
+; CHECK-NEXT:    fcsel h0, h1, h0, lt
+; CHECK-NEXT:    fcmp h21, h21
+; CHECK-NEXT:    ldr h1, [sp, #384] // 2-byte Reload
+; CHECK-NEXT:    str h0, [sp, #80] // 2-byte Spill
+; CHECK-NEXT:    fcsel h0, h1, h21, vs
+; CHECK-NEXT:    ldr h21, [sp, #150] // 2-byte Reload
+; CHECK-NEXT:    fcmp h1, h0
+; CHECK-NEXT:    fcsel h0, h1, h0, lt
+; CHECK-NEXT:    fcmp h22, h22
+; CHECK-NEXT:    ldr h1, [sp, #382] // 2-byte Reload
+; CHECK-NEXT:    str h0, [sp, #78] // 2-byte Spill
+; CHECK-NEXT:    fcsel h0, h1, h22, vs
+; CHECK-NEXT:    ldr h22, [sp, #158] // 2-byte Reload
+; CHECK-NEXT:    fcmp h1, h0
+; CHECK-NEXT:    fcsel h0, h1, h0, lt
+; CHECK-NEXT:    fcmp h29, h29
+; CHECK-NEXT:    ldr h1, [sp, #380] // 2-byte Reload
+; CHECK-NEXT:    str h0, [sp, #76] // 2-byte Spill
+; CHECK-NEXT:    fcsel h0, h1, h29, vs
+; CHECK-NEXT:    ldr h29, [sp, #210] // 2-byte Reload
+; CHECK-NEXT:    fcmp h1, h0
+; CHECK-NEXT:    fcsel h0, h1, h0, lt
+; CHECK-NEXT:    ldr h1, [sp, #378] // 2-byte Reload
+; CHECK-NEXT:    str h0, [sp, #74] // 2-byte Spill
+; CHECK-NEXT:    ldr h0, [sp, #270] // 2-byte Reload
+; CHECK-NEXT:    fcmp h0, h0
+; CHECK-NEXT:    fcsel h0, h1, h0, vs
+; CHECK-NEXT:    fcmp h1, h0
+; CHECK-NEXT:    fcsel h0, h1, h0, lt
+; CHECK-NEXT:    ldr h1, [sp, #376] // 2-byte Reload
+; CHECK-NEXT:    str h0, [sp, #270] // 2-byte Spill
+; CHECK-NEXT:    ldr h0, [sp, #266] // 2-byte Reload
+; CHECK-NEXT:    fcmp h0, h0
+; CHECK-NEXT:    fcsel h0, h1, h0, vs
+; CHECK-NEXT:    fcmp h1, h0
+; CHECK-NEXT:    fcsel h0, h1, h0, lt
+; CHECK-NEXT:    fcmp h23, h23
+; CHECK-NEXT:    ldr h1, [sp, #374] // 2-byte Reload
+; CHECK-NEXT:    str h0, [sp, #266] // 2-byte Spill
+; CHECK-NEXT:    fcsel h0, h1, h23, vs
+; CHECK-NEXT:    ldr h23, [sp, #166] // 2-byte Reload
+; CHECK-NEXT:    fcmp h1, h0
+; CHECK-NEXT:    fcsel h0, h1, h0, lt
+; CHECK-NEXT:    fcmp h24, h24
+; CHECK-NEXT:    ldr h1, [sp, #372] // 2-byte Reload
+; CHECK-NEXT:    str h0, [sp, #72] // 2-byte Spill
+; CHECK-NEXT:    fcsel h0, h1, h24, vs
+; CHECK-NEXT:    ldr h24, [sp, #172] // 2-byte Reload
+; CHECK-NEXT:    fcmp h1, h0
+; CHECK-NEXT:    fcsel h0, h1, h0, lt
+; CHECK-NEXT:    ldr h1, [sp, #370] // 2-byte Reload
+; CHECK-NEXT:    str h0, [sp, #70] // 2-byte Spill
+; CHECK-NEXT:    ldr h0, [sp, #258] // 2-byte Reload
+; CHECK-NEXT:    fcmp h0, h0
+; CHECK-NEXT:    fcsel h0, h1, h0, vs
+; CHECK-NEXT:    fcmp h1, h0
+; CHECK-NEXT:    fcsel h0, h1, h0, lt
+; CHECK-NEXT:    fcmp h26, h26
+; CHECK-NEXT:    ldr h1, [sp, #368] // 2-byte Reload
+; CHECK-NEXT:    str h0, [sp, #258] // 2-byte Spill
+; CHECK-NEXT:    fcsel h0, h1, h26, vs
+; CHECK-NEXT:    ldr h26, [sp, #188] // 2-byte Reload
+; CHECK-NEXT:    fcmp h1, h0
+; CHECK-NEXT:    fcsel h0, h1, h0, lt
+; CHECK-NEXT:    ldr h1, [sp, #366] // 2-byte Reload
+; CHECK-NEXT:    str h0, [sp, #68] // 2-byte Spill
+; CHECK-NEXT:    ldr h0, [sp, #254] // 2-byte Reload
+; CHECK-NEXT:    fcmp h0, h0
+; CHECK-NEXT:    fcsel h0, h1, h0, vs
+; CHECK-NEXT:    fcmp h1, h0
+; CHECK-NEXT:    fcsel h0, h1, h0, lt
+; CHECK-NEXT:    fcmp h12, h12
+; CHECK-NEXT:    ldr h1, [sp, #364] // 2-byte Reload
+; CHECK-NEXT:    str h0, [sp, #254] // 2-byte Spill
+; CHECK-NEXT:    fcsel h0, h1, h12, vs
+; CHECK-NEXT:    ldr h12, [sp, #242] // 2-byte Reload
+; CHECK-NEXT:    fcmp h1, h0
+; CHECK-NEXT:    fcsel h0, h1, h0, lt
+; CHECK-NEXT:    fcmp h27, h27
+; CHECK-NEXT:    ldr h1, [sp, #362] // 2-byte Reload
+; CHECK-NEXT:    str h0, [sp, #66] // 2-byte Spill
+; CHECK-NEXT:    fcsel h0, h1, h27, vs
+; CHECK-NEXT:    ldr h27, [sp, #194] // 2-byte Reload
+; CHECK-NEXT:    fcmp h1, h0
+; CHECK-NEXT:    fcsel h0, h1, h0, lt
+; CHECK-NEXT:    ldr h1, [sp, #396] // 2-byte Reload
+; CHECK-NEXT:    str h0, [sp, #64] // 2-byte Spill
+; CHECK-NEXT:    ldr h0, [sp, #248] // 2-byte Reload
+; CHECK-NEXT:    fcmp h0, h0
+; CHECK-NEXT:    fcsel h0, h14, h0, vs
+; CHECK-NEXT:    fcmp h14, h0
+; CHECK-NEXT:    fcsel h0, h14, h0, lt
+; CHECK-NEXT:    str h0, [sp, #248] // 2-byte Spill
+; CHECK-NEXT:    ldr h0, [sp, #244] // 2-byte Reload
+; CHECK-NEXT:    fcmp h0, h0
+; CHECK-NEXT:    fcsel h0, h13, h0, vs
+; CHECK-NEXT:    fcmp h13, h0
+; CHECK-NEXT:    fcsel h0, h13, h0, lt
+; CHECK-NEXT:    str h0, [sp, #244] // 2-byte Spill
+; CHECK-NEXT:    ldr h0, [sp, #240] // 2-byte Reload
+; CHECK-NEXT:    fcmp h0, h0
+; CHECK-NEXT:    fcsel h0, h12, h0, vs
+; CHECK-NEXT:    fcmp h12, h0
+; CHECK-NEXT:    fcsel h0, h12, h0, lt
+; CHECK-NEXT:    str h0, [sp, #240] // 2-byte Spill
+; CHECK-NEXT:    ldr h0, [sp, #236] // 2-byte Reload
+; CHECK-NEXT:    fcmp h0, h0
+; CHECK-NEXT:    fcsel h0, h11, h0, vs
+; CHECK-NEXT:    fcmp h11, h0
+; CHECK-NEXT:    fcsel h0, h11, h0, lt
+; CHECK-NEXT:    str h0, [sp, #236] // 2-byte Spill
+; CHECK-NEXT:    ldr h0, [sp, #232] // 2-byte Reload
+; CHECK-NEXT:    fcmp h0, h0
+; CHECK-NEXT:    fcsel h0, h10, h0, vs
+; CHECK-NEXT:    fcmp h10, h0
+; CHECK-NEXT:    fcsel h0, h10, h0, lt
+; CHECK-NEXT:    str h0, [sp, #232] // 2-byte Spill
+; CHECK-NEXT:    ldr h0, [sp, #226] // 2-byte Reload
+; CHECK-NEXT:    fcmp h0, h0
+; CHECK-NEXT:    fcsel h0, h9, h0, vs
+; CHECK-NEXT:    fcmp h9, h0
+; CHECK-NEXT:    fcsel h0, h9, h0, lt
+; CHECK-NEXT:    fcmp h31, h31
+; CHECK-NEXT:    str h0, [sp, #226] // 2-byte Spill
+; CHECK-NEXT:    fcsel h0, h8, h31, vs
+; CHECK-NEXT:    ldr h31, [sp, #222] // 2-byte Reload
+; CHECK-NEXT:    fcmp h8, h0
+; CHECK-NEXT:    fcsel h0, h8, h0, lt
+; CHECK-NEXT:    str h0, [sp, #62] // 2-byte Spill
+; CHECK-NEXT:    ldr h0, [sp, #220] // 2-byte Reload
+; CHECK-NEXT:    fcmp h0, h0
+; CHECK-NEXT:    fcsel h0, h31, h0, vs
+; CHECK-NEXT:    fcmp h31, h0
+; CHECK-NEXT:    fcsel h0, h31, h0, lt
+; CHECK-NEXT:    str h0, [sp, #220] // 2-byte Spill
+; CHECK-NEXT:    ldr h0, [sp, #214] // 2-byte Reload
+; CHECK-NEXT:    fcmp h0, h0
+; CHECK-NEXT:    fcsel h0, h30, h0, vs
+; CHECK-NEXT:    fcmp h30, h0
+; CHECK-NEXT:    fcsel h0, h30, h0, lt
+; CHECK-NEXT:    str h0, [sp, #214] // 2-byte Spill
+; CHECK-NEXT:    ldr h0, [sp, #206] // 2-byte Reload
+; CHECK-NEXT:    fcmp h0, h0
+; CHECK-NEXT:    fcsel h0, h29, h0, vs
+; CHECK-NEXT:    fcmp h29, h0
+; CHECK-NEXT:    fcsel h0, h29, h0, lt
+; CHECK-NEXT:    str h0, [sp, #206] // 2-byte Spill
+; CHECK-NEXT:    ldr h0, [sp, #200] // 2-byte Reload
+; CHECK-NEXT:    fcmp h0, h0
+; CHECK-NEXT:    fcsel h0, h28, h0, vs
+; CHECK-NEXT:    fcmp h28, h0
+; CHECK-NEXT:    fcsel h0, h28, h0, lt
+; CHECK-NEXT:    str h0, [sp, #200] // 2-byte Spill
+; CHECK-NEXT:    ldr h0, [sp, #192] // 2-byte Reload
+; CHECK-NEXT:    fcmp h0, h0
+; CHECK-NEXT:    fcsel h0, h27, h0, vs
+; CHECK-NEXT:    fcmp h27, h0
+; CHECK-NEXT:    fcsel h0, h27, h0, lt
+; CHECK-NEXT:    str h0, [sp, #192] // 2-byte Spill
+; CHECK-NEXT:    ldr h0, [sp, #184] // 2-byte Reload
+; CHECK-NEXT:    fcmp h0, h0
+; CHECK-NEXT:    fcsel h0, h26, h0, vs
+; CHECK-NEXT:    fcmp h26, h0
+; CHECK-NEXT:    fcsel h0, h26, h0, lt
+; CHECK-NEXT:    str h0, [sp, #184] // 2-byte Spill
+; CHECK-NEXT:    ldr h0, [sp, #178] // 2-byte Reload
+; CHECK-NEXT:    fcmp h0, h0
+; CHECK-NEXT:    fcsel h0, h25, h0, vs
+; CHECK-NEXT:    fcmp h25, h0
+; CHECK-NEXT:    fcsel h0, h25, h0, lt
+; CHECK-NEXT:    str h0, [sp, #178] // 2-byte Spill
+; CHECK-NEXT:    ldr h0, [sp, #170] // 2-byte Reload
+; CHECK-NEXT:    fcmp h0, h0
+; CHECK-NEXT:    fcsel h0, h24, h0, vs
+; CHECK-NEXT:    fcmp h24, h0
+; CHECK-NEXT:    fcsel h0, h24, h0, lt
+; CHECK-NEXT:    str h0, [sp, #170] // 2-byte Spill
+; CHECK-NEXT:    ldr h0, [sp, #162] // 2-byte Reload
+; CHECK-NEXT:    fcmp h0, h0
+; CHECK-NEXT:    fcsel h0, h23, h0, vs
+; CHECK-NEXT:    fcmp h23, h0
+; CHECK-NEXT:    fcsel h0, h23, h0, lt
+; CHECK-NEXT:    str h0, [sp, #162] // 2-byte Spill
+; CHECK-NEXT:    ldr h0, [sp, #156] // 2-byte Reload
+; CHECK-NEXT:    fcmp h0, h0
+; CHECK-NEXT:    fcsel h0, h22, h0, vs
+; CHECK-NEXT:    fcmp h22, h0
+; CHECK-NEXT:    fcsel h0, h22, h0, lt
+; CHECK-NEXT:    str h0, [sp, #156] // 2-byte Spill
+; CHECK-NEXT:    ldr h0, [sp, #148] // 2-byte Reload
+; CHECK-NEXT:    fcmp h0, h0
+; CHECK-NEXT:    fcsel h0, h21, h0, vs
+; CHECK-NEXT:    fcmp h21, h0
+; CHECK-NEXT:    fcsel h0, h21, h0, lt
+; CHECK-NEXT:    str h0, [sp, #148] // 2-byte Spill
+; CHECK-NEXT:    ldr z0, [x8, #-26, mul vl] // 16-byte Folded Reload
+; CHECK-NEXT:    fcmp h0, h0
+; CHECK-NEXT:    fcsel h0, h20, h0, vs
+; CHECK-NEXT:    fcmp h20, h0
+; CHECK-NEXT:    fcsel h0, h20, h0, lt
+; CHECK-NEXT:    str h0, [sp, #60] // 2-byte Spill
+; CHECK-NEXT:    ldr z0, [x8, #-28, mul vl] // 16-byte Folded Reload
+; CHECK-NEXT:    fcmp h0, h0
+; CHECK-NEXT:    fcsel h0, h19, h0, vs
+; CHECK-NEXT:    fcmp h19, h0
+; CHECK-NEXT:    fcsel h0, h19, h0, lt
+; CHECK-NEXT:    str h0, [sp, #58] // 2-byte Spill
+; CHECK-NEXT:    ldr z0, [x8, #-30, mul vl] // 16-byte Folded Reload
+; CHECK-NEXT:    str h4, [sp, #512]
+; CHECK-NEXT:    ldr h4, [sp, #168] // 2-byte Reload
+; CHECK-NEXT:    fcmp h0, h0
+; CHECK-NEXT:    fcsel h0, h18, h0, vs
+; CHECK-NEXT:    fcmp h18, h0
+; CHECK-NEXT:    fcsel h0, h18, h0, lt
+; CHECK-NEXT:    str h0, [sp, #262] // 2-byte Spill
+; CHECK-NEXT:    ldr z0, [x8, #-31, mul vl] // 16-byte Folded Reload
+; CHECK-NEXT:    str h1, [sp, #766]
+; CHECK-NEXT:    ldr h1, [sp, #510] // 2-byte Reload
+; CHECK-NEXT:    str h2, [sp, #760]
+; CHECK-NEXT:    ldr h2, [sp, #506] // 2-byte Reload
+; CHECK-NEXT:    str h1, [sp, #764]
+; CHECK-NEXT:    ldr h1, [sp, #508] // 2-byte Reload
+; CHECK-NEXT:    fcmp h0, h0
+; CHECK-NEXT:    str h2, [sp, #758]
+; CHECK-NEXT:    ldr h2, [sp, #496] // 2-byte Reload
+; CHECK-NEXT:    str h1, [sp, #762]
+; CHECK-NEXT:    ldr h1, [sp, #132] // 2-byte Reload
+; CHECK-NEXT:    str h5, [sp, #756]
+; CHECK-NEXT:    ldr h5, [sp, #160] // 2-byte Reload
+; CHECK-NEXT:    fcsel h0, h1, h0, vs
+; CHECK-NEXT:    str h2, [sp, #754]
+; CHECK-NEXT:    ldr h2, [sp, #494] // 2-byte Reload
+; CHECK-NEXT:    str h17, [sp, #752]
+; CHECK-NEXT:    fmov s17, s1
+; CHECK-NEXT:    str h3, [sp, #750]
+; CHECK-NEXT:    ldr h3, [sp, #176] // 2-byte Reload
+; CHECK-NEXT:    fcmp h1, h0
+; CHECK-NEXT:    fcsel h0, h1, h0, lt
+; CHECK-NEXT:    ldr h1, [sp, #502] // 2-byte Reload
+; CHECK-NEXT:    str h0, [sp, #510] // 2-byte Spill
+; CHECK-NEXT:    ldr z0, [x8, #-29, mul vl] // 16-byte Folded Reload
+; CHECK-NEXT:    str h2, [sp, #742]
+; CHECK-NEXT:    ldr h2, [sp, #492] // 2-byte Reload
+; CHECK-NEXT:    str h1, [sp, #748]
+; CHECK-NEXT:    ldr h1, [sp, #500] // 2-byte Reload
+; CHECK-NEXT:    fcmp h0, h0
+; CHECK-NEXT:    str h2, [sp, #740]
+; CHECK-NEXT:    ldr h2, [sp, #490] // 2-byte Reload
+; CHECK-NEXT:    str h1, [sp, #746]
+; CHECK-NEXT:    ldr h1, [sp, #498] // 2-byte Reload
+; CHECK-NEXT:    str h2, [sp, #738]
+; CHECK-NEXT:    ldr h2, [sp, #488] // 2-byte Reload
+; CHECK-NEXT:    fcsel h0, h16, h0, vs
+; CHECK-NEXT:    str h1, [sp, #744]
+; CHECK-NEXT:    ldr h1, [sp, #482] // 2-byte Reload
+; CHECK-NEXT:    str h2, [sp, #736]
+; CHECK-NEXT:    ldr h2, [sp, #486] // 2-byte Reload
+; CHECK-NEXT:    fcmp h16, h0
+; CHECK-NEXT:    str h2, [sp, #734]
+; CHECK-NEXT:    ldr h2, [sp, #484] // 2-byte Reload
+; CHECK-NEXT:    str h2, [sp, #732]
+; CHECK-NEXT:    ldr h2, [sp, #476] // 2-byte Reload
+; CHECK-NEXT:    fcsel h0, h16, h0, lt
+; CHECK-NEXT:    str h0, [sp, #508] // 2-byte Spill
+; CHECK-NEXT:    ldr z0, [x8, #-27, mul vl] // 16-byte Folded Reload
+; CHECK-NEXT:    str h2, [sp, #724]
+; CHECK-NEXT:    ldr h2, [sp, #474] // 2-byte Reload
+; CHECK-NEXT:    str h1, [sp, #730]
+; CHECK-NEXT:    ldr h1, [sp, #480] // 2-byte Reload
+; CHECK-NEXT:    fcmp h0, h0
+; CHECK-NEXT:    str h2, [sp, #722]
+; CHECK-NEXT:    ldr h2, [sp, #472] // 2-byte Reload
+; CHECK-NEXT:    str h1, [sp, #728]
+; CHECK-NEXT:    ldr h1, [sp, #478] // 2-byte Reload
+; CHECK-NEXT:    str h2, [sp, #720]
+; CHECK-NEXT:    ldr h2, [sp, #470] // 2-byte Reload
+; CHECK-NEXT:    fcsel h0, h7, h0, vs
+; CHECK-NEXT:    str h1, [sp, #726]
+; CHECK-NEXT:    ldr h1, [sp, #464] // 2-byte Reload
+; CHECK-NEXT:    str h2, [sp, #718]
+; CHECK-NEXT:    ldr h2, [sp, #468] // 2-byte Reload
+; CHECK-NEXT:    fcmp h7, h0
+; CHECK-NEXT:    str h2, [sp, #716]
+; CHECK-NEXT:    ldr h2, [sp, #466] // 2-byte Reload
+; CHECK-NEXT:    str h2, [sp, #714]
+; CHECK-NEXT:    ldr h2, [sp, #458] // 2-byte Reload
+; CHECK-NEXT:    fcsel h0, h7, h0, lt
+; CHECK-NEXT:    str h0, [sp, #506] // 2-byte Spill
+; CHECK-NEXT:    ldr z0, [x8, #-25, mul vl] // 16-byte Folded Reload
+; CHECK-NEXT:    str h2, [sp, #706]
+; CHECK-NEXT:    ldr h2, [sp, #456] // 2-byte Reload
+; CHECK-NEXT:    str h1, [sp, #712]
+; CHECK-NEXT:    ldr h1, [sp, #462] // 2-byte Reload
+; CHECK-NEXT:    fcmp h0, h0
+; CHECK-NEXT:    str h2, [sp, #704]
+; CHECK-NEXT:    ldr h2, [sp, #454] // 2-byte Reload
+; CHECK-NEXT:    str h1, [sp, #710]
+; CHECK-NEXT:    ldr h1, [sp, #460] // 2-byte Reload
+; CHECK-NEXT:    str h2, [sp, #702]
+; CHECK-NEXT:    ldr h2, [sp, #452] // 2-byte Reload
+; CHECK-NEXT:    fcsel h0, h6, h0, vs
+; CHECK-NEXT:    str h1, [sp, #708]
+; CHECK-NEXT:    ldr h1, [sp, #446] // 2-byte Reload
+; CHECK-NEXT:    str h2, [sp, #700]
+; CHECK-NEXT:    ldr h2, [sp, #450] // 2-byte Reload
+; CHECK-NEXT:    fcmp h6, h0
+; CHECK-NEXT:    str h2, [sp, #698]
+; CHECK-NEXT:    ldr h2, [sp, #448] // 2-byte Reload
+; CHECK-NEXT:    str h2, [sp, #696]
+; CHECK-NEXT:    ldr h2, [sp, #440] // 2-byte Reload
+; CHECK-NEXT:    fcsel h0, h6, h0, lt
+; CHECK-NEXT:    str h0, [sp, #504] // 2-byte Spill
+; CHECK-NEXT:    ldr z0, [x8, #-24, mul vl] // 16-byte Folded Reload
+; CHECK-NEXT:    str h2, [sp, #688]
+; CHECK-NEXT:    ldr h2, [sp, #438] // 2-byte Reload
+; CHECK-NEXT:    str h1, [sp, #694]
+; CHECK-NEXT:    ldr h1, [sp, #444] // 2-byte Reload
+; CHECK-NEXT:    fcmp h0, h0
+; CHECK-NEXT:    str h2, [sp, #686]
+; CHECK-NEXT:    ldr h2, [sp, #436] // 2-byte Reload
+; CHECK-NEXT:    str h1, [sp, #692]
+; CHECK-NEXT:    ldr h1, [sp, #442] // 2-byte Reload
+; CHECK-NEXT:    str h2, [sp, #684]
+; CHECK-NEXT:    ldr h2, [sp, #434] // 2-byte Reload
+; CHECK-NEXT:    fcsel h0, h5, h0, vs
+; CHECK-NEXT:    str h1, [sp, #690]
+; CHECK-NEXT:    ldr h1, [sp, #428] // 2-byte Reload
+; CHECK-NEXT:    str h2, [sp, #682]
+; CHECK-NEXT:    ldr h2, [sp, #432] // 2-byte Reload
+; CHECK-NEXT:    fcmp h5, h0
+; CHECK-NEXT:    str h2, [sp, #680]
+; CHECK-NEXT:    ldr h2, [sp, #430] // 2-byte Reload
+; CHECK-NEXT:    str h2, [sp, #678]
+; CHECK-NEXT:    ldr h2, [sp, #422] // 2-byte Reload
+; CHECK-NEXT:    fcsel h0, h5, h0, lt
+; CHECK-NEXT:    str h0, [sp, #502] // 2-byte Spill
+; CHECK-NEXT:    ldr z0, [x8, #-23, mul vl] // 16-byte Folded Reload
+; CHECK-NEXT:    str h2, [sp, #670]
+; CHECK-NEXT:    ldr h2, [sp, #420] // 2-byte Reload
+; CHECK-NEXT:    str h1, [sp, #676]
+; CHECK-NEXT:    ldr h1, [sp, #426] // 2-byte Reload
+; CHECK-NEXT:    fcmp h0, h0
+; CHECK-NEXT:    str h2, [sp, #668]
+; CHECK-NEXT:    ldr h2, [sp, #418] // 2-byte Reload
+; CHECK-NEXT:    str h1, [sp, #674]
+; CHECK-NEXT:    ldr h1, [sp, #424] // 2-byte Reload
+; CHECK-NEXT:    str h2, [sp, #666]
+; CHECK-NEXT:    ldr h2, [sp, #416] // 2-byte Reload
+; CHECK-NEXT:    fcsel h0, h4, h0, vs
+; CHECK-NEXT:    str h1, [sp, #672]
+; CHECK-NEXT:    ldr h1, [sp, #410] // 2-byte Reload
+; CHECK-NEXT:    str h2, [sp, #664]
+; CHECK-NEXT:    ldr h2, [sp, #414] // 2-byte Reload
+; CHECK-NEXT:    fcmp h4, h0
+; CHECK-NEXT:    str h2, [sp, #662]
+; CHECK-NEXT:    ldr h2, [sp, #412] // 2-byte Reload
+; CHECK-NEXT:    str h2, [sp, #660]
+; CHECK-NEXT:    ldr h2, [sp, #404] // 2-byte Reload
+; CHECK-NEXT:    fcsel h0, h4, h0, lt
+; CHECK-NEXT:    str h0, [sp, #500] // 2-byte Spill
+; CHECK-NEXT:    ldr z0, [x8, #-22, mul vl] // 16-byte Folded Reload
+; CHECK-NEXT:    str h2, [sp, #652]
+; CHECK-NEXT:    ldr h2, [sp, #402] // 2-byte Reload
+; CHECK-NEXT:    str h1, [sp, #658]
+; CHECK-NEXT:    ldr h1, [sp, #408] // 2-byte Reload
+; CHECK-NEXT:    fcmp h0, h0
+; CHECK-NEXT:    str h2, [sp, #650]
+; CHECK-NEXT:    ldr h2, [sp, #400] // 2-byte Reload
+; CHECK-NEXT:    str h1, [sp, #656]
+; CHECK-NEXT:    ldr h1, [sp, #406] // 2-byte Reload
+; CHECK-NEXT:    str h2, [sp, #648]
+; CHECK-NEXT:    ldr h2, [sp, #398] // 2-byte Reload
+; CHECK-NEXT:    fcsel h0, h3, h0, vs
+; CHECK-NEXT:    str h1, [sp, #654]
+; CHECK-NEXT:    str h2, [sp, #646]
+; CHECK-NEXT:    ldr h2, [sp, #394] // 2-byte Reload
+; CHECK-NEXT:    fcmp h3, h0
+; CHECK-NEXT:    str h2, [sp, #644]
+; CHECK-NEXT:    ldr h2, [sp, #392] // 2-byte Reload
+; CHECK-NEXT:    str h2, [sp, #642]
+; CHECK-NEXT:    ldr h2, [sp, #384] // 2-byte Reload
+; CHECK-NEXT:    fcsel h0, h3, h0, lt
+; CHECK-NEXT:    ldr z1, [x8, #-21, mul vl] // 16-byte Folded Reload
+; CHECK-NEXT:    str h2, [sp, #634]
+; CHECK-NEXT:    ldr h2, [sp, #382] // 2-byte Reload
+; CHECK-NEXT:    str h0, [sp, #498] // 2-byte Spill
+; CHECK-NEXT:    ldr h0, [sp, #390] // 2-byte Reload
+; CHECK-NEXT:    fcmp h1, h1
+; CHECK-NEXT:    str h2, [sp, #632]
+; CHECK-NEXT:    ldr h2, [sp, #380] // 2-byte Reload
+; CHECK-NEXT:    str h0, [sp, #640]
+; CHECK-NEXT:    ldr h0, [sp, #388] // 2-byte Reload
+; CHECK-NEXT:    str h2, [sp, #630]
+; CHECK-NEXT:    ldr h2, [sp, #378] // 2-byte Reload
+; CHECK-NEXT:    str h0, [sp, #638]
+; CHECK-NEXT:    ldr h0, [sp, #386] // 2-byte Reload
+; CHECK-NEXT:    str h2, [sp, #628]
+; CHECK-NEXT:    ldr h2, [sp, #376] // 2-byte Reload
+; CHECK-NEXT:    str h0, [sp, #636]
+; CHECK-NEXT:    ldr h0, [sp, #182] // 2-byte Reload
+; CHECK-NEXT:    str h2, [sp, #626]
+; CHECK-NEXT:    ldr h2, [sp, #374] // 2-byte Reload
+; CHECK-NEXT:    fcsel h1, h0, h1, vs
+; CHECK-NEXT:    str h2, [sp, #624]
+; CHECK-NEXT:    fmov s2, s0
+; CHECK-NEXT:    fcmp h0, h1
+; CHECK-NEXT:    fcsel h1, h0, h1, lt
+; CHECK-NEXT:    ldr h0, [sp, #372] // 2-byte Reload
+; CHECK-NEXT:    str h1, [sp, #496] // 2-byte Spill
+; CHECK-NEXT:    ldr z1, [x8, #-20, mul vl] // 16-byte Folded Reload
+; CHECK-NEXT:    str h0, [sp, #622]
+; CHECK-NEXT:    ldr h0, [sp, #370] // 2-byte Reload
+; CHECK-NEXT:    str h15, [sp, #616]
+; CHECK-NEXT:    ldr h15, [sp, #364] // 2-byte Reload
+; CHECK-NEXT:    str h0, [sp, #620]
+; CHECK-NEXT:    ldr h0, [sp, #368] // 2-byte Reload
+; CHECK-NEXT:    fcmp h1, h1
+; CHECK-NEXT:    str h15, [sp, #614]
+; CHECK-NEXT:    ldr h15, [sp, #362] // 2-byte Reload
+; CHECK-NEXT:    str h0, [sp, #618]
+; CHECK-NEXT:    ldr h0, [sp, #190] // 2-byte Reload
+; CHECK-NEXT:    str h15, [sp, #612]
+; CHECK-NEXT:    fcsel h1, h0, h1, vs
+; CHECK-NEXT:    str h14, [sp, #610]
+; CHECK-NEXT:    str h13, [sp, #608]
+; CHECK-NEXT:    str h12, [sp, #606]
+; CHECK-NEXT:    fcmp h0, h1
+; CHECK-NEXT:    fcsel h12, h0, h1, lt
+; CHECK-NEXT:    fmov s1, s0
+; CHECK-NEXT:    ldr z0, [x8, #-19, mul vl] // 16-byte Folded Reload
+; CHECK-NEXT:    str h9, [sp, #600]
+; CHECK-NEXT:    ldr h9, [sp, #198] // 2-byte Reload
+; CHECK-NEXT:    str h11, [sp, #604]
+; CHECK-NEXT:    fcmp h0, h0
+; CHECK-NEXT:    str h10, [sp, #602]
+; CHECK-NEXT:    str h8, [sp, #598]
+; CHECK-NEXT:    str h31, [sp, #596]
+; CHECK-NEXT:    fcsel h0, h9, h0, vs
+; CHECK-NEXT:    str h30, [sp, #594]
+; CHECK-NEXT:    str h29, [sp, #592]
+; CHECK-NEXT:    str h28, [sp, #590]
+; CHECK-NEXT:    fcmp h9, h0
+; CHECK-NEXT:    str h27, [sp, #588]
+; CHECK-NEXT:    ldr h27, [sp, #130] // 2-byte Reload
+; CHECK-NEXT:    fcsel h29, h9, h0, lt
+; CHECK-NEXT:    ldr z0, [x8, #-18, mul vl] // 16-byte Folded Reload
+; CHECK-NEXT:    str h24, [sp, #582]
+; CHECK-NEXT:    ldr h24, [sp, #204] // 2-byte Reload
+; CHECK-NEXT:    str h26, [sp, #586]
+; CHECK-NEXT:    ldr h26, [sp, #116] // 2-byte Reload
+; CHECK-NEXT:    str h25, [sp, #584]
+; CHECK-NEXT:    fcmp h0, h0
+; CHECK-NEXT:    str h23, [sp, #580]
+; CHECK-NEXT:    ldr h23, [sp, #154] // 2-byte Reload
+; CHECK-NEXT:    str h22, [sp, #578]
+; CHECK-NEXT:    ldr h22, [sp, #164] // 2-byte Reload
+; CHECK-NEXT:    str h21, [sp, #576]
+; CHECK-NEXT:    fcsel h0, h24, h0, vs
+; CHECK-NEXT:    str h20, [sp, #574]
+; CHECK-NEXT:    ldr h20, [sp, #174] // 2-byte Reload
+; CHECK-NEXT:    str h19, [sp, #572]
+; CHECK-NEXT:    ldr h19, [sp, #186] // 2-byte Reload
+; CHECK-NEXT:    str h18, [sp, #570]
+; CHECK-NEXT:    ldr h18, [sp, #196] // 2-byte Reload
+; CHECK-NEXT:    fcmp h24, h0
+; CHECK-NEXT:    fcsel h21, h24, h0, lt
+; CHECK-NEXT:    ldr z0, [x8, #-17, mul vl] // 16-byte Folded Reload
+; CHECK-NEXT:    str h7, [sp, #564]
+; CHECK-NEXT:    ldr h7, [sp, #212] // 2-byte Reload
+; CHECK-NEXT:    str h17, [sp, #568]
+; CHECK-NEXT:    str h16, [sp, #566]
+; CHECK-NEXT:    fcmp h0, h0
+; CHECK-NEXT:    str h6, [sp, #562]
+; CHECK-NEXT:    ldr h6, [sp, #128] // 2-byte Reload
+; CHECK-NEXT:    str h5, [sp, #560]
+; CHECK-NEXT:    ldr h5, [sp, #124] // 2-byte Reload
+; CHECK-NEXT:    str h4, [sp, #558]
+; CHECK-NEXT:    ldr h4, [sp, #118] // 2-byte Reload
+; CHECK-NEXT:    fcsel h0, h7, h0, vs
+; CHECK-NEXT:    str h3, [sp, #556]
+; CHECK-NEXT:    ldr h3, [sp, #126] // 2-byte Reload
+; CHECK-NEXT:    str h2, [sp, #554]
+; CHECK-NEXT:    ldr h2, [sp, #208] // 2-byte Reload
+; CHECK-NEXT:    str h1, [sp, #552]
+; CHECK-NEXT:    ldr h1, [sp, #218] // 2-byte Reload
+; CHECK-NEXT:    fcmp h7, h0
+; CHECK-NEXT:    fcsel h25, h7, h0, lt
+; CHECK-NEXT:    ldr z0, [x8, #-16, mul vl] // 16-byte Folded Reload
+; CHECK-NEXT:    str h9, [sp, #550]
+; CHECK-NEXT:    str h24, [sp, #548]
+; CHECK-NEXT:    ldr h24, [sp, #144] // 2-byte Reload
+; CHECK-NEXT:    str h7, [sp, #546]
+; CHECK-NEXT:    ldr h7, [sp, #122] // 2-byte Reload
+; CHECK-NEXT:    fcmp h0, h0
+; CHECK-NEXT:    str h1, [sp, #544]
+; CHECK-NEXT:    str h2, [sp, #542]
+; CHECK-NEXT:    str h18, [sp, #540]
+; CHECK-NEXT:    fcsel h0, h1, h0, vs
+; CHECK-NEXT:    str h19, [sp, #538]
+; CHECK-NEXT:    str h20, [sp, #536]
+; CHECK-NEXT:    str h22, [sp, #534]
+; CHECK-NEXT:    fcmp h1, h0
+; CHECK-NEXT:    fcsel h16, h1, h0, lt
+; CHECK-NEXT:    ldr z0, [x8, #-15, mul vl] // 16-byte Folded Reload
+; CHECK-NEXT:    ldr h1, [sp, #136] // 2-byte Reload
+; CHECK-NEXT:    str h23, [sp, #532]
+; CHECK-NEXT:    str h24, [sp, #530]
+; CHECK-NEXT:    fcmp h0, h0
+; CHECK-NEXT:    str h1, [sp, #528]
+; CHECK-NEXT:    str h27, [sp, #526]
+; CHECK-NEXT:    str h6, [sp, #524]
+; CHECK-NEXT:    fcsel h0, h2, h0, vs
+; CHECK-NEXT:    str h3, [sp, #522]
+; CHECK-NEXT:    str h5, [sp, #520]
+; CHECK-NEXT:    str h7, [sp, #518]
+; CHECK-NEXT:    fcmp h2, h0
+; CHECK-NEXT:    fcsel h17, h2, h0, lt
+; CHECK-NEXT:    ldr h2, [sp, #120] // 2-byte Reload
+; CHECK-NEXT:    str h2, [sp, #516]
+; CHECK-NEXT:    ldr z0, [x8, #-14, mul vl] // 16-byte Folded Reload
+; CHECK-NEXT:    str h26, [sp, #768]
+; CHECK-NEXT:    ldr h26, [sp, #114] // 2-byte Reload
+; CHECK-NEXT:    str h4, [sp, #514]
+; CHECK-NEXT:    str h26, [sp, #1022]
+; CHECK-NEXT:    ldr h26, [sp, #282] // 2-byte Reload
+; CHECK-NEXT:    fcmp h0, h0
+; CHECK-NEXT:    str h26, [sp, #1020]
+; CHECK-NEXT:    ldr h26, [sp, #280] // 2-byte Reload
+; CHECK-NEXT:    str h26, [sp, #1018]
+; CHECK-NEXT:    ldr h26, [sp, #276] // 2-byte Reload
+; CHECK-NEXT:    fcsel h0, h18, h0, vs
+; CHECK-NEXT:    str h26, [sp, #1016]
+; CHECK-NEXT:    ldr h26, [sp, #278] // 2-byte Reload
+; CHECK-NEXT:    fcmp h18, h0
+; CHECK-NEXT:    str h26, [sp, #1014]
+; CHECK-NEXT:    ldr h26, [sp, #272] // 2-byte Reload
+; CHECK-NEXT:    str h26, [sp, #1012]
+; CHECK-NEXT:    ldr h26, [sp, #274] // 2-byte Reload
+; CHECK-NEXT:    fcsel h18, h18, h0, lt
+; CHECK-NEXT:    str h26, [sp, #1010]
+; CHECK-NEXT:    ldr h26, [sp, #112] // 2-byte Reload
+; CHECK-NEXT:    ldr z0, [x8, #-13, mul vl] // 16-byte Folded Reload
+; CHECK-NEXT:    str h26, [sp, #1008]
+; CHECK-NEXT:    ldr h26, [sp, #110] // 2-byte Reload
+; CHECK-NEXT:    str h26, [sp, #1006]
+; CHECK-NEXT:    ldr h26, [sp, #108] // 2-byte Reload
+; CHECK-NEXT:    fcmp h0, h0
+; CHECK-NEXT:    str h26, [sp, #1004]
+; CHECK-NEXT:    ldr h26, [sp, #106] // 2-byte Reload
+; CHECK-NEXT:    fcsel h0, h19, h0, vs
+; CHECK-NEXT:    str h26, [sp, #1002]
+; CHECK-NEXT:    ldr h26, [sp, #104] // 2-byte Reload
+; CHECK-NEXT:    str h26, [sp, #1000]
+; CHECK-NEXT:    ldr h26, [sp, #268] // 2-byte Reload
+; CHECK-NEXT:    fcmp h19, h0
+; CHECK-NEXT:    str h26, [sp, #998]
+; CHECK-NEXT:    ldr h26, [sp, #102] // 2-byte Reload
+; CHECK-NEXT:    fcsel h19, h19, h0, lt
+; CHECK-NEXT:    str h26, [sp, #996]
+; CHECK-NEXT:    ldr h26, [sp, #264] // 2-byte Reload
+; CHECK-NEXT:    str h26, [sp, #994]
+; CHECK-NEXT:    ldr h26, [sp, #100] // 2-byte Reload
+; CHECK-NEXT:    str h26, [sp, #992]
+; CHECK-NEXT:    ldr h26, [sp, #260] // 2-byte Reload
+; CHECK-NEXT:    ldr z0, [x8, #-12, mul vl] // 16-byte Folded Reload
+; CHECK-NEXT:    str h26, [sp, #990]
+; CHECK-NEXT:    ldr h26, [sp, #354] // 2-byte Reload
+; CHECK-NEXT:    str h26, [sp, #988]
+; CHECK-NEXT:    ldr h26, [sp, #352] // 2-byte Reload
+; CHECK-NEXT:    fcmp h0, h0
+; CHECK-NEXT:    str h26, [sp, #986]
+; CHECK-NEXT:    ldr h26, [sp, #256] // 2-byte Reload
+; CHECK-NEXT:    fcsel h0, h20, h0, vs
+; CHECK-NEXT:    str h26, [sp, #984]
+; CHECK-NEXT:    ldr h26, [sp, #350] // 2-byte Reload
+; CHECK-NEXT:    str h26, [sp, #982]
+; CHECK-NEXT:    ldr h26, [sp, #252] // 2-byte Reload
+; CHECK-NEXT:    fcmp h20, h0
+; CHECK-NEXT:    str h26, [sp, #980]
+; CHECK-NEXT:    ldr h26, [sp, #348] // 2-byte Reload
+; CHECK-NEXT:    fcsel h20, h20, h0, lt
+; CHECK-NEXT:    str h26, [sp, #978]
+; CHECK-NEXT:    ldr h26, [sp, #98] // 2-byte Reload
+; CHECK-NEXT:    str h26, [sp, #976]
+; CHECK-NEXT:    ldr h26, [sp, #96] // 2-byte Reload
+; CHECK-NEXT:    str h26, [sp, #974]
+; CHECK-NEXT:    ldr h26, [sp, #346] // 2-byte Reload
+; CHECK-NEXT:    ldr z0, [x8, #-11, mul vl] // 16-byte Folded Reload
+; CHECK-NEXT:    str h26, [sp, #972]
+; CHECK-NEXT:    ldr h26, [sp, #94] // 2-byte Reload
+; CHECK-NEXT:    str h26, [sp, #970]
+; CHECK-NEXT:    ldr h26, [sp, #344] // 2-byte Reload
+; CHECK-NEXT:    fcmp h0, h0
+; CHECK-NEXT:    str h26, [sp, #968]
+; CHECK-NEXT:    ldr h26, [sp, #92] // 2-byte Reload
+; CHECK-NEXT:    fcsel h0, h22, h0, vs
+; CHECK-NEXT:    str h26, [sp, #966]
+; CHECK-NEXT:    ldr h26, [sp, #230] // 2-byte Reload
+; CHECK-NEXT:    str h26, [sp, #964]
+; CHECK-NEXT:    ldr h26, [sp, #342] // 2-byte Reload
+; CHECK-NEXT:    fcmp h22, h0
+; CHECK-NEXT:    str h26, [sp, #962]
+; CHECK-NEXT:    ldr h26, [sp, #340] // 2-byte Reload
+; CHECK-NEXT:    fcsel h22, h22, h0, lt
+; CHECK-NEXT:    str h26, [sp, #960]
+; CHECK-NEXT:    ldr h26, [sp, #338] // 2-byte Reload
+; CHECK-NEXT:    str h26, [sp, #958]
+; CHECK-NEXT:    ldr h26, [sp, #336] // 2-byte Reload
+; CHECK-NEXT:    str h26, [sp, #956]
+; CHECK-NEXT:    ldr h26, [sp, #90] // 2-byte Reload
+; CHECK-NEXT:    ldr z0, [x8, #-10, mul vl] // 16-byte Folded Reload
+; CHECK-NEXT:    str h26, [sp, #954]
+; CHECK-NEXT:    ldr h26, [sp, #334] // 2-byte Reload
+; CHECK-NEXT:    str h26, [sp, #952]
+; CHECK-NEXT:    ldr h26, [sp, #332] // 2-byte Reload
+; CHECK-NEXT:    fcmp h0, h0
+; CHECK-NEXT:    str h26, [sp, #950]
+; CHECK-NEXT:    ldr h26, [sp, #330] // 2-byte Reload
+; CHECK-NEXT:    fcsel h0, h23, h0, vs
+; CHECK-NEXT:    str h26, [sp, #948]
+; CHECK-NEXT:    ldr h26, [sp, #88] // 2-byte Reload
+; CHECK-NEXT:    str h26, [sp, #946]
+; CHECK-NEXT:    ldr h26, [sp, #328] // 2-byte Reload
+; CHECK-NEXT:    fcmp h23, h0
+; CHECK-NEXT:    str h26, [sp, #944]
+; CHECK-NEXT:    ldr h26, [sp, #326] // 2-byte Reload
+; CHECK-NEXT:    fcsel h23, h23, h0, lt
+; CHECK-NEXT:    str h26, [sp, #942]
+; CHECK-NEXT:    ldr h26, [sp, #324] // 2-byte Reload
+; CHECK-NEXT:    str h26, [sp, #940]
+; CHECK-NEXT:    ldr h26, [sp, #322] // 2-byte Reload
+; CHECK-NEXT:    str h26, [sp, #938]
+; CHECK-NEXT:    ldr h26, [sp, #320] // 2-byte Reload
+; CHECK-NEXT:    ldr z0, [x8, #-9, mul vl] // 16-byte Folded Reload
+; CHECK-NEXT:    str h26, [sp, #936]
+; CHECK-NEXT:    ldr h26, [sp, #318] // 2-byte Reload
+; CHECK-NEXT:    str h26, [sp, #934]
+; CHECK-NEXT:    ldr h26, [sp, #316] // 2-byte Reload
+; CHECK-NEXT:    fcmp h0, h0
+; CHECK-NEXT:    str h26, [sp, #932]
+; CHECK-NEXT:    ldr h26, [sp, #314] // 2-byte Reload
+; CHECK-NEXT:    fcsel h0, h24, h0, vs
+; CHECK-NEXT:    str h26, [sp, #930]
+; CHECK-NEXT:    ldr h26, [sp, #312] // 2-byte Reload
+; CHECK-NEXT:    str h26, [sp, #928]
+; CHECK-NEXT:    ldr h26, [sp, #310] // 2-byte Reload
+; CHECK-NEXT:    fcmp h24, h0
+; CHECK-NEXT:    str h26, [sp, #926]
+; CHECK-NEXT:    ldr h26, [sp, #308] // 2-byte Reload
+; CHECK-NEXT:    fcsel h24, h24, h0, lt
+; CHECK-NEXT:    str h26, [sp, #924]
+; CHECK-NEXT:    ldr h26, [sp, #306] // 2-byte Reload
+; CHECK-NEXT:    str h26, [sp, #922]
+; CHECK-NEXT:    ldr h26, [sp, #304] // 2-byte Reload
+; CHECK-NEXT:    str h26, [sp, #920]
+; CHECK-NEXT:    ldr h26, [sp, #302] // 2-byte Reload
+; CHECK-NEXT:    ldr z0, [x8, #-8, mul vl] // 16-byte Folded Reload
+; CHECK-NEXT:    str h26, [sp, #918]
+; CHECK-NEXT:    ldr h26, [sp, #300] // 2-byte Reload
+; CHECK-NEXT:    str h26, [sp, #916]
+; CHECK-NEXT:    ldr h26, [sp, #298] // 2-byte Reload
+; CHECK-NEXT:    fcmp h0, h0
+; CHECK-NEXT:    str h26, [sp, #914]
+; CHECK-NEXT:    ldr h26, [sp, #296] // 2-byte Reload
+; CHECK-NEXT:    fcsel h0, h1, h0, vs
+; CHECK-NEXT:    str h26, [sp, #912]
+; CHECK-NEXT:    ldr h26, [sp, #294] // 2-byte Reload
+; CHECK-NEXT:    str h26, [sp, #910]
+; CHECK-NEXT:    ldr h26, [sp, #292] // 2-byte Reload
+; CHECK-NEXT:    fcmp h1, h0
+; CHECK-NEXT:    str h26, [sp, #908]
+; CHECK-NEXT:    ldr h26, [sp, #290] // 2-byte Reload
+; CHECK-NEXT:    str h26, [sp, #906]
+; CHECK-NEXT:    ldr h26, [sp, #288] // 2-byte Reload
+; CHECK-NEXT:    str h26, [sp, #904]
+; CHECK-NEXT:    ldr h26, [sp, #286] // 2-byte Reload
+; CHECK-NEXT:    str h26, [sp, #902]
+; CHECK-NEXT:    fcsel h26, h1, h0, lt
+; CHECK-NEXT:    ldr h1, [sp, #284] // 2-byte Reload
+; CHECK-NEXT:    ldr z0, [x8, #-7, mul vl] // 16-byte Folded Reload
+; CHECK-NEXT:    str h1, [sp, #900]
+; CHECK-NEXT:    ldr h1, [sp, #86] // 2-byte Reload
+; CHECK-NEXT:    fcmp h0, h0
+; CHECK-NEXT:    str h1, [sp, #898]
+; CHECK-NEXT:    ldr h1, [sp, #84] // 2-byte Reload
+; CHECK-NEXT:    str h1, [sp, #896]
+; CHECK-NEXT:    fmov s1, s27
+; CHECK-NEXT:    fcsel h0, h27, h0, vs
+; CHECK-NEXT:    ldr h27, [sp, #82] // 2-byte Reload
+; CHECK-NEXT:    str h27, [sp, #894]
+; CHECK-NEXT:    ldr h27, [sp, #80] // 2-byte Reload
+; CHECK-NEXT:    fcmp h1, h0
+; CHECK-NEXT:    str h27, [sp, #892]
+; CHECK-NEXT:    ldr h27, [sp, #78] // 2-byte Reload
+; CHECK-NEXT:    str h27, [sp, #890]
+; CHECK-NEXT:    ldr h27, [sp, #76] // 2-byte Reload
+; CHECK-NEXT:    str h27, [sp, #888]
+; CHECK-NEXT:    ldr h27, [sp, #74] // 2-byte Reload
+; CHECK-NEXT:    str h27, [sp, #886]
+; CHECK-NEXT:    ldr h27, [sp, #270] // 2-byte Reload
+; CHECK-NEXT:    str h27, [sp, #884]
+; CHECK-NEXT:    fcsel h27, h1, h0, lt
+; CHECK-NEXT:    ldr h1, [sp, #266] // 2-byte Reload
+; CHECK-NEXT:    ldr z0, [x8, #-6, mul vl] // 16-byte Folded Reload
+; CHECK-NEXT:    str h1, [sp, #882]
+; CHECK-NEXT:    ldr h1, [sp, #72] // 2-byte Reload
+; CHECK-NEXT:    fcmp h0, h0
+; CHECK-NEXT:    str h1, [sp, #880]
+; CHECK-NEXT:    ldr h1, [sp, #70] // 2-byte Reload
+; CHECK-NEXT:    str h1, [sp, #878]
+; CHECK-NEXT:    fmov s1, s6
+; CHECK-NEXT:    fcsel h0, h6, h0, vs
+; CHECK-NEXT:    ldr h6, [sp, #258] // 2-byte Reload
+; CHECK-NEXT:    str h6, [sp, #876]
+; CHECK-NEXT:    ldr h6, [sp, #68] // 2-byte Reload
+; CHECK-NEXT:    fcmp h1, h0
+; CHECK-NEXT:    str h6, [sp, #874]
+; CHECK-NEXT:    ldr h6, [sp, #254] // 2-byte Reload
+; CHECK-NEXT:    str h6, [sp, #872]
+; CHECK-NEXT:    ldr h6, [sp, #66] // 2-byte Reload
+; CHECK-NEXT:    fcsel h28, h1, h0, lt
+; CHECK-NEXT:    ldr h1, [sp, #244] // 2-byte Reload
+; CHECK-NEXT:    str h6, [sp, #870]
+; CHECK-NEXT:    ldr h6, [sp, #64] // 2-byte Reload
+; CHECK-NEXT:    str h6, [sp, #868]
+; CHECK-NEXT:    ldr h6, [sp, #248] // 2-byte Reload
+; CHECK-NEXT:    str h6, [sp, #866]
+; CHECK-NEXT:    ldr z0, [x8, #-5, mul vl] // 16-byte Folded Reload
+; CHECK-NEXT:    str h1, [sp, #864]
+; CHECK-NEXT:    ldr h1, [sp, #240] // 2-byte Reload
+; CHECK-NEXT:    str h1, [sp, #862]
+; CHECK-NEXT:    ldr h1, [sp, #236] // 2-byte Reload
+; CHECK-NEXT:    fcmp h0, h0
+; CHECK-NEXT:    str h1, [sp, #860]
+; CHECK-NEXT:    fmov s1, s3
+; CHECK-NEXT:    fcsel h0, h3, h0, vs
+; CHECK-NEXT:    ldr h3, [sp, #232] // 2-byte Reload
+; CHECK-NEXT:    str h3, [sp, #858]
+; CHECK-NEXT:    ldr h3, [sp, #226] // 2-byte Reload
+; CHECK-NEXT:    fcmp h1, h0
+; CHECK-NEXT:    str h3, [sp, #856]
+; CHECK-NEXT:    ldr h3, [sp, #62] // 2-byte Reload
+; CHECK-NEXT:    str h3, [sp, #854]
+; CHECK-NEXT:    ldr h3, [sp, #220] // 2-byte Reload
+; CHECK-NEXT:    fcsel h0, h1, h0, lt
+; CHECK-NEXT:    ldr h1, [sp, #200] // 2-byte Reload
+; CHECK-NEXT:    str h3, [sp, #852]
+; CHECK-NEXT:    ldr h3, [sp, #214] // 2-byte Reload
+; CHECK-NEXT:    str h3, [sp, #850]
+; CHECK-NEXT:    ldr h3, [sp, #206] // 2-byte Reload
+; CHECK-NEXT:    str h3, [sp, #848]
+; CHECK-NEXT:    ldr z3, [x8, #-3, mul vl] // 16-byte Folded Reload
+; CHECK-NEXT:    str h1, [sp, #846]
+; CHECK-NEXT:    ldr h1, [sp, #192] // 2-byte Reload
+; CHECK-NEXT:    str h1, [sp, #844]
+; CHECK-NEXT:    ldr h1, [sp, #184] // 2-byte Reload
+; CHECK-NEXT:    fcmp h3, h3
+; CHECK-NEXT:    str h1, [sp, #842]
+; CHECK-NEXT:    fcsel h30, h5, h3, vs
+; CHECK-NEXT:    ldr h3, [sp, #178] // 2-byte Reload
+; CHECK-NEXT:    str h3, [sp, #840]
+; CHECK-NEXT:    ldr h3, [sp, #170] // 2-byte Reload
+; CHECK-NEXT:    fcmp h5, h30
+; CHECK-NEXT:    str h3, [sp, #838]
+; CHECK-NEXT:    ldr h3, [sp, #162] // 2-byte Reload
+; CHECK-NEXT:    str h3, [sp, #836]
+; CHECK-NEXT:    ldr h3, [sp, #156] // 2-byte Reload
+; CHECK-NEXT:    fcsel h30, h5, h30, lt
+; CHECK-NEXT:    str h3, [sp, #834]
+; CHECK-NEXT:    ldr h3, [sp, #148] // 2-byte Reload
+; CHECK-NEXT:    str h3, [sp, #832]
+; CHECK-NEXT:    ldr h3, [sp, #60] // 2-byte Reload
+; CHECK-NEXT:    str h3, [sp, #830]
+; CHECK-NEXT:    ldr h3, [sp, #58] // 2-byte Reload
+; CHECK-NEXT:    ldr z1, [x8, #-4, mul vl] // 16-byte Folded Reload
+; CHECK-NEXT:    str h3, [sp, #828]
+; CHECK-NEXT:    ldr h3, [sp, #262] // 2-byte Reload
+; CHECK-NEXT:    fcmp h1, h1
+; CHECK-NEXT:    str h3, [sp, #826]
+; CHECK-NEXT:    ldr h3, [sp, #510] // 2-byte Reload
+; CHECK-NEXT:    str h3, [sp, #824]
+; CHECK-NEXT:    fcsel h31, h7, h1, vs
+; CHECK-NEXT:    ldr h1, [sp, #508] // 2-byte Reload
+; CHECK-NEXT:    str h1, [sp, #822]
+; CHECK-NEXT:    ldr h1, [sp, #506] // 2-byte Reload
+; CHECK-NEXT:    fcmp h7, h31
+; CHECK-NEXT:    str h1, [sp, #820]
+; CHECK-NEXT:    ldr h1, [sp, #504] // 2-byte Reload
+; CHECK-NEXT:    str h1, [sp, #818]
+; CHECK-NEXT:    ldr h1, [sp, #502] // 2-byte Reload
+; CHECK-NEXT:    fcsel h5, h7, h31, lt
+; CHECK-NEXT:    str h1, [sp, #816]
+; CHECK-NEXT:    ldr h1, [sp, #500] // 2-byte Reload
+; CHECK-NEXT:    str h1, [sp, #814]
+; CHECK-NEXT:    ldr h1, [sp, #498] // 2-byte Reload
+; CHECK-NEXT:    str h1, [sp, #812]
+; CHECK-NEXT:    ldr h1, [sp, #496] // 2-byte Reload
+; CHECK-NEXT:    ldr z3, [x8, #-2, mul vl] // 16-byte Folded Reload
+; CHECK-NEXT:    str h12, [sp, #808]
+; CHECK-NEXT:    str h1, [sp, #810]
+; CHECK-NEXT:    fmov s1, s2
+; CHECK-NEXT:    str h29, [sp, #806]
+; CHECK-NEXT:    fcmp h3, h3
+; CHECK-NEXT:    str h21, [sp, #804]
+; CHECK-NEXT:    str h25, [sp, #802]
+; CHECK-NEXT:    str h16, [sp, #800]
+; CHECK-NEXT:    fcsel h2, h2, h3, vs
+; CHECK-NEXT:    str h17, [sp, #798]
+; CHECK-NEXT:    str h18, [sp, #796]
+; CHECK-NEXT:    str h19, [sp, #794]
+; CHECK-NEXT:    fcmp h1, h2
+; CHECK-NEXT:    fcsel h1, h1, h2, lt
+; CHECK-NEXT:    ldr z2, [x8, #-1, mul vl] // 16-byte Folded Reload
+; CHECK-NEXT:    str h0, [sp, #778]
+; CHECK-NEXT:    str h20, [sp, #792]
+; CHECK-NEXT:    adrp x8, .LCPI95_0
+; CHECK-NEXT:    add x8, x8, :lo12:.LCPI95_0
+; CHECK-NEXT:    str h22, [sp, #790]
+; CHECK-NEXT:    fcmp h2, h2
+; CHECK-NEXT:    str h23, [sp, #788]
+; CHECK-NEXT:    str h24, [sp, #786]
+; CHECK-NEXT:    str h26, [sp, #784]
+; CHECK-NEXT:    fcsel h2, h4, h2, vs
+; CHECK-NEXT:    str h27, [sp, #782]
+; CHECK-NEXT:    str h28, [sp, #780]
+; CHECK-NEXT:    str h30, [sp, #776]
+; CHECK-NEXT:    fcmp h4, h2
+; CHECK-NEXT:    str h5, [sp, #774]
+; CHECK-NEXT:    str h1, [sp, #772]
+; CHECK-NEXT:    fcsel h0, h4, h2, lt
+; CHECK-NEXT:    str h0, [sp, #770]
+; CHECK-NEXT:    ld1h { z0.h }, p0/z, [x8]
+; CHECK-NEXT:    add x8, sp, #768
+; CHECK-NEXT:    ld1h { z1.h }, p0/z, [x9]
+; CHECK-NEXT:    cmpeq p1.h, p0/z, z1.h, z0.h
+; CHECK-NEXT:    mov z0.h, p1/z, #-1 // =0xffffffffffffffff
+; CHECK-NEXT:    ptrue p1.h
+; CHECK-NEXT:    and z0.h, z0.h, #0x1
+; CHECK-NEXT:    cmpne p1.h, p1/z, z0.h, #0
+; CHECK-NEXT:    ld1h { z0.h }, p0/z, [x8]
+; CHECK-NEXT:    fcmeq p2.h, p0/z, z0.h, #0.0
+; CHECK-NEXT:    sel z1.h, p1, z1.h, z0.h
+; CHECK-NEXT:    mov z0.h, p2/m, z1.h
+; CHECK-NEXT:    st1h { z0.h }, p0, [x0]
+; CHECK-NEXT:    sub sp, x29, #64
+; CHECK-NEXT:    ldp x29, x30, [sp, #64] // 16-byte Folded Reload
+; CHECK-NEXT:    ldp d9, d8, [sp, #48] // 16-byte Folded Reload
+; CHECK-NEXT:    ldp d11, d10, [sp, #32] // 16-byte Folded Reload
+; CHECK-NEXT:    ldp d13, d12, [sp, #16] // 16-byte Folded Reload
+; CHECK-NEXT:    ldp d15, d14, [sp], #80 // 16-byte Folded Reload
+; CHECK-NEXT:    ret
+  %op1 = load <128 x half>, ptr %a
+  %op2 = load <128 x half>, ptr %b
+  %res = call <128 x half> @llvm.minimumnum.v128f16(<128 x half> %op1, <128 x half> %op2)
+  store <128 x half> %res, ptr %a
+  ret void
+}
+
+; Don't use SVE for 64-bit vectors.
+define <2 x float> @fminimumnum_v2f32(<2 x float> %op1, <2 x float> %op2) vscale_range(2,0) #0 {
+; CHECK-LABEL: fminimumnum_v2f32:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    fminnm v1.2s, v1.2s, v1.2s
+; CHECK-NEXT:    fminnm v0.2s, v0.2s, v0.2s
+; CHECK-NEXT:    fminnm v0.2s, v0.2s, v1.2s
+; CHECK-NEXT:    ret
+  %res = call <2 x float> @llvm.minimumnum.v2f32(<2 x float> %op1, <2 x float> %op2)
+  ret <2 x float> %res
+}
+
+; Don't use SVE for 128-bit vectors.
+define <4 x float> @fminimumnum_v4f32(<4 x float> %op1, <4 x float> %op2) vscale_range(2,0) #0 {
+; CHECK-LABEL: fminimumnum_v4f32:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    fminnm v1.4s, v1.4s, v1.4s
+; CHECK-NEXT:    fminnm v0.4s, v0.4s, v0.4s
+; CHECK-NEXT:    fminnm v0.4s, v0.4s, v1.4s
+; CHECK-NEXT:    ret
+  %res = call <4 x float> @llvm.minimumnum.v4f32(<4 x float> %op1, <4 x float> %op2)
+  ret <4 x float> %res
+}
+
+define void @fminimumnum_v8f32(ptr %a, ptr %b) vscale_range(2,0) #0 {
+; CHECK-LABEL: fminimumnum_v8f32:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    stp x29, x30, [sp, #-16]! // 16-byte Folded Spill
+; CHECK-NEXT:    sub x9, sp, #80
+; CHECK-NEXT:    mov x29, sp
+; CHECK-NEXT:    and sp, x9, #0xffffffffffffffe0
+; CHECK-NEXT:    .cfi_def_cfa w29, 16
+; CHECK-NEXT:    .cfi_offset w30, -8
+; CHECK-NEXT:    .cfi_offset w29, -16
+; CHECK-NEXT:    ptrue p0.s, vl8
+; CHECK-NEXT:    adrp x8, .LCPI98_0
+; CHECK-NEXT:    add x8, x8, :lo12:.LCPI98_0
+; CHECK-NEXT:    mov x9, sp
+; CHECK-NEXT:    ld1w { z5.s }, p0/z, [x0]
+; CHECK-NEXT:    ld1w { z2.s }, p0/z, [x1]
+; CHECK-NEXT:    fcmp s5, s5
+; CHECK-NEXT:    mov z1.s, z5.s[7]
+; CHECK-NEXT:    mov z3.s, z2.s[7]
+; CHECK-NEXT:    mov z4.s, z5.s[6]
+; CHECK-NEXT:    mov z6.s, z2.s[6]
+; CHECK-NEXT:    mov z7.s, z5.s[5]
+; CHECK-NEXT:    mov z16.s, z2.s[5]
+; CHECK-NEXT:    mov z17.s, z5.s[4]
+; CHECK-NEXT:    mov z18.s, z2.s[4]
+; CHECK-NEXT:    fcsel s0, s2, s5, vs
+; CHECK-NEXT:    fcmp s1, s1
+; CHECK-NEXT:    mov z19.s, z5.s[3]
+; CHECK-NEXT:    mov z20.s, z2.s[3]
+; CHECK-NEXT:    mov z21.s, z5.s[2]
+; CHECK-NEXT:    mov z22.s, z2.s[2]
+; CHECK-NEXT:    mov z5.s, z5.s[1]
+; CHECK-NEXT:    mov z23.s, z2.s[1]
+; CHECK-NEXT:    fcsel s1, s3, s1, vs
+; CHECK-NEXT:    fcmp s4, s4
+; CHECK-NEXT:    fcsel s4, s6, s4, vs
+; CHECK-NEXT:    fcmp s7, s7
+; CHECK-NEXT:    fcsel s7, s16, s7, vs
+; CHECK-NEXT:    fcmp s17, s17
+; CHECK-NEXT:    stp s4, s1, [sp, #24]
+; CHECK-NEXT:    fcsel s17, s18, s17, vs
+; CHECK-NEXT:    fcmp s19, s19
+; CHECK-NEXT:    fcsel s19, s20, s19, vs
+; CHECK-NEXT:    fcmp s21, s21
+; CHECK-NEXT:    stp s17, s7, [sp, #16]
+; CHECK-NEXT:    fcsel s21, s22, s21, vs
+; CHECK-NEXT:    fcmp s5, s5
+; CHECK-NEXT:    fcsel s5, s23, s5, vs
+; CHECK-NEXT:    fcmp s2, s2
+; CHECK-NEXT:    stp s21, s19, [sp, #8]
+; CHECK-NEXT:    fcsel s2, s0, s2, vs
+; CHECK-NEXT:    stp s0, s5, [sp]
+; CHECK-NEXT:    fcmp s0, s2
+; CHECK-NEXT:    fcsel s2, s0, s2, lt
+; CHECK-NEXT:    fcmp s3, s3
+; CHECK-NEXT:    fcsel s3, s1, s3, vs
+; CHECK-NEXT:    fcmp s1, s3
+; CHECK-NEXT:    fcsel s3, s1, s3, lt
+; CHECK-NEXT:    fcmp s6, s6
+; CHECK-NEXT:    fcsel s6, s4, s6, vs
+; CHECK-NEXT:    fcmp s4, s6
+; CHECK-NEXT:    fcsel s6, s4, s6, lt
+; CHECK-NEXT:    fcmp s16, s16
+; CHECK-NEXT:    fcsel s16, s7, s16, vs
+; CHECK-NEXT:    stp s6, s3, [sp, #56]
+; CHECK-NEXT:    fcmp s7, s16
+; CHECK-NEXT:    fcsel s16, s7, s16, lt
+; CHECK-NEXT:    fcmp s18, s18
+; CHECK-NEXT:    fcsel s18, s17, s18, vs
+; CHECK-NEXT:    fcmp s17, s18
+; CHECK-NEXT:    fcsel s18, s17, s18, lt
+; CHECK-NEXT:    fcmp s20, s20
+; CHECK-NEXT:    fcsel s20, s19, s20, vs
+; CHECK-NEXT:    stp s18, s16, [sp, #48]
+; CHECK-NEXT:    fcmp s19, s20
+; CHECK-NEXT:    fcsel s20, s19, s20, lt
+; CHECK-NEXT:    fcmp s22, s22
+; CHECK-NEXT:    fcsel s22, s21, s22, vs
+; CHECK-NEXT:    fcmp s21, s22
+; CHECK-NEXT:    fcsel s1, s21, s22, lt
+; CHECK-NEXT:    fcmp s23, s23
+; CHECK-NEXT:    fcsel s4, s5, s23, vs
+; CHECK-NEXT:    stp s1, s20, [sp, #40]
+; CHECK-NEXT:    fcmp s5, s4
+; CHECK-NEXT:    fcsel s0, s5, s4, lt
+; CHECK-NEXT:    stp s2, s0, [sp, #32]
+; CHECK-NEXT:    ld1w { z0.s }, p0/z, [x8]
+; CHECK-NEXT:    add x8, sp, #32
+; CHECK-NEXT:    ld1w { z1.s }, p0/z, [x9]
+; CHECK-NEXT:    cmpeq p1.s, p0/z, z1.s, z0.s
+; CHECK-NEXT:    mov z0.s, p1/z, #-1 // =0xffffffffffffffff
+; CHECK-NEXT:    ptrue p1.s
+; CHECK-NEXT:    and z0.s, z0.s, #0x1
+; CHECK-NEXT:    cmpne p1.s, p1/z, z0.s, #0
+; CHECK-NEXT:    ld1w { z0.s }, p0/z, [x8]
+; CHECK-NEXT:    fcmeq p2.s, p0/z, z0.s, #0.0
+; CHECK-NEXT:    sel z1.s, p1, z1.s, z0.s
+; CHECK-NEXT:    mov z0.s, p2/m, z1.s
+; CHECK-NEXT:    st1w { z0.s }, p0, [x0]
+; CHECK-NEXT:    mov sp, x29
+; CHECK-NEXT:    ldp x29, x30, [sp], #16 // 16-byte Folded Reload
+; CHECK-NEXT:    ret
+  %op1 = load <8 x float>, ptr %a
+  %op2 = load <8 x float>, ptr %b
+  %res = call <8 x float> @llvm.minimumnum.v8f32(<8 x float> %op1, <8 x float> %op2)
+  store <8 x float> %res, ptr %a
+  ret void
+}
+
+define void @fminimumnum_v16f32(ptr %a, ptr %b) #0 {
+; VBITS_EQ_256-LABEL: fminimumnum_v16f32:
+; VBITS_EQ_256:       // %bb.0:
+; VBITS_EQ_256-NEXT:    stp d15, d14, [sp, #-80]! // 16-byte Folded Spill
+; VBITS_EQ_256-NEXT:    sub x9, sp, #144
+; VBITS_EQ_256-NEXT:    stp d13, d12, [sp, #16] // 16-byte Folded Spill
+; VBITS_EQ_256-NEXT:    stp d11, d10, [sp, #32] // 16-byte Folded Spill
+; VBITS_EQ_256-NEXT:    stp d9, d8, [sp, #48] // 16-byte Folded Spill
+; VBITS_EQ_256-NEXT:    stp x29, x30, [sp, #64] // 16-byte Folded Spill
+; VBITS_EQ_256-NEXT:    add x29, sp, #64
+; VBITS_EQ_256-NEXT:    and sp, x9, #0xffffffffffffffe0
+; VBITS_EQ_256-NEXT:    .cfi_def_cfa w29, 16
+; VBITS_EQ_256-NEXT:    .cfi_offset w30, -8
+; VBITS_EQ_256-NEXT:    .cfi_offset w29, -16
+; VBITS_EQ_256-NEXT:    .cfi_offset b8, -24
+; VBITS_EQ_256-NEXT:    .cfi_offset b9, -32
+; VBITS_EQ_256-NEXT:    .cfi_offset b10, -40
+; VBITS_EQ_256-NEXT:    .cfi_offset b11, -48
+; VBITS_EQ_256-NEXT:    .cfi_offset b12, -56
+; VBITS_EQ_256-NEXT:    .cfi_offset b13, -64
+; VBITS_EQ_256-NEXT:    .cfi_offset b14, -72
+; VBITS_EQ_256-NEXT:    .cfi_offset b15, -80
+; VBITS_EQ_256-NEXT:    ptrue p0.s, vl8
+; VBITS_EQ_256-NEXT:    mov x8, #8 // =0x8
+; VBITS_EQ_256-NEXT:    adrp x9, .LCPI99_0
+; VBITS_EQ_256-NEXT:    add x9, x9, :lo12:.LCPI99_0
+; VBITS_EQ_256-NEXT:    add x10, sp, #32
+; VBITS_EQ_256-NEXT:    ld1w { z6.s }, p0/z, [x0]
+; VBITS_EQ_256-NEXT:    ld1w { z5.s }, p0/z, [x1]
+; VBITS_EQ_256-NEXT:    ld1w { z29.s }, p0/z, [x0, x8, lsl #2]
+; VBITS_EQ_256-NEXT:    ld1w { z27.s }, p0/z, [x1, x8, lsl #2]
+; VBITS_EQ_256-NEXT:    fcmp s6, s6
+; VBITS_EQ_256-NEXT:    mov z1.s, z6.s[7]
+; VBITS_EQ_256-NEXT:    mov z17.s, z5.s[7]
+; VBITS_EQ_256-NEXT:    mov z2.s, z6.s[6]
+; VBITS_EQ_256-NEXT:    mov z18.s, z5.s[6]
+; VBITS_EQ_256-NEXT:    mov z3.s, z6.s[5]
+; VBITS_EQ_256-NEXT:    mov z19.s, z5.s[5]
+; VBITS_EQ_256-NEXT:    mov z4.s, z6.s[4]
+; VBITS_EQ_256-NEXT:    mov z20.s, z5.s[4]
+; VBITS_EQ_256-NEXT:    fcsel s0, s5, s6, vs
+; VBITS_EQ_256-NEXT:    fcmp s1, s1
+; VBITS_EQ_256-NEXT:    mov z7.s, z6.s[3]
+; VBITS_EQ_256-NEXT:    mov z21.s, z5.s[3]
+; VBITS_EQ_256-NEXT:    mov z16.s, z6.s[2]
+; VBITS_EQ_256-NEXT:    mov z22.s, z5.s[2]
+; VBITS_EQ_256-NEXT:    mov z23.s, z6.s[1]
+; VBITS_EQ_256-NEXT:    mov z24.s, z5.s[1]
+; VBITS_EQ_256-NEXT:    mov z25.s, z29.s[7]
+; VBITS_EQ_256-NEXT:    fcsel s1, s17, s1, vs
+; VBITS_EQ_256-NEXT:    fcmp s2, s2
+; VBITS_EQ_256-NEXT:    mov z30.s, z27.s[7]
+; VBITS_EQ_256-NEXT:    mov z26.s, z29.s[6]
+; VBITS_EQ_256-NEXT:    mov z8.s, z27.s[6]
+; VBITS_EQ_256-NEXT:    mov z28.s, z29.s[5]
+; VBITS_EQ_256-NEXT:    mov z9.s, z27.s[5]
+; VBITS_EQ_256-NEXT:    mov z31.s, z29.s[4]
+; VBITS_EQ_256-NEXT:    mov z10.s, z27.s[4]
+; VBITS_EQ_256-NEXT:    fcsel s2, s18, s2, vs
+; VBITS_EQ_256-NEXT:    fcmp s3, s3
+; VBITS_EQ_256-NEXT:    mov z11.s, z29.s[3]
+; VBITS_EQ_256-NEXT:    mov z12.s, z27.s[3]
+; VBITS_EQ_256-NEXT:    mov z13.s, z29.s[2]
+; VBITS_EQ_256-NEXT:    mov z14.s, z27.s[2]
+; VBITS_EQ_256-NEXT:    mov z15.s, z27.s[1]
+; VBITS_EQ_256-NEXT:    fcsel s3, s19, s3, vs
+; VBITS_EQ_256-NEXT:    stp s2, s1, [sp, #24]
+; VBITS_EQ_256-NEXT:    fcmp s4, s4
+; VBITS_EQ_256-NEXT:    fcsel s4, s20, s4, vs
+; VBITS_EQ_256-NEXT:    fcmp s7, s7
+; VBITS_EQ_256-NEXT:    fcsel s6, s21, s7, vs
+; VBITS_EQ_256-NEXT:    fcmp s16, s16
+; VBITS_EQ_256-NEXT:    stp s4, s3, [sp, #16]
+; VBITS_EQ_256-NEXT:    fcsel s7, s22, s16, vs
+; VBITS_EQ_256-NEXT:    fcmp s23, s23
+; VBITS_EQ_256-NEXT:    fcsel s16, s24, s23, vs
+; VBITS_EQ_256-NEXT:    fcmp s5, s5
+; VBITS_EQ_256-NEXT:    stp s7, s6, [sp, #8]
+; VBITS_EQ_256-NEXT:    fcsel s5, s0, s5, vs
+; VBITS_EQ_256-NEXT:    stp s0, s16, [sp]
+; VBITS_EQ_256-NEXT:    fcmp s0, s5
+; VBITS_EQ_256-NEXT:    fcsel s5, s0, s5, lt
+; VBITS_EQ_256-NEXT:    fcmp s17, s17
+; VBITS_EQ_256-NEXT:    fcsel s17, s1, s17, vs
+; VBITS_EQ_256-NEXT:    fcmp s1, s17
+; VBITS_EQ_256-NEXT:    fcsel s17, s1, s17, lt
+; VBITS_EQ_256-NEXT:    fcmp s18, s18
+; VBITS_EQ_256-NEXT:    fcsel s18, s2, s18, vs
+; VBITS_EQ_256-NEXT:    fcmp s2, s18
+; VBITS_EQ_256-NEXT:    fcsel s18, s2, s18, lt
+; VBITS_EQ_256-NEXT:    fcmp s19, s19
+; VBITS_EQ_256-NEXT:    fcsel s19, s3, s19, vs
+; VBITS_EQ_256-NEXT:    stp s18, s17, [sp, #88]
+; VBITS_EQ_256-NEXT:    fcmp s3, s19
+; VBITS_EQ_256-NEXT:    fcsel s19, s3, s19, lt
+; VBITS_EQ_256-NEXT:    fcmp s20, s20
+; VBITS_EQ_256-NEXT:    fcsel s20, s4, s20, vs
+; VBITS_EQ_256-NEXT:    fcmp s4, s20
+; VBITS_EQ_256-NEXT:    fcsel s20, s4, s20, lt
+; VBITS_EQ_256-NEXT:    fcmp s21, s21
+; VBITS_EQ_256-NEXT:    fcsel s21, s6, s21, vs
+; VBITS_EQ_256-NEXT:    stp s20, s19, [sp, #80]
+; VBITS_EQ_256-NEXT:    fcmp s6, s21
+; VBITS_EQ_256-NEXT:    fcsel s21, s6, s21, lt
+; VBITS_EQ_256-NEXT:    fcmp s22, s22
+; VBITS_EQ_256-NEXT:    fcsel s22, s7, s22, vs
+; VBITS_EQ_256-NEXT:    fcmp s7, s22
+; VBITS_EQ_256-NEXT:    fcsel s22, s7, s22, lt
+; VBITS_EQ_256-NEXT:    fcmp s24, s24
+; VBITS_EQ_256-NEXT:    fcsel s23, s16, s24, vs
+; VBITS_EQ_256-NEXT:    stp s22, s21, [sp, #72]
+; VBITS_EQ_256-NEXT:    fcmp s16, s23
+; VBITS_EQ_256-NEXT:    fcsel s24, s16, s23, lt
+; VBITS_EQ_256-NEXT:    fcmp s29, s29
+; VBITS_EQ_256-NEXT:    fcsel s23, s27, s29, vs
+; VBITS_EQ_256-NEXT:    fcmp s25, s25
+; VBITS_EQ_256-NEXT:    mov z29.s, z29.s[1]
+; VBITS_EQ_256-NEXT:    stp s5, s24, [sp, #64]
+; VBITS_EQ_256-NEXT:    fcsel s25, s30, s25, vs
+; VBITS_EQ_256-NEXT:    fcmp s26, s26
+; VBITS_EQ_256-NEXT:    fcsel s26, s8, s26, vs
+; VBITS_EQ_256-NEXT:    fcmp s28, s28
+; VBITS_EQ_256-NEXT:    fcsel s28, s9, s28, vs
+; VBITS_EQ_256-NEXT:    fcmp s31, s31
+; VBITS_EQ_256-NEXT:    stp s26, s25, [sp, #56]
+; VBITS_EQ_256-NEXT:    fcsel s31, s10, s31, vs
+; VBITS_EQ_256-NEXT:    fcmp s11, s11
+; VBITS_EQ_256-NEXT:    fcsel s11, s12, s11, vs
+; VBITS_EQ_256-NEXT:    fcmp s13, s13
+; VBITS_EQ_256-NEXT:    stp s31, s28, [sp, #48]
+; VBITS_EQ_256-NEXT:    fcsel s13, s14, s13, vs
+; VBITS_EQ_256-NEXT:    fcmp s29, s29
+; VBITS_EQ_256-NEXT:    fcsel s29, s15, s29, vs
+; VBITS_EQ_256-NEXT:    fcmp s27, s27
+; VBITS_EQ_256-NEXT:    stp s13, s11, [sp, #40]
+; VBITS_EQ_256-NEXT:    fcsel s27, s23, s27, vs
+; VBITS_EQ_256-NEXT:    stp s23, s29, [sp, #32]
+; VBITS_EQ_256-NEXT:    fcmp s23, s27
+; VBITS_EQ_256-NEXT:    fcsel s27, s23, s27, lt
+; VBITS_EQ_256-NEXT:    fcmp s30, s30
+; VBITS_EQ_256-NEXT:    fcsel s30, s25, s30, vs
+; VBITS_EQ_256-NEXT:    fcmp s25, s30
+; VBITS_EQ_256-NEXT:    fcsel s30, s25, s30, lt
+; VBITS_EQ_256-NEXT:    fcmp s8, s8
+; VBITS_EQ_256-NEXT:    fcsel s8, s26, s8, vs
+; VBITS_EQ_256-NEXT:    fcmp s26, s8
+; VBITS_EQ_256-NEXT:    fcsel s8, s26, s8, lt
+; VBITS_EQ_256-NEXT:    fcmp s9, s9
+; VBITS_EQ_256-NEXT:    fcsel s9, s28, s9, vs
+; VBITS_EQ_256-NEXT:    stp s8, s30, [sp, #120]
+; VBITS_EQ_256-NEXT:    fcmp s28, s9
+; VBITS_EQ_256-NEXT:    fcsel s9, s28, s9, lt
+; VBITS_EQ_256-NEXT:    fcmp s10, s10
+; VBITS_EQ_256-NEXT:    fcsel s10, s31, s10, vs
+; VBITS_EQ_256-NEXT:    fcmp s31, s10
+; VBITS_EQ_256-NEXT:    fcsel s1, s31, s10, lt
+; VBITS_EQ_256-NEXT:    fcmp s12, s12
+; VBITS_EQ_256-NEXT:    fcsel s2, s11, s12, vs
+; VBITS_EQ_256-NEXT:    stp s1, s9, [sp, #112]
+; VBITS_EQ_256-NEXT:    fcmp s11, s2
+; VBITS_EQ_256-NEXT:    fcsel s0, s11, s2, lt
+; VBITS_EQ_256-NEXT:    fcmp s14, s14
+; VBITS_EQ_256-NEXT:    fcsel s2, s13, s14, vs
+; VBITS_EQ_256-NEXT:    fcmp s13, s2
+; VBITS_EQ_256-NEXT:    fcsel s2, s13, s2, lt
+; VBITS_EQ_256-NEXT:    fcmp s15, s15
+; VBITS_EQ_256-NEXT:    fcsel s3, s29, s15, vs
+; VBITS_EQ_256-NEXT:    stp s2, s0, [sp, #104]
+; VBITS_EQ_256-NEXT:    ld1w { z0.s }, p0/z, [x9]
+; VBITS_EQ_256-NEXT:    mov x9, sp
+; VBITS_EQ_256-NEXT:    fcmp s29, s3
+; VBITS_EQ_256-NEXT:    fcsel s1, s29, s3, lt
+; VBITS_EQ_256-NEXT:    stp s27, s1, [sp, #96]
+; VBITS_EQ_256-NEXT:    ld1w { z1.s }, p0/z, [x10]
+; VBITS_EQ_256-NEXT:    ld1w { z2.s }, p0/z, [x9]
+; VBITS_EQ_256-NEXT:    add x9, sp, #96
+; VBITS_EQ_256-NEXT:    cmpeq p1.s, p0/z, z1.s, z0.s
+; VBITS_EQ_256-NEXT:    cmpeq p2.s, p0/z, z2.s, z0.s
+; VBITS_EQ_256-NEXT:    mov z0.s, p1/z, #-1 // =0xffffffffffffffff
+; VBITS_EQ_256-NEXT:    mov z3.s, p2/z, #-1 // =0xffffffffffffffff
+; VBITS_EQ_256-NEXT:    ptrue p1.s
+; VBITS_EQ_256-NEXT:    and z0.s, z0.s, #0x1
+; VBITS_EQ_256-NEXT:    and z3.s, z3.s, #0x1
+; VBITS_EQ_256-NEXT:    cmpne p2.s, p1/z, z0.s, #0
+; VBITS_EQ_256-NEXT:    ld1w { z0.s }, p0/z, [x9]
+; VBITS_EQ_256-NEXT:    add x9, sp, #64
+; VBITS_EQ_256-NEXT:    ld1w { z4.s }, p0/z, [x9]
+; VBITS_EQ_256-NEXT:    cmpne p1.s, p1/z, z3.s, #0
+; VBITS_EQ_256-NEXT:    fcmeq p3.s, p0/z, z0.s, #0.0
+; VBITS_EQ_256-NEXT:    sel z1.s, p2, z1.s, z0.s
+; VBITS_EQ_256-NEXT:    fcmeq p2.s, p0/z, z4.s, #0.0
+; VBITS_EQ_256-NEXT:    sel z2.s, p1, z2.s, z4.s
+; VBITS_EQ_256-NEXT:    mov z0.s, p3/m, z1.s
+; VBITS_EQ_256-NEXT:    sel z1.s, p2, z2.s, z4.s
+; VBITS_EQ_256-NEXT:    st1w { z0.s }, p0, [x0, x8, lsl #2]
+; VBITS_EQ_256-NEXT:    st1w { z1.s }, p0, [x0]
+; VBITS_EQ_256-NEXT:    sub sp, x29, #64
+; VBITS_EQ_256-NEXT:    ldp x29, x30, [sp, #64] // 16-byte Folded Reload
+; VBITS_EQ_256-NEXT:    ldp d9, d8, [sp, #48] // 16-byte Folded Reload
+; VBITS_EQ_256-NEXT:    ldp d11, d10, [sp, #32] // 16-byte Folded Reload
+; VBITS_EQ_256-NEXT:    ldp d13, d12, [sp, #16] // 16-byte Folded Reload
+; VBITS_EQ_256-NEXT:    ldp d15, d14, [sp], #80 // 16-byte Folded Reload
+; VBITS_EQ_256-NEXT:    ret
+;
+; VBITS_GE_512-LABEL: fminimumnum_v16f32:
+; VBITS_GE_512:       // %bb.0:
+; VBITS_GE_512-NEXT:    stp d15, d14, [sp, #-80]! // 16-byte Folded Spill
+; VBITS_GE_512-NEXT:    sub x9, sp, #176
+; VBITS_GE_512-NEXT:    stp d13, d12, [sp, #16] // 16-byte Folded Spill
+; VBITS_GE_512-NEXT:    stp d11, d10, [sp, #32] // 16-byte Folded Spill
+; VBITS_GE_512-NEXT:    stp d9, d8, [sp, #48] // 16-byte Folded Spill
+; VBITS_GE_512-NEXT:    stp x29, x30, [sp, #64] // 16-byte Folded Spill
+; VBITS_GE_512-NEXT:    add x29, sp, #64
+; VBITS_GE_512-NEXT:    and sp, x9, #0xffffffffffffffc0
+; VBITS_GE_512-NEXT:    .cfi_def_cfa w29, 16
+; VBITS_GE_512-NEXT:    .cfi_offset w30, -8
+; VBITS_GE_512-NEXT:    .cfi_offset w29, -16
+; VBITS_GE_512-NEXT:    .cfi_offset b8, -24
+; VBITS_GE_512-NEXT:    .cfi_offset b9, -32
+; VBITS_GE_512-NEXT:    .cfi_offset b10, -40
+; VBITS_GE_512-NEXT:    .cfi_offset b11, -48
+; VBITS_GE_512-NEXT:    .cfi_offset b12, -56
+; VBITS_GE_512-NEXT:    .cfi_offset b13, -64
+; VBITS_GE_512-NEXT:    .cfi_offset b14, -72
+; VBITS_GE_512-NEXT:    .cfi_offset b15, -80
+; VBITS_GE_512-NEXT:    ptrue p0.s, vl16
+; VBITS_GE_512-NEXT:    adrp x8, .LCPI99_0
+; VBITS_GE_512-NEXT:    add x8, x8, :lo12:.LCPI99_0
+; VBITS_GE_512-NEXT:    mov x9, sp
+; VBITS_GE_512-NEXT:    ld1w { z17.s }, p0/z, [x0]
+; VBITS_GE_512-NEXT:    ld1w { z6.s }, p0/z, [x1]
+; VBITS_GE_512-NEXT:    fcmp s17, s17
+; VBITS_GE_512-NEXT:    mov z1.s, z17.s[15]
+; VBITS_GE_512-NEXT:    mov z7.s, z6.s[15]
+; VBITS_GE_512-NEXT:    mov z2.s, z17.s[14]
+; VBITS_GE_512-NEXT:    mov z18.s, z6.s[14]
+; VBITS_GE_512-NEXT:    mov z3.s, z17.s[13]
+; VBITS_GE_512-NEXT:    mov z19.s, z6.s[13]
+; VBITS_GE_512-NEXT:    mov z4.s, z17.s[12]
+; VBITS_GE_512-NEXT:    mov z21.s, z6.s[12]
+; VBITS_GE_512-NEXT:    fcsel s0, s6, s17, vs
+; VBITS_GE_512-NEXT:    fcmp s1, s1
+; VBITS_GE_512-NEXT:    mov z5.s, z17.s[11]
+; VBITS_GE_512-NEXT:    mov z22.s, z6.s[11]
+; VBITS_GE_512-NEXT:    mov z16.s, z17.s[10]
+; VBITS_GE_512-NEXT:    mov z24.s, z6.s[10]
+; VBITS_GE_512-NEXT:    mov z20.s, z17.s[9]
+; VBITS_GE_512-NEXT:    mov z26.s, z6.s[9]
+; VBITS_GE_512-NEXT:    mov z23.s, z17.s[8]
+; VBITS_GE_512-NEXT:    fcsel s1, s7, s1, vs
+; VBITS_GE_512-NEXT:    fcmp s2, s2
+; VBITS_GE_512-NEXT:    mov z27.s, z6.s[8]
+; VBITS_GE_512-NEXT:    mov z25.s, z17.s[7]
+; VBITS_GE_512-NEXT:    mov z29.s, z6.s[7]
+; VBITS_GE_512-NEXT:    mov z28.s, z17.s[6]
+; VBITS_GE_512-NEXT:    mov z31.s, z6.s[6]
+; VBITS_GE_512-NEXT:    mov z30.s, z17.s[5]
+; VBITS_GE_512-NEXT:    mov z10.s, z6.s[5]
+; VBITS_GE_512-NEXT:    fcsel s2, s18, s2, vs
+; VBITS_GE_512-NEXT:    fcmp s3, s3
+; VBITS_GE_512-NEXT:    mov z8.s, z17.s[4]
+; VBITS_GE_512-NEXT:    mov z14.s, z6.s[4]
+; VBITS_GE_512-NEXT:    mov z9.s, z17.s[3]
+; VBITS_GE_512-NEXT:    mov z15.s, z6.s[3]
+; VBITS_GE_512-NEXT:    mov z12.s, z17.s[2]
+; VBITS_GE_512-NEXT:    mov z11.s, z6.s[2]
+; VBITS_GE_512-NEXT:    mov z17.s, z17.s[1]
+; VBITS_GE_512-NEXT:    stp s2, s1, [sp, #56]
+; VBITS_GE_512-NEXT:    fcsel s3, s19, s3, vs
+; VBITS_GE_512-NEXT:    fcmp s4, s4
+; VBITS_GE_512-NEXT:    fcsel s4, s21, s4, vs
+; VBITS_GE_512-NEXT:    fcmp s5, s5
+; VBITS_GE_512-NEXT:    fcsel s5, s22, s5, vs
+; VBITS_GE_512-NEXT:    fcmp s16, s16
+; VBITS_GE_512-NEXT:    stp s4, s3, [sp, #48]
+; VBITS_GE_512-NEXT:    fcsel s16, s24, s16, vs
+; VBITS_GE_512-NEXT:    fcmp s20, s20
+; VBITS_GE_512-NEXT:    fcsel s20, s26, s20, vs
+; VBITS_GE_512-NEXT:    fcmp s23, s23
+; VBITS_GE_512-NEXT:    stp s16, s5, [sp, #40]
+; VBITS_GE_512-NEXT:    fcsel s23, s27, s23, vs
+; VBITS_GE_512-NEXT:    fcmp s25, s25
+; VBITS_GE_512-NEXT:    fcsel s25, s29, s25, vs
+; VBITS_GE_512-NEXT:    fcmp s28, s28
+; VBITS_GE_512-NEXT:    stp s23, s20, [sp, #32]
+; VBITS_GE_512-NEXT:    fcsel s28, s31, s28, vs
+; VBITS_GE_512-NEXT:    fcmp s30, s30
+; VBITS_GE_512-NEXT:    fcsel s30, s10, s30, vs
+; VBITS_GE_512-NEXT:    fcmp s8, s8
+; VBITS_GE_512-NEXT:    stp s28, s25, [sp, #24]
+; VBITS_GE_512-NEXT:    fcsel s8, s14, s8, vs
+; VBITS_GE_512-NEXT:    fcmp s9, s9
+; VBITS_GE_512-NEXT:    fcsel s13, s15, s9, vs
+; VBITS_GE_512-NEXT:    fcmp s12, s12
+; VBITS_GE_512-NEXT:    mov z9.s, z6.s[1]
+; VBITS_GE_512-NEXT:    stp s8, s30, [sp, #16]
+; VBITS_GE_512-NEXT:    fcsel s12, s11, s12, vs
+; VBITS_GE_512-NEXT:    fcmp s17, s17
+; VBITS_GE_512-NEXT:    fcsel s17, s9, s17, vs
+; VBITS_GE_512-NEXT:    fcmp s6, s6
+; VBITS_GE_512-NEXT:    stp s12, s13, [sp, #8]
+; VBITS_GE_512-NEXT:    fcsel s6, s0, s6, vs
+; VBITS_GE_512-NEXT:    stp s0, s17, [sp]
+; VBITS_GE_512-NEXT:    fcmp s0, s6
+; VBITS_GE_512-NEXT:    fcsel s6, s0, s6, lt
+; VBITS_GE_512-NEXT:    fcmp s7, s7
+; VBITS_GE_512-NEXT:    fcsel s7, s1, s7, vs
+; VBITS_GE_512-NEXT:    fcmp s1, s7
+; VBITS_GE_512-NEXT:    fcsel s7, s1, s7, lt
+; VBITS_GE_512-NEXT:    fcmp s18, s18
+; VBITS_GE_512-NEXT:    fcsel s18, s2, s18, vs
+; VBITS_GE_512-NEXT:    fcmp s2, s18
+; VBITS_GE_512-NEXT:    fcsel s18, s2, s18, lt
+; VBITS_GE_512-NEXT:    fcmp s19, s19
+; VBITS_GE_512-NEXT:    fcsel s19, s3, s19, vs
+; VBITS_GE_512-NEXT:    stp s18, s7, [sp, #120]
+; VBITS_GE_512-NEXT:    fcmp s3, s19
+; VBITS_GE_512-NEXT:    fcsel s19, s3, s19, lt
+; VBITS_GE_512-NEXT:    fcmp s21, s21
+; VBITS_GE_512-NEXT:    fcsel s21, s4, s21, vs
+; VBITS_GE_512-NEXT:    fcmp s4, s21
+; VBITS_GE_512-NEXT:    fcsel s21, s4, s21, lt
+; VBITS_GE_512-NEXT:    fcmp s22, s22
+; VBITS_GE_512-NEXT:    fcsel s22, s5, s22, vs
+; VBITS_GE_512-NEXT:    stp s21, s19, [sp, #112]
+; VBITS_GE_512-NEXT:    fcmp s5, s22
+; VBITS_GE_512-NEXT:    fcsel s22, s5, s22, lt
+; VBITS_GE_512-NEXT:    fcmp s24, s24
+; VBITS_GE_512-NEXT:    fcsel s24, s16, s24, vs
+; VBITS_GE_512-NEXT:    fcmp s16, s24
+; VBITS_GE_512-NEXT:    fcsel s24, s16, s24, lt
+; VBITS_GE_512-NEXT:    fcmp s26, s26
+; VBITS_GE_512-NEXT:    fcsel s26, s20, s26, vs
+; VBITS_GE_512-NEXT:    stp s24, s22, [sp, #104]
+; VBITS_GE_512-NEXT:    fcmp s20, s26
+; VBITS_GE_512-NEXT:    fcsel s26, s20, s26, lt
+; VBITS_GE_512-NEXT:    fcmp s27, s27
+; VBITS_GE_512-NEXT:    fcsel s27, s23, s27, vs
+; VBITS_GE_512-NEXT:    fcmp s23, s27
+; VBITS_GE_512-NEXT:    fcsel s27, s23, s27, lt
+; VBITS_GE_512-NEXT:    fcmp s29, s29
+; VBITS_GE_512-NEXT:    fcsel s29, s25, s29, vs
+; VBITS_GE_512-NEXT:    stp s27, s26, [sp, #96]
+; VBITS_GE_512-NEXT:    fcmp s25, s29
+; VBITS_GE_512-NEXT:    fcsel s29, s25, s29, lt
+; VBITS_GE_512-NEXT:    fcmp s31, s31
+; VBITS_GE_512-NEXT:    fcsel s31, s28, s31, vs
+; VBITS_GE_512-NEXT:    fcmp s28, s31
+; VBITS_GE_512-NEXT:    fcsel s31, s28, s31, lt
+; VBITS_GE_512-NEXT:    fcmp s10, s10
+; VBITS_GE_512-NEXT:    fcsel s10, s30, s10, vs
+; VBITS_GE_512-NEXT:    stp s31, s29, [sp, #88]
+; VBITS_GE_512-NEXT:    fcmp s30, s10
+; VBITS_GE_512-NEXT:    fcsel s10, s30, s10, lt
+; VBITS_GE_512-NEXT:    fcmp s14, s14
+; VBITS_GE_512-NEXT:    fcsel s14, s8, s14, vs
+; VBITS_GE_512-NEXT:    fcmp s8, s14
+; VBITS_GE_512-NEXT:    fcsel s1, s8, s14, lt
+; VBITS_GE_512-NEXT:    fcmp s15, s15
+; VBITS_GE_512-NEXT:    fcsel s2, s13, s15, vs
+; VBITS_GE_512-NEXT:    stp s1, s10, [sp, #80]
+; VBITS_GE_512-NEXT:    fcmp s13, s2
+; VBITS_GE_512-NEXT:    fcsel s2, s13, s2, lt
+; VBITS_GE_512-NEXT:    fcmp s11, s11
+; VBITS_GE_512-NEXT:    fcsel s3, s12, s11, vs
+; VBITS_GE_512-NEXT:    fcmp s12, s3
+; VBITS_GE_512-NEXT:    fcsel s0, s12, s3, lt
+; VBITS_GE_512-NEXT:    fcmp s9, s9
+; VBITS_GE_512-NEXT:    fcsel s3, s17, s9, vs
+; VBITS_GE_512-NEXT:    stp s0, s2, [sp, #72]
+; VBITS_GE_512-NEXT:    ld1w { z0.s }, p0/z, [x8]
+; VBITS_GE_512-NEXT:    add x8, sp, #64
+; VBITS_GE_512-NEXT:    fcmp s17, s3
+; VBITS_GE_512-NEXT:    fcsel s1, s17, s3, lt
+; VBITS_GE_512-NEXT:    stp s6, s1, [sp, #64]
+; VBITS_GE_512-NEXT:    ld1w { z1.s }, p0/z, [x9]
+; VBITS_GE_512-NEXT:    cmpeq p1.s, p0/z, z1.s, z0.s
+; VBITS_GE_512-NEXT:    mov z0.s, p1/z, #-1 // =0xffffffffffffffff
+; VBITS_GE_512-NEXT:    ptrue p1.s
+; VBITS_GE_512-NEXT:    and z0.s, z0.s, #0x1
+; VBITS_GE_512-NEXT:    cmpne p1.s, p1/z, z0.s, #0
+; VBITS_GE_512-NEXT:    ld1w { z0.s }, p0/z, [x8]
+; VBITS_GE_512-NEXT:    fcmeq p2.s, p0/z, z0.s, #0.0
+; VBITS_GE_512-NEXT:    sel z1.s, p1, z1.s, z0.s
+; VBITS_GE_512-NEXT:    mov z0.s, p2/m, z1.s
+; VBITS_GE_512-NEXT:    st1w { z0.s }, p0, [x0]
+; VBITS_GE_512-NEXT:    sub sp, x29, #64
+; VBITS_GE_512-NEXT:    ldp x29, x30, [sp, #64] // 16-byte Folded Reload
+; VBITS_GE_512-NEXT:    ldp d9, d8, [sp, #48] // 16-byte Folded Reload
+; VBITS_GE_512-NEXT:    ldp d11, d10, [sp, #32] // 16-byte Folded Reload
+; VBITS_GE_512-NEXT:    ldp d13, d12, [sp, #16] // 16-byte Folded Reload
+; VBITS_GE_512-NEXT:    ldp d15, d14, [sp], #80 // 16-byte Folded Reload
+; VBITS_GE_512-NEXT:    ret
+  %op1 = load <16 x float>, ptr %a
+  %op2 = load <16 x float>, ptr %b
+  %res = call <16 x float> @llvm.minimumnum.v16f32(<16 x float> %op1, <16 x float> %op2)
+  store <16 x float> %res, ptr %a
+  ret void
+}
+
+define void @fminimumnum_v32f32(ptr %a, ptr %b) vscale_range(8,0) #0 {
+; CHECK-LABEL: fminimumnum_v32f32:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    stp d15, d14, [sp, #-80]! // 16-byte Folded Spill
+; CHECK-NEXT:    sub x9, sp, #560
+; CHECK-NEXT:    stp d13, d12, [sp, #16] // 16-byte Folded Spill
+; CHECK-NEXT:    addvl x9, x9, #-5
+; CHECK-NEXT:    stp d11, d10, [sp, #32] // 16-byte Folded Spill
+; CHECK-NEXT:    stp d9, d8, [sp, #48] // 16-byte Folded Spill
+; CHECK-NEXT:    stp x29, x30, [sp, #64] // 16-byte Folded Spill
+; CHECK-NEXT:    add x29, sp, #64
+; CHECK-NEXT:    and sp, x9, #0xffffffffffffff80
+; CHECK-NEXT:    .cfi_def_cfa w29, 16
+; CHECK-NEXT:    .cfi_offset w30, -8
+; CHECK-NEXT:    .cfi_offset w29, -16
+; CHECK-NEXT:    .cfi_offset b8, -24
+; CHECK-NEXT:    .cfi_offset b9, -32
+; CHECK-NEXT:    .cfi_offset b10, -40
+; CHECK-NEXT:    .cfi_offset b11, -48
+; CHECK-NEXT:    .cfi_offset b12, -56
+; CHECK-NEXT:    .cfi_offset b13, -64
+; CHECK-NEXT:    .cfi_offset b14, -72
+; CHECK-NEXT:    .cfi_offset b15, -80
+; CHECK-NEXT:    ptrue p0.s, vl32
+; CHECK-NEXT:    mov w8, #31 // =0x1f
+; CHECK-NEXT:    add x9, sp, #256
+; CHECK-NEXT:    ld1w { z25.s }, p0/z, [x0]
+; CHECK-NEXT:    ld1w { z22.s }, p0/z, [x1]
+; CHECK-NEXT:    fcmp s25, s25
+; CHECK-NEXT:    mov z12.s, z22.s[15]
+; CHECK-NEXT:    mov z8.s, z22.s[14]
+; CHECK-NEXT:    mov z31.s, z22.s[13]
+; CHECK-NEXT:    mov z29.s, z22.s[12]
+; CHECK-NEXT:    mov z27.s, z22.s[11]
+; CHECK-NEXT:    mov z24.s, z22.s[10]
+; CHECK-NEXT:    mov z21.s, z22.s[9]
+; CHECK-NEXT:    mov z18.s, z22.s[8]
+; CHECK-NEXT:    fcsel s1, s22, s25, vs
+; CHECK-NEXT:    whilels p1.s, xzr, x8
+; CHECK-NEXT:    mov w8, #30 // =0x1e
+; CHECK-NEXT:    mov z17.s, z22.s[7]
+; CHECK-NEXT:    mov z19.s, z22.s[6]
+; CHECK-NEXT:    mov z9.s, z25.s[2]
+; CHECK-NEXT:    lastb s0, p1, z25.s
+; CHECK-NEXT:    lastb s2, p1, z22.s
+; CHECK-NEXT:    fcmp s0, s0
+; CHECK-NEXT:    fcsel s4, s2, s0, vs
+; CHECK-NEXT:    whilels p1.s, xzr, x8
+; CHECK-NEXT:    mov w8, #29 // =0x1d
+; CHECK-NEXT:    lastb s0, p1, z25.s
+; CHECK-NEXT:    lastb s3, p1, z22.s
+; CHECK-NEXT:    fcmp s0, s0
+; CHECK-NEXT:    fcsel s0, s3, s0, vs
+; CHECK-NEXT:    whilels p1.s, xzr, x8
+; CHECK-NEXT:    mov w8, #28 // =0x1c
+; CHECK-NEXT:    lastb s23, p1, z22.s
+; CHECK-NEXT:    stp s0, s1, [sp, #248] // 8-byte Folded Spill
+; CHECK-NEXT:    lastb s0, p1, z25.s
+; CHECK-NEXT:    fcmp s0, s0
+; CHECK-NEXT:    fcsel s0, s23, s0, vs
+; CHECK-NEXT:    whilels p1.s, xzr, x8
+; CHECK-NEXT:    mov w8, #27 // =0x1b
+; CHECK-NEXT:    lastb s30, p1, z22.s
+; CHECK-NEXT:    stp s0, s4, [sp, #240] // 8-byte Folded Spill
+; CHECK-NEXT:    lastb s0, p1, z25.s
+; CHECK-NEXT:    fcmp s0, s0
+; CHECK-NEXT:    fcsel s4, s30, s0, vs
+; CHECK-NEXT:    whilels p1.s, xzr, x8
+; CHECK-NEXT:    mov w8, #26 // =0x1a
+; CHECK-NEXT:    lastb s0, p1, z25.s
+; CHECK-NEXT:    lastb s1, p1, z22.s
+; CHECK-NEXT:    fcmp s0, s0
+; CHECK-NEXT:    str s1, [sp, #208] // 4-byte Spill
+; CHECK-NEXT:    fcsel s0, s1, s0, vs
+; CHECK-NEXT:    whilels p1.s, xzr, x8
+; CHECK-NEXT:    mov w8, #25 // =0x19
+; CHECK-NEXT:    lastb s1, p1, z22.s
+; CHECK-NEXT:    stp s0, s4, [sp, #232] // 8-byte Folded Spill
+; CHECK-NEXT:    lastb s0, p1, z25.s
+; CHECK-NEXT:    str s1, [sp, #204] // 4-byte Spill
+; CHECK-NEXT:    fcmp s0, s0
+; CHECK-NEXT:    fcsel s4, s1, s0, vs
+; CHECK-NEXT:    whilels p1.s, xzr, x8
+; CHECK-NEXT:    mov w8, #24 // =0x18
+; CHECK-NEXT:    lastb s0, p1, z25.s
+; CHECK-NEXT:    lastb s5, p1, z22.s
+; CHECK-NEXT:    fcmp s0, s0
+; CHECK-NEXT:    fcsel s0, s5, s0, vs
+; CHECK-NEXT:    whilels p1.s, xzr, x8
+; CHECK-NEXT:    mov w8, #23 // =0x17
+; CHECK-NEXT:    lastb s1, p1, z22.s
+; CHECK-NEXT:    stp s0, s4, [sp, #224] // 8-byte Folded Spill
+; CHECK-NEXT:    lastb s0, p1, z25.s
+; CHECK-NEXT:    str s1, [sp, #200] // 4-byte Spill
+; CHECK-NEXT:    fcmp s0, s0
+; CHECK-NEXT:    fcsel s4, s1, s0, vs
+; CHECK-NEXT:    whilels p1.s, xzr, x8
+; CHECK-NEXT:    mov w8, #22 // =0x16
+; CHECK-NEXT:    lastb s0, p1, z25.s
+; CHECK-NEXT:    lastb s1, p1, z22.s
+; CHECK-NEXT:    fcmp s0, s0
+; CHECK-NEXT:    str s1, [sp, #196] // 4-byte Spill
+; CHECK-NEXT:    fcsel s0, s1, s0, vs
+; CHECK-NEXT:    whilels p1.s, xzr, x8
+; CHECK-NEXT:    mov w8, #21 // =0x15
+; CHECK-NEXT:    lastb s14, p1, z22.s
+; CHECK-NEXT:    stp s0, s4, [sp, #216] // 8-byte Folded Spill
+; CHECK-NEXT:    lastb s0, p1, z25.s
+; CHECK-NEXT:    fcmp s0, s0
+; CHECK-NEXT:    fcsel s0, s14, s0, vs
+; CHECK-NEXT:    whilels p1.s, xzr, x8
+; CHECK-NEXT:    mov w8, #20 // =0x14
+; CHECK-NEXT:    lastb s1, p1, z22.s
+; CHECK-NEXT:    str s0, [sp, #212] // 4-byte Spill
+; CHECK-NEXT:    lastb s0, p1, z25.s
+; CHECK-NEXT:    fcmp s0, s0
+; CHECK-NEXT:    fcsel s0, s1, s0, vs
+; CHECK-NEXT:    whilels p1.s, xzr, x8
+; CHECK-NEXT:    mov w8, #19 // =0x13
+; CHECK-NEXT:    stp s1, s0, [sp, #188] // 8-byte Folded Spill
+; CHECK-NEXT:    lastb s0, p1, z25.s
+; CHECK-NEXT:    lastb s1, p1, z22.s
+; CHECK-NEXT:    fcmp s0, s0
+; CHECK-NEXT:    fcsel s0, s1, s0, vs
+; CHECK-NEXT:    whilels p1.s, xzr, x8
+; CHECK-NEXT:    mov w8, #18 // =0x12
+; CHECK-NEXT:    stp s1, s0, [sp, #180] // 8-byte Folded Spill
+; CHECK-NEXT:    lastb s0, p1, z25.s
+; CHECK-NEXT:    lastb s1, p1, z22.s
+; CHECK-NEXT:    fcmp s0, s0
+; CHECK-NEXT:    fcsel s0, s1, s0, vs
+; CHECK-NEXT:    whilels p1.s, xzr, x8
+; CHECK-NEXT:    mov w8, #17 // =0x11
+; CHECK-NEXT:    stp s1, s0, [sp, #172] // 8-byte Folded Spill
+; CHECK-NEXT:    lastb s0, p1, z25.s
+; CHECK-NEXT:    lastb s1, p1, z22.s
+; CHECK-NEXT:    fcmp s0, s0
+; CHECK-NEXT:    fcsel s0, s1, s0, vs
+; CHECK-NEXT:    whilels p1.s, xzr, x8
+; CHECK-NEXT:    mov w8, #16 // =0x10
+; CHECK-NEXT:    stp s1, s0, [sp, #164] // 8-byte Folded Spill
+; CHECK-NEXT:    lastb s0, p1, z25.s
+; CHECK-NEXT:    lastb s1, p1, z22.s
+; CHECK-NEXT:    fcmp s0, s0
+; CHECK-NEXT:    fcsel s0, s1, s0, vs
+; CHECK-NEXT:    whilels p1.s, xzr, x8
+; CHECK-NEXT:    sub x8, x29, #64
+; CHECK-NEXT:    lastb s4, p1, z22.s
+; CHECK-NEXT:    stp s1, s0, [sp, #156] // 8-byte Folded Spill
+; CHECK-NEXT:    lastb s0, p1, z25.s
+; CHECK-NEXT:    mov z1.s, z25.s[15]
+; CHECK-NEXT:    fcmp s0, s0
+; CHECK-NEXT:    fcsel s0, s4, s0, vs
+; CHECK-NEXT:    fcmp s1, s1
+; CHECK-NEXT:    stp s4, s0, [sp, #144] // 8-byte Folded Spill
+; CHECK-NEXT:    mov z0.s, z25.s[14]
+; CHECK-NEXT:    fcsel s6, s12, s1, vs
+; CHECK-NEXT:    mov z1.s, z25.s[13]
+; CHECK-NEXT:    mov z4.s, z22.s[5]
+; CHECK-NEXT:    fcmp s0, s0
+; CHECK-NEXT:    str z4, [x8, #-5, mul vl] // 16-byte Folded Spill
+; CHECK-NEXT:    fcsel s0, s8, s0, vs
+; CHECK-NEXT:    fcmp s1, s1
+; CHECK-NEXT:    stp s0, s6, [sp, #136] // 8-byte Folded Spill
+; CHECK-NEXT:    mov z0.s, z25.s[12]
+; CHECK-NEXT:    fcsel s6, s31, s1, vs
+; CHECK-NEXT:    mov z1.s, z25.s[11]
+; CHECK-NEXT:    fcmp s0, s0
+; CHECK-NEXT:    fcsel s0, s29, s0, vs
+; CHECK-NEXT:    fcmp s1, s1
+; CHECK-NEXT:    stp s0, s6, [sp, #128] // 8-byte Folded Spill
+; CHECK-NEXT:    mov z0.s, z25.s[10]
+; CHECK-NEXT:    fcsel s15, s27, s1, vs
+; CHECK-NEXT:    mov z1.s, z25.s[9]
+; CHECK-NEXT:    fcmp s0, s0
+; CHECK-NEXT:    fcsel s13, s24, s0, vs
+; CHECK-NEXT:    fcmp s1, s1
+; CHECK-NEXT:    mov z0.s, z25.s[8]
+; CHECK-NEXT:    fcsel s11, s21, s1, vs
+; CHECK-NEXT:    fcmp s0, s0
+; CHECK-NEXT:    mov z1.s, z25.s[7]
+; CHECK-NEXT:    fcsel s10, s18, s0, vs
+; CHECK-NEXT:    fcmp s1, s1
+; CHECK-NEXT:    mov z0.s, z25.s[6]
+; CHECK-NEXT:    fcsel s28, s17, s1, vs
+; CHECK-NEXT:    fcmp s0, s0
+; CHECK-NEXT:    mov z1.s, z25.s[5]
+; CHECK-NEXT:    fcsel s20, s19, s0, vs
+; CHECK-NEXT:    fcmp s1, s1
+; CHECK-NEXT:    mov z0.s, z25.s[4]
+; CHECK-NEXT:    fcsel s7, s4, s1, vs
+; CHECK-NEXT:    fcmp s0, s0
+; CHECK-NEXT:    mov z1.s, z22.s[4]
+; CHECK-NEXT:    mov z4.s, z25.s[3]
+; CHECK-NEXT:    mov z25.s, z25.s[1]
+; CHECK-NEXT:    fcsel s16, s1, s0, vs
+; CHECK-NEXT:    mov z0.s, z22.s[3]
+; CHECK-NEXT:    str z1, [x8, #-3, mul vl] // 16-byte Folded Spill
+; CHECK-NEXT:    fcmp s4, s4
+; CHECK-NEXT:    str z0, [x8, #-4, mul vl] // 16-byte Folded Spill
+; CHECK-NEXT:    fcsel s6, s0, s4, vs
+; CHECK-NEXT:    fcmp s9, s9
+; CHECK-NEXT:    mov z0.s, z22.s[2]
+; CHECK-NEXT:    ldr s4, [sp, #208] // 4-byte Reload
+; CHECK-NEXT:    str z0, [x8, #-2, mul vl] // 16-byte Folded Spill
+; CHECK-NEXT:    fcsel s26, s0, s9, vs
+; CHECK-NEXT:    fcmp s25, s25
+; CHECK-NEXT:    mov z0.s, z22.s[1]
+; CHECK-NEXT:    fcsel s25, s0, s25, vs
+; CHECK-NEXT:    fcmp s22, s22
+; CHECK-NEXT:    str z0, [x8, #-1, mul vl] // 16-byte Folded Spill
+; CHECK-NEXT:    ldr s0, [sp, #252] // 4-byte Reload
+; CHECK-NEXT:    fcsel s22, s0, s22, vs
+; CHECK-NEXT:    fcmp s0, s22
+; CHECK-NEXT:    fcsel s1, s0, s22, lt
+; CHECK-NEXT:    fcmp s2, s2
+; CHECK-NEXT:    ldr s0, [sp, #244] // 4-byte Reload
+; CHECK-NEXT:    fcsel s22, s0, s2, vs
+; CHECK-NEXT:    str s1, [sp, #152] // 4-byte Spill
+; CHECK-NEXT:    fcmp s0, s22
+; CHECK-NEXT:    fcsel s2, s0, s22, lt
+; CHECK-NEXT:    fcmp s3, s3
+; CHECK-NEXT:    ldr s0, [sp, #248] // 4-byte Reload
+; CHECK-NEXT:    fcsel s22, s0, s3, vs
+; CHECK-NEXT:    fcmp s0, s22
+; CHECK-NEXT:    fcsel s1, s0, s22, lt
+; CHECK-NEXT:    fcmp s23, s23
+; CHECK-NEXT:    stp s1, s2, [sp, #120] // 8-byte Folded Spill
+; CHECK-NEXT:    ldp s0, s2, [sp, #236] // 8-byte Folded Reload
+; CHECK-NEXT:    fcsel s22, s2, s23, vs
+; CHECK-NEXT:    fcmp s2, s22
+; CHECK-NEXT:    fcsel s3, s2, s22, lt
+; CHECK-NEXT:    fcmp s30, s30
+; CHECK-NEXT:    fcsel s22, s0, s30, vs
+; CHECK-NEXT:    fcmp s0, s22
+; CHECK-NEXT:    fcsel s1, s0, s22, lt
+; CHECK-NEXT:    fcmp s4, s4
+; CHECK-NEXT:    ldp s0, s2, [sp, #228] // 8-byte Folded Reload
+; CHECK-NEXT:    stp s1, s3, [sp, #112] // 8-byte Folded Spill
+; CHECK-NEXT:    ldr s1, [sp, #204] // 4-byte Reload
+; CHECK-NEXT:    fcsel s22, s2, s4, vs
+; CHECK-NEXT:    fcmp s2, s22
+; CHECK-NEXT:    fcsel s3, s2, s22, lt
+; CHECK-NEXT:    fcmp s1, s1
+; CHECK-NEXT:    fcsel s22, s0, s1, vs
+; CHECK-NEXT:    fcmp s0, s22
+; CHECK-NEXT:    fcsel s1, s0, s22, lt
+; CHECK-NEXT:    fcmp s5, s5
+; CHECK-NEXT:    ldp s0, s2, [sp, #220] // 8-byte Folded Reload
+; CHECK-NEXT:    stp s1, s3, [sp, #204] // 8-byte Folded Spill
+; CHECK-NEXT:    ldr s1, [sp, #200] // 4-byte Reload
+; CHECK-NEXT:    fcsel s22, s2, s5, vs
+; CHECK-NEXT:    fcmp s2, s22
+; CHECK-NEXT:    fcsel s3, s2, s22, lt
+; CHECK-NEXT:    fcmp s1, s1
+; CHECK-NEXT:    fcsel s22, s0, s1, vs
+; CHECK-NEXT:    ldr s1, [sp, #196] // 4-byte Reload
+; CHECK-NEXT:    fcmp s0, s22
+; CHECK-NEXT:    fcsel s2, s0, s22, lt
+; CHECK-NEXT:    fcmp s1, s1
+; CHECK-NEXT:    ldp s0, s4, [sp, #212] // 8-byte Folded Reload
+; CHECK-NEXT:    fcsel s22, s4, s1, vs
+; CHECK-NEXT:    fcmp s4, s22
+; CHECK-NEXT:    fcsel s1, s4, s22, lt
+; CHECK-NEXT:    fcmp s14, s14
+; CHECK-NEXT:    fcsel s22, s0, s14, vs
+; CHECK-NEXT:    stp s1, s2, [sp, #196] // 8-byte Folded Spill
+; CHECK-NEXT:    fcmp s0, s22
+; CHECK-NEXT:    fcsel s1, s0, s22, lt
+; CHECK-NEXT:    stp s1, s3, [sp, #104] // 8-byte Folded Spill
+; CHECK-NEXT:    ldp s1, s14, [sp, #188] // 8-byte Folded Reload
+; CHECK-NEXT:    ldp s2, s3, [sp, #136] // 8-byte Folded Reload
+; CHECK-NEXT:    fcmp s1, s1
+; CHECK-NEXT:    str s14, [sp, #340]
+; CHECK-NEXT:    fcsel s22, s14, s1, vs
+; CHECK-NEXT:    fcmp s14, s22
+; CHECK-NEXT:    fcsel s1, s14, s22, lt
+; CHECK-NEXT:    str s1, [sp, #188] // 4-byte Spill
+; CHECK-NEXT:    ldp s1, s9, [sp, #180] // 8-byte Folded Reload
+; CHECK-NEXT:    fcmp s1, s1
+; CHECK-NEXT:    str s9, [sp, #336]
+; CHECK-NEXT:    fcsel s22, s9, s1, vs
+; CHECK-NEXT:    fcmp s9, s22
+; CHECK-NEXT:    fcsel s1, s9, s22, lt
+; CHECK-NEXT:    str s1, [sp, #180] // 4-byte Spill
+; CHECK-NEXT:    ldp s1, s30, [sp, #172] // 8-byte Folded Reload
+; CHECK-NEXT:    fcmp s1, s1
+; CHECK-NEXT:    str s30, [sp, #332]
+; CHECK-NEXT:    fcsel s22, s30, s1, vs
+; CHECK-NEXT:    fcmp s30, s22
+; CHECK-NEXT:    fcsel s1, s30, s22, lt
+; CHECK-NEXT:    str s1, [sp, #172] // 4-byte Spill
+; CHECK-NEXT:    ldp s1, s23, [sp, #164] // 8-byte Folded Reload
+; CHECK-NEXT:    fcmp s1, s1
+; CHECK-NEXT:    str s23, [sp, #328]
+; CHECK-NEXT:    fcsel s22, s23, s1, vs
+; CHECK-NEXT:    fcmp s23, s22
+; CHECK-NEXT:    fcsel s1, s23, s22, lt
+; CHECK-NEXT:    str s1, [sp, #164] // 4-byte Spill
+; CHECK-NEXT:    ldp s1, s5, [sp, #156] // 8-byte Folded Reload
+; CHECK-NEXT:    fcmp s1, s1
+; CHECK-NEXT:    str s5, [sp, #324]
+; CHECK-NEXT:    fcsel s22, s5, s1, vs
+; CHECK-NEXT:    fcmp s5, s22
+; CHECK-NEXT:    fcsel s1, s5, s22, lt
+; CHECK-NEXT:    str s1, [sp, #156] // 4-byte Spill
+; CHECK-NEXT:    ldp s1, s4, [sp, #144] // 8-byte Folded Reload
+; CHECK-NEXT:    fcmp s1, s1
+; CHECK-NEXT:    str s4, [sp, #320]
+; CHECK-NEXT:    fcsel s22, s4, s1, vs
+; CHECK-NEXT:    fcmp s4, s22
+; CHECK-NEXT:    fcsel s1, s4, s22, lt
+; CHECK-NEXT:    fcmp s12, s12
+; CHECK-NEXT:    ldr s22, [sp, #244] // 4-byte Reload
+; CHECK-NEXT:    str s22, [sp, #380]
+; CHECK-NEXT:    ldr s22, [sp, #248] // 4-byte Reload
+; CHECK-NEXT:    fcsel s12, s3, s12, vs
+; CHECK-NEXT:    str s1, [sp, #144] // 4-byte Spill
+; CHECK-NEXT:    ldp s0, s1, [sp, #128] // 8-byte Folded Reload
+; CHECK-NEXT:    str s22, [sp, #376]
+; CHECK-NEXT:    ldr s22, [sp, #240] // 4-byte Reload
+; CHECK-NEXT:    fcmp s3, s12
+; CHECK-NEXT:    str s22, [sp, #372]
+; CHECK-NEXT:    ldr s22, [sp, #236] // 4-byte Reload
+; CHECK-NEXT:    fcsel s12, s3, s12, lt
+; CHECK-NEXT:    fcmp s8, s8
+; CHECK-NEXT:    str s22, [sp, #368]
+; CHECK-NEXT:    ldr s22, [sp, #232] // 4-byte Reload
+; CHECK-NEXT:    fcsel s8, s2, s8, vs
+; CHECK-NEXT:    str s22, [sp, #364]
+; CHECK-NEXT:    ldr s22, [sp, #228] // 4-byte Reload
+; CHECK-NEXT:    str s22, [sp, #360]
+; CHECK-NEXT:    ldr s22, [sp, #224] // 4-byte Reload
+; CHECK-NEXT:    fcmp s2, s8
+; CHECK-NEXT:    str s22, [sp, #356]
+; CHECK-NEXT:    ldr s22, [sp, #220] // 4-byte Reload
+; CHECK-NEXT:    fcsel s8, s2, s8, lt
+; CHECK-NEXT:    fcmp s31, s31
+; CHECK-NEXT:    str s22, [sp, #352]
+; CHECK-NEXT:    ldr s22, [sp, #216] // 4-byte Reload
+; CHECK-NEXT:    fcsel s31, s1, s31, vs
+; CHECK-NEXT:    str s22, [sp, #348]
+; CHECK-NEXT:    ldr s22, [sp, #212] // 4-byte Reload
+; CHECK-NEXT:    str s22, [sp, #344]
+; CHECK-NEXT:    fcmp s1, s31
+; CHECK-NEXT:    ldr z4, [x8, #-5, mul vl] // 16-byte Folded Reload
+; CHECK-NEXT:    str s3, [sp, #316]
+; CHECK-NEXT:    str s2, [sp, #312]
+; CHECK-NEXT:    str s1, [sp, #308]
+; CHECK-NEXT:    fcsel s31, s1, s31, lt
+; CHECK-NEXT:    fcmp s29, s29
+; CHECK-NEXT:    str s0, [sp, #304]
+; CHECK-NEXT:    str s15, [sp, #300]
+; CHECK-NEXT:    ldr s1, [sp, #252] // 4-byte Reload
+; CHECK-NEXT:    str s13, [sp, #296]
+; CHECK-NEXT:    fcsel s29, s0, s29, vs
+; CHECK-NEXT:    str s11, [sp, #292]
+; CHECK-NEXT:    str s10, [sp, #288]
+; CHECK-NEXT:    str s28, [sp, #284]
+; CHECK-NEXT:    fcmp s0, s29
+; CHECK-NEXT:    fcsel s29, s0, s29, lt
+; CHECK-NEXT:    fcmp s27, s27
+; CHECK-NEXT:    ldr z0, [x8, #-3, mul vl] // 16-byte Folded Reload
+; CHECK-NEXT:    str s1, [sp, #256]
+; CHECK-NEXT:    str s20, [sp, #280]
+; CHECK-NEXT:    fcsel s27, s15, s27, vs
+; CHECK-NEXT:    str s7, [sp, #276]
+; CHECK-NEXT:    str s16, [sp, #272]
+; CHECK-NEXT:    str s6, [sp, #268]
+; CHECK-NEXT:    fcmp s15, s27
+; CHECK-NEXT:    str s26, [sp, #264]
+; CHECK-NEXT:    str s25, [sp, #260]
+; CHECK-NEXT:    fcsel s27, s15, s27, lt
+; CHECK-NEXT:    fcmp s24, s24
+; CHECK-NEXT:    fcsel s24, s13, s24, vs
+; CHECK-NEXT:    fcmp s13, s24
+; CHECK-NEXT:    fcsel s24, s13, s24, lt
+; CHECK-NEXT:    fcmp s21, s21
+; CHECK-NEXT:    fcsel s21, s11, s21, vs
+; CHECK-NEXT:    fcmp s11, s21
+; CHECK-NEXT:    fcsel s21, s11, s21, lt
+; CHECK-NEXT:    fcmp s18, s18
+; CHECK-NEXT:    fcsel s18, s10, s18, vs
+; CHECK-NEXT:    fcmp s10, s18
+; CHECK-NEXT:    fcsel s18, s10, s18, lt
+; CHECK-NEXT:    fcmp s17, s17
+; CHECK-NEXT:    fcsel s17, s28, s17, vs
+; CHECK-NEXT:    fcmp s28, s17
+; CHECK-NEXT:    fcsel s17, s28, s17, lt
+; CHECK-NEXT:    fcmp s19, s19
+; CHECK-NEXT:    fcsel s19, s20, s19, vs
+; CHECK-NEXT:    fcmp s20, s19
+; CHECK-NEXT:    fcsel s19, s20, s19, lt
+; CHECK-NEXT:    fcmp s4, s4
+; CHECK-NEXT:    fcsel s23, s7, s4, vs
+; CHECK-NEXT:    fcmp s7, s23
+; CHECK-NEXT:    fcsel s5, s7, s23, lt
+; CHECK-NEXT:    fcmp s0, s0
+; CHECK-NEXT:    fcsel s1, s16, s0, vs
+; CHECK-NEXT:    ldp s0, s2, [sp, #120] // 8-byte Folded Reload
+; CHECK-NEXT:    str s2, [sp, #508]
+; CHECK-NEXT:    fcmp s16, s1
+; CHECK-NEXT:    str s0, [sp, #504]
+; CHECK-NEXT:    ldp s2, s3, [sp, #112] // 8-byte Folded Reload
+; CHECK-NEXT:    ldr z0, [x8, #-4, mul vl] // 16-byte Folded Reload
+; CHECK-NEXT:    fcsel s1, s16, s1, lt
+; CHECK-NEXT:    str s2, [sp, #496]
+; CHECK-NEXT:    ldr s2, [sp, #208] // 4-byte Reload
+; CHECK-NEXT:    fcmp s0, s0
+; CHECK-NEXT:    str s3, [sp, #500]
+; CHECK-NEXT:    str s2, [sp, #492]
+; CHECK-NEXT:    fcsel s2, s6, s0, vs
+; CHECK-NEXT:    ldr s0, [sp, #204] // 4-byte Reload
+; CHECK-NEXT:    str s0, [sp, #488]
+; CHECK-NEXT:    ldr s0, [sp, #108] // 4-byte Reload
+; CHECK-NEXT:    fcmp s6, s2
+; CHECK-NEXT:    str s0, [sp, #484]
+; CHECK-NEXT:    ldp s0, s3, [sp, #196] // 8-byte Folded Reload
+; CHECK-NEXT:    str s0, [sp, #476]
+; CHECK-NEXT:    ldr s0, [sp, #104] // 4-byte Reload
+; CHECK-NEXT:    str s3, [sp, #480]
+; CHECK-NEXT:    ldr s3, [sp, #180] // 4-byte Reload
+; CHECK-NEXT:    str s0, [sp, #472]
+; CHECK-NEXT:    ldr s0, [sp, #188] // 4-byte Reload
+; CHECK-NEXT:    str s0, [sp, #468]
+; CHECK-NEXT:    fcsel s0, s6, s2, lt
+; CHECK-NEXT:    ldr z2, [x8, #-2, mul vl] // 16-byte Folded Reload
+; CHECK-NEXT:    str s3, [sp, #464]
+; CHECK-NEXT:    ldr s3, [sp, #172] // 4-byte Reload
+; CHECK-NEXT:    str s12, [sp, #444]
+; CHECK-NEXT:    str s3, [sp, #460]
+; CHECK-NEXT:    ldr s3, [sp, #164] // 4-byte Reload
+; CHECK-NEXT:    fcmp s2, s2
+; CHECK-NEXT:    str s8, [sp, #440]
+; CHECK-NEXT:    str s3, [sp, #456]
+; CHECK-NEXT:    ldr s3, [sp, #156] // 4-byte Reload
+; CHECK-NEXT:    str s31, [sp, #436]
+; CHECK-NEXT:    fcsel s2, s26, s2, vs
+; CHECK-NEXT:    str s3, [sp, #452]
+; CHECK-NEXT:    ldr s3, [sp, #144] // 4-byte Reload
+; CHECK-NEXT:    str s29, [sp, #432]
+; CHECK-NEXT:    str s3, [sp, #448]
+; CHECK-NEXT:    fcmp s26, s2
+; CHECK-NEXT:    ldr z3, [x8, #-1, mul vl] // 16-byte Folded Reload
+; CHECK-NEXT:    str s1, [sp, #400]
+; CHECK-NEXT:    str s0, [sp, #396]
+; CHECK-NEXT:    ldr s0, [sp, #152] // 4-byte Reload
+; CHECK-NEXT:    adrp x8, .LCPI100_0
+; CHECK-NEXT:    add x8, x8, :lo12:.LCPI100_0
+; CHECK-NEXT:    str s27, [sp, #428]
+; CHECK-NEXT:    fcsel s2, s26, s2, lt
+; CHECK-NEXT:    fcmp s3, s3
+; CHECK-NEXT:    str s24, [sp, #424]
+; CHECK-NEXT:    str s21, [sp, #420]
+; CHECK-NEXT:    str s18, [sp, #416]
+; CHECK-NEXT:    fcsel s3, s25, s3, vs
+; CHECK-NEXT:    str s17, [sp, #412]
+; CHECK-NEXT:    str s19, [sp, #408]
+; CHECK-NEXT:    str s5, [sp, #404]
+; CHECK-NEXT:    fcmp s25, s3
+; CHECK-NEXT:    str s2, [sp, #392]
+; CHECK-NEXT:    str s0, [sp, #384]
+; CHECK-NEXT:    ld1w { z0.s }, p0/z, [x8]
+; CHECK-NEXT:    add x8, sp, #384
+; CHECK-NEXT:    fcsel s1, s25, s3, lt
+; CHECK-NEXT:    str s1, [sp, #388]
+; CHECK-NEXT:    ld1w { z1.s }, p0/z, [x9]
+; CHECK-NEXT:    cmpeq p1.s, p0/z, z1.s, z0.s
+; CHECK-NEXT:    mov z0.s, p1/z, #-1 // =0xffffffffffffffff
+; CHECK-NEXT:    ptrue p1.s
+; CHECK-NEXT:    and z0.s, z0.s, #0x1
+; CHECK-NEXT:    cmpne p1.s, p1/z, z0.s, #0
+; CHECK-NEXT:    ld1w { z0.s }, p0/z, [x8]
+; CHECK-NEXT:    fcmeq p2.s, p0/z, z0.s, #0.0
+; CHECK-NEXT:    sel z1.s, p1, z1.s, z0.s
+; CHECK-NEXT:    mov z0.s, p2/m, z1.s
+; CHECK-NEXT:    st1w { z0.s }, p0, [x0]
+; CHECK-NEXT:    sub sp, x29, #64
+; CHECK-NEXT:    ldp x29, x30, [sp, #64] // 16-byte Folded Reload
+; CHECK-NEXT:    ldp d9, d8, [sp, #48] // 16-byte Folded Reload
+; CHECK-NEXT:    ldp d11, d10, [sp, #32] // 16-byte Folded Reload
+; CHECK-NEXT:    ldp d13, d12, [sp, #16] // 16-byte Folded Reload
+; CHECK-NEXT:    ldp d15, d14, [sp], #80 // 16-byte Folded Reload
+; CHECK-NEXT:    ret
+  %op1 = load <32 x float>, ptr %a
+  %op2 = load <32 x float>, ptr %b
+  %res = call <32 x float> @llvm.minimumnum.v32f32(<32 x float> %op1, <32 x float> %op2)
+  store <32 x float> %res, ptr %a
+  ret void
+}
+
+define void @fminimumnum_v64f32(ptr %a, ptr %b) vscale_range(16,0) #0 {
+; CHECK-LABEL: fminimumnum_v64f32:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    stp d15, d14, [sp, #-80]! // 16-byte Folded Spill
+; CHECK-NEXT:    sub x9, sp, #1200
+; CHECK-NEXT:    stp d13, d12, [sp, #16] // 16-byte Folded Spill
+; CHECK-NEXT:    addvl x9, x9, #-12
+; CHECK-NEXT:    stp d11, d10, [sp, #32] // 16-byte Folded Spill
+; CHECK-NEXT:    stp d9, d8, [sp, #48] // 16-byte Folded Spill
+; CHECK-NEXT:    stp x29, x30, [sp, #64] // 16-byte Folded Spill
+; CHECK-NEXT:    add x29, sp, #64
+; CHECK-NEXT:    and sp, x9, #0xffffffffffffff00
+; CHECK-NEXT:    .cfi_def_cfa w29, 16
+; CHECK-NEXT:    .cfi_offset w30, -8
+; CHECK-NEXT:    .cfi_offset w29, -16
+; CHECK-NEXT:    .cfi_offset b8, -24
+; CHECK-NEXT:    .cfi_offset b9, -32
+; CHECK-NEXT:    .cfi_offset b10, -40
+; CHECK-NEXT:    .cfi_offset b11, -48
+; CHECK-NEXT:    .cfi_offset b12, -56
+; CHECK-NEXT:    .cfi_offset b13, -64
+; CHECK-NEXT:    .cfi_offset b14, -72
+; CHECK-NEXT:    .cfi_offset b15, -80
+; CHECK-NEXT:    ptrue p0.s, vl64
+; CHECK-NEXT:    mov w8, #63 // =0x3f
+; CHECK-NEXT:    add x9, sp, #512
+; CHECK-NEXT:    ld1w { z0.s }, p0/z, [x0]
+; CHECK-NEXT:    ld1w { z13.s }, p0/z, [x1]
+; CHECK-NEXT:    fcmp s0, s0
+; CHECK-NEXT:    mov z27.s, z13.s[15]
+; CHECK-NEXT:    mov z25.s, z13.s[14]
+; CHECK-NEXT:    mov z28.s, z13.s[13]
+; CHECK-NEXT:    mov z7.s, z0.s[6]
+; CHECK-NEXT:    mov z16.s, z0.s[5]
+; CHECK-NEXT:    mov z19.s, z0.s[4]
+; CHECK-NEXT:    mov z21.s, z0.s[3]
+; CHECK-NEXT:    fcsel s1, s13, s0, vs
+; CHECK-NEXT:    whilels p1.s, xzr, x8
+; CHECK-NEXT:    mov w8, #62 // =0x3e
+; CHECK-NEXT:    lastb s30, p1, z13.s
+; CHECK-NEXT:    str s1, [sp, #508] // 4-byte Spill
+; CHECK-NEXT:    lastb s1, p1, z0.s
+; CHECK-NEXT:    fcmp s1, s1
+; CHECK-NEXT:    fcsel s1, s30, s1, vs
+; CHECK-NEXT:    whilels p1.s, xzr, x8
+; CHECK-NEXT:    mov w8, #61 // =0x3d
+; CHECK-NEXT:    lastb s31, p1, z13.s
+; CHECK-NEXT:    str s1, [sp, #396] // 4-byte Spill
+; CHECK-NEXT:    lastb s1, p1, z0.s
+; CHECK-NEXT:    fcmp s1, s1
+; CHECK-NEXT:    fcsel s1, s31, s1, vs
+; CHECK-NEXT:    whilels p1.s, xzr, x8
+; CHECK-NEXT:    mov w8, #60 // =0x3c
+; CHECK-NEXT:    lastb s10, p1, z13.s
+; CHECK-NEXT:    str s1, [sp, #392] // 4-byte Spill
+; CHECK-NEXT:    lastb s1, p1, z0.s
+; CHECK-NEXT:    fcmp s1, s1
+; CHECK-NEXT:    fcsel s1, s10, s1, vs
+; CHECK-NEXT:    whilels p1.s, xzr, x8
+; CHECK-NEXT:    mov w8, #59 // =0x3b
+; CHECK-NEXT:    lastb s24, p1, z13.s
+; CHECK-NEXT:    str s1, [sp, #504] // 4-byte Spill
+; CHECK-NEXT:    lastb s1, p1, z0.s
+; CHECK-NEXT:    fcmp s1, s1
+; CHECK-NEXT:    fcsel s1, s24, s1, vs
+; CHECK-NEXT:    whilels p1.s, xzr, x8
+; CHECK-NEXT:    mov w8, #58 // =0x3a
+; CHECK-NEXT:    lastb s9, p1, z13.s
+; CHECK-NEXT:    str s1, [sp, #500] // 4-byte Spill
+; CHECK-NEXT:    lastb s1, p1, z0.s
+; CHECK-NEXT:    fcmp s1, s1
+; CHECK-NEXT:    fcsel s1, s9, s1, vs
+; CHECK-NEXT:    whilels p1.s, xzr, x8
+; CHECK-NEXT:    mov w8, #57 // =0x39
+; CHECK-NEXT:    lastb s12, p1, z13.s
+; CHECK-NEXT:    str s1, [sp, #496] // 4-byte Spill
+; CHECK-NEXT:    lastb s1, p1, z0.s
+; CHECK-NEXT:    fcmp s1, s1
+; CHECK-NEXT:    fcsel s1, s12, s1, vs
+; CHECK-NEXT:    whilels p1.s, xzr, x8
+; CHECK-NEXT:    mov w8, #56 // =0x38
+; CHECK-NEXT:    lastb s2, p1, z13.s
+; CHECK-NEXT:    str s1, [sp, #492] // 4-byte Spill
+; CHECK-NEXT:    lastb s1, p1, z0.s
+; CHECK-NEXT:    str s2, [sp, #388] // 4-byte Spill
+; CHECK-NEXT:    fcmp s1, s1
+; CHECK-NEXT:    fcsel s1, s2, s1, vs
+; CHECK-NEXT:    whilels p1.s, xzr, x8
+; CHECK-NEXT:    mov w8, #55 // =0x37
+; CHECK-NEXT:    lastb s4, p1, z13.s
+; CHECK-NEXT:    str s1, [sp, #488] // 4-byte Spill
+; CHECK-NEXT:    lastb s1, p1, z0.s
+; CHECK-NEXT:    fcmp s1, s1
+; CHECK-NEXT:    fcsel s1, s4, s1, vs
+; CHECK-NEXT:    whilels p1.s, xzr, x8
+; CHECK-NEXT:    mov w8, #54 // =0x36
+; CHECK-NEXT:    lastb s2, p1, z13.s
+; CHECK-NEXT:    str s1, [sp, #384] // 4-byte Spill
+; CHECK-NEXT:    lastb s1, p1, z0.s
+; CHECK-NEXT:    str s2, [sp, #380] // 4-byte Spill
+; CHECK-NEXT:    fcmp s1, s1
+; CHECK-NEXT:    fcsel s1, s2, s1, vs
+; CHECK-NEXT:    whilels p1.s, xzr, x8
+; CHECK-NEXT:    mov w8, #53 // =0x35
+; CHECK-NEXT:    lastb s2, p1, z13.s
+; CHECK-NEXT:    str s1, [sp, #484] // 4-byte Spill
+; CHECK-NEXT:    lastb s1, p1, z0.s
+; CHECK-NEXT:    str s2, [sp, #376] // 4-byte Spill
+; CHECK-NEXT:    fcmp s1, s1
+; CHECK-NEXT:    fcsel s1, s2, s1, vs
+; CHECK-NEXT:    whilels p1.s, xzr, x8
+; CHECK-NEXT:    mov w8, #52 // =0x34
+; CHECK-NEXT:    lastb s2, p1, z13.s
+; CHECK-NEXT:    str s1, [sp, #480] // 4-byte Spill
+; CHECK-NEXT:    lastb s1, p1, z0.s
+; CHECK-NEXT:    str s2, [sp, #372] // 4-byte Spill
+; CHECK-NEXT:    fcmp s1, s1
+; CHECK-NEXT:    fcsel s1, s2, s1, vs
+; CHECK-NEXT:    whilels p1.s, xzr, x8
+; CHECK-NEXT:    mov w8, #51 // =0x33
+; CHECK-NEXT:    lastb s2, p1, z13.s
+; CHECK-NEXT:    str s1, [sp, #476] // 4-byte Spill
+; CHECK-NEXT:    lastb s1, p1, z0.s
+; CHECK-NEXT:    str s2, [sp, #368] // 4-byte Spill
+; CHECK-NEXT:    fcmp s1, s1
+; CHECK-NEXT:    fcsel s1, s2, s1, vs
+; CHECK-NEXT:    whilels p1.s, xzr, x8
+; CHECK-NEXT:    mov w8, #50 // =0x32
+; CHECK-NEXT:    lastb s2, p1, z13.s
+; CHECK-NEXT:    str s1, [sp, #472] // 4-byte Spill
+; CHECK-NEXT:    lastb s1, p1, z0.s
+; CHECK-NEXT:    str s2, [sp, #364] // 4-byte Spill
+; CHECK-NEXT:    fcmp s1, s1
+; CHECK-NEXT:    fcsel s1, s2, s1, vs
+; CHECK-NEXT:    whilels p1.s, xzr, x8
+; CHECK-NEXT:    mov w8, #49 // =0x31
+; CHECK-NEXT:    lastb s2, p1, z13.s
+; CHECK-NEXT:    str s1, [sp, #468] // 4-byte Spill
+; CHECK-NEXT:    lastb s1, p1, z0.s
+; CHECK-NEXT:    str s2, [sp, #360] // 4-byte Spill
+; CHECK-NEXT:    fcmp s1, s1
+; CHECK-NEXT:    fcsel s1, s2, s1, vs
+; CHECK-NEXT:    whilels p1.s, xzr, x8
+; CHECK-NEXT:    mov w8, #48 // =0x30
+; CHECK-NEXT:    lastb s2, p1, z13.s
+; CHECK-NEXT:    str s1, [sp, #464] // 4-byte Spill
+; CHECK-NEXT:    lastb s1, p1, z0.s
+; CHECK-NEXT:    str s2, [sp, #356] // 4-byte Spill
+; CHECK-NEXT:    fcmp s1, s1
+; CHECK-NEXT:    fcsel s1, s2, s1, vs
+; CHECK-NEXT:    whilels p1.s, xzr, x8
+; CHECK-NEXT:    mov w8, #47 // =0x2f
+; CHECK-NEXT:    lastb s14, p1, z13.s
+; CHECK-NEXT:    str s1, [sp, #460] // 4-byte Spill
+; CHECK-NEXT:    lastb s1, p1, z0.s
+; CHECK-NEXT:    fcmp s1, s1
+; CHECK-NEXT:    fcsel s1, s14, s1, vs
+; CHECK-NEXT:    whilels p1.s, xzr, x8
+; CHECK-NEXT:    mov w8, #46 // =0x2e
+; CHECK-NEXT:    lastb s2, p1, z13.s
+; CHECK-NEXT:    str s1, [sp, #456] // 4-byte Spill
+; CHECK-NEXT:    lastb s1, p1, z0.s
+; CHECK-NEXT:    str s2, [sp, #352] // 4-byte Spill
+; CHECK-NEXT:    fcmp s1, s1
+; CHECK-NEXT:    fcsel s1, s2, s1, vs
+; CHECK-NEXT:    whilels p1.s, xzr, x8
+; CHECK-NEXT:    mov w8, #45 // =0x2d
+; CHECK-NEXT:    lastb s18, p1, z13.s
+; CHECK-NEXT:    str s1, [sp, #452] // 4-byte Spill
+; CHECK-NEXT:    lastb s1, p1, z0.s
+; CHECK-NEXT:    fcmp s1, s1
+; CHECK-NEXT:    fcsel s1, s18, s1, vs
+; CHECK-NEXT:    whilels p1.s, xzr, x8
+; CHECK-NEXT:    mov w8, #44 // =0x2c
+; CHECK-NEXT:    lastb s2, p1, z13.s
+; CHECK-NEXT:    str s1, [sp, #448] // 4-byte Spill
+; CHECK-NEXT:    lastb s1, p1, z0.s
+; CHECK-NEXT:    str s2, [sp, #348] // 4-byte Spill
+; CHECK-NEXT:    fcmp s1, s1
+; CHECK-NEXT:    fcsel s1, s2, s1, vs
+; CHECK-NEXT:    whilels p1.s, xzr, x8
+; CHECK-NEXT:    mov w8, #43 // =0x2b
+; CHECK-NEXT:    lastb s2, p1, z13.s
+; CHECK-NEXT:    str s1, [sp, #444] // 4-byte Spill
+; CHECK-NEXT:    lastb s1, p1, z0.s
+; CHECK-NEXT:    str s2, [sp, #340] // 4-byte Spill
+; CHECK-NEXT:    fcmp s1, s1
+; CHECK-NEXT:    fcsel s1, s2, s1, vs
+; CHECK-NEXT:    whilels p1.s, xzr, x8
+; CHECK-NEXT:    mov w8, #42 // =0x2a
+; CHECK-NEXT:    lastb s20, p1, z13.s
+; CHECK-NEXT:    str s1, [sp, #344] // 4-byte Spill
+; CHECK-NEXT:    lastb s1, p1, z0.s
+; CHECK-NEXT:    fcmp s1, s1
+; CHECK-NEXT:    fcsel s1, s20, s1, vs
+; CHECK-NEXT:    whilels p1.s, xzr, x8
+; CHECK-NEXT:    mov w8, #41 // =0x29
+; CHECK-NEXT:    lastb s2, p1, z13.s
+; CHECK-NEXT:    str s1, [sp, #440] // 4-byte Spill
+; CHECK-NEXT:    lastb s1, p1, z0.s
+; CHECK-NEXT:    str s2, [sp, #336] // 4-byte Spill
+; CHECK-NEXT:    fcmp s1, s1
+; CHECK-NEXT:    fcsel s1, s2, s1, vs
+; CHECK-NEXT:    whilels p1.s, xzr, x8
+; CHECK-NEXT:    mov w8, #40 // =0x28
+; CHECK-NEXT:    lastb s2, p1, z13.s
+; CHECK-NEXT:    str s1, [sp, #436] // 4-byte Spill
+; CHECK-NEXT:    lastb s1, p1, z0.s
+; CHECK-NEXT:    str s2, [sp, #332] // 4-byte Spill
+; CHECK-NEXT:    fcmp s1, s1
+; CHECK-NEXT:    fcsel s1, s2, s1, vs
+; CHECK-NEXT:    whilels p1.s, xzr, x8
+; CHECK-NEXT:    mov w8, #39 // =0x27
+; CHECK-NEXT:    lastb s2, p1, z13.s
+; CHECK-NEXT:    str s1, [sp, #432] // 4-byte Spill
+; CHECK-NEXT:    lastb s1, p1, z0.s
+; CHECK-NEXT:    str s2, [sp, #328] // 4-byte Spill
+; CHECK-NEXT:    fcmp s1, s1
+; CHECK-NEXT:    fcsel s1, s2, s1, vs
+; CHECK-NEXT:    whilels p1.s, xzr, x8
+; CHECK-NEXT:    mov w8, #38 // =0x26
+; CHECK-NEXT:    lastb s22, p1, z13.s
+; CHECK-NEXT:    str s1, [sp, #428] // 4-byte Spill
+; CHECK-NEXT:    lastb s1, p1, z0.s
+; CHECK-NEXT:    fcmp s1, s1
+; CHECK-NEXT:    fcsel s1, s22, s1, vs
+; CHECK-NEXT:    whilels p1.s, xzr, x8
+; CHECK-NEXT:    mov w8, #37 // =0x25
+; CHECK-NEXT:    lastb s2, p1, z13.s
+; CHECK-NEXT:    str s1, [sp, #424] // 4-byte Spill
+; CHECK-NEXT:    lastb s1, p1, z0.s
+; CHECK-NEXT:    str s2, [sp, #324] // 4-byte Spill
+; CHECK-NEXT:    fcmp s1, s1
+; CHECK-NEXT:    fcsel s1, s2, s1, vs
+; CHECK-NEXT:    whilels p1.s, xzr, x8
+; CHECK-NEXT:    mov w8, #36 // =0x24
+; CHECK-NEXT:    lastb s23, p1, z13.s
+; CHECK-NEXT:    str s1, [sp, #420] // 4-byte Spill
+; CHECK-NEXT:    lastb s1, p1, z0.s
+; CHECK-NEXT:    fcmp s1, s1
+; CHECK-NEXT:    fcsel s1, s23, s1, vs
+; CHECK-NEXT:    whilels p1.s, xzr, x8
+; CHECK-NEXT:    mov w8, #35 // =0x23
+; CHECK-NEXT:    lastb s2, p1, z13.s
+; CHECK-NEXT:    str s1, [sp, #416] // 4-byte Spill
+; CHECK-NEXT:    lastb s1, p1, z0.s
+; CHECK-NEXT:    str s2, [sp, #320] // 4-byte Spill
+; CHECK-NEXT:    fcmp s1, s1
+; CHECK-NEXT:    fcsel s1, s2, s1, vs
+; CHECK-NEXT:    whilels p1.s, xzr, x8
+; CHECK-NEXT:    mov w8, #34 // =0x22
+; CHECK-NEXT:    lastb s26, p1, z13.s
+; CHECK-NEXT:    str s1, [sp, #412] // 4-byte Spill
+; CHECK-NEXT:    lastb s1, p1, z0.s
+; CHECK-NEXT:    fcmp s1, s1
+; CHECK-NEXT:    fcsel s1, s26, s1, vs
+; CHECK-NEXT:    whilels p1.s, xzr, x8
+; CHECK-NEXT:    mov w8, #33 // =0x21
+; CHECK-NEXT:    lastb s2, p1, z13.s
+; CHECK-NEXT:    str s1, [sp, #316] // 4-byte Spill
+; CHECK-NEXT:    lastb s1, p1, z0.s
+; CHECK-NEXT:    str s2, [sp, #312] // 4-byte Spill
+; CHECK-NEXT:    fcmp s1, s1
+; CHECK-NEXT:    fcsel s1, s2, s1, vs
+; CHECK-NEXT:    whilels p1.s, xzr, x8
+; CHECK-NEXT:    mov w8, #32 // =0x20
+; CHECK-NEXT:    lastb s2, p1, z13.s
+; CHECK-NEXT:    str s1, [sp, #408] // 4-byte Spill
+; CHECK-NEXT:    lastb s1, p1, z0.s
+; CHECK-NEXT:    str s2, [sp, #308] // 4-byte Spill
+; CHECK-NEXT:    fcmp s1, s1
+; CHECK-NEXT:    fcsel s1, s2, s1, vs
+; CHECK-NEXT:    whilels p1.s, xzr, x8
+; CHECK-NEXT:    mov w8, #31 // =0x1f
+; CHECK-NEXT:    lastb s6, p1, z13.s
+; CHECK-NEXT:    str s1, [sp, #404] // 4-byte Spill
+; CHECK-NEXT:    lastb s1, p1, z0.s
+; CHECK-NEXT:    fcmp s1, s1
+; CHECK-NEXT:    fcsel s1, s6, s1, vs
+; CHECK-NEXT:    whilels p1.s, xzr, x8
+; CHECK-NEXT:    mov w8, #30 // =0x1e
+; CHECK-NEXT:    lastb s2, p1, z13.s
+; CHECK-NEXT:    str s1, [sp, #400] // 4-byte Spill
+; CHECK-NEXT:    lastb s1, p1, z0.s
+; CHECK-NEXT:    str s2, [sp, #300] // 4-byte Spill
+; CHECK-NEXT:    fcmp s1, s1
+; CHECK-NEXT:    fcsel s1, s2, s1, vs
+; CHECK-NEXT:    whilels p1.s, xzr, x8
+; CHECK-NEXT:    mov w8, #29 // =0x1d
+; CHECK-NEXT:    lastb s2, p1, z13.s
+; CHECK-NEXT:    str s1, [sp, #304] // 4-byte Spill
+; CHECK-NEXT:    lastb s1, p1, z0.s
+; CHECK-NEXT:    str s2, [sp, #292] // 4-byte Spill
+; CHECK-NEXT:    fcmp s1, s1
+; CHECK-NEXT:    fcsel s1, s2, s1, vs
+; CHECK-NEXT:    whilels p1.s, xzr, x8
+; CHECK-NEXT:    mov w8, #28 // =0x1c
+; CHECK-NEXT:    lastb s2, p1, z13.s
+; CHECK-NEXT:    str s1, [sp, #296] // 4-byte Spill
+; CHECK-NEXT:    lastb s1, p1, z0.s
+; CHECK-NEXT:    str s2, [sp, #280] // 4-byte Spill
+; CHECK-NEXT:    fcmp s1, s1
+; CHECK-NEXT:    fcsel s1, s2, s1, vs
+; CHECK-NEXT:    whilels p1.s, xzr, x8
+; CHECK-NEXT:    mov w8, #27 // =0x1b
+; CHECK-NEXT:    lastb s2, p1, z13.s
+; CHECK-NEXT:    str s1, [sp, #284] // 4-byte Spill
+; CHECK-NEXT:    lastb s1, p1, z0.s
+; CHECK-NEXT:    str s2, [sp, #272] // 4-byte Spill
+; CHECK-NEXT:    fcmp s1, s1
+; CHECK-NEXT:    fcsel s1, s2, s1, vs
+; CHECK-NEXT:    whilels p1.s, xzr, x8
+; CHECK-NEXT:    mov w8, #26 // =0x1a
+; CHECK-NEXT:    lastb s2, p1, z13.s
+; CHECK-NEXT:    str s1, [sp, #276] // 4-byte Spill
+; CHECK-NEXT:    lastb s1, p1, z0.s
+; CHECK-NEXT:    str s2, [sp, #264] // 4-byte Spill
+; CHECK-NEXT:    fcmp s1, s1
+; CHECK-NEXT:    fcsel s1, s2, s1, vs
+; CHECK-NEXT:    whilels p1.s, xzr, x8
+; CHECK-NEXT:    mov w8, #25 // =0x19
+; CHECK-NEXT:    lastb s2, p1, z13.s
+; CHECK-NEXT:    str s1, [sp, #268] // 4-byte Spill
+; CHECK-NEXT:    lastb s1, p1, z0.s
+; CHECK-NEXT:    str s2, [sp, #256] // 4-byte Spill
+; CHECK-NEXT:    fcmp s1, s1
+; CHECK-NEXT:    fcsel s1, s2, s1, vs
+; CHECK-NEXT:    whilels p1.s, xzr, x8
+; CHECK-NEXT:    mov w8, #24 // =0x18
+; CHECK-NEXT:    lastb s2, p1, z13.s
+; CHECK-NEXT:    str s1, [sp, #260] // 4-byte Spill
+; CHECK-NEXT:    lastb s1, p1, z0.s
+; CHECK-NEXT:    fcmp s1, s1
+; CHECK-NEXT:    fcsel s1, s2, s1, vs
+; CHECK-NEXT:    whilels p1.s, xzr, x8
+; CHECK-NEXT:    mov w8, #23 // =0x17
+; CHECK-NEXT:    stp s2, s1, [sp, #248] // 8-byte Folded Spill
+; CHECK-NEXT:    lastb s1, p1, z0.s
+; CHECK-NEXT:    lastb s2, p1, z13.s
+; CHECK-NEXT:    fcmp s1, s1
+; CHECK-NEXT:    fcsel s1, s2, s1, vs
+; CHECK-NEXT:    whilels p1.s, xzr, x8
+; CHECK-NEXT:    mov w8, #22 // =0x16
+; CHECK-NEXT:    stp s2, s1, [sp, #240] // 8-byte Folded Spill
+; CHECK-NEXT:    lastb s1, p1, z0.s
+; CHECK-NEXT:    lastb s2, p1, z13.s
+; CHECK-NEXT:    fcmp s1, s1
+; CHECK-NEXT:    fcsel s1, s2, s1, vs
+; CHECK-NEXT:    whilels p1.s, xzr, x8
+; CHECK-NEXT:    mov w8, #21 // =0x15
+; CHECK-NEXT:    stp s2, s1, [sp, #232] // 8-byte Folded Spill
+; CHECK-NEXT:    lastb s1, p1, z0.s
+; CHECK-NEXT:    lastb s2, p1, z13.s
+; CHECK-NEXT:    fcmp s1, s1
+; CHECK-NEXT:    fcsel s1, s2, s1, vs
+; CHECK-NEXT:    whilels p1.s, xzr, x8
+; CHECK-NEXT:    mov w8, #20 // =0x14
+; CHECK-NEXT:    stp s2, s1, [sp, #224] // 8-byte Folded Spill
+; CHECK-NEXT:    lastb s1, p1, z0.s
+; CHECK-NEXT:    lastb s2, p1, z13.s
+; CHECK-NEXT:    fcmp s1, s1
+; CHECK-NEXT:    fcsel s1, s2, s1, vs
+; CHECK-NEXT:    whilels p1.s, xzr, x8
+; CHECK-NEXT:    mov w8, #19 // =0x13
+; CHECK-NEXT:    lastb s17, p1, z13.s
+; CHECK-NEXT:    stp s2, s1, [sp, #216] // 8-byte Folded Spill
+; CHECK-NEXT:    lastb s1, p1, z0.s
+; CHECK-NEXT:    mov z2.s, z0.s[15]
+; CHECK-NEXT:    fcmp s1, s1
+; CHECK-NEXT:    fcsel s1, s17, s1, vs
+; CHECK-NEXT:    whilels p1.s, xzr, x8
+; CHECK-NEXT:    mov w8, #18 // =0x12
+; CHECK-NEXT:    lastb s15, p1, z13.s
+; CHECK-NEXT:    str s1, [sp, #208] // 4-byte Spill
+; CHECK-NEXT:    lastb s1, p1, z0.s
+; CHECK-NEXT:    fcmp s1, s1
+; CHECK-NEXT:    fcsel s1, s15, s1, vs
+; CHECK-NEXT:    whilels p1.s, xzr, x8
+; CHECK-NEXT:    mov w8, #17 // =0x11
+; CHECK-NEXT:    lastb s11, p1, z13.s
+; CHECK-NEXT:    str s1, [sp, #200] // 4-byte Spill
+; CHECK-NEXT:    lastb s1, p1, z0.s
+; CHECK-NEXT:    fcmp s1, s1
+; CHECK-NEXT:    fcsel s1, s11, s1, vs
+; CHECK-NEXT:    whilels p1.s, xzr, x8
+; CHECK-NEXT:    mov w8, #16 // =0x10
+; CHECK-NEXT:    lastb s8, p1, z13.s
+; CHECK-NEXT:    str s1, [sp, #188] // 4-byte Spill
+; CHECK-NEXT:    lastb s1, p1, z0.s
+; CHECK-NEXT:    fcmp s1, s1
+; CHECK-NEXT:    fcsel s1, s8, s1, vs
+; CHECK-NEXT:    whilels p1.s, xzr, x8
+; CHECK-NEXT:    sub x8, x29, #64
+; CHECK-NEXT:    lastb s29, p1, z13.s
+; CHECK-NEXT:    str s1, [sp, #176] // 4-byte Spill
+; CHECK-NEXT:    lastb s1, p1, z0.s
+; CHECK-NEXT:    fcmp s1, s1
+; CHECK-NEXT:    fcsel s3, s29, s1, vs
+; CHECK-NEXT:    fcmp s2, s2
+; CHECK-NEXT:    mov z1.s, z0.s[14]
+; CHECK-NEXT:    fcsel s5, s27, s2, vs
+; CHECK-NEXT:    fcmp s1, s1
+; CHECK-NEXT:    mov z2.s, z0.s[13]
+; CHECK-NEXT:    fcsel s1, s25, s1, vs
+; CHECK-NEXT:    fcmp s2, s2
+; CHECK-NEXT:    stp s1, s5, [sp, #152] // 8-byte Folded Spill
+; CHECK-NEXT:    mov z1.s, z0.s[12]
+; CHECK-NEXT:    fcsel s2, s28, s2, vs
+; CHECK-NEXT:    mov z5.s, z0.s[7]
+; CHECK-NEXT:    stp s2, s3, [sp, #160] // 8-byte Folded Spill
+; CHECK-NEXT:    fcmp s1, s1
+; CHECK-NEXT:    mov z3.s, z13.s[12]
+; CHECK-NEXT:    mov z2.s, z0.s[11]
+; CHECK-NEXT:    fcsel s1, s3, s1, vs
+; CHECK-NEXT:    str z3, [x8, #-12, mul vl] // 16-byte Folded Spill
+; CHECK-NEXT:    mov z3.s, z13.s[11]
+; CHECK-NEXT:    fcmp s2, s2
+; CHECK-NEXT:    str s1, [sp, #172] // 4-byte Spill
+; CHECK-NEXT:    mov z1.s, z0.s[10]
+; CHECK-NEXT:    str z3, [x8, #-11, mul vl] // 16-byte Folded Spill
+; CHECK-NEXT:    fcsel s2, s3, s2, vs
+; CHECK-NEXT:    mov z3.s, z13.s[10]
+; CHECK-NEXT:    fcmp s1, s1
+; CHECK-NEXT:    str s2, [sp, #184] // 4-byte Spill
+; CHECK-NEXT:    mov z2.s, z0.s[9]
+; CHECK-NEXT:    str z3, [x8, #-10, mul vl] // 16-byte Folded Spill
+; CHECK-NEXT:    fcsel s1, s3, s1, vs
+; CHECK-NEXT:    mov z3.s, z0.s[8]
+; CHECK-NEXT:    fcmp s2, s2
+; CHECK-NEXT:    str s1, [sp, #192] // 4-byte Spill
+; CHECK-NEXT:    mov z1.s, z13.s[9]
+; CHECK-NEXT:    str z1, [x8, #-9, mul vl] // 16-byte Folded Spill
+; CHECK-NEXT:    fcsel s2, s1, s2, vs
+; CHECK-NEXT:    fcmp s3, s3
+; CHECK-NEXT:    mov z1.s, z13.s[8]
+; CHECK-NEXT:    str s2, [sp, #204] // 4-byte Spill
+; CHECK-NEXT:    str z1, [x8, #-8, mul vl] // 16-byte Folded Spill
+; CHECK-NEXT:    fcsel s2, s1, s3, vs
+; CHECK-NEXT:    fcmp s5, s5
+; CHECK-NEXT:    mov z1.s, z13.s[7]
+; CHECK-NEXT:    ldr s3, [sp, #392] // 4-byte Reload
+; CHECK-NEXT:    str s2, [sp, #212] // 4-byte Spill
+; CHECK-NEXT:    ldr s2, [sp, #396] // 4-byte Reload
+; CHECK-NEXT:    str z1, [x8, #-7, mul vl] // 16-byte Folded Spill
+; CHECK-NEXT:    fcsel s1, s1, s5, vs
+; CHECK-NEXT:    fcmp s7, s7
+; CHECK-NEXT:    str s1, [sp, #196] // 4-byte Spill
+; CHECK-NEXT:    mov z1.s, z13.s[6]
+; CHECK-NEXT:    str z1, [x8, #-6, mul vl] // 16-byte Folded Spill
+; CHECK-NEXT:    fcsel s1, s1, s7, vs
+; CHECK-NEXT:    fcmp s16, s16
+; CHECK-NEXT:    ldr s7, [sp, #176] // 4-byte Reload
+; CHECK-NEXT:    str s1, [sp, #180] // 4-byte Spill
+; CHECK-NEXT:    mov z1.s, z13.s[5]
+; CHECK-NEXT:    str z1, [x8, #-5, mul vl] // 16-byte Folded Spill
+; CHECK-NEXT:    fcsel s1, s1, s16, vs
+; CHECK-NEXT:    fcmp s19, s19
+; CHECK-NEXT:    ldr s16, [sp, #188] // 4-byte Reload
+; CHECK-NEXT:    str s1, [sp, #168] // 4-byte Spill
+; CHECK-NEXT:    mov z1.s, z13.s[4]
+; CHECK-NEXT:    str z1, [x8, #-3, mul vl] // 16-byte Folded Spill
+; CHECK-NEXT:    fcsel s1, s1, s19, vs
+; CHECK-NEXT:    fcmp s21, s21
+; CHECK-NEXT:    mov z19.s, z0.s[2]
+; CHECK-NEXT:    mov z0.s, z0.s[1]
+; CHECK-NEXT:    str s1, [sp, #148] // 4-byte Spill
+; CHECK-NEXT:    mov z1.s, z13.s[3]
+; CHECK-NEXT:    str z1, [x8, #-4, mul vl] // 16-byte Folded Spill
+; CHECK-NEXT:    fcsel s1, s1, s21, vs
+; CHECK-NEXT:    fcmp s19, s19
+; CHECK-NEXT:    str s1, [sp, #144] // 4-byte Spill
+; CHECK-NEXT:    mov z1.s, z13.s[2]
+; CHECK-NEXT:    str z1, [x8, #-2, mul vl] // 16-byte Folded Spill
+; CHECK-NEXT:    fcsel s1, s1, s19, vs
+; CHECK-NEXT:    fcmp s0, s0
+; CHECK-NEXT:    str s1, [sp, #140] // 4-byte Spill
+; CHECK-NEXT:    mov z1.s, z13.s[1]
+; CHECK-NEXT:    fcsel s0, s1, s0, vs
+; CHECK-NEXT:    fcmp s13, s13
+; CHECK-NEXT:    str z1, [x8, #-1, mul vl] // 16-byte Folded Spill
+; CHECK-NEXT:    str s3, [sp, #760]
+; CHECK-NEXT:    str s2, [sp, #764]
+; CHECK-NEXT:    str s0, [sp, #136] // 4-byte Spill
+; CHECK-NEXT:    ldr s0, [sp, #508] // 4-byte Reload
+; CHECK-NEXT:    fcsel s13, s0, s13, vs
+; CHECK-NEXT:    fcmp s0, s13
+; CHECK-NEXT:    fcsel s1, s0, s13, lt
+; CHECK-NEXT:    fcmp s30, s30
+; CHECK-NEXT:    fcsel s13, s2, s30, vs
+; CHECK-NEXT:    str s1, [sp, #288] // 4-byte Spill
+; CHECK-NEXT:    ldr s30, [sp, #284] // 4-byte Reload
+; CHECK-NEXT:    fcmp s2, s13
+; CHECK-NEXT:    fcsel s0, s2, s13, lt
+; CHECK-NEXT:    fcmp s31, s31
+; CHECK-NEXT:    ldr s2, [sp, #172] // 4-byte Reload
+; CHECK-NEXT:    fcsel s13, s3, s31, vs
+; CHECK-NEXT:    ldr s31, [sp, #344] // 4-byte Reload
+; CHECK-NEXT:    fcmp s3, s13
+; CHECK-NEXT:    fcsel s1, s3, s13, lt
+; CHECK-NEXT:    fcmp s10, s10
+; CHECK-NEXT:    ldr s3, [sp, #160] // 4-byte Reload
+; CHECK-NEXT:    stp s1, s0, [sp, #128] // 8-byte Folded Spill
+; CHECK-NEXT:    ldr s0, [sp, #504] // 4-byte Reload
+; CHECK-NEXT:    fcsel s13, s0, s10, vs
+; CHECK-NEXT:    ldr s10, [sp, #316] // 4-byte Reload
+; CHECK-NEXT:    fcmp s0, s13
+; CHECK-NEXT:    fcsel s1, s0, s13, lt
+; CHECK-NEXT:    fcmp s24, s24
+; CHECK-NEXT:    ldr s0, [sp, #500] // 4-byte Reload
+; CHECK-NEXT:    fcsel s13, s0, s24, vs
+; CHECK-NEXT:    str s1, [sp, #124] // 4-byte Spill
+; CHECK-NEXT:    fcmp s0, s13
+; CHECK-NEXT:    fcsel s1, s0, s13, lt
+; CHECK-NEXT:    fcmp s9, s9
+; CHECK-NEXT:    ldr s0, [sp, #496] // 4-byte Reload
+; CHECK-NEXT:    fcsel s13, s0, s9, vs
+; CHECK-NEXT:    str s1, [sp, #120] // 4-byte Spill
+; CHECK-NEXT:    ldr s9, [sp, #276] // 4-byte Reload
+; CHECK-NEXT:    fcmp s0, s13
+; CHECK-NEXT:    fcsel s1, s0, s13, lt
+; CHECK-NEXT:    fcmp s12, s12
+; CHECK-NEXT:    ldr s0, [sp, #492] // 4-byte Reload
+; CHECK-NEXT:    fcsel s13, s0, s12, vs
+; CHECK-NEXT:    str s1, [sp, #116] // 4-byte Spill
+; CHECK-NEXT:    ldr s12, [sp, #296] // 4-byte Reload
+; CHECK-NEXT:    fcmp s0, s13
+; CHECK-NEXT:    fcsel s1, s0, s13, lt
+; CHECK-NEXT:    ldr s0, [sp, #488] // 4-byte Reload
+; CHECK-NEXT:    str s1, [sp, #112] // 4-byte Spill
+; CHECK-NEXT:    ldr s1, [sp, #388] // 4-byte Reload
+; CHECK-NEXT:    fcmp s1, s1
+; CHECK-NEXT:    fcsel s13, s0, s1, vs
+; CHECK-NEXT:    fcmp s0, s13
+; CHECK-NEXT:    fcsel s1, s0, s13, lt
+; CHECK-NEXT:    fcmp s4, s4
+; CHECK-NEXT:    ldr s0, [sp, #384] // 4-byte Reload
+; CHECK-NEXT:    fcsel s13, s0, s4, vs
+; CHECK-NEXT:    str s1, [sp, #388] // 4-byte Spill
+; CHECK-NEXT:    fmov s4, s0
+; CHECK-NEXT:    fcmp s0, s13
+; CHECK-NEXT:    str s4, [sp, #736]
+; CHECK-NEXT:    fcsel s1, s0, s13, lt
+; CHECK-NEXT:    ldr s0, [sp, #484] // 4-byte Reload
+; CHECK-NEXT:    str s1, [sp, #108] // 4-byte Spill
+; CHECK-NEXT:    ldr s1, [sp, #380] // 4-byte Reload
+; CHECK-NEXT:    fcmp s1, s1
+; CHECK-NEXT:    fcsel s13, s0, s1, vs
+; CHECK-NEXT:    fcmp s0, s13
+; CHECK-NEXT:    fcsel s1, s0, s13, lt
+; CHECK-NEXT:    ldr s0, [sp, #480] // 4-byte Reload
+; CHECK-NEXT:    str s1, [sp, #380] // 4-byte Spill
+; CHECK-NEXT:    ldr s1, [sp, #376] // 4-byte Reload
+; CHECK-NEXT:    fcmp s1, s1
+; CHECK-NEXT:    fcsel s13, s0, s1, vs
+; CHECK-NEXT:    fcmp s0, s13
+; CHECK-NEXT:    fcsel s1, s0, s13, lt
+; CHECK-NEXT:    ldr s0, [sp, #476] // 4-byte Reload
+; CHECK-NEXT:    str s1, [sp, #376] // 4-byte Spill
+; CHECK-NEXT:    ldr s1, [sp, #372] // 4-byte Reload
+; CHECK-NEXT:    fcmp s1, s1
+; CHECK-NEXT:    fcsel s13, s0, s1, vs
+; CHECK-NEXT:    fcmp s0, s13
+; CHECK-NEXT:    fcsel s1, s0, s13, lt
+; CHECK-NEXT:    ldr s0, [sp, #472] // 4-byte Reload
+; CHECK-NEXT:    str s1, [sp, #372] // 4-byte Spill
+; CHECK-NEXT:    ldr s1, [sp, #368] // 4-byte Reload
+; CHECK-NEXT:    fcmp s1, s1
+; CHECK-NEXT:    fcsel s13, s0, s1, vs
+; CHECK-NEXT:    fcmp s0, s13
+; CHECK-NEXT:    fcsel s1, s0, s13, lt
+; CHECK-NEXT:    ldr s0, [sp, #468] // 4-byte Reload
+; CHECK-NEXT:    str s1, [sp, #368] // 4-byte Spill
+; CHECK-NEXT:    ldr s1, [sp, #364] // 4-byte Reload
+; CHECK-NEXT:    fcmp s1, s1
+; CHECK-NEXT:    fcsel s13, s0, s1, vs
+; CHECK-NEXT:    fcmp s0, s13
+; CHECK-NEXT:    fcsel s1, s0, s13, lt
+; CHECK-NEXT:    ldr s0, [sp, #464] // 4-byte Reload
+; CHECK-NEXT:    str s1, [sp, #364] // 4-byte Spill
+; CHECK-NEXT:    ldr s1, [sp, #360] // 4-byte Reload
+; CHECK-NEXT:    fcmp s1, s1
+; CHECK-NEXT:    fcsel s13, s0, s1, vs
+; CHECK-NEXT:    fcmp s0, s13
+; CHECK-NEXT:    fcsel s1, s0, s13, lt
+; CHECK-NEXT:    ldr s0, [sp, #460] // 4-byte Reload
+; CHECK-NEXT:    str s1, [sp, #360] // 4-byte Spill
+; CHECK-NEXT:    ldr s1, [sp, #356] // 4-byte Reload
+; CHECK-NEXT:    fcmp s1, s1
+; CHECK-NEXT:    fcsel s13, s0, s1, vs
+; CHECK-NEXT:    fcmp s0, s13
+; CHECK-NEXT:    fcsel s1, s0, s13, lt
+; CHECK-NEXT:    fcmp s14, s14
+; CHECK-NEXT:    ldr s0, [sp, #456] // 4-byte Reload
+; CHECK-NEXT:    fcsel s13, s0, s14, vs
+; CHECK-NEXT:    str s1, [sp, #356] // 4-byte Spill
+; CHECK-NEXT:    ldr s14, [sp, #304] // 4-byte Reload
+; CHECK-NEXT:    fcmp s0, s13
+; CHECK-NEXT:    fcsel s1, s0, s13, lt
+; CHECK-NEXT:    ldr s0, [sp, #452] // 4-byte Reload
+; CHECK-NEXT:    str s1, [sp, #104] // 4-byte Spill
+; CHECK-NEXT:    ldr s1, [sp, #352] // 4-byte Reload
+; CHECK-NEXT:    fcmp s1, s1
+; CHECK-NEXT:    fcsel s13, s0, s1, vs
+; CHECK-NEXT:    fcmp s0, s13
+; CHECK-NEXT:    fcsel s1, s0, s13, lt
+; CHECK-NEXT:    fcmp s18, s18
+; CHECK-NEXT:    ldr s0, [sp, #448] // 4-byte Reload
+; CHECK-NEXT:    fcsel s13, s0, s18, vs
+; CHECK-NEXT:    str s1, [sp, #352] // 4-byte Spill
+; CHECK-NEXT:    ldr s18, [sp, #200] // 4-byte Reload
+; CHECK-NEXT:    fcmp s0, s13
+; CHECK-NEXT:    fcsel s1, s0, s13, lt
+; CHECK-NEXT:    ldr s0, [sp, #444] // 4-byte Reload
+; CHECK-NEXT:    str s1, [sp, #100] // 4-byte Spill
+; CHECK-NEXT:    ldr s1, [sp, #348] // 4-byte Reload
+; CHECK-NEXT:    fcmp s1, s1
+; CHECK-NEXT:    fcsel s13, s0, s1, vs
+; CHECK-NEXT:    fcmp s0, s13
+; CHECK-NEXT:    fcsel s1, s0, s13, lt
+; CHECK-NEXT:    ldr s0, [sp, #440] // 4-byte Reload
+; CHECK-NEXT:    str s1, [sp, #348] // 4-byte Spill
+; CHECK-NEXT:    ldr s1, [sp, #340] // 4-byte Reload
+; CHECK-NEXT:    fcmp s1, s1
+; CHECK-NEXT:    fcsel s13, s31, s1, vs
+; CHECK-NEXT:    fcmp s31, s13
+; CHECK-NEXT:    fcsel s1, s31, s13, lt
+; CHECK-NEXT:    fcmp s20, s20
+; CHECK-NEXT:    fcsel s13, s0, s20, vs
+; CHECK-NEXT:    str s1, [sp, #340] // 4-byte Spill
+; CHECK-NEXT:    fcmp s0, s13
+; CHECK-NEXT:    fcsel s1, s0, s13, lt
+; CHECK-NEXT:    ldr s0, [sp, #436] // 4-byte Reload
+; CHECK-NEXT:    str s1, [sp, #96] // 4-byte Spill
+; CHECK-NEXT:    ldr s1, [sp, #336] // 4-byte Reload
+; CHECK-NEXT:    fcmp s1, s1
+; CHECK-NEXT:    fcsel s13, s0, s1, vs
+; CHECK-NEXT:    fcmp s0, s13
+; CHECK-NEXT:    fcsel s1, s0, s13, lt
+; CHECK-NEXT:    ldr s0, [sp, #432] // 4-byte Reload
+; CHECK-NEXT:    str s1, [sp, #336] // 4-byte Spill
+; CHECK-NEXT:    ldr s1, [sp, #332] // 4-byte Reload
+; CHECK-NEXT:    fcmp s1, s1
+; CHECK-NEXT:    fcsel s13, s0, s1, vs
+; CHECK-NEXT:    fcmp s0, s13
+; CHECK-NEXT:    fcsel s1, s0, s13, lt
+; CHECK-NEXT:    ldr s0, [sp, #428] // 4-byte Reload
+; CHECK-NEXT:    str s1, [sp, #332] // 4-byte Spill
+; CHECK-NEXT:    ldr s1, [sp, #328] // 4-byte Reload
+; CHECK-NEXT:    fcmp s1, s1
+; CHECK-NEXT:    fcsel s13, s0, s1, vs
+; CHECK-NEXT:    fcmp s0, s13
+; CHECK-NEXT:    fcsel s1, s0, s13, lt
+; CHECK-NEXT:    fcmp s22, s22
+; CHECK-NEXT:    ldr s0, [sp, #424] // 4-byte Reload
+; CHECK-NEXT:    fcsel s13, s0, s22, vs
+; CHECK-NEXT:    str s1, [sp, #328] // 4-byte Spill
+; CHECK-NEXT:    fcmp s0, s13
+; CHECK-NEXT:    fcsel s1, s0, s13, lt
+; CHECK-NEXT:    ldr s0, [sp, #420] // 4-byte Reload
+; CHECK-NEXT:    str s1, [sp, #92] // 4-byte Spill
+; CHECK-NEXT:    ldr s1, [sp, #324] // 4-byte Reload
+; CHECK-NEXT:    fcmp s1, s1
+; CHECK-NEXT:    fcsel s13, s0, s1, vs
+; CHECK-NEXT:    fcmp s0, s13
+; CHECK-NEXT:    fcsel s1, s0, s13, lt
+; CHECK-NEXT:    fcmp s23, s23
+; CHECK-NEXT:    ldr s0, [sp, #416] // 4-byte Reload
+; CHECK-NEXT:    fcsel s13, s0, s23, vs
+; CHECK-NEXT:    str s1, [sp, #324] // 4-byte Spill
+; CHECK-NEXT:    ldr s23, [sp, #260] // 4-byte Reload
+; CHECK-NEXT:    fcmp s0, s13
+; CHECK-NEXT:    fcsel s1, s0, s13, lt
+; CHECK-NEXT:    ldr s0, [sp, #412] // 4-byte Reload
+; CHECK-NEXT:    str s1, [sp, #88] // 4-byte Spill
+; CHECK-NEXT:    ldr s1, [sp, #320] // 4-byte Reload
+; CHECK-NEXT:    fcmp s1, s1
+; CHECK-NEXT:    fcsel s13, s0, s1, vs
+; CHECK-NEXT:    fcmp s0, s13
+; CHECK-NEXT:    fcsel s1, s0, s13, lt
+; CHECK-NEXT:    fcmp s26, s26
+; CHECK-NEXT:    ldr s0, [sp, #408] // 4-byte Reload
+; CHECK-NEXT:    fcsel s13, s10, s26, vs
+; CHECK-NEXT:    str s1, [sp, #320] // 4-byte Spill
+; CHECK-NEXT:    ldr s26, [sp, #268] // 4-byte Reload
+; CHECK-NEXT:    fcmp s10, s13
+; CHECK-NEXT:    fcsel s1, s10, s13, lt
+; CHECK-NEXT:    str s1, [sp, #84] // 4-byte Spill
+; CHECK-NEXT:    ldr s1, [sp, #312] // 4-byte Reload
+; CHECK-NEXT:    fcmp s1, s1
+; CHECK-NEXT:    fcsel s13, s0, s1, vs
+; CHECK-NEXT:    fcmp s0, s13
+; CHECK-NEXT:    fcsel s1, s0, s13, lt
+; CHECK-NEXT:    ldr s0, [sp, #404] // 4-byte Reload
+; CHECK-NEXT:    str s1, [sp, #312] // 4-byte Spill
+; CHECK-NEXT:    ldr s1, [sp, #308] // 4-byte Reload
+; CHECK-NEXT:    fcmp s1, s1
+; CHECK-NEXT:    fcsel s13, s0, s1, vs
+; CHECK-NEXT:    fcmp s0, s13
+; CHECK-NEXT:    fcsel s1, s0, s13, lt
+; CHECK-NEXT:    fcmp s6, s6
+; CHECK-NEXT:    ldr s0, [sp, #400] // 4-byte Reload
+; CHECK-NEXT:    fcsel s13, s0, s6, vs
+; CHECK-NEXT:    str s1, [sp, #308] // 4-byte Spill
+; CHECK-NEXT:    ldr s6, [sp, #164] // 4-byte Reload
+; CHECK-NEXT:    fcmp s0, s13
+; CHECK-NEXT:    fcsel s1, s0, s13, lt
+; CHECK-NEXT:    ldr s0, [sp, #208] // 4-byte Reload
+; CHECK-NEXT:    str s1, [sp, #80] // 4-byte Spill
+; CHECK-NEXT:    ldr s1, [sp, #300] // 4-byte Reload
+; CHECK-NEXT:    fcmp s1, s1
+; CHECK-NEXT:    fcsel s13, s14, s1, vs
+; CHECK-NEXT:    fcmp s14, s13
+; CHECK-NEXT:    fcsel s1, s14, s13, lt
+; CHECK-NEXT:    str s1, [sp, #300] // 4-byte Spill
+; CHECK-NEXT:    ldr s1, [sp, #292] // 4-byte Reload
+; CHECK-NEXT:    fcmp s1, s1
+; CHECK-NEXT:    fcsel s13, s12, s1, vs
+; CHECK-NEXT:    fcmp s12, s13
+; CHECK-NEXT:    fcsel s1, s12, s13, lt
+; CHECK-NEXT:    str s1, [sp, #292] // 4-byte Spill
+; CHECK-NEXT:    ldr s1, [sp, #280] // 4-byte Reload
+; CHECK-NEXT:    fcmp s1, s1
+; CHECK-NEXT:    fcsel s13, s30, s1, vs
+; CHECK-NEXT:    fcmp s30, s13
+; CHECK-NEXT:    fcsel s1, s30, s13, lt
+; CHECK-NEXT:    str s1, [sp, #280] // 4-byte Spill
+; CHECK-NEXT:    ldr s1, [sp, #272] // 4-byte Reload
+; CHECK-NEXT:    fcmp s1, s1
+; CHECK-NEXT:    fcsel s13, s9, s1, vs
+; CHECK-NEXT:    fcmp s9, s13
+; CHECK-NEXT:    fcsel s1, s9, s13, lt
+; CHECK-NEXT:    str s1, [sp, #272] // 4-byte Spill
+; CHECK-NEXT:    ldr s1, [sp, #264] // 4-byte Reload
+; CHECK-NEXT:    fcmp s1, s1
+; CHECK-NEXT:    fcsel s13, s26, s1, vs
+; CHECK-NEXT:    fcmp s26, s13
+; CHECK-NEXT:    fcsel s1, s26, s13, lt
+; CHECK-NEXT:    str s1, [sp, #264] // 4-byte Spill
+; CHECK-NEXT:    ldp s24, s1, [sp, #252] // 8-byte Folded Reload
+; CHECK-NEXT:    fcmp s1, s1
+; CHECK-NEXT:    fcsel s13, s23, s1, vs
+; CHECK-NEXT:    fcmp s23, s13
+; CHECK-NEXT:    fcsel s1, s23, s13, lt
+; CHECK-NEXT:    str s1, [sp, #256] // 4-byte Spill
+; CHECK-NEXT:    ldp s22, s1, [sp, #244] // 8-byte Folded Reload
+; CHECK-NEXT:    fcmp s1, s1
+; CHECK-NEXT:    fcsel s13, s24, s1, vs
+; CHECK-NEXT:    fcmp s24, s13
+; CHECK-NEXT:    fcsel s1, s24, s13, lt
+; CHECK-NEXT:    str s1, [sp, #248] // 4-byte Spill
+; CHECK-NEXT:    ldp s21, s1, [sp, #236] // 8-byte Folded Reload
+; CHECK-NEXT:    fcmp s1, s1
+; CHECK-NEXT:    fcsel s13, s22, s1, vs
+; CHECK-NEXT:    fcmp s22, s13
+; CHECK-NEXT:    fcsel s1, s22, s13, lt
+; CHECK-NEXT:    str s1, [sp, #240] // 4-byte Spill
+; CHECK-NEXT:    ldp s20, s1, [sp, #228] // 8-byte Folded Reload
+; CHECK-NEXT:    fcmp s1, s1
+; CHECK-NEXT:    fcsel s13, s21, s1, vs
+; CHECK-NEXT:    fcmp s21, s13
+; CHECK-NEXT:    fcsel s1, s21, s13, lt
+; CHECK-NEXT:    str s1, [sp, #232] // 4-byte Spill
+; CHECK-NEXT:    ldp s19, s1, [sp, #220] // 8-byte Folded Reload
+; CHECK-NEXT:    fcmp s1, s1
+; CHECK-NEXT:    fcsel s13, s20, s1, vs
+; CHECK-NEXT:    fcmp s20, s13
+; CHECK-NEXT:    fcsel s1, s20, s13, lt
+; CHECK-NEXT:    str s1, [sp, #224] // 4-byte Spill
+; CHECK-NEXT:    ldr s1, [sp, #216] // 4-byte Reload
+; CHECK-NEXT:    fcmp s1, s1
+; CHECK-NEXT:    fcsel s13, s19, s1, vs
+; CHECK-NEXT:    fcmp s19, s13
+; CHECK-NEXT:    fcsel s1, s19, s13, lt
+; CHECK-NEXT:    fcmp s17, s17
+; CHECK-NEXT:    fcsel s13, s0, s17, vs
+; CHECK-NEXT:    fmov s17, s0
+; CHECK-NEXT:    str s1, [sp, #216] // 4-byte Spill
+; CHECK-NEXT:    ldr s1, [sp, #504] // 4-byte Reload
+; CHECK-NEXT:    fcmp s0, s13
+; CHECK-NEXT:    str s1, [sp, #756]
+; CHECK-NEXT:    ldr s1, [sp, #500] // 4-byte Reload
+; CHECK-NEXT:    str s1, [sp, #752]
+; CHECK-NEXT:    ldr s1, [sp, #496] // 4-byte Reload
+; CHECK-NEXT:    fcsel s13, s0, s13, lt
+; CHECK-NEXT:    fcmp s15, s15
+; CHECK-NEXT:    ldp s0, s5, [sp, #152] // 8-byte Folded Reload
+; CHECK-NEXT:    str s1, [sp, #748]
+; CHECK-NEXT:    ldr s1, [sp, #492] // 4-byte Reload
+; CHECK-NEXT:    fcsel s15, s18, s15, vs
+; CHECK-NEXT:    str s1, [sp, #744]
+; CHECK-NEXT:    ldr s1, [sp, #488] // 4-byte Reload
+; CHECK-NEXT:    fmov s4, s0
+; CHECK-NEXT:    fcmp s18, s15
+; CHECK-NEXT:    str s1, [sp, #740]
+; CHECK-NEXT:    ldr s1, [sp, #472] // 4-byte Reload
+; CHECK-NEXT:    str s1, [sp, #720]
+; CHECK-NEXT:    ldr s1, [sp, #468] // 4-byte Reload
+; CHECK-NEXT:    fcsel s15, s18, s15, lt
+; CHECK-NEXT:    fcmp s11, s11
+; CHECK-NEXT:    str s1, [sp, #716]
+; CHECK-NEXT:    ldr s1, [sp, #464] // 4-byte Reload
+; CHECK-NEXT:    fcsel s11, s16, s11, vs
+; CHECK-NEXT:    str s1, [sp, #712]
+; CHECK-NEXT:    ldr s1, [sp, #460] // 4-byte Reload
+; CHECK-NEXT:    str s1, [sp, #708]
+; CHECK-NEXT:    ldr s1, [sp, #456] // 4-byte Reload
+; CHECK-NEXT:    fcmp s16, s11
+; CHECK-NEXT:    str s1, [sp, #704]
+; CHECK-NEXT:    ldr s1, [sp, #452] // 4-byte Reload
+; CHECK-NEXT:    fcsel s11, s16, s11, lt
+; CHECK-NEXT:    fcmp s8, s8
+; CHECK-NEXT:    str s1, [sp, #700]
+; CHECK-NEXT:    fcsel s8, s7, s8, vs
+; CHECK-NEXT:    fcmp s7, s8
+; CHECK-NEXT:    fcsel s8, s7, s8, lt
+; CHECK-NEXT:    fcmp s29, s29
+; CHECK-NEXT:    fcsel s29, s6, s29, vs
+; CHECK-NEXT:    fcmp s6, s29
+; CHECK-NEXT:    fcsel s29, s6, s29, lt
+; CHECK-NEXT:    fcmp s27, s27
+; CHECK-NEXT:    fcsel s27, s5, s27, vs
+; CHECK-NEXT:    fcmp s5, s27
+; CHECK-NEXT:    fcsel s27, s5, s27, lt
+; CHECK-NEXT:    fcmp s25, s25
+; CHECK-NEXT:    fcsel s25, s0, s25, vs
+; CHECK-NEXT:    fcmp s0, s25
+; CHECK-NEXT:    fcsel s25, s0, s25, lt
+; CHECK-NEXT:    ldr s0, [sp, #484] // 4-byte Reload
+; CHECK-NEXT:    fcmp s28, s28
+; CHECK-NEXT:    str s0, [sp, #732]
+; CHECK-NEXT:    ldr s0, [sp, #480] // 4-byte Reload
+; CHECK-NEXT:    fcsel s28, s3, s28, vs
+; CHECK-NEXT:    str s0, [sp, #728]
+; CHECK-NEXT:    ldr s0, [sp, #476] // 4-byte Reload
+; CHECK-NEXT:    str s0, [sp, #724]
+; CHECK-NEXT:    fcmp s3, s28
+; CHECK-NEXT:    ldr s0, [sp, #448] // 4-byte Reload
+; CHECK-NEXT:    ldr z1, [x8, #-12, mul vl] // 16-byte Folded Reload
+; CHECK-NEXT:    str s31, [sp, #688]
+; CHECK-NEXT:    str s0, [sp, #696]
+; CHECK-NEXT:    ldr s0, [sp, #444] // 4-byte Reload
+; CHECK-NEXT:    fcsel s28, s3, s28, lt
+; CHECK-NEXT:    fcmp s1, s1
+; CHECK-NEXT:    str s0, [sp, #692]
+; CHECK-NEXT:    ldr s0, [sp, #416] // 4-byte Reload
+; CHECK-NEXT:    fcsel s31, s2, s1, vs
+; CHECK-NEXT:    ldr s1, [sp, #440] // 4-byte Reload
+; CHECK-NEXT:    str s1, [sp, #684]
+; CHECK-NEXT:    ldr s1, [sp, #436] // 4-byte Reload
+; CHECK-NEXT:    fcmp s2, s31
+; CHECK-NEXT:    str s1, [sp, #680]
+; CHECK-NEXT:    ldr s1, [sp, #432] // 4-byte Reload
+; CHECK-NEXT:    str s1, [sp, #676]
+; CHECK-NEXT:    ldr s1, [sp, #428] // 4-byte Reload
+; CHECK-NEXT:    fcsel s31, s2, s31, lt
+; CHECK-NEXT:    str s1, [sp, #672]
+; CHECK-NEXT:    ldr s1, [sp, #424] // 4-byte Reload
+; CHECK-NEXT:    str s1, [sp, #668]
+; CHECK-NEXT:    ldr s1, [sp, #420] // 4-byte Reload
+; CHECK-NEXT:    str s1, [sp, #664]
+; CHECK-NEXT:    ldr z1, [x8, #-11, mul vl] // 16-byte Folded Reload
+; CHECK-NEXT:    str s0, [sp, #660]
+; CHECK-NEXT:    ldr s0, [sp, #412] // 4-byte Reload
+; CHECK-NEXT:    str s10, [sp, #652]
+; CHECK-NEXT:    str s0, [sp, #656]
+; CHECK-NEXT:    ldr s0, [sp, #184] // 4-byte Reload
+; CHECK-NEXT:    fcmp s1, s1
+; CHECK-NEXT:    str s14, [sp, #636]
+; CHECK-NEXT:    str s12, [sp, #632]
+; CHECK-NEXT:    str s30, [sp, #628]
+; CHECK-NEXT:    fcsel s10, s0, s1, vs
+; CHECK-NEXT:    ldr s1, [sp, #408] // 4-byte Reload
+; CHECK-NEXT:    str s1, [sp, #648]
+; CHECK-NEXT:    ldr s1, [sp, #404] // 4-byte Reload
+; CHECK-NEXT:    fcmp s0, s10
+; CHECK-NEXT:    str s1, [sp, #644]
+; CHECK-NEXT:    ldr s1, [sp, #400] // 4-byte Reload
+; CHECK-NEXT:    str s1, [sp, #640]
+; CHECK-NEXT:    fcsel s10, s0, s10, lt
+; CHECK-NEXT:    ldr z30, [x8, #-10, mul vl] // 16-byte Folded Reload
+; CHECK-NEXT:    str s23, [sp, #616]
+; CHECK-NEXT:    ldr s23, [sp, #192] // 4-byte Reload
+; CHECK-NEXT:    str s9, [sp, #624]
+; CHECK-NEXT:    str s26, [sp, #620]
+; CHECK-NEXT:    fcmp s30, s30
+; CHECK-NEXT:    str s24, [sp, #612]
+; CHECK-NEXT:    str s22, [sp, #608]
+; CHECK-NEXT:    str s21, [sp, #604]
+; CHECK-NEXT:    fcsel s12, s23, s30, vs
+; CHECK-NEXT:    str s20, [sp, #600]
+; CHECK-NEXT:    str s19, [sp, #596]
+; CHECK-NEXT:    str s17, [sp, #592]
+; CHECK-NEXT:    fcmp s23, s12
+; CHECK-NEXT:    ldr z17, [x8, #-9, mul vl] // 16-byte Folded Reload
+; CHECK-NEXT:    str s7, [sp, #580]
+; CHECK-NEXT:    ldr s7, [sp, #204] // 4-byte Reload
+; CHECK-NEXT:    str s18, [sp, #588]
+; CHECK-NEXT:    str s16, [sp, #584]
+; CHECK-NEXT:    ldp s18, s19, [sp, #128] // 8-byte Folded Reload
+; CHECK-NEXT:    fcsel s9, s23, s12, lt
+; CHECK-NEXT:    fcmp s17, s17
+; CHECK-NEXT:    str s6, [sp, #576]
+; CHECK-NEXT:    str s5, [sp, #572]
+; CHECK-NEXT:    ldr s5, [sp, #168] // 4-byte Reload
+; CHECK-NEXT:    str s4, [sp, #568]
+; CHECK-NEXT:    ldr s4, [sp, #180] // 4-byte Reload
+; CHECK-NEXT:    fcsel s24, s7, s17, vs
+; CHECK-NEXT:    str s3, [sp, #564]
+; CHECK-NEXT:    ldr s3, [sp, #196] // 4-byte Reload
+; CHECK-NEXT:    str s2, [sp, #560]
+; CHECK-NEXT:    str s0, [sp, #556]
+; CHECK-NEXT:    ldr s0, [sp, #508] // 4-byte Reload
+; CHECK-NEXT:    fcmp s7, s24
+; CHECK-NEXT:    ldr z1, [x8, #-8, mul vl] // 16-byte Folded Reload
+; CHECK-NEXT:    str s7, [sp, #548]
+; CHECK-NEXT:    str s0, [sp, #512]
+; CHECK-NEXT:    ldr s0, [sp, #212] // 4-byte Reload
+; CHECK-NEXT:    str s23, [sp, #552]
+; CHECK-NEXT:    fcsel s6, s7, s24, lt
+; CHECK-NEXT:    fcmp s1, s1
+; CHECK-NEXT:    str s0, [sp, #544]
+; CHECK-NEXT:    ldp s16, s7, [sp, #144] // 8-byte Folded Reload
+; CHECK-NEXT:    str s3, [sp, #540]
+; CHECK-NEXT:    str s4, [sp, #536]
+; CHECK-NEXT:    fcsel s1, s0, s1, vs
+; CHECK-NEXT:    str s5, [sp, #532]
+; CHECK-NEXT:    str s7, [sp, #528]
+; CHECK-NEXT:    ldr z2, [x8, #-7, mul vl] // 16-byte Folded Reload
+; CHECK-NEXT:    str s19, [sp, #1020]
+; CHECK-NEXT:    fcmp s0, s1
+; CHECK-NEXT:    str s18, [sp, #1016]
+; CHECK-NEXT:    ldp s18, s19, [sp, #120] // 8-byte Folded Reload
+; CHECK-NEXT:    str s16, [sp, #524]
+; CHECK-NEXT:    fcsel s1, s0, s1, lt
+; CHECK-NEXT:    fcmp s2, s2
+; CHECK-NEXT:    str s19, [sp, #1012]
+; CHECK-NEXT:    ldp s0, s17, [sp, #136] // 8-byte Folded Reload
+; CHECK-NEXT:    str s18, [sp, #1008]
+; CHECK-NEXT:    ldp s18, s19, [sp, #112] // 8-byte Folded Reload
+; CHECK-NEXT:    fcsel s2, s3, s2, vs
+; CHECK-NEXT:    str s17, [sp, #520]
+; CHECK-NEXT:    str s18, [sp, #1000]
+; CHECK-NEXT:    ldr s18, [sp, #388] // 4-byte Reload
+; CHECK-NEXT:    fcmp s3, s2
+; CHECK-NEXT:    str s0, [sp, #516]
+; CHECK-NEXT:    str s18, [sp, #996]
+; CHECK-NEXT:    ldr s18, [sp, #108] // 4-byte Reload
+; CHECK-NEXT:    str s19, [sp, #1004]
+; CHECK-NEXT:    fcsel s2, s3, s2, lt
+; CHECK-NEXT:    ldr z3, [x8, #-6, mul vl] // 16-byte Folded Reload
+; CHECK-NEXT:    str s18, [sp, #992]
+; CHECK-NEXT:    ldr s18, [sp, #380] // 4-byte Reload
+; CHECK-NEXT:    str s18, [sp, #988]
+; CHECK-NEXT:    ldr s18, [sp, #376] // 4-byte Reload
+; CHECK-NEXT:    fcmp s3, s3
+; CHECK-NEXT:    str s18, [sp, #984]
+; CHECK-NEXT:    ldr s18, [sp, #372] // 4-byte Reload
+; CHECK-NEXT:    fcsel s3, s4, s3, vs
+; CHECK-NEXT:    str s18, [sp, #980]
+; CHECK-NEXT:    ldr s18, [sp, #368] // 4-byte Reload
+; CHECK-NEXT:    str s18, [sp, #976]
+; CHECK-NEXT:    ldr s18, [sp, #364] // 4-byte Reload
+; CHECK-NEXT:    fcmp s4, s3
+; CHECK-NEXT:    str s18, [sp, #972]
+; CHECK-NEXT:    ldr s18, [sp, #360] // 4-byte Reload
+; CHECK-NEXT:    fcsel s3, s4, s3, lt
+; CHECK-NEXT:    str s18, [sp, #968]
+; CHECK-NEXT:    ldr s18, [sp, #356] // 4-byte Reload
+; CHECK-NEXT:    str s18, [sp, #964]
+; CHECK-NEXT:    ldr s18, [sp, #104] // 4-byte Reload
+; CHECK-NEXT:    str s18, [sp, #960]
+; CHECK-NEXT:    ldr s18, [sp, #352] // 4-byte Reload
+; CHECK-NEXT:    ldr z4, [x8, #-5, mul vl] // 16-byte Folded Reload
+; CHECK-NEXT:    str s18, [sp, #956]
+; CHECK-NEXT:    ldr s18, [sp, #100] // 4-byte Reload
+; CHECK-NEXT:    str s18, [sp, #952]
+; CHECK-NEXT:    ldr s18, [sp, #348] // 4-byte Reload
+; CHECK-NEXT:    fcmp s4, s4
+; CHECK-NEXT:    str s18, [sp, #948]
+; CHECK-NEXT:    ldr s18, [sp, #340] // 4-byte Reload
+; CHECK-NEXT:    fcsel s4, s5, s4, vs
+; CHECK-NEXT:    str s18, [sp, #944]
+; CHECK-NEXT:    ldr s18, [sp, #96] // 4-byte Reload
+; CHECK-NEXT:    str s18, [sp, #940]
+; CHECK-NEXT:    ldr s18, [sp, #336] // 4-byte Reload
+; CHECK-NEXT:    fcmp s5, s4
+; CHECK-NEXT:    str s18, [sp, #936]
+; CHECK-NEXT:    ldr s18, [sp, #332] // 4-byte Reload
+; CHECK-NEXT:    fcsel s4, s5, s4, lt
+; CHECK-NEXT:    str s18, [sp, #932]
+; CHECK-NEXT:    ldr s18, [sp, #328] // 4-byte Reload
+; CHECK-NEXT:    str s18, [sp, #928]
+; CHECK-NEXT:    ldr s18, [sp, #92] // 4-byte Reload
+; CHECK-NEXT:    str s18, [sp, #924]
+; CHECK-NEXT:    ldr s18, [sp, #324] // 4-byte Reload
+; CHECK-NEXT:    ldr z5, [x8, #-3, mul vl] // 16-byte Folded Reload
+; CHECK-NEXT:    str s18, [sp, #920]
+; CHECK-NEXT:    ldr s18, [sp, #88] // 4-byte Reload
+; CHECK-NEXT:    str s18, [sp, #916]
+; CHECK-NEXT:    ldr s18, [sp, #320] // 4-byte Reload
+; CHECK-NEXT:    fcmp s5, s5
+; CHECK-NEXT:    str s18, [sp, #912]
+; CHECK-NEXT:    ldr s18, [sp, #84] // 4-byte Reload
+; CHECK-NEXT:    fcsel s5, s7, s5, vs
+; CHECK-NEXT:    str s18, [sp, #908]
+; CHECK-NEXT:    ldr s18, [sp, #312] // 4-byte Reload
+; CHECK-NEXT:    str s18, [sp, #904]
+; CHECK-NEXT:    ldr s18, [sp, #308] // 4-byte Reload
+; CHECK-NEXT:    fcmp s7, s5
+; CHECK-NEXT:    str s18, [sp, #900]
+; CHECK-NEXT:    ldr s18, [sp, #80] // 4-byte Reload
+; CHECK-NEXT:    fcsel s5, s7, s5, lt
+; CHECK-NEXT:    str s18, [sp, #896]
+; CHECK-NEXT:    ldr s18, [sp, #300] // 4-byte Reload
+; CHECK-NEXT:    str s18, [sp, #892]
+; CHECK-NEXT:    ldr s18, [sp, #292] // 4-byte Reload
+; CHECK-NEXT:    str s18, [sp, #888]
+; CHECK-NEXT:    ldr s18, [sp, #280] // 4-byte Reload
+; CHECK-NEXT:    ldr z7, [x8, #-4, mul vl] // 16-byte Folded Reload
+; CHECK-NEXT:    str s18, [sp, #884]
+; CHECK-NEXT:    ldr s18, [sp, #272] // 4-byte Reload
+; CHECK-NEXT:    str s18, [sp, #880]
+; CHECK-NEXT:    ldr s18, [sp, #264] // 4-byte Reload
+; CHECK-NEXT:    fcmp s7, s7
+; CHECK-NEXT:    str s18, [sp, #876]
+; CHECK-NEXT:    ldr s18, [sp, #256] // 4-byte Reload
+; CHECK-NEXT:    fcsel s7, s16, s7, vs
+; CHECK-NEXT:    str s18, [sp, #872]
+; CHECK-NEXT:    ldr s18, [sp, #248] // 4-byte Reload
+; CHECK-NEXT:    str s18, [sp, #868]
+; CHECK-NEXT:    ldr s18, [sp, #240] // 4-byte Reload
+; CHECK-NEXT:    fcmp s16, s7
+; CHECK-NEXT:    str s18, [sp, #864]
+; CHECK-NEXT:    ldr s18, [sp, #232] // 4-byte Reload
+; CHECK-NEXT:    fcsel s7, s16, s7, lt
+; CHECK-NEXT:    str s18, [sp, #860]
+; CHECK-NEXT:    ldr s18, [sp, #224] // 4-byte Reload
+; CHECK-NEXT:    str s18, [sp, #856]
+; CHECK-NEXT:    ldr s18, [sp, #216] // 4-byte Reload
+; CHECK-NEXT:    str s18, [sp, #852]
+; CHECK-NEXT:    ldr z16, [x8, #-2, mul vl] // 16-byte Folded Reload
+; CHECK-NEXT:    str s13, [sp, #848]
+; CHECK-NEXT:    str s15, [sp, #844]
+; CHECK-NEXT:    str s11, [sp, #840]
+; CHECK-NEXT:    fcmp s16, s16
+; CHECK-NEXT:    str s8, [sp, #836]
+; CHECK-NEXT:    str s29, [sp, #832]
+; CHECK-NEXT:    str s27, [sp, #828]
+; CHECK-NEXT:    fcsel s16, s17, s16, vs
+; CHECK-NEXT:    str s25, [sp, #824]
+; CHECK-NEXT:    str s28, [sp, #820]
+; CHECK-NEXT:    str s31, [sp, #816]
+; CHECK-NEXT:    fcmp s17, s16
+; CHECK-NEXT:    fcsel s16, s17, s16, lt
+; CHECK-NEXT:    ldr z17, [x8, #-1, mul vl] // 16-byte Folded Reload
+; CHECK-NEXT:    str s6, [sp, #804]
+; CHECK-NEXT:    str s1, [sp, #800]
+; CHECK-NEXT:    ldr s1, [sp, #288] // 4-byte Reload
+; CHECK-NEXT:    adrp x8, .LCPI101_0
+; CHECK-NEXT:    add x8, x8, :lo12:.LCPI101_0
+; CHECK-NEXT:    str s10, [sp, #812]
+; CHECK-NEXT:    fcmp s17, s17
+; CHECK-NEXT:    str s9, [sp, #808]
+; CHECK-NEXT:    str s2, [sp, #796]
+; CHECK-NEXT:    str s3, [sp, #792]
+; CHECK-NEXT:    fcsel s6, s0, s17, vs
+; CHECK-NEXT:    str s4, [sp, #788]
+; CHECK-NEXT:    str s5, [sp, #784]
+; CHECK-NEXT:    str s7, [sp, #780]
+; CHECK-NEXT:    fcmp s0, s6
+; CHECK-NEXT:    str s16, [sp, #776]
+; CHECK-NEXT:    str s1, [sp, #768]
+; CHECK-NEXT:    fcsel s0, s0, s6, lt
+; CHECK-NEXT:    str s0, [sp, #772]
+; CHECK-NEXT:    ld1w { z0.s }, p0/z, [x8]
+; CHECK-NEXT:    add x8, sp, #768
+; CHECK-NEXT:    ld1w { z1.s }, p0/z, [x9]
+; CHECK-NEXT:    cmpeq p1.s, p0/z, z1.s, z0.s
+; CHECK-NEXT:    mov z0.s, p1/z, #-1 // =0xffffffffffffffff
+; CHECK-NEXT:    ptrue p1.s
+; CHECK-NEXT:    and z0.s, z0.s, #0x1
+; CHECK-NEXT:    cmpne p1.s, p1/z, z0.s, #0
+; CHECK-NEXT:    ld1w { z0.s }, p0/z, [x8]
+; CHECK-NEXT:    fcmeq p2.s, p0/z, z0.s, #0.0
+; CHECK-NEXT:    sel z1.s, p1, z1.s, z0.s
+; CHECK-NEXT:    mov z0.s, p2/m, z1.s
+; CHECK-NEXT:    st1w { z0.s }, p0, [x0]
+; CHECK-NEXT:    sub sp, x29, #64
+; CHECK-NEXT:    ldp x29, x30, [sp, #64] // 16-byte Folded Reload
+; CHECK-NEXT:    ldp d9, d8, [sp, #48] // 16-byte Folded Reload
+; CHECK-NEXT:    ldp d11, d10, [sp, #32] // 16-byte Folded Reload
+; CHECK-NEXT:    ldp d13, d12, [sp, #16] // 16-byte Folded Reload
+; CHECK-NEXT:    ldp d15, d14, [sp], #80 // 16-byte Folded Reload
+; CHECK-NEXT:    ret
+  %op1 = load <64 x float>, ptr %a
+  %op2 = load <64 x float>, ptr %b
+  %res = call <64 x float> @llvm.minimumnum.v64f32(<64 x float> %op1, <64 x float> %op2)
+  store <64 x float> %res, ptr %a
+  ret void
+}
+
+; Don't use SVE for 64-bit vectors.
+define <1 x double> @fminimumnum_v1f64(<1 x double> %op1, <1 x double> %op2) vscale_range(2,0) #0 {
+; CHECK-LABEL: fminimumnum_v1f64:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    fminnm d1, d1, d1
+; CHECK-NEXT:    fminnm d0, d0, d0
+; CHECK-NEXT:    fminnm d0, d0, d1
+; CHECK-NEXT:    ret
+  %res = call <1 x double> @llvm.minimumnum.v1f64(<1 x double> %op1, <1 x double> %op2)
+  ret <1 x double> %res
+}
+
+; Don't use SVE for 128-bit vectors.
+define <2 x double> @fminimumnum_v2f64(<2 x double> %op1, <2 x double> %op2) vscale_range(2,0) #0 {
+; CHECK-LABEL: fminimumnum_v2f64:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    fminnm v1.2d, v1.2d, v1.2d
+; CHECK-NEXT:    fminnm v0.2d, v0.2d, v0.2d
+; CHECK-NEXT:    fminnm v0.2d, v0.2d, v1.2d
+; CHECK-NEXT:    ret
+  %res = call <2 x double> @llvm.minimumnum.v2f64(<2 x double> %op1, <2 x double> %op2)
+  ret <2 x double> %res
+}
+
+define void @fminimumnum_v4f64(ptr %a, ptr %b) vscale_range(2,0) #0 {
+; CHECK-LABEL: fminimumnum_v4f64:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    stp x29, x30, [sp, #-16]! // 16-byte Folded Spill
+; CHECK-NEXT:    sub x9, sp, #80
+; CHECK-NEXT:    mov x29, sp
+; CHECK-NEXT:    and sp, x9, #0xffffffffffffffe0
+; CHECK-NEXT:    .cfi_def_cfa w29, 16
+; CHECK-NEXT:    .cfi_offset w30, -8
+; CHECK-NEXT:    .cfi_offset w29, -16
+; CHECK-NEXT:    ptrue p0.d, vl4
+; CHECK-NEXT:    adrp x8, .LCPI104_0
+; CHECK-NEXT:    add x8, x8, :lo12:.LCPI104_0
+; CHECK-NEXT:    mov x9, sp
+; CHECK-NEXT:    ld1d { z0.d }, p0/z, [x0]
+; CHECK-NEXT:    ld1d { z1.d }, p0/z, [x1]
+; CHECK-NEXT:    fcmp d0, d0
+; CHECK-NEXT:    mov z2.d, z0.d[3]
+; CHECK-NEXT:    mov z3.d, z1.d[3]
+; CHECK-NEXT:    mov z5.d, z0.d[2]
+; CHECK-NEXT:    mov z6.d, z1.d[2]
+; CHECK-NEXT:    mov z7.d, z1.d[1]
+; CHECK-NEXT:    fcsel d4, d1, d0, vs
+; CHECK-NEXT:    fcmp d2, d2
+; CHECK-NEXT:    mov z0.d, z0.d[1]
+; CHECK-NEXT:    fcsel d2, d3, d2, vs
+; CHECK-NEXT:    fcmp d5, d5
+; CHECK-NEXT:    fcsel d5, d6, d5, vs
+; CHECK-NEXT:    fcmp d0, d0
+; CHECK-NEXT:    fcsel d0, d7, d0, vs
+; CHECK-NEXT:    fcmp d1, d1
+; CHECK-NEXT:    stp d5, d2, [sp, #16]
+; CHECK-NEXT:    fcsel d1, d4, d1, vs
+; CHECK-NEXT:    stp d4, d0, [sp]
+; CHECK-NEXT:    fcmp d4, d1
+; CHECK-NEXT:    fcsel d1, d4, d1, lt
+; CHECK-NEXT:    fcmp d3, d3
+; CHECK-NEXT:    fcsel d3, d2, d3, vs
+; CHECK-NEXT:    fcmp d2, d3
+; CHECK-NEXT:    fcsel d3, d2, d3, lt
+; CHECK-NEXT:    fcmp d6, d6
+; CHECK-NEXT:    fcsel d6, d5, d6, vs
+; CHECK-NEXT:    fcmp d5, d6
+; CHECK-NEXT:    fcsel d6, d5, d6, lt
+; CHECK-NEXT:    fcmp d7, d7
+; CHECK-NEXT:    fcsel d7, d0, d7, vs
+; CHECK-NEXT:    stp d6, d3, [sp, #48]
+; CHECK-NEXT:    fcmp d0, d7
+; CHECK-NEXT:    fcsel d0, d0, d7, lt
+; CHECK-NEXT:    stp d1, d0, [sp, #32]
+; CHECK-NEXT:    ld1d { z0.d }, p0/z, [x8]
+; CHECK-NEXT:    add x8, sp, #32
+; CHECK-NEXT:    ld1d { z1.d }, p0/z, [x9]
+; CHECK-NEXT:    cmpeq p1.d, p0/z, z1.d, z0.d
+; CHECK-NEXT:    mov z0.d, p1/z, #-1 // =0xffffffffffffffff
+; CHECK-NEXT:    ptrue p1.d
+; CHECK-NEXT:    and z0.d, z0.d, #0x1
+; CHECK-NEXT:    cmpne p1.d, p1/z, z0.d, #0
+; CHECK-NEXT:    ld1d { z0.d }, p0/z, [x8]
+; CHECK-NEXT:    fcmeq p2.d, p0/z, z0.d, #0.0
+; CHECK-NEXT:    sel z1.d, p1, z1.d, z0.d
+; CHECK-NEXT:    mov z0.d, p2/m, z1.d
+; CHECK-NEXT:    st1d { z0.d }, p0, [x0]
+; CHECK-NEXT:    mov sp, x29
+; CHECK-NEXT:    ldp x29, x30, [sp], #16 // 16-byte Folded Reload
+; CHECK-NEXT:    ret
+  %op1 = load <4 x double>, ptr %a
+  %op2 = load <4 x double>, ptr %b
+  %res = call <4 x double> @llvm.minimumnum.v4f64(<4 x double> %op1, <4 x double> %op2)
+  store <4 x double> %res, ptr %a
+  ret void
+}
+
+define void @fminimumnum_v8f64(ptr %a, ptr %b) #0 {
+; VBITS_EQ_256-LABEL: fminimumnum_v8f64:
+; VBITS_EQ_256:       // %bb.0:
+; VBITS_EQ_256-NEXT:    stp x29, x30, [sp, #-16]! // 16-byte Folded Spill
+; VBITS_EQ_256-NEXT:    sub x9, sp, #144
+; VBITS_EQ_256-NEXT:    mov x29, sp
+; VBITS_EQ_256-NEXT:    and sp, x9, #0xffffffffffffffe0
+; VBITS_EQ_256-NEXT:    .cfi_def_cfa w29, 16
+; VBITS_EQ_256-NEXT:    .cfi_offset w30, -8
+; VBITS_EQ_256-NEXT:    .cfi_offset w29, -16
+; VBITS_EQ_256-NEXT:    ptrue p0.d, vl4
+; VBITS_EQ_256-NEXT:    mov x8, #4 // =0x4
+; VBITS_EQ_256-NEXT:    adrp x9, .LCPI105_0
+; VBITS_EQ_256-NEXT:    add x9, x9, :lo12:.LCPI105_0
+; VBITS_EQ_256-NEXT:    add x10, sp, #32
+; VBITS_EQ_256-NEXT:    ld1d { z1.d }, p0/z, [x0]
+; VBITS_EQ_256-NEXT:    ld1d { z2.d }, p0/z, [x1]
+; VBITS_EQ_256-NEXT:    ld1d { z17.d }, p0/z, [x1, x8, lsl #3]
+; VBITS_EQ_256-NEXT:    fcmp d1, d1
+; VBITS_EQ_256-NEXT:    mov z3.d, z1.d[3]
+; VBITS_EQ_256-NEXT:    mov z5.d, z2.d[3]
+; VBITS_EQ_256-NEXT:    mov z4.d, z1.d[2]
+; VBITS_EQ_256-NEXT:    mov z6.d, z2.d[2]
+; VBITS_EQ_256-NEXT:    mov z7.d, z1.d[1]
+; VBITS_EQ_256-NEXT:    mov z16.d, z2.d[1]
+; VBITS_EQ_256-NEXT:    mov z19.d, z17.d[3]
+; VBITS_EQ_256-NEXT:    mov z22.d, z17.d[2]
+; VBITS_EQ_256-NEXT:    fcsel d0, d2, d1, vs
+; VBITS_EQ_256-NEXT:    fcmp d3, d3
+; VBITS_EQ_256-NEXT:    mov z23.d, z17.d[1]
+; VBITS_EQ_256-NEXT:    fcsel d1, d5, d3, vs
+; VBITS_EQ_256-NEXT:    fcmp d4, d4
+; VBITS_EQ_256-NEXT:    fcsel d3, d6, d4, vs
+; VBITS_EQ_256-NEXT:    fcmp d7, d7
+; VBITS_EQ_256-NEXT:    fcsel d4, d16, d7, vs
+; VBITS_EQ_256-NEXT:    fcmp d2, d2
+; VBITS_EQ_256-NEXT:    fcsel d2, d0, d2, vs
+; VBITS_EQ_256-NEXT:    fcmp d0, d2
+; VBITS_EQ_256-NEXT:    fcsel d2, d0, d2, lt
+; VBITS_EQ_256-NEXT:    fcmp d5, d5
+; VBITS_EQ_256-NEXT:    fcsel d5, d1, d5, vs
+; VBITS_EQ_256-NEXT:    fcmp d1, d5
+; VBITS_EQ_256-NEXT:    fcsel d5, d1, d5, lt
+; VBITS_EQ_256-NEXT:    fcmp d6, d6
+; VBITS_EQ_256-NEXT:    fcsel d6, d3, d6, vs
+; VBITS_EQ_256-NEXT:    fcmp d3, d6
+; VBITS_EQ_256-NEXT:    fcsel d6, d3, d6, lt
+; VBITS_EQ_256-NEXT:    fcmp d16, d16
+; VBITS_EQ_256-NEXT:    fcsel d7, d4, d16, vs
+; VBITS_EQ_256-NEXT:    ld1d { z16.d }, p0/z, [x0, x8, lsl #3]
+; VBITS_EQ_256-NEXT:    stp d0, d4, [sp]
+; VBITS_EQ_256-NEXT:    stp d3, d1, [sp, #16]
+; VBITS_EQ_256-NEXT:    stp d6, d5, [sp, #80]
+; VBITS_EQ_256-NEXT:    fcmp d4, d7
+; VBITS_EQ_256-NEXT:    mov z18.d, z16.d[3]
+; VBITS_EQ_256-NEXT:    mov z20.d, z16.d[2]
+; VBITS_EQ_256-NEXT:    fcsel d7, d4, d7, lt
+; VBITS_EQ_256-NEXT:    fcmp d16, d16
+; VBITS_EQ_256-NEXT:    fcsel d21, d17, d16, vs
+; VBITS_EQ_256-NEXT:    fcmp d18, d18
+; VBITS_EQ_256-NEXT:    mov z16.d, z16.d[1]
+; VBITS_EQ_256-NEXT:    stp d2, d7, [sp, #64]
+; VBITS_EQ_256-NEXT:    fcsel d18, d19, d18, vs
+; VBITS_EQ_256-NEXT:    fcmp d20, d20
+; VBITS_EQ_256-NEXT:    fcsel d20, d22, d20, vs
+; VBITS_EQ_256-NEXT:    fcmp d16, d16
+; VBITS_EQ_256-NEXT:    fcsel d16, d23, d16, vs
+; VBITS_EQ_256-NEXT:    fcmp d17, d17
+; VBITS_EQ_256-NEXT:    stp d20, d18, [sp, #48]
+; VBITS_EQ_256-NEXT:    fcsel d17, d21, d17, vs
+; VBITS_EQ_256-NEXT:    stp d21, d16, [sp, #32]
+; VBITS_EQ_256-NEXT:    fcmp d21, d17
+; VBITS_EQ_256-NEXT:    fcsel d17, d21, d17, lt
+; VBITS_EQ_256-NEXT:    fcmp d19, d19
+; VBITS_EQ_256-NEXT:    fcsel d19, d18, d19, vs
+; VBITS_EQ_256-NEXT:    fcmp d18, d19
+; VBITS_EQ_256-NEXT:    fcsel d19, d18, d19, lt
+; VBITS_EQ_256-NEXT:    fcmp d22, d22
+; VBITS_EQ_256-NEXT:    fcsel d22, d20, d22, vs
+; VBITS_EQ_256-NEXT:    fcmp d20, d22
+; VBITS_EQ_256-NEXT:    fcsel d0, d20, d22, lt
+; VBITS_EQ_256-NEXT:    fcmp d23, d23
+; VBITS_EQ_256-NEXT:    fcsel d1, d16, d23, vs
+; VBITS_EQ_256-NEXT:    stp d0, d19, [sp, #112]
+; VBITS_EQ_256-NEXT:    ld1d { z0.d }, p0/z, [x9]
+; VBITS_EQ_256-NEXT:    mov x9, sp
+; VBITS_EQ_256-NEXT:    fcmp d16, d1
+; VBITS_EQ_256-NEXT:    fcsel d1, d16, d1, lt
+; VBITS_EQ_256-NEXT:    stp d17, d1, [sp, #96]
+; VBITS_EQ_256-NEXT:    ld1d { z1.d }, p0/z, [x10]
+; VBITS_EQ_256-NEXT:    ld1d { z2.d }, p0/z, [x9]
+; VBITS_EQ_256-NEXT:    add x9, sp, #96
+; VBITS_EQ_256-NEXT:    cmpeq p1.d, p0/z, z1.d, z0.d
+; VBITS_EQ_256-NEXT:    cmpeq p2.d, p0/z, z2.d, z0.d
+; VBITS_EQ_256-NEXT:    mov z0.d, p1/z, #-1 // =0xffffffffffffffff
+; VBITS_EQ_256-NEXT:    mov z3.d, p2/z, #-1 // =0xffffffffffffffff
+; VBITS_EQ_256-NEXT:    ptrue p1.d
+; VBITS_EQ_256-NEXT:    and z0.d, z0.d, #0x1
+; VBITS_EQ_256-NEXT:    and z3.d, z3.d, #0x1
+; VBITS_EQ_256-NEXT:    cmpne p2.d, p1/z, z0.d, #0
+; VBITS_EQ_256-NEXT:    ld1d { z0.d }, p0/z, [x9]
+; VBITS_EQ_256-NEXT:    add x9, sp, #64
+; VBITS_EQ_256-NEXT:    ld1d { z4.d }, p0/z, [x9]
+; VBITS_EQ_256-NEXT:    cmpne p1.d, p1/z, z3.d, #0
+; VBITS_EQ_256-NEXT:    fcmeq p3.d, p0/z, z0.d, #0.0
+; VBITS_EQ_256-NEXT:    sel z1.d, p2, z1.d, z0.d
+; VBITS_EQ_256-NEXT:    fcmeq p2.d, p0/z, z4.d, #0.0
+; VBITS_EQ_256-NEXT:    sel z2.d, p1, z2.d, z4.d
+; VBITS_EQ_256-NEXT:    mov z0.d, p3/m, z1.d
+; VBITS_EQ_256-NEXT:    sel z1.d, p2, z2.d, z4.d
+; VBITS_EQ_256-NEXT:    st1d { z0.d }, p0, [x0, x8, lsl #3]
+; VBITS_EQ_256-NEXT:    st1d { z1.d }, p0, [x0]
+; VBITS_EQ_256-NEXT:    mov sp, x29
+; VBITS_EQ_256-NEXT:    ldp x29, x30, [sp], #16 // 16-byte Folded Reload
+; VBITS_EQ_256-NEXT:    ret
+;
+; VBITS_GE_512-LABEL: fminimumnum_v8f64:
+; VBITS_GE_512:       // %bb.0:
+; VBITS_GE_512-NEXT:    stp x29, x30, [sp, #-16]! // 16-byte Folded Spill
+; VBITS_GE_512-NEXT:    sub x9, sp, #176
+; VBITS_GE_512-NEXT:    mov x29, sp
+; VBITS_GE_512-NEXT:    and sp, x9, #0xffffffffffffffc0
+; VBITS_GE_512-NEXT:    .cfi_def_cfa w29, 16
+; VBITS_GE_512-NEXT:    .cfi_offset w30, -8
+; VBITS_GE_512-NEXT:    .cfi_offset w29, -16
+; VBITS_GE_512-NEXT:    ptrue p0.d, vl8
+; VBITS_GE_512-NEXT:    adrp x8, .LCPI105_0
+; VBITS_GE_512-NEXT:    add x8, x8, :lo12:.LCPI105_0
+; VBITS_GE_512-NEXT:    mov x9, sp
+; VBITS_GE_512-NEXT:    ld1d { z5.d }, p0/z, [x0]
+; VBITS_GE_512-NEXT:    ld1d { z2.d }, p0/z, [x1]
+; VBITS_GE_512-NEXT:    fcmp d5, d5
+; VBITS_GE_512-NEXT:    mov z1.d, z5.d[7]
+; VBITS_GE_512-NEXT:    mov z3.d, z2.d[7]
+; VBITS_GE_512-NEXT:    mov z4.d, z5.d[6]
+; VBITS_GE_512-NEXT:    mov z6.d, z2.d[6]
+; VBITS_GE_512-NEXT:    mov z7.d, z5.d[5]
+; VBITS_GE_512-NEXT:    mov z16.d, z2.d[5]
+; VBITS_GE_512-NEXT:    mov z17.d, z5.d[4]
+; VBITS_GE_512-NEXT:    mov z18.d, z2.d[4]
+; VBITS_GE_512-NEXT:    fcsel d0, d2, d5, vs
+; VBITS_GE_512-NEXT:    fcmp d1, d1
+; VBITS_GE_512-NEXT:    mov z19.d, z5.d[3]
+; VBITS_GE_512-NEXT:    mov z20.d, z2.d[3]
+; VBITS_GE_512-NEXT:    mov z21.d, z5.d[2]
+; VBITS_GE_512-NEXT:    mov z22.d, z2.d[2]
+; VBITS_GE_512-NEXT:    mov z5.d, z5.d[1]
+; VBITS_GE_512-NEXT:    mov z23.d, z2.d[1]
+; VBITS_GE_512-NEXT:    fcsel d1, d3, d1, vs
+; VBITS_GE_512-NEXT:    fcmp d4, d4
+; VBITS_GE_512-NEXT:    fcsel d4, d6, d4, vs
+; VBITS_GE_512-NEXT:    fcmp d7, d7
+; VBITS_GE_512-NEXT:    fcsel d7, d16, d7, vs
+; VBITS_GE_512-NEXT:    fcmp d17, d17
+; VBITS_GE_512-NEXT:    stp d4, d1, [sp, #48]
+; VBITS_GE_512-NEXT:    fcsel d17, d18, d17, vs
+; VBITS_GE_512-NEXT:    fcmp d19, d19
+; VBITS_GE_512-NEXT:    fcsel d19, d20, d19, vs
+; VBITS_GE_512-NEXT:    fcmp d21, d21
+; VBITS_GE_512-NEXT:    stp d17, d7, [sp, #32]
+; VBITS_GE_512-NEXT:    fcsel d21, d22, d21, vs
+; VBITS_GE_512-NEXT:    fcmp d5, d5
+; VBITS_GE_512-NEXT:    fcsel d5, d23, d5, vs
+; VBITS_GE_512-NEXT:    fcmp d2, d2
+; VBITS_GE_512-NEXT:    stp d21, d19, [sp, #16]
+; VBITS_GE_512-NEXT:    fcsel d2, d0, d2, vs
+; VBITS_GE_512-NEXT:    stp d0, d5, [sp]
+; VBITS_GE_512-NEXT:    fcmp d0, d2
+; VBITS_GE_512-NEXT:    fcsel d2, d0, d2, lt
+; VBITS_GE_512-NEXT:    fcmp d3, d3
+; VBITS_GE_512-NEXT:    fcsel d3, d1, d3, vs
+; VBITS_GE_512-NEXT:    fcmp d1, d3
+; VBITS_GE_512-NEXT:    fcsel d3, d1, d3, lt
+; VBITS_GE_512-NEXT:    fcmp d6, d6
+; VBITS_GE_512-NEXT:    fcsel d6, d4, d6, vs
+; VBITS_GE_512-NEXT:    fcmp d4, d6
+; VBITS_GE_512-NEXT:    fcsel d6, d4, d6, lt
+; VBITS_GE_512-NEXT:    fcmp d16, d16
+; VBITS_GE_512-NEXT:    fcsel d16, d7, d16, vs
+; VBITS_GE_512-NEXT:    stp d6, d3, [sp, #112]
+; VBITS_GE_512-NEXT:    fcmp d7, d16
+; VBITS_GE_512-NEXT:    fcsel d16, d7, d16, lt
+; VBITS_GE_512-NEXT:    fcmp d18, d18
+; VBITS_GE_512-NEXT:    fcsel d18, d17, d18, vs
+; VBITS_GE_512-NEXT:    fcmp d17, d18
+; VBITS_GE_512-NEXT:    fcsel d18, d17, d18, lt
+; VBITS_GE_512-NEXT:    fcmp d20, d20
+; VBITS_GE_512-NEXT:    fcsel d20, d19, d20, vs
+; VBITS_GE_512-NEXT:    stp d18, d16, [sp, #96]
+; VBITS_GE_512-NEXT:    fcmp d19, d20
+; VBITS_GE_512-NEXT:    fcsel d20, d19, d20, lt
+; VBITS_GE_512-NEXT:    fcmp d22, d22
+; VBITS_GE_512-NEXT:    fcsel d22, d21, d22, vs
+; VBITS_GE_512-NEXT:    fcmp d21, d22
+; VBITS_GE_512-NEXT:    fcsel d1, d21, d22, lt
+; VBITS_GE_512-NEXT:    fcmp d23, d23
+; VBITS_GE_512-NEXT:    fcsel d4, d5, d23, vs
+; VBITS_GE_512-NEXT:    stp d1, d20, [sp, #80]
+; VBITS_GE_512-NEXT:    fcmp d5, d4
+; VBITS_GE_512-NEXT:    fcsel d0, d5, d4, lt
+; VBITS_GE_512-NEXT:    stp d2, d0, [sp, #64]
+; VBITS_GE_512-NEXT:    ld1d { z0.d }, p0/z, [x8]
+; VBITS_GE_512-NEXT:    add x8, sp, #64
+; VBITS_GE_512-NEXT:    ld1d { z1.d }, p0/z, [x9]
+; VBITS_GE_512-NEXT:    cmpeq p1.d, p0/z, z1.d, z0.d
+; VBITS_GE_512-NEXT:    mov z0.d, p1/z, #-1 // =0xffffffffffffffff
+; VBITS_GE_512-NEXT:    ptrue p1.d
+; VBITS_GE_512-NEXT:    and z0.d, z0.d, #0x1
+; VBITS_GE_512-NEXT:    cmpne p1.d, p1/z, z0.d, #0
+; VBITS_GE_512-NEXT:    ld1d { z0.d }, p0/z, [x8]
+; VBITS_GE_512-NEXT:    fcmeq p2.d, p0/z, z0.d, #0.0
+; VBITS_GE_512-NEXT:    sel z1.d, p1, z1.d, z0.d
+; VBITS_GE_512-NEXT:    mov z0.d, p2/m, z1.d
+; VBITS_GE_512-NEXT:    st1d { z0.d }, p0, [x0]
+; VBITS_GE_512-NEXT:    mov sp, x29
+; VBITS_GE_512-NEXT:    ldp x29, x30, [sp], #16 // 16-byte Folded Reload
+; VBITS_GE_512-NEXT:    ret
+  %op1 = load <8 x double>, ptr %a
+  %op2 = load <8 x double>, ptr %b
+  %res = call <8 x double> @llvm.minimumnum.v8f64(<8 x double> %op1, <8 x double> %op2)
+  store <8 x double> %res, ptr %a
+  ret void
+}
+
+define void @fminimumnum_v16f64(ptr %a, ptr %b) vscale_range(8,0) #0 {
+; CHECK-LABEL: fminimumnum_v16f64:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    stp d15, d14, [sp, #-80]! // 16-byte Folded Spill
+; CHECK-NEXT:    sub x9, sp, #432
+; CHECK-NEXT:    stp d13, d12, [sp, #16] // 16-byte Folded Spill
+; CHECK-NEXT:    stp d11, d10, [sp, #32] // 16-byte Folded Spill
+; CHECK-NEXT:    stp d9, d8, [sp, #48] // 16-byte Folded Spill
+; CHECK-NEXT:    stp x29, x30, [sp, #64] // 16-byte Folded Spill
+; CHECK-NEXT:    add x29, sp, #64
+; CHECK-NEXT:    and sp, x9, #0xffffffffffffff80
+; CHECK-NEXT:    .cfi_def_cfa w29, 16
+; CHECK-NEXT:    .cfi_offset w30, -8
+; CHECK-NEXT:    .cfi_offset w29, -16
+; CHECK-NEXT:    .cfi_offset b8, -24
+; CHECK-NEXT:    .cfi_offset b9, -32
+; CHECK-NEXT:    .cfi_offset b10, -40
+; CHECK-NEXT:    .cfi_offset b11, -48
+; CHECK-NEXT:    .cfi_offset b12, -56
+; CHECK-NEXT:    .cfi_offset b13, -64
+; CHECK-NEXT:    .cfi_offset b14, -72
+; CHECK-NEXT:    .cfi_offset b15, -80
+; CHECK-NEXT:    ptrue p0.d, vl16
+; CHECK-NEXT:    mov w8, #15 // =0xf
+; CHECK-NEXT:    add x9, sp, #128
+; CHECK-NEXT:    ld1d { z18.d }, p0/z, [x0]
+; CHECK-NEXT:    ld1d { z0.d }, p0/z, [x1]
+; CHECK-NEXT:    fcmp d18, d18
+; CHECK-NEXT:    mov z25.d, z18.d[7]
+; CHECK-NEXT:    mov z29.d, z0.d[7]
+; CHECK-NEXT:    mov z28.d, z18.d[6]
+; CHECK-NEXT:    mov z31.d, z0.d[6]
+; CHECK-NEXT:    mov z30.d, z18.d[5]
+; CHECK-NEXT:    mov z9.d, z0.d[5]
+; CHECK-NEXT:    mov z8.d, z18.d[4]
+; CHECK-NEXT:    mov z13.d, z0.d[4]
+; CHECK-NEXT:    fcsel d1, d0, d18, vs
+; CHECK-NEXT:    whilels p1.d, xzr, x8
+; CHECK-NEXT:    mov w8, #14 // =0xe
+; CHECK-NEXT:    mov z12.d, z18.d[3]
+; CHECK-NEXT:    mov z14.d, z0.d[3]
+; CHECK-NEXT:    mov z7.d, z18.d[2]
+; CHECK-NEXT:    lastb d17, p1, z0.d
+; CHECK-NEXT:    mov z10.d, z0.d[2]
+; CHECK-NEXT:    str d1, [sp, #120] // 8-byte Spill
+; CHECK-NEXT:    lastb d1, p1, z18.d
+; CHECK-NEXT:    fcmp d1, d1
+; CHECK-NEXT:    fcsel d1, d17, d1, vs
+; CHECK-NEXT:    whilels p1.d, xzr, x8
+; CHECK-NEXT:    mov w8, #13 // =0xd
+; CHECK-NEXT:    lastb d2, p1, z18.d
+; CHECK-NEXT:    lastb d19, p1, z0.d
+; CHECK-NEXT:    fcmp d2, d2
+; CHECK-NEXT:    fcsel d2, d19, d2, vs
+; CHECK-NEXT:    whilels p1.d, xzr, x8
+; CHECK-NEXT:    mov w8, #12 // =0xc
+; CHECK-NEXT:    lastb d3, p1, z18.d
+; CHECK-NEXT:    lastb d20, p1, z0.d
+; CHECK-NEXT:    stp d2, d1, [sp, #240]
+; CHECK-NEXT:    fcmp d3, d3
+; CHECK-NEXT:    fcsel d3, d20, d3, vs
+; CHECK-NEXT:    whilels p1.d, xzr, x8
+; CHECK-NEXT:    mov w8, #11 // =0xb
+; CHECK-NEXT:    lastb d4, p1, z18.d
+; CHECK-NEXT:    lastb d21, p1, z0.d
+; CHECK-NEXT:    fcmp d4, d4
+; CHECK-NEXT:    fcsel d4, d21, d4, vs
+; CHECK-NEXT:    whilels p1.d, xzr, x8
+; CHECK-NEXT:    mov w8, #10 // =0xa
+; CHECK-NEXT:    lastb d5, p1, z18.d
+; CHECK-NEXT:    lastb d23, p1, z0.d
+; CHECK-NEXT:    stp d4, d3, [sp, #224]
+; CHECK-NEXT:    fcmp d5, d5
+; CHECK-NEXT:    fcsel d5, d23, d5, vs
+; CHECK-NEXT:    whilels p1.d, xzr, x8
+; CHECK-NEXT:    mov w8, #9 // =0x9
+; CHECK-NEXT:    lastb d6, p1, z18.d
+; CHECK-NEXT:    lastb d24, p1, z0.d
+; CHECK-NEXT:    fcmp d6, d6
+; CHECK-NEXT:    fcsel d6, d24, d6, vs
+; CHECK-NEXT:    whilels p1.d, xzr, x8
+; CHECK-NEXT:    mov w8, #8 // =0x8
+; CHECK-NEXT:    lastb d16, p1, z18.d
+; CHECK-NEXT:    lastb d26, p1, z0.d
+; CHECK-NEXT:    stp d6, d5, [sp, #208]
+; CHECK-NEXT:    fcmp d16, d16
+; CHECK-NEXT:    fcsel d16, d26, d16, vs
+; CHECK-NEXT:    whilels p1.d, xzr, x8
+; CHECK-NEXT:    adrp x8, .LCPI106_0
+; CHECK-NEXT:    add x8, x8, :lo12:.LCPI106_0
+; CHECK-NEXT:    lastb d22, p1, z18.d
+; CHECK-NEXT:    lastb d27, p1, z0.d
+; CHECK-NEXT:    mov z18.d, z18.d[1]
+; CHECK-NEXT:    fcmp d22, d22
+; CHECK-NEXT:    fcsel d22, d27, d22, vs
+; CHECK-NEXT:    fcmp d25, d25
+; CHECK-NEXT:    fcsel d25, d29, d25, vs
+; CHECK-NEXT:    fcmp d28, d28
+; CHECK-NEXT:    stp d22, d16, [sp, #192]
+; CHECK-NEXT:    fcsel d28, d31, d28, vs
+; CHECK-NEXT:    fcmp d30, d30
+; CHECK-NEXT:    fcsel d30, d9, d30, vs
+; CHECK-NEXT:    fcmp d8, d8
+; CHECK-NEXT:    stp d28, d25, [sp, #176]
+; CHECK-NEXT:    fcsel d11, d13, d8, vs
+; CHECK-NEXT:    fcmp d12, d12
+; CHECK-NEXT:    mov z8.d, z0.d[1]
+; CHECK-NEXT:    fcsel d15, d14, d12, vs
+; CHECK-NEXT:    fcmp d7, d7
+; CHECK-NEXT:    stp d11, d30, [sp, #160]
+; CHECK-NEXT:    fcsel d12, d10, d7, vs
+; CHECK-NEXT:    fcmp d18, d18
+; CHECK-NEXT:    ldr d7, [sp, #120] // 8-byte Reload
+; CHECK-NEXT:    fcsel d18, d8, d18, vs
+; CHECK-NEXT:    fcmp d0, d0
+; CHECK-NEXT:    stp d12, d15, [sp, #144]
+; CHECK-NEXT:    fcsel d0, d7, d0, vs
+; CHECK-NEXT:    stp d7, d18, [sp, #128]
+; CHECK-NEXT:    fcmp d7, d0
+; CHECK-NEXT:    fcsel d0, d7, d0, lt
+; CHECK-NEXT:    fcmp d17, d17
+; CHECK-NEXT:    str d0, [sp, #112] // 8-byte Spill
+; CHECK-NEXT:    fcsel d0, d1, d17, vs
+; CHECK-NEXT:    fcmp d1, d0
+; CHECK-NEXT:    fcsel d17, d1, d0, lt
+; CHECK-NEXT:    fcmp d19, d19
+; CHECK-NEXT:    fcsel d0, d2, d19, vs
+; CHECK-NEXT:    fcmp d2, d0
+; CHECK-NEXT:    fcsel d19, d2, d0, lt
+; CHECK-NEXT:    fcmp d20, d20
+; CHECK-NEXT:    fcsel d0, d3, d20, vs
+; CHECK-NEXT:    stp d19, d17, [sp, #368]
+; CHECK-NEXT:    fcmp d3, d0
+; CHECK-NEXT:    fcsel d20, d3, d0, lt
+; CHECK-NEXT:    fcmp d21, d21
+; CHECK-NEXT:    fcsel d0, d4, d21, vs
+; CHECK-NEXT:    fcmp d4, d0
+; CHECK-NEXT:    fcsel d21, d4, d0, lt
+; CHECK-NEXT:    fcmp d23, d23
+; CHECK-NEXT:    fcsel d0, d5, d23, vs
+; CHECK-NEXT:    stp d21, d20, [sp, #352]
+; CHECK-NEXT:    fcmp d5, d0
+; CHECK-NEXT:    fcsel d23, d5, d0, lt
+; CHECK-NEXT:    fcmp d24, d24
+; CHECK-NEXT:    fcsel d0, d6, d24, vs
+; CHECK-NEXT:    fcmp d6, d0
+; CHECK-NEXT:    fcsel d0, d6, d0, lt
+; CHECK-NEXT:    fcmp d26, d26
+; CHECK-NEXT:    fcsel d24, d16, d26, vs
+; CHECK-NEXT:    stp d0, d23, [sp, #336]
+; CHECK-NEXT:    fcmp d16, d24
+; CHECK-NEXT:    fcsel d24, d16, d24, lt
+; CHECK-NEXT:    fcmp d27, d27
+; CHECK-NEXT:    fcsel d26, d22, d27, vs
+; CHECK-NEXT:    fcmp d22, d26
+; CHECK-NEXT:    fcsel d26, d22, d26, lt
+; CHECK-NEXT:    fcmp d29, d29
+; CHECK-NEXT:    fcsel d27, d25, d29, vs
+; CHECK-NEXT:    stp d26, d24, [sp, #320]
+; CHECK-NEXT:    fcmp d25, d27
+; CHECK-NEXT:    fcsel d27, d25, d27, lt
+; CHECK-NEXT:    fcmp d31, d31
+; CHECK-NEXT:    fcsel d29, d28, d31, vs
+; CHECK-NEXT:    fcmp d28, d29
+; CHECK-NEXT:    fcsel d29, d28, d29, lt
+; CHECK-NEXT:    fcmp d9, d9
+; CHECK-NEXT:    fcsel d31, d30, d9, vs
+; CHECK-NEXT:    stp d29, d27, [sp, #304]
+; CHECK-NEXT:    fcmp d30, d31
+; CHECK-NEXT:    fcsel d31, d30, d31, lt
+; CHECK-NEXT:    fcmp d13, d13
+; CHECK-NEXT:    fcsel d9, d11, d13, vs
+; CHECK-NEXT:    fcmp d11, d9
+; CHECK-NEXT:    fcsel d1, d11, d9, lt
+; CHECK-NEXT:    fcmp d14, d14
+; CHECK-NEXT:    fcsel d2, d15, d14, vs
+; CHECK-NEXT:    stp d1, d31, [sp, #288]
+; CHECK-NEXT:    ldr d1, [sp, #112] // 8-byte Reload
+; CHECK-NEXT:    fcmp d15, d2
+; CHECK-NEXT:    fcsel d2, d15, d2, lt
+; CHECK-NEXT:    fcmp d10, d10
+; CHECK-NEXT:    fcsel d3, d12, d10, vs
+; CHECK-NEXT:    fcmp d12, d3
+; CHECK-NEXT:    fcsel d3, d12, d3, lt
+; CHECK-NEXT:    fcmp d8, d8
+; CHECK-NEXT:    fcsel d0, d18, d8, vs
+; CHECK-NEXT:    stp d3, d2, [sp, #272]
+; CHECK-NEXT:    fcmp d18, d0
+; CHECK-NEXT:    fcsel d0, d18, d0, lt
+; CHECK-NEXT:    stp d1, d0, [sp, #256]
+; CHECK-NEXT:    ld1d { z0.d }, p0/z, [x8]
+; CHECK-NEXT:    add x8, sp, #256
+; CHECK-NEXT:    ld1d { z1.d }, p0/z, [x9]
+; CHECK-NEXT:    cmpeq p1.d, p0/z, z1.d, z0.d
+; CHECK-NEXT:    mov z0.d, p1/z, #-1 // =0xffffffffffffffff
+; CHECK-NEXT:    ptrue p1.d
+; CHECK-NEXT:    and z0.d, z0.d, #0x1
+; CHECK-NEXT:    cmpne p1.d, p1/z, z0.d, #0
+; CHECK-NEXT:    ld1d { z0.d }, p0/z, [x8]
+; CHECK-NEXT:    fcmeq p2.d, p0/z, z0.d, #0.0
+; CHECK-NEXT:    sel z1.d, p1, z1.d, z0.d
+; CHECK-NEXT:    mov z0.d, p2/m, z1.d
+; CHECK-NEXT:    st1d { z0.d }, p0, [x0]
+; CHECK-NEXT:    sub sp, x29, #64
+; CHECK-NEXT:    ldp x29, x30, [sp, #64] // 16-byte Folded Reload
+; CHECK-NEXT:    ldp d9, d8, [sp, #48] // 16-byte Folded Reload
+; CHECK-NEXT:    ldp d11, d10, [sp, #32] // 16-byte Folded Reload
+; CHECK-NEXT:    ldp d13, d12, [sp, #16] // 16-byte Folded Reload
+; CHECK-NEXT:    ldp d15, d14, [sp], #80 // 16-byte Folded Reload
+; CHECK-NEXT:    ret
+  %op1 = load <16 x double>, ptr %a
+  %op2 = load <16 x double>, ptr %b
+  %res = call <16 x double> @llvm.minimumnum.v16f64(<16 x double> %op1, <16 x double> %op2)
+  store <16 x double> %res, ptr %a
+  ret void
+}
+
+define void @fminimumnum_v32f64(ptr %a, ptr %b) vscale_range(16,0) #0 {
+; CHECK-LABEL: fminimumnum_v32f64:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    stp d15, d14, [sp, #-80]! // 16-byte Folded Spill
+; CHECK-NEXT:    sub x9, sp, #1200
+; CHECK-NEXT:    stp d13, d12, [sp, #16] // 16-byte Folded Spill
+; CHECK-NEXT:    addvl x9, x9, #-5
+; CHECK-NEXT:    stp d11, d10, [sp, #32] // 16-byte Folded Spill
+; CHECK-NEXT:    stp d9, d8, [sp, #48] // 16-byte Folded Spill
+; CHECK-NEXT:    stp x29, x30, [sp, #64] // 16-byte Folded Spill
+; CHECK-NEXT:    add x29, sp, #64
+; CHECK-NEXT:    and sp, x9, #0xffffffffffffff00
+; CHECK-NEXT:    .cfi_def_cfa w29, 16
+; CHECK-NEXT:    .cfi_offset w30, -8
+; CHECK-NEXT:    .cfi_offset w29, -16
+; CHECK-NEXT:    .cfi_offset b8, -24
+; CHECK-NEXT:    .cfi_offset b9, -32
+; CHECK-NEXT:    .cfi_offset b10, -40
+; CHECK-NEXT:    .cfi_offset b11, -48
+; CHECK-NEXT:    .cfi_offset b12, -56
+; CHECK-NEXT:    .cfi_offset b13, -64
+; CHECK-NEXT:    .cfi_offset b14, -72
+; CHECK-NEXT:    .cfi_offset b15, -80
+; CHECK-NEXT:    ptrue p0.d, vl32
+; CHECK-NEXT:    mov w8, #31 // =0x1f
+; CHECK-NEXT:    add x9, sp, #512
+; CHECK-NEXT:    ld1d { z25.d }, p0/z, [x0]
+; CHECK-NEXT:    ld1d { z22.d }, p0/z, [x1]
+; CHECK-NEXT:    fcmp d25, d25
+; CHECK-NEXT:    mov z16.d, z22.d[7]
+; CHECK-NEXT:    mov z19.d, z22.d[6]
+; CHECK-NEXT:    mov z9.d, z25.d[2]
+; CHECK-NEXT:    fcsel d1, d22, d25, vs
+; CHECK-NEXT:    whilels p1.d, xzr, x8
+; CHECK-NEXT:    mov w8, #30 // =0x1e
+; CHECK-NEXT:    lastb d0, p1, z25.d
+; CHECK-NEXT:    lastb d2, p1, z22.d
+; CHECK-NEXT:    fcmp d0, d0
+; CHECK-NEXT:    fcsel d0, d2, d0, vs
+; CHECK-NEXT:    whilels p1.d, xzr, x8
+; CHECK-NEXT:    mov w8, #29 // =0x1d
+; CHECK-NEXT:    lastb d3, p1, z22.d
+; CHECK-NEXT:    stp d0, d1, [sp, #488] // 16-byte Folded Spill
+; CHECK-NEXT:    lastb d0, p1, z25.d
+; CHECK-NEXT:    fcmp d0, d0
+; CHECK-NEXT:    fcsel d0, d3, d0, vs
+; CHECK-NEXT:    whilels p1.d, xzr, x8
+; CHECK-NEXT:    mov w8, #28 // =0x1c
+; CHECK-NEXT:    lastb d23, p1, z22.d
+; CHECK-NEXT:    str d0, [sp, #504] // 8-byte Spill
+; CHECK-NEXT:    lastb d0, p1, z25.d
+; CHECK-NEXT:    fcmp d0, d0
+; CHECK-NEXT:    fcsel d1, d23, d0, vs
+; CHECK-NEXT:    whilels p1.d, xzr, x8
+; CHECK-NEXT:    mov w8, #27 // =0x1b
+; CHECK-NEXT:    lastb d0, p1, z25.d
+; CHECK-NEXT:    lastb d30, p1, z22.d
+; CHECK-NEXT:    fcmp d0, d0
+; CHECK-NEXT:    fcsel d0, d30, d0, vs
+; CHECK-NEXT:    whilels p1.d, xzr, x8
+; CHECK-NEXT:    mov w8, #26 // =0x1a
+; CHECK-NEXT:    stp d0, d1, [sp, #472] // 16-byte Folded Spill
+; CHECK-NEXT:    lastb d0, p1, z25.d
+; CHECK-NEXT:    lastb d1, p1, z22.d
+; CHECK-NEXT:    fcmp d0, d0
+; CHECK-NEXT:    str d1, [sp, #416] // 8-byte Spill
+; CHECK-NEXT:    fcsel d4, d1, d0, vs
+; CHECK-NEXT:    whilels p1.d, xzr, x8
+; CHECK-NEXT:    mov w8, #25 // =0x19
+; CHECK-NEXT:    lastb d0, p1, z25.d
+; CHECK-NEXT:    lastb d1, p1, z22.d
+; CHECK-NEXT:    fcmp d0, d0
+; CHECK-NEXT:    str d1, [sp, #408] // 8-byte Spill
+; CHECK-NEXT:    fcsel d0, d1, d0, vs
+; CHECK-NEXT:    whilels p1.d, xzr, x8
+; CHECK-NEXT:    mov w8, #24 // =0x18
+; CHECK-NEXT:    lastb d5, p1, z22.d
+; CHECK-NEXT:    stp d0, d4, [sp, #456] // 16-byte Folded Spill
+; CHECK-NEXT:    lastb d0, p1, z25.d
+; CHECK-NEXT:    fcmp d0, d0
+; CHECK-NEXT:    fcsel d4, d5, d0, vs
+; CHECK-NEXT:    whilels p1.d, xzr, x8
+; CHECK-NEXT:    mov w8, #23 // =0x17
+; CHECK-NEXT:    lastb d0, p1, z25.d
+; CHECK-NEXT:    lastb d1, p1, z22.d
+; CHECK-NEXT:    fcmp d0, d0
+; CHECK-NEXT:    str d1, [sp, #400] // 8-byte Spill
+; CHECK-NEXT:    fcsel d0, d1, d0, vs
+; CHECK-NEXT:    whilels p1.d, xzr, x8
+; CHECK-NEXT:    mov w8, #22 // =0x16
+; CHECK-NEXT:    lastb d21, p1, z22.d
+; CHECK-NEXT:    stp d0, d4, [sp, #440] // 16-byte Folded Spill
+; CHECK-NEXT:    lastb d0, p1, z25.d
+; CHECK-NEXT:    fcmp d0, d0
+; CHECK-NEXT:    fcsel d4, d21, d0, vs
+; CHECK-NEXT:    whilels p1.d, xzr, x8
+; CHECK-NEXT:    mov w8, #21 // =0x15
+; CHECK-NEXT:    lastb d0, p1, z25.d
+; CHECK-NEXT:    lastb d1, p1, z22.d
+; CHECK-NEXT:    fcmp d0, d0
+; CHECK-NEXT:    str d1, [sp, #392] // 8-byte Spill
+; CHECK-NEXT:    fcsel d0, d1, d0, vs
+; CHECK-NEXT:    whilels p1.d, xzr, x8
+; CHECK-NEXT:    mov w8, #20 // =0x14
+; CHECK-NEXT:    lastb d1, p1, z22.d
+; CHECK-NEXT:    stp d0, d4, [sp, #424] // 16-byte Folded Spill
+; CHECK-NEXT:    lastb d0, p1, z25.d
+; CHECK-NEXT:    str d1, [sp, #384] // 8-byte Spill
+; CHECK-NEXT:    fcmp d0, d0
+; CHECK-NEXT:    fcsel d15, d1, d0, vs
+; CHECK-NEXT:    whilels p1.d, xzr, x8
+; CHECK-NEXT:    mov w8, #19 // =0x13
+; CHECK-NEXT:    lastb d0, p1, z25.d
+; CHECK-NEXT:    lastb d1, p1, z22.d
+; CHECK-NEXT:    fcmp d0, d0
+; CHECK-NEXT:    fcsel d0, d1, d0, vs
+; CHECK-NEXT:    whilels p1.d, xzr, x8
+; CHECK-NEXT:    mov w8, #18 // =0x12
+; CHECK-NEXT:    stp d1, d0, [sp, #368] // 16-byte Folded Spill
+; CHECK-NEXT:    lastb d0, p1, z25.d
+; CHECK-NEXT:    lastb d1, p1, z22.d
+; CHECK-NEXT:    fcmp d0, d0
+; CHECK-NEXT:    fcsel d0, d1, d0, vs
+; CHECK-NEXT:    whilels p1.d, xzr, x8
+; CHECK-NEXT:    mov w8, #17 // =0x11
+; CHECK-NEXT:    stp d1, d0, [sp, #352] // 16-byte Folded Spill
+; CHECK-NEXT:    lastb d0, p1, z25.d
+; CHECK-NEXT:    lastb d1, p1, z22.d
+; CHECK-NEXT:    fcmp d0, d0
+; CHECK-NEXT:    fcsel d0, d1, d0, vs
+; CHECK-NEXT:    whilels p1.d, xzr, x8
+; CHECK-NEXT:    mov w8, #16 // =0x10
+; CHECK-NEXT:    stp d1, d0, [sp, #336] // 16-byte Folded Spill
+; CHECK-NEXT:    lastb d0, p1, z25.d
+; CHECK-NEXT:    lastb d1, p1, z22.d
+; CHECK-NEXT:    fcmp d0, d0
+; CHECK-NEXT:    fcsel d0, d1, d0, vs
+; CHECK-NEXT:    whilels p1.d, xzr, x8
+; CHECK-NEXT:    mov w8, #15 // =0xf
+; CHECK-NEXT:    stp d1, d0, [sp, #320] // 16-byte Folded Spill
+; CHECK-NEXT:    lastb d0, p1, z25.d
+; CHECK-NEXT:    lastb d1, p1, z22.d
+; CHECK-NEXT:    fcmp d0, d0
+; CHECK-NEXT:    fcsel d0, d1, d0, vs
+; CHECK-NEXT:    whilels p1.d, xzr, x8
+; CHECK-NEXT:    mov w8, #14 // =0xe
+; CHECK-NEXT:    lastb d14, p1, z22.d
+; CHECK-NEXT:    stp d1, d0, [sp, #304] // 16-byte Folded Spill
+; CHECK-NEXT:    lastb d0, p1, z25.d
+; CHECK-NEXT:    mov z1.d, z25.d[7]
+; CHECK-NEXT:    fcmp d0, d0
+; CHECK-NEXT:    fcsel d0, d14, d0, vs
+; CHECK-NEXT:    whilels p1.d, xzr, x8
+; CHECK-NEXT:    mov w8, #13 // =0xd
+; CHECK-NEXT:    lastb d11, p1, z22.d
+; CHECK-NEXT:    str d0, [sp, #296] // 8-byte Spill
+; CHECK-NEXT:    lastb d0, p1, z25.d
+; CHECK-NEXT:    fcmp d0, d0
+; CHECK-NEXT:    fcsel d4, d11, d0, vs
+; CHECK-NEXT:    whilels p1.d, xzr, x8
+; CHECK-NEXT:    mov w8, #12 // =0xc
+; CHECK-NEXT:    lastb d0, p1, z25.d
+; CHECK-NEXT:    lastb d8, p1, z22.d
+; CHECK-NEXT:    fcmp d0, d0
+; CHECK-NEXT:    fcsel d0, d8, d0, vs
+; CHECK-NEXT:    whilels p1.d, xzr, x8
+; CHECK-NEXT:    mov w8, #11 // =0xb
+; CHECK-NEXT:    lastb d31, p1, z22.d
+; CHECK-NEXT:    stp d0, d4, [sp, #272] // 16-byte Folded Spill
+; CHECK-NEXT:    lastb d0, p1, z25.d
+; CHECK-NEXT:    fcmp d0, d0
+; CHECK-NEXT:    fcsel d4, d31, d0, vs
+; CHECK-NEXT:    whilels p1.d, xzr, x8
+; CHECK-NEXT:    mov w8, #10 // =0xa
+; CHECK-NEXT:    lastb d0, p1, z25.d
+; CHECK-NEXT:    lastb d28, p1, z22.d
+; CHECK-NEXT:    fcmp d0, d0
+; CHECK-NEXT:    fcsel d0, d28, d0, vs
+; CHECK-NEXT:    whilels p1.d, xzr, x8
+; CHECK-NEXT:    mov w8, #9 // =0x9
+; CHECK-NEXT:    lastb d24, p1, z22.d
+; CHECK-NEXT:    stp d0, d4, [sp, #256] // 16-byte Folded Spill
+; CHECK-NEXT:    lastb d0, p1, z25.d
+; CHECK-NEXT:    mov z4.d, z22.d[5]
+; CHECK-NEXT:    fcmp d0, d0
+; CHECK-NEXT:    fcsel d13, d24, d0, vs
+; CHECK-NEXT:    whilels p1.d, xzr, x8
+; CHECK-NEXT:    mov w8, #8 // =0x8
+; CHECK-NEXT:    lastb d0, p1, z25.d
+; CHECK-NEXT:    lastb d20, p1, z22.d
+; CHECK-NEXT:    fcmp d0, d0
+; CHECK-NEXT:    fcsel d12, d20, d0, vs
+; CHECK-NEXT:    whilels p1.d, xzr, x8
+; CHECK-NEXT:    sub x8, x29, #64
+; CHECK-NEXT:    str z4, [x8, #-5, mul vl] // 16-byte Folded Spill
+; CHECK-NEXT:    lastb d0, p1, z25.d
+; CHECK-NEXT:    lastb d18, p1, z22.d
+; CHECK-NEXT:    fcmp d0, d0
+; CHECK-NEXT:    fcsel d10, d18, d0, vs
+; CHECK-NEXT:    fcmp d1, d1
+; CHECK-NEXT:    mov z0.d, z25.d[6]
+; CHECK-NEXT:    fcsel d29, d16, d1, vs
+; CHECK-NEXT:    fcmp d0, d0
+; CHECK-NEXT:    mov z1.d, z25.d[5]
+; CHECK-NEXT:    fcsel d26, d19, d0, vs
+; CHECK-NEXT:    fcmp d1, d1
+; CHECK-NEXT:    mov z0.d, z25.d[4]
+; CHECK-NEXT:    fcsel d7, d4, d1, vs
+; CHECK-NEXT:    fcmp d0, d0
+; CHECK-NEXT:    mov z1.d, z22.d[4]
+; CHECK-NEXT:    mov z4.d, z25.d[3]
+; CHECK-NEXT:    mov z25.d, z25.d[1]
+; CHECK-NEXT:    fcsel d17, d1, d0, vs
+; CHECK-NEXT:    mov z0.d, z22.d[3]
+; CHECK-NEXT:    str z1, [x8, #-3, mul vl] // 16-byte Folded Spill
+; CHECK-NEXT:    fcmp d4, d4
+; CHECK-NEXT:    str z0, [x8, #-4, mul vl] // 16-byte Folded Spill
+; CHECK-NEXT:    fcsel d6, d0, d4, vs
+; CHECK-NEXT:    fcmp d9, d9
+; CHECK-NEXT:    mov z0.d, z22.d[2]
+; CHECK-NEXT:    str z0, [x8, #-2, mul vl] // 16-byte Folded Spill
+; CHECK-NEXT:    fcsel d27, d0, d9, vs
+; CHECK-NEXT:    fcmp d25, d25
+; CHECK-NEXT:    mov z0.d, z22.d[1]
+; CHECK-NEXT:    fcsel d25, d0, d25, vs
+; CHECK-NEXT:    fcmp d22, d22
+; CHECK-NEXT:    str z0, [x8, #-1, mul vl] // 16-byte Folded Spill
+; CHECK-NEXT:    ldr d0, [sp, #496] // 8-byte Reload
+; CHECK-NEXT:    str d15, [sp, #680]
+; CHECK-NEXT:    fcsel d22, d0, d22, vs
+; CHECK-NEXT:    fcmp d0, d22
+; CHECK-NEXT:    fcsel d1, d0, d22, lt
+; CHECK-NEXT:    fcmp d2, d2
+; CHECK-NEXT:    ldr d0, [sp, #488] // 8-byte Reload
+; CHECK-NEXT:    fcsel d22, d0, d2, vs
+; CHECK-NEXT:    str d1, [sp, #288] // 8-byte Spill
+; CHECK-NEXT:    fcmp d0, d22
+; CHECK-NEXT:    fcsel d2, d0, d22, lt
+; CHECK-NEXT:    fcmp d3, d3
+; CHECK-NEXT:    ldr d0, [sp, #504] // 8-byte Reload
+; CHECK-NEXT:    fcsel d22, d0, d3, vs
+; CHECK-NEXT:    fcmp d0, d22
+; CHECK-NEXT:    fcsel d1, d0, d22, lt
+; CHECK-NEXT:    fcmp d23, d23
+; CHECK-NEXT:    stp d1, d2, [sp, #240] // 16-byte Folded Spill
+; CHECK-NEXT:    ldp d0, d2, [sp, #472] // 16-byte Folded Reload
+; CHECK-NEXT:    fcsel d22, d2, d23, vs
+; CHECK-NEXT:    fcmp d2, d22
+; CHECK-NEXT:    fcsel d3, d2, d22, lt
+; CHECK-NEXT:    fcmp d30, d30
+; CHECK-NEXT:    fcsel d22, d0, d30, vs
+; CHECK-NEXT:    fcmp d0, d22
+; CHECK-NEXT:    fcsel d1, d0, d22, lt
+; CHECK-NEXT:    ldp d0, d2, [sp, #456] // 16-byte Folded Reload
+; CHECK-NEXT:    stp d1, d3, [sp, #224] // 16-byte Folded Spill
+; CHECK-NEXT:    ldr d1, [sp, #416] // 8-byte Reload
+; CHECK-NEXT:    fcmp d1, d1
+; CHECK-NEXT:    fcsel d22, d2, d1, vs
+; CHECK-NEXT:    ldr d1, [sp, #408] // 8-byte Reload
+; CHECK-NEXT:    fcmp d2, d22
+; CHECK-NEXT:    fcsel d3, d2, d22, lt
+; CHECK-NEXT:    fcmp d1, d1
+; CHECK-NEXT:    fcsel d22, d0, d1, vs
+; CHECK-NEXT:    fcmp d0, d22
+; CHECK-NEXT:    fcsel d1, d0, d22, lt
+; CHECK-NEXT:    fcmp d5, d5
+; CHECK-NEXT:    ldp d0, d2, [sp, #440] // 16-byte Folded Reload
+; CHECK-NEXT:    stp d1, d3, [sp, #408] // 16-byte Folded Spill
+; CHECK-NEXT:    ldr d1, [sp, #400] // 8-byte Reload
+; CHECK-NEXT:    fcsel d22, d2, d5, vs
+; CHECK-NEXT:    fcmp d2, d22
+; CHECK-NEXT:    fcsel d3, d2, d22, lt
+; CHECK-NEXT:    fcmp d1, d1
+; CHECK-NEXT:    fcsel d22, d0, d1, vs
+; CHECK-NEXT:    fcmp d0, d22
+; CHECK-NEXT:    fcsel d2, d0, d22, lt
+; CHECK-NEXT:    fcmp d21, d21
+; CHECK-NEXT:    ldp d0, d5, [sp, #424] // 16-byte Folded Reload
+; CHECK-NEXT:    fcsel d22, d5, d21, vs
+; CHECK-NEXT:    fcmp d5, d22
+; CHECK-NEXT:    fcsel d1, d5, d22, lt
+; CHECK-NEXT:    stp d1, d3, [sp, #208] // 16-byte Folded Spill
+; CHECK-NEXT:    ldr d1, [sp, #392] // 8-byte Reload
+; CHECK-NEXT:    fcmp d1, d1
+; CHECK-NEXT:    fcsel d22, d0, d1, vs
+; CHECK-NEXT:    fcmp d0, d22
+; CHECK-NEXT:    fcsel d1, d0, d22, lt
+; CHECK-NEXT:    stp d1, d2, [sp, #392] // 16-byte Folded Spill
+; CHECK-NEXT:    ldp d9, d1, [sp, #376] // 16-byte Folded Reload
+; CHECK-NEXT:    ldp d2, d3, [sp, #272] // 16-byte Folded Reload
+; CHECK-NEXT:    fcmp d1, d1
+; CHECK-NEXT:    str d9, [sp, #672]
+; CHECK-NEXT:    fcsel d22, d15, d1, vs
+; CHECK-NEXT:    fcmp d15, d22
+; CHECK-NEXT:    fcsel d1, d15, d22, lt
+; CHECK-NEXT:    str d1, [sp, #384] // 8-byte Spill
+; CHECK-NEXT:    ldp d30, d1, [sp, #360] // 16-byte Folded Reload
+; CHECK-NEXT:    fcmp d1, d1
+; CHECK-NEXT:    str d30, [sp, #664]
+; CHECK-NEXT:    fcsel d22, d9, d1, vs
+; CHECK-NEXT:    fcmp d9, d22
+; CHECK-NEXT:    fcsel d1, d9, d22, lt
+; CHECK-NEXT:    str d1, [sp, #368] // 8-byte Spill
+; CHECK-NEXT:    ldp d23, d1, [sp, #344] // 16-byte Folded Reload
+; CHECK-NEXT:    fcmp d1, d1
+; CHECK-NEXT:    str d23, [sp, #656]
+; CHECK-NEXT:    fcsel d22, d30, d1, vs
+; CHECK-NEXT:    fcmp d30, d22
+; CHECK-NEXT:    fcsel d1, d30, d22, lt
+; CHECK-NEXT:    str d1, [sp, #352] // 8-byte Spill
+; CHECK-NEXT:    ldp d21, d1, [sp, #328] // 16-byte Folded Reload
+; CHECK-NEXT:    fcmp d1, d1
+; CHECK-NEXT:    str d21, [sp, #648]
+; CHECK-NEXT:    fcsel d22, d23, d1, vs
+; CHECK-NEXT:    fcmp d23, d22
+; CHECK-NEXT:    fcsel d1, d23, d22, lt
+; CHECK-NEXT:    str d1, [sp, #336] // 8-byte Spill
+; CHECK-NEXT:    ldp d5, d1, [sp, #312] // 16-byte Folded Reload
+; CHECK-NEXT:    fcmp d1, d1
+; CHECK-NEXT:    str d5, [sp, #640]
+; CHECK-NEXT:    fcsel d22, d21, d1, vs
+; CHECK-NEXT:    fcmp d21, d22
+; CHECK-NEXT:    fcsel d1, d21, d22, lt
+; CHECK-NEXT:    str d1, [sp, #320] // 8-byte Spill
+; CHECK-NEXT:    ldp d4, d1, [sp, #296] // 16-byte Folded Reload
+; CHECK-NEXT:    fcmp d1, d1
+; CHECK-NEXT:    fcsel d22, d5, d1, vs
+; CHECK-NEXT:    fcmp d5, d22
+; CHECK-NEXT:    fcsel d1, d5, d22, lt
+; CHECK-NEXT:    fcmp d14, d14
+; CHECK-NEXT:    ldr d22, [sp, #488] // 8-byte Reload
+; CHECK-NEXT:    str d22, [sp, #760]
+; CHECK-NEXT:    ldr d22, [sp, #504] // 8-byte Reload
+; CHECK-NEXT:    fcsel d14, d4, d14, vs
+; CHECK-NEXT:    str d1, [sp, #304] // 8-byte Spill
+; CHECK-NEXT:    ldp d0, d1, [sp, #256] // 16-byte Folded Reload
+; CHECK-NEXT:    str d22, [sp, #752]
+; CHECK-NEXT:    ldr d22, [sp, #480] // 8-byte Reload
+; CHECK-NEXT:    fcmp d4, d14
+; CHECK-NEXT:    str d22, [sp, #744]
+; CHECK-NEXT:    ldr d22, [sp, #472] // 8-byte Reload
+; CHECK-NEXT:    fcsel d14, d4, d14, lt
+; CHECK-NEXT:    fcmp d11, d11
+; CHECK-NEXT:    str d22, [sp, #736]
+; CHECK-NEXT:    ldr d22, [sp, #464] // 8-byte Reload
+; CHECK-NEXT:    fcsel d11, d3, d11, vs
+; CHECK-NEXT:    str d22, [sp, #728]
+; CHECK-NEXT:    ldr d22, [sp, #456] // 8-byte Reload
+; CHECK-NEXT:    str d22, [sp, #720]
+; CHECK-NEXT:    ldr d22, [sp, #448] // 8-byte Reload
+; CHECK-NEXT:    fcmp d3, d11
+; CHECK-NEXT:    str d22, [sp, #712]
+; CHECK-NEXT:    ldr d22, [sp, #440] // 8-byte Reload
+; CHECK-NEXT:    fcsel d11, d3, d11, lt
+; CHECK-NEXT:    fcmp d8, d8
+; CHECK-NEXT:    str d22, [sp, #704]
+; CHECK-NEXT:    ldr d22, [sp, #432] // 8-byte Reload
+; CHECK-NEXT:    fcsel d8, d2, d8, vs
+; CHECK-NEXT:    str d22, [sp, #696]
+; CHECK-NEXT:    ldr d22, [sp, #424] // 8-byte Reload
+; CHECK-NEXT:    str d22, [sp, #688]
+; CHECK-NEXT:    fcmp d2, d8
+; CHECK-NEXT:    ldr z5, [x8, #-5, mul vl] // 16-byte Folded Reload
+; CHECK-NEXT:    str d4, [sp, #632]
+; CHECK-NEXT:    str d3, [sp, #624]
+; CHECK-NEXT:    str d2, [sp, #616]
+; CHECK-NEXT:    fcsel d8, d2, d8, lt
+; CHECK-NEXT:    fcmp d31, d31
+; CHECK-NEXT:    str d1, [sp, #608]
+; CHECK-NEXT:    str d0, [sp, #600]
+; CHECK-NEXT:    str d13, [sp, #592]
+; CHECK-NEXT:    fcsel d31, d1, d31, vs
+; CHECK-NEXT:    str d12, [sp, #584]
+; CHECK-NEXT:    str d10, [sp, #576]
+; CHECK-NEXT:    str d29, [sp, #568]
+; CHECK-NEXT:    fcmp d1, d31
+; CHECK-NEXT:    fcsel d31, d1, d31, lt
+; CHECK-NEXT:    fcmp d28, d28
+; CHECK-NEXT:    ldr d1, [sp, #496] // 8-byte Reload
+; CHECK-NEXT:    fcsel d28, d0, d28, vs
+; CHECK-NEXT:    fcmp d0, d28
+; CHECK-NEXT:    fcsel d28, d0, d28, lt
+; CHECK-NEXT:    fcmp d24, d24
+; CHECK-NEXT:    ldr z0, [x8, #-3, mul vl] // 16-byte Folded Reload
+; CHECK-NEXT:    str d1, [sp, #512]
+; CHECK-NEXT:    str d26, [sp, #560]
+; CHECK-NEXT:    fcsel d24, d13, d24, vs
+; CHECK-NEXT:    str d7, [sp, #552]
+; CHECK-NEXT:    str d17, [sp, #544]
+; CHECK-NEXT:    str d6, [sp, #536]
+; CHECK-NEXT:    fcmp d13, d24
+; CHECK-NEXT:    str d27, [sp, #528]
+; CHECK-NEXT:    str d25, [sp, #520]
+; CHECK-NEXT:    fcsel d24, d13, d24, lt
+; CHECK-NEXT:    fcmp d20, d20
+; CHECK-NEXT:    fcsel d20, d12, d20, vs
+; CHECK-NEXT:    fcmp d12, d20
+; CHECK-NEXT:    fcsel d20, d12, d20, lt
+; CHECK-NEXT:    fcmp d18, d18
+; CHECK-NEXT:    fcsel d18, d10, d18, vs
+; CHECK-NEXT:    fcmp d10, d18
+; CHECK-NEXT:    fcsel d18, d10, d18, lt
+; CHECK-NEXT:    fcmp d16, d16
+; CHECK-NEXT:    fcsel d16, d29, d16, vs
+; CHECK-NEXT:    fcmp d29, d16
+; CHECK-NEXT:    fcsel d16, d29, d16, lt
+; CHECK-NEXT:    fcmp d19, d19
+; CHECK-NEXT:    fcsel d19, d26, d19, vs
+; CHECK-NEXT:    fcmp d26, d19
+; CHECK-NEXT:    fcsel d19, d26, d19, lt
+; CHECK-NEXT:    fcmp d5, d5
+; CHECK-NEXT:    fcsel d23, d7, d5, vs
+; CHECK-NEXT:    fcmp d7, d23
+; CHECK-NEXT:    fcsel d5, d7, d23, lt
+; CHECK-NEXT:    fcmp d0, d0
+; CHECK-NEXT:    fcsel d1, d17, d0, vs
+; CHECK-NEXT:    ldp d0, d2, [sp, #240] // 16-byte Folded Reload
+; CHECK-NEXT:    str d2, [sp, #1016]
+; CHECK-NEXT:    fcmp d17, d1
+; CHECK-NEXT:    str d0, [sp, #1008]
+; CHECK-NEXT:    ldp d2, d3, [sp, #224] // 16-byte Folded Reload
+; CHECK-NEXT:    ldr z0, [x8, #-4, mul vl] // 16-byte Folded Reload
+; CHECK-NEXT:    fcsel d1, d17, d1, lt
+; CHECK-NEXT:    str d2, [sp, #992]
+; CHECK-NEXT:    ldr d2, [sp, #416] // 8-byte Reload
+; CHECK-NEXT:    fcmp d0, d0
+; CHECK-NEXT:    str d3, [sp, #1000]
+; CHECK-NEXT:    str d2, [sp, #984]
+; CHECK-NEXT:    fcsel d2, d6, d0, vs
+; CHECK-NEXT:    ldr d0, [sp, #408] // 8-byte Reload
+; CHECK-NEXT:    str d0, [sp, #976]
+; CHECK-NEXT:    ldr d0, [sp, #216] // 8-byte Reload
+; CHECK-NEXT:    fcmp d6, d2
+; CHECK-NEXT:    str d0, [sp, #968]
+; CHECK-NEXT:    ldr d0, [sp, #400] // 8-byte Reload
+; CHECK-NEXT:    str d0, [sp, #960]
+; CHECK-NEXT:    ldr d0, [sp, #208] // 8-byte Reload
+; CHECK-NEXT:    str d0, [sp, #952]
+; CHECK-NEXT:    ldp d0, d3, [sp, #384] // 16-byte Folded Reload
+; CHECK-NEXT:    str d3, [sp, #944]
+; CHECK-NEXT:    ldr d3, [sp, #368] // 8-byte Reload
+; CHECK-NEXT:    str d0, [sp, #936]
+; CHECK-NEXT:    fcsel d0, d6, d2, lt
+; CHECK-NEXT:    ldr z2, [x8, #-2, mul vl] // 16-byte Folded Reload
+; CHECK-NEXT:    str d3, [sp, #928]
+; CHECK-NEXT:    ldr d3, [sp, #352] // 8-byte Reload
+; CHECK-NEXT:    str d14, [sp, #888]
+; CHECK-NEXT:    str d3, [sp, #920]
+; CHECK-NEXT:    ldr d3, [sp, #336] // 8-byte Reload
+; CHECK-NEXT:    fcmp d2, d2
+; CHECK-NEXT:    str d11, [sp, #880]
+; CHECK-NEXT:    str d3, [sp, #912]
+; CHECK-NEXT:    ldr d3, [sp, #320] // 8-byte Reload
+; CHECK-NEXT:    str d8, [sp, #872]
+; CHECK-NEXT:    fcsel d2, d27, d2, vs
+; CHECK-NEXT:    str d3, [sp, #904]
+; CHECK-NEXT:    ldr d3, [sp, #304] // 8-byte Reload
+; CHECK-NEXT:    str d31, [sp, #864]
+; CHECK-NEXT:    str d3, [sp, #896]
+; CHECK-NEXT:    fcmp d27, d2
+; CHECK-NEXT:    ldr z3, [x8, #-1, mul vl] // 16-byte Folded Reload
+; CHECK-NEXT:    str d1, [sp, #800]
+; CHECK-NEXT:    str d0, [sp, #792]
+; CHECK-NEXT:    ldr d0, [sp, #288] // 8-byte Reload
+; CHECK-NEXT:    adrp x8, .LCPI107_0
+; CHECK-NEXT:    add x8, x8, :lo12:.LCPI107_0
+; CHECK-NEXT:    str d28, [sp, #856]
+; CHECK-NEXT:    fcsel d2, d27, d2, lt
+; CHECK-NEXT:    fcmp d3, d3
+; CHECK-NEXT:    str d24, [sp, #848]
+; CHECK-NEXT:    str d20, [sp, #840]
+; CHECK-NEXT:    str d18, [sp, #832]
+; CHECK-NEXT:    fcsel d3, d25, d3, vs
+; CHECK-NEXT:    str d16, [sp, #824]
+; CHECK-NEXT:    str d19, [sp, #816]
+; CHECK-NEXT:    str d5, [sp, #808]
+; CHECK-NEXT:    fcmp d25, d3
+; CHECK-NEXT:    str d2, [sp, #784]
+; CHECK-NEXT:    str d0, [sp, #768]
+; CHECK-NEXT:    ld1d { z0.d }, p0/z, [x8]
+; CHECK-NEXT:    add x8, sp, #768
+; CHECK-NEXT:    fcsel d1, d25, d3, lt
+; CHECK-NEXT:    str d1, [sp, #776]
+; CHECK-NEXT:    ld1d { z1.d }, p0/z, [x9]
+; CHECK-NEXT:    cmpeq p1.d, p0/z, z1.d, z0.d
+; CHECK-NEXT:    mov z0.d, p1/z, #-1 // =0xffffffffffffffff
+; CHECK-NEXT:    ptrue p1.d
+; CHECK-NEXT:    and z0.d, z0.d, #0x1
+; CHECK-NEXT:    cmpne p1.d, p1/z, z0.d, #0
+; CHECK-NEXT:    ld1d { z0.d }, p0/z, [x8]
+; CHECK-NEXT:    fcmeq p2.d, p0/z, z0.d, #0.0
+; CHECK-NEXT:    sel z1.d, p1, z1.d, z0.d
+; CHECK-NEXT:    mov z0.d, p2/m, z1.d
+; CHECK-NEXT:    st1d { z0.d }, p0, [x0]
+; CHECK-NEXT:    sub sp, x29, #64
+; CHECK-NEXT:    ldp x29, x30, [sp, #64] // 16-byte Folded Reload
+; CHECK-NEXT:    ldp d9, d8, [sp, #48] // 16-byte Folded Reload
+; CHECK-NEXT:    ldp d11, d10, [sp, #32] // 16-byte Folded Reload
+; CHECK-NEXT:    ldp d13, d12, [sp, #16] // 16-byte Folded Reload
+; CHECK-NEXT:    ldp d15, d14, [sp], #80 // 16-byte Folded Reload
+; CHECK-NEXT:    ret
+  %op1 = load <32 x double>, ptr %a
+  %op2 = load <32 x double>, ptr %b
+  %res = call <32 x double> @llvm.minimumnum.v32f64(<32 x double> %op1, <32 x double> %op2)
+  store <32 x double> %res, ptr %a
+  ret void
+}
+
 attributes #0 = { "target-features"="+sve" }
-
-declare <4 x half> @llvm.minnum.v4f16(<4 x half>, <4 x half>)
-declare <8 x half> @llvm.minnum.v8f16(<8 x half>, <8 x half>)
-declare <16 x half> @llvm.minnum.v16f16(<16 x half>, <16 x half>)
-declare <32 x half> @llvm.minnum.v32f16(<32 x half>, <32 x half>)
-declare <64 x half> @llvm.minnum.v64f16(<64 x half>, <64 x half>)
-declare <128 x half> @llvm.minnum.v128f16(<128 x half>, <128 x half>)
-declare <2 x float> @llvm.minnum.v2f32(<2 x float>, <2 x float>)
-declare <4 x float> @llvm.minnum.v4f32(<4 x float>, <4 x float>)
-declare <8 x float> @llvm.minnum.v8f32(<8 x float>, <8 x float>)
-declare <16 x float> @llvm.minnum.v16f32(<16 x float>, <16 x float>)
-declare <32 x float> @llvm.minnum.v32f32(<32 x float>, <32 x float>)
-declare <64 x float> @llvm.minnum.v64f32(<64 x float>, <64 x float>)
-declare <1 x double> @llvm.minnum.v1f64(<1 x double>, <1 x double>)
-declare <2 x double> @llvm.minnum.v2f64(<2 x double>, <2 x double>)
-declare <4 x double> @llvm.minnum.v4f64(<4 x double>, <4 x double>)
-declare <8 x double> @llvm.minnum.v8f64(<8 x double>, <8 x double>)
-declare <16 x double> @llvm.minnum.v16f64(<16 x double>, <16 x double>)
-declare <32 x double> @llvm.minnum.v32f64(<32 x double>, <32 x double>)
-
-declare <4 x half> @llvm.maxnum.v4f16(<4 x half>, <4 x half>)
-declare <8 x half> @llvm.maxnum.v8f16(<8 x half>, <8 x half>)
-declare <16 x half> @llvm.maxnum.v16f16(<16 x half>, <16 x half>)
-declare <32 x half> @llvm.maxnum.v32f16(<32 x half>, <32 x half>)
-declare <64 x half> @llvm.maxnum.v64f16(<64 x half>, <64 x half>)
-declare <128 x half> @llvm.maxnum.v128f16(<128 x half>, <128 x half>)
-declare <2 x float> @llvm.maxnum.v2f32(<2 x float>, <2 x float>)
-declare <4 x float> @llvm.maxnum.v4f32(<4 x float>, <4 x float>)
-declare <8 x float> @llvm.maxnum.v8f32(<8 x float>, <8 x float>)
-declare <16 x float> @llvm.maxnum.v16f32(<16 x float>, <16 x float>)
-declare <32 x float> @llvm.maxnum.v32f32(<32 x float>, <32 x float>)
-declare <64 x float> @llvm.maxnum.v64f32(<64 x float>, <64 x float>)
-declare <1 x double> @llvm.maxnum.v1f64(<1 x double>, <1 x double>)
-declare <2 x double> @llvm.maxnum.v2f64(<2 x double>, <2 x double>)
-declare <4 x double> @llvm.maxnum.v4f64(<4 x double>, <4 x double>)
-declare <8 x double> @llvm.maxnum.v8f64(<8 x double>, <8 x double>)
-declare <16 x double> @llvm.maxnum.v16f64(<16 x double>, <16 x double>)
-declare <32 x double> @llvm.maxnum.v32f64(<32 x double>, <32 x double>)
-
-declare <4 x half> @llvm.minimum.v4f16(<4 x half>, <4 x half>)
-declare <8 x half> @llvm.minimum.v8f16(<8 x half>, <8 x half>)
-declare <16 x half> @llvm.minimum.v16f16(<16 x half>, <16 x half>)
-declare <32 x half> @llvm.minimum.v32f16(<32 x half>, <32 x half>)
-declare <64 x half> @llvm.minimum.v64f16(<64 x half>, <64 x half>)
-declare <128 x half> @llvm.minimum.v128f16(<128 x half>, <128 x half>)
-declare <2 x float> @llvm.minimum.v2f32(<2 x float>, <2 x float>)
-declare <4 x float> @llvm.minimum.v4f32(<4 x float>, <4 x float>)
-declare <8 x float> @llvm.minimum.v8f32(<8 x float>, <8 x float>)
-declare <16 x float> @llvm.minimum.v16f32(<16 x float>, <16 x float>)
-declare <32 x float> @llvm.minimum.v32f32(<32 x float>, <32 x float>)
-declare <64 x float> @llvm.minimum.v64f32(<64 x float>, <64 x float>)
-declare <1 x double> @llvm.minimum.v1f64(<1 x double>, <1 x double>)
-declare <2 x double> @llvm.minimum.v2f64(<2 x double>, <2 x double>)
-declare <4 x double> @llvm.minimum.v4f64(<4 x double>, <4 x double>)
-declare <8 x double> @llvm.minimum.v8f64(<8 x double>, <8 x double>)
-declare <16 x double> @llvm.minimum.v16f64(<16 x double>, <16 x double>)
-declare <32 x double> @llvm.minimum.v32f64(<32 x double>, <32 x double>)
-
-declare <4 x half> @llvm.maximum.v4f16(<4 x half>, <4 x half>)
-declare <8 x half> @llvm.maximum.v8f16(<8 x half>, <8 x half>)
-declare <16 x half> @llvm.maximum.v16f16(<16 x half>, <16 x half>)
-declare <32 x half> @llvm.maximum.v32f16(<32 x half>, <32 x half>)
-declare <64 x half> @llvm.maximum.v64f16(<64 x half>, <64 x half>)
-declare <128 x half> @llvm.maximum.v128f16(<128 x half>, <128 x half>)
-declare <2 x float> @llvm.maximum.v2f32(<2 x float>, <2 x float>)
-declare <4 x float> @llvm.maximum.v4f32(<4 x float>, <4 x float>)
-declare <8 x float> @llvm.maximum.v8f32(<8 x float>, <8 x float>)
-declare <16 x float> @llvm.maximum.v16f32(<16 x float>, <16 x float>)
-declare <32 x float> @llvm.maximum.v32f32(<32 x float>, <32 x float>)
-declare <64 x float> @llvm.maximum.v64f32(<64 x float>, <64 x float>)
-declare <1 x double> @llvm.maximum.v1f64(<1 x double>, <1 x double>)
-declare <2 x double> @llvm.maximum.v2f64(<2 x double>, <2 x double>)
-declare <4 x double> @llvm.maximum.v4f64(<4 x double>, <4 x double>)
-declare <8 x double> @llvm.maximum.v8f64(<8 x double>, <8 x double>)
-declare <16 x double> @llvm.maximum.v16f64(<16 x double>, <16 x double>)
-declare <32 x double> @llvm.maximum.v32f64(<32 x double>, <32 x double>)

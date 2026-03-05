@@ -1881,137 +1881,2178 @@ define void @frintz_v32f64(ptr %a) vscale_range(16,0) #0 {
   ret void
 }
 
+;
+; FCANONICALIZE -> FMINNM
+;
+
+; Don't use SVE for 64-bit vectors.
+define <4 x half> @fcanonicalize_v4f16(<4 x half> %op) vscale_range(2,0) #0 {
+; CHECK-LABEL: fcanonicalize_v4f16:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    fminnm v0.4h, v0.4h, v0.4h
+; CHECK-NEXT:    ret
+  %res = call <4 x half> @llvm.canonicalize.v4f16(<4 x half> %op)
+  ret <4 x half> %res
+}
+
+; Don't use SVE for 128-bit vectors.
+define <8 x half> @fcanonicalize_v8f16(<8 x half> %op) vscale_range(2,0) #0 {
+; CHECK-LABEL: fcanonicalize_v8f16:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    fminnm v0.8h, v0.8h, v0.8h
+; CHECK-NEXT:    ret
+  %res = call <8 x half> @llvm.canonicalize.v8f16(<8 x half> %op)
+  ret <8 x half> %res
+}
+
+define void @fcanonicalize_v16f16(ptr %a) vscale_range(2,0) #0 {
+; CHECK-LABEL: fcanonicalize_v16f16:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    stp x29, x30, [sp, #-16]! // 16-byte Folded Spill
+; CHECK-NEXT:    sub x9, sp, #48
+; CHECK-NEXT:    mov x29, sp
+; CHECK-NEXT:    and sp, x9, #0xffffffffffffffe0
+; CHECK-NEXT:    .cfi_def_cfa w29, 16
+; CHECK-NEXT:    .cfi_offset w30, -8
+; CHECK-NEXT:    .cfi_offset w29, -16
+; CHECK-NEXT:    ptrue p0.h, vl16
+; CHECK-NEXT:    mov x8, sp
+; CHECK-NEXT:    ld1h { z0.h }, p0/z, [x0]
+; CHECK-NEXT:    mov z1.h, z0.h[15]
+; CHECK-NEXT:    mov z2.h, z0.h[14]
+; CHECK-NEXT:    fminnm h3, h0, h0
+; CHECK-NEXT:    mov z4.h, z0.h[13]
+; CHECK-NEXT:    mov z5.h, z0.h[12]
+; CHECK-NEXT:    mov z6.h, z0.h[11]
+; CHECK-NEXT:    mov z7.h, z0.h[10]
+; CHECK-NEXT:    fminnm h1, h1, h1
+; CHECK-NEXT:    fminnm h2, h2, h2
+; CHECK-NEXT:    str h3, [sp]
+; CHECK-NEXT:    mov z3.h, z0.h[9]
+; CHECK-NEXT:    fminnm h4, h4, h4
+; CHECK-NEXT:    fminnm h5, h5, h5
+; CHECK-NEXT:    fminnm h6, h6, h6
+; CHECK-NEXT:    fminnm h7, h7, h7
+; CHECK-NEXT:    str h1, [sp, #30]
+; CHECK-NEXT:    mov z1.h, z0.h[8]
+; CHECK-NEXT:    fminnm h3, h3, h3
+; CHECK-NEXT:    str h2, [sp, #28]
+; CHECK-NEXT:    mov z2.h, z0.h[7]
+; CHECK-NEXT:    str h4, [sp, #26]
+; CHECK-NEXT:    mov z4.h, z0.h[6]
+; CHECK-NEXT:    fminnm h1, h1, h1
+; CHECK-NEXT:    str h5, [sp, #24]
+; CHECK-NEXT:    mov z5.h, z0.h[5]
+; CHECK-NEXT:    fminnm h2, h2, h2
+; CHECK-NEXT:    str h6, [sp, #22]
+; CHECK-NEXT:    mov z6.h, z0.h[4]
+; CHECK-NEXT:    str h7, [sp, #20]
+; CHECK-NEXT:    mov z7.h, z0.h[3]
+; CHECK-NEXT:    fminnm h4, h4, h4
+; CHECK-NEXT:    str h3, [sp, #18]
+; CHECK-NEXT:    mov z3.h, z0.h[2]
+; CHECK-NEXT:    mov z0.h, z0.h[1]
+; CHECK-NEXT:    fminnm h5, h5, h5
+; CHECK-NEXT:    str h1, [sp, #16]
+; CHECK-NEXT:    fminnm h1, h6, h6
+; CHECK-NEXT:    str h2, [sp, #14]
+; CHECK-NEXT:    fminnm h2, h7, h7
+; CHECK-NEXT:    fminnm h3, h3, h3
+; CHECK-NEXT:    fminnm h0, h0, h0
+; CHECK-NEXT:    str h4, [sp, #12]
+; CHECK-NEXT:    str h5, [sp, #10]
+; CHECK-NEXT:    str h1, [sp, #8]
+; CHECK-NEXT:    str h2, [sp, #6]
+; CHECK-NEXT:    str h3, [sp, #4]
+; CHECK-NEXT:    str h0, [sp, #2]
+; CHECK-NEXT:    ld1h { z0.h }, p0/z, [x8]
+; CHECK-NEXT:    st1h { z0.h }, p0, [x0]
+; CHECK-NEXT:    mov sp, x29
+; CHECK-NEXT:    ldp x29, x30, [sp], #16 // 16-byte Folded Reload
+; CHECK-NEXT:    ret
+  %op = load <16 x half>, ptr %a
+  %res = call <16 x half> @llvm.canonicalize.v16f16(<16 x half> %op)
+  store <16 x half> %res, ptr %a
+  ret void
+}
+
+define void @fcanonicalize_v32f16(ptr %a) #0 {
+; VBITS_GE_256-LABEL: fcanonicalize_v32f16:
+; VBITS_GE_256:       // %bb.0:
+; VBITS_GE_256-NEXT:    stp x29, x30, [sp, #-16]! // 16-byte Folded Spill
+; VBITS_GE_256-NEXT:    sub x9, sp, #80
+; VBITS_GE_256-NEXT:    mov x29, sp
+; VBITS_GE_256-NEXT:    and sp, x9, #0xffffffffffffffe0
+; VBITS_GE_256-NEXT:    .cfi_def_cfa w29, 16
+; VBITS_GE_256-NEXT:    .cfi_offset w30, -8
+; VBITS_GE_256-NEXT:    .cfi_offset w29, -16
+; VBITS_GE_256-NEXT:    ptrue p0.h, vl16
+; VBITS_GE_256-NEXT:    mov x8, #16 // =0x10
+; VBITS_GE_256-NEXT:    add x9, sp, #32
+; VBITS_GE_256-NEXT:    ld1h { z1.h }, p0/z, [x0]
+; VBITS_GE_256-NEXT:    mov z0.h, z1.h[15]
+; VBITS_GE_256-NEXT:    mov z2.h, z1.h[14]
+; VBITS_GE_256-NEXT:    fminnm h3, h1, h1
+; VBITS_GE_256-NEXT:    mov z4.h, z1.h[13]
+; VBITS_GE_256-NEXT:    mov z5.h, z1.h[12]
+; VBITS_GE_256-NEXT:    mov z7.h, z1.h[11]
+; VBITS_GE_256-NEXT:    mov z16.h, z1.h[10]
+; VBITS_GE_256-NEXT:    fminnm h6, h0, h0
+; VBITS_GE_256-NEXT:    fminnm h2, h2, h2
+; VBITS_GE_256-NEXT:    ld1h { z0.h }, p0/z, [x0, x8, lsl #1]
+; VBITS_GE_256-NEXT:    fminnm h4, h4, h4
+; VBITS_GE_256-NEXT:    str h3, [sp]
+; VBITS_GE_256-NEXT:    mov z3.h, z1.h[9]
+; VBITS_GE_256-NEXT:    fminnm h5, h5, h5
+; VBITS_GE_256-NEXT:    fminnm h7, h7, h7
+; VBITS_GE_256-NEXT:    fminnm h16, h16, h16
+; VBITS_GE_256-NEXT:    str h6, [sp, #30]
+; VBITS_GE_256-NEXT:    mov z6.h, z1.h[8]
+; VBITS_GE_256-NEXT:    fminnm h3, h3, h3
+; VBITS_GE_256-NEXT:    str h2, [sp, #28]
+; VBITS_GE_256-NEXT:    mov z2.h, z1.h[7]
+; VBITS_GE_256-NEXT:    str h4, [sp, #26]
+; VBITS_GE_256-NEXT:    mov z4.h, z1.h[6]
+; VBITS_GE_256-NEXT:    str h5, [sp, #24]
+; VBITS_GE_256-NEXT:    mov z5.h, z1.h[5]
+; VBITS_GE_256-NEXT:    fminnm h6, h6, h6
+; VBITS_GE_256-NEXT:    str h7, [sp, #22]
+; VBITS_GE_256-NEXT:    mov z7.h, z1.h[4]
+; VBITS_GE_256-NEXT:    fminnm h2, h2, h2
+; VBITS_GE_256-NEXT:    str h16, [sp, #20]
+; VBITS_GE_256-NEXT:    mov z16.h, z1.h[3]
+; VBITS_GE_256-NEXT:    fminnm h4, h4, h4
+; VBITS_GE_256-NEXT:    fminnm h5, h5, h5
+; VBITS_GE_256-NEXT:    str h3, [sp, #18]
+; VBITS_GE_256-NEXT:    mov z3.h, z1.h[2]
+; VBITS_GE_256-NEXT:    str h6, [sp, #16]
+; VBITS_GE_256-NEXT:    fminnm h6, h7, h7
+; VBITS_GE_256-NEXT:    mov z1.h, z1.h[1]
+; VBITS_GE_256-NEXT:    str h2, [sp, #14]
+; VBITS_GE_256-NEXT:    fminnm h2, h16, h16
+; VBITS_GE_256-NEXT:    mov z7.h, z0.h[13]
+; VBITS_GE_256-NEXT:    str h4, [sp, #12]
+; VBITS_GE_256-NEXT:    fminnm h3, h3, h3
+; VBITS_GE_256-NEXT:    mov z4.h, z0.h[15]
+; VBITS_GE_256-NEXT:    str h5, [sp, #10]
+; VBITS_GE_256-NEXT:    fminnm h1, h1, h1
+; VBITS_GE_256-NEXT:    mov z5.h, z0.h[14]
+; VBITS_GE_256-NEXT:    str h6, [sp, #8]
+; VBITS_GE_256-NEXT:    fminnm h6, h0, h0
+; VBITS_GE_256-NEXT:    str h2, [sp, #6]
+; VBITS_GE_256-NEXT:    fminnm h2, h4, h4
+; VBITS_GE_256-NEXT:    mov z4.h, z0.h[12]
+; VBITS_GE_256-NEXT:    str h3, [sp, #4]
+; VBITS_GE_256-NEXT:    fminnm h3, h5, h5
+; VBITS_GE_256-NEXT:    mov z5.h, z0.h[11]
+; VBITS_GE_256-NEXT:    str h1, [sp, #2]
+; VBITS_GE_256-NEXT:    fminnm h1, h7, h7
+; VBITS_GE_256-NEXT:    mov z7.h, z0.h[10]
+; VBITS_GE_256-NEXT:    str h6, [sp, #32]
+; VBITS_GE_256-NEXT:    fminnm h4, h4, h4
+; VBITS_GE_256-NEXT:    mov z6.h, z0.h[9]
+; VBITS_GE_256-NEXT:    str h2, [sp, #62]
+; VBITS_GE_256-NEXT:    fminnm h2, h5, h5
+; VBITS_GE_256-NEXT:    mov z5.h, z0.h[8]
+; VBITS_GE_256-NEXT:    str h3, [sp, #60]
+; VBITS_GE_256-NEXT:    fminnm h3, h7, h7
+; VBITS_GE_256-NEXT:    mov z7.h, z0.h[7]
+; VBITS_GE_256-NEXT:    str h1, [sp, #58]
+; VBITS_GE_256-NEXT:    fminnm h1, h6, h6
+; VBITS_GE_256-NEXT:    mov z6.h, z0.h[6]
+; VBITS_GE_256-NEXT:    str h4, [sp, #56]
+; VBITS_GE_256-NEXT:    fminnm h4, h5, h5
+; VBITS_GE_256-NEXT:    mov z5.h, z0.h[5]
+; VBITS_GE_256-NEXT:    str h2, [sp, #54]
+; VBITS_GE_256-NEXT:    fminnm h2, h7, h7
+; VBITS_GE_256-NEXT:    mov z7.h, z0.h[4]
+; VBITS_GE_256-NEXT:    str h3, [sp, #52]
+; VBITS_GE_256-NEXT:    fminnm h3, h6, h6
+; VBITS_GE_256-NEXT:    mov z6.h, z0.h[3]
+; VBITS_GE_256-NEXT:    str h1, [sp, #50]
+; VBITS_GE_256-NEXT:    fminnm h1, h5, h5
+; VBITS_GE_256-NEXT:    mov z5.h, z0.h[2]
+; VBITS_GE_256-NEXT:    mov z0.h, z0.h[1]
+; VBITS_GE_256-NEXT:    str h4, [sp, #48]
+; VBITS_GE_256-NEXT:    fminnm h4, h7, h7
+; VBITS_GE_256-NEXT:    str h2, [sp, #46]
+; VBITS_GE_256-NEXT:    fminnm h2, h6, h6
+; VBITS_GE_256-NEXT:    str h3, [sp, #44]
+; VBITS_GE_256-NEXT:    fminnm h3, h5, h5
+; VBITS_GE_256-NEXT:    fminnm h0, h0, h0
+; VBITS_GE_256-NEXT:    str h1, [sp, #42]
+; VBITS_GE_256-NEXT:    str h4, [sp, #40]
+; VBITS_GE_256-NEXT:    str h2, [sp, #38]
+; VBITS_GE_256-NEXT:    str h3, [sp, #36]
+; VBITS_GE_256-NEXT:    str h0, [sp, #34]
+; VBITS_GE_256-NEXT:    ld1h { z0.h }, p0/z, [x9]
+; VBITS_GE_256-NEXT:    mov x9, sp
+; VBITS_GE_256-NEXT:    ld1h { z1.h }, p0/z, [x9]
+; VBITS_GE_256-NEXT:    st1h { z0.h }, p0, [x0, x8, lsl #1]
+; VBITS_GE_256-NEXT:    st1h { z1.h }, p0, [x0]
+; VBITS_GE_256-NEXT:    mov sp, x29
+; VBITS_GE_256-NEXT:    ldp x29, x30, [sp], #16 // 16-byte Folded Reload
+; VBITS_GE_256-NEXT:    ret
+;
+; VBITS_GE_512-LABEL: fcanonicalize_v32f16:
+; VBITS_GE_512:       // %bb.0:
+; VBITS_GE_512-NEXT:    stp x29, x30, [sp, #-16]! // 16-byte Folded Spill
+; VBITS_GE_512-NEXT:    sub x9, sp, #112
+; VBITS_GE_512-NEXT:    mov x29, sp
+; VBITS_GE_512-NEXT:    and sp, x9, #0xffffffffffffffc0
+; VBITS_GE_512-NEXT:    .cfi_def_cfa w29, 16
+; VBITS_GE_512-NEXT:    .cfi_offset w30, -8
+; VBITS_GE_512-NEXT:    .cfi_offset w29, -16
+; VBITS_GE_512-NEXT:    ptrue p0.h, vl32
+; VBITS_GE_512-NEXT:    mov x8, sp
+; VBITS_GE_512-NEXT:    ld1h { z0.h }, p0/z, [x0]
+; VBITS_GE_512-NEXT:    mov z1.h, z0.h[31]
+; VBITS_GE_512-NEXT:    mov z2.h, z0.h[30]
+; VBITS_GE_512-NEXT:    fminnm h3, h0, h0
+; VBITS_GE_512-NEXT:    mov z4.h, z0.h[29]
+; VBITS_GE_512-NEXT:    mov z5.h, z0.h[28]
+; VBITS_GE_512-NEXT:    mov z6.h, z0.h[27]
+; VBITS_GE_512-NEXT:    mov z7.h, z0.h[26]
+; VBITS_GE_512-NEXT:    fminnm h1, h1, h1
+; VBITS_GE_512-NEXT:    fminnm h2, h2, h2
+; VBITS_GE_512-NEXT:    fminnm h4, h4, h4
+; VBITS_GE_512-NEXT:    str h3, [sp]
+; VBITS_GE_512-NEXT:    mov z3.h, z0.h[25]
+; VBITS_GE_512-NEXT:    fminnm h5, h5, h5
+; VBITS_GE_512-NEXT:    fminnm h6, h6, h6
+; VBITS_GE_512-NEXT:    fminnm h7, h7, h7
+; VBITS_GE_512-NEXT:    str h1, [sp, #62]
+; VBITS_GE_512-NEXT:    mov z1.h, z0.h[24]
+; VBITS_GE_512-NEXT:    fminnm h3, h3, h3
+; VBITS_GE_512-NEXT:    str h2, [sp, #60]
+; VBITS_GE_512-NEXT:    mov z2.h, z0.h[23]
+; VBITS_GE_512-NEXT:    str h4, [sp, #58]
+; VBITS_GE_512-NEXT:    mov z4.h, z0.h[22]
+; VBITS_GE_512-NEXT:    str h5, [sp, #56]
+; VBITS_GE_512-NEXT:    mov z5.h, z0.h[21]
+; VBITS_GE_512-NEXT:    fminnm h1, h1, h1
+; VBITS_GE_512-NEXT:    str h6, [sp, #54]
+; VBITS_GE_512-NEXT:    mov z6.h, z0.h[20]
+; VBITS_GE_512-NEXT:    fminnm h2, h2, h2
+; VBITS_GE_512-NEXT:    str h7, [sp, #52]
+; VBITS_GE_512-NEXT:    mov z7.h, z0.h[19]
+; VBITS_GE_512-NEXT:    fminnm h4, h4, h4
+; VBITS_GE_512-NEXT:    fminnm h5, h5, h5
+; VBITS_GE_512-NEXT:    str h3, [sp, #50]
+; VBITS_GE_512-NEXT:    mov z3.h, z0.h[18]
+; VBITS_GE_512-NEXT:    str h1, [sp, #48]
+; VBITS_GE_512-NEXT:    fminnm h1, h6, h6
+; VBITS_GE_512-NEXT:    mov z6.h, z0.h[17]
+; VBITS_GE_512-NEXT:    str h2, [sp, #46]
+; VBITS_GE_512-NEXT:    fminnm h2, h7, h7
+; VBITS_GE_512-NEXT:    mov z7.h, z0.h[16]
+; VBITS_GE_512-NEXT:    str h4, [sp, #44]
+; VBITS_GE_512-NEXT:    fminnm h3, h3, h3
+; VBITS_GE_512-NEXT:    mov z4.h, z0.h[15]
+; VBITS_GE_512-NEXT:    str h5, [sp, #42]
+; VBITS_GE_512-NEXT:    fminnm h5, h6, h6
+; VBITS_GE_512-NEXT:    mov z6.h, z0.h[14]
+; VBITS_GE_512-NEXT:    str h1, [sp, #40]
+; VBITS_GE_512-NEXT:    fminnm h1, h7, h7
+; VBITS_GE_512-NEXT:    mov z7.h, z0.h[13]
+; VBITS_GE_512-NEXT:    str h2, [sp, #38]
+; VBITS_GE_512-NEXT:    fminnm h2, h4, h4
+; VBITS_GE_512-NEXT:    mov z4.h, z0.h[12]
+; VBITS_GE_512-NEXT:    str h3, [sp, #36]
+; VBITS_GE_512-NEXT:    fminnm h3, h6, h6
+; VBITS_GE_512-NEXT:    mov z6.h, z0.h[11]
+; VBITS_GE_512-NEXT:    str h5, [sp, #34]
+; VBITS_GE_512-NEXT:    fminnm h5, h7, h7
+; VBITS_GE_512-NEXT:    mov z7.h, z0.h[10]
+; VBITS_GE_512-NEXT:    str h1, [sp, #32]
+; VBITS_GE_512-NEXT:    fminnm h1, h4, h4
+; VBITS_GE_512-NEXT:    mov z4.h, z0.h[9]
+; VBITS_GE_512-NEXT:    str h2, [sp, #30]
+; VBITS_GE_512-NEXT:    fminnm h2, h6, h6
+; VBITS_GE_512-NEXT:    mov z6.h, z0.h[8]
+; VBITS_GE_512-NEXT:    str h3, [sp, #28]
+; VBITS_GE_512-NEXT:    fminnm h3, h7, h7
+; VBITS_GE_512-NEXT:    mov z7.h, z0.h[7]
+; VBITS_GE_512-NEXT:    str h5, [sp, #26]
+; VBITS_GE_512-NEXT:    fminnm h4, h4, h4
+; VBITS_GE_512-NEXT:    mov z5.h, z0.h[6]
+; VBITS_GE_512-NEXT:    str h1, [sp, #24]
+; VBITS_GE_512-NEXT:    fminnm h1, h6, h6
+; VBITS_GE_512-NEXT:    mov z6.h, z0.h[5]
+; VBITS_GE_512-NEXT:    str h2, [sp, #22]
+; VBITS_GE_512-NEXT:    fminnm h2, h7, h7
+; VBITS_GE_512-NEXT:    mov z7.h, z0.h[4]
+; VBITS_GE_512-NEXT:    str h3, [sp, #20]
+; VBITS_GE_512-NEXT:    fminnm h3, h5, h5
+; VBITS_GE_512-NEXT:    mov z5.h, z0.h[3]
+; VBITS_GE_512-NEXT:    str h4, [sp, #18]
+; VBITS_GE_512-NEXT:    fminnm h4, h6, h6
+; VBITS_GE_512-NEXT:    mov z6.h, z0.h[2]
+; VBITS_GE_512-NEXT:    mov z0.h, z0.h[1]
+; VBITS_GE_512-NEXT:    str h1, [sp, #16]
+; VBITS_GE_512-NEXT:    fminnm h1, h7, h7
+; VBITS_GE_512-NEXT:    str h2, [sp, #14]
+; VBITS_GE_512-NEXT:    fminnm h2, h5, h5
+; VBITS_GE_512-NEXT:    str h3, [sp, #12]
+; VBITS_GE_512-NEXT:    fminnm h3, h6, h6
+; VBITS_GE_512-NEXT:    fminnm h0, h0, h0
+; VBITS_GE_512-NEXT:    str h4, [sp, #10]
+; VBITS_GE_512-NEXT:    str h1, [sp, #8]
+; VBITS_GE_512-NEXT:    str h2, [sp, #6]
+; VBITS_GE_512-NEXT:    str h3, [sp, #4]
+; VBITS_GE_512-NEXT:    str h0, [sp, #2]
+; VBITS_GE_512-NEXT:    ld1h { z0.h }, p0/z, [x8]
+; VBITS_GE_512-NEXT:    st1h { z0.h }, p0, [x0]
+; VBITS_GE_512-NEXT:    mov sp, x29
+; VBITS_GE_512-NEXT:    ldp x29, x30, [sp], #16 // 16-byte Folded Reload
+; VBITS_GE_512-NEXT:    ret
+  %op = load <32 x half>, ptr %a
+  %res = call <32 x half> @llvm.canonicalize.v32f16(<32 x half> %op)
+  store <32 x half> %res, ptr %a
+  ret void
+}
+
+define void @fcanonicalize_v64f16(ptr %a) vscale_range(8,0) #0 {
+; CHECK-LABEL: fcanonicalize_v64f16:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    stp x29, x30, [sp, #-16]! // 16-byte Folded Spill
+; CHECK-NEXT:    sub x9, sp, #240
+; CHECK-NEXT:    mov x29, sp
+; CHECK-NEXT:    and sp, x9, #0xffffffffffffff80
+; CHECK-NEXT:    .cfi_def_cfa w29, 16
+; CHECK-NEXT:    .cfi_offset w30, -8
+; CHECK-NEXT:    .cfi_offset w29, -16
+; CHECK-NEXT:    ptrue p0.h, vl64
+; CHECK-NEXT:    mov w8, #63 // =0x3f
+; CHECK-NEXT:    whilels p1.h, xzr, x8
+; CHECK-NEXT:    mov w8, #62 // =0x3e
+; CHECK-NEXT:    ld1h { z0.h }, p0/z, [x0]
+; CHECK-NEXT:    whilels p2.h, xzr, x8
+; CHECK-NEXT:    mov w8, #61 // =0x3d
+; CHECK-NEXT:    whilels p3.h, xzr, x8
+; CHECK-NEXT:    mov w8, #60 // =0x3c
+; CHECK-NEXT:    lastb h1, p1, z0.h
+; CHECK-NEXT:    whilels p1.h, xzr, x8
+; CHECK-NEXT:    mov w8, #59 // =0x3b
+; CHECK-NEXT:    lastb h2, p2, z0.h
+; CHECK-NEXT:    whilels p2.h, xzr, x8
+; CHECK-NEXT:    mov w8, #58 // =0x3a
+; CHECK-NEXT:    lastb h3, p3, z0.h
+; CHECK-NEXT:    lastb h4, p1, z0.h
+; CHECK-NEXT:    whilels p1.h, xzr, x8
+; CHECK-NEXT:    mov w8, #57 // =0x39
+; CHECK-NEXT:    lastb h6, p2, z0.h
+; CHECK-NEXT:    fminnm h5, h0, h0
+; CHECK-NEXT:    fminnm h1, h1, h1
+; CHECK-NEXT:    lastb h7, p1, z0.h
+; CHECK-NEXT:    whilels p2.h, xzr, x8
+; CHECK-NEXT:    mov w8, #56 // =0x38
+; CHECK-NEXT:    fminnm h2, h2, h2
+; CHECK-NEXT:    fminnm h3, h3, h3
+; CHECK-NEXT:    whilels p1.h, xzr, x8
+; CHECK-NEXT:    mov w8, #55 // =0x37
+; CHECK-NEXT:    lastb h16, p2, z0.h
+; CHECK-NEXT:    fminnm h4, h4, h4
+; CHECK-NEXT:    whilels p2.h, xzr, x8
+; CHECK-NEXT:    str h1, [sp, #126]
+; CHECK-NEXT:    fminnm h1, h7, h7
+; CHECK-NEXT:    mov w8, #54 // =0x36
+; CHECK-NEXT:    str h2, [sp, #124]
+; CHECK-NEXT:    lastb h2, p1, z0.h
+; CHECK-NEXT:    whilels p1.h, xzr, x8
+; CHECK-NEXT:    str h3, [sp, #122]
+; CHECK-NEXT:    lastb h3, p2, z0.h
+; CHECK-NEXT:    mov w8, #53 // =0x35
+; CHECK-NEXT:    str h5, [sp]
+; CHECK-NEXT:    fminnm h5, h6, h6
+; CHECK-NEXT:    str h4, [sp, #120]
+; CHECK-NEXT:    lastb h4, p1, z0.h
+; CHECK-NEXT:    whilels p1.h, xzr, x8
+; CHECK-NEXT:    str h1, [sp, #116]
+; CHECK-NEXT:    fminnm h1, h16, h16
+; CHECK-NEXT:    mov w8, #52 // =0x34
+; CHECK-NEXT:    fminnm h2, h2, h2
+; CHECK-NEXT:    fminnm h3, h3, h3
+; CHECK-NEXT:    whilels p2.h, xzr, x8
+; CHECK-NEXT:    mov w8, #51 // =0x33
+; CHECK-NEXT:    str h5, [sp, #118]
+; CHECK-NEXT:    lastb h5, p1, z0.h
+; CHECK-NEXT:    whilels p1.h, xzr, x8
+; CHECK-NEXT:    mov w8, #50 // =0x32
+; CHECK-NEXT:    fminnm h4, h4, h4
+; CHECK-NEXT:    str h1, [sp, #114]
+; CHECK-NEXT:    lastb h1, p2, z0.h
+; CHECK-NEXT:    whilels p2.h, xzr, x8
+; CHECK-NEXT:    str h2, [sp, #112]
+; CHECK-NEXT:    lastb h2, p1, z0.h
+; CHECK-NEXT:    mov w8, #49 // =0x31
+; CHECK-NEXT:    str h3, [sp, #110]
+; CHECK-NEXT:    lastb h3, p2, z0.h
+; CHECK-NEXT:    whilels p1.h, xzr, x8
+; CHECK-NEXT:    str h4, [sp, #108]
+; CHECK-NEXT:    fminnm h4, h5, h5
+; CHECK-NEXT:    mov w8, #48 // =0x30
+; CHECK-NEXT:    fminnm h1, h1, h1
+; CHECK-NEXT:    whilels p2.h, xzr, x8
+; CHECK-NEXT:    mov w8, #47 // =0x2f
+; CHECK-NEXT:    fminnm h2, h2, h2
+; CHECK-NEXT:    lastb h5, p1, z0.h
+; CHECK-NEXT:    whilels p1.h, xzr, x8
+; CHECK-NEXT:    fminnm h3, h3, h3
+; CHECK-NEXT:    mov w8, #46 // =0x2e
+; CHECK-NEXT:    str h4, [sp, #106]
+; CHECK-NEXT:    lastb h4, p2, z0.h
+; CHECK-NEXT:    whilels p2.h, xzr, x8
+; CHECK-NEXT:    str h1, [sp, #104]
+; CHECK-NEXT:    lastb h1, p1, z0.h
+; CHECK-NEXT:    mov w8, #45 // =0x2d
+; CHECK-NEXT:    str h2, [sp, #102]
+; CHECK-NEXT:    lastb h2, p2, z0.h
+; CHECK-NEXT:    whilels p1.h, xzr, x8
+; CHECK-NEXT:    str h3, [sp, #100]
+; CHECK-NEXT:    fminnm h3, h5, h5
+; CHECK-NEXT:    mov w8, #44 // =0x2c
+; CHECK-NEXT:    fminnm h4, h4, h4
+; CHECK-NEXT:    whilels p2.h, xzr, x8
+; CHECK-NEXT:    mov w8, #43 // =0x2b
+; CHECK-NEXT:    fminnm h1, h1, h1
+; CHECK-NEXT:    lastb h5, p1, z0.h
+; CHECK-NEXT:    whilels p1.h, xzr, x8
+; CHECK-NEXT:    fminnm h2, h2, h2
+; CHECK-NEXT:    mov w8, #42 // =0x2a
+; CHECK-NEXT:    str h3, [sp, #98]
+; CHECK-NEXT:    lastb h3, p2, z0.h
+; CHECK-NEXT:    whilels p2.h, xzr, x8
+; CHECK-NEXT:    str h4, [sp, #96]
+; CHECK-NEXT:    lastb h4, p1, z0.h
+; CHECK-NEXT:    mov w8, #41 // =0x29
+; CHECK-NEXT:    str h1, [sp, #94]
+; CHECK-NEXT:    lastb h1, p2, z0.h
+; CHECK-NEXT:    whilels p1.h, xzr, x8
+; CHECK-NEXT:    str h2, [sp, #92]
+; CHECK-NEXT:    fminnm h2, h5, h5
+; CHECK-NEXT:    mov w8, #40 // =0x28
+; CHECK-NEXT:    fminnm h3, h3, h3
+; CHECK-NEXT:    whilels p2.h, xzr, x8
+; CHECK-NEXT:    mov w8, #39 // =0x27
+; CHECK-NEXT:    fminnm h4, h4, h4
+; CHECK-NEXT:    lastb h5, p1, z0.h
+; CHECK-NEXT:    whilels p1.h, xzr, x8
+; CHECK-NEXT:    fminnm h1, h1, h1
+; CHECK-NEXT:    mov w8, #38 // =0x26
+; CHECK-NEXT:    str h2, [sp, #90]
+; CHECK-NEXT:    lastb h2, p2, z0.h
+; CHECK-NEXT:    str h3, [sp, #88]
+; CHECK-NEXT:    lastb h3, p1, z0.h
+; CHECK-NEXT:    whilels p1.h, xzr, x8
+; CHECK-NEXT:    mov w8, #37 // =0x25
+; CHECK-NEXT:    str h4, [sp, #86]
+; CHECK-NEXT:    whilels p2.h, xzr, x8
+; CHECK-NEXT:    mov w8, #36 // =0x24
+; CHECK-NEXT:    lastb h4, p1, z0.h
+; CHECK-NEXT:    whilels p1.h, xzr, x8
+; CHECK-NEXT:    mov w8, #35 // =0x23
+; CHECK-NEXT:    str h1, [sp, #84]
+; CHECK-NEXT:    fminnm h1, h5, h5
+; CHECK-NEXT:    lastb h5, p2, z0.h
+; CHECK-NEXT:    whilels p2.h, xzr, x8
+; CHECK-NEXT:    mov w8, #34 // =0x22
+; CHECK-NEXT:    fminnm h2, h2, h2
+; CHECK-NEXT:    lastb h6, p1, z0.h
+; CHECK-NEXT:    whilels p1.h, xzr, x8
+; CHECK-NEXT:    mov w8, #33 // =0x21
+; CHECK-NEXT:    fminnm h3, h3, h3
+; CHECK-NEXT:    lastb h7, p2, z0.h
+; CHECK-NEXT:    whilels p2.h, xzr, x8
+; CHECK-NEXT:    mov w8, #32 // =0x20
+; CHECK-NEXT:    fminnm h4, h4, h4
+; CHECK-NEXT:    lastb h16, p1, z0.h
+; CHECK-NEXT:    whilels p1.h, xzr, x8
+; CHECK-NEXT:    lastb h17, p2, z0.h
+; CHECK-NEXT:    str h1, [sp, #82]
+; CHECK-NEXT:    fminnm h1, h5, h5
+; CHECK-NEXT:    str h2, [sp, #80]
+; CHECK-NEXT:    fminnm h2, h6, h6
+; CHECK-NEXT:    lastb h5, p1, z0.h
+; CHECK-NEXT:    str h3, [sp, #78]
+; CHECK-NEXT:    fminnm h3, h7, h7
+; CHECK-NEXT:    mov z6.h, z0.h[31]
+; CHECK-NEXT:    str h4, [sp, #76]
+; CHECK-NEXT:    fminnm h4, h16, h16
+; CHECK-NEXT:    mov z7.h, z0.h[30]
+; CHECK-NEXT:    str h1, [sp, #74]
+; CHECK-NEXT:    fminnm h1, h17, h17
+; CHECK-NEXT:    mov x8, sp
+; CHECK-NEXT:    str h2, [sp, #72]
+; CHECK-NEXT:    fminnm h2, h5, h5
+; CHECK-NEXT:    mov z5.h, z0.h[29]
+; CHECK-NEXT:    str h3, [sp, #70]
+; CHECK-NEXT:    fminnm h3, h6, h6
+; CHECK-NEXT:    mov z6.h, z0.h[28]
+; CHECK-NEXT:    str h4, [sp, #68]
+; CHECK-NEXT:    fminnm h4, h7, h7
+; CHECK-NEXT:    mov z7.h, z0.h[27]
+; CHECK-NEXT:    str h1, [sp, #66]
+; CHECK-NEXT:    fminnm h1, h5, h5
+; CHECK-NEXT:    mov z5.h, z0.h[26]
+; CHECK-NEXT:    str h2, [sp, #64]
+; CHECK-NEXT:    fminnm h2, h6, h6
+; CHECK-NEXT:    mov z6.h, z0.h[25]
+; CHECK-NEXT:    str h3, [sp, #62]
+; CHECK-NEXT:    fminnm h3, h7, h7
+; CHECK-NEXT:    mov z7.h, z0.h[24]
+; CHECK-NEXT:    str h4, [sp, #60]
+; CHECK-NEXT:    fminnm h4, h5, h5
+; CHECK-NEXT:    mov z5.h, z0.h[23]
+; CHECK-NEXT:    str h1, [sp, #58]
+; CHECK-NEXT:    fminnm h1, h6, h6
+; CHECK-NEXT:    mov z6.h, z0.h[22]
+; CHECK-NEXT:    str h2, [sp, #56]
+; CHECK-NEXT:    fminnm h2, h7, h7
+; CHECK-NEXT:    mov z7.h, z0.h[21]
+; CHECK-NEXT:    str h3, [sp, #54]
+; CHECK-NEXT:    fminnm h3, h5, h5
+; CHECK-NEXT:    mov z5.h, z0.h[20]
+; CHECK-NEXT:    str h4, [sp, #52]
+; CHECK-NEXT:    fminnm h4, h6, h6
+; CHECK-NEXT:    mov z6.h, z0.h[19]
+; CHECK-NEXT:    str h1, [sp, #50]
+; CHECK-NEXT:    fminnm h1, h7, h7
+; CHECK-NEXT:    mov z7.h, z0.h[18]
+; CHECK-NEXT:    str h2, [sp, #48]
+; CHECK-NEXT:    fminnm h2, h5, h5
+; CHECK-NEXT:    mov z5.h, z0.h[17]
+; CHECK-NEXT:    str h3, [sp, #46]
+; CHECK-NEXT:    fminnm h3, h6, h6
+; CHECK-NEXT:    mov z6.h, z0.h[16]
+; CHECK-NEXT:    str h4, [sp, #44]
+; CHECK-NEXT:    fminnm h4, h7, h7
+; CHECK-NEXT:    mov z7.h, z0.h[15]
+; CHECK-NEXT:    str h1, [sp, #42]
+; CHECK-NEXT:    fminnm h1, h5, h5
+; CHECK-NEXT:    mov z5.h, z0.h[14]
+; CHECK-NEXT:    str h2, [sp, #40]
+; CHECK-NEXT:    fminnm h2, h6, h6
+; CHECK-NEXT:    mov z6.h, z0.h[13]
+; CHECK-NEXT:    str h3, [sp, #38]
+; CHECK-NEXT:    fminnm h3, h7, h7
+; CHECK-NEXT:    mov z7.h, z0.h[12]
+; CHECK-NEXT:    str h4, [sp, #36]
+; CHECK-NEXT:    fminnm h4, h5, h5
+; CHECK-NEXT:    mov z5.h, z0.h[11]
+; CHECK-NEXT:    str h1, [sp, #34]
+; CHECK-NEXT:    fminnm h1, h6, h6
+; CHECK-NEXT:    mov z6.h, z0.h[10]
+; CHECK-NEXT:    str h2, [sp, #32]
+; CHECK-NEXT:    fminnm h2, h7, h7
+; CHECK-NEXT:    mov z7.h, z0.h[9]
+; CHECK-NEXT:    str h3, [sp, #30]
+; CHECK-NEXT:    fminnm h3, h5, h5
+; CHECK-NEXT:    mov z5.h, z0.h[8]
+; CHECK-NEXT:    str h4, [sp, #28]
+; CHECK-NEXT:    fminnm h4, h6, h6
+; CHECK-NEXT:    mov z6.h, z0.h[7]
+; CHECK-NEXT:    str h1, [sp, #26]
+; CHECK-NEXT:    fminnm h1, h7, h7
+; CHECK-NEXT:    mov z7.h, z0.h[6]
+; CHECK-NEXT:    str h2, [sp, #24]
+; CHECK-NEXT:    fminnm h2, h5, h5
+; CHECK-NEXT:    mov z5.h, z0.h[5]
+; CHECK-NEXT:    str h3, [sp, #22]
+; CHECK-NEXT:    fminnm h3, h6, h6
+; CHECK-NEXT:    mov z6.h, z0.h[4]
+; CHECK-NEXT:    str h4, [sp, #20]
+; CHECK-NEXT:    fminnm h4, h7, h7
+; CHECK-NEXT:    mov z7.h, z0.h[3]
+; CHECK-NEXT:    str h1, [sp, #18]
+; CHECK-NEXT:    fminnm h1, h5, h5
+; CHECK-NEXT:    mov z5.h, z0.h[2]
+; CHECK-NEXT:    mov z0.h, z0.h[1]
+; CHECK-NEXT:    str h2, [sp, #16]
+; CHECK-NEXT:    fminnm h2, h6, h6
+; CHECK-NEXT:    str h3, [sp, #14]
+; CHECK-NEXT:    fminnm h3, h7, h7
+; CHECK-NEXT:    str h4, [sp, #12]
+; CHECK-NEXT:    fminnm h4, h5, h5
+; CHECK-NEXT:    fminnm h0, h0, h0
+; CHECK-NEXT:    str h1, [sp, #10]
+; CHECK-NEXT:    str h2, [sp, #8]
+; CHECK-NEXT:    str h3, [sp, #6]
+; CHECK-NEXT:    str h4, [sp, #4]
+; CHECK-NEXT:    str h0, [sp, #2]
+; CHECK-NEXT:    ld1h { z0.h }, p0/z, [x8]
+; CHECK-NEXT:    st1h { z0.h }, p0, [x0]
+; CHECK-NEXT:    mov sp, x29
+; CHECK-NEXT:    ldp x29, x30, [sp], #16 // 16-byte Folded Reload
+; CHECK-NEXT:    ret
+  %op = load <64 x half>, ptr %a
+  %res = call <64 x half> @llvm.canonicalize.v64f16(<64 x half> %op)
+  store <64 x half> %res, ptr %a
+  ret void
+}
+
+define void @fcanonicalize_v128f16(ptr %a) vscale_range(16,0) #0 {
+; CHECK-LABEL: fcanonicalize_v128f16:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    stp x29, x30, [sp, #-16]! // 16-byte Folded Spill
+; CHECK-NEXT:    sub x9, sp, #496
+; CHECK-NEXT:    mov x29, sp
+; CHECK-NEXT:    and sp, x9, #0xffffffffffffff00
+; CHECK-NEXT:    .cfi_def_cfa w29, 16
+; CHECK-NEXT:    .cfi_offset w30, -8
+; CHECK-NEXT:    .cfi_offset w29, -16
+; CHECK-NEXT:    ptrue p0.h, vl128
+; CHECK-NEXT:    mov w8, #127 // =0x7f
+; CHECK-NEXT:    whilels p1.h, xzr, x8
+; CHECK-NEXT:    mov w8, #126 // =0x7e
+; CHECK-NEXT:    ld1h { z0.h }, p0/z, [x0]
+; CHECK-NEXT:    whilels p2.h, xzr, x8
+; CHECK-NEXT:    mov w8, #125 // =0x7d
+; CHECK-NEXT:    whilels p3.h, xzr, x8
+; CHECK-NEXT:    mov w8, #124 // =0x7c
+; CHECK-NEXT:    lastb h1, p1, z0.h
+; CHECK-NEXT:    whilels p1.h, xzr, x8
+; CHECK-NEXT:    mov w8, #123 // =0x7b
+; CHECK-NEXT:    lastb h2, p2, z0.h
+; CHECK-NEXT:    whilels p2.h, xzr, x8
+; CHECK-NEXT:    mov w8, #122 // =0x7a
+; CHECK-NEXT:    lastb h3, p3, z0.h
+; CHECK-NEXT:    lastb h4, p1, z0.h
+; CHECK-NEXT:    whilels p1.h, xzr, x8
+; CHECK-NEXT:    mov w8, #121 // =0x79
+; CHECK-NEXT:    lastb h6, p2, z0.h
+; CHECK-NEXT:    fminnm h5, h0, h0
+; CHECK-NEXT:    fminnm h1, h1, h1
+; CHECK-NEXT:    lastb h7, p1, z0.h
+; CHECK-NEXT:    whilels p2.h, xzr, x8
+; CHECK-NEXT:    mov w8, #120 // =0x78
+; CHECK-NEXT:    fminnm h2, h2, h2
+; CHECK-NEXT:    fminnm h3, h3, h3
+; CHECK-NEXT:    whilels p1.h, xzr, x8
+; CHECK-NEXT:    mov w8, #119 // =0x77
+; CHECK-NEXT:    lastb h16, p2, z0.h
+; CHECK-NEXT:    fminnm h4, h4, h4
+; CHECK-NEXT:    whilels p2.h, xzr, x8
+; CHECK-NEXT:    str h1, [sp, #254]
+; CHECK-NEXT:    fminnm h1, h7, h7
+; CHECK-NEXT:    mov w8, #118 // =0x76
+; CHECK-NEXT:    str h2, [sp, #252]
+; CHECK-NEXT:    lastb h2, p1, z0.h
+; CHECK-NEXT:    whilels p1.h, xzr, x8
+; CHECK-NEXT:    str h3, [sp, #250]
+; CHECK-NEXT:    lastb h3, p2, z0.h
+; CHECK-NEXT:    mov w8, #117 // =0x75
+; CHECK-NEXT:    str h5, [sp]
+; CHECK-NEXT:    fminnm h5, h6, h6
+; CHECK-NEXT:    str h4, [sp, #248]
+; CHECK-NEXT:    lastb h4, p1, z0.h
+; CHECK-NEXT:    whilels p1.h, xzr, x8
+; CHECK-NEXT:    str h1, [sp, #244]
+; CHECK-NEXT:    fminnm h1, h16, h16
+; CHECK-NEXT:    mov w8, #116 // =0x74
+; CHECK-NEXT:    fminnm h2, h2, h2
+; CHECK-NEXT:    fminnm h3, h3, h3
+; CHECK-NEXT:    whilels p2.h, xzr, x8
+; CHECK-NEXT:    mov w8, #115 // =0x73
+; CHECK-NEXT:    str h5, [sp, #246]
+; CHECK-NEXT:    lastb h5, p1, z0.h
+; CHECK-NEXT:    whilels p1.h, xzr, x8
+; CHECK-NEXT:    mov w8, #114 // =0x72
+; CHECK-NEXT:    fminnm h4, h4, h4
+; CHECK-NEXT:    str h1, [sp, #242]
+; CHECK-NEXT:    lastb h1, p2, z0.h
+; CHECK-NEXT:    whilels p2.h, xzr, x8
+; CHECK-NEXT:    str h2, [sp, #240]
+; CHECK-NEXT:    lastb h2, p1, z0.h
+; CHECK-NEXT:    mov w8, #113 // =0x71
+; CHECK-NEXT:    str h3, [sp, #238]
+; CHECK-NEXT:    lastb h3, p2, z0.h
+; CHECK-NEXT:    whilels p1.h, xzr, x8
+; CHECK-NEXT:    str h4, [sp, #236]
+; CHECK-NEXT:    fminnm h4, h5, h5
+; CHECK-NEXT:    mov w8, #112 // =0x70
+; CHECK-NEXT:    fminnm h1, h1, h1
+; CHECK-NEXT:    whilels p2.h, xzr, x8
+; CHECK-NEXT:    mov w8, #111 // =0x6f
+; CHECK-NEXT:    fminnm h2, h2, h2
+; CHECK-NEXT:    lastb h5, p1, z0.h
+; CHECK-NEXT:    whilels p1.h, xzr, x8
+; CHECK-NEXT:    fminnm h3, h3, h3
+; CHECK-NEXT:    mov w8, #110 // =0x6e
+; CHECK-NEXT:    str h4, [sp, #234]
+; CHECK-NEXT:    lastb h4, p2, z0.h
+; CHECK-NEXT:    whilels p2.h, xzr, x8
+; CHECK-NEXT:    str h1, [sp, #232]
+; CHECK-NEXT:    lastb h1, p1, z0.h
+; CHECK-NEXT:    mov w8, #109 // =0x6d
+; CHECK-NEXT:    str h2, [sp, #230]
+; CHECK-NEXT:    lastb h2, p2, z0.h
+; CHECK-NEXT:    whilels p1.h, xzr, x8
+; CHECK-NEXT:    str h3, [sp, #228]
+; CHECK-NEXT:    fminnm h3, h5, h5
+; CHECK-NEXT:    mov w8, #108 // =0x6c
+; CHECK-NEXT:    fminnm h4, h4, h4
+; CHECK-NEXT:    whilels p2.h, xzr, x8
+; CHECK-NEXT:    mov w8, #107 // =0x6b
+; CHECK-NEXT:    fminnm h1, h1, h1
+; CHECK-NEXT:    lastb h5, p1, z0.h
+; CHECK-NEXT:    whilels p1.h, xzr, x8
+; CHECK-NEXT:    mov w8, #106 // =0x6a
+; CHECK-NEXT:    fminnm h2, h2, h2
+; CHECK-NEXT:    str h3, [sp, #226]
+; CHECK-NEXT:    lastb h3, p2, z0.h
+; CHECK-NEXT:    whilels p2.h, xzr, x8
+; CHECK-NEXT:    str h4, [sp, #224]
+; CHECK-NEXT:    lastb h4, p1, z0.h
+; CHECK-NEXT:    mov w8, #105 // =0x69
+; CHECK-NEXT:    str h1, [sp, #222]
+; CHECK-NEXT:    lastb h1, p2, z0.h
+; CHECK-NEXT:    whilels p1.h, xzr, x8
+; CHECK-NEXT:    str h2, [sp, #220]
+; CHECK-NEXT:    fminnm h2, h5, h5
+; CHECK-NEXT:    mov w8, #104 // =0x68
+; CHECK-NEXT:    fminnm h3, h3, h3
+; CHECK-NEXT:    whilels p2.h, xzr, x8
+; CHECK-NEXT:    mov w8, #103 // =0x67
+; CHECK-NEXT:    fminnm h4, h4, h4
+; CHECK-NEXT:    lastb h5, p1, z0.h
+; CHECK-NEXT:    whilels p1.h, xzr, x8
+; CHECK-NEXT:    fminnm h1, h1, h1
+; CHECK-NEXT:    mov w8, #102 // =0x66
+; CHECK-NEXT:    str h2, [sp, #218]
+; CHECK-NEXT:    lastb h2, p2, z0.h
+; CHECK-NEXT:    whilels p2.h, xzr, x8
+; CHECK-NEXT:    str h3, [sp, #216]
+; CHECK-NEXT:    lastb h3, p1, z0.h
+; CHECK-NEXT:    mov w8, #101 // =0x65
+; CHECK-NEXT:    str h4, [sp, #214]
+; CHECK-NEXT:    lastb h4, p2, z0.h
+; CHECK-NEXT:    whilels p1.h, xzr, x8
+; CHECK-NEXT:    str h1, [sp, #212]
+; CHECK-NEXT:    fminnm h1, h5, h5
+; CHECK-NEXT:    mov w8, #100 // =0x64
+; CHECK-NEXT:    fminnm h2, h2, h2
+; CHECK-NEXT:    whilels p2.h, xzr, x8
+; CHECK-NEXT:    mov w8, #99 // =0x63
+; CHECK-NEXT:    fminnm h3, h3, h3
+; CHECK-NEXT:    lastb h5, p1, z0.h
+; CHECK-NEXT:    whilels p1.h, xzr, x8
+; CHECK-NEXT:    mov w8, #98 // =0x62
+; CHECK-NEXT:    fminnm h4, h4, h4
+; CHECK-NEXT:    str h1, [sp, #210]
+; CHECK-NEXT:    lastb h1, p2, z0.h
+; CHECK-NEXT:    whilels p2.h, xzr, x8
+; CHECK-NEXT:    str h2, [sp, #208]
+; CHECK-NEXT:    lastb h2, p1, z0.h
+; CHECK-NEXT:    mov w8, #97 // =0x61
+; CHECK-NEXT:    str h3, [sp, #206]
+; CHECK-NEXT:    lastb h3, p2, z0.h
+; CHECK-NEXT:    whilels p1.h, xzr, x8
+; CHECK-NEXT:    str h4, [sp, #204]
+; CHECK-NEXT:    fminnm h4, h5, h5
+; CHECK-NEXT:    mov w8, #96 // =0x60
+; CHECK-NEXT:    fminnm h1, h1, h1
+; CHECK-NEXT:    whilels p2.h, xzr, x8
+; CHECK-NEXT:    mov w8, #95 // =0x5f
+; CHECK-NEXT:    fminnm h2, h2, h2
+; CHECK-NEXT:    lastb h5, p1, z0.h
+; CHECK-NEXT:    whilels p1.h, xzr, x8
+; CHECK-NEXT:    fminnm h3, h3, h3
+; CHECK-NEXT:    mov w8, #94 // =0x5e
+; CHECK-NEXT:    str h4, [sp, #202]
+; CHECK-NEXT:    lastb h4, p2, z0.h
+; CHECK-NEXT:    whilels p2.h, xzr, x8
+; CHECK-NEXT:    str h1, [sp, #200]
+; CHECK-NEXT:    lastb h1, p1, z0.h
+; CHECK-NEXT:    mov w8, #93 // =0x5d
+; CHECK-NEXT:    str h2, [sp, #198]
+; CHECK-NEXT:    lastb h2, p2, z0.h
+; CHECK-NEXT:    whilels p1.h, xzr, x8
+; CHECK-NEXT:    str h3, [sp, #196]
+; CHECK-NEXT:    fminnm h3, h5, h5
+; CHECK-NEXT:    mov w8, #92 // =0x5c
+; CHECK-NEXT:    fminnm h4, h4, h4
+; CHECK-NEXT:    whilels p2.h, xzr, x8
+; CHECK-NEXT:    mov w8, #91 // =0x5b
+; CHECK-NEXT:    fminnm h1, h1, h1
+; CHECK-NEXT:    lastb h5, p1, z0.h
+; CHECK-NEXT:    whilels p1.h, xzr, x8
+; CHECK-NEXT:    mov w8, #90 // =0x5a
+; CHECK-NEXT:    fminnm h2, h2, h2
+; CHECK-NEXT:    str h3, [sp, #194]
+; CHECK-NEXT:    lastb h3, p2, z0.h
+; CHECK-NEXT:    whilels p2.h, xzr, x8
+; CHECK-NEXT:    str h4, [sp, #192]
+; CHECK-NEXT:    lastb h4, p1, z0.h
+; CHECK-NEXT:    mov w8, #89 // =0x59
+; CHECK-NEXT:    str h1, [sp, #190]
+; CHECK-NEXT:    lastb h1, p2, z0.h
+; CHECK-NEXT:    whilels p1.h, xzr, x8
+; CHECK-NEXT:    str h2, [sp, #188]
+; CHECK-NEXT:    fminnm h2, h5, h5
+; CHECK-NEXT:    mov w8, #88 // =0x58
+; CHECK-NEXT:    fminnm h3, h3, h3
+; CHECK-NEXT:    whilels p2.h, xzr, x8
+; CHECK-NEXT:    mov w8, #87 // =0x57
+; CHECK-NEXT:    fminnm h4, h4, h4
+; CHECK-NEXT:    lastb h5, p1, z0.h
+; CHECK-NEXT:    whilels p1.h, xzr, x8
+; CHECK-NEXT:    fminnm h1, h1, h1
+; CHECK-NEXT:    mov w8, #86 // =0x56
+; CHECK-NEXT:    str h2, [sp, #186]
+; CHECK-NEXT:    lastb h2, p2, z0.h
+; CHECK-NEXT:    whilels p2.h, xzr, x8
+; CHECK-NEXT:    str h3, [sp, #184]
+; CHECK-NEXT:    lastb h3, p1, z0.h
+; CHECK-NEXT:    mov w8, #85 // =0x55
+; CHECK-NEXT:    str h4, [sp, #182]
+; CHECK-NEXT:    lastb h4, p2, z0.h
+; CHECK-NEXT:    whilels p1.h, xzr, x8
+; CHECK-NEXT:    str h1, [sp, #180]
+; CHECK-NEXT:    fminnm h1, h5, h5
+; CHECK-NEXT:    mov w8, #84 // =0x54
+; CHECK-NEXT:    fminnm h2, h2, h2
+; CHECK-NEXT:    whilels p2.h, xzr, x8
+; CHECK-NEXT:    mov w8, #83 // =0x53
+; CHECK-NEXT:    fminnm h3, h3, h3
+; CHECK-NEXT:    lastb h5, p1, z0.h
+; CHECK-NEXT:    whilels p1.h, xzr, x8
+; CHECK-NEXT:    mov w8, #82 // =0x52
+; CHECK-NEXT:    fminnm h4, h4, h4
+; CHECK-NEXT:    str h1, [sp, #178]
+; CHECK-NEXT:    lastb h1, p2, z0.h
+; CHECK-NEXT:    whilels p2.h, xzr, x8
+; CHECK-NEXT:    str h2, [sp, #176]
+; CHECK-NEXT:    lastb h2, p1, z0.h
+; CHECK-NEXT:    mov w8, #81 // =0x51
+; CHECK-NEXT:    str h3, [sp, #174]
+; CHECK-NEXT:    lastb h3, p2, z0.h
+; CHECK-NEXT:    whilels p1.h, xzr, x8
+; CHECK-NEXT:    str h4, [sp, #172]
+; CHECK-NEXT:    fminnm h4, h5, h5
+; CHECK-NEXT:    mov w8, #80 // =0x50
+; CHECK-NEXT:    fminnm h1, h1, h1
+; CHECK-NEXT:    whilels p2.h, xzr, x8
+; CHECK-NEXT:    mov w8, #79 // =0x4f
+; CHECK-NEXT:    fminnm h2, h2, h2
+; CHECK-NEXT:    lastb h5, p1, z0.h
+; CHECK-NEXT:    whilels p1.h, xzr, x8
+; CHECK-NEXT:    fminnm h3, h3, h3
+; CHECK-NEXT:    mov w8, #78 // =0x4e
+; CHECK-NEXT:    str h4, [sp, #170]
+; CHECK-NEXT:    lastb h4, p2, z0.h
+; CHECK-NEXT:    whilels p2.h, xzr, x8
+; CHECK-NEXT:    str h1, [sp, #168]
+; CHECK-NEXT:    lastb h1, p1, z0.h
+; CHECK-NEXT:    mov w8, #77 // =0x4d
+; CHECK-NEXT:    str h2, [sp, #166]
+; CHECK-NEXT:    lastb h2, p2, z0.h
+; CHECK-NEXT:    whilels p1.h, xzr, x8
+; CHECK-NEXT:    str h3, [sp, #164]
+; CHECK-NEXT:    fminnm h3, h5, h5
+; CHECK-NEXT:    mov w8, #76 // =0x4c
+; CHECK-NEXT:    fminnm h4, h4, h4
+; CHECK-NEXT:    whilels p2.h, xzr, x8
+; CHECK-NEXT:    mov w8, #75 // =0x4b
+; CHECK-NEXT:    fminnm h1, h1, h1
+; CHECK-NEXT:    lastb h5, p1, z0.h
+; CHECK-NEXT:    whilels p1.h, xzr, x8
+; CHECK-NEXT:    mov w8, #74 // =0x4a
+; CHECK-NEXT:    fminnm h2, h2, h2
+; CHECK-NEXT:    str h3, [sp, #162]
+; CHECK-NEXT:    lastb h3, p2, z0.h
+; CHECK-NEXT:    whilels p2.h, xzr, x8
+; CHECK-NEXT:    str h4, [sp, #160]
+; CHECK-NEXT:    lastb h4, p1, z0.h
+; CHECK-NEXT:    mov w8, #73 // =0x49
+; CHECK-NEXT:    str h1, [sp, #158]
+; CHECK-NEXT:    lastb h1, p2, z0.h
+; CHECK-NEXT:    whilels p1.h, xzr, x8
+; CHECK-NEXT:    str h2, [sp, #156]
+; CHECK-NEXT:    fminnm h2, h5, h5
+; CHECK-NEXT:    mov w8, #72 // =0x48
+; CHECK-NEXT:    fminnm h3, h3, h3
+; CHECK-NEXT:    whilels p2.h, xzr, x8
+; CHECK-NEXT:    mov w8, #71 // =0x47
+; CHECK-NEXT:    fminnm h4, h4, h4
+; CHECK-NEXT:    lastb h5, p1, z0.h
+; CHECK-NEXT:    whilels p1.h, xzr, x8
+; CHECK-NEXT:    fminnm h1, h1, h1
+; CHECK-NEXT:    mov w8, #70 // =0x46
+; CHECK-NEXT:    str h2, [sp, #154]
+; CHECK-NEXT:    lastb h2, p2, z0.h
+; CHECK-NEXT:    whilels p2.h, xzr, x8
+; CHECK-NEXT:    str h3, [sp, #152]
+; CHECK-NEXT:    lastb h3, p1, z0.h
+; CHECK-NEXT:    mov w8, #69 // =0x45
+; CHECK-NEXT:    str h4, [sp, #150]
+; CHECK-NEXT:    lastb h4, p2, z0.h
+; CHECK-NEXT:    whilels p1.h, xzr, x8
+; CHECK-NEXT:    str h1, [sp, #148]
+; CHECK-NEXT:    fminnm h1, h5, h5
+; CHECK-NEXT:    mov w8, #68 // =0x44
+; CHECK-NEXT:    fminnm h2, h2, h2
+; CHECK-NEXT:    whilels p2.h, xzr, x8
+; CHECK-NEXT:    mov w8, #67 // =0x43
+; CHECK-NEXT:    fminnm h3, h3, h3
+; CHECK-NEXT:    lastb h5, p1, z0.h
+; CHECK-NEXT:    whilels p1.h, xzr, x8
+; CHECK-NEXT:    mov w8, #66 // =0x42
+; CHECK-NEXT:    fminnm h4, h4, h4
+; CHECK-NEXT:    str h1, [sp, #146]
+; CHECK-NEXT:    lastb h1, p2, z0.h
+; CHECK-NEXT:    whilels p2.h, xzr, x8
+; CHECK-NEXT:    str h2, [sp, #144]
+; CHECK-NEXT:    lastb h2, p1, z0.h
+; CHECK-NEXT:    mov w8, #65 // =0x41
+; CHECK-NEXT:    str h3, [sp, #142]
+; CHECK-NEXT:    lastb h3, p2, z0.h
+; CHECK-NEXT:    whilels p1.h, xzr, x8
+; CHECK-NEXT:    str h4, [sp, #140]
+; CHECK-NEXT:    fminnm h4, h5, h5
+; CHECK-NEXT:    mov w8, #64 // =0x40
+; CHECK-NEXT:    fminnm h1, h1, h1
+; CHECK-NEXT:    whilels p2.h, xzr, x8
+; CHECK-NEXT:    mov w8, #63 // =0x3f
+; CHECK-NEXT:    fminnm h2, h2, h2
+; CHECK-NEXT:    lastb h5, p1, z0.h
+; CHECK-NEXT:    whilels p1.h, xzr, x8
+; CHECK-NEXT:    fminnm h3, h3, h3
+; CHECK-NEXT:    mov w8, #62 // =0x3e
+; CHECK-NEXT:    str h4, [sp, #138]
+; CHECK-NEXT:    lastb h4, p2, z0.h
+; CHECK-NEXT:    whilels p2.h, xzr, x8
+; CHECK-NEXT:    str h1, [sp, #136]
+; CHECK-NEXT:    lastb h1, p1, z0.h
+; CHECK-NEXT:    mov w8, #61 // =0x3d
+; CHECK-NEXT:    str h2, [sp, #134]
+; CHECK-NEXT:    lastb h2, p2, z0.h
+; CHECK-NEXT:    whilels p1.h, xzr, x8
+; CHECK-NEXT:    str h3, [sp, #132]
+; CHECK-NEXT:    fminnm h3, h5, h5
+; CHECK-NEXT:    mov w8, #60 // =0x3c
+; CHECK-NEXT:    fminnm h4, h4, h4
+; CHECK-NEXT:    whilels p2.h, xzr, x8
+; CHECK-NEXT:    mov w8, #59 // =0x3b
+; CHECK-NEXT:    fminnm h1, h1, h1
+; CHECK-NEXT:    lastb h5, p1, z0.h
+; CHECK-NEXT:    whilels p1.h, xzr, x8
+; CHECK-NEXT:    mov w8, #58 // =0x3a
+; CHECK-NEXT:    fminnm h2, h2, h2
+; CHECK-NEXT:    str h3, [sp, #130]
+; CHECK-NEXT:    lastb h3, p2, z0.h
+; CHECK-NEXT:    whilels p2.h, xzr, x8
+; CHECK-NEXT:    str h4, [sp, #128]
+; CHECK-NEXT:    lastb h4, p1, z0.h
+; CHECK-NEXT:    mov w8, #57 // =0x39
+; CHECK-NEXT:    str h1, [sp, #126]
+; CHECK-NEXT:    lastb h1, p2, z0.h
+; CHECK-NEXT:    whilels p1.h, xzr, x8
+; CHECK-NEXT:    str h2, [sp, #124]
+; CHECK-NEXT:    fminnm h2, h5, h5
+; CHECK-NEXT:    mov w8, #56 // =0x38
+; CHECK-NEXT:    fminnm h3, h3, h3
+; CHECK-NEXT:    whilels p2.h, xzr, x8
+; CHECK-NEXT:    mov w8, #55 // =0x37
+; CHECK-NEXT:    fminnm h4, h4, h4
+; CHECK-NEXT:    lastb h5, p1, z0.h
+; CHECK-NEXT:    whilels p1.h, xzr, x8
+; CHECK-NEXT:    fminnm h1, h1, h1
+; CHECK-NEXT:    mov w8, #54 // =0x36
+; CHECK-NEXT:    str h2, [sp, #122]
+; CHECK-NEXT:    lastb h2, p2, z0.h
+; CHECK-NEXT:    whilels p2.h, xzr, x8
+; CHECK-NEXT:    str h3, [sp, #120]
+; CHECK-NEXT:    lastb h3, p1, z0.h
+; CHECK-NEXT:    mov w8, #53 // =0x35
+; CHECK-NEXT:    str h4, [sp, #118]
+; CHECK-NEXT:    lastb h4, p2, z0.h
+; CHECK-NEXT:    whilels p1.h, xzr, x8
+; CHECK-NEXT:    str h1, [sp, #116]
+; CHECK-NEXT:    fminnm h1, h5, h5
+; CHECK-NEXT:    mov w8, #52 // =0x34
+; CHECK-NEXT:    fminnm h2, h2, h2
+; CHECK-NEXT:    whilels p2.h, xzr, x8
+; CHECK-NEXT:    mov w8, #51 // =0x33
+; CHECK-NEXT:    fminnm h3, h3, h3
+; CHECK-NEXT:    lastb h5, p1, z0.h
+; CHECK-NEXT:    whilels p1.h, xzr, x8
+; CHECK-NEXT:    mov w8, #50 // =0x32
+; CHECK-NEXT:    fminnm h4, h4, h4
+; CHECK-NEXT:    str h1, [sp, #114]
+; CHECK-NEXT:    lastb h1, p2, z0.h
+; CHECK-NEXT:    whilels p2.h, xzr, x8
+; CHECK-NEXT:    str h2, [sp, #112]
+; CHECK-NEXT:    lastb h2, p1, z0.h
+; CHECK-NEXT:    mov w8, #49 // =0x31
+; CHECK-NEXT:    str h3, [sp, #110]
+; CHECK-NEXT:    lastb h3, p2, z0.h
+; CHECK-NEXT:    whilels p1.h, xzr, x8
+; CHECK-NEXT:    str h4, [sp, #108]
+; CHECK-NEXT:    fminnm h4, h5, h5
+; CHECK-NEXT:    mov w8, #48 // =0x30
+; CHECK-NEXT:    fminnm h1, h1, h1
+; CHECK-NEXT:    whilels p2.h, xzr, x8
+; CHECK-NEXT:    mov w8, #47 // =0x2f
+; CHECK-NEXT:    fminnm h2, h2, h2
+; CHECK-NEXT:    lastb h5, p1, z0.h
+; CHECK-NEXT:    whilels p1.h, xzr, x8
+; CHECK-NEXT:    fminnm h3, h3, h3
+; CHECK-NEXT:    mov w8, #46 // =0x2e
+; CHECK-NEXT:    str h4, [sp, #106]
+; CHECK-NEXT:    lastb h4, p2, z0.h
+; CHECK-NEXT:    whilels p2.h, xzr, x8
+; CHECK-NEXT:    str h1, [sp, #104]
+; CHECK-NEXT:    lastb h1, p1, z0.h
+; CHECK-NEXT:    mov w8, #45 // =0x2d
+; CHECK-NEXT:    str h2, [sp, #102]
+; CHECK-NEXT:    lastb h2, p2, z0.h
+; CHECK-NEXT:    whilels p1.h, xzr, x8
+; CHECK-NEXT:    str h3, [sp, #100]
+; CHECK-NEXT:    fminnm h3, h5, h5
+; CHECK-NEXT:    mov w8, #44 // =0x2c
+; CHECK-NEXT:    fminnm h4, h4, h4
+; CHECK-NEXT:    whilels p2.h, xzr, x8
+; CHECK-NEXT:    mov w8, #43 // =0x2b
+; CHECK-NEXT:    fminnm h1, h1, h1
+; CHECK-NEXT:    lastb h5, p1, z0.h
+; CHECK-NEXT:    whilels p1.h, xzr, x8
+; CHECK-NEXT:    fminnm h2, h2, h2
+; CHECK-NEXT:    mov w8, #42 // =0x2a
+; CHECK-NEXT:    str h3, [sp, #98]
+; CHECK-NEXT:    lastb h3, p2, z0.h
+; CHECK-NEXT:    whilels p2.h, xzr, x8
+; CHECK-NEXT:    str h4, [sp, #96]
+; CHECK-NEXT:    lastb h4, p1, z0.h
+; CHECK-NEXT:    mov w8, #41 // =0x29
+; CHECK-NEXT:    str h1, [sp, #94]
+; CHECK-NEXT:    lastb h1, p2, z0.h
+; CHECK-NEXT:    whilels p1.h, xzr, x8
+; CHECK-NEXT:    str h2, [sp, #92]
+; CHECK-NEXT:    fminnm h2, h5, h5
+; CHECK-NEXT:    mov w8, #40 // =0x28
+; CHECK-NEXT:    fminnm h3, h3, h3
+; CHECK-NEXT:    whilels p2.h, xzr, x8
+; CHECK-NEXT:    mov w8, #39 // =0x27
+; CHECK-NEXT:    fminnm h4, h4, h4
+; CHECK-NEXT:    lastb h5, p1, z0.h
+; CHECK-NEXT:    whilels p1.h, xzr, x8
+; CHECK-NEXT:    fminnm h1, h1, h1
+; CHECK-NEXT:    mov w8, #38 // =0x26
+; CHECK-NEXT:    str h2, [sp, #90]
+; CHECK-NEXT:    lastb h2, p2, z0.h
+; CHECK-NEXT:    str h3, [sp, #88]
+; CHECK-NEXT:    lastb h3, p1, z0.h
+; CHECK-NEXT:    whilels p1.h, xzr, x8
+; CHECK-NEXT:    mov w8, #37 // =0x25
+; CHECK-NEXT:    str h4, [sp, #86]
+; CHECK-NEXT:    whilels p2.h, xzr, x8
+; CHECK-NEXT:    mov w8, #36 // =0x24
+; CHECK-NEXT:    lastb h4, p1, z0.h
+; CHECK-NEXT:    whilels p1.h, xzr, x8
+; CHECK-NEXT:    mov w8, #35 // =0x23
+; CHECK-NEXT:    str h1, [sp, #84]
+; CHECK-NEXT:    fminnm h1, h5, h5
+; CHECK-NEXT:    lastb h5, p2, z0.h
+; CHECK-NEXT:    whilels p2.h, xzr, x8
+; CHECK-NEXT:    mov w8, #34 // =0x22
+; CHECK-NEXT:    fminnm h2, h2, h2
+; CHECK-NEXT:    lastb h6, p1, z0.h
+; CHECK-NEXT:    whilels p1.h, xzr, x8
+; CHECK-NEXT:    mov w8, #33 // =0x21
+; CHECK-NEXT:    fminnm h3, h3, h3
+; CHECK-NEXT:    lastb h7, p2, z0.h
+; CHECK-NEXT:    whilels p2.h, xzr, x8
+; CHECK-NEXT:    mov w8, #32 // =0x20
+; CHECK-NEXT:    fminnm h4, h4, h4
+; CHECK-NEXT:    lastb h16, p1, z0.h
+; CHECK-NEXT:    whilels p1.h, xzr, x8
+; CHECK-NEXT:    lastb h17, p2, z0.h
+; CHECK-NEXT:    str h1, [sp, #82]
+; CHECK-NEXT:    fminnm h1, h5, h5
+; CHECK-NEXT:    str h2, [sp, #80]
+; CHECK-NEXT:    fminnm h2, h6, h6
+; CHECK-NEXT:    lastb h5, p1, z0.h
+; CHECK-NEXT:    str h3, [sp, #78]
+; CHECK-NEXT:    fminnm h3, h7, h7
+; CHECK-NEXT:    mov z6.h, z0.h[31]
+; CHECK-NEXT:    str h4, [sp, #76]
+; CHECK-NEXT:    fminnm h4, h16, h16
+; CHECK-NEXT:    mov z7.h, z0.h[30]
+; CHECK-NEXT:    str h1, [sp, #74]
+; CHECK-NEXT:    fminnm h1, h17, h17
+; CHECK-NEXT:    mov x8, sp
+; CHECK-NEXT:    str h2, [sp, #72]
+; CHECK-NEXT:    fminnm h2, h5, h5
+; CHECK-NEXT:    mov z5.h, z0.h[29]
+; CHECK-NEXT:    str h3, [sp, #70]
+; CHECK-NEXT:    fminnm h3, h6, h6
+; CHECK-NEXT:    mov z6.h, z0.h[28]
+; CHECK-NEXT:    str h4, [sp, #68]
+; CHECK-NEXT:    fminnm h4, h7, h7
+; CHECK-NEXT:    mov z7.h, z0.h[27]
+; CHECK-NEXT:    str h1, [sp, #66]
+; CHECK-NEXT:    fminnm h1, h5, h5
+; CHECK-NEXT:    mov z5.h, z0.h[26]
+; CHECK-NEXT:    str h2, [sp, #64]
+; CHECK-NEXT:    fminnm h2, h6, h6
+; CHECK-NEXT:    mov z6.h, z0.h[25]
+; CHECK-NEXT:    str h3, [sp, #62]
+; CHECK-NEXT:    fminnm h3, h7, h7
+; CHECK-NEXT:    mov z7.h, z0.h[24]
+; CHECK-NEXT:    str h4, [sp, #60]
+; CHECK-NEXT:    fminnm h4, h5, h5
+; CHECK-NEXT:    mov z5.h, z0.h[23]
+; CHECK-NEXT:    str h1, [sp, #58]
+; CHECK-NEXT:    fminnm h1, h6, h6
+; CHECK-NEXT:    mov z6.h, z0.h[22]
+; CHECK-NEXT:    str h2, [sp, #56]
+; CHECK-NEXT:    fminnm h2, h7, h7
+; CHECK-NEXT:    mov z7.h, z0.h[21]
+; CHECK-NEXT:    str h3, [sp, #54]
+; CHECK-NEXT:    fminnm h3, h5, h5
+; CHECK-NEXT:    mov z5.h, z0.h[20]
+; CHECK-NEXT:    str h4, [sp, #52]
+; CHECK-NEXT:    fminnm h4, h6, h6
+; CHECK-NEXT:    mov z6.h, z0.h[19]
+; CHECK-NEXT:    str h1, [sp, #50]
+; CHECK-NEXT:    fminnm h1, h7, h7
+; CHECK-NEXT:    mov z7.h, z0.h[18]
+; CHECK-NEXT:    str h2, [sp, #48]
+; CHECK-NEXT:    fminnm h2, h5, h5
+; CHECK-NEXT:    mov z5.h, z0.h[17]
+; CHECK-NEXT:    str h3, [sp, #46]
+; CHECK-NEXT:    fminnm h3, h6, h6
+; CHECK-NEXT:    mov z6.h, z0.h[16]
+; CHECK-NEXT:    str h4, [sp, #44]
+; CHECK-NEXT:    fminnm h4, h7, h7
+; CHECK-NEXT:    mov z7.h, z0.h[15]
+; CHECK-NEXT:    str h1, [sp, #42]
+; CHECK-NEXT:    fminnm h1, h5, h5
+; CHECK-NEXT:    mov z5.h, z0.h[14]
+; CHECK-NEXT:    str h2, [sp, #40]
+; CHECK-NEXT:    fminnm h2, h6, h6
+; CHECK-NEXT:    mov z6.h, z0.h[13]
+; CHECK-NEXT:    str h3, [sp, #38]
+; CHECK-NEXT:    fminnm h3, h7, h7
+; CHECK-NEXT:    mov z7.h, z0.h[12]
+; CHECK-NEXT:    str h4, [sp, #36]
+; CHECK-NEXT:    fminnm h4, h5, h5
+; CHECK-NEXT:    mov z5.h, z0.h[11]
+; CHECK-NEXT:    str h1, [sp, #34]
+; CHECK-NEXT:    fminnm h1, h6, h6
+; CHECK-NEXT:    mov z6.h, z0.h[10]
+; CHECK-NEXT:    str h2, [sp, #32]
+; CHECK-NEXT:    fminnm h2, h7, h7
+; CHECK-NEXT:    mov z7.h, z0.h[9]
+; CHECK-NEXT:    str h3, [sp, #30]
+; CHECK-NEXT:    fminnm h3, h5, h5
+; CHECK-NEXT:    mov z5.h, z0.h[8]
+; CHECK-NEXT:    str h4, [sp, #28]
+; CHECK-NEXT:    fminnm h4, h6, h6
+; CHECK-NEXT:    mov z6.h, z0.h[7]
+; CHECK-NEXT:    str h1, [sp, #26]
+; CHECK-NEXT:    fminnm h1, h7, h7
+; CHECK-NEXT:    mov z7.h, z0.h[6]
+; CHECK-NEXT:    str h2, [sp, #24]
+; CHECK-NEXT:    fminnm h2, h5, h5
+; CHECK-NEXT:    mov z5.h, z0.h[5]
+; CHECK-NEXT:    str h3, [sp, #22]
+; CHECK-NEXT:    fminnm h3, h6, h6
+; CHECK-NEXT:    mov z6.h, z0.h[4]
+; CHECK-NEXT:    str h4, [sp, #20]
+; CHECK-NEXT:    fminnm h4, h7, h7
+; CHECK-NEXT:    mov z7.h, z0.h[3]
+; CHECK-NEXT:    str h1, [sp, #18]
+; CHECK-NEXT:    fminnm h1, h5, h5
+; CHECK-NEXT:    mov z5.h, z0.h[2]
+; CHECK-NEXT:    mov z0.h, z0.h[1]
+; CHECK-NEXT:    str h2, [sp, #16]
+; CHECK-NEXT:    fminnm h2, h6, h6
+; CHECK-NEXT:    str h3, [sp, #14]
+; CHECK-NEXT:    fminnm h3, h7, h7
+; CHECK-NEXT:    str h4, [sp, #12]
+; CHECK-NEXT:    fminnm h4, h5, h5
+; CHECK-NEXT:    fminnm h0, h0, h0
+; CHECK-NEXT:    str h1, [sp, #10]
+; CHECK-NEXT:    str h2, [sp, #8]
+; CHECK-NEXT:    str h3, [sp, #6]
+; CHECK-NEXT:    str h4, [sp, #4]
+; CHECK-NEXT:    str h0, [sp, #2]
+; CHECK-NEXT:    ld1h { z0.h }, p0/z, [x8]
+; CHECK-NEXT:    st1h { z0.h }, p0, [x0]
+; CHECK-NEXT:    mov sp, x29
+; CHECK-NEXT:    ldp x29, x30, [sp], #16 // 16-byte Folded Reload
+; CHECK-NEXT:    ret
+  %op = load <128 x half>, ptr %a
+  %res = call <128 x half> @llvm.canonicalize.v128f16(<128 x half> %op)
+  store <128 x half> %res, ptr %a
+  ret void
+}
+
+; Don't use SVE for 64-bit vectors.
+define <2 x float> @fcanonicalize_v2f32(<2 x float> %op) vscale_range(2,0) #0 {
+; CHECK-LABEL: fcanonicalize_v2f32:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    fminnm v0.2s, v0.2s, v0.2s
+; CHECK-NEXT:    ret
+  %res = call <2 x float> @llvm.canonicalize.v2f32(<2 x float> %op)
+  ret <2 x float> %res
+}
+
+; Don't use SVE for 128-bit vectors.
+define <4 x float> @fcanonicalize_v4f32(<4 x float> %op) vscale_range(2,0) #0 {
+; CHECK-LABEL: fcanonicalize_v4f32:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    fminnm v0.4s, v0.4s, v0.4s
+; CHECK-NEXT:    ret
+  %res = call <4 x float> @llvm.canonicalize.v4f32(<4 x float> %op)
+  ret <4 x float> %res
+}
+
+define void @fcanonicalize_v8f32(ptr %a) vscale_range(2,0) #0 {
+; CHECK-LABEL: fcanonicalize_v8f32:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    stp x29, x30, [sp, #-16]! // 16-byte Folded Spill
+; CHECK-NEXT:    sub x9, sp, #48
+; CHECK-NEXT:    mov x29, sp
+; CHECK-NEXT:    and sp, x9, #0xffffffffffffffe0
+; CHECK-NEXT:    .cfi_def_cfa w29, 16
+; CHECK-NEXT:    .cfi_offset w30, -8
+; CHECK-NEXT:    .cfi_offset w29, -16
+; CHECK-NEXT:    ptrue p0.s, vl8
+; CHECK-NEXT:    mov x8, sp
+; CHECK-NEXT:    ld1w { z0.s }, p0/z, [x0]
+; CHECK-NEXT:    mov z1.s, z0.s[7]
+; CHECK-NEXT:    mov z2.s, z0.s[6]
+; CHECK-NEXT:    mov z3.s, z0.s[5]
+; CHECK-NEXT:    mov z4.s, z0.s[4]
+; CHECK-NEXT:    mov z5.s, z0.s[3]
+; CHECK-NEXT:    mov z6.s, z0.s[2]
+; CHECK-NEXT:    mov z7.s, z0.s[1]
+; CHECK-NEXT:    fminnm s0, s0, s0
+; CHECK-NEXT:    fminnm s1, s1, s1
+; CHECK-NEXT:    fminnm s2, s2, s2
+; CHECK-NEXT:    fminnm s3, s3, s3
+; CHECK-NEXT:    fminnm s4, s4, s4
+; CHECK-NEXT:    fminnm s5, s5, s5
+; CHECK-NEXT:    stp s2, s1, [sp, #24]
+; CHECK-NEXT:    fminnm s1, s6, s6
+; CHECK-NEXT:    fminnm s2, s7, s7
+; CHECK-NEXT:    stp s4, s3, [sp, #16]
+; CHECK-NEXT:    stp s1, s5, [sp, #8]
+; CHECK-NEXT:    stp s0, s2, [sp]
+; CHECK-NEXT:    ld1w { z0.s }, p0/z, [x8]
+; CHECK-NEXT:    st1w { z0.s }, p0, [x0]
+; CHECK-NEXT:    mov sp, x29
+; CHECK-NEXT:    ldp x29, x30, [sp], #16 // 16-byte Folded Reload
+; CHECK-NEXT:    ret
+  %op = load <8 x float>, ptr %a
+  %res = call <8 x float> @llvm.canonicalize.v8f32(<8 x float> %op)
+  store <8 x float> %res, ptr %a
+  ret void
+}
+
+define void @fcanonicalize_v16f32(ptr %a) #0 {
+; VBITS_GE_256-LABEL: fcanonicalize_v16f32:
+; VBITS_GE_256:       // %bb.0:
+; VBITS_GE_256-NEXT:    stp x29, x30, [sp, #-16]! // 16-byte Folded Spill
+; VBITS_GE_256-NEXT:    sub x9, sp, #80
+; VBITS_GE_256-NEXT:    mov x29, sp
+; VBITS_GE_256-NEXT:    and sp, x9, #0xffffffffffffffe0
+; VBITS_GE_256-NEXT:    .cfi_def_cfa w29, 16
+; VBITS_GE_256-NEXT:    .cfi_offset w30, -8
+; VBITS_GE_256-NEXT:    .cfi_offset w29, -16
+; VBITS_GE_256-NEXT:    ptrue p0.s, vl8
+; VBITS_GE_256-NEXT:    mov x8, #8 // =0x8
+; VBITS_GE_256-NEXT:    add x9, sp, #32
+; VBITS_GE_256-NEXT:    ld1w { z0.s }, p0/z, [x0]
+; VBITS_GE_256-NEXT:    ld1w { z7.s }, p0/z, [x0, x8, lsl #2]
+; VBITS_GE_256-NEXT:    mov z1.s, z0.s[7]
+; VBITS_GE_256-NEXT:    mov z2.s, z0.s[6]
+; VBITS_GE_256-NEXT:    mov z4.s, z0.s[5]
+; VBITS_GE_256-NEXT:    mov z5.s, z0.s[4]
+; VBITS_GE_256-NEXT:    mov z6.s, z0.s[1]
+; VBITS_GE_256-NEXT:    fminnm s3, s0, s0
+; VBITS_GE_256-NEXT:    mov z16.s, z0.s[3]
+; VBITS_GE_256-NEXT:    mov z0.s, z0.s[2]
+; VBITS_GE_256-NEXT:    fminnm s1, s1, s1
+; VBITS_GE_256-NEXT:    fminnm s2, s2, s2
+; VBITS_GE_256-NEXT:    fminnm s4, s4, s4
+; VBITS_GE_256-NEXT:    fminnm s5, s5, s5
+; VBITS_GE_256-NEXT:    fminnm s6, s6, s6
+; VBITS_GE_256-NEXT:    fminnm s16, s16, s16
+; VBITS_GE_256-NEXT:    fminnm s0, s0, s0
+; VBITS_GE_256-NEXT:    stp s2, s1, [sp, #24]
+; VBITS_GE_256-NEXT:    mov z1.s, z7.s[6]
+; VBITS_GE_256-NEXT:    mov z2.s, z7.s[5]
+; VBITS_GE_256-NEXT:    stp s3, s6, [sp]
+; VBITS_GE_256-NEXT:    mov z3.s, z7.s[7]
+; VBITS_GE_256-NEXT:    mov z6.s, z7.s[1]
+; VBITS_GE_256-NEXT:    stp s5, s4, [sp, #16]
+; VBITS_GE_256-NEXT:    mov z4.s, z7.s[4]
+; VBITS_GE_256-NEXT:    mov z5.s, z7.s[3]
+; VBITS_GE_256-NEXT:    fminnm s1, s1, s1
+; VBITS_GE_256-NEXT:    fminnm s2, s2, s2
+; VBITS_GE_256-NEXT:    stp s0, s16, [sp, #8]
+; VBITS_GE_256-NEXT:    fminnm s3, s3, s3
+; VBITS_GE_256-NEXT:    mov z0.s, z7.s[2]
+; VBITS_GE_256-NEXT:    fminnm s4, s4, s4
+; VBITS_GE_256-NEXT:    fminnm s5, s5, s5
+; VBITS_GE_256-NEXT:    fminnm s0, s0, s0
+; VBITS_GE_256-NEXT:    stp s1, s3, [sp, #56]
+; VBITS_GE_256-NEXT:    fminnm s1, s7, s7
+; VBITS_GE_256-NEXT:    stp s4, s2, [sp, #48]
+; VBITS_GE_256-NEXT:    fminnm s2, s6, s6
+; VBITS_GE_256-NEXT:    stp s0, s5, [sp, #40]
+; VBITS_GE_256-NEXT:    stp s1, s2, [sp, #32]
+; VBITS_GE_256-NEXT:    ld1w { z0.s }, p0/z, [x9]
+; VBITS_GE_256-NEXT:    mov x9, sp
+; VBITS_GE_256-NEXT:    ld1w { z1.s }, p0/z, [x9]
+; VBITS_GE_256-NEXT:    st1w { z0.s }, p0, [x0, x8, lsl #2]
+; VBITS_GE_256-NEXT:    st1w { z1.s }, p0, [x0]
+; VBITS_GE_256-NEXT:    mov sp, x29
+; VBITS_GE_256-NEXT:    ldp x29, x30, [sp], #16 // 16-byte Folded Reload
+; VBITS_GE_256-NEXT:    ret
+;
+; VBITS_GE_512-LABEL: fcanonicalize_v16f32:
+; VBITS_GE_512:       // %bb.0:
+; VBITS_GE_512-NEXT:    stp x29, x30, [sp, #-16]! // 16-byte Folded Spill
+; VBITS_GE_512-NEXT:    sub x9, sp, #112
+; VBITS_GE_512-NEXT:    mov x29, sp
+; VBITS_GE_512-NEXT:    and sp, x9, #0xffffffffffffffc0
+; VBITS_GE_512-NEXT:    .cfi_def_cfa w29, 16
+; VBITS_GE_512-NEXT:    .cfi_offset w30, -8
+; VBITS_GE_512-NEXT:    .cfi_offset w29, -16
+; VBITS_GE_512-NEXT:    ptrue p0.s, vl16
+; VBITS_GE_512-NEXT:    mov x8, sp
+; VBITS_GE_512-NEXT:    ld1w { z0.s }, p0/z, [x0]
+; VBITS_GE_512-NEXT:    mov z1.s, z0.s[15]
+; VBITS_GE_512-NEXT:    mov z2.s, z0.s[14]
+; VBITS_GE_512-NEXT:    mov z3.s, z0.s[13]
+; VBITS_GE_512-NEXT:    mov z4.s, z0.s[12]
+; VBITS_GE_512-NEXT:    mov z5.s, z0.s[11]
+; VBITS_GE_512-NEXT:    mov z6.s, z0.s[10]
+; VBITS_GE_512-NEXT:    mov z7.s, z0.s[9]
+; VBITS_GE_512-NEXT:    mov z16.s, z0.s[8]
+; VBITS_GE_512-NEXT:    fminnm s1, s1, s1
+; VBITS_GE_512-NEXT:    fminnm s2, s2, s2
+; VBITS_GE_512-NEXT:    fminnm s3, s3, s3
+; VBITS_GE_512-NEXT:    fminnm s4, s4, s4
+; VBITS_GE_512-NEXT:    fminnm s5, s5, s5
+; VBITS_GE_512-NEXT:    fminnm s6, s6, s6
+; VBITS_GE_512-NEXT:    fminnm s7, s7, s7
+; VBITS_GE_512-NEXT:    fminnm s16, s16, s16
+; VBITS_GE_512-NEXT:    stp s2, s1, [sp, #56]
+; VBITS_GE_512-NEXT:    mov z1.s, z0.s[7]
+; VBITS_GE_512-NEXT:    mov z2.s, z0.s[6]
+; VBITS_GE_512-NEXT:    stp s4, s3, [sp, #48]
+; VBITS_GE_512-NEXT:    mov z3.s, z0.s[5]
+; VBITS_GE_512-NEXT:    mov z4.s, z0.s[4]
+; VBITS_GE_512-NEXT:    stp s6, s5, [sp, #40]
+; VBITS_GE_512-NEXT:    mov z5.s, z0.s[3]
+; VBITS_GE_512-NEXT:    mov z6.s, z0.s[2]
+; VBITS_GE_512-NEXT:    fminnm s1, s1, s1
+; VBITS_GE_512-NEXT:    fminnm s2, s2, s2
+; VBITS_GE_512-NEXT:    stp s16, s7, [sp, #32]
+; VBITS_GE_512-NEXT:    mov z7.s, z0.s[1]
+; VBITS_GE_512-NEXT:    fminnm s3, s3, s3
+; VBITS_GE_512-NEXT:    fminnm s4, s4, s4
+; VBITS_GE_512-NEXT:    fminnm s5, s5, s5
+; VBITS_GE_512-NEXT:    fminnm s0, s0, s0
+; VBITS_GE_512-NEXT:    stp s2, s1, [sp, #24]
+; VBITS_GE_512-NEXT:    fminnm s1, s6, s6
+; VBITS_GE_512-NEXT:    fminnm s2, s7, s7
+; VBITS_GE_512-NEXT:    stp s4, s3, [sp, #16]
+; VBITS_GE_512-NEXT:    stp s1, s5, [sp, #8]
+; VBITS_GE_512-NEXT:    stp s0, s2, [sp]
+; VBITS_GE_512-NEXT:    ld1w { z0.s }, p0/z, [x8]
+; VBITS_GE_512-NEXT:    st1w { z0.s }, p0, [x0]
+; VBITS_GE_512-NEXT:    mov sp, x29
+; VBITS_GE_512-NEXT:    ldp x29, x30, [sp], #16 // 16-byte Folded Reload
+; VBITS_GE_512-NEXT:    ret
+  %op = load <16 x float>, ptr %a
+  %res = call <16 x float> @llvm.canonicalize.v16f32(<16 x float> %op)
+  store <16 x float> %res, ptr %a
+  ret void
+}
+
+define void @fcanonicalize_v32f32(ptr %a) vscale_range(8,0) #0 {
+; CHECK-LABEL: fcanonicalize_v32f32:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    stp x29, x30, [sp, #-16]! // 16-byte Folded Spill
+; CHECK-NEXT:    sub x9, sp, #240
+; CHECK-NEXT:    mov x29, sp
+; CHECK-NEXT:    and sp, x9, #0xffffffffffffff80
+; CHECK-NEXT:    .cfi_def_cfa w29, 16
+; CHECK-NEXT:    .cfi_offset w30, -8
+; CHECK-NEXT:    .cfi_offset w29, -16
+; CHECK-NEXT:    ptrue p0.s, vl32
+; CHECK-NEXT:    mov w8, #31 // =0x1f
+; CHECK-NEXT:    whilels p1.s, xzr, x8
+; CHECK-NEXT:    mov w8, #30 // =0x1e
+; CHECK-NEXT:    ld1w { z0.s }, p0/z, [x0]
+; CHECK-NEXT:    whilels p2.s, xzr, x8
+; CHECK-NEXT:    mov w8, #29 // =0x1d
+; CHECK-NEXT:    lastb s1, p1, z0.s
+; CHECK-NEXT:    whilels p1.s, xzr, x8
+; CHECK-NEXT:    mov w8, #28 // =0x1c
+; CHECK-NEXT:    lastb s2, p2, z0.s
+; CHECK-NEXT:    whilels p2.s, xzr, x8
+; CHECK-NEXT:    mov w8, #27 // =0x1b
+; CHECK-NEXT:    lastb s3, p1, z0.s
+; CHECK-NEXT:    whilels p1.s, xzr, x8
+; CHECK-NEXT:    mov w8, #26 // =0x1a
+; CHECK-NEXT:    lastb s4, p2, z0.s
+; CHECK-NEXT:    whilels p2.s, xzr, x8
+; CHECK-NEXT:    mov w8, #25 // =0x19
+; CHECK-NEXT:    lastb s5, p1, z0.s
+; CHECK-NEXT:    fminnm s1, s1, s1
+; CHECK-NEXT:    whilels p1.s, xzr, x8
+; CHECK-NEXT:    lastb s6, p2, z0.s
+; CHECK-NEXT:    fminnm s2, s2, s2
+; CHECK-NEXT:    mov w8, #24 // =0x18
+; CHECK-NEXT:    fminnm s3, s3, s3
+; CHECK-NEXT:    whilels p2.s, xzr, x8
+; CHECK-NEXT:    mov w8, #23 // =0x17
+; CHECK-NEXT:    fminnm s4, s4, s4
+; CHECK-NEXT:    lastb s7, p1, z0.s
+; CHECK-NEXT:    whilels p1.s, xzr, x8
+; CHECK-NEXT:    fminnm s5, s5, s5
+; CHECK-NEXT:    mov w8, #22 // =0x16
+; CHECK-NEXT:    stp s2, s1, [sp, #120]
+; CHECK-NEXT:    fminnm s1, s6, s6
+; CHECK-NEXT:    lastb s2, p2, z0.s
+; CHECK-NEXT:    stp s4, s3, [sp, #112]
+; CHECK-NEXT:    lastb s3, p1, z0.s
+; CHECK-NEXT:    whilels p1.s, xzr, x8
+; CHECK-NEXT:    mov w8, #21 // =0x15
+; CHECK-NEXT:    whilels p2.s, xzr, x8
+; CHECK-NEXT:    mov w8, #20 // =0x14
+; CHECK-NEXT:    lastb s4, p1, z0.s
+; CHECK-NEXT:    whilels p1.s, xzr, x8
+; CHECK-NEXT:    mov w8, #19 // =0x13
+; CHECK-NEXT:    stp s1, s5, [sp, #104]
+; CHECK-NEXT:    lastb s5, p2, z0.s
+; CHECK-NEXT:    whilels p2.s, xzr, x8
+; CHECK-NEXT:    mov w8, #18 // =0x12
+; CHECK-NEXT:    fminnm s1, s7, s7
+; CHECK-NEXT:    fminnm s2, s2, s2
+; CHECK-NEXT:    lastb s6, p1, z0.s
+; CHECK-NEXT:    whilels p1.s, xzr, x8
+; CHECK-NEXT:    mov w8, #17 // =0x11
+; CHECK-NEXT:    lastb s7, p2, z0.s
+; CHECK-NEXT:    whilels p2.s, xzr, x8
+; CHECK-NEXT:    mov w8, #16 // =0x10
+; CHECK-NEXT:    fminnm s3, s3, s3
+; CHECK-NEXT:    fminnm s4, s4, s4
+; CHECK-NEXT:    lastb s16, p1, z0.s
+; CHECK-NEXT:    whilels p1.s, xzr, x8
+; CHECK-NEXT:    lastb s17, p2, z0.s
+; CHECK-NEXT:    fminnm s5, s5, s5
+; CHECK-NEXT:    stp s2, s1, [sp, #96]
+; CHECK-NEXT:    fminnm s1, s6, s6
+; CHECK-NEXT:    lastb s2, p1, z0.s
+; CHECK-NEXT:    fminnm s6, s7, s7
+; CHECK-NEXT:    mov x8, sp
+; CHECK-NEXT:    stp s4, s3, [sp, #88]
+; CHECK-NEXT:    fminnm s3, s16, s16
+; CHECK-NEXT:    mov z4.s, z0.s[15]
+; CHECK-NEXT:    mov z16.s, z0.s[14]
+; CHECK-NEXT:    fminnm s7, s17, s17
+; CHECK-NEXT:    stp s1, s5, [sp, #80]
+; CHECK-NEXT:    fminnm s1, s2, s2
+; CHECK-NEXT:    mov z2.s, z0.s[13]
+; CHECK-NEXT:    mov z5.s, z0.s[12]
+; CHECK-NEXT:    fminnm s4, s4, s4
+; CHECK-NEXT:    stp s3, s6, [sp, #72]
+; CHECK-NEXT:    fminnm s3, s16, s16
+; CHECK-NEXT:    mov z6.s, z0.s[11]
+; CHECK-NEXT:    mov z16.s, z0.s[10]
+; CHECK-NEXT:    fminnm s2, s2, s2
+; CHECK-NEXT:    stp s1, s7, [sp, #64]
+; CHECK-NEXT:    fminnm s1, s5, s5
+; CHECK-NEXT:    mov z5.s, z0.s[9]
+; CHECK-NEXT:    mov z7.s, z0.s[8]
+; CHECK-NEXT:    fminnm s6, s6, s6
+; CHECK-NEXT:    stp s3, s4, [sp, #56]
+; CHECK-NEXT:    fminnm s3, s16, s16
+; CHECK-NEXT:    mov z4.s, z0.s[7]
+; CHECK-NEXT:    fminnm s5, s5, s5
+; CHECK-NEXT:    mov z16.s, z0.s[6]
+; CHECK-NEXT:    stp s1, s2, [sp, #48]
+; CHECK-NEXT:    fminnm s1, s7, s7
+; CHECK-NEXT:    mov z2.s, z0.s[5]
+; CHECK-NEXT:    mov z7.s, z0.s[4]
+; CHECK-NEXT:    fminnm s4, s4, s4
+; CHECK-NEXT:    stp s3, s6, [sp, #40]
+; CHECK-NEXT:    mov z6.s, z0.s[3]
+; CHECK-NEXT:    fminnm s3, s16, s16
+; CHECK-NEXT:    fminnm s2, s2, s2
+; CHECK-NEXT:    mov z16.s, z0.s[2]
+; CHECK-NEXT:    stp s1, s5, [sp, #32]
+; CHECK-NEXT:    fminnm s1, s7, s7
+; CHECK-NEXT:    fminnm s5, s6, s6
+; CHECK-NEXT:    mov z6.s, z0.s[1]
+; CHECK-NEXT:    fminnm s0, s0, s0
+; CHECK-NEXT:    stp s3, s4, [sp, #24]
+; CHECK-NEXT:    fminnm s3, s16, s16
+; CHECK-NEXT:    stp s1, s2, [sp, #16]
+; CHECK-NEXT:    fminnm s1, s6, s6
+; CHECK-NEXT:    stp s3, s5, [sp, #8]
+; CHECK-NEXT:    stp s0, s1, [sp]
+; CHECK-NEXT:    ld1w { z0.s }, p0/z, [x8]
+; CHECK-NEXT:    st1w { z0.s }, p0, [x0]
+; CHECK-NEXT:    mov sp, x29
+; CHECK-NEXT:    ldp x29, x30, [sp], #16 // 16-byte Folded Reload
+; CHECK-NEXT:    ret
+  %op = load <32 x float>, ptr %a
+  %res = call <32 x float> @llvm.canonicalize.v32f32(<32 x float> %op)
+  store <32 x float> %res, ptr %a
+  ret void
+}
+
+define void @fcanonicalize_v64f32(ptr %a) vscale_range(16,0) #0 {
+; CHECK-LABEL: fcanonicalize_v64f32:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    stp x29, x30, [sp, #-16]! // 16-byte Folded Spill
+; CHECK-NEXT:    sub x9, sp, #496
+; CHECK-NEXT:    mov x29, sp
+; CHECK-NEXT:    and sp, x9, #0xffffffffffffff00
+; CHECK-NEXT:    .cfi_def_cfa w29, 16
+; CHECK-NEXT:    .cfi_offset w30, -8
+; CHECK-NEXT:    .cfi_offset w29, -16
+; CHECK-NEXT:    ptrue p0.s, vl64
+; CHECK-NEXT:    mov w8, #63 // =0x3f
+; CHECK-NEXT:    whilels p1.s, xzr, x8
+; CHECK-NEXT:    mov w8, #62 // =0x3e
+; CHECK-NEXT:    ld1w { z0.s }, p0/z, [x0]
+; CHECK-NEXT:    whilels p2.s, xzr, x8
+; CHECK-NEXT:    mov w8, #61 // =0x3d
+; CHECK-NEXT:    lastb s1, p1, z0.s
+; CHECK-NEXT:    whilels p1.s, xzr, x8
+; CHECK-NEXT:    mov w8, #60 // =0x3c
+; CHECK-NEXT:    lastb s2, p2, z0.s
+; CHECK-NEXT:    whilels p2.s, xzr, x8
+; CHECK-NEXT:    mov w8, #59 // =0x3b
+; CHECK-NEXT:    lastb s3, p1, z0.s
+; CHECK-NEXT:    whilels p1.s, xzr, x8
+; CHECK-NEXT:    mov w8, #58 // =0x3a
+; CHECK-NEXT:    lastb s4, p2, z0.s
+; CHECK-NEXT:    whilels p2.s, xzr, x8
+; CHECK-NEXT:    mov w8, #57 // =0x39
+; CHECK-NEXT:    fminnm s1, s1, s1
+; CHECK-NEXT:    lastb s5, p1, z0.s
+; CHECK-NEXT:    whilels p3.s, xzr, x8
+; CHECK-NEXT:    fminnm s2, s2, s2
+; CHECK-NEXT:    mov w8, #56 // =0x38
+; CHECK-NEXT:    lastb s6, p2, z0.s
+; CHECK-NEXT:    whilels p1.s, xzr, x8
+; CHECK-NEXT:    fminnm s3, s3, s3
+; CHECK-NEXT:    mov w8, #55 // =0x37
+; CHECK-NEXT:    fminnm s4, s4, s4
+; CHECK-NEXT:    whilels p2.s, xzr, x8
+; CHECK-NEXT:    mov w8, #54 // =0x36
+; CHECK-NEXT:    lastb s7, p3, z0.s
+; CHECK-NEXT:    fminnm s5, s5, s5
+; CHECK-NEXT:    stp s2, s1, [sp, #248]
+; CHECK-NEXT:    lastb s2, p1, z0.s
+; CHECK-NEXT:    whilels p1.s, xzr, x8
+; CHECK-NEXT:    fminnm s1, s6, s6
+; CHECK-NEXT:    mov w8, #53 // =0x35
+; CHECK-NEXT:    stp s4, s3, [sp, #240]
+; CHECK-NEXT:    lastb s3, p2, z0.s
+; CHECK-NEXT:    lastb s4, p1, z0.s
+; CHECK-NEXT:    whilels p1.s, xzr, x8
+; CHECK-NEXT:    mov w8, #52 // =0x34
+; CHECK-NEXT:    whilels p2.s, xzr, x8
+; CHECK-NEXT:    fminnm s2, s2, s2
+; CHECK-NEXT:    mov w8, #51 // =0x33
+; CHECK-NEXT:    stp s1, s5, [sp, #232]
+; CHECK-NEXT:    fminnm s1, s7, s7
+; CHECK-NEXT:    lastb s5, p1, z0.s
+; CHECK-NEXT:    fminnm s3, s3, s3
+; CHECK-NEXT:    fminnm s4, s4, s4
+; CHECK-NEXT:    whilels p1.s, xzr, x8
+; CHECK-NEXT:    mov w8, #50 // =0x32
+; CHECK-NEXT:    lastb s6, p2, z0.s
+; CHECK-NEXT:    whilels p2.s, xzr, x8
+; CHECK-NEXT:    mov w8, #49 // =0x31
+; CHECK-NEXT:    stp s2, s1, [sp, #224]
+; CHECK-NEXT:    lastb s1, p1, z0.s
+; CHECK-NEXT:    whilels p1.s, xzr, x8
+; CHECK-NEXT:    lastb s2, p2, z0.s
+; CHECK-NEXT:    mov w8, #48 // =0x30
+; CHECK-NEXT:    stp s4, s3, [sp, #216]
+; CHECK-NEXT:    fminnm s3, s5, s5
+; CHECK-NEXT:    fminnm s4, s6, s6
+; CHECK-NEXT:    whilels p2.s, xzr, x8
+; CHECK-NEXT:    mov w8, #47 // =0x2f
+; CHECK-NEXT:    lastb s5, p1, z0.s
+; CHECK-NEXT:    whilels p1.s, xzr, x8
+; CHECK-NEXT:    mov w8, #46 // =0x2e
+; CHECK-NEXT:    lastb s6, p2, z0.s
+; CHECK-NEXT:    whilels p2.s, xzr, x8
+; CHECK-NEXT:    fminnm s1, s1, s1
+; CHECK-NEXT:    fminnm s2, s2, s2
+; CHECK-NEXT:    stp s4, s3, [sp, #208]
+; CHECK-NEXT:    lastb s3, p1, z0.s
+; CHECK-NEXT:    mov w8, #45 // =0x2d
+; CHECK-NEXT:    lastb s4, p2, z0.s
+; CHECK-NEXT:    whilels p1.s, xzr, x8
+; CHECK-NEXT:    mov w8, #44 // =0x2c
+; CHECK-NEXT:    whilels p2.s, xzr, x8
+; CHECK-NEXT:    mov w8, #43 // =0x2b
+; CHECK-NEXT:    stp s2, s1, [sp, #200]
+; CHECK-NEXT:    fminnm s1, s5, s5
+; CHECK-NEXT:    fminnm s2, s6, s6
+; CHECK-NEXT:    fminnm s3, s3, s3
+; CHECK-NEXT:    lastb s5, p1, z0.s
+; CHECK-NEXT:    whilels p1.s, xzr, x8
+; CHECK-NEXT:    fminnm s4, s4, s4
+; CHECK-NEXT:    mov w8, #42 // =0x2a
+; CHECK-NEXT:    lastb s6, p2, z0.s
+; CHECK-NEXT:    whilels p2.s, xzr, x8
+; CHECK-NEXT:    mov w8, #41 // =0x29
+; CHECK-NEXT:    stp s2, s1, [sp, #192]
+; CHECK-NEXT:    lastb s1, p1, z0.s
+; CHECK-NEXT:    whilels p1.s, xzr, x8
+; CHECK-NEXT:    lastb s2, p2, z0.s
+; CHECK-NEXT:    mov w8, #40 // =0x28
+; CHECK-NEXT:    stp s4, s3, [sp, #184]
+; CHECK-NEXT:    fminnm s3, s5, s5
+; CHECK-NEXT:    fminnm s4, s6, s6
+; CHECK-NEXT:    whilels p2.s, xzr, x8
+; CHECK-NEXT:    mov w8, #39 // =0x27
+; CHECK-NEXT:    lastb s5, p1, z0.s
+; CHECK-NEXT:    whilels p1.s, xzr, x8
+; CHECK-NEXT:    mov w8, #38 // =0x26
+; CHECK-NEXT:    fminnm s1, s1, s1
+; CHECK-NEXT:    lastb s6, p2, z0.s
+; CHECK-NEXT:    whilels p2.s, xzr, x8
+; CHECK-NEXT:    fminnm s2, s2, s2
+; CHECK-NEXT:    stp s4, s3, [sp, #176]
+; CHECK-NEXT:    lastb s3, p1, z0.s
+; CHECK-NEXT:    mov w8, #37 // =0x25
+; CHECK-NEXT:    lastb s4, p2, z0.s
+; CHECK-NEXT:    whilels p1.s, xzr, x8
+; CHECK-NEXT:    mov w8, #36 // =0x24
+; CHECK-NEXT:    whilels p2.s, xzr, x8
+; CHECK-NEXT:    mov w8, #35 // =0x23
+; CHECK-NEXT:    stp s2, s1, [sp, #168]
+; CHECK-NEXT:    fminnm s1, s5, s5
+; CHECK-NEXT:    fminnm s2, s6, s6
+; CHECK-NEXT:    fminnm s3, s3, s3
+; CHECK-NEXT:    lastb s5, p1, z0.s
+; CHECK-NEXT:    whilels p1.s, xzr, x8
+; CHECK-NEXT:    fminnm s4, s4, s4
+; CHECK-NEXT:    mov w8, #34 // =0x22
+; CHECK-NEXT:    lastb s6, p2, z0.s
+; CHECK-NEXT:    whilels p2.s, xzr, x8
+; CHECK-NEXT:    mov w8, #33 // =0x21
+; CHECK-NEXT:    stp s2, s1, [sp, #160]
+; CHECK-NEXT:    lastb s1, p1, z0.s
+; CHECK-NEXT:    whilels p1.s, xzr, x8
+; CHECK-NEXT:    lastb s2, p2, z0.s
+; CHECK-NEXT:    mov w8, #32 // =0x20
+; CHECK-NEXT:    stp s4, s3, [sp, #152]
+; CHECK-NEXT:    fminnm s3, s5, s5
+; CHECK-NEXT:    fminnm s4, s6, s6
+; CHECK-NEXT:    whilels p2.s, xzr, x8
+; CHECK-NEXT:    mov w8, #31 // =0x1f
+; CHECK-NEXT:    lastb s5, p1, z0.s
+; CHECK-NEXT:    whilels p1.s, xzr, x8
+; CHECK-NEXT:    mov w8, #30 // =0x1e
+; CHECK-NEXT:    fminnm s1, s1, s1
+; CHECK-NEXT:    lastb s6, p2, z0.s
+; CHECK-NEXT:    whilels p2.s, xzr, x8
+; CHECK-NEXT:    fminnm s2, s2, s2
+; CHECK-NEXT:    stp s4, s3, [sp, #144]
+; CHECK-NEXT:    lastb s3, p1, z0.s
+; CHECK-NEXT:    mov w8, #29 // =0x1d
+; CHECK-NEXT:    lastb s4, p2, z0.s
+; CHECK-NEXT:    whilels p1.s, xzr, x8
+; CHECK-NEXT:    mov w8, #28 // =0x1c
+; CHECK-NEXT:    whilels p2.s, xzr, x8
+; CHECK-NEXT:    mov w8, #27 // =0x1b
+; CHECK-NEXT:    stp s2, s1, [sp, #136]
+; CHECK-NEXT:    fminnm s1, s5, s5
+; CHECK-NEXT:    fminnm s2, s6, s6
+; CHECK-NEXT:    fminnm s3, s3, s3
+; CHECK-NEXT:    lastb s5, p1, z0.s
+; CHECK-NEXT:    whilels p1.s, xzr, x8
+; CHECK-NEXT:    fminnm s4, s4, s4
+; CHECK-NEXT:    mov w8, #26 // =0x1a
+; CHECK-NEXT:    lastb s6, p2, z0.s
+; CHECK-NEXT:    whilels p2.s, xzr, x8
+; CHECK-NEXT:    mov w8, #25 // =0x19
+; CHECK-NEXT:    stp s2, s1, [sp, #128]
+; CHECK-NEXT:    lastb s1, p1, z0.s
+; CHECK-NEXT:    whilels p1.s, xzr, x8
+; CHECK-NEXT:    lastb s2, p2, z0.s
+; CHECK-NEXT:    mov w8, #24 // =0x18
+; CHECK-NEXT:    stp s4, s3, [sp, #120]
+; CHECK-NEXT:    fminnm s3, s5, s5
+; CHECK-NEXT:    fminnm s4, s6, s6
+; CHECK-NEXT:    whilels p2.s, xzr, x8
+; CHECK-NEXT:    mov w8, #23 // =0x17
+; CHECK-NEXT:    lastb s5, p1, z0.s
+; CHECK-NEXT:    whilels p1.s, xzr, x8
+; CHECK-NEXT:    fminnm s1, s1, s1
+; CHECK-NEXT:    mov w8, #22 // =0x16
+; CHECK-NEXT:    fminnm s2, s2, s2
+; CHECK-NEXT:    lastb s6, p2, z0.s
+; CHECK-NEXT:    stp s4, s3, [sp, #112]
+; CHECK-NEXT:    lastb s3, p1, z0.s
+; CHECK-NEXT:    whilels p1.s, xzr, x8
+; CHECK-NEXT:    mov w8, #21 // =0x15
+; CHECK-NEXT:    whilels p2.s, xzr, x8
+; CHECK-NEXT:    mov w8, #20 // =0x14
+; CHECK-NEXT:    lastb s4, p1, z0.s
+; CHECK-NEXT:    whilels p1.s, xzr, x8
+; CHECK-NEXT:    mov w8, #19 // =0x13
+; CHECK-NEXT:    stp s2, s1, [sp, #104]
+; CHECK-NEXT:    fminnm s1, s5, s5
+; CHECK-NEXT:    lastb s5, p2, z0.s
+; CHECK-NEXT:    whilels p2.s, xzr, x8
+; CHECK-NEXT:    mov w8, #18 // =0x12
+; CHECK-NEXT:    fminnm s2, s6, s6
+; CHECK-NEXT:    lastb s6, p1, z0.s
+; CHECK-NEXT:    whilels p1.s, xzr, x8
+; CHECK-NEXT:    mov w8, #17 // =0x11
+; CHECK-NEXT:    lastb s7, p2, z0.s
+; CHECK-NEXT:    whilels p2.s, xzr, x8
+; CHECK-NEXT:    mov w8, #16 // =0x10
+; CHECK-NEXT:    fminnm s3, s3, s3
+; CHECK-NEXT:    fminnm s4, s4, s4
+; CHECK-NEXT:    lastb s16, p1, z0.s
+; CHECK-NEXT:    whilels p1.s, xzr, x8
+; CHECK-NEXT:    lastb s17, p2, z0.s
+; CHECK-NEXT:    fminnm s5, s5, s5
+; CHECK-NEXT:    stp s2, s1, [sp, #96]
+; CHECK-NEXT:    fminnm s1, s6, s6
+; CHECK-NEXT:    lastb s2, p1, z0.s
+; CHECK-NEXT:    fminnm s6, s7, s7
+; CHECK-NEXT:    mov x8, sp
+; CHECK-NEXT:    stp s4, s3, [sp, #88]
+; CHECK-NEXT:    fminnm s3, s16, s16
+; CHECK-NEXT:    mov z4.s, z0.s[15]
+; CHECK-NEXT:    mov z16.s, z0.s[14]
+; CHECK-NEXT:    fminnm s7, s17, s17
+; CHECK-NEXT:    stp s1, s5, [sp, #80]
+; CHECK-NEXT:    fminnm s1, s2, s2
+; CHECK-NEXT:    mov z2.s, z0.s[13]
+; CHECK-NEXT:    mov z5.s, z0.s[12]
+; CHECK-NEXT:    fminnm s4, s4, s4
+; CHECK-NEXT:    stp s3, s6, [sp, #72]
+; CHECK-NEXT:    fminnm s3, s16, s16
+; CHECK-NEXT:    mov z6.s, z0.s[11]
+; CHECK-NEXT:    mov z16.s, z0.s[10]
+; CHECK-NEXT:    fminnm s2, s2, s2
+; CHECK-NEXT:    stp s1, s7, [sp, #64]
+; CHECK-NEXT:    fminnm s1, s5, s5
+; CHECK-NEXT:    mov z5.s, z0.s[9]
+; CHECK-NEXT:    mov z7.s, z0.s[8]
+; CHECK-NEXT:    fminnm s6, s6, s6
+; CHECK-NEXT:    stp s3, s4, [sp, #56]
+; CHECK-NEXT:    fminnm s3, s16, s16
+; CHECK-NEXT:    mov z4.s, z0.s[7]
+; CHECK-NEXT:    fminnm s5, s5, s5
+; CHECK-NEXT:    mov z16.s, z0.s[6]
+; CHECK-NEXT:    stp s1, s2, [sp, #48]
+; CHECK-NEXT:    fminnm s1, s7, s7
+; CHECK-NEXT:    mov z2.s, z0.s[5]
+; CHECK-NEXT:    mov z7.s, z0.s[4]
+; CHECK-NEXT:    fminnm s4, s4, s4
+; CHECK-NEXT:    stp s3, s6, [sp, #40]
+; CHECK-NEXT:    mov z6.s, z0.s[3]
+; CHECK-NEXT:    fminnm s3, s16, s16
+; CHECK-NEXT:    fminnm s2, s2, s2
+; CHECK-NEXT:    mov z16.s, z0.s[2]
+; CHECK-NEXT:    stp s1, s5, [sp, #32]
+; CHECK-NEXT:    fminnm s1, s7, s7
+; CHECK-NEXT:    fminnm s5, s6, s6
+; CHECK-NEXT:    mov z6.s, z0.s[1]
+; CHECK-NEXT:    fminnm s0, s0, s0
+; CHECK-NEXT:    stp s3, s4, [sp, #24]
+; CHECK-NEXT:    fminnm s3, s16, s16
+; CHECK-NEXT:    stp s1, s2, [sp, #16]
+; CHECK-NEXT:    fminnm s1, s6, s6
+; CHECK-NEXT:    stp s3, s5, [sp, #8]
+; CHECK-NEXT:    stp s0, s1, [sp]
+; CHECK-NEXT:    ld1w { z0.s }, p0/z, [x8]
+; CHECK-NEXT:    st1w { z0.s }, p0, [x0]
+; CHECK-NEXT:    mov sp, x29
+; CHECK-NEXT:    ldp x29, x30, [sp], #16 // 16-byte Folded Reload
+; CHECK-NEXT:    ret
+  %op = load <64 x float>, ptr %a
+  %res = call <64 x float> @llvm.canonicalize.v64f32(<64 x float> %op)
+  store <64 x float> %res, ptr %a
+  ret void
+}
+
+; TODO: This causes selection failures upstream.
+; Don't use SVE for 64-bit vectors.
+;define <1 x double> @fcanonicalize_v1f64(<1 x double> %op) vscale_range(2,0) #0 {
+;  %res = call <1 x double> @llvm.canonicalize.v1f64(<1 x double> %op)
+;  ret <1 x double> %res
+;}
+
+; Don't use SVE for 128-bit vectors.
+define <2 x double> @fcanonicalize_v2f64(<2 x double> %op) vscale_range(2,0) #0 {
+; CHECK-LABEL: fcanonicalize_v2f64:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    fminnm v0.2d, v0.2d, v0.2d
+; CHECK-NEXT:    ret
+  %res = call <2 x double> @llvm.canonicalize.v2f64(<2 x double> %op)
+  ret <2 x double> %res
+}
+
+define void @fcanonicalize_v4f64(ptr %a) vscale_range(2,0) #0 {
+; CHECK-LABEL: fcanonicalize_v4f64:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    stp x29, x30, [sp, #-16]! // 16-byte Folded Spill
+; CHECK-NEXT:    sub x9, sp, #48
+; CHECK-NEXT:    mov x29, sp
+; CHECK-NEXT:    and sp, x9, #0xffffffffffffffe0
+; CHECK-NEXT:    .cfi_def_cfa w29, 16
+; CHECK-NEXT:    .cfi_offset w30, -8
+; CHECK-NEXT:    .cfi_offset w29, -16
+; CHECK-NEXT:    ptrue p0.d, vl4
+; CHECK-NEXT:    mov x8, sp
+; CHECK-NEXT:    ld1d { z0.d }, p0/z, [x0]
+; CHECK-NEXT:    mov z1.d, z0.d[3]
+; CHECK-NEXT:    mov z2.d, z0.d[2]
+; CHECK-NEXT:    mov z3.d, z0.d[1]
+; CHECK-NEXT:    fminnm d0, d0, d0
+; CHECK-NEXT:    fminnm d1, d1, d1
+; CHECK-NEXT:    fminnm d2, d2, d2
+; CHECK-NEXT:    fminnm d3, d3, d3
+; CHECK-NEXT:    stp d2, d1, [sp, #16]
+; CHECK-NEXT:    stp d0, d3, [sp]
+; CHECK-NEXT:    ld1d { z0.d }, p0/z, [x8]
+; CHECK-NEXT:    st1d { z0.d }, p0, [x0]
+; CHECK-NEXT:    mov sp, x29
+; CHECK-NEXT:    ldp x29, x30, [sp], #16 // 16-byte Folded Reload
+; CHECK-NEXT:    ret
+  %op = load <4 x double>, ptr %a
+  %res = call <4 x double> @llvm.canonicalize.v4f64(<4 x double> %op)
+  store <4 x double> %res, ptr %a
+  ret void
+}
+
+define void @fcanonicalize_v8f64(ptr %a) #0 {
+; VBITS_GE_256-LABEL: fcanonicalize_v8f64:
+; VBITS_GE_256:       // %bb.0:
+; VBITS_GE_256-NEXT:    stp x29, x30, [sp, #-16]! // 16-byte Folded Spill
+; VBITS_GE_256-NEXT:    sub x9, sp, #80
+; VBITS_GE_256-NEXT:    mov x29, sp
+; VBITS_GE_256-NEXT:    and sp, x9, #0xffffffffffffffe0
+; VBITS_GE_256-NEXT:    .cfi_def_cfa w29, 16
+; VBITS_GE_256-NEXT:    .cfi_offset w30, -8
+; VBITS_GE_256-NEXT:    .cfi_offset w29, -16
+; VBITS_GE_256-NEXT:    ptrue p0.d, vl4
+; VBITS_GE_256-NEXT:    mov x8, #4 // =0x4
+; VBITS_GE_256-NEXT:    add x9, sp, #32
+; VBITS_GE_256-NEXT:    ld1d { z0.d }, p0/z, [x0]
+; VBITS_GE_256-NEXT:    ld1d { z3.d }, p0/z, [x0, x8, lsl #3]
+; VBITS_GE_256-NEXT:    mov z1.d, z0.d[3]
+; VBITS_GE_256-NEXT:    mov z2.d, z0.d[2]
+; VBITS_GE_256-NEXT:    mov z4.d, z0.d[1]
+; VBITS_GE_256-NEXT:    fminnm d0, d0, d0
+; VBITS_GE_256-NEXT:    mov z5.d, z3.d[3]
+; VBITS_GE_256-NEXT:    mov z6.d, z3.d[2]
+; VBITS_GE_256-NEXT:    fminnm d7, d3, d3
+; VBITS_GE_256-NEXT:    mov z3.d, z3.d[1]
+; VBITS_GE_256-NEXT:    fminnm d1, d1, d1
+; VBITS_GE_256-NEXT:    fminnm d2, d2, d2
+; VBITS_GE_256-NEXT:    fminnm d4, d4, d4
+; VBITS_GE_256-NEXT:    stp d2, d1, [sp, #16]
+; VBITS_GE_256-NEXT:    fminnm d1, d5, d5
+; VBITS_GE_256-NEXT:    fminnm d2, d6, d6
+; VBITS_GE_256-NEXT:    stp d0, d4, [sp]
+; VBITS_GE_256-NEXT:    fminnm d0, d3, d3
+; VBITS_GE_256-NEXT:    stp d2, d1, [sp, #48]
+; VBITS_GE_256-NEXT:    stp d7, d0, [sp, #32]
+; VBITS_GE_256-NEXT:    ld1d { z0.d }, p0/z, [x9]
+; VBITS_GE_256-NEXT:    mov x9, sp
+; VBITS_GE_256-NEXT:    ld1d { z1.d }, p0/z, [x9]
+; VBITS_GE_256-NEXT:    st1d { z0.d }, p0, [x0, x8, lsl #3]
+; VBITS_GE_256-NEXT:    st1d { z1.d }, p0, [x0]
+; VBITS_GE_256-NEXT:    mov sp, x29
+; VBITS_GE_256-NEXT:    ldp x29, x30, [sp], #16 // 16-byte Folded Reload
+; VBITS_GE_256-NEXT:    ret
+;
+; VBITS_GE_512-LABEL: fcanonicalize_v8f64:
+; VBITS_GE_512:       // %bb.0:
+; VBITS_GE_512-NEXT:    stp x29, x30, [sp, #-16]! // 16-byte Folded Spill
+; VBITS_GE_512-NEXT:    sub x9, sp, #112
+; VBITS_GE_512-NEXT:    mov x29, sp
+; VBITS_GE_512-NEXT:    and sp, x9, #0xffffffffffffffc0
+; VBITS_GE_512-NEXT:    .cfi_def_cfa w29, 16
+; VBITS_GE_512-NEXT:    .cfi_offset w30, -8
+; VBITS_GE_512-NEXT:    .cfi_offset w29, -16
+; VBITS_GE_512-NEXT:    ptrue p0.d, vl8
+; VBITS_GE_512-NEXT:    mov x8, sp
+; VBITS_GE_512-NEXT:    ld1d { z0.d }, p0/z, [x0]
+; VBITS_GE_512-NEXT:    mov z1.d, z0.d[7]
+; VBITS_GE_512-NEXT:    mov z2.d, z0.d[6]
+; VBITS_GE_512-NEXT:    mov z3.d, z0.d[5]
+; VBITS_GE_512-NEXT:    mov z4.d, z0.d[4]
+; VBITS_GE_512-NEXT:    mov z5.d, z0.d[3]
+; VBITS_GE_512-NEXT:    mov z6.d, z0.d[2]
+; VBITS_GE_512-NEXT:    mov z7.d, z0.d[1]
+; VBITS_GE_512-NEXT:    fminnm d0, d0, d0
+; VBITS_GE_512-NEXT:    fminnm d1, d1, d1
+; VBITS_GE_512-NEXT:    fminnm d2, d2, d2
+; VBITS_GE_512-NEXT:    fminnm d3, d3, d3
+; VBITS_GE_512-NEXT:    fminnm d4, d4, d4
+; VBITS_GE_512-NEXT:    fminnm d5, d5, d5
+; VBITS_GE_512-NEXT:    stp d2, d1, [sp, #48]
+; VBITS_GE_512-NEXT:    fminnm d1, d6, d6
+; VBITS_GE_512-NEXT:    fminnm d2, d7, d7
+; VBITS_GE_512-NEXT:    stp d4, d3, [sp, #32]
+; VBITS_GE_512-NEXT:    stp d1, d5, [sp, #16]
+; VBITS_GE_512-NEXT:    stp d0, d2, [sp]
+; VBITS_GE_512-NEXT:    ld1d { z0.d }, p0/z, [x8]
+; VBITS_GE_512-NEXT:    st1d { z0.d }, p0, [x0]
+; VBITS_GE_512-NEXT:    mov sp, x29
+; VBITS_GE_512-NEXT:    ldp x29, x30, [sp], #16 // 16-byte Folded Reload
+; VBITS_GE_512-NEXT:    ret
+  %op = load <8 x double>, ptr %a
+  %res = call <8 x double> @llvm.canonicalize.v8f64(<8 x double> %op)
+  store <8 x double> %res, ptr %a
+  ret void
+}
+
+define void @fcanonicalize_v16f64(ptr %a) vscale_range(8,0) #0 {
+; CHECK-LABEL: fcanonicalize_v16f64:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    stp x29, x30, [sp, #-16]! // 16-byte Folded Spill
+; CHECK-NEXT:    sub x9, sp, #240
+; CHECK-NEXT:    mov x29, sp
+; CHECK-NEXT:    and sp, x9, #0xffffffffffffff80
+; CHECK-NEXT:    .cfi_def_cfa w29, 16
+; CHECK-NEXT:    .cfi_offset w30, -8
+; CHECK-NEXT:    .cfi_offset w29, -16
+; CHECK-NEXT:    ptrue p0.d, vl16
+; CHECK-NEXT:    mov w8, #15 // =0xf
+; CHECK-NEXT:    whilels p1.d, xzr, x8
+; CHECK-NEXT:    mov w8, #14 // =0xe
+; CHECK-NEXT:    ld1d { z0.d }, p0/z, [x0]
+; CHECK-NEXT:    whilels p2.d, xzr, x8
+; CHECK-NEXT:    mov w8, #13 // =0xd
+; CHECK-NEXT:    whilels p3.d, xzr, x8
+; CHECK-NEXT:    mov w8, #12 // =0xc
+; CHECK-NEXT:    lastb d1, p1, z0.d
+; CHECK-NEXT:    whilels p1.d, xzr, x8
+; CHECK-NEXT:    mov w8, #11 // =0xb
+; CHECK-NEXT:    lastb d2, p2, z0.d
+; CHECK-NEXT:    whilels p2.d, xzr, x8
+; CHECK-NEXT:    mov w8, #10 // =0xa
+; CHECK-NEXT:    lastb d4, p1, z0.d
+; CHECK-NEXT:    whilels p1.d, xzr, x8
+; CHECK-NEXT:    mov w8, #9 // =0x9
+; CHECK-NEXT:    lastb d5, p2, z0.d
+; CHECK-NEXT:    whilels p2.d, xzr, x8
+; CHECK-NEXT:    mov w8, #8 // =0x8
+; CHECK-NEXT:    lastb d6, p1, z0.d
+; CHECK-NEXT:    whilels p1.d, xzr, x8
+; CHECK-NEXT:    lastb d3, p3, z0.d
+; CHECK-NEXT:    fminnm d1, d1, d1
+; CHECK-NEXT:    fminnm d2, d2, d2
+; CHECK-NEXT:    lastb d7, p2, z0.d
+; CHECK-NEXT:    lastb d16, p1, z0.d
+; CHECK-NEXT:    fminnm d4, d4, d4
+; CHECK-NEXT:    mov x8, sp
+; CHECK-NEXT:    fminnm d5, d5, d5
+; CHECK-NEXT:    fminnm d3, d3, d3
+; CHECK-NEXT:    fminnm d6, d6, d6
+; CHECK-NEXT:    stp d2, d1, [sp, #112]
+; CHECK-NEXT:    mov z1.d, z0.d[7]
+; CHECK-NEXT:    mov z2.d, z0.d[6]
+; CHECK-NEXT:    fminnm d7, d7, d7
+; CHECK-NEXT:    fminnm d16, d16, d16
+; CHECK-NEXT:    fminnm d1, d1, d1
+; CHECK-NEXT:    fminnm d2, d2, d2
+; CHECK-NEXT:    stp d4, d3, [sp, #96]
+; CHECK-NEXT:    mov z3.d, z0.d[5]
+; CHECK-NEXT:    mov z4.d, z0.d[4]
+; CHECK-NEXT:    stp d6, d5, [sp, #80]
+; CHECK-NEXT:    mov z5.d, z0.d[3]
+; CHECK-NEXT:    mov z6.d, z0.d[2]
+; CHECK-NEXT:    stp d16, d7, [sp, #64]
+; CHECK-NEXT:    mov z7.d, z0.d[1]
+; CHECK-NEXT:    fminnm d0, d0, d0
+; CHECK-NEXT:    fminnm d3, d3, d3
+; CHECK-NEXT:    fminnm d4, d4, d4
+; CHECK-NEXT:    stp d2, d1, [sp, #48]
+; CHECK-NEXT:    fminnm d5, d5, d5
+; CHECK-NEXT:    fminnm d1, d6, d6
+; CHECK-NEXT:    fminnm d2, d7, d7
+; CHECK-NEXT:    stp d4, d3, [sp, #32]
+; CHECK-NEXT:    stp d1, d5, [sp, #16]
+; CHECK-NEXT:    stp d0, d2, [sp]
+; CHECK-NEXT:    ld1d { z0.d }, p0/z, [x8]
+; CHECK-NEXT:    st1d { z0.d }, p0, [x0]
+; CHECK-NEXT:    mov sp, x29
+; CHECK-NEXT:    ldp x29, x30, [sp], #16 // 16-byte Folded Reload
+; CHECK-NEXT:    ret
+  %op = load <16 x double>, ptr %a
+  %res = call <16 x double> @llvm.canonicalize.v16f64(<16 x double> %op)
+  store <16 x double> %res, ptr %a
+  ret void
+}
+
+define void @fcanonicalize_v32f64(ptr %a) vscale_range(16,0) #0 {
+; CHECK-LABEL: fcanonicalize_v32f64:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    stp x29, x30, [sp, #-16]! // 16-byte Folded Spill
+; CHECK-NEXT:    sub x9, sp, #496
+; CHECK-NEXT:    mov x29, sp
+; CHECK-NEXT:    and sp, x9, #0xffffffffffffff00
+; CHECK-NEXT:    .cfi_def_cfa w29, 16
+; CHECK-NEXT:    .cfi_offset w30, -8
+; CHECK-NEXT:    .cfi_offset w29, -16
+; CHECK-NEXT:    ptrue p0.d, vl32
+; CHECK-NEXT:    mov w8, #31 // =0x1f
+; CHECK-NEXT:    whilels p1.d, xzr, x8
+; CHECK-NEXT:    mov w8, #30 // =0x1e
+; CHECK-NEXT:    ld1d { z0.d }, p0/z, [x0]
+; CHECK-NEXT:    whilels p2.d, xzr, x8
+; CHECK-NEXT:    mov w8, #29 // =0x1d
+; CHECK-NEXT:    lastb d1, p1, z0.d
+; CHECK-NEXT:    whilels p1.d, xzr, x8
+; CHECK-NEXT:    mov w8, #28 // =0x1c
+; CHECK-NEXT:    lastb d2, p2, z0.d
+; CHECK-NEXT:    whilels p2.d, xzr, x8
+; CHECK-NEXT:    mov w8, #27 // =0x1b
+; CHECK-NEXT:    lastb d3, p1, z0.d
+; CHECK-NEXT:    whilels p1.d, xzr, x8
+; CHECK-NEXT:    mov w8, #26 // =0x1a
+; CHECK-NEXT:    lastb d4, p2, z0.d
+; CHECK-NEXT:    whilels p2.d, xzr, x8
+; CHECK-NEXT:    mov w8, #25 // =0x19
+; CHECK-NEXT:    fminnm d1, d1, d1
+; CHECK-NEXT:    lastb d5, p1, z0.d
+; CHECK-NEXT:    whilels p3.d, xzr, x8
+; CHECK-NEXT:    fminnm d2, d2, d2
+; CHECK-NEXT:    mov w8, #24 // =0x18
+; CHECK-NEXT:    lastb d6, p2, z0.d
+; CHECK-NEXT:    whilels p1.d, xzr, x8
+; CHECK-NEXT:    fminnm d3, d3, d3
+; CHECK-NEXT:    mov w8, #23 // =0x17
+; CHECK-NEXT:    fminnm d4, d4, d4
+; CHECK-NEXT:    whilels p2.d, xzr, x8
+; CHECK-NEXT:    mov w8, #22 // =0x16
+; CHECK-NEXT:    lastb d7, p3, z0.d
+; CHECK-NEXT:    fminnm d5, d5, d5
+; CHECK-NEXT:    stp d2, d1, [sp, #240]
+; CHECK-NEXT:    lastb d2, p1, z0.d
+; CHECK-NEXT:    whilels p1.d, xzr, x8
+; CHECK-NEXT:    fminnm d1, d6, d6
+; CHECK-NEXT:    mov w8, #21 // =0x15
+; CHECK-NEXT:    stp d4, d3, [sp, #224]
+; CHECK-NEXT:    lastb d3, p2, z0.d
+; CHECK-NEXT:    lastb d4, p1, z0.d
+; CHECK-NEXT:    whilels p1.d, xzr, x8
+; CHECK-NEXT:    mov w8, #20 // =0x14
+; CHECK-NEXT:    whilels p2.d, xzr, x8
+; CHECK-NEXT:    fminnm d2, d2, d2
+; CHECK-NEXT:    mov w8, #19 // =0x13
+; CHECK-NEXT:    stp d1, d5, [sp, #208]
+; CHECK-NEXT:    fminnm d1, d7, d7
+; CHECK-NEXT:    lastb d5, p1, z0.d
+; CHECK-NEXT:    fminnm d3, d3, d3
+; CHECK-NEXT:    fminnm d4, d4, d4
+; CHECK-NEXT:    whilels p1.d, xzr, x8
+; CHECK-NEXT:    mov w8, #18 // =0x12
+; CHECK-NEXT:    lastb d6, p2, z0.d
+; CHECK-NEXT:    whilels p2.d, xzr, x8
+; CHECK-NEXT:    mov w8, #17 // =0x11
+; CHECK-NEXT:    stp d2, d1, [sp, #192]
+; CHECK-NEXT:    lastb d1, p1, z0.d
+; CHECK-NEXT:    whilels p1.d, xzr, x8
+; CHECK-NEXT:    lastb d2, p2, z0.d
+; CHECK-NEXT:    stp d4, d3, [sp, #176]
+; CHECK-NEXT:    fminnm d3, d5, d5
+; CHECK-NEXT:    fminnm d4, d6, d6
+; CHECK-NEXT:    mov w8, #16 // =0x10
+; CHECK-NEXT:    lastb d5, p1, z0.d
+; CHECK-NEXT:    whilels p2.d, xzr, x8
+; CHECK-NEXT:    mov w8, #15 // =0xf
+; CHECK-NEXT:    whilels p1.d, xzr, x8
+; CHECK-NEXT:    fminnm d1, d1, d1
+; CHECK-NEXT:    mov w8, #14 // =0xe
+; CHECK-NEXT:    fminnm d2, d2, d2
+; CHECK-NEXT:    lastb d6, p2, z0.d
+; CHECK-NEXT:    stp d4, d3, [sp, #160]
+; CHECK-NEXT:    lastb d3, p1, z0.d
+; CHECK-NEXT:    whilels p1.d, xzr, x8
+; CHECK-NEXT:    mov w8, #13 // =0xd
+; CHECK-NEXT:    whilels p2.d, xzr, x8
+; CHECK-NEXT:    mov w8, #12 // =0xc
+; CHECK-NEXT:    lastb d4, p1, z0.d
+; CHECK-NEXT:    whilels p1.d, xzr, x8
+; CHECK-NEXT:    mov w8, #11 // =0xb
+; CHECK-NEXT:    stp d2, d1, [sp, #144]
+; CHECK-NEXT:    fminnm d1, d5, d5
+; CHECK-NEXT:    lastb d5, p2, z0.d
+; CHECK-NEXT:    whilels p2.d, xzr, x8
+; CHECK-NEXT:    mov w8, #10 // =0xa
+; CHECK-NEXT:    fminnm d2, d6, d6
+; CHECK-NEXT:    lastb d6, p1, z0.d
+; CHECK-NEXT:    whilels p1.d, xzr, x8
+; CHECK-NEXT:    mov w8, #9 // =0x9
+; CHECK-NEXT:    lastb d7, p2, z0.d
+; CHECK-NEXT:    whilels p2.d, xzr, x8
+; CHECK-NEXT:    mov w8, #8 // =0x8
+; CHECK-NEXT:    fminnm d3, d3, d3
+; CHECK-NEXT:    fminnm d4, d4, d4
+; CHECK-NEXT:    lastb d16, p1, z0.d
+; CHECK-NEXT:    whilels p1.d, xzr, x8
+; CHECK-NEXT:    lastb d17, p2, z0.d
+; CHECK-NEXT:    fminnm d5, d5, d5
+; CHECK-NEXT:    stp d2, d1, [sp, #128]
+; CHECK-NEXT:    fminnm d1, d6, d6
+; CHECK-NEXT:    lastb d2, p1, z0.d
+; CHECK-NEXT:    fminnm d6, d7, d7
+; CHECK-NEXT:    mov x8, sp
+; CHECK-NEXT:    stp d4, d3, [sp, #112]
+; CHECK-NEXT:    fminnm d3, d16, d16
+; CHECK-NEXT:    mov z4.d, z0.d[7]
+; CHECK-NEXT:    fminnm d7, d17, d17
+; CHECK-NEXT:    mov z16.d, z0.d[6]
+; CHECK-NEXT:    stp d1, d5, [sp, #96]
+; CHECK-NEXT:    fminnm d1, d2, d2
+; CHECK-NEXT:    mov z2.d, z0.d[5]
+; CHECK-NEXT:    mov z5.d, z0.d[4]
+; CHECK-NEXT:    fminnm d4, d4, d4
+; CHECK-NEXT:    stp d3, d6, [sp, #80]
+; CHECK-NEXT:    mov z6.d, z0.d[3]
+; CHECK-NEXT:    fminnm d3, d16, d16
+; CHECK-NEXT:    fminnm d2, d2, d2
+; CHECK-NEXT:    mov z16.d, z0.d[2]
+; CHECK-NEXT:    stp d1, d7, [sp, #64]
+; CHECK-NEXT:    fminnm d1, d5, d5
+; CHECK-NEXT:    fminnm d5, d6, d6
+; CHECK-NEXT:    mov z6.d, z0.d[1]
+; CHECK-NEXT:    fminnm d0, d0, d0
+; CHECK-NEXT:    stp d3, d4, [sp, #48]
+; CHECK-NEXT:    fminnm d3, d16, d16
+; CHECK-NEXT:    stp d1, d2, [sp, #32]
+; CHECK-NEXT:    fminnm d1, d6, d6
+; CHECK-NEXT:    stp d3, d5, [sp, #16]
+; CHECK-NEXT:    stp d0, d1, [sp]
+; CHECK-NEXT:    ld1d { z0.d }, p0/z, [x8]
+; CHECK-NEXT:    st1d { z0.d }, p0, [x0]
+; CHECK-NEXT:    mov sp, x29
+; CHECK-NEXT:    ldp x29, x30, [sp], #16 // 16-byte Folded Reload
+; CHECK-NEXT:    ret
+  %op = load <32 x double>, ptr %a
+  %res = call <32 x double> @llvm.canonicalize.v32f64(<32 x double> %op)
+  store <32 x double> %res, ptr %a
+  ret void
+}
+
 attributes #0 = { "target-features"="+sve" }
-
-declare <4 x half> @llvm.ceil.v4f16(<4 x half>)
-declare <8 x half> @llvm.ceil.v8f16(<8 x half>)
-declare <16 x half> @llvm.ceil.v16f16(<16 x half>)
-declare <32 x half> @llvm.ceil.v32f16(<32 x half>)
-declare <64 x half> @llvm.ceil.v64f16(<64 x half>)
-declare <128 x half> @llvm.ceil.v128f16(<128 x half>)
-declare <2 x float> @llvm.ceil.v2f32(<2 x float>)
-declare <4 x float> @llvm.ceil.v4f32(<4 x float>)
-declare <8 x float> @llvm.ceil.v8f32(<8 x float>)
-declare <16 x float> @llvm.ceil.v16f32(<16 x float>)
-declare <32 x float> @llvm.ceil.v32f32(<32 x float>)
-declare <64 x float> @llvm.ceil.v64f32(<64 x float>)
-declare <1 x double> @llvm.ceil.v1f64(<1 x double>)
-declare <2 x double> @llvm.ceil.v2f64(<2 x double>)
-declare <4 x double> @llvm.ceil.v4f64(<4 x double>)
-declare <8 x double> @llvm.ceil.v8f64(<8 x double>)
-declare <16 x double> @llvm.ceil.v16f64(<16 x double>)
-declare <32 x double> @llvm.ceil.v32f64(<32 x double>)
-
-declare <4 x half> @llvm.floor.v4f16(<4 x half>)
-declare <8 x half> @llvm.floor.v8f16(<8 x half>)
-declare <16 x half> @llvm.floor.v16f16(<16 x half>)
-declare <32 x half> @llvm.floor.v32f16(<32 x half>)
-declare <64 x half> @llvm.floor.v64f16(<64 x half>)
-declare <128 x half> @llvm.floor.v128f16(<128 x half>)
-declare <2 x float> @llvm.floor.v2f32(<2 x float>)
-declare <4 x float> @llvm.floor.v4f32(<4 x float>)
-declare <8 x float> @llvm.floor.v8f32(<8 x float>)
-declare <16 x float> @llvm.floor.v16f32(<16 x float>)
-declare <32 x float> @llvm.floor.v32f32(<32 x float>)
-declare <64 x float> @llvm.floor.v64f32(<64 x float>)
-declare <1 x double> @llvm.floor.v1f64(<1 x double>)
-declare <2 x double> @llvm.floor.v2f64(<2 x double>)
-declare <4 x double> @llvm.floor.v4f64(<4 x double>)
-declare <8 x double> @llvm.floor.v8f64(<8 x double>)
-declare <16 x double> @llvm.floor.v16f64(<16 x double>)
-declare <32 x double> @llvm.floor.v32f64(<32 x double>)
-
-declare <4 x half> @llvm.nearbyint.v4f16(<4 x half>)
-declare <8 x half> @llvm.nearbyint.v8f16(<8 x half>)
-declare <16 x half> @llvm.nearbyint.v16f16(<16 x half>)
-declare <32 x half> @llvm.nearbyint.v32f16(<32 x half>)
-declare <64 x half> @llvm.nearbyint.v64f16(<64 x half>)
-declare <128 x half> @llvm.nearbyint.v128f16(<128 x half>)
-declare <2 x float> @llvm.nearbyint.v2f32(<2 x float>)
-declare <4 x float> @llvm.nearbyint.v4f32(<4 x float>)
-declare <8 x float> @llvm.nearbyint.v8f32(<8 x float>)
-declare <16 x float> @llvm.nearbyint.v16f32(<16 x float>)
-declare <32 x float> @llvm.nearbyint.v32f32(<32 x float>)
-declare <64 x float> @llvm.nearbyint.v64f32(<64 x float>)
-declare <1 x double> @llvm.nearbyint.v1f64(<1 x double>)
-declare <2 x double> @llvm.nearbyint.v2f64(<2 x double>)
-declare <4 x double> @llvm.nearbyint.v4f64(<4 x double>)
-declare <8 x double> @llvm.nearbyint.v8f64(<8 x double>)
-declare <16 x double> @llvm.nearbyint.v16f64(<16 x double>)
-declare <32 x double> @llvm.nearbyint.v32f64(<32 x double>)
-
-declare <4 x half> @llvm.rint.v4f16(<4 x half>)
-declare <8 x half> @llvm.rint.v8f16(<8 x half>)
-declare <16 x half> @llvm.rint.v16f16(<16 x half>)
-declare <32 x half> @llvm.rint.v32f16(<32 x half>)
-declare <64 x half> @llvm.rint.v64f16(<64 x half>)
-declare <128 x half> @llvm.rint.v128f16(<128 x half>)
-declare <2 x float> @llvm.rint.v2f32(<2 x float>)
-declare <4 x float> @llvm.rint.v4f32(<4 x float>)
-declare <8 x float> @llvm.rint.v8f32(<8 x float>)
-declare <16 x float> @llvm.rint.v16f32(<16 x float>)
-declare <32 x float> @llvm.rint.v32f32(<32 x float>)
-declare <64 x float> @llvm.rint.v64f32(<64 x float>)
-declare <1 x double> @llvm.rint.v1f64(<1 x double>)
-declare <2 x double> @llvm.rint.v2f64(<2 x double>)
-declare <4 x double> @llvm.rint.v4f64(<4 x double>)
-declare <8 x double> @llvm.rint.v8f64(<8 x double>)
-declare <16 x double> @llvm.rint.v16f64(<16 x double>)
-declare <32 x double> @llvm.rint.v32f64(<32 x double>)
-
-declare <4 x half> @llvm.round.v4f16(<4 x half>)
-declare <8 x half> @llvm.round.v8f16(<8 x half>)
-declare <16 x half> @llvm.round.v16f16(<16 x half>)
-declare <32 x half> @llvm.round.v32f16(<32 x half>)
-declare <64 x half> @llvm.round.v64f16(<64 x half>)
-declare <128 x half> @llvm.round.v128f16(<128 x half>)
-declare <2 x float> @llvm.round.v2f32(<2 x float>)
-declare <4 x float> @llvm.round.v4f32(<4 x float>)
-declare <8 x float> @llvm.round.v8f32(<8 x float>)
-declare <16 x float> @llvm.round.v16f32(<16 x float>)
-declare <32 x float> @llvm.round.v32f32(<32 x float>)
-declare <64 x float> @llvm.round.v64f32(<64 x float>)
-declare <1 x double> @llvm.round.v1f64(<1 x double>)
-declare <2 x double> @llvm.round.v2f64(<2 x double>)
-declare <4 x double> @llvm.round.v4f64(<4 x double>)
-declare <8 x double> @llvm.round.v8f64(<8 x double>)
-declare <16 x double> @llvm.round.v16f64(<16 x double>)
-declare <32 x double> @llvm.round.v32f64(<32 x double>)
-
-declare <4 x half> @llvm.roundeven.v4f16(<4 x half>)
-declare <8 x half> @llvm.roundeven.v8f16(<8 x half>)
-declare <16 x half> @llvm.roundeven.v16f16(<16 x half>)
-declare <32 x half> @llvm.roundeven.v32f16(<32 x half>)
-declare <64 x half> @llvm.roundeven.v64f16(<64 x half>)
-declare <128 x half> @llvm.roundeven.v128f16(<128 x half>)
-declare <2 x float> @llvm.roundeven.v2f32(<2 x float>)
-declare <4 x float> @llvm.roundeven.v4f32(<4 x float>)
-declare <8 x float> @llvm.roundeven.v8f32(<8 x float>)
-declare <16 x float> @llvm.roundeven.v16f32(<16 x float>)
-declare <32 x float> @llvm.roundeven.v32f32(<32 x float>)
-declare <64 x float> @llvm.roundeven.v64f32(<64 x float>)
-declare <1 x double> @llvm.roundeven.v1f64(<1 x double>)
-declare <2 x double> @llvm.roundeven.v2f64(<2 x double>)
-declare <4 x double> @llvm.roundeven.v4f64(<4 x double>)
-declare <8 x double> @llvm.roundeven.v8f64(<8 x double>)
-declare <16 x double> @llvm.roundeven.v16f64(<16 x double>)
-declare <32 x double> @llvm.roundeven.v32f64(<32 x double>)
-
-declare <4 x half> @llvm.trunc.v4f16(<4 x half>)
-declare <8 x half> @llvm.trunc.v8f16(<8 x half>)
-declare <16 x half> @llvm.trunc.v16f16(<16 x half>)
-declare <32 x half> @llvm.trunc.v32f16(<32 x half>)
-declare <64 x half> @llvm.trunc.v64f16(<64 x half>)
-declare <128 x half> @llvm.trunc.v128f16(<128 x half>)
-declare <2 x float> @llvm.trunc.v2f32(<2 x float>)
-declare <4 x float> @llvm.trunc.v4f32(<4 x float>)
-declare <8 x float> @llvm.trunc.v8f32(<8 x float>)
-declare <16 x float> @llvm.trunc.v16f32(<16 x float>)
-declare <32 x float> @llvm.trunc.v32f32(<32 x float>)
-declare <64 x float> @llvm.trunc.v64f32(<64 x float>)
-declare <1 x double> @llvm.trunc.v1f64(<1 x double>)
-declare <2 x double> @llvm.trunc.v2f64(<2 x double>)
-declare <4 x double> @llvm.trunc.v4f64(<4 x double>)
-declare <8 x double> @llvm.trunc.v8f64(<8 x double>)
-declare <16 x double> @llvm.trunc.v16f64(<16 x double>)
-declare <32 x double> @llvm.trunc.v32f64(<32 x double>)
