@@ -48,6 +48,7 @@
 #include "clang/Sema/SemaBPF.h"
 #include "clang/Sema/SemaCUDA.h"
 #include "clang/Sema/SemaHLSL.h"
+#include "clang/Sema/SemaInternal.h"
 #include "clang/Sema/SemaM68k.h"
 #include "clang/Sema/SemaMIPS.h"
 #include "clang/Sema/SemaMSP430.h"
@@ -705,6 +706,24 @@ static void handleExcludeFromExplicitInstantiationAttr(Sema &S, Decl *D,
         << AL << /*IsMember=*/!isa<CXXRecordDecl>(D);
     return;
   }
+
+  if (auto *DA = getDLLAttr(D); DA && !DA->isInherited()) {
+    if (auto *RD = dyn_cast<CXXRecordDecl>(D->getDeclContext())) {
+      if (RD->isTemplated()) {
+        S.Diag(DA->getLoc(),
+               diag::warn_dllattr_ignored_exclusion_takes_precedence)
+            << DA << AL;
+        D->dropAttrs<DLLExportAttr, DLLImportAttr>();
+      } else {
+        S.Diag(AL.getLoc(), diag::warn_attribute_ignored_in_non_template) << AL;
+        return;
+      }
+    } else {
+      S.Diag(AL.getLoc(), diag::warn_attribute_ignored_on_non_member) << AL;
+      return;
+    }
+  }
+
   D->addAttr(::new (S.Context)
                  ExcludeFromExplicitInstantiationAttr(S.Context, AL));
 }
@@ -3834,14 +3853,6 @@ static void handleInitPriorityAttr(Sema &S, Decl *D, const ParsedAttr &AL) {
     AL.setInvalid();
     return;
   }
-  QualType T = cast<VarDecl>(D)->getType();
-  if (S.Context.getAsArrayType(T))
-    T = S.Context.getBaseElementType(T);
-  if (!T->isRecordType()) {
-    S.Diag(AL.getLoc(), diag::err_init_priority_object_attr);
-    AL.setInvalid();
-    return;
-  }
 
   Expr *E = AL.getArgAsExpr(0);
   uint32_t prioritynum;
@@ -6477,6 +6488,22 @@ static void handleDLLAttr(Sema &S, Decl *D, const ParsedAttr &A) {
     }
   }
 
+  if (auto *EA = D->getAttr<ExcludeFromExplicitInstantiationAttr>()) {
+    if (auto *RD = dyn_cast<CXXRecordDecl>(D->getDeclContext())) {
+      if (RD->isTemplated()) {
+        S.Diag(A.getRange().getBegin(),
+               diag::warn_dllattr_ignored_exclusion_takes_precedence)
+            << A << EA;
+        return;
+      }
+      S.Diag(EA->getLoc(), diag::warn_attribute_ignored_in_non_template) << EA;
+      D->dropAttr<ExcludeFromExplicitInstantiationAttr>();
+    } else {
+      S.Diag(EA->getLoc(), diag::warn_attribute_ignored_on_non_member) << EA;
+      D->dropAttr<ExcludeFromExplicitInstantiationAttr>();
+    }
+  }
+
   Attr *NewAttr = A.getKind() == ParsedAttr::AT_DLLExport
                       ? (Attr *)S.mergeDLLExportAttr(D, A)
                       : (Attr *)S.mergeDLLImportAttr(D, A);
@@ -8674,5 +8701,15 @@ void Sema::ActOnCleanupAttr(Decl *D, const Attr *A) {
         << NI.getName() << ParamTy << Ty;
     D->dropAttr<CleanupAttr>();
     return;
+  }
+}
+
+void Sema::ActOnInitPriorityAttr(Decl *D, const Attr *A) {
+  QualType T = cast<VarDecl>(D)->getType();
+  if (this->Context.getAsArrayType(T))
+    T = this->Context.getBaseElementType(T);
+  if (!T->isRecordType()) {
+    this->Diag(A->getLoc(), diag::err_init_priority_object_attr);
+    D->dropAttr<InitPriorityAttr>();
   }
 }

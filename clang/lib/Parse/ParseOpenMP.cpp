@@ -5080,6 +5080,62 @@ bool Parser::ParseOpenMPVarList(OpenMPDirectiveKind DKind,
           Diag(Tok, diag::err_modifier_expected_colon) << "fallback";
       }
     }
+  } // Handle num_teams clause with optional lower-bound:upper-bound syntax
+  if (Kind == OMPC_num_teams && !Tok.is(tok::r_paren) &&
+      !Tok.is(tok::annot_pragma_openmp_end)) {
+    ExprResult FirstExpr = ParseAssignmentExpression();
+    if (FirstExpr.isInvalid()) {
+      SkipUntil(tok::r_paren, tok::annot_pragma_openmp_end, StopBeforeMatch);
+      Data.RLoc = Tok.getLocation();
+      if (!T.consumeClose())
+        Data.RLoc = T.getCloseLocation();
+      return true;
+    }
+
+    if (Tok.is(tok::colon)) {
+      // Lower-bound:upper-bound syntax
+      ConsumeToken();
+      ExprResult UpperBound = ParseAssignmentExpression();
+      if (UpperBound.isInvalid()) {
+        SkipUntil(tok::r_paren, tok::annot_pragma_openmp_end, StopBeforeMatch);
+        Data.RLoc = Tok.getLocation();
+        if (!T.consumeClose())
+          Data.RLoc = T.getCloseLocation();
+        return true;
+      }
+      Vars.push_back(FirstExpr.get());  // lower-bound
+      Vars.push_back(UpperBound.get()); // upper-bound
+      Data.RLoc = Tok.getLocation();
+      if (!T.consumeClose())
+        Data.RLoc = T.getCloseLocation();
+      return false; // Success
+    }
+    if (Tok.is(tok::comma)) {
+      Vars.push_back(FirstExpr.get());
+      while (Tok.is(tok::comma)) {
+        ConsumeToken();
+        ExprResult NextExpr = ParseAssignmentExpression();
+        if (NextExpr.isUsable()) {
+          Vars.push_back(NextExpr.get());
+        } else {
+          SkipUntil(tok::comma, tok::r_paren, tok::annot_pragma_openmp_end,
+                    StopBeforeMatch);
+          break;
+        }
+      }
+      Data.RLoc = Tok.getLocation();
+      bool HadError = T.consumeClose();
+      if (!HadError)
+        Data.RLoc = T.getCloseLocation();
+      return HadError;
+    }
+
+    // Single value - parse closing paren
+    Vars.push_back(FirstExpr.get());
+    Data.RLoc = Tok.getLocation();
+    if (!T.consumeClose())
+      Data.RLoc = T.getCloseLocation();
+    return false; // Success
   }
 
   bool IsComma =

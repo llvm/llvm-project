@@ -41,7 +41,7 @@ define void @PR31671(float %x, ptr %d) #0 {
 ; CHECK-NEXT:    [[WIDE_VEC:%.*]] = load <80 x float>, ptr [[TMP0]], align 4
 ; CHECK-NEXT:    [[STRIDED_VEC:%.*]] = shufflevector <80 x float> [[WIDE_VEC]], <80 x float> poison, <16 x i32> <i32 0, i32 5, i32 10, i32 15, i32 20, i32 25, i32 30, i32 35, i32 40, i32 45, i32 50, i32 55, i32 60, i32 65, i32 70, i32 75>
 ; CHECK-NEXT:    [[TMP1:%.*]] = fmul <16 x float> [[BROADCAST_SPLAT]], [[STRIDED_VEC]]
-; CHECK-NEXT:    [[TMP2:%.*]] = getelementptr inbounds [[DATA:%.*]], ptr [[D]], i64 0, i32 0, <16 x i64> [[VEC_IND]]
+; CHECK-NEXT:    [[TMP2:%.*]] = getelementptr inbounds float, ptr [[D]], <16 x i64> [[VEC_IND]]
 ; CHECK-NEXT:    [[TMP3:%.*]] = extractelement <16 x ptr> [[TMP2]], i64 0
 ; CHECK-NEXT:    [[WIDE_VEC1:%.*]] = load <80 x float>, ptr [[TMP3]], align 4
 ; CHECK-NEXT:    [[STRIDED_VEC2:%.*]] = shufflevector <80 x float> [[WIDE_VEC1]], <80 x float> poison, <16 x i32> <i32 0, i32 5, i32 10, i32 15, i32 20, i32 25, i32 30, i32 35, i32 40, i32 45, i32 50, i32 55, i32 60, i32 65, i32 70, i32 75>
@@ -66,7 +66,6 @@ define void @PR31671(float %x, ptr %d) #0 {
 ; FORCE:       [[VECTOR_BODY]]:
 ; FORCE-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[VECTOR_BODY]] ]
 ; FORCE-NEXT:    [[OFFSET_IDX:%.*]] = mul i64 [[INDEX]], 5
-; FORCE-NEXT:    [[TMP0:%.*]] = add i64 [[OFFSET_IDX]], 0
 ; FORCE-NEXT:    [[TMP1:%.*]] = add i64 [[OFFSET_IDX]], 5
 ; FORCE-NEXT:    [[TMP2:%.*]] = add i64 [[OFFSET_IDX]], 10
 ; FORCE-NEXT:    [[TMP3:%.*]] = add i64 [[OFFSET_IDX]], 15
@@ -74,7 +73,7 @@ define void @PR31671(float %x, ptr %d) #0 {
 ; FORCE-NEXT:    [[TMP5:%.*]] = add i64 [[OFFSET_IDX]], 25
 ; FORCE-NEXT:    [[TMP6:%.*]] = add i64 [[OFFSET_IDX]], 30
 ; FORCE-NEXT:    [[TMP7:%.*]] = add i64 [[OFFSET_IDX]], 35
-; FORCE-NEXT:    [[TMP8:%.*]] = getelementptr inbounds [[DATA:%.*]], ptr [[D]], i64 0, i32 3, i64 [[TMP0]]
+; FORCE-NEXT:    [[TMP8:%.*]] = getelementptr inbounds [[DATA:%.*]], ptr [[D]], i64 0, i32 3, i64 [[OFFSET_IDX]]
 ; FORCE-NEXT:    [[TMP9:%.*]] = getelementptr inbounds [[DATA]], ptr [[D]], i64 0, i32 3, i64 [[TMP2]]
 ; FORCE-NEXT:    [[TMP10:%.*]] = getelementptr inbounds [[DATA]], ptr [[D]], i64 0, i32 3, i64 [[TMP4]]
 ; FORCE-NEXT:    [[TMP11:%.*]] = getelementptr inbounds [[DATA]], ptr [[D]], i64 0, i32 3, i64 [[TMP6]]
@@ -90,7 +89,7 @@ define void @PR31671(float %x, ptr %d) #0 {
 ; FORCE-NEXT:    [[TMP13:%.*]] = fmul <2 x float> [[BROADCAST_SPLAT]], [[STRIDED_VEC2]]
 ; FORCE-NEXT:    [[TMP14:%.*]] = fmul <2 x float> [[BROADCAST_SPLAT]], [[STRIDED_VEC4]]
 ; FORCE-NEXT:    [[TMP15:%.*]] = fmul <2 x float> [[BROADCAST_SPLAT]], [[STRIDED_VEC6]]
-; FORCE-NEXT:    [[TMP16:%.*]] = getelementptr inbounds [[DATA]], ptr [[D]], i64 0, i32 0, i64 [[TMP0]]
+; FORCE-NEXT:    [[TMP16:%.*]] = getelementptr inbounds [[DATA]], ptr [[D]], i64 0, i32 0, i64 [[OFFSET_IDX]]
 ; FORCE-NEXT:    [[TMP17:%.*]] = getelementptr inbounds [[DATA]], ptr [[D]], i64 0, i32 0, i64 [[TMP1]]
 ; FORCE-NEXT:    [[TMP18:%.*]] = getelementptr inbounds [[DATA]], ptr [[D]], i64 0, i32 0, i64 [[TMP2]]
 ; FORCE-NEXT:    [[TMP19:%.*]] = getelementptr inbounds [[DATA]], ptr [[D]], i64 0, i32 0, i64 [[TMP3]]

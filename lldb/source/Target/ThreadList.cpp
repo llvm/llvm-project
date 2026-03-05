@@ -515,12 +515,18 @@ bool ThreadList::WillResume(RunDirection &direction) {
   for (const auto &thread_sp : m_threads) {
     ThreadPlan *plan = thread_sp->GetCurrentPlan();
     if (plan && plan->GetKind() == ThreadPlan::eKindStepOverBreakpoint) {
-      // Suppress the re-enable side effect in DidPop() — the breakpoint
-      // may still be disabled from the previous batch, and we don't want
-      // to toggle it. The new plans will handle disable/re-enable correctly.
-      static_cast<ThreadPlanStepOverBreakpoint *>(plan)
-          ->SetReenabledBreakpointSite();
-      thread_sp->DiscardPlan();
+      auto *bp_plan = static_cast<ThreadPlanStepOverBreakpoint *>(plan);
+      // Only pop plans created by our batching logic (deferred plans).
+      // Plans from the single-thread path must not be popped, as doing so
+      // would change the StopOthers scan result and cause other threads
+      // to lose their breakpoint stop reason.
+      if (bp_plan->GetDeferReenableBreakpointSite()) {
+        // Suppress the re-enable side effect in DidPop(), the breakpoint
+        // may still be disabled from the previous batch, and we don't want
+        // to toggle it. The new plans will handle re-enable correctly.
+        bp_plan->SetReenabledBreakpointSite();
+        thread_sp->DiscardPlan();
+      }
     }
   }
 
