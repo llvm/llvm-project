@@ -81,3 +81,51 @@ define i64 @test_bzhi64_range(i64 %arg) nounwind readnone {
   %4 = tail call i64 @llvm.x86.bmi.bzhi.64(i64 30064771240, i64 %3)
   ret i64 %4
 }
+
+define i32 @test_bzhi32_mask_const_highbits(i32 %a) nounwind {
+; CHECK-LABEL: test_bzhi32_mask_const_highbits:
+; CHECK-NOT:   $257
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    movl $1, %eax
+; CHECK-NEXT:    bzhil
+; CHECK-NEXT:    retq
+  %1 = tail call i32 @llvm.x86.bmi.bzhi.32(i32 %a, i32 257)
+  ret i32 %1
+}
+
+define i64 @test_bzhi64_mask_const_highbits(i64 %a) nounwind {
+; CHECK-LABEL: test_bzhi64_mask_const_highbits:
+; CHECK-NOT:   $257
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    movl $1, %eax
+; CHECK-NEXT:    bzhiq
+; CHECK-NEXT:    retq
+  %1 = tail call i64 @llvm.x86.bmi.bzhi.64(i64 %a, i64 257)
+  ret i64 %1
+}
+
+define i32 @test_bzhi32_rule2_mask_max31_kills_topbit(i32 %a, i32 %m) nounwind {
+; CHECK-LABEL: test_bzhi32_rule2_mask_max31_kills_topbit:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    andl $31, %esi
+; CHECK-NEXT:    bzhil
+; CHECK-NEXT:    retq
+  %mask = and i32 %m, 31
+  %hi  = shl i32 %a, 31
+  %src = or i32 %a, %hi
+  %r = tail call i32 @llvm.x86.bmi.bzhi.32(i32 %src, i32 %mask)
+  ret i32 %r
+}
+
+define i64 @test_bzhi64_rule2_mask_max63_kills_topbit(i64 %a, i64 %m) nounwind {
+; CHECK-LABEL: test_bzhi64_rule2_mask_max63_kills_topbit:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    andl $63, %esi
+; CHECK-NEXT:    bzhiq
+; CHECK-NEXT:    retq
+  %mask = and i64 %m, 63
+  %hi  = shl i64 %a, 63
+  %src = or i64 %a, %hi
+  %r = tail call i64 @llvm.x86.bmi.bzhi.64(i64 %src, i64 %mask)
+  ret i64 %r
+}
