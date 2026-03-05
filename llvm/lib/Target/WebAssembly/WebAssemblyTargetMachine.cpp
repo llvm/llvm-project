@@ -108,6 +108,7 @@ LLVMInitializeWebAssemblyTarget() {
   initializeWebAssemblyArgumentMovePass(PR);
   initializeWebAssemblyAsmPrinterPass(PR);
   initializeWebAssemblySetP2AlignOperandsPass(PR);
+  initializeWebAssemblyFixupAtomicsPass(PR);
   initializeWebAssemblyReplacePhysRegsPass(PR);
   initializeWebAssemblyOptimizeLiveIntervalsPass(PR);
   initializeWebAssemblyMemIntrinsicResultsPass(PR);
@@ -551,7 +552,7 @@ bool WebAssemblyPassConfig::addInstSelector() {
   // it's inconvenient to collect. Collect it now, and update the immediate
   // operands.
   addPass(createWebAssemblySetP2AlignOperands());
-
+  addPass(createWebAssemblyFixupAtomics());
   // Eliminate range checks and add default targets to br_table instructions.
   addPass(createWebAssemblyFixBrTableDefaults());
 
@@ -713,6 +714,7 @@ bool WebAssemblyPassConfig::addGlobalInstructionSelect() {
   if (isGlobalISelAbortEnabled()) {
     addPass(createWebAssemblyArgumentMove());
     addPass(createWebAssemblySetP2AlignOperands());
+    addPass(createWebAssemblyFixupAtomics());
     addPass(createWebAssemblyFixBrTableDefaults());
     addPass(createWebAssemblyCleanCodeAfterTrap());
   }

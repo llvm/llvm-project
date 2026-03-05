@@ -217,22 +217,7 @@ void WebAssemblyMCInstLower::lower(const MachineInstr *MI,
     if (I < Desc.getNumOperands() &&
         Desc.operands()[I].OperandType == WebAssembly::OPERAND_MEMORDER &&
         !MI->memoperands_empty()) {
-      unsigned Order = MO.getImm();
-      auto *MMO = *MI->memoperands_begin();
-      if (MF->getSubtarget<WebAssemblySubtarget>().hasRelaxedAtomics()) {
-        switch (MMO->getMergedOrdering()) {
-        case AtomicOrdering::Acquire:
-        case AtomicOrdering::Release:
-        case AtomicOrdering::AcquireRelease:
-        case AtomicOrdering::Monotonic:
-          Order = 1; // acqrel
-          break;
-        default:
-          Order = 0; // seqcst
-          break;
-        }
-      }
-      MCOp = MCOperand::createImm(Order);
+      MCOp = MCOperand::createImm(MO.getImm());
       OutMI.addOperand(MCOp);
       continue;
     }
