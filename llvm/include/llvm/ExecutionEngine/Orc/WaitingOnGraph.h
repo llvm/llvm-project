@@ -18,6 +18,8 @@
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/Support/raw_ostream.h"
 
+#include "llvm/Support/Debug.h"
+
 #include <algorithm>
 #include <vector>
 
@@ -94,6 +96,8 @@ private:
   using ElemToSuperNodeMap =
       DenseMap<ContainerId, DenseMap<ElementId, SuperNode *>>;
 
+  using SuperNodeDepsMap = DenseMap<SuperNode *, DenseSet<SuperNode *>>;
+
 public:
   class SuperNode {
     friend class WaitingOnGraph;
@@ -154,11 +158,68 @@ public:
       }
       RegisteredElemToSN = nullptr;
     }
+
+    /// For all Defs of this node that are defined by some node in ElemToSN,
+    /// remove the Def from this map and add this SuperNode to the list of
+    /// dependants of the defining node.
+    ///
+    /// Returns true if SuperNodeDeps was changed.
+    bool hoistDeps(SuperNodeDepsMap &SuperNodeDeps,
+                   ElemToSuperNodeMap &ElemToSN) {
+      bool Changed = false;
+
+      SmallVector<ContainerId> ContainersToRemove;
+      for (auto &[DepContainer, DepElems] : Deps) {
+        auto I = ElemToSN.find(DepContainer);
+        if (I == ElemToSN.end())
+          continue;
+        auto &ContainerElemToSN = I->second;
+
+        // ElemToSN includes SuperNodes that define elements in DepContainer.
+        // We need to iterate over ContainerElemToSN or DepElems: we pick the
+        // smaller to minimize the cost.
+        if (ContainerElemToSN.size() < DepElems.size()) {
+          for (auto &[DefElem, DefSN] : ContainerElemToSN) {
+            if (DepElems.erase(DefElem) && DefSN != this) {
+              Changed = true;
+              SuperNodeDeps[DefSN].insert(this);
+            }
+          }
+        } else {
+          SmallVector<ElementId> ElemsToRemove;
+          for (auto &DepElem : DepElems) {
+            auto J = ContainerElemToSN.find(DepElem);
+            if (J == ContainerElemToSN.end())
+              continue;
+            ElemsToRemove.push_back(DepElem);
+            SuperNode *DefSN = J->second;
+            if (DefSN != this) {
+              Changed = true;
+              SuperNodeDeps[DefSN].insert(this);
+            }
+          }
+
+          for (auto &DepElem : ElemsToRemove)
+            DepElems.erase(DepElem);
+        }
+
+        // If DepElems has become empty then add DepContainer to the list of
+        // containers to remove.
+        if (DepElems.empty())
+          ContainersToRemove.push_back(DepContainer);
+      }
+
+      for (auto &DepContainer : ContainersToRemove) {
+        assert(Deps.count(DepContainer) && "already removed?");
+        assert(Deps[DepContainer].empty() && "non empty?");
+        Deps.erase(DepContainer);
+      }
+
+      return Changed;
+    }
   };
 
 private:
-  using SuperNodeDepsMap = DenseMap<SuperNode *, DenseSet<SuperNode *>>;
-
   class Coalescer {
   public:
     std::unique_ptr<SuperNode> addOrCreateSuperNode(ContainerElementsMap Defs,
@@ -336,7 +397,7 @@ public:
       SN->mapDefsToThis(ElemToSN);
 
     SuperNodeDepsMap SuperNodeDeps;
-    hoistDeps(SuperNodeDeps, SNs, ElemToSN);
+    hoistDeps(SNs, SuperNodeDeps, ElemToSN);
     propagateDeps(SuperNodeDeps);
 
     // Pre-coalesce nodes.
@@ -365,25 +426,13 @@ public:
     // First process any dependencies on nodes with external state.
     auto FailedSNs = processExternalDeps(NewSNs, GetExternalState);
 
+    SuperNodeDepsMap SuperNodeDeps;
+
     // Collect the PendingSNs whose dep sets are about to be modified.
     std::vector<std::unique_ptr<SuperNode>> ModifiedPendingSNs;
     for (size_t I = 0; I != PendingSNs.size();) {
       auto &SN = PendingSNs[I];
-      bool Remove = false;
-      for (auto &[Container, Elems] : SN->Deps) {
-        auto I = ElemToNewSN.find(Container);
-        if (I == ElemToNewSN.end())
-          continue;
-        for (auto Elem : Elems) {
-          if (I->second.contains(Elem)) {
-            Remove = true;
-            break;
-          }
-        }
-        if (Remove)
-          break;
-      }
-      if (Remove) {
+      if (SN->hoistDeps(SuperNodeDeps, ElemToNewSN)) {
         ModifiedPendingSNs.push_back(std::move(SN));
         std::swap(SN, PendingSNs.back());
         PendingSNs.pop_back();
@@ -391,15 +440,11 @@ public:
         ++I;
     }
 
-    // Remove cycles from the graphs.
-    SuperNodeDepsMap SuperNodeDeps;
-    hoistDeps(SuperNodeDeps, ModifiedPendingSNs, ElemToNewSN);
-
-    // If SN's deps are about to be modified then remove it from the coalescer.
+    // Remove SNs whose deps have been modified from the coalescer.
     for (auto &SN : ModifiedPendingSNs)
       CoalesceToPendingSNs.erase(SN.get());
 
-    hoistDeps(SuperNodeDeps, NewSNs, ElemToPendingSN);
+    hoistDeps(NewSNs, SuperNodeDeps, ElemToPendingSN);
     propagateDeps(SuperNodeDeps);
 
     propagateFailures(FailedSNs, SuperNodeDeps);
@@ -552,57 +597,12 @@ public:
 
 private:
   // Replace individual dependencies with supernode dependencies.
-  static void hoistDeps(SuperNodeDepsMap &SuperNodeDeps,
-                        std::vector<std::unique_ptr<SuperNode>> &SNs,
+  static void hoistDeps(std::vector<std::unique_ptr<SuperNode>> &SNs,
+                        SuperNodeDepsMap &SuperNodeDeps,
                         ElemToSuperNodeMap &ElemToSN) {
     // For all SNs...
-    for (auto &SN : SNs) {
-      SmallVector<ContainerId> ContainersToRemove;
-      for (auto &[DepContainer, DepElems] : SN->Deps) {
-
-        // Check ElemToSN to see if any other SuperNodes define elements in
-        // DepContainer. If not then bail out early.
-        auto I = ElemToSN.find(DepContainer);
-        if (I == ElemToSN.end())
-          continue;
-        auto &ContainerElemToSN = I->second;
-
-        // ElemToSN includes SuperNodes that define elements in DepContainer.
-        // We need to iterate over ContainerElemToSN or DepElems: we pick the
-        // smaller to minimize the cost.
-        if (ContainerElemToSN.size() < DepElems.size()) {
-          for (auto &[DefElem, DefSN] : ContainerElemToSN)
-            if (DepElems.erase(DefElem) && DefSN != SN.get())
-              SuperNodeDeps[DefSN].insert(SN.get());
-        } else {
-          SmallVector<ElementId> ElemsToRemove;
-          for (auto &DepElem : DepElems) {
-            auto J = ContainerElemToSN.find(DepElem);
-            if (J == ContainerElemToSN.end())
-              continue;
-            ElemsToRemove.push_back(DepElem);
-            SuperNode *DefSN = J->second;
-            if (DefSN != SN.get())
-              SuperNodeDeps[DefSN].insert(SN.get());
-          }
-
-          for (auto &DepElem : ElemsToRemove)
-            DepElems.erase(DepElem);
-        }
-
-        // If DepElems has become empty then add DepContainer to the list of
-        // containers to remove.
-        if (DepElems.empty())
-          ContainersToRemove.push_back(DepContainer);
-      }
-
-      // Remove any containers in SN->Deps that have become empty.
-      for (auto &DepContainer : ContainersToRemove) {
-        assert(SN->Deps.count(DepContainer) && "DepContainer already removed?");
-        assert(SN->Deps[DepContainer].empty() && "DepContainer deps not empty");
-        SN->Deps.erase(DepContainer);
-      }
-    }
+    for (auto &SN : SNs)
+      SN->hoistDeps(SuperNodeDeps, ElemToSN);
   }
 
   // Compute transitive closure of deps for each node.
