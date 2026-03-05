@@ -373,14 +373,12 @@ define <vscale x 2 x i64> @orn(<vscale x 2 x i64> %0, <vscale x 2 x i64> %1) #0 
 define void @array_or_not_nxv4i32(ptr %a, <vscale x 4 x i32> %m) {
 ; CHECK-LABEL: array_or_not_nxv4i32:
 ; CHECK:       // %bb.0: // %entry
-; CHECK-NEXT:    mov z1.s, #-1 // =0xffffffffffffffff
 ; CHECK-NEXT:    ptrue p0.s
 ; CHECK-NEXT:    mov x8, xzr
-; CHECK-NEXT:    eor z0.d, z0.d, z1.d
 ; CHECK-NEXT:  .LBB29_1: // %vector.body
 ; CHECK-NEXT:    // =>This Inner Loop Header: Depth=1
 ; CHECK-NEXT:    ld1w { z1.s }, p0/z, [x0, x8, lsl #2]
-; CHECK-NEXT:    orr z1.d, z1.d, z0.d
+; CHECK-NEXT:    bsl2n z1.d, z1.d, z0.d, z1.d
 ; CHECK-NEXT:    st1w { z1.s }, p0, [x0, x8, lsl #2]
 ; CHECK-NEXT:    incw x8
 ; CHECK-NEXT:    cmp x8, #256
@@ -410,15 +408,14 @@ for.cond.cleanup:
 define void @array_xor_not_nxv4i32(ptr %a, <vscale x 4 x i32> %m) {
 ; CHECK-LABEL: array_xor_not_nxv4i32:
 ; CHECK:       // %bb.0: // %entry
-; CHECK-NEXT:    mov z1.s, #-1 // =0xffffffffffffffff
 ; CHECK-NEXT:    ptrue p0.s
 ; CHECK-NEXT:    mov x8, xzr
-; CHECK-NEXT:    eor z0.d, z0.d, z1.d
 ; CHECK-NEXT:  .LBB30_1: // %vector.body
 ; CHECK-NEXT:    // =>This Inner Loop Header: Depth=1
 ; CHECK-NEXT:    ld1w { z1.s }, p0/z, [x0, x8, lsl #2]
-; CHECK-NEXT:    eor z1.d, z1.d, z0.d
-; CHECK-NEXT:    st1w { z1.s }, p0, [x0, x8, lsl #2]
+; CHECK-NEXT:    mov z2.d, z0.d
+; CHECK-NEXT:    bsl2n z2.d, z2.d, z0.d, z1.d
+; CHECK-NEXT:    st1w { z2.s }, p0, [x0, x8, lsl #2]
 ; CHECK-NEXT:    incw x8
 ; CHECK-NEXT:    cmp x8, #256
 ; CHECK-NEXT:    b.ne .LBB30_1
