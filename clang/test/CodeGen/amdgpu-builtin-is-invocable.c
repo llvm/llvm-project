@@ -25,7 +25,7 @@
 // AMDGCNSPIRV-LABEL: define spir_func void @foo(
 // AMDGCNSPIRV-SAME: ) addrspace(4) #[[ATTR0:[0-9]+]] {
 // AMDGCNSPIRV-NEXT:  [[ENTRY:.*:]]
-// AMDGCNSPIRV-NEXT:    [[TMP0:%.*]] = call addrspace(4) i1 @_Z20__spirv_SpecConstant(i32 -1, i1 false), !llvm.amdgcn.feature.predicate [[META3:![0-9]+]]
+// AMDGCNSPIRV-NEXT:    [[TMP0:%.*]] = call addrspace(4) i1 @_Z20__spirv_SpecConstant(i32 -1, i1 false), !llvm.amdgcn.feature.predicate [[META2:![0-9]+]]
 // AMDGCNSPIRV-NEXT:    [[TOBOOL:%.*]] = icmp ne i1 [[TMP0]], false
 // AMDGCNSPIRV-NEXT:    br i1 [[TOBOOL]], label %[[IF_THEN:.*]], label %[[IF_END:.*]]
 // AMDGCNSPIRV:       [[IF_THEN]]:
@@ -48,15 +48,12 @@ void foo() {
 // AMDGCNSPIRV: attributes #[[ATTR1:[0-9]+]] = { cold noreturn nounwind memory(inaccessiblemem: write) }
 //.
 // AMDGCN-GFX900: [[META0:![0-9]+]] = !{i32 1, !"amdhsa_code_object_version", i32 600}
-// AMDGCN-GFX900: [[META1:![0-9]+]] = !{i32 1, !"wchar_size", i32 4}
-// AMDGCN-GFX900: [[META2:![0-9]+]] = !{!"{{.*}}clang version {{.*}}"}
+// AMDGCN-GFX900: [[META1:![0-9]+]] = !{!"{{.*}}clang version {{.*}}"}
 //.
 // AMDGCN-GFX1010: [[META0:![0-9]+]] = !{i32 1, !"amdhsa_code_object_version", i32 600}
-// AMDGCN-GFX1010: [[META1:![0-9]+]] = !{i32 1, !"wchar_size", i32 4}
-// AMDGCN-GFX1010: [[META2:![0-9]+]] = !{!"{{.*}}clang version {{.*}}"}
+// AMDGCN-GFX1010: [[META1:![0-9]+]] = !{!"{{.*}}clang version {{.*}}"}
 //.
 // AMDGCNSPIRV: [[META0:![0-9]+]] = !{i32 1, !"amdhsa_code_object_version", i32 600}
-// AMDGCNSPIRV: [[META1:![0-9]+]] = !{i32 1, !"wchar_size", i32 4}
-// AMDGCNSPIRV: [[META2:![0-9]+]] = !{!"{{.*}}clang version {{.*}}"}
-// AMDGCNSPIRV: [[META3]] = !{!"has.gfx10-insts"}
+// AMDGCNSPIRV: [[META1:![0-9]+]] = !{!"{{.*}}clang version {{.*}}"}
+// AMDGCNSPIRV: [[META2]] = !{!"has.gfx10-insts"}
 //.
