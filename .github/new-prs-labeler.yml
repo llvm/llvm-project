@@ -116,6 +116,7 @@ vectorizers:
     - any-glob-to-any-file:
       - llvm/lib/Transforms/Vectorize/**/*
       - llvm/include/llvm/Transforms/Vectorize/**/*
+      - llvm/docs/Vectorizers.rst
 
 # IMPORTED FROM CODEOWNERS
 LTO:
@@ -628,6 +629,12 @@ github:workflow:
   - changed-files:
     - any-glob-to-any-file:
       - .github/workflows/**
+      - .github/new-prs-labeler.yml
+
+github-prs:
+  - changed-files:
+    - any-glob-to-any-file:
+      - .github/new-prs-labeler.yml
 
 cmake:
   - changed-files:
@@ -1466,3 +1473,8 @@ infrastructure:
   - changed-files:
     - any-glob-to-any-file:
       - .ci/**
+
+documentation:
+  - changed-files:
+    - any-glob-to-any-file:
+      - llvm/docs/**
