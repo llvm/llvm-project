@@ -1709,9 +1709,6 @@ RISCVTTIImpl::getIntrinsicInstrCost(const IntrinsicCostAttributes &ICA,
     auto ValLT = getTypeLegalizationCost(ValTy);
     auto MaskLT = getTypeLegalizationCost(MaskTy);
 
-    if (!ValLT.first.isValid() || !MaskLT.first.isValid())
-      return InstructionCost::getInvalid();
-
     // TODO: Return cheaper cost when the entire lane is inactive.
     // The expected asm sequence is:
     // vcpop.m a0, v0
@@ -1720,7 +1717,7 @@ RISCVTTIImpl::getIntrinsicInstrCost(const IntrinsicCostAttributes &ICA,
     // vredmaxu.vs v10, v10, v10
     // vmv.x.s a0, v10
     // zext.b a0, a0
-    // vslidedown v8, v8, a0
+    // vslidedown.vx v8, v8, a0
     // vmv.x.s a0, v8
     // exit:
     //   ...
