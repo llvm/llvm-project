@@ -459,7 +459,7 @@ struct VPlanTransforms {
   /// +-------------------------------------------+
   /// |%iv = ...                                  |
   /// |%wide.iv = widen-canonical-iv ...          |
-  /// |%header-mask = icmp ult %wide.iv, BTC      |
+  /// |%header-mask = icmp ule %wide.iv, BTC      |
   /// |branch-on-cond %header-mask                |---+
   /// +-------------------------------------------+   |
   ///                      |                          |
