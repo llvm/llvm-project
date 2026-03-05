@@ -16,7 +16,7 @@ FPMaxminBehavior parseFPMaxminBehavior(llvm::StringRef value) {
       .Case("legacy", FPMaxminBehavior::Legacy)
       .Case("portable", FPMaxminBehavior::Portable)
       .Case("extremum", FPMaxminBehavior::Extremum)
-      .Case("extremenum", FPMaxminBehavior::Extremenum)
+      .Case("extremenum", FPMaxminBehavior::ExtremeNum)
       .Default(FPMaxminBehavior::Legacy);
 }
 

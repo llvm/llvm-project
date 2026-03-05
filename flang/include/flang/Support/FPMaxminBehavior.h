@@ -7,7 +7,7 @@
 //===----------------------------------------------------------------------===//
 ///
 /// \file
-/// Shared definition of FP max/min behavior for MAX/MIN and [max|min][loc|val].
+/// Shared definition of FP max/min behavior for max/min and [max|min][loc|val].
 /// Used by CodeGenOptions, LoweringOptions, and other components.
 ///
 //===----------------------------------------------------------------------===//
@@ -19,16 +19,18 @@
 
 namespace Fortran::common {
 
-/// Control for MAX/MIN and [max|min][loc|val] lowering, constant folding, and
+/// Control for max/min and [max|min][loc|val] lowering, constant folding, and
 /// related behavior. Legacy: current Flang behavior (always cmp+select).
 /// Portable: same as Legacy but may use arith.maxnumf under
-/// '-fno-signed-zeros -fno-honor-nans'. Extremum/Extremenum: maximumf/minnumf.
+/// '-fno-signed-zeros -fno-honor-nans'.
+/// Extremum: arith.maximumf/minimumf
+/// ExtremeNum: arith.maxnumf/minnumf.
 /// Legacy is transitional and will eventually be replaced by Portable.
 enum class FPMaxminBehavior : unsigned {
-  Legacy = 0,
-  Portable = 1,
-  Extremum = 2,
-  Extremenum = 3
+  Legacy,
+  Portable,
+  Extremum,
+  ExtremeNum,
 };
 
 /// Parse -ffp-maxmin-behavior= value. Triggers llvm_unreachable

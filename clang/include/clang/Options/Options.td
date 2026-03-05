@@ -7651,7 +7651,7 @@ def ffp_maxmin_behavior_EQ
       Flags<[HelpHidden]>,
       Group<f_Group>,
       Values<"legacy,portable,extremum,extremenum">,
-      HelpText<"Control MAX/MIN and [max|min][loc|val] behavior: "
+      HelpText<"Control max/min and [max|min][loc|val] behavior: "
                "legacy (cmp+select), portable (same as legacy, "
                " but may use max/minNum when -fno-signed-zeros "
                "-fno-honor-nans), extremum (IEEE-754-2019 maximum/minimum), "

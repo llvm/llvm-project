@@ -1075,7 +1075,7 @@ getReductionOperator(const Fortran::parser::ReductionOperator &op,
     if (fir::isa_real(reductionTy)) {
       if (maxminMode == Fortran::common::FPMaxminBehavior::Extremum)
         return mlir::acc::ReductionOperator::AccMaximumf;
-      else if (maxminMode == Fortran::common::FPMaxminBehavior::Extremenum)
+      else if (maxminMode == Fortran::common::FPMaxminBehavior::ExtremeNum)
         return mlir::acc::ReductionOperator::AccMaxnumf;
     }
     return mlir::acc::ReductionOperator::AccMax;
@@ -1083,7 +1083,7 @@ getReductionOperator(const Fortran::parser::ReductionOperator &op,
     if (fir::isa_real(reductionTy)) {
       if (maxminMode == Fortran::common::FPMaxminBehavior::Extremum)
         return mlir::acc::ReductionOperator::AccMinimumf;
-      else if (maxminMode == Fortran::common::FPMaxminBehavior::Extremenum)
+      else if (maxminMode == Fortran::common::FPMaxminBehavior::ExtremeNum)
         return mlir::acc::ReductionOperator::AccMinnumf;
     }
     return mlir::acc::ReductionOperator::AccMin;

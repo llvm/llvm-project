@@ -1033,7 +1033,7 @@ static mlir::Value genScalarCombiner(fir::FirOpBuilder &builder,
       builder.setFPMaxminBehavior(Fortran::common::FPMaxminBehavior::Extremum);
     else if (op == mlir::acc::ReductionOperator::AccMinnumf)
       builder.setFPMaxminBehavior(
-          Fortran::common::FPMaxminBehavior::Extremenum);
+          Fortran::common::FPMaxminBehavior::ExtremeNum);
 
     mlir::Value result = fir::genMin(builder, loc, {value1, value2});
     builder.setFPMaxminBehavior(savedMode);
@@ -1048,7 +1048,7 @@ static mlir::Value genScalarCombiner(fir::FirOpBuilder &builder,
       builder.setFPMaxminBehavior(Fortran::common::FPMaxminBehavior::Extremum);
     else if (op == mlir::acc::ReductionOperator::AccMaxnumf)
       builder.setFPMaxminBehavior(
-          Fortran::common::FPMaxminBehavior::Extremenum);
+          Fortran::common::FPMaxminBehavior::ExtremeNum);
 
     mlir::Value result = fir::genMax(builder, loc, {value1, value2});
     builder.setFPMaxminBehavior(savedMode);

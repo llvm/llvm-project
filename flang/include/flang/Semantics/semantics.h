@@ -17,7 +17,6 @@
 #include "flang/Evaluate/intrinsics.h"
 #include "flang/Evaluate/target.h"
 #include "flang/Parser/message.h"
-#include "flang/Support/FPMaxminBehavior.h"
 #include "flang/Support/Fortran-features.h"
 #include "flang/Support/LangOptions.h"
 #include <iosfwd>
@@ -120,9 +119,6 @@ public:
   }
   parser::Messages &messages() { return messages_; }
   evaluate::FoldingContext &foldingContext() { return foldingContext_; }
-  common::FPMaxminBehavior fpMaxminBehavior() const {
-    return fpMaxminBehavior_;
-  }
   parser::AllCookedSources &allCookedSources() { return allCookedSources_; }
   ModuleDependences &moduleDependences() { return moduleDependences_; }
   std::map<const Symbol *, SourceName> &moduleFileOutputRenamings() {
@@ -378,7 +374,6 @@ private:
   ScopeIndex scopeIndex_;
   parser::Messages messages_;
   std::size_t maxErrors_{0};
-  common::FPMaxminBehavior fpMaxminBehavior_{common::FPMaxminBehavior::Legacy};
   evaluate::FoldingContext foldingContext_;
   ConstructStack constructStack_;
   struct IndexVarInfo {

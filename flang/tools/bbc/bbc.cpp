@@ -296,16 +296,16 @@ static llvm::cl::opt<std::string> complexRange(
 
 static llvm::cl::opt<Fortran::common::FPMaxminBehavior> fpMaxminBehavior(
     "ffp-maxmin-behavior",
-    llvm::cl::desc("Control MAX/MIN and [max|min][loc|val] lowering "
-                   "[legacy|portable|extremum|extremenum]"),
+    llvm::cl::desc("Control max/min and [max|min][loc|val] lowering "
+                   "[legacy|portable|extremum|extremeNum]"),
     llvm::cl::values(clEnumValN(Fortran::common::FPMaxminBehavior::Legacy,
                                 "legacy", "Legacy (current cmp+select)"),
                      clEnumValN(Fortran::common::FPMaxminBehavior::Portable,
                                 "portable", "Portable"),
                      clEnumValN(Fortran::common::FPMaxminBehavior::Extremum,
                                 "extremum", "Extremum"),
-                     clEnumValN(Fortran::common::FPMaxminBehavior::Extremenum,
-                                "extremenum", "Extremenum")),
+                     clEnumValN(Fortran::common::FPMaxminBehavior::ExtremeNum,
+                                "extremeNum", "ExtremeNum")),
     llvm::cl::init(Fortran::common::FPMaxminBehavior::Legacy));
 
 #define FLANG_EXCLUDE_CODEGEN

@@ -8771,7 +8771,7 @@ static mlir::Value genExtremumResult(mlir::Location loc,
         return mlir::arith::MaximumFOp::create(builder, loc, left, right);
       else
         return mlir::arith::MinimumFOp::create(builder, loc, left, right);
-    case Fortran::common::FPMaxminBehavior::Extremenum:
+    case Fortran::common::FPMaxminBehavior::ExtremeNum:
       if constexpr (isMax)
         return mlir::arith::MaxNumFOp::create(builder, loc, left, right);
       else

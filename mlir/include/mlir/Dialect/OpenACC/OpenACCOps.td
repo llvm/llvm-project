@@ -67,6 +67,38 @@ def OpenACC_ReductionOperatorMinnum
 def OpenACC_ReductionOperator
     : I32EnumAttr<
           "ReductionOperator",
+          // Built-in reduction operations supported by OpenACC
+          // according OpenACC 3.3:
+          //
+          //  |-------------------|----------------------|
+          //  | Language operator |                      |
+          //  |-------------------|   ReductionOperator  |
+          //  | C/C++   | Fortran |                      |
+          //  |------------------------------------------|
+          //  |     +   |      +  |         add          |
+          //  |     *   |      *  |         mul          |
+          //  |   max   |    max  | max/maximumf/maxnumf |
+          //  |   min   |    min  | min/minimumf/minnumf |
+          //  |     &   |   iand  |        iand          |
+          //  |     |   |    ior  |         ior          |
+          //  |     ^   |   ieor  |         xor          |
+          //  |    &&   |  .and.  |        land          |
+          //  |    ||   |   .or.  |         lor          |
+          //  |         |  .eqv.  |         eqv          |
+          //  |         | .neqv.  |        neqv          |
+          //  |------------------------------------------|
+          //
+          //  The different max/min ReductionOperator's have different behavior
+          //  when the arguments may be NaNs or signed zeros:
+          //    * max/min - in general, produces inconsistent results
+          //      in parallel execution, because it is not commutative.
+          //      The max/min returns the second argument,
+          //      when one of the arguments is NaN,
+          //      or both arguments are zeros regardless of the sign.
+          //    * maximumf/minimumf - safe to parallelize, corresponds to
+          //      maximum/minimum defined in IEEE-754-2019.
+          //    * maxnumf/minnumf - safe to parallelize, corresponds to
+          //      maxNum/minNum defined in IEEE-754-2008.
           "built-in reduction operations supported by OpenACC",
           [OpenACC_ReductionOperatorNone, OpenACC_ReductionOperatorAdd,
            OpenACC_ReductionOperatorMul, OpenACC_ReductionOperatorMax,

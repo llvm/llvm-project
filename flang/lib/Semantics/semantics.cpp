@@ -388,7 +388,6 @@ SemanticsContext::SemanticsContext(
       intrinsics_{evaluate::IntrinsicProcTable::Configure(defaultKinds_)},
       globalScope_{*this}, intrinsicModulesScope_{globalScope_.MakeScope(
                                Scope::Kind::IntrinsicModules, nullptr)},
-      fpMaxminBehavior_{fpMaxminBehavior},
       foldingContext_{parser::ContextualMessages{&messages_}, defaultKinds_,
           intrinsics_, targetCharacteristics_, languageFeatures_, tempNames_,
           fpMaxminBehavior} {}
