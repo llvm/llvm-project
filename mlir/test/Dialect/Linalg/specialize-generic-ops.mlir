@@ -364,9 +364,9 @@ func.func @op_batch_matmul_unsigned_cast(%A: tensor<2x16x8xi16>,
 #mapA = affine_map<(m, n, k1, k2) -> (m, k1, k2)>
 #mapB = affine_map<(m, n, k1, k2) -> (k2, k1, n)>
 #mapC = affine_map<(m, n, k1, k2) -> (m, n)>
-func.func @negative_op_multi_reduction(%A: tensor<10x20x30xf32>,
-                                       %B: tensor<30x20x40xf32>,
-                                       %C: tensor<10x40xf32>) -> tensor<10x40xf32> {
+func.func @op_multi_reduction(%A: tensor<10x20x30xf32>,
+                              %B: tensor<30x20x40xf32>,
+                              %C: tensor<10x40xf32>) -> tensor<10x40xf32> {
   %0 = linalg.generic
            {indexing_maps = [#mapA, #mapB, #mapC],
             iterator_types = ["parallel", "parallel", "reduction", "reduction"]}
@@ -381,10 +381,10 @@ func.func @negative_op_multi_reduction(%A: tensor<10x20x30xf32>,
 }
 
 // Cannot be lifted to named matrix multiply.
-// CHECK-LABEL: negative_op_multi_reduction
+// CHECK-LABEL: op_multi_reduction
 // CHECK: linalg.generic
 
-// CATEGORY-LABEL: negative_op_multi_reduction
+// CATEGORY-LABEL: op_multi_reduction
 // CATEGORY-NOT: linalg.generic
 // CATEGORY: linalg.contract
 
@@ -395,8 +395,8 @@ func.func @negative_op_multi_reduction(%A: tensor<10x20x30xf32>,
 #mapBni0 = affine_map<(d0, d1, d2, d3) -> (d1, d0, d3)>
 #mapBni1 = affine_map<(d0, d1, d2, d3) -> (d0, d3, d2)>
 #mapBni2 = affine_map<(d0, d1, d2, d3) -> (d0, d1, d2)>
-func.func @negative_batch_matmul_non_identity_batch(%A: tensor<4x2x8xf32>, %B: tensor<2x8x16xf32>,
-                                                     %Out: tensor<2x4x16xf32>) -> tensor<2x4x16xf32> {
+func.func @batch_matmul_non_identity_batch(%A: tensor<4x2x8xf32>, %B: tensor<2x8x16xf32>,
+                                           %Out: tensor<2x4x16xf32>) -> tensor<2x4x16xf32> {
   %0 = linalg.generic
            {indexing_maps = [#mapBni0, #mapBni1, #mapBni2], iterator_types = ["parallel", "parallel", "parallel", "reduction"]}
            ins(%A, %B : tensor<4x2x8xf32>, tensor<2x8x16xf32>) outs(%Out : tensor<2x4x16xf32>) {
@@ -409,10 +409,10 @@ func.func @negative_batch_matmul_non_identity_batch(%A: tensor<4x2x8xf32>, %B: t
 }
 
 // Cannot be lifted to named matrix multiply.
-// CHECK-LABEL: negative_batch_matmul_non_identity_batch
+// CHECK-LABEL: batch_matmul_non_identity_batch
 // CHECK: linalg.generic
 
-// CATEGORY-LABEL: negative_batch_matmul_non_identity_batch
+// CATEGORY-LABEL: batch_matmul_non_identity_batch
 // CATEGORY-NOT: linalg.generic
 // CATEGORY: linalg.contract
 
