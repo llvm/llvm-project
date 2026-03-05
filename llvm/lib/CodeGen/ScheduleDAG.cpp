@@ -478,6 +478,7 @@ void ScheduleDAGTopologicalSort::InitDAGTopologicalSorting() {
 
   Index2Node.resize(DAGSize);
   Node2Index.resize(DAGSize);
+  Visited.resize(DAGSize);
 
   // Initialize the data structures.
   if (ExitSU)
@@ -500,26 +501,32 @@ void ScheduleDAGTopologicalSort::InitDAGTopologicalSorting() {
   while (!WorkList.empty()) {
     SUnit *SU = WorkList.back();
     WorkList.pop_back();
+    // Allocate index, skipping non-SUnits, e.g., ExitSU
     if (SU->NodeNum < DAGSize)
       Allocate(SU->NodeNum, --Id);
+    // Update predcessors
     for (const SDep &PredDep : SU->Preds) {
-      SUnit *SU = PredDep.getSUnit();
-      if (SU->NodeNum < DAGSize && !--Node2Index[SU->NodeNum])
-        // If all dependencies of the node are processed already,
-        // then the node can be computed now.
-        WorkList.push_back(SU);
+      SUnit *Pred = PredDep.getSUnit();
+      // Skip non-SUnits, e.g., ExitSU
+      if (Pred->NodeNum >= DAGSize)
+        continue;
+      // Reduce degree (we're processed a successor of Pred).
+      unsigned Degree = --Node2Index[Pred->NodeNum];
+      // If all dependents of the node are processed already, then the node can
+      // be computed now.
+      if (!Degree)
+        WorkList.push_back(Pred);
     }
   }
 
-  Visited.resize(DAGSize);
   NumTopoInits++;
 
 #ifndef NDEBUG
   // Check correctness of the ordering
   for (SUnit &SU : SUnits)  {
-    for (const SDep &PD : SU.Preds) {
-      assert(Node2Index[SU.NodeNum] > Node2Index[PD.getSUnit()->NodeNum] &&
-      "Wrong topological sorting");
+    for (const SDep &PredDep : SU.Preds) {
+      assert(Node2Index[SU.NodeNum] > Node2Index[PredDep.getSUnit()->NodeNum] &&
+             "Wrong topological sorting");
     }
   }
 #endif
@@ -542,7 +549,7 @@ void ScheduleDAGTopologicalSort::AddPredQueued(SUnit *Y, SUnit *X) {
   // Recomputing the order from scratch is likely more efficient than applying
   // updates one-by-one for too many updates. The current cut-off is arbitrarily
   // chosen.
-  Dirty = Dirty || Updates.size() > 10;
+  Dirty |= Updates.size() > 10;
 
   if (Dirty)
     return;
@@ -551,18 +558,16 @@ void ScheduleDAGTopologicalSort::AddPredQueued(SUnit *Y, SUnit *X) {
 }
 
 void ScheduleDAGTopologicalSort::AddPred(SUnit *Y, SUnit *X) {
-  int UpperBound, LowerBound;
-  LowerBound = Node2Index[Y->NodeNum];
-  UpperBound = Node2Index[X->NodeNum];
+  int LowerBound = Node2Index[Y->NodeNum];
+  int UpperBound = Node2Index[X->NodeNum];
   bool HasLoop = false;
   // Is Ord(X) < Ord(Y) ?
   if (LowerBound < UpperBound) {
     // Update the topological order.
-    Visited.reset();
     DFS(Y, UpperBound, HasLoop);
     assert(!HasLoop && "Inserted edge creates a loop!");
     // Recompute topological indexes.
-    Shift(Visited, LowerBound, UpperBound);
+    Shift(LowerBound, UpperBound);
   }
 
   NumNewPredsAdded++;
@@ -574,6 +579,8 @@ void ScheduleDAGTopologicalSort::RemovePred(SUnit *M, SUnit *N) {
 
 void ScheduleDAGTopologicalSort::DFS(const SUnit *SU, int UpperBound,
                                      bool &HasLoop) {
+  Visited.reset();
+
   std::vector<const SUnit*> WorkList;
   WorkList.reserve(SUnits.size());
 
@@ -583,18 +590,17 @@ void ScheduleDAGTopologicalSort::DFS(const SUnit *SU, int UpperBound,
     WorkList.pop_back();
     Visited.set(SU->NodeNum);
     for (const SDep &SuccDep : llvm::reverse(SU->Succs)) {
-      unsigned s = SuccDep.getSUnit()->NodeNum;
+      unsigned Succ = SuccDep.getSUnit()->NodeNum;
       // Edges to non-SUnits are allowed but ignored (e.g. ExitSU).
-      if (s >= Node2Index.size())
+      if (Succ >= Node2Index.size())
         continue;
-      if (Node2Index[s] == UpperBound) {
+      if (Node2Index[Succ] == UpperBound) {
         HasLoop = true;
         return;
       }
-      // Visit successors if not already and in affected region.
-      if (!Visited.test(s) && Node2Index[s] < UpperBound) {
+      // Visit successors if haven't already and in affected region.
+      if (!Visited.test(Succ) && Node2Index[Succ] < UpperBound)
         WorkList.push_back(SuccDep.getSUnit());
-      }
     }
   } while (!WorkList.empty());
 }
@@ -623,19 +629,19 @@ std::vector<int> ScheduleDAGTopologicalSort::GetSubGraph(const SUnit &StartSU,
   do {
     const SUnit *SU = WorkList.back();
     WorkList.pop_back();
-    for (const SDep &SD : llvm::reverse(SU->Succs)) {
-      const SUnit *Succ = SD.getSUnit();
-      unsigned s = Succ->NodeNum;
+    for (const SDep &SuccDep : llvm::reverse(SU->Succs)) {
+      const SUnit *Succ = SuccDep.getSUnit();
+      unsigned SuccNum = Succ->NodeNum;
       // Edges to non-SUnits are allowed but ignored (e.g. ExitSU).
       if (Succ->isBoundaryNode())
         continue;
-      if (Node2Index[s] == UpperBound) {
+      if (Node2Index[SuccNum] == UpperBound) {
         Found = true;
         continue;
       }
       // Visit successors if not already and in affected region.
-      if (!Visited.test(s) && Node2Index[s] < UpperBound) {
-        Visited.set(s);
+      if (!Visited.test(SuccNum) && Node2Index[SuccNum] < UpperBound) {
+        Visited.set(SuccNum);
         WorkList.push_back(Succ);
       }
     }
@@ -657,20 +663,20 @@ std::vector<int> ScheduleDAGTopologicalSort::GetSubGraph(const SUnit &StartSU,
   do {
     const SUnit *SU = WorkList.back();
     WorkList.pop_back();
-    for (const SDep &SD : llvm::reverse(SU->Preds)) {
-      const SUnit *Pred = SD.getSUnit();
-      unsigned s = Pred->NodeNum;
+    for (const SDep &PredDep : llvm::reverse(SU->Preds)) {
+      const SUnit *Pred = PredDep.getSUnit();
+      unsigned PredNum = Pred->NodeNum;
       // Edges to non-SUnits are allowed but ignored (e.g. EntrySU).
       if (Pred->isBoundaryNode())
         continue;
-      if (Node2Index[s] == LowerBound) {
+      if (Node2Index[PredNum] == LowerBound) {
         Found = true;
         continue;
       }
-      if (!VisitedBack.test(s) && Visited.test(s)) {
-        VisitedBack.set(s);
+      if (!VisitedBack.test(PredNum) && Visited.test(PredNum)) {
+        VisitedBack.set(PredNum);
         WorkList.push_back(Pred);
-        Nodes.push_back(s);
+        Nodes.push_back(PredNum);
       }
     }
   } while (!WorkList.empty());
@@ -680,41 +686,36 @@ std::vector<int> ScheduleDAGTopologicalSort::GetSubGraph(const SUnit &StartSU,
   return Nodes;
 }
 
-void ScheduleDAGTopologicalSort::Shift(BitVector& Visited, int LowerBound,
-                                       int UpperBound) {
-  std::vector<int> L;
-  int shift = 0;
-  int i;
+void ScheduleDAGTopologicalSort::Shift(int LowerBound, int UpperBound) {
+  int I;
+  std::vector<int> NodesToShift;
 
-  for (i = LowerBound; i <= UpperBound; ++i) {
-    // w is node at topological index i.
-    int w = Index2Node[i];
-    if (Visited.test(w)) {
-      // Unmark.
-      Visited.reset(w);
-      L.push_back(w);
-      shift = shift + 1;
-    } else {
-      Allocate(w, i - shift);
+  for (I = LowerBound; I <= UpperBound; ++I) {
+    int Node = Index2Node[I];
+    // Mark any visited nodes as requiring a backwards shift
+    if (Visited.test(Node)) {
+      NodesToShift.push_back(Node);
+      continue;
     }
+    // Shift unvisited nodes forwards.
+    Allocate(Node, I - NodesToShift.size());
   }
 
-  for (unsigned LI : L) {
-    Allocate(LI, i - shift);
-    i = i + 1;
+  // Perform the remaining shifts.
+  for (int Node : NodesToShift) {
+    Allocate(Node, I - NodesToShift.size());
+    ++I;
   }
 }
 
 bool ScheduleDAGTopologicalSort::WillCreateCycle(SUnit *TargetSU, SUnit *SU) {
   FixOrder();
   // Is SU reachable from TargetSU via successor edges?
-  if (IsReachable(SU, TargetSU))
-    return true;
-  for (const SDep &PredDep : TargetSU->Preds)
-    if (PredDep.isAssignedRegDep() &&
-        IsReachable(SU, PredDep.getSUnit()))
-      return true;
-  return false;
+  return IsReachable(SU, TargetSU) ||
+         any_of(TargetSU->Preds, [&](SDep &PredDep) {
+           return PredDep.isAssignedRegDep() &&
+                  IsReachable(SU, PredDep.getSUnit());
+         });
 }
 
 void ScheduleDAGTopologicalSort::AddSUnitWithoutPredecessors(const SUnit *SU) {
@@ -732,26 +733,24 @@ bool ScheduleDAGTopologicalSort::IsReachable(const SUnit *SU,
   FixOrder();
   // If insertion of the edge SU->TargetSU would create a cycle
   // then there is a path from TargetSU to SU.
-  int UpperBound, LowerBound;
-  LowerBound = Node2Index[TargetSU->NodeNum];
-  UpperBound = Node2Index[SU->NodeNum];
+  int LowerBound = Node2Index[TargetSU->NodeNum];
+  int UpperBound = Node2Index[SU->NodeNum];
   bool HasLoop = false;
   // Is Ord(TargetSU) < Ord(SU) ?
   if (LowerBound < UpperBound) {
-    Visited.reset();
     // There may be a path from TargetSU to SU. Check for it.
     DFS(TargetSU, UpperBound, HasLoop);
   }
   return HasLoop;
 }
 
-void ScheduleDAGTopologicalSort::Allocate(int n, int index) {
-  Node2Index[n] = index;
-  Index2Node[index] = n;
+void ScheduleDAGTopologicalSort::Allocate(int N, int Index) {
+  Node2Index[N] = Index;
+  Index2Node[Index] = N;
 }
 
-ScheduleDAGTopologicalSort::
-ScheduleDAGTopologicalSort(std::vector<SUnit> &sunits, SUnit *exitsu)
-  : SUnits(sunits), ExitSU(exitsu) {}
+ScheduleDAGTopologicalSort::ScheduleDAGTopologicalSort(
+    std::vector<SUnit> &SUnits, SUnit *ExitSU)
+    : SUnits(SUnits), ExitSU(ExitSU) {}
 
 ScheduleHazardRecognizer::~ScheduleHazardRecognizer() = default;
