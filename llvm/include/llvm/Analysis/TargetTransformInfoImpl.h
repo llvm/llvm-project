@@ -632,6 +632,13 @@ public:
     }
   }
 
+  virtual InstructionCost
+  getRegisterClassSpillCost(unsigned ClassID,
+                            TTI::TargetCostKind CostKind) const {
+    // Assume one spill and reload, each with cost TCC_Basic
+    return TTI::TCC_Basic * 2;
+  }
+
   virtual TypeSize
   getRegisterBitWidth(TargetTransformInfo::RegisterKind K) const {
     return TypeSize::getFixed(32);
