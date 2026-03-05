@@ -1,4 +1,4 @@
-// RUN: %check_clang_tidy -std=c++11 %s cppcoreguidelines-rvalue-reference-param-not-moved %t -- \
+// RUN: %check_clang_tidy -std=c++11-or-later %s cppcoreguidelines-rvalue-reference-param-not-moved %t -- \
 // RUN: -config="{CheckOptions: {cppcoreguidelines-rvalue-reference-param-not-moved.AllowPartialMove: true, cppcoreguidelines-rvalue-reference-param-not-moved.IgnoreUnnamedParams: true, cppcoreguidelines-rvalue-reference-param-not-moved.IgnoreNonDeducedTemplateTypes: true, cppcoreguidelines-rvalue-reference-param-not-moved.MoveFunction: custom_move}}" -- -fno-delayed-template-parsing
 
 // NOLINTBEGIN
