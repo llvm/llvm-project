@@ -652,7 +652,6 @@ DistributeLayoutAttr LayoutAttr::transposeDims(ArrayRef<int64_t> permutation) {
   SmallVector<int32_t> laneLayout;
   SmallVector<int32_t> laneData;
   SmallVector<int32_t> order;
-  xegpu::LayoutAttr layoutAttr;
 
   for (int64_t idx : permutation) {
     if (!origLaneLayout.empty()) {
@@ -661,33 +660,28 @@ DistributeLayoutAttr LayoutAttr::transposeDims(ArrayRef<int64_t> permutation) {
     }
     if (!origInstData.empty())
       instData.push_back(static_cast<int32_t>(origInstData[idx]));
-    if (!origSgData.empty()) {
+    if (!origSgLayout.empty()) {
       sgLayout.push_back(static_cast<int32_t>(origSgLayout[idx]));
       sgData.push_back(static_cast<int32_t>(origSgData[idx]));
     }
     order.push_back(static_cast<int32_t>(origOrder[idx]));
   }
-
-  if (!origLaneLayout.empty()) {
-    layoutAttr = xegpu::LayoutAttr::get(
-        getContext(),
-        /*sg_lane =*/nullptr, /*sg_data =*/nullptr, /*inst_data =*/nullptr,
-        DenseI32ArrayAttr::get(getContext(), laneLayout),
-        DenseI32ArrayAttr::get(getContext(), laneData),
-        DenseI32ArrayAttr::get(getContext(), order));
-  }
-  if (!origInstData.empty()) {
-    layoutAttr = xegpu::LayoutAttr::get(getContext(), instData);
-  }
-  if (!origSgData.empty()) {
-    layoutAttr = xegpu::LayoutAttr::get(
-        getContext(), DenseI32ArrayAttr::get(getContext(), sgLayout),
-        DenseI32ArrayAttr::get(getContext(), sgData),
-        /*inst_data =*/nullptr, /*lane_layout =*/nullptr,
-        /*lane_data =*/nullptr, DenseI32ArrayAttr::get(getContext(), order));
-  }
-
-  return layoutAttr;
+  if (origLaneLayout.empty() && origSgLayout.empty())
+    order.clear();
+  return xegpu::LayoutAttr::get(
+      getContext(),
+      sgLayout.empty() ? DenseI32ArrayAttr()
+                       : DenseI32ArrayAttr::get(getContext(), sgLayout),
+      sgData.empty() ? DenseI32ArrayAttr()
+                     : DenseI32ArrayAttr::get(getContext(), sgData),
+      instData.empty() ? DenseI32ArrayAttr()
+                       : DenseI32ArrayAttr::get(getContext(), instData),
+      laneLayout.empty() ? DenseI32ArrayAttr()
+                         : DenseI32ArrayAttr::get(getContext(), laneLayout),
+      laneData.empty() ? DenseI32ArrayAttr()
+                       : DenseI32ArrayAttr::get(getContext(), laneData),
+      order.empty() ? DenseI32ArrayAttr()
+                    : DenseI32ArrayAttr::get(getContext(), order));
 }
 
 /// Check if this layout is a transpose of another layout.
