@@ -8,6 +8,8 @@
 // RUN:   -triple powerpc64le-unknown-unknown -emit-llvm %s \
 // RUN:   -o - | FileCheck %s
 
+// AI Generated.
+
 #include <altivec.h>
 
 vector unsigned int vuia, vuib;
@@ -94,5 +96,3 @@ vector unsigned short test_vec_mulh_uh(void) {
   // CHECK-NEXT: ret <8 x i16>
   return vec_mulh(vusa, vusb);
 }
-
-// Made with Bob
