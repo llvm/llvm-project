@@ -392,6 +392,12 @@
 #  define _LIBCPP_NOINLINE
 #endif
 
+#if __has_cpp_attribute(_Clang::__nonblocking__)
+#  define _LIBCPP_NONBLOCKING [[_Clang::__nonblocking__]]
+#else
+#  define _LIBCPP_NONBLOCKING
+#endif
+
 // Deprecation macros
 // ------------------
 
