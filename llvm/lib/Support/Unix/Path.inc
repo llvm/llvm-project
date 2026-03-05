@@ -1437,7 +1437,12 @@ std::error_code readlink(const Twine &path, SmallVectorImpl<char> &dest) {
   // can't use lstat to get the size ahead of time because it's racy (the
   // symlink can be replaced between lstat and readlink), and some filesystems
   // (e.g. /proc on Linux) report st_size == 0 for symlinks.
-  size_t BufSize = 128;
+  //
+  // Default buffer starts at destination's current capacity unless that's too
+  // small. 32 is the somewhat arbitrary lower bound, but if we're going to have
+  // to allocate anyway it should have a reasonable chance of holding the
+  // result. This is to handle cases of `SmallString<0>` as buffers.
+  size_t BufSize = std::max(32, dest.capacity());
   for (;;) {
     dest.resize_for_overwrite(BufSize);
     ssize_t Len = ::readlink(P.begin(), dest.data(), dest.size());
