@@ -9,13 +9,8 @@
 
 target triple = "wasm32-unknown-unknown"
 
-; mvp: -component_model_thread_context
-; MVP-LABEL: .section        .custom_section.target_features,"",@
-; MVP-NEXT:  .int8   1
-; MVP-NEXT:  .int8   45
-; MVP-NEXT:  .int8   30
-; MVP-NEXT:  .ascii  "component-model-thread-context"
-; MVP-NEXT:  .text
+; mvp: should not contain the target features section
+; MVP-NOT: .custom_section.target_features,"",@
 
 ; generic: +call-indirect-overlong, +multivalue, +mutable-globals, +reference-types, +sign-ext, -component-model-thread-context
 ; GENERIC-LABEL: .custom_section.target_features,"",@
