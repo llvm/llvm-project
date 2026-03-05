@@ -143,7 +143,7 @@ void *copyEnvironment(const char **Envp, ol_device_handle_t Device) {
 }
 
 ol_device_handle_t findDevice(MemoryBufferRef Binary) {
-  ol_device_handle_t Device;
+  ol_device_handle_t Device = nullptr;
   std::tuple Data = std::make_tuple(&Device, &Binary);
   OFFLOAD_ERR(olIterateDevices(
       [](ol_device_handle_t Device, void *UserData) {
@@ -201,7 +201,8 @@ int main(int argc, const char **argv, const char **envp) {
   cl::ParseCommandLineOptions(
       argc, argv,
       "A utility used to launch unit tests built for a GPU target. This is\n"
-      "intended to provide an intrface simular to cross-compiling emulators\n");
+      "intended to provide an interface similar to cross-compiling "
+      "emulators\n");
 
   if (Help) {
     cl::PrintHelpMessage();
@@ -242,6 +243,8 @@ int main(int argc, const char **argv, const char **envp) {
     }
     InitArgs.NumPlatforms = 1;
     InitArgs.Platforms = &Backend;
+  } else {
+    handleError(createStringError("unrecognized file type"));
   }
 
   SmallVector<const char *> NewArgv = {File.c_str()};
@@ -249,8 +252,13 @@ int main(int argc, const char **argv, const char **envp) {
                   [](const std::string &Arg) { return Arg.c_str(); });
 
   OFFLOAD_ERR(olInit(&InitArgs));
+  if (InitArgs.NumPlatforms == 0)
+    handleError(createStringError("No compatible platforms were found"));
   ol_device_handle_t Device = findDevice(Image);
+  if (!Device)
+    handleError(createStringError("No compatible device was found"));
   ol_device_handle_t Host = getHostDevice();
+  assert(Host && "Host device should always be present");
 
   ol_program_handle_t Program;
   OFFLOAD_ERR(olCreateProgram(Device, Image.getBufferStart(),
