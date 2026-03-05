@@ -159,12 +159,11 @@ void OmpStructureChecker::HasInvalidLoopBinding(
   const parser::OmpDirectiveName &beginName{beginSpec.DirName()};
 
   auto teamsBindingChecker = [&](parser::MessageFixedText msg) {
-    for (const auto &clause : beginSpec.Clauses().v) {
-      if (const auto *bindClause{
-              std::get_if<parser::OmpClause::Bind>(&clause.u)}) {
-        if (bindClause->v.v != parser::OmpBindClause::Binding::Teams) {
-          context_.Say(beginName.source, msg);
-        }
+    if (auto *clause{
+            parser::omp::FindClause(beginSpec, llvm::omp::Clause::OMPC_bind)}) {
+      auto &bind{std::get<parser::OmpClause::Bind>(clause->u).v};
+      if (bind.v != parser::OmpBindClause::Binding::Teams) {
+        context_.Say(beginName.source, msg);
       }
     }
   };
@@ -204,11 +203,9 @@ void OmpStructureChecker::CheckSIMDNest(const parser::OpenMPConstruct &c) {
           [&](const parser::OmpBlockConstruct &c) {
             const parser::OmpDirectiveSpecification &beginSpec{c.BeginDir()};
             if (beginSpec.DirId() == llvm::omp::Directive::OMPD_ordered) {
-              for (const auto &clause : beginSpec.Clauses().v) {
-                if (std::get_if<parser::OmpClause::Simd>(&clause.u)) {
-                  eligibleSIMD = true;
-                  break;
-                }
+              if (parser::omp::FindClause(
+                      beginSpec, llvm::omp::Clause::OMPC_simd)) {
+                eligibleSIMD = true;
               }
             }
           },
@@ -217,11 +214,9 @@ void OmpStructureChecker::CheckSIMDNest(const parser::OpenMPConstruct &c) {
                     &c.u)}) {
               llvm::omp::Directive dirId{ssc->v.DirId()};
               if (dirId == llvm::omp::Directive::OMPD_ordered) {
-                for (const parser::OmpClause &x : ssc->v.Clauses().v) {
-                  if (x.Id() == llvm::omp::Clause::OMPC_simd) {
-                    eligibleSIMD = true;
-                    break;
-                  }
+                if (parser::omp::FindClause(
+                        ssc->v, llvm::omp::Clause::OMPC_simd)) {
+                  eligibleSIMD = true;
                 }
               } else if (dirId == llvm::omp::Directive::OMPD_scan) {
                 eligibleSIMD = true;
@@ -274,9 +269,8 @@ static bool IsFullUnroll(const parser::OpenMPLoopConstruct &x) {
   const parser::OmpDirectiveSpecification &beginSpec{x.BeginDir()};
 
   if (beginSpec.DirName().v == llvm::omp::Directive::OMPD_unroll) {
-    return llvm::none_of(beginSpec.Clauses().v, [](const parser::OmpClause &c) {
-      return c.Id() == llvm::omp::Clause::OMPC_partial;
-    });
+    return parser::omp::FindClause(
+               beginSpec, llvm::omp::Clause::OMPC_partial) == nullptr;
   }
   return false;
 }
@@ -312,15 +306,13 @@ static std::optional<size_t> CountGeneratedNests(
     if (!nestedCount || *nestedCount == 0) {
       return std::nullopt;
     }
-    auto rangeAt{
-        llvm::find_if(beginSpec.Clauses().v, [](const parser::OmpClause &c) {
-          return c.Id() == llvm::omp::Clause::OMPC_looprange;
-        })};
-    if (rangeAt == beginSpec.Clauses().v.end()) {
+    auto *clause{
+        parser::omp::FindClause(beginSpec, llvm::omp::Clause::OMPC_looprange)};
+    if (!clause) {
       return 1;
     }
 
-    auto *loopRange{parser::Unwrap<parser::OmpLooprangeClause>(*rangeAt)};
+    auto *loopRange{parser::Unwrap<parser::OmpLooprangeClause>(*clause)};
     std::optional<int64_t> count{GetIntValue(std::get<1>(loopRange->t))};
     if (!count || *count <= 0) {
       return std::nullopt;
@@ -617,22 +609,21 @@ void OmpStructureChecker::CheckDistLinear(
 
 void OmpStructureChecker::CheckLooprangeBounds(
     const parser::OpenMPLoopConstruct &x) {
-  for (const parser::OmpClause &clause : x.BeginDir().Clauses().v) {
-    if (auto *lrClause{parser::Unwrap<parser::OmpLooprangeClause>(clause)}) {
-      auto first{GetIntValue(std::get<0>(lrClause->t))};
-      auto count{GetIntValue(std::get<1>(lrClause->t))};
-      if (!first || !count || *first <= 0 || *count <= 0) {
-        return;
-      }
-      auto requiredCount{static_cast<size_t>(*first + *count - 1)};
-      if (auto loopCount{CountGeneratedNests(std::get<parser::Block>(x.t))}) {
-        if (*loopCount < requiredCount) {
-          context_.Say(clause.source,
-              "The specified loop range requires %zu loops, but the loop sequence has a length of %zu"_err_en_US,
-              requiredCount, *loopCount);
-        }
-      }
+  if (auto *clause{parser::omp::FindClause(
+          x.BeginDir(), llvm::omp::Clause::OMPC_looprange)}) {
+    auto *lrClause{parser::Unwrap<parser::OmpLooprangeClause>(clause)};
+    auto first{GetIntValue(std::get<0>(lrClause->t))};
+    auto count{GetIntValue(std::get<1>(lrClause->t))};
+    if (!first || !count || *first <= 0 || *count <= 0) {
       return;
+    }
+    auto requiredCount{static_cast<size_t>(*first + *count - 1)};
+    if (auto loopCount{CountGeneratedNests(std::get<parser::Block>(x.t))}) {
+      if (*loopCount < requiredCount) {
+        context_.Say(clause->source,
+            "The specified loop range requires %zu loops, but the loop sequence has a length of %zu"_err_en_US,
+            requiredCount, *loopCount);
+      }
     }
   }
 }
