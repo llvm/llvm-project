@@ -73,6 +73,8 @@ Semantic import
 ---------------
 Modules improve access to the API of software libraries by replacing the textual preprocessor inclusion model with a more robust, more efficient semantic model. From the user's perspective, the code looks only slightly different, because one uses an ``import`` declaration rather than a ``#include`` preprocessor directive:
 
+In the case of the C++ standard library, importing a standard library module (for example via ``import std;``) provides access to standard library facilities without requiring the inclusion of individual standard library headers, and diagnostics may differ from the traditional header-based model.
+
 .. code-block:: c
 
   import std.io; // pseudo-code; see below for syntax discussion
