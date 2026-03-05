@@ -50,8 +50,6 @@
 namespace Fortran::semantics {
 
 using NameToSymbolMap = std::multimap<parser::CharBlock, SymbolRef>;
-static void DoDumpSymbols(llvm::raw_ostream &, const Scope &, int indent = 0);
-static void PutIndent(llvm::raw_ostream &, int indent);
 
 static void GetSymbolNames(const Scope &scope, NameToSymbolMap &symbols) {
   // Finds all symbol names in the scope without collecting duplicates.
@@ -704,7 +702,7 @@ void Semantics::EmitMessages(llvm::raw_ostream &os) {
 }
 
 void SemanticsContext::DumpSymbols(llvm::raw_ostream &os) {
-  DoDumpSymbols(os, globalScope());
+  globalScope().print(os);
 }
 
 ProgramTree &SemanticsContext::SaveProgramTree(ProgramTree &&tree) {
@@ -727,70 +725,6 @@ void Semantics::DumpSymbolsSources(llvm::raw_ostream &os) const {
       os << symbol.name().ToString() << ": "
          << symbol.GetUltimate().owner().symbol()->name().ToString() << "\n";
     }
-  }
-}
-
-void DoDumpSymbols(llvm::raw_ostream &os, const Scope &scope, int indent) {
-  PutIndent(os, indent);
-  os << Scope::EnumToString(scope.kind()) << " scope:";
-  if (const auto *symbol{scope.symbol()}) {
-    os << ' ' << symbol->name();
-  }
-  if (scope.alignment().has_value()) {
-    os << " size=" << scope.size() << " alignment=" << *scope.alignment();
-  }
-  if (scope.derivedTypeSpec()) {
-    os << " instantiation of " << *scope.derivedTypeSpec();
-  }
-  os << " sourceRange=" << scope.sourceRange().size() << " bytes\n";
-  ++indent;
-  for (const auto &pair : scope) {
-    const auto &symbol{*pair.second};
-    PutIndent(os, indent);
-    os << symbol << '\n';
-    if (const auto *details{symbol.detailsIf<GenericDetails>()}) {
-      if (const auto &type{details->derivedType()}) {
-        PutIndent(os, indent);
-        os << *type << '\n';
-      }
-    }
-  }
-  if (!scope.equivalenceSets().empty()) {
-    PutIndent(os, indent);
-    os << "Equivalence Sets:";
-    for (const auto &set : scope.equivalenceSets()) {
-      os << ' ';
-      char sep = '(';
-      for (const auto &object : set) {
-        os << sep << object.AsFortran();
-        sep = ',';
-      }
-      os << ')';
-    }
-    os << '\n';
-  }
-  if (!scope.crayPointers().empty()) {
-    PutIndent(os, indent);
-    os << "Cray Pointers:";
-    for (const auto &[pointee, pointer] : scope.crayPointers()) {
-      os << " (" << pointer->name() << ',' << pointee << ')';
-    }
-    os << '\n';
-  }
-  for (const auto &pair : scope.commonBlocks()) {
-    const auto &symbol{*pair.second};
-    PutIndent(os, indent);
-    os << symbol << '\n';
-  }
-  for (const auto &child : scope.children()) {
-    DoDumpSymbols(os, child, indent);
-  }
-  --indent;
-}
-
-static void PutIndent(llvm::raw_ostream &os, int indent) {
-  for (int i = 0; i < indent; ++i) {
-    os << "  ";
   }
 }
 

@@ -296,6 +296,11 @@ public:
     runtimeDerivedTypeDescription_ = &symbol;
   }
 
+  void print(llvm::raw_ostream &os, int indent = 0) const;
+#if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
+  LLVM_DUMP_METHOD void dump() const;
+#endif
+
 private:
   Scope *parent_{
       nullptr}; // this is enclosing scope, not extended derived type base
