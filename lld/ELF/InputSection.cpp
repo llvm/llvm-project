@@ -1289,7 +1289,8 @@ void InputSectionBase::adjustSplitStackFunctionPrologues(Ctx &ctx, uint8_t *buf,
     // conservative.
     if (Defined *d = dyn_cast<Defined>(rel.sym))
       if (InputSection *isec = cast_or_null<InputSection>(d->section))
-        if (!isec || !isec->getFile<ELFT>() || isec->getFile<ELFT>()->splitStack)
+        if (!isec || !isec->getFile<ELFT>() ||
+            isec->getFile<ELFT>()->splitStack)
           continue;
 
     if (enclosingPrologueAttempted(rel.offset, prologues))
