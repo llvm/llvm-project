@@ -1694,6 +1694,9 @@ protected:
     MemoryRegionInfo::OptionalBool is_shadow_stack = range_info.IsShadowStack();
     if (is_shadow_stack == MemoryRegionInfo::OptionalBool::eYes)
       result.AppendMessage("shadow stack: yes");
+    if (std::optional<unsigned> protection_key = range_info.GetProtectionKey())
+      result.AppendMessageWithFormat("protection key: %" PRIu32 "\n",
+                                     *protection_key);
 
     const std::optional<std::vector<addr_t>> &dirty_page_list =
         range_info.GetDirtyPageList();
