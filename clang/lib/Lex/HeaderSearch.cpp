@@ -148,12 +148,12 @@ std::vector<bool> HeaderSearch::collectVFSUsageAndClear() const {
 
   llvm::vfs::FileSystem &RootFS = FileMgr.getVirtualFileSystem();
   // TODO: This only works if the `RedirectingFileSystem`s were all created by
-  //       `createVFSFromOverlayFiles`. But at least exclude the ones with null
+  //       `createVFSFromHSOpts`. But at least exclude the ones with null
   //       OverlayFileDir.
   RootFS.visit([&](llvm::vfs::FileSystem &FS) {
     if (auto *RFS = dyn_cast<llvm::vfs::RedirectingFileSystem>(&FS)) {
       // Skip a `RedirectingFileSystem` with null OverlayFileDir which indicates
-      // that they aren't created by createVFSFromOverlayFiles from the overlays
+      // that they aren't created by createVFSFromHSOpts from the overlays
       // in HeaderSearchOption::VFSOverlayFiles.
       if (!RFS->getOverlayFileDir().empty()) {
         VFSUsage.push_back(RFS->hasBeenUsed());
