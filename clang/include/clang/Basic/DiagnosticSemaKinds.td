@@ -3935,6 +3935,11 @@ def warn_dllexport_on_decl_ignored : Warning<
   InGroup<IgnoredAttributes>;
 def note_dllexport_on_decl : Note<
   "'dllexport' attribute on the declaration is ignored">;
+def warn_dllexport_inherited_ctor_unsupported : Warning<
+  "exporting inherited constructor is not yet supported; "
+  "'dllexport' ignored on inherited constructor with "
+  "%select{variadic arguments|callee-cleanup parameters}0">,
+  InGroup<IgnoredAttributes>;
 def warn_attribute_exclude_from_explicit_instantiation_local_class : Warning<
   "%0 attribute ignored on local class%select{| member}1">,
   InGroup<IgnoredAttributes>;
@@ -9563,6 +9568,14 @@ def err_atomic_builtin_must_be_pointer_intfltptr : Error<
 def err_atomic_builtin_pointer_size : Error<
   "address argument to atomic builtin must be a pointer to 1,2,4,8 or 16 byte "
   "type (%0 invalid)">;
+def err_arm_atomic_store_with_stshh_bad_type : Error<
+  "address argument to '__arm_atomic_store_with_stshh' must be a pointer to an "
+  "8,16,32, or 64-bit integer type (%0 invalid)">;
+def err_arm_atomic_store_with_stshh_bad_value_type : Error<
+  "value argument to '__arm_atomic_store_with_stshh' must be %0; got %1">;
+def err_arm_atomic_store_with_stshh_bad_order : Error<
+  "memory order argument to '__arm_atomic_store_with_stshh' must be one of "
+  "__ATOMIC_RELAXED, __ATOMIC_RELEASE, or __ATOMIC_SEQ_CST">;
 def err_atomic_exclusive_builtin_pointer_size : Error<
   "address argument to load or store exclusive builtin must be a pointer to "
   // Because the range of legal sizes for load/store exclusive varies with the
