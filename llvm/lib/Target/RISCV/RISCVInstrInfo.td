@@ -804,16 +804,26 @@ def ANDI  : ALU_ri<0b111, "andi">;
 def SRLI : Shift_ri<0b00000, 0b101, "srli">,
            Sched<[WriteShiftImm, ReadShiftImm]>;
 def SRAI : Shift_ri<0b01000, 0b101, "srai">,
-           Sched<[WriteShiftImm, ReadShiftImm]>;*/
+           Sched<[WriteShiftImm, ReadShiftImm]>;
+def SLL  : ALU_rr<0b0000000, 0b001, "sll">,
+           Sched<[WriteShiftReg, ReadShiftReg, ReadShiftReg]>;
+def SRL  : ALU_rr<0b0100000, 0b000, "srl">,
+           Sched<[WriteShiftReg, ReadShiftReg, ReadShiftReg]>;
+def SRA  : ALU_rr<0b0100000, 0b101, "sra">,
+           Sched<[WriteShiftReg, ReadShiftReg, ReadShiftReg]>;*/
+
 
 //Defining the pseudo commands
 let isPseudo = 1, isCodeGenOnly = 1, hasSideEffects = 0, mayLoad = 0, mayStore = 0 in {
   def SLLI : Pseudo<(outs GPR:$rd), (ins GPR:$rs1, uimmlog2xlen:$shamt), []>;
   def SRLI : Pseudo<(outs GPR:$rd), (ins GPR:$rs1, uimmlog2xlen:$shamt), []>;
   def SRAI : Pseudo<(outs GPR:$rd), (ins GPR:$rs1, uimmlog2xlen:$shamt), []>;
+  def SLL : Pseudo<(outs GPR:$rd), (ins GPR:$rs1, GPR:$rs2), []>;
+  def SRL : Pseudo<(outs GPR:$rd), (ins GPR:$rs1, GPR:$rs2), []>;
+  def SRA : Pseudo<(outs GPR:$rd), (ins GPR:$rs1, GPR:$rs2), []>;
 }
 
-//New shift commands
+//New immediate shift instructions
 def SLI : Shift_ri<0b00000, 0b001, "sli">,
           Sched<[WriteShiftImm, ReadShiftImm]>;
 
@@ -822,10 +832,15 @@ def SRI : Shift_ri<0b00000, 0b101, "sri">,
 
 def ADD  : ALU_rr<0b0000000, 0b000, "add", Commutable=1>,
            Sched<[WriteIALU, ReadIALU, ReadIALU]>;
-def SUB  : ALU_rr<0b0100000, 0b000, "sub">,
+def SUB  : ALU_rr<0b0000000, 0b001, "sub">,
            Sched<[WriteIALU, ReadIALU, ReadIALU]>;
-def SLL  : ALU_rr<0b0000000, 0b001, "sll">,
-           Sched<[WriteShiftReg, ReadShiftReg, ReadShiftReg]>;
+
+//New Shift instruction
+def SL : ALU_rr<0b0000000, 0b101, "shift">,
+          Sched<[WriteShiftReg, ReadShiftReg, ReadShiftReg]>;
+def SR : ALU_rr<0b0100000, 0b101, "shift">,
+          Sched<[WriteShiftReg, ReadShiftReg, ReadShiftReg]>;
+
 let IsSignExtendingOpW = 1 in {
 def SLT  : ALU_rr<0b0000000, 0b010, "slt">,
            Sched<[WriteIALU, ReadIALU, ReadIALU]>;
@@ -834,10 +849,6 @@ def SLTU : ALU_rr<0b0000000, 0b011, "sltu">,
 }
 def XOR  : ALU_rr<0b0000000, 0b100, "xor", Commutable=1>,
            Sched<[WriteIALU, ReadIALU, ReadIALU]>;
-def SRL  : ALU_rr<0b0000000, 0b101, "srl">,
-           Sched<[WriteShiftReg, ReadShiftReg, ReadShiftReg]>;
-def SRA  : ALU_rr<0b0100000, 0b101, "sra">,
-           Sched<[WriteShiftReg, ReadShiftReg, ReadShiftReg]>;
 def OR   : ALU_rr<0b0000000, 0b110, "or", Commutable=1>,
            Sched<[WriteIALU, ReadIALU, ReadIALU]>;
 def AND  : ALU_rr<0b0000000, 0b111, "and", Commutable=1>,
@@ -1540,9 +1551,9 @@ class PatGprShiftMask32<SDPatternOperator OpNode, RVInst Inst>
     : Pat<(OpNode GPR:$rs1, shiftMask32:$rs2),
           (Inst GPR:$rs1, shiftMask32:$rs2)>;
 
-def : PatGprShiftMaskXLen<shl, SLL>;
-def : PatGprShiftMaskXLen<srl, SRL>;
-def : PatGprShiftMaskXLen<sra, SRA>;
+def : PatGprShiftMaskXLen<shl, SL>;
+def : PatGprShiftMaskXLen<srl, SR>;
+def : PatGprShiftMaskXLen<sra, SR>;
 
 // This is a special case of the ADD instruction used to facilitate the use of a
 // fourth operand to emit a relocation on a symbol relating to this instruction.
