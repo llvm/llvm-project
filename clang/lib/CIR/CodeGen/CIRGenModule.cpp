@@ -809,7 +809,6 @@ CIRGenModule::getOrCreateCIRGlobal(StringRef mangledName, mlir::Type ty,
       errorNYI(d->getSourceRange(), "HIP managed attribute");
   }
 
-  // TODO(cir): address space cast when needed for DAddrSpace.
   assert(!cir::MissingFeatures::addressSpace());
   return gv;
 }
