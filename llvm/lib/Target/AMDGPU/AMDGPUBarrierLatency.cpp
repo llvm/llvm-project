@@ -35,6 +35,11 @@ static cl::opt<unsigned> BarrierSignalWaitLatencyOpt(
              "to encourage scheduling independent work between them"),
     cl::init(16), cl::Hidden);
 
+static cl::opt<bool> NoAddedLatencyBeforeAtomicFence(
+    "amdgpu-no-added-latency-before-atomic-fence",
+    cl::desc("Disable adding latency before ATOMIC_FENCE"), cl::init(false),
+    cl::Hidden);
+
 namespace {
 
 class BarrierLatency : public ScheduleDAGMutation {
@@ -83,6 +88,8 @@ void BarrierLatency::apply(ScheduleDAGInstrs *DAG) {
     unsigned Op = MI->getOpcode();
 
     if (Op == AMDGPU::ATOMIC_FENCE) {
+      if (NoAddedLatencyBeforeAtomicFence)
+        continue;
       // Update latency on barrier edges of ATOMIC_FENCE.
       // Ignore scopes not expected to have any latency.
       SyncScope::ID SSID =
@@ -101,6 +108,8 @@ void BarrierLatency::apply(ScheduleDAGInstrs *DAG) {
         addLatencyToEdge(PredDep, SU, FenceLatency);
       }
     } else if (Op == AMDGPU::S_BARRIER_WAIT) {
+      if (BarrierSignalWaitLatency == 0)
+        continue;
       for (SDep &PredDep : SU.Preds) {
         SUnit *PredSU = PredDep.getSUnit();
         const MachineInstr *PredMI = PredSU->getInstr();
