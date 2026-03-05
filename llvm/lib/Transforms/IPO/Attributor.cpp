@@ -1136,13 +1136,11 @@ Attributor::updateAttrMap(const IRPosition &IRP, ArrayRef<DescTy> AttrDescs,
     break;
   };
 
-  AttributeList AL;
+  AttributeList AL = IRP.getAttrList();
   Value *AttrListAnchor = IRP.getAttrListAnchor();
-  auto It = AttrsMap.find(AttrListAnchor);
-  if (It == AttrsMap.end())
-    AL = IRP.getAttrList();
-  else
-    AL = It->getSecond();
+  auto [Iter, Inserted] = AttrsMap.insert({AttrListAnchor, AL});
+  if (!Inserted)
+    AL = Iter->second;
 
   LLVMContext &Ctx = IRP.getAnchorValue().getContext();
   auto AttrIdx = IRP.getAttrIdx();
@@ -1160,8 +1158,9 @@ Attributor::updateAttrMap(const IRPosition &IRP, ArrayRef<DescTy> AttrDescs,
 
   AL = AL.removeAttributesAtIndex(Ctx, AttrIdx, AM);
   AL = AL.addAttributesAtIndex(Ctx, AttrIdx, AB);
-  AttrsMap[AttrListAnchor] = AL;
-  return ChangeStatus::CHANGED;
+
+  Iter->second = AL;
+  return HasChanged;
 }
 
 bool Attributor::hasAttr(const IRPosition &IRP,
