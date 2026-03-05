@@ -2018,8 +2018,8 @@ int32_t GenericPluginTy::query_async(int32_t DeviceId,
 InfoTreeNode GenericPluginTy::obtain_device_info(int32_t DeviceId) {
   auto InfoOrErr = getDevice(DeviceId).obtainInfo();
   if (auto Err = InfoOrErr.takeError()) {
-    REPORT("Failure to obtain device %d info: %s\n", DeviceId,
-           toString(std::move(Err)).data());
+    REPORT() << "Failure to obtain device " << DeviceId
+             << " info: " << toString(std::move(Err));
     return InfoTreeNode{};
   }
   return std::move(*InfoOrErr);
