@@ -4059,10 +4059,12 @@ convertFCmpPredicateToAtomicCompareOp(LLVM::FCmpPredicate predicate) {
 ///     %sel = llvm.select %cmp, %d, %xval : i1, T
 ///     omp.yield(%sel : T)
 ///
-/// This function walks the MLIR region to extract the comparison predicate,
-/// the expected value (e), and the desired value (d), then delegates to
-/// OpenMPIRBuilder::createAtomicCompare which generates the actual
-/// cmpxchg / atomicrmw instruction.
+/// From MLIR extract:
+///   1) comparison operator
+///   2) expected value (e)
+///   3) desired value (d)
+/// These are passed to OpenMPIRBuilder::createAtomicCompare which generates
+/// the actual cmpxchg / atomicrmw instruction.
 ///
 static LogicalResult
 convertOmpAtomicCompare(omp::AtomicCompareOp atomicCompareOp,

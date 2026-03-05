@@ -568,17 +568,13 @@ void Fortran::lower::omp::lowerAtomic(
 
     // Check for compound clauses (fail, capture, weak) that are not yet
     // supported with atomic compare.
-    bool hasCompoundClause = false;
-    for (const omp::Clause &clause : clauses) {
-      if (clause.id == llvm::omp::Clause::OMPC_fail ||
-          clause.id == llvm::omp::Clause::OMPC_capture ||
-          clause.id == llvm::omp::Clause::OMPC_weak) {
-        hasCompoundClause = true;
-        break;
-      }
-    }
-    if (hasCompoundClause)
+    if (llvm::any_of(clauses, [](const omp::Clause &clause) {
+          return clause.id == llvm::omp::Clause::OMPC_fail ||
+                 clause.id == llvm::omp::Clause::OMPC_capture ||
+                 clause.id == llvm::omp::Clause::OMPC_weak;
+        })) {
       TODO(loc, "Compound clauses of OpenMP ATOMIC COMPARE");
+    }
 
     Fortran::common::RelationalOperator relOpr =
         Fortran::common::RelationalOperator::EQ;
@@ -597,7 +593,6 @@ void Fortran::lower::omp::lowerAtomic(
           rel->u);
     }
     if (!expectedExprStorage) {
-      // The condition expression exists but isn't a recognized relational form.
       mlir::emitError(loc, "internal error: atomic compare condition is not a "
                            "recognized relational expression");
       return;
