@@ -36,16 +36,16 @@
 # CHECK: shrq	%rax, %rbx
 # CHECK: encoding: [0x62,0xf4,0xe4,0x18,0xd1,0xe8]
          shrq	$1, %rax, %rbx
-# CHECK: {nf}	shrb	%al, %bl
+# CHECK: {nf}	shrb	$1, %al, %bl
 # CHECK: encoding: [0x62,0xf4,0x64,0x1c,0xd0,0xe8]
          {nf}	shrb	$1, %al, %bl
-# CHECK: {nf}	shrw	%ax, %bx
+# CHECK: {nf}	shrw	$1, %ax, %bx
 # CHECK: encoding: [0x62,0xf4,0x65,0x1c,0xd1,0xe8]
          {nf}	shrw	$1, %ax, %bx
-# CHECK: {nf}	shrl	%eax, %ebx
+# CHECK: {nf}	shrl	$1, %eax, %ebx
 # CHECK: encoding: [0x62,0xf4,0x64,0x1c,0xd1,0xe8]
          {nf}	shrl	$1, %eax, %ebx
-# CHECK: {nf}	shrq	%rax, %rbx
+# CHECK: {nf}	shrq	$1, %rax, %rbx
 # CHECK: encoding: [0x62,0xf4,0xe4,0x1c,0xd1,0xe8]
          {nf}	shrq	$1, %rax, %rbx
 # CHECK: {evex}	shrb	123(%r8,%rax,4)

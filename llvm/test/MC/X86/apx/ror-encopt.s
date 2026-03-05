@@ -36,16 +36,16 @@
 # CHECK: rorq	%rax, %rbx
 # CHECK: encoding: [0x62,0xf4,0xe4,0x18,0xd1,0xc8]
          rorq	$1, %rax, %rbx
-# CHECK: {nf}	rorb	%al, %bl
+# CHECK: {nf}	rorb	$1, %al, %bl
 # CHECK: encoding: [0x62,0xf4,0x64,0x1c,0xd0,0xc8]
          {nf}	rorb	$1, %al, %bl
-# CHECK: {nf}	rorw	%ax, %bx
+# CHECK: {nf}	rorw	$1, %ax, %bx
 # CHECK: encoding: [0x62,0xf4,0x65,0x1c,0xd1,0xc8]
          {nf}	rorw	$1, %ax, %bx
-# CHECK: {nf}	rorl	%eax, %ebx
+# CHECK: {nf}	rorl	$1, %eax, %ebx
 # CHECK: encoding: [0x62,0xf4,0x64,0x1c,0xd1,0xc8]
          {nf}	rorl	$1, %eax, %ebx
-# CHECK: {nf}	rorq	%rax, %rbx
+# CHECK: {nf}	rorq	$1, %rax, %rbx
 # CHECK: encoding: [0x62,0xf4,0xe4,0x1c,0xd1,0xc8]
          {nf}	rorq	$1, %rax, %rbx
 # CHECK: {evex}	rorb	123(%r8,%rax,4)

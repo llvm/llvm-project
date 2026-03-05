@@ -4,7 +4,7 @@
 define i8 @ror8m1(ptr %ptr) {
 ; CHECK-LABEL: ror8m1:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    rorb (%rdi), %al # encoding: [0x62,0xf4,0x7c,0x18,0xd0,0x0f]
+; CHECK-NEXT:    rorb $1, (%rdi), %al # encoding: [0x62,0xf4,0x7c,0x18,0xd0,0x0f]
 ; CHECK-NEXT:    retq # encoding: [0xc3]
 entry:
   %a = load i8, ptr %ptr
@@ -17,7 +17,7 @@ entry:
 define i16 @ror16m1(ptr %ptr) {
 ; CHECK-LABEL: ror16m1:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    rorw (%rdi), %ax # encoding: [0x62,0xf4,0x7d,0x18,0xd1,0x0f]
+; CHECK-NEXT:    rorw $1, (%rdi), %ax # encoding: [0x62,0xf4,0x7d,0x18,0xd1,0x0f]
 ; CHECK-NEXT:    retq # encoding: [0xc3]
 entry:
   %a = load i16, ptr %ptr
@@ -30,7 +30,7 @@ entry:
 define i32 @ror32m1(ptr %ptr) {
 ; CHECK-LABEL: ror32m1:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    rorl (%rdi), %eax # encoding: [0x62,0xf4,0x7c,0x18,0xd1,0x0f]
+; CHECK-NEXT:    rorl $1, (%rdi), %eax # encoding: [0x62,0xf4,0x7c,0x18,0xd1,0x0f]
 ; CHECK-NEXT:    retq # encoding: [0xc3]
 entry:
   %a = load i32, ptr %ptr
@@ -43,7 +43,7 @@ entry:
 define i64 @ror64m1(ptr %ptr) {
 ; CHECK-LABEL: ror64m1:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    rorq (%rdi), %rax # encoding: [0x62,0xf4,0xfc,0x18,0xd1,0x0f]
+; CHECK-NEXT:    rorq $1, (%rdi), %rax # encoding: [0x62,0xf4,0xfc,0x18,0xd1,0x0f]
 ; CHECK-NEXT:    retq # encoding: [0xc3]
 entry:
   %a = load i64, ptr %ptr
@@ -240,7 +240,7 @@ entry:
 define i8 @ror8r1(i8 noundef %a) {
 ; CHECK-LABEL: ror8r1:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    rorb %dil, %al # encoding: [0x62,0xf4,0x7c,0x18,0xd0,0xcf]
+; CHECK-NEXT:    rorb $1, %dil, %al # encoding: [0x62,0xf4,0x7c,0x18,0xd0,0xcf]
 ; CHECK-NEXT:    retq # encoding: [0xc3]
 entry:
   %0 = lshr i8 %a, 1
@@ -252,7 +252,7 @@ entry:
 define i16 @ror16r1(i16 noundef %a) {
 ; CHECK-LABEL: ror16r1:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    rorw %di, %ax # encoding: [0x62,0xf4,0x7d,0x18,0xd1,0xcf]
+; CHECK-NEXT:    rorw $1, %di, %ax # encoding: [0x62,0xf4,0x7d,0x18,0xd1,0xcf]
 ; CHECK-NEXT:    retq # encoding: [0xc3]
 entry:
   %0 = lshr i16 %a, 1
@@ -264,7 +264,7 @@ entry:
 define i32 @ror32r1(i32 noundef %a) {
 ; CHECK-LABEL: ror32r1:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    rorl %edi, %eax # encoding: [0x62,0xf4,0x7c,0x18,0xd1,0xcf]
+; CHECK-NEXT:    rorl $1, %edi, %eax # encoding: [0x62,0xf4,0x7c,0x18,0xd1,0xcf]
 ; CHECK-NEXT:    retq # encoding: [0xc3]
 entry:
   %0 = lshr i32 %a, 1
@@ -276,7 +276,7 @@ entry:
 define i64 @ror64r1(i64 noundef %a) {
 ; CHECK-LABEL: ror64r1:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    rorq %rdi, %rax # encoding: [0x62,0xf4,0xfc,0x18,0xd1,0xcf]
+; CHECK-NEXT:    rorq $1, %rdi, %rax # encoding: [0x62,0xf4,0xfc,0x18,0xd1,0xcf]
 ; CHECK-NEXT:    retq # encoding: [0xc3]
 entry:
   %0 = lshr i64 %a, 1
