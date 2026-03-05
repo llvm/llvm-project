@@ -313,9 +313,7 @@ define <4 x i8> @test_paaddu_b(<4 x i8> %a, <4 x i8> %b) {
 define <2 x i16> @test_pabs_h(<2 x i16> %a) {
 ; CHECK-LABEL: test_pabs_h:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    pli.h a1, 0
-; CHECK-NEXT:    psub.h a1, a1, a0
-; CHECK-NEXT:    pmax.h a0, a0, a1
+; CHECK-NEXT:    pabd.h a0, a0, zero
 ; CHECK-NEXT:    ret
   %res = call <2 x i16> @llvm.abs.v2i16(<2 x i16> %a, i1 0)
   ret <2 x i16> %res
@@ -324,9 +322,7 @@ define <2 x i16> @test_pabs_h(<2 x i16> %a) {
 define <4 x i8> @test_pabs_b(<4 x i8> %a) {
 ; CHECK-LABEL: test_pabs_b:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    pli.b a1, 0
-; CHECK-NEXT:    psub.b a1, a1, a0
-; CHECK-NEXT:    pmax.b a0, a0, a1
+; CHECK-NEXT:    pabd.b a0, a0, zero
 ; CHECK-NEXT:    ret
   %res = call <4 x i8> @llvm.abs.v4i8(<4 x i8> %a, i1 0)
   ret <4 x i8> %res
