@@ -13591,6 +13591,8 @@ bool BoUpSLP::matchesInversedZExtSelect(
       continue;
     if (!CmpPredicate::getMatching(InversedPred, Pred))
       return false;
+    if (!V->hasOneUse())
+      return false;
     InversedCmpsIndices.push_back(Idx);
   }
 
@@ -15830,17 +15832,16 @@ BoUpSLP::getEntryCost(const TreeEntry *E, ArrayRef<Value *> VectorizedVals,
       InstructionCost BitcastCost = TTI.getCastInstrCost(
           Instruction::BitCast, ScalarTy, SrcVecTy, CastCtx, CostKind);
       if (ShuffleOrOp == TreeEntry::ReducedBitcastBSwap) {
-        auto *OrigScalarTy = IntegerType::getIntNTy(
+        auto *SrcType = IntegerType::getIntNTy(
             ScalarTy->getContext(),
             DL->getTypeSizeInBits(SrcScalarTy) * EntryVF);
-        IntrinsicCostAttributes CostAttrs(Intrinsic::bswap, OrigScalarTy,
-                                          {OrigScalarTy});
+        IntrinsicCostAttributes CostAttrs(Intrinsic::bswap, SrcType, {SrcType});
         InstructionCost IntrinsicCost =
             TTI.getIntrinsicInstrCost(CostAttrs, CostKind);
         BitcastCost += IntrinsicCost;
-        if (OrigScalarTy != ScalarTy) {
+        if (SrcType != ScalarTy) {
           BitcastCost +=
-              TTI.getCastInstrCost(Instruction::ZExt, ScalarTy, OrigScalarTy,
+              TTI.getCastInstrCost(Instruction::ZExt, ScalarTy, SrcType,
                                    TTI::CastContextHint::None, CostKind);
         }
       }
@@ -15871,21 +15872,20 @@ BoUpSLP::getEntryCost(const TreeEntry *E, ArrayRef<Value *> VectorizedVals,
       const TreeEntry *LhsTE = getOperandEntry(E, /*Idx=*/0);
       const TreeEntry *LoadTE = getOperandEntry(LhsTE, /*Idx=*/0);
       auto *LI0 = cast<LoadInst>(LoadTE->getMainOp());
-      auto *OrigScalarTy = IntegerType::getIntNTy(
+      auto *SrcType = IntegerType::getIntNTy(
           ScalarTy->getContext(),
           DL->getTypeSizeInBits(LI0->getType()) * EntryVF);
       InstructionCost LoadCost =
-          TTI.getMemoryOpCost(Instruction::Load, OrigScalarTy, LI0->getAlign(),
+          TTI.getMemoryOpCost(Instruction::Load, SrcType, LI0->getAlign(),
                               LI0->getPointerAddressSpace(), CostKind);
       if (ShuffleOrOp == TreeEntry::ReducedBitcastBSwapLoads) {
-        IntrinsicCostAttributes CostAttrs(Intrinsic::bswap, OrigScalarTy,
-                                          {OrigScalarTy});
+        IntrinsicCostAttributes CostAttrs(Intrinsic::bswap, SrcType, {SrcType});
         InstructionCost IntrinsicCost =
             TTI.getIntrinsicInstrCost(CostAttrs, CostKind);
         LoadCost += IntrinsicCost;
-        if (OrigScalarTy != ScalarTy) {
+        if (SrcType != ScalarTy) {
           LoadCost +=
-              TTI.getCastInstrCost(Instruction::ZExt, ScalarTy, OrigScalarTy,
+              TTI.getCastInstrCost(Instruction::ZExt, ScalarTy, SrcType,
                                    TTI::CastContextHint::None, CostKind);
         }
       }
@@ -21827,6 +21827,7 @@ Value *BoUpSLP::vectorizeTree(
     // to adjust insertion point again to the end of block.
     if (isa<PHINode>(UserI) ||
         (TE->UserTreeIndex.UserTE->hasState() &&
+         TE->UserTreeIndex.UserTE->State != TreeEntry::SplitVectorize &&
          TE->UserTreeIndex.UserTE->getOpcode() == Instruction::PHI)) {
       // Insert before all users.
       Instruction *InsertPt = PrevVec->getParent()->getTerminator();

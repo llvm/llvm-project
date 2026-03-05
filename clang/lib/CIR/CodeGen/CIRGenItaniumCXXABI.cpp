@@ -119,8 +119,37 @@ public:
                              const CXXRecordDecl *rd) override;
   void emitVirtualInheritanceTables(const CXXRecordDecl *rd) override;
 
+  void setThunkLinkage(cir::FuncOp thunk, bool forVTable, GlobalDecl gd,
+                       bool returnAdjustment) override {
+    if (forVTable && !thunk.hasLocalLinkage())
+      thunk.setLinkage(cir::GlobalLinkageKind::AvailableExternallyLinkage);
+    const auto *nd = cast<NamedDecl>(gd.getDecl());
+    cgm.setGVProperties(thunk, nd);
+  }
+
+  bool exportThunk() override { return true; }
+
+  mlir::Value performThisAdjustment(CIRGenFunction &cgf, Address thisAddr,
+                                    const CXXRecordDecl *unadjustedClass,
+                                    const ThunkInfo &ti) override;
+
+  mlir::Value performReturnAdjustment(CIRGenFunction &cgf, Address ret,
+                                      const CXXRecordDecl *unadjustedClass,
+                                      const ReturnAdjustment &ra) override;
+
+  bool shouldTypeidBeNullChecked(QualType srcTy) override;
+  mlir::Value emitTypeid(CIRGenFunction &cgf, QualType SrcRecordTy,
+                         Address thisPtr, mlir::Type StdTypeInfoPtrTy) override;
+  void emitBadTypeidCall(CIRGenFunction &cgf, mlir::Location loc) override;
+
   mlir::Attribute getAddrOfRTTIDescriptor(mlir::Location loc,
                                           QualType ty) override;
+
+  StringRef getPureVirtualCallName() override { return "__cxa_pure_virtual"; }
+  StringRef getDeletedVirtualCallName() override {
+    return "__cxa_deleted_virtual";
+  }
+
   CatchTypeInfo
   getAddrOfCXXCatchHandlerType(mlir::Location loc, QualType ty,
                                QualType catchHandlerType) override {
@@ -973,13 +1002,13 @@ const char *vTableClassNameForType(const CIRGenModule &cgm, const Type *ty) {
   case Type::ConstantArray:
   case Type::IncompleteArray:
   case Type::VariableArray:
-    cgm.errorNYI("VTableClassNameForType: __array_type_info");
-    break;
+    // abi::__array_type_info.
+    return "_ZTVN10__cxxabiv117__array_type_infoE";
 
   case Type::FunctionNoProto:
   case Type::FunctionProto:
-    cgm.errorNYI("VTableClassNameForType: __function_type_info");
-    break;
+    // abi::__function_type_info.
+    return "_ZTVN10__cxxabiv120__function_type_infoE";
 
   case Type::Enum:
     return "_ZTVN10__cxxabiv116__enum_type_infoE";
@@ -1009,12 +1038,12 @@ const char *vTableClassNameForType(const CIRGenModule &cgm, const Type *ty) {
 
   case Type::ObjCObjectPointer:
   case Type::Pointer:
-    cgm.errorNYI("VTableClassNameForType: __pointer_type_info");
-    break;
+    // abi::__pointer_type_info.
+    return "_ZTVN10__cxxabiv119__pointer_type_infoE";
 
   case Type::MemberPointer:
-    cgm.errorNYI("VTableClassNameForType: __pointer_to_member_type_info");
-    break;
+    // abi::__pointer_to_member_type_info.
+    return "_ZTVN10__cxxabiv129__pointer_to_member_type_infoE";
 
   case Type::HLSLAttributedResource:
   case Type::HLSLInlineSpirv:
@@ -1524,6 +1553,48 @@ mlir::Attribute CIRGenItaniumRTTIBuilder::buildTypeInfo(
 
   CIRGenModule::setInitializer(gv, init);
   return builder.getGlobalViewAttr(builder.getUInt8PtrTy(), gv);
+}
+
+bool CIRGenItaniumCXXABI::shouldTypeidBeNullChecked(QualType srcTy) {
+  return true;
+}
+
+void CIRGenItaniumCXXABI::emitBadTypeidCall(CIRGenFunction &cgf,
+                                            mlir::Location loc) {
+  // void __cxa_bad_typeid();
+  cir::FuncType fnTy =
+      cgf.getBuilder().getFuncType({}, cgf.getBuilder().getVoidTy());
+  mlir::NamedAttrList attrs;
+  attrs.set(cir::CIRDialect::getNoReturnAttrName(),
+            mlir::UnitAttr::get(&cgf.cgm.getMLIRContext()));
+
+  cgf.emitRuntimeCall(
+      loc, cgf.cgm.createRuntimeFunction(fnTy, "__cxa_bad_typeid", attrs), {},
+      attrs);
+  cir::UnreachableOp::create(cgf.getBuilder(), loc);
+}
+
+mlir::Value CIRGenItaniumCXXABI::emitTypeid(CIRGenFunction &cgf, QualType srcTy,
+                                            Address thisPtr,
+                                            mlir::Type typeInfoPtrTy) {
+  auto *classDecl = srcTy->castAsCXXRecordDecl();
+  mlir::Location loc = cgm.getLoc(classDecl->getSourceRange());
+  mlir::Value vptr = cgf.getVTablePtr(loc, thisPtr, classDecl);
+  mlir::Value vtbl;
+
+  // TODO(cir): In classic codegen relative layouts cause us to do a
+  // 'load_relative' of -4 here. We probably don't want to reprensent this in
+  // CIR at all, but we should have the NYI here since this could be
+  // meaningful/notable for implementation of relative layout in the future.
+  if (cgm.getItaniumVTableContext().isRelativeLayout())
+    cgm.errorNYI("buildVTablePointer: isRelativeLayout");
+  else
+    vtbl = cir::VTableGetTypeInfoOp::create(
+        cgf.getBuilder(), loc, cgf.getBuilder().getPointerTo(typeInfoPtrTy),
+        vptr);
+
+  return cgf.getBuilder().createAlignedLoad(loc, typeInfoPtrTy, vtbl,
+                                            cgf.getPointerAlign());
 }
 
 mlir::Attribute CIRGenItaniumCXXABI::getAddrOfRTTIDescriptor(mlir::Location loc,
@@ -2486,4 +2557,62 @@ void CIRGenItaniumCXXABI::emitBeginCatch(CIRGenFunction &cgf,
   initCatchParam(cgf, ehToken, *catchParam, var.getObjectAddress(cgf),
                  catchStmt->getBeginLoc());
   cgf.emitAutoVarCleanups(var);
+}
+
+static mlir::Value performTypeAdjustment(CIRGenFunction &cgf,
+                                         Address initialPtr,
+                                         const CXXRecordDecl *unadjustedClass,
+                                         int64_t nonVirtualAdjustment,
+                                         int64_t virtualAdjustment,
+                                         bool isReturnAdjustment) {
+  if (!nonVirtualAdjustment && !virtualAdjustment)
+    return initialPtr.getPointer();
+
+  CIRGenBuilderTy &builder = cgf.getBuilder();
+  mlir::Location loc = builder.getUnknownLoc();
+  cir::PointerType i8PtrTy = builder.getUInt8PtrTy();
+  mlir::Value v = builder.createBitcast(initialPtr.getPointer(), i8PtrTy);
+
+  // In a base-to-derived cast, the non-virtual adjustment is applied first.
+  if (nonVirtualAdjustment && !isReturnAdjustment) {
+    cir::ConstantOp offsetConst = builder.getSInt64(nonVirtualAdjustment, loc);
+    v = cir::PtrStrideOp::create(builder, loc, i8PtrTy, v, offsetConst);
+  }
+
+  // Perform the virtual adjustment if we have one.
+  mlir::Value resultPtr;
+  if (virtualAdjustment) {
+    cgf.cgm.errorNYI("virtual adjustment in thunk");
+    resultPtr = v;
+  } else {
+    resultPtr = v;
+  }
+
+  // In a derived-to-base conversion, the non-virtual adjustment is
+  // applied second.
+  if (nonVirtualAdjustment && isReturnAdjustment) {
+    cir::ConstantOp offsetConst = builder.getSInt64(nonVirtualAdjustment, loc);
+    resultPtr =
+        cir::PtrStrideOp::create(builder, loc, i8PtrTy, resultPtr, offsetConst);
+  }
+
+  // Cast back to original pointer type.
+  return builder.createBitcast(resultPtr, initialPtr.getType());
+}
+
+mlir::Value CIRGenItaniumCXXABI::performThisAdjustment(
+    CIRGenFunction &cgf, Address thisAddr, const CXXRecordDecl *unadjustedClass,
+    const ThunkInfo &ti) {
+  return performTypeAdjustment(cgf, thisAddr, unadjustedClass,
+                               ti.This.NonVirtual,
+                               ti.This.Virtual.Itanium.VCallOffsetOffset,
+                               /*isReturnAdjustment=*/false);
+}
+
+mlir::Value CIRGenItaniumCXXABI::performReturnAdjustment(
+    CIRGenFunction &cgf, Address ret, const CXXRecordDecl *unadjustedClass,
+    const ReturnAdjustment &ra) {
+  return performTypeAdjustment(cgf, ret, unadjustedClass, ra.NonVirtual,
+                               ra.Virtual.Itanium.VBaseOffsetOffset,
+                               /*isReturnAdjustment=*/true);
 }
