@@ -52,7 +52,7 @@ int main()
 // CHECK-NEXT:    store ptr [[DYN_PTR]], ptr [[DYN_PTR_ADDR_ASCAST]], align 8
 // CHECK-NEXT:    store ptr [[ARR]], ptr [[ARR_ADDR_ASCAST]], align 8
 // CHECK-NEXT:    store i64 [[N]], ptr [[N_ADDR_ASCAST]], align 8
-// CHECK-NEXT:    [[TMP0:%.*]] = load ptr, ptr [[ARR_ADDR_ASCAST]], align 8
+// CHECK-NEXT:    [[TMP0:%.*]] = load ptr, ptr [[ARR_ADDR_ASCAST]], align 8, !nonnull [[META5:![0-9]+]], !align [[META6:![0-9]+]]
 // CHECK-NEXT:    call void @__kmpc_specialized_kernel_init()
 // CHECK-NEXT:    store i32 0, ptr [[J_ASCAST]], align 4
 // CHECK-NEXT:    [[TMP1:%.*]] = load i32, ptr [[J_ASCAST]], align 4
@@ -83,13 +83,11 @@ int main()
 // CHECK-NEXT:    store i32 [[COND]], ptr [[DOTLOWER_ASCAST]], align 4
 // CHECK-NEXT:    [[TMP9:%.*]] = load i32, ptr [[DOTLOWER_ASCAST]], align 4
 // CHECK-NEXT:    [[SUB:%.*]] = sub i32 10, [[TMP9]]
-// CHECK-NEXT:    [[SUB1:%.*]] = sub i32 [[SUB]], 1
-// CHECK-NEXT:    [[ADD:%.*]] = add i32 [[SUB1]], 1
-// CHECK-NEXT:    [[DIV:%.*]] = udiv i32 [[ADD]], 1
-// CHECK-NEXT:    [[CONV:%.*]] = zext i32 [[DIV]] to i64
+// CHECK-NEXT:    [[ADD:%.*]] = add i32 [[SUB]], 1
+// CHECK-NEXT:    [[CONV:%.*]] = zext i32 [[ADD]] to i64
 // CHECK-NEXT:    [[MUL:%.*]] = mul nsw i64 10, [[CONV]]
-// CHECK-NEXT:    [[SUB2:%.*]] = sub nsw i64 [[MUL]], 1
-// CHECK-NEXT:    store i64 [[SUB2]], ptr [[DOTCAPTURE_EXPR__ASCAST]], align 8
+// CHECK-NEXT:    [[SUB1:%.*]] = sub nsw i64 [[MUL]], 1
+// CHECK-NEXT:    store i64 [[SUB1]], ptr [[DOTCAPTURE_EXPR__ASCAST]], align 8
 // CHECK-NEXT:    store i32 0, ptr [[J_ASCAST]], align 4
 // CHECK-NEXT:    [[TMP10:%.*]] = load i32, ptr [[J_ASCAST]], align 4
 // CHECK-NEXT:    store i32 [[TMP10]], ptr [[I_ASCAST]], align 4
@@ -110,56 +108,50 @@ int main()
 // CHECK-NEXT:    store i64 [[TMP19]], ptr [[DOTOMP_IV_ASCAST]], align 8
 // CHECK-NEXT:    [[TMP20:%.*]] = load i64, ptr [[DOTOMP_IV_ASCAST]], align 8
 // CHECK-NEXT:    [[TMP21:%.*]] = load i32, ptr [[DOTLOWER_ASCAST]], align 4
-// CHECK-NEXT:    [[SUB3:%.*]] = sub i32 10, [[TMP21]]
-// CHECK-NEXT:    [[SUB4:%.*]] = sub i32 [[SUB3]], 1
-// CHECK-NEXT:    [[ADD5:%.*]] = add i32 [[SUB4]], 1
-// CHECK-NEXT:    [[DIV6:%.*]] = udiv i32 [[ADD5]], 1
-// CHECK-NEXT:    [[MUL7:%.*]] = mul i32 1, [[DIV6]]
-// CHECK-NEXT:    [[CONV8:%.*]] = zext i32 [[MUL7]] to i64
-// CHECK-NEXT:    [[DIV9:%.*]] = sdiv i64 [[TMP20]], [[CONV8]]
-// CHECK-NEXT:    [[MUL10:%.*]] = mul nsw i64 [[DIV9]], 1
-// CHECK-NEXT:    [[ADD11:%.*]] = add nsw i64 0, [[MUL10]]
-// CHECK-NEXT:    [[CONV12:%.*]] = trunc i64 [[ADD11]] to i32
-// CHECK-NEXT:    store i32 [[CONV12]], ptr [[J_ASCAST]], align 4
+// CHECK-NEXT:    [[SUB2:%.*]] = sub i32 10, [[TMP21]]
+// CHECK-NEXT:    [[ADD3:%.*]] = add i32 [[SUB2]], 1
+// CHECK-NEXT:    [[MUL4:%.*]] = mul i32 1, [[ADD3]]
+// CHECK-NEXT:    [[CONV5:%.*]] = zext i32 [[MUL4]] to i64
+// CHECK-NEXT:    [[DIV:%.*]] = sdiv i64 [[TMP20]], [[CONV5]]
+// CHECK-NEXT:    [[MUL6:%.*]] = mul nsw i64 [[DIV]], 1
+// CHECK-NEXT:    [[ADD7:%.*]] = add nsw i64 0, [[MUL6]]
+// CHECK-NEXT:    [[CONV8:%.*]] = trunc i64 [[ADD7]] to i32
+// CHECK-NEXT:    store i32 [[CONV8]], ptr [[J_ASCAST]], align 4
 // CHECK-NEXT:    [[TMP22:%.*]] = load i32, ptr [[J_ASCAST]], align 4
-// CHECK-NEXT:    [[CONV13:%.*]] = sext i32 [[TMP22]] to i64
+// CHECK-NEXT:    [[CONV9:%.*]] = sext i32 [[TMP22]] to i64
 // CHECK-NEXT:    [[TMP23:%.*]] = load i64, ptr [[DOTOMP_IV_ASCAST]], align 8
 // CHECK-NEXT:    [[TMP24:%.*]] = load i64, ptr [[DOTOMP_IV_ASCAST]], align 8
 // CHECK-NEXT:    [[TMP25:%.*]] = load i32, ptr [[DOTLOWER_ASCAST]], align 4
-// CHECK-NEXT:    [[SUB14:%.*]] = sub i32 10, [[TMP25]]
-// CHECK-NEXT:    [[SUB15:%.*]] = sub i32 [[SUB14]], 1
-// CHECK-NEXT:    [[ADD16:%.*]] = add i32 [[SUB15]], 1
-// CHECK-NEXT:    [[DIV17:%.*]] = udiv i32 [[ADD16]], 1
-// CHECK-NEXT:    [[MUL18:%.*]] = mul i32 1, [[DIV17]]
-// CHECK-NEXT:    [[CONV19:%.*]] = zext i32 [[MUL18]] to i64
-// CHECK-NEXT:    [[DIV20:%.*]] = sdiv i64 [[TMP24]], [[CONV19]]
+// CHECK-NEXT:    [[SUB10:%.*]] = sub i32 10, [[TMP25]]
+// CHECK-NEXT:    [[ADD11:%.*]] = add i32 [[SUB10]], 1
+// CHECK-NEXT:    [[MUL12:%.*]] = mul i32 1, [[ADD11]]
+// CHECK-NEXT:    [[CONV13:%.*]] = zext i32 [[MUL12]] to i64
+// CHECK-NEXT:    [[DIV14:%.*]] = sdiv i64 [[TMP24]], [[CONV13]]
 // CHECK-NEXT:    [[TMP26:%.*]] = load i32, ptr [[DOTLOWER_ASCAST]], align 4
-// CHECK-NEXT:    [[SUB21:%.*]] = sub i32 10, [[TMP26]]
-// CHECK-NEXT:    [[SUB22:%.*]] = sub i32 [[SUB21]], 1
-// CHECK-NEXT:    [[ADD23:%.*]] = add i32 [[SUB22]], 1
-// CHECK-NEXT:    [[DIV24:%.*]] = udiv i32 [[ADD23]], 1
-// CHECK-NEXT:    [[MUL25:%.*]] = mul i32 1, [[DIV24]]
-// CHECK-NEXT:    [[CONV26:%.*]] = zext i32 [[MUL25]] to i64
-// CHECK-NEXT:    [[MUL27:%.*]] = mul nsw i64 [[DIV20]], [[CONV26]]
-// CHECK-NEXT:    [[SUB28:%.*]] = sub nsw i64 [[TMP23]], [[MUL27]]
-// CHECK-NEXT:    [[MUL29:%.*]] = mul nsw i64 [[SUB28]], 1
-// CHECK-NEXT:    [[ADD30:%.*]] = add nsw i64 [[CONV13]], [[MUL29]]
-// CHECK-NEXT:    [[CONV31:%.*]] = trunc i64 [[ADD30]] to i32
-// CHECK-NEXT:    store i32 [[CONV31]], ptr [[I_ASCAST]], align 4
+// CHECK-NEXT:    [[SUB15:%.*]] = sub i32 10, [[TMP26]]
+// CHECK-NEXT:    [[ADD16:%.*]] = add i32 [[SUB15]], 1
+// CHECK-NEXT:    [[MUL17:%.*]] = mul i32 1, [[ADD16]]
+// CHECK-NEXT:    [[CONV18:%.*]] = zext i32 [[MUL17]] to i64
+// CHECK-NEXT:    [[MUL19:%.*]] = mul nsw i64 [[DIV14]], [[CONV18]]
+// CHECK-NEXT:    [[SUB20:%.*]] = sub nsw i64 [[TMP23]], [[MUL19]]
+// CHECK-NEXT:    [[MUL21:%.*]] = mul nsw i64 [[SUB20]], 1
+// CHECK-NEXT:    [[ADD22:%.*]] = add nsw i64 [[CONV9]], [[MUL21]]
+// CHECK-NEXT:    [[CONV23:%.*]] = trunc i64 [[ADD22]] to i32
+// CHECK-NEXT:    store i32 [[CONV23]], ptr [[I_ASCAST]], align 4
 // CHECK-NEXT:    [[TMP27:%.*]] = load i64, ptr [[DOTOMP_IV_ASCAST]], align 8
 // CHECK-NEXT:    [[TMP28:%.*]] = load i64, ptr [[DOTOMP_UB_ASCAST]], align 8
-// CHECK-NEXT:    [[CMP32:%.*]] = icmp sle i64 [[TMP27]], [[TMP28]]
-// CHECK-NEXT:    br i1 [[CMP32]], label [[OMP_KERNEL_BODY:%.*]], label [[OMP_KERNEL_DONE:%.*]]
+// CHECK-NEXT:    [[CMP24:%.*]] = icmp sle i64 [[TMP27]], [[TMP28]]
+// CHECK-NEXT:    br i1 [[CMP24]], label [[OMP_KERNEL_BODY:%.*]], label [[OMP_KERNEL_DONE:%.*]]
 // CHECK:       omp.kernel.body:
 // CHECK-NEXT:    [[TMP29:%.*]] = load i32, ptr [[I_ASCAST]], align 4
-// CHECK-NEXT:    [[CMP33:%.*]] = icmp slt i32 [[TMP29]], 10
-// CHECK-NEXT:    br i1 [[CMP33]], label [[OMP_BODY_NEXT:%.*]], label [[OMP_KERNEL_DONE]]
+// CHECK-NEXT:    [[CMP25:%.*]] = icmp slt i32 [[TMP29]], 10
+// CHECK-NEXT:    br i1 [[CMP25]], label [[OMP_BODY_NEXT:%.*]], label [[OMP_KERNEL_DONE]]
 // CHECK:       omp.body.next:
 // CHECK-NEXT:    [[TMP30:%.*]] = load i32, ptr [[J_ASCAST]], align 4
-// CHECK-NEXT:    [[MUL34:%.*]] = mul nsw i32 [[TMP30]], 10
+// CHECK-NEXT:    [[MUL26:%.*]] = mul nsw i32 [[TMP30]], 10
 // CHECK-NEXT:    [[TMP31:%.*]] = load i32, ptr [[I_ASCAST]], align 4
-// CHECK-NEXT:    [[ADD35:%.*]] = add nsw i32 [[MUL34]], [[TMP31]]
-// CHECK-NEXT:    [[IDXPROM:%.*]] = sext i32 [[ADD35]] to i64
+// CHECK-NEXT:    [[ADD27:%.*]] = add nsw i32 [[MUL26]], [[TMP31]]
+// CHECK-NEXT:    [[IDXPROM:%.*]] = sext i32 [[ADD27]] to i64
 // CHECK-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds [100 x double], ptr [[TMP0]], i64 0, i64 [[IDXPROM]]
 // CHECK-NEXT:    [[TMP32:%.*]] = load double, ptr [[ARRAYIDX]], align 8
 // CHECK-NEXT:    [[INC:%.*]] = fadd double [[TMP32]], 1.000000e+00

@@ -3393,4 +3393,26 @@ TEST(DataLayoutTest, UEFI) {
   EXPECT_THAT(TT.computeDataLayout(), testing::HasSubstr("-m:w-"));
 }
 
+TEST(TripleTest, DefaultWCharSize) {
+  EXPECT_EQ(4u, Triple("x86_64-unknown-linux-gnu").getDefaultWCharSize());
+  EXPECT_EQ(4u, Triple("aarch64-unknown-linux-gnu").getDefaultWCharSize());
+  EXPECT_EQ(4u, Triple("riscv64-unknown-linux-gnu").getDefaultWCharSize());
+  EXPECT_EQ(4u, Triple("amdgcn-amd-amdhsa").getDefaultWCharSize());
+  EXPECT_EQ(4u, Triple("nvptx64-nvidia-cuda").getDefaultWCharSize());
+  EXPECT_EQ(4u, Triple("armv7-unknown-linux-gnueabi").getDefaultWCharSize());
+  EXPECT_EQ(4u, Triple("s390x-none-zos").getDefaultWCharSize());
+  EXPECT_EQ(4u, Triple("powerpc64-ibm-aix").getDefaultWCharSize());
+  EXPECT_EQ(4u, Triple("").getDefaultWCharSize());
+
+  EXPECT_EQ(2u, Triple("x86_64-pc-windows-msvc").getDefaultWCharSize());
+  EXPECT_EQ(2u, Triple("aarch64-pc-windows-msvc").getDefaultWCharSize());
+  EXPECT_EQ(2u, Triple("x86_64-w64-windows-gnu").getDefaultWCharSize());
+  EXPECT_EQ(2u, Triple("x86_64-unknown-uefi").getDefaultWCharSize());
+  EXPECT_EQ(2u, Triple("x86_64-scei-ps4").getDefaultWCharSize());
+  EXPECT_EQ(2u, Triple("x86_64-scei-ps5").getDefaultWCharSize());
+  EXPECT_EQ(2u, Triple("powerpc-ibm-aix").getDefaultWCharSize());
+
+  EXPECT_EQ(1u, Triple("xcore-unknown-unknown").getDefaultWCharSize());
+}
+
 } // end anonymous namespace

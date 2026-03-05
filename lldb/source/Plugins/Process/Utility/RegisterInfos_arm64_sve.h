@@ -373,8 +373,7 @@ static lldb_private::RegisterInfo g_register_infos_arm64_sve_le[] = {
     DEFINE_GPR64_ALT(sp, x31, LLDB_REGNUM_GENERIC_SP),
     DEFINE_GPR64(pc, LLDB_REGNUM_GENERIC_PC),
 
-    // DEFINE_MISC_LLDB_REGS(name, size, TYPE, lldb kind)
-    DEFINE_MISC_LLDB_REGS(cpsr, 4, GPR, gpr_cpsr),
+    DEFINE_GPR_CPSR,
 
     // DEFINE_GPR32(name, parent name)
     DEFINE_GPR32(w0, x0),

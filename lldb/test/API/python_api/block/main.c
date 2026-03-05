@@ -1,6 +1,6 @@
 #include <stdio.h>
 
-extern int fn(int a, int b);
+extern LLDB_DYLIB_IMPORT int fn(int a, int b);
 
 int main(int argc, char const *argv[]) {
   int a = 3;

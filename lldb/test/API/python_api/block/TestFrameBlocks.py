@@ -8,7 +8,7 @@ from lldbsuite.test.lldbtest import *
 from lldbsuite.test import lldbutil
 
 
-class BlockAPITestCase(TestBase):
+class FrameBlocksTestCase(TestBase):
     def test_block_equality(self):
         """Exercise SBBlock equality checks across frames and functions in different dylibs."""
         self.build()

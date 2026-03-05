@@ -613,6 +613,10 @@ public:
   // related attributes.
   bool shouldEmitCUDAGlobalVar(const VarDecl *global) const;
 
+  /// Replace all uses of the old global with the new global, updating types
+  /// and references as needed. Erases the old global when done.
+  void replaceGlobal(cir::GlobalOp oldGV, cir::GlobalOp newGV);
+
   void replaceUsesOfNonProtoTypeWithRealFunction(mlir::Operation *old,
                                                  cir::FuncOp newFn);
 
