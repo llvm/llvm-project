@@ -2449,10 +2449,9 @@ fillAffinityIteratorLoop(mlir::omp::IteratorOp itersOp,
 
   llvm::OpenMPIRBuilder::LocationDescription loc(builder);
 
-  // Build the iterator loop using the new OMPIRBuilder helper.
   auto bodyGen = [&](llvm::OpenMPIRBuilder::InsertPointTy bodyIP,
                      llvm::Value *linearIV) -> llvm::Error {
-    llvm::IRBuilderBase::InsertPointGuard g(builder);
+    llvm::IRBuilderBase::InsertPointGuard guard(builder);
     builder.restoreIP(bodyIP);
 
     if (failed(convertIteratorRegion(linearIV, iterInfo, iteratorRegionBlock,
@@ -2473,7 +2472,8 @@ fillAffinityIteratorLoop(mlir::omp::IteratorOp itersOp,
     llvm::Value *len = moduleTranslation.lookupValue(entryOp.getLen());
     storeAffinityEntry(builder, affinityList, linearIV, addr, len);
 
-    // Avoid leaking region mappings if this iterator loop is reused/expanded.
+    // Iterator-region block/value mappings are temporary for this conversion,
+    // clear them to avoid stale entries in ModuleTranslation.
     moduleTranslation.forgetMapping(itersRegion);
 
     return llvm::Error::success();
@@ -2501,8 +2501,6 @@ static mlir::LogicalResult buildAffinityData(
       llvm::Type::getInt32Ty(ctx));
 
   auto allocateAffinityList = [&](llvm::Value *count) -> llvm::Value * {
-    llvm::IRBuilderBase::InsertPointGuard guard(builder);
-    builder.SetInsertPointPastAllocas(builder.GetInsertBlock()->getParent());
     return builder.CreateAlloca(kmpTaskAffinityInfoTy, count,
                                 "omp.affinity_list");
   };

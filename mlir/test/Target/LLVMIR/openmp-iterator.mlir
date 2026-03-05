@@ -49,7 +49,7 @@ llvm.func @task_affinity_iterator_1d(%arr: !llvm.ptr {llvm.nocapture}) {
 //
 // Body: store into affinity_list[IV] then branch to inc
 // CHECK: omp_iterator.body:
-// CHECK: [[ENTRY:%.*]] = getelementptr inbounds { i64, i64, i32 }, ptr %loadgep_omp.affinity_list, i64 [[IV]]
+// CHECK: [[ENTRY:%.*]] = getelementptr inbounds { i64, i64, i32 }, ptr %{{.*affinity_list.*}}, i64 [[IV]]
 // CHECK: [[ADDRI64:%.*]] = ptrtoint ptr %loadgep_ to i64
 // CHECK: [[ADDRGEP:%.*]] = getelementptr inbounds nuw { i64, i64, i32 }, ptr [[ENTRY]], i32 0, i32 0
 // CHECK: store i64 [[ADDRI64]], ptr [[ADDRGEP]]
@@ -114,7 +114,7 @@ llvm.func @task_affinity_iterator_3d(%arr: !llvm.ptr {llvm.nocapture}) {
 //
 // Body: store into affinity_list[IV] then branch to inc
 // CHECK: omp_iterator.body:
-// CHECK: [[ENTRY:%.*]] = getelementptr inbounds { i64, i64, i32 }, ptr %loadgep_omp.affinity_list, i64 [[IV]]
+// CHECK: [[ENTRY:%.*]] = getelementptr inbounds { i64, i64, i32 }, ptr %{{.*affinity_list.*}}, i64 [[IV]]
 // CHECK: [[ADDRI64:%.*]] = ptrtoint ptr %loadgep_ to i64
 // CHECK: [[ADDRGEP:%.*]] = getelementptr inbounds nuw { i64, i64, i32 }, ptr [[ENTRY]], i32 0, i32 0
 // CHECK: store i64 [[ADDRI64]], ptr [[ADDRGEP]]
@@ -167,8 +167,7 @@ llvm.func @task_affinity_iterator_multiple(%arr: !llvm.ptr {llvm.nocapture}) {
 }
 
 // CHECK-LABEL: define internal void @task_affinity_iterator_multiple..omp_par.3(
-// CHECK-DAG: %gep_omp.affinity_list = getelementptr { ptr, ptr, ptr }, ptr %0, i32 0, i32 0
-// CHECK-DAG: %gep_omp.affinity_list{{.*}} = getelementptr { ptr, ptr, ptr }, ptr %0, i32 0, i32 1
+// CHECK: [[AFFLIST0:%.*]] = alloca { i64, i64, i32 }, i64 24, align 8
 
 // First iterator header
 // CHECK: omp_iterator.preheader:
@@ -181,6 +180,7 @@ llvm.func @task_affinity_iterator_multiple(%arr: !llvm.ptr {llvm.nocapture}) {
 // CHECK: br i1 [[CMP0]], label %[[BODY0:.+]], label %omp_iterator.exit
 
 // Second iterator header
+// CHECK: [[AFFLIST1:%.*]] = alloca { i64, i64, i32 }, i64 3, align 8
 // CHECK: omp_iterator.preheader{{.*}}:
 // CHECK: [[HEADER1:.+]]:
 // CHECK: [[IV1:%.*]] = phi i64 [ 0, %omp_iterator.preheader{{.*}} ], [ [[NEXT1:%.*]], %[[INC1:.+]] ]
@@ -191,13 +191,13 @@ llvm.func @task_affinity_iterator_multiple(%arr: !llvm.ptr {llvm.nocapture}) {
 
 // CHECK: codeRepl:
 // CHECK: call ptr @__kmpc_omp_task_alloc
-// CHECK: call i32 @__kmpc_omp_reg_task_with_affinity{{.*}}i32 24{{.*}}ptr %loadgep_omp.affinity_list
-// CHECK: call i32 @__kmpc_omp_reg_task_with_affinity{{.*}}i32 3{{.*}}ptr %loadgep_omp.affinity_list{{.*}}
+// CHECK: call i32 @__kmpc_omp_reg_task_with_affinity{{.*}}i32 24{{.*}}ptr [[AFFLIST0]]
+// CHECK: call i32 @__kmpc_omp_reg_task_with_affinity{{.*}}i32 3{{.*}}ptr [[AFFLIST1]]
 // CHECK: call i32 @__kmpc_omp_task
 
 // Second iterator body
 // CHECK: [[BODY1]]:
-// CHECK: [[ENTRY1:%.*]] = getelementptr inbounds { i64, i64, i32 }, ptr %loadgep_omp.affinity_list
+// CHECK: [[ENTRY1:%.*]] = getelementptr inbounds { i64, i64, i32 }, ptr [[AFFLIST1]]
 // CHECK: [[ADDR1:%.*]] = ptrtoint ptr %loadgep_ to i64
 // CHECK: [[ADDRGEP1:%.*]] = getelementptr inbounds{{.*}} { i64, i64, i32 }, ptr [[ENTRY1]], i32 0, i32 0
 // CHECK: store i64 [[ADDR1]], ptr [[ADDRGEP1]]
@@ -212,7 +212,7 @@ llvm.func @task_affinity_iterator_multiple(%arr: !llvm.ptr {llvm.nocapture}) {
 
 // First iterator body
 // CHECK: [[BODY0]]:
-// CHECK: [[ENTRY0:%.*]] = getelementptr inbounds { i64, i64, i32 }, ptr %loadgep_omp.affinity_list, i64 [[IV0]]
+// CHECK: [[ENTRY0:%.*]] = getelementptr inbounds { i64, i64, i32 }, ptr [[AFFLIST0]], i64 [[IV0]]
 // CHECK: [[ADDR0:%.*]] = ptrtoint ptr %loadgep_ to i64
 // CHECK: [[ADDRGEP0:%.*]] = getelementptr inbounds{{.*}} { i64, i64, i32 }, ptr [[ENTRY0]], i32 0, i32 0
 // CHECK: store i64 [[ADDR0]], ptr [[ADDRGEP0]]
@@ -224,3 +224,32 @@ llvm.func @task_affinity_iterator_multiple(%arr: !llvm.ptr {llvm.nocapture}) {
 // CHECK: [[INC0]]:
 // CHECK: [[NEXT0]] = add nuw i64 [[IV0]], 1
 // CHECK: br label %[[HEADER0]]
+
+// Makes sure affinity list only created after dynamic count
+llvm.func @task_affinity_iterator_dynamic_tripcount(
+    %arr: !llvm.ptr {llvm.nocapture}, %lb: i64, %ub: i64, %step: i64,
+    %len: i64) {
+  omp.parallel {
+    omp.single {
+      %it = omp.iterator(%i: i64) = (%lb to %ub step %step) {
+        %entry = omp.affinity_entry %arr, %len
+            : (!llvm.ptr, i64) -> !omp.affinity_entry_ty<!llvm.ptr, i64>
+        omp.yield(%entry : !omp.affinity_entry_ty<!llvm.ptr, i64>)
+      } -> !omp.iterated<!omp.affinity_entry_ty<!llvm.ptr, i64>>
+
+      omp.task affinity(%it : !omp.iterated<!omp.affinity_entry_ty<!llvm.ptr, i64>>) {
+        omp.terminator
+      }
+      omp.terminator
+    }
+    omp.terminator
+  }
+  llvm.return
+}
+
+// CHECK-LABEL: define internal void @task_affinity_iterator_dynamic_tripcount
+// CHECK: [[DIFF:%.*]] = sub i64 {{.*}}, {{.*}}
+// CHECK: [[DIV:%.*]] = sdiv i64 [[DIFF]], {{.*}}
+// CHECK: [[TRIPS:%.*]] = add i64 [[DIV]], 1
+// CHECK: [[SCALED:%.*]] = mul i64 1, [[TRIPS]]
+// CHECK: [[AFFLIST:%.*]] = alloca { i64, i64, i32 }, i64 [[SCALED]]

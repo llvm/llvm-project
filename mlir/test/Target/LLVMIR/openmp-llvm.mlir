@@ -3610,7 +3610,8 @@ llvm.func @task_affinity_plain(%arr: !llvm.ptr {llvm.nocapture}) {
 
 // CHECK-LABEL: define internal void @task_affinity_plain
 // CHECK: [[BASE:%.*]] = load ptr, ptr %gep_, align 8
-// CHECK: [[ENTRY:%.*]] = getelementptr inbounds { i64, i64, i32 }, ptr %loadgep_omp.affinity_list, i64 0
+// CHECK: [[AFFLIST:%.*]] = alloca { i64, i64, i32 }, i64 1, align 8
+// CHECK: [[ENTRY:%.*]] = getelementptr inbounds { i64, i64, i32 }, ptr [[AFFLIST]], i64 0
 // addr
 // CHECK: [[ADDRI64:%.*]] = ptrtoint ptr [[BASE]] to i64
 // CHECK: [[ADDRGEP:%.*]] = getelementptr inbounds nuw { i64, i64, i32 }, ptr [[ENTRY]], i32 0, i32 0
@@ -3621,4 +3622,4 @@ llvm.func @task_affinity_plain(%arr: !llvm.ptr {llvm.nocapture}) {
 // flags is always 0
 // CHECK: [[FLAGGEP:%.*]] = getelementptr inbounds nuw { i64, i64, i32 }, ptr [[ENTRY]], i32 0, i32 2
 // CHECK: store i32 0, ptr [[FLAGGEP]]
-// CHECK: call i32 @__kmpc_omp_reg_task_with_affinity{{.*}}i32 1, ptr %loadgep_omp.affinity_list
+// CHECK: call i32 @__kmpc_omp_reg_task_with_affinity{{.*}}i32 1, ptr [[AFFLIST]]
