@@ -18,6 +18,7 @@
 
 #include "clang/AST/ASTContext.h"
 #include "clang/AST/ASTLambda.h"
+#include "clang/AST/Attrs.inc"
 #include "clang/AST/DeclBase.h"
 #include "clang/AST/DeclOpenACC.h"
 #include "clang/AST/GlobalDecl.h"
@@ -797,22 +798,19 @@ CIRGenModule::getOrCreateCIRGlobal(StringRef mangledName, mlir::Type ty,
                "external const declaration with initializer");
   }
 
-  // TODO(cir): if this method is used to handle functions we must have
-  // something closer to GlobalValue::isDeclaration instead of checking for
-  // initializer.
-  if (gv.isDeclaration()) {
+  if (d &&
+      d->isThisDeclarationADefinition(astContext) == VarDecl::DeclarationOnly) {
+    getTargetCIRGenInfo().setTargetAttributes(d, gv, *this);
     // TODO(cir): set target attributes
-
-    // External HIP managed variables needed to be recorded for transformation
-    // in both device and host compilations.
     // External HIP managed variables needed to be recorded for transformation
     // in both device and host compilations.
     if (getLangOpts().CUDA && d && d->hasAttr<HIPManagedAttr>() &&
         d->hasExternalStorage())
-      llvm_unreachable("NYI");
+      errorNYI(d->getSourceRange(), "HIP managed attribute");
   }
 
   // TODO(cir): address space cast when needed for DAddrSpace.
+  assert(!cir::MissingFeatures::addressSpace());
   return gv;
 }
 
@@ -896,9 +894,18 @@ void CIRGenModule::emitGlobalVarDefinition(const clang::VarDecl *vd,
 
   assert(!cir::MissingFeatures::cudaSupport());
 
-  if (vd->hasAttr<LoaderUninitializedAttr>()) {
+  // CUDA E.2.4.1 "__shared__ variables cannot have an initialization
+  // as part of their declaration."  Sema has already checked for
+  // error cases, so we just need to set Init to UndefValue.
+  bool isCUDASharedVar =
+      getLangOpts().CUDAIsDevice && vd->hasAttr<CUDASharedAttr>();
+  // TODO(cir): implement isCUDAShadowVar and isCUDADeviceShadowVar, reference:
+  // OGCG
+
+  if (getLangOpts().CUDA && isCUDASharedVar) {
+    init = cir::UndefAttr::get(&getMLIRContext(), convertType(vd->getType()));
+  } else if (vd->hasAttr<LoaderUninitializedAttr>()) {
     errorNYI(vd->getSourceRange(), "loader uninitialized attribute");
-    return;
   } else if (!initExpr) {
     // This is a tentative definition; tentative definitions are
     // implicitly initialized with { 0 }.
@@ -963,6 +970,39 @@ void CIRGenModule::emitGlobalVarDefinition(const clang::VarDecl *vd,
     errorNYI(vd->getSourceRange(), "annotate global variable");
   }
 
+  // Set CIR's linkage type as appropriate.
+  cir::GlobalLinkageKind linkage =
+      getCIRLinkageVarDefinition(vd, /*IsConstant=*/false);
+
+  // CUDA B.2.1 "The __device__ qualifier declares a variable that resides on
+  // the device. [...]"
+  // CUDA B.2.2 "The __constant__ qualifier, optionally used together with
+  // __device__, declares a variable that: [...]
+  // Is accessible from all the threads within the grid and from the host
+  // through the runtime library (cudaGetSymbolAddress() / cudaGetSymbolSize()
+  // / cudaMemcpyToSymbol() / cudaMemcpyFromSymbol())."
+  if (langOpts.CUDA) {
+    if (langOpts.CUDAIsDevice) {
+      // __shared__ variables is not marked as externally initialized,
+      // because they must not be initialized.
+      if (linkage != cir::GlobalLinkageKind::InternalLinkage &&
+          !vd->isConstexpr() && !vd->getType().isConstQualified() &&
+          (vd->hasAttr<CUDADeviceAttr>() || vd->hasAttr<CUDAConstantAttr>() ||
+           vd->getType()->isCUDADeviceBuiltinSurfaceType() ||
+           vd->getType()->isCUDADeviceBuiltinTextureType())) {
+        gv->setAttr(cir::CUDAExternallyInitializedAttr::getMnemonic(),
+                    cir::CUDAExternallyInitializedAttr::get(&getMLIRContext()));
+      }
+    } else {
+      // TODO(cir):
+      // Adjust linkage of shadow variables in host compilation
+      // getCUDARuntime().internalizeDeviceSideVar(vd, linkage);
+    }
+    // TODO(cir):
+    // Handle variable registration
+    // getCUDARuntime().handleVarRegistration(vd, gv);
+  }
+
   // Set initializer and finalize emission
   CIRGenModule::setInitializer(gv, init);
   if (emitter)
@@ -976,10 +1016,6 @@ void CIRGenModule::emitGlobalVarDefinition(const clang::VarDecl *vd,
                                                   /*ExcludeCtor=*/true,
                                                   /*ExcludeDtor=*/true)));
   assert(!cir::MissingFeatures::opGlobalSection());
-
-  // Set CIR's linkage type as appropriate.
-  cir::GlobalLinkageKind linkage =
-      getCIRLinkageVarDefinition(vd, /*IsConstant=*/false);
 
   // Set CIR linkage and DLL storage class.
   gv.setLinkage(linkage);
@@ -1586,7 +1622,7 @@ LangAS CIRGenModule::getGlobalVarAddressSpace(const VarDecl *d) {
 
   if (langOpts.SYCLIsDevice &&
       (!d || d->getType().getAddressSpace() == LangAS::Default))
-    llvm_unreachable("NYI");
+    errorNYI(d->getSourceRange(), "global as for SYCL device");
 
   if (langOpts.CUDA && langOpts.CUDAIsDevice) {
     if (d) {
@@ -1603,7 +1639,7 @@ LangAS CIRGenModule::getGlobalVarAddressSpace(const VarDecl *d) {
   }
 
   if (langOpts.OpenMP)
-    llvm_unreachable("NYI");
+    errorNYI(d->getSourceRange(), "global as for OpenMP");
 
   return getTargetCIRGenInfo().getGlobalVarAddressSpace(*this, d);
 }

@@ -14,10 +14,12 @@
 #include "CIRGenFunction.h"
 #include "mlir/IR/Location.h"
 #include "clang/AST/Attr.h"
+#include "clang/AST/Attrs.inc"
 #include "clang/AST/Decl.h"
 #include "clang/AST/DeclOpenACC.h"
 #include "clang/AST/Expr.h"
 #include "clang/AST/ExprCXX.h"
+#include "clang/Basic/Cuda.h"
 #include "clang/CIR/MissingFeatures.h"
 
 using namespace clang;
@@ -667,6 +669,26 @@ void CIRGenFunction::emitStaticVarDecl(const VarDecl &d,
     var = addInitializerToStaticVarDecl(d, var, getAddrOp);
 
   var.setAlignment(alignment.getAsAlign().value());
+
+  // There are a lot of attributes that need to be handled here. Until
+  // we start to support them, we just report an error if there are any.
+  if (d.hasAttr<AnnotateAttr>())
+    cgm.errorNYI(d.getSourceRange(), "Global annotations are NYI");
+  if (d.getAttr<PragmaClangBSSSectionAttr>())
+    cgm.errorNYI(d.getSourceRange(), "CIR global BSS section attribute is NYI");
+  if (d.getAttr<PragmaClangDataSectionAttr>())
+    cgm.errorNYI(d.getSourceRange(),
+                 "CIR global Data section attribute is NYI");
+  if (d.getAttr<PragmaClangRodataSectionAttr>())
+    cgm.errorNYI(d.getSourceRange(),
+                 "CIR global Rodata section attribute is NYI");
+  if (d.getAttr<PragmaClangRelroSectionAttr>())
+    cgm.errorNYI(d.getSourceRange(),
+                 "CIR global Relro section attribute is NYI");
+
+  if (d.getAttr<SectionAttr>())
+    cgm.errorNYI(d.getSourceRange(),
+                 "CIR global object file section attribute is NYI");
 
   if (cgm.getCodeGenOpts().KeepPersistentStorageVariables)
     cgm.errorNYI(d.getSourceRange(), "static var keep persistent storage");
