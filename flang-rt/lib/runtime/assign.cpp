@@ -7,9 +7,6 @@
 //===----------------------------------------------------------------------===//
 
 #include "flang/Runtime/assign.h"
-#if (not defined(__AMDGPU__) && not defined(__NVPTX__)) || not defined(EMBED_FLANG_RT_GPU_LLVM_IR)
-#include "flang/Runtime/stop.h"
-#endif
 #include "flang-rt/runtime/assign-impl.h"
 #include "flang-rt/runtime/derived.h"
 #include "flang-rt/runtime/descriptor.h"

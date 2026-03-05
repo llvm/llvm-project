@@ -159,7 +159,6 @@ if (NOT "${FLANG_RT_LIBCXX_PROVIDER}" IN_LIST FLANG_RT_SUPPORTED_PROVIDERS)
 endif ()
 
 option(FLANG_RT_ENABLE_STATIC "Build Flang-RT as a static library." ON)
-option(FLANG_RT_EMBED_GPU_LLVM_IR "Build Flang-RT as GPU LLVM IR library" ON)
 
 if (WIN32)
   # Windows DLL currently not implemented.

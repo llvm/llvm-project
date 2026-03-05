@@ -6,7 +6,6 @@
 //
 //===----------------------------------------------------------------------===//
 
-#if (not defined(__AMDGPU__) && not defined(__NVPTX__)) || not defined(EMBED_FLANG_RT_GPU_LLVM_IR)
 #include "flang-rt/runtime/file.h"
 #include "flang-rt/runtime/memory.h"
 #include "flang-rt/runtime/tools.h"
@@ -496,4 +495,3 @@ RT_API_ATTRS std::int64_t SizeInBytes(const char *path) {
 #endif // defined(RT_DEVICE_COMPILATION)
 
 } // namespace Fortran::runtime::io
-#endif

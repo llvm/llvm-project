@@ -11,13 +11,13 @@
 
 #include "flang/Runtime/c-or-cpp.h"
 #include "flang/Runtime/entry-names.h"
-#if (not defined(__AMDGPU__) && not defined(__NVPTX__)) || not defined(EMBED_FLANG_RT_GPU_LLVM_IR)
+#if (not defined(__AMDGPU__) && not defined(__NVPTX__))
 #include <thread>
 #endif
 
 struct EnvironmentDefaultList;
 
-#if (not defined(__AMDGPU__) && not defined(__NVPTX__)) || not defined(EMBED_FLANG_RT_GPU_LLVM_IR)
+#if (not defined(__AMDGPU__) && not defined(__NVPTX__))
 std::thread::id RTNAME(GetMainThreadId)();
 #endif
 

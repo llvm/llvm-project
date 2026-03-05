@@ -22,9 +22,6 @@
 // UID and GID don't exist on all targets, these exist to avoid errors.
 typedef std::uint32_t uid_t;
 typedef std::uint32_t gid_t;
-#elif (defined(__AMDGPU__) || defined(__NVPTX__)) && defined (EMBED_FLANG_RT_GPU_LLVM_IR)
-typedef std::uint32_t uid_t;
-typedef std::uint32_t gid_t;
 #else
 #include "sys/types.h" //pid_t
 #endif

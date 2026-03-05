@@ -77,7 +77,7 @@ static void CloseAllExternalUnits(const char *why) {
 #endif
 }
 
-#if (not defined(__AMDGPU__) && not defined(__NVPTX__)) || not defined(EMBED_FLANG_RT_GPU_LLVM_IR)
+#if (not defined(__AMDGPU__) && not defined(__NVPTX__))
 [[noreturn]] RT_API_ATTRS void RTNAME(StopStatement)(
     int code, bool isErrorStop, bool quiet) {
 #if defined(RT_DEVICE_COMPILATION)
@@ -119,7 +119,7 @@ static void CloseAllExternalUnits(const char *why) {
 }
 #endif
 
-#if (not defined(__AMDGPU__) && not defined(__NVPTX__)) || not defined(EMBED_FLANG_RT_GPU_LLVM_IR)
+#if (not defined(__AMDGPU__) && not defined(__NVPTX__))
 [[noreturn]] RT_API_ATTRS void RTNAME(StopStatementText)(
     const char *code, std::size_t length, bool isErrorStop, bool quiet) {
 #if defined(RT_DEVICE_COMPILATION)
@@ -249,7 +249,7 @@ static RT_NOINLINE_ATTR void PrintBacktrace() {
 
 #endif
 }
-#if (not defined(__AMDGPU__) && not defined(__NVPTX__)) || not defined(EMBED_FLANG_RT_GPU_LLVM_IR)
+#if (not defined(__AMDGPU__) && not defined(__NVPTX__))
 [[noreturn]] RT_OPTNONE_ATTR void RTNAME(Abort)() {
 #ifdef HAVE_BACKTRACE
   PrintBacktrace();

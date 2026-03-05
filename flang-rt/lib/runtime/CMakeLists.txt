@@ -45,6 +45,7 @@ set(supported_sources
   internal-unit.cpp
   io-api.cpp
   io-api-minimal.cpp
+  io-error.cpp
   io-stmt.cpp
   iostat.cpp
   matmul-transpose.cpp
@@ -82,7 +83,6 @@ set(host_sources
   exceptions.cpp
   execute.cpp
   extensions.cpp
-  io-error.cpp
   main.cpp
   random.cpp
   reduce.cpp
@@ -185,11 +185,7 @@ else ()
 endif ()
 
 if ("${LLVM_RUNTIMES_TARGET}" MATCHES "^amdgcn|^nvptx")
-  if (FLANG_RT_EMBED_GPU_LLVM_IR)
-    set(sources ${supported_sources} ${gpu_sources})
-  else ()
-    set(sources ${gpu_sources})
-  endif ()
+  set(sources ${gpu_sources})
 elseif(FLANG_RT_EXPERIMENTAL_OFFLOAD_SUPPORT STREQUAL "CUDA")
   set(sources ${supported_sources})
 else ()
