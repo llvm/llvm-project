@@ -5178,6 +5178,20 @@ void OmpStructureChecker::CheckArraySection(
   }
 }
 
+void OmpStructureChecker::CheckLastPartRefForArraySection(
+    const parser::Designator &designator, llvm::omp::Clause clauseId) {
+  if (!designator.EndsInBareName()) {
+    return;
+  }
+  if (MaybeExpr expr{AnalyzeExpr(context_, designator)}) {
+    if (evaluate::IsArraySection(*expr)) {
+      context_.Say(designator.source,
+          "If a list item is an array section, the last part-ref of the list item must have a section subscript list in %s clause"_err_en_US,
+          parser::ToUpperCaseLetters(getClauseName(clauseId).str()));
+    }
+  }
+}
+
 void OmpStructureChecker::CheckIntentInPointer(
     SymbolSourceMap &symbols, llvm::omp::Clause clauseId) {
   for (auto &[symbol, source] : symbols) {
@@ -5698,20 +5712,25 @@ void OmpStructureChecker::Enter(const parser::OmpClause::Affinity &x) {
   for (const parser::OmpObject &object : objects.v) {
     if (const parser::Designator *designator{
             omp::GetDesignatorFromObj(object)}) {
+      if (const auto *dataRef{GetDataRefFromObj(object)}) {
+        if (const auto *arrayElement{GetArrayElementFromObj(object)}) {
+          CheckArraySection(*arrayElement, GetLastName(*dataRef),
+              llvm::omp::Clause::OMPC_affinity);
+        }
+      }
+
+      // CheckArraySection handles ArrayElement cases,
+      // but true substrings (e.g. a(2)(2:4)) are parser::Substring and bypass
+      // CheckArraySection.
       if (std::holds_alternative<parser::Substring>(designator->u)) {
         context_.Say(designator->source,
             "Substrings are not allowed on AFFINITY clause"_err_en_US);
-        continue;
       }
 
-      // OpenMP 5.2 3.2.1, unless otherwise specified, a variable
-      // that is part of another variable as a structure element cannot be a
-      // locator list item. AFFINITY does not provide an exception for
-      // structure components.
-      if (parser::Unwrap<parser::StructureComponent>(object)) {
-        context_.Say(designator->source,
-            "Structure components are not allowed in an AFFINITY clause"_err_en_US);
-      }
+      // OpenMP 5.2 5.2.5 Array section: if a list item is an array section, the
+      // last part-ref of the list item must have a section subscript list.
+      CheckLastPartRefForArraySection(
+          *designator, llvm::omp::Clause::OMPC_affinity);
     }
   }
 }
