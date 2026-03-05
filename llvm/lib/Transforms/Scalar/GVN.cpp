@@ -115,6 +115,8 @@ GVNEnableSplitBackedgeInLoadPRE("enable-split-backedge-in-load-pre",
 static cl::opt<bool> GVNEnableMemDep("enable-gvn-memdep", cl::init(true));
 static cl::opt<bool> GVNEnableMemorySSA("enable-gvn-memoryssa",
                                         cl::init(false));
+static cl::opt<bool> GVNSkipZeroEntryCount("gvn-skip-zero-entry-count",
+                                           cl::init(false));
 
 static cl::opt<uint32_t> MaxNumDeps(
     "gvn-max-num-deps", cl::Hidden, cl::init(100),
@@ -894,6 +896,17 @@ PreservedAnalyses GVNPass::run(Function &F, FunctionAnalysisManager &AM) {
     MSSA = &AM.getResult<MemorySSAAnalysis>(F);
   }
   auto &ORE = AM.getResult<OptimizationRemarkEmitterAnalysis>(F);
+  
+  // Skip the pass if function has zero entry count in PGO.
+  // This indicates that the function is never executed according to the profile
+  // data.
+  auto EntryCount = F.getEntryCount();
+  if (GVNSkipZeroEntryCount && EntryCount && EntryCount->getCount() == 0) {
+    LLVM_DEBUG(dbgs() << "GVN: Skipping function '" << F.getName()
+                      << "' with zero profile entry count\n");
+    return PreservedAnalyses::all();
+  }
+
   bool Changed = runImpl(F, AC, DT, TLI, AA, MemDep, LI, &ORE,
                          MSSA ? &MSSA->getMSSA() : nullptr);
   if (!Changed)
