@@ -30,12 +30,10 @@ consteval auto eval() {
   return r;
 }
 
-bool test() {
+void test() {
   static constexpr auto r = eval();
   assert(r.front() == "hello");
   assert(r.back() == "hello");
-
-  return true;
 }
 
 int main(int, char**) {
