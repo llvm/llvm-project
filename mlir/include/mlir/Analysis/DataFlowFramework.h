@@ -507,10 +507,7 @@ protected:
   /// to enqueue more work items. For example, if a state tracks dependents
   /// through the IR (e.g. use-def chains), this function can be implemented to
   /// push those dependents on the worklist.
-  virtual void onUpdate(DataFlowSolver *solver) const {
-    for (const DataFlowSolver::WorkItem &item : dependents)
-      solver->enqueue(item);
-  }
+  virtual void onUpdate(DataFlowSolver *solver) const;
 
   /// The lattice anchor to which the state belongs.
   LatticeAnchor anchor;
@@ -518,6 +515,7 @@ protected:
 #if LLVM_ENABLE_ABI_BREAKING_CHECKS
   /// When compiling with debugging, keep a name for the analysis state.
   StringRef debugName;
+  StringRef getAnalysisDebugName(DataFlowAnalysis *analysis) const;
 #endif // LLVM_ENABLE_ABI_BREAKING_CHECKS
 
 private:
@@ -707,6 +705,8 @@ private:
 
   /// Allow the data-flow solver to access the internals of this class.
   friend class DataFlowSolver;
+  // Allow the AnalysisState to access the internals of this class.
+  friend class AnalysisState;
 };
 
 template <typename AnalysisT, typename... Args>
