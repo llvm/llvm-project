@@ -65,7 +65,8 @@ LLVM_ABI void thinLTOInternalizeAndPromoteInIndex(
     ModuleSummaryIndex &Index,
     function_ref<bool(StringRef, ValueInfo)> isExported,
     function_ref<bool(GlobalValue::GUID, const GlobalValueSummary *)>
-        isPrevailing);
+        isPrevailing,
+    DenseSet<StringRef> *ExternallyVisibleSymbolNamesPtr = nullptr);
 
 /// Computes a unique hash for the Module considering the current list of
 /// export/import and other global analysis results.
@@ -641,6 +642,15 @@ private:
 
   // Diagnostic optimization remarks file
   LLVMRemarkFileHandle DiagnosticOutputFile;
+
+  // A dummy module to host the dummy function.
+  std::unique_ptr<Module> DummyModule;
+
+  // A dummy function created in a private module to provide a context for
+  // LTO-link optimization remarks. This is needed for ThinLTO where we
+  // may not have any IR functions available, because the optimization remark
+  // handling requires a function.
+  Function *LinkerRemarkFunction = nullptr;
 
   // Setup optimization remarks according to the provided configuration.
   Error setupOptimizationRemarks();

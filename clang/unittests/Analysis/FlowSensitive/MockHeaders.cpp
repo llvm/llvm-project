@@ -219,6 +219,8 @@ inline constexpr bool is_convertible_v = is_convertible<From, To>::value;
 
 template <class...>
 using void_t = void;
+template <class...>
+using __void_t = void;
 
 template <class, class T, class... Args>
 struct is_constructible_ : false_type {};
@@ -2000,6 +2002,103 @@ char *Check_LTImpl(const T1 &v1, const T2 &v2, const char *names);
 #endif // ABSL_LOG_H
 )cc";
 
+static constexpr char StdCoroutineHeader[] = R"cc(
+#ifndef COROUTINE_H
+#define COROUTINE_H
+
+#include "std_type_traits.h"
+
+namespace std {
+
+template <class _Tp, class = void>
+struct __coroutine_traits_sfinae {};
+
+template <class _Tp>
+struct __coroutine_traits_sfinae< _Tp, __void_t<typename _Tp::promise_type> > {
+  using promise_type = typename _Tp::promise_type;
+};
+
+template <class _Ret, class... _Args>
+struct coroutine_traits : public __coroutine_traits_sfinae<_Ret> {};
+
+template <class _Promise = void>
+struct coroutine_handle;
+
+template <>
+struct coroutine_handle<void> {
+public:
+  constexpr coroutine_handle() noexcept;
+  constexpr coroutine_handle(nullptr_t) noexcept;
+  coroutine_handle& operator=(nullptr_t) noexcept;
+  constexpr void* address() const noexcept;
+
+  static constexpr coroutine_handle from_address(void* __addr) noexcept;
+
+  // [coroutine.handle.observers], observers
+  constexpr explicit operator bool() const noexcept;
+
+  bool done() const;
+
+  // [coroutine.handle.resumption], resumption
+  void operator()() const;
+
+  void resume() const;
+
+  void destroy() const;
+};
+
+template <class _Promise>
+struct coroutine_handle {
+public:
+  // [coroutine.handle.con], construct/reset
+  constexpr coroutine_handle() noexcept;
+
+  constexpr coroutine_handle(nullptr_t) noexcept;
+
+  static coroutine_handle from_promise(_Promise& __promise);
+  coroutine_handle& operator=(nullptr_t) noexcept;
+
+  // [coroutine.handle.export.import], export/import
+  constexpr void* address() const noexcept;
+
+  static constexpr coroutine_handle from_address(void* __addr) noexcept;
+
+  // [coroutine.handle.conv], conversion
+  constexpr operator coroutine_handle<>() const noexcept;
+
+  // [coroutine.handle.observers], observers
+  constexpr explicit operator bool() const noexcept;
+
+  bool done() const;
+
+  // [coroutine.handle.resumption], resumption
+  void operator()() const;
+
+  void resume() const;
+
+  void destroy() const;
+
+  // [coroutine.handle.promise], promise access
+  _Promise& promise() const;
+};
+
+struct suspend_never {
+  constexpr bool await_ready() const noexcept { return true; }
+  constexpr void await_suspend(coroutine_handle<>) const noexcept {}
+  constexpr void await_resume() const noexcept {}
+};
+
+struct suspend_always {
+  constexpr bool await_ready() const noexcept { return false; }
+  constexpr void await_suspend(coroutine_handle<>) const noexcept {}
+  constexpr void await_resume() const noexcept {}
+};
+
+} // namespace std
+
+#endif // COROUTINE_H
+)cc";
+
 constexpr const char TestingDefsHeader[] = R"cc(
 #pragma clang system_header
 
@@ -2325,6 +2424,24 @@ namespace std {
 }
 )cc";
 
+constexpr const char TaskHeader[] = R"cc(
+#include "std_coroutine.h"
+
+  template<typename T>
+  struct Task {
+    struct promise_type {
+        Task get_return_object();
+        std::suspend_never initial_suspend() noexcept;
+        std::suspend_always final_suspend() noexcept;
+        void return_value(T v);
+        void unhandled_exception();
+    };
+    bool await_ready() const noexcept;
+    T await_resume() noexcept;
+    void await_suspend(std::coroutine_handle<> handle) noexcept;
+  };
+)cc";
+
 std::vector<std::pair<std::string, std::string>> getMockHeaders() {
   std::vector<std::pair<std::string, std::string>> Headers;
   Headers.emplace_back("cstddef.h", CStdDefHeader);
@@ -2333,6 +2450,7 @@ std::vector<std::pair<std::string, std::string>> getMockHeaders() {
   Headers.emplace_back("std_type_traits.h", StdTypeTraitsHeader);
   Headers.emplace_back("std_utility.h", StdUtilityHeader);
   Headers.emplace_back("std_optional.h", StdOptionalHeader);
+  Headers.emplace_back("std_coroutine.h", StdCoroutineHeader);
   Headers.emplace_back("absl_type_traits.h", AbslTypeTraitsHeader);
   Headers.emplace_back("absl_optional.h", AbslOptionalHeader);
   Headers.emplace_back("base_optional.h", BaseOptionalHeader);
@@ -2343,6 +2461,8 @@ std::vector<std::pair<std::string, std::string>> getMockHeaders() {
   Headers.emplace_back("absl_log.h", AbslLogHeader);
   Headers.emplace_back("testing_defs.h", TestingDefsHeader);
   Headers.emplace_back("std_unique_ptr.h", StdUniquePtrHeader);
+  Headers.emplace_back("task.h", TaskHeader);
+
   return Headers;
 }
 

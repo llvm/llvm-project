@@ -32,6 +32,8 @@ extern "C" {
   typedef struct name name
 
 DEFINE_C_API_STRUCT(MlirDynamicOpTrait, void);
+DEFINE_C_API_STRUCT(MlirDynamicTypeDefinition, void);
+DEFINE_C_API_STRUCT(MlirDynamicAttrDefinition, void);
 
 #undef DEFINE_C_API_STRUCT
 
@@ -72,6 +74,83 @@ typedef struct {
 /// Create a custom dynamic op trait with the given type ID and callbacks.
 MLIR_CAPI_EXPORTED MlirDynamicOpTrait mlirDynamicOpTraitCreate(
     MlirTypeID typeID, MlirDynamicOpTraitCallbacks callbacks, void *userData);
+
+/// Check if the given dialect is an extensible dialect.
+MLIR_CAPI_EXPORTED bool mlirDialectIsAExtensibleDialect(MlirDialect dialect);
+
+/// Look up a registered type definition by type name in the given dialect.
+/// Note that the dialect must be an extensible dialect.
+MLIR_CAPI_EXPORTED MlirDynamicTypeDefinition
+mlirExtensibleDialectLookupTypeDefinition(MlirDialect dialect,
+                                          MlirStringRef typeName);
+
+/// Check if the given type is a dynamic type.
+MLIR_CAPI_EXPORTED bool mlirTypeIsADynamicType(MlirType type);
+
+/// Get a dynamic type by instantiating the given type definition with the
+/// provided attributes.
+MLIR_CAPI_EXPORTED MlirType mlirDynamicTypeGet(
+    MlirDynamicTypeDefinition typeDef, MlirAttribute *attrs, intptr_t numAttrs);
+
+/// Get the number of parameters in the given dynamic type.
+MLIR_CAPI_EXPORTED intptr_t mlirDynamicTypeGetNumParams(MlirType type);
+
+/// Get the parameter at the given index in the provided dynamic type.
+MLIR_CAPI_EXPORTED MlirAttribute mlirDynamicTypeGetParam(MlirType type,
+                                                         intptr_t index);
+
+/// Get the type definition of the given dynamic type.
+MLIR_CAPI_EXPORTED MlirDynamicTypeDefinition
+mlirDynamicTypeGetTypeDef(MlirType type);
+
+/// Get the type ID of a dynamic type definition.
+MLIR_CAPI_EXPORTED MlirTypeID
+mlirDynamicTypeDefinitionGetTypeID(MlirDynamicTypeDefinition typeDef);
+
+/// Get the name of the given dynamic type definition.
+MLIR_CAPI_EXPORTED MlirStringRef
+mlirDynamicTypeDefinitionGetName(MlirDynamicTypeDefinition typeDef);
+
+/// Get the dialect that the given dynamic type definition belongs to.
+MLIR_CAPI_EXPORTED MlirDialect
+mlirDynamicTypeDefinitionGetDialect(MlirDynamicTypeDefinition typeDef);
+
+/// Look up a registered attribute definition by attribute name in the given
+/// dialect. Note that the dialect must be an extensible dialect.
+MLIR_CAPI_EXPORTED MlirDynamicAttrDefinition
+mlirExtensibleDialectLookupAttrDefinition(MlirDialect dialect,
+                                          MlirStringRef attrName);
+
+/// Check if the given attribute is a dynamic attribute.
+MLIR_CAPI_EXPORTED bool mlirAttributeIsADynamicAttr(MlirAttribute attr);
+
+/// Get a dynamic attribute by instantiating the given attribute definition with
+/// the provided attributes.
+MLIR_CAPI_EXPORTED MlirAttribute mlirDynamicAttrGet(
+    MlirDynamicAttrDefinition attrDef, MlirAttribute *attrs, intptr_t numAttrs);
+
+/// Get the number of parameters in the given dynamic attribute.
+MLIR_CAPI_EXPORTED intptr_t mlirDynamicAttrGetNumParams(MlirAttribute attr);
+
+/// Get the parameter at the given index in the provided dynamic attribute.
+MLIR_CAPI_EXPORTED MlirAttribute mlirDynamicAttrGetParam(MlirAttribute attr,
+                                                         intptr_t index);
+
+/// Get the attribute definition of the given dynamic attribute.
+MLIR_CAPI_EXPORTED MlirDynamicAttrDefinition
+mlirDynamicAttrGetAttrDef(MlirAttribute attr);
+
+/// Get the type ID of a dynamic attribute definition.
+MLIR_CAPI_EXPORTED MlirTypeID
+mlirDynamicAttrDefinitionGetTypeID(MlirDynamicAttrDefinition attrDef);
+
+/// Get the name of the given dynamic attribute definition.
+MLIR_CAPI_EXPORTED MlirStringRef
+mlirDynamicAttrDefinitionGetName(MlirDynamicAttrDefinition attrDef);
+
+/// Get the dialect that the given dynamic attribute definition belongs to.
+MLIR_CAPI_EXPORTED MlirDialect
+mlirDynamicAttrDefinitionGetDialect(MlirDynamicAttrDefinition attrDef);
 
 #ifdef __cplusplus
 }

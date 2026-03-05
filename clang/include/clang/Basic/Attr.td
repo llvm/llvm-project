@@ -3288,6 +3288,7 @@ def InitPriority : InheritableAttr, TargetSpecificAttr<TargetSupportsInitPriorit
   let Args = [UnsignedArgument<"Priority">];
   let Subjects = SubjectList<[Var], ErrorDiag>;
   let Documentation = [InitPriorityDocs];
+  let IsTypeDependent = 1;
 }
 
 def Section : InheritableAttr {
@@ -4733,6 +4734,15 @@ def OMPDeclareTargetDecl : InheritableAttr {
     static std::optional<DevTypeTy> getDeviceType(const ValueDecl *VD);
     static std::optional<SourceLocation> getLocation(const ValueDecl *VD);
   }];
+}
+
+def OMPTargetIndirectCall : InheritableAttr {
+  // This attribute has no spellings as it is only ever created implicitly.
+  // The attribute is added to the VarDecl of the function pointer used in
+  // an indirect call in a OMP target region.
+  let Spellings = [];
+  let SemaHandler = 0;
+  let Documentation = [InternalOnly];
 }
 
 def OMPAllocateDecl : InheritableAttr {
