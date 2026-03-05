@@ -195,20 +195,6 @@ const Relocation *InputSection::getRelocAt(uint32_t off) const {
   return &*it;
 }
 
-bool InputSection::isCold() const {
-  if (!isCodeSection(this))
-    return false;
-  for (const Defined *sym : symbols) {
-    // Skip symbols absorbed from ICF-folded sections so that a non-cold master
-    // is not misidentified as cold after folding a cold duplicate.
-    if (sym->identicalCodeFoldingKind != Symbol::ICFFoldKind::None)
-      continue;
-    if (sym->isCold())
-      return true;
-  }
-  return false;
-}
-
 void ConcatInputSection::foldIdentical(ConcatInputSection *copy,
                                        Symbol::ICFFoldKind foldKind) {
   align = std::max(align, copy->align);

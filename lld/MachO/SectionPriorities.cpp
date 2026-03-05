@@ -399,8 +399,11 @@ macho::PriorityBuilder::buildInputSectionPriorities() {
     std::optional<int> symbolPriority = getSymbolPriority(sym);
     if (!symbolPriority)
       return;
-    int &priority = sectionPriorities[sym->isec()];
+    auto *isec = sym->isec();
+    int &priority = sectionPriorities[isec];
     priority = std::min(priority, *symbolPriority);
+    // Order file takes precedence over cold partitioning.
+    isec->isCold = false;
   };
 
   // TODO: Make sure this handles weak symbols correctly.
