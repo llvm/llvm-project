@@ -6,14 +6,15 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include <clc/opencl/synchronization/utils.h>
-#include <clc/synchronization/clc_work_group_barrier.h>
+#include "clc/opencl/synchronization/utils.h"
+#include "clc/opencl/utils.h"
+#include "clc/synchronization/clc_work_group_barrier.h"
 
 _CLC_DEF _CLC_OVERLOAD void work_group_barrier(cl_mem_fence_flags flags,
                                                memory_scope scope) {
   int memory_order = __ATOMIC_SEQ_CST;
   __CLC_MemorySemantics memory_semantics = __opencl_get_memory_semantics(flags);
-  __clc_work_group_barrier(__opencl_get_memory_scope(scope), memory_order,
+  __clc_work_group_barrier(__opencl_get_clang_memory_scope(scope), memory_order,
                            memory_semantics);
 }
 
