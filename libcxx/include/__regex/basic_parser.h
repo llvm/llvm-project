@@ -121,11 +121,13 @@ class __parser {
 
     if (__parse_escaped_character('(')) {
       size_t __subexpr_num = __marked_count_++;
-      __machine_.__push_subexpression_begin(__subexpr_num);
+      if (!(__flags_ & regex_constants::nosubs))
+        __machine_.__push_subexpression_begin(__subexpr_num);
       __parse_re_expression();
       if (!__parse_escaped_character(')'))
         std::__throw_regex_error<regex_constants::error_paren>();
-      __machine_.__push_subexpression_end(__subexpr_num);
+      if (!(__flags_ & regex_constants::nosubs))
+        __machine_.__push_subexpression_end(__subexpr_num);
       return true;
     } else {
       return __parse_backref();
@@ -220,7 +222,7 @@ class __parser {
 public:
   __parser(
       _ForwardIterator __first, _ForwardIterator __last, _Traits __traits, regex_constants::syntax_option_type __flags)
-      : __machine_(__traits), __first_(__first), __last_(__last), __flags_(__flags) {}
+      : __machine_(__traits, true), __first_(__first), __last_(__last), __flags_(__flags) {}
 
   void __parse_basic() {
     __parse_basic_expr();
@@ -241,11 +243,12 @@ public:
     while (__first_ != __last_) {
       __newline = std::find(__first_, __last_, '\n');
       std::swap(__last_, __newline);
+      auto __expr2_start = __machine_.size();
       __parse_basic_expr();
       std::swap(__last_, __newline);
       if (__first_ != __newline)
         std::__throw_regex_error<regex_constants::__re_err_grammar>();
-      __machine_.__push_alternative(0, __machine_.size());
+      __machine_.__push_alternative(0, __expr2_start);
       if (__first_ != __last_)
         ++__first_;
     }

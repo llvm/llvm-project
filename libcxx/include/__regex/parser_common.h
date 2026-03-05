@@ -18,6 +18,56 @@ _LIBCPP_BEGIN_NAMESPACE_STD
 
 namespace __regex {
 
+template <class _CharT, class _ForwardIterator>
+_CharT __parse_awk_escape(_ForwardIterator& __first, _ForwardIterator __last) {
+  switch (*__first) {
+  case '\\':
+  case '"':
+  case '/':
+    return *__first++;
+
+  case 'a':
+    ++__first;
+    return '\a';
+
+  case 'b':
+    ++__first;
+    return '\b';
+
+  case 'f':
+    ++__first;
+    return '\f';
+
+  case 'n':
+    ++__first;
+    return '\n';
+
+  case 'r':
+    ++__first;
+    return '\r';
+
+  case 't':
+    ++__first;
+    return '\t';
+
+  case 'v':
+    ++__first;
+    return '\v';
+  }
+
+  auto __is_base_8_char = [](_CharT __c) { return __c >= '0' && __c <= '7'; };
+
+  if (!__is_base_8_char(*__first))
+    std::__throw_regex_error<regex_constants::error_escape>();
+  unsigned __val = *__first - '0';
+  if (++__first != __last && __is_base_8_char(*__first)) {
+    __val = 8 * __val + *__first - '0';
+    if (++__first != __last && __is_base_8_char(*__first))
+      __val = 8 * __val + *__first++ - '0';
+  }
+  return _CharT(__val);
+}
+
 // bracket expression parsing
 
 template <class _CharT, class _Traits, class _ForwardIterator>
@@ -136,6 +186,11 @@ bool __parse_expression_term(
   if (*__first == '[' && *__next == '.') {
     __first = ++__next;
     __regex::__parse_collating_symbol(__machine, __start_range, __first, __last);
+  } else if (auto __grammar = regex_constants::__get_grammar(__flags);
+             __grammar == regex_constants::awk && *__first == '\\') {
+    if (++__first == __last)
+      return false;
+    __start_range = __parse_awk_escape<_CharT>(__first, __last);
   } else {
     __start_range = *__first;
     ++__first;
@@ -176,6 +231,11 @@ bool __parse_expression_term(
   if (*__first == '[' && *__next == '.') {
     __first = ++__next;
     __parse_collating_symbol(__machine, __end_range, __first, __last);
+  } else if (auto __grammar = regex_constants::__get_grammar(__flags);
+             __grammar == regex_constants::awk && *__first == '\\') {
+    if (++__first == __last)
+      return false;
+    __start_range = __parse_awk_escape<_CharT>(__first, __last);
   } else {
     __end_range = *__first;
     ++__first;

@@ -122,6 +122,7 @@ class __interpreter {
   vector<__interpreter_info<_CharT> > __machine_;
   vector<size_t> __initial_loop_values_;
   _Traits __traits_;
+  bool __find_longest_;
 
   static size_t __read_uleb(const vector<__interpreter_info<_CharT> >& __machine, size_t& __current_pos) {
     size_t __result = 0;
@@ -137,6 +138,14 @@ class __interpreter {
   }
 
   struct __global_execution_state {
+    struct __local_execution_state;
+
+    bool __at_first_;
+    stack<__local_execution_state> __states_;
+    const __interpreter& __machine_;
+    regex_constants::match_flag_type __flags_;
+    size_t __counter_ = 0;
+
     struct __local_execution_state {
       const _CharT* __current_;
       vector<sub_match<const _CharT*> > __sub_matches_;
@@ -146,6 +155,7 @@ class __interpreter {
 
       bool __execute(const _CharT* __first, const _CharT* __last, __global_execution_state& __gstate) {
         while (true) {
+          ++__gstate.__counter_;
           auto __st = __gstate.__machine()[__current_pos_++].__state_;
           switch (__st) {
             using enum __state;
@@ -161,7 +171,7 @@ class __interpreter {
           } break;
 
           case __end_state: {
-            return true;
+            return !(__gstate.__flags_ & regex_constants::match_flag_type::__full_match) || __current_ == __last;
           }
 
           case __match_any: {
@@ -185,9 +195,8 @@ class __interpreter {
 
           case __branch_alternative: {
             auto __offset = __read_uleb(__gstate.__machine(), __current_pos_);
-            auto __cpy    = *this;
-            __cpy.__current_pos_ += __offset;
-            __gstate.__states_.push(std::move(__cpy));
+            __gstate.__states_.push(*this);
+            __current_pos_ += __offset;
             break;
           }
 
@@ -387,27 +396,43 @@ class __interpreter {
       }
     };
 
-    bool __at_first_;
-    stack<__local_execution_state> __states_;
-    const __interpreter& __machine_;
-
-    __global_execution_state(bool __at_first, __local_execution_state __initial_state, const __interpreter& __machine)
-        : __at_first_(__at_first), __machine_(__machine) {
-      __states_.push(std::move(__initial_state));
-    }
-
-    const vector<__interpreter_info<_CharT> >& __machine() { return __machine_.__machine_; }
+    const vector<__interpreter_info<_CharT>>& __machine() { return __machine_.__machine_; }
 
     bool __execute(const _CharT* __first, const _CharT* __last) {
-      while (!__states_.empty()) {
-        auto __st = std::move(__states_.top());
-        __states_.pop();
-        if (__st.__execute(__first, __last, *this)) {
-          __states_.push(std::move(__st));
-          return true;
+      size_t __length = __last - __first + 1;
+      if (__machine_.__find_longest_) {
+        __local_execution_state __best_state;
+        bool __found_match = false;
+        while (!__states_.empty()) {
+          if (__counter_ / _LIBCPP_REGEX_COMPLEXITY_FACTOR >= __length)
+            std::__throw_regex_error<regex_constants::error_complexity>();
+          auto __state = std::move(__states_.top());
+          __states_.pop();
+          if (__state.__execute(__first, __last, *this)) {
+            if (!__found_match || __best_state.__current_ < __state.__current_)
+              __best_state = std::move(__state);
+            if (__best_state.__current_ == __last) {
+              __states_.push(std::move(__best_state));
+              return true;
+            }
+            __found_match = true;
+          }
         }
+        __states_.push(std::move(__best_state));
+        return __found_match;
+      } else {
+        while (!__states_.empty()) {
+          if (__counter_ / _LIBCPP_REGEX_COMPLEXITY_FACTOR >= __length)
+            std::__throw_regex_error<regex_constants::error_complexity>();
+          auto __state = std::move(__states_.top());
+          __states_.pop();
+          if (__state.__execute(__first, __last, *this)) {
+            __states_.push(std::move(__state));
+            return true;
+          }
+        }
+        return false;
       }
-      return false;
     }
   };
 
@@ -446,7 +471,7 @@ class __interpreter {
   }
 
 public:
-  __interpreter(_Traits __traits) : __traits_(__traits) {}
+  __interpreter(_Traits __traits, bool __find_longest) : __traits_(__traits), __find_longest_(__find_longest) {}
 
   void __push_any_matcher() { push_back(__state::__match_any); }
   void __push_end_state() { push_back(__state::__end_state); }
@@ -503,13 +528,14 @@ public:
 
   void __push_alternative(size_t __expr1_start, size_t __expr2_start) {
     vector<__interpreter_info<_CharT> > __buffer;
+    __push_relative_jump(__buffer, size() - __expr2_start);
+    insert(__expr2_start, __buffer);
+    __expr2_start += __buffer.size();
+    __buffer.clear();
     __buffer.push_back(__state::__branch_alternative);
     __write_uleb(__buffer, __expr2_start - __expr1_start);
     insert(__expr1_start, __buffer);
     __expr2_start += __buffer.size();
-    __buffer.clear();
-    __push_relative_jump(__buffer, size() - __expr2_start);
-    insert(__expr2_start, __buffer);
   }
 
   void __push_bracket_expr(bool __negate, const __bracket_expr<_CharT, _Traits>& __expr) {
@@ -535,15 +561,20 @@ public:
 
   size_t size() const { return __machine_.size(); }
 
-  __global_execution_state
-  __get_exec_state(vector<sub_match<const _CharT*> >& __sub_matches, const _CharT* __current, bool __at_first) const {
+  __global_execution_state __get_exec_state(
+      vector<sub_match<const _CharT*>>& __sub_matches,
+      const _CharT* __current,
+      bool __at_first,
+      regex_constants::match_flag_type __flags) const {
     typename __global_execution_state::__local_execution_state __base_state;
     __base_state.__sub_matches_ = __sub_matches;
     __base_state.__current_     = __current;
     __base_state.__loop_values_ = __initial_loop_values_;
     __base_state.__loop_starts_.resize(__initial_loop_values_.size());
     __base_state.__current_pos_ = 0;
-    return __global_execution_state(__at_first, __base_state, *this);
+    stack<typename __global_execution_state::__local_execution_state> __s;
+    __s.push(__base_state);
+    return __global_execution_state{__at_first, __s, *this, __flags};
   }
 
   _Traits __get_traits() { return __traits_; }

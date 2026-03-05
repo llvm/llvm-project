@@ -795,6 +795,7 @@ set(files
   __ranges/zip_transform_view.h
   __ranges/zip_view.h
   __regex/basic_parser.h
+  __regex/extended_parser.h
   __regex/interpreter.h
   __regex/parser_common.h
   __regex/regex_error.h

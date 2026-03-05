@@ -14,6 +14,8 @@
 
 _LIBCPP_BEGIN_NAMESPACE_STD
 
+#define _LIBCPP_REGEX_COMPLEXITY_FACTOR 4096
+
 namespace regex_constants {
 
 // syntax_option_type

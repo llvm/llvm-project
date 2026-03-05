@@ -824,6 +824,7 @@ typedef regex_token_iterator<wstring::const_iterator> wsregex_token_iterator;
 #    include <__memory/shared_ptr.h>
 #    include <__memory_resource/polymorphic_allocator.h>
 #    include <__regex/basic_parser.h>
+#    include <__regex/extended_parser.h>
 #    include <__regex/regex_error.h>
 #    include <__type_traits/is_swappable.h>
 #    include <__utility/move.h>
@@ -842,8 +843,6 @@ typedef regex_token_iterator<wstring::const_iterator> wsregex_token_iterator;
 
 _LIBCPP_PUSH_MACROS
 #    include <__undef_macros>
-
-#    define _LIBCPP_REGEX_COMPLEXITY_FACTOR 4096
 
 _LIBCPP_BEGIN_NAMESPACE_STD
 _LIBCPP_BEGIN_EXPLICIT_ABI_ANNOTATIONS
@@ -1681,7 +1680,8 @@ public:
       : __owns_one_state<_CharT>(__s), __machine_(std::move(__machine)) {}
 
   _LIBCPP_HIDE_FROM_ABI_VIRTUAL void __exec(__state<_CharT>& __state) const override {
-    auto __exec_state = __machine_.__get_exec_state(__state.__sub_matches_, __state.__current_, __state.__at_first_);
+    auto __exec_state =
+        __machine_.__get_exec_state(__state.__sub_matches_, __state.__current_, __state.__at_first_, __state.__flags_);
     if (!__exec_state.__execute(__state.__first_, __state.__last_)) {
       __state.__do_ = std::__state<_CharT>::__reject;
       __state.__node_ = nullptr;
@@ -2324,18 +2324,6 @@ private:
   template <class _ForwardIterator>
   _ForwardIterator __parse_DUP_COUNT(_ForwardIterator __first, _ForwardIterator __last, int& __c);
   template <class _ForwardIterator>
-  _ForwardIterator __parse_extended_reg_exp(_ForwardIterator __first, _ForwardIterator __last);
-  template <class _ForwardIterator>
-  _ForwardIterator __parse_ERE_branch(_ForwardIterator __first, _ForwardIterator __last);
-  template <class _ForwardIterator>
-  _ForwardIterator __parse_ERE_expression(_ForwardIterator __first, _ForwardIterator __last);
-  template <class _ForwardIterator>
-  _ForwardIterator __parse_one_char_or_coll_elem_ERE(_ForwardIterator __first, _ForwardIterator __last);
-  template <class _ForwardIterator>
-  _ForwardIterator __parse_ORD_CHAR_ERE(_ForwardIterator __first, _ForwardIterator __last);
-  template <class _ForwardIterator>
-  _ForwardIterator __parse_QUOTED_CHAR_ERE(_ForwardIterator __first, _ForwardIterator __last);
-  template <class _ForwardIterator>
   _ForwardIterator __parse_ecma_exp(_ForwardIterator __first, _ForwardIterator __last);
   template <class _ForwardIterator>
   _ForwardIterator __parse_alternative(_ForwardIterator __first, _ForwardIterator __last);
@@ -2356,8 +2344,6 @@ private:
   __parse_character_escape(_ForwardIterator __first, _ForwardIterator __last, basic_string<_CharT>* __str = nullptr);
   template <class _ForwardIterator>
   _ForwardIterator __parse_pattern_character(_ForwardIterator __first, _ForwardIterator __last);
-  template <class _ForwardIterator>
-  _ForwardIterator __parse_egrep(_ForwardIterator __first, _ForwardIterator __last);
   template <class _ForwardIterator>
   _ForwardIterator __parse_class_escape(
       _ForwardIterator __first,
@@ -2607,173 +2593,21 @@ _ForwardIterator basic_regex<_CharT, _Traits>::__parse(_ForwardIterator __first,
     __marked_count_ = __parser.mark_count();
     return __last;
   }
-  case extended:
   case awk:
-    __first = __parse_extended_reg_exp(__first, __last);
-    break;
-  case egrep:
-    __first = __parse_egrep(__first, __last);
-    break;
+  case extended:
+  case egrep: {
+    __regex::__extended::__parser<_CharT, _Traits, _ForwardIterator> __parser(__first, __last, __traits_, flags());
+    if (auto __grammar = __get_grammar(__flags_); __grammar == extended || __grammar == awk)
+      __parser.__parse_extended();
+    else
+      __parser.__parse_egrep();
+    __end_->first() = new __interpreter_state<_CharT, _Traits>(__parser.__extract_interpreter(), __end_->first());
+    __end_          = static_cast<__owns_one_state<_CharT>*>(__end_->first());
+    __marked_count_ = __parser.mark_count();
+    return __last;
+  }
   default:
     std::__throw_regex_error<regex_constants::__re_err_grammar>();
-  }
-  return __first;
-}
-
-template <class _CharT, class _Traits>
-template <class _ForwardIterator>
-_ForwardIterator
-basic_regex<_CharT, _Traits>::__parse_extended_reg_exp(_ForwardIterator __first, _ForwardIterator __last) {
-  __owns_one_state<_CharT>* __sa = __end_;
-  _ForwardIterator __temp        = __parse_ERE_branch(__first, __last);
-  if (__temp == __first)
-    std::__throw_regex_error<regex_constants::__re_err_empty>();
-  __first = __temp;
-  while (__first != __last && *__first == '|') {
-    __owns_one_state<_CharT>* __sb = __end_;
-    __temp                         = __parse_ERE_branch(++__first, __last);
-    if (__temp == __first)
-      std::__throw_regex_error<regex_constants::__re_err_empty>();
-    __push_alternation(__sa, __sb);
-    __first = __temp;
-  }
-  return __first;
-}
-
-template <class _CharT, class _Traits>
-template <class _ForwardIterator>
-_ForwardIterator basic_regex<_CharT, _Traits>::__parse_ERE_branch(_ForwardIterator __first, _ForwardIterator __last) {
-  _ForwardIterator __temp = __parse_ERE_expression(__first, __last);
-  if (__temp == __first)
-    std::__throw_regex_error<regex_constants::__re_err_empty>();
-  do {
-    __first = __temp;
-    __temp  = __parse_ERE_expression(__first, __last);
-  } while (__temp != __first);
-  return __first;
-}
-
-template <class _CharT, class _Traits>
-template <class _ForwardIterator>
-_ForwardIterator
-basic_regex<_CharT, _Traits>::__parse_ERE_expression(_ForwardIterator __first, _ForwardIterator __last) {
-  __owns_one_state<_CharT>* __e = __end_;
-  unsigned __mexp_begin         = __marked_count_;
-  _ForwardIterator __temp       = __parse_one_char_or_coll_elem_ERE(__first, __last);
-  if (__temp == __first && __temp != __last) {
-    switch (*__temp) {
-    case '^':
-      __push_l_anchor();
-      ++__temp;
-      break;
-    case '$':
-      __push_r_anchor();
-      ++__temp;
-      break;
-    case '(':
-      __push_begin_marked_subexpression();
-      unsigned __temp_count = __marked_count_;
-      ++__open_count_;
-      __temp = __parse_extended_reg_exp(++__temp, __last);
-      if (__temp == __last || *__temp != ')')
-        std::__throw_regex_error<regex_constants::error_paren>();
-      __push_end_marked_subexpression(__temp_count);
-      --__open_count_;
-      ++__temp;
-      break;
-    }
-  }
-  if (__temp != __first)
-    __temp = __parse_ERE_dupl_symbol(__temp, __last, __e, __mexp_begin + 1, __marked_count_ + 1);
-  __first = __temp;
-  return __first;
-}
-
-template <class _CharT, class _Traits>
-template <class _ForwardIterator>
-_ForwardIterator
-basic_regex<_CharT, _Traits>::__parse_one_char_or_coll_elem_ERE(_ForwardIterator __first, _ForwardIterator __last) {
-  _ForwardIterator __temp = __parse_ORD_CHAR_ERE(__first, __last);
-  if (__temp == __first) {
-    __temp = __parse_QUOTED_CHAR_ERE(__first, __last);
-    if (__temp == __first) {
-      if (__temp != __last && *__temp == '.') {
-        __push_match_any();
-        ++__temp;
-      } else
-        __temp = __parse_bracket_expression(__first, __last);
-    }
-  }
-  __first = __temp;
-  return __first;
-}
-
-template <class _CharT, class _Traits>
-template <class _ForwardIterator>
-_ForwardIterator basic_regex<_CharT, _Traits>::__parse_ORD_CHAR_ERE(_ForwardIterator __first, _ForwardIterator __last) {
-  if (__first != __last) {
-    switch (*__first) {
-    case '^':
-    case '.':
-    case '[':
-    case '$':
-    case '(':
-    case '|':
-    case '*':
-    case '+':
-    case '?':
-    case '{':
-    case '\\':
-      break;
-    case ')':
-      if (__open_count_ == 0) {
-        __push_char(*__first);
-        ++__first;
-      }
-      break;
-    default:
-      __push_char(*__first);
-      ++__first;
-      break;
-    }
-  }
-  return __first;
-}
-
-template <class _CharT, class _Traits>
-template <class _ForwardIterator>
-_ForwardIterator
-basic_regex<_CharT, _Traits>::__parse_QUOTED_CHAR_ERE(_ForwardIterator __first, _ForwardIterator __last) {
-  if (__first != __last) {
-    _ForwardIterator __temp = std::next(__first);
-    if (__temp != __last) {
-      if (*__first == '\\') {
-        switch (*__temp) {
-        case '^':
-        case '.':
-        case '*':
-        case '[':
-        case '$':
-        case '\\':
-        case '(':
-        case ')':
-        case '|':
-        case '+':
-        case '?':
-        case '{':
-        case '}':
-          __push_char(*__temp);
-          __first = ++__temp;
-          break;
-        default:
-          if (__get_grammar(__flags_) == awk)
-            __first = __parse_awk_escape(++__first, __last);
-          else if (__test_back_ref(*__temp))
-            __first = ++__temp;
-          break;
-        }
-      }
-    }
   }
   return __first;
 }
@@ -3586,33 +3420,6 @@ basic_regex<_CharT, _Traits>::__parse_pattern_character(_ForwardIterator __first
       ++__first;
       break;
     }
-  }
-  return __first;
-}
-
-template <class _CharT, class _Traits>
-template <class _ForwardIterator>
-_ForwardIterator basic_regex<_CharT, _Traits>::__parse_egrep(_ForwardIterator __first, _ForwardIterator __last) {
-  __owns_one_state<_CharT>* __sa = __end_;
-  _ForwardIterator __t1          = std::find(__first, __last, _CharT('\n'));
-  if (__t1 != __first)
-    __parse_extended_reg_exp(__first, __t1);
-  else
-    __push_empty();
-  __first = __t1;
-  if (__first != __last)
-    ++__first;
-  while (__first != __last) {
-    __t1                           = std::find(__first, __last, _CharT('\n'));
-    __owns_one_state<_CharT>* __sb = __end_;
-    if (__t1 != __first)
-      __parse_extended_reg_exp(__first, __t1);
-    else
-      __push_empty();
-    __push_alternation(__sa, __sb);
-    __first = __t1;
-    if (__first != __last)
-      ++__first;
   }
   return __first;
 }
