@@ -1,0 +1,48 @@
+// RUN: cir-opt %s --cir-to-mlir -o - | FileCheck %s -check-prefix=MLIR
+// RUN: cir-opt %s --cir-to-mlir -cir-mlir-to-llvm -o - | mlir-translate -mlir-to-llvmir | FileCheck %s -check-prefix=LLVM
+
+!s32i = !cir.int<s, 32>
+module {
+  cir.func @foo() {
+    %0 = cir.alloca !s32i, !cir.ptr<!s32i>, ["a", init] {alignment = 4 : i64}
+    %1 = cir.alloca !s32i, !cir.ptr<!s32i>, ["b", init] {alignment = 4 : i64}
+    %2 = cir.const #cir.int<2> : !s32i
+    cir.store %2, %0 : !s32i, !cir.ptr<!s32i>
+    cir.store %2, %1 : !s32i, !cir.ptr<!s32i>
+
+    %3 = cir.load %0 : !cir.ptr<!s32i>, !s32i
+    %4 = cir.unary(inc, %3) : !s32i, !s32i
+    cir.store %4, %0 : !s32i, !cir.ptr<!s32i>
+
+    %5 = cir.load %1 : !cir.ptr<!s32i>, !s32i
+    %6 = cir.unary(dec, %5) : !s32i, !s32i
+    cir.store %6, %1 : !s32i, !cir.ptr<!s32i>
+
+    // test float
+    %7 = cir.alloca !s32i, !cir.ptr<!s32i>, ["b", init] {alignment = 4 : i64}
+    cir.return
+  }
+
+// MLIR: = arith.constant 1
+// MLIR: = arith.addi
+// MLIR: = arith.constant -1
+// MLIR: = arith.addi
+
+// LLVM: = add i32 %[[#]], 1
+// LLVM: = add i32 %[[#]], -1
+
+
+  cir.func @floatingPoints(%arg0: !cir.double) {
+    %0 = cir.alloca !cir.double, !cir.ptr<!cir.double>, ["X", init] {alignment = 8 : i64}
+    cir.store %arg0, %0 : !cir.double, !cir.ptr<!cir.double>
+    %1 = cir.load %0 : !cir.ptr<!cir.double>, !cir.double
+    %2 = cir.unary(inc, %1) : !cir.double, !cir.double
+    %3 = cir.load %0 : !cir.ptr<!cir.double>, !cir.double
+    %4 = cir.unary(dec, %3) : !cir.double, !cir.double
+    cir.return
+  }
+// MLIR: = arith.constant 1.0
+// MLIR: = arith.addf
+// MLIR: = arith.constant -1.0
+// MLIR: = arith.addf
+}

@@ -1,0 +1,14 @@
+// RUN: cir-opt %s -cir-to-mlir -o - | FileCheck %s -check-prefix=MLIR
+
+#fn_attr = #cir<extra({cl.kernel = #cir.cl.kernel})>
+module {
+  cir.func @kernel1() extra(#fn_attr) {
+// MLIR: func.func @kernel1() attributes {gpu.kernel} {
+    cir.return
+  }
+  cir.func @func1() {
+// MLIR: func.func @func1() {
+    cir.return
+  }
+}
+

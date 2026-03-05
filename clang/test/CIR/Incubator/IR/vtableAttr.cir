@@ -1,0 +1,7 @@
+// RUN: cir-opt %s --verify-roundtrip | FileCheck %s
+
+!u8i = !cir.int<u, 8>
+
+// Should parse VTable attribute.
+cir.global external @testVTable = #cir.vtable<{#cir.const_array<[#cir.ptr<null> : !cir.ptr<!u8i>]> : !cir.array<!cir.ptr<!u8i> x 1>}> : !cir.record<struct {!cir.array<!cir.ptr<!u8i> x 1>}>
+// CHECK: cir.global external @testVTable = #cir.vtable<{#cir.const_array<[#cir.ptr<null> : !cir.ptr<!u8i>]> : !cir.array<!cir.ptr<!u8i> x 1>}> : !rec_anon_struct

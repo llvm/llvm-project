@@ -1,0 +1,16 @@
+// RUN: cir-opt %s -cir-to-llvm -o %t.cir
+// RUN: FileCheck --input-file=%t.cir %s -check-prefix=MLIR
+
+!s16i = !cir.int<s, 16>
+!u16i = !cir.int<u, 16>
+
+cir.func @vec_cmp(%0: !cir.vector<!s16i x 16>, %1: !cir.vector<!s16i x 16>) -> () {
+  %2 = cir.vec.cmp(lt, %0, %1) : !cir.vector<!s16i x 16>, !cir.vector<!cir.int<u, 1> x 16> 
+  %3 = cir.cast bitcast %2 : !cir.vector<!cir.int<u, 1> x 16> -> !u16i
+  cir.return
+}
+    
+// MLIR: llvm.func @vec_cmp
+// MLIR-NEXT: %{{[0-9]+}} = llvm.icmp "slt" %arg0, %arg1 : vector<16xi16>
+// MLIR-NEXT: %{{[0-9]+}} = llvm.bitcast %{{[0-9]+}} : vector<16xi1> to i16
+// MLIR-NEXT: llvm.return

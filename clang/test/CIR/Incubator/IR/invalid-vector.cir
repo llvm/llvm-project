@@ -1,0 +1,10 @@
+// RUN: cir-opt %s -verify-diagnostics -split-input-file
+
+!s32i = !cir.int<s, 32>
+
+module  {
+
+// expected-error @below {{failed to verify 'elementType'}}
+cir.global external @vec_b = #cir.zero : !cir.vector<!cir.array<!s32i x 10> x 4>
+
+}

@@ -1,0 +1,67 @@
+// RUN: cir-opt %s -cir-to-mlir -o %t.mlir
+// RUN: FileCheck --input-file=%t.mlir %s -check-prefix=MLIR
+
+!s32i = !cir.int<s, 32>
+
+module {
+  cir.global external lang_address_space(offload_global) @addrspace1 = #cir.int<1> : !s32i
+  // MLIR: memref.global "public" @addrspace1 : memref<1xi32, #gpu.address_space<global>> = dense<1>
+
+  cir.global "private" internal lang_address_space(offload_local) @addrspace2 : !s32i
+  // MLIR: memref.global "private" @addrspace2 : memref<1xi32, #gpu.address_space<workgroup>>
+
+  cir.global external target_address_space(7) @addrspace3 = #cir.int<3> : !s32i
+  // MLIR: memref.global "public" @addrspace3 : memref<1xi32, 7> = dense<3>
+
+  // MLIR: func.func @test_get_global_op() {
+  cir.func @test_get_global_op() {
+    // MLIR-NEXT: memref.get_global @addrspace1 : memref<1xi32, #gpu.address_space<global>>
+    %0 = cir.get_global @addrspace1 : !cir.ptr<!s32i, lang_address_space(offload_global)>
+    cir.load %0 : !cir.ptr<!s32i, lang_address_space(offload_global)>, !s32i
+
+    // MLIR: memref.get_global @addrspace2 : memref<1xi32, #gpu.address_space<workgroup>>
+    %1 = cir.get_global @addrspace2 : !cir.ptr<!s32i, lang_address_space(offload_local)>
+    cir.load %1 : !cir.ptr<!s32i, lang_address_space(offload_local)>, !s32i
+
+    // MLIR: memref.get_global @addrspace3 : memref<1xi32, 7>
+    %2 = cir.get_global @addrspace3 : !cir.ptr<!s32i, target_address_space(7)>
+    cir.load %2 : !cir.ptr<!s32i, target_address_space(7)>, !s32i
+    cir.return
+  }
+
+  // MLIR: func.func @foo(%arg0: memref<?xi32>) {
+  cir.func @foo(%arg0: !cir.ptr<!s32i>) {
+    // MLIR-NEXT: memref.alloca() {alignment = 8 : i64} : memref<1xmemref<?xi32>>
+    %0 = cir.alloca !cir.ptr<!s32i>, !cir.ptr<!cir.ptr<!s32i>>, ["arg", init] {alignment = 8 : i64}
+    cir.return
+  }
+
+  // MLIR: func.func @bar(%arg0: memref<?xi32, 1>) {
+  cir.func @bar(%arg0: !cir.ptr<!s32i, target_address_space(1)>) {
+    // MLIR-NEXT: memref.alloca() {alignment = 8 : i64} : memref<1xmemref<?xi32, 1>>
+    %0 = cir.alloca !cir.ptr<!s32i, target_address_space(1)>, !cir.ptr<!cir.ptr<!s32i, target_address_space(1)>>, ["arg", init] {alignment = 8 : i64}
+    cir.return
+  }
+
+  // MLIR: func.func @baz(%arg0: memref<?xi32>) {
+  cir.func @baz(%arg0: !cir.ptr<!s32i, target_address_space(0)>) {
+    // MLIR-NEXT: memref.alloca() {alignment = 8 : i64} : memref<1xmemref<?xi32>>
+    %0 = cir.alloca !cir.ptr<!s32i, target_address_space(0)>, !cir.ptr<!cir.ptr<!s32i, target_address_space(0)>>, ["arg", init] {alignment = 8 : i64}
+    cir.return
+  }
+
+  // MLIR: func.func @test_lower_offload_as() {
+  cir.func @test_lower_offload_as() {
+    %0 = cir.alloca !cir.ptr<!s32i, lang_address_space(offload_private)>, !cir.ptr<!cir.ptr<!s32i, lang_address_space(offload_private)>>, ["arg0", init] {alignment = 8 : i64}
+    // MLIR-NEXT: memref.alloca() {alignment = 8 : i64} : memref<1xmemref<?xi32, #gpu.address_space<private>>>
+    %1 = cir.alloca !cir.ptr<!s32i, lang_address_space(offload_global)>, !cir.ptr<!cir.ptr<!s32i, lang_address_space(offload_global)>>, ["arg1", init] {alignment = 8 : i64}
+    // MLIR: memref.alloca() {alignment = 8 : i64} : memref<1xmemref<?xi32, #gpu.address_space<global>>>
+    %2 = cir.alloca !cir.ptr<!s32i, lang_address_space(offload_constant)>, !cir.ptr<!cir.ptr<!s32i, lang_address_space(offload_constant)>>, ["arg2", init] {alignment = 8 : i64}
+    // MLIR: memref.alloca() {alignment = 8 : i64} : memref<1xmemref<?xi32>>
+    %3 = cir.alloca !cir.ptr<!s32i, lang_address_space(offload_local)>, !cir.ptr<!cir.ptr<!s32i, lang_address_space(offload_local)>>, ["arg3", init] {alignment = 8 : i64}
+    // MLIR: memref.alloca() {alignment = 8 : i64} : memref<1xmemref<?xi32, #gpu.address_space<workgroup>>>
+    %4 = cir.alloca !cir.ptr<!s32i, lang_address_space(offload_generic)>, !cir.ptr<!cir.ptr<!s32i, lang_address_space(offload_generic)>>, ["arg4", init] {alignment = 8 : i64}
+    // MLIR: memref.alloca() {alignment = 8 : i64} : memref<1xmemref<?xi32>>
+    cir.return
+  }
+}

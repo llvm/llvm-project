@@ -1,0 +1,46 @@
+// RUN: cir-opt %s -cir-to-mlir | FileCheck %s -check-prefix=MLIR
+
+!s32i = !cir.int<s, 32>
+!u32i = !cir.int<u, 32>
+module {
+  cir.func @ptrLoad(%arg0: !cir.ptr<!s32i>) -> !s32i {
+    %0 = cir.load align(4) %arg0 : !cir.ptr<!s32i>, !s32i
+    cir.return %0 : !s32i
+// MLIR-LABEL: func.func @ptrLoad
+// MLIR:       %[[VALUE:.*]] = memref.load %arg0[{{%c0(_[0-9]+)?}}] : memref<?xi32>
+// MLIR:       return %[[VALUE]] : i32
+  }
+  cir.func @ptrStore(%arg0: !cir.ptr<!s32i>, %arg1: !s32i) -> !s32i {
+    cir.store align(4) %arg1, %arg0 : !s32i, !cir.ptr<!s32i>
+    %0 = cir.load align(4) %arg0 : !cir.ptr<!s32i>, !s32i
+    cir.return %0 : !s32i
+// MLIR-LABEL: func.func @ptrStore
+// MLIR:       memref.store %arg1, %arg0[{{%c0(_[0-9]+)?}}] : memref<?xi32>
+// MLIR:       %[[VALUE:.*]] = memref.load %arg0[{{%c0(_[0-9]+)?}}] : memref<?xi32>
+// MLIR:       return %[[VALUE]] : i32
+  }
+  cir.func @arrayLoad(%arg0: !cir.ptr<!s32i>, %arg1: !u32i) -> !s32i {
+    %0 = cir.ptr_stride %arg0, %arg1 : (!cir.ptr<!s32i>, !u32i) -> !cir.ptr<!s32i>
+    %1 = cir.load align(4) %0 : !cir.ptr<!s32i>, !s32i
+    cir.return %1 : !s32i
+// MLIR-LABEL: func.func @arrayLoad
+// MLIR:       %[[IDX:.*]] = arith.index_cast %arg1 : i32 to index
+// MLIR:       %[[VALUE:.*]] = memref.load %arg0[%[[IDX]]] : memref<?xi32>
+// MLIR:       return %[[VALUE]] : i32
+  }
+
+  cir.func @arrayStore(%arg0: !cir.ptr<!s32i>, %arg1: !s32i, %arg2: !u32i) -> !s32i {
+    %0 = cir.ptr_stride %arg0, %arg2 : (!cir.ptr<!s32i>, !u32i) -> !cir.ptr<!s32i>
+    cir.store align(4) %arg1, %0 : !s32i, !cir.ptr<!s32i>
+    %1 = cir.ptr_stride %arg0, %arg2 : (!cir.ptr<!s32i>, !u32i) -> !cir.ptr<!s32i>
+    %2 = cir.load align(4) %1 : !cir.ptr<!s32i>, !s32i
+    cir.return %2 : !s32i
+// MLIR-LABEL: func.func @arrayStore
+// MLIR:       %[[IDX:.*]] = arith.index_cast %arg2 : i32 to index
+// MLIR:       memref.store %arg1, %arg0[%[[IDX]]] : memref<?xi32>
+// MLIR:       %[[IDX2:.*]] = arith.index_cast %arg2 : i32 to index
+// MLIR:       %[[VALUE:.*]] = memref.load %arg0[%[[IDX2]]] : memref<?xi32>
+// MLIR:       return %[[VALUE]] : i32
+  }
+}
+

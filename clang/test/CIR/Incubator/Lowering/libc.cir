@@ -1,0 +1,18 @@
+// RUN: cir-opt %s -cir-to-llvm -o %t.mlir
+// RUN: FileCheck --input-file=%t.mlir %s
+
+!void = !cir.void
+!u64i = !cir.int<u, 64>
+module {
+  cir.func @shouldLowerLibcMemcpyBuiltin(%arg0: !cir.ptr<!void>, %arg1: !cir.ptr<!void>, %arg2: !u64i) {
+    cir.libc.memcpy %arg2 bytes from %arg0 to %arg1 : !u64i, !cir.ptr<!void> -> !cir.ptr<!void>
+    // CHECK: "llvm.intr.memcpy"(%{{.+}}, %{{.+}}, %{{.+}}) <{isVolatile = false}> : (!llvm.ptr, !llvm.ptr, i64) -> ()
+    cir.return
+  }
+
+  cir.func @shouldLowerLibcFAbsBuiltin(%arg0: !cir.double) -> !cir.double {
+    %0 = cir.fabs %arg0 : !cir.double
+    // CHECK: %0 = llvm.intr.fabs(%arg0) : (f64) -> f64
+    cir.return %0 : !cir.double
+  }
+}

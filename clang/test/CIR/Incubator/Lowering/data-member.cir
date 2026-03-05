@@ -1,0 +1,57 @@
+// RUN: cir-opt -cir-to-llvm -o - %s | FileCheck -check-prefix=MLIR %s
+// RUN: cir-translate -cir-to-llvmir --target x86_64-unknown-linux-gnu --disable-cc-lowering -o - %s  | FileCheck -check-prefix=LLVM %s
+
+!s32i = !cir.int<s, 32>
+!s64i = !cir.int<s, 64>
+!structT = !cir.record<struct "Point" {!cir.int<s, 32>, !cir.int<s, 32>, !cir.int<s, 32>}>
+
+module @test attributes {
+  cir.triple = "x86_64-unknown-linux-gnu",
+  dlti.dl_spec = #dlti.dl_spec<i128 = dense<128> : vector<2xi64>, f80 = dense<128> : vector<2xi64>, !llvm.ptr<271> = dense<32> : vector<4xi64>, !llvm.ptr<272> = dense<64> : vector<4xi64>, i64 = dense<64> : vector<2xi64>, f16 = dense<16> : vector<2xi64>, i32 = dense<32> : vector<2xi64>, f128 = dense<128> : vector<2xi64>, !llvm.ptr<270> = dense<32> : vector<4xi64>, f64 = dense<64> : vector<2xi64>, !llvm.ptr = dense<64> : vector<4xi64>, i1 = dense<8> : vector<2xi64>, i8 = dense<8> : vector<2xi64>, i16 = dense<16> : vector<2xi64>, "dlti.stack_alignment" = 128 : i64, "dlti.endianness" = "little">
+} {
+  cir.global external @pt_member = #cir.data_member<1> : !cir.data_member<!s32i in !structT>
+  // MLIR: llvm.mlir.global external @pt_member(4 : i64) {addr_space = 0 : i32} : i64
+  // LLVM: @pt_member = global i64 4
+
+  cir.func @constant() -> !cir.data_member<!s32i in !structT> {
+    %0 = cir.const #cir.data_member<1> : !cir.data_member<!s32i in !structT>
+    cir.return %0 : !cir.data_member<!s32i in !structT>
+  }
+  //      MLIR: llvm.func @constant() -> i64
+  // MLIR-NEXT:   %[[#VAL:]] = llvm.mlir.constant(4 : i64) : i64
+  // MLIR-NEXT:   llvm.return %[[#VAL]] : i64
+  // MLIR-NEXT: }
+
+  //      LLVM: define i64 @constant()
+  // LLVM-NEXT:   ret i64 4
+  // LLVM-NEXT: }
+
+  cir.func @null_constant() -> !cir.data_member<!s32i in !structT> {
+    %0 = cir.const #cir.data_member<null> : !cir.data_member<!s32i in !structT>
+    cir.return %0 : !cir.data_member<!s32i in !structT>
+  }
+  //      MLIR: llvm.func @null_constant() -> i64
+  // MLIR-NEXT:   %[[#VAL:]] = llvm.mlir.constant(-1 : i64) : i64
+  // MLIR-NEXT:   llvm.return %[[#VAL]] : i64
+  // MLIR-NEXT: }
+
+  //      LLVM: define i64 @null_constant() !dbg !7 {
+  // LLVM-NEXT:   ret i64 -1
+  // LLVM-NEXT: }
+
+  cir.func @get_runtime_member(%arg0: !cir.ptr<!structT>, %arg1: !cir.data_member<!s32i in !structT>) -> !cir.ptr<!s32i> {
+    %0 = cir.get_runtime_member %arg0[%arg1 : !cir.data_member<!s32i in !structT>] : !cir.ptr<!structT> -> !cir.ptr<!s32i>
+    cir.return %0 : !cir.ptr<!s32i>
+  }
+  //      MLIR: llvm.func @get_runtime_member(%[[ARG0:.+]]: !llvm.ptr, %[[ARG1:.+]]: i64) -> !llvm.ptr
+  // MLIR-NEXT:   %[[#PTR:]] = llvm.bitcast %[[ARG0]] : !llvm.ptr to !llvm.ptr
+  // MLIR-NEXT:   %[[#VAL:]] = llvm.getelementptr %[[#PTR]][%[[ARG1]]] : (!llvm.ptr, i64) -> !llvm.ptr, i8
+  // MLIR-NEXT:   %[[#RET:]] = llvm.bitcast %[[#VAL]] : !llvm.ptr to !llvm.ptr
+  // MLIR-NEXT:   llvm.return %[[#RET]] : !llvm.ptr
+  // MLIR-NEXT: }
+
+  //      LLVM: define ptr @get_runtime_member(ptr %[[ARG0:.+]], i64 %[[ARG1:.+]])
+  // LLVM-NEXT:   %[[#VAL:]] = getelementptr i8, ptr %[[ARG0]], i64 %[[ARG1]]
+  // LLVM-NEXT:   ret ptr %[[#VAL]]
+  // LLVM-NEXT: }
+}

@@ -1,0 +1,106 @@
+// RUN: cir-opt --cir-abi-lowering -o %t.cir %s
+// RUN: FileCheck --input-file %t.cir %s
+
+!void = !cir.void
+!s32i = !cir.int<s, 32>
+!s64i = !cir.int<s, 64>
+!Base = !cir.record<struct "Base" {!s32i, !s32i, !s32i}>
+!Derived = !cir.record<struct "Derived" {!Base, !s32i}>
+!BaseField = !cir.data_member<!s32i in !Base>
+!DerivedField = !cir.data_member<!s32i in !Derived>
+!BaseMethod = !cir.method<!cir.func<(!s32i)> in !Base>
+!DerivedMethod = !cir.method<!cir.func<(!s32i)> in !Derived>
+
+module attributes {
+  cir.triple = "x86_64-unknown-linux-gnu",
+  dlti.dl_spec = #dlti.dl_spec<i128 = dense<128> : vector<2xi64>, f80 = dense<128> : vector<2xi64>, !llvm.ptr<271> = dense<32> : vector<4xi64>, !llvm.ptr<272> = dense<64> : vector<4xi64>, i64 = dense<64> : vector<2xi64>, f16 = dense<16> : vector<2xi64>, i32 = dense<32> : vector<2xi64>, f128 = dense<128> : vector<2xi64>, !llvm.ptr<270> = dense<32> : vector<4xi64>, f64 = dense<64> : vector<2xi64>, !llvm.ptr = dense<64> : vector<4xi64>, i1 = dense<8> : vector<2xi64>, i8 = dense<8> : vector<2xi64>, i16 = dense<16> : vector<2xi64>, "dlti.stack_alignment" = 128 : i64, "dlti.endianness" = "little">
+} {
+  cir.func @get_runtime_member(%arg0: !cir.ptr<!Base>, %arg1: !BaseField) -> !cir.ptr<!s32i> {
+    %0 = cir.get_runtime_member %arg0[%arg1 : !BaseField] : !cir.ptr<!Base> -> !cir.ptr<!s32i>
+    cir.return %0 : !cir.ptr<!s32i>
+  }
+  // CHECK:      cir.func @get_runtime_member(%[[ARG0:.+]]: !cir.ptr<!rec_Base>, %[[ARG1:.+]]: !s64i) -> !cir.ptr<!s32i> {
+  // CHECK-NEXT:   %[[BYTE_PTR:.+]] = cir.cast bitcast %[[ARG0]] : !cir.ptr<!rec_Base> -> !cir.ptr<!s8i>
+  // CHECK-NEXT:   %[[COMPUTED:.+]] = cir.ptr_stride %[[BYTE_PTR]], %[[ARG1]] : (!cir.ptr<!s8i>, !s64i) -> !cir.ptr<!s8i>
+  // CHECK-NEXT:   %[[RESULT:.+]] = cir.cast bitcast %[[COMPUTED]] : !cir.ptr<!s8i> -> !cir.ptr<!s32i>
+  // CHECK-NEXT:   cir.return %[[RESULT]] : !cir.ptr<!s32i>
+  // CHECK-NEXT: }
+
+  cir.func @get_method(%arg0: !cir.ptr<!Base>, %arg1: !BaseMethod) {
+    %0, %1 = cir.get_method %arg1, %arg0 : (!BaseMethod, !cir.ptr<!Base>) -> (!cir.ptr<!cir.func<(!cir.ptr<!void>, !s32i)>>, !cir.ptr<!void>)
+    cir.return
+  }
+  // CHECK:      cir.func @get_method(%[[ARG0:.+]]: !cir.ptr<!rec_Base>, %[[ARG1:.+]]: ![[ABI_TY:.+]]) {
+  // CHECK-NEXT:   %[[MASK:.+]] = cir.const #cir.int<1> : !s64i
+  // CHECK-NEXT:   %[[OFFSET:.+]] = cir.extract_member %[[ARG1]][1] : ![[ABI_TY]] -> !s64i
+  // CHECK-NEXT:   %[[THIS:.+]] = cir.cast bitcast %[[ARG0]] : !cir.ptr<!rec_Base> -> !cir.ptr<!void>
+  // CHECK-NEXT:   %{{.+}} = cir.ptr_stride %[[THIS]], %[[OFFSET]] : (!cir.ptr<!void>, !s64i) -> !cir.ptr<!void>
+  // CHECK-NEXT:   %[[PTR:.+]] = cir.extract_member %[[ARG1]][0] : ![[ABI_TY]] -> !s64i
+  // CHECK-NEXT:   %[[PTR_MASKED:.+]] = cir.binop(and, %[[PTR]], %[[MASK]]) : !s64i
+  // CHECK-NEXT:   %[[IS_VIRT:.+]] = cir.cmp(eq, %[[PTR_MASKED]], %[[MASK]]) : !s64i, !cir.bool
+  // CHECK-NEXT:   cir.brcond %[[IS_VIRT]] ^[[BLK_VIRT:.+]], ^[[BLK_NON_VIRT:.+]]
+  // CHECK-NEXT: ^[[BLK_VIRT]]:
+  // CHECK-NEXT:   %[[VPTR_PTR:.+]] = cir.cast bitcast %[[ARG0]] : !cir.ptr<!rec_Base> -> !cir.ptr<!cir.ptr<!s8i>>
+  // CHECK-NEXT:   %[[VPTR:.+]] = cir.load %[[VPTR_PTR]] : !cir.ptr<!cir.ptr<!s8i>>, !cir.ptr<!s8i>
+  // CHECK-NEXT:   %[[VPTR_OFFSET:.+]] = cir.binop(sub, %[[PTR]], %[[MASK]]) : !s64i
+  // CHECK-NEXT:   %[[VELEM_PTR:.+]] = cir.ptr_stride %[[VPTR]], %[[VPTR_OFFSET]] : (!cir.ptr<!s8i>, !s64i) -> !cir.ptr<!s8i>
+  // CHECK-NEXT:   %[[VFPTR_PTR:.+]] = cir.cast bitcast %[[VELEM_PTR]] : !cir.ptr<!s8i> -> !cir.ptr<!cir.ptr<!cir.func<(!cir.ptr<!void>, !s32i)>>>
+  // CHECK-NEXT:   %[[VFPTR:.+]] = cir.load %[[VFPTR_PTR]] : !cir.ptr<!cir.ptr<!cir.func<(!cir.ptr<!void>, !s32i)>>>, !cir.ptr<!cir.func<(!cir.ptr<!void>, !s32i)>>
+  // CHECK-NEXT:   cir.br ^[[BLK_CONT:.+]](%[[VFPTR]] : !cir.ptr<!cir.func<(!cir.ptr<!void>, !s32i)>>)
+  // CHECK-NEXT: ^[[BLK_NON_VIRT]]:
+  // CHECK-NEXT:   %[[FPTR:.+]] = cir.cast int_to_ptr %[[PTR]] : !s64i -> !cir.ptr<!cir.func<(!cir.ptr<!void>, !s32i)>>
+  // CHECK-NEXT:   cir.br ^[[BLK_CONT]](%[[FPTR]] : !cir.ptr<!cir.func<(!cir.ptr<!void>, !s32i)>>)
+  // CHECK-NEXT: ^[[BLK_CONT]](%14: !cir.ptr<!cir.func<(!cir.ptr<!void>, !s32i)>>):
+  // CHECK-NEXT:   cir.return
+  // CHECK-NEXT: }
+
+  cir.func @data_member_derived_to_base(%arg0: !DerivedField) -> !BaseField {
+    %0 = cir.base_data_member %arg0 : !DerivedField [8] -> !BaseField
+    cir.return %0 : !BaseField
+  }
+  // CHECK:      @data_member_derived_to_base(%[[ARG:.+]]: !s64i) -> !s64i {
+  // CHECK-NEXT:   %[[NULL:.+]] = cir.const #cir.int<-1> : !s64i
+  // CHECK-NEXT:   %[[IS_NULL:.+]] = cir.cmp(eq, %[[ARG]], %[[NULL]]) : !s64i, !cir.bool
+  // CHECK-NEXT:   %[[OFFSET:.+]] = cir.const #cir.int<8> : !s64i
+  // CHECK-NEXT:   %[[COMPUTED:.+]] = cir.binop(sub, %[[ARG]], %[[OFFSET]]) : !s64i
+  // CHECK-NEXT:   %[[RES:.+]] = cir.select if %[[IS_NULL]] then %[[NULL]] else %[[COMPUTED]] : (!cir.bool, !s64i, !s64i) -> !s64i
+  // CHECK-NEXT:   cir.return %[[RES]] : !s64i
+  // CHECK-NEXT: }
+
+  cir.func @data_member_base_to_derived(%arg0: !BaseField) -> !DerivedField {
+    %0 = cir.derived_data_member %arg0 : !BaseField [8] -> !DerivedField
+    cir.return %0 : !DerivedField
+  }
+  // CHECK:      @data_member_base_to_derived(%[[ARG:.+]]: !s64i) -> !s64i {
+  // CHECK-NEXT:   %[[NULL:.+]] = cir.const #cir.int<-1> : !s64i
+  // CHECK-NEXT:   %[[IS_NULL:.+]] = cir.cmp(eq, %[[ARG]], %[[NULL]]) : !s64i, !cir.bool
+  // CHECK-NEXT:   %[[OFFSET:.+]] = cir.const #cir.int<8> : !s64i
+  // CHECK-NEXT:   %[[COMPUTED:.+]] = cir.binop(add, %[[ARG]], %[[OFFSET]]) : !s64i
+  // CHECK-NEXT:   %[[RES:.+]] = cir.select if %[[IS_NULL]] then %[[NULL]] else %[[COMPUTED]] : (!cir.bool, !s64i, !s64i) -> !s64i
+  // CHECK-NEXT:   cir.return %[[RES]] : !s64i
+  // CHECK-NEXT: }
+
+  cir.func @method_derived_to_base(%arg0: !DerivedMethod) -> !BaseMethod {
+    %0 = cir.base_method %arg0 : !DerivedMethod [8] -> !BaseMethod
+    cir.return %0 : !BaseMethod
+  }
+  // CHECK:      @method_derived_to_base(%[[ARG:.+]]: ![[ABI_TY:.+]]) -> ![[ABI_TY]] {
+  // CHECK-NEXT:   %[[THIS_OFFSET:.+]] = cir.extract_member %[[ARG]][1] : ![[ABI_TY]] -> !s64i
+  // CHECK-NEXT:   %[[BASE_OFFSET:.+]] = cir.const #cir.int<8> : !s64i
+  // CHECK-NEXT:   %[[COMPUTED:.+]] = cir.binop(sub, %[[THIS_OFFSET]], %[[BASE_OFFSET]]) : !s64i
+  // CHECK-NEXT:   %[[RES:.+]] = cir.insert_member %[[ARG]][1], %[[COMPUTED]] : ![[ABI_TY]], !s64i
+  // CHECK-NEXT:   cir.return %[[RES]] : ![[ABI_TY]]
+  // CHECK-NEXT: }
+
+  cir.func @method_base_to_derived(%arg0: !BaseMethod) -> !DerivedMethod {
+    %0 = cir.derived_method %arg0 : !BaseMethod [8] -> !DerivedMethod
+    cir.return %0 : !DerivedMethod
+  }
+  // CHECK:      @method_base_to_derived(%[[ARG:.+]]: ![[ABI_TY:.+]]) -> ![[ABI_TY]] {
+  // CHECK-NEXT:   %[[THIS_OFFSET:.+]] = cir.extract_member %[[ARG]][1] : ![[ABI_TY]] -> !s64i
+  // CHECK-NEXT:   %[[BASE_OFFSET:.+]] = cir.const #cir.int<8> : !s64i
+  // CHECK-NEXT:   %[[COMPUTED:.+]] = cir.binop(add, %[[THIS_OFFSET]], %[[BASE_OFFSET]]) : !s64i
+  // CHECK-NEXT:   %[[RES:.+]] = cir.insert_member %[[ARG]][1], %[[COMPUTED]] : ![[ABI_TY]], !s64i
+  // CHECK-NEXT:   cir.return %[[RES]] : ![[ABI_TY]]
+  // CHECK-NEXT: }
+}

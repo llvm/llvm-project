@@ -1,0 +1,21 @@
+// RUN: cir-opt %s --verify-roundtrip | FileCheck %s
+
+!s32i = !cir.int<s, 32>
+!rec_S = !cir.record<struct "S" {!s32i}>
+module {
+  cir.func private @_ZN1SC1ERKS_(!cir.ptr<!rec_S>, !cir.ptr<!rec_S>) special_member<#cir.cxx_ctor<!rec_S, copy>>
+  cir.func private @_ZN1SC1EOS_(!cir.ptr<!rec_S>, !cir.ptr<!rec_S>) special_member<#cir.cxx_ctor<!rec_S, move>>
+  cir.func private @_ZN1SC2Ei(!cir.ptr<!rec_S>, !cir.ptr<!rec_S>)
+  cir.func private @_ZN1SC2Ev(!cir.ptr<!rec_S>) special_member<#cir.cxx_ctor<!rec_S, default>>
+  cir.func private @_ZN1SD2Ev(!cir.ptr<!rec_S>) special_member<#cir.cxx_dtor<!rec_S>>
+}
+
+// CHECK: !s32i = !cir.int<s, 32>
+// CHECK: !rec_S = !cir.record<struct "S" {!s32i}>
+// CHECK: module {
+// CHECK:   cir.func private @_ZN1SC1ERKS_(!cir.ptr<!rec_S>, !cir.ptr<!rec_S>) special_member<#cir.cxx_ctor<!rec_S, copy>>
+// CHECK:   cir.func private @_ZN1SC1EOS_(!cir.ptr<!rec_S>, !cir.ptr<!rec_S>) special_member<#cir.cxx_ctor<!rec_S, move>>
+// CHECK:   cir.func private @_ZN1SC2Ei(!cir.ptr<!rec_S>, !cir.ptr<!rec_S>)
+// CHECK:   cir.func private @_ZN1SC2Ev(!cir.ptr<!rec_S>) special_member<#cir.cxx_ctor<!rec_S, default>>
+// CHECK:   cir.func private @_ZN1SD2Ev(!cir.ptr<!rec_S>) special_member<#cir.cxx_dtor<!rec_S>>
+// CHECK: }

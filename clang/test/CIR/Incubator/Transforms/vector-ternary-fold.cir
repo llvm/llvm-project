@@ -1,0 +1,19 @@
+// RUN: cir-opt %s -cir-canonicalize -o - | FileCheck %s
+
+!s32i = !cir.int<s, 32>
+
+module {
+  cir.func @vector_ternary_fold_test() -> !cir.vector<!s32i x 4> {
+    %cond = cir.const #cir.const_vector<[#cir.int<1> : !s32i, #cir.int<0> : !s32i, #cir.int<1> : !s32i, #cir.int<0> : !s32i]> : !cir.vector<!s32i x 4>
+    %lhs = cir.const #cir.const_vector<[#cir.int<1> : !s32i, #cir.int<2> : !s32i, #cir.int<3> : !s32i, #cir.int<4> : !s32i]> : !cir.vector<!s32i x 4>
+    %rhs = cir.const #cir.const_vector<[#cir.int<5> : !s32i, #cir.int<6> : !s32i, #cir.int<7> : !s32i, #cir.int<8> : !s32i]> : !cir.vector<!s32i x 4>
+    %res = cir.vec.ternary(%cond, %lhs, %rhs) : !cir.vector<!s32i x 4>, !cir.vector<!s32i x 4>
+    cir.return %res : !cir.vector<!s32i x 4>
+  }
+
+  // [1, 0, 1, 0] ? [1, 2, 3, 4] : [5, 6, 7, 8] Will be fold to [1, 6, 3, 8]
+  // CHECK: cir.func @vector_ternary_fold_test() -> !cir.vector<!s32i x 4> {
+  // CHECK-NEXT: %[[RES:.*]] = cir.const #cir.const_vector<[#cir.int<1> : !s32i, #cir.int<6> : !s32i, #cir.int<3> : !s32i, #cir.int<8> : !s32i]> : !cir.vector<!s32i x 4>
+  // CHECK-NEXT: cir.return %[[RES]] : !cir.vector<!s32i x 4>
+}
+
