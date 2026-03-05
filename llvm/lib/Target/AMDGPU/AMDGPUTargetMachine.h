@@ -14,6 +14,7 @@
 #ifndef LLVM_LIB_TARGET_AMDGPU_AMDGPUTARGETMACHINE_H
 #define LLVM_LIB_TARGET_AMDGPU_AMDGPUTARGETMACHINE_H
 
+#include "AMDGPURegPressureGuard.h"
 #include "GCNSubtarget.h"
 #include "llvm/CodeGen/CodeGenTargetMachineImpl.h"
 #include "llvm/CodeGen/TargetPassConfig.h"
@@ -140,6 +141,9 @@ public:
   bool addPreISel() override;
   bool addInstSelector() override;
   bool addGCPasses() override;
+
+  void addAMDGPURegPressureGuardedPass(
+      Pass *P, const AMDGPURegPressureGuardConfig &Config = {});
 
   std::unique_ptr<CSEConfigBase> getCSEConfig() const override;
 
