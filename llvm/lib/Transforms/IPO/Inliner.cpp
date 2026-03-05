@@ -374,6 +374,11 @@ PreservedAnalyses InlinerPass::run(LazyCallGraph::SCC &InitialC,
           getStringFnAttrAsInt(
               *CB, InlineConstants::FunctionInlineCostMultiplierAttributeName)
               .value_or(1);
+      int CBInliningAdditionalCost =
+          getStringFnAttrAsInt(
+              *CB, InlineConstants::FunctionInlineAdditionalCostAttributeName)
+              .value_or(0);
+      std::optional<int> InliningCost = Advice->inliningCost();
 
       // Setup the data structure used to plumb customization into the
       // `InlineFunction` routine.
@@ -437,6 +442,18 @@ PreservedAnalyses InlinerPass::run(LazyCallGraph::SCC &InitialC,
                     InlineConstants::FunctionInlineCostMultiplierAttributeName,
                     itostr(CBCostMult * IntraSCCCostMultiplier));
                 ICB->addFnAttr(NewCBCostMult);
+              } else if (InliningCost && *InliningCost > 0) {
+                // The hot callsite threshold violates the inliner's bottom-up
+                // inlining assumption, as we end up inlining calls which we
+                // previously declined to inline with a higher threshold. This
+                // can result in exponential inlining, which is effectively
+                // unlimited without this additional cost.
+                Attribute NewCBAdditionalCost = Attribute::get(
+                    M.getContext(),
+                    InlineConstants::FunctionInlineAdditionalCostAttributeName,
+                    itostr(CBInliningAdditionalCost +
+                           (*InliningCost - CBInliningAdditionalCost) / 16));
+                ICB->addFnAttr(NewCBAdditionalCost);
               }
             }
           }
