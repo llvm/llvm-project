@@ -57,36 +57,36 @@ bool WebAssemblyFixupAtomics::runOnMachineFunction(MachineFunction &MF) {
                     << "********** Function: " << MF.getName() << '\n');
 
   bool Changed = false;
-  const auto &Subtarget = MF.getSubtarget<WebAssemblySubtarget>();
-  bool HasRelaxedAtomics = Subtarget.hasRelaxedAtomics();
+  if (!MF.getSubtarget<WebAssemblySubtarget>().hasRelaxedAtomics())
+    return Changed;
 
   for (auto &MBB : MF) {
     for (auto &MI : MBB) {
       const MCInstrDesc &Desc = MI.getDesc();
       for (unsigned I = 0, E = MI.getNumExplicitOperands(); I < E; ++I) {
         if (I < Desc.getNumOperands() &&
-            Desc.operands()[I].OperandType == WebAssembly::OPERAND_MEMORDER) {
-
-          if (HasRelaxedAtomics && !MI.memoperands_empty()) {
-            assert(MI.getOperand(I).getImm() == wasm::WASM_MEM_ORDER_SEQ_CST &&
-                   "Expected seqcst default atomics from ISel");
-            unsigned Order = wasm::WASM_MEM_ORDER_SEQ_CST;
-            auto *MMO = *MI.memoperands_begin();
-            switch (MMO->getMergedOrdering()) {
-            case AtomicOrdering::Acquire:
-            case AtomicOrdering::Release:
-            case AtomicOrdering::AcquireRelease:
-            case AtomicOrdering::Monotonic:
-              Order = wasm::WASM_MEM_ORDER_ACQ_REL;
-              break;
-            default:
-              Order = wasm::WASM_MEM_ORDER_SEQ_CST;
-              break;
-            }
-            if (MI.getOperand(I).getImm() != Order) {
-              MI.getOperand(I).setImm(Order);
-              Changed = true;
-            }
+            Desc.operands()[I].OperandType == WebAssembly::OPERAND_MEMORDER &&
+            // Fences are already selected with the correct ordering.
+            MI.getOpcode() != WebAssembly::ATOMIC_FENCE) {
+          assert(MI.getOperand(I).getImm() == wasm::WASM_MEM_ORDER_SEQ_CST &&
+                 "Expected seqcst default atomics from ISel");
+          assert(!MI.memoperands_empty());
+          unsigned Order = wasm::WASM_MEM_ORDER_SEQ_CST;
+          auto *MMO = *MI.memoperands_begin();
+          switch (MMO->getMergedOrdering()) {
+          case AtomicOrdering::Acquire:
+          case AtomicOrdering::Release:
+          case AtomicOrdering::AcquireRelease:
+          case AtomicOrdering::Monotonic:
+            Order = wasm::WASM_MEM_ORDER_ACQ_REL;
+            break;
+          default:
+            Order = wasm::WASM_MEM_ORDER_SEQ_CST;
+            break;
+          }
+          if (MI.getOperand(I).getImm() != Order) {
+            MI.getOperand(I).setImm(Order);
+            Changed = true;
           }
         }
       }
