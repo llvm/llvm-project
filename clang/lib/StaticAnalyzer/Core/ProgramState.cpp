@@ -23,7 +23,9 @@
 using namespace clang;
 using namespace ento;
 
-namespace clang { namespace  ento {
+namespace clang { namespace ento {
+
+thread_local unsigned GlobalRecursionDepth = 0;
 /// Increments the number of times this state is referenced.
 
 void ProgramStateRetain(const ProgramState *state) {

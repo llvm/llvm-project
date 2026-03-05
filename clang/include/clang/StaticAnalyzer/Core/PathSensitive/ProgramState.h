@@ -909,6 +909,8 @@ public:
   bool scan(const SymExpr *sym);
 };
 
+extern thread_local unsigned GlobalRecursionDepth;
+
 } // end ento namespace
 
 } // end clang namespace
