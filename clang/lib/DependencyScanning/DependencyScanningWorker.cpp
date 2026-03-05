@@ -154,37 +154,6 @@ void DependencyScanningWorker::computeDependenciesFromCompilerInvocation(
                              PCHContainerOps, &DiagsConsumer);
 }
 
-bool DependencyScanningWorker::initializeCompilerInstanceWithContext(
-    StringRef CWD, ArrayRef<std::string> CommandLine,
-    DependencyActionController &Controller, DiagnosticConsumer &DC) {
-  auto [OverlayFS, ModifiedCommandLine] = initVFSForByNameScanning(
-      DepFS, CommandLine, CWD, "ScanningByName", getCAS());
-  auto DiagEngineWithCmdAndOpts =
-      std::make_unique<DiagnosticsEngineWithDiagOpts>(ModifiedCommandLine,
-                                                      OverlayFS, DC);
-  return initializeCompilerInstanceWithContext(
-      CWD, ModifiedCommandLine, Controller, std::move(DiagEngineWithCmdAndOpts),
-      OverlayFS);
-}
-
-bool DependencyScanningWorker::initializeCompilerInstanceWithContext(
-    StringRef CWD, ArrayRef<std::string> CommandLine,
-    DependencyActionController &Controller,
-    std::unique_ptr<DiagnosticsEngineWithDiagOpts> DiagEngineWithDiagOpts,
-    IntrusiveRefCntPtr<llvm::vfs::OverlayFileSystem> OverlayFS) {
-  CIWithContext =
-      std::make_unique<CompilerInstanceWithContext>(*this, CWD, CommandLine);
-  return CIWithContext->initialize(
-      Controller, std::move(DiagEngineWithDiagOpts), OverlayFS);
-}
-
-bool DependencyScanningWorker::computeDependenciesByNameWithContext(
-    StringRef ModuleName, DependencyConsumer &Consumer,
-    DependencyActionController &Controller) {
-  assert(CIWithContext && "CompilerInstance with context required!");
-  return CIWithContext->computeDependencies(ModuleName, Consumer, Controller);
-}
-
 std::pair<IntrusiveRefCntPtr<llvm::vfs::OverlayFileSystem>,
           std::vector<std::string>>
 dependencies::initVFSForTUBufferScanning(
