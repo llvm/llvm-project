@@ -2212,10 +2212,10 @@ public:
         auto *CurrI = dyn_cast<Instruction>(Current);
         if (!CurrI)
           continue;
-        if (isa<PHINode>(CurrI))
-          return;
         if (DT->dominates(CurrI, MatMul))
           continue;
+        if (isa<PHINode>(CurrI))
+          return;
         if (CurrI->mayHaveSideEffects() || CurrI->mayReadFromMemory())
           return;
         ToHoist.push_back(CurrI);

@@ -369,25 +369,51 @@ define void @multiply_phi_dominates_matmul(ptr noalias %A, ptr noalias %B, ptr n
 ; CHECK-NEXT:    br label [[LOOP:%.*]]
 ; CHECK:       loop:
 ; CHECK-NEXT:    [[IV:%.*]] = phi i64 [ 0, [[ENTRY:%.*]] ], [ [[IV_NEXT:%.*]], [[LOOP]] ]
-; CHECK-NEXT:    [[COL_LOAD:%.*]] = load <2 x double>, ptr [[A:%.*]], align 8
-; CHECK-NEXT:    [[VEC_GEP:%.*]] = getelementptr i8, ptr [[A]], i64 16
-; CHECK-NEXT:    [[COL_LOAD1:%.*]] = load <2 x double>, ptr [[VEC_GEP]], align 8
-; CHECK-NEXT:    [[COL_LOAD2:%.*]] = load <2 x double>, ptr [[B:%.*]], align 8
-; CHECK-NEXT:    [[VEC_GEP3:%.*]] = getelementptr i8, ptr [[B]], i64 16
-; CHECK-NEXT:    [[COL_LOAD4:%.*]] = load <2 x double>, ptr [[VEC_GEP3]], align 8
-; CHECK-NEXT:    [[SPLAT_SPLAT:%.*]] = shufflevector <2 x double> [[COL_LOAD2]], <2 x double> poison, <2 x i32> zeroinitializer
-; CHECK-NEXT:    [[TMP0:%.*]] = fmul contract <2 x double> [[COL_LOAD]], [[SPLAT_SPLAT]]
-; CHECK-NEXT:    [[SPLAT_SPLAT7:%.*]] = shufflevector <2 x double> [[COL_LOAD2]], <2 x double> poison, <2 x i32> <i32 1, i32 1>
-; CHECK-NEXT:    [[TMP1:%.*]] = call contract <2 x double> @llvm.fmuladd.v2f64(<2 x double> [[COL_LOAD1]], <2 x double> [[SPLAT_SPLAT7]], <2 x double> [[TMP0]])
-; CHECK-NEXT:    [[SPLAT_SPLAT10:%.*]] = shufflevector <2 x double> [[COL_LOAD4]], <2 x double> poison, <2 x i32> zeroinitializer
-; CHECK-NEXT:    [[TMP2:%.*]] = fmul contract <2 x double> [[COL_LOAD]], [[SPLAT_SPLAT10]]
-; CHECK-NEXT:    [[SPLAT_SPLAT13:%.*]] = shufflevector <2 x double> [[COL_LOAD4]], <2 x double> poison, <2 x i32> <i32 1, i32 1>
-; CHECK-NEXT:    [[TMP3:%.*]] = call contract <2 x double> @llvm.fmuladd.v2f64(<2 x double> [[COL_LOAD1]], <2 x double> [[SPLAT_SPLAT13]], <2 x double> [[TMP2]])
 ; CHECK-NEXT:    [[OFFSET:%.*]] = shl i64 [[IV]], 5
 ; CHECK-NEXT:    [[DST:%.*]] = getelementptr i8, ptr [[C:%.*]], i64 [[OFFSET]]
-; CHECK-NEXT:    store <2 x double> [[TMP1]], ptr [[DST]], align 8
+; CHECK-NEXT:    [[COL_LOAD:%.*]] = load <1 x double>, ptr [[A:%.*]], align 8
+; CHECK-NEXT:    [[COL_LOAD1:%.*]] = load <1 x double>, ptr [[B:%.*]], align 8
+; CHECK-NEXT:    [[TMP0:%.*]] = fmul contract <1 x double> [[COL_LOAD]], [[COL_LOAD1]]
+; CHECK-NEXT:    [[TMP1:%.*]] = getelementptr i8, ptr [[A]], i64 16
+; CHECK-NEXT:    [[COL_LOAD2:%.*]] = load <1 x double>, ptr [[TMP1]], align 8
+; CHECK-NEXT:    [[TMP2:%.*]] = getelementptr i8, ptr [[B]], i64 8
+; CHECK-NEXT:    [[COL_LOAD3:%.*]] = load <1 x double>, ptr [[TMP2]], align 8
+; CHECK-NEXT:    [[TMP3:%.*]] = call contract <1 x double> @llvm.fmuladd.v1f64(<1 x double> [[COL_LOAD2]], <1 x double> [[COL_LOAD3]], <1 x double> [[TMP0]])
+; CHECK-NEXT:    store <1 x double> [[TMP3]], ptr [[DST]], align 8
+; CHECK-NEXT:    [[TMP4:%.*]] = getelementptr i8, ptr [[A]], i64 8
+; CHECK-NEXT:    [[COL_LOAD8:%.*]] = load <1 x double>, ptr [[TMP4]], align 8
+; CHECK-NEXT:    [[COL_LOAD9:%.*]] = load <1 x double>, ptr [[B]], align 8
+; CHECK-NEXT:    [[TMP5:%.*]] = fmul contract <1 x double> [[COL_LOAD8]], [[COL_LOAD9]]
+; CHECK-NEXT:    [[TMP6:%.*]] = getelementptr i8, ptr [[A]], i64 24
+; CHECK-NEXT:    [[COL_LOAD13:%.*]] = load <1 x double>, ptr [[TMP6]], align 8
+; CHECK-NEXT:    [[TMP7:%.*]] = getelementptr i8, ptr [[B]], i64 8
+; CHECK-NEXT:    [[COL_LOAD14:%.*]] = load <1 x double>, ptr [[TMP7]], align 8
+; CHECK-NEXT:    [[TMP8:%.*]] = call contract <1 x double> @llvm.fmuladd.v1f64(<1 x double> [[COL_LOAD13]], <1 x double> [[COL_LOAD14]], <1 x double> [[TMP5]])
+; CHECK-NEXT:    [[TMP9:%.*]] = getelementptr i8, ptr [[DST]], i64 8
+; CHECK-NEXT:    store <1 x double> [[TMP8]], ptr [[TMP9]], align 8
+; CHECK-NEXT:    [[COL_LOAD19:%.*]] = load <1 x double>, ptr [[A]], align 8
+; CHECK-NEXT:    [[TMP10:%.*]] = getelementptr i8, ptr [[B]], i64 16
+; CHECK-NEXT:    [[COL_LOAD20:%.*]] = load <1 x double>, ptr [[TMP10]], align 8
+; CHECK-NEXT:    [[TMP11:%.*]] = fmul contract <1 x double> [[COL_LOAD19]], [[COL_LOAD20]]
+; CHECK-NEXT:    [[TMP12:%.*]] = getelementptr i8, ptr [[A]], i64 16
+; CHECK-NEXT:    [[COL_LOAD24:%.*]] = load <1 x double>, ptr [[TMP12]], align 8
+; CHECK-NEXT:    [[TMP13:%.*]] = getelementptr i8, ptr [[B]], i64 24
+; CHECK-NEXT:    [[COL_LOAD25:%.*]] = load <1 x double>, ptr [[TMP13]], align 8
+; CHECK-NEXT:    [[TMP14:%.*]] = call contract <1 x double> @llvm.fmuladd.v1f64(<1 x double> [[COL_LOAD24]], <1 x double> [[COL_LOAD25]], <1 x double> [[TMP11]])
 ; CHECK-NEXT:    [[VEC_GEP14:%.*]] = getelementptr i8, ptr [[DST]], i64 16
-; CHECK-NEXT:    store <2 x double> [[TMP3]], ptr [[VEC_GEP14]], align 8
+; CHECK-NEXT:    store <1 x double> [[TMP14]], ptr [[VEC_GEP14]], align 8
+; CHECK-NEXT:    [[TMP16:%.*]] = getelementptr i8, ptr [[A]], i64 8
+; CHECK-NEXT:    [[COL_LOAD30:%.*]] = load <1 x double>, ptr [[TMP16]], align 8
+; CHECK-NEXT:    [[TMP17:%.*]] = getelementptr i8, ptr [[B]], i64 16
+; CHECK-NEXT:    [[COL_LOAD31:%.*]] = load <1 x double>, ptr [[TMP17]], align 8
+; CHECK-NEXT:    [[TMP18:%.*]] = fmul contract <1 x double> [[COL_LOAD30]], [[COL_LOAD31]]
+; CHECK-NEXT:    [[TMP19:%.*]] = getelementptr i8, ptr [[A]], i64 24
+; CHECK-NEXT:    [[COL_LOAD35:%.*]] = load <1 x double>, ptr [[TMP19]], align 8
+; CHECK-NEXT:    [[TMP20:%.*]] = getelementptr i8, ptr [[B]], i64 24
+; CHECK-NEXT:    [[COL_LOAD36:%.*]] = load <1 x double>, ptr [[TMP20]], align 8
+; CHECK-NEXT:    [[TMP21:%.*]] = call contract <1 x double> @llvm.fmuladd.v1f64(<1 x double> [[COL_LOAD35]], <1 x double> [[COL_LOAD36]], <1 x double> [[TMP18]])
+; CHECK-NEXT:    [[TMP22:%.*]] = getelementptr i8, ptr [[DST]], i64 24
+; CHECK-NEXT:    store <1 x double> [[TMP21]], ptr [[TMP22]], align 8
 ; CHECK-NEXT:    [[IV_NEXT]] = add i64 [[IV]], 1
 ; CHECK-NEXT:    [[COND:%.*]] = icmp ult i64 [[IV_NEXT]], [[N:%.*]]
 ; CHECK-NEXT:    br i1 [[COND]], label [[LOOP]], label [[EXIT:%.*]]
