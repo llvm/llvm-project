@@ -211,6 +211,14 @@ MyString<wchar_t> aliasedWChar() {
   return L"aliasedWChar";
 }
 
+namespace overload_funcs_redeclared {
+  std::basic_string<char> overload(int);
+  std::string overload(int);
+  std::string overload(int) { return "int"; }
+// CHECK-MESSAGES:[[@LINE-1]]:3: warning: consider using 'std::string_view' to avoid unnecessary copying and allocations [modernize-use-string-view]
+// CHECK-FIXES: std::string_view overload(int) { return "int"; }
+}
+
 // ==========================================================
 // Negative tests
 // ==========================================================
@@ -365,11 +373,49 @@ std::string lambda() {
   }();
 }
 
-namespace overloads {
+namespace overload_funcs {
 std::string dbl2str(double f);
+// Skip overloaded functions
 std::string overload(int) { return "int"; }
+// Because of this overload (non-literal return) the fix should not be applied
 std::string overload(double f) { return "f=" + dbl2str(f); }
 std::string overload(std::string) { return "string"; }
+}
+
+namespace overload_methods {
+struct Foo {
+  // Skip overloaded methods
+  std::string overload(int) { return "int"; }
+  std::string overload(double f) { return "double"; }
+  std::string overload(std::string) { return "string"; }
+};
+}
+
+namespace overload_methods_nested_classes {
+struct Bar {
+  std::string overload(int) { return "int"; }
+  std::string overload(std::string) { return "string"; }
+
+  struct FooBar {
+    std::string overload(char*) { return "char*"; }
+    std::string overload(double f) { return "double"; }
+  };
+};
+}
+
+namespace overload_methods_nested_namespaces {
+namespace foo {
+  std::string overload(int) { return "int"; }
+  std::string overload(std::string) { return "string"; }
+}
+using foo::overload;
+std::string overload(char*) { return "char*"; }
+}
+
+namespace overload_methods_templated {
+    template <typename T>
+    std::string overload(T value) { return "T";}
+    std::string overload(int value) { return "int"; }
 }
 
 struct TemplateString {

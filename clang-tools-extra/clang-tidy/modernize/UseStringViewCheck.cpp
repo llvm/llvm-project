@@ -24,7 +24,7 @@ namespace clang::tidy::modernize {
 namespace {
 AST_MATCHER(FunctionDecl, isOverloaded) {
   const DeclarationName Name = Node.getDeclName();
-  // Skip lambda-like functions
+  // Sanity check
   if (Name.isEmpty())
     return false;
   const DeclContext *DC = Node.getDeclContext();
@@ -32,7 +32,18 @@ AST_MATCHER(FunctionDecl, isOverloaded) {
   size_t UniqueSignatures = 0;
   llvm::SmallPtrSet<const FunctionDecl *, 2> SeenFunctions;
   for (NamedDecl *ND : LookupResult) {
-    if (const auto *FD = dyn_cast<FunctionDecl>(ND)) {
+    const FunctionDecl *FD = nullptr;
+    if (const auto *Func = dyn_cast<FunctionDecl>(ND)) {
+      // Regular functions
+      FD = Func;
+    } else if (const auto *USD = dyn_cast<UsingShadowDecl>(ND)) {
+      // Overloads via "using ns::func_name"
+      FD = dyn_cast<FunctionDecl>(USD->getTargetDecl());
+    } else if (const auto *FTD = dyn_cast<FunctionTemplateDecl>(ND)) {
+      // Templated functions
+      FD = FTD->getTemplatedDecl();
+    }
+    if (FD) {
       if (SeenFunctions.insert(FD->getCanonicalDecl()).second) {
         UniqueSignatures++;
         if (UniqueSignatures > 1)
