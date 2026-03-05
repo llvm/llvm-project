@@ -95,7 +95,7 @@ jobs:
             -DLLVM_INCLUDE_TESTS=OFF \
             -DLLVM_INCLUDE_BENCHMARKS=OFF \
             -DLLVM_INCLUDE_EXAMPLES=OFF \
-            -DLLVM_USE_STATIC_ZSTD
+            -DLLVM_USE_STATIC_ZSTD=ON
 
       - name: Build
         run: |
