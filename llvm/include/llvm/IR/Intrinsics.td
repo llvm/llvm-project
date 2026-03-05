@@ -718,7 +718,8 @@ class Intrinsic<list<LLVMType> ret_types,
                 list<IntrinsicProperty> intr_properties = [],
                 string name = "",
                 list<SDNodeProperty> sd_properties = [],
-                bit disable_default_attributes = true> : SDPatternOperator {
+                bit disable_default_attributes = true,
+                string const_folder = ""> : SDPatternOperator {
   string LLVMName = name;
   string TargetPrefix = "";   // Set to a prefix for target-specific intrinsics.
   list<LLVMType> RetTypes = ret_types;
@@ -729,6 +730,7 @@ class Intrinsic<list<LLVMType> ret_types,
   // Disable applying IntrinsicProperties that are marked default with
   // IntrinsicProperty<1>
   bit DisableDefaultAttributes = disable_default_attributes;
+  string ConstFolder = const_folder;
 
   TypeInfoGen TypeInfo = TypeInfoGen<RetTypes, ParamTypes>;
 }
