@@ -2903,12 +2903,9 @@ void CodeGenModule::ConstructAttributeList(StringRef Name,
         CodeGenOpts.StrictLifetimes) {
       const CXXRecordDecl *ClassDecl =
           dyn_cast<CXXRecordDecl>(DD->getDeclContext());
-      // TODO(boomanaiden154): We are being intentionally conservative here
-      // as we gain experience with this optimization. We should remove the
-      // condition for non-virtual bases after more testing. We cannot add
-      // dead_on_return if we have virtual base classes because they will
-      // generally still be live after the base object destructor.
-      if (ClassDecl->getNumBases() == 0 && ClassDecl->getNumVBases() == 0)
+      // We cannot add dead_on_return if we have virtual base classes because
+      // they will generally still be live after the base object destructor.
+      if (ClassDecl->getNumVBases() == 0)
         Attrs.addDeadOnReturnAttr(llvm::DeadOnReturnInfo(
             Context.getASTRecordLayout(ClassDecl).getDataSize().getQuantity()));
     }
