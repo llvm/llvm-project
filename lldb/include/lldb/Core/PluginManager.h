@@ -82,6 +82,46 @@ struct PluginNamespace {
   SetPluginEnabled set_enabled;
 };
 
+struct InstrumentationRuntimeCallbacks {
+  InstrumentationRuntimeCreateInstance create_callback;
+  InstrumentationRuntimeGetType get_type_callback;
+};
+
+struct LanguageRuntimeCallbacks {
+  LanguageRuntimeCreateInstance create_callback;
+  LanguageRuntimeGetCommandObject command_callback;
+  LanguageRuntimeGetExceptionPrecondition precondition_callback;
+};
+
+struct ObjectFileCallbacks {
+  ObjectFileCreateInstance create_callback;
+  ObjectFileCreateMemoryInstance create_memory_callback;
+  ObjectFileGetModuleSpecifications get_module_specifications;
+  ObjectFileSaveCore save_core;
+};
+
+struct ObjectContainerCallbacks {
+  ObjectContainerCreateInstance create_callback;
+  ObjectContainerCreateMemoryInstance create_memory_callback;
+  ObjectFileGetModuleSpecifications get_module_specifications;
+};
+
+struct StructuredDataPluginCallbacks {
+  StructuredDataPluginCreateInstance create_callback;
+  StructuredDataFilterLaunchInfo filter_callback; // may be null
+};
+
+struct REPLCallbacks {
+  REPLCreateInstance create_callback;
+  LanguageSet supported_languages;
+};
+
+struct TraceExporterCallbacks {
+  llvm::StringRef name;
+  TraceExporterCreateInstance create_callback;
+  ThreadTraceExportCommandCreator create_thread_trace_export_command;
+};
+
 class PluginManager {
 public:
   static void Initialize();
@@ -130,7 +170,7 @@ public:
 
   static bool UnregisterPlugin(ABICreateInstance create_callback);
 
-  static ABICreateInstance GetABICreateCallbackAtIndex(uint32_t idx);
+  static std::vector<ABICreateInstance> GetABICreateCallbacks();
 
   // Architecture
   static void RegisterPlugin(llvm::StringRef name, llvm::StringRef description,
@@ -147,8 +187,8 @@ public:
 
   static bool UnregisterPlugin(DisassemblerCreateInstance create_callback);
 
-  static DisassemblerCreateInstance
-  GetDisassemblerCreateCallbackAtIndex(uint32_t idx);
+  static std::vector<DisassemblerCreateInstance>
+  GetDisassemblerCreateCallbacks();
 
   static DisassemblerCreateInstance
   GetDisassemblerCreateCallbackForPluginName(llvm::StringRef name);
@@ -161,8 +201,8 @@ public:
 
   static bool UnregisterPlugin(DynamicLoaderCreateInstance create_callback);
 
-  static DynamicLoaderCreateInstance
-  GetDynamicLoaderCreateCallbackAtIndex(uint32_t idx);
+  static std::vector<DynamicLoaderCreateInstance>
+  GetDynamicLoaderCreateCallbacks();
 
   static DynamicLoaderCreateInstance
   GetDynamicLoaderCreateCallbackForPluginName(llvm::StringRef name);
@@ -175,8 +215,7 @@ public:
 
   static bool UnregisterPlugin(JITLoaderCreateInstance create_callback);
 
-  static JITLoaderCreateInstance
-  GetJITLoaderCreateCallbackAtIndex(uint32_t idx);
+  static std::vector<JITLoaderCreateInstance> GetJITLoaderCreateCallbacks();
 
   // EmulateInstruction
   static bool RegisterPlugin(llvm::StringRef name, llvm::StringRef description,
@@ -185,8 +224,8 @@ public:
   static bool
   UnregisterPlugin(EmulateInstructionCreateInstance create_callback);
 
-  static EmulateInstructionCreateInstance
-  GetEmulateInstructionCreateCallbackAtIndex(uint32_t idx);
+  static std::vector<EmulateInstructionCreateInstance>
+  GetEmulateInstructionCreateCallbacks();
 
   static EmulateInstructionCreateInstance
   GetEmulateInstructionCreateCallbackForPluginName(llvm::StringRef name);
@@ -198,8 +237,8 @@ public:
 
   static bool UnregisterPlugin(OperatingSystemCreateInstance create_callback);
 
-  static OperatingSystemCreateInstance
-  GetOperatingSystemCreateCallbackAtIndex(uint32_t idx);
+  static std::vector<OperatingSystemCreateInstance>
+  GetOperatingSystemCreateCallbacks();
 
   static OperatingSystemCreateInstance
   GetOperatingSystemCreateCallbackForPluginName(llvm::StringRef name);
@@ -212,7 +251,7 @@ public:
 
   static bool UnregisterPlugin(LanguageCreateInstance create_callback);
 
-  static LanguageCreateInstance GetLanguageCreateCallbackAtIndex(uint32_t idx);
+  static std::vector<LanguageCreateInstance> GetLanguageCreateCallbacks();
 
   // LanguageRuntime
   static bool RegisterPlugin(
@@ -223,14 +262,7 @@ public:
 
   static bool UnregisterPlugin(LanguageRuntimeCreateInstance create_callback);
 
-  static LanguageRuntimeCreateInstance
-  GetLanguageRuntimeCreateCallbackAtIndex(uint32_t idx);
-
-  static LanguageRuntimeGetCommandObject
-  GetLanguageRuntimeGetCommandObjectAtIndex(uint32_t idx);
-
-  static LanguageRuntimeGetExceptionPrecondition
-  GetLanguageRuntimeGetExceptionPreconditionAtIndex(uint32_t idx);
+  static std::vector<LanguageRuntimeCallbacks> GetLanguageRuntimeCallbacks();
 
   // SystemRuntime
   static bool RegisterPlugin(llvm::StringRef name, llvm::StringRef description,
@@ -238,8 +270,8 @@ public:
 
   static bool UnregisterPlugin(SystemRuntimeCreateInstance create_callback);
 
-  static SystemRuntimeCreateInstance
-  GetSystemRuntimeCreateCallbackAtIndex(uint32_t idx);
+  static std::vector<SystemRuntimeCreateInstance>
+  GetSystemRuntimeCreateCallbacks();
 
   // ObjectFile
   static bool
@@ -254,14 +286,7 @@ public:
 
   static bool IsRegisteredObjectFilePluginName(llvm::StringRef name);
 
-  static ObjectFileCreateInstance
-  GetObjectFileCreateCallbackAtIndex(uint32_t idx);
-
-  static ObjectFileCreateMemoryInstance
-  GetObjectFileCreateMemoryCallbackAtIndex(uint32_t idx);
-
-  static ObjectFileGetModuleSpecifications
-  GetObjectFileGetModuleSpecificationsCallbackAtIndex(uint32_t idx);
+  static std::vector<ObjectFileCallbacks> GetObjectFileCallbacks();
 
   static ObjectFileCreateMemoryInstance
   GetObjectFileCreateMemoryCallbackForPluginName(llvm::StringRef name);
@@ -279,14 +304,7 @@ public:
 
   static bool UnregisterPlugin(ObjectContainerCreateInstance create_callback);
 
-  static ObjectContainerCreateInstance
-  GetObjectContainerCreateCallbackAtIndex(uint32_t idx);
-
-  static ObjectContainerCreateMemoryInstance
-  GetObjectContainerCreateMemoryCallbackAtIndex(uint32_t idx);
-
-  static ObjectFileGetModuleSpecifications
-  GetObjectContainerGetModuleSpecificationsCallbackAtIndex(uint32_t idx);
+  static std::vector<ObjectContainerCallbacks> GetObjectContainerCallbacks();
 
   // Platform
   static bool
@@ -296,7 +314,7 @@ public:
 
   static bool UnregisterPlugin(PlatformCreateInstance create_callback);
 
-  static PlatformCreateInstance GetPlatformCreateCallbackAtIndex(uint32_t idx);
+  static std::vector<PlatformCreateInstance> GetPlatformCreateCallbacks();
 
   static PlatformCreateInstance
   GetPlatformCreateCallbackForPluginName(llvm::StringRef name);
@@ -315,7 +333,7 @@ public:
 
   static bool UnregisterPlugin(ProcessCreateInstance create_callback);
 
-  static ProcessCreateInstance GetProcessCreateCallbackAtIndex(uint32_t idx);
+  static std::vector<ProcessCreateInstance> GetProcessCreateCallbacks();
 
   static ProcessCreateInstance
   GetProcessCreateCallbackForPluginName(llvm::StringRef name);
@@ -356,8 +374,8 @@ public:
 
   static bool UnregisterPlugin(ScriptInterpreterCreateInstance create_callback);
 
-  static ScriptInterpreterCreateInstance
-  GetScriptInterpreterCreateCallbackAtIndex(uint32_t idx);
+  static std::vector<ScriptInterpreterCreateInstance>
+  GetScriptInterpreterCreateCallbacks();
 
   static lldb::ScriptInterpreterSP
   GetScriptInterpreterForLanguage(lldb::ScriptLanguage script_lang,
@@ -381,8 +399,8 @@ public:
   static SyntheticFrameProviderCreateInstance
   GetSyntheticFrameProviderCreateCallbackForPluginName(llvm::StringRef name);
 
-  static ScriptedFrameProviderCreateInstance
-  GetScriptedFrameProviderCreateCallbackAtIndex(uint32_t idx);
+  static std::vector<ScriptedFrameProviderCreateInstance>
+  GetScriptedFrameProviderCreateCallbacks();
 
   // StructuredDataPlugin
 
@@ -427,12 +445,8 @@ public:
   static bool
   UnregisterPlugin(StructuredDataPluginCreateInstance create_callback);
 
-  static StructuredDataPluginCreateInstance
-  GetStructuredDataPluginCreateCallbackAtIndex(uint32_t idx);
-
-  static StructuredDataFilterLaunchInfo
-  GetStructuredDataFilterCallbackAtIndex(uint32_t idx,
-                                         bool &iteration_complete);
+  static std::vector<StructuredDataPluginCallbacks>
+  GetStructuredDataPluginCallbacks();
 
   // SymbolFile
   static bool
@@ -442,8 +456,7 @@ public:
 
   static bool UnregisterPlugin(SymbolFileCreateInstance create_callback);
 
-  static SymbolFileCreateInstance
-  GetSymbolFileCreateCallbackAtIndex(uint32_t idx);
+  static std::vector<SymbolFileCreateInstance> GetSymbolFileCreateCallbacks();
 
   // SymbolVendor
   static bool RegisterPlugin(llvm::StringRef name, llvm::StringRef description,
@@ -451,8 +464,8 @@ public:
 
   static bool UnregisterPlugin(SymbolVendorCreateInstance create_callback);
 
-  static SymbolVendorCreateInstance
-  GetSymbolVendorCreateCallbackAtIndex(uint32_t idx);
+  static std::vector<SymbolVendorCreateInstance>
+  GetSymbolVendorCreateCallbacks();
 
   // SymbolLocator
   static bool RegisterPlugin(
@@ -469,8 +482,8 @@ public:
 
   static bool UnregisterPlugin(SymbolLocatorCreateInstance create_callback);
 
-  static SymbolLocatorCreateInstance
-  GetSymbolLocatorCreateCallbackAtIndex(uint32_t idx);
+  static std::vector<SymbolLocatorCreateInstance>
+  GetSymbolLocatorCreateCallbacks();
 
   static ModuleSpec LocateExecutableObjectFile(const ModuleSpec &module_spec,
                                                StatisticsMap &map);
@@ -542,12 +555,7 @@ public:
 
   static bool UnregisterPlugin(TraceExporterCreateInstance create_callback);
 
-  static llvm::StringRef GetTraceExporterPluginNameAtIndex(uint32_t index);
-
-  /// Return the callback used to create the CommandObject that will be listed
-  /// under "thread trace export". Can be \b null.
-  static ThreadTraceExportCommandCreator
-  GetThreadTraceExportCommandCreatorAtIndex(uint32_t index);
+  static std::vector<TraceExporterCallbacks> GetTraceExporterCallbacks();
 
   // UnwindAssembly
   static bool RegisterPlugin(llvm::StringRef name, llvm::StringRef description,
@@ -555,8 +563,8 @@ public:
 
   static bool UnregisterPlugin(UnwindAssemblyCreateInstance create_callback);
 
-  static UnwindAssemblyCreateInstance
-  GetUnwindAssemblyCreateCallbackAtIndex(uint32_t idx);
+  static std::vector<UnwindAssemblyCreateInstance>
+  GetUnwindAssemblyCreateCallbacks();
 
   // MemoryHistory
   static bool RegisterPlugin(llvm::StringRef name, llvm::StringRef description,
@@ -564,8 +572,8 @@ public:
 
   static bool UnregisterPlugin(MemoryHistoryCreateInstance create_callback);
 
-  static MemoryHistoryCreateInstance
-  GetMemoryHistoryCreateCallbackAtIndex(uint32_t idx);
+  static std::vector<MemoryHistoryCreateInstance>
+  GetMemoryHistoryCreateCallbacks();
 
   // InstrumentationRuntime
   static bool
@@ -576,11 +584,8 @@ public:
   static bool
   UnregisterPlugin(InstrumentationRuntimeCreateInstance create_callback);
 
-  static InstrumentationRuntimeGetType
-  GetInstrumentationRuntimeGetTypeCallbackAtIndex(uint32_t idx);
-
-  static InstrumentationRuntimeCreateInstance
-  GetInstrumentationRuntimeCreateCallbackAtIndex(uint32_t idx);
+  static std::vector<InstrumentationRuntimeCallbacks>
+  GetInstrumentationRuntimeCallbacks();
 
   // TypeSystem
   static bool RegisterPlugin(llvm::StringRef name, llvm::StringRef description,
@@ -590,8 +595,7 @@ public:
 
   static bool UnregisterPlugin(TypeSystemCreateInstance create_callback);
 
-  static TypeSystemCreateInstance
-  GetTypeSystemCreateCallbackAtIndex(uint32_t idx);
+  static std::vector<TypeSystemCreateInstance> GetTypeSystemCreateCallbacks();
 
   static LanguageSet GetAllTypeSystemSupportedLanguagesForTypes();
 
@@ -623,9 +627,7 @@ public:
 
   static bool UnregisterPlugin(REPLCreateInstance create_callback);
 
-  static REPLCreateInstance GetREPLCreateCallbackAtIndex(uint32_t idx);
-
-  static LanguageSet GetREPLSupportedLanguagesAtIndex(uint32_t idx);
+  static std::vector<REPLCallbacks> GetREPLCallbacks();
 
   static LanguageSet GetREPLAllTypeSystemSupportedLanguages();
 
@@ -635,8 +637,7 @@ public:
 
   static bool UnregisterPlugin(HighlighterCreateInstance create_callback);
 
-  static HighlighterCreateInstance
-  GetHighlighterCreateCallbackAtIndex(uint32_t idx);
+  static std::vector<HighlighterCreateInstance> GetHighlighterCreateCallbacks();
 
   // Some plug-ins might register a DebuggerInitializeCallback callback when
   // registering the plug-in. After a new Debugger instance is created, this
