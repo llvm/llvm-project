@@ -146,8 +146,8 @@ define i64 @std_find_i16_constant_offset_with_assumptions(ptr %first.coerce, i16
 ; CHECK-NEXT:    [[TMP8:%.*]] = getelementptr i8, ptr [[FIRST_COERCE]], i64 [[TMP7]]
 ; CHECK-NEXT:    br label %[[RETURN]]
 ; CHECK:       [[RETURN]]:
-; CHECK-NEXT:    [[__FIRST_ADDR_0_LCSSA_I_I_PH:%.*]] = phi ptr [ [[TMP8]], %[[VECTOR_EARLY_EXIT]] ], [ [[COERCE_VAL_IP]], %[[VECTOR_BODY_INTERIM_14]] ]
-; CHECK-NEXT:    [[DOTPRE:%.*]] = ptrtoint ptr [[__FIRST_ADDR_0_LCSSA_I_I_PH]] to i64
+; CHECK-NEXT:    [[MERGE:%.*]] = phi ptr [ [[TMP8]], %[[VECTOR_EARLY_EXIT]] ], [ [[COERCE_VAL_IP]], %[[VECTOR_BODY_INTERIM_14]] ]
+; CHECK-NEXT:    [[DOTPRE:%.*]] = ptrtoint ptr [[MERGE]] to i64
 ; CHECK-NEXT:    ret i64 [[DOTPRE]]
 ;
 entry:
@@ -202,8 +202,8 @@ define i64 @std_find_i16_constant_offset_no_assumptions(ptr %first.coerce, i16 n
 ; CHECK-NEXT:    [[CMP_NOT_I_I:%.*]] = icmp eq ptr [[PTR_IV_NEXT]], [[COERCE_VAL_IP]]
 ; CHECK-NEXT:    br i1 [[CMP_NOT_I_I]], label %[[RETURN]], label %[[LOOP_HEADER]]
 ; CHECK:       [[RETURN]]:
-; CHECK-NEXT:    [[MERGE_PH:%.*]] = phi ptr [ [[PTR_IV]], %[[LOOP_HEADER]] ], [ [[COERCE_VAL_IP]], %[[LOOP_LATCH]] ]
-; CHECK-NEXT:    [[DOTPRE:%.*]] = ptrtoint ptr [[MERGE_PH]] to i64
+; CHECK-NEXT:    [[MERGE:%.*]] = phi ptr [ [[PTR_IV]], %[[LOOP_HEADER]] ], [ [[COERCE_VAL_IP]], %[[LOOP_LATCH]] ]
+; CHECK-NEXT:    [[DOTPRE:%.*]] = ptrtoint ptr [[MERGE]] to i64
 ; CHECK-NEXT:    ret i64 [[DOTPRE]]
 ;
 entry:

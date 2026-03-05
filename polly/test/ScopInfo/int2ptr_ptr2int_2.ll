@@ -18,9 +18,6 @@
 ; CHECK-NEXT:   MustWriteAccess :=	[Reduction Type: +] [Scalar: 0]
 ; CHECK-NEXT:       [val, ptr] -> { Stmt_for_body[i0] -> MemRef_A[9 + ptr] };
 
-; IR:      entry:
-; IR-NEXT:   %ptr13 = ptrtoint ptr %ptr to i16
-;
 ; IR:      polly.stmt.for.body:
 ; IR-NEXT:   %tmp4_p_scalar_ = load i64, ptr %scevgep, align 8, !alias.scope !5, !noalias !2
 ; IR-NEXT:   %p_add4 = add nsw i64 %tmp4_p_scalar_, %polly.preload.tmp3.merge
@@ -30,10 +27,10 @@
 ; IR-NEXT:   br i1 %polly.loop_cond, label %polly.loop_header, label %polly.loop_exit
 
 ; IR:      polly.loop_preheader:
-; IR-NEXT:   %41 = add i16 %val, 1
-; IR-NEXT:   %42 = shl i16 %ptr13, 3
-; IR-NEXT:   %43 = add i16 %42, 72
-; IR-NEXT:   %scevgep = getelementptr i8, ptr %A, i16 %43
+; IR-NEXT:   %{{[0-9]+}} = add i16 %val, 1
+; IR-NEXT:   %[[SHL:[0-9]+]] = shl i16 %{{[0-9]+}}, 3
+; IR-NEXT:   %[[ADD:[0-9]+]] = add i16 %[[SHL]], 72
+; IR-NEXT:   %scevgep = getelementptr i8, ptr %A, i16 %[[ADD]]
 ; IR-NEXT:   br label %polly.loop_header
 ;
 target datalayout = "e-p:16:16:16-m:e-i64:64-f80:128-n8:16:16:64-S128"

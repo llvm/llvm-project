@@ -1263,8 +1263,7 @@ Value *SCEVExpander::tryToReuseLCSSAPhi(const SCEVAddRecExpr *S) {
     const SCEV *Op = Diff;
     match(Op, m_scev_Add(m_SCEVConstant(), m_SCEV(Op)));
     match(Op, m_scev_Mul(m_scev_AllOnes(), m_SCEV(Op)));
-    match(Op, m_scev_PtrToAddr(m_SCEV(Op))) ||
-        match(Op, m_scev_PtrToInt(m_SCEV(Op)));
+    match(Op, m_scev_PtrToAddr(m_SCEV(Op)));
     if (!isa<SCEVConstant, SCEVUnknown>(Op))
       return nullptr;
     return Diff;
@@ -1280,13 +1279,8 @@ Value *SCEVExpander::tryToReuseLCSSAPhi(const SCEVAddRecExpr *S) {
     const SCEV *Diff = nullptr;
     if (STy->isIntegerTy() && PhiTy->isPointerTy() &&
         DL.getAddressType(PhiTy) == STy) {
-      // Prefer ptrtoaddr over ptrtoint.
       const SCEV *AddrSCEV = SE.getPtrToAddrExpr(ExitSCEV);
       Diff = CanReuse(AddrSCEV);
-      if (!Diff) {
-        const SCEV *IntSCEV = SE.getPtrToIntExpr(ExitSCEV, STy);
-        Diff = CanReuse(IntSCEV);
-      }
     } else if (STy == PhiTy) {
       Diff = CanReuse(ExitSCEV);
     }
@@ -1452,7 +1446,8 @@ Value *SCEVExpander::visitPtrToAddrExpr(const SCEVPtrToAddrExpr *S) {
   Value *V = expand(S->getOperand());
   Type *Ty = S->getType();
 
-  // ptrtoaddr and ptrtoint produce the same value, so try to reuse either.
+  // ptrtoaddr and ptrtoint produce the same value if the result type matches,
+  // so try to reuse either.
   if (!isa<Constant>(V)) {
     BasicBlock::iterator BIP = Builder.GetInsertPoint();
     for (User *U : V->users()) {
@@ -1475,6 +1470,25 @@ Value *SCEVExpander::visitPtrToIntExpr(const SCEVPtrToIntExpr *S) {
 }
 
 Value *SCEVExpander::visitTruncateExpr(const SCEVTruncateExpr *S) {
+  Type *Ty = S->getType();
+
+  // When truncating a ptrtoaddr, check for existing ptrtoint instructions that
+  // convert directly to the target type, to avoid generating redundant
+  // ptrtoaddr + trunc sequences.
+  if (auto *PtrToAddr = dyn_cast<SCEVPtrToAddrExpr>(S->getOperand())) {
+    Value *PtrOp = expand(PtrToAddr->getOperand());
+    if (!isa<Constant>(PtrOp)) {
+      BasicBlock::iterator BIP = Builder.GetInsertPoint();
+      for (User *U : PtrOp->users()) {
+        auto *CI = dyn_cast<CastInst>(U);
+        if (CI && CI->getType() == Ty &&
+            CI->getOpcode() == CastInst::PtrToInt && &*BIP != CI &&
+            SE.DT.dominates(CI, &*BIP))
+          return CI;
+      }
+    }
+  }
+
   Value *V = expand(S->getOperand());
   return Builder.CreateTrunc(V, S->getType());
 }

@@ -4,14 +4,10 @@
 define void @test_ptr_iv_no_inbounds(ptr %p1.start, ptr %p2.start, ptr %p1.end) {
 ; CHECK-LABEL: @test_ptr_iv_no_inbounds(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[P1_START7:%.*]] = ptrtoint ptr [[P1_START:%.*]] to i64
-; CHECK-NEXT:    [[P1_END6:%.*]] = ptrtoint ptr [[P1_END:%.*]] to i64
-; CHECK-NEXT:    [[P1_START4:%.*]] = ptrtoint ptr [[P1_START]] to i64
-; CHECK-NEXT:    [[P1_END3:%.*]] = ptrtoint ptr [[P1_END]] to i64
-; CHECK-NEXT:    [[P1_START2:%.*]] = ptrtoint ptr [[P1_START]] to i64
-; CHECK-NEXT:    [[P1_END1:%.*]] = ptrtoint ptr [[P1_END]] to i64
-; CHECK-NEXT:    [[TMP0:%.*]] = add i64 [[P1_END6]], -4
-; CHECK-NEXT:    [[TMP1:%.*]] = sub i64 [[TMP0]], [[P1_START7]]
+; CHECK-NEXT:    [[P1_START2:%.*]] = ptrtoaddr ptr [[P1_START:%.*]] to i64
+; CHECK-NEXT:    [[P1_END1:%.*]] = ptrtoaddr ptr [[P1_END:%.*]] to i64
+; CHECK-NEXT:    [[TMP0:%.*]] = add i64 [[P1_END1]], -4
+; CHECK-NEXT:    [[TMP1:%.*]] = sub i64 [[TMP0]], [[P1_START2]]
 ; CHECK-NEXT:    [[TMP2:%.*]] = lshr i64 [[TMP1]], 2
 ; CHECK-NEXT:    [[TMP3:%.*]] = add nuw nsw i64 [[TMP2]], 1
 ; CHECK-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i64 [[TMP3]], 2
@@ -24,8 +20,8 @@ define void @test_ptr_iv_no_inbounds(ptr %p1.start, ptr %p2.start, ptr %p1.end) 
 ; CHECK-NEXT:    [[IDENT_CHECK:%.*]] = icmp ne i64 [[TMP7]], 0
 ; CHECK-NEXT:    br i1 [[IDENT_CHECK]], label [[SCALAR_PH]], label [[VECTOR_MEMCHECK:%.*]]
 ; CHECK:       vector.memcheck:
-; CHECK-NEXT:    [[TMP8:%.*]] = add i64 [[P1_END3]], -4
-; CHECK-NEXT:    [[TMP9:%.*]] = sub i64 [[TMP8]], [[P1_START4]]
+; CHECK-NEXT:    [[TMP8:%.*]] = add i64 [[P1_END1]], -4
+; CHECK-NEXT:    [[TMP9:%.*]] = sub i64 [[TMP8]], [[P1_START2]]
 ; CHECK-NEXT:    [[TMP10:%.*]] = lshr i64 [[TMP9]], 2
 ; CHECK-NEXT:    [[TMP11:%.*]] = shl nuw i64 [[TMP10]], 2
 ; CHECK-NEXT:    [[TMP12:%.*]] = add i64 [[TMP11]], 4
@@ -99,12 +95,10 @@ exit:
 define void @test_ptr_iv_with_inbounds(ptr %p1.start, ptr %p2.start, ptr %p1.end) {
 ; CHECK-LABEL: @test_ptr_iv_with_inbounds(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[P1_START5:%.*]] = ptrtoint ptr [[P1_START:%.*]] to i64
-; CHECK-NEXT:    [[P1_END4:%.*]] = ptrtoint ptr [[P1_END:%.*]] to i64
-; CHECK-NEXT:    [[P1_START2:%.*]] = ptrtoint ptr [[P1_START]] to i64
-; CHECK-NEXT:    [[P1_END1:%.*]] = ptrtoint ptr [[P1_END]] to i64
-; CHECK-NEXT:    [[TMP0:%.*]] = add i64 [[P1_END4]], -4
-; CHECK-NEXT:    [[TMP1:%.*]] = sub i64 [[TMP0]], [[P1_START5]]
+; CHECK-NEXT:    [[P1_START2:%.*]] = ptrtoaddr ptr [[P1_START:%.*]] to i64
+; CHECK-NEXT:    [[P1_END1:%.*]] = ptrtoaddr ptr [[P1_END:%.*]] to i64
+; CHECK-NEXT:    [[TMP0:%.*]] = add i64 [[P1_END1]], -4
+; CHECK-NEXT:    [[TMP1:%.*]] = sub i64 [[TMP0]], [[P1_START2]]
 ; CHECK-NEXT:    [[TMP2:%.*]] = lshr i64 [[TMP1]], 2
 ; CHECK-NEXT:    [[TMP3:%.*]] = add nuw nsw i64 [[TMP2]], 1
 ; CHECK-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i64 [[TMP3]], 2
@@ -185,8 +179,8 @@ exit:
 define void @store_pointer_induction(ptr %start, ptr %end) {
 ; CHECK-LABEL: @store_pointer_induction(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[START2:%.*]] = ptrtoint ptr [[START:%.*]] to i64
-; CHECK-NEXT:    [[END1:%.*]] = ptrtoint ptr [[END:%.*]] to i64
+; CHECK-NEXT:    [[START2:%.*]] = ptrtoaddr ptr [[START:%.*]] to i64
+; CHECK-NEXT:    [[END1:%.*]] = ptrtoaddr ptr [[END:%.*]] to i64
 ; CHECK-NEXT:    [[TMP0:%.*]] = add i64 [[END1]], -8
 ; CHECK-NEXT:    [[TMP1:%.*]] = sub i64 [[TMP0]], [[START2]]
 ; CHECK-NEXT:    [[TMP2:%.*]] = lshr i64 [[TMP1]], 3

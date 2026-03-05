@@ -8,12 +8,14 @@ define void @test_epilogue_step_scev_expansion(ptr %dst) {
 ; CHECK-LABEL: define void @test_epilogue_step_scev_expansion(
 ; CHECK-SAME: ptr [[DST:%.*]]) {
 ; CHECK-NEXT:  [[ITER_CHECK:.*]]:
-; CHECK-NEXT:    br i1 false, label %[[VEC_EPILOG_SCALAR_PH:.*]], label %[[VECTOR_MAIN_LOOP_ITER_CHECK:.*]]
+; CHECK-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i64 sub (i64 1, i64 ptrtoint (ptr getelementptr inbounds nuw (i8, ptr @end, i64 1) to i64)), 4
+; CHECK-NEXT:    br i1 [[MIN_ITERS_CHECK]], label %[[VEC_EPILOG_SCALAR_PH:.*]], label %[[VECTOR_MAIN_LOOP_ITER_CHECK:.*]]
 ; CHECK:       [[VECTOR_MAIN_LOOP_ITER_CHECK]]:
-; CHECK-NEXT:    br i1 false, label %[[VEC_EPILOG_PH:.*]], label %[[VECTOR_PH:.*]]
+; CHECK-NEXT:    [[MIN_ITERS_CHECK1:%.*]] = icmp ult i64 sub (i64 1, i64 ptrtoint (ptr getelementptr inbounds nuw (i8, ptr @end, i64 1) to i64)), 4
+; CHECK-NEXT:    br i1 [[MIN_ITERS_CHECK1]], label %[[VEC_EPILOG_PH:.*]], label %[[VECTOR_PH:.*]]
 ; CHECK:       [[VECTOR_PH]]:
-; CHECK-NEXT:    [[N_MOD_VF:%.*]] = urem i64 sub (i64 0, i64 ptrtoint (ptr @end to i64)), 4
-; CHECK-NEXT:    [[N_VEC:%.*]] = sub i64 sub (i64 0, i64 ptrtoint (ptr @end to i64)), [[N_MOD_VF]]
+; CHECK-NEXT:    [[N_MOD_VF:%.*]] = urem i64 sub (i64 1, i64 ptrtoint (ptr getelementptr inbounds nuw (i8, ptr @end, i64 1) to i64)), 4
+; CHECK-NEXT:    [[N_VEC:%.*]] = sub i64 sub (i64 1, i64 ptrtoint (ptr getelementptr inbounds nuw (i8, ptr @end, i64 1) to i64)), [[N_MOD_VF]]
 ; CHECK-NEXT:    br label %[[VECTOR_BODY:.*]]
 ; CHECK:       [[VECTOR_BODY]]:
 ; CHECK-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[VECTOR_BODY]] ]
@@ -23,16 +25,16 @@ define void @test_epilogue_step_scev_expansion(ptr %dst) {
 ; CHECK-NEXT:    [[TMP1:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[N_VEC]]
 ; CHECK-NEXT:    br i1 [[TMP1]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP0:![0-9]+]]
 ; CHECK:       [[MIDDLE_BLOCK]]:
-; CHECK-NEXT:    [[CMP_N:%.*]] = icmp eq i64 sub (i64 0, i64 ptrtoint (ptr @end to i64)), [[N_VEC]]
+; CHECK-NEXT:    [[CMP_N:%.*]] = icmp eq i64 sub (i64 1, i64 ptrtoint (ptr getelementptr inbounds nuw (i8, ptr @end, i64 1) to i64)), [[N_VEC]]
 ; CHECK-NEXT:    br i1 [[CMP_N]], label %[[EXIT:.*]], label %[[VEC_EPILOG_ITER_CHECK:.*]]
 ; CHECK:       [[VEC_EPILOG_ITER_CHECK]]:
-; CHECK-NEXT:    [[N_VEC_REMAINING:%.*]] = sub i64 sub (i64 0, i64 ptrtoint (ptr @end to i64)), [[N_VEC]]
+; CHECK-NEXT:    [[N_VEC_REMAINING:%.*]] = sub i64 sub (i64 1, i64 ptrtoint (ptr getelementptr inbounds nuw (i8, ptr @end, i64 1) to i64)), [[N_VEC]]
 ; CHECK-NEXT:    [[MIN_EPILOG_ITERS_CHECK:%.*]] = icmp ult i64 [[N_VEC_REMAINING]], 4
 ; CHECK-NEXT:    br i1 [[MIN_EPILOG_ITERS_CHECK]], label %[[VEC_EPILOG_SCALAR_PH]], label %[[VEC_EPILOG_PH]], !prof [[PROF3:![0-9]+]]
 ; CHECK:       [[VEC_EPILOG_PH]]:
 ; CHECK-NEXT:    [[VEC_EPILOG_RESUME_VAL:%.*]] = phi i64 [ [[N_VEC]], %[[VEC_EPILOG_ITER_CHECK]] ], [ 0, %[[VECTOR_MAIN_LOOP_ITER_CHECK]] ]
-; CHECK-NEXT:    [[N_MOD_VF1:%.*]] = urem i64 sub (i64 0, i64 ptrtoint (ptr @end to i64)), 4
-; CHECK-NEXT:    [[N_VEC2:%.*]] = sub i64 sub (i64 0, i64 ptrtoint (ptr @end to i64)), [[N_MOD_VF1]]
+; CHECK-NEXT:    [[N_MOD_VF2:%.*]] = urem i64 sub (i64 1, i64 ptrtoint (ptr getelementptr inbounds nuw (i8, ptr @end, i64 1) to i64)), 4
+; CHECK-NEXT:    [[N_VEC2:%.*]] = sub i64 sub (i64 1, i64 ptrtoint (ptr getelementptr inbounds nuw (i8, ptr @end, i64 1) to i64)), [[N_MOD_VF2]]
 ; CHECK-NEXT:    br label %[[VEC_EPILOG_VECTOR_BODY:.*]]
 ; CHECK:       [[VEC_EPILOG_VECTOR_BODY]]:
 ; CHECK-NEXT:    [[INDEX3:%.*]] = phi i64 [ [[VEC_EPILOG_RESUME_VAL]], %[[VEC_EPILOG_PH]] ], [ [[INDEX_NEXT4:%.*]], %[[VEC_EPILOG_VECTOR_BODY]] ]
@@ -42,7 +44,7 @@ define void @test_epilogue_step_scev_expansion(ptr %dst) {
 ; CHECK-NEXT:    [[TMP3:%.*]] = icmp eq i64 [[INDEX_NEXT4]], [[N_VEC2]]
 ; CHECK-NEXT:    br i1 [[TMP3]], label %[[VEC_EPILOG_MIDDLE_BLOCK:.*]], label %[[VEC_EPILOG_VECTOR_BODY]], !llvm.loop [[LOOP4:![0-9]+]]
 ; CHECK:       [[VEC_EPILOG_MIDDLE_BLOCK]]:
-; CHECK-NEXT:    [[CMP_N5:%.*]] = icmp eq i64 sub (i64 0, i64 ptrtoint (ptr @end to i64)), [[N_VEC2]]
+; CHECK-NEXT:    [[CMP_N5:%.*]] = icmp eq i64 sub (i64 1, i64 ptrtoint (ptr getelementptr inbounds nuw (i8, ptr @end, i64 1) to i64)), [[N_VEC2]]
 ; CHECK-NEXT:    br i1 [[CMP_N5]], label %[[EXIT]], label %[[VEC_EPILOG_SCALAR_PH]]
 ; CHECK:       [[VEC_EPILOG_SCALAR_PH]]:
 ; CHECK-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i64 [ [[N_VEC2]], %[[VEC_EPILOG_MIDDLE_BLOCK]] ], [ [[N_VEC]], %[[VEC_EPILOG_ITER_CHECK]] ], [ 0, %[[ITER_CHECK]] ]
@@ -71,3 +73,44 @@ loop:
 exit:
   ret void
 }
+
+; Test that SCEV expander reuses existing ptrtoint instructions when expanding
+; ptrtoaddr expressions for trip count calculation.
+define void @test_scev_expansion_reuses_ptrtoint(ptr %base, i64 %n) {
+; CHECK-LABEL: define void @test_scev_expansion_reuses_ptrtoint(
+; CHECK-SAME: ptr [[BASE:%.*]], i64 [[N:%.*]]) {
+; CHECK-NEXT:  [[ENTRY:.*]]:
+; CHECK-NEXT:    [[BASE_INT:%.*]] = ptrtoint ptr [[BASE]] to i64
+; CHECK-NEXT:    [[DUMMY:%.*]] = add i64 [[BASE_INT]], 1
+; CHECK-NEXT:    call void @use(i64 [[DUMMY]])
+; CHECK-NEXT:    [[CMP:%.*]] = icmp ugt i64 [[N]], 0
+; CHECK-NEXT:    br i1 [[CMP]], label %[[LOOP_PH:.*]], label %[[EXIT:.*]]
+; CHECK:       [[LOOP_PH]]:
+; Verify that the existing ptrtoint (%base.int) is reused in trip count computation.
+; CHECK-NEXT:    [[TMP0:%.*]] = add i64 [[N]], [[BASE_INT]]
+; CHECK-NEXT:    [[UMAX:%.*]] = call i64 @llvm.umax.i64(i64 [[BASE_INT]], i64 [[TMP0]])
+; CHECK-NOT:     ptrtoaddr
+entry:
+  %base.int = ptrtoint ptr %base to i64
+  %dummy = add i64 %base.int, 1
+  call void @use(i64 %dummy)
+  %cmp = icmp ugt i64 %n, 0
+  br i1 %cmp, label %loop.ph, label %exit
+
+loop.ph:
+  br label %loop
+
+loop:
+  %iv = phi i64 [ 0, %loop.ph ], [ %iv.next, %loop ]
+  %ptr = getelementptr inbounds i8, ptr %base, i64 %iv
+  store i8 0, ptr %ptr, align 1
+  %iv.next = add nuw i64 %iv, 1
+  %end = getelementptr inbounds i8, ptr %base, i64 %n
+  %cmp.loop = icmp ult ptr %ptr, %end
+  br i1 %cmp.loop, label %loop, label %exit
+
+exit:
+  ret void
+}
+
+declare void @use(i64)

@@ -703,7 +703,7 @@ TEST_F(ScalarEvolutionsTest, SCEVZeroExtendExpr) {
   ReturnInst::Create(Context, nullptr, EndBB);
   ScalarEvolution SE = buildSE(*F);
   const SCEV *S = SE.getSCEV(Accum);
-  S = SE.getLosslessPtrToIntExpr(S);
+  S = SE.getPtrToAddrExpr(S);
   Type *I128Ty = Type::getInt128Ty(Context);
   SE.getZeroExtendExpr(S, I128Ty);
 }
@@ -1722,9 +1722,9 @@ TEST_F(ScalarEvolutionsTest, ComplexityComparatorIsStrictWeakOrdering2) {
   const SCEV *S1 = SE.getSCEV(F->getArg(1));
   const SCEV *S2 = SE.getSCEV(F->getArg(2));
 
-  const SCEV *P0 = SE.getPtrToIntExpr(S0, Int64Ty);
-  const SCEV *P1 = SE.getPtrToIntExpr(S1, Int64Ty);
-  const SCEV *P2 = SE.getPtrToIntExpr(S2, Int64Ty);
+  const SCEV *P0 = SE.getPtrToAddrExpr(S0);
+  const SCEV *P1 = SE.getPtrToAddrExpr(S1);
+  const SCEV *P2 = SE.getPtrToAddrExpr(S2);
 
   const SCEV *M0 = SE.getNegativeSCEV(P0);
   const SCEV *M2 = SE.getNegativeSCEV(P2);

@@ -15,15 +15,15 @@ define void @test_runtime_check_known_false_after_construction(ptr %start.1, ptr
 ; CHECK-NEXT:          %ptr.iv.2 = phi ptr [ %ptr.iv.2.next, %loop ], [ %start.2.diff, %entry ]
 ; CHECK-NEXT:      Grouped accesses:
 ; CHECK-NEXT:        Group GRP0:
-; CHECK-NEXT:          (Low: ((-8 * ((2305843009213693951 * (8 + (-1 * (ptrtoint ptr %start.1 to i64)) + (ptrtoint ptr %end to i64))) /u 8)) + %start.1) High: (8 + %start.1))
+; CHECK-NEXT:          (Low: ((-8 * ((2305843009213693951 * (8 + (-1 * (ptrtoaddr ptr %start.1 to i64)) + (ptrtoaddr ptr %end to i64))) /u 8)) + %start.1) High: (8 + %start.1))
 ; CHECK-NEXT:            Member: {%start.1,+,-8}<%loop>
 ; CHECK-NEXT:        Group GRP1:
-; CHECK-NEXT:          (Low: (-8 + (-8 * ((2305843009213693951 * (8 + (-1 * (ptrtoint ptr %start.1 to i64)) + (ptrtoint ptr %end to i64))) /u 8)) + (-1 * (ptrtoint ptr %start.2 to i64)) + (ptrtoint ptr %start.1 to i64) + %start.2) High: ((-1 * (ptrtoint ptr %start.2 to i64)) + (ptrtoint ptr %start.1 to i64) + %start.2))
-; CHECK-NEXT:            Member: {(-8 + (-1 * (ptrtoint ptr %start.2 to i64)) + (ptrtoint ptr %start.1 to i64) + %start.2),+,-8}<%loop>
+; CHECK-NEXT:          (Low: (-8 + (-8 * ((2305843009213693951 * (8 + (-1 * (ptrtoaddr ptr %start.1 to i64)) + (ptrtoaddr ptr %end to i64))) /u 8)) + (-1 * (ptrtoaddr ptr %start.2 to i64)) + (ptrtoaddr ptr %start.1 to i64) + %start.2) High: ((-1 * (ptrtoaddr ptr %start.2 to i64)) + (ptrtoaddr ptr %start.1 to i64) + %start.2))
+; CHECK-NEXT:            Member: {(-8 + (-1 * (ptrtoaddr ptr %start.2 to i64)) + (ptrtoaddr ptr %start.1 to i64) + %start.2),+,-8}<%loop>
 ; CHECK-EMPTY:
 ; CHECK-NEXT:      Non vectorizable stores to invariant address were not found in loop.
 ; CHECK-NEXT:      SCEV assumptions:
-; CHECK-NEXT:      Equal predicate: (zext i3 ((trunc i64 (ptrtoint ptr %end to i64) to i3) + (-1 * (trunc i64 (ptrtoint ptr %start.1 to i64) to i3))) to i64) == 0
+; CHECK-NEXT:      Equal predicate: (zext i3 ((trunc i64 (ptrtoaddr ptr %end to i64) to i3) + (-1 * (trunc i64 (ptrtoaddr ptr %start.1 to i64) to i3))) to i64) == 0
 ; CHECK-EMPTY:
 ; CHECK-NEXT:      Expressions re-written:
 ;

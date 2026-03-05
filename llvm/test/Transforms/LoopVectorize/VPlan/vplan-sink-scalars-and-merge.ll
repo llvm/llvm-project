@@ -1422,7 +1422,7 @@ define void @ptr_induction_remove_dead_recipe(ptr %start, ptr %end) {
 ; CHECK-NEXT:  vp<[[VP3:%[0-9]+]]> = original trip-count
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  ir-bb<entry>:
-; CHECK-NEXT:    EMIT vp<[[VP3]]> = EXPAND SCEV ((-1 * (ptrtoint ptr %end to i64)) + (ptrtoint ptr %start to i64))
+; CHECK-NEXT:    EMIT vp<[[VP3]]> = EXPAND SCEV ((-1 * (ptrtoaddr ptr %end to i64)) + (ptrtoaddr ptr %start to i64))
 ; CHECK-NEXT:  Successor(s): scalar.ph, vector.ph
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  vector.ph:

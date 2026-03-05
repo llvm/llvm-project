@@ -1086,45 +1086,6 @@ public:
   }
 };
 
-const SCEV *ScalarEvolution::getLosslessPtrToIntExpr(const SCEV *Op) {
-  assert(Op->getType()->isPointerTy() && "Op must be a pointer");
-
-  // It isn't legal for optimizations to construct new ptrtoint expressions
-  // for non-integral pointers.
-  if (getDataLayout().isNonIntegralPointerType(Op->getType()))
-    return getCouldNotCompute();
-
-  Type *IntPtrTy = getDataLayout().getIntPtrType(Op->getType());
-
-  // We can only trivially model ptrtoint if SCEV's effective (integer) type
-  // is sufficiently wide to represent all possible pointer values.
-  // We could theoretically teach SCEV to truncate wider pointers, but
-  // that isn't implemented for now.
-  if (getDataLayout().getTypeSizeInBits(getEffectiveSCEVType(Op->getType())) !=
-      getDataLayout().getTypeSizeInBits(IntPtrTy))
-    return getCouldNotCompute();
-
-  // Use the rewriter to sink the cast down to SCEVUnknown leaves.
-  const SCEV *IntOp = SCEVCastSinkingRewriter::rewrite(
-      Op, *this, IntPtrTy, [this, IntPtrTy](const SCEVUnknown *U) {
-        FoldingSetNodeID ID;
-        ID.AddInteger(scPtrToInt);
-        ID.AddPointer(U);
-        void *IP = nullptr;
-        if (const SCEV *S = UniqueSCEVs.FindNodeOrInsertPos(ID, IP))
-          return S;
-        SCEV *S = new (SCEVAllocator)
-            SCEVPtrToIntExpr(ID.Intern(SCEVAllocator), U, IntPtrTy);
-        UniqueSCEVs.InsertNode(S, IP);
-        registerUser(S, U);
-        return static_cast<const SCEV *>(S);
-      });
-  assert(IntOp->getType()->isIntegerTy() &&
-         "We must have succeeded in sinking the cast, "
-         "and ending up with an integer-typed expression!");
-  return IntOp;
-}
-
 const SCEV *ScalarEvolution::getPtrToAddrExpr(const SCEV *Op) {
   assert(Op->getType()->isPointerTy() && "Op must be a pointer");
 
@@ -1161,11 +1122,9 @@ const SCEV *ScalarEvolution::getPtrToAddrExpr(const SCEV *Op) {
 const SCEV *ScalarEvolution::getPtrToIntExpr(const SCEV *Op, Type *Ty) {
   assert(Ty->isIntegerTy() && "Target type must be an integer type!");
 
-  const SCEV *IntOp = getLosslessPtrToIntExpr(Op);
-  if (isa<SCEVCouldNotCompute>(IntOp))
-    return IntOp;
-
-  return getTruncateOrZeroExtend(IntOp, Ty);
+  // We don't model ptrtoint in SCEV. Return CouldNotCompute, which will cause
+  // callers to fall back to SCEVUnknown.
+  return getCouldNotCompute();
 }
 
 const SCEV *ScalarEvolution::getTruncateExpr(const SCEV *Op, Type *Ty,
@@ -5894,6 +5853,21 @@ const SCEV *ScalarEvolution::createAddRecFromPHI(PHINode *PN) {
   // the back-edge.
   const SCEV *BEValue = getSCEV(BEValueV);
 
+  // If the backedge value is an SCEVUnknown from a ptrtoint, try to use
+  // ptrtoaddr to get a usable SCEV expression. This allows recognizing
+  // integer induction variables derived from pointer inductions.
+  if (isa<SCEVUnknown>(BEValue))
+    if (auto *PTI = dyn_cast<PtrToIntInst>(BEValueV)) {
+      const SCEV *PtrAddr = getPtrToAddrExpr(getSCEV(PTI->getOperand(0)));
+      if (!isa<SCEVCouldNotCompute>(PtrAddr)) {
+        // Adjust type to match the ptrtoint result type if needed.
+        Type *DestTy = PTI->getType();
+        if (PtrAddr->getType() != DestTy)
+          PtrAddr = getTruncateOrZeroExtend(PtrAddr, DestTy);
+        BEValue = PtrAddr;
+      }
+    }
+
   // NOTE: If BEValue is loop invariant, we know that the PHI node just
   // has a special value for the first iteration of the loop.
 
@@ -6214,7 +6188,7 @@ ScalarEvolution::createNodeForSelectOrPHIInstWithICmpInstCond(Type *Ty,
       }
       auto CoerceOperand = [&](const SCEV *Op) -> const SCEV * {
         if (Op->getType()->isPointerTy()) {
-          Op = getLosslessPtrToIntExpr(Op);
+          Op = getPtrToAddrExpr(Op);
           if (isa<SCEVCouldNotCompute>(Op))
             return Op;
         }
@@ -7921,6 +7895,23 @@ const SCEV *ScalarEvolution::createSCEV(Value *V) {
       SCEV::NoWrapFlags Flags = SCEV::FlagAnyWrap;
       if (BO->Op)
         Flags = getNoWrapFlagsFromUB(BO->Op);
+
+      // Special case: sub (ptrtoint p1), (ptrtoint p2) -> subtract of ptrtoaddr
+      // expressions. While we don't model ptrtoint directly in SCEV, the
+      // difference between two pointer addresses is well-defined.
+      Value *PtrLHS, *PtrRHS;
+      if (match(BO->LHS, m_PtrToInt(m_Value(PtrLHS))) &&
+          match(BO->RHS, m_PtrToInt(m_Value(PtrRHS)))) {
+        const SCEV *AddrLHS = getPtrToAddrExpr(getSCEV(PtrLHS));
+        const SCEV *AddrRHS = getPtrToAddrExpr(getSCEV(PtrRHS));
+        if (!isa<SCEVCouldNotCompute>(AddrLHS) &&
+            !isa<SCEVCouldNotCompute>(AddrRHS)) {
+          Type *Ty = BO->LHS->getType();
+          return getMinusSCEV(getTruncateOrZeroExtend(AddrLHS, Ty),
+                              getTruncateOrZeroExtend(AddrRHS, Ty), Flags);
+        }
+      }
+
       LHS = getSCEV(BO->LHS);
       RHS = getSCEV(BO->RHS);
       return getMinusSCEV(LHS, RHS, Flags);
@@ -8189,15 +8180,10 @@ const SCEV *ScalarEvolution::createSCEV(Value *V) {
   }
 
   case Instruction::PtrToInt: {
-    // Pointer to integer cast is straight-forward, so do model it.
-    const SCEV *Op = getSCEV(U->getOperand(0));
-    Type *DstIntTy = U->getType();
-    // But only if effective SCEV (integer) type is wide enough to represent
-    // all possible pointer values.
-    const SCEV *IntOp = getPtrToIntExpr(Op, DstIntTy);
-    if (isa<SCEVCouldNotCompute>(IntOp))
-      return getUnknown(V);
-    return IntOp;
+    // IMPORTANT: Do NOT use getPtrToAddrExpr here! Using SCEVPtrToAddr for
+    // PtrToInt is NOT safe because the expander may replace IR ptrtoint with
+    // ptrtoaddr, which changes semantics. We must keep ptrtoint as SCEVUnknown.
+    return getUnknown(V);
   }
   case Instruction::IntToPtr:
     // Just don't deal with inttoptr casts.
@@ -9383,12 +9369,12 @@ ScalarEvolution::ExitLimit ScalarEvolution::computeExitLimitFromICmp(
   case ICmpInst::ICMP_NE: {                     // while (X != Y)
     // Convert to: while (X-Y != 0)
     if (LHS->getType()->isPointerTy()) {
-      LHS = getLosslessPtrToIntExpr(LHS);
+      LHS = getPtrToAddrExpr(LHS);
       if (isa<SCEVCouldNotCompute>(LHS))
         return LHS;
     }
     if (RHS->getType()->isPointerTy()) {
-      RHS = getLosslessPtrToIntExpr(RHS);
+      RHS = getPtrToAddrExpr(RHS);
       if (isa<SCEVCouldNotCompute>(RHS))
         return RHS;
     }
@@ -9401,12 +9387,12 @@ ScalarEvolution::ExitLimit ScalarEvolution::computeExitLimitFromICmp(
   case ICmpInst::ICMP_EQ: {                     // while (X == Y)
     // Convert to: while (X-Y == 0)
     if (LHS->getType()->isPointerTy()) {
-      LHS = getLosslessPtrToIntExpr(LHS);
+      LHS = getPtrToAddrExpr(LHS);
       if (isa<SCEVCouldNotCompute>(LHS))
         return LHS;
     }
     if (RHS->getType()->isPointerTy()) {
-      RHS = getLosslessPtrToIntExpr(RHS);
+      RHS = getPtrToAddrExpr(RHS);
       if (isa<SCEVCouldNotCompute>(RHS))
         return RHS;
     }
@@ -13306,12 +13292,12 @@ ScalarEvolution::howManyLessThans(const SCEV *LHS, const SCEV *RHS,
   const SCEV *OrigStart = Start;
   const SCEV *OrigRHS = RHS;
   if (Start->getType()->isPointerTy()) {
-    Start = getLosslessPtrToIntExpr(Start);
+    Start = getPtrToAddrExpr(Start);
     if (isa<SCEVCouldNotCompute>(Start))
       return Start;
   }
   if (RHS->getType()->isPointerTy()) {
-    RHS = getLosslessPtrToIntExpr(RHS);
+    RHS = getPtrToAddrExpr(RHS);
     if (isa<SCEVCouldNotCompute>(RHS))
       return RHS;
   }
@@ -13614,12 +13600,12 @@ ScalarEvolution::ExitLimit ScalarEvolution::howManyGreaterThans(
   }
 
   if (Start->getType()->isPointerTy()) {
-    Start = getLosslessPtrToIntExpr(Start);
+    Start = getPtrToAddrExpr(Start);
     if (isa<SCEVCouldNotCompute>(Start))
       return Start;
   }
   if (End->getType()->isPointerTy()) {
-    End = getLosslessPtrToIntExpr(End);
+    End = getPtrToAddrExpr(End);
     if (isa<SCEVCouldNotCompute>(End))
       return End;
   }
@@ -15841,8 +15827,8 @@ void ScalarEvolution::LoopGuards::collectFromBlock(
           // inequalities in a separate map, and materialize the rewrite lazily
           // when encountering a suitable subtraction while re-writing.
           if (LHS->getType()->isPointerTy()) {
-            LHS = SE.getLosslessPtrToIntExpr(LHS);
-            RHS = SE.getLosslessPtrToIntExpr(RHS);
+            LHS = SE.getPtrToAddrExpr(LHS);
+            RHS = SE.getPtrToAddrExpr(RHS);
             if (isa<SCEVCouldNotCompute>(LHS) || isa<SCEVCouldNotCompute>(RHS))
               break;
           }
