@@ -100,6 +100,8 @@ private:
 
   llvm::SmallVector<mlir::Attribute> globalScopeAsm;
 
+  llvm::DenseSet<clang::GlobalDecl> diagnosedConflictingDefinitions;
+
   void createCUDARuntime();
 
   /// A helper for constructAttributeList that handles return attributes.
@@ -599,6 +601,9 @@ public:
   // or if they are alias to each other.
   cir::FuncOp codegenCXXStructor(clang::GlobalDecl gd);
 
+  bool lookupRepresentativeDecl(llvm::StringRef mangledName,
+                                clang::GlobalDecl &gd) const;
+
   bool supportsCOMDAT() const;
   void maybeSetTrivialComdat(const clang::Decl &d, mlir::Operation *op);
 
@@ -607,6 +612,10 @@ public:
   // Whether a global variable should be emitted by CUDA/HIP host/device
   // related attributes.
   bool shouldEmitCUDAGlobalVar(const VarDecl *global) const;
+
+  /// Replace all uses of the old global with the new global, updating types
+  /// and references as needed. Erases the old global when done.
+  void replaceGlobal(cir::GlobalOp oldGV, cir::GlobalOp newGV);
 
   void replaceUsesOfNonProtoTypeWithRealFunction(mlir::Operation *old,
                                                  cir::FuncOp newFn);

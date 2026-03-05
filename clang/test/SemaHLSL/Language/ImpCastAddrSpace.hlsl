@@ -2,7 +2,7 @@
 
 static double D = 2.0;
 static int I = D; // expected-warning{{implicit conversion turns floating-point number into integer: 'double' to 'int'}}
-groupshared float F = I; // expected-warning{{implicit conversion from 'int' to 'float' may lose precision}}
+static float F = I; // expected-warning{{implicit conversion from 'int' to 'float' may lose precision}}
 
 export void fn() {
   half d = I; // expected-warning{{implicit conversion from 'int' to 'half' may lose precision}}
