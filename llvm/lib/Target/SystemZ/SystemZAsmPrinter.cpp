@@ -1918,9 +1918,10 @@ static void determinePrologueStackUpdateSym(MachineFunction *MF,
         EndOfPrologMI = &I;
       else if (!StackUpdateMI) {
         unsigned Opcode = I.getOpcode();
-        // TODO: We can instead emit a pseudo instruction in SystemZFrameLowering to
-        // represent a stack adjustment instruction, and check for that here, instead
-        // of having to check for multiple instructions. 
+        // TODO: We can instead emit a pseudo instruction in
+        // SystemZFrameLowering to represent a stack adjustment instruction, and
+        // check for that here, instead of having to check for multiple
+        // instructions.
         if ((Opcode == SystemZ::AGHI || Opcode == SystemZ::AGFI) &&
             I.getOperand(0).getReg() == Regs.getStackPointerRegister())
           StackUpdateMI = &I;
