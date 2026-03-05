@@ -5072,6 +5072,18 @@ def HLSLResourceSampleCmpLevelZero : LangBuiltin<"HLSL_LANG"> {
   let Prototype = "void(...)";
 }
 
+def HLSLResourceGather : LangBuiltin<"HLSL_LANG"> {
+  let Spellings = ["__builtin_hlsl_resource_gather"];
+  let Attributes = [NoThrow];
+  let Prototype = "void(...)";
+}
+
+def HLSLResourceGatherCmp : LangBuiltin<"HLSL_LANG"> {
+  let Spellings = ["__builtin_hlsl_resource_gather_cmp"];
+  let Attributes = [NoThrow];
+  let Prototype = "void(...)";
+}
+
 def HLSLResourceUninitializedHandle : LangBuiltin<"HLSL_LANG"> {
   let Spellings = ["__builtin_hlsl_resource_uninitializedhandle"];
   let Attributes = [NoThrow];
@@ -5140,6 +5152,12 @@ def HLSLAny : LangBuiltin<"HLSL_LANG"> {
 
 def HLSLAsDouble : LangBuiltin<"HLSL_LANG"> {
   let Spellings = ["__builtin_hlsl_asdouble"];
+  let Attributes = [NoThrow, Const];
+  let Prototype = "void(...)";
+}
+
+def HLSLWaveActiveAllEqual : LangBuiltin<"HLSL_LANG"> {
+  let Spellings = ["__builtin_hlsl_wave_active_all_equal"];
   let Attributes = [NoThrow, Const];
   let Prototype = "void(...)";
 }

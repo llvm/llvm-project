@@ -663,6 +663,54 @@ Value *CodeGenFunction::EmitHLSLBuiltinExpr(unsigned BuiltinID,
     return Builder.CreateIntrinsic(
         RetTy, CGM.getHLSLRuntime().getSampleCmpLevelZeroIntrinsic(), Args);
   }
+  case Builtin::BI__builtin_hlsl_resource_gather: {
+    Value *HandleOp = EmitScalarExpr(E->getArg(0));
+    Value *SamplerOp = EmitScalarExpr(E->getArg(1));
+    Value *CoordOp = EmitScalarExpr(E->getArg(2));
+    Value *ComponentOp = EmitScalarExpr(E->getArg(3));
+    if (ComponentOp->getType() != Builder.getInt32Ty())
+      ComponentOp = Builder.CreateIntCast(ComponentOp, Builder.getInt32Ty(),
+                                          /*isSigned=*/false);
+
+    SmallVector<Value *, 5> Args;
+    Args.push_back(HandleOp);
+    Args.push_back(SamplerOp);
+    Args.push_back(CoordOp);
+    Args.push_back(ComponentOp);
+    Args.push_back(emitHlslOffset(*this, E, 4));
+
+    llvm::Type *RetTy = ConvertType(E->getType());
+    return Builder.CreateIntrinsic(
+        RetTy, CGM.getHLSLRuntime().getGatherIntrinsic(), Args);
+  }
+  case Builtin::BI__builtin_hlsl_resource_gather_cmp: {
+    Value *HandleOp = EmitScalarExpr(E->getArg(0));
+    Value *SamplerOp = EmitScalarExpr(E->getArg(1));
+    Value *CoordOp = EmitScalarExpr(E->getArg(2));
+    Value *CompareOp = EmitScalarExpr(E->getArg(3));
+    if (CompareOp->getType() != Builder.getFloatTy())
+      CompareOp = Builder.CreateFPCast(CompareOp, Builder.getFloatTy());
+
+    SmallVector<Value *, 6> Args;
+    Args.push_back(HandleOp);
+    Args.push_back(SamplerOp);
+    Args.push_back(CoordOp);
+    Args.push_back(CompareOp);
+
+    if (CGM.getTarget().getTriple().isDXIL()) {
+      Value *ComponentOp = EmitScalarExpr(E->getArg(4));
+      if (ComponentOp->getType() != Builder.getInt32Ty())
+        ComponentOp = Builder.CreateIntCast(ComponentOp, Builder.getInt32Ty(),
+                                            /*isSigned=*/false);
+      Args.push_back(ComponentOp);
+    }
+
+    Args.push_back(emitHlslOffset(*this, E, 5));
+
+    llvm::Type *RetTy = ConvertType(E->getType());
+    return Builder.CreateIntrinsic(
+        RetTy, CGM.getHLSLRuntime().getGatherCmpIntrinsic(), Args);
+  }
   case Builtin::BI__builtin_hlsl_resource_load_with_status:
   case Builtin::BI__builtin_hlsl_resource_load_with_status_typed: {
     Value *HandleOp = EmitScalarExpr(E->getArg(0));
@@ -1122,6 +1170,14 @@ Value *CodeGenFunction::EmitHLSLBuiltinExpr(unsigned BuiltinID,
     return Builder.CreateIntrinsic(
         /*ReturnType=*/Op0->getType(), CGM.getHLSLRuntime().getStepIntrinsic(),
         ArrayRef<Value *>{Op0, Op1}, nullptr, "hlsl.step");
+  }
+  case Builtin::BI__builtin_hlsl_wave_active_all_equal: {
+    Value *Op = EmitScalarExpr(E->getArg(0));
+
+    Intrinsic::ID ID = CGM.getHLSLRuntime().getWaveActiveAllEqualIntrinsic();
+    return EmitRuntimeCall(Intrinsic::getOrInsertDeclaration(
+                               &CGM.getModule(), ID, {Op->getType()}),
+                           {Op});
   }
   case Builtin::BI__builtin_hlsl_wave_active_all_true: {
     Value *Op = EmitScalarExpr(E->getArg(0));
