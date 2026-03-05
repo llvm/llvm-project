@@ -301,7 +301,8 @@ public:
               // as they aren't used in the SIInstrInfo implementation.
               !SII->shouldClusterMemOps(CI.BaseOps, 0, false, BaseOps, 0, false,
                                         2, 2))) ||
-            (CI.Length && incompatibleScope(MI, *CI.Last, SII))) {
+            (CI.Length && ST->hasGFX1250A0() &&
+             incompatibleScope(MI, *CI.Last, SII))) {
           // Finish the current clause.
           Changed |= emitClause(CI, SII);
           CI = ClauseInfo();

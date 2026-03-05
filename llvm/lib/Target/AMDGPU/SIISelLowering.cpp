@@ -10736,7 +10736,8 @@ SDValue SITargetLowering::LowerINTRINSIC_W_CHAIN(SDValue Op,
   case Intrinsic::amdgcn_cluster_load_b32:
   case Intrinsic::amdgcn_cluster_load_b64:
   case Intrinsic::amdgcn_cluster_load_b128: {
-    InitializeM0ToZero(Op, DAG, DL);
+    if (Subtarget->hasGFX1250A0())
+      InitializeM0ToZero(Op, DAG, DL);
     return SDValue();
   } // End Multicast Load Bug Workaround for GFX1250 A0.
   case Intrinsic::amdgcn_ds_ordered_add:
@@ -11510,7 +11511,8 @@ SDValue SITargetLowering::LowerINTRINSIC_VOID(SDValue Op,
   case Intrinsic::amdgcn_cluster_load_async_to_lds_b32:
   case Intrinsic::amdgcn_cluster_load_async_to_lds_b64:
   case Intrinsic::amdgcn_cluster_load_async_to_lds_b128: {
-    InitializeM0ToZero(Op, DAG, DL);
+    if (Subtarget->hasGFX1250A0())
+      InitializeM0ToZero(Op, DAG, DL);
     return SDValue();
   } // End Multicast Load Bug Workaround for GFX1250 A0.
   case Intrinsic::amdgcn_exp_compr: {

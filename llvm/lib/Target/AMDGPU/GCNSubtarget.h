@@ -972,10 +972,12 @@ public:
     return HasGFX1250Insts && getGeneration() == GFX12;
   }
 
+  bool hasGFX1250A0() const { return HasGFX1250Insts && !HasGFX1250B0; }
+
   // TODO: Remove this when we replace all A0 GFX1250 with B0.
   // DS_READ2 and DS_WRITE2 instructions must have addresses aligned to the
   // payload size.
-  bool hasUnalignedDS2Bug() const { return HasGFX1250Insts; }
+  bool hasUnalignedDS2Bug() const { return hasGFX1250A0(); }
 
   /// \returns true if the subtarget requires a wait for xcnt before VMEM
   /// accesses that must never be repeated in the event of a page fault/re-try.

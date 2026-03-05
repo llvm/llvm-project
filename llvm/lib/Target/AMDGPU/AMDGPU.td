@@ -1316,6 +1316,12 @@ def FeatureUseAddPC64Inst : SubtargetFeature<"use-add-pc64-inst",
   "Use s_add_pc_i64 instruction."
 >;
 
+def FeatureGFX1250B0 : SubtargetFeature<"gfx1250-b0-specific",
+  "HasGFX1250B0",
+  "true",
+  "Generate code for B0 flavor of gfx1250."
+>;
+
 //===----------------------------------------------------------------------===//
 
 class GCNSubtargetFeatureGeneration <string Value,
@@ -2642,10 +2648,10 @@ def NotHasSALUFloatInsts : Predicate<"!Subtarget->hasSALUFloatInsts()">,
 def NotHasCvtFP8VOP1Bug : Predicate<"!Subtarget->hasCvtFP8VOP1Bug()">;
 
 def HasUnalignedDS2Bug : Predicate<"Subtarget->hasUnalignedDS2Bug()">,
- AssemblerPredicate<(all_of FeatureGFX1250Insts)>;
+ AssemblerPredicate<(all_of FeatureGFX1250Insts, (not FeatureGFX1250B0))>;
 
 def NotHasUnalignedDS2Bug : Predicate<"!Subtarget->hasUnalignedDS2Bug()">,
- AssemblerPredicate<(not FeatureGFX1250Insts)>;
+ AssemblerPredicate<(any_of (not FeatureGFX1250Insts), (not FeatureGFX1250B0))>;
 
 def NeedsAlignedVGPRs : Predicate<"Subtarget->needsAlignedVGPRs()">,
                       AssemblerPredicate<(all_of FeatureRequiresAlignedVGPRs)>;
