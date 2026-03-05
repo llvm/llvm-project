@@ -227,7 +227,7 @@ void RTNAME(ExecuteCommandLine)(const Descriptor &command, bool wait,
   const size_t newCmdWinLen{
       (sizeof(prefix) - 1) + std::strlen(newCmd) + (sizeof(suffix) - 1) + 1};
   char *newCmdWin{
-      static_cast<char *>(AllocateMemoryOrCrash(terminator, cmdBufLen))};
+      static_cast<char *>(AllocateMemoryOrCrash(terminator, newCmdWinLen))};
   std::snprintf(newCmdWin, newCmdWinLen, "%s%s%s", prefix, newCmd, suffix);
   cmd = newCmdWin;
 #endif
