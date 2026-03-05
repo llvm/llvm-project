@@ -101,7 +101,10 @@ _DEFAULT_FN_ATTRS static __inline__ uint32_t __gpu_lane_id(void) {
   return __nvvm_read_ptx_sreg_laneid();
 }
 
-// Returns the bit-mask of active threads in the current warp.
+// Returns the bit-mask of convergent threads in the current warp. On NVIDIA
+// hardware supporting independent thread scheduling it is important to note
+// that this operation only queries and returns a subset of the currently active
+// threads in the warp.
 _DEFAULT_FN_ATTRS static __inline__ uint64_t __gpu_lane_mask(void) {
   return __nvvm_activemask();
 }
@@ -114,7 +117,10 @@ __gpu_read_first_lane_u32(uint64_t __lane_mask, uint32_t __x) {
   return __nvvm_shfl_sync_idx_i32(__mask, __x, __id, __gpu_num_lanes() - 1);
 }
 
-// Returns a bitmask of threads in the current lane for which \p x is true.
+// Returns a bitmask of threads in the current lane for which \p x is true. The
+// \p __lane_mask lists the set of threads that must reach this instruction
+// before progress can continue. The resulting bitmask may be larger as threads
+// not contained inside the provided mask are allowed to recongverge.
 _DEFAULT_FN_ATTRS static __inline__ uint64_t __gpu_ballot(uint64_t __lane_mask,
                                                           bool __x) {
   uint32_t __mask = (uint32_t)__lane_mask;
