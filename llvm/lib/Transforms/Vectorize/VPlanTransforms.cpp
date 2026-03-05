@@ -4919,18 +4919,18 @@ void VPlanTransforms::materializePacksAndUnpacks(VPlan &Plan) {
       vp_depth_first_shallow(Plan.getEntry()));
   auto VPBBsInsideLoopRegion = VPBlockUtils::blocksOnly<VPBasicBlock>(
       vp_depth_first_shallow(LoopRegion->getEntry()));
-  // Materialize Build(Struct)Vector for all replicating VPReplicateRecipes and
-  // VPInstructions, excluding ones in replicate regions. Those are not
-  // materialized explicitly yet. Those vector users are still handled in
-  // VPReplicateRegion::execute(), via shouldPack().
+  // Materialize Build(Struct)Vector for all replicating VPReplicateRecipes,
+  // VPScalarIVStepsRecipe and VPInstructions, excluding ones in replicate
+  // regions. Those are not materialized explicitly yet. Those vector users are
+  // still handled in VPReplicateRegion::execute(), via shouldPack().
   // TODO: materialize build vectors for replicating recipes in replicating
   // regions.
   for (VPBasicBlock *VPBB :
        concat<VPBasicBlock *>(VPBBsOutsideLoopRegion, VPBBsInsideLoopRegion)) {
     for (VPRecipeBase &R : make_early_inc_range(*VPBB)) {
-      if (!isa<VPReplicateRecipe, VPInstruction>(&R))
+      if (!isa<VPScalarIVStepsRecipe, VPReplicateRecipe, VPInstruction>(&R))
         continue;
-      auto *DefR = cast<VPRecipeWithIRFlags>(&R);
+      auto *DefR = cast<VPSingleDefRecipe>(&R);
       auto UsesVectorOrInsideReplicateRegion = [DefR, LoopRegion](VPUser *U) {
         VPRegionBlock *ParentRegion = cast<VPRecipeBase>(U)->getRegion();
         return !U->usesScalars(DefR) || ParentRegion != LoopRegion;
