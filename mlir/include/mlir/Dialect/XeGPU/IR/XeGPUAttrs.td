@@ -248,6 +248,11 @@ def DistributeLayoutAttr: AttrInterface<"DistributeLayoutAttr"> {
                           "int64_t": $sgData,
                           "int64_t": $instData,
                           "int64_t": $laneData)>,
+    InterfaceMethod<[{Derive a new layout by removing dimensions.
+                      `dimGroup` specifies a group of dimensions to be removed in the derived layout.}],
+                    "xegpu::DistributeLayoutAttr",
+                    "dropDims",
+                    (ins "SmallVector<int64_t>": $dimGroup)>,
     InterfaceMethod<[{Derive a new layout by collapsing dimensions.
                       `dimGroup` specifies a group of adjacent dimensions that are collapsed into
                        a single dimension in the derived layout.}],
@@ -562,6 +567,10 @@ def XeGPU_LayoutAttr : XeGPUAttr<"Layout", "layout", [DistributeLayoutAttr]> {
     // preserves its original value.
     DistributeLayoutAttr setDimData(int64_t dim, int64_t sgData, int64_t instData, int64_t laneData);
 
+    // Derive a new layout by removing dimensions.
+    // `dimGroup` specifies a group of dimensions to be removed in the derived layout.
+    DistributeLayoutAttr dropDims(SmallVector<int64_t> dimGroup);
+
     // Derive a new layout by collapsing dimensions.
     // `dimGroup` specifies a group of adjacent dimensions
     // that are collapsed into a single dimension in the derived layout.
@@ -761,6 +770,10 @@ def XeGPU_SliceAttr : XeGPUAttr<"Slice", "slice", [DistributeLayoutAttr]> {
     // specified values for the given dimension. Passing -1 for any parameter
     // preserves its original value.
     DistributeLayoutAttr setDimData(int64_t dim, int64_t sgData, int64_t instData, int64_t laneData);
+
+    // Derive a new layout by removing dimensions.
+    // `dimGroup` specifies a group of dimensions to be removed in the derived layout.
+    DistributeLayoutAttr dropDims(SmallVector<int64_t> dimGroup);
 
     // Derive a new layout by collapsing dimensions.
     // `dimGroup` specifies a group of adjacent dimensions

@@ -241,31 +241,19 @@ xegpu::DistributeLayoutAttr xegpu::inferInsertStridedSliceSourceLayout(
   int resShapeSize = resShape.size();
   int dimDiff = resShapeSize - srcShapeSize;
 
-  assert(isa<xegpu::LayoutAttr>(resLayout) &&
-         "insertStridedSlice result layout must be plain layout");
-  auto context = resLayout.getContext();
-  auto resInstData = resLayout.getEffectiveInstDataAsInt();
-  auto resLaneLayout = resLayout.getEffectiveLaneLayoutAsInt();
-  auto resLaneData = resLayout.getEffectiveLaneDataAsInt();
-
-  if (resInstData.size() != 0) {
-    SmallVector<int> inferredInstData(srcShapeSize);
-    for (int i = 0; i < srcShapeSize; i++)
-      inferredInstData[i] = resInstData[i + dimDiff];
-    return xegpu::LayoutAttr::get(context, inferredInstData);
-  }
-
-  if (resLaneLayout.size() != 0) {
-    SmallVector<int> inferredLaneLayout(srcShapeSize);
-    SmallVector<int> inferredLaneData(srcShapeSize);
-    for (int i = 0; i < srcShapeSize; i++) {
-      inferredLaneLayout[i] = resLaneLayout[i + dimDiff];
-      inferredLaneData[i] = resLaneData[i + dimDiff];
+  if (dimDiff > 0) {
+    // assert that the leading dimensions being sliced off are not distributed
+    // (i.e. sg_layout and lane_layout for those dimensions are all 1)
+    auto resSgLayout = resLayout.getEffectiveSgLayoutAsInt();
+    auto resLaneLayout = resLayout.getEffectiveLaneLayoutAsInt();
+    for (int i = 0; i < dimDiff; i++) {
+      assert((resSgLayout.size() == 0 || resSgLayout[i] == 1) &&
+             (resLaneLayout.size() == 0 || resLaneLayout[i] == 1) &&
+             "Leading dimensions being sliced off must not be distributed");
     }
-    return xegpu::LayoutAttr::get(context, inferredLaneLayout,
-                                  inferredLaneData);
+    return resLayout.dropDims(llvm::to_vector(llvm::seq<int64_t>(0, dimDiff)));
   }
-  return nullptr;
+  return resLayout;
 }
 
 /// Infers the source layout attribute for a shape cast operation given the
@@ -619,52 +607,54 @@ xegpu::DistributeLayoutAttr xegpu::setupBitCastResultLayout(
 ///      resShape=[4, 64], subgroupSize=16, bitwidth=16, packingFactor=2
 ///      consumerLayout: laneLayout=[1, 16], laneData=[1, 2]
 ///      Result: laneLayout=[1, 16], laneData=[1, 2] (adjusted for packed data)
-xegpu::DistributeLayoutAttr xegpu::setupInsertStridedSliceResultLayout(
-    xegpu::LayoutKind layoutKind, VectorType srcVectorTy,
-    VectorType resVectorTy, xegpu::DistributeLayoutAttr consumerLayout,
-    const xegpu::uArch::uArch *uArch) {
+// xegpu::DistributeLayoutAttr xegpu::setupInsertStridedSliceResultLayout(
+//     xegpu::LayoutKind layoutKind, VectorType srcVectorTy,
+//     VectorType resVectorTy, xegpu::DistributeLayoutAttr consumerLayout,
+//     const xegpu::uArch::uArch *uArch) {
 
-  xegpu::DistributeLayoutAttr requiredResLayout;
-  auto subgroupSize = uArch->getSubgroupSize();
-  auto context = resVectorTy.getContext();
-  auto resShape = resVectorTy.getShape();
-  int resShapeSize = resShape.size();
-  auto srcShape = srcVectorTy.getShape();
-  SmallVector<int64_t> consumerInstData =
-      consumerLayout.getEffectiveInstDataAsInt();
-  SmallVector<int64_t> consumerLaneData =
-      consumerLayout.getEffectiveLaneDataAsInt();
+//   xegpu::DistributeLayoutAttr requiredResLayout;
+//   auto subgroupSize = uArch->getSubgroupSize();
+//   auto context = resVectorTy.getContext();
+//   auto resShape = resVectorTy.getShape();
+//   int resShapeSize = resShape.size();
+//   auto srcShape = srcVectorTy.getShape();
+//   SmallVector<int64_t> consumerInstData =
+//       consumerLayout.getEffectiveInstDataAsInt();
+//   SmallVector<int64_t> consumerLaneData =
+//       consumerLayout.getEffectiveLaneDataAsInt();
 
-  SmallVector<int> instData(resShapeSize, 1);
-  SmallVector<int> laneLayout(resShapeSize, 1);
-  SmallVector<int> laneData(resShapeSize, 1);
+//   SmallVector<int> instData(resShapeSize, 1);
+//   SmallVector<int> laneLayout(resShapeSize, 1);
+//   SmallVector<int> laneData(resShapeSize, 1);
 
-  const unsigned packingSize{uArch->getGeneralPackedFormatBitSize()};
-  unsigned bitwidth = resVectorTy.getElementType().getIntOrFloatBitWidth();
-  int packingFactor = bitwidth < packingSize ? packingSize / bitwidth : 1;
-  int packedDataSize = subgroupSize * packingFactor;
+//   const unsigned packingSize{uArch->getGeneralPackedFormatBitSize()};
+//   unsigned bitwidth = resVectorTy.getElementType().getIntOrFloatBitWidth();
+//   int packingFactor = bitwidth < packingSize ? packingSize / bitwidth : 1;
+//   int packedDataSize = subgroupSize * packingFactor;
 
-  if (layoutKind == xegpu::LayoutKind::Subgroup) {
-    assert(true &&
-           "subgroup layout assignment not supported for insertStridedSlice.");
-  } else if (layoutKind == xegpu::LayoutKind::InstData) {
-    assert(srcShape.back() >= subgroupSize &&
-           "source innermost dim must be >= subgroupSize");
-    instData.back() = subgroupSize;
-    if (consumerInstData.back() == packedDataSize &&
-        srcShape.back() >= packedDataSize)
-      instData.back() = packedDataSize;
-    requiredResLayout = xegpu::LayoutAttr::get(context, instData);
-  } else if (layoutKind == xegpu::LayoutKind::Lane) {
-    laneLayout.back() = subgroupSize;
-    laneData.back() = 1;
-    if (consumerLaneData.back() == packingFactor &&
-        srcShape.back() >= packedDataSize)
-      laneData.back() = packingFactor;
-    requiredResLayout = xegpu::LayoutAttr::get(context, laneLayout, laneData);
-  }
-  return requiredResLayout;
-}
+//   if (layoutKind == xegpu::LayoutKind::Subgroup) {
+//     assert(true &&
+//            "subgroup layout assignment not supported for
+//            insertStridedSlice.");
+//   } else if (layoutKind == xegpu::LayoutKind::InstData) {
+//     assert(srcShape.back() >= subgroupSize &&
+//            "source innermost dim must be >= subgroupSize");
+//     instData.back() = subgroupSize;
+//     if (consumerInstData.back() == packedDataSize &&
+//         srcShape.back() >= packedDataSize)
+//       instData.back() = packedDataSize;
+//     requiredResLayout = xegpu::LayoutAttr::get(context, instData);
+//   } else if (layoutKind == xegpu::LayoutKind::Lane) {
+//     laneLayout.back() = subgroupSize;
+//     laneData.back() = 1;
+//     if (consumerLaneData.back() == packingFactor &&
+//         srcShape.back() >= packedDataSize)
+//       laneData.back() = packingFactor;
+//     requiredResLayout = xegpu::LayoutAttr::get(context, laneLayout,
+//     laneData);
+//   }
+//   return requiredResLayout;
+// }
 
 /// Sets up the anchor layout for load gather and load matrix operation.
 /// load matrix lowers to load gather and 1d block load. All of them share the
