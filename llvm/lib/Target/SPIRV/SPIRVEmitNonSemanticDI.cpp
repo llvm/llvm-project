@@ -52,8 +52,11 @@ struct SPIRVEmitNonSemanticDI : public MachineFunctionPass {
   static char ID;
   SPIRVTargetMachine *TM;
   DenseMap<const DICompileUnit *, Register> CompileUnitRegMap;
+  const SPIRV::InstructionSet::InstructionSet DebugInfoInstSet;
   SPIRVEmitNonSemanticDI(SPIRVTargetMachine *TM = nullptr)
-      : MachineFunctionPass(ID), TM(TM) {}
+      : MachineFunctionPass(ID), TM(TM),
+        DebugInfoInstSet(
+            SPIRV::InstructionSet::NonSemantic_Shader_DebugInfo_100) {}
 
   bool runOnMachineFunction(MachineFunction &MF) override;
 
@@ -63,7 +66,7 @@ private:
   convertDWARFToSPIRVSourceLanguage(int64_t LLVMSourceLanguage);
   static Register emitOpString(MachineRegisterInfo &MRI,
                                MachineIRBuilder &MIRBuilder, StringRef SR);
-  static Register
+  Register
   emitDIInstruction(MachineRegisterInfo &MRI, MachineIRBuilder &MIRBuilder,
                     SPIRVGlobalRegistry *GR, const SPIRVTypeInst &VoidTy,
                     const SPIRVInstrInfo *TII, const SPIRVRegisterInfo *TRI,
@@ -124,7 +127,7 @@ Register SPIRVEmitNonSemanticDI::emitOpString(MachineRegisterInfo &MRI,
                                               MachineIRBuilder &MIRBuilder,
                                               StringRef SR) {
   const Register StrReg = MRI.createVirtualRegister(&SPIRV::IDRegClass);
-  MRI.setType(StrReg, LLT::scalar(32));
+  MRI.setType(StrReg, LLT::scalar(64));
   MachineInstrBuilder MIB = MIRBuilder.buildInstr(SPIRV::OpString);
   MIB.addDef(StrReg);
   addStringImm(SR, MIB);
@@ -139,14 +142,12 @@ Register SPIRVEmitNonSemanticDI::emitDIInstruction(
     SPIRV::NonSemanticExtInst::NonSemanticExtInst Inst,
     ArrayRef<Register> Registers) {
   const Register InstReg = MRI.createVirtualRegister(&SPIRV::IDRegClass);
-  MRI.setType(InstReg, LLT::scalar(32));
-  MachineInstrBuilder MIB =
-      MIRBuilder.buildInstr(SPIRV::OpExtInst)
-          .addDef(InstReg)
-          .addUse(GR->getSPIRVTypeID(VoidTy))
-          .addImm(static_cast<int64_t>(
-              SPIRV::InstructionSet::NonSemantic_Shader_DebugInfo_100))
-          .addImm(Inst);
+  MRI.setType(InstReg, LLT::scalar(64));
+  MachineInstrBuilder MIB = MIRBuilder.buildInstr(SPIRV::OpExtInst)
+                                .addDef(InstReg)
+                                .addUse(GR->getSPIRVTypeID(VoidTy))
+                                .addImm(static_cast<int64_t>(DebugInfoInstSet))
+                                .addImm(Inst);
   for (auto Reg : Registers) {
     MIB.addUse(Reg);
   }
