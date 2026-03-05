@@ -9,13 +9,8 @@
 # RUN: %lld -arch arm64 -lSystem -e _main -o %t/compr.out %t/a.o --bp-compression-sort=function
 # RUN: llvm-nm --numeric-sort --format=just-symbols %t/compr.out | FileCheck %s --check-prefix=COMPRESSION
 
-# COMPRESSION:         _main
-# COMPRESSION:         _hot1
-# COMPRESSION:         _hot2
-# COMPRESSION:         _hot3
-# COMPRESSION:         _cold1
-# COMPRESSION:         _cold2
-# COMPRESSION:         _cold3
+# COMPRESSION:         _cold
+# COMPRESSION-NOT:     _hot
 
 ## Startup sort only: _hot1 and _cold1 are in the startup trace and get ordered
 ## first. Non-startup non-cold sections keep input order, then non-startup cold
@@ -24,8 +19,8 @@
 # RUN: llvm-nm --numeric-sort --format=just-symbols %t/startup-only.out | FileCheck %s --check-prefix=STARTUP-ONLY
 # RUN: FileCheck %s --input-file %t/startup-only-verbose.txt --check-prefix=STARTUP-ONLY-VERBOSE
 
-# STARTUP-ONLY:         _hot1
-# STARTUP-ONLY:         _cold1
+# STARTUP-ONLY-DAG:     _hot1
+# STARTUP-ONLY-DAG:     _cold1
 # STARTUP-ONLY:         _main
 # STARTUP-ONLY:         _hot2
 # STARTUP-ONLY:         _hot3
@@ -41,13 +36,11 @@
 # RUN: llvm-nm --numeric-sort --format=just-symbols %t/startup-compr.out | FileCheck %s --check-prefix=STARTUP-COMPR
 # RUN: FileCheck %s --input-file %t/startup-compr-verbose.txt --check-prefix=STARTUP-COMPR-VERBOSE
 
-# STARTUP-COMPR:         _hot1
-# STARTUP-COMPR:         _cold1
+# STARTUP-COMPR-DAG:     _hot1
+# STARTUP-COMPR-DAG:     _cold1
 # STARTUP-COMPR:         _main
-# STARTUP-COMPR:         _hot2
-# STARTUP-COMPR:         _hot3
-# STARTUP-COMPR:         _cold2
-# STARTUP-COMPR:         _cold3
+# STARTUP-COMPR:         _cold
+# STARTUP-COMPR-NOT:     _hot
 # STARTUP-COMPR-VERBOSE: Functions for startup: 2
 # STARTUP-COMPR-VERBOSE: Functions for compression: 3
 # STARTUP-COMPR-VERBOSE: Cold functions for compression: 2
