@@ -1145,6 +1145,17 @@ static bool argTypeIsABIEquivalent(QualType SrcType, QualType DestType,
         Context.getTypeSizeInChars(DestType))
       return true;
 
+  // Allow pointer-to-integral and integral-to-pointer conversions if sizes
+  // match. On platforms where pointers and certain integer types (like
+  // uintptr_t) have the same size, such conversions are ABI-safe.
+  if ((SrcType->isPointerType() &&
+       (DestType->isIntegralType(Context) || DestType->isEnumeralType())) ||
+      ((SrcType->isIntegralType(Context) || SrcType->isEnumeralType()) &&
+       DestType->isPointerType()))
+    if (Context.getTypeSizeInChars(SrcType) ==
+        Context.getTypeSizeInChars(DestType))
+      return true;
+
   return Context.hasSameUnqualifiedType(SrcType, DestType);
 }
 

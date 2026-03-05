@@ -2,6 +2,7 @@
 // RUN: %clang_cc1 %s -fblocks -fsyntax-only -Wextra -Wno-cast-function-type-strict -verify
 
 int x(long);
+int y(short);
 
 typedef int (f1)(long);
 typedef int (f2)(void*);
@@ -39,8 +40,8 @@ void foo() {
   a = (f1 *)x;
   a = (f1 *)efunc; // enum is just type system sugar, still passed as a long.
   a = (f1 *)e2func; // enum is just type system sugar, still passed as a long.
-  b = (f2 *)x; // expected-warning {{cast from 'int (*)(long)' to 'f2 *' (aka 'int (*)(void *)') converts to incompatible function type}}
-  b = reinterpret_cast<f2 *>(x); // expected-warning {{cast from 'int (*)(long)' to 'f2 *' (aka 'int (*)(void *)') converts to incompatible function type}}
+  b = (f2 *)y; // expected-warning {{cast from 'int (*)(short)' to 'f2 *' (aka 'int (*)(void *)') converts to incompatible function type}}
+  b = reinterpret_cast<f2 *>(y); // expected-warning {{cast from 'int (*)(short)' to 'f2 *' (aka 'int (*)(void *)') converts to incompatible function type}}
   c = (f3 *)x;
   d = (f4 *)x; // expected-warning {{cast from 'int (*)(long)' to 'f4 *' (aka 'void (*)(...)') converts to incompatible function type}}
   e = (f5 *)x;
