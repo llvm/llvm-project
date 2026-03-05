@@ -78,3 +78,57 @@ define void @test_different_evl(<vscale x 2 x float> %val, <vscale x 2 x float>*
   ret void
 }
 
+define void @test_store_splice_reverse_combiner(<vscale x 2 x float> %val, ptr %ptr, i32 zeroext %evl) {
+; CHECK-LABEL: test_store_splice_reverse_combiner:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    slli a2, a1, 2
+; CHECK-NEXT:    add a0, a2, a0
+; CHECK-NEXT:    addi a0, a0, -4
+; CHECK-NEXT:    li a2, -4
+; CHECK-NEXT:    vsetvli zero, a1, e32, m1, ta, ma
+; CHECK-NEXT:    vsse32.v v8, (a0), a2
+; CHECK-NEXT:    ret
+  %rev = call <vscale x 2 x float> @llvm.vector.reverse(<vscale x 2 x float> %val)
+  %splice = call <vscale x 2 x float> @llvm.vector.splice.right(<vscale x 2 x float> %rev, <vscale x 2 x float> poison, i32 %evl)
+  call void @llvm.vp.store.nxv2f32.p0nxv2f32(<vscale x 2 x float> %splice, ptr %ptr, <vscale x 2 x i1> splat (i1 true), i32 %evl)
+  ret void
+}
+
+define void @test_store_splice_mask_is_reverse(<vscale x 2 x float> %val, ptr %ptr, <vscale x 2 x i1> %mask, i32 zeroext %evl) {
+; CHECK-LABEL: test_store_splice_mask_is_reverse:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    slli a2, a1, 2
+; CHECK-NEXT:    add a0, a2, a0
+; CHECK-NEXT:    addi a0, a0, -4
+; CHECK-NEXT:    li a2, -4
+; CHECK-NEXT:    vsetvli zero, a1, e32, m1, ta, ma
+; CHECK-NEXT:    vsse32.v v8, (a0), a2, v0.t
+; CHECK-NEXT:    ret
+  %storemask.rev = call <vscale x 2 x i1> @llvm.vector.reverse(<vscale x 2 x i1> %mask)
+  %storemask.splice = call <vscale x 2 x i1> @llvm.vector.splice.right(<vscale x 2 x i1> %storemask.rev, <vscale x 2 x i1> poison, i32 %evl)
+  %rev = call <vscale x 2 x float> @llvm.vector.reverse(<vscale x 2 x float> %val)
+  %splice = call <vscale x 2 x float> @llvm.vector.splice.right(<vscale x 2 x float> %rev, <vscale x 2 x float> poison, i32 %evl)
+  call void @llvm.vp.store.nxv2f32.p0nxv2f32(<vscale x 2 x float> %splice, ptr %ptr, <vscale x 2 x i1> %storemask.splice, i32 %evl)
+  ret void
+}
+
+define void @test_store_splice_different_evl(<vscale x 2 x float> %val, ptr %ptr, i32 zeroext %evl1, i32 zeroext %evl2) {
+; CHECK-LABEL: test_store_splice_different_evl:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    csrr a3, vlenb
+; CHECK-NEXT:    vsetvli a4, zero, e32, m1, ta, ma
+; CHECK-NEXT:    vid.v v9
+; CHECK-NEXT:    srli a3, a3, 2
+; CHECK-NEXT:    addi a4, a3, -1
+; CHECK-NEXT:    vrsub.vx v9, v9, a4
+; CHECK-NEXT:    vrgather.vv v10, v8, v9
+; CHECK-NEXT:    sub a3, a3, a1
+; CHECK-NEXT:    vsetvli zero, a2, e32, m1, ta, ma
+; CHECK-NEXT:    vslidedown.vx v8, v10, a3
+; CHECK-NEXT:    vse32.v v8, (a0)
+; CHECK-NEXT:    ret
+  %rev = call <vscale x 2 x float> @llvm.vector.reverse(<vscale x 2 x float> %val)
+  %splice = call <vscale x 2 x float> @llvm.vector.splice.right(<vscale x 2 x float> %rev, <vscale x 2 x float> poison, i32 %evl1)
+  call void @llvm.vp.store.nxv2f32.p0nxv2f32(<vscale x 2 x float> %splice, ptr %ptr, <vscale x 2 x i1> splat (i1 true), i32 %evl2)
+  ret void
+}
