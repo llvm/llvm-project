@@ -81,10 +81,10 @@ private:
   EntityId entityIdFromJSON(const uint64_t EntityIdIndex) const;
   uint64_t entityIdToJSON(EntityId EI) const;
 
-  llvm::Expected<EntityId>
-  entityIdFromJSONObject(const Object &EntityIdObject) const;
+  static llvm::Expected<EntityId>
+  entityIdFromJSONObject(const Object &EntityIdObject);
   static Value *entityIdReferenceFromJSONObject(Object &EntityIdObject);
-  Object entityIdToJSONObject(EntityId EI) const;
+  static Object entityIdToJSONObject(EntityId EI);
 
   llvm::Expected<BuildNamespace>
   buildNamespaceFromJSON(const Object &BuildNamespaceObject) const;

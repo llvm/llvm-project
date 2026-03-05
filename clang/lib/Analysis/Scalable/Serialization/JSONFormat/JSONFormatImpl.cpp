@@ -149,7 +149,7 @@ uint64_t JSONFormat::entityIdToJSON(EntityId EI) const {
 }
 
 llvm::Expected<EntityId>
-JSONFormat::entityIdFromJSONObject(const Object &EntityIdObject) const {
+JSONFormat::entityIdFromJSONObject(const Object &EntityIdObject) {
   if (EntityIdObject.size() != 1) {
     return ErrorBuilder::create(std::errc::invalid_argument,
                                 ErrorMessages::FailedToReadEntityIdObject,
@@ -189,9 +189,9 @@ Value *JSONFormat::entityIdReferenceFromJSONObject(Object &EntityIdObject) {
   return AtVal;
 }
 
-Object JSONFormat::entityIdToJSONObject(EntityId EI) const {
+Object JSONFormat::entityIdToJSONObject(EntityId EI) {
   Object Result;
-  Result["@"] = static_cast<uint64_t>(getIndex(EI));
+  Result[JSONEntityIdKey] = static_cast<uint64_t>(getIndex(EI));
   return Result;
 }
 
@@ -666,7 +666,7 @@ JSONFormat::entitySummaryFromJSON(const SummaryName &SN,
 
   return InfoEntry.Deserialize(
       EntitySummaryObject, IdTable,
-      [this](const Object &Obj) { return entityIdFromJSONObject(Obj); });
+      [](const Object &Obj) { return entityIdFromJSONObject(Obj); });
 }
 
 llvm::Expected<Object>
@@ -684,7 +684,7 @@ JSONFormat::entitySummaryToJSON(const SummaryName &SN,
   assert(InfoEntry.ForSummary == SN);
 
   return InfoEntry.Serialize(
-      ES, [this](EntityId EI) { return entityIdToJSONObject(EI); });
+      ES, [](EntityId EI) { return entityIdToJSONObject(EI); });
 }
 
 //----------------------------------------------------------------------------

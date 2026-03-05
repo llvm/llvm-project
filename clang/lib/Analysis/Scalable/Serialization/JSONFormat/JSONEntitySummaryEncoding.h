@@ -1,4 +1,4 @@
-//===- JSONEntitySummaryEncoding.h ------------------------------*- C++ -*-===//
+//===- JSONEntitySummaryEncoding.h ----------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -22,14 +22,6 @@
 #include <map>
 
 namespace clang::ssaf {
-
-//----------------------------------------------------------------------------
-// JSONEntitySummaryEncoding
-//
-// Concrete EntitySummaryEncoding used by JSONFormat for both TUSummaryEncoding
-// and LUSummaryEncoding. Stores the raw EntitySummary JSON value opaquely so
-// the linker can patch and emit it without knowing the analysis schema.
-//----------------------------------------------------------------------------
 
 class JSONEntitySummaryEncoding final : public EntitySummaryEncoding {
   friend JSONFormat;

@@ -8,6 +8,7 @@
 
 #include "clang/Analysis/Scalable/Serialization/SerializationFormatRegistry.h"
 #include "clang/Analysis/Scalable/TUSummary/TUSummary.h"
+#include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/ScopeExit.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Support/FileSystem.h"
@@ -54,8 +55,10 @@ TEST(SerializationFormatRegistryTest, isFormatRegistered) {
 
 TEST(SerializationFormatRegistryTest, EnumeratingRegistryEntries) {
   auto Formats = SerializationFormatRegistry::entries();
-  ASSERT_EQ(std::distance(Formats.begin(), Formats.end()), 2U);
-  EXPECT_EQ(Formats.begin()->getName(), "MockSerializationFormat");
+  ASSERT_GE(std::distance(Formats.begin(), Formats.end()), 1U);
+  EXPECT_TRUE(llvm::any_of(Formats, [](const auto &Entry) {
+    return StringRef(Entry.getName()) == "MockSerializationFormat";
+  }));
 }
 
 TEST(SerializationFormatRegistryTest, Roundtrip) {

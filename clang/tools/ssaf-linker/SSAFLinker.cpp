@@ -15,16 +15,18 @@
 #include "clang/Analysis/Scalable/EntityLinker/TUSummaryEncoding.h"
 #include "clang/Analysis/Scalable/Model/BuildNamespace.h"
 #include "clang/Analysis/Scalable/Serialization/JSONFormat.h"
+#include "clang/Analysis/Scalable/Serialization/SerializationFormatRegistry.h"
 #include "llvm/ADT/STLExtras.h"
+#include "llvm/ADT/SmallVector.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/FileSystem.h"
 #include "llvm/Support/FormatVariadic.h"
+#include "llvm/Support/InitLLVM.h"
 #include "llvm/Support/Path.h"
-#include "llvm/Support/Signals.h"
+#include "llvm/Support/Process.h"
 #include "llvm/Support/Timer.h"
 #include "llvm/Support/WithColor.h"
 #include "llvm/Support/raw_ostream.h"
-#include <map>
 #include <memory>
 #include <string>
 
@@ -42,32 +44,27 @@ namespace {
 
 cl::OptionCategory SsafLinkerCategory("ssaf-linker options");
 
-cl::list<std::string> InputPaths(cl::Positional, cl::desc("input..."),
-                                 cl::value_desc("path"), cl::OneOrMore,
-                                 cl::cat(SsafLinkerCategory));
+cl::list<std::string> InputPaths(cl::Positional, cl::desc("<input files>"),
+                                 cl::OneOrMore, cl::cat(SsafLinkerCategory));
 
-cl::opt<std::string> OutputPath("output", cl::desc("Output summary path"),
+cl::opt<std::string> OutputPath("o", cl::desc("Output summary path"),
                                 cl::value_desc("path"), cl::Required,
                                 cl::cat(SsafLinkerCategory));
 
-cl::alias OutputFileShort("o", cl::aliasopt(OutputPath));
+cl::alias OutputPathLong("output", cl::aliasopt(OutputPath));
 
 cl::opt<bool> Verbose("verbose", cl::desc("Enable verbose output"),
                       cl::init(false), cl::cat(SsafLinkerCategory));
 
-cl::alias VerboseShort("v", cl::aliasopt(Verbose));
-
 cl::opt<bool> Time("time", cl::desc("Enable timing"), cl::init(false),
                    cl::cat(SsafLinkerCategory));
-
-cl::alias TimeShort("t", cl::aliasopt(Time));
 
 //===----------------------------------------------------------------------===//
 // Error Messages
 //===----------------------------------------------------------------------===//
 
 constexpr const char *ErrorCannotValidateSummary =
-    "Failed to validate summary '{0}': {1}";
+    "failed to validate summary '{0}': {1}.";
 
 constexpr const char *ErrorOutputDirectoryMissing =
     "Parent directory does not exist.";
@@ -80,17 +77,14 @@ constexpr const char *ErrorExtensionNotSupplied = "Extension not supplied.";
 constexpr const char *ErrorNoFormatForExtension =
     "Format not registered for extension '{0}'.";
 
-constexpr const char *ErrorCannotResolvePath =
-    "Failed to validate summary '{0}': {1}.";
-
 constexpr const char *ErrorLoadFailed =
-    "Failed to load input summary '{0}': {1}.";
+    "failed to load input summary '{0}': {1}.";
 
 constexpr const char *ErrorLinkFailed =
-    "Failed to link input summary '{0}': {1}.";
+    "failed to link input summary '{0}': {1}.";
 
 constexpr const char *ErrorWriteFailed =
-    "Failed to write output summary '{0}': {1}.";
+    "failed to write output summary '{0}': {1}.";
 
 //===----------------------------------------------------------------------===//
 // Diagnostic Utilities
@@ -100,11 +94,13 @@ constexpr unsigned IndentationWidth = 2;
 
 static llvm::StringRef ToolName;
 
+static void PrintVersion(llvm::raw_ostream &OS) { OS << "ssaf-linker 0.1\n"; }
+
 template <typename... Ts>
 [[noreturn]] void Fail(const char *Fmt, Ts &&...Args) {
   llvm::WithColor::error(llvm::errs(), ToolName)
       << llvm::formatv(Fmt, std::forward<Ts>(Args)...) << "\n";
-  std::exit(1);
+  llvm::sys::Process::Exit(1);
 }
 
 template <typename... Ts>
@@ -116,48 +112,31 @@ void Info(unsigned IndentationLevel, const char *Fmt, Ts &&...Args) {
   }
 }
 
-struct ScopedTimer {
-  explicit ScopedTimer(llvm::Timer &T) : T(T) {
-    if (Time) {
-      T.startTimer();
-    }
-  }
-
-  ~ScopedTimer() {
-    if (Time) {
-      T.stopTimer();
-    }
-  }
-  llvm::Timer &T;
-};
-
 //===----------------------------------------------------------------------===//
 // Format Registry
 //===----------------------------------------------------------------------===//
 
-// TODO - will be replaced by an equivalent method from the framework
-std::unique_ptr<SerializationFormat>
-MakeFormatForExtension(llvm::StringRef Extension) {
-  if (Extension == "json") {
-    return std::make_unique<JSONFormat>();
-  }
-  return nullptr;
-}
-
 SerializationFormat *GetFormatForExtension(llvm::StringRef Extension) {
-  static std::map<std::string, std::unique_ptr<SerializationFormat>>
-      ExtensionFormatMap;
+  static llvm::SmallVector<
+      std::pair<std::string, std::unique_ptr<SerializationFormat>>, 4>
+      ExtensionFormatList;
 
-  auto It = ExtensionFormatMap.find(Extension.str());
-  if (It != ExtensionFormatMap.end()) {
+  // Most recently used format is most likely to be reused again.
+  auto ReversedList = llvm::reverse(ExtensionFormatList);
+  auto It = llvm::find_if(ReversedList, [&](const auto &Entry) {
+    return Entry.first == Extension;
+  });
+  if (It != ReversedList.end()) {
     return It->second.get();
   }
 
-  auto Format = MakeFormatForExtension(Extension);
+  // SerializationFormats are uppercase while file extensions are lowercase.
+  std::string CapitalizedExtension = Extension.upper();
+  auto Format = makeFormat(CapitalizedExtension);
   SerializationFormat *Result = Format.get();
 
   if (Result) {
-    ExtensionFormatMap.emplace(Extension, std::move(Format));
+    ExtensionFormatList.emplace_back(Extension, std::move(Format));
   }
 
   return Result;
@@ -201,7 +180,7 @@ LinkerInput Validate(llvm::TimerGroup &TG) {
   LinkerInput LI;
 
   {
-    ScopedTimer _(TValidate);
+    llvm::TimeRegion _(Time ? &TValidate : nullptr);
     llvm::StringRef ParentDir = path::parent_path(OutputPath);
     llvm::StringRef DirToCheck = ParentDir.empty() ? "." : ParentDir;
 
@@ -221,12 +200,12 @@ LinkerInput Validate(llvm::TimerGroup &TG) {
   Info(2, "Validated output summary path '{0}'.", LI.OutputFile.Path);
 
   {
-    ScopedTimer _(TValidate);
+    llvm::TimeRegion _(Time ? &TValidate : nullptr);
     for (const auto &InputPath : InputPaths) {
       llvm::SmallString<256> RealPath;
       std::error_code EC = fs::real_path(InputPath, RealPath, true);
       if (EC) {
-        Fail(ErrorCannotResolvePath, InputPath, EC.message());
+        Fail(ErrorCannotValidateSummary, InputPath, EC.message());
       }
       LI.InputFiles.push_back(SummaryFile::FromPath(RealPath));
     }
@@ -256,7 +235,7 @@ void Link(const LinkerInput &LI, llvm::TimerGroup &TG) {
       Info(3, "[{0}/{1}] Reading '{2}'.", (Index + 1), LI.InputFiles.size(),
            InputFile.Path);
 
-      ScopedTimer _(TRead);
+      llvm::TimeRegion _(Time ? &TRead : nullptr);
 
       auto ExpectedSummaryEncoding =
           InputFile.Format->readTUSummaryEncoding(InputFile.Path);
@@ -273,7 +252,7 @@ void Link(const LinkerInput &LI, llvm::TimerGroup &TG) {
       Info(3, "[{0}/{1}] Linking '{2}'.", (Index + 1), LI.InputFiles.size(),
            InputFile.Path);
 
-      ScopedTimer _(TLink);
+      llvm::TimeRegion _(Time ? &TLink : nullptr);
 
       if (auto Err = EL.link(std::move(Summary))) {
         Fail(ErrorLinkFailed, InputFile.Path, toString(std::move(Err)));
@@ -284,7 +263,7 @@ void Link(const LinkerInput &LI, llvm::TimerGroup &TG) {
   {
     Info(2, "Writing output summary to '{0}'.", LI.OutputFile.Path);
 
-    ScopedTimer _(TWrite);
+    llvm::TimeRegion _(Time ? &TWrite : nullptr);
 
     auto Output = std::move(EL).getOutput();
     if (auto Err = LI.OutputFile.Format->writeLUSummaryEncoding(
@@ -301,11 +280,12 @@ void Link(const LinkerInput &LI, llvm::TimerGroup &TG) {
 //===----------------------------------------------------------------------===//
 
 int main(int argc, const char **argv) {
-  ToolName = argv[0];
+  InitLLVM X(argc, argv);
+  ToolName = llvm::sys::path::filename(argv[0]);
   initializeJSONFormat();
-  sys::PrintStackTraceOnErrorSignal(argv[0]);
 
   cl::HideUnrelatedOptions(SsafLinkerCategory);
+  cl::SetVersionPrinter(PrintVersion);
   cl::ParseCommandLineOptions(argc, argv, "SSAF Linker\n");
 
   llvm::TimerGroup LinkerTimers("ssaf-linker", "SSAF Linker");
@@ -325,10 +305,6 @@ int main(int argc, const char **argv) {
     }
 
     Info(0, "Linking finished.");
-  }
-
-  if (Time) {
-    LinkerTimers.print(llvm::errs());
   }
 
   return 0;

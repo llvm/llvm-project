@@ -122,12 +122,8 @@ inline constexpr const char *FailedToPatchEntityIdNotInTable =
 // Entity Id JSON Representation
 //----------------------------------------------------------------------------
 
-namespace {
-
 /// An entity ID is encoded as the single-key object {"@": <index>}.
 inline constexpr const char *JSONEntityIdKey = "@";
-
-} // namespace
 
 //----------------------------------------------------------------------------
 // JSON Reader and Writer
