@@ -1194,9 +1194,11 @@ def ZPR    : ZPRClass<0, 31> {
 }
 def ZPR_4b : ZPRClass<0, 15> { // Restricted 4 bit SVE vector register class.
   let DecoderMethod = "DecodeSimpleRegisterClass<AArch64::ZPRRegClassID, 0, 16>";
+  let AllocationPriority = 1;
 }
 def ZPR_3b : ZPRClass<0, 7> {  // Restricted 3 bit SVE vector register class.
   let DecoderMethod = "DecodeSimpleRegisterClass<AArch64::ZPRRegClassID, 0, 8>";
+  let AllocationPriority = 2;
 }
 
 class ZPRAsmOperand<string name, int Width, string RegClassSuffix = "">
