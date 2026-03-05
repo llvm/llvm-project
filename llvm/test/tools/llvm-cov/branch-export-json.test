@@ -18,7 +18,7 @@
 // CHECK: 45,5,45,11,0,5,0,0,4
 // CHECK: 47,5,47,12,3,2,0,0,4
 // CHECK: 53,12,53,20,50,5,0,0,4
-// CHECK: {"count":30,"covered":26,"notcovered":4,"percent":86.666666666666671}
+// CHECK: {"count":30,"covered":26,"notcovered":4,"percent":86.6[[#]]}
 
 // Check recursive macro-expansions.
 // RUN: llvm-profdata merge %S/Inputs/branch-macros.proftext -o %t.profdata
@@ -46,4 +46,4 @@
 // MACROS: 5,15,5,23,1,2,8,0,4
 // MACROS: 6,15,6,23,0,1,9,0,4
 // MACROS: 8,15,8,38,1,2,2,0,4
-// MACROS: {"count":40,"covered":24,"notcovered":16,"percent":60}
+// MACROS: {"count":16,"covered":6,"notcovered":10,"percent":37.5}

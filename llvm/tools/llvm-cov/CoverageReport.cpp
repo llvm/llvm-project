@@ -448,27 +448,47 @@ void CoverageReport::prepareSingleFileReport(const StringRef Filename,
     const coverage::CoverageMapping *Coverage,
     const CoverageViewOptions &Options, const unsigned LCP,
     FileCoverageSummary *FileReport, const CoverageFilter *Filters) {
+  DenseSet<const coverage::FunctionRecord *> FilteredOutFunctions;
+  assert(FileReport->empty());
   for (const auto &Group : Coverage->getInstantiationGroups(Filename)) {
-    std::vector<FunctionCoverageSummary> InstantiationSummaries;
+    bool Updated = false;
     for (const coverage::FunctionRecord *F : Group.getInstantiations()) {
-      if (!Filters->matches(*Coverage, *F))
+      if (!Filters->matches(*Coverage, *F)) {
+        FilteredOutFunctions.insert(F);
         continue;
-      auto InstantiationSummary = FunctionCoverageSummary::get(*Coverage, *F);
-      FileReport->addInstantiation(InstantiationSummary);
-      InstantiationSummaries.push_back(InstantiationSummary);
+      }
+      FileReport->InstantiationCoverage.addFunction(
+          /*Covered=*/F->ExecutionCount > 0);
+      Updated = true;
     }
-    if (InstantiationSummaries.empty())
+    if (!Updated)
       continue;
 
-    auto GroupSummary =
-        FunctionCoverageSummary::get(Group, InstantiationSummaries);
+    if (Options.Debug) {
+      std::string Name;
+      if (Group.hasName()) {
+        Name = std::string(Group.getName());
+      } else {
+        llvm::raw_string_ostream OS(Name);
+        OS << "Definition at line " << Group.getLine() << ", column "
+           << Group.getColumn();
+      }
 
-    if (Options.Debug)
-      outs() << "InstantiationGroup: " << GroupSummary.Name << " with "
+      outs() << "InstantiationGroup: " << Name << " with "
              << "size = " << Group.size() << "\n";
+    }
 
-    FileReport->addFunction(GroupSummary);
+    FileReport->FunctionCoverage.addFunction(
+        /*Covered=*/Group.getTotalExecutionCount() > 0);
   }
+
+  auto FileCoverage = Coverage->getCoverageForFile(
+      Filename, Options.MergeStrategyOpts, FilteredOutFunctions);
+  if (FileCoverage.empty())
+    return;
+
+  *static_cast<CoverageDataSummary *>(FileReport) +=
+      CoverageDataSummary(FileCoverage);
 }
 
 std::vector<FileCoverageSummary> CoverageReport::prepareFileReports(
