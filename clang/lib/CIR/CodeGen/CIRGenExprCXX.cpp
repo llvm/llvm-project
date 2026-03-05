@@ -682,9 +682,9 @@ RValue CIRGenFunction::emitNewOrDeleteBuiltinCall(const FunctionProtoType *type,
 
   clang::DeclContextLookupResult lookupResult =
       astContext.getTranslationUnitDecl()->lookup(name);
-  for (const auto *decl : lookupResult) {
+  for (const NamedDecl *decl : lookupResult) {
     if (const auto *funcDecl = dyn_cast<FunctionDecl>(decl)) {
-      if (astContext.hasSameType(funcDecl->getType(), QualType(type, 0))) {
+      if (astContext.hasSameType(funcDecl->getType().getTypePtr(), type)) {
         if (sanOpts.has(SanitizerKind::AllocToken)) {
           // TODO: Set !alloc_token metadata.
           assert(!cir::MissingFeatures::allocToken());
@@ -1329,20 +1329,16 @@ mlir::Value CIRGenFunction::emitCXXNewExpr(const CXXNewExpr *e) {
     cgm.errorNYI(e->getSourceRange(), "emitCXXNewExpr: null check");
 
   // If there's an operator delete, enter a cleanup to call it if an
-  // exception is thrown. If we do this, we'l be creating the result pointer
+  // exception is thrown. If we do this, we'll be creating the result pointer
   // inside a cleanup scope, either with a bitcast or an offset based on the
   // array cookie size. However, we need to return that pointer from outside
   // the cleanup scope, so we need to store it in a temporary variable.
   bool useNewDeleteCleanup =
       e->getOperatorDelete() &&
       !e->getOperatorDelete()->isReservedGlobalPlacementOperator();
-  // These variables are only used if we use the new delete cleanup.
-  mlir::OpBuilder::InsertPoint beforeNewDeleteCleanup;
   EHScopeStack::stable_iterator operatorDeleteCleanup;
-  Address resultPtr = Address::invalid();
   mlir::Operation *cleanupDominator = nullptr;
   if (useNewDeleteCleanup) {
-    beforeNewDeleteCleanup = builder.saveInsertionPoint();
     assert(!cir::MissingFeatures::typeAwareAllocation());
     enterNewDeleteCleanup(*this, e, allocation, allocSize, allocAlign,
                           allocatorArgs);
@@ -1370,6 +1366,7 @@ mlir::Value CIRGenFunction::emitCXXNewExpr(const CXXNewExpr *e) {
                                                 allocation, elementTy);
 
   // If we're inside a new delete cleanup, store the result pointer.
+  Address resultPtr = Address::invalid();
   if (useNewDeleteCleanup) {
     resultPtr =
         createTempAlloca(builder.getPointerTo(elementTy), result.getAlignment(),
