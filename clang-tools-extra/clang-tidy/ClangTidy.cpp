@@ -446,7 +446,7 @@ ClangTidyASTConsumerFactory::createASTConsumer(
   if (!Context.getOptions().SystemHeaders.value_or(false))
     FinderOptions.IgnoreSystemHeaders = true;
 
-  std::unique_ptr<ast_matchers::MatchFinder> Finder =
+  auto Finder =
       std::make_unique<ast_matchers::MatchFinder>(std::move(FinderOptions));
 
   Preprocessor *PP = &Compiler.getPreprocessor();
