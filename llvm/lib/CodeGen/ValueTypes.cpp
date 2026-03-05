@@ -333,6 +333,13 @@ const fltSemantics &EVT::getFltSemantics() const {
   return getScalarType().getSimpleVT().getFltSemantics();
 }
 
+std::string MVT::getString() const {
+  if (SimpleTy == INVALID_SIMPLE_VALUE_TYPE)
+    return "invalid";
+
+  return EVT(*this).getEVTString();
+}
+
 #if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
 void MVT::dump() const {
   print(dbgs());
@@ -340,9 +347,4 @@ void MVT::dump() const {
 }
 #endif
 
-void MVT::print(raw_ostream &OS) const {
-  if (SimpleTy == INVALID_SIMPLE_VALUE_TYPE)
-    OS << "invalid";
-  else
-    OS << EVT(*this).getEVTString();
-}
+void MVT::print(raw_ostream &OS) const { OS << getString(); }
