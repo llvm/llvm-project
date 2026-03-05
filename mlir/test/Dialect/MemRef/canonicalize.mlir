@@ -47,7 +47,7 @@ func.func @subview_of_size_memcast(%arg : memref<4x6x16x32xi8>) ->
 //       CHECK: func @subview_of_strides_memcast
 //  CHECK-SAME:   %[[ARG0:.[a-z0-9A-Z_]+]]: memref<1x1x?xf32, strided{{.*}}>
 //       CHECK:   %[[S:.+]] = memref.subview %[[ARG0]][0, 0, 0] [1, 1, 4]
-//  CHECK-SAME:                    to memref<1x4xf32, strided<[7, 1], offset: ?>>
+//  CHECK-SAME:                    to memref<1x4xf32, strided<[35, 1], offset: ?>>
 //       CHECK:   %[[M:.+]] = memref.cast %[[S]]
 //  CHECK-SAME:                    to memref<1x4xf32, strided<[?, ?], offset: ?>>
 //       CHECK:   return %[[M]]
@@ -1381,6 +1381,21 @@ func.func @expand_collapse_do_not_fold_to_cast(%m: memref<1x3x2x384xui8, strided
       : memref<3x2x384xui8, strided<[768, 384, 1]>>
         into memref<3x1x2x384xui8, strided<[768, 768, 384, 1]>>
   return %1 : memref<3x1x2x384xui8, strided<[768, 768, 384, 1]>>
+}
+
+// -----
+
+// CHECK-LABEL: func @expand_collapse_dynamic_do_not_fold_to_cast(
+//   CHECK-NOT:   memref.cast
+
+func.func @expand_collapse_dynamic_do_not_fold_to_cast(%m: memref<1x?x1x32xsi8, strided<[?, 32, 32, 1]>>, %dyn_size: index)
+    -> (memref<1x1x?x32xsi8, strided<[?, ?, 32, 1]>>)
+  {
+  %0 = memref.collapse_shape %m [[0], [1, 2], [3]]
+      : memref<1x?x1x32xsi8, strided<[?, 32, 32, 1]>> into memref<1x?x32xsi8, strided<[?, 32, 1]>>
+  %1 = memref.expand_shape %0 [[0, 1], [2], [3]] output_shape [1, 1, %dyn_size, 32]
+      : memref<1x?x32xsi8, strided<[?, 32, 1]>> into memref<1x1x?x32xsi8, strided<[?, ?, 32, 1]>>
+  return %1 : memref<1x1x?x32xsi8, strided<[?, ?, 32, 1]>>
 }
 
 // -----

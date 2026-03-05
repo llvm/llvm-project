@@ -7,8 +7,6 @@
 // CHECK-LABEL: define dso_local i32 @foo(
 // CHECK-SAME: ) #[[ATTR0:[0-9]+]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
-// CHECK-NEXT:    [[RETVAL:%.*]] = alloca i32, align 4, addrspace(5)
-// CHECK-NEXT:    [[RETVAL_ASCAST:%.*]] = addrspacecast ptr addrspace(5) [[RETVAL]] to ptr
 // CHECK-NEXT:    [[TMP0:%.*]] = load i32, ptr addrspace(4) @__oclc_ABI_version, align 4
 // CHECK-NEXT:    [[TMP1:%.*]] = icmp sge i32 [[TMP0]], 500
 // CHECK-NEXT:    [[TMP2:%.*]] = call align 8 dereferenceable(256) ptr addrspace(4) @llvm.amdgcn.implicitarg.ptr()
@@ -16,7 +14,7 @@
 // CHECK-NEXT:    [[TMP4:%.*]] = call align 4 dereferenceable(64) ptr addrspace(4) @llvm.amdgcn.dispatch.ptr()
 // CHECK-NEXT:    [[TMP5:%.*]] = getelementptr i8, ptr addrspace(4) [[TMP4]], i32 4
 // CHECK-NEXT:    [[TMP6:%.*]] = select i1 [[TMP1]], ptr addrspace(4) [[TMP3]], ptr addrspace(4) [[TMP5]]
-// CHECK-NEXT:    [[TMP7:%.*]] = load i16, ptr addrspace(4) [[TMP6]], align 2, !range [[RNG2:![0-9]+]], !invariant.load [[META3:![0-9]+]], !noundef [[META3]]
+// CHECK-NEXT:    [[TMP7:%.*]] = load i16, ptr addrspace(4) [[TMP6]], align 2, !range [[RNG1:![0-9]+]], !invariant.load [[META2:![0-9]+]], !noundef [[META2]]
 // CHECK-NEXT:    [[CONV:%.*]] = zext i16 [[TMP7]] to i32
 // CHECK-NEXT:    ret i32 [[CONV]]
 //
@@ -25,8 +23,7 @@ int foo() { return __builtin_amdgcn_workgroup_size_x(); }
 // CHECK: attributes #[[ATTR0]] = { convergent noinline nounwind optnone "no-trapping-math"="true" "stack-protector-buffer-size"="8" }
 // CHECK: attributes #[[ATTR1:[0-9]+]] = { nocallback nofree nosync nounwind speculatable willreturn memory(none) }
 //.
-// CHECK: [[META0:![0-9]+]] = !{i32 1, !"wchar_size", i32 4}
-// CHECK: [[META1:![0-9]+]] = !{!"{{.*}}clang version {{.*}}"}
-// CHECK: [[RNG2]] = !{i16 1, i16 1025}
-// CHECK: [[META3]] = !{}
+// CHECK: [[META0:![0-9]+]] = !{!"{{.*}}clang version {{.*}}"}
+// CHECK: [[RNG1]] = !{i16 1, i16 1025}
+// CHECK: [[META2]] = !{}
 //.

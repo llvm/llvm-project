@@ -694,30 +694,14 @@ SystemZTargetLowering::SystemZTargetLowering(const TargetMachine &TM,
     setOperationAction(ISD::FROUND, MVT::v4f32, Legal);
     setOperationAction(ISD::FROUNDEVEN, MVT::v4f32, Legal);
 
-    setOperationAction(ISD::FMAXNUM, MVT::f64, Legal);
-    setOperationAction(ISD::FMAXIMUM, MVT::f64, Legal);
-    setOperationAction(ISD::FMINNUM, MVT::f64, Legal);
-    setOperationAction(ISD::FMINIMUM, MVT::f64, Legal);
-
-    setOperationAction(ISD::FMAXNUM, MVT::v2f64, Legal);
-    setOperationAction(ISD::FMAXIMUM, MVT::v2f64, Legal);
-    setOperationAction(ISD::FMINNUM, MVT::v2f64, Legal);
-    setOperationAction(ISD::FMINIMUM, MVT::v2f64, Legal);
-
-    setOperationAction(ISD::FMAXNUM, MVT::f32, Legal);
-    setOperationAction(ISD::FMAXIMUM, MVT::f32, Legal);
-    setOperationAction(ISD::FMINNUM, MVT::f32, Legal);
-    setOperationAction(ISD::FMINIMUM, MVT::f32, Legal);
-
-    setOperationAction(ISD::FMAXNUM, MVT::v4f32, Legal);
-    setOperationAction(ISD::FMAXIMUM, MVT::v4f32, Legal);
-    setOperationAction(ISD::FMINNUM, MVT::v4f32, Legal);
-    setOperationAction(ISD::FMINIMUM, MVT::v4f32, Legal);
-
-    setOperationAction(ISD::FMAXNUM, MVT::f128, Legal);
-    setOperationAction(ISD::FMAXIMUM, MVT::f128, Legal);
-    setOperationAction(ISD::FMINNUM, MVT::f128, Legal);
-    setOperationAction(ISD::FMINIMUM, MVT::f128, Legal);
+    for (MVT Type : {MVT::f64, MVT::v2f64, MVT::f32, MVT::v4f32, MVT::f128}) {
+      setOperationAction(ISD::FMAXNUM, Type, Legal);
+      setOperationAction(ISD::FMAXIMUM, Type, Legal);
+      setOperationAction(ISD::FMAXIMUMNUM, Type, Legal);
+      setOperationAction(ISD::FMINNUM, Type, Legal);
+      setOperationAction(ISD::FMINIMUM, Type, Legal);
+      setOperationAction(ISD::FMINIMUMNUM, Type, Legal);
+    }
 
     // Handle constrained floating-point operations.
     setOperationAction(ISD::STRICT_FADD, MVT::v4f32, Legal);
@@ -1473,7 +1457,7 @@ bool SystemZTargetLowering::isLegalAddressingMode(const DataLayout &DL,
 bool SystemZTargetLowering::findOptimalMemOpLowering(
     LLVMContext &Context, std::vector<EVT> &MemOps, unsigned Limit,
     const MemOp &Op, unsigned DstAS, unsigned SrcAS,
-    const AttributeList &FuncAttributes) const {
+    const AttributeList &FuncAttributes, EVT *LargestVT) const {
   const int MVCFastLen = 16;
 
   if (Limit != ~unsigned(0)) {
@@ -1486,8 +1470,8 @@ bool SystemZTargetLowering::findOptimalMemOpLowering(
       return false; // Memset zero: Use XC
   }
 
-  return TargetLowering::findOptimalMemOpLowering(Context, MemOps, Limit, Op,
-                                                  DstAS, SrcAS, FuncAttributes);
+  return TargetLowering::findOptimalMemOpLowering(
+      Context, MemOps, Limit, Op, DstAS, SrcAS, FuncAttributes, LargestVT);
 }
 
 EVT SystemZTargetLowering::getOptimalMemOpType(

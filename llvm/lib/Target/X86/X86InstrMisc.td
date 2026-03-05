@@ -1340,23 +1340,19 @@ def AndMask64 : ImmLeaf<i64, [{
 let Predicates = [HasBMI, NoBMI2, NoTBM, NoEGPR] in {
   def : Pat<(and GR64:$src, AndMask64:$mask),
             (BEXTR64rr GR64:$src,
-              (SUBREG_TO_REG (i64 0),
-                             (MOV32ri (BEXTRMaskXForm imm:$mask)), sub_32bit))>;
+              (SUBREG_TO_REG (MOV32ri (BEXTRMaskXForm imm:$mask)), sub_32bit))>;
   def : Pat<(and (loadi64 addr:$src), AndMask64:$mask),
             (BEXTR64rm addr:$src,
-              (SUBREG_TO_REG (i64 0),
-                             (MOV32ri (BEXTRMaskXForm imm:$mask)), sub_32bit))>;
+              (SUBREG_TO_REG (MOV32ri (BEXTRMaskXForm imm:$mask)), sub_32bit))>;
 }
 
 let Predicates = [HasBMI, NoBMI2, NoTBM, HasEGPR] in {
   def : Pat<(and GR64:$src, AndMask64:$mask),
             (BEXTR64rr_EVEX GR64:$src,
-              (SUBREG_TO_REG (i64 0),
-                             (MOV32ri (BEXTRMaskXForm imm:$mask)), sub_32bit))>;
+              (SUBREG_TO_REG (MOV32ri (BEXTRMaskXForm imm:$mask)), sub_32bit))>;
   def : Pat<(and (loadi64 addr:$src), AndMask64:$mask),
             (BEXTR64rm_EVEX addr:$src,
-              (SUBREG_TO_REG (i64 0),
-                             (MOV32ri (BEXTRMaskXForm imm:$mask)), sub_32bit))>;
+              (SUBREG_TO_REG (MOV32ri (BEXTRMaskXForm imm:$mask)), sub_32bit))>;
 }
 
 // Use BZHI for 64-bit 'and' with large immediate 'mask'.

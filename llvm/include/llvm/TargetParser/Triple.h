@@ -252,8 +252,11 @@ public:
     Serenity,
     Vulkan, // Vulkan SPIR-V
     CheriotRTOS,
+    OpenCL,
     ChipStar,
-    LastOSType = ChipStar
+    Firmware,
+    QURT,
+    LastOSType = QURT
   };
   enum EnvironmentType {
     UnknownEnvironment,
@@ -313,7 +316,6 @@ public:
     Mesh,
     Amplification,
     RootSignature,
-    OpenCL,
     OpenHOS,
     Mlibc,
 
@@ -627,11 +629,18 @@ public:
     return (getVendor() == Triple::Apple) && isOSBinFormatMachO();
   }
 
+  /// Is this an Apple firmware triple.
+  bool isAppleFirmware() const {
+    return (getVendor() == Triple::Apple) && isOSFirmware();
+  }
+
   /// Is this a "Darwin" OS (macOS, iOS, tvOS, watchOS, DriverKit, XROS, or
   /// bridgeOS).
   bool isOSDarwin() const {
     return isMacOSX() || isiOS() || isWatchOS() || isDriverKit() || isXROS() ||
-           isBridgeOS();
+           isBridgeOS() || isAppleFirmware();
+    // Apple firmware isn't necessarily a Darwin based OS, but for most intents
+    // and purposes it can be treated like a Darwin OS in the compiler.
   }
 
   bool isSimulatorEnvironment() const {
@@ -787,6 +796,9 @@ public:
     return getOS() == Triple::Serenity;
   }
 
+  /// Tests whether the OS is QURT.
+  bool isOSQurt() const { return getOS() == Triple::QURT; }
+
   /// Tests whether the OS uses the ELF binary format.
   bool isOSBinFormatELF() const {
     return getObjectFormat() == Triple::ELF;
@@ -892,6 +904,8 @@ public:
   bool isVulkanOS() const { return getOS() == Triple::Vulkan; }
 
   bool isOSManagarm() const { return getOS() == Triple::Managarm; }
+
+  bool isOSFirmware() const { return getOS() == Triple::Firmware; }
 
   bool isShaderStageEnvironment() const {
     EnvironmentType Env = getEnvironment();
@@ -1047,6 +1061,8 @@ public:
                ? PointerWidth == 32
                : PointerWidth == 64;
   }
+
+  bool isAVR() const { return getArch() == Triple::avr; }
 
   /// Tests whether the target is 32-bit LoongArch.
   bool isLoongArch32() const { return getArch() == Triple::loongarch32; }
@@ -1222,6 +1238,9 @@ public:
   bool hasDefaultDataSections() const {
     return isOSBinFormatXCOFF() || isWasm();
   }
+
+  /// Returns the default wchar_t size (in bytes) for this target triple.
+  unsigned getDefaultWCharSize() const;
 
   /// Tests if the environment supports dllimport/export annotations.
   bool hasDLLImportExport() const { return isOSWindows() || isPS(); }

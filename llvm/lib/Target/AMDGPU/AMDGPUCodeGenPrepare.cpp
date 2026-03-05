@@ -101,10 +101,9 @@ public:
   const GCNSubtarget &ST;
   const AMDGPUTargetMachine &TM;
   const TargetLibraryInfo *TLI;
-  AssumptionCache *AC;
-  const DominatorTree *DT;
   const UniformityInfo &UA;
   const DataLayout &DL;
+  SimplifyQuery SQ;
   const bool HasFP32DenormalFlush;
   bool FlowChanged = false;
   mutable Function *SqrtF32 = nullptr;
@@ -116,8 +115,8 @@ public:
   AMDGPUCodeGenPrepareImpl(Function &F, const AMDGPUTargetMachine &TM,
                            const TargetLibraryInfo *TLI, AssumptionCache *AC,
                            const DominatorTree *DT, const UniformityInfo &UA)
-      : F(F), ST(TM.getSubtarget<GCNSubtarget>(F)), TM(TM), TLI(TLI), AC(AC),
-        DT(DT), UA(UA), DL(F.getDataLayout()),
+      : F(F), ST(TM.getSubtarget<GCNSubtarget>(F)), TM(TM), TLI(TLI), UA(UA),
+        DL(F.getDataLayout()), SQ(DL, TLI, DT, AC),
         HasFP32DenormalFlush(SIModeRegisterDefaults(F, ST).FP32Denormals ==
                              DenormalMode::getPreserveSign()) {}
 
@@ -150,7 +149,8 @@ public:
   /// Wrapper to pass all the arguments to computeKnownFPClass
   KnownFPClass computeKnownFPClass(const Value *V, FPClassTest Interested,
                                    const Instruction *CtxI) const {
-    return llvm::computeKnownFPClass(V, DL, Interested, TLI, AC, CtxI, DT);
+    return llvm::computeKnownFPClass(V, Interested,
+                                     SQ.getWithInstruction(CtxI));
   }
 
   bool canIgnoreDenormalInput(const Value *V, const Instruction *CtxI) const {
@@ -161,12 +161,12 @@ public:
   /// \returns The minimum number of bits needed to store the value of \Op as an
   /// unsigned integer. Truncating to this size and then zero-extending to
   /// the original will not change the value.
-  unsigned numBitsUnsigned(Value *Op) const;
+  unsigned numBitsUnsigned(Value *Op, const Instruction *CtxI) const;
 
   /// \returns The minimum number of bits needed to store the value of \Op as a
   /// signed integer. Truncating to this size and then sign-extending to
   /// the original size will not change the value.
-  unsigned numBitsSigned(Value *Op) const;
+  unsigned numBitsSigned(Value *Op, const Instruction *CtxI) const;
 
   /// Replace mul instructions with llvm.amdgcn.mul.u24 or llvm.amdgcn.mul.s24.
   /// SelectionDAG has an issue where an and asserting the bits are known
@@ -260,6 +260,7 @@ public:
   bool visitIntrinsicInst(IntrinsicInst &I);
   bool visitFMinLike(IntrinsicInst &I);
   bool visitSqrt(IntrinsicInst &I);
+  bool visitLog(FPMathOperator &Log, Intrinsic::ID IID);
   bool visitMbcntLo(IntrinsicInst &I) const;
   bool visitMbcntHi(IntrinsicInst &I) const;
   bool run();
@@ -319,12 +320,16 @@ bool AMDGPUCodeGenPrepareImpl::canWidenScalarExtLoad(LoadInst &I) const {
   return I.isSimple() && TySize < 32 && Alignment >= 4 && UA.isUniform(&I);
 }
 
-unsigned AMDGPUCodeGenPrepareImpl::numBitsUnsigned(Value *Op) const {
-  return computeKnownBits(Op, DL, AC).countMaxActiveBits();
+unsigned
+AMDGPUCodeGenPrepareImpl::numBitsUnsigned(Value *Op,
+                                          const Instruction *CtxI) const {
+  return computeKnownBits(Op, SQ.getWithInstruction(CtxI)).countMaxActiveBits();
 }
 
-unsigned AMDGPUCodeGenPrepareImpl::numBitsSigned(Value *Op) const {
-  return ComputeMaxSignificantBits(Op, DL, AC);
+unsigned
+AMDGPUCodeGenPrepareImpl::numBitsSigned(Value *Op,
+                                        const Instruction *CtxI) const {
+  return ComputeMaxSignificantBits(Op, SQ.DL, SQ.AC, CtxI, SQ.DT);
 }
 
 static void extractValues(IRBuilder<> &Builder,
@@ -375,12 +380,12 @@ bool AMDGPUCodeGenPrepareImpl::replaceMulWithMul24(BinaryOperator &I) const {
   unsigned LHSBits = 0, RHSBits = 0;
   bool IsSigned = false;
 
-  if (ST.hasMulU24() && (LHSBits = numBitsUnsigned(LHS)) <= 24 &&
-      (RHSBits = numBitsUnsigned(RHS)) <= 24) {
+  if (ST.hasMulU24() && (LHSBits = numBitsUnsigned(LHS, &I)) <= 24 &&
+      (RHSBits = numBitsUnsigned(RHS, &I)) <= 24) {
     IsSigned = false;
 
-  } else if (ST.hasMulI24() && (LHSBits = numBitsSigned(LHS)) <= 24 &&
-             (RHSBits = numBitsSigned(RHS)) <= 24) {
+  } else if (ST.hasMulI24() && (LHSBits = numBitsSigned(LHS, &I)) <= 24 &&
+             (RHSBits = numBitsSigned(RHS, &I)) <= 24) {
     IsSigned = true;
 
   } else
@@ -1019,13 +1024,13 @@ unsigned AMDGPUCodeGenPrepareImpl::getDivNumBits(BinaryOperator &I, Value *Num,
          Den->getType()->getScalarSizeInBits());
   unsigned SSBits = Num->getType()->getScalarSizeInBits();
   if (IsSigned) {
-    unsigned RHSSignBits = ComputeNumSignBits(Den, DL, AC, &I);
+    unsigned RHSSignBits = ComputeNumSignBits(Den, SQ.DL, SQ.AC, &I, SQ.DT);
     // A sign bit needs to be reserved for shrinking.
     unsigned DivBits = SSBits - RHSSignBits + 1;
     if (DivBits > MaxDivBits)
       return SSBits;
 
-    unsigned LHSSignBits = ComputeNumSignBits(Num, DL, AC, &I);
+    unsigned LHSSignBits = ComputeNumSignBits(Num, SQ.DL, SQ.AC, &I);
 
     unsigned SignBits = std::min(LHSSignBits, RHSSignBits);
     DivBits = SSBits - SignBits + 1;
@@ -1034,7 +1039,7 @@ unsigned AMDGPUCodeGenPrepareImpl::getDivNumBits(BinaryOperator &I, Value *Num,
 
   // All bits are used for unsigned division for Num or Den in range
   // (SignedMax, UnsignedMax].
-  KnownBits Known = computeKnownBits(Den, DL, AC, &I);
+  KnownBits Known = computeKnownBits(Den, SQ.getWithInstruction(&I));
   if (Known.isNegative() || !Known.isNonNegative())
     return SSBits;
   unsigned RHSSignBits = Known.countMinLeadingZeros();
@@ -1042,7 +1047,7 @@ unsigned AMDGPUCodeGenPrepareImpl::getDivNumBits(BinaryOperator &I, Value *Num,
   if (DivBits > MaxDivBits)
     return SSBits;
 
-  Known = computeKnownBits(Num, DL, AC, &I);
+  Known = computeKnownBits(Num, SQ.getWithInstruction(&I));
   if (Known.isNegative() || !Known.isNonNegative())
     return SSBits;
   unsigned LHSSignBits = Known.countMinLeadingZeros();
@@ -1179,7 +1184,7 @@ bool AMDGPUCodeGenPrepareImpl::divHasSpecialOptimization(BinaryOperator &I,
     // If there's no wider mulhi, there's only a better expansion for powers of
     // two.
     // TODO: Should really know for each vector element.
-    if (isKnownToBeAPowerOfTwo(C, DL, true, AC, &I, DT))
+    if (isKnownToBeAPowerOfTwo(C, true, SQ.getWithInstruction(&I)))
       return true;
 
     return false;
@@ -1189,7 +1194,8 @@ bool AMDGPUCodeGenPrepareImpl::divHasSpecialOptimization(BinaryOperator &I,
     // fold (udiv x, (shl c, y)) -> x >>u (log2(c)+y) iff c is power of 2
     if (BinOpDen->getOpcode() == Instruction::Shl &&
         isa<Constant>(BinOpDen->getOperand(0)) &&
-        isKnownToBeAPowerOfTwo(BinOpDen->getOperand(0), DL, true, AC, &I, DT)) {
+        isKnownToBeAPowerOfTwo(BinOpDen->getOperand(0), true,
+                               SQ.getWithInstruction(&I))) {
       return true;
     }
   }
@@ -1993,13 +1999,20 @@ bool AMDGPUCodeGenPrepareImpl::visitAddrSpaceCastInst(AddrSpaceCastInst &I) {
 }
 
 bool AMDGPUCodeGenPrepareImpl::visitIntrinsicInst(IntrinsicInst &I) {
-  switch (I.getIntrinsicID()) {
+  Intrinsic::ID IID = I.getIntrinsicID();
+  switch (IID) {
   case Intrinsic::minnum:
   case Intrinsic::minimumnum:
   case Intrinsic::minimum:
     return visitFMinLike(I);
   case Intrinsic::sqrt:
     return visitSqrt(I);
+  case Intrinsic::log:
+  case Intrinsic::log10:
+    return visitLog(cast<FPMathOperator>(I), IID);
+  case Intrinsic::log2:
+    // No reason to handle log2.
+    return false;
   case Intrinsic::amdgcn_mbcnt_lo:
     return visitMbcntLo(I);
   case Intrinsic::amdgcn_mbcnt_hi:
@@ -2078,7 +2091,7 @@ bool AMDGPUCodeGenPrepareImpl::visitFMinLike(IntrinsicInst &I) {
 
   // Match pattern for fract intrinsic in contexts where the nan check has been
   // optimized out (and hope the knowledge the source can't be nan wasn't lost).
-  if (!I.hasNoNaNs() && !isKnownNeverNaN(FractArg, SimplifyQuery(DL, TLI)))
+  if (!I.hasNoNaNs() && !isKnownNeverNaN(FractArg, SQ.getWithInstruction(&I)))
     return false;
 
   IRBuilder<> Builder(&I);
@@ -2137,6 +2150,43 @@ bool AMDGPUCodeGenPrepareImpl::visitSqrt(IntrinsicInst &Sqrt) {
   NewSqrt->takeName(&Sqrt);
   Sqrt.replaceAllUsesWith(NewSqrt);
   DeadVals.push_back(&Sqrt);
+  return true;
+}
+
+/// Replace log and log10 intrinsic calls based on fpmath metadata.
+bool AMDGPUCodeGenPrepareImpl::visitLog(FPMathOperator &Log,
+                                        Intrinsic::ID IID) {
+  Type *Ty = Log.getType();
+  if (!Ty->getScalarType()->isHalfTy() || !ST.has16BitInsts())
+    return false;
+
+  FastMathFlags FMF = Log.getFastMathFlags();
+
+  // Defer fast math cases to codegen.
+  if (FMF.approxFunc())
+    return false;
+
+  // Limit experimentally determined from OpenCL conformance test (1.79)
+  if (Log.getFPAccuracy() < 1.80f)
+    return false;
+
+  IRBuilder<> Builder(&cast<CallInst>(Log));
+
+  // Use the generic intrinsic for convenience in the vector case. Codegen will
+  // recognize the denormal handling is not necessary from the fpext.
+  // TODO: Move to generic code
+  Value *Log2 =
+      Builder.CreateUnaryIntrinsic(Intrinsic::log2, Log.getOperand(0), FMF);
+
+  double Log2BaseInverted =
+      IID == Intrinsic::log10 ? numbers::ln2 / numbers::ln10 : numbers::ln2;
+  Value *Mul =
+      Builder.CreateFMulFMF(Log2, ConstantFP::get(Ty, Log2BaseInverted), FMF);
+
+  Mul->takeName(&Log);
+
+  Log.replaceAllUsesWith(Mul);
+  DeadVals.push_back(&Log);
   return true;
 }
 

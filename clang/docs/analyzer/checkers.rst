@@ -139,41 +139,6 @@ core.DivideZero (C, C++, ObjC)
 .. literalinclude:: checkers/dividezero_example.c
     :language: c
 
-.. _core-FixedAddressDereference:
-
-core.FixedAddressDereference (C, C++, ObjC)
-"""""""""""""""""""""""""""""""""""""""""""
-Check for dereferences of fixed addresses.
-
-A pointer contains a fixed address if it was set to a hard-coded value or it
-becomes otherwise obvious that at that point it can have only a single fixed
-numerical value.
-
-.. code-block:: c
-
- void test1() {
-   int *p = (int *)0x020;
-   int x = p[0]; // warn
- }
-
- void test2(int *p) {
-   if (p == (int *)-1)
-     *p = 0; // warn
- }
-
- void test3() {
-   int (*p_function)(char, char);
-   p_function = (int (*)(char, char))0x04080;
-   int x = (*p_function)('x', 'y'); // NO warning yet at functon pointer calls
- }
-
-If the analyzer option ``suppress-dereferences-from-any-address-space`` is set
-to true (the default value), then this checker never reports dereference of
-pointers with a specified address space. If the option is set to false, then
-reports from the specific x86 address spaces 256, 257 and 258 are still
-suppressed, but fixed address dereferences from other address spaces are
-reported.
-
 .. _core-NonNullParamChecker:
 
 core.NonNullParamChecker (C, C++, ObjC)
@@ -884,6 +849,103 @@ of this Clang attribute.
 
 Projects that use this pattern should not enable this optin checker.
 
+.. _optin-core-FixedAddressDereference:
+
+optin.core.FixedAddressDereference (C, C++, ObjC)
+"""""""""""""""""""""""""""""""""""""""""""""""""
+Check for dereferences of fixed addresses.
+
+A pointer contains a fixed address if it was set to a hard-coded value or it
+becomes otherwise obvious that at that point it can have only a single fixed
+numerical value.
+
+.. code-block:: c
+
+ void test1() {
+   int *p = (int *)0x020;
+   int x = p[0]; // warn
+ }
+
+ void test2(int *p) {
+   if (p == (int *)-1)
+     *p = 0; // warn
+ }
+
+ void test3() {
+   int (*p_function)(char, char);
+   p_function = (int (*)(char, char))0x04080;
+   int x = (*p_function)('x', 'y'); // NO warning yet at functon pointer calls
+ }
+
+Access of fixed numerical addresses can be legitimate in low-level projects (e.g. firmware) and hardware interop.
+These values are often marked as ``volatile`` (to prevent unwanted compiler optimizations),
+so this checker doesn't report situations where the pointee of the fixed address is ``volatile``.
+If this suppression is not sufficient on a low-level project, then consider disabling this ``optin`` checker.
+Note that null pointers will still be reported by :ref:`core.NullDereference <core-NullDereference>`
+regardless if the pointee is ``volatile`` or not.
+
+.. code-block:: c
+
+ void volatile_pointee() {
+   *(volatile int *)0x404 = 1; // no warning: fixed non-null "volatile" pointee, you must know what you are doing
+ }
+
+ void deref_volatile_nullptr() {
+   *(volatile int *)0 = 1; // core.NullDereference still warns about this
+ }
+
+If the analyzer option ``suppress-dereferences-from-any-address-space`` is set
+to true (the default value), then this checker never reports dereference of
+pointers with a specified address space. If the option is set to false, then
+reports from the specific x86 address spaces 256, 257 and 258 are still
+suppressed, but fixed address dereferences from other address spaces are
+reported.
+Do not use the :ref:`address_space <langext-address_space_documentation>`
+attribute to suppress the reports - it just happens so that the checker also doesn't raise issues if the attribute is present.
+
+.. _optin-core-UnconditionalVAArg:
+
+optin.core.UnconditionalVAArg (C, C++)
+""""""""""""""""""""""""""""""""""""""
+Check for variadic functions that unconditionally use ``va_arg()``. It is
+possible to use such functions safely (as long as they always receive at least
+one variadic argument), but their careless use can lead to undefined behavior
+(trying to access a variadic argument when there isn't any), so it is better to
+avoid them.
+
+**Note:** This checker only inspects the *definition* of the variadic functions
+and reports those that *would* fail if they were called with no variadic
+arguments -- even if there is no such call in the codebase.
+
+This design rule is dictated by the SEI CERT rule `EXP47-C
+<https://wiki.sei.cmu.edu/confluence/display/c/EXP47-C.+Do+not+call+va_arg+with+an+argument+of+the+incorrect+type>`_,
+which describes several issues related to the use of ``va_arg()``. (The problem
+reported by this checker is shown in the second code example; the first,
+unrelated code example is covered by the clang diagnostic `-Wvarargs
+<https://clang.llvm.org/docs/DiagnosticsReference.html#wvarargs>`_.)
+
+.. code-block:: cpp
+
+  // This function expects a list of variadic arguments terminated by a NULL pointer.
+  void log_message(const char *msg, ...) {
+    va_list va;
+    const char *arg;
+    printf("%s\n", msg);
+    va_start(va, msg);
+    while ((arg = va_arg(va, const char *))) {
+      // warn: calls to 'log_message' always reach this va_arg() expression
+      printf(" * %s\n", arg);
+    }
+    va_end(va);
+  }
+
+Instead of this bugprone pattern, the SEI-CERT coding standard suggests
+approaches where the number of variadic arguments can be specified in a
+different manner -- for example, it can be encoded in the initial parameter
+like ``void foo(size_t num_varargs, ...)``. Those approaches are still not
+foolproof (e.g. ``foo(3, "a")`` will be undefined behavior), but they reduce
+the chances of an accidental mistake.
+
 .. _optin-cplusplus-UninitializedObject:
 
 optin.cplusplus.UninitializedObject (C++)
@@ -1413,8 +1475,19 @@ For a more detailed description of configuration options, please see the
 
 **Configuration**
 
-* `Config`  Specifies the name of the YAML configuration file. The user can
-  define their own taint sources and sinks.
+* ``optin.taint.TaintPropagation:Config``  Specifies the name of the YAML
+  configuration file. The user can define their own taint sources and sinks.
+* ``optin.taint.TaintPropagation:EnableDefaultConfig`` If set to false,
+   the default source, sink and propagation rules are not loaded. This way,
+   advanced users can fully customize their taint configuration model.
+   Default: ``true``.
+
+* If the analyzer option ``assume-controlled-environment`` is set to ``false``,
+  it is assumed that the command line arguments and the environment
+  variables of the program are attacker controlled.
+  In particular, the ``argv``, ``argc`` and ``envp`` arguments of the
+  ``main`` function and the return value of the ``getenv()``
+  function are assumed to hold tainted values.
 
 **Related Guidelines**
 
@@ -3131,19 +3204,6 @@ Check for cases where the dynamic and the static type of an object are unrelated
  NSNumber *number = date;
  [number doubleValue];
 
-.. _alpha-core-FixedAddr:
-
-alpha.core.FixedAddr (C)
-""""""""""""""""""""""""
-Check for assignment of a fixed address to a pointer.
-
-.. code-block:: c
-
- void test() {
-   int *p;
-   p = (int *) 0x10000; // warn
- }
-
 .. _alpha-core-PointerArithm:
 
 alpha.core.PointerArithm (C)
@@ -3735,7 +3795,7 @@ Check that ``[[clang::annotate_type("webkit.nodelete")]]`` annotation does not a
  Foo [[clang::annotate_type("webkit.nodelete")]] trivialFunction(RefCountable* obj) {
    return obj->anotherTrivialFunction();
  };
- 
+
 ``[[clang::annotate_type("webkit.nodelete")]]`` annotation makes the function ignored for the purpose of other WebKit smart pointer checkers.
 For example, ``alpha.webkit.UncountedCallArgsChecker`` will ignore a function call with this annotation.
 

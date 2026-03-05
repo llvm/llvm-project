@@ -11,15 +11,6 @@
 
 include "mlir/Pass/PassBase.td"
 
-def XeGPUFoldAliasOps : Pass<"xegpu-fold-alias-ops"> {
-  let summary = "Fold alias ops into XeGPU ops";
-  let description = [{
-    The pass folds aliasing ops into XeGPU ops that they operate on the original
-    source references.
-  }];
-  let dependentDialects = ["memref::MemRefDialect", "xegpu::XeGPUDialect"];
-}
-
 def XeGPUSubgroupDistribute : Pass<"xegpu-subgroup-distribute"> {
   let summary = "Distribute XeGPU ops to work items";
   let description = [{
@@ -113,5 +104,15 @@ def XeGPUPeepHoleOptimizer : Pass<"xegpu-optimize-peephole"> {
   let dependentDialects = ["memref::MemRefDialect", "xegpu::XeGPUDialect",
                            "vector::VectorDialect"];
 }
+
+def XeGPUSgToWiDistributeExperimental : Pass<"xegpu-sg-to-wi-distribute-experimental"> {
+  let summary = "Distribute XeGPU ops to work items";
+  let description = [{
+    The pass distributes subgroup level XeGPU ops to work item level XeGPU ops.
+  }];
+  let dependentDialects = ["memref::MemRefDialect", "xegpu::XeGPUDialect",
+                           "vector::VectorDialect", "index::IndexDialect"];
+}
+
 
 #endif // MLIR_DIALECT_XEGPU_TRANSFORMS_PASSES_TD

@@ -16,6 +16,7 @@ add_flangrt_library(flang_rt.cuda STATIC SHARED
   memory.cpp
   pointer.cpp
   registration.cpp
+  stream.cpp
 
   TARGET_PROPERTIES
     # libflang_rt.runtime depends on a certain version of CUDA. To be able to have

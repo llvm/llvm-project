@@ -80,7 +80,8 @@ static cl::opt<size_t> InlineMaxBB(
 static cl::opt<unsigned> MemcpyLoopUnroll(
     "amdgpu-memcpy-loop-unroll",
     cl::desc("Unroll factor (affecting 4x32-bit operations) to use for memory "
-             "operations when lowering memcpy as a loop"),
+             "operations when lowering statically-sized memcpy, memmove, or"
+             "memset as a loop"),
     cl::init(16), cl::Hidden);
 
 static bool dependsOnLocalPhi(const Loop *L, const Value *Cond,
@@ -216,13 +217,10 @@ void AMDGPUTTIImpl::getUnrollingPreferences(
         // a variable, most likely we will be unable to combine it.
         // Do not unroll too deep inner loops for local memory to give a chance
         // to unroll an outer loop for a more important reason.
-        if (LocalGEPsSeen > 1 || L->getLoopDepth() > 2)
+        if (LocalGEPsSeen > 1 || L->getLoopDepth() > 2 ||
+            (!isa<GlobalVariable>(GEP->getPointerOperand()) &&
+             !isa<Argument>(GEP->getPointerOperand())))
           continue;
-
-        const Value *V = getUnderlyingObject(GEP->getPointerOperand());
-        if (!isa<GlobalVariable>(V) && !isa<Argument>(V))
-          continue;
-
         LLVM_DEBUG(dbgs() << "Allow unroll runtime for loop:\n"
                           << *L << " due to LDS use.\n");
         UP.Runtime = UnrollRuntimeLocal;
@@ -285,8 +283,7 @@ const FeatureBitset GCNTTIImpl::InlineFeatureIgnoreList = {
     // Codegen control options which don't matter.
     AMDGPU::FeatureEnableLoadStoreOpt, AMDGPU::FeatureEnableSIScheduler,
     AMDGPU::FeatureEnableUnsafeDSOffsetFolding, AMDGPU::FeatureUseFlatForGlobal,
-    AMDGPU::FeaturePromoteAlloca, AMDGPU::FeatureUnalignedScratchAccess,
-    AMDGPU::FeatureUnalignedAccessMode,
+    AMDGPU::FeatureUnalignedScratchAccess, AMDGPU::FeatureUnalignedAccessMode,
 
     AMDGPU::FeatureAutoWaitcntBeforeBarrier,
 
@@ -734,18 +731,42 @@ GCNTTIImpl::getIntrinsicInstrCost(const IntrinsicCostAttributes &ICA,
     break;
   }
 
+  Type *RetTy = ICA.getReturnType();
+
+  Intrinsic::ID IID = ICA.getID();
+  switch (IID) {
+  case Intrinsic::exp:
+  case Intrinsic::exp2:
+  case Intrinsic::exp10: {
+    // Legalize the type.
+    std::pair<InstructionCost, MVT> LT = getTypeLegalizationCost(RetTy);
+    MVT::SimpleValueType SLT = LT.second.getScalarType().SimpleTy;
+
+    if (SLT == MVT::f64) {
+      int NumOps = 20;
+      if (IID == Intrinsic::exp)
+        ++NumOps;
+      else if (IID == Intrinsic::exp10)
+        NumOps += 3;
+
+      unsigned NElts =
+          LT.second.isVector() ? LT.second.getVectorNumElements() : 1;
+
+      return LT.first * NElts * NumOps * get64BitInstrCost(CostKind);
+    }
+
+    break;
+  }
+  default:
+    break;
+  }
+
   if (!intrinsicHasPackedVectorBenefit(ICA.getID()))
     return BaseT::getIntrinsicInstrCost(ICA, CostKind);
 
-  Type *RetTy = ICA.getReturnType();
-
-  // Legalize the type.
   std::pair<InstructionCost, MVT> LT = getTypeLegalizationCost(RetTy);
-
-  unsigned NElts = LT.second.isVector() ?
-    LT.second.getVectorNumElements() : 1;
-
   MVT::SimpleValueType SLT = LT.second.getScalarType().SimpleTy;
+  unsigned NElts = LT.second.isVector() ? LT.second.getVectorNumElements() : 1;
 
   if ((ST->hasVOP3PInsts() &&
        (SLT == MVT::f16 || SLT == MVT::i16 ||
@@ -1340,8 +1361,60 @@ bool GCNTTIImpl::isProfitableToSinkOperands(Instruction *I,
     if (any_of(Ops, [&](Use *U) { return U->get() == Op.get(); }))
       continue;
 
-    if (match(&Op, m_FAbs(m_Value())) || match(&Op, m_FNeg(m_Value())))
+    if (match(&Op, m_FAbs(m_Value())) || match(&Op, m_FNeg(m_Value()))) {
       Ops.push_back(&Op);
+      continue;
+    }
+
+    // Check for zero-cost multiple use InsertElement/ExtractElement
+    // instructions
+    if (Instruction *OpInst = dyn_cast<Instruction>(Op.get())) {
+      if (OpInst->getType()->isVectorTy() && OpInst->getNumOperands() > 1) {
+        Instruction *VecOpInst = dyn_cast<Instruction>(OpInst->getOperand(0));
+        if (VecOpInst && VecOpInst->hasOneUse())
+          continue;
+
+        if (getVectorInstrCost(OpInst->getOpcode(), OpInst->getType(),
+                               TTI::TCK_RecipThroughput, 0,
+                               OpInst->getOperand(0),
+                               OpInst->getOperand(1)) == 0) {
+          Ops.push_back(&Op);
+          continue;
+        }
+      }
+    }
+
+    if (auto *Shuffle = dyn_cast<ShuffleVectorInst>(Op.get())) {
+
+      unsigned EltSize = DL.getTypeSizeInBits(
+          cast<VectorType>(Shuffle->getType())->getElementType());
+
+      // For i32 (or greater) shufflevectors, these will be lowered into a
+      // series of insert / extract elements, which will be coalesced away.
+      if (EltSize < 16 || !ST->has16BitInsts())
+        continue;
+
+      int NumSubElts, SubIndex;
+      if (Shuffle->changesLength()) {
+        if (Shuffle->increasesLength() && Shuffle->isIdentityWithPadding()) {
+          Ops.push_back(&Op);
+          continue;
+        }
+
+        if ((Shuffle->isExtractSubvectorMask(SubIndex) ||
+             Shuffle->isInsertSubvectorMask(NumSubElts, SubIndex)) &&
+            !(SubIndex & 0x1)) {
+          Ops.push_back(&Op);
+          continue;
+        }
+      }
+
+      if (Shuffle->isReverse() || Shuffle->isZeroEltSplat() ||
+          Shuffle->isSingleSource()) {
+        Ops.push_back(&Op);
+        continue;
+      }
+    }
   }
 
   return !Ops.empty();
@@ -1578,8 +1651,8 @@ void GCNTTIImpl::collectKernelLaunchBounds(
 
 GCNTTIImpl::KnownIEEEMode
 GCNTTIImpl::fpenvIEEEMode(const Instruction &I) const {
-  if (!ST->hasIEEEMode()) // Only mode on gfx12
-    return KnownIEEEMode::On;
+  if (!ST->hasFeature(AMDGPU::FeatureDX10ClampAndIEEEMode))
+    return KnownIEEEMode::On; // Only mode on gfx1170+
 
   const Function *F = I.getFunction();
   if (!F)

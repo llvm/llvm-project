@@ -1569,6 +1569,8 @@ void AccVisitor::Post(const parser::OpenACCCombinedConstruct &x) { PopScope(); }
 class OmpVisitor : public virtual DeclarationVisitor {
 public:
   void AddOmpSourceRange(const parser::CharBlock &);
+  void PushScopeWithSource(
+      Scope::Kind kind, parser::CharBlock source, Symbol *symbol = nullptr);
 
   static bool NeedsScope(const parser::OmpBlockConstruct &);
   static bool NeedsScope(const parser::OmpClause &);
@@ -1592,8 +1594,8 @@ public:
     Post(static_cast<const parser::OmpDirectiveSpecification &>(x));
   }
 
-  bool Pre(const parser::OpenMPLoopConstruct &) {
-    PushScope(Scope::Kind::OtherConstruct, nullptr);
+  bool Pre(const parser::OpenMPLoopConstruct &x) {
+    PushScopeWithSource(Scope::Kind::OtherConstruct, x.source);
     return true;
   }
   void Post(const parser::OpenMPLoopConstruct &) { PopScope(); }
@@ -1616,6 +1618,20 @@ public:
   bool Pre(const parser::OmpStylizedInstance &);
   void Post(const parser::OmpStylizedInstance &);
 
+  void Post(const parser::OmpObjectList &x) {
+    // The objects from OMP clauses should have already been resolved,
+    // except common blocks (the ResolveNamesVisitor does not visit
+    // parser::Name, those are dealt with as members of other structures).
+    // Iterate over elements of x, and resolve any common blocks that
+    // are still unresolved.
+    for (const parser::OmpObject &obj : x.v) {
+      auto *name{std::get_if<parser::Name>(&obj.u)};
+      if (name && !name->symbol) {
+        Resolve(*name, currScope().MakeCommonBlock(name->source, name->source));
+      }
+    }
+  }
+
   bool Pre(const parser::OpenMPDeclareMapperConstruct &x) {
     AddOmpSourceRange(x.source);
     return true;
@@ -1636,9 +1652,11 @@ public:
     return true;
   }
   bool Pre(const parser::OmpMapClause &);
+  bool Pre(const parser::OmpClause::To &);
+  bool Pre(const parser::OmpClause::From &);
 
-  bool Pre(const parser::OpenMPSectionsConstruct &) {
-    PushScope(Scope::Kind::OtherConstruct, nullptr);
+  bool Pre(const parser::OpenMPSectionsConstruct &x) {
+    PushScopeWithSource(Scope::Kind::OtherConstruct, x.source);
     return true;
   }
   void Post(const parser::OpenMPSectionsConstruct &) { PopScope(); }
@@ -1744,7 +1762,7 @@ public:
   }
   bool Pre(const parser::OmpClause &x) {
     if (NeedsScope(x)) {
-      PushScope(Scope::Kind::OtherClause, nullptr);
+      PushScopeWithSource(Scope::Kind::OtherClause, x.source);
     }
     return true;
   }
@@ -1782,6 +1800,7 @@ public:
   }
 
 private:
+  void ResolveMapperModifier(const parser::OmpMapper &mapper);
   void ProcessMapperSpecifier(const parser::OmpMapperSpecifier &spec,
       const parser::OmpClauseList &clauses);
   void ProcessReductionSpecifier(const parser::OmpReductionSpecifier &spec,
@@ -1813,9 +1832,15 @@ void OmpVisitor::AddOmpSourceRange(const parser::CharBlock &source) {
   currScope().AddSourceRange(source);
 }
 
+void OmpVisitor::PushScopeWithSource(
+    Scope::Kind kind, parser::CharBlock source, Symbol *symbol) {
+  PushScope(kind, symbol);
+  currScope().AddSourceRange(source);
+}
+
 bool OmpVisitor::Pre(const parser::OmpBlockConstruct &x) {
   if (NeedsScope(x)) {
-    PushScope(Scope::Kind::OtherConstruct, nullptr);
+    PushScopeWithSource(Scope::Kind::OtherConstruct, x.source);
   }
   return true;
 }
@@ -1853,32 +1878,49 @@ void OmpVisitor::Post(const parser::OmpStylizedInstance &x) { //
 bool OmpVisitor::Pre(const parser::OmpMapClause &x) {
   auto &mods{OmpGetModifiers(x)};
   if (auto *mapper{OmpGetUniqueModifier<parser::OmpMapper>(mods)}) {
-    if (auto *symbol{FindSymbol(currScope(), mapper->v)}) {
-      // TODO: Do we need a specific flag or type here, to distinghuish against
-      // other ConstructName things? Leaving this for the full implementation
-      // of mapper lowering.
-      auto &ultimate{symbol->GetUltimate()};
-      auto *misc{ultimate.detailsIf<MiscDetails>()};
-      auto *md{ultimate.detailsIf<MapperDetails>()};
-      if (!md && (!misc || misc->kind() != MiscDetails::Kind::ConstructName))
-        context().Say(mapper->v.source,
-            "Name '%s' should be a mapper name"_err_en_US, mapper->v.source);
-      else
-        mapper->v.symbol = symbol;
-    } else {
-      // Allow the special 'default' mapper identifier without prior
-      // declaration so lowering can recognize and handle it. Emit an
-      // error for any other missing mapper identifier.
-      if (mapper->v.source.ToString() == "default") {
-        mapper->v.symbol = &MakeSymbol(
-            mapper->v, MiscDetails{MiscDetails::Kind::ConstructName});
-      } else {
-        context().Say(
-            mapper->v.source, "'%s' not declared"_err_en_US, mapper->v.source);
-      }
-    }
+    ResolveMapperModifier(*mapper);
   }
   return true;
+}
+
+bool OmpVisitor::Pre(const parser::OmpClause::To &x) {
+  auto &mods{OmpGetModifiers(x.v)};
+  if (auto *mapper{OmpGetUniqueModifier<parser::OmpMapper>(mods)}) {
+    ResolveMapperModifier(*mapper);
+  }
+  return true;
+}
+
+bool OmpVisitor::Pre(const parser::OmpClause::From &x) {
+  auto &mods{OmpGetModifiers(x.v)};
+  if (auto *mapper{OmpGetUniqueModifier<parser::OmpMapper>(mods)}) {
+    ResolveMapperModifier(*mapper);
+  }
+  return true;
+}
+
+void OmpVisitor::ResolveMapperModifier(const parser::OmpMapper &mapper) {
+  if (auto *symbol{FindSymbol(currScope(), mapper.v)}) {
+    auto &ultimate{symbol->GetUltimate()};
+    auto *misc{ultimate.detailsIf<MiscDetails>()};
+    auto *md{ultimate.detailsIf<MapperDetails>()};
+    if (!md && (!misc || misc->kind() != MiscDetails::Kind::ConstructName))
+      context().Say(mapper.v.source,
+          "Name '%s' should be a mapper name"_err_en_US, mapper.v.source);
+    else
+      mapper.v.symbol = symbol;
+  } else {
+    // Allow the special 'default' mapper identifier without prior
+    // declaration so lowering can recognize and handle it. Emit an
+    // error for any other missing mapper identifier.
+    if (mapper.v.source.ToString() == "default") {
+      mapper.v.symbol =
+          &MakeSymbol(mapper.v, MiscDetails{MiscDetails::Kind::ConstructName});
+    } else {
+      context().Say(
+          mapper.v.source, "'%s' not declared"_err_en_US, mapper.v.source);
+    }
+  }
 }
 
 void OmpVisitor::ProcessMapperSpecifier(const parser::OmpMapperSpecifier &spec,
@@ -7206,6 +7248,13 @@ void DeclarationVisitor::FinishNamelists() {
             } else if (!ConvertToObjectEntity(symbol->GetUltimate())) {
               SayWithDecl(name, *symbol, "'%s' is not a variable"_err_en_US);
               context().SetError(*groupSymbol);
+            } else if (IsAssumedRank(*symbol)) {
+              evaluate::AttachDeclaration(
+                  context().Warn(common::LanguageFeature::AssumedRankIoItem,
+                      name.source,
+                      "Assumed-rank object '%s' should not be a namelist group item"_port_en_US,
+                      symbol->name()),
+                  *symbol);
             }
             symbol->GetUltimate().set(Symbol::Flag::InNamelist);
             details->add_object(*symbol);
@@ -10217,16 +10266,18 @@ void ResolveNamesVisitor::Post(const parser::CompilerDirective &x) {
   }
   if (const auto *tkr{
           std::get_if<std::list<parser::CompilerDirective::IgnoreTKR>>(&x.u)}) {
-    if (currScope().IsTopLevel() ||
-        GetProgramUnitContaining(currScope()).kind() !=
-            Scope::Kind::Subprogram) {
+    if (currScope().IsTopLevel()) {
       Say(x.source,
-          "!DIR$ IGNORE_TKR directive must appear in a subroutine or function"_err_en_US);
+          "!DIR$ IGNORE_TKR directive must appear in a program unit"_err_en_US);
       return;
-    }
-    if (!inSpecificationPart_) {
-      Say(x.source,
-          "!DIR$ IGNORE_TKR directive must appear in the specification part"_err_en_US);
+    } else if (GetProgramUnitContaining(currScope()).kind() !=
+        Scope::Kind::Subprogram) {
+      context().Warn(common::UsageWarning::MisplacedIgnoreTKR, x.source,
+          "!DIR$ IGNORE_TKR directive should appear in a subroutine or function"_warn_en_US);
+      return;
+    } else if (!inSpecificationPart_) {
+      context().Warn(common::UsageWarning::MisplacedIgnoreTKR, x.source,
+          "!DIR$ IGNORE_TKR directive should appear in the specification part"_warn_en_US);
       return;
     }
     if (tkr->empty()) {

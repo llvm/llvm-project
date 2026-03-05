@@ -2369,24 +2369,30 @@ void SILoadStoreOptimizer::processBaseWithConstOffset(const MachineOperand &Base
   Addr.Offset = (*Offset0P & 0x00000000ffffffff) | (Offset1 << 32);
 }
 
-// Maintain the correct LDS address for async loads.
-// It becomes incorrect when promoteConstantOffsetToImm
-// adds an offset only meant for the src operand.
+// Maintain the correct LDS address for async loads and stores.
+// It becomes incorrect when promoteConstantOffsetToImm adds an offset only
+// meant for the global address operand. For async loads the LDS address is in
+// vdst. For async stores, the LDS address is in vdata.
 void SILoadStoreOptimizer::updateAsyncLDSAddress(MachineInstr &MI,
                                                  int32_t OffsetDiff) const {
   if (!TII->usesASYNC_CNT(MI) || OffsetDiff == 0)
     return;
 
-  Register OldVDst = TII->getNamedOperand(MI, AMDGPU::OpName::vdst)->getReg();
-  Register NewVDst = MRI->createVirtualRegister(MRI->getRegClass(OldVDst));
+  MachineOperand *LDSAddr = TII->getNamedOperand(MI, AMDGPU::OpName::vdst);
+  if (!LDSAddr)
+    LDSAddr = TII->getNamedOperand(MI, AMDGPU::OpName::vdata);
+  assert(LDSAddr);
+
+  Register OldReg = LDSAddr->getReg();
+  Register NewReg = MRI->createVirtualRegister(MRI->getRegClass(OldReg));
   MachineBasicBlock &MBB = *MI.getParent();
   const DebugLoc &DL = MI.getDebugLoc();
-  BuildMI(MBB, MI, DL, TII->get(AMDGPU::V_ADD_U32_e64), NewVDst)
-      .addReg(OldVDst)
+  BuildMI(MBB, MI, DL, TII->get(AMDGPU::V_ADD_U32_e64), NewReg)
+      .addReg(OldReg)
       .addImm(-OffsetDiff)
       .addImm(0);
 
-  MI.getOperand(0).setReg(NewVDst);
+  LDSAddr->setReg(NewReg);
 }
 
 bool SILoadStoreOptimizer::promoteConstantOffsetToImm(

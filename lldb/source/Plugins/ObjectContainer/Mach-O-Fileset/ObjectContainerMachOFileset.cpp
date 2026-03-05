@@ -199,7 +199,7 @@ bool ObjectContainerMachOFileset::ParseHeader() {
 
   std::lock_guard<std::recursive_mutex> guard(module_sp->GetMutex());
 
-  std::optional<mach_header> header = ParseMachOHeader(*m_extractor_sp.get());
+  std::optional<mach_header> header = ParseMachOHeader(*m_extractor_sp);
   if (!header)
     return false;
 
@@ -216,21 +216,24 @@ bool ObjectContainerMachOFileset::ParseHeader() {
     m_extractor_sp->SetData(data_sp);
   }
 
-  return ParseFileset(*m_extractor_sp.get(), *header, m_entries, m_memory_addr);
+  return ParseFileset(*m_extractor_sp, *header, m_entries, m_memory_addr);
 }
 
 size_t ObjectContainerMachOFileset::GetModuleSpecifications(
-    const lldb_private::FileSpec &file, lldb::DataBufferSP &data_sp,
+    const lldb_private::FileSpec &file, lldb::DataExtractorSP &extractor_sp,
     lldb::offset_t data_offset, lldb::offset_t file_offset,
     lldb::offset_t file_size, lldb_private::ModuleSpecList &specs) {
   const size_t initial_count = specs.GetSize();
+  if (!extractor_sp)
+    return initial_count;
 
-  DataExtractor extractor;
-  extractor.SetData(data_sp, data_offset, data_sp->GetByteSize());
-
-  if (MagicBytesMatch(extractor)) {
+  DataExtractorSP data_extractor_sp =
+      extractor_sp->GetSubsetExtractorSP(data_offset);
+  if (!data_extractor_sp)
+    return initial_count;
+  if (MagicBytesMatch(*data_extractor_sp)) {
     std::vector<Entry> entries;
-    if (ParseHeader(extractor, file, file_offset, entries)) {
+    if (ParseHeader(*data_extractor_sp, file, file_offset, entries)) {
       for (const Entry &entry : entries) {
         const lldb::offset_t entry_offset = entry.fileoff + file_offset;
         if (ObjectFile::GetModuleSpecifications(
