@@ -7219,6 +7219,24 @@ a container class:
   }];
 }
 
+def DefaultConstructedAfterMoveDocs : Documentation {
+  let Category = DocCatType;
+  let Content = [{
+The ``default_constructed_after_move`` attribute can be applied to a class to
+indicate that, when an object of this type is moved from, it is guaranteed to
+be in the same state as a default-constructed object.
+
+This attribute can be interpreted by static analyzers that warn
+about potential uses of an object after it is moved. For types
+with this attribute, analyzers can assume that accessing a moved object
+is as safe as accessing a default-constructed object.
+
+A typical use case is to annotate smart pointer classes, which often guarantee
+that a pointer is null, and hence in a default-constructed state, after the
+move.
+}];
+}
+
 def AlwaysDestroyDocs : Documentation {
   let Category = DocCatVariable;
   let Content = [{
