@@ -5146,6 +5146,53 @@ TEST(Hover, FunctionParameters) {
   }
 }
 
+TEST(Hover, GH2381) {
+  Annotations Code(R"cpp(
+  struct Foo {
+    enum Bar : unsigned long long int {
+      A = -42ULL,
+      B = ~0ULL,
+    };
+  };
+  constexpr auto va$a^ = Foo::A;
+  constexpr auto vb$b^ = Foo::B;
+  )cpp");
+
+  TestTU TU = TestTU::withCode(Code.code());
+
+  for (const auto *Triplet :
+       {"--target=x86_64-pc-windows-msvc", "--target=x86_64-pc-linux-gnu"}) {
+    SCOPED_TRACE(Triplet);
+    TU.ExtraArgs.push_back(Triplet);
+    auto AST = TU.build();
+
+    {
+      auto H = getHover(AST, Code.point("a"), format::getLLVMStyle(), nullptr);
+
+      ASSERT_TRUE(H);
+      EXPECT_EQ(H->Name, "va");
+      EXPECT_EQ(H->Kind, index::SymbolKind::Variable);
+      EXPECT_EQ(H->NamespaceScope, "");
+      EXPECT_EQ(H->LocalScope, "");
+      EXPECT_EQ(H->Type, "const Foo::Bar");
+      EXPECT_EQ(H->Definition, "constexpr auto va = Foo::A");
+      EXPECT_EQ(H->Value, "A (0xffffffffffffffd6)");
+    }
+
+    {
+      auto H = getHover(AST, Code.point("b"), format::getLLVMStyle(), nullptr);
+
+      ASSERT_TRUE(H);
+      EXPECT_EQ(H->Name, "vb");
+      EXPECT_EQ(H->Kind, index::SymbolKind::Variable);
+      EXPECT_EQ(H->NamespaceScope, "");
+      EXPECT_EQ(H->LocalScope, "");
+      EXPECT_EQ(H->Type, "const Foo::Bar");
+      EXPECT_EQ(H->Definition, "constexpr auto vb = Foo::B");
+      EXPECT_EQ(H->Value, "B (0xffffffffffffffff)");
+    }
+  }
+}
 } // namespace
 } // namespace clangd
 } // namespace clang
