@@ -110,6 +110,13 @@ public:
     UNW_Libgcc
   };
 
+  enum CStdlibType {
+    CST_Newlib,
+    CST_Picolibc,
+    CST_LLVMLibC,
+    CST_System,
+  };
+
   enum class UnwindTableLevel {
     None,
     Synchronous,
@@ -195,6 +202,7 @@ private:
   mutable std::optional<CXXStdlibType> cxxStdlibType;
   mutable std::optional<RuntimeLibType> runtimeLibType;
   mutable std::optional<UnwindLibType> unwindLibType;
+  mutable std::optional<CStdlibType> cStdlibType;
 
 protected:
   // OpenMP creates a toolchain for each target arch. eg - gfx908
@@ -749,6 +757,11 @@ public:
   // GetUnwindLibType - Determine the unwind library type to use with the
   // given compilation arguments.
   virtual UnwindLibType GetUnwindLibType(const llvm::opt::ArgList &Args) const;
+
+  // Determine the C standard library to use with the given
+  // compilation arguments. Defaults to CST_System when no --cstdlib= flag
+  // is provided.
+  virtual CStdlibType GetCStdlibType(const llvm::opt::ArgList &Args) const;
 
   // Detect the highest available version of libc++ in include path.
   virtual std::string detectLibcxxVersion(StringRef IncludePath) const;

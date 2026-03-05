@@ -1,4 +1,4 @@
-// RUN: %check_clang_tidy %s readability-else-after-return %t -- -- -isystem %clang_tidy_headers -fexceptions -std=c++17
+// RUN: %check_clang_tidy -std=c++17-or-later %s readability-else-after-return %t -- -- -isystem %clang_tidy_headers -fexceptions
 #include <string>
 
 struct my_exception {

@@ -100,7 +100,7 @@ add_header_library(
     acospif.h
   DEPENDS
     .inv_trigf_utils
-    libc.src.__support.FPUtil.fenv_implt
+    libc.src.__support.FPUtil.fenv_impl
     libc.src.__support.FPUtil.fp_bits
     libc.src.__support.FPUtil.polyeval
     libc.src.__support.FPUtil.cast
