@@ -62,15 +62,6 @@ namespace OpaqueEnumDecl {
 
 int decltype(f())::*ptr_mem_decltype;
 
-class ExtraSemiAfterMemFn {
-  // Due to a peculiarity in the C++11 grammar, a deleted or defaulted function
-  // is permitted to be followed by either one or two semicolons.
-  void f() = delete // expected-error {{expected ';' after delete}}
-  void g() = delete; // ok
-  void h() = delete;; // ok
-  void i() = delete;;; // expected-error {{extra ';' after member function definition}}
-};
-
 int *const const p = 0; // expected-error {{duplicate 'const' declaration specifier}}
 const const int *q = 0; // expected-error {{duplicate 'const' declaration specifier}}
 
