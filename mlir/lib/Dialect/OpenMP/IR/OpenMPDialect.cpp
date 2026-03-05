@@ -1818,9 +1818,6 @@ static ParseResult parseMapClause(OpAsmParser &parser,
     if (mapTypeMod == "ref_ptee")
       mapTypeBits |= ClauseMapFlags::ref_ptee;
 
-    if (mapTypeMod == "ref_ptr_ptee")
-      mapTypeBits |= ClauseMapFlags::ref_ptr_ptee;
-
     if (mapTypeMod == "is_device_ptr")
       mapTypeBits |= ClauseMapFlags::is_device_ptr;
 
@@ -1891,8 +1888,6 @@ static void printMapClause(OpAsmPrinter &p, Operation *op,
     mapTypeStrs.push_back("ref_ptr");
   if (mapTypeToBool(mapFlags, ClauseMapFlags::ref_ptee))
     mapTypeStrs.push_back("ref_ptee");
-  if (mapTypeToBool(mapFlags, ClauseMapFlags::ref_ptr_ptee))
-    mapTypeStrs.push_back("ref_ptr_ptee");
   if (mapTypeToBool(mapFlags, ClauseMapFlags::is_device_ptr))
     mapTypeStrs.push_back("is_device_ptr");
   if (mapFlags == ClauseMapFlags::none)
@@ -2009,6 +2004,7 @@ static LogicalResult verifyMapClause(Operation *op, OperandRange mapVars) {
       bool always = mapTypeToBool(mapTypeBits, ClauseMapFlags::always);
       bool close = mapTypeToBool(mapTypeBits, ClauseMapFlags::close);
       bool implicit = mapTypeToBool(mapTypeBits, ClauseMapFlags::implicit);
+      bool attach = mapTypeToBool(mapTypeBits, ClauseMapFlags::attach);
 
       if ((isa<TargetDataOp>(op) || isa<TargetOp>(op)) && del)
         return emitError(op->getLoc(),
@@ -2028,10 +2024,11 @@ static LogicalResult verifyMapClause(Operation *op, OperandRange mapVars) {
                            "specified, other map types are not permitted");
         }
 
-        if (!to && !from) {
-          return emitError(op->getLoc(),
-                           "at least one of to or from map types must be "
-                           "specified, other map types are not permitted");
+        if (!to && !from && !attach) {
+          return emitError(
+              op->getLoc(),
+              "at least one of to or from or attach map types must be "
+              "specified, other map types are not permitted");
         }
 
         auto updateVar = mapInfoOp.getVarPtr();
@@ -2049,7 +2046,20 @@ static LogicalResult verifyMapClause(Operation *op, OperandRange mapVars) {
               "present, mapper and iterator map type modifiers are permitted");
         }
 
-        to ? updateToVars.insert(updateVar) : updateFromVars.insert(updateVar);
+        // It's possible we have an attach map, in which case if there is no to
+        // or from tied to it, we skip insertion.
+        if (to || from) {
+          to ? updateToVars.insert(updateVar)
+             : updateFromVars.insert(updateVar);
+        }
+      }
+
+      if ((mapInfoOp.getVarPtrPtr() && !mapInfoOp.getVarPtrPtrType()) ||
+          (!mapInfoOp.getVarPtrPtr() && mapInfoOp.getVarPtrPtrType())) {
+        return emitError(
+            op->getLoc(),
+            "if varPtrPtr or varPtrPtrType is specified, then both "
+            "must be present");
       }
     } else if (!isa<DeclareMapperInfoOp>(op)) {
       return emitError(op->getLoc(),
