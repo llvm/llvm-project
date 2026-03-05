@@ -20,8 +20,8 @@ uint test_uint(uint expr) {
 
 // CHECK-LABEL: test_uint2
 uint2 test_uint2(uint2 expr) {
-  // DXCHECK:  %[[RET:.*]] = call [[TY:.*]] @llvm.[[ICF:dx]].wave.reduce.or.v2i32([[TY]] %[[#]])
-  // SPVCHECK:  %[[RET:.*]] = call spir_func [[TY:.*]] @llvm.[[ICF:spv]].wave.reduce.or.v2i32([[TY]] %[[#]])
+  // DXCHECK:  %[[RET:.*]] = call [[TY:.*]] @llvm.[[ICF]].wave.reduce.or.v2i32([[TY]] %[[#]])
+  // SPVCHECK:  %[[RET:.*]] = call spir_func [[TY:.*]] @llvm.[[ICF]].wave.reduce.or.v2i32([[TY]] %[[#]])
   // CHECK:  ret [[TY]] %[[RET]]
   return WaveActiveBitOr(expr);
 }
@@ -30,8 +30,8 @@ uint2 test_uint2(uint2 expr) {
 
 // CHECK-LABEL: test_uint3
 uint3 test_uint3(uint3 expr) {
-  // DXCHECK:  %[[RET:.*]] = call [[TY:.*]] @llvm.[[ICF:dx]].wave.reduce.or.v3i32([[TY]] %[[#]])
-  // SPVCHECK:  %[[RET:.*]] = call spir_func [[TY:.*]] @llvm.[[ICF:spv]].wave.reduce.or.v3i32([[TY]] %[[#]])
+  // DXCHECK:  %[[RET:.*]] = call [[TY:.*]] @llvm.[[ICF]].wave.reduce.or.v3i32([[TY]] %[[#]])
+  // SPVCHECK:  %[[RET:.*]] = call spir_func [[TY:.*]] @llvm.[[ICF]].wave.reduce.or.v3i32([[TY]] %[[#]])
   // CHECK:  ret [[TY]] %[[RET]]
   return WaveActiveBitOr(expr);
 }
@@ -40,8 +40,8 @@ uint3 test_uint3(uint3 expr) {
 
 // CHECK-LABEL: test_uint4
 uint4 test_uint4(uint4 expr) {
-  // DXCHECK:  %[[RET:.*]] = call [[TY:.*]] @llvm.[[ICF:dx]].wave.reduce.or.v4i32([[TY]] %[[#]])
-  // SPVCHECK:  %[[RET:.*]] = call spir_func [[TY:.*]] @llvm.[[ICF:spv]].wave.reduce.or.v4i32([[TY]] %[[#]])
+  // DXCHECK:  %[[RET:.*]] = call [[TY:.*]] @llvm.[[ICF]].wave.reduce.or.v4i32([[TY]] %[[#]])
+  // SPVCHECK:  %[[RET:.*]] = call spir_func [[TY:.*]] @llvm.[[ICF]].wave.reduce.or.v4i32([[TY]] %[[#]])
   // CHECK:  ret [[TY]] %[[RET]]
   return WaveActiveBitOr(expr);
 }
@@ -50,8 +50,8 @@ uint4 test_uint4(uint4 expr) {
 
 // CHECK-LABEL: test_uint64_t
 uint64_t test_uint64_t(uint64_t expr) {
-  // DXCHECK:  %[[RET:.*]] = call [[TY:.*]] @llvm.[[ICF:dx]].wave.reduce.or.i64([[TY]] %[[#]])
-  // SPVCHECK:  %[[RET:.*]] = call spir_func [[TY:.*]] @llvm.[[ICF:spv]].wave.reduce.or.i64([[TY]] %[[#]])
+  // DXCHECK:  %[[RET:.*]] = call [[TY:.*]] @llvm.[[ICF]].wave.reduce.or.i64([[TY]] %[[#]])
+  // SPVCHECK:  %[[RET:.*]] = call spir_func [[TY:.*]] @llvm.[[ICF]].wave.reduce.or.i64([[TY]] %[[#]])
   // CHECK:  ret [[TY]] %[[RET]]
   return WaveActiveBitOr(expr);
 }
@@ -60,8 +60,8 @@ uint64_t test_uint64_t(uint64_t expr) {
 
 // CHECK-LABEL: test_uint64_t2
 uint64_t2 test_uint64_t2(uint64_t2 expr) {
-  // DXCHECK:  %[[RET:.*]] = call [[TY:.*]] @llvm.[[ICF:dx]].wave.reduce.or.v2i64([[TY]] %[[#]])
-  // SPVCHECK:  %[[RET:.*]] = call spir_func [[TY:.*]] @llvm.[[ICF:spv]].wave.reduce.or.v2i64([[TY]] %[[#]])
+  // DXCHECK:  %[[RET:.*]] = call [[TY:.*]] @llvm.[[ICF]].wave.reduce.or.v2i64([[TY]] %[[#]])
+  // SPVCHECK:  %[[RET:.*]] = call spir_func [[TY:.*]] @llvm.[[ICF]].wave.reduce.or.v2i64([[TY]] %[[#]])
   // CHECK:  ret [[TY]] %[[RET]]
   return WaveActiveBitOr(expr);
 }
@@ -70,8 +70,8 @@ uint64_t2 test_uint64_t2(uint64_t2 expr) {
 
 // CHECK-LABEL: test_uint64_t3
 uint64_t3 test_uint64_t3(uint64_t3 expr) {
-  // DXCHECK:  %[[RET:.*]] = call [[TY:.*]] @llvm.[[ICF:dx]].wave.reduce.or.v3i64([[TY]] %[[#]])
-  // SPVCHECK:  %[[RET:.*]] = call spir_func [[TY:.*]] @llvm.[[ICF:spv]].wave.reduce.or.v3i64([[TY]] %[[#]])
+  // DXCHECK:  %[[RET:.*]] = call [[TY:.*]] @llvm.[[ICF]].wave.reduce.or.v3i64([[TY]] %[[#]])
+  // SPVCHECK:  %[[RET:.*]] = call spir_func [[TY:.*]] @llvm.[[ICF]].wave.reduce.or.v3i64([[TY]] %[[#]])
   // CHECK:  ret [[TY]] %[[RET]]
   return WaveActiveBitOr(expr);
 }
@@ -80,8 +80,8 @@ uint64_t3 test_uint64_t3(uint64_t3 expr) {
 
 // CHECK-LABEL: test_uint64_t4
 uint64_t4 test_uint64_t4(uint64_t4 expr) {
-  // DXCHECK:  %[[RET:.*]] = call [[TY:.*]] @llvm.[[ICF:dx]].wave.reduce.or.v4i64([[TY]] %[[#]])
-  // SPVCHECK:  %[[RET:.*]] = call spir_func [[TY:.*]] @llvm.[[ICF:spv]].wave.reduce.or.v4i64([[TY]] %[[#]])
+  // DXCHECK:  %[[RET:.*]] = call [[TY:.*]] @llvm.[[ICF]].wave.reduce.or.v4i64([[TY]] %[[#]])
+  // SPVCHECK:  %[[RET:.*]] = call spir_func [[TY:.*]] @llvm.[[ICF]].wave.reduce.or.v4i64([[TY]] %[[#]])
   // CHECK:  ret [[TY]] %[[RET]]
   return WaveActiveBitOr(expr);
 }
