@@ -16,6 +16,7 @@
 #include "mlir/Dialect/MemRef/IR/MemRef.h"
 #include "mlir/Dialect/SCF/IR/DeviceMappingInterface.h"
 #include "mlir/Dialect/Tensor/IR/Tensor.h"
+#include "mlir/Dialect/UB/IR/UBOps.h"
 #include "mlir/IR/BuiltinAttributes.h"
 #include "mlir/IR/IRMapping.h"
 #include "mlir/IR/Matchers.h"
@@ -525,8 +526,10 @@ void ForOp::print(OpAsmPrinter &p) {
   p.printRegion(getRegion(),
                 /*printEntryBlockArgs=*/false,
                 /*printBlockTerminators=*/!getInitArgs().empty());
-  p.printOptionalAttrDict((*this)->getAttrs(),
-                          /*elidedAttrs=*/getUnsignedCmpAttrName().strref());
+  SmallVector<StringRef> elidedAttrs = {getUnsignedCmpAttrName().strref()};
+  if (getMustProgress()) // "true" is the default, elide attribute.
+    elidedAttrs.push_back(getMustProgressAttrName().strref());
+  p.printOptionalAttrDict((*this)->getAttrs(), elidedAttrs);
 }
 
 ParseResult ForOp::parse(OpAsmParser &parser, OperationState &result) {
@@ -707,6 +710,24 @@ void ForOp::getSuccessorRegions(RegionBranchPoint point,
     }
   }
 
+  // Infinite loops (lb < ub and step size 0) enter the loop body and never
+  // leave it.
+  std::optional<std::pair<APInt, bool>> lbCst =
+      getConstantAPIntValue(getLowerBound());
+  std::optional<std::pair<APInt, bool>> ubCst =
+      getConstantAPIntValue(getUpperBound());
+  std::optional<std::pair<APInt, bool>> stepCst =
+      getConstantAPIntValue(getStep());
+  if (lbCst.has_value() && ubCst.has_value() && stepCst.has_value()) {
+    bool atLeastOneIteration =
+        (getUnsignedCmp() && lbCst->first.ult(ubCst->first)) ||
+        (!getUnsignedCmp() && lbCst->first.slt(ubCst->first));
+    if (atLeastOneIteration && stepCst->first.isZero()) {
+      regions.push_back(RegionSuccessor(&getRegion()));
+      return;
+    }
+  }
+
   // Both the operation itself and the region may be branching into the body or
   // back into the operation itself. It is possible for loop not to enter the
   // body.
@@ -718,6 +739,8 @@ ValueRange ForOp::getSuccessorInputs(RegionSuccessor successor) {
   return successor.isParent() ? ValueRange(getResults())
                               : ValueRange(getRegionIterArgs());
 }
+
+bool ForOp::mustProgress() { return getMustProgress(); }
 
 SmallVector<Region *> ForallOp::getLoopRegions() { return {&getRegion()}; }
 
@@ -1020,6 +1043,8 @@ void ForOp::getCanonicalizationPatterns(RewritePatternSet &results,
         auto forOp = cast<ForOp>(blockArg.getOwner()->getParentOp());
         return forOp.getLowerBound();
       });
+  ub::populateEraseInfiniteRegionBranchLoopPattern(results,
+                                                   ForOp::getOperationName());
 }
 
 std::optional<APInt> ForOp::getConstantStep() {
@@ -3226,6 +3251,16 @@ void WhileOp::build(::mlir::OpBuilder &odsBuilder,
     afterBuilder(odsBuilder, odsState.location, afterBlock->getArguments());
 }
 
+void WhileOp::build(::mlir::OpBuilder &odsBuilder,
+                    ::mlir::OperationState &odsState, TypeRange resultTypes,
+                    ValueRange inits, bool mustProgress) {
+  odsState.addOperands(inits);
+  for (unsigned i = 0; i < 2; ++i)
+    (void)odsState.addRegion();
+  odsState.addTypes(resultTypes);
+  odsState.addAttribute("mustProgress", odsBuilder.getBoolAttr(mustProgress));
+}
+
 ConditionOp WhileOp::getConditionOp() {
   return cast<ConditionOp>(getBeforeBody()->getTerminator());
 }
@@ -3289,6 +3324,8 @@ ValueRange WhileOp::getSuccessorInputs(RegionSuccessor successor) {
   llvm_unreachable("invalid region successor");
 }
 
+bool WhileOp::mustProgress() { return getMustProgress(); }
+
 SmallVector<Region *> WhileOp::getLoopRegions() {
   return {&getBefore(), &getAfter()};
 }
@@ -3348,7 +3385,10 @@ void scf::WhileOp::print(OpAsmPrinter &p) {
   p.printRegion(getBefore(), /*printEntryBlockArgs=*/false);
   p << " do ";
   p.printRegion(getAfter());
-  p.printOptionalAttrDictWithKeyword((*this)->getAttrs());
+  SmallVector<StringRef> elidedAttrs;
+  if (getMustProgress()) // "true" is the default, elide attribute.
+    elidedAttrs.push_back(getMustProgressAttrName().strref());
+  p.printOptionalAttrDictWithKeyword((*this)->getAttrs(), elidedAttrs);
 }
 
 /// Verifies that two ranges of types match, i.e. have the same number of
@@ -3724,6 +3764,8 @@ void WhileOp::getCanonicalizationPatterns(RewritePatternSet &results,
       results, WhileOp::getOperationName());
   populateRegionBranchOpInterfaceInliningPattern(results,
                                                  WhileOp::getOperationName());
+  ub::populateEraseInfiniteRegionBranchLoopPattern(results,
+                                                   WhileOp::getOperationName());
 }
 
 //===----------------------------------------------------------------------===//
