@@ -194,23 +194,21 @@ func.func @foo() {} // expected-error {{expected non-empty function body}}
 
 // -----
 
-// test.loop_block_term implements RegionBranchTerminatorOpInterface.
-// getMutableSuccessorOperands(parent) returns only the exit operand (f32).
-// The function returns i32, so the type check must fail.
+// test.loop_block_term implements RegionBranchTerminatorOpInterface but is not
+// a func.return op. func.func requires func.return as the only terminator.
 func.func @region_branch_term_type_mismatch(%arg: i32) -> i32 {
   %0 = "test.constant"() { value = 5.3 : f32 } : () -> f32
-  // expected-error @+1 {{type of return operand 0 ('f32') doesn't match function result type ('i32') in function @region_branch_term_type_mismatch}}
+  // expected-error @+1 {{is not a func.return op}}
   test.loop_block_term iter %arg exit %0
 }
 
 // -----
 
-// test.loop_block_term has one exit operand (f32) but the function returns
-// nothing. getMutableSuccessorOperands(parent) returns 1 operand while the
-// function has 0 results, so the count check must fail.
+// test.loop_block_term implements RegionBranchTerminatorOpInterface but is not
+// a func.return op. func.func requires func.return as the only terminator.
 func.func @region_branch_term_count_mismatch(%arg: i32) {
   %0 = "test.constant"() { value = 5.3 : f32 } : () -> f32
-  // expected-error @+1 {{'test.loop_block_term' op has 1 operands, but enclosing function (@region_branch_term_count_mismatch) returns 0}}
+  // expected-error @+1 {{is not a func.return op}}
   test.loop_block_term iter %arg exit %0
 }
 

@@ -88,7 +88,7 @@ func.func @cp_async_mbarrier_arrive(%bar_shared: !llvm.ptr<3>, %bar_gen: !llvm.p
   nvvm.cp.async.mbarrier.arrive %bar_shared : !llvm.ptr<3>
   // CHECK: nvvm.cp.async.mbarrier.arrive %{{.*}} {noinc = true}
   nvvm.cp.async.mbarrier.arrive %bar_shared {noinc = true} : !llvm.ptr<3>
-  llvm.return
+  return
 }
 
 // CHECK-LABEL: @tma_load_3d_all

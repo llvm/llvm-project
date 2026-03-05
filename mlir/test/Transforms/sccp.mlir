@@ -253,5 +253,5 @@ func.func @no_crash_with_different_source_type() {
   %0 = llvm.mlir.constant(0 : index) : i64
   // CHECK: vector.broadcast %[[CST:.*]] : i64 to vector<128xi64>
   %1 = vector.broadcast %0 : i64 to vector<128xi64>
-  llvm.return
+  func.return
 }

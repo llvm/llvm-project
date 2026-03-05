@@ -719,7 +719,12 @@ struct ReturnOpLowering : public ConvertOpToLLVMPattern<func::ReturnOp> {
     Location loc = op.getLoc();
     SmallVector<Value, 4> updatedOperands;
 
+    // Only convert when the enclosing func.func has already been converted to
+    // llvm.func. If the parent is still a func::FuncOp (e.g., because its
+    // signature has non-convertible types), leave func.return as-is.
     auto funcOp = op->getParentOfType<LLVM::LLVMFuncOp>();
+    if (!funcOp)
+      return failure();
     bool useBarePtrCallConv =
         shouldUseBarePtrCallConv(funcOp, this->getTypeConverter());
 

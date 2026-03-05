@@ -225,7 +225,7 @@ func.func @store_unaligned_atomic(%val : f32, %ptr : !llvm.ptr) {
 
 // -----
 
-func.func @invalid_call() {
+llvm.func @invalid_call() {
   // expected-error@+1 {{'llvm.call' op must have either a `callee` attribute or at least an operand}}
   "llvm.call"() {op_bundle_sizes = array<i32>} : () -> ()
   llvm.return
@@ -236,14 +236,14 @@ func.func @invalid_call() {
 func.func @call_missing_ptr_type(%callee : !llvm.func<i8 (i8)>, %arg : i8) {
   // expected-error@+1 {{expected indirect call to have 2 trailing types}}
   llvm.call %callee(%arg) : (i8) -> (i8)
-  llvm.return
+  return
 }
 
 // -----
 
 func.func private @standard_func_callee()
 
-func.func @call_missing_ptr_type(%arg : i8) {
+llvm.func @call_missing_ptr_type(%arg : i8) {
   // expected-error@+2 {{expected '('}}
   // expected-error@+1 {{expected direct call to have 1 trailing type}}
   llvm.call @standard_func_callee(%arg) : !llvm.ptr, (i8) -> (i8)
@@ -255,12 +255,12 @@ func.func @call_missing_ptr_type(%arg : i8) {
 func.func @call_non_pointer_type(%callee : !llvm.func<i8 (i8)>, %arg : i8) {
   // expected-error@+1 {{indirect call expects a pointer as callee: '!llvm.func<i8 (i8)>'}}
   llvm.call %callee(%arg) : !llvm.func<i8 (i8)>, (i8) -> (i8)
-  llvm.return
+  return
 }
 
 // -----
 
-func.func @call_non_function_type(%callee : !llvm.ptr, %arg : i8) {
+llvm.func @call_non_function_type(%callee : !llvm.ptr, %arg : i8) {
   // expected-error@+2 {{expected '('}}
   // expected-error@+1 {{expected trailing function type}}
   llvm.call %callee(%arg) : !llvm.ptr, !llvm.func<i8 (i8)>
@@ -269,7 +269,7 @@ func.func @call_non_function_type(%callee : !llvm.ptr, %arg : i8) {
 
 // -----
 
-func.func @call_void_result_type(%callee : !llvm.ptr, %arg : i8) {
+llvm.func @call_void_result_type(%callee : !llvm.ptr, %arg : i8) {
   // expected-error@+1 {{expected a non-void result type}}
   llvm.call %callee(%arg) : !llvm.ptr, (i8) -> (!llvm.void)
   llvm.return
@@ -277,7 +277,7 @@ func.func @call_void_result_type(%callee : !llvm.ptr, %arg : i8) {
 
 // -----
 
-func.func @call_unknown_symbol() {
+llvm.func @call_unknown_symbol() {
   // expected-error@+1 {{'llvm.call' op 'missing_callee' does not reference a symbol in the current scope}}
   llvm.call @missing_callee() : () -> ()
   llvm.return
@@ -287,7 +287,7 @@ func.func @call_unknown_symbol() {
 
 func.func private @standard_func_callee()
 
-func.func @call_non_llvm() {
+llvm.func @call_non_llvm() {
   // expected-error@+1 {{'llvm.call' op 'standard_func_callee' does not reference a valid LLVM function}}
   llvm.call @standard_func_callee() : () -> ()
   llvm.return
@@ -298,12 +298,12 @@ func.func @call_non_llvm() {
 func.func @call_non_llvm_arg(%arg0 : tensor<*xi32>) {
   // expected-error@+1 {{'llvm.call' op operand #0 must be variadic of LLVM dialect-compatible type}}
   "llvm.call"(%arg0) {operandSegmentSizes = array<i32: 1, 0>, op_bundle_sizes = array<i32>} : (tensor<*xi32>) -> ()
-  llvm.return
+  return
 }
 
 // -----
 
-func.func @call_non_llvm_res(%callee : !llvm.ptr) {
+llvm.func @call_non_llvm_res(%callee : !llvm.ptr) {
   // expected-error@+1 {{'llvm.call' op result #0 must be LLVM dialect-compatible type}}
   llvm.call %callee() : !llvm.ptr, () -> (tensor<*xi32>)
   llvm.return
@@ -313,7 +313,7 @@ func.func @call_non_llvm_res(%callee : !llvm.ptr) {
 
 llvm.func @callee_func(i8) -> ()
 
-func.func @callee_arg_mismatch(%arg0 : i32) {
+llvm.func @callee_arg_mismatch(%arg0 : i32) {
   // expected-error@+1 {{'llvm.call' op operand type mismatch for operand 0: 'i32' != 'i8'}}
   llvm.call @callee_func(%arg0) : (i32) -> ()
   llvm.return
@@ -323,7 +323,7 @@ func.func @callee_arg_mismatch(%arg0 : i32) {
 
 llvm.func @callee_func() -> (i8)
 
-func.func @callee_return_mismatch() {
+llvm.func @callee_return_mismatch() {
   // expected-error@+1 {{'llvm.call' op result type mismatch: 'i32' != 'i8'}}
   %res = llvm.call @callee_func() : () -> (i32)
   llvm.return
@@ -331,7 +331,7 @@ func.func @callee_return_mismatch() {
 
 // -----
 
-func.func @call_too_many_results(%callee : !llvm.ptr) {
+llvm.func @call_too_many_results(%callee : !llvm.ptr) {
   // expected-error@+1 {{expected function with 0 or 1 result}}
   llvm.call %callee() : !llvm.ptr, () -> (i32, i32)
   llvm.return
@@ -684,7 +684,7 @@ func.func @nvvm_invalid_shfl_pred_3(%arg0 : i32, %arg1 : i32, %arg2 : i32, %arg3
 
 // -----
 
-func.func @nvvm_invalid_mma_0(%a0 : f16, %a1 : f16,
+llvm.func @nvvm_invalid_mma_0(%a0 : f16, %a1 : f16,
                          %b0 : vector<2xf16>, %b1 : vector<2xf16>,
                          %c0 : f32, %c1 : f32, %c2 : f32, %c3 : f32,
                          %c4 : f32, %c5 : f32, %c6 : f32, %c7 : f32) -> !llvm.struct<(f32, f32, f32, f32, f32, f32, f32, f32)> {
@@ -696,7 +696,7 @@ func.func @nvvm_invalid_mma_0(%a0 : f16, %a1 : f16,
 
 // -----
 
-func.func @nvvm_invalid_mma_1(%a0 : vector<2xf16>, %a1 : vector<2xf16>,
+llvm.func @nvvm_invalid_mma_1(%a0 : vector<2xf16>, %a1 : vector<2xf16>,
                          %b0 : vector<2xf16>, %b1 : vector<2xf16>,
                          %c0 : f32, %c1 : f32, %c2 : f32, %c3 : f32,
                          %c4 : f32, %c5 : f32, %c6 : f32, %c7 : f32) -> !llvm.struct<(f32, f32, f32, f32, f32, f32, f32, f16)> {
@@ -708,7 +708,7 @@ func.func @nvvm_invalid_mma_1(%a0 : vector<2xf16>, %a1 : vector<2xf16>,
 
 // -----
 
-func.func @nvvm_invalid_mma_2(%a0 : vector<2xf16>, %a1 : vector<2xf16>,
+llvm.func @nvvm_invalid_mma_2(%a0 : vector<2xf16>, %a1 : vector<2xf16>,
                          %b0 : vector<2xf16>, %b1 : vector<2xf16>,
                          %c0 : f32, %c1 : f32, %c2 : f32, %c3 : f32,
                          %c4 : f32, %c5 : f32, %c6 : f32, %c7 : f32) -> !llvm.struct<(f32, f32, f32, f32, f32, f32, f32, f32)> {
@@ -720,7 +720,7 @@ func.func @nvvm_invalid_mma_2(%a0 : vector<2xf16>, %a1 : vector<2xf16>,
 
 // -----
 
-func.func @nvvm_invalid_mma_3(%a0 : vector<2xf16>, %a1 : vector<2xf16>,
+llvm.func @nvvm_invalid_mma_3(%a0 : vector<2xf16>, %a1 : vector<2xf16>,
                          %b0 : vector<2xf16>, %b1 : vector<2xf16>,
                          %c0 : vector<2xf16>, %c1 : vector<2xf16>) -> !llvm.struct<(vector<2xf16>, vector<2xf16>)> {
   // expected-error@+1 {{unimplemented variant for MMA shape <8, 8, 16>}}
@@ -730,7 +730,7 @@ func.func @nvvm_invalid_mma_3(%a0 : vector<2xf16>, %a1 : vector<2xf16>,
 
 // -----
 
-func.func @nvvm_invalid_mma_8(%a0 : i32, %a1 : i32,
+llvm.func @nvvm_invalid_mma_8(%a0 : i32, %a1 : i32,
                                %b0 : i32,
                                %c0 : i32, %c1 : i32, %c2 : i32, %c3 : i32) -> !llvm.struct<(i32, i32, i32, i32)> {
   // expected-error@+1 {{op requires b1Op attribute}}
@@ -773,7 +773,7 @@ llvm.func @nvvm_mma_m16n8k16_f16_f32(%a0 : vector<2xf16>, %a1 : vector<2xf16>,
 
 // -----
 
-func.func @atomicrmw_mismatched_operands(%f32_ptr : !llvm.ptr, %f32 : f32) {
+llvm.func @atomicrmw_mismatched_operands(%f32_ptr : !llvm.ptr, %f32 : f32) {
   // expected-error@+1 {{op failed to verify that result #0 and operand #1 have the same type}}
   %0 = "llvm.atomicrmw"(%f32_ptr, %f32) {bin_op=11, ordering=1} : (!llvm.ptr, f32) -> i32
   llvm.return
@@ -781,7 +781,7 @@ func.func @atomicrmw_mismatched_operands(%f32_ptr : !llvm.ptr, %f32 : f32) {
 
 // -----
 
-func.func @atomicrmw_expected_float(%i32_ptr : !llvm.ptr, %i32 : i32) {
+llvm.func @atomicrmw_expected_float(%i32_ptr : !llvm.ptr, %i32 : i32) {
   // expected-error@+1 {{expected LLVM IR floating point type}}
   %0 = llvm.atomicrmw fadd %i32_ptr, %i32 unordered : !llvm.ptr, i32
   llvm.return
@@ -789,7 +789,7 @@ func.func @atomicrmw_expected_float(%i32_ptr : !llvm.ptr, %i32 : i32) {
 
 // -----
 
-func.func @atomicrmw_scalable_vector(%ptr : !llvm.ptr, %f32_vec : vector<[2]xf32>) {
+llvm.func @atomicrmw_scalable_vector(%ptr : !llvm.ptr, %f32_vec : vector<[2]xf32>) {
   // expected-error@+1 {{'val' must be floating point LLVM type or LLVM pointer type or signless integer or LLVM dialect-compatible fixed-length vector type}}
   %0 = llvm.atomicrmw fadd %ptr, %f32_vec unordered : !llvm.ptr, vector<[2]xf32>
   llvm.return
@@ -797,7 +797,7 @@ func.func @atomicrmw_scalable_vector(%ptr : !llvm.ptr, %f32_vec : vector<[2]xf32
 
 // -----
 
-func.func @atomicrmw_vector_expected_float(%ptr : !llvm.ptr, %i32_vec : vector<3xi32>) {
+llvm.func @atomicrmw_vector_expected_float(%ptr : !llvm.ptr, %i32_vec : vector<3xi32>) {
   // expected-error@+1 {{expected LLVM IR floating point type for vector element}}
   %0 = llvm.atomicrmw fadd %ptr, %i32_vec unordered : !llvm.ptr, vector<3xi32>
   llvm.return
@@ -805,7 +805,7 @@ func.func @atomicrmw_vector_expected_float(%ptr : !llvm.ptr, %i32_vec : vector<3
 
 // -----
 
-func.func @atomicrmw_unexpected_xchg_type(%i1_ptr : !llvm.ptr, %i1 : i1) {
+llvm.func @atomicrmw_unexpected_xchg_type(%i1_ptr : !llvm.ptr, %i1 : i1) {
   // expected-error@+1 {{unexpected LLVM IR type for 'xchg' bin_op}}
   %0 = llvm.atomicrmw xchg %i1_ptr, %i1 unordered : !llvm.ptr, i1
   llvm.return
@@ -813,7 +813,7 @@ func.func @atomicrmw_unexpected_xchg_type(%i1_ptr : !llvm.ptr, %i1 : i1) {
 
 // -----
 
-func.func @atomicrmw_expected_int(%f32_ptr : !llvm.ptr, %f32 : f32) {
+llvm.func @atomicrmw_expected_int(%f32_ptr : !llvm.ptr, %f32 : f32) {
   // expected-error@+1 {{expected LLVM IR integer type}}
   %0 = llvm.atomicrmw max %f32_ptr, %f32 unordered : !llvm.ptr, f32
   llvm.return
@@ -821,7 +821,7 @@ func.func @atomicrmw_expected_int(%f32_ptr : !llvm.ptr, %f32 : f32) {
 
 // -----
 
-func.func @cmpxchg_mismatched_value_operands(%ptr : !llvm.ptr, %i32 : i32, %i64 : i64) {
+llvm.func @cmpxchg_mismatched_value_operands(%ptr : !llvm.ptr, %i32 : i32, %i64 : i64) {
   // expected-error@+1 {{op failed to verify that operand #1 and operand #2 have the same type}}
   %0 = "llvm.cmpxchg"(%ptr, %i32, %i64) {success_ordering=2,failure_ordering=2} : (!llvm.ptr, i32, i64) -> !llvm.struct<(i32, i1)>
   llvm.return
@@ -829,7 +829,7 @@ func.func @cmpxchg_mismatched_value_operands(%ptr : !llvm.ptr, %i32 : i32, %i64 
 
 // -----
 
-func.func @cmpxchg_mismatched_result(%ptr : !llvm.ptr, %i64 : i64) {
+llvm.func @cmpxchg_mismatched_result(%ptr : !llvm.ptr, %i64 : i64) {
   // expected-error@+1 {{op failed to verify that result #0 has an LLVM struct type consisting of the type of operand #2 and a bool}}
   %0 = "llvm.cmpxchg"(%ptr, %i64, %i64) {success_ordering=2,failure_ordering=2} : (!llvm.ptr, i64, i64) -> !llvm.struct<(i64, i64)>
   llvm.return
@@ -837,7 +837,7 @@ func.func @cmpxchg_mismatched_result(%ptr : !llvm.ptr, %i64 : i64) {
 
 // -----
 
-func.func @cmpxchg_unexpected_type(%i1_ptr : !llvm.ptr, %i1 : i1) {
+llvm.func @cmpxchg_unexpected_type(%i1_ptr : !llvm.ptr, %i1 : i1) {
   // expected-error@+1 {{unexpected LLVM IR type}}
   %0 = llvm.cmpxchg %i1_ptr, %i1, %i1 monotonic monotonic : !llvm.ptr, i1
   llvm.return
@@ -845,7 +845,7 @@ func.func @cmpxchg_unexpected_type(%i1_ptr : !llvm.ptr, %i1 : i1) {
 
 // -----
 
-func.func @cmpxchg_at_least_monotonic_success(%i32_ptr : !llvm.ptr, %i32 : i32) {
+llvm.func @cmpxchg_at_least_monotonic_success(%i32_ptr : !llvm.ptr, %i32 : i32) {
   // expected-error@+1 {{ordering must be at least 'monotonic'}}
   %0 = llvm.cmpxchg %i32_ptr, %i32, %i32 unordered monotonic : !llvm.ptr, i32
   llvm.return
@@ -853,7 +853,7 @@ func.func @cmpxchg_at_least_monotonic_success(%i32_ptr : !llvm.ptr, %i32 : i32) 
 
 // -----
 
-func.func @cmpxchg_at_least_monotonic_failure(%i32_ptr : !llvm.ptr, %i32 : i32) {
+llvm.func @cmpxchg_at_least_monotonic_failure(%i32_ptr : !llvm.ptr, %i32 : i32) {
   // expected-error@+1 {{ordering must be at least 'monotonic'}}
   %0 = llvm.cmpxchg %i32_ptr, %i32, %i32 monotonic unordered : !llvm.ptr, i32
   llvm.return
@@ -861,7 +861,7 @@ func.func @cmpxchg_at_least_monotonic_failure(%i32_ptr : !llvm.ptr, %i32 : i32) 
 
 // -----
 
-func.func @cmpxchg_failure_release(%i32_ptr : !llvm.ptr, %i32 : i32) {
+llvm.func @cmpxchg_failure_release(%i32_ptr : !llvm.ptr, %i32 : i32) {
   // expected-error@+1 {{failure ordering cannot be 'release' or 'acq_rel'}}
   %0 = llvm.cmpxchg %i32_ptr, %i32, %i32 acq_rel release : !llvm.ptr, i32
   llvm.return
@@ -869,7 +869,7 @@ func.func @cmpxchg_failure_release(%i32_ptr : !llvm.ptr, %i32 : i32) {
 
 // -----
 
-func.func @cmpxchg_failure_acq_rel(%i32_ptr : !llvm.ptr, %i32 : i32) {
+llvm.func @cmpxchg_failure_acq_rel(%i32_ptr : !llvm.ptr, %i32 : i32) {
   // expected-error@+1 {{failure ordering cannot be 'release' or 'acq_rel'}}
   %0 = llvm.cmpxchg %i32_ptr, %i32, %i32 acq_rel acq_rel : !llvm.ptr, i32
   llvm.return
@@ -998,7 +998,7 @@ module attributes {llvm.data_layout = "#vjkr32"} {
 
 // -----
 
-func.func @switch_superfluous_comma(%arg0 : i64) {
+llvm.func @switch_superfluous_comma(%arg0 : i64) {
   // expected-error@+3 {{custom op 'llvm.switch' expected integer value}}
   llvm.switch %arg0 : i32, ^bb1 [
     42: ^bb2,
@@ -1011,7 +1011,7 @@ func.func @switch_superfluous_comma(%arg0 : i64) {
 
 // -----
 
-func.func @switch_wrong_number_of_weights(%arg0 : i32) {
+llvm.func @switch_wrong_number_of_weights(%arg0 : i32) {
   // expected-error@+1 {{expects number of branch weights to match number of successors: 3 vs 2}}
   llvm.switch %arg0 : i32, ^bb1 [
     42: ^bb2(%arg0, %arg0 : i32, i32)
@@ -1026,7 +1026,7 @@ func.func @switch_wrong_number_of_weights(%arg0 : i32) {
 
 // -----
 
-func.func @switch_case_type_mismatch(%arg0 : i64) {
+llvm.func @switch_case_type_mismatch(%arg0 : i64) {
   // expected-error@below {{expects case value type to match condition value type}}
   "llvm.switch"(%arg0)[^bb1, ^bb2] <{case_operand_segments = array<i32: 0>, case_values = dense<42> : vector<1xi32>, operandSegmentSizes = array<i32: 1, 0, 0>}> : (i64) -> ()
 ^bb1: // pred: ^bb0
@@ -1491,7 +1491,7 @@ func.func @invalid_target_ext_atomic(%arg0 : !llvm.ptr) {
 
 // -----
 
-func.func @invalid_target_ext_constant_unsupported() {
+llvm.func @invalid_target_ext_constant_unsupported() {
   // expected-error@+1 {{target extension type does not support zero-initializer}}
   %0 = llvm.mlir.zero : !llvm.target<"invalid_constant">
   llvm.return
@@ -1499,7 +1499,7 @@ func.func @invalid_target_ext_constant_unsupported() {
 
 // -----
 
-func.func @invalid_target_ext_constant() {
+llvm.func @invalid_target_ext_constant() {
   // expected-error@+1 {{does not support target extension type.}}
   %0 = llvm.mlir.constant(0 : index) : !llvm.target<"spirv.Event">
   llvm.return

@@ -10,7 +10,7 @@
 func.func @remap_input_1_to_1(%arg0: i32) {
   %0 = "test.one_variadic_out_one_variadic_in1"(%arg0) : (i32) -> i32
   %1 = "test.one_variadic_out_one_variadic_in1"(%0) : (i32) -> i32
-  "test.return"() : () -> ()
+  func.return
 }
 
 // Test the case where an operation is converted before its operands are.
@@ -24,5 +24,5 @@ func.func @remap_unconverted() {
     "test.return"(%result) : (f32) -> ()
   }) : () -> (f32)
   "test.type_consumer"(%region_result) : (f32) -> ()
-  "test.return"() : () -> ()
+  func.return
 }

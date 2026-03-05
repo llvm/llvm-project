@@ -525,7 +525,7 @@ func.func @noRegionBranchOpInterface() {
     }) : () -> (i32)
     "test.return"() : () -> ()
   }) : () -> (i32)
-  "test.return"() : () -> ()
+  func.return
 }
 
 // -----
@@ -544,7 +544,7 @@ func.func @noRegionBranchOpInterface() {
     }) : () -> (memref<2xi32>)
     "test.return"() : () -> ()
   }) : () -> (i32)
-  "test.return"() : () -> ()
+  func.return
 }
 
 // -----

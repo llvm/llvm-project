@@ -73,7 +73,7 @@ llvm.comdat @__llvm_comdat {
 llvm.mlir.global @any() comdat(@__llvm_comdat::@any) {addr_space = 1 : i32} : i64
 
 // CHECK-LABEL: references
-func.func @references() {
+llvm.func @references() {
   // CHECK: llvm.mlir.addressof @".string" : !llvm.ptr
   %0 = llvm.mlir.addressof @".string" : !llvm.ptr
 
@@ -164,7 +164,7 @@ func.func @bar() {
 
 // -----
 
-func.func @foo() {
+llvm.func @foo() {
   // The attribute parser will consume the first colon-type, so we put two of
   // them to trigger the attribute type mismatch error.
   // expected-error @+1 {{invalid kind of attribute specified}}
@@ -177,7 +177,7 @@ func.func @foo() {
 func.func @foo() {
   // expected-error @+1 {{must reference a global defined by 'llvm.mlir.global'}}
   llvm.mlir.addressof @foo : !llvm.ptr
-  llvm.return
+  return
 }
 
 // -----
@@ -206,7 +206,7 @@ llvm.mlir.global internal @g(43 : i64) : i64 {
 // -----
 
 llvm.mlir.global internal @g(32 : i64) {addr_space = 3: i32} : i64
-func.func @mismatch_addr_space_implicit_global() {
+llvm.func @mismatch_addr_space_implicit_global() {
   // expected-error @+1 {{pointer address space must match address space of the referenced global}}
   llvm.mlir.addressof @g : !llvm.ptr
   llvm.return
@@ -216,7 +216,7 @@ func.func @mismatch_addr_space_implicit_global() {
 
 llvm.mlir.global internal @g(32 : i64) {addr_space = 3: i32} : i64
 
-func.func @mismatch_addr_space() {
+llvm.func @mismatch_addr_space() {
   // expected-error @+1 {{pointer address space must match address space of the referenced global}}
   llvm.mlir.addressof @g : !llvm.ptr<4>
   llvm.return

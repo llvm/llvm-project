@@ -531,7 +531,7 @@ func.func @omp_simd_firstprivate(%lb : index, %ub : index, %step : index) {
       omp.yield
     }
   }
-  llvm.return
+  return
 }
 
 // -----

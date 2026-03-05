@@ -9,6 +9,7 @@ func.func @test(%arg0: f32) {
       // expected-remark@+1 {{op 'test.invalid' is legalizable}}
       "test.invalid"() : () -> ()
   }) : () -> ()
+  // expected-remark@+1 {{op 'func.return' is legalizable}}
   return
 }
 

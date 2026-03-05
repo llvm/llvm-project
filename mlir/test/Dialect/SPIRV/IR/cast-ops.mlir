@@ -89,7 +89,7 @@ func.func @cast3(%arg0 : i64) {
 func.func @convert_f_to_s_scalar(%arg0 : f32) -> i32 {
   // CHECK: {{%.*}} = spirv.ConvertFToS {{%.*}} : f32 to i32
   %0 = spirv.ConvertFToS %arg0 : f32 to i32
-  spirv.ReturnValue %0 : i32
+  return %0 : i32
 }
 
 // -----
@@ -97,7 +97,7 @@ func.func @convert_f_to_s_scalar(%arg0 : f32) -> i32 {
 func.func @convert_f64_to_s32_scalar(%arg0 : f64) -> i32 {
   // CHECK: {{%.*}} = spirv.ConvertFToS {{%.*}} : f64 to i32
   %0 = spirv.ConvertFToS %arg0 : f64 to i32
-  spirv.ReturnValue %0 : i32
+  return %0 : i32
 }
 
 // -----
@@ -105,7 +105,7 @@ func.func @convert_f64_to_s32_scalar(%arg0 : f64) -> i32 {
 func.func @convert_f_to_s_vector(%arg0 : vector<3xf32>) -> vector<3xi32> {
   // CHECK: {{%.*}} = spirv.ConvertFToS {{%.*}} : vector<3xf32> to vector<3xi32>
   %0 = spirv.ConvertFToS %arg0 : vector<3xf32> to vector<3xi32>
-  spirv.ReturnValue %0 : vector<3xi32>
+  return %0 : vector<3xi32>
 }
 
 // -----
@@ -113,7 +113,7 @@ func.func @convert_f_to_s_vector(%arg0 : vector<3xf32>) -> vector<3xi32> {
 func.func @convert_bf16_to_s32_scalar(%arg0 : bf16) -> i32 {
   // CHECK: {{%.*}} = spirv.ConvertFToS {{%.*}} : bf16 to i32
   %0 = spirv.ConvertFToS %arg0 : bf16 to i32
-  spirv.ReturnValue %0 : i32
+  return %0 : i32
 }
 
 // -----
@@ -125,7 +125,7 @@ func.func @convert_bf16_to_s32_scalar(%arg0 : bf16) -> i32 {
 func.func @convert_f_to_u_scalar(%arg0 : f32) -> i32 {
   // CHECK: {{%.*}} = spirv.ConvertFToU {{%.*}} : f32 to i32
   %0 = spirv.ConvertFToU %arg0 : f32 to i32
-  spirv.ReturnValue %0 : i32
+  return %0 : i32
 }
 
 // -----
@@ -133,7 +133,7 @@ func.func @convert_f_to_u_scalar(%arg0 : f32) -> i32 {
 func.func @convert_f64_to_u32_scalar(%arg0 : f64) -> i32 {
   // CHECK: {{%.*}} = spirv.ConvertFToU {{%.*}} : f64 to i32
   %0 = spirv.ConvertFToU %arg0 : f64 to i32
-  spirv.ReturnValue %0 : i32
+  return %0 : i32
 }
 
 // -----
@@ -141,7 +141,7 @@ func.func @convert_f64_to_u32_scalar(%arg0 : f64) -> i32 {
 func.func @convert_f_to_u_vector(%arg0 : vector<3xf32>) -> vector<3xi32> {
   // CHECK: {{%.*}} = spirv.ConvertFToU {{%.*}} : vector<3xf32> to vector<3xi32>
   %0 = spirv.ConvertFToU %arg0 : vector<3xf32> to vector<3xi32>
-  spirv.ReturnValue %0 : vector<3xi32>
+  return %0 : vector<3xi32>
 }
 
 // -----
@@ -149,7 +149,7 @@ func.func @convert_f_to_u_vector(%arg0 : vector<3xf32>) -> vector<3xi32> {
 func.func @convert_f_to_u.coopmatrix(%arg0 : !spirv.coopmatrix<8x16xf32, Subgroup, MatrixB>) {
   // CHECK: {{%.*}} = spirv.ConvertFToU {{%.*}} : !spirv.coopmatrix<8x16xf32, Subgroup, MatrixB> to !spirv.coopmatrix<8x16xi32, Subgroup, MatrixB>
   %0 = spirv.ConvertFToU %arg0 : !spirv.coopmatrix<8x16xf32, Subgroup, MatrixB> to !spirv.coopmatrix<8x16xi32, Subgroup, MatrixB>
-  spirv.Return
+  return
 }
 
 // -----
@@ -157,7 +157,7 @@ func.func @convert_f_to_u.coopmatrix(%arg0 : !spirv.coopmatrix<8x16xf32, Subgrou
 func.func @convert_bf16_to_u32_scalar(%arg0 : bf16) -> i32 {
   // CHECK: {{%.*}} = spirv.ConvertFToU {{%.*}} : bf16 to i32
   %0 = spirv.ConvertFToU %arg0 : bf16 to i32
-  spirv.ReturnValue %0 : i32
+  return %0 : i32
 }
 
 // -----
@@ -169,7 +169,7 @@ func.func @convert_bf16_to_u32_scalar(%arg0 : bf16) -> i32 {
 func.func @convert_s_to_f_scalar(%arg0 : i32) -> f32 {
   // CHECK: {{%.*}} = spirv.ConvertSToF {{%.*}} : i32 to f32
   %0 = spirv.ConvertSToF %arg0 : i32 to f32
-  spirv.ReturnValue %0 : f32
+  return %0 : f32
 }
 
 // -----
@@ -177,7 +177,7 @@ func.func @convert_s_to_f_scalar(%arg0 : i32) -> f32 {
 func.func @convert_s64_to_f32_scalar(%arg0 : i64) -> f32 {
   // CHECK: {{%.*}} = spirv.ConvertSToF {{%.*}} : i64 to f32
   %0 = spirv.ConvertSToF %arg0 : i64 to f32
-  spirv.ReturnValue %0 : f32
+  return %0 : f32
 }
 
 // -----
@@ -185,7 +185,7 @@ func.func @convert_s64_to_f32_scalar(%arg0 : i64) -> f32 {
 func.func @convert_s_to_f_vector(%arg0 : vector<3xi32>) -> vector<3xf32> {
   // CHECK: {{%.*}} = spirv.ConvertSToF {{%.*}} : vector<3xi32> to vector<3xf32>
   %0 = spirv.ConvertSToF %arg0 : vector<3xi32> to vector<3xf32>
-  spirv.ReturnValue %0 : vector<3xf32>
+  return %0 : vector<3xf32>
 }
 
 // -----
@@ -193,7 +193,7 @@ func.func @convert_s_to_f_vector(%arg0 : vector<3xi32>) -> vector<3xf32> {
 func.func @convert_s32_to_bf16_scalar(%arg0 : i32) -> bf16 {
   // CHECK: {{%.*}} = spirv.ConvertSToF {{%.*}} : i32 to bf16
   %0 = spirv.ConvertSToF %arg0 : i32 to bf16
-  spirv.ReturnValue %0 : bf16
+  return %0 : bf16
 }
 
 // -----
@@ -205,7 +205,7 @@ func.func @convert_s32_to_bf16_scalar(%arg0 : i32) -> bf16 {
 func.func @convert_u_to_f_scalar(%arg0 : i32) -> f32 {
   // CHECK: {{%.*}} = spirv.ConvertUToF {{%.*}} : i32 to f32
   %0 = spirv.ConvertUToF %arg0 : i32 to f32
-  spirv.ReturnValue %0 : f32
+  return %0 : f32
 }
 
 // -----
@@ -213,7 +213,7 @@ func.func @convert_u_to_f_scalar(%arg0 : i32) -> f32 {
 func.func @convert_u64_to_f32_scalar(%arg0 : i64) -> f32 {
   // CHECK: {{%.*}} = spirv.ConvertUToF {{%.*}} : i64 to f32
   %0 = spirv.ConvertUToF %arg0 : i64 to f32
-  spirv.ReturnValue %0 : f32
+  return %0 : f32
 }
 
 // -----
@@ -221,7 +221,7 @@ func.func @convert_u64_to_f32_scalar(%arg0 : i64) -> f32 {
 func.func @convert_u_to_f_vector(%arg0 : vector<3xi32>) -> vector<3xf32> {
   // CHECK: {{%.*}} = spirv.ConvertUToF {{%.*}} : vector<3xi32> to vector<3xf32>
   %0 = spirv.ConvertUToF %arg0 : vector<3xi32> to vector<3xf32>
-  spirv.ReturnValue %0 : vector<3xf32>
+  return %0 : vector<3xf32>
 }
 
 // -----
@@ -229,7 +229,7 @@ func.func @convert_u_to_f_vector(%arg0 : vector<3xi32>) -> vector<3xf32> {
 func.func @convert_u32_to_bf16_scalar(%arg0 : i32) -> bf16 {
   // CHECK: {{%.*}} = spirv.ConvertUToF {{%.*}} : i32 to bf16
   %0 = spirv.ConvertUToF %arg0 : i32 to bf16
-  spirv.ReturnValue %0 : bf16
+  return %0 : bf16
 }
 
 // -----
@@ -241,7 +241,7 @@ func.func @convert_u32_to_bf16_scalar(%arg0 : i32) -> bf16 {
 func.func @f_convert_scalar(%arg0 : f32) -> f64 {
   // CHECK: {{%.*}} = spirv.FConvert {{%.*}} : f32 to f64
   %0 = spirv.FConvert %arg0 : f32 to f64
-  spirv.ReturnValue %0 : f64
+  return %0 : f64
 }
 
 // -----
@@ -249,7 +249,7 @@ func.func @f_convert_scalar(%arg0 : f32) -> f64 {
 func.func @f_convert_vector(%arg0 : vector<3xf32>) -> vector<3xf64> {
   // CHECK: {{%.*}} = spirv.FConvert {{%.*}} : vector<3xf32> to vector<3xf64>
   %0 = spirv.FConvert %arg0 : vector<3xf32> to vector<3xf64>
-  spirv.ReturnValue %0 : vector<3xf64>
+  return %0 : vector<3xf64>
 }
 
 // -----
@@ -257,7 +257,7 @@ func.func @f_convert_vector(%arg0 : vector<3xf32>) -> vector<3xf64> {
 func.func @f_convert_coop_matrix(%arg0 : !spirv.coopmatrix<8x16xf32, Subgroup, MatrixA>) {
   // CHECK: {{%.*}} = spirv.FConvert {{%.*}} : !spirv.coopmatrix<8x16xf32, Subgroup, MatrixA> to !spirv.coopmatrix<8x16xf64, Subgroup, MatrixA>
   %0 = spirv.FConvert %arg0 : !spirv.coopmatrix<8x16xf32, Subgroup, MatrixA> to !spirv.coopmatrix<8x16xf64, Subgroup, MatrixA>
-  spirv.Return
+  return
 }
 
 // -----
@@ -265,7 +265,7 @@ func.func @f_convert_coop_matrix(%arg0 : !spirv.coopmatrix<8x16xf32, Subgroup, M
 func.func @f_convert_vector(%arg0 : f32) -> f32 {
   // expected-error @+1 {{expected the different bit widths for operand type and result type, but provided 'f32' and 'f32'}}
   %0 = spirv.FConvert %arg0 : f32 to f32
-  spirv.ReturnValue %0 : f32
+  return %0 : f32
 }
 
 // -----
@@ -273,7 +273,7 @@ func.func @f_convert_vector(%arg0 : f32) -> f32 {
 func.func @f_convert_bf16_to_f32_scalar(%arg0 : bf16) -> f32 {
   // CHECK: {{%.*}} = spirv.FConvert {{%.*}} : bf16 to f32
   %0 = spirv.FConvert %arg0 : bf16 to f32
-  spirv.ReturnValue %0 : f32
+  return %0 : f32
 }
 
 // -----
@@ -281,7 +281,7 @@ func.func @f_convert_bf16_to_f32_scalar(%arg0 : bf16) -> f32 {
 func.func @f_convert_f32_to_bf16_vector(%arg0 : vector<3xf32>) -> vector<3xbf16> {
   // CHECK: {{%.*}} = spirv.FConvert {{%.*}} : vector<3xf32> to vector<3xbf16>
   %0 = spirv.FConvert %arg0 : vector<3xf32> to vector<3xbf16>
-  spirv.ReturnValue %0 : vector<3xbf16>
+  return %0 : vector<3xbf16>
 }
 
 // -----
@@ -289,7 +289,7 @@ func.func @f_convert_f32_to_bf16_vector(%arg0 : vector<3xf32>) -> vector<3xbf16>
 func.func @f_convert_f32_to_bf16_coop_matrix(%arg0 : !spirv.coopmatrix<8x16xf32, Subgroup, MatrixA>) -> !spirv.coopmatrix<8x16xbf16, Subgroup, MatrixA> {
   // CHECK: {{%.*}} = spirv.FConvert {{%.*}} : !spirv.coopmatrix<8x16xf32, Subgroup, MatrixA> to !spirv.coopmatrix<8x16xbf16, Subgroup, MatrixA>
   %0 = spirv.FConvert %arg0 : !spirv.coopmatrix<8x16xf32, Subgroup, MatrixA> to !spirv.coopmatrix<8x16xbf16, Subgroup, MatrixA>
-  spirv.ReturnValue %0 : !spirv.coopmatrix<8x16xbf16, Subgroup, MatrixA>
+  return %0 : !spirv.coopmatrix<8x16xbf16, Subgroup, MatrixA>
 }
 
 // -----
@@ -301,7 +301,7 @@ func.func @f_convert_f32_to_bf16_coop_matrix(%arg0 : !spirv.coopmatrix<8x16xf32,
 func.func @s_convert_scalar(%arg0 : i32) -> i64 {
   // CHECK: {{%.*}} = spirv.SConvert {{%.*}} : i32 to i64
   %0 = spirv.SConvert %arg0 : i32 to i64
-  spirv.ReturnValue %0 : i64
+  return %0 : i64
 }
 
 // -----
@@ -313,7 +313,7 @@ func.func @s_convert_scalar(%arg0 : i32) -> i64 {
 func.func @u_convert_scalar(%arg0 : i32) -> i64 {
   // CHECK: {{%.*}} = spirv.UConvert {{%.*}} : i32 to i64
   %0 = spirv.UConvert %arg0 : i32 to i64
-  spirv.ReturnValue %0 : i64
+  return %0 : i64
 }
 
 // -----

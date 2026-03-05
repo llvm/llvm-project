@@ -7,7 +7,7 @@
 func.func @emit_vertex() {
   // CHECK: spirv.EmitVertex
   spirv.EmitVertex
-  spirv.Return
+  return
 }
 
 //===----------------------------------------------------------------------===//
@@ -17,5 +17,5 @@ func.func @emit_vertex() {
 func.func @end_primitive() {
   // CHECK: spirv.EndPrimitive
   spirv.EndPrimitive
-  spirv.Return
+  return
 }

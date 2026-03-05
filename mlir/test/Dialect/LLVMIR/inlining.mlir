@@ -61,7 +61,7 @@ func.func @test_inline(%ptr : !llvm.ptr) -> i32 {
 // Check that llvm.return is correctly handled
 
 func.func @func(%arg0 : i32) -> i32  {
-  llvm.return %arg0 : i32
+  return %arg0 : i32
 }
 // CHECK-LABEL: @llvm_ret
 // CHECK-NOT: call
@@ -698,7 +698,7 @@ llvm.func @caller(%x : i32) -> i32 {
 
 func.func @func(%arg0 : i32) -> i32  {
   llvm.blocktag <id = 1>
-  llvm.return %arg0 : i32
+  return %arg0 : i32
 }
 
 // CHECK-LABEL: @llvm_ret

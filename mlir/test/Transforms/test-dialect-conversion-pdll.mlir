@@ -3,9 +3,9 @@
 // CHECK-LABEL: @TestSingleConversion
 func.func @TestSingleConversion() {
   // CHECK: "test.cast"() : () -> f64
-  // CHECK-NEXT: "test.return"() : () -> ()
+  // CHECK-NEXT: return
   %result = "test.cast"() : () -> (i64)
-  "test.return"() : () -> ()
+  func.return
 }
 
 // CHECK-LABEL: @TestLingeringConversion

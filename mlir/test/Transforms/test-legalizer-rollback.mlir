@@ -39,7 +39,6 @@ func.func @create_illegal_block() {
   // expected-remark@+1 {{op 'test.create_illegal_block' is not legalizable}}
   "test.create_illegal_block"() : () -> ()
 
-  // expected-remark@+1 {{op 'func.return' is not legalizable}}
   return
 }
 
@@ -95,7 +94,6 @@ func.func @undo_block_erase() {
 func.func @undo_child_created_before_parent() {
   // expected-remark@+1 {{is not legalizable}}
   "test.illegal_op_with_region_anchor"() : () -> ()
-  // expected-remark@+1 {{op 'func.return' is not legalizable}}
   return
 }
 
@@ -106,7 +104,7 @@ builtin.module {
 func.func @create_unregistered_op_in_pattern() -> i32 {
   // expected-error@+1 {{failed to legalize operation 'test.illegal_op_g'}}
   %0 = "test.illegal_op_g"() : () -> (i32)
-  "test.return"(%0) : (i32) -> ()
+  func.return %0 : i32
 }
 }
 
@@ -121,7 +119,7 @@ func.func @test_move_op_before_rollback() {
     %0 = "test.hoist_me"() : () -> (i32)
     "test.valid"(%0) : (i32) -> ()
   }) : () -> ()
-  "test.return"() : () -> ()
+  func.return
 }
 
 // -----
@@ -133,7 +131,7 @@ func.func @test_properties_rollback() {
   test.with_properties
       a = 32, b = "foo", c = "bar", flag = true, array = [1, 2, 3, 4], array32 = [5, 6]
       {modify_inplace}
-  "test.return"() : () -> ()
+  func.return
 }
 
 // -----
@@ -145,7 +143,7 @@ func.func @test_undo_block_move_detached() {
   ^bb0(%arg0: i64):
     "test.return"() : () -> ()
   }) : () -> ()
-  "test.return"() : () -> ()
+  func.return
 }
 
 // -----
@@ -161,7 +159,7 @@ func.func @test_undo_region_clone() {
 
   // expected-error@+1 {{failed to legalize operation 'test.illegal_op_f'}}
   %ignored = "test.illegal_op_f"() : () -> (i32)
-  "test.return"() : () -> ()
+  func.return
 }
 }
 
@@ -172,7 +170,7 @@ builtin.module {
 func.func @create_unregistered_op_in_pattern() -> i32 {
   // expected-error@+1 {{failed to legalize operation 'test.illegal_op_g'}}
   %0 = "test.illegal_op_g"() : () -> (i32)
-  "test.return"(%0) : (i32) -> ()
+  func.return %0 : i32
 }
 }
 

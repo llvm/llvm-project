@@ -6,7 +6,7 @@ func.func @multi_level_mapping() {
   // CHECK: "test.type_consumer"(%{{.*}}) : (f64) -> ()
   %result = "test.type_producer"() : () -> i32
   "test.type_consumer"(%result) : (i32) -> ()
-  "test.return"() : () -> ()
+  func.return
 }
 
 // -----
@@ -14,12 +14,12 @@ func.func @multi_level_mapping() {
 // Test that operations that are erased don't need to be legalized.
 // CHECK-LABEL: func @dropped_region_with_illegal_ops
 func.func @dropped_region_with_illegal_ops() {
-  // CHECK-NEXT: test.return
+  // CHECK-NEXT: return
   "test.drop_region_op"() ({
     %ignored = "test.illegal_op_f"() : () -> (i32)
     "test.return"() : () -> ()
   }) : () -> ()
-  "test.return"() : () -> ()
+  func.return
 }
 
 // -----
@@ -27,9 +27,9 @@ func.func @dropped_region_with_illegal_ops() {
 // CHECK-LABEL: func @replace_non_root_illegal_op
 func.func @replace_non_root_illegal_op() {
   // CHECK-NEXT: "test.legal_op_b"
-  // CHECK-NEXT: test.return
+  // CHECK-NEXT: return
   %result = "test.replace_non_root"() : () -> (i32)
-  "test.return"() : () -> ()
+  func.return
 }
 
 // -----
@@ -50,11 +50,11 @@ func.func @recursively_legal_invalid_op() {
     func.func @dynamic_func(%arg: i64) attributes {test.recursively_legal} {
       // CHECK: "test.illegal_op_f"
       %ignored = "test.illegal_op_f"() : () -> (i32)
-      "test.return"() : () -> ()
+      func.return
     }
   }
 
-  "test.return"() : () -> ()
+  func.return
 }
 
 // -----
@@ -68,7 +68,7 @@ builtin.module {
 
     // expected-error@+1 {{failed to legalize operation 'foo.unknown_op'}}
     "foo.unknown_op"() {} : () -> ()
-    "test.return"() : () -> ()
+    func.return
   }
 
 }

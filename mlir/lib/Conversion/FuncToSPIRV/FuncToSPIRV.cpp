@@ -42,6 +42,24 @@ public:
     if (returnOp.getNumOperands() > 1)
       return failure();
 
+    // Only convert func.return when the enclosing func.func is being converted
+    // to spirv.func. Check that all argument and result types of the parent
+    // function are convertible; if not, leave this op unconverted so the
+    // func.func stays in the Func dialect with a valid func.return terminator.
+    if (auto funcOp = returnOp->getParentOfType<func::FuncOp>()) {
+      FunctionType fnType = funcOp.getFunctionType();
+      if (fnType.getNumResults() > 1)
+        return failure();
+      for (Type argType : fnType.getInputs()) {
+        if (!getTypeConverter()->convertType(argType))
+          return failure();
+      }
+      if (fnType.getNumResults() == 1) {
+        if (!getTypeConverter()->convertType(fnType.getResult(0)))
+          return failure();
+      }
+    }
+
     if (returnOp.getNumOperands() == 1) {
       rewriter.replaceOpWithNewOp<spirv::ReturnValueOp>(
           returnOp, adaptor.getOperands()[0]);

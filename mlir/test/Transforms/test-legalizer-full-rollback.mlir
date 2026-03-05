@@ -9,7 +9,7 @@
 //       CHECK:    ^[[bb1]](%[[arg1:.*]]: i64):
 //       CHECK:      "test.invalid"(%[[arg1]]) : (i64) -> ()
 //       CHECK:    }) : () -> ()
-//       CHECK:    "test.return"() : () -> ()
+//       CHECK:    return
 //       CHECK: }
 
 // expected-remark@+1 {{applyFullConversion failed}}
@@ -23,7 +23,7 @@ func.func @test_undo_region_inline() {
       "test.invalid"(%i1) : (i64) -> ()
   }) {} : () -> ()
 
-  "test.return"() : () -> ()
+  func.return
 }
 }
 
@@ -40,7 +40,7 @@ func.func @test_undo_region_inline() {
 //       CHECK:   ^[[bb2]](%[[arg2:.*]]: i64):
 //       CHECK:     cf.br ^[[bb1]](%[[arg2]] : i64)
 //       CHECK:   }) {legalizer.erase_old_blocks, legalizer.should_clone} : () -> ()
-//       CHECK:   "test.return"() : () -> ()
+//       CHECK:   return
 //       CHECK: }
 
 // expected-remark@+1 {{applyFullConversion failed}}
@@ -55,6 +55,6 @@ func.func @test_undo_block_erase() {
     ^bb3(%i2: i64):
       cf.br ^bb2(%i2 : i64)
   }) {legalizer.should_clone, legalizer.erase_old_blocks} : () -> ()
-  "test.return"() : () -> ()
+  func.return
 }
 }

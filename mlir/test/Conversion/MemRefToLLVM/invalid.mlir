@@ -4,7 +4,7 @@
 llvm.func @malloc(i64)
 func.func @redef_reserved() {
     %alloc = memref.alloc() : memref<1024x64xf32, 1>
-    llvm.return
+    return
 }
 
 // -----

@@ -10,7 +10,7 @@ func.func @missing_sizes(%tc : i32, %ts : i32) {
   // expected-error@+1 {{'omp.tile' op there must be one tile size for each applyee}}
   omp.tile <-(%canonloop)
 
-  llvm.return
+  return
 }
 
 // -----
@@ -49,7 +49,7 @@ func.func @insufficient_sizes(%tc : i32, %ts : i32) {
   // expected-error@+1 {{'omp.tile' op there must be one tile size for each applyee}}
   omp.tile <-(%canonloop1, %canonloop2) sizes(%ts : i32)
 
-  llvm.return
+  return
 }
 
 // -----
@@ -97,7 +97,7 @@ func.func @not_perfectly_nested(%tc : i32, %ts : i32) {
   // expected-error@+1 {{'omp.tile' op tiled loop nest must be perfectly nested}}
   omp.tile <-(%canonloop1, %canonloop2) sizes(%ts, %ts : i32, i32)
 
-  llvm.return
+  return
 }
 
 // -----
@@ -115,5 +115,5 @@ func.func @non_nectangular(%tc : i32, %ts : i32) {
   // expected-error@+1 {{'omp.tile' op tiled loop nest must be rectangular}}
   omp.tile <-(%canonloop1, %canonloop2) sizes(%ts, %ts : i32, i32)
 
-  llvm.return
+  return
 }

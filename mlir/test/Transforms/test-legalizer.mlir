@@ -20,7 +20,6 @@
 func.func @verifyDirectPattern() -> i32 {
   // CHECK-NEXT:  "test.legal_op_a"() <{status = "Success"}
   %result = "test.illegal_op_a"() : () -> (i32)
-  // expected-remark@+1 {{op 'func.return' is not legalizable}}
   return %result : i32
 }
 
@@ -40,7 +39,6 @@ func.func @verifyDirectPattern() -> i32 {
 func.func @verifyLargerBenefit() -> i32 {
   // CHECK-NEXT:  "test.legal_op_a"() <{status = "Success"}
   %result = "test.illegal_op_c"() : () -> (i32)
-  // expected-remark@+1 {{op 'func.return' is not legalizable}}
   return %result : i32
 }
 
@@ -65,7 +63,6 @@ func.func @remap_input_1_to_1(%arg0: i64) {
 func.func @remap_call_1_to_1(%arg0: i64) {
   // CHECK-NEXT: call @remap_input_1_to_1(%arg0) : (f64) -> ()
   call @remap_input_1_to_1(%arg0) : (i64) -> ()
-  // expected-remark@+1 {{op 'func.return' is not legalizable}}
   return
 }
 
@@ -75,7 +72,7 @@ func.func @remap_call_1_to_1(%arg0: i64) {
 // CHECK:      notifyBlockInserted into func.func: was unlinked
 
 // Contents of the old block are moved to the new block.
-// CHECK-NEXT: notifyOperationInserted: test.return
+// CHECK-NEXT: notifyOperationInserted: func.return
 
 // The old block is erased.
 // CHECK-NEXT: notifyBlockErased
@@ -83,15 +80,9 @@ func.func @remap_call_1_to_1(%arg0: i64) {
 // The function op gets a new type attribute.
 // CHECK-NEXT: notifyOperationModified: func.func
 
-// "test.return" is replaced.
-// CHECK-NEXT: notifyOperationInserted: test.return, was unlinked
-// CHECK-NEXT: notifyOperationReplaced: test.return
-// CHECK-NEXT: notifyOperationErased: test.return
-
-// CHECK-LABEL: func @remap_input_1_to_N({{.*}}f16, {{.*}}f16)
-func.func @remap_input_1_to_N(%arg0: f32) -> f32 {
-  // CHECK-NEXT: "test.return"{{.*}} : (f16, f16) -> ()
-  "test.return"(%arg0) : (f32) -> ()
+// CHECK-LABEL: func @remap_input_1_to_N(%arg0: f16, %arg1: f16)
+func.func @remap_input_1_to_N(%arg0: f32) {
+  func.return
 }
 
 // -----
@@ -110,7 +101,7 @@ func.func @remap_materialize_1_to_1(%arg0: i42) {
   // CHECK-NEXT: "work"(%[[V]])
   // expected-remark@+1 {{op 'work' is not legalizable}}
   "work"(%arg0) : (i42) -> ()
-  "test.return"() : () -> ()
+  func.return
 }
 
 // -----
@@ -141,7 +132,6 @@ func.func @no_remap_nested() {
       // CHECK-NEXT: "test.valid"{{.*}} : (f64, f64)
       "test.invalid"(%i0, %i1) : (f64, f64) -> ()
   }) : () -> ()
-  // expected-remark@+1 {{op 'func.return' is not legalizable}}
   return
 }
 
@@ -155,7 +145,6 @@ func.func @remap_drop_region() {
     ^bb1(%i0: i64, %unused: i16, %i1: i64, %2: f32):
       "test.invalid"(%i0, %i1, %2) : (i64, i64, f32) -> ()
   }) : () -> ()
-  // expected-remark@+1 {{op 'func.return' is not legalizable}}
   return
 }
 
@@ -176,7 +165,6 @@ func.func @up_to_date_replacement(%arg: i8) -> i8 {
   // CHECK-NEXT: return
   %repl_1 = "test.rewrite"(%arg) : (i8) -> i8
   %repl_2 = "test.rewrite"(%repl_1) : (i8) -> i8
-  // expected-remark@+1 {{op 'func.return' is not legalizable}}
   return %repl_2 : i8
 }
 
@@ -189,7 +177,6 @@ func.func @remove_foldable_op(%arg0 : i32) -> (i32) {
   %0 = "test.op_with_region_fold"(%arg0) ({
     "foo.op_with_region_terminator"() : () -> ()
   }) : (i32) -> (i32)
-  // expected-remark@+1 {{op 'func.return' is not legalizable}}
   return %0 : i32
 }
 
@@ -202,7 +189,6 @@ func.func @create_block() {
   // CHECK: ^{{.*}}(%{{.*}}: i32, %{{.*}}: i32):
   "test.create_block"() : () -> ()
 
-  // expected-remark@+1 {{op 'func.return' is not legalizable}}
   return
 }
 
@@ -216,7 +202,6 @@ func.func @create_block() {
 func.func @bounded_recursion() {
   // CHECK: test.recursive_rewrite 0
   test.recursive_rewrite 3
-  // expected-remark@+1 {{op 'func.return' is not legalizable}}
   return
 }
 
@@ -247,7 +232,7 @@ func.func @replace_block_arg_1_to_n() {
     "test.value_replace"(%arg0, %arg1) : (i32, i16) -> ()
     "test.return"(%arg0) : (i32) -> ()
   }) : () -> ()
-  "test.return"() : () -> ()
+  func.return
 }
 
 // -----
@@ -261,9 +246,9 @@ func.func @replace_op_result_1_to_n() -> i32 {
 
   // CHECK-NEXT: %[[cast:.*]] = "test.cast"(%[[repl]], %[[repl]]) : (i16, i16) -> i32
   // CHECK-NEXT: "test.value_replace"(%[[cast]], %[[repl]]) {is_legal} : (i32, i16) -> ()
-  // CHECK-NEXT: "test.return"(%[[cast]]) : (i32)
+  // CHECK-NEXT: return %[[cast]] : i32
   "test.value_replace"(%0, %1) : (i32, i16) -> ()
-  "test.return"(%0) : (i32) -> ()
+  func.return %0 : i32
 }
 
 // -----
@@ -274,7 +259,6 @@ func.func @replace_op_result_1_to_n() -> i32 {
 func.func @blackhole() {
   %input = "test.blackhole_producer"() : () -> (i32)
   "test.blackhole"(%input) : (i32) -> ()
-  // expected-remark@+1 {{op 'func.return' is not legalizable}}
   return
 }
 
@@ -296,7 +280,7 @@ func.func @caller() {
   // CHECK: "test.some_user"(%[[cast0]], %[[cast1]]) : (f32, i24) -> ()
   // expected-remark @below{{'test.some_user' is not legalizable}}
   "test.some_user"(%0#0, %0#1) : (f32, i24) -> ()
-  "test.return"() : () -> ()
+  func.return
 }
 }
 
@@ -319,7 +303,7 @@ func.func @fold_legalization() -> i32 {
   // CHECK: op_in_place_self_fold
   // CHECK-SAME: folded
   %1 = "test.op_in_place_self_fold"() : () -> (i32)
-  "test.return"(%1) : (i32) -> ()
+  func.return %1 : i32
 }
 
 // -----
@@ -334,7 +318,7 @@ func.func @convert_detached_signature() {
   ^bb0(%arg0: i64):
     "test.return"() : () -> ()
   }) : () -> ()
-  "test.return"() : () -> ()
+  func.return
 }
 
 // -----
@@ -374,7 +358,7 @@ func.func @test_duplicate_block_arg() {
   ^bb0(%arg0: i64):
     "test.repetitive_1_to_n_consumer"(%arg0) : (i64) -> ()
   } : () -> ()
-  "test.return"() : () -> ()
+  func.return
 }
 
 // -----
@@ -390,7 +374,7 @@ func.func @test_remap_block_arg() {
   ^bb0(%arg0: i32):
     "test.repetitive_1_to_n_consumer"(%arg0) : (i32) -> ()
   } : (i32) -> ()
-  "test.return"() : () -> ()
+  func.return
 }
 
 // -----
@@ -426,7 +410,6 @@ func.func @test_lookup_without_converter() {
   // Make sure that the second "replace_with_valid_consumer" lowering does not
   // lookup the materialization that was created for the above op.
   "test.replace_with_valid_consumer"(%0) : (i64) -> ()
-  // expected-remark@+1 {{op 'func.return' is not legalizable}}
   return
 }
 
@@ -446,9 +429,9 @@ func.func @test_skip_1to1_pattern(%arg0: f32) {
 
 // CHECK-LABEL: @test_working_1to1_pattern(
 func.func @test_working_1to1_pattern(%arg0: f16) {
-  // CHECK-NEXT: "test.return"() : () -> ()
+  // CHECK-NEXT: return
   "test.type_consumer"(%arg0) : (f16) -> ()
-  "test.return"() : () -> ()
+  func.return
 }
 
 // -----
@@ -487,6 +470,5 @@ func.func @test_preorder_legalization() {
     }) : () -> ()
     "test.invalid"(%arg0) : (i64) -> ()
   }) : () -> ()
-  // expected-remark @+1 {{'func.return' is not legalizable}}
   return
 }

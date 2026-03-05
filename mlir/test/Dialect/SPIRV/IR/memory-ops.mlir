@@ -644,7 +644,7 @@ func.func @copy_memory_incompatible_ptrs() {
   %1 = spirv.Variable : !spirv.ptr<i32, Function>
   // expected-error @+1 {{both operands must be pointers to the same type}}
   "spirv.CopyMemory"(%0, %1) {} : (!spirv.ptr<f32, Function>, !spirv.ptr<i32, Function>) -> ()
-  spirv.Return
+  return
 }
 
 // -----
@@ -654,7 +654,7 @@ func.func @copy_memory_invalid_maa() {
   %1 = spirv.Variable : !spirv.ptr<f32, Function>
   // expected-error @+1 {{missing alignment value}}
   "spirv.CopyMemory"(%0, %1) {memory_access=#spirv.memory_access<Aligned>} : (!spirv.ptr<f32, Function>, !spirv.ptr<f32, Function>) -> ()
-  spirv.Return
+  return
 }
 
 // -----
@@ -664,7 +664,7 @@ func.func @copy_memory_invalid_source_maa() {
   %1 = spirv.Variable : !spirv.ptr<f32, Function>
   // expected-error @+1 {{invalid alignment specification with non-aligned memory access specification}}
   "spirv.CopyMemory"(%0, %1) {source_memory_access=#spirv.memory_access<Volatile>, memory_access=#spirv.memory_access<Aligned>, source_alignment=8 : i32, alignment=4 : i32} : (!spirv.ptr<f32, Function>, !spirv.ptr<f32, Function>) -> ()
-  spirv.Return
+  return
 }
 
 // -----
@@ -674,7 +674,7 @@ func.func @copy_memory_invalid_source_maa2() {
   %1 = spirv.Variable : !spirv.ptr<f32, Function>
   // expected-error @+1 {{missing alignment value}}
   "spirv.CopyMemory"(%0, %1) {source_memory_access=#spirv.memory_access<Aligned>, memory_access=#spirv.memory_access<Aligned>, alignment=4 : i32} : (!spirv.ptr<f32, Function>, !spirv.ptr<f32, Function>) -> ()
-  spirv.Return
+  return
 }
 
 // -----
@@ -695,7 +695,7 @@ func.func @copy_memory_print_maa() {
   // CHECK: spirv.CopyMemory "Function" %{{.*}}, "Function" %{{.*}} ["Aligned", 4], ["Aligned", 8] : f32
   "spirv.CopyMemory"(%0, %1) {source_memory_access=#spirv.memory_access<Aligned>, memory_access=#spirv.memory_access<Aligned>, source_alignment=8 : i32, alignment=4 : i32} : (!spirv.ptr<f32, Function>, !spirv.ptr<f32, Function>) -> ()
 
-  spirv.Return
+  return
 }
 
 // -----
