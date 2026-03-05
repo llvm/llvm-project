@@ -307,16 +307,26 @@ StringRef NVPTXTargetCodeGenInfo::getLLVMSyncScopeStr(
     const LangOptions &LangOpts, SyncScope Scope,
     llvm::AtomicOrdering Ordering) const {
   switch (Scope) {
+  case SyncScope::HIPSingleThread:
   case SyncScope::SingleScope:
     return "singlethread";
+  case SyncScope::HIPWavefront:
+  case SyncScope::OpenCLSubGroup:
   case SyncScope::WavefrontScope:
+  case SyncScope::HIPWorkgroup:
+  case SyncScope::OpenCLWorkGroup:
   case SyncScope::WorkgroupScope:
     return "block";
+  case SyncScope::HIPCluster:
   case SyncScope::ClusterScope:
     return "cluster";
+  case SyncScope::HIPAgent:
+  case SyncScope::OpenCLDevice:
   case SyncScope::DeviceScope:
     return "device";
   case SyncScope::SystemScope:
+  case SyncScope::HIPSystem:
+  case SyncScope::OpenCLAllSVMDevices:
     return "";
   }
   llvm_unreachable("Unknown SyncScope enum");
