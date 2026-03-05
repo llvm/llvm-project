@@ -5166,11 +5166,12 @@ static void handleConstantAttr(Sema &S, Decl *D, const ParsedAttr &AL) {
 static void handleSharedAttr(Sema &S, Decl *D, const ParsedAttr &AL) {
   const auto *VD = cast<VarDecl>(D);
   // extern __shared__ is only allowed on arrays with no length (e.g.
-  // "int x[]").
+  // "int x[]") per the CUDA spec. However, NVCC accepts extern __shared__
+  // on any type (commonly used for struct overlays on dynamic shared memory).
+  // We accept it too for compatibility, but can optionally warn.
   if (!S.getLangOpts().GPURelocatableDeviceCode && VD->hasExternalStorage() &&
       !isa<IncompleteArrayType>(VD->getType())) {
-    S.Diag(AL.getLoc(), diag::err_cuda_extern_shared) << VD;
-    return;
+    S.Diag(AL.getLoc(), diag::warn_cuda_extern_shared) << VD;
   }
   if (!S.CheckVarDeclSizeAddressSpace(VD, LangAS::cuda_shared))
     return;

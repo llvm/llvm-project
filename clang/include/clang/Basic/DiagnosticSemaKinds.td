@@ -9732,6 +9732,10 @@ def err_cuda_vla : Error<
     "cannot use variable-length arrays in "
     "%select{__device__|__global__|__host__|__host__ __device__}0 functions">;
 def err_cuda_extern_shared : Error<"__shared__ variable %0 cannot be 'extern'">;
+def warn_cuda_extern_shared : Warning<
+    "'extern __shared__' variable %0 is not an incomplete array type; "
+    "NVCC accepts this but it is not standards-conforming">,
+    InGroup<DiagGroup<"cuda-extern-shared">>, DefaultIgnore;
 def err_cuda_host_shared : Error<
     "__shared__ local variables not allowed in "
     "%select{__device__|__global__|__host__|__host__ __device__}0 functions">;
