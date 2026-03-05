@@ -1101,6 +1101,10 @@ defm SWakeupBarrier : AMDGPUSubtargetFeature<"s-wakeup-barrier-inst",
   "Has s_wakeup_barrier instruction."
 >;
 
+defm FlatSignedOffset : AMDGPUSubtargetFeature<"flat-signed-offset",
+  "Immediate offset of FLAT instructions are always signed"
+>;
+
 //===------------------------------------------------------------===//
 // Subtarget Features (options and debugging)
 //===------------------------------------------------------------===//
@@ -1466,7 +1470,7 @@ def FeatureGFX12 : GCNSubtargetFeatureGeneration<"GFX12",
    FeatureAtomicFMinFMaxF32GlobalInsts, FeatureAtomicFMinFMaxF32FlatInsts,
    FeatureIEEEMinimumMaximumInsts, FeatureMinimum3Maximum3F32,
    FeatureMinimum3Maximum3F16, FeatureAgentScopeFineGrainedRemoteMemoryAtomics,
-   FeatureFlatOffsetBits24
+   FeatureFlatOffsetBits24, FeatureFlatSignedOffset
   ]
 >;
 
