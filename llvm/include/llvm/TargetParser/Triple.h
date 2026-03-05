@@ -1240,6 +1240,9 @@ public:
     return isOSBinFormatXCOFF() || isWasm();
   }
 
+  /// Returns the default wchar_t size (in bytes) for this target triple.
+  unsigned getDefaultWCharSize() const;
+
   /// Tests if the environment supports dllimport/export annotations.
   bool hasDLLImportExport() const { return isOSWindows() || isPS(); }
 
