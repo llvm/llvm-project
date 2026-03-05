@@ -3790,6 +3790,15 @@ def warn_dllimport_dropped_from_inline_function : Warning<
 def warn_nothrow_attribute_ignored : Warning<"'nothrow' attribute conflicts with"
   " exception specification; attribute ignored">,
   InGroup<IgnoredAttributes>;
+def warn_dllattr_ignored_exclusion_takes_precedence : Warning<
+  "%0 attribute ignored; %1 takes precedence">,
+  InGroup<IgnoredAttributes>;
+def warn_attribute_ignored_on_non_member :
+  Warning<"%0 attribute ignored on a non-member declaration">,
+  InGroup<IgnoredAttributes>;
+def warn_attribute_ignored_in_non_template :
+  Warning<"%0 attribute ignored in a non-template context">,
+  InGroup<IgnoredAttributes>;
 def warn_attribute_ignored_on_non_definition :
   Warning<"%0 attribute ignored on a non-definition declaration">,
   InGroup<IgnoredAttributes>;
@@ -6159,7 +6168,7 @@ def note_template_declared_here : Note<
   "%1 declared here">;
 def err_template_expansion_into_fixed_list : Error<
   "pack expansion used as argument for non-pack parameter of %select{alias "
-  "template|concept}0">;
+  "template|concept|builtin template}0">;
 def note_parameter_type : Note<
   "parameter of type %0 is declared here">;
 
@@ -6296,6 +6305,8 @@ def warn_unavailable_def : Warning<
   InGroup<DeprecatedImplementations>, DefaultIgnore;
 def warn_deprecated_builtin : Warning<
   "builtin %0 is deprecated; use %1 instead">,
+  InGroup<DeprecatedBuiltins>;
+def warn_deprecated_builtin_no_suggestion : Warning<"builtin %0 is deprecated">,
   InGroup<DeprecatedBuiltins>;
 def err_unavailable : Error<"%0 is unavailable">;
 def err_property_method_unavailable :
@@ -6663,6 +6674,8 @@ def err_block_extern_cant_init : Error<
   "declaration of block scope identifier with linkage cannot have an initializer">;
 def warn_extern_init : Warning<"'extern' variable has an initializer">,
   InGroup<DiagGroup<"extern-initializer">>;
+def warn_hlsl_groupshared_init : Warning<"initializer of groupshared variable will be ignored">,
+  InGroup<DiagGroup<"groupshared-initializer">>, DefaultError;
 def err_variable_object_no_init : Error<
   "variable-sized object may not be initialized">;
 def err_excess_initializers : Error<
@@ -13589,6 +13602,10 @@ def err_hlsl_incomplete_resource_array_in_function_param: Error<
   "incomplete resource array in a function parameter">;
 def err_hlsl_assign_to_global_resource: Error<
   "assignment to global resource variable %0 is not allowed">;
+def warn_hlsl_assigning_local_resource_is_not_unique
+    : Warning<"assignment of %0 to local resource %1 is not to the same "
+              "unique global resource">,
+      InGroup<HLSLExplicitBinding>;
 
 def err_hlsl_push_constant_unique
     : Error<"cannot have more than one push constant block">;
@@ -13633,8 +13650,12 @@ def note_unsafe_buffer_variable_fixit_together : Note<
 def note_safe_buffer_usage_suggestions_disabled : Note<
   "pass -fsafe-buffer-usage-suggestions to receive code hardening suggestions">;
 def warn_unsafe_buffer_usage_in_container : Warning<
-  "the two-parameter std::span construction is unsafe as it can introduce mismatch between buffer size and the bound information">,
+  "the two-parameter %0 construction is unsafe as it can introduce mismatch "
+  "between buffer size and the bound information">,
   InGroup<UnsafeBufferUsageInContainer>, DefaultIgnore;
+def warn_unsafe_buffer_usage_in_string_view : Warning<
+  "the two-parameter std::string_view construction is unsafe">,
+  InGroup<UnsafeBufferUsageInStringView>, DefaultIgnore;
 def warn_unsafe_buffer_usage_unique_ptr_array_access : Warning<"direct access using operator[] on std::unique_ptr<T[]> is unsafe due to lack of bounds checking">,
   InGroup<UnsafeBufferUsageInUniquePtrArrayAccess>, DefaultIgnore;
 def warn_unsafe_buffer_usage_in_static_sized_array : Warning<"direct access on T[N] is unsafe due to the lack of bounds checking">,
