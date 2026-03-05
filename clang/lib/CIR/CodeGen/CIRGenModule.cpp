@@ -22,6 +22,7 @@
 #include "clang/AST/DeclOpenACC.h"
 #include "clang/AST/GlobalDecl.h"
 #include "clang/AST/RecordLayout.h"
+#include "clang/Basic/DiagnosticFrontend.h"
 #include "clang/Basic/SourceManager.h"
 #include "clang/CIR/Dialect/IR/CIRAttrs.h"
 #include "clang/CIR/Dialect/IR/CIRDialect.h"
@@ -673,6 +674,47 @@ static void setLinkageForGV(cir::GlobalOp &gv, const NamedDecl *nd) {
     gv.setLinkage(cir::GlobalLinkageKind::ExternalWeakLinkage);
 }
 
+// We want to replace a global value, but because of CIR's typed pointers,
+// we need to update the existing uses to reflect the new type, not just replace
+// them directly.
+void CIRGenModule::replaceGlobal(cir::GlobalOp oldGV, cir::GlobalOp newGV) {
+  assert(oldGV.getSymName() == newGV.getSymName() && "symbol names must match");
+
+  mlir::Type oldTy = oldGV.getSymType();
+  mlir::Type newTy = newGV.getSymType();
+
+  assert(!cir::MissingFeatures::addressSpace());
+
+  // If the type didn't change, why are we here?
+  assert(oldTy != newTy && "expected type change in replaceGlobal");
+
+  // Visit all uses and add handling to fix up the types.
+  std::optional<mlir::SymbolTable::UseRange> oldSymUses =
+      oldGV.getSymbolUses(theModule);
+  for (mlir::SymbolTable::SymbolUse use : *oldSymUses) {
+    mlir::Operation *userOp = use.getUser();
+    assert(
+        (mlir::isa<cir::GetGlobalOp, cir::GlobalOp, cir::ConstantOp>(userOp)) &&
+        "Unexpected user for global op");
+
+    if (auto getGlobalOp = dyn_cast<cir::GetGlobalOp>(use.getUser())) {
+      mlir::Value useOpResultValue = getGlobalOp.getAddr();
+      useOpResultValue.setType(cir::PointerType::get(newTy));
+
+      mlir::OpBuilder::InsertionGuard guard(builder);
+      builder.setInsertionPointAfter(getGlobalOp);
+      mlir::Type ptrTy = builder.getPointerTo(oldTy);
+      mlir::Value cast =
+          builder.createBitcast(getGlobalOp->getLoc(), useOpResultValue, ptrTy);
+      useOpResultValue.replaceAllUsesExcept(cast, cast.getDefiningOp());
+    } else {
+      errorNYI(userOp->getLoc(), "Replace global op use in global view attr");
+    }
+  }
+
+  oldGV.erase();
+}
+
 /// If the specified mangled name is not in the module,
 /// create and return an mlir GlobalOp with the specified type (TODO(cir):
 /// address space).
@@ -746,6 +788,11 @@ CIRGenModule::getOrCreateCIRGlobal(StringRef mangledName, mlir::Type ty,
   cir::GlobalOp gv =
       CIRGenModule::createGlobalOp(*this, loc, mangledName, ty, isConstant,
                                    /*insertPoint=*/entry.getOperation());
+
+  // If we already created a global with the same mangled name (but different
+  // type) before, remove it from its parent.
+  if (entry)
+    replaceGlobal(entry, gv);
 
   // This is the first use or definition of a mangled name.  If there is a
   // deferred decl with this name, remember that we need to emit it at the end
@@ -2188,6 +2235,15 @@ void CIRGenModule::setGVPropertiesAux(mlir::Operation *op,
   assert(!cir::MissingFeatures::opGlobalPartition());
 }
 
+bool CIRGenModule::lookupRepresentativeDecl(StringRef mangledName,
+                                            GlobalDecl &result) const {
+  auto res = manglings.find(mangledName);
+  if (res == manglings.end())
+    return false;
+  result = res->getValue();
+  return true;
+}
+
 cir::TLS_Model CIRGenModule::getDefaultCIRTLSModel() const {
   switch (getCodeGenOpts().getDefaultTLSModel()) {
   case CodeGenOptions::GeneralDynamicTLSModel:
@@ -2402,8 +2458,20 @@ cir::FuncOp CIRGenModule::getOrCreateCIRFunction(
     // error.
     auto fn = cast<cir::FuncOp>(entry);
     if (isForDefinition && fn && !fn.isDeclaration()) {
-      errorNYI(d->getSourceRange(), "Duplicate function definition");
+      GlobalDecl otherGd;
+      // Check that GD is not yet in DiagnosedConflictingDefinitions is required
+      // to make sure that we issue an error only once.
+      if (lookupRepresentativeDecl(mangledName, otherGd) &&
+          (gd.getCanonicalDecl().getDecl() !=
+           otherGd.getCanonicalDecl().getDecl()) &&
+          diagnosedConflictingDefinitions.insert(gd).second) {
+        getDiags().Report(d->getLocation(), diag::err_duplicate_mangled_name)
+            << mangledName;
+        getDiags().Report(otherGd.getDecl()->getLocation(),
+                          diag::note_previous_definition);
+      }
     }
+
     if (fn && fn.getFunctionType() == funcType) {
       return fn;
     }

@@ -767,7 +767,7 @@ static VPValue *
 scalarizeVPWidenPointerInduction(VPWidenPointerInductionRecipe *PtrIV,
                                  VPlan &Plan, VPBuilder &Builder) {
   const InductionDescriptor &ID = PtrIV->getInductionDescriptor();
-  VPIRValue *StartV = Plan.getConstantInt(ID.getStep()->getType(), 0);
+  VPIRValue *StartV = Plan.getZero(ID.getStep()->getType());
   VPValue *StepV = PtrIV->getOperand(1);
   VPScalarIVStepsRecipe *Steps = createScalarIVSteps(
       Plan, InductionDescriptor::IK_IntInduction, Instruction::Add, nullptr,
@@ -1016,7 +1016,7 @@ static VPValue *optimizeLatchExitInductionUser(
     return B.createSub(EndValue, Step, DebugLoc::getUnknown(), "ind.escape");
   if (ScalarTy->isPointerTy()) {
     Type *StepTy = TypeInfo.inferScalarType(Step);
-    auto *Zero = Plan.getConstantInt(StepTy, 0);
+    auto *Zero = Plan.getZero(StepTy);
     return B.createPtrAdd(EndValue, B.createSub(Zero, Step),
                           DebugLoc::getUnknown(), "ind.escape");
   }
@@ -1277,23 +1277,24 @@ static void simplifyRecipe(VPSingleDefRecipe *Def, VPTypeAnalysis &TypeInfo) {
     return;
   }
 
-  // x | 1 -> 1
+  // x | AllOnes -> AllOnes
   if (match(Def, m_c_BinaryOr(m_VPValue(X), m_AllOnes())))
-    return Def->replaceAllUsesWith(Def->getOperand(Def->getOperand(0) == X));
+    return Def->replaceAllUsesWith(
+        Plan->getAllOnesValue(TypeInfo.inferScalarType(Def)));
 
   // x | 0 -> x
   if (match(Def, m_c_BinaryOr(m_VPValue(X), m_ZeroInt())))
     return Def->replaceAllUsesWith(X);
 
   // x | !x -> AllOnes
-  if (match(Def, m_c_BinaryOr(m_VPValue(X), m_Not(m_Deferred(X))))) {
-    return Def->replaceAllUsesWith(Plan->getOrAddLiveIn(
-        ConstantInt::getAllOnesValue(TypeInfo.inferScalarType(Def))));
-  }
+  if (match(Def, m_c_BinaryOr(m_VPValue(X), m_Not(m_Deferred(X)))))
+    return Def->replaceAllUsesWith(
+        Plan->getAllOnesValue(TypeInfo.inferScalarType(Def)));
 
   // x & 0 -> 0
   if (match(Def, m_c_BinaryAnd(m_VPValue(X), m_ZeroInt())))
-    return Def->replaceAllUsesWith(Def->getOperand(Def->getOperand(0) == X));
+    return Def->replaceAllUsesWith(
+        Plan->getZero(TypeInfo.inferScalarType(Def)));
 
   // x & AllOnes -> x
   if (match(Def, m_c_BinaryAnd(m_VPValue(X), m_AllOnes())))
@@ -1347,7 +1348,7 @@ static void simplifyRecipe(VPSingleDefRecipe *Def, VPTypeAnalysis &TypeInfo) {
 
   if (match(Def, m_c_Mul(m_VPValue(A), m_ZeroInt())))
     return Def->replaceAllUsesWith(
-        Def->getOperand(0) == A ? Def->getOperand(1) : Def->getOperand(0));
+        Plan->getZero(TypeInfo.inferScalarType(Def)));
 
   const APInt *APC;
   if (CanCreateNewRecipe && match(Def, m_c_Mul(m_VPValue(A), m_APInt(APC))) &&
@@ -1909,7 +1910,7 @@ static bool optimizeVectorInductionWidthForTCAndVFUF(VPlan &Plan,
       continue;
 
     // Update IV operands and comparison bound to use new narrower type.
-    auto *NewStart = Plan.getConstantInt(NewIVTy, 0);
+    auto *NewStart = Plan.getZero(NewIVTy);
     WideIV->setStartValue(NewStart);
     auto *NewStep = Plan.getConstantInt(NewIVTy, 1);
     WideIV->setStepValue(NewStep);
@@ -3385,8 +3386,8 @@ void VPlanTransforms::convertEVLExitCond(VPlan &Plan) {
 
   Type *AVLTy = VPTypeAnalysis(Plan).inferScalarType(AVLNext);
   VPBuilder Builder(LatchBr);
-  LatchBr->setOperand(0, Builder.createICmp(CmpInst::ICMP_EQ, AVLNext,
-                                            Plan.getConstantInt(AVLTy, 0)));
+  LatchBr->setOperand(
+      0, Builder.createICmp(CmpInst::ICMP_EQ, AVLNext, Plan.getZero(AVLTy)));
 }
 
 void VPlanTransforms::replaceSymbolicStrides(
@@ -4770,12 +4771,18 @@ void VPlanTransforms::hoistPredicatedLoads(VPlan &Plan,
     // Find the load with minimum alignment to use.
     auto *LoadWithMinAlign = findRecipeWithMinAlign<LoadInst>(Group);
 
+    bool IsSingleScalar = EarliestLoad->isSingleScalar();
+    assert(all_of(Group,
+                  [IsSingleScalar](VPReplicateRecipe *R) {
+                    return R->isSingleScalar() == IsSingleScalar;
+                  }) &&
+           "all members in group must agree on IsSingleScalar");
+
     // Create an unpredicated version of the earliest load with common
     // metadata.
     auto *UnpredicatedLoad = new VPReplicateRecipe(
         LoadWithMinAlign->getUnderlyingInstr(), {EarliestLoad->getOperand(0)},
-        /*IsSingleScalar=*/false, /*Mask=*/nullptr, *EarliestLoad,
-        CommonMetadata);
+        IsSingleScalar, /*Mask=*/nullptr, *EarliestLoad, CommonMetadata);
 
     UnpredicatedLoad->insertBefore(EarliestLoad);
 
@@ -4832,7 +4839,10 @@ void VPlanTransforms::sinkPredicatedStores(VPlan &Plan,
     VPValue *SelectedValue = Group[0]->getOperand(0);
     VPBuilder Builder(InsertBB, LastStore->getIterator());
 
+    bool IsSingleScalar = Group[0]->isSingleScalar();
     for (unsigned I = 1; I < Group.size(); ++I) {
+      assert(IsSingleScalar == Group[I]->isSingleScalar() &&
+             "all members in group must agree on IsSingleScalar");
       VPValue *Mask = Group[I]->getMask();
       VPValue *Value = Group[I]->getOperand(0);
       SelectedValue = Builder.createSelect(Mask, Value, SelectedValue,
@@ -4843,11 +4853,10 @@ void VPlanTransforms::sinkPredicatedStores(VPlan &Plan,
     auto *StoreWithMinAlign = findRecipeWithMinAlign<StoreInst>(Group);
 
     // Create unconditional store with selected value and common metadata.
-    auto *UnpredicatedStore =
-        new VPReplicateRecipe(StoreWithMinAlign->getUnderlyingInstr(),
-                              {SelectedValue, LastStore->getOperand(1)},
-                              /*IsSingleScalar=*/false,
-                              /*Mask=*/nullptr, *LastStore, CommonMetadata);
+    auto *UnpredicatedStore = new VPReplicateRecipe(
+        StoreWithMinAlign->getUnderlyingInstr(),
+        {SelectedValue, LastStore->getOperand(1)}, IsSingleScalar,
+        /*Mask=*/nullptr, *LastStore, CommonMetadata);
     UnpredicatedStore->insertBefore(*InsertBB, LastStore->getIterator());
 
     // Remove all predicated stores from the group.
@@ -5039,7 +5048,7 @@ void VPlanTransforms::materializeVectorTripCount(VPlan &Plan,
     assert(!TailByMasking &&
            "requiring scalar epilogue is not supported with fail folding");
     VPValue *IsZero =
-        Builder.createICmp(CmpInst::ICMP_EQ, R, Plan.getConstantInt(TCTy, 0));
+        Builder.createICmp(CmpInst::ICMP_EQ, R, Plan.getZero(TCTy));
     R = Builder.createSelect(IsZero, Step, R);
   }
 
@@ -5915,7 +5924,7 @@ static void transformToPartialReduction(const VPPartialReductionChain &Chain,
       Chain.RK != RecurKind::Sub) {
     VPBuilder Builder(WidenRecipe);
     Type *ElemTy = TypeInfo.inferScalarType(BinOp);
-    auto *Zero = Plan.getConstantInt(ElemTy, 0);
+    auto *Zero = Plan.getZero(ElemTy);
     VPIRFlags Flags = WidenRecipe->getUnderlyingInstr()
                           ? VPIRFlags(*WidenRecipe->getUnderlyingInstr())
                           : VPIRFlags();
