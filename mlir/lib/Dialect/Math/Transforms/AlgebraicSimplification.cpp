@@ -206,16 +206,16 @@ PowIStrengthReduction<PowIOpTy, DivOpTy, MulOpTy>::matchAndRewrite(
   if (exponentValue > exponentThreshold)
     return failure();
 
-  Value result = base;
-  // Transform to naive sequence of multiplications:
+  Value result = one;
+  // Transform to a square-and-multiply sequence:
   //   * For positive exponent case replace:
   //       `[fi]powi(x, positive_exponent)`
   //     with:
-  //       x * x * x * ...
+  //       a chain of x, x*x, x**4, and so on...
   //   * For negative exponent case replace:
   //       `[fi]powi(x, negative_exponent)`
   //     with:
-  //       (1 / x) * (1 / x) * (1 / x) * ...
+  //       a chain of (1/x), (1/x)*(1/x), and so on...
   auto buildMul = [&](Value lhs, Value rhs) {
     if constexpr (std::is_same_v<PowIOpTy, complex::PowiOp>)
       return MulOpTy::create(rewriter, loc, op.getType(), lhs, rhs,
@@ -223,8 +223,13 @@ PowIStrengthReduction<PowIOpTy, DivOpTy, MulOpTy>::matchAndRewrite(
     else
       return MulOpTy::create(rewriter, loc, lhs, rhs);
   };
-  for (unsigned i = 1; i < exponentValue; ++i)
-    result = buildMul(result, base);
+  while (exponentValue > 0) {
+    if (exponentValue & 1) {
+      result = buildMul(base, result);
+    }
+    exponentValue >>= 1;
+    base = buildMul(base, base);
+  }
 
   // Inverse the base for negative exponent, i.e. for
   // `[fi]powi(x, negative_exponent)` set `x` to `1 / x`.
