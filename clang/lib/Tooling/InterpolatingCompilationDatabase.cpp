@@ -123,6 +123,14 @@ static types::ID foldType(types::ID Lang) {
   }
 }
 
+// Whether two types use the same -std flag family.
+// C and ObjC share C standards; C++, ObjC++, CUDA, HIP share C++ standards.
+static bool typesSameStandardFamily(types::ID T1, types::ID T2) {
+  if (!types::isDerivedFromC(T1) || !types::isDerivedFromC(T2))
+    return false;
+  return types::isCXX(T1) == types::isCXX(T2);
+}
+
 // Return the language standard that's activated by the /std:clatest
 // flag in clang-CL mode.
 static LangStandard::Kind latestLangStandardC() {
@@ -253,9 +261,11 @@ struct TransferableCommand {
       }
     }
 
-    // --std flag may only be transferred if the language is the same.
-    // We may consider "translating" these, e.g. c++11 -> c11.
-    if (Std != LangStandard::lang_unspecified && foldType(TargetType) == Type) {
+    // --std flag may only be transferred if the language families share
+    // compatible standards. C/ObjC share C standards; C++/ObjC++/CUDA/HIP
+    // share C++ standards.
+    if (Std != LangStandard::lang_unspecified && Type &&
+        typesSameStandardFamily(foldType(TargetType), *Type)) {
       const char *Spelling =
           LangStandard::getLangStandardForKind(Std).getName();
 
