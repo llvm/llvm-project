@@ -685,14 +685,13 @@ awareness of. For such changes, the following should be done:
   "vendors" github team to the review for their awareness. The purpose of these
   groups is to give vendors early notice that potentially disruptive changes
   are being considered but have not yet been accepted. Vendors can give early
-  testing feedback on the changes to alert us to unacceptable breakages. The
-  current list of vendor groups is:
+  testing feedback on the changes to alert us to unacceptable breakages. 
+  The current list of vendor groups includes Clang and libc++ vendors.
+  
+  These vendor groups are managed by the LLVM project administrators.
+  Interested vendors should contact the LLVM project to request access,
+  rather than joining directly via GitHub.
 
-  * `Clang vendors <https://github.com/orgs/llvm/teams/clang-vendors>`_
-  * `libc++ vendors <https://github.com/orgs/llvm/teams/libcxx-vendors>`_
-
-  People interested in joining the vendors group can do so by clicking the
-  "Join team" button on the linked github pages above.
 
 * When committing the change to the repository, add appropriate information
   about the potentially breaking changes to the ``Potentially Breaking Changes``
