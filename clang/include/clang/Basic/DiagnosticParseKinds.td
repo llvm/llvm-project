@@ -348,8 +348,6 @@ def warn_cxx20_compat_label_end_of_compound_statement : Warning<
   InGroup<CXXPre23Compat>, DefaultIgnore;
 def err_address_of_label_outside_fn : Error<
   "use of address-of-label extension outside of a function body">;
-def err_asm_operand_wide_string_literal : Error<
-  "cannot use %select{unicode|wide}0 string literal in 'asm'">;
 def err_defer_ts_labeled_stmt : Error<
   "substatement of defer must not be a label">;
 

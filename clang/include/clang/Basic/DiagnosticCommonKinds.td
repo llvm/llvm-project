@@ -307,6 +307,9 @@ def err_asm_invalid_type_in_input : Error<
 def err_asm_invalid_type : Error<
   "invalid type %0 in asm %select{input|output}1">;
 
+def err_asm_operand_wide_string_literal : Error<
+  "cannot use %select{unicode|wide}0 string literal in 'asm'">;
+
 def err_ms_asm_bitfield_unsupported : Error<
   "an inline asm block cannot have an operand which is a bit-field">;
 
