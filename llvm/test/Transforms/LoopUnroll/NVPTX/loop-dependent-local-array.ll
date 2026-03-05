@@ -23,7 +23,7 @@ define void @iv_dependent_alloca(ptr %out) {
 ; CHECK-NEXT:    [[PTR_3:%.*]] = getelementptr inbounds [4 x i32], ptr [[ARR]], i32 0, i32 3
 ; CHECK-NEXT:    store i32 3, ptr [[PTR_3]], align 4
 ; CHECK-NEXT:    [[VAL:%.*]] = load i32, ptr [[ARR]], align 4
-; CHECK-NEXT:    store i32 [[VAL]], ptr [[OUT]], alidgn 4
+; CHECK-NEXT:    store i32 [[VAL]], ptr [[OUT]], align 4
 ; CHECK-NEXT:    ret void
 ;
 entry:
