@@ -746,7 +746,7 @@ enum NodeType {
   /// is performed.
   ABS,
 
-  /// ABS with an undefined result for INT_MIN. This corresponds to
+  /// ABS with a poison result for INT_MIN. This corresponds to
   /// llvm.abs(x, true) where the "int min is poison" flag is set.
   ABS_MIN_POISON,
 
