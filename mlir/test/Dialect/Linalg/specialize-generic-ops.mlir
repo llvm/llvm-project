@@ -171,11 +171,9 @@ func.func @negative_op_matmul_output_cast(%A: tensor<16x8xi32>, %B: tensor<8x32x
 // CHECK: linalg.generic
 // CHECK-NOT: linalg.matmul
 
-// Bitcasts are not modeled by the cast attribute, but should not block
-// specialization.
-// NOTE: Bitcasts are not preserved by the matmul named op during
-// roundtrip, so this is potentially loosing information here.
-// See #177593 for more details.
+// Bitcasts are not modeled by the cast attribute, and would lose information
+// when roundtripped through the matmul named op (sitofp will be emitted in
+// this case), so we do not allow them for specialization.
 func.func @op_matmul_bitcast_int_to_float(%A: tensor<16x8xi32>,
                                           %B: tensor<8x32xi32>,
                                           %Out: tensor<16x32xf32>) -> tensor<16x32xf32> {
@@ -193,8 +191,8 @@ func.func @op_matmul_bitcast_int_to_float(%A: tensor<16x8xi32>,
 }
 
 // CHECK-LABEL: op_matmul_bitcast_int_to_float
-// CHECK-NOT: linalg.generic
-// CHECK: linalg.matmul
+// CHECK:     linalg.generic
+// CHECK-NOT: linalg.matmul
 
 // Signed float casts only use sitofp, which defaults to signed semantics.
 func.func @op_matmul_signed_cast_float(%A: tensor<16x8xi16>, %B: tensor<8x32xi16>,
