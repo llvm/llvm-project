@@ -88,5 +88,9 @@ ENUM_LOWERINGOPT(RegisterMLIRDiagnosticsHandler, unsigned, 1, 1)
 /// LineTablesOnly. Off by default.
 ENUM_LOWERINGOPT(PreserveUseDebugInfo, unsigned, 1, 0)
 
+/// FP max/min behavior for MAX/MIN intrinsics and [max|min][loc|val] (Legacy,
+/// Portable, Extremum, Extremenum). Default: Legacy.
+ENUM_LOWERINGOPT(FPMaxminBehavior, Fortran::common::FPMaxminBehavior, 2, 0)
+
 #undef LOWERINGOPT
 #undef ENUM_LOWERINGOPT

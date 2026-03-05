@@ -381,14 +381,17 @@ SemanticsContext::SemanticsContext(
     const common::IntrinsicTypeDefaultKinds &defaultKinds,
     const common::LanguageFeatureControl &languageFeatures,
     const common::LangOptions &langOpts,
-    parser::AllCookedSources &allCookedSources)
+    parser::AllCookedSources &allCookedSources,
+    common::FPMaxminBehavior fpMaxminBehavior)
     : defaultKinds_{defaultKinds}, languageFeatures_{languageFeatures},
       langOpts_{langOpts}, allCookedSources_{allCookedSources},
       intrinsics_{evaluate::IntrinsicProcTable::Configure(defaultKinds_)},
       globalScope_{*this}, intrinsicModulesScope_{globalScope_.MakeScope(
                                Scope::Kind::IntrinsicModules, nullptr)},
+      fpMaxminBehavior_{fpMaxminBehavior},
       foldingContext_{parser::ContextualMessages{&messages_}, defaultKinds_,
-          intrinsics_, targetCharacteristics_, languageFeatures_, tempNames_} {}
+          intrinsics_, targetCharacteristics_, languageFeatures_, tempNames_,
+          fpMaxminBehavior} {}
 
 SemanticsContext::~SemanticsContext() {}
 
