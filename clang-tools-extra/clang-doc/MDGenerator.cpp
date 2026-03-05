@@ -423,7 +423,7 @@ llvm::Error MDGenerator::generateDocumentation(
   // Collect all output by file name and create the necessary directories.
   llvm::StringMap<std::vector<doc::Info *>> FileToInfos;
   for (const auto &Group : Infos) {
-    doc::Info *Info = Group.getValue().get();
+    doc::Info *Info = getPtr(Group.getValue());
 
     llvm::SmallString<128> Path;
     llvm::sys::path::native(RootDir, Path);

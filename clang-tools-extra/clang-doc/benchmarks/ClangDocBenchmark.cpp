@@ -91,7 +91,7 @@ BENCHMARK(BM_Mapper_Scale)->Range(10, 10000);
 // --- Reducer Benchmarks ---
 
 static void BM_SerializeFunctionInfo(benchmark::State &State) {
-  auto I = std::make_unique<FunctionInfo>();
+  auto I = allocatePtr<FunctionInfo>();
   I->Name = "f";
   I->DefLoc = Location(0, 0, "test.cpp");
   I->ReturnType = TypeInfo("void");
@@ -119,7 +119,7 @@ static void BM_MergeInfos_Scale(benchmark::State &State) {
     OwningPtrArray<Info> Input;
     Input.reserve(State.range(0));
     for (int i = 0; i < State.range(0); ++i) {
-      auto I = std::make_unique<FunctionInfo>();
+      auto I = allocatePtr<FunctionInfo>();
       I->Name = "f";
       I->USR = USR;
       I->DefLoc = Location(10, i, "test.cpp");
@@ -181,7 +181,7 @@ static void BM_JSONGenerator_Scale(benchmark::State &State) {
   }
 
   int NumRecords = State.range(0);
-  auto NI = std::make_unique<NamespaceInfo>();
+  auto NI = allocatePtr<NamespaceInfo>();
   NI->Name = "GlobalNamespace";
   for (int i = 0; i < NumRecords; ++i) {
     NI->Children.Records.emplace_back(SymbolID{(uint8_t)(i & 0xFF)},
@@ -200,7 +200,7 @@ static void BM_JSONGenerator_Scale(benchmark::State &State) {
 
   for (auto _ : State) {
     Output.clear();
-    auto Err = (*G)->generateDocForInfo(NI.get(), OS, CDCtx);
+    auto Err = (*G)->generateDocForInfo(getPtr(NI), OS, CDCtx);
     if (Err) {
       State.SkipWithError("generateDocForInfo failed");
       llvm::consumeError(std::move(Err));

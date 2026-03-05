@@ -48,6 +48,17 @@ template <typename T> using OwningPtrVec = std::vector<OwnedPtr<T>>;
 // To be eventually transitioned to arena-allocated arrays of bare pointers.
 template <typename T> using OwningPtrArray = std::vector<OwnedPtr<T>>;
 
+// A helper function to create an owned pointer, abstracting away the memory
+// allocation mechanism.
+template <typename T, typename... Args>
+OwnedPtr<T> allocatePtr(Args &&...args) {
+  return std::make_unique<T>(std::forward<Args>(args)...);
+}
+
+// A helper function to access the underlying pointer from an owned pointer,
+// abstracting away the pointer dereferencing mechanism.
+template <typename T> T *getPtr(const OwnedPtr<T> &O) { return O.get(); }
+
 // SHA1'd hash of a USR.
 using SymbolID = std::array<uint8_t, 20>;
 
