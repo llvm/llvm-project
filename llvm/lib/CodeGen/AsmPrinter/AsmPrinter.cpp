@@ -2274,7 +2274,7 @@ void AsmPrinter::emitFunctionBody() {
 
       // If there is a post-instruction symbol, emit a label for it here.
       if (MCSymbol *S = MI.getPostInstrSymbol()) {
-        if (MCSymbolELF *ESym = static_cast<MCSymbolELF*>(S))
+        if (MCSymbolELF *ESym = static_cast<MCSymbolELF *>(S))
           if (ESym->isWeakref())
             OutStreamer->emitSymbolAttribute(S, MCSA_Weak);
         OutStreamer->emitLabel(S);

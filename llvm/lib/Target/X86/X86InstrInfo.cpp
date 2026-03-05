@@ -10785,9 +10785,10 @@ void X86InstrInfo::getFrameIndexOperands(SmallVectorImpl<MachineOperand> &Ops,
   M.getFullAddress(Ops);
 }
 
-MachineInstr* X86InstrInfo::insertCodePrefetchInstr(
-    MachineBasicBlock &MBB, MachineBasicBlock::iterator InsertBefore,
-    const GlobalValue *GV) const {
+MachineInstr *
+X86InstrInfo::insertCodePrefetchInstr(MachineBasicBlock &MBB,
+                                      MachineBasicBlock::iterator InsertBefore,
+                                      const GlobalValue *GV) const {
   MachineFunction &MF = *MBB.getParent();
   MachineInstr *PrefetchInstr = MF.CreateMachineInstr(
       get(X86::PREFETCHIT1),

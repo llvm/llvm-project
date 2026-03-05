@@ -767,9 +767,10 @@ private:
   /// fails to commute the operands, it will return \p Idx1.
   unsigned commuteOperandsForFold(MachineInstr &MI, unsigned Idx1) const;
 
-  MachineInstr* insertCodePrefetchInstr(MachineBasicBlock &MBB,
-                               MachineBasicBlock::iterator InsertBefore,
-                               const GlobalValue *GV) const override;
+  MachineInstr *
+  insertCodePrefetchInstr(MachineBasicBlock &MBB,
+                          MachineBasicBlock::iterator InsertBefore,
+                          const GlobalValue *GV) const override;
 };
 } // namespace llvm
 
