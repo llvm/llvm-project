@@ -428,6 +428,16 @@ public:
   std::pair<unsigned, unsigned> hardwareInterferenceSizes() const override {
     return std::make_pair(32, 32);
   }
+
+  CallingConvCheckResult checkCallingConvention(CallingConv CC) const override {
+    switch (CC) {
+    default:
+      return CCCR_Warning;
+    case CC_PreserveAll:
+    case CC_C:
+      return CCCR_OK;
+    }
+  }
 };
 
 // Note: ABI differences may eventually require us to have a separate
@@ -490,6 +500,7 @@ public:
   CallingConvCheckResult checkCallingConvention(CallingConv CC) const override {
     switch (CC) {
     case CC_Swift:
+    case CC_PreserveAll:
       return CCCR_OK;
     case CC_SwiftAsync:
       return CCCR_Error;
