@@ -180,6 +180,10 @@ namespace Intrinsic {
       AMX,
       PPCQuad,
       AArch64Svcount,
+      ArgumentTypeConstraint, // For AnyTypeOf - marks constrained argument
+                              // types.
+      ArgumentTypeExclusion,  // For NoneTypeOf - marks excluded argument types.
+      ExceptConstraint,       // For Except - marks excluded combinations.
     } Kind;
 
     union {
@@ -188,6 +192,7 @@ namespace Intrinsic {
       unsigned Pointer_AddressSpace;
       unsigned Struct_NumElements;
       unsigned Argument_Info;
+      unsigned Argument_NumConstraints;
       ElementCount Vector_Width;
     };
 
@@ -229,6 +234,26 @@ namespace Intrinsic {
       return Argument_Info & 0xFFFF;
     }
 
+    // For ArgumentTypeConstraint: get number of allowed types.
+    unsigned getArgumentNumConstraints() const {
+      assert(Kind == ArgumentTypeConstraint);
+      return Argument_NumConstraints;
+    }
+
+    // For ArgumentTypeExclusion: get number of excluded types.
+    unsigned getArgumentNumExclusions() const {
+      assert(Kind == ArgumentTypeExclusion);
+      return Argument_NumConstraints;
+    }
+
+    // For ExceptConstraint: get number of combinations and size.
+    std::pair<unsigned, unsigned> getExceptInfo() const {
+      assert(Kind == ExceptConstraint);
+      unsigned NumCombos = Argument_Info >> 16;
+      unsigned ComboSize = Argument_Info & 0xFFFF;
+      return {NumCombos, ComboSize};
+    }
+
     static IITDescriptor get(IITDescriptorKind K, unsigned Field) {
       IITDescriptor Result = { K, { Field } };
       return Result;
@@ -245,6 +270,13 @@ namespace Intrinsic {
       IITDescriptor Result = {Vector, {0}};
       Result.Vector_Width = ElementCount::get(Width, IsScalable);
       return Result;
+    }
+
+    static IITDescriptor getExcept(unsigned NumCombos, unsigned ComboSize) {
+      assert(NumCombos <= 0xFFFF && "NumCombos exceeds 16 bits");
+      assert(ComboSize <= 0xFFFF && "ComboSize exceeds 16 bits");
+      return get(ExceptConstraint, static_cast<unsigned short>(NumCombos),
+                 static_cast<unsigned short>(ComboSize));
     }
   };
 
@@ -275,6 +307,10 @@ namespace Intrinsic {
   /// This method returns true on error.
   LLVM_ABI bool matchIntrinsicVarArg(bool isVarArg,
                                      ArrayRef<IITDescriptor> &Infos);
+
+  /// Verify type constraints for AnyTypeOf constrained intrinsics.
+  LLVM_ABI bool verifyIntrinsicTypeConstraints(ID id, FunctionType *FTy,
+                                               std::string &ErrMsg);
 
   /// Gets the type arguments of an intrinsic call by matching type contraints
   /// specified by the .td file. The overloaded types are pushed into the
