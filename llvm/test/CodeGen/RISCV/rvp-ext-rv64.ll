@@ -2137,24 +2137,8 @@ define <2 x i32> @test_vselect_v2i32(<2 x i32> %a, <2 x i32> %b, <2 x i32> %c) {
 define <4 x i16> @test_bswap_v4i16(<4 x i16> %a) {
 ; CHECK-LABEL: test_bswap_v4i16:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    srli a1, a0, 56
-; CHECK-NEXT:    srli a2, a0, 40
-; CHECK-NEXT:    srliw a3, a0, 24
-; CHECK-NEXT:    zext.b a4, a2
-; CHECK-NEXT:    ppaire.h a1, a4, a1
-; CHECK-NEXT:    slli a4, a0, 48
-; CHECK-NEXT:    srli a4, a4, 56
-; CHECK-NEXT:    ppaire.h a3, a4, a3
-; CHECK-NEXT:    srli a4, a0, 32
-; CHECK-NEXT:    andi a2, a2, -256
-; CHECK-NEXT:    slli a4, a4, 8
-; CHECK-NEXT:    ppaire.h a2, a4, a2
-; CHECK-NEXT:    slliw a4, a0, 8
-; CHECK-NEXT:    srli a0, a0, 16
-; CHECK-NEXT:    slli a0, a0, 8
-; CHECK-NEXT:    ppaire.h a0, a4, a0
-; CHECK-NEXT:    pack a1, a3, a1
-; CHECK-NEXT:    pack a0, a0, a2
+; CHECK-NEXT:    psrli.h a1, a0, 8
+; CHECK-NEXT:    pslli.h a0, a0, 8
 ; CHECK-NEXT:    or a0, a0, a1
 ; CHECK-NEXT:    ret
   %res = call <4 x i16> @llvm.bswap.v4i16(<4 x i16> %a)
@@ -2164,28 +2148,18 @@ define <4 x i16> @test_bswap_v4i16(<4 x i16> %a) {
 define <2 x i32> @test_bswap_v2i32(<2 x i32> %a) {
 ; CHECK-LABEL: test_bswap_v2i32:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    srli a1, a0, 56
-; CHECK-NEXT:    srliw a2, a0, 24
-; CHECK-NEXT:    srli a3, a0, 40
-; CHECK-NEXT:    srliw a4, a0, 8
-; CHECK-NEXT:    pack a1, a2, a1
-; CHECK-NEXT:    slli a2, a0, 24
-; CHECK-NEXT:    pack a3, a4, a3
-; CHECK-NEXT:    srli a4, a0, 32
-; CHECK-NEXT:    slli a4, a4, 24
-; CHECK-NEXT:    pack a2, a2, a4
-; CHECK-NEXT:    lui a4, 16
-; CHECK-NEXT:    addi a4, a4, -256
-; CHECK-NEXT:    padd.ws a4, zero, a4
-; CHECK-NEXT:    and a3, a3, a4
-; CHECK-NEXT:    and a0, a0, a4
-; CHECK-NEXT:    or a1, a3, a1
-; CHECK-NEXT:    srli a3, a0, 24
-; CHECK-NEXT:    slli a0, a0, 40
-; CHECK-NEXT:    srli a0, a0, 32
-; CHECK-NEXT:    pack a0, a0, a3
-; CHECK-NEXT:    or a1, a2, a1
-; CHECK-NEXT:    or a0, a1, a0
+; CHECK-NEXT:    psrli.w a1, a0, 8
+; CHECK-NEXT:    lui a2, 16
+; CHECK-NEXT:    psrli.w a3, a0, 24
+; CHECK-NEXT:    addi a2, a2, -256
+; CHECK-NEXT:    padd.ws a2, zero, a2
+; CHECK-NEXT:    and a1, a1, a2
+; CHECK-NEXT:    and a2, a0, a2
+; CHECK-NEXT:    or a1, a1, a3
+; CHECK-NEXT:    pslli.w a2, a2, 8
+; CHECK-NEXT:    pslli.w a0, a0, 24
+; CHECK-NEXT:    or a0, a0, a2
+; CHECK-NEXT:    or a0, a0, a1
 ; CHECK-NEXT:    ret
   %res = call <2 x i32> @llvm.bswap.v2i32(<2 x i32> %a)
   ret <2 x i32> %res
@@ -2194,125 +2168,24 @@ define <2 x i32> @test_bswap_v2i32(<2 x i32> %a) {
 define <8 x i8> @test_bitreverse_v8i8(<8 x i8> %a) {
 ; CHECK-LABEL: test_bitreverse_v8i8:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    pli.b a1, 15
-; CHECK-NEXT:    srli a2, a0, 60
-; CHECK-NEXT:    slli a3, a0, 8
-; CHECK-NEXT:    slli a4, a0, 16
-; CHECK-NEXT:    slli a5, a0, 24
-; CHECK-NEXT:    srliw a6, a0, 28
-; CHECK-NEXT:    slli a7, a0, 40
-; CHECK-NEXT:    slli t0, a0, 48
-; CHECK-NEXT:    slli t1, a0, 56
-; CHECK-NEXT:    and a1, a0, a1
-; CHECK-NEXT:    pli.b a0, 51
-; CHECK-NEXT:    srli a3, a3, 60
-; CHECK-NEXT:    srli a4, a4, 60
-; CHECK-NEXT:    srli a5, a5, 60
-; CHECK-NEXT:    srli a7, a7, 60
-; CHECK-NEXT:    srli t0, t0, 60
-; CHECK-NEXT:    srli t1, t1, 60
-; CHECK-NEXT:    ppaire.b a2, a3, a2
-; CHECK-NEXT:    srli a3, a1, 52
-; CHECK-NEXT:    ppaire.b a4, a5, a4
-; CHECK-NEXT:    srli a5, a1, 44
-; CHECK-NEXT:    ppaire.b a6, a7, a6
-; CHECK-NEXT:    srli a7, a1, 36
-; CHECK-NEXT:    ppaire.b t0, t1, t0
-; CHECK-NEXT:    srli t1, a1, 28
-; CHECK-NEXT:    ppaire.b a3, a5, a3
-; CHECK-NEXT:    srli a5, a1, 20
-; CHECK-NEXT:    ppaire.b a7, t1, a7
-; CHECK-NEXT:    srli t1, a1, 12
-; CHECK-NEXT:    ppaire.b a5, t1, a5
-; CHECK-NEXT:    srli t1, a1, 4
-; CHECK-NEXT:    slli a1, a1, 4
-; CHECK-NEXT:    ppaire.b a1, a1, t1
-; CHECK-NEXT:    ppaire.h a2, a4, a2
-; CHECK-NEXT:    ppaire.h a4, t0, a6
-; CHECK-NEXT:    ppaire.h a3, a7, a3
-; CHECK-NEXT:    ppaire.h a1, a1, a5
-; CHECK-NEXT:    pack a2, a4, a2
-; CHECK-NEXT:    pack a1, a1, a3
-; CHECK-NEXT:    or a1, a2, a1
-; CHECK-NEXT:    and a2, a1, a0
-; CHECK-NEXT:    srli a3, a1, 58
-; CHECK-NEXT:    slli a4, a1, 8
-; CHECK-NEXT:    slli a5, a1, 16
-; CHECK-NEXT:    srli a6, a2, 54
-; CHECK-NEXT:    srli a7, a2, 46
-; CHECK-NEXT:    srli t0, a2, 38
-; CHECK-NEXT:    srli t1, a2, 30
-; CHECK-NEXT:    ppaire.b a6, a7, a6
-; CHECK-NEXT:    srli a7, a2, 22
-; CHECK-NEXT:    ppaire.b t0, t1, t0
-; CHECK-NEXT:    srli t1, a2, 14
-; CHECK-NEXT:    ppaire.b a7, t1, a7
-; CHECK-NEXT:    srli t1, a2, 6
-; CHECK-NEXT:    slli a2, a2, 2
-; CHECK-NEXT:    ppaire.b a2, a2, t1
-; CHECK-NEXT:    slli t1, a1, 24
-; CHECK-NEXT:    srli a4, a4, 58
-; CHECK-NEXT:    ppaire.b a3, a4, a3
-; CHECK-NEXT:    srliw a4, a1, 26
-; CHECK-NEXT:    srli a5, a5, 58
-; CHECK-NEXT:    srli t1, t1, 58
-; CHECK-NEXT:    ppaire.b a5, t1, a5
-; CHECK-NEXT:    slli t1, a1, 40
-; CHECK-NEXT:    srli t1, t1, 58
-; CHECK-NEXT:    ppaire.b a4, t1, a4
-; CHECK-NEXT:    slli t1, a1, 48
-; CHECK-NEXT:    slli a1, a1, 56
-; CHECK-NEXT:    srli t1, t1, 58
-; CHECK-NEXT:    srli a1, a1, 58
-; CHECK-NEXT:    ppaire.b t1, a1, t1
-; CHECK-NEXT:    pli.b a1, 85
-; CHECK-NEXT:    ppaire.h a6, t0, a6
-; CHECK-NEXT:    ppaire.h a2, a2, a7
-; CHECK-NEXT:    ppaire.h a3, a5, a3
-; CHECK-NEXT:    ppaire.h a4, t1, a4
-; CHECK-NEXT:    pack a2, a2, a6
-; CHECK-NEXT:    pack a3, a4, a3
-; CHECK-NEXT:    and a0, a3, a0
-; CHECK-NEXT:    or a0, a0, a2
-; CHECK-NEXT:    and a2, a0, a1
-; CHECK-NEXT:    srli a3, a0, 57
-; CHECK-NEXT:    slli a4, a0, 8
-; CHECK-NEXT:    slli a5, a0, 16
-; CHECK-NEXT:    srli a6, a2, 55
-; CHECK-NEXT:    srli a7, a2, 47
-; CHECK-NEXT:    srli t0, a2, 39
-; CHECK-NEXT:    srli t1, a2, 31
-; CHECK-NEXT:    ppaire.b a6, a7, a6
-; CHECK-NEXT:    srli a7, a2, 23
-; CHECK-NEXT:    ppaire.b t0, t1, t0
-; CHECK-NEXT:    srli t1, a2, 15
-; CHECK-NEXT:    ppaire.b a7, t1, a7
-; CHECK-NEXT:    srli t1, a2, 7
-; CHECK-NEXT:    slli a2, a2, 1
-; CHECK-NEXT:    ppaire.b a2, a2, t1
-; CHECK-NEXT:    slli t1, a0, 24
-; CHECK-NEXT:    srli a4, a4, 57
-; CHECK-NEXT:    ppaire.b a3, a4, a3
-; CHECK-NEXT:    srliw a4, a0, 25
-; CHECK-NEXT:    srli a5, a5, 57
-; CHECK-NEXT:    srli t1, t1, 57
-; CHECK-NEXT:    ppaire.b a5, t1, a5
-; CHECK-NEXT:    slli t1, a0, 40
-; CHECK-NEXT:    srli t1, t1, 57
-; CHECK-NEXT:    ppaire.b a4, t1, a4
-; CHECK-NEXT:    slli t1, a0, 48
-; CHECK-NEXT:    slli a0, a0, 56
-; CHECK-NEXT:    srli t1, t1, 57
-; CHECK-NEXT:    srli a0, a0, 57
-; CHECK-NEXT:    ppaire.b a0, a0, t1
-; CHECK-NEXT:    ppaire.h a6, t0, a6
-; CHECK-NEXT:    ppaire.h a2, a2, a7
-; CHECK-NEXT:    ppaire.h a3, a5, a3
-; CHECK-NEXT:    ppaire.h a0, a0, a4
-; CHECK-NEXT:    pack a2, a2, a6
-; CHECK-NEXT:    pack a0, a0, a3
-; CHECK-NEXT:    and a0, a0, a1
-; CHECK-NEXT:    or a0, a0, a2
+; CHECK-NEXT:    psrli.b a1, a0, 4
+; CHECK-NEXT:    pli.b a2, 15
+; CHECK-NEXT:    and a1, a1, a2
+; CHECK-NEXT:    and a0, a0, a2
+; CHECK-NEXT:    pli.b a2, 51
+; CHECK-NEXT:    pslli.b a0, a0, 4
+; CHECK-NEXT:    or a0, a1, a0
+; CHECK-NEXT:    psrli.b a1, a0, 2
+; CHECK-NEXT:    and a0, a0, a2
+; CHECK-NEXT:    and a1, a1, a2
+; CHECK-NEXT:    pli.b a2, 85
+; CHECK-NEXT:    pslli.b a0, a0, 2
+; CHECK-NEXT:    or a0, a1, a0
+; CHECK-NEXT:    psrli.b a1, a0, 1
+; CHECK-NEXT:    and a0, a0, a2
+; CHECK-NEXT:    and a1, a1, a2
+; CHECK-NEXT:    pslli.b a0, a0, 1
+; CHECK-NEXT:    or a0, a1, a0
 ; CHECK-NEXT:    ret
   %res = call <8 x i8> @llvm.bitreverse.v8i8(<8 x i8> %a)
   ret <8 x i8> %res
@@ -2321,91 +2194,33 @@ define <8 x i8> @test_bitreverse_v8i8(<8 x i8> %a) {
 define <4 x i16> @test_bitreverse_v4i16(<4 x i16> %a) {
 ; CHECK-LABEL: test_bitreverse_v4i16:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    srli a1, a0, 56
-; CHECK-NEXT:    srli a2, a0, 40
-; CHECK-NEXT:    srliw a3, a0, 24
-; CHECK-NEXT:    slli a4, a0, 48
-; CHECK-NEXT:    zext.b a5, a2
-; CHECK-NEXT:    ppaire.h a1, a5, a1
-; CHECK-NEXT:    srli a5, a0, 32
-; CHECK-NEXT:    srli a4, a4, 56
-; CHECK-NEXT:    ppaire.h a3, a4, a3
-; CHECK-NEXT:    slliw a4, a0, 8
-; CHECK-NEXT:    srli a0, a0, 16
-; CHECK-NEXT:    andi a2, a2, -256
-; CHECK-NEXT:    slli a5, a5, 8
-; CHECK-NEXT:    ppaire.h a2, a5, a2
-; CHECK-NEXT:    lui a5, 1
-; CHECK-NEXT:    slli a0, a0, 8
-; CHECK-NEXT:    addi a5, a5, -241
-; CHECK-NEXT:    ppaire.h a0, a4, a0
-; CHECK-NEXT:    padd.hs a4, zero, a5
-; CHECK-NEXT:    pack a1, a3, a1
-; CHECK-NEXT:    pack a0, a0, a2
+; CHECK-NEXT:    psrli.h a1, a0, 8
+; CHECK-NEXT:    pslli.h a0, a0, 8
+; CHECK-NEXT:    lui a2, 1
 ; CHECK-NEXT:    or a0, a0, a1
-; CHECK-NEXT:    and a1, a0, a4
-; CHECK-NEXT:    srli a2, a0, 52
-; CHECK-NEXT:    srli a3, a1, 44
-; CHECK-NEXT:    srli a5, a1, 28
-; CHECK-NEXT:    ppaire.h a3, a5, a3
-; CHECK-NEXT:    srli a5, a1, 12
-; CHECK-NEXT:    slliw a1, a1, 4
-; CHECK-NEXT:    ppaire.h a1, a1, a5
-; CHECK-NEXT:    slli a5, a0, 16
-; CHECK-NEXT:    srli a5, a5, 52
-; CHECK-NEXT:    ppaire.h a2, a5, a2
-; CHECK-NEXT:    srliw a5, a0, 20
-; CHECK-NEXT:    slli a0, a0, 48
-; CHECK-NEXT:    srli a0, a0, 52
-; CHECK-NEXT:    ppaire.h a0, a0, a5
-; CHECK-NEXT:    lui a5, 3
-; CHECK-NEXT:    addi a5, a5, 819
-; CHECK-NEXT:    padd.hs a5, zero, a5
-; CHECK-NEXT:    pack a1, a1, a3
-; CHECK-NEXT:    pack a0, a0, a2
-; CHECK-NEXT:    and a0, a0, a4
-; CHECK-NEXT:    or a0, a0, a1
-; CHECK-NEXT:    and a1, a0, a5
-; CHECK-NEXT:    srli a2, a0, 50
-; CHECK-NEXT:    srli a3, a1, 46
-; CHECK-NEXT:    srli a4, a1, 30
-; CHECK-NEXT:    ppaire.h a3, a4, a3
-; CHECK-NEXT:    srli a4, a1, 14
-; CHECK-NEXT:    slliw a1, a1, 2
-; CHECK-NEXT:    ppaire.h a1, a1, a4
-; CHECK-NEXT:    slli a4, a0, 16
-; CHECK-NEXT:    srli a4, a4, 50
-; CHECK-NEXT:    ppaire.h a2, a4, a2
-; CHECK-NEXT:    srliw a4, a0, 18
-; CHECK-NEXT:    slli a0, a0, 48
-; CHECK-NEXT:    srli a0, a0, 50
-; CHECK-NEXT:    ppaire.h a0, a0, a4
-; CHECK-NEXT:    lui a4, 5
-; CHECK-NEXT:    addi a4, a4, 1365
-; CHECK-NEXT:    padd.hs a4, zero, a4
-; CHECK-NEXT:    pack a1, a1, a3
-; CHECK-NEXT:    pack a0, a0, a2
-; CHECK-NEXT:    and a0, a0, a5
-; CHECK-NEXT:    or a0, a0, a1
-; CHECK-NEXT:    and a1, a0, a4
-; CHECK-NEXT:    srli a2, a0, 49
-; CHECK-NEXT:    srli a3, a1, 47
-; CHECK-NEXT:    srli a5, a1, 31
-; CHECK-NEXT:    ppaire.h a3, a5, a3
-; CHECK-NEXT:    srli a5, a1, 15
-; CHECK-NEXT:    slliw a1, a1, 1
-; CHECK-NEXT:    ppaire.h a1, a1, a5
-; CHECK-NEXT:    slli a5, a0, 16
-; CHECK-NEXT:    srli a5, a5, 49
-; CHECK-NEXT:    ppaire.h a2, a5, a2
-; CHECK-NEXT:    srliw a5, a0, 17
-; CHECK-NEXT:    slli a0, a0, 48
-; CHECK-NEXT:    srli a0, a0, 49
-; CHECK-NEXT:    ppaire.h a0, a0, a5
-; CHECK-NEXT:    pack a1, a1, a3
-; CHECK-NEXT:    pack a0, a0, a2
-; CHECK-NEXT:    and a0, a0, a4
-; CHECK-NEXT:    or a0, a0, a1
+; CHECK-NEXT:    addi a1, a2, -241
+; CHECK-NEXT:    psrli.h a2, a0, 4
+; CHECK-NEXT:    padd.hs a1, zero, a1
+; CHECK-NEXT:    and a2, a2, a1
+; CHECK-NEXT:    and a0, a0, a1
+; CHECK-NEXT:    lui a1, 3
+; CHECK-NEXT:    addi a1, a1, 819
+; CHECK-NEXT:    padd.hs a1, zero, a1
+; CHECK-NEXT:    pslli.h a0, a0, 4
+; CHECK-NEXT:    or a0, a2, a0
+; CHECK-NEXT:    psrli.h a2, a0, 2
+; CHECK-NEXT:    and a0, a0, a1
+; CHECK-NEXT:    and a1, a2, a1
+; CHECK-NEXT:    lui a2, 5
+; CHECK-NEXT:    addi a2, a2, 1365
+; CHECK-NEXT:    padd.hs a2, zero, a2
+; CHECK-NEXT:    pslli.h a0, a0, 2
+; CHECK-NEXT:    or a0, a1, a0
+; CHECK-NEXT:    psrli.h a1, a0, 1
+; CHECK-NEXT:    and a0, a0, a2
+; CHECK-NEXT:    and a1, a1, a2
+; CHECK-NEXT:    pslli.h a0, a0, 1
+; CHECK-NEXT:    or a0, a1, a0
 ; CHECK-NEXT:    ret
   %res = call <4 x i16> @llvm.bitreverse.v4i16(<4 x i16> %a)
   ret <4 x i16> %res
@@ -2414,64 +2229,42 @@ define <4 x i16> @test_bitreverse_v4i16(<4 x i16> %a) {
 define <2 x i32> @test_bitreverse_v2i32(<2 x i32> %a) {
 ; CHECK-LABEL: test_bitreverse_v2i32:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    srli a1, a0, 56
-; CHECK-NEXT:    srliw a2, a0, 24
-; CHECK-NEXT:    srli a3, a0, 40
-; CHECK-NEXT:    srliw a4, a0, 8
-; CHECK-NEXT:    pack a1, a2, a1
-; CHECK-NEXT:    slli a2, a0, 24
-; CHECK-NEXT:    pack a3, a4, a3
-; CHECK-NEXT:    srli a4, a0, 32
-; CHECK-NEXT:    slli a4, a4, 24
-; CHECK-NEXT:    pack a2, a2, a4
-; CHECK-NEXT:    lui a4, 16
-; CHECK-NEXT:    addi a4, a4, -256
-; CHECK-NEXT:    padd.ws a4, zero, a4
-; CHECK-NEXT:    and a3, a3, a4
-; CHECK-NEXT:    and a0, a0, a4
-; CHECK-NEXT:    or a1, a3, a1
+; CHECK-NEXT:    psrli.w a1, a0, 8
+; CHECK-NEXT:    lui a2, 16
+; CHECK-NEXT:    psrli.w a3, a0, 24
+; CHECK-NEXT:    addi a2, a2, -256
+; CHECK-NEXT:    padd.ws a2, zero, a2
+; CHECK-NEXT:    and a1, a1, a2
+; CHECK-NEXT:    and a2, a0, a2
+; CHECK-NEXT:    pslli.w a0, a0, 24
+; CHECK-NEXT:    or a1, a1, a3
 ; CHECK-NEXT:    lui a3, 61681
+; CHECK-NEXT:    pslli.w a2, a2, 8
+; CHECK-NEXT:    or a0, a0, a2
+; CHECK-NEXT:    lui a2, 209715
 ; CHECK-NEXT:    addi a3, a3, -241
 ; CHECK-NEXT:    padd.ws a3, zero, a3
-; CHECK-NEXT:    or a1, a2, a1
-; CHECK-NEXT:    srli a2, a0, 24
-; CHECK-NEXT:    slli a0, a0, 40
-; CHECK-NEXT:    srli a0, a0, 32
-; CHECK-NEXT:    pack a0, a0, a2
-; CHECK-NEXT:    or a0, a1, a0
-; CHECK-NEXT:    and a1, a0, a3
-; CHECK-NEXT:    srli a2, a0, 36
-; CHECK-NEXT:    srliw a0, a0, 4
-; CHECK-NEXT:    pack a0, a0, a2
-; CHECK-NEXT:    srli a2, a1, 28
-; CHECK-NEXT:    slli a1, a1, 4
-; CHECK-NEXT:    pack a1, a1, a2
-; CHECK-NEXT:    lui a2, 209715
-; CHECK-NEXT:    addi a2, a2, 819
-; CHECK-NEXT:    padd.ws a2, zero, a2
-; CHECK-NEXT:    and a0, a0, a3
 ; CHECK-NEXT:    or a0, a0, a1
-; CHECK-NEXT:    and a1, a0, a2
-; CHECK-NEXT:    srli a3, a0, 34
-; CHECK-NEXT:    srliw a0, a0, 2
-; CHECK-NEXT:    pack a0, a0, a3
-; CHECK-NEXT:    srli a3, a1, 30
-; CHECK-NEXT:    slli a1, a1, 2
-; CHECK-NEXT:    pack a1, a1, a3
+; CHECK-NEXT:    psrli.w a1, a0, 4
+; CHECK-NEXT:    and a0, a0, a3
+; CHECK-NEXT:    and a1, a1, a3
 ; CHECK-NEXT:    lui a3, 349525
+; CHECK-NEXT:    addi a2, a2, 819
 ; CHECK-NEXT:    addi a3, a3, 1365
+; CHECK-NEXT:    padd.ws a2, zero, a2
 ; CHECK-NEXT:    padd.ws a3, zero, a3
+; CHECK-NEXT:    pslli.w a0, a0, 4
+; CHECK-NEXT:    or a0, a1, a0
+; CHECK-NEXT:    psrli.w a1, a0, 2
 ; CHECK-NEXT:    and a0, a0, a2
-; CHECK-NEXT:    or a0, a0, a1
-; CHECK-NEXT:    and a1, a0, a3
-; CHECK-NEXT:    srli a2, a0, 33
-; CHECK-NEXT:    srliw a0, a0, 1
-; CHECK-NEXT:    pack a0, a0, a2
-; CHECK-NEXT:    srli a2, a1, 31
-; CHECK-NEXT:    slli a1, a1, 1
-; CHECK-NEXT:    pack a1, a1, a2
+; CHECK-NEXT:    and a1, a1, a2
+; CHECK-NEXT:    pslli.w a0, a0, 2
+; CHECK-NEXT:    or a0, a1, a0
+; CHECK-NEXT:    psrli.w a1, a0, 1
 ; CHECK-NEXT:    and a0, a0, a3
-; CHECK-NEXT:    or a0, a0, a1
+; CHECK-NEXT:    and a1, a1, a3
+; CHECK-NEXT:    pslli.w a0, a0, 1
+; CHECK-NEXT:    or a0, a1, a0
 ; CHECK-NEXT:    ret
   %res = call <2 x i32> @llvm.bitreverse.v2i32(<2 x i32> %a)
   ret <2 x i32> %res

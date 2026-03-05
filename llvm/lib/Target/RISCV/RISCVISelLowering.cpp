@@ -8859,9 +8859,14 @@ SDValue RISCVTargetLowering::LowerOperation(SDValue Op,
   case ISD::SRA:
     if (Op.getSimpleValueType().isFixedLengthVector()) {
       if (Subtarget.hasStdExtP()) {
-        // There's no vector-vector version of shift instruction in P extension
-        // so we need to unroll to scalar computation and pack them back.
-        if (Op.getOperand(1)->getOpcode() != ISD::SPLAT_VECTOR)
+        SDValue ShAmtVec = Op.getOperand(1);
+        SDValue SplatVal;
+        if (ShAmtVec.getOpcode() == ISD::SPLAT_VECTOR)
+          SplatVal = ShAmtVec.getOperand(0);
+        else if (ShAmtVec.getOpcode() == ISD::BUILD_VECTOR)
+          SplatVal = cast<BuildVectorSDNode>(ShAmtVec)->getSplatValue();
+
+        if (!SplatVal)
           return DAG.UnrollVectorOp(Op.getNode());
 
         unsigned Opc;
@@ -8879,7 +8884,7 @@ SDValue RISCVTargetLowering::LowerOperation(SDValue Op,
           break;
         }
         return DAG.getNode(Opc, SDLoc(Op), Op.getValueType(), Op.getOperand(0),
-                           Op.getOperand(1).getOperand(0));
+                           SplatVal);
       }
       return lowerToScalableOp(Op, DAG);
     }
