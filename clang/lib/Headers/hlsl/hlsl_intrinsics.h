@@ -804,6 +804,17 @@ fwidth(__detail::HLSL_FIXED_VECTOR<float, N> input) {
 /// The inner dimension x-columns and y-rows must be equal. The result has the
 /// dimension x-rows x y-columns. When both x and y are vectors, the result is
 /// a dot product (scalar). Scalar operands are multiplied element-wise.
+///
+/// This function supports 9 overloaded forms:
+///   1. scalar * scalar -> scalar
+///   2. scalar * vector -> vector
+///   3. scalar * matrix -> matrix
+///   4. vector * scalar -> vector
+///   5. vector * vector -> scalar (dot product)
+///   6. vector * matrix -> vector
+///   7. matrix * scalar -> matrix
+///   8. matrix * vector -> vector
+///   9. matrix * matrix -> matrix
 
 // Case 1: scalar * scalar -> scalar
 template <typename T>
