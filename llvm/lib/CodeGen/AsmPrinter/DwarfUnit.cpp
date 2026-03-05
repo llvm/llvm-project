@@ -250,7 +250,8 @@ void DwarfUnit::addIntAsBlock(DIE &Die, dwarf::Attribute Attribute, const APInt 
     addUInt(*Block, dwarf::DW_FORM_data1, c);
   }
 
-  addBlock(Die, Attribute, Block);
+  Block->computeSize(Asm->getDwarfFormParams());
+  addBlock(Die, Attribute, Block->BestForm(), Block);
 }
 
 void DwarfUnit::addInt(DIE &Die, dwarf::Attribute Attribute,
