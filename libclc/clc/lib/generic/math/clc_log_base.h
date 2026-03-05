@@ -1,5 +1,5 @@
-#ifndef LLVM_LIBCLC_CLC_LIB_GENERIC_MATH_CLC_LOG_BASE_H
-#define LLVM_LIBCLC_CLC_LIB_GENERIC_MATH_CLC_LOG_BASE_H
+#ifndef CLC_LIB_GENERIC_MATH_CLC_LOG_BASE_H
+#define CLC_LIB_GENERIC_MATH_CLC_LOG_BASE_H
 
 //===----------------------------------------------------------------------===//
 //
@@ -326,4 +326,4 @@ __clc_log(half x) {
 
 #endif // cl_khr_fp16
 
-#endif
+#endif // CLC_LIB_GENERIC_MATH_CLC_LOG_BASE_H

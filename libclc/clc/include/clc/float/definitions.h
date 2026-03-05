@@ -64,4 +64,4 @@
 
 #endif
 
-#endif
+#endif // CLC_FLOAT_DEFINITIONS_H
