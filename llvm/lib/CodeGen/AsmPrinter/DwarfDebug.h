@@ -667,6 +667,7 @@ private:
   /// emit it here if we don't have a skeleton CU for split dwarf.
   void addGnuPubAttributes(DwarfCompileUnit &U, DIE &D) const;
 
+  DwarfCompileUnit *getDwarfCompileUnit(const DICompileUnit *DIUnit);
   /// Create new DwarfCompileUnit for the given metadata node with tag
   /// DW_TAG_compile_unit.
   DwarfCompileUnit &getOrCreateDwarfCompileUnit(const DICompileUnit *DIUnit);
