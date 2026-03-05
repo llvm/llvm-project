@@ -121,7 +121,7 @@ define amdgpu_cs void @test_cvt_pk_fp8_f32_word1(i32 %a, float %y, i32 %old, ptr
 ; GFX1170:       ; %bb.0:
 ; GFX1170-NEXT:    v_mov_b32_dpp v0, v0 quad_perm:[0,1,2,3] row_mask:0xf bank_mask:0xf bound_ctrl:1
 ; GFX1170-NEXT:    s_delay_alu instid0(VALU_DEP_1)
-; GFX1170-NEXT:    v_cvt_pk_fp8_f32 v2.h, v0, v1 op_sel:[0,0,1]
+; GFX1170-NEXT:    v_cvt_pk_fp8_f32 v2.h, v0, v1
 ; GFX1170-NEXT:    global_store_b32 v[3:4], v2, off
 ; GFX1170-NEXT:    s_endpgm
 ;

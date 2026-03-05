@@ -25,31 +25,6 @@ namespace clang::CIRGen {
 
 class CIRGenFunction;
 
-/// A branch fixup.  These are required when emitting a goto to a
-/// label which hasn't been emitted yet.  The goto is optimistically
-/// emitted as a branch to the basic block for the label, and (if it
-/// occurs in a scope with non-trivial cleanups) a fixup is added to
-/// the innermost cleanup.  When a (normal) cleanup is popped, any
-/// unresolved fixups in that scope are threaded through the cleanup.
-struct BranchFixup {
-  /// The block containing the terminator which needs to be modified
-  /// into a switch if this fixup is resolved into the current scope.
-  /// If null, LatestBranch points directly to the destination.
-  mlir::Block *optimisticBranchBlock = nullptr;
-
-  /// The ultimate destination of the branch.
-  ///
-  /// This can be set to null to indicate that this fixup was
-  /// successfully resolved.
-  mlir::Block *destination = nullptr;
-
-  /// The destination index value.
-  unsigned destinationIndex = 0;
-
-  /// The initial branch of the fixup.
-  cir::BrOp initialBranch = {};
-};
-
 enum CleanupKind : unsigned {
   /// Denotes a cleanup that should run when a scope is exited using exceptional
   /// control flow (a throw statement leading to stack unwinding, ).
@@ -191,25 +166,6 @@ private:
   /// The CGF this Stack belong to
   CIRGenFunction *cgf = nullptr;
 
-  /// The current set of branch fixups.  A branch fixup is a jump to
-  /// an as-yet unemitted label, i.e. a label for which we don't yet
-  /// know the EH stack depth.  Whenever we pop a cleanup, we have
-  /// to thread all the current branch fixups through it.
-  ///
-  /// Fixups are recorded as the Use of the respective branch or
-  /// switch statement.  The use points to the final destination.
-  /// When popping out of a cleanup, these uses are threaded through
-  /// the cleanup and adjusted to point to the new cleanup.
-  ///
-  /// Note that branches are allowed to jump into protected scopes
-  /// in certain situations;  e.g. the following code is legal:
-  ///     struct A { ~A(); }; // trivial ctor, non-trivial dtor
-  ///     goto foo;
-  ///     A a;
-  ///    foo:
-  ///     bar();
-  llvm::SmallVector<BranchFixup> branchFixups;
-
   // This class uses a custom allocator for maximum efficiency because cleanups
   // are allocated and freed very frequently. It's basically a bump pointer
   // allocator, but we can't use LLVM's BumpPtrAllocator because we use offsets
@@ -278,24 +234,6 @@ public:
   /// Turn a stable reference to a scope depth into a unstable pointer
   /// to the EH stack.
   iterator find(stable_iterator savePoint) const;
-
-  /// Add a branch fixup to the current cleanup scope.
-  BranchFixup &addBranchFixup() {
-    assert(hasNormalCleanups() && "adding fixup in scope without cleanups");
-    branchFixups.push_back(BranchFixup());
-    return branchFixups.back();
-  }
-
-  unsigned getNumBranchFixups() const { return branchFixups.size(); }
-  BranchFixup &getBranchFixup(unsigned i) {
-    assert(i < getNumBranchFixups());
-    return branchFixups[i];
-  }
-
-  /// Pops lazily-removed fixups from the end of the list.  This
-  /// should only be called by procedures which have just popped a
-  /// cleanup or resolved one or more fixups.
-  void popNullFixups();
 };
 
 } // namespace clang::CIRGen
