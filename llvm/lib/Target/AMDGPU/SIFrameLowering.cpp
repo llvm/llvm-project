@@ -1531,13 +1531,11 @@ void SIFrameLowering::processFunctionBeforeFrameFinalized(
         // correct register value. But not sure the register value alone is
         for (MachineInstr &MI : MBB) {
           if (MI.isDebugValue()) {
-            uint32_t StackOperandIdx = MI.isDebugValueList() ? 2 : 0;
-            if (MI.getOperand(StackOperandIdx).isFI() &&
-                !MFI.isFixedObjectIndex(
-                    MI.getOperand(StackOperandIdx).getIndex()) &&
-                SpillFIs[MI.getOperand(StackOperandIdx).getIndex()]) {
-              MI.getOperand(StackOperandIdx)
-                  .ChangeToRegister(Register(), false /*isDef*/);
+            for (MachineOperand &Op : MI.debug_operands()) {
+              if (Op.isFI() && !MFI.isFixedObjectIndex(Op.getIndex()) &&
+                  SpillFIs[Op.getIndex()]) {
+                Op.ChangeToRegister(Register(), false /*isDef*/);
+              }
             }
           }
         }
