@@ -174,6 +174,30 @@ int SANITIZER_CDECL __asan_get_report_access_type(void);
 /// \returns Access size in bytes.
 size_t SANITIZER_CDECL __asan_get_report_access_size(void);
 
+typedef enum {
+  // Source address (e.g. memcpy source, or the address being read from).
+  __asan_address_info_src = 1,
+  // Destination address (e.g. memcpy dest, or the address being written to).
+  __asan_address_info_dest = 2,
+  // Address being deallocated (lifetime is terminated).
+  __asan_address_info_dealloc = 3,
+  // First non-dereferenced operand (e.g. pointer comparison, ODR violation).
+  __asan_address_info_first = 4,
+  // Second non-dereferenced operand (e.g. pointer comparison, ODR violation).
+  __asan_address_info_second = 5,
+} __asan_address_info_type;
+
+/// Gets a specific address or address range involved in the current error.
+///
+/// \param type __asan_address_info_type which the info is requested for.
+/// \param out_addr [out] Storage for the address.
+/// \param out_size [out] Storage for the range size. Zero may be reported
+/// (e.g., for pointer comparison errors as no dereferencing occurs).
+///
+/// \returns 1 if found, 0 otherwise.
+int SANITIZER_CDECL __asan_get_report_address_info(int type, void **out_addr,
+                                                   size_t *out_size);
+
 /// Gets the bug description of an ASan error (useful for calling from a
 /// debugger).
 ///
