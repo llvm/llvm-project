@@ -2524,6 +2524,7 @@ static SDValue foldSelectWithIdentityConstant(SDNode *N, SelectionDAG &DAG,
   unsigned SelOpcode = N1.getOpcode();
   unsigned Opcode = N->getOpcode();
   EVT VT = N->getValueType(0);
+  SDLoc DL(N);
   const TargetLowering &TLI = DAG.getTargetLoweringInfo();
 
   // This transform increases uses of N0, so freeze it to be safe.
@@ -2534,15 +2535,24 @@ static SDValue foldSelectWithIdentityConstant(SDNode *N, SelectionDAG &DAG,
                                                FVal)) {
     SDValue F0 = DAG.getFreeze(N0);
     SDValue NewBO = DAG.getNode(Opcode, SDLoc(N), VT, F0, FVal, N->getFlags());
-    return DAG.getSelect(SDLoc(N), VT, Cond, F0, NewBO);
+    // For RISCV prefer to N0 == FVal
+    if (Cond.getOpcode() == ISD::SETCC) {
+      EVT CVT = Cond->getValueType(0);
+      ISD::CondCode NotCC = ISD::getSetCCInverse(
+          cast<CondCodeSDNode>(Cond.getOperand(2))->get(), CVT);
+      SDValue NCond =
+          DAG.getSetCC(DL, CVT, Cond.getOperand(0), Cond.getOperand(1), NotCC);
+      return DAG.getSelect(DL, VT, NCond, NewBO, F0);
+    }
+    return DAG.getSelect(DL, VT, Cond, F0, NewBO);
   }
   // binop N0, (vselect Cond, TVal, IDC) --> vselect Cond, (binop N0, TVal), N0
   if (isNeutralConstant(Opcode, N->getFlags(), FVal, OpNo) &&
       TLI.shouldFoldSelectWithIdentityConstant(Opcode, VT, SelOpcode, N0,
                                                TVal)) {
     SDValue F0 = DAG.getFreeze(N0);
-    SDValue NewBO = DAG.getNode(Opcode, SDLoc(N), VT, F0, TVal, N->getFlags());
-    return DAG.getSelect(SDLoc(N), VT, Cond, NewBO, F0);
+    SDValue NewBO = DAG.getNode(Opcode, DL, VT, F0, TVal, N->getFlags());
+    return DAG.getSelect(DL, VT, Cond, NewBO, F0);
   }
 
   return SDValue();
