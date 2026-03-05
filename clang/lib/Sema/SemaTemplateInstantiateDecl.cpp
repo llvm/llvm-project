@@ -1685,6 +1685,40 @@ TemplateDeclInstantiator::VisitTypeAliasTemplateDecl(TypeAliasTemplateDecl *D) {
 }
 
 Decl *TemplateDeclInstantiator::VisitBindingDecl(BindingDecl *D) {
+  // Note: Here we "instantiate" a BindingDecl.
+  //
+  // Currently it basically creates a new one with the same internal content.
+  // So, the address of the BindingDecl will be different in the template
+  // specialization, but the content would be the same. This also means
+  // that it will inherit the "dependent-type" of that original BindingDecl
+  // (because that was in the primary template, thus it was in dependent
+  // context) - but in a fully specialized template there shouldn't be anything
+  // with "dependent-type" (I think).
+  // https://github.com/llvm/llvm-project/issues/182691#issuecomment-3939539109
+
+  // llvm::errs() << "binding decl type:\n";
+  // D->getType()->dump();
+  // QualType Ty = D->getType(); // <-- this one
+
+  // TODO: How to instantiate the Decl type to get rid of the "dependent-type"?
+
+  // Some copypaste from other places to see if it would work. Spoiler: NO.
+#if 0
+  if (const auto *ExpTy = Ty->getAs<PackExpansionType>()) {
+    QualType Pattern = ExpTy->getPattern();
+    QualType T =
+        SubstType(Pattern, TemplateArgs, D->getLocation(), D->getDeclName());
+
+    TemplateInstantiator Instantiator(
+        *this, TemplateArgs, Loc, Entity,
+        /*BailOutOnIncomplete=*/IsIncompleteSubstitution != nullptr);
+    QualType QT = Instantiator.TransformType(T);
+    if (IsIncompleteSubstitution && Instantiator.getIsIncomplete())
+      *IsIncompleteSubstitution = true;
+    return QT;
+  }
+#endif
+
   auto *NewBD = BindingDecl::Create(SemaRef.Context, Owner, D->getLocation(),
                                     D->getIdentifier(), D->getType());
   NewBD->setReferenced(D->isReferenced());
@@ -1708,6 +1742,10 @@ Decl *TemplateDeclInstantiator::VisitDecompositionDecl(DecompositionDecl *D) {
     NewBindings.push_back(cast<BindingDecl>(VisitBindingDecl(OldBD)));
   }
   ArrayRef<BindingDecl*> NewBindingArray = NewBindings;
+  // llvm::errs() << "instantiating VisitDecompositionDecl\n";
+  // for (const BindingDecl *B : NewBindings) {
+  //   B->dumpColor();
+  // }
 
   auto *NewDD = cast_if_present<DecompositionDecl>(
       VisitVarDecl(D, /*InstantiatingVarTemplate=*/false, &NewBindingArray));

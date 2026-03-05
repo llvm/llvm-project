@@ -3082,13 +3082,22 @@ bool RemoveDeadBindingsWorker::UpdatePostponed() {
 StoreRef RegionStoreManager::removeDeadBindings(Store store,
                                                 const StackFrameContext *LCtx,
                                                 SymbolReaper& SymReaper) {
+  // static int counter = 0;
+  // ++counter;
+  // if (counter == 7) {
+  //   counter = 100;
+  // }
+  // llvm::errs() << "\nremoveDeadBindings\n";
   RegionBindingsRef B = getRegionBindings(store);
   RemoveDeadBindingsWorker W(*this, StateMgr, B, SymReaper, LCtx);
   W.GenerateClusters();
 
+  // llvm::errs() << "SymbolReaper root (live) regions:\n";
+
   // Enqueue the region roots onto the worklist.
   for (const MemRegion *Reg : SymReaper.regions()) {
     W.AddToWorkList(Reg);
+    // llvm::errs() << "  " << Reg << "\n";
   }
 
   do W.RunWorkList(); while (W.UpdatePostponed());
@@ -3099,8 +3108,11 @@ StoreRef RegionStoreManager::removeDeadBindings(Store store,
   for (const MemRegion *Base : llvm::make_first_range(B)) {
     // If the cluster has been visited, we know the region has been marked.
     // Otherwise, remove the dead entry.
-    if (!W.isVisited(Base))
+    if (!W.isVisited(Base)) {
       B = B.removeCluster(Base);
+      // llvm::errs() << "Base was not visited, so removing it: " << Base <<
+      // "\n";
+    }
   }
 
   return StoreRef(B.asStore(), *this);
