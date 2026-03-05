@@ -1014,6 +1014,9 @@ mlir::presburger::BoundType ReifyBoundOp::getBoundType() {
 }
 
 LogicalResult ReifyBoundOp::verify() {
+  if (getType() != "EQ" && getType() != "LB" && getType() != "UB")
+    return emitOpError("invalid bound type '")
+           << getType() << "', expected 'EQ', 'LB', or 'UB'";
   if (isa<ShapedType>(getVar().getType())) {
     if (!getDim().has_value())
       return emitOpError("expected 'dim' attribute for shaped type variable");
@@ -1282,6 +1285,24 @@ LoopBlockTerminatorOp::getMutableSuccessorOperands(RegionSuccessor successor) {
   if (successor.isParent())
     return getExitArgMutable();
   return getNextIterArgMutable();
+}
+
+//===----------------------------------------------------------------------===//
+// TestCrashingReturnOp
+//===----------------------------------------------------------------------===//
+
+LogicalResult TestCrashingReturnOp::verify() {
+  if (!getValid())
+    return emitOpError("requires 'valid' unit attribute");
+  return success();
+}
+
+MutableOperandRange
+TestCrashingReturnOp::getMutableSuccessorOperands(RegionSuccessor successor) {
+  if (!getValid())
+    llvm::report_fatal_error("getMutableSuccessorOperands called on unverified "
+                             "test.crashing_return");
+  return getArgsMutable();
 }
 
 //===----------------------------------------------------------------------===//
