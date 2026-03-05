@@ -859,7 +859,8 @@ void CodeGenPassBuilder<Derived, TargetMachineT>::addISelPrepare(
   if (getOptLevel() != CodeGenOptLevel::None)
     addFunctionPass(ObjCARCContractPass(), PMW);
 
-  addFunctionPass(InlineAsmPreparePass(), PMW);
+  addFunctionPass(InlineAsmPreparePass(TM), PMW);
+
   // Add both the safe stack and the stack protection passes: each of them will
   // only protect functions that have corresponding attributes.
   addFunctionPass(SafeStackPass(TM), PMW);

@@ -13,9 +13,16 @@
 
 namespace llvm {
 
+class TargetMachine;
+
 class InlineAsmPreparePass : public PassInfoMixin<InlineAsmPreparePass> {
+  const TargetMachine *TM;
+
 public:
-  PreservedAnalyses run(Function &F, FunctionAnalysisManager &FAM);
+  explicit InlineAsmPreparePass(const TargetMachine &TM) : TM(&TM) {}
+  LLVM_ABI PreservedAnalyses run(Function &F, FunctionAnalysisManager &FAM);
+
+  static bool isRequired() { return true; }
 };
 
 } // namespace llvm

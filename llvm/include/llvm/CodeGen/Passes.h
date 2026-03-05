@@ -622,6 +622,7 @@ LLVM_ABI ModulePass *createJMCInstrumenterPass();
 /// This pass converts conditional moves to conditional jumps when profitable.
 LLVM_ABI FunctionPass *createSelectOptimizePass();
 
+/// Process inline assembly calls to prepare for code generation.
 LLVM_ABI FunctionPass *createInlineAsmPreparePass();
 
 /// Creates Windows Secure Hot Patch pass. \see WindowsSecureHotPatching.cpp
