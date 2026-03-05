@@ -279,25 +279,11 @@ void AMDGPUAsmPrinter::emitFunctionEntryLabel() {
     getTargetStreamer()->EmitAMDGPUSymbolType(
         SymbolName, ELF::STT_AMDGPU_HSA_KERNEL);
   }
-  if (DumpCodeInstEmitter) {
-    // Disassemble function name label to text.
-    DisasmLines.push_back(MF->getName().str() + ":");
-    DisasmLineMaxLen = std::max(DisasmLineMaxLen, DisasmLines.back().size());
-    HexLines.emplace_back("");
-  }
 
   AsmPrinter::emitFunctionEntryLabel();
 }
 
 void AMDGPUAsmPrinter::emitBasicBlockStart(const MachineBasicBlock &MBB) {
-  if (DumpCodeInstEmitter && !isBlockOnlyReachableByFallthrough(&MBB)) {
-    // Write a line for the basic block label if it is not only fallthrough.
-    DisasmLines.push_back(
-        (Twine("BB") + Twine(getFunctionNumber())
-         + "_" + Twine(MBB.getNumber()) + ":").str());
-    DisasmLineMaxLen = std::max(DisasmLineMaxLen, DisasmLines.back().size());
-    HexLines.emplace_back("");
-  }
   AsmPrinter::emitBasicBlockStart(MBB);
 }
 
@@ -715,15 +701,6 @@ bool AMDGPUAsmPrinter::runOnMachineFunction(MachineFunction &MF) {
     EmitProgramInfoSI(MF, CurrentProgramInfo);
   }
 
-  DumpCodeInstEmitter = nullptr;
-  if (STM.dumpCode()) {
-    // For -dumpcode, get the assembler out of the streamer. This only works
-    // with -filetype=obj.
-    MCAssembler *Assembler = OutStreamer->getAssemblerPtr();
-    if (Assembler)
-      DumpCodeInstEmitter = Assembler->getEmitterPtr();
-  }
-
   DisasmLines.clear();
   HexLines.clear();
   DisasmLineMaxLen = 0;
@@ -885,23 +862,6 @@ bool AMDGPUAsmPrinter::runOnMachineFunction(MachineFunction &MF) {
                   amdhsa::COMPUTE_PGM_RSRC3_GFX90A_TG_SPLIT_SHIFT,
                   amdhsa::COMPUTE_PGM_RSRC3_GFX90A_TG_SPLIT, Ctx)),
           false);
-    }
-  }
-
-  if (DumpCodeInstEmitter) {
-
-    OutStreamer->switchSection(
-        Context.getELFSection(".AMDGPU.disasm", ELF::SHT_PROGBITS, 0));
-
-    for (size_t i = 0; i < DisasmLines.size(); ++i) {
-      std::string Comment = "\n";
-      if (!HexLines[i].empty()) {
-        Comment = std::string(DisasmLineMaxLen - DisasmLines[i].size(), ' ');
-        Comment += " ; " + HexLines[i] + "\n";
-      }
-
-      OutStreamer->emitBytes(StringRef(DisasmLines[i]));
-      OutStreamer->emitBytes(StringRef(Comment));
     }
   }
 
