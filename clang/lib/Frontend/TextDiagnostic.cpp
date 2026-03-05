@@ -1455,10 +1455,13 @@ void TextDiagnostic::emitSnippetAndCaret(
 
     // Copy the line of code into an std::string for ease of manipulation.
     std::string SourceLine(LineStart, LineEnd);
-    // Remove trailing null bytes.
+    // Remove trailing null bytes. When on the caret line, keep stripping even
+    // if the null byte is exactly at the caret column; an invisible null at
+    // the end adds nothing visible to the snippet and its multi-column
+    // diagnostic expansion can cause column/byte map mismatches downstream.
     while (!SourceLine.empty() && SourceLine.back() == '\0' &&
            (LineNo != CaretLineNo ||
-            SourceLine.size() > static_cast<size_t>(CaretByte.V)))
+            SourceLine.size() >= static_cast<size_t>(CaretByte.V)))
       SourceLine.pop_back();
 
     // Build the byte to column map.
