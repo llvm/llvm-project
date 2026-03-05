@@ -24,8 +24,8 @@ using namespace ento;
 using namespace ast_matchers;
 
 namespace {
-static constexpr const char *const WarnAtNode = "WarnAtNode";
-static constexpr const char *const WarnRecordDecl = "WarnRecordDecl";
+constexpr char WarnAtNode[] = "WarnAtNode";
+constexpr char WarnRecordDecl[] = "WarnRecordDecl";
 
 class OSObjectCStyleCastChecker : public Checker<check::ASTCodeBody> {
 public:

@@ -198,8 +198,8 @@ using FnCheck = std::function<void(const StreamChecker *, const FnDescription *,
 using ArgNoTy = unsigned int;
 static const ArgNoTy ArgNone = std::numeric_limits<ArgNoTy>::max();
 
-const char *FeofNote = "Assuming stream reaches end-of-file here";
-const char *FerrorNote = "Assuming this stream operation fails";
+constexpr char FeofNote[] = "Assuming stream reaches end-of-file here";
+constexpr char FerrorNote[] = "Assuming this stream operation fails";
 
 struct FnDescription {
   FnCheck PreFn;
@@ -1923,7 +1923,7 @@ ProgramStateRef StreamChecker::ensureStreamOpened(SVal StreamVal,
 
 ProgramStateRef StreamChecker::ensureNoFilePositionIndeterminate(
     SVal StreamVal, CheckerContext &C, ProgramStateRef State) const {
-  static const char *BugMessage =
+  const char *BugMessage =
       "File position of the stream might be 'indeterminate' "
       "after a failed operation. "
       "Can cause undefined behavior.";

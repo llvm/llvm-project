@@ -43,7 +43,7 @@ using namespace ast_matchers;
 namespace {
 
 // ID of a node at which the diagnostic would be emitted.
-const char *WarnAtNode = "waitcall";
+constexpr char WarnAtNode[] = "waitcall";
 
 class GCDAntipatternChecker : public Checker<check::ASTCodeBody> {
 public:
