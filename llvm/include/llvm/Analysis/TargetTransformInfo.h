@@ -592,6 +592,10 @@ public:
   LLVM_ABI std::pair<const Value *, unsigned>
   getPredicatedAddrSpace(const Value *V) const;
 
+  /// Does the current target requires @llvm.structured.gep for pointer
+  /// arithmetic instead of getelementptr/ptradd instructions.
+  LLVM_ABI bool requiresStructuredGEP() const;
+
   /// Rewrite intrinsic call \p II such that \p OldV will be replaced with \p
   /// NewV, which has a different address space. This should happen for every
   /// operand index that collectFlatAddressOperands returned for the intrinsic.

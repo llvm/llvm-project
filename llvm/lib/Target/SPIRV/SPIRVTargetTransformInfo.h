@@ -61,6 +61,8 @@ public:
                                           Value *NewV) const override;
 
   bool allowVectorElementIndexingUsingGEP() const override { return false; }
+
+  bool requiresStructuredGEP() const override { return true; }
 };
 
 } // namespace llvm
