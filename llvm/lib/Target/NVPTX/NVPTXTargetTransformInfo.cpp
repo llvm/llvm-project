@@ -508,8 +508,8 @@ InstructionCost NVPTXTTIImpl::getArithmeticInstrCost(
 
   switch (ISD) {
   default:
-    return BaseT::getArithmeticInstrCost(Opcode, Ty, CostKind, Op1Info,
-                                         Op2Info);
+    return BaseT::getArithmeticInstrCostImpl(Opcode, Ty, CostKind, Op1Info,
+                                             Op2Info);
   case ISD::ADD:
   case ISD::MUL:
   case ISD::XOR:
@@ -521,8 +521,8 @@ InstructionCost NVPTXTTIImpl::getArithmeticInstrCost(
     if (LT.second.SimpleTy == MVT::i64)
       return 2 * LT.first;
     // Delegate other cases to the basic TTI.
-    return BaseT::getArithmeticInstrCost(Opcode, Ty, CostKind, Op1Info,
-                                         Op2Info);
+    return BaseT::getArithmeticInstrCostImpl(Opcode, Ty, CostKind, Op1Info,
+                                             Op2Info);
   }
 }
 
