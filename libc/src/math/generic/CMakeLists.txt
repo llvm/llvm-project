@@ -1834,6 +1834,17 @@ add_entrypoint_object(
 )
 
 add_entrypoint_object(
+  log10p1f16
+  SRCS
+    log10p1f16.cpp
+  HDRS
+    ../log10p1f16.h
+  DEPENDS
+    libc.src.__support.math.log10p1f16
+    libc.src.errno.errno
+)
+
+add_entrypoint_object(
   log1p
   SRCS
     log1p.cpp
