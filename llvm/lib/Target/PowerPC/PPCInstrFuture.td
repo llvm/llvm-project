@@ -599,6 +599,35 @@ def : Pat<(int_ppc_vsx_stxvprll v256i1:$XTp, addr:$RA, i64:$RB), (STXVPRLL $XTp,
 let Predicates = [HasVSX, IsISAFuture] in {
   def : Pat<(v4i32 (rotl v4i32:$vA, v4i32:$vB)), (v4i32 (XVRLW v4i32:$vA,
                                                      v4i32:$vB))>;
+
+  // Post Quantum Cryptography Acceleration patterns
+  // Use AddedComplexity to prefer these patterns over AltiVec patterns
+  let AddedComplexity = 400 in {
+    // Vector add
+    def : Pat<(v4i32 (add v4i32:$XA, v4i32:$XB)), (v4i32 (XVADDUWM $XA, $XB))>;
+    def : Pat<(v8i16 (add v8i16:$XA, v8i16:$XB)),
+              (COPY_TO_REGCLASS (XVADDUHM RCCp.AToVSRC, RCCp.BToVSRC), VSRC)>;
+
+    // Vector subtract
+    def : Pat<(v4i32 (sub v4i32:$XA, v4i32:$XB)), (v4i32 (XVSUBUWM $XA, $XB))>;
+    def : Pat<(v8i16 (sub v8i16:$XA, v8i16:$XB)),
+              (COPY_TO_REGCLASS (XVSUBUHM RCCp.AToVSRC, RCCp.BToVSRC), VSRC)>;
+
+    // Vector multiply
+    def : Pat<(v4i32 (mul v4i32:$XA, v4i32:$XB)), (v4i32 (XVMULUWM $XA, $XB))>;
+    def : Pat<(v8i16 (mul v8i16:$XA, v8i16:$XB)),
+              (COPY_TO_REGCLASS (XVMULUHM RCCp.AToVSRC, RCCp.BToVSRC), VSRC)>;
+
+    // Vector multiply high intrinsics
+    def : Pat<(v4i32 (int_ppc_altivec_vmulhsw v4i32:$XA, v4i32:$XB)),
+              (v4i32 (XVMULHSW $XA, $XB))>;
+    def : Pat<(v4i32 (int_ppc_altivec_vmulhuw v4i32:$XA, v4i32:$XB)),
+              (v4i32 (XVMULHUW $XA, $XB))>;
+    def : Pat<(v8i16 (int_ppc_altivec_vmulhsh v8i16:$XA, v8i16:$XB)),
+              (COPY_TO_REGCLASS (XVMULHSH RCCp.AToVSRC, RCCp.BToVSRC), VSRC)>;
+    def : Pat<(v8i16 (int_ppc_altivec_vmulhuh v8i16:$XA, v8i16:$XB)),
+              (COPY_TO_REGCLASS (XVMULHUH RCCp.AToVSRC, RCCp.BToVSRC), VSRC)>;
+  }
 }
 
 //---------------------------- Instruction aliases ---------------------------//
