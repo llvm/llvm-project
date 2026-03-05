@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef __CLC_CLCFUNC_H_
-#define __CLC_CLCFUNC_H_
+#ifndef CLC_CLCFUNC_H
+#define CLC_CLCFUNC_H
 
 #define _CLC_OVERLOAD __attribute__((overloadable))
 #define _CLC_DECL
@@ -34,4 +34,4 @@
 #define _CLC_DISTINCT_GENERIC_AS_SUPPORTED 0
 #endif
 
-#endif // __CLC_CLCFUNC_H_
+#endif // CLC_CLCFUNC_H

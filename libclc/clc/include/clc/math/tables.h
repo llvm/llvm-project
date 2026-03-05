@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef __CLC_MATH_TABLES_H__
-#define __CLC_MATH_TABLES_H__
+#ifndef CLC_MATH_TABLES_H
+#define CLC_MATH_TABLES_H
 
 #define __CLC_TABLE_SPACE __constant
 
@@ -102,4 +102,4 @@ __CLC_TABLE_FUNCTION_DECL_VEC(double, log_f_inv_tbl_tail);
 
 #endif // cl_khr_fp64
 
-#endif // __CLC_MATH_TABLES_H__
+#endif // CLC_MATH_TABLES_H

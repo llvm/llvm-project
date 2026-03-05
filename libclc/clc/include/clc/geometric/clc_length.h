@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef __CLC_GEOMETRIC_CLC_LENGTH_H__
-#define __CLC_GEOMETRIC_CLC_LENGTH_H__
+#ifndef CLC_GEOMETRIC_CLC_LENGTH_H
+#define CLC_GEOMETRIC_CLC_LENGTH_H
 
 #define __CLC_FUNCTION __clc_length
 #define __CLC_BODY <clc/geometric/unary_decl.inc>
@@ -16,4 +16,4 @@
 
 #undef __CLC_FUNCTION
 
-#endif // __CLC_GEOMETRIC_CLC_LENGTH_H__
+#endif // CLC_GEOMETRIC_CLC_LENGTH_H

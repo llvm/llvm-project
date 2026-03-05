@@ -6,11 +6,11 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef __CLC_WORKITEM_CLC_GET_NUM_GROUPS_H__
-#define __CLC_WORKITEM_CLC_GET_NUM_GROUPS_H__
+#ifndef CLC_WORKITEM_CLC_GET_NUM_GROUPS_H
+#define CLC_WORKITEM_CLC_GET_NUM_GROUPS_H
 
 #include <clc/internal/clc.h>
 
 _CLC_OVERLOAD _CLC_CONST _CLC_DECL size_t __clc_get_num_groups(uint dim);
 
-#endif // __CLC_WORKITEM_CLC_GET_NUM_GROUPS_H__
+#endif // CLC_WORKITEM_CLC_GET_NUM_GROUPS_H

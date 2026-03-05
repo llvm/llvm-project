@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef __CLC_RELATIONAL_CLC_ISNAN_H__
-#define __CLC_RELATIONAL_CLC_ISNAN_H__
+#ifndef CLC_RELATIONAL_CLC_ISNAN_H
+#define CLC_RELATIONAL_CLC_ISNAN_H
 
 #include <clc/clcfunc.h>
 
@@ -39,4 +39,4 @@ _CLC_VECTOR_ISNAN_DECL(short, half)
 #undef _CLC_ISNAN_DECL
 #undef _CLC_VECTOR_ISNAN_DECL
 
-#endif // __CLC_RELATIONAL_CLC_ISNAN_H__
+#endif // CLC_RELATIONAL_CLC_ISNAN_H

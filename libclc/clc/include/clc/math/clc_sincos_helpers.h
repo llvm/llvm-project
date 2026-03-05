@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef __CLC_MATH_CLC_SINCOS_HELPERS_H__
-#define __CLC_MATH_CLC_SINCOS_HELPERS_H__
+#ifndef CLC_MATH_CLC_SINCOS_HELPERS_H
+#define CLC_MATH_CLC_SINCOS_HELPERS_H
 
 #define __CLC_FLOAT_ONLY
 #define __CLC_BODY <clc/math/clc_sincos_helpers.inc>
@@ -19,4 +19,4 @@
 
 #include <clc/math/gentype.inc>
 
-#endif // __CLC_MATH_CLC_SINCOS_HELPERS_H__
+#endif // CLC_MATH_CLC_SINCOS_HELPERS_H

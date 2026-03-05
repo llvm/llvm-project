@@ -1,3 +1,6 @@
+#ifndef LLVM_LIBCLC_CLC_LIB_GENERIC_MATH_CLC_LOG_BASE_H
+#define LLVM_LIBCLC_CLC_LIB_GENERIC_MATH_CLC_LOG_BASE_H
+
 //===----------------------------------------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
@@ -322,3 +325,5 @@ __clc_log(half x) {
 #endif
 
 #endif // cl_khr_fp16
+
+#endif

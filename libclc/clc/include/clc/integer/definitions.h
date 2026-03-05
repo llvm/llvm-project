@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef __CLC_INTEGER_DEFINITIONS_H__
-#define __CLC_INTEGER_DEFINITIONS_H__
+#ifndef CLC_INTEGER_DEFINITIONS_H
+#define CLC_INTEGER_DEFINITIONS_H
 
 #define CHAR_BIT 8
 #define INT_MAX 2147483647
@@ -25,4 +25,4 @@
 #define ULONG_MAX 0xffffffffffffffffUL
 #define ULONG_MIN 0UL
 
-#endif // __CLC_INTEGER_DEFINITIONS_H__
+#endif // CLC_INTEGER_DEFINITIONS_H

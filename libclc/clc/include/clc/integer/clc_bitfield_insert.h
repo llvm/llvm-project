@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef __CLC_INTEGER_CLC_BITFIELD_INSERT_H__
-#define __CLC_INTEGER_CLC_BITFIELD_INSERT_H__
+#ifndef CLC_INTEGER_CLC_BITFIELD_INSERT_H
+#define CLC_INTEGER_CLC_BITFIELD_INSERT_H
 
 #include <clc/internal/clc.h>
 
@@ -15,4 +15,4 @@
 #define __CLC_BODY <clc/integer/clc_bitfield_insert.inc>
 #include <clc/integer/gentype.inc>
 
-#endif // __CLC_INTEGER_CLC_BITFIELD_INSERT_H__
+#endif // CLC_INTEGER_CLC_BITFIELD_INSERT_H

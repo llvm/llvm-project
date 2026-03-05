@@ -1,3 +1,6 @@
+#ifndef CLC_FLOAT_DEFINITIONS_H
+#define CLC_FLOAT_DEFINITIONS_H
+
 //===----------------------------------------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
@@ -58,5 +61,7 @@
 #define HALF_MIN_EXP -13
 #define HALF_RADIX 2
 #define HALF_NAN __builtin_nanf16("")
+
+#endif
 
 #endif

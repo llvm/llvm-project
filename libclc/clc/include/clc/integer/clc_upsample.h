@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef __CLC_INTEGER_CLC_UPSAMPLE_H__
-#define __CLC_INTEGER_CLC_UPSAMPLE_H__
+#ifndef CLC_INTEGER_CLC_UPSAMPLE_H
+#define CLC_INTEGER_CLC_UPSAMPLE_H
 
 #include <clc/clcfunc.h>
 
@@ -36,4 +36,4 @@ __CLC_UPSAMPLE_TYPES()
 #undef __CLC_UPSAMPLE_DECL
 #undef __CLC_UPSAMPLE_VEC
 
-#endif // __CLC_INTEGER_CLC_UPSAMPLE_H__
+#endif // CLC_INTEGER_CLC_UPSAMPLE_H

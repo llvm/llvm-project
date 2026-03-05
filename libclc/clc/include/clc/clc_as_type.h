@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef __CLC_CLC_AS_TYPE_H__
-#define __CLC_CLC_AS_TYPE_H__
+#ifndef CLC_CLC_AS_TYPE_H
+#define CLC_CLC_AS_TYPE_H
 
 #define __clc_as_char(x) __builtin_astype(x, char)
 #define __clc_as_uchar(x) __builtin_astype(x, uchar)
@@ -87,4 +87,4 @@
 #define __clc_as_half16(x) __builtin_astype(x, half16)
 #endif
 
-#endif // __CLC_CLC_AS_TYPE_H__
+#endif // CLC_CLC_AS_TYPE_H

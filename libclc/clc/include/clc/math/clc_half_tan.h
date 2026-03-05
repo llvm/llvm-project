@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef __CLC_MATH_CLC_HALF_TAN_H__
-#define __CLC_MATH_CLC_HALF_TAN_H__
+#ifndef CLC_MATH_CLC_HALF_TAN_H
+#define CLC_MATH_CLC_HALF_TAN_H
 
 #define __CLC_FLOAT_ONLY
 #define __CLC_FUNCTION __clc_half_tan
@@ -17,4 +17,4 @@
 
 #undef __CLC_FUNCTION
 
-#endif // __CLC_MATH_CLC_HALF_TAN_H__
+#endif // CLC_MATH_CLC_HALF_TAN_H

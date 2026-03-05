@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef __CLC_ATOMIC_CLC_ATOMIC_FLAG_CLEAR_H__
-#define __CLC_ATOMIC_CLC_ATOMIC_FLAG_CLEAR_H__
+#ifndef CLC_ATOMIC_CLC_ATOMIC_FLAG_CLEAR_H
+#define CLC_ATOMIC_CLC_ATOMIC_FLAG_CLEAR_H
 
 #include <clc/internal/clc.h>
 
@@ -21,4 +21,4 @@ __CLC_DECLARE_ATOMIC_FLAG_CLEAR(local)
 __CLC_DECLARE_ATOMIC_FLAG_CLEAR()
 #endif
 
-#endif // __CLC_ATOMIC_CLC_ATOMIC_FLAG_CLEAR_H__
+#endif // CLC_ATOMIC_CLC_ATOMIC_FLAG_CLEAR_H
