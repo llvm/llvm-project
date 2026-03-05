@@ -32,7 +32,9 @@ define i16 @test_16bit_reg(i16 %x) {
 ; O0-NEXT:    //APP
 ; O0-NEXT:    nop
 ; O0-NEXT:    //NO_APP
-; O0-NEXT:    // kill: def $s0 killed $h0
+; O0-NEXT:    fmov s1, s0
+; O0-NEXT:    // implicit-def: $s0
+; O0-NEXT:    fmov s0, s1
 ; O0-NEXT:    fmov w0, s0
 ; O0-NEXT:    ret
 ;

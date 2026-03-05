@@ -13,14 +13,16 @@ body:             |
     ; CHECK-LABEL: name: insert_gprx
     ; CHECK: liveins: $x0
     ; CHECK-NEXT: {{  $}}
-    ; CHECK-NEXT: [[COPY:%[0-9]+]]:gpr32 = COPY $w0
-    ; CHECK-NEXT: [[DEF:%[0-9]+]]:gpr64 = IMPLICIT_DEF
-    ; CHECK-NEXT: [[SUBREG_TO_REG:%[0-9]+]]:gpr64 = SUBREG_TO_REG [[COPY]], %subreg.sub_32
-    ; CHECK-NEXT: [[BFMXri:%[0-9]+]]:gpr64 = BFMXri [[DEF]], [[SUBREG_TO_REG]], 0, 31
-    ; CHECK-NEXT: [[SUBREG_TO_REG1:%[0-9]+]]:gpr64 = SUBREG_TO_REG [[COPY]], %subreg.sub_32
-    ; CHECK-NEXT: [[BFMXri1:%[0-9]+]]:gpr64 = BFMXri [[DEF]], [[SUBREG_TO_REG1]], 51, 31
-    ; CHECK-NEXT: $x0 = COPY [[BFMXri]]
-    ; CHECK-NEXT: $x1 = COPY [[BFMXri1]]
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:gpr32(s32) = COPY $w0
+    ; CHECK-NEXT: [[DEF:%[0-9]+]]:gpr64(s64) = IMPLICIT_DEF
+    ; CHECK-NEXT: [[DEF1:%[0-9]+]]:_(s64) = G_IMPLICIT_DEF
+    ; CHECK-NEXT: [[INSERT_SUBREG:%[0-9]+]]:gpr64(s64) = INSERT_SUBREG [[DEF1]](s64), [[COPY]](s32), %subreg.sub_32
+    ; CHECK-NEXT: [[BFMXri:%[0-9]+]]:gpr64(s64) = BFMXri [[DEF]](s64), [[INSERT_SUBREG]](s64), 0, 31
+    ; CHECK-NEXT: [[DEF2:%[0-9]+]]:_(s64) = G_IMPLICIT_DEF
+    ; CHECK-NEXT: [[INSERT_SUBREG1:%[0-9]+]]:gpr64(s64) = INSERT_SUBREG [[DEF2]](s64), [[COPY]](s32), %subreg.sub_32
+    ; CHECK-NEXT: [[BFMXri1:%[0-9]+]]:gpr64(s64) = BFMXri [[DEF]](s64), [[INSERT_SUBREG1]](s64), 51, 31
+    ; CHECK-NEXT: $x0 = COPY [[BFMXri]](s64)
+    ; CHECK-NEXT: $x1 = COPY [[BFMXri1]](s64)
     %0:gpr(s32) = COPY $w0
 
     %1:gpr(s64) = G_IMPLICIT_DEF
