@@ -34,6 +34,7 @@ struct BPOrdererMachO : lld::BPOrderer<BPOrdererMachO> {
   static bool isCodeSection(const Section &sec) {
     return macho::isCodeSection(&sec);
   }
+  static bool isColdSection(const Section &sec) { return sec.isCold; }
   static ArrayRef<Defined *> getSymbols(const Section &sec) {
     return sec.symbols;
   }
@@ -140,8 +141,17 @@ DenseMap<const InputSection *, int> lld::macho::runBalancedPartitioning(
     }
   }
 
-  return BPOrdererMachO().computeOrder(profilePath, forFunctionCompression,
-                                       forDataCompression,
-                                       compressionSortStartupFunctions, verbose,
-                                       sections, rootSymbolToSectionIdxs);
+  auto result = BPOrdererMachO().computeOrder(
+      profilePath, forFunctionCompression, forDataCompression,
+      compressionSortStartupFunctions, verbose, sections,
+      rootSymbolToSectionIdxs);
+  // BP already orders cold sections after non-cold via separate buckets.
+  // Unset isCold on sections that received a BP priority so Writer.cpp's
+  // stable_partition doesn't re-partition them. Sections without a BP priority
+  // (e.g. non-startup cold sections when only --bp-startup-sort is used) keep
+  // their isCold flag for Writer.cpp to handle.
+  for (auto *isec : sections)
+    if (result.contains(isec))
+      isec->isCold = false;
+  return result;
 }

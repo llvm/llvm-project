@@ -222,14 +222,18 @@ auto BPOrderer<D>::computeOrder(
   }
 
   SmallVector<unsigned> sectionIdxsForFunctionCompression,
-      sectionIdxsForDataCompression;
+      sectionIdxsForColdFunctionCompression, sectionIdxsForDataCompression;
   for (unsigned sectionIdx = 0; sectionIdx < sections.size(); sectionIdx++) {
     if (startupSectionIdxUNs.contains(sectionIdx))
       continue;
     const auto *isec = sections[sectionIdx];
     if (D::isCodeSection(*isec)) {
-      if (forFunctionCompression)
-        sectionIdxsForFunctionCompression.push_back(sectionIdx);
+      if (forFunctionCompression) {
+        if (D::isColdSection(*isec))
+          sectionIdxsForColdFunctionCompression.push_back(sectionIdx);
+        else
+          sectionIdxsForFunctionCompression.push_back(sectionIdx);
+      }
     } else {
       if (forDataCompression)
         sectionIdxsForDataCompression.push_back(sectionIdx);
@@ -258,16 +262,21 @@ auto BPOrderer<D>::computeOrder(
   auto unsForFunctionCompression = getUnsForCompression<D>(
       sections, sectionToIdx, sectionIdxsForFunctionCompression,
       &duplicateSectionIdxs, maxUN);
+  auto unsForColdFunctionCompression = getUnsForCompression<D>(
+      sections, sectionToIdx, sectionIdxsForColdFunctionCompression,
+      &duplicateSectionIdxs, maxUN);
   auto unsForDataCompression = getUnsForCompression<D>(
       sections, sectionToIdx, sectionIdxsForDataCompression,
       &duplicateSectionIdxs, maxUN);
 
   std::vector<BPFunctionNode> nodesForStartup, nodesForFunctionCompression,
-      nodesForDataCompression;
+      nodesForColdFunctionCompression, nodesForDataCompression;
   for (auto &[sectionIdx, uns] : startupSectionIdxUNs)
     nodesForStartup.emplace_back(sectionIdx, uns);
   for (auto &[sectionIdx, uns] : unsForFunctionCompression)
     nodesForFunctionCompression.emplace_back(sectionIdx, uns);
+  for (auto &[sectionIdx, uns] : unsForColdFunctionCompression)
+    nodesForColdFunctionCompression.emplace_back(sectionIdx, uns);
   for (auto &[sectionIdx, uns] : unsForDataCompression)
     nodesForDataCompression.emplace_back(sectionIdx, uns);
 
@@ -280,6 +289,8 @@ auto BPOrderer<D>::computeOrder(
   // input linker order tends to be not bad.
   llvm::sort(nodesForFunctionCompression,
              [](auto &L, auto &R) { return L.Id < R.Id; });
+  llvm::sort(nodesForColdFunctionCompression,
+             [](auto &L, auto &R) { return L.Id < R.Id; });
   llvm::sort(nodesForDataCompression,
              [](auto &L, auto &R) { return L.Id < R.Id; });
 
@@ -289,12 +300,15 @@ auto BPOrderer<D>::computeOrder(
     BalancedPartitioning bp(config);
     bp.run(nodesForStartup);
     bp.run(nodesForFunctionCompression);
+    bp.run(nodesForColdFunctionCompression);
     bp.run(nodesForDataCompression);
   }
 
   unsigned numStartupSections = 0, startupSize = 0;
   unsigned numCodeCompressionSections = 0, codeCompressionSize = 0;
   unsigned numDuplicateCodeSections = 0, duplicateCodeSize = 0;
+  unsigned numColdCodeCompressionSections = 0, coldCodeCompressionSize = 0;
+  unsigned numDuplicateColdCodeSections = 0, duplicateColdCodeSize = 0;
   unsigned numDataCompressionSections = 0, dataCompressionSize = 0;
   unsigned numDuplicateDataSections = 0, duplicateDataSize = 0;
   SetVector<const Section *> orderedSections;
@@ -306,7 +320,7 @@ auto BPOrderer<D>::computeOrder(
       ++numStartupSections;
     }
   }
-  // then functions for compression,
+  // then non-cold functions for compression,
   for (auto &node : nodesForFunctionCompression) {
     const auto *isec = sections[node.Id];
     if (orderedSections.insert(isec)) {
@@ -321,6 +335,24 @@ auto BPOrderer<D>::computeOrder(
       if (orderedSections.insert(dupIsec)) {
         duplicateCodeSize += D::getSize(*dupIsec);
         ++numDuplicateCodeSections;
+      }
+    }
+  }
+  // then cold functions for compression,
+  for (auto &node : nodesForColdFunctionCompression) {
+    const auto *isec = sections[node.Id];
+    if (orderedSections.insert(isec)) {
+      coldCodeCompressionSize += D::getSize(*isec);
+      ++numColdCodeCompressionSections;
+    }
+    auto It = duplicateSectionIdxs.find(node.Id);
+    if (It == duplicateSectionIdxs.end())
+      continue;
+    for (auto dupSecIdx : It->getSecond()) {
+      const auto *dupIsec = sections[dupSecIdx];
+      if (orderedSections.insert(dupIsec)) {
+        duplicateColdCodeSize += D::getSize(*dupIsec);
+        ++numDuplicateColdCodeSections;
       }
     }
   }
@@ -346,11 +378,13 @@ auto BPOrderer<D>::computeOrder(
   if (verbose) {
     unsigned numTotalOrderedSections =
         numStartupSections + numCodeCompressionSections +
-        numDuplicateCodeSections + numDataCompressionSections +
+        numDuplicateCodeSections + numColdCodeCompressionSections +
+        numDuplicateColdCodeSections + numDataCompressionSections +
         numDuplicateDataSections;
-    unsigned totalOrderedSize = startupSize + codeCompressionSize +
-                                duplicateCodeSize + dataCompressionSize +
-                                duplicateDataSize;
+    unsigned totalOrderedSize =
+        startupSize + codeCompressionSize + duplicateCodeSize +
+        coldCodeCompressionSize + duplicateColdCodeSize +
+        dataCompressionSize + duplicateDataSize;
     dbgs() << "Ordered " << numTotalOrderedSections << " sections ("
            << totalOrderedSize << " bytes) using balanced partitioning:\n";
     dbgs() << "  Functions for startup: " << numStartupSections << " ("
@@ -359,6 +393,11 @@ auto BPOrderer<D>::computeOrder(
            << " (" << codeCompressionSize << " bytes)\n";
     dbgs() << "  Duplicate functions: " << numDuplicateCodeSections << " ("
            << duplicateCodeSize << " bytes)\n";
+    dbgs() << "  Cold functions for compression: "
+           << numColdCodeCompressionSections << " ("
+           << coldCodeCompressionSize << " bytes)\n";
+    dbgs() << "  Duplicate cold functions: " << numDuplicateColdCodeSections
+           << " (" << duplicateColdCodeSize << " bytes)\n";
     dbgs() << "  Data for compression: " << numDataCompressionSections << " ("
            << dataCompressionSize << " bytes)\n";
     dbgs() << "  Duplicate data: " << numDuplicateDataSections << " ("
