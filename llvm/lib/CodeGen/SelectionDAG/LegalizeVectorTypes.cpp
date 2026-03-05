@@ -695,9 +695,8 @@ SDValue DAGTypeLegalizer::ScalarizeVecRes_VSELECT(SDNode *N) {
   if (BoolVT.bitsLT(CondVT))
     Cond = DAG.getNode(ISD::TRUNCATE, SDLoc(N), BoolVT, Cond);
 
-  return DAG.getSelect(SDLoc(N),
-                       LHS.getValueType(), Cond, LHS,
-                       GetScalarizedVector(N->getOperand(2)));
+  return DAG.getSelect(SDLoc(N), LHS.getValueType(), Cond, LHS,
+                       GetScalarizedVector(N->getOperand(2)), N->getFlags());
 }
 
 SDValue DAGTypeLegalizer::ScalarizeVecRes_SELECT(SDNode *N) {
