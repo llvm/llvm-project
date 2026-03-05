@@ -318,6 +318,7 @@ void createHLFIRToFIRPassPipeline(mlir::PassManager &pm,
   if (enableOpenMP != EnableOpenMP::None) {
     pm.addPass(flangomp::createLowerWorkshare());
     pm.addPass(flangomp::createLowerWorkdistribute());
+    pm.addPass(flangomp::createHostOpFilteringPass());
   }
   if (enableOpenMP == EnableOpenMP::Simd)
     pm.addPass(flangomp::createSimdOnlyPass());
