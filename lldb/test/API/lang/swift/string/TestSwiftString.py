@@ -13,5 +13,11 @@ class TestSwiftTuple(TestBase):
             self, 'break here', lldb.SBFileSpec('main.swift'))
 
         # FIXME: It would be even better if this were an error.
-        self.expect("frame variable zero", substrs=['<uninitialized>'])
-        self.expect("frame variable random", substrs=['cannot decode string'])
+        zero = self.frame().FindVariable("zero")
+        self.assertEqual(zero.GetSummary(), '<uninitialized>')
+        random = self.frame().FindVariable("random")
+        self.assertIn('cannot decode string', random.GetSummary())
+        good = self.frame().FindVariable("good")
+        self.assertIn('hello', good.GetSummary())
+        options = good.GetTypeSummary().GetOptions()
+        self.assertEqual(options & lldb.eTypeOptionHideChildren, lldb.eTypeOptionHideChildren, "String guts hidden")
