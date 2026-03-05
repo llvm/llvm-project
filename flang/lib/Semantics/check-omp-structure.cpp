@@ -5150,6 +5150,9 @@ void OmpStructureChecker::CheckArraySection(
             if (lval && uval) {
               int64_t sectionLen = *uval - *lval;
               if (strideVal) {
+                if (*strideVal == 0) {
+                  continue;
+                }
                 sectionLen = sectionLen / *strideVal;
               }
 
