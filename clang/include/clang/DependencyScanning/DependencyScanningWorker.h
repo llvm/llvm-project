@@ -27,9 +27,12 @@ namespace clang {
 
 class DependencyOutputOptions;
 
+namespace tooling {
+class CompilerInstanceWithContext;
+}
+
 namespace dependencies {
 class DependencyScanningWorkerFilesystem;
-class CompilerInstanceWithContext;
 
 /// A command-line tool invocation that is part of building a TU.
 ///
@@ -165,47 +168,6 @@ public:
       llvm::IntrusiveRefCntPtr<llvm::vfs::OverlayFileSystem> OverlayFS =
           nullptr);
 
-  /// The two method below implements a new interface for by name
-  /// dependency scanning. They together enable the dependency scanning worker
-  /// to more effectively perform scanning for a sequence of modules
-  /// by name when the CWD and CommandLine do not change across the queries.
-  /// The initialization function asks the client for a DiagnosticsConsumer
-  /// that it direct the diagnostics to.
-
-  /// @brief Initializing the context and the compiler instance.
-  /// @param CWD The current working directory used during the scan.
-  /// @param CommandLine The commandline used for the scan.
-  /// @return False if the initializaiton fails.
-  bool initializeCompilerInstanceWithContext(
-      StringRef CWD, ArrayRef<std::string> CommandLine,
-      DependencyActionController &Controller, DiagnosticConsumer &DC);
-
-  /// @brief Initializing the context and the compiler instance.
-  /// @param CWD The current working directory used during the scan.
-  /// @param CommandLine The commandline used for the scan.
-  /// @param DiagEngineWithCmdAndOpts Preconfigured diagnostics engine and
-  /// options associated with the cc1 command line.
-  /// @param FS The overlay file system to use for this compiler instance.
-  /// @return False if the initializaiton fails.
-  bool initializeCompilerInstanceWithContext(
-      StringRef CWD, ArrayRef<std::string> CommandLine,
-      DependencyActionController &Controller,
-      std::unique_ptr<DiagnosticsEngineWithDiagOpts> DiagEngineWithCmdAndOpts,
-      IntrusiveRefCntPtr<llvm::vfs::OverlayFileSystem> OverlayFS);
-
-  /// @brief Performaces dependency scanning for the module whose name is
-  ///        specified.
-  /// @param ModuleName  The name of the module whose dependency will be
-  ///                    scanned.
-  /// @param Consumer The dependency consumer that stores the results.
-  /// @param Controller The controller for the dependency scanning action.
-  /// @return False if the scanner incurs errors.
-  bool
-  computeDependenciesByNameWithContext(StringRef ModuleName,
-                                       DependencyConsumer &Consumer,
-                                       DependencyActionController &Controller);
-
-
   /// Scan from a compiler invocation.
   /// If \p DiagGenerationAsCompilation is true it will generate error
   /// diagnostics same way as the normal compilation, with "N errors generated"
@@ -216,6 +178,8 @@ public:
       StringRef WorkingDirectory, DependencyConsumer &Consumer,
       DependencyActionController &Controller, DiagnosticConsumer &DiagsConsumer,
       raw_ostream *VerboseOS, bool DiagGenerationAsCompilation);
+
+  DependencyScanningService &getService() const { return Service; }
 
   ScanningOutputFormat getScanningFormat() const {
     return Service.getOpts().Format;
@@ -245,8 +209,7 @@ private:
   /// overlaid on top of the base VFS passed in the constructor.
   IntrusiveRefCntPtr<DependencyScanningWorkerFilesystem> DepFS;
 
-  friend CompilerInstanceWithContext;
-  std::unique_ptr<CompilerInstanceWithContext> CIWithContext;
+  friend tooling::CompilerInstanceWithContext;
 };
 
 std::pair<IntrusiveRefCntPtr<llvm::vfs::OverlayFileSystem>,
