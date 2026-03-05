@@ -47,7 +47,7 @@ func.func @subview_of_size_memcast(%arg : memref<4x6x16x32xi8>) ->
 //       CHECK: func @subview_of_strides_memcast
 //  CHECK-SAME:   %[[ARG0:.[a-z0-9A-Z_]+]]: memref<1x1x?xf32, strided{{.*}}>
 //       CHECK:   %[[S:.+]] = memref.subview %[[ARG0]][0, 0, 0] [1, 1, 4]
-//  CHECK-SAME:                    to memref<1x4xf32, strided<[7, 1], offset: ?>>
+//  CHECK-SAME:                    to memref<1x4xf32, strided<[35, 1], offset: ?>>
 //       CHECK:   %[[M:.+]] = memref.cast %[[S]]
 //  CHECK-SAME:                    to memref<1x4xf32, strided<[?, ?], offset: ?>>
 //       CHECK:   return %[[M]]

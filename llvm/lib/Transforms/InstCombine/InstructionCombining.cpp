@@ -2314,17 +2314,19 @@ Instruction *InstCombinerImpl::foldBinopWithPhiOperands(BinaryOperator &BO) {
 }
 
 Instruction *InstCombinerImpl::foldBinOpIntoSelectOrPhi(BinaryOperator &I) {
-  bool IsOtherParamConst = isa<Constant>(I.getOperand(1));
+  auto TryFoldOperand = [&](unsigned OpIdx,
+                            bool IsOtherParamConst) -> Instruction * {
+    if (auto *Sel = dyn_cast<SelectInst>(I.getOperand(OpIdx)))
+      return FoldOpIntoSelect(I, Sel, false, !IsOtherParamConst);
+    if (auto *PN = dyn_cast<PHINode>(I.getOperand(OpIdx)))
+      return foldOpIntoPhi(I, PN);
+    return nullptr;
+  };
 
-  if (auto *Sel = dyn_cast<SelectInst>(I.getOperand(0))) {
-    if (Instruction *NewSel =
-            FoldOpIntoSelect(I, Sel, false, !IsOtherParamConst))
-      return NewSel;
-  } else if (auto *PN = dyn_cast<PHINode>(I.getOperand(0))) {
-    if (Instruction *NewPhi = foldOpIntoPhi(I, PN))
-      return NewPhi;
-  }
-  return nullptr;
+  if (Instruction *NewI =
+          TryFoldOperand(/*OpIdx=*/0, isa<Constant>(I.getOperand(1))))
+    return NewI;
+  return TryFoldOperand(/*OpIdx=*/1, isa<Constant>(I.getOperand(0)));
 }
 
 static bool shouldMergeGEPs(GEPOperator &GEP, GEPOperator &Src) {
@@ -3429,7 +3431,8 @@ Instruction *InstCombinerImpl::visitGetElementPtrInst(GetElementPtrInst &GEP) {
       !FirstIdx->getType()->isVectorTy()) {
     gep_type_iterator GTI = gep_type_begin(GEP);
     ++GTI;
-    if (!GTI.isStruct())
+    if (!GTI.isStruct() && GTI.getSequentialElementStride(DL) ==
+                               DL.getTypeAllocSize(GTI.getIndexedType()))
       return replaceInstUsesWith(GEP, Builder.CreateGEP(GTI.getIndexedType(),
                                                         GEP.getPointerOperand(),
                                                         drop_begin(Indices), "",
@@ -3464,8 +3467,9 @@ Instruction *InstCombinerImpl::visitGetElementPtrInst(GetElementPtrInst &GEP) {
 
   bool SeenNonZeroIndex = false;
   for (auto [IdxNum, Idx] : enumerate(Indices)) {
+    // Ignore one leading zero index.
     auto *C = dyn_cast<Constant>(Idx);
-    if (C && C->isNullValue())
+    if (C && C->isNullValue() && IdxNum == 0)
       continue;
 
     if (!SeenNonZeroIndex) {
@@ -3515,13 +3519,9 @@ Instruction *InstCombinerImpl::visitGetElementPtrInst(GetElementPtrInst &GEP) {
             GEPType == Y->getType()) {
           bool HasNonAddressBits =
               DL.getAddressSizeInBits(AS) != DL.getPointerSizeInBits(AS);
-          bool Changed = false;
-          GEP.replaceUsesWithIf(Y, [&](Use &U) {
-            bool ShouldReplace =
-                isa<PtrToAddrInst, ICmpInst>(U.getUser()) ||
-                (!HasNonAddressBits && isa<PtrToIntInst>(U.getUser()));
-            Changed |= ShouldReplace;
-            return ShouldReplace;
+          bool Changed = GEP.replaceUsesWithIf(Y, [&](Use &U) {
+            return isa<PtrToAddrInst, ICmpInst>(U.getUser()) ||
+                   (!HasNonAddressBits && isa<PtrToIntInst>(U.getUser()));
           });
           return Changed ? &GEP : nullptr;
         }
@@ -5357,11 +5357,8 @@ bool InstCombinerImpl::freezeOtherUses(FreezeInst &FI) {
     Changed = true;
   }
 
-  Op->replaceUsesWithIf(&FI, [&](Use &U) -> bool {
-    bool Dominates = DT.dominates(&FI, U);
-    Changed |= Dominates;
-    return Dominates;
-  });
+  Changed |= Op->replaceUsesWithIf(
+      &FI, [&](Use &U) -> bool { return DT.dominates(&FI, U); });
 
   return Changed;
 }

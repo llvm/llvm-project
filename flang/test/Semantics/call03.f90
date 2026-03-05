@@ -374,6 +374,7 @@ module m01
     call volatileassumedsize(d(::2))
     !ERROR: ASYNCHRONOUS or VOLATILE actual argument that is not simply contiguous may not be associated with a contiguous ASYNCHRONOUS or VOLATILE dummy argument 'x='
     call volatilecontiguous(d(::2))
+    !ERROR: Assumed-rank actual argument may not be associated with a dummy argument 'x=' that is not also assumed-rank
     !ERROR: ASYNCHRONOUS or VOLATILE actual argument that is not simply contiguous may not be associated with a contiguous ASYNCHRONOUS or VOLATILE dummy argument 'x='
     call volatilecontiguous(assumedrank)
   end subroutine

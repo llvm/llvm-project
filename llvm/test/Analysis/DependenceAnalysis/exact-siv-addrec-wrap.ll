@@ -34,11 +34,11 @@ define void @exact_siv_no_nsw(ptr %A) {
 ;
 ; CHECK-EXACT-SIV-LABEL: 'exact_siv_no_nsw'
 ; CHECK-EXACT-SIV-NEXT:  Src: store i8 0, ptr %gep.0, align 1 --> Dst: store i8 0, ptr %gep.0, align 1
-; CHECK-EXACT-SIV-NEXT:    da analyze - consistent output [*]!
+; CHECK-EXACT-SIV-NEXT:    da analyze - output [*]!
 ; CHECK-EXACT-SIV-NEXT:  Src: store i8 0, ptr %gep.0, align 1 --> Dst: store i8 1, ptr %gep.1, align 1
 ; CHECK-EXACT-SIV-NEXT:    da analyze - none!
 ; CHECK-EXACT-SIV-NEXT:  Src: store i8 1, ptr %gep.1, align 1 --> Dst: store i8 1, ptr %gep.1, align 1
-; CHECK-EXACT-SIV-NEXT:    da analyze - consistent output [*]!
+; CHECK-EXACT-SIV-NEXT:    da analyze - output [*]!
 ;
 entry:
   br label %loop.header
