@@ -2378,9 +2378,15 @@ public:
     ProcessEventHijacker(Process &process, lldb::ListenerSP listener_sp)
         : m_process(process) {
       m_process.HijackProcessEvents(std::move(listener_sp));
+      // When we are hijacking events, we don't want them to leak out
+      // to a user thread that is allowed to see the private state:
+      m_process.m_current_private_state_thread->m_consult_use_private_state_stack = false;
     }
 
-    ~ProcessEventHijacker() { m_process.RestoreProcessEvents(); }
+    ~ProcessEventHijacker() { 
+      m_process.m_current_private_state_thread->m_consult_use_private_state_stack = true;
+      m_process.RestoreProcessEvents();
+    }
 
   private:
     Process &m_process;
@@ -3284,6 +3290,9 @@ protected:
     }
 
     bool UsesPrivateState(lldb::thread_t thread) const {
+      if (!m_consult_use_private_state_stack)
+        return false;
+
       if (m_use_private_state_stack.empty())
         return false;
       return m_use_private_state_stack.back() == thread;
@@ -3317,6 +3326,10 @@ protected:
     std::string m_thread_name;
 
     std::deque<lldb::thread_t> m_use_private_state_stack;
+    // When we are running behind the user's back - e.g. when running 
+    // expressions, we don't want the user thread we've allowed to see the
+    // private state to see it here.
+    bool m_consult_use_private_state_stack = true;
   };
 
   bool SetPrivateRunLockToStopped() {
