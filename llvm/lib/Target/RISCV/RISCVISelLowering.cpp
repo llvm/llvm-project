@@ -8889,8 +8889,8 @@ SDValue RISCVTargetLowering::LowerOperation(SDValue Op,
     return SDValue();
   case ISD::SSHLSAT: {
     MVT VT = Op.getSimpleValueType();
-    assert(VT.isFixedLengthVector() &&
-           Subtarget.hasStdExtP() && "Unexptect custom legalisation");
+    assert(VT.isFixedLengthVector() && Subtarget.hasStdExtP() &&
+           "Unexptect custom legalisation");
     APInt Splat;
     if (!ISD::isConstantSplatVector(Op.getOperand(1).getNode(), Splat))
       return SDValue();
