@@ -13625,6 +13625,8 @@ def err_hlsl_push_constant_unique
 def err_hlsl_samplecmp_requires_float
     : Error<"'SampleCmp' and 'SampleCmpLevelZero' require resource to contain "
             "a floating point type">;
+def err_hlsl_gathercmp_invalid_component
+    : Error<"gatherCmp%select{Red|Green|Blue|Alpha}0 operations on the Vulkan target are not supported; only GatherCmp and GatherCmpRed are allowed">;
 
 // Layout randomization diagnostics.
 def err_non_designated_init_used : Error<
