@@ -978,7 +978,7 @@ void CGHLSLRuntime::emitEntryFunction(const FunctionDecl *FD,
       llvm_unreachable("Not handled yet");
     } else {
       llvm::Type *ParamType =
-          Param.hasByValAttr() ? Param.getParamByValType() : Param.getType();
+	Param.hasByValAttr() ? Param.getParamByValType() : PD->getType()->isRecordType() ? CGM.getTypes().ConvertType(PD->getType()) : Param.getType();
       auto AttrBegin = PD->specific_attr_begin<HLSLAppliedSemanticAttr>();
       auto AttrEnd = PD->specific_attr_end<HLSLAppliedSemanticAttr>();
       auto Result =
@@ -986,8 +986,8 @@ void CGHLSLRuntime::emitEntryFunction(const FunctionDecl *FD,
       SemanticValue = Result.first;
       if (!SemanticValue)
         return;
-      if (Param.hasByValAttr()) {
-        llvm::Value *Var = B.CreateAlloca(Param.getParamByValType());
+      if (Param.hasByValAttr() || PD->getType()->isRecordType()) {
+        llvm::Value *Var = B.CreateAlloca(ParamType);
         B.CreateStore(SemanticValue, Var);
         SemanticValue = Var;
       }

@@ -4837,6 +4837,16 @@ static void TryConstructorOrParenListInitialization(
   TryConstructorInitialization(S, Entity, Kind, Args, DestType, DestType,
                                Sequence, /*IsListInit=*/false, IsAggrListInit);
 
+  // Try list initialization if this is hlsl
+  if (S.getLangOpts().HLSL && Sequence.Failed()) {
+    InitListExpr *ILE = new (S.Context) InitListExpr(S.getASTContext(), Args.front()->getBeginLoc(), Args, Args.back()->getEndLoc());
+    ILE->setType(S.getASTContext().VoidTy);
+    Args[0] = ILE;
+    // reset sequence as normal
+    Sequence.setSequenceKind(InitializationSequence::NormalSequence);
+    TryListInitialization(S, Entity, Kind, ILE, Sequence, /*TreatUnavailableAsInvalid=*/true);
+    return;
+  }
   //       * Otherwise, if no constructor is viable, the destination type
   //         is an aggregate class, and the initializer is a parenthesized
   //         expression-list, the object is initialized as follows. [...]
@@ -5970,7 +5980,7 @@ static void TryOrBuildParenListInitialization(
         return false;
 
       if (InitExpr)
-        *InitExpr = ER.get();
+	*InitExpr = ER.get();
       else
         InitExprs.push_back(ER.get());
     }

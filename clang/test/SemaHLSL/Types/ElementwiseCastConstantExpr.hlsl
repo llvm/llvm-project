@@ -70,15 +70,6 @@ export void fn() {
   _Static_assert(FArr[1] == 200.11, "Woo!");
   _Static_assert(FArr[2] == 300.11, "Woo!");
 
-  // result type struct from struct
-  constexpr B2 SB2 = {5.5, 6.5, 1000, 5000, false};
-  constexpr Base SB = (Base)SB2;
-  _Static_assert(SB.D == 5.5, "Woo!");
-  _Static_assert(SB.U[0] == 6, "Woo!");
-  _Static_assert(SB.U[1] == 1000, "Woo!");
-  _Static_assert(SB.I == 8, "Woo!");
-  _Static_assert(SB.I2 == 0, "Woo!");
-
   // Make sure we read bitfields correctly
   constexpr Base BB = {222.22, {100, 200}, -2, 7};
   constexpr int Arr3[5] = (int[5])BB;

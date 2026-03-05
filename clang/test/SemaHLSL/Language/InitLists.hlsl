@@ -100,14 +100,11 @@ void Errs() {
 
 struct R {
   int A;
-  union { // #anon
+  union {
     float F;
     int4 G;
   };
 };
-
-// expected-note@#anon{{candidate constructor (the implicit copy constructor) not viable: no known conversion from 'int' to}}
-// expected-note@#anon{{candidate constructor (the implicit move constructor) not viable: no known conversion from 'int' to}}
 
 void Err2(RWBuffer<float4> B) {
   ContainsResource RS1 = {1, B};
@@ -117,9 +114,6 @@ void Err2(RWBuffer<float4> B) {
 
   R r = {1,2}; // expected-error{{no viable conversion from 'int' to 'R::(anonymous union at}}
 }
-
-// expected-note@#ContainsResource{{candidate constructor (the implicit copy constructor) not viable: no known conversion from 'vector<int, 2>' (vector of 2 'int' values) to 'const ContainsResource &' for 1st argument}}
-// expected-note@#ContainsResource{{candidate constructor (the implicit move constructor) not viable: no known conversion from 'vector<int, 2>' (vector of 2 'int' values) to 'ContainsResource &&' for 1st argument}}
 
 // This note refers to the RWBuffer copy constructor that do not have a source locations
 // expected-note@*{{candidate constructor not viable}}

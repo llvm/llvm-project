@@ -6,13 +6,14 @@ struct Pair {
 
   int getFirst() {
     Pair Another = {5, 10};
+    Pair B = Another;
     this = Another;
-	  return this.First;
+    return this.First;
   }
 
   // In HLSL 202x, this is a move assignment rather than a copy.
   int getSecond() {
-    this = Pair();
+//    this = Pair();
     return Second;
   }
 

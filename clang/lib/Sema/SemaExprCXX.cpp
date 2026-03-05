@@ -1602,6 +1602,11 @@ Sema::BuildCXXTypeConstructExpr(TypeSourceInfo *TInfo,
         Context, Ty.getNonReferenceType(), TInfo, LParenOrBraceLoc, Exprs,
         RParenOrBraceLoc, ListInitialization);
 
+  // HLSL doesn't support constructors or c++ functional cast for structs
+  if (getLangOpts().HLSL && Ty->isRecordType())
+    return ExprError(Diag(TyBeginLoc, diag::err_ovl_no_viable_function_in_init)
+		     << Ty << FullRange);
+
   // C++ [expr.type.conv]p1:
   // If the expression list is a parenthesized single expression, the type
   // conversion expression is equivalent (in definedness, and if defined in

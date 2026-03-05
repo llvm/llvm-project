@@ -3632,6 +3632,8 @@ CXXConstructorDecl *Sema::LookupMovingConstructor(CXXRecordDecl *Class,
 
 DeclContext::lookup_result Sema::LookupConstructors(CXXRecordDecl *Class) {
   // If the implicit constructors have not yet been declared, do so now.
+  // HLSL doesn't support implicit constructors because constructors for
+  // user defined classes are not supported
   if (CanDeclareSpecialMemberFunction(Class)) {
     runWithSufficientStackSpace(Class->getLocation(), [&] {
       if (Class->needsImplicitDefaultConstructor())

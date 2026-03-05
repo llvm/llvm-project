@@ -759,19 +759,29 @@ public:
            needsImplicitDefaultConstructor();
   }
 
+  /// Determines whether this class has any user provided special members.
+  bool hasUserProvidedSpecialMembers() const {
+    return data().UserDeclaredSpecialMembers &
+      (SMF_MoveConstructor | SMF_MoveAssignment | SMF_Destructor |
+       SMF_CopyAssignment | SMF_CopyConstructor) ||
+      data().UserDeclaredConstructor ||
+      data().UserProvidedDefaultConstructor;
+  }
+
   /// Determine if we need to declare a default constructor for
   /// this class.
   ///
   /// This value is used for lazy creation of default constructors.
   bool needsImplicitDefaultConstructor() const {
-    return (!data().UserDeclaredConstructor &&
+    return ((!data().UserDeclaredConstructor &&
             !(data().DeclaredSpecialMembers & SMF_DefaultConstructor) &&
             (!isLambda() || lambdaIsDefaultConstructibleAndAssignable())) ||
            // FIXME: Proposed fix to core wording issue: if a class inherits
            // a default constructor and doesn't explicitly declare one, one
            // is declared implicitly.
            (data().HasInheritedDefaultConstructor &&
-            !(data().DeclaredSpecialMembers & SMF_DefaultConstructor));
+            !(data().DeclaredSpecialMembers & SMF_DefaultConstructor))) &&
+      (!getLangOpts().HLSL || (isLambda() && lambdaIsDefaultConstructibleAndAssignable()) || hasUserProvidedSpecialMembers());
   }
 
   /// Determine whether this class has any user-declared constructors.
@@ -797,7 +807,8 @@ public:
   /// Determine whether this class needs an implicit copy
   /// constructor to be lazily declared.
   bool needsImplicitCopyConstructor() const {
-    return !(data().DeclaredSpecialMembers & SMF_CopyConstructor);
+    return !(data().DeclaredSpecialMembers & SMF_CopyConstructor) &&
+      (!getLangOpts().HLSL || isLambda() || hasUserProvidedSpecialMembers());
   }
 
   /// Determine whether we need to eagerly declare a defaulted copy
@@ -894,7 +905,9 @@ public:
            !hasUserDeclaredCopyConstructor() &&
            !hasUserDeclaredCopyAssignment() &&
            !hasUserDeclaredMoveAssignment() &&
-           !hasUserDeclaredDestructor();
+           !hasUserDeclaredDestructor() &&
+      (!getLangOpts().HLSL || isLambda() || hasUserDeclaredConstructor()
+       || hasUserProvidedDefaultConstructor());
   }
 
   /// Determine whether we need to eagerly declare a defaulted move
@@ -923,7 +936,8 @@ public:
   /// Determine whether this class needs an implicit copy
   /// assignment operator to be lazily declared.
   bool needsImplicitCopyAssignment() const {
-    return !(data().DeclaredSpecialMembers & SMF_CopyAssignment);
+    return !(data().DeclaredSpecialMembers & SMF_CopyAssignment) &&
+      (!getLangOpts().HLSL || isLambda() || hasUserProvidedSpecialMembers());
   }
 
   /// Determine whether we need to eagerly declare a defaulted copy
@@ -986,7 +1000,8 @@ public:
            !hasUserDeclaredCopyAssignment() &&
            !hasUserDeclaredMoveConstructor() &&
            !hasUserDeclaredDestructor() &&
-           (!isLambda() || lambdaIsDefaultConstructibleAndAssignable());
+           (!isLambda() || lambdaIsDefaultConstructibleAndAssignable()) &&
+      (!getLangOpts().HLSL || (isLambda() && lambdaIsDefaultConstructibleAndAssignable()) || hasUserProvidedSpecialMembers());
   }
 
   /// Determine whether we need to eagerly declare a move assignment

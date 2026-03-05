@@ -1527,8 +1527,9 @@ CodeGenFunction::EmitAutoVarAlloca(const VarDecl &D) {
     if (D.getInit() && (Ty->isArrayType() || Ty->isRecordType()) &&
         (D.isConstexpr() ||
          ((Ty.isPODType(getContext()) ||
-           getContext().getBaseElementType(Ty)->isObjCObjectPointerType()) &&
-          D.getInit()->isConstantInitializer(getContext(), false)))) {
+	   getContext().getBaseElementType(Ty)->isObjCObjectPointerType() ||
+	   getLangOpts().HLSL) &&
+	    D.getInit()->isConstantInitializer(getContext(), false)))) {
 
       // If the variable's a const type, and it's neither an NRVO
       // candidate nor a __block variable and has no mutable members,
