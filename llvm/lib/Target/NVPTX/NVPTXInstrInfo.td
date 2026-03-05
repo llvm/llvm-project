@@ -2553,10 +2553,10 @@ def NVPTX_fma_oneuse_and_nnan : PatFrag<(ops node:$a, node:$b, node:$c),
   return N->hasOneUse() &&
     (N->getFlags().hasNoNaNs() || TM.Options.NoNaNsFPMath);
 }]>;
-// fmaxnum will differentiate between signed and unsigned zeros soon, so this
-// PatFrag is for a fmaxnum node with nsz
-def NVPTX_fmaxnum_nsz : PatFrag<(ops node:$a, node:$b),
-                                  (fmaxnum node:$a, node:$b), [{
+// fmaxnum/fmaximumnum differentiate between signed and unsigned zeros, so this
+// PatFrag is for a fmaxnum/fmaximumnum node with nsz
+def NVPTX_fmaxnum_or_fmaximumnum_nsz : PatFrag<(ops node:$a, node:$b),
+                                  (fmaxnum_or_fmaximumnum node:$a, node:$b), [{
   return N->getFlags().hasNoSignedZeros();
 }]>;
 
@@ -2564,7 +2564,7 @@ class FMARELUInst<RegTyInfo t, bit allow_ftz, PatFrag zero_pat>
   : BasicFlagsNVPTXInst<(outs t.RC:$dst), (ins t.RC:$a, t.RC:$b, t.RC:$c),
                    !if(allow_ftz, (ins FTZFlag:$ftz), (ins)),
                    "fma.rn" # !if(allow_ftz, "$ftz", "") # ".relu." # t.PtxType,
-                   [(set t.Ty:$dst, (NVPTX_fmaxnum_nsz (NVPTX_fma_oneuse_and_nnan t.Ty:$a, t.Ty:$b, t.Ty:$c), zero_pat))]>;
+                   [(set t.Ty:$dst, (NVPTX_fmaxnum_or_fmaximumnum_nsz (NVPTX_fma_oneuse_and_nnan t.Ty:$a, t.Ty:$b, t.Ty:$c), zero_pat))]>;
 
 let Predicates = [useFP16Math, hasPTX<70>, hasSM<80>] in {
   def FMARELU_F16 : FMARELUInst<F16RT, true, fpimm_0>;
