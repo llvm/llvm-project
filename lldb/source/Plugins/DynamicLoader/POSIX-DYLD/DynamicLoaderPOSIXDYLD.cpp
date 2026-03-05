@@ -540,10 +540,34 @@ DynamicLoaderPOSIXDYLD::GetStepThroughTrampolinePlan(Thread &thread,
 
   StackFrame *frame = thread.GetStackFrameAtIndex(0).get();
   const SymbolContext &context = frame->GetSymbolContext(eSymbolContextSymbol);
-  const Symbol *sym = context.symbol;
 
-  if (sym == nullptr || !sym->IsTrampoline())
+  const Symbol *sym = context.symbol;
+  if (sym == nullptr)
     return thread_plan_sp;
+
+  if (!sym->IsTrampoline()) {
+    if (sym->GetType() != lldb::eSymbolTypeCode)
+      return thread_plan_sp;
+
+    // Check if any trampoline symbols exists at the file address.
+    SymbolContextList addr_ctx_list =
+        context.module_sp->FindSymbolsContainingFileAddress(
+            context.GetFunctionOrSymbolAddress(), eSymbolTypeTrampoline);
+
+    if (addr_ctx_list.IsEmpty())
+      return thread_plan_sp;
+
+    for (const auto &sym_ctx : addr_ctx_list.SymbolContexts()) {
+      if (sym_ctx.symbol != nullptr) {
+        sym = sym_ctx.symbol;
+        break;
+      }
+    }
+
+    // may not find a match
+    if (sym == nullptr)
+      return thread_plan_sp;
+  }
 
   ConstString sym_name = sym->GetMangled().GetName(Mangled::ePreferMangled);
   if (!sym_name)
