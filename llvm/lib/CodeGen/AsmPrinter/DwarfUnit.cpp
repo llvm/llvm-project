@@ -2041,25 +2041,15 @@ DIE *DwarfUnit::getOrCreateStaticMemberDIE(const DIDerivedType *DT) {
     addConstantFPValue(StaticMemberDIE, CFP);
   else if (auto *CDS =
                dyn_cast_or_null<ConstantDataSequential>(DT->getConstant())) {
-    // Emit each element byte-by-byte in target byte order. We avoid
-    // getRawDataValues() because it exposes host endianness, which
-    // produces incorrect DWARF on big-endian hosts cross-compiling
-    // for little-endian targets (and vice versa).
-    auto *Block = new (DIEValueAllocator) DIEBlock;
+    // Concatenate all array elements into a single APInt and emit using
+    // addIntAsBlock, which handles target endianness correctly.
     unsigned NumElts = CDS->getNumElements();
-    unsigned ElemByteSize = CDS->getElementType()->getPrimitiveSizeInBits() / 8;
-    bool IsLE = Asm->getDataLayout().isLittleEndian();
-    for (unsigned I = 0; I < NumElts; ++I) {
-      APInt Val = CDS->getElementAsAPInt(I);
-      for (unsigned J = 0; J < ElemByteSize; ++J) {
-        unsigned BitOff = IsLE ? (J * 8) : ((ElemByteSize - 1 - J) * 8);
-        addUInt(*Block, dwarf::DW_FORM_data1,
-                Val.extractBitsAsZExtValue(8, BitOff));
-      }
-    }
-    Block->computeSize(Asm->getDwarfFormParams());
-    addBlock(StaticMemberDIE, dwarf::DW_AT_const_value, Block->BestForm(),
-             Block);
+    unsigned ElemBits = CDS->getElementType()->getPrimitiveSizeInBits();
+    unsigned TotalBits = NumElts * ElemBits;
+    APInt Combined(TotalBits, 0);
+    for (unsigned I = 0; I < NumElts; ++I)
+      Combined.insertBits(CDS->getElementAsAPInt(I), I * ElemBits);
+    addIntAsBlock(StaticMemberDIE, dwarf::DW_AT_const_value, Combined);
   }
 
   if (uint32_t AlignInBytes = DT->getAlignInBytes())
