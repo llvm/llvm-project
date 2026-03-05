@@ -175,7 +175,6 @@ private:
   // Translate(base[x]) -> Translate(*base)
   Expected<EntityPointerLevelSet>
   VisitArraySubscriptExpr(const ArraySubscriptExpr *E) {
-    // Translate(ptr[x]) := Translate(*ptr)
     return translateDereferencePointer(E->getBase());
   }
 
@@ -262,6 +261,8 @@ buildEntityPointerLevels(std::set<const Expr *> &&UnsafePointers,
 std::unique_ptr<UnsafeBufferUsageEntitySummary>
 UnsafeBufferUsageTUSummaryExtractor::extractEntitySummary(
     const Decl *Contributor, ASTContext &Ctx, llvm::Error &Error) {
+  // FIXME: findUnsafePointers should accept more kinds of `Decl`s than just
+  // `FunctionDecl`:
   if (const auto *FD = dyn_cast<FunctionDecl>(Contributor)) {
     Expected<EntityPointerLevelSet> EPLs =
         buildEntityPointerLevels(findUnsafePointers(FD), *this);

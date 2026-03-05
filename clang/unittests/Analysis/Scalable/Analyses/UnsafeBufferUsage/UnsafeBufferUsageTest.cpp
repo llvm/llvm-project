@@ -304,6 +304,18 @@ TEST_F(UnsafeBufferUsageTest, CommaOperator) {
   EXPECT_EQ(*Sum, makeSet(__LINE__, {{"p", 1U}}));
 }
 
+TEST_F(UnsafeBufferUsageTest, CommaOperator2) {
+  auto Sum = setUpTest(R"cpp(
+    void foo(int **p, int **q, int x) {
+      (p[x] = 0, q[x] = 0)[5];
+    }
+  )cpp",
+                       "foo");
+
+  EXPECT_NE(Sum, nullptr);
+  EXPECT_EQ(*Sum, makeSet(__LINE__, {{"p", 1U}, {"q", 1U}, {"q", 2U}}));
+}
+
 TEST_F(UnsafeBufferUsageTest, ParenthesizedExpression) {
   auto Sum = setUpTest(R"cpp(
     void foo(int *p) {
