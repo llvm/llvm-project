@@ -554,7 +554,7 @@ void NVVM::AddFOp::lowerAddFToLLVMIR(Operation &op, LLVM::ModuleTranslation &mt,
   }
 
   // f32 + f32 -> f32 / vector<2xf32> + vector<2xf32> -> vector<2xf32>
-  unsigned numRndModes = 5; // NONE, RM, RN, RP, RZ
+  const unsigned numRndModes = 5; // NONE, RM, RN, RP, RZ
   if (opTypeLLVM->getScalarType()->isFloatTy()) {
     unsigned index =
         ((isFTZ << 1) | isSat) * numRndModes + static_cast<unsigned>(rndMode);

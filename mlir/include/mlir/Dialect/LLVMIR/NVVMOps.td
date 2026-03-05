@@ -6285,10 +6285,15 @@ def SaturationModeSatOrNone :
   ConfinedAttr<SaturationModeAttr, [EnumAttrIsOneOf<SaturationModeAttr, 
                 [SaturationModeNone, SaturationModeSat]>]>;
 
+def FPArithRoundingMode : 
+  ConfinedAttr<FPRoundingModeAttr, [EnumAttrIsOneOf<FPRoundingModeAttr, 
+                [FPRoundingModeNone, FPRoundingModeRM, FPRoundingModeRN, 
+                 FPRoundingModeRP, FPRoundingModeRZ]>]>;
+
 class NVVM_FloatBinaryOp<string mnemonic, list<Trait> traits = []> :
     NVVM_Op<mnemonic, traits # [Pure, SameOperandsAndResultType]>,
     Arguments<(ins SIMTFloatType:$lhs, SIMTFloatType:$rhs,
-      DefaultValuedAttr<FPRoundingModeAttr, "FPRoundingMode::NONE">:$rnd,
+      DefaultValuedAttr<FPArithRoundingMode, "FPRoundingMode::NONE">:$rnd,
       DefaultValuedAttr<SaturationModeSatOrNone, "SaturationMode::NONE">:$sat,
       DefaultValuedAttr<BoolAttr, "false">:$ftz)>,
     Results<(outs SIMTFloatType:$res)> {
