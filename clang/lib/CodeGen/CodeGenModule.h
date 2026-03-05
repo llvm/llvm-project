@@ -587,6 +587,9 @@ private:
   /// A vector of metadata strings for dependent libraries for ELF.
   SmallVector<llvm::MDNode *, 16> ELFDependentLibraries;
 
+  /// Metadata for copyright pragma comment (if present).
+  llvm::MDNode *LoadTimeComment = nullptr;
+
   /// @name Cache for Objective-C runtime types
   /// @{
 
@@ -1490,6 +1493,9 @@ public:
   /// Appends a dependent lib to the appropriate metadata value.
   void AddDependentLib(StringRef Lib);
 
+  /// Process pragma comment
+  void ProcessPragmaComment(PragmaMSCommentKind Kind, StringRef Comment,
+                            bool isFromASTFile);
 
   llvm::GlobalVariable::LinkageTypes getFunctionLinkage(GlobalDecl GD);
 

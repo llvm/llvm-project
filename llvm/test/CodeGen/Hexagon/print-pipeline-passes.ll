@@ -3,7 +3,7 @@
 
 ; CHECK: hexagon-loop-idiom
 ; CHECK: hexagon-vlcr
-; O0: {{^}}function(ee-instrument<>),always-inline,coro-cond(coro-early,cgscc(coro-split),coro-cleanup,globaldce),alloc-token,function(annotation-remarks),verify,print{{$}}
+; O0: {{^}}lower-comment-string,function(ee-instrument<>),always-inline,coro-cond(coro-early,cgscc(coro-split),coro-cleanup,globaldce),alloc-token,function(annotation-remarks),verify,print{{$}}
 
 define void @test_hexagon_passes() {
 entry:
