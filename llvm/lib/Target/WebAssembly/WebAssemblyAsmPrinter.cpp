@@ -392,6 +392,22 @@ void WebAssemblyAsmPrinter::emitEndOfAsmFile(Module &M) {
   // emitDecls() is not called until now.
   emitDecls(M);
 
+  {
+    StringRef Name = "__funcref_call_table";
+    auto *Sym = static_cast<MCSymbolWasm *>(OutContext.lookupSymbol(Name));
+    if (Sym) {
+      if (!Sym->isFunctionTable())
+        OutContext.reportError(SMLoc(), "symbol is not a wasm funcref table");
+
+      if (Sym->isWeak()) {
+        OutStreamer->emitSymbolAttribute(Sym, MCSA_Weak);
+      }
+      if (!Sym->isDefined()) {
+        OutStreamer->emitLabel(Sym);
+        OutStreamer->addBlankLine();
+      }
+    }
+  }
   // When a function's address is taken, a TABLE_INDEX relocation is emitted
   // against the function symbol at the use site.  However the relocation
   // doesn't explicitly refer to the table.  In the future we may want to
