@@ -203,8 +203,8 @@ public:
             const OriginManager &OM) const override;
 };
 
-/// Represents that an origin escapes via assignment to global storage.
-/// Example: `global_storage = local_var;`
+/// Represents that an origin escapes via assignment to global or static
+/// storage. Example: `global_storage = local_var;`
 class GlobalEscapeFact : public OriginEscapesFact {
   const VarDecl *Global;
 
