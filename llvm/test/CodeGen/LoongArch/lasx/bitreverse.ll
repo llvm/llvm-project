@@ -158,9 +158,8 @@ declare <4 x i64> @llvm.bitreverse.v4i64(<4 x i64>)
 define <4 x i64> @test_bitreverse_v4i64(<4 x i64> %a) nounwind {
 ; LA32-LABEL: test_bitreverse_v4i64:
 ; LA32:       # %bb.0:
-; LA32-NEXT:    pcalau12i $a0, %pc_hi20(.LCPI3_0)
-; LA32-NEXT:    xvld $xr1, $a0, %pc_lo12(.LCPI3_0)
-; LA32-NEXT:    xvshuf.b $xr0, $xr0, $xr0, $xr1
+; LA32-NEXT:    xvshuf4i.b $xr0, $xr0, 27
+; LA32-NEXT:    xvshuf4i.w $xr0, $xr0, 177
 ; LA32-NEXT:    xvslli.b $xr1, $xr0, 4
 ; LA32-NEXT:    xvsrli.b $xr0, $xr0, 4
 ; LA32-NEXT:    xvor.v $xr0, $xr0, $xr1
