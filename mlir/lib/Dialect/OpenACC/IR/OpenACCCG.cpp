@@ -343,8 +343,7 @@ static ParWidthOp getParWidthOpForLaunchArg(ComputeRegionOp op,
   return nullptr;
 }
 
-std::optional<Value>
-ComputeRegionOp::getLaunchArg(GPUParallelDimAttr parDim) {
+std::optional<Value> ComputeRegionOp::getLaunchArg(GPUParallelDimAttr parDim) {
   if (auto parWidthOp = getParWidthOpForLaunchArg(*this, parDim))
     return parWidthOp.getResult();
   return {};
@@ -436,8 +435,7 @@ LogicalResult ComputeRegionOp::verify() {
       return emitOpError(
           "launch arguments must be results of acc.par_width operations");
 
-  unsigned expectedBlockArgs =
-      getLaunchArgs().size() + getInputArgs().size();
+  unsigned expectedBlockArgs = getLaunchArgs().size() + getInputArgs().size();
   unsigned actualBlockArgs = getRegion().front().getNumArguments();
   if (expectedBlockArgs != actualBlockArgs)
     return emitOpError("expected ")
@@ -540,11 +538,11 @@ ParseResult ComputeRegionOp::parse(OpAsmParser &parser,
   assert(numLaunchOperands + numInputOperands == regionArgs.size() &&
          "compute region args mismatch");
 
-  result.addAttribute(ComputeRegionOp::getOperandSegmentSizeAttr(),
-                      builder.getDenseI32ArrayAttr(
-                          {static_cast<int32_t>(numLaunchOperands),
-                           static_cast<int32_t>(numInputOperands),
-                           hasStream ? 1 : 0}));
+  result.addAttribute(
+      ComputeRegionOp::getOperandSegmentSizeAttr(),
+      builder.getDenseI32ArrayAttr({static_cast<int32_t>(numLaunchOperands),
+                                    static_cast<int32_t>(numInputOperands),
+                                    hasStream ? 1 : 0}));
 
   for (size_t i = 0; i < numLaunchOperands; ++i) {
     if (parser.resolveOperand(launchOperands[i], types[i], result.operands))
