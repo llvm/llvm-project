@@ -186,6 +186,37 @@ public:
     friend Rematerializer;
   };
 
+  /// Rematerializer listener. Defines overridable hooks that allow to catch
+  /// specific events inside the rematerializer. All hooks do nothing by
+  /// default. Listeners can be added or removed at any time during the
+  /// rematerializer's lifetime.
+  class Listener {
+  private:
+    /// Called before register \p RegIdx is rematerialized to register \p
+    /// RematRegIdx. At this point the rematerialization does not exist.
+    virtual void beforeRegRematerialized(const Rematerializer &Remater,
+                                         RegisterIdx RegIdx,
+                                         RegisterIdx RematRegIdx) {}
+
+    /// Called just after register \p NewRegIdx is created (following a
+    /// rematerializations). At this point the rematerialization exists but does
+    /// not yet have any user.
+    virtual void newRegCreated(const Rematerializer &Remater,
+                               RegisterIdx NewRegIdx) {}
+
+    /// Called juste before register \p RegIdx is deleted from the MIR. At this
+    /// point the register still exists and is guaranteed to have 0 users.
+    virtual void beforeRegDeleted(const Rematerializer &Remater,
+                                  RegisterIdx RegIdx) {}
+
+    friend Rematerializer;
+
+  public:
+    using RegisterIdx = Rematerializer::RegisterIdx;
+
+    virtual ~Listener() = default;
+  };
+
   /// Error value for register indices.
   static constexpr unsigned NoReg = ~0;
 
@@ -206,6 +237,11 @@ public:
   /// when they longer have any users. Returns whether there is any
   /// rematerializable register in regions.
   bool analyze(bool SupportRollback);
+
+  /// Adds a listener to the rematerializer.
+  void addListener(Listener *Listen) { Listeners.push_back(Listen); }
+  /// Removes all listeners from the rematerializer.
+  void clearListeners() { Listeners.clear(); }
 
   inline const Reg &getReg(RegisterIdx RegIdx) const {
     assert(RegIdx < Regs.size() && "out of bounds");
@@ -386,6 +422,13 @@ private:
   LiveIntervals &LIS;
   const TargetInstrInfo &TII;
   const TargetRegisterInfo &TRI;
+  SmallVector<Listener *, 2> Listeners;
+
+  template <typename Callback, typename... ArgsTy>
+  void notifyListeners(Callback Cb, ArgsTy &&...Args) const {
+    for (Listener *Listen : Listeners)
+      (Listen->*Cb)(*this, std::forward<ArgsTy>(Args)...);
+  }
 
   /// Rematerializable registers identified since the rematerializer's creation,
   /// both dead and alive, originals and rematerializations. No register is ever
