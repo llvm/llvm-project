@@ -128,7 +128,7 @@ private:
 
 public:
   // Dereference and indexing operations.
-  _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX14 reference operator*() const _NOEXCEPT {
+  [[__nodiscard__]] _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX14 reference operator*() const _NOEXCEPT {
     _LIBCPP_ASSERT_VALID_ELEMENT_ACCESS(
         __current() != __end(), "__static_bounded_iter::operator*: Attempt to dereference an iterator at the end");
     return *__current();
@@ -140,7 +140,8 @@ public:
     return std::__to_address(__current());
   }
 
-  _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX14 reference operator[](difference_type __n) const _NOEXCEPT {
+  [[__nodiscard__]] _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX14 reference
+  operator[](difference_type __n) const _NOEXCEPT {
     _LIBCPP_ASSERT_VALID_ELEMENT_ACCESS(
         __n >= __begin() - __current(),
         "__static_bounded_iter::operator[]: Attempt to index an iterator past the start");
@@ -186,13 +187,13 @@ public:
     __current() += __n;
     return *this;
   }
-  _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX14 friend __static_bounded_iter
+  [[__nodiscard__]] _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX14 friend __static_bounded_iter
   operator+(__static_bounded_iter const& __self, difference_type __n) _NOEXCEPT {
     __static_bounded_iter __tmp(__self);
     __tmp += __n;
     return __tmp;
   }
-  _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX14 friend __static_bounded_iter
+  [[__nodiscard__]] _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX14 friend __static_bounded_iter
   operator+(difference_type __n, __static_bounded_iter const& __self) _NOEXCEPT {
     __static_bounded_iter __tmp(__self);
     __tmp += __n;
@@ -208,13 +209,13 @@ public:
     __current() -= __n;
     return *this;
   }
-  _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX14 friend __static_bounded_iter
+  [[__nodiscard__]] _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX14 friend __static_bounded_iter
   operator-(__static_bounded_iter const& __self, difference_type __n) _NOEXCEPT {
     __static_bounded_iter __tmp(__self);
     __tmp -= __n;
     return __tmp;
   }
-  _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX14 friend difference_type
+  [[__nodiscard__]] _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX14 friend difference_type
   operator-(__static_bounded_iter const& __x, __static_bounded_iter const& __y) _NOEXCEPT {
     return __x.__current() - __y.__current();
   }
@@ -306,7 +307,7 @@ struct pointer_traits<__static_bounded_iter<_Iterator, _Size> > {
   using element_type    = typename pointer_traits<_Iterator>::element_type;
   using difference_type = typename pointer_traits<_Iterator>::difference_type;
 
-  _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR static element_type* to_address(pointer __it) _NOEXCEPT {
+  [[__nodiscard__]] _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR static element_type* to_address(pointer __it) _NOEXCEPT {
     return std::__to_address(__it.__current());
   }
 };
