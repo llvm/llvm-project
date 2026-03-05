@@ -51,6 +51,7 @@ if (NOT LLD_BUILT_STANDALONE)
     llvm-bcanalyzer
     llvm-cgdata
     llvm-config
+    llvm-cov
     llvm-cvtres
     llvm-dis
     llvm-dlltool
