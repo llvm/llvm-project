@@ -8025,11 +8025,11 @@ struct EqualBBWrapper {
       return false;
 
     // TODO: relax this condition to merge equal blocks with >1 instructions?
-    if (BB->size() != 1)
+    if (/* I.e., O(n) calc: size() != 1 */ &BB->front() != &BB->back())
       return false;
 
     // The BB must have at least one predecessor.
-    if (!BB->hasNPredecessorsOrMore(1))
+    if (pred_empty(BB))
       return false;
 
     return true;
