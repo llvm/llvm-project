@@ -1695,7 +1695,6 @@ BuiltinTypeDeclBuilder::addGatherCmpMethods(ResourceDimension Dim) {
         .callBuiltin("__builtin_hlsl_resource_gather_cmp", ReturnType,
                      PH::Handle, PH::LastStmt, PH::_1, PH::_2,
                      getConstantUnsignedIntExpr(V.Component))
-        .returnValue(PH::LastStmt)
         .finalize();
 
     // ret GatherCmpVariant(SamplerComparisonState s, float2 location, float
