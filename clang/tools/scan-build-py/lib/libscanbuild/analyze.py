@@ -23,6 +23,7 @@ import contextlib
 import datetime
 import shutil
 import glob
+import platform
 from collections import defaultdict
 
 from libscanbuild import (
@@ -563,7 +564,7 @@ def report_failure(opts):
         handle.write(opts["file"] + os.linesep)
         handle.write(error.title().replace("_", " ") + os.linesep)
         handle.write(" ".join(cmd) + os.linesep)
-        handle.write(" ".join(os.uname()) + os.linesep)
+        handle.write(" ".join(platform.uname()) + os.linesep)
         handle.write(get_version(opts["clang"]))
         handle.close()
     # write the captured output too
