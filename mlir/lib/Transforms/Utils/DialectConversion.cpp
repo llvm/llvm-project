@@ -1306,7 +1306,11 @@ void ReplaceOperationRewrite::commit(RewriterBase &rewriter) {
 
   // Do not erase the operation yet. It may still be referenced in `mapping`.
   // Just unlink it for now and erase it during cleanup.
-  op->getBlock()->getOperations().remove(op);
+  // Note: The op may not have a parent block if it was detached (e.g., when
+  // dialect conversion is applied to a top-level op with no parent block.
+  // In that case, there is nothing to unlink.
+  if (Block *block = op->getBlock())
+    block->getOperations().remove(op);
 }
 
 void ReplaceOperationRewrite::rollback() {
@@ -3459,6 +3463,16 @@ LogicalResult ConversionPatternRewriter::legalize(Region *r) {
 LogicalResult OperationConverter::applyConversion(ArrayRef<Operation *> ops) {
   // Convert each operation and discard rewrites on failure.
   ConversionPatternRewriterImpl &rewriterImpl = rewriter.getImpl();
+
+  // Track which root ops are detached (not in any block). If a detached root
+  // op is replaced or erased during conversion, we must report an error because
+  // the newly inserted replacement op would have no parent context, and the
+  // original op cannot be properly unlinked.
+  SmallPtrSet<Operation *, 4> detachedRootOps;
+  for (Operation *op : ops)
+    if (!op->getBlock())
+      detachedRootOps.insert(op);
+
   LogicalResult status = legalizeOperations(ops, /*onFailure=*/[&]() {
     // Dialect conversion failed.
     if (rewriterImpl.config.allowPatternRollback) {
@@ -3472,6 +3486,21 @@ LogicalResult OperationConverter::applyConversion(ArrayRef<Operation *> ops) {
   });
   if (failed(status))
     return failure();
+
+  // Check whether any originally-detached root op was replaced or erased
+  // during conversion. Such ops cannot be properly handled: the replacement op
+  // would be detached as well, and the original op cannot be unlinked from a
+  // (non-existent) parent block. Roll back and report an error.
+  if (rewriterImpl.config.allowPatternRollback) {
+    for (Operation *op : detachedRootOps) {
+      if (rewriterImpl.wasOpReplaced(op)) {
+        rewriterImpl.undoRewrites();
+        return op->emitError("dialect conversion requires that the root "
+                             "operation is nested within a block when it is "
+                             "replaced or erased by the conversion");
+      }
+    }
+  }
 
   // After a successful conversion, apply rewrites.
   rewriterImpl.applyRewrites();
