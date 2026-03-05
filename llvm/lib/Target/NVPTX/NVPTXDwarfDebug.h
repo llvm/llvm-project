@@ -33,6 +33,14 @@ public:
   /// Constructor - Pass through to DwarfDebug constructor.
   NVPTXDwarfDebug(AsmPrinter *A);
 
+  /// Get or create an MCSymbol in .debug_str for a function's linkage name.
+  /// Used to reference the function name in .loc directives with inlined_at.
+  MCSymbol *getOrCreateFuncNameSymbol(StringRef LinkageName);
+
+  /// Returns true if the enhanced lineinfo mode (with inlined_at) is active
+  /// for the given MachineFunction.
+  bool isEnhancedLineinfo(const MachineFunction &MF) const;
+
 protected:
   /// Override to collect inlined_at locations.
   void initializeTargetDebugInfo(const MachineFunction &MF) override;
