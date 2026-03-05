@@ -1295,10 +1295,10 @@ public:
     /// VPlan, used by the epilogue vector loop.
     ResumeForEpilogue,
     /// Extracts the last active lane from a set of vectors. The first operand
-    /// is the default value if no lanes are active. Conceptually, this
-    /// concatenates all data vectors (odd operands), concatenates all masks
-    /// (even operands -- ignoring the default value), and returns the last
-    /// active value from the combined data vector using the combined mask.
+    /// is the default value if no lanes in the masks are active. Conceptually,
+    /// this concatenates all data vectors (odd operands), concatenates all
+    /// masks (even operands -- ignoring the default value), and returns the
+    /// last active value from the combined data vector using the combined mask.
     ExtractLastActive,
 
     /// Returns the value for vscale.

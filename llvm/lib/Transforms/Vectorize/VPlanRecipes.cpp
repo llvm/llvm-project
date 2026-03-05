@@ -905,8 +905,7 @@ Value *VPInstruction::generate(VPTransformState &State) {
   case VPInstruction::Reverse:
     return Builder.CreateVectorReverse(State.get(getOperand(0)), "reverse");
   case VPInstruction::ExtractLastActive: {
-    Value *Default = State.get(getOperand(0), /*IsScalar=*/true);
-    Value *Result = Default;
+    Value *Result = State.get(getOperand(0), /*IsScalar=*/true);
     for (unsigned Idx = 1; Idx < getNumOperands(); Idx += 2) {
       Value *Data = State.get(getOperand(Idx));
       Value *Mask = State.get(getOperand(Idx + 1));
