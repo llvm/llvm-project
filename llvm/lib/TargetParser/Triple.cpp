@@ -2167,6 +2167,16 @@ bool Triple::isLittleEndian() const {
   }
 }
 
+unsigned Triple::getDefaultWCharSize() const {
+  if (getArch() == Triple::xcore)
+    return 1;
+  if (isOSWindows() || isWindowsCygwinEnvironment() || isPS() || isUEFI())
+    return 2;
+  if (isOSAIX() && isArch32Bit())
+    return 2;
+  return 4;
+}
+
 bool Triple::isCompatibleWith(const Triple &Other) const {
   // On MinGW, C code is usually built with a "w64" vendor, while Rust
   // often uses a "pc" vendor.
