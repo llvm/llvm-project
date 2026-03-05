@@ -11,23 +11,23 @@ define void @smax_call_uniform(ptr %dst, i64 %x) {
 ; CHECK-NEXT:  [[ENTRY:.*]]:
 ; CHECK-NEXT:    [[C:%.*]] = icmp ult i8 -68, -69
 ; CHECK-NEXT:    [[MUL:%.*]] = mul nuw nsw i64 [[X]], 0
-; CHECK-NEXT:    br label %[[LOOP_HEADER:.*]]
-; CHECK:       [[LOOP_HEADER]]:
-; CHECK-NEXT:    [[IV:%.*]] = phi i64 [ 0, %[[ENTRY]] ], [ [[INDEX_NEXT:%.*]], %[[LOOP_LATCH:.*]] ]
-; CHECK-NEXT:    br i1 [[C]], label %[[LOOP_LATCH]], label %[[ELSE:.*]]
-; CHECK:       [[ELSE]]:
+; CHECK-NEXT:    br label %[[PRED_UREM_CONTINUE4:.*]]
+; CHECK:       [[PRED_UREM_CONTINUE4]]:
+; CHECK-NEXT:    [[IV:%.*]] = phi i64 [ 0, %[[ENTRY]] ], [ [[INDEX_NEXT:%.*]], %[[PRED_UREM_CONTINUE6:.*]] ]
+; CHECK-NEXT:    br i1 [[C]], label %[[PRED_UREM_CONTINUE6]], label %[[PRED_UREM_IF5:.*]]
+; CHECK:       [[PRED_UREM_IF5]]:
 ; CHECK-NEXT:    [[REM:%.*]] = urem i64 [[MUL]], [[X]]
 ; CHECK-NEXT:    [[SMAX:%.*]] = tail call i64 @llvm.smax.i64(i64 [[REM]], i64 0)
-; CHECK-NEXT:    br label %[[LOOP_LATCH]]
-; CHECK:       [[LOOP_LATCH]]:
-; CHECK-NEXT:    [[PREDPHI7:%.*]] = phi i64 [ 1, %[[LOOP_HEADER]] ], [ [[SMAX]], %[[ELSE]] ]
+; CHECK-NEXT:    br label %[[PRED_UREM_CONTINUE6]]
+; CHECK:       [[PRED_UREM_CONTINUE6]]:
+; CHECK-NEXT:    [[PREDPHI7:%.*]] = phi i64 [ 1, %[[PRED_UREM_CONTINUE4]] ], [ [[SMAX]], %[[PRED_UREM_IF5]] ]
 ; CHECK-NEXT:    [[TMP17:%.*]] = add i64 [[PREDPHI7]], 1
 ; CHECK-NEXT:    [[TMP19:%.*]] = getelementptr i64, ptr [[DST]], i64 [[TMP17]]
 ; CHECK-NEXT:    store i64 0, ptr [[TMP19]], align 8
 ; CHECK-NEXT:    [[INDEX_NEXT]] = add i64 [[IV]], 1
 ; CHECK-NEXT:    [[TMP20:%.*]] = icmp eq i64 [[INDEX_NEXT]], 1024
-; CHECK-NEXT:    br i1 [[TMP20]], label %[[EXIT:.*]], label %[[LOOP_HEADER]]
-; CHECK:       [[EXIT]]:
+; CHECK-NEXT:    br i1 [[TMP20]], label %[[EXIT1:.*]], label %[[PRED_UREM_CONTINUE4]]
+; CHECK:       [[EXIT1]]:
 ; CHECK-NEXT:    ret void
 ;
 entry:
