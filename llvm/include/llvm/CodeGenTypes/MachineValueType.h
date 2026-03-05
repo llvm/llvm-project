@@ -455,6 +455,17 @@ namespace llvm {
       return (MVT::SimpleValueType)(MVT::INVALID_SIMPLE_VALUE_TYPE);
     }
 
+    static MVT getCheriCapabilityVT(unsigned BitWidth) {
+      switch (BitWidth) {
+      default:
+        return (MVT::SimpleValueType)(MVT::INVALID_SIMPLE_VALUE_TYPE);
+      case 64:
+        return MVT::c64;
+      case 128:
+        return MVT::c128;
+      }
+    }
+
     static MVT getVectorVT(MVT VT, unsigned NumElements) {
 #define GET_VT_VECATTR(Ty, Sc, Tup, nElem, ElTy)                             \
     if (!Sc && !Tup && VT.SimpleTy == ElTy && NumElements == nElem)            \
