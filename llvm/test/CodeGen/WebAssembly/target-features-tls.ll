@@ -12,13 +12,10 @@ target triple = "wasm32-unknown-unknown"
 
 ; -bulk-memory
 ; NO-BULK-MEM-LABEL: .custom_section.target_features,"",@
-; NO-BULK-MEM-NEXT: .int8 3
+; NO-BULK-MEM-NEXT: .int8 2
 ; NO-BULK-MEM-NEXT: .int8 43
 ; NO-BULK-MEM-NEXT: .int8 7
 ; NO-BULK-MEM-NEXT: .ascii "atomics"
-; NO-BULK-MEM-NEXT: .int8 45
-; NO-BULK-MEM-NEXT: .int8 30
-; NO-BULK-MEM-NEXT: .ascii "component-model-thread-context"
 ; NO-BULK-MEM-NEXT: .int8 45
 ; NO-BULK-MEM-NEXT: .int8 10
 ; NO-BULK-MEM-NEXT: .ascii "shared-mem"
@@ -26,7 +23,7 @@ target triple = "wasm32-unknown-unknown"
 
 ; +bulk-memory
 ; BULK-MEM-LABEL: .custom_section.target_features,"",@
-; BULK-MEM-NEXT: .int8 4
+; BULK-MEM-NEXT: .int8 3
 ; BULK-MEM-NEXT: .int8 43
 ; BULK-MEM-NEXT: .int8 7
 ; BULK-MEM-NEXT: .ascii "atomics"
@@ -36,9 +33,6 @@ target triple = "wasm32-unknown-unknown"
 ; BULK-MEM-NEXT: .int8 43
 ; BULK-MEM-NEXT: .int8 15
 ; BULK-MEM-NEXT: .ascii "bulk-memory-opt"
-; BULK-MEM-NEXT: .int8 45
-; BULK-MEM-NEXT: .int8 30
-; BULK-MEM-NEXT: .ascii "component-model-thread-context"
 ; BULK-MEM-NEXT: .tbss.foo,"T",@
 
 ; -bulk-memory,+component-model-thread-context
