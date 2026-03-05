@@ -29,7 +29,7 @@ class UnsupportedSeparate<string name> : Separate<["/", "-"], name>,
                                          Group<unsupported_Group>;
 
 def bitness : LLVMJoined<"m">, Values<"32,64">,
-              HelpText<"Target platform (x86 or x86-64)">;
+              HelpText<"Target platform (set to 32 for x86 or to 64 for x86-64)">;
 def as_lex : LLVMFlag<"as-lex">,
              HelpText<"Lex tokens from a file without assembling">;
 def debug : LLVMFlag<"debug">, Flags<[HelpHidden]>,
