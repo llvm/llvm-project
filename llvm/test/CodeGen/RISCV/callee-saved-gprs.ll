@@ -1382,14 +1382,15 @@ define void @callee() {
 ; RV32I-ZILSD-WITH-FP-NEXT:    addi sp, sp, -80
 ; RV32I-ZILSD-WITH-FP-NEXT:    .cfi_def_cfa_offset 80
 ; RV32I-ZILSD-WITH-FP-NEXT:    sw ra, 76(sp) # 4-byte Folded Spill
-; RV32I-ZILSD-WITH-FP-NEXT:    sd s0, 64(sp) # 8-byte Folded Spill
+; RV32I-ZILSD-WITH-FP-NEXT:    sw s0, 72(sp) # 4-byte Folded Spill
+; RV32I-ZILSD-WITH-FP-NEXT:    sw s1, 68(sp) # 4-byte Folded Spill
 ; RV32I-ZILSD-WITH-FP-NEXT:    sd s2, 56(sp) # 8-byte Folded Spill
 ; RV32I-ZILSD-WITH-FP-NEXT:    sd s4, 48(sp) # 8-byte Folded Spill
 ; RV32I-ZILSD-WITH-FP-NEXT:    sd s6, 40(sp) # 8-byte Folded Spill
 ; RV32I-ZILSD-WITH-FP-NEXT:    sd s8, 32(sp) # 8-byte Folded Spill
 ; RV32I-ZILSD-WITH-FP-NEXT:    sd s10, 24(sp) # 8-byte Folded Spill
 ; RV32I-ZILSD-WITH-FP-NEXT:    .cfi_offset ra, -4
-; RV32I-ZILSD-WITH-FP-NEXT:    .cfi_offset s0, -16
+; RV32I-ZILSD-WITH-FP-NEXT:    .cfi_offset s0, -8
 ; RV32I-ZILSD-WITH-FP-NEXT:    .cfi_offset s1, -12
 ; RV32I-ZILSD-WITH-FP-NEXT:    .cfi_offset s2, -24
 ; RV32I-ZILSD-WITH-FP-NEXT:    .cfi_offset s3, -20
@@ -1472,7 +1473,8 @@ define void @callee() {
 ; RV32I-ZILSD-WITH-FP-NEXT:    sw a1, 0(a0)
 ; RV32I-ZILSD-WITH-FP-NEXT:    .cfi_def_cfa sp, 80
 ; RV32I-ZILSD-WITH-FP-NEXT:    lw ra, 76(sp) # 4-byte Folded Reload
-; RV32I-ZILSD-WITH-FP-NEXT:    ld s0, 64(sp) # 8-byte Folded Reload
+; RV32I-ZILSD-WITH-FP-NEXT:    lw s0, 72(sp) # 4-byte Folded Reload
+; RV32I-ZILSD-WITH-FP-NEXT:    lw s1, 68(sp) # 4-byte Folded Reload
 ; RV32I-ZILSD-WITH-FP-NEXT:    ld s2, 56(sp) # 8-byte Folded Reload
 ; RV32I-ZILSD-WITH-FP-NEXT:    ld s4, 48(sp) # 8-byte Folded Reload
 ; RV32I-ZILSD-WITH-FP-NEXT:    ld s6, 40(sp) # 8-byte Folded Reload
@@ -3414,14 +3416,15 @@ define void @caller() {
 ; RV32I-ZILSD-WITH-FP-NEXT:    addi sp, sp, -144
 ; RV32I-ZILSD-WITH-FP-NEXT:    .cfi_def_cfa_offset 144
 ; RV32I-ZILSD-WITH-FP-NEXT:    sw ra, 140(sp) # 4-byte Folded Spill
-; RV32I-ZILSD-WITH-FP-NEXT:    sd s0, 128(sp) # 8-byte Folded Spill
+; RV32I-ZILSD-WITH-FP-NEXT:    sw s0, 136(sp) # 4-byte Folded Spill
+; RV32I-ZILSD-WITH-FP-NEXT:    sw s1, 132(sp) # 4-byte Folded Spill
 ; RV32I-ZILSD-WITH-FP-NEXT:    sd s2, 120(sp) # 8-byte Folded Spill
 ; RV32I-ZILSD-WITH-FP-NEXT:    sd s4, 112(sp) # 8-byte Folded Spill
 ; RV32I-ZILSD-WITH-FP-NEXT:    sd s6, 104(sp) # 8-byte Folded Spill
 ; RV32I-ZILSD-WITH-FP-NEXT:    sd s8, 96(sp) # 8-byte Folded Spill
 ; RV32I-ZILSD-WITH-FP-NEXT:    sd s10, 88(sp) # 8-byte Folded Spill
 ; RV32I-ZILSD-WITH-FP-NEXT:    .cfi_offset ra, -4
-; RV32I-ZILSD-WITH-FP-NEXT:    .cfi_offset s0, -16
+; RV32I-ZILSD-WITH-FP-NEXT:    .cfi_offset s0, -8
 ; RV32I-ZILSD-WITH-FP-NEXT:    .cfi_offset s1, -12
 ; RV32I-ZILSD-WITH-FP-NEXT:    .cfi_offset s2, -24
 ; RV32I-ZILSD-WITH-FP-NEXT:    .cfi_offset s3, -20
@@ -3532,7 +3535,8 @@ define void @caller() {
 ; RV32I-ZILSD-WITH-FP-NEXT:    sw a0, 0(s1)
 ; RV32I-ZILSD-WITH-FP-NEXT:    .cfi_def_cfa sp, 144
 ; RV32I-ZILSD-WITH-FP-NEXT:    lw ra, 140(sp) # 4-byte Folded Reload
-; RV32I-ZILSD-WITH-FP-NEXT:    ld s0, 128(sp) # 8-byte Folded Reload
+; RV32I-ZILSD-WITH-FP-NEXT:    lw s0, 136(sp) # 4-byte Folded Reload
+; RV32I-ZILSD-WITH-FP-NEXT:    lw s1, 132(sp) # 4-byte Folded Reload
 ; RV32I-ZILSD-WITH-FP-NEXT:    ld s2, 120(sp) # 8-byte Folded Reload
 ; RV32I-ZILSD-WITH-FP-NEXT:    ld s4, 112(sp) # 8-byte Folded Reload
 ; RV32I-ZILSD-WITH-FP-NEXT:    ld s6, 104(sp) # 8-byte Folded Reload

@@ -1683,20 +1683,24 @@ void RISCVFrameLowering::determineCalleeSaves(MachineFunction &MF,
   // aliases like X8_W or X8_H which are not set in SavedRegs.
   for (unsigned i = 0; CSRegs[i]; ++i) {
     unsigned CSReg = CSRegs[i];
-    bool AllSubRegsSaved;
+    bool CombineToSuperReg;
     if (RISCV::GPRPairRegClass.contains(CSReg)) {
       MCPhysReg EvenReg = TRI.getSubReg(CSReg, RISCV::sub_gpr_even);
       MCPhysReg OddReg = TRI.getSubReg(CSReg, RISCV::sub_gpr_odd);
-      AllSubRegsSaved = SavedRegs.test(EvenReg) && SavedRegs.test(OddReg);
+      CombineToSuperReg = SavedRegs.test(EvenReg) && SavedRegs.test(OddReg);
+      // If s0(x8) is used as FP we can't generate load/store pair because it
+      // breaks the frame chain.
+      if (hasFP(MF) && CSReg == RISCV::X8_X9)
+        CombineToSuperReg = false;
     } else {
       auto SubRegs = TRI.subregs(CSReg);
-      AllSubRegsSaved =
+      CombineToSuperReg =
           !SubRegs.empty() && llvm::all_of(SubRegs, [&](unsigned Reg) {
             return SavedRegs.test(Reg);
           });
     }
 
-    if (AllSubRegsSaved)
+    if (CombineToSuperReg)
       SavedRegs.set(CSReg);
   }
 
