@@ -33,10 +33,10 @@ module attributes {omp.target_triples = ["amdgcn-amd-amdhsa"]} {
 }
 
 // CHECK-LABEL: define void @test_mapper_combined_entries
-// CHECK: %[[MAPPERS:.*offload_mappers.*]] = alloca [4 x ptr]
-// CHECK: %[[MAPPER0:.*]] = getelementptr inbounds [4 x ptr], ptr %[[MAPPERS]], i64 0, i64 0
+// CHECK: %[[MAPPERS:.*offload_mappers.*]] = alloca [3 x ptr]
+// CHECK: %[[MAPPER0:.*]] = getelementptr inbounds [3 x ptr], ptr %[[MAPPERS]], i64 0, i64 0
 // CHECK: store ptr @.omp_mapper.mapper, ptr %[[MAPPER0]]
-// CHECK: %[[MAPPER1:.*]] = getelementptr inbounds [4 x ptr], ptr %[[MAPPERS]], i64 0, i64 1
+// CHECK: %[[MAPPER1:.*]] = getelementptr inbounds [3 x ptr], ptr %[[MAPPERS]], i64 0, i64 1
 // CHECK: store ptr null, ptr %[[MAPPER1]]
-// CHECK: %[[MAPPER2:.*]] = getelementptr inbounds [4 x ptr], ptr %[[MAPPERS]], i64 0, i64 2
+// CHECK: %[[MAPPER2:.*]] = getelementptr inbounds [3 x ptr], ptr %[[MAPPERS]], i64 0, i64 2
 // CHECK: store ptr null, ptr %[[MAPPER2]]
