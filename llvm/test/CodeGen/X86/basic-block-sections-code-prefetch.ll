@@ -34,9 +34,9 @@ cond.true:                                           ; preds = %1
 ; CHECK:        .globl __llvm_prefetch_target_foo_1_0
 ; CHECK-NEXT: __llvm_prefetch_target_foo_1_0:
 ; CHECK-NEXT:   callq bar@PLT
-; CHECK-NEXT:   prefetchit1     __llvm_prefetch_target_undef_5_5(%rip)
 ; CHECK-NEXT:   .globl __llvm_prefetch_target_foo_1_1
 ; CHECK-NEXT: __llvm_prefetch_target_foo_1_1:
+; CHECK-NEXT:   prefetchit1     __llvm_prefetch_target_undef_5_5(%rip)
 ; CHECK-NEXT:   .weak __llvm_prefetch_target_undef_5_5
 ; CHECK-NEXT: __llvm_prefetch_target_undef_5_5:
 
