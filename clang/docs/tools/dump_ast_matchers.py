@@ -6,6 +6,7 @@
 import collections
 import re
 import os
+import sys
 from urllib.request import urlopen
 
 
@@ -612,5 +613,7 @@ reference = re.sub(
     flags=re.S,
 )
 
-with open(HTML_FILE, "w", newline="\n") as output:
+output_file = sys.argv[1] if len(sys.argv) == 2 else HTML_FILE
+
+with open(output_file, "w", newline="\n") as output:
     output.write(reference)
