@@ -289,12 +289,21 @@ void AggExprEmitter::withReturnValueSlot(
   //
   // We also need a temporary if the destination is in a different address space
   // from the alloca AS, to avoid an invalid addrspacecast on the sret pointer.
-  bool UseTemp =
-      Dest.isPotentiallyAliased() || Dest.requiresGCollection() ||
-      (RequiresDestruction && Dest.isIgnored()) ||
-      (!Dest.isIgnored() && Dest.getAddress().getAddressSpace() !=
-                                CGF.getContext().getTargetAddressSpace(
-                                    CGF.CGM.getASTAllocaAddressSpace()));
+  // Look through addrspacecasts to avoid unnecessary temps when the
+  // destination is already in the alloca AS.
+  bool DestASMismatch = false;
+  if (!Dest.isIgnored()) {
+    unsigned SRetAS = CGF.getContext().getTargetAddressSpace(
+        CGF.CGM.getASTAllocaAddressSpace());
+    unsigned DestAS = Dest.getAddress()
+                          .getBasePointer()
+                          ->stripPointerCasts()
+                          ->getType()
+                          ->getPointerAddressSpace();
+    DestASMismatch = DestAS != SRetAS;
+  }
+  bool UseTemp = Dest.isPotentiallyAliased() || Dest.requiresGCollection() ||
+                 (RequiresDestruction && Dest.isIgnored()) || DestASMismatch;
 
   Address RetAddr = Address::invalid();
 

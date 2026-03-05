@@ -53,10 +53,9 @@ __attribute__((global)) void kernel(Big *out) {
 // CHECK-SAME: ) #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
 // CHECK-NEXT:    [[LOCAL:%.*]] = alloca [[STRUCT_BIG:%.*]], align 4, addrspace(5)
-// CHECK-NEXT:    [[TMP:%.*]] = alloca [[STRUCT_BIG]], align 4, addrspace(5)
 // CHECK-NEXT:    [[LOCAL_ASCAST:%.*]] = addrspacecast ptr addrspace(5) [[LOCAL]] to ptr
-// CHECK-NEXT:    call void @_Z8make_bigv(ptr addrspace(5) dead_on_unwind writable sret([[STRUCT_BIG]]) align 4 [[TMP]]) #[[ATTR3]]
-// CHECK-NEXT:    call void @llvm.memcpy.p0.p5.i64(ptr align 4 [[LOCAL_ASCAST]], ptr addrspace(5) align 4 [[TMP]], i64 128, i1 false)
+// CHECK-NEXT:    [[LOCAL_ASCAST_ASCAST:%.*]] = addrspacecast ptr [[LOCAL_ASCAST]] to ptr addrspace(5)
+// CHECK-NEXT:    call void @_Z8make_bigv(ptr addrspace(5) dead_on_unwind writable sret([[STRUCT_BIG]]) align 4 [[LOCAL_ASCAST_ASCAST]]) #[[ATTR3]]
 // CHECK-NEXT:    ret void
 //
 __attribute__((device)) void local_test() {
