@@ -273,8 +273,9 @@ Type *VPTypeAnalysis::inferScalarTypeForRecipe(const VPReplicateRecipe *R) {
 }
 
 Type *VPTypeAnalysis::inferScalarType(const VPValue *V) {
-  if (Type *CachedTy = CachedTypes.lookup(V))
-    return CachedTy;
+  auto CachedIt = CachedTypes.find_as(V);
+  if (CachedIt != CachedTypes.end())
+    return CachedIt->second;
 
   if (auto *IRV = dyn_cast<VPIRValue>(V))
     return IRV->getType();

@@ -152,6 +152,62 @@ VPRecipeValue::~VPRecipeValue() {
   Def->removeDefinedValue(this);
 }
 
+#if LLVM_ENABLE_ABI_BREAKING_CHECKS && !defined(NDEBUG)
+const VPlan *PoisoningVPValueHandle::getVPlan(const VPValue *V) {
+  const VPRecipeBase *Def = V->getDefiningRecipe();
+  if (!Def || !Def->getParent())
+    return nullptr;
+  return Def->getParent()->getPlan();
+}
+
+void PoisoningVPValueHandle::addToList() {
+  Plan = getVPlan(VP);
+  if (!Plan)
+    return;
+  auto &Map = Plan->PoisoningHandles;
+  PoisoningVPValueHandle *&Head = Map[VP];
+  Next = Head;
+  Head = this;
+}
+
+void PoisoningVPValueHandle::removeFromList() {
+  if (!Plan)
+    return;
+  auto &Map = Plan->PoisoningHandles;
+  auto It = Map.find(VP);
+  assert(It != Map.end() && "VPValue not in handle map");
+  PoisoningVPValueHandle **Cur = &It->second;
+  while (*Cur != this) {
+    assert(*Cur && "Handle not found in list for VPValue");
+    Cur = &(*Cur)->Next;
+  }
+  *Cur = Next;
+  if (It->second == nullptr)
+    Map.erase(It);
+  Next = nullptr;
+  Plan = nullptr;
+}
+
+void PoisoningVPValueHandle::poisonAll(const VPlan *Plan, const VPValue *V) {
+  if (!Plan)
+    return;
+  auto &Map = Plan->PoisoningHandles;
+  auto It = Map.find(V);
+  if (It == Map.end())
+    return;
+  PoisoningVPValueHandle *Cur = It->second;
+  while (Cur) {
+    assert(!Cur->Poisoned && "Handle already poisoned");
+    Cur->Poisoned = true;
+    Cur->Plan = nullptr;
+    Cur = Cur->Next;
+  }
+  Map.erase(It);
+}
+#else
+void PoisoningVPValueHandle::poisonAll(const VPlan *, const VPValue *) {}
+#endif
+
 // Get the top-most entry block of \p Start. This is the entry block of the
 // containing VPlan. This function is templated to support both const and non-const blocks
 template <typename T> static T *getPlanEntry(T *Start) {

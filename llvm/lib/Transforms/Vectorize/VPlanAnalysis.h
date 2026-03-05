@@ -9,6 +9,7 @@
 #ifndef LLVM_TRANSFORMS_VECTORIZE_VPLANANALYSIS_H
 #define LLVM_TRANSFORMS_VECTORIZE_VPLANANALYSIS_H
 
+#include "VPlanValue.h"
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/DenseSet.h"
 #include "llvm/ADT/MapVector.h"
@@ -17,7 +18,6 @@
 namespace llvm {
 
 class LLVMContext;
-class VPValue;
 class VPBlendRecipe;
 class VPInstruction;
 class VPWidenRecipe;
@@ -40,7 +40,7 @@ class Type;
 /// be constructed once a VPlan has been modified in a way that invalidates any
 /// of the previously inferred types.
 class VPTypeAnalysis {
-  DenseMap<const VPValue *, Type *> CachedTypes;
+  DenseMap<PoisoningVPValueHandle, Type *> CachedTypes;
   /// Type of the canonical induction variable. Used for all VPValues without
   /// any underlying IR value (like the vector trip count or the backedge-taken
   /// count).

@@ -20,6 +20,7 @@
 #ifndef LLVM_TRANSFORMS_VECTORIZE_VPLAN_VALUE_H
 #define LLVM_TRANSFORMS_VECTORIZE_VPLAN_VALUE_H
 
+#include "llvm/ADT/DenseMapInfo.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/TinyPtrVector.h"
@@ -35,10 +36,12 @@ class raw_ostream;
 class Type;
 class Value;
 class VPDef;
+class VPlan;
 class VPSlotTracker;
 class VPUser;
 class VPRecipeBase;
 class VPPhiAccessors;
+class PoisoningVPValueHandle;
 
 /// This is the base class of the VPlan Def/Use graph, used for modeling the
 /// data flow into, within and out of the VPlan. VPValues can stand for live-ins
@@ -425,6 +428,140 @@ public:
 
   /// Returns the number of values defined by the VPDef.
   unsigned getNumDefinedValues() const { return DefinedValues.size(); }
+};
+
+/// Value handle that poisons itself when the referenced VPValue is deleted,
+/// catching dangling pointer bugs (e.g. stale DenseMap keys). Only
+/// VPRecipeValues with a retrievable VPlan are tracked; other VPValue types
+/// work but are not poisoned. Does *not* follow RAUW.
+class LLVM_ABI_FOR_TEST PoisoningVPValueHandle {
+#if LLVM_ENABLE_ABI_BREAKING_CHECKS && !defined(NDEBUG)
+  const VPValue *VP = nullptr;
+  const VPlan *Plan = nullptr;
+  bool Poisoned = false;
+  PoisoningVPValueHandle *Next = nullptr;
+
+  /// Returns true if \p V is not null and not a DenseMap sentinel.
+  static bool isValid(const VPValue *V) {
+    return V && V != DenseMapInfo<const VPValue *>::getEmptyKey() &&
+           V != DenseMapInfo<const VPValue *>::getTombstoneKey();
+  }
+
+  /// Return the VPlan owning \p V, or nullptr if not available.
+  static const VPlan *getVPlan(const VPValue *V);
+
+  const VPValue *getRawValPtr() const { return VP; }
+  void setRawValPtr(const VPValue *P) {
+    if (isValid(VP) && !Poisoned)
+      removeFromList();
+    VP = P;
+    Poisoned = false;
+    Plan = nullptr;
+    if (isValid(VP))
+      addToList();
+  }
+
+  void addToList();
+  void removeFromList();
+
+  friend struct DenseMapInfo<PoisoningVPValueHandle>;
+#else
+  const VPValue *VP = nullptr;
+
+  const VPValue *getRawValPtr() const { return VP; }
+  void setRawValPtr(const VPValue *P) { VP = P; }
+#endif
+
+  const VPValue *getValPtr() const {
+#if LLVM_ENABLE_ABI_BREAKING_CHECKS && !defined(NDEBUG)
+    assert(!Poisoned && "Accessed a poisoned VPValue handle!");
+#endif
+    return VP;
+  }
+
+public:
+  PoisoningVPValueHandle() = default;
+  PoisoningVPValueHandle(const VPValue *V) : VP(V) {
+#if LLVM_ENABLE_ABI_BREAKING_CHECKS && !defined(NDEBUG)
+    if (isValid(VP))
+      addToList();
+#endif
+  }
+
+#if LLVM_ENABLE_ABI_BREAKING_CHECKS && !defined(NDEBUG)
+  PoisoningVPValueHandle(const PoisoningVPValueHandle &RHS)
+      : VP(RHS.VP), Poisoned(RHS.Poisoned) {
+    if (isValid(VP) && !Poisoned)
+      addToList();
+  }
+
+  ~PoisoningVPValueHandle() {
+    if (isValid(VP) && !Poisoned)
+      removeFromList();
+  }
+
+  PoisoningVPValueHandle &operator=(const PoisoningVPValueHandle &RHS) {
+    if (this == &RHS)
+      return *this;
+    if (isValid(VP) && !Poisoned)
+      removeFromList();
+    VP = RHS.VP;
+    Poisoned = RHS.Poisoned;
+    if (isValid(VP) && !Poisoned)
+      addToList();
+    return *this;
+  }
+#endif
+
+  operator const VPValue *() const { return getValPtr(); }
+  const VPValue *operator->() const { return getValPtr(); }
+  const VPValue &operator*() const { return *getValPtr(); }
+
+  static void poisonAll(const VPlan *Plan, const VPValue *V);
+};
+
+template <> struct DenseMapInfo<PoisoningVPValueHandle> {
+  static inline PoisoningVPValueHandle getEmptyKey() {
+    PoisoningVPValueHandle Res;
+    Res.setRawValPtr(DenseMapInfo<const VPValue *>::getEmptyKey());
+    return Res;
+  }
+
+  static inline PoisoningVPValueHandle getTombstoneKey() {
+    PoisoningVPValueHandle Res;
+    Res.setRawValPtr(DenseMapInfo<const VPValue *>::getTombstoneKey());
+    return Res;
+  }
+
+  static unsigned getHashValue(const PoisoningVPValueHandle &Val) {
+    return DenseMapInfo<const VPValue *>::getHashValue(Val.getRawValPtr());
+  }
+
+  static bool isEqual(const PoisoningVPValueHandle &LHS,
+                      const PoisoningVPValueHandle &RHS) {
+    if (!DenseMapInfo<const VPValue *>::isEqual(LHS.getRawValPtr(),
+                                                RHS.getRawValPtr()))
+      return false;
+#if LLVM_ENABLE_ABI_BREAKING_CHECKS && !defined(NDEBUG)
+    assert(!LHS.Poisoned && !RHS.Poisoned &&
+           "Accessed a poisoned VPValue handle!");
+#endif
+    return true;
+  }
+
+  // Allow lookup by raw VPValue* via find_as().
+  static unsigned getHashValue(const VPValue *Val) {
+    return DenseMapInfo<const VPValue *>::getHashValue(Val);
+  }
+
+  static bool isEqual(const VPValue *LHS, const PoisoningVPValueHandle &RHS) {
+    if (!DenseMapInfo<const VPValue *>::isEqual(LHS, RHS.getRawValPtr()))
+      return false;
+#if LLVM_ENABLE_ABI_BREAKING_CHECKS && !defined(NDEBUG)
+    assert(!RHS.Poisoned && "Accessed a poisoned VPValue handle!");
+#endif
+    return true;
+  }
 };
 
 } // namespace llvm
