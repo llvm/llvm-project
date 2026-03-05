@@ -299,33 +299,33 @@ define void @mul_add_common_mul_add_mul(<4 x double> %a, <4 x double> %b, <4 x d
 ; CHECK-LABEL: mul_add_common_mul_add_mul:
 ; CHECK:       // %bb.0: // %entry
 ; CHECK-NEXT:    movi v16.2d, #0000000000000000
-; CHECK-NEXT:    movi v17.2d, #0000000000000000
-; CHECK-NEXT:    ldr q19, [sp, #112]
 ; CHECK-NEXT:    ldp q18, q20, [sp, #80]
+; CHECK-NEXT:    ldr q19, [sp, #112]
+; CHECK-NEXT:    movi v17.2d, #0000000000000000
 ; CHECK-NEXT:    ldr q21, [sp, #64]
-; CHECK-NEXT:    movi v22.2d, #0000000000000000
 ; CHECK-NEXT:    fcmla v16.2d, v18.2d, v19.2d, #0
 ; CHECK-NEXT:    fcmla v17.2d, v21.2d, v20.2d, #0
-; CHECK-NEXT:    fcmla v22.2d, v1.2d, v3.2d, #0
 ; CHECK-NEXT:    fcmla v16.2d, v18.2d, v19.2d, #90
-; CHECK-NEXT:    movi v18.2d, #0000000000000000
 ; CHECK-NEXT:    fcmla v17.2d, v21.2d, v20.2d, #90
-; CHECK-NEXT:    fcmla v22.2d, v1.2d, v3.2d, #90
 ; CHECK-NEXT:    fcmla v16.2d, v5.2d, v7.2d, #0
-; CHECK-NEXT:    fcmla v18.2d, v0.2d, v2.2d, #0
 ; CHECK-NEXT:    fcmla v17.2d, v4.2d, v6.2d, #0
 ; CHECK-NEXT:    fcmla v16.2d, v5.2d, v7.2d, #90
-; CHECK-NEXT:    fcmla v18.2d, v0.2d, v2.2d, #90
 ; CHECK-NEXT:    fcmla v17.2d, v4.2d, v6.2d, #90
-; CHECK-NEXT:    ldp q3, q0, [sp, #32]
-; CHECK-NEXT:    ldp q2, q1, [sp]
-; CHECK-NEXT:    fsub v4.2d, v22.2d, v16.2d
-; CHECK-NEXT:    fsub v5.2d, v18.2d, v17.2d
-; CHECK-NEXT:    fcmla v16.2d, v0.2d, v1.2d, #0
-; CHECK-NEXT:    fcmla v17.2d, v3.2d, v2.2d, #0
-; CHECK-NEXT:    stp q5, q4, [x0]
-; CHECK-NEXT:    fcmla v16.2d, v0.2d, v1.2d, #90
-; CHECK-NEXT:    fcmla v17.2d, v3.2d, v2.2d, #90
+; CHECK-NEXT:    ldp q7, q6, [sp, #32]
+; CHECK-NEXT:    mov     v4.16b, v16.16b
+; CHECK-NEXT:    mov     v5.16b, v17.16b
+; CHECK-NEXT:    fcmla v4.2d, v1.2d, v3.2d, #180
+; CHECK-NEXT:    fcmla v5.2d, v0.2d, v2.2d, #180
+; CHECK-NEXT:    fcmla v4.2d, v1.2d, v3.2d, #270
+; CHECK-NEXT:    ldp q3, q1, [sp]
+; CHECK-NEXT:    fcmla v5.2d, v0.2d, v2.2d, #270
+; CHECK-NEXT:    fcmla v16.2d, v6.2d, v1.2d, #0
+; CHECK-NEXT:    fcmla v17.2d, v7.2d, v3.2d, #0
+; CHECK-NEXT:    fneg v0.2d, v4.2d
+; CHECK-NEXT:    fneg v2.2d, v5.2d
+; CHECK-NEXT:    fcmla v16.2d, v6.2d, v1.2d, #90
+; CHECK-NEXT:    fcmla v17.2d, v7.2d, v3.2d, #90
+; CHECK-NEXT:    stp q2, q0, [x0]
 ; CHECK-NEXT:    stp q17, q16, [x1]
 ; CHECK-NEXT:    ret
 entry:

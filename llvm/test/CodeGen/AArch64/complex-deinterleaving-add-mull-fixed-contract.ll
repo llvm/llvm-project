@@ -7,19 +7,14 @@ target triple = "aarch64"
 define <4 x double> @mull_add(<4 x double> %a, <4 x double> %b, <4 x double> %c) {
 ; CHECK-LABEL: mull_add:
 ; CHECK:       // %bb.0: // %entry
-; CHECK-NEXT:    zip2 v4.2d, v2.2d, v3.2d
-; CHECK-NEXT:    zip2 v5.2d, v0.2d, v1.2d
-; CHECK-NEXT:    zip1 v0.2d, v0.2d, v1.2d
-; CHECK-NEXT:    zip1 v2.2d, v2.2d, v3.2d
-; CHECK-NEXT:    fmul v1.2d, v5.2d, v4.2d
-; CHECK-NEXT:    fmul v3.2d, v0.2d, v4.2d
-; CHECK-NEXT:    fneg v1.2d, v1.2d
-; CHECK-NEXT:    fmla v3.2d, v2.2d, v5.2d
-; CHECK-NEXT:    fmla v1.2d, v2.2d, v0.2d
-; CHECK-NEXT:    fadd v1.2d, v2.2d, v1.2d
-; CHECK-NEXT:    fadd v2.2d, v3.2d, v4.2d
-; CHECK-NEXT:    zip1 v0.2d, v1.2d, v2.2d
-; CHECK-NEXT:    zip2 v1.2d, v1.2d, v2.2d
+; CHECK-NEXT:    movi    v6.2d, #0000000000000000
+; CHECK-NEXT:    movi    v7.2d, #0000000000000000
+; CHECK-NEXT:    fcmla   v7.2d, v2.2d, v0.2d, #90
+; CHECK-NEXT:    fcmla   v6.2d, v3.2d, v1.2d, #90
+; CHECK-NEXT:    fcmla   v7.2d, v2.2d, v0.2d, #0
+; CHECK-NEXT:    fcmla   v6.2d, v3.2d, v1.2d, #0
+; CHECK-NEXT:    fadd    v0.2d, v4.2d, v7.2d
+; CHECK-NEXT:    fadd    v1.2d, v5.2d, v6.2d
 ; CHECK-NEXT:    ret
 entry:
   %strided.vec = shufflevector <4 x double> %a, <4 x double> poison, <2 x i32> <i32 0, i32 2>
@@ -32,11 +27,71 @@ entry:
   %3 = fmul contract <2 x double> %strided.vec, %strided.vec30
   %4 = fmul contract <2 x double> %strided.vec28, %strided.vec31
   %5 = fsub contract <2 x double> %3, %4
-  %strided.vec33 = shufflevector <4 x double> %b, <4 x double> poison, <2 x i32> <i32 0, i32 2>
-  %strided.vec34 = shufflevector <4 x double> %b, <4 x double> poison, <2 x i32> <i32 1, i32 3>
+  %strided.vec33 = shufflevector <4 x double> %c, <4 x double> poison, <2 x i32> <i32 0, i32 2>
+  %strided.vec34 = shufflevector <4 x double> %c, <4 x double> poison, <2 x i32> <i32 1, i32 3>
   %6 = fadd contract <2 x double> %strided.vec33, %5
   %7 = fadd contract <2 x double> %2, %strided.vec34
   %interleaved.vec = shufflevector <2 x double> %6, <2 x double> %7, <4 x i32> <i32 0, i32 2, i32 1, i32 3>
+  ret <4 x double> %interleaved.vec
+}
+
+; a * b + c
+define <4 x double> @mull_accum(<4 x double> %a, <4 x double> %b, <4 x double> %c) {
+; CHECK-LABEL: mull_accum:
+; CHECK:       // %bb.0: // %entry
+; CHECK-NEXT:    fcmla   v4.2d, v0.2d, v2.2d, #0
+; CHECK-NEXT:    fcmla   v5.2d, v1.2d, v3.2d, #0
+; CHECK-NEXT:    fcmla   v4.2d, v0.2d, v2.2d, #90
+; CHECK-NEXT:    fcmla   v5.2d, v1.2d, v3.2d, #90
+; CHECK-NEXT:    mov     v0.16b, v4.16b
+; CHECK-NEXT:    mov     v1.16b, v5.16b
+; CHECK-NEXT:    ret
+entry:
+  %strided.vec = shufflevector <4 x double> %a, <4 x double> poison, <2 x i32> <i32 0, i32 2>
+  %strided.vec28 = shufflevector <4 x double> %a, <4 x double> poison, <2 x i32> <i32 1, i32 3>
+  %strided.vec30 = shufflevector <4 x double> %b, <4 x double> poison, <2 x i32> <i32 0, i32 2>
+  %strided.vec31 = shufflevector <4 x double> %b, <4 x double> poison, <2 x i32> <i32 1, i32 3>
+  %strided.vec33 = shufflevector <4 x double> %c, <4 x double> poison, <2 x i32> <i32 0, i32 2>
+  %strided.vec34 = shufflevector <4 x double> %c, <4 x double> poison, <2 x i32> <i32 1, i32 3>
+  %0 = fmul contract <2 x double> %strided.vec, %strided.vec31
+  %1 = fadd contract <2 x double> %strided.vec34, %0
+  %2 = fmul contract <2 x double> %strided.vec28, %strided.vec30
+  %3 = fadd contract <2 x double> %1, %2
+  %4 = fmul contract <2 x double> %strided.vec, %strided.vec30
+  %5 = fadd contract <2 x double> %strided.vec33, %4
+  %6 = fmul contract <2 x double> %strided.vec28, %strided.vec31
+  %7 = fsub contract <2 x double> %5, %6
+  %interleaved.vec = shufflevector <2 x double> %7, <2 x double> %3, <4 x i32> <i32 0, i32 2, i32 1, i32 3>
+  ret <4 x double> %interleaved.vec
+}
+
+; a * b - c
+define <4 x double> @mull_neg_accum(<4 x double> %a, <4 x double> %b, <4 x double> %c) {
+; CHECK-LABEL: mull_neg_accum:
+; CHECK:       // %bb.0: // %entry
+; CHECK-NEXT:    fcmla   v4.2d, v0.2d, v2.2d, #180
+; CHECK-NEXT:    fcmla   v5.2d, v1.2d, v3.2d, #180
+; CHECK-NEXT:    fcmla   v4.2d, v0.2d, v2.2d, #270
+; CHECK-NEXT:    fcmla   v5.2d, v1.2d, v3.2d, #270
+; CHECK-NEXT:    fneg    v0.2d, v4.2d
+; CHECK-NEXT:    fneg    v1.2d, v5.2d
+; CHECK-NEXT:    ret
+entry:
+  %strided.vec = shufflevector <4 x double> %a, <4 x double> poison, <2 x i32> <i32 0, i32 2>
+  %strided.vec28 = shufflevector <4 x double> %a, <4 x double> poison, <2 x i32> <i32 1, i32 3>
+  %strided.vec30 = shufflevector <4 x double> %b, <4 x double> poison, <2 x i32> <i32 0, i32 2>
+  %strided.vec31 = shufflevector <4 x double> %b, <4 x double> poison, <2 x i32> <i32 1, i32 3>
+  %strided.vec33 = shufflevector <4 x double> %c, <4 x double> poison, <2 x i32> <i32 0, i32 2>
+  %strided.vec34 = shufflevector <4 x double> %c, <4 x double> poison, <2 x i32> <i32 1, i32 3>
+  %0 = fmul contract <2 x double> %strided.vec, %strided.vec31
+  %1 = fsub contract <2 x double> %0, %strided.vec34
+  %2 = fmul contract <2 x double> %strided.vec28, %strided.vec30
+  %3 = fadd contract <2 x double> %1, %2
+  %4 = fmul contract <2 x double> %strided.vec, %strided.vec30
+  %5 = fsub contract <2 x double> %4, %strided.vec33
+  %6 = fmul contract <2 x double> %strided.vec28, %strided.vec31
+  %7 = fsub contract <2 x double> %5, %6
+  %interleaved.vec = shufflevector <2 x double> %7, <2 x double> %3, <4 x i32> <i32 0, i32 2, i32 1, i32 3>
   ret <4 x double> %interleaved.vec
 }
 
@@ -48,14 +103,14 @@ define <4 x double> @mul_add_mull(<4 x double> %a, <4 x double> %b, <4 x double>
 ; CHECK-NEXT:    movi v17.2d, #0000000000000000
 ; CHECK-NEXT:    movi v18.2d, #0000000000000000
 ; CHECK-NEXT:    movi v19.2d, #0000000000000000
-; CHECK-NEXT:    fcmla v16.2d, v2.2d, v0.2d, #0
-; CHECK-NEXT:    fcmla v18.2d, v3.2d, v1.2d, #0
-; CHECK-NEXT:    fcmla v17.2d, v7.2d, v5.2d, #0
-; CHECK-NEXT:    fcmla v19.2d, v6.2d, v4.2d, #0
 ; CHECK-NEXT:    fcmla v16.2d, v2.2d, v0.2d, #90
 ; CHECK-NEXT:    fcmla v18.2d, v3.2d, v1.2d, #90
 ; CHECK-NEXT:    fcmla v17.2d, v7.2d, v5.2d, #90
 ; CHECK-NEXT:    fcmla v19.2d, v6.2d, v4.2d, #90
+; CHECK-NEXT:    fcmla v16.2d, v2.2d, v0.2d, #0
+; CHECK-NEXT:    fcmla v18.2d, v3.2d, v1.2d, #0
+; CHECK-NEXT:    fcmla v17.2d, v7.2d, v5.2d, #0
+; CHECK-NEXT:    fcmla v19.2d, v6.2d, v4.2d, #0
 ; CHECK-NEXT:    fadd v1.2d, v18.2d, v17.2d
 ; CHECK-NEXT:    fadd v0.2d, v16.2d, v19.2d
 ; CHECK-NEXT:    ret
@@ -94,14 +149,14 @@ define <4 x double> @mul_sub_mull(<4 x double> %a, <4 x double> %b, <4 x double>
 ; CHECK-NEXT:    movi v17.2d, #0000000000000000
 ; CHECK-NEXT:    movi v18.2d, #0000000000000000
 ; CHECK-NEXT:    movi v19.2d, #0000000000000000
-; CHECK-NEXT:    fcmla v16.2d, v2.2d, v0.2d, #0
-; CHECK-NEXT:    fcmla v18.2d, v3.2d, v1.2d, #0
-; CHECK-NEXT:    fcmla v17.2d, v7.2d, v5.2d, #0
-; CHECK-NEXT:    fcmla v19.2d, v6.2d, v4.2d, #0
 ; CHECK-NEXT:    fcmla v16.2d, v2.2d, v0.2d, #90
 ; CHECK-NEXT:    fcmla v18.2d, v3.2d, v1.2d, #90
 ; CHECK-NEXT:    fcmla v17.2d, v7.2d, v5.2d, #90
 ; CHECK-NEXT:    fcmla v19.2d, v6.2d, v4.2d, #90
+; CHECK-NEXT:    fcmla v16.2d, v2.2d, v0.2d, #0
+; CHECK-NEXT:    fcmla v18.2d, v3.2d, v1.2d, #0
+; CHECK-NEXT:    fcmla v17.2d, v7.2d, v5.2d, #0
+; CHECK-NEXT:    fcmla v19.2d, v6.2d, v4.2d, #0
 ; CHECK-NEXT:    fsub v1.2d, v18.2d, v17.2d
 ; CHECK-NEXT:    fsub v0.2d, v16.2d, v19.2d
 ; CHECK-NEXT:    ret
@@ -140,14 +195,14 @@ define <4 x double> @mul_conj_mull(<4 x double> %a, <4 x double> %b, <4 x double
 ; CHECK-NEXT:    movi v17.2d, #0000000000000000
 ; CHECK-NEXT:    movi v18.2d, #0000000000000000
 ; CHECK-NEXT:    movi v19.2d, #0000000000000000
-; CHECK-NEXT:    fcmla v16.2d, v2.2d, v0.2d, #0
-; CHECK-NEXT:    fcmla v18.2d, v3.2d, v1.2d, #0
-; CHECK-NEXT:    fcmla v17.2d, v5.2d, v7.2d, #0
-; CHECK-NEXT:    fcmla v19.2d, v4.2d, v6.2d, #0
 ; CHECK-NEXT:    fcmla v16.2d, v2.2d, v0.2d, #90
 ; CHECK-NEXT:    fcmla v18.2d, v3.2d, v1.2d, #90
 ; CHECK-NEXT:    fcmla v17.2d, v5.2d, v7.2d, #270
 ; CHECK-NEXT:    fcmla v19.2d, v4.2d, v6.2d, #270
+; CHECK-NEXT:    fcmla v16.2d, v2.2d, v0.2d, #0
+; CHECK-NEXT:    fcmla v18.2d, v3.2d, v1.2d, #0
+; CHECK-NEXT:    fcmla v17.2d, v5.2d, v7.2d, #0
+; CHECK-NEXT:    fcmla v19.2d, v4.2d, v6.2d, #0
 ; CHECK-NEXT:    fadd v1.2d, v18.2d, v17.2d
 ; CHECK-NEXT:    fadd v0.2d, v16.2d, v19.2d
 ; CHECK-NEXT:    ret
