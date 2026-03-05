@@ -748,11 +748,18 @@ public:
                       const FunctionDecl *operatorDelete, ValueTy ptr,
                       ValueTy allocSize,
                       const ImplicitAllocationParameters &iap,
-                      CharUnits allocAlign)
+                      CharUnits allocAlign, const CallArgList *newArgs,
+                      unsigned numNonPlacementArgs, CIRGenFunction *cgf,
+                      mlir::Location loc)
       : numPlacementArgs(numPlacementArgs),
         passAlignmentToPlacementDelete(isAlignedAllocation(iap.PassAlignment)),
         operatorDelete(operatorDelete), ptr(ptr), allocSize(allocSize),
-        allocAlign(allocAlign) {}
+        allocAlign(allocAlign) {
+    for (unsigned i = 0, n = numPlacementArgs; i != n; ++i) {
+      const CallArg &arg = (*newArgs)[i + numNonPlacementArgs];
+      setPlacementArg(i, arg.getRValue(*cgf, loc), arg.ty);
+    }
+  }
 
   void setPlacementArg(unsigned i, RValueTy argValue, QualType argType) {
     assert(i < numPlacementArgs && "index out of range");
@@ -834,15 +841,11 @@ static void enterNewDeleteCleanup(CIRGenFunction &cgf, const CXXNewExpr *e,
     typedef CallDeleteDuringNew<DirectCleanupTraits> DirectCleanup;
 
     assert(!cir::MissingFeatures::typeAwareAllocation());
-    DirectCleanup *cleanup = cgf.ehStack.pushCleanupWithExtra<DirectCleanup>(
+    cgf.ehStack.pushCleanupWithExtra<DirectCleanup>(
         EHCleanup, e->getNumPlacementArgs(), e->getOperatorDelete(),
         newPtr.getPointer(), allocSize, e->implicitAllocationParameters(),
-        allocAlign);
-    for (unsigned i = 0, n = e->getNumPlacementArgs(); i != n; ++i) {
-      const CallArg &arg = newArgs[i + numNonPlacementArgs];
-      cleanup->setPlacementArg(
-          i, arg.getRValue(cgf, cgf.getLoc(e->getSourceRange())), arg.ty);
-    }
+        allocAlign, &newArgs, numNonPlacementArgs, &cgf,
+        cgf.getLoc(e->getSourceRange()));
 
     return;
   }
