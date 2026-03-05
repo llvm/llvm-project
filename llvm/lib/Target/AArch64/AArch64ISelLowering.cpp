@@ -24066,7 +24066,7 @@ static SDValue performZExtDeinterleaveShuffleCombine(SDNode *N,
   unsigned Idx;
   bool IsDeInterleave = ShuffleVectorInst::isDeInterleaveMaskOfFactor(
       Shuffle->getMask().slice(ExtOffset, VT.getVectorNumElements()), 4, Idx);
-  // An undef interleave shuffle can come up after other canonicalization,
+  // An undef interleave shuffle can come up after other canonicalizations,
   // where the shuffle has been converted to
   //   zext(extract(shuffle b, undef, [u,u,0,4]))
   bool IsUndefDeInterleave = false;
