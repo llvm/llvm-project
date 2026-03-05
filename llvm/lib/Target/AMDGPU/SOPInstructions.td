@@ -2049,9 +2049,18 @@ def UniformSelect : PatFrag<
   [{ return !N->isDivergent(); }]
 >;
 
+def FreezeUniformSelect : PatFrag<
+  (ops node:$src0, node:$src1),
+  (select (freeze SCC), node:$src0, node:$src1),
+  [{
+    SDValue FreezeNode = N->getOperand(0);
+    return FreezeNode->hasOneUse() && !N->isDivergent();
+  }]
+>;
+
 let AddedComplexity = 20 in {
   def : GCNPat<
-    (i32 (UniformSelect i32:$src0, i32:$src1)),
+    (i32 (FreezeUniformSelect i32:$src0, i32:$src1)),
     (S_CSELECT_B32 SSrc_b32:$src0, SSrc_b32:$src1)
   >;
 

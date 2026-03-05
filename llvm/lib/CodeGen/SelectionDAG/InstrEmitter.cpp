@@ -24,9 +24,11 @@
 #include "llvm/CodeGen/StackMaps.h"
 #include "llvm/CodeGen/TargetInstrInfo.h"
 #include "llvm/CodeGen/TargetLowering.h"
+#include "llvm/CodeGen/TargetRegisterInfo.h"
 #include "llvm/CodeGen/TargetSubtargetInfo.h"
 #include "llvm/IR/DebugInfoMetadata.h"
 #include "llvm/IR/PseudoProbe.h"
+#include "llvm/MC/MCInstrDesc.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Target/TargetMachine.h"
 using namespace llvm;
@@ -105,8 +107,6 @@ void InstrEmitter::EmitCopyFromReg(SDValue Op, bool IsClone, Register SrcReg,
   MVT VT = Op.getSimpleValueType();
 
   // Stick to the preferred register classes for legal types.
-  if (TLI->isTypeLegal(VT))
-    UseRC = TLI->getRegClassFor(VT, Op->isDivergent());
 
   for (SDNode *User : Op->users()) {
     bool Match = true;
@@ -131,6 +131,7 @@ void InstrEmitter::EmitCopyFromReg(SDValue Op, bool IsClone, Register SrcReg,
             RC = TRI->getAllocatableClass(
                 TII->getRegClass(II, i + II.getNumDefs()));
           }
+
           if (!UseRC)
             UseRC = RC;
           else if (RC) {
@@ -147,6 +148,18 @@ void InstrEmitter::EmitCopyFromReg(SDValue Op, bool IsClone, Register SrcReg,
     MatchReg &= Match;
     if (VRBase)
       break;
+  }
+
+  const TargetRegisterClass *RegClassForVT = nullptr;
+  // The check is to be removed in other pending PR, it is kept to make System Z happy.
+  if (TLI->isTypeLegal(VT)) {
+      RegClassForVT = TLI->getRegClassFor(VT, Op->isDivergent());
+  }
+
+  if (UseRC == nullptr || !UseRC->isAllocatable()) {
+      UseRC = RegClassForVT;
+  } else if (auto CommonSubClass = TRI->getCommonSubClass(UseRC, RegClassForVT)) {
+      UseRC = CommonSubClass;
   }
 
   const TargetRegisterClass *SrcRC = nullptr, *DstRC = nullptr;

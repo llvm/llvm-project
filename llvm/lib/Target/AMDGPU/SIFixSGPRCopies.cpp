@@ -70,6 +70,7 @@
 #include "GCNSubtarget.h"
 #include "MCTargetDesc/AMDGPUMCTargetDesc.h"
 #include "llvm/CodeGen/MachineDominators.h"
+#include "llvm/CodeGen/MachineInstr.h"
 #include "llvm/InitializePasses.h"
 #include "llvm/Target/TargetMachine.h"
 
@@ -1173,25 +1174,34 @@ void SIFixSGPRCopies::lowerVGPR2SGPRCopies(MachineFunction &MF) {
 void SIFixSGPRCopies::fixSCCCopies(MachineFunction &MF) {
   const AMDGPU::LaneMaskConstants &LMC =
       AMDGPU::LaneMaskConstants::get(MF.getSubtarget<GCNSubtarget>());
+
+  const GCNSubtarget &ST = MF.getSubtarget<GCNSubtarget>();
+  const SIRegisterInfo *TRI = ST.getRegisterInfo();
+
   for (MachineBasicBlock &MBB : MF) {
-    for (MachineBasicBlock::iterator I = MBB.begin(), E = MBB.end(); I != E;
-         ++I) {
-      MachineInstr &MI = *I;
+    for (MachineBasicBlock::iterator I = MBB.begin(), E = MBB.end(); I != E;) {
+
+      MachineInstr &MI = *I++;
       // May already have been lowered.
       if (!MI.isCopy())
         continue;
       Register SrcReg = MI.getOperand(1).getReg();
       Register DstReg = MI.getOperand(0).getReg();
       if (SrcReg == AMDGPU::SCC) {
-        Register SCCCopy =
-            MRI->createVirtualRegister(TRI->getWaveMaskRegClass());
-        I = BuildMI(*MI.getParent(), std::next(MachineBasicBlock::iterator(MI)),
-                    MI.getDebugLoc(), TII->get(LMC.CSelectOpc), SCCCopy)
-                .addImm(-1)
-                .addImm(0);
-        I = BuildMI(*MI.getParent(), std::next(I), I->getDebugLoc(),
-                    TII->get(AMDGPU::COPY), DstReg)
-                .addReg(SCCCopy);
+        assert(DstReg.isVirtual());
+        Register NewDstReg = MRI->createVirtualRegister(TRI->getWaveMaskRegClass());
+        auto NewCopy = BuildMI(
+                  *MI.getParent(), std::next(MachineBasicBlock::iterator(MI)),
+                  MI.getDebugLoc(), TII->get(LMC.CSelectOpc), NewDstReg)
+                  .addImm(-1)
+                  .addImm(0);
+
+        for (MachineOperand &UseMO : llvm::make_early_inc_range(MRI->use_operands(DstReg))) {
+            if (UseMO.getParent() == NewCopy)
+                continue;
+
+            UseMO.setReg(NewDstReg);
+        }
         MI.eraseFromParent();
         continue;
       }
@@ -1202,7 +1212,29 @@ void SIFixSGPRCopies::fixSCCCopies(MachineFunction &MF) {
                 .addReg(Tmp, getDefRegState(true))
                 .addReg(SrcReg)
                 .addReg(LMC.ExecReg);
+
         MI.eraseFromParent();
+      }
+
+      if (SrcReg.isPhysical() || DstReg.isPhysical()) continue;
+      auto SrcRC = MRI->getRegClass(SrcReg);
+      auto DstRC = MRI->getRegClass(DstReg);
+
+      if (TRI->isSGPRClass(DstRC) && TRI->isSGPRClass(SrcRC) && DstRC != SrcRC) {
+        auto DstBitWidth = TRI->getRegSizeInBits(DstReg, *MRI);
+        auto SrcBitWidth = TRI->getRegSizeInBits(SrcReg, *MRI);
+
+        if (DstBitWidth == 64 && SrcBitWidth == 32) {
+          BuildMI(MBB, MI, MI.getDebugLoc(), TII->get(AMDGPU::REG_SEQUENCE),
+                    DstReg)
+                .addReg(SrcReg)
+                .addImm(AMDGPU::sub0)
+                .addReg(SrcReg)
+                .addImm(AMDGPU::sub1);
+           MI.eraseFromParent();
+        } else if (DstBitWidth == 32 && SrcBitWidth == 64) {
+            MI.getOperand(1).setSubReg(AMDGPU::sub0);
+        }
       }
     }
   }
