@@ -3715,6 +3715,19 @@ full list of supported sanitizer flags.
   }];
 }
 
+def ForceMemtagDocs : Documentation {
+  let Category = DocCatVariable;
+  let Content = [{
+Use the ``force_memtag`` attribute on a global variable declaration that also
+has the attribute section. If the memory tag sanitizer is active, will force
+the global variable to be MTE tagged. Global variables under sections are not
+tagged by default, so you need to explicitly opt-in using this attribute.
+Please note that, in non-trivial cases where memory layout is assumed, forcing
+memory tagging might lead to extremely hard to debug bugs, depending on what
+the code assuming the alignment does.
+  }];
+}
+
 def DisableSanitizerInstrumentationDocs : Documentation {
   let Category = DocCatFunction;
   let Content = [{

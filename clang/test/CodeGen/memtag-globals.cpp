@@ -28,6 +28,7 @@ void func() {
 // This DOES NOT mean we are instrumenting the section global,
 // but we are ignoring it in AsmPrinter rather than in clang.
 // CHECK:     @{{.*}}section_global{{.*}} ={{.*}} sanitize_memtag
+
 // CHECK:     @{{.*}}attributed_global{{.*}} =
 // CHECK-NOT: sanitize_memtag
 // CHECK:     @{{.*}}disable_instrumentation_global{{.*}} =

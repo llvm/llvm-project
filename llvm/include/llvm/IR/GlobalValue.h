@@ -318,8 +318,8 @@ public:
   // specifically to global variables.
   struct SanitizerMetadata {
     SanitizerMetadata()
-        : NoAddress(false), NoHWAddress(false),
-          Memtag(false), IsDynInit(false) {}
+        : NoAddress(false), NoHWAddress(false), Memtag(false),
+          ForceMemtag(false), IsDynInit(false) {}
     // For ASan and HWASan, this instrumentation is implicitly applied to all
     // global variables when built with -fsanitize=*. What we need is a way to
     // persist the information that a certain global variable should *not* have
@@ -346,7 +346,13 @@ public:
     //
     // Use `GlobalValue::isTagged()` to check whether tagging should be enabled
     // for a global variable.
+    //
+    // Since not all global variables will be tagged (more specifically,
+    // variables inside sections will not be tagged), ForceMemtag can be used
+    // to opt-in memory taggig in those cases. For more information see
+    // __attribute__((force_memtag)).
     unsigned Memtag : 1;
+    unsigned ForceMemtag : 1;
 
     // ASan-specific metadata. Is this global variable dynamically initialized
     // (from a C++ language perspective), and should therefore be checked for
@@ -365,7 +371,8 @@ public:
   LLVM_ABI void setNoSanitizeMetadata();
 
   bool isTagged() const {
-    return hasSanitizerMetadata() && getSanitizerMetadata().Memtag;
+    return hasSanitizerMetadata() && (getSanitizerMetadata().Memtag ||
+                                      getSanitizerMetadata().ForceMemtag);
   }
 
   static LinkageTypes getLinkOnceLinkage(bool ODR) {
