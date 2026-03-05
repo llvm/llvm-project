@@ -972,7 +972,9 @@ public:
     return HasGFX1250Insts && getGeneration() == GFX12;
   }
 
-  bool hasGFX1250A0() const { return HasGFX1250Insts && !HasGFX1250B0; }
+  bool hasGFX1250A0() const {
+    return getGeneration() == GFX12 && HasGFX1250Insts && !HasGFX1250B0;
+  }
 
   // TODO: Remove this when we replace all A0 GFX1250 with B0.
   // DS_READ2 and DS_WRITE2 instructions must have addresses aligned to the
