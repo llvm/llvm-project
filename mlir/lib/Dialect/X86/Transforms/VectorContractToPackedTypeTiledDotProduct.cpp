@@ -382,15 +382,12 @@ struct VectorContractToPackedTypeTiledDotProduct
                         "The rest dims should be 1.");
 
       Location loc = contractOp.getLoc();
-      llvm::outs() << "Reaching-here1" << "\n";
+
       auto srcIndxLhs = getSrcIndxValue(rewriter, contractOp.getLoc(),
                                         contractOp.getLhs(), true);
-      llvm::outs() << "Reaching-here2" << "\n";
       if (failed(srcIndxLhs))
         return rewriter.notifyMatchFailure(contractOp,
                                            "The LHS src is not a MemRef type.");
-      llvm::outs() << "Reaching-here3" << "\n";
-
       auto [srcBuffLhs, indicesLhs] = *srcIndxLhs;
 
       auto srcIndxRhs = getSrcIndxValue(rewriter, contractOp.getLoc(),
