@@ -1213,7 +1213,11 @@ public:
   // TODO(boomanaiden154): Once we mark this in destructors as dead on return,
   // we can use a normal call to __reset_internal_buffer and remove the extra
   // __rep constructor.
-  inline _LIBCPP_CONSTEXPR_SINCE_CXX20 ~basic_string() { __reset_internal_buffer(__rep(__uninitialized_tag())); }
+  inline _LIBCPP_CONSTEXPR_SINCE_CXX20 ~basic_string() { 
+    if (__libcpp_is_constant_evaluated())
+      return;
+    __reset_internal_buffer(__rep(__uninitialized_tag()));
+  }
 
   _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 operator __self_view() const _NOEXCEPT {
     return __self_view(typename __self_view::__assume_valid(), data(), size());
@@ -2330,18 +2334,26 @@ private:
   }
 
   _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 void __annotate_new(size_type __current_size) const _NOEXCEPT {
+    if (__libcpp_is_constant_evaluated())
+      return;
     __annotate_contiguous_container(data() + capacity() + 1, data() + __current_size + 1);
   }
 
   _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 void __annotate_delete() const _NOEXCEPT {
+    if (__libcpp_is_constant_evaluated())
+      return;
     __annotate_contiguous_container(data() + size() + 1, data() + capacity() + 1);
   }
 
   _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 void __annotate_increase(size_type __n) const _NOEXCEPT {
+    if (__libcpp_is_constant_evaluated())
+      return;
     __annotate_contiguous_container(data() + size() + 1, data() + size() + 1 + __n);
   }
 
   _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 void __annotate_shrink(size_type __old_size) const _NOEXCEPT {
+    if (__libcpp_is_constant_evaluated())
+      return;
     __annotate_contiguous_container(data() + __old_size + 1, data() + size() + 1);
   }
 
