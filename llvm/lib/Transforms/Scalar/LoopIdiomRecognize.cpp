@@ -20,8 +20,6 @@
 //
 // TODO List:
 //
-// Future loop memory idioms to recognize: memcmp, etc.
-//
 // This could recognize common matrix multiplies and dot product idioms and
 // replace them with calls to BLAS (if linked in??).
 //
@@ -40,6 +38,7 @@
 #include "llvm/Analysis/AliasAnalysis.h"
 #include "llvm/Analysis/CmpInstAnalysis.h"
 #include "llvm/Analysis/HashRecognize.h"
+#include "llvm/Analysis/Loads.h"
 #include "llvm/Analysis/LoopAccessAnalysis.h"
 #include "llvm/Analysis/LoopInfo.h"
 #include "llvm/Analysis/LoopPass.h"
@@ -53,6 +52,7 @@
 #include "llvm/Analysis/ScalarEvolutionPatternMatch.h"
 #include "llvm/Analysis/TargetLibraryInfo.h"
 #include "llvm/Analysis/TargetTransformInfo.h"
+#include "llvm/Analysis/Utils/Local.h"
 #include "llvm/Analysis/ValueTracking.h"
 #include "llvm/IR/BasicBlock.h"
 #include "llvm/IR/Constant.h"
@@ -100,6 +100,7 @@ using namespace SCEVPatternMatch;
 STATISTIC(NumMemSet, "Number of memset's formed from loop stores");
 STATISTIC(NumMemCpy, "Number of memcpy's formed from loop load+stores");
 STATISTIC(NumMemMove, "Number of memmove's formed from loop load+stores");
+STATISTIC(NumMemCmp, "Number of uncountable loops recognized as memcmp idiom");
 STATISTIC(NumStrLen, "Number of strlen's and wcslen's formed from loop loads");
 STATISTIC(
     NumShiftUntilBitTest,
@@ -129,6 +130,14 @@ static cl::opt<bool, true>
                       cl::desc("Proceed with loop idiom recognize pass, but do "
                                "not convert loop(s) to memcpy."),
                       cl::location(DisableLIRP::Memcpy), cl::init(false),
+                      cl::ReallyHidden);
+
+bool DisableLIRP::Memcmp;
+static cl::opt<bool, true>
+    DisableLIRPMemcmp("disable-loop-idiom-memcmp",
+                      cl::desc("Proceed with loop idiom recognize pass, but do "
+                               "not convert loop(s) to memcmp."),
+                      cl::location(DisableLIRP::Memcmp), cl::init(false),
                       cl::ReallyHidden);
 
 bool DisableLIRP::Strlen;
@@ -182,17 +191,17 @@ class LoopIdiomRecognize {
   const TargetTransformInfo *TTI;
   const DataLayout *DL;
   OptimizationRemarkEmitter &ORE;
+  AssumptionCache *AC;
   bool ApplyCodeSizeHeuristics;
   std::unique_ptr<MemorySSAUpdater> MSSAU;
 
 public:
-  explicit LoopIdiomRecognize(AliasAnalysis *AA, DominatorTree *DT,
-                              LoopInfo *LI, ScalarEvolution *SE,
-                              TargetLibraryInfo *TLI,
-                              const TargetTransformInfo *TTI, MemorySSA *MSSA,
-                              const DataLayout *DL,
-                              OptimizationRemarkEmitter &ORE)
-      : AA(AA), DT(DT), LI(LI), SE(SE), TLI(TLI), TTI(TTI), DL(DL), ORE(ORE) {
+  explicit LoopIdiomRecognize(
+      AliasAnalysis *AA, DominatorTree *DT, LoopInfo *LI, ScalarEvolution *SE,
+      TargetLibraryInfo *TLI, const TargetTransformInfo *TTI, MemorySSA *MSSA,
+      const DataLayout *DL, OptimizationRemarkEmitter &ORE, AssumptionCache *AC)
+      : AA(AA), DT(DT), LI(LI), SE(SE), TLI(TLI), TTI(TTI), DL(DL), ORE(ORE),
+        AC(AC) {
     if (MSSA)
       MSSAU = std::make_unique<MemorySSAUpdater>(MSSA);
   }
@@ -286,6 +295,7 @@ private:
   bool recognizeShiftUntilBitTest();
   bool recognizeShiftUntilZero();
   bool recognizeAndInsertStrLen();
+  bool recognizeAndInsertMemcmp();
 
   /// @}
 };
@@ -305,7 +315,7 @@ PreservedAnalyses LoopIdiomRecognizePass::run(Loop &L, LoopAnalysisManager &AM,
   OptimizationRemarkEmitter ORE(L.getHeader()->getParent());
 
   LoopIdiomRecognize LIR(&AR.AA, &AR.DT, &AR.LI, &AR.SE, &AR.TLI, &AR.TTI,
-                         AR.MSSA, DL, ORE);
+                         AR.MSSA, DL, ORE, &AR.AC);
   if (!LIR.runOnLoop(&L))
     return PreservedAnalyses::all();
 
@@ -336,7 +346,7 @@ bool LoopIdiomRecognize::runOnLoop(Loop *L) {
   // Disable loop idiom recognition if the function's name is a common idiom.
   StringRef Name = L->getHeader()->getParent()->getName();
   if (Name == "memset" || Name == "memcpy" || Name == "strlen" ||
-      Name == "wcslen")
+      Name == "wcslen" || Name == "memcmp")
     return false;
 
   // Determine if code size heuristics need to be applied.
@@ -1698,7 +1708,8 @@ bool LoopIdiomRecognize::runOnNoncountableLoop() {
 
   return recognizePopcount() || recognizeAndInsertFFS() ||
          recognizeShiftUntilBitTest() || recognizeShiftUntilZero() ||
-         recognizeShiftUntilLessThan() || recognizeAndInsertStrLen();
+         recognizeShiftUntilLessThan() || recognizeAndInsertStrLen() ||
+         recognizeAndInsertMemcmp();
 }
 
 /// Check if the given conditional branch is based on the comparison between
@@ -3588,4 +3599,276 @@ bool LoopIdiomRecognize::recognizeShiftUntilZero() {
 
   ++NumShiftUntilZero;
   return MadeChange;
+}
+
+namespace {
+class MemcmpVerifier {
+public:
+  explicit MemcmpVerifier(Loop *CurLoop, ScalarEvolution *SE, DominatorTree *DT,
+                          AssumptionCache *AC, TargetLibraryInfo *TLI,
+                          const DataLayout *DL)
+      : CurLoop(CurLoop), SE(SE), DT(DT), AC(AC), TLI(TLI), DL(DL) {}
+
+  bool isLoadMemcmpOperandCandidate(LoadInst *LI, const SCEVUnknown *&Base,
+                                    const APInt *&Offset, const APInt *&Step) {
+    if (!LI->isSimple())
+      return false;
+
+    Value *LoadPointer = LI->getPointerOperand();
+    if (LoadPointer->getType()->getPointerAddressSpace() != 0)
+      return false;
+
+    // Comparisons of floats can't be transformed. For example, the bits of
+    // two NaN values might be equivalent, but NaN is never equal to itself.
+    // This means `memcmp` would be a behavior change from float equality.
+    IntegerType *LoadType = dyn_cast<IntegerType>(LI->getType());
+    if (!LoadType)
+      return false;
+
+    // There should be no padding between consecutive members of the integer
+    // array, as `memcmp` could give a different answer from integer equality.
+    if (DL->getTypeAllocSizeInBits(LoadType) != DL->getTypeSizeInBits(LoadType))
+      return false;
+
+    // If the Load SCEV has a non-constant step, it is clearly not part of a
+    // `memcmp` idiom. Furthermore, the step must be equal to the size of
+    // the load type, as otherwise the for loop would skip equality checks
+    // for certain bytes.
+    const SCEV *LoadSCEV = SE->getSCEVAtScope(LoadPointer, CurLoop);
+    const SCEVUnknown *LoadBase;
+    const APInt *LoadStep;
+    const APInt *LoadOffset = 0;
+    if (!match(LoadSCEV, m_scev_AffineAddRec(m_SCEVUnknown(LoadBase),
+                                             m_scev_APInt(LoadStep))) &&
+        !match(LoadSCEV,
+               m_scev_AffineAddRec(m_scev_Add(m_scev_APInt(LoadOffset),
+                                              m_SCEVUnknown(LoadBase)),
+                                   m_scev_APInt(LoadStep)))) {
+      return false;
+    }
+    // TODO: Possibly handle negative strides.
+    if (LoadType->getBitWidth() != *LoadStep * 8 || LoadStep->isNegative())
+      return false;
+
+    // Strangely the IR seems to allow this. Guess we'll just give up in this
+    // degenerate case.
+    unsigned SizeTBits = TLI->getSizeTSize(*CurLoop->getHeader()->getModule());
+    if (LoadStep->getBitWidth() > SizeTBits)
+      return false;
+
+    // The load must be dereferenceable no matter how many times the loop
+    // executes. Otherwise, creating a memcmp for this loop is undefined
+    // behavior.
+    if (!llvm::isDereferenceableAndAlignedInLoop(LI, CurLoop, *SE, *DT, AC))
+      return false;
+
+    Base = LoadBase;
+    Offset = LoadOffset;
+    Step = LoadStep;
+    return true;
+  }
+
+  /// We are trying to detect the following memcmp-like structure:
+  ///
+  /// preheader:
+  ///   ...
+  ///   br label %body
+  ///
+  /// body:
+  ///   ... ; Both loads have equal SCEV steps and satisfy certain properties
+  ///   %lhs = load i32, ptr %lhs_ptr
+  ///   %rhs = load i32, ptr %rhs_ptr
+  ///   %equal = icmp eq i32 %lhs, %rhs
+  ///   br i1 %equal, label %cond, label %exit
+  ///
+  /// cond:
+  ///   ... ; Compute whether loop should stop using some induction variable
+  ///   br i1 %stop_loop, label %exit, label %body
+  ///
+  /// exit:
+  ///   %buffers_equal = phi i1 [ %equal, %body ], [ %equal, %cond ]
+  ///
+  /// More specifically, we expect the pairs of loads to have a SCEV expression
+  /// of the form {%buffer,+,c}, where c is a ConstantInt that is equal to the
+  /// bitwidth of the load type. Furthermore, we must be able to prove that
+  /// there are no padding bytes in the buffers being read from, and that the
+  /// loads are always dereferenceable up to the maximum number of times the
+  /// loop backedge is taken.
+  bool detectMemcmpIdiom(PHINode *&PhiToReplace, CmpInst::Predicate &Pred,
+                         Value *&Lhs, APInt &OffsetLhs, Value *&Rhs,
+                         APInt &OffsetRhs, APInt &Len) {
+    // Step 1: Make sure the loop is in a nice enough form for analysis.
+    // For simplicity, we'll only transform loops that we can compute a
+    // maximum backedge taken count for.
+    if (!CurLoop->isLoopSimplifyForm() || !CurLoop->isLCSSAForm(*DT) ||
+        !CurLoop->getUniqueExitBlock())
+      return false;
+
+    const SCEVConstant *MaxBackedgeTaken =
+        llvm::dyn_cast<SCEVConstant>(SE->getBackedgeTakenCount(
+            CurLoop, llvm::ScalarEvolution::ConstantMaximum));
+    if (!MaxBackedgeTaken)
+      return false;
+
+    BasicBlock *LoopBody = *CurLoop->block_begin();
+    for (Instruction &I : *LoopBody)
+      if (I.mayHaveSideEffects())
+        return false;
+
+    // Step 2: Look at our LCSSAPhis, and make sure the only thing being
+    // used is the equality check of the buffers. Otherwise, it's not
+    // immediately obvious that extracting a memcmp from a loop that can't
+    // be eliminated is beneficial.
+    BasicBlock *ExitBlock = CurLoop->getUniqueExitBlock();
+    if (!ExitBlock ||
+        std::distance(ExitBlock->phis().begin(), ExitBlock->phis().end()) != 1)
+      return false;
+
+    PHINode &Phi = *ExitBlock->phis().begin();
+    Value *LCSSAVal = Phi.hasConstantValue();
+    if (Phi.getNumIncomingValues() != 2 || !LCSSAVal)
+      return false;
+
+    // Step 3: Verify that the value being used in the LCSSAPhi is actually
+    // a compare operation, and that the branch operation looks correct.
+    using namespace PatternMatch;
+    CmpInst *CI = dyn_cast<CmpInst>(LCSSAVal);
+    BasicBlock *CompareBlock = CI->getParent();
+    BasicBlock *ConditionBlock = *llvm::find_if(
+        Phi.blocks(), [&](BasicBlock *Block) { return Block != CompareBlock; });
+    assert(CompareBlock && ConditionBlock);
+
+    BranchInst *CompareBlockBranch =
+        dyn_cast<BranchInst>(CompareBlock->getTerminator());
+    CmpInst::Predicate CompareBlockPred;
+    if (match(CompareBlockBranch,
+              m_Br(m_SpecificICmp(CmpInst::ICMP_EQ, m_Value(), m_Value()),
+                   m_Specific(ConditionBlock), m_Specific(ExitBlock)))) {
+      CompareBlockPred = CmpInst::ICMP_EQ;
+    } else if (match(
+                   CompareBlockBranch,
+                   m_Br(m_SpecificICmp(CmpInst::ICMP_NE, m_Value(), m_Value()),
+                        m_Specific(ExitBlock), m_Specific(ConditionBlock)))) {
+      CompareBlockPred = CmpInst::ICMP_NE;
+    } else {
+      return false;
+    }
+
+    // Step 4: Look into the condition block of the loop, and verify that
+    // it has the expected pattern of a traditional loop. Note that we rely
+    // on IndVar simplification having been run to detect this.
+    Value *IndVar = CurLoop->getInductionVariable(*SE);
+    if (!match(ConditionBlock->getTerminator(),
+               m_Br(m_SpecificICmp(CmpInst::ICMP_EQ,
+                                   m_Add(m_Specific(IndVar), m_One()),
+                                   m_ConstantInt()),
+                    m_Specific(ExitBlock), m_Specific(LoopBody)))) {
+      LLVM_DEBUG(dbgs() << DEBUG_TYPE " Bad backedge structure.\n");
+      return false;
+    }
+
+    // Step 5: Verify that the compare operation is comparing two
+    // pointers satisfying certain criteria. See
+    // `isLoadMemcmpOperandCandidate()` for more information.
+    LoadInst *LoadLHS = dyn_cast<LoadInst>(CI->getOperand(0));
+    LoadInst *LoadRHS = dyn_cast<LoadInst>(CI->getOperand(1));
+    if (!LoadLHS || !LoadRHS) {
+      return false;
+    }
+
+    const SCEVUnknown *BaseLHS;
+    const SCEVUnknown *BaseRHS;
+    const APInt *OffsetLHS;
+    const APInt *OffsetRHS;
+    const APInt *StepLHS;
+    const APInt *StepRHS;
+    if (!isLoadMemcmpOperandCandidate(LoadLHS, BaseLHS, OffsetLHS, StepLHS) ||
+        !isLoadMemcmpOperandCandidate(LoadRHS, BaseRHS, OffsetRHS, StepRHS))
+      return false;
+    if (*StepLHS != *StepRHS)
+      return false;
+
+    // Step 6: Celebrate! This transform is safe to be done, so return
+    // the information needed for the caller to emit an equivalent
+    // memcmp.
+    unsigned SizeTBits = TLI->getSizeTSize(*CurLoop->getHeader()->getModule());
+    APInt ArraySize = (MaxBackedgeTaken->getAPInt() + 1).zext(SizeTBits);
+    PhiToReplace = &Phi;
+    Pred = CompareBlockPred;
+    Lhs = BaseLHS->getValue();
+    Rhs = BaseRHS->getValue();
+    if (OffsetLHS) {
+      OffsetLhs = *OffsetLHS;
+    }
+    if (OffsetRHS) {
+      OffsetRhs = *OffsetRHS;
+    }
+    Len = ArraySize * StepLHS->zext(SizeTBits);
+    return true;
+  }
+
+private:
+  Loop *CurLoop;
+  ScalarEvolution *SE;
+  DominatorTree *DT;
+  AssumptionCache *AC;
+  const TargetLibraryInfo *TLI;
+  const DataLayout *DL;
+};
+} // namespace
+
+// TODO: Explain what's happening here a bit more.
+bool LoopIdiomRecognize::recognizeAndInsertMemcmp() {
+  if (!TLI->has(LibFunc_memcmp) || DisableLIRPMemcmp)
+    return false;
+
+  PHINode *PhiToReplace;
+  CmpInst::Predicate Pred;
+  Value *Lhs;
+  APInt OffsetLhs;
+  Value *Rhs;
+  APInt OffsetRhs;
+  APInt Len;
+  MemcmpVerifier Verifier(CurLoop, SE, DT, AC, TLI, DL);
+  if (!Verifier.detectMemcmpIdiom(PhiToReplace, Pred, Lhs, OffsetLhs, Rhs,
+                                  OffsetRhs, Len))
+    return false;
+
+  BasicBlock *PhiBlock = PhiToReplace->getParent();
+  IRBuilder<> Builder(PhiBlock);
+  Builder.SetInsertPoint(PhiBlock->getFirstNonPHIIt());
+
+  // We'll need to create registers holding the offsetted pointer using geps
+  if (!OffsetLhs.isZero()) {
+    Lhs = Builder.CreateGEP(
+        Type::getInt8Ty(Builder.getContext()), Lhs,
+        ConstantInt::get(Type::getInt64Ty(Builder.getContext()), OffsetLhs));
+  }
+  if (!OffsetRhs.isZero()) {
+    Rhs = Builder.CreateGEP(
+        Type::getInt8Ty(Builder.getContext()), Rhs,
+        ConstantInt::get(Type::getInt64Ty(Builder.getContext()), OffsetRhs));
+  }
+
+  Value *MemCmpCall = llvm::emitMemCmp(
+      Lhs, Rhs, llvm::ConstantInt::get(Builder.getContext(), Len), Builder, *DL,
+      TLI);
+  Value *NewCmpInst = Builder.CreateCmp(
+      Pred, MemCmpCall,
+      llvm::ConstantInt::get(
+          Builder.getContext(),
+          llvm::APInt(MemCmpCall->getType()->getPrimitiveSizeInBits(), 0)));
+  PhiToReplace->replaceAllUsesWith(NewCmpInst);
+  RecursivelyDeleteDeadPHINode(PhiToReplace);
+
+  ++NumMemCmp;
+  LLVM_DEBUG(dbgs() << "Formed memcmp idiom:" << *MemCmpCall << "\n");
+  ORE.emit([&]() {
+    return OptimizationRemark(DEBUG_TYPE, "recognizeAndInsertMemcmp",
+                              CurLoop->getStartLoc(), PhiBlock)
+           << "Transformed memcmp loop idiom";
+  });
+
+  // We'll let the loop-deletion pass handle deleting the now dead loop.
+  return true;
 }
