@@ -329,7 +329,7 @@ def generate_data_tables() -> str:
     # The exact entries may differ between Unicode versions. When these numbers
     # change the test needs to be updated too.
     #   libcxx/test/libcxx/utilities/format/format.string/format.string.std/escaped_output.pass.cpp
-    assert (data[-2].lower) == 0x323B0
+    assert (data[-2].lower) == 0x3347A
     assert (data[-2].upper) == 0xE00FF
     assert (data[-1].lower) == 0xE01F0
     assert (data[-1].upper) == 0x10FFFF
