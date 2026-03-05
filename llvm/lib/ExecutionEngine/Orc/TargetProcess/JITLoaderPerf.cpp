@@ -247,6 +247,7 @@ static Expected<Header> FillMachine(PerfState &State) {
   Hdr.TotalSize = sizeof(Hdr);
   Hdr.Pid = State.Pid;
   Hdr.Timestamp = perf_get_timestamp();
+  Hdr.Flags = 0;
 
   char Id[16];
   struct {
