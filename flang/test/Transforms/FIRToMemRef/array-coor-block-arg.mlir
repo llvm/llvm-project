@@ -26,7 +26,7 @@ func.func @block_arg_memref(%arg0: !fir.ref<!fir.array<32xi32>>) {
 // CHECK:       memref.store {{%.+}}, [[BASE]][[[IDX]]] : memref<32xi32>
 // CHECK-NOT:   fir.array_coor
 
-// Verify fir.array_coor lowering when the base is a boxed SCF region block
+// Verify fir.array_coor lowering when the base is a boxed block
 // argument. The pass must materialize fir.box_addr
 // first and must not emit an illegal direct box->memref fir.convert.
 func.func @block_arg_boxed_array(%arg0: !fir.box<!fir.array<?xi32>>) {
