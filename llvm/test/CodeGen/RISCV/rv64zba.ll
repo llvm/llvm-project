@@ -4157,8 +4157,9 @@ define i64 @mul_neg5(i64 %a) {
 define i64 @mul_neg6(i64 %a) {
 ; CHECK-LABEL: mul_neg6:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    li a1, -6
-; CHECK-NEXT:    mul a0, a0, a1
+; CHECK-NEXT:    slli a1, a0, 3
+; CHECK-NEXT:    slli a0, a0, 1
+; CHECK-NEXT:    sub a0, a0, a1
 ; CHECK-NEXT:    ret
   %c = mul i64 %a, -6
   ret i64 %c
