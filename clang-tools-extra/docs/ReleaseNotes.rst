@@ -264,8 +264,8 @@ Changes in existing checks
 
 - Improved :doc:`performance-faster-string-find
   <clang-tidy/checks/performance/faster-string-find>` check to
-  analyze calls to the ``starts_with``, ``ends_with``, and ``contains``
-  string member functions.
+  analyze calls to the ``starts_with``, ``ends_with``, ``contains``,
+  and ``operator+=`` string member functions.
 
 - Improved :doc:`performance-inefficient-vector-operation
   <clang-tidy/checks/performance/inefficient-vector-operation>` check by
@@ -280,6 +280,10 @@ Changes in existing checks
   <clang-tidy/checks/readability/container-size-empty>` check by fixing a crash
   when a member expression has a non-identifier name.
 
+- Improved :doc:`readability-else-after-return
+  <clang-tidy/checks/readability/else-after-return>` check by fixing missed
+  diagnostics when ``if`` statements appear in unbraced ``switch`` case labels.
+
 - Improved :doc:`readability-enum-initial-value
   <clang-tidy/checks/readability/enum-initial-value>` check: the warning message
   now uses separate note diagnostics for each uninitialized enumerator, making
@@ -289,6 +293,11 @@ Changes in existing checks
   <clang-tidy/checks/readability/non-const-parameter>` check by avoiding false
   positives on parameters used in dependent expressions (e.g. inside generic
   lambdas).
+
+- Improved :doc:`readability-redundant-preprocessor
+  <clang-tidy/checks/readability/redundant-preprocessor>` check by fixing a
+  false positive for nested ``#if`` directives using different builtin
+  expressions such as ``__has_builtin`` and ``__has_cpp_attribute``.
 
 - Improved :doc:`readability-simplify-boolean-expr
   <clang-tidy/checks/readability/simplify-boolean-expr>` check to provide valid
