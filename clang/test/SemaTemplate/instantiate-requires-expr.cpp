@@ -288,7 +288,7 @@ struct tid {
 template <typename T>
 using tid_t = tid<T>::type;
 
-template <class T, int N = ::tid_t<T>::value>
+template <class T, int N = tid_t<T>::value>
 concept req = N < 3 || requires { typename T::template as_two<3>; };
 
 struct two {
