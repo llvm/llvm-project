@@ -5704,8 +5704,6 @@ void VPlanTransforms::optimizeFindIVReductions(VPlan &Plan,
     return std::nullopt;
   };
 
-  VPTypeAnalysis TypeInfo(Plan);
-
   VPValue *HeaderMask = vputils::findHeaderMask(Plan);
   for (VPRecipeBase &Phi :
        make_early_inc_range(VectorLoopRegion->getEntryBasicBlock()->phis())) {
@@ -5714,7 +5712,7 @@ void VPlanTransforms::optimizeFindIVReductions(VPlan &Plan,
                      PhiR->getRecurrenceKind()))
       continue;
 
-    Type *PhiTy = TypeInfo.inferScalarType(PhiR);
+    Type *PhiTy = VPTypeAnalysis(Plan).inferScalarType(PhiR);
     if (PhiTy->isPointerTy() || PhiTy->isFloatingPointTy())
       continue;
 
