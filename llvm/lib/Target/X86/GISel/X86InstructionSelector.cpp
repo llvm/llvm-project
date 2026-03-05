@@ -625,7 +625,8 @@ static bool X86SelectAddress(MachineInstr &I, const X86TargetMachine &TM,
     }
     break;
   }
-  case TargetOpcode::G_GLOBAL_VALUE: {
+  case TargetOpcode::G_GLOBAL_VALUE:
+  case TargetOpcode::G_TARGET_GLOBAL_VALUE: {
     auto GV = I.getOperand(1).getGlobal();
     if (GV->isThreadLocal()) {
       return false; // TODO: we don't support TLS yet.
@@ -636,15 +637,12 @@ static bool X86SelectAddress(MachineInstr &I, const X86TargetMachine &TM,
     AM.GV = GV;
     AM.GVOpFlags = STI.classifyGlobalReference(GV);
 
-    // TODO: The ABI requires an extra load. not supported yet.
-    if (isGlobalStubReference(AM.GVOpFlags))
-      return false;
-
     // TODO: This reference is relative to the pic base. not supported yet.
     if (isGlobalRelativeToPICBase(AM.GVOpFlags))
       return false;
 
-    if (STI.isPICStyleRIPRel()) {
+    if (STI.isPICStyleRIPRel() || AM.GVOpFlags == X86II::MO_GOTPCREL ||
+        AM.GVOpFlags == X86II::MO_GOTPCREL_NORELAX) {
       // Use rip-relative addressing.
       assert(AM.Base.Reg == 0 && AM.IndexReg == 0 &&
              "RIP-relative addresses can't have additional register operands");
@@ -1973,7 +1971,8 @@ X86InstructionSelector::selectAddr(MachineOperand &Root) const {
   MachineRegisterInfo &MRI = MI->getMF()->getRegInfo();
   MachineInstr *Ptr = MRI.getVRegDef(Root.getReg());
   X86AddressMode AM;
-  X86SelectAddress(*Ptr, TM, MRI, STI, AM);
+  if (!X86SelectAddress(*Ptr, TM, MRI, STI, AM))
+    return std::nullopt;
 
   if (AM.IndexReg)
     return std::nullopt;

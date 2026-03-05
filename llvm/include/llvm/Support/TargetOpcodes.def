@@ -328,6 +328,11 @@ HANDLE_TARGET_OPCODE(G_FRAME_INDEX)
 /// Generic reference to global value.
 HANDLE_TARGET_OPCODE(G_GLOBAL_VALUE)
 
+/// Generic target specific reference to a global value (typically for
+/// distinguishing already legalized and not yet legalized refrence to a global
+/// value).
+HANDLE_TARGET_OPCODE(G_TARGET_GLOBAL_VALUE)
+
 /// Generic ptrauth-signed reference to global value.
 HANDLE_TARGET_OPCODE(G_PTRAUTH_GLOBAL_VALUE)
 
