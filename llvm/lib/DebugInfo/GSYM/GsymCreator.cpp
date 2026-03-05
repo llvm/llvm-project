@@ -10,6 +10,7 @@
 #include "llvm/DebugInfo/GSYM/Header.h"
 #include "llvm/DebugInfo/GSYM/LineTable.h"
 #include "llvm/DebugInfo/GSYM/OutputAggregator.h"
+#include "llvm/Demangle/Demangle.h"
 #include "llvm/MC/StringTableBuilder.h"
 #include "llvm/Support/raw_ostream.h"
 
@@ -312,6 +313,21 @@ llvm::Error GsymCreator::finalize(OutputAggregator &Out) {
             // address ranges that have debug info are last in
             // the sort.
             if (!(Prev == Curr)) {
+              // Before discarding the symbol table entry, check if the DWARF
+              // entry has a truncated name that should be replaced with the
+              // full mangled name from the symbol table.
+              if (!Prev.hasRichInfo() && Curr.hasRichInfo()) {
+                // Prev is from symbol table, Curr is from DWARF.
+                if (isSubStrOfMangledName(getString(Prev.Name),
+                                          getString(Curr.Name)))
+                  Curr.updateName(Prev.Name);
+              } else if (Prev.hasRichInfo() && !Curr.hasRichInfo()) {
+                // Prev is from DWARF, Curr is from symbol table.
+                if (isSubStrOfMangledName(getString(Curr.Name),
+                                          getString(Prev.Name)))
+                  Prev.updateName(Curr.Name);
+              }
+
               if (Prev.hasRichInfo() && Curr.hasRichInfo())
                 Out.Report(
                     "Duplicate address ranges with different debug info.",
@@ -624,4 +640,27 @@ GsymCreator::createSegment(uint64_t SegmentSize, size_t &FuncIdx) const {
     SegmentFuncInfosSize += alignTo(GC->copyFunctionInfo(*this, FuncIdx), 4);
   }
   return std::move(GC);
+}
+
+static bool isMangled(StringRef Name) {
+  return Name.size() >= 2 && Name[0] == '_' && Name[1] == 'Z';
+}
+
+bool GsymCreator::isSubStrOfMangledName(StringRef MangledName,
+                                        StringRef ShortName) const {
+  // Only applies when ShortName is NOT mangled and MangledName IS mangled.
+  if (isMangled(ShortName) || !isMangled(MangledName))
+    return false;
+
+  std::string Demangled = llvm::demangle(MangledName);
+  StringRef DemangledRef(Demangled);
+
+  // Check if ShortName appears within the demangled long name:
+  // - Exact match: "make_ftype" == "make_ftype"
+  // - With params: "make_ftype(" prefix match
+  // - With namespace: "::make_ftype" suffix or "::make_ftype(" substring
+  return DemangledRef == ShortName ||
+         DemangledRef.starts_with(ShortName.str() + "(") ||
+         DemangledRef.ends_with("::" + ShortName.str()) ||
+         DemangledRef.contains("::" + ShortName.str() + "(");
 }

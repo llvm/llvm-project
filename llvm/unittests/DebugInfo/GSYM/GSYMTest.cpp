@@ -5085,3 +5085,108 @@ TEST(GSYMTest, TestDWARFTransformNoErrorForMissingFileDecl) {
                         "index 4294967295 in its DW_AT_decl_file attribute");
   EXPECT_TRUE(errors.find(error_str) == std::string::npos);
 }
+
+TEST(GSYMTest, TestMangledNameReplacement) {
+  // Test that during finalize(), when deduplicating entries with the same
+  // address range, if the DWARF entry has a truncated name that is a
+  // substring of the demangled symbol table name, the DWARF entry's name
+  // is replaced with the full mangled name from the symbol table.
+  GsymCreator GC;
+  const auto ByteOrder = llvm::endianness::native;
+  constexpr uint64_t FuncAddr = 0x1000;
+  constexpr uint64_t FuncSize = 0x100;
+
+  // Insert a mangled name (symbol table) and a short name (DWARF).
+  // _Z10make_ftypePci demangles to make_ftype(char*, int)
+  const uint32_t MangledName = GC.insertString("_Z10make_ftypePci");
+  const uint32_t ShortName = GC.insertString("make_ftype");
+
+  // Add a symbol table entry (no line table, no inline info).
+  GC.addFunctionInfo(FunctionInfo(FuncAddr, FuncSize, MangledName));
+
+  // Add a DWARF entry (with line table) using the short name.
+  FunctionInfo DwarfFI(FuncAddr, FuncSize, ShortName);
+  DwarfFI.OptLineTable = LineTable();
+  const uint32_t FileIdx = GC.insertFile("/tmp/main.cpp");
+  DwarfFI.OptLineTable->push(LineEntry(FuncAddr, FileIdx, 10));
+  DwarfFI.OptLineTable->push(LineEntry(FuncAddr + 0x10, FileIdx, 20));
+  GC.addFunctionInfo(std::move(DwarfFI));
+
+  OutputAggregator Null(nullptr);
+  Error FinalizeErr = GC.finalize(Null);
+  ASSERT_FALSE(FinalizeErr);
+
+  // Encode to buffer and create a GsymReader to verify the result.
+  SmallString<512> Str;
+  raw_svector_ostream OutStrm(Str);
+  FileWriter FW(OutStrm, ByteOrder);
+  ASSERT_FALSE(bool(GC.encode(FW)));
+
+  auto ExpectedGR = GsymReader::copyBuffer(OutStrm.str());
+  ASSERT_THAT_EXPECTED(ExpectedGR, Succeeded());
+  const GsymReader &GR = ExpectedGR.get();
+
+  // Look up the function and verify the name is the full mangled name.
+  auto ExpFI = GR.getFunctionInfo(FuncAddr);
+  ASSERT_THAT_EXPECTED(ExpFI, Succeeded());
+  EXPECT_EQ(GR.getString(ExpFI->Name), "_Z10make_ftypePci");
+  // Verify it still has line table info.
+  EXPECT_TRUE(ExpFI->OptLineTable.has_value());
+}
+
+TEST(GSYMTest, TestMangledNameReplacementNegative) {
+  // Test negative cases: no replacement should happen when both names are
+  // mangled, or when the short name is not a substring of the demangled name.
+  GsymCreator GC;
+  const auto ByteOrder = llvm::endianness::native;
+  constexpr uint64_t FuncAddr = 0x2000;
+  constexpr uint64_t FuncSize = 0x100;
+
+  // Case 1: Both names are mangled — no replacement.
+  const uint32_t Mangled1 = GC.insertString("_Z3foov");
+  const uint32_t Mangled2 = GC.insertString("_Z3barv");
+
+  GC.addFunctionInfo(FunctionInfo(FuncAddr, FuncSize, Mangled1));
+  FunctionInfo DwarfFI1(FuncAddr, FuncSize, Mangled2);
+  DwarfFI1.OptLineTable = LineTable();
+  const uint32_t FileIdx = GC.insertFile("/tmp/test.cpp");
+  DwarfFI1.OptLineTable->push(LineEntry(FuncAddr, FileIdx, 5));
+  GC.addFunctionInfo(std::move(DwarfFI1));
+
+  // Case 2: Short name is NOT a substring — no replacement.
+  constexpr uint64_t Func2Addr = 0x3000;
+  // _Z10make_ftypePci demangles to make_ftype(char*, int)
+  const uint32_t MangledName = GC.insertString("_Z10make_ftypePci");
+  const uint32_t UnrelatedName = GC.insertString("some_other_func");
+
+  GC.addFunctionInfo(FunctionInfo(Func2Addr, FuncSize, MangledName));
+  FunctionInfo DwarfFI2(Func2Addr, FuncSize, UnrelatedName);
+  DwarfFI2.OptLineTable = LineTable();
+  DwarfFI2.OptLineTable->push(LineEntry(Func2Addr, FileIdx, 15));
+  GC.addFunctionInfo(std::move(DwarfFI2));
+
+  OutputAggregator Null(nullptr);
+  Error FinalizeErr = GC.finalize(Null);
+  ASSERT_FALSE(FinalizeErr);
+
+  SmallString<512> Str;
+  raw_svector_ostream OutStrm(Str);
+  FileWriter FW(OutStrm, ByteOrder);
+  ASSERT_FALSE(bool(GC.encode(FW)));
+
+  auto ExpectedGR = GsymReader::copyBuffer(OutStrm.str());
+  ASSERT_THAT_EXPECTED(ExpectedGR, Succeeded());
+  const GsymReader &GR = ExpectedGR.get();
+
+  // Case 1: Both mangled — should keep the DWARF entry's name (which sorts
+  // last due to having rich info), not replace it.
+  auto ExpFI1 = GR.getFunctionInfo(FuncAddr);
+  ASSERT_THAT_EXPECTED(ExpFI1, Succeeded());
+  // The DWARF entry with _Z3barv should be kept (it has rich info).
+  EXPECT_EQ(GR.getString(ExpFI1->Name), "_Z3barv");
+
+  // Case 2: Unrelated name — no replacement, keep DWARF entry's name.
+  auto ExpFI2 = GR.getFunctionInfo(Func2Addr);
+  ASSERT_THAT_EXPECTED(ExpFI2, Succeeded());
+  EXPECT_EQ(GR.getString(ExpFI2->Name), "some_other_func");
+}

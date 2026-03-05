@@ -127,6 +127,15 @@ struct FunctionInfo {
     return Name != 0;
   }
 
+  /// Update the name of this FunctionInfo.
+  ///
+  /// DWARF debug info may have truncated function names. When the symbol table
+  /// has a longer mangled name, this allows replacing the truncated name with
+  /// the full mangled name.
+  ///
+  /// \param NewName The new string table offset for the function name.
+  void updateName(uint32_t NewName) { Name = NewName; }
+
   /// Decode an object from a binary data stream.
   ///
   /// \param Data The binary stream to read the data from. This object must

@@ -283,6 +283,17 @@ class GsymCreator {
   llvm::Error saveSegments(StringRef Path, llvm::endianness ByteOrder,
                            uint64_t SegmentSize) const;
 
+  /// Check if a short name is a substring of a demangled mangled name.
+  ///
+  /// DWARF may have truncated names (e.g., just "make_ftype") while the
+  /// symbol table has the full mangled name (e.g., "_Z17make_ftypePci"
+  /// which demangles to "(anonymous namespace)::make_ftype(char*, int)").
+  ///
+  /// \param MangledName The mangled name from the symbol table.
+  /// \param ShortName The potentially truncated name from DWARF.
+  /// \returns True if ShortName is a substring of the demangled MangledName.
+  bool isSubStrOfMangledName(StringRef MangledName, StringRef ShortName) const;
+
   /// Let this creator know that this is a segment of another GsymCreator.
   ///
   /// When we have a segment, we know that function infos will be added in
