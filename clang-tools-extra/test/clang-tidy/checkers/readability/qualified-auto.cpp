@@ -6,7 +6,7 @@
 // RUN: -config='{CheckOptions: { \
 // RUN:   readability-qualified-auto.AllowedTypes: "[iI]terator$;my::ns::Ignored1;std::array<.*>::Ignored2;MyIgnoredPtr", \
 // RUN:   readability-qualified-auto.IgnoreAliasing: false \
-// RUN: }}' -check-suffix=ALIAS -- 
+// RUN: }}' -check-suffix=ALIAS --
 
 namespace typedefs {
 typedef int *MyPtr;
