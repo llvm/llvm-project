@@ -9,12 +9,10 @@ target datalayout = "E-p:64:64:64-a0:0:8-f32:32:32-f64:64:64-i1:8:8-i8:8:8-i16:1
 define internal i32 @f(ptr byval(%struct.ss)  %b) nounwind  {
 ; CHECK: Function Attrs: mustprogress nofree norecurse nosync nounwind willreturn memory(none)
 ; CHECK-LABEL: define {{[^@]+}}@f
-; CHECK-SAME: (i32 [[TMP0:%.*]], i64 [[TMP1:%.*]]) #[[ATTR0:[0-9]+]] {
+; CHECK-SAME: (<2 x i64> [[TMP0:%.*]]) #[[ATTR0:[0-9]+]] {
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[B_PRIV:%.*]] = alloca [[STRUCT_SS:%.*]], align 4
-; CHECK-NEXT:    store i32 [[TMP0]], ptr [[B_PRIV]], align 4
-; CHECK-NEXT:    [[B_PRIV_B4:%.*]] = getelementptr i8, ptr [[B_PRIV]], i64 4
-; CHECK-NEXT:    store i64 [[TMP1]], ptr [[B_PRIV_B4]], align 4
+; CHECK-NEXT:    [[B_PRIV:%.*]] = alloca <2 x i64>, align 16
+; CHECK-NEXT:    store <2 x i64> [[TMP0]], ptr [[B_PRIV]], align 16
 ; CHECK-NEXT:    [[VAL1:%.*]] = load i32, ptr [[B_PRIV]], align 8
 ; CHECK-NEXT:    [[VAL2:%.*]] = add i32 [[VAL1]], 1
 ; CHECK-NEXT:    store i32 [[VAL2]], ptr [[B_PRIV]], align 8
@@ -31,12 +29,10 @@ entry:
 define internal i32 @g(ptr byval(%struct.ss) align 32 %b) nounwind {
 ; CHECK: Function Attrs: mustprogress nofree norecurse nosync nounwind willreturn memory(none)
 ; CHECK-LABEL: define {{[^@]+}}@g
-; CHECK-SAME: (i32 [[TMP0:%.*]], i64 [[TMP1:%.*]]) #[[ATTR0]] {
+; CHECK-SAME: (<2 x i64> [[TMP0:%.*]]) #[[ATTR0]] {
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[B_PRIV:%.*]] = alloca [[STRUCT_SS:%.*]], align 4
-; CHECK-NEXT:    store i32 [[TMP0]], ptr [[B_PRIV]], align 4
-; CHECK-NEXT:    [[B_PRIV_B4:%.*]] = getelementptr i8, ptr [[B_PRIV]], i64 4
-; CHECK-NEXT:    store i64 [[TMP1]], ptr [[B_PRIV_B4]], align 4
+; CHECK-NEXT:    [[B_PRIV:%.*]] = alloca <2 x i64>, align 16
+; CHECK-NEXT:    store <2 x i64> [[TMP0]], ptr [[B_PRIV]], align 16
 ; CHECK-NEXT:    [[VAL1:%.*]] = load i32, ptr [[B_PRIV]], align 32
 ; CHECK-NEXT:    [[VAL2:%.*]] = add i32 [[VAL1]], 1
 ; CHECK-NEXT:    store i32 [[VAL2]], ptr [[B_PRIV]], align 32
@@ -58,14 +54,10 @@ define i32 @main() nounwind  {
 ; TUNIT-NEXT:    [[S:%.*]] = alloca [[STRUCT_SS:%.*]], align 4
 ; TUNIT-NEXT:    store i32 1, ptr [[S]], align 32
 ; TUNIT-NEXT:    [[VAL4:%.*]] = getelementptr [[STRUCT_SS]], ptr [[S]], i32 0, i32 1
-; TUNIT-NEXT:    [[TMP0:%.*]] = load i32, ptr [[S]], align 8
-; TUNIT-NEXT:    [[S_B4:%.*]] = getelementptr i8, ptr [[S]], i64 4
-; TUNIT-NEXT:    [[TMP1:%.*]] = load i64, ptr [[S_B4]], align 8
-; TUNIT-NEXT:    [[C0:%.*]] = call i32 @f(i32 [[TMP0]], i64 [[TMP1]]) #[[ATTR1:[0-9]+]]
-; TUNIT-NEXT:    [[TMP2:%.*]] = load i32, ptr [[S]], align 32
-; TUNIT-NEXT:    [[S_B41:%.*]] = getelementptr i8, ptr [[S]], i64 4
-; TUNIT-NEXT:    [[TMP3:%.*]] = load i64, ptr [[S_B41]], align 32
-; TUNIT-NEXT:    [[C1:%.*]] = call i32 @g(i32 [[TMP2]], i64 [[TMP3]]) #[[ATTR1]]
+; TUNIT-NEXT:    [[TMP0:%.*]] = load <2 x i64>, ptr [[S]], align 8
+; TUNIT-NEXT:    [[C0:%.*]] = call i32 @f(<2 x i64> [[TMP0]]) #[[ATTR1:[0-9]+]]
+; TUNIT-NEXT:    [[TMP1:%.*]] = load <2 x i64>, ptr [[S]], align 32
+; TUNIT-NEXT:    [[C1:%.*]] = call i32 @g(<2 x i64> [[TMP1]]) #[[ATTR1]]
 ; TUNIT-NEXT:    [[A:%.*]] = add i32 [[C0]], [[C1]]
 ; TUNIT-NEXT:    ret i32 [[A]]
 ;
@@ -74,9 +66,13 @@ define i32 @main() nounwind  {
 ; CGSCC-SAME: () #[[ATTR1:[0-9]+]] {
 ; CGSCC-NEXT:  entry:
 ; CGSCC-NEXT:    [[S:%.*]] = alloca [[STRUCT_SS:%.*]], align 4
+; CGSCC-NEXT:    store i32 1, ptr [[S]], align 32
 ; CGSCC-NEXT:    [[VAL4:%.*]] = getelementptr [[STRUCT_SS]], ptr [[S]], i32 0, i32 1
-; CGSCC-NEXT:    [[C0:%.*]] = call i32 @f(i32 noundef 1, i64 noundef 2) #[[ATTR2:[0-9]+]]
-; CGSCC-NEXT:    [[C1:%.*]] = call i32 @g(i32 noundef 1, i64 noundef 2) #[[ATTR2]]
+; CGSCC-NEXT:    store i64 2, ptr [[VAL4]], align 4
+; CGSCC-NEXT:    [[TMP0:%.*]] = load <2 x i64>, ptr [[S]], align 32
+; CGSCC-NEXT:    [[C0:%.*]] = call i32 @f(<2 x i64> [[TMP0]]) #[[ATTR2:[0-9]+]]
+; CGSCC-NEXT:    [[TMP1:%.*]] = load <2 x i64>, ptr [[S]], align 32
+; CGSCC-NEXT:    [[C1:%.*]] = call i32 @g(<2 x i64> [[TMP1]]) #[[ATTR2]]
 ; CGSCC-NEXT:    [[A:%.*]] = add i32 [[C0]], [[C1]]
 ; CGSCC-NEXT:    ret i32 [[A]]
 ;

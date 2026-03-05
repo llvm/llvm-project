@@ -2464,9 +2464,9 @@ define float @user(float %arg) {
 define internal float @through_memory0(ptr %ptr.arg) {
 ; CGSCC: Function Attrs: mustprogress nofree norecurse nosync nounwind willreturn memory(none)
 ; CGSCC-LABEL: define internal float @through_memory0
-; CGSCC-SAME: (float [[TMP0:%.*]]) #[[ATTR3]] {
-; CGSCC-NEXT:    [[PTR_ARG_PRIV:%.*]] = alloca float, align 4
-; CGSCC-NEXT:    store float [[TMP0]], ptr [[PTR_ARG_PRIV]], align 4
+; CGSCC-SAME: (i32 [[TMP0:%.*]]) #[[ATTR3]] {
+; CGSCC-NEXT:    [[PTR_ARG_PRIV:%.*]] = alloca i32, align 4
+; CGSCC-NEXT:    store i32 [[TMP0]], ptr [[PTR_ARG_PRIV]], align 4
 ; CGSCC-NEXT:    [[LOAD:%.*]] = load float, ptr [[PTR_ARG_PRIV]], align 4, !invariant.load [[META0]]
 ; CGSCC-NEXT:    ret float [[LOAD]]
 ;
@@ -2478,18 +2478,18 @@ define internal float @through_memory0(ptr %ptr.arg) {
 define internal float @through_memory1(ptr %ptr.arg) {
 ; TUNIT: Function Attrs: mustprogress nofree norecurse nosync nounwind willreturn memory(none)
 ; TUNIT-LABEL: define internal float @through_memory1
-; TUNIT-SAME: (float [[TMP0:%.*]]) #[[ATTR3]] {
-; TUNIT-NEXT:    [[PTR_ARG_PRIV:%.*]] = alloca float, align 4
-; TUNIT-NEXT:    store float [[TMP0]], ptr [[PTR_ARG_PRIV]], align 4
+; TUNIT-SAME: (i32 [[TMP0:%.*]]) #[[ATTR3]] {
+; TUNIT-NEXT:    [[PTR_ARG_PRIV:%.*]] = alloca i32, align 4
+; TUNIT-NEXT:    store i32 [[TMP0]], ptr [[PTR_ARG_PRIV]], align 4
 ; TUNIT-NEXT:    [[LOAD:%.*]] = load float, ptr [[PTR_ARG_PRIV]], align 4
 ; TUNIT-NEXT:    [[CALL:%.*]] = call float @llvm.arithmetic.fence.f32(float [[LOAD]]) #[[ATTR26]]
 ; TUNIT-NEXT:    ret float [[CALL]]
 ;
 ; CGSCC: Function Attrs: mustprogress nofree norecurse nosync nounwind willreturn memory(none)
 ; CGSCC-LABEL: define internal float @through_memory1
-; CGSCC-SAME: (float [[TMP0:%.*]]) #[[ATTR3]] {
-; CGSCC-NEXT:    [[PTR_ARG_PRIV:%.*]] = alloca float, align 4
-; CGSCC-NEXT:    store float [[TMP0]], ptr [[PTR_ARG_PRIV]], align 4
+; CGSCC-SAME: (i32 [[TMP0:%.*]]) #[[ATTR3]] {
+; CGSCC-NEXT:    [[PTR_ARG_PRIV:%.*]] = alloca i32, align 4
+; CGSCC-NEXT:    store i32 [[TMP0]], ptr [[PTR_ARG_PRIV]], align 4
 ; CGSCC-NEXT:    [[LOAD:%.*]] = load float, ptr [[PTR_ARG_PRIV]], align 4, !invariant.load [[META0]]
 ; CGSCC-NEXT:    [[CALL:%.*]] = call float @llvm.arithmetic.fence.f32(float [[LOAD]]) #[[ATTR23]]
 ; CGSCC-NEXT:    ret float [[CALL]]
@@ -2503,9 +2503,9 @@ define internal float @through_memory1(ptr %ptr.arg) {
 define internal float @through_memory2(ptr %ptr.arg) {
 ; CHECK: Function Attrs: memory(readwrite, argmem: none)
 ; CHECK-LABEL: define internal float @through_memory2
-; CHECK-SAME: (float [[TMP0:%.*]]) #[[ATTR15:[0-9]+]] {
-; CHECK-NEXT:    [[PTR_ARG_PRIV:%.*]] = alloca float, align 4
-; CHECK-NEXT:    store float [[TMP0]], ptr [[PTR_ARG_PRIV]], align 4
+; CHECK-SAME: (i32 [[TMP0:%.*]]) #[[ATTR15:[0-9]+]] {
+; CHECK-NEXT:    [[PTR_ARG_PRIV:%.*]] = alloca i32, align 4
+; CHECK-NEXT:    store i32 [[TMP0]], ptr [[PTR_ARG_PRIV]], align 4
 ; CHECK-NEXT:    [[LOAD:%.*]] = load float, ptr [[PTR_ARG_PRIV]], align 4, !invariant.load [[META0]]
 ; CHECK-NEXT:    [[CALL:%.*]] = call float @extern.f32(float [[LOAD]])
 ; CHECK-NEXT:    ret float [[CALL]]
@@ -2528,7 +2528,8 @@ define float @call_through_memory0(float nofpclass(nan) %val) {
 ; CGSCC-SAME: (float nofpclass(nan) [[VAL:%.*]]) #[[ATTR4]] {
 ; CGSCC-NEXT:    [[ALLOCA:%.*]] = alloca float, align 4
 ; CGSCC-NEXT:    store float [[VAL]], ptr [[ALLOCA]], align 4
-; CGSCC-NEXT:    [[THROUGH_MEMORY:%.*]] = call float @through_memory0(float nofpclass(nan) [[VAL]]) #[[ATTR23]]
+; CGSCC-NEXT:    [[TMP1:%.*]] = load i32, ptr [[ALLOCA]], align 4
+; CGSCC-NEXT:    [[THROUGH_MEMORY:%.*]] = call float @through_memory0(i32 [[TMP1]]) #[[ATTR23]]
 ; CGSCC-NEXT:    ret float [[THROUGH_MEMORY]]
 ;
   %alloca = alloca float
@@ -2543,8 +2544,8 @@ define float @call_through_memory1(float nofpclass(nan) %val) {
 ; TUNIT-SAME: (float nofpclass(nan) [[VAL:%.*]]) #[[ATTR3]] {
 ; TUNIT-NEXT:    [[ALLOCA:%.*]] = alloca float, align 4
 ; TUNIT-NEXT:    store float [[VAL]], ptr [[ALLOCA]], align 4
-; TUNIT-NEXT:    [[TMP1:%.*]] = load float, ptr [[ALLOCA]], align 4
-; TUNIT-NEXT:    [[THROUGH_MEMORY:%.*]] = call float @through_memory1(float [[TMP1]]) #[[ATTR25]]
+; TUNIT-NEXT:    [[TMP1:%.*]] = load i32, ptr [[ALLOCA]], align 4
+; TUNIT-NEXT:    [[THROUGH_MEMORY:%.*]] = call float @through_memory1(i32 [[TMP1]]) #[[ATTR25]]
 ; TUNIT-NEXT:    ret float [[THROUGH_MEMORY]]
 ;
 ; CGSCC: Function Attrs: mustprogress nofree nosync nounwind willreturn memory(none)
@@ -2552,7 +2553,8 @@ define float @call_through_memory1(float nofpclass(nan) %val) {
 ; CGSCC-SAME: (float nofpclass(nan) [[VAL:%.*]]) #[[ATTR4]] {
 ; CGSCC-NEXT:    [[ALLOCA:%.*]] = alloca float, align 4
 ; CGSCC-NEXT:    store float [[VAL]], ptr [[ALLOCA]], align 4
-; CGSCC-NEXT:    [[THROUGH_MEMORY:%.*]] = call float @through_memory1(float nofpclass(nan) [[VAL]]) #[[ATTR23]]
+; CGSCC-NEXT:    [[TMP1:%.*]] = load i32, ptr [[ALLOCA]], align 4
+; CGSCC-NEXT:    [[THROUGH_MEMORY:%.*]] = call float @through_memory1(i32 [[TMP1]]) #[[ATTR23]]
 ; CGSCC-NEXT:    ret float [[THROUGH_MEMORY]]
 ;
   %alloca = alloca float
@@ -2562,20 +2564,13 @@ define float @call_through_memory1(float nofpclass(nan) %val) {
 }
 
 define float @call_through_memory2(float nofpclass(nan) %val) {
-; TUNIT-LABEL: define float @call_through_memory2
-; TUNIT-SAME: (float nofpclass(nan) [[VAL:%.*]]) {
-; TUNIT-NEXT:    [[ALLOCA:%.*]] = alloca float, align 4
-; TUNIT-NEXT:    store float [[VAL]], ptr [[ALLOCA]], align 4
-; TUNIT-NEXT:    [[TMP1:%.*]] = load float, ptr [[ALLOCA]], align 4
-; TUNIT-NEXT:    [[THROUGH_MEMORY:%.*]] = call float @through_memory2(float [[TMP1]])
-; TUNIT-NEXT:    ret float [[THROUGH_MEMORY]]
-;
-; CGSCC-LABEL: define float @call_through_memory2
-; CGSCC-SAME: (float nofpclass(nan) [[VAL:%.*]]) {
-; CGSCC-NEXT:    [[ALLOCA:%.*]] = alloca float, align 4
-; CGSCC-NEXT:    store float [[VAL]], ptr [[ALLOCA]], align 4
-; CGSCC-NEXT:    [[THROUGH_MEMORY:%.*]] = call float @through_memory2(float nofpclass(nan) [[VAL]])
-; CGSCC-NEXT:    ret float [[THROUGH_MEMORY]]
+; CHECK-LABEL: define float @call_through_memory2
+; CHECK-SAME: (float nofpclass(nan) [[VAL:%.*]]) {
+; CHECK-NEXT:    [[ALLOCA:%.*]] = alloca float, align 4
+; CHECK-NEXT:    store float [[VAL]], ptr [[ALLOCA]], align 4
+; CHECK-NEXT:    [[TMP1:%.*]] = load i32, ptr [[ALLOCA]], align 4
+; CHECK-NEXT:    [[THROUGH_MEMORY:%.*]] = call float @through_memory2(i32 [[TMP1]])
+; CHECK-NEXT:    ret float [[THROUGH_MEMORY]]
 ;
   %alloca = alloca float
   store float %val, ptr %alloca

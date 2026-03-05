@@ -14,14 +14,12 @@ declare void @use(i8)
 define internal void @vfu1(ptr byval(%struct.MYstr) align 4 %u) nounwind {
 ; CHECK: Function Attrs: nounwind memory(readwrite, argmem: none)
 ; CHECK-LABEL: define {{[^@]+}}@vfu1
-; CHECK-SAME: (i8 [[TMP0:%.*]], i32 [[TMP1:%.*]]) #[[ATTR0:[0-9]+]] {
+; CHECK-SAME: (i64 [[TMP0:%.*]]) #[[ATTR0:[0-9]+]] {
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[U_PRIV:%.*]] = alloca [[STRUCT_MYSTR:%.*]], align 8
-; CHECK-NEXT:    store i8 [[TMP0]], ptr [[U_PRIV]], align 1
-; CHECK-NEXT:    [[U_PRIV_B4:%.*]] = getelementptr i8, ptr [[U_PRIV]], i64 4
-; CHECK-NEXT:    store i32 [[TMP1]], ptr [[U_PRIV_B4]], align 4
-; CHECK-NEXT:    [[TMP2:%.*]] = getelementptr [[STRUCT_MYSTR]], ptr [[U_PRIV]], i32 0, i32 1
-; CHECK-NEXT:    store i32 99, ptr [[TMP2]], align 4
+; CHECK-NEXT:    [[U_PRIV:%.*]] = alloca i64, align 8
+; CHECK-NEXT:    store i64 [[TMP0]], ptr [[U_PRIV]], align 4
+; CHECK-NEXT:    [[TMP1:%.*]] = getelementptr [[STRUCT_MYSTR:%.*]], ptr [[U_PRIV]], i32 0, i32 1
+; CHECK-NEXT:    store i32 99, ptr [[TMP1]], align 4
 ; CHECK-NEXT:    store i8 97, ptr [[U_PRIV]], align 8
 ; CHECK-NEXT:    [[L:%.*]] = load i8, ptr [[U_PRIV]], align 8
 ; CHECK-NEXT:    call void @use(i8 [[L]])
@@ -45,18 +43,16 @@ return:                                           ; preds = %entry
 define internal i32 @vfu2(ptr byval(%struct.MYstr) align 4 %u) nounwind readonly {
 ; CHECK: Function Attrs: mustprogress nofree norecurse nosync nounwind willreturn memory(none)
 ; CHECK-LABEL: define {{[^@]+}}@vfu2
-; CHECK-SAME: (i8 [[TMP0:%.*]], i32 [[TMP1:%.*]]) #[[ATTR1:[0-9]+]] {
+; CHECK-SAME: (i64 [[TMP0:%.*]]) #[[ATTR1:[0-9]+]] {
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[U_PRIV:%.*]] = alloca [[STRUCT_MYSTR:%.*]], align 8
-; CHECK-NEXT:    store i8 [[TMP0]], ptr [[U_PRIV]], align 1
-; CHECK-NEXT:    [[U_PRIV_B4:%.*]] = getelementptr i8, ptr [[U_PRIV]], i64 4
-; CHECK-NEXT:    store i32 [[TMP1]], ptr [[U_PRIV_B4]], align 4
-; CHECK-NEXT:    [[TMP2:%.*]] = getelementptr [[STRUCT_MYSTR]], ptr [[U_PRIV]], i32 0, i32 1
-; CHECK-NEXT:    [[TMP3:%.*]] = load i32, ptr [[TMP2]], align 4
-; CHECK-NEXT:    [[TMP4:%.*]] = load i8, ptr [[U_PRIV]], align 8
-; CHECK-NEXT:    [[TMP5:%.*]] = zext i8 [[TMP4]] to i32
-; CHECK-NEXT:    [[TMP6:%.*]] = add i32 [[TMP5]], [[TMP3]]
-; CHECK-NEXT:    ret i32 [[TMP6]]
+; CHECK-NEXT:    [[U_PRIV:%.*]] = alloca i64, align 8
+; CHECK-NEXT:    store i64 [[TMP0]], ptr [[U_PRIV]], align 4
+; CHECK-NEXT:    [[TMP1:%.*]] = getelementptr [[STRUCT_MYSTR:%.*]], ptr [[U_PRIV]], i32 0, i32 1
+; CHECK-NEXT:    [[TMP2:%.*]] = load i32, ptr [[TMP1]], align 4, !invariant.load [[META0:![0-9]+]]
+; CHECK-NEXT:    [[TMP3:%.*]] = load i8, ptr [[U_PRIV]], align 8, !invariant.load [[META0]]
+; CHECK-NEXT:    [[TMP4:%.*]] = zext i8 [[TMP3]] to i32
+; CHECK-NEXT:    [[TMP5:%.*]] = add i32 [[TMP4]], [[TMP2]]
+; CHECK-NEXT:    ret i32 [[TMP5]]
 ;
 entry:
   %0 = getelementptr %struct.MYstr, ptr %u, i32 0, i32 1 ; <ptr> [#uses=1]
@@ -73,28 +69,20 @@ define i32 @unions() nounwind {
 ; TUNIT-LABEL: define {{[^@]+}}@unions
 ; TUNIT-SAME: () #[[ATTR2:[0-9]+]] {
 ; TUNIT-NEXT:  entry:
-; TUNIT-NEXT:    [[TMP0:%.*]] = load i8, ptr @mystr, align 8
-; TUNIT-NEXT:    [[MYSTR_B41:%.*]] = getelementptr i8, ptr @mystr, i64 4
-; TUNIT-NEXT:    [[TMP1:%.*]] = load i32, ptr [[MYSTR_B41]], align 8
-; TUNIT-NEXT:    call void @vfu1(i8 [[TMP0]], i32 [[TMP1]]) #[[ATTR2]]
-; TUNIT-NEXT:    [[TMP2:%.*]] = load i8, ptr @mystr, align 8
-; TUNIT-NEXT:    [[MYSTR_B4:%.*]] = getelementptr i8, ptr @mystr, i64 4
-; TUNIT-NEXT:    [[TMP3:%.*]] = load i32, ptr [[MYSTR_B4]], align 8
-; TUNIT-NEXT:    [[RESULT:%.*]] = call i32 @vfu2(i8 [[TMP2]], i32 [[TMP3]]) #[[ATTR3:[0-9]+]]
+; TUNIT-NEXT:    [[TMP0:%.*]] = load i64, ptr @mystr, align 8
+; TUNIT-NEXT:    call void @vfu1(i64 [[TMP0]]) #[[ATTR2]]
+; TUNIT-NEXT:    [[TMP1:%.*]] = load i64, ptr @mystr, align 8
+; TUNIT-NEXT:    [[RESULT:%.*]] = call i32 @vfu2(i64 [[TMP1]]) #[[ATTR3:[0-9]+]]
 ; TUNIT-NEXT:    ret i32 [[RESULT]]
 ;
 ; CGSCC: Function Attrs: nounwind
 ; CGSCC-LABEL: define {{[^@]+}}@unions
 ; CGSCC-SAME: () #[[ATTR2:[0-9]+]] {
 ; CGSCC-NEXT:  entry:
-; CGSCC-NEXT:    [[TMP0:%.*]] = load i8, ptr @mystr, align 8
-; CGSCC-NEXT:    [[MYSTR_B4:%.*]] = getelementptr i8, ptr @mystr, i64 4
-; CGSCC-NEXT:    [[TMP1:%.*]] = load i32, ptr [[MYSTR_B4]], align 8
-; CGSCC-NEXT:    call void @vfu1(i8 [[TMP0]], i32 [[TMP1]]) #[[ATTR2]]
-; CGSCC-NEXT:    [[TMP2:%.*]] = load i8, ptr @mystr, align 8
-; CGSCC-NEXT:    [[MYSTR_B41:%.*]] = getelementptr i8, ptr @mystr, i64 4
-; CGSCC-NEXT:    [[TMP3:%.*]] = load i32, ptr [[MYSTR_B41]], align 8
-; CGSCC-NEXT:    [[RESULT:%.*]] = call i32 @vfu2(i8 [[TMP2]], i32 [[TMP3]]) #[[ATTR2]]
+; CGSCC-NEXT:    [[TMP0:%.*]] = load i64, ptr @mystr, align 8
+; CGSCC-NEXT:    call void @vfu1(i64 [[TMP0]]) #[[ATTR2]]
+; CGSCC-NEXT:    [[TMP1:%.*]] = load i64, ptr @mystr, align 8
+; CGSCC-NEXT:    [[RESULT:%.*]] = call i32 @vfu2(i64 [[TMP1]]) #[[ATTR2]]
 ; CGSCC-NEXT:    ret i32 [[RESULT]]
 ;
 entry:
@@ -106,20 +94,18 @@ entry:
 define internal i32 @vfu2_v2(ptr byval(%struct.MYstr) align 4 %u) nounwind readonly {
 ; CHECK: Function Attrs: mustprogress nofree norecurse nosync nounwind willreturn memory(none)
 ; CHECK-LABEL: define {{[^@]+}}@vfu2_v2
-; CHECK-SAME: (i8 [[TMP0:%.*]], i32 [[TMP1:%.*]]) #[[ATTR1]] {
+; CHECK-SAME: (i64 [[TMP0:%.*]]) #[[ATTR1]] {
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[U_PRIV:%.*]] = alloca [[STRUCT_MYSTR:%.*]], align 8
-; CHECK-NEXT:    store i8 [[TMP0]], ptr [[U_PRIV]], align 1
-; CHECK-NEXT:    [[U_PRIV_B4:%.*]] = getelementptr i8, ptr [[U_PRIV]], i64 4
-; CHECK-NEXT:    store i32 [[TMP1]], ptr [[U_PRIV_B4]], align 4
-; CHECK-NEXT:    [[Z:%.*]] = getelementptr [[STRUCT_MYSTR]], ptr [[U_PRIV]], i32 0, i32 1
+; CHECK-NEXT:    [[U_PRIV:%.*]] = alloca i64, align 8
+; CHECK-NEXT:    store i64 [[TMP0]], ptr [[U_PRIV]], align 4
+; CHECK-NEXT:    [[Z:%.*]] = getelementptr [[STRUCT_MYSTR:%.*]], ptr [[U_PRIV]], i32 0, i32 1
 ; CHECK-NEXT:    store i32 99, ptr [[Z]], align 4
-; CHECK-NEXT:    [[TMP2:%.*]] = getelementptr [[STRUCT_MYSTR]], ptr [[U_PRIV]], i32 0, i32 1
-; CHECK-NEXT:    [[TMP3:%.*]] = load i32, ptr [[TMP2]], align 4
-; CHECK-NEXT:    [[TMP4:%.*]] = load i8, ptr [[U_PRIV]], align 8
-; CHECK-NEXT:    [[TMP5:%.*]] = zext i8 [[TMP4]] to i32
-; CHECK-NEXT:    [[TMP6:%.*]] = add i32 [[TMP5]], [[TMP3]]
-; CHECK-NEXT:    ret i32 [[TMP6]]
+; CHECK-NEXT:    [[TMP1:%.*]] = getelementptr [[STRUCT_MYSTR]], ptr [[U_PRIV]], i32 0, i32 1
+; CHECK-NEXT:    [[TMP2:%.*]] = load i32, ptr [[TMP1]], align 4
+; CHECK-NEXT:    [[TMP3:%.*]] = load i8, ptr [[U_PRIV]], align 8
+; CHECK-NEXT:    [[TMP4:%.*]] = zext i8 [[TMP3]] to i32
+; CHECK-NEXT:    [[TMP5:%.*]] = add i32 [[TMP4]], [[TMP2]]
+; CHECK-NEXT:    ret i32 [[TMP5]]
 ;
 entry:
   %z = getelementptr %struct.MYstr, ptr %u, i32 0, i32 1
@@ -138,22 +124,18 @@ define i32 @unions_v2() nounwind {
 ; TUNIT-LABEL: define {{[^@]+}}@unions_v2
 ; TUNIT-SAME: () #[[ATTR2]] {
 ; TUNIT-NEXT:  entry:
-; TUNIT-NEXT:    [[TMP0:%.*]] = load i8, ptr @mystr, align 8
-; TUNIT-NEXT:    [[MYSTR_B41:%.*]] = getelementptr i8, ptr @mystr, i64 4
-; TUNIT-NEXT:    [[TMP1:%.*]] = load i32, ptr [[MYSTR_B41]], align 8
-; TUNIT-NEXT:    call void @vfu1(i8 [[TMP0]], i32 [[TMP1]]) #[[ATTR2]]
-; TUNIT-NEXT:    [[TMP2:%.*]] = load i8, ptr @mystr, align 8
-; TUNIT-NEXT:    [[MYSTR_B4:%.*]] = getelementptr i8, ptr @mystr, i64 4
-; TUNIT-NEXT:    [[TMP3:%.*]] = load i32, ptr [[MYSTR_B4]], align 8
-; TUNIT-NEXT:    [[RESULT:%.*]] = call i32 @vfu2_v2(i8 [[TMP2]], i32 [[TMP3]]) #[[ATTR3]]
+; TUNIT-NEXT:    [[TMP0:%.*]] = load i64, ptr @mystr, align 8
+; TUNIT-NEXT:    call void @vfu1(i64 [[TMP0]]) #[[ATTR2]]
+; TUNIT-NEXT:    [[TMP1:%.*]] = load i64, ptr @mystr, align 8
+; TUNIT-NEXT:    [[RESULT:%.*]] = call i32 @vfu2_v2(i64 [[TMP1]]) #[[ATTR3]]
 ; TUNIT-NEXT:    ret i32 [[RESULT]]
 ;
 ; CGSCC: Function Attrs: nounwind
 ; CGSCC-LABEL: define {{[^@]+}}@unions_v2
 ; CGSCC-SAME: () #[[ATTR2]] {
 ; CGSCC-NEXT:  entry:
-; CGSCC-NEXT:    call void @vfu1(i8 noundef 0, i32 noundef 0) #[[ATTR2]]
-; CGSCC-NEXT:    [[RESULT:%.*]] = call i32 @vfu2_v2(i8 noundef 0, i32 noundef 0) #[[ATTR2]]
+; CGSCC-NEXT:    call void @vfu1(i64 noundef 0) #[[ATTR2]]
+; CGSCC-NEXT:    [[RESULT:%.*]] = call i32 @vfu2_v2(i64 noundef 0) #[[ATTR2]]
 ; CGSCC-NEXT:    ret i32 [[RESULT]]
 ;
 entry:
@@ -170,4 +152,8 @@ entry:
 ; CGSCC: attributes #[[ATTR0]] = { nounwind memory(readwrite, argmem: none) }
 ; CGSCC: attributes #[[ATTR1]] = { mustprogress nofree norecurse nosync nounwind willreturn memory(none) }
 ; CGSCC: attributes #[[ATTR2]] = { nounwind }
+;.
+; TUNIT: [[META0]] = !{}
+;.
+; CGSCC: [[META0]] = !{}
 ;.

@@ -225,45 +225,6 @@ static bool mayBeInCycle(const CycleInfo *CI, const Instruction *I,
   return !HeaderOnly || BB == C->getHeader();
 }
 
-/// Checks if a type could have padding bytes.
-static bool isDenselyPacked(Type *Ty, const DataLayout &DL) {
-  // There is no size information, so be conservative.
-  if (!Ty->isSized())
-    return false;
-
-  // If the alloc size is not equal to the storage size, then there are padding
-  // bytes. For x86_fp80 on x86-64, size: 80 alloc size: 128.
-  if (DL.getTypeSizeInBits(Ty) != DL.getTypeAllocSizeInBits(Ty))
-    return false;
-
-  // FIXME: This isn't the right way to check for padding in vectors with
-  // non-byte-size elements.
-  if (VectorType *SeqTy = dyn_cast<VectorType>(Ty))
-    return isDenselyPacked(SeqTy->getElementType(), DL);
-
-  // For array types, check for padding within members.
-  if (ArrayType *SeqTy = dyn_cast<ArrayType>(Ty))
-    return isDenselyPacked(SeqTy->getElementType(), DL);
-
-  if (!isa<StructType>(Ty))
-    return true;
-
-  // Check for padding within and between elements of a struct.
-  StructType *StructTy = cast<StructType>(Ty);
-  const StructLayout *Layout = DL.getStructLayout(StructTy);
-  uint64_t StartPos = 0;
-  for (unsigned I = 0, E = StructTy->getNumElements(); I < E; ++I) {
-    Type *ElTy = StructTy->getElementType(I);
-    if (!isDenselyPacked(ElTy, DL))
-      return false;
-    if (StartPos != Layout->getElementOffsetInBits(I))
-      return false;
-    StartPos += DL.getTypeAllocSizeInBits(ElTy);
-  }
-
-  return true;
-}
-
 /// Get pointer operand of memory accessing instruction. If \p I is
 /// not a memory accessing instruction, return nullptr. If \p AllowVolatile,
 /// is set to false and the instruction is volatile, return nullptr.
@@ -7290,34 +7251,35 @@ ChangeStatus AAHeapToStackFunction::updateImpl(Attributor &A) {
 namespace {
 struct AAPrivatizablePtrImpl : public AAPrivatizablePtr {
   AAPrivatizablePtrImpl(const IRPosition &IRP, Attributor &A)
-      : AAPrivatizablePtr(IRP, A), PrivatizableType(std::nullopt) {}
+      : AAPrivatizablePtr(IRP, A), PrivatizableSize(std::nullopt) {}
 
   ChangeStatus indicatePessimisticFixpoint() override {
     AAPrivatizablePtr::indicatePessimisticFixpoint();
-    PrivatizableType = nullptr;
+    PrivatizableSize = TypeSize::getFixed(0);
     return ChangeStatus::CHANGED;
   }
 
-  /// Identify the type we can chose for a private copy of the underlying
-  /// argument. std::nullopt means it is not clear yet, nullptr means there is
+  /// Identify the size we can chose for a private copy of the underlying
+  /// argument. std::nullopt means it is not clear yet, zero means there is
   /// none.
-  virtual std::optional<Type *> identifyPrivatizableType(Attributor &A) = 0;
+  virtual std::optional<TypeSize> identifyPrivatizableSize(Attributor &A) = 0;
 
-  /// Return a privatizable type that encloses both T0 and T1.
-  /// TODO: This is merely a stub for now as we should manage a mapping as well.
-  std::optional<Type *> combineTypes(std::optional<Type *> T0,
-                                     std::optional<Type *> T1) {
-    if (!T0)
-      return T1;
-    if (!T1)
-      return T0;
-    if (T0 == T1)
-      return T0;
-    return nullptr;
+  /// Return a privatizable size that encloses both S0 and S1.
+  std::optional<TypeSize> combineSizes(std::optional<TypeSize> S0,
+                                       std::optional<TypeSize> S1) {
+    if (!S0)
+      return S1;
+    if (!S1)
+      return S0;
+    // Both sizes must be known and must match (including scalability)
+    if (*S0 == *S1)
+      return S0;
+    // Sizes don't match - cannot privatize
+    return TypeSize::getFixed(0);
   }
 
-  std::optional<Type *> getPrivatizableType() const override {
-    return PrivatizableType;
+  std::optional<TypeSize> getPrivatizableSize() const override {
+    return PrivatizableSize;
   }
 
   const std::string getAsStr(Attributor *A) const override {
@@ -7325,7 +7287,8 @@ struct AAPrivatizablePtrImpl : public AAPrivatizablePtr {
   }
 
 protected:
-  std::optional<Type *> PrivatizableType;
+  std::optional<TypeSize> PrivatizableSize;
+  Type *PrivatizableType = nullptr;
 };
 
 // TODO: Do this for call site arguments (probably also other values) as well.
@@ -7334,8 +7297,9 @@ struct AAPrivatizablePtrArgument final : public AAPrivatizablePtrImpl {
   AAPrivatizablePtrArgument(const IRPosition &IRP, Attributor &A)
       : AAPrivatizablePtrImpl(IRP, A) {}
 
-  /// See AAPrivatizablePtrImpl::identifyPrivatizableType(...)
-  std::optional<Type *> identifyPrivatizableType(Attributor &A) override {
+  /// See AAPrivatizablePtrImpl::identifyPrivatizableSize(...)
+  std::optional<TypeSize> identifyPrivatizableSize(Attributor &A) override {
+    const DataLayout &DL = A.getDataLayout();
     // If this is a byval argument and we know all the call sites (so we can
     // rewrite them), there is no need to check them explicitly.
     bool UsedAssumedInformation = false;
@@ -7344,18 +7308,19 @@ struct AAPrivatizablePtrArgument final : public AAPrivatizablePtrImpl {
                /* IgnoreSubsumingPositions */ true);
     if (!Attrs.empty() &&
         A.checkForAllCallSites([](AbstractCallSite ACS) { return true; }, *this,
-                               true, UsedAssumedInformation))
-      return Attrs[0].getValueAsType();
+                               true, UsedAssumedInformation)) {
+      Type *ByValTy = Attrs[0].getValueAsType();
+      if (ByValTy->isSized())
+        return DL.getTypeAllocSize(ByValTy);
+      return TypeSize::getFixed(0);
+    }
 
-    std::optional<Type *> Ty;
+    std::optional<TypeSize> Size;
     unsigned ArgNo = getIRPosition().getCallSiteArgNo();
 
-    // Make sure the associated call site argument has the same type at all call
+    // Make sure the associated call site argument has the same size at all call
     // sites and it is an allocation we know is safe to privatize, for now that
     // means we only allow alloca instructions.
-    // TODO: We can additionally analyze the accesses in the callee to  create
-    //       the type from that information instead. That is a little more
-    //       involved and will be done in a follow up patch.
     auto CallSiteCheck = [&](AbstractCallSite ACS) {
       IRPosition ACSArgPos = IRPosition::callsite_argument(ACS, ArgNo);
       // Check if a coresponding argument was found or if it is one not
@@ -7363,96 +7328,76 @@ struct AAPrivatizablePtrArgument final : public AAPrivatizablePtrImpl {
       if (ACSArgPos.getPositionKind() == IRPosition::IRP_INVALID)
         return false;
 
-      // Check that all call sites agree on a type.
+      // Check that all call sites agree on a size.
       auto *PrivCSArgAA =
           A.getAAFor<AAPrivatizablePtr>(*this, ACSArgPos, DepClassTy::REQUIRED);
       if (!PrivCSArgAA)
         return false;
-      std::optional<Type *> CSTy = PrivCSArgAA->getPrivatizableType();
+      std::optional<TypeSize> CSSize = PrivCSArgAA->getPrivatizableSize();
 
       LLVM_DEBUG({
-        dbgs() << "[AAPrivatizablePtr] ACSPos: " << ACSArgPos << ", CSTy: ";
-        if (CSTy && *CSTy)
-          (*CSTy)->print(dbgs());
-        else if (CSTy)
-          dbgs() << "<nullptr>";
+        dbgs() << "[AAPrivatizablePtr] ACSPos: " << ACSArgPos << ", CSSize: ";
+        if (CSSize && !CSSize->isZero())
+          dbgs() << *CSSize;
+        else if (CSSize)
+          dbgs() << "<zero>";
         else
           dbgs() << "<none>";
       });
 
-      Ty = combineTypes(Ty, CSTy);
+      Size = combineSizes(Size, CSSize);
 
       LLVM_DEBUG({
-        dbgs() << " : New Type: ";
-        if (Ty && *Ty)
-          (*Ty)->print(dbgs());
-        else if (Ty)
-          dbgs() << "<nullptr>";
+        dbgs() << " : New Size: ";
+        if (Size && !Size->isZero())
+          dbgs() << *Size;
+        else if (Size)
+          dbgs() << "<zero>";
         else
           dbgs() << "<none>";
         dbgs() << "\n";
       });
 
-      return !Ty || *Ty;
+      return !Size || !Size->isZero();
     };
 
     if (!A.checkForAllCallSites(CallSiteCheck, *this, true,
                                 UsedAssumedInformation))
-      return nullptr;
-    return Ty;
+      return TypeSize::getFixed(0);
+    return Size;
   }
 
   /// See AbstractAttribute::updateImpl(...).
   ChangeStatus updateImpl(Attributor &A) override {
-    PrivatizableType = identifyPrivatizableType(A);
-    if (!PrivatizableType)
+    PrivatizableSize = identifyPrivatizableSize(A);
+    if (!PrivatizableSize)
       return ChangeStatus::UNCHANGED;
-    if (!*PrivatizableType)
+    if (PrivatizableSize->isZero())
       return indicatePessimisticFixpoint();
 
-    // The dependence is optional so we don't give up once we give up on the
-    // alignment.
-    A.getAAFor<AAAlign>(*this, IRPosition::value(getAssociatedValue()),
-                        DepClassTy::OPTIONAL);
-
-    // Avoid arguments with padding for now.
-    if (!A.hasAttr(getIRPosition(), Attribute::ByVal) &&
-        !isDenselyPacked(*PrivatizableType, A.getInfoCache().getDL())) {
-      LLVM_DEBUG(dbgs() << "[AAPrivatizablePtr] Padding detected\n");
+    // Reject scalable vectors for now
+    if (PrivatizableSize->isScalable()) {
+      LLVM_DEBUG(dbgs() << "[AAPrivatizablePtr] Scalable size not supported\n");
       return indicatePessimisticFixpoint();
     }
 
-    // Collect the types that will replace the privatizable type in the function
-    // signature.
-    SmallVector<Type *, 16> ReplacementTypes;
-    identifyReplacementTypes(*PrivatizableType, ReplacementTypes);
+    // Get alignment information for choosing optimal type
+    const auto *AlignAA =
+        A.getAAFor<AAAlign>(*this, IRPosition::value(getAssociatedValue()),
+                            DepClassTy::OPTIONAL);
+    Align Alignment = AlignAA ? AlignAA->getAssumedAlign() : Align(1);
 
-    // Verify callee and caller agree on how the promoted argument would be
-    // passed.
+    // Get TTI for target-specific type selection
     Function &Fn = *getIRPosition().getAnchorScope();
     const auto *TTI =
         A.getInfoCache().getAnalysisResultForFunction<TargetIRAnalysis>(Fn);
-    if (!TTI) {
-      LLVM_DEBUG(dbgs() << "[AAPrivatizablePtr] Missing TTI for function "
-                        << Fn.getName() << "\n");
-      return indicatePessimisticFixpoint();
-    }
 
-    auto CallSiteCheck = [&](AbstractCallSite ACS) {
-      CallBase *CB = ACS.getInstruction();
-      return TTI->areTypesABICompatible(
-          CB->getCaller(),
-          dyn_cast_if_present<Function>(CB->getCalledOperand()),
-          ReplacementTypes);
-    };
-    bool UsedAssumedInformation = false;
-    if (!A.checkForAllCallSites(CallSiteCheck, *this, true,
-                                UsedAssumedInformation)) {
-      LLVM_DEBUG(
-          dbgs() << "[AAPrivatizablePtr] ABI incompatibility detected for "
-                 << Fn.getName() << "\n");
-      return indicatePessimisticFixpoint();
-    }
+    // Choose an optimal type to represent the privatizable data
+    const DataLayout &DL = A.getDataLayout();
+    PrivatizableType = getPrivatizableReplacementType(
+        PrivatizableSize->getFixedValue(), Alignment, DL,
+        getAnchorValue().getContext(), TTI);
+    SmallVector<Type *, 1> ReplacementTypes = {PrivatizableType};
 
     // Register a rewrite of the argument.
     Argument *Arg = getAssociatedArgument();
@@ -7462,6 +7407,7 @@ struct AAPrivatizablePtrArgument final : public AAPrivatizablePtrImpl {
     }
 
     unsigned ArgNo = Arg->getArgNo();
+    bool UsedAssumedInformation = false;
 
     // Helper to check if for the given call site the associated argument is
     // passed to a callback where the privatization would be different.
@@ -7494,10 +7440,10 @@ struct AAPrivatizablePtrArgument final : public AAPrivatizablePtrImpl {
           const auto *CBArgPrivAA = A.getAAFor<AAPrivatizablePtr>(
               *this, IRPosition::argument(CBArg), DepClassTy::REQUIRED);
           if (CBArgPrivAA && CBArgPrivAA->isValidState()) {
-            auto CBArgPrivTy = CBArgPrivAA->getPrivatizableType();
-            if (!CBArgPrivTy)
+            auto CBArgPrivSize = CBArgPrivAA->getPrivatizableSize();
+            if (!CBArgPrivSize)
               continue;
-            if (*CBArgPrivTy == PrivatizableType)
+            if (*CBArgPrivSize == PrivatizableSize)
               continue;
           }
 
@@ -7541,10 +7487,10 @@ struct AAPrivatizablePtrArgument final : public AAPrivatizablePtrImpl {
             *this, IRPosition::argument(*DCCallee->getArg(DCArgNo)),
             DepClassTy::REQUIRED);
         if (DCArgPrivAA && DCArgPrivAA->isValidState()) {
-          auto DCArgPrivTy = DCArgPrivAA->getPrivatizableType();
-          if (!DCArgPrivTy)
+          auto DCArgPrivSize = DCArgPrivAA->getPrivatizableSize();
+          if (!DCArgPrivSize)
             return true;
-          if (*DCArgPrivTy == PrivatizableType)
+          if (*DCArgPrivSize == PrivatizableSize)
             return true;
         }
       }
@@ -7580,101 +7526,84 @@ struct AAPrivatizablePtrArgument final : public AAPrivatizablePtrImpl {
     return ChangeStatus::UNCHANGED;
   }
 
-  /// Given a type to private \p PrivType, collect the constituates (which are
-  /// used) in \p ReplacementTypes.
-  static void
-  identifyReplacementTypes(Type *PrivType,
-                           SmallVectorImpl<Type *> &ReplacementTypes) {
-    // TODO: For now we expand the privatization type to the fullest which can
-    //       lead to dead arguments that need to be removed later.
-    assert(PrivType && "Expected privatizable type!");
+  /// Choose an optimal type to represent \p Size bytes of data.
+  /// Strategy:
+  /// 1. Up to pointer size: use IntegerType
+  /// 2. Up to vector register size: use vector of integers
+  /// 3. Otherwise: use array of integers sized to alignment
+  static Type *getPrivatizableReplacementType(uint64_t Size, Align Alignment,
+                                               const DataLayout &DL,
+                                               LLVMContext &Ctx,
+                                               const TargetTransformInfo *TTI) {
+    // Strategy 1: If size fits in pointer, use integer type
+    uint64_t PointerSizeInBits = DL.getPointerSizeInBits();
+    if (Size * 8 <= PointerSizeInBits)
+      return IntegerType::get(Ctx, Size * 8);
 
-    // Traverse the type, extract constituate types on the outermost level.
-    if (auto *PrivStructType = dyn_cast<StructType>(PrivType)) {
-      for (unsigned u = 0, e = PrivStructType->getNumElements(); u < e; u++)
-        ReplacementTypes.push_back(PrivStructType->getElementType(u));
-    } else if (auto *PrivArrayType = dyn_cast<ArrayType>(PrivType)) {
-      ReplacementTypes.append(PrivArrayType->getNumElements(),
-                              PrivArrayType->getElementType());
-    } else {
-      ReplacementTypes.push_back(PrivType);
+    // Strategy 2: Try to use a vector type up to the vector register size
+    if (TTI) {
+      // Check for common vector widths (128-bit, 256-bit, 512-bit)
+      for (unsigned VectorBits : {128, 256, 512}) {
+        if (Size * 8 <= VectorBits) {
+          // Use a vector of i64 or smaller elements
+          uint64_t ElementBits = std::min(uint64_t(64), PointerSizeInBits);
+          unsigned NumElements = (Size * 8 + ElementBits - 1) / ElementBits;
+
+          // Verify this vector size is reasonable for the target
+          Type *ElementTy = IntegerType::get(Ctx, ElementBits);
+          auto VecTy = FixedVectorType::get(ElementTy, NumElements);
+
+          // Check if the vector type makes sense (not larger than requested)
+          if (DL.getTypeStoreSize(VecTy) >= Size &&
+              DL.getTypeStoreSize(VecTy) <= (Size * 3) / 2) // Max 50% overhead
+            return VecTy;
+        }
+      }
     }
+
+    // Strategy 3: Use array of integers sized to alignment
+    uint64_t AlignmentBytes = Alignment.value();
+    // Use alignment-sized integers, but cap at pointer size
+    uint64_t ElementSize = std::min(AlignmentBytes, PointerSizeInBits / 8);
+    // Ensure element size is a power of 2 and at least 1 byte
+    ElementSize = std::max(uint64_t(1), llvm::bit_floor(ElementSize));
+
+    Type *ElementTy = IntegerType::get(Ctx, ElementSize * 8);
+    uint64_t NumElements = (Size + ElementSize - 1) / ElementSize;
+
+    return ArrayType::get(ElementTy, NumElements);
   }
 
-  /// Initialize \p Base according to the type \p PrivType at position \p IP.
-  /// The values needed are taken from the arguments of \p F starting at
-  /// position \p ArgNo.
-  static void createInitialization(Type *PrivType, Value &Base, Function &F,
+  /// Initialize \p Base with the replacement value argument at position \p ArgNo.
+  /// Stores the value argument into the alloca.
+  static void createInitialization(Type *ReplacementTy, Value &Base, Function &F,
                                    unsigned ArgNo, BasicBlock::iterator IP) {
-    assert(PrivType && "Expected privatizable type!");
+    assert(ReplacementTy && "Expected valid replacement type!");
 
-    IRBuilder<NoFolder> IRB(IP->getParent(), IP);
-    const DataLayout &DL = F.getDataLayout();
-
-    // Traverse the type, build GEPs and stores.
-    if (auto *PrivStructType = dyn_cast<StructType>(PrivType)) {
-      const StructLayout *PrivStructLayout = DL.getStructLayout(PrivStructType);
-      for (unsigned u = 0, e = PrivStructType->getNumElements(); u < e; u++) {
-        Value *Ptr =
-            constructPointer(&Base, PrivStructLayout->getElementOffset(u), IRB);
-        new StoreInst(F.getArg(ArgNo + u), Ptr, IP);
-      }
-    } else if (auto *PrivArrayType = dyn_cast<ArrayType>(PrivType)) {
-      Type *PointeeTy = PrivArrayType->getElementType();
-      uint64_t PointeeTySize = DL.getTypeStoreSize(PointeeTy);
-      for (unsigned u = 0, e = PrivArrayType->getNumElements(); u < e; u++) {
-        Value *Ptr = constructPointer(&Base, u * PointeeTySize, IRB);
-        new StoreInst(F.getArg(ArgNo + u), Ptr, IP);
-      }
-    } else {
-      new StoreInst(F.getArg(ArgNo), &Base, IP);
-    }
+    // The argument is a value - store it into the alloca
+    new StoreInst(F.getArg(ArgNo), &Base, IP);
   }
 
-  /// Extract values from \p Base according to the type \p PrivType at the
-  /// call position \p ACS. The values are appended to \p ReplacementValues.
-  void createReplacementValues(Align Alignment, Type *PrivType,
+  /// Extract the replacement value from \p Base at the call position \p ACS.
+  /// Creates a load of the value and appends it to \p ReplacementValues.
+  void createReplacementValues(Align Alignment, Type *ReplacementTy,
                                AbstractCallSite ACS, Value *Base,
                                SmallVectorImpl<Value *> &ReplacementValues) {
     assert(Base && "Expected base value!");
-    assert(PrivType && "Expected privatizable type!");
+    assert(ReplacementTy && "Expected valid replacement type!");
     Instruction *IP = ACS.getInstruction();
 
-    IRBuilder<NoFolder> IRB(IP);
-    const DataLayout &DL = IP->getDataLayout();
-
-    // Traverse the type, build GEPs and loads.
-    if (auto *PrivStructType = dyn_cast<StructType>(PrivType)) {
-      const StructLayout *PrivStructLayout = DL.getStructLayout(PrivStructType);
-      for (unsigned u = 0, e = PrivStructType->getNumElements(); u < e; u++) {
-        Type *PointeeTy = PrivStructType->getElementType(u);
-        Value *Ptr =
-            constructPointer(Base, PrivStructLayout->getElementOffset(u), IRB);
-        LoadInst *L = new LoadInst(PointeeTy, Ptr, "", IP->getIterator());
-        L->setAlignment(Alignment);
-        ReplacementValues.push_back(L);
-      }
-    } else if (auto *PrivArrayType = dyn_cast<ArrayType>(PrivType)) {
-      Type *PointeeTy = PrivArrayType->getElementType();
-      uint64_t PointeeTySize = DL.getTypeStoreSize(PointeeTy);
-      for (unsigned u = 0, e = PrivArrayType->getNumElements(); u < e; u++) {
-        Value *Ptr = constructPointer(Base, u * PointeeTySize, IRB);
-        LoadInst *L = new LoadInst(PointeeTy, Ptr, "", IP->getIterator());
-        L->setAlignment(Alignment);
-        ReplacementValues.push_back(L);
-      }
-    } else {
-      LoadInst *L = new LoadInst(PrivType, Base, "", IP->getIterator());
-      L->setAlignment(Alignment);
-      ReplacementValues.push_back(L);
-    }
+    // Load the replacement type value
+    LoadInst *L = new LoadInst(ReplacementTy, Base, "", IP->getIterator());
+    L->setAlignment(Alignment);
+    ReplacementValues.push_back(L);
   }
 
   /// See AbstractAttribute::manifest(...)
   ChangeStatus manifest(Attributor &A) override {
-    if (!PrivatizableType)
+    if (!PrivatizableSize)
       return ChangeStatus::UNCHANGED;
-    assert(*PrivatizableType && "Expected privatizable type!");
+    assert(!PrivatizableSize->isZero() && "Expected non-zero privatizable size!");
 
     // Collect all tail calls in the function as we cannot allow new allocas to
     // escape into tail recursion.
@@ -7698,8 +7627,8 @@ struct AAPrivatizablePtrArgument final : public AAPrivatizablePtrImpl {
         A.getAAFor<AAAlign>(*this, IRPosition::value(*Arg), DepClassTy::NONE);
 
     // Callback to repair the associated function. A new alloca is placed at the
-    // beginning and initialized with the values passed through arguments. The
-    // new alloca replaces the use of the old pointer argument.
+    // beginning and initialized with the replacement value passed as an argument.
+    Type *RepTy = PrivatizableType;
     Attributor::ArgumentReplacementInfo::CalleeRepairCBTy FnRepairCB =
         [=](const Attributor::ArgumentReplacementInfo &ARI,
             Function &ReplacementFn, Function::arg_iterator ArgIt) {
@@ -7707,9 +7636,9 @@ struct AAPrivatizablePtrArgument final : public AAPrivatizablePtrImpl {
           BasicBlock::iterator IP = EntryBB.getFirstInsertionPt();
           const DataLayout &DL = IP->getDataLayout();
           unsigned AS = DL.getAllocaAddrSpace();
-          Instruction *AI = new AllocaInst(*PrivatizableType, AS,
+          Instruction *AI = new AllocaInst(RepTy, AS,
                                            Arg->getName() + ".priv", IP);
-          createInitialization(*PrivatizableType, *AI, ReplacementFn,
+          createInitialization(RepTy, *AI, ReplacementFn,
                                ArgIt->getArgNo(), IP);
 
           if (AI->getType() != Arg->getType())
@@ -7721,9 +7650,8 @@ struct AAPrivatizablePtrArgument final : public AAPrivatizablePtrImpl {
             CI->setTailCall(false);
         };
 
-    // Callback to repair a call site of the associated function. The elements
-    // of the privatizable type are loaded prior to the call and passed to the
-    // new function version.
+    // Callback to repair a call site of the associated function. The replacement
+    // value is loaded prior to the call and passed to the new function version.
     Attributor::ArgumentReplacementInfo::ACSRepairCBTy ACSRepairCB =
         [=](const Attributor::ArgumentReplacementInfo &ARI,
             AbstractCallSite ACS, SmallVectorImpl<Value *> &NewArgOperands) {
@@ -7731,15 +7659,14 @@ struct AAPrivatizablePtrArgument final : public AAPrivatizablePtrImpl {
           // natural alignment is assumed.
           createReplacementValues(
               AlignAA ? AlignAA->getAssumedAlign() : Align(0),
-              *PrivatizableType, ACS,
+              RepTy, ACS,
               ACS.getCallArgOperand(ARI.getReplacedArg().getArgNo()),
               NewArgOperands);
         };
 
-    // Collect the types that will replace the privatizable type in the function
+    // The replacement type replaces the privatizable pointer in the function
     // signature.
-    SmallVector<Type *, 16> ReplacementTypes;
-    identifyReplacementTypes(*PrivatizableType, ReplacementTypes);
+    SmallVector<Type *, 1> ReplacementTypes = {RepTy};
 
     // Register a rewrite of the argument.
     if (A.registerFunctionSignatureRewrite(*Arg, ReplacementTypes,
@@ -7770,29 +7697,35 @@ struct AAPrivatizablePtrFloating : public AAPrivatizablePtrImpl {
                      "updateImpl will not be called");
   }
 
-  /// See AAPrivatizablePtrImpl::identifyPrivatizableType(...)
-  std::optional<Type *> identifyPrivatizableType(Attributor &A) override {
+  /// See AAPrivatizablePtrImpl::identifyPrivatizableSize(...)
+  std::optional<TypeSize> identifyPrivatizableSize(Attributor &A) override {
+    const DataLayout &DL = A.getDataLayout();
     Value *Obj = getUnderlyingObject(&getAssociatedValue());
     if (!Obj) {
       LLVM_DEBUG(dbgs() << "[AAPrivatizablePtr] No underlying object found!\n");
-      return nullptr;
+      return TypeSize::getFixed(0);
     }
 
-    if (auto *AI = dyn_cast<AllocaInst>(Obj))
-      if (auto *CI = dyn_cast<ConstantInt>(AI->getArraySize()))
-        if (CI->isOne())
-          return AI->getAllocatedType();
+    if (auto *AI = dyn_cast<AllocaInst>(Obj)) {
+      if (auto *CI = dyn_cast<ConstantInt>(AI->getArraySize())) {
+        if (CI->isOne()) {
+          std::optional<TypeSize> Size = AI->getAllocationSize(DL);
+          if (Size)
+            return *Size;
+        }
+      }
+    }
     if (auto *Arg = dyn_cast<Argument>(Obj)) {
       auto *PrivArgAA = A.getAAFor<AAPrivatizablePtr>(
           *this, IRPosition::argument(*Arg), DepClassTy::REQUIRED);
       if (PrivArgAA && PrivArgAA->isAssumedPrivatizablePtr())
-        return PrivArgAA->getPrivatizableType();
+        return PrivArgAA->getPrivatizableSize();
     }
 
     LLVM_DEBUG(dbgs() << "[AAPrivatizablePtr] Underlying object neither valid "
                          "alloca nor privatizable argument: "
                       << *Obj << "!\n");
-    return nullptr;
+    return TypeSize::getFixed(0);
   }
 
   /// See AbstractAttribute::trackStatistics()
@@ -7814,10 +7747,10 @@ struct AAPrivatizablePtrCallSiteArgument final
 
   /// See AbstractAttribute::updateImpl(...).
   ChangeStatus updateImpl(Attributor &A) override {
-    PrivatizableType = identifyPrivatizableType(A);
-    if (!PrivatizableType)
+    PrivatizableSize = identifyPrivatizableSize(A);
+    if (!PrivatizableSize)
       return ChangeStatus::UNCHANGED;
-    if (!*PrivatizableType)
+    if (PrivatizableSize->isZero())
       return indicatePessimisticFixpoint();
 
     const IRPosition &IRP = getIRPosition();

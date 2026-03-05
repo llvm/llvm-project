@@ -10,17 +10,13 @@ define void @caller() {
 ; TUNIT-LABEL: define {{[^@]+}}@caller() {
 ; TUNIT-NEXT:  entry:
 ; TUNIT-NEXT:    [[LEFT:%.*]] = alloca [3 x i32], align 4
-; TUNIT-NEXT:    [[TMP0:%.*]] = load i32, ptr [[LEFT]], align 4
-; TUNIT-NEXT:    [[LEFT_B4:%.*]] = getelementptr i8, ptr [[LEFT]], i64 4
-; TUNIT-NEXT:    [[TMP1:%.*]] = load i32, ptr [[LEFT_B4]], align 4
-; TUNIT-NEXT:    [[LEFT_B8:%.*]] = getelementptr i8, ptr [[LEFT]], i64 8
-; TUNIT-NEXT:    [[TMP2:%.*]] = load i32, ptr [[LEFT_B8]], align 4
-; TUNIT-NEXT:    call void @callee(i32 [[TMP0]], i32 [[TMP1]], i32 [[TMP2]])
+; TUNIT-NEXT:    [[TMP0:%.*]] = load <2 x i64>, ptr [[LEFT]], align 4
+; TUNIT-NEXT:    call void @callee(<2 x i64> [[TMP0]])
 ; TUNIT-NEXT:    ret void
 ;
 ; CGSCC-LABEL: define {{[^@]+}}@caller() {
 ; CGSCC-NEXT:  entry:
-; CGSCC-NEXT:    call void @callee(i32 undef, i32 undef, i32 undef)
+; CGSCC-NEXT:    call void @callee(<2 x i64> undef)
 ; CGSCC-NEXT:    ret void
 ;
 entry:
@@ -32,14 +28,10 @@ entry:
 define internal void @callee(ptr noalias %arg) {
 ; CHECK: Function Attrs: memory(readwrite, argmem: none)
 ; CHECK-LABEL: define {{[^@]+}}@callee
-; CHECK-SAME: (i32 [[TMP0:%.*]], i32 [[TMP1:%.*]], i32 [[TMP2:%.*]]) #[[ATTR0:[0-9]+]] {
+; CHECK-SAME: (<2 x i64> [[TMP0:%.*]]) #[[ATTR0:[0-9]+]] {
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[ARG_PRIV:%.*]] = alloca [3 x i32], align 4
-; CHECK-NEXT:    store i32 [[TMP0]], ptr [[ARG_PRIV]], align 4
-; CHECK-NEXT:    [[ARG_PRIV_B4:%.*]] = getelementptr i8, ptr [[ARG_PRIV]], i64 4
-; CHECK-NEXT:    store i32 [[TMP1]], ptr [[ARG_PRIV_B4]], align 4
-; CHECK-NEXT:    [[ARG_PRIV_B8:%.*]] = getelementptr i8, ptr [[ARG_PRIV]], i64 8
-; CHECK-NEXT:    store i32 [[TMP2]], ptr [[ARG_PRIV_B8]], align 4
+; CHECK-NEXT:    [[ARG_PRIV:%.*]] = alloca <2 x i64>, align 16
+; CHECK-NEXT:    store <2 x i64> [[TMP0]], ptr [[ARG_PRIV]], align 16
 ; CHECK-NEXT:    call void @use(ptr noalias nofree noundef nonnull readonly align 4 captures(none) dereferenceable(12) [[ARG_PRIV]])
 ; CHECK-NEXT:    ret void
 ;

@@ -9,14 +9,12 @@ define internal i32 @f(ptr byval(%struct.ss) %b, ptr byval(i32) %X, i32 %i) noun
 ;
 ; CHECK: Function Attrs: mustprogress nofree norecurse nosync nounwind willreturn memory(none)
 ; CHECK-LABEL: define {{[^@]+}}@f
-; CHECK-SAME: (i32 [[TMP0:%.*]], i64 [[TMP1:%.*]], i32 [[TMP2:%.*]]) #[[ATTR0:[0-9]+]] {
+; CHECK-SAME: (<2 x i64> [[TMP0:%.*]], i32 [[TMP1:%.*]]) #[[ATTR0:[0-9]+]] {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[X_PRIV:%.*]] = alloca i32, align 4
-; CHECK-NEXT:    store i32 [[TMP2]], ptr [[X_PRIV]], align 4
-; CHECK-NEXT:    [[B_PRIV:%.*]] = alloca [[STRUCT_SS:%.*]], align 8
-; CHECK-NEXT:    store i32 [[TMP0]], ptr [[B_PRIV]], align 4
-; CHECK-NEXT:    [[B_PRIV_B4:%.*]] = getelementptr i8, ptr [[B_PRIV]], i64 4
-; CHECK-NEXT:    store i64 [[TMP1]], ptr [[B_PRIV_B4]], align 4
+; CHECK-NEXT:    store i32 [[TMP1]], ptr [[X_PRIV]], align 4
+; CHECK-NEXT:    [[B_PRIV:%.*]] = alloca <2 x i64>, align 16
+; CHECK-NEXT:    store <2 x i64> [[TMP0]], ptr [[B_PRIV]], align 16
 ; CHECK-NEXT:    [[VAL1:%.*]] = load i32, ptr [[B_PRIV]], align 8
 ; CHECK-NEXT:    [[VAL2:%.*]] = add i32 [[VAL1]], 1
 ; CHECK-NEXT:    store i32 [[VAL2]], ptr [[B_PRIV]], align 8
@@ -47,11 +45,9 @@ define i32 @test(ptr %X) {
 ; TUNIT-NEXT:    [[S:%.*]] = alloca [[STRUCT_SS:%.*]], align 8
 ; TUNIT-NEXT:    store i32 1, ptr [[S]], align 8
 ; TUNIT-NEXT:    [[VAL4:%.*]] = getelementptr [[STRUCT_SS]], ptr [[S]], i32 0, i32 1
-; TUNIT-NEXT:    [[TMP0:%.*]] = load i32, ptr [[S]], align 8
-; TUNIT-NEXT:    [[S_B4:%.*]] = getelementptr i8, ptr [[S]], i64 4
-; TUNIT-NEXT:    [[TMP1:%.*]] = load i64, ptr [[S_B4]], align 8
-; TUNIT-NEXT:    [[TMP2:%.*]] = load i32, ptr [[X]], align 4
-; TUNIT-NEXT:    [[C:%.*]] = call i32 @f(i32 [[TMP0]], i64 [[TMP1]], i32 [[TMP2]]) #[[ATTR2:[0-9]+]]
+; TUNIT-NEXT:    [[TMP0:%.*]] = load <2 x i64>, ptr [[S]], align 8
+; TUNIT-NEXT:    [[TMP1:%.*]] = load i32, ptr [[X]], align 4
+; TUNIT-NEXT:    [[C:%.*]] = call i32 @f(<2 x i64> [[TMP0]], i32 [[TMP1]]) #[[ATTR2:[0-9]+]]
 ; TUNIT-NEXT:    ret i32 [[C]]
 ;
 ; CGSCC: Function Attrs: mustprogress nofree nosync nounwind willreturn memory(argmem: readwrite)
@@ -59,9 +55,12 @@ define i32 @test(ptr %X) {
 ; CGSCC-SAME: (ptr nofree noundef nonnull readonly align 4 captures(none) dereferenceable(4) [[X:%.*]]) #[[ATTR1:[0-9]+]] {
 ; CGSCC-NEXT:  entry:
 ; CGSCC-NEXT:    [[S:%.*]] = alloca [[STRUCT_SS:%.*]], align 8
+; CGSCC-NEXT:    store i32 1, ptr [[S]], align 8
 ; CGSCC-NEXT:    [[VAL4:%.*]] = getelementptr [[STRUCT_SS]], ptr [[S]], i32 0, i32 1
-; CGSCC-NEXT:    [[TMP0:%.*]] = load i32, ptr [[X]], align 4
-; CGSCC-NEXT:    [[C:%.*]] = call i32 @f(i32 noundef 1, i64 noundef 2, i32 [[TMP0]]) #[[ATTR2:[0-9]+]]
+; CGSCC-NEXT:    store i64 2, ptr [[VAL4]], align 4
+; CGSCC-NEXT:    [[TMP0:%.*]] = load <2 x i64>, ptr [[S]], align 8
+; CGSCC-NEXT:    [[TMP1:%.*]] = load i32, ptr [[X]], align 4
+; CGSCC-NEXT:    [[C:%.*]] = call i32 @f(<2 x i64> [[TMP0]], i32 [[TMP1]]) #[[ATTR2:[0-9]+]]
 ; CGSCC-NEXT:    ret i32 [[C]]
 ;
 entry:
