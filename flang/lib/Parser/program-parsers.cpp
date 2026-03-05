@@ -81,11 +81,6 @@ static constexpr auto globalOpenACCCompilerDirective{
 
 // R501 program -> program-unit [program-unit]...
 // This is the top-level production for the Fortran language.
-// F'2018 6.3.1 defines a program unit as a sequence of one or more lines,
-// implying that a line can't be part of two distinct program units.
-// Consequently, a program unit END statement should be the last statement
-// on its line.  We parse those END statements via unterminatedStatement()
-// and then skip over the end of the line here.
 TYPE_PARSER(construct<Program>(skipStuffBeforeStatement >>
     (extension<LanguageFeature::EmptySourceFile>(
          "nonstandard usage: empty source file"_port_en_US,
