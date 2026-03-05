@@ -84,6 +84,7 @@ def setDescLayoutSlice():
     # CHECK: sg_data = [32, 16]
     # CHECK: slice_dims = [0]
 
+
 @run
 def setDescLayoutOrder():
     sequence = transform.SequenceOp(
@@ -180,6 +181,7 @@ def setOpLayoutAttrResultSlice():
     # CHECK: sg_data = [32, 16]
     # CHECK: inst_data = [8, 16]
     # CHECK: slice_dims = [0]
+
 
 @run
 def setOpLayoutAttrResultOrder():
