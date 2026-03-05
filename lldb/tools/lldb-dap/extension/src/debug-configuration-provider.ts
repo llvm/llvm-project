@@ -1,6 +1,7 @@
 import * as child_process from "child_process";
 import * as util from "util";
 import * as vscode from "vscode";
+import { AndroidPlatform } from "./android/android-platform";
 import { createDebugAdapterExecutable } from "./debug-adapter-factory";
 import { LLDBDapServer } from "./lldb-dap-server";
 import { LogFilePathProvider } from "./logging";
@@ -67,6 +68,11 @@ const configurations: Record<string, DefaultConfig> = {
   stopCommands: { type: "stringArray", default: [] },
   exitCommands: { type: "stringArray", default: [] },
   terminateCommands: { type: "stringArray", default: [] },
+
+  // Keys for Android debugging.
+  androidNDKPath: { type: "string", default: "" },
+  androidDevice: { type: "string", default: "" },
+  androidComponent: { type: "string", default: "" },
 };
 
 export function getDefaultConfigKey(
@@ -230,6 +236,11 @@ export class LLDBDapConfigurationProvider
           debugConfiguration.debugAdapterPort = serverInfo.port;
         }
       }
+
+      await AndroidPlatform.resolveDebugConfiguration(
+        debugConfiguration,
+        this.logger,
+      );
 
       this.logger.info(
         "Resolved debug configuration:\n" +
