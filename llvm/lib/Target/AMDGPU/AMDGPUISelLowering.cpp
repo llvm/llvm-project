@@ -37,6 +37,12 @@ static cl::opt<bool> AMDGPUBypassSlowDiv(
   cl::desc("Skip 64-bit divide for dynamic 32-bit values"),
   cl::init(true));
 
+cl::opt<bool> AMDGPUAllowLDSInNonEntryFunctions(
+    "amdgpu-allow-lds-in-non-entry-functions",
+    cl::desc("Allow LDS global variables to be lowered in non-entry functions "
+             "instead of emitting a diagnostic and trap"),
+    cl::init(false), cl::Hidden);
+
 // Find a larger type to do a load / store of a vector with.
 EVT AMDGPUTargetLowering::getEquivalentMemType(LLVMContext &Ctx, EVT VT) {
   unsigned StoreSize = VT.getStoreSizeInBits();
@@ -1542,7 +1548,7 @@ SDValue AMDGPUTargetLowering::LowerGlobalAddress(AMDGPUMachineFunction* MFI,
 
   if (G->getAddressSpace() == AMDGPUAS::LOCAL_ADDRESS ||
       G->getAddressSpace() == AMDGPUAS::REGION_ADDRESS) {
-    if (!MFI->isModuleEntryFunction() &&
+    if (!AMDGPUAllowLDSInNonEntryFunctions && !MFI->isModuleEntryFunction() &&
         GV->getName() != "llvm.amdgcn.module.lds" &&
         !AMDGPU::isNamedBarrier(*cast<GlobalVariable>(GV))) {
       SDLoc DL(Op);

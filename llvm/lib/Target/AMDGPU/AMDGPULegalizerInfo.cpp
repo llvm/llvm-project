@@ -36,6 +36,7 @@
 #include "llvm/IR/DiagnosticInfo.h"
 #include "llvm/IR/IntrinsicsAMDGPU.h"
 #include "llvm/IR/IntrinsicsR600.h"
+#include "llvm/Support/CommandLine.h"
 
 #define DEBUG_TYPE "amdgpu-legalinfo"
 
@@ -44,6 +45,8 @@ using namespace LegalizeActions;
 using namespace LegalizeMutations;
 using namespace LegalityPredicates;
 using namespace MIPatternMatch;
+
+extern cl::opt<bool> AMDGPUAllowLDSInNonEntryFunctions;
 
 // Hack until load/store selection patterns support any tuple of legal types.
 static cl::opt<bool> EnableNewLegality(
@@ -3166,7 +3169,7 @@ bool AMDGPULegalizerInfo::legalizeGlobalValue(
   SIMachineFunctionInfo *MFI = MF.getInfo<SIMachineFunctionInfo>();
 
   if (AS == AMDGPUAS::LOCAL_ADDRESS || AS == AMDGPUAS::REGION_ADDRESS) {
-    if (!MFI->isModuleEntryFunction() &&
+    if (!AMDGPUAllowLDSInNonEntryFunctions && !MFI->isModuleEntryFunction() &&
         GV->getName() != "llvm.amdgcn.module.lds" &&
         !AMDGPU::isNamedBarrier(*cast<GlobalVariable>(GV))) {
       const Function &Fn = MF.getFunction();
