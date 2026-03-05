@@ -39,8 +39,11 @@ void AMDGCN::Linker::constructLLVMLinkCommand(
 
   ArgStringList LinkerInputs;
 
-  for (auto Input : Inputs)
+  for (auto Input : Inputs) {
+    if (!Input.isFilename())
+      continue;
     LinkerInputs.push_back(Input.getFilename());
+  }
 
   // Look for archive of bundled bitcode in arguments, and add temporary files
   // for the extracted archive of bitcode to inputs.
@@ -131,8 +134,11 @@ void AMDGCN::Linker::constructLldCommand(Compilation &C, const JobAction &JA,
   }
 
   LldArgs.append({"-o", Output.getFilename()});
-  for (auto Input : Inputs)
+  for (auto Input : Inputs) {
+    if (!Input.isFilename())
+      continue;
     LldArgs.push_back(Input.getFilename());
+  }
 
   // Look for archive of bundled bitcode in arguments, and add temporary files
   // for the extracted archive of bitcode to inputs.
