@@ -934,6 +934,24 @@ std::optional<APValue> Pointer::toRValue(const Context &Ctx,
       return true;
     }
 
+    // Constant Matrix types.
+    if (const auto *MT = Ty->getAs<ConstantMatrixType>()) {
+      assert(Ptr.getFieldDesc()->isPrimitiveArray());
+      QualType ElemTy = MT->getElementType();
+      PrimType ElemT = *Ctx.classify(ElemTy);
+      unsigned NumElems = MT->getNumElementsFlattened();
+
+      SmallVector<APValue> Values;
+      Values.reserve(NumElems);
+      for (unsigned I = 0; I != NumElems; ++I) {
+        TYPE_SWITCH(ElemT,
+                    { Values.push_back(Ptr.elem<T>(I).toAPValue(ASTCtx)); });
+      }
+
+      R = APValue(Values.data(), MT->getNumRows(), MT->getNumColumns());
+      return true;
+    }
+
     llvm_unreachable("invalid value to return");
   };
 
