@@ -1693,14 +1693,25 @@ void NVPTXAsmPrinter::bufferAggregateConstant(const Constant *CPV,
       Buffer->addByte(Val.extractBitsAsZExtValue(8, I * 8));
   };
 
+  // Integer or floating point vector splats.
+  if (isa<ConstantInt, ConstantFP>(CPV)) {
+    if (auto *VTy = dyn_cast<FixedVectorType>(CPV->getType())) {
+      for (unsigned I : llvm::seq(VTy->getNumElements()))
+        bufferLEByte(CPV->getAggregateElement(I), 0, aggBuffer);
+      return;
+    }
+  }
+
   // Integers of arbitrary width
   if (const ConstantInt *CI = dyn_cast<ConstantInt>(CPV)) {
+    assert(CI->getType()->isIntegerTy() && "Expected integer constant!");
     ExtendBuffer(CI->getValue(), aggBuffer);
     return;
   }
 
   // f128
   if (const ConstantFP *CFP = dyn_cast<ConstantFP>(CPV)) {
+    assert(CFP->getType()->isFloatingPointTy() && "Expected fp constant!");
     if (CFP->getType()->isFP128Ty()) {
       ExtendBuffer(CFP->getValueAPF().bitcastToAPInt(), aggBuffer);
       return;
