@@ -57,6 +57,27 @@ def FunctionFilteringPass : Pass<"omp-function-filtering"> {
   ];
 }
 
+def HostOpFilteringPass : Pass<"omp-host-op-filtering"> {
+  let summary = "Filters out host-only operations from any remaining host "
+                "functions after filtering when compiling for a target device.";
+  let description = [{
+    Removes operations from host functions that are not placed inside of an
+    `omp.target` region when compiling for the target device.
+    
+    It must run after any passes that might introduce new host operations,
+    especially if they belong to the 'omp' dialect, like `LowerWorkdistribute`.
+    This ensures all potentially problematic host operations are accounted for
+    prior to LLVM IR translation.
+
+    This pass works at the FIR level of abstraction.
+  }];
+  let dependentDialects = [
+    "mlir::arith::ArithDialect",
+    "mlir::func::FuncDialect",
+    "fir::FIROpsDialect"
+  ];
+}
+
 def DoConcurrentConversionPass : Pass<"omp-do-concurrent-conversion", "mlir::ModuleOp"> {
   let summary = "Map `DO CONCURRENT` loops to OpenMP worksharing loops.";
 
