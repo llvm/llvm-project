@@ -1003,6 +1003,13 @@ static FailureOr<llvm::SmallBitVector> computeMemRefRankReductionMaskByStrides(
     MemRefType originalType, MemRefType reducedType,
     ArrayRef<int64_t> originalStrides, ArrayRef<int64_t> candidateStrides,
     llvm::SmallBitVector unusedDims) {
+  // Track the number of occurences of the strides in the original type
+  // and the candidate type. For each unused dim that stride should not be
+  // present in the candidate type. Note that there could be multiple dimensions
+  // that have the same size. We dont need to exactly figure out which dim
+  // corresponds to which stride, we just need to verify that the number of
+  // reptitions of a stride in the original + number of unused dims with that
+  // stride == number of repititions of a stride in the candidate.
   std::map<int64_t, unsigned> currUnaccountedStrides =
       getNumOccurences(originalStrides);
   std::map<int64_t, unsigned> candidateStridesNumOccurences =
@@ -1013,17 +1020,22 @@ static FailureOr<llvm::SmallBitVector> computeMemRefRankReductionMaskByStrides(
     int64_t originalStride = originalStrides[dim];
     if (currUnaccountedStrides[originalStride] >
         candidateStridesNumOccurences[originalStride]) {
+      // This dim can be treated as dropped.
       currUnaccountedStrides[originalStride]--;
       continue;
     }
     if (currUnaccountedStrides[originalStride] ==
         candidateStridesNumOccurences[originalStride]) {
+      // The stride for this is not dropped. Keep as is.
       unusedDims.reset(dim);
       continue;
     }
     if (currUnaccountedStrides[originalStride] <
-        candidateStridesNumOccurences[originalStride])
+        candidateStridesNumOccurences[originalStride]) {
+      // This should never happen. Cant have a stride in the reduced rank type
+      // that wasnt in the original one.
       return failure();
+    }
   }
   if (static_cast<int64_t>(unusedDims.count()) + reducedType.getRank() !=
       originalType.getRank())
