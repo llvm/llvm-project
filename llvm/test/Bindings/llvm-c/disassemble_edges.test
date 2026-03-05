@@ -1,0 +1,15 @@
+; RUN: llvm-c-test --disassemble < %s 2>&1 | FileCheck %s
+
+x86_64-linux-unknown NULL 0f
+; CHECK: triple: x86_64-linux-unknown, features: NULL
+; CHECK: 0000:  0f
+; CHECK: ???
+
+nope-triple NULL 90
+; CHECK: triple: nope-triple, features: NULL
+; CHECK: ERROR: Couldn't create disassembler for triple nope-triple
+
+x86_64-linux-unknown NULL 90 90 90 90 90 90 90 90 90 90 90 90 90 90 90 90 90 90 90 90 90 90 90 90 90 90 90 90 90 90 90 90 90 90 90 90 90 90 90 90 90 90 90 90 90 90 90 90 90 90 90 90 90 90 90 90 90 90 90 90 90 90 90 90 90 90 90 90 90 90 90 90 90 90 90 90 90 90 90 90 90 90 90 90 90 90 90 90 90 90 90 90 90 90 90 90 90 90 90 90 90 90 90 90 90 90 90 90 90 90 90 90 90 90 90 90 90 90 90 90 90 90 90 90 90 90 90 90 90 90
+; CHECK: triple: x86_64-linux-unknown, features: NULL
+; CHECK: 007f:  90
+; CHECK-NOT: 0080:

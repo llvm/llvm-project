@@ -1,0 +1,6 @@
+; RUN: not llvm-c-test --invalid-command-xyz 2>&1 | FileCheck %s
+;
+; Test that running llvm-c-test with an unknown command prints usage.
+
+; CHECK: llvm-c-test command
+; CHECK: Commands:
