@@ -663,6 +663,8 @@ void SPIRVModuleAnalysis::processOtherInstrs(const Module &M) {
           // and section 10 (function declarations).
           // DebugFunctionDefinition must appear in the entry basic block of an
           // OpFunction, so it should not be moved to the global section.
+          // See the "SPIR-V NonSemantic Shader DebugInfo Instructions / Binary
+          // Form" spec section.
           static constexpr int64_t ExcludedFromGlobalDI[] = {
               NS::DebugScope, NS::DebugNoScope, NS::DebugDeclare,
               NS::DebugValue, NS::DebugFunctionDefinition};
