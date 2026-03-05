@@ -199,6 +199,77 @@ const MappingDesc kMemoryLayout[] = {
 #define MEM_TO_SHADOW(mem) (LINEARIZE_MEM((mem)) + 0x100000000000ULL)
 #define SHADOW_TO_ORIGIN(shadow) (((uptr)(shadow)) + 0x280000000000)
 
+#elif LLVM_MSAN_SHADOW_OFFSET_2MB == 1
+
+#  if SANITIZER_NETBSD || (SANITIZER_LINUX && SANITIZER_WORDSIZE == 64)
+
+// Offset applied to shadow addresses to avoid cache line conflicts on AMD Zen
+// (on Intel it is not required, but does not harm).
+//
+// Problem: AMD Zen's 32 KiB L1D cache is 8-way associative with 64-byte lines
+// (64 sets) [1]. Addresses are partitioned as:
+//
+//   | tag | set_index (bits 6-11) | offset (bits 0-5) |
+//           ^^^^^^^^^^^^^^^^^^^^^   ^^^^^^^^^^^^^^^^^
+//              6 bits set index    6 bits index in set
+//
+// Without offset, app memory and its shadow share the same set_index (bits
+// 6-11) but have different tags. Normally, 8-way associativity accommodates
+// both lines in the same set without conflict.
+//
+// However, AMD Zen uses a Linear address μtag/way-predictor (derived from
+// addr[12:27], see [2]) to save power by predicting which way to check instead
+// of searching all 8 ways. Since XOR preserves addr[0:43], shadow and app share
+// identical μtags, causing them to predict the same way, effectively degrading
+// the 8-way cache to direct-mapped (20x slowdown).
+//
+// Solution: Adding 2MB offset (bit 21) changes the μtag while maintaining 2MB
+// page alignment for mmap.
+//
+//   [1]: https://lsferreira.net/public/knowledge-base/x86/upos/amd_zen+.PDF
+//   [2]: https://inria.hal.science/hal-02866777/document
+const unsigned long kShadowOffset = 0x200000ULL;
+// All of the following configurations are supported.
+// ASLR disabled: main executable and DSOs at 0x555550000000
+// PIE and ASLR: main executable and DSOs at 0x7f0000000000
+// non-PIE: main executable below 0x100000000, DSOs at 0x7f0000000000
+// Heap at 0x700000000000.
+const MappingDesc kMemoryLayout[] = {
+    {0x000000000000ULL, 0x010000000000ULL - kShadowOffset, MappingDesc::APP,
+     "app-1"},
+    {0x010000000000ULL - kShadowOffset, 0x010000000000ULL + kShadowOffset,
+     MappingDesc::INVALID, "gap"},
+    {0x010000000000ULL + kShadowOffset, 0x100000000000ULL + kShadowOffset,
+     MappingDesc::SHADOW, "shadow-2"},
+    {0x100000000000ULL + kShadowOffset, 0x110000000000ULL + kShadowOffset,
+     MappingDesc::INVALID, "invalid"},
+    {0x110000000000ULL + kShadowOffset, 0x200000000000ULL + kShadowOffset,
+     MappingDesc::ORIGIN, "origin-2"},
+    {0x200000000000ULL + kShadowOffset, 0x300000000000ULL + kShadowOffset,
+     MappingDesc::SHADOW, "shadow-3"},
+    {0x300000000000ULL + kShadowOffset, 0x400000000000ULL + kShadowOffset,
+     MappingDesc::ORIGIN, "origin-3"},
+    {0x400000000000ULL + kShadowOffset, 0x500000000000ULL + kShadowOffset,
+     MappingDesc::INVALID, "invalid"},
+    {0x500000000000ULL + kShadowOffset, 0x510000000000ULL, MappingDesc::SHADOW,
+     "shadow-1"},
+    {0x510000000000ULL, 0x600000000000ULL - kShadowOffset, MappingDesc::APP,
+     "app-2"},
+    {0x600000000000ULL - kShadowOffset, 0x600000000000ULL + kShadowOffset,
+     MappingDesc::INVALID, "gap"},
+    {0x600000000000ULL + kShadowOffset, 0x610000000000ULL, MappingDesc::ORIGIN,
+     "origin-1"},
+    {0x610000000000ULL, 0x700000000000ULL, MappingDesc::INVALID, "invalid"},
+    {0x700000000000ULL, 0x740000000000ULL, MappingDesc::ALLOCATOR, "allocator"},
+    {0x740000000000ULL, 0x800000000000ULL, MappingDesc::APP, "app-3"}};
+#    define MEM_TO_SHADOW(mem) \
+      ((((uptr)(mem)) ^ 0x500000000000ULL) + kShadowOffset)
+#    define SHADOW_TO_ORIGIN(mem) (((uptr)(mem)) + 0x100000000000ULL)
+
+#  else
+#    error LLVM_MSAN_SHADOW_OFFSET_2MB is applicable only for x86_64 NetBSD/Linux
+#  endif
+
 #elif SANITIZER_NETBSD || (SANITIZER_LINUX && SANITIZER_WORDSIZE == 64)
 
 // All of the following configurations are supported.

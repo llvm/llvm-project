@@ -44,3 +44,9 @@ add_llvm_component_library(LLVMInstrumentation
   TransformUtils
   ProfileData
   )
+
+if (LLVM_MSAN_SHADOW_OFFSET_2MB)
+  add_definitions(-DLLVM_MSAN_SHADOW_OFFSET_2MB=1)
+else()
+  add_definitions(-DLLVM_MSAN_SHADOW_OFFSET_2MB=0)
+endif()
