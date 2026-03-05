@@ -1823,6 +1823,85 @@ unsigned TargetInstrInfo::getInstrLatency(const InstrItineraryData *ItinData,
   return ItinData->getStageLatency(MI.getDesc().getSchedClass());
 }
 
+std::optional<unsigned>
+TargetInstrInfo::getInstrLatency(const TargetSchedModel &TargetSchedModel,
+                                 const MachineInstr &MI) const {
+  if (TargetSchedModel.hasInstrSchedModel()) {
+    const MCSchedClassDesc *SCDesc = TargetSchedModel.resolveSchedClass(&MI);
+    if (SCDesc->isValid())
+      return TargetSchedModel.computeInstrLatency(*SCDesc);
+  }
+
+  return std::nullopt;
+}
+
+std::optional<unsigned> TargetInstrInfo::getOperandLatency(const TargetSchedModel &SchedModel,
+                                            const MachineInstr *DefMI,
+                                            unsigned DefOperIdx,
+                                            const MachineInstr *UseMI,
+                                            unsigned UseOperIdx) const {
+  // Only handle the TargetSchedModel-based computation here. If no
+  // instruction scheduling model is available, defer to the caller.
+  if (!SchedModel.hasInstrSchedModel())
+    return std::nullopt;
+
+  const MCSchedClassDesc *SCDesc = SchedModel.resolveSchedClass(DefMI);
+  if (!SCDesc->isValid())
+    return std::nullopt;
+
+  // Compute DefIdx from operand index.
+  unsigned DefIdx = 0;
+  for (unsigned I = 0; I != DefOperIdx; ++I) {
+    const MachineOperand &MO = DefMI->getOperand(I);
+    if (MO.isReg() && MO.isDef())
+      ++DefIdx;
+  }
+  if (DefIdx < SCDesc->NumWriteLatencyEntries) {
+    // Lookup the definition's write latency in SubtargetInfo.
+    const TargetSubtargetInfo *STI = SchedModel.getSubtargetInfo();
+    const MCWriteLatencyEntry *WLEntry = STI->getWriteLatencyEntry(SCDesc, DefIdx);
+    unsigned WriteID = WLEntry->WriteResourceID;
+    unsigned Latency = WLEntry->Cycles >= 0 ? static_cast<unsigned>(WLEntry->Cycles) : 1000u;
+    if (!UseMI)
+      return Latency;
+
+    // Lookup the use's latency adjustment in SubtargetInfo.
+    const MCSchedClassDesc *UseDesc = SchedModel.resolveSchedClass(UseMI);
+    if (UseDesc->NumReadAdvanceEntries == 0)
+      return Latency;
+    // Compute UseIdx from operand index.
+    unsigned UseIdx = 0;
+    for (unsigned I = 0; I != UseOperIdx; ++I) {
+      const MachineOperand &MO = UseMI->getOperand(I);
+      if (MO.isReg() && MO.readsReg() && !MO.isDef())
+        ++UseIdx;
+    }
+    int Advance = STI->getReadAdvanceCycles(UseDesc, UseIdx, WriteID);
+    if (Advance > 0 && static_cast<unsigned>(Advance) > Latency) // unsigned wrap
+      return 0;
+    return Latency - Advance;
+  }
+
+  // If DefIdx does not exist in the model (e.g. implicit defs), then return
+  // unit latency (defaultDefLatency may be too conservative).
+#ifndef NDEBUG
+  if (SCDesc->isValid() && !DefMI->getOperand(DefOperIdx).isImplicit() &&
+      !DefMI->getDesc().operands()[DefOperIdx].isOptionalDef() &&
+      SchedModel.getMCSchedModel()->isComplete()) {
+    errs() << "DefIdx " << DefIdx << " exceeds machine model writes for "
+           << *DefMI
+           << " (Try with MCSchedModel.CompleteModel set to false)";
+    llvm_unreachable("incomplete machine model");
+  }
+#endif
+
+  // FIXME: Automatically giving all implicit defs defaultDefLatency is
+  // undesirable. We should only do it for defs that are known to the MC
+  // desc like flags. Truly implicit defs should get 1 cycle latency.
+  const MCSchedModel *MCSM = SchedModel.getMCSchedModel();
+  return DefMI->isTransient() ? 0 : defaultDefLatency(*MCSM, *DefMI);
+}
+
 bool TargetInstrInfo::hasLowDefLatency(const TargetSchedModel &SchedModel,
                                        const MachineInstr &DefMI,
                                        unsigned DefIdx) const {
