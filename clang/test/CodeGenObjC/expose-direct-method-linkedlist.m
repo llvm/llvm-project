@@ -1,11 +1,13 @@
 // REQUIRES: system-darwin
 
-// RUN: mkdir -p %t
-
 // RUN: %clang -fobjc-direct-precondition-thunk -fobjc-arc \
-// RUN:   -O2 -framework Foundation %s -o %t/thunk-linkedlist
+// RUN:   -S -emit-llvm %s -o - | FileCheck %s
 
-// RUN: %t/thunk-linkedlist 8 7 6 | FileCheck %s --check-prefix=EXE
+// Build and execute (for manual testing):
+//   mkdir -p %t
+//   %clang -fobjc-direct-precondition-thunk -fobjc-arc \
+//     -O2 -framework Foundation %s -o %t/thunk-linkedlist
+//   %t/thunk-linkedlist 8 7 6 | FileCheck %s --check-prefix=EXE
 #import <Foundation/Foundation.h>
 
 @interface LinkedList: NSObject
@@ -24,6 +26,7 @@
 - (int) size __attribute__((objc_direct));
 - (int) sum __attribute__((objc_direct));
 - (double) avg __attribute__((objc_direct));
+- (int) sumWith:(LinkedList *) __attribute__((ns_consumed)) other __attribute__((objc_direct));
 @end
 
 @implementation LinkedList
@@ -71,6 +74,9 @@ static int numInstances=0;
 - (double) avg {
   return (double)[self sum] / (double)[self size];
 }
+- (int) sumWith:(LinkedList *) __attribute__((ns_consumed)) other {
+  return [self sum] + [other sum];
+}
 @end
 
 int main(int argc, char** argv) { // argv = ["8", "7", "6"]
@@ -112,6 +118,10 @@ int main(int argc, char** argv) { // argv = ["8", "7", "6"]
   // EXE: id: 4, v: 7
   // EXE: id: 3, v: 6
 
+  // Test ns_consumed parameter with direct method thunk.
+  // CHECK: call i32 @"-[LinkedList sumWith:]_thunk"
+  int combined = [ll sumWith:[cloned clone]];
+  printf("Combined sum: %d\n", combined);
 
   // CHECK: call ptr @"-[LinkedList reverseWithPrev:]_thunk"
   ll = [ll reverseWithPrev:nil];
