@@ -192,5 +192,5 @@
 
 # AMD-specific projects.
 /amd/comgr/ @lamb-j @chinmaydd
-/amd/device-libs/ @b-sumner
-/amd/hipcc/ @david-salinas
+/amd/device-libs/ @b-sumner @lamb-j
+/amd/hipcc/ @david-salinas @lamb-j
