@@ -291,15 +291,6 @@ def LoopLikeOpInterface : OpInterface<"LoopLikeOpInterface"> {
       /*defaultImplementation=*/[{
         return ::mlir::failure();
       }]
-    >,
-    InterfaceMethod<[{
-        This method is called to compare types along control-flow edges. By
-        default, the types are checked as equal.
-      }],
-      /*retTy=*/"bool",
-      /*methodName=*/"areLoopIterArgTypesCompatible",
-      /*args=*/(ins "::mlir::Type":$lhs, "::mlir::Type":$rhs), [{}],
-      /*defaultImplementation=*/[{ return lhs == rhs; }]
     >
   ];
 

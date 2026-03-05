@@ -1477,10 +1477,6 @@ bool TestLoopTypesCompatOp::areTypesCompatible(Type lhs, Type rhs) {
   return lhs == rhs || (isa<IntegerType>(lhs) && isa<IntegerType>(rhs));
 }
 
-bool TestLoopTypesCompatOp::areLoopIterArgTypesCompatible(Type lhs, Type rhs) {
-  return lhs == rhs || (isa<IntegerType>(lhs) && isa<IntegerType>(rhs));
-}
-
 //===----------------------------------------------------------------------===//
 // TestVersionedOpA
 //===----------------------------------------------------------------------===//
