@@ -158,8 +158,11 @@ extractSPIRVFromELF(StringRef ImageData) {
   // Extract all sections with name matching "__openmp_offload_spirv_*"
   for (const SectionRef &Sec : Obj.sections()) {
     Expected<StringRef> NameOrErr = Sec.getName();
-    if (!NameOrErr)
+    if (!NameOrErr) {
+      // consume error and skip this section
+      consumeError(NameOrErr.takeError());
       continue;
+    }
 
     if (!NameOrErr->starts_with("__openmp_offload_spirv_"))
       continue;
