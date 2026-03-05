@@ -871,7 +871,7 @@ void LoongArch::relocate(uint8_t *loc, const Relocation &rel,
   case R_LARCH_TLS_GD_PCADD_HI20:
   case R_LARCH_TLS_DESC_PCADD_HI20: {
     uint64_t hi = val + 0x800;
-    checkInt(ctx, loc, val, 32, rel);
+    checkInt(ctx, loc, SignExtend64(hi, ctx.arg.wordsize * 8) >> 12, 20, rel);
     write32le(loc, setJ20(read32le(loc), extractBits(hi, 31, 12)));
     return;
   }
