@@ -56,7 +56,7 @@ class MockedSymStore:
             self._test.getBuildArtifact(self._pdb),
             os.path.join(pdb_dir, self._pdb),
         )
-        return self._tmp.replace("\\", "/")
+        return self._tmp
 
     def __exit__(self, *exc_info):
         """
@@ -81,8 +81,9 @@ class SymStoreLocalTests(TestBase):
         self.assertTrue(os.path.isfile(self.getBuildArtifact(sym_file)))
         return exe_file, sym_file
 
-    def try_breakpoint(self, exe, should_have_loc):
-        self.runCmd("settings set symbols.enable-external-lookup true")
+    def try_breakpoint(self, exe, should_have_loc, ext_lookup=True):
+        enable = "true" if ext_lookup else "false"
+        self.runCmd(f"settings set symbols.enable-external-lookup {enable}")
         target = self.dbg.CreateTarget(self.getBuildArtifact(exe))
         self.assertTrue(target and target.IsValid(), "Target is valid")
         bp = target.BreakpointCreateByName("func")
@@ -90,13 +91,24 @@ class SymStoreLocalTests(TestBase):
         self.assertEqual(bp.GetNumLocations(), 1 if should_have_loc else 0)
         self.dbg.DeleteTarget(target)
 
-    def test_off(self):
+    def test_no_symstore_url(self):
         """
         Check that breakpoint doesn't resolve without SymStore.
         """
         exe, sym = self.build_inferior()
         with MockedSymStore(self, exe, sym):
             self.try_breakpoint(exe, should_have_loc=False)
+
+    def test_external_lookup_off(self):
+        """
+        Check that breakpoint doesn't resolve with external lookup disabled.
+        """
+        exe, sym = self.build_inferior()
+        with MockedSymStore(self, exe, sym) as symstore_dir:
+            self.runCmd(
+                f"settings set plugin.symbol-locator.symstore.urls {symstore_dir}"
+            )
+            self.try_breakpoint(exe, ext_lookup=False, should_have_loc=False)
 
     def test_basic(self):
         """
