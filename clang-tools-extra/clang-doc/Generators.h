@@ -51,7 +51,7 @@ typedef llvm::Registry<Generator> GeneratorRegistry;
 llvm::Expected<std::unique_ptr<Generator>>
 findGeneratorByName(llvm::StringRef Format);
 
-std::string getTagType(TagTypeKind AS);
+llvm::StringRef getTagType(TagTypeKind AS);
 
 llvm::Error createFileOpenError(StringRef FileName, std::error_code EC);
 
@@ -86,6 +86,10 @@ public:
   }
 
   void render(llvm::json::Value &V, raw_ostream &OS) { T.render(V, OS); }
+
+  void setEscapeCharacters(const llvm::DenseMap<char, std::string> Characters) {
+    T.overrideEscapeCharacters(Characters);
+  }
 
   MustacheTemplateFile(std::unique_ptr<llvm::MemoryBuffer> &&B)
       : Saver(Allocator), Ctx(Allocator, Saver), T(B->getBuffer(), Ctx),
@@ -137,8 +141,8 @@ struct MustacheGenerator : public Generator {
 extern volatile int YAMLGeneratorAnchorSource;
 extern volatile int MDGeneratorAnchorSource;
 extern volatile int HTMLGeneratorAnchorSource;
-extern volatile int MHTMLGeneratorAnchorSource;
 extern volatile int JSONGeneratorAnchorSource;
+extern volatile int MDMustacheGeneratorAnchorSource;
 
 } // namespace doc
 } // namespace clang

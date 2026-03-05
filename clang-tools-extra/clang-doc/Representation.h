@@ -18,6 +18,7 @@
 #include "clang/Basic/Diagnostic.h"
 #include "clang/Basic/Specifiers.h"
 #include "clang/Tooling/Execution.h"
+#include "llvm/ADT/SmallString.h"
 #include "llvm/ADT/SmallVector.h"
 #include <array>
 #include <optional>
@@ -67,6 +68,8 @@ enum class CommentKind {
   CK_VerbatimLineComment,
   CK_Unknown
 };
+
+enum OutputFormatTy { md, yaml, html, json, md_mustache };
 
 CommentKind stringToCommentKind(llvm::StringRef KindStr);
 llvm::StringRef commentKindToString(CommentKind Kind);
@@ -163,6 +166,16 @@ struct Reference {
   // (possibly unresolved)
   llvm::SmallString<128> Path;
   SmallString<16> DocumentationFileName;
+};
+
+// A Context is a reference that holds a relative path from a certain Info's
+// location.
+struct Context : public Reference {
+  Context(SymbolID USR, StringRef Name, InfoType IT, StringRef QualName,
+          StringRef Path, SmallString<16> DocumentationFileName)
+      : Reference(USR, Name, IT, QualName, Path, DocumentationFileName) {}
+  explicit Context(const Info &I);
+  SmallString<128> RelativePath;
 };
 
 // Holds the children of a record or namespace.
@@ -356,12 +369,20 @@ struct Info {
   // Unique identifier for the decl described by this Info.
   SymbolID USR = SymbolID();
 
+  // Currently only used for namespaces and records.
+  SymbolID ParentUSR = SymbolID();
+
   // InfoType of this particular Info.
   InfoType IT = InfoType::IT_default;
 
   // Comment description of this decl.
   std::vector<CommentInfo> Description;
+
+  SmallVector<Context, 4> Contexts;
 };
+
+inline Context::Context(const Info &I)
+    : Reference(I.USR, I.Name, I.IT, I.Name, I.Path, I.DocumentationFileName) {}
 
 // Info for namespaces.
 struct NamespaceInfo : public Info {
@@ -498,11 +519,11 @@ struct TypedefInfo : public SymbolInfo {
 
   TypeInfo Underlying;
 
+  // Only type aliases can be templates.
+  std::optional<TemplateInfo> Template;
+
   // Underlying type declaration
   SmallString<16> TypeDeclaration;
-
-  /// Comment description for the typedef.
-  std::vector<CommentInfo> Description;
 
   // Indicates if this is a new C++ "using"-style typedef:
   //   using MyVector = std::vector<int>
@@ -593,8 +614,9 @@ struct Index : public Reference {
   bool operator<(const Index &Other) const;
 
   std::optional<SmallString<16>> JumpToSection;
-  std::vector<Index> Children;
+  llvm::StringMap<Index> Children;
 
+  std::vector<const Index *> getSortedChildren() const;
   void sort();
 };
 
@@ -611,7 +633,8 @@ struct ClangDocContext {
                   bool PublicOnly, StringRef OutDirectory, StringRef SourceRoot,
                   StringRef RepositoryUrl, StringRef RepositoryCodeLinePrefix,
                   StringRef Base, std::vector<std::string> UserStylesheets,
-                  clang::DiagnosticsEngine &Diags, bool FTimeTrace = false);
+                  clang::DiagnosticsEngine &Diags, OutputFormatTy Format,
+                  bool FTimeTrace = false);
   tooling::ExecutionContext *ECtx;
   std::string ProjectName;  // Name of project clang-doc is documenting.
   std::string OutDirectory; // Directory for outputting generated files.
@@ -635,6 +658,7 @@ struct ClangDocContext {
   // A pointer to a DiagnosticsEngine for error reporting.
   clang::DiagnosticsEngine &Diags;
   Index Idx;
+  OutputFormatTy Format;
   int Granularity; // Granularity of ftime trace
   bool PublicOnly; // Indicates if only public declarations are documented.
   bool FTimeTrace; // Indicates if ftime trace is turned on

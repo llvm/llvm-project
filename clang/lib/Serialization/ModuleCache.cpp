@@ -11,6 +11,7 @@
 #include "clang/Serialization/InMemoryModuleCache.h"
 #include "clang/Serialization/ModuleFile.h"
 #include "llvm/Support/FileSystem.h"
+#include "llvm/Support/IOSandbox.h"
 #include "llvm/Support/LockFileManager.h"
 #include "llvm/Support/Path.h"
 
@@ -26,6 +27,9 @@ void clang::maybePruneImpl(StringRef Path, time_t PruneInterval,
                            time_t PruneAfter) {
   if (PruneInterval <= 0 || PruneAfter <= 0)
     return;
+
+  // This is a compiler-internal input/output, let's bypass the sandbox.
+  auto BypassSandbox = llvm::sys::sandbox::scopedDisable();
 
   llvm::SmallString<128> TimestampFile(Path);
   llvm::sys::path::append(TimestampFile, "modules.timestamp");
@@ -103,6 +107,9 @@ class CrossProcessModuleCache : public ModuleCache {
 
 public:
   void prepareForGetLock(StringRef ModuleFilename) override {
+    // This is a compiler-internal input/output, let's bypass the sandbox.
+    auto BypassSandbox = llvm::sys::sandbox::scopedDisable();
+
     // FIXME: Do this in LockFileManager and only if the directory doesn't
     // exist.
     StringRef Dir = llvm::sys::path::parent_path(ModuleFilename);
@@ -115,6 +122,9 @@ public:
   }
 
   std::time_t getModuleTimestamp(StringRef ModuleFilename) override {
+    // This is a compiler-internal input/output, let's bypass the sandbox.
+    auto BypassSandbox = llvm::sys::sandbox::scopedDisable();
+
     std::string TimestampFilename =
         serialization::ModuleFile::getTimestampFilename(ModuleFilename);
     llvm::sys::fs::file_status Status;
@@ -124,6 +134,9 @@ public:
   }
 
   void updateModuleTimestamp(StringRef ModuleFilename) override {
+    // This is a compiler-internal input/output, let's bypass the sandbox.
+    auto BypassSandbox = llvm::sys::sandbox::scopedDisable();
+
     // Overwrite the timestamp file contents so that file's mtime changes.
     std::error_code EC;
     llvm::raw_fd_ostream OS(
@@ -138,6 +151,9 @@ public:
 
   void maybePrune(StringRef Path, time_t PruneInterval,
                   time_t PruneAfter) override {
+    // This is a compiler-internal input/output, let's bypass the sandbox.
+    auto BypassSandbox = llvm::sys::sandbox::scopedDisable();
+
     maybePruneImpl(Path, PruneInterval, PruneAfter);
   }
 
@@ -148,6 +164,6 @@ public:
 };
 } // namespace
 
-IntrusiveRefCntPtr<ModuleCache> clang::createCrossProcessModuleCache() {
-  return llvm::makeIntrusiveRefCnt<CrossProcessModuleCache>();
+std::shared_ptr<ModuleCache> clang::createCrossProcessModuleCache() {
+  return std::make_shared<CrossProcessModuleCache>();
 }

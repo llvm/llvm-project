@@ -67,6 +67,7 @@ public:
   void emitDirectiveOptionNoRVC() override;
   void emitDirectiveVariantCC(MCSymbol &Symbol) override;
 
+  void emitNoteGnuPropertySection(const uint32_t Feature1And);
   void finish() override;
 };
 

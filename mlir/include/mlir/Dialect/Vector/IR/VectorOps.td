@@ -32,6 +32,17 @@ include "mlir/Interfaces/ViewLikeInterface.td"
 include "mlir/IR/BuiltinAttributes.td"
 include "mlir/IR/EnumAttr.td"
 
+// Type constraint helpers for the vector dialect.
+
+// Any vector of any rank whose element type is not i0 (zero-bitwidth integer).
+// Floats, index, and integers with width >= 1 are all accepted.
+def AnyVectorOfNonI0Elem : VectorOfAnyRankOf<[
+    Type<CPred<"!$_self.isInteger(0)">, "non-zero-bitwidth type">]>;
+
+// Like AnyVectorOfNonI0Elem but additionally requires rank >= 1.
+def AnyVectorOfNonZeroRankNonI0Elem : VectorOfNonZeroRankOf<[
+    Type<CPred<"!$_self.isInteger(0)">, "non-zero-bitwidth type">]>;
+
 // TODO: Add an attribute to specify a different algebra with operators other
 // than the current set: {*, +}.
 def Vector_ContractionOp :
@@ -44,7 +55,7 @@ def Vector_ContractionOp :
       DeclareOpInterfaceMethods<MaskableOpInterface>,
       DeclareOpInterfaceMethods<VectorUnrollOpInterface, ["getShapeForUnroll"]>
     ]>,
-    Arguments<(ins AnyVectorOfNonZeroRank:$lhs, AnyVectorOfNonZeroRank:$rhs, AnyType:$acc,
+    Arguments<(ins AnyVectorOfNonZeroRankNonI0Elem:$lhs, AnyVectorOfNonZeroRankNonI0Elem:$rhs, AnyType:$acc,
                ArrayAttr:$indexing_maps,
                Vector_IteratorTypeArrayAttr:$iterator_types,
                DefaultValuedAttr<Vector_CombiningKindAttr,
@@ -239,7 +250,7 @@ def Vector_ReductionOp :
      DeclareOpInterfaceMethods<VectorUnrollOpInterface, ["getShapeForUnroll"]>
     ]>,
     Arguments<(ins Vector_CombiningKindAttr:$kind,
-               AnyVectorOfAnyRank:$vector,
+               AnyVectorOfNonI0Elem:$vector,
                Optional<AnyType>:$acc,
                DefaultValuedAttr<
                  Arith_FastMathAttr,
@@ -299,7 +310,7 @@ def Vector_MultiDimReductionOp :
      DeclareOpInterfaceMethods<VectorUnrollOpInterface,
                                ["getShapeForUnroll"]>]>,
     Arguments<(ins Vector_CombiningKindAttr:$kind,
-                   AnyVectorOfNonZeroRank:$source,
+                   AnyVectorOfNonZeroRankNonI0Elem:$source,
                    AnyType:$acc,
                    DenseI64ArrayAttr:$reduction_dims)>,
     Results<(outs AnyType:$dest)> {
@@ -711,11 +722,6 @@ def Vector_ExtractOp :
     bool hasDynamicPosition() {
       return !getDynamicPosition().empty();
     }
-
-    /// Wrapper for getSource, which replaced getVector.
-    [[deprecated("Use getSource instead!")]] ::mlir::Value getVector() {
-      return getSource();
-    }
   }];
 
   let assemblyFormat = [{
@@ -1031,10 +1037,6 @@ def Vector_ScalableExtractOp :
     VectorType getResultVectorType() {
       return ::llvm::cast<VectorType>(getResult().getType());
     }
-    /// Wrapper for getSource, which replaced getVector.
-    [[deprecated("Use getSource instead!")]] ::mlir::Value getVector() {
-      return getSource();
-    }
   }];
 }
 
@@ -1103,10 +1105,10 @@ def Vector_OuterProductOp :
     PredOpTrait<"rhs operand and result have same element type",
                 TCresVTEtIsSameAsOpBase<0, 1>>,
     DeclareOpInterfaceMethods<MaskableOpInterface>]>,
-    Arguments<(ins AnyVectorOfNonZeroRank:$lhs, AnyType:$rhs,
-               Optional<AnyVectorOfNonZeroRank>:$acc,
+    Arguments<(ins AnyVectorOfNonZeroRankNonI0Elem:$lhs, AnyType:$rhs,
+               Optional<AnyVectorOfNonZeroRankNonI0Elem>:$acc,
                DefaultValuedAttr<Vector_CombiningKindAttr, "CombiningKind::ADD">:$kind)>,
-    Results<(outs AnyVectorOfNonZeroRank)> {
+    Results<(outs AnyVectorOfNonZeroRankNonI0Elem)> {
   let summary = "vector outerproduct with optional fused add";
   let description = [{
     Takes 2 1-D vectors and returns the 2-D vector containing the outer-product,
@@ -1228,10 +1230,6 @@ def Vector_ExtractStridedSliceOp :
       return llvm::any_of(getStrides(), [](Attribute attr) {
         return ::llvm::cast<IntegerAttr>(attr).getInt() != 1;
       });
-    }
-    /// Wrapper for getSource, which replaced getVector.
-    [[deprecated("Use getSource instead!")]] ::mlir::Value getVector() {
-      return getSource();
     }
   }];
   let hasCanonicalizer = 1;
@@ -2467,8 +2465,8 @@ def Vector_ShapeCastOp :
 
 def Vector_BitCastOp :
   Vector_Op<"bitcast", [Pure, AllRanksMatch<["source", "result"]>]>,
-    Arguments<(ins AnyVectorOfAnyRank:$source)>,
-    Results<(outs AnyVectorOfAnyRank:$result)>{
+    Arguments<(ins AnyVectorOfNonI0Elem:$source)>,
+    Results<(outs AnyVectorOfNonI0Elem:$result)>{
   let summary = "bitcast casts between vectors";
   let description = [{
     The bitcast operation casts between vectors of the same rank, the minor 1-D
@@ -2547,7 +2545,9 @@ def Vector_TypeCastOp :
 }
 
 def Vector_ConstantMaskOp :
-  Vector_Op<"constant_mask", [Pure]>,
+  Vector_Op<"constant_mask", [Pure, 
+   DeclareOpInterfaceMethods<VectorUnrollOpInterface>
+   ]>,
     Arguments<(ins DenseI64ArrayAttr:$mask_dim_sizes)>,
     Results<(outs VectorOfAnyRankOf<[I1]>)> {
   let summary = "creates a constant vector mask";
@@ -2949,12 +2949,12 @@ def Vector_ScanOp :
     AllTypesMatch<["source", "dest"]>,
     AllTypesMatch<["initial_value", "accumulated_value"]> ]>,
     Arguments<(ins Vector_CombiningKindAttr:$kind,
-                   AnyVectorOfNonZeroRank:$source,
-                   AnyVectorOfAnyRank:$initial_value,
+                   AnyVectorOfNonZeroRankNonI0Elem:$source,
+                   AnyVectorOfNonI0Elem:$initial_value,
                    I64Attr:$reduction_dim,
                    BoolAttr:$inclusive)>,
-    Results<(outs AnyVectorOfNonZeroRank:$dest,
-                  AnyVectorOfAnyRank:$accumulated_value)> {
+    Results<(outs AnyVectorOfNonZeroRankNonI0Elem:$dest,
+                  AnyVectorOfNonI0Elem:$accumulated_value)> {
   let summary = "Scan operation";
   let description = [{
     Performs an inclusive/exclusive scan on an n-D vector along a single

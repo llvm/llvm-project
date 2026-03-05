@@ -170,11 +170,6 @@ getTypeConversionFailure(ConversionPatternRewriter &rewriter, Operation *op) {
   return getTypeConversionFailure(rewriter, op, op->getResultTypes().front());
 }
 
-// TODO: Move to some common place?
-static std::string getDecorationString(spirv::Decoration decor) {
-  return llvm::convertToSnakeFromCamelCase(stringifyDecoration(decor));
-}
-
 namespace {
 
 /// Converts elementwise unary, binary and ternary arith operations to SPIR-V
@@ -267,8 +262,7 @@ struct ConstantCompositeOpPattern final
 
       // Check that the buffer meets the requirements to get converted to a
       // DenseElementsAttr
-      bool detectedSplat = false;
-      if (!DenseElementsAttr::isValidRawBuffer(srcType, ptr, detectedSplat))
+      if (!DenseElementsAttr::isValidRawBuffer(srcType, ptr))
         return constOp->emitError("resource is not a valid buffer");
 
       dstElementsAttr =
@@ -731,6 +725,8 @@ struct ExtSIPattern final : public OpConversionPattern<arith::ExtSIOp> {
       assert(srcBW < dstBW);
       Value shiftSize = getScalarOrVectorConstInt(dstType, dstBW - srcBW,
                                                   rewriter, op.getLoc());
+      if (!shiftSize)
+        return rewriter.notifyMatchFailure(op, "unsupported type for shift");
 
       // First shift left to sequeeze out all leading bits beyond the original
       // bitwidth. Here we need to use the original source and result type's
@@ -806,6 +802,8 @@ struct ExtUIPattern final : public OpConversionPattern<arith::ExtUIOp> {
       Value mask = getScalarOrVectorConstInt(
           dstType, llvm::maskTrailingOnes<uint64_t>(bitwidth), rewriter,
           op.getLoc());
+      if (!mask)
+        return rewriter.notifyMatchFailure(op, "unsupported type for mask");
       rewriter.replaceOpWithNewOp<spirv::BitwiseAndOp>(op, dstType,
                                                        adaptor.getIn(), mask);
     } else {
@@ -874,6 +872,8 @@ struct TruncIPattern final : public OpConversionPattern<arith::TruncIOp> {
       unsigned bw = getElementTypeOrSelf(op.getType()).getIntOrFloatBitWidth();
       Value mask = getScalarOrVectorConstInt(
           dstType, llvm::maskTrailingOnes<uint64_t>(bw), rewriter, op.getLoc());
+      if (!mask)
+        return rewriter.notifyMatchFailure(op, "unsupported type for mask");
       rewriter.replaceOpWithNewOp<spirv::BitwiseAndOp>(op, dstType,
                                                        adaptor.getIn(), mask);
     } else {

@@ -66,20 +66,28 @@ void FasterStringFindCheck::storeOptions(ClangTidyOptions::OptionMap &Opts) {
 
 void FasterStringFindCheck::registerMatchers(MatchFinder *Finder) {
   const auto SingleChar =
-      expr(ignoringParenCasts(stringLiteral(hasSize(1)).bind("literal")));
-  const auto StringFindFunctions =
-      hasAnyName("find", "rfind", "find_first_of", "find_first_not_of",
-                 "find_last_of", "find_last_not_of");
+      ignoringParenCasts(stringLiteral(hasSize(1)).bind("literal"));
+
+  const auto StringExpr =
+      expr(hasType(hasUnqualifiedDesugaredType(recordType(
+               hasDeclaration(recordDecl(hasAnyName(StringLikeClasses)))))),
+           unless(hasSubstitutedType()));
+
+  const auto InterestingStringFunction = hasAnyName(
+      "find", "rfind", "find_first_of", "find_first_not_of", "find_last_of",
+      "find_last_not_of", "starts_with", "ends_with", "contains", "operator+=");
 
   Finder->addMatcher(
       cxxMemberCallExpr(
-          callee(functionDecl(StringFindFunctions).bind("func")),
+          callee(functionDecl(InterestingStringFunction).bind("func")),
           anyOf(argumentCountIs(1), argumentCountIs(2)),
-          hasArgument(0, SingleChar),
-          on(expr(hasType(hasUnqualifiedDesugaredType(recordType(hasDeclaration(
-                      recordDecl(hasAnyName(StringLikeClasses)))))),
-                  unless(hasSubstitutedType())))),
+          hasArgument(0, SingleChar), on(StringExpr)),
       this);
+
+  Finder->addMatcher(cxxOperatorCallExpr(hasOperatorName("+="),
+                                         hasLHS(StringExpr), hasRHS(SingleChar),
+                                         callee(functionDecl().bind("func"))),
+                     this);
 }
 
 void FasterStringFindCheck::check(const MatchFinder::MatchResult &Result) {
@@ -94,10 +102,7 @@ void FasterStringFindCheck::check(const MatchFinder::MatchResult &Result) {
                                "a single character; consider using the more "
                                "effective overload accepting a character")
       << FindFunc
-      << FixItHint::CreateReplacement(
-             CharSourceRange::getTokenRange(Literal->getBeginLoc(),
-                                            Literal->getEndLoc()),
-             *Replacement);
+      << FixItHint::CreateReplacement(Literal->getSourceRange(), *Replacement);
 }
 
 } // namespace clang::tidy::performance

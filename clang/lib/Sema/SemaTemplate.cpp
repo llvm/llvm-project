@@ -3408,6 +3408,9 @@ static QualType checkBuiltinTemplateIdType(
     TemplateArgumentListInfo &TemplateArgs) {
   ASTContext &Context = SemaRef.getASTContext();
 
+  assert(Converted.size() == BTD->getTemplateParameters()->size() &&
+         "Builtin template arguments do not match its parameters");
+
   switch (BTD->getBuiltinTemplateKind()) {
   case BTK__make_integer_seq: {
     // Specializations of __make_integer_seq<S, T, N> are treated like
@@ -5981,13 +5984,16 @@ bool Sema::CheckTemplateArgumentList(
                                                 Params->getDepth()));
         if (ArgIsExpansion && NonPackParameter) {
           // CWG1430/CWG2686: we have a pack expansion as an argument to an
-          // alias template or concept, and it's not part of a parameter pack.
-          // This can't be canonicalized, so reject it now.
-          if (isa<TypeAliasTemplateDecl, ConceptDecl>(Template)) {
+          // alias template, builtin template, or concept, and it's not part of
+          // a parameter pack. This can't be canonicalized, so reject it now.
+          if (isa<TypeAliasTemplateDecl, ConceptDecl, BuiltinTemplateDecl>(
+                  Template)) {
+            unsigned DiagSelect = isa<ConceptDecl>(Template)           ? 1
+                                  : isa<BuiltinTemplateDecl>(Template) ? 2
+                                                                       : 0;
             Diag(ArgLoc.getLocation(),
                  diag::err_template_expansion_into_fixed_list)
-                << (isa<ConceptDecl>(Template) ? 1 : 0)
-                << ArgLoc.getSourceRange();
+                << DiagSelect << ArgLoc.getSourceRange();
             NoteTemplateParameterLocation(**Param);
             return true;
           }
@@ -6437,6 +6443,11 @@ bool UnnamedLocalNoLinkageFinder::VisitObjCObjectPointerType(
 
 bool UnnamedLocalNoLinkageFinder::VisitAtomicType(const AtomicType* T) {
   return Visit(T->getValueType());
+}
+
+bool UnnamedLocalNoLinkageFinder::VisitOverflowBehaviorType(
+    const OverflowBehaviorType *T) {
+  return Visit(T->getUnderlyingType());
 }
 
 bool UnnamedLocalNoLinkageFinder::VisitPipeType(const PipeType* T) {
@@ -10282,10 +10293,26 @@ DeclResult Sema::ActOnExplicitInstantiation(
     // mode, if a previous declaration of the instantiation was seen.
     for (const ParsedAttr &AL : Attr) {
       if (AL.getKind() == ParsedAttr::AT_DLLExport) {
-        Diag(AL.getLoc(),
-             diag::warn_attribute_dllexport_explicit_instantiation_def);
+        if (PrevDecl->hasAttr<DLLExportAttr>()) {
+          Diag(AL.getLoc(), diag::warn_attr_dllexport_explicit_inst_def);
+        } else {
+          Diag(AL.getLoc(),
+               diag::warn_attr_dllexport_explicit_inst_def_mismatch);
+          Diag(PrevDecl->getLocation(), diag::note_prev_decl_missing_dllexport);
+        }
         break;
       }
+    }
+  }
+
+  if (TSK == TSK_ExplicitInstantiationDefinition && PrevDecl &&
+      !Context.getTargetInfo().getTriple().isWindowsGNUEnvironment() &&
+      llvm::none_of(Attr, [](const ParsedAttr &AL) {
+        return AL.getKind() == ParsedAttr::AT_DLLExport;
+      })) {
+    if (const auto *DEA = PrevDecl->getAttr<DLLExportOnDeclAttr>()) {
+      Diag(TemplateLoc, diag::warn_dllexport_on_decl_ignored);
+      Diag(DEA->getLoc(), diag::note_dllexport_on_decl);
     }
   }
 

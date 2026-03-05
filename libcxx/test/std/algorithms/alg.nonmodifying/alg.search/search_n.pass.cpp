@@ -14,79 +14,83 @@
 //            const T& value);
 
 #include <algorithm>
+#include <array>
 #include <cassert>
 
 #include "test_macros.h"
 #include "test_iterators.h"
-#include "user_defined_integral.h"
-
-#if TEST_STD_VER > 17
-TEST_CONSTEXPR bool test_constexpr() {
-    int ia[] = {0, 0, 1, 1, 2, 2};
-    return    (std::search_n(std::begin(ia), std::end(ia), 1, 0) == ia)
-           && (std::search_n(std::begin(ia), std::end(ia), 2, 1) == ia+2)
-           && (std::search_n(std::begin(ia), std::end(ia), 1, 3) == std::end(ia))
-           ;
-    }
-#endif
 
 template <class Iter>
-void
-test()
-{
-    int ia[] = {0, 1, 2, 3, 4, 5};
-    const unsigned sa = sizeof(ia)/sizeof(ia[0]);
-    assert(std::search_n(Iter(ia), Iter(ia+sa), 0, 0) == Iter(ia));
-    assert(std::search_n(Iter(ia), Iter(ia+sa), 1, 0) == Iter(ia+0));
-    assert(std::search_n(Iter(ia), Iter(ia+sa), 2, 0) == Iter(ia+sa));
-    assert(std::search_n(Iter(ia), Iter(ia+sa), sa, 0) == Iter(ia+sa));
-    assert(std::search_n(Iter(ia), Iter(ia+sa), 0, 3) == Iter(ia));
-    assert(std::search_n(Iter(ia), Iter(ia+sa), 1, 3) == Iter(ia+3));
-    assert(std::search_n(Iter(ia), Iter(ia+sa), 2, 3) == Iter(ia+sa));
-    assert(std::search_n(Iter(ia), Iter(ia+sa), sa, 3) == Iter(ia+sa));
-    assert(std::search_n(Iter(ia), Iter(ia+sa), 0, 5) == Iter(ia));
-    assert(std::search_n(Iter(ia), Iter(ia+sa), 1, 5) == Iter(ia+5));
-    assert(std::search_n(Iter(ia), Iter(ia+sa), 2, 5) == Iter(ia+sa));
-    assert(std::search_n(Iter(ia), Iter(ia+sa), sa, 5) == Iter(ia+sa));
+TEST_CONSTEXPR_CXX20 bool test() {
+  { // simple test
+    int a[]  = {1, 2, 3, 4, 5, 6};
+    auto ret = std::search_n(Iter(a), Iter(a + 6), 1, 3);
+    assert(base(ret) == a + 2);
+  }
+  { // matching part begins at the front
+    int a[]  = {7, 7, 3, 7, 3, 6};
+    auto ret = std::search_n(Iter(a), Iter(a + 6), 2, 7);
+    assert(base(ret) == a);
+  }
+  { // matching part ends at the back
+    int a[]  = {9, 3, 6, 4, 4};
+    auto ret = std::search_n(Iter(a), Iter(a + 5), 2, 4);
+    assert(base(ret) == a + 3);
+  }
+  { // pattern does not match
+    int a[]  = {9, 3, 6, 4, 8};
+    auto ret = std::search_n(Iter(a), Iter(a + 5), 1, 1);
+    assert(base(ret) == a + 5);
+  }
+  { // range and pattern are identical
+    int a[]  = {1, 1, 1, 1};
+    auto ret = std::search_n(Iter(a), Iter(a + 4), 4, 1);
+    assert(base(ret) == a);
+  }
+  { // pattern is longer than range
+    int a[]  = {3, 3, 3};
+    auto ret = std::search_n(Iter(a), Iter(a + 3), 4, 3);
+    assert(base(ret) == a + 3);
+  }
+  { // pattern has zero length
+    int a[]  = {6, 7, 8};
+    auto ret = std::search_n(Iter(a), Iter(a + 3), 0, 7);
+    assert(base(ret) == a);
+  }
+  { // range has zero length
+    std::array<int, 0> a = {};
+    auto ret             = std::search_n(Iter(a.data()), Iter(a.data()), 1, 1);
+    assert(base(ret) == a.data());
+  }
+  {   // check that the first match is returned
+    { // Match is at the start
+      int a[]  = {6, 6, 8, 6, 6, 8, 6, 6, 8};
+      auto ret = std::search_n(Iter(a), Iter(a + 9), 2, 6);
+      assert(base(ret) == a);
+    }
+    { // Match is in the middle
+      int a[]  = {6, 8, 8, 6, 6, 8, 6, 6, 8};
+      auto ret = std::search_n(Iter(a), Iter(a + 9), 2, 6);
+      assert(base(ret) == a + 3);
+    }
+    { // Match is at the end
+      int a[]  = {6, 6, 8, 6, 6, 8, 6, 6, 6};
+      auto ret = std::search_n(Iter(a), Iter(a + 9), 3, 6);
+      assert(base(ret) == a + 6);
+    }
+  }
 
-    int ib[] = {0, 0, 1, 1, 2, 2};
-    const unsigned sb = sizeof(ib)/sizeof(ib[0]);
-    assert(std::search_n(Iter(ib), Iter(ib+sb), 0, 0) == Iter(ib));
-    assert(std::search_n(Iter(ib), Iter(ib+sb), 1, 0) == Iter(ib+0));
-    assert(std::search_n(Iter(ib), Iter(ib+sb), 2, 0) == Iter(ib+0));
-    assert(std::search_n(Iter(ib), Iter(ib+sb), 3, 0) == Iter(ib+sb));
-    assert(std::search_n(Iter(ib), Iter(ib+sb), sb, 0) == Iter(ib+sb));
-    assert(std::search_n(Iter(ib), Iter(ib+sb), 0, 1) == Iter(ib));
-    assert(std::search_n(Iter(ib), Iter(ib+sb), 1, 1) == Iter(ib+2));
-    assert(std::search_n(Iter(ib), Iter(ib+sb), 2, 1) == Iter(ib+2));
-    assert(std::search_n(Iter(ib), Iter(ib+sb), 3, 1) == Iter(ib+sb));
-    assert(std::search_n(Iter(ib), Iter(ib+sb), sb, 1) == Iter(ib+sb));
-    assert(std::search_n(Iter(ib), Iter(ib+sb), 0, 2) == Iter(ib));
-    assert(std::search_n(Iter(ib), Iter(ib+sb), 1, 2) == Iter(ib+4));
-    assert(std::search_n(Iter(ib), Iter(ib+sb), 2, 2) == Iter(ib+4));
-    assert(std::search_n(Iter(ib), Iter(ib+sb), 3, 2) == Iter(ib+sb));
-    assert(std::search_n(Iter(ib), Iter(ib+sb), sb, 2) == Iter(ib+sb));
-
-    int ic[] = {0, 0, 0};
-    const unsigned sc = sizeof(ic)/sizeof(ic[0]);
-    assert(std::search_n(Iter(ic), Iter(ic+sc), 0, 0) == Iter(ic));
-    assert(std::search_n(Iter(ic), Iter(ic+sc), 1, 0) == Iter(ic));
-    assert(std::search_n(Iter(ic), Iter(ic+sc), 2, 0) == Iter(ic));
-    assert(std::search_n(Iter(ic), Iter(ic+sc), 3, 0) == Iter(ic));
-    assert(std::search_n(Iter(ic), Iter(ic+sc), 4, 0) == Iter(ic+sc));
-
-    // Check that we properly convert the size argument to an integral.
-    (void)std::search_n(Iter(ic), Iter(ic+sc), UserDefinedIntegral<unsigned>(0), 0);
+  return true;
 }
 
-int main(int, char**)
-{
-    test<forward_iterator<const int*> >();
-    test<bidirectional_iterator<const int*> >();
-    test<random_access_iterator<const int*> >();
-
-#if TEST_STD_VER > 17
-    static_assert(test_constexpr());
+int main(int, char**) {
+  test<forward_iterator<const int*> >();
+  test<bidirectional_iterator<const int*> >();
+  test<random_access_iterator<const int*> >();
+#if TEST_STD_VER >= 20
+  static_assert(test<forward_iterator<const int*> >());
+  static_assert(test<bidirectional_iterator<const int*> >());
+  static_assert(test<random_access_iterator<const int*> >());
 #endif
 
   return 0;

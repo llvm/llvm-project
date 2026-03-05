@@ -523,9 +523,7 @@ define <2 x i32> @fptosi_nonnorm_copysign_vec(<2 x float> %x) {
 
 define i32 @fptosi_nonnorm_fmul(float %x) {
 ; CHECK-LABEL: @fptosi_nonnorm_fmul(
-; CHECK-NEXT:    [[SEL:%.*]] = fmul float [[X:%.*]], 0.000000e+00
-; CHECK-NEXT:    [[RET:%.*]] = fptosi float [[SEL]] to i32
-; CHECK-NEXT:    ret i32 [[RET]]
+; CHECK-NEXT:    ret i32 0
 ;
   %sel = fmul float %x, 0.000000e+00
   %ret = fptosi float %sel to i32

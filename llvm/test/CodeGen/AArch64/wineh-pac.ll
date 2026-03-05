@@ -7,19 +7,19 @@ define dso_local i32 @func(ptr %g, i32 %a) "sign-return-address"="non-leaf" "sig
 ; CHECK-NEXT:  // %bb.0: // %entry
 ; CHECK-NEXT:    hint #27
 ; CHECK-NEXT:    .seh_pac_sign_lr
-; CHECK-NEXT:    str x19, [sp, #-16]! // 8-byte Folded Spill
-; CHECK-NEXT:    .seh_save_reg_x x19, 16
-; CHECK-NEXT:    str x30, [sp, #8] // 8-byte Spill
-; CHECK-NEXT:    .seh_save_reg x30, 8
+; CHECK-NEXT:    sub sp, sp, #16
+; CHECK-NEXT:    .seh_stackalloc 16
+; CHECK-NEXT:    stp x19, x30, [sp] // 16-byte Folded Spill
+; CHECK-NEXT:    .seh_save_lrpair x19, 0
 ; CHECK-NEXT:    .seh_endprologue
 ; CHECK-NEXT:    mov w19, w1
 ; CHECK-NEXT:    blr x0
 ; CHECK-NEXT:    mov w0, w19
 ; CHECK-NEXT:    .seh_startepilogue
-; CHECK-NEXT:    ldr x30, [sp, #8] // 8-byte Reload
-; CHECK-NEXT:    .seh_save_reg x30, 8
-; CHECK-NEXT:    ldr x19, [sp], #16 // 8-byte Folded Reload
-; CHECK-NEXT:    .seh_save_reg_x x19, 16
+; CHECK-NEXT:    ldp x19, x30, [sp] // 16-byte Folded Reload
+; CHECK-NEXT:    .seh_save_lrpair x19, 0
+; CHECK-NEXT:    add sp, sp, #16
+; CHECK-NEXT:    .seh_stackalloc 16
 ; CHECK-NEXT:    hint #31
 ; CHECK-NEXT:    .seh_pac_sign_lr
 ; CHECK-NEXT:    .seh_endepilogue
@@ -40,19 +40,19 @@ define dso_local i32 @func2(ptr %g, i32 %a) "sign-return-address"="non-leaf" "si
 ; CHECK-NEXT:  // %bb.0: // %entry
 ; CHECK-NEXT:    pacibsp
 ; CHECK-NEXT:    .seh_pac_sign_lr
-; CHECK-NEXT:    str x19, [sp, #-16]! // 8-byte Folded Spill
-; CHECK-NEXT:    .seh_save_reg_x x19, 16
-; CHECK-NEXT:    str x30, [sp, #8] // 8-byte Spill
-; CHECK-NEXT:    .seh_save_reg x30, 8
+; CHECK-NEXT:    sub sp, sp, #16
+; CHECK-NEXT:    .seh_stackalloc 16
+; CHECK-NEXT:    stp x19, x30, [sp] // 16-byte Folded Spill
+; CHECK-NEXT:    .seh_save_lrpair x19, 0
 ; CHECK-NEXT:    .seh_endprologue
 ; CHECK-NEXT:    mov w19, w1
 ; CHECK-NEXT:    blr x0
 ; CHECK-NEXT:    mov w0, w19
 ; CHECK-NEXT:    .seh_startepilogue
-; CHECK-NEXT:    ldr x30, [sp, #8] // 8-byte Reload
-; CHECK-NEXT:    .seh_save_reg x30, 8
-; CHECK-NEXT:    ldr x19, [sp], #16 // 8-byte Folded Reload
-; CHECK-NEXT:    .seh_save_reg_x x19, 16
+; CHECK-NEXT:    ldp x19, x30, [sp] // 16-byte Folded Reload
+; CHECK-NEXT:    .seh_save_lrpair x19, 0
+; CHECK-NEXT:    add sp, sp, #16
+; CHECK-NEXT:    .seh_stackalloc 16
 ; CHECK-NEXT:    autibsp
 ; CHECK-NEXT:    .seh_pac_sign_lr
 ; CHECK-NEXT:    .seh_endepilogue

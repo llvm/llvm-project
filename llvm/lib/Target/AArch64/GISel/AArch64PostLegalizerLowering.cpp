@@ -215,14 +215,15 @@ bool matchTRN(MachineInstr &MI, MachineRegisterInfo &MRI,
               ShuffleVectorPseudo &MatchInfo) {
   assert(MI.getOpcode() == TargetOpcode::G_SHUFFLE_VECTOR);
   unsigned WhichResult;
+  unsigned OperandOrder;
   ArrayRef<int> ShuffleMask = MI.getOperand(3).getShuffleMask();
   Register Dst = MI.getOperand(0).getReg();
   unsigned NumElts = MRI.getType(Dst).getNumElements();
-  if (!isTRNMask(ShuffleMask, NumElts, WhichResult))
+  if (!isTRNMask(ShuffleMask, NumElts, WhichResult, OperandOrder))
     return false;
   unsigned Opc = (WhichResult == 0) ? AArch64::G_TRN1 : AArch64::G_TRN2;
-  Register V1 = MI.getOperand(1).getReg();
-  Register V2 = MI.getOperand(2).getReg();
+  Register V1 = MI.getOperand(OperandOrder == 0 ? 1 : 2).getReg();
+  Register V2 = MI.getOperand(OperandOrder == 0 ? 2 : 1).getReg();
   MatchInfo = ShuffleVectorPseudo(Opc, Dst, {V1, V2});
   return true;
 }
@@ -953,7 +954,7 @@ void applySwapICmpOperands(MachineInstr &MI, GISelChangeObserver &Observer) {
 
 /// \returns a function which builds a vector floating point compare instruction
 /// for a condition code \p CC.
-/// \param [in] NoNans - True if the target has NoNansFPMath.
+/// \param [in] NoNans - True if the instruction has nnan flag.
 std::function<Register(MachineIRBuilder &)>
 getVectorFCMP(AArch64CC::CondCode CC, Register LHS, Register RHS, bool NoNans,
               MachineRegisterInfo &MRI) {
@@ -1015,7 +1016,6 @@ bool matchLowerVectorFCMP(MachineInstr &MI, MachineRegisterInfo &MRI,
 void applyLowerVectorFCMP(MachineInstr &MI, MachineRegisterInfo &MRI,
                           MachineIRBuilder &MIB) {
   assert(MI.getOpcode() == TargetOpcode::G_FCMP);
-  const auto &ST = MI.getMF()->getSubtarget<AArch64Subtarget>();
 
   const auto &CmpMI = cast<GFCmp>(MI);
 
@@ -1044,8 +1044,8 @@ void applyLowerVectorFCMP(MachineInstr &MI, MachineRegisterInfo &MRI,
   // Instead of having an apply function, just build here to simplify things.
   MIB.setInstrAndDebugLoc(MI);
 
-  const bool NoNans =
-      ST.getTargetLowering()->getTargetMachine().Options.NoNaNsFPMath;
+  // TODO: Also consider GISelValueTracking result if eligible.
+  const bool NoNans = MI.getFlag(MachineInstr::FmNoNans);
 
   auto Cmp = getVectorFCMP(CC, LHS, RHS, NoNans, MRI);
   Register CmpRes;

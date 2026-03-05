@@ -116,14 +116,14 @@ LogicalResult OperationOp::verify() {
 
 LogicalResult TypeOp::verify() {
   auto symName = getSymName();
-  if (symName.front() == '!')
+  if (!symName.empty() && symName.front() == '!')
     symName = symName.substr(1);
   return isValidName(symName, getOperation(), "type");
 }
 
 LogicalResult AttributeOp::verify() {
   auto symName = getSymName();
-  if (symName.front() == '#')
+  if (!symName.empty() && symName.front() == '#')
     symName = symName.substr(1);
   return isValidName(symName, getOperation(), "attribute");
 }
@@ -143,12 +143,9 @@ LogicalResult OperationOp::verifyRegions() {
 
   for (Operation &op : getBody().getOps()) {
     TypeSwitch<Operation *>(&op)
-        .Case<OperandsOp>(
-            [&](OperandsOp op) { insertNames("operands", op.getNames()); })
-        .Case<ResultsOp>(
-            [&](ResultsOp op) { insertNames("results", op.getNames()); })
-        .Case<RegionsOp>(
-            [&](RegionsOp op) { insertNames("regions", op.getNames()); });
+        .Case([&](OperandsOp op) { insertNames("operands", op.getNames()); })
+        .Case([&](ResultsOp op) { insertNames("results", op.getNames()); })
+        .Case([&](RegionsOp op) { insertNames("regions", op.getNames()); });
   }
 
   // Verify that no two operand, result or region share the same name.

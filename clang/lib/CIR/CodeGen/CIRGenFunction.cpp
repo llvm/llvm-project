@@ -16,9 +16,11 @@
 #include "CIRGenCall.h"
 #include "CIRGenValue.h"
 #include "mlir/IR/Location.h"
+#include "clang/AST/Attr.h"
 #include "clang/AST/ExprCXX.h"
 #include "clang/AST/GlobalDecl.h"
 #include "clang/CIR/MissingFeatures.h"
+#include "llvm/IR/FPEnv.h"
 
 #include <cassert>
 
@@ -65,6 +67,7 @@ cir::TypeEvaluationKind CIRGenFunction::getEvaluationKind(QualType type) {
     case Type::ObjCObjectPointer:
     case Type::Pipe:
     case Type::BitInt:
+    case Type::OverflowBehavior:
     case Type::HLSLAttributedResource:
     case Type::HLSLInlineSpirv:
       return cir::TEK_Scalar;
@@ -268,6 +271,8 @@ void CIRGenFunction::LexicalScope::cleanup() {
     // Leverage and defers to RunCleanupsScope's dtor and scope handling.
     applyCleanup();
 
+    mlir::Block *currentBlock = builder.getBlock();
+
     // If we now have one after `applyCleanup`, hook it up properly.
     if (!cleanupBlock && localScope->getCleanupBlock(builder)) {
       cleanupBlock = localScope->getCleanupBlock(builder);
@@ -307,7 +312,7 @@ void CIRGenFunction::LexicalScope::cleanup() {
     // End of any local scope != function
     // Ternary ops have to deal with matching arms for yielding types
     // and do return a value, it must do its own cir.yield insertion.
-    if (!localScope->isTernary() && !insPt->mightHaveTerminator()) {
+    if (!localScope->isTernary() && !currentBlock->mightHaveTerminator()) {
       !retVal ? cir::YieldOp::create(builder, localScope->endLoc)
               : cir::YieldOp::create(builder, localScope->endLoc, retVal);
     }
@@ -354,11 +359,13 @@ void CIRGenFunction::LexicalScope::cleanup() {
 cir::ReturnOp CIRGenFunction::LexicalScope::emitReturn(mlir::Location loc) {
   CIRGenBuilderTy &builder = cgf.getBuilder();
 
-  // If we are on a coroutine, add the coro_end builtin call.
-  assert(!cir::MissingFeatures::coroEndBuiltinCall());
-
   auto fn = dyn_cast<cir::FuncOp>(cgf.curFn);
   assert(fn && "emitReturn from non-function");
+
+  // If we are on a coroutine, add the coro_end builtin call.
+  if (fn.getCoroutine())
+    cgf.emitCoroEndBuiltinCall(loc,
+                               builder.getNullPtr(builder.getVoidPtrTy(), loc));
   if (!fn.getFunctionType().hasVoidReturn()) {
     // Load the value from `__retval` and return it via the `cir.return` op.
     auto value = cir::LoadOp::create(
@@ -380,6 +387,30 @@ static bool mayDropFunctionReturn(const ASTContext &astContext,
   return returnType.isTriviallyCopyableType(astContext);
 }
 
+static bool previousOpIsNonYieldingCleanup(mlir::Block *block) {
+  if (block->empty())
+    return false;
+  mlir::Operation *op = &block->back();
+  auto cleanupScopeOp = mlir::dyn_cast<cir::CleanupScopeOp>(op);
+  if (!cleanupScopeOp)
+    return false;
+
+  // Check whether the body region of the cleanup scope exits via cir.yield.
+  // Exits via cir.return or cir.goto do not fall through to the operation
+  // following the cleanup scope, and exits via break, continue, and resume
+  // are not expected here.
+  for (mlir::Block &bodyBlock : cleanupScopeOp.getBodyRegion()) {
+    if (bodyBlock.mightHaveTerminator()) {
+      if (mlir::isa<cir::YieldOp>(bodyBlock.getTerminator()))
+        return false;
+      assert(!mlir::isa<cir::BreakOp>(bodyBlock.getTerminator()) &&
+             !mlir::isa<cir::ContinueOp>(bodyBlock.getTerminator()) &&
+             !mlir::isa<cir::ResumeOp>(bodyBlock.getTerminator()));
+    }
+  }
+  return true;
+}
+
 void CIRGenFunction::LexicalScope::emitImplicitReturn() {
   CIRGenBuilderTy &builder = cgf.getBuilder();
   LexicalScope *localScope = cgf.curLexScope;
@@ -393,7 +424,8 @@ void CIRGenFunction::LexicalScope::emitImplicitReturn() {
   // return.
   if (cgf.getLangOpts().CPlusPlus && !fd->hasImplicitReturnZero() &&
       !cgf.sawAsmBlock && !fd->getReturnType()->isVoidType() &&
-      builder.getInsertionBlock()) {
+      builder.getInsertionBlock() &&
+      !previousOpIsNonYieldingCleanup(builder.getInsertionBlock())) {
     bool shouldEmitUnreachable =
         cgf.cgm.getCodeGenOpts().StrictReturn ||
         !mayDropFunctionReturn(fd->getASTContext(), fd->getReturnType());
@@ -422,28 +454,35 @@ cir::TryOp CIRGenFunction::LexicalScope::getClosestTryParent() {
   return nullptr;
 }
 
-void CIRGenFunction::startFunction(GlobalDecl gd, QualType returnType,
-                                   cir::FuncOp fn, cir::FuncType funcType,
-                                   FunctionArgList args, SourceLocation loc,
-                                   SourceLocation startLoc) {
-  assert(!curFn &&
-         "CIRGenFunction can only be used for one function at a time");
+/// An argument came in as a promoted argument; demote it back to its
+/// declared type.
+static mlir::Value emitArgumentDemotion(CIRGenFunction &cgf, const VarDecl *var,
+                                        mlir::Value value) {
+  mlir::Type ty = cgf.convertType(var->getType());
 
-  curFn = fn;
+  // This can happen with promotions that actually don't change the
+  // underlying type, like the enum promotions.
+  if (value.getType() == ty)
+    return value;
 
-  const Decl *d = gd.getDecl();
+  assert((mlir::isa<cir::IntType>(ty) || cir::isAnyFloatingPointType(ty)) &&
+         "unexpected promotion type");
 
-  didCallStackSave = false;
-  curCodeDecl = d;
-  const auto *fd = dyn_cast_or_null<FunctionDecl>(d);
-  curFuncDecl = d->getNonClosureContext();
+  if (mlir::isa<cir::IntType>(ty))
+    return cgf.getBuilder().CIRBaseBuilderTy::createIntCast(value, ty);
 
-  prologueCleanupDepth = ehStack.stable_begin();
+  return cgf.getBuilder().createFloatingCast(value, ty);
+}
 
-  mlir::Block *entryBB = &fn.getBlocks().front();
-  builder.setInsertionPointToStart(entryBB);
+void CIRGenFunction::emitFunctionProlog(const FunctionArgList &args,
+                                        mlir::Block *entryBB,
+                                        const FunctionDecl *fd,
+                                        SourceLocation bodyBeginLoc) {
+  // Naked functions don't have prologues.
+  if (fd && fd->hasAttr<NakedAttr>()) {
+    cgm.errorNYI(bodyBeginLoc, "naked function decl");
+  }
 
-  // TODO(cir): this should live in `emitFunctionProlog
   // Declare all the function arguments in the symbol table.
   for (const auto nameValue : llvm::zip(args, entryBB->getArguments())) {
     const VarDecl *paramVar = std::get<0>(nameValue);
@@ -466,20 +505,64 @@ void CIRGenFunction::startFunction(GlobalDecl gd, QualType returnType,
                       cast<ParmVarDecl>(paramVar)->isKNRPromoted();
     assert(!cir::MissingFeatures::constructABIArgDirectExtend());
     if (isPromoted)
-      cgm.errorNYI(fd->getSourceRange(), "Function argument demotion");
+      paramVal = emitArgumentDemotion(*this, paramVar, paramVal);
 
     // Location of the store to the param storage tracked as beginning of
     // the function body.
-    mlir::Location fnBodyBegin = getLoc(fd->getBody()->getBeginLoc());
+    mlir::Location fnBodyBegin = getLoc(bodyBeginLoc);
     builder.CIRBaseBuilderTy::createStore(fnBodyBegin, paramVal, addrVal);
   }
   assert(builder.getInsertionBlock() && "Should be valid");
+}
+
+void CIRGenFunction::startFunction(GlobalDecl gd, QualType returnType,
+                                   cir::FuncOp fn, cir::FuncType funcType,
+                                   FunctionArgList args, SourceLocation loc,
+                                   SourceLocation startLoc) {
+  assert(!curFn &&
+         "CIRGenFunction can only be used for one function at a time");
+
+  curFn = fn;
+
+  const Decl *d = gd.getDecl();
+
+  didCallStackSave = false;
+  curCodeDecl = d;
+  const auto *fd = dyn_cast_or_null<FunctionDecl>(d);
+  curFuncDecl = (d ? d->getNonClosureContext() : nullptr);
+
+  prologueCleanupDepth = ehStack.stable_begin();
+
+  mlir::Block *entryBB = &fn.getBlocks().front();
+  builder.setInsertionPointToStart(entryBB);
+
+  // Determine the function body begin location for the prolog.
+  // If fd is null or has no body, use startLoc as fallback.
+  SourceLocation bodyBeginLoc = startLoc;
+  if (fd) {
+    if (Stmt *body = fd->getBody())
+      bodyBeginLoc = body->getBeginLoc();
+    else
+      bodyBeginLoc = fd->getLocation();
+  }
+
+  emitFunctionProlog(args, entryBB, fd, bodyBeginLoc);
 
   // When the current function is not void, create an address to store the
   // result value.
-  if (!returnType->isVoidType())
-    emitAndUpdateRetAlloca(returnType, getLoc(fd->getBody()->getEndLoc()),
+  if (!returnType->isVoidType()) {
+    // Determine the function body end location.
+    // If fd is null or has no body, use loc as fallback.
+    SourceLocation bodyEndLoc = loc;
+    if (fd) {
+      if (Stmt *body = fd->getBody())
+        bodyEndLoc = body->getEndLoc();
+      else
+        bodyEndLoc = fd->getLocation();
+    }
+    emitAndUpdateRetAlloca(returnType, getLoc(bodyEndLoc),
                            getContext().getTypeAlignInChars(returnType));
+  }
 
   if (isa_and_nonnull<CXXMethodDecl>(d) &&
       cast<CXXMethodDecl>(d)->isInstance()) {
@@ -694,7 +777,7 @@ cir::FuncOp CIRGenFunction::generateCode(clang::GlobalDecl gd, cir::FuncOp fn,
       emitConstructorBody(args);
     } else if (getLangOpts().CUDA && !getLangOpts().CUDAIsDevice &&
                funcDecl->hasAttr<CUDAGlobalAttr>()) {
-      getCIRGenModule().errorNYI(bodyRange, "CUDA kernel");
+      cgm.getCUDARuntime().emitDeviceStub(*this, fn, args);
     } else if (isa<CXXMethodDecl>(funcDecl) &&
                cast<CXXMethodDecl>(funcDecl)->isLambdaStaticInvoker()) {
       // The lambda static invoker function is special, because it forwards or
@@ -784,7 +867,9 @@ void CIRGenFunction::emitDestructorBody(FunctionArgList &args) {
   // in fact emit references to them from other compilations, so emit them
   // as functions containing a trap instruction.
   if (dtorType != Dtor_Base && dtor->getParent()->isAbstract()) {
-    cgm.errorNYI(dtor->getSourceRange(), "abstract base class destructors");
+    SourceLocation loc =
+        dtor->hasBody() ? dtor->getBody()->getBeginLoc() : dtor->getLocation();
+    emitTrap(getLoc(loc), true);
     return;
   }
 
@@ -795,7 +880,9 @@ void CIRGenFunction::emitDestructorBody(FunctionArgList &args) {
   // outside of the function-try-block, which means it's always
   // possible to delegate the destructor body to the complete
   // destructor.  Do so.
-  if (dtorType == Dtor_Deleting) {
+  if (dtorType == Dtor_Deleting || dtorType == Dtor_VectorDeleting) {
+    if (cxxStructorImplicitParamValue && dtorType == Dtor_VectorDeleting)
+      cgm.errorNYI(dtor->getSourceRange(), "emitConditionalArrayDtorCall");
     RunCleanupsScope dtorEpilogue(*this);
     enterDtorCleanups(dtor, Dtor_Deleting);
     if (haveInsertPoint()) {
@@ -828,6 +915,7 @@ void CIRGenFunction::emitDestructorBody(FunctionArgList &args) {
   case Dtor_Comdat:
     llvm_unreachable("not expecting a COMDAT");
   case Dtor_Deleting:
+  case Dtor_VectorDeleting:
     llvm_unreachable("already handled deleting case");
 
   case Dtor_Complete:
@@ -897,6 +985,23 @@ LValue CIRGenFunction::makeNaturalAlignAddrLValue(mlir::Value val,
   Address addr(val, convertTypeForMem(ty), alignment);
   assert(!cir::MissingFeatures::opTBAA());
   return makeAddrLValue(addr, ty, baseInfo);
+}
+
+// Map the LangOption for exception behavior into the corresponding enum in
+// the IR.
+static llvm::fp::ExceptionBehavior
+toConstrainedExceptMd(LangOptions::FPExceptionModeKind kind) {
+  switch (kind) {
+  case LangOptions::FPE_Ignore:
+    return llvm::fp::ebIgnore;
+  case LangOptions::FPE_MayTrap:
+    return llvm::fp::ebMayTrap;
+  case LangOptions::FPE_Strict:
+    return llvm::fp::ebStrict;
+  case LangOptions::FPE_Default:
+    llvm_unreachable("expected explicitly initialized exception behavior");
+  }
+  llvm_unreachable("unsupported FP exception behavior");
 }
 
 clang::QualType CIRGenFunction::buildFunctionArgList(clang::GlobalDecl gd,
@@ -993,10 +1098,14 @@ LValue CIRGenFunction::emitLValue(const Expr *e) {
     return emitLValue(cast<GenericSelectionExpr>(e)->getResultExpr());
   case Expr::DeclRefExprClass:
     return emitDeclRefLValue(cast<DeclRefExpr>(e));
+  case Expr::ImplicitCastExprClass:
   case Expr::CStyleCastExprClass:
   case Expr::CXXStaticCastExprClass:
   case Expr::CXXDynamicCastExprClass:
-  case Expr::ImplicitCastExprClass:
+  case Expr::CXXReinterpretCastExprClass:
+  case Expr::CXXConstCastExprClass:
+    // TODO(cir): The above list is missing CXXFunctionalCastExprClass,
+    // CXXAddrSpaceCastExprClass, and ObjCBridgedCastExprClass.
     return emitCastLValue(cast<CastExpr>(e));
   case Expr::MaterializeTemporaryExprClass:
     return emitMaterializeTemporaryExpr(cast<MaterializeTemporaryExpr>(e));
@@ -1004,6 +1113,8 @@ LValue CIRGenFunction::emitLValue(const Expr *e) {
     return emitOpaqueValueLValue(cast<OpaqueValueExpr>(e));
   case Expr::ChooseExprClass:
     return emitLValue(cast<ChooseExpr>(e)->getChosenSubExpr());
+  case Expr::SubstNonTypeTemplateParmExprClass:
+    return emitLValue(cast<SubstNonTypeTemplateParmExpr>(e)->getReplacement());
   }
 }
 
@@ -1060,6 +1171,60 @@ void CIRGenFunction::emitNullInitialization(mlir::Location loc, Address destPtr,
   // Builder.CreateMemSet(DestPtr, Builder.getInt8(0), SizeVal, false);
   const mlir::Value zeroValue = builder.getNullValue(convertType(ty), loc);
   builder.createStore(loc, zeroValue, destPtr);
+}
+
+CIRGenFunction::CIRGenFPOptionsRAII::CIRGenFPOptionsRAII(CIRGenFunction &cgf,
+                                                         const clang::Expr *e)
+    : cgf(cgf) {
+  ConstructorHelper(e->getFPFeaturesInEffect(cgf.getLangOpts()));
+}
+
+CIRGenFunction::CIRGenFPOptionsRAII::CIRGenFPOptionsRAII(CIRGenFunction &cgf,
+                                                         FPOptions fpFeatures)
+    : cgf(cgf) {
+  ConstructorHelper(fpFeatures);
+}
+
+void CIRGenFunction::CIRGenFPOptionsRAII::ConstructorHelper(
+    FPOptions fpFeatures) {
+  oldFPFeatures = cgf.curFPFeatures;
+  cgf.curFPFeatures = fpFeatures;
+
+  oldExcept = cgf.builder.getDefaultConstrainedExcept();
+  oldRounding = cgf.builder.getDefaultConstrainedRounding();
+
+  if (oldFPFeatures == fpFeatures)
+    return;
+
+  // TODO(cir): create guard to restore fast math configurations.
+  assert(!cir::MissingFeatures::fastMathGuard());
+
+  [[maybe_unused]] llvm::RoundingMode newRoundingBehavior =
+      fpFeatures.getRoundingMode();
+  // TODO(cir): override rounding behaviour once FM configs are guarded.
+  [[maybe_unused]] llvm::fp::ExceptionBehavior newExceptionBehavior =
+      toConstrainedExceptMd(static_cast<LangOptions::FPExceptionModeKind>(
+          fpFeatures.getExceptionMode()));
+  // TODO(cir): override exception behaviour once FM configs are guarded.
+
+  // TODO(cir): override FP flags once FM configs are guarded.
+  assert(!cir::MissingFeatures::fastMathFlags());
+
+  assert((cgf.curFuncDecl == nullptr || cgf.builder.getIsFPConstrained() ||
+          isa<CXXConstructorDecl>(cgf.curFuncDecl) ||
+          isa<CXXDestructorDecl>(cgf.curFuncDecl) ||
+          (newExceptionBehavior == llvm::fp::ebIgnore &&
+           newRoundingBehavior == llvm::RoundingMode::NearestTiesToEven)) &&
+         "FPConstrained should be enabled on entire function");
+
+  // TODO(cir): mark CIR function with fast math attributes.
+  assert(!cir::MissingFeatures::fastMathFuncAttributes());
+}
+
+CIRGenFunction::CIRGenFPOptionsRAII::~CIRGenFPOptionsRAII() {
+  cgf.curFPFeatures = oldFPFeatures;
+  cgf.builder.setDefaultConstrainedExcept(oldExcept);
+  cgf.builder.setDefaultConstrainedRounding(oldRounding);
 }
 
 // TODO(cir): should be shared with LLVM codegen.
@@ -1244,6 +1409,7 @@ void CIRGenFunction::emitVariablyModifiedType(QualType type) {
     case Type::ObjCInterface:
     case Type::ObjCObjectPointer:
     case Type::BitInt:
+    case Type::OverflowBehavior:
       llvm_unreachable("type class is never variably-modified!");
 
     case Type::Adjusted:

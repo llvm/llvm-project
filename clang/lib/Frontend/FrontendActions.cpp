@@ -798,7 +798,7 @@ namespace {
     /// \returns true to continue receiving the next input file, false to stop.
     bool visitInputFileAsRequested(StringRef FilenameAsRequested,
                                    StringRef Filename, bool isSystem,
-                                   bool isOverridden,
+                                   bool isOverridden, time_t StoredTime,
                                    bool isExplicitModule) override {
 
       Out.indent(2) << "Input file: " << FilenameAsRequested;
@@ -822,6 +822,9 @@ namespace {
       }
 
       Out << "\n";
+
+      if (StoredTime > 0)
+        Out.indent(4) << "MTime: " << llvm::itostr(StoredTime) << "\n";
 
       return true;
     }

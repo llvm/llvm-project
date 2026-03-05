@@ -254,6 +254,7 @@ bool FriendInfo::mergeable(const FriendInfo &Other) {
 void FriendInfo::merge(FriendInfo &&Other) {
   assert(mergeable(Other));
   Ref.merge(std::move(Other.Ref));
+  SymbolInfo::merge(std::move(Other));
 }
 
 void Info::mergeBase(Info &&Other) {
@@ -272,6 +273,10 @@ void Info::mergeBase(Info &&Other) {
   llvm::sort(Description);
   auto Last = llvm::unique(Description);
   Description.erase(Last, Description.end());
+  if (ParentUSR == EmptySID)
+    ParentUSR = Other.ParentUSR;
+  if (DocumentationFileName.empty())
+    DocumentationFileName = Other.DocumentationFileName;
 }
 
 bool Info::mergeable(const Info &Other) {
@@ -368,6 +373,8 @@ void TypedefInfo::merge(TypedefInfo &&Other) {
     IsUsing = Other.IsUsing;
   if (Underlying.Type.Name == "")
     Underlying = Other.Underlying;
+  if (!Template)
+    Template = Other.Template;
   SymbolInfo::merge(std::move(Other));
 }
 
@@ -465,9 +472,18 @@ bool Index::operator<(const Index &Other) const {
   return Name.size() < Other.Name.size();
 }
 
+std::vector<const Index *> Index::getSortedChildren() const {
+  std::vector<const Index *> SortedChildren;
+  SortedChildren.reserve(Children.size());
+  for (const auto &[_, C] : Children)
+    SortedChildren.push_back(&C);
+  llvm::sort(SortedChildren,
+             [](const Index *A, const Index *B) { return *A < *B; });
+  return SortedChildren;
+}
+
 void Index::sort() {
-  llvm::sort(Children);
-  for (auto &C : Children)
+  for (auto &[_, C] : Children)
     C.sort();
 }
 
@@ -478,10 +494,11 @@ ClangDocContext::ClangDocContext(tooling::ExecutionContext *ECtx,
                                  StringRef RepositoryLinePrefix, StringRef Base,
                                  std::vector<std::string> UserStylesheets,
                                  clang::DiagnosticsEngine &Diags,
-                                 bool FTimeTrace)
+                                 OutputFormatTy Format, bool FTimeTrace)
     : ECtx(ECtx), ProjectName(ProjectName), OutDirectory(OutDirectory),
       SourceRoot(std::string(SourceRoot)), UserStylesheets(UserStylesheets),
-      Base(Base), Diags(Diags), PublicOnly(PublicOnly), FTimeTrace(FTimeTrace) {
+      Base(Base), Diags(Diags), Format(Format), PublicOnly(PublicOnly),
+      FTimeTrace(FTimeTrace) {
   llvm::SmallString<128> SourceRootDir(SourceRoot);
   if (SourceRoot.empty())
     // If no SourceRoot was provided the current path is used as the default

@@ -295,8 +295,8 @@ SymbolKind adjustKindToCapability(SymbolKind Kind,
   }
 }
 
-SymbolKind indexSymbolKindToSymbolKind(index::SymbolKind Kind) {
-  switch (Kind) {
+SymbolKind indexSymbolKindToSymbolKind(const index::SymbolInfo &Info) {
+  switch (Info.Kind) {
   // FIXME: for backwards compatibility, the include directive kind is treated
   // the same as Unknown
   case index::SymbolKind::IncludeDirective:
@@ -322,8 +322,16 @@ SymbolKind indexSymbolKindToSymbolKind(index::SymbolKind Kind) {
     return SymbolKind::Interface;
   case index::SymbolKind::Union:
     return SymbolKind::Class;
-  case index::SymbolKind::TypeAlias:
-    return SymbolKind::Class;
+  case index::SymbolKind::TypeAlias: {
+    switch (Info.SubKind) {
+    case index::SymbolSubKind::UsingStruct:
+      return SymbolKind::Struct;
+    case index::SymbolSubKind::UsingClass:
+      return SymbolKind::Class;
+    default:
+      return SymbolKind::Class;
+    }
+  }
   case index::SymbolKind::Function:
     return SymbolKind::Function;
   case index::SymbolKind::Variable:
@@ -964,6 +972,8 @@ llvm::json::Value toJSON(const DocumentSymbol &S) {
     Result["children"] = S.children;
   if (S.deprecated)
     Result["deprecated"] = true;
+  if (!S.tags.empty())
+    Result["tags"] = S.tags;
   // FIXME: workaround for older gcc/clang
   return std::move(Result);
 }
@@ -1509,7 +1519,7 @@ bool fromJSON(const llvm::json::Value &Params, CallHierarchyItem &I,
 bool fromJSON(const llvm::json::Value &Params,
               CallHierarchyIncomingCallsParams &C, llvm::json::Path P) {
   llvm::json::ObjectMapper O(Params, P);
-  return O.map("item", C.item);
+  return O && O.map("item", C.item);
 }
 
 llvm::json::Value toJSON(const CallHierarchyIncomingCall &C) {
@@ -1519,7 +1529,7 @@ llvm::json::Value toJSON(const CallHierarchyIncomingCall &C) {
 bool fromJSON(const llvm::json::Value &Params,
               CallHierarchyOutgoingCallsParams &C, llvm::json::Path P) {
   llvm::json::ObjectMapper O(Params, P);
-  return O.map("item", C.item);
+  return O && O.map("item", C.item);
 }
 
 llvm::json::Value toJSON(const CallHierarchyOutgoingCall &C) {

@@ -1,7 +1,7 @@
 # Xqciint - Qualcomm uC Interrupts extension
-# RUN: not llvm-mc -triple riscv32 -mattr=+experimental-xqciint < %s 2>&1 \
+# RUN: not llvm-mc -triple riscv32 -mattr=+xqciint < %s 2>&1 \
 # RUN:     | FileCheck -check-prefixes=CHECK,CHECK-PLUS %s
-# RUN: not llvm-mc -triple riscv32 -mattr=-experimental-xqciint < %s 2>&1 \
+# RUN: not llvm-mc -triple riscv32 -mattr=-xqciint < %s 2>&1 \
 # RUN:     | FileCheck -check-prefixes=CHECK,CHECK-MINUS %s
 
 # CHECK-PLUS: :[[@LINE+2]]:12: error: immediate must be an integer in the range [0, 1023]

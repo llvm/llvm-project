@@ -6,7 +6,6 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include <clc/opencl/relational/signbit.h>
 #include <clc/relational/clc_signbit.h>
 
 #define __CLC_FUNCTION signbit

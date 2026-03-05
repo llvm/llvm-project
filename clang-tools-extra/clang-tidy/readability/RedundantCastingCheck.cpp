@@ -77,17 +77,14 @@ static bool areBinaryOperatorOperandsTypesEqualToOperatorResultType(
 
 static const Decl *getSourceExprDecl(const Expr *SourceExpr) {
   const Expr *CleanSourceExpr = SourceExpr->IgnoreParenImpCasts();
-  if (const auto *E = dyn_cast<DeclRefExpr>(CleanSourceExpr)) {
+  if (const auto *E = dyn_cast<DeclRefExpr>(CleanSourceExpr))
     return E->getDecl();
-  }
 
-  if (const auto *E = dyn_cast<CallExpr>(CleanSourceExpr)) {
+  if (const auto *E = dyn_cast<CallExpr>(CleanSourceExpr))
     return E->getCalleeDecl();
-  }
 
-  if (const auto *E = dyn_cast<MemberExpr>(CleanSourceExpr)) {
+  if (const auto *E = dyn_cast<MemberExpr>(CleanSourceExpr))
     return E->getMemberDecl();
-  }
   return nullptr;
 }
 

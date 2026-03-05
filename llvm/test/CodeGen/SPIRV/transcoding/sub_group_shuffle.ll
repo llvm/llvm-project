@@ -106,14 +106,14 @@
 ; CHECK-SPIRV: %[[#]] = OpGroupNonUniformShuffleXor %[[#char]] %[[#ScopeSubgroup]] %[[#char_0]] %[[#int_0]]
 ; CHECK-SPIRV: OpFunctionEnd
 
-define dso_local spir_kernel void @testShuffleChar(i8 addrspace(1)* nocapture) local_unnamed_addr {
+define dso_local spir_kernel void @testShuffleChar(ptr addrspace(1) nocapture) local_unnamed_addr {
   %2 = tail call spir_func signext i8 @_Z17sub_group_shufflecj(i8 signext 0, i32 0)
   %r2 = tail call spir_func signext i8 @__spirv_GroupNonUniformShuffle(i32 3, i8 signext 0, i32 0)
-  store i8 %2, i8 addrspace(1)* %0, align 1
+  store i8 %2, ptr addrspace(1) %0, align 1
   %3 = tail call spir_func signext i8 @_Z21sub_group_shuffle_xorcj(i8 signext 0, i32 0)
   %r3 = tail call spir_func signext i8 @__spirv_GroupNonUniformShuffleXor(i32 3, i8 signext 0, i32 0)
-  %4 = getelementptr inbounds i8, i8 addrspace(1)* %0, i64 1
-  store i8 %3, i8 addrspace(1)* %4, align 1
+  %4 = getelementptr inbounds i8, ptr addrspace(1) %0, i64 1
+  store i8 %3, ptr addrspace(1) %4, align 1
   ret void
 }
 
@@ -128,12 +128,12 @@ declare dso_local spir_func signext i8 @__spirv_GroupNonUniformShuffleXor(i32, i
 ; CHECK-SPIRV: %[[#]] = OpGroupNonUniformShuffleXor %[[#char]] %[[#ScopeSubgroup]] %[[#char_0]] %[[#int_0]]
 ; CHECK-SPIRV: OpFunctionEnd
 
-define dso_local spir_kernel void @testShuffleUChar(i8 addrspace(1)* nocapture) local_unnamed_addr {
+define dso_local spir_kernel void @testShuffleUChar(ptr addrspace(1) nocapture) local_unnamed_addr {
   %2 = tail call spir_func zeroext i8 @_Z17sub_group_shufflehj(i8 zeroext 0, i32 0)
-  store i8 %2, i8 addrspace(1)* %0, align 1
+  store i8 %2, ptr addrspace(1) %0, align 1
   %3 = tail call spir_func zeroext i8 @_Z21sub_group_shuffle_xorhj(i8 zeroext 0, i32 0)
-  %4 = getelementptr inbounds i8, i8 addrspace(1)* %0, i64 1
-  store i8 %3, i8 addrspace(1)* %4, align 1
+  %4 = getelementptr inbounds i8, ptr addrspace(1) %0, i64 1
+  store i8 %3, ptr addrspace(1) %4, align 1
   ret void
 }
 
@@ -146,12 +146,12 @@ declare dso_local spir_func zeroext i8 @_Z21sub_group_shuffle_xorhj(i8 zeroext, 
 ; CHECK-SPIRV: %[[#]] = OpGroupNonUniformShuffleXor %[[#short]] %[[#ScopeSubgroup]] %[[#short_0]] %[[#int_0]]
 ; CHECK-SPIRV: OpFunctionEnd
 
-define dso_local spir_kernel void @testShuffleShort(i16 addrspace(1)* nocapture) local_unnamed_addr {
+define dso_local spir_kernel void @testShuffleShort(ptr addrspace(1) nocapture) local_unnamed_addr {
   %2 = tail call spir_func signext i16 @_Z17sub_group_shufflesj(i16 signext 0, i32 0)
-  store i16 %2, i16 addrspace(1)* %0, align 2
+  store i16 %2, ptr addrspace(1) %0, align 2
   %3 = tail call spir_func signext i16 @_Z21sub_group_shuffle_xorsj(i16 signext 0, i32 0)
-  %4 = getelementptr inbounds i16, i16 addrspace(1)* %0, i64 1
-  store i16 %3, i16 addrspace(1)* %4, align 2
+  %4 = getelementptr inbounds i16, ptr addrspace(1) %0, i64 1
+  store i16 %3, ptr addrspace(1) %4, align 2
   ret void
 }
 
@@ -164,12 +164,12 @@ declare dso_local spir_func signext i16 @_Z21sub_group_shuffle_xorsj(i16 signext
 ; CHECK-SPIRV: %[[#]] = OpGroupNonUniformShuffleXor %[[#short]] %[[#ScopeSubgroup]] %[[#short_0]] %[[#int_0]]
 ; CHECK-SPIRV: OpFunctionEnd
 
-define dso_local spir_kernel void @testShuffleUShort(i16 addrspace(1)* nocapture) local_unnamed_addr {
+define dso_local spir_kernel void @testShuffleUShort(ptr addrspace(1) nocapture) local_unnamed_addr {
   %2 = tail call spir_func zeroext i16 @_Z17sub_group_shuffletj(i16 zeroext 0, i32 0)
-  store i16 %2, i16 addrspace(1)* %0, align 2
+  store i16 %2, ptr addrspace(1) %0, align 2
   %3 = tail call spir_func zeroext i16 @_Z21sub_group_shuffle_xortj(i16 zeroext 0, i32 0)
-  %4 = getelementptr inbounds i16, i16 addrspace(1)* %0, i64 1
-  store i16 %3, i16 addrspace(1)* %4, align 2
+  %4 = getelementptr inbounds i16, ptr addrspace(1) %0, i64 1
+  store i16 %3, ptr addrspace(1) %4, align 2
   ret void
 }
 
@@ -182,12 +182,12 @@ declare dso_local spir_func zeroext i16 @_Z21sub_group_shuffle_xortj(i16 zeroext
 ; CHECK-SPIRV: %[[#]] = OpGroupNonUniformShuffleXor %[[#int]] %[[#ScopeSubgroup]] %[[#int_0]] %[[#int_0]]
 ; CHECK-SPIRV: OpFunctionEnd
 
-define dso_local spir_kernel void @testShuffleInt(i32 addrspace(1)* nocapture) local_unnamed_addr {
+define dso_local spir_kernel void @testShuffleInt(ptr addrspace(1) nocapture) local_unnamed_addr {
   %2 = tail call spir_func i32 @_Z17sub_group_shuffleij(i32 0, i32 0)
-  store i32 %2, i32 addrspace(1)* %0, align 4
+  store i32 %2, ptr addrspace(1) %0, align 4
   %3 = tail call spir_func i32 @_Z21sub_group_shuffle_xorij(i32 0, i32 0)
-  %4 = getelementptr inbounds i32, i32 addrspace(1)* %0, i64 1
-  store i32 %3, i32 addrspace(1)* %4, align 4
+  %4 = getelementptr inbounds i32, ptr addrspace(1) %0, i64 1
+  store i32 %3, ptr addrspace(1) %4, align 4
   ret void
 }
 
@@ -200,12 +200,12 @@ declare dso_local spir_func i32 @_Z21sub_group_shuffle_xorij(i32, i32) local_unn
 ; CHECK-SPIRV: %[[#]] = OpGroupNonUniformShuffleXor %[[#int]] %[[#ScopeSubgroup]] %[[#int_0]] %[[#int_0]]
 ; CHECK-SPIRV: OpFunctionEnd
 
-define dso_local spir_kernel void @testShuffleUInt(i32 addrspace(1)* nocapture) local_unnamed_addr {
+define dso_local spir_kernel void @testShuffleUInt(ptr addrspace(1) nocapture) local_unnamed_addr {
   %2 = tail call spir_func i32 @_Z17sub_group_shufflejj(i32 0, i32 0)
-  store i32 %2, i32 addrspace(1)* %0, align 4
+  store i32 %2, ptr addrspace(1) %0, align 4
   %3 = tail call spir_func i32 @_Z21sub_group_shuffle_xorjj(i32 0, i32 0)
-  %4 = getelementptr inbounds i32, i32 addrspace(1)* %0, i64 1
-  store i32 %3, i32 addrspace(1)* %4, align 4
+  %4 = getelementptr inbounds i32, ptr addrspace(1) %0, i64 1
+  store i32 %3, ptr addrspace(1) %4, align 4
   ret void
 }
 
@@ -218,12 +218,12 @@ declare dso_local spir_func i32 @_Z21sub_group_shuffle_xorjj(i32, i32) local_unn
 ; CHECK-SPIRV: %[[#]] = OpGroupNonUniformShuffleXor %[[#long]] %[[#ScopeSubgroup]] %[[#long_0]] %[[#int_0]]
 ; CHECK-SPIRV: OpFunctionEnd
 
-define dso_local spir_kernel void @testShuffleLong(i64 addrspace(1)* nocapture) local_unnamed_addr {
+define dso_local spir_kernel void @testShuffleLong(ptr addrspace(1) nocapture) local_unnamed_addr {
   %2 = tail call spir_func i64 @_Z17sub_group_shufflelj(i64 0, i32 0)
-  store i64 %2, i64 addrspace(1)* %0, align 8
+  store i64 %2, ptr addrspace(1) %0, align 8
   %3 = tail call spir_func i64 @_Z21sub_group_shuffle_xorlj(i64 0, i32 0)
-  %4 = getelementptr inbounds i64, i64 addrspace(1)* %0, i64 1
-  store i64 %3, i64 addrspace(1)* %4, align 8
+  %4 = getelementptr inbounds i64, ptr addrspace(1) %0, i64 1
+  store i64 %3, ptr addrspace(1) %4, align 8
   ret void
 }
 
@@ -236,12 +236,12 @@ declare dso_local spir_func i64 @_Z21sub_group_shuffle_xorlj(i64, i32) local_unn
 ; CHECK-SPIRV: %[[#]] = OpGroupNonUniformShuffleXor %[[#long]] %[[#ScopeSubgroup]] %[[#long_0]] %[[#int_0]]
 ; CHECK-SPIRV: OpFunctionEnd
 
-define dso_local spir_kernel void @testShuffleULong(i64 addrspace(1)* nocapture) local_unnamed_addr {
+define dso_local spir_kernel void @testShuffleULong(ptr addrspace(1) nocapture) local_unnamed_addr {
   %2 = tail call spir_func i64 @_Z17sub_group_shufflemj(i64 0, i32 0)
-  store i64 %2, i64 addrspace(1)* %0, align 8
+  store i64 %2, ptr addrspace(1) %0, align 8
   %3 = tail call spir_func i64 @_Z21sub_group_shuffle_xormj(i64 0, i32 0)
-  %4 = getelementptr inbounds i64, i64 addrspace(1)* %0, i64 1
-  store i64 %3, i64 addrspace(1)* %4, align 8
+  %4 = getelementptr inbounds i64, ptr addrspace(1) %0, i64 1
+  store i64 %3, ptr addrspace(1) %4, align 8
   ret void
 }
 
@@ -254,12 +254,12 @@ declare dso_local spir_func i64 @_Z21sub_group_shuffle_xormj(i64, i32) local_unn
 ; CHECK-SPIRV: %[[#]] = OpGroupNonUniformShuffleXor %[[#float]] %[[#ScopeSubgroup]] %[[#float_0]] %[[#int_0]]
 ; CHECK-SPIRV: OpFunctionEnd
 
-define dso_local spir_kernel void @testShuffleFloat(float addrspace(1)* nocapture) local_unnamed_addr {
+define dso_local spir_kernel void @testShuffleFloat(ptr addrspace(1) nocapture) local_unnamed_addr {
   %2 = tail call spir_func float @_Z17sub_group_shufflefj(float 0.000000e+00, i32 0)
-  store float %2, float addrspace(1)* %0, align 4
+  store float %2, ptr addrspace(1) %0, align 4
   %3 = tail call spir_func float @_Z21sub_group_shuffle_xorfj(float 0.000000e+00, i32 0)
-  %4 = getelementptr inbounds float, float addrspace(1)* %0, i64 1
-  store float %3, float addrspace(1)* %4, align 4
+  %4 = getelementptr inbounds float, ptr addrspace(1) %0, i64 1
+  store float %3, ptr addrspace(1) %4, align 4
   ret void
 }
 
@@ -272,12 +272,12 @@ declare dso_local spir_func float @_Z21sub_group_shuffle_xorfj(float, i32) local
 ; CHECK-SPIRV: %[[#]] = OpGroupNonUniformShuffleXor %[[#half]] %[[#ScopeSubgroup]] %[[#half_0]] %[[#int_0]]
 ; CHECK-SPIRV: OpFunctionEnd
 
-define dso_local spir_kernel void @testShuffleHalf(half addrspace(1)* nocapture) local_unnamed_addr {
+define dso_local spir_kernel void @testShuffleHalf(ptr addrspace(1) nocapture) local_unnamed_addr {
   %2 = tail call spir_func half @_Z17sub_group_shuffleDhj(half 0xH0000, i32 0)
-  store half %2, half addrspace(1)* %0, align 2
+  store half %2, ptr addrspace(1) %0, align 2
   %3 = tail call spir_func half @_Z21sub_group_shuffle_xorDhj(half 0xH0000, i32 0)
-  %4 = getelementptr inbounds half, half addrspace(1)* %0, i64 1
-  store half %3, half addrspace(1)* %4, align 2
+  %4 = getelementptr inbounds half, ptr addrspace(1) %0, i64 1
+  store half %3, ptr addrspace(1) %4, align 2
   ret void
 }
 
@@ -290,12 +290,12 @@ declare dso_local spir_func half @_Z21sub_group_shuffle_xorDhj(half, i32) local_
 ; CHECK-SPIRV: %[[#]] = OpGroupNonUniformShuffleXor %[[#double]] %[[#ScopeSubgroup]] %[[#double_0]] %[[#int_0]]
 ; CHECK-SPIRV: OpFunctionEnd
 
-define dso_local spir_kernel void @testShuffleDouble(double addrspace(1)* nocapture) local_unnamed_addr {
+define dso_local spir_kernel void @testShuffleDouble(ptr addrspace(1) nocapture) local_unnamed_addr {
   %2 = tail call spir_func double @_Z17sub_group_shuffledj(double 0.000000e+00, i32 0)
-  store double %2, double addrspace(1)* %0, align 8
+  store double %2, ptr addrspace(1) %0, align 8
   %3 = tail call spir_func double @_Z21sub_group_shuffle_xordj(double 0.000000e+00, i32 0)
-  %4 = getelementptr inbounds double, double addrspace(1)* %0, i64 1
-  store double %3, double addrspace(1)* %4, align 8
+  %4 = getelementptr inbounds double, ptr addrspace(1) %0, i64 1
+  store double %3, ptr addrspace(1) %4, align 8
   ret void
 }
 

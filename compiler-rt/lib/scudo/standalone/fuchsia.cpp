@@ -231,6 +231,9 @@ void outputRaw(const char *Buffer) {
 
 void setAbortMessage(const char *Message) {}
 
+// TODO: Implement for fuchsia.
+u64 getResidentPages(uptr BaseAddress, uptr Size) { return 0; }
+
 } // namespace scudo
 
 #endif // SCUDO_FUCHSIA

@@ -8,53 +8,20 @@
 
 #include "DAP.h"
 #include "EventHelper.h"
-#include "JSONUtils.h"
+#include "LLDBUtils.h"
+#include "Protocol/ProtocolRequests.h"
 #include "RequestHandler.h"
 
 namespace lldb_dap {
 
-// "PauseRequest": {
-//   "allOf": [ { "$ref": "#/definitions/Request" }, {
-//     "type": "object",
-//     "description": "Pause request; value of command field is 'pause'. The
-//     request suspenses the debuggee. The debug adapter first sends the
-//     PauseResponse and then a StoppedEvent (event type 'pause') after the
-//     thread has been paused successfully.", "properties": {
-//       "command": {
-//         "type": "string",
-//         "enum": [ "pause" ]
-//       },
-//       "arguments": {
-//         "$ref": "#/definitions/PauseArguments"
-//       }
-//     },
-//     "required": [ "command", "arguments"  ]
-//   }]
-// },
-// "PauseArguments": {
-//   "type": "object",
-//   "description": "Arguments for 'pause' request.",
-//   "properties": {
-//     "threadId": {
-//       "type": "integer",
-//       "description": "Pause execution for this thread."
-//     }
-//   },
-//   "required": [ "threadId" ]
-// },
-// "PauseResponse": {
-//   "allOf": [ { "$ref": "#/definitions/Response" }, {
-//     "type": "object",
-//     "description": "Response to 'pause' request. This is just an
-//     acknowledgement, so no body field is required."
-//   }]
-// }
-void PauseRequestHandler::operator()(const llvm::json::Object &request) const {
-  llvm::json::Object response;
-  FillResponse(request, response);
+/// The request suspenses the debuggee. The debug adapter first sends the
+/// PauseResponse and then a StoppedEvent (event type 'pause') after the thread
+/// has been paused successfully.
+llvm::Error
+PauseRequestHandler::Run(const protocol::PauseArguments &args) const {
   lldb::SBProcess process = dap.target.GetProcess();
   lldb::SBError error = process.Stop();
-  dap.SendJSON(llvm::json::Value(std::move(response)));
+  return ToError(error);
 }
 
 } // namespace lldb_dap

@@ -32,6 +32,22 @@ LangOptions createLangOpts() {
   return LangOpts;
 }
 
+// Create a new lexer on the given \p Code and calls \p Callback with the
+// created source manager and lexer. \p Callback must be a callable object that
+// could be invoked with (const SourceManager &, Lexer &). This function returns
+// whatever \p Callback returns.
+template <typename F>
+auto withLexer(StringRef FileName, StringRef Code, const IncludeStyle &Style,
+               F &&Callback)
+    -> std::invoke_result_t<F, const SourceManager &, Lexer &> {
+  SourceManagerForFile VirtualSM(FileName, Code);
+  SourceManager &SM = VirtualSM.get();
+  LangOptions LangOpts = createLangOpts();
+  Lexer Lex(SM.getMainFileID(), SM.getBufferOrFake(SM.getMainFileID()), SM,
+            LangOpts);
+  return std::invoke(std::forward<F>(Callback), std::as_const(SM), Lex);
+}
+
 // Returns the offset after skipping a sequence of tokens, matched by \p
 // GetOffsetAfterSequence, from the start of the code.
 // \p GetOffsetAfterSequence should be a function that matches a sequence of
@@ -40,15 +56,13 @@ unsigned getOffsetAfterTokenSequence(
     StringRef FileName, StringRef Code, const IncludeStyle &Style,
     llvm::function_ref<unsigned(const SourceManager &, Lexer &, Token &)>
         GetOffsetAfterSequence) {
-  SourceManagerForFile VirtualSM(FileName, Code);
-  SourceManager &SM = VirtualSM.get();
-  LangOptions LangOpts = createLangOpts();
-  Lexer Lex(SM.getMainFileID(), SM.getBufferOrFake(SM.getMainFileID()), SM,
-            LangOpts);
-  Token Tok;
-  // Get the first token.
-  Lex.LexFromRawLexer(Tok);
-  return GetOffsetAfterSequence(SM, Lex, Tok);
+  return withLexer(FileName, Code, Style,
+                   [&](const SourceManager &SM, Lexer &Lex) {
+                     Token Tok;
+                     // Get the first token.
+                     Lex.LexFromRawLexer(Tok);
+                     return GetOffsetAfterSequence(SM, Lex, Tok);
+                   });
 }
 
 // Check if a sequence of tokens is like "#<Name> <raw_identifier>". If it is,
@@ -190,6 +204,43 @@ unsigned getMaxHeaderInsertionOffset(StringRef FileName, StringRef Code,
       });
 }
 
+// Check whether the first declaration in the code is a C++20 module
+// declaration, and it is not preceded by any preprocessor directives.
+bool isFirstDeclModuleDecl(StringRef FileName, StringRef Code,
+                           const IncludeStyle &Style) {
+  return withLexer(
+      FileName, Code, Style, [](const SourceManager &SM, Lexer &Lex) {
+        // Let the lexer skip any comments and whitespaces for us.
+        Lex.SetKeepWhitespaceMode(false);
+        Lex.SetCommentRetentionState(false);
+
+        Token tok;
+        if (Lex.LexFromRawLexer(tok))
+          return false;
+
+        // A module declaration is made up of the following token sequence:
+        //     export? module <ident> ('.' <ident>)* <partition> <attr> ;
+        //
+        // For convenience, we don't actually lex the whole declaration -- it's
+        // enough to distinguish a module declaration to just ensure an <ident>
+        // is following the "module" keyword.
+
+        // Lex the optional "export" keyword.
+        if (tok.is(tok::raw_identifier) && tok.getRawIdentifier() == "export") {
+          if (Lex.LexFromRawLexer(tok))
+            return false;
+        }
+
+        // Lex the "module" keyword.
+        if (!tok.is(tok::raw_identifier) ||
+            tok.getRawIdentifier() != "module" || Lex.LexFromRawLexer(tok))
+          return false;
+
+        // Make sure an identifier follows the "module" keyword.
+        return tok.is(tok::raw_identifier);
+      });
+}
+
 inline StringRef trimInclude(StringRef IncludeName) {
   return IncludeName.trim("\"<>");
 }
@@ -306,7 +357,10 @@ HeaderIncludes::HeaderIncludes(StringRef FileName, StringRef Code,
       MaxInsertOffset(MinInsertOffset +
                       getMaxHeaderInsertionOffset(
                           FileName, Code.drop_front(MinInsertOffset), Style)),
-      MainIncludeFound(false), Categories(Style, FileName) {
+      MainIncludeFound(false),
+      ShouldInsertGlobalModuleFragmentDecl(
+          isFirstDeclModuleDecl(FileName, Code, Style)),
+      Categories(Style, FileName) {
   // Add 0 for main header and INT_MAX for headers that are not in any
   // category.
   Priorities = {0, INT_MAX};
@@ -414,6 +468,8 @@ HeaderIncludes::insert(llvm::StringRef IncludeName, bool IsAngled,
   // newline should be added.
   if (InsertOffset == Code.size() && (!Code.empty() && Code.back() != '\n'))
     NewInclude = "\n" + NewInclude;
+  if (ShouldInsertGlobalModuleFragmentDecl)
+    NewInclude = "module;\n" + NewInclude;
   return tooling::Replacement(FileName, InsertOffset, 0, NewInclude);
 }
 

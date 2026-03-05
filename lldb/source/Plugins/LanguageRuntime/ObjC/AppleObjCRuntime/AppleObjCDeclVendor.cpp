@@ -79,9 +79,9 @@ public:
               static_cast<void *>(&tag_decl->getASTContext()),
               static_cast<void *>(tag_decl), tag_decl->getName().str().c_str());
 
-    LLDB_LOG(log, "  AOEAS::CT Before:\n{1}", ClangUtil::DumpDecl(tag_decl));
+    LLDB_LOG(log, "  AOEAS::CT Before:\n{0}", ClangUtil::DumpDecl(tag_decl));
 
-    LLDB_LOG(log, "  AOEAS::CT After:{1}", ClangUtil::DumpDecl(tag_decl));
+    LLDB_LOG(log, "  AOEAS::CT After:{0}", ClangUtil::DumpDecl(tag_decl));
   }
 
   void CompleteType(clang::ObjCInterfaceDecl *interface_decl) override {

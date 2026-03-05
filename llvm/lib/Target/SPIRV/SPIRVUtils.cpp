@@ -171,8 +171,17 @@ void addNumImm(const APInt &Imm, MachineInstrBuilder &MIB) {
     // Asm Printer needs this info to print 64-bit operands correctly
     MIB.getInstr()->setAsmPrinterFlag(SPIRV::ASM_PRINTER_WIDTH64);
     return;
+  } else {
+    // Emit ceil(Bitwidth / 32) words to conform SPIR-V spec.
+    unsigned NumWords = (Bitwidth + 31) / 32;
+    for (unsigned I = 0; I < NumWords; ++I) {
+      unsigned LimbIdx = I / 2;
+      unsigned LimbShift = (I % 2) * 32;
+      uint32_t Word = (Imm.getRawData()[LimbIdx] >> LimbShift) & 0xffffffff;
+      MIB.addImm(Word);
+    }
+    return;
   }
-  report_fatal_error("Unsupported constant bitwidth");
 }
 
 void buildOpName(Register Target, const StringRef &Name,
@@ -353,6 +362,8 @@ addressSpaceToStorageClass(unsigned AddrSpace, const SPIRVSubtarget &STI) {
     return SPIRV::StorageClass::StorageBuffer;
   case 12:
     return SPIRV::StorageClass::Uniform;
+  case 13:
+    return SPIRV::StorageClass::PushConstant;
   default:
     report_fatal_error("Unknown address space");
   }
@@ -852,9 +863,9 @@ bool getVacantFunctionName(Module &M, std::string &Name) {
 
 // Assign SPIR-V type to the register. If the register has no valid assigned
 // class, set register LLT type and class according to the SPIR-V type.
-void setRegClassType(Register Reg, SPIRVType *SpvType, SPIRVGlobalRegistry *GR,
-                     MachineRegisterInfo *MRI, const MachineFunction &MF,
-                     bool Force) {
+void setRegClassType(Register Reg, SPIRVTypeInst SpvType,
+                     SPIRVGlobalRegistry *GR, MachineRegisterInfo *MRI,
+                     const MachineFunction &MF, bool Force) {
   GR->assignSPIRVTypeToVReg(SpvType, Reg, MF);
   if (!MRI->getRegClassOrNull(Reg) || Force) {
     MRI->setRegClass(Reg, GR->getRegClass(SpvType));
@@ -876,7 +887,7 @@ void setRegClassType(Register Reg, const Type *Ty, SPIRVGlobalRegistry *GR,
 
 // Create a virtual register and assign SPIR-V type to the register. Set
 // register LLT type and class according to the SPIR-V type.
-Register createVirtualRegister(SPIRVType *SpvType, SPIRVGlobalRegistry *GR,
+Register createVirtualRegister(SPIRVTypeInst SpvType, SPIRVGlobalRegistry *GR,
                                MachineRegisterInfo *MRI,
                                const MachineFunction &MF) {
   Register Reg = MRI->createVirtualRegister(GR->getRegClass(SpvType));
@@ -887,7 +898,7 @@ Register createVirtualRegister(SPIRVType *SpvType, SPIRVGlobalRegistry *GR,
 
 // Create a virtual register and assign SPIR-V type to the register. Set
 // register LLT type and class according to the SPIR-V type.
-Register createVirtualRegister(SPIRVType *SpvType, SPIRVGlobalRegistry *GR,
+Register createVirtualRegister(SPIRVTypeInst SpvType, SPIRVGlobalRegistry *GR,
                                MachineIRBuilder &MIRBuilder) {
   return createVirtualRegister(SpvType, GR, MIRBuilder.getMRI(),
                                MIRBuilder.getMF());
@@ -977,31 +988,41 @@ createContinuedInstructions(MachineIRBuilder &MIRBuilder, unsigned Opcode,
   return Instructions;
 }
 
-SmallVector<unsigned, 1> getSpirvLoopControlOperandsFromLoopMetadata(Loop *L) {
+SmallVector<unsigned, 1>
+getSpirvLoopControlOperandsFromLoopMetadata(MDNode *LoopMD) {
   unsigned LC = SPIRV::LoopControl::None;
   // Currently used only to store PartialCount value. Later when other
   // LoopControls are added - this map should be sorted before making
   // them loop_merge operands to satisfy 3.23. Loop Control requirements.
   std::vector<std::pair<unsigned, unsigned>> MaskToValueMap;
-  if (getBooleanLoopAttribute(L, "llvm.loop.unroll.disable")) {
+  if (findOptionMDForLoopID(LoopMD, "llvm.loop.unroll.disable")) {
     LC |= SPIRV::LoopControl::DontUnroll;
   } else {
-    if (getBooleanLoopAttribute(L, "llvm.loop.unroll.enable") ||
-        getBooleanLoopAttribute(L, "llvm.loop.unroll.full")) {
+    if (findOptionMDForLoopID(LoopMD, "llvm.loop.unroll.enable") ||
+        findOptionMDForLoopID(LoopMD, "llvm.loop.unroll.full")) {
       LC |= SPIRV::LoopControl::Unroll;
     }
-    std::optional<int> Count =
-        getOptionalIntLoopAttribute(L, "llvm.loop.unroll.count");
-    if (Count && Count != 1) {
-      LC |= SPIRV::LoopControl::PartialCount;
-      MaskToValueMap.emplace_back(
-          std::make_pair(SPIRV::LoopControl::PartialCount, *Count));
+    if (MDNode *CountMD =
+            findOptionMDForLoopID(LoopMD, "llvm.loop.unroll.count")) {
+      if (auto *CI =
+              mdconst::extract_or_null<ConstantInt>(CountMD->getOperand(1))) {
+        unsigned Count = CI->getZExtValue();
+        if (Count != 1) {
+          LC |= SPIRV::LoopControl::PartialCount;
+          MaskToValueMap.emplace_back(
+              std::make_pair(SPIRV::LoopControl::PartialCount, Count));
+        }
+      }
     }
   }
   SmallVector<unsigned, 1> Result = {LC};
   for (auto &[Mask, Val] : MaskToValueMap)
     Result.push_back(Val);
   return Result;
+}
+
+SmallVector<unsigned, 1> getSpirvLoopControlOperandsFromLoopMetadata(Loop *L) {
+  return getSpirvLoopControlOperandsFromLoopMetadata(L->getLoopID());
 }
 
 const std::set<unsigned> &getTypeFoldingSupportedOpcodes() {
@@ -1187,6 +1208,24 @@ getSpirvLinkageTypeFor(const SPIRVSubtarget &ST, const GlobalValue &GV) {
     return SPIRV::LinkageType::LinkOnceODR;
 
   return SPIRV::LinkageType::Export;
+}
+
+Function *getOrCreateBackendServiceFunction(Module &M) {
+  std::string ServiceFunName = SPIRV_BACKEND_SERVICE_FUN_NAME;
+  if (!getVacantFunctionName(M, ServiceFunName))
+    report_fatal_error(
+        "cannot allocate a name for the internal service function");
+  if (Function *SF = M.getFunction(ServiceFunName)) {
+    if (SF->getInstructionCount() > 0)
+      report_fatal_error(
+          "Unexpected combination of global variables and function pointers");
+    return SF;
+  }
+  Function *SF = Function::Create(
+      FunctionType::get(Type::getVoidTy(M.getContext()), {}, false),
+      GlobalValue::PrivateLinkage, ServiceFunName, M);
+  SF->addFnAttr(SPIRV_BACKEND_SERVICE_FUN_NAME, "");
+  return SF;
 }
 
 } // namespace llvm

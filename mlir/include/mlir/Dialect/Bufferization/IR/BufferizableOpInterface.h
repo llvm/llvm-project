@@ -586,12 +586,14 @@ class BufferizationState {
 public:
   /// Get a reference to the collection of cached symbol tables.
   SymbolTableCollection &getSymbolTables();
+  /// Const overload so callers can reuse the cache from a const state.
+  SymbolTableCollection &getSymbolTables() const;
 
 private:
   /// The cached symbol tables.
   /// The user is expected to update / invalidate the cached symbol tables if
   /// the bufferized operation has the Symbol or SymbolTable traits.
-  SymbolTableCollection symbolTables;
+  mutable SymbolTableCollection symbolTables;
 };
 
 /// Create an AllocTensorOp for the given shaped value (memref or tensor).

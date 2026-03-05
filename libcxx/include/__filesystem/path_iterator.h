@@ -52,7 +52,7 @@ public:
 
   _LIBCPP_HIDE_FROM_ABI iterator& operator=(const iterator&) = default;
 
-  _LIBCPP_HIDE_FROM_ABI reference operator*() const { return __stashed_elem_; }
+  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI reference operator*() const { return __stashed_elem_; }
 
   _LIBCPP_HIDE_FROM_ABI pointer operator->() const { return &__stashed_elem_; }
 

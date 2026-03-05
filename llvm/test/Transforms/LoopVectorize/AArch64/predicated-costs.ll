@@ -66,16 +66,16 @@ define void @test_predicated_load_cast_hint(ptr %dst.1, ptr %dst.2, ptr %src, i8
 ; CHECK-NEXT:    [[CONFLICT_RDX15:%.*]] = or i1 [[CONFLICT_RDX]], [[FOUND_CONFLICT14]]
 ; CHECK-NEXT:    br i1 [[CONFLICT_RDX15]], label %[[SCALAR_PH]], label %[[VECTOR_PH:.*]]
 ; CHECK:       [[VECTOR_PH]]:
+; CHECK-NEXT:    [[TMP28:%.*]] = load i8, ptr [[SRC]], align 1, !alias.scope [[META0:![0-9]+]], !noalias [[META3:![0-9]+]]
+; CHECK-NEXT:    [[BROADCAST_SPLATINSERT:%.*]] = insertelement <4 x i8> poison, i8 [[TMP28]], i64 0
+; CHECK-NEXT:    [[BROADCAST_SPLAT:%.*]] = shufflevector <4 x i8> [[BROADCAST_SPLATINSERT]], <4 x i8> poison, <4 x i32> zeroinitializer
 ; CHECK-NEXT:    [[ACTIVE_LANE_MASK_ENTRY:%.*]] = call <4 x i1> @llvm.get.active.lane.mask.v4i1.i32(i32 0, i32 [[TMP2]])
+; CHECK-NEXT:    [[TMP25:%.*]] = zext <4 x i8> [[BROADCAST_SPLAT]] to <4 x i64>
 ; CHECK-NEXT:    br label %[[VECTOR_BODY:.*]]
 ; CHECK:       [[VECTOR_BODY]]:
 ; CHECK-NEXT:    [[INDEX:%.*]] = phi i32 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[PRED_STORE_CONTINUE22:.*]] ]
 ; CHECK-NEXT:    [[ACTIVE_LANE_MASK:%.*]] = phi <4 x i1> [ [[ACTIVE_LANE_MASK_ENTRY]], %[[VECTOR_PH]] ], [ [[ACTIVE_LANE_MASK_NEXT:%.*]], %[[PRED_STORE_CONTINUE22]] ]
 ; CHECK-NEXT:    [[VEC_IND:%.*]] = phi <4 x i8> [ <i8 0, i8 4, i8 8, i8 12>, %[[VECTOR_PH]] ], [ [[VEC_IND_NEXT:%.*]], %[[PRED_STORE_CONTINUE22]] ]
-; CHECK-NEXT:    [[TMP28:%.*]] = load i8, ptr [[SRC]], align 1, !alias.scope [[META0:![0-9]+]], !noalias [[META3:![0-9]+]]
-; CHECK-NEXT:    [[BROADCAST_SPLATINSERT:%.*]] = insertelement <4 x i8> poison, i8 [[TMP28]], i64 0
-; CHECK-NEXT:    [[BROADCAST_SPLAT:%.*]] = shufflevector <4 x i8> [[BROADCAST_SPLATINSERT]], <4 x i8> poison, <4 x i32> zeroinitializer
-; CHECK-NEXT:    [[TMP25:%.*]] = zext <4 x i8> [[BROADCAST_SPLAT]] to <4 x i64>
 ; CHECK-NEXT:    [[TMP26:%.*]] = zext <4 x i8> [[VEC_IND]] to <4 x i64>
 ; CHECK-NEXT:    [[TMP27:%.*]] = extractelement <4 x i1> [[ACTIVE_LANE_MASK]], i32 0
 ; CHECK-NEXT:    br i1 [[TMP27]], label %[[PRED_STORE_IF:.*]], label %[[PRED_STORE_CONTINUE:.*]]
@@ -438,6 +438,57 @@ exit:
   ret void
 }
 
+; BFI computes the relative frequency of if.2 to the loop header to be extremely
+; low, so the discount in getPredBlockCostDivisor is high enough to not fit in
+; uint32_t. Make sure we return uint64_t which fits all possible BlockFrequency
+; values.
+define void @getPredBlockCostDivisor_truncate(i32 %0, i1 %c1, i1 %c2, ptr %p) {
+; CHECK-LABEL: define void @getPredBlockCostDivisor_truncate(
+; CHECK-SAME: i32 [[TMP0:%.*]], i1 [[C1:%.*]], i1 [[C2:%.*]], ptr [[P:%.*]]) {
+; CHECK-NEXT:  [[ENTRY:.*]]:
+; CHECK-NEXT:    br label %[[LOOP:.*]]
+; CHECK:       [[LOOP]]:
+; CHECK-NEXT:    [[IV:%.*]] = phi i32 [ [[TMP0]], %[[ENTRY]] ], [ [[IV_NEXT:%.*]], %[[LATCH:.*]] ]
+; CHECK-NEXT:    br i1 [[C1]], label %[[IF_1:.*]], label %[[LATCH]], !prof [[PROF15:![0-9]+]]
+; CHECK:       [[IF_1]]:
+; CHECK-NEXT:    br i1 [[C2]], label %[[IF_2:.*]], label %[[LATCH]], !prof [[PROF15]]
+; CHECK:       [[IF_2]]:
+; CHECK-NEXT:    [[GEP:%.*]] = getelementptr i32, ptr [[P]], i32 [[IV]]
+; CHECK-NEXT:    store i32 0, ptr [[GEP]], align 4
+; CHECK-NEXT:    br label %[[LATCH]]
+; CHECK:       [[LATCH]]:
+; CHECK-NEXT:    [[IV_NEXT]] = add i32 [[IV]], 1
+; CHECK-NEXT:    [[EC:%.*]] = icmp eq i32 [[IV]], 0
+; CHECK-NEXT:    br i1 [[EC]], label %[[EXIT:.*]], label %[[LOOP]]
+; CHECK:       [[EXIT]]:
+; CHECK-NEXT:    ret void
+;
+entry:
+  br label %loop
+
+loop:
+  %iv = phi i32 [ %0, %entry ], [ %iv.next, %latch ]
+  br i1 %c1, label %if.1, label %latch, !prof !4
+
+if.1:
+  br i1 %c2, label %if.2, label %latch, !prof !4
+
+if.2:
+  %gep = getelementptr i32, ptr %p, i32 %iv
+  store i32 0, ptr %gep
+  br label %latch
+
+latch:
+  %iv.next = add i32 %iv, 1
+  %ec = icmp eq i32 %iv, 0
+  br i1 %ec, label %exit, label %loop
+
+exit:
+  ret void
+}
+
+!4 = !{!"branch_weights", i32 0, i32 1}
+
 ;.
 ; CHECK: [[META0]] = !{[[META1:![0-9]+]]}
 ; CHECK: [[META1]] = distinct !{[[META1]], [[META2:![0-9]+]]}
@@ -454,4 +505,5 @@ exit:
 ; CHECK: [[LOOP12]] = distinct !{[[LOOP12]], [[META9]], [[META10]]}
 ; CHECK: [[LOOP13]] = distinct !{[[LOOP13]], [[META10]], [[META11]]}
 ; CHECK: [[LOOP14]] = distinct !{[[LOOP14]], [[META11]], [[META10]]}
+; CHECK: [[PROF15]] = !{!"branch_weights", i32 0, i32 1}
 ;.

@@ -12,14 +12,19 @@
 #include "clang/Serialization/ModuleCache.h"
 #include "llvm/ADT/StringMap.h"
 
+#include <atomic>
+#include <condition_variable>
 #include <mutex>
-#include <shared_mutex>
 
 namespace clang {
 namespace dependencies {
 
 struct ModuleCacheEntry {
-  std::shared_mutex CompilationMutex;
+  std::mutex Mutex;
+  std::condition_variable CondVar;
+  bool Locked = false;
+  unsigned Generation = 0;
+
   std::atomic<std::time_t> Timestamp = 0;
 };
 
@@ -28,7 +33,7 @@ struct ModuleCacheEntries {
   llvm::StringMap<std::unique_ptr<ModuleCacheEntry>> Map;
 };
 
-IntrusiveRefCntPtr<ModuleCache>
+std::shared_ptr<ModuleCache>
 makeInProcessModuleCache(ModuleCacheEntries &Entries);
 
 } // namespace dependencies

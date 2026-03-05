@@ -90,6 +90,15 @@ public:
   virtual void ResolvedOperatorGlobDelete(const CXXDestructorDecl *DD,
                                           const FunctionDecl *GlobDelete) {}
 
+  /// A virtual destructor's operator array delete has been resolved.
+  virtual void ResolvedOperatorArrayDelete(const CXXDestructorDecl *DD,
+                                           const FunctionDecl *ArrayDelete) {}
+
+  /// A virtual destructor's operator global array delete has been resolved.
+  virtual void
+  ResolvedOperatorGlobArrayDelete(const CXXDestructorDecl *DD,
+                                  const FunctionDecl *GlobArrayDelete) {}
+
   /// An implicit member got a definition.
   virtual void CompletedImplicitDefinition(const FunctionDecl *D) {}
 
@@ -143,6 +152,11 @@ public:
   ///
   /// \param D the declaration marked as a variable with OpenMP allocator.
   virtual void DeclarationMarkedOpenMPAllocate(const Decl *D, const Attr *A) {}
+
+  /// A declaration is marked as an OpenMP indirect call target.
+  ///
+  /// \param D the declaration marked as an indirect call target.
+  virtual void DeclarationMarkedOpenMPIndirectCall(const Decl *D) {}
 
   /// A definition has been made visible by being redefined locally.
   ///

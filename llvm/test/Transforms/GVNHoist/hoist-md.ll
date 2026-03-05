@@ -157,6 +157,37 @@ return:                                           ; preds = %if.end, %if.then
   ret ptr %retval.0
 }
 
+define float @nofpclass_md(i1 %b, ptr %y) {
+; CHECK-LABEL: define float @nofpclass_md(
+; CHECK-SAME: i1 [[B:%.*]], ptr [[Y:%.*]]) {
+; CHECK-NEXT:  [[ENTRY:.*:]]
+; CHECK-NEXT:    [[NOT_NAN:%.*]] = load float, ptr [[Y]], align 4, !nofpclass [[META4:![0-9]+]]
+; CHECK-NEXT:    br i1 [[B]], label %[[IF_THEN:.*]], label %[[IF_END:.*]]
+; CHECK:       [[IF_THEN]]:
+; CHECK-NEXT:    br label %[[RETURN:.*]]
+; CHECK:       [[IF_END]]:
+; CHECK-NEXT:    br label %[[RETURN]]
+; CHECK:       [[RETURN]]:
+; CHECK-NEXT:    [[RETVAL_0:%.*]] = phi float [ [[NOT_NAN]], %[[IF_THEN]] ], [ [[NOT_NAN]], %[[IF_END]] ]
+; CHECK-NEXT:    ret float [[RETVAL_0]]
+;
+entry:
+  br i1 %b, label %if.then, label %if.end
+
+if.then:                                          ; preds = %entry
+  %not.nan = load float, ptr %y, align 4, !nofpclass !{i32 547}
+  br label %return
+
+if.end:                                           ; preds = %entry
+  %not.inf = load float, ptr %y, align 4, !nofpclass !{i32 519}
+  br label %return
+
+return:                                           ; preds = %if.end, %if.then
+  %retval.0 = phi float [ %not.nan, %if.then ], [ %not.inf, %if.end ]
+  ret float %retval.0
+}
+
+
 !1 = !{!2, !2, i64 0}
 !2 = !{!"int", !3, i64 0}
 !3 = !{!"omnipotent char", !4, i64 0}
@@ -171,4 +202,5 @@ return:                                           ; preds = %if.end, %if.then
 ; CHECK: [[META1]] = !{!"omnipotent char", [[META2:![0-9]+]], i64 0}
 ; CHECK: [[META2]] = !{!"Simple C++ TBAA"}
 ; CHECK: [[RNG3]] = !{i32 0, i32 2, i32 3, i32 4}
+; CHECK: [[META4]] = !{i32 515}
 ;.

@@ -42,20 +42,31 @@ static bool isZeroConstant(Value val) {
     return false;
 
   return TypeSwitch<Attribute, bool>(constant.getValue())
-      .Case<FloatAttr>(
-          [](auto floatAttr) { return floatAttr.getValue().isZero(); })
-      .Case<IntegerAttr>(
-          [](auto intAttr) { return intAttr.getValue().isZero(); })
+      .Case([](FloatAttr floatAttr) { return floatAttr.getValue().isZero(); })
+      .Case([](IntegerAttr intAttr) { return intAttr.getValue().isZero(); })
       .Default(false);
 }
 
 static LogicalResult storeLoadPreconditions(PatternRewriter &rewriter,
-                                            Operation *op, VectorType vecTy) {
+                                            Operation *op, VectorType vecTy,
+                                            MemRefType memTy) {
   // Validate only vector as the basic vector store and load ops guarantee
   // XeGPU-compatible memref source.
   unsigned vecRank = vecTy.getRank();
   if (!(vecRank == 1 || vecRank == 2))
     return rewriter.notifyMatchFailure(op, "Expects 1D or 2D vector");
+
+  if (!vecTy.getElementType().isIntOrFloat())
+    return rewriter.notifyMatchFailure(
+        op, "Expected scalar type with known bitwidth");
+
+  // XeGPU requires the memref to have a scalar integer or float element type.
+  // Memrefs with vector element types (e.g. memref<?xvector<4xf32>>) are not
+  // supported because createNdDescriptor computes byte offsets using
+  // getElementTypeBitWidth(), which asserts on non-integer/float types.
+  if (!memTy.getElementType().isIntOrFloat())
+    return rewriter.notifyMatchFailure(
+        op, "Unsupported memref element type: expected integer or float");
 
   return success();
 }
@@ -102,18 +113,46 @@ static xegpu::CreateNdDescOp createNdDescriptor(PatternRewriter &rewriter,
                                                 xegpu::TensorDescType descType,
                                                 TypedValue<MemRefType> src) {
   MemRefType srcTy = src.getType();
+  assert(srcTy.isStrided() && "Expected strided memref type");
   auto [strides, offset] = srcTy.getStridesAndOffset();
+  bool isStatic = true;
+
+  // Memref is dynamic if any of its shape, offset or strides is dynamic.
+  if (!srcTy.hasStaticShape())
+    isStatic = false;
+
+  if (!ShapedType::isStatic(offset))
+    isStatic = false;
+
+  for (auto stride : strides) {
+    if (!ShapedType::isStatic(stride)) {
+      isStatic = false;
+      break;
+    }
+  }
 
   xegpu::CreateNdDescOp ndDesc;
-  if (srcTy.hasStaticShape()) {
+  if (isStatic) {
     ndDesc = xegpu::CreateNdDescOp::create(rewriter, loc, descType, src);
   } else {
-    // In case of any dynamic shapes, source's shape and strides have to be
+    // In case of ranked dynamic memref, instead of passing on the memref,
+    // i64 base address, source's offset, shape and strides have to be
     // explicitly provided.
     auto meta = memref::ExtractStridedMetadataOp::create(rewriter, loc, src);
-    ndDesc = xegpu::CreateNdDescOp::create(rewriter, loc, descType, src,
-                                           meta.getConstifiedMixedSizes(),
-                                           meta.getConstifiedMixedStrides());
+    auto baseAddrIndex = memref::ExtractAlignedPointerAsIndexOp::create(
+        rewriter, loc, meta.getBaseBuffer());
+    auto offset = meta.getOffset();
+    auto elemByteSize = srcTy.getElementTypeBitWidth() / 8;
+    auto offsetInBytes = arith::MulIOp::create(
+        rewriter, loc, offset,
+        arith::ConstantIndexOp::create(rewriter, loc, elemByteSize));
+    auto adjustedBaseAddr = arith::AddIOp::create(
+        rewriter, loc, baseAddrIndex.getResult(), offsetInBytes);
+    auto adjustedAddrI64 = arith::IndexCastOp::create(
+        rewriter, loc, rewriter.getI64Type(), adjustedBaseAddr);
+    ndDesc = xegpu::CreateNdDescOp::create(
+        rewriter, loc, descType, adjustedAddrI64,
+        meta.getConstifiedMixedSizes(), meta.getConstifiedMixedStrides());
   }
 
   return ndDesc;
@@ -526,7 +565,8 @@ struct TransferReadLowering : public OpRewritePattern<vector::TransferReadOp> {
       return lowerToScatteredLoadOp(readOp, rewriter);
 
     // Perform common data transfer checks.
-    if (failed(storeLoadPreconditions(rewriter, readOp, vecTy)))
+    auto readMemTy = cast<MemRefType>(readOp.getShapedType());
+    if (failed(storeLoadPreconditions(rewriter, readOp, vecTy, readMemTy)))
       return failure();
 
     bool isOutOfBounds = readOp.hasOutOfBoundsDim();
@@ -599,7 +639,8 @@ struct TransferWriteLowering
 
     // Perform common data transfer checks.
     VectorType vecTy = writeOp.getVectorType();
-    if (failed(storeLoadPreconditions(rewriter, writeOp, vecTy)))
+    auto writeMemTy = cast<MemRefType>(writeOp.getShapedType());
+    if (failed(storeLoadPreconditions(rewriter, writeOp, vecTy, writeMemTy)))
       return failure();
 
     AffineMap map = writeOp.getPermutationMap();
@@ -705,7 +746,8 @@ struct LoadLowering : public OpRewritePattern<vector::LoadOp> {
     Location loc = loadOp.getLoc();
 
     VectorType vecTy = loadOp.getResult().getType();
-    if (failed(storeLoadPreconditions(rewriter, loadOp, vecTy)))
+    MemRefType memTy = loadOp.getBase().getType();
+    if (failed(storeLoadPreconditions(rewriter, loadOp, vecTy, memTy)))
       return failure();
 
     // Boundary check is available only for block instructions.
@@ -744,7 +786,8 @@ struct StoreLowering : public OpRewritePattern<vector::StoreOp> {
 
     TypedValue<VectorType> vector = storeOp.getValueToStore();
     VectorType vecTy = vector.getType();
-    if (failed(storeLoadPreconditions(rewriter, storeOp, vecTy)))
+    MemRefType memTy = storeOp.getBase().getType();
+    if (failed(storeLoadPreconditions(rewriter, storeOp, vecTy, memTy)))
       return failure();
 
     // Boundary check is available only for block instructions.

@@ -1945,7 +1945,7 @@ def : InstRW<[V3AEWrite_2c_1M], (instregex "^PTRUES_[BHSD]")>;
 def : InstRW<[V3AEWrite_2c_1M], (instregex "^PFIRST_B", "^PNEXT_[BHSD]")>;
 
 // Predicate test
-def : InstRW<[V3AEWrite_1c_1M], (instrs PTEST_PP)>;
+def : InstRW<[V3AEWrite_1c_1M], (instrs PTEST_PP, PTEST_PP_ANY, PTEST_PP_FIRST)>;
 
 // Predicate transpose
 def : InstRW<[V3AEWrite_2c_1M], (instregex "^TRN[12]_PPP_[BHSD]")>;
@@ -1982,7 +1982,7 @@ def : InstRW<[V3AEWrite_2c_1V],
                         "^ADR_LSL_ZZZ_[SD]_[0123]",
                         "^[SU](ADD|SUB)[LW][BT]_ZZZ_[HSD]",
                         "^SADDLBT_ZZZ_[HSD]",
-                        "^[SU]H(ADD|SUB|SUBR)_ZPmZ_[BHSD]",
+                        "^[SU]H(ADD|SUB|SUBR)_(ZPmZ|ZPZZ)_[BHSD]",
                         "^SSUBL(BT|TB)_ZZZ_[HSD]")>;
 
 // Arithmetic, complex

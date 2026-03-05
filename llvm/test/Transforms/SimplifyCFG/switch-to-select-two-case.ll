@@ -279,7 +279,7 @@ define i8 @switch_to_select_two_case_results_no_default(i32 %i) !prof !0 {
 ; CHECK:       default:
 ; CHECK-NEXT:    unreachable
 ; CHECK:       end:
-; CHECK-NEXT:    [[T0:%.*]] = phi i8 [ 44, [[CASE3]] ], [ 42, [[ENTRY:%.*]] ], [ 42, [[ENTRY]] ]
+; CHECK-NEXT:    [[T0:%.*]] = phi i8 [ 42, [[ENTRY:%.*]] ], [ 42, [[ENTRY]] ], [ 44, [[CASE3]] ]
 ; CHECK-NEXT:    ret i8 [[T0]]
 ;
 entry:

@@ -131,9 +131,14 @@ unsigned long long __llvm_omp_host_call(void *fn, void *data, size_t size) {
   Port.recv([&](rpc::Buffer *Buffer, uint32_t) {
     Ret = static_cast<unsigned long long>(Buffer->data[0]);
   });
-  Port.close();
   return Ret;
 }
+}
+
+// C++ ABI helpers.
+extern "C" {
+[[gnu::weak]] void __cxa_pure_virtual(void) { __builtin_trap(); }
+[[gnu::weak]] void __cxa_deleted_virtual(void) { __builtin_trap(); }
 }
 
 ///}

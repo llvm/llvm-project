@@ -919,7 +919,7 @@ void DwarfUnit::constructTypeDIE(DIE &Buffer, const DIDerivedType *DTy) {
 }
 
 std::optional<unsigned>
-DwarfUnit::constructSubprogramArguments(DIE &Buffer, DITypeRefArray Args) {
+DwarfUnit::constructSubprogramArguments(DIE &Buffer, DITypeArray Args) {
   // Args[0] is the return type.
   std::optional<unsigned> ObjectPointerIndex;
   for (unsigned i = 1, N = Args.size(); i < N; ++i) {
@@ -1076,8 +1076,12 @@ void DwarfUnit::constructTypeDIE(DIE &Buffer, const DICompositeType *CTy) {
 
     // Add template parameters to a class, structure or union types.
     if (Tag == dwarf::DW_TAG_class_type ||
-        Tag == dwarf::DW_TAG_structure_type || Tag == dwarf::DW_TAG_union_type)
-      addTemplateParams(Buffer, CTy->getTemplateParams());
+        Tag == dwarf::DW_TAG_structure_type ||
+        Tag == dwarf::DW_TAG_union_type) {
+      if (!(DD->useSplitDwarf() && !getCU().getSkeleton()) ||
+          CTy->isNameSimplified())
+        addTemplateParams(Buffer, CTy->getTemplateParams());
+    }
 
     // Add elements to structure type.
     DINodeArray Elements = CTy->getElements();
@@ -1394,7 +1398,7 @@ bool DwarfUnit::applySubprogramDefinitionAttributes(const DISubprogram *SP,
   StringRef DeclLinkageName;
   if (auto *SPDecl = SP->getDeclaration()) {
     if (!Minimal) {
-      DITypeRefArray DeclArgs, DefinitionArgs;
+      DITypeArray DeclArgs, DefinitionArgs;
       DeclArgs = SPDecl->getType()->getTypeArray();
       DefinitionArgs = SP->getType()->getTypeArray();
 
@@ -1420,7 +1424,8 @@ bool DwarfUnit::applySubprogramDefinitionAttributes(const DISubprogram *SP,
   }
 
   // Add function template parameters.
-  addTemplateParams(SPDie, SP->getTemplateParams());
+  if (!Minimal || SP->isNameSimplified())
+    addTemplateParams(SPDie, SP->getTemplateParams());
 
   // Add the linkage name if we have one and it isn't in the Decl.
   StringRef LinkageName = SP->getLinkageName();
@@ -1470,7 +1475,7 @@ void DwarfUnit::applySubprogramAttributes(const DISubprogram *SP, DIE &SPDie,
     addFlag(SPDie, dwarf::DW_AT_APPLE_objc_direct);
 
   unsigned CC = 0;
-  DITypeRefArray Args;
+  DITypeArray Args;
   if (const DISubroutineType *SPTy = SP->getType()) {
     Args = SPTy->getTypeArray();
     CC = SPTy->getCC();
@@ -2031,8 +2036,19 @@ DIE *DwarfUnit::getOrCreateStaticMemberDIE(const DIDerivedType *DT) {
 
   if (const ConstantInt *CI = dyn_cast_or_null<ConstantInt>(DT->getConstant()))
     addConstantValue(StaticMemberDIE, CI, Ty);
-  if (const ConstantFP *CFP = dyn_cast_or_null<ConstantFP>(DT->getConstant()))
+  else if (const ConstantFP *CFP =
+               dyn_cast_or_null<ConstantFP>(DT->getConstant()))
     addConstantFPValue(StaticMemberDIE, CFP);
+  else if (auto *CDS =
+               dyn_cast_or_null<ConstantDataSequential>(DT->getConstant())) {
+    StringRef RawData = CDS->getRawDataValues();
+    auto *Block = new (DIEValueAllocator) DIEBlock;
+    for (unsigned char Byte : RawData)
+      addUInt(*Block, dwarf::DW_FORM_data1, Byte);
+    Block->computeSize(Asm->getDwarfFormParams());
+    addBlock(StaticMemberDIE, dwarf::DW_AT_const_value, Block->BestForm(),
+             Block);
+  }
 
   if (uint32_t AlignInBytes = DT->getAlignInBytes())
     addUInt(StaticMemberDIE, dwarf::DW_AT_alignment, dwarf::DW_FORM_udata,

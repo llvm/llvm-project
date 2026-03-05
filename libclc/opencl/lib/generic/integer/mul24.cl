@@ -7,7 +7,6 @@
 //===----------------------------------------------------------------------===//
 
 #include <clc/integer/clc_mul24.h>
-#include <clc/opencl/integer/mul24.h>
 
 #define __CLC_FUNCTION mul24
 #define __CLC_BODY <clc/shared/binary_def.inc>
