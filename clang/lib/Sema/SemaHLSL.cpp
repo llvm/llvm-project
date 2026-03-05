@@ -3775,6 +3775,63 @@ bool SemaHLSL::CheckBuiltinFunctionCall(unsigned BuiltinID, CallExpr *TheCall) {
       return true;
     break;
   }
+  case Builtin::BI__builtin_hlsl_mul: {
+    if (SemaRef.checkArgCount(TheCall, 2))
+      return true;
+
+    Expr *Arg0 = TheCall->getArg(0);
+    Expr *Arg1 = TheCall->getArg(1);
+    QualType Ty0 = Arg0->getType();
+    QualType Ty1 = Arg1->getType();
+
+    auto getElemType = [](QualType T) -> QualType {
+      if (const auto *VTy = T->getAs<VectorType>())
+        return VTy->getElementType();
+      if (const auto *MTy = T->getAs<ConstantMatrixType>())
+        return MTy->getElementType();
+      return T;
+    };
+
+    QualType EltTy0 = getElemType(Ty0);
+
+    bool IsScalar0 = Ty0->isScalarType();
+    bool IsVec0 = Ty0->isVectorType();
+    bool IsMat0 = Ty0->isConstantMatrixType();
+    bool IsScalar1 = Ty1->isScalarType();
+    bool IsVec1 = Ty1->isVectorType();
+    bool IsMat1 = Ty1->isConstantMatrixType();
+
+    QualType RetTy;
+
+    if (IsScalar0 && IsScalar1) {
+      RetTy = EltTy0;
+    } else if (IsScalar0 && IsVec1) {
+      RetTy = Ty1;
+    } else if (IsScalar0 && IsMat1) {
+      RetTy = Ty1;
+    } else if (IsVec0 && IsScalar1) {
+      RetTy = Ty0;
+    } else if (IsVec0 && IsVec1) {
+      RetTy = EltTy0;
+    } else if (IsVec0 && IsMat1) {
+      auto *MatTy = Ty1->castAs<ConstantMatrixType>();
+      RetTy = getASTContext().getExtVectorType(EltTy0, MatTy->getNumColumns());
+    } else if (IsMat0 && IsScalar1) {
+      RetTy = Ty0;
+    } else if (IsMat0 && IsVec1) {
+      auto *MatTy = Ty0->castAs<ConstantMatrixType>();
+      RetTy = getASTContext().getExtVectorType(EltTy0, MatTy->getNumRows());
+    } else {
+      assert(IsMat0 && IsMat1);
+      auto *MatTy0 = Ty0->castAs<ConstantMatrixType>();
+      auto *MatTy1 = Ty1->castAs<ConstantMatrixType>();
+      RetTy = getASTContext().getConstantMatrixType(
+          EltTy0, MatTy0->getNumRows(), MatTy1->getNumColumns());
+    }
+
+    TheCall->setType(RetTy);
+    break;
+  }
   case Builtin::BI__builtin_hlsl_normalize: {
     if (SemaRef.checkArgCount(TheCall, 1))
       return true;
