@@ -199,5 +199,6 @@ shared/max.cl
 shared/min.cl
 shared/vload.cl
 shared/vstore.cl
+workitem/get_enqueued_local_size.cl
 workitem/get_global_id.cl
 workitem/get_global_size.cl
