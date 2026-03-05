@@ -243,8 +243,6 @@ int main(int argc, const char **argv, const char **envp) {
     }
     InitArgs.NumPlatforms = 1;
     InitArgs.Platforms = &Backend;
-  } else {
-    handleError(createStringError("unrecognized file type"));
   }
 
   SmallVector<const char *> NewArgv = {File.c_str()};
@@ -252,8 +250,6 @@ int main(int argc, const char **argv, const char **envp) {
                   [](const std::string &Arg) { return Arg.c_str(); });
 
   OFFLOAD_ERR(olInit(&InitArgs));
-  if (InitArgs.NumPlatforms == 0)
-    handleError(createStringError("No compatible platforms were found"));
   ol_device_handle_t Device = findDevice(Image);
   if (!Device)
     handleError(createStringError("No compatible device was found"));
