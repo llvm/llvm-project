@@ -270,33 +270,6 @@ entry:
   ret <4 x float> %partial.reduce
 }
 
-define <2 x float> @fixed_fdot(<2 x float> %acc, <4 x half> %a, <4 x half> %b) {
-; SVE2-LABEL: fixed_fdot:
-; SVE2:       // %bb.0: // %entry
-; SVE2-NEXT:    fcvtl v1.4s, v1.4h
-; SVE2-NEXT:    fcvtl v2.4s, v2.4h
-; SVE2-NEXT:    fmul v1.4s, v1.4s, v2.4s
-; SVE2-NEXT:    fadd v0.2s, v0.2s, v1.2s
-; SVE2-NEXT:    ext v1.16b, v1.16b, v1.16b, #8
-; SVE2-NEXT:    fadd v0.2s, v1.2s, v0.2s
-; SVE2-NEXT:    ret
-;
-; SVE2P1-LABEL: fixed_fdot:
-; SVE2P1:       // %bb.0: // %entry
-; SVE2P1-NEXT:    // kill: def $d0 killed $d0 def $z0
-; SVE2P1-NEXT:    // kill: def $d2 killed $d2 def $z2
-; SVE2P1-NEXT:    // kill: def $d1 killed $d1 def $z1
-; SVE2P1-NEXT:    fdot z0.s, z1.h, z2.h
-; SVE2P1-NEXT:    // kill: def $d0 killed $d0 killed $z0
-; SVE2P1-NEXT:    ret
-entry:
-  %a.wide = fpext <4 x half> %a to <4 x float>
-  %b.wide = fpext <4 x half> %b to <4 x float>
-  %mult = fmul <4 x float> %a.wide, %b.wide
-  %partial.reduce = call <2 x float> @llvm.vector.partial.reduce.fadd(<2 x float> %acc, <4 x float> %mult)
-  ret <2 x float> %partial.reduce
-}
-
 define <8 x half> @partial_reduce_half(<8 x half> %acc, <16 x half> %a) {
 ; CHECK-LABEL: partial_reduce_half:
 ; CHECK:       // %bb.0: // %entry
