@@ -771,7 +771,7 @@ bool SampleProfileMatcher::functionMatchesProfileHelper(
   // this, we load the top-level profile candidate explicitly for the matching.
   if (!FSForMatching && LoadFuncProfileforCGMatching) {
     DenseSet<StringRef> TopLevelFunc({ProfFunc.stringRef()});
-    if (std::error_code EC = Reader.read(TopLevelFunc))
+    if (std::error_code EC = Reader.read(TopLevelFunc, /*IgnoreRemapper=*/true))
       return false;
     FSForMatching = Reader.getSamplesFor(ProfFunc.stringRef());
     LLVM_DEBUG({
@@ -879,7 +879,7 @@ void SampleProfileMatcher::UpdateWithSalvagedProfiles() {
   // based on current function names in the module, so we need to load top-level
   // profiles for functions with different profile name explicitly after
   // function-profile name map is established with stale profile matching.
-  Reader.read(ProfileSalvagedFuncs);
+  Reader.read(ProfileSalvagedFuncs, /*IgnoreRemapper=*/true);
   Reader.setFuncNameToProfNameMap(*FuncNameToProfNameMap);
 }
 
