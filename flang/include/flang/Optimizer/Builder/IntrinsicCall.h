@@ -260,7 +260,7 @@ struct IntrinsicLibrary {
   mlir::Value genExponent(mlir::Type, llvm::ArrayRef<mlir::Value>);
   fir::ExtendedValue genExtendsTypeOf(mlir::Type,
                                       llvm::ArrayRef<fir::ExtendedValue>);
-  template <Extremum, ExtremumBehavior>
+  template <bool isMax>
   mlir::Value genExtremum(mlir::Type, llvm::ArrayRef<mlir::Value>);
   fir::ExtendedValue genFCString(mlir::Type,
                                  llvm::ArrayRef<fir::ExtendedValue>);
