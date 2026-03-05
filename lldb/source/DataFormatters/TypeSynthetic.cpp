@@ -20,8 +20,10 @@
 #include "lldb/Symbol/CompilerType.h"
 #include "lldb/Target/Target.h"
 #include "lldb/Utility/StreamString.h"
+#include "llvm/ADT/STLExtras.h"
 #include "llvm/Support/Error.h"
 #include <cstdint>
+#include <iterator>
 
 using namespace lldb;
 using namespace lldb_private;
@@ -258,13 +260,11 @@ std::string ScriptedSyntheticChildren::GetDescription() {
 BytecodeSyntheticChildren::FrontEnd::FrontEnd(
     ValueObject &backend, SyntheticBytecodeImplementation &impl)
     : SyntheticChildrenFrontEnd(backend), m_impl(impl) {
-  FormatterBytecode::DataStack data(backend.GetSP());
-  if (!m_impl.init) {
-    m_self = std::move(data);
+  if (!m_impl.init)
     return;
-  }
 
   FormatterBytecode::ControlStack control = {m_impl.init->getBuffer()};
+  FormatterBytecode::DataStack data = {backend.GetSP()};
   llvm::Error error =
       FormatterBytecode::Interpret(control, data, FormatterBytecode::sig_init);
   if (error) {
@@ -274,7 +274,7 @@ BytecodeSyntheticChildren::FrontEnd::FrontEnd(
   }
 
   if (data.size() > 0)
-    m_self = std::move(data);
+    m_init_results = std::move(data);
 }
 
 lldb::ChildCacheState BytecodeSyntheticChildren::FrontEnd::Update() {
@@ -282,7 +282,7 @@ lldb::ChildCacheState BytecodeSyntheticChildren::FrontEnd::Update() {
     return ChildCacheState::eRefetch;
 
   FormatterBytecode::ControlStack control = {m_impl.update->getBuffer()};
-  FormatterBytecode::DataStack data = m_self;
+  FormatterBytecode::DataStack data = {m_backend.GetSP()};
   llvm::Error error = FormatterBytecode::Interpret(
       control, data, FormatterBytecode::sig_update);
   if (error) {
@@ -292,7 +292,7 @@ lldb::ChildCacheState BytecodeSyntheticChildren::FrontEnd::Update() {
   }
 
   if (data.size() > 0)
-    m_self = std::move(data);
+    m_update_results = std::move(data);
 
   return ChildCacheState::eRefetch;
 }
@@ -303,7 +303,7 @@ BytecodeSyntheticChildren::FrontEnd::CalculateNumChildren() {
     return 0;
 
   FormatterBytecode::ControlStack control = {m_impl.num_children->getBuffer()};
-  FormatterBytecode::DataStack data = m_self;
+  FormatterBytecode::DataStack data = GetSelf();
   llvm::Error error = FormatterBytecode::Interpret(
       control, data, FormatterBytecode::sig_get_num_children);
   if (error)
@@ -335,7 +335,7 @@ BytecodeSyntheticChildren::FrontEnd::GetChildAtIndex(uint32_t idx) {
 
   FormatterBytecode::ControlStack control = {
       m_impl.get_child_at_index->getBuffer()};
-  FormatterBytecode::DataStack data = m_self;
+  FormatterBytecode::DataStack data = GetSelf();
   data.emplace_back((uint64_t)idx);
   llvm::Error error = FormatterBytecode::Interpret(
       control, data, FormatterBytecode::sig_get_child_at_index);
@@ -365,7 +365,7 @@ BytecodeSyntheticChildren::FrontEnd::GetIndexOfChildWithName(ConstString name) {
 
   FormatterBytecode::ControlStack control = {
       m_impl.get_child_index->getBuffer()};
-  FormatterBytecode::DataStack data = m_self;
+  FormatterBytecode::DataStack data = GetSelf();
   data.emplace_back(name.GetString());
   llvm::Error error = FormatterBytecode::Interpret(
       control, data, FormatterBytecode::sig_get_child_index);
@@ -389,6 +389,16 @@ BytecodeSyntheticChildren::FrontEnd::GetIndexOfChildWithName(ConstString name) {
   }
 
   return llvm::createStringError("@get_child_index returned invalid value");
+}
+
+FormatterBytecode::DataStack BytecodeSyntheticChildren::FrontEnd::GetSelf() {
+  FormatterBytecode::DataStack self;
+  llvm::copy(m_init_results, std::back_inserter(self));
+  llvm::copy(m_update_results, std::back_inserter(self));
+  if (self.empty())
+    // As a fallback, "self" is just the valobj.
+    self.emplace_back(m_backend.GetSP());
+  return self;
 }
 
 std::string BytecodeSyntheticChildren::GetDescription() {
