@@ -387,3 +387,83 @@ bb5:
 exit:
   ret void
 }
+
+define void @diamond_phi2(ptr %a, i1 %c1, i1 %c2) {
+; CHECK-LABEL: VPlan for loop in 'diamond_phi2'
+; CHECK-NEXT:  <x1> vector loop: {
+; CHECK-NEXT:    vector.body:
+; CHECK-NEXT:      EMIT vp<[[VP3:%[0-9]+]]> = CANONICAL-INDUCTION ir<0>, vp<%index.next>
+; CHECK-NEXT:      ir<%iv> = WIDEN-INDUCTION nuw nsw ir<0>, ir<1>, vp<[[VP0:%[0-9]+]]>
+; CHECK-NEXT:      EMIT ir<%gep> = getelementptr ir<%a>, ir<%iv>
+; CHECK-NEXT:      EMIT ir<%c0> = icmp sle ir<%iv>, ir<0>
+; CHECK-NEXT:    Successor(s): bb2
+; CHECK-EMPTY:
+; CHECK-NEXT:    bb2:
+; CHECK-NEXT:      EMIT vp<[[VP4:%[0-9]+]]> = not ir<%c0>
+; CHECK-NEXT:      EMIT ir<%add2> = add ir<%iv>, ir<2>, vp<[[VP4]]>
+; CHECK-NEXT:    Successor(s): bb1
+; CHECK-EMPTY:
+; CHECK-NEXT:    bb1:
+; CHECK-NEXT:      EMIT ir<%add1> = add ir<%iv>, ir<1>, ir<%c0>
+; CHECK-NEXT:    Successor(s): bb4
+; CHECK-EMPTY:
+; CHECK-NEXT:    bb4:
+; CHECK-NEXT:      EMIT vp<[[VP5:%[0-9]+]]> = logical-and vp<[[VP4]]>, ir<%c2>
+; CHECK-NEXT:      EMIT vp<[[VP6:%[0-9]+]]> = logical-and ir<%c0>, ir<%c1>
+; CHECK-NEXT:      EMIT vp<[[VP7:%[0-9]+]]> = or vp<[[VP5]]>, vp<[[VP6]]>
+; CHECK-NEXT:      BLEND ir<%phi4> = ir<%add2>/vp<[[VP5]]> ir<%add1>/vp<[[VP6]]>
+; CHECK-NEXT:      EMIT store ir<%phi4>, ir<%gep>, vp<[[VP7]]>
+; CHECK-NEXT:    Successor(s): bb5
+; CHECK-EMPTY:
+; CHECK-NEXT:    bb5:
+; CHECK-NEXT:      EMIT vp<[[VP8:%[0-9]+]]> = not ir<%c2>
+; CHECK-NEXT:      EMIT vp<[[VP9:%[0-9]+]]> = logical-and vp<[[VP4]]>, vp<[[VP8]]>
+; CHECK-NEXT:      EMIT vp<[[VP10:%[0-9]+]]> = or vp<[[VP7]]>, vp<[[VP9]]>
+; CHECK-NEXT:      EMIT vp<[[VP11:%[0-9]+]]> = not ir<%c1>
+; CHECK-NEXT:      EMIT vp<[[VP12:%[0-9]+]]> = logical-and ir<%c0>, vp<[[VP11]]>
+; CHECK-NEXT:      EMIT vp<[[VP13:%[0-9]+]]> = or vp<[[VP10]]>, vp<[[VP12]]>
+; CHECK-NEXT:      EMIT ir<%iv.next> = add nuw nsw ir<%iv>, ir<1>, vp<[[VP13]]>
+; CHECK-NEXT:      EMIT ir<%ec> = icmp eq ir<%iv.next>, ir<128>, vp<[[VP13]]>
+; CHECK-NEXT:      EMIT vp<%index.next> = add nuw vp<[[VP3]]>, vp<[[VP1:%[0-9]+]]>
+; CHECK-NEXT:      EMIT branch-on-count vp<%index.next>, vp<[[VP2:%[0-9]+]]>
+; CHECK-NEXT:    No successors
+; CHECK-NEXT:  }
+; CHECK-NEXT:  Successor(s): middle.block
+;
+entry:
+  br label %bb0
+
+bb0:
+;          bb0
+;         /  \
+;       bb1  bb2
+;       | \  / |
+;       |  bb4 |
+;        \  | /
+;          bb5
+  %iv = phi i64 [0, %entry], [%iv.next, %bb5]
+  %gep = getelementptr i64, ptr %a, i64 %iv
+  %c0 = icmp sle i64 %iv, 0
+  br i1 %c0, label %bb1, label %bb2
+
+bb1:
+  %add1 = add i64 %iv, 1
+  br i1 %c1, label %bb4, label %bb5
+
+bb2:
+  %add2 = add i64 %iv, 2
+  br i1 %c2, label %bb4, label %bb5
+
+bb4:
+  %phi4 = phi i64 [%add1, %bb1], [%add2, %bb2]
+  store i64 %phi4, ptr %gep
+  br label %bb5
+
+bb5:
+  %iv.next = add nsw nuw i64 %iv, 1
+  %ec = icmp eq i64 %iv.next, 128
+  br i1 %ec, label %exit, label %bb0
+
+exit:
+  ret void
+}
