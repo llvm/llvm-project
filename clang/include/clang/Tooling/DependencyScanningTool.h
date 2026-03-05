@@ -168,14 +168,10 @@ class CompilerInstanceWithContext {
   int32_t SrcLocOffset = 0;
 
   CompilerInstanceWithContext(dependencies::DependencyScanningWorker &Worker,
-                              StringRef CWD, ArrayRef<std::string> CommandLine)
-      : Worker(Worker), CWD(CWD), CommandLine(std::move(CommandLine)) {};
+                              StringRef CWD,
+                              const std::vector<std::string> &CMD)
+      : Worker(Worker), CWD(CWD), CommandLine(CMD) {};
 
-  CompilerInstanceWithContext(dependencies::DependencyScanningWorker &Worker)
-      : Worker(Worker) {};
-
-  // The two methods below returns false when they fail, with the detail
-  // accumulated in \c DiagEngineWithDiagOpts's diagnostic consumer.
   bool initialize(std::unique_ptr<dependencies::DiagnosticsEngineWithDiagOpts>
                       DiagEngineWithDiagOpts,
                   IntrusiveRefCntPtr<llvm::vfs::OverlayFileSystem> OverlayFS);
