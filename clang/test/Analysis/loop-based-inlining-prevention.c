@@ -1,5 +1,7 @@
-// RUN: %clang_analyze_cc1 -analyzer-checker=core,debug.ExprInspection -verify=expected,default %s
-// RUN: %clang_analyze_cc1 -analyzer-checker=core,debug.ExprInspection -analyzer-config inline-functions-with-ambiguous-loops=true -verify=expected,enabled %s
+// RUN: %clang_analyze_cc1 -analyzer-config unroll-loops=false -analyzer-checker=core,debug.ExprInspection -verify=expected,default %s
+// RUN: %clang_analyze_cc1 -analyzer-config unroll-loops=false -analyzer-checker=core,debug.ExprInspection -analyzer-config inline-functions-with-ambiguous-loops=true -verify=expected,enabled %s
+// Note: unroll-loops=false is intentional - this test validates the heuristic that prevents
+// inlining when loops reach analyzer-max-loop limit. With unrolling, this heuristic behaves differently.
 
 // This file tests some heuristics in the engine that put functions on a
 // "do not inline" list if their analyisis reaches the `analyzer-max-loop`
