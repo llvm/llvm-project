@@ -682,9 +682,9 @@ let Predicates = [HasFutureVector] in {
             (v16i8 (COPY_TO_REGCLASS (XSREBASE3T3UQM RCCp.AToVSRC, RCCp.BToVSRC), VSRC))>;
 }
 
-// Post Quantum Cryptography Acceleration patterns
-// Use AddedComplexity to prefer these patterns over AltiVec patterns
-let Predicates = [HasVSX, IsISAFuture], AddedComplexity = 400 in {
+// Post Quantum Cryptography Acceleration patterns.
+// Use AddedComplexity to prefer these patterns over AltiVec patterns.
+let Predicates = [HasFutureVector], AddedComplexity = 400 in {
   // Vector add
   def : Pat<(v4i32 (add v4i32:$XA, v4i32:$XB)), (v4i32 (XVADDUWM $XA, $XB))>;
   def : Pat<(v8i16 (add v8i16:$XA, v8i16:$XB)),
