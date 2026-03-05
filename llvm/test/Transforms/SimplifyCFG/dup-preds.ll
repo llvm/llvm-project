@@ -51,3 +51,58 @@ exit:                                             ; preds = %else, %switch.case.
   %ret = phi i8 [ 0, %else ], [ 0, %switch.case.0 ], [ 1, %switch.case.1 ], [ 1, %switch.case.2 ], [ 2, %then ], [ 3, %entry ]
   ret i8 %ret
 }
+
+define i8 @test_no_merge_address_taken(i8 %v1, i8 %v2, ptr %p) {
+; SIMPLIFY-CFG-LABEL: @test_no_merge_address_taken(
+; SIMPLIFY-CFG-NEXT:  entry:
+; SIMPLIFY-CFG-NEXT:    store ptr blockaddress(@test_no_merge_address_taken, [[SWITCH_CASE_0:%.*]]), ptr [[P:%.*]], align 8
+; SIMPLIFY-CFG-NEXT:    switch i8 [[V1:%.*]], label [[EXIT:%.*]] [
+; SIMPLIFY-CFG-NEXT:      i8 0, label [[THEN:%.*]]
+; SIMPLIFY-CFG-NEXT:      i8 1, label [[ELSE:%.*]]
+; SIMPLIFY-CFG-NEXT:    ]
+; SIMPLIFY-CFG:       then:
+; SIMPLIFY-CFG-NEXT:    switch i8 [[V2:%.*]], label [[EXIT]] [
+; SIMPLIFY-CFG-NEXT:      i8 0, label [[SWITCH_CASE_0]]
+; SIMPLIFY-CFG-NEXT:      i8 1, label [[SWITCH_CASE_1:%.*]]
+; SIMPLIFY-CFG-NEXT:      i8 2, label [[SWITCH_CASE_1]]
+; SIMPLIFY-CFG-NEXT:    ]
+; SIMPLIFY-CFG:       switch.case.0:
+; SIMPLIFY-CFG-NEXT:    br label [[EXIT]]
+; SIMPLIFY-CFG:       switch.case.1:
+; SIMPLIFY-CFG-NEXT:    br label [[EXIT]]
+; SIMPLIFY-CFG:       else:
+; SIMPLIFY-CFG-NEXT:    br label [[EXIT]]
+; SIMPLIFY-CFG:       exit:
+; SIMPLIFY-CFG-NEXT:    [[RET:%.*]] = phi i8 [ 0, [[ELSE]] ], [ 0, [[SWITCH_CASE_0]] ], [ 1, [[SWITCH_CASE_1]] ], [ 3, [[ENTRY:%.*]] ], [ 2, [[THEN]] ]
+; SIMPLIFY-CFG-NEXT:    ret i8 [[RET]]
+;
+entry:
+  store ptr blockaddress(@test_no_merge_address_taken, %switch.case.0), ptr %p
+  switch i8 %v1, label %exit [
+  i8 0, label %then
+  i8 1, label %else
+  ]
+
+then:                                             ; preds = %entry
+  switch i8 %v2, label %exit [
+  i8 0, label %switch.case.0
+  i8 1, label %switch.case.1
+  i8 2, label %switch.case.2
+  ]
+
+switch.case.0:                                    ; preds = %then
+  br label %exit
+
+switch.case.1:                                    ; preds = %then
+  br label %exit
+
+switch.case.2:                                    ; preds = %then
+  br label %exit
+
+else:                                             ; preds = %entry
+  br label %exit
+
+exit:                                             ; preds = %else, %switch.case.2, %switch.case.1, %switch.case.0, %then, %entry
+  %ret = phi i8 [ 0, %else ], [ 0, %switch.case.0 ], [ 1, %switch.case.1 ], [ 1, %switch.case.2 ], [ 2, %then ], [ 3, %entry ]
+  ret i8 %ret
+}
