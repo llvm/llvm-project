@@ -196,3 +196,59 @@ struct buffer_of_const_structs_with_annotated_vla {
   const struct has_annotated_VLA Arr[] __counted_by(count);
 };
 
+//==============================================================================
+// __counted_by on flexible array members in unions
+//==============================================================================
+
+// FAM in anonymous union with count in parent struct - OK
+struct fam_in_anon_union_count_in_parent {
+  int count;
+  union {
+    char a;
+    char fam[] __counted_by(count);
+  };
+};
+
+// FAM in named union - ERROR
+union fam_in_named_union {
+  int count;
+  char fam[] __counted_by(count); // expected-error {{'counted_by' cannot be applied to a union member}}
+};
+
+// Both FAM and count in same anonymous union - ERROR (they share storage)
+struct fam_and_count_in_same_anon_union {
+  union {
+    int count;
+    char fam[] __counted_by(count); // expected-error {{'counted_by' cannot be applied to a union member}}
+  };
+};
+
+// Count in anonymous union, FAM in parent struct - ERROR (count in union)
+struct count_in_anon_union_fam_in_parent {
+  union {
+    int count;
+    int x;
+  };
+  char fam[] __counted_by(count); // expected-error {{'counted_by' argument cannot refer to a union member}}
+};
+
+// FAM in nested anonymous struct inside anonymous union - OK
+struct fam_in_nested_anon_struct_in_anon_union {
+  int count;
+  union {
+    int a;
+    struct {
+      char fam[] __counted_by(count);
+    };
+  };
+};
+
+// Count in anonymous union, but hidden by struct - ERROR (count in union)
+struct count_in_deep_anon_union {
+  union {
+    struct {
+      int count;
+    };
+  };
+  char fam[] __counted_by(count); // expected-error {{'counted_by' argument cannot refer to a union member}}
+};

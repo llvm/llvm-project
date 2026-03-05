@@ -26,20 +26,43 @@ getCountAttrKind(bool CountInBytes, bool OrNull) {
                 : CountAttributedType::CountedBy;
 }
 
+// Check if a RecordDecl is anonymous or will be anonymous once processing
+// completes. The anonymous flag may not be set yet during parsing.
+static bool IsAnonymousOrWillBeAnonymous(const RecordDecl *RD) {
+  return RD->isAnonymousStructOrUnion() ||
+         (!RD->isCompleteDefinition() && RD->getName().empty());
+}
+
 static const RecordDecl *GetEnclosingNamedOrTopAnonRecord(const FieldDecl *FD) {
   const auto *RD = FD->getParent();
   // An unnamed struct is anonymous struct only if it's not instantiated.
   // However, the struct may not be fully processed yet to determine
   // whether it's anonymous or not. In that case, this function treats it as
   // an anonymous struct and tries to find a named parent.
-  while (RD && (RD->isAnonymousStructOrUnion() ||
-                (!RD->isCompleteDefinition() && RD->getName().empty()))) {
+  while (RD && IsAnonymousOrWillBeAnonymous(RD)) {
     const auto *Parent = dyn_cast<RecordDecl>(RD->getParent());
     if (!Parent)
       break;
     RD = Parent;
   }
   return RD;
+}
+
+// Check if any anonymous ancestor record of FD is a union. This catches cases
+// like:
+//   struct S { union { struct { int count; }; }; int *p __counted_by(count); };
+// where 'count' is inside an anonymous struct inside an anonymous union.
+static bool HasUnionInAncestors(const FieldDecl *FD) {
+  const auto *RD = FD->getParent();
+  while (RD && IsAnonymousOrWillBeAnonymous(RD)) {
+    if (RD->isUnion())
+      return true;
+    const auto *Parent = dyn_cast<RecordDecl>(RD->getParent());
+    if (!Parent)
+      break;
+    RD = Parent;
+  }
+  return false;
 }
 
 enum class CountedByInvalidPointeeTypeKind {
@@ -56,7 +79,11 @@ bool Sema::CheckCountedByAttrOnField(FieldDecl *FD, Expr *E, bool CountInBytes,
 
   unsigned Kind = getCountAttrKind(CountInBytes, OrNull);
 
-  if (FD->getParent()->isUnion()) {
+  // Reject if the field is directly in a non-anonymous union.
+  // Anonymous unions are allowed because their members are promoted to the
+  // enclosing scope, so the count field can be in the parent struct.
+  if (FD->getParent()->isUnion() &&
+      !IsAnonymousOrWillBeAnonymous(FD->getParent())) {
     Diag(FD->getBeginLoc(), diag::err_count_attr_in_union)
         << Kind << FD->getSourceRange();
     return true;
@@ -207,10 +234,17 @@ bool Sema::CheckCountedByAttrOnField(FieldDecl *FD, Expr *E, bool CountInBytes,
     return true;
   }
 
+  // Reject if both FD and CountFD are in the same union - they share storage.
+  if (FD->getParent() == CountFD->getParent() && FD->getParent()->isUnion()) {
+    Diag(FD->getBeginLoc(), diag::err_count_attr_in_union)
+        << Kind << FD->getSourceRange();
+    return true;
+  }
+
   if (FD->getParent() != CountFD->getParent()) {
-    if (CountFD->getParent()->isUnion()) {
-      Diag(CountFD->getBeginLoc(), diag::err_count_attr_refer_to_union)
-          << Kind << CountFD->getSourceRange();
+    if (HasUnionInAncestors(CountFD)) {
+      Diag(FD->getBeginLoc(), diag::err_count_attr_refer_to_union)
+          << Kind << FD->getSourceRange();
       return true;
     }
     // Whether CountRD is an anonymous struct is not determined at this
