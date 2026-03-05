@@ -2130,10 +2130,10 @@ bool GCNTargetMachine::parseMachineFunctionInfo(
     MFI->NumUserSGPRs += YamlMFI.NumKernargPreloadSGPRs;
   }
 
-  if (ST.hasIEEEMode())
+  if (ST.hasFeature(AMDGPU::FeatureDX10ClampAndIEEEMode)) {
     MFI->Mode.IEEE = YamlMFI.Mode.IEEE;
-  if (ST.hasDX10ClampMode())
     MFI->Mode.DX10Clamp = YamlMFI.Mode.DX10Clamp;
+  }
 
   // FIXME: Move proper support for denormal-fp-math into base MachineFunction
   MFI->Mode.FP32Denormals.Input = YamlMFI.Mode.FP32InputDenormals
