@@ -93,6 +93,7 @@ add_subdirectory(Frontend)
 add_subdirectory(Rewrite)
 add_subdirectory(Sema)
 add_subdirectory(CodeGen)
+add_subdirectory(IPC2978)
 if(HAVE_CLANG_REPL_SUPPORT)
   add_subdirectory(Interpreter)
 endif()
@@ -126,6 +127,10 @@ add_distinct_clang_unittest(AllClangUnitTests
   LLVM_COMPONENTS
   ${LLVM_COMPONENTS}
 )
+
+# Needed for the IPC2978Test
+target_compile_definitions(AllClangUnitTests PRIVATE LLVM_TOOLS_BINARY_DIR="${LLVM_TOOLS_BINARY_DIR}")
+add_dependencies(AllClangUnitTests clang)
 
 # The Tooling library has some internal headers. Make those work. If we like
 # the merged clang unit test binary, we can update the include paths and make
