@@ -19,6 +19,7 @@
 
 #include "GCNSubtarget.h"
 #include "llvm/CodeGen/LiveIntervals.h"
+#include "llvm/CodeGen/LiveRegUnits.h"
 #include "llvm/CodeGen/RegisterPressure.h"
 #include <algorithm>
 #include <array>
@@ -129,6 +130,10 @@ struct GCNRegPressure {
            LaneBitmask PrevMask,
            LaneBitmask NewMask,
            const MachineRegisterInfo &MRI);
+
+  /// Update pressure for a physical register (add or remove). Used when
+  /// tracking physical registers.
+  void inc(MCRegister Reg, bool IsAdd, const MachineRegisterInfo &MRI);
 
   bool higherOccupancy(const GCNSubtarget &ST, const GCNRegPressure &O,
                        unsigned DynamicVGPRBlockSize) const {
@@ -320,12 +325,46 @@ public:
 
 protected:
   const LiveIntervals &LIS;
+
+  // Virtual register tracking
   LiveRegSet VirtLiveRegs;
   GCNRegPressure CurVirtPressure, MaxVirtPressure;
+
+  // Physical register tracking: Maintain clean separation between virtual and
+  // physical registers. Tracking physical registers can be turned OFF with an
+  // option. Uses LiveRegUnits (bit vector of live register units).
+  LiveRegUnits PhysLiveRegs;
+  GCNRegPressure CurPhysPressure, MaxPhysPressure;
+
+  // Flag to control whether physical register tracking is active.
+  // Set to true when GCNTrackers are enabled, false otherwise.
+  bool TrackPhysRegs = false;
+
   const MachineInstr *LastTrackedMI = nullptr;
   mutable const MachineRegisterInfo *MRI = nullptr;
 
-  GCNRPTracker(const LiveIntervals &LIS_) : LIS(LIS_) {}
+  GCNRPTracker(const LiveIntervals &LIS, const MachineRegisterInfo &MRI)
+      : LIS(LIS), MRI(&MRI) {
+    setPhysRegTracking();
+    if (TrackPhysRegs)
+      PhysLiveRegs.init(*MRI.getTargetRegisterInfo());
+  }
+
+  // Copy constructor - PhysLiveRegs must be initialized then copied.
+  GCNRPTracker(const GCNRPTracker &Other)
+      : LIS(Other.LIS), VirtLiveRegs(Other.VirtLiveRegs),
+        CurVirtPressure(Other.CurVirtPressure),
+        MaxVirtPressure(Other.MaxVirtPressure),
+        CurPhysPressure(Other.CurPhysPressure),
+        MaxPhysPressure(Other.MaxPhysPressure),
+        TrackPhysRegs(Other.TrackPhysRegs), LastTrackedMI(Other.LastTrackedMI),
+        MRI(Other.MRI) {
+    if (TrackPhysRegs) {
+      assert(MRI && "MRI not initialized");
+      PhysLiveRegs.init(*MRI->getTargetRegisterInfo());
+      PhysLiveRegs.addUnits(Other.PhysLiveRegs.getBitVector());
+    }
+  }
 
   void reset(const MachineInstr &MI, const LiveRegSet *VirtLiveRegsCopy,
              bool After);
@@ -335,17 +374,60 @@ protected:
 
   LaneBitmask getLastUsedLanes(Register Reg, SlotIndex Pos) const;
 
+  // Helper to check if a register unit is live at a given slot index.
+  bool isUnitLiveAt(MCRegUnit Unit, SlotIndex SI) const;
+
+  // Check if all register units of Reg are currently live in PhysLiveRegs.
+  bool allRegUnitsLive(MCRegister Reg) const;
+
+  // Check if Reg has any killed units at the given slot index.
+  bool checkRegKilled(MCRegister Reg, SlotIndex SI) const;
+
+  // Check if Reg has any killed units and erase them from PhysLiveRegs.
+  bool eraseKilledUnits(MCRegister Reg, SlotIndex SI);
+
+  // Erase all live units of Reg from PhysLiveRegs.
+  // Returns true if any unit was live (and thus erased).
+  bool eraseAllLiveUnits(MCRegister Reg);
+
+  // Insert all not-live units of Reg into PhysLiveRegs.
+  // Returns true if any unit was not live (and thus inserted).
+  bool insertAllNotLiveUnits(MCRegister Reg);
+
 public:
+  // Enable physical register tracking only if both GCNTrackers and
+  // TrackPhysRegInTrackers are true.
+  void setPhysRegTracking();
+
   // reset tracker and set live register set to the specified value.
   void reset(const MachineRegisterInfo &MRInfo,
              const LiveRegSet &VirtLiveRegsSet);
+
   // live regs for the current state
   const decltype(VirtLiveRegs) &getLiveRegs() const { return VirtLiveRegs; }
+  const decltype(VirtLiveRegs) &getVirtLiveRegs() const { return VirtLiveRegs; }
   const MachineInstr *getLastTrackedMI() const { return LastTrackedMI; }
 
-  void clearMaxPressure() { MaxVirtPressure.clear(); }
+  void clearMaxPressure() {
+    MaxVirtPressure.clear();
+    MaxPhysPressure.clear();
+  }
 
-  GCNRegPressure getPressure() const { return CurVirtPressure; }
+  // Returns sum of virtual and physical register pressure
+  GCNRegPressure getPressure() const {
+    return CurVirtPressure + CurPhysPressure;
+  }
+
+  // Returns only virtual register pressure
+  GCNRegPressure getVirtPressure() const { return CurVirtPressure; }
+
+  // Returns only physical register pressure
+  GCNRegPressure getPhysPressure() const { return CurPhysPressure; }
+
+  // Returns sum of virtual and physical max pressure
+  GCNRegPressure getMaxPressure() const {
+    return MaxVirtPressure + MaxPhysPressure;
+  }
 
   decltype(VirtLiveRegs) moveLiveRegs() { return std::move(VirtLiveRegs); }
 };
@@ -360,7 +442,8 @@ getLiveRegs(SlotIndex SI, const LiveIntervals &LIS,
 
 class GCNUpwardRPTracker : public GCNRPTracker {
 public:
-  GCNUpwardRPTracker(const LiveIntervals &LIS) : GCNRPTracker(LIS) {}
+  GCNUpwardRPTracker(const LiveIntervals &LIS, const MachineRegisterInfo &MRI)
+      : GCNRPTracker(LIS, MRI) {}
 
   using GCNRPTracker::reset;
 
@@ -389,12 +472,13 @@ public:
   /// to reported by LIS.
   bool isValid() const;
 
-  const GCNRegPressure &getMaxPressure() const { return MaxVirtPressure; }
-
-  void resetMaxPressure() { MaxVirtPressure = CurVirtPressure; }
+  void resetMaxPressure() {
+    MaxVirtPressure = CurVirtPressure;
+    MaxPhysPressure = CurPhysPressure;
+  }
 
   GCNRegPressure getMaxPressureAndReset() {
-    GCNRegPressure RP = MaxVirtPressure;
+    GCNRegPressure RP = getMaxPressure();
     resetMaxPressure();
     return RP;
   }
@@ -410,7 +494,8 @@ class GCNDownwardRPTracker : public GCNRPTracker {
   MachineBasicBlock::const_iterator MBBEnd;
 
 public:
-  GCNDownwardRPTracker(const LiveIntervals &LIS_) : GCNRPTracker(LIS_) {}
+  GCNDownwardRPTracker(const LiveIntervals &LIS, const MachineRegisterInfo &MRI)
+      : GCNRPTracker(LIS, MRI) {}
 
   using GCNRPTracker::reset;
 
@@ -418,8 +503,9 @@ public:
 
   /// \p return MaxPressure and clear it.
   GCNRegPressure moveMaxPressure() {
-    auto Res = MaxVirtPressure;
+    auto Res = getMaxPressure();
     MaxVirtPressure.clear();
+    MaxPhysPressure.clear();
     return Res;
   }
 
