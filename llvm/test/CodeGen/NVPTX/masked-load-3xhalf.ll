@@ -47,29 +47,30 @@ define void @halfx3_extend_chain(ptr align 16 captures(none) %rd0) {
 define void @halfx3_no_align(ptr align 4 captures(none) %rd0) {
 ; CHECK-LABEL: halfx3_no_align(
 ; CHECK:       {
-; CHECK-NEXT:    .reg .b16 %rs<7>;
+; CHECK-NEXT:    .reg .b16 %rs<6>;
 ; CHECK-NEXT:    .reg .b32 %r<10>;
 ; CHECK-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    ld.param.b64 %rd1, [halfx3_no_align_param_0];
 ; CHECK-NEXT:    ld.b16 %rs1, [%rd1+4];
-; CHECK-NEXT:    mov.b32 %r1, {%rs1, %rs2};
-; CHECK-NEXT:    ld.b32 %r2, [%rd1];
-; CHECK-NEXT:    mov.b32 %r3, 0;
-; CHECK-NEXT:    max.f16x2 %r4, %r1, %r3;
-; CHECK-NEXT:    max.f16x2 %r5, %r2, %r3;
+; CHECK-NEXT:    mov.b32 %r1, 0;
+; CHECK-NEXT:    mov.b32 {_, %rs2}, %r1;
+; CHECK-NEXT:    mov.b32 %r2, {%rs1, %rs2};
+; CHECK-NEXT:    ld.b32 %r3, [%rd1];
+; CHECK-NEXT:    max.f16x2 %r4, %r2, %r1;
+; CHECK-NEXT:    max.f16x2 %r5, %r3, %r1;
 ; CHECK-NEXT:    st.b32 [%rd1], %r5;
 ; CHECK-NEXT:    mov.b32 {%rs3, _}, %r4;
 ; CHECK-NEXT:    st.b16 [%rd1+4], %rs3;
 ; CHECK-NEXT:    ld.b16 %rs4, [%rd1+10];
-; CHECK-NEXT:    mov.b32 %r6, {%rs4, %rs5};
+; CHECK-NEXT:    mov.b32 %r6, {%rs4, %rs2};
 ; CHECK-NEXT:    ld.b32 %r7, [%rd1+6];
-; CHECK-NEXT:    max.f16x2 %r8, %r6, %r3;
-; CHECK-NEXT:    max.f16x2 %r9, %r7, %r3;
+; CHECK-NEXT:    max.f16x2 %r8, %r6, %r1;
+; CHECK-NEXT:    max.f16x2 %r9, %r7, %r1;
 ; CHECK-NEXT:    st.b32 [%rd1+6], %r9;
-; CHECK-NEXT:    mov.b32 {%rs6, _}, %r8;
-; CHECK-NEXT:    st.b16 [%rd1+10], %rs6;
+; CHECK-NEXT:    mov.b32 {%rs5, _}, %r8;
+; CHECK-NEXT:    st.b16 [%rd1+10], %rs5;
 ; CHECK-NEXT:    ret;
   %load1 = load <3 x half>, ptr %rd0, align 4
   %p1 = fcmp ogt <3 x half> %load1, zeroinitializer

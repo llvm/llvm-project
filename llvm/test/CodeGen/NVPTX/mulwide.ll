@@ -153,10 +153,10 @@ define i64 @mulwide32(i32 %a, i32 %b) {
 ; NOOPT-NEXT:    .reg .b64 %rd<4>;
 ; NOOPT-EMPTY:
 ; NOOPT-NEXT:  // %bb.0:
-; NOOPT-NEXT:    ld.param.b32 %r2, [mulwide32_param_1];
-; NOOPT-NEXT:    ld.param.b32 %r1, [mulwide32_param_0];
-; NOOPT-NEXT:    cvt.s64.s32 %rd1, %r1;
-; NOOPT-NEXT:    cvt.s64.s32 %rd2, %r2;
+; NOOPT-NEXT:    ld.param.s32 %rd1, [mulwide32_param_0];
+; NOOPT-NEXT:    cvt.u32.u64 %r1, %rd1;
+; NOOPT-NEXT:    ld.param.s32 %rd2, [mulwide32_param_1];
+; NOOPT-NEXT:    cvt.u32.u64 %r2, %rd2;
 ; NOOPT-NEXT:    mul.lo.s64 %rd3, %rd1, %rd2;
 ; NOOPT-NEXT:    st.param.b64 [func_retval0], %rd3;
 ; NOOPT-NEXT:    ret;
@@ -185,10 +185,10 @@ define i64 @mulwideu32(i32 %a, i32 %b) {
 ; NOOPT-NEXT:    .reg .b64 %rd<4>;
 ; NOOPT-EMPTY:
 ; NOOPT-NEXT:  // %bb.0:
-; NOOPT-NEXT:    ld.param.b32 %r2, [mulwideu32_param_1];
-; NOOPT-NEXT:    ld.param.b32 %r1, [mulwideu32_param_0];
-; NOOPT-NEXT:    cvt.u64.u32 %rd1, %r1;
-; NOOPT-NEXT:    cvt.u64.u32 %rd2, %r2;
+; NOOPT-NEXT:    ld.param.b32 %rd1, [mulwideu32_param_0];
+; NOOPT-NEXT:    cvt.u32.u64 %r1, %rd1;
+; NOOPT-NEXT:    ld.param.b32 %rd2, [mulwideu32_param_1];
+; NOOPT-NEXT:    cvt.u32.u64 %r2, %rd2;
 ; NOOPT-NEXT:    mul.lo.s64 %rd3, %rd1, %rd2;
 ; NOOPT-NEXT:    st.param.b64 [func_retval0], %rd3;
 ; NOOPT-NEXT:    ret;
@@ -300,8 +300,8 @@ define i64 @shl30(i32 %a) {
 ; NOOPT-NEXT:    .reg .b64 %rd<3>;
 ; NOOPT-EMPTY:
 ; NOOPT-NEXT:  // %bb.0:
-; NOOPT-NEXT:    ld.param.b32 %r1, [shl30_param_0];
-; NOOPT-NEXT:    cvt.s64.s32 %rd1, %r1;
+; NOOPT-NEXT:    ld.param.s32 %rd1, [shl30_param_0];
+; NOOPT-NEXT:    cvt.u32.u64 %r1, %rd1;
 ; NOOPT-NEXT:    shl.b64 %rd2, %rd1, 30;
 ; NOOPT-NEXT:    st.param.b64 [func_retval0], %rd2;
 ; NOOPT-NEXT:    ret;
@@ -327,8 +327,8 @@ define i64 @shl31(i32 %a) {
 ; NOOPT-NEXT:    .reg .b64 %rd<3>;
 ; NOOPT-EMPTY:
 ; NOOPT-NEXT:  // %bb.0:
-; NOOPT-NEXT:    ld.param.b32 %r1, [shl31_param_0];
-; NOOPT-NEXT:    cvt.s64.s32 %rd1, %r1;
+; NOOPT-NEXT:    ld.param.s32 %rd1, [shl31_param_0];
+; NOOPT-NEXT:    cvt.u32.u64 %r1, %rd1;
 ; NOOPT-NEXT:    shl.b64 %rd2, %rd1, 31;
 ; NOOPT-NEXT:    st.param.b64 [func_retval0], %rd2;
 ; NOOPT-NEXT:    ret;
