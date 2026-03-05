@@ -1442,7 +1442,7 @@ std::error_code readlink(const Twine &path, SmallVectorImpl<char> &dest) {
   // small. 32 is the somewhat arbitrary lower bound, but if we're going to have
   // to allocate anyway it should have a reasonable chance of holding the
   // result. This is to handle cases of `SmallString<0>` as buffers.
-  size_t BufSize = std::max(32, dest.capacity());
+  size_t BufSize = std::max(std::size_t{32}, dest.capacity());
   for (;;) {
     dest.resize_for_overwrite(BufSize);
     ssize_t Len = ::readlink(P.begin(), dest.data(), dest.size());
