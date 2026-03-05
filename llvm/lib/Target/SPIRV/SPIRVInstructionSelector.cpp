@@ -3090,10 +3090,9 @@ bool SPIRVInstructionSelector::selectBitreverse(Register ResVReg,
       IntType = GR.getOrCreateSPIRVVectorType(ResType, N, I, TII);
 
     OpReg = MRI->createVirtualRegister(GR.getRegClass(ResType));
-    unsigned ExtendOpcode =
-        sampledTypeIsSignedInteger(GR.getTypeForSPIRVType(ResType))
-            ? SPIRV::OpSConvert
-            : SPIRV::OpUConvert;
+    unsigned ExtendOpcode = GR.isScalarOrVectorSigned(ResType)
+                                ? SPIRV::OpSConvert
+                                : SPIRV::OpUConvert;
     if (!selectOpWithSrcs(OpReg, IntType, I, {I.getOperand(1).getReg()},
                           ExtendOpcode))
       return false;
