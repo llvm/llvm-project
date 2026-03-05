@@ -506,9 +506,13 @@ define void @s_minimum_f64(double inreg %src0, double inreg %src1) {
 ; GFX12-NEXT:    s_wait_bvhcnt 0x0
 ; GFX12-NEXT:    s_wait_kmcnt 0x0
 ; GFX12-NEXT:    v_minimum_f64 v[0:1], s[0:1], s[2:3]
+; GFX12-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_2)
+; GFX12-NEXT:    v_readfirstlane_b32 s0, v0
+; GFX12-NEXT:    v_readfirstlane_b32 s1, v1
 ; GFX12-NEXT:    ;;#ASMSTART
-; GFX12-NEXT:    ; use v[0:1]
+; GFX12-NEXT:    ; use s[0:1]
 ; GFX12-NEXT:    ;;#ASMEND
+; GFX12-NEXT:    s_wait_alu depctr_va_sdst(0)
 ; GFX12-NEXT:    s_setpc_b64 s[30:31]
   %op = call double @llvm.minimum.f64(double %src0, double %src1)
   call void asm sideeffect "; use $0", "s"(double %op)
