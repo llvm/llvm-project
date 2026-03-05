@@ -125,6 +125,9 @@ public:
   };
   virtual VAArgSlotInfo slotInfo(const DataLayout &DL, Type *Parameter) = 0;
 
+  // Per-target overrides of special symbols.
+  virtual bool ignoreFunction(Function *F) { return false; }
+
   // Targets implemented so far all have the same trivial lowering for these
   bool vaEndIsNop() { return true; }
   bool vaCopyIsMemcpy() { return true; }
@@ -240,6 +243,9 @@ public:
   bool expansionApplicableToFunction(Module &M, Function *F) {
     if (F->isIntrinsic() || !F->isVarArg() ||
         F->hasFnAttribute(Attribute::Naked))
+      return false;
+
+    if (ABI->ignoreFunction(F))
       return false;
 
     if (!isValidCallingConv(F))
@@ -627,6 +633,9 @@ bool ExpandVariadics::expandCall(Module &M, IRBuilder<> &Builder, CallBase *CB,
   bool Changed = false;
   const DataLayout &DL = M.getDataLayout();
 
+  if (ABI->ignoreFunction(CB->getCalledFunction()))
+    return Changed;
+
   if (!expansionApplicableToFunctionCall(CB)) {
     if (rewriteABI())
       report_fatal_error("Cannot lower callbase instruction");
@@ -982,6 +991,31 @@ struct SPIRV final : public VariadicABIInfo {
     // promoting types to their appropriate size and alignment.
     Align A = DL.getABITypeAlign(Parameter);
     return {A, false};
+  }
+
+  // The SPIR-V backend has special handling for SPIR-V mangled printf
+  // functions.
+  // printf can be mangled in two ways with itanium mangling,
+  // either as a normal printf or with an additional __spirv_ocl_ prefix.
+  // For example:
+  //   _Z6printfPU3AS2Kcz
+  //   _Z18__spirv_ocl_printfPU3AS2Kcz
+  // Ignore those functions if target is SPIR-V
+  bool ignoreFunction(Function *F) override {
+    Module *M = F->getParent();
+    const Triple &T = M->getTargetTriple();
+    if (!T.isSPIRV())
+      return false;
+
+    size_t len = F->getName().str().length();
+    if (len == 18) {
+      return F->getName().starts_with("_Z6printfPU3AS") &&
+             F->getName().ends_with("Kcz");
+    } else if (len == 31) {
+      return F->getName().starts_with("_Z18__spirv_ocl_printfPU3AS") &&
+             F->getName().ends_with("Kcz");
+    }
+    return false;
   }
 
   // We will likely see va intrinsics in the generic addrspace (4).
