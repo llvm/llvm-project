@@ -2425,7 +2425,7 @@ void CIRGenModule::setCIRFunctionAttributesForDefinition(
 cir::FuncOp CIRGenModule::getOrCreateCIRFunction(
     StringRef mangledName, mlir::Type funcType, GlobalDecl gd, bool forVTable,
     bool dontDefer, bool isThunk, ForDefinition_t isForDefinition,
-    mlir::ArrayAttr extraAttrs) {
+    mlir::NamedAttrList extraAttrs) {
   const Decl *d = gd.getDecl();
 
   if (const auto *fd = cast_or_null<FunctionDecl>(d)) {
@@ -2518,6 +2518,10 @@ cir::FuncOp CIRGenModule::getOrCreateCIRFunction(
 
   if (d)
     setFunctionAttributes(gd, funcOp, /*isIncompleteFunction=*/false, isThunk);
+  if (!extraAttrs.empty()) {
+    extraAttrs.append(funcOp->getAttrs());
+    funcOp->setAttrs(extraAttrs);
+  }
 
   // 'dontDefer' actually means don't move this to the deferredDeclsToEmit list.
   if (dontDefer) {
@@ -2702,14 +2706,15 @@ static void setWindowsItaniumDLLImport(CIRGenModule &cgm, bool isLocal,
 }
 
 cir::FuncOp CIRGenModule::createRuntimeFunction(cir::FuncType ty,
-                                                StringRef name, mlir::ArrayAttr,
+                                                StringRef name,
+                                                mlir::NamedAttrList extraAttrs,
                                                 bool isLocal,
                                                 bool assumeConvergent) {
   if (assumeConvergent)
     errorNYI("createRuntimeFunction: assumeConvergent");
 
   cir::FuncOp entry = getOrCreateCIRFunction(name, ty, GlobalDecl(),
-                                             /*forVtable=*/false);
+                                             /*forVtable=*/false, extraAttrs);
 
   if (entry) {
     // TODO(cir): set the attributes of the function.

@@ -1464,6 +1464,8 @@ public:
                                              cir::CaseOpKind kind,
                                              bool buildingTopLevelCase);
 
+  LValue emitCXXTypeidLValue(const CXXTypeidExpr *e);
+
   mlir::LogicalResult emitCaseStmt(const clang::CaseStmt &s,
                                    mlir::Type condType,
                                    bool buildingTopLevelCase);
@@ -1601,6 +1603,7 @@ public:
 
   mlir::LogicalResult emitDoStmt(const clang::DoStmt &s);
 
+  mlir::Value emitCXXTypeidExpr(const CXXTypeidExpr *e);
   mlir::Value emitDynamicCast(Address thisAddr, const CXXDynamicCastExpr *dce);
 
   /// Emit an expression as an initializer for an object (variable, field, etc.)
@@ -1638,7 +1641,8 @@ public:
   void emitReturnOfRValue(mlir::Location loc, RValue rv, QualType ty);
 
   mlir::Value emitRuntimeCall(mlir::Location loc, cir::FuncOp callee,
-                              llvm::ArrayRef<mlir::Value> args = {});
+                              llvm::ArrayRef<mlir::Value> args = {},
+                              mlir::NamedAttrList attrs = {});
 
   void emitInvariantStart(CharUnits size, mlir::Value addr, mlir::Location loc);
 

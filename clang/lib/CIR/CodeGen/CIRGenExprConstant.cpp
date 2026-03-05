@@ -1412,10 +1412,9 @@ ConstantLValueEmitter::tryEmitBase(const APValue::LValueBase &base) {
   }
 
   // Handle typeid(T).
-  if (base.dyn_cast<TypeInfoLValue>()) {
-    cgm.errorNYI("ConstantLValueEmitter: typeid");
-    return {};
-  }
+  if (TypeInfoLValue typeInfo = base.dyn_cast<TypeInfoLValue>())
+    return cast<cir::GlobalViewAttr>(cgm.getAddrOfRTTIDescriptor(
+        cgm.getBuilder().getUnknownLoc(), QualType(typeInfo.getType(), 0)));
 
   // Otherwise, it must be an expression.
   return Visit(base.get<const Expr *>());
@@ -1479,8 +1478,12 @@ ConstantLValue ConstantLValueEmitter::VisitBlockExpr(const BlockExpr *e) {
 
 ConstantLValue
 ConstantLValueEmitter::VisitCXXTypeidExpr(const CXXTypeidExpr *e) {
-  cgm.errorNYI(e->getSourceRange(), "ConstantLValueEmitter: cxx typeid expr");
-  return {};
+  if (e->isTypeOperand())
+    return cast<cir::GlobalViewAttr>(
+        cgm.getAddrOfRTTIDescriptor(cgm.getLoc(e->getSourceRange()),
+                                    e->getTypeOperand(cgm.getASTContext())));
+  return cast<cir::GlobalViewAttr>(cgm.getAddrOfRTTIDescriptor(
+      cgm.getLoc(e->getSourceRange()), e->getExprOperand()->getType()));
 }
 
 ConstantLValue ConstantLValueEmitter::VisitMaterializeTemporaryExpr(
