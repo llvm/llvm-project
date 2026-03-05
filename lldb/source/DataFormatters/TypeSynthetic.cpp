@@ -294,7 +294,9 @@ lldb::ChildCacheState BytecodeSyntheticChildren::FrontEnd::Update() {
   if (data.size() > 0)
     m_self = std::move(data);
 
-  return ChildCacheState::eRefetch;
+  // At this time it is assumed that synthetic bytecode formatters can always
+  // reuse the work performed in `update`.
+  return ChildCacheState::eReuse;
 }
 
 llvm::Expected<uint32_t>
