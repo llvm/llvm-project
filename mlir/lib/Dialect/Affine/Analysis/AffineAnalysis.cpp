@@ -152,6 +152,7 @@ bool mlir::affine::isLoopMemoryParallel(AffineForOp forOp) {
         loadAndStoreOps.push_back(op);
     } else if (!isa<AffineForOp, AffineYieldOp, AffineIfOp>(op) &&
                !hasSingleEffect<MemoryEffects::Allocate>(op) &&
+               !hasSingleEffect<MemoryEffects::Free>(op) &&
                !isMemoryEffectFree(op)) {
       // Alloc-like ops inside `forOp` are fine (they don't impact parallelism)
       // as long as they don't escape the loop (which has been checked above).
