@@ -1,4 +1,4 @@
-//===-- Implementation of daddf128 function -------------------------------===//
+//===-- Shared daddf128 function --------------------------------*- C++ -*-===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -6,13 +6,23 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "src/math/daddf128.h"
+#ifndef LLVM_LIBC_SHARED_MATH_DADDF128_H
+#define LLVM_LIBC_SHARED_MATH_DADDF128_H
+
+#include "include/llvm-libc-types/float128.h"
+
+#ifdef LIBC_TYPES_HAS_FLOAT128
+
 #include "src/__support/math/daddf128.h"
 
 namespace LIBC_NAMESPACE_DECL {
+namespace shared {
 
-LLVM_LIBC_FUNCTION(double, daddf128, (float128 x, float128 y)) {
-  return math::daddf128(x, y);
-}
+using math::daddf128;
 
+} // namespace shared
 } // namespace LIBC_NAMESPACE_DECL
+
+#endif // LIBC_TYPES_HAS_FLOAT128
+
+#endif // LLVM_LIBC_SHARED_MATH_DADDF128_H
