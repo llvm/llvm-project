@@ -619,13 +619,13 @@ char *__kmp_str_token(
   return token;
 } // __kmp_str_token
 
-int __kmp_basic_str_to_int(char const *str) {
+int __kmp_basic_str_to_int(char const *str, int maxlen) {
   int result;
   char const *t;
 
   result = 0;
 
-  for (t = str; *t != '\0'; ++t) {
+  for (t = str; *t != '\0' && maxlen > 0; ++t, --maxlen) {
     if (*t < '0' || *t > '9')
       break;
     // Cap parsing to create largest integer
