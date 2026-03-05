@@ -127,7 +127,6 @@ class Variadic<Type type> : TypeConstraint<type.predicate,
                                            "variadic of " # type.summary,
                                            type.cppType> {
   Type baseType = type;
-  int minSize = 0;
 }
 
 // A nested variadic type constraint. It expands to zero or more variadic ranges
