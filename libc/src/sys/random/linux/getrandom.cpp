@@ -8,7 +8,7 @@
 
 #include "src/sys/random/getrandom.h"
 
-#include "src/__support/OSUtil/linux/getrandom.h"
+#include "src/__support/OSUtil/linux/syscall_wrappers/getrandom.h"
 #include "src/__support/OSUtil/syscall.h" // For internal syscall function.
 #include "src/__support/common.h"
 #include "src/__support/error_or.h"

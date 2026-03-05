@@ -7,6 +7,6 @@ add_entrypoint_object(
   DEPENDS
     libc.include.sys_random
     libc.include.sys_syscall
-    libc.src.__support.OSUtil.osutil
+    libc.src.__support.OSUtil.linux.syscall_wrappers.getrandom
     libc.src.errno.errno
 )
