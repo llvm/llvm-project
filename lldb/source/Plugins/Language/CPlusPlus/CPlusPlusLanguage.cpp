@@ -178,50 +178,6 @@ static bool ReverseFindMatchingChars(const llvm::StringRef &s,
   return false;
 }
 
-static bool IsTrivialBasename(const llvm::StringRef &basename) {
-  // Check that the basename matches with the following regular expression
-  // "^~?([A-Za-z_][A-Za-z_0-9]*)$" We are using a hand written implementation
-  // because it is significantly more efficient then using the general purpose
-  // regular expression library.
-  size_t idx = 0;
-  if (basename.starts_with('~'))
-    idx = 1;
-
-  if (basename.size() <= idx)
-    return false; // Empty string or "~"
-
-  if (!std::isalpha(static_cast<unsigned char>(basename[idx])) &&
-      basename[idx] != '_')
-    return false; // First character (after removing the possible '~'') isn't in
-                  // [A-Za-z_]
-
-  // Read all characters matching [A-Za-z_0-9]
-  ++idx;
-  while (idx < basename.size()) {
-    if (!std::isalnum(static_cast<unsigned char>(basename[idx])) &&
-        basename[idx] != '_')
-      break;
-    ++idx;
-  }
-
-  // We processed all characters. It is a vaild basename.
-  return idx == basename.size();
-}
-
-/// A context is trivial if an only if it matches this pattern.
-/// "^\s*([A-Za-z_:]*)\s*$". for example function `foo::bar::func()`
-/// has a trivial context but. but `foo<int>::bar::func()` doesn't.
-static bool IsTrivialContext(llvm::StringRef context) {
-  // remove trailing or leading whitespace.
-  context = context.trim();
-
-  const auto iter = context.find_if_not([](char current) {
-    return std::isalnum(static_cast<unsigned char>(current)) ||
-           current == '_' || current == ':';
-  });
-  return iter == llvm::StringRef::npos;
-}
-
 /// Writes out the function name in 'full_name' to 'out_stream'
 /// but replaces each argument type with the variable name
 /// and the corresponding pretty-printed value
@@ -468,65 +424,20 @@ static bool PrintDemangledArgumentList(Stream &s, const SymbolContext &sc) {
   return true;
 }
 
-bool CPlusPlusLanguage::CxxMethodName::TrySimplifiedParse() {
-  // This method tries to parse simple method definitions which are presumably
-  // most comman in user programs. Definitions that can be parsed by this
-  // function don't have return types and templates in the name.
-  // A::B::C::fun(std::vector<T> &) const
-  size_t arg_start, arg_end;
-  llvm::StringRef full(m_full.GetCString());
-  llvm::StringRef parens("()", 2);
-  if (ReverseFindMatchingChars(full, parens, arg_start, arg_end)) {
-    m_arguments = full.substr(arg_start, arg_end - arg_start + 1);
-    if (arg_end + 1 < full.size())
-      m_qualifiers = full.substr(arg_end + 1).ltrim();
-
-    if (arg_start == 0)
-      return false;
-    size_t basename_end = arg_start;
-    size_t context_start = 0;
-    size_t context_end = full.rfind(':', basename_end);
-    if (context_end == llvm::StringRef::npos)
-      m_basename = full.substr(0, basename_end);
-    else {
-      if (context_start < context_end)
-        m_context = full.substr(context_start, context_end - 1 - context_start);
-      const size_t basename_begin = context_end + 1;
-      m_basename = full.substr(basename_begin, basename_end - basename_begin);
-    }
-
-    if (IsTrivialBasename(m_basename) && IsTrivialContext(m_context)) {
-      return true;
-    }
-    // The C++ basename doesn't match our regular expressions so this can't
-    // be a valid C++ method, clear everything out and indicate an error
-    m_context = llvm::StringRef();
-    m_basename = llvm::StringRef();
-    m_arguments = llvm::StringRef();
-    m_qualifiers = llvm::StringRef();
-    m_return_type = llvm::StringRef();
-    return false;
-  }
-  return false;
-}
-
 void CPlusPlusLanguage::CxxMethodName::Parse() {
   if (!m_parsed && m_full) {
-    if (TrySimplifiedParse()) {
+    CPlusPlusNameParser parser(m_full.GetStringRef());
+    if (auto function = parser.ParseAsFunctionDefinition()) {
+      m_basename = function->name.basename;
+      m_context = function->name.context;
+      m_arguments = function->arguments;
+      m_qualifiers = function->qualifiers;
+      m_return_type = function->return_type;
       m_parse_error = false;
     } else {
-      CPlusPlusNameParser parser(m_full.GetStringRef());
-      if (auto function = parser.ParseAsFunctionDefinition()) {
-        m_basename = function->name.basename;
-        m_context = function->name.context;
-        m_arguments = function->arguments;
-        m_qualifiers = function->qualifiers;
-        m_return_type = function->return_type;
-        m_parse_error = false;
-      } else {
-        m_parse_error = true;
-      }
+      m_parse_error = true;
     }
+
     if (m_context.empty()) {
       m_scope_qualified = std::string(m_basename);
     } else {
