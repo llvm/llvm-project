@@ -243,6 +243,25 @@ opt<std::string> FallbackStyle{
     init(clang::format::DefaultFallbackStyle),
 };
 
+opt<std::string> FormatStyle{
+    "style",
+    cat(Features),
+    desc("Set coding style. <string> can be:\n"
+         "1. A preset: LLVM, GNU, Google, Chromium, Microsoft,\n"
+         "   Mozilla, WebKit.\n"
+         "2. 'file' to load style configuration from a\n"
+         "   .clang-format file in one of the parent directories\n"
+         "   of the source file.\n"
+         "   If no .clang-format file is found, falls back to\n"
+         "   --fallback-style.\n"
+         "   --style=file is the default.\n"
+         "3. 'file:<format_file_path>' to explicitly specify\n"
+         "   the configuration file.\n"
+         "4. \"{key: value, ...}\" to set specific parameters, e.g.:\n"
+         "   --style=\"{BasedOnStyle: llvm, IndentWidth: 8}"),
+    init(clang::format::DefaultFormatStyle),
+};
+
 opt<std::string> EnableFunctionArgSnippets{
     "function-arg-placeholders",
     cat(Features),
@@ -827,6 +846,8 @@ clangd accepts flags on the commandline, and in the CLANGD_FLAGS environment var
   }
   if (FallbackStyle.getNumOccurrences())
     clang::format::DefaultFallbackStyle = FallbackStyle.c_str();
+  if (FormatStyle.getNumOccurrences())
+    clang::format::DefaultFormatStyle = FormatStyle.c_str();
 
   // Validate command line arguments.
   std::optional<llvm::raw_fd_ostream> InputMirrorStream;
