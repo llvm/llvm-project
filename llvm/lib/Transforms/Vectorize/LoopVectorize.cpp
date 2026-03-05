@@ -7490,9 +7490,8 @@ DenseMap<const SCEV *, Value *> LoopVectorizationPlanner::executePlan(
   // compactness.
   attachRuntimeChecks(BestVPlan, ILV.RTChecks, HasBranchWeights);
 
-  VPValue *ClampedVF = nullptr;
   if (CM.maskPartialAliasing()) {
-    ClampedVF = materializeAliasMask(
+    materializeAliasMask(
         BestVPlan, *CM.Legal->getRuntimePointerChecking()->getDiffChecks(),
         HasBranchWeights);
     ++LoopsPartialAliasVectorized;
@@ -7536,7 +7535,6 @@ DenseMap<const SCEV *, Value *> LoopVectorizationPlanner::executePlan(
       CM.requiresScalarEpilogue(BestVF.isVector()));
   // Do a late fix-up of the VF to replace any additional users of VF since the
   // alias mask was materialized.
-  VPlanTransforms::fixupVFUsersForClampedVF(BestVPlan, ClampedVF);
   VPlanTransforms::materializeFactors(BestVPlan, VectorPH, BestVF);
   VPlanTransforms::cse(BestVPlan);
   VPlanTransforms::simplifyRecipes(BestVPlan);
@@ -8749,10 +8747,12 @@ void LoopVectorizationPlanner::attachRuntimeChecks(
   }
 }
 
-VPValue *LoopVectorizationPlanner::materializeAliasMask(
+void LoopVectorizationPlanner::materializeAliasMask(
     VPlan &Plan, ArrayRef<PointerDiffInfo> DiffChecks, bool HasBranchWeights) {
+  assert(CM.foldTailByMasking() && "Expected tail folding to be enabled");
   VPBasicBlock *ClampedVFCheck =
       Plan.createVPBasicBlock("vector.clamped.vf.check");
+
   VPValue *ClampedVF = VPlanTransforms::materializeAliasMask(
       Plan, ClampedVFCheck,
       *CM.Legal->getRuntimePointerChecking()->getDiffChecks());
@@ -8777,8 +8777,17 @@ VPValue *LoopVectorizationPlanner::materializeAliasMask(
   VPValue *Cond = Builder.createOr(IsScalar, TripCountCheck, DL);
   VPlanTransforms::attachCheckBlock(Plan, Cond, ClampedVFCheck,
                                     HasBranchWeights);
-  VPlanTransforms::fixupVFUsersForClampedVF(Plan, ClampedVF);
-  return ClampedVF;
+
+  // Materialize the trip count early as this will add a use of (VFxUF) that
+  // needs to be replaced with the ClampedVF.
+  VPlanTransforms::materializeVectorTripCount(Plan, Plan.getVectorPreheader(),
+                                              /*TailByMasking=*/true,
+                                              /*RequiresScalarEpilogue=*/false);
+
+  assert(Plan.getConcreteUF() == 1 &&
+         "Clamped VF not supported with interleaving");
+  Plan.getVF().replaceAllUsesWith(ClampedVF);
+  Plan.getVFxUF().replaceAllUsesWith(ClampedVF);
 }
 
 void LoopVectorizationPlanner::addMinimumIterationCheck(

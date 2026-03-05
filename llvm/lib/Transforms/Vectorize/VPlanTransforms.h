@@ -429,9 +429,6 @@ struct VPlanTransforms {
   static VPValue *materializeAliasMask(VPlan &Plan, VPBasicBlock *AliasCheck,
                                        ArrayRef<PointerDiffInfo> DiffChecks);
 
-  /// Replaces all users of the VF and VFxUF with the runtime clamped VF.
-  static void fixupVFUsersForClampedVF(VPlan &Plan, VPValue *ClampedVF);
-
   /// Expand VPExpandSCEVRecipes in \p Plan's entry block. Each
   /// VPExpandSCEVRecipe is replaced with a live-in wrapping the expanded IR
   /// value. A mapping from SCEV expressions to their expanded IR value is

@@ -24,11 +24,11 @@ define void @alias_mask(ptr noalias %a, ptr %b, ptr %c, i64 %n) {
 ; FINAL-NEXT:  Successor(s): ir-bb<scalar.ph>, vector.ph
 ; FINAL-EMPTY:
 ; FINAL-NEXT:  vector.ph:
+; FINAL-NEXT:    EMIT vp<%trip.count.minus.1> = sub ir<%n>, ir<1>
 ; FINAL-NEXT:    EMIT vp<[[VP9:%[0-9]+]]> = sub vp<[[VP5]]>, ir<1>
 ; FINAL-NEXT:    EMIT vp<%n.rnd.up> = add ir<%n>, vp<[[VP9]]>
 ; FINAL-NEXT:    EMIT vp<%n.mod.vf> = urem vp<%n.rnd.up>, vp<[[VP5]]>
 ; FINAL-NEXT:    EMIT vp<%n.vec> = sub vp<%n.rnd.up>, vp<%n.mod.vf>
-; FINAL-NEXT:    EMIT vp<%trip.count.minus.1> = sub ir<%n>, ir<1>
 ; FINAL-NEXT:    EMIT vp<[[VP10:%[0-9]+]]> = broadcast vp<%trip.count.minus.1>
 ; FINAL-NEXT:  Successor(s): vector.body
 ; FINAL-EMPTY:

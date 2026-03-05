@@ -5149,17 +5149,6 @@ VPlanTransforms::materializeAliasMask(VPlan &Plan, VPBasicBlock *AliasCheck,
   return ClampedVF;
 }
 
-void VPlanTransforms::fixupVFUsersForClampedVF(VPlan &Plan,
-                                               VPValue *ClampedVF) {
-  if (!ClampedVF)
-    return;
-
-  assert(Plan.getConcreteUF() == 1 &&
-         "Clamped VF not support with interleaving");
-  Plan.getVF().replaceAllUsesWith(ClampedVF);
-  Plan.getVFxUF().replaceAllUsesWith(ClampedVF);
-}
-
 DenseMap<const SCEV *, Value *>
 VPlanTransforms::expandSCEVs(VPlan &Plan, ScalarEvolution &SE) {
   SCEVExpander Expander(SE, "induction", /*PreserveLCSSA=*/false);
