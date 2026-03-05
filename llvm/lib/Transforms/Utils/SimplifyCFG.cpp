@@ -8019,11 +8019,12 @@ struct EqualBBWrapper {
 
     // Avoid blocks that are "address-taken" (blockaddress) or have unusual
     // uses.
-    if (BB->hasAddressTaken() || BB->isLandingPad())
+    if (BB->hasAddressTaken() || BB->isEHPad())
       return false;
 
     // TODO: relax this condition to merge equal blocks with >1 instructions?
-    if (/* I.e., O(n) calc: size() != 1 */ &BB->front() != &BB->back())
+    // Here, we use a O(1) form of the O(n) comparison size() != 1
+    if (&BB->front() != &BB->back())
       return false;
 
     // The BB must have at least one predecessor.
@@ -8059,10 +8060,9 @@ template <> struct llvm::DenseMapInfo<const EqualBBWrapper *> {
     // time and passing it in EqualBBWrapper, but this slowed down the average
     // compile time without having any impact on the worst case compile time.
     BasicBlock *Succ = BI->getSuccessor(0);
-    auto PhiValsForBB = map_range(
-        Succ->phis(), [BB, &PhiPredIVs = *EBW->PhiPredIVs](PHINode &Phi) {
-          return PhiPredIVs[&Phi][BB];
-        });
+    auto PhiValsForBB = map_range(Succ->phis(), [&](PHINode &Phi) {
+      return (*EBW->PhiPredIVs)[&Phi][BB];
+    });
     return hash_combine(Succ, hash_combine_range(PhiValsForBB));
   }
   static bool isEqual(const EqualBBWrapper *LHS, const EqualBBWrapper *RHS) {
@@ -8183,7 +8183,7 @@ static bool mergeIdenticalBBs(ArrayRef<BasicBlock *> Candidates,
 
   // Try to eliminate duplicate predecessors.
   for (const auto &EBW : BBs2Merge) {
-    // Pred is a candidate for simplification. If we find a duplicate BB,
+    // EBW is a candidate for simplification. If we find a duplicate BB,
     // replace it.
     const auto &[It, Inserted] = Keep.insert(&EBW);
     if (Inserted)
@@ -8193,7 +8193,7 @@ static bool mergeIdenticalBBs(ArrayRef<BasicBlock *> Candidates,
     BasicBlock *KeepBB = (*It)->BB;
     BasicBlock *DeadBB = EBW.BB;
 
-    // Avoid merging if either is the other's predecessor in weird ways.
+    // Avoid merging a BB with itself.
     if (KeepBB == DeadBB)
       continue;
 
