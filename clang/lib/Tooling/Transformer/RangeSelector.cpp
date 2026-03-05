@@ -257,6 +257,8 @@ RangeSelector transformer::name(std::string ID) {
       if (!D->getDeclName().isIdentifier())
         return missingPropertyError(ID, "name", "identifier");
       SourceLocation L = D->getLocation();
+      // the name may be spelled in a macro
+      L = Result.SourceManager->getSpellingLoc(L);
       auto R = CharSourceRange::getTokenRange(L, L);
       // Verify that the range covers exactly the name.
       // FIXME: extend this code to support cases like `operator +` or
@@ -405,8 +407,7 @@ RangeSelector transformer::constructExprArgs(std::string ID) {
 namespace {
 // Returns the range of the elements of the initializer list. Includes all
 // source between the braces.
-CharSourceRange getElementsRange(const MatchResult &,
-                                 const InitListExpr &E) {
+CharSourceRange getElementsRange(const MatchResult &, const InitListExpr &E) {
   return CharSourceRange::getCharRange(E.getLBraceLoc().getLocWithOffset(1),
                                        E.getRBraceLoc());
 }
@@ -435,5 +436,19 @@ RangeSelector transformer::expansion(RangeSelector S) {
     if (!SRange)
       return SRange.takeError();
     return Result.SourceManager->getExpansionRange(*SRange);
+  };
+}
+
+RangeSelector transformer::spelled(RangeSelector S) {
+  return [S](const MatchResult &Result) -> Expected<CharSourceRange> {
+    Expected<CharSourceRange> SRange = S(Result);
+    if (!SRange)
+      return SRange.takeError();
+    const auto &SM = *Result.SourceManager;
+    const auto B = SRange->getBegin();
+    const auto E = SRange->getEnd();
+    return CharSourceRange(
+        SourceRange(SM.getSpellingLoc(B), SM.getSpellingLoc(E)),
+        SRange->isTokenRange());
   };
 }
