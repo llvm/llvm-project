@@ -1809,6 +1809,12 @@ void affine::vectorizeChildAffineLoops(
 /// predetermined patterns.
 void Vectorize::runOnOperation() {
   func::FuncOp f = getOperation();
+  // The vectorization pass requires a valid vector size to be specified.
+  if (vectorSizes.empty()) {
+    f.emitError("virtual-vector-size option must be specified");
+    return signalPassFailure();
+  }
+
   if (!fastestVaryingPattern.empty() &&
       fastestVaryingPattern.size() != vectorSizes.size()) {
     f.emitRemark("Fastest varying pattern specified with different size than "
