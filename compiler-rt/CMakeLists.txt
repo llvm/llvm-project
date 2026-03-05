@@ -147,12 +147,7 @@ if (COMPILER_RT_STANDALONE_BUILD)
 endif()
 
 construct_compiler_rt_default_triple()
-if ("${COMPILER_RT_DEFAULT_TARGET_TRIPLE}" MATCHES ".*hf$")
-  if (${COMPILER_RT_DEFAULT_TARGET_ARCH} MATCHES "^arm")
-    set(COMPILER_RT_DEFAULT_TARGET_ARCH "armhf")
-    CHECK_SYMBOL_EXISTS (__thumb__ "" COMPILER_RT_ARM_THUMB)
-  endif()
-endif()
+
 if ("${COMPILER_RT_DEFAULT_TARGET_TRIPLE}" MATCHES ".*android.*")
   set(ANDROID 1)
   string(REGEX MATCH "-target(=| +)[^ ]+android[a-z]*([0-9]+)" ANDROID_API_LEVEL "${CMAKE_C_FLAGS}")
