@@ -8,6 +8,11 @@
 ; CHECK: %[[#var2:]] = OpTypeFloat 64
 ; CHECK: %[[#var3:]] = OpTypeVector %[[#var1]] 4
 
+; 15360 = 0x3c00 = 1.0 (bf16)
+; CHECK: %[[#one_f16:]] = OpConstant %[[#var0]] 15360
+; CHECK: %[[#one_f32:]] = OpConstant %[[#var1]] 1
+; CHECK: %[[#one_f64:]] = OpConstant %[[#var2]] 1
+
 ; CHECK: OpFunction
 ; CHECK: %[[#]] = OpExtInst %[[#var0]] %[[#extinst_id]] fabs
 ; CHECK: OpFunctionEnd
@@ -403,3 +408,43 @@ return:
 }
 
 declare { double, double } @llvm.modf.f64(double)
+
+; CHECK: OpFunction
+; CHECK: %[[#x:]] = OpFunctionParameter %[[#]]
+; CHECK: %[[#]] = OpFMul %[[#var0]] %[[#x]] %[[#one_f16]]
+; CHECK: OpFunctionEnd
+define dso_local half @TestCanonicalizeF16(half %x) {
+entry:
+  %t = tail call half @llvm.canonicalize.f16(half %x)
+  ret half %t
+}
+
+; CHECK: OpFunction
+; CHECK: %[[#x:]] = OpFunctionParameter %[[#]]
+; CHECK: %[[#]] = OpFMul %[[#var1]] %[[#x]] %[[#one_f32]]
+; CHECK: OpFunctionEnd
+define dso_local float @TestCanonicalizeF32(float %x) {
+entry:
+  %t = tail call float @llvm.canonicalize.f32(float %x)
+  ret float %t
+}
+
+; CHECK: OpFunction
+; CHECK: %[[#x:]] = OpFunctionParameter %[[#]]
+; CHECK: %[[#]] = OpFMul %[[#var2]] %[[#x]] %[[#one_f64]]
+; CHECK: OpFunctionEnd
+define dso_local double @TestCanonicalizeF64(double %x) {
+entry:
+  %t = tail call double @llvm.canonicalize.f64(double %x)
+  ret double %t
+}
+
+; CHECK: OpFunction
+; CHECK: %[[#x:]] = OpFunctionParameter %[[#]]
+; CHECK: %[[#]] = OpVectorTimesScalar %[[#var3]] %[[#x]] %[[#one_f32]]
+; CHECK: OpFunctionEnd
+define dso_local <4 x float> @TestCanonicalizeVec(<4 x float> %x) {
+entry:
+  %t = tail call <4 x float> @llvm.canonicalize.v4f32(<4 x float> %x)
+  ret <4 x float> %t
+}
