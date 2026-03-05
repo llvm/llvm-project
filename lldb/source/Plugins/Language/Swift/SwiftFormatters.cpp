@@ -983,7 +983,7 @@ public:
         if (auto err = task_info.takeError()) {
           LLDB_LOG_ERROR(
               GetLog(LLDBLog::DataFormatters | LLDBLog::Types), std::move(err),
-              "could not get info for async task {0:x}: {1}", m_task_ptr);
+              "could not get info for async task {1:x}: {0}", m_task_ptr);
         } else {
           m_task_info = *task_info;
           for (auto child :
