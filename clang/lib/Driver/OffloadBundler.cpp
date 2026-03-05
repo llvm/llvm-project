@@ -257,7 +257,7 @@ public:
                                           sizeof(OFFLOAD_BUNDLER_MAGIC_STR));
 
       if (NextbundleStart != StringRef::npos)
-      Offset += NextbundleStart;
+        Offset += NextbundleStart;
     }
     return Error::success();
   }
@@ -1374,8 +1374,6 @@ Error OffloadBundler::ListBundleIDsInFile(
       MemoryBuffer::getFileOrSTDIN(InputFileName, /*IsText=*/true);
   if (std::error_code EC = Contents.getError())
     return createFileError(InputFileName, EC);
-
-  StringRef Buf = (**Contents).getBuffer();
 
   // There may be multiple bundles.
   while ((NextbundleStart != StringRef::npos) &&
