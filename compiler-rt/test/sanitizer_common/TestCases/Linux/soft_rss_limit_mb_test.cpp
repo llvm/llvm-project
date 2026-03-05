@@ -10,8 +10,8 @@
 // RUN: %env_tool_opts=soft_rss_limit_mb=384:quarantine_size=1:allocator_may_return_null=0:can_use_proc_maps_statm=0 not %run %t 2>&1 | FileCheck %s -check-prefix=CHECK_MAY_RETURN_0 --implicit-check-not="returned null"
 // REQUIRES: stable-runtime
 
-// Ubsan does not intercept pthread_create.
-// XFAIL: ubsan
+// Tysan and Ubsan do not intercept pthread_create.
+// XFAIL: tysan, ubsan
 
 // THUMB starts background thead only for Asan.
 // XFAIL: target=thumb{{.*}} && !asan

@@ -4,8 +4,8 @@
 // RUN: %clangxx -O0 %s -o %t
 // RUN: %env_tool_opts=allocator_may_return_null=0 not %run %t 2>&1 | FileCheck %s
 
-// UBSAN has no allocator.
-// UNSUPPORTED: ubsan
+// TYSAN and UBSAN has no allocator.
+// UNSUPPORTED: tysan, ubsan
 
 // REQUIRES: x86_64-target-arch
 
