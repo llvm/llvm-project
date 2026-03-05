@@ -13,7 +13,7 @@ if (COMPILER_RT_HAS_SANITIZER_COMMON AND
   add_subdirectory(sanitizer_common)
 endif()
 
-if (COMPILER_RT_HAS_RIPPLE)
+if(COMPILER_RT_BUILD_RIPPLE)
   add_subdirectory(ripple)
 endif()
 

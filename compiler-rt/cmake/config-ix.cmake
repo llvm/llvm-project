@@ -955,12 +955,6 @@ else()
   set(COMPILER_RT_HAS_SHADOWCALLSTACK FALSE)
 endif()
 
-if (OS_NAME MATCHES "Android|Linux")
-  set(COMPILER_RT_HAS_RIPPLE TRUE)
-else()
-  set(COMPILER_RT_HAS_RIPPLE FALSE)
-endif()
-
 # Note: Fuchsia and Windows are not currently supported by GWP-ASan. Support
 # is planned for these platforms. Darwin is also not supported due to TLS
 # calling malloc on first use.
