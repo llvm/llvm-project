@@ -6153,7 +6153,9 @@ static bool
 getScaledReductions(VPReductionPHIRecipe *RedPhiR, VPValue *ExitValue,
                     SmallVectorImpl<VPPartialReductionChain> &Chains,
                     VPCostContext &CostCtx, VFRange &Range) {
+  RecurKind RK = RedPhiR->getRecurrenceKind();
   Type *PhiType = CostCtx.Types.inferScalarType(RedPhiR);
+  TypeSize PHISize = PhiType->getPrimitiveSizeInBits();
 
   VPValue *CurrentValue = ExitValue;
   while (CurrentValue != RedPhiR) {
@@ -6174,18 +6176,16 @@ getScaledReductions(VPReductionPHIRecipe *RedPhiR, VPValue *ExitValue,
       std::swap(Op, PrevValue);
     }
 
-    TypeSize PHISize = PhiType->getPrimitiveSizeInBits();
-    Type *ExtOpType = CostCtx.Types.inferScalarType(
+    Type *ExtSrcType = CostCtx.Types.inferScalarType(
         ExtendedOp->CastRecipes[0]->getOperand(0));
-    TypeSize ASize = ExtOpType->getPrimitiveSizeInBits();
-    if (!PHISize.hasKnownScalarFactor(ASize))
+    TypeSize ExtSrcSize = ExtSrcType->getPrimitiveSizeInBits();
+    if (!PHISize.hasKnownScalarFactor(ExtSrcSize))
       return false;
 
-    RecurKind RK = cast<VPReductionPHIRecipe>(RedPhiR)->getRecurrenceKind();
     VPPartialReductionChain Chain(
         {UpdateR, ExtendedOp->CastRecipes[0], ExtendedOp->CastRecipes[1],
          ExtendedOp->BinOp,
-         static_cast<unsigned>(PHISize.getKnownScalarFactor(ASize)), RK});
+         static_cast<unsigned>(PHISize.getKnownScalarFactor(ExtSrcSize)), RK});
     if (!isValidPartialReduction(Chain, PhiType, CostCtx, Range))
       return false;
 
