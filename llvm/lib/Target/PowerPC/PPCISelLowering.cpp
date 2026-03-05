@@ -590,9 +590,16 @@ PPCTargetLowering::PPCTargetLowering(const PPCTargetMachine &TM,
   // We cannot sextinreg(i1).  Expand to shifts.
   setOperationAction(ISD::SIGN_EXTEND_INREG, MVT::i1, Expand);
 
-  // Custom handling for PowerPC ucmp instruction
-  setOperationAction(ISD::UCMP, MVT::i32, Custom);
-  setOperationAction(ISD::UCMP, MVT::i64, isPPC64 ? Custom : Expand);
+  if (Subtarget.isISA3_0()) {
+    setOperationAction(ISD::UCMP, MVT::i32, Legal);
+    setOperationAction(ISD::UCMP, MVT::i64, isPPC64 ? Legal : Expand);
+    setOperationAction(ISD::SCMP, MVT::i32, Legal);
+    setOperationAction(ISD::SCMP, MVT::i64, isPPC64 ? Legal : Expand);
+  } else {
+    // Custom handling for PowerPC ucmp instruction
+    setOperationAction(ISD::UCMP, MVT::i32, Custom);
+    setOperationAction(ISD::UCMP, MVT::i64, isPPC64 ? Custom : Expand);
+  }
 
   // NOTE: EH_SJLJ_SETJMP/_LONGJMP supported here is NOT intended to support
   // SjLj exception handling but a light-weight setjmp/longjmp replacement to
