@@ -27,6 +27,7 @@ jobs:
           set -eux
           apk add --no-cache \
             bash \
+            binutils \
             build-base \
             ca-certificates \
             clang \
@@ -93,7 +94,8 @@ jobs:
             -DLLVM_ENABLE_ZSTD=FORCE_ON \
             -DLLVM_INCLUDE_TESTS=OFF \
             -DLLVM_INCLUDE_BENCHMARKS=OFF \
-            -DLLVM_INCLUDE_EXAMPLES=OFF
+            -DLLVM_INCLUDE_EXAMPLES=OFF \
+            -DLLVM_USE_STATIC_ZSTD
 
       - name: Build
         run: |
@@ -118,39 +120,54 @@ jobs:
           file package/bin/ld.lld || true
           file package/bin/lldb || true
 
-      - name: Create debug-symbol package
-        id: package
+      - name: Prepare deliverables
+        id: deliverables
         run: |
           set -eux
           SHORT_SHA=$(git rev-parse --short HEAD)
-          DEBUG_PKG_NAME="llvm-alpine-static-relwithdebinfo-debug-${SHORT_SHA}.tar.xz"
-          tar -C package -cJf "${DEBUG_PKG_NAME}" .
-          echo "debug_pkg_name=${DEBUG_PKG_NAME}" >> "$GITHUB_OUTPUT"
-
-      - name: Create stripped package
-        run: |
-          set -eux
           cp -a package package-stripped
-          find package-stripped -type f | while read -r f; do
-            if file "$f" | grep -q 'ELF '; then
-              strip --strip-debug "$f" || true
-            fi
-          done
-          SHORT_SHA=$(git rev-parse --short HEAD)
-          STRIPPED_PKG_NAME="llvm-alpine-static-relwithdebinfo-stripped-${SHORT_SHA}.tar.xz"
-          tar -C package-stripped -cJf "${STRIPPED_PKG_NAME}" .
-          echo "stripped_pkg_name=${STRIPPED_PKG_NAME}" >> "$GITHUB_ENV"
+          mkdir -p debug_symbols
 
-      - name: Upload debug-symbol artifact
+          for bin in clang lldb ld.lld; do
+            objcopy --only-keep-debug "package/bin/${bin}" "debug_symbols/${bin}.debug"
+            strip --strip-debug "package-stripped/bin/${bin}"
+          done
+
+          cp "package-stripped/bin/clang" "clang-${SHORT_SHA}"
+          cp "package-stripped/bin/lldb" "lldb-${SHORT_SHA}"
+          cp "package-stripped/bin/ld.lld" "ld-${SHORT_SHA}"
+          chmod +x "clang-${SHORT_SHA}" "lldb-${SHORT_SHA}" "ld-${SHORT_SHA}"
+
+          tar -C debug_symbols -czf debug_symbols.tar.gz .
+
+          echo "clang_name=clang-${SHORT_SHA}" >> "$GITHUB_OUTPUT"
+          echo "lldb_name=lldb-${SHORT_SHA}" >> "$GITHUB_OUTPUT"
+          echo "ld_name=ld-${SHORT_SHA}" >> "$GITHUB_OUTPUT"
+
+      - name: Upload clang artifact
         uses: actions/upload-artifact@v4
         with:
-          name: ${{ steps.package.outputs.debug_pkg_name }}
-          path: ${{ steps.package.outputs.debug_pkg_name }}
+          name: ${{ steps.deliverables.outputs.clang_name }}
+          path: ${{ steps.deliverables.outputs.clang_name }}
           if-no-files-found: error
 
-      - name: Upload stripped artifact
+      - name: Upload lldb artifact
         uses: actions/upload-artifact@v4
         with:
-          name: ${{ env.stripped_pkg_name }}
-          path: ${{ env.stripped_pkg_name }}
+          name: ${{ steps.deliverables.outputs.lldb_name }}
+          path: ${{ steps.deliverables.outputs.lldb_name }}
+          if-no-files-found: error
+
+      - name: Upload ld artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: ${{ steps.deliverables.outputs.ld_name }}
+          path: ${{ steps.deliverables.outputs.ld_name }}
+          if-no-files-found: error
+
+      - name: Upload debug symbols artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: debug_symbols.tar.gz
+          path: debug_symbols.tar.gz
           if-no-files-found: error
