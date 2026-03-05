@@ -243,7 +243,6 @@ void arith::ExtSIOp::inferResultRanges(ArrayRef<ConstantIntRanges> argRanges,
 
 void arith::TruncIOp::inferResultRanges(ArrayRef<ConstantIntRanges> argRanges,
                                         SetIntRangeFn setResultRange) {
-  // NOTE: ISSUE HERE, BE CAREFUL
   unsigned destWidth =
       ConstantIntRanges::getStorageBitwidth(getResult().getType());
   setResultRange(getResult(), truncRange(argRanges[0], destWidth));
