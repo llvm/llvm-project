@@ -1317,6 +1317,24 @@ def or_disjoint : PatFrag<(ops node:$lhs, node:$rhs),
   }];
 }
 
+def addlike : PatFrags<(ops node:$lhs, node:$rhs),
+                       [(add node:$lhs, node:$rhs), (or node:$lhs, node:$rhs)],[{
+  if (Op.getOpcode() == ISD::ADD)
+    return true;
+  return CurDAG->isADDLike(Op);
+}]>{
+  // Add GlobalISel support
+  let GISelPredicateCode = [{
+    // For GlobalISel, match G_ADD or disjoint G_OR
+    if (MI.getOpcode() == TargetOpcode::G_ADD)
+      return true;
+    if (MI.getOpcode() == TargetOpcode::G_OR &&
+        MI.getFlag(MachineInstr::Disjoint))
+      return true;
+    return false;
+  }];
+}
+
 def xor_like : PatFrags<(ops node:$lhs, node:$rhs),
                         [(xor node:$lhs, node:$rhs),
                          (or_disjoint node:$lhs, node:$rhs)]>;

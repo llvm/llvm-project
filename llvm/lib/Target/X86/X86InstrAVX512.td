@@ -4725,7 +4725,7 @@ let Predicates = [HasVLX], AddedComplexity = 400 in {
 //===----------------------------------------------------------------------===//
 // AVX-512 - Integer arithmetic
 //
-multiclass avx512_binop_rm<bits<8> opc, string OpcodeStr, SDNode OpNode,
+multiclass avx512_binop_rm<bits<8> opc, string OpcodeStr, SDPatternOperator OpNode,
                            X86VectorVTInfo _, X86FoldableSchedWrite sched,
                            bit IsCommutable = 0> {
   defm rr : AVX512_maskable<opc, MRMSrcReg, _, (outs _.RC:$dst),
@@ -4744,7 +4744,7 @@ multiclass avx512_binop_rm<bits<8> opc, string OpcodeStr, SDNode OpNode,
                   Sched<[sched.Folded, sched.ReadAfterFold]>;
 }
 
-multiclass avx512_binop_rmb<bits<8> opc, string OpcodeStr, SDNode OpNode,
+multiclass avx512_binop_rmb<bits<8> opc, string OpcodeStr, SDPatternOperator OpNode,
                             X86VectorVTInfo _, X86FoldableSchedWrite sched,
                             bit IsCommutable = 0> :
            avx512_binop_rm<opc, OpcodeStr, OpNode, _, sched, IsCommutable> {
@@ -4759,7 +4759,7 @@ multiclass avx512_binop_rmb<bits<8> opc, string OpcodeStr, SDNode OpNode,
                   Sched<[sched.Folded, sched.ReadAfterFold]>;
 }
 
-multiclass avx512_binop_rm_vl<bits<8> opc, string OpcodeStr, SDNode OpNode,
+multiclass avx512_binop_rm_vl<bits<8> opc, string OpcodeStr, SDPatternOperator OpNode,
                               AVX512VLVectorVTInfo VTInfo,
                               X86SchedWriteWidths sched, Predicate prd,
                               bit IsCommutable = 0> {
@@ -4775,7 +4775,7 @@ multiclass avx512_binop_rm_vl<bits<8> opc, string OpcodeStr, SDNode OpNode,
   }
 }
 
-multiclass avx512_binop_rmb_vl<bits<8> opc, string OpcodeStr, SDNode OpNode,
+multiclass avx512_binop_rmb_vl<bits<8> opc, string OpcodeStr, SDPatternOperator OpNode,
                                AVX512VLVectorVTInfo VTInfo,
                                X86SchedWriteWidths sched, Predicate prd,
                                bit IsCommutable = 0> {
@@ -4791,7 +4791,7 @@ multiclass avx512_binop_rmb_vl<bits<8> opc, string OpcodeStr, SDNode OpNode,
   }
 }
 
-multiclass avx512_binop_rm_vl_q<bits<8> opc, string OpcodeStr, SDNode OpNode,
+multiclass avx512_binop_rm_vl_q<bits<8> opc, string OpcodeStr, SDPatternOperator OpNode,
                                 X86SchedWriteWidths sched, Predicate prd,
                                 bit IsCommutable = 0> {
   defm NAME : avx512_binop_rmb_vl<opc, OpcodeStr, OpNode, avx512vl_i64_info,
@@ -4799,14 +4799,14 @@ multiclass avx512_binop_rm_vl_q<bits<8> opc, string OpcodeStr, SDNode OpNode,
                                   REX_W, EVEX_CD8<64, CD8VF>;
 }
 
-multiclass avx512_binop_rm_vl_d<bits<8> opc, string OpcodeStr, SDNode OpNode,
+multiclass avx512_binop_rm_vl_d<bits<8> opc, string OpcodeStr, SDPatternOperator OpNode,
                                 X86SchedWriteWidths sched, Predicate prd,
                                 bit IsCommutable = 0> {
   defm NAME : avx512_binop_rmb_vl<opc, OpcodeStr, OpNode, avx512vl_i32_info,
                                   sched, prd, IsCommutable>, EVEX_CD8<32, CD8VF>;
 }
 
-multiclass avx512_binop_rm_vl_w<bits<8> opc, string OpcodeStr, SDNode OpNode,
+multiclass avx512_binop_rm_vl_w<bits<8> opc, string OpcodeStr, SDPatternOperator OpNode,
                                 X86SchedWriteWidths sched, Predicate prd,
                                 bit IsCommutable = 0> {
   defm NAME : avx512_binop_rm_vl<opc, OpcodeStr, OpNode, avx512vl_i16_info,
@@ -4814,7 +4814,7 @@ multiclass avx512_binop_rm_vl_w<bits<8> opc, string OpcodeStr, SDNode OpNode,
                                  WIG;
 }
 
-multiclass avx512_binop_rm_vl_b<bits<8> opc, string OpcodeStr, SDNode OpNode,
+multiclass avx512_binop_rm_vl_b<bits<8> opc, string OpcodeStr, SDPatternOperator OpNode,
                                 X86SchedWriteWidths sched, Predicate prd,
                                 bit IsCommutable = 0> {
   defm NAME : avx512_binop_rm_vl<opc, OpcodeStr, OpNode, avx512vl_i8_info,
@@ -4823,7 +4823,7 @@ multiclass avx512_binop_rm_vl_b<bits<8> opc, string OpcodeStr, SDNode OpNode,
 }
 
 multiclass avx512_binop_rm_vl_dq<bits<8> opc_d, bits<8> opc_q, string OpcodeStr,
-                                 SDNode OpNode, X86SchedWriteWidths sched,
+                                 SDPatternOperator OpNode, X86SchedWriteWidths sched,
                                  Predicate prd, bit IsCommutable = 0> {
   defm Q : avx512_binop_rm_vl_q<opc_q, OpcodeStr#"q", OpNode, sched, prd,
                                    IsCommutable>;
@@ -4833,7 +4833,7 @@ multiclass avx512_binop_rm_vl_dq<bits<8> opc_d, bits<8> opc_q, string OpcodeStr,
 }
 
 multiclass avx512_binop_rm_vl_bw<bits<8> opc_b, bits<8> opc_w, string OpcodeStr,
-                                 SDNode OpNode, X86SchedWriteWidths sched,
+                                 SDPatternOperator OpNode, X86SchedWriteWidths sched,
                                  Predicate prd, bit IsCommutable = 0> {
   defm W : avx512_binop_rm_vl_w<opc_w, OpcodeStr#"w", OpNode, sched, prd,
                                    IsCommutable>;
@@ -4844,7 +4844,7 @@ multiclass avx512_binop_rm_vl_bw<bits<8> opc_b, bits<8> opc_w, string OpcodeStr,
 
 multiclass avx512_binop_rm_vl_all<bits<8> opc_b, bits<8> opc_w,
                                   bits<8> opc_d, bits<8> opc_q,
-                                  string OpcodeStr, SDNode OpNode,
+                                  string OpcodeStr, SDPatternOperator OpNode,
                                   X86SchedWriteWidths sched,
                                   bit IsCommutable = 0> {
   defm NAME : avx512_binop_rm_vl_dq<opc_d, opc_q, OpcodeStr, OpNode,
@@ -4887,7 +4887,7 @@ multiclass avx512_binop_rm2<bits<8> opc, string OpcodeStr,
   }
 }
 
-defm VPADD : avx512_binop_rm_vl_all<0xFC, 0xFD, 0xFE, 0xD4, "vpadd", add,
+defm VPADD : avx512_binop_rm_vl_all<0xFC, 0xFD, 0xFE, 0xD4, "vpadd", addlike,
                                     SchedWriteVecALU, 1>;
 defm VPSUB : avx512_binop_rm_vl_all<0xF8, 0xF9, 0xFA, 0xFB, "vpsub", sub,
                                     SchedWriteVecALU, 0>;
