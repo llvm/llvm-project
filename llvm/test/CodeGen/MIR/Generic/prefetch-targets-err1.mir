@@ -1,0 +1,8 @@
+# RUN: not llc -run-pass=none -o - %s 2>&1 | FileCheck %s
+
+name: prefetch
+body: |
+  bb.0:
+  ; CHECK: [[@LINE+1]]:22: expected ':'
+    prefetch-targets 0, 1, 2
+...
