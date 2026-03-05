@@ -453,6 +453,13 @@ OptionalFileEntryRef HeaderSearch::getFileAndSuggestModule(
     // For rare, surprising errors (e.g. "out of file handles"), diag the EC
     // message.
     std::error_code EC = llvm::errorToErrorCode(File.takeError());
+
+    if (EC == llvm::errc::permission_denied) {
+      Diags.Report(IncludeLoc, diag::warn_cannot_access_file)
+          << FileName << EC.message();
+      return std::nullopt;
+    }
+
     if (EC != llvm::errc::no_such_file_or_directory &&
         EC != llvm::errc::invalid_argument &&
         EC != llvm::errc::is_a_directory && EC != llvm::errc::not_a_directory) {
