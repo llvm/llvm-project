@@ -275,7 +275,7 @@ bool SPIRVEmitNonSemanticDI::emitGlobalDI(MachineFunction &MF) {
                             {DebugInfoVersionReg, DwarfVersionReg,
                              DebugSourceResIdReg, SourceLanguageReg});
 
-      // Store the register for this compile unit
+      // Store the register for this compile unit.
       CompileUnitRegMap[CompileUnit] = DebugCompUnitResIdReg;
     }
 
