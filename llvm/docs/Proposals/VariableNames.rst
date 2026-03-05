@@ -2,9 +2,6 @@
 Variable Names Plan
 ===================
 
-.. contents::
-   :local:
-
 This plan is *provisional*. It is not agreed upon. It is written with the
 intention of capturing the desires and concerns of the LLVM community, and
 forming them into a plan that can be agreed upon.

@@ -2,9 +2,6 @@
 ORC Design and Implementation
 ===============================
 
-.. contents::
-   :local:
-
 Introduction
 ============
 

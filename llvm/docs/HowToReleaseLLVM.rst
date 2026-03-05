@@ -86,9 +86,6 @@ Release Process Summary
 Release Process
 ===============
 
-.. contents::
-   :local:
-
 Release Administrative Tasks
 ----------------------------
 

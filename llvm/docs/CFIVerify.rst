@@ -2,9 +2,6 @@
 Control Flow Verification Tool Design Document
 ==============================================
 
-.. contents::
-   :local:
-
 Objective
 =========
 

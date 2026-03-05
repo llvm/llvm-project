@@ -102,26 +102,40 @@ pygments_style = "friendly"
 
 # The theme to use for HTML and HTML Help pages.  See the documentation for
 # a list of builtin themes.
-html_theme = "llvm-theme"
+if not tags.has("builder-man"):
+    try:
+        import furo
+    except ModuleNotFoundError:
+        print(f"install sphinx furo theme with {sys.executable} -m pip install furo")
+    html_theme = "furo"
+else:
+    html_theme = "llvm-theme"
 
 # Theme options are theme-specific and customize the look and feel of a theme
 # further.  For a list of options available for each theme, see the
 # documentation.
-html_theme_options = {"nosidebar": False}
+if html_theme == "furo":
+    html_theme_options = {
+        "source_repository": "https://github.com/llvm/llvm-project",
+        "source_branch": "main",
+        "source_directory": "llvm/docs/",
+    }
+else:
+    html_theme_options = {"nosidebar": False}
 
 # Add any paths that contain custom themes here, relative to this directory.
-html_theme_path = ["_themes"]
+# html_theme_path = ["_themes"]
 
 # The name for this set of Sphinx documents.  If None, it defaults to
 # "<project> v<release> documentation".
-# html_title = None
+html_title = "LLVM"
 
 # A shorter title for the navigation bar.  Default is the same as html_title.
 # html_short_title = None
 
 # The name of an image file (relative to this directory) to place at the top
 # of the sidebar.
-# html_logo = None
+html_logo = "_static/LLVMWyvernSmall.png"
 
 # The name of an image file (within the static path) to use as favicon of the
 # docs.  This file should be a Windows icon file (.ico) being 16x16 or 32x32
@@ -143,13 +157,14 @@ html_last_updated_fmt = "%Y-%m-%d"
 
 # Custom sidebar templates, maps document names to template names.
 
-html_sidebars = {
-    "**": [
-        "indexsidebar.html",
-        "sourcelink.html",
-        "searchbox.html",
-    ]
-}
+if html_theme != "furo":
+    html_sidebars = {
+        "**": [
+            "indexsidebar.html",
+            "sourcelink.html",
+            "searchbox.html",
+        ]
+    }
 
 # Additional templates that should be rendered to pages, maps page names to
 # template names.

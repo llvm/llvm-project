@@ -2,9 +2,6 @@
 Remarks
 =======
 
-.. contents::
-   :local:
-
 Introduction to the LLVM remark diagnostics
 ===========================================
 

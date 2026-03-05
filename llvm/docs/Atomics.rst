@@ -2,9 +2,6 @@
 LLVM Atomic Instructions and Concurrency Guide
 ==============================================
 
-.. contents::
-   :local:
-
 Introduction
 ============
 

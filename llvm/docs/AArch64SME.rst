@@ -2,9 +2,6 @@
 Support for AArch64 Scalable Matrix Extension in LLVM
 *****************************************************
 
-.. contents::
-   :local:
-
 1. Introduction
 ===============
 

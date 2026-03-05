@@ -2,9 +2,6 @@
 MemorySSA
 =========
 
-.. contents::
-   :local:
-
 Introduction
 ============
 

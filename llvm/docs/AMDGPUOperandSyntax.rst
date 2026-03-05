@@ -2,9 +2,6 @@
 Syntax of AMDGPU Instruction Operands
 =====================================
 
-.. contents::
-   :local:
-
 Conventions
 ===========
 

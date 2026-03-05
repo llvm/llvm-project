@@ -7,9 +7,6 @@ Writing an LLVM Backend
 
    HowToUseInstrMappings
 
-.. contents::
-   :local:
-
 Introduction
 ============
 

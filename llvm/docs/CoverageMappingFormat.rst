@@ -5,9 +5,6 @@
 LLVM Code Coverage Mapping Format
 =================================
 
-.. contents::
-   :local:
-
 Introduction
 ============
 

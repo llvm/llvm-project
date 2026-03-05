@@ -2,9 +2,6 @@
 TableGen BackEnds
 =================
 
-.. contents::
-   :local:
-
 Introduction
 ============
 
