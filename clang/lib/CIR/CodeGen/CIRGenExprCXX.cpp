@@ -702,8 +702,7 @@ RValue CIRGenFunction::emitNewOrDeleteBuiltinCall(const FunctionProtoType *type,
 }
 
 namespace {
-template <typename Traits>
-struct PlacementArg {
+template <typename Traits> struct PlacementArg {
   typename Traits::RValueTy argValue;
   QualType argType;
 };
@@ -734,9 +733,7 @@ class CallDeleteDuringNew final
   ValueTy allocSize;
   CharUnits allocAlign;
 
-  PlacementArg<Traits> *getPlacementArgs() {
-    return getTrailingObjects();
-  }
+  PlacementArg<Traits> *getPlacementArgs() { return getTrailingObjects(); }
 
   void setPlacementArg(unsigned i, RValueTy argValue, QualType argType) {
     assert(i < numPlacementArgs && "index out of range");
