@@ -49,12 +49,10 @@ static std::string operationNameFromObject(nb::handle root) {
 }
 
 static std::string dialectNameFromObject(nb::handle root) {
-  if (root.is_type()) {
+  if (root.is_type())
     return nb::cast<std::string>(root.attr("DIALECT_NAMESPACE"));
-  }
-  if (nb::isinstance<nb::str>(root)) {
+  if (nb::isinstance<nb::str>(root))
     return nb::cast<std::string>(root);
-  }
 
   throw nb::type_error("the root argument must be a type or a string");
 }
