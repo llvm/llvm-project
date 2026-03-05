@@ -183,3 +183,9 @@
 // RUN: not %clang -### -fgpu-rdc --offload-arch=gfx90a -nogpulib -nogpuinc --no-offload-new-driver \
 // RUN:   -L. -foffload-lto -flto-partitions=0 %s 2>&1 | FileCheck -check-prefix=LTO_PARTS_INV1 %s
 // LTO_PARTS_INV1: clang: error: invalid integral value '0' in '-flto-partitions=0'
+
+// Check verbose printing with the new driver.
+// RUN: %clang -### --target=x86_64-linux-gnu -fgpu-rdc -nogpulib -nogpuinc \
+// RUN:   --offload-new-driver --offload-arch=gfx908 -v %s 2>&1 | FileCheck %s --check-prefix=VERBOSE
+// VERBOSE: clang-linker-wrapper
+// VERBOSE-NOT: --device-compiler=amdgcn-amd-amdhsa=-v
