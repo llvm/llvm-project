@@ -13,7 +13,8 @@ _CLC_DEF _CLC_OVERLOAD void work_group_barrier(cl_mem_fence_flags flags,
                                                memory_scope scope) {
   int memory_order = __ATOMIC_SEQ_CST;
   __CLC_MemorySemantics memory_semantics = __opencl_get_memory_semantics(flags);
-  __clc_work_group_barrier(scope, memory_order, memory_semantics);
+  __clc_work_group_barrier(__opencl_get_memory_scope(scope), memory_order,
+                           memory_semantics);
 }
 
 _CLC_DEF _CLC_OVERLOAD void work_group_barrier(cl_mem_fence_flags flags) {
