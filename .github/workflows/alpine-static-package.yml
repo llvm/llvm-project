@@ -39,7 +39,6 @@ jobs:
             python3 \
             sccache \
             swig \
-            zstd \
             zstd-static \
             zstd-dev \
             xz \
@@ -67,14 +66,14 @@ jobs:
           sccache --version
           sccache --zero-stats || true
 
-      - name: Configure (Release + LTO + static)
+      - name: Configure (RelWithDebInfo + LTO + static)
         env:
           CC: clang
           CXX: clang++
         run: |
           set -eux
           cmake -G Ninja -S llvm -B build \
-            -DCMAKE_BUILD_TYPE=Release \
+            -DCMAKE_BUILD_TYPE=RelWithDebInfo \
             -DCMAKE_C_COMPILER=clang \
             -DCMAKE_CXX_COMPILER=clang++ \
             -DCMAKE_C_COMPILER_LAUNCHER=sccache \
@@ -119,18 +118,39 @@ jobs:
           file package/bin/ld.lld || true
           file package/bin/lldb || true
 
-      - name: Create package
+      - name: Create debug-symbol package
         id: package
         run: |
           set -eux
           SHORT_SHA=$(git rev-parse --short HEAD)
-          PKG_NAME="llvm-alpine-static-${SHORT_SHA}.tar.xz"
-          tar -C package -cJf "${PKG_NAME}" .
-          echo "pkg_name=${PKG_NAME}" >> "$GITHUB_OUTPUT"
+          DEBUG_PKG_NAME="llvm-alpine-static-relwithdebinfo-debug-${SHORT_SHA}.tar.xz"
+          tar -C package -cJf "${DEBUG_PKG_NAME}" .
+          echo "debug_pkg_name=${DEBUG_PKG_NAME}" >> "$GITHUB_OUTPUT"
 
-      - name: Upload artifact
+      - name: Create stripped package
+        run: |
+          set -eux
+          cp -a package package-stripped
+          find package-stripped -type f | while read -r f; do
+            if file "$f" | grep -q 'ELF '; then
+              strip --strip-debug "$f" || true
+            fi
+          done
+          SHORT_SHA=$(git rev-parse --short HEAD)
+          STRIPPED_PKG_NAME="llvm-alpine-static-relwithdebinfo-stripped-${SHORT_SHA}.tar.xz"
+          tar -C package-stripped -cJf "${STRIPPED_PKG_NAME}" .
+          echo "stripped_pkg_name=${STRIPPED_PKG_NAME}" >> "$GITHUB_ENV"
+
+      - name: Upload debug-symbol artifact
         uses: actions/upload-artifact@v4
         with:
-          name: ${{ steps.package.outputs.pkg_name }}
-          path: ${{ steps.package.outputs.pkg_name }}
+          name: ${{ steps.package.outputs.debug_pkg_name }}
+          path: ${{ steps.package.outputs.debug_pkg_name }}
+          if-no-files-found: error
+
+      - name: Upload stripped artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: ${{ env.stripped_pkg_name }}
+          path: ${{ env.stripped_pkg_name }}
           if-no-files-found: error
