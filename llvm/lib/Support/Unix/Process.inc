@@ -344,20 +344,11 @@ unsigned Process::StandardErrColumns() {
 }
 
 static bool terminalHasColors() {
-  // Check if the current terminal is one of terminals that are known to support
-  // ANSI color escape codes.
-  if (const char *TermStr = std::getenv("TERM")) {
-    return StringSwitch<bool>(TermStr)
-        .Case("ansi", true)
-        .Case("cygwin", true)
-        .Case("linux", true)
-        .StartsWith("screen", true)
-        .StartsWith("xterm", true)
-        .StartsWith("vt100", true)
-        .StartsWith("rxvt", true)
-        .EndsWith("color", true)
-        .Default(false);
-  }
+  // If TERM is defined in the environment, assume it supports ANSI color escape
+  // codes. This matches GCC.
+  if (const char *TermStr = std::getenv("TERM"))
+    // emacs M-x shell is a known exception and sets TERM="dumb".
+    return std::strcmp(TermStr, "dumb");
 
   return false;
 }
