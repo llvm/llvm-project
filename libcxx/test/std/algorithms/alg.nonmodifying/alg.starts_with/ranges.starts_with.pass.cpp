@@ -218,12 +218,17 @@ constexpr void test_iterators() {
 constexpr bool test() {
   types::for_each(types::cpp20_input_iterator_list<int*>{}, []<class Iter2>() {
     types::for_each(types::cpp20_input_iterator_list<int*>{}, []<class Iter1>() {
-      if constexpr (std::forward_iterator<Iter1> && std::forward_iterator<Iter2>)
+      if constexpr (std::forward_iterator<Iter1> && std::forward_iterator<Iter2>) {
         test_iterators<Iter1, Iter1, Iter2, Iter2>();
-      if constexpr (std::forward_iterator<Iter2>)
+      }
+      if constexpr (std::forward_iterator<Iter2>) {
+        test_iterators<Iter1, sentinel_wrapper<Iter1>, Iter2, Iter2>();
         test_iterators<Iter1, sized_sentinel<Iter1>, Iter2, Iter2>();
-      if constexpr (std::forward_iterator<Iter1>)
+      }
+      if constexpr (std::forward_iterator<Iter1>) {
+        test_iterators<Iter1, Iter1, Iter2, sentinel_wrapper<Iter2>>();
         test_iterators<Iter1, Iter1, Iter2, sized_sentinel<Iter2>>();
+      }
       test_iterators<Iter1, sized_sentinel<Iter1>, Iter2, sized_sentinel<Iter2>>();
     });
   });
