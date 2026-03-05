@@ -8,6 +8,7 @@
 
 #include "ABIInfoImpl.h"
 #include "TargetInfo.h"
+#include "clang/Basic/SyncScope.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/IR/CallingConv.h"
@@ -49,6 +50,9 @@ public:
   void setTargetAttributes(const Decl *D, llvm::GlobalValue *GV,
                            CodeGen::CodeGenModule &M) const override;
   bool shouldEmitStaticExternCAliases() const override;
+
+  StringRef getLLVMSyncScopeStr(const LangOptions &LangOpts, SyncScope Scope,
+                                llvm::AtomicOrdering Ordering) const override;
 
   llvm::Constant *getNullPointer(const CodeGen::CodeGenModule &CGM,
                                  llvm::PointerType *T,
@@ -297,6 +301,25 @@ void NVPTXTargetCodeGenInfo::addNVVMMetadata(llvm::GlobalValue *GV,
 
 bool NVPTXTargetCodeGenInfo::shouldEmitStaticExternCAliases() const {
   return false;
+}
+
+StringRef NVPTXTargetCodeGenInfo::getLLVMSyncScopeStr(
+    const LangOptions &LangOpts, SyncScope Scope,
+    llvm::AtomicOrdering Ordering) const {
+  switch (Scope) {
+  case SyncScope::SingleScope:
+    return "singlethread";
+  case SyncScope::WavefrontScope:
+  case SyncScope::WorkgroupScope:
+    return "block";
+  case SyncScope::ClusterScope:
+    return "cluster";
+  case SyncScope::DeviceScope:
+    return "device";
+  case SyncScope::SystemScope:
+    return "";
+  }
+  llvm_unreachable("Unknown SyncScope enum");
 }
 
 llvm::Constant *
