@@ -6592,8 +6592,7 @@ void Sema::checkClassLevelDLLAttribute(CXXRecordDecl *Class) {
   // seem to be true in practice?
 
   for (Decl *Member : Class->decls()) {
-    if ((TSK == TSK_ExplicitInstantiationDeclaration ||
-         TSK == TSK_ExplicitInstantiationDefinition) &&
+    if (isTemplateInstantiation(TSK) &&
         Member->hasAttr<ExcludeFromExplicitInstantiationAttr>())
       continue;
 

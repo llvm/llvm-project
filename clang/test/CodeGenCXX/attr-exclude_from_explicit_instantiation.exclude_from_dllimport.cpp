@@ -105,12 +105,12 @@ void useImportWholeTemplate() {
   // GNU-DAG: define linkonce_odr dso_local void @_ZN19ImportWholeTemplateI9NoAttrTagE22excludedNoinlineMethodEv
 
   ImportWholeTemplate<ImplicitTag>().excludedMethod();
-  // MSC-DAG: declare dllimport void @"?excludedMethod@?$ImportWholeTemplate@UImplicitTag@@@@QEAAXXZ"
+  // MSC-DAG: define linkonce_odr dso_local void @"?excludedMethod@?$ImportWholeTemplate@UImplicitTag@@@@QEAAXXZ"
   // GNU-DAG: define linkonce_odr dso_local void @_ZN19ImportWholeTemplateI11ImplicitTagE14excludedMethodEv
 
   ImportWholeTemplate<ImplicitTag>().excludedNoinlineMethod();
-  // MSC-DAG: declare dllimport void @"?excludedNoinlineMethod@?$ImportWholeTemplate@UImplicitTag@@@@QEAAXXZ"
-  // GNU-DAG: declare dllimport void @_ZN19ImportWholeTemplateI11ImplicitTagE22excludedNoinlineMethodEv
+  // MSC-DAG: define linkonce_odr dso_local void @"?excludedNoinlineMethod@?$ImportWholeTemplate@UImplicitTag@@@@QEAAXXZ"
+  // GNU-DAG: define linkonce_odr dso_local void @_ZN19ImportWholeTemplateI11ImplicitTagE22excludedNoinlineMethodEv
 }
 
 template <class T>

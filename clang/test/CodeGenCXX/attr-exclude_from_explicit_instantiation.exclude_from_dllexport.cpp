@@ -102,12 +102,12 @@ void useExportWholeTemplate() {
   // GNU-DAG: define linkonce_odr dso_local void @_ZN19ExportWholeTemplateI9NoAttrTagE22excludedNoinlineMethodEv
 
   ExportWholeTemplate<ImplicitTag>().excludedMethod();
-  // MSC-DAG: define weak_odr dso_local dllexport void @"?excludedMethod@?$ExportWholeTemplate@UImplicitTag@@@@QEAAXXZ"
+  // MSC-DAG: define linkonce_odr dso_local void @"?excludedMethod@?$ExportWholeTemplate@UImplicitTag@@@@QEAAXXZ"
   // GNU-DAG: define linkonce_odr dso_local void @_ZN19ExportWholeTemplateI11ImplicitTagE14excludedMethodEv
 
   ExportWholeTemplate<ImplicitTag>().excludedNoinlineMethod();
-  // MSC-DAG: define weak_odr dso_local dllexport void @"?excludedNoinlineMethod@?$ExportWholeTemplate@UImplicitTag@@@@QEAAXXZ"
-  // GNU-DAG: define weak_odr dso_local dllexport void @_ZN19ExportWholeTemplateI11ImplicitTagE22excludedNoinlineMethodEv
+  // MSC-DAG: define linkonce_odr dso_local void @"?excludedNoinlineMethod@?$ExportWholeTemplate@UImplicitTag@@@@QEAAXXZ"
+  // GNU-DAG: define linkonce_odr dso_local void @_ZN19ExportWholeTemplateI11ImplicitTagE22excludedNoinlineMethodEv
 }
 
 // Interaction with VTables.
