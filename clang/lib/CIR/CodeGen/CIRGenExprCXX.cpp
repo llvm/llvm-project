@@ -738,6 +738,11 @@ class CallDeleteDuringNew final
     return getTrailingObjects();
   }
 
+  void setPlacementArg(unsigned i, RValueTy argValue, QualType argType) {
+    assert(i < numPlacementArgs && "index out of range");
+    getPlacementArgs()[i] = {argValue, argType};
+  }
+
 public:
   static size_t getExtraSize(size_t numPlacementArgs) {
     return TrailingObj::template additionalSizeToAlloc<PlacementArg<Traits>>(
@@ -759,11 +764,6 @@ public:
       const CallArg &arg = (*newArgs)[i + numNonPlacementArgs];
       setPlacementArg(i, arg.getRValue(*cgf, loc), arg.ty);
     }
-  }
-
-  void setPlacementArg(unsigned i, RValueTy argValue, QualType argType) {
-    assert(i < numPlacementArgs && "index out of range");
-    getPlacementArgs()[i] = {argValue, argType};
   }
 
   void emit(CIRGenFunction &cgf, Flags flags) override {
