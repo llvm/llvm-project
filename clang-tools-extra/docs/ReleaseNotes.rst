@@ -157,6 +157,12 @@ New checks
 New check aliases
 ^^^^^^^^^^^^^^^^^
 
+- Renamed :doc:`hicpp-exception-baseclass
+  <clang-tidy/checks/hicpp/exception-baseclass>`
+  to :doc:`bugprone-std-exception-baseclass
+  <clang-tidy/checks/bugprone/std-exception-baseclass>`.
+  The `hicpp-exception-baseclass` name is kept as an alias.
+
 Changes in existing checks
 ^^^^^^^^^^^^^^^^^^^^^^^^^^
 

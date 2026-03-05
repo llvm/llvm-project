@@ -76,6 +76,7 @@
 #include "SizeofExpressionCheck.h"
 #include "SpuriouslyWakeUpFunctionsCheck.h"
 #include "StandaloneEmptyCheck.h"
+#include "StdExceptionBaseclassCheck.h"
 #include "StdNamespaceModificationCheck.h"
 #include "StringConstructorCheck.h"
 #include "StringIntegerAssignmentCheck.h"
@@ -158,6 +159,8 @@ public:
     CheckFactories.registerCheck<EasilySwappableParametersCheck>(
         "bugprone-easily-swappable-parameters");
     CheckFactories.registerCheck<EmptyCatchCheck>("bugprone-empty-catch");
+    CheckFactories.registerCheck<StdExceptionBaseclassCheck>(
+        "bugprone-std-exception-baseclass");
     CheckFactories.registerCheck<ExceptionCopyConstructorThrowsCheck>(
         "bugprone-exception-copy-constructor-throws");
     CheckFactories.registerCheck<ExceptionEscapeCheck>(

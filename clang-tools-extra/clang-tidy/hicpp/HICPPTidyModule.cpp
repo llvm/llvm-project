@@ -8,6 +8,7 @@
 
 #include "../ClangTidy.h"
 #include "../ClangTidyModule.h"
+#include "../bugprone/StdExceptionBaseclassCheck.h"
 #include "../bugprone/UndelegatedConstructorCheck.h"
 #include "../bugprone/UseAfterMoveCheck.h"
 #include "../cppcoreguidelines/AvoidGotoCheck.h"
@@ -34,7 +35,6 @@
 #include "../readability/FunctionSizeCheck.h"
 #include "../readability/NamedParameterCheck.h"
 #include "../readability/UppercaseLiteralSuffixCheck.h"
-#include "ExceptionBaseclassCheck.h"
 #include "IgnoredRemoveResultCheck.h"
 #include "MultiwayPathsCoveredCheck.h"
 #include "NoAssemblerCheck.h"
@@ -55,7 +55,7 @@ public:
         "hicpp-braces-around-statements");
     CheckFactories.registerCheck<modernize::DeprecatedHeadersCheck>(
         "hicpp-deprecated-headers");
-    CheckFactories.registerCheck<ExceptionBaseclassCheck>(
+    CheckFactories.registerCheck<bugprone::StdExceptionBaseclassCheck>(
         "hicpp-exception-baseclass");
     CheckFactories.registerCheck<IgnoredRemoveResultCheck>(
         "hicpp-ignored-remove-result");
