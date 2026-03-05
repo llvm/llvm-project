@@ -1287,3 +1287,43 @@ void test() {
     const auto ptrTSC = StringTemplateSpecC<char>().data();  // Both have attribute         // expected-warning {{temporary whose address is used}}
 }
 } // namespace GH175391
+
+namespace owner_arrow {
+struct TypeParamType {
+  std::string_view name() [[clang::lifetimebound]];
+};
+
+void test_optional_arrow_lifetimebound() {
+  std::string_view a;
+  a = std::optional<TypeParamType>()->name(); // expected-warning {{object backing the pointer 'a' will be destroyed at the end of the full-expression}} \
+                                              // cfg-warning {{object whose reference is captured does not live long enough}} \
+                                              // cfg-note {{destroyed here}}
+  use(a);                                     // cfg-note {{later used here}}
+}
+
+void test_optional_arrow_data() {
+  const char* p = std::optional<std::string>()->data(); // expected-warning {{object backing the pointer will be destroyed at the end of the full-expression}} \
+                                                        // cfg-warning {{object whose reference is captured does not live long enough}} \
+                                                        // cfg-note {{destroyed here}}
+  use(p);                                               // cfg-note {{later used here}}
+}
+
+void test_optional_arrow_non_temporary() {
+  std::optional<std::string> opt;
+  const char* p = opt->data();
+  use(p);
+}
+
+void test_unique_ptr_arrow_data() {
+  const char* p = std::unique_ptr<std::string>()->data(); // expected-warning {{object backing the pointer will be destroyed at the end of the full-expression}} \
+                                                          // cfg-warning {{object whose reference is captured does not live long enough}} \
+                                                          // cfg-note {{destroyed here}}
+  use(p);                                                 // cfg-note {{later used here}}
+}
+
+void test_unique_ptr_arrow_non_temporary() {
+  std::unique_ptr<std::string> up;
+  const char* p = up->data();
+  use(p);
+}
+} // namespace owner_arrow

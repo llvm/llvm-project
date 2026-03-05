@@ -152,8 +152,11 @@ bool shouldTrackImplicitObjectArg(const CXXMethodDecl *Callee,
     return false;
 
   if (isPointerLikeType(Callee->getReturnType())) {
-    if (!Callee->getIdentifier())
-      return false;
+    if (!Callee->getIdentifier()) {
+      return Callee->getParent()->hasAttr<OwnerAttr>() &&
+             Callee->getOverloadedOperator() ==
+                 OverloadedOperatorKind::OO_Arrow;
+    }
     return IteratorMembers.contains(Callee->getName()) ||
            InnerPointerGetters.contains(Callee->getName()) ||
            ContainerFindFns.contains(Callee->getName());
