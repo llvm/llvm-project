@@ -8203,7 +8203,7 @@ static bool mergeIdenticalBBs(ArrayRef<BasicBlock *> Candidates,
     // Now DeadBB should become unreachable; leave DCE to later,
     // but we can try to simplify it if it only branches to Succ.
     // (We won't erase here to keep the routine simple and DT-safe.)
-    assert(DeadBB->hasNPredecessors(0) && "DeadBB shoud be unreachable.");
+    assert(pred_empty(DeadBB) && "DeadBB shoud be unreachable.");
     MadeChange = true;
   }
 
