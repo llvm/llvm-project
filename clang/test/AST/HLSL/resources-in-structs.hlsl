@@ -1,4 +1,5 @@
-// RUN: %clang_cc1 -triple dxil-pc-shadermodel6.0-compute -ast-dump %s | FileCheck %s
+// RUN: %clang_cc1 -triple dxil-pc-shadermodel6.0-compute -ast-dump %s | FileCheck %s -check-prefixes=CHECK,DXIL
+// RUN: %clang_cc1 -triple spirv-unknown-vulkan-compute -ast-dump %s | FileCheck %s -check-prefixes=CHECK,SPIRV
 
 // Single resource field in struct
 
@@ -9,11 +10,14 @@ struct A {
 };
 
 // CHECK: VarDecl {{.*}} implicit a1.Buf 'hlsl::RWBuffer<float>' callinit
-// CHECK: HLSLResourceBindingAttr {{.*}} Implicit "" "0"
+// SPIRV: HLSLVkBindingAttr {{.*}} Implicit 0 0
+// DXIL: HLSLResourceBindingAttr {{.*}} Implicit "u0" "space0"
 
 // CHECK: VarDecl {{.*}} a1 'hlsl_constant A'
-// CHECK: HLSLResourceBindingAttr {{.*}} "u0" "space0"
+// CHECK-NEXT: HLSLVkBindingAttr {{.*}} 0 0
+// CHECK-NEXT: HLSLResourceBindingAttr {{.*}} "u0" "space0"
 // CHECK-NEXT: HLSLAssociatedResourceDeclAttr {{.*}} 'a1.Buf' 'hlsl::RWBuffer<float>'
+[[vk::binding(0)]]
 A a1 : register(u0);
 
 // Resource array in struct
@@ -24,13 +28,17 @@ struct B {
   RWBuffer<float> Bufs[10];
 };
 
-// CHECK: VarDecl {{.*}} implicit b1.Bufs 'hlsl::RWBuffer<float>[10]'
-// CHECK: HLSLResourceBindingAttr {{.*}} Implicit "" "0"
+// Check when the struct has only [[vk::binding]] binding attribute.
+
+// CHECK: VarDecl {{.*}} b1.Bufs 'hlsl::RWBuffer<float>[10]'
+// DXIL: HLSLResourceBindingAttr {{.*}} Implicit "" "0"
+// SPIRV: HLSLVkBindingAttr {{.*}} Implicit 2 0
 
 // CHECK: VarDecl {{.*}} b1 'hlsl_constant B'
-// CHECK: HLSLResourceBindingAttr {{.*}} "u2" "space0"
+// CHECK-NEXT: HLSLVkBindingAttr {{.*}} 2 0
 // CHECK-NEXT: HLSLAssociatedResourceDeclAttr {{.*}} 'b1.Bufs' 'hlsl::RWBuffer<float>[10]'
-B b1 : register(u2);
+[[vk::binding(2)]]
+B b1;
 
 // Inheritance
 
@@ -41,15 +49,19 @@ struct C : A {
 };
 
 // CHECK: VarDecl {{.*}} implicit c1.A::Buf 'hlsl::RWBuffer<float>' callinit
-// CHECK: HLSLResourceBindingAttr {{.*}} Implicit "" "0"
+// DXIL: HLSLResourceBindingAttr {{.*}} Implicit "u3" "space0"
+// SPIRV: HLSLVkBindingAttr {{.*}} Implicit 3 0
 
 // CHECK: VarDecl {{.*}} implicit c1.Buf2 'hlsl::RWBuffer<float>' callinit
-// CHECK: HLSLResourceBindingAttr {{.*}} Implicit "" "0"
+// DXIL: HLSLResourceBindingAttr {{.*}} Implicit "u4" "space0"
+// SPIRV: HLSLVkBindingAttr {{.*}} Implicit 4 0
 
 // CHECK: VarDecl {{.*}} c1 'hlsl_constant C'
-// CHECK: HLSLResourceBindingAttr {{.*}} "u3" "space0"
-// CHECK: HLSLAssociatedResourceDeclAttr {{.*}} 'c1.A::Buf' 'hlsl::RWBuffer<float>'
-// CHECK: HLSLAssociatedResourceDeclAttr {{.*}} 'c1.Buf2' 'hlsl::RWBuffer<float>'
+// CHECK-NEXT: HLSLVkBindingAttr {{.*}} 3 0
+// CHECK-NEXT: HLSLResourceBindingAttr {{.*}} "u3" "space0"
+// CHECK-NEXT: HLSLAssociatedResourceDeclAttr {{.*}} 'c1.A::Buf' 'hlsl::RWBuffer<float>'
+// CHECK-NEXT: HLSLAssociatedResourceDeclAttr {{.*}} 'c1.Buf2' 'hlsl::RWBuffer<float>'
+[[vk::binding(3)]]
 C c1 : register(u3);
 
 // Inheritance with same named field
@@ -66,8 +78,8 @@ struct D : A {
 // CHECK: HLSLResourceBindingAttr {{.*}} Implicit "" "0"
 
 // CHECK: VarDecl {{.*}} d1 'hlsl_constant D'
-// CHECK: HLSLAssociatedResourceDeclAttr {{.*}} 'd1.A::Buf' 'hlsl::RWBuffer<float>'
-// CHECK: HLSLAssociatedResourceDeclAttr {{.*}} 'd1.A.Buf' 'hlsl::RWBuffer<float>'
+// CHECK-NEXT: HLSLAssociatedResourceDeclAttr {{.*}} 'd1.A::Buf' 'hlsl::RWBuffer<float>'
+// CHECK-NEXT: HLSLAssociatedResourceDeclAttr {{.*}} 'd1.A.Buf' 'hlsl::RWBuffer<float>'
 D d1;
 
 // Inheritance and Multiple Resources Kinds
@@ -89,34 +101,49 @@ class F : E {
 };
 
 // CHECK: VarDecl {{.*}} implicit f.E::SrvBuf 'hlsl::StructuredBuffer<int>' callinit
-// CHECK: HLSLResourceBindingAttr {{.*}} Implicit "" "0"
+// DXIL: HLSLResourceBindingAttr {{.*}} Implicit "t0" "space0"
+// SPIRV: HLSLVkBindingAttr {{.*}} Implicit 10 0
 
 // CHECK: VarDecl {{.*}} implicit f.a.Buf 'hlsl::RWBuffer<float>' callinit
-// CHECK: HLSLResourceBindingAttr {{.*}} Implicit "" "0"
+// DXIL: HLSLResourceBindingAttr {{.*}} Implicit "u20" "space0"
+// SPIRV: HLSLVkBindingAttr {{.*}} Implicit 11 0
 
 // CHECK: VarDecl {{.*}} implicit f.SrvBuf 'hlsl::StructuredBuffer<float>' callinit
-// CHECK: HLSLResourceBindingAttr {{.*}} Implicit "" "0"
+// DXIL: HLSLResourceBindingAttr {{.*}} Implicit "t1" "space0"
+// SPIRV: HLSLVkBindingAttr {{.*}} Implicit 12 0
 
 // CHECK: VarDecl {{.*}} implicit f.Samp 'hlsl::SamplerState' callinit
-// CHECK: HLSLResourceBindingAttr {{.*}} Implicit "" "0"
+// DXIL: HLSLResourceBindingAttr {{.*}} Implicit "s3" "space0"
+// SPIRV: HLSLVkBindingAttr {{.*}} Implicit 13 0
 
 // CHECK: VarDecl {{.*}} f 'hlsl_constant F'
-// CHECK: HLSLResourceBindingAttr {{.*}} "t0" "space0"
-// CHECK: HLSLResourceBindingAttr {{.*}} "u20" "space0"
-// CHECK: HLSLResourceBindingAttr {{.*}} "s3" "space0"
-// CHECK: HLSLAssociatedResourceDeclAttr {{.*}} 'f.E::SrvBuf' 'hlsl::StructuredBuffer<int>'
-// CHECK: HLSLAssociatedResourceDeclAttr {{.*}} 'f.a.Buf' 'hlsl::RWBuffer<float>'
-// CHECK: HLSLAssociatedResourceDeclAttr {{.*}} 'f.SrvBuf' 'hlsl::StructuredBuffer<float>'
-// CHECK: HLSLAssociatedResourceDeclAttr {{.*}} 'f.Samp' 'hlsl::SamplerState'
+// CHECK-NEXT: HLSLVkBindingAttr {{.*}} 10 0
+// CHECK-NEXT: HLSLResourceBindingAttr {{.*}} "t0" "space0"
+// CHECK-NEXT: HLSLResourceBindingAttr {{.*}} "u20" "space0"
+// CHECK-NEXT: HLSLResourceBindingAttr {{.*}} "s3" "space0"
+// CHECK-NEXT: HLSLAssociatedResourceDeclAttr {{.*}} 'f.E::SrvBuf' 'hlsl::StructuredBuffer<int>'
+// CHECK-NEXT: HLSLAssociatedResourceDeclAttr {{.*}} 'f.a.Buf' 'hlsl::RWBuffer<float>'
+// CHECK-NEXT: HLSLAssociatedResourceDeclAttr {{.*}} 'f.SrvBuf' 'hlsl::StructuredBuffer<float>'
+// CHECK-NEXT: HLSLAssociatedResourceDeclAttr {{.*}} 'f.Samp' 'hlsl::SamplerState'
+[[vk::binding(10)]]
 F f : register(t0) : register(u20) : register(s3);
 
 // Array of structs with resources
 
 // CHECK: VarDecl {{.*}} implicit arrayOfA.0.Buf 'hlsl::RWBuffer<float>' callinit
-// CHECK: HLSLResourceBindingAttr {{.*}} Implicit "" "0"
+// DXIL: HLSLResourceBindingAttr {{.*}} Implicit "u0" "space1"
+// SPIRV: HLSLVkBindingAttr {{.*}} Implicit 0 1
 
 // CHECK: VarDecl {{.*}} implicit arrayOfA.1.Buf 'hlsl::RWBuffer<float>' callinit
-// CHECK: HLSLResourceBindingAttr {{.*}} Implicit "" "0"
+// DXIL: HLSLResourceBindingAttr {{.*}} Implicit "u1" "space1"
+// SPIRV: HLSLVkBindingAttr {{.*}} Implicit 1 1
+
+// CHECK: VarDecl {{.*}} arrayOfA 'hlsl_constant A[2]'
+// CHECK-NEXT: HLSLVkBindingAttr {{.*}} 0 1
+// CHECK-NEXT: HLSLResourceBindingAttr {{.*}} "u0" "space1"
+// CHECK-NEXT: HLSLAssociatedResourceDeclAttr {{.*}} 'arrayOfA.0.Buf' 'hlsl::RWBuffer<float>'
+// CHECK-NEXT: HLSLAssociatedResourceDeclAttr {{.*}} 'arrayOfA.1.Buf' 'hlsl::RWBuffer<float>'
+[[vk::binding(0, 1)]]
 A arrayOfA[2] : register(u0, space1);
 
 // CHECK: CXXRecordDecl {{.*}} struct G
@@ -126,38 +153,48 @@ struct G {
 };
 
 // CHECK: VarDecl {{.*}} implicit gArray.0.multiArray.0.0.Buf 'hlsl::RWBuffer<float>' callinit
-// CHECK: HLSLResourceBindingAttr {{.*}} Implicit "" "0"
+// DXIL: HLSLResourceBindingAttr {{.*}} Implicit "u10" "space2"
+// SPRIV: HLSLVkBindingAttr {{.*}} Implicit 10 2
 
 // CHECK: VarDecl {{.*}} implicit gArray.0.multiArray.0.1.Buf 'hlsl::RWBuffer<float>' callinit
-// CHECK: HLSLResourceBindingAttr {{.*}} Implicit "" "0"
+// DXIL: HLSLResourceBindingAttr {{.*}} Implicit "u11" "space2"
+// SPIRV: HLSLVkBindingAttr {{.*}} Implicit 11 2
 
 // CHECK: VarDecl {{.*}} implicit gArray.0.multiArray.1.0.Buf 'hlsl::RWBuffer<float>' callinit
-// CHECK: HLSLResourceBindingAttr {{.*}} Implicit "" "0"
-
+// DXIL: HLSLResourceBindingAttr {{.*}} Implicit "u12" "space2"
+// SPIRV: HLSLVkBindingAttr {{.*}} Implicit 12 2
 // CHECK: VarDecl {{.*}} implicit gArray.0.multiArray.1.1.Buf 'hlsl::RWBuffer<float>' callinit
-// CHECK: HLSLResourceBindingAttr {{.*}} Implicit "" "0"
+// DXIL: HLSLResourceBindingAttr {{.*}} Implicit "u13" "space2"
+// SPIRV: HLSLVkBindingAttr {{.*}} Implicit 13 2
 
 // CHECK: VarDecl {{.*}} implicit gArray.1.multiArray.0.0.Buf 'hlsl::RWBuffer<float>' callinit
-// CHECK: HLSLResourceBindingAttr {{.*}} Implicit "" "0"
+// DXIL: HLSLResourceBindingAttr {{.*}} Implicit "u14" "space2"
+// SPIRV: HLSLVkBindingAttr {{.*}} Implicit 14 2
 
 // CHECK: VarDecl {{.*}} implicit gArray.1.multiArray.0.1.Buf 'hlsl::RWBuffer<float>' callinit
-// CHECK: HLSLResourceBindingAttr {{.*}} Implicit "" "0"
+// DXIL: HLSLResourceBindingAttr {{.*}} Implicit "u15" "space2"
+// SPIRV: HLSLVkBindingAttr {{.*}} Implicit 15 2
 
 // CHECK: VarDecl {{.*}} implicit gArray.1.multiArray.1.0.Buf 'hlsl::RWBuffer<float>' callinit
-// CHECK: HLSLResourceBindingAttr {{.*}} Implicit "" "0"
+// DXIL: HLSLResourceBindingAttr {{.*}} Implicit "u16" "space2"
+// SPIRV: HLSLVkBindingAttr {{.*}} Implicit 16 2
 
 // CHECK: VarDecl {{.*}} implicit gArray.1.multiArray.1.1.Buf 'hlsl::RWBuffer<float>' callinit
-// CHECK: HLSLResourceBindingAttr {{.*}} Implicit "" "0"
+// DXIL: HLSLResourceBindingAttr {{.*}} Implicit "u17" "space2"
+// SPIRV: HLSLVkBindingAttr {{.*}} Implicit 17 2
 
 // CHECK: VarDecl {{.*}} gArray 'hlsl_constant G[2]'
-// CHECK: HLSLAssociatedResourceDeclAttr {{.*}} 'gArray.0.multiArray.0.0.Buf' 'hlsl::RWBuffer<float>'
-// CHECK: HLSLAssociatedResourceDeclAttr {{.*}} 'gArray.0.multiArray.0.1.Buf' 'hlsl::RWBuffer<float>'
-// CHECK: HLSLAssociatedResourceDeclAttr {{.*}} 'gArray.0.multiArray.1.0.Buf' 'hlsl::RWBuffer<float>'
-// CHECK: HLSLAssociatedResourceDeclAttr {{.*}} 'gArray.0.multiArray.1.1.Buf' 'hlsl::RWBuffer<float>'
-// CHECK: HLSLAssociatedResourceDeclAttr {{.*}} 'gArray.1.multiArray.0.0.Buf' 'hlsl::RWBuffer<float>'
-// CHECK: HLSLAssociatedResourceDeclAttr {{.*}} 'gArray.1.multiArray.0.1.Buf' 'hlsl::RWBuffer<float>'
-// CHECK: HLSLAssociatedResourceDeclAttr {{.*}} 'gArray.1.multiArray.1.0.Buf' 'hlsl::RWBuffer<float>'
-// CHECK: HLSLAssociatedResourceDeclAttr {{.*}} 'gArray.1.multiArray.1.1.Buf' 'hlsl::RWBuffer<float>'
+// CHECK-NEXT: HLSLVkBindingAttr {{.*}} 10 2
+// CHECK-NEXT: HLSLResourceBindingAttr {{.*}} "u10" "space2"
+// CHECK-NEXT: HLSLAssociatedResourceDeclAttr {{.*}} 'gArray.0.multiArray.0.0.Buf' 'hlsl::RWBuffer<float>'
+// CHECK-NEXT: HLSLAssociatedResourceDeclAttr {{.*}} 'gArray.0.multiArray.0.1.Buf' 'hlsl::RWBuffer<float>'
+// CHECK-NEXT: HLSLAssociatedResourceDeclAttr {{.*}} 'gArray.0.multiArray.1.0.Buf' 'hlsl::RWBuffer<float>'
+// CHECK-NEXT: HLSLAssociatedResourceDeclAttr {{.*}} 'gArray.0.multiArray.1.1.Buf' 'hlsl::RWBuffer<float>'
+// CHECK-NEXT: HLSLAssociatedResourceDeclAttr {{.*}} 'gArray.1.multiArray.0.0.Buf' 'hlsl::RWBuffer<float>'
+// CHECK-NEXT: HLSLAssociatedResourceDeclAttr {{.*}} 'gArray.1.multiArray.0.1.Buf' 'hlsl::RWBuffer<float>'
+// CHECK-NEXT: HLSLAssociatedResourceDeclAttr {{.*}} 'gArray.1.multiArray.1.0.Buf' 'hlsl::RWBuffer<float>'
+// CHECK-NEXT: HLSLAssociatedResourceDeclAttr {{.*}} 'gArray.1.multiArray.1.1.Buf' 'hlsl::RWBuffer<float>'
+[[vk::binding(10, 2)]]
 G gArray[2] : register(u10, space2);
 
 // Static struct with resources
