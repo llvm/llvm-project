@@ -195,6 +195,12 @@ class AArch64FunctionInfo final : public MachineFunctionInfo {
   /// epilogue when using PC as a second salt (FEAT_PAuth_LR)
   MCSymbol *SignInstrLabel = nullptr;
 
+  /// SignReturnAddressHardening specifies the PAC-RET hardening scheme.
+  enum class SignReturnAddressHardeningKind {
+    None,
+    LoadReturnAddress
+  } SignReturnAddressHardening = SignReturnAddressHardeningKind::None;
+
   /// BranchTargetEnforcement enables placing BTI instructions at potential
   /// indirect branch destinations.
   bool BranchTargetEnforcement = false;
@@ -614,6 +620,11 @@ public:
   void setSigningInstrLabel(MCSymbol *Label) { SignInstrLabel = Label; }
 
   bool isMTETagged() const { return IsMTETagged; }
+
+  bool shouldHardenSignReturnAddress() const {
+    return SignReturnAddressHardening ==
+           SignReturnAddressHardeningKind::LoadReturnAddress;
+  }
 
   bool branchTargetEnforcement() const { return BranchTargetEnforcement; }
 
