@@ -42,6 +42,15 @@ std::string foo_str(int p1);
 std::wstring foo_wstr(int, const std::string&);
 std::string_view foo_sv(int p1);
 
+struct TakesStringView {
+  TakesStringView(int, std::string_view);
+};
+
+struct StringBuilder {
+  StringBuilder& operator+=(std::string_view);
+  StringBuilder& append(std::string_view);
+};
+
 void positive(std::string_view sv, std::wstring_view wsv) {
   // string(string_view)
   //
@@ -109,6 +118,43 @@ void positive(std::string_view sv, std::wstring_view wsv) {
   foo_wsv(42, std::wstring(wptr), 3.14);
   // CHECK-MESSAGES: :[[@LINE-1]]:15: warning: redundant conversion to 'std::wstring' (aka 'basic_string<wchar_t>') and then back to 'basic_string_view<wchar_t, std::char_traits<wchar_t>>' [performance-string-view-conversions]
   // CHECK-FIXES: foo_wsv(42, wptr, 3.14);
+
+  TakesStringView(0, std::string("foo"));
+  // CHECK-MESSAGES: :[[@LINE-1]]:22: warning: redundant conversion to 'std::string' (aka 'basic_string<char>') and then back to 'basic_string_view<char, std::char_traits<char>>' [performance-string-view-conversions]
+  // CHECK-FIXES: TakesStringView(0, "foo");
+
+  TakesStringView var(0, std::string("foo"));
+  // CHECK-MESSAGES: :[[@LINE-1]]:26: warning: redundant conversion to 'std::string' (aka 'basic_string<char>') and then back to 'basic_string_view<char, std::char_traits<char>>' [performance-string-view-conversions]
+  // CHECK-FIXES: TakesStringView var(0, "foo");
+
+  TakesStringView(1, std::string{"foo"});
+  // CHECK-MESSAGES: :[[@LINE-1]]:22: warning: redundant conversion to 'std::string' (aka 'basic_string<char>') and then back to 'basic_string_view<char, std::char_traits<char>>' [performance-string-view-conversions]
+  // CHECK-FIXES: TakesStringView(1, "foo");
+
+  TakesStringView(2, std::string(std::string_view("foo")));
+  // CHECK-MESSAGES: :[[@LINE-1]]:22: warning: redundant conversion to 'std::string' (aka 'basic_string<char>') and then back to 'basic_string_view<char, std::char_traits<char>>' [performance-string-view-conversions]
+  // CHECK-FIXES: TakesStringView(2, std::string_view("foo"));
+
+  TakesStringView(3, std::string(foo_sv(42)));
+  // CHECK-MESSAGES: :[[@LINE-1]]:22: warning: redundant conversion to 'std::string' (aka 'basic_string<char>') and then back to 'basic_string_view<char, std::char_traits<char>>' [performance-string-view-conversions]
+  // CHECK-FIXES: TakesStringView(3, foo_sv(42));
+
+  StringBuilder builder;
+  builder += std::string("hmm");
+  // CHECK-MESSAGES: :[[@LINE-1]]:14: warning: redundant conversion to 'std::string' (aka 'basic_string<char>') and then back to 'basic_string_view<char, std::char_traits<char>>' [performance-string-view-conversions]
+  // CHECK-FIXES: builder += "hmm";
+
+  builder.append(std::string("hmm"));
+  // CHECK-MESSAGES: :[[@LINE-1]]:18: warning: redundant conversion to 'std::string' (aka 'basic_string<char>') and then back to 'basic_string_view<char, std::char_traits<char>>' [performance-string-view-conversions]
+  // CHECK-FIXES: builder.append("hmm");
+
+  std::string_view{std::string(foo_sv(1))};
+  // CHECK-MESSAGES: :[[@LINE-1]]:20: warning: redundant conversion to 'std::string' (aka 'basic_string<char>') and then back to 'basic_string_view<char, std::char_traits<char>>' [performance-string-view-conversions]
+  // CHECK-FIXES: std::string_view{foo_sv(1)};
+
+  std::string_view(std::string("hmm").data());
+  // CHECK-MESSAGES: :[[@LINE-1]]:20: warning: redundant conversion to 'const std::basic_string<char>' and calling .data() and then back to 'std::string_view' (aka 'basic_string_view<char>') [performance-string-view-conversions]
+  // CHECK-FIXES: std::string_view("hmm");
 }
 
 void negative(std::string_view sv, std::wstring_view wsv) {
@@ -142,6 +188,7 @@ void negative(std::string_view sv, std::wstring_view wsv) {
   // Move semantics ignored
   std::string s;
   foo_sv(42, std::move(s), 3.14);
+  TakesStringView{0, std::move(s)};
 
   // Inner calls are ignored
   foo_wsv(foo_wstr(42, "Hello, world"));
@@ -149,4 +196,5 @@ void negative(std::string_view sv, std::wstring_view wsv) {
 
   // No warnings expected: string parameter of a limited length, not string-view
   foo_sv(142, std::string("Hello, world", 5), 3.14);
+  TakesStringView{0, std::string("Hello, world", 5)};
 }
