@@ -62,6 +62,12 @@ def int_aarch64_frint64x
 // HINT
 
 def int_aarch64_hint : DefaultAttrsIntrinsic<[], [llvm_i32_ty]>;
+def int_aarch64_stshh_atomic_store
+    : Intrinsic<[],
+                [llvm_anyptr_ty, llvm_i64_ty, llvm_i32_ty, llvm_i32_ty,
+                 llvm_i32_ty],
+                [IntrHasSideEffects, ImmArg<ArgIndex<2>>,
+                 ImmArg<ArgIndex<3>>, ImmArg<ArgIndex<4>>]>;
 
 def int_aarch64_break : Intrinsic<[], [llvm_i32_ty],
     [IntrNoMem, IntrHasSideEffects, IntrNoReturn, IntrCold, ImmArg<ArgIndex<0>>]>;
@@ -75,6 +81,11 @@ def int_aarch64_prefetch : Intrinsic<[],
      ImmArg<ArgIndex<1>>, ImmArg<ArgIndex<2>>, ImmArg<ArgIndex<3>>, ImmArg<ArgIndex<4>>
      ]>,
     ClangBuiltin<"__builtin_arm_prefetch">;
+
+def int_aarch64_prefetch_ir : Intrinsic<[], [llvm_ptr_ty],
+    [IntrHasSideEffects, IntrInaccessibleMemOrArgMemOnly,
+     IntrWillReturn, ReadOnly<ArgIndex<0>>]>,
+    ClangBuiltin<"__builtin_arm_prefetch_ir">;
 
 def int_aarch64_range_prefetch : Intrinsic<[],
     [llvm_ptr_ty, llvm_i32_ty, llvm_i32_ty, llvm_i64_ty],

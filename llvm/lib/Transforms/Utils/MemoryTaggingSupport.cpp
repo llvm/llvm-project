@@ -21,29 +21,13 @@
 #include "llvm/IR/BasicBlock.h"
 #include "llvm/IR/IRBuilder.h"
 #include "llvm/IR/IntrinsicInst.h"
+#include "llvm/IR/Intrinsics.h"
 #include "llvm/TargetParser/Triple.h"
 #include "llvm/Transforms/Utils/PromoteMemToReg.h"
+#include <utility>
 
 namespace llvm {
 namespace memtag {
-namespace {
-bool maybeReachableFromEachOther(const SmallVectorImpl<IntrinsicInst *> &Insts,
-                                 const DominatorTree *DT, const LoopInfo *LI,
-                                 size_t MaxLifetimes) {
-  // If we have too many lifetime ends, give up, as the algorithm below is N^2.
-  if (Insts.size() > MaxLifetimes)
-    return true;
-  for (size_t I = 0; I < Insts.size(); ++I) {
-    for (size_t J = 0; J < Insts.size(); ++J) {
-      if (I == J)
-        continue;
-      if (isPotentiallyReachable(Insts[I], Insts[J], nullptr, DT, LI))
-        return true;
-    }
-  }
-  return false;
-}
-} // namespace
 
 bool forAllReachableExits(const DominatorTree &DT, const PostDominatorTree &PDT,
                           const LoopInfo &LI, const AllocaInfo &AInfo,
@@ -56,8 +40,8 @@ bool forAllReachableExits(const DominatorTree &DT, const PostDominatorTree &PDT,
   }
   SmallPtrSet<BasicBlock *, 2> EndBlocks;
   SmallVector<BasicBlock *, 2> StartBlocks;
-  for (const auto &[BB, ID] : AInfo.LastBBLifetime) {
-    if (ID == Intrinsic::lifetime_end)
+  for (const auto &[BB, BBInfo] : AInfo.BBInfos) {
+    if (BBInfo.Last == Intrinsic::lifetime_end)
       EndBlocks.insert(BB);
     else
       StartBlocks.push_back(BB);
@@ -85,17 +69,26 @@ bool forAllReachableExits(const DominatorTree &DT, const PostDominatorTree &PDT,
   return !UncoveredRets;
 }
 
-bool isStandardLifetime(const SmallVectorImpl<IntrinsicInst *> &LifetimeStart,
-                        const SmallVectorImpl<IntrinsicInst *> &LifetimeEnd,
-                        const DominatorTree *DT, const LoopInfo *LI,
-                        size_t MaxLifetimes) {
-  // An alloca that has exactly one start and end in every possible execution.
-  // If it has multiple ends, they have to be unreachable from each other, so
-  // at most one of them is actually used for each execution of the function.
-  return LifetimeStart.size() > 0 &&
-         (LifetimeEnd.size() == 1 ||
-          (LifetimeEnd.size() > 0 &&
-           !maybeReachableFromEachOther(LifetimeEnd, DT, LI, MaxLifetimes)));
+bool isSupportedLifetime(const AllocaInfo &AInfo, const DominatorTree *DT,
+                         const LoopInfo *LI) {
+  if (AInfo.LifetimeStart.empty())
+    return false;
+  SmallVector<BasicBlock *, 2> LastEndBlocks;
+  SmallPtrSet<const BasicBlock *, 2> FirstEndBlocks;
+  SmallPtrSet<BasicBlock *, 2> StartBlocks;
+  for_each(AInfo.BBInfos, [&](const auto &It) {
+    const auto &[BB, BBI] = It;
+    if (BBI.Last == Intrinsic::lifetime_end)
+      LastEndBlocks.append(succ_begin(BB), succ_end(BB));
+    else
+      StartBlocks.insert(BB);
+    if (BBI.First == Intrinsic::lifetime_end)
+      FirstEndBlocks.insert(BB);
+  });
+  if (LastEndBlocks.empty() || FirstEndBlocks.empty())
+    return true;
+  return !isManyPotentiallyReachableFromMany(LastEndBlocks, FirstEndBlocks,
+                                             &StartBlocks, DT, LI);
 }
 
 Instruction *getUntagLocationIfFunctionExit(Instruction &Inst) {
@@ -158,12 +151,18 @@ void StackInfoBuilder::visit(OptimizationRemarkEmitter &ORE,
     if (!AI ||
         getAllocaInterestingness(*AI) != AllocaInterestingness::kInteresting)
       return;
+    auto &AInfo = Info.AllocasToInstrument[AI];
+    auto &BBInfo = AInfo.BBInfos[II->getParent()];
+
     if (II->getIntrinsicID() == Intrinsic::lifetime_start)
-      Info.AllocasToInstrument[AI].LifetimeStart.push_back(II);
-    else
-      Info.AllocasToInstrument[AI].LifetimeEnd.push_back(II);
-    Info.AllocasToInstrument[AI].LastBBLifetime[II->getParent()] =
-        II->getIntrinsicID();
+      AInfo.LifetimeStart.push_back(II);
+    else if (BBInfo.Last != Intrinsic::lifetime_end)
+      AInfo.LifetimeEnd.push_back(II);
+
+    BBInfo.Last = II->getIntrinsicID();
+    if (BBInfo.First == Intrinsic::not_intrinsic)
+      BBInfo.First = II->getIntrinsicID();
+
     return;
   }
 
@@ -263,6 +262,25 @@ Value *getFP(IRBuilder<> &IRB) {
       IRB.getIntPtrTy(M->getDataLayout()));
 }
 
+Value *getDarwinSlotPtr(IRBuilder<> &IRB, int Slot) {
+  Module *M = IRB.GetInsertBlock()->getParent()->getParent();
+  // FIXME: This should use the thread_pointer intrinsic. However, the
+  // intrinsic is not currently implemented on Darwin correctly. The
+  // TPIDRRO_EL0 register became part of the ABI to access TSD on recent
+  // versions of OS and so it is safe to use here
+  // Darwin provides a fixed slot for sanitizers at offset 231.
+  MDNode *MD = MDNode::get(M->getContext(),
+                           {MDString::get(M->getContext(), "TPIDRRO_EL0")});
+  Value *Args[] = {MetadataAsValue::get(M->getContext(), MD)};
+  return IRB.CreateConstGEP1_32(
+      IRB.getInt8Ty(),
+      IRB.CreateIntToPtr(
+          IRB.CreateIntrinsic(Intrinsic::read_register,
+                              {IRB.getIntPtrTy(M->getDataLayout())}, Args),
+          IRB.getPtrTy()),
+      8 * Slot);
+}
+
 Value *getAndroidSlotPtr(IRBuilder<> &IRB, int Slot) {
   Module *M = IRB.GetInsertBlock()->getParent()->getParent();
   // Android provides a fixed TLS slot for sanitizers. See TLS_SLOT_SANITIZER
@@ -299,7 +317,7 @@ void annotateDebugRecords(AllocaInfo &Info, unsigned int Tag) {
 }
 
 Value *incrementThreadLong(IRBuilder<> &IRB, Value *ThreadLong,
-                           unsigned int Inc) {
+                           unsigned int Inc, bool IsMemtagDarwin) {
   // Update the ring buffer. Top byte of ThreadLong defines the size of the
   // buffer in pages, it must be a power of two, and the start of the buffer
   // must be aligned by twice that much. Therefore wrap around of the ring
@@ -323,9 +341,16 @@ Value *incrementThreadLong(IRBuilder<> &IRB, Value *ThreadLong,
   //            0x01AAAAAAAAAAA000
   //
   // Then the WrapMask will be a no-op until the next wrap case.
+  //
+  // Darwin relies on bit 60-62 to store the size of the buffer in pages. This
+  // limits N to [0,2] while the rest of the proof remains unchanged. Bits
+  // 56-59 are avoided in order to prevent MTE Canonical Tag Faults while
+  // accessing the ring buffer. Bit 63 is avoided to prevent unintentional
+  // signed extension by AShr.
   assert((4096 % Inc) == 0);
   Value *WrapMask = IRB.CreateXor(
-      IRB.CreateShl(IRB.CreateAShr(ThreadLong, 56), 12, "", true, true),
+      IRB.CreateShl(IRB.CreateAShr(ThreadLong, IsMemtagDarwin ? 60 : 56), 12,
+                    "", true, true),
       ConstantInt::get(ThreadLong->getType(), (uint64_t)-1));
   return IRB.CreateAnd(
       IRB.CreateAdd(ThreadLong, ConstantInt::get(ThreadLong->getType(), Inc)),

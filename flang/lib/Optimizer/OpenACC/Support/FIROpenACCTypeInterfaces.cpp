@@ -23,6 +23,7 @@
 #include "flang/Optimizer/Dialect/FIRType.h"
 #include "flang/Optimizer/Dialect/Support/FIRContext.h"
 #include "flang/Optimizer/Dialect/Support/KindMapping.h"
+#include "flang/Optimizer/OpenACC/Support/FIROpenACCUtils.h"
 #include "flang/Optimizer/Support/Utils.h"
 #include "mlir/Dialect/Arith/IR/Arith.h"
 #include "mlir/Dialect/OpenACC/OpenACC.h"
@@ -30,6 +31,19 @@
 #include "mlir/Support/LLVM.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/TypeSwitch.h"
+#include "llvm/Support/CommandLine.h"
+
+static llvm::cl::opt<bool> useAccReductionCombine(
+    "openacc-use-reduction-combine",
+    llvm::cl::desc("Whether to generate acc.reduction_combine. Does not "
+                   "control reduction for MIN/MAX and logical reductions."),
+    llvm::cl::init(false));
+
+static llvm::cl::opt<bool> useAccReductionCombineAll(
+    "openacc-use-reduction-combine-all",
+    llvm::cl::desc("Whether to generate acc.reduction_combine for all types "
+                   "and operators"),
+    llvm::cl::init(false));
 
 namespace fir::acc {
 
@@ -226,48 +240,53 @@ generateSeqTyAccBounds(fir::SequenceType seqType, mlir::Value var,
   fir::FirOpBuilder firBuilder(builder, var.getDefiningOp());
   mlir::Location loc = var.getLoc();
 
-  if (seqType.hasDynamicExtents() || seqType.hasUnknownShape()) {
-    if (auto boxAddr =
-            mlir::dyn_cast_if_present<fir::BoxAddrOp>(var.getDefiningOp())) {
-      mlir::Value box = boxAddr.getVal();
-      auto res =
-          hlfir::translateToExtendedValue(loc, firBuilder, hlfir::Entity(box));
-      fir::ExtendedValue exv = res.first;
-      mlir::Value boxRef = box;
-      if (auto boxPtr = mlir::cast<mlir::acc::MappableType>(box.getType())
-                            .getVarPtr(box)) {
-        boxRef = boxPtr;
+  // If [hl]fir.declare is visible, extract the bounds from the declaration's
+  // shape (if it is provided).
+  if (mlir::isa<hlfir::DeclareOp, fir::DeclareOp>(var.getDefiningOp())) {
+    mlir::Value zero =
+        firBuilder.createIntegerConstant(loc, builder.getIndexType(), 0);
+    mlir::Value one =
+        firBuilder.createIntegerConstant(loc, builder.getIndexType(), 1);
+
+    mlir::Value shape;
+    if (auto declareOp =
+            mlir::dyn_cast_if_present<fir::DeclareOp>(var.getDefiningOp()))
+      shape = declareOp.getShape();
+    else if (auto declareOp = mlir::dyn_cast_if_present<hlfir::DeclareOp>(
+                 var.getDefiningOp()))
+      shape = declareOp.getShape();
+
+    const bool strideIncludeLowerExtent = true;
+
+    llvm::SmallVector<mlir::Value> accBounds;
+    mlir::Operation *anyShapeOp = shape ? shape.getDefiningOp() : nullptr;
+    if (auto shapeOp = mlir::dyn_cast_if_present<fir::ShapeOp>(anyShapeOp)) {
+      mlir::Value cummulativeExtent = one;
+      for (auto extent : shapeOp.getExtents()) {
+        mlir::Value upperbound =
+            mlir::arith::SubIOp::create(builder, loc, extent, one);
+        mlir::Value stride = one;
+        if (strideIncludeLowerExtent) {
+          stride = cummulativeExtent;
+          cummulativeExtent = mlir::arith::MulIOp::create(
+              builder, loc, cummulativeExtent, extent);
+        }
+        auto accBound = mlir::acc::DataBoundsOp::create(
+            builder, loc, mlir::acc::DataBoundsType::get(builder.getContext()),
+            /*lowerbound=*/zero, /*upperbound=*/upperbound,
+            /*extent=*/extent, /*stride=*/stride, /*strideInBytes=*/false,
+            /*startIdx=*/one);
+        accBounds.push_back(accBound);
       }
-      // TODO: Handle Fortran optional.
-      const mlir::Value isPresent;
-      fir::factory::AddrAndBoundsInfo info(box, boxRef, isPresent,
-                                           box.getType());
-      return fir::factory::genBoundsOpsFromBox<mlir::acc::DataBoundsOp,
-                                               mlir::acc::DataBoundsType>(
-          firBuilder, loc, exv, info);
-    }
-
-    if (mlir::isa<hlfir::DeclareOp, fir::DeclareOp>(var.getDefiningOp())) {
-      mlir::Value zero =
-          firBuilder.createIntegerConstant(loc, builder.getIndexType(), 0);
-      mlir::Value one =
-          firBuilder.createIntegerConstant(loc, builder.getIndexType(), 1);
-
-      mlir::Value shape;
-      if (auto declareOp =
-              mlir::dyn_cast_if_present<fir::DeclareOp>(var.getDefiningOp()))
-        shape = declareOp.getShape();
-      else if (auto declareOp = mlir::dyn_cast_if_present<hlfir::DeclareOp>(
-                   var.getDefiningOp()))
-        shape = declareOp.getShape();
-
-      const bool strideIncludeLowerExtent = true;
-
-      llvm::SmallVector<mlir::Value> accBounds;
-      if (auto shapeOp =
-              mlir::dyn_cast_if_present<fir::ShapeOp>(shape.getDefiningOp())) {
-        mlir::Value cummulativeExtent = one;
-        for (auto extent : shapeOp.getExtents()) {
+    } else if (auto shapeShiftOp =
+                   mlir::dyn_cast_if_present<fir::ShapeShiftOp>(anyShapeOp)) {
+      mlir::Value lowerbound;
+      mlir::Value cummulativeExtent = one;
+      for (auto [idx, val] : llvm::enumerate(shapeShiftOp.getPairs())) {
+        if (idx % 2 == 0) {
+          lowerbound = val;
+        } else {
+          mlir::Value extent = val;
           mlir::Value upperbound =
               mlir::arith::SubIOp::create(builder, loc, extent, one);
           mlir::Value stride = one;
@@ -281,40 +300,48 @@ generateSeqTyAccBounds(fir::SequenceType seqType, mlir::Value var,
               mlir::acc::DataBoundsType::get(builder.getContext()),
               /*lowerbound=*/zero, /*upperbound=*/upperbound,
               /*extent=*/extent, /*stride=*/stride, /*strideInBytes=*/false,
-              /*startIdx=*/one);
+              /*startIdx=*/lowerbound);
           accBounds.push_back(accBound);
         }
-      } else if (auto shapeShiftOp =
-                     mlir::dyn_cast_if_present<fir::ShapeShiftOp>(
-                         shape.getDefiningOp())) {
-        mlir::Value lowerbound;
-        mlir::Value cummulativeExtent = one;
-        for (auto [idx, val] : llvm::enumerate(shapeShiftOp.getPairs())) {
-          if (idx % 2 == 0) {
-            lowerbound = val;
-          } else {
-            mlir::Value extent = val;
-            mlir::Value upperbound =
-                mlir::arith::SubIOp::create(builder, loc, extent, one);
-            mlir::Value stride = one;
-            if (strideIncludeLowerExtent) {
-              stride = cummulativeExtent;
-              cummulativeExtent = mlir::arith::MulIOp::create(
-                  builder, loc, cummulativeExtent, extent);
-            }
-            auto accBound = mlir::acc::DataBoundsOp::create(
-                builder, loc,
-                mlir::acc::DataBoundsType::get(builder.getContext()),
-                /*lowerbound=*/zero, /*upperbound=*/upperbound,
-                /*extent=*/extent, /*stride=*/stride, /*strideInBytes=*/false,
-                /*startIdx=*/lowerbound);
-            accBounds.push_back(accBound);
-          }
-        }
       }
+    }
 
-      if (!accBounds.empty())
-        return accBounds;
+    if (!accBounds.empty())
+      return accBounds;
+  }
+
+  if (seqType.hasDynamicExtents() || seqType.hasUnknownShape()) {
+    mlir::Value box;
+    bool mayBeOptional = false;
+    if (auto boxAddr =
+            mlir::dyn_cast_if_present<fir::BoxAddrOp>(var.getDefiningOp())) {
+      box = boxAddr.getVal();
+      // Since fir.box_addr already accesses the box, we do not care
+      // checking if it is optional.
+    } else if (mlir::isa<fir::BaseBoxType>(var.getType())) {
+      box = var;
+      mayBeOptional = fir::mayBeAbsentBox(box);
+    }
+
+    if (box) {
+      auto res =
+          hlfir::translateToExtendedValue(loc, firBuilder, hlfir::Entity(box));
+      fir::ExtendedValue exv = res.first;
+      mlir::Value boxRef = box;
+      if (auto boxPtr =
+              mlir::cast<mlir::acc::MappableType>(box.getType()).getVarPtr(box))
+        boxRef = boxPtr;
+
+      mlir::Value isPresent =
+          !mayBeOptional ? mlir::Value{}
+                         : fir::IsPresentOp::create(builder, loc,
+                                                    builder.getI1Type(), box);
+
+      fir::factory::AddrAndBoundsInfo info(box, boxRef, isPresent,
+                                           box.getType());
+      return fir::factory::genBoundsOpsFromBox<mlir::acc::DataBoundsOp,
+                                               mlir::acc::DataBoundsType>(
+          firBuilder, loc, exv, info);
     }
 
     assert(false && "array with unknown dimension expected to have descriptor");
@@ -377,7 +404,7 @@ getBaseRef(mlir::TypedValue<mlir::acc::PointerLikeType> varPtr) {
   // calculation op.
   mlir::Value baseRef =
       llvm::TypeSwitch<mlir::Operation *, mlir::Value>(op)
-          .Case<fir::DeclareOp>([&](auto op) {
+          .Case([&](fir::DeclareOp op) {
             // If this declare binds a view with an underlying storage operand,
             // treat that storage as the base reference. Otherwise, fall back
             // to the declared memref.
@@ -385,7 +412,7 @@ getBaseRef(mlir::TypedValue<mlir::acc::PointerLikeType> varPtr) {
               return storage;
             return mlir::Value(varPtr);
           })
-          .Case<hlfir::DesignateOp>([&](auto op) {
+          .Case([&](hlfir::DesignateOp op) {
             // Get the base object.
             return op.getMemref();
           })
@@ -393,12 +420,12 @@ getBaseRef(mlir::TypedValue<mlir::acc::PointerLikeType> varPtr) {
             // Get the base array on which the coordinate is being applied.
             return op.getMemref();
           })
-          .Case<fir::CoordinateOp>([&](auto op) {
+          .Case([&](fir::CoordinateOp op) {
             // For coordinate operation which is applied on derived type
             // object, get the base object.
             return op.getRef();
           })
-          .Case<fir::ConvertOp>([&](auto op) -> mlir::Value {
+          .Case([&](fir::ConvertOp op) -> mlir::Value {
             // Strip the conversion and recursively check the operand
             if (auto ptrLikeOperand = mlir::dyn_cast_if_present<
                     mlir::TypedValue<mlir::acc::PointerLikeType>>(
@@ -1031,6 +1058,25 @@ static mlir::Value genScalarCombiner(fir::FirOpBuilder &builder,
   TODO(loc, "reduction operator");
 }
 
+static bool useAccReductionCombineOp(mlir::Type elementType,
+                                     mlir::acc::ReductionOperator op) {
+  if (useAccReductionCombineAll)
+    return true;
+  if (!useAccReductionCombine)
+    return false;
+  // LOGICAL operators do not have mlir operators and requires FIR specific
+  // logic to interpret the TRUE and FALSE values from the storage (implemented
+  // in fir.convert to i1).
+  if (!llvm::isa<mlir::IntegerType, mlir::FloatType, mlir::ComplexType>(
+          elementType))
+    return false;
+  // MIN/MAX for floating point can have different edge-case behaviors (NANs).
+  // Currently the mlir operator does not match the behavior implemented by
+  // flang.
+  return op != mlir::acc::ReductionOperator::AccMax &&
+         op != mlir::acc::ReductionOperator::AccMin;
+}
+
 template <typename Ty>
 bool OpenACCMappableModel<Ty>::generateCombiner(
     mlir::Type type, mlir::OpBuilder &mlirBuilder, mlir::Location loc,
@@ -1055,11 +1101,25 @@ bool OpenACCMappableModel<Ty>::generateCombiner(
   }
 
   mlir::Type elementType = fir::getFortranElementType(dest.getType());
-  auto genKernel = [&](mlir::Location l, fir::FirOpBuilder &b,
-                       hlfir::Entity srcElementValue,
-                       hlfir::Entity destElementValue) -> hlfir::Entity {
-    return hlfir::Entity{genScalarCombiner(builder, loc, op, elementType,
-                                           srcElementValue, destElementValue)};
+  auto genKernel =
+      [&](mlir::Location l, fir::FirOpBuilder &b, hlfir::Entity destElementAddr,
+          hlfir::Entity srcElementAddr, mlir::ArrayAttr accessGroups) -> void {
+    assert(!accessGroups && "access groups not expected in acc reductions");
+    if (useAccReductionCombineOp(elementType, op)) {
+      mlir::acc::ReductionCombineOp::create(builder, loc, destElementAddr,
+                                            srcElementAddr, op);
+      return;
+    }
+    hlfir::Entity srcElementValue =
+        hlfir::loadTrivialScalar(loc, builder, srcElementAddr);
+    hlfir::Entity destElementValue =
+        hlfir::loadTrivialScalar(loc, builder, destElementAddr);
+    hlfir::Entity combined(genScalarCombiner(
+        builder, loc, op, elementType, destElementValue, srcElementValue));
+    hlfir::AssignOp::create(builder, loc, combined, destElementAddr,
+                            /*realloc=*/false,
+                            /*keep_lhs_length_if_realloc=*/false,
+                            /*temporary_lhs=*/false);
   };
   hlfir::genNoAliasAssignment(loc, builder, srcSection, destSection,
                               /*emitWorkshareLoop=*/false,
@@ -1211,41 +1271,6 @@ template mlir::Value OpenACCPointerLikeModel<fir::LLVMPointerType>::genAllocate(
     llvm::StringRef varName, mlir::Type varType, mlir::Value originalVar,
     bool &needsFree) const;
 
-static mlir::Value stripCasts(mlir::Value value, bool stripDeclare = true) {
-  mlir::Value currentValue = value;
-
-  while (currentValue) {
-    auto *definingOp = currentValue.getDefiningOp();
-    if (!definingOp)
-      break;
-
-    if (auto convertOp = mlir::dyn_cast<fir::ConvertOp>(definingOp)) {
-      currentValue = convertOp.getValue();
-      continue;
-    }
-
-    if (auto viewLike = mlir::dyn_cast<mlir::ViewLikeOpInterface>(definingOp)) {
-      currentValue = viewLike.getViewSource();
-      continue;
-    }
-
-    if (stripDeclare) {
-      if (auto declareOp = mlir::dyn_cast<hlfir::DeclareOp>(definingOp)) {
-        currentValue = declareOp.getMemref();
-        continue;
-      }
-
-      if (auto declareOp = mlir::dyn_cast<fir::DeclareOp>(definingOp)) {
-        currentValue = declareOp.getMemref();
-        continue;
-      }
-    }
-    break;
-  }
-
-  return currentValue;
-}
-
 template <typename Ty>
 bool OpenACCPointerLikeModel<Ty>::genFree(
     mlir::Type pointer, mlir::OpBuilder &builder, mlir::Location loc,
@@ -1273,7 +1298,7 @@ bool OpenACCPointerLikeModel<Ty>::genFree(
   mlir::Value valueToInspect = allocRes ? allocRes : varToFree;
 
   // Strip casts and declare operations to find the original allocation
-  mlir::Value strippedValue = stripCasts(valueToInspect);
+  mlir::Value strippedValue = fir::acc::getOriginalDef(valueToInspect);
   mlir::Operation *originalAlloc = strippedValue.getDefiningOp();
 
   // If we found an AllocMemOp (heap allocation), free it
@@ -1511,7 +1536,8 @@ static bool hasCUDADeviceAttrOnFuncArg(mlir::BlockArgument blockArg) {
 /// Shared implementation for checking if a value represents device data.
 static bool isDeviceDataImpl(mlir::Value var) {
   // Strip casts to find the underlying value.
-  mlir::Value currentVal = stripCasts(var, /*stripDeclare=*/false);
+  mlir::Value currentVal =
+      fir::acc::getOriginalDef(var, /*stripDeclare=*/false);
 
   if (auto blockArg = mlir::dyn_cast<mlir::BlockArgument>(currentVal))
     return hasCUDADeviceAttrOnFuncArg(blockArg);

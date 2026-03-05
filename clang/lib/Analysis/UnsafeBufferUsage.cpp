@@ -458,6 +458,46 @@ static bool areEqualIntegers(const Expr *E1, const Expr *E2, ASTContext &Ctx) {
   }
 }
 
+// Given an expression like `&X` or `std::addressof(X)`, returns the `Expr`
+// corresponding to `X` (after removing parens and implicit casts).
+// Returns null if the input expression `E` is not an address-of expression.
+static const Expr *getSubExprInAddressOfExpr(const Expr &E) {
+  if (!E.getType()->isPointerType())
+    return nullptr;
+  const Expr *Ptr = E.IgnoreParenImpCasts();
+
+  // `&X` where `X` is an `Expr`.
+  if (const auto *UO = dyn_cast<UnaryOperator>(Ptr)) {
+    if (UO->getOpcode() != UnaryOperator::Opcode::UO_AddrOf)
+      return nullptr;
+    return UO->getSubExpr()->IgnoreParenImpCasts();
+  }
+
+  // `std::addressof(X)` where `X` is an `Expr`.
+  if (const auto *CE = dyn_cast<CallExpr>(Ptr)) {
+    const FunctionDecl *FnDecl = CE->getDirectCallee();
+    if (!FnDecl || !FnDecl->isInStdNamespace() ||
+        FnDecl->getNameAsString() != "addressof" || CE->getNumArgs() != 1)
+      return nullptr;
+    return CE->getArg(0)->IgnoreParenImpCasts();
+  }
+
+  return nullptr;
+}
+
+// Given an expression like `sizeof(X)`, returns the `Expr` corresponding to `X`
+// (after removing parens and implicit casts). Returns null if the expression
+// `E` is not a `sizeof` expression or is `sizeof(T)` for a type `T`.
+static const Expr *getSubExprInSizeOfExpr(const Expr &E) {
+  const auto *SizeOfExpr =
+      dyn_cast<UnaryExprOrTypeTraitExpr>(E.IgnoreParenImpCasts());
+  if (!SizeOfExpr || SizeOfExpr->getKind() != UETT_SizeOf)
+    return nullptr;
+  if (SizeOfExpr->isArgumentType())
+    return nullptr;
+  return SizeOfExpr->getArgumentExpr()->IgnoreParenImpCasts();
+}
+
 // Providing that `Ptr` is a pointer and `Size` is an unsigned-integral
 // expression, returns true iff they follow one of the following safe
 // patterns:
@@ -530,21 +570,14 @@ static bool isPtrBufferSafe(const Expr *Ptr, const Expr *Size,
     }
 
     // Pattern 3:
-    if (ER.Val.getInt().isOne()) {
-      if (auto *UO = dyn_cast<UnaryOperator>(Ptr->IgnoreParenImpCasts()))
-        return UO && UO->getOpcode() == UnaryOperator::Opcode::UO_AddrOf;
-      if (auto *CE = dyn_cast<CallExpr>(Ptr->IgnoreParenImpCasts())) {
-        auto *FnDecl = CE->getDirectCallee();
+    if (ER.Val.getInt().isOne() && getSubExprInAddressOfExpr(*Ptr) != nullptr)
+      return true;
 
-        return FnDecl && FnDecl->getNameAsString() == "addressof" &&
-               FnDecl->isInStdNamespace();
-      }
-      return false;
-    }
     // Pattern 4:
     if (ER.Val.getInt().isZero())
       return true;
   }
+
   return false;
 }
 
@@ -664,6 +697,71 @@ static bool isSafeSpanTwoParamConstruct(const CXXConstructExpr &Node,
 
   // Check 5:
   return isPtrBufferSafe(Arg0, Arg1, Ctx);
+}
+
+static bool isSafeStringViewTwoParamConstruct(const CXXConstructExpr &Node,
+                                              ASTContext &Ctx) {
+  const Expr *Arg0 = Node.getArg(0)->IgnoreParenImpCasts();
+  const Expr *Arg1 = Node.getArg(1)->IgnoreParenImpCasts();
+
+  // Pattern 1: String Literals
+  if (const auto *SL = dyn_cast<StringLiteral>(Arg0)) {
+    if (auto ArgSize = Arg1->getIntegerConstantExpr(Ctx)) {
+      if (llvm::APSInt::compareValues(
+              llvm::APSInt::getUnsigned(SL->getLength()), *ArgSize) >= 0)
+        return true;
+      return false; // Explicitly unsafe if size > length
+    }
+  }
+
+  // Pattern 2: Constant Arrays
+  if (const auto *CAT = Ctx.getAsConstantArrayType(Arg0->getType())) {
+    if (auto ArgSize = Arg1->getIntegerConstantExpr(Ctx)) {
+      if (llvm::APSInt::compareValues(llvm::APSInt(CAT->getSize(), true),
+                                      *ArgSize) >= 0)
+        return true;
+      return false; // Explicitly unsafe if size > ArraySize
+    }
+  }
+
+  // Pattern 3: Zero length
+  if (auto Val = Arg1->getIntegerConstantExpr(Ctx)) {
+    if (Val->isZero())
+      return true;
+  }
+
+  // Pattern 4: string_view(it, it) - Only safe if it's .begin() and .end() of
+  // the SAME object
+  auto GetContainerObj = [](const Expr *E) -> const Expr * {
+    E = E->IgnoreParenImpCasts();
+    if (const auto *MCE = dyn_cast<CXXMemberCallExpr>(E)) {
+      const auto *MD = MCE->getMethodDecl();
+      if (MD && (MD->getName() == "begin" || MD->getName() == "end"))
+        return MCE->getImplicitObjectArgument()->IgnoreParenImpCasts();
+    }
+    return nullptr;
+  };
+
+  const Expr *Obj0 = GetContainerObj(Arg0);
+  const Expr *Obj1 = GetContainerObj(Arg1);
+
+  if (Obj0 && Obj1) {
+    const auto *DRE0 = dyn_cast<DeclRefExpr>(Obj0);
+    const auto *DRE1 = dyn_cast<DeclRefExpr>(Obj1);
+
+    // If both are references to variables, they MUST point to the same
+    // declaration.
+    if (DRE0 && DRE1) {
+      if (DRE0->getDecl()->getCanonicalDecl() ==
+          DRE1->getDecl()->getCanonicalDecl())
+        return true;
+    }
+
+    // If they aren't both DeclRefExprs or don't match, we DO NOT return true.
+    // This ensures v1.begin(), v2.end() triggers a warning.
+  }
+
+  return false; // Default to unsafe
 }
 
 static bool isSafeArraySubscript(const ArraySubscriptExpr &Node,
@@ -800,14 +898,13 @@ static bool isNullTermPointer(const Expr *Ptr, ASTContext &Ctx) {
   return false;
 }
 
-namespace libc_func_matchers {
 // Under `libc_func_matchers`, define a set of matchers that match unsafe
 // functions in libc and unsafe calls to them.
-
+namespace libc_func_matchers {
 //  A tiny parser to strip off common prefix and suffix of libc function names
 //  in real code.
 //
-//  Given a function name, `matchName` returns `CoreName` according to the
+//  Given a function name, `matchName()` returns `CoreName` according to the
 //  following grammar:
 //
 //  LibcName     := CoreName | CoreName + "_s"
@@ -815,35 +912,33 @@ namespace libc_func_matchers {
 //                  "__builtin___" + LibcName + "_chk"   |
 //                  "__asan_" + LibcName
 //
-struct LibcFunNamePrefixSuffixParser {
-  StringRef matchName(StringRef FunName, bool isBuiltin) {
-    // Try to match __builtin_:
-    if (isBuiltin && FunName.starts_with("__builtin_"))
-      // Then either it is __builtin_LibcName or __builtin___LibcName_chk or
-      // no match:
-      return matchLibcNameOrBuiltinChk(
-          FunName.drop_front(10 /* truncate "__builtin_" */));
-    // Try to match __asan_:
-    if (FunName.starts_with("__asan_"))
-      return matchLibcName(FunName.drop_front(7 /* truncate of "__asan_" */));
-    return matchLibcName(FunName);
-  }
+static StringRef matchLibcName(StringRef Name) {
+  if (Name.ends_with("_s"))
+    return Name.drop_back(2 /* truncate "_s" */);
+  return Name;
+}
 
-  // Parameter `Name` is the substring after stripping off the prefix
-  // "__builtin_".
-  StringRef matchLibcNameOrBuiltinChk(StringRef Name) {
-    if (Name.starts_with("__") && Name.ends_with("_chk"))
-      return matchLibcName(
-          Name.drop_front(2).drop_back(4) /* truncate "__" and "_chk" */);
-    return matchLibcName(Name);
-  }
+// Parameter `Name` is the substring after stripping off the prefix
+// "__builtin_".
+static StringRef matchLibcNameOrBuiltinChk(StringRef Name) {
+  if (Name.starts_with("__") && Name.ends_with("_chk"))
+    return matchLibcName(
+        Name.drop_front(2).drop_back(4) /* truncate "__" and "_chk" */);
+  return matchLibcName(Name);
+}
 
-  StringRef matchLibcName(StringRef Name) {
-    if (Name.ends_with("_s"))
-      return Name.drop_back(2 /* truncate "_s" */);
-    return Name;
-  }
-};
+static StringRef matchName(StringRef FunName, bool isBuiltin) {
+  // Try to match __builtin_:
+  if (isBuiltin && FunName.starts_with("__builtin_"))
+    // Then either it is __builtin_LibcName or __builtin___LibcName_chk or no
+    // match:
+    return matchLibcNameOrBuiltinChk(
+        FunName.drop_front(10 /* truncate "__builtin_" */));
+  // Try to match __asan_:
+  if (FunName.starts_with("__asan_"))
+    return matchLibcName(FunName.drop_front(7 /* truncate of "__asan_" */));
+  return matchLibcName(FunName);
+}
 
 // Return true iff at least one of following cases holds:
 //  1. Format string is a literal and there is an unsafe pointer argument
@@ -998,95 +1093,90 @@ hasUnsafeFormatOrSArg(ASTContext &Ctx, const CallExpr *Call,
 //  2. `CoreName` or `CoreName[str/wcs]` is one of the `PredefinedNames`, which
 //     is a set of libc function names.
 //
-//  Note: For predefined prefix and suffix, see `LibcFunNamePrefixSuffixParser`.
+//  Note: For predefined prefix and suffix, see `matchName()`.
 //  The notation `CoreName[str/wcs]` means a new name obtained from replace
 //  string "wcs" with "str" in `CoreName`.
 static bool isPredefinedUnsafeLibcFunc(const FunctionDecl &Node) {
-  static std::unique_ptr<std::set<StringRef>> PredefinedNames = nullptr;
-  if (!PredefinedNames)
-    PredefinedNames =
-        std::make_unique<std::set<StringRef>, std::set<StringRef>>({
-            // numeric conversion:
-            "atof",
-            "atoi",
-            "atol",
-            "atoll",
-            "strtol",
-            "strtoll",
-            "strtoul",
-            "strtoull",
-            "strtof",
-            "strtod",
-            "strtold",
-            "strtoimax",
-            "strtoumax",
-            // "strfromf",  "strfromd", "strfroml", // C23?
-            // string manipulation:
-            "strcpy",
-            "strncpy",
-            "strlcpy",
-            "strcat",
-            "strncat",
-            "strlcat",
-            "strxfrm",
-            "strdup",
-            "strndup",
-            // string examination:
-            "strlen",
-            "strnlen",
-            "strcmp",
-            "strncmp",
-            "stricmp",
-            "strcasecmp",
-            "strcoll",
-            "strchr",
-            "strrchr",
-            "strspn",
-            "strcspn",
-            "strpbrk",
-            "strstr",
-            "strtok",
-            // "mem-" functions
-            "memchr",
-            "wmemchr",
-            "memcmp",
-            "wmemcmp",
-            "memcpy",
-            "memccpy",
-            "mempcpy",
-            "wmemcpy",
-            "memmove",
-            "wmemmove",
-            "memset",
-            "wmemset",
-            // IO:
-            "fread",
-            "fwrite",
-            "fgets",
-            "fgetws",
-            "gets",
-            "fputs",
-            "fputws",
-            "puts",
-            // others
-            "strerror_s",
-            "strerror_r",
-            "bcopy",
-            "bzero",
-            "bsearch",
-            "qsort",
-        });
+  static const std::set<StringRef> PredefinedNames = {
+      // numeric conversion:
+      "atof",
+      "atoi",
+      "atol",
+      "atoll",
+      "strtol",
+      "strtoll",
+      "strtoul",
+      "strtoull",
+      "strtof",
+      "strtod",
+      "strtold",
+      "strtoimax",
+      "strtoumax",
+      // "strfromf",  "strfromd", "strfroml", // C23?
+      // string manipulation:
+      "strcpy",
+      "strncpy",
+      "strlcpy",
+      "strcat",
+      "strncat",
+      "strlcat",
+      "strxfrm",
+      "strdup",
+      "strndup",
+      // string examination:
+      "strlen",
+      "strnlen",
+      "strcmp",
+      "strncmp",
+      "stricmp",
+      "strcasecmp",
+      "strcoll",
+      "strchr",
+      "strrchr",
+      "strspn",
+      "strcspn",
+      "strpbrk",
+      "strstr",
+      "strtok",
+      // "mem-" functions
+      "memchr",
+      "wmemchr",
+      "memcmp",
+      "wmemcmp",
+      "memcpy",
+      "memccpy",
+      "mempcpy",
+      "wmemcpy",
+      "memmove",
+      "wmemmove",
+      "wmemset",
+      // IO:
+      "fread",
+      "fwrite",
+      "fgets",
+      "fgetws",
+      "gets",
+      "fputs",
+      "fputws",
+      "puts",
+      // others
+      "strerror_s",
+      "strerror_r",
+      "bcopy",
+      "bzero",
+      "bsearch",
+      "qsort",
+  };
 
   auto *II = Node.getIdentifier();
 
   if (!II)
     return false;
 
-  StringRef Name = LibcFunNamePrefixSuffixParser().matchName(
-      II->getName(), Node.getBuiltinID());
+  StringRef Name = matchName(II->getName(), Node.getBuiltinID());
 
   // Match predefined names:
-  if (PredefinedNames->find(Name) != PredefinedNames->end())
+  if (PredefinedNames.count(Name))
     return true;
 
   std::string NameWCS = Name.str();
@@ -1098,11 +1188,48 @@ static bool isPredefinedUnsafeLibcFunc(const FunctionDecl &Node) {
     NameWCS[WcsPos++] = 'r';
     WcsPos = NameWCS.find("wcs", WcsPos);
   }
-  if (PredefinedNames->find(NameWCS) != PredefinedNames->end())
+  if (PredefinedNames.count(NameWCS))
     return true;
   // All `scanf` functions are unsafe (including `sscanf`, `vsscanf`, etc.. They
   // all should end with "scanf"):
   return Name.ends_with("scanf");
+}
+
+// Returns true if this is an unsafe call to `memset`.
+// The only call we currently consider safe is of the form
+// `memset(&x, 0, sizeof(x))`, with possible variations in parentheses.
+static bool isUnsafeMemset(const CallExpr &Node, ASTContext &Ctx) {
+  const FunctionDecl *FD = Node.getDirectCallee();
+  assert(FD && "It should have been checked that FD is non-null.");
+
+  const IdentifierInfo *II = FD->getIdentifier();
+  if (!II)
+    return false;
+
+  StringRef Name = matchName(II->getName(), FD->getBuiltinID());
+  if (Name != "memset")
+    return false;
+
+  // We currently only handle the basic forms of `memset` with 3 parameters.
+  // There is also `__builtin___memset_chk()` which takes a 4th `destlen`
+  // parameter for bounds checking, but we don't consider its safe forms yet.
+  // https://refspecs.linuxbase.org/LSB_4.1.0/LSB-Core-generic/LSB-Core-generic/libc---memset-chk-1.html
+  if (FD->getNumParams() != 3)
+    return true;
+
+  // Now we have a known version of `memset`, consider it unsafe unless it's in
+  // the form `memset(&x, 0, sizeof(x))`.
+  const auto *AddressOfVar = dyn_cast_if_present<DeclRefExpr>(
+      getSubExprInAddressOfExpr(*Node.getArg(0)));
+  if (!AddressOfVar)
+    return true;
+
+  const auto *SizeOfVar =
+      dyn_cast_if_present<DeclRefExpr>(getSubExprInSizeOfExpr(*Node.getArg(2)));
+  if (!SizeOfVar)
+    return true;
+
+  return AddressOfVar->getDecl() != SizeOfVar->getDecl();
 }
 
 // Match a call to one of the `v*printf` functions taking `va_list`.  We cannot
@@ -1114,12 +1241,9 @@ static bool isUnsafeVaListPrintfFunc(const FunctionDecl &Node) {
   if (!II)
     return false;
 
-  StringRef Name = LibcFunNamePrefixSuffixParser().matchName(
-      II->getName(), Node.getBuiltinID());
+  StringRef Name = matchName(II->getName(), Node.getBuiltinID());
 
-  if (!Name.ends_with("printf"))
-    return false; // neither printf nor scanf
-  return Name.starts_with("v");
+  return Name.starts_with("v") && Name.ends_with("printf");
 }
 
 // Matches a call to one of the `sprintf` functions as they are always unsafe
@@ -1130,19 +1254,9 @@ static bool isUnsafeSprintfFunc(const FunctionDecl &Node) {
   if (!II)
     return false;
 
-  StringRef Name = LibcFunNamePrefixSuffixParser().matchName(
-      II->getName(), Node.getBuiltinID());
+  StringRef Name = matchName(II->getName(), Node.getBuiltinID());
 
-  if (!Name.ends_with("printf") ||
-      // Let `isUnsafeVaListPrintfFunc` check for cases with va-list:
-      Name.starts_with("v"))
-    return false;
-
-  StringRef Prefix = Name.drop_back(6);
-
-  if (Prefix.ends_with("w"))
-    Prefix = Prefix.drop_back(1);
-  return Prefix == "s";
+  return Name == "sprintf" || Name == "swprintf";
 }
 
 // Match function declarations of `printf`, `fprintf`, `snprintf` and their wide
@@ -1154,10 +1268,9 @@ static bool isNormalPrintfFunc(const FunctionDecl &Node) {
   if (!II)
     return false;
 
-  StringRef Name = LibcFunNamePrefixSuffixParser().matchName(
-      II->getName(), Node.getBuiltinID());
+  StringRef Name = matchName(II->getName(), Node.getBuiltinID());
 
-  if (!Name.ends_with("printf") || Name.starts_with("v"))
+  if (!Name.ends_with("printf"))
     return false;
 
   StringRef Prefix = Name.drop_back(6);
@@ -1754,6 +1867,70 @@ public:
   SmallVector<const Expr *, 1> getUnsafePtrs() const override { return {}; }
 };
 
+class StringViewTwoParamConstructorGadget : public WarningGadget {
+  static constexpr const char *const StringViewTwoParamConstructorTag =
+      "stringViewTwoParamConstructor";
+  const CXXConstructExpr *Ctor; // the string_view constructor expression
+
+public:
+  StringViewTwoParamConstructorGadget(const MatchResult &Result)
+      : WarningGadget(Kind::StringViewTwoParamConstructor),
+        Ctor(Result.getNodeAs<CXXConstructExpr>(
+            StringViewTwoParamConstructorTag)) {}
+
+  static bool classof(const Gadget *G) {
+    return G->getKind() == Kind::StringViewTwoParamConstructor;
+  }
+
+  static bool matches(const Stmt *S, ASTContext &Ctx, MatchResult &Result) {
+    const auto *CE = dyn_cast<CXXConstructExpr>(S);
+    if (!CE)
+      return false;
+    const auto *CDecl = CE->getConstructor();
+    const auto *CRecordDecl = CDecl->getParent();
+
+    // MATCH: std::basic_string_view
+    bool IsStringView =
+        CRecordDecl->isInStdNamespace() &&
+        CDecl->getDeclName().getAsString() == "basic_string_view" &&
+        CE->getNumArgs() == 2;
+
+    if (!IsStringView || isSafeStringViewTwoParamConstruct(*CE, Ctx))
+      return false;
+
+    Result.addNode(StringViewTwoParamConstructorTag, DynTypedNode::create(*CE));
+    return true;
+  }
+
+  static bool matches(const Stmt *S, ASTContext &Ctx,
+                      const UnsafeBufferUsageHandler *Handler,
+                      MatchResult &Result) {
+    if (ignoreUnsafeBufferInContainer(*S, Handler))
+      return false;
+    return matches(S, Ctx, Result);
+  }
+
+  void handleUnsafeOperation(UnsafeBufferUsageHandler &Handler,
+                             bool IsRelatedToDecl,
+                             ASTContext &Ctx) const override {
+    Handler.handleUnsafeOperationInStringView(Ctor, IsRelatedToDecl, Ctx);
+  }
+
+  SourceLocation getSourceLoc() const override { return Ctor->getBeginLoc(); }
+
+  DeclUseList getClaimedVarUseSites() const override {
+    // If the constructor call is of the form `std::string_view{var, n}`, `var`
+    // is considered an unsafe variable.
+    if (auto *DRE = dyn_cast<DeclRefExpr>(Ctor->getArg(0))) {
+      if (isa<VarDecl>(DRE->getDecl()))
+        return {DRE};
+    }
+    return {};
+  }
+
+  SmallVector<const Expr *, 1> getUnsafePtrs() const override { return {}; }
+};
+
 /// A pointer initialization expression of the form:
 ///  \code
 ///  int *p = q;
@@ -2168,6 +2345,10 @@ public:
     if (!isSingleStringLiteralArg) {
       // (unless the call has a sole string literal argument):
       if (libc_func_matchers::isPredefinedUnsafeLibcFunc(*FD)) {
+        Result.addNode(Tag, DynTypedNode::create(*CE));
+        return true;
+      }
+      if (libc_func_matchers::isUnsafeMemset(*CE, Ctx)) {
         Result.addNode(Tag, DynTypedNode::create(*CE));
         return true;
       }
@@ -2899,6 +3080,8 @@ std::set<const Expr *> clang::findUnsafePointers(const FunctionDecl *FD) {
                               const Expr *UnsafeArg = nullptr) override {}
     void handleUnsafeOperationInContainer(const Stmt *, bool,
                                           ASTContext &) override {}
+    void handleUnsafeOperationInStringView(const Stmt *, bool,
+                                           ASTContext &) override {}
     void handleUnsafeVariableGroup(const VarDecl *,
                                    const VariableGroupsManager &, FixItList &&,
                                    const Decl *,

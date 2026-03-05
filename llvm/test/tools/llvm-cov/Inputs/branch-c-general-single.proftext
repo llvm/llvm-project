@@ -2,13 +2,10 @@
 :single_byte_coverage
 big_switch
 # Func Hash:
-13144136522122330070
+461999971447013334
 # Num Counters:
-27
+25
 # Counter Values:
-1
-1
-1
 1
 1
 1
@@ -28,17 +25,18 @@ big_switch
 1
 1
 1
-1
-1
-1
-1
+0
+0
+0
+0
+0
 1
 
 boolean_operators
 # Func Hash:
 1245693242827665
 # Num Counters:
-17
+26
 # Counter Values:
 1
 1
@@ -57,25 +55,30 @@ boolean_operators
 1
 1
 1
+0
+1
+1
+1
+1
+1
+1
+1
+0
 
 boolop_loops
 # Func Hash:
-12402604614320574815
+873389568252105055
 # Num Counters:
-23
+21
 # Counter Values:
 1
-0
 1
 1
 1
 1
-0
 1
 1
 1
-1
-0
 1
 1
 1
@@ -84,6 +87,8 @@ boolop_loops
 0
 1
 1
+1
+0
 1
 1
 1
@@ -92,11 +97,8 @@ branch-c-general.c:static_func
 # Func Hash:
 18129
 # Num Counters:
-5
+2
 # Counter Values:
-1
-1
-1
 1
 1
 
@@ -114,10 +116,18 @@ conditional_operator
 
 conditionals
 # Func Hash:
-4904767535850050386
+293081517422662482
 # Num Counters:
-25
+24
 # Counter Values:
+1
+1
+1
+1
+1
+1
+1
+1
 1
 1
 1
@@ -126,34 +136,21 @@ conditionals
 1
 0
 1
+0
 1
 1
+0
 1
 1
-1
-1
-1
-1
-1
-1
-1
-1
-1
-1
-1
-1
+0
 1
 
 do_fallthrough
 # Func Hash:
-8714614136504380050
+644163604256451218
 # Num Counters:
-10
+6
 # Counter Values:
-1
-1
-1
-1
 1
 1
 1
@@ -163,9 +160,9 @@ do_fallthrough
 
 early_exits
 # Func Hash:
-2880354649761471549
+574511640547777597
 # Num Counters:
-20
+17
 # Counter Values:
 1
 0
@@ -175,24 +172,21 @@ early_exits
 1
 1
 1
-1
-1
-1
+0
 1
 1
 1
 0
-1
-1
+0
 1
 0
 0
 
 jumps
 # Func Hash:
-15051420506203462683
+63440946314451995
 # Num Counters:
-38
+33
 # Counter Values:
 1
 1
@@ -200,18 +194,15 @@ jumps
 1
 0
 0
-0
-1
-0
-1
-1
-0
-1
 1
 0
 1
 1
 1
+1
+0
+1
+0
 1
 1
 1
@@ -220,16 +211,14 @@ jumps
 1
 1
 0
-1
-1
-1
+0
 1
 1
 1
 1
 0
-0
 1
+0
 1
 1
 
@@ -245,15 +234,8 @@ simple_loops
 # Func Hash:
 1245818015463121
 # Num Counters:
-11
+4
 # Counter Values:
-1
-1
-1
-1
-1
-1
-1
 1
 1
 1
@@ -263,7 +245,7 @@ switches
 # Func Hash:
 43242458792028222
 # Num Counters:
-29
+28
 # Counter Values:
 1
 1
@@ -274,13 +256,6 @@ switches
 0
 1
 1
-0
-1
-1
-1
-1
-1
-1
 1
 1
 1
@@ -290,7 +265,13 @@ switches
 1
 1
 1
+0
 1
+1
+0
+0
+0
+0
 1
 0
 0

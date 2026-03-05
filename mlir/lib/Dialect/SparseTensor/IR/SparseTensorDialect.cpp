@@ -826,6 +826,15 @@ LogicalResult SparseTensorEncodingAttr::verify(
     return emitError() << "SoA is only applicable to singleton lvlTypes.";
   }
 
+  // Dense levels cannot follow a non-unique level. The iteration model for
+  // dense levels requires exactly one parent position to linearize into a
+  // contiguous range, but a non-unique parent provides two cursor values
+  // (segment start and end), which the dense level cannot handle.
+  for (auto [i, lt] : llvm::drop_begin(llvm::enumerate(lvlTypes))) {
+    if (isDenseLT(lt) && !isUniqueLT(lvlTypes[i - 1]))
+      return emitError() << "dense level cannot follow a non-unique level";
+  }
+
   // TODO: audit formats that actually are supported by backend.
   if (auto it = llvm::find_if(lvlTypes, isNOutOfMLT);
       it != std::end(lvlTypes)) {
@@ -1746,7 +1755,12 @@ static LogicalResult verifyNumBlockArgs(T *op, Region &region,
       return op->emitError() << regionName << " region argument " << (i + 1)
                              << " type mismatch";
   }
-  Operation *term = region.front().getTerminator();
+  Block &block = region.front();
+  if (!block.mightHaveTerminator())
+    return op->emitError() << regionName
+                           << " region must end with a terminator";
+
+  Operation *term = block.getTerminator();
   YieldOp yield = dyn_cast<YieldOp>(term);
   if (!yield)
     return op->emitError() << regionName

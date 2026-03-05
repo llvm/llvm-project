@@ -34,6 +34,7 @@
 #include "llvm/ADT/DenseSet.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SmallBitVector.h"
+#include "llvm/ADT/SmallVectorExtras.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Support/Casting.h"
 #include "llvm/Support/MathExtras.h"
@@ -1455,6 +1456,13 @@ void FromElementsOp::build(OpBuilder &builder, OperationState &result,
 }
 
 OpFoldResult FromElementsOp::fold(FoldAdaptor adaptor) {
+  // DenseElementsAttr::get requires StringAttr for element types that are not
+  // integer, index, float, or complex (e.g. vector types), but folded constants
+  // won't be StringAttr instances. Only fold for element types directly
+  // supported by DenseElementsAttr.
+  Type eltType = getType().getElementType();
+  if (!eltType.isIntOrIndexOrFloat() && !isa<ComplexType>(eltType))
+    return {};
   if (!llvm::is_contained(adaptor.getElements(), nullptr))
     return DenseElementsAttr::get(getType(), adaptor.getElements());
   return {};
@@ -2040,6 +2048,16 @@ static LogicalResult verifyTensorReshapeOp(TensorReshapeOp op,
           verifyReshapeLikeTypes(op, expandedType, collapsedType, isExpansion)))
     return failure();
 
+  // Reshape must preserve the number of elements when statically known.
+  if (expandedType.hasStaticShape() && collapsedType.hasStaticShape()) {
+    int64_t expandedNumElements = expandedType.getNumElements();
+    int64_t collapsedNumElements = collapsedType.getNumElements();
+    if (expandedNumElements != collapsedNumElements) {
+      return op.emitOpError("number of elements must be preserved: ")
+             << expandedNumElements << " != " << collapsedNumElements;
+    }
+  }
+
   auto maps = op.getReassociationMaps();
   RankedTensorType expectedType =
       CollapseShapeOp::inferCollapsedType(expandedType, maps);
@@ -2050,8 +2068,8 @@ static LogicalResult verifyTensorReshapeOp(TensorReshapeOp op,
 }
 
 LogicalResult ExpandShapeOp::verify() {
-  auto srcType = getSrcType();
-  auto resultType = getResultType();
+  RankedTensorType srcType = getSrc().getType();
+  RankedTensorType resultType = getResult().getType();
 
   if ((int64_t)getStaticOutputShape().size() != resultType.getRank())
     return emitOpError("expected number of static shape dims to be equal to "
@@ -2067,6 +2085,19 @@ LogicalResult ExpandShapeOp::verify() {
            << " dynamic dims while output_shape has " << getOutputShape().size()
            << " values";
 
+  // Verify that the number of dynamic dims in output_shape matches the number
+  // of dynamic dims in the result type.
+  if (failed(verifyDynamicDimensionCount(getOperation(), resultType,
+                                         getOutputShape())))
+    return failure();
+
+  // Verify if provided output shapes are in agreement with output type.
+  DenseI64ArrayAttr staticOutputShapes = getStaticOutputShapeAttr();
+  ArrayRef<int64_t> resShape = getResult().getType().getShape();
+  for (auto [pos, shape] : llvm::enumerate(resShape))
+    if (ShapedType::isStatic(shape) && shape != staticOutputShapes[pos])
+      return emitOpError("invalid output shape provided at pos ") << pos;
+
   return verifyTensorReshapeOp(*this, resultType, srcType);
 }
 
@@ -2076,7 +2107,10 @@ LogicalResult CollapseShapeOp::verify() {
                    [](ReassociationIndices group) { return group.empty(); })) {
     return op.emitOpError("reassociation indices must not be empty");
   }
-  return verifyTensorReshapeOp(*this, getSrcType(), getResultType());
+  RankedTensorType srcType = op.getSrc().getType();
+  RankedTensorType resultType = op.getResult().getType();
+
+  return verifyTensorReshapeOp(op, srcType, resultType);
 }
 
 namespace {
@@ -2091,6 +2125,10 @@ struct FoldReshapeWithConstant : OpRewritePattern<TensorReshapeOp> {
     if (!matchPattern(reshapeOp.getSrc(), m_Constant(&attr)))
       return failure();
     if (!attr || !attr.isSplat())
+      return failure();
+    // DenseElementsAttr requires a static shape; skip folding for dynamic
+    // result types.
+    if (!reshapeOp.getResultType().hasStaticShape())
       return failure();
     DenseElementsAttr newAttr = DenseElementsAttr::getFromRawBuffer(
         reshapeOp.getResultType(), attr.getRawData());
@@ -2413,12 +2451,12 @@ void ExtractSliceOp::build(OpBuilder &b, OperationState &result,
                            RankedTensorType resultType, Value source,
                            ValueRange offsets, ValueRange sizes,
                            ValueRange strides, ArrayRef<NamedAttribute> attrs) {
-  SmallVector<OpFoldResult> offsetValues = llvm::to_vector<4>(
-      llvm::map_range(offsets, [](Value v) -> OpFoldResult { return v; }));
-  SmallVector<OpFoldResult> sizeValues = llvm::to_vector<4>(
-      llvm::map_range(sizes, [](Value v) -> OpFoldResult { return v; }));
-  SmallVector<OpFoldResult> strideValues = llvm::to_vector<4>(
-      llvm::map_range(strides, [](Value v) -> OpFoldResult { return v; }));
+  SmallVector<OpFoldResult> offsetValues = llvm::map_to_vector<4>(
+      offsets, [](Value v) -> OpFoldResult { return v; });
+  SmallVector<OpFoldResult> sizeValues =
+      llvm::map_to_vector<4>(sizes, [](Value v) -> OpFoldResult { return v; });
+  SmallVector<OpFoldResult> strideValues = llvm::map_to_vector<4>(
+      strides, [](Value v) -> OpFoldResult { return v; });
   build(b, result, resultType, source, offsetValues, sizeValues, strideValues);
 }
 
@@ -2662,29 +2700,14 @@ public:
       counts.push_back(count);
     }
 
-    // New attribute constructed by the sliced values.
-    DenseElementsAttr newAttr;
-
-    if (auto elems = llvm::dyn_cast<DenseIntElementsAttr>(attr)) {
-      SmallVector<APInt> outValues;
-      outValues.reserve(sourceType.getNumElements());
-      sliceElements<DenseElementsAttr::IntElementIterator, APInt>(
-          elems.begin(), counts, offsets, sizes, strides, &outValues);
-      newAttr = DenseElementsAttr::get(resultType, outValues);
-    } else if (auto elems = llvm::dyn_cast<DenseFPElementsAttr>(attr)) {
-      SmallVector<APFloat> outValues;
-      outValues.reserve(sourceType.getNumElements());
-      sliceElements<DenseElementsAttr::FloatElementIterator, APFloat>(
-          elems.begin(), counts, offsets, sizes, strides, &outValues);
-      newAttr = DenseElementsAttr::get(resultType, outValues);
-    }
-
-    if (newAttr) {
-      rewriter.replaceOpWithNewOp<arith::ConstantOp>(op, resultType, newAttr);
-      return success();
-    }
-
-    return failure();
+    // Slice the elements and construct a new attribute.
+    SmallVector<Attribute> outValues;
+    outValues.reserve(resultType.getNumElements());
+    sliceElements(attr.value_begin<Attribute>(), counts, offsets, sizes,
+                  strides, &outValues);
+    auto newAttr = DenseElementsAttr::get(resultType, outValues);
+    rewriter.replaceOpWithNewOp<arith::ConstantOp>(op, resultType, newAttr);
+    return success();
   }
 
 private:
@@ -2707,8 +2730,24 @@ struct SliceReturnTypeCanonicalizer {
                               ArrayRef<OpFoldResult> mixedOffsets,
                               ArrayRef<OpFoldResult> mixedSizes,
                               ArrayRef<OpFoldResult> mixedStrides) {
-    return ExtractSliceOp::inferCanonicalRankReducedResultType(
-        op.getType().getRank(), op.getSourceType(), mixedSizes);
+    // Infer a tensor type without taking into account any rank reductions.
+    RankedTensorType nonReducedType =
+        ExtractSliceOp::inferResultType(op.getSourceType(), mixedSizes);
+
+    // Directly return the non-rank reduced type if there are no dropped
+    // dims.
+    llvm::SmallBitVector droppedDims = op.getDroppedDims();
+    if (droppedDims.none())
+      return nonReducedType;
+
+    // Build the reduced shape, preserving the original rank reduction pattern.
+    SmallVector<int64_t> targetShape;
+    for (auto i : llvm::seq<int64_t>(mixedSizes.size()))
+      if (!droppedDims.test(i))
+        targetShape.push_back(nonReducedType.getDimSize(i));
+
+    return RankedTensorType::get(targetShape, nonReducedType.getElementType(),
+                                 nonReducedType.getEncoding());
   }
 };
 
@@ -2832,12 +2871,12 @@ void InsertSliceOp::build(OpBuilder &b, OperationState &result, Value source,
 void InsertSliceOp::build(OpBuilder &b, OperationState &result, Value source,
                           Value dest, ValueRange offsets, ValueRange sizes,
                           ValueRange strides, ArrayRef<NamedAttribute> attrs) {
-  SmallVector<OpFoldResult> offsetValues = llvm::to_vector<4>(
-      llvm::map_range(offsets, [](Value v) -> OpFoldResult { return v; }));
-  SmallVector<OpFoldResult> sizeValues = llvm::to_vector<4>(
-      llvm::map_range(sizes, [](Value v) -> OpFoldResult { return v; }));
-  SmallVector<OpFoldResult> strideValues = llvm::to_vector<4>(
-      llvm::map_range(strides, [](Value v) -> OpFoldResult { return v; }));
+  SmallVector<OpFoldResult> offsetValues = llvm::map_to_vector<4>(
+      offsets, [](Value v) -> OpFoldResult { return v; });
+  SmallVector<OpFoldResult> sizeValues =
+      llvm::map_to_vector<4>(sizes, [](Value v) -> OpFoldResult { return v; });
+  SmallVector<OpFoldResult> strideValues = llvm::map_to_vector<4>(
+      strides, [](Value v) -> OpFoldResult { return v; });
   build(b, result, source, dest, offsetValues, sizeValues, strideValues);
 }
 
@@ -3897,12 +3936,12 @@ void ParallelInsertSliceOp::build(OpBuilder &b, OperationState &result,
                                   Value source, Value dest, ValueRange offsets,
                                   ValueRange sizes, ValueRange strides,
                                   ArrayRef<NamedAttribute> attrs) {
-  SmallVector<OpFoldResult> offsetValues = llvm::to_vector<4>(
-      llvm::map_range(offsets, [](Value v) -> OpFoldResult { return v; }));
-  SmallVector<OpFoldResult> sizeValues = llvm::to_vector<4>(
-      llvm::map_range(sizes, [](Value v) -> OpFoldResult { return v; }));
-  SmallVector<OpFoldResult> strideValues = llvm::to_vector<4>(
-      llvm::map_range(strides, [](Value v) -> OpFoldResult { return v; }));
+  SmallVector<OpFoldResult> offsetValues = llvm::map_to_vector<4>(
+      offsets, [](Value v) -> OpFoldResult { return v; });
+  SmallVector<OpFoldResult> sizeValues =
+      llvm::map_to_vector<4>(sizes, [](Value v) -> OpFoldResult { return v; });
+  SmallVector<OpFoldResult> strideValues = llvm::map_to_vector<4>(
+      strides, [](Value v) -> OpFoldResult { return v; });
   build(b, result, source, dest, offsetValues, sizeValues, strideValues);
 }
 

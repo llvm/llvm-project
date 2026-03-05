@@ -1,4 +1,4 @@
-; RUN: llc < %s -mtriple=s390x-ibm-zos -emit-gnuas-syntax-on-zos=0 | FileCheck %s
+; RUN: llc < %s -mtriple=s390x-ibm-zos | FileCheck %s
 %struct.LargeStruct_t = type { [33 x i32] }
 
 @GlobLargeS = hidden global %struct.LargeStruct_t zeroinitializer, align 4

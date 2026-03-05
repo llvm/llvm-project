@@ -206,34 +206,48 @@ class DAPTestCaseBase(TestBase):
                     return
         self.fail(f"breakpoints not hit, stopped_events={stopped_events}")
 
-    def verify_stop_exception_info(self, expected_description):
-        """Wait for the process we are debugging to stop, and verify the stop
-        reason is 'exception' and that the description matches
-        'expected_description'
-        """
+    def verify_stop_exception_info(
+        self, expected_description: str, expected_text: Optional[str] = None
+    ) -> None:
+        """Wait for the debuggee to stop, and verify the stop reason is
+        'exception' with the description matching 'expected_description' and
+        text match 'expected_text', if specified."""
         stopped_events = self.dap_server.wait_for_stopped()
+        self.assertIsNotNone(stopped_events, "No stopped events detected")
         for stopped_event in stopped_events:
-            if "body" in stopped_event:
-                body = stopped_event["body"]
-                if "reason" not in body:
-                    continue
-                if body["reason"] != "exception":
-                    continue
-                if "description" not in body:
-                    continue
-                description = body["description"]
-                if expected_description == description:
-                    return True
-        return False
+            body = stopped_event["body"]
+            if body["reason"] != "exception":
+                continue
+            self.assertIn(
+                "description",
+                body,
+                f"stopped event missing description {stopped_event}",
+            )
+            description = body["description"]
+            self.assertRegex(
+                description,
+                expected_description,
+                f"for 'stopped' event {stopped_event!r}",
+            )
+            if expected_text:
+                self.assertRegex(
+                    body["text"],
+                    expected_text,
+                    f"for stopped event {stopped_event!r}",
+                )
+            return
+        self.fail(f"No valid stop exception info detected in {stopped_events!r}")
 
     def verify_stop_on_entry(self) -> None:
         """Waits for the process to be stopped and then verifies at least one
         thread has the stop reason 'entry'."""
+        if not self.dap_server.configuration_done_sent:
+            self.verify_configuration_done()
         self.dap_server.wait_for_stopped()
         self.assertIn(
             "entry",
             (t["reason"] for t in self.dap_server.thread_stop_reasons.values()),
-            "Expected at least one thread to report stop reason 'entry' in {self.dap_server.thread_stop_reasons}",
+            f"Expected at least one thread to report stop reason 'entry' in {self.dap_server.thread_stop_reasons}",
         )
 
     def verify_commands(self, flavor: str, output: str, commands: List[str]):
@@ -252,21 +266,6 @@ class DAPTestCaseBase(TestBase):
                 found,
                 f"Command '{flavor}' - '{cmd}' not found in output: {output}",
             )
-
-    def verify_invalidated_event(self, expected_areas):
-        event = self.dap_server.invalidated_event
-        self.dap_server.invalidated_event = None
-        self.assertIsNotNone(event)
-        areas = event["body"].get("areas", [])
-        self.assertEqual(set(expected_areas), set(areas))
-
-    def verify_memory_event(self, memoryReference):
-        if memoryReference is None:
-            self.assertIsNone(self.dap_server.memory_event)
-        event = self.dap_server.memory_event
-        self.dap_server.memory_event = None
-        self.assertIsNotNone(event)
-        self.assertEqual(memoryReference, event["body"].get("memoryReference"))
 
     def get_dict_value(self, d: Mapping[str, Any], key_path: List[str]) -> Any:
         """Verify each key in the key_path array is in contained in each
@@ -326,7 +325,6 @@ class DAPTestCaseBase(TestBase):
         )
         if stackFrames is not None:
             stackFrame = stackFrames[0]
-            ["source", "path"]
             if "source" in stackFrame:
                 source = stackFrame["source"]
                 if "path" in source:
@@ -364,21 +362,41 @@ class DAPTestCaseBase(TestBase):
         else:
             return int(value)
 
-    def set_variable(self, varRef, name, value, id=None):
+    def set_variable(self, varRef, name, value, id=None, is_hex: Optional[bool] = None):
         """Set a variable."""
-        response = self.dap_server.request_setVariable(varRef, name, str(value), id=id)
+        response = self.dap_server.request_setVariable(
+            varRef, name, str(value), id=id, is_hex=is_hex
+        )
         if response["success"]:
-            self.verify_invalidated_event(["variables"])
-            self.verify_memory_event(response["body"].get("memoryReference"))
+            invalidated_event = self.dap_server.wait_for_invalidated()
+            self.assertEqual(invalidated_event["body"].get("areas"), ["variables"])
+            memory_event = self.dap_server.wait_for_memory()
+            self.assertEqual(
+                memory_event["body"].get("memoryReference"),
+                response["body"].get("memoryReference"),
+            )
         return response
 
-    def set_local(self, name, value, id=None):
+    def set_local(self, name, value, id=None, is_hex: Optional[bool] = None):
         """Set a top level local variable only."""
-        return self.set_variable(1, name, str(value), id=id)
+        # Get the locals scope reference dynamically
+        locals_ref = self.get_locals_scope_reference()
+        if locals_ref is None:
+            return None
+        return self.set_variable(locals_ref, name, str(value), id=id, is_hex=is_hex)
 
-    def set_global(self, name, value, id=None):
-        """Set a top level global variable only."""
-        return self.set_variable(2, name, str(value), id=id)
+    def get_locals_scope_reference(self):
+        """Get the variablesReference for the locals scope."""
+        stackFrame = self.dap_server.get_stackFrame()
+        if stackFrame is None:
+            return None
+        frameId = stackFrame["id"]
+        scopes_response = self.dap_server.request_scopes(frameId)
+        frame_scopes = scopes_response["body"]["scopes"]
+        for scope in frame_scopes:
+            if scope["name"] == "Locals":
+                return scope["variablesReference"]
+        return None
 
     def stepIn(
         self,
@@ -432,15 +450,17 @@ class DAPTestCaseBase(TestBase):
         self.do_continue()
         self.verify_breakpoint_hit(breakpoint_ids)
 
-    def continue_to_exception_breakpoint(self, filter_label):
+    def continue_to_exception_breakpoint(
+        self, expected_description, expected_text=None
+    ):
         self.do_continue()
-        self.assertTrue(
-            self.verify_stop_exception_info(filter_label),
-            'verify we got "%s"' % (filter_label),
-        )
+        self.verify_stop_exception_info(expected_description, expected_text)
 
     def continue_to_exit(self, exitCode=0):
         self.do_continue()
+        self.verify_process_exited(exitCode)
+
+    def verify_process_exited(self, exitCode: int = 0):
         stopped_events = self.dap_server.wait_for_stopped()
         self.assertEqual(
             len(stopped_events), 1, "stopped_events = {}".format(stopped_events)
@@ -471,28 +491,10 @@ class DAPTestCaseBase(TestBase):
 
         return disassembled_instructions, disassembled_instructions[memoryReference]
 
-    def _build_error_message(self, base_message, response):
-        """Build a detailed error message from a DAP response.
-        Extracts error information from various possible locations in the response structure.
-        """
-        error_msg = base_message
-        if response:
-            if "message" in response:
-                error_msg += " (%s)" % response["message"]
-            elif "body" in response and "error" in response["body"]:
-                if "format" in response["body"]["error"]:
-                    error_msg += " (%s)" % response["body"]["error"]["format"]
-                else:
-                    error_msg += " (error in body)"
-            else:
-                error_msg += " (no error details available)"
-        else:
-            error_msg += " (no response)"
-        return error_msg
-
     def attach(
         self,
         *,
+        client_features: Optional[dict[str, bool]] = None,
         disconnectAutomatically=True,
         sourceInitFile=False,
         **kwargs,
@@ -509,7 +511,9 @@ class DAPTestCaseBase(TestBase):
         # Execute the cleanup function during test case tear down.
         self.addTearDownHook(cleanup)
         # Initialize and launch the program
-        self.dap_server.request_initialize(sourceInitFile)
+        self.dap_server.request_initialize(
+            client_features=client_features, sourceInitFile=sourceInitFile
+        )
         return self.dap_server.request_attach(**kwargs)
 
     def attach_and_configurationDone(
@@ -526,6 +530,7 @@ class DAPTestCaseBase(TestBase):
         self,
         program: str,
         *,
+        client_features: Optional[dict[str, bool]] = None,
         sourceInitFile=False,
         disconnectAutomatically=True,
         **kwargs,
@@ -543,7 +548,9 @@ class DAPTestCaseBase(TestBase):
         self.addTearDownHook(cleanup)
 
         # Initialize and launch the program
-        self.dap_server.request_initialize(sourceInitFile)
+        self.dap_server.request_initialize(
+            client_features=client_features, sourceInitFile=sourceInitFile
+        )
         return self.dap_server.request_launch(program, **kwargs)
 
     def launch_and_configurationDone(
@@ -610,5 +617,6 @@ class DAPTestCaseBase(TestBase):
             memoryReference, encodedData, offset=offset, allowPartial=allowPartial
         )
         if response["success"]:
-            self.verify_invalidated_event(["all"])
+            invalidated_event = self.dap_server.wait_for_invalidated()
+            self.assertEqual(invalidated_event["body"].get("areas"), ["all"])
         return response

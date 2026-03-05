@@ -113,15 +113,14 @@ static lldb::offset_t GetWasmOffsetFromInitExpr(DataExtractor &data,
 }
 
 /// Checks whether the data buffer starts with a valid Wasm module header.
-static bool ValidateModuleHeader(const DataBufferSP &data_sp) {
-  if (!data_sp || data_sp->GetByteSize() < kWasmHeaderSize)
+static bool ValidateModuleHeader(llvm::ArrayRef<uint8_t> data) {
+  if (data.size() < kWasmHeaderSize)
     return false;
 
-  if (llvm::identify_magic(toStringRef(data_sp->GetData())) !=
-      llvm::file_magic::wasm_object)
+  if (llvm::identify_magic(toStringRef(data)) != llvm::file_magic::wasm_object)
     return false;
 
-  const uint8_t *Ptr = data_sp->GetBytes() + sizeof(llvm::wasm::WasmMagic);
+  const uint8_t *Ptr = data.data() + sizeof(llvm::wasm::WasmMagic);
 
   uint32_t version = llvm::support::endian::read32le(Ptr);
   return version == llvm::wasm::WasmVersion;
@@ -159,7 +158,7 @@ ObjectFile *ObjectFileWasm::CreateInstance(const ModuleSP &module_sp,
   }
 
   assert(extractor_sp);
-  if (!ValidateModuleHeader(extractor_sp->GetSharedDataBuffer())) {
+  if (!ValidateModuleHeader(extractor_sp->GetData())) {
     LLDB_LOGF(log,
               "Failed to create ObjectFileWasm instance: invalid Wasm header");
     return nullptr;
@@ -200,7 +199,7 @@ ObjectFile *ObjectFileWasm::CreateMemoryInstance(const ModuleSP &module_sp,
                                                  WritableDataBufferSP data_sp,
                                                  const ProcessSP &process_sp,
                                                  addr_t header_addr) {
-  if (!ValidateModuleHeader(data_sp))
+  if (!ValidateModuleHeader(data_sp->GetData()))
     return nullptr;
 
   std::unique_ptr<ObjectFileWasm> objfile_up(
@@ -275,9 +274,9 @@ bool ObjectFileWasm::DecodeSections() {
 }
 
 size_t ObjectFileWasm::GetModuleSpecifications(
-    const FileSpec &file, DataBufferSP &data_sp, offset_t data_offset,
+    const FileSpec &file, DataExtractorSP &extractor_sp, offset_t data_offset,
     offset_t file_offset, offset_t length, ModuleSpecList &specs) {
-  if (!ValidateModuleHeader(data_sp)) {
+  if (!ValidateModuleHeader(extractor_sp->GetData())) {
     return 0;
   }
 
@@ -627,8 +626,7 @@ void ObjectFileWasm::CreateSections(SectionList &unified_section_list) {
         file_offset,    // Offset of this section in the file.
         sect_info.size, // Size of the section as found in the file.
         0,              // Alignment of the section
-        0,              // Flags for this section.
-        1);             // Number of host bytes per target byte
+        0);             // Flags for this section.
     m_sections_up->AddSection(section_sp);
     unified_section_list.AddSection(section_sp);
   }

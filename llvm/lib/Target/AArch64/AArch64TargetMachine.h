@@ -82,6 +82,9 @@ public:
   /// Returns true if the new SME ABI lowering should be used.
   bool useNewSMEABILowering() const { return UseNewSMEABILowering; }
 
+  /// Returns the optimisation level that enables GlobalISel.
+  unsigned getEnableGlobalISelAtO() const;
+
 private:
   bool isLittle;
   bool UseNewSMEABILowering;

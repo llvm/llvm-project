@@ -13,6 +13,7 @@
 #include "mlir/IR/Verifier.h"
 #include "mlir/Interfaces/FunctionImplementation.h"
 #include "mlir/Interfaces/MemorySlotInterfaces.h"
+#include "llvm/ADT/SmallVectorExtras.h"
 
 using namespace mlir;
 using namespace test;
@@ -309,10 +310,10 @@ LogicalResult OpWithResultShapeInterfaceOp::reifyReturnTypeShapes(
   shapes.reserve(operands.size());
   for (Value operand : llvm::reverse(operands)) {
     auto rank = cast<RankedTensorType>(operand.getType()).getRank();
-    auto currShape = llvm::to_vector<4>(
-        llvm::map_range(llvm::seq<int64_t>(0, rank), [&](int64_t dim) -> Value {
+    auto currShape = llvm::map_to_vector<4>(
+        llvm::seq<int64_t>(0, rank), [&](int64_t dim) -> Value {
           return builder.createOrFold<tensor::DimOp>(loc, operand, dim);
-        }));
+        });
     shapes.push_back(tensor::FromElementsOp::create(
         builder, getLoc(),
         RankedTensorType::get({rank}, builder.getIndexType()), currShape));
@@ -330,7 +331,7 @@ LogicalResult ReifyShapedTypeUsingReifyResultShapesOp::reifyResultShapes(
   shapes.reserve(getNumOperands());
   for (Value operand : llvm::reverse(getOperands())) {
     auto tensorType = cast<RankedTensorType>(operand.getType());
-    auto currShape = llvm::to_vector<4>(llvm::map_range(
+    auto currShape = llvm::map_to_vector<4>(
         llvm::seq<int64_t>(0, tensorType.getRank()),
         [&](int64_t dim) -> OpFoldResult {
           return tensorType.isDynamicDim(dim)
@@ -339,7 +340,7 @@ LogicalResult ReifyShapedTypeUsingReifyResultShapesOp::reifyResultShapes(
                                                                dim))
                      : static_cast<OpFoldResult>(
                            builder.getIndexAttr(tensorType.getDimSize(dim)));
-        }));
+        });
     shapes.emplace_back(std::move(currShape));
   }
   return success();
@@ -1013,6 +1014,9 @@ mlir::presburger::BoundType ReifyBoundOp::getBoundType() {
 }
 
 LogicalResult ReifyBoundOp::verify() {
+  if (getType() != "EQ" && getType() != "LB" && getType() != "UB")
+    return emitOpError("invalid bound type '")
+           << getType() << "', expected 'EQ', 'LB', or 'UB'";
   if (isa<ShapedType>(getVar().getType())) {
     if (!getDim().has_value())
       return emitOpError("expected 'dim' attribute for shaped type variable");
@@ -1281,6 +1285,24 @@ LoopBlockTerminatorOp::getMutableSuccessorOperands(RegionSuccessor successor) {
   if (successor.isParent())
     return getExitArgMutable();
   return getNextIterArgMutable();
+}
+
+//===----------------------------------------------------------------------===//
+// TestCrashingReturnOp
+//===----------------------------------------------------------------------===//
+
+LogicalResult TestCrashingReturnOp::verify() {
+  if (!getValid())
+    return emitOpError("requires 'valid' unit attribute");
+  return success();
+}
+
+MutableOperandRange
+TestCrashingReturnOp::getMutableSuccessorOperands(RegionSuccessor successor) {
+  if (!getValid())
+    llvm::report_fatal_error("getMutableSuccessorOperands called on unverified "
+                             "test.crashing_return");
+  return getArgsMutable();
 }
 
 //===----------------------------------------------------------------------===//

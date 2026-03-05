@@ -252,19 +252,23 @@ def CIR_PointerType : CIR_Type<"Pointer", "ptr", [
   let parameters = (ins
     "mlir::Type":$pointee,
     OptionalParameter<
-        "cir::TargetAddressSpaceAttr">:$addrSpace
+        "mlir::ptr::MemorySpaceAttrInterface">:$addrSpace
   );
 
   let skipDefaultBuilders = 1;
   let builders = [
     TypeBuilderWithInferredContext<(ins
       "mlir::Type":$pointee,
-       CArg<"cir::TargetAddressSpaceAttr", "nullptr">:$addrSpace), [{
+       CArg<"mlir::ptr::MemorySpaceAttrInterface", "{}">:$addrSpace), [{
+        // Drop default address space and replace with empty attribute.
+        addrSpace = cir::normalizeDefaultAddressSpace(addrSpace);
         return $_get(pointee.getContext(), pointee, addrSpace);
     }]>,
     TypeBuilder<(ins
       "mlir::Type":$pointee,
-      CArg<"cir::TargetAddressSpaceAttr", "nullptr">:$addrSpace), [{
+      CArg<"mlir::ptr::MemorySpaceAttrInterface", "{}">:$addrSpace), [{
+        // Drop default address space and replace with empty attribute.
+        addrSpace = cir::normalizeDefaultAddressSpace(addrSpace);
         return $_get($_ctxt, pointee, addrSpace);
     }]>
   ];
@@ -272,7 +276,7 @@ def CIR_PointerType : CIR_Type<"Pointer", "ptr", [
   let assemblyFormat = [{
     `<`
       $pointee
-      ( `,` ` ` custom<TargetAddressSpace>($addrSpace)^ )?
+      ( `,` ` ` custom<AddressSpaceValue>($addrSpace)^ )?
     `>`
   }];
 
@@ -303,6 +307,8 @@ def CIR_PointerType : CIR_Type<"Pointer", "ptr", [
       return false;
     }
   }];
+
+  let genVerifyDecl = 1;
 }
 
 //===----------------------------------------------------------------------===//
@@ -754,13 +760,54 @@ def CIRRecordType : Type<
   CPred<"::mlir::isa<::cir::RecordType>($_self)">, "CIR record type">;
 
 //===----------------------------------------------------------------------===//
+// Exception Handling Token Types
+//===----------------------------------------------------------------------===//
+
+def CIR_EhTokenType : CIR_Type<"EhToken", "eh_token"> {
+  let summary = "CIR exception handling token type";
+  let description = [{
+    `!cir.eh_token` is an opaque type used to track exception handling state
+    in flattened CIR. It is returned by `cir.eh.initiate` and passed to
+    `cir.eh.dispatch`, `cir.begin_cleanup`, and `cir.begin_catch` operations.
+
+    This token represents an in-flight exception and is used during ABI-lowering
+    to generate the appropriate exception handling code.
+  }];
+}
+
+def CIR_CleanupTokenType : CIR_Type<"CleanupToken", "cleanup_token"> {
+  let summary = "CIR cleanup token type";
+  let description = [{
+    `!cir.cleanup_token` is an opaque type used to track cleanup handling state
+    in flattened CIR. It is returned by `cir.begin_cleanup` and consumed by
+    `cir.end_cleanup`.
+
+    This token ensures that cleanup regions are properly paired and allows
+    the ABI lowering pass to generate appropriate cleanup handling code.
+  }];
+}
+
+def CIR_CatchTokenType : CIR_Type<"CatchToken", "catch_token"> {
+  let summary = "CIR catch token type";
+  let description = [{
+    `!cir.catch_token` is an opaque type used to track catch handling state
+    in flattened CIR. It is returned by `cir.begin_catch` and consumed by
+    `cir.end_catch`.
+
+    This token ensures that catch handlers are properly paired and allows
+    the ABI lowering pass to generate appropriate exception catching code.
+  }];
+}
+
+//===----------------------------------------------------------------------===//
 // Global type constraints
 //===----------------------------------------------------------------------===//
 
 def CIR_AnyType : AnyTypeOf<[
   CIR_VoidType, CIR_BoolType, CIR_ArrayType, CIR_VectorType, CIR_IntType,
   CIR_AnyFloatType, CIR_PointerType, CIR_FuncType, CIR_RecordType,
-  CIR_ComplexType, CIR_VPtrType, CIR_DataMemberType, CIR_MethodType
+  CIR_ComplexType, CIR_VPtrType, CIR_DataMemberType, CIR_MethodType,
+  CIR_EhTokenType, CIR_CleanupTokenType, CIR_CatchTokenType
 ]>;
 
 #endif // CLANG_CIR_DIALECT_IR_CIRTYPES_TD

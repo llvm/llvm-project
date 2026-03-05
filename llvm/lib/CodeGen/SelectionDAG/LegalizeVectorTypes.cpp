@@ -62,6 +62,9 @@ void DAGTypeLegalizer::ScalarizeVectorResult(SDNode *N, unsigned ResNo) {
   case ISD::BUILD_VECTOR:      R = ScalarizeVecRes_BUILD_VECTOR(N); break;
   case ISD::EXTRACT_SUBVECTOR: R = ScalarizeVecRes_EXTRACT_SUBVECTOR(N); break;
   case ISD::FP_ROUND:          R = ScalarizeVecRes_FP_ROUND(N); break;
+  case ISD::CONVERT_FROM_ARBITRARY_FP:
+    R = ScalarizeVecRes_CONVERT_FROM_ARBITRARY_FP(N);
+    break;
   case ISD::AssertZext:
   case ISD::AssertSext:
   case ISD::FPOWI:
@@ -478,6 +481,23 @@ SDValue DAGTypeLegalizer::ScalarizeVecRes_FP_ROUND(SDNode *N) {
                      N->getOperand(1));
 }
 
+SDValue DAGTypeLegalizer::ScalarizeVecRes_CONVERT_FROM_ARBITRARY_FP(SDNode *N) {
+  SDLoc DL(N);
+  SDValue Op = N->getOperand(0);
+  EVT OpVT = Op.getValueType();
+  // The result needs scalarizing, but it's not a given that the source does.
+  // See similar logic in ScalarizeVecRes_UnaryOp.
+  if (getTypeAction(OpVT) == TargetLowering::TypeScalarizeVector) {
+    Op = GetScalarizedVector(Op);
+  } else {
+    EVT VT = OpVT.getVectorElementType();
+    Op = DAG.getExtractVectorElt(DL, VT, Op, 0);
+  }
+  return DAG.getNode(ISD::CONVERT_FROM_ARBITRARY_FP, DL,
+                     N->getValueType(0).getVectorElementType(), Op,
+                     N->getOperand(1));
+}
+
 SDValue DAGTypeLegalizer::ScalarizeVecRes_UnaryOpWithExtraInput(SDNode *N) {
   SDValue Op = GetScalarizedVector(N->getOperand(0));
   return DAG.getNode(N->getOpcode(), SDLoc(N), Op.getValueType(), Op,
@@ -818,6 +838,7 @@ bool DAGTypeLegalizer::ScalarizeVectorOperand(SDNode *N, unsigned OpNo) {
     break;
   case ISD::FP_TO_SINT_SAT:
   case ISD::FP_TO_UINT_SAT:
+  case ISD::CONVERT_FROM_ARBITRARY_FP:
     Res = ScalarizeVecOp_UnaryOpWithExtraInput(N);
     break;
   case ISD::STRICT_SINT_TO_FP:
@@ -884,6 +905,9 @@ bool DAGTypeLegalizer::ScalarizeVectorOperand(SDNode *N, unsigned OpNo) {
   case ISD::SCMP:
   case ISD::UCMP:
     Res = ScalarizeVecOp_CMP(N);
+    break;
+  case ISD::VECTOR_FIND_LAST_ACTIVE:
+    Res = ScalarizeVecOp_VECTOR_FIND_LAST_ACTIVE(N);
     break;
   }
 
@@ -1185,6 +1209,18 @@ SDValue DAGTypeLegalizer::ScalarizeVecOp_CMP(SDNode *N) {
   return DAG.getNode(ISD::SCALAR_TO_VECTOR, SDLoc(N), N->getValueType(0), Cmp);
 }
 
+SDValue DAGTypeLegalizer::ScalarizeVecOp_VECTOR_FIND_LAST_ACTIVE(SDNode *N) {
+  // Since there is no "none-active" result, the only valid return for <1 x ty>
+  // is 0. Note: Since we check the high mask during splitting this is safe.
+  // As e.g., a <2 x ty> operation would split to:
+  //   any_active(%hi_mask) ? (1 + last_active(%hi_mask))
+  //                        : `last_active(%lo_mask)`
+  // Which then scalarizes to:
+  //   %mask[1] ? 1 : 0
+  EVT VT = N->getValueType(0);
+  return DAG.getConstant(0, SDLoc(N), VT);
+}
+
 //===----------------------------------------------------------------------===//
 //  Result Vector Splitting
 //===----------------------------------------------------------------------===//
@@ -1217,6 +1253,7 @@ void DAGTypeLegalizer::SplitVectorResult(SDNode *N, unsigned ResNo) {
     break;
   case ISD::MERGE_VALUES: SplitRes_MERGE_VALUES(N, ResNo, Lo, Hi); break;
   case ISD::AssertZext:   SplitVecRes_AssertZext(N, Lo, Hi); break;
+  case ISD::AssertSext:   SplitVecRes_AssertSext(N, Lo, Hi); break;
   case ISD::VSELECT:
   case ISD::SELECT:
   case ISD::VP_MERGE:
@@ -1366,6 +1403,7 @@ void DAGTypeLegalizer::SplitVectorResult(SDNode *N, unsigned ResNo) {
   case ISD::VP_UINT_TO_FP:
   case ISD::FCANONICALIZE:
   case ISD::AssertNoFPClass:
+  case ISD::CONVERT_FROM_ARBITRARY_FP:
     SplitVecRes_UnaryOp(N, Lo, Hi);
     break;
   case ISD::ADDRSPACECAST:
@@ -2767,7 +2805,8 @@ void DAGTypeLegalizer::SplitVecRes_UnaryOp(SDNode *N, SDValue &Lo,
   const SDNodeFlags Flags = N->getFlags();
   unsigned Opcode = N->getOpcode();
   if (N->getNumOperands() <= 2) {
-    if (Opcode == ISD::FP_ROUND || Opcode == ISD::AssertNoFPClass) {
+    if (Opcode == ISD::FP_ROUND || Opcode == ISD::AssertNoFPClass ||
+        Opcode == ISD::CONVERT_FROM_ARBITRARY_FP) {
       Lo = DAG.getNode(Opcode, dl, LoVT, Lo, N->getOperand(1), Flags);
       Hi = DAG.getNode(Opcode, dl, HiVT, Hi, N->getOperand(1), Flags);
     } else {
@@ -3571,13 +3610,19 @@ bool DAGTypeLegalizer::SplitVectorOperand(SDNode *N, unsigned OpNo) {
   case ISD::INSERT_SUBVECTOR:  Res = SplitVecOp_INSERT_SUBVECTOR(N, OpNo); break;
   case ISD::EXTRACT_VECTOR_ELT:Res = SplitVecOp_EXTRACT_VECTOR_ELT(N); break;
   case ISD::CONCAT_VECTORS:    Res = SplitVecOp_CONCAT_VECTORS(N); break;
+  case ISD::VECTOR_FIND_LAST_ACTIVE:
+    Res = SplitVecOp_VECTOR_FIND_LAST_ACTIVE(N);
+    break;
   case ISD::VP_TRUNCATE:
   case ISD::TRUNCATE:
     Res = SplitVecOp_TruncateHelper(N);
     break;
   case ISD::STRICT_FP_ROUND:
   case ISD::VP_FP_ROUND:
-  case ISD::FP_ROUND:          Res = SplitVecOp_FP_ROUND(N); break;
+  case ISD::FP_ROUND:
+  case ISD::CONVERT_FROM_ARBITRARY_FP:
+    Res = SplitVecOp_FP_ROUND(N);
+    break;
   case ISD::FCOPYSIGN:         Res = SplitVecOp_FPOpDifferentTypes(N); break;
   case ISD::STORE:
     Res = SplitVecOp_STORE(cast<StoreSDNode>(N), OpNo);
@@ -3729,6 +3774,34 @@ bool DAGTypeLegalizer::SplitVectorOperand(SDNode *N, unsigned OpNo) {
 
   ReplaceValueWith(SDValue(N, 0), Res);
   return false;
+}
+
+SDValue DAGTypeLegalizer::SplitVecOp_VECTOR_FIND_LAST_ACTIVE(SDNode *N) {
+  SDLoc DL(N);
+
+  SDValue LoMask, HiMask;
+  GetSplitVector(N->getOperand(0), LoMask, HiMask);
+
+  EVT VT = N->getValueType(0);
+  EVT SplitVT = LoMask.getValueType();
+  ElementCount SplitEC = SplitVT.getVectorElementCount();
+
+  // Find the last active in both the low and the high masks.
+  SDValue LoFind = DAG.getNode(ISD::VECTOR_FIND_LAST_ACTIVE, DL, VT, LoMask);
+  SDValue HiFind = DAG.getNode(ISD::VECTOR_FIND_LAST_ACTIVE, DL, VT, HiMask);
+
+  // Check if any lane is active in the high mask.
+  // FIXME: This would not be necessary if VECTOR_FIND_LAST_ACTIVE returned a
+  // sentinel value for "none active".
+  SDValue AnyHiActive = DAG.getNode(ISD::VECREDUCE_OR, DL, MVT::i1, HiMask);
+  SDValue Cond = DAG.getBoolExtOrTrunc(AnyHiActive, DL,
+                                       getSetCCResultType(MVT::i1), MVT::i1);
+
+  // Return: AnyHiActive ? (HiFind + SplitEC) : LoFind;
+  return DAG.getNode(ISD::SELECT, DL, VT, Cond,
+                     DAG.getNode(ISD::ADD, DL, VT, HiFind,
+                                 DAG.getElementCount(DL, VT, SplitEC)),
+                     LoFind);
 }
 
 SDValue DAGTypeLegalizer::SplitVecOp_VSELECT(SDNode *N, unsigned OpNo) {
@@ -4685,8 +4758,8 @@ SDValue DAGTypeLegalizer::SplitVecOp_FP_ROUND(SDNode *N) {
     Lo = DAG.getNode(ISD::VP_FP_ROUND, DL, OutVT, Lo, MaskLo, EVLLo);
     Hi = DAG.getNode(ISD::VP_FP_ROUND, DL, OutVT, Hi, MaskHi, EVLHi);
   } else {
-    Lo = DAG.getNode(ISD::FP_ROUND, DL, OutVT, Lo, N->getOperand(1));
-    Hi = DAG.getNode(ISD::FP_ROUND, DL, OutVT, Hi, N->getOperand(1));
+    Lo = DAG.getNode(N->getOpcode(), DL, OutVT, Lo, N->getOperand(1));
+    Hi = DAG.getNode(N->getOpcode(), DL, OutVT, Hi, N->getOperand(1));
   }
 
   return DAG.getNode(ISD::CONCAT_VECTORS, DL, ResVT, Lo, Hi);
@@ -5095,6 +5168,7 @@ void DAGTypeLegalizer::WidenVectorResult(SDNode *N, unsigned ResNo) {
   case ISD::VP_UINT_TO_FP:
   case ISD::ZERO_EXTEND:
   case ISD::VP_ZERO_EXTEND:
+  case ISD::CONVERT_FROM_ARBITRARY_FP:
     Res = WidenVecRes_Convert(N);
     break;
 
@@ -6603,11 +6677,14 @@ SDValue DAGTypeLegalizer::WidenVecRes_MLOAD(MaskedLoadSDNode *N) {
                       N->getMemoryVT(), N->getMemOperand());
     SDValue NewVal = NewLoad;
 
-    // Manually merge with vp.select
+    // Manually merge with vselect
     if (!N->getPassThru()->isUndef()) {
       assert(WidenVT.isScalableVector());
-      NewVal =
-          DAG.getNode(ISD::VP_SELECT, dl, WidenVT, Mask, NewVal, PassThru, EVL);
+      NewVal = DAG.getNode(ISD::VSELECT, dl, WidenVT, Mask, NewVal, PassThru);
+      // The lanes past EVL are poison.
+      NewVal = DAG.getNode(ISD::VP_MERGE, dl, WidenVT,
+                           DAG.getAllOnesConstant(dl, WideMaskVT), NewVal,
+                           DAG.getPOISON(WidenVT), EVL);
     }
 
     // Modified the chain - switch anything that used the old chain to use
@@ -6772,7 +6849,8 @@ SDValue DAGTypeLegalizer::convertMask(SDValue InMask, EVT MaskVT,
     ReplaceValueWith(InMask.getValue(1), Mask.getValue(1));
   }
   else
-    Mask = DAG.getNode(InMask->getOpcode(), SDLoc(InMask), MaskVT, Ops);
+    Mask = DAG.getNode(InMask->getOpcode(), SDLoc(InMask), MaskVT, Ops,
+                       InMask->getFlags());
 
   // If MaskVT has smaller or bigger elements than ToMaskVT, a vector sign
   // extend or truncate is needed.
@@ -7227,6 +7305,7 @@ bool DAGTypeLegalizer::WidenVectorOperand(SDNode *N, unsigned OpNo) {
   case ISD::UINT_TO_FP:
   case ISD::STRICT_UINT_TO_FP:
   case ISD::TRUNCATE:
+  case ISD::CONVERT_FROM_ARBITRARY_FP:
     Res = WidenVecOp_Convert(N);
     break;
 
@@ -7448,7 +7527,7 @@ SDValue DAGTypeLegalizer::WidenVecOp_Convert(SDNode *N) {
       // use the new one.
       ReplaceValueWith(SDValue(N, 1), Res.getValue(1));
     } else {
-      if (Opcode == ISD::FP_ROUND)
+      if (Opcode == ISD::FP_ROUND || Opcode == ISD::CONVERT_FROM_ARBITRARY_FP)
         Res = DAG.getNode(Opcode, dl, WideVT, InOp, N->getOperand(1));
       else
         Res = DAG.getNode(Opcode, dl, WideVT, InOp);
@@ -7472,9 +7551,13 @@ SDValue DAGTypeLegalizer::WidenVecOp_Convert(SDNode *N) {
     SDValue NewChain = DAG.getNode(ISD::TokenFactor, dl, MVT::Other, OpChains);
     ReplaceValueWith(SDValue(N, 1), NewChain);
   } else {
-    for (unsigned i = 0; i < NumElts; ++i)
-      Ops[i] = DAG.getNode(Opcode, dl, EltVT,
-                           DAG.getExtractVectorElt(dl, InEltVT, InOp, i));
+    for (unsigned i = 0; i < NumElts; ++i) {
+      SDValue Elt = DAG.getExtractVectorElt(dl, InEltVT, InOp, i);
+      if (Opcode == ISD::FP_ROUND || Opcode == ISD::CONVERT_FROM_ARBITRARY_FP)
+        Ops[i] = DAG.getNode(Opcode, dl, EltVT, Elt, N->getOperand(1));
+      else
+        Ops[i] = DAG.getNode(Opcode, dl, EltVT, Elt);
+    }
   }
 
   return DAG.getBuildVector(VT, dl, Ops);

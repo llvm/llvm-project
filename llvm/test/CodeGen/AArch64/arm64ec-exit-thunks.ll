@@ -477,8 +477,8 @@ declare <4 x i8> @small_vector(<4 x i8> %0) nounwind;
 ; CHECK-NEXT:     fmov	w0, s0
 ; CHECK-NEXT:     stur	s0, [x29, #-4]
 ; CHECK-NEXT:     blr	x16
+; CHECK-NEXT:     fmov s0, w8
 ; CHECK-NEXT:     stur	w8, [x29, #-8]
-; CHECK-NEXT:     ldur	s0, [x29, #-8]
 ; CHECK-NEXT:     ushll	v0.8h, v0.8b, #0
 ; CHECK-NEXT:                                           // kill: def $d0 killed $d0 killed $q0
 ; CHECK-NEXT:     .seh_startepilogue
