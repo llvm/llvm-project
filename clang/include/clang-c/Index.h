@@ -3267,7 +3267,29 @@ CINDEX_LINKAGE CXType clang_Cursor_getTemplateArgumentType(CXCursor C,
                                                            unsigned I);
 
 /**
- * Retrieve the value of an Integral TemplateArgument (of a function
+ * Retrieve the type of an Integral TemplateArgument at a given index.
+ *
+ * For example, for:
+ *   template <typename T, int N>
+ *   void foo() {}
+ *
+ *   template <>
+ *   void foo<float, 42>();
+ *
+ * If called with I = 1, the type "int" will be returned (the type of the
+ * integral argument 42). An invalid type is returned if the argument at
+ * index I is not integral, or if the index is out of range.
+ *
+ * \param C a cursor representing a template specialization.
+ * \param I the zero-based index of the template argument.
+ *
+ * \returns the type of the integral template argument, or an invalid type.
+ */
+CINDEX_LINKAGE CXType clang_Cursor_getTemplateArgumentIntegralType(CXCursor C,
+                                                                   unsigned I);
+
+/**
+ * Retrieve the value of an Integral TemplateArgument (of a function or class
  *  decl representing a template specialization) as a signed long long.
  *
  * It is undefined to call this function on a CXCursor that does not represent a
@@ -3288,7 +3310,7 @@ CINDEX_LINKAGE long long clang_Cursor_getTemplateArgumentValue(CXCursor C,
                                                                unsigned I);
 
 /**
- * Retrieve the value of an Integral TemplateArgument (of a function
+ * Retrieve the value of an Integral TemplateArgument (of a function or class
  *  decl representing a template specialization) as an unsigned long long.
  *
  * It is undefined to call this function on a CXCursor that does not represent a
@@ -3307,6 +3329,38 @@ CINDEX_LINKAGE long long clang_Cursor_getTemplateArgumentValue(CXCursor C,
  */
 CINDEX_LINKAGE unsigned long long
 clang_Cursor_getTemplateArgumentUnsignedValue(CXCursor C, unsigned I);
+
+/**
+ * Retrieve the number of template parameters on a template declaration.
+ *
+ * \param C a cursor representing a class template or function template.
+ *
+ * \returns the number of template parameters, or -1 if the cursor does not
+ * represent a template.
+ */
+CINDEX_LINKAGE int clang_Cursor_getNumTemplateParameters(CXCursor C);
+
+/**
+ * Retrieve a template parameter at the given index.
+ *
+ * \param C a cursor representing a class template or function template.
+ * \param I the zero-based index of the template parameter.
+ *
+ * \returns a cursor for the template parameter, or a null cursor if the
+ * index is out of range or the cursor is not a template.
+ */
+CINDEX_LINKAGE CXCursor clang_Cursor_getTemplateParameter(CXCursor C,
+                                                          unsigned I);
+
+/**
+ * Determine whether a template parameter is a parameter pack.
+ *
+ * \param C a cursor representing a template type parameter, non-type
+ * template parameter, or template template parameter.
+ *
+ * \returns non-zero if the template parameter is a parameter pack.
+ */
+CINDEX_LINKAGE unsigned clang_Cursor_isTemplateParameterPack(CXCursor C);
 
 /**
  * Determine whether two CXTypes represent the same type.

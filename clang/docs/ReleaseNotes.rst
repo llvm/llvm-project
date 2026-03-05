@@ -459,6 +459,10 @@ libclang
 - Visit constraints of `auto` type to properly visit concept usages (#GH166580)
 - Visit switch initializer statements (https://bugs.kde.org/show_bug.cgi?id=415537#c2)
 - Fix crash in clang_getBinaryOperatorKindSpelling and clang_getUnaryOperatorKindSpelling
+- Added ``clang_Cursor_getNumTemplateParameters``, ``clang_Cursor_getTemplateParameter``,
+  ``clang_Cursor_isTemplateParameterPack``, and ``clang_Cursor_getTemplateArgumentIntegralType``.
+- Fixed ``clang_Cursor_getNumTemplateArguments`` and related APIs to work with
+  ``CXCursor_CXXMethod`` cursors and to correctly allow indexing into parameter pack arguments.
 
 Code Completion
 ---------------
@@ -497,6 +501,8 @@ Python Binding Changes
   ``CodeCompletionResults.results`` should be changed to directly use
   ``CodeCompletionResults``: it nows supports ``__len__`` and ``__getitem__``,
   so it can be used the same as ``CodeCompletionResults.results``.
+- Added ``Cursor.get_num_template_parameters``, ``Cursor.get_template_parameter``,
+  ``Cursor.is_template_parameter_pack``, and ``Cursor.get_template_argument_integral_type``.
 
 OpenMP Support
 --------------
