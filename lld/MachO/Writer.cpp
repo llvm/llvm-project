@@ -1008,14 +1008,15 @@ static void sortSegmentsAndSections() {
       }
 
       if (auto *merged = dyn_cast<ConcatOutputSection>(osec)) {
-        auto coldIt = std::stable_partition(merged->inputs.begin(), merged->inputs.end(), [](InputSection *isec) {
-          return !isec->isCold;
-        });
+        auto coldIt = std::stable_partition(
+            merged->inputs.begin(), merged->inputs.end(),
+            [](InputSection *isec) { return !isec->isCold; });
         if (!isecPriorities.empty()) {
-          std::stable_sort(
-              merged->inputs.begin(), coldIt, [&](InputSection *a, InputSection *b) {
-                return isecPriorities.lookup(a) < isecPriorities.lookup(b);
-              });
+          std::stable_sort(merged->inputs.begin(), coldIt,
+                           [&](InputSection *a, InputSection *b) {
+                             return isecPriorities.lookup(a) <
+                                    isecPriorities.lookup(b);
+                           });
         }
       }
     }

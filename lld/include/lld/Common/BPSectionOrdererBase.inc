@@ -381,10 +381,10 @@ auto BPOrderer<D>::computeOrder(
         numDuplicateCodeSections + numColdCodeCompressionSections +
         numDuplicateColdCodeSections + numDataCompressionSections +
         numDuplicateDataSections;
-    unsigned totalOrderedSize =
-        startupSize + codeCompressionSize + duplicateCodeSize +
-        coldCodeCompressionSize + duplicateColdCodeSize +
-        dataCompressionSize + duplicateDataSize;
+    unsigned totalOrderedSize = startupSize + codeCompressionSize +
+                                duplicateCodeSize + coldCodeCompressionSize +
+                                duplicateColdCodeSize + dataCompressionSize +
+                                duplicateDataSize;
     dbgs() << "Ordered " << numTotalOrderedSections << " sections ("
            << totalOrderedSize << " bytes) using balanced partitioning:\n";
     dbgs() << "  Functions for startup: " << numStartupSections << " ("
@@ -394,8 +394,8 @@ auto BPOrderer<D>::computeOrder(
     dbgs() << "  Duplicate functions: " << numDuplicateCodeSections << " ("
            << duplicateCodeSize << " bytes)\n";
     dbgs() << "  Cold functions for compression: "
-           << numColdCodeCompressionSections << " ("
-           << coldCodeCompressionSize << " bytes)\n";
+           << numColdCodeCompressionSections << " (" << coldCodeCompressionSize
+           << " bytes)\n";
     dbgs() << "  Duplicate cold functions: " << numDuplicateColdCodeSections
            << " (" << duplicateColdCodeSize << " bytes)\n";
     dbgs() << "  Data for compression: " << numDataCompressionSections << " ("
