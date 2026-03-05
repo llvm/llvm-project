@@ -702,9 +702,8 @@ public:
   };
 
   // Extract byte methods
-  signed char B0(void) {
-    return HEXAGON_V64_GET_B0(data);
-  };
+  signed char b0(void) { return HEXAGON_V64_GET_B0(data); };
+  signed char B0(void) { return b0(); };
   signed char B1(void) {
     return HEXAGON_V64_GET_B1(data);
   };
@@ -781,9 +780,10 @@ public:
   };
 
   // Set byte methods
-  HEXAGON_Vect64C B0(signed char b) {
+  HEXAGON_Vect64C b0(signed char b) {
     return HEXAGON_Vect64C(HEXAGON_V64_PUT_B0(data, b));
   };
+  HEXAGON_Vect64C B0(signed char b) { return b0(b); };
   HEXAGON_Vect64C B1(signed char b) {
     return HEXAGON_Vect64C(HEXAGON_V64_PUT_B1(data, b));
   };
@@ -1126,9 +1126,8 @@ public:
   };
 
   // Extract byte methods
-  signed char B0(void) {
-    return HEXAGON_V32_GET_B0(data);
-  };
+  signed char b0(void) { return HEXAGON_V32_GET_B0(data); };
+  signed char B0(void) { return b0(); };
   signed char B1(void) {
     return HEXAGON_V32_GET_B1(data);
   };
@@ -1167,9 +1166,10 @@ public:
   };
 
   // Set byte methods
-  HEXAGON_Vect32C B0(signed char b) {
+  HEXAGON_Vect32C b0(signed char b) {
     return HEXAGON_Vect32C(HEXAGON_V32_PUT_B0(data, b));
   };
+  HEXAGON_Vect32C B0(signed char b) { return b0(b); };
   HEXAGON_Vect32C B1(signed char b) {
     return HEXAGON_Vect32C(HEXAGON_V32_PUT_B1(data, b));
   };
@@ -1929,9 +1929,8 @@ public:
   };
 
   // Extract byte methods
-  signed char B0(void) {
-    return Q6V64_GET_B0(data);
-  };
+  signed char b0(void) { return Q6V64_GET_B0(data); };
+  signed char B0(void) { return b0(); };
   signed char B1(void) {
     return Q6V64_GET_B1(data);
   };
@@ -2008,9 +2007,8 @@ public:
   };
 
   // Set byte methods
-  Q6Vect64C B0(signed char b) {
-    return Q6Vect64C(Q6V64_PUT_B0(data, b));
-  };
+  Q6Vect64C b0(signed char b) { return Q6Vect64C(Q6V64_PUT_B0(data, b)); };
+  Q6Vect64C B0(signed char b) { return b0(b); };
   Q6Vect64C B1(signed char b) {
     return Q6Vect64C(Q6V64_PUT_B1(data, b));
   };
@@ -2353,9 +2351,8 @@ public:
   };
 
   // Extract byte methods
-  signed char B0(void) {
-    return Q6V32_GET_B0(data);
-  };
+  signed char b0(void) { return Q6V32_GET_B0(data); };
+  signed char B0(void) { return b0(); };
   signed char B1(void) {
     return Q6V32_GET_B1(data);
   };
@@ -2394,9 +2391,8 @@ public:
   };
 
   // Set byte methods
-  Q6Vect32C B0(signed char b) {
-    return Q6Vect32C(Q6V32_PUT_B0(data, b));
-  };
+  Q6Vect32C b0(signed char b) { return Q6Vect32C(Q6V32_PUT_B0(data, b)); };
+  Q6Vect32C B0(signed char b) { return b0(b); };
   Q6Vect32C B1(signed char b) {
     return Q6Vect32C(Q6V32_PUT_B1(data, b));
   };
