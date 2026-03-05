@@ -5,9 +5,6 @@ target triple = "arm64-apple-macos99.99"
 
 %coro_func_pointer = type <{ i32, i32, i64 }>
 
-; CHECK-LABEL: %func.Frame = type { ptr }
-; CHECK-LABEL: %big_types.Frame = type { <32 x i8>, [16 x i8], i64, ptr, %Integer8 }
-
 ; CHECK-LABEL: @func_cfp = constant <{ i32, i32, i64 }>
 ; CHECK-SAME:  <{
 ; CHECK-SAME:    i32 trunc
@@ -41,8 +38,7 @@ target triple = "arm64-apple-macos99.99"
 ; CHECK-SAME:      ptr %allocator
 ; CHECK-SAME:      ptr %array
 ; CHECK-SAME:  ) {
-; CHECK:           %array.spill.addr = getelementptr inbounds %func.Frame, ptr %buffer, i32 0, i32 0
-; CHECK:           store ptr %array, ptr %array.spill.addr
+; CHECK:           store ptr %array, ptr %buffer
 ; CHECK:           %load = load i32, ptr %array
 ; CHECK:           %load.positive = icmp sgt i32 %load, 0
 ; CHECK:           [[CONTINUATION:%.*]] = select i1 %load.positive
@@ -65,7 +61,7 @@ target triple = "arm64-apple-macos99.99"
 ; CHECK-SAME:      ptr [[BUFFER:[^,]+]]
 ; CHECK-SAME:      ptr [[ALLOCATOR:%[^)]+]]
 ; CHECK-SAME:  ) {
-; CHECK:           %array.reload.addr3 = getelementptr inbounds %func.Frame, ptr [[BUFFER:%.*]], i32 0, i32 0
+; CHECK:           %array.reload.addr3 = getelementptr inbounds i8, ptr [[BUFFER:%.*]], i64 0
 ; CHECK:           %array.reload4 = load ptr, ptr %array.reload.addr3
 ; CHECK:           store i32 0, ptr %array.reload4
 ; CHECK:           ret void
@@ -75,7 +71,7 @@ target triple = "arm64-apple-macos99.99"
 ; CHECK-SAME:      ptr [[BUFFER:[^,]+]]
 ; CHECK-SAME:      ptr [[ALLOCATOR:%[^)]+]]
 ; CHECK-SAME:  ) {
-; CHECK:           %array.reload.addr = getelementptr inbounds %func.Frame, ptr [[BUFFER:%.*]], i32 0, i32 0
+; CHECK:           %array.reload.addr = getelementptr inbounds i8, ptr [[BUFFER:%.*]], i64 0
 ; CHECK:           %array.reload = load ptr, ptr %array.reload.addr
 ; CHECK:           store i32 10, ptr %array.reload
 ; CHECK:           ret void
@@ -132,7 +128,7 @@ declare void @use(ptr %ptr)
 ; CHECK-SAME:      i64 %index,
 ; CHECK-SAME:      ptr swiftself dereferenceable(32) %vec_addr
 ; CHECK-SAME:  ) {
-; CHECK:         [[VEC_STK_BASE_PTR:%.*]] = getelementptr inbounds %big_types.Frame, ptr %frame, i32 0, i32 0
+; CHECK:         [[VEC_STK_BASE_PTR:%.*]] = getelementptr inbounds i8, ptr %frame, i64 0
 ; CHECK:         [[VEC_STK_BASE_INT:%.*]] = ptrtoint ptr [[VEC_STK_BASE_PTR]] to i64
 ; CHECK:         [[VEC_STK_BIASED_INT:%.*]] = add i64 [[VEC_STK_BASE_INT]], 31
 ; CHECK:         [[VEC_STK_ALIGNED_INT:%.*]] = and i64 [[VEC_STK_BIASED_INT]], -32
