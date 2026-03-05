@@ -1,6 +1,5 @@
 ; RUN: llc -verify-machineinstrs -O0 -mtriple=spirv64-unknown-unknown %s -o - | FileCheck %s
-; TODO: re-enable validator FPRoundingMode is placed correctly
-; RUNx: %if spirv-tools %{ llc -O0 -mtriple=spirv64-unknown-unknown %s -o - -filetype=obj | spirv-val %}
+; RUN: %if spirv-tools %{ llc -O0 -mtriple=spirv64-unknown-unknown %s -o - -filetype=obj | spirv-val %}
 
 ; CHECK-DAG: %[[#r1:]] = OpFAdd %[[#]] %[[#]]
 ; CHECK-DAG: %[[#r2:]] = OpFDiv %[[#]] %[[#]]
@@ -9,14 +8,7 @@
 ; CHECK-DAG: %[[#r5:]] = OpExtInst %[[#]] %[[#]] fma %[[#]] %[[#]] %[[#]]
 ; CHECK-DAG: %[[#r6:]] = OpFRem
 
-; CHECK-DAG: OpDecorate %[[#r1]] FPRoundingMode RTE
-; CHECK-DAG: OpDecorate %[[#r2]] FPRoundingMode RTZ
-; CHECK-DAG: OpDecorate %[[#r4]] FPRoundingMode RTN
-; CHECK-DAG: OpDecorate %[[#r3]] FPRoundingMode RTP
-
-; CHECK-NOT: OpDecorate %[[#r5]] FPRoundingMode
-; CHECK-NOT: OpDecorate %[[#r6]] FPRoundingMode
-
+; CHECK-NOT: OpDecorate %[[#]] FPRoundingMode
 
 @G_r1 = global float 0.0
 @G_r2 = global float 0.0

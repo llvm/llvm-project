@@ -3025,8 +3025,21 @@ bool SPIRVEmitIntrinsics::runOnFunction(Function &Func) {
     if (Postpone && !GR->findAssignPtrTypeInstr(I))
       insertAssignPtrTypeIntrs(I, B, true);
 
-    if (auto *FPI = dyn_cast<ConstrainedFPIntrinsic>(I))
-      useRoundingMode(FPI, B);
+    if (auto *FPI = dyn_cast<ConstrainedFPIntrinsic>(I)) {
+      // FPRoundingMode can only be applied to conversion instructions.
+      switch (FPI->getIntrinsicID()) {
+      case Intrinsic::experimental_constrained_fptosi:
+      case Intrinsic::experimental_constrained_fptoui:
+      case Intrinsic::experimental_constrained_sitofp:
+      case Intrinsic::experimental_constrained_uitofp:
+      case Intrinsic::experimental_constrained_fptrunc:
+      case Intrinsic::experimental_constrained_fpext:
+        useRoundingMode(FPI, B);
+        break;
+      default:
+        break;
+      }
+    }
   }
 
   // Pass backward: use instructions results to specify/update/cast operands
