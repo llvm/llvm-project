@@ -1142,7 +1142,7 @@ private:
   void IssueNonConformanceWarning(llvm::omp::Directive D,
       parser::CharBlock source, unsigned EmitFromVersion);
 
-  void CreateImplicitSymbols(const Symbol *symbol);
+  void CreateImplicitSymbols(const parser::Name &, const Symbol *symbol);
 
   void AddToContextObjectWithExplicitDSA(Symbol &symbol, Symbol::Flag flag) {
     AddToContextObjectWithDSA(symbol, flag);
@@ -2696,7 +2696,8 @@ static bool IsTargetCaptureImplicitlyFirstprivatizeable(const Symbol &symbol,
       symbol.details());
 }
 
-void OmpAttributeVisitor::CreateImplicitSymbols(const Symbol *symbol) {
+void OmpAttributeVisitor::CreateImplicitSymbols(
+    const parser::Name &name, const Symbol *symbol) {
   if (!IsPrivatizable(symbol)) {
     return;
   }
@@ -2707,6 +2708,7 @@ void OmpAttributeVisitor::CreateImplicitSymbols(const Symbol *symbol) {
   // OMP 5.2 5.1.1 - Variables Referenced in a Construct
   Symbol *lastDeclSymbol = nullptr;
   Symbol::Flags prevDSA;
+  bool checkDefaultNone = false;
   for (int dirDepth{0}; dirDepth < (int)dirContext_.size(); ++dirDepth) {
     DirContext &dirContext = dirContext_[dirDepth];
     Symbol::Flags dsa;
@@ -2792,6 +2794,33 @@ void OmpAttributeVisitor::CreateImplicitSymbols(const Symbol *symbol) {
     bool isStaticStorageDuration = HasStaticStorageDuration(*symbol);
     LLVM_DEBUG(llvm::dbgs()
         << "HasStaticStorageDuration(" << symbol->name() << "):\n");
+
+    if ((checkDefaultNone = checkDefaultNone |
+                (dsa.none() &&
+                    dirContext.defaultDSA == Symbol::Flag::OmpNone))) {
+      auto defaultNoneError = [&](parser::CharBlock loc, const Symbol *sym) {
+        if (sym->GetUltimate().test(Symbol::Flag::CrayPointee)) {
+          std::string crayPtrName{
+              semantics::GetCrayPointer(*sym).name().ToString()};
+          if (!IsObjectWithDSA(*currScope().FindSymbol(crayPtrName))) {
+            context_.Say(loc,
+                "The DEFAULT(NONE) clause requires that the Cray Pointer '%s' must be listed in a data-sharing attribute clause"_err_en_US,
+                crayPtrName);
+          }
+        } else {
+          context_.Say(loc,
+              "The DEFAULT(NONE) clause requires that '%s' must be listed in a data-sharing attribute clause"_err_en_US,
+              sym->name());
+        }
+      };
+      if (dsa.test(Symbol::Flag::OmpPrivate)) {
+        checkDefaultNone = false;
+      } else if (dsa.any()) {
+        defaultNoneError(dirContext.directiveSource, symbol);
+      } else if (dirDepth == (int)dirContext_.size() - 1) {
+        defaultNoneError(name.source, symbol);
+      }
+    }
 
     if (dsa.any()) {
       if (parallelDir || taskGenDir || teamsDir) {
@@ -2953,24 +2982,6 @@ void OmpAttributeVisitor::Post(const parser::Name &name) {
       if (Symbol * found{currScope().FindSymbol(name.source)}) {
         if (symbol != found) {
           name.symbol = found; // adjust the symbol within region
-        } else if (GetContext().defaultDSA == Symbol::Flag::OmpNone &&
-            !symbol->GetUltimate().test(Symbol::Flag::OmpThreadprivate) &&
-            // Exclude indices of sequential loops that are privatised in
-            // the scope of the parallel region, and not in this scope.
-            // TODO: check whether this should be caught in IsObjectWithDSA
-            !symbol->test(Symbol::Flag::OmpPrivate)) {
-          if (symbol->GetUltimate().test(Symbol::Flag::CrayPointee)) {
-            std::string crayPtrName{
-                semantics::GetCrayPointer(*symbol).name().ToString()};
-            if (!IsObjectWithDSA(*currScope().FindSymbol(crayPtrName)))
-              context_.Say(name.source,
-                  "The DEFAULT(NONE) clause requires that the Cray Pointer '%s' must be listed in a data-sharing attribute clause"_err_en_US,
-                  crayPtrName);
-          } else {
-            context_.Say(name.source,
-                "The DEFAULT(NONE) clause requires that '%s' must be listed in a data-sharing attribute clause"_err_en_US,
-                symbol->name());
-          }
         }
       }
     }
@@ -3024,7 +3035,7 @@ void OmpAttributeVisitor::Post(const parser::Name &name) {
     // we don't need to do anything here (i.e. no flags are needed or
     // anything else).
     if (!IsLocalInsideScope(*symbol, currScope())) {
-      CreateImplicitSymbols(symbol);
+      CreateImplicitSymbols(name, symbol);
     }
   } // within OpenMP construct
 }
@@ -3147,6 +3158,12 @@ void OmpAttributeVisitor::ResolveOmpDesignator(
       if (ompFlag == Symbol::Flag::OmpAllocate) {
         AddAllocateName(name);
       }
+    }
+    // Save the original symbol. For privatizing clauses, ensure enclosing
+    // constructs properly capture the variable.
+    const Symbol *origSymbol{name->symbol};
+    if (origSymbol && privateDataSharingAttributeFlags.test(ompFlag)) {
+      CreateImplicitSymbols(*name, origSymbol);
     }
     if (ompFlag == Symbol::Flag::OmpReduction) {
       // Using variables inside of a namelist in OpenMP reductions
