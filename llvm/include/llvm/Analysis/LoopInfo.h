@@ -310,15 +310,16 @@ public:
   /// by one each time through the loop.
   bool isCanonical(ScalarEvolution &SE) const;
 
-  /// Return true if the Loop is in LCSSA form. If \p IgnoreTokens is set to
-  /// true, token values defined inside loop are allowed to violate LCSSA form.
-  bool isLCSSAForm(const DominatorTree &DT, bool IgnoreTokens = true) const;
+  /// Return true if the Loop is in LCSSA form. If \p IgnoreEphemerals is set to
+  /// true, token and lifetime uses outside the loop are allowed to violate
+  /// LCSSA form.
+  bool isLCSSAForm(const DominatorTree &DT, bool IgnoreEphemerals = true) const;
 
   /// Return true if this Loop and all inner subloops are in LCSSA form. If \p
-  /// IgnoreTokens is set to true, token values defined inside loop are allowed
-  /// to violate LCSSA form.
+  /// IgnoreEphemerals is set to true, token and lifetime uses outside the loop
+  /// are allowed to violate LCSSA form.
   bool isRecursivelyLCSSAForm(const DominatorTree &DT, const LoopInfo &LI,
-                              bool IgnoreTokens = true) const;
+                              bool IgnoreEphemerals = true) const;
 
   /// Return true if the Loop is in the form that the LoopSimplify form
   /// transforms loops to, which is sometimes called normal form.
