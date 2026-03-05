@@ -519,11 +519,15 @@ def XeVM_ET_U4 : I32EnumAttrCase<"U4", 13, "u4">;
 def XeVM_ET_TF32 : I32EnumAttrCase<"TF32", 14, "tf32">;
 def XeVM_ET_F32 : I32EnumAttrCase<"F32", 15, "f32">;
 def XeVM_ET_S32 : I32EnumAttrCase<"S32", 16, "s32">;
+def XeVM_ET_E2M1 : I32EnumAttrCase<"E2M1", 17, "e2m1">;
+def XeVM_ET_BF8 : I32EnumAttrCase<"BF8", 18, "bf8">;
+def XeVM_ET_F8 : I32EnumAttrCase<"F8", 19, "f8">;
 
-def XeVM_ElemTypeAttr : I32EnumAttr<"ElemType", "XeVM element type",
-                                    [XeVM_ET_BF16, XeVM_ET_F16, XeVM_ET_S8,
-                                     XeVM_ET_U8, XeVM_ET_S4, XeVM_ET_U4,
-                                     XeVM_ET_TF32, XeVM_ET_F32, XeVM_ET_S32]> {
+def XeVM_ElemTypeAttr
+    : I32EnumAttr<"ElemType", "XeVM element type",
+                  [XeVM_ET_BF16, XeVM_ET_F16, XeVM_ET_S8, XeVM_ET_U8,
+                   XeVM_ET_S4, XeVM_ET_U4, XeVM_ET_TF32, XeVM_ET_F32,
+                   XeVM_ET_S32, XeVM_ET_E2M1, XeVM_ET_BF8, XeVM_ET_F8]> {
   let cppNamespace = "::mlir::xevm";
 }
 
@@ -583,6 +587,77 @@ def XeVM_MMAOp
 
   let assemblyFormat = [{
     $a `,` $b (`,` $c^)? ` `
+    `{`
+      `shape` `=` $shape `,`
+      `types` `=` $types
+    `}` attr-dict `:` functional-type(operands, results)
+  }];
+
+  let hasVerifier = 1;
+}
+
+def XeVM_ConversionTypesAttr
+    : XeVM_Attr<"ConversionTypes", "conversion_types"> {
+  let description = [{
+    This attribute is used to specify source and destination types for conversion operations.
+  }];
+  let parameters = (ins "xevm::ElemType":$src_type, "xevm::ElemType":$dst_type);
+  let assemblyFormat = "`<` struct(params) `>`";
+}
+
+def XeVM_TruncfOp
+    : XeVM_Op<"truncf">,
+      Results<(outs AnyTypeOf<[I8]>:$res)>,
+      Arguments<(ins AnyTypeOf<[I16]>:$arg, XeVM_ConversionTypesAttr:$types)> {
+  let summary = "Floating point truncation from f16/bf16 to f8/bf8/f4";
+  let description = [{
+    The `xevm.truncf` operation truncates a floating point value from
+    f16/bf16 to f8/bf8/f4 format.
+  }];
+
+  let assemblyFormat = [{
+    $arg ` ` `{` `types` `=` $types `}` attr-dict `:` functional-type(operands, results)
+  }];
+}
+
+def XeVM_MMAMxOp
+    : XeVM_Op<"mma_mx">,
+      Results<(outs FixedVectorOfRankAndType<[1], [XeVM_MatrixElemType]>:$d)>,
+      Arguments<(ins FixedVectorOfRankAndType<[1], [XeVM_MatrixElemType]>:$a,
+          FixedVectorOfRankAndType<[1], [XeVM_MatrixElemType]>:$b,
+          FixedVectorOfRankAndType<[1], [I8]>:$scale_a,
+          FixedVectorOfRankAndType<[1], [I8]>:$scale_b,
+          Optional<FixedVectorOfRankAndType<[1], [XeVM_MatrixElemType]>>:$c,
+          XeVM_MMAShapeAttr:$shape, XeVM_MMATypesAttr:$types)> {
+
+  let summary = "Subgroup matrix multiply-add with MxN shape and MX scaling";
+
+  let description = [{
+    The `xevm.mma_mx` is similar to `xevm.mma` has scale operands for A and B matrices.
+    It is a cooperative operation where all threads/lanes in a subgroup participates
+    and carries out matrix multiplication plus accumulation:
+
+      D = C + A x B
+
+      where the A, B, C input matrices and the result D have shapes:
+        - D : MxN
+        - C : MxN
+        - A : MxK
+        - B : KxN
+
+    Parameters:
+      * `a` - vector of matrix A elements.
+      * `b` - vector of matrix B elements.
+      * `scale_a` - vector of scaling factors for matrix A.
+      * `scale_b` - vector of scaling factors for matrix B.
+      * `c` - (optional) vector of matrix C elements.
+      * `shape` - the shape of the matrices, specified as `M`, `N`, and `K` values.
+      * `types` - the data types of the matrices, specified as `D`, `A`, `B`, and optionally `C`.
+
+  }];
+
+  let assemblyFormat = [{
+    $a `,` $b `,` $scale_a `,` $scale_b (`,` $c^)? ` `
     `{`
       `shape` `=` $shape `,`
       `types` `=` $types
