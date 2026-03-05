@@ -119,6 +119,8 @@ Defined *SymbolTable::addDefined(StringRef name, InputFile *file,
           defined->weakDefCanBeHidden &= isWeakDefCanBeHidden;
           defined->referencedDynamically |= isReferencedDynamically;
           defined->noDeadStrip |= noDeadStrip;
+          // If either weak definition is cold, the merged symbol is cold.
+          // This matches the behavior of both ld-prime and ld64.
           defined->cold |= isCold;
         }
         if (auto concatIsec = dyn_cast_or_null<ConcatInputSection>(isec)) {
