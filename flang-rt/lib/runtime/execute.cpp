@@ -111,7 +111,19 @@ std::int64_t TerminationCheck(std::int64_t status, const Descriptor *cmdstat,
   // On WIN32 API std::system() returns exit status directly. On other OS'es,
   // special status codes are handled below.
   std::int64_t exitStatusVal{status};
-#ifndef _WIN32
+#ifdef _WIN32
+  if (status == 9009) {
+    // cmd.exe returns status code 9009 for "command not found" error
+    if (!cmdstat) {
+      Crash(sourceFile, line, "Command not found.");
+    }
+    else {
+      StoreIntToDescriptor(cmdstat, COMMAND_NOT_FOUND_ERR, sourceFile, line);
+      CopyCharsToDescriptor(
+        cmdmsg, "Command not found.", sourceFile, line);
+    }
+  }
+#else
 
 #if defined(WIFSIGNALED) && defined(WTERMSIG)
   if (WIFSIGNALED(status)) {
@@ -195,9 +207,34 @@ void RTNAME(ExecuteCommandLine)(const Descriptor &command, bool wait,
     RUNTIME_CHECK(terminator, IsValidCharDescriptor(cmdmsg));
   }
 
+  const char* cmd{newCmd};
+#ifdef _WIN32
+    // Construct a string that looks like
+    //   "cmd.exe /v:on /c \"mycommand & exit /b !ERRORLEVEL!\""
+    // Explanantion:
+    //   /v:on - turns delayed environment variable expansion on, so
+    //     variables written as !VAR! are expanded at execution time
+    //     instead of at parse time. This is required for !ERRORLEVEL!
+    //     to reflect the current error code at the moment exit runs.
+    //   exit /b !ERRORLEVEL! - exits the current cmd instance (/b) and
+    //     sets its process exit code to the current ERRORLEVEL value.
+    //     Because delayed expansion is on, !ERRORLEVEL! is evaluated at
+    //     execution time, so this cmd instance returns the same error
+    //     code as mycommand.
+    //
+    const char prefix[]{"cmd.exe /v:on /c \""};
+    const char suffix[]{" & exit /b !ERRORLEVEL!\""};
+    const size_t newCmdWinLen{(sizeof(prefix) - 1) + std::strlen(newCmd)
+        + (sizeof(suffix) - 1) + 1};
+    char *newCmdWin{static_cast<char *>(AllocateMemoryOrCrash(
+        terminator, cmdBufLen))};
+    std::snprintf(newCmdWin, newCmdWinLen, "%s%s%s", prefix, newCmd, suffix);
+    cmd = newCmdWin;
+#endif
+
   if (wait) {
     // either wait is not specified or wait is true: synchronous mode
-    std::int64_t status{std::system(newCmd)};
+    std::int64_t status{std::system(cmd)};
     std::int64_t exitStatusVal{
         TerminationCheck(status, cmdstat, cmdmsg, terminator)};
     // If sync, assigned processor-dependent exit status. Otherwise unchanged
@@ -210,13 +247,6 @@ void RTNAME(ExecuteCommandLine)(const Descriptor &command, bool wait,
     ZeroMemory(&si, sizeof(si));
     si.cb = sizeof(si);
     ZeroMemory(&pi, sizeof(pi));
-
-    // add "cmd.exe /c " to the beginning of command
-    const char *prefix{"cmd.exe /c "};
-    char *newCmdWin{static_cast<char *>(AllocateMemoryOrCrash(
-        terminator, std::strlen(prefix) + std::strlen(newCmd) + 1))};
-    std::strcpy(newCmdWin, prefix);
-    std::strcat(newCmdWin, newCmd);
 
     // Convert the char to wide char
     const size_t sizeNeeded{mbstowcs(NULL, newCmdWin, 0) + 1};
