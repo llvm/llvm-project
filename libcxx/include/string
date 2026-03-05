@@ -2325,7 +2325,7 @@ private:
 #  if _LIBCPP_ENABLE_ASAN_CONTAINER_CHECKS_FOR_STRING
     if (__libcpp_is_constant_evaluated())
       return;
-    __asm__ volatile("" ::: "memory");
+    asm volatile("" ::: "memory");
 #  endif
   }
 
