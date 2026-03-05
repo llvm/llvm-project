@@ -6592,6 +6592,11 @@ void Sema::checkClassLevelDLLAttribute(CXXRecordDecl *Class) {
   // seem to be true in practice?
 
   for (Decl *Member : Class->decls()) {
+    if ((TSK == TSK_ExplicitInstantiationDeclaration ||
+         TSK == TSK_ExplicitInstantiationDefinition) &&
+        Member->hasAttr<ExcludeFromExplicitInstantiationAttr>())
+      continue;
+
     VarDecl *VD = dyn_cast<VarDecl>(Member);
     CXXMethodDecl *MD = dyn_cast<CXXMethodDecl>(Member);
 

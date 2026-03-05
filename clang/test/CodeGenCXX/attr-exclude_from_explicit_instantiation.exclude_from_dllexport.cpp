@@ -2,28 +2,18 @@
 //
 // RUN: %clang_cc1 -triple x86_64-win32 -fms-extensions -emit-llvm -o - %s > x86_64-win32.ll
 // RUN: FileCheck %s --check-prefixes=MSC                                  < x86_64-win32.ll
-// RUN: FileCheck %s --check-prefixes=UNDESIRED-MSC --implicit-check-not=notToBeInstantiated < x86_64-win32.ll
+// RUN: FileCheck %s --implicit-check-not=notToBeInstantiated              < x86_64-win32.ll
 //
 // RUN: %clang_cc1 -triple x86_64-mingw                 -emit-llvm -o - %s > x86_64-mingw.ll
 // RUN: FileCheck %s --check-prefixes=GNU                                  < x86_64-mingw.ll
-// RUN: FileCheck %s --check-prefixes=UNDESIRED-GNU --implicit-check-not=notToBeInstantiated < x86_64-mingw.ll
+// RUN: FileCheck %s --implicit-check-not=notToBeInstantiated              < x86_64-mingw.ll
 //
 // RUN: %clang_cc1 -triple x86_64-cygwin                -emit-llvm -o - %s > x86_64-cygwin.ll
 // RUN: FileCheck %s --check-prefixes=GNU                                  < x86_64-cygwin.ll
-// RUN: FileCheck %s --check-prefixes=UNDESIRED-GNU --implicit-check-not=notToBeInstantiated < x86_64-cygwin.ll
+// RUN: FileCheck %s --implicit-check-not=notToBeInstantiated              < x86_64-cygwin.ll
 
 // Because --implicit-check-not doesn't work with -DAG checks, negative checks
 // are performed on another independent path.
-// UNDESIRED-MSC: $"?notToBeInstantiated@?$BasicCase@UWithExportTag@@@@QEAAXXZ" = comdat any
-// UNDESIRED-GNU: $_ZN9BasicCaseI13WithExportTagE19notToBeInstantiatedEv = comdat any
-// UNDESIRED-MSC: $"?notToBeInstantiated_withExport@?$BasicCase@UWithExportTag@@@@QEAAXXZ" = comdat any
-// UNDESIRED-GNU: $_ZN9BasicCaseI13WithExportTagE30notToBeInstantiated_withExportEv = comdat any
-// UNDESIRED-MSC: $"?notToBeInstantiated@?$ExportWholeTemplate@UNoAttrTag@@@@QEAAXXZ" = comdat any
-// UNDESIRED-GNU: $_ZN19ExportWholeTemplateI9NoAttrTagE19notToBeInstantiatedEv = comdat any
-// UNDESIRED-MSC: $"?notToBeInstantiated@?$Polymorphic@UWithExportTag@@@@QEAAXXZ" = comdat any
-// UNDESIRED-GNU: $_ZN11PolymorphicI13WithExportTagE19notToBeInstantiatedEv = comdat any
-// UNDESIRED-MSC: $"?notToBeInstantiated_withExport@?$Polymorphic@UWithExportTag@@@@QEAAXXZ" = comdat any
-// UNDESIRED-GNU: $_ZN11PolymorphicI13WithExportTagE30notToBeInstantiated_withExportEv = comdat any
 
 #define EXCLUDE_ATTR __attribute__((exclude_from_explicit_instantiation))
 
@@ -48,12 +38,6 @@ template struct __declspec(dllexport) BasicCase<WithExportTag>;
 // MSC-DAG: define weak_odr dso_local dllexport void @"?noAttrMethod@?$BasicCase@UWithExportTag@@@@QEAAXXZ"
 // GNU-DAG: define weak_odr dso_local dllexport void @_ZN9BasicCaseI13WithExportTagE12noAttrMethodEv
 
-// UNDESIRED-MSC: define weak_odr dso_local dllexport void @"?notToBeInstantiated@?$BasicCase@UWithExportTag@@@@QEAAXXZ"
-// UNDESIRED-GNU: define weak_odr dso_local dllexport void @_ZN9BasicCaseI13WithExportTagE19notToBeInstantiatedEv
-
-// UNDESIRED-MSC: define weak_odr dso_local dllexport void @"?notToBeInstantiated_withExport@?$BasicCase@UWithExportTag@@@@QEAAXXZ"
-// UNDESIRED-GNU: define weak_odr dso_local dllexport void @_ZN9BasicCaseI13WithExportTagE30notToBeInstantiated_withExportEv
-
 /// Test that a non-exported explicit instantiation definition instantiates
 /// non-exclued methods but not exports.
 template struct BasicCase<NoAttrTag>;
@@ -66,12 +50,12 @@ template struct BasicCase<NoAttrTag>;
 /// method isn't instantiated unexpectedly.
 void useBasicCase() {
   BasicCase<WithExportTag>().excludedMethod();
-  // MSC-DAG: define weak_odr dso_local dllexport void @"?excludedMethod@?$BasicCase@UWithExportTag@@@@QEAAXXZ"
-  // GNU-DAG: define weak_odr dso_local dllexport void @_ZN9BasicCaseI13WithExportTagE14excludedMethodEv
+  // MSC-DAG: define linkonce_odr dso_local void @"?excludedMethod@?$BasicCase@UWithExportTag@@@@QEAAXXZ"
+  // GNU-DAG: define linkonce_odr dso_local void @_ZN9BasicCaseI13WithExportTagE14excludedMethodEv
 
   BasicCase<WithExportTag>().excludedExportedMethod();
-  // MSC-DAG: define weak_odr dso_local dllexport void @"?excludedExportedMethod@?$BasicCase@UWithExportTag@@@@QEAAXXZ"
-  // GNU-DAG: define weak_odr dso_local dllexport void @_ZN9BasicCaseI13WithExportTagE22excludedExportedMethodEv
+  // MSC-DAG: define linkonce_odr dso_local void @"?excludedExportedMethod@?$BasicCase@UWithExportTag@@@@QEAAXXZ"
+  // GNU-DAG: define linkonce_odr dso_local void @_ZN9BasicCaseI13WithExportTagE22excludedExportedMethodEv
 
   BasicCase<NoAttrTag>().excludedMethod();
   // MSC-DAG: define linkonce_odr dso_local void @"?excludedMethod@?$BasicCase@UNoAttrTag@@@@QEAAXXZ"
@@ -107,17 +91,14 @@ template struct ExportWholeTemplate<NoAttrTag>;
 // MSC-DAG: define weak_odr dso_local dllexport void @"?noAttrMethod@?$ExportWholeTemplate@UNoAttrTag@@@@QEAAXXZ"
 // GNU-DAG: define weak_odr dso_local dllexport void @_ZN19ExportWholeTemplateI9NoAttrTagE12noAttrMethodEv
 
-// UNDESIRED-MSC: define weak_odr dso_local dllexport void @"?notToBeInstantiated@?$ExportWholeTemplate@UNoAttrTag@@@@QEAAXXZ"
-// UNDESIRED-GNU: define weak_odr dso_local dllexport void @_ZN19ExportWholeTemplateI9NoAttrTagE19notToBeInstantiatedEv
-
 void useExportWholeTemplate() {
   ExportWholeTemplate<NoAttrTag>().excludedMethod();
-  // MSC-DAG: define weak_odr dso_local dllexport void @"?excludedMethod@?$ExportWholeTemplate@UNoAttrTag@@@@QEAAXXZ"
-  // GNU-DAG: define weak_odr dso_local dllexport void @_ZN19ExportWholeTemplateI9NoAttrTagE14excludedMethodEv
+  // MSC-DAG: define linkonce_odr dso_local void @"?excludedMethod@?$ExportWholeTemplate@UNoAttrTag@@@@QEAAXXZ"
+  // GNU-DAG: define linkonce_odr dso_local void @_ZN19ExportWholeTemplateI9NoAttrTagE14excludedMethodEv
 
   ExportWholeTemplate<NoAttrTag>().excludedNoinlineMethod();
-  // MSC-DAG: define weak_odr dso_local dllexport void @"?excludedNoinlineMethod@?$ExportWholeTemplate@UNoAttrTag@@@@QEAAXXZ"
-  // GNU-DAG: define weak_odr dso_local dllexport void @_ZN19ExportWholeTemplateI9NoAttrTagE22excludedNoinlineMethodEv
+  // MSC-DAG: define linkonce_odr dso_local void @"?excludedNoinlineMethod@?$ExportWholeTemplate@UNoAttrTag@@@@QEAAXXZ"
+  // GNU-DAG: define linkonce_odr dso_local void @_ZN19ExportWholeTemplateI9NoAttrTagE22excludedNoinlineMethodEv
 
   ExportWholeTemplate<ImplicitTag>().excludedMethod();
   // MSC-DAG: define weak_odr dso_local dllexport void @"?excludedMethod@?$ExportWholeTemplate@UImplicitTag@@@@QEAAXXZ"
@@ -146,17 +127,11 @@ template struct __declspec(dllexport) Polymorphic<WithExportTag>;
 // MSC-DAG: define weak_odr dso_local dllexport void @"?noAttrVirtualMethod@?$Polymorphic@UWithExportTag@@@@UEAAXXZ"
 // GNU-DAG: define weak_odr dso_local dllexport void @_ZN11PolymorphicI13WithExportTagE19noAttrVirtualMethodEv
 
-// MSC-DAG: define weak_odr dso_local dllexport void @"?excludedVirtualMethod@?$Polymorphic@UWithExportTag@@@@UEAAXXZ"
-// GNU-DAG: define weak_odr dso_local dllexport void @_ZN11PolymorphicI13WithExportTagE21excludedVirtualMethodEv
+// MSC-DAG: define linkonce_odr dso_local void @"?excludedVirtualMethod@?$Polymorphic@UWithExportTag@@@@UEAAXXZ"
+// GNU-DAG: define linkonce_odr dso_local void @_ZN11PolymorphicI13WithExportTagE21excludedVirtualMethodEv
 
-// MSC-DAG: define weak_odr dso_local dllexport void @"?excludedExportedVirtualMethod@?$Polymorphic@UWithExportTag@@@@UEAAXXZ"
-// GNU-DAG: define weak_odr dso_local dllexport void @_ZN11PolymorphicI13WithExportTagE29excludedExportedVirtualMethodEv
-
-// UNDESIRED-MSC: define weak_odr dso_local dllexport void @"?notToBeInstantiated@?$Polymorphic@UWithExportTag@@@@QEAAXXZ"
-// UNDESIRED-GNU: define weak_odr dso_local dllexport void @_ZN11PolymorphicI13WithExportTagE19notToBeInstantiatedEv
-
-// UNDESIRED-MSC: define weak_odr dso_local dllexport void @"?notToBeInstantiated_withExport@?$Polymorphic@UWithExportTag@@@@QEAAXXZ"
-// UNDESIRED-GNU: define weak_odr dso_local dllexport void @_ZN11PolymorphicI13WithExportTagE30notToBeInstantiated_withExportEv
+// MSC-DAG: define linkonce_odr dso_local void @"?excludedExportedVirtualMethod@?$Polymorphic@UWithExportTag@@@@UEAAXXZ"
+// GNU-DAG: define linkonce_odr dso_local void @_ZN11PolymorphicI13WithExportTagE29excludedExportedVirtualMethodEv
 
 template struct Polymorphic<NoAttrTag>;
 // MSC-DAG: @"??_7?$Polymorphic@UNoAttrTag@@@@6B@" = unnamed_addr

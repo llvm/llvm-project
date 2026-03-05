@@ -2,15 +2,15 @@
 //
 // RUN: %clang_cc1 -triple x86_64-win32 -fms-extensions -emit-llvm -o - %s > x86_64-win32.ll
 // RUN: FileCheck %s --check-prefixes=MSC                                  < x86_64-win32.ll
-// RUN: FileCheck %s --check-prefixes=UNDESIRED-MSC --implicit-check-not=notToBeInstantiated < x86_64-win32.ll
+// RUN: FileCheck %s --implicit-check-not=notToBeInstantiated              < x86_64-win32.ll
 //
 // RUN: %clang_cc1 -triple x86_64-mingw                 -emit-llvm -o - %s > x86_64-mingw.ll
 // RUN: FileCheck %s --check-prefixes=GNU                                  < x86_64-mingw.ll
-// RUN: FileCheck %s --check-prefixes=NEGATIVE-GNU,UNDESIRED-GNU --implicit-check-not=notToBeInstantiated < x86_64-mingw.ll
+// RUN: FileCheck %s --check-prefixes=NEGATIVE-GNU --implicit-check-not=notToBeInstantiated < x86_64-mingw.ll
 //
 // RUN: %clang_cc1 -triple x86_64-cygwin                -emit-llvm -o - %s > x86_64-cygwin.ll
 // RUN: FileCheck %s --check-prefixes=GNU                                  < x86_64-cygwin.ll
-// RUN: FileCheck %s --check-prefixes=NEGATIVE-GNU,UNDESIRED-GNU --implicit-check-not=notToBeInstantiated < x86_64-cygwin.ll
+// RUN: FileCheck %s --check-prefixes=NEGATIVE-GNU --implicit-check-not=notToBeInstantiated < x86_64-cygwin.ll
 
 // Because --implicit-check-not doesn't work with -DAG checks, negative checks
 // are performed on another independent path.
@@ -46,12 +46,12 @@ void useBaseCase() {
   // GNU-DAG: declare dllimport void @_ZN9BasicCaseI13WithImportTagE12noAttrMethodEv
 
   BasicCase<WithImportTag>().excludedMethod();
-  // MSC-DAG: declare dllimport void @"?excludedMethod@?$BasicCase@UWithImportTag@@@@QEAAXXZ"
-  // GNU-DAG: declare dllimport void @_ZN9BasicCaseI13WithImportTagE14excludedMethodEv
+  // MSC-DAG: define linkonce_odr dso_local void @"?excludedMethod@?$BasicCase@UWithImportTag@@@@QEAAXXZ"
+  // GNU-DAG: define linkonce_odr dso_local void @_ZN9BasicCaseI13WithImportTagE14excludedMethodEv
 
   BasicCase<WithImportTag>().excludedImportedMethod();
-  // MSC-DAG: declare dllimport void @"?excludedImportedMethod@?$BasicCase@UWithImportTag@@@@QEAAXXZ"
-  // GNU-DAG: declare dllimport void @_ZN9BasicCaseI13WithImportTagE22excludedImportedMethodEv
+  // MSC-DAG: define linkonce_odr dso_local void @"?excludedImportedMethod@?$BasicCase@UWithImportTag@@@@QEAAXXZ"
+  // GNU-DAG: define linkonce_odr dso_local void @_ZN9BasicCaseI13WithImportTagE22excludedImportedMethodEv
 
   BasicCase<NoAttrTag>().noAttrMethod();
   // MSC-DAG: declare dso_local void @"?noAttrMethod@?$BasicCase@UNoAttrTag@@@@QEAAXXZ"
@@ -96,12 +96,12 @@ extern template struct ImportWholeTemplate<NoAttrTag>;
 
 void useImportWholeTemplate() {
   ImportWholeTemplate<NoAttrTag>().excludedMethod();
-  // MSC-DAG: declare dllimport void @"?excludedMethod@?$ImportWholeTemplate@UNoAttrTag@@@@QEAAXXZ"
-  // GNU-DAG: declare dllimport void @_ZN19ImportWholeTemplateI9NoAttrTagE14excludedMethodEv
+  // MSC-DAG: define linkonce_odr dso_local void @"?excludedMethod@?$ImportWholeTemplate@UNoAttrTag@@@@QEAAXXZ"
+  // GNU-DAG: define linkonce_odr dso_local void @_ZN19ImportWholeTemplateI9NoAttrTagE14excludedMethodEv
 
   ImportWholeTemplate<NoAttrTag>().excludedNoinlineMethod();
-  // MSC-DAG: declare dllimport void @"?excludedNoinlineMethod@?$ImportWholeTemplate@UNoAttrTag@@@@QEAAXXZ"
-  // GNU-DAG: declare dllimport void @_ZN19ImportWholeTemplateI9NoAttrTagE22excludedNoinlineMethodEv
+  // MSC-DAG: define linkonce_odr dso_local void @"?excludedNoinlineMethod@?$ImportWholeTemplate@UNoAttrTag@@@@QEAAXXZ"
+  // GNU-DAG: define linkonce_odr dso_local void @_ZN19ImportWholeTemplateI9NoAttrTagE22excludedNoinlineMethodEv
 
   ImportWholeTemplate<ImplicitTag>().excludedMethod();
   // MSC-DAG: declare dllimport void @"?excludedMethod@?$ImportWholeTemplate@UImplicitTag@@@@QEAAXXZ"
@@ -144,16 +144,16 @@ extern template struct Polymorphic<NoAttrTag>;
 ///
 void usePolymorphic() {
   new Polymorphic<WithImportTag>();
-  // UNDESIRED-MSC-NOT: @"??_{{.}}?$Polymorphic@UWithImportTag@@@@6B@" = unnamed_addr
-  // UNDESIRED-GNU-NOT: @_ZTV11PolymorphicI13WithImportTagE = external dllimport unnamed_addr
+  // MSC-DAG: @"??_S?$Polymorphic@UWithImportTag@@@@6B@" = unnamed_addr
+  // GNU-DAG: @_ZTV11PolymorphicI13WithImportTagE = external dllimport unnamed_addr
 
-  // UNDESIRED-MSC-NOT: @"?noAttrVirtualMethod@?$Polymorphic@UWithImportTag@@@@UEAAXXZ"
+  // MSC-DAG: declare dllimport void @"?noAttrVirtualMethod@?$Polymorphic@UWithImportTag@@@@UEAAXXZ"
   // NEGATIVE-GNU-NOT: @_ZN11PolymorphicI13WithImportTagE19noAttrVirtualMethodEv
 
-  // UNDESIRED-MSC-NOT: @"?excludedVirtualMethod@?$Polymorphic@UWithImportTag@@@@UEAAXXZ"
+  // MSC-DAG: declare dso_local void @"?excludedVirtualMethod@?$Polymorphic@UWithImportTag@@@@UEAAXXZ"
   // NEGATIVE-GNU-NOT: @_ZN11PolymorphicI13WithImportTagE21excludedVirtualMethodEv
 
-  // UNDESIRED-MSC-NOT: @"?excludedImportedVirtualMethod@?$Polymorphic@UWithImportTag@@@@UEAAXXZ"
+  // MSC-DAG: declare dso_local void @"?excludedImportedVirtualMethod@?$Polymorphic@UWithImportTag@@@@UEAAXXZ"
   // NEGATIVE-GNU-NOT: @_ZN11PolymorphicI13WithImportTagE29excludedImportedVirtualMethodEv
 
   new Polymorphic<NoAttrTag>();
