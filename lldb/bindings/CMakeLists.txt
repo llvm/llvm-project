@@ -67,3 +67,7 @@ endif()
 if (LLDB_ENABLE_LUA)
   add_subdirectory(lua)
 endif()
+
+if (LLDB_ENABLE_JAVASCRIPT)
+  add_subdirectory(javascript)
+endif()

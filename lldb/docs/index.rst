@@ -27,7 +27,9 @@ with GDB there is a cheat sheet listing common tasks and their LLDB equivalent
 in the `GDB to LLDB command map <https://lldb.llvm.org/use/map.html>`_.
 
 There are also multiple resources on how to script LLDB using Python: the
-:doc:`use/python-reference` is a great starting point for that.
+:doc:`use/python-reference` is a great starting point for that. LLDB also
+supports scripting with JavaScript through the V8 engine (see
+`JavaScript Reference <use/javascript-reference.html>`_).
 
 Compiler Integration Benefits
 -----------------------------
@@ -149,6 +151,7 @@ interesting areas to contribute to lldb.
    :caption: Scripting LLDB
 
    use/python-reference
+   use/javascript-reference
    Python API <python_api>
    Python Extensions <python_extensions>
 
