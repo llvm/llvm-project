@@ -40,7 +40,7 @@ void vla_type_with_element_type_int() {
 // CIR: cir.store {{.*}} %[[CONST_10]], %[[N_ADDR]] : !u64i, !cir.ptr<!u64i>
 // CIR: %3 = cir.load {{.*}} %[[N_ADDR]] : !cir.ptr<!u64i>, !u64i
 // CIR: %[[CONST_4:.*]] = cir.const #cir.int<4> : !u64i
-// CIR: %[[SIZE:.*]] = cir.binop(mul, %[[CONST_4]], %3) nuw : !u64i
+// CIR: %[[SIZE:.*]] = cir.mul nuw %[[CONST_4]], %3 : !u64i
 // CIR: cir.store {{.*}} %[[SIZE]], %[[SIZE_ADDR]] : !u64i, !cir.ptr<!u64i>
 
 // LLVM: %[[N_ADDR:.*]] = alloca i64, i64 1, align 8
@@ -126,7 +126,7 @@ void vla_expr_element_type_int() {
 // CIR: cir.cleanup.scope {
 // CIR:   %[[ARR_ADDR:.*]] = cir.alloca !s32i, !cir.ptr<!s32i>, %[[TMP_N]] : !u64i, ["arr"]
 // CIR:   %[[CONST_4:.*]] = cir.const #cir.int<4> : !u64i
-// CIR:   %[[SIZE:.*]] = cir.binop(mul, %[[CONST_4]], %[[TMP_N]]) nuw : !u64i
+// CIR:   %[[SIZE:.*]] = cir.mul nuw %[[CONST_4]], %[[TMP_N]] : !u64i
 // CIR:   cir.store {{.*}} %[[SIZE]], %[[SIZE_ADDR]] : !u64i, !cir.ptr<!u64i>
 // CIR:   cir.yield
 // CIR: } cleanup normal {

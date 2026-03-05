@@ -2434,7 +2434,11 @@ ObjectFileELF::ParseSymbols(Symtab *symtab, user_id_t start_id,
                    sect_name == rodata1_section_name ||
                    sect_name == bss_section_name) {
           symbol_type = eSymbolTypeData;
-        }
+        } else if (symbol_section_sp->Get() & SHF_ALLOC)
+          // Check for symbols from custom sections (e.g. added by linker
+          // scripts) with SHF_ALLOC (i.e. occupies memory during process
+          // execution) in their flags.
+          symbol_type = eSymbolTypeData;
       }
     }
 

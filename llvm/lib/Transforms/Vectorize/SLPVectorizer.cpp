@@ -15294,7 +15294,10 @@ TTI::CastContextHint BoUpSLP::getCastContextHint(const TreeEntry &TE) const {
 static unsigned getLoopTripCount(const Loop *L, ScalarEvolution &SE) {
   if (LoopAwareTripCount == 0)
     return 1;
-  if (unsigned Scale = SE.getSmallConstantTripCount(L)) {
+  unsigned Scale = SE.getSmallConstantTripCount(L);
+  if (Scale == 0)
+    Scale = getLoopEstimatedTripCount(const_cast<Loop *>(L)).value_or(0);
+  if (Scale != 0) {
     // Multiple exiting blocks - choose the minimum between trip count (scale)
     // and LoopAwareTripCount, since the multiple exit loops can be terminated
     // early.
@@ -21965,6 +21968,7 @@ Value *BoUpSLP::vectorizeTree(
     // to adjust insertion point again to the end of block.
     if (isa<PHINode>(UserI) ||
         (TE->UserTreeIndex.UserTE->hasState() &&
+         TE->UserTreeIndex.UserTE->State != TreeEntry::SplitVectorize &&
          TE->UserTreeIndex.UserTE->getOpcode() == Instruction::PHI)) {
       // Insert before all users.
       Instruction *InsertPt = PrevVec->getParent()->getTerminator();
