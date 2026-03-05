@@ -35,13 +35,7 @@ entry:
 define arm_aapcs_vfpcc float @vecAddAcrossF32Mve(<4 x float> %in) {
 ; CHECK-LABEL: @vecAddAcrossF32Mve(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[TMP0:%.*]] = extractelement <4 x float> [[IN:%.*]], i64 0
-; CHECK-NEXT:    [[TMP1:%.*]] = extractelement <4 x float> [[IN]], i64 1
-; CHECK-NEXT:    [[ADD:%.*]] = fadd fast float [[TMP0]], [[TMP1]]
-; CHECK-NEXT:    [[TMP2:%.*]] = extractelement <4 x float> [[IN]], i64 2
-; CHECK-NEXT:    [[ADD1:%.*]] = fadd fast float [[ADD]], [[TMP2]]
-; CHECK-NEXT:    [[TMP3:%.*]] = extractelement <4 x float> [[IN]], i64 3
-; CHECK-NEXT:    [[ADD2:%.*]] = fadd fast float [[ADD1]], [[TMP3]]
+; CHECK-NEXT:    [[ADD2:%.*]] = tail call fast float @llvm.vector.reduce.fadd.v4f32(float -0.000000e+00, <4 x float> [[IN:%.*]])
 ; CHECK-NEXT:    ret float [[ADD2]]
 ;
 entry:

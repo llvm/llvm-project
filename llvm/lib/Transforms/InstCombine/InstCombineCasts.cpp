@@ -2056,6 +2056,9 @@ Instruction *InstCombinerImpl::visitFPTrunc(FPTruncInst &FPT) {
   if (Instruction *I = commonCastTransforms(FPT))
     return I;
 
+  if (Instruction *I = foldOrderedFloatingPointReduction(&FPT))
+    return I;
+
   // If we have fptrunc(OpI (fpextend x), (fpextend y)), we would like to
   // simplify this expression to avoid one or more of the trunc/extend
   // operations if we can do so without changing the numerical results.

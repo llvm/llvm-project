@@ -1236,9 +1236,10 @@ define <8 x float> @add_v8f32_76u43210(<8 x float> %a, <8 x float> %b) {
 
 define <2 x double> @add_v2f64_01(<2 x double> %a, <2 x double> %b) {
 ; CHECK-LABEL: @add_v2f64_01(
-; CHECK-NEXT:    [[TMP1:%.*]] = shufflevector <2 x double> [[A:%.*]], <2 x double> [[B:%.*]], <2 x i32> <i32 0, i32 2>
-; CHECK-NEXT:    [[TMP2:%.*]] = shufflevector <2 x double> [[A]], <2 x double> [[B]], <2 x i32> <i32 1, i32 3>
-; CHECK-NEXT:    [[TMP3:%.*]] = fadd <2 x double> [[TMP1]], [[TMP2]]
+; CHECK-NEXT:    [[A01:%.*]] = tail call double @llvm.vector.reduce.fadd.v2f64(double -0.000000e+00, <2 x double> [[A:%.*]])
+; CHECK-NEXT:    [[B01:%.*]] = tail call double @llvm.vector.reduce.fadd.v2f64(double -0.000000e+00, <2 x double> [[B:%.*]])
+; CHECK-NEXT:    [[HADD0:%.*]] = insertelement <2 x double> poison, double [[A01]], i64 0
+; CHECK-NEXT:    [[TMP3:%.*]] = insertelement <2 x double> [[HADD0]], double [[B01]], i64 1
 ; CHECK-NEXT:    ret <2 x double> [[TMP3]]
 ;
   %a0 = extractelement <2 x double> %a, i32 0
@@ -1255,8 +1256,8 @@ define <2 x double> @add_v2f64_01(<2 x double> %a, <2 x double> %b) {
 
 define <2 x double> @add_v2f64_u1(<2 x double> %a, <2 x double> %b) {
 ; CHECK-LABEL: @add_v2f64_u1(
-; CHECK-NEXT:    [[TMP1:%.*]] = shufflevector <2 x double> [[B:%.*]], <2 x double> poison, <2 x i32> <i32 poison, i32 0>
-; CHECK-NEXT:    [[RESULT1:%.*]] = fadd <2 x double> [[TMP1]], [[B]]
+; CHECK-NEXT:    [[B01:%.*]] = tail call double @llvm.vector.reduce.fadd.v2f64(double -0.000000e+00, <2 x double> [[B:%.*]])
+; CHECK-NEXT:    [[RESULT1:%.*]] = insertelement <2 x double> poison, double [[B01]], i64 1
 ; CHECK-NEXT:    ret <2 x double> [[RESULT1]]
 ;
   %a0 = extractelement <2 x double> %a, i32 0
@@ -1273,8 +1274,8 @@ define <2 x double> @add_v2f64_u1(<2 x double> %a, <2 x double> %b) {
 
 define <2 x double> @add_v2f64_0u(<2 x double> %a, <2 x double> %b) {
 ; CHECK-LABEL: @add_v2f64_0u(
-; CHECK-NEXT:    [[RESULT:%.*]] = shufflevector <2 x double> [[TMP1:%.*]], <2 x double> poison, <2 x i32> <i32 1, i32 poison>
-; CHECK-NEXT:    [[RESULT1:%.*]] = fadd <2 x double> [[TMP1]], [[RESULT]]
+; CHECK-NEXT:    [[A01:%.*]] = tail call double @llvm.vector.reduce.fadd.v2f64(double -0.000000e+00, <2 x double> [[A:%.*]])
+; CHECK-NEXT:    [[RESULT1:%.*]] = insertelement <2 x double> poison, double [[A01]], i64 0
 ; CHECK-NEXT:    ret <2 x double> [[RESULT1]]
 ;
   %a0 = extractelement <2 x double> %a, i32 0
