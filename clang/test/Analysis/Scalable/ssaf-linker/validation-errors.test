@@ -1,5 +1,6 @@
-// Tests for EntityLinker error cases.
+// Tests for ssaf-linker input validation.
 
+// RUN: rm -rf %t
 // RUN: mkdir -p %t
 
 // No extension on output.

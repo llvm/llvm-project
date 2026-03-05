@@ -83,7 +83,6 @@ private:
 
   static llvm::Expected<EntityId>
   entityIdFromJSONObject(const Object &EntityIdObject);
-  static Value *entityIdReferenceFromJSONObject(Object &EntityIdObject);
   static Object entityIdToJSONObject(EntityId EI);
 
   llvm::Expected<BuildNamespace>

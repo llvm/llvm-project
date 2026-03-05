@@ -11,29 +11,55 @@
 
 namespace clang::ssaf {
 
+llvm::Expected<bool> JSONEntitySummaryEncoding::patchEntityIdObject(
+    llvm::json::Object &Obj, const std::map<EntityId, EntityId> &Table) {
+
+  llvm::json::Value *AtVal = Obj.get(JSONEntityIdKey);
+  if (!AtVal) {
+    return false;
+  }
+
+  if (Obj.size() != 1) {
+    return ErrorBuilder::create(std::errc::invalid_argument,
+                                ErrorMessages::FailedToReadEntityIdObject,
+                                JSONEntityIdKey)
+        .build();
+  }
+
+  std::optional<uint64_t> OptEntityIdIndex = AtVal->getAsUINT64();
+  if (!OptEntityIdIndex) {
+    return ErrorBuilder::create(std::errc::invalid_argument,
+                                ErrorMessages::FailedToReadEntityIdObject,
+                                JSONEntityIdKey)
+        .build();
+  }
+
+  auto OldId = JSONFormat::makeEntityId(*OptEntityIdIndex);
+  auto It = Table.find(OldId);
+  if (It == Table.end()) {
+    return ErrorBuilder::create(std::errc::invalid_argument,
+                                ErrorMessages::FailedToPatchEntityIdNotInTable,
+                                OldId)
+        .build();
+  }
+
+  *AtVal = static_cast<uint64_t>(JSONFormat::getIndex(It->second));
+
+  return true;
+}
+
 llvm::Error JSONEntitySummaryEncoding::patchObject(
     llvm::json::Object &Obj, const std::map<EntityId, EntityId> &Table) {
 
-  if (auto AtVal = JSONFormat::entityIdReferenceFromJSONObject(Obj)) {
-    std::optional<uint64_t> OptEntityIdIndex = AtVal->getAsUINT64();
-    if (!OptEntityIdIndex) {
-      return ErrorBuilder::create(std::errc::invalid_argument,
-                                  ErrorMessages::FailedToReadEntityIdObject,
-                                  JSONEntityIdKey)
-          .build();
-    }
+  auto ExpectedIsEntityId = patchEntityIdObject(Obj, Table);
 
-    auto OldId = JSONFormat::makeEntityId(*OptEntityIdIndex);
-    auto It = Table.find(OldId);
-    if (It == Table.end()) {
-      return ErrorBuilder::create(
-                 std::errc::invalid_argument,
-                 ErrorMessages::FailedToPatchEntityIdNotInTable, OldId)
-          .build();
-    }
+  if (!ExpectedIsEntityId) {
+    return ExpectedIsEntityId.takeError();
+  }
 
-    *AtVal = static_cast<uint64_t>(JSONFormat::getIndex(It->second));
-  } else {
+  bool IsEntityId = *ExpectedIsEntityId;
+
+  if (!IsEntityId) {
     for (auto &[Key, Val] : Obj) {
       if (auto Err = patchValue(Val, Table)) {
         return Err;

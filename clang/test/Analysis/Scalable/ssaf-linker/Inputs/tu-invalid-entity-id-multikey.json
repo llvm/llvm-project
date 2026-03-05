@@ -1,0 +1,32 @@
+{
+  "tu_namespace": {
+    "kind": "CompilationUnit",
+    "name": "invalid-entity-id-multikey.cpp"
+  },
+  "id_table": [
+    {
+      "id": 0,
+      "name": {
+        "namespace": [{"kind": "CompilationUnit", "name": "invalid-entity-id-multikey.cpp"}],
+        "suffix": "",
+        "usr": "c:@F@foo#"
+      }
+    }
+  ],
+  "linkage_table": [
+    {"id": 0, "linkage": {"type": "External"}}
+  ],
+  "data": [
+    {
+      "summary_name": "TestAnalysis",
+      "summary_data": [
+        {
+          "entity_id": 0,
+          "entity_summary": {
+            "ref": {"@": 0, "extra": "field"}
+          }
+        }
+      ]
+    }
+  ]
+}

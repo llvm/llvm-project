@@ -34,10 +34,13 @@ private:
   explicit JSONEntitySummaryEncoding(llvm::json::Value Data)
       : Data(std::move(Data)) {}
 
-  static llvm::Error patchObject(llvm::json::Object &Obj,
-                                 const std::map<EntityId, EntityId> &Table);
-  static llvm::Error patchValue(llvm::json::Value &V,
-                                const std::map<EntityId, EntityId> &Table);
+  llvm::Expected<bool>
+  patchEntityIdObject(llvm::json::Object &Obj,
+                      const std::map<EntityId, EntityId> &Table);
+  llvm::Error patchObject(llvm::json::Object &Obj,
+                          const std::map<EntityId, EntityId> &Table);
+  llvm::Error patchValue(llvm::json::Value &V,
+                         const std::map<EntityId, EntityId> &Table);
 
   llvm::json::Value Data;
 };

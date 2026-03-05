@@ -1,26 +1,24 @@
 // Tests for ssaf-linker file I/O error handling.
 
-// Input file is a directory.
-// RUN: not ssaf-linker %S/Inputs -o %t.json 2>&1 | FileCheck %s --check-prefix=INPUT-IS-DIR
-// INPUT-IS-DIR: error: Failed to load input summary
-// INPUT-IS-DIR: path is a directory, not a file
-
-// Input file has wrong extension — caught at validation before read.
-// (Extension check happens in SummaryFile::FromPath before real_path.)
-// RUN: not ssaf-linker %S/Inputs/empty.json %S/Inputs/malformed.json -o %t.json 2>&1
+// RUN: rm -rf %t
+// RUN: mkdir -p %t
 
 // Malformed JSON input.
-// RUN: not ssaf-linker %S/Inputs/malformed.json -o %t.json 2>&1 | FileCheck %s --check-prefix=BAD-JSON
-// BAD-JSON: error: Failed to load input summary
-// BAD-JSON: failed to read file
+// RUN: not ssaf-linker %S/Inputs/tu-malformed.json -o %t/out.json 2>&1 \
+// RUN:   | FileCheck %s --check-prefix=BAD-JSON -DPATH=%S/Inputs/tu-malformed.json
+// BAD-JSON: ssaf-linker: error: reading TUSummary from file '[[PATH]]'
+// BAD-JSON: Invalid JSON value
 
 // Missing required fields in otherwise valid JSON.
-// RUN: not ssaf-linker %S/Inputs/missing-fields.json -o %t.json 2>&1 | FileCheck %s --check-prefix=MISSING-FIELDS
-// MISSING-FIELDS: error: Failed to load input summary
-// MISSING-FIELDS: failed to read
+// RUN: not ssaf-linker %S/Inputs/tu-missing-fields.json -o %t/out.json 2>&1 \
+//        | FileCheck %s --check-prefix=MISSING-FIELDS -DPATH=%S/Inputs/tu-missing-fields.json
+// MISSING-FIELDS: ssaf-linker: error: reading TUSummary from file '[[PATH]]'
+// MISSING-FIELDS: failed to read IdTable from field 'id_table': expected JSON array
 
 // Output file already exists.
-// RUN: ssaf-linker %S/Inputs/empty.json -o %t-exists.json
-// RUN: not ssaf-linker %S/Inputs/empty.json -o %t-exists.json 2>&1 | FileCheck %s --check-prefix=OUTPUT-EXISTS
-// OUTPUT-EXISTS: error: Failed to write output summary
-// OUTPUT-EXISTS: file already exists
+// RUN: touch %t/out.json
+// RUN: ssaf-linker %S/Inputs/tu-empty.json -o %t/out.json
+// RUN: not ssaf-linker %S/Inputs/tu-empty.json -o %t/out.json 2>&1 \
+// RUN:   | FileCheck %s --check-prefix=OUTPUT-EXISTS -DPATH=%t/out.json
+// OUTPUT-EXISTS: ssaf-linker: error: writing LUSummary to file '[[PATH]]'
+// OUTPUT-EXISTS: failed to write file '[[PATH]]': file already exists

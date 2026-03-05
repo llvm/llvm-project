@@ -13,7 +13,6 @@
 // CHECK:   --help-list         - Display list of available options (--help-list-hidden for more)
 // CHECK:   --help-list-hidden  - Display list of all available options
 // CHECK:   -o <path>           - Output summary path
-// CHECK:   --output            -
 // CHECK:   --print-all-options - Print all option values after command line parsing
 // CHECK:   --print-options     - Print non-default options after command line parsing
 // CHECK:   --time              - Enable timing

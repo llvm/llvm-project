@@ -161,19 +161,17 @@ EntityLinker::merge(TUSummaryEncoding &Summary,
   return PatchTargets;
 }
 
-void EntityLinker::patch(
-    const std::vector<EntitySummaryEncoding *> &PatchTargets,
-    const std::map<EntityId, EntityId> &EntityResolutionTable) {
+llvm::Error
+EntityLinker::patch(const std::vector<EntitySummaryEncoding *> &PatchTargets,
+                    const std::map<EntityId, EntityId> &EntityResolutionTable) {
   for (auto *PatchTarget : PatchTargets) {
     assert(PatchTarget && "EntityLinker::patch: Patch target cannot be null");
 
     if (auto Err = PatchTarget->patch(EntityResolutionTable)) {
-      std::string PatchingErrorMessage = llvm::toString(std::move(Err));
-      ErrorBuilder::fatal("{0} - {1}",
-                          ErrorMessages::EntityLinkerFatalErrorPrefix,
-                          PatchingErrorMessage);
+      return Err;
     }
   }
+  return llvm::Error::success();
 }
 
 llvm::Error EntityLinker::link(std::unique_ptr<TUSummaryEncoding> Summary) {
@@ -189,7 +187,9 @@ llvm::Error EntityLinker::link(std::unique_ptr<TUSummaryEncoding> Summary) {
 
   auto EntityResolutionTable = resolve(SummaryRef);
   auto PatchTargets = merge(SummaryRef, EntityResolutionTable);
-  patch(PatchTargets, EntityResolutionTable);
+  if (auto Err = patch(PatchTargets, EntityResolutionTable)) {
+    return Err;
+  }
 
   return llvm::Error::success();
 }

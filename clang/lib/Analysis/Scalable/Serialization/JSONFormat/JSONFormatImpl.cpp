@@ -176,19 +176,6 @@ JSONFormat::entityIdFromJSONObject(const Object &EntityIdObject) {
   return makeEntityId(static_cast<size_t>(*OptEntityIdIndex));
 }
 
-Value *JSONFormat::entityIdReferenceFromJSONObject(Object &EntityIdObject) {
-  if (EntityIdObject.size() != 1) {
-    return nullptr;
-  }
-
-  llvm::json::Value *AtVal = EntityIdObject.get(JSONEntityIdKey);
-  if (!AtVal) {
-    return nullptr;
-  }
-
-  return AtVal;
-}
-
 Object JSONFormat::entityIdToJSONObject(EntityId EI) {
   Object Result;
   Result[JSONEntityIdKey] = static_cast<uint64_t>(getIndex(EI));
