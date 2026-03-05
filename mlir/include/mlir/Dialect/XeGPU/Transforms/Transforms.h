@@ -61,8 +61,6 @@ struct UnrollOptions {
   }
 };
 
-/// Appends patterns for folding aliasing ops into XeGPU ops into `patterns`.
-void populateXeGPUFoldAliasOpsPatterns(RewritePatternSet &patterns);
 /// Appends patterns for optimizing block load operations into `patterns`.
 void populateXeGPUPeepHoleOptimizerPatterns(RewritePatternSet &patterns);
 /// Appends patterns for XeGPU SIMT distribution into `patterns`.
@@ -82,14 +80,6 @@ void populateXeGPUSgToWiDistributeTypeConversions(TypeConverter &typeConverter);
 void populateXeGPUSgToWiDistributeTypeConversionAndLegality(
     TypeConverter &typeConverter, RewritePatternSet &patterns,
     ConversionTarget &target);
-/// Appends patterns to rewrite vector::MultiDimReductionOp in terms of
-/// vector::ReductionOps if the multi-reduction involves cross-lane data
-/// movement. This pattern is used as pre-processing step before applying
-/// subgroup to workitem distribution patterns. This pattern will rewrite a
-/// multi reduction in terms of a series of simpler extract, reduction and
-/// insert ops if the reduction require cross-lane data movement.
-void populateXeGPUSgToWiLowerVectorMultiReductionAndLegality(
-    RewritePatternSet &patterns, ConversionTarget &target);
 
 /// Collect a set of patterns to unroll xegpu operations to a smaller shapes.
 /// Users can control whether an operation to be unrolled or not, as well as

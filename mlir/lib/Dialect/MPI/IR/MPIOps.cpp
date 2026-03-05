@@ -15,7 +15,22 @@
 using namespace mlir;
 using namespace mlir::mpi;
 
+//===----------------------------------------------------------------------===//
+// Verifiers
+//===----------------------------------------------------------------------===//
+
+LogicalResult mlir::mpi::ReduceScatterBlockOp::verify() {
+  if (getSendbuf().getType().getElementType() !=
+      getRecvbuf().getType().getElementType())
+    return emitOpError("sendbuf and recvbuf must have the same element type");
+  return success();
+}
+
 namespace {
+
+//===----------------------------------------------------------------------===//
+// Canonicalization patterns
+//===----------------------------------------------------------------------===//
 
 // If input memref has dynamic shape and is a cast and if the cast's input has
 // static shape, fold the cast's static input into the given operation.
