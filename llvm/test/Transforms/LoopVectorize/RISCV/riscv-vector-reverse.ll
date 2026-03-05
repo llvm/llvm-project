@@ -171,10 +171,10 @@ define void @vector_reverse_i64(ptr nocapture noundef writeonly %A, ptr nocaptur
 ; RV64-NEXT:    [[TMP8:%.*]] = or i1 [[TMP7]], [[TMP9]]
 ; RV64-NEXT:    br i1 [[TMP8]], label %[[SCALAR_PH:.*]], label %[[VECTOR_MEMCHECK:.*]]
 ; RV64:       [[VECTOR_MEMCHECK]]:
+; RV64-NEXT:    [[TMP14:%.*]] = sub i64 [[B1]], [[A2]]
 ; RV64-NEXT:    [[TMP11:%.*]] = call i64 @llvm.vscale.i64()
 ; RV64-NEXT:    [[TMP12:%.*]] = mul nuw i64 [[TMP11]], 4
 ; RV64-NEXT:    [[TMP13:%.*]] = mul i64 [[TMP12]], 4
-; RV64-NEXT:    [[TMP14:%.*]] = sub i64 [[B1]], [[A2]]
 ; RV64-NEXT:    [[DIFF_CHECK:%.*]] = icmp ult i64 [[TMP14]], [[TMP13]]
 ; RV64-NEXT:    br i1 [[DIFF_CHECK]], label %[[SCALAR_PH]], label %[[VECTOR_PH:.*]]
 ; RV64:       [[VECTOR_PH]]:
@@ -226,10 +226,10 @@ define void @vector_reverse_i64(ptr nocapture noundef writeonly %A, ptr nocaptur
 ; RV32-NEXT:    [[TMP0:%.*]] = zext i32 [[N]] to i64
 ; RV32-NEXT:    br label %[[VECTOR_MEMCHECK:.*]]
 ; RV32:       [[VECTOR_MEMCHECK]]:
+; RV32-NEXT:    [[TMP6:%.*]] = sub i32 [[B1]], [[A2]]
 ; RV32-NEXT:    [[TMP3:%.*]] = call i32 @llvm.vscale.i32()
 ; RV32-NEXT:    [[TMP4:%.*]] = mul nuw i32 [[TMP3]], 4
 ; RV32-NEXT:    [[TMP5:%.*]] = mul i32 [[TMP4]], 4
-; RV32-NEXT:    [[TMP6:%.*]] = sub i32 [[B1]], [[A2]]
 ; RV32-NEXT:    [[DIFF_CHECK:%.*]] = icmp ult i32 [[TMP6]], [[TMP5]]
 ; RV32-NEXT:    br i1 [[DIFF_CHECK]], label %[[SCALAR_PH:.*]], label %[[VECTOR_PH:.*]]
 ; RV32:       [[VECTOR_PH]]:
@@ -291,10 +291,10 @@ define void @vector_reverse_i64(ptr nocapture noundef writeonly %A, ptr nocaptur
 ; RV64-UF2-NEXT:    [[TMP10:%.*]] = or i1 [[TMP7]], [[TMP9]]
 ; RV64-UF2-NEXT:    br i1 [[TMP10]], label %[[SCALAR_PH]], label %[[VECTOR_MEMCHECK:.*]]
 ; RV64-UF2:       [[VECTOR_MEMCHECK]]:
+; RV64-UF2-NEXT:    [[TMP14:%.*]] = sub i64 [[B1]], [[A2]]
 ; RV64-UF2-NEXT:    [[TMP11:%.*]] = call i64 @llvm.vscale.i64()
 ; RV64-UF2-NEXT:    [[TMP12:%.*]] = mul nuw i64 [[TMP11]], 4
 ; RV64-UF2-NEXT:    [[TMP13:%.*]] = mul i64 [[TMP12]], 8
-; RV64-UF2-NEXT:    [[TMP14:%.*]] = sub i64 [[B1]], [[A2]]
 ; RV64-UF2-NEXT:    [[DIFF_CHECK:%.*]] = icmp ult i64 [[TMP14]], [[TMP13]]
 ; RV64-UF2-NEXT:    br i1 [[DIFF_CHECK]], label %[[SCALAR_PH]], label %[[VECTOR_PH:.*]]
 ; RV64-UF2:       [[VECTOR_PH]]:
@@ -396,10 +396,10 @@ define void @vector_reverse_f32(ptr nocapture noundef writeonly %A, ptr nocaptur
 ; RV64-NEXT:    [[TMP8:%.*]] = or i1 [[TMP7]], [[TMP9]]
 ; RV64-NEXT:    br i1 [[TMP8]], label %[[SCALAR_PH:.*]], label %[[VECTOR_MEMCHECK:.*]]
 ; RV64:       [[VECTOR_MEMCHECK]]:
+; RV64-NEXT:    [[TMP14:%.*]] = sub i64 [[B1]], [[A2]]
 ; RV64-NEXT:    [[TMP11:%.*]] = call i64 @llvm.vscale.i64()
 ; RV64-NEXT:    [[TMP12:%.*]] = mul nuw i64 [[TMP11]], 4
 ; RV64-NEXT:    [[TMP13:%.*]] = mul i64 [[TMP12]], 4
-; RV64-NEXT:    [[TMP14:%.*]] = sub i64 [[B1]], [[A2]]
 ; RV64-NEXT:    [[DIFF_CHECK:%.*]] = icmp ult i64 [[TMP14]], [[TMP13]]
 ; RV64-NEXT:    br i1 [[DIFF_CHECK]], label %[[SCALAR_PH]], label %[[VECTOR_PH:.*]]
 ; RV64:       [[VECTOR_PH]]:
@@ -451,10 +451,10 @@ define void @vector_reverse_f32(ptr nocapture noundef writeonly %A, ptr nocaptur
 ; RV32-NEXT:    [[TMP0:%.*]] = zext i32 [[N]] to i64
 ; RV32-NEXT:    br label %[[VECTOR_MEMCHECK:.*]]
 ; RV32:       [[VECTOR_MEMCHECK]]:
+; RV32-NEXT:    [[TMP6:%.*]] = sub i32 [[B1]], [[A2]]
 ; RV32-NEXT:    [[TMP3:%.*]] = call i32 @llvm.vscale.i32()
 ; RV32-NEXT:    [[TMP4:%.*]] = mul nuw i32 [[TMP3]], 4
 ; RV32-NEXT:    [[TMP5:%.*]] = mul i32 [[TMP4]], 4
-; RV32-NEXT:    [[TMP6:%.*]] = sub i32 [[B1]], [[A2]]
 ; RV32-NEXT:    [[DIFF_CHECK:%.*]] = icmp ult i32 [[TMP6]], [[TMP5]]
 ; RV32-NEXT:    br i1 [[DIFF_CHECK]], label %[[SCALAR_PH:.*]], label %[[VECTOR_PH:.*]]
 ; RV32:       [[VECTOR_PH]]:
@@ -516,10 +516,10 @@ define void @vector_reverse_f32(ptr nocapture noundef writeonly %A, ptr nocaptur
 ; RV64-UF2-NEXT:    [[TMP10:%.*]] = or i1 [[TMP7]], [[TMP9]]
 ; RV64-UF2-NEXT:    br i1 [[TMP10]], label %[[SCALAR_PH]], label %[[VECTOR_MEMCHECK:.*]]
 ; RV64-UF2:       [[VECTOR_MEMCHECK]]:
+; RV64-UF2-NEXT:    [[TMP14:%.*]] = sub i64 [[B1]], [[A2]]
 ; RV64-UF2-NEXT:    [[TMP11:%.*]] = call i64 @llvm.vscale.i64()
 ; RV64-UF2-NEXT:    [[TMP12:%.*]] = mul nuw i64 [[TMP11]], 4
 ; RV64-UF2-NEXT:    [[TMP13:%.*]] = mul i64 [[TMP12]], 8
-; RV64-UF2-NEXT:    [[TMP14:%.*]] = sub i64 [[B1]], [[A2]]
 ; RV64-UF2-NEXT:    [[DIFF_CHECK:%.*]] = icmp ult i64 [[TMP14]], [[TMP13]]
 ; RV64-UF2-NEXT:    br i1 [[DIFF_CHECK]], label %[[SCALAR_PH]], label %[[VECTOR_PH:.*]]
 ; RV64-UF2:       [[VECTOR_PH]]:

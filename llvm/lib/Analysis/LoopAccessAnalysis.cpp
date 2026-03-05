@@ -508,11 +508,16 @@ bool RuntimePointerChecking::tryToCreateDiffCheck(
     }
   }
 
+  // Find the minimum common alignment of all accesses.
+  Align AccessAlign = getLoadStoreAlignment(SrcInsts[0]);
+  for (Instruction *Inst : concat<Instruction *>(SrcInsts, SinkInsts))
+    AccessAlign = std::min(AccessAlign, getLoadStoreAlignment(Inst));
+
   LLVM_DEBUG(dbgs() << "LAA: Creating diff runtime check for:\n"
                     << "SrcStart: " << *SrcStartInt << '\n'
                     << "SinkStartInt: " << *SinkStartInt << '\n');
   DiffChecks.emplace_back(SrcStartInt, SinkStartInt, AllocSize,
-                          Src->NeedsFreeze || Sink->NeedsFreeze);
+                          Src->NeedsFreeze || Sink->NeedsFreeze, AccessAlign);
   return true;
 }
 
