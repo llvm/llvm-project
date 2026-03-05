@@ -501,8 +501,13 @@ DiagnosticIDs::getDiagnosticSeverity(unsigned DiagID, SourceLocation Loc,
 
   // For extension diagnostics that haven't been explicitly mapped, check if we
   // should upgrade the diagnostic.
-  if (IsExtensionDiag && !Mapping.isUser())
-    Result = std::max(Result, State->ExtBehavior);
+  if (IsExtensionDiag && !Mapping.isUser()) {
+    if (Mapping.hasNoWarningAsError())
+      Result = std::max(Result,
+                        std::min(State->ExtBehavior, diag::Severity::Warning));
+    else
+      Result = std::max(Result, State->ExtBehavior);
+  }
 
   // At this point, ignored errors can no longer be upgraded.
   if (Result == diag::Severity::Ignored)
