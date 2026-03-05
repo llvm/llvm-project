@@ -143,6 +143,14 @@ const X86FoldTableEntry *llvm::lookupFoldTable(unsigned RegOp, unsigned OpNum) {
   return lookupFoldTableImpl(FoldTable, RegOp);
 }
 
+bool llvm::isNonFoldableWithSameMask(unsigned RegOp) {
+  // NonFoldableWithSameMask table stores instruction opcodes that are unsafe
+  // for masked-load folding when the same mask is used.
+  ArrayRef<unsigned> Table(NonFoldableWithSameMaskTable);
+  auto I = llvm::lower_bound(Table, RegOp);
+  return I != Table.end() && *I == RegOp;
+}
+
 const X86FoldTableEntry *llvm::lookupBroadcastFoldTable(unsigned RegOp,
                                                         unsigned OpNum) {
   ArrayRef<X86FoldTableEntry> FoldTable;

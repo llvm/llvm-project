@@ -8147,6 +8147,11 @@ MachineInstr *X86InstrInfo::foldMemoryOperandImpl(
       MaskReg = Op2.getReg();
 
     if (MaskReg) {
+      // Some instructions are invalid to fold into even with the same mask.
+      // Folding is unsafe if an active destination element may read from a
+      // source element that is masked off.
+      if (isNonFoldableWithSameMask(MI.getOpcode()))
+        return nullptr;
       bool HasSameMask = false;
       for (unsigned I = 1, E = MI.getDesc().getNumOperands(); I < E; ++I) {
         const MachineOperand &Op = MI.getOperand(I);
