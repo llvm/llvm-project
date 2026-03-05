@@ -19,7 +19,14 @@
 #include "mlir/InitAllPasses.h"
 #include "mlir/Tools/mlir-reduce/MlirReduceMain.h"
 
+#include "mlir/InitAllPasses.h"
+#include "mlir/Tools/mlir-reduce/MlirReduceMain.h"
+
 using namespace mlir;
+
+namespace mlir {
+void registerReducerExtension(DialectRegistry &registry);
+}
 
 namespace test {
 #ifdef MLIR_INCLUDE_TESTS
@@ -32,6 +39,8 @@ int main(int argc, char **argv) {
 
   DialectRegistry registry;
   registerAllDialects(registry);
+
+  mlir::registerReducerExtension(registry);
 #ifdef MLIR_INCLUDE_TESTS
   test::registerTestDialect(registry);
 #endif

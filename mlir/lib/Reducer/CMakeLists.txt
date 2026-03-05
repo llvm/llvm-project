@@ -3,12 +3,15 @@ add_mlir_library(MLIRReduce
    ReductionNode.cpp
    ReductionTreePass.cpp
    Tester.cpp
+   ReductionPatterns.cpp
 
    LINK_LIBS PUBLIC
    MLIRIR
    MLIRPass
    MLIRRewrite
    MLIRTransformUtils
+   MLIRVectorDialect
+   MLIRUBDialect
 
    DEPENDS
    MLIRReducerIncGen
