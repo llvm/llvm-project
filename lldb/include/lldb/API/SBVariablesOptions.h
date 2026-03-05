@@ -46,6 +46,10 @@ public:
 
   void SetIncludeStatics(bool);
 
+  bool GetIncludeExtended() const;
+
+  void SetIncludeExtended(bool);
+
   bool GetInScopeOnly() const;
 
   void SetInScopeOnly(bool);

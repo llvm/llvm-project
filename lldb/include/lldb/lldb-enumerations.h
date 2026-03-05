@@ -340,6 +340,11 @@ enum ValueType {
   eValueTypeVTableEntry = 10, ///< function pointer in virtual function table
 };
 
+/// A mask that we can use to check if the value type is 'extended' or not.
+// NOTE: This limits the number of value types to 31, but that's 3x more than
+// what we currently have now.
+static constexpr unsigned ValueTypeExtendedMask = 0x20;
+
 /// Token size/granularities for Input Readers.
 
 enum InputReaderGranularity {
