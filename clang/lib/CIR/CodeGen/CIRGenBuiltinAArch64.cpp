@@ -97,7 +97,7 @@ struct ARMVectorIntrinsicInfo {
   {#NameBase, NEON::BI__builtin_neon_##NameBase, Intrinsic::LLVMIntrinsic,     \
    Intrinsic::AltLLVMIntrinsic, TypeModifier}
 
-static const armVectorIntrinsicInfo AArch64SIMDIntrinsicMap[] = {
+static const ARMVectorIntrinsicInfo AArch64SIMDIntrinsicMap[] = {
     NEONMAP0(splat_lane_v),
     NEONMAP0(splat_laneq_v),
     NEONMAP0(splatq_lane_v),
@@ -415,7 +415,7 @@ static const armVectorIntrinsicInfo AArch64SIMDIntrinsicMap[] = {
 
 #define SVEMAP2(NameBase, TypeModifier)                                        \
   {#NameBase, SVE::BI__builtin_sve_##NameBase, 0, 0, TypeModifier}
-static const armVectorIntrinsicInfo aarch64SVEIntrinsicMap[] = {
+static const ARMVectorIntrinsicInfo aarch64SVEIntrinsicMap[] = {
 #define GET_SVE_LLVM_INTRINSIC_MAP
 #include "clang/Basic/arm_sve_builtin_cg.inc"
 #undef GET_SVE_LLVM_INTRINSIC_MAP
@@ -2240,7 +2240,7 @@ CIRGenFunction::emitAArch64BuiltinExpr(unsigned builtinID, const CallExpr *expr,
 
   // Not all intrinsics handled by the common case work for AArch64 yet, so only
   // defer to common code if it's been added to our special map.
-  const armVectorIntrinsicInfo *builtin;
+  const ARMVectorIntrinsicInfo *builtin;
   builtin = findARMVectorIntrinsicInMap(AArch64SIMDIntrinsicMap, builtinID,
                                         aarch64SIMDIntrinsicsProvenSorted);
 

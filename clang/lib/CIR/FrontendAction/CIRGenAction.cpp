@@ -102,8 +102,6 @@ public:
 
     if (!FEOptions.ClangIRDisableCIRVerifier) {
       if (!Gen->verifyModule()) {
-        // HACK!!
-        Gen->getModule().dump();
         CI.getDiagnostics().Report(
             diag::err_cir_verification_failed_pre_passes);
         llvm::report_fatal_error(
