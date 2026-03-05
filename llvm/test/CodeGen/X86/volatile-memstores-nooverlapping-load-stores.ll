@@ -34,10 +34,8 @@ define dso_local void @move_7_bytes(ptr nocapture, ptr nocapture readonly) nounw
 ; CHECK-LABEL: move_7_bytes:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    movl (%rsi), %eax
-; CHECK-NEXT:    movzwl 4(%rsi), %ecx
-; CHECK-NEXT:    movzbl 6(%rsi), %edx
-; CHECK-NEXT:    movb %dl, 6(%rdi)
-; CHECK-NEXT:    movw %cx, 4(%rdi)
+; CHECK-NEXT:    movl 3(%rsi), %ecx
+; CHECK-NEXT:    movl %ecx, 3(%rdi)
 ; CHECK-NEXT:    movl %eax, (%rdi)
 ; CHECK-NEXT:    retq
   tail call void @llvm.memmove.p0.p0.i64(ptr align 1 %0, ptr align 1 %1, i64 7, i1 false)
