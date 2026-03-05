@@ -285,6 +285,24 @@ def libc_generated_header(name, hdr, yaml_template, other_srcs = []):
         tools = [hdrgen],
     )
 
+def libc_copy_header(name, src, out):
+    """Copies a header file to the staging directory.
+
+    Args:
+      name: Name of the target.
+      src: Path of the source header file.
+      out: Path of the output header file (relative to staging/include/).
+    """
+    if not out.startswith("staging/include/"):
+        fail("Output header must be in staging/include/")
+
+    native.genrule(
+        name = name,
+        srcs = [src],
+        outs = [out],
+        cmd = "cp $< $@",
+    )
+
 def libc_math_function(
         name,
         additional_deps = None):
