@@ -51,6 +51,19 @@ using namespace MIPatternMatch;
 
 namespace {
 
+CombinerInfo createCombinerInfo(bool OptEnabled, const Function &F) {
+  CombinerInfo CInfo(/*AllowIllegalOps=*/true,
+                     /*ShouldLegalizeIllegal=*/false,
+                     /*LInfo=*/nullptr, /*OptEnabled=*/OptEnabled,
+                     /*OptSize=*/F.hasOptSize(), /*MinSize=*/F.hasMinSize());
+  // Disable fixed-point iteration to reduce compile-time
+  CInfo.MaxIterations = 1;
+  CInfo.ObserverLvl = CombinerInfo::ObserverLevel::SinglePass;
+  // Legalizer performs DCE, so a full DCE pass is unnecessary.
+  CInfo.EnableFullDCE = false;
+  return CInfo;
+}
+
 #define GET_GICOMBINER_TYPES
 #include "X86GenPostLegalizeGICombiner.inc"
 #undef GET_GICOMBINER_TYPES
@@ -66,8 +79,7 @@ public:
       MachineFunction &MF, CombinerInfo &CInfo, const TargetPassConfig *TPC,
       GISelValueTracking &VT, GISelCSEInfo *CSEInfo,
       const X86PostLegalizerCombinerImplRuleConfig &RuleConfig,
-      const X86Subtarget &STI, MachineDominatorTree *MDT,
-      const LegalizerInfo *LI);
+      MachineDominatorTree *MDT);
 
   static const char *getName() { return "X86PostLegalizerCombiner"; }
 
@@ -88,10 +100,11 @@ X86PostLegalizerCombinerImpl::X86PostLegalizerCombinerImpl(
     MachineFunction &MF, CombinerInfo &CInfo, const TargetPassConfig *TPC,
     GISelValueTracking &VT, GISelCSEInfo *CSEInfo,
     const X86PostLegalizerCombinerImplRuleConfig &RuleConfig,
-    const X86Subtarget &STI, MachineDominatorTree *MDT, const LegalizerInfo *LI)
+    MachineDominatorTree *MDT)
     : Combiner(MF, CInfo, TPC, &VT, CSEInfo),
-      Helper(Observer, B, /*IsPreLegalize=*/false, &VT, MDT, LI),
-      RuleConfig(RuleConfig), STI(STI),
+      Helper(Observer, B, /*IsPreLegalize=*/false, &VT, MDT,
+             MF.getSubtarget<X86Subtarget>().getLegalizerInfo()),
+      RuleConfig(RuleConfig), STI(MF.getSubtarget<X86Subtarget>()),
 #define GET_GICOMBINER_CONSTRUCTOR_INITS
 #include "X86GenPostLegalizeGICombiner.inc"
 #undef GET_GICOMBINER_CONSTRUCTOR_INITS
@@ -102,13 +115,15 @@ bool X86PostLegalizerCombinerImpl::tryCombineAll(MachineInstr &MI) const {
   return tryCombineAllImpl(MI);
 }
 
-class X86PostLegalizerCombiner : public MachineFunctionPass {
+class X86PostLegalizerCombinerLegacy : public MachineFunctionPass {
 public:
   static char ID;
 
-  X86PostLegalizerCombiner();
+  X86PostLegalizerCombinerLegacy();
 
-  StringRef getPassName() const override { return "X86PostLegalizerCombiner"; }
+  StringRef getPassName() const override {
+    return "X86PostLegalizerCombinerLegacy";
+  }
 
   bool runOnMachineFunction(MachineFunction &MF) override;
   void getAnalysisUsage(AnalysisUsage &AU) const override;
@@ -118,7 +133,7 @@ private:
 };
 } // end anonymous namespace
 
-void X86PostLegalizerCombiner::getAnalysisUsage(AnalysisUsage &AU) const {
+void X86PostLegalizerCombinerLegacy::getAnalysisUsage(AnalysisUsage &AU) const {
   AU.addRequired<TargetPassConfig>();
   AU.setPreservesCFG();
   getSelectionDAGFallbackAnalysisUsage(AU);
@@ -133,20 +148,18 @@ void X86PostLegalizerCombiner::getAnalysisUsage(AnalysisUsage &AU) const {
   MachineFunctionPass::getAnalysisUsage(AU);
 }
 
-X86PostLegalizerCombiner::X86PostLegalizerCombiner() : MachineFunctionPass(ID) {
+X86PostLegalizerCombinerLegacy::X86PostLegalizerCombinerLegacy()
+    : MachineFunctionPass(ID) {
   if (!RuleConfig.parseCommandLineOption())
     reportFatalInternalError("Invalid rule identifier");
 }
 
-bool X86PostLegalizerCombiner::runOnMachineFunction(MachineFunction &MF) {
+bool X86PostLegalizerCombinerLegacy::runOnMachineFunction(MachineFunction &MF) {
   if (MF.getProperties().hasFailedISel())
     return false;
   assert(MF.getProperties().hasLegalized() && "Expected a legalized function?");
   auto *TPC = &getAnalysis<TargetPassConfig>();
   const Function &F = MF.getFunction();
-
-  const X86Subtarget &ST = MF.getSubtarget<X86Subtarget>();
-  const auto *LI = ST.getLegalizerInfo();
 
   GISelValueTracking *VT =
       &getAnalysis<GISelValueTrackingAnalysisLegacy>().get(MF);
@@ -156,32 +169,55 @@ bool X86PostLegalizerCombiner::runOnMachineFunction(MachineFunction &MF) {
       getAnalysis<GISelCSEAnalysisWrapperPass>().getCSEWrapper();
   auto *CSEInfo = &Wrapper.get(TPC->getCSEConfig());
 
-  CombinerInfo CInfo(/*AllowIllegalOps=*/true,
-                     /*ShouldLegalizeIllegal=*/false,
-                     /*LegalizerInfo=*/nullptr, !skipFunction(F),
-                     F.hasOptSize(), F.hasMinSize());
-  // Disable fixed-point iteration to reduce compile-time
-  CInfo.MaxIterations = 1;
-  CInfo.ObserverLvl = CombinerInfo::ObserverLevel::SinglePass;
-  // Legalizer performs DCE, so a full DCE pass is unnecessary.
-  CInfo.EnableFullDCE = false;
+  CombinerInfo CInfo = createCombinerInfo(!skipFunction(F), F);
+
   X86PostLegalizerCombinerImpl Impl(MF, CInfo, TPC, *VT, CSEInfo, RuleConfig,
-                                    ST, MDT, LI);
+                                    MDT);
   return Impl.combineMachineInstrs();
 }
 
-char X86PostLegalizerCombiner::ID = 0;
-INITIALIZE_PASS_BEGIN(X86PostLegalizerCombiner, DEBUG_TYPE,
+char X86PostLegalizerCombinerLegacy::ID = 0;
+INITIALIZE_PASS_BEGIN(X86PostLegalizerCombinerLegacy, DEBUG_TYPE,
                       "Combine X86 MachineInstrs after legalization", false,
                       false)
 INITIALIZE_PASS_DEPENDENCY(TargetPassConfig)
 INITIALIZE_PASS_DEPENDENCY(GISelValueTrackingAnalysisLegacy)
-INITIALIZE_PASS_END(X86PostLegalizerCombiner, DEBUG_TYPE,
+INITIALIZE_PASS_END(X86PostLegalizerCombinerLegacy, DEBUG_TYPE,
                     "Combine X86 MachineInstrs after legalization", false,
                     false)
 
 namespace llvm {
-FunctionPass *createX86PostLegalizerCombiner() {
-  return new X86PostLegalizerCombiner();
+
+PreservedAnalyses
+X86PostLegalizerCombinerPass::run(MachineFunction &MF,
+                                  MachineFunctionAnalysisManager &MFAM) {
+  if (MF.getProperties().hasFailedISel())
+    return PreservedAnalyses::all();
+  assert(MF.getProperties().hasLegalized() && "Expected a legalized function?");
+  const Function &F = MF.getFunction();
+
+  GISelValueTracking VT = MFAM.getResult<GISelValueTrackingAnalysis>(MF);
+  MachineDominatorTree &MDT = MFAM.getResult<MachineDominatorTreeAnalysis>(MF);
+  auto &CSEInfo = MFAM.getResult<GISelCSEAnalysis>(MF);
+
+  CombinerInfo CInfo = createCombinerInfo(true, F);
+
+  X86PostLegalizerCombinerImplRuleConfig RuleConfig;
+  if (!RuleConfig.parseCommandLineOption())
+    reportFatalInternalError("Invalid rule identifier");
+
+  X86PostLegalizerCombinerImpl Impl(MF, CInfo, nullptr, VT, CSEInfo.get(),
+                                    RuleConfig, &MDT);
+  Impl.combineMachineInstrs();
+
+  PreservedAnalyses PA = getMachineFunctionPassPreservedAnalyses();
+  PA.preserveSet<CFGAnalyses>();
+  PA.preserve<GISelCSEAnalysis>();
+  PA.preserve<GISelValueTrackingAnalysis>();
+  return PA;
+}
+
+FunctionPass *createX86PostLegalizerCombinerLegacy() {
+  return new X86PostLegalizerCombinerLegacy();
 }
 } // end namespace llvm
