@@ -1363,7 +1363,7 @@ void Writer::createInitMemoryFunction() {
         }
 
         // When we initialize the TLS segment we also set the `__tls_base`
-        // global/thread.context[1]. This allows the runtime to use this
+        // global/context.get(1). This allows the runtime to use this
         // static copy of the TLS data for the first/main thread.
         if (ctx.isMultithreaded() && s->isTLS()) {
           if (ctx.isPic) {
