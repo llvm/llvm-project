@@ -9,7 +9,7 @@ int f(void) {
   return 0;
 }
 // CHECK-NONE-NOT: ptrauth.abi-version
-// CHECK-WITH:  !llvm.module.flags = !{{{.*}} ![[ABI_VERSION_REF:[0-9]+]]}
+// CHECK-WITH:  !llvm.module.flags = !{![[ABI_VERSION_REF:[0-9]+]]}
 // CHECK-WITH:  ![[ABI_VERSION_REF]] = !{i32 6, !"ptrauth.abi-version", ![[ABI_VERSION_VAR:[0-9]+]]}
 // CHECK-WITH:  ![[ABI_VERSION_VAR]] = !{![[ABI_VERSION_VAL:[0-9]+]]}
 // CHECK-ZERO:  ![[ABI_VERSION_VAL]] = !{i32 0, i1 false}

@@ -420,21 +420,18 @@ int read_cb(int*__counted_by(count) ptr, int count) {
 // OPT: attributes #[[ATTR2]] = { nomerge nounwind }
 // OPT: attributes #[[ATTR3]] = { nounwind }
 //.
-// UNOPT: [[META0:![0-9]+]] = !{i32 1, !"wchar_size", i32 4}
 // UNOPT: [[META1:![0-9]+]] = !{!"{{.*}}clang version {{.*}}"}
 // UNOPT: [[META2]] = !{!"bounds-safety-check-ptr-le-upper-bound"}
 // UNOPT: [[PROF3]] = !{!"branch_weights", i32 1048575, i32 1}
 // UNOPT: [[META4]] = !{!"bounds-safety-check-ptr-ge-lower-bound"}
 // UNOPT: [[META5]] = !{!"bounds-safety-generic"}
 //.
-// UNOPT-TF: [[META0:![0-9]+]] = !{i32 1, !"wchar_size", i32 4}
 // UNOPT-TF: [[META1:![0-9]+]] = !{!"{{.*}}clang version {{.*}}"}
 // UNOPT-TF: [[META2]] = !{!"bounds-safety-check-ptr-le-upper-bound"}
 // UNOPT-TF: [[PROF3]] = !{!"branch_weights", i32 1048575, i32 1}
 // UNOPT-TF: [[META4]] = !{!"bounds-safety-check-ptr-ge-lower-bound"}
 // UNOPT-TF: [[META5]] = !{!"bounds-safety-generic"}
 //.
-// OPT: [[META0:![0-9]+]] = !{i32 1, !"wchar_size", i32 4}
 // OPT: [[META1:![0-9]+]] = !{!"{{.*}}clang version {{.*}}"}
 // OPT: [[INT_TBAA2]] = !{[[META3:![0-9]+]], [[META3]], i64 0}
 // OPT: [[META3]] = !{!"int", [[META4:![0-9]+]], i64 0}
