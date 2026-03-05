@@ -375,7 +375,11 @@ public:
         // Create nested module and insert outlinedFunc. The module will
         // originally get the same name as the function, but may be renamed on
         // insertion into the parent module.
-        auto kernelModule = createKernelModule(op, outlinedFunc, symbolTable);
+        auto kernelModuleOrFailure =
+            createKernelModule(op, outlinedFunc, symbolTable);
+        if (failed(kernelModuleOrFailure))
+          return WalkResult::interrupt();
+        auto kernelModule = *kernelModuleOrFailure;
         symbolTable.insert(kernelModule, insertPt);
 
         // Potentially changes signature, pulling in constants.
@@ -396,9 +400,9 @@ public:
 
 private:
   /// Returns a gpu.module containing kernelFunc and all callees (recursive).
-  gpu::GPUModuleOp createKernelModule(gpu::LaunchOp gpuLaunchOp,
-                                      gpu::GPUFuncOp kernelFunc,
-                                      const SymbolTable &parentSymbolTable) {
+  FailureOr<gpu::GPUModuleOp>
+  createKernelModule(gpu::LaunchOp gpuLaunchOp, gpu::GPUFuncOp kernelFunc,
+                     const SymbolTable &parentSymbolTable) {
     // TODO: This code cannot use an OpBuilder because it must be inserted into
     // a SymbolTable by the caller. SymbolTable needs to be refactored to
     // prevent manual building of Ops with symbols in code using SymbolTables
@@ -435,12 +439,25 @@ private:
       if (std::optional<SymbolTable::UseRange> symbolUses =
               SymbolTable::getSymbolUses(symbolDefWorklist.pop_back_val())) {
         for (SymbolTable::SymbolUse symbolUse : *symbolUses) {
-          StringAttr symbolName = symbolUse.getSymbolRef().getLeafReference();
+          SymbolRefAttr symbolRef = symbolUse.getSymbolRef();
+          StringAttr symbolName = symbolRef.getLeafReference();
           if (symbolTable.lookup(symbolName))
             continue;
 
-          Operation *symbolDefClone =
-              parentSymbolTable.lookup(symbolName)->clone();
+          Operation *symbolDef =
+              SymbolTable::lookupSymbolIn(parentSymbolTable.getOp(), symbolRef);
+          if (!symbolDef) {
+            if (isa<FlatSymbolRefAttr>(symbolRef)) {
+              return symbolUse.getUser()->emitOpError(
+                  "failed to outline gpu kernel: symbol '" +
+                  symbolName.getValue() + "' not found");
+            }
+            return symbolUse.getUser()->emitOpError(
+                       "failed to outline gpu kernel: "
+                       "found invalid symbol reference: ")
+                   << symbolRef;
+          }
+          Operation *symbolDefClone = symbolDef->clone();
           symbolDefWorklist.push_back(symbolDefClone);
           symbolTable.insert(symbolDefClone);
         }
