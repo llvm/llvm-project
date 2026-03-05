@@ -19,6 +19,7 @@
 #include "clang/CIR/Dialect/IR/CIRTypes.h"
 #include "clang/CIR/MissingFeatures.h"
 
+#include "mlir/Dialect/Ptr/IR/MemorySpaceInterfaces.h"
 #include "mlir/IR/Location.h"
 #include "mlir/IR/Value.h"
 
@@ -675,11 +676,6 @@ public:
         // VLA types don't have constant size.
         cgf.cgm.errorNYI(e->getSourceRange(), "Pointer arithmetic on VLA");
         return {};
-      } else if (type->isFunctionType()) {
-        // Arithmetic on function pointers (!) is just +-1.
-        cgf.cgm.errorNYI(e->getSourceRange(),
-                         "Pointer arithmetic on function pointer");
-        return {};
       } else {
         // For everything else, we can just do a simple increment.
         mlir::Location loc = cgf.getLoc(e->getSourceRange());
@@ -1196,16 +1192,25 @@ public:
             mlir::isa<cir::PointerType>(rhs.getType())) {
           cgf.cgm.errorNYI(loc, "strict vtable pointer comparisons");
         }
-
-        cir::CmpOpKind kind = clangCmpToCIRCmp(e->getOpcode());
         result = builder.createCompare(loc, kind, lhs, rhs);
       }
     } else {
       // Complex Comparison: can only be an equality comparison.
       assert(e->getOpcode() == BO_EQ || e->getOpcode() == BO_NE);
-
       BinOpInfo boInfo = emitBinOps(e);
-      result = cir::CmpOp::create(builder, loc, kind, boInfo.lhs, boInfo.rhs);
+      mlir::Value lhs = boInfo.lhs;
+      if (!lhsTy->isAnyComplexType()) {
+        lhs = builder.createComplexCreate(
+            loc, lhs, builder.getNullValue(lhs.getType(), loc));
+      }
+
+      mlir::Value rhs = boInfo.rhs;
+      if (!rhsTy->isAnyComplexType()) {
+        rhs = builder.createComplexCreate(
+            loc, rhs, builder.getNullValue(rhs.getType(), loc));
+      }
+
+      result = builder.createCompare(loc, kind, lhs, rhs);
     }
 
     return emitScalarConversion(result, cgf.getContext().BoolTy, e->getType(),
@@ -1250,6 +1255,8 @@ public:
       // 'An assignment expression has the value of the left operand after the
       // assignment...'.
       if (lhs.isBitField()) {
+        CIRGenFunction::SourceLocRAIIObject loc{
+            cgf, cgf.getLoc(e->getSourceRange())};
         rhs = cgf.emitStoreThroughBitfieldLValue(RValue::get(rhs), lhs);
       } else {
         cgf.emitNullabilityCheck(lhs, rhs, e->getExprLoc());
@@ -1313,7 +1320,7 @@ public:
                                                 b.getInsertionBlock()};
           cgf.curLexScope->setAsTernary();
           mlir::Value res = cgf.evaluateExprAsBool(e->getRHS());
-          lexScope.forceCleanup();
+          lexScope.forceCleanup({&res});
           cir::YieldOp::create(b, loc, res);
           if (res.getParentBlock() != builder.getInsertionBlock())
             cgf.cgm.errorNYI(
@@ -1370,7 +1377,7 @@ public:
                                                 b.getInsertionBlock()};
           cgf.curLexScope->setAsTernary();
           mlir::Value res = cgf.evaluateExprAsBool(e->getRHS());
-          lexScope.forceCleanup();
+          lexScope.forceCleanup({&res});
           cir::YieldOp::create(b, loc, res);
           if (res.getParentBlock() != builder.getInsertionBlock())
             cgf.cgm.errorNYI(
@@ -1593,26 +1600,12 @@ mlir::Value ScalarExprEmitter::emitCompoundAssign(
 }
 
 mlir::Value ScalarExprEmitter::VisitExprWithCleanups(ExprWithCleanups *e) {
-  mlir::Location scopeLoc = cgf.getLoc(e->getSourceRange());
-  mlir::OpBuilder &builder = cgf.builder;
-
-  auto scope = cir::ScopeOp::create(
-      builder, scopeLoc,
-      /*scopeBuilder=*/
-      [&](mlir::OpBuilder &b, mlir::Type &yieldTy, mlir::Location loc) {
-        CIRGenFunction::LexicalScope lexScope{cgf, loc,
-                                              builder.getInsertionBlock()};
-        mlir::Value scopeYieldVal = Visit(e->getSubExpr());
-        if (scopeYieldVal) {
-          // Defend against dominance problems caused by jumps out of expression
-          // evaluation through the shared cleanup block.
-          lexScope.forceCleanup();
-          cir::YieldOp::create(builder, loc, scopeYieldVal);
-          yieldTy = scopeYieldVal.getType();
-        }
-      });
-
-  return scope.getNumResults() > 0 ? scope->getResult(0) : nullptr;
+  CIRGenFunction::RunCleanupsScope cleanups(cgf);
+  mlir::Value v = Visit(e->getSubExpr());
+  // Defend against dominance problems caused by jumps out of expression
+  // evaluation through the shared cleanup block.
+  cleanups.forceCleanup({&v});
+  return v;
 }
 
 } // namespace
@@ -1825,11 +1818,6 @@ static mlir::Value emitPointerArithmetic(CIRGenFunction &cgf,
     return nullptr;
   }
 
-  if (elementType->isVoidType() || elementType->isFunctionType()) {
-    cgf.cgm.errorNYI("void* or function pointer arithmetic");
-    return nullptr;
-  }
-
   assert(!cir::MissingFeatures::sanitizers());
   return cir::PtrStrideOp::create(cgf.getBuilder(),
                                   cgf.getLoc(op.e->getExprLoc()),
@@ -1875,19 +1863,16 @@ mlir::Value ScalarExprEmitter::emitMul(const BinOpInfo &ops) {
     return nullptr;
   }
 
-  return cir::BinOp::create(builder, cgf.getLoc(ops.loc),
-                            cgf.convertType(ops.fullType), cir::BinOpKind::Mul,
-                            ops.lhs, ops.rhs);
+  return cir::MulOp::create(builder, cgf.getLoc(ops.loc),
+                            cgf.convertType(ops.fullType), ops.lhs, ops.rhs);
 }
 mlir::Value ScalarExprEmitter::emitDiv(const BinOpInfo &ops) {
-  return cir::BinOp::create(builder, cgf.getLoc(ops.loc),
-                            cgf.convertType(ops.fullType), cir::BinOpKind::Div,
-                            ops.lhs, ops.rhs);
+  return cir::DivOp::create(builder, cgf.getLoc(ops.loc),
+                            cgf.convertType(ops.fullType), ops.lhs, ops.rhs);
 }
 mlir::Value ScalarExprEmitter::emitRem(const BinOpInfo &ops) {
-  return cir::BinOp::create(builder, cgf.getLoc(ops.loc),
-                            cgf.convertType(ops.fullType), cir::BinOpKind::Rem,
-                            ops.lhs, ops.rhs);
+  return cir::RemOp::create(builder, cgf.getLoc(ops.loc),
+                            cgf.convertType(ops.fullType), ops.lhs, ops.rhs);
 }
 
 mlir::Value ScalarExprEmitter::emitAdd(const BinOpInfo &ops) {
@@ -1934,8 +1919,7 @@ mlir::Value ScalarExprEmitter::emitAdd(const BinOpInfo &ops) {
     return {};
   }
 
-  return cir::BinOp::create(builder, loc, cgf.convertType(ops.fullType),
-                            cir::BinOpKind::Add, ops.lhs, ops.rhs);
+  return builder.createAdd(loc, ops.lhs, ops.rhs);
 }
 
 mlir::Value ScalarExprEmitter::emitSub(const BinOpInfo &ops) {
@@ -1982,9 +1966,7 @@ mlir::Value ScalarExprEmitter::emitSub(const BinOpInfo &ops) {
       return {};
     }
 
-    return cir::BinOp::create(builder, cgf.getLoc(ops.loc),
-                              cgf.convertType(ops.fullType),
-                              cir::BinOpKind::Sub, ops.lhs, ops.rhs);
+    return builder.createSub(loc, ops.lhs, ops.rhs);
   }
 
   // If the RHS is not a pointer, then we have normal pointer
@@ -2062,19 +2044,13 @@ mlir::Value ScalarExprEmitter::emitShr(const BinOpInfo &ops) {
 }
 
 mlir::Value ScalarExprEmitter::emitAnd(const BinOpInfo &ops) {
-  return cir::BinOp::create(builder, cgf.getLoc(ops.loc),
-                            cgf.convertType(ops.fullType), cir::BinOpKind::And,
-                            ops.lhs, ops.rhs);
+  return cir::AndOp::create(builder, cgf.getLoc(ops.loc), ops.lhs, ops.rhs);
 }
 mlir::Value ScalarExprEmitter::emitXor(const BinOpInfo &ops) {
-  return cir::BinOp::create(builder, cgf.getLoc(ops.loc),
-                            cgf.convertType(ops.fullType), cir::BinOpKind::Xor,
-                            ops.lhs, ops.rhs);
+  return cir::XorOp::create(builder, cgf.getLoc(ops.loc), ops.lhs, ops.rhs);
 }
 mlir::Value ScalarExprEmitter::emitOr(const BinOpInfo &ops) {
-  return cir::BinOp::create(builder, cgf.getLoc(ops.loc),
-                            cgf.convertType(ops.fullType), cir::BinOpKind::Or,
-                            ops.lhs, ops.rhs);
+  return cir::OrOp::create(builder, cgf.getLoc(ops.loc), ops.lhs, ops.rhs);
 }
 
 // Emit code for an explicit or implicit cast.  Implicit

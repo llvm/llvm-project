@@ -15,6 +15,7 @@
 #include "CIRGenFunction.h"
 #include "CIRGenModule.h"
 #include "CIRGenValue.h"
+#include "mlir/Dialect/Ptr/IR/MemorySpaceInterfaces.h"
 #include "mlir/IR/BuiltinAttributes.h"
 #include "mlir/IR/Value.h"
 #include "clang/AST/Attr.h"
@@ -383,9 +384,9 @@ mlir::Value CIRGenFunction::emitStoreThroughBitfieldLValue(RValue src,
                      dst.isVolatileQualified() &&
                      info.volatileStorageSize != 0 && isAAPCS(cgm.getTarget());
 
-  mlir::Value dstAddr = dst.getAddress().getPointer();
+  assert(currSrcLoc && "must pass in source location");
 
-  return builder.createSetBitfield(dstAddr.getLoc(), resLTy, ptr,
+  return builder.createSetBitfield(*currSrcLoc, resLTy, ptr,
                                    ptr.getElementType(), src.getValue(), info,
                                    dst.isVolatileQualified(), useVoaltile);
 }
@@ -1455,9 +1456,9 @@ LValue CIRGenFunction::emitCastLValue(const CastExpr *e) {
     QualType destTy = getContext().getPointerType(e->getType());
 
     clang::LangAS srcLangAS = e->getSubExpr()->getType().getAddressSpace();
-    cir::TargetAddressSpaceAttr srcAS;
+    mlir::ptr::MemorySpaceAttrInterface srcAS;
     if (clang::isTargetAddressSpace(srcLangAS))
-      srcAS = cir::toCIRTargetAddressSpace(getMLIRContext(), srcLangAS);
+      srcAS = cir::toCIRAddressSpaceAttr(getMLIRContext(), srcLangAS);
     else
       cgm.errorNYI(
           e->getSourceRange(),
@@ -1489,8 +1490,7 @@ LValue CIRGenFunction::emitCastLValue(const CastExpr *e) {
     LValue lv = emitLValue(e->getSubExpr());
     // Propagate the volatile qualifier to LValue, if exists in e.
     if (e->changesVolatileQualification())
-      cgm.errorNYI(e->getSourceRange(),
-                   "emitCastLValue: NoOp changes volatile qual");
+      lv.getQuals() = e->getType().getQualifiers();
     if (lv.isSimple()) {
       Address v = lv.getAddress();
       if (v.isValid()) {
@@ -2548,6 +2548,18 @@ cir::AllocaOp CIRGenFunction::createTempAlloca(mlir::Type ty,
           .getDefiningOp());
 }
 
+/// CreateDefaultAlignTempAlloca - This creates an alloca with the
+/// default alignment of the corresponding LLVM type, which is *not*
+/// guaranteed to be related in any way to the expected alignment of
+/// an AST type that might have been lowered to Ty.
+Address CIRGenFunction::createDefaultAlignTempAlloca(mlir::Type ty,
+                                                     mlir::Location loc,
+                                                     const Twine &name) {
+  CharUnits align =
+      CharUnits::fromQuantity(cgm.getDataLayout().getABITypeAlign(ty));
+  return createTempAlloca(ty, align, loc, name);
+}
+
 /// Try to emit a reference to the given value without producing it as
 /// an l-value.  For many cases, this is just an optimization, but it avoids
 /// us needing to emit global copies of variables if they're named without
@@ -2807,4 +2819,8 @@ bool CIRGenFunction::isLValueSuitableForInlineAtomic(LValue lv) {
 
   cgm.errorNYI("LValueSuitableForInlineAtomic LangOpts MSVolatile");
   return false;
+}
+
+LValue CIRGenFunction::emitCXXTypeidLValue(const CXXTypeidExpr *e) {
+  return makeNaturalAlignAddrLValue(emitCXXTypeidExpr(e), e->getType());
 }

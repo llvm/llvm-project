@@ -533,7 +533,7 @@ static mlir::Value emitCXXNewAllocSize(CIRGenFunction &cgf, const CXXNewExpr *e,
     // Create a value for the variable number of elements
     numElements = cgf.emitScalarExpr(*e->getArraySize());
     auto numElementsType = mlir::cast<cir::IntType>(numElements.getType());
-    unsigned numElementsWidth = numElementsType.getWidth();
+    [[maybe_unused]] unsigned numElementsWidth = numElementsType.getWidth();
 
     // We might need check for overflow.
 
@@ -1333,4 +1333,68 @@ mlir::Value CIRGenFunction::emitDynamicCast(Address thisAddr,
   auto destCirTy = mlir::cast<cir::PointerType>(convertType(destTy));
   return cgm.getCXXABI().emitDynamicCast(*this, loc, srcRecordTy, destRecordTy,
                                          destCirTy, isRefCast, thisAddr);
+}
+
+static mlir::Value emitCXXTypeidFromVTable(CIRGenFunction &cgf, const Expr *e,
+                                           mlir::Type typeInfoPtrTy,
+                                           bool hasNullCheck) {
+  Address thisPtr = cgf.emitLValue(e).getAddress();
+  QualType srcType = e->getType();
+
+  // C++ [class.cdtor]p4:
+  //   If the operand of typeid refers to the object under construction or
+  //   destruction and the static type of the operand is neither the constructor
+  //   or destructor’s class nor one of its bases, the behavior is undefined.
+  assert(!cir::MissingFeatures::sanitizers());
+
+  if (hasNullCheck && cgf.cgm.getCXXABI().shouldTypeidBeNullChecked(srcType)) {
+    mlir::Value isThisNull =
+        cgf.getBuilder().createPtrIsNull(thisPtr.getPointer());
+    // We don't really care about the value, we just want to make sure the
+    // 'true' side calls bad-type-id.
+    cir::IfOp::create(
+        cgf.getBuilder(), cgf.getLoc(e->getSourceRange()), isThisNull,
+        /*withElseRegion=*/false, [&](mlir::OpBuilder &, mlir::Location loc) {
+          cgf.cgm.getCXXABI().emitBadTypeidCall(cgf, loc);
+        });
+  }
+
+  return cgf.cgm.getCXXABI().emitTypeid(cgf, srcType, thisPtr, typeInfoPtrTy);
+}
+
+mlir::Value CIRGenFunction::emitCXXTypeidExpr(const CXXTypeidExpr *e) {
+  mlir::Location loc = getLoc(e->getSourceRange());
+  mlir::Type resultType = cir::PointerType::get(convertType(e->getType()));
+  QualType ty = e->isTypeOperand() ? e->getTypeOperand(getContext())
+                                   : e->getExprOperand()->getType();
+
+  // If the non-default global var address space is not default, we need to do
+  // an address-space cast here.
+  assert(!cir::MissingFeatures::addressSpace());
+
+  // C++ [expr.typeid]p2:
+  //   When typeid is applied to a glvalue expression whose type is a
+  //   polymorphic class type, the result refers to a std::type_info object
+  //   representing the type of the most derived object (that is, the dynamic
+  //   type) to which the glvalue refers.
+  // If the operand is already most derived object, no need to look up vtable.
+  if (!e->isTypeOperand() && e->isPotentiallyEvaluated() &&
+      !e->isMostDerived(getContext()))
+    return emitCXXTypeidFromVTable(*this, e->getExprOperand(), resultType,
+                                   e->hasNullCheck());
+
+  auto typeInfo =
+      cast<cir::GlobalViewAttr>(cgm.getAddrOfRTTIDescriptor(loc, ty));
+  // `getAddrOfRTTIDescriptor` lies to us and always gives us a uint8ptr as its
+  // type, however we need the value of the actual global to call the
+  // get-global-op, so look it up here.
+  auto typeInfoGlobal =
+      cast<cir::GlobalOp>(cgm.getGlobalValue(typeInfo.getSymbol().getValue()));
+  auto getTypeInfo = cir::GetGlobalOp::create(
+      builder, loc, builder.getPointerTo(typeInfoGlobal.getSymType()),
+      typeInfoGlobal.getSymName());
+  // The ABI is just generating these sometimes as ptr to u8, but they are
+  // simply a representation of the type_info. So we have to cast this, if
+  // necessary (createBitcast is a noop if the types match).
+  return builder.createBitcast(getTypeInfo, resultType);
 }

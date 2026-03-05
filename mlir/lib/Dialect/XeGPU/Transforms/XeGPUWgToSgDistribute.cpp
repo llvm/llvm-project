@@ -1521,13 +1521,6 @@ struct WgToSgVectorTransposeOp
     SmallVector<int64_t> sourceSgLayout =
         sourceLayout.getEffectiveSgLayoutAsInt();
     SmallVector<int64_t> resultSgLayout = layout.getEffectiveSgLayoutAsInt();
-    DenseI32ArrayAttr sourceOrder = sourceLayout.getOrder();
-    DenseI32ArrayAttr resultOrder = layout.getOrder();
-
-    if (!sourceOrder || !resultOrder) {
-      return rewriter.notifyMatchFailure(
-          op, "Both source and result must have order attributes");
-    }
 
     ArrayRef<int64_t> permutation = op.getPermutation();
     size_t permutationSize = permutation.size();
@@ -1683,14 +1676,20 @@ void XeGPUWgToSgDistributePass::runOnOperation() {
     converter.addConversion(
         [&](RankedTensorType type,
             SmallVectorImpl<Type> &result) -> std::optional<LogicalResult> {
+          // Only convert RankedTensorTypes that carry an XeGPU layout encoding.
+          // Plain tensors (e.g. tensor<?xi32>) have no XeGPU encoding and must
+          // not be converted: VectorType does not support dynamic dimensions.
+          auto encoding =
+              dyn_cast_if_present<xegpu::LayoutAttr>(type.getEncoding());
+          if (!encoding)
+            return std::nullopt;
+
           Type elemTy = type.getElementType();
           ArrayRef<int64_t> shape = type.getShape();
 
           int count;
           SmallVector<int64_t> subShape;
-          std::tie(subShape, count) = getSgShapeAndCount(
-              shape,
-              dyn_cast_if_present<xegpu::LayoutAttr>(type.getEncoding()));
+          std::tie(subShape, count) = getSgShapeAndCount(shape, encoding);
 
           auto newTy = VectorType::get(subShape, elemTy);
           result.append(count, newTy);
