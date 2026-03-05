@@ -13,6 +13,8 @@
 
 #include "WebAssemblyRegisterBankInfo.h"
 #include "MCTargetDesc/WebAssemblyMCTargetDesc.h"
+#include "WebAssemblyRegisterInfo.h"
+#include "llvm/CodeGen/MachineRegisterInfo.h"
 #include "llvm/CodeGen/TargetRegisterInfo.h"
 
 #define GET_TARGET_REGBANK_IMPL
@@ -20,7 +22,38 @@
 #include "WebAssemblyGenRegisterBank.inc"
 
 namespace llvm {
-namespace WebAssembly {} // namespace WebAssembly
+namespace WebAssembly {
+enum PartialMappingIdx {
+  PMI_None = -1,
+  PMI_I32 = 1,
+  PMI_I64,
+  PMI_Min = PMI_I32,
+};
+
+enum ValueMappingIdx {
+  InvalidIdx = 0,
+  I32Idx = 1,
+  I64Idx = 5,
+};
+
+const RegisterBankInfo::PartialMapping PartMappings[]{{0, 32, I32RegBank},
+                                                      {0, 64, I64RegBank}};
+
+const RegisterBankInfo::ValueMapping ValueMappings[] = {
+    // invalid
+    {nullptr, 0},
+    // up to 4 operands as I32
+    {&PartMappings[PMI_I32 - PMI_Min], 1},
+    {&PartMappings[PMI_I32 - PMI_Min], 1},
+    {&PartMappings[PMI_I32 - PMI_Min], 1},
+    {&PartMappings[PMI_I32 - PMI_Min], 1},
+    // up to 4 operands as I64
+    {&PartMappings[PMI_I64 - PMI_Min], 1},
+    {&PartMappings[PMI_I64 - PMI_Min], 1},
+    {&PartMappings[PMI_I64 - PMI_Min], 1},
+    {&PartMappings[PMI_I64 - PMI_Min], 1},
+};
+} // namespace WebAssembly
 } // namespace llvm
 
 using namespace llvm;
@@ -30,5 +63,62 @@ WebAssemblyRegisterBankInfo::WebAssemblyRegisterBankInfo(
 
 const RegisterBankInfo::InstructionMapping &
 WebAssemblyRegisterBankInfo::getInstrMapping(const MachineInstr &MI) const {
-  return getInvalidInstructionMapping();
+  unsigned Opc = MI.getOpcode();
+  const MachineFunction &MF = *MI.getParent()->getParent();
+  const MachineRegisterInfo &MRI = MF.getRegInfo();
+
+  if ((Opc != TargetOpcode::COPY && !isPreISelGenericOpcode(Opc)) ||
+      Opc == TargetOpcode::G_PHI) {
+    const RegisterBankInfo::InstructionMapping &Mapping =
+        getInstrMappingImpl(MI);
+    if (Mapping.isValid())
+      return Mapping;
+  }
+
+  const unsigned NumOperands = MI.getNumOperands();
+  const ValueMapping *OperandsMapping = nullptr;
+  unsigned MappingID = DefaultMappingID;
+
+#ifndef NDEBUG
+  // Check if LLT sizes match sizes of available register banks.
+  for (const MachineOperand &Op : MI.operands()) {
+    if (!Op.isReg())
+      continue;
+
+    LLT RegTy = MRI.getType(Op.getReg());
+
+    if (RegTy.isScalar() &&
+        (RegTy.getSizeInBits() != 32 && RegTy.getSizeInBits() != 64))
+      return getInvalidInstructionMapping();
+
+    if (RegTy.isVector() && RegTy.getSizeInBits() != 128)
+      return getInvalidInstructionMapping();
+  }
+#endif
+
+  const LLT Op0Ty = MRI.getType(MI.getOperand(0).getReg());
+  unsigned Op0Size = Op0Ty.getSizeInBits();
+
+  auto &Op0IntValueMapping =
+      WebAssembly::ValueMappings[Op0Size == 64 ? WebAssembly::I64Idx
+                                               : WebAssembly::I32Idx];
+
+  using namespace TargetOpcode;
+  switch (Opc) {
+  case G_ADD:
+  case G_AND:
+  case G_ASHR:
+  case G_SHL:
+    OperandsMapping = &Op0IntValueMapping;
+    break;
+  case G_CONSTANT:
+    OperandsMapping = getOperandsMapping({&Op0IntValueMapping, nullptr});
+    break;
+  }
+
+  if (!OperandsMapping)
+    return getInvalidInstructionMapping();
+
+  return getInstructionMapping(MappingID, /*Cost=*/1, OperandsMapping,
+                               NumOperands);
 }
