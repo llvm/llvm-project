@@ -305,6 +305,7 @@ class SPIRVEmitIntrinsics
   bool postprocessTypes(Module &M);
   bool processFunctionPointers(Module &M);
   void parseFunDeclarations(Module &M);
+
   void useRoundingMode(ConstrainedFPIntrinsic *FPI, IRBuilder<> &B);
   bool processMaskedMemIntrinsic(IntrinsicInst &I);
   bool convertMaskedMemIntrinsics(Module &M);
@@ -366,6 +367,8 @@ public:
   Instruction *visitAtomicCmpXchgInst(AtomicCmpXchgInst &I);
   Instruction *visitUnreachableInst(UnreachableInst &I);
   Instruction *visitCallInst(CallInst &I);
+  Instruction *visitPtrToIntInst(PtrToIntInst &I);
+  Instruction *visitIntToPtrInst(IntToPtrInst &I);
 
   StringRef getPassName() const override { return "SPIRV emit intrinsics"; }
 
@@ -2122,6 +2125,58 @@ SPIRVEmitIntrinsics::visitExtractElementInst(ExtractElementInst &I) {
   auto *NewI = B.CreateIntrinsic(Intrinsic::spv_extractelt, {Types}, {Args});
   replaceAllUsesWithAndErase(B, &I, NewI);
   return NewI;
+}
+
+Instruction *SPIRVEmitIntrinsics::visitPtrToIntInst(PtrToIntInst &I) {
+  // Scalarize ptrtoint on vectors of pointers, since SPIR-V does not support
+  // vectors of pointers.
+  Type *SrcTy = I.getOperand(0)->getType();
+  auto *VecTy = dyn_cast<FixedVectorType>(SrcTy);
+
+  if (!VecTy || !VecTy->getElementType()->isPointerTy())
+    return &I;
+
+  IRBuilder<> B(I.getParent());
+  B.SetInsertPoint(&I);
+
+  unsigned NumElems = VecTy->getNumElements();
+  Type *ElemIntTy = cast<VectorType>(I.getType())->getElementType();
+  Value *Result = PoisonValue::get(I.getType());
+
+  for (unsigned Idx = 0; Idx < NumElems; ++Idx) {
+    Value *Elem = B.CreateExtractElement(I.getOperand(0), B.getInt32(Idx));
+    Value *Conv = B.CreatePtrToInt(Elem, ElemIntTy);
+    Result = B.CreateInsertElement(Result, Conv, B.getInt32(Idx));
+  }
+
+  replaceAllUsesWithAndErase(B, &I, cast<Instruction>(Result));
+  return cast<Instruction>(Result);
+}
+
+Instruction *SPIRVEmitIntrinsics::visitIntToPtrInst(IntToPtrInst &I) {
+  // Scalarize inttoptr producing vectors of pointers, since SPIR-V does not
+  // support vectors of pointers.
+  Type *DstTy = I.getType();
+  auto *VecTy = dyn_cast<FixedVectorType>(DstTy);
+
+  if (!VecTy || !VecTy->getElementType()->isPointerTy())
+    return &I;
+
+  IRBuilder<> B(I.getParent());
+  B.SetInsertPoint(&I);
+
+  unsigned NumElems = VecTy->getNumElements();
+  Type *ElemPtrTy = VecTy->getElementType();
+  Value *Result = PoisonValue::get(I.getType());
+
+  for (unsigned Idx = 0; Idx < NumElems; ++Idx) {
+    Value *Elem = B.CreateExtractElement(I.getOperand(0), B.getInt32(Idx));
+    Value *Conv = B.CreateIntToPtr(Elem, ElemPtrTy);
+    Result = B.CreateInsertElement(Result, Conv, B.getInt32(Idx));
+  }
+
+  replaceAllUsesWithAndErase(B, &I, cast<Instruction>(Result));
+  return cast<Instruction>(Result);
 }
 
 Instruction *SPIRVEmitIntrinsics::visitInsertValueInst(InsertValueInst &I) {
