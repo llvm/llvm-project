@@ -1,0 +1,190 @@
+//===-- Implementation header for log10p1f16 ---------------------*- C++ -*-===//
+//
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
+//
+//===----------------------------------------------------------------------===//
+
+#ifndef LLVM_LIBC_SRC___SUPPORT_MATH_LOG10P1F16_H
+#define LLVM_LIBC_SRC___SUPPORT_MATH_LOG10P1F16_H
+
+#include "include/llvm-libc-macros/float16-macros.h"
+
+#ifdef LIBC_TYPES_HAS_FLOAT16
+
+#include "exp10_float16_constants.h"
+#include "expxf16_utils.h"
+#include "hdr/errno_macros.h"
+#include "hdr/fenv_macros.h"
+#include "src/__support/FPUtil/FEnvImpl.h"
+#include "src/__support/FPUtil/FPBits.h"
+#include "src/__support/FPUtil/PolyEval.h"
+#include "src/__support/FPUtil/cast.h"
+#include "src/__support/FPUtil/except_value_utils.h"
+#include "src/__support/FPUtil/multiply_add.h"
+#include "src/__support/common.h"
+#include "src/__support/macros/config.h"
+#include "src/__support/macros/optimization.h"
+#include "src/__support/macros/properties/cpu_features.h"
+
+namespace LIBC_NAMESPACE_DECL {
+
+namespace math {
+
+namespace log10p1f16_internal {
+#ifndef LIBC_MATH_HAS_SKIP_ACCURATE_PASS
+
+// ExceptValues for the small-|x| polynomial path (|x| <= 2^-3).
+LIBC_INLINE_VAR constexpr size_t N_LOG10P1F16_EXCEPTS = 3;
+
+LIBC_INLINE_VAR constexpr fputil::ExceptValues<float16, N_LOG10P1F16_EXCEPTS>
+    LOG10P1F16_EXCEPTS = {{
+        // (input, RZ output, RU offset, RD offset, RN offset)
+        // x = 0x1.ep-13
+        {0x0B80U, 0x0683U, 1U, 0U, 0U},
+        // x = -0x1.b8p-13
+        {0x89DCU, 0x8516U, 0U, 1U, 1U},
+        // x = -0x1.42p-8
+        {0x9D08U, 0x9861U, 0U, 1U, 0U},
+    }};
+
+// ExceptValues for the large-|x| table-based path (|x| > 2^-3).
+LIBC_INLINE_VAR constexpr size_t N_LOG10P1F16_EXCEPTS_HI = 6;
+
+LIBC_INLINE_VAR constexpr fputil::ExceptValues<float16,
+                                                N_LOG10P1F16_EXCEPTS_HI>
+    LOG10P1F16_EXCEPTS_HI = {{
+        // (input, RZ output, RU offset, RD offset, RN offset)
+        // x = 0x1.4c4p-2, log10p1f16(x) = 0x1.f3cp-4 (RZ)
+        {0x3531U, 0x2FCFU, 1U, 0U, 0U},
+        // x = 0x1.2p+3, log10p1f16(x) = 0x1p+0 (RZ)
+        {0x4880U, 0x3C00U, 0U, 0U, 0U},
+        // x = 0x1.8cp+6, log10p1f16(x) = 0x1p+1 (RZ)
+        {0x5630U, 0x4000U, 0U, 0U, 0U},
+        // x = 0x1.f44p+6, log10p1f16(x) = 0x1.0ccp+1 (RZ)
+        {0x57D1U, 0x4033U, 1U, 0U, 0U},
+        // x = 0x1.f38p+9, log10p1f16(x) = 0x1.8p+1 (RZ)
+        {0x63CEU, 0x4200U, 0U, 0U, 0U},
+        // x = -0x1.808p-1, log10p1f16(x) = -0x1.354p-1 (RZ)
+        {0xBA02U, 0xB8D4U, 0U, 1U, 1U},
+    }};
+#endif // !LIBC_MATH_HAS_SKIP_ACCURATE_PASS
+} // namespace log10p1f16_internal
+
+LIBC_INLINE float16 log10p1f16(float16 x) {
+  using namespace math::expxf16_internal;
+  using FPBits = fputil::FPBits<float16>;
+  FPBits x_bits(x);
+
+  uint16_t x_u = x_bits.uintval();
+  uint16_t x_abs = x_u & 0x7fffU;
+
+  // If x is +-0, +inf, NaN, -1, x < -1, or |x| <= 2^-3.
+  if (LIBC_UNLIKELY(x_abs == 0U || x_abs <= 0x3000U || x_u == 0x7c00U ||
+                    x_u >= 0xbc00U || x_bits.is_nan())) {
+    // log10p1(NaN) = NaN
+    if (x_bits.is_nan()) {
+      if (x_bits.is_signaling_nan()) {
+        fputil::raise_except_if_required(FE_INVALID);
+        return FPBits::quiet_nan().get_val();
+      }
+
+      return x;
+    }
+
+    // log10p1(+/-0) = +/-0
+    if (x_abs == 0U)
+      return x;
+
+    // log10p1(+inf) = +inf
+    if (x_u == 0x7c00U)
+      return FPBits::inf().get_val();
+
+    // log10p1(-1) = -inf
+    if (x_u == 0xbc00U) {
+      fputil::raise_except_if_required(FE_DIVBYZERO);
+      return FPBits::inf(Sign::NEG).get_val();
+    }
+
+    // log10p1(x) = NaN for x < -1
+    if (x_u > 0xbc00U) {
+      fputil::set_errno_if_required(EDOM);
+      fputil::raise_except_if_required(FE_INVALID);
+      return FPBits::quiet_nan().get_val();
+    }
+
+    // When |x| <= 2^-3, use a polynomial approximation directly on x.
+    // For y = 1+x near 1, the table-based range reduction suffers from
+    // catastrophic cancellation (m*log10(2) + log10(f) nearly cancel).
+    // Computing log10(1+x) directly via polynomial avoids this.
+    //   log10(1+x) = x * (c0 + c1*x + c2*x^2 + c3*x^3 + c4*x^4 + c5*x^5 +
+    //                      c6*x^6)
+    // where ck = (-1)^k / ((k+1) * ln(10)), the Taylor coefficients of
+    // log10(1+x)/x.
+    if (x_abs <= 0x3000U) {
+#ifndef LIBC_MATH_HAS_SKIP_ACCURATE_PASS
+      if (auto r = log10p1f16_internal::LOG10P1F16_EXCEPTS.lookup(x_u);
+          LIBC_UNLIKELY(r.has_value()))
+        return r.value();
+#endif // !LIBC_MATH_HAS_SKIP_ACCURATE_PASS
+
+      float xf = x;
+      return fputil::cast<float16>(
+          xf * fputil::polyeval(xf, 0x1.bcb7b2p-2f, -0x1.bcb7b2p-3f,
+                                0x1.287a76p-3f, -0x1.bcb7b2p-4f,
+                                0x1.63c628p-4f, -0x1.287a76p-4f,
+                                0x1.fc3fa6p-5f));
+    }
+  }
+
+#ifndef LIBC_MATH_HAS_SKIP_ACCURATE_PASS
+  if (auto r = log10p1f16_internal::LOG10P1F16_EXCEPTS_HI.lookup(x_u);
+      LIBC_UNLIKELY(r.has_value()))
+    return r.value();
+#endif // !LIBC_MATH_HAS_SKIP_ACCURATE_PASS
+
+  // For the range reduction, we compute y = 1 + x in float. For |x| > 2^-3,
+  // the addition 1.0f + xf is exact in float, and the result y is bounded away
+  // from 1.0, avoiding catastrophic cancellation in the table decomposition.
+  float xf = x;
+  float y = 1.0f + xf;
+
+  using FPBitsFloat = fputil::FPBits<float>;
+  FPBitsFloat y_bits(y);
+
+  // When y is subnormal or zero, which shouldn't happen since y = 1 + x and
+  // x >= -1 + eps in f16, so y >= eps > 0. But handle y = 0 just in case.
+  if (LIBC_UNLIKELY(y_bits.is_zero()))
+    return FPBits::inf(Sign::NEG).get_val();
+
+  int m = y_bits.get_exponent();
+  // Set y_bits to 1.mant (biased exponent = 127).
+  y_bits.set_biased_exponent(FPBitsFloat::EXP_BIAS);
+  float mant_f = y_bits.get_val();
+
+  // Leading 23 - 5 = 18, so top 5 mantissa bits give index f in [0, 31].
+  int f = y_bits.get_mantissa() >> (FPBitsFloat::FRACTION_LEN - 5);
+
+  // v = 1.mant * 1/f - 1 = d/f
+  float v = fputil::multiply_add(mant_f, ONE_OVER_F_F[f], -1.0f);
+
+  // Degree-3 minimax polynomial generated by Sollya with the following
+  // commands:
+  //   > display = hexadecimal;
+  //   > P = fpminimax(log10(1 + x)/x, 2, [|SG...|], [-2^-5, 2^-5]);
+  //   > x * P;
+  float log10p1_d_over_f =
+      v * fputil::polyeval(v, 0x1.bcb7bp-2f, -0x1.bce168p-3f, 0x1.28acb8p-3f);
+  // log10(1.mant) = log10(f) + log10(1 + d/f)
+  float log10_1_mant = LOG10F_F[f] + log10p1_d_over_f;
+  return fputil::cast<float16>(
+      fputil::multiply_add(static_cast<float>(m), LOG10F_2, log10_1_mant));
+}
+
+} // namespace math
+} // namespace LIBC_NAMESPACE_DECL
+
+#endif // LIBC_TYPES_HAS_FLOAT16
+
+#endif // LLVM_LIBC_SRC___SUPPORT_MATH_LOG10P1F16_H
