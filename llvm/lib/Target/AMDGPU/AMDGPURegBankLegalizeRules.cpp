@@ -820,6 +820,25 @@ RegBankLegalizeRules::RegBankLegalizeRules(const GCNSubtarget &_ST,
       .Any({{DivV2S16, P3, V2S16}, {{VgprV2S16}, {VgprP3, VgprV2S16}}},
            HasAtomicDsPkAdd16Insts);
 
+  // atomicrmw fmin/fmax: same operand banks as FADD. Only add rules for
+  // (address space, type) combinations the subtarget supports; when the new
+  // regbank selector is used the legalizer may not filter these.
+  bool HasAtomicFMinFMaxF32Flat = ST->hasAtomicFMinFMaxF32FlatInsts();
+  bool HasAtomicFMinFMaxF64Flat = ST->hasAtomicFMinFMaxF64FlatInsts();
+  bool HasAtomicFMinFMaxF32Global = ST->hasAtomicFMinFMaxF32GlobalInsts();
+  bool HasAtomicFMinFMaxF64Global = ST->hasAtomicFMinFMaxF64GlobalInsts();
+  addRulesForGOpcs({G_ATOMICRMW_FMIN, G_ATOMICRMW_FMAX})
+      .Any({{DivS32, P0, S32}, {{Vgpr32}, {VgprP0, Vgpr32}}},
+           HasAtomicFMinFMaxF32Flat)
+      .Any({{DivS64, P0, S64}, {{Vgpr64}, {VgprP0, Vgpr64}}},
+           HasAtomicFMinFMaxF64Flat)
+      .Any({{DivS32, P1, S32}, {{Vgpr32}, {VgprP1, Vgpr32}}},
+           HasAtomicFMinFMaxF32Global)
+      .Any({{DivS64, P1, S64}, {{Vgpr64}, {VgprP1, Vgpr64}}},
+           HasAtomicFMinFMaxF64Global)
+      .Any({{DivS32, P3, S32}, {{Vgpr32}, {VgprP3, Vgpr32}}})
+      .Any({{DivS64, P3, S64}, {{Vgpr64}, {VgprP3, Vgpr64}}});
+
   addRulesForGOpcs({G_ATOMIC_CMPXCHG})
       .Any({{DivS32, P2}, {{Vgpr32}, {VgprP2, Vgpr32, Vgpr32}}})
       .Any({{DivS64, P2}, {{Vgpr64}, {VgprP2, Vgpr64, Vgpr64}}})
