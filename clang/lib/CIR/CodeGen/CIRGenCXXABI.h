@@ -169,6 +169,10 @@ public:
   getAddrOfCXXCatchHandlerType(mlir::Location loc, QualType ty,
                                QualType catchHandlerType) = 0;
   virtual CatchTypeInfo getCatchAllTypeInfo();
+  virtual bool shouldTypeidBeNullChecked(QualType srcTy) = 0;
+  virtual mlir::Value emitTypeid(CIRGenFunction &cgf, QualType srcTy,
+                                 Address thisPtr, mlir::Type typeInfoPtrTy) = 0;
+  virtual void emitBadTypeidCall(CIRGenFunction &cgf, mlir::Location loc) = 0;
 
   /// Get the implicit (second) parameter that comes after the "this" pointer,
   /// or nullptr if there is isn't one.
