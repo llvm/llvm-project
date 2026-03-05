@@ -57,8 +57,8 @@ def stringify(bytecode: bytearray) -> str:
     return s
 
 
-def evaluate(assembler: str, data: list):
-    bytecode = assemble(assembler)
+def evaluate(assembly: str, data: list):
+    bytecode = assemble(assembly)
     trace = True
     if trace:
         print(
