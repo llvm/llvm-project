@@ -113,3 +113,9 @@ __asan_poison_stack_memory
 __asan_unpoison_stack_memory
 __asan_option_detect_stack_use_after_return
 __asan_shadow_memory_dynamic_address
+__interceptor_vec_calloc
+__interceptor_vec_malloc
+__interceptor_vec_realloc
+vec_calloc
+vec_malloc
+vec_realloc

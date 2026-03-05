@@ -283,6 +283,7 @@ void *asan_calloc(uptr nmemb, uptr size, BufferedStackTrace *stack);
 #if SANITIZER_AIX
 void* asan_vec_malloc(uptr size, BufferedStackTrace* stack);
 void* asan_vec_calloc(uptr nmemb, uptr size, BufferedStackTrace* stack);
+void* asan_vec_realloc(void* p, uptr size, BufferedStackTrace* stack);
 #endif
 void *asan_realloc(void *p, uptr size, BufferedStackTrace *stack);
 void *asan_reallocarray(void *p, uptr nmemb, uptr size,
