@@ -961,6 +961,18 @@ def _ssaf_tu_summary_file :
     "The output file for the extracted summaries. "
     "The extension selects which file format to use.">,
   MarshallingInfoString<FrontendOpts<"SSAFTUSummaryFile">>;
+def _ssaf_list_extractors :
+  Flag<["--"], "ssaf-list-extractors">,
+  Group<SSAF_Group>,
+  Visibility<[ClangOption, CC1Option]>,
+  HelpText<"Display the list of available SSAF summary extractors">,
+  MarshallingInfoFlag<FrontendOpts<"SSAFShowExtractors">>;
+def _ssaf_list_formats :
+  Flag<["--"], "ssaf-list-formats">,
+  Group<SSAF_Group>,
+  Visibility<[ClangOption, CC1Option]>,
+  HelpText<"Display the list of available SSAF serialization formats">,
+  MarshallingInfoFlag<FrontendOpts<"SSAFShowFormats">>;
 def Xarch__
     : JoinedAndSeparate<["-"], "Xarch_">,
       Flags<[NoXarchOption]>,

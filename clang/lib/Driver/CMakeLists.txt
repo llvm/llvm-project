@@ -99,6 +99,7 @@ add_clang_library(clangDriver
   target_parser_gen
 
   LINK_LIBS
+  clangAnalysisScalable
   clangBasic
   clangFrontend
   clangSerialization
