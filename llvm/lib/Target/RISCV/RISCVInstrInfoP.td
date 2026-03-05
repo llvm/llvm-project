@@ -1865,6 +1865,7 @@ let Predicates = [HasStdExtP, IsRV32] in {
   def : PatGprGpr<uaddsat, SADDU>;
   def : PatGprGpr<usubsat, SSUBU>;
   def : PatGprGpr<sshlsat, SSHA>;
+  def : PatGprUimmLog2XLen<sshlsat, SSLAI>;
 
   // Narrowing shift patterns (NSRL/NSRA)
   // Immediate shift amount patterns
