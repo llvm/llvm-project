@@ -1,0 +1,38 @@
+[
+  {
+    "StackSizes": [
+      {
+        "Entry": {
+          "Functions": [
+            "foo"
+          ],
+          "Size": 16
+        }
+      },
+      {
+        "Entry": {
+          "Functions": [
+            "bar"
+          ],
+          "Size": 32
+        }
+      },
+      {
+        "Entry": {
+          "Functions": [
+            "baz"
+          ],
+          "Size": 8
+        }
+      },
+      {
+        "Entry": {
+          "Functions": [
+            "main"
+          ],
+          "Size": 64
+        }
+      }
+    ]
+  }
+]

@@ -1,0 +1,95 @@
+[
+  {
+    "CallGraph": [
+      {
+        "Function": {
+          "Names": [
+            "foo"
+          ],
+          "Address": 6032,
+          "DirectCallees": []
+        }
+      },
+      {
+        "Function": {
+          "Names": [
+            "bar"
+          ],
+          "Address": 6048,
+          "DirectCallees": []
+        }
+      },
+      {
+        "Function": {
+          "Names": [
+            "baz"
+          ],
+          "Address": 6064,
+          "DirectCallees": []
+        }
+      },
+      {
+        "Function": {
+          "Names": [
+            "main"
+          ],
+          "Address": 6080,
+          "DirectCallees": [
+            {
+              "Names": [
+                "foo"
+              ],
+              "Address": 6032
+            },
+            {
+              "Names": [
+                "bar"
+              ],
+              "Address": 6048
+            },
+            {
+              "Names": [
+                "baz"
+              ],
+              "Address": 6064
+            }
+          ]
+        }
+      }
+    ],
+    "StackSizes": [
+      {
+        "Entry": {
+          "Functions": [
+            "foo"
+          ],
+          "Size": 16
+        }
+      },
+      {
+        "Entry": {
+          "Functions": [
+            "bar"
+          ],
+          "Size": 32
+        }
+      },
+      {
+        "Entry": {
+          "Functions": [
+            "baz"
+          ],
+          "Size": 8
+        }
+      },
+      {
+        "Entry": {
+          "Functions": [
+            "main"
+          ],
+          "Size": 64
+        }
+      }
+    ]
+  }
+]
