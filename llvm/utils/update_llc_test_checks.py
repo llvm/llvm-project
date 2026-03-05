@@ -170,7 +170,13 @@ def update_test(ti: common.TestInfo):
             )
         else:
             # ASM output mode
-            scrubber, function_re = output_type.get_run_handler(triple)
+
+            bb_sections = "basic-block-sections" in llc_args and (
+                triple.startswith("x86")
+                or triple.startswith("i686")
+                or triple.startswith("i386")
+            )
+            scrubber, function_re = output_type.get_run_handler(triple, bb_sections)
             if 0 == builder.process_run_line(
                 function_re, scrubber, raw_tool_output, prefixes
             ):
