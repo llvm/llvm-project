@@ -17,7 +17,6 @@
 ; RUN: diff %s %t4
 
 ; Test extracting all images without specifying --image filters
-; RUN: llvm-offload-binary %t
-; RUN: ls  llvm-offload-binary.*-x-y-z-abc.0.| FileCheck --check-prefix=EXTRACT %s
+; RUN: llvm-offload-binary %t | FileCheck --check-prefix=EXTRACT %s
 
-; EXTRACT: llvm-offload-binary.{{.*}}-x-y-z-abc.0.
+; EXTRACT: Extracted: llvm-offload-binary.{{.*}}-x-y-z-abc.0.
