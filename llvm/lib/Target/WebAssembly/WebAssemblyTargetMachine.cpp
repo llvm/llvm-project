@@ -51,11 +51,11 @@ static cl::opt<bool> WasmDisableExplicitLocals(
              " instruction output for test purposes only."),
     cl::init(false));
 
-static cl::opt<bool> WasmDisableFixIrreducibleControlFlowPass(
-    "wasm-disable-fix-irreducible-control-flow-pass", cl::Hidden,
-    cl::desc("webassembly: disables the fix "
-             " irreducible control flow optimization pass"),
-    cl::init(false));
+static cl::opt<int> WasmTestFixIrreduciblePass(
+    "wasm-test-fix-irreducible-pass", cl::Hidden,
+    cl::desc("webassembly: use WebAssemblyFixIrreducibleControlFlow (0),"
+             "the common FixIrreducible pass (1), or nothing (2)"),
+    cl::init(0));
 
 // Exception handling & setjmp-longjmp handling related options.
 
@@ -604,8 +604,10 @@ void WebAssemblyPassConfig::addPreEmitPass() {
   // Nullify DBG_VALUE_LISTs that we cannot handle.
   addPass(createWebAssemblyNullifyDebugValueLists());
 
-  // Eliminate multiple-entry loops.
-  if (!WasmDisableFixIrreducibleControlFlowPass)
+  // If this value is 1, we used an IR pass above. Otherwise,
+  // on't fix irreducible control flow. This will cause compiler crashes
+  // which is only useful for identifying programs that need fixing.
+  if (WasmTestFixIrreduciblePass == 0)
     addPass(createWebAssemblyFixIrreducibleControlFlow());
 
   // Do various transformations for exception handling.
@@ -673,6 +675,8 @@ void WebAssemblyPassConfig::addPreEmitPass() {
 bool WebAssemblyPassConfig::addPreISel() {
   TargetPassConfig::addPreISel();
   addPass(createWebAssemblyLowerRefTypesIntPtrConv());
+  if (WasmTestFixIrreduciblePass == 1)
+    addPass(createFixIrreduciblePass());
   return false;
 }
 
