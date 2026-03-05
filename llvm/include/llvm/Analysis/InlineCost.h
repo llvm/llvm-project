@@ -283,7 +283,8 @@ LLVM_ABI InlineCost getInlineCost(
     function_ref<BlockFrequencyInfo &(Function &)> GetBFI = nullptr,
     ProfileSummaryInfo *PSI = nullptr, OptimizationRemarkEmitter *ORE = nullptr,
     function_ref<EphemeralValuesCache &(Function &)> GetEphValuesCache =
-        nullptr);
+        nullptr,
+    bool IsInlinedCall = false);
 
 /// Get an InlineCost with the callee explicitly specified.
 /// This allows you to calculate the cost of inlining a function via a
@@ -298,7 +299,8 @@ LLVM_ABI InlineCost getInlineCost(
     function_ref<BlockFrequencyInfo &(Function &)> GetBFI = nullptr,
     ProfileSummaryInfo *PSI = nullptr, OptimizationRemarkEmitter *ORE = nullptr,
     function_ref<EphemeralValuesCache &(Function &)> GetEphValuesCache =
-        nullptr);
+        nullptr,
+    bool IsInlinedCall = false);
 
 /// Returns InlineResult::success() if the call site should be always inlined
 /// because of user directives, and the inlining is viable. Returns

@@ -172,13 +172,16 @@ public:
   /// be up-to-date wrt previous inlining decisions. \p MandatoryOnly indicates
   /// only mandatory (always-inline) call sites should be recommended - this
   /// allows the InlineAdvisor track such inlininings.
+  /// \p IsInlinedCall indicates whether this call-site is the result of
+  /// inlining another call.
   /// Returns:
   /// - An InlineAdvice with the inlining recommendation.
   /// - Null when no recommendation is made (https://reviews.llvm.org/D110658).
   /// TODO: Consider removing the Null return scenario by incorporating the
   /// SampleProfile inliner into an InlineAdvisor
   std::unique_ptr<InlineAdvice> getAdvice(CallBase &CB,
-                                          bool MandatoryOnly = false);
+                                          bool MandatoryOnly = false,
+                                          bool IsInlinedCall = false);
 
   /// This must be called when the Inliner pass is entered, to allow the
   /// InlineAdvisor update internal state, as result of function passes run
@@ -203,7 +206,8 @@ public:
 protected:
   InlineAdvisor(Module &M, FunctionAnalysisManager &FAM,
                 std::optional<InlineContext> IC = std::nullopt);
-  virtual std::unique_ptr<InlineAdvice> getAdviceImpl(CallBase &CB) = 0;
+  virtual std::unique_ptr<InlineAdvice> getAdviceImpl(CallBase &CB,
+                                                      bool IsInlinedCall) = 0;
   virtual std::unique_ptr<InlineAdvice> getMandatoryAdvice(CallBase &CB,
                                                            bool Advice);
 
@@ -235,7 +239,8 @@ public:
       : InlineAdvisor(M, FAM, IC), Params(Params) {}
 
 private:
-  std::unique_ptr<InlineAdvice> getAdviceImpl(CallBase &CB) override;
+  std::unique_ptr<InlineAdvice> getAdviceImpl(CallBase &CB,
+                                              bool IsInlinedCall) override;
 
   InlineParams Params;
 };
@@ -355,11 +360,11 @@ public:
 
 LLVM_ABI std::unique_ptr<InlineAdvisor>
 getReleaseModeAdvisor(Module &M, ModuleAnalysisManager &MAM,
-                      std::function<bool(CallBase &)> GetDefaultAdvice);
+                      std::function<bool(CallBase &, bool)> GetDefaultAdvice);
 
-LLVM_ABI std::unique_ptr<InlineAdvisor>
-getDevelopmentModeAdvisor(Module &M, ModuleAnalysisManager &MAM,
-                          std::function<bool(CallBase &)> GetDefaultAdvice);
+LLVM_ABI std::unique_ptr<InlineAdvisor> getDevelopmentModeAdvisor(
+    Module &M, ModuleAnalysisManager &MAM,
+    std::function<bool(CallBase &, bool)> GetDefaultAdvice);
 
 // Default (manual policy) decision making helper APIs. Shared with the legacy
 // pass manager inliner.
