@@ -654,6 +654,8 @@ TARGET_BUILTIN(__builtin_altivec_vmulhsd, "V2LLiV2LLiV2LLi", "",
                "power10-vector")
 TARGET_BUILTIN(__builtin_altivec_vmulhud, "V2ULLiV2ULLiV2ULLi", "",
                "power10-vector")
+TARGET_BUILTIN(__builtin_altivec_vmulhsh, "V8SsV8SsV8Ss", "", "isa-future-instructions")
+TARGET_BUILTIN(__builtin_altivec_vmulhuh, "V8UsV8UsV8Us", "", "isa-future-instructions")
 
 // P10 Vector Expand with Mask built-ins.
 TARGET_BUILTIN(__builtin_altivec_vexpandbm, "V16UcV16Uc", "", "power10-vector")
