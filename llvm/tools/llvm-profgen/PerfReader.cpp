@@ -27,9 +27,10 @@ cl::opt<bool> SkipSymbolization("skip-symbolization",
                                          "output for CS profile generation."),
                                 cl::cat(ProfGenCategory));
 
-static cl::opt<bool> ShowMmapEvents("show-mmap-events",
-                                    cl::desc("Print binary load events."),
-                                    cl::cat(ProfGenCategory));
+static cl::opt<bool> ShowMmapEvents(
+    "show-mmap-events",
+    cl::desc("Print binary load events. Also logs process forks."),
+    cl::cat(ProfGenCategory));
 
 static cl::opt<bool>
     UseOffset("use-offset", cl::init(true),
@@ -58,6 +59,13 @@ static cl::opt<int> CSProfMaxUnsymbolizedCtxDepth(
     "csprof-max-unsymbolized-context-depth", cl::init(-1),
     cl::desc("Keep the last K contexts while merging unsymbolized profile. -1 "
              "means no depth limit."),
+    cl::cat(ProfGenCategory));
+
+static cl::opt<bool> MultiProcessProfile(
+    "multi-process-profile",
+    cl::desc("Handle multiple instances of the binary loaded in different "
+             "processes as if they came from one process, effectively summing "
+             "their samples. perf script input must include the PID field."),
     cl::cat(ProfGenCategory));
 
 namespace sampleprof {
@@ -345,7 +353,7 @@ bool VirtualUnwinder::unwind(const PerfSample *Sample, uint64_t Repeat) {
 
 std::unique_ptr<PerfReaderBase>
 PerfReaderBase::create(ProfiledBinary *Binary, PerfInputFile &PerfInput,
-                       std::optional<int32_t> PIDFilter) {
+                       SmallSet<int32_t, 16> &PIDFilter) {
   std::unique_ptr<PerfReaderBase> PerfReader;
 
   if (PerfInput.Format == PerfFormat::UnsymbolizedProfile) {
@@ -378,7 +386,7 @@ PerfReaderBase::create(ProfiledBinary *Binary, PerfInputFile &PerfInput,
 }
 
 Error PerfReaderBase::parseDataAccessPerfTraces(
-    StringRef DataAccessPerfTraceFile, std::optional<int32_t> PIDFilter) {
+    StringRef DataAccessPerfTraceFile, SmallSet<int32_t, 16> &PIDFilter) {
   // A perf_record_sample line is like
   // . 1282514022939813 0x87b0 [0x60]: PERF_RECORD_SAMPLE(IP, 0x4002):
   // 3446532/3446532: 0x2608a2 period: 233 addr: 0x3b3fb0
@@ -423,7 +431,7 @@ Error PerfReaderBase::parseDataAccessPerfTraces(
             "Failed to parse PID from perf trace line: " + Line,
             inconvertibleErrorCode());
 
-      if (PIDFilter.has_value() && *PIDFilter != PID) {
+      if (!PIDFilter.empty() && !PIDFilter.contains(PID)) {
         continue;
       }
 
@@ -440,8 +448,11 @@ Error PerfReaderBase::parseDataAccessPerfTraces(
       if (DataSymbol.starts_with("_ZTV")) {
         uint64_t IP = 0;
         Fields[2].getAsInteger(16, IP);
-        Counter.recordDataAccessCount(Binary->canonicalizeVirtualAddress(IP),
-                                      DataSymbol, 1);
+        // If no PID is in the profile's samples, we treat everything as the
+        // default PID value
+        int32_t LookupPID = MultiProcessProfile ? PID : DefaultPID;
+        Counter.recordDataAccessCount(
+            Binary->canonicalizeVirtualAddress(LookupPID, IP), DataSymbol, 1);
       }
     }
   }
@@ -451,7 +462,7 @@ Error PerfReaderBase::parseDataAccessPerfTraces(
 PerfInputFile
 PerfScriptReader::convertPerfDataToTrace(ProfiledBinary *Binary, bool SkipPID,
                                          PerfInputFile &File,
-                                         std::optional<int32_t> PIDFilter) {
+                                         SmallSet<int32_t, 16> &PIDFilter) {
   StringRef PerfData = File.InputFile;
   // Run perf script to retrieve PIDs matching binary we're interested in.
   auto PerfExecutable = sys::Process::FindInEnvPath("PATH", "perf");
@@ -484,7 +495,7 @@ PerfScriptReader::convertPerfDataToTrace(ProfiledBinary *Binary, bool SkipPID,
       if (isMMapEvent(TraceIt.getCurrentLine()) &&
           extractMMapEventForBinary(Binary, TraceIt.getCurrentLine(), MMap)) {
         auto It = PIDSet.emplace(MMap.PID);
-        if (It.second && (!PIDFilter || MMap.PID == *PIDFilter)) {
+        if (It.second && (PIDFilter.empty() || PIDFilter.contains(MMap.PID))) {
           if (!PIDs.empty()) {
             PIDs.append(",");
           }
@@ -505,7 +516,13 @@ PerfScriptReader::convertPerfDataToTrace(ProfiledBinary *Binary, bool SkipPID,
   ScriptSampleArgs.push_back("script");
   ScriptSampleArgs.push_back("--show-mmap-events");
   ScriptSampleArgs.push_back("-F");
-  ScriptSampleArgs.push_back("ip,brstack");
+  if (MultiProcessProfile) {
+    ScriptSampleArgs.push_back("pid,ip,brstack");
+    // We need to keep track of process forking
+    ScriptSampleArgs.push_back("--show-task-events");
+  } else {
+    ScriptSampleArgs.push_back("ip,brstack");
+  }
   ScriptSampleArgs.push_back("-i");
   ScriptSampleArgs.push_back(PerfData);
   if (!PIDs.empty()) {
@@ -541,22 +558,42 @@ void PerfScriptReader::updateBinaryAddress(const MMapEvent &Event) {
     return;
 
   // Drop the event if process does not match pid filter
-  if (PIDFilter && Event.PID != *PIDFilter)
+  if (!PIDFilter.empty() && !PIDFilter.contains(Event.PID))
     return;
 
+  // If no PID is in the profile's samples, we treat everything as the default
+  // PID value
+  int32_t LookupPID = MultiProcessProfile ? Event.PID : DefaultPID;
+
   // Drop the event if its image is loaded at the same address
-  if (Event.Address == Binary->getBaseAddress()) {
+  if (Event.Address == Binary->getBaseAddress(LookupPID)) {
     Binary->setIsLoadedByMMap(true);
     return;
   }
 
   if (IsKernel || Event.Offset == Binary->getTextSegmentOffset()) {
+    // Warn if multiple processes are presesnt without the relevant flag
+    std::optional<int32_t> LastSeenPID = Binary->getLastSeenPID();
+    if (!MultiProcessProfile && LastSeenPID.has_value() &&
+        LastSeenPID.value() != Event.PID) {
+      WithColor::warning() << "Binary previously loaded in process ID "
+                           << LastSeenPID.value() << " at "
+                           << format("0x%" PRIx64,
+                                     Binary->getBaseAddress(LookupPID))
+                           << " was reloaded in process ID " << Event.PID
+                           << " at " << format("0x%" PRIx64, Event.Address)
+                           << ". If profiling multiple processes running "
+                           << "concurrently, use --multi-process-profile to "
+                           << "prevent loss of samples.\n";
+    }
+    Binary->setLastSeenPID(Event.PID);
+
     // A binary image could be unloaded and then reloaded at different
     // place, so update binary load address.
     // Only update for the first executable segment and assume all other
     // segments are loaded at consecutive memory addresses, which is the case on
     // X64.
-    Binary->setBaseAddress(Event.Address);
+    Binary->setBaseAddress(LookupPID, Event.Address);
     Binary->setIsLoadedByMMap(true);
   } else {
     // Verify segments are loaded consecutively.
@@ -567,7 +604,7 @@ void PerfScriptReader::updateBinaryAddress(const MMapEvent &Event) {
       auto I = std::distance(Offsets.begin(), It);
       const auto &PreferredAddrs = Binary->getPreferredTextSegmentAddresses();
       if (PreferredAddrs[I] - Binary->getPreferredBaseAddress() !=
-          Event.Address - Binary->getBaseAddress())
+          Event.Address - Binary->getBaseAddress(LookupPID))
         exitWithError("Executable segments not loaded consecutively");
     } else {
       if (It == Offsets.begin())
@@ -577,7 +614,8 @@ void PerfScriptReader::updateBinaryAddress(const MMapEvent &Event) {
         // via multiple mmap calls with consecutive memory addresses.
         --It;
         assert(*It < Event.Offset);
-        if (Event.Offset - *It != Event.Address - Binary->getBaseAddress())
+        if (Event.Offset - *It !=
+            Event.Address - Binary->getBaseAddress(LookupPID))
           exitWithError("Segment not loaded by consecutive mmaps");
       }
     }
@@ -654,14 +692,15 @@ void HybridPerfReader::unwindSamples() {
                      "frame to match.");
 }
 
-bool PerfScriptReader::extractLBRStack(TraceStream &TraceIt,
+bool PerfScriptReader::extractLBRStack(std::optional<int32_t> PIDIfKnown,
+                                       TraceStream &TraceIt,
                                        SmallVectorImpl<LBREntry> &LBRStack) {
   // The raw format of LBR stack is like:
   // 0x4005c8/0x4005dc/P/-/-/0 0x40062f/0x4005b0/P/-/-/0 ...
   //                           ... 0x4005c8/0x4005dc/P/-/-/0
   // It's in FIFO order and separated by whitespace.
   SmallVector<StringRef, 32> Records;
-  TraceIt.getCurrentLine().rtrim().split(Records, " ", -1, false);
+  TraceIt.getCurrentLine().trim().split(Records, " ", -1, false);
   auto WarnInvalidLBR = [](TraceStream &TraceIt) {
     WithColor::warning() << "Invalid address in LBR record at line "
                          << TraceIt.getLineNumber() << ": "
@@ -670,14 +709,37 @@ bool PerfScriptReader::extractLBRStack(TraceStream &TraceIt,
 
   // Skip the leading instruction pointer.
   size_t Index = 0;
+  // Default to a default PID value if not provided
+  int32_t PID = DefaultPID;
   uint64_t LeadingAddr;
+
+  if (Records.size() < (MultiProcessProfile ? 2 : 1)) {
+    WarnInvalidLBR(TraceIt);
+    TraceIt.advance();
+    return false;
+  }
+
+  if (MultiProcessProfile) {
+    // If we read the PID elsewhere, use that instead of trying to read it here
+    if (PIDIfKnown.has_value()) {
+      PID = PIDIfKnown.value();
+    } else {
+      if (Records[Index].getAsInteger(10, PID)) {
+        WarnInvalidLBR(TraceIt);
+        TraceIt.advance();
+        return false;
+      }
+      Index++;
+    }
+  }
+
   if (!Records.empty() && !Records[0].contains('/')) {
-    if (Records[0].getAsInteger(16, LeadingAddr)) {
+    if (Records[Index].getAsInteger(16, LeadingAddr)) {
       WarnInvalidLBR(TraceIt);
       TraceIt.advance();
       return false;
     }
-    Index = 1;
+    Index++;
   }
 
   // Now extract LBR samples - note that we do not reverse the
@@ -701,8 +763,8 @@ bool PerfScriptReader::extractLBRStack(TraceStream &TraceIt,
     }
 
     // Canonicalize to use preferred load address as base address.
-    Src = Binary->canonicalizeVirtualAddress(Src);
-    Dst = Binary->canonicalizeVirtualAddress(Dst);
+    Src = Binary->canonicalizeVirtualAddress(PID, Src);
+    Dst = Binary->canonicalizeVirtualAddress(PID, Dst);
     bool SrcIsInternal = Binary->addressIsCode(Src);
     bool DstIsInternal = Binary->addressIsCode(Dst);
     if (!SrcIsInternal)
@@ -719,7 +781,7 @@ bool PerfScriptReader::extractLBRStack(TraceStream &TraceIt,
   return !LBRStack.empty();
 }
 
-bool PerfScriptReader::extractCallstack(TraceStream &TraceIt,
+bool PerfScriptReader::extractCallstack(int32_t PID, TraceStream &TraceIt,
                                         SmallVectorImpl<uint64_t> &CallStack) {
   // The raw format of call stack is like:
   //            4005dc      # leaf frame
@@ -739,7 +801,7 @@ bool PerfScriptReader::extractCallstack(TraceStream &TraceIt,
     }
     TraceIt.advance();
 
-    FrameAddr = Binary->canonicalizeVirtualAddress(FrameAddr);
+    FrameAddr = Binary->canonicalizeVirtualAddress(PID, FrameAddr);
     // Currently intermixed frame from different binaries is not supported.
     if (!Binary->addressIsCode(FrameAddr)) {
       if (CallStack.empty())
@@ -818,8 +880,24 @@ void HybridPerfReader::parseSample(TraceStream &TraceIt, uint64_t Count) {
 #ifndef NDEBUG
   Sample->Linenum = TraceIt.getLineNumber();
 #endif
+  // Default to a default PID value
+  int32_t PID = DefaultPID;
+  if (MultiProcessProfile) {
+    // Parse the PID at the beginning of the sample
+    StringRef FirstLine = TraceIt.getCurrentLine();
+    if (FirstLine.trim().getAsInteger(10, PID)) {
+      // If there's an error reading the PID, treat this line as not part of the
+      // sample
+      // While this should usually not happen in a real perf script, this allows
+      // us to use comments and empty lines in test cases
+      TraceIt.advance();
+      return;
+    }
+    TraceIt.advance();
+  }
+
   // Parsing call stack and populate into PerfSample.CallStack
-  if (!extractCallstack(TraceIt, Sample->CallStack)) {
+  if (!extractCallstack(PID, TraceIt, Sample->CallStack)) {
     // Skip the next LBR line matched current call stack
     if (!TraceIt.isAtEoF() && TraceIt.getCurrentLine().starts_with(" 0x"))
       TraceIt.advance();
@@ -830,7 +908,7 @@ void HybridPerfReader::parseSample(TraceStream &TraceIt, uint64_t Count) {
 
   if (!TraceIt.isAtEoF() && TraceIt.getCurrentLine().starts_with(" 0x")) {
     // Parsing LBR stack and populate into PerfSample.LBRStack
-    if (extractLBRStack(TraceIt, Sample->LBRStack)) {
+    if (extractLBRStack(PID, TraceIt, Sample->LBRStack)) {
       if (IgnoreStackSamples) {
         Sample->CallStack.clear();
       } else {
@@ -1022,7 +1100,7 @@ void PerfScriptReader::computeCounterFromLBR(const PerfSample *Sample,
 void LBRPerfReader::parseSample(TraceStream &TraceIt, uint64_t Count) {
   std::shared_ptr<PerfSample> Sample = std::make_shared<PerfSample>();
   // Parsing LBR stack and populate into PerfSample.LBRStack
-  if (extractLBRStack(TraceIt, Sample->LBRStack)) {
+  if (extractLBRStack(std::nullopt, TraceIt, Sample->LBRStack)) {
     warnIfMissingMMap();
     // Record LBR only samples by aggregation
     AggregatedSamples[Hashable<PerfSample>(Sample)] += Count;
@@ -1065,15 +1143,17 @@ bool PerfScriptReader::extractMMapEventForBinary(ProfiledBinary *Binary,
   // Parse a MMap2 line like:
   //  PERF_RECORD_MMAP2 2113428/2113428: [0x7fd4efb57000(0x204000) @ 0
   //  08:04 19532229 3585508847]: r-xp /usr/lib64/libdl-2.17.so
+  // It may be prefixed by a PID
   constexpr static const char *const MMap2Pattern =
-      "PERF_RECORD_MMAP2 (-?[0-9]+)/[0-9]+: "
+      " ?-?[0-9]* ?PERF_RECORD_MMAP2 (-?[0-9]+)/[0-9]+: "
       "\\[(0x[a-f0-9]+)\\((0x[a-f0-9]+)\\) @ "
       "(0x[a-f0-9]+|0) .*\\]: ([-a-z]+) (.*)";
   // Parse a MMap line like
   // PERF_RECORD_MMAP -1/0: [0xffffffff81e00000(0x3e8fa000) @ \
   //  0xffffffff81e00000]: x [kernel.kallsyms]_text
+  // It may be prefixed by a PID
   constexpr static const char *const MMapPattern =
-      "PERF_RECORD_MMAP (-?[0-9]+)/[0-9]+: "
+      " ?-?[0-9]* ?PERF_RECORD_MMAP (-?[0-9]+)/[0-9]+: "
       "\\[(0x[a-f0-9]+)\\((0x[a-f0-9]+)\\) @ "
       "(0x[a-f0-9]+|0)\\]: ([-a-z]+) (.*)";
   // Field 0 - whole line
@@ -1135,11 +1215,79 @@ void PerfScriptReader::parseMMapEvent(TraceStream &TraceIt) {
   TraceIt.advance();
 }
 
+void PerfScriptReader::parseForkEvent(TraceStream &TraceIt) {
+  // If multi process profile is not on, we treat everything as having the same
+  // PID anyway, so we don't care about forks
+  if (!MultiProcessProfile) {
+    TraceIt.advance();
+    return;
+  }
+
+  auto Line = TraceIt.getCurrentLine();
+
+  // e.g.
+  //  123456 PERF_RECORD_FORK(123457:123457):(123456:123456)
+  constexpr static const char *const ForkPattern =
+      " ?-?[0-9]* ?PERF_RECORD_FORK"
+      "\\((-?[0-9]+):(-?[0-9]+)\\):\\((-?[0-9]+):(-?[0-9]+)\\)";
+
+  enum EventIndex {
+    WHOLE_LINE = 0,
+    NEW_PID = 1,
+    NEW_TID = 2,
+    PARENT_PID = 3,
+    PARENT_TID = 4,
+  };
+
+  SmallVector<StringRef, 5> Fields;
+  Regex RegFork(ForkPattern);
+  bool R = RegFork.match(Line, &Fields);
+
+  if (!R) {
+    std::string WarningMsg = "Cannot parse fork event: " + Line.str() + " \n";
+    WithColor::warning() << WarningMsg;
+    TraceIt.advance();
+    return;
+  }
+
+  // We don't care about thread IDs
+  long long NewPID = 0;
+  long long ParentPID = 0;
+  getAsSignedInteger(Fields[NEW_PID], 10, NewPID);
+  getAsSignedInteger(Fields[PARENT_PID], 10, ParentPID);
+
+  if (ShowMmapEvents) {
+    outs() << "Fork: Process " << ParentPID << " created fork with ID "
+           << NewPID << " \n";
+  }
+
+  // Drop the event if process does not match pid filter
+  if (!PIDFilter.empty() && !PIDFilter.contains(NewPID)) {
+    TraceIt.advance();
+    return;
+  }
+
+  // If there was a base address entry for the old PID, copy it to the new PID
+  Binary->copyBaseAddress(ParentPID, NewPID);
+
+  TraceIt.advance();
+}
+
 void PerfScriptReader::parseEventOrSample(TraceStream &TraceIt) {
-  if (isMMapEvent(TraceIt.getCurrentLine()))
+  auto Line = TraceIt.getCurrentLine();
+
+  if (isMMapEvent(Line)) {
     parseMMapEvent(TraceIt);
-  else
+  } else if (isTaskEvent(Line)) {
+    // Only parse fork events, ignore other task events
+    if (isForkEvent(Line)) {
+      parseForkEvent(TraceIt);
+    } else {
+      TraceIt.advance();
+    }
+  } else {
     parseSample(TraceIt);
+  }
 }
 
 void PerfScriptReader::parseAndAggregateTrace() {
@@ -1152,15 +1300,35 @@ void PerfScriptReader::parseAndAggregateTrace() {
 // A LBR sample is like:
 // 40062f 0x5c6313f/0x5c63170/P/-/-/0  0x5c630e7/0x5c63130/P/-/-/0 ...
 // A heuristic for fast detection by checking whether a
-// leading "  0x" and the '/' exist.
+// leading "0x" and the '/' exist.
 bool PerfScriptReader::isLBRSample(StringRef Line) {
-  // Skip the leading instruction pointer
+  // Skip the leading instruction pointer, and maybe PID
+
   SmallVector<StringRef, 32> Records;
-  Line.trim().split(Records, " ", 2, false);
-  if (Records.size() < 2)
-    return false;
-  if (Records[1].starts_with("0x") && Records[1].contains('/'))
+
+  // Trim off the PID (and maybe part/all of the IP)
+  StringRef Trimmed = Line.ltrim().ltrim("0123456789").trim();
+
+  // Split by spaces, handling duplicate whitespace using ltrim
+  auto Temp = Trimmed.split(' ');
+  StringRef FirstPart = Temp.first.ltrim();
+  StringRef Next = Temp.second.ltrim();
+
+  // If we trimmed off the IP, or it's a hybrid profile, there could be a record
+  // at the start
+  // The 0 at the start of the 0x may have been removed
+  if ((FirstPart.starts_with("x") || FirstPart.starts_with("0x")) &&
+      FirstPart.contains('/'))
     return true;
+
+  // Get the next part split by whitespace
+  Temp = Next.split(' ');
+  StringRef SecondPart = Temp.first.ltrim();
+
+  // Otherwise it should be the second entry
+  if (SecondPart.starts_with("0x") && SecondPart.contains('/'))
+    return true;
+
   return false;
 }
 
@@ -1169,7 +1337,13 @@ bool PerfScriptReader::isMMapEvent(StringRef Line) {
   if (Line.empty() || Line.size() < 50)
     return false;
 
-  if (std::isdigit(Line[0]))
+  auto Trimmed = Line;
+  if (MultiProcessProfile)
+    // Trim off the first numeric field, which is the PID.
+    // Make sure not to trim other numeric fields.
+    Trimmed = Line.ltrim().ltrim("0123456789").ltrim();
+
+  if (Trimmed.empty() || std::isdigit(Trimmed[0]))
     return false;
 
   // PERF_RECORD_MMAP2 or PERF_RECORD_MMAP does not appear at the beginning of
@@ -1177,7 +1351,29 @@ bool PerfScriptReader::isMMapEvent(StringRef Line) {
   return Line.contains("PERF_RECORD_MMAP");
 }
 
-// The raw hybird sample is like
+bool PerfScriptReader::isTaskEvent(StringRef Line) {
+  if (Line.size() < 21)
+    return false;
+
+  // Event name should appear immediately after PID, so avoid searching the
+  // whole string
+  auto Sliced = Line.slice(0, 25);
+
+  if (!Sliced.contains("PERF_RECORD_"))
+    return false;
+  return Sliced.contains("PERF_RECORD_COMM") ||
+         Sliced.contains("PERF_RECORD_FORK") ||
+         Sliced.contains("PERF_RECORD_EXIT");
+}
+
+bool PerfScriptReader::isForkEvent(StringRef Line) {
+  if (Line.size() < 27 || Line.size() > 75)
+    return false;
+
+  return Line.slice(0, 25).contains("PERF_RECORD_FORK");
+}
+
+// The raw hybrid sample is like
 // e.g.
 // 	          4005dc    # call stack leaf
 //	          400634
