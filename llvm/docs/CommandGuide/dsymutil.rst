@@ -23,6 +23,12 @@ OPTIONS
  Specify the desired type of accelerator table. Valid options are 'Apple',
  'Dwarf', 'Default' and 'None'.
 
+.. option:: --allow <path>
+
+ Only process debug map objects listed in the YAML file at <path>. Only filters
+ N_OSO entries. If `--oso-prepend-path` is specified, the path prefix applies,
+ i.e. paths in the file should exact match that of N_OSO entries.
+
 .. option:: --arch <arch>
 
  Link DWARF debug information only for specified CPU architecture types.
@@ -52,6 +58,12 @@ OPTIONS
 .. option:: --cas-plugin-option <cas option>
 
  Specify the options to pass to CAS plugin dylib if needed.
+
+.. option:: --disallow <path>
+
+ Exclude debug map objects listed in the YAML file at <path>. Only filters
+ N_OSO entries. If `--oso-prepend-path` is specified, the path prefix applies,
+ i.e. paths in the file should exact match that of N_OSO entries.
 
 .. option:: --dump-debug-map
 
