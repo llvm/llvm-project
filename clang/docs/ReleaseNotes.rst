@@ -285,6 +285,10 @@ Improvements to Clang's diagnostics
 - ``-Wunsafe-buffer-usage`` now warns about unsafe two-parameter constructors of
   ``std::string_view`` (pointer and size), consistent with the existing warning for ``std::span``.
 
+- The warning about static local variables declared inside `inline` 
+  functions is now correctly converted to an error if `-pedantic-errors` is 
+  passed (#GH39524).
+
 Improvements to Clang's time-trace
 ----------------------------------
 
