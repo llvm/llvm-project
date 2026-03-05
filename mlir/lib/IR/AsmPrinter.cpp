@@ -175,8 +175,9 @@ struct AsmPrinterOptions {
       llvm::cl::desc("Print the generic op form"), llvm::cl::Hidden};
 
   llvm::cl::opt<bool> assumeVerifiedOpt{
-      "mlir-print-assume-verified", llvm::cl::init(false),
-      llvm::cl::desc("Skip op verification when using custom printers"),
+      "mlir-unsafe-print-assume-verified", llvm::cl::init(false),
+      llvm::cl::desc(
+          "Skip op verification when using custom printers; crashes expected."),
       llvm::cl::Hidden};
 
   llvm::cl::opt<bool> printLocalScopeOpt{

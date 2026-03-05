@@ -1102,8 +1102,6 @@ static void buildGenericRegion(
 
 void GenericOp::getAsmBlockArgumentNames(Region &region,
                                          OpAsmSetValueNameFn setNameFn) {
-  if (region.empty())
-    return;
   for (Value v : getRegionInputArgs())
     setNameFn(v, "in");
   for (Value v : getRegionOutputArgs())
@@ -1483,8 +1481,6 @@ static ParseResult parseDstStyleOp(
 
 void MapOp::getAsmBlockArgumentNames(Region &region,
                                      OpAsmSetValueNameFn setNameFn) {
-  if (region.empty())
-    return;
   for (Value v : getRegionInputArgs())
     setNameFn(v, "in");
   for (Value v : getRegionOutputArgs())
@@ -1742,8 +1738,6 @@ Speculation::Speculatability MapOp::getSpeculatability() {
 
 void ReduceOp::getAsmBlockArgumentNames(Region &region,
                                         OpAsmSetValueNameFn setNameFn) {
-  if (region.empty())
-    return;
   for (Value v : getRegionInputArgs())
     setNameFn(v, "in");
   for (Value v : getRegionOutputArgs())
