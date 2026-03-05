@@ -5247,10 +5247,11 @@ void OmpStructureChecker::CheckDefinableObjects(
   for (auto &[symbol, source] : symbols) {
     if (auto msg{WhyNotDefinable(source, context_.FindScope(source),
             DefinabilityFlags{}, *symbol)}) {
-      context_.Say(source,
-          "Variable '%s' on the %s clause is not definable"_err_en_US,
-          symbol->name(), parser::omp::GetUpperName(clause, version))
-      .Attach(std::move(msg->set_severity(parser::Severity::Because)));
+      context_
+          .Say(source,
+              "Variable '%s' on the %s clause is not definable"_err_en_US,
+              symbol->name(), parser::omp::GetUpperName(clause, version))
+          .Attach(std::move(msg->set_severity(parser::Severity::Because)));
     }
   }
 }
