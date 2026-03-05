@@ -703,12 +703,12 @@ private:
     /// Original instruction order (both debug and non-debug MIs).
     std::vector<MachineInstr *> OrigMIOrder;
     /// Maximum pressure recorded in the region.
-    GCNRegPressure MaxPressure;
+    GCNRegPressure MaxVirtPressure;
 
     RegionSchedRevert(unsigned RegionIdx, ArrayRef<MachineInstr *> OrigMIOrder,
-                      const GCNRegPressure &MaxPressure)
+                      const GCNRegPressure &MaxVirtPressure)
         : RegionIdx(RegionIdx), OrigMIOrder(OrigMIOrder),
-          MaxPressure(MaxPressure) {}
+          MaxVirtPressure(MaxVirtPressure) {}
   };
   /// After re-scheduling, contains pre-re-scheduling data for all re-scheduled
   /// regions.
