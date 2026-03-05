@@ -25,6 +25,7 @@ local:
   logical expression.
 * `!$acc routine` directive can be placed at the top level.
 * `!$acc cache` directive accepts scalar variable.
+* `!$acc cache` directive is accepted outside of a loop construct.
 * The `!$acc declare` directive accepts assumed size array arguments for
   `deviceptr` and `present` clauses.
 * The OpenACC specification disallows a variable appearing multiple times in

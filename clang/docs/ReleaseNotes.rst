@@ -282,6 +282,9 @@ Improvements to Clang's diagnostics
 - Clang now emits ``-Wsizeof-pointer-memaccess`` when snprintf/vsnprintf use the sizeof 
   the destination buffer(dynamically allocated) in the len parameter(#GH162366)
 
+- ``-Wunsafe-buffer-usage`` now warns about unsafe two-parameter constructors of
+  ``std::string_view`` (pointer and size), consistent with the existing warning for ``std::span``.
+
 Improvements to Clang's time-trace
 ----------------------------------
 
@@ -308,6 +311,7 @@ Bug Fixes in This Version
 - Fixed an assertion failure in the serialized diagnostic printer when it is destroyed without calling ``finish()``. (#GH140433)
 - Fixed an assertion failure caused by error recovery while extending a nested name specifier with results from ordinary lookup. (#GH181470)
 - Fixed a crash when parsing ``#pragma clang attribute`` arguments for attributes that forbid arguments. (#GH182122)
+- Fixed a bug with multiple-include optimization (MIOpt) state not being preserved in some cases during lexing, which could suppress header-guard mismatch diagnostics and interfere with include-guard optimization. (#GH180155)
 
 Bug Fixes to Compiler Builtins
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^

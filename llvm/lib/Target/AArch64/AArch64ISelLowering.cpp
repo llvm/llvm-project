@@ -6473,9 +6473,10 @@ SDValue AArch64TargetLowering::LowerINTRINSIC_WO_CHAIN(SDValue Op,
     EVT Ty = Op.getValueType();
     if (Ty == MVT::i64) {
       SDValue Result =
-          DAG.getNode(ISD::BITCAST, DL, MVT::v1i64, Op.getOperand(1));
+          DAG.getNode(ISD::SCALAR_TO_VECTOR, DL, MVT::v1i64, Op.getOperand(1));
       Result = DAG.getNode(ISD::ABS, DL, MVT::v1i64, Result);
-      return DAG.getNode(ISD::BITCAST, DL, MVT::i64, Result);
+      return DAG.getNode(ISD::EXTRACT_VECTOR_ELT, DL, MVT::i64, Result,
+                         DAG.getConstant(0, DL, MVT::i64));
     } else if (Ty.isVector() && Ty.isInteger() && isTypeLegal(Ty)) {
       return DAG.getNode(ISD::ABS, DL, Ty, Op.getOperand(1));
     } else {
@@ -6654,6 +6655,10 @@ SDValue AArch64TargetLowering::LowerINTRINSIC_WO_CHAIN(SDValue Op,
       return DAG.getNode(ISD::UADDSAT, DL, Op.getValueType(), Op.getOperand(1),
                          Op.getOperand(2));
     return lowerIntNeonIntrinsic(Op, AArch64ISD::UQADD, DAG);
+  case Intrinsic::aarch64_neon_suqadd:
+    return lowerIntNeonIntrinsic(Op, AArch64ISD::SUQADD, DAG);
+  case Intrinsic::aarch64_neon_usqadd:
+    return lowerIntNeonIntrinsic(Op, AArch64ISD::USQADD, DAG);
   case Intrinsic::aarch64_neon_uqsub:
     if (Op.getValueType().isVector())
       return DAG.getNode(ISD::USUBSAT, DL, Op.getValueType(), Op.getOperand(1),
@@ -6661,6 +6666,10 @@ SDValue AArch64TargetLowering::LowerINTRINSIC_WO_CHAIN(SDValue Op,
     return lowerIntNeonIntrinsic(Op, AArch64ISD::UQSUB, DAG);
   case Intrinsic::aarch64_neon_sqdmulls_scalar:
     return lowerIntNeonIntrinsic(Op, AArch64ISD::SQDMULL, DAG);
+  case Intrinsic::aarch64_neon_sqabs:
+    return lowerIntNeonIntrinsic(Op, AArch64ISD::SQABS, DAG);
+  case Intrinsic::aarch64_neon_sqneg:
+    return lowerIntNeonIntrinsic(Op, AArch64ISD::SQNEG, DAG);
   case Intrinsic::aarch64_sve_whilelt:
     return optimizeIncrementingWhile(Op.getNode(), DAG, /*IsSigned=*/true,
                                      /*IsEqual=*/false);
