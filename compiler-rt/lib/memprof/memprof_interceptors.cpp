@@ -63,9 +63,14 @@ DECLARE_REAL_AND_INTERCEPTOR(void, free, void *)
 #define COMMON_INTERCEPTOR_ENTER(ctx, func, ...)                               \
   MEMPROF_INTERCEPTOR_ENTER(ctx, func);                                        \
   do {                                                                         \
-    if (memprof_init_is_running)                                               \
-      return REAL(func)(__VA_ARGS__);                                          \
-    ENSURE_MEMPROF_INITED();                                                   \
+    if constexpr (SANITIZER_APPLE) {                                           \
+      if (UNLIKELY(!memprof_inited))                                           \
+        return REAL(func)(__VA_ARGS__);                                        \
+    } else {                                                                   \
+      if (memprof_init_is_running)                                             \
+        return REAL(func)(__VA_ARGS__);                                        \
+      ENSURE_MEMPROF_INITED();                                                 \
+    }                                                                          \
   } while (false)
 #define COMMON_INTERCEPTOR_DIR_ACQUIRE(ctx, path)                              \
   do {                                                                         \
@@ -168,8 +173,13 @@ INTERCEPTOR(int, pthread_join, void *t, void **arg) {
 
 DEFINE_INTERNAL_PTHREAD_FUNCTIONS
 
+#if SANITIZER_APPLE
+DECLARE_REAL(char *, index, const char *string, int c)
+OVERRIDE_FUNCTION(index, strchr);
+#else
 INTERCEPTOR(char *, index, const char *string, int c)
 ALIAS(WRAP(strchr));
+#endif
 
 // For both strcat() and strncat() we need to check the validity of |to|
 // argument irrespective of the |from| length.
@@ -201,8 +211,13 @@ INTERCEPTOR(char *, strncat, char *to, const char *from, usize size) {
 INTERCEPTOR(char *, strcpy, char *to, const char *from) {
   void *ctx;
   MEMPROF_INTERCEPTOR_ENTER(ctx, strcpy);
-  if (memprof_init_is_running) {
-    return REAL(strcpy)(to, from);
+  if constexpr (SANITIZER_APPLE) {
+    if (UNLIKELY(!memprof_inited))
+      return REAL(strcpy)(to, from);
+  } else {
+    if (memprof_init_is_running) {
+      return REAL(strcpy)(to, from);
+    }
   }
   ENSURE_MEMPROF_INITED();
   uptr from_size = internal_strlen(from) + 1;
@@ -225,6 +240,7 @@ INTERCEPTOR(char *, strdup, const char *s) {
   return reinterpret_cast<char *>(new_mem);
 }
 
+#if SANITIZER_LINUX
 INTERCEPTOR(char *, __strdup, const char *s) {
   void *ctx;
   MEMPROF_INTERCEPTOR_ENTER(ctx, strdup);
@@ -238,6 +254,7 @@ INTERCEPTOR(char *, __strdup, const char *s) {
   REAL(memcpy)(new_mem, s, length + 1);
   return reinterpret_cast<char *>(new_mem);
 }
+#endif // SANITIZER_LINUX
 
 INTERCEPTOR(char *, strncpy, char *to, const char *from, usize size) {
   void *ctx;
@@ -320,7 +337,9 @@ void InitializeMemprofInterceptors() {
   MEMPROF_INTERCEPT_FUNC(strncat);
   MEMPROF_INTERCEPT_FUNC(strncpy);
   MEMPROF_INTERCEPT_FUNC(strdup);
+#if SANITIZER_LINUX
   MEMPROF_INTERCEPT_FUNC(__strdup);
+#endif
   MEMPROF_INTERCEPT_FUNC(index);
 
   MEMPROF_INTERCEPT_FUNC(atoi);
