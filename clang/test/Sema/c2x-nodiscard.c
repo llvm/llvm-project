@@ -65,15 +65,31 @@ void GH104391() {
   M; // expected-warning {{ignoring return value of function declared with 'nodiscard' attribute}}
 }
 
+struct S4 get_s_ignored(void) __attribute__((candiscard));
+enum E2 get_e_ignored(void) __attribute__((candiscard));
+typedef __attribute__((candiscard)) enum E2 EIgnored;
+EIgnored get_e_ignored2();
+
+void f4(void) {
+  get_s_ignored();
+  get_e_ignored();
+  get_e_ignored2();
+}
+
 [[nodiscard]] typedef int NoDInt; // expected-warning {{'[[nodiscard]]' attribute ignored when applied to a typedef}}
 typedef __attribute__((warn_unused)) int WUInt; // expected-warning {{'warn_unused' attribute only applies to structs, unions, and classes}}
 typedef __attribute__((warn_unused_result)) int WURInt;
+typedef __attribute__((candiscard)) WURInt WURIntIgnored;
 NoDInt get_nodint();
 WUInt get_wuint();
 WURInt get_wurint();
+WURIntIgnored get_wurint_ignored();
+WURIntIgnored get_wurint_ignored2() __attribute__((candiscard));
 
-void f4(void) {
+void f5(void) {
   get_nodint(); // no warning because attribute is ignored
   get_wuint();  // no warning because attribute is ignored
   get_wurint(); // expected-warning {{ignoring return value of type 'WURInt' declared with 'warn_unused_result' attribute}}
+  get_wurint_ignored(); // no warning
+  get_wurint_ignored2(); // no warning
 }
