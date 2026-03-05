@@ -186,7 +186,6 @@ void WebAssemblyDAGToDAGISel::Select(SDNode *Node) {
   auto GlobalGetIns = PtrVT == MVT::i64 ? WebAssembly::GLOBAL_GET_I64
                                         : WebAssembly::GLOBAL_GET_I32;
 
-  // Few custom selection stuff.
   SDLoc DL(Node);
   MachineFunction &MF = CurDAG->getMachineFunction();
   switch (Node->getOpcode()) {
@@ -208,7 +207,7 @@ void WebAssemblyDAGToDAGISel::Select(SDNode *Node) {
       );
       break;
     case SyncScope::System: {
-      unsigned Order = 0;
+      unsigned Order = wasm::WASM_MEM_ORDER_SEQ_CST;
       if (MF.getSubtarget<WebAssemblySubtarget>().hasRelaxedAtomics()) {
         auto Ordering =
             static_cast<AtomicOrdering>(Node->getConstantOperandVal(1));
@@ -217,10 +216,10 @@ void WebAssemblyDAGToDAGISel::Select(SDNode *Node) {
         case AtomicOrdering::Release:
         case AtomicOrdering::AcquireRelease:
         case AtomicOrdering::Monotonic:
-          Order = 1; // acqrel
+          Order = wasm::WASM_MEM_ORDER_ACQ_REL;
           break;
         default:
-          Order = 0; // seqcst
+          Order = wasm::WASM_MEM_ORDER_SEQ_CST;
           break;
         }
       }

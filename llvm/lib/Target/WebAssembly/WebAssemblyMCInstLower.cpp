@@ -33,7 +33,6 @@
 #include "llvm/MC/MCExpr.h"
 #include "llvm/MC/MCInst.h"
 #include "llvm/MC/MCSymbolWasm.h"
-#include "llvm/Support/AtomicOrdering.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/raw_ostream.h"
 
@@ -213,15 +212,6 @@ void WebAssemblyMCInstLower::lower(const MachineInstr *MI,
     const MachineOperand &MO = MI->getOperand(I);
 
     MCOperand MCOp;
-
-    if (I < Desc.getNumOperands() &&
-        Desc.operands()[I].OperandType == WebAssembly::OPERAND_MEMORDER &&
-        !MI->memoperands_empty()) {
-      MCOp = MCOperand::createImm(MO.getImm());
-      OutMI.addOperand(MCOp);
-      continue;
-    }
-
     switch (MO.getType()) {
     default:
       MI->print(errs());
