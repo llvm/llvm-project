@@ -84,7 +84,7 @@ class TestComputeProjects(unittest.TestCase):
         )
         self.assertEqual(
             env_variables["projects_to_build"],
-            "clang;clang-tools-extra;flang;lld;lldb;llvm",
+            "clang;clang-tools-extra;lld;lldb;llvm",
         )
         self.assertEqual(
             env_variables["project_check_targets"],
