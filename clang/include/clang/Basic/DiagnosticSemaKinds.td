@@ -14600,7 +14600,8 @@ def note_unsafe_buffer_variable_fixit_together : Note<
 def note_safe_buffer_usage_suggestions_disabled : Note<
   "pass -fsafe-buffer-usage-suggestions to receive code hardening suggestions">;
 def warn_unsafe_buffer_usage_in_container : Warning<
-  "the two-parameter std::span construction is unsafe as it can introduce mismatch between buffer size and the bound information">,
+  "the two-parameter %0 construction is unsafe as it can introduce mismatch "
+  "between buffer size and the bound information">,
   InGroup<UnsafeBufferUsageInContainer>, DefaultIgnore;
 def warn_unsafe_count_attributed_pointer_argument : Warning<
   "unsafe assignment to function parameter of count-attributed type">,
@@ -14620,6 +14621,9 @@ def warn_unsafe_single_pointer_argument : Warning<
 def warn_unsafe_single_pointer_assignment : Warning<
   "unsafe assignment to __single pointer type">,
   InGroup<UnsafeBufferUsage>, DefaultIgnore;
+def warn_unsafe_buffer_usage_in_string_view : Warning<
+  "the two-parameter std::string_view construction is unsafe">,
+  InGroup<UnsafeBufferUsageInStringView>, DefaultIgnore;
 def warn_unsafe_buffer_usage_unique_ptr_array_access : Warning<"direct access using operator[] on std::unique_ptr<T[]> is unsafe due to lack of bounds checking">,
   InGroup<UnsafeBufferUsageInUniquePtrArrayAccess>, DefaultIgnore;
 def warn_unsafe_buffer_usage_in_static_sized_array : Warning<"direct access on T[N] is unsafe due to the lack of bounds checking">,
