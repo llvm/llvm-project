@@ -94,7 +94,7 @@ smulh x0, x0, x0
 # CHECK:      Dispatch Width:    3
 # CHECK-NEXT: uOps Per Cycle:    0.29
 # CHECK-NEXT: IPC:               0.29
-# CHECK-NEXT: Block RThroughput: 4.0
+# CHECK-NEXT: Block RThroughput: 12.0
 
 # CHECK:      Timeline view:
 # CHECK-NEXT:                     0123456789          0
@@ -176,7 +176,7 @@ smulh x0, x0, x0
 # CHECK:      Dispatch Width:    3
 # CHECK-NEXT: uOps Per Cycle:    0.50
 # CHECK-NEXT: IPC:               0.50
-# CHECK-NEXT: Block RThroughput: 4.0
+# CHECK-NEXT: Block RThroughput: 6.0
 
 # CHECK:      Timeline view:
 # CHECK-NEXT:                     012345678
@@ -492,7 +492,7 @@ smulh x0, x0, x0
 # CHECK:      Dispatch Width:    3
 # CHECK-NEXT: uOps Per Cycle:    0.21
 # CHECK-NEXT: IPC:               0.21
-# CHECK-NEXT: Block RThroughput: 4.0
+# CHECK-NEXT: Block RThroughput: 15.0
 
 # CHECK:      Timeline view:
 # CHECK-NEXT:                     0123456789          0123456789
