@@ -177,7 +177,8 @@ static DiagnosedSilenceableFailure reifyMixedParamAndHandleResults(
       reified.push_back(cast<IntegerAttr>(attr).getInt());
       continue;
     }
-    if (isa<ParamType>(cast<Value>(paramOrHandle).getType())) {
+    if (isa<TransformParamTypeInterface>(
+            cast<Value>(paramOrHandle).getType())) {
       ArrayRef<Attribute> params = state.getParams(cast<Value>(paramOrHandle));
       if (params.size() != 1)
         return transformOp.emitSilenceableError() << "expected a single param";
@@ -269,6 +270,26 @@ void transform::ApplyFoldIntoPackAndUnpackPatternsOp::populatePatterns(
 void transform::ApplyFoldPackUnpackIntoEmptyPatternsOp::populatePatterns(
     RewritePatternSet &patterns) {
   linalg::populateFoldPackUnpackIntoTensorEmptyPatterns(patterns);
+}
+
+void transform::ApplyDataLayoutPropagationPatternsOp::populatePatterns(
+    RewritePatternSet &patterns) {
+  linalg::ControlPropagationFn defaultControlFn = [](OpOperand *operand) {
+    return true;
+  };
+  linalg::populateDataLayoutPropagationPatterns(patterns, defaultControlFn,
+                                                getPoisonPadding());
+}
+
+void transform::ApplyExtractSliceSinkingPatternsOp::populatePatterns(
+    RewritePatternSet &patterns) {
+  linalg::ControlPropagationFn defaultControlFn =
+      [](OpOperand *opOperand) -> bool {
+    Operation *producer = opOperand->get().getDefiningOp();
+    Operation *consumer = opOperand->getOwner();
+    return consumer->getBlock() == producer->getBlock();
+  };
+  linalg::populateExtractSliceSinkingPatterns(patterns, defaultControlFn);
 }
 
 //===----------------------------------------------------------------------===//
@@ -1555,6 +1576,7 @@ DiagnosedSilenceableFailure transform::LowerUnPackOp::applyToOne(
   transformResults.push_back(res->transposeOp);
   transformResults.push_back(res->collapseShapeOp);
   transformResults.push_back(res->extractSliceOp);
+  transformResults.push_back(res->copyOp);
   return DiagnosedSilenceableFailure::success();
 }
 
@@ -3190,9 +3212,9 @@ DiagnosedSilenceableFailure transform::TileReductionUsingForOp::applyToOne(
   rewriter.replaceOp(target, result->replacements);
   for (Value initValue : result->initialValues)
     results.push_back(initValue.getDefiningOp());
-  for (auto parallelTiledOp : result->tiledOps)
+  for (auto *parallelTiledOp : result->tiledOps)
     results.push_back(parallelTiledOp);
-  for (auto mergeOp : result->mergeOps)
+  for (auto *mergeOp : result->mergeOps)
     results.push_back(mergeOp);
   results.push_back(result->loops.front());
   return DiagnosedSilenceableFailure::success();
@@ -3274,9 +3296,9 @@ DiagnosedSilenceableFailure transform::TileReductionUsingForallOp::applyToOne(
 
   for (Value initValue : result->initialValues)
     results.push_back(initValue.getDefiningOp());
-  for (auto parallelTiledOp : result->tiledOps)
+  for (auto *parallelTiledOp : result->tiledOps)
     results.push_back(parallelTiledOp);
-  for (auto mergeOp : result->mergeOps)
+  for (auto *mergeOp : result->mergeOps)
     results.push_back(mergeOp);
   results.push_back(result->loops.front());
   return DiagnosedSilenceableFailure::success();
@@ -3526,7 +3548,7 @@ transform::TileUsingForOp::apply(transform::TransformRewriter &rewriter,
   dynamicSizeProducers.reserve(getDynamicSizes().size());
   paramSizes.reserve(getDynamicSizes().size());
   for (Value transformValue : getDynamicSizes()) {
-    if (isa<ParamType>(transformValue.getType())) {
+    if (isa<TransformParamTypeInterface>(transformValue.getType())) {
       dynamicSizeProducers.push_back({});
       ArrayRef<Attribute> params = state.getParams(transformValue);
       paramSizes.push_back(llvm::map_to_vector(params, [](Attribute attr) {
@@ -4447,7 +4469,7 @@ DiagnosedSilenceableFailure transform::MapCopyToThreadsOp::applyToOne(
     return diag;
 
   results.push_back(tilingResult.loops.front());
-  for (auto op : tilingResult.tiledOps)
+  for (auto *op : tilingResult.tiledOps)
     results.push_back(op);
   return DiagnosedSilenceableFailure::success();
 }

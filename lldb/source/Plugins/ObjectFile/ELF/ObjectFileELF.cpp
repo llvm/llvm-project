@@ -1934,18 +1934,6 @@ SectionType ObjectFileELF::GetSectionType(const ELFSectionHeaderInfo &H) const {
   return GetSectionTypeFromName(H.section_name.GetStringRef());
 }
 
-static uint32_t GetTargetByteSize(SectionType Type, const ArchSpec &arch) {
-  switch (Type) {
-  case eSectionTypeData:
-  case eSectionTypeZeroFill:
-    return arch.GetDataByteSize();
-  case eSectionTypeCode:
-    return arch.GetCodeByteSize();
-  default:
-    return 1;
-  }
-}
-
 static Permissions GetPermissions(const ELFSectionHeader &H) {
   Permissions Perm = Permissions(0);
   if (H.sh_flags & SHF_ALLOC)
@@ -2161,9 +2149,6 @@ void ObjectFileELF::CreateSections(SectionList &unified_section_list) {
 
     SectionType sect_type = GetSectionType(header);
 
-    const uint32_t target_bytes_size =
-        GetTargetByteSize(sect_type, m_arch_spec);
-
     elf::elf_xword log2align =
         (header.sh_addralign == 0) ? 0 : llvm::Log2_64(header.sh_addralign);
 
@@ -2177,10 +2162,9 @@ void ObjectFileELF::CreateSections(SectionList &unified_section_list) {
         InfoOr->Range.GetRangeBase(), // VM address.
         InfoOr->Range.GetByteSize(),  // VM size in bytes of this section.
         header.sh_offset,             // Offset of this section in the file.
-        file_size,           // Size of the section as found in the file.
-        log2align,           // Alignment of the section
-        header.sh_flags,     // Flags for this section.
-        target_bytes_size)); // Number of host bytes per target byte
+        file_size,         // Size of the section as found in the file.
+        log2align,         // Alignment of the section
+        header.sh_flags)); // Flags for this section.
 
     section_sp->SetPermissions(GetPermissions(header));
     section_sp->SetIsThreadSpecific(header.sh_flags & SHF_TLS);
@@ -2450,7 +2434,11 @@ ObjectFileELF::ParseSymbols(Symtab *symtab, user_id_t start_id,
                    sect_name == rodata1_section_name ||
                    sect_name == bss_section_name) {
           symbol_type = eSymbolTypeData;
-        }
+        } else if (symbol_section_sp->Get() & SHF_ALLOC)
+          // Check for symbols from custom sections (e.g. added by linker
+          // scripts) with SHF_ALLOC (i.e. occupies memory during process
+          // execution) in their flags.
+          symbol_type = eSymbolTypeData;
       }
     }
 

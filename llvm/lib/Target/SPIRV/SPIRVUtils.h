@@ -25,6 +25,8 @@
 #include <unordered_map>
 #include <unordered_set>
 
+#include "SPIRVTypeInst.h"
+
 namespace llvm {
 class MCInst;
 class MachineFunction;
@@ -585,5 +587,6 @@ getFirstValidInstructionInsertPoint(MachineBasicBlock &BB);
 
 std::optional<SPIRV::LinkageType::LinkageType>
 getSpirvLinkageTypeFor(const SPIRVSubtarget &ST, const GlobalValue &GV);
+Function *getOrCreateBackendServiceFunction(Module &M);
 } // namespace llvm
 #endif // LLVM_LIB_TARGET_SPIRV_SPIRVUTILS_H

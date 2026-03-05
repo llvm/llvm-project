@@ -2844,7 +2844,8 @@ def OpenACC_LoopOp
 // Yield operation for the acc.loop and acc.parallel operations.
 def OpenACC_YieldOp : OpenACC_Op<"yield", [Pure, ReturnLike, Terminator,
     ParentOneOf<["FirstprivateRecipeOp, LoopOp, ParallelOp, PrivateRecipeOp,"
-                 "ReductionRecipeOp, SerialOp, AtomicUpdateOp"]>]> {
+                 "ReductionRecipeOp, ReductionInitOp, ReductionCombineRegionOp,"
+                 "SerialOp, AtomicUpdateOp"]>]> {
   let summary = "Acc yield and termination operation";
 
   let description = [{
@@ -3640,6 +3641,7 @@ def OpenACC_WaitOp : OpenACC_Op<"wait", [AttrSizedOperandSegments]> {
   let hasVerifier = 1;
 }
 
+include "mlir/Dialect/OpenACC/OpenACCCGAttributes.td"
 include "mlir/Dialect/OpenACC/OpenACCCGOps.td"
 
 #endif // OPENACC_OPS

@@ -1423,7 +1423,7 @@ LogicalResult MmaSpOp::verify() {
     case MMATypes::e3m2:
     case MMATypes::e2m3:
     case MMATypes::e2m1:
-      kFactor = 32;
+      kFactor = 16;
       multiplicandFragType = i32Ty;
       expectedResult.push_back(f16x2x2StructTy);
       expectedResult.push_back(f32x4StructTy);
@@ -1917,7 +1917,8 @@ LogicalResult MmaBlockScaleOp::verify() {
       if (!((getScaleVecSize() == NVVM::ScaleVecSize::X2 &&
              getBlockScaleFormat() == NVVM::BlockScaleFormat::UE8M0) ||
             (getScaleVecSize() == NVVM::ScaleVecSize::X4 &&
-             getBlockScaleFormat() == NVVM::BlockScaleFormat::UE4M3)))
+             (getBlockScaleFormat() == NVVM::BlockScaleFormat::UE4M3 ||
+              getBlockScaleFormat() == NVVM::BlockScaleFormat::UE8M0))))
         result = emitOpError("unsupported ScaleVecSize and BlockScaleFormat "
                              "attributes for mma.m16n8k64.mxf4nvf4");
     } else {
@@ -2185,7 +2186,8 @@ LogicalResult MmaSpBlockScaleOp::verify() {
       if (!((getScaleVecSize() == NVVM::ScaleVecSize::X2 &&
              getBlockScaleFormat() == NVVM::BlockScaleFormat::UE8M0) ||
             (getScaleVecSize() == NVVM::ScaleVecSize::X4 &&
-             getBlockScaleFormat() == NVVM::BlockScaleFormat::UE4M3)))
+             (getBlockScaleFormat() == NVVM::BlockScaleFormat::UE4M3 ||
+              getBlockScaleFormat() == NVVM::BlockScaleFormat::UE8M0))))
         result = emitOpError("unsupported ScaleVecSize and BlockScaleFormat "
                              "attributes for mma.m16n8k128.mxf4nvf4");
     } else {
@@ -2731,18 +2733,7 @@ bool NVVM::WgmmaMmaAsyncOp::getAsmValues(
   return true; // Has manual mapping
 }
 
-LogicalResult NVVM::FenceSyncRestrictOp::verify() {
-  if (getOrder() != NVVM::MemOrderKind::ACQUIRE &&
-      getOrder() != NVVM::MemOrderKind::RELEASE)
-    return emitOpError("only acquire and release semantics are supported");
-  return success();
-}
-
 LogicalResult NVVM::FenceProxyOp::verify() {
-  if (getKind() == NVVM::ProxyKind::TENSORMAP)
-    return emitOpError() << "tensormap proxy is not a supported proxy kind";
-  if (getKind() == NVVM::ProxyKind::GENERIC)
-    return emitOpError() << "generic proxy not a supported proxy kind";
   if (getKind() == NVVM::ProxyKind::async_shared && !getSpace().has_value()) {
     return emitOpError() << "async_shared fence requires space attribute";
   }
@@ -2775,10 +2766,6 @@ LogicalResult NVVM::FenceProxyReleaseOp::verify() {
 }
 
 LogicalResult NVVM::FenceProxySyncRestrictOp::verify() {
-  if (getOrder() != NVVM::MemOrderKind::ACQUIRE &&
-      getOrder() != NVVM::MemOrderKind::RELEASE)
-    return emitOpError("only acquire and release semantics are supported");
-
   if (getFromProxy() != NVVM::ProxyKind::GENERIC)
     return emitOpError("only generic is support for from_proxy attribute");
 
@@ -5253,7 +5240,7 @@ mlir::NVVM::IDArgPair Tcgen05MMABlockScaleOp::getIntrinsicIDAndArgs(
   auto kind = thisOp.getKind();
   auto blockScale = thisOp.getBlockScale();
   llvm::Intrinsic::ID ID = [&]() {
-    if (kind == NVVM::MMABlockScaleKind::MXF8F6F4) {
+    if (kind == NVVM::Tcgen05MMAKind::MXF8F6F4) {
       if (blockScale == NVVM::Tcgen05MMABlockScale::DEFAULT) {
         return isATensor ? llvm::Intrinsic::
                                nvvm_tcgen05_mma_tensor_mxf8f6f4_block_scale
@@ -5266,7 +5253,7 @@ mlir::NVVM::IDArgPair Tcgen05MMABlockScaleOp::getIntrinsicIDAndArgs(
                    : llvm::Intrinsic::
                          nvvm_tcgen05_mma_shared_mxf8f6f4_block_scale_block32;
       }
-    } else if (kind == NVVM::MMABlockScaleKind::MXF4) {
+    } else if (kind == NVVM::Tcgen05MMAKind::MXF4) {
       if (blockScale == NVVM::Tcgen05MMABlockScale::DEFAULT) {
         return isATensor
                    ? llvm::Intrinsic::nvvm_tcgen05_mma_tensor_mxf4_block_scale
@@ -5277,7 +5264,7 @@ mlir::NVVM::IDArgPair Tcgen05MMABlockScaleOp::getIntrinsicIDAndArgs(
                          : llvm::Intrinsic::
                                nvvm_tcgen05_mma_shared_mxf4_block_scale_block32;
       }
-    } else if (kind == NVVM::MMABlockScaleKind::MXF4NVF4) {
+    } else if (kind == NVVM::Tcgen05MMAKind::MXF4NVF4) {
       if (blockScale == NVVM::Tcgen05MMABlockScale::BLOCK32) {
         return isATensor
                    ? llvm::Intrinsic::
@@ -5300,15 +5287,14 @@ mlir::NVVM::IDArgPair Tcgen05MMABlockScaleOp::getIntrinsicIDAndArgs(
 }
 
 static LogicalResult verifyTcgen05MMABlockScaleOp(
-    NVVM::Tcgen05MMACollectorOp collectorOp, NVVM::MMABlockScaleKind kind,
+    NVVM::Tcgen05MMACollectorOp collectorOp, NVVM::Tcgen05MMAKind kind,
     NVVM::Tcgen05MMABlockScale blockScale, Location loc) {
-
   if (blockScale == NVVM::Tcgen05MMABlockScale::DEFAULT &&
-      kind == MMABlockScaleKind::MXF4NVF4)
+      kind == NVVM::Tcgen05MMAKind::MXF4NVF4)
     return emitError(loc, "mxf4nvf4 requires block scale attribute");
 
   if (blockScale == NVVM::Tcgen05MMABlockScale::BLOCK16 &&
-      kind != MMABlockScaleKind::MXF4NVF4)
+      kind != NVVM::Tcgen05MMAKind::MXF4NVF4)
     return emitError(loc,
                      llvm::formatv("{} kind does not support block16 attribute",
                                    stringifyEnum(kind)));
@@ -5351,7 +5337,7 @@ mlir::NVVM::IDArgPair Tcgen05MMASparseBlockScaleOp::getIntrinsicIDAndArgs(
   auto kind = thisOp.getKind();
   auto blockScale = thisOp.getBlockScale();
   llvm::Intrinsic::ID ID = [&]() {
-    if (kind == NVVM::MMABlockScaleKind::MXF8F6F4) {
+    if (kind == NVVM::Tcgen05MMAKind::MXF8F6F4) {
       if (blockScale == NVVM::Tcgen05MMABlockScale::DEFAULT) {
         return isATensor ? llvm::Intrinsic::
                                nvvm_tcgen05_mma_sp_tensor_mxf8f6f4_block_scale
@@ -5364,7 +5350,7 @@ mlir::NVVM::IDArgPair Tcgen05MMASparseBlockScaleOp::getIntrinsicIDAndArgs(
                    : llvm::Intrinsic::
                          nvvm_tcgen05_mma_sp_shared_mxf8f6f4_block_scale_block32;
       }
-    } else if (kind == NVVM::MMABlockScaleKind::MXF4) {
+    } else if (kind == NVVM::Tcgen05MMAKind::MXF4) {
       if (blockScale == NVVM::Tcgen05MMABlockScale::DEFAULT) {
         return isATensor ? llvm::Intrinsic::
                                nvvm_tcgen05_mma_sp_tensor_mxf4_block_scale
@@ -5377,7 +5363,7 @@ mlir::NVVM::IDArgPair Tcgen05MMASparseBlockScaleOp::getIntrinsicIDAndArgs(
                    : llvm::Intrinsic::
                          nvvm_tcgen05_mma_sp_shared_mxf4_block_scale_block32;
       }
-    } else if (kind == NVVM::MMABlockScaleKind::MXF4NVF4) {
+    } else if (kind == NVVM::Tcgen05MMAKind::MXF4NVF4) {
       if (blockScale == NVVM::Tcgen05MMABlockScale::BLOCK32) {
         return isATensor
                    ? llvm::Intrinsic::

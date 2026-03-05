@@ -2028,10 +2028,10 @@ public:
   /// Vectorize the tree but with the list of externally used values \p
   /// ExternallyUsedValues. Values in this MapVector can be replaced but the
   /// generated extractvalue instructions.
-  Value *vectorizeTree(
-      const ExtraValueToDebugLocsMap &ExternallyUsedValues,
-      Instruction *ReductionRoot = nullptr,
-      ArrayRef<std::tuple<Value *, unsigned, bool>> VectorValuesAndScales = {});
+  Value *vectorizeTree(const ExtraValueToDebugLocsMap &ExternallyUsedValues,
+                       Instruction *ReductionRoot = nullptr,
+                       ArrayRef<std::tuple<Value *, unsigned, bool, bool>>
+                           VectorValuesAndScales = {});
 
   /// \returns the cost incurred by unwanted spills and fills, caused by
   /// holding live values over call sites.
@@ -3584,7 +3584,8 @@ public:
   template <typename T>
   void removeInstructionsAndOperands(
       ArrayRef<T *> DeadVals,
-      ArrayRef<std::tuple<Value *, unsigned, bool>> VectorValuesAndScales) {
+      ArrayRef<std::tuple<Value *, unsigned, bool, bool>>
+          VectorValuesAndScales) {
     SmallVector<WeakTrackingVH> DeadInsts;
     for (T *V : DeadVals) {
       auto *I = cast<Instruction>(V);
@@ -3652,7 +3653,7 @@ public:
           if (!DeletedInstructions.contains(OpI) &&
               (!OpI->getType()->isVectorTy() ||
                none_of(VectorValuesAndScales,
-                       [&](const std::tuple<Value *, unsigned, bool> &V) {
+                       [&](const std::tuple<Value *, unsigned, bool, bool> &V) {
                          return std::get<0>(V) == OpI;
                        })) &&
               isInstructionTriviallyDead(OpI, TLI))
@@ -10612,6 +10613,23 @@ BoUpSLP::TreeEntry::EntryState BoUpSLP::getScalarsVectorizationState(
     return TreeEntry::Vectorize;
   }
   case Instruction::Select:
+    if (SLPReVec) {
+      SmallPtrSet<Type *, 4> CondTypes;
+      for (Value *V : VL) {
+        Value *Cond;
+        if (!match(V, m_Select(m_Value(Cond), m_Value(), m_Value())) &&
+            !match(V, m_ZExt(m_Value(Cond))))
+          continue;
+        CondTypes.insert(Cond->getType());
+      }
+      if (CondTypes.size() > 1) {
+        LLVM_DEBUG(
+            dbgs()
+            << "SLP: Gathering select with different condition types.\n");
+        return TreeEntry::NeedToGather;
+      }
+    }
+    [[fallthrough]];
   case Instruction::FNeg:
   case Instruction::Add:
   case Instruction::FAdd:
@@ -11620,15 +11638,16 @@ public:
     // Check profitability if number of copyables > VL.size() / 2.
     // 1. Reorder operands for better matching.
     if (isCommutative(MainOp)) {
-      for (auto &Ops : Operands) {
+      for (auto [OpL, OpR] : zip(Operands.front(), Operands.back())) {
         // Make instructions the first operands.
-        if (!isa<Instruction>(Ops.front()) && isa<Instruction>(Ops.back())) {
-          std::swap(Ops.front(), Ops.back());
+        if (!isa<Instruction>(OpL) && isa<Instruction>(OpR)) {
+          std::swap(OpL, OpR);
           continue;
         }
         // Make constants the second operands.
-        if (isa<Constant>(Ops.front())) {
-          std::swap(Ops.front(), Ops.back());
+        if ((isa<Constant>(OpL) && !match(OpR, m_Zero())) ||
+            match(OpL, m_Zero())) {
+          std::swap(OpL, OpR);
           continue;
         }
       }
@@ -13419,6 +13438,8 @@ bool BoUpSLP::matchesShlZExt(const TreeEntry &TE, OrdersType &Order,
   } else {
     const unsigned VF = RhsTE->getVectorFactor();
     Order.assign(VF, VF);
+    // Track which logical positions we've seen; reject duplicate shift amounts.
+    SmallBitVector SeenPositions(VF);
     // Check if need to reorder Rhs to make it in form (0, Stride, 2 * Stride,
     // ..., Sz-Stride).
     if (VF * Stride != Sz)
@@ -13436,6 +13457,9 @@ bool BoUpSLP::matchesShlZExt(const TreeEntry &TE, OrdersType &Order,
       // TODO: Support Pos >= VF, in this case need to shift the final value.
       if (Order[Idx] != VF || Pos >= VF)
         return false;
+      if (SeenPositions.test(Pos))
+        return false;
+      SeenPositions.set(Pos);
       Order[Idx] = Pos;
     }
     // One of the indices not set - exit.
@@ -13540,9 +13564,11 @@ bool BoUpSLP::matchesInversedZExtSelect(
   const auto *Op2TE = getOperandEntry(&SelectTE, 2);
   // Compares must be alternate vectorized, and other operands must be gathers
   // or copyables.
+  // TODO: investigate opportunity for reordered/reused nodes.
   if (CmpTE->State != TreeEntry::Vectorize || !CmpTE->isAltShuffle() ||
       (CmpTE->getOpcode() != Instruction::ICmp &&
        CmpTE->getOpcode() != Instruction::FCmp) ||
+      !CmpTE->ReorderIndices.empty() || !CmpTE->ReuseShuffleIndices.empty() ||
       !Op1TE->ReorderIndices.empty() || !Op1TE->ReuseShuffleIndices.empty() ||
       !Op2TE->ReorderIndices.empty() || !Op2TE->ReuseShuffleIndices.empty())
     return false;
@@ -13565,10 +13591,33 @@ bool BoUpSLP::matchesInversedZExtSelect(
       continue;
     if (!CmpPredicate::getMatching(InversedPred, Pred))
       return false;
+    if (!V->hasOneUse())
+      return false;
     InversedCmpsIndices.push_back(Idx);
   }
 
-  return !InversedCmpsIndices.empty();
+  if (InversedCmpsIndices.empty())
+    return false;
+  VectorType *VecTy =
+      getWidenedType(Cmp->getOperand(0)->getType(), CmpTE->getVectorFactor());
+  Type *CmpTy = CmpInst::makeCmpResultType(VecTy);
+
+  constexpr TTI::TargetCostKind CostKind = TTI::TCK_RecipThroughput;
+  InstructionCost VecCost =
+      TTI->getCmpSelInstrCost(CmpTE->getOpcode(), VecTy, CmpTy, MainPred,
+                              CostKind, getOperandInfo(CmpTE->getOperand(0)),
+                              getOperandInfo(CmpTE->getOperand(1)));
+  InstructionCost BVCost =
+      ::getScalarizationOverhead(*TTI, Cmp->getType(), cast<VectorType>(CmpTy),
+                                 APInt::getAllOnes(CmpTE->getVectorFactor()),
+                                 /*Insert=*/true, /*Extract=*/false, CostKind);
+  for (Value *V : CmpTE->Scalars) {
+    auto *I = dyn_cast<Instruction>(V);
+    if (!I)
+      continue;
+    BVCost += TTI->getInstructionCost(I, CostKind);
+  }
+  return VecCost < BVCost;
 }
 
 bool BoUpSLP::matchesSelectOfBits(const TreeEntry &SelectTE) const {
@@ -13579,6 +13628,8 @@ bool BoUpSLP::matchesSelectOfBits(const TreeEntry &SelectTE) const {
   if (!SelectTE.ReorderIndices.empty() || !SelectTE.ReuseShuffleIndices.empty())
     return false;
   if (!UserIgnoreList)
+    return false;
+  if (any_of(SelectTE.Scalars, [](Value *V) { return !V->hasOneUse(); }))
     return false;
   // Check that all reduction operands are or instructions.
   if (any_of(*UserIgnoreList,
@@ -17172,6 +17223,20 @@ InstructionCost BoUpSLP::calculateTreeCostAndTrimNonProfitable(
            ArrayRef<TreeEntry *> Entries = getSplitTreeEntries(V);
            return Entries.size() > 1;
          }))) {
+      Worklist.pop();
+      continue;
+    }
+    // Skip inversed compare nodes, they cannot be transformed to buildvectors.
+    if (TE->State == TreeEntry::Vectorize && !TE->isAltShuffle() &&
+        (TE->getOpcode() == Instruction::ICmp ||
+         TE->getOpcode() == Instruction::FCmp) &&
+        any_of(TE->Scalars, [&](Value *V) {
+          auto *I = dyn_cast<CmpInst>(V);
+          if (!I)
+            return false;
+          return I->getPredicate() !=
+                 cast<CmpInst>(TE->getMainOp())->getPredicate();
+        })) {
       Worklist.pop();
       continue;
     }
@@ -21645,7 +21710,7 @@ Value *BoUpSLP::vectorizeTree() {
 Value *BoUpSLP::vectorizeTree(
     const ExtraValueToDebugLocsMap &ExternallyUsedValues,
     Instruction *ReductionRoot,
-    ArrayRef<std::tuple<Value *, unsigned, bool>> VectorValuesAndScales) {
+    ArrayRef<std::tuple<Value *, unsigned, bool, bool>> VectorValuesAndScales) {
   // Clean Entry-to-LastInstruction table. It can be affected after scheduling,
   // need to rebuild it.
   EntryToLastInstruction.clear();
@@ -21733,6 +21798,7 @@ Value *BoUpSLP::vectorizeTree(
     // to adjust insertion point again to the end of block.
     if (isa<PHINode>(UserI) ||
         (TE->UserTreeIndex.UserTE->hasState() &&
+         TE->UserTreeIndex.UserTE->State != TreeEntry::SplitVectorize &&
          TE->UserTreeIndex.UserTE->getOpcode() == Instruction::PHI)) {
       // Insert before all users.
       Instruction *InsertPt = PrevVec->getParent()->getTerminator();
@@ -23416,13 +23482,13 @@ void BoUpSLP::scheduleBlock(const BoUpSLP &R, BlockScheduling *BS) {
               doesNotNeedToBeScheduled(I)) &&
              "scheduler and vectorizer bundle mismatch");
       SD->setSchedulingPriority(Idx++);
-      if (!SD->hasValidDependencies() &&
-          (!CopyableData.empty() ||
-           any_of(R.ValueToGatherNodes.lookup(I), [&](const TreeEntry *TE) {
-             assert(TE->isGather() && "expected gather node");
-             return TE->hasState() && TE->hasCopyableElements() &&
-                    TE->isCopyableElement(I);
-           }))) {
+      if (!CopyableData.empty() ||
+          any_of(R.ValueToGatherNodes.lookup(I), [&](const TreeEntry *TE) {
+            assert(TE->isGather() && "expected gather node");
+            return TE->hasState() && TE->hasCopyableElements() &&
+                   TE->isCopyableElement(I);
+          })) {
+        SD->clearDirectDependencies();
         // Need to calculate deps for these nodes to correctly handle copyable
         // dependencies, even if they were cancelled.
         // If copyables bundle was cancelled, the deps are cleared and need to
@@ -25294,8 +25360,8 @@ class HorizontalReduction {
   /// The minimum number of the reduced values.
   const unsigned ReductionLimit = VectorizeNonPowerOf2 ? 3 : 4;
   /// Contains vector values for reduction including their scale factor and
-  /// signedness.
-  SmallVector<std::tuple<Value *, unsigned, bool>> VectorValuesAndScales;
+  /// signedness. The last bool is true, if the value was reduced in-tree.
+  SmallVector<std::tuple<Value *, unsigned, bool, bool>> VectorValuesAndScales;
 
   static bool isCmpSelMinMax(Instruction *I) {
     return match(I, m_Select(m_Cmp(), m_Value(), m_Value())) &&
@@ -26341,7 +26407,8 @@ public:
                 : 1,
             RedScalarTy != ScalarTy->getScalarType()
                 ? V.isSignedMinBitwidthRootNode()
-                : true);
+                : true,
+            V.isReducedBitcastRoot() || V.isReducedCmpBitcastRoot());
 
         // Count vectorized reduced values to exclude them from final reduction.
         for (Value *RdxVal : VL) {
@@ -26373,9 +26440,8 @@ public:
     }
     if (!VectorValuesAndScales.empty())
       VectorizedTree = GetNewVectorizedTree(
-          VectorizedTree, emitReduction(Builder, *TTI, ReductionRoot->getType(),
-                                        V.isReducedBitcastRoot() ||
-                                            V.isReducedCmpBitcastRoot()));
+          VectorizedTree,
+          emitReduction(Builder, *TTI, ReductionRoot->getType()));
 
     if (!VectorizedTree) {
       if (!CheckForReusedReductionOps) {
@@ -26785,10 +26851,11 @@ private:
   /// sub-registers, combines them with the given reduction operation as a
   /// vector operation and then performs single (small enough) reduction.
   Value *emitReduction(IRBuilderBase &Builder, const TargetTransformInfo &TTI,
-                       Type *DestTy, bool ReducedInTree) {
+                       Type *DestTy) {
     Value *ReducedSubTree = nullptr;
     // Creates reduction and combines with the previous reduction.
-    auto CreateSingleOp = [&](Value *Vec, unsigned Scale, bool IsSigned) {
+    auto CreateSingleOp = [&](Value *Vec, unsigned Scale, bool IsSigned,
+                              bool ReducedInTree) {
       Value *Rdx = createSingleOp(Builder, TTI, Vec, Scale, IsSigned, DestTy,
                                   ReducedInTree);
       if (ReducedSubTree)
@@ -26798,15 +26865,21 @@ private:
         ReducedSubTree = Rdx;
     };
     if (VectorValuesAndScales.size() == 1) {
-      const auto &[Vec, Scale, IsSigned] = VectorValuesAndScales.front();
-      CreateSingleOp(Vec, Scale, IsSigned);
+      const auto &[Vec, Scale, IsSigned, ReducedInTree] =
+          VectorValuesAndScales.front();
+      CreateSingleOp(Vec, Scale, IsSigned, ReducedInTree);
       return ReducedSubTree;
     }
     // Scales Vec using given Cnt scale factor and then performs vector combine
     // with previous value of VecOp.
     Value *VecRes = nullptr;
     bool VecResSignedness = false;
-    auto CreateVecOp = [&](Value *Vec, unsigned Cnt, bool IsSigned) {
+    auto CreateVecOp = [&](Value *Vec, unsigned Cnt, bool IsSigned,
+                           bool ReducedInTree) {
+      if (ReducedInTree) {
+        CreateSingleOp(Vec, Cnt, IsSigned, ReducedInTree);
+        return;
+      }
       Type *ScalarTy = Vec->getType()->getScalarType();
       // Scale Vec using given Cnt scale factor.
       if (Cnt > 1) {
@@ -26910,13 +26983,22 @@ private:
           VecRes = Builder.CreateShuffleVector(VecRes, Vec, Mask, "rdx.op");
           return;
         }
-        if (VecRes->getType()->getScalarType() != DestTy->getScalarType())
+        if (VecRes->getType()->getScalarType() != DestTy->getScalarType()) {
+          assert(getNumElements(VecRes->getType()) % getNumElements(DestTy) ==
+                     0 &&
+                 "Expected the number of elements in VecRes to be a multiple "
+                 "of the number of elements in DestTy");
           VecRes = Builder.CreateIntCast(
-              VecRes, getWidenedType(DestTy, getNumElements(VecRes->getType())),
+              VecRes,
+              getWidenedType(DestTy->getScalarType(),
+                             getNumElements(VecRes->getType())),
               VecResSignedness);
+        }
         if (ScalarTy != DestTy->getScalarType())
           Vec = Builder.CreateIntCast(
-              Vec, getWidenedType(DestTy, getNumElements(Vec->getType())),
+              Vec,
+              getWidenedType(DestTy->getScalarType(),
+                             getNumElements(Vec->getType())),
               IsSigned);
         unsigned VecResVF = getNumElements(VecRes->getType());
         unsigned VecVF = getNumElements(Vec->getType());
@@ -26935,9 +27017,10 @@ private:
         VecRes = Op;
       }
     };
-    for (auto [Vec, Scale, IsSigned] : VectorValuesAndScales)
-      CreateVecOp(Vec, Scale, IsSigned);
-    CreateSingleOp(VecRes, /*Scale=*/1, /*IsSigned=*/false);
+    for (auto [Vec, Scale, IsSigned, ReducedInTree] : VectorValuesAndScales)
+      CreateVecOp(Vec, Scale, IsSigned, ReducedInTree);
+    CreateSingleOp(VecRes, /*Scale=*/1, /*IsSigned=*/false,
+                   /*ReducedInTree=*/false);
 
     return ReducedSubTree;
   }
