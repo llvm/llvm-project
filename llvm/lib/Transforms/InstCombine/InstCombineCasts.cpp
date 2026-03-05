@@ -21,11 +21,14 @@
 #include "llvm/IR/DataLayout.h"
 #include "llvm/IR/DebugInfo.h"
 #include "llvm/IR/Instruction.h"
+#include "llvm/IR/Intrinsics.h"
 #include "llvm/IR/PatternMatch.h"
 #include "llvm/IR/Type.h"
 #include "llvm/IR/Value.h"
+#include "llvm/Support/Casting.h"
 #include "llvm/Support/KnownBits.h"
 #include "llvm/Transforms/InstCombine/InstCombiner.h"
+#include <cstdint>
 #include <iterator>
 #include <optional>
 
@@ -120,6 +123,19 @@ static Value *EvaluateInDifferentTypeImpl(Value *V, Type *Ty, bool isSigned,
         Function *Fn = Intrinsic::getOrInsertDeclaration(
             I->getModule(), Intrinsic::vscale, {Ty});
         Res = CallInst::Create(Fn->getFunctionType(), Fn);
+        break;
+      }
+      case Intrinsic::umin:
+      case Intrinsic::umax: {
+        Value *LHS = IC.InsertNewInstWith(
+            CastInst::CreateIntegerCast(I->getOperand(0), Ty, isSigned),
+            I->getIterator());
+        Value *RHS = IC.InsertNewInstWith(
+            CastInst::CreateIntegerCast(I->getOperand(1), Ty, isSigned),
+            I->getIterator());
+        Function *Fn = Intrinsic::getOrInsertDeclaration(
+            I->getModule(), II->getIntrinsicID(), {Ty});
+        Res = CallInst::Create(Fn->getFunctionType(), Fn, {LHS, RHS});
         break;
       }
       }
@@ -606,6 +622,32 @@ bool TypeEvaluationHelper::canEvaluateTruncatedPred(Value *V, Type *Ty,
   case Instruction::ShuffleVector:
     return canEvaluateTruncatedImpl(I->getOperand(0), Ty, IC, CxtI) &&
            canEvaluateTruncatedImpl(I->getOperand(1), Ty, IC, CxtI);
+
+  case Instruction::Call:
+    if (const IntrinsicInst *II = dyn_cast<IntrinsicInst>(I)) {
+      switch (II->getIntrinsicID()) {
+      case Intrinsic::umax:
+      case Intrinsic::umin: {
+        unsigned OrginalBitWidth = OrigTy->getScalarSizeInBits();
+        unsigned TargetBitWidth = Ty->getScalarSizeInBits();
+        assert(TargetBitWidth < OrginalBitWidth && "Unexpected bitwidths!");
+        APInt Mask = APInt::getBitsSetFrom(OrginalBitWidth, TargetBitWidth);
+        // If we know that all operands is always within the truncated
+        // range, we can perform the umin in the smaller type.
+        if (IC.MaskedValueIsZero(II->getArgOperand(0), Mask, CxtI) &&
+            IC.MaskedValueIsZero(II->getArgOperand(1), Mask, CxtI)) {
+          Value *Op0 = II->getArgOperand(0);
+          Value *Op1 = II->getArgOperand(1);
+          return canEvaluateTruncatedImpl(Op0, Ty, IC, CxtI) ||
+                 canEvaluateTruncatedImpl(Op1, Ty, IC, CxtI);
+        }
+        break;
+      }
+      default:
+        break;
+      }
+    }
+    break;
 
   default:
     // TODO: Can handle more cases here.
