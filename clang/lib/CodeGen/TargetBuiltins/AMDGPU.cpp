@@ -89,7 +89,7 @@ Value *EmitAMDGPUWorkGroupSize(CodeGenFunction &CGF, unsigned Index) {
 
   auto Cov = CGF.getTarget().getTargetOpts().CodeObjectVersion;
 
-  // Do not emit __oclc_ABI_version references with non-empt environment.
+  // Do not emit __oclc_ABI_version references with non-empty environment.
   if (Cov == CodeObjectVersionKind::COV_None &&
       CGF.getTarget().getTriple().hasEnvironment())
     Cov = CodeObjectVersionKind::COV_6;
