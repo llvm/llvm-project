@@ -170,9 +170,16 @@ def update_test(ti: common.TestInfo):
             )
         else:
             # ASM output mode
-            scrubber, function_re = output_type.get_run_handler(triple)
+            scrubber, function_re, constant_re = output_type.get_run_handler(triple)
+            if not ti.args.include_constant_pool:
+                constant_re = None
+            elif not constant_re:
+                common.warn(
+                    f"Didn't find constant regex for triple={triple} even though requested --include-constant-pool"
+                )
+
             if 0 == builder.process_run_line(
-                function_re, scrubber, raw_tool_output, prefixes
+                function_re, scrubber, raw_tool_output, prefixes, constant_re
             ):
                 common.warn(
                     "Couldn't match any function. Possibly the wrong target triple has been provided"
@@ -359,6 +366,12 @@ def main():
         "--default-march",
         default=None,
         help="Set a default -march for when neither triple nor arch are found in a RUN line",
+    )
+    parser.add_argument(
+        "--include-constant-pool",
+        action="store_true",
+        default=False,
+        help="Test for constant pool values",
     )
     parser.add_argument("tests", nargs="+")
     initial_args = common.parse_commandline_args(parser)
