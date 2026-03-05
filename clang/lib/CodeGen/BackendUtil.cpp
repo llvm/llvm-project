@@ -468,6 +468,17 @@ static bool initTargetOptions(const CompilerInstance &CI,
   Options.VecLib =
       convertDriverVectorLibraryToVectorLibrary(CodeGenOpts.getVecLib());
 
+  switch (CodeGenOpts.getTrapUnreachable()) {
+  case clang::CodeGenOptions::TrapUnreachableKind::ExceptNoreturn:
+    Options.NoTrapAfterNoreturn = true;
+    LLVM_FALLTHROUGH;
+  case clang::CodeGenOptions::TrapUnreachableKind::All:
+    Options.TrapUnreachable = true;
+    break;
+  case clang::CodeGenOptions::TrapUnreachableKind::None:
+    break;
+  };
+
   switch (CodeGenOpts.getSwiftAsyncFramePointer()) {
   case CodeGenOptions::SwiftAsyncFramePointerKind::Auto:
     Options.SwiftAsyncFramePointer =
