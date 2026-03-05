@@ -583,8 +583,10 @@ FUNCTION_PASS_WITH_PARAMS(
     parseEarlyCSEPassOptions, "memssa")
 FUNCTION_PASS_WITH_PARAMS(
     "drop-unnecessary-assumes", "DropUnnecessaryAssumesPass",
-    [](bool DropDereferenceable) { return DropUnnecessaryAssumesPass(DropDereferenceable); },
-    parseDropUnnecessaryAssumesPassOptions, "drop-deref")
+    [](std::pair<bool, bool> Options) {
+      return DropUnnecessaryAssumesPass(Options.first, Options.second);
+    },
+    parseDropUnnecessaryAssumesPassOptions, "drop-deref;drop-array-bounds")
 FUNCTION_PASS_WITH_PARAMS(
     "ee-instrument", "EntryExitInstrumenterPass",
     [](bool PostInlining) { return EntryExitInstrumenterPass(PostInlining); },

@@ -19,13 +19,20 @@ namespace llvm {
 
 struct DropUnnecessaryAssumesPass
     : public PassInfoMixin<DropUnnecessaryAssumesPass> {
-  DropUnnecessaryAssumesPass(bool DropDereferenceable = false)
-      : DropDereferenceable(DropDereferenceable) {}
+  DropUnnecessaryAssumesPass(bool DropDereferenceable = false,
+                             bool DropArrayBounds = false)
+      : DropDereferenceable(DropDereferenceable),
+        DropArrayBounds(DropArrayBounds) {}
 
   PreservedAnalyses run(Function &F, FunctionAnalysisManager &AM);
 
 private:
   bool DropDereferenceable;
+  // When true, drop assumes with "llvm.array.bounds" metadata. These are
+  // array bounds assumes from Fortran/C/C++ that should be dropped before
+  // vectorization to prevent IR bloat and avoid negatively impacting cost
+  // models in later passes like LSR.
+  bool DropArrayBounds;
 };
 
 } // end namespace llvm
