@@ -500,6 +500,7 @@ int llvm_symbolizer_main(int argc, char **argv, const llvm::ToolContext &) {
   Opts.DefaultArch = Args.getLastArgValue(OPT_default_arch_EQ).str();
   Opts.Demangle = Args.hasFlag(OPT_demangle, OPT_no_demangle, !IsAddr2Line);
   Opts.DWPName = Args.getLastArgValue(OPT_dwp_EQ).str();
+  Opts.PDBName = Args.getLastArgValue(OPT_pdb_EQ).str();
   Opts.FallbackDebugPath =
       Args.getLastArgValue(OPT_fallback_debug_path_EQ).str();
   Opts.GsymFileDirectory = Args.getAllArgValues(OPT_gsym_file_directory_EQ);
