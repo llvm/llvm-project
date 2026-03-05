@@ -283,7 +283,6 @@ define void @ld_div2_ld_scevunknown_nonuniform(ptr %src.a, ptr noalias %src.b, p
 ; CHECK-NEXT:    br label [[VECTOR_BODY:%.*]]
 ; CHECK:       vector.body:
 ; CHECK-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, [[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], [[VECTOR_BODY]] ]
-; CHECK-NEXT:    [[TMP0:%.*]] = add i64 [[INDEX]], 0
 ; CHECK-NEXT:    [[TMP1:%.*]] = add i64 [[INDEX]], 1
 ; CHECK-NEXT:    [[TMP2:%.*]] = add i64 [[INDEX]], 2
 ; CHECK-NEXT:    [[TMP3:%.*]] = add i64 [[INDEX]], 3
@@ -291,7 +290,7 @@ define void @ld_div2_ld_scevunknown_nonuniform(ptr %src.a, ptr noalias %src.b, p
 ; CHECK-NEXT:    [[TMP5:%.*]] = add i64 [[INDEX]], 5
 ; CHECK-NEXT:    [[TMP6:%.*]] = add i64 [[INDEX]], 6
 ; CHECK-NEXT:    [[TMP7:%.*]] = add i64 [[INDEX]], 7
-; CHECK-NEXT:    [[TMP8:%.*]] = getelementptr i32, ptr [[SRC_A]], i64 [[TMP0]]
+; CHECK-NEXT:    [[TMP8:%.*]] = getelementptr i32, ptr [[SRC_A]], i64 [[INDEX]]
 ; CHECK-NEXT:    [[TMP9:%.*]] = getelementptr i32, ptr [[SRC_A]], i64 [[TMP1]]
 ; CHECK-NEXT:    [[TMP10:%.*]] = getelementptr i32, ptr [[SRC_A]], i64 [[TMP2]]
 ; CHECK-NEXT:    [[TMP11:%.*]] = getelementptr i32, ptr [[SRC_A]], i64 [[TMP3]]
@@ -348,7 +347,7 @@ define void @ld_div2_ld_scevunknown_nonuniform(ptr %src.a, ptr noalias %src.b, p
 ; CHECK-NEXT:    [[TMP62:%.*]] = insertelement <8 x i32> [[TMP61]], i32 [[TMP54]], i32 5
 ; CHECK-NEXT:    [[TMP63:%.*]] = insertelement <8 x i32> [[TMP62]], i32 [[TMP55]], i32 6
 ; CHECK-NEXT:    [[TMP64:%.*]] = insertelement <8 x i32> [[TMP63]], i32 [[TMP56]], i32 7
-; CHECK-NEXT:    [[TMP65:%.*]] = getelementptr i32, ptr [[DST]], i64 [[TMP0]]
+; CHECK-NEXT:    [[TMP65:%.*]] = getelementptr i32, ptr [[DST]], i64 [[INDEX]]
 ; CHECK-NEXT:    store <8 x i32> [[TMP64]], ptr [[TMP65]], align 4
 ; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 8
 ; CHECK-NEXT:    [[TMP66:%.*]] = icmp eq i64 [[INDEX_NEXT]], 1000

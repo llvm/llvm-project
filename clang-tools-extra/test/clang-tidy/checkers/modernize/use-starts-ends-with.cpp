@@ -1,4 +1,4 @@
-// RUN: %check_clang_tidy -std=c++20 %s modernize-use-starts-ends-with %t -- \
+// RUN: %check_clang_tidy -std=c++20-or-later %s modernize-use-starts-ends-with %t -- \
 // RUN:   -- -isystem %clang_tidy_headers
 
 #include <string.h>

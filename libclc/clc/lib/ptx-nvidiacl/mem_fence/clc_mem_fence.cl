@@ -11,6 +11,8 @@
 _CLC_OVERLOAD _CLC_DEF void
 __clc_mem_fence(int memory_scope, int memory_order,
                 __CLC_MemorySemantics memory_semantics) {
+  (void)memory_order;
+  (void)memory_semantics;
   if (memory_scope & (__MEMORY_SCOPE_DEVICE | __MEMORY_SCOPE_WRKGRP))
     __nvvm_membar_cta();
 }

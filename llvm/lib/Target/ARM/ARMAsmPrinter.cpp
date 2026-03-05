@@ -820,13 +820,13 @@ void ARMAsmPrinter::emitAttributes() {
   if (const Module *SourceModule = MMI->getModule()) {
     // ABI_PCS_wchar_t to indicate wchar_t width
     // FIXME: There is no way to emit value 0 (wchar_t prohibited).
+    int WCharWidth = TM.getTargetTriple().getDefaultWCharSize();
     if (auto WCharWidthValue = mdconst::extract_or_null<ConstantInt>(
-            SourceModule->getModuleFlag("wchar_size"))) {
-      int WCharWidth = WCharWidthValue->getZExtValue();
-      assert((WCharWidth == 2 || WCharWidth == 4) &&
-             "wchar_t width must be 2 or 4 bytes");
-      ATS.emitAttribute(ARMBuildAttrs::ABI_PCS_wchar_t, WCharWidth);
-    }
+            SourceModule->getModuleFlag("wchar_size")))
+      WCharWidth = WCharWidthValue->getZExtValue();
+    assert((WCharWidth == 2 || WCharWidth == 4) &&
+           "wchar_t width must be 2 or 4 bytes");
+    ATS.emitAttribute(ARMBuildAttrs::ABI_PCS_wchar_t, WCharWidth);
 
     // ABI_enum_size to indicate enum width
     // FIXME: There is no way to emit value 0 (enums prohibited) or value 3

@@ -339,12 +339,7 @@ static llvm::Error serializeIndex(ClangDocContext &CDCtx) {
     OS << " for " << CDCtx.ProjectName;
   OS << "\n\n";
 
-  std::vector<const Index *> Children;
-  Children.reserve(CDCtx.Idx.Children.size());
-  for (const auto &[_, C] : CDCtx.Idx.Children)
-    Children.push_back(&C);
-  llvm::sort(Children, [](const Index *A, const Index *B) { return *A < *B; });
-
+  std::vector<const Index *> Children = CDCtx.Idx.getSortedChildren();
   for (const auto *C : Children)
     serializeReference(OS, *C, 0);
 
@@ -363,11 +358,7 @@ static llvm::Error genIndex(ClangDocContext &CDCtx) {
                                        FileErr.message());
   CDCtx.Idx.sort();
   OS << "# " << CDCtx.ProjectName << " C/C++ Reference\n\n";
-  std::vector<const Index *> Children;
-  Children.reserve(CDCtx.Idx.Children.size());
-  for (const auto &[_, C] : CDCtx.Idx.Children)
-    Children.push_back(&C);
-  llvm::sort(Children, [](const Index *A, const Index *B) { return *A < *B; });
+  std::vector<const Index *> Children = CDCtx.Idx.getSortedChildren();
   for (const auto *C : Children) {
     if (!C->Children.empty()) {
       const char *Type;

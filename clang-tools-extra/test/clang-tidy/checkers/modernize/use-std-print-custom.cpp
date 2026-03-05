@@ -1,4 +1,4 @@
-// RUN: %check_clang_tidy -std=c++23 %s modernize-use-std-print %t -- \
+// RUN: %check_clang_tidy -std=c++23-or-later %s modernize-use-std-print %t -- \
 // RUN:   -config="{CheckOptions: \
 // RUN:             { \
 // RUN:               modernize-use-std-print.PrintfLikeFunctions: 'unqualified_printf;::myprintf; mynamespace::myprintf2; any_format_type_printf; fmt::printf', \

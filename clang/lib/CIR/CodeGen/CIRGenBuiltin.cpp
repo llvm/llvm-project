@@ -972,8 +972,7 @@ RValue CIRGenFunction::emitBuiltinExpr(const GlobalDecl &gd, unsigned builtinID,
     mlir::Value vaList = builtinID == Builtin::BI__va_start
                              ? emitScalarExpr(e->getArg(0))
                              : emitVAListRef(e->getArg(0)).getPointer();
-    mlir::Value count = emitScalarExpr(e->getArg(1));
-    emitVAStart(vaList, count);
+    emitVAStart(vaList);
     return {};
   }
 
@@ -2412,10 +2411,10 @@ mlir::Value CIRGenFunction::emitCheckedArgForAssume(const Expr *e) {
   return {};
 }
 
-void CIRGenFunction::emitVAStart(mlir::Value vaList, mlir::Value count) {
+void CIRGenFunction::emitVAStart(mlir::Value vaList) {
   // LLVM codegen casts to *i8, no real gain on doing this for CIRGen this
   // early, defer to LLVM lowering.
-  cir::VAStartOp::create(builder, vaList.getLoc(), vaList, count);
+  cir::VAStartOp::create(builder, vaList.getLoc(), vaList);
 }
 
 void CIRGenFunction::emitVAEnd(mlir::Value vaList) {

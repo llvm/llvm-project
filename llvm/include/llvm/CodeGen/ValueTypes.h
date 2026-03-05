@@ -46,11 +46,7 @@ namespace llvm {
       return !(*this != VT);
     }
     bool operator!=(EVT VT) const {
-      if (V.SimpleTy != VT.V.SimpleTy)
-        return true;
-      if (V.SimpleTy == MVT::INVALID_SIMPLE_VALUE_TYPE)
-        return LLVMTy != VT.LLVMTy;
-      return false;
+      return V.SimpleTy != VT.V.SimpleTy || LLVMTy != VT.LLVMTy;
     }
 
     /// Returns the EVT that represents a floating-point type with the given
@@ -106,6 +102,18 @@ namespace llvm {
           return M;
       }
       return getVectorVT(Context, EltVT, getVectorElementCount());
+    }
+
+    /// Return a VT for a vector type whose attributes match ourselves
+    /// with the exception of the element count that is chosen by the caller.
+    EVT changeVectorElementCount(LLVMContext &Context, ElementCount EC) const {
+      assert(isVector() && "Not a vector EVT!");
+      if (isSimple()) {
+        MVT M = getSimpleVT().changeVectorElementCount(EC);
+        if (M != MVT::INVALID_SIMPLE_VALUE_TYPE)
+          return M;
+      }
+      return getVectorVT(Context, getVectorElementType(), EC);
     }
 
     /// Return a VT for a type whose attributes match ourselves with the

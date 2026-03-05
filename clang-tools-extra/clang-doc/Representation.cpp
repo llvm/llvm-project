@@ -472,6 +472,16 @@ bool Index::operator<(const Index &Other) const {
   return Name.size() < Other.Name.size();
 }
 
+std::vector<const Index *> Index::getSortedChildren() const {
+  std::vector<const Index *> SortedChildren;
+  SortedChildren.reserve(Children.size());
+  for (const auto &[_, C] : Children)
+    SortedChildren.push_back(&C);
+  llvm::sort(SortedChildren,
+             [](const Index *A, const Index *B) { return *A < *B; });
+  return SortedChildren;
+}
+
 void Index::sort() {
   for (auto &[_, C] : Children)
     C.sort();

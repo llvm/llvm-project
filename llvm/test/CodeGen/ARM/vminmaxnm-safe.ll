@@ -309,12 +309,14 @@ define float @fp_armv8_vminnm_NNNo(float %a) {
 ; CHECK-LABEL: fp_armv8_vminnm_NNNo:
 ; CHECK:       @ %bb.0:
 ; CHECK-NEXT:    vmov.f32 s0, #1.200000e+01
-; CHECK-NEXT:    vldr s2, .LCPI20_0
-; CHECK-NEXT:    vmov s4, r0
-; CHECK-NEXT:    vminnm.f32 s0, s4, s0
+; CHECK-NEXT:    vldr s4, .LCPI20_0
+; CHECK-NEXT:    vmov s2, r0
 ; CHECK-NEXT:    vcmp.f32 s0, s2
 ; CHECK-NEXT:    vmrs APSR_nzcv, fpscr
 ; CHECK-NEXT:    vselgt.f32 s0, s2, s0
+; CHECK-NEXT:    vcmp.f32 s0, s4
+; CHECK-NEXT:    vmrs APSR_nzcv, fpscr
+; CHECK-NEXT:    vselgt.f32 s0, s4, s0
 ; CHECK-NEXT:    vmov r0, s0
 ; CHECK-NEXT:    bx lr
 ; CHECK-NEXT:    .p2align 2
@@ -331,13 +333,15 @@ define float @fp_armv8_vminnm_NNNo(float %a) {
 define double @fp_armv8_vminnm_NNNole(double %a) {
 ; CHECK-LABEL: fp_armv8_vminnm_NNNole:
 ; CHECK:       @ %bb.0:
-; CHECK-NEXT:    vldr d16, .LCPI21_0
-; CHECK-NEXT:    vmov d18, r0, r1
-; CHECK-NEXT:    vldr d17, .LCPI21_1
-; CHECK-NEXT:    vminnm.f64 d16, d18, d16
-; CHECK-NEXT:    vcmp.f64 d16, d17
+; CHECK-NEXT:    vmov d16, r0, r1
+; CHECK-NEXT:    vldr d17, .LCPI21_0
+; CHECK-NEXT:    vldr d18, .LCPI21_1
+; CHECK-NEXT:    vcmp.f64 d17, d16
 ; CHECK-NEXT:    vmrs APSR_nzcv, fpscr
-; CHECK-NEXT:    vselge.f64 d16, d17, d16
+; CHECK-NEXT:    vselge.f64 d16, d16, d17
+; CHECK-NEXT:    vcmp.f64 d16, d18
+; CHECK-NEXT:    vmrs APSR_nzcv, fpscr
+; CHECK-NEXT:    vselge.f64 d16, d18, d16
 ; CHECK-NEXT:    vmov r0, r1, d16
 ; CHECK-NEXT:    bx lr
 ; CHECK-NEXT:    .p2align 3
@@ -364,7 +368,9 @@ define float @fp_armv8_vminnm_NNNo_rev(float %a) {
 ; CHECK-NEXT:    vcmp.f32 s2, s0
 ; CHECK-NEXT:    vmrs APSR_nzcv, fpscr
 ; CHECK-NEXT:    vselgt.f32 s0, s0, s2
-; CHECK-NEXT:    vminnm.f32 s0, s0, s4
+; CHECK-NEXT:    vcmp.f32 s4, s0
+; CHECK-NEXT:    vmrs APSR_nzcv, fpscr
+; CHECK-NEXT:    vselgt.f32 s0, s0, s4
 ; CHECK-NEXT:    vmov r0, s0
 ; CHECK-NEXT:    bx lr
 ; CHECK-NEXT:    .p2align 2
@@ -389,7 +395,9 @@ define double @fp_armv8_vminnm_NNNoge_rev(double %a) {
 ; CHECK-NEXT:    vcmp.f64 d17, d16
 ; CHECK-NEXT:    vmrs APSR_nzcv, fpscr
 ; CHECK-NEXT:    vselge.f64 d16, d16, d17
-; CHECK-NEXT:    vminnm.f64 d16, d16, d18
+; CHECK-NEXT:    vcmp.f64 d18, d16
+; CHECK-NEXT:    vmrs APSR_nzcv, fpscr
+; CHECK-NEXT:    vselge.f64 d16, d16, d18
 ; CHECK-NEXT:    vmov r0, r1, d16
 ; CHECK-NEXT:    bx lr
 ; CHECK-NEXT:    .p2align 3
@@ -411,12 +419,14 @@ define float @fp_armv8_vminnm_NNNu(float %b) {
 ; CHECK-LABEL: fp_armv8_vminnm_NNNu:
 ; CHECK:       @ %bb.0:
 ; CHECK-NEXT:    vmov.f32 s0, #1.200000e+01
-; CHECK-NEXT:    vldr s2, .LCPI24_0
-; CHECK-NEXT:    vmov s4, r0
-; CHECK-NEXT:    vminnm.f32 s0, s4, s0
-; CHECK-NEXT:    vcmp.f32 s2, s0
+; CHECK-NEXT:    vldr s4, .LCPI24_0
+; CHECK-NEXT:    vmov s2, r0
+; CHECK-NEXT:    vcmp.f32 s0, s2
 ; CHECK-NEXT:    vmrs APSR_nzcv, fpscr
-; CHECK-NEXT:    vselgt.f32 s0, s0, s2
+; CHECK-NEXT:    vselge.f32 s0, s2, s0
+; CHECK-NEXT:    vcmp.f32 s0, s4
+; CHECK-NEXT:    vmrs APSR_nzcv, fpscr
+; CHECK-NEXT:    vselge.f32 s0, s4, s0
 ; CHECK-NEXT:    vmov r0, s0
 ; CHECK-NEXT:    bx lr
 ; CHECK-NEXT:    .p2align 2
@@ -434,12 +444,14 @@ define float @fp_armv8_vminnm_NNNule(float %b) {
 ; CHECK-LABEL: fp_armv8_vminnm_NNNule:
 ; CHECK:       @ %bb.0:
 ; CHECK-NEXT:    vldr s0, .LCPI25_0
-; CHECK-NEXT:    vmov s4, r0
-; CHECK-NEXT:    vldr s2, .LCPI25_1
-; CHECK-NEXT:    vminnm.f32 s0, s4, s0
-; CHECK-NEXT:    vcmp.f32 s2, s0
+; CHECK-NEXT:    vmov s2, r0
+; CHECK-NEXT:    vldr s4, .LCPI25_1
+; CHECK-NEXT:    vcmp.f32 s0, s2
 ; CHECK-NEXT:    vmrs APSR_nzcv, fpscr
-; CHECK-NEXT:    vselge.f32 s0, s0, s2
+; CHECK-NEXT:    vselgt.f32 s0, s2, s0
+; CHECK-NEXT:    vcmp.f32 s0, s4
+; CHECK-NEXT:    vmrs APSR_nzcv, fpscr
+; CHECK-NEXT:    vselgt.f32 s0, s4, s0
 ; CHECK-NEXT:    vmov r0, s0
 ; CHECK-NEXT:    bx lr
 ; CHECK-NEXT:    .p2align 2
@@ -464,7 +476,9 @@ define float @fp_armv8_vminnm_NNNu_rev(float %b) {
 ; CHECK-NEXT:    vcmp.f32 s2, s0
 ; CHECK-NEXT:    vmrs APSR_nzcv, fpscr
 ; CHECK-NEXT:    vselge.f32 s0, s0, s2
-; CHECK-NEXT:    vminnm.f32 s0, s0, s4
+; CHECK-NEXT:    vcmp.f32 s4, s0
+; CHECK-NEXT:    vmrs APSR_nzcv, fpscr
+; CHECK-NEXT:    vselge.f32 s0, s0, s4
 ; CHECK-NEXT:    vmov r0, s0
 ; CHECK-NEXT:    bx lr
 ; CHECK-NEXT:    .p2align 2
@@ -489,7 +503,9 @@ define double @fp_armv8_vminnm_NNNuge_rev(double %b) {
 ; CHECK-NEXT:    vcmp.f64 d17, d16
 ; CHECK-NEXT:    vmrs APSR_nzcv, fpscr
 ; CHECK-NEXT:    vselgt.f64 d16, d16, d17
-; CHECK-NEXT:    vminnm.f64 d16, d16, d18
+; CHECK-NEXT:    vcmp.f64 d18, d16
+; CHECK-NEXT:    vmrs APSR_nzcv, fpscr
+; CHECK-NEXT:    vselgt.f64 d16, d16, d18
 ; CHECK-NEXT:    vmov r0, r1, d16
 ; CHECK-NEXT:    bx lr
 ; CHECK-NEXT:    .p2align 3
@@ -511,12 +527,14 @@ define float @fp_armv8_vmaxnm_NNNo(float %a) {
 ; CHECK-LABEL: fp_armv8_vmaxnm_NNNo:
 ; CHECK:       @ %bb.0:
 ; CHECK-NEXT:    vmov.f32 s0, #1.200000e+01
-; CHECK-NEXT:    vldr s2, .LCPI28_0
-; CHECK-NEXT:    vmov s4, r0
-; CHECK-NEXT:    vmaxnm.f32 s0, s4, s0
+; CHECK-NEXT:    vldr s4, .LCPI28_0
+; CHECK-NEXT:    vmov s2, r0
 ; CHECK-NEXT:    vcmp.f32 s2, s0
 ; CHECK-NEXT:    vmrs APSR_nzcv, fpscr
 ; CHECK-NEXT:    vselgt.f32 s0, s2, s0
+; CHECK-NEXT:    vcmp.f32 s4, s0
+; CHECK-NEXT:    vmrs APSR_nzcv, fpscr
+; CHECK-NEXT:    vselgt.f32 s0, s4, s0
 ; CHECK-NEXT:    vmov r0, s0
 ; CHECK-NEXT:    bx lr
 ; CHECK-NEXT:    .p2align 2
@@ -534,12 +552,14 @@ define float @fp_armv8_vmaxnm_NNNoge(float %a) {
 ; CHECK-LABEL: fp_armv8_vmaxnm_NNNoge:
 ; CHECK:       @ %bb.0:
 ; CHECK-NEXT:    vldr s0, .LCPI29_0
-; CHECK-NEXT:    vmov s4, r0
-; CHECK-NEXT:    vldr s2, .LCPI29_1
-; CHECK-NEXT:    vmaxnm.f32 s0, s4, s0
+; CHECK-NEXT:    vmov s2, r0
+; CHECK-NEXT:    vldr s4, .LCPI29_1
 ; CHECK-NEXT:    vcmp.f32 s2, s0
 ; CHECK-NEXT:    vmrs APSR_nzcv, fpscr
 ; CHECK-NEXT:    vselge.f32 s0, s2, s0
+; CHECK-NEXT:    vcmp.f32 s4, s0
+; CHECK-NEXT:    vmrs APSR_nzcv, fpscr
+; CHECK-NEXT:    vselge.f32 s0, s4, s0
 ; CHECK-NEXT:    vmov r0, s0
 ; CHECK-NEXT:    bx lr
 ; CHECK-NEXT:    .p2align 2
@@ -564,7 +584,9 @@ define float @fp_armv8_vmaxnm_NNNo_rev(float %a) {
 ; CHECK-NEXT:    vcmp.f32 s0, s2
 ; CHECK-NEXT:    vmrs APSR_nzcv, fpscr
 ; CHECK-NEXT:    vselgt.f32 s0, s0, s2
-; CHECK-NEXT:    vmaxnm.f32 s0, s0, s4
+; CHECK-NEXT:    vcmp.f32 s0, s4
+; CHECK-NEXT:    vmrs APSR_nzcv, fpscr
+; CHECK-NEXT:    vselgt.f32 s0, s0, s4
 ; CHECK-NEXT:    vmov r0, s0
 ; CHECK-NEXT:    bx lr
 ; CHECK-NEXT:    .p2align 2
@@ -589,7 +611,9 @@ define float @fp_armv8_vmaxnm_NNNole_rev(float %a) {
 ; CHECK-NEXT:    vcmp.f32 s0, s2
 ; CHECK-NEXT:    vmrs APSR_nzcv, fpscr
 ; CHECK-NEXT:    vselge.f32 s0, s0, s2
-; CHECK-NEXT:    vmaxnm.f32 s0, s0, s4
+; CHECK-NEXT:    vcmp.f32 s0, s4
+; CHECK-NEXT:    vmrs APSR_nzcv, fpscr
+; CHECK-NEXT:    vselge.f32 s0, s0, s4
 ; CHECK-NEXT:    vmov r0, s0
 ; CHECK-NEXT:    bx lr
 ; CHECK-NEXT:    .p2align 2
@@ -609,12 +633,14 @@ define float @fp_armv8_vmaxnm_NNNu(float %b) {
 ; CHECK-LABEL: fp_armv8_vmaxnm_NNNu:
 ; CHECK:       @ %bb.0:
 ; CHECK-NEXT:    vmov.f32 s0, #1.200000e+01
-; CHECK-NEXT:    vldr s2, .LCPI32_0
-; CHECK-NEXT:    vmov s4, r0
-; CHECK-NEXT:    vmaxnm.f32 s0, s4, s0
-; CHECK-NEXT:    vcmp.f32 s0, s2
+; CHECK-NEXT:    vldr s4, .LCPI32_0
+; CHECK-NEXT:    vmov s2, r0
+; CHECK-NEXT:    vcmp.f32 s2, s0
 ; CHECK-NEXT:    vmrs APSR_nzcv, fpscr
-; CHECK-NEXT:    vselgt.f32 s0, s0, s2
+; CHECK-NEXT:    vselge.f32 s0, s2, s0
+; CHECK-NEXT:    vcmp.f32 s4, s0
+; CHECK-NEXT:    vmrs APSR_nzcv, fpscr
+; CHECK-NEXT:    vselge.f32 s0, s4, s0
 ; CHECK-NEXT:    vmov r0, s0
 ; CHECK-NEXT:    bx lr
 ; CHECK-NEXT:    .p2align 2
@@ -632,12 +658,14 @@ define float @fp_armv8_vmaxnm_NNNuge(float %b) {
 ; CHECK-LABEL: fp_armv8_vmaxnm_NNNuge:
 ; CHECK:       @ %bb.0:
 ; CHECK-NEXT:    vldr s0, .LCPI33_0
-; CHECK-NEXT:    vmov s4, r0
-; CHECK-NEXT:    vldr s2, .LCPI33_1
-; CHECK-NEXT:    vmaxnm.f32 s0, s4, s0
-; CHECK-NEXT:    vcmp.f32 s0, s2
+; CHECK-NEXT:    vmov s2, r0
+; CHECK-NEXT:    vldr s4, .LCPI33_1
+; CHECK-NEXT:    vcmp.f32 s2, s0
 ; CHECK-NEXT:    vmrs APSR_nzcv, fpscr
-; CHECK-NEXT:    vselge.f32 s0, s0, s2
+; CHECK-NEXT:    vselgt.f32 s0, s2, s0
+; CHECK-NEXT:    vcmp.f32 s4, s0
+; CHECK-NEXT:    vmrs APSR_nzcv, fpscr
+; CHECK-NEXT:    vselgt.f32 s0, s4, s0
 ; CHECK-NEXT:    vmov r0, s0
 ; CHECK-NEXT:    bx lr
 ; CHECK-NEXT:    .p2align 2
@@ -662,7 +690,9 @@ define float @fp_armv8_vmaxnm_NNNu_rev(float %b) {
 ; CHECK-NEXT:    vcmp.f32 s0, s2
 ; CHECK-NEXT:    vmrs APSR_nzcv, fpscr
 ; CHECK-NEXT:    vselge.f32 s0, s0, s2
-; CHECK-NEXT:    vmaxnm.f32 s0, s0, s4
+; CHECK-NEXT:    vcmp.f32 s0, s4
+; CHECK-NEXT:    vmrs APSR_nzcv, fpscr
+; CHECK-NEXT:    vselge.f32 s0, s0, s4
 ; CHECK-NEXT:    vmov r0, s0
 ; CHECK-NEXT:    bx lr
 ; CHECK-NEXT:    .p2align 2
@@ -687,7 +717,9 @@ define double @fp_armv8_vmaxnm_NNNule_rev( double %b) {
 ; CHECK-NEXT:    vcmp.f64 d17, d16
 ; CHECK-NEXT:    vmrs APSR_nzcv, fpscr
 ; CHECK-NEXT:    vselgt.f64 d16, d17, d16
-; CHECK-NEXT:    vmaxnm.f64 d16, d16, d18
+; CHECK-NEXT:    vcmp.f64 d16, d18
+; CHECK-NEXT:    vmrs APSR_nzcv, fpscr
+; CHECK-NEXT:    vselgt.f64 d16, d16, d18
 ; CHECK-NEXT:    vmov r0, r1, d16
 ; CHECK-NEXT:    bx lr
 ; CHECK-NEXT:    .p2align 3
@@ -714,7 +746,9 @@ define float @fp_armv8_vminmaxnm_0(float %a) {
 ; CHECK-NEXT:    vmrs APSR_nzcv, fpscr
 ; CHECK-NEXT:    vmov.f32 s4, s2
 ; CHECK-NEXT:    vmovlt.f32 s4, s0
-; CHECK-NEXT:    vmaxnm.f32 s0, s4, s2
+; CHECK-NEXT:    vcmp.f32 s4, #0
+; CHECK-NEXT:    vmrs APSR_nzcv, fpscr
+; CHECK-NEXT:    vselgt.f32 s0, s4, s2
 ; CHECK-NEXT:    vmov r0, s0
 ; CHECK-NEXT:    bx lr
 ; CHECK-NEXT:    .p2align 2
@@ -733,10 +767,12 @@ define float @fp_armv8_vminmaxnm_neg0(float %a) {
 ; CHECK:       @ %bb.0:
 ; CHECK-NEXT:    vldr s0, .LCPI37_0
 ; CHECK-NEXT:    vmov s2, r0
-; CHECK-NEXT:    vminnm.f32 s2, s2, s0
-; CHECK-NEXT:    vcmp.f32 s2, s0
+; CHECK-NEXT:    vcmp.f32 s0, s2
 ; CHECK-NEXT:    vmrs APSR_nzcv, fpscr
-; CHECK-NEXT:    vselgt.f32 s0, s2, s0
+; CHECK-NEXT:    vselgt.f32 s2, s2, s0
+; CHECK-NEXT:    vcmp.f32 s0, s2
+; CHECK-NEXT:    vmrs APSR_nzcv, fpscr
+; CHECK-NEXT:    vselge.f32 s0, s0, s2
 ; CHECK-NEXT:    vmov r0, s0
 ; CHECK-NEXT:    bx lr
 ; CHECK-NEXT:    .p2align 2
@@ -758,7 +794,9 @@ define float @fp_armv8_vminmaxnm_e_0(float %a) {
 ; CHECK-NEXT:    vcmp.f32 s0, #0
 ; CHECK-NEXT:    vmrs APSR_nzcv, fpscr
 ; CHECK-NEXT:    vselge.f32 s0, s2, s0
-; CHECK-NEXT:    vmaxnm.f32 s0, s0, s2
+; CHECK-NEXT:    vcmp.f32 s0, #0
+; CHECK-NEXT:    vmrs APSR_nzcv, fpscr
+; CHECK-NEXT:    vmovle.f32 s0, s2
 ; CHECK-NEXT:    vmov r0, s0
 ; CHECK-NEXT:    bx lr
 ; CHECK-NEXT:    .p2align 2
@@ -777,7 +815,9 @@ define float @fp_armv8_vminmaxnm_e_neg0(float %a) {
 ; CHECK:       @ %bb.0:
 ; CHECK-NEXT:    vldr s0, .LCPI39_0
 ; CHECK-NEXT:    vmov s2, r0
-; CHECK-NEXT:    vminnm.f32 s2, s2, s0
+; CHECK-NEXT:    vcmp.f32 s0, s2
+; CHECK-NEXT:    vmrs APSR_nzcv, fpscr
+; CHECK-NEXT:    vselgt.f32 s2, s2, s0
 ; CHECK-NEXT:    vcmp.f32 s0, s2
 ; CHECK-NEXT:    vmrs APSR_nzcv, fpscr
 ; CHECK-NEXT:    vselge.f32 s0, s0, s2

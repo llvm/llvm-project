@@ -2830,7 +2830,7 @@ def CIR_VTableGetVirtualFnAddrOp : CIR_Op<"vtable.get_virtual_fn_addr", [
     called.
 
     The `vptr` operand must be a `!cir.ptr<!cir.vptr>` value, which would
-    have been returned by a previous call to `cir.vatble.get_vptr`. The
+    have been returned by a previous call to `cir.vtable.get_vptr`. The
     `index` operand is an index of the virtual function in the vtable.
 
     The return type is a pointer-to-pointer to the function type.
@@ -2861,6 +2861,46 @@ def CIR_VTableGetVirtualFnAddrOp : CIR_Op<"vtable.get_virtual_fn_addr", [
     `:` qualified(type($vptr)) `->` qualified(type($result))
   }];
 }
+
+//===----------------------------------------------------------------------===//
+// VTableGetTypeInfoOp
+//===----------------------------------------------------------------------===//
+
+def CIR_VTableGetTypeInfoOp : CIR_Op<"vtable.get_type_info", [
+  Pure
+]> {
+  let summary = "Get the address of the type_info from the vtable";
+  let description = [{
+    The `vtable.get_type_info` operation retreives the address of the dynamic
+    type_info/rtti object from an object's vtable. This is an ABI independent
+    abstraction of this operation.
+
+    The `vptr` operand must be a `!cir.vptr` value, which would have been
+    returned by a previous call to `cir.vtable.get_vptr`.
+
+    The return type is a loadable pointer to a `type_info` struct.
+
+    Example:
+    ```mlir
+    %5 = cir.vtable.get_vptr %2 : !cir.ptr<!rec_A> -> !cir.ptr<!cir.vptr>
+    %6 = cir.load align(8) %5 : !cir.ptr<!cir.vptr>, !cir.vptr
+    %7 = cir.vtable.get_type_info %6 : !cir.vptr -> !cir.ptr<!cir.ptr<!rec_std3A3Atype_info>>
+    %8 = cir.load align(8) %7 : !cir.ptr<!cir.ptr<!rec_std3A3Atype_info>>, !cir.ptr<!rec_std3A3Atype_info>
+
+    ```
+  }];
+
+  let arguments = (ins Arg<CIR_VPtrType, "vptr", [MemRead]>:$vptr);
+  let results = (outs CIR_PointerType:$result);
+
+  let assemblyFormat = [{
+    $vptr attr-dict `:` qualified(type($vptr)) `->` qualified(type($result))
+  }];
+
+  let hasLLVMLowering = false;
+  let hasCXXABILowering = true;
+}
+
 
 //===----------------------------------------------------------------------===//
 // VTTAddrPointOp
@@ -6212,11 +6252,9 @@ def CIR_VAStartOp : CIR_Op<"va_start"> {
     initializing a variable argument list at the given va_list storage
     location.
 
-    The first operand must be a pointer to the target's `va_list`
-    representation. This operation has no results and produces its effect by
-    mutating the storage referenced by the pointer operand. The second operand
-    must be an integer value that contains the expected number of arguments in
-    that list.
+    The operand must be a pointer to the target's `va_list` representation.
+    This operation has no results and produces its effect by mutating the
+    storage referenced by the pointer operand.
 
     Each `cir.va_start` must be paired with a corresponding `cir.va_end`
     on the same logical `va_list` object along all control-flow paths. After
@@ -6233,17 +6271,13 @@ def CIR_VAStartOp : CIR_Op<"va_start"> {
     %p = cir.cast array_to_ptrdecay %args
           : !cir.ptr<!cir.array<!rec___va_list_tag x 1>>)
           -> !cir.ptr<!rec___va_list_tag>
-    %count = cir.load %0 : !cir.ptr<!s32i>, !s32i
-    cir.va_start %p %count : !cir.ptr<!rec___va_list_tag>, !s32i
+    cir.va_start %p : !cir.ptr<!rec___va_list_tag>
     ```
   }];
-  let arguments = (ins
-    CIR_PointerType:$arg_list,
-    CIR_AnyFundamentalIntType:$count
-  );
+  let arguments = (ins CIR_PointerType:$arg_list);
 
   let assemblyFormat = [{
-    $arg_list $count attr-dict `:` type(operands)
+    $arg_list attr-dict `:` type(operands)
   }];
 }
 

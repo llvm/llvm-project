@@ -140,6 +140,9 @@ GCNSubtarget &GCNSubtarget::initializeSubtargetDependencies(const Triple &TT,
   if (AddressableLocalMemorySize == 0)
     AddressableLocalMemorySize = 32768;
 
+  if (FlatOffsetBitWidth == 0)
+    FlatOffsetBitWidth = 13;
+
   LocalMemorySize = AMDGPU::IsaInfo::getLocalMemorySize(this);
 
   HasFminFmaxLegacy = getGeneration() < AMDGPUSubtarget::VOLCANIC_ISLANDS;

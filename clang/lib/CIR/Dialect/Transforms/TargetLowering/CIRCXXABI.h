@@ -122,6 +122,10 @@ public:
 
   virtual mlir::Value lowerDynamicCast(cir::DynamicCastOp op,
                                        mlir::OpBuilder &builder) const = 0;
+
+  virtual mlir::Value
+  lowerVTableGetTypeInfo(cir::VTableGetTypeInfoOp op,
+                         mlir::OpBuilder &builder) const = 0;
 };
 
 /// Creates an Itanium-family ABI.

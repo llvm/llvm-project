@@ -69,19 +69,19 @@ void WebAssemblyInstPrinter::printInst(const MCInst *MI, uint64_t Address,
     OS << getMnemonic(*MI).first;
     OS << " ";
     if (MI->getOperand(TableOperand).isExpr()) {
-      printOperand(MI, TableOperand, OS);
+      printOperand(MI, TableOperand, STI, OS);
       OS << ", ";
     } else {
       assert(MI->getOperand(TableOperand).getImm() == 0);
     }
-    printOperand(MI, TypeOperand, OS);
+    printOperand(MI, TypeOperand, STI, OS);
     if (MI->getOpcode() == WebAssembly::CALL_INDIRECT)
       OS << ", ";
     break;
   }
   default:
     // Print the instruction (this uses the AsmStrings from the .td files).
-    printInstruction(MI, Address, OS);
+    printInstruction(MI, Address, STI, OS);
     break;
   }
 
@@ -108,7 +108,7 @@ void WebAssemblyInstPrinter::printInst(const MCInst *MI, uint64_t Address,
       }
       if (NeedsComma)
         OS << ", ";
-      printOperand(MI, I, OS, I - Start < NumVariadicDefs);
+      printOperand(MI, I, STI, OS, I - Start < NumVariadicDefs);
       NeedsComma = true;
     }
   }
@@ -320,6 +320,7 @@ static std::string toString(const APFloat &FP) {
 }
 
 void WebAssemblyInstPrinter::printOperand(const MCInst *MI, unsigned OpNo,
+                                          const MCSubtargetInfo &STI,
                                           raw_ostream &O, bool IsVariadicDef) {
   const MCOperand &Op = MI->getOperand(OpNo);
   if (Op.isReg()) {
@@ -358,6 +359,7 @@ void WebAssemblyInstPrinter::printOperand(const MCInst *MI, unsigned OpNo,
 }
 
 void WebAssemblyInstPrinter::printBrList(const MCInst *MI, unsigned OpNo,
+                                         const MCSubtargetInfo &STI,
                                          raw_ostream &O) {
   O << "{";
   for (unsigned I = OpNo, E = MI->getNumOperands(); I != E; ++I) {
@@ -368,18 +370,37 @@ void WebAssemblyInstPrinter::printBrList(const MCInst *MI, unsigned OpNo,
   O << "}";
 }
 
-void WebAssemblyInstPrinter::printWebAssemblyP2AlignOperand(const MCInst *MI,
-                                                            unsigned OpNo,
-                                                            raw_ostream &O) {
+void WebAssemblyInstPrinter::printWebAssemblyP2AlignOperand(
+    const MCInst *MI, unsigned OpNo, const MCSubtargetInfo &STI,
+    raw_ostream &O) {
   int64_t Imm = MI->getOperand(OpNo).getImm();
   if (Imm == WebAssembly::GetDefaultP2Align(MI->getOpcode()))
     return;
   O << ":p2align=" << Imm;
 }
 
-void WebAssemblyInstPrinter::printWebAssemblySignatureOperand(const MCInst *MI,
-                                                              unsigned OpNo,
-                                                              raw_ostream &O) {
+void WebAssemblyInstPrinter::printWebAssemblyMemOrderOperand(
+    const MCInst *MI, unsigned OpNo, const MCSubtargetInfo &STI,
+    raw_ostream &O) {
+  int64_t Imm = MI->getOperand(OpNo).getImm();
+
+  switch (Imm) {
+  case wasm::WASM_MEM_ORDER_RMW_ACQ_REL:
+  case wasm::WASM_MEM_ORDER_ACQ_REL:
+    O << "acqrel";
+    break;
+  case wasm::WASM_MEM_ORDER_SEQ_CST:
+    if (STI.getFeatureBits()[WebAssembly::FeatureRelaxedAtomics])
+      O << "seqcst";
+    break;
+  default:
+    llvm_unreachable("Unknown memory ordering");
+  }
+}
+
+void WebAssemblyInstPrinter::printWebAssemblySignatureOperand(
+    const MCInst *MI, unsigned OpNo, const MCSubtargetInfo &STI,
+    raw_ostream &O) {
   const MCOperand &Op = MI->getOperand(OpNo);
   if (Op.isImm()) {
     auto Imm = static_cast<unsigned>(Op.getImm());
@@ -398,6 +419,7 @@ void WebAssemblyInstPrinter::printWebAssemblySignatureOperand(const MCInst *MI,
 }
 
 void WebAssemblyInstPrinter::printCatchList(const MCInst *MI, unsigned OpNo,
+                                            const MCSubtargetInfo &STI,
                                             raw_ostream &O) {
   unsigned OpIdx = OpNo;
   const MCOperand &Op = MI->getOperand(OpIdx++);

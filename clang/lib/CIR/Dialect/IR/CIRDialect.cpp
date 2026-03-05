@@ -2563,14 +2563,15 @@ void cir::TernaryOp::build(
 
   // Get result type from whichever branch has a yield (the other may have
   // unreachable from a throw expression)
-  auto yield =
-      dyn_cast_or_null<cir::YieldOp>(trueRegion->back().getTerminator());
-  if (!yield)
+  cir::YieldOp yield;
+  if (trueRegion->back().mightHaveTerminator())
+    yield = dyn_cast_or_null<cir::YieldOp>(trueRegion->back().getTerminator());
+  if (!yield && falseRegion->back().mightHaveTerminator())
     yield = dyn_cast_or_null<cir::YieldOp>(falseRegion->back().getTerminator());
 
-  assert((yield && yield.getNumOperands() <= 1) &&
+  assert((!yield || yield.getNumOperands() <= 1) &&
          "expected zero or one result type");
-  if (yield.getNumOperands() == 1)
+  if (yield && yield.getNumOperands() == 1)
     result.addTypes(TypeRange{yield.getOperandTypes().front()});
 }
 

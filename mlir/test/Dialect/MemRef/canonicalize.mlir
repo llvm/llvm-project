@@ -47,7 +47,7 @@ func.func @subview_of_size_memcast(%arg : memref<4x6x16x32xi8>) ->
 //       CHECK: func @subview_of_strides_memcast
 //  CHECK-SAME:   %[[ARG0:.[a-z0-9A-Z_]+]]: memref<1x1x?xf32, strided{{.*}}>
 //       CHECK:   %[[S:.+]] = memref.subview %[[ARG0]][0, 0, 0] [1, 1, 4]
-//  CHECK-SAME:                    to memref<1x4xf32, strided<[7, 1], offset: ?>>
+//  CHECK-SAME:                    to memref<1x4xf32, strided<[35, 1], offset: ?>>
 //       CHECK:   %[[M:.+]] = memref.cast %[[S]]
 //  CHECK-SAME:                    to memref<1x4xf32, strided<[?, ?], offset: ?>>
 //       CHECK:   return %[[M]]
@@ -1638,4 +1638,25 @@ func.func @non_replace_view_negative_static_dims(%src: memref<?xi8>, %offset : i
   %c-1 = arith.constant -1: index
   %res = memref.view %src[%offset][%c-1] : memref<?xi8> to memref<?x4xi32>
   return %res : memref<?x4xi32>
+}
+
+// -----
+
+// Verify that canonicalization does not crash when a memref.dim is applied to
+// a subview with ambiguous dropped dimensions (multiple size-1 source dims with
+// all-dynamic strides). The dim should be folded to the corresponding subview
+// size operand.
+// See: https://github.com/llvm/llvm-project/issues/111244
+
+// CHECK-LABEL: func @no_crash_dim_of_ambiguous_subview
+// CHECK-SAME: (%[[ARG0:.*]]: {{.*}}, %[[ARG1:.*]]: index) -> index
+// CHECK-NOT: memref.dim
+// CHECK: return %[[ARG1]]
+func.func @no_crash_dim_of_ambiguous_subview(
+    %arg0: memref<?x?x?xf32, strided<[?, ?, ?], offset: ?>>, %arg1: index) -> index {
+  %c1 = arith.constant 1 : index
+  %subview = memref.subview %arg0[0, 0, 0] [1, %arg1, 1] [1, 1, 1]
+      : memref<?x?x?xf32, strided<[?, ?, ?], offset: ?>> to memref<1x?xf32, strided<[?, ?], offset: ?>>
+  %dim = memref.dim %subview, %c1 : memref<1x?xf32, strided<[?, ?], offset: ?>>
+  return %dim : index
 }

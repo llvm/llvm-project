@@ -5274,6 +5274,33 @@ Value *CodeGenFunction::EmitAArch64BuiltinExpr(unsigned BuiltinID,
     return Builder.CreateCall(F, Args);
   }
 
+  if (BuiltinID == clang::AArch64::BI__builtin_arm_atomic_store_with_stshh) {
+    Value *StoreAddr = EmitScalarExpr(E->getArg(0));
+    Value *StoreValue = EmitScalarExpr(E->getArg(1));
+
+    auto *OrderC = cast<ConstantInt>(EmitScalarExpr(E->getArg(2)));
+    auto *PolicyC = cast<ConstantInt>(EmitScalarExpr(E->getArg(3)));
+
+    // Compute pointee bit-width from arg0 and create as i32 constant
+    QualType ValQT =
+        E->getArg(0)->getType()->castAs<PointerType>()->getPointeeType();
+    unsigned SizeBits = getContext().getTypeSize(ValQT);
+    auto *SizeC = llvm::ConstantInt::get(Int32Ty, SizeBits);
+
+    Value *StoreValue64 = Builder.CreateIntCast(StoreValue, Int64Ty,
+                                                ValQT->isSignedIntegerType());
+
+    Function *F = CGM.getIntrinsic(Intrinsic::aarch64_stshh_atomic_store,
+                                   {StoreAddr->getType()});
+
+    // Emit a single intrinsic so backend can expand to STSHH followed by
+    // atomic store, to guarantee STSHH immediately precedes STR insn
+    return Builder.CreateCall(
+        F, {StoreAddr, StoreValue64,
+            ConstantInt::get(Int32Ty, OrderC->getZExtValue()),
+            ConstantInt::get(Int32Ty, PolicyC->getZExtValue()), SizeC});
+  }
+
   if (BuiltinID == clang::AArch64::BI__builtin_arm_rndr ||
       BuiltinID == clang::AArch64::BI__builtin_arm_rndrrs) {
 

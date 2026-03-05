@@ -413,10 +413,12 @@ bool AMDGPULowerVGPREncoding::handleSetregMode(MachineInstr &MI) {
   // imm32[12:19] is unused. Safe to set imm32[12:19] to the correct VGPR
   // MSBs.
   if (Size <= VGPRMSBShift) {
-    // This instruction now acts as MostRecentModeSet so it can be updated if
-    // CurrentMode changes via piggybacking.
+    // This instruction is at the boundary of the old mode's control range.
+    // Reset CurrentMode so that the next setMode call can freely piggyback
+    // the required mode into bits[12:19] without triggering Rewritten.
     MostRecentModeSet = &MI;
-    return updateSetregModeImm(MI, ModeValue);
+    CurrentMode = {};
+    return updateSetregModeImm(MI, 0);
   }
 
   // Case 2: Size > 12 - the original instruction uses bits beyond 11, so we

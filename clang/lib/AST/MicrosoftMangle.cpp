@@ -2154,6 +2154,11 @@ void MicrosoftCXXNameMangler::mangleTemplateArgValue(QualType T,
     return;
   }
 
+  case APValue::Matrix: {
+    Error("template argument (value type: matrix)");
+    return;
+  }
+
   case APValue::AddrLabelDiff: {
     Error("template argument (value type: address label diff)");
     return;

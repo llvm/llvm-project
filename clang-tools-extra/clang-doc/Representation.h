@@ -616,6 +616,7 @@ struct Index : public Reference {
   std::optional<SmallString<16>> JumpToSection;
   llvm::StringMap<Index> Children;
 
+  std::vector<const Index *> getSortedChildren() const;
   void sort();
 };
 

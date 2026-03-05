@@ -833,11 +833,10 @@ define void @sinkable_predicated_store(ptr %A, ptr %B) {
 ; VEC-NEXT:    br i1 [[FOUND_CONFLICT]], label [[SCALAR_PH:%.*]], label [[VECTOR_BODY:%.*]]
 ; VEC:       vector.body:
 ; VEC-NEXT:    [[INDEX:%.*]] = phi i64 [ [[INDEX_NEXT:%.*]], [[VECTOR_BODY]] ], [ 0, [[ENTRY:%.*]] ]
-; VEC-NEXT:    [[TMP0:%.*]] = add i64 [[INDEX]], 0
 ; VEC-NEXT:    [[TMP1:%.*]] = add i64 [[INDEX]], 1
-; VEC-NEXT:    [[TMP2:%.*]] = getelementptr i32, ptr [[A]], i64 [[TMP0]]
+; VEC-NEXT:    [[TMP2:%.*]] = getelementptr i32, ptr [[A]], i64 [[INDEX]]
 ; VEC-NEXT:    [[TMP3:%.*]] = getelementptr i32, ptr [[A]], i64 [[TMP1]]
-; VEC-NEXT:    [[TMP4:%.*]] = getelementptr i32, ptr [[B]], i64 [[TMP0]]
+; VEC-NEXT:    [[TMP4:%.*]] = getelementptr i32, ptr [[B]], i64 [[INDEX]]
 ; VEC-NEXT:    [[WIDE_LOAD:%.*]] = load <2 x i32>, ptr [[TMP4]], align 4, !alias.scope [[META8:![0-9]+]]
 ; VEC-NEXT:    [[TMP5:%.*]] = icmp eq <2 x i32> [[WIDE_LOAD]], zeroinitializer
 ; VEC-NEXT:    [[TMP6:%.*]] = select <2 x i1> [[TMP5]], <2 x i32> zeroinitializer, <2 x i32> splat (i32 1)

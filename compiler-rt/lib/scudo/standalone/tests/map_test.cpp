@@ -75,6 +75,14 @@ TEST(ScudoMapDeathTest, MapWithGuardUnmap) {
   MemMap.unmap();
 }
 
+// These death tests only fail when debugging is enabled.
+#if SCUDO_LINUX
+TEST(ScudoMapDeathTest, ResidentPagesNotMapped) {
+  scudo::MemMapT MemMap;
+  ASSERT_EQ(MemMap.getResidentPages(), 0);
+}
+#endif
+
 TEST(ScudoMapTest, MapGrowUnmap) {
   const scudo::uptr PageSize = scudo::getPageSizeCached();
   const scudo::uptr Size = 4 * PageSize;

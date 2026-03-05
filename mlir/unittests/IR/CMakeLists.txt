@@ -21,6 +21,7 @@ add_mlir_unittest(MLIRIRTests
   TypeAttrNamesTest.cpp
   OpPropertiesTest.cpp
   ValueTest.cpp
+  VerifierTest.cpp
   BlobManagerTest.cpp
 
   DEPENDS

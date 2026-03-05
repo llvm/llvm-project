@@ -940,19 +940,19 @@ TEST_F(FileSystemTest, TempFiles) {
 #ifdef _WIN32
   // Path name > 260 chars should get an error.
   const char *Path270 =
-    "abcdefghijklmnopqrstuvwxyz9abcdefghijklmnopqrstuvwxyz8"
-    "abcdefghijklmnopqrstuvwxyz7abcdefghijklmnopqrstuvwxyz6"
-    "abcdefghijklmnopqrstuvwxyz5abcdefghijklmnopqrstuvwxyz4"
-    "abcdefghijklmnopqrstuvwxyz3abcdefghijklmnopqrstuvwxyz2"
-    "abcdefghijklmnopqrstuvwxyz1abcdefghijklmnopqrstuvwxyz0";
+      "abcdefghijklmnopqrstuvwxyz9abcdefghijklmnopqrstuvwxyz8"
+      "abcdefghijklmnopqrstuvwxyz7abcdefghijklmnopqrstuvwxyz6"
+      "abcdefghijklmnopqrstuvwxyz5abcdefghijklmnopqrstuvwxyz4"
+      "abcdefghijklmnopqrstuvwxyz3abcdefghijklmnopqrstuvwxyz2"
+      "abcdefghijklmnopqrstuvwxyz1abcdefghijklmnopqrstuvwxyz%";
   EXPECT_EQ(fs::createUniqueFile(Path270, FileDescriptor, TempPath),
             errc::invalid_argument);
   // Relative path < 247 chars, no problem.
   const char *Path216 =
-    "abcdefghijklmnopqrstuvwxyz7abcdefghijklmnopqrstuvwxyz6"
-    "abcdefghijklmnopqrstuvwxyz5abcdefghijklmnopqrstuvwxyz4"
-    "abcdefghijklmnopqrstuvwxyz3abcdefghijklmnopqrstuvwxyz2"
-    "abcdefghijklmnopqrstuvwxyz1abcdefghijklmnopqrstuvwxyz0";
+      "abcdefghijklmnopqrstuvwxyz7abcdefghijklmnopqrstuvwxyz6"
+      "abcdefghijklmnopqrstuvwxyz5abcdefghijklmnopqrstuvwxyz4"
+      "abcdefghijklmnopqrstuvwxyz3abcdefghijklmnopqrstuvwxyz2"
+      "abcdefghijklmnopqrstuvwxyz1abcdefghijklmnopqrstu%%%%%%";
   ASSERT_NO_ERROR(fs::createTemporaryFile(Path216, "", TempPath));
   ASSERT_NO_ERROR(fs::remove(Twine(TempPath)));
 #endif
@@ -2117,8 +2117,8 @@ TEST_F(FileSystemTest, is_local) {
 
   int FD;
   SmallString<128> TempPath;
-  ASSERT_NO_ERROR(
-      fs::createUniqueFile(Twine(TestDirectory) + "/temp", FD, TempPath));
+  ASSERT_NO_ERROR(fs::createUniqueFile(Twine(TestDirectory) + "/temp-%%%%%%",
+                                       FD, TempPath));
   FileRemover Cleanup(TempPath);
 
   // Make sure it exists.

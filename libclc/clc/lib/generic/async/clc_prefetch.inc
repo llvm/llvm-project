@@ -7,4 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 _CLC_OVERLOAD _CLC_DEF void __clc_prefetch(const global __CLC_GENTYPE *p,
-                                           size_t num_gentypes) {}
+                                           size_t num_gentypes) {
+  (void)p;
+  (void)num_gentypes;
+}

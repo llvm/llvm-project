@@ -193,7 +193,7 @@ static llvm::StringRef getPersonalityFn(CIRGenModule &cgm,
   auto funcTy = cir::FuncType::get({}, i32Ty, /*isVarArg=*/true);
 
   cir::FuncOp personalityFn = cgm.createRuntimeFunction(
-      funcTy, personality.personalityFn, mlir::ArrayAttr(), /*isLocal=*/true);
+      funcTy, personality.personalityFn, {}, /*isLocal=*/true);
 
   return personalityFn.getSymName();
 }

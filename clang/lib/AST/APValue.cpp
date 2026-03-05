@@ -333,6 +333,11 @@ APValue::APValue(const APValue &RHS)
     setVector(((const Vec *)(const char *)&RHS.Data)->Elts,
               RHS.getVectorLength());
     break;
+  case Matrix:
+    MakeMatrix();
+    setMatrix(((const Mat *)(const char *)&RHS.Data)->Elts,
+              RHS.getMatrixNumRows(), RHS.getMatrixNumColumns());
+    break;
   case ComplexInt:
     MakeComplexInt();
     setComplexInt(RHS.getComplexIntReal(), RHS.getComplexIntImag());
@@ -414,6 +419,8 @@ void APValue::DestroyDataAndMakeUninit() {
     ((APFixedPoint *)(char *)&Data)->~APFixedPoint();
   else if (Kind == Vector)
     ((Vec *)(char *)&Data)->~Vec();
+  else if (Kind == Matrix)
+    ((Mat *)(char *)&Data)->~Mat();
   else if (Kind == ComplexInt)
     ((ComplexAPSInt *)(char *)&Data)->~ComplexAPSInt();
   else if (Kind == ComplexFloat)
@@ -444,6 +451,7 @@ bool APValue::needsCleanup() const {
   case Union:
   case Array:
   case Vector:
+  case Matrix:
     return true;
   case Int:
     return getInt().needsCleanup();
@@ -578,6 +586,12 @@ void APValue::Profile(llvm::FoldingSetNodeID &ID) const {
   case Vector:
     for (unsigned I = 0, N = getVectorLength(); I != N; ++I)
       getVectorElt(I).Profile(ID);
+    return;
+
+  case Matrix:
+    for (unsigned R = 0, N = getMatrixNumRows(); R != N; ++R)
+      for (unsigned C = 0, M = getMatrixNumColumns(); C != M; ++C)
+        getMatrixElt(R, C).Profile(ID);
     return;
 
   case Int:
@@ -743,6 +757,24 @@ void APValue::printPretty(raw_ostream &Out, const PrintingPolicy &Policy,
     for (unsigned i = 1; i != getVectorLength(); ++i) {
       Out << ", ";
       getVectorElt(i).printPretty(Out, Policy, ElemTy, Ctx);
+    }
+    Out << '}';
+    return;
+  }
+  case APValue::Matrix: {
+    const auto *MT = Ty->castAs<ConstantMatrixType>();
+    QualType ElemTy = MT->getElementType();
+    Out << '{';
+    for (unsigned R = 0; R < getMatrixNumRows(); ++R) {
+      if (R != 0)
+        Out << ", ";
+      Out << '{';
+      for (unsigned C = 0; C < getMatrixNumColumns(); ++C) {
+        if (C != 0)
+          Out << ", ";
+        getMatrixElt(R, C).printPretty(Out, Policy, ElemTy, Ctx);
+      }
+      Out << '}';
     }
     Out << '}';
     return;
@@ -1139,6 +1171,7 @@ LinkageInfo LinkageComputer::getLVForValue(const APValue &V,
   case APValue::ComplexInt:
   case APValue::ComplexFloat:
   case APValue::Vector:
+  case APValue::Matrix:
     break;
 
   case APValue::AddrLabelDiff:

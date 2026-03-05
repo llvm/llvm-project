@@ -32,7 +32,8 @@ TEST(raw_socket_streamTest, CLIENT_TO_SERVER_AND_SERVER_TO_CLIENT) {
     GTEST_SKIP();
 
   SmallString<100> SocketPath;
-  llvm::sys::fs::createUniquePath("client_server_comms.sock", SocketPath, true);
+  llvm::sys::fs::createUniquePath("client_server_comms-%%%%%%.sock", SocketPath,
+                                  true);
 
   // Make sure socket file does not exist. May still be there from the last test
   std::remove(SocketPath.c_str());
@@ -73,7 +74,8 @@ TEST(raw_socket_streamTest, READ_WITH_TIMEOUT) {
     GTEST_SKIP();
 
   SmallString<100> SocketPath;
-  llvm::sys::fs::createUniquePath("read_with_timeout.sock", SocketPath, true);
+  llvm::sys::fs::createUniquePath("read_with_timeout-%%%%%%.sock", SocketPath,
+                                  true);
 
   // Make sure socket file does not exist. May still be there from the last test
   std::remove(SocketPath.c_str());
@@ -105,7 +107,8 @@ TEST(raw_socket_streamTest, ACCEPT_WITH_TIMEOUT) {
     GTEST_SKIP();
 
   SmallString<100> SocketPath;
-  llvm::sys::fs::createUniquePath("accept_with_timeout.sock", SocketPath, true);
+  llvm::sys::fs::createUniquePath("accept_with_timeout-%%%%%%.sock", SocketPath,
+                                  true);
 
   // Make sure socket file does not exist. May still be there from the last test
   std::remove(SocketPath.c_str());
@@ -126,8 +129,8 @@ TEST(raw_socket_streamTest, ACCEPT_WITH_SHUTDOWN) {
     GTEST_SKIP();
 
   SmallString<100> SocketPath;
-  llvm::sys::fs::createUniquePath("accept_with_shutdown.sock", SocketPath,
-                                  true);
+  llvm::sys::fs::createUniquePath("accept_with_shutdown-%%%%%%.sock",
+                                  SocketPath, true);
 
   // Make sure socket file does not exist. May still be there from the last test
   std::remove(SocketPath.c_str());

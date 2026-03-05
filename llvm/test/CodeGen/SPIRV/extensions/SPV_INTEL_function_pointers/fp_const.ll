@@ -1,5 +1,5 @@
 ; RUN: llc -verify-machineinstrs -O0 -mtriple=spirv32-unknown-unknown --spirv-ext=+SPV_INTEL_function_pointers %s -o - | FileCheck %s
-; TODO: %if spirv-tools %{ llc -O0 -mtriple=spirv64-unknown-unknown %s -o - -filetype=obj | spirv-val %}
+; TODO: %if spirv-tools %{ llc -O0 -mtriple=spirv64-unknown-unknown --spirv-ext=+SPV_INTEL_function_pointers %s -o - -filetype=obj | spirv-val %}
 
 ; CHECK-DAG: OpCapability FunctionPointersINTEL
 ; CHECK-DAG: OpCapability Int64
@@ -9,12 +9,14 @@
 ; CHECK-DAG: %[[TyInt64:.*]] = OpTypeInt 64 0
 ; CHECK-DAG: %[[TyFun:.*]] = OpTypeFunction %[[TyInt64]] %[[TyInt64]]
 ; CHECK-DAG: %[[TyPtrFunCodeSection:.*]] = OpTypePointer CodeSectionINTEL %[[TyFun]]
+; CHECK-DAG: %[[TyPtrPtrFunCodeSection:.*]] = OpTypePointer Function %[[TyPtrFunCodeSection]]
 ; CHECK-DAG: %[[ConstFunFp:.*]] = OpConstantFunctionPointerINTEL %[[TyPtrFunCodeSection]] %[[DefFunFp:.*]]
 ; CHECK-DAG: %[[TyPtrFun:.*]] = OpTypePointer Function %[[TyFun]]
 ; CHECK-DAG: %[[TyPtrPtrFun:.*]] = OpTypePointer Function %[[TyPtrFun]]
 ; CHECK: OpFunction
 ; CHECK: %[[Var:.*]] = OpVariable %[[TyPtrPtrFun]] Function
-; CHECK: OpStore %[[Var]] %[[ConstFunFp]]
+; CHECK: %[[Cast:.*]] = OpBitcast %[[TyPtrPtrFunCodeSection]] %[[Var]]
+; CHECK: OpStore %[[Cast]] %[[ConstFunFp]]
 ; CHECK: %[[FP:.*]] = OpLoad %[[TyPtrFun]] %[[Var]]
 ; CHECK: OpFunctionPointerCallINTEL %[[TyInt64]] %[[FP]] %[[#]]
 ; CHECK: OpFunctionEnd

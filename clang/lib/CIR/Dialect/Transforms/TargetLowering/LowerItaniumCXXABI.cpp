@@ -106,6 +106,8 @@ public:
 
   mlir::Value lowerDynamicCast(cir::DynamicCastOp op,
                                mlir::OpBuilder &builder) const override;
+  mlir::Value lowerVTableGetTypeInfo(cir::VTableGetTypeInfoOp op,
+                                     mlir::OpBuilder &builder) const override;
 };
 
 } // namespace
@@ -756,6 +758,21 @@ LowerItaniumCXXABI::lowerDynamicCast(cir::DynamicCastOp op,
                                           builder.getI64IntegerAttr(0)));
                cir::YieldOp::create(builder, loc, null);
              })
+      .getResult();
+}
+mlir::Value
+LowerItaniumCXXABI::lowerVTableGetTypeInfo(cir::VTableGetTypeInfoOp op,
+                                           mlir::OpBuilder &builder) const {
+  mlir::Location loc = op->getLoc();
+  auto offset = cir::ConstantOp::create(
+      builder, op->getLoc(), cir::IntAttr::get(getPtrDiffCIRTy(lm), -1));
+
+  // Cast the vptr to type_info-ptr, so that we can go backwards 1 pointer.
+  auto vptrCast = cir::CastOp::create(builder, loc, op.getType(),
+                                      cir::CastKind::bitcast, op.getVptr());
+
+  return cir::PtrStrideOp::create(builder, loc, vptrCast.getType(), vptrCast,
+                                  offset)
       .getResult();
 }
 

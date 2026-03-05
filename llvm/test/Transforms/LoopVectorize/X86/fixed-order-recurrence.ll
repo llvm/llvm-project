@@ -354,7 +354,6 @@ define void @test_for_tried_to_force_scalar(ptr noalias %A, ptr noalias %B, ptr 
 ; CHECK-NEXT:    br label [[VECTOR_BODY:%.*]]
 ; CHECK:       vector.body:
 ; CHECK-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, [[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], [[VECTOR_BODY]] ]
-; CHECK-NEXT:    [[TMP5:%.*]] = add i64 [[INDEX]], 0
 ; CHECK-NEXT:    [[TMP6:%.*]] = add i64 [[INDEX]], 1
 ; CHECK-NEXT:    [[TMP7:%.*]] = add i64 [[INDEX]], 2
 ; CHECK-NEXT:    [[TMP8:%.*]] = add i64 [[INDEX]], 3
@@ -362,7 +361,7 @@ define void @test_for_tried_to_force_scalar(ptr noalias %A, ptr noalias %B, ptr 
 ; CHECK-NEXT:    [[TMP10:%.*]] = add i64 [[INDEX]], 5
 ; CHECK-NEXT:    [[TMP11:%.*]] = add i64 [[INDEX]], 6
 ; CHECK-NEXT:    [[TMP12:%.*]] = add i64 [[INDEX]], 7
-; CHECK-NEXT:    [[TMP13:%.*]] = getelementptr nusw [3 x float], ptr [[A:%.*]], i64 [[TMP5]]
+; CHECK-NEXT:    [[TMP13:%.*]] = getelementptr nusw [3 x float], ptr [[A:%.*]], i64 [[INDEX]]
 ; CHECK-NEXT:    [[TMP14:%.*]] = getelementptr nusw [3 x float], ptr [[A]], i64 [[TMP6]]
 ; CHECK-NEXT:    [[TMP15:%.*]] = getelementptr nusw [3 x float], ptr [[A]], i64 [[TMP7]]
 ; CHECK-NEXT:    [[TMP16:%.*]] = getelementptr nusw [3 x float], ptr [[A]], i64 [[TMP8]]

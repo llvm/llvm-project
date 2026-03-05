@@ -114,10 +114,8 @@ const B& f(A *a) {
 // WITH-NONZERO-DEFAULT-AS: attributes #[[ATTR4]] = { noreturn }
 //.
 // CHECK: [[META0:![0-9]+]] = !{i32 1, !"amdhsa_code_object_version", i32 600}
-// CHECK: [[META1:![0-9]+]] = !{i32 1, !"wchar_size", i32 4}
-// CHECK: [[META2:![0-9]+]] = !{!"{{.*}}clang version {{.*}}"}
+// CHECK: [[META1:![0-9]+]] = !{!"{{.*}}clang version {{.*}}"}
 //.
 // WITH-NONZERO-DEFAULT-AS: [[META0:![0-9]+]] = !{i32 1, !"amdhsa_code_object_version", i32 600}
-// WITH-NONZERO-DEFAULT-AS: [[META1:![0-9]+]] = !{i32 1, !"wchar_size", i32 4}
-// WITH-NONZERO-DEFAULT-AS: [[META2:![0-9]+]] = !{!"{{.*}}clang version {{.*}}"}
+// WITH-NONZERO-DEFAULT-AS: [[META1:![0-9]+]] = !{!"{{.*}}clang version {{.*}}"}
 //.

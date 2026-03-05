@@ -34,8 +34,9 @@ public:
 
   void applyFixup(const MCFragment &, const MCFixup &, const MCValue &Target,
                   uint8_t *Data, uint64_t Value, bool IsResolved) override;
-  bool fixupNeedsRelaxation(const MCFixup &Fixup,
-                            uint64_t Value) const override;
+  bool fixupNeedsRelaxationAdvanced(const MCFragment &, const MCFixup &,
+                                    const MCValue &, uint64_t,
+                                    bool) const override;
 
   void relaxInstruction(MCInst &Inst,
                         const MCSubtargetInfo &STI) const override;
@@ -62,8 +63,13 @@ void AMDGPUAsmBackend::relaxInstruction(MCInst &Inst,
   Inst = std::move(Res);
 }
 
-bool AMDGPUAsmBackend::fixupNeedsRelaxation(const MCFixup &Fixup,
-                                            uint64_t Value) const {
+bool AMDGPUAsmBackend::fixupNeedsRelaxationAdvanced(const MCFragment &,
+                                                    const MCFixup &Fixup,
+                                                    const MCValue &,
+                                                    uint64_t Value,
+                                                    bool Resolved) const {
+  if (!Resolved)
+    return true;
   // if the branch target has an offset of x3f this needs to be relaxed to
   // add a s_nop 0 immediately after branch to effectively increment offset
   // for hardware workaround in gfx1010

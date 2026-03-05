@@ -603,11 +603,15 @@ static void handleCallSite(Instruction &I, const Function *CalledFunction,
           append_range(CallStack, InlinedCallStack);
           MatchedCallSites.insert(std::move(CallStack));
         }
-        ORE.emit(OptimizationRemark(DEBUG_TYPE, "MemProfUse", &I)
-                 << ore::NV("CallSite", &I) << " in function "
-                 << ore::NV("Caller", I.getFunction())
-                 << " matched callsite with frame count "
-                 << ore::NV("Frames", InlinedCallStack.size()));
+        OptimizationRemark Remark(DEBUG_TYPE, "MemProfUse", &I);
+        Remark << ore::NV("CallSite", &I) << " in function "
+               << ore::NV("Caller", I.getFunction())
+               << " matched callsite with frame count "
+               << ore::NV("Frames", InlinedCallStack.size())
+               << " and stack ids";
+        for (uint64_t StackId : InlinedCallStack)
+          Remark << " " << ore::NV("StackId", StackId);
+        ORE.emit(Remark);
 
         // If this is a direct call, we're done.
         if (CalledFunction)

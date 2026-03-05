@@ -349,13 +349,8 @@ TEST_F(ZeroArguments, ECLGeneralErrorCommandErrorSync) {
   RTNAME(ExecuteCommandLine)
   (*command.get(), wait, exitStat.get(), cmdStat.get(), cmdMsg.get());
   CheckDescriptorEqInt<std::int64_t>(exitStat.get(), 1);
-#if defined(_WIN32)
-  CheckDescriptorEqInt<std::int64_t>(cmdStat.get(), 6);
-  CheckDescriptorEqStr(cmdMsg.get(), "Invalid command lineXXXXXXXXX");
-#else
-  CheckDescriptorEqInt<std::int64_t>(cmdStat.get(), 3);
-  CheckDescriptorEqStr(cmdMsg.get(), "Command line execution failed");
-#endif
+  CheckDescriptorEqInt<std::int64_t>(cmdStat.get(), 0);
+  CheckDescriptorEqStr(cmdMsg.get(), "cmd msg buffer XXXXXXXXXXXXXX");
 }
 
 TEST_F(ZeroArguments, ECLNotExecutedCommandErrorSync) {
@@ -371,8 +366,8 @@ TEST_F(ZeroArguments, ECLNotExecutedCommandErrorSync) {
   (*command.get(), wait, exitStat.get(), cmdStat.get(), cmdMsg.get());
 #ifdef _WIN32
   CheckDescriptorEqInt<std::int64_t>(exitStat.get(), 1);
-  CheckDescriptorEqInt<std::int64_t>(cmdStat.get(), 6);
-  CheckDescriptorEqStr(cmdMsg.get(), "Invalid command lineXXX");
+  CheckDescriptorEqInt<std::int64_t>(cmdStat.get(), 0);
+  CheckDescriptorEqStr(cmdMsg.get(), "cmd msg buffer XXXXXXXX");
 #else
   CheckDescriptorEqInt<std::int64_t>(exitStat.get(), 126);
   CheckDescriptorEqInt<std::int64_t>(cmdStat.get(), 4);
@@ -400,8 +395,8 @@ TEST_F(ZeroArguments, ECLNotFoundCommandErrorSync) {
   (*command.get(), wait, exitStat.get(), cmdStat.get(), cmdMsg.get());
 #ifdef _WIN32
   CheckDescriptorEqInt<std::int64_t>(exitStat.get(), 1);
-  CheckDescriptorEqInt<std::int64_t>(cmdStat.get(), 6);
-  CheckDescriptorEqStr(cmdMsg.get(), "Invalid command lineXXXXXXX");
+  CheckDescriptorEqInt<std::int64_t>(cmdStat.get(), 0);
+  CheckDescriptorEqStr(cmdMsg.get(), "unmodified buffer XXXXXXXXX");
 #else
   CheckDescriptorEqInt<std::int64_t>(exitStat.get(), 127);
   CheckDescriptorEqInt<std::int64_t>(cmdStat.get(), 5);

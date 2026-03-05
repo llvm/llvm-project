@@ -334,6 +334,7 @@ static uint64_t StopAddress = UINT64_MAX;
 static bool HasStopAddressFlag;
 
 bool objdump::SymbolTable;
+static std::optional<bool> SymbolizeOperandsOption;
 static bool SymbolizeOperands;
 static bool PrettyPGOAnalysisMap;
 static bool DynamicSymbolTable;
@@ -2674,6 +2675,11 @@ static void disassembleObject(ObjectFile *Obj, bool InlineRelocs,
 
   const Target *TheTarget = getTarget(Obj);
 
+  // Default --symbolize-operands to on for BPF, since BPF users expect to see
+  // basic block labels in disassembly.
+  SymbolizeOperands =
+      SymbolizeOperandsOption.value_or(Obj->makeTriple().isBPF());
+
   // Package up features to be passed to target/subtarget
   Expected<SubtargetFeatures> FeaturesValue = Obj->getFeatures();
   if (!FeaturesValue)
@@ -3744,9 +3750,12 @@ static void parseObjdumpOptions(const llvm::opt::InputArgList &InputArgs) {
   parseIntArg(InputArgs, OBJDUMP_stop_address_EQ, StopAddress);
   HasStopAddressFlag = InputArgs.hasArg(OBJDUMP_stop_address_EQ);
   SymbolTable = InputArgs.hasArg(OBJDUMP_syms);
-  SymbolizeOperands = InputArgs.hasArg(OBJDUMP_symbolize_operands);
+  if (const opt::Arg *A = InputArgs.getLastArg(OBJDUMP_symbolize_operands,
+                                               OBJDUMP_no_symbolize_operands))
+    SymbolizeOperandsOption =
+        A->getOption().matches(OBJDUMP_symbolize_operands);
   PrettyPGOAnalysisMap = InputArgs.hasArg(OBJDUMP_pretty_pgo_analysis_map);
-  if (PrettyPGOAnalysisMap && !SymbolizeOperands)
+  if (PrettyPGOAnalysisMap && !SymbolizeOperandsOption.value_or(false))
     reportCmdLineWarning("--symbolize-operands must be enabled for "
                          "--pretty-pgo-analysis-map to have an effect");
   DynamicSymbolTable = InputArgs.hasArg(OBJDUMP_dynamic_syms);

@@ -127,7 +127,6 @@ define i32 @not_dotp_different_types(ptr %a, ptr %b) {
 ; CHECK-INTERLEAVE1:       vector.body:
 ; CHECK-INTERLEAVE1-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, [[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], [[VECTOR_BODY]] ]
 ; CHECK-INTERLEAVE1-NEXT:    [[VEC_PHI:%.*]] = phi <16 x i32> [ zeroinitializer, [[VECTOR_PH]] ], [ [[TMP69:%.*]], [[VECTOR_BODY]] ]
-; CHECK-INTERLEAVE1-NEXT:    [[TMP0:%.*]] = add i64 [[INDEX]], 0
 ; CHECK-INTERLEAVE1-NEXT:    [[TMP1:%.*]] = add i64 [[INDEX]], 1
 ; CHECK-INTERLEAVE1-NEXT:    [[TMP2:%.*]] = add i64 [[INDEX]], 2
 ; CHECK-INTERLEAVE1-NEXT:    [[TMP3:%.*]] = add i64 [[INDEX]], 3
@@ -143,10 +142,10 @@ define i32 @not_dotp_different_types(ptr %a, ptr %b) {
 ; CHECK-INTERLEAVE1-NEXT:    [[TMP13:%.*]] = add i64 [[INDEX]], 13
 ; CHECK-INTERLEAVE1-NEXT:    [[TMP14:%.*]] = add i64 [[INDEX]], 14
 ; CHECK-INTERLEAVE1-NEXT:    [[TMP15:%.*]] = add i64 [[INDEX]], 15
-; CHECK-INTERLEAVE1-NEXT:    [[TMP16:%.*]] = getelementptr i8, ptr [[A]], i64 [[TMP0]]
+; CHECK-INTERLEAVE1-NEXT:    [[TMP16:%.*]] = getelementptr i8, ptr [[A]], i64 [[INDEX]]
 ; CHECK-INTERLEAVE1-NEXT:    [[WIDE_LOAD:%.*]] = load <16 x i8>, ptr [[TMP16]], align 1
 ; CHECK-INTERLEAVE1-NEXT:    [[TMP18:%.*]] = zext <16 x i8> [[WIDE_LOAD]] to <16 x i32>
-; CHECK-INTERLEAVE1-NEXT:    [[TMP19:%.*]] = getelementptr i8, ptr [[B]], i64 [[TMP0]]
+; CHECK-INTERLEAVE1-NEXT:    [[TMP19:%.*]] = getelementptr i8, ptr [[B]], i64 [[INDEX]]
 ; CHECK-INTERLEAVE1-NEXT:    [[TMP20:%.*]] = getelementptr i8, ptr [[B]], i64 [[TMP1]]
 ; CHECK-INTERLEAVE1-NEXT:    [[TMP21:%.*]] = getelementptr i8, ptr [[B]], i64 [[TMP2]]
 ; CHECK-INTERLEAVE1-NEXT:    [[TMP22:%.*]] = getelementptr i8, ptr [[B]], i64 [[TMP3]]
@@ -216,7 +215,6 @@ define i32 @not_dotp_different_types(ptr %a, ptr %b) {
 ; CHECK-INTERLEAVED-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, [[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], [[VECTOR_BODY]] ]
 ; CHECK-INTERLEAVED-NEXT:    [[VEC_PHI:%.*]] = phi <16 x i32> [ zeroinitializer, [[VECTOR_PH]] ], [ [[TMP137:%.*]], [[VECTOR_BODY]] ]
 ; CHECK-INTERLEAVED-NEXT:    [[VEC_PHI1:%.*]] = phi <16 x i32> [ zeroinitializer, [[VECTOR_PH]] ], [ [[TMP138:%.*]], [[VECTOR_BODY]] ]
-; CHECK-INTERLEAVED-NEXT:    [[TMP0:%.*]] = add i64 [[INDEX]], 0
 ; CHECK-INTERLEAVED-NEXT:    [[TMP1:%.*]] = add i64 [[INDEX]], 1
 ; CHECK-INTERLEAVED-NEXT:    [[TMP2:%.*]] = add i64 [[INDEX]], 2
 ; CHECK-INTERLEAVED-NEXT:    [[TMP3:%.*]] = add i64 [[INDEX]], 3
@@ -248,13 +246,13 @@ define i32 @not_dotp_different_types(ptr %a, ptr %b) {
 ; CHECK-INTERLEAVED-NEXT:    [[TMP29:%.*]] = add i64 [[INDEX]], 29
 ; CHECK-INTERLEAVED-NEXT:    [[TMP30:%.*]] = add i64 [[INDEX]], 30
 ; CHECK-INTERLEAVED-NEXT:    [[TMP31:%.*]] = add i64 [[INDEX]], 31
-; CHECK-INTERLEAVED-NEXT:    [[TMP32:%.*]] = getelementptr i8, ptr [[A]], i64 [[TMP0]]
+; CHECK-INTERLEAVED-NEXT:    [[TMP32:%.*]] = getelementptr i8, ptr [[A]], i64 [[INDEX]]
 ; CHECK-INTERLEAVED-NEXT:    [[TMP34:%.*]] = getelementptr i8, ptr [[TMP32]], i64 16
 ; CHECK-INTERLEAVED-NEXT:    [[WIDE_LOAD:%.*]] = load <16 x i8>, ptr [[TMP32]], align 1
 ; CHECK-INTERLEAVED-NEXT:    [[WIDE_LOAD2:%.*]] = load <16 x i8>, ptr [[TMP34]], align 1
 ; CHECK-INTERLEAVED-NEXT:    [[TMP35:%.*]] = zext <16 x i8> [[WIDE_LOAD]] to <16 x i32>
 ; CHECK-INTERLEAVED-NEXT:    [[TMP36:%.*]] = zext <16 x i8> [[WIDE_LOAD2]] to <16 x i32>
-; CHECK-INTERLEAVED-NEXT:    [[TMP37:%.*]] = getelementptr i8, ptr [[B]], i64 [[TMP0]]
+; CHECK-INTERLEAVED-NEXT:    [[TMP37:%.*]] = getelementptr i8, ptr [[B]], i64 [[INDEX]]
 ; CHECK-INTERLEAVED-NEXT:    [[TMP38:%.*]] = getelementptr i8, ptr [[B]], i64 [[TMP1]]
 ; CHECK-INTERLEAVED-NEXT:    [[TMP39:%.*]] = getelementptr i8, ptr [[B]], i64 [[TMP2]]
 ; CHECK-INTERLEAVED-NEXT:    [[TMP40:%.*]] = getelementptr i8, ptr [[B]], i64 [[TMP3]]
@@ -375,7 +373,6 @@ define i32 @not_dotp_different_types(ptr %a, ptr %b) {
 ; CHECK-MAXBW:       vector.body:
 ; CHECK-MAXBW-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, [[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], [[VECTOR_BODY]] ]
 ; CHECK-MAXBW-NEXT:    [[VEC_PHI:%.*]] = phi <16 x i32> [ zeroinitializer, [[VECTOR_PH]] ], [ [[TMP69:%.*]], [[VECTOR_BODY]] ]
-; CHECK-MAXBW-NEXT:    [[TMP0:%.*]] = add i64 [[INDEX]], 0
 ; CHECK-MAXBW-NEXT:    [[TMP1:%.*]] = add i64 [[INDEX]], 1
 ; CHECK-MAXBW-NEXT:    [[TMP2:%.*]] = add i64 [[INDEX]], 2
 ; CHECK-MAXBW-NEXT:    [[TMP3:%.*]] = add i64 [[INDEX]], 3
@@ -391,10 +388,10 @@ define i32 @not_dotp_different_types(ptr %a, ptr %b) {
 ; CHECK-MAXBW-NEXT:    [[TMP13:%.*]] = add i64 [[INDEX]], 13
 ; CHECK-MAXBW-NEXT:    [[TMP14:%.*]] = add i64 [[INDEX]], 14
 ; CHECK-MAXBW-NEXT:    [[TMP15:%.*]] = add i64 [[INDEX]], 15
-; CHECK-MAXBW-NEXT:    [[TMP16:%.*]] = getelementptr i8, ptr [[A]], i64 [[TMP0]]
+; CHECK-MAXBW-NEXT:    [[TMP16:%.*]] = getelementptr i8, ptr [[A]], i64 [[INDEX]]
 ; CHECK-MAXBW-NEXT:    [[WIDE_LOAD:%.*]] = load <16 x i8>, ptr [[TMP16]], align 1
 ; CHECK-MAXBW-NEXT:    [[TMP18:%.*]] = zext <16 x i8> [[WIDE_LOAD]] to <16 x i32>
-; CHECK-MAXBW-NEXT:    [[TMP19:%.*]] = getelementptr i8, ptr [[B]], i64 [[TMP0]]
+; CHECK-MAXBW-NEXT:    [[TMP19:%.*]] = getelementptr i8, ptr [[B]], i64 [[INDEX]]
 ; CHECK-MAXBW-NEXT:    [[TMP20:%.*]] = getelementptr i8, ptr [[B]], i64 [[TMP1]]
 ; CHECK-MAXBW-NEXT:    [[TMP21:%.*]] = getelementptr i8, ptr [[B]], i64 [[TMP2]]
 ; CHECK-MAXBW-NEXT:    [[TMP22:%.*]] = getelementptr i8, ptr [[B]], i64 [[TMP3]]

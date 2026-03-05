@@ -472,6 +472,29 @@ public:
     return false;
   }
 
+  bool addMemOrderOrDefault(OperandVector &Operands) {
+    auto &Tok = Lexer.getTok();
+    int64_t Order = wasm::WASM_MEM_ORDER_SEQ_CST;
+    if (Tok.is(AsmToken::Identifier)) {
+      StringRef S = Tok.getString();
+      Order = StringSwitch<int64_t>(S)
+                  .Case("acqrel", wasm::WASM_MEM_ORDER_ACQ_REL)
+                  .Case("seqcst", wasm::WASM_MEM_ORDER_SEQ_CST)
+                  .Default(-1);
+      if (Order != -1) {
+        if (!STI->checkFeatures("+relaxed-atomics"))
+          return error("memory ordering requires relaxed-atomics feature: ",
+                       Tok);
+        Parser.Lex();
+      } else {
+        Order = wasm::WASM_MEM_ORDER_SEQ_CST;
+      }
+    }
+    Operands.push_back(std::make_unique<WebAssemblyOperand>(
+        Tok.getLoc(), Tok.getEndLoc(), WebAssemblyOperand::IntOp{Order}));
+    return false;
+  }
+
   bool checkForP2AlignIfLoadStore(OperandVector &Operands, StringRef InstName) {
     // FIXME: there is probably a cleaner way to do this.
     auto IsLoadStore = InstName.contains(".load") ||
@@ -672,6 +695,11 @@ public:
       // When we get support for wasm-gc types, this should become
       // ExpectRefType.
       ExpectFuncType = true;
+    }
+
+    if (Name.contains("atomic.")) {
+      if (addMemOrderOrDefault(Operands))
+        return true;
     }
 
     // Returns true if the next tokens are a catch clause
@@ -1167,11 +1195,21 @@ public:
     case Match_Success: {
       ensureLocals(Out);
       // Fix unknown p2align operands.
+      const MCInstrDesc &Desc = MII.get(Inst.getOpcode());
       auto Align = WebAssembly::GetDefaultP2AlignAny(Inst.getOpcode());
       if (Align != -1U) {
-        auto &Op0 = Inst.getOperand(0);
-        if (Op0.getImm() == -1)
-          Op0.setImm(Align);
+        unsigned I = 0;
+        // It's operand 0 for regular memory ops and 1 for atomics.
+        for (unsigned E = Desc.getNumOperands(); I < E; ++I) {
+          if (Desc.operands()[I].OperandType == WebAssembly::OPERAND_P2ALIGN) {
+            auto &Op = Inst.getOperand(I);
+            if (Op.getImm() == -1) {
+              Op.setImm(Align);
+            }
+            break;
+          }
+        }
+        assert(I < 2 && "Default p2align set but operand not found");
       }
       if (Is64) {
         // Upgrade 32-bit loads/stores to 64-bit. These mostly differ by having

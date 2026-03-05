@@ -276,11 +276,6 @@ bool CSKYAsmBackend::shouldForceRelocation(const MCFixup &Fixup,
   return false;
 }
 
-bool CSKYAsmBackend::fixupNeedsRelaxation(const MCFixup &Fixup,
-                                          uint64_t Value) const {
-  return false;
-}
-
 void CSKYAsmBackend::relaxInstruction(MCInst &Inst,
                                       const MCSubtargetInfo &STI) const {
   MCInst Res;

@@ -600,7 +600,9 @@ protected:
               Debugger &debugger = thread_sp->CalculateTarget()->GetDebugger();
               bool old_async = debugger.GetAsyncExecution();
               debugger.SetAsyncExecution(true);
-
+              // The callback will run commands or SB API calls, which need to
+              // see the public state as stopped, but we haven't set the public
+              // state yet.
               callback_says_stop = bp_loc_sp->InvokeCallback(&context);
 
               debugger.SetAsyncExecution(old_async);

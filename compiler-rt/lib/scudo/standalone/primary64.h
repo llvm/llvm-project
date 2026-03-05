@@ -1170,11 +1170,10 @@ void SizeClassAllocator64<Config>::getStats(ScopedString *Str, uptr ClassId,
     Str->append(" Latest release: %6" PRIu64 ":%" PRIu64 " seconds ago",
                 LastReleaseSecAgo, LastReleaseMsAgo);
   }
-#if SCUDO_LINUX
-  const uptr MapBase = Region->MemMapInfo.MemMap.getBase();
-  Str->append(" Resident Pages: %6" PRIu64,
-              getResidentPages(MapBase, RegionSize));
-#endif
+  const s64 ResidentPages = Region->MemMapInfo.MemMap.getResidentPages();
+  if (ResidentPages >= 0) {
+    Str->append(" Resident Pages: %6" PRIu64, ResidentPages);
+  }
   Str->append("\n");
 }
 

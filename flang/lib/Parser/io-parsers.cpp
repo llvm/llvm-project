@@ -552,6 +552,11 @@ TYPE_PARSER(construct<format::FormatItem>(
     construct<format::FormatItem>(
         maybe(repeat), Parser<format::DerivedTypeDataEditDesc>{}) ||
     construct<format::FormatItem>(Parser<format::ControlEditDesc>{}) ||
+    // Error recovery: accept [r] before control-edit-desc so that the
+    // format validator can diagnose a repeat specifier before descriptors
+    // like SS, SP, S, BN, BZ, etc., rather than failing the parse entirely.
+    construct<format::FormatItem>(
+        maybe(repeat), Parser<format::ControlEditDesc>{}) ||
     construct<format::FormatItem>(charStringEditDesc) ||
     construct<format::FormatItem>(maybe(repeat), parenthesized(formatItems)))
 

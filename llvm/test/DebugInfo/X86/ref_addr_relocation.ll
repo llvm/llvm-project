@@ -33,12 +33,12 @@
 
 ; Make sure we use relocation for ref_addr on non-darwin platforms.
 ; CHECK: DW_TAG_compile_unit
+; CHECK: DW_TAG_structure_type
 ; CHECK: DW_TAG_variable
 ; ELF-ASM: .long [[TYPE:.*]] # DW_AT_type
 ; DARWIN-ASM2: .long [[TYPE:.*]] ## DW_AT_type
 ; DARWIN-ASM4: .long [[TYPE:.*]] ## DW_AT_type
 ; COFF-ASM: .long [[TYPE:.*]] # DW_AT_type
-; CHECK: DW_TAG_structure_type
 ; CHECK: cu_begin1
 ; CHECK: DW_TAG_compile_unit
 ; CHECK-NOT: DW_TAG_structure_type
@@ -60,9 +60,9 @@
 ; CHECK-DWARF: DW_AT_type [DW_FORM_ref_addr] {{.*}}[[ADDR]]
 
 ; CHECK-DWARF2: DW_TAG_compile_unit
+; CHECK-DWARF2: [[ADDR:.*]]: DW_TAG_structure_type
 ; CHECK-DWARF2: DW_TAG_variable
-; CHECK-DWARF2: DW_AT_type [DW_FORM_ref4] {{.*}} => {[[ADDR:.*]]}
-; CHECK-DWARF2: [[ADDR]]: DW_TAG_structure_type
+; CHECK-DWARF2: DW_AT_type [DW_FORM_ref4] {{.*}} => {[[ADDR]]}
 
 source_filename = "test/DebugInfo/X86/ref_addr_relocation.ll"
 

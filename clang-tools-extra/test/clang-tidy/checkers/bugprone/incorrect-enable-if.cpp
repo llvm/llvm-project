@@ -1,5 +1,5 @@
-// RUN: %check_clang_tidy -std=c++11 %s bugprone-incorrect-enable-if %t
-// RUN: %check_clang_tidy -check-suffix=CXX20 -std=c++20 %s bugprone-incorrect-enable-if %t
+// RUN: %check_clang_tidy -std=c++11,c++14,c++17 %s bugprone-incorrect-enable-if %t
+// RUN: %check_clang_tidy -std=c++20-or-later -check-suffix=CXX20 %s bugprone-incorrect-enable-if %t
 
 // NOLINTBEGIN
 namespace std {

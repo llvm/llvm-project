@@ -40,5 +40,4 @@ __global__ void kernel() {
 //.
 // OPTNONE: [[META0:![0-9]+]] = !{i32 1, !"amdhsa_code_object_version", i32 600}
 // OPTNONE: [[META1:![0-9]+]] = !{i32 1, !"amdgpu_printf_kind", !"hostcall"}
-// OPTNONE: [[META2:![0-9]+]] = !{i32 1, !"wchar_size", i32 4}
 //.

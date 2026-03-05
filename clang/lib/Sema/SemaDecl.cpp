@@ -13894,6 +13894,12 @@ void Sema::AddInitializerToDecl(Decl *RealDecl, Expr *Init, bool DirectInit) {
 
   this->CheckAttributesOnDeducedType(RealDecl);
 
+  // we don't initialize groupshared variables so warn and return
+  if (VDecl->hasAttr<HLSLGroupSharedAddressSpaceAttr>()) {
+    Diag(VDecl->getLocation(), diag::warn_hlsl_groupshared_init);
+    return;
+  }
+
   // dllimport cannot be used on variable definitions.
   if (VDecl->hasAttr<DLLImportAttr>() && !VDecl->isStaticDataMember()) {
     Diag(VDecl->getLocation(), diag::err_attribute_dllimport_data_definition);

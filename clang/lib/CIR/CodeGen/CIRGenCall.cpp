@@ -1270,13 +1270,17 @@ void CallArg::copyInto(CIRGenFunction &cgf, Address addr,
 
 mlir::Value CIRGenFunction::emitRuntimeCall(mlir::Location loc,
                                             cir::FuncOp callee,
-                                            ArrayRef<mlir::Value> args) {
+                                            ArrayRef<mlir::Value> args,
+                                            mlir::NamedAttrList attrs) {
   // TODO(cir): set the calling convention to this runtime call.
   assert(!cir::MissingFeatures::opFuncCallingConv());
 
   cir::CallOp call = builder.createCallOp(loc, callee, args);
   assert(call->getNumResults() <= 1 &&
          "runtime functions have at most 1 result");
+
+  if (!attrs.empty())
+    call->setAttrs(attrs);
 
   if (call->getNumResults() == 0)
     return nullptr;

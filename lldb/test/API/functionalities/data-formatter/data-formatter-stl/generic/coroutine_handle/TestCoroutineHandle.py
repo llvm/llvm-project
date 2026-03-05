@@ -2,20 +2,15 @@
 Test lldb data formatter subsystem.
 """
 
-
 import lldb
 from lldbsuite.test.decorators import *
 from lldbsuite.test.lldbtest import *
 from lldbsuite.test import lldbutil
 
-USE_LIBSTDCPP = "USE_LIBSTDCPP"
-USE_LIBCPP = "USE_LIBCPP"
-
 
 class TestCoroutineHandle(TestBase):
-    def do_test(self, stdlib_type):
+    def do_test(self):
         """Test std::coroutine_handle is displayed correctly."""
-        self.build(dictionary={stdlib_type: "1"})
         is_clang = self.expectedCompiler(["clang"])
 
         # Clang <= 20 used to also name the resume/destroy functions
@@ -167,9 +162,11 @@ class TestCoroutineHandle(TestBase):
 
     @add_test_categories(["libstdcxx"])
     def test_libstdcpp(self):
-        self.do_test(USE_LIBSTDCPP)
+        self.build(dictionary={"USE_LIBSTDCPP": 1})
+        self.do_test()
 
     @add_test_categories(["libc++"])
     @skipIf(compiler="clang", compiler_version=["<", "15.0"])
     def test_libcpp(self):
-        self.do_test(USE_LIBCPP)
+        self.build(dictionary={"USE_LIBCPP": 1})
+        self.do_test()

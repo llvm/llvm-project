@@ -368,6 +368,15 @@ mlir::LogicalResult CIRGetRuntimeMemberOpABILowering::matchAndRewrite(
   return mlir::success();
 }
 
+mlir::LogicalResult CIRVTableGetTypeInfoOpABILowering::matchAndRewrite(
+    cir::VTableGetTypeInfoOp op, OpAdaptor adaptor,
+    mlir::ConversionPatternRewriter &rewriter) const {
+  mlir::Value loweredResult =
+      lowerModule->getCXXABI().lowerVTableGetTypeInfo(op, rewriter);
+  rewriter.replaceOp(op, loweredResult);
+  return mlir::success();
+}
+
 // Prepare the type converter for the CXXABI lowering pass.
 // Even though this is a CIR-to-CIR pass, we are eliminating some CIR types.
 static void prepareCXXABITypeConverter(mlir::TypeConverter &converter,
@@ -446,6 +455,7 @@ populateCXXABIConversionTarget(mlir::ConversionTarget &target,
         return typeConverter.isLegal(op.getSymType());
       });
   target.addIllegalOp<cir::DynamicCastOp>();
+  target.addIllegalOp<cir::VTableGetTypeInfoOp>();
 }
 
 //===----------------------------------------------------------------------===//

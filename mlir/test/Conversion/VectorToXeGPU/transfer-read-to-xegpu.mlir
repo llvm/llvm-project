@@ -120,9 +120,10 @@ gpu.func @load_transposed(%source: memref<32x64xf32>,
 // LOAD-ND-SAME:   %[[OFFSET2:.+]]: index  
 // LOAD-ND:        %[[DESC:.+]] = xegpu.create_nd_tdesc %[[SRC]]
 // LOAD-ND-SAME:     memref<32x64xf32> -> !xegpu.tensor_desc<16x8xf32
-// LOAD-ND:        %[[VEC:.+]] = xegpu.load_nd %[[DESC]][%[[OFFSET1]], %[[OFFSET2]]] <{transpose = array<i64: 1, 0>}>
-// LOAD-ND-SAME:     -> vector<8x16xf32>
-// LOAD-ND:        return %[[VEC]]
+// LOAD-ND:        %[[VEC:.+]] = xegpu.load_nd %[[DESC]][%[[OFFSET1]], %[[OFFSET2]]]
+// LOAD-ND-SAME:     -> vector<16x8xf32>
+// LOAD-ND:        %[[VEC_TRANSPOSED:.+]] = vector.transpose %[[VEC]], [1, 0] : vector<16x8xf32> to vector<8x16xf32>
+// LOAD-ND:        return %[[VEC_TRANSPOSED]]
 
 
 // LOAD-GATHER-LABEL:  @load_transposed(
@@ -297,7 +298,8 @@ gpu.func @load_transpose_f16(%source: memref<32x64xf16>,
 }
 
 // LOAD-ND-LABEL:  @load_transpose_f16(
-// LOAD-ND:        vector.transfer_read
+// LOAD-ND:        %[[LOAD:.*]] = xegpu.load_nd
+// LOAD-ND:        vector.transpose %[[LOAD]], [1, 0] : vector<16x8xf16> to vector<8x16xf16>
 
 // LOAD-GATHER-LABEL:  @load_transpose_f16(
 // LOAD-GATHER-SAME:    %[[SRC:.+]]: memref<32x64xf16>,

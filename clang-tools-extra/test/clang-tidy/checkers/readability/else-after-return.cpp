@@ -1,4 +1,4 @@
-// RUN: %check_clang_tidy %s readability-else-after-return %t -- -- -isystem %clang_tidy_headers -fexceptions -std=c++17
+// RUN: %check_clang_tidy -std=c++17-or-later %s readability-else-after-return %t -- -- -isystem %clang_tidy_headers -fexceptions
 #include <string>
 
 struct my_exception {
@@ -305,4 +305,136 @@ void testPPConditionals() {
     return;
   }
 #endif
+}
+
+void testSwitchCases(int i, bool b, bool b2) {
+  // Case statement without braces.
+  switch (i) {
+  case 0:
+    if (b) {
+      return;
+    } else { // comment-18
+      // CHECK-MESSAGES: :[[@LINE-1]]:7: warning: do not use 'else' after 'return'
+      // CHECK-FIXES: {{^}}    } // comment-18
+      f(1);
+    }
+  }
+
+  // Fallthrough.
+  switch (i) {
+  case 0:
+  case 1:
+  case 2:
+    if (b)
+      return;
+    else // comment-19
+      // CHECK-MESSAGES: :[[@LINE-1]]:5: warning: do not use 'else' after 'return'
+      // CHECK-FIXES: {{^}} // comment-19
+      return;
+  }
+
+  switch (i) {
+  case 1:
+  case 2:
+    if (b)
+      f(0);
+    else if (b2)
+      return;
+    else // comment-20
+      // CHECK-FIXES-NOT: {{^}}  // comment-20
+      f(1);
+  }
+
+  switch (i) {
+  case 0:
+    if (b) {
+      if (b2)
+        return;
+      else // comment-21
+        // CHECK-MESSAGES: :[[@LINE-1]]:7: warning: do not use 'else' after 'return'
+        // CHECK-FIXES: {{^}}    // comment-21
+        f(0);
+    } else {
+      if (b && b2)
+        return;
+      else // comment-22
+        // CHECK-MESSAGES: :[[@LINE-1]]:7: warning: do not use 'else' after 'return'
+        // CHECK-FIXES: {{^}}    // comment-22
+        f(0);
+    }
+  }
+
+  // Nested switch.
+  switch (i) {
+  case 0:
+  case 1:
+    switch (3) {
+    case 0:
+      if (b) {
+        return;
+      } else { // comment-23
+        // CHECK-MESSAGES: :[[@LINE-1]]:9: warning: do not use 'else' after 'return'
+        // CHECK-FIXES: {{^}}      } // comment-23
+        f(0);
+      }
+      break;
+    default:
+      break;
+    }
+    break;
+  default:
+    break;
+  }
+
+  switch (i) {
+  case 1:
+    if (b)
+      return;
+    else // comment-24
+      // CHECK-MESSAGES: :[[@LINE-1]]:5: warning: do not use 'else' after 'return'
+      // CHECK-FIXES-NOT: {{^}}   // comment-24
+      int _ = 20;
+    break;
+  case 2:
+    break;
+  }
+
+  switch (i) {
+  case 1:
+  case 2:
+  [[clang::annotate("TestWithAttributedStmt")]]
+  case 3:
+    if (b) {
+      return;
+    } else { // comment-25
+      // CHECK-MESSAGES: :[[@LINE-1]]:7: warning: do not use 'else' after 'return'
+      // CHECK-FIXES: {{^}}      } // comment-25
+        f(0);
+    }
+  }
+}
+
+void testLabels(bool b) {
+  goto LABEL;
+  goto LABEL2;
+
+LABEL:
+  if (b)
+    return;
+  else // comment-26
+    // CHECK-MESSAGES: :[[@LINE-1]]:3: warning: do not use 'else' after 'return'
+    // CHECK-FIXES: {{^}} // comment-26
+    return;
+
+  switch ((int)b) {
+  case 1:
+  case 2:
+  LABEL2:
+    if (0)
+      return;
+    else  // comment-27
+      // CHECK-MESSAGES: :[[@LINE-1]]:5: warning: do not use 'else' after 'return'
+      // CHECK-FIXES: {{^}} // comment-27
+      f(0);
+  }
 }

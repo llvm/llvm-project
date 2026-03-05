@@ -364,10 +364,10 @@ class ClassInAnotherNamespace {};
 // MD-ALL-FILES: ## [PrimaryNamespace](PrimaryNamespace{{[\/]}}index.md)
 
 // MD-MUSTACHE-ALL-FILES: # All Files
-// MD-MUSTACHE-ALL-FILES: ## [GlobalNamespace](GlobalNamespace{{[\/]}}index.md)
-// MD-MUSTACHE-ALL-FILES: ## [PrimaryNamespace](PrimaryNamespace{{[\/]}}index.md)
 // MD-MUSTACHE-ALL-FILES: ## [@nonymous_namespace](@nonymous_namespace{{[\/]}}index.md)
 // MD-MUSTACHE-ALL-FILES: ## [AnotherNamespace](AnotherNamespace{{[\/]}}index.md)
+// MD-MUSTACHE-ALL-FILES: ## [GlobalNamespace](GlobalNamespace{{[\/]}}index.md)
+// MD-MUSTACHE-ALL-FILES: ## [PrimaryNamespace](PrimaryNamespace{{[\/]}}index.md)
 
 // MD-INDEX: #  C/C++ Reference
 // MD-INDEX: * Namespace: [@nonymous_namespace](@nonymous_namespace)
