@@ -1271,7 +1271,7 @@ static const SCEV *absSCEVNoSignedOverflow(const SCEV *A, ScalarEvolution &SE) {
   return SE.getAbsExpr(A, /*IsNSW=*/true);
 }
 
-/// Returns true iff \p Test is enabled.
+/// Returns true if \p Test is enabled.
 static bool isDependenceTestEnabled(DependenceTestType Test) {
   if (EnableDependenceTest == DependenceTestType::All)
     return true;
