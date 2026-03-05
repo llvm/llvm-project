@@ -11459,7 +11459,7 @@ def SYSPxt  : SystemPXtI<0, "sysp"> {
 
 def SYSPxt_XZR
   : BaseSystemI<0, (outs),
-      (ins sysp_op1:$op1, sysp_crn_op:$Cn, sysp_crm_op:$Cm, imm0_7:$op2,
+      (ins imm0_6:$op1, sysp_crn_op:$Cn, sysp_crm_op:$Cm, imm0_7:$op2,
            SyspXzrPairOperand:$xzr_pair),
       "sysp", "\t$op1, $Cn, $Cm, $op2, $xzr_pair">,
     Sched<[WriteSys]>
@@ -11486,7 +11486,7 @@ def SYSPxt_XZR
 }
 
 def : InstAlias<"sysp $op1, $Cn, $Cm, $op2",
-                (SYSPxt_XZR sysp_op1:$op1, sysp_crn_op:$Cn, sysp_crm_op:$Cm,
+                (SYSPxt_XZR imm0_6:$op1, sysp_crn_op:$Cn, sysp_crm_op:$Cm,
                             imm0_7:$op2, XZR)>;
 
 //---

@@ -943,6 +943,7 @@ def Imm0_1Operand : AsmImmRange<0, 1>;
 def Imm1_1Operand : AsmImmRange<1, 1>;
 def Imm0_3Operand : AsmImmRange<0, 3>;
 def Imm1_3Operand : AsmImmRange<1, 3>;
+def Imm0_6Operand : AsmImmRange<0, 6>;
 def Imm0_7Operand : AsmImmRange<0, 7>;
 def Imm1_7Operand : AsmImmRange<1, 7>;
 def Imm0_15Operand : AsmImmRange<0, 15>;
@@ -1174,6 +1175,13 @@ def imm0_15 : Operand<i64>, ImmLeaf<i64, [{
   return ((uint64_t)Imm) < 16;
 }]> {
   let ParserMatchClass = Imm0_15Operand;
+}
+
+// imm0_6 predicate - True if the immediate is in the range [0,6]
+def imm0_6 : Operand<i64>, ImmLeaf<i64, [{
+  return ((uint64_t)Imm) < 7;
+}]> {
+  let ParserMatchClass = Imm0_6Operand;
 }
 
 // imm0_7 predicate - True if the immediate is in the range [0,7]
@@ -2119,14 +2127,6 @@ def SysCRAsmOperand : AsmOperandClass {
 def sys_cr_op : Operand<i32> {
   let PrintMethod = "printSysCROperand";
   let ParserMatchClass = SysCRAsmOperand;
-  let OperandType = "OPERAND_IMMEDIATE";
-}
-
-// SYSP operands are more restricted than generic system CR/imm fields.
-def sysp_op1 : Operand<i64>, ImmLeaf<i64, [{
-  return Imm >= 0 && Imm <= 6;
-}]> {
-  let ParserMatchClass = Imm0_7Operand;
   let OperandType = "OPERAND_IMMEDIATE";
 }
 
@@ -13303,7 +13303,7 @@ class BaseSYSPEncoding<bit L, string asm, string operands, dag outputs, dag inpu
 }
 class SystemPXtI<bit L, string asm> :
   BaseSYSPEncoding<L, asm, "\t$op1, $Cn, $Cm, $op2, $Rt", (outs),
-  (ins sysp_op1:$op1, sysp_crn_op:$Cn, sysp_crm_op:$Cm, imm0_7:$op2,
+  (ins imm0_6:$op1, sysp_crn_op:$Cn, sysp_crm_op:$Cm, imm0_7:$op2,
        XSeqPairClassOperand:$Rt)>;
 
 //----------------------------------------------------------------------------
