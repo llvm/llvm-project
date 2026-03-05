@@ -41,6 +41,20 @@
 ; RUN:	-r=%t.o,_ZdaPv, \
 ; RUN:	-r=%t.o,sleep, \
 ; RUN:	-r=%t.o,_Znam, \
+; RUN:	-pass-remarks-output=%t.remarks.yaml \
+; RUN:	-o %t.out.2 2>&1
+; RUN: FileCheck %s --check-prefix=REMARKSONLY < %t.remarks.yaml
+
+; REMARKSONLY: MemProf hinting: NotCold full allocation context 123 with total size 100 is NotCold after cloning (context id 1)
+; REMARKSONLY: MemProf hinting: Cold full allocation context 456 with total size 200 is Cold after cloning (context id 2)
+; REMARKSONLY: MemProf hinting: Cold full allocation context 789 with total size 300 is Cold after cloning (context id 2)
+
+; RUN: llvm-lto2 run %t.o -enable-memprof-context-disambiguation \
+; RUN:	-supports-hot-cold-new \
+; RUN:	-r=%t.o,main,plx \
+; RUN:	-r=%t.o,_ZdaPv, \
+; RUN:	-r=%t.o,sleep, \
+; RUN:	-r=%t.o,_Znam, \
 ; RUN:	-memprof-verify-ccg -memprof-verify-nodes -memprof-dump-ccg \
 ; RUN:	-memprof-export-to-dot -memprof-dot-file-path-prefix=%t. \
 ; RUN:	-memprof-report-hinted-sizes \
