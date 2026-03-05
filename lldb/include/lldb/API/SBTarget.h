@@ -418,7 +418,7 @@ public:
   ///     The base address for the section.
   ///
   /// \return
-  ///      An error to indicate success, fail, and any reason for
+  ///     An error to indicate success, fail, and any reason for
   ///     failure.
   lldb::SBError SetSectionLoadAddress(lldb::SBSection section,
                                       lldb::addr_t section_base_addr);
@@ -430,7 +430,7 @@ public:
   ///     this target.
   ///
   /// \return
-  ///      An error to indicate success, fail, and any reason for
+  ///     An error to indicate success, fail, and any reason for
   ///     failure.
   lldb::SBError ClearSectionLoadAddress(lldb::SBSection section);
 

@@ -316,8 +316,10 @@ public:
 
   SBStructuredData GetStatistics();
 
-  /// Returns a list of handled commands, output and error. Each element in
-  /// the list is a dictionary with the following keys/values:
+  /// Returns a list of handled commands, output and error.
+  ///
+  /// Each element in the list is a dictionary with the following keys/values:
+  ///
   /// - "command" (string): The command that was given by the user.
   /// - "commandName" (string): The name of the executed command.
   /// - "commandArguments" (string): The arguments of the executed command.

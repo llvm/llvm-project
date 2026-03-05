@@ -129,8 +129,7 @@ public:
   ///
   /// \param [in] envp
   ///     The new environment variables as a list of strings with the following
-  ///     format
-  ///         name=value
+  ///     format: `name=value`
   ///
   /// \param [in] append
   ///     Flag that controls whether to replace the existing environment.

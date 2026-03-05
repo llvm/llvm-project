@@ -83,7 +83,7 @@ See also SBThread."
     sets that exist for this thread.  
     Each SBValue in the SBValueList represents one register-set. 
     The first register-set will be the general purpose registers -- 
-    the registers printed by the `register read` command-line in lldb, with 
+    the registers printed by the ``register read`` command-line in lldb, with 
     no additional arguments.  
     The register-set SBValue will have a name, e.g. 
     SBFrame::GetRegisters().GetValueAtIndex(0).GetName() 

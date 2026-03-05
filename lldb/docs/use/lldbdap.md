@@ -26,7 +26,7 @@ such as [Variable Pretty-Printing](https://lldb.llvm.org/use/variable.html),
 and [Python Scripting](https://lldb.llvm.org/use/python.html) are available
 also in `lldb-dap`.
 
-#### Links to IDE Extensions
+### Links to IDE Extensions
 
 - Visual Studio Code -
 [LLDB DAP Extension](https://marketplace.visualstudio.com/items?itemName=llvm-vs-code-extensions.lldb-dap)
