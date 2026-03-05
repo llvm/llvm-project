@@ -532,11 +532,12 @@ xegpu::DistributeLayoutAttr xegpu::setupBitCastResultLayout(
   SmallVector<int64_t> sgData = consumerLayout.getEffectiveSgDataAsInt();
   SmallVector<int64_t> instData = consumerLayout.getEffectiveInstDataAsInt();
   SmallVector<int64_t> laneData = consumerLayout.getEffectiveLaneDataAsInt();
+  assert(consumerLayout.getRank() == static_cast<int64_t>(srcShape.size()) &&
+         "laneData must be available for all dimensions");
   size_t dim = srcShape.size() - 1;
   int64_t sgDataValue = -1;
   int64_t instDataValue = -1;
   int64_t laneDataValue = -1;
-
   const int subgroupSize = uArch->getSubgroupSize();
 
   if (srcElemTyBitWidth > resElemTyBitWidth) {
@@ -546,12 +547,8 @@ xegpu::DistributeLayoutAttr xegpu::setupBitCastResultLayout(
     int bitWidthRatio = srcElemTyBitWidth / resElemTyBitWidth;
     int innermostDimLaneLayout = subgroupSize;
     if (layoutKind == xegpu::LayoutKind::Subgroup) {
-      assert(sgData.size() == srcShape.size() &&
-             "sgData must be available for all dimensions");
       sgDataValue = sgData[dim];
     } else if (layoutKind == xegpu::LayoutKind::InstData) {
-      assert(instData.size() == srcShape.size() &&
-             "instData must be available for all dimensions");
       instDataValue = instData[dim];
       // Adjust instDataValue so it still fits within an instruction after
       // dividing by bitWidthRatio
@@ -561,8 +558,6 @@ xegpu::DistributeLayoutAttr xegpu::setupBitCastResultLayout(
       assert((srcShape[dim] % instDataValue) == 0 &&
              "srcShape, instData, and lanelayout for innermost must be 2^n !");
     } else if (layoutKind == xegpu::LayoutKind::Lane) {
-      assert(laneData.size() == srcShape.size() &&
-             "laneData must be available for all dimensions");
       laneDataValue = laneData[dim];
       while ((laneDataValue <= srcShape[dim]) &&
              (laneDataValue % bitWidthRatio != 0))
@@ -580,81 +575,47 @@ xegpu::DistributeLayoutAttr xegpu::setupBitCastResultLayout(
 /// Sets up the result layout for an insert strided slice operation.
 /// Creates a result layout based on the specified layout kind (InstData or
 /// Lane).
-/// Subgroup layout is currently not supported for this operation.
-/// InstData layout is first set to be {1, .., subgroupSize}.
-/// Lane layout is first set to be {1, ..., subgroupSize} with lane data {1,
-/// ..., 1}. The instData and laneData is then adjusted to contain packed data,
-/// by checking if the consumerLayout's innermost dimension.
-///
-/// Examples:
-///   1. InstData layout without packing:
-///      resShape=[8, 32], subgroupSize=16, bitwidth=32
-///      packingFactor=1, packedDataSize=16
-///      consumerLayout: instData=[1, 16]
-///      Result: instData=[1, 16]
-///
-///   2. InstData layout with packing:
-///      resShape=[8, 64], subgroupSize=16, bitwidth=8, packingFactor=4
-///      consumerLayout: instData=[1, 64]
-///      Result: instData=[1, 64] (adjusted for packed data)
-///
-///   3. Lane layout without packing:
-///      resShape=[4, 64], subgroupSize=16, bitwidth=32
-///      consumerLayout: laneLayout=[1, 16], laneData=[1, 1]
-///      Result: laneLayout=[1, 16], laneData=[1, 1]
-///
-///   4. Lane layout with packing:
-///      resShape=[4, 64], subgroupSize=16, bitwidth=16, packingFactor=2
-///      consumerLayout: laneLayout=[1, 16], laneData=[1, 2]
-///      Result: laneLayout=[1, 16], laneData=[1, 2] (adjusted for packed data)
-// xegpu::DistributeLayoutAttr xegpu::setupInsertStridedSliceResultLayout(
-//     xegpu::LayoutKind layoutKind, VectorType srcVectorTy,
-//     VectorType resVectorTy, xegpu::DistributeLayoutAttr consumerLayout,
-//     const xegpu::uArch::uArch *uArch) {
+xegpu::DistributeLayoutAttr xegpu::setupInsertStridedSliceResultLayout(
+    xegpu::LayoutKind layoutKind, VectorType srcVectorTy,
+    VectorType resVectorTy, xegpu::DistributeLayoutAttr consumerLayout,
+    const xegpu::uArch::uArch *uArch) {
 
-//   xegpu::DistributeLayoutAttr requiredResLayout;
-//   auto subgroupSize = uArch->getSubgroupSize();
-//   auto context = resVectorTy.getContext();
-//   auto resShape = resVectorTy.getShape();
-//   int resShapeSize = resShape.size();
-//   auto srcShape = srcVectorTy.getShape();
-//   SmallVector<int64_t> consumerInstData =
-//       consumerLayout.getEffectiveInstDataAsInt();
-//   SmallVector<int64_t> consumerLaneData =
-//       consumerLayout.getEffectiveLaneDataAsInt();
+  xegpu::DistributeLayoutAttr requiredResLayout;
+  SmallVector<int64_t> consumerInstData =
+      consumerLayout.getEffectiveInstDataAsInt();
+  SmallVector<int64_t> consumerLaneData =
+      consumerLayout.getEffectiveLaneDataAsInt();
+  SmallVector<int64_t> consumerLaneLayout =
+      consumerLayout.getEffectiveLaneLayoutAsInt();
+  ArrayRef<int64_t> srcShape = srcVectorTy.getShape();
+  int64_t instDataValue = -1;
+  int64_t laneDataValue = -1;
 
-//   SmallVector<int> instData(resShapeSize, 1);
-//   SmallVector<int> laneLayout(resShapeSize, 1);
-//   SmallVector<int> laneData(resShapeSize, 1);
+  requiredResLayout = consumerLayout;
+  int srcRank = srcShape.size();
 
-//   const unsigned packingSize{uArch->getGeneralPackedFormatBitSize()};
-//   unsigned bitwidth = resVectorTy.getElementType().getIntOrFloatBitWidth();
-//   int packingFactor = bitwidth < packingSize ? packingSize / bitwidth : 1;
-//   int packedDataSize = subgroupSize * packingFactor;
+  if (layoutKind == xegpu::LayoutKind::Subgroup) {
+    assert(true &&
+           "subgroup layout assignment not supported for insertStridedSlice.");
+  } else if (layoutKind == xegpu::LayoutKind::InstData) {
+    for (int dim = 0; dim < srcRank; dim++) {
+      instDataValue = std::min(srcShape[dim], consumerInstData[dim]);
+      requiredResLayout =
+          requiredResLayout.setDimData(dim, -1, instDataValue, -1);
+    }
+  } else if (layoutKind == xegpu::LayoutKind::Lane) {
+    for (int dim = 0; dim < srcRank; dim++) {
+      assert(srcShape[dim] % consumerLaneLayout[dim] == 0 &&
+             "srcShape must be divisible by laneLayout for all dimensions");
+      laneDataValue = std::min(srcShape[dim] / consumerLaneLayout[dim],
+                               consumerLaneData[dim]);
 
-//   if (layoutKind == xegpu::LayoutKind::Subgroup) {
-//     assert(true &&
-//            "subgroup layout assignment not supported for
-//            insertStridedSlice.");
-//   } else if (layoutKind == xegpu::LayoutKind::InstData) {
-//     assert(srcShape.back() >= subgroupSize &&
-//            "source innermost dim must be >= subgroupSize");
-//     instData.back() = subgroupSize;
-//     if (consumerInstData.back() == packedDataSize &&
-//         srcShape.back() >= packedDataSize)
-//       instData.back() = packedDataSize;
-//     requiredResLayout = xegpu::LayoutAttr::get(context, instData);
-//   } else if (layoutKind == xegpu::LayoutKind::Lane) {
-//     laneLayout.back() = subgroupSize;
-//     laneData.back() = 1;
-//     if (consumerLaneData.back() == packingFactor &&
-//         srcShape.back() >= packedDataSize)
-//       laneData.back() = packingFactor;
-//     requiredResLayout = xegpu::LayoutAttr::get(context, laneLayout,
-//     laneData);
-//   }
-//   return requiredResLayout;
-// }
+      requiredResLayout =
+          requiredResLayout.setDimData(dim, -1, -1, laneDataValue);
+    }
+  }
+  return requiredResLayout;
+}
 
 /// Sets up the anchor layout for load gather and load matrix operation.
 /// load matrix lowers to load gather and 1d block load. All of them share the
@@ -849,8 +810,8 @@ xegpu::setupStoreMatrixAnchorLayout(xegpu::LayoutKind layoutKind,
 }
 
 // This function returns the default lane layout for a given vector type.
-// - `packingSize` means multiple consecutive elements can be accessed together
-// as a single unit.
+// - `packingSize` means multiple consecutive elements can be accessed
+// together as a single unit.
 // - `vnni` means data packing is column-wise (i.e., 2x1xf16 with vnni vs.
 // 1x2xf16 w/o vnni).
 template <typename RankedTy>
@@ -915,7 +876,8 @@ getValidLayouts(ArrayRef<int64_t> wgShape, ArrayRef<int64_t> instData,
 }
 
 /// Sets up the anchor layouts for dpas operands (A, B, and C/D).
-/// The numSg and consumerLayout (optional) are only used by sg layout creation.
+/// The numSg and consumerLayout (optional) are only used by sg layout
+/// creation.
 std::optional<
     std::tuple<xegpu::DistributeLayoutAttr, xegpu::DistributeLayoutAttr,
                xegpu::DistributeLayoutAttr>>
@@ -1001,9 +963,9 @@ xegpu::setupDpasLayout(xegpu::LayoutKind layoutKind, VectorType aTy,
           break;
         }
         // Is in (A and B and CD) layoutsB is ordered from most
-        // balanced to least. So the first one we see is the most balanced one,
-        // remember it and later only update if there is one that matches the
-        // consumer.
+        // balanced to least. So the first one we see is the most balanced
+        // one, remember it and later only update if there is one that matches
+        // the consumer.
         if (!bestPick)
           bestPick = sgLayout;
       }
@@ -1142,7 +1104,7 @@ xegpu::DistributeLayoutAttr xegpu::getConsumerLayoutAt(OpOperand &operand) {
     return resLayout;
   }
   // TODO: Handle more cases as needed here.
-  // By default, assume no layout conflict and return the current layout of the
-  // operand.
+  // By default, assume no layout conflict and return the current layout of
+  // the operand.
   return xegpu::getDistributeLayoutAttr(operand.get());
 }

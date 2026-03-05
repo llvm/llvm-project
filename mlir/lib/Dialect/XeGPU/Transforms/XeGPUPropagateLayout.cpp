@@ -969,12 +969,16 @@ void LayoutInfoPropagation::visitInsertStridedSliceOp(
   if (!uArch)
     return;
 
-  auto srcLayoutAttr = xegpu::inferInsertStridedSliceSourceLayout(
-      consumerLayoutAttr, resVecType.getShape(), srcVecType.getShape());
+  auto requiredResLayoutAttr = xegpu::setupInsertStridedSliceResultLayout(
+      layoutKind, srcVecType, resVecType, consumerLayoutAttr, uArch);
+  xegpu::setTemporaryLayout(insertStridedSlice->getResult(0),
+                            requiredResLayoutAttr);
 
+  auto srcLayoutAttr = xegpu::inferInsertStridedSliceSourceLayout(
+      requiredResLayoutAttr, resVecType.getShape(), srcVecType.getShape());
   propagateIfChanged(operands[0], operands[0]->meet(LayoutInfo(srcLayoutAttr)));
   propagateIfChanged(operands[1],
-                     operands[1]->meet(LayoutInfo(consumerLayoutAttr)));
+                     operands[1]->meet(LayoutInfo(requiredResLayoutAttr)));
 }
 
 /// Propagate the layout of the result to the tensor descriptor, mask and offset
