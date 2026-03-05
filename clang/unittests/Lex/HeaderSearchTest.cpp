@@ -37,14 +37,15 @@ protected:
     Target = TargetInfo::CreateTargetInfo(Diags, *TargetOpts);
   }
 
-  void addSearchDir(llvm::StringRef Dir) {
+  void addSearchDir(llvm::StringRef Dir, bool IsSystem = false) {
     VFS->addFile(
         Dir, 0, llvm::MemoryBuffer::getMemBuffer(""), /*User=*/std::nullopt,
         /*Group=*/std::nullopt, llvm::sys::fs::file_type::directory_file);
     auto DE = FileMgr.getOptionalDirectoryRef(Dir);
     assert(DE);
-    auto DL = DirectoryLookup(*DE, SrcMgr::C_User, /*isFramework=*/false);
-    Search.AddSearchPath(DL, /*isAngled=*/false);
+    auto DL = DirectoryLookup(*DE, IsSystem ? SrcMgr::C_System : SrcMgr::C_User,
+                              /*isFramework=*/false);
+    Search.AddSearchPath(DL, /*isAngled=*/IsSystem);
   }
 
   void addFrameworkSearchDir(llvm::StringRef Dir, bool IsSystem = true) {
@@ -387,6 +388,59 @@ TEST_F(HeaderSearchTest, HeaderFileInfoMerge) {
                               /*isCompilingModuleHeader=*/true);
   EXPECT_FALSE(Search.getExistingFileInfo(ModularFE)->External);
   EXPECT_FALSE(Search.getExistingFileInfo(TextualFE)->External);
+}
+
+TEST_F(HeaderSearchTest, IncludeNamesLookup) {
+  auto AddHeader = [&](const std::string &HeaderPath) -> FileEntryRef {
+    VFS->addFile(HeaderPath, 0,
+                 llvm::MemoryBuffer::getMemBufferCopy("", HeaderPath),
+                 /*User=*/std::nullopt, /*Group=*/std::nullopt,
+                 llvm::sys::fs::file_type::regular_file);
+    return *FileMgr.getOptionalFileRef(HeaderPath);
+  };
+
+  auto LookupFile =
+      [&](llvm::StringRef Filename, bool IsAngled,
+          llvm::ArrayRef<std::pair<OptionalFileEntryRef, DirectoryEntryRef>>
+              Includers) -> OptionalFileEntryRef {
+    return Search.LookupFile(
+        Filename, SourceLocation(), /*isAngled=*/IsAngled,
+        /*FromDir=*/nullptr,
+        /*CurDir=*/nullptr, Includers, /*SearchPath=*/nullptr,
+        /*RelativePath=*/nullptr, /*RequestingModule=*/nullptr,
+        /*SuggestedModule=*/nullptr, /*IsMapped=*/nullptr,
+        /*IsFrameworkFound=*/nullptr);
+  };
+
+  AddHeader("/sys/bits/textual.h");
+  AddHeader("/sys/bits/detail.h");
+  AddHeader("/sys/system.h");
+  addSearchDir("/sys", /*IsSystem=*/true);
+
+  // main.c: #include <system.h>
+  auto SystemFile = LookupFile("system.h", true, {});
+  ASSERT_TRUE(SystemFile.has_value());
+  // system.h: #include <bits/detail.h>
+  auto DetailFile =
+      LookupFile("bits/detail.h", true, {{SystemFile, SystemFile->getDir()}});
+  ASSERT_TRUE(DetailFile.has_value());
+  // bits/detail.h: #include "textual.h"
+  auto TextualFile =
+      LookupFile("textual.h", false, {{DetailFile, DetailFile->getDir()}});
+  ASSERT_TRUE(TextualFile.has_value());
+
+  EXPECT_EQ(Search.getIncludeNameForHeader(*SystemFile), "system.h");
+  EXPECT_EQ(Search.getIncludeNameForHeader(*DetailFile), "bits/detail.h");
+  // BUG: LookupFile does not add an include name for textual.h.
+  EXPECT_EQ(Search.getIncludeNameForHeader(*TextualFile), "textual.h");
+
+  // bits/detail.h: #include "bits/textual.h"
+  auto R =
+      LookupFile("bits/textual.h", false, {{DetailFile, DetailFile->getDir()}});
+  ASSERT_TRUE(R.has_value());
+  // SURPRISE? TextualFile is remapped under the hood because "bits/textual.h"
+  // resolves to the same file as "textual.h".
+  EXPECT_EQ(Search.getIncludeNameForHeader(*TextualFile), "bits/textual.h");
 }
 
 } // namespace
