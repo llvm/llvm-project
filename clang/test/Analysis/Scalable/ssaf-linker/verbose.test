@@ -4,35 +4,17 @@
 // RUN: mkdir -p %t
 
 // RUN: ssaf-linker --verbose %S/Inputs/tu-1.json %S/Inputs/tu-2.json -o %t/lu-1+2.json 2>&1 \
-// RUN:           | FileCheck %s --check-prefix=CHECK-LONG -DINPUT=%S/Inputs -DOUTPUT=%t
-// CHECK-LONG: note: - Linking started.
-// CHECK-LONG: note:   - Validating input.
-// CHECK-LONG: note:     - Validated output summary path '[[OUTPUT]]/lu-1+2.json'.
-// CHECK-LONG: note:     - Validated 2 input summary paths.
-// CHECK-LONG: note:   - Linking input.
-// CHECK-LONG: note:     - Constructing linker.
-// CHECK-LONG: note:     - Linking summaries.
-// CHECK-LONG: note:       - [1/2] Reading '[[INPUT]]/tu-1.json'.
-// CHECK-LONG: note:       - [1/2] Linking '[[INPUT]]/tu-1.json'.
-// CHECK-LONG: note:       - [2/2] Reading '[[INPUT]]/tu-2.json'.
-// CHECK-LONG: note:       - [2/2] Linking '[[INPUT]]/tu-2.json'.
-// CHECK-LONG: note:     - Writing output summary to '[[OUTPUT]]/lu-1+2.json'.
-// CHECK-LONG: note: - Linking finished.
-
-// RUN: rm %t/lu-1+2.json
-
-// RUN: ssaf-linker -v %S/Inputs/tu-1.json %S/Inputs/tu-2.json -o %t/lu-1+2.json 2>&1 \
-// RUN:           | FileCheck %s --check-prefix=CHECK-SHORT -DINPUT=%S/Inputs -DOUTPUT=%t
-// CHECK-SHORT: note: - Linking started.
-// CHECK-SHORT: note:   - Validating input.
-// CHECK-SHORT: note:     - Validated output summary path '[[OUTPUT]]/lu-1+2.json'.
-// CHECK-SHORT: note:     - Validated 2 input summary paths.
-// CHECK-SHORT: note:   - Linking input.
-// CHECK-SHORT: note:     - Constructing linker.
-// CHECK-SHORT: note:     - Linking summaries.
-// CHECK-SHORT: note:       - [1/2] Reading '[[INPUT]]/tu-1.json'.
-// CHECK-SHORT: note:       - [1/2] Linking '[[INPUT]]/tu-1.json'.
-// CHECK-SHORT: note:       - [2/2] Reading '[[INPUT]]/tu-2.json'.
-// CHECK-SHORT: note:       - [2/2] Linking '[[INPUT]]/tu-2.json'.
-// CHECK-SHORT: note:     - Writing output summary to '[[OUTPUT]]/lu-1+2.json'.
-// CHECK-SHORT: note: - Linking finished.
+// RUN:           | FileCheck %s -DINPUT=%S/Inputs -DOUTPUT=%t
+// CHECK: note: - Linking started.
+// CHECK: note:   - Validating input.
+// CHECK: note:     - Validated output summary path '[[OUTPUT]]/lu-1+2.json'.
+// CHECK: note:     - Validated 2 input summary paths.
+// CHECK: note:   - Linking input.
+// CHECK: note:     - Constructing linker.
+// CHECK: note:     - Linking summaries.
+// CHECK: note:       - [1/2] Reading '[[INPUT]]/tu-1.json'.
+// CHECK: note:       - [1/2] Linking '[[INPUT]]/tu-1.json'.
+// CHECK: note:       - [2/2] Reading '[[INPUT]]/tu-2.json'.
+// CHECK: note:       - [2/2] Linking '[[INPUT]]/tu-2.json'.
+// CHECK: note:     - Writing output summary to '[[OUTPUT]]/lu-1+2.json'.
+// CHECK: note: - Linking finished.

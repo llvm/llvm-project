@@ -4,7 +4,7 @@
 
 // CHECK: OVERVIEW: SSAF Linker
 // CHECK-EMPTY:
-// CHECK: USAGE: ssaf-linker [options] input...
+// CHECK: USAGE: ssaf-linker [options] <input files>
 // CHECK-EMPTY:
 // CHECK: OPTIONS:
 // CHECK:   -h                  - Alias for --help
@@ -12,12 +12,10 @@
 // CHECK:   --help-hidden       - Display all available options
 // CHECK:   --help-list         - Display list of available options (--help-list-hidden for more)
 // CHECK:   --help-list-hidden  - Display list of all available options
-// CHECK:   -o                  -
-// CHECK:   --output=<path>     - Output summary path
+// CHECK:   -o <path>           - Output summary path
+// CHECK:   --output            -
 // CHECK:   --print-all-options - Print all option values after command line parsing
 // CHECK:   --print-options     - Print non-default options after command line parsing
-// CHECK:   -t                  -
 // CHECK:   --time              - Enable timing
-// CHECK:   -v                  -
 // CHECK:   --verbose           - Enable verbose output
 // CHECK:   --version           - Display the version of this program

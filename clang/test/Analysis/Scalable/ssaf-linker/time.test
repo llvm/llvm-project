@@ -4,29 +4,14 @@
 // RUN: mkdir -p %t
 
 // RUN: ssaf-linker --time %S/Inputs/tu-1.json %S/Inputs/tu-2.json -o %t/lu-1+2.json 2>&1 \
-// RUN:           | FileCheck %s --check-prefix=CHECK-LONG
-// CHECK-LONG: ===-------------------------------------------------------------------------===
-// CHECK-LONG:                                   SSAF Linker
-// CHECK-LONG: ===-------------------------------------------------------------------------===
-// CHECK-LONG: Total Execution Time: {{[0-9.]+}} seconds ({{[0-9.]+}} wall clock)
-// CHECK-LONG: ---User Time---   --System Time--   --User+System--   ---Wall Time---
-// CHECK-LONG-DAG: {{.*}}Write Summary
-// CHECK-LONG-DAG: {{.*}}Read Summaries
-// CHECK-LONG-DAG: {{.*}}Link Summaries
-// CHECK-LONG-DAG: {{.*}}Validate Input
-// CHECK-LONG: {{.*}}Total
-
-// RUN: rm %t/lu-1+2.json
-
-// RUN: ssaf-linker -t %S/Inputs/tu-1.json %S/Inputs/tu-2.json -o %t/lu-1+2.json 2>&1 \
-// RUN:           | FileCheck %s --check-prefix=CHECK-SHORT
-// CHECK-SHORT: ===-------------------------------------------------------------------------===
-// CHECK-SHORT:                                   SSAF Linker
-// CHECK-SHORT: ===-------------------------------------------------------------------------===
-// CHECK-SHORT: Total Execution Time: {{[0-9.]+}} seconds ({{[0-9.]+}} wall clock)
-// CHECK-SHORT: ---User Time---   --System Time--   --User+System--   ---Wall Time---
-// CHECK-SHORT-DAG: {{.*}}Write Summary
-// CHECK-SHORT-DAG: {{.*}}Read Summaries
-// CHECK-SHORT-DAG: {{.*}}Link Summaries
-// CHECK-SHORT-DAG: {{.*}}Validate Input
-// CHECK-SHORT: {{.*}}Total
+// RUN:           | FileCheck %s
+// CHECK: ===-------------------------------------------------------------------------===
+// CHECK:                                   SSAF Linker
+// CHECK: ===-------------------------------------------------------------------------===
+// CHECK: Total Execution Time: {{[0-9.]+}} seconds ({{[0-9.]+}} wall clock)
+// CHECK: ---User Time---   --System Time--   --User+System--   ---Wall Time---
+// CHECK-DAG: {{.*}}Write Summary
+// CHECK-DAG: {{.*}}Read Summaries
+// CHECK-DAG: {{.*}}Link Summaries
+// CHECK-DAG: {{.*}}Validate Input
+// CHECK: {{.*}}Total

@@ -132,12 +132,16 @@ SerializationFormat *GetFormatForExtension(llvm::StringRef Extension) {
 
   // SerializationFormats are uppercase while file extensions are lowercase.
   std::string CapitalizedExtension = Extension.upper();
+
+  if (!isFormatRegistered(CapitalizedExtension)) {
+    return nullptr;
+  }
+
   auto Format = makeFormat(CapitalizedExtension);
   SerializationFormat *Result = Format.get();
+  assert(Result);
 
-  if (Result) {
-    ExtensionFormatList.emplace_back(Extension, std::move(Format));
-  }
+  ExtensionFormatList.emplace_back(Extension, std::move(Format));
 
   return Result;
 }
