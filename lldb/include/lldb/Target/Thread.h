@@ -1315,6 +1315,12 @@ public:
     return m_frame_providers;
   }
 
+  const std::vector<
+      std::pair<ScriptedFrameProviderDescriptor, lldb::frame_list_id_t>> &
+  GetProviderChainIds() const {
+    return m_provider_chain_ids;
+  }
+
 protected:
   friend class ThreadPlan;
   friend class ThreadList;
