@@ -897,3 +897,197 @@ loop.latch:
 for.end:
   ret void
 }
+
+define void @hoistable_predicated_store(ptr %A, ptr %B, ptr %C, ptr %D) {
+; UNROLL-LABEL: @hoistable_predicated_store(
+; UNROLL-NEXT:  entry:
+; UNROLL-NEXT:    [[SCEVGEP:%.*]] = getelementptr i8, ptr [[C:%.*]], i64 4
+; UNROLL-NEXT:    [[SCEVGEP1:%.*]] = getelementptr i8, ptr [[B:%.*]], i64 4
+; UNROLL-NEXT:    [[SCEVGEP2:%.*]] = getelementptr i8, ptr [[D:%.*]], i64 404
+; UNROLL-NEXT:    [[SCEVGEP3:%.*]] = getelementptr i8, ptr [[A:%.*]], i64 4
+; UNROLL-NEXT:    [[BOUND0:%.*]] = icmp ult ptr [[C]], [[SCEVGEP1]]
+; UNROLL-NEXT:    [[BOUND1:%.*]] = icmp ult ptr [[B]], [[SCEVGEP]]
+; UNROLL-NEXT:    [[FOUND_CONFLICT:%.*]] = and i1 [[BOUND0]], [[BOUND1]]
+; UNROLL-NEXT:    [[BOUND04:%.*]] = icmp ult ptr [[C]], [[SCEVGEP2]]
+; UNROLL-NEXT:    [[BOUND15:%.*]] = icmp ult ptr [[D]], [[SCEVGEP]]
+; UNROLL-NEXT:    [[FOUND_CONFLICT6:%.*]] = and i1 [[BOUND04]], [[BOUND15]]
+; UNROLL-NEXT:    [[CONFLICT_RDX:%.*]] = or i1 [[FOUND_CONFLICT]], [[FOUND_CONFLICT6]]
+; UNROLL-NEXT:    [[BOUND07:%.*]] = icmp ult ptr [[C]], [[SCEVGEP3]]
+; UNROLL-NEXT:    [[BOUND18:%.*]] = icmp ult ptr [[A]], [[SCEVGEP]]
+; UNROLL-NEXT:    [[FOUND_CONFLICT9:%.*]] = and i1 [[BOUND07]], [[BOUND18]]
+; UNROLL-NEXT:    [[CONFLICT_RDX10:%.*]] = or i1 [[CONFLICT_RDX]], [[FOUND_CONFLICT9]]
+; UNROLL-NEXT:    [[BOUND011:%.*]] = icmp ult ptr [[B]], [[SCEVGEP2]]
+; UNROLL-NEXT:    [[BOUND112:%.*]] = icmp ult ptr [[D]], [[SCEVGEP1]]
+; UNROLL-NEXT:    [[FOUND_CONFLICT13:%.*]] = and i1 [[BOUND011]], [[BOUND112]]
+; UNROLL-NEXT:    [[CONFLICT_RDX14:%.*]] = or i1 [[CONFLICT_RDX10]], [[FOUND_CONFLICT13]]
+; UNROLL-NEXT:    [[BOUND015:%.*]] = icmp ult ptr [[B]], [[SCEVGEP3]]
+; UNROLL-NEXT:    [[BOUND116:%.*]] = icmp ult ptr [[A]], [[SCEVGEP1]]
+; UNROLL-NEXT:    [[FOUND_CONFLICT17:%.*]] = and i1 [[BOUND015]], [[BOUND116]]
+; UNROLL-NEXT:    [[CONFLICT_RDX18:%.*]] = or i1 [[CONFLICT_RDX14]], [[FOUND_CONFLICT17]]
+; UNROLL-NEXT:    br i1 [[CONFLICT_RDX18]], label [[SCALAR_PH:%.*]], label [[VECTOR_PH:%.*]]
+; UNROLL:       vector.ph:
+; UNROLL-NEXT:    [[TMP0:%.*]] = load i32, ptr [[A]], align 8, !alias.scope [[META15:![0-9]+]]
+; UNROLL-NEXT:    br label [[VECTOR_BODY:%.*]]
+; UNROLL:       vector.body:
+; UNROLL-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, [[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], [[VECTOR_BODY]] ]
+; UNROLL-NEXT:    store i32 0, ptr [[C]], align 4, !alias.scope [[META18:![0-9]+]], !noalias [[META20:![0-9]+]]
+; UNROLL-NEXT:    store i32 [[TMP0]], ptr [[B]], align 4, !alias.scope [[META23:![0-9]+]], !noalias [[META24:![0-9]+]]
+; UNROLL-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 2
+; UNROLL-NEXT:    [[TMP1:%.*]] = icmp eq i64 [[INDEX_NEXT]], 100
+; UNROLL-NEXT:    br i1 [[TMP1]], label [[SCALAR_PH]], label [[VECTOR_BODY]], !llvm.loop [[LOOP25:![0-9]+]]
+; UNROLL:       scalar.ph:
+; UNROLL-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i64 [ 0, [[ENTRY:%.*]] ], [ 100, [[VECTOR_BODY]] ]
+; UNROLL-NEXT:    br label [[LOOP:%.*]]
+; UNROLL:       loop:
+; UNROLL-NEXT:    [[IV:%.*]] = phi i64 [ [[BC_RESUME_VAL]], [[SCALAR_PH]] ], [ [[IV_NEXT:%.*]], [[LOOP]] ]
+; UNROLL-NEXT:    store i32 0, ptr [[C]], align 4
+; UNROLL-NEXT:    [[L_0:%.*]] = load i32, ptr [[A]], align 8
+; UNROLL-NEXT:    store i32 [[L_0]], ptr [[B]], align 4
+; UNROLL-NEXT:    [[IV_NEXT]] = add i64 [[IV]], 1
+; UNROLL-NEXT:    [[EC:%.*]] = icmp eq i64 [[IV]], 100
+; UNROLL-NEXT:    br i1 [[EC]], label [[EXIT:%.*]], label [[LOOP]], !llvm.loop [[LOOP26:![0-9]+]]
+; UNROLL:       exit:
+; UNROLL-NEXT:    ret void
+;
+; UNROLL-NOSIMPLIFY-LABEL: @hoistable_predicated_store(
+; UNROLL-NOSIMPLIFY-NEXT:  entry:
+; UNROLL-NOSIMPLIFY-NEXT:    br label [[VECTOR_MEMCHECK:%.*]]
+; UNROLL-NOSIMPLIFY:       vector.memcheck:
+; UNROLL-NOSIMPLIFY-NEXT:    [[SCEVGEP:%.*]] = getelementptr i8, ptr [[C:%.*]], i64 4
+; UNROLL-NOSIMPLIFY-NEXT:    [[SCEVGEP1:%.*]] = getelementptr i8, ptr [[B:%.*]], i64 4
+; UNROLL-NOSIMPLIFY-NEXT:    [[SCEVGEP2:%.*]] = getelementptr i8, ptr [[D:%.*]], i64 404
+; UNROLL-NOSIMPLIFY-NEXT:    [[SCEVGEP3:%.*]] = getelementptr i8, ptr [[A:%.*]], i64 4
+; UNROLL-NOSIMPLIFY-NEXT:    [[BOUND0:%.*]] = icmp ult ptr [[C]], [[SCEVGEP1]]
+; UNROLL-NOSIMPLIFY-NEXT:    [[BOUND1:%.*]] = icmp ult ptr [[B]], [[SCEVGEP]]
+; UNROLL-NOSIMPLIFY-NEXT:    [[FOUND_CONFLICT:%.*]] = and i1 [[BOUND0]], [[BOUND1]]
+; UNROLL-NOSIMPLIFY-NEXT:    [[BOUND04:%.*]] = icmp ult ptr [[C]], [[SCEVGEP2]]
+; UNROLL-NOSIMPLIFY-NEXT:    [[BOUND15:%.*]] = icmp ult ptr [[D]], [[SCEVGEP]]
+; UNROLL-NOSIMPLIFY-NEXT:    [[FOUND_CONFLICT6:%.*]] = and i1 [[BOUND04]], [[BOUND15]]
+; UNROLL-NOSIMPLIFY-NEXT:    [[CONFLICT_RDX:%.*]] = or i1 [[FOUND_CONFLICT]], [[FOUND_CONFLICT6]]
+; UNROLL-NOSIMPLIFY-NEXT:    [[BOUND07:%.*]] = icmp ult ptr [[C]], [[SCEVGEP3]]
+; UNROLL-NOSIMPLIFY-NEXT:    [[BOUND18:%.*]] = icmp ult ptr [[A]], [[SCEVGEP]]
+; UNROLL-NOSIMPLIFY-NEXT:    [[FOUND_CONFLICT9:%.*]] = and i1 [[BOUND07]], [[BOUND18]]
+; UNROLL-NOSIMPLIFY-NEXT:    [[CONFLICT_RDX10:%.*]] = or i1 [[CONFLICT_RDX]], [[FOUND_CONFLICT9]]
+; UNROLL-NOSIMPLIFY-NEXT:    [[BOUND011:%.*]] = icmp ult ptr [[B]], [[SCEVGEP2]]
+; UNROLL-NOSIMPLIFY-NEXT:    [[BOUND112:%.*]] = icmp ult ptr [[D]], [[SCEVGEP1]]
+; UNROLL-NOSIMPLIFY-NEXT:    [[FOUND_CONFLICT13:%.*]] = and i1 [[BOUND011]], [[BOUND112]]
+; UNROLL-NOSIMPLIFY-NEXT:    [[CONFLICT_RDX14:%.*]] = or i1 [[CONFLICT_RDX10]], [[FOUND_CONFLICT13]]
+; UNROLL-NOSIMPLIFY-NEXT:    [[BOUND015:%.*]] = icmp ult ptr [[B]], [[SCEVGEP3]]
+; UNROLL-NOSIMPLIFY-NEXT:    [[BOUND116:%.*]] = icmp ult ptr [[A]], [[SCEVGEP1]]
+; UNROLL-NOSIMPLIFY-NEXT:    [[FOUND_CONFLICT17:%.*]] = and i1 [[BOUND015]], [[BOUND116]]
+; UNROLL-NOSIMPLIFY-NEXT:    [[CONFLICT_RDX18:%.*]] = or i1 [[CONFLICT_RDX14]], [[FOUND_CONFLICT17]]
+; UNROLL-NOSIMPLIFY-NEXT:    br i1 [[CONFLICT_RDX18]], label [[SCALAR_PH:%.*]], label [[VECTOR_PH:%.*]]
+; UNROLL-NOSIMPLIFY:       vector.ph:
+; UNROLL-NOSIMPLIFY-NEXT:    [[TMP0:%.*]] = load i32, ptr [[A]], align 8, !alias.scope [[META16:![0-9]+]]
+; UNROLL-NOSIMPLIFY-NEXT:    br label [[VECTOR_BODY:%.*]]
+; UNROLL-NOSIMPLIFY:       vector.body:
+; UNROLL-NOSIMPLIFY-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, [[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], [[VECTOR_BODY]] ]
+; UNROLL-NOSIMPLIFY-NEXT:    store i32 0, ptr [[C]], align 4, !alias.scope [[META19:![0-9]+]], !noalias [[META21:![0-9]+]]
+; UNROLL-NOSIMPLIFY-NEXT:    store i32 [[TMP0]], ptr [[B]], align 4, !alias.scope [[META24:![0-9]+]], !noalias [[META25:![0-9]+]]
+; UNROLL-NOSIMPLIFY-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 2
+; UNROLL-NOSIMPLIFY-NEXT:    [[TMP1:%.*]] = icmp eq i64 [[INDEX_NEXT]], 100
+; UNROLL-NOSIMPLIFY-NEXT:    br i1 [[TMP1]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP26:![0-9]+]]
+; UNROLL-NOSIMPLIFY:       middle.block:
+; UNROLL-NOSIMPLIFY-NEXT:    br label [[SCALAR_PH]]
+; UNROLL-NOSIMPLIFY:       scalar.ph:
+; UNROLL-NOSIMPLIFY-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i64 [ 100, [[MIDDLE_BLOCK]] ], [ 0, [[VECTOR_MEMCHECK]] ]
+; UNROLL-NOSIMPLIFY-NEXT:    br label [[LOOP:%.*]]
+; UNROLL-NOSIMPLIFY:       loop:
+; UNROLL-NOSIMPLIFY-NEXT:    [[IV:%.*]] = phi i64 [ [[BC_RESUME_VAL]], [[SCALAR_PH]] ], [ [[IV_NEXT:%.*]], [[LOOP_LATCH:%.*]] ]
+; UNROLL-NOSIMPLIFY-NEXT:    store i32 0, ptr [[C]], align 4
+; UNROLL-NOSIMPLIFY-NEXT:    [[GEP_D:%.*]] = getelementptr i32, ptr [[D]], i64 [[IV]]
+; UNROLL-NOSIMPLIFY-NEXT:    [[L:%.*]] = load i32, ptr [[GEP_D]], align 4
+; UNROLL-NOSIMPLIFY-NEXT:    [[C:%.*]] = icmp eq i32 [[L]], 0
+; UNROLL-NOSIMPLIFY-NEXT:    br i1 [[C]], label [[IF_THEN4:%.*]], label [[IF_ELSE:%.*]]
+; UNROLL-NOSIMPLIFY:       if.then4:
+; UNROLL-NOSIMPLIFY-NEXT:    [[L_0:%.*]] = load i32, ptr [[A]], align 8
+; UNROLL-NOSIMPLIFY-NEXT:    br label [[LOOP_LATCH]]
+; UNROLL-NOSIMPLIFY:       if.else:
+; UNROLL-NOSIMPLIFY-NEXT:    [[L_1:%.*]] = load i32, ptr [[A]], align 8
+; UNROLL-NOSIMPLIFY-NEXT:    br label [[LOOP_LATCH]]
+; UNROLL-NOSIMPLIFY:       loop.latch:
+; UNROLL-NOSIMPLIFY-NEXT:    [[P:%.*]] = phi i32 [ [[L_0]], [[IF_THEN4]] ], [ [[L_1]], [[IF_ELSE]] ]
+; UNROLL-NOSIMPLIFY-NEXT:    store i32 [[P]], ptr [[B]], align 4
+; UNROLL-NOSIMPLIFY-NEXT:    [[IV_NEXT]] = add i64 [[IV]], 1
+; UNROLL-NOSIMPLIFY-NEXT:    [[EC:%.*]] = icmp eq i64 [[IV]], 100
+; UNROLL-NOSIMPLIFY-NEXT:    br i1 [[EC]], label [[EXIT:%.*]], label [[LOOP]], !llvm.loop [[LOOP27:![0-9]+]]
+; UNROLL-NOSIMPLIFY:       exit:
+; UNROLL-NOSIMPLIFY-NEXT:    ret void
+;
+; VEC-LABEL: @hoistable_predicated_store(
+; VEC-NEXT:  entry:
+; VEC-NEXT:    [[SCEVGEP:%.*]] = getelementptr i8, ptr [[C:%.*]], i64 4
+; VEC-NEXT:    [[SCEVGEP1:%.*]] = getelementptr i8, ptr [[B:%.*]], i64 4
+; VEC-NEXT:    [[SCEVGEP2:%.*]] = getelementptr i8, ptr [[D:%.*]], i64 404
+; VEC-NEXT:    [[SCEVGEP3:%.*]] = getelementptr i8, ptr [[A:%.*]], i64 4
+; VEC-NEXT:    [[BOUND0:%.*]] = icmp ult ptr [[C]], [[SCEVGEP1]]
+; VEC-NEXT:    [[BOUND1:%.*]] = icmp ult ptr [[B]], [[SCEVGEP]]
+; VEC-NEXT:    [[FOUND_CONFLICT:%.*]] = and i1 [[BOUND0]], [[BOUND1]]
+; VEC-NEXT:    [[BOUND04:%.*]] = icmp ult ptr [[C]], [[SCEVGEP2]]
+; VEC-NEXT:    [[BOUND15:%.*]] = icmp ult ptr [[D]], [[SCEVGEP]]
+; VEC-NEXT:    [[FOUND_CONFLICT6:%.*]] = and i1 [[BOUND04]], [[BOUND15]]
+; VEC-NEXT:    [[CONFLICT_RDX:%.*]] = or i1 [[FOUND_CONFLICT]], [[FOUND_CONFLICT6]]
+; VEC-NEXT:    [[BOUND07:%.*]] = icmp ult ptr [[C]], [[SCEVGEP3]]
+; VEC-NEXT:    [[BOUND18:%.*]] = icmp ult ptr [[A]], [[SCEVGEP]]
+; VEC-NEXT:    [[FOUND_CONFLICT9:%.*]] = and i1 [[BOUND07]], [[BOUND18]]
+; VEC-NEXT:    [[CONFLICT_RDX10:%.*]] = or i1 [[CONFLICT_RDX]], [[FOUND_CONFLICT9]]
+; VEC-NEXT:    [[BOUND011:%.*]] = icmp ult ptr [[B]], [[SCEVGEP2]]
+; VEC-NEXT:    [[BOUND112:%.*]] = icmp ult ptr [[D]], [[SCEVGEP1]]
+; VEC-NEXT:    [[FOUND_CONFLICT13:%.*]] = and i1 [[BOUND011]], [[BOUND112]]
+; VEC-NEXT:    [[CONFLICT_RDX14:%.*]] = or i1 [[CONFLICT_RDX10]], [[FOUND_CONFLICT13]]
+; VEC-NEXT:    [[BOUND015:%.*]] = icmp ult ptr [[B]], [[SCEVGEP3]]
+; VEC-NEXT:    [[BOUND116:%.*]] = icmp ult ptr [[A]], [[SCEVGEP1]]
+; VEC-NEXT:    [[FOUND_CONFLICT17:%.*]] = and i1 [[BOUND015]], [[BOUND116]]
+; VEC-NEXT:    [[CONFLICT_RDX18:%.*]] = or i1 [[CONFLICT_RDX14]], [[FOUND_CONFLICT17]]
+; VEC-NEXT:    br i1 [[CONFLICT_RDX18]], label [[SCALAR_PH:%.*]], label [[VECTOR_BODY:%.*]]
+; VEC:       vector.body:
+; VEC-NEXT:    [[INDEX:%.*]] = phi i64 [ [[INDEX_NEXT:%.*]], [[VECTOR_BODY]] ], [ 0, [[ENTRY:%.*]] ]
+; VEC-NEXT:    store i32 0, ptr [[C]], align 4, !alias.scope [[META15:![0-9]+]], !noalias [[META18:![0-9]+]]
+; VEC-NEXT:    [[TMP0:%.*]] = load i32, ptr [[A]], align 8, !alias.scope [[META22:![0-9]+]]
+; VEC-NEXT:    store i32 [[TMP0]], ptr [[B]], align 4, !alias.scope [[META23:![0-9]+]], !noalias [[META24:![0-9]+]]
+; VEC-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 2
+; VEC-NEXT:    [[TMP1:%.*]] = icmp eq i64 [[INDEX_NEXT]], 100
+; VEC-NEXT:    br i1 [[TMP1]], label [[SCALAR_PH]], label [[VECTOR_BODY]], !llvm.loop [[LOOP25:![0-9]+]]
+; VEC:       scalar.ph:
+; VEC-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i64 [ 0, [[ENTRY]] ], [ 100, [[VECTOR_BODY]] ]
+; VEC-NEXT:    br label [[LOOP:%.*]]
+; VEC:       loop:
+; VEC-NEXT:    [[IV:%.*]] = phi i64 [ [[BC_RESUME_VAL]], [[SCALAR_PH]] ], [ [[IV_NEXT:%.*]], [[LOOP]] ]
+; VEC-NEXT:    store i32 0, ptr [[C]], align 4
+; VEC-NEXT:    [[L_0:%.*]] = load i32, ptr [[A]], align 8
+; VEC-NEXT:    store i32 [[L_0]], ptr [[B]], align 4
+; VEC-NEXT:    [[IV_NEXT]] = add i64 [[IV]], 1
+; VEC-NEXT:    [[EC:%.*]] = icmp eq i64 [[IV]], 100
+; VEC-NEXT:    br i1 [[EC]], label [[EXIT:%.*]], label [[LOOP]], !llvm.loop [[LOOP26:![0-9]+]]
+; VEC:       exit:
+; VEC-NEXT:    ret void
+;
+entry:
+  br label %loop
+
+loop:
+  %iv = phi i64 [ 0, %entry ], [ %iv.next, %loop.latch ]
+  store i32 0, ptr %C, align 4
+  %gep.D = getelementptr i32, ptr %D, i64 %iv
+  %l = load i32, ptr %gep.D
+  %c = icmp eq i32 %l, 0
+  br i1 %c, label %if.then4, label %if.else
+
+if.then4:
+  %l.0 = load i32, ptr %A, align 8
+  br label %loop.latch
+
+if.else:
+  %l.1 = load i32, ptr %A, align 8
+  br label %loop.latch
+
+loop.latch:
+  %p = phi i32 [ %l.0, %if.then4 ], [ %l.1, %if.else ]
+  store i32 %p, ptr %B, align 4
+  %iv.next = add i64 %iv, 1
+  %ec = icmp eq i64 %iv, 100
+  br i1 %ec, label %exit, label %loop
+
+exit:
+  ret void
+}
