@@ -142,8 +142,8 @@ static cl::opt<unsigned> UnrollMaxUpperBound(
 
 static cl::opt<unsigned> PragmaUnrollThreshold(
     "pragma-unroll-threshold", cl::init(16 * 1024), cl::Hidden,
-    cl::desc("Unrolled size limit for loops with an unroll(full) or "
-             "unroll_count pragma."));
+    cl::desc("Unrolled size limit for loops with unroll metadata "
+             "(full, enable, or count)."));
 
 static cl::opt<unsigned> FlatLoopTripCountThreshold(
     "flat-loop-tripcount-threshold", cl::init(5), cl::Hidden,
@@ -1049,9 +1049,8 @@ bool llvm::computeUnrollCount(Loop *L, const TargetTransformInfo &TTI,
         return OptimizationRemarkMissed(DEBUG_TYPE,
                                         "FullUnrollAsDirectedTooLarge",
                                         L->getStartLoc(), L->getHeader())
-               << "Unable to fully unroll loop as directed by unroll pragma "
-                  "because "
-                  "unrolled size is too large.";
+               << "unable to fully unroll loop as directed by unroll metadata "
+                  "because unrolled size is too large";
       });
 
     if (UP.PartialThreshold != NoThreshold) {
@@ -1061,9 +1060,9 @@ bool llvm::computeUnrollCount(Loop *L, const TargetTransformInfo &TTI,
             return OptimizationRemarkMissed(DEBUG_TYPE,
                                             "UnrollAsDirectedTooLarge",
                                             L->getStartLoc(), L->getHeader())
-                   << "Unable to unroll loop as directed by unroll(enable) "
-                      "pragma "
-                      "because unrolled size is too large.";
+                   << "unable to unroll loop as directed by "
+                      "llvm.loop.unroll.enable metadata because unrolled size "
+                      "is too large";
           });
       }
     }
@@ -1076,9 +1075,9 @@ bool llvm::computeUnrollCount(Loop *L, const TargetTransformInfo &TTI,
       return OptimizationRemarkMissed(
                  DEBUG_TYPE, "CantFullUnrollAsDirectedRuntimeTripCount",
                  L->getStartLoc(), L->getHeader())
-             << "Unable to fully unroll loop as directed by unroll(full) "
-                "pragma "
-                "because loop has a runtime trip count.";
+             << "unable to fully unroll loop as directed by "
+                "llvm.loop.unroll.full metadata because loop has a runtime "
+                "trip count";
     });
 
   // 7th priority is runtime unrolling.
@@ -1128,7 +1127,7 @@ bool llvm::computeUnrollCount(Loop *L, const TargetTransformInfo &TTI,
     while (UP.Count != 0 && TripMultiple % UP.Count != 0)
       UP.Count >>= 1;
     LLVM_DEBUG(dbgs().indent(2)
-               << "Remainder loop is restricted (that could architecture "
+               << "Remainder loop is restricted (that could be architecture "
                   "specific or because the loop contains a convergent "
                   "instruction), so unroll count must divide the trip "
                   "multiple, "
@@ -1143,11 +1142,10 @@ bool llvm::computeUnrollCount(Loop *L, const TargetTransformInfo &TTI,
                                         "DifferentUnrollCountFromDirected",
                                         L->getStartLoc(), L->getHeader())
                << "Unable to unroll loop the number of times directed by "
-                  "unroll_count pragma because remainder loop is restricted "
-                  "(that could architecture specific or because the loop "
-                  "contains a convergent instruction) and so must have an "
-                  "unroll "
-                  "count that divides the loop trip multiple of "
+                  "llvm.loop.unroll.count metadata because remainder loop is "
+                  "restricted (that could be architecture specific or because "
+                  "the loop contains a convergent instruction) and so must "
+                  "have an unroll count that divides the loop trip multiple of "
                << NV("TripMultiple", TripMultiple) << ".  Unrolling instead "
                << NV("UnrollCount", UP.Count) << " time(s).";
       });
