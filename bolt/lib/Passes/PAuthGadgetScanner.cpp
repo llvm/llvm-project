@@ -1553,6 +1553,12 @@ collectRegsToTrack(ArrayRef<PartialReport<MCPhysReg>> Reports) {
 
 void FunctionAnalysisContext::findUnsafeUses(
     SmallVector<PartialReport<MCPhysReg>> &Reports) {
+  using GSK = opts::GadgetScannerKind;
+  const uint64_t HandledDetectorsMask =
+      GSK::GS_PTRAUTH_ALL_MASK & ~GSK::GS_PTRAUTH_AUTH_ORACLES;
+  if (0 == (EnabledDetectorsMask & HandledDetectorsMask))
+    return;
+
   auto Analysis = SrcSafetyAnalysis::create(BF, AllocatorId, {});
   LLVM_DEBUG(dbgs() << "Running src register safety analysis...\n");
   Analysis->run();
@@ -1617,19 +1623,22 @@ void FunctionAnalysisContext::findUnsafeUses(
       return;
     }
 
-    if (auto Report = shouldReportReturnGadget(BC, Inst, S))
-      Reports.push_back(*Report);
-
-    if (PacRetGadgetsOnly)
-      return;
-
-    if (auto Report = shouldReportUnsafeTailCall(BC, BF, Inst, S))
-      Reports.push_back(*Report);
-
-    if (auto Report = shouldReportCallGadget(BC, Inst, S))
-      Reports.push_back(*Report);
-    if (auto Report = shouldReportSigningOracle(BC, Inst, S))
-      Reports.push_back(*Report);
+    if (EnabledDetectorsMask & GSK::GS_PTRAUTH_RETURN_TARGETS) {
+      if (auto Report = shouldReportReturnGadget(BC, Inst, S))
+        Reports.push_back(*Report);
+    }
+    if (EnabledDetectorsMask & GSK::GS_PTRAUTH_TAIL_CALLS) {
+      if (auto Report = shouldReportUnsafeTailCall(BC, BF, Inst, S))
+        Reports.push_back(*Report);
+    }
+    if (EnabledDetectorsMask & GSK::GS_PTRAUTH_BRANCH_AND_CALL_TARGETS) {
+      if (auto Report = shouldReportCallGadget(BC, Inst, S))
+        Reports.push_back(*Report);
+    }
+    if (EnabledDetectorsMask & GSK::GS_PTRAUTH_SIGN_ORACLES) {
+      if (auto Report = shouldReportSigningOracle(BC, Inst, S))
+        Reports.push_back(*Report);
+    }
   });
 }
 
@@ -1660,8 +1669,11 @@ void FunctionAnalysisContext::augmentUnsafeUseReports(
 
 void FunctionAnalysisContext::findUnsafeDefs(
     SmallVector<PartialReport<MCPhysReg>> &Reports) {
-  if (PacRetGadgetsOnly)
+  using GSK = opts::GadgetScannerKind;
+  const uint64_t HandledDetectorsMask = GSK::GS_PTRAUTH_AUTH_ORACLES;
+  if (0 == (EnabledDetectorsMask & HandledDetectorsMask))
     return;
+
   if (AuthTrapsOnFailure)
     return;
 
@@ -1741,7 +1753,7 @@ void FunctionAnalysisContext::run() {
 
 void Analysis::runOnFunction(BinaryFunction &BF,
                              MCPlusBuilder::AllocatorIdTy AllocatorId) {
-  FunctionAnalysisContext FA(BF, AllocatorId, PacRetGadgetsOnly);
+  FunctionAnalysisContext FA(BF, AllocatorId, EnabledDetectorsMask);
   FA.run();
 
   const FunctionAnalysisResult &FAR = FA.getResult();
@@ -1850,6 +1862,10 @@ void GenericDiagnostic::generateReport(raw_ostream &OS,
 }
 
 Error Analysis::runOnFunctions(BinaryContext &BC) {
+  using GSK = opts::GadgetScannerKind;
+  assert(0 == (EnabledDetectorsMask & ~GSK::GS_PTRAUTH_ALL_MASK) &&
+         "Unrelated detectors requested");
+
   ParallelUtilities::WorkFuncWithAllocTy WorkFun =
       [&](BinaryFunction &BF, MCPlusBuilder::AllocatorIdTy AllocatorId) {
         runOnFunction(BF, AllocatorId);

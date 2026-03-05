@@ -161,7 +161,8 @@ class FunctionAnalysisContext {
   MCPlusBuilder::AllocatorIdTy AllocatorId;
   FunctionAnalysisResult Result;
 
-  bool PacRetGadgetsOnly;
+  /// Bitmask of detectors to run (see opts::GadgetScannerKind).
+  uint64_t EnabledDetectorsMask;
 
   void findUnsafeUses(SmallVector<PartialReport<MCPhysReg>> &Reports);
   void augmentUnsafeUseReports(ArrayRef<PartialReport<MCPhysReg>> Reports);
@@ -176,9 +177,9 @@ class FunctionAnalysisContext {
 public:
   FunctionAnalysisContext(BinaryFunction &BF,
                           MCPlusBuilder::AllocatorIdTy AllocatorId,
-                          bool PacRetGadgetsOnly)
+                          uint64_t EnabledDetectorsMask)
       : BC(BF.getBinaryContext()), BF(BF), AllocatorId(AllocatorId),
-        PacRetGadgetsOnly(PacRetGadgetsOnly) {}
+        EnabledDetectorsMask(EnabledDetectorsMask) {}
 
   void run();
 
@@ -186,8 +187,8 @@ public:
 };
 
 class Analysis : public BinaryFunctionPass {
-  /// Only search for pac-ret violations.
-  bool PacRetGadgetsOnly;
+  /// Bitmask of detectors to run (see opts::GadgetScannerKind).
+  uint64_t EnabledDetectorsMask;
 
   void runOnFunction(BinaryFunction &Function,
                      MCPlusBuilder::AllocatorIdTy AllocatorId);
@@ -196,8 +197,12 @@ class Analysis : public BinaryFunctionPass {
   std::mutex AnalysisResultsMutex;
 
 public:
-  explicit Analysis(bool PacRetGadgetsOnly)
-      : BinaryFunctionPass(false), PacRetGadgetsOnly(PacRetGadgetsOnly) {}
+  /// Constructs the analysis pass.
+  ///
+  /// EnabledDetectorsMask selects the checks to perform, see
+  /// opts::GadgetScannerKind for the available GS_PTRAUTH_* options.
+  explicit Analysis(uint64_t EnabledDetectorsMask)
+      : BinaryFunctionPass(false), EnabledDetectorsMask(EnabledDetectorsMask) {}
 
   const char *getName() const override { return "pauth-gadget-scanner"; }
 
