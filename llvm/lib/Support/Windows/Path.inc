@@ -1769,7 +1769,6 @@ std::error_code readlink(const Twine &path, SmallVectorImpl<char> &dest) {
   if (std::error_code EC = UTF16ToUTF8(Target, TargetLen, dest))
     return EC;
 
-  llvm::sys::path::make_preferred(dest);
   return std::error_code();
 }
 
