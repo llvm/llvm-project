@@ -323,8 +323,8 @@ private:
   void writeValueType(wasm::ValType Ty) { W->OS << static_cast<char>(Ty); }
 
   void writeTypeSection(ArrayRef<wasm::WasmSignature> Signatures);
-  void writeImportSection(ArrayRef<wasm::WasmImport> Imports, uint64_t DataSize,
-                          uint32_t NumElements);
+  void writeImportSection(ArrayRef<wasm::WasmImport> Imports,
+                          uint64_t DataSize);
   void writeFunctionSection(ArrayRef<WasmFunction> Functions);
   void writeExportSection(ArrayRef<wasm::WasmExport> Exports);
   void writeElemSection(const MCSymbolWasm *IndirectFunctionTable,
@@ -824,8 +824,7 @@ void WasmObjectWriter::writeTypeSection(
 }
 
 void WasmObjectWriter::writeImportSection(ArrayRef<wasm::WasmImport> Imports,
-                                          uint64_t DataSize,
-                                          uint32_t NumElements) {
+                                          uint64_t DataSize) {
   if (Imports.empty())
     return;
 
@@ -856,7 +855,9 @@ void WasmObjectWriter::writeImportSection(ArrayRef<wasm::WasmImport> Imports,
     case wasm::WASM_EXTERNAL_TABLE:
       W->OS << char(Import.Table.ElemType);
       encodeULEB128(Import.Table.Limits.Flags, W->OS);
-      encodeULEB128(NumElements, W->OS); // initial
+      encodeULEB128(Import.Table.Limits.Minimum, W->OS);
+      if (Import.Table.Limits.Flags & wasm::WASM_LIMITS_FLAG_HAS_MAX)
+        encodeULEB128(Import.Table.Limits.Maximum, W->OS);
       break;
     case wasm::WASM_EXTERNAL_TAG:
       W->OS << char(0); // Reserved 'attribute' field
@@ -1850,6 +1851,15 @@ uint64_t WasmObjectWriter::writeOneObject(MCAssembler &Asm,
       HandleReloc(RelEntry);
     for (const WasmRelocationEntry &RelEntry : DataRelocations)
       HandleReloc(RelEntry);
+
+    // Update minimum size of `__indirect_function_table` table.
+    auto It = llvm::find_if(Imports, [](const wasm::WasmImport &I) {
+      return I.Field == "__indirect_function_table";
+    });
+
+    if (It != Imports.end()) {
+      It->Table.Limits.Minimum = TableElems.size();
+    }
   }
 
   // Translate .init_array section contents into start functions.
@@ -1902,7 +1912,7 @@ uint64_t WasmObjectWriter::writeOneObject(MCAssembler &Asm,
   uint32_t CodeSectionIndex, DataSectionIndex;
   if (Mode != DwoMode::DwoOnly) {
     writeTypeSection(Signatures);
-    writeImportSection(Imports, DataSize, TableElems.size());
+    writeImportSection(Imports, DataSize);
     writeFunctionSection(Functions);
     writeTableSection(Tables);
     // Skip the "memory" section; we import the memory instead.
