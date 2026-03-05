@@ -3901,8 +3901,11 @@ bool SemaHLSL::CheckBuiltinFunctionCall(unsigned BuiltinID, CallExpr *TheCall) {
 
     QualType RetTy;
 
-    // Only matrix-involved cases reach the builtin (cases 6, 8, 9).
-    if (IsVec0 && IsMat1) {
+    // Only vector and matrix-involved cases reach the builtin (cases 5-6, 8-9).
+    if (IsVec0 && IsVec1) {
+      // Case 5: vector * vector -> scalar (dot product)
+      RetTy = EltTy0;
+    } else if (IsVec0 && IsMat1) {
       // Case 6: vector * matrix -> vector
       auto *MatTy = Ty1->castAs<ConstantMatrixType>();
       RetTy = getASTContext().getExtVectorType(EltTy0, MatTy->getNumColumns());

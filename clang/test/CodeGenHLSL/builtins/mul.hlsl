@@ -43,31 +43,37 @@ export float3 test_vec_scalar_mul(float3 a, float b) { return mul(a, b); }
 // -- Case 5: vector * vector -> scalar (dot product) --
 
 // CHECK-LABEL: test_vec_vec_mul
-// DXIL: %hlsl.dot.i = {{.*}} call {{.*}} float @llvm.dx.fdot.v3f32(<3 x float> {{.*}} %a, <3 x float> {{.*}} %b)
-// SPIRV: %hlsl.dot.i = {{.*}} call {{.*}} float @llvm.spv.fdot.v3f32(<3 x float> {{.*}} %a, <3 x float> {{.*}} %b)
-// CHECK: ret float %hlsl.dot.i
+// DXIL: %hlsl.mul = {{.*}}call {{.*}} float @llvm.dx.fdot.v3f32(<3 x float> %a, <3 x float> %b)
+// SPIRV: %hlsl.mul = {{.*}}call {{.*}} float @llvm.spv.fdot.v3f32(<3 x float> %a, <3 x float> %b)
+// CHECK: ret float %hlsl.mul
 export float test_vec_vec_mul(float3 a, float3 b) { return mul(a, b); }
 
 // CHECK-LABEL: test_vec_vec_muli
-// DXIL: %hlsl.dot.i = {{.*}} call {{.*}} i32 @llvm.dx.sdot.v3i32(<3 x i32> %a, <3 x i32> %b)
-// SPIRV: %hlsl.dot.i = {{.*}} call {{.*}} i32 @llvm.spv.sdot.v3i32(<3 x i32> %a, <3 x i32> %b)
-// CHECK: ret i32 %hlsl.dot.i
+// DXIL: %hlsl.mul = {{.*}}call i32 @llvm.dx.sdot.v3i32(<3 x i32> %a, <3 x i32> %b)
+// SPIRV: %hlsl.mul = {{.*}}call i32 @llvm.spv.sdot.v3i32(<3 x i32> %a, <3 x i32> %b)
+// CHECK: ret i32 %hlsl.mul
 export int test_vec_vec_muli(int3 a, int3 b) { return mul(a, b); }
 
 // CHECK-LABEL: test_vec_vec_mulu
-// DXIL: %hlsl.dot.i = {{.*}} call {{.*}} i32 @llvm.dx.udot.v3i32(<3 x i32> %a, <3 x i32> %b)
-// SPIRV: %hlsl.dot.i = {{.*}} call {{.*}} i32 @llvm.spv.udot.v3i32(<3 x i32> %a, <3 x i32> %b)
-// CHECK: ret i32 %hlsl.dot.i
+// DXIL: %hlsl.mul = {{.*}}call i32 @llvm.dx.udot.v3i32(<3 x i32> %a, <3 x i32> %b)
+// SPIRV: %hlsl.mul = {{.*}}call i32 @llvm.spv.udot.v3i32(<3 x i32> %a, <3 x i32> %b)
+// CHECK: ret i32 %hlsl.mul
 export uint test_vec_vec_mulu(uint3 a, uint3 b) { return mul(a, b); }
 
-// Double vector dot product: no dot intrinsic for double vectors.
-// The checks for this test are less precise because the scalar loop may be vectorized depending on the build configuration.
+// Double vector dot product: DXIL uses fmul + fmuladd, SPIR-V uses fdot.
 // CHECK-LABEL: test_vec_vec_muld
-// CHECK-NOT: @llvm.dx.fdot
-// CHECK-NOT: @llvm.spv.fdot
-// CHECK: fmul {{.*}} double
-// CHECK: fadd {{.*}} double
-// CHECK: ret double %{{.*}}
+// DXIL: [[A0:%.*]] = extractelement <3 x double> %a, i64 0
+// DXIL: [[B0:%.*]] = extractelement <3 x double> %b, i64 0
+// DXIL: %hlsl.mul = fmul {{.*}} double [[B0]], [[A0]]
+// DXIL: [[A1:%.*]] = extractelement <3 x double> %a, i64 1
+// DXIL: [[B1:%.*]] = extractelement <3 x double> %b, i64 1
+// DXIL: %hlsl.mul1 = {{.*}}call {{.*}} double @llvm.fmuladd.f64(double [[A1]], double [[B1]], double %hlsl.mul)
+// DXIL: [[A2:%.*]] = extractelement <3 x double> %a, i64 2
+// DXIL: [[B2:%.*]] = extractelement <3 x double> %b, i64 2
+// DXIL: %hlsl.mul2 = {{.*}}call {{.*}} double @llvm.fmuladd.f64(double [[A2]], double [[B2]], double %hlsl.mul1)
+// DXIL: ret double %hlsl.mul2
+// SPIRV: %hlsl.mul = {{.*}}call {{.*}} double @llvm.spv.fdot.v3f64(<3 x double> %a, <3 x double> %b)
+// SPIRV: ret double %hlsl.mul
 export double test_vec_vec_muld(double3 a, double3 b) { return mul(a, b); }
 
 // -- Case 6: vector * matrix -> vector --
