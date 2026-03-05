@@ -1948,12 +1948,12 @@ TEST(FindImplementations, InheritanceRecursion) {
     };
 
     template <int I>
-    struct [[Even]] : Odd<I - 1> {};
+    struct [[[[Even]]]] : Odd<I - 1> {};
 
     template <int I>
     struct [[Odd]] : Even<I - 1> {};
 
-    constexpr bool Answer = Even<42>::value;
+    constexpr bool Answer = Even<2>::value;
   )cpp";
 
   Annotations Code(Test);
@@ -1997,6 +1997,44 @@ TEST(FindImplementations, InheritanceObjC) {
   EXPECT_THAT(findImplementations(AST, Code.point("protocol"), Index.get()),
               UnorderedElementsAre(sym("protocol", Code.range("protocolDef"),
                                        Code.range("protocolDef"))));
+}
+
+TEST(FindImplementations, InheritanceTemplate) {
+  Annotations Main(R"cpp(
+    class Fi$First^rst {};
+
+    class Sec$Second^ond {};
+
+    class Th$Third^ird {};
+
+    template <typename... T>
+    struct $Third[[Inherit]] : T... {};
+
+    template struct $First[[Inherit]]<First>;
+
+    template<>
+    struct $Second[[Inherit]]<Second> : Second {};
+
+    class $First[[Battler]] : Inherit<First> {};
+
+    class $Second[[Beatrice]] : Inherit<Second> {};
+
+    class $Third[[Maria]] : Inherit<Third> {};
+  )cpp");
+
+  TestTU TU;
+  TU.Code = std::string(Main.code());
+  auto AST = TU.build();
+  auto Index = TU.index();
+
+  EXPECT_THAT(findImplementations(AST, Main.point("First"), Index.get()),
+              UnorderedPointwise(declRange(), Main.ranges("First")));
+
+  EXPECT_THAT(findImplementations(AST, Main.point("Second"), Index.get()),
+              UnorderedPointwise(declRange(), Main.ranges("Second")));
+
+  EXPECT_THAT(findImplementations(AST, Main.point("Third"), Index.get()),
+              UnorderedPointwise(declRange(), Main.ranges("Third")));
 }
 
 TEST(FindImplementations, CaptureDefinition) {

@@ -734,7 +734,28 @@ public:
       indexTemplateParameters(Params, Parent);
     }
 
-    return Visit(Parent);
+    bool shouldContinue = Visit(Parent);
+    if (!shouldContinue)
+      return false;
+
+    // Only check instantiation if D is canonical to prevent infinite cycling
+    if (D != D->getCanonicalDecl())
+      return true;
+
+    if (const auto *CTD = llvm::dyn_cast<ClassTemplateDecl>(D))
+      for (auto *SD : CTD->specializations())
+        for (auto *RD : SD->redecls()) {
+          auto *CTSD = dyn_cast<ClassTemplateSpecializationDecl>(RD);
+          // For now we are only interested in instantiations with inheritance.
+          if (!CTSD || !CTSD->hasDefinition() || CTSD->bases().empty())
+            continue;
+          // Explicit specialization is handled elsewhere
+          if (CTSD->isExplicitSpecialization())
+            continue;
+          Visit(RD);
+        }
+
+    return true;
   }
 
   bool VisitConceptDecl(const ConceptDecl *D) {

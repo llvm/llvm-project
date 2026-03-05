@@ -603,6 +603,7 @@ bool SymbolCollector::handleDeclOccurrence(
   assert(ASTCtx && PP && HeaderFileURIs);
   assert(CompletionAllocator && CompletionTUInfo);
   assert(ASTNode.OrigD);
+
   // Indexing API puts canonical decl into D, which might not have a valid
   // source location for implicit/built-in decls. Fallback to original decl in
   // such cases.
@@ -673,9 +674,16 @@ bool SymbolCollector::handleDeclOccurrence(
   // refs, because the indexing code only populates relations for specific
   // occurrences. For example, RelationBaseOf is only populated for the
   // occurrence inside the base-specifier.
-  processRelations(*ND, ID, Relations);
+  processRelations(ID, *ASTNode.OrigD, Relations);
 
   bool CollectRef = static_cast<bool>(Opts.RefFilter & toRefKind(Roles));
+  // For now we only want the bare minimum of information for a class
+  // instantiation such that we have symbols for the `BaseOf` relation.
+  if (const auto *CTSD = dyn_cast<ClassTemplateSpecializationDecl>(D);
+      CTSD && CTSD->hasDefinition() && !CTSD->bases().empty() &&
+      !CTSD->isExplicitSpecialization()) {
+    CollectRef = false;
+  }
   // Unlike other fields, e.g. Symbols (which use spelling locations), we use
   // file locations for references (as it aligns the behavior of clangd's
   // AST-based xref).
@@ -875,7 +883,7 @@ bool SymbolCollector::handleMacroOccurrence(const IdentifierInfo *Name,
 }
 
 void SymbolCollector::processRelations(
-    const NamedDecl &ND, const SymbolID &ID,
+    const SymbolID &ID, const Decl &OrigD,
     ArrayRef<index::SymbolRelation> Relations) {
   for (const auto &R : Relations) {
     auto RKind = indexableRelation(R);
@@ -896,9 +904,17 @@ void SymbolCollector::processRelations(
     //       in the index and find nothing, but that's a situation they
     //       probably need to handle for other reasons anyways.
     // We currently do (B) because it's simpler.
-    if (*RKind == RelationKind::BaseOf)
+    if (*RKind == RelationKind::BaseOf) {
       this->Relations.insert({ID, *RKind, ObjectID});
-    else if (*RKind == RelationKind::OverriddenBy)
+      // If the Subject is a template, we also want a relation to the
+      // template instantiation (OrigD) to record inheritance chains.
+      if (const auto *CTSD = dyn_cast<ClassTemplateSpecializationDecl>(&OrigD);
+          CTSD && !CTSD->isExplicitSpecialization()) {
+        auto OrigID = getSymbolIDCached(&OrigD);
+        if (OrigID)
+          this->Relations.insert({OrigID, *RKind, ObjectID});
+      }
+    } else if (*RKind == RelationKind::OverriddenBy)
       this->Relations.insert({ObjectID, *RKind, ID});
   }
 }
