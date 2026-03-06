@@ -10,10 +10,16 @@
 #define LLDB_HOST_FILEACTION_H
 
 #include "lldb/Utility/FileSpec.h"
+#include "lldb/lldb-types.h"
 #include <string>
+#include <variant>
 
 namespace lldb_private {
 
+/// Represents a file descriptor action to be performed during process launch.
+///
+/// FileAction encapsulates operations like opening, closing, or duplicating
+/// file descriptors that should be applied when spawning a new process.
 class FileAction {
 public:
   enum Action {
@@ -25,30 +31,99 @@ public:
 
   FileAction();
 
+  /// Reset this FileAction to its default state.
   void Clear();
 
+  /// Configure this action to close a file descriptor.
   bool Close(int fd);
 
-  bool Duplicate(int fd, int dup_fd);
+  /// Configure this action to duplicate a file descriptor.
+  ///
+  /// \param[in] fd
+  ///     The file descriptor to duplicate.
+  /// \param[in] dup_file
+  ///     The target file descriptor number.
+  bool Duplicate(int fd, int dup_file);
 
+#ifdef _WIN32
+  /// Configure this action to duplicate a file handle.
+  ///
+  /// \param[in] fd
+  ///     The file descriptor to duplicate.
+  /// \param[in] dup_file
+  ///     The target file descriptor number.
+  bool Duplicate(void *fh, void *dup_fh);
+#endif
+
+  /// Configure this action to open a file.
+  ///
+  /// \param[in] fd
+  ///     The file descriptor to use for the opened file.
+  /// \param[in] file_spec
+  ///     The file to open.
+  /// \param[in] read
+  ///     Open for reading.
+  /// \param[in] write
+  ///     Open for writing.
   bool Open(int fd, const FileSpec &file_spec, bool read, bool write);
 
-  int GetFD() const { return m_fd; }
+#ifdef _WIN32
+  /// Configure this action to open a file (Windows handle version).
+  ///
+  /// This method will open a CRT file descriptor to the handle and
+  /// store that descriptor internally.
+  ///
+  /// \param[in] fh
+  ///     The file handle to use for the opened file.
+  /// \param[in] file_spec
+  ///     The file to open.
+  /// \param[in] read
+  ///     Open for reading.
+  /// \param[in] write
+  ///     Open for writing.
+  bool Open(void *fh, const FileSpec &file_spec, bool read, bool write);
+#endif
 
+  /// Get the file descriptor this action applies to.
+  int GetFD() const;
+
+#ifdef _WIN32
+  /// Get the Windows handle for this file descriptor.
+  ///
+  /// The handle is converted from the file descriptor which is stored
+  /// internally. The initial file descriptor must have been registered in the
+  /// CRT before.
+  void *GetHandle() const;
+#endif
+
+  /// Get the type of action.
   Action GetAction() const { return m_action; }
 
-  int GetActionArgument() const { return m_arg; }
+#ifdef _WIN32
+  /// Get the file handle argument for eFileActionDuplicate actions.
+  void *GetActionArgumentHandle() const;
+#endif
 
+  /// Get the action-specific argument.
+  ///
+  /// For eFileActionOpen, returns the open flags (O_RDONLY, etc.).
+  /// For eFileActionDuplicate, returns the target fd to duplicate to.
+  int GetActionArgument() const;
+
+  /// Get the file specification for open actions.
   const FileSpec &GetFileSpec() const;
 
   void Dump(Stream &stream) const;
 
 protected:
-  Action m_action = eFileActionNone; // The action for this file
-  int m_fd = -1;                     // An existing file descriptor
-  int m_arg = -1; // oflag for eFileActionOpen*, dup_fd for eFileActionDuplicate
-  FileSpec
-      m_file_spec; // A file spec to use for opening after fork or posix_spawn
+  /// The action for this file.
+  Action m_action = eFileActionNone;
+  /// An existing file descriptor.
+  std::variant<int, void *> m_file = -1;
+  /// oflag for eFileActionOpen, dup_fd for eFileActionDuplicate.
+  std::variant<int, void *> m_arg = -1;
+  /// File spec to use for opening after fork or posix_spawn.
+  FileSpec m_file_spec;
 };
 
 } // namespace lldb_private

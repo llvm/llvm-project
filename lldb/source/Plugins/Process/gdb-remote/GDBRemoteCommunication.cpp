@@ -860,7 +860,7 @@ Status GDBRemoteCommunication::StartDebugserverProcess(
     debugserver_args.AppendArgument(llvm::formatv("--fd={0}", *comm_fd).str());
     // Send "comm_fd" down to the inferior so it can use it to communicate back
     // with this process.
-    launch_info.AppendDuplicateFileAction((int64_t)*comm_fd, (int64_t)*comm_fd);
+    launch_info.AppendDuplicateFileAction(*comm_fd, *comm_fd);
   } else {
     llvm::StringRef url = std::get<llvm::StringRef>(comm);
     LLDB_LOG(log, "debugserver listens on: {0}", url);
@@ -886,7 +886,7 @@ Status GDBRemoteCommunication::StartDebugserverProcess(
     pipe_t write = socket_pipe.GetWritePipe();
     debugserver_args.AppendArgument(llvm::StringRef("--pipe"));
     debugserver_args.AppendArgument(llvm::to_string(write));
-    launch_info.AppendDuplicateFileAction((int64_t)write, (int64_t)write);
+    launch_info.AppendDuplicateFileAction(write, write);
 #endif
   }
 

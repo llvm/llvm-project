@@ -248,9 +248,17 @@ llvm::ErrorOr<std::vector<HANDLE>> ProcessLauncherWindows::GetInheritedHandles(
 
   for (size_t i = 0; i < launch_info.GetNumFileActions(); ++i) {
     const FileAction *act = launch_info.GetFileActionAtIndex(i);
-    if (act->GetAction() == FileAction::eFileActionDuplicate &&
+    if (std::find(inherited_handles.begin(), inherited_handles.end(),
+                  act->GetHandle()) != inherited_handles.end())
+      continue;
+    if (act->GetAction() != FileAction::eFileActionDuplicate)
+      continue;
+    if (act->GetActionArgument() != -1 &&
         act->GetFD() == act->GetActionArgument())
-      inherited_handles.push_back(reinterpret_cast<HANDLE>(act->GetFD()));
+      inherited_handles.push_back(act->GetHandle());
+    else if (act->GetActionArgumentHandle() != INVALID_HANDLE_VALUE &&
+             act->GetHandle() == act->GetActionArgumentHandle())
+      inherited_handles.push_back(act->GetHandle());
   }
 
   if (inherited_handles.empty())
@@ -280,16 +288,20 @@ ProcessLauncherWindows::GetStdioHandle(const ProcessLaunchInfo &launch_info,
   DWORD share = FILE_SHARE_READ | FILE_SHARE_WRITE | FILE_SHARE_DELETE;
   DWORD create = 0;
   DWORD flags = 0;
-  if (fd == STDIN_FILENO) {
+  switch (fd) {
+  case STDIN_FILENO:
     access = GENERIC_READ;
     create = OPEN_EXISTING;
     flags = FILE_ATTRIBUTE_READONLY;
-  }
-  if (fd == STDOUT_FILENO || fd == STDERR_FILENO) {
+    break;
+  case STDERR_FILENO:
+    flags = FILE_FLAG_WRITE_THROUGH;
+  case STDOUT_FILENO:
     access = GENERIC_WRITE;
     create = CREATE_ALWAYS;
-    if (fd == STDERR_FILENO)
-      flags = FILE_FLAG_WRITE_THROUGH;
+    break;
+  default:
+    break;
   }
 
   const std::string path = action->GetFileSpec().GetPath();
