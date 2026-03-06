@@ -323,8 +323,9 @@ Register RegScavenger::scavengeRegisterBackwards(const TargetRegisterClass &RC,
         SmallVector<MCPhysReg>(RC.getRawAllocationOrder(MF));
 
   // Find the register whose use is furthest away.
-  std::pair<MCPhysReg, MachineBasicBlock::iterator> P = findSurvivorBackwards(
-      *MRI, std::prev(MBBI), To, LiveUnits, FilteredAllocationOrder, RestoreAfter);
+  std::pair<MCPhysReg, MachineBasicBlock::iterator> P =
+      findSurvivorBackwards(*MRI, std::prev(MBBI), To, LiveUnits,
+                            FilteredAllocationOrder, RestoreAfter);
   MCPhysReg Reg = P.first;
   MachineBasicBlock::iterator SpillBefore = P.second;
   // Found an available register?
