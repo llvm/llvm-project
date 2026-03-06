@@ -56,7 +56,7 @@
 // CHECK:      omp.loop_nest (%[[ARG3:.*]]) : i32 = (%[[IDX_VAL]]) to (%[[END_IDX]]) inclusive step (%[[IDX_VAL]]) {
 // CHECK:        llvm.store %[[ARG3]], %{{.*}} : i32, !llvm.ptr
 // CHECK:        %[[CONST_VAL2:.*]] = llvm.mlir.constant(48 : i32) : i32
-// CHECK:        "llvm.intr.memcpy"(%[[ALLOCA1:.*]], %[[ARG0]], %[[CONST_VAL2]]) {{.*}} : (!llvm.ptr, !llvm.ptr, i32) -> ()
+// CHECK:        "llvm.intr.memcpy"(%[[ALLOCA1:.*]], %[[ARG0]], %[[CONST_VAL2]]) <{arg_attrs = [{{.*}}], isVolatile = false}> : (!llvm.ptr, !llvm.ptr, i32) -> ()
 // CHECK:        %[[VAL1:.*]] = llvm.load %{{.*}} : !llvm.ptr -> i32
 // CHECK:        %[[VAL2:.*]] = llvm.sext %[[VAL1]] : i32 to i64
 // CHECK:        %[[VAL3:.*]] = llvm.getelementptr %[[ALLOCA1]][0, 0] : (!llvm.ptr) -> !llvm.ptr, !llvm.struct<(ptr, i64, i32, i8, i8, i8, i8, array<1 x array<3 x i64>>)>
