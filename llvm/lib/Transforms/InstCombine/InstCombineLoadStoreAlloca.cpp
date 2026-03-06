@@ -1000,8 +1000,10 @@ static Instruction *replaceGEPIdxWithZero(InstCombinerImpl &IC, Value *Ptr,
       // Replace the GEP for all users so they all benefit.
       if (GEPI->getParent() == MemI.getParent() &&
           isGuaranteedToTransferExecutionToSuccessor(GEPI->getIterator(),
-                                                     MemI.getIterator()))
+                                                     MemI.getIterator())) {
         IC.replaceInstUsesWith(*GEPI, NewGEPI);
+        IC.eraseInstFromFunction(*GEPI);
+      }
       return NewGEPI;
     }
   }
