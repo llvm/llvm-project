@@ -1364,7 +1364,8 @@ bool DependenceInfo::strongSIVtest(const SCEVAddRecExpr *Src,
 //
 // Return true if dependence disproved.
 bool DependenceInfo::weakCrossingSIVtest(const SCEVAddRecExpr *Src,
-                                         const SCEVAddRecExpr *Dst, unsigned Level,
+                                         const SCEVAddRecExpr *Dst,
+                                         unsigned Level,
                                          FullDependence &Result) const {
   if (!isDependenceTestEnabled(DependenceTestType::WeakCrossingSIV))
     return false;
@@ -1379,7 +1380,6 @@ bool DependenceInfo::weakCrossingSIVtest(const SCEVAddRecExpr *Src,
   LLVM_DEBUG(dbgs() << "\t    Coeff = " << *Coeff << "\n");
   LLVM_DEBUG(dbgs() << "\t    SrcConst = " << *SrcConst << "\n");
   LLVM_DEBUG(dbgs() << "\t    DstConst = " << *DstConst << "\n");
-
   ++WeakCrossingSIVapplications;
   assert(0 < Level && Level <= CommonLevels && "Level out of range");
   Level--;
