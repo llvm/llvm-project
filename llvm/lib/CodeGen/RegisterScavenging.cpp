@@ -306,11 +306,12 @@ Register RegScavenger::scavengeRegisterBackwards(const TargetRegisterClass &RC,
   // First, determine if there are any such early-clobber def regs.
   SmallVector<MCPhysReg> FilteredAllocationOrder;
   SmallVector<MCPhysReg> ECDefs;
-  for (const MachineOperand &Op : MBBI->operands())
-    if (Op.isReg() && Op.isDef() && Op.isEarlyClobber())
-      ECDefs.push_back(Op.getReg());
+  if ((MBBI != MBB.end()) && (MBBI != MBB.begin()))
+    for (const MachineOperand &Op : MBBI->operands())
+      if (Op.isReg() && Op.isDef() && Op.isEarlyClobber())
+        ECDefs.push_back(Op.getReg());
   if (!ECDefs.empty()) {
-    // if so, obtain the filtered version.
+    // If so, obtain the filtered version.
     for (MCPhysReg Reg : RC.getRawAllocationOrder(MF)) {
       // Only add Reg if it does not overlap with any element of ECDefs.
       if (!llvm::any_of(ECDefs, [&](MCPhysReg ECReg) {
