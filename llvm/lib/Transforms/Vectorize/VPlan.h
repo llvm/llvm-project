@@ -1724,6 +1724,11 @@ struct LLVM_ABI_FOR_TEST VPIRPhi : public VPIRInstruction,
     return R && isa<PHINode>(R->getInstruction());
   }
 
+  static inline bool classof(const VPUser *U) {
+    auto *R = dyn_cast<VPRecipeBase>(U);
+    return R && classof(R);
+  }
+
   PHINode &getIRPhi() { return cast<PHINode>(getInstruction()); }
 
   void execute(VPTransformState &State) override;
