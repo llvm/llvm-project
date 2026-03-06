@@ -112,6 +112,8 @@ void llvm::GenericUniformityAnalysisImpl<SSAContext>::finalizeUniformValues() {
   for (const Value *V : UniformValues)
     Manager->registerValue(V);
   UniformValueCallbacks = std::move(Manager);
+
+  DivergentValues.clear();
 }
 
 template <>
