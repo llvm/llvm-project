@@ -10,6 +10,7 @@
 #include "llvm/ADT/BitVector.h"
 #include "llvm/ADT/Sequence.h"
 #include "llvm/ADT/SmallBitVector.h"
+#include "llvm/IR/CmpPredicate.h"
 #include "llvm/IR/Instructions.h"
 #include "llvm/IR/Operator.h"
 #include "llvm/Support/KnownBits.h"
@@ -1728,6 +1729,64 @@ TEST(ConstantRange, MakeAllowedICmpRegionEdgeCases) {
                   .isSingleElement());
   EXPECT_TRUE(ConstantRange::makeAllowedICmpRegion(ICmpInst::ICMP_UGE, UMin)
                   .isFullSet());
+}
+
+template <typename SIV>
+auto getSameSignTester(SIV ShouldIncludeValue, CmpInst::Predicate Cmp) {
+  return [Cmp, ShouldIncludeValue](const ConstantRange &CR) {
+    uint32_t BitWidth = CR.getBitWidth();
+    unsigned Max = 1 << BitWidth;
+    SmallBitVector Elems(Max);
+    if (!CR.isEmptySet()) {
+      for (unsigned I : llvm::seq(Max)) {
+        APInt Current(BitWidth, I);
+        if (ShouldIncludeValue(Current, CR))
+          Elems.set(I);
+      }
+    }
+
+    CmpPredicate CmpPred(Cmp, true);
+    TestRange(ConstantRange::makeAllowedICmpRegion(CmpPred, CR), Elems,
+              PreferSmallest, {});
+  };
+}
+
+TEST(ConstantRange, MakeAllowedICmpRegionExaustive) {
+  EnumerateInterestingConstantRanges(getSameSignTester(
+      [](const APInt &A, const ConstantRange &B) {
+        if (A.isNegative())
+          return A.sge(B.getSignedMin());
+        return A.uge(B.getUnsignedMin());
+      },
+      ICmpInst::ICMP_UGE));
+
+  EnumerateInterestingConstantRanges(getSameSignTester(
+      [](const APInt &A, const ConstantRange &B) {
+        if (A.isNegative())
+          return A.sgt(B.getSignedMin());
+        return A.ugt(B.getUnsignedMin());
+      },
+      ICmpInst::ICMP_UGT));
+
+  EnumerateInterestingConstantRanges(getSameSignTester(
+      [](const APInt &A, const ConstantRange &B) {
+        if (A.isNegative() && B.getUnsignedMax().isNegative())
+          return A.sle(B.getUnsignedMax());
+        if (A.isNonNegative() && B.getSignedMax().isNonNegative())
+          return A.ule(B.getSignedMax());
+        return false;
+      },
+      ICmpInst::ICMP_ULE));
+
+  EnumerateInterestingConstantRanges(getSameSignTester(
+      [](const APInt &A, const ConstantRange &B) {
+        if (A.isNegative() && B.getUnsignedMax().isNegative())
+          return A.slt(B.getUnsignedMax());
+        if (A.isNonNegative() && B.getSignedMax().isNonNegative())
+          return A.ult(B.getSignedMax());
+        return false;
+      },
+      ICmpInst::ICMP_ULT));
 }
 
 TEST(ConstantRange, MakeExactICmpRegion) {
