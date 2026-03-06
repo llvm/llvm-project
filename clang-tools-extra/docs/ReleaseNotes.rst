@@ -157,6 +157,11 @@ New checks
 New check aliases
 ^^^^^^^^^^^^^^^^^
 
+- Renamed :doc:`hicpp-no-assembler <clang-tidy/checks/hicpp/no-assembler>`
+  to :doc:`portability-no-assembler
+  <clang-tidy/checks/portability/no-assembler>`. The `hicpp-no-assembler`
+  name is kept as an alias.
+
 Changes in existing checks
 ^^^^^^^^^^^^^^^^^^^^^^^^^^
 
@@ -230,6 +235,15 @@ Changes in existing checks
 
   - Fixed false positive where an array of pointers to ``const`` was
     incorrectly diagnosed as allowing the pointee to be made ``const``.
+
+- Improved :doc:`misc-throw-by-value-catch-by-reference
+  <clang-tidy/checks/misc/throw-by-value-catch-by-reference>` check:
+
+  - Fixed the `WarnOnLargeObject` option to use the correct name when
+    storing the configuration.
+
+  - Fixed the `CheckThrowTemporaries` option to correctly reflect its
+    configured value in exported settings.
 
 - Improved :doc:`misc-unused-using-decls
   <clang-tidy/checks/misc/unused-using-decls>` to not diagnose ``using``
