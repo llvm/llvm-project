@@ -657,13 +657,21 @@ void SPIRVModuleAnalysis::processOtherInstrs(const Module &M) {
                            NonSemantic_Shader_DebugInfo_100) {
           MachineOperand Ins = MI.getOperand(3);
           namespace NS = SPIRV::NonSemanticExtInst;
-          static constexpr int64_t GlobalNonSemanticDITy[] = {
-              NS::DebugSource, NS::DebugCompilationUnit, NS::DebugInfoNone,
-              NS::DebugTypeBasic, NS::DebugTypePointer};
-          bool IsGlobalDI = false;
-          for (unsigned Idx = 0; Idx < std::size(GlobalNonSemanticDITy); ++Idx)
-            IsGlobalDI |= Ins.getImm() == GlobalNonSemanticDITy[Idx];
-          if (IsGlobalDI)
+          // Debug info extension instructions other than DebugScope,
+          // DebugNoScope, DebugDeclare, DebugValue, DebugFunctionDefinition
+          // must appear between section 9 (types, constants, global variables)
+          // and section 10 (function declarations).
+          // DebugFunctionDefinition must appear in the entry basic block of an
+          // OpFunction, so it should not be moved to the global section.
+          // See the "SPIR-V NonSemantic Shader DebugInfo Instructions / Binary
+          // Form" spec section.
+          static constexpr int64_t ExcludedFromGlobalDI[] = {
+              NS::DebugScope, NS::DebugNoScope, NS::DebugDeclare,
+              NS::DebugValue, NS::DebugFunctionDefinition};
+          static_assert(is_sorted_constexpr(ExcludedFromGlobalDI));
+          bool IsExcluded = binary_search(ExcludedFromGlobalDI, Ins.getImm());
+          // All other NonSemantic debug info instructions go to global section
+          if (!IsExcluded)
             collectOtherInstr(MI, MAI, SPIRV::MB_NonSemanticGlobalDI, IS);
         } else if (OpCode == SPIRV::OpName || OpCode == SPIRV::OpMemberName) {
           collectOtherInstr(MI, MAI, SPIRV::MB_DebugNames, IS);
