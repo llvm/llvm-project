@@ -661,6 +661,7 @@ def interpret(bytecode: bytes, control: list, data: list, tracing: bool = False)
                 assert False
     return data[-1]
 
+
 ################################################################################
 # Python Compiler
 ################################################################################
