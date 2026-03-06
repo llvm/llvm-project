@@ -1296,9 +1296,11 @@ public:
     /// Explicit user for the resume phi of the canonical induction in the main
     /// VPlan, used by the epilogue vector loop.
     ResumeForEpilogue,
-    /// Extracts the lane from the first operand corresponding to the last
-    /// active (non-zero) lane in the mask (second operand), or if no lanes
-    /// were active in the mask, returns the default value (third operand).
+    /// Extracts the last active lane from a set of vectors. The first operand
+    /// is the default value if no lanes in the masks are active. Conceptually,
+    /// this concatenates all data vectors (odd operands), concatenates all
+    /// masks (even operands -- ignoring the default value), and returns the
+    /// last active value from the combined data vector using the combined mask.
     ExtractLastActive,
 
     /// Returns the value for vscale.
@@ -1720,6 +1722,11 @@ struct LLVM_ABI_FOR_TEST VPIRPhi : public VPIRInstruction,
   static inline bool classof(const VPRecipeBase *U) {
     auto *R = dyn_cast<VPIRInstruction>(U);
     return R && isa<PHINode>(R->getInstruction());
+  }
+
+  static inline bool classof(const VPUser *U) {
+    auto *R = dyn_cast<VPRecipeBase>(U);
+    return R && classof(R);
   }
 
   PHINode &getIRPhi() { return cast<PHINode>(getInstruction()); }
@@ -2563,8 +2570,9 @@ public:
   }
 
   VPWidenPHIRecipe *clone() override {
-    auto *C = new VPWidenPHIRecipe(cast<PHINode>(getUnderlyingValue()),
-                                   getOperand(0), getDebugLoc(), Name);
+    auto *C =
+        new VPWidenPHIRecipe(cast_if_present<PHINode>(getUnderlyingValue()),
+                             getOperand(0), getDebugLoc(), Name);
     for (VPValue *Op : llvm::drop_begin(operands()))
       C->addOperand(Op);
     return C;
