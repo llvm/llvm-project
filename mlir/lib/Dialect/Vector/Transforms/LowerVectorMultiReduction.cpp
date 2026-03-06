@@ -443,6 +443,82 @@ struct TwoDimMultiReductionToReduction
   }
 };
 
+/// Unrolls outermost dimension for vector.multi_reduction.
+/// Matches when the outermost dimension is not the only
+/// reduction dimension.
+///
+/// ```mlir
+/// %res = vector.multi_reduction <add> %src, %acc [0, [[REDUCTION_DIMS]] ] :
+/// vector<NxMx...xf32> to vector<Ix...xf32>
+/// ```
+///
+/// ```mlir
+/// %0 = vector.extract %src[0] : vector<Mx...xf32> from vector<NxMx...xf32>
+/// ...
+/// %Nminus1 = vector.extract %src[ [[N-1]] ] : vector<Mx...x.f32> from
+/// vector<NxMx...xf32>
+///
+/// %red0 = vector.multi_reduction %0, %acc [ [[REDUCTION_DIMS]] ] :
+/// vector<Mx...xf32> to vector<Ix...xf32>
+/// ...
+/// %res = vector.multi_reduction %Nminus1, %redNminus2 [ [[REDUCTION_DIMS]] ] :
+/// vector<Mx...xf32> to vector<Ix...xf32>
+/// ```
+struct UnrollMultiReductionInnerParallel
+    : public vector::MaskableOpRewritePattern<vector::MultiDimReductionOp> {
+  using MaskableOpRewritePattern::MaskableOpRewritePattern;
+
+  FailureOr<Value>
+  matchAndRewriteMaskableOp(vector::MultiDimReductionOp multiReductionOp,
+                            vector::MaskingOpInterface maskingOp,
+                            PatternRewriter &rewriter) const override {
+    if (!multiReductionOp.isReducedDim(0))
+      return failure();
+
+    ArrayRef<int64_t> reductionDims = multiReductionOp.getReductionDims();
+    if (reductionDims.size() <= 1)
+      return failure();
+
+    Location loc = multiReductionOp.getLoc();
+    Value source = multiReductionOp.getSource();
+
+    ArrayRef<int64_t> srcShape =
+        multiReductionOp.getSourceVectorType().getShape();
+    int64_t outerDimSize = srcShape.front();
+
+    Value mask = maskingOp ? maskingOp.getMask() : nullptr;
+
+    SmallVector<Value> vectors(outerDimSize);
+    for (int64_t i = 0; i < outerDimSize; ++i)
+      vectors[i] = vector::ExtractOp::create(rewriter, loc, source, i);
+
+    SmallVector<Value> masks(outerDimSize);
+    if (mask)
+      for (int64_t i = 0; i < outerDimSize; ++i)
+        masks[i] = vector::ExtractOp::create(rewriter, loc, mask, i);
+
+    SmallVector<bool> fullReductionMask = multiReductionOp.getReductionMask();
+    ArrayRef<bool> reductionMask =
+        ArrayRef<bool>(fullReductionMask).drop_front();
+    Value result = multiReductionOp.getAcc();
+    for (auto [innerVector, innerMask] : llvm::zip_equal(vectors, masks)) {
+      auto reductionOp = vector::MultiDimReductionOp::create(
+          rewriter, loc, innerVector, result, reductionMask,
+          multiReductionOp.getKind());
+
+      if (innerMask) {
+        Operation *maskOp =
+            vector::maskOperation(rewriter, reductionOp, innerMask);
+        result = maskOp->getResult(0);
+      } else {
+        result = reductionOp.getResult();
+      }
+    }
+
+    return result;
+  }
+};
+
 /// Converts 1D vector.multi_reduction directly to vector.reduction.
 ///
 /// Example:
@@ -542,6 +618,12 @@ void mlir::vector::populateVectorMultiReductionLoweringPatterns(
   else
     patterns.add<TwoDimMultiReductionToElementWise>(patterns.getContext(),
                                                     benefit);
+}
+
+void mlir::vector::populateVectorMultiReductionUnrollingPatterns(
+    RewritePatternSet &patterns, PatternBenefit benefit) {
+  patterns.add<UnrollMultiReductionInnerParallel>(patterns.getContext(),
+                                                  benefit);
 }
 
 std::unique_ptr<Pass> vector::createLowerVectorMultiReductionPass(

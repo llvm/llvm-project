@@ -145,6 +145,11 @@ void transform::ApplyMultiReductionFlatteningPatternsOp::populatePatterns(
       patterns, vectorTransformOptions.vectorMultiReductionLowering);
 }
 
+void transform::ApplyUnrollMultiReductionUnrollingPatternsOp::populatePatterns(
+    RewritePatternSet &patterns) {
+  vector::populateVectorMultiReductionUnrollingPatterns(patterns);
+}
+
 void transform::ApplyMultiReductionLoweringPatternsOp::populatePatterns(
     RewritePatternSet &patterns) {
   vector::VectorTransformsOptions vectorTransformOptions;

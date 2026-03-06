@@ -262,6 +262,20 @@ def ApplyMultiReductionFlatteningPatternsOp: Op<Transform_Dialect,
   }];
 }
 
+def ApplyUnrollMultiReductionUnrollingPatternsOp: Op<Transform_Dialect,
+    "apply_patterns.vector.multi_reduction_unrolling",
+    [DeclareOpInterfaceMethods<PatternDescriptorOpInterface>]> {
+  let description = [{
+    Indicates that vector multi_reduction operations with more than one
+    reduction dimension should be unrolled in a rank-reducing way.
+
+    This populates the patterns:
+  }];
+
+  let assemblyFormat = "attr-dict";
+}
+
+
 def ApplyMultiReductionLoweringPatternsOp: Op<Transform_Dialect,
     "apply_patterns.vector.multi_reduction_lowering",
     [DeclareOpInterfaceMethods<PatternDescriptorOpInterface>]> {
