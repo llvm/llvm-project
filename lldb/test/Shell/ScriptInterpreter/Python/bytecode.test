@@ -1,6 +1,8 @@
+# REQUIRES: lld
+
 # RUN: %python %S/../../../../examples/python/formatter_bytecode.py --test
 
-# RUN: %clang_host -std=c++17 -g %S/Inputs/FormatterBytecode/MyOptional.cpp -o %t.exe
+# RUN: %clang_host -std=c++17 -g %S/Inputs/FormatterBytecode/MyOptional.cpp -fuse-ld=lld -gdwarf -o %t.exe
 # RUN: %lldb %t.exe -o "command script import %S/../../../../examples/python/formatter_bytecode.py" -o "command script import %S/Inputs/FormatterBytecode/formatter.py" -o "b -p here" -o "r" -o "v x" -o "v y" -o q | FileCheck %s --check-prefix=OPTIONAL
 # OPTIONAL: (lldb) v x
 # OPTIONAL: (MyOptional<int>) x = None {
