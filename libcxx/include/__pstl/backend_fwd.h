@@ -303,6 +303,12 @@ struct __is_sorted;
 // optional<bool>
 // operator()(_Policy&& __policy, _ForwardIterator __first, _ForwardIterator __last, _Comp&& __comp) const noexcept;
 
+template <class _Backend, class _ExecutionPolicy>
+struct __is_sorted_until;
+// template <class _Policy, class _ForwardIterator, class _Comp>
+// optional<_ForwardIterator>
+// operator()(_Policy&& __policy, _ForwardIterator __first, _ForwardIterator __last, _Comp&& __comp) const noexcept;
+
 } // namespace __pstl
 _LIBCPP_END_NAMESPACE_STD
 
