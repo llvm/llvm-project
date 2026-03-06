@@ -14,9 +14,6 @@
 // Stress test for constexpr std::string initialization.
 // This test ensures that we can handle a large number of constexpr strings.
 
-// ADDITIONAL_COMPILE_FLAGS(has-fconstexpr-steps): -fconstexpr-steps=1000000
-// ADDITIONAL_COMPILE_FLAGS(has-fconstexpr-ops-limit): -fconstexpr-ops-limit=1000000
-
 #include <string>
 #include <array>
 #include <cassert>
