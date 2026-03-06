@@ -7,8 +7,8 @@
 ; CHECK-NOT: OpCapability Linkage
 ; CHECK-NOT: LinkageAttributes
 
-@input_var = external hidden addrspace(7) global <4 x float>
-@output_var = external hidden addrspace(8) global <4 x float>
+@input_var = external hidden addrspace(7) global <4 x float>, !spirv.Decorations !0
+@output_var = external hidden addrspace(8) global <4 x float>, !spirv.Decorations !2
 
 ; CHECK-DAG: %[[#INPUT_TYPE:]] = OpTypePointer Input %[[#FLOAT4:]]
 ; CHECK-DAG: %[[#OUTPUT_TYPE:]] = OpTypePointer Output %[[#FLOAT4]]
@@ -23,3 +23,8 @@ entry:
 }
 
 attributes #0 = { "hlsl.shader"="pixel" }
+
+!0 = !{!1}
+!1 = !{i32 30, i32 0}   ; Location 0
+!2 = !{!3}
+!3 = !{i32 30, i32 1}   ; Location 1
