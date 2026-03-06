@@ -2415,6 +2415,10 @@ bool SILoadStoreOptimizer::promoteConstantOffsetToImm(
                              : SIInstrFlags::FLAT;
   bool AllowNegativeOffset =
       TII->allowNegativeFlatOffset(FlatVariant) && !TII->usesASYNC_CNT(MI);
+  // The async global instructions use i24 offset for global address but u16
+  // offset for LDS address. In this case, we just only promote when the offset
+  // is u16.
+  bool IsOffsetU16 = TII->usesASYNC_CNT(MI);
 
   if (AnchorList.count(&MI))
     return false;
@@ -2534,6 +2538,7 @@ bool SILoadStoreOptimizer::promoteConstantOffsetToImm(
       AM.HasBaseReg = true;
       AM.BaseOffs = Dist;
       if (Dist >= 0 && TLI->isLegalFlatAddressingMode(AM, AS) &&
+          (!IsOffsetU16 || isUInt<16>(Dist)) &&
           (!AnchorInst || Offset < AnchorAddr.Offset)) {
         AnchorAddr = Visited[Inst];
         AnchorInst = Inst;
@@ -2563,7 +2568,8 @@ bool SILoadStoreOptimizer::promoteConstantOffsetToImm(
       AM.BaseOffs = OtherOffset - AnchorAddr.Offset;
 
       if (TLI->isLegalFlatAddressingMode(AM, AS) &&
-          (AllowNegativeOffset || AM.BaseOffs >= 0)) {
+          (AllowNegativeOffset || AM.BaseOffs >= 0) &&
+          (!IsOffsetU16 || isUInt<16>(AM.BaseOffs))) {
         LLVM_DEBUG(dbgs() << "  Promote Offset(" << OtherOffset; dbgs() << ")";
                    OtherMI->dump());
         int32_t OtherOffsetDiff = OtherOffset - AnchorAddr.Offset;
@@ -2588,7 +2594,8 @@ bool SILoadStoreOptimizer::promoteConstantOffsetToImm(
       TargetLoweringBase::AddrMode AM;
       AM.HasBaseReg = true;
       AM.BaseOffs = Dist;
-      if (Dist >= 0 && TLI->isLegalFlatAddressingMode(AM, AS)) {
+      if (Dist >= 0 && TLI->isLegalFlatAddressingMode(AM, AS) &&
+          (!IsOffsetU16 || isUInt<16>(Dist))) {
         LLVM_DEBUG(dbgs() << "  Promote Offset(" << OtherOffset << ")";
                    OtherMI->dump());
         updateBaseAndOffset(*OtherMI, Base, Dist);
