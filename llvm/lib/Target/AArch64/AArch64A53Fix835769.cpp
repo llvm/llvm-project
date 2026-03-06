@@ -76,9 +76,16 @@ static bool isSecondInstructionInSequence(MachineInstr *MI) {
 //===----------------------------------------------------------------------===//
 
 namespace {
-class AArch64A53Fix835769 : public MachineFunctionPass {
-  const TargetInstrInfo *TII;
+class AArch64A53Fix835769Impl {
+public:
+  bool run(MachineFunction &F);
 
+private:
+  const TargetInstrInfo *TII;
+  bool runOnBasicBlock(MachineBasicBlock &MBB);
+};
+
+class AArch64A53Fix835769 : public MachineFunctionPass {
 public:
   static char ID;
   explicit AArch64A53Fix835769() : MachineFunctionPass(ID) {}
@@ -97,9 +104,6 @@ public:
     AU.setPreservesCFG();
     MachineFunctionPass::getAnalysisUsage(AU);
   }
-
-private:
-  bool runOnBasicBlock(MachineBasicBlock &MBB);
 };
 char AArch64A53Fix835769::ID = 0;
 
@@ -110,8 +114,11 @@ INITIALIZE_PASS(AArch64A53Fix835769, "aarch64-fix-cortex-a53-835769-pass",
 
 //===----------------------------------------------------------------------===//
 
-bool
-AArch64A53Fix835769::runOnMachineFunction(MachineFunction &F) {
+bool AArch64A53Fix835769::runOnMachineFunction(MachineFunction &F) {
+  return AArch64A53Fix835769Impl().run(F);
+}
+
+bool AArch64A53Fix835769Impl::run(MachineFunction &F) {
   LLVM_DEBUG(dbgs() << "***** AArch64A53Fix835769 *****\n");
   auto &STI = F.getSubtarget<AArch64Subtarget>();
   // Fix not requested, skip pass.
@@ -188,7 +195,7 @@ static void insertNopBeforeInstruction(MachineBasicBlock &MBB, MachineInstr* MI,
 }
 
 bool
-AArch64A53Fix835769::runOnBasicBlock(MachineBasicBlock &MBB) {
+AArch64A53Fix835769Impl::runOnBasicBlock(MachineBasicBlock &MBB) {
   bool Changed = false;
   LLVM_DEBUG(dbgs() << "Running on MBB: " << MBB
                     << " - scanning instructions...\n");
