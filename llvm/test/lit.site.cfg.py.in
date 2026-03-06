@@ -70,6 +70,9 @@ config.has_logf128 = @LLVM_HAS_LOGF128@
 config.have_ondisk_cas = @LLVM_ENABLE_ONDISK_CAS@
 
 import lit.llvm
+if lit.util.pythonize_bool("@LLVM_WINDOWS_PREFER_FORWARD_SLASH@"):
+    config.available_features.add("windows-prefer-forward-slash")
+
 lit.llvm.initialize(lit_config, config)
 
 # Let the main config do the real work.
