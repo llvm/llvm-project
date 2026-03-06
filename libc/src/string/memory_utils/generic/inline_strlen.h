@@ -32,15 +32,17 @@ LIBC_NO_SANITIZE_OOB_ACCESS LIBC_INLINE size_t string_length(const char *src) {
   const cpp::simd<char> *aligned = reinterpret_cast<const cpp::simd<char> *>(
       __builtin_align_down(src, alignment));
 
-  cpp::simd<char> chars = cpp::load<cpp::simd<char>>(aligned, /*aligned=*/true);
+  cpp::simd<char> chars =
+      cpp::load_unsanitized<cpp::simd<char>>(aligned, /*aligned=*/true);
   cpp::simd_mask<char> mask = chars == null_byte;
   size_t offset = src - reinterpret_cast<const char *>(aligned);
   if (cpp::any_of(shift_mask<char>(mask, offset)))
     return cpp::find_first_set(shift_mask<char>(mask, offset));
 
   for (;;) {
-    cpp::simd<char> chars = cpp::load<cpp::simd<char>>(++aligned,
-                                                       /*aligned=*/true);
+    cpp::simd<char> chars =
+        cpp::load_unsanitized<cpp::simd<char>>(++aligned,
+                                               /*aligned=*/true);
     cpp::simd_mask<char> mask = chars == null_byte;
     if (cpp::any_of(mask))
       return (reinterpret_cast<const char *>(aligned) - src) +
@@ -66,7 +68,7 @@ find_first_character(const unsigned char *s, unsigned char c, size_t n) {
   const Vector *aligned =
       reinterpret_cast<const Vector *>(__builtin_align_down(s, alignment));
 
-  Vector chars = cpp::load<Vector>(aligned, /*aligned=*/true);
+  Vector chars = cpp::load_unsanitized<Vector>(aligned, /*aligned=*/true);
   Mask cmp_v = chars == c_byte;
   size_t offset = s - reinterpret_cast<const unsigned char *>(aligned);
 
@@ -78,7 +80,7 @@ find_first_character(const unsigned char *s, unsigned char c, size_t n) {
   for (size_t bytes_checked = sizeof(Vector) - offset; bytes_checked < n;
        bytes_checked += sizeof(Vector)) {
     aligned++;
-    Vector chars = cpp::load<Vector>(aligned, /*aligned=*/true);
+    Vector chars = cpp::load_unsanitized<Vector>(aligned, /*aligned=*/true);
     Mask cmp_v = chars == c_byte;
     if (cpp::any_of(cmp_v))
       return calculate_find_first_character_return(

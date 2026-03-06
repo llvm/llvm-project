@@ -302,6 +302,23 @@ LIBC_INLINE constexpr static void store(T v, void *ptr, bool aligned = false) {
     ptr = __builtin_assume_aligned(ptr, alignof(T));
   __builtin_memcpy_inline(ptr, &v, sizeof(T));
 }
+template <typename T>
+LIBC_NO_SANITIZE_OOB_ACCESS LIBC_INLINE
+    T constexpr static load_unsanitized(const void *ptr, bool aligned = false) {
+  if (aligned)
+    ptr = __builtin_assume_aligned(ptr, alignof(T));
+  T tmp;
+  __builtin_memcpy_inline(
+      &tmp, reinterpret_cast<const simd_element_type_t<T> *>(ptr), sizeof(T));
+  return tmp;
+}
+template <typename T, internal::enable_if_simd_t<T> = 0>
+LIBC_NO_SANITIZE_OOB_ACCESS LIBC_INLINE constexpr static void
+store_unsanitized(T v, void *ptr, bool aligned = false) {
+  if (aligned)
+    ptr = __builtin_assume_aligned(ptr, alignof(T));
+  __builtin_memcpy_inline(ptr, &v, sizeof(T));
+}
 template <typename T, internal::enable_if_simd_t<T> = 0>
 LIBC_INLINE constexpr static T
 load_masked(simd<bool, simd_size_v<T>> mask, const void *ptr,
