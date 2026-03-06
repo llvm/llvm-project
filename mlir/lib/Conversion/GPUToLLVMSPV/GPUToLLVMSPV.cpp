@@ -307,8 +307,7 @@ struct GPUShuffleConversion final : ConvertOpToLLVMPattern<gpu::ShuffleOp> {
   static bool hasValidWidth(gpu::ShuffleOp op, int subgroupSize) {
     llvm::APInt val;
     Value width = op.getWidth();
-    return matchPattern(width, m_ConstantInt(&val)) &&
-           val == subgroupSize;
+    return matchPattern(width, m_ConstantInt(&val)) && val == subgroupSize;
   }
 
   static Value bitcastOrExtBeforeShuffle(Value oldVal, Location loc,
