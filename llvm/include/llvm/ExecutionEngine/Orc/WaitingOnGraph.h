@@ -94,9 +94,11 @@ public:
 
     /// Merge the elements of Other into this set. Returns true if any new
     /// elements are added.
-    bool merge(const ElementSet &Other) {
+    bool merge(const ElementSet &Other, bool AssertNoOverlap = false) {
       size_t OrigSize = this->size();
       this->insert(Other.begin(), Other.end());
+      assert((!AssertNoOverlap || this->size() == (OrigSize + Other.size())) &&
+             "merge of overlapping elements");
       return this->size() != OrigSize;
     }
 
@@ -151,10 +153,11 @@ public:
 
     /// Merge the elements of Other into this map. Returns true if any new
     /// elements are added.
-    bool merge(const ContainerElementsMap &Other) {
+    bool merge(const ContainerElementsMap &Other,
+               bool AssertNoElementsOverlap = false) {
       bool Changed = false;
       for (auto &[Container, Elements] : Other)
-        Changed |= (*this)[Container].merge(Elements);
+        Changed |= (*this)[Container].merge(Elements, AssertNoElementsOverlap);
       return Changed;
     }
 
@@ -310,13 +313,7 @@ private:
                                                     ContainerElementsMap Deps) {
       auto H = getHash(Deps);
       if (auto *ExistingSN = findCanonicalSuperNode(H, Deps)) {
-        for (auto &[Container, Elems] : Defs) {
-          auto &DstCElems = ExistingSN->Defs[Container];
-          [[maybe_unused]] size_t ExpectedSize =
-              DstCElems.size() + Elems.size();
-          DstCElems.insert(Elems.begin(), Elems.end());
-          assert(DstCElems.size() == ExpectedSize);
-        }
+        ExistingSN->Defs.merge(Defs, /* AssertNoElementsOverlap */ true);
         return nullptr;
       }
 
@@ -338,7 +335,7 @@ private:
         auto H = getHash(SN->Deps);
         if (auto *CanonicalSN = findCanonicalSuperNode(H, SN->Deps)) {
           SN->mapDefsTo(ElemToSN, CanonicalSN, AbandonOldMapping);
-          CanonicalSN->Defs.merge(SN->Defs);
+          CanonicalSN->Defs.merge(SN->Defs, /* AssertNoElementsOverlap */ true);
           std::swap(SN, SNs.back());
           SNs.pop_back();
         } else {
