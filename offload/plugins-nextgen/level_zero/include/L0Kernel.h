@@ -61,6 +61,8 @@ struct KernelPropertiesTy {
   /// Cached input parameters used in the previous launch.
   int32_t NumTeams = -1;
   int32_t ThreadLimit = -1;
+  uint32_t NumKernelArgs = 0;
+  std::unique_ptr<uint32_t[]> ArgSizes;
 
   /// Cached parameters used in the previous launch.
   ze_kernel_indirect_access_flags_t IndirectAccessFlags =
@@ -81,15 +83,17 @@ struct KernelPropertiesTy {
 
 struct L0LaunchEnvTy {
   bool IsAsync;
+  bool IsCooperative = false;
   AsyncQueueTy *AsyncQueue;
   ze_group_count_t GroupCounts = {0, 0, 0};
   KernelPropertiesTy &KernelPR;
   bool HalfNumThreads = false;
   bool IsTeamsNDRange = false;
 
-  L0LaunchEnvTy(bool IsAsync, AsyncQueueTy *AsyncQueue,
+  L0LaunchEnvTy(bool IsAsync, bool IsCooperative, AsyncQueueTy *AsyncQueue,
                 KernelPropertiesTy &KernelPR)
-      : IsAsync(IsAsync), AsyncQueue(AsyncQueue), KernelPR(KernelPR) {}
+      : IsAsync(IsAsync), IsCooperative(IsCooperative), AsyncQueue(AsyncQueue),
+        KernelPR(KernelPR) {}
 };
 
 class L0KernelTy : public GenericKernelTy {
@@ -137,6 +141,11 @@ public:
     return Plugin::error(ErrorCode::UNIMPLEMENTED,
                          "maxGroupSize not implemented yet");
   }
+
+  Expected<uint32_t>
+  getMaxCooperativeGroupCount(GenericDeviceTy &GenericDevice, uint32_t WorkDim,
+                              const size_t *LocalWorkSize,
+                              size_t DynamicSharedMemorySize) const override;
 
   ze_kernel_handle_t getZeKernel() const { return zeKernel; }
 

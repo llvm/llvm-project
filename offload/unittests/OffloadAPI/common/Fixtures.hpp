@@ -254,6 +254,43 @@ struct OffloadEventTest : OffloadQueueTest {
   ol_event_handle_t Event = nullptr;
 };
 
+struct LaunchKernelTestBase : OffloadQueueTest {
+  void SetUpProgram(const char *program) {
+    RETURN_ON_FATAL_FAILURE(OffloadQueueTest::SetUp());
+    ASSERT_TRUE(TestEnvironment::loadDeviceBinary(program, Device, DeviceBin));
+    ASSERT_GE(DeviceBin->getBufferSize(), 0lu);
+    ASSERT_SUCCESS(olCreateProgram(Device, DeviceBin->getBufferStart(),
+                                   DeviceBin->getBufferSize(), &Program));
+
+    LaunchArgs.Dimensions = 1;
+    LaunchArgs.GroupSize = {64, 1, 1};
+    LaunchArgs.NumGroups = {1, 1, 1};
+
+    LaunchArgs.DynSharedMemory = 0;
+  }
+
+  void TearDown() override {
+    if (Program) {
+      olDestroyProgram(Program);
+    }
+    RETURN_ON_FATAL_FAILURE(OffloadQueueTest::TearDown());
+  }
+
+  std::unique_ptr<llvm::MemoryBuffer> DeviceBin;
+  ol_program_handle_t Program = nullptr;
+  ol_kernel_launch_size_args_t LaunchArgs{};
+};
+
+struct LaunchSingleKernelTestBase : LaunchKernelTestBase {
+  void SetUpKernel(const char *kernel) {
+    RETURN_ON_FATAL_FAILURE(SetUpProgram(kernel));
+    ASSERT_SUCCESS(
+        olGetSymbol(Program, kernel, OL_SYMBOL_KIND_KERNEL, &Kernel));
+  }
+
+  ol_symbol_handle_t Kernel = nullptr;
+};
+
 // Devices might not be available for offload testing, so allow uninstantiated
 // tests (as the device list will be empty). This means that all tests requiring
 // a device will be silently skipped.

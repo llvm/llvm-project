@@ -47,7 +47,14 @@ def ol_device_info_t : Enum {
   ];
   list<TaggedEtor> fp_configs = !foreach(type, ["Single", "Double", "Half"], TaggedEtor<type # "_FP_CONFIG", "ol_device_fp_capability_flags_t", type # " precision floating point capability">);
   list<TaggedEtor> native_vec_widths = !foreach(type, ["char","short","int","long","float","double","half"], TaggedEtor<"NATIVE_VECTOR_WIDTH_" # type, "uint32_t", "Native vector width for " # type>);
-  let etors = !listconcat(basic_etors, fp_configs, native_vec_widths);
+  // This list is maintained separately to allow adding new basic etors without
+  // changing the values of previous ones.
+  list<TaggedEtor> basic_etors2 =
+      [TaggedEtor<"COOPERATIVE_LAUNCH_SUPPORT", "bool",
+                  "Is cooperative kernel launch supported">,
+  ];
+  let etors =
+      !listconcat(basic_etors, fp_configs, native_vec_widths, basic_etors2);
 }
 
 def ol_device_fp_capability_flag_t : Enum {

@@ -16,6 +16,7 @@
 #include "L0Plugin.h"
 #include "L0Program.h"
 #include "L0Trace.h"
+#include "PluginInterface.h"
 
 namespace llvm::omp::target::plugin {
 
@@ -158,6 +159,28 @@ std::pair<uint32_t, uint32_t> L0DeviceTy::findCopyOrdinal(bool LinkCopy) {
   return Ordinal;
 }
 
+/// Check if device supports cooperative kernels by checking if any command
+/// queue group has the cooperative kernels flag set.
+bool L0DeviceTy::checkCooperativeKernelSupport() {
+  uint32_t Count = 0;
+  const auto zeDevice = getZeDevice();
+  CALL_ZE_RET(false, zeDeviceGetCommandQueueGroupProperties, zeDevice, &Count,
+              nullptr);
+
+  std::vector<ze_command_queue_group_properties_t> Properties(
+      Count,
+      {ZE_STRUCTURE_TYPE_COMMAND_QUEUE_GROUP_PROPERTIES, nullptr, 0, 0, 0});
+  CALL_ZE_RET(false, zeDeviceGetCommandQueueGroupProperties, zeDevice, &Count,
+              Properties.data());
+
+  for (auto &Property : Properties)
+    if (Property.flags &
+        ZE_COMMAND_QUEUE_GROUP_PROPERTY_FLAG_COOPERATIVE_KERNELS)
+      return true;
+
+  return false;
+}
+
 void L0DeviceTy::reportDeviceInfo() const {
   ODBG_OS(OLDT_Device, [&](llvm::raw_ostream &O) {
     O << "Device " << DeviceId << " information\n"
@@ -215,6 +238,8 @@ Error L0DeviceTy::initImpl(GenericPluginTy &Plugin) {
   ComputeOrdinal = findComputeOrdinal();
 
   CopyOrdinal = findCopyOrdinal();
+
+  SupportsCooperativeKernels = checkCooperativeKernelSupport();
 
   IsAsyncEnabled =
       isDiscreteDevice() && Options.CommandMode != CommandModeTy::Sync;
@@ -629,6 +654,8 @@ Expected<InfoTreeNode> L0DeviceTy::obtainInfoImpl() {
            DeviceInfo::MEMORY_CLOCK_RATE);
   Info.add("Memory Address Size", uint64_t{64u}, "bits",
            DeviceInfo::ADDRESS_BITS);
+  Info.add("Cooperative launch support", SupportsCooperativeKernels, "",
+           DeviceInfo::COOPERATIVE_LAUNCH_SUPPORT);
   return Info;
 }
 

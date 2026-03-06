@@ -135,6 +135,11 @@ public:
 
   const MemAllocatorTy &getHostMemAllocator() const { return HostMemAllocator; }
   MemAllocatorTy &getHostMemAllocator() { return HostMemAllocator; }
+
+  /// Level Zero extension function pointer for kernel argument size query.
+  ze_result_t(ZE_APICALL *zexKernelGetArgumentSize)(
+      ze_kernel_handle_t hKernel, uint32_t argIndex,
+      uint32_t *pArgSize) = nullptr;
 };
 
 } // namespace llvm::omp::target::plugin
