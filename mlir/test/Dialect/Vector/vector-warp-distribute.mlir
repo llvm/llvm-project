@@ -39,7 +39,7 @@ func.func @rewrite_warp_op_to_scf_if(%laneid: index,
 //       CHECK-SCF-IF:   %[[s1:.*]] = affine.apply #[[$TIMES8]]()[%[[laneid]]]
 //       CHECK-SCF-IF:   vector.transfer_write %[[v1]], %[[buffer_v1]][%[[s1]]]
 
-//   CHECK-SCF-IF-DAG:   gpu.barrier
+//   CHECK-SCF-IF-DAG:   gpu.barrier memfence [#gpu.address_space<workgroup>]
 //   CHECK-SCF-IF-DAG:   %[[buffer_def_0:.*]] = memref.get_global @__shared_32xf32
 //   CHECK-SCF-IF-DAG:   %[[buffer_def_1:.*]] = memref.get_global @__shared_64xf32
 
@@ -58,7 +58,7 @@ func.func @rewrite_warp_op_to_scf_if(%laneid: index,
     gpu.yield %2, %3 : vector<32xf32>, vector<64xf32>
   }
 //       CHECK-SCF-IF:   }
-//       CHECK-SCF-IF:   gpu.barrier
+//       CHECK-SCF-IF:   gpu.barrier memfence [#gpu.address_space<workgroup>]
 //       CHECK-SCF-IF:   %[[o1:.*]] = affine.apply #[[$TIMES2]]()[%[[laneid]]]
 //       CHECK-SCF-IF:   %[[r1:.*]] = vector.transfer_read %[[buffer_def_1]][%[[o1]]], %{{.*}} {in_bounds = [true]} : memref<64xf32, 3>, vector<2xf32>
 //       CHECK-SCF-IF:   %[[r0:.*]] = vector.transfer_read %[[buffer_def_0]][%[[laneid]]], %{{.*}} {in_bounds = [true]} : memref<32xf32, 3>, vector<1xf32>
@@ -1230,7 +1230,7 @@ func.func @warp_execute_has_broadcast_semantics(%laneid: index, %s0: f32, %v0: v
       gpu.yield %rs0, %rv0, %rv1, %rv2 : f32, vector<f32>, vector<1xf32>, vector<1x1xf32>
   }
 
-  // CHECK-SCF-IF: gpu.barrier
+  // CHECK-SCF-IF: gpu.barrier memfence [#gpu.address_space<workgroup>]
   // CHECK-SCF-IF: %[[RV2:.*]] = vector.transfer_read {{.*}}[%[[C0]], %[[C0]]]{{.*}} {in_bounds = [true, true]} : memref<1x1xf32, 3>, vector<1x1xf32>
   // CHECK-SCF-IF: %[[RV1:.*]] = vector.transfer_read {{.*}}[%[[C0]]]{{.*}} {in_bounds = [true]} : memref<1xf32, 3>, vector<1xf32>
   // CHECK-SCF-IF: %[[RV0:.*]] = vector.transfer_read {{.*}}[]{{.*}} : memref<f32, 3>, vector<f32>
@@ -1252,7 +1252,7 @@ func.func @warp_execute_nd_distribute(%laneid: index, %v0: vector<1x64x1xf32>, %
   // CHECK-SCF-IF:  vector.transfer_write %{{.*}}, %{{.*}}[%[[LANEID]], %c0, %c0] {in_bounds = [true, true, true]} : vector<1x64x1xf32>, memref<32x64x1xf32, 3>
   // CHECK-SCF-IF:  %[[RID:.*]] = affine.apply #[[$TIMES2]]()[%[[LANEID]]]
   // CHECK-SCF-IF:  vector.transfer_write %{{.*}}, %{{.*}}[%[[C0]], %[[RID]], %[[C0]]] {in_bounds = [true, true, true]} : vector<1x2x128xf32>, memref<1x64x128xf32, 3>
-  // CHECK-SCF-IF:  gpu.barrier
+  // CHECK-SCF-IF:  gpu.barrier memfence [#gpu.address_space<workgroup>]
 
   // CHECK-SCF-IF: scf.if{{.*}}{
   %r:2 = gpu.warp_execute_on_lane_0(%laneid)[32]
@@ -1273,7 +1273,7 @@ func.func @warp_execute_nd_distribute(%laneid: index, %v0: vector<1x64x1xf32>, %
       gpu.yield %r0, %r1 : vector<32x64x1xf32>, vector<1x64x128xf32>
   }
 
-  //     CHECK-SCF-IF: gpu.barrier
+  //     CHECK-SCF-IF: gpu.barrier memfence [#gpu.address_space<workgroup>]
   //     CHECK-SCF-IF: %[[WID:.*]] = affine.apply #[[$TIMES2]]()[%[[LANEID]]]
   // CHECK-SCF-IF-DAG: %[[R0:.*]] = vector.transfer_read %{{.*}}[%[[LANEID]], %[[C0]], %[[C0]]], %{{.*}} {in_bounds = [true, true, true]} : memref<32x64x1xf32, 3>, vector<1x64x1xf32>
   // CHECK-SCF-IF-DAG: %[[R1:.*]] = vector.transfer_read %{{.*}}[%[[C0]], %[[WID]], %[[C0]]], %{{.*}} {in_bounds = [true, true, true]} : memref<1x64x128xf32, 3>, vector<1x2x128xf32>
@@ -1601,6 +1601,74 @@ func.func @warp_propagate_shape_cast(%laneid: index, %src: memref<32x4x32xf32>) 
 // CHECK-PROP:   %[[READ:.+]] = vector.transfer_read {{.+}} : memref<32x4x32xf32>, vector<1x1x4xf32>
 // CHECK-PROP:   %[[CAST:.+]] = vector.shape_cast %[[READ]] : vector<1x1x4xf32> to vector<4xf32>
 // CHECK-PROP:   return %[[CAST]] : vector<4xf32>
+
+// -----
+
+func.func @warp_propagate_shape_cast_rank_extending(
+    %laneid: index, %src: memref<4096xf32>) -> vector<1x1x4xf32> {
+  %c0 = arith.constant 0 : index
+  %cst = arith.constant 0.000000e+00 : f32
+  %r = gpu.warp_execute_on_lane_0(%laneid)[1024] -> (vector<1x1x4xf32>) {
+    %1 = vector.transfer_read %src[%c0], %cst : memref<4096xf32>, vector<4096xf32>
+    %2 = vector.shape_cast %1 : vector<4096xf32> to vector<32x4x32xf32>
+    gpu.yield %2 : vector<32x4x32xf32>
+  }
+  return %r : vector<1x1x4xf32>
+}
+
+// CHECK-PROP-LABEL: func.func @warp_propagate_shape_cast_rank_extending
+//  CHECK-PROP-NOT:    gpu.warp_execute_on_lane_0
+//      CHECK-PROP:    %[[READ:.+]] = vector.transfer_read {{.+}} : memref<4096xf32>, vector<4xf32>
+//      CHECK-PROP:    %[[CAST:.+]] = vector.shape_cast %[[READ]] : vector<4xf32> to vector<1x1x4xf32>
+//      CHECK-PROP:    return %[[CAST]] : vector<1x1x4xf32>
+
+// -----
+
+// Shape cast from a single-rank source.
+// The per-lane source type is expected to be obtained by flattening the distributed result dims
+// (here, 1x2x4 = 8).
+func.func @warp_propagate_shape_cast_rank_extending_flat(
+    %laneid: index, %src: memref<128xf32>) -> vector<1x2x4xf32> {
+  %c0 = arith.constant 0 : index
+  %cst = arith.constant 0.000000e+00 : f32
+  %r = gpu.warp_execute_on_lane_0(%laneid)[16] -> (vector<1x2x4xf32>) {
+    %1 = vector.transfer_read %src[%c0], %cst : memref<128xf32>, vector<128xf32>
+    %2 = vector.shape_cast %1 : vector<128xf32> to vector<4x4x8xf32>
+    gpu.yield %2 : vector<4x4x8xf32>
+  }
+  return %r : vector<1x2x4xf32>
+}
+
+// CHECK-PROP-LABEL: func.func @warp_propagate_shape_cast_rank_extending_flat
+//  CHECK-PROP-NOT:    gpu.warp_execute_on_lane_0
+//      CHECK-PROP:    %[[READ:.+]] = vector.transfer_read {{.+}} : memref<128xf32>, vector<8xf32>
+//      CHECK-PROP:    %[[CAST:.+]] = vector.shape_cast %[[READ]] : vector<8xf32> to vector<1x2x4xf32>
+//      CHECK-PROP:    return %[[CAST]] : vector<1x2x4xf32>
+
+// -----
+
+// Negative test: rank-2 source with a non-unit dimension.
+// The per-lane distribution across source dimensions is ambiguous, so the pattern under
+// test isn't expected to handle it.
+func.func @warp_do_not_propagate_shape_cast_rank_extending_ambiguous(
+    %laneid: index, %src: memref<32x4xf32>) -> vector<2x4x8xf32> {
+  %c0 = arith.constant 0 : index
+  %cst = arith.constant 0.000000e+00 : f32
+  %r = gpu.warp_execute_on_lane_0(%laneid)[2] -> (vector<2x4x8xf32>) {
+    %1 = vector.transfer_read %src[%c0, %c0], %cst : memref<32x4xf32>, vector<32x4xf32>
+    %2 = vector.shape_cast %1 : vector<32x4xf32> to vector<4x4x8xf32>
+    gpu.yield %2 : vector<4x4x8xf32>
+  }
+  return %r : vector<2x4x8xf32>
+}
+
+// CHECK-PROP-LABEL: func.func @warp_do_not_propagate_shape_cast_rank_extending_ambiguous
+//      CHECK-PROP:    gpu.warp_execute_on_lane_0
+//      CHECK-PROP:      vector.transfer_read {{.+}} : memref<32x4xf32>, vector<32x4xf32>
+//      CHECK-PROP:      vector.shape_cast {{.+}} : vector<32x4xf32> to vector<4x4x8xf32>
+//      CHECK-PROP:      gpu.yield {{.+}} : vector<4x4x8xf32>
+//      CHECK-PROP:    }
+//  CHECK-PROP-NOT:    vector.shape_cast
 
 // -----
 

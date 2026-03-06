@@ -26,3 +26,6 @@
 //
 // ROCM-LIB-LLVM: ROCm installation search path: {{.*sysroot/opt/rocm$}}
 // ROCM-LIB-LLVM-NOT: ROCm installation search path: {{.*sysroot/opt/rocm/lib$}}
+
+// Clean up copy of large binary copied into temp directory to avoid bloat.
+// RUN: rm -f %t/sysroot/opt/rocm/lib/llvm/bin/clang || true

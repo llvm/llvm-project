@@ -13,6 +13,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "clang/Sema/AnalysisBasedWarnings.h"
+#include "TypeLocBuilder.h"
 #include "clang/AST/Decl.h"
 #include "clang/AST/DeclCXX.h"
 #include "clang/AST/DeclObjC.h"
@@ -30,6 +31,7 @@
 #include "clang/Analysis/Analyses/CFGReachabilityAnalysis.h"
 #include "clang/Analysis/Analyses/CalledOnceCheck.h"
 #include "clang/Analysis/Analyses/Consumed.h"
+#include "clang/Analysis/Analyses/LifetimeSafety/LifetimeAnnotations.h"
 #include "clang/Analysis/Analyses/LifetimeSafety/LifetimeSafety.h"
 #include "clang/Analysis/Analyses/ReachableCode.h"
 #include "clang/Analysis/Analyses/ThreadSafety.h"
@@ -571,8 +573,8 @@ static ControlFlowKind CheckFallThrough(AnalysisDeclContext &AC) {
   // The CFG leaves in dead things, and we don't want the dead code paths to
   // confuse us, so we mark all live things first.
   llvm::BitVector live(cfg->getNumBlockIDs());
-  unsigned count = reachable_code::ScanReachableFromBlock(&cfg->getEntry(),
-                                                          live);
+  unsigned count =
+      reachable_code::ScanReachableFromBlock(&cfg->getEntry(), live);
 
   bool AddEHEdges = AC.getAddEHEdges();
   if (!AddEHEdges && count != cfg->getNumBlockIDs())
@@ -2553,16 +2555,46 @@ public:
     SourceRange Range;
     unsigned MsgParam = 0;
 
-    // This function only handles SpanTwoParamConstructorGadget so far, which
-    // always gives a CXXConstructExpr.
     const auto *CtorExpr = cast<CXXConstructExpr>(Operation);
     Loc = CtorExpr->getLocation();
+    Range = CtorExpr->getSourceRange();
 
-    S.Diag(Loc, diag::warn_unsafe_buffer_usage_in_container);
+    std::string ContainerName = "std::span";
+    if (auto *TD = CtorExpr->getConstructor()->getParent()) {
+      // This will provide "std::span" if it's in the std namespace
+      ContainerName = TD->getQualifiedNameAsString();
+    }
+
+    // FIX: Pass the container name to fill the %0 parameter
+    S.Diag(Loc, diag::warn_unsafe_buffer_usage_in_container) << ContainerName;
+
     if (IsRelatedToDecl) {
       assert(!SuggestSuggestions &&
              "Variables blamed for unsafe buffer usage without suggestions!");
       S.Diag(Loc, diag::note_unsafe_buffer_operation) << MsgParam << Range;
+    }
+  }
+
+  void handleUnsafeOperationInStringView(const Stmt *Operation,
+                                         bool IsRelatedToDecl,
+                                         ASTContext &Ctx) override {
+    // Extracting location: prioritize the specific location of the constructor
+    SourceLocation Loc = Operation->getBeginLoc();
+    SourceRange Range = Operation->getSourceRange();
+
+    if (const auto *CtorExpr = dyn_cast<CXXConstructExpr>(Operation)) {
+      Loc = CtorExpr->getLocation();
+    }
+
+    // 1. Emit the primary warning for string_view
+    S.Diag(Loc, diag::warn_unsafe_buffer_usage_in_container)
+        << "std::string_view";
+
+    // 2. If a specific variable is 'blamed', emit the note
+    if (IsRelatedToDecl) {
+      // MsgParam 0 is "unsafe operation"
+      // Range helps the IDE underline the whole expression
+      S.Diag(Loc, diag::note_unsafe_buffer_operation) << 0 << Range;
     }
   }
 
@@ -2872,59 +2904,158 @@ public:
 
 namespace clang::lifetimes {
 namespace {
-class LifetimeSafetyReporterImpl : public LifetimeSafetyReporter {
+class LifetimeSafetySemaHelperImpl : public LifetimeSafetySemaHelper {
 
 public:
-  LifetimeSafetyReporterImpl(Sema &S) : S(S) {}
+  LifetimeSafetySemaHelperImpl(Sema &S) : S(S) {}
 
   void reportUseAfterFree(const Expr *IssueExpr, const Expr *UseExpr,
-                          SourceLocation FreeLoc, Confidence C) override {
+                          const Expr *MovedExpr, SourceLocation FreeLoc,
+                          Confidence) override {
     S.Diag(IssueExpr->getExprLoc(),
-           C == Confidence::Definite
-               ? diag::warn_lifetime_safety_loan_expires_permissive
-               : diag::warn_lifetime_safety_loan_expires_strict)
+           MovedExpr ? diag::warn_lifetime_safety_use_after_scope_moved
+                     : diag::warn_lifetime_safety_use_after_scope)
         << IssueExpr->getSourceRange();
+    if (MovedExpr)
+      S.Diag(MovedExpr->getExprLoc(), diag::note_lifetime_safety_moved_here)
+          << MovedExpr->getSourceRange();
     S.Diag(FreeLoc, diag::note_lifetime_safety_destroyed_here);
     S.Diag(UseExpr->getExprLoc(), diag::note_lifetime_safety_used_here)
         << UseExpr->getSourceRange();
   }
 
-  void reportUseAfterReturn(const Expr *IssueExpr, const Expr *EscapeExpr,
-                            SourceLocation ExpiryLoc, Confidence C) override {
+  void reportUseAfterReturn(const Expr *IssueExpr, const Expr *ReturnExpr,
+                            const Expr *MovedExpr, SourceLocation ExpiryLoc,
+                            Confidence) override {
     S.Diag(IssueExpr->getExprLoc(),
-           C == Confidence::Definite
-               ? diag::warn_lifetime_safety_return_stack_addr_permissive
-               : diag::warn_lifetime_safety_return_stack_addr_strict)
+           MovedExpr ? diag::warn_lifetime_safety_return_stack_addr_moved
+                     : diag::warn_lifetime_safety_return_stack_addr)
         << IssueExpr->getSourceRange();
+    if (MovedExpr)
+      S.Diag(MovedExpr->getExprLoc(), diag::note_lifetime_safety_moved_here)
+          << MovedExpr->getSourceRange();
+    S.Diag(ReturnExpr->getExprLoc(), diag::note_lifetime_safety_returned_here)
+        << ReturnExpr->getSourceRange();
+  }
+  void reportDanglingField(const Expr *IssueExpr,
+                           const FieldDecl *DanglingField,
+                           const Expr *MovedExpr,
+                           SourceLocation ExpiryLoc) override {
+    S.Diag(IssueExpr->getExprLoc(),
+           MovedExpr ? diag::warn_lifetime_safety_dangling_field_moved
+                     : diag::warn_lifetime_safety_dangling_field)
+        << IssueExpr->getSourceRange();
+    if (MovedExpr)
+      S.Diag(MovedExpr->getExprLoc(), diag::note_lifetime_safety_moved_here)
+          << MovedExpr->getSourceRange();
+    S.Diag(DanglingField->getLocation(),
+           diag::note_lifetime_safety_dangling_field_here)
+        << DanglingField->getEndLoc();
+  }
 
-    S.Diag(EscapeExpr->getExprLoc(), diag::note_lifetime_safety_returned_here)
+  void reportUseAfterInvalidation(const Expr *IssueExpr, const Expr *UseExpr,
+                                  const Expr *InvalidationExpr) override {
+    S.Diag(IssueExpr->getExprLoc(), diag::warn_lifetime_safety_invalidation)
+        << false << IssueExpr->getSourceRange();
+    S.Diag(InvalidationExpr->getExprLoc(),
+           diag::note_lifetime_safety_invalidated_here)
+        << InvalidationExpr->getSourceRange();
+    S.Diag(UseExpr->getExprLoc(), diag::note_lifetime_safety_used_here)
+        << UseExpr->getSourceRange();
+  }
+  void reportUseAfterInvalidation(const ParmVarDecl *PVD, const Expr *UseExpr,
+                                  const Expr *InvalidationExpr) override {
+    S.Diag(PVD->getSourceRange().getBegin(),
+           diag::warn_lifetime_safety_invalidation)
+        << true << PVD->getSourceRange();
+    S.Diag(InvalidationExpr->getExprLoc(),
+           diag::note_lifetime_safety_invalidated_here)
+        << InvalidationExpr->getSourceRange();
+    S.Diag(UseExpr->getExprLoc(), diag::note_lifetime_safety_used_here)
+        << UseExpr->getSourceRange();
+  }
+
+  void suggestLifetimeboundToParmVar(SuggestionScope Scope,
+                                     const ParmVarDecl *ParmToAnnotate,
+                                     const Expr *EscapeExpr) override {
+    unsigned DiagID =
+        (Scope == SuggestionScope::CrossTU)
+            ? diag::warn_lifetime_safety_cross_tu_param_suggestion
+            : diag::warn_lifetime_safety_intra_tu_param_suggestion;
+    SourceLocation InsertionPoint = Lexer::getLocForEndOfToken(
+        ParmToAnnotate->getEndLoc(), 0, S.getSourceManager(), S.getLangOpts());
+    StringRef FixItText = " [[clang::lifetimebound]]";
+    if (!ParmToAnnotate->getIdentifier()) {
+      // For unnamed parameters, placing attributes after the type would be
+      // parsed as a type attribute, not a parameter attribute.
+      InsertionPoint = ParmToAnnotate->getBeginLoc();
+      FixItText = "[[clang::lifetimebound]] ";
+    }
+    S.Diag(ParmToAnnotate->getBeginLoc(), DiagID)
+        << ParmToAnnotate->getSourceRange()
+        << FixItHint::CreateInsertion(InsertionPoint, FixItText);
+    S.Diag(EscapeExpr->getBeginLoc(),
+           diag::note_lifetime_safety_suggestion_returned_here)
         << EscapeExpr->getSourceRange();
   }
 
-  void suggestAnnotation(SuggestionScope Scope,
-                         const ParmVarDecl *ParmToAnnotate,
-                         const Expr *EscapeExpr) override {
-    unsigned DiagID;
-    switch (Scope) {
-    case SuggestionScope::CrossTU:
-      DiagID = diag::warn_lifetime_safety_cross_tu_suggestion;
-      break;
-    case SuggestionScope::IntraTU:
-      DiagID = diag::warn_lifetime_safety_intra_tu_suggestion;
-      break;
-    }
-
+  void suggestLifetimeboundToImplicitThis(SuggestionScope Scope,
+                                          const CXXMethodDecl *MD,
+                                          const Expr *EscapeExpr) override {
+    unsigned DiagID = (Scope == SuggestionScope::CrossTU)
+                          ? diag::warn_lifetime_safety_cross_tu_this_suggestion
+                          : diag::warn_lifetime_safety_intra_tu_this_suggestion;
+    const auto MDL = MD->getTypeSourceInfo()->getTypeLoc();
     SourceLocation InsertionPoint = Lexer::getLocForEndOfToken(
-        ParmToAnnotate->getEndLoc(), 0, S.getSourceManager(), S.getLangOpts());
-
-    S.Diag(ParmToAnnotate->getBeginLoc(), DiagID)
-        << ParmToAnnotate->getSourceRange()
+        MDL.getEndLoc(), 0, S.getSourceManager(), S.getLangOpts());
+    if (const auto *FPT = MD->getType()->getAs<FunctionProtoType>();
+        FPT && FPT->hasTrailingReturn()) {
+      // For trailing return types, 'getEndLoc()' includes the return type
+      // after '->', placing the attribute in an invalid position.
+      // Instead use 'getLocalRangeEnd()' which gives the '->' location
+      // for trailing returns, so find the last token before it.
+      const auto FTL = MDL.getAs<FunctionTypeLoc>();
+      assert(FTL);
+      InsertionPoint = Lexer::getLocForEndOfToken(
+          Lexer::findPreviousToken(FTL.getLocalRangeEnd(), S.getSourceManager(),
+                                   S.getLangOpts(),
+                                   /*IncludeComments=*/false)
+              ->getLocation(),
+          0, S.getSourceManager(), S.getLangOpts());
+    }
+    S.Diag(InsertionPoint, DiagID)
+        << MD->getNameInfo().getSourceRange()
         << FixItHint::CreateInsertion(InsertionPoint,
                                       " [[clang::lifetimebound]]");
+    S.Diag(EscapeExpr->getBeginLoc(),
+           diag::note_lifetime_safety_suggestion_returned_here)
+        << EscapeExpr->getSourceRange();
+  }
+
+  void reportNoescapeViolation(const ParmVarDecl *ParmWithNoescape,
+                               const Expr *EscapeExpr) override {
+    S.Diag(ParmWithNoescape->getBeginLoc(),
+           diag::warn_lifetime_safety_noescape_escapes)
+        << ParmWithNoescape->getSourceRange();
 
     S.Diag(EscapeExpr->getBeginLoc(),
            diag::note_lifetime_safety_suggestion_returned_here)
         << EscapeExpr->getSourceRange();
+  }
+
+  void reportNoescapeViolation(const ParmVarDecl *ParmWithNoescape,
+                               const FieldDecl *EscapeField) override {
+    S.Diag(ParmWithNoescape->getBeginLoc(),
+           diag::warn_lifetime_safety_noescape_escapes)
+        << ParmWithNoescape->getSourceRange();
+
+    S.Diag(EscapeField->getLocation(),
+           diag::note_lifetime_safety_escapes_to_field_here)
+        << EscapeField->getEndLoc();
+  }
+
+  void addLifetimeBoundToImplicitThis(const CXXMethodDecl *MD) override {
+    S.addLifetimeBoundToImplicitThis(const_cast<CXXMethodDecl *>(MD));
   }
 
 private:
@@ -2939,7 +3070,7 @@ LifetimeSafetyTUAnalysis(Sema &S, TranslationUnitDecl *TU,
   llvm::TimeTraceScope TimeProfile("LifetimeSafetyTUAnalysis");
   CallGraph CG;
   CG.addToCallGraph(TU);
-  lifetimes::LifetimeSafetyReporterImpl Reporter(S);
+  lifetimes::LifetimeSafetySemaHelperImpl SemaHelper(S);
   for (auto *Node : llvm::post_order(&CG)) {
     const clang::FunctionDecl *CanonicalFD =
         dyn_cast_or_null<clang::FunctionDecl>(Node->getDecl());
@@ -2951,11 +3082,10 @@ LifetimeSafetyTUAnalysis(Sema &S, TranslationUnitDecl *TU,
     AnalysisDeclContext AC(nullptr, FD);
     AC.getCFGBuildOptions().PruneTriviallyFalseEdges = false;
     AC.getCFGBuildOptions().AddLifetime = true;
-    AC.getCFGBuildOptions().AddImplicitDtors = true;
-    AC.getCFGBuildOptions().AddTemporaryDtors = true;
+    AC.getCFGBuildOptions().AddParameterLifetimes = true;
     AC.getCFGBuildOptions().setAllAlwaysAdd();
     if (AC.getCFG())
-      runLifetimeSafetyAnalysis(AC, &Reporter, LSStats, S.CollectStats);
+      runLifetimeSafetyAnalysis(AC, &SemaHelper, LSStats, S.CollectStats);
   }
 }
 
@@ -3059,18 +3189,23 @@ void clang::sema::AnalysisBasedWarnings::IssueWarnings(
   AC.getCFGBuildOptions().AddEHEdges = false;
   AC.getCFGBuildOptions().AddInitializers = true;
   AC.getCFGBuildOptions().AddImplicitDtors = true;
+  AC.getCFGBuildOptions().AddParameterLifetimes = true;
   AC.getCFGBuildOptions().AddTemporaryDtors = true;
   AC.getCFGBuildOptions().AddCXXNewAllocator = false;
   AC.getCFGBuildOptions().AddCXXDefaultInitExprInCtors = true;
 
   bool IsLifetimeSafetyDiagnosticEnabled =
-      !Diags.isIgnored(diag::warn_lifetime_safety_loan_expires_permissive,
+      !Diags.isIgnored(diag::warn_lifetime_safety_use_after_scope,
                        D->getBeginLoc()) ||
-      !Diags.isIgnored(diag::warn_lifetime_safety_loan_expires_strict,
+      !Diags.isIgnored(diag::warn_lifetime_safety_use_after_scope_moved,
                        D->getBeginLoc()) ||
-      !Diags.isIgnored(diag::warn_lifetime_safety_return_stack_addr_permissive,
+      !Diags.isIgnored(diag::warn_lifetime_safety_return_stack_addr,
                        D->getBeginLoc()) ||
-      !Diags.isIgnored(diag::warn_lifetime_safety_return_stack_addr_strict,
+      !Diags.isIgnored(diag::warn_lifetime_safety_return_stack_addr_moved,
+                       D->getBeginLoc()) ||
+      !Diags.isIgnored(diag::warn_lifetime_safety_invalidation,
+                       D->getBeginLoc()) ||
+      !Diags.isIgnored(diag::warn_lifetime_safety_noescape_escapes,
                        D->getBeginLoc());
   bool EnableLifetimeSafetyAnalysis =
       S.getLangOpts().EnableLifetimeSafety &&
@@ -3190,9 +3325,9 @@ void clang::sema::AnalysisBasedWarnings::IssueWarnings(
   // stable.
   if (EnableLifetimeSafetyAnalysis && S.getLangOpts().CPlusPlus) {
     if (AC.getCFG()) {
-      lifetimes::LifetimeSafetyReporterImpl LifetimeSafetyReporter(S);
-      lifetimes::runLifetimeSafetyAnalysis(AC, &LifetimeSafetyReporter, LSStats,
-                                           S.CollectStats);
+      lifetimes::LifetimeSafetySemaHelperImpl LifetimeSafetySemaHelper(S);
+      lifetimes::runLifetimeSafetyAnalysis(AC, &LifetimeSafetySemaHelper,
+                                           LSStats, S.CollectStats);
     }
   }
   // Check for violations of "called once" parameter properties.

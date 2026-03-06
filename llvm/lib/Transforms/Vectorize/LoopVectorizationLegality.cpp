@@ -885,7 +885,7 @@ bool LoopVectorizationLegality::canVectorizeInstr(Instruction &I) {
                                              PSE.getSE())) {
       Requirements->addExactFPMathInst(RedDes.getExactFPMathInst());
       AllowedExit.insert(RedDes.getLoopExitInstr());
-      Reductions[Phi] = RedDes;
+      Reductions[Phi] = std::move(RedDes);
       assert((!RedDes.hasUsesOutsideReductionChain() ||
               RecurrenceDescriptor::isMinMaxRecurrenceKind(
                   RedDes.getRecurrenceKind())) &&
@@ -1745,34 +1745,6 @@ bool LoopVectorizationLegality::isVectorizableEarlyExitLoop() {
     return false;
   }
 
-  // Sort exiting blocks by dominance order to establish a clear chain.
-  llvm::sort(UncountableExitingBlocks, [this](BasicBlock *A, BasicBlock *B) {
-    return DT->properlyDominates(A, B);
-  });
-
-  // Verify that exits form a strict dominance chain: each block must
-  // dominate the next. This ensures each exit is only dominated by its
-  // predecessors in the chain.
-  for (unsigned I = 0; I + 1 < UncountableExitingBlocks.size(); ++I) {
-    if (!DT->properlyDominates(UncountableExitingBlocks[I],
-                               UncountableExitingBlocks[I + 1])) {
-      reportVectorizationFailure(
-          "Uncountable early exits do not form a dominance chain",
-          "Cannot vectorize early exit loop with non-dominating exits",
-          "NonDominatingEarlyExits", ORE, TheLoop);
-      return false;
-    }
-  }
-
-  BasicBlock *LatchPredBB = LatchBB->getUniquePredecessor();
-  if (LatchPredBB != UncountableExitingBlocks.back()) {
-    reportVectorizationFailure(
-        "Last early exiting block in the chain is not the latch predecessor",
-        "Cannot vectorize early exit loop", "EarlyExitNotLatchPredecessor", ORE,
-        TheLoop);
-    return false;
-  }
-
   // The latch block must have a countable exit.
   if (isa<SCEVCouldNotCompute>(
           PSE.getSE()->getPredicatedExitCount(TheLoop, LatchBB, &Predicates))) {
@@ -2116,19 +2088,6 @@ bool LoopVectorizationLegality::canFoldTailByMasking() const {
 
   for (const auto &Reduction : getReductionVars())
     ReductionLiveOuts.insert(Reduction.second.getLoopExitInstr());
-
-  for (const auto &Entry : getInductionVars()) {
-    PHINode *OrigPhi = Entry.first;
-    for (User *U : OrigPhi->users()) {
-      auto *UI = cast<Instruction>(U);
-      if (!TheLoop->contains(UI)) {
-        LLVM_DEBUG(dbgs() << "LV: Cannot fold tail by masking, loop IV has an "
-                             "outside user for "
-                          << *UI << "\n");
-        return false;
-      }
-    }
-  }
 
   // The list of pointers that we can safely read and write to remains empty.
   SmallPtrSet<Value *, 8> SafePointers;

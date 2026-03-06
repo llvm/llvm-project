@@ -187,6 +187,8 @@ def err_drv_incompatible_unwindlib : Error<
   "--rtlib=libgcc requires --unwindlib=libgcc">;
 def err_drv_incompatible_options : Error<
   "the combination of '%0' and '%1' is incompatible">;
+def err_drv_invalid_cstdlib_name : Error<
+  "invalid C library name in argument '%0'">;
 def err_drv_invalid_stdlib_name : Error<
   "invalid library name in argument '%0'">;
 def err_drv_invalid_output_with_multiple_archs : Error<
@@ -446,6 +448,9 @@ def warn_ignored_clang_option : Warning<"the flag '%0' has been deprecated and w
 def warn_drv_unsupported_opt_for_target : Warning<
   "optimization flag '%0' is not supported for target '%1'">,
   InGroup<IgnoredOptimizationArgument>;
+def warn_drv_riscv_be_experimental : Warning<
+  "big-endian RISC-V target support is experimental">,
+  InGroup<RISCVBEExperimental>;
 def warn_drv_unsupported_debug_info_opt_for_target : Warning<
   "debug information option '%0' is not supported for target '%1'">,
   InGroup<UnsupportedTargetOpt>;
@@ -607,6 +612,18 @@ def err_drv_reduced_module_output_overrided : Warning<
   "the implicit output of reduced BMI may be overrided by the output file specified by '--precompile'. "
   "please consider use '-fmodule-output=' to specify the output file for reduced BMI explicitly">,
   InGroup<DiagGroup<"reduced-bmi-output-overrided">>;
+
+def remark_performing_driver_managed_module_build : Remark<
+  "performing driver managed module build">, InGroup<ModulesDriver>;
+def remark_modules_manifest_not_found : Remark<
+  "standard modules manifest file not found; import of standard library "
+  "modules not supported">,
+  InGroup<ModulesDriver>;
+def remark_using_modules_manifest : Remark<
+  "using standard modules manifest file '%0'">,
+  InGroup<ModulesDriver>;
+def err_modules_manifest_failed_parse : Error<
+  "failure while parsing standard modules manifest: '%0'">;
 
 def warn_drv_delayed_template_parsing_after_cxx20 : Warning<
   "-fdelayed-template-parsing is deprecated after C++20">,
@@ -916,4 +933,7 @@ def warn_drv_gcc_install_dir_libstdcxx : Warning<
     "future releases of the clang compiler will prefer GCC installations "
     "containing libstdc++ include directories; '%0' would be chosen over '%1'">,
     InGroup<DiagGroup<"gcc-install-dir-libstdcxx">>;
+
+def err_drv_reflection_requires_cxx26 : Error<
+  "option '%0' is only supported when compiling in C++26 mode">;
 }

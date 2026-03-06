@@ -217,6 +217,9 @@ def DistributeLayoutAttr: AttrInterface<"DistributeLayoutAttr"> {
     InterfaceMethod<"Get the effective LaneData of the layout attribute as integer array",
                     "SmallVector<int64_t>",
                     "getEffectiveLaneDataAsInt">,
+    InterfaceMethod<"Get the effective order of the layout attribute as integer array",
+                    "SmallVector<int64_t>",
+                    "getEffectiveOrderAsInt">,
     InterfaceMethod<"Derive a new layout by dropping sgLayout and sgData",
                     "xegpu::DistributeLayoutAttr",
                     "dropSgLayoutAndData">,
@@ -226,16 +229,35 @@ def DistributeLayoutAttr: AttrInterface<"DistributeLayoutAttr"> {
     InterfaceMethod<"Derive a new layout with sg_data, inst_data and lane_data set to 1 for the specified unit dims",
                     "xegpu::DistributeLayoutAttr",
                     "setUnitDimData",
-                    /*args=*/(ins "const llvm::SetVector<int64_t>": $unitDims)>,
+                    /*args=*/(ins "const SmallVector<int64_t>": $unitDims)>,
     InterfaceMethod<"Derive a new layout with sg_lane and lane_layout set to 1 for the specified unit dims",
                     "xegpu::DistributeLayoutAttr",
                     "setUnitDimLayout",
-                    /*args=*/(ins "const llvm::SetVector<int64_t>": $unitDims)>,
+                    /*args=*/(ins "const SmallVector<int64_t>": $unitDims)>,
     InterfaceMethod<[{Delinearizes a linear ID into its multidimensional
                       indices based on the effective layout level.}],
                     "FailureOr<SmallVector<Value>>",
                     "delinearizeId",
                     (ins "OpBuilder &": $builder, "Location":$loc, "Value":$linearId)>,
+    InterfaceMethod<[{Derive a new layout with sg_data, inst_data and lane_data set to the
+                      specified values for the given dimension. Passing -1 for any parameter
+                      preserves its original value.}],
+                    "xegpu::DistributeLayoutAttr",
+                    "setDimData",
+                    (ins "int64_t": $dim,
+                          "int64_t": $sgData,
+                          "int64_t": $instData,
+                          "int64_t": $laneData)>,
+    InterfaceMethod<[{Derive a new layout by collapsing dimensions.
+                      `dimGroup` specifies a group of adjacent dimensions that are collapsed into
+                       a single dimension in the derived layout.}],
+                    "xegpu::DistributeLayoutAttr",
+                    "collapseDims",
+                    (ins "SmallVector<int64_t>": $dimGroup)>,
+    InterfaceMethod<[{Derive a new layout by trasnposing it using `permutation`.}],
+                    "xegpu::DistributeLayoutAttr",
+                    "transposeDims",
+                    (ins "ArrayRef<int64_t>": $permutation)>,
     InterfaceMethod<[{Generates instructions to compute multidimensional coordinates for dist units
                       assigned to a level identified by linearId. The shape parameter
                       represents the higher-level problem size. Each level may access
@@ -243,60 +265,43 @@ def DistributeLayoutAttr: AttrInterface<"DistributeLayoutAttr"> {
                     "FailureOr<SmallVector<SmallVector<Value>>>",
                     "computeDistributedCoords",
                     (ins "OpBuilder &": $builder, "Location":$loc, "Value":$linearId, "ArrayRef<int64_t>":$shape)>,
-    InterfaceMethod</*desc=*/[{Check if this layout can be achieved by applying a transpose
-                     to some other layout according to given permutation of (0...n-1).}],
-                    /*retTy=*/"bool",
-                    /*methodName=*/"isTransposeOf",
-                    /*args=*/(ins "const xegpu::DistributeLayoutAttr&": $other, "ArrayRef<int64_t>": $perm),
-                    /*methodBody=*/[{
-                      if (!other)
-                        return false;
-                      if ($_self.getRank() != other.getRank() || perm.size() != static_cast<size_t>($_self.getRank()))
-                        return false;
-                      // Check if the permutation is valid
-                      if (!isPermutationVector(perm))
-                        return false;
-                      auto checkTranspose = [](ArrayRef<int64_t> dst, ArrayRef<int64_t> src, ArrayRef<int64_t> perm) {
-                        // If both `dst` and `src` are empty, conservatively return true
-                        // here because some layout fields can be empty.
-                        if (dst.empty() && src.empty())
-                          return true;
-                        for (const auto &ta : llvm::enumerate(perm)) {
-                          if (src[ta.index()] != dst[ta.value()])
-                            return false;
-                        }
-                        return true;
-                      };
-                      // Check sgLayout
-                      if (!checkTranspose($_self.getEffectiveSgLayoutAsInt(), other.getEffectiveSgLayoutAsInt(), perm))
-                        return false;
-                      // Check sgData
-                      if (!checkTranspose($_self.getEffectiveSgDataAsInt(), other.getEffectiveSgDataAsInt(), perm))
-                        return false;
-                      // Check instData
-                      if (!checkTranspose($_self.getEffectiveInstDataAsInt(), other.getEffectiveInstDataAsInt(), perm))
-                        return false;
-                      // Check laneLayout
-                      if (!checkTranspose($_self.getEffectiveLaneLayoutAsInt(), other.getEffectiveLaneLayoutAsInt(), perm))
-                        return false;
-                      // Check laneData
-                      if (!checkTranspose($_self.getEffectiveLaneDataAsInt(), other.getEffectiveLaneDataAsInt(), perm))
-                        return false;
-                      // Check order if both sides have order field.
-                      if ($_self.getOrder() && other.getOrder()) {
-                        auto thisOrderAsInt = llvm::to_vector_of<int64_t>($_self.getOrder().asArrayRef());
-                        auto otherOrderAsInt = llvm::to_vector_of<int64_t>(other.getOrder().asArrayRef());
-                        if (!checkTranspose(thisOrderAsInt, otherOrderAsInt, perm))
-                          return false;
-                      }
-                      return true;
-                    }]>,
     InterfaceMethod</*desc=*/[{Check if this layout is a slice of another layout.}],
                     /*retTy=*/"bool",
                     /*methodName=*/"isSliceOf",
                     /*args=*/(ins "const xegpu::DistributeLayoutAttr&": $other)>,
-
-    InterfaceMethod</*desc=*/[{Check if this layout is identical to another layout.}],
+    InterfaceMethod</*desc=*/[{Check if this layout is a transpose of
+                     the other layout according to given permutation of (0...n-1).}],
+                    /*retTy=*/"bool",
+                    /*methodName=*/"isTransposeOf",
+                    /*args=*/(ins "const xegpu::DistributeLayoutAttr&": $other,
+                                  "ArrayRef<int64_t>": $perm,
+                                  "xegpu::LayoutKind": $kind)>,
+    InterfaceMethod</*desc=*/[{Check if this layout is compatible with another layout
+                     at a specific level of the layout hierarchy. Unlike isEqualTo,
+                     this compares only the effective (non-sliced) fields at the
+                     requested level.}],
+                    /*retTy=*/"bool",
+                    /*methodName=*/"isCompatibleWith",
+                    /*args=*/(ins "const xegpu::DistributeLayoutAttr&": $other,
+                                  "xegpu::LayoutKind": $level),
+                    /*methodBody=*/[{
+                      if (!other)
+                        return false;
+                      switch (level) {
+                        case xegpu::LayoutKind::Subgroup:
+                          return $_self.getEffectiveSgLayoutAsInt() == other.getEffectiveSgLayoutAsInt() &&
+                                 $_self.getEffectiveSgDataAsInt() == other.getEffectiveSgDataAsInt();
+                        case xegpu::LayoutKind::InstData:
+                          return $_self.getEffectiveInstDataAsInt() == other.getEffectiveInstDataAsInt();
+                        case xegpu::LayoutKind::Lane:
+                          return $_self.getEffectiveLaneLayoutAsInt() == other.getEffectiveLaneLayoutAsInt() &&
+                                 $_self.getEffectiveLaneDataAsInt() == other.getEffectiveLaneDataAsInt();
+                      }
+                      return false;
+                    }]>,
+    InterfaceMethod</*desc=*/[{Check if this layout is equal to another layout.
+                     For LayoutAttr, this compares all fields.
+                     For SliceAttr, this requires the same parent and same sliced dims.}],
                     /*retTy=*/"bool",
                     /*methodName=*/"isEqualTo",
                     /*args=*/(ins "const xegpu::DistributeLayoutAttr&": $other)>
@@ -444,7 +449,7 @@ def XeGPU_LayoutAttr : XeGPUAttr<"Layout", "layout", [DistributeLayoutAttr]> {
       return !isForWorkgroup();
     }
 
-    int64_t getRank() {
+    int64_t getRank() const {
       if (auto attr = getSgLayout())
         return attr.size();
       if (auto attr = getInstData())
@@ -458,8 +463,11 @@ def XeGPU_LayoutAttr : XeGPUAttr<"Layout", "layout", [DistributeLayoutAttr]> {
       // avoid every field of the attribute is nullptr, which may lead to segment fault
       if (!getInstData() && !getLaneLayout())
         return nullptr;
+      // Only preserve order if lane_layout remains, since order requires
+      // sg_layout or lane_layout to be present.
+      auto order = getLaneLayout() ? getOrder() : nullptr;
       return LayoutAttr::get(getContext(), nullptr, nullptr, getInstData(),
-                             getLaneLayout(), getLaneData(), getOrder());
+                             getLaneLayout(), getLaneData(), order);
     }
 
     LayoutAttr dropInstData() const{
@@ -500,11 +508,35 @@ def XeGPU_LayoutAttr : XeGPUAttr<"Layout", "layout", [DistributeLayoutAttr]> {
       return {};
     }
 
+    // Returns the order as integers. If order is not set, returns the default
+    // value [rank-1, ..., 0] (row-major, last dim is fastest).
+    SmallVector<int64_t> getEffectiveOrderAsInt() const {
+      if (DenseI32ArrayAttr order = getOrder())
+        return llvm::to_vector_of<int64_t>(order.asArrayRef());
+      int64_t rank = getRank();
+      SmallVector<int64_t> defaultOrder(rank);
+      std::iota(defaultOrder.rbegin(), defaultOrder.rend(), 0);
+      return defaultOrder;
+    }
+
     //set the layout for the sepcified unit dims: sg_data, inst_data and lane_data to 1
-    DistributeLayoutAttr setUnitDimData(SetVector<int64_t> unitDims) const;
+    DistributeLayoutAttr setUnitDimData(SmallVector<int64_t> unitDims) const;
 
     //set the layout for the sepcified unit dims: sg_lane and lane_layout to 1
-    DistributeLayoutAttr setUnitDimLayout(SetVector<int64_t> unitDims) const;
+    DistributeLayoutAttr setUnitDimLayout(SmallVector<int64_t> unitDims) const;
+
+    // Derive a new layout with sg_data, inst_data and lane_data set to the
+    // specified values for the given dimension. Passing -1 for any parameter
+    // preserves its original value.
+    DistributeLayoutAttr setDimData(int64_t dim, int64_t sgData, int64_t instData, int64_t laneData);
+
+    // Derive a new layout by collapsing dimensions.
+    // `dimGroup` specifies a group of adjacent dimensions
+    // that are collapsed into a single dimension in the derived layout.
+    DistributeLayoutAttr collapseDims(SmallVector<int64_t> dimGroup);
+
+    // Derive a new layout by transposing the layout using `permutation`.
+    DistributeLayoutAttr transposeDims(ArrayRef<int64_t> permutation);
 
     /// Delinearizes a linear ID into its multidimensional indices
     /// based on the effective level of the layout.
@@ -521,9 +553,11 @@ def XeGPU_LayoutAttr : XeGPUAttr<"Layout", "layout", [DistributeLayoutAttr]> {
     /// Check if this is slice of some other layout.
     bool isSliceOf(const xegpu::DistributeLayoutAttr &other) { return false; }
 
-    /// Check if this is identical to some other layout.
+    /// Check if this layout is equal to another layout.
     bool isEqualTo(const xegpu::DistributeLayoutAttr &other);
 
+    /// Check if this layout is a transpose of another layout.
+    bool isTransposeOf(const xegpu::DistributeLayoutAttr &other, ArrayRef<int64_t> perm, const xegpu::LayoutKind kind);
   }];
 
   let assemblyFormat = "`<` struct(params) `>`";
@@ -653,6 +687,26 @@ def XeGPU_SliceAttr : XeGPUAttr<"Slice", "slice", [DistributeLayoutAttr]> {
       return {};
     }
 
+    /// Returns the effective order of the attribute. The parent's effective
+    /// order (or default [rank-1,...,0]) is filtered by removing entries that
+    /// correspond to sliced dimensions, then renumbered to form a valid
+    /// permutation over the remaining dimensions.
+    /// Example: parent order = [2, 0, 1, 3], slice dims = [0, 2] -> result = [1, 0]
+    SmallVector<int64_t> getEffectiveOrderAsInt() const {
+      SliceAttr attr = flatten();
+      auto parent = dyn_cast<LayoutAttr>(attr.getParent());
+      auto order = parent.getEffectiveOrderAsInt();
+      ArrayRef<int64_t> dims = attr.getDims().asArrayRef();
+      SmallVector<int64_t> result;
+      for (int64_t d : order) {
+        if (llvm::is_contained(dims, d))
+          continue;
+        int64_t offset = llvm::count_if(dims, [&](int64_t s) { return s < d; });
+        result.push_back(d - offset);
+      }
+      return result;
+    }
+
     SliceAttr dropSgLayoutAndData() const{
       SliceAttr attr = flatten();
       auto parent = dyn_cast<LayoutAttr>(attr.getParent());
@@ -672,10 +726,23 @@ def XeGPU_SliceAttr : XeGPUAttr<"Slice", "slice", [DistributeLayoutAttr]> {
     }
 
     //set the layout for the sepcified unit dims: sg_data, inst_data and lane_data to 1
-    DistributeLayoutAttr setUnitDimData(SetVector<int64_t> unitDims) const;
+    DistributeLayoutAttr setUnitDimData(SmallVector<int64_t> unitDims) const;
 
     //set the layout for the sepcified unit dims: sg_lane and lane_layout to 1
-    DistributeLayoutAttr setUnitDimLayout(SetVector<int64_t> unitDims) const;
+    DistributeLayoutAttr setUnitDimLayout(SmallVector<int64_t> unitDims) const;
+
+    // Derive a new layout with sg_data, inst_data and lane_data set to the
+    // specified values for the given dimension. Passing -1 for any parameter
+    // preserves its original value.
+    DistributeLayoutAttr setDimData(int64_t dim, int64_t sgData, int64_t instData, int64_t laneData);
+
+    // Derive a new layout by collapsing dimensions.
+    // `dimGroup` specifies a group of adjacent dimensions
+    // that are collapsed into a single dimension in the derived layout.
+    DistributeLayoutAttr collapseDims(SmallVector<int64_t> dimGroup);
+
+    // Derive a new layout by transposing the layout using `permutation`.
+    DistributeLayoutAttr transposeDims(ArrayRef<int64_t> permutation);
 
     /// flatten a nested SliceAttr, e.g., for 2-level nested SliceAttr
     /// #xegpu.slice<#xegpu.slice<#xegpu.layout<sg_layout = [4, 8, 12]>, dims = [0]>, dims = [0]>
@@ -699,11 +766,14 @@ def XeGPU_SliceAttr : XeGPUAttr<"Slice", "slice", [DistributeLayoutAttr]> {
     /// Check if this is slice of some other layout.
     bool isSliceOf(const xegpu::DistributeLayoutAttr &other);
 
+    /// Check if this layout is equal to another layout.
+    bool isEqualTo(const xegpu::DistributeLayoutAttr &other);
+
+    /// Check if this layout is a transpose of another layout.
+    bool isTransposeOf(const xegpu::DistributeLayoutAttr &other, ArrayRef<int64_t> perm, const xegpu::LayoutKind kind);
+
     /// Drop the slice dims to get the original layout.
     SliceAttr dropSliceDims(ArrayRef<int64_t> sliceDimsToDrop);
-
-    /// Check if this is identical to some other layout.
-    bool isEqualTo(const xegpu::DistributeLayoutAttr &other);
   }];
 
   let assemblyFormat = "`<` qualified($parent) `,` `dims` `=` $dims `>`";

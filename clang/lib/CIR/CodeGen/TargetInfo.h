@@ -16,8 +16,10 @@
 
 #include "ABIInfo.h"
 #include "CIRGenTypes.h"
+#include "mlir/Dialect/Ptr/IR/MemorySpaceInterfaces.h"
 #include "clang/Basic/AddressSpaces.h"
 #include "clang/CIR/Dialect/IR/CIRAttrs.h"
+#include "clang/CIR/Dialect/IR/CIROpsEnums.h"
 
 #include <memory>
 #include <utility>
@@ -48,18 +50,10 @@ public:
   const ABIInfo &getABIInfo() const { return *info; }
 
   /// Get the address space for alloca.
-  virtual cir::TargetAddressSpaceAttr getCIRAllocaAddressSpace() const {
-    return {};
+  virtual mlir::ptr::MemorySpaceAttrInterface getCIRAllocaAddressSpace() const {
+    return cir::LangAddressSpaceAttr::get(&info->cgt.getMLIRContext(),
+                                          cir::LangAddressSpace::Default);
   }
-  /// Perform address space cast of an expression of pointer type.
-  /// \param V is the value to be casted to another address space.
-  /// \param DestTy is the destination pointer type.
-  /// \param srcAS is theaddress space of \p V.
-  /// \param IsNonNull is the flag indicating \p V is known to be non null.
-  virtual mlir::Value performAddrSpaceCast(CIRGenFunction &cgf, mlir::Value v,
-                                           cir::TargetAddressSpaceAttr srcAddr,
-                                           mlir::Type destTy,
-                                           bool isNonNull = false) const;
 
   /// Determine whether a call to an unprototyped functions under
   /// the given calling convention should use the variadic
@@ -123,6 +117,8 @@ public:
 };
 
 std::unique_ptr<TargetCIRGenInfo> createX8664TargetCIRGenInfo(CIRGenTypes &cgt);
+
+std::unique_ptr<TargetCIRGenInfo> createNVPTXTargetCIRGenInfo(CIRGenTypes &cgt);
 
 } // namespace clang::CIRGen
 

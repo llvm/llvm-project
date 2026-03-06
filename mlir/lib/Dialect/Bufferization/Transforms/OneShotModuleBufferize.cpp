@@ -60,7 +60,6 @@
 // as "not reading" and/or "not writing".
 
 #include "mlir/Dialect/Bufferization/Transforms/OneShotModuleBufferize.h"
-
 #include "mlir/Dialect/Bufferization/IR/BufferizableOpInterface.h"
 #include "mlir/Dialect/Bufferization/IR/Bufferization.h"
 #include "mlir/Dialect/Bufferization/Transforms/Bufferize.h"
@@ -71,6 +70,8 @@
 #include "mlir/Dialect/MemRef/IR/MemRef.h"
 #include "mlir/IR/BuiltinTypes.h"
 #include "mlir/IR/Operation.h"
+#include "llvm/ADT/MapVector.h"
+#include "llvm/ADT/SmallVectorExtras.h"
 
 using namespace mlir;
 using namespace mlir::bufferization;
@@ -99,9 +100,9 @@ static void annotateEquivalentReturnBbArg(OpOperand &returnVal,
   SmallVector<int64_t> equivBbArgs;
   if (op->hasAttr(kEquivalentArgsAttr)) {
     auto attr = cast<ArrayAttr>(op->getAttr(kEquivalentArgsAttr));
-    equivBbArgs = llvm::to_vector<4>(llvm::map_range(attr, [](Attribute a) {
+    equivBbArgs = llvm::map_to_vector<4>(attr, [](Attribute a) {
       return cast<IntegerAttr>(a).getValue().getSExtValue();
-    }));
+    });
   } else {
     equivBbArgs.append(op->getNumOperands(), -1);
   }
@@ -316,9 +317,9 @@ static LogicalResult getFuncOpsOrderedByCalls(
     SymbolTableCollection &symbolTables) {
   // For each FuncOp, the set of functions called by it (i.e. the union of
   // symbols of all nested func::CallOp).
-  DenseMap<func::FuncOp, DenseSet<func::FuncOp>> calledBy;
+  DenseMap<func::FuncOp, SetVector<func::FuncOp>> calledBy;
   // For each FuncOp, the number of func::CallOp it contains.
-  DenseMap<func::FuncOp, unsigned> numberCallOpsContainedInFuncOp;
+  llvm::MapVector<func::FuncOp, unsigned> numberCallOpsContainedInFuncOp;
   for (mlir::Region &region : moduleOp->getRegions()) {
     for (mlir::Block &block : region.getBlocks()) {
       for (func::FuncOp funcOp : block.getOps<func::FuncOp>()) {
@@ -333,7 +334,7 @@ static LogicalResult getFuncOpsOrderedByCalls(
             return WalkResult::skip();
 
           callerMap[calledFunction].insert(callOp);
-          if (calledBy[calledFunction].insert(funcOp).second) {
+          if (calledBy[calledFunction].insert(funcOp)) {
             numberCallOpsContainedInFuncOp[funcOp]++;
           }
           return WalkResult::advance();

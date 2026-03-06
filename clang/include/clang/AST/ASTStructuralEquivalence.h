@@ -69,6 +69,10 @@ struct StructuralEquivalenceContext {
       Ctx.Complain = false;
     }
     ~AttrScopedAttrEquivalenceContext() { Ctx.Complain = OldComplain; }
+    AttrScopedAttrEquivalenceContext(const AttrScopedAttrEquivalenceContext &) =
+        delete;
+    AttrScopedAttrEquivalenceContext &
+    operator=(const AttrScopedAttrEquivalenceContext &) = delete;
 
     StructuralEquivalenceContext &Ctx;
     bool OldComplain;
