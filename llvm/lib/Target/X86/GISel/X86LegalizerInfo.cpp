@@ -573,6 +573,12 @@ X86LegalizerInfo::X86LegalizerInfo(const X86Subtarget &STI,
                          {v8s64, v2s64},
                          {v8s64, v4s64}});
 
+  getActionDefinitionsBuilder(G_SHUFFLE_VECTOR)
+      .customFor(HasSSE1, {{v16s8, v16s8}, {v8s16, v8s16}, {v4s32, v4s32},
+                           {v2s64, v2s64}})
+      .customFor(HasAVX, {{v32s8, v32s8}, {v16s16, v16s16}, {v8s32, v8s32},
+                          {v4s64, v4s64}})
+      .customFor(HasAVX512, {{v16s32, v16s32}, {v8s64, v8s64}});
   // todo: vectors and address spaces
   getActionDefinitionsBuilder(G_SELECT)
       .legalFor({{s16, s32}, {s32, s32}, {p0, s32}})
@@ -613,6 +619,8 @@ bool X86LegalizerInfo::legalizeCustom(LegalizerHelper &Helper, MachineInstr &MI,
     return false;
   case TargetOpcode::G_BUILD_VECTOR:
     return legalizeBuildVector(MI, MRI, Helper);
+  case TargetOpcode::G_SHUFFLE_VECTOR:
+    return legalizeShuffleVector(MI, MRI, Helper);
   case TargetOpcode::G_FPTOUI:
     return legalizeFPTOUI(MI, MRI, Helper);
   case TargetOpcode::G_UITOFP:
@@ -737,7 +745,195 @@ bool X86LegalizerInfo::legalizeBuildVector(MachineInstr &MI,
   MI.eraseFromParent();
   return true;
 }
+/// Compute the SHUFPS/SHUFPD immediate encoding for a per-lane shuffle mask.
+/// For SHUFPS (4 elements per lane):
+///   Elements 0,1 select from the first operand's lane (2 bits each)
+///   Elements 2,3 select from the second operand's lane (2 bits each)
+/// For SHUFPD (2 elements per lane):
+///   Element 0 selects from the first operand's lane (1 bit)
+///   Element 1 selects from the second operand's lane (1 bit)
+static unsigned getShufpImm(ArrayRef<int> LaneMask, unsigned EltsPerLane) {
+  unsigned BitsPerIdx = (EltsPerLane == 4) ? 2 : 1;
+  unsigned HalfLane = EltsPerLane / 2;
+  unsigned Imm = 0;
+  for (unsigned i = 0; i < EltsPerLane; ++i) {
+    int M = LaneMask[i];
+    unsigned Val;
+    if (M < 0)
+      Val = (i < HalfLane) ? i : (i - HalfLane);
+    else
+      Val = M;
+    Imm |= (Val & ((1u << BitsPerIdx) - 1)) << (i * BitsPerIdx);
+  }
+  return Imm;
+}
 
+/// Shuffle mask as a SHUFPS/SHUFPD pattern:
+/// The mask must satisfy per-128-bit-lane constraints:
+///   - Low half elements reference the first source's lane
+///   - High half elements reference the second source's lane
+/// All lanes must produce the same immediate encoding.
+static bool matchShufpMask(ArrayRef<int> Mask, unsigned NumElts,
+                           unsigned NumSrcElts, unsigned EltSize,
+                           bool SingleSource, unsigned &Imm, bool &Swap) {
+  unsigned EltsPerLane = 128 / EltSize; // 4 for 32-bit, 2 for 64-bit
+  unsigned NumLanes = NumElts / EltsPerLane;
+  unsigned HalfLane = EltsPerLane / 2;
+
+  for (int Attempt = 0; Attempt < 2; ++Attempt) {
+    bool TrySwap = (Attempt == 1);
+    if (TrySwap && SingleSource)
+      break;
+
+    bool Valid = true;
+    unsigned FirstLaneImm = 0;
+
+    for (unsigned Lane = 0; Lane < NumLanes && Valid; ++Lane) {
+      unsigned LaneStart = Lane * EltsPerLane;
+      SmallVector<int, 4> LaneMask(EltsPerLane);
+
+      for (unsigned i = 0; i < EltsPerLane && Valid; ++i) {
+        int M = Mask[LaneStart + i];
+
+        if (M < 0) {
+          LaneMask[i] = -1;
+          continue;
+        }
+
+        bool FromSrc2 = ((unsigned)M >= NumSrcElts);
+        unsigned SrcIdx = FromSrc2 ? (M - NumSrcElts) : M;
+
+        // Must reference the same lane in the source.
+        if (SrcIdx / EltsPerLane != Lane) {
+          Valid = false;
+          break;
+        }
+        unsigned SrcLaneOff = SrcIdx % EltsPerLane;
+
+        if (i < HalfLane) {
+          // Low half: should come from the first operand.
+          bool WantSrc2 = TrySwap;
+          if (!SingleSource && FromSrc2 != WantSrc2) {
+            Valid = false;
+            break;
+          }
+        } else {
+          // High half: should come from the second operand.
+          bool WantSrc2 = !TrySwap;
+          if (!SingleSource && FromSrc2 != WantSrc2) {
+            Valid = false;
+            break;
+          }
+        }
+
+        LaneMask[i] = SrcLaneOff;
+      }
+
+      if (!Valid)
+        break;
+
+      unsigned CurImm = getShufpImm(LaneMask, EltsPerLane);
+      if (Lane == 0)
+        FirstLaneImm = CurImm;
+      else if (CurImm != FirstLaneImm)
+        Valid = false;
+    }
+
+    if (Valid) {
+      Imm = FirstLaneImm;
+      Swap = TrySwap;
+      return true;
+    }
+  }
+  return false;
+}
+
+static bool matchBlendMask(ArrayRef<int> Mask, unsigned NumElts,
+                           unsigned NumSrcElts) {
+  for (unsigned i = 0; i < NumElts; ++i) {
+    if (Mask[i] < 0)
+      continue; // undef is fine
+    if (Mask[i] != (int)i && Mask[i] != (int)(i + NumSrcElts))
+      return false;
+  }
+  return true;
+}
+
+bool X86LegalizerInfo::legalizeShuffleVector(MachineInstr &MI,
+                                             MachineRegisterInfo &MRI,
+                                             LegalizerHelper &Helper) const {
+  MachineIRBuilder &MIRBuilder = Helper.MIRBuilder;
+  const auto &ShuffleVec = cast<GShuffleVector>(MI);
+  Register Dst = ShuffleVec.getReg(0);
+  Register Src1 = ShuffleVec.getSrc1Reg();
+  Register Src2 = ShuffleVec.getSrc2Reg();
+  ArrayRef<int> Mask = ShuffleVec.getMask();
+  LLT DstTy = MRI.getType(Dst);
+  LLT SrcTy = MRI.getType(Src1);
+
+  unsigned NumElts = DstTy.getNumElements();
+  unsigned EltSize = DstTy.getScalarSizeInBits();
+  unsigned VecSize = DstTy.getSizeInBits();
+  unsigned NumSrcElts = SrcTy.getNumElements();
+
+  bool Src2IsUndef = getOpcodeDef<GImplicitDef>(Src2, MRI) != nullptr;
+  bool SingleSource = Src2IsUndef || (Src1 == Src2);
+
+  // (SHUFPS for 32-bit / SHUFPD for 64-bit elements).
+  // Available: SSE1 for 128-bit, AVX for 256-bit, AVX512 for 512-bit.
+  if ((EltSize == 32 || EltSize == 64) && VecSize >= 128) {
+    unsigned Imm = 0;
+    bool Swap = false;
+
+    if (matchShufpMask(Mask, NumElts, NumSrcElts, EltSize, SingleSource, Imm,
+                       Swap)) {
+      Register OpA = Swap ? Src2 : Src1;
+      Register OpB = SingleSource ? Src1 : (Swap ? Src1 : Src2);
+
+      MIRBuilder.buildInstr(X86::G_SHUFP, {Dst}, {OpA, OpB}).addImm(Imm);
+      MI.eraseFromParent();
+      return true;
+    }
+  } // SHUFD ends
+
+  // BLENDV
+  // Available: SSE4.1 for 128-bit, AVX for 256-bit, AVX512 for 512-bit.
+  if (Subtarget.hasSSE41() && !SingleSource &&
+      matchBlendMask(Mask, NumElts, NumSrcElts)) {
+    MachineFunction &MF = MIRBuilder.getMF();
+    LLVMContext &Ctx = MF.getFunction().getContext();
+    IntegerType *EltTy = IntegerType::get(Ctx, EltSize);
+
+    SmallVector<Constant *, 64> MaskConsts;
+    for (unsigned i = 0; i < NumElts; ++i) {
+      if (Mask[i] < 0 || Mask[i] == (int)i)
+        MaskConsts.push_back(Constant::getNullValue(EltTy));
+      else
+        MaskConsts.push_back(Constant::getAllOnesValue(EltTy));
+    }
+
+    Constant *MaskCV = ConstantVector::get(MaskConsts);
+    const DataLayout &DL = MIRBuilder.getDataLayout();
+    unsigned AddrSpace = DL.getDefaultGlobalsAddressSpace();
+    Align Alignment(DL.getABITypeAlign(MaskCV->getType()));
+
+    auto MaskAddr = MIRBuilder.buildConstantPool(
+        LLT::pointer(AddrSpace, DL.getPointerSizeInBits(AddrSpace)),
+        MF.getConstantPool()->getConstantPoolIndex(MaskCV, Alignment));
+
+    MachineMemOperand *MMO = MF.getMachineMemOperand(
+        MachinePointerInfo::getConstantPool(MF), MachineMemOperand::MOLoad,
+        DstTy, Alignment);
+
+    auto MaskReg = MIRBuilder.buildLoad(DstTy, MaskAddr, *MMO);
+
+    MIRBuilder.buildInstr(X86::G_BLENDV, {Dst}, {Src1, Src2, MaskReg});
+    MI.eraseFromParent();
+    return true;
+  }
+
+  return false;
+}
 bool X86LegalizerInfo::legalizeFPTOUI(MachineInstr &MI,
                                       MachineRegisterInfo &MRI,
                                       LegalizerHelper &Helper) const {
