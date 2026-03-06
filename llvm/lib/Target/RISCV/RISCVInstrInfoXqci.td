@@ -1500,6 +1500,12 @@ class SelectQCbi<CondCode Cond, DAGOperand InTyImm, Pseudo OpNode >
           (OpNode GPRNoX0:$lhs, InTyImm:$Constant, (CCtoRISCVCC $cc),
                   GPRNoX0:$truev, GPRNoX0:$falsev)>;
 
+class SelectQCbiSFB<CondCode Cond, DAGOperand InTyImm, SDNodeXForm xform>
+    : Pat<(riscv_selectcc (i32 GPRNoX0:$lhs), InTyImm:$Constant, Cond:$cc,
+                          (i32 GPR:$truev), GPR:$falsev),
+          (PseudoCCMOVGPR GPR:$falsev, GPR:$truev, (xform $cc), GPRNoX0:$lhs,
+                          InTyImm:$Constant)>;
+
 let Predicates = [HasVendorXqciac, IsRV32] in {
 def : Pat<(i32 (add GPRNoX0:$rd, (mul GPRNoX0:$rs1, simm12_lo:$imm12))),
           (QC_MULIADD GPRNoX0:$rd, GPRNoX0:$rs1, simm12_lo:$imm12)>;
@@ -1562,6 +1568,22 @@ def : PatGprNoX0GprNoX0<usubsat, QC_SUBUSAT>;
 def : PatGprNoX0GprNoX0<ushlsat, QC_SHLUSAT>;
 def : PatGprNoX0GprNoX0<sshlsat, QC_SHLSAT>;
 } // Predicates = [HasVendorXqcia, IsRV32]
+
+let Predicates = [HasShortForwardBranchImm, HasVendorXqcibi, IsRV32] in {
+def : SelectQCbiSFB<SETEQ, simm5nonzero, CCtoQC_BccI>;
+def : SelectQCbiSFB<SETNE, simm5nonzero, CCtoQC_BccI>;
+def : SelectQCbiSFB<SETGE, simm5nonzero, CCtoQC_BccI>;
+def : SelectQCbiSFB<SETLT, simm5nonzero, CCtoQC_BccI>;
+def : SelectQCbiSFB<SETULT, uimm5nonzero, CCtoQC_BccI>;
+def : SelectQCbiSFB<SETUGE, uimm5nonzero, CCtoQC_BccI>;
+
+def : SelectQCbiSFB<SETEQ, simm16nonzero, CCtoQC_E_BccI>;
+def : SelectQCbiSFB<SETGE, simm16nonzero, CCtoQC_E_BccI>;
+def : SelectQCbiSFB<SETLT, simm16nonzero, CCtoQC_E_BccI>;
+def : SelectQCbiSFB<SETNE, simm16nonzero, CCtoQC_E_BccI>;
+def : SelectQCbiSFB<SETUGE, uimm16nonzero, CCtoQC_E_BccI>;
+def : SelectQCbiSFB<SETUGE, uimm16nonzero, CCtoQC_E_BccI>;
+}
 
 /// Branches
 
