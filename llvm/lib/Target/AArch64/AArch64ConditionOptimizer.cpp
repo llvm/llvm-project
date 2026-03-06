@@ -345,6 +345,15 @@ void AArch64ConditionOptimizer::modifyCmp(MachineInstr *CmpMI,
   AArch64CC::CondCode Cmp;
   std::tie(Imm, Opc, Cmp) = Info;
 
+  // Convert GE/LT to PL/MI for comparisons with 0.
+  // PL (Plus) and MI (Minus) are more canonical for sign checks.
+  if (Imm == 0) {
+    if (Cmp == AArch64CC::GE)
+      Cmp = AArch64CC::PL;
+    if (Cmp == AArch64CC::LT)
+      Cmp = AArch64CC::MI;
+  }
+
   MachineBasicBlock *const MBB = CmpMI->getParent();
 
   // Change immediate in comparison instruction (ADDS or SUBS).
@@ -596,6 +605,20 @@ bool AArch64ConditionOptimizer::optimizeCrossBlock(MachineBasicBlock &HBB) {
   LLVM_DEBUG(dbgs() << "\tcondition: " << AArch64CC::getCondCodeName(TrueCmp)
                     << '\n');
   LLVM_DEBUG(dbgs() << "\timmediate: " << TrueImm << '\n');
+
+  // Convert PL/MI to GE/LT for comparisons with 0.
+  if (HeadImm == 0) {
+    if (HeadCmp == AArch64CC::PL)
+      HeadCmp = AArch64CC::GE;
+    if (HeadCmp == AArch64CC::MI)
+      HeadCmp = AArch64CC::LT;
+  }
+  if (TrueImm == 0) {
+    if (TrueCmp == AArch64CC::PL)
+      TrueCmp = AArch64CC::GE;
+    if (TrueCmp == AArch64CC::MI)
+      TrueCmp = AArch64CC::LT;
+  }
 
   unsigned Opc = HeadCmpMI->getOpcode();
   if (Opc == AArch64::ADDSWri || Opc == AArch64::ADDSXri)
