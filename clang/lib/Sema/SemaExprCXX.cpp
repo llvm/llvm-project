@@ -1429,7 +1429,7 @@ bool Sema::CheckCXXThisType(SourceLocation Loc, QualType Type) {
   const auto *Method = dyn_cast<CXXMethodDecl>(DC);
   if (Method && Method->isExplicitObjectMemberFunction()) {
     Diag(Loc, diag::err_invalid_this_use) << 1;
-  } else if (Method && isLambdaCallWithExplicitObjectParameter(CurContext)) {
+  } else if (Method && isLambdaCallWithExplicitObjectParameter(DC)) {
     Diag(Loc, diag::err_invalid_this_use) << 1;
   } else {
     Diag(Loc, diag::err_invalid_this_use) << 0;
