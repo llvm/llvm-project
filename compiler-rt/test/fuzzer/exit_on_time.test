@@ -1,0 +1,15 @@
+RUN: %cpp_compiler %S/SingleMemcmpTest.cpp -o %t-SingleMemcmpTest
+
+EXIT_ON_TIME-NOT: Done 100000000 runs
+EXIT_ON_TIME: Done {{[0-9]+}} runs in {{[0-9]}} second(s), {{[0-9]}} second(s) without new corpus
+
+# does it work?
+RUN: %run %t-SingleMemcmpTest -seed=1 -runs=100000000 -exit_on_time=2 -use_cmp=0 2>&1 | FileCheck %s --check-prefix=EXIT_ON_TIME
+
+# same for -fork
+
+EXIT_ON_TIME_FORK-NOT: INFO: fuzzed for {{[0-9]+}} iterations
+EXIT_ON_TIME_FORK: INFO: no new corpus for {{[0-9]+}} seconds
+
+# does it work?
+RUN: %run %t-SingleMemcmpTest -runs=100000000 -exit_on_time=2 -use_cmp=0 -fork=1 2>&1 | FileCheck %s --check-prefix=EXIT_ON_TIME_FORK

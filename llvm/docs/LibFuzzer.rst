@@ -287,6 +287,9 @@ The most important command line options are:
 ``-max_total_time``
   If positive, indicates the maximum total time in seconds to run the fuzzer.
   If 0 (the default), run indefinitely.
+``-exit_on_time``
+  If positive, indicates the maximum time in seconds to run the fuzzer after new
+  input is added to the corpus.
 ``-merge``
   If set to 1, any corpus inputs from the 2nd, 3rd etc. corpus directories
   that trigger new code coverage will be merged into the first corpus

@@ -1,0 +1,22 @@
+RUN: %cpp_compiler %S/CleanseTest.cpp -o %t-CleanseTest
+
+# total time - double digits, without new corpus - one digit
+EXIT_ON_TIME: Done {{.*}} runs in {{[0-9][0-9]}} second(s), {{[0-9]}} second(s)
+
+# is timer updated with a new input?
+RUN: rm -rf %t-1
+RUN: mkdir -p %t-1
+RUN: setsid %run %t-CleanseTest -seed=1 -exit_on_time=7 -mutate_depth=0 %t-1 2>%t-1-log & export PID=$!
+RUN: sleep 4
+RUN: echo -n ' 1   5    A         ' > %t-1/new
+RUN: wait $PID
+RUN: cat %t-1-log | FileCheck %s --check-prefix=EXIT_ON_TIME
+
+# max_total_time may be triggered first
+RUN: rm -rf %t-2
+RUN: mkdir -p %t-2
+RUN: setsid %run %t-CleanseTest -seed=1 -exit_on_time=10 -max_total_time=10 -mutate_depth=0 %t-2 2>%t-2-log & export PID=$!
+RUN: sleep 4
+RUN: echo -n ' 1   5    A         ' > %t-2/new
+RUN: wait $PID
+RUN: cat %t-2-log | FileCheck %s --check-prefix=EXIT_ON_TIME
