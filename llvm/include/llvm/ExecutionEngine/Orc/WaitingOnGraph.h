@@ -88,6 +88,13 @@ public:
   using ElementSet = DenseSet<ElementId>;
   using ContainerElementsMap = DenseMap<ContainerId, ElementSet>;
 
+  class SuperNode;
+
+private:
+  using ElemToSuperNodeMap =
+      DenseMap<ContainerId, DenseMap<ElementId, SuperNode *>>;
+
+public:
   class SuperNode {
     friend class WaitingOnGraph;
     friend class WaitingOnGraphTest;
@@ -103,12 +110,53 @@ public:
   private:
     ContainerElementsMap Defs;
     ContainerElementsMap Deps;
+
+    ElemToSuperNodeMap *RegisteredElemToSN = nullptr;
+
+    /// Add a mapping from the Defs in this SuperNode to SN (which may or may
+    /// not be the same as this).
+    void mapDefsTo(ElemToSuperNodeMap &ElemToSN, SuperNode *SN,
+                   bool AbandonOldMapping = false) {
+      assert(!Defs.empty() && "Empty defs!?");
+      for (auto &[Container, Elements] : Defs) {
+        assert(!Elements.empty() && "Empty elements for container?");
+        auto &ContainerElemToSN = ElemToSN[Container];
+        for (auto &Elem : Elements)
+          ContainerElemToSN[Elem] = SN;
+      }
+      assert((AbandonOldMapping || !SN->RegisteredElemToSN ||
+              SN->RegisteredElemToSN == &ElemToSN) &&
+             "SN defs split across maps");
+      SN->RegisteredElemToSN = &ElemToSN;
+    }
+
+    /// Add a mapping from the Defs in this SuperNode to this.
+    /// (Equivalent to `SN.mapDefsTo(ElemToSN, &SN);`)
+    void mapDefsToThis(ElemToSuperNodeMap &ElemToSN,
+                       bool AbandonOldMapping = false) {
+      mapDefsTo(ElemToSN, this, AbandonOldMapping);
+    }
+
+    /// Remove a mapping from the Defs in this SuperNode from the registered
+    /// ElemToSuperNodeMap. The mapping must already exist.
+    void unmapDefsFromThis() {
+      assert(RegisteredElemToSN && "No registered ElemToSuperNodeMap");
+      for (auto &[Container, Elements] : Defs) {
+        auto I = RegisteredElemToSN->find(Container);
+        assert(I != RegisteredElemToSN->end() && "Container not in map");
+        auto &ContainerElemToSN = I->second;
+        for (auto &Elem : Elements) {
+          assert(ContainerElemToSN[Elem] == this && "Mapping not present");
+          ContainerElemToSN.erase(Elem);
+        }
+        if (ContainerElemToSN.empty())
+          RegisteredElemToSN->erase(I);
+      }
+      RegisteredElemToSN = nullptr;
+    }
   };
 
 private:
-  using ElemToSuperNodeMap =
-      DenseMap<ContainerId, DenseMap<ElementId, SuperNode *>>;
-
   using SuperNodeDepsMap = DenseMap<SuperNode *, DenseSet<SuperNode *>>;
 
   class Coalescer {
@@ -136,19 +184,17 @@ private:
     }
 
     void coalesce(std::vector<std::unique_ptr<SuperNode>> &SNs,
-                  ElemToSuperNodeMap &ElemToSN) {
+                  ElemToSuperNodeMap &ElemToSN,
+                  bool AbandonOldMapping = false) {
       for (size_t I = 0; I != SNs.size();) {
         auto &SN = SNs[I];
         assert(!SNHashes.count(SN.get()) &&
                "Elements of SNs should be new to the coalescer");
         auto H = getHash(SN->Deps);
         if (auto *CanonicalSN = findCanonicalSuperNode(H, SN->Deps)) {
-          for (auto &[Container, Elems] : SN->Defs) {
+          SN->mapDefsTo(ElemToSN, CanonicalSN, AbandonOldMapping);
+          for (auto &[Container, Elems] : SN->Defs)
             CanonicalSN->Defs[Container].insert(Elems.begin(), Elems.end());
-            auto &ContainerElemToSN = ElemToSN[Container];
-            for (auto &Elem : Elems)
-              ContainerElemToSN[Elem] = CanonicalSN;
-          }
           std::swap(SN, SNs.back());
           SNs.pop_back();
         } else {
@@ -286,13 +332,8 @@ public:
   static SimplifyResult simplify(std::vector<std::unique_ptr<SuperNode>> SNs) {
     // Build ElemToSN map.
     ElemToSuperNodeMap ElemToSN;
-    for (auto &SN : SNs) {
-      for (auto &[Container, Elements] : SN->Defs) {
-        auto &ContainerElemToSN = ElemToSN[Container];
-        for (auto &E : Elements)
-          ContainerElemToSN[E] = SN.get();
-      }
-    }
+    for (auto &SN : SNs)
+      SN->mapDefsToThis(ElemToSN);
 
     SuperNodeDepsMap SuperNodeDeps;
     hoistDeps(SuperNodeDeps, SNs, ElemToSN);
@@ -372,7 +413,8 @@ public:
                          FailedSNs, nullptr);
 
     CoalesceToPendingSNs.coalesce(ModifiedPendingSNs, ElemToPendingSN);
-    CoalesceToPendingSNs.coalesce(NewSNs, ElemToPendingSN);
+    CoalesceToPendingSNs.coalesce(NewSNs, ElemToPendingSN,
+                                  /* AbandonOldMapping = */ true);
 
     // Integrate remaining ModifiedPendingSNs and NewSNs into PendingSNs.
     for (auto &SN : ModifiedPendingSNs)
@@ -380,11 +422,7 @@ public:
 
     // Update ElemToPendingSN for the remaining elements.
     for (auto &SN : NewSNs) {
-      for (auto &[Container, Elems] : SN->Defs) {
-        auto &Row = ElemToPendingSN[Container];
-        for (auto &Elem : Elems)
-          Row[Elem] = SN.get();
-      }
+      SN->mapDefsToThis(ElemToPendingSN, /* AbandonOldMapping = */ true);
       PendingSNs.push_back(std::move(SN));
     }
 
@@ -692,13 +730,8 @@ private:
     }
 
     // Update ElemToSNs (if passed) to remove elements pointing at SN.
-    for (auto *SN : ToRemoveFromElemToSNs) {
-      for (auto &[Container, Elems] : SN->defs()) {
-        auto &Row = (*ElemToSNs)[Container];
-        for (auto &Elem : Elems)
-          Row.erase(Elem);
-      }
-    }
+    for (auto *SN : ToRemoveFromElemToSNs)
+      SN->unmapDefsFromThis();
   }
 
   std::vector<std::unique_ptr<SuperNode>> PendingSNs;
