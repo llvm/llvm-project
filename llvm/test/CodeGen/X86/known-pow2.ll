@@ -912,6 +912,36 @@ define i1 @pow2_though_zext(i32 %x, i16 %y) {
   ret i1 %r
 }
 
+define i32 @pow2_though_zext_vec(<8 x i16> %a0, ptr %p1, i32 %a2) {
+; CHECK-LABEL: pow2_though_zext_vec:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    movl %esi, %eax
+; CHECK-NEXT:    pxor %xmm1, %xmm1
+; CHECK-NEXT:    pxor %xmm2, %xmm2
+; CHECK-NEXT:    pcmpgtw %xmm0, %xmm2
+; CHECK-NEXT:    movdqa %xmm2, %xmm0
+; CHECK-NEXT:    pandn {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
+; CHECK-NEXT:    pand {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm2
+; CHECK-NEXT:    por %xmm0, %xmm2
+; CHECK-NEXT:    movdqa %xmm2, %xmm0
+; CHECK-NEXT:    punpcklwd {{.*#+}} xmm0 = xmm0[0],xmm1[0],xmm0[1],xmm1[1],xmm0[2],xmm1[2],xmm0[3],xmm1[3]
+; CHECK-NEXT:    pextrw $0, %xmm2, %ecx
+; CHECK-NEXT:    punpckhwd {{.*#+}} xmm2 = xmm2[4],xmm1[4],xmm2[5],xmm1[5],xmm2[6],xmm1[6],xmm2[7],xmm1[7]
+; CHECK-NEXT:    movdqa %xmm2, 16(%rdi)
+; CHECK-NEXT:    movdqa %xmm0, (%rdi)
+; CHECK-NEXT:    xorl %edx, %edx
+; CHECK-NEXT:    divl %ecx
+; CHECK-NEXT:    movl %edx, %eax
+; CHECK-NEXT:    retq
+  %cmp = icmp sgt <8 x i16> zeroinitializer, %a0
+  %sel = select <8 x i1> %cmp, <8 x i16> <i16 4, i16 5, i16 6, i16 7, i16 9, i16 10, i16 11, i16 12>, <8 x i16> splat (i16 2)
+  %ext = zext <8 x i16> %sel to <8 x i32>
+  store <8 x i32> %ext, ptr %p1
+  %elt = extractelement <8 x i32> %ext, i32 0
+  %res = urem i32 %a2, %elt
+  ret i32 %res
+}
+
 define i1 @pow2_and_i20(i20 %num, i20 %shift) {
 ; CHECK-LABEL: pow2_and_i20:
 ; CHECK:       # %bb.0:
