@@ -16,7 +16,6 @@
 #include "clang/Frontend/CompilerInstance.h"
 #include "clang/Frontend/CompilerInvocation.h"
 #include "clang/Frontend/TextDiagnosticPrinter.h"
-#include "clang/Serialization/ObjectFilePCHContainerReader.h"
 #include "llvm/Support/VirtualFileSystem.h"
 
 namespace clang {
