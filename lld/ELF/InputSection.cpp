@@ -1101,7 +1101,7 @@ void InputSection::relocateNonAlloc(Ctx &ctx, uint8_t *buf,
         continue;
       }
       Err(ctx) << getLocation(offset)
-               << ": R_RISCV_SET_ULEB128 not paired with R_RISCV_SUB_SET128";
+               << ": R_RISCV_SET_ULEB128 not paired with R_RISCV_SUB_ULEB128";
       return;
     }
 

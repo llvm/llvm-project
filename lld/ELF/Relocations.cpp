@@ -1136,35 +1136,24 @@ unsigned RelocScan::handleTlsRelocation(RelExpr expr, RelType type,
   if (expr == R_TPREL || expr == R_TPREL_NEG)
     return checkTlsLe(offset, sym, type) ? 1 : 0;
 
-  bool isRISCV = ctx.arg.emachine == EM_RISCV;
-
   if (oneof<R_TLSDESC, R_TLSDESC_CALL, R_TLSDESC_PC, R_TLSDESC_GOTPLT>(expr) &&
       ctx.arg.shared) {
-    // R_RISCV_TLSDESC_{LOAD_LO12,ADD_LO12_I,CALL} reference a label. Do not
-    // set NEEDS_TLSDESC on the label.
     if (expr != R_TLSDESC_CALL) {
-      if (!isRISCV || type == R_RISCV_TLSDESC_HI20)
-        sym.setFlags(NEEDS_TLSDESC);
+      sym.setFlags(NEEDS_TLSDESC);
       sec->addReloc({expr, type, offset, addend, &sym});
     }
     return 1;
   }
 
-  // RISC-V does not support GD/LD to IE/LE optimizations.
-  // RISC-V supports TLSDESC to IE/LE optimizations.
-  // For PPC64, if the file has missing R_PPC64_TLSGD/R_PPC64_TLSLD, disable
-  // optimization as well.
-  bool execOptimize =
-      !ctx.arg.shared &&
-      !(isRISCV && expr != R_TLSDESC_PC && expr != R_TLSDESC_CALL);
+  bool execOptimize = !ctx.arg.shared;
 
   // If we are producing an executable and the symbol is non-preemptable, it
   // must be defined and the code sequence can be optimized to use Local-Exec.
   //
-  // RISC-V does not support any relaxations for TLS relocations, however, we
-  // can omit the DTPMOD dynamic relocations and resolve them at link time
-  // because them are always 1. This may be necessary for static linking as
-  // DTPMOD may not be expected at load time.
+  // While some targets do not have TLS optimizations, we can omit the
+  // DTPMOD dynamic relocations and resolve them at link time because them
+  // are always 1. This may be necessary for static linking as DTPMOD may
+  // not be expected at load time.
   bool isLocalInExecutable = !sym.isPreemptible && !ctx.arg.shared;
 
   // Local Dynamic is for access to module local TLS variables, while still
@@ -1203,10 +1192,6 @@ unsigned RelocScan::handleTlsRelocation(RelExpr expr, RelType type,
 
     // Global-Dynamic/TLSDESC can be optimized to Initial-Exec or Local-Exec
     // depending on the symbol being locally defined or not.
-    //
-    // R_RISCV_TLSDESC_{LOAD_LO12,ADD_LO12_I,CALL} reference a non-preemptible
-    // label, so TLSDESC=>IE will be categorized as R_RELAX_TLS_GD_TO_LE. We fix
-    // the categorization in RISCV::relocateAlloc.
     if (sym.isPreemptible) {
       sym.setFlags(NEEDS_TLSIE);
       sec->addReloc({ctx.target->adjustTlsExpr(type, R_RELAX_TLS_GD_TO_IE),
