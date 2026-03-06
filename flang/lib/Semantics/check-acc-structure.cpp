@@ -688,13 +688,7 @@ void AccStructureChecker::Enter(const parser::OpenACCCacheConstruct &x) {
                     if (const auto *triplet =
                             std::get_if<parser::SubscriptTriplet>(
                                 &subscript.u)) {
-                      const auto &lower{std::get<0>(triplet->t)};
-                      const auto &upper{std::get<1>(triplet->t)};
                       const auto &stride{std::get<2>(triplet->t)};
-                      if (!lower && !upper) {
-                        context_.Say(designator.source,
-                            "The CACHE directive requires at least one of the bounds in the array section subscript triplet to be specified"_err_en_US);
-                      }
                       if (stride) {
                         if (auto strideVal{GetIntValue(*stride)}) {
                           if (*strideVal != 1) {
