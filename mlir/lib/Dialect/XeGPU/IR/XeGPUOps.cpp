@@ -1045,13 +1045,11 @@ LogicalResult UpdateOffsetOp::verify() {
 // XeGPU_DpasOp
 //===----------------------------------------------------------------------===//
 LogicalResult DpasOp::verify() {
-  auto lhsType = getLhsType();
-  auto rhsType = getRhsType();
-  int64_t lhsRank = lhsType.getRank();
-  int64_t rhsRank = rhsType.getRank();
+  int64_t lhsRank = getLhsType().getRank();
+  int64_t rhsRank = getRhsType().getRank();
   int64_t resRank = getResultType().getRank();
-  auto lhsShape = lhsType.getShape();
-  auto rhsShape = rhsType.getShape();
+  auto lhsShape = getLhsType().getShape();
+  auto rhsShape = getRhsType().getShape();
   auto resShape = getResultType().getShape();
 
   if (getAcc() && getAcc().getType() != getResultType())
@@ -1061,8 +1059,8 @@ LogicalResult DpasOp::verify() {
   // It skips the semantic check since lack of architecture information.
   // Users need to ensure the correctness.
   if (lhsRank == 1 && rhsRank == 1 && resRank == 1) {
-    auto numElems = rhsType.getNumElements();
-    auto elemTy = rhsType.getElementType();
+    auto numElems = getRhsType().getNumElements();
+    auto elemTy = getRhsType().getElementType();
     auto factor = 32 / elemTy.getIntOrFloatBitWidth();
     if (numElems % factor != 0)
       return emitOpError("Expecting B operand to be a multiple of 32 bits.");

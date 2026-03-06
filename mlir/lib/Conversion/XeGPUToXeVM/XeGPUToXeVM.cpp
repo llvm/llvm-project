@@ -22,6 +22,7 @@
 #include "mlir/Dialect/SCF/Transforms/Patterns.h"
 #include "mlir/Dialect/Vector/IR/VectorOps.h"
 #include "mlir/Dialect/XeGPU/IR/XeGPU.h"
+#include "mlir/Dialect/XeGPU/uArch/IntelGpuXe2.h"
 #include "mlir/Dialect/XeGPU/Utils/XeGPUUtils.h"
 #include "mlir/Pass/Pass.h"
 #include "mlir/Support/LLVM.h"
@@ -901,6 +902,39 @@ class DpasToXeVMPattern : public OpConversionPattern<xegpu::DpasOp> {
     auto aTy = cast<VectorType>(op.getLhs().getType());
     auto bTy = cast<VectorType>(op.getRhs().getType());
     auto resultType = cast<VectorType>(op.getResultType());
+
+    // get the correct dpasInst by getting info from chip
+    auto chipStr = xegpu::getChipStr(op);
+    if (!chipStr)
+      return rewriter.notifyMatchFailure(op, "cannot determine target chip");
+
+    const auto *uArch= mlir::xegpu::uArch::getUArch(*chipStr);
+    if (!uArch)
+      return rewriter.notifyMatchFailure(op, "unsupported target uArch");
+
+    auto *dpasInst = const_cast<xegpu::uArch::SubgroupMatrixMultiplyAcc*>(
+        llvm::dyn_cast_or_null<xegpu::uArch::SubgroupMatrixMultiplyAcc>(
+            uArch->getInstruction(
+                xegpu::uArch::InstructionKind::SubgroupMatrixMultiplyAcc)));
+    if (!dpasInst)
+      return rewriter.notifyMatchFailure(op, "DPAS not supported by target uArch");
+
+    auto supportedA = dpasInst->getSupportedTypes(*ctxt, xegpu::uArch::MMAOpndKind::MatrixA);
+    auto supportedB = dpasInst->getSupportedTypes(*ctxt, xegpu::uArch::MMAOpndKind::MatrixB);
+    auto supportedD = dpasInst->getSupportedTypes(*ctxt, xegpu::uArch::MMAOpndKind::MatrixD);
+    // NOTE: Supported types for MatrixC and MatrixD are identical
+
+    if (llvm::find(supportedA, aTy.getElementType()) == supportedA.end())
+      return rewriter.notifyMatchFailure(
+          op, "A-matrix element type not supported by target uArch");
+
+    if (llvm::find(supportedB, bTy.getElementType()) == supportedB.end())
+      return rewriter.notifyMatchFailure(
+          op, "B-matrix element type not supported by target uArch");
+
+    if (llvm::find(supportedD, resultType.getElementType()) == supportedD.end())
+      return rewriter.notifyMatchFailure(
+          op, "result/accumulator element type not supported by target uArch");
 
     auto encodePrecision = [&](Type type) -> xevm::ElemType {
       if (type == rewriter.getBF16Type())
