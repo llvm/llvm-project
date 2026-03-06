@@ -163,6 +163,13 @@ static Reloc::Model getEffectiveRelocModel(const Triple &TT, bool JIT,
   if (*RM == Reloc::Static && TT.isOSDarwin() && is64Bit)
     return Reloc::PIC_;
 
+  // On 32-bit Windows, PIC is meaningless for PE/COFF. Force static.
+  // On 64-bit Windows, Clang enforces PIC regardless.
+  // See: https://github.com/llvm/llvm-project/pull/137643
+  if (TT.isOSWindows()) {
+    return is64Bit ? Reloc::PIC_ : Reloc::Static;
+  }
+
   return *RM;
 }
 
