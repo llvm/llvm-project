@@ -15,6 +15,7 @@
 #define LLVM_LIB_TARGET_X86_X86MACHINELEGALIZER_H
 
 #include "llvm/CodeGen/GlobalISel/LegalizerInfo.h"
+#include "llvm/CodeGen/GlobalISel/MachineIRBuilder.h"
 
 namespace llvm {
 
@@ -37,6 +38,8 @@ public:
                          MachineInstr &MI) const override;
 
 private:
+  void buildVector(MachineRegisterInfo &MRI, LegalizerHelper &Helper,
+                   Register Dst, ArrayRef<Register> Sources) const;
   bool legalizeBuildVector(MachineInstr &MI, MachineRegisterInfo &MRI,
                            LegalizerHelper &Helper) const;
 

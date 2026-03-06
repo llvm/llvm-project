@@ -11,16 +11,29 @@
 //===----------------------------------------------------------------------===//
 
 #include "X86LegalizerInfo.h"
+#include "MCTargetDesc/X86MCTargetDesc.h"
+#include "X86RegisterInfo.h"
 #include "X86Subtarget.h"
 #include "X86TargetMachine.h"
+#include "llvm/ADT/ArrayRef.h"
+#include "llvm/ADT/STLExtras.h"
+#include "llvm/ADT/SmallVector.h"
 #include "llvm/CodeGen/GlobalISel/GenericMachineInstrs.h"
 #include "llvm/CodeGen/GlobalISel/LegalizerHelper.h"
+#include "llvm/CodeGen/GlobalISel/LegalizerInfo.h"
 #include "llvm/CodeGen/GlobalISel/MachineIRBuilder.h"
+#include "llvm/CodeGen/GlobalISel/Utils.h"
+#include "llvm/CodeGen/LowLevelTypeUtils.h"
 #include "llvm/CodeGen/MachineConstantPool.h"
 #include "llvm/CodeGen/MachineFrameInfo.h"
+#include "llvm/CodeGen/MachineFunction.h"
+#include "llvm/CodeGen/MachineRegisterInfo.h"
+#include "llvm/CodeGen/Register.h"
 #include "llvm/CodeGen/TargetOpcodes.h"
+#include "llvm/CodeGen/TargetRegisterInfo.h"
 #include "llvm/CodeGen/ValueTypes.h"
 #include "llvm/IR/DerivedTypes.h"
+#include "llvm/IR/Instructions.h"
 #include "llvm/IR/IntrinsicsX86.h"
 #include "llvm/IR/Type.h"
 
@@ -34,6 +47,7 @@ X86LegalizerInfo::X86LegalizerInfo(const X86Subtarget &STI,
     : Subtarget(STI) {
 
   bool Is64Bit = Subtarget.is64Bit();
+  bool Is64BitPointer = TM.getPointerSizeInBits(0) == 64;
   bool HasCMOV = Subtarget.canUseCMOV();
   bool HasSSE1 = Subtarget.hasSSE1();
   bool HasSSE2 = Subtarget.hasSSE2();
@@ -77,6 +91,9 @@ X86LegalizerInfo::X86LegalizerInfo(const X86Subtarget &STI,
   const LLT v32s16 = LLT::fixed_vector(32, 16);
   const LLT v16s32 = LLT::fixed_vector(16, 32);
   const LLT v8s64 = LLT::fixed_vector(8, 64);
+  const LLT v8p0 = LLT::fixed_vector(8, p0);
+
+  const LLT v16p0 = LLT::fixed_vector(16, p0);
 
   const LLT s8MaxVector = HasAVX512 ? v64s8 : HasAVX ? v32s8 : v16s8;
   const LLT s16MaxVector = HasAVX512 ? v32s16 : HasAVX ? v16s16 : v8s16;
@@ -94,9 +111,12 @@ X86LegalizerInfo::X86LegalizerInfo(const X86Subtarget &STI,
       .legalFor({p0, s1, s8, s16, s32, s64})
       .legalFor(UseX87, {s80})
       .legalFor(Is64Bit, {s128})
-      .legalFor(HasSSE2, {v16s8, v8s16, v4s32, v2s64})
-      .legalFor(HasAVX, {v32s8, v16s16, v8s32, v4s64})
-      .legalFor(HasAVX512, {v64s8, v32s16, v16s32, v8s64})
+      .legalFor(HasSSE2,
+                {v16s8, v8s16, v4s32, v2s64, Is64BitPointer ? v2p0 : v4p0})
+      .legalFor(HasAVX,
+                {v32s8, v16s16, v8s32, v4s64, Is64BitPointer ? v4p0 : v8p0})
+      .legalFor(HasAVX512,
+                {v64s8, v32s16, v16s32, v8s64, Is64BitPointer ? v8p0 : v16p0})
       .widenScalarOrEltToNextPow2(0, /*Min=*/8)
       .clampScalarOrElt(0, s8, sMaxScalar)
       .moreElementsToNextPow2(0)
@@ -529,15 +549,16 @@ X86LegalizerInfo::X86LegalizerInfo(const X86Subtarget &STI,
   getActionDefinitionsBuilder(G_BUILD_VECTOR)
       .customIf([=](const LegalityQuery &Query) {
         return (HasSSE1 && typeInSet(0, {v4s32})(Query)) ||
-               (HasSSE2 && typeInSet(0, {v2s64, v8s16, v16s8})(Query)) ||
-               (HasAVX && typeInSet(0, {v4s64, v8s32, v16s16, v32s8})(Query)) ||
-               (HasAVX512 && typeInSet(0, {v8s64, v16s32, v32s16, v64s8}));
-      })
-      .clampNumElements(0, v16s8, s8MaxVector)
-      .clampNumElements(0, v8s16, s16MaxVector)
-      .clampNumElements(0, v4s32, s32MaxVector)
-      .clampNumElements(0, v2s64, s64MaxVector)
-      .moreElementsToNextPow2(0);
+               (HasSSE2 &&
+                typeInSet(0, {v2s64, v8s16, v16s8,
+                              Is64BitPointer ? v2p0 : v4p0})(Query)) ||
+               (HasAVX &&
+                typeInSet(0, {v4s64, v8s32, v16s16, v32s8,
+                              Is64BitPointer ? v4p0 : v8p0})(Query)) ||
+               (HasAVX512 &&
+                typeInSet(0, {v8s64, v16s32, v32s16, v64s8,
+                              Is64BitPointer ? v8p0 : v16p0})(Query));
+      });
 
   getActionDefinitionsBuilder({G_EXTRACT, G_INSERT})
       .legalIf([=](const LegalityQuery &Query) {
@@ -687,21 +708,19 @@ bool X86LegalizerInfo::legalizeFPTOSI(MachineInstr &MI,
   return true;
 }
 
-bool X86LegalizerInfo::legalizeBuildVector(MachineInstr &MI,
-                                           MachineRegisterInfo &MRI,
-                                           LegalizerHelper &Helper) const {
-  MachineIRBuilder &MIRBuilder = Helper.MIRBuilder;
-  const auto &BuildVector = cast<GBuildVector>(MI);
-  Register Dst = BuildVector.getReg(0);
-  LLT DstTy = MRI.getType(Dst);
+void X86LegalizerInfo::buildVector(MachineRegisterInfo &MRI,
+                                   LegalizerHelper &Helper, Register Dst,
+                                   ArrayRef<Register> Sources) const {
+  MachineIRBuilder MIRBuilder = Helper.MIRBuilder;
   MachineFunction &MF = MIRBuilder.getMF();
   LLVMContext &Ctx = MF.getFunction().getContext();
-  uint64_t DstTySize = DstTy.getScalarSizeInBits();
+  const LLT DstTy = MRI.getType(Dst);
+  const uint64_t ElemSize = DstTy.getScalarSizeInBits();
+  const uint64_t VecSize = DstTy.getSizeInBits();
 
   SmallVector<Constant *, 4> CstIdxs;
-  for (unsigned i = 0; i < BuildVector.getNumSources(); ++i) {
-    Register Source = BuildVector.getSourceReg(i);
-
+  bool IsConstant = true;
+  for (const auto Source : Sources) {
     auto ValueAndReg = getIConstantVRegValWithLookThrough(Source, MRI);
     if (ValueAndReg) {
       CstIdxs.emplace_back(ConstantInt::get(Ctx, ValueAndReg->Value));
@@ -715,26 +734,130 @@ bool X86LegalizerInfo::legalizeBuildVector(MachineInstr &MI,
     }
 
     if (getOpcodeDef<GImplicitDef>(Source, MRI)) {
-      CstIdxs.emplace_back(UndefValue::get(Type::getIntNTy(Ctx, DstTySize)));
+      CstIdxs.emplace_back(UndefValue::get(Type::getIntNTy(Ctx, ElemSize)));
       continue;
     }
-    return false;
+
+    IsConstant = false;
+    break;
   }
 
-  Constant *ConstVal = ConstantVector::get(CstIdxs);
+  // We cannot create a constant load of a vector which does not fit in
+  // XMM/YMM/ZMM since it will result in creating an unsupported G_BUILD_VECTOR.
+  if (IsConstant && llvm::is_contained({128u, 256u, 512u}, VecSize)) {
+    Constant *ConstVal = ConstantVector::get(CstIdxs);
 
-  const DataLayout &DL = MIRBuilder.getDataLayout();
-  unsigned AddrSpace = DL.getDefaultGlobalsAddressSpace();
-  Align Alignment(DL.getABITypeAlign(ConstVal->getType()));
-  auto Addr = MIRBuilder.buildConstantPool(
-      LLT::pointer(AddrSpace, DL.getPointerSizeInBits(AddrSpace)),
-      MF.getConstantPool()->getConstantPoolIndex(ConstVal, Alignment));
-  MachineMemOperand *MMO =
-      MF.getMachineMemOperand(MachinePointerInfo::getConstantPool(MF),
-                              MachineMemOperand::MOLoad, DstTy, Alignment);
+    const DataLayout &DL = MIRBuilder.getDataLayout();
+    unsigned AddrSpace = DL.getDefaultGlobalsAddressSpace();
+    Align Alignment(DL.getABITypeAlign(ConstVal->getType()));
+    auto Addr = MIRBuilder.buildConstantPool(
+        LLT::pointer(AddrSpace, DL.getPointerSizeInBits(AddrSpace)),
+        MF.getConstantPool()->getConstantPoolIndex(ConstVal, Alignment));
+    MachineMemOperand *MMO =
+        MF.getMachineMemOperand(MachinePointerInfo::getConstantPool(MF),
+                                MachineMemOperand::MOLoad, DstTy, Alignment);
 
-  MIRBuilder.buildLoad(Dst, Addr, *MMO);
-  MI.eraseFromParent();
+    MIRBuilder.buildLoad(Dst, Addr, *MMO);
+    return;
+  }
+
+  if (Sources.size() == 1) {
+    MIRBuilder.buildCopy(Dst, Sources[0]);
+    return;
+  }
+
+  if (!Subtarget.hasSSE2()) {
+    // If there is no SSE2 the only vector type is v4s32 and it must be loaded
+    // via memory.
+    const DataLayout &DL = MIRBuilder.getDataLayout();
+    Type *Ty = FixedVectorType::get(IntegerType::get(Ctx, 32), 4);
+    Align Alignment(DL.getABITypeAlign(Ty));
+    MachinePointerInfo PtrInfo;
+    auto StackTemp = Helper.createStackTemporary(Ty->getPrimitiveSizeInBits(),
+                                                 Alignment, PtrInfo);
+    Register StackPtr = StackTemp.getReg(0);
+    Register StackPtrAddImm =
+        MRI.createVirtualRegister({&X86::GR8RegClass, LLT::scalar(8)});
+    MIRBuilder.buildConstant(StackPtrAddImm, Ty->getScalarSizeInBits() / 8);
+
+    auto *StoreMMO = MF.getMachineMemOperand(
+        PtrInfo, MachineMemOperand::MOStore,
+        getLLTForType(*Ty->getScalarType(), DL), Align(1));
+    MIRBuilder.buildStore(Sources[0], StackPtr, *StoreMMO);
+    Register CurrentStackPtr = StackPtr;
+    for (const Register Source : Sources.slice(1)) {
+      Register NextStackPtr = MRI.cloneVirtualRegister(CurrentStackPtr);
+      MIRBuilder.buildPtrAdd(NextStackPtr, CurrentStackPtr, StackPtrAddImm);
+      CurrentStackPtr = NextStackPtr;
+      MIRBuilder.buildStore(Source, CurrentStackPtr, *StoreMMO);
+    }
+
+    auto *LoadMMO = MF.getMachineMemOperand(PtrInfo, MachineMemOperand::MOLoad,
+                                            getLLTForType(*Ty, DL), Alignment);
+    MIRBuilder.buildLoad(Dst, StackPtr, *LoadMMO);
+
+    return;
+  }
+
+  // If the vector is occupies at most xmm, construct using PINSRB/W/D/Q if
+  // possible.
+  if (VecSize <= 128 && (Subtarget.hasSSE41() || ElemSize == 16)) {
+    unsigned int PINSROpc = ElemSize == 8    ? X86::PINSRBrri
+                            : ElemSize == 16 ? X86::PINSRWrri
+                            : ElemSize == 32 ? X86::PINSRDrri
+                                             : X86::PINSRQrri;
+    Register TmpDst = MRI.createVirtualRegister({&X86::VR128RegClass, DstTy});
+    MIRBuilder.buildUndef(TmpDst);
+    for (const auto [idx, Source] : enumerate(Sources)) {
+      Register PrevDst = TmpDst;
+      TmpDst =
+          idx == Sources.size() - 1 ? Dst : MRI.cloneVirtualRegister(PrevDst);
+      MIRBuilder.buildInstr(PINSROpc, {TmpDst}, {PrevDst, Source, SrcOp(idx)});
+    }
+    return;
+  }
+
+  // Otherwise, construct it by splitting it into two subregisters
+  const TargetRegisterClass *SubVecRC =
+      VecSize == 512 ? &X86::VR256RegClass : &X86::VR128RegClass;
+  const LLT SubVecTy = LLT::scalarOrVector(
+      ElementCount::get(Sources.size() / 2, false), DstTy.getScalarType());
+  Register LowSubVec = MRI.createVirtualRegister({SubVecRC, SubVecTy});
+  Register HighSubVec = MRI.createVirtualRegister({SubVecRC, SubVecTy});
+  buildVector(MRI, Helper, LowSubVec, Sources.slice(0, Sources.size() / 2));
+  buildVector(MRI, Helper, HighSubVec, Sources.slice(Sources.size() / 2));
+
+  if (VecSize >= 256) {
+    const unsigned Opc =
+        VecSize == 512 ? X86::VINSERTF64X4Zrri : X86::VINSERTF128rri;
+    const MachineRegisterInfo::VRegAttrs TmpAttrs = {
+        VecSize == 512 ? &X86::VR512RegClass : &X86::VR256RegClass, DstTy};
+    Register TmpUndef = MRI.createVirtualRegister(TmpAttrs);
+    Register TmpLow = MRI.createVirtualRegister(TmpAttrs);
+    MIRBuilder.buildUndef(TmpUndef);
+    MIRBuilder.buildInstr(Opc, {TmpLow},
+                          {TmpUndef, LowSubVec, SrcOp((uint64_t)0)});
+    MIRBuilder.buildInstr(Opc, {Dst}, {TmpLow, HighSubVec, SrcOp((uint64_t)1)});
+    return;
+  }
+  const unsigned Opc = VecSize == 128  ? X86::PUNPCKLQDQrr
+                       : VecSize == 64 ? X86::PUNPCKLDQrr
+                       : VecSize == 32 ? X86::PUNPCKLWDrr
+                                       : X86::PUNPCKLBWrr;
+  MIRBuilder.buildInstr(Opc, {Dst}, {LowSubVec, HighSubVec});
+}
+
+bool X86LegalizerInfo::legalizeBuildVector(MachineInstr &MI,
+                                           MachineRegisterInfo &MRI,
+                                           LegalizerHelper &Helper) const {
+  const auto &BuildVector = cast<GBuildVector>(MI);
+  Register Dst = BuildVector.getReg(0);
+
+  SmallVector<Register> Sources;
+  for (unsigned i = 0; i < BuildVector.getNumSources(); i++)
+    Sources.push_back(BuildVector.getSourceReg(i));
+  buildVector(MRI, Helper, Dst, Sources);
+  MI.removeFromParent();
   return true;
 }
 
