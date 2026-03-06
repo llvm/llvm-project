@@ -13080,7 +13080,7 @@ template <typename Derived>
 StmtResult TreeTransform<Derived>::TransformUnresolvedSYCLKernelCallStmt(
     UnresolvedSYCLKernelCallStmt *S) {
   auto *FD = cast<FunctionDecl>(SemaRef.CurContext);
-  const auto *SKEPAttr = FD->getAttr<SYCLKernelEntryPointAttr>();
+  const auto *SKEPAttr = FD->template getAttr<SYCLKernelEntryPointAttr>();
   if (!SKEPAttr || SKEPAttr->isInvalidAttr())
     return StmtError();
 
