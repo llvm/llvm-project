@@ -6,11 +6,15 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include <amdhsa_abi.h>
 #include <clc/opencl/opencl-base.h>
 
 _CLC_DEF _CLC_OVERLOAD size_t get_global_size(uint dim) {
-  __constant uint *ptr = (__constant uint *)__builtin_amdgcn_dispatch_ptr();
-  if (dim < 3)
-    return ptr[3 + dim];
-  return 1;
+  if (dim > 2)
+    return 1;
+  __constant amdhsa_implicit_kernarg_v5 *args =
+      (__constant amdhsa_implicit_kernarg_v5 *)
+          __builtin_amdgcn_implicitarg_ptr();
+  return args->block_count[dim] * (uint)args->group_size[dim] +
+         (uint)args->remainder[dim];
 }

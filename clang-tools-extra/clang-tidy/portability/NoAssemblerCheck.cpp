@@ -11,7 +11,7 @@
 
 using namespace clang::ast_matchers;
 
-namespace clang::tidy::hicpp {
+namespace clang::tidy::portability {
 
 void NoAssemblerCheck::registerMatchers(MatchFinder *Finder) {
   Finder->addMatcher(asmStmt().bind("asm-stmt"), this);
@@ -34,4 +34,4 @@ void NoAssemblerCheck::check(const MatchFinder::MatchResult &Result) {
   diag(ASMLocation, "do not use inline assembler in safety-critical code");
 }
 
-} // namespace clang::tidy::hicpp
+} // namespace clang::tidy::portability

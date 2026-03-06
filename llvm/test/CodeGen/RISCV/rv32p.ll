@@ -584,6 +584,37 @@ define i32 @shlsat_i32(i32 %a, i32 %b) {
  ret i32 %sshlsat
 }
 
+define i8 @shlsati_i8(i8 %a) {
+; CHECK-LABEL: shlsati_i8:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    slli a0, a0, 24
+; CHECK-NEXT:    sslai a0, a0, 5
+; CHECK-NEXT:    srai a0, a0, 24
+; CHECK-NEXT:    ret
+ %sshlsat = tail call i8 @llvm.sshl.sat.i8(i8 %a, i8 5)
+ ret i8 %sshlsat
+}
+
+define i16 @shlsati_i16(i16 %a) {
+; CHECK-LABEL: shlsati_i16:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    slli a0, a0, 16
+; CHECK-NEXT:    sslai a0, a0, 10
+; CHECK-NEXT:    srai a0, a0, 16
+; CHECK-NEXT:    ret
+ %sshlsat = tail call i16 @llvm.sshl.sat.i16(i16 %a, i16 10)
+ ret i16 %sshlsat
+}
+
+define i32 @shlsati_i32(i32 %a) {
+; CHECK-LABEL: shlsati_i32:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    sslai a0, a0, 21
+; CHECK-NEXT:    ret
+ %sshlsat = tail call i32 @llvm.sshl.sat.i32(i32 %a, i32 21)
+ ret i32 %sshlsat
+}
+
 define i8 @sadd_i8(i8 %x, i8 %y) {
 ; CHECK-LABEL: sadd_i8:
 ; CHECK:       # %bb.0:
