@@ -525,5 +525,5 @@ void v2i8_reg_count(char2 arg0, char2 arg1, char2 arg2, char2 arg3,
 void v2i8_reg_count_over(char2 arg0, char2 arg1, char2 arg2, char2 arg3,
                          char2 arg4, char2 arg5, int arg6, struct_4regs arg7) { }
 
-// CHECK: define{{.}} void @num_regs_left_64bit_aggregate(<4 x i32> noundef %arg0, <4 x i32> noundef %arg1, <4 x i32> noundef %arg2, <3 x i32> noundef %arg3, ptr addrspace(5) noundef readnone byref(%struct.struct_char_x8) align 1 captures(none) %{{.}}, i32 noundef %arg5)
+// CHECK: define{{.*}} void @num_regs_left_64bit_aggregate(<4 x i32> noundef %arg0, <4 x i32> noundef %arg1, <4 x i32> noundef %arg2, <3 x i32> noundef %arg3, ptr addrspace(5) noundef readnone byref(%struct.struct_char_x8) align 1 captures(none) %{{.*}}, i32 noundef %arg5)
 void num_regs_left_64bit_aggregate(int4 arg0, int4 arg1, int4 arg2, int3 arg3, struct_char_x8 arg4, int arg5) { }
