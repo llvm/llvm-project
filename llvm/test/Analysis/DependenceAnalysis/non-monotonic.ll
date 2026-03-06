@@ -28,10 +28,17 @@ define void @f(ptr %A) {
 ; CHECK-LABEL: 'f'
 ; CHECK-NEXT:  Monotonicity check:
 ; CHECK-NEXT:    Inst: store i8 1, ptr %idx.0, align 1
-; CHECK-NEXT:      Expr: {0,+,1}<nuw><nsw><%loop.header>
+; CHECK-NEXT:    Expr: {0,+,1}<nuw><nsw><%loop.header>
+; CHECK-NEXT:    Entire Domain:
+; CHECK-NEXT:      Monotonicity: MultivariateSignedMonotonic
+; CHECK-NEXT:    Effective Domain:
 ; CHECK-NEXT:      Monotonicity: MultivariateSignedMonotonic
 ; CHECK-NEXT:    Inst: store i8 2, ptr %idx.1, align 1
-; CHECK-NEXT:      Expr: {4611686018427387904,+,32}<%loop.header>
+; CHECK-NEXT:    Expr: {4611686018427387904,+,32}<%loop.header>
+; CHECK-NEXT:    Entire Domain:
+; CHECK-NEXT:      Monotonicity: Unknown
+; CHECK-NEXT:      Reason: {4611686018427387904,+,32}<%loop.header>
+; CHECK-NEXT:    Effective Domain:
 ; CHECK-NEXT:      Monotonicity: Unknown
 ; CHECK-NEXT:      Reason: {4611686018427387904,+,32}<%loop.header>
 ; CHECK-EMPTY:

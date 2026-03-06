@@ -8,7 +8,10 @@ define void @single_loop_invariant(ptr %a, i64 %x, i64 %n) {
 ; CHECK-LABEL: 'single_loop_invariant'
 ; CHECK-NEXT:  Monotonicity check:
 ; CHECK-NEXT:    Inst: store i8 0, ptr %idx, align 1
-; CHECK-NEXT:      Expr: %x
+; CHECK-NEXT:    Expr: %x
+; CHECK-NEXT:    Entire Domain:
+; CHECK-NEXT:      Monotonicity: Invariant
+; CHECK-NEXT:    Effective Domain:
 ; CHECK-NEXT:      Monotonicity: Invariant
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  Src: store i8 0, ptr %idx, align 1 --> Dst: store i8 0, ptr %idx, align 1
@@ -36,7 +39,11 @@ define void @single_loop_variant(ptr %a, i64 %x, i64 %y, i64 %n) {
 ; CHECK-LABEL: 'single_loop_variant'
 ; CHECK-NEXT:  Monotonicity check:
 ; CHECK-NEXT:    Inst: store i8 0, ptr %idx, align 1
-; CHECK-NEXT:      Expr: %offset
+; CHECK-NEXT:    Expr: %offset
+; CHECK-NEXT:    Entire Domain:
+; CHECK-NEXT:      Monotonicity: Unknown
+; CHECK-NEXT:      Reason: %offset
+; CHECK-NEXT:    Effective Domain:
 ; CHECK-NEXT:      Monotonicity: Unknown
 ; CHECK-NEXT:      Reason: %offset
 ; CHECK-EMPTY:
@@ -68,7 +75,10 @@ define void @invariant_plus_monotonic0(ptr %a, i64 %x, i64 %n, i64 %m) {
 ; CHECK-LABEL: 'invariant_plus_monotonic0'
 ; CHECK-NEXT:  Monotonicity check:
 ; CHECK-NEXT:    Inst: store i8 0, ptr %idx, align 1
-; CHECK-NEXT:      Expr: {%x,+,1}<nsw><%loop.i.header>
+; CHECK-NEXT:    Expr: {%x,+,1}<nsw><%loop.i.header>
+; CHECK-NEXT:    Entire Domain:
+; CHECK-NEXT:      Monotonicity: MultivariateSignedMonotonic
+; CHECK-NEXT:    Effective Domain:
 ; CHECK-NEXT:      Monotonicity: MultivariateSignedMonotonic
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  Src: store i8 0, ptr %idx, align 1 --> Dst: store i8 0, ptr %idx, align 1
@@ -112,7 +122,10 @@ define void @invariant_plus_monotonic1(ptr %a, i64 %x, i64 %n, i64 %m) {
 ; CHECK-LABEL: 'invariant_plus_monotonic1'
 ; CHECK-NEXT:  Monotonicity check:
 ; CHECK-NEXT:    Inst: store i8 0, ptr %idx, align 1
-; CHECK-NEXT:      Expr: {%x,+,1}<nsw><%loop.j>
+; CHECK-NEXT:    Expr: {%x,+,1}<nsw><%loop.j>
+; CHECK-NEXT:    Entire Domain:
+; CHECK-NEXT:      Monotonicity: MultivariateSignedMonotonic
+; CHECK-NEXT:    Effective Domain:
 ; CHECK-NEXT:      Monotonicity: MultivariateSignedMonotonic
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  Src: store i8 0, ptr %idx, align 1 --> Dst: store i8 0, ptr %idx, align 1
