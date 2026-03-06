@@ -59,7 +59,7 @@ void SPIRVInstPrinter::printOpConstantVarOps(const MCInst *MI,
       uint64_t Word = MI->getOperand(StartIndex + i).getImm();
       Val |= APInt(TotalBits, Word) << (i * 32);
     }
-    O << Val;
+    O << ' ' << Val;
     return;
   }
 
