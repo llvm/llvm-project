@@ -1422,13 +1422,13 @@ WebAssemblyTargetLowering::LowerCall(CallLoweringInfo &CLI,
     // Outgoing non-fixed arguments are placed in a buffer. First
     // compute their offsets and the total amount of buffer space needed.
     for (unsigned I = NumFixedArgs; I < Outs.size(); ++I) {
-      const ISD::OutputArg &Out = Outs[I];
       SDValue &Arg = OutVals[I];
       EVT VT = Arg.getValueType();
       assert(VT != MVT::iPTR && "Legalized args should be concrete");
       Type *Ty = VT.getTypeForEVT(*DAG.getContext());
       Align Alignment =
-          std::max(Out.Flags.getNonZeroOrigAlign(), Layout.getABITypeAlign(Ty));
+          std::max(Align(Subtarget->getTargetTriple().isArch64Bit() ? 8 : 4),
+                   Layout.getABITypeAlign(Ty));
       unsigned Offset =
           CCInfo.AllocateStack(Layout.getTypeAllocSize(Ty), Alignment);
       CCInfo.addLoc(CCValAssign::getMem(ArgLocs.size(), VT.getSimpleVT(),

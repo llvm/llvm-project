@@ -160,10 +160,11 @@ RValue WebAssemblyABIInfo::EmitVAArg(CodeGenFunction &CGF, Address VAListAddr,
   bool IsIndirect = isAggregateTypeForABI(Ty) &&
                     !isEmptyRecord(getContext(), Ty, true) &&
                     !isSingleElementStruct(Ty, getContext());
-  return emitVoidPtrVAArg(CGF, VAListAddr, Ty, IsIndirect,
-                          getContext().getTypeInfoInChars(Ty),
-                          CharUnits::fromQuantity(4),
-                          /*AllowHigherAlign=*/true, Slot);
+  return emitVoidPtrVAArg(
+      CGF, VAListAddr, Ty, IsIndirect, getContext().getTypeInfoInChars(Ty),
+      CharUnits::fromQuantity(
+          getContext().getTargetInfo().getTriple().isArch64Bit() ? 8 : 4),
+      /*AllowHigherAlign=*/true, Slot);
 }
 
 std::unique_ptr<TargetCodeGenInfo>
