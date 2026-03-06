@@ -34,7 +34,7 @@ int64_t test_vnegd_s64(int64_t a) {
 // CIR-LABEL: @vceqzd_s64
 uint64_t test_vceqzd_s64(int64_t a) {
 // CIR:   [[C_0:%.*]] = cir.const #cir.int<0>
-// CIR:   [[CMP:%.*]] = cir.cmp(eq, %{{.*}}, [[C_0]]) : !s64i, !cir.bool
+// CIR:   [[CMP:%.*]] = cir.cmp eq %{{.*}}, [[C_0]] : !s64i
 // CIR:   [[RES:%.*]] = cir.cast bool_to_int [[CMP]] : !cir.bool -> !cir.int<s, 1>
 // CIR:   cir.cast integral [[RES]] : !cir.int<s, 1> -> !u64i
 

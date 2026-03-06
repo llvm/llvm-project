@@ -2032,27 +2032,40 @@ def CIR_CmpOpKind : CIR_I32EnumAttr<"CmpOpKind", "compare operation kind", [
 ]>;
 
 def CIR_CmpOp : CIR_Op<"cmp", [Pure, SameTypeOperands]> {
-  let summary = "Compare values two values and produce a boolean result";
+  let summary = "Compare two values and produce a boolean result";
   let description = [{
-    `cir.cmp` compares two input operands of the same type and produces a
-    `cir.bool` result. The kinds of comparison available are:
-    [lt,gt,ge,eq,ne]
+    The `cir.cmp` operation compares two operands of the same type and produces
+    a `!cir.bool` result. It supports integral, floating-point, and pointer
+    types.
+
+    The following comparison predicates are available:
+
+    - `lt`: less than
+    - `le`: less than or equal
+    - `gt`: greater than
+    - `ge`: greater than or equal
+    - `eq`: equal
+    - `ne`: not equal
+
+    For floating-point comparisons, the predicate follows C semantics (e.g.
+    NaN comparisons return false for all predicates except `ne`).
 
     ```mlir
-    %7 = cir.cmp(gt, %1, %2) : i32, !cir.bool
+    %0 = cir.cmp gt %1, %2 : !s32i
+    %1 = cir.cmp eq %a, %b : !cir.ptr<!u8i>
     ```
   }];
 
   let arguments = (ins
     CIR_CmpOpKind:$kind,
-    CIR_AnyType:$lhs,
-    CIR_AnyType:$rhs
+    CIR_ComparableType:$lhs,
+    CIR_ComparableType:$rhs
   );
 
   let results = (outs CIR_BoolType:$result);
 
   let assemblyFormat = [{
-    `(` $kind `,` $lhs `,` $rhs  `)` `:` type($lhs) `,` type($result) attr-dict
+    $kind $lhs `,` $rhs `:` type($lhs) attr-dict
   }];
 
   let isLLVMLoweringRecursive = true;

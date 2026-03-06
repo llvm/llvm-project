@@ -49,7 +49,7 @@ struct NoCopyConstruct {};
 // CHECK-NEXT: cir.store %[[LB_CAST]], %[[ITR]] : !u64i, !cir.ptr<!u64i>
 // CHECK-NEXT: cir.for : cond {
 // CHECK-NEXT: %[[ITR_LOAD:.*]] = cir.load %[[ITR]] : !cir.ptr<!u64i>, !u64i
-// CHECK-NEXT: %[[COND:.*]] = cir.cmp(lt, %[[ITR_LOAD]], %[[UB_CAST]]) : !u64i, !cir.bool
+// CHECK-NEXT: %[[COND:.*]] = cir.cmp lt %[[ITR_LOAD]], %[[UB_CAST]] : !u64i
 // CHECK-NEXT: cir.condition(%[[COND]])
 // CHECK-NEXT: } body {
 // CHECK-NEXT: %[[ITR_LOAD:.*]] = cir.load %[[ITR]] : !cir.ptr<!u64i>, !u64i
@@ -85,7 +85,7 @@ struct NoCopyConstruct {};
 // CHECK-NEXT: cir.store %[[LB_CAST]], %[[ITR]] : !u64i, !cir.ptr<!u64i>
 // CHECK-NEXT: cir.for : cond {
 // CHECK-NEXT: %[[ITR_LOAD:.*]] = cir.load %[[ITR]] : !cir.ptr<!u64i>, !u64i
-// CHECK-NEXT: %[[COND:.*]] = cir.cmp(lt, %[[ITR_LOAD]], %[[UB_CAST]]) : !u64i, !cir.bool
+// CHECK-NEXT: %[[COND:.*]] = cir.cmp lt %[[ITR_LOAD]], %[[UB_CAST]] : !u64i
 // CHECK-NEXT: cir.condition(%[[COND]])
 // CHECK-NEXT: } body {
 // CHECK-NEXT: %[[ITR_LOAD:.*]] = cir.load %[[ITR]] : !cir.ptr<!u64i>, !u64i
@@ -121,7 +121,7 @@ struct NoCopyConstruct {};
 // CHECK-NEXT: cir.store %[[LB_CAST]], %[[ITR]] : !u64i, !cir.ptr<!u64i>
 // CHECK-NEXT: cir.for : cond {
 // CHECK-NEXT: %[[ITR_LOAD:.*]] = cir.load %[[ITR]] : !cir.ptr<!u64i>, !u64i
-// CHECK-NEXT: %[[COND:.*]] = cir.cmp(lt, %[[ITR_LOAD]], %[[UB_CAST]]) : !u64i, !cir.bool
+// CHECK-NEXT: %[[COND:.*]] = cir.cmp lt %[[ITR_LOAD]], %[[UB_CAST]] : !u64i
 // CHECK-NEXT: cir.condition(%[[COND]])
 // CHECK-NEXT: } body {
 // CHECK-NEXT: %[[ITR_LOAD:.*]] = cir.load %[[ITR]] : !cir.ptr<!u64i>, !u64i

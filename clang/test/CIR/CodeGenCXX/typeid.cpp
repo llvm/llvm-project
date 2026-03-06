@@ -72,7 +72,7 @@ const char *f(void *arg) {
     // CIR: %[[ARG_VALUE:.*]] = cir.load{{.*}}%[[ARG]] : !cir.ptr<!cir.ptr<!void>>, !cir.ptr<!void>
     // CIR-NEXT: %[[ARG_CAST:.*]] = cir.cast bitcast %[[ARG_VALUE]] : !cir.ptr<!void> -> !cir.ptr<!rec_Test13A3AA>
     // CIR-NEXT: %[[NULL:.*]] = cir.const #cir.ptr<null> : !cir.ptr<!rec_Test13A3AA>
-    // CIR-NEXT: %[[CMP:.*]] = cir.cmp(eq, %[[ARG_CAST]], %[[NULL]])
+    // CIR-NEXT: %[[CMP:.*]] = cir.cmp eq %[[ARG_CAST]], %[[NULL]]
     // CIR-NEXT: cir.if %[[CMP]] {
     // CIR-NEXT: cir.call @__cxa_bad_typeid() {noreturn} : () -> ()
     // CIR-NEXT: cir.unreachable

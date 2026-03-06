@@ -39,7 +39,7 @@ void test_cleanup_array() {
 // CIR:     cir.yield
 // CIR:   } while {
 // CIR:     %[[CURRENT2:.*]] = cir.load %[[ITER]] : !cir.ptr<!cir.ptr<!rec_S>>, !cir.ptr<!rec_S>
-// CIR:     %[[CMP:.*]] = cir.cmp(ne, %[[CURRENT2]], %[[DECAY]])
+// CIR:     %[[CMP:.*]] = cir.cmp ne %[[CURRENT2]], %[[DECAY]]
 // CIR:     cir.condition(%[[CMP]])
 // CIR:   }
 // CIR:   cir.return
@@ -134,7 +134,7 @@ void multi_dimensional() {
 // CIR:         cir.yield
 // CIR:       } while {
 // CIR:         %[[CHK:.*]] = cir.load %[[ITER]] : !cir.ptr<!cir.ptr<!rec_S>>, !cir.ptr<!rec_S>
-// CIR:         %[[CMP:.*]] = cir.cmp(ne, %[[CHK]], %[[DECAY]])
+// CIR:         %[[CMP:.*]] = cir.cmp ne %[[CHK]], %[[DECAY]]
 // CIR:         cir.condition(%[[CMP]])
 // CIR:       }
 // CIR:       cir.return
