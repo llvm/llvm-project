@@ -152,8 +152,12 @@ static LinalgOp replaceWithMatmulVariant(RewriterBase &rewriter, GenericOp op,
 
   // Set the original generic's maps to preserve operand indexing semantics like
   // transposition.
+  SmallVector<Attribute, 3> indexingMapsAttrVal =
+      llvm::map_to_vector(indexingMaps, [](AffineMap map) -> Attribute {
+        return AffineMapAttr::get(map);
+      });
   auto indexingMapsAttr = rewriter.getNamedAttr(
-      "indexing_maps", rewriter.getArrayAttr(indexingMaps));
+      "indexing_maps", rewriter.getArrayAttr(indexingMapsAttrVal));
   attributes.push_back(indexingMapsAttr);
 
   LinalgOp namedOp = rewriter.replaceOpWithNewOp<NamedOpTy>(
