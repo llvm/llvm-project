@@ -422,8 +422,7 @@ define <2 x i16> @test_pli_h() {
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    pli.h a0, 42
 ; CHECK-NEXT:    ret
-  %res = add <2 x i16> <i16 42, i16 42>, <i16 0, i16 0>
-  ret <2 x i16> %res
+  ret <2 x i16> splat (i16 42)
 }
 
 define <2 x i16> @test_pli_h_negative() {
@@ -431,8 +430,7 @@ define <2 x i16> @test_pli_h_negative() {
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    pli.h a0, -5
 ; CHECK-NEXT:    ret
-  %res = add <2 x i16> <i16 -5, i16 -5>, <i16 0, i16 0>
-  ret <2 x i16> %res
+  ret <2 x i16> splat (i16 -5)
 }
 
 ; Test PLI for v4i8 with unsigned immediate
@@ -441,8 +439,15 @@ define <4 x i8> @test_pli_b() {
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    pli.b a0, 32
 ; CHECK-NEXT:    ret
-  %res = add <4 x i8> <i8 32, i8 32, i8 32, i8 32>, <i8 0, i8 0, i8 0, i8 0>
-  ret <4 x i8> %res
+  ret <4 x i8> splat (i8 32)
+}
+
+define <2 x i16> @test_pli_b_v2i16() {
+; CHECK-LABEL: test_pli_b_v2i16:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    pli.b a0, 32
+; CHECK-NEXT:    ret
+  ret <2 x i16> splat (i16 u0x2020)
 }
 
 define <4 x i8> @test_pli_b_negative() {
@@ -450,8 +455,31 @@ define <4 x i8> @test_pli_b_negative() {
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    pli.b a0, -2
 ; CHECK-NEXT:    ret
-  %res = add <4 x i8> <i8 -2, i8 -2, i8 -2, i8 -2>, <i8 0, i8 0, i8 0, i8 0>
-  ret <4 x i8> %res
+  ret <4 x i8> splat (i8 -2)
+}
+
+define <2 x i16> @test_pli_b_negative_v2i16() {
+; CHECK-LABEL: test_pli_b_negative_v2i16:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    pli.b a0, -2
+; CHECK-NEXT:    ret
+  ret <2 x i16> splat (i16 u0xfefe)
+}
+
+define <2 x i16> @test_plui_h() {
+; CHECK-LABEL: test_plui_h:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    plui.h a0, 218
+; CHECK-NEXT:    ret
+  ret <2 x i16> splat (i16 u0x3680)
+}
+
+define <2 x i16> @test_plui_h_negative() {
+; CHECK-LABEL: test_plui_h_negative:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    plui.h a0, -295
+; CHECK-NEXT:    ret
+  ret <2 x i16> splat (i16 u0xb640)
 }
 
 define i16 @test_extract_vector_16(<2 x i16> %a) {
@@ -642,6 +670,23 @@ define <2 x i16> @test_psslai_h(<2 x i16> %a) {
 ; CHECK-NEXT:    ret
   %res = call <2 x i16> @llvm.sshl.sat.v2i16(<2 x i16> %a, <2 x i16> splat(i16 2))
   ret <2 x i16> %res
+}
+
+; Test arithmetic saturation shift left immediate for v4i8
+define <4 x i8> @test_psslai_b(<4 x i8> %a) {
+; CHECK-LABEL: test_psslai_b:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    pmslt.b a1, a0, zero
+; CHECK-NEXT:    pli.b a2, -128
+; CHECK-NEXT:    pli.b a3, 127
+; CHECK-NEXT:    merge a1, a3, a2
+; CHECK-NEXT:    pslli.b a2, a0, 2
+; CHECK-NEXT:    psrai.b a3, a2, 2
+; CHECK-NEXT:    pmseq.b a0, a0, a3
+; CHECK-NEXT:    merge a0, a1, a2
+; CHECK-NEXT:    ret
+  %res = call <4 x i8> @llvm.sshl.sat.v4i8(<4 x i8> %a, <4 x i8> splat(i8 2))
+  ret <4 x i8> %res
 }
 
 ; Test logical shift right immediate
@@ -1699,10 +1744,10 @@ define <2 x i16> @test_select_v2i16(i1 %cond, <2 x i16> %a, <2 x i16> %b) {
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    andi a3, a0, 1
 ; CHECK-NEXT:    mv a0, a1
-; CHECK-NEXT:    bnez a3, .LBB119_2
+; CHECK-NEXT:    bnez a3, .LBB124_2
 ; CHECK-NEXT:  # %bb.1:
 ; CHECK-NEXT:    mv a0, a2
-; CHECK-NEXT:  .LBB119_2:
+; CHECK-NEXT:  .LBB124_2:
 ; CHECK-NEXT:    ret
   %res = select i1 %cond, <2 x i16> %a, <2 x i16> %b
   ret <2 x i16> %res
@@ -1713,10 +1758,10 @@ define <4 x i8> @test_select_v4i8(i1 %cond, <4 x i8> %a, <4 x i8> %b) {
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    andi a3, a0, 1
 ; CHECK-NEXT:    mv a0, a1
-; CHECK-NEXT:    bnez a3, .LBB120_2
+; CHECK-NEXT:    bnez a3, .LBB125_2
 ; CHECK-NEXT:  # %bb.1:
 ; CHECK-NEXT:    mv a0, a2
-; CHECK-NEXT:  .LBB120_2:
+; CHECK-NEXT:  .LBB125_2:
 ; CHECK-NEXT:    ret
   %res = select i1 %cond, <4 x i8> %a, <4 x i8> %b
   ret <4 x i8> %res

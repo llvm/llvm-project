@@ -330,10 +330,10 @@ define signext i32 @sadu_2block_16xi8_as_i32(ptr %a, ptr %b, i32 signext %stride
 ; ZVABD-NEXT:    vabd.vv v8, v14, v15
 ; ZVABD-NEXT:    vsetvli zero, zero, e16, m2, ta, ma
 ; ZVABD-NEXT:    vzext.vf2 v14, v8
-; ZVABD-NEXT:    vzext.vf2 v16, v18
-; ZVABD-NEXT:    vzext.vf2 v18, v20
+; ZVABD-NEXT:    vsext.vf2 v16, v18
+; ZVABD-NEXT:    vsext.vf2 v18, v20
 ; ZVABD-NEXT:    vwaddu.vv v8, v14, v12
-; ZVABD-NEXT:    vwabdau.vv v8, v18, v16
+; ZVABD-NEXT:    vwabda.vv v8, v18, v16
 ; ZVABD-NEXT:    vsetvli zero, zero, e32, m4, ta, ma
 ; ZVABD-NEXT:    vmv.s.x v12, zero
 ; ZVABD-NEXT:    vredsum.vs v8, v8, v12

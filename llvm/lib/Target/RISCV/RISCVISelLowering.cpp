@@ -25,6 +25,7 @@
 #include "llvm/Analysis/MemoryLocation.h"
 #include "llvm/Analysis/ValueTracking.h"
 #include "llvm/Analysis/VectorUtils.h"
+#include "llvm/CodeGen/ISDOpcodes.h"
 #include "llvm/CodeGen/MachineFrameInfo.h"
 #include "llvm/CodeGen/MachineFunction.h"
 #include "llvm/CodeGen/MachineInstrBuilder.h"
@@ -573,9 +574,13 @@ RISCVTargetLowering::RISCVTargetLowering(const TargetMachine &TM,
     setOperationAction(ISD::SADDSAT, VTs, Legal);
     setOperationAction(ISD::USUBSAT, VTs, Legal);
     setOperationAction(ISD::SSUBSAT, VTs, Legal);
-    setOperationAction(ISD::SSHLSAT, VTs, Legal);
     setOperationAction({ISD::AVGFLOORS, ISD::AVGFLOORU}, VTs, Legal);
-    setOperationAction({ISD::ABDS, ISD::ABDU}, VTs, Legal);
+    for (MVT VT : VTs) {
+      if (VT != MVT::v2i32)
+        setOperationAction({ISD::ABDS, ISD::ABDU}, VT, Legal);
+      if (VT.getVectorElementType() != MVT::i8)
+        setOperationAction(ISD::SSHLSAT, VT, Legal);
+    }
     setOperationAction(ISD::SPLAT_VECTOR, VTs, Legal);
     setOperationAction(ISD::BUILD_VECTOR, VTs, Legal);
     setOperationAction(ISD::SCALAR_TO_VECTOR, VTs, Legal);
@@ -1117,11 +1122,13 @@ RISCVTargetLowering::RISCVTargetLowering(const TargetMachine &TM,
         }
       }
 
-      if (Subtarget.hasStdExtZvbc() && Subtarget.hasVInstructionsI64()) {
-        // TODO: Support Zvbc32e.
-        if (VT.getVectorElementType() == MVT::i64)
+      if (VT.getVectorElementType() == MVT::i64) {
+        if (Subtarget.hasStdExtZvbc())
           setOperationAction({ISD::CLMUL, ISD::CLMULH}, VT, Legal);
-        else {
+      } else {
+        if (Subtarget.hasStdExtZvbc32e()) {
+          setOperationAction({ISD::CLMUL, ISD::CLMULH}, VT, Legal);
+        } else if (Subtarget.hasStdExtZvbc()) {
           // Promote to i64 if the lmul is small enough.
           // FIXME: Split if necessary to widen.
           // FIXME: Promote clmulh directly without legalizing to clmul first.
@@ -2714,7 +2721,6 @@ bool RISCVTargetLowering::isExtractSubvectorCheap(EVT ResVT, EVT SrcVT,
   assert(EltVT == SrcVT.getVectorElementType() && "Should hold for node");
 
   // The smallest type we can slide is i8.
-  // TODO: We can extract index 0 from a mask vector without a slide.
   if (EltVT == MVT::i1)
     return false;
 
@@ -8853,14 +8859,27 @@ SDValue RISCVTargetLowering::LowerOperation(SDValue Op,
   case ISD::SRA:
     if (Op.getSimpleValueType().isFixedLengthVector()) {
       if (Subtarget.hasStdExtP()) {
-        // We have patterns for scalar/immediate shift amount, so no lowering
-        // needed.
-        if (Op.getOperand(1)->getOpcode() == ISD::SPLAT_VECTOR)
-          return Op;
-
         // There's no vector-vector version of shift instruction in P extension
         // so we need to unroll to scalar computation and pack them back.
-        return DAG.UnrollVectorOp(Op.getNode());
+        if (Op.getOperand(1)->getOpcode() != ISD::SPLAT_VECTOR)
+          return DAG.UnrollVectorOp(Op.getNode());
+
+        unsigned Opc;
+        switch (Op.getOpcode()) {
+        default:
+          llvm_unreachable("Unexpected opcode");
+        case ISD::SHL:
+          Opc = RISCVISD::PSHL;
+          break;
+        case ISD::SRL:
+          Opc = RISCVISD::PSRL;
+          break;
+        case ISD::SRA:
+          Opc = RISCVISD::PSRA;
+          break;
+        }
+        return DAG.getNode(Opc, SDLoc(Op), Op.getValueType(), Op.getOperand(0),
+                           Op.getOperand(1).getOperand(0));
       }
       return lowerToScalableOp(Op, DAG);
     }
@@ -19129,9 +19148,11 @@ static SDValue performVWABDACombine(SDNode *N, SelectionDAG &DAG,
 }
 
 // vwaddu_wv C (vabd A B) -> vwabda(A B C)
+// vwaddu_wv C (zext (vabd A B)) -> vwabda(A (sext B) (sext C))
 // vwaddu_wv C (vabdu A B) -> vwabdau(A B C)
-static SDValue performVWABDACombine_WV(SDNode *N, SelectionDAG &DAG,
-                                       const RISCVSubtarget &Subtarget) {
+// vwaddu_wv C (zext (vabdu A B)) -> vwabdau(A (zext B) (zext C))
+static SDValue performVWABDACombineWV(SDNode *N, SelectionDAG &DAG,
+                                      const RISCVSubtarget &Subtarget) {
   if (!Subtarget.hasStdExtZvabd())
     return SDValue();
 
@@ -19149,42 +19170,62 @@ static SDValue performVWABDACombine_WV(SDNode *N, SelectionDAG &DAG,
 
   SDValue Mask = N->getOperand(3);
   SDValue VL = N->getOperand(4);
-  bool HasZExt = 0;
-  MVT ExtVT = MVT::INVALID_SIMPLE_VALUE_TYPE;
-  auto IsABD = [&](SDValue Op) {
+  unsigned ExtOpc = 0;
+  MVT ExtVT;
+  auto GetDiff = [&](SDValue Op) {
     unsigned Opc = Op.getOpcode();
-    if (Opc != ISD::ABDS && Opc != ISD::ABDU) {
-      if (Opc == RISCVISD::VZEXT_VL) {
-        SDValue Src = Op->getOperand(0);
-        if (Src->getOpcode() == RISCVISD::ABDS_VL ||
-            Src->getOpcode() == RISCVISD::ABDU_VL) {
-          HasZExt = true;
-          ExtVT = Op->getSimpleValueType(0);
-          return Src;
-        }
+    if (Opc == RISCVISD::VZEXT_VL) {
+      SDValue Src = Op->getOperand(0);
+      unsigned SrcOpc = Src.getOpcode();
+      switch (SrcOpc) {
+      default:
+        return SDValue();
+      case ISD::ABDS:
+      case RISCVISD::ABDS_VL:
+        ExtOpc = RISCVISD::VSEXT_VL;
+        break;
+      case ISD::ABDU:
+      case RISCVISD::ABDU_VL:
+        ExtOpc = RISCVISD::VZEXT_VL;
+        break;
       }
-      return SDValue();
+      ExtVT = Op->getSimpleValueType(0);
+      return Src;
     }
+
+    if (Opc != ISD::ABDS && Opc != ISD::ABDU && Opc != RISCVISD::ABDS_VL &&
+        Opc != RISCVISD::ABDU_VL)
+      return SDValue();
     return Op;
   };
 
-  SDValue Diff = IsABD(Op0);
-  Diff = Diff ? Diff : IsABD(Op1);
+  auto ExtractOps = [&](SDValue Op0,
+                        SDValue Op1) -> std::pair<SDValue, SDValue> {
+    SDValue Diff = GetDiff(Op0);
+    if (Diff)
+      return {Op1, Diff};
+    Diff = GetDiff(Op1);
+    if (Diff)
+      return {Op0, Diff};
+    return {};
+  };
+
+  auto [Acc, Diff] = ExtractOps(Op0, Op1);
   if (!Diff)
     return SDValue();
-  SDValue Acc = Diff == Op0 ? Op1 : Op0;
 
   SDLoc DL(N);
   SDValue DiffA = Diff.getOperand(0);
   SDValue DiffB = Diff.getOperand(1);
-  if (HasZExt) {
-    DiffA = DAG.getNode(RISCVISD::VZEXT_VL, DL, ExtVT, DiffA, Mask, VL);
-    DiffB = DAG.getNode(RISCVISD::VZEXT_VL, DL, ExtVT, DiffB, Mask, VL);
+  if (ExtOpc) {
+    DiffA = DAG.getNode(ExtOpc, DL, ExtVT, DiffA, Mask, VL);
+    DiffB = DAG.getNode(ExtOpc, DL, ExtVT, DiffB, Mask, VL);
   }
-  SDValue Result =
-      DAG.getNode(Diff.getOpcode() == ISD::ABDS ? RISCVISD::VWABDA_VL
-                                                : RISCVISD::VWABDAU_VL,
-                  DL, VT, DiffA, DiffB, Acc, Mask, VL);
+  SDValue Result = DAG.getNode(Diff.getOpcode() == ISD::ABDS ||
+                                       Diff.getOpcode() == RISCVISD::ABDS_VL
+                                   ? RISCVISD::VWABDA_VL
+                                   : RISCVISD::VWABDAU_VL,
+                               DL, VT, DiffA, DiffB, Acc, Mask, VL);
   return Result;
 }
 
@@ -22238,7 +22279,7 @@ SDValue RISCVTargetLowering::PerformDAGCombine(SDNode *N,
   case RISCVISD::VWADDU_VL:
     return performVWABDACombine(N, DAG, Subtarget);
   case RISCVISD::VWADDU_W_VL:
-    if (SDValue V = performVWABDACombine_WV(N, DAG, Subtarget))
+    if (SDValue V = performVWABDACombineWV(N, DAG, Subtarget))
       return V;
     [[fallthrough]];
   case RISCVISD::VWADD_W_VL:
@@ -25278,6 +25319,8 @@ RISCVTargetLowering::getRegForInlineAsmConstraint(const TargetRegisterInfo *TRI,
           return std::make_pair(0U, &RISCV::FPR16RegClass);
         if (Subtarget.hasStdExtZhinxmin())
           return std::make_pair(0U, &RISCV::GPRF16NoX0RegClass);
+      } else if (VT == MVT::bf16 && Subtarget.hasStdExtZfbfmin()) {
+        return std::make_pair(0U, &RISCV::FPR16RegClass);
       } else if (VT == MVT::f32) {
         if (Subtarget.hasStdExtF())
           return std::make_pair(0U, &RISCV::FPR32RegClass);
@@ -25375,6 +25418,8 @@ RISCVTargetLowering::getRegForInlineAsmConstraint(const TargetRegisterInfo *TRI,
         return std::make_pair(0U, &RISCV::FPR16CRegClass);
       if (Subtarget.hasStdExtZhinxmin())
         return std::make_pair(0U, &RISCV::GPRF16CRegClass);
+    } else if (VT == MVT::bf16 && Subtarget.hasStdExtZfbfmin()) {
+      return std::make_pair(0U, &RISCV::FPR16CRegClass);
     } else if (VT == MVT::f32) {
       if (Subtarget.hasStdExtF())
         return std::make_pair(0U, &RISCV::FPR32CRegClass);
