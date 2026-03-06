@@ -1549,8 +1549,9 @@ Sema::BuildCXXTypeConstructExpr(TypeSourceInfo *TInfo,
   DeducedType *Deduced = Ty->getContainedDeducedType();
   if (Deduced && !Deduced->isDeduced() &&
       isa<DeducedTemplateSpecializationType>(Deduced)) {
-    Ty = DeduceTemplateSpecializationFromInitializer(TInfo, Entity,
-                                                     Kind, Exprs);
+    TypeSourceInfo *TSI =
+        DeduceTemplateSpecializationFromInitializer(TInfo, Entity, Kind, Exprs);
+    Ty = TSI ? TSI->getType() : QualType();
     if (Ty.isNull())
       return ExprError();
     Entity = InitializedEntity::InitializeTemporary(TInfo, Ty);
@@ -2208,8 +2209,9 @@ ExprResult Sema::BuildCXXNew(SourceRange Range, bool UseGlobal,
 
     InitializedEntity Entity
       = InitializedEntity::InitializeNew(StartLoc, AllocType);
-    AllocType = DeduceTemplateSpecializationFromInitializer(
+    TypeSourceInfo *TSI = DeduceTemplateSpecializationFromInitializer(
         AllocTypeInfo, Entity, Kind, Exprs);
+    AllocType = TSI ? TSI->getType() : QualType();
     if (AllocType.isNull())
       return ExprError();
   } else if (Deduced && !Deduced->isDeduced()) {

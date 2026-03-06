@@ -13283,8 +13283,16 @@ QualType Sema::deduceVarTypeFromInitializer(VarDecl *VDecl,
         VDecl->getLocation(), DirectInit, Init);
     // FIXME: Initialization should not be taking a mutable list of inits.
     SmallVector<Expr *, 8> InitsCopy(DeduceInits);
-    return DeduceTemplateSpecializationFromInitializer(TSI, Entity, Kind,
-                                                       InitsCopy);
+    TypeSourceInfo *DeducedTSI = DeduceTemplateSpecializationFromInitializer(
+        TSI, Entity, Kind, InitsCopy);
+    if (DeducedTSI) {
+      // DeduceVariableDeclarationType will update the type from DeducedTSI.
+      // FIXME: Propagate TSI up, but it's difficult for DeduceAutoType.
+      // See https://github.com/llvm/llvm-project/issues/42259
+      VDecl->setTypeSourceInfo(DeducedTSI);
+      return DeducedTSI->getType();
+    }
+    return QualType();
   }
 
   if (DirectInit) {

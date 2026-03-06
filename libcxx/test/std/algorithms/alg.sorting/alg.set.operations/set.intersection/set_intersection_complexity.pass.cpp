@@ -89,9 +89,6 @@ struct counted_set_intersection_result {
   }
 };
 
-template <std::size_t ResultSize>
-counted_set_intersection_result(std::array<int, ResultSize>) -> counted_set_intersection_result<ResultSize>;
-
 template <template <class...> class InIterType1,
           template <class...>
           class InIterType2,
