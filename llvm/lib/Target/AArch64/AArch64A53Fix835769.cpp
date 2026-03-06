@@ -85,10 +85,10 @@ private:
   bool runOnBasicBlock(MachineBasicBlock &MBB);
 };
 
-class AArch64A53Fix835769 : public MachineFunctionPass {
+class AArch64A53Fix835769Legacy : public MachineFunctionPass {
 public:
   static char ID;
-  explicit AArch64A53Fix835769() : MachineFunctionPass(ID) {}
+  explicit AArch64A53Fix835769Legacy() : MachineFunctionPass(ID) {}
 
   bool runOnMachineFunction(MachineFunction &F) override;
 
@@ -105,16 +105,27 @@ public:
     MachineFunctionPass::getAnalysisUsage(AU);
   }
 };
-char AArch64A53Fix835769::ID = 0;
+char AArch64A53Fix835769Legacy::ID = 0;
 
 } // end anonymous namespace
 
-INITIALIZE_PASS(AArch64A53Fix835769, "aarch64-fix-cortex-a53-835769-pass",
+INITIALIZE_PASS(AArch64A53Fix835769Legacy, "aarch64-fix-cortex-a53-835769-pass",
                 "AArch64 fix for A53 erratum 835769", false, false)
 
 //===----------------------------------------------------------------------===//
 
-bool AArch64A53Fix835769::runOnMachineFunction(MachineFunction &F) {
+PreservedAnalyses
+AArch64A53Fix835769Pass::run(MachineFunction &MF,
+                             MachineFunctionAnalysisManager &MFAM) {
+  bool Changed = AArch64A53Fix835769Impl().run(MF);
+  if (!Changed)
+    return PreservedAnalyses::all();
+  PreservedAnalyses PA = getMachineFunctionPassPreservedAnalyses();
+  PA.preserveSet<CFGAnalyses>();
+  return PA;
+}
+
+bool AArch64A53Fix835769Legacy::runOnMachineFunction(MachineFunction &F) {
   return AArch64A53Fix835769Impl().run(F);
 }
 
@@ -248,6 +259,6 @@ AArch64A53Fix835769Impl::runOnBasicBlock(MachineBasicBlock &MBB) {
 
 // Factory function used by AArch64TargetMachine to add the pass to
 // the passmanager.
-FunctionPass *llvm::createAArch64A53Fix835769() {
-  return new AArch64A53Fix835769();
+FunctionPass *llvm::createAArch64A53Fix835769LegacyPass() {
+  return new AArch64A53Fix835769Legacy();
 }
