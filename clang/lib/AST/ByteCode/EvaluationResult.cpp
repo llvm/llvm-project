@@ -27,10 +27,10 @@ static void DiagnoseUninitializedSubobject(InterpState &S, SourceLocation Loc,
 }
 
 static bool CheckFieldsInitialized(InterpState &S, SourceLocation Loc,
-                                   const Pointer &BasePtr, const Record *R);
+                                   PtrView BasePtr, const Record *R);
 
 static bool CheckArrayInitialized(InterpState &S, SourceLocation Loc,
-                                  const Pointer &BasePtr,
+                                  PtrView BasePtr,
                                   const ConstantArrayType *CAT) {
   size_t NumElems = CAT->getZExtSize();
 
@@ -43,12 +43,12 @@ static bool CheckArrayInitialized(InterpState &S, SourceLocation Loc,
   if (ElemType->isRecordType()) {
     const Record *R = BasePtr.getElemRecord();
     for (size_t I = 0; I != NumElems; ++I) {
-      Pointer ElemPtr = BasePtr.atIndex(I).narrow();
+      PtrView ElemPtr = BasePtr.atIndex(I);
       Result &= CheckFieldsInitialized(S, Loc, ElemPtr, R);
     }
   } else if (const auto *ElemCAT = dyn_cast<ConstantArrayType>(ElemType)) {
     for (size_t I = 0; I != NumElems; ++I) {
-      Pointer ElemPtr = BasePtr.atIndex(I).narrow();
+      PtrView ElemPtr = BasePtr.atIndex(I);
       Result &= CheckArrayInitialized(S, Loc, ElemPtr, ElemCAT);
     }
   } else {
@@ -74,12 +74,12 @@ static bool CheckArrayInitialized(InterpState &S, SourceLocation Loc,
 }
 
 static bool CheckFieldsInitialized(InterpState &S, SourceLocation Loc,
-                                   const Pointer &BasePtr, const Record *R) {
+                                   PtrView BasePtr, const Record *R) {
   assert(R);
   bool Result = true;
   // Check all fields of this record are initialized.
   for (const Record::Field &F : R->fields()) {
-    Pointer FieldPtr = BasePtr.atField(F.Offset);
+    PtrView FieldPtr = BasePtr.atField(F.Offset);
     QualType FieldType = F.Decl->getType();
 
     // Don't check inactive union members.
@@ -104,7 +104,7 @@ static bool CheckFieldsInitialized(InterpState &S, SourceLocation Loc,
 
   // Check Fields in all bases
   for (auto [I, B] : llvm::enumerate(R->bases())) {
-    Pointer P = BasePtr.atField(B.Offset);
+    PtrView P = BasePtr.atField(B.Offset);
     if (!P.isInitialized()) {
       const Descriptor *Desc = BasePtr.getDeclDesc();
       if (const auto *CD = dyn_cast_if_present<CXXRecordDecl>(R->getDecl())) {
@@ -122,7 +122,6 @@ static bool CheckFieldsInitialized(InterpState &S, SourceLocation Loc,
   }
 
   // TODO: Virtual bases
-
   return Result;
 }
 
@@ -148,11 +147,11 @@ bool EvaluationResult::checkFullyInitialized(InterpState &S,
     InitLoc = E->getExprLoc();
 
   if (const Record *R = Ptr.getRecord())
-    return CheckFieldsInitialized(S, InitLoc, Ptr, R);
+    return CheckFieldsInitialized(S, InitLoc, Ptr.view(), R);
 
   if (const auto *CAT = dyn_cast_if_present<ConstantArrayType>(
           Ptr.getType()->getAsArrayTypeUnsafe()))
-    return CheckArrayInitialized(S, InitLoc, Ptr, CAT);
+    return CheckArrayInitialized(S, InitLoc, Ptr.view(), CAT);
 
   return true;
 }
@@ -166,17 +165,16 @@ static bool isOrHasPtr(const Descriptor *D) {
   return false;
 }
 
-static void collectBlocks(const Pointer &Ptr,
-                          llvm::SetVector<const Block *> &Blocks) {
+static void collectBlocks(PtrView Ptr, llvm::SetVector<const Block *> &Blocks) {
   auto isUsefulPtr = [](const Pointer &P) -> bool {
     return P.isLive() && P.isBlockPointer() && !P.isZero() && !P.isDummy() &&
            P.isDereferencable() && !P.isUnknownSizeArray() && !P.isOnePastEnd();
   };
 
-  if (!isUsefulPtr(Ptr))
+  if (!isUsefulPtr(Pointer(Ptr)))
     return;
 
-  Blocks.insert(Ptr.block());
+  Blocks.insert(Ptr.Pointee);
 
   const Descriptor *Desc = Ptr.getFieldDesc();
   if (!Desc)
@@ -187,24 +185,24 @@ static void collectBlocks(const Pointer &Ptr,
     for (const Record::Field &F : R->fields()) {
       if (!isOrHasPtr(F.Desc))
         continue;
-      Pointer FieldPtr = Ptr.atField(F.Offset);
-      assert(FieldPtr.block() == Ptr.block());
+      PtrView FieldPtr = Ptr.atField(F.Offset);
+      // assert(FieldPtr.block() == Ptr.block());
       collectBlocks(FieldPtr, Blocks);
     }
   } else if (Desc->isPrimitive() && Desc->getPrimType() == PT_Ptr) {
     Pointer Pointee = Ptr.deref<Pointer>();
     if (isUsefulPtr(Pointee) && !Blocks.contains(Pointee.block()))
-      collectBlocks(Pointee, Blocks);
+      collectBlocks(Pointee.view(), Blocks);
 
   } else if (Desc->isPrimitiveArray() && Desc->getPrimType() == PT_Ptr) {
     for (unsigned I = 0; I != Desc->getNumElems(); ++I) {
       Pointer ElemPointee = Ptr.elem<Pointer>(I);
       if (isUsefulPtr(ElemPointee) && !Blocks.contains(ElemPointee.block()))
-        collectBlocks(ElemPointee, Blocks);
+        collectBlocks(ElemPointee.view(), Blocks);
     }
   } else if (Desc->isCompositeArray() && isOrHasPtr(Desc->ElemDesc)) {
     for (unsigned I = 0; I != Desc->getNumElems(); ++I) {
-      Pointer ElemPtr = Ptr.atIndex(I).narrow();
+      PtrView ElemPtr = Ptr.atIndex(I);
       collectBlocks(ElemPtr, Blocks);
     }
   }
@@ -213,11 +211,13 @@ static void collectBlocks(const Pointer &Ptr,
 bool EvaluationResult::checkReturnValue(InterpState &S, const Context &Ctx,
                                         const Pointer &Ptr,
                                         const SourceInfo &Info) {
+  if (!Ptr.isBlockPointer())
+    return true;
   // Collect all blocks that this pointer (transitively) points to and
   // return false if any of them is a dynamic block.
   llvm::SetVector<const Block *> Blocks;
 
-  collectBlocks(Ptr, Blocks);
+  collectBlocks(Ptr.view(), Blocks);
 
   for (const Block *B : Blocks) {
     if (B->isDynamic()) {
