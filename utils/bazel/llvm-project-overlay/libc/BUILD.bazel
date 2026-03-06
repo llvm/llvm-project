@@ -5532,7 +5532,6 @@ libc_support_library(
     hdrs = ["src/__support/math/tanbf16.h"],
     deps = [
         ":__support_fputil_cast",
-        ":__support_fputil_except_value_utils",
         ":__support_fputil_fenv_impl",
         ":__support_fputil_fp_bits",
         ":__support_fputil_multiply_add",
