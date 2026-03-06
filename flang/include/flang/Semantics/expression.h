@@ -251,6 +251,7 @@ public:
   MaybeExpr Analyze(const parser::InitialDataTarget &);
   MaybeExpr Analyze(const parser::NullInit &);
   MaybeExpr Analyze(const parser::StmtFunctionStmt &);
+  MaybeExpr Analyze(const parser::AllocateShapeSpecArrayList &x);
 
   void Analyze(const parser::CallStmt &);
   const Assignment *Analyze(const parser::AssignmentStmt &);
@@ -501,6 +502,10 @@ public:
   }
   bool Pre(const parser::PointerObject &x) {
     AnalyzeAndNoteUses(x, /*isDefinition=*/true);
+    return false;
+  }
+  bool Pre(const parser::AllocateShapeSpecArrayList &x) {
+    exprAnalyzer_.Analyze(x);
     return false;
   }
   bool Pre(const parser::DataStmtObject &);

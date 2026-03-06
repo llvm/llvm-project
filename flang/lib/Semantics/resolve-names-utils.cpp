@@ -203,6 +203,7 @@ private:
   }
   void Analyze(const parser::AssumedShapeSpec &);
   void Analyze(const parser::ExplicitShapeSpec &);
+  void Analyze(const parser::ExplicitShapeBoundsSpec &);
   void Analyze(const parser::AssumedImpliedSpec &);
   void Analyze(const parser::DeferredShapeSpecList &);
   void Analyze(const parser::AssumedRankSpec &);
@@ -212,6 +213,7 @@ private:
   void MakeDeferred(int);
   Bound GetBound(const std::optional<parser::SpecificationExpr> &);
   Bound GetBound(const parser::SpecificationExpr &);
+  void checkExplicitShapeBoundsSpec(const parser::ExplicitShapeBoundsSpec &x);
 };
 
 ArraySpec AnalyzeArraySpec(
@@ -237,15 +239,79 @@ ArraySpec ArraySpecAnalyzer::Analyze(const parser::ComponentArraySpec &x) {
   CHECK(!arraySpec_.empty());
   return arraySpec_;
 }
+
+static bool shouldRewriteShapeSpecListToExplicitBounds(
+    SemanticsContext &context, const parser::ArraySpec &x) {
+  auto &explicitShapeSpecList{std::get<std::list<parser::ExplicitShapeSpec>>(
+      const_cast<parser::ArraySpec&>(x).u)};
+  
+  if (explicitShapeSpecList.size() != 1) {
+    return false;
+  }
+
+  auto &explicitShapeSpec{explicitShapeSpecList.front()};
+  const auto &upperBound{std::get<1>(explicitShapeSpec.t)};
+  const auto &lowerBoundOpt{std::get<0>(explicitShapeSpec.t)};
+  
+  bool foundArray{false};
+  
+  if (MaybeExpr analyzedExpr = AnalyzeExpr(context, upperBound.v.thing.thing.value());
+      analyzedExpr && (analyzedExpr->Rank() > 0)) {
+    foundArray = true;
+  }
+  
+  if (lowerBoundOpt) {
+    const auto &lowerBound{*lowerBoundOpt};
+    if (MaybeExpr analyzedExpr = AnalyzeExpr(context, lowerBound.v.thing.thing.value());
+        analyzedExpr && (analyzedExpr->Rank() > 0)) {
+      foundArray = true;
+    }
+  }
+  
+  return foundArray;
+}
+
+static void rewriteShapeSpecListToExplicitBounds(const parser::ArraySpec &x) {
+  auto &explicitShapeSpecList{std::get<std::list<parser::ExplicitShapeSpec>>(
+      const_cast<parser::ArraySpec&>(x).u)};
+  auto &mutableArraySpec{const_cast<parser::ArraySpec&>(x)};
+  auto &mutableExplicitShapeSpec{explicitShapeSpecList.front()};
+  
+  auto &mutableUpperBound{std::get<1>(mutableExplicitShapeSpec.t)};
+  parser::IntExpr upperIntExpr{std::move(mutableUpperBound.v.thing)};
+
+  auto &lowerBoundOpt{std::get<0>(mutableExplicitShapeSpec.t)};
+  std::optional<parser::IntExpr> lowerIntExpr;
+  if (lowerBoundOpt) {
+    auto &mutableLowerBound{std::get<0>(mutableExplicitShapeSpec.t)};
+    if(mutableLowerBound) {
+      lowerIntExpr = std::move(mutableLowerBound->v.thing);
+    }
+  }
+  
+  parser::ExplicitShapeBoundsSpec boundsSpec{
+    std::make_tuple(std::move(lowerIntExpr), std::move(upperIntExpr))};
+  mutableArraySpec.u = std::move(boundsSpec);
+
+  return;
+}
+
 ArraySpec ArraySpecAnalyzer::Analyze(const parser::ArraySpec &x) {
+  if(std::get_if<std::list<parser::ExplicitShapeSpec>>(&x.u) && 
+     shouldRewriteShapeSpecListToExplicitBounds(context_, x)) {
+    rewriteShapeSpecListToExplicitBounds(x);
+  }
   common::visit(common::visitors{
                     [&](const parser::AssumedSizeSpec &y) {
                       Analyze(
                           std::get<std::list<parser::ExplicitShapeSpec>>(y.t));
                       Analyze(std::get<parser::AssumedImpliedSpec>(y.t));
                     },
-                    [&](const parser::ImpliedShapeSpec &y) { Analyze(y.v); },
-                    [&](const auto &y) { Analyze(y); },
+                    [&](const parser::ImpliedShapeSpec &y) { 
+                      Analyze(y.v); },
+                    [&](const auto &y) { 
+                      Analyze(y); 
+                    },
                 },
       x.u);
   CHECK(!arraySpec_.empty());
@@ -279,6 +345,155 @@ void ArraySpecAnalyzer::Analyze(const parser::ExplicitShapeSpec &x) {
   MakeExplicit(std::get<std::optional<parser::SpecificationExpr>>(x.t),
       std::get<parser::SpecificationExpr>(x.t));
 }
+
+// All error paths push a dummy bound arraySpec_ to satisfy
+// CHECK(!arraySpec_.empty());
+// in ArraySpecAnalyzer::Analyze(const parser::ArraySpec &x).
+void ArraySpecAnalyzer::checkExplicitShapeBoundsSpec(const parser::ExplicitShapeBoundsSpec &x) {
+  const auto &lowerBoundOpt{std::get<0>(x.t)};
+  const auto &upperBound{std::get<1>(x.t)};
+
+  // Analyze and fold the upper bound expression
+  MaybeExpr ubExpr{AnalyzeExpr(context_, upperBound.thing)};
+  auto ubFolded{evaluate::Fold(context_.foldingContext(), std::move(*ubExpr))};
+  int ubRank{ubFolded.Rank()};
+
+  bool constError_{false};
+  bool rankError_{false};
+  if (!evaluate::IsActuallyConstant(ubFolded)) {
+    parser::CharBlock at{parser::FindSourceLocation(upperBound)};
+    context_.Say(at, 
+        "Array (upper) bound must be a constant expression"_err_en_US);
+    arraySpec_.push_back(ShapeSpec::MakeExplicit(Bound{1}));
+    constError_ = true;
+  }
+  if(ubRank > 1) {
+    parser::CharBlock at{parser::FindSourceLocation(upperBound)};
+    context_.Say(at,
+      "Integer array used as upper bounds in DECLARATION must be rank-1 but is rank-%d"_err_en_US, ubRank);
+    arraySpec_.push_back(ShapeSpec::MakeExplicit(Bound{1}));
+    rankError_ = true;
+  }
+
+
+  // Analyze and fold the lower bound expression if present
+  int lbRank{0};
+  std::optional<SomeExpr> lbFolded;
+  if (lowerBoundOpt) {
+    MaybeExpr lbExpr{AnalyzeExpr(context_, lowerBoundOpt->thing)};
+    if (lbExpr) {
+      lbFolded = evaluate::Fold(context_.foldingContext(), std::move(*lbExpr));
+      lbRank = lbFolded->Rank();
+      if (!evaluate::IsActuallyConstant(*lbFolded)) {
+        parser::CharBlock at{parser::FindSourceLocation(*lowerBoundOpt)};
+        context_.Say(at,
+            "Array (lower) bound must be a constant expression"_err_en_US);
+        arraySpec_.push_back(ShapeSpec::MakeExplicit(Bound{1}));
+        constError_ = true;
+      }
+      if(lbRank > 1) {
+        parser::CharBlock at{parser::FindSourceLocation(*lowerBoundOpt)};
+        context_.Say(at,
+          "Integer array used as lower bounds in DECLARATION must be rank-1 but is rank-%d"_err_en_US, lbRank);
+        arraySpec_.push_back(ShapeSpec::MakeExplicit(Bound{1}));
+        rankError_ = true;
+      }
+    }
+  }
+
+  if(constError_ || rankError_) return;
+
+  // if both lower and upper bounds are arrays, they must have the same
+  // number of elements
+  if (lbRank == 1 && ubRank == 1) {
+    auto lbShape{evaluate::GetShape(context_.foldingContext(), *lbFolded)};
+    auto ubShape{evaluate::GetShape(context_.foldingContext(), ubFolded)};
+    if (lbShape && ubShape) {
+      auto lbSize{evaluate::GetSize(*lbShape)};
+      auto ubSize{evaluate::GetSize(*ubShape)};
+      if (lbSize && ubSize) {
+        auto lbSizeFolded{evaluate::Fold(context_.foldingContext(), std::move(*lbSize))};
+        auto ubSizeFolded{evaluate::Fold(context_.foldingContext(), std::move(*ubSize))};
+        auto lbSizeVal{evaluate::ToInt64(lbSizeFolded)};
+        auto ubSizeVal{evaluate::ToInt64(ubSizeFolded)};
+        if (lbSizeVal && ubSizeVal && *lbSizeVal != *ubSizeVal) {
+          parser::CharBlock at{parser::FindSourceLocation(x)};
+            context_.Say(at, "DECLARATION bounds integer rank-1 arrays must have the same size; "
+                "lower bounds has %jd elements, upper bounds has %jd elements"_err_en_US,
+                static_cast<std::intmax_t>(*lbSizeVal), 
+                static_cast<std::intmax_t>(*ubSizeVal));
+          arraySpec_.push_back(ShapeSpec::MakeExplicit(Bound{1}));
+          return;
+        }
+      }
+    }
+  }
+}
+
+
+void ArraySpecAnalyzer::Analyze(const parser::ExplicitShapeBoundsSpec &x) {
+  checkExplicitShapeBoundsSpec(x);
+
+  const auto &lowerBoundOpt{std::get<0>(x.t)};
+  const auto &upperBound{std::get<1>(x.t)};
+
+  // Helper lambda to extract int64 values from a folded array expression
+  auto extractValues = [&](SomeExpr &folded) -> std::vector<std::int64_t> {
+    std::vector<std::int64_t> values;
+    if (auto scalar{evaluate::ToInt64(folded)}) {
+      values.push_back(*scalar);
+    } else if (const auto *someInt{
+                   evaluate::UnwrapExpr<evaluate::Expr<evaluate::SomeInteger>>(
+                       folded)}) {
+      common::visit(
+          [&](const auto &kindExpr) {
+            using T = std::decay_t<decltype(kindExpr)>;
+            if (const auto *constArray{
+                    evaluate::UnwrapExpr<evaluate::Constant<typename T::Result>>(
+                        kindExpr)}) {
+              for (auto it{constArray->values().begin()};
+                   it != constArray->values().end(); ++it) {
+                values.push_back(it->ToInt64());
+              }
+            }
+          },
+          someInt->u);
+    }
+    return values;
+  };
+
+  MaybeExpr ubArrayExpr{AnalyzeExpr(context_, upperBound.thing)};
+  if (!ubArrayExpr) {
+    return;
+  }
+  auto ubFolded{evaluate::Fold(context_.foldingContext(), std::move(*ubArrayExpr))};
+  auto ubValues{extractValues(ubFolded)};
+  if (ubValues.empty()) {
+    return;
+  }
+
+  std::vector<std::int64_t> lbValues;
+  if (lowerBoundOpt) {
+    MaybeExpr lbArrayExpr{AnalyzeExpr(context_, lowerBoundOpt->thing)};
+    if (lbArrayExpr) {
+      auto lbFolded{evaluate::Fold(context_.foldingContext(), std::move(*lbArrayExpr))};
+      lbValues = extractValues(lbFolded);
+    }
+  }
+
+  std::size_t numDims{std::max(ubValues.size(), lbValues.size())};
+  for (std::size_t i{0}; i < numDims; ++i) {
+    Bound lb{1};
+    if (!lbValues.empty()) {
+      std::size_t lbIdx{lbValues.size() == 1 ? 0 : i};
+      lb = Bound{common::Clone(evaluate::ExtentExpr{lbValues[lbIdx]})};
+    }
+    std::size_t ubIdx{ubValues.size() == 1 ? 0 : i};
+    Bound ub{common::Clone(evaluate::ExtentExpr{ubValues[ubIdx]})};
+    arraySpec_.push_back(ShapeSpec::MakeExplicit(std::move(lb), std::move(ub)));
+  }
+}
+
 void ArraySpecAnalyzer::Analyze(const parser::AssumedImpliedSpec &x) {
   MakeImplied(x.v);
 }

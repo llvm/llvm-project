@@ -4377,6 +4377,85 @@ MaybeExpr ExpressionAnalyzer::Analyze(const parser::PointerObject &x) {
   return ExprOrVariable(x, parser::FindSourceLocation(x));
 }
 
+// Everything comes in as an 
+// AllocateShapeSpecArrayList -> std::list<AllocateShapeSpec>
+// with the assumption that it's a misparse if there is a rank > 1 array in at least one of the 
+// bounds, and the original std::list<AllocateShapeSpec> is 1 element long. 
+// So correct the misparse by rewriting from std::list<AllocateShapeSpec> to AllocateShapeSpecArray.
+// This is necessary, otherwise semantic analysis will fail since AllocateShapeSpec contains
+// a BoundExpr which is just a ScalarIntExpr. We need to place the expression(s) in an
+// AllocateShapeSpecArray because that is typed as a pair of BoundsExpr, which is a
+// (more general) IntExpr. It will still cover the case of having a scalar broadcast
+// to a rank-1 integer array. 
+// Since we cannot clone nodes in a tree, we will handle both cases separately in Lower.
+// We will check that it is a rank-1 array as part of other error checks in 
+// check-allocate.cpp, so rewrite even if rank != 1.
+MaybeExpr ExpressionAnalyzer::Analyze(const parser::AllocateShapeSpecArrayList &x) {
+  auto &shapeSpecList{
+    std::get<std::list<parser::AllocateShapeSpec>>(x.u)};
+  if(shapeSpecList.size() == 0) {
+    return std::nullopt;
+  }
+
+  if(shapeSpecList.size() == 1) {
+    // Get upper bound - BoundExpr is Scalar<Integer<Indirection<Expr>>>
+    const auto &upperBound{std::get<1>(shapeSpecList.front().t)};
+    const auto &lowerBoundOpt = std::get<0>(shapeSpecList.front().t);
+    const auto *lowerBound = lowerBoundOpt ? &*lowerBoundOpt : nullptr;
+
+    bool foundArray{false};
+    // We want to rewrite as an AllocateShapeSpecArray even if 
+    // the element type is wrong (say a real instead of integer), so 
+    // analyze as an unwrapped Expr for its rank, then analyze as 
+    // an Integer<Indirection<Expr>>.
+    if(MaybeExpr analyzedExpr = Analyze(upperBound.thing.thing.value());
+       analyzedExpr && (analyzedExpr->Rank() > 0)) {
+      foundArray = true;
+      Analyze(upperBound.thing);  
+    } 
+    if(lowerBound) {
+      if(MaybeExpr analyzedExpr = Analyze(lowerBound->thing.thing.value());
+         analyzedExpr && analyzedExpr->Rank() > 0) {
+        foundArray = true;
+        Analyze(lowerBound->thing);
+      }
+    }
+    
+    if(foundArray) {
+      // Get the IntExpr from the upper bound (BoundExpr.thing is the IntExpr)
+      auto &mutableUpperBound{const_cast<parser::BoundExpr&>(upperBound)};
+      parser::IntExpr upperIntExpr{std::move(mutableUpperBound.thing)};
+      
+      // Handle optional lower bound
+      std::optional<parser::IntExpr> lowerIntExpr;
+      if(lowerBound) {
+        auto &mutableLowerBound{const_cast<parser::BoundExpr&>(*lowerBound)};
+        lowerIntExpr = std::move(mutableLowerBound.thing);
+      }
+      
+      // Create the AllocateShapeSpecArray and replace the variant
+      parser::AllocateShapeSpecArray boundsExpr{
+          std::make_tuple(std::move(lowerIntExpr), std::move(upperIntExpr))};
+      auto &mutableArrayList{const_cast<parser::AllocateShapeSpecArrayList&>(x)};
+      mutableArrayList.u = std::move(boundsExpr);
+
+      return std::nullopt;
+    }
+  }
+
+  // Analyze each AllocateShapeSpec, as a Scalar<Int<Expr>>
+  for(auto it = shapeSpecList.begin(); it != shapeSpecList.end(); ++it) {
+    const auto &upperBound{std::get<1>(it->t)};
+    Analyze(upperBound);
+    const auto &lowerBoundOpt{std::get<0>(it->t)};
+    if(lowerBoundOpt) {
+      Analyze(*lowerBoundOpt);
+    }
+  }
+
+  return std::nullopt;
+}
+
 Expr<SubscriptInteger> ExpressionAnalyzer::AnalyzeKindSelector(
     TypeCategory category,
     const std::optional<parser::KindSelector> &selector) {

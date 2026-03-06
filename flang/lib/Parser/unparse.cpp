@@ -571,6 +571,7 @@ public:
     common::visit(
         common::visitors{
             [&](const std::list<ExplicitShapeSpec> &y) { Walk(y, ","); },
+            [&](const ExplicitShapeBoundsSpec &y) { Walk(y); },
             [&](const std::list<AssumedShapeSpec> &y) { Walk(y, ","); },
             [&](const DeferredShapeSpecList &y) { Walk(y); },
             [&](const AssumedSizeSpec &y) { Walk(y); },
@@ -849,7 +850,7 @@ public:
   }
   void Unparse(const Allocation &x) { // R932
     Walk(std::get<AllocateObject>(x.t));
-    Walk("(", std::get<std::list<AllocateShapeSpec>>(x.t), ",", ")");
+    Walk("(", std::get<std::list<AllocateShapeSpec>>(std::get<AllocateShapeSpecArrayList>(x.t).u), ",", ")");
     Walk("[", std::get<std::optional<AllocateCoarraySpec>>(x.t), "]");
   }
   void Unparse(const AllocateShapeSpec &x) { // R934 & R938

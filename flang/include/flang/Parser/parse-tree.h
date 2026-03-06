@@ -1324,14 +1324,31 @@ WRAPPER_CLASS(ImpliedShapeSpec, std::list<AssumedImpliedSpec>);
 EMPTY_CLASS(AssumedRankSpec);
 
 // R815 array-spec ->
-//        explicit-shape-spec-list | assumed-shape-spec-list |
-//        deferred-shape-spec-list | assumed-size-spec | implied-shape-spec |
+//        explicit-shape-spec-list | explicit-shape-bounds-spec | 
+//        assumed-shape-spec-list | deferred-shape-spec-list | 
+//        assumed-size-spec | implied-shape-spec |
 //        implied-shape-or-assumed-size-spec | assumed-rank-spec
+using ExplicitBoundsExpr = IntExpr;
+
+struct ExplicitShapeBoundsSpec {
+  TUPLE_CLASS_BOILERPLATE(ExplicitShapeBoundsSpec);
+  std::tuple<
+    std::optional<ExplicitBoundsExpr>,
+    ExplicitBoundsExpr>
+  t;
+};
+
 struct ArraySpec {
   UNION_CLASS_BOILERPLATE(ArraySpec);
-  std::variant<std::list<ExplicitShapeSpec>, std::list<AssumedShapeSpec>,
-      DeferredShapeSpecList, AssumedSizeSpec, ImpliedShapeSpec, AssumedRankSpec>
-      u;
+  std::variant<
+    std::list<ExplicitShapeSpec>,
+    ExplicitShapeBoundsSpec,
+    std::list<AssumedShapeSpec>,
+    DeferredShapeSpecList, 
+    AssumedSizeSpec, 
+    ImpliedShapeSpec, 
+    AssumedRankSpec>
+  u;
 };
 
 // R826 intent-spec -> IN | OUT | INOUT
@@ -1905,6 +1922,10 @@ struct AllocateObject {
 // R936 upper-bound-expr -> scalar-int-expr
 using BoundExpr = ScalarIntExpr;
 
+// R937 lower-bounds-expr -> int-expr
+// R939 upper-bounds-expr -> int-expr
+using BoundsExpr = IntExpr;
+
 // R934 allocate-shape-spec -> [lower-bound-expr :] upper-bound-expr
 // R938 allocate-coshape-spec -> [lower-bound-expr :] upper-bound-expr
 struct AllocateShapeSpec {
@@ -1921,14 +1942,34 @@ struct AllocateCoarraySpec {
   std::tuple<std::list<AllocateCoshapeSpec>, std::optional<BoundExpr>> t;
 };
 
-// R932 allocation ->
+// R933 allocation ->
 //        allocate-object [( allocate-shape-spec-list )]
+//        [lbracket allocate-coarray-spec rbracket] |
+//        allocate-object ( [ lower-bounds-expr : ] upper-bounds-expr )
+//        [ lbracket allocate-coarray-spec rbracket ]
 //        [lbracket allocate-coarray-spec rbracket]
+struct AllocateShapeSpecArray {
+  TUPLE_CLASS_BOILERPLATE(AllocateShapeSpecArray);
+  std::tuple<
+    std::optional<BoundsExpr>, 
+    BoundsExpr> 
+  t;
+};
+
+struct AllocateShapeSpecArrayList {
+  UNION_CLASS_BOILERPLATE(AllocateShapeSpecArrayList);
+  std::variant<
+    std::list<AllocateShapeSpec>, 
+    AllocateShapeSpecArray> 
+  u;
+};
 struct Allocation {
   TUPLE_CLASS_BOILERPLATE(Allocation);
-  std::tuple<AllocateObject, std::list<AllocateShapeSpec>,
-      std::optional<AllocateCoarraySpec>>
-      t;
+  std::tuple<
+    AllocateObject, 
+    AllocateShapeSpecArrayList,
+    std::optional<AllocateCoarraySpec>>
+  t;
 };
 
 // R929 stat-variable -> scalar-int-variable
