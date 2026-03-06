@@ -184,14 +184,14 @@ LIBC_INLINE double asin_eval(double xsq) {
 // > prec = 200;
 // > display = hexadecimal;
 // > g = asin(x) / (pi * x);
-// > P = fpminimax(g, [|0, 2, 4, 6, 8, 10, 12, 14, 16, 18, 20|],
+// > P = fpminimax(g, [|0, 2, 4, 6, 8, 10, 12, 14, 16, 18, 20, 22|],
 // >              [|D...|], [0, 0.5]);
 // > for i from 0 to degree(P) do coeff(P, i);
 // > print("Error:", dirtyinfnorm(P - g, [1e-30; 0.25]));
-// Error: 0x1.45c281e1cf9b58p-50 ~= 2^−49.652
+// Error : 0x1.a53f84eafa3ea69bb81b6c52b3278872083fca2c757bd778acp-54 ~= 2^-54
 //
 // Non-zero coefficients (even powers only):
-LIBC_INLINE_VAR constexpr double ASINPI_COEFFS[13] = {
+LIBC_INLINE_VAR constexpr double ASINPI_COEFFS[12] = {
     0x1.45f306dc9c881p-2,  // x^0
     0x1.b2995e7b7e756p-5,  // x^2
     0x1.8723a1d12f828p-6,  // x^4
@@ -206,12 +206,40 @@ LIBC_INLINE_VAR constexpr double ASINPI_COEFFS[13] = {
     0x1.4b50c2eb13708p-7   // x^22
 };
 
-// Evaluates P1(v2) = c1 + c2*v2 + c3*v2^2 + ... (tail of P without c0)
+// Evaluates P1(v2) = c1 + c2*v2 + c3*v2^2 + ... + c12*v2^11 (tail of P
+// without c0) using Estrin's scheme for instruction-level parallelism.
+//
+// The tail polynomial has 12 coefficients ASINPI_COEFFS[1..11] in powers of
+// v2:
+//   P1(v2) = c1 + c2*v2 + c3*v2^2 + c4*v2^3 + ... + c11*v2^10
+//
+// Estrin pairs them bottom-up:
+//   Level 0 (6 pairs, using v2):
+//     p0 = c1  + c2*v2       p1 = c3  + c4*v2
+//     p2 = c5  + c6*v2       p3 = c7  + c8*v2
+//     p4 = c9  + c10*v2      p5 = c11
+//   Level 1 (3 pairs, using v4):
+//     q0 = p0 + p1*v4        q1 = p2 + p3*v4
+//     q2 = p4 + p5*v4
+//   Level 2 (using v8):
+//     r0 = q0 + q1*v8        r1 = q2
+//     result = q0 + q1*v8 + q1*v16
 LIBC_INLINE double asinpi_eval(double v2) {
-  return fputil::polyeval(
-      v2, ASINPI_COEFFS[1], ASINPI_COEFFS[2], ASINPI_COEFFS[3],
-      ASINPI_COEFFS[4], ASINPI_COEFFS[5], ASINPI_COEFFS[6], ASINPI_COEFFS[7],
-      ASINPI_COEFFS[8], ASINPI_COEFFS[9], ASINPI_COEFFS[10], ASINPI_COEFFS[11]);
+  double v4 = v2 * v2;
+  double v8 = v4 * v4;
+
+  double p0 = fputil::multiply_add(v2, ASINPI_COEFFS[2], ASINPI_COEFFS[1]);
+  double p1 = fputil::multiply_add(v2, ASINPI_COEFFS[4], ASINPI_COEFFS[3]);
+  double p2 = fputil::multiply_add(v2, ASINPI_COEFFS[6], ASINPI_COEFFS[5]);
+  double p3 = fputil::multiply_add(v2, ASINPI_COEFFS[8], ASINPI_COEFFS[7]);
+  double p4 = fputil::multiply_add(v2, ASINPI_COEFFS[10], ASINPI_COEFFS[9]);
+  double p5 = ASINPI_COEFFS[11];
+
+  double q0 = fputil::multiply_add(v4, p1, p0);
+  double q1 = fputil::multiply_add(v4, p3, p2);
+  double q2 = fputil::multiply_add(v4, p5, p4);
+
+  return fputil::polyeval(v8, q0, q1, q2);
 }
 
 } // namespace inv_trigf_utils_internal

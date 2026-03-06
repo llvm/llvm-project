@@ -1490,8 +1490,7 @@ LValue CIRGenFunction::emitCastLValue(const CastExpr *e) {
     LValue lv = emitLValue(e->getSubExpr());
     // Propagate the volatile qualifier to LValue, if exists in e.
     if (e->changesVolatileQualification())
-      cgm.errorNYI(e->getSourceRange(),
-                   "emitCastLValue: NoOp changes volatile qual");
+      lv.getQuals() = e->getType().getQualifiers();
     if (lv.isSimple()) {
       Address v = lv.getAddress();
       if (v.isValid()) {
@@ -2820,4 +2819,8 @@ bool CIRGenFunction::isLValueSuitableForInlineAtomic(LValue lv) {
 
   cgm.errorNYI("LValueSuitableForInlineAtomic LangOpts MSVolatile");
   return false;
+}
+
+LValue CIRGenFunction::emitCXXTypeidLValue(const CXXTypeidExpr *e) {
+  return makeNaturalAlignAddrLValue(emitCXXTypeidExpr(e), e->getType());
 }
