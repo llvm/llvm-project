@@ -56,6 +56,7 @@ static constexpr unsigned GFX10_1 = 1;
 static constexpr unsigned GFX10_3 = 1;
 static constexpr unsigned GFX11 = 1;
 static constexpr unsigned GFX12 = 1;
+static constexpr unsigned GFX12_5 = 1;
 } // namespace GenericVersion
 
 enum { AMDHSA_COV4 = 4, AMDHSA_COV5 = 5, AMDHSA_COV6 = 6 };
@@ -216,9 +217,18 @@ public:
   void setTargetIDFromFeaturesString(StringRef FS);
   void setTargetIDFromTargetIDStream(StringRef TargetID);
 
+  /// Write string representation to \p OS
+  void print(raw_ostream &OS) const;
+
   /// \returns String representation of an object.
   std::string toString() const;
 };
+
+inline raw_ostream &operator<<(raw_ostream &OS,
+                               const AMDGPUTargetID &TargetID) {
+  TargetID.print(OS);
+  return OS;
+}
 
 /// \returns Wavefront size for given subtarget \p STI.
 unsigned getWavefrontSize(const MCSubtargetInfo *STI);
@@ -1111,7 +1121,7 @@ namespace AMDGPU {
 ///
 /// Large values (including the maximum possible integer) can be used to
 /// represent "don't care" waits.
-struct Waitcnt {
+class Waitcnt {
   unsigned LoadCnt = ~0u; // Corresponds to Vmcnt prior to gfx12.
   unsigned ExpCnt = ~0u;
   unsigned DsCnt = ~0u;     // Corresponds to LGKMcnt prior to gfx12.
@@ -1123,6 +1133,7 @@ struct Waitcnt {
   unsigned VaVdst = ~0u;    // gfx12+ expert scheduling mode only.
   unsigned VmVsrc = ~0u;    // gfx12+ expert scheduling mode only.
 
+public:
   unsigned get(InstCounterType T) const {
     switch (T) {
     case LOAD_CNT:
@@ -1638,13 +1649,18 @@ constexpr bool isChainCC(CallingConv::ID CC) {
 // the hardware. Module entry points include all entry functions but also
 // include functions that can be called from other functions inside or outside
 // the current module. Module entry functions are allowed to allocate LDS.
+//
+// AMDGPU_CS_Chain is intended for externally callable chain functions, so it is
+// treated as a module entrypoint. AMDGPU_CS_ChainPreserve is used for internal
+// helper functions (e.g. retry helpers), so it is not a module entrypoint.
 LLVM_READNONE
 constexpr bool isModuleEntryFunctionCC(CallingConv::ID CC) {
   switch (CC) {
   case CallingConv::AMDGPU_Gfx:
+  case CallingConv::AMDGPU_CS_Chain:
     return true;
   default:
-    return isEntryFunctionCC(CC) || isChainCC(CC);
+    return isEntryFunctionCC(CC);
   }
 }
 

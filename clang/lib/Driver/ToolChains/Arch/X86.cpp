@@ -9,10 +9,12 @@
 #include "X86.h"
 #include "clang/Driver/Driver.h"
 #include "clang/Options/Options.h"
+#include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/ADT/StringMap.h"
 #include "llvm/Option/ArgList.h"
 #include "llvm/TargetParser/Host.h"
+#include "llvm/TargetParser/X86TargetParser.h"
 
 using namespace clang::driver;
 using namespace clang::driver::tools;
@@ -149,6 +151,17 @@ void x86::getX86TargetFeatures(const Driver &D, const llvm::Triple &Triple,
   }
 
   const llvm::Triple::ArchType ArchType = Triple.getArch();
+  bool HasEGPR = false;
+
+  // -ffixed-r16 through -ffixed-r31 are only valid when the selected x86_64
+  // CPU enables APX EGPR by default; later -target-feature arguments still get
+  // their own validation when translated to backend features.
+  if (ArchType == llvm::Triple::x86_64) {
+    SmallVector<StringRef, 16> CPUFeatures;
+    llvm::X86::getFeaturesForCPU(getX86TargetCPU(D, Args, Triple), CPUFeatures);
+    HasEGPR = llvm::is_contained(CPUFeatures, "+egpr");
+  }
+
   // Add features to be compatible with gcc for Android.
   if (Triple.isAndroid()) {
     if (ArchType == llvm::Triple::x86_64) {
@@ -258,11 +271,13 @@ void x86::getX86TargetFeatures(const Driver &D, const llvm::Triple &Triple,
     if (A->getOption().matches(options::OPT_mapxf) ||
         A->getOption().matches(options::OPT_mno_apxf)) {
       if (IsNegative) {
+        HasEGPR = false;
         Features.insert(Features.end(),
                         {"-egpr", "-ndd", "-ccmp", "-nf", "-zu"});
         if (!Triple.isOSWindows())
           Features.insert(Features.end(), {"-push2pop2", "-ppx"});
       } else {
+        HasEGPR = true;
         Features.insert(Features.end(),
                         {"+egpr", "+ndd", "+ccmp", "+nf", "+zu"});
         if (!Triple.isOSWindows())
@@ -288,11 +303,17 @@ void x86::getX86TargetFeatures(const Driver &D, const llvm::Triple &Triple,
           D.Diag(clang::diag::err_drv_unsupported_option_argument)
               << A->getSpelling() << Value;
 
+        if (Value == "egpr")
+          HasEGPR = !IsNegative;
+
         Features.push_back(
             Args.MakeArgString((IsNegative ? "-" : "+") + Value));
       }
       continue;
     }
+
+    if (Name == "egpr")
+      HasEGPR = !IsNegative;
     Features.push_back(Args.MakeArgString((IsNegative ? "-" : "+") + Name));
   }
 
@@ -332,4 +353,43 @@ void x86::getX86TargetFeatures(const Driver &D, const llvm::Triple &Triple,
     if (A->getOption().matches(options::OPT_m3dnow))
       D.Diag(diag::warn_drv_clang_unsupported) << A->getAsString(Args);
   }
+
+  // Handle features corresponding to "-ffixed-X" options
+#define RESERVE_REG(REG)                                                       \
+  if (Args.hasArg(options::OPT_ffixed_##REG))                                  \
+    Features.push_back("+reserve-" #REG);
+  RESERVE_REG(r8)
+  RESERVE_REG(r9)
+  RESERVE_REG(r10)
+  RESERVE_REG(r11)
+  RESERVE_REG(r12)
+  RESERVE_REG(r13)
+  RESERVE_REG(r14)
+  RESERVE_REG(r15)
+#define RESERVE_EGPR(REG)                                                      \
+  if (Args.hasArg(options::OPT_ffixed_##REG)) {                                \
+    if (!HasEGPR)                                                              \
+      D.Diag(diag::err_drv_unsupported_opt_for_target)                         \
+          << "-ffixed-" #REG << Triple.getTriple();                            \
+    else                                                                       \
+      Features.push_back("+reserve-" #REG);                                    \
+  }
+  RESERVE_EGPR(r16)
+  RESERVE_EGPR(r17)
+  RESERVE_EGPR(r18)
+  RESERVE_EGPR(r19)
+  RESERVE_EGPR(r20)
+  RESERVE_EGPR(r21)
+  RESERVE_EGPR(r22)
+  RESERVE_EGPR(r23)
+  RESERVE_EGPR(r24)
+  RESERVE_EGPR(r25)
+  RESERVE_EGPR(r26)
+  RESERVE_EGPR(r27)
+  RESERVE_EGPR(r28)
+  RESERVE_EGPR(r29)
+  RESERVE_EGPR(r30)
+  RESERVE_EGPR(r31)
+#undef RESERVE_EGPR
+#undef RESERVE_REG
 }

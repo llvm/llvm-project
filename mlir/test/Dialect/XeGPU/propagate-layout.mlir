@@ -278,9 +278,9 @@ func.func @vector_bitcast_i16_to_f16(%arg0: memref<8x16xi16>, %arg1: memref<16x1
 // -----
 gpu.module @test {
 // CHECK-LABEL: func.func @vector_bitcast_i32_to_f16(
-// CHECK:      %[[LOAD:.*]] = xegpu.load_nd %{{.*}} <{layout = #xegpu.layout<lane_layout = [16, 1], lane_data = [1, 1]>}>
-// CHECK-SAME:     !xegpu.tensor_desc<16x8xi32, #xegpu.layout<lane_layout = [16, 1], lane_data = [1, 1]>> -> vector<16x8xi32>
-// CHECK-NEXT: %{{.*}} = vector.bitcast %[[LOAD]] {layout_result_0 = #xegpu.layout<lane_layout = [16, 1], lane_data = [1, 2]>}
+// CHECK:      %[[LOAD:.*]] = xegpu.load_nd %{{.*}} <{layout = #xegpu.layout<lane_layout = [16, 1], lane_data = [1, 1], order = [0, 1]>}>
+// CHECK-SAME:     !xegpu.tensor_desc<16x8xi32, #xegpu.layout<lane_layout = [16, 1], lane_data = [1, 1], order = [0, 1]>> -> vector<16x8xi32>
+// CHECK-NEXT: %{{.*}} = vector.bitcast %[[LOAD]] {layout_result_0 = #xegpu.layout<lane_layout = [16, 1], lane_data = [1, 2], order = [0, 1]>}
 // CHECK-SAME:     vector<16x8xi32> to vector<16x16xf16>
 func.func @vector_bitcast_i32_to_f16(%arg0: memref<8x16xf16>, %arg1: memref<16x8xi32>, %arg2: memref<8x16xf32>) {
   %c0 = arith.constant 0 : index
@@ -792,3 +792,17 @@ func.func @insert_strided_slice_lane_layout_with_packing(%arg0: memref<4x64xf16>
 }
 }
 
+// -----
+gpu.module @test{
+  // CHECK-LABEL: load_store_matrix
+  // CHECK: xegpu.load_matrix %{{.*}} <{layout = #xegpu.layout<lane_layout = [1, 1], lane_data = [1, 1]>}>
+  // CHECK: xegpu.store_matrix %{{.*}} <{layout = #xegpu.layout<lane_layout = [1, 1], lane_data = [1, 1]>}>
+  func.func @load_store_matrix(%arg0: !xegpu.mem_desc<64x128xf32>, %arg1: i1) {
+    %c0 = arith.constant 0 : index
+    scf.if %arg1 {
+      %0 = xegpu.load_matrix %arg0[%c0, %c0] : !xegpu.mem_desc<64x128xf32>, index, index -> vector<2x1xf32>
+      xegpu.store_matrix %0, %arg0[%c0, %c0] : vector<2x1xf32>, !xegpu.mem_desc<64x128xf32>, index, index
+    }
+    return
+  }
+}
