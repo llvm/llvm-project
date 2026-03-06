@@ -69,6 +69,16 @@ public:
                            std::shared_ptr<llvm::cas::ActionCache>>>
   getOrCreateDatabases() const;
 
+  /// Get a CAS & ActionCache defined by the options above. Ignores any cached
+  /// instances.
+  ///
+  /// If \p CreateEmptyDBsOnFailure, returns empty in-memory databases on
+  /// failure. Else, returns \c nullptr on failure.
+  std::pair<std::shared_ptr<llvm::cas::ObjectStore>,
+            std::shared_ptr<llvm::cas::ActionCache>>
+  createDatabases(DiagnosticsEngine &Diags,
+                  bool CreateEmptyDBsOnFailure = false) const;
+
   /// Freeze CAS Configuration. Future calls will return the same
   /// CAS instance, even if the configuration changes again later.
   ///
@@ -81,6 +91,10 @@ public:
   /// If the configuration is not for a persistent store, it modifies it to the
   /// default on-disk CAS, otherwise this is a noop.
   void ensurePersistentCAS();
+
+  /// Returns true if a CAS database instance has already been opened and
+  /// cached in this options object.
+  bool hasCachedDatabase() const { return static_cast<bool>(Cache.CAS); }
 
 private:
   /// Initialize Cached CAS and ActionCache.

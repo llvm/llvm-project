@@ -521,6 +521,13 @@ void dependencies::initializeScanCompilerInstance(
     IntrusiveRefCntPtr<llvm::vfs::FileSystem> FS,
     DiagnosticConsumer *DiagConsumer, DependencyScanningService &Service,
     IntrusiveRefCntPtr<DependencyScanningWorkerFilesystem> DepFS) {
+  // Pre-set the shared CAS databases on the scan instance so that code which
+  // calls getOrCreateObjectStore()/getOrCreateActionCache() before
+  // createVirtualFileSystem() gets the correct shared instance.
+  if (auto *IT =
+          std::get_if<IncludeTreeCompilation>(&Service.getOpts().Compilation))
+    ScanInstance.setCASDatabases(IT->CAS, IT->Cache);
+
   ScanInstance.setBuildingModule(false);
   ScanInstance.createVirtualFileSystem(FS, DiagConsumer);
   ScanInstance.createDiagnostics(DiagConsumer, /*ShouldOwnClient=*/false);

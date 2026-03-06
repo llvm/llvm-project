@@ -297,9 +297,8 @@ void CompilerInstance::createVirtualFileSystem(
   DiagnosticsEngine Diags(DiagnosticIDs::create(), DiagOpts, DC,
                           /*ShouldOwnClient=*/false);
 
-  std::tie(CAS, ActionCache) =
-      getInvocation().getCASOpts().getOrCreateDatabases(
-          Diags, /*CreateEmptyCASOnFailure=*/false);
+  // CAS is passed here so that if we have cached a CAS already it is shared.
+  // Otherwise, createBaseFS will handle it.
 
   VFS = createVFSFromCompilerInvocation(getInvocation(), Diags,
                                         std::move(BaseFS), CAS);
@@ -986,6 +985,16 @@ CompilerInstance::getOrCreateCASDatabases() {
   return {CAS, ActionCache};
 }
 
+void CompilerInstance::setCASDatabases(
+    std::shared_ptr<llvm::cas::ObjectStore> CAS,
+    std::shared_ptr<llvm::cas::ActionCache> ActionCache) {
+  assert((!this->CAS || this->CAS == CAS) && "modifying CompilerInstance CAS");
+  assert((!this->ActionCache || this->ActionCache == ActionCache) &&
+         "modifying CompilerInstance Cache");
+  this->CAS = std::move(CAS);
+  this->ActionCache = std::move(ActionCache);
+}
+
 llvm::cas::ObjectStore &CompilerInstance::getOrCreateObjectStore() {
   if (!CAS)
     getOrCreateCASDatabases();
@@ -1410,6 +1419,9 @@ std::unique_ptr<CompilerInstance> CompilerInstance::cloneForModuleCompileImpl(
   auto &Instance = *InstancePtr;
 
   auto &Inv = Instance.getInvocation();
+
+  if (CAS)
+    Instance.setCASDatabases(CAS, ActionCache);
 
   if (ThreadSafeConfig) {
     Instance.setVirtualFileSystem(ThreadSafeConfig->getVFS());

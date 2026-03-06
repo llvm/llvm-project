@@ -35,6 +35,23 @@ CASOptions::getOrCreateDatabases(DiagnosticsEngine &Diags,
   return {Cache.CAS, Cache.AC};
 }
 
+std::pair<std::shared_ptr<llvm::cas::ObjectStore>,
+          std::shared_ptr<llvm::cas::ActionCache>>
+CASOptions::createDatabases(DiagnosticsEngine &Diags,
+                            bool CreateEmptyDBsOnFailure) const {
+  auto DBs = CASConfiguration::createDatabases();
+  if (DBs)
+    return std::move(*DBs);
+
+  Diags.Report(diag::err_cas_cannot_be_initialized)
+      << toString(DBs.takeError());
+
+  if (CreateEmptyDBsOnFailure)
+    return {llvm::cas::createInMemoryCAS(),
+            llvm::cas::createInMemoryActionCache()};
+  return {nullptr, nullptr};
+}
+
 llvm::Expected<std::pair<std::shared_ptr<llvm::cas::ObjectStore>,
                          std::shared_ptr<llvm::cas::ActionCache>>>
 CASOptions::getOrCreateDatabases() const {
