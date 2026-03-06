@@ -99,15 +99,17 @@ static cl::opt<bool> testGeneratorMode(
 static cl::opt<Fortran::common::FPMaxminBehavior> fpMaxminBehavior(
     "ffp-maxmin-behavior",
     cl::desc("Control max/min and [max|min][loc|val] behavior "
-             "[legacy|portable|extremum|extremeNum] (for future pass use)"),
+             "[legacy|portable|extremum|extremenum] (for future pass use)"),
     cl::values(clEnumValN(Fortran::common::FPMaxminBehavior::Legacy, "legacy",
-                          "Legacy (current cmp+select)"),
+                          "cmp+select"),
                clEnumValN(Fortran::common::FPMaxminBehavior::Portable,
-                          "portable", "Portable"),
+                          "portable",
+                          "cmp+select and arith.max/minnumf when nnan and nsz "
+                          "fast math flags are enabled"),
                clEnumValN(Fortran::common::FPMaxminBehavior::Extremum,
-                          "extremum", "Extremum"),
+                          "extremum", "arith.max/minimum"),
                clEnumValN(Fortran::common::FPMaxminBehavior::ExtremeNum,
-                          "extremeNum", "ExtremeNum")),
+                          "extremenum", "arith.max/minnum")),
     cl::init(Fortran::common::FPMaxminBehavior::Legacy));
 
 #include "flang/Optimizer/Passes/CommandLineOpts.h"

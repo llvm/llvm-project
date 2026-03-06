@@ -6,7 +6,7 @@
 ! RUN: bbc -emit-hlfir -o - %s 2>&1 | FileCheck %s -check-prefix=LEGACY
 ! RUN: bbc -emit-hlfir -ffp-maxmin-behavior=legacy -o - %s 2>&1 | FileCheck %s -check-prefix=LEGACY
 ! RUN: bbc -emit-hlfir -ffp-maxmin-behavior=extremum -o - %s 2>&1 | FileCheck %s -check-prefix=EXTREMUM
-! RUN: bbc -emit-hlfir -ffp-maxmin-behavior=extremeNum -o - %s 2>&1 | FileCheck %s -check-prefix=EXTREMENUM
+! RUN: bbc -emit-hlfir -ffp-maxmin-behavior=extremenum -o - %s 2>&1 | FileCheck %s -check-prefix=EXTREMENUM
 
 ! flang -fc1: legacy, extremum, extremenum
 ! RUN: %flang_fc1 -emit-hlfir -o - %s 2>&1 | FileCheck %s -check-prefix=LEGACY

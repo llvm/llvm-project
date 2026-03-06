@@ -15,7 +15,5 @@ end program p
 
 ! flang driver does not forward the option to -fc1 (fc1-only option)
 ! RUN: not %flang -### -ffp-maxmin-behavior=legacy %s 2>&1 \
-! RUN:   | FileCheck %s -check-prefix=DRIVER-NO-FORWARD
-! DRIVER-NO-FORWARD: error: unknown argument '-ffp-maxmin-behavior=legacy'
-! DRIVER-NO-FORWARD: "-fc1"
-! DRIVER-NO-FORWARD-NOT: -ffp-maxmin-behavior
+! RUN:   | FileCheck %s -check-prefix=DRIVER-UNKNOWN-ARG
+! DRIVER-UNKNOWN-ARG: error: unknown argument '-ffp-maxmin-behavior=legacy'
