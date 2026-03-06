@@ -33,6 +33,7 @@
 #include "llvm/ADT/Twine.h"
 #include "llvm/Support/Allocator.h"
 #include "llvm/Support/Error.h"
+#include "llvm/Support/FileSystem.h"
 #include "llvm/Support/FormatVariadic.h"
 #include "llvm/Support/JSON.h"
 #include "llvm/Support/SHA1.h"
@@ -730,6 +731,10 @@ void ClangdLSPServer::onSync(const NoParams &, Callback<std::nullptr_t> Reply) {
 void ClangdLSPServer::onDocumentDidOpen(
     const DidOpenTextDocumentParams &Params) {
   PathRef File = Params.textDocument.uri.file();
+  if (llvm::sys::fs::is_directory(File)) {
+    elog("Ignoring didOpen for directory: {0}", File);
+    return;
+  }
 
   const std::string &Contents = Params.textDocument.text;
 
