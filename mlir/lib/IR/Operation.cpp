@@ -674,13 +674,18 @@ InFlightDiagnostic Operation::emitOpError(const Twine &message) {
 //===----------------------------------------------------------------------===//
 
 Operation::CloneOptions::CloneOptions()
-    : cloneRegionsFlag(false), cloneOperandsFlag(false) {}
+    : cloneRegionsFlag(false), cloneOperandsFlag(false),
+      resultTypes(std::nullopt) {}
 
-Operation::CloneOptions::CloneOptions(bool cloneRegions, bool cloneOperands)
-    : cloneRegionsFlag(cloneRegions), cloneOperandsFlag(cloneOperands) {}
+Operation::CloneOptions::CloneOptions(
+    bool cloneRegions, bool cloneOperands,
+    std::optional<SmallVector<Type>> resultTypes)
+    : cloneRegionsFlag(cloneRegions), cloneOperandsFlag(cloneOperands),
+      resultTypes(resultTypes) {}
 
 Operation::CloneOptions Operation::CloneOptions::all() {
-  return CloneOptions().cloneRegions().cloneOperands();
+  return CloneOptions().cloneRegions().cloneOperands().withResultTypes(
+      std::nullopt);
 }
 
 Operation::CloneOptions &Operation::CloneOptions::cloneRegions(bool enable) {
@@ -690,6 +695,12 @@ Operation::CloneOptions &Operation::CloneOptions::cloneRegions(bool enable) {
 
 Operation::CloneOptions &Operation::CloneOptions::cloneOperands(bool enable) {
   cloneOperandsFlag = enable;
+  return *this;
+}
+
+Operation::CloneOptions &Operation::CloneOptions::withResultTypes(
+    std::optional<SmallVector<Type>> resultTypes) {
+  this->resultTypes = std::move(resultTypes);
   return *this;
 }
 
@@ -711,7 +722,7 @@ Operation *Operation::cloneWithoutRegions() {
 /// them alone if no entry is present).  Replaces references to cloned
 /// sub-operations to the corresponding operation that is copied, and adds
 /// those mappings to the map.
-Operation *Operation::clone(IRMapping &mapper, CloneOptions options) {
+Operation *Operation::clone(IRMapping &mapper, const CloneOptions &options) {
   SmallVector<Value, 8> operands;
   SmallVector<Block *, 2> successors;
 
@@ -728,7 +739,8 @@ Operation *Operation::clone(IRMapping &mapper, CloneOptions options) {
     successors.push_back(mapper.lookupOrDefault(successor));
 
   // Create the new operation.
-  auto *newOp = create(getLoc(), getName(), getResultTypes(), operands, attrs,
+  auto *newOp = create(getLoc(), getName(),
+                       options.resultTypesOr(getResultTypes()), operands, attrs,
                        getPropertiesStorage(), successors, getNumRegions());
   mapper.map(this, newOp);
 
@@ -739,13 +751,14 @@ Operation *Operation::clone(IRMapping &mapper, CloneOptions options) {
   }
 
   // Remember the mapping of any results.
-  for (unsigned i = 0, e = getNumResults(); i != e; ++i)
-    mapper.map(getResult(i), newOp->getResult(i));
+  if (options.shouldCloneResults())
+    for (unsigned i = 0, e = getNumResults(); i != e; ++i)
+      mapper.map(getResult(i), newOp->getResult(i));
 
   return newOp;
 }
 
-Operation *Operation::clone(CloneOptions options) {
+Operation *Operation::clone(const CloneOptions &options) {
   IRMapping mapper;
   return clone(mapper, options);
 }

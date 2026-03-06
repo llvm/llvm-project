@@ -1,4 +1,4 @@
-from __future__ import absolute_import
+from __future__ import absolute_import, annotations
 import errno
 import io
 import itertools
@@ -12,9 +12,7 @@ import shlex
 import shutil
 import tempfile
 import threading
-import typing
 import traceback
-from typing import Optional, Tuple
 from io import StringIO
 
 from lit.ShCommands import GlobItem, Command
@@ -91,12 +89,13 @@ class ShellEnvironment(object):
     we maintain a dir stack for pushd/popd.
     """
 
-    def __init__(self, cwd, env, umask=-1, ulimit=None):
+    def __init__(self, cwd, env, umask=-1, ulimit=None, normalize_slashes=False):
         self.cwd = cwd
         self.env = dict(env)
         self.umask = umask
         self.dirStack = []
         self.ulimit = ulimit if ulimit else {}
+        self.normalize_slashes = normalize_slashes
 
     def change_dir(self, newdir):
         if os.path.isabs(newdir):
@@ -725,7 +724,7 @@ def processRedirects(cmd, stdin_source, cmd_shenv, opened_files):
     return std_fds
 
 
-def _expandLateSubstitutions(cmd, arguments, cwd):
+def _expandLateSubstitutions(cmd, arguments, cwd, normalize_slashes=False):
     for i, arg in enumerate(arguments):
         if not isinstance(arg, str):
             continue
@@ -734,6 +733,8 @@ def _expandLateSubstitutions(cmd, arguments, cwd):
             filePath = match.group(1)
             if not os.path.isabs(filePath):
                 filePath = os.path.join(cwd, filePath)
+            if normalize_slashes:
+                filePath = filePath.replace("\\", "/")
             try:
                 with open(filePath) as fileHandle:
                     return fileHandle.read()
@@ -817,7 +818,9 @@ def _executeShCmd(cmd, shenv, results, timeoutHelper):
         not_crash = False
 
         # Expand all late substitutions.
-        args = _expandLateSubstitutions(j, args, cmd_shenv.cwd)
+        args = _expandLateSubstitutions(
+            j, args, cmd_shenv.cwd, cmd_shenv.normalize_slashes
+        )
 
         while True:
             if args[0] == "env":
@@ -828,7 +831,12 @@ def _executeShCmd(cmd, shenv, results, timeoutHelper):
                 #   env FOO=1 llc < %s | env BAR=2 llvm-mc | FileCheck %s
                 #   env FOO=1 %{another_env_plus_cmd} | FileCheck %s
                 if cmd_shenv is shenv:
-                    cmd_shenv = ShellEnvironment(shenv.cwd, shenv.env, shenv.umask)
+                    cmd_shenv = ShellEnvironment(
+                        shenv.cwd,
+                        shenv.env,
+                        shenv.umask,
+                        normalize_slashes=shenv.normalize_slashes,
+                    )
                 args = updateEnv(cmd_shenv, args)
                 if not args:
                     # Return the environment variables if no argument is provided.
@@ -1190,8 +1198,9 @@ def formatOutput(title, data, limit=None):
 # from the script, and there is no execution trace.
 def executeScriptInternal(
     test, litConfig, tmpBase, commands, cwd, debug=True
-) -> Tuple[str, str, int, Optional[str]]:
+) -> tuple[str, str, int, str | None, str | None]:
     cmds = []
+    update_output = None
     for i, ln in enumerate(commands):
         # Within lit, we try to always add '%dbg(...)' to command lines in order
         # to maximize debuggability.  However, custom lit test formats might not
@@ -1226,7 +1235,10 @@ def executeScriptInternal(
 
     results = []
     timeoutInfo = None
-    shenv = ShellEnvironment(cwd, test.config.environment)
+    normalize_slashes = litConfig.params.get("use_normalized_slashes", False)
+    shenv = ShellEnvironment(
+        cwd, test.config.environment, normalize_slashes=normalize_slashes
+    )
     shenv.env["LIT_CURRENT_TESTCASE"] = test.getFullName()
 
     exitCode, timeoutInfo = executeShCmd(
@@ -1326,14 +1338,14 @@ def executeScriptInternal(
                     output += traceback.format_exc()
                     raise TestUpdaterException(output)
                 if update_output:
-                    for line in update_output.splitlines():
-                        out += f"# {line}\n"
                     break
 
-    return out, err, exitCode, timeoutInfo
+    return out, err, exitCode, timeoutInfo, update_output
 
 
-def executeScript(test, litConfig, tmpBase, commands, cwd):
+def executeScript(
+    test, litConfig, tmpBase, commands, cwd
+) -> tuple[str, str, int, str | None, str | None]:
     bashPath = litConfig.getBashPath()
     isWin32CMDEXE = litConfig.isWindows and not bashPath
     script = tmpBase + ".script"
@@ -1429,9 +1441,9 @@ def executeScript(test, litConfig, tmpBase, commands, cwd):
             env=env,
             timeout=litConfig.maxIndividualTestTime,
         )
-        return (out, err, exitCode, None)
+        return (out, err, exitCode, None, None)
     except lit.util.ExecuteCommandTimeoutException as e:
-        return (e.out, e.err, e.exitCode, e.msg)
+        return (e.out, e.err, e.exitCode, e.msg, None)
 
 
 def parseIntegratedTestScriptCommands(source_path, keywords):
@@ -1525,11 +1537,25 @@ def getDefaultSubstitutions(test, tmpDir, tmpBase, normalize_slashes=False):
     substitutions.append(("%{s:basename}", sourceBaseName))
     substitutions.append(("%{t:stem}", tmpBaseName))
 
+    fs_sep = os.path.sep
+    if normalize_slashes:
+        fs_sep = "/"
+
     substitutions.extend(
         [
-            ("%{fs-src-root}", pathlib.Path(sourcedir).anchor),
-            ("%{fs-tmp-root}", pathlib.Path(tmpBase).anchor),
-            ("%{fs-sep}", os.path.sep),
+            (
+                "%{fs-src-root}",
+                pathlib.Path(sourcedir).anchor.replace("\\", "/")
+                if normalize_slashes
+                else pathlib.Path(sourcedir).anchor,
+            ),
+            (
+                "%{fs-tmp-root}",
+                pathlib.Path(tmpBase).anchor.replace("\\", "/")
+                if normalize_slashes
+                else pathlib.Path(tmpBase).anchor,
+            ),
+            ("%{fs-sep}", fs_sep),
         ]
     )
 
@@ -2338,7 +2364,7 @@ def _runShTest(test, litConfig, useExternalSh, script, tmpBase) -> lit.Test.Resu
     # Always returns the tuple (out, err, exitCode, timeoutInfo, status).
     def runOnce(
         execdir,
-    ) -> Tuple[str, str, int, Optional[str], Test.ResultCode]:
+    ) -> tuple[str, str, int, str | None, Test.ResultCode, str | None]:
         # script is modified below (for litConfig.per_test_coverage, and for
         # %dbg expansions).  runOnce can be called multiple times, but applying
         # the modifications multiple times can corrupt script, so always modify
@@ -2374,9 +2400,9 @@ def _runShTest(test, litConfig, useExternalSh, script, tmpBase) -> lit.Test.Resu
                 )
         except ScriptFatal as e:
             out = f"# " + "\n# ".join(str(e).splitlines()) + "\n"
-            return out, "", 1, None, Test.UNRESOLVED
+            return out, "", 1, None, Test.UNRESOLVED, None
 
-        out, err, exitCode, timeoutInfo = res
+        out, err, exitCode, timeoutInfo, test_update_output = res
         if exitCode == 0:
             status = Test.PASS
         else:
@@ -2384,7 +2410,7 @@ def _runShTest(test, litConfig, useExternalSh, script, tmpBase) -> lit.Test.Resu
                 status = Test.FAIL
             else:
                 status = Test.TIMEOUT
-        return out, err, exitCode, timeoutInfo, status
+        return out, err, exitCode, timeoutInfo, status, test_update_output
 
     # Create the output directory if it does not already exist.
     pathlib.Path(tmpBase).parent.mkdir(parents=True, exist_ok=True)
@@ -2392,16 +2418,21 @@ def _runShTest(test, litConfig, useExternalSh, script, tmpBase) -> lit.Test.Resu
     # Re-run failed tests up to test.allowed_retries times.
     execdir = os.path.dirname(test.getExecPath())
     attempts = test.allowed_retries + 1
+    test_updates = []
     for i in range(attempts):
         res = runOnce(execdir)
-        out, err, exitCode, timeoutInfo, status = res
+        out, err, exitCode, timeoutInfo, status, test_update_output = res
+        test_updates.append(test_update_output)
         if status != Test.FAIL:
             break
 
     # If we had to run the test more than once, count it as a flaky pass. These
     # will be printed separately in the test summary.
     if i > 0 and status == Test.PASS:
-        status = Test.FLAKYPASS
+        if any(test_updates):
+            status = Test.FIXED
+        else:
+            status = Test.FLAKYPASS
 
     # Form the output log.
     output = f"Exit Code: {exitCode}\n"
@@ -2417,7 +2448,11 @@ def _runShTest(test, litConfig, useExternalSh, script, tmpBase) -> lit.Test.Resu
         output += """Command Output (stderr):\n--\n%s\n--\n""" % (err,)
 
     return lit.Test.Result(
-        status, output, attempts=i + 1, max_allowed_attempts=attempts
+        status,
+        output,
+        attempts=i + 1,
+        max_allowed_attempts=attempts,
+        test_updater_outputs=test_updates,
     )
 
 
@@ -2457,7 +2492,11 @@ def executeShTest(
     tmpDir, tmpBase = getTempPaths(test)
     substitutions = list(extra_substitutions)
     substitutions += getDefaultSubstitutions(
-        test, tmpDir, tmpBase, normalize_slashes=useExternalSh
+        test,
+        tmpDir,
+        tmpBase,
+        normalize_slashes=useExternalSh
+        or litConfig.params.get("use_normalized_slashes", False),
     )
     conditions = {feature: True for feature in test.config.available_features}
     script = applySubstitutions(

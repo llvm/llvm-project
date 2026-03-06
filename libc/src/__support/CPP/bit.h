@@ -46,7 +46,6 @@ LIBC_INLINE static constexpr cpp::enable_if_t<
         cpp::is_trivially_copyable<From>::value,
     To>
 bit_cast(const From &from) {
-  MSAN_UNPOISON(&from, sizeof(From));
 #if __has_builtin(__builtin_bit_cast) || defined(LIBC_COMPILER_IS_MSVC)
   return __builtin_bit_cast(To, from);
 #else
@@ -67,7 +66,6 @@ LIBC_INLINE constexpr cpp::enable_if_t<
         cpp::is_trivially_copyable<From>::value,
     void>
 bit_copy(const From &from, To &to) {
-  MSAN_UNPOISON(&from, sizeof(From));
   char *dst = reinterpret_cast<char *>(&to);
   const char *src = reinterpret_cast<const char *>(&from);
   inline_copy<sizeof(From)>(src, dst);

@@ -108,19 +108,15 @@ void after_return() {
 }
 
 // CIR:  cir.func {{.*}} @after_return
-// CIR:    cir.br ^bb1
-// CIR:  ^bb1:  // 2 preds: ^bb0, ^bb2
 // CIR:    cir.return
-// CIR:  ^bb2:  // no predecessors
+// CIR:  ^bb1:  // no predecessors
 // CIR:    cir.label "label"
-// CIR:    cir.br ^bb1
+// CIR:    cir.return
 
 // LLVM: define dso_local void @after_return{{.*}}
-// LLVM:   br label %1
+// LLVM:   ret void
 // LLVM: 1:
 // LLVM:   ret void
-// LLVM: 2:
-// LLVM:   br label %1
 
 // OGCG: define dso_local void @after_return
 // OGCG:   br label %label

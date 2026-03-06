@@ -144,6 +144,8 @@ public:
 
   bool isOffsetFoldingLegal(const GlobalAddressSDNode *GA) const override;
 
+  bool isFPImmLegalAsFMov(const APFloat &Imm, EVT VT) const;
+
   bool isFPImmLegal(const APFloat &Imm, EVT VT,
                     bool ForCodeSize) const override;
 
@@ -562,8 +564,6 @@ public:
   SDValue changeStreamingMode(SelectionDAG &DAG, SDLoc DL, bool Enable,
                               SDValue Chain, SDValue InGlue, unsigned Condition,
                               bool InsertVectorLengthCheck = false) const;
-
-  bool isVScaleKnownToBeAPowerOfTwo() const override { return true; }
 
   /// Returns true if \p RdxOp should be lowered to a SVE reduction. If a SVE2
   /// pairwise operation can be used for the reduction \p PairwiseOpIID is set

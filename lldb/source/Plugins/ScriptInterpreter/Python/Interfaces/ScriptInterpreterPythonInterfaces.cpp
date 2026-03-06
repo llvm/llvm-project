@@ -14,8 +14,6 @@
 using namespace lldb;
 using namespace lldb_private;
 
-LLDB_PLUGIN_DEFINE(ScriptInterpreterPythonInterfaces)
-
 llvm::StringRef
 ScriptInterpreterPythonInterfaces::GetPluginDescriptionStatic() {
   return "Script Interpreter Python Interfaces";
