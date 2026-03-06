@@ -102,6 +102,20 @@ void populateVectorMultiReductionUnrollingPatterns(
 
 /// Populate the pattern set with the following patterns:
 ///
+/// [MultiReductionToArithOps]
+/// Rank reducing unrolling for inner-parallel case, when there is only one
+/// reduction dimension and it is the outermost one.
+///
+/// [UnrollMultiReductionInnerParallel]
+/// Unrolls the outermost dimension of a vector.multi_reduction when there is
+/// more than one reduction dimension and the outermost dimension is a reduction
+/// dimension. Each extracted slice is reduced via a lower-rank
+/// vector.multi_reduction.
+void populateVectorMultiReductionRankReducingUnrollingPatterns(
+    RewritePatternSet &patterns, PatternBenefit benefit = 1);
+
+/// Populate the pattern set with the following patterns:
+///
 /// [TransferReadToVectorLoadLowering]
 /// Progressive lowering of BroadcastOp to ExtractOp + InsertOp + lower-D
 /// BroadcastOp until dim 1.

@@ -288,6 +288,21 @@ def ApplyMultiReductionUnrollingPatternsOp: Op<Transform_Dialect,
   }];
 }
 
+def ApplyUnrollMultiReductionRankReducingUnrollingPatternsOp: Op<Transform_Dialect,
+    "apply_patterns.vector.multi_reduction_rank_reducing_unrolling",
+    [DeclareOpInterfaceMethods<PatternDescriptorOpInterface>]> {
+  let description = [{
+    Indicates that vector multi_reduction operations with more than one
+    reduction dimension should be unrolled in a rank-reducing way.
+
+    This populates the patterns:
+    * `MultiReductionToArithOps`
+    * `UnrollMultiReductionInnerParallel`
+  }];
+
+  let assemblyFormat = "attr-dict";
+}
+
 def ApplyLowerOuterProductPatternsOp : Op<Transform_Dialect,
     "apply_patterns.vector.lower_outerproduct",
     [DeclareOpInterfaceMethods<PatternDescriptorOpInterface>]> {
