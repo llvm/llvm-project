@@ -70,6 +70,8 @@ Parser::Parser(Preprocessor &pp, Sema &actions, bool skipFunctionBodies)
   NumCachedScopes = 0;
   CurParsedObjCImpl = nullptr;
 
+  ParserConversionAction = CA_ToExecEncoding;
+
   // Add #pragma handlers. These are removed and destroyed in the
   // destructor.
   initializePragmaHandlers();
@@ -1546,6 +1548,8 @@ void Parser::ParseKNRParamDeclarations(Declarator &D) {
 }
 
 ExprResult Parser::ParseAsmStringLiteral(bool ForAsmLabel) {
+  SaveAndRestore<ConversionAction> SavedTranslationState(ParserConversionAction,
+                                                         CA_NoConversion);
 
   ExprResult AsmString;
   if (isTokenStringLiteral()) {

@@ -23,7 +23,8 @@ TextEncodingConfig::getConverter(ConversionAction Action) const {
 
 std::error_code
 TextEncodingConfig::setConvertersFromOptions(TextEncodingConfig &TEC,
-                                             const clang::LangOptions &Opts) {
+                                             const clang::LangOptions &Opts,
+                                             clang::TargetInfo &TInfo) {
   using namespace llvm;
 
   const char *UTF8 = "UTF-8";
@@ -36,10 +37,19 @@ TextEncodingConfig::setConvertersFromOptions(TextEncodingConfig &TEC,
     return std::error_code();
   ErrorOr<TextEncodingConverter> ErrorOrConverter =
       llvm::TextEncodingConverter::create(UTF8, TEC.ExecEncoding);
-  if (ErrorOrConverter)
+  if (ErrorOrConverter) {
     TEC.ToExecEncodingConverter =
         new TextEncodingConverter(std::move(*ErrorOrConverter));
-  else
+    TInfo.ExecStrConverter = TEC.ToExecEncodingConverter;
+  } else
     return ErrorOrConverter.getError();
+
+  ErrorOrConverter = llvm::TextEncodingConverter::create(
+      TInfo.getTriple().getDefaultNarrowTextEncoding(), UTF8);
+
+  if (ErrorOrConverter)
+    TInfo.FormatStrConverter =
+        new TextEncodingConverter(std::move(*ErrorOrConverter));
+
   return std::error_code();
 }

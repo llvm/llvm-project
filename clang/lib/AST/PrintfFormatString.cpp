@@ -35,14 +35,17 @@ typedef clang::analyze_format_string::SpecifierResult<PrintfSpecifier>
 
 using analyze_format_string::ParseNonPositionAmount;
 
-static bool ParsePrecision(FormatStringHandler &H, PrintfSpecifier &FS,
-                           const char *Start, const char *&Beg, const char *E,
-                           unsigned *argIndex) {
+static bool
+ParsePrecision(FormatStringHandler &H, PrintfSpecifier &FS, const char *Start,
+               const char *&Beg, const char *E, unsigned *argIndex,
+               const llvm::TextEncodingConverter &FormatStrConverter) {
   if (argIndex) {
-    FS.setPrecision(ParseNonPositionAmount(Beg, E, *argIndex));
+    FS.setPrecision(
+        ParseNonPositionAmount(Beg, E, *argIndex, FormatStrConverter));
   } else {
-    const OptionalAmount Amt = ParsePositionAmount(H, Start, Beg, E,
-                                           analyze_format_string::PrecisionPos);
+    const OptionalAmount Amt = ParsePositionAmount(
+        H, Start, Beg, E, analyze_format_string::PrecisionPos,
+        FormatStrConverter);
     if (Amt.isInvalid())
       return true;
     FS.setPrecision(Amt);
@@ -50,32 +53,32 @@ static bool ParsePrecision(FormatStringHandler &H, PrintfSpecifier &FS,
   return false;
 }
 
-static bool ParseObjCFlags(FormatStringHandler &H, PrintfSpecifier &FS,
-                           const char *FlagBeg, const char *E, bool Warn) {
-   StringRef Flag(FlagBeg, E - FlagBeg);
-   // Currently there is only one flag.
-   if (Flag == "tt") {
-     FS.setHasObjCTechnicalTerm(FlagBeg);
-     return false;
-   }
-   // Handle either the case of no flag or an invalid flag.
-   if (Warn) {
-     if (Flag == "")
-       H.HandleEmptyObjCModifierFlag(FlagBeg, E  - FlagBeg);
-     else
-       H.HandleInvalidObjCModifierFlag(FlagBeg, E  - FlagBeg);
-   }
-   return true;
+static bool
+ParseObjCFlags(FormatStringHandler &H, PrintfSpecifier &FS, const char *FlagBeg,
+               const char *E, bool Warn,
+               const llvm::TextEncodingConverter &FormatStrConverter) {
+  StringRef Flag(FlagBeg, E - FlagBeg);
+  // Currently there is only one flag.
+  if (Flag.size() == 2 && FormatStrConverter.convert(FlagBeg[0]) == 't' &&
+      FormatStrConverter.convert(FlagBeg[1]) == 't') {
+    FS.setHasObjCTechnicalTerm(FlagBeg);
+    return false;
+  }
+  // Handle either the case of no flag or an invalid flag.
+  if (Warn) {
+    if (Flag == "")
+      H.HandleEmptyObjCModifierFlag(FlagBeg, E - FlagBeg);
+    else
+      H.HandleInvalidObjCModifierFlag(FlagBeg, E - FlagBeg);
+  }
+  return true;
 }
 
-static PrintfSpecifierResult ParsePrintfSpecifier(FormatStringHandler &H,
-                                                  const char *&Beg,
-                                                  const char *E,
-                                                  unsigned &argIndex,
-                                                  const LangOptions &LO,
-                                                  const TargetInfo &Target,
-                                                  bool Warn,
-                                                  bool isFreeBSDKPrintf) {
+static PrintfSpecifierResult
+ParsePrintfSpecifier(FormatStringHandler &H, const char *&Beg, const char *E,
+                     unsigned &argIndex, const LangOptions &LO,
+                     const TargetInfo &Target, bool Warn,
+                     bool isFreeBSDKPrintf) {
 
   using namespace clang::analyze_format_string;
   using namespace clang::analyze_printf;
@@ -84,6 +87,8 @@ static PrintfSpecifierResult ParsePrintfSpecifier(FormatStringHandler &H,
   const char *Start = nullptr;
   UpdateOnReturn <const char*> UpdateBeg(Beg, I);
 
+  const llvm::TextEncodingConverter &FormatStrConverter =
+      *Target.FormatStrConverter;
   // Look for a '%' character that indicates the start of a format specifier.
   for ( ; I != E ; ++I) {
     char c = *I;
@@ -92,7 +97,7 @@ static PrintfSpecifierResult ParsePrintfSpecifier(FormatStringHandler &H,
       H.HandleNullChar(I);
       return true;
     }
-    if (c == '%') {
+    if (FormatStrConverter.convert(c) == '%') {
       Start = I++;  // Record the start of the format specifier.
       break;
     }
@@ -110,7 +115,7 @@ static PrintfSpecifierResult ParsePrintfSpecifier(FormatStringHandler &H,
   }
 
   PrintfSpecifier FS;
-  if (ParseArgPosition(H, FS, Start, I, E))
+  if (ParseArgPosition(H, FS, Start, I, E, FormatStrConverter))
     return true;
 
   if (I == E) {
@@ -120,13 +125,17 @@ static PrintfSpecifierResult ParsePrintfSpecifier(FormatStringHandler &H,
     return true;
   }
 
-  if (*I == '{') {
+  if (FormatStrConverter.convert(*I) == '{') {
     ++I;
     unsigned char PrivacyFlags = 0;
     StringRef MatchedStr;
 
     do {
-      StringRef Str(I, E - I);
+      const char *II;
+      std::string S(I, E - I);
+      for (unsigned long i = 0; i < S.length(); ++i)
+        S[i] = FormatStrConverter.convert(S[i]);
+      StringRef Str(S);
       std::string Match = "^[[:space:]]*"
                           "(private|public|sensitive|mask\\.[^[:space:],}]*)"
                           "[[:space:]]*(,|})";
@@ -135,25 +144,38 @@ static PrintfSpecifierResult ParsePrintfSpecifier(FormatStringHandler &H,
 
       if (R.match(Str, &Matches)) {
         MatchedStr = Matches[1];
+        II = I;
         I += Matches[0].size();
+
+        while (FormatStrConverter.convert(*II) == ' ')
+          ++II;
 
         // Set the privacy flag if the privacy annotation in the
         // comma-delimited segment is at least as strict as the privacy
         // annotations in previous comma-delimited segments.
         if (MatchedStr.starts_with("mask")) {
-          StringRef MaskType = MatchedStr.substr(sizeof("mask.") - 1);
+          StringRef MaskType(II + sizeof("mask.") - 1,
+                             MatchedStr.size() - sizeof("mask.") + 1);
           unsigned Size = MaskType.size();
+
           if (Warn && (Size == 0 || Size > 8))
             H.handleInvalidMaskType(MaskType);
           FS.setMaskType(MaskType);
-        } else if (MatchedStr == "sensitive")
+        } else if (MatchedStr == "sensitive") {
+          StringRef ProxyMatchedStr(II, sizeof("sensitive") - 1);
+          MatchedStr = ProxyMatchedStr;
           PrivacyFlags = clang::analyze_os_log::OSLogBufferItem::IsSensitive;
-        else if (PrivacyFlags !=
-                     clang::analyze_os_log::OSLogBufferItem::IsSensitive &&
-                 MatchedStr == "private")
+        } else if (PrivacyFlags !=
+                       clang::analyze_os_log::OSLogBufferItem::IsSensitive &&
+                   MatchedStr == "private") {
+          StringRef ProxyMatchedStr(II, sizeof("private") - 1);
+          MatchedStr = ProxyMatchedStr;
           PrivacyFlags = clang::analyze_os_log::OSLogBufferItem::IsPrivate;
-        else if (PrivacyFlags == 0 && MatchedStr == "public")
+        } else if (PrivacyFlags == 0 && MatchedStr == "public") {
+          StringRef ProxyMatchedStr(II, sizeof("public") - 1);
+          MatchedStr = ProxyMatchedStr;
           PrivacyFlags = clang::analyze_os_log::OSLogBufferItem::IsPublic;
+        }
       } else {
         size_t CommaOrBracePos =
             Str.find_if([](char c) { return c == ',' || c == '}'; });
@@ -168,7 +190,7 @@ static PrintfSpecifierResult ParsePrintfSpecifier(FormatStringHandler &H,
         I += CommaOrBracePos + 1;
       }
       // Continue until the closing brace is found.
-    } while (*(I - 1) == ',');
+    } while (FormatStrConverter.convert(*(I - 1)) == ',');
 
     // Set the privacy flag.
     switch (PrivacyFlags) {
@@ -191,17 +213,29 @@ static PrintfSpecifierResult ParsePrintfSpecifier(FormatStringHandler &H,
   // Look for flags (if any).
   bool hasMore = true;
   for ( ; I != E; ++I) {
-    switch (*I) {
-      default: hasMore = false; break;
-      case '\'':
-        // FIXME: POSIX specific.  Always accept?
-        FS.setHasThousandsGrouping(I);
-        break;
-      case '-': FS.setIsLeftJustified(I); break;
-      case '+': FS.setHasPlusPrefix(I); break;
-      case ' ': FS.setHasSpacePrefix(I); break;
-      case '#': FS.setHasAlternativeForm(I); break;
-      case '0': FS.setHasLeadingZeros(I); break;
+    switch (FormatStrConverter.convert(*I)) {
+    default:
+      hasMore = false;
+      break;
+    case '\'':
+      // FIXME: POSIX specific.  Always accept?
+      FS.setHasThousandsGrouping(I);
+      break;
+    case '-':
+      FS.setIsLeftJustified(I);
+      break;
+    case '+':
+      FS.setHasPlusPrefix(I);
+      break;
+    case ' ':
+      FS.setHasSpacePrefix(I);
+      break;
+    case '#':
+      FS.setHasAlternativeForm(I);
+      break;
+    case '0':
+      FS.setHasLeadingZeros(I);
+      break;
     }
     if (!hasMore)
       break;
@@ -216,7 +250,8 @@ static PrintfSpecifierResult ParsePrintfSpecifier(FormatStringHandler &H,
 
   // Look for the field width (if any).
   if (ParseFieldWidth(H, FS, Start, I, E,
-                      FS.usesPositionalArg() ? nullptr : &argIndex))
+                      FS.usesPositionalArg() ? nullptr : &argIndex,
+                      FormatStrConverter))
     return true;
 
   if (I == E) {
@@ -227,7 +262,7 @@ static PrintfSpecifierResult ParsePrintfSpecifier(FormatStringHandler &H,
   }
 
   // Look for the precision (if any).
-  if (*I == '.') {
+  if (FormatStrConverter.convert(*I) == '.') {
     ++I;
     if (I == E) {
       if (Warn)
@@ -236,7 +271,8 @@ static PrintfSpecifierResult ParsePrintfSpecifier(FormatStringHandler &H,
     }
 
     if (ParsePrecision(H, FS, Start, I, E,
-                       FS.usesPositionalArg() ? nullptr : &argIndex))
+                       FS.usesPositionalArg() ? nullptr : &argIndex,
+                       FormatStrConverter))
       return true;
 
     if (I == E) {
@@ -247,11 +283,11 @@ static PrintfSpecifierResult ParsePrintfSpecifier(FormatStringHandler &H,
     }
   }
 
-  if (ParseVectorModifier(H, FS, I, E, LO))
+  if (ParseVectorModifier(H, FS, I, E, LO, FormatStrConverter))
     return true;
 
   // Look for the length modifier.
-  if (ParseLengthModifier(FS, I, E, LO) && I == E) {
+  if (ParseLengthModifier(FS, I, E, LO, FormatStrConverter) && I == E) {
     // No more characters left?
     if (Warn)
       H.HandleIncompleteSpecifier(Start, E - Start);
@@ -266,7 +302,7 @@ static PrintfSpecifierResult ParsePrintfSpecifier(FormatStringHandler &H,
   // these flags are applicable until later.
   const char *ObjCModifierFlagsStart = nullptr,
              *ObjCModifierFlagsEnd = nullptr;
-  if (*I == '[') {
+  if (FormatStrConverter.convert(*I) == '[') {
     ObjCModifierFlagsStart = I;
     ++I;
     auto flagStart = I;
@@ -278,8 +314,8 @@ static PrintfSpecifierResult ParsePrintfSpecifier(FormatStringHandler &H,
         return true;
       }
       // Did we find the closing ']'?
-      if (*I == ']') {
-        if (ParseObjCFlags(H, FS, flagStart, I, Warn))
+      if (FormatStrConverter.convert(*I) == ']') {
+        if (ParseObjCFlags(H, FS, flagStart, I, Warn, FormatStrConverter))
           return true;
         ++I;
         break;
@@ -299,96 +335,142 @@ static PrintfSpecifierResult ParsePrintfSpecifier(FormatStringHandler &H,
   // Finally, look for the conversion specifier.
   const char *conversionPosition = I++;
   ConversionSpecifier::Kind k = ConversionSpecifier::InvalidSpecifier;
-  switch (*conversionPosition) {
-    default:
-      break;
-    // C99: 7.19.6.1 (section 8).
-    case '%': k = ConversionSpecifier::PercentArg;   break;
-    case 'A': k = ConversionSpecifier::AArg; break;
-    case 'E': k = ConversionSpecifier::EArg; break;
-    case 'F': k = ConversionSpecifier::FArg; break;
-    case 'G': k = ConversionSpecifier::GArg; break;
-    case 'X': k = ConversionSpecifier::XArg; break;
-    case 'a': k = ConversionSpecifier::aArg; break;
-    case 'c': k = ConversionSpecifier::cArg; break;
-    case 'd': k = ConversionSpecifier::dArg; break;
-    case 'e': k = ConversionSpecifier::eArg; break;
-    case 'f': k = ConversionSpecifier::fArg; break;
-    case 'g': k = ConversionSpecifier::gArg; break;
-    case 'i': k = ConversionSpecifier::iArg; break;
-    case 'n':
-      // Not handled, but reserved in OpenCL.
-      if (!LO.OpenCL)
-        k = ConversionSpecifier::nArg;
-      break;
-    case 'o': k = ConversionSpecifier::oArg; break;
-    case 'p': k = ConversionSpecifier::pArg; break;
-    case 's': k = ConversionSpecifier::sArg; break;
-    case 'u': k = ConversionSpecifier::uArg; break;
-    case 'x': k = ConversionSpecifier::xArg; break;
-    // C23.
-    case 'b':
-      if (isFreeBSDKPrintf)
-        k = ConversionSpecifier::FreeBSDbArg; // int followed by char *
-      else
-        k = ConversionSpecifier::bArg;
-      break;
-    case 'B': k = ConversionSpecifier::BArg; break;
-    // POSIX specific.
-    case 'C': k = ConversionSpecifier::CArg; break;
-    case 'S': k = ConversionSpecifier::SArg; break;
-    // Apple extension for os_log
-    case 'P':
-      k = ConversionSpecifier::PArg;
-      break;
-    // Objective-C.
-    case '@': k = ConversionSpecifier::ObjCObjArg; break;
-    // Glibc specific.
-    case 'm': k = ConversionSpecifier::PrintErrno; break;
-    case 'r':
-      if (isFreeBSDKPrintf)
-        k = ConversionSpecifier::FreeBSDrArg; // int
-      else if (LO.FixedPoint)
-        k = ConversionSpecifier::rArg;
-      break;
-    case 'y':
-      if (isFreeBSDKPrintf)
-        k = ConversionSpecifier::FreeBSDyArg; // int
-      break;
-    // Apple-specific.
-    case 'D':
-      if (isFreeBSDKPrintf)
-        k = ConversionSpecifier::FreeBSDDArg; // void * followed by char *
-      else if (Target.getTriple().isOSDarwin())
-        k = ConversionSpecifier::DArg;
-      break;
-    case 'O':
-      if (Target.getTriple().isOSDarwin())
-        k = ConversionSpecifier::OArg;
-      break;
-    case 'U':
-      if (Target.getTriple().isOSDarwin())
-        k = ConversionSpecifier::UArg;
-      break;
-    // MS specific.
-    case 'Z':
-      if (Target.getTriple().isOSMSVCRT())
-        k = ConversionSpecifier::ZArg;
-      break;
-    // ISO/IEC TR 18037 (fixed-point) specific.
-    // NOTE: 'r' is handled up above since FreeBSD also supports %r.
-    case 'k':
-      if (LO.FixedPoint)
-        k = ConversionSpecifier::kArg;
-      break;
-    case 'K':
-      if (LO.FixedPoint)
-        k = ConversionSpecifier::KArg;
-      break;
-    case 'R':
-      if (LO.FixedPoint)
-        k = ConversionSpecifier::RArg;
-      break;
+  switch (FormatStrConverter.convert(*conversionPosition)) {
+  default:
+    break;
+  // C99: 7.19.6.1 (section 8).
+  case '%':
+    k = ConversionSpecifier::PercentArg;
+    break;
+  case 'A':
+    k = ConversionSpecifier::AArg;
+    break;
+  case 'E':
+    k = ConversionSpecifier::EArg;
+    break;
+  case 'F':
+    k = ConversionSpecifier::FArg;
+    break;
+  case 'G':
+    k = ConversionSpecifier::GArg;
+    break;
+  case 'X':
+    k = ConversionSpecifier::XArg;
+    break;
+  case 'a':
+    k = ConversionSpecifier::aArg;
+    break;
+  case 'c':
+    k = ConversionSpecifier::cArg;
+    break;
+  case 'd':
+    k = ConversionSpecifier::dArg;
+    break;
+  case 'e':
+    k = ConversionSpecifier::eArg;
+    break;
+  case 'f':
+    k = ConversionSpecifier::fArg;
+    break;
+  case 'g':
+    k = ConversionSpecifier::gArg;
+    break;
+  case 'i':
+    k = ConversionSpecifier::iArg;
+    break;
+  case 'n':
+    // Not handled, but reserved in OpenCL.
+    if (!LO.OpenCL)
+      k = ConversionSpecifier::nArg;
+    break;
+  case 'o':
+    k = ConversionSpecifier::oArg;
+    break;
+  case 'p':
+    k = ConversionSpecifier::pArg;
+    break;
+  case 's':
+    k = ConversionSpecifier::sArg;
+    break;
+  case 'u':
+    k = ConversionSpecifier::uArg;
+    break;
+  case 'x':
+    k = ConversionSpecifier::xArg;
+    break;
+  // C23.
+  case 'b':
+    if (isFreeBSDKPrintf)
+      k = ConversionSpecifier::FreeBSDbArg; // int followed by char *
+    else
+      k = ConversionSpecifier::bArg;
+    break;
+  case 'B':
+    k = ConversionSpecifier::BArg;
+    break;
+  // POSIX specific.
+  case 'C':
+    k = ConversionSpecifier::CArg;
+    break;
+  case 'S':
+    k = ConversionSpecifier::SArg;
+    break;
+  // Apple extension for os_log
+  case 'P':
+    k = ConversionSpecifier::PArg;
+    break;
+  // Objective-C.
+  case '@':
+    k = ConversionSpecifier::ObjCObjArg;
+    break;
+  // Glibc specific.
+  case 'm':
+    k = ConversionSpecifier::PrintErrno;
+    break;
+  case 'r':
+    if (isFreeBSDKPrintf)
+      k = ConversionSpecifier::FreeBSDrArg; // int
+    else if (LO.FixedPoint)
+      k = ConversionSpecifier::rArg;
+    break;
+  case 'y':
+    if (isFreeBSDKPrintf)
+      k = ConversionSpecifier::FreeBSDyArg; // int
+    break;
+  // Apple-specific.
+  case 'D':
+    if (isFreeBSDKPrintf)
+      k = ConversionSpecifier::FreeBSDDArg; // void * followed by char *
+    else if (Target.getTriple().isOSDarwin())
+      k = ConversionSpecifier::DArg;
+    break;
+  case 'O':
+    if (Target.getTriple().isOSDarwin())
+      k = ConversionSpecifier::OArg;
+    break;
+  case 'U':
+    if (Target.getTriple().isOSDarwin())
+      k = ConversionSpecifier::UArg;
+    break;
+  // MS specific.
+  case 'Z':
+    if (Target.getTriple().isOSMSVCRT())
+      k = ConversionSpecifier::ZArg;
+    break;
+  // ISO/IEC TR 18037 (fixed-point) specific.
+  // NOTE: 'r' is handled up above since FreeBSD also supports %r.
+  case 'k':
+    if (LO.FixedPoint)
+      k = ConversionSpecifier::kArg;
+    break;
+  case 'K':
+    if (LO.FixedPoint)
+      k = ConversionSpecifier::KArg;
+    break;
+  case 'R':
+    if (LO.FixedPoint)
+      k = ConversionSpecifier::RArg;
+    break;
   }
 
   // Check to see if we used the Objective-C modifier flags with
@@ -418,25 +500,21 @@ static PrintfSpecifierResult ParsePrintfSpecifier(FormatStringHandler &H,
       FS.setConversionSpecifier(CS);
     }
     // Assume the conversion takes one argument.
-    return !H.HandleInvalidPrintfConversionSpecifier(FS, Start, Len);
+    return !H.HandleInvalidPrintfConversionSpecifier(FS, Start, Len,
+                                                     FormatStrConverter);
   }
   return PrintfSpecifierResult(Start, FS);
 }
 
-bool clang::analyze_format_string::ParsePrintfString(FormatStringHandler &H,
-                                                     const char *I,
-                                                     const char *E,
-                                                     const LangOptions &LO,
-                                                     const TargetInfo &Target,
-                                                     bool isFreeBSDKPrintf) {
+bool clang::analyze_format_string::ParsePrintfString(
+    FormatStringHandler &H, const char *I, const char *E, const LangOptions &LO,
+    const TargetInfo &Target, bool isFreeBSDKPrintf) {
 
   unsigned argIndex = 0;
-
   // Keep looking for a format specifier until we have exhausted the string.
   while (I != E) {
-    const PrintfSpecifierResult &FSR = ParsePrintfSpecifier(H, I, E, argIndex,
-                                                            LO, Target, true,
-                                                            isFreeBSDKPrintf);
+    const PrintfSpecifierResult &FSR = ParsePrintfSpecifier(
+        H, I, E, argIndex, LO, Target, true, isFreeBSDKPrintf);
     // Did a fail-stop error of any kind occur when parsing the specifier?
     // If so, don't do any more processing.
     if (FSR.shouldStop())
@@ -464,9 +542,8 @@ bool clang::analyze_format_string::ParseFormatStringHasSArg(const char *I,
   // Keep looking for a %s format specifier until we have exhausted the string.
   FormatStringHandler H;
   while (I != E) {
-    const PrintfSpecifierResult &FSR = ParsePrintfSpecifier(H, I, E, argIndex,
-                                                            LO, Target, false,
-                                                            false);
+    const PrintfSpecifierResult &FSR =
+        ParsePrintfSpecifier(H, I, E, argIndex, LO, Target, false, false);
     // Did a fail-stop error of any kind occur when parsing the specifier?
     // If so, don't do any more processing.
     if (FSR.shouldStop())
