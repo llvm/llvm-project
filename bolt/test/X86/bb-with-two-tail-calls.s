@@ -7,6 +7,7 @@
 # RUN: llvm-strip --strip-unneeded %t.o
 # RUN: %clang %cflags %t.o -o %t.exe -Wl,-q -nostdlib
 # RUN: llvm-bolt %t.exe -o %t.out --data %t.fdata --lite=0 --dyno-stats \
+# RUN:    --reorder-functions=cdsort \
 # RUN:    --print-sctc --print-only=_start -enable-bat 2>&1 | FileCheck %s
 # RUN: llvm-objdump --syms %t.out > %t.log
 # RUN: llvm-bat-dump %t.out --dump-all >> %t.log
