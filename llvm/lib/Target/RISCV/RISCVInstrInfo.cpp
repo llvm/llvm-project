@@ -184,7 +184,7 @@ Register RISCVInstrInfo::isLoadFromStackSlot(const MachineInstr &MI,
 
 Register RISCVInstrInfo::isLoadFromStackSlotPostFE(const MachineInstr &MI,
                                                    int &FrameIndex) const {
-  if (!MI.mayLoad())
+  if (!MI.mayLoad() || isGenericOpcode(MI.getOpcode()))
     return Register();
 
   if (Register Reg = isLoadFromStackSlot(MI, FrameIndex))
@@ -198,6 +198,8 @@ Register RISCVInstrInfo::isLoadFromStackSlotPostFE(const MachineInstr &MI,
     FrameIndex =
         cast<FixedStackPseudoSourceValue>(Accesses.front()->getPseudoValue())
             ->getFrameIndex();
+    dbgs() << "HERE0\n";
+    MI.dump();
     return MI.getOperand(0).getReg();
   }
   return Register();
@@ -256,7 +258,7 @@ Register RISCVInstrInfo::isStoreToStackSlot(const MachineInstr &MI,
 
 Register RISCVInstrInfo::isStoreToStackSlotPostFE(const MachineInstr &MI,
                                                   int &FrameIndex) const {
-  if (!MI.mayStore())
+  if (!MI.mayStore() || isGenericOpcode(MI.getOpcode()))
     return Register();
 
   if (Register Reg = isStoreToStackSlot(MI, FrameIndex))
