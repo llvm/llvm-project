@@ -205,8 +205,7 @@ static void insertNopBeforeInstruction(MachineBasicBlock &MBB, MachineInstr* MI,
   ++NumNopsAdded;
 }
 
-bool
-AArch64A53Fix835769Impl::runOnBasicBlock(MachineBasicBlock &MBB) {
+bool AArch64A53Fix835769Impl::runOnBasicBlock(MachineBasicBlock &MBB) {
   bool Changed = false;
   LLVM_DEBUG(dbgs() << "Running on MBB: " << MBB
                     << " - scanning instructions...\n");
