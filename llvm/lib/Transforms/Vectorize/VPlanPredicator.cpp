@@ -76,6 +76,11 @@ public:
   /// Compute the predicate of \p VPBB.
   void createBlockInMask(VPBasicBlock *VPBB);
 
+  /// Compute the masks for a VPBlendRecipe in \p VPBB from the minumum number
+  /// of edge masks required.
+  DenseMap<const VPBasicBlock *, VPValue *>
+  computeBlendMasks(VPBasicBlock *VPBB);
+
   /// Convert phi recipes in \p VPBB to VPBlendRecipes.
   void convertPhisToBlends(VPBasicBlock *VPBB);
 };
@@ -205,10 +210,81 @@ void VPPredicator::createSwitchEdgeMasks(const VPInstruction *SI) {
   setEdgeMask(Src, DefaultDst, DefaultMask);
 }
 
+DenseMap<const VPBasicBlock *, VPValue *>
+VPPredicator::computeBlendMasks(VPBasicBlock *VPBB) {
+  // First compute the set of ancestors which are reachable from multiple
+  // incoming blocks. This is where we can no longer determine the unique
+  // incoming edge.
+  SmallPtrSet<VPBlockBase *, 8> NonUnique;
+  DenseMap<VPBlockBase *, unsigned> Freq;
+  for (VPBlockBase *InVPBB : VPBB->predecessors()) {
+    for (VPBlockBase *VPBB : vp_inverse_depth_first_shallow(InVPBB)) {
+      Freq[VPBB]++;
+      if (Freq[VPBB] > 1)
+        NonUnique.insert(VPBB);
+    }
+  }
+
+  auto IsNonUnique = [&NonUnique](VPBlockBase *VPBB) {
+    return NonUnique.contains(VPBB);
+  };
+
+  // Then for each incoming block, compute the disjunction of the incoming edges
+  // to its "unique" subgraph.
+  DenseMap<const VPBasicBlock *, VPValue *> Masks;
+  for (VPBlockBase *InVPBBBase : VPBB->predecessors()) {
+    auto *InVPBB = cast<VPBasicBlock>(InVPBBBase);
+
+    // If the incoming block isn't unique, we need to use the incoming edge
+    // mask.
+    if (NonUnique.contains(InVPBB)) {
+      Masks[InVPBB] = getEdgeMask(InVPBB, VPBB);
+      continue;
+    }
+
+    // Traverse upwards and find the edges where the path is no longer unique to
+    // that incoming edge.
+    VPValue *Mask = nullptr;
+    SmallVector<VPBasicBlock *> Worklist = {InVPBB};
+    SmallPtrSet<VPBasicBlock *, 8> Visited;
+    while (!Worklist.empty()) {
+      VPBasicBlock *Unique = Worklist.pop_back_val();
+      if (!Visited.insert(Unique).second)
+        continue;
+
+      // If all predecessors aren't unique, just use the block mask.
+      if (all_of(Unique->predecessors(), IsNonUnique)) {
+        Mask = Mask ? Builder.createOr(Mask, getBlockInMask(Unique))
+                    : getBlockInMask(Unique);
+        continue;
+      }
+
+      for (VPBlockBase *PredBase : Unique->predecessors()) {
+        auto *Pred = cast<VPBasicBlock>(PredBase);
+        if (NonUnique.contains(Pred)) {
+          // We've reached a non-unique node. Stop and add that edge mask.
+          VPValue *Edge = getEdgeMask(Pred, Unique);
+          Mask = Mask ? Builder.createOr(Mask, Edge) : Edge;
+        } else {
+          Worklist.push_back(Pred);
+        }
+      }
+    }
+    Masks[InVPBB] = Mask;
+  }
+
+  return Masks;
+}
+
 void VPPredicator::convertPhisToBlends(VPBasicBlock *VPBB) {
   SmallVector<VPPhi *> Phis;
   for (VPRecipeBase &R : VPBB->phis())
     Phis.push_back(cast<VPPhi>(&R));
+
+  DenseMap<const VPBasicBlock *, VPValue *> BlendMasks;
+  if (!Phis.empty())
+    BlendMasks = computeBlendMasks(VPBB);
+
   for (VPPhi *PhiR : Phis) {
     // The non-header Phi is converted into a Blend recipe below,
     // so we don't have to worry about the insertion order and we can just use
@@ -229,7 +305,7 @@ void VPPredicator::convertPhisToBlends(VPBasicBlock *VPBB) {
     SmallVector<VPValue *, 2> OperandsWithMask;
     for (const auto &[InVPV, InVPBB] : PhiR->incoming_values_and_blocks()) {
       OperandsWithMask.push_back(InVPV);
-      OperandsWithMask.push_back(getEdgeMask(InVPBB, VPBB));
+      OperandsWithMask.push_back(BlendMasks[InVPBB]);
     }
     PHINode *IRPhi = cast_or_null<PHINode>(PhiR->getUnderlyingValue());
     auto *Blend =

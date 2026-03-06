@@ -223,7 +223,7 @@ define void @test_exit_branch_cost(ptr %dst, ptr noalias %x.ptr, ptr noalias %y.
 ; COMMON-NEXT:    [[TMP22:%.*]] = select <2 x i1> [[TMP7]], <2 x i1> [[BROADCAST_SPLAT]], <2 x i1> zeroinitializer
 ; COMMON-NEXT:    [[TMP13:%.*]] = select <2 x i1> [[TMP22]], <2 x i1> [[BROADCAST_SPLAT3]], <2 x i1> zeroinitializer
 ; COMMON-NEXT:    [[TMP14:%.*]] = or <2 x i1> [[TMP6]], [[TMP13]]
-; COMMON-NEXT:    [[PREDPHI:%.*]] = select <2 x i1> [[TMP13]], <2 x i64> zeroinitializer, <2 x i64> splat (i64 1)
+; COMMON-NEXT:    [[PREDPHI:%.*]] = select <2 x i1> [[TMP6]], <2 x i64> splat (i64 1), <2 x i64> zeroinitializer
 ; COMMON-NEXT:    [[TMP15:%.*]] = extractelement <2 x i1> [[TMP14]], i32 0
 ; COMMON-NEXT:    br i1 [[TMP15]], label %[[PRED_STORE_IF10:.*]], label %[[PRED_STORE_CONTINUE11:.*]]
 ; COMMON:       [[PRED_STORE_IF10]]:
