@@ -1312,25 +1312,25 @@ Value *InstCombinerImpl::foldUsingDistributiveLaws(BinaryOperator &I) {
 // Bitwise AND between the upper and lower parts can be achived by performing
 // the operation between the original and shuffled equality vector.
 Instruction *InstCombinerImpl::foldV4EqualShuffleAndToV2Equal(Instruction &I) {
+  // Check argument type
+  auto *OldVecType = dyn_cast<VectorType>(I.getType());
+
+  if (!OldVecType || OldVecType->isScalableTy() ||
+      !OldVecType->getElementType()->isIntegerTy(32) ||
+      OldVecType->getElementCount().getFixedValue() != 4)
+    return nullptr;
+
+  // Check pattern existance
   Value *L, *R;
   CmpPredicate Pred;
   SmallVector<int> Mask = {1, 0, 3, 2};
 
-  // Check pattern existance
   auto Equal = m_ICmp(Pred, m_Value(L), m_Value(R));
   auto Shuffle = m_SExtOrSelf(
       m_Shuffle(m_SExtOrSelf(Equal), m_Poison(), m_SpecificMask(Mask)));
   if (!match(&I, m_CombineOr(m_c_And(m_SExt(Equal), Shuffle),
                              m_Select(Equal, Shuffle, m_Zero()))) ||
       Pred != CmpInst::ICMP_EQ)
-    return nullptr;
-
-  // Check argument type
-  auto *OldVecType = cast<VectorType>(L->getType());
-
-  if (OldVecType->isScalableTy() ||
-      !OldVecType->getElementType()->isIntegerTy(32) ||
-      OldVecType->getElementCount().getFixedValue() != 4)
     return nullptr;
 
   LLVM_DEBUG(dbgs() << "IC: Folding equal-shuffle-and pattern" << '\n');
@@ -1368,9 +1368,7 @@ Instruction *InstCombinerImpl::foldV4EqualShuffleAndToV2Equal(Instruction &I) {
 // can be derived from signed comparison by flipping the MSB of both operands.
 Instruction *
 InstCombinerImpl::foldV2CmpGtUsingV4CmpGtPattern(BinaryOperator &I) {
-  if (I.getOpcode() != Instruction::Or)
-    return nullptr;
-
+  // Check argument type
   auto *OldVecType = dyn_cast<VectorType>(I.getType());
 
   if (!OldVecType || OldVecType->isScalableTy() ||
@@ -1378,6 +1376,7 @@ InstCombinerImpl::foldV2CmpGtUsingV4CmpGtPattern(BinaryOperator &I) {
       OldVecType->getElementCount().getFixedValue() != 4)
     return nullptr;
 
+  // Check pattern existance
   Value *A, *B, *Greater1, *Greater2, *Greater;
   CmpPredicate PredEq;
   SmallVector<int> MaskLower = {0, 0, 2, 2};
@@ -1420,7 +1419,7 @@ InstCombinerImpl::foldV2CmpGtUsingV4CmpGtPattern(BinaryOperator &I) {
         (PredGt == ICmpInst::ICMP_SGT || PredGt == ICmpInst::ICMP_SLT)))
     return nullptr;
 
-  LLVM_DEBUG(dbgs() << "Found V2CmpGt using V4CmpGt pattern" << '\n');
+  LLVM_DEBUG(dbgs() << "IC: Folding V2CmpGt using V4CmpGt pattern" << '\n');
 
   // Perform folding
   auto *NewElementType = IntegerType::get(I.getContext(), 64);
