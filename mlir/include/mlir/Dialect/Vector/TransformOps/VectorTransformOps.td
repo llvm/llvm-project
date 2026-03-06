@@ -262,7 +262,7 @@ def ApplyMultiReductionFlatteningPatternsOp: Op<Transform_Dialect,
   }];
 }
 
-def ApplyUnrollMultiReductionUnrollingPatternsOp: Op<Transform_Dialect,
+def ApplyMultiReductionUnrollingPatternsOp: Op<Transform_Dialect,
     "apply_patterns.vector.multi_reduction_unrolling",
     [DeclareOpInterfaceMethods<PatternDescriptorOpInterface>]> {
   let description = [{
