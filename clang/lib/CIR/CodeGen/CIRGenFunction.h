@@ -513,6 +513,8 @@ public:
       return llvm::isa_and_nonnull<clang::FunctionDecl>(calleeDecl);
     }
 
+    const clang::Decl *getDecl() const { return calleeDecl; }
+
     unsigned getNumParams() const {
       if (const auto *fd = llvm::dyn_cast<clang::FunctionDecl>(calleeDecl))
         return fd->getNumParams();
@@ -1584,6 +1586,11 @@ public:
                                mlir::Type elementTy, Address beginPtr,
                                mlir::Value numElements,
                                mlir::Value allocSizeWithoutCookie);
+
+  /// Create a check for a function parameter that may potentially be
+  /// declared as non-null.
+  void emitNonNullArgCheck(RValue rv, QualType argType, SourceLocation argLoc,
+                           AbstractCallee ac, unsigned paramNum);
 
   RValue emitCXXOperatorMemberCallExpr(const CXXOperatorCallExpr *e,
                                        const CXXMethodDecl *md,

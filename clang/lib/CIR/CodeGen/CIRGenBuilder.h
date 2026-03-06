@@ -240,6 +240,11 @@ public:
     return cir::MemCpyOp::create(*this, loc, dst, src, len);
   }
 
+  cir::MemMoveOp createMemMove(mlir::Location loc, mlir::Value dst,
+                               mlir::Value src, mlir::Value len) {
+    return cir::MemMoveOp::create(*this, loc, dst, src, len);
+  }
+
   cir::MemSetOp createMemSet(mlir::Location loc, mlir::Value dst,
                              mlir::Value val, mlir::Value len) {
     assert(val.getType() == getUInt8Ty());
