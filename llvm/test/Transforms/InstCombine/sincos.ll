@@ -2,6 +2,7 @@
 ; RUN: opt -passes=instcombine -S < %s -mtriple=x86_64-apple-macosx10.9 | FileCheck %s --check-prefixes=CHECK,CHECK-DOUBLE-ALIGN8
 ; RUN: opt -passes=instcombine -S < %s -mtriple=arm-apple-ios7.0 | FileCheck %s --check-prefixes=CHECK,CHECK-DOUBLE-ALIGN4
 ; RUN: opt -passes=instcombine -S < %s -mtriple=x86_64-none-linux-gnu | FileCheck %s --check-prefixes=CHECK,CHECK-DOUBLE-ALIGN8-LINUX
+; RUN: opt -passes=instcombine -S < %s -mtriple=x86_64-apple-macosx10.9 -enable-double-float-shrink | FileCheck %s --check-prefixes=CHECK-SHRINK
 ; REQUIRES: arm-registered-target, x86-registered-target
 
 declare float @sinf(float) #0
@@ -19,9 +20,16 @@ define float @sincos_f32() {
 ; CHECK-NEXT:    [[SINCOS:%.*]] = call { float, float } @llvm.sincos.f32(float [[VAL]])
 ; CHECK-NEXT:    [[SIN:%.*]] = extractvalue { float, float } [[SINCOS]], 0
 ; CHECK-NEXT:    [[COS:%.*]] = extractvalue { float, float } [[SINCOS]], 1
-; CHECK-NEXT:    [[C:%.*]] = call float @cosf(float [[VAL]]) #[[ATTR0:[0-9]+]]
 ; CHECK-NEXT:    [[RES:%.*]] = fadd float [[SIN]], [[COS]]
 ; CHECK-NEXT:    ret float [[RES]]
+;
+; CHECK-SHRINK-LABEL: @sincos_f32(
+; CHECK-SHRINK-NEXT:    [[VAL:%.*]] = load float, ptr @var32, align 4
+; CHECK-SHRINK-NEXT:    [[SINCOS:%.*]] = call { float, float } @llvm.sincos.f32(float [[VAL]])
+; CHECK-SHRINK-NEXT:    [[SIN:%.*]] = extractvalue { float, float } [[SINCOS]], 0
+; CHECK-SHRINK-NEXT:    [[COS:%.*]] = extractvalue { float, float } [[SINCOS]], 1
+; CHECK-SHRINK-NEXT:    [[RES:%.*]] = fadd float [[SIN]], [[COS]]
+; CHECK-SHRINK-NEXT:    ret float [[RES]]
 ;
   %val = load float, ptr @var32
   %s = call float @sinf(float %val) #0
@@ -37,7 +45,6 @@ define double @sincos_f64() {
 ; CHECK-DOUBLE-ALIGN8-NEXT:    [[SINCOS:%.*]] = call { double, double } @llvm.sincos.f64(double [[VAL]])
 ; CHECK-DOUBLE-ALIGN8-NEXT:    [[SIN:%.*]] = extractvalue { double, double } [[SINCOS]], 0
 ; CHECK-DOUBLE-ALIGN8-NEXT:    [[COS:%.*]] = extractvalue { double, double } [[SINCOS]], 1
-; CHECK-DOUBLE-ALIGN8-NEXT:    [[C:%.*]] = call double @cos(double [[VAL]]) #[[ATTR0]]
 ; CHECK-DOUBLE-ALIGN8-NEXT:    [[RES:%.*]] = fadd double [[SIN]], [[COS]]
 ; CHECK-DOUBLE-ALIGN8-NEXT:    ret double [[RES]]
 ;
@@ -46,7 +53,6 @@ define double @sincos_f64() {
 ; CHECK-DOUBLE-ALIGN4-NEXT:    [[SINCOS:%.*]] = call { double, double } @llvm.sincos.f64(double [[VAL]])
 ; CHECK-DOUBLE-ALIGN4-NEXT:    [[SIN:%.*]] = extractvalue { double, double } [[SINCOS]], 0
 ; CHECK-DOUBLE-ALIGN4-NEXT:    [[COS:%.*]] = extractvalue { double, double } [[SINCOS]], 1
-; CHECK-DOUBLE-ALIGN4-NEXT:    [[C:%.*]] = call double @cos(double [[VAL]]) #[[ATTR0]]
 ; CHECK-DOUBLE-ALIGN4-NEXT:    [[RES:%.*]] = fadd double [[SIN]], [[COS]]
 ; CHECK-DOUBLE-ALIGN4-NEXT:    ret double [[RES]]
 ;
@@ -55,9 +61,16 @@ define double @sincos_f64() {
 ; CHECK-DOUBLE-ALIGN8-LINUX-NEXT:    [[SINCOS:%.*]] = call { double, double } @llvm.sincos.f64(double [[VAL]])
 ; CHECK-DOUBLE-ALIGN8-LINUX-NEXT:    [[SIN:%.*]] = extractvalue { double, double } [[SINCOS]], 0
 ; CHECK-DOUBLE-ALIGN8-LINUX-NEXT:    [[COS:%.*]] = extractvalue { double, double } [[SINCOS]], 1
-; CHECK-DOUBLE-ALIGN8-LINUX-NEXT:    [[C:%.*]] = call double @cos(double [[VAL]]) #[[ATTR0]]
 ; CHECK-DOUBLE-ALIGN8-LINUX-NEXT:    [[RES:%.*]] = fadd double [[SIN]], [[COS]]
 ; CHECK-DOUBLE-ALIGN8-LINUX-NEXT:    ret double [[RES]]
+;
+; CHECK-SHRINK-LABEL: @sincos_f64(
+; CHECK-SHRINK-NEXT:    [[VAL:%.*]] = load double, ptr @var64, align 8
+; CHECK-SHRINK-NEXT:    [[SINCOS:%.*]] = call { double, double } @llvm.sincos.f64(double [[VAL]])
+; CHECK-SHRINK-NEXT:    [[SIN:%.*]] = extractvalue { double, double } [[SINCOS]], 0
+; CHECK-SHRINK-NEXT:    [[COS:%.*]] = extractvalue { double, double } [[SINCOS]], 1
+; CHECK-SHRINK-NEXT:    [[RES:%.*]] = fadd double [[SIN]], [[COS]]
+; CHECK-SHRINK-NEXT:    ret double [[RES]]
 ;
   %val = load double, ptr @var64
   %s = call double @sin(double %val) #0
@@ -69,8 +82,12 @@ define double @sincos_f64() {
 ; Only sin, no cos - should NOT combine
 define float @sin_only_f32(float %x) {
 ; CHECK-LABEL: @sin_only_f32(
-; CHECK-NEXT:    [[S:%.*]] = call float @sinf(float [[X:%.*]]) #[[ATTR0]]
+; CHECK-NEXT:    [[S:%.*]] = call float @llvm.sin.f32(float [[X:%.*]])
 ; CHECK-NEXT:    ret float [[S]]
+;
+; CHECK-SHRINK-LABEL: @sin_only_f32(
+; CHECK-SHRINK-NEXT:    [[S:%.*]] = call float @llvm.sin.f32(float [[X:%.*]])
+; CHECK-SHRINK-NEXT:    ret float [[S]]
 ;
   %s = call float @sinf(float %x) #0
   ret float %s
@@ -79,8 +96,12 @@ define float @sin_only_f32(float %x) {
 ; Only cos, no sin - should NOT combine
 define float @cos_only_f32(float %x) {
 ; CHECK-LABEL: @cos_only_f32(
-; CHECK-NEXT:    [[C:%.*]] = call float @cosf(float [[X:%.*]]) #[[ATTR0]]
+; CHECK-NEXT:    [[C:%.*]] = call float @llvm.cos.f32(float [[X:%.*]])
 ; CHECK-NEXT:    ret float [[C]]
+;
+; CHECK-SHRINK-LABEL: @cos_only_f32(
+; CHECK-SHRINK-NEXT:    [[C:%.*]] = call float @llvm.cos.f32(float [[X:%.*]])
+; CHECK-SHRINK-NEXT:    ret float [[C]]
 ;
   %c = call float @cosf(float %x) #0
   ret float %c
@@ -89,26 +110,19 @@ define float @cos_only_f32(float %x) {
 ; Different arguments - should NOT combine
 define float @sincos_different_args(float %x, float %y) {
 ; CHECK-LABEL: @sincos_different_args(
-; CHECK-NEXT:    [[S:%.*]] = call float @sinf(float [[X:%.*]]) #[[ATTR0]]
-; CHECK-NEXT:    [[C:%.*]] = call float @cosf(float [[Y:%.*]]) #[[ATTR0]]
+; CHECK-NEXT:    [[S:%.*]] = call float @llvm.sin.f32(float [[X:%.*]])
+; CHECK-NEXT:    [[C:%.*]] = call float @llvm.cos.f32(float [[Y:%.*]])
 ; CHECK-NEXT:    [[RES:%.*]] = fadd float [[S]], [[C]]
 ; CHECK-NEXT:    ret float [[RES]]
 ;
+; CHECK-SHRINK-LABEL: @sincos_different_args(
+; CHECK-SHRINK-NEXT:    [[S:%.*]] = call float @llvm.sin.f32(float [[X:%.*]])
+; CHECK-SHRINK-NEXT:    [[C:%.*]] = call float @llvm.cos.f32(float [[Y:%.*]])
+; CHECK-SHRINK-NEXT:    [[RES:%.*]] = fadd float [[S]], [[C]]
+; CHECK-SHRINK-NEXT:    ret float [[RES]]
+;
   %s = call float @sinf(float %x) #0
   %c = call float @cosf(float %y) #0
-  %res = fadd float %s, %c
-  ret float %res
-}
-
-; Constant argument - should NOT combine
-define float @sincos_const_arg() {
-; CHECK-LABEL: @sincos_const_arg(
-; CHECK-NEXT:    [[S:%.*]] = call float @sinf(float 1.000000e+00) #[[ATTR0]]
-; CHECK-NEXT:    [[C:%.*]] = call float @cosf(float 1.000000e+00) #[[ATTR0]]
-; CHECK-NEXT:    ret float 0x3FF61BBE40000000
-;
-  %s = call float @sinf(float 1.0) #0
-  %c = call float @cosf(float 1.0) #0
   %res = fadd float %s, %c
   ret float %res
 }
@@ -119,11 +133,19 @@ define float @sincos_multi_use(float %x) {
 ; CHECK-NEXT:    [[SINCOS:%.*]] = call { float, float } @llvm.sincos.f32(float [[X:%.*]])
 ; CHECK-NEXT:    [[SIN:%.*]] = extractvalue { float, float } [[SINCOS]], 0
 ; CHECK-NEXT:    [[COS:%.*]] = extractvalue { float, float } [[SINCOS]], 1
-; CHECK-NEXT:    [[C:%.*]] = call float @cosf(float [[X]]) #[[ATTR0]]
 ; CHECK-NEXT:    [[ADD:%.*]] = fadd float [[SIN]], [[COS]]
 ; CHECK-NEXT:    [[MUL:%.*]] = fmul float [[SIN]], [[COS]]
 ; CHECK-NEXT:    [[RES:%.*]] = fadd float [[ADD]], [[MUL]]
 ; CHECK-NEXT:    ret float [[RES]]
+;
+; CHECK-SHRINK-LABEL: @sincos_multi_use(
+; CHECK-SHRINK-NEXT:    [[SINCOS:%.*]] = call { float, float } @llvm.sincos.f32(float [[X:%.*]])
+; CHECK-SHRINK-NEXT:    [[SIN:%.*]] = extractvalue { float, float } [[SINCOS]], 0
+; CHECK-SHRINK-NEXT:    [[COS:%.*]] = extractvalue { float, float } [[SINCOS]], 1
+; CHECK-SHRINK-NEXT:    [[ADD:%.*]] = fadd float [[SIN]], [[COS]]
+; CHECK-SHRINK-NEXT:    [[MUL:%.*]] = fmul float [[SIN]], [[COS]]
+; CHECK-SHRINK-NEXT:    [[RES:%.*]] = fadd float [[ADD]], [[MUL]]
+; CHECK-SHRINK-NEXT:    ret float [[RES]]
 ;
   %s = call float @sinf(float %x) #0
   %c = call float @cosf(float %x) #0
@@ -136,10 +158,18 @@ define float @sincos_multi_use(float %x) {
 ; Intrinsic sin + intrinsic cos - should combine
 define float @sincos_intrinsic_f32(float %x) {
 ; CHECK-LABEL: @sincos_intrinsic_f32(
-; CHECK-NEXT:    [[S:%.*]] = call float @llvm.sin.f32(float [[X:%.*]])
-; CHECK-NEXT:    [[C:%.*]] = call float @llvm.cos.f32(float [[X]])
+; CHECK-NEXT:    [[SINCOS:%.*]] = call { float, float } @llvm.sincos.f32(float [[X:%.*]])
+; CHECK-NEXT:    [[S:%.*]] = extractvalue { float, float } [[SINCOS]], 0
+; CHECK-NEXT:    [[C:%.*]] = extractvalue { float, float } [[SINCOS]], 1
 ; CHECK-NEXT:    [[RES:%.*]] = fadd float [[S]], [[C]]
 ; CHECK-NEXT:    ret float [[RES]]
+;
+; CHECK-SHRINK-LABEL: @sincos_intrinsic_f32(
+; CHECK-SHRINK-NEXT:    [[SINCOS:%.*]] = call { float, float } @llvm.sincos.f32(float [[X:%.*]])
+; CHECK-SHRINK-NEXT:    [[SIN:%.*]] = extractvalue { float, float } [[SINCOS]], 0
+; CHECK-SHRINK-NEXT:    [[COS:%.*]] = extractvalue { float, float } [[SINCOS]], 1
+; CHECK-SHRINK-NEXT:    [[RES:%.*]] = fadd float [[SIN]], [[COS]]
+; CHECK-SHRINK-NEXT:    ret float [[RES]]
 ;
   %s = call float @llvm.sin.f32(float %x)
   %c = call float @llvm.cos.f32(float %x)
@@ -150,10 +180,18 @@ define float @sincos_intrinsic_f32(float %x) {
 ; Mixed: libcall sin + intrinsic cos
 define float @sincos_mixed_libcall_sin_intrinsic_cos(float %x) {
 ; CHECK-LABEL: @sincos_mixed_libcall_sin_intrinsic_cos(
-; CHECK-NEXT:    [[S:%.*]] = call float @sinf(float [[X:%.*]]) #[[ATTR0]]
-; CHECK-NEXT:    [[C:%.*]] = call float @llvm.cos.f32(float [[X]])
+; CHECK-NEXT:    [[SINCOS:%.*]] = call { float, float } @llvm.sincos.f32(float [[X:%.*]])
+; CHECK-NEXT:    [[S:%.*]] = extractvalue { float, float } [[SINCOS]], 0
+; CHECK-NEXT:    [[C:%.*]] = extractvalue { float, float } [[SINCOS]], 1
 ; CHECK-NEXT:    [[RES:%.*]] = fadd float [[S]], [[C]]
 ; CHECK-NEXT:    ret float [[RES]]
+;
+; CHECK-SHRINK-LABEL: @sincos_mixed_libcall_sin_intrinsic_cos(
+; CHECK-SHRINK-NEXT:    [[SINCOS:%.*]] = call { float, float } @llvm.sincos.f32(float [[X:%.*]])
+; CHECK-SHRINK-NEXT:    [[SIN:%.*]] = extractvalue { float, float } [[SINCOS]], 0
+; CHECK-SHRINK-NEXT:    [[COS:%.*]] = extractvalue { float, float } [[SINCOS]], 1
+; CHECK-SHRINK-NEXT:    [[RES:%.*]] = fadd float [[SIN]], [[COS]]
+; CHECK-SHRINK-NEXT:    ret float [[RES]]
 ;
   %s = call float @sinf(float %x) #0
   %c = call float @llvm.cos.f32(float %x)
@@ -164,15 +202,88 @@ define float @sincos_mixed_libcall_sin_intrinsic_cos(float %x) {
 ; Mixed: intrinsic sin + libcall cos
 define float @sincos_mixed_intrinsic_sin_libcall_cos(float %x) {
 ; CHECK-LABEL: @sincos_mixed_intrinsic_sin_libcall_cos(
-; CHECK-NEXT:    [[S:%.*]] = call float @llvm.sin.f32(float [[X:%.*]])
-; CHECK-NEXT:    [[C:%.*]] = call float @cosf(float [[X]]) #[[ATTR0]]
+; CHECK-NEXT:    [[SINCOS:%.*]] = call { float, float } @llvm.sincos.f32(float [[X:%.*]])
+; CHECK-NEXT:    [[S:%.*]] = extractvalue { float, float } [[SINCOS]], 0
+; CHECK-NEXT:    [[C:%.*]] = extractvalue { float, float } [[SINCOS]], 1
 ; CHECK-NEXT:    [[RES:%.*]] = fadd float [[S]], [[C]]
 ; CHECK-NEXT:    ret float [[RES]]
+;
+; CHECK-SHRINK-LABEL: @sincos_mixed_intrinsic_sin_libcall_cos(
+; CHECK-SHRINK-NEXT:    [[SINCOS:%.*]] = call { float, float } @llvm.sincos.f32(float [[X:%.*]])
+; CHECK-SHRINK-NEXT:    [[SIN:%.*]] = extractvalue { float, float } [[SINCOS]], 0
+; CHECK-SHRINK-NEXT:    [[COS:%.*]] = extractvalue { float, float } [[SINCOS]], 1
+; CHECK-SHRINK-NEXT:    [[RES:%.*]] = fadd float [[SIN]], [[COS]]
+; CHECK-SHRINK-NEXT:    ret float [[RES]]
 ;
   %s = call float @llvm.sin.f32(float %x)
   %c = call float @cosf(float %x) #0
   %res = fadd float %s, %c
   ret float %res
+}
+
+; UnsafeFPShrink: sin(fpext float) -> fpext(sinf(float))
+; This should trigger optimizeUnaryDoubleFP before converting to intrinsic.
+define float @sin_double_to_float_shrink(float %x) {
+; CHECK-LABEL: @sin_double_to_float_shrink(
+; CHECK-NEXT:    [[EXT:%.*]] = fpext float [[X:%.*]] to double
+; CHECK-NEXT:    [[S:%.*]] = call double @llvm.sin.f64(double [[EXT]])
+; CHECK-NEXT:    [[TRUNC:%.*]] = fptrunc double [[S]] to float
+; CHECK-NEXT:    ret float [[TRUNC]]
+;
+; CHECK-SHRINK-LABEL: @sin_double_to_float_shrink(
+; CHECK-SHRINK-NEXT:    [[SINF:%.*]] = call float @llvm.sin.f32(float [[X:%.*]])
+; CHECK-SHRINK-NEXT:    ret float [[SINF]]
+;
+  %ext = fpext float %x to double
+  %s = call double @sin(double %ext) #0
+  %trunc = fptrunc double %s to float
+  ret float %trunc
+}
+
+; UnsafeFPShrink: cos(fpext float) -> fpext(cosf(float))
+define float @cos_double_to_float_shrink(float %x) {
+; CHECK-LABEL: @cos_double_to_float_shrink(
+; CHECK-NEXT:    [[EXT:%.*]] = fpext float [[X:%.*]] to double
+; CHECK-NEXT:    [[C:%.*]] = call double @llvm.cos.f64(double [[EXT]])
+; CHECK-NEXT:    [[TRUNC:%.*]] = fptrunc double [[C]] to float
+; CHECK-NEXT:    ret float [[TRUNC]]
+;
+; CHECK-SHRINK-LABEL: @cos_double_to_float_shrink(
+; CHECK-SHRINK-NEXT:    [[COSF:%.*]] = call float @llvm.cos.f32(float [[X:%.*]])
+; CHECK-SHRINK-NEXT:    ret float [[COSF]]
+;
+  %ext = fpext float %x to double
+  %c = call double @cos(double %ext) #0
+  %trunc = fptrunc double %c to float
+  ret float %trunc
+}
+
+; UnsafeFPShrink + sincos: sin(fpext float) + cos(fpext float) should
+; first shrink to sinf/cosf, then combine into llvm.sincos.f32.
+define { float, float } @sincos_double_to_float_shrink(float %x) {
+; CHECK-LABEL: @sincos_double_to_float_shrink(
+; CHECK-NEXT:    [[EXT:%.*]] = fpext float [[X:%.*]] to double
+; CHECK-NEXT:    [[SINCOS:%.*]] = call { double, double } @llvm.sincos.f64(double [[EXT]])
+; CHECK-NEXT:    [[SIN:%.*]] = extractvalue { double, double } [[SINCOS]], 0
+; CHECK-NEXT:    [[COS:%.*]] = extractvalue { double, double } [[SINCOS]], 1
+; CHECK-NEXT:    [[ST:%.*]] = fptrunc double [[SIN]] to float
+; CHECK-NEXT:    [[CT:%.*]] = fptrunc double [[COS]] to float
+; CHECK-NEXT:    [[R0:%.*]] = insertvalue { float, float } undef, float [[ST]], 0
+; CHECK-NEXT:    [[R1:%.*]] = insertvalue { float, float } [[R0]], float [[CT]], 1
+; CHECK-NEXT:    ret { float, float } [[R1]]
+;
+; CHECK-SHRINK-LABEL: @sincos_double_to_float_shrink(
+; CHECK-SHRINK-NEXT:    [[SINCOS:%.*]] = call { float, float } @llvm.sincos.f32(float [[X:%.*]])
+; CHECK-SHRINK-NEXT:    ret { float, float } [[SINCOS]]
+;
+  %ext = fpext float %x to double
+  %s = call double @sin(double %ext) #0
+  %c = call double @cos(double %ext) #0
+  %st = fptrunc double %s to float
+  %ct = fptrunc double %c to float
+  %r0 = insertvalue { float, float } undef, float %st, 0
+  %r1 = insertvalue { float, float } %r0, float %ct, 1
+  ret { float, float } %r1
 }
 
 attributes #0 = { nounwind memory(none) }
