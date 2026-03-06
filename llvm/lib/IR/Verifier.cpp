@@ -1862,12 +1862,21 @@ void Verifier::visitDIImportedEntity(const DIImportedEntity &N) {
 }
 
 void Verifier::visitComdat(const Comdat &C) {
-  // In COFF the Module is invalid if the GlobalValue has private linkage.
-  // Entities with private linkage don't have entries in the symbol table.
-  if (TT.isOSBinFormatCOFF())
-    if (const GlobalValue *GV = M.getNamedValue(C.getName()))
+  // Comdats in COFF modules must have a corresponding global that is not
+  // private. If the global is private, there will be no symbol table entry.
+  // We consider unused or dead comdat entries to be valid, since they won't
+  // make it into the COFF object file.
+  if (TT.isOSBinFormatCOFF()) {
+    const GlobalValue *GV = M.getNamedValue(C.getName());
+    bool IsDefined = GV != nullptr && !GV->isDeclarationForLinker();
+    if (IsDefined)
       Check(!GV->hasPrivateLinkage(), "comdat global value has private linkage",
             GV);
+    else
+      Check(C.getUsers().empty(),
+            "COFF comdats must have a defined global value with the same name",
+            GV);
+  }
 }
 
 void Verifier::visitModuleIdents() {
