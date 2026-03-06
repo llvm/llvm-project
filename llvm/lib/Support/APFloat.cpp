@@ -2776,6 +2776,12 @@ IEEEFloat::convertToInteger(MutableArrayRef<integerPart> parts,
    point number is not modified.  */
 APFloat::opStatus IEEEFloat::convertFromUnsignedParts(
     const integerPart *src, unsigned int srcCount, roundingMode rounding_mode) {
+  if (srcCount == 0) {
+    category = fcZero;
+    sign = false;
+    return APFloat::opOK;
+  }
+
   unsigned int omsb, precision, dstCount;
   integerPart *dst;
   lostFraction lost_fraction;
