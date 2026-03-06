@@ -13,13 +13,17 @@
 #ifndef FORTRAN_OPTIMIZER_SUPPORT_INITFIR_H
 #define FORTRAN_OPTIMIZER_SUPPORT_INITFIR_H
 
+#include "flang/Optimizer/CodeGen/CodeGen.h"
 #include "flang/Optimizer/Dialect/CUF/CUFDialect.h"
 #include "flang/Optimizer/Dialect/CUF/CUFToLLVMIRTranslation.h"
 #include "flang/Optimizer/Dialect/FIRDialect.h"
 #include "flang/Optimizer/Dialect/MIF/MIFDialect.h"
 #include "flang/Optimizer/HLFIR/HLFIRDialect.h"
+#include "flang/Optimizer/HLFIR/Passes.h"
 #include "flang/Optimizer/OpenACC/Support/RegisterOpenACCExtensions.h"
+#include "flang/Optimizer/OpenMP/Passes.h"
 #include "flang/Optimizer/OpenMP/Support/RegisterOpenMPExtensions.h"
+#include "flang/Optimizer/Transforms/Passes.h"
 #include "mlir/Conversion/Passes.h"
 #include "mlir/Dialect/Affine/IR/AffineOps.h"
 #include "mlir/Dialect/Affine/Transforms/Passes.h"
@@ -31,6 +35,7 @@
 #include "mlir/Dialect/Index/IR/IndexDialect.h"
 #include "mlir/Dialect/LLVMIR/NVVMDialect.h"
 #include "mlir/Dialect/LLVMIR/Transforms/InlinerInterfaceImpl.h"
+#include "mlir/Dialect/LLVMIR/Transforms/Passes.h"
 #include "mlir/Dialect/Math/IR/Math.h"
 #include "mlir/Dialect/OpenACC/OpenACC.h"
 #include "mlir/Dialect/OpenACC/Transforms/Passes.h"
@@ -131,6 +136,32 @@ inline void registerMLIRPassesForFortranTools() {
 
   mlir::registerMem2RegPass();
   mlir::registerLowerAffinePass();
+}
+
+/// Register the passes used in flang's MLIR pass pipeline so that
+/// --mlir-print-ir-before=<pass> and --mlir-print-ir-after=<pass> work.
+/// This must be called BEFORE mlir::registerPassManagerCLOptions() because
+/// that function creates the PassNameCLParser which snapshots the pass
+/// registry during initialization.
+inline void registerFlangPipelinePasses() {
+  // MLIR core passes used in the pipeline.
+  mlir::registerCSEPass();
+  mlir::registerCanonicalizerPass();
+  mlir::registerInlinerPass();
+
+  // MLIR conversion passes used in the pipeline.
+  mlir::registerSCFToControlFlowPass();
+  mlir::registerConvertMathToFuncs();
+  mlir::registerConvertComplexToStandardPass();
+  mlir::registerConvertMathToLLVMPass();
+  mlir::LLVM::registerLLVMAddComdats();
+  mlir::registerReconcileUnrealizedCastsPass();
+
+  // FIR, HLFIR, and OpenMP passes.
+  fir::registerOptCodeGenPasses();
+  fir::registerOptTransformPasses();
+  hlfir::registerHLFIRPasses();
+  flangomp::registerFlangOpenMPPasses();
 }
 
 /// Register the interfaces needed to lower to LLVM IR.
