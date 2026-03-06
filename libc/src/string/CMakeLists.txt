@@ -303,6 +303,17 @@ add_entrypoint_object(
 )
 
 add_entrypoint_object(
+  strnlen_s
+  SRCS
+    strnlen_s.cpp
+  HDRS
+    strnlen_s.h
+  DEPENDS
+    libc.hdr.types.size_t
+    .string_utils
+)
+
+add_entrypoint_object(
   strpbrk
   SRCS
     strpbrk.cpp

@@ -252,6 +252,7 @@ add_header_macro(
   string.h
   DEPENDS
     .llvm_libc_common_h
+    .llvm-libc-macros.annex_k_macros
     .llvm-libc-macros.null_macro
     .llvm-libc-types.size_t
 )
