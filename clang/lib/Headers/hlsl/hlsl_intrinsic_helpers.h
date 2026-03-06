@@ -69,8 +69,7 @@ template <typename T, int N>
 enable_if_t<is_same<double, T>::value, T> mul_vec_impl(vector<T, N> x,
                                                        vector<T, N> y) {
   T sum = x[0] * y[0];
-  [unroll] for (int i = 1; i < N; ++i) sum =
-      __builtin_hlsl_mad(x[i], y[i], sum);
+  [unroll] for (int i = 1; i < N; ++i) sum = mad(x[i], y[i], sum);
   return sum;
 }
 
