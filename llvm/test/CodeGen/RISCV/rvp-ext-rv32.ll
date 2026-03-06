@@ -310,6 +310,24 @@ define <4 x i8> @test_paaddu_b(<4 x i8> %a, <4 x i8> %b) {
   ret <4 x i8> %res
 }
 
+define <2 x i16> @test_pabs_h(<2 x i16> %a) {
+; CHECK-LABEL: test_pabs_h:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    pabd.h a0, a0, zero
+; CHECK-NEXT:    ret
+  %res = call <2 x i16> @llvm.abs.v2i16(<2 x i16> %a, i1 0)
+  ret <2 x i16> %res
+}
+
+define <4 x i8> @test_pabs_b(<4 x i8> %a) {
+; CHECK-LABEL: test_pabs_b:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    pabd.b a0, a0, zero
+; CHECK-NEXT:    ret
+  %res = call <4 x i8> @llvm.abs.v4i8(<4 x i8> %a, i1 0)
+  ret <4 x i8> %res
+}
+
 ; Test absolute difference signed for v2i16
 define <2 x i16> @test_pdif_h(<2 x i16> %a, <2 x i16> %b) {
 ; CHECK-LABEL: test_pdif_h:
@@ -1828,10 +1846,10 @@ define <2 x i16> @test_select_v2i16(i1 %cond, <2 x i16> %a, <2 x i16> %b) {
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    andi a3, a0, 1
 ; CHECK-NEXT:    mv a0, a1
-; CHECK-NEXT:    bnez a3, .LBB126_2
+; CHECK-NEXT:    bnez a3, .LBB128_2
 ; CHECK-NEXT:  # %bb.1:
 ; CHECK-NEXT:    mv a0, a2
-; CHECK-NEXT:  .LBB126_2:
+; CHECK-NEXT:  .LBB128_2:
 ; CHECK-NEXT:    ret
   %res = select i1 %cond, <2 x i16> %a, <2 x i16> %b
   ret <2 x i16> %res
@@ -1842,10 +1860,10 @@ define <4 x i8> @test_select_v4i8(i1 %cond, <4 x i8> %a, <4 x i8> %b) {
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    andi a3, a0, 1
 ; CHECK-NEXT:    mv a0, a1
-; CHECK-NEXT:    bnez a3, .LBB127_2
+; CHECK-NEXT:    bnez a3, .LBB129_2
 ; CHECK-NEXT:  # %bb.1:
 ; CHECK-NEXT:    mv a0, a2
-; CHECK-NEXT:  .LBB127_2:
+; CHECK-NEXT:  .LBB129_2:
 ; CHECK-NEXT:    ret
   %res = select i1 %cond, <4 x i8> %a, <4 x i8> %b
   ret <4 x i8> %res
