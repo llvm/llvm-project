@@ -1051,6 +1051,10 @@ void StmtProfiler::VisitOMPInterchangeDirective(
   VisitOMPCanonicalLoopNestTransformationDirective(S);
 }
 
+void StmtProfiler::VisitOMPSplitDirective(const OMPSplitDirective *S) {
+  VisitOMPCanonicalLoopNestTransformationDirective(S);
+}
+
 void StmtProfiler::VisitOMPCanonicalLoopSequenceTransformationDirective(
     const OMPCanonicalLoopSequenceTransformationDirective *S) {
   VisitOMPExecutableDirective(S);
