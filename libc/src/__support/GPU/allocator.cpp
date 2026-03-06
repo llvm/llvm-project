@@ -20,7 +20,7 @@
 #include "src/__support/CPP/atomic.h"
 #include "src/__support/CPP/bit.h"
 #include "src/__support/CPP/new.h"
-#include "src/__support/GPU/fixedstack.h"
+#include "src/__support/GPU/fixedbuffer.h"
 #include "src/__support/GPU/utils.h"
 #include "src/__support/RPC/rpc_client.h"
 #include "src/__support/threads/sleep.h"
@@ -359,7 +359,7 @@ struct Slab {
 };
 
 // A global cache of previously allocated slabs for efficient reuse.
-static FixedStack<Slab *, CACHED_SLABS> slab_cache;
+static FixedBuffer<Slab *, CACHED_SLABS> slab_cache;
 
 /// A wait-free guard around a pointer resource to be created dynamically if
 /// space is available and freed once there are no more users.

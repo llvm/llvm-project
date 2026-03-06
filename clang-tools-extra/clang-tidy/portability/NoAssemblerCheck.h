@@ -6,17 +6,17 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLVM_CLANG_TOOLS_EXTRA_CLANG_TIDY_HICPP_NOASSEMBLERCHECK_H
-#define LLVM_CLANG_TOOLS_EXTRA_CLANG_TIDY_HICPP_NOASSEMBLERCHECK_H
+#ifndef LLVM_CLANG_TOOLS_EXTRA_CLANG_TIDY_PORTABILITY_NOASSEMBLERCHECK_H
+#define LLVM_CLANG_TOOLS_EXTRA_CLANG_TIDY_PORTABILITY_NOASSEMBLERCHECK_H
 
 #include "../ClangTidyCheck.h"
 
-namespace clang::tidy::hicpp {
+namespace clang::tidy::portability {
 
 /// Find assembler statements. No fix is offered.
 ///
 /// For the user-facing documentation see:
-/// https://clang.llvm.org/extra/clang-tidy/checks/hicpp/no-assembler.html
+/// https://clang.llvm.org/extra/clang-tidy/checks/portability/no-assembler.html
 class NoAssemblerCheck : public ClangTidyCheck {
 public:
   NoAssemblerCheck(StringRef Name, ClangTidyContext *Context)
@@ -25,6 +25,6 @@ public:
   void check(const ast_matchers::MatchFinder::MatchResult &Result) override;
 };
 
-} // namespace clang::tidy::hicpp
+} // namespace clang::tidy::portability
 
-#endif // LLVM_CLANG_TOOLS_EXTRA_CLANG_TIDY_HICPP_NOASSEMBLERCHECK_H
+#endif // LLVM_CLANG_TOOLS_EXTRA_CLANG_TIDY_PORTABILITY_NOASSEMBLERCHECK_H
