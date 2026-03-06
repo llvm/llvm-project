@@ -67,8 +67,6 @@ option(COMPILER_RT_BUILTINS_HIDE_SYMBOLS
 
 include_directories(../../../third-party/siphash/include)
 
-# TODO: Need to add a mechanism for logging errors when builtin source files are
-# added to a sub-directory and not this CMakeLists file.
 set(GENERIC_SOURCES
   absvdi2.c
   absvsi2.c
@@ -897,6 +895,139 @@ set(ve_SOURCES
   ${GENERIC_SOURCES})
 
 set(m68k_SOURCES ${GENERIC_SOURCES})
+
+option(COMPILER_RT_BUILTINS_WARN_UNLISTED_SOURCES
+  "Warn about builtin source files that exist on disk but are not listed in CMakeLists.txt"
+  Off)
+
+if(COMPILER_RT_BUILTINS_WARN_UNLISTED_SOURCES)
+  # Sources that are intentionally conditional (platform/config specific).
+  # these are known to the build system but may not appear in any active
+  # *_SOURCES variable depending on the current configuration. like 
+  # x86_64/chkstk.S that is enabled for WIN32 only. dont forget add 
+  # files like these here to disable the warning message.
+  set(_known_conditional_sources
+    # x86 Windows stack probe stubs
+    x86_64/chkstk.S
+    i386/chkstk.S
+    i386/chkstk2.S
+    # x86 float builtins not available on Android
+    x86_64/floatundidf.S
+    x86_64/floatundisf.S
+    x86_64/floatundixf.S
+    # i386 float builtins not available on Android
+    i386/floatdixf.S
+    i386/floatundixf.S
+    # ARM optimized FP (requires assembler -mimplicit-it=always support)
+    arm/mulsf3.S
+    arm/divsf3.S
+    arm/fnan2.c
+    arm/fnorm2.c
+    arm/funder.c
+    arm/thumb1/mulsf3.S
+    # AArch64 SME ABI (requires FMV + fno-builtin support)
+    aarch64/sme-abi.S
+    aarch64/sme-abi-assert.c
+    aarch64/sme-libc-memset-memchr.c
+    aarch64/sme-libc-memcpy-memmove.c
+    aarch64/sme-libc-opt-memset-memchr.S
+    aarch64/sme-libc-opt-memcpy-memmove.S
+    aarch64/sme-libc-opt-memcpy-memmove-sve.S
+    aarch64/arm_apple_sme_abi.s
+    # PowerPC AIX-specific
+    ppc/init_ifuncs.c
+    # PowerPC __int128 routines (not on AIX)
+    ppc/floattitf.c
+    ppc/fixtfti.c
+    ppc/fixunstfti.c
+    # ppc/restFP.S and ppc/saveFP.S are #include-d at the assembler level by
+    # other PPC source files; they are not standalone translation units.
+    ppc/restFP.S
+    ppc/saveFP.S
+    # BF16 (only when __bf16 is available)
+    extendbfsf2.c
+    truncdfbf2.c
+    truncxfbf2.c
+    truncsfbf2.c
+    trunctfbf2.c
+    # emupac (AArch64, not MSVC)
+    aarch64/emupac.cpp
+    # MINGW chkstk
+    aarch64/chkstk.S
+    arm/chkstk.S
+    # Generic sources conditionally excluded on Fuchsia/baremetal/GPU
+    emutls.c
+    enable_execute_stack.c
+    eprintf.c
+    clear_cache.c
+    # Conditionally included based on compiler/platform support
+    atomic.c
+    atomic_flag_clear.c
+    atomic_flag_clear_explicit.c
+    atomic_flag_test_and_set.c
+    atomic_flag_test_and_set_explicit.c
+    atomic_signal_fence.c
+    atomic_thread_fence.c
+    gcc_personality_v0.c
+    # x86 i386 fp_mode (not on MSVC)
+    i386/fp_mode.c
+    # aarch64/lse.S is a template: it is symlinked/copied per-variant into
+    # outline_atomic_helpers.dir/ with different COMPILE_DEFINITIONS and is
+    # never compiled directly.
+    aarch64/lse.S
+    # crtbegin.c/crtend.c are compiled via add_compiler_rt_runtime(clang_rt.crtbegin/crtend)
+    # directly by path, not through any _SOURCES variable.
+    crtbegin.c
+    crtend.c
+  )
+
+  set(_known_conditional_sources_abs)
+  foreach(_src ${_known_conditional_sources})
+    get_filename_component(_abs "${_src}" ABSOLUTE
+      BASE_DIR "${CMAKE_CURRENT_SOURCE_DIR}")
+    list(APPEND _known_conditional_sources_abs "${_abs}")
+  endforeach()
+
+  set(_all_listed_sources)
+  get_cmake_property(_all_vars VARIABLES)
+  foreach(_var ${_all_vars})
+    if(_var MATCHES "^[a-zA-Z0-9_]+_SOURCES$" AND
+        NOT _var MATCHES "^(CMAKE|LLVM|CLANG|COMPILER_RT_LIBATOMIC|CRT)_")
+      foreach(_src ${${_var}})
+        if(NOT IS_ABSOLUTE "${_src}")
+          get_filename_component(_abs "${_src}" ABSOLUTE
+            BASE_DIR "${CMAKE_CURRENT_SOURCE_DIR}")
+        else()
+          set(_abs "${_src}")
+        endif()
+        list(APPEND _all_listed_sources "${_abs}")
+      endforeach()
+    endif()
+  endforeach()
+  list(REMOVE_DUPLICATES _all_listed_sources)
+
+  file(GLOB_RECURSE _all_disk_sources
+    CONFIGURE_DEPENDS
+    "${CMAKE_CURRENT_SOURCE_DIR}/*.c"
+    "${CMAKE_CURRENT_SOURCE_DIR}/*.cpp"
+    "${CMAKE_CURRENT_SOURCE_DIR}/*.S"
+    "${CMAKE_CURRENT_SOURCE_DIR}/*.s"
+  )
+
+  list(FILTER _all_disk_sources EXCLUDE REGEX "/Darwin-excludes/")
+  list(FILTER _all_disk_sources EXCLUDE REGEX "/macho_embedded/")
+  list(FILTER _all_disk_sources EXCLUDE REGEX "/CMakeFiles/")
+
+  foreach(_file ${_all_disk_sources})
+    if(NOT "${_file}" IN_LIST _all_listed_sources AND
+       NOT "${_file}" IN_LIST _known_conditional_sources_abs)
+      file(RELATIVE_PATH _rel "${CMAKE_CURRENT_SOURCE_DIR}" "${_file}")
+      message(WARNING
+        "Builtin source file '${_rel}' exists on disk but is not listed in "
+        "any *_SOURCES variable in compiler-rt/lib/builtins/CMakeLists.txt")
+    endif()
+  endforeach()
+endif()
 
 add_custom_target(builtins)
 set_target_properties(builtins PROPERTIES FOLDER "Compiler-RT/Metatargets")
