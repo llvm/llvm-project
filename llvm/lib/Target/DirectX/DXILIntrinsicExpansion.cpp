@@ -1065,7 +1065,6 @@ static Value *expandMatrixMultiply(CallInst *Orig) {
   // Column-major indexing:
   // LHS row R, element K: index = K * LHSRows + R
   // RHS col C, element K: index = C * LHSCols + K
-  // TODO: support row-major indexing
   Value *Result = PoisonValue::get(RetTy);
 
   // Extract all scalar elements from LHS and RHS once, then reuse them.
