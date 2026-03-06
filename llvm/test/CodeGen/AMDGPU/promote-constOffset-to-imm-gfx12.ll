@@ -63,11 +63,12 @@ define amdgpu_kernel void @promote_async_load_offset_positive(ptr addrspace(1) %
 ; GFX1250-NEXT:    s_wait_kmcnt 0x0
 ; GFX1250-NEXT:    global_load_async_to_lds_b128 v1, v0, s[0:1]
 ; GFX1250-NEXT:    v_add_nc_u64_e32 v[2:3], s[0:1], v[0:1]
-; GFX1250-NEXT:    s_delay_alu instid0(VALU_DEP_1)
-; GFX1250-NEXT:    v_add_nc_u64_e32 v[4:5], 0x100, v[2:3]
-; GFX1250-NEXT:    v_add_nc_u64_e32 v[2:3], 0x200, v[2:3]
-; GFX1250-NEXT:    global_load_async_to_lds_b128 v1, v[4:5], off
+; GFX1250-NEXT:    v_add_nc_u32_e64 v0, 0xffffff00, 0
+; GFX1250-NEXT:    s_delay_alu instid0(VALU_DEP_2)
+; GFX1250-NEXT:    v_add_nc_u64_e32 v[2:3], 0x100, v[2:3]
+; GFX1250-NEXT:    s_clause 0x1
 ; GFX1250-NEXT:    global_load_async_to_lds_b128 v1, v[2:3], off
+; GFX1250-NEXT:    global_load_async_to_lds_b128 v0, v[2:3], off offset:256
 ; GFX1250-NEXT:    s_endpgm
 entry:
   %tid = call i32 @llvm.amdgcn.workitem.id.x()

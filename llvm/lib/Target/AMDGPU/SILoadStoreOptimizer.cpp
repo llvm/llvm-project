@@ -2410,6 +2410,12 @@ bool SILoadStoreOptimizer::promoteConstantOffsetToImm(
   unsigned AS = SIInstrInfo::isFLATGlobal(MI) ? AMDGPUAS::GLOBAL_ADDRESS
                                               : AMDGPUAS::FLAT_ADDRESS;
 
+  uint64_t FlatVariant = AS == AMDGPUAS::GLOBAL_ADDRESS
+                             ? SIInstrFlags::FlatGlobal
+                             : SIInstrFlags::FLAT;
+  bool AllowNegativeOffset =
+      TII->allowNegativeFlatOffset(FlatVariant) && !TII->usesASYNC_CNT(MI);
+
   if (AnchorList.count(&MI))
     return false;
 
@@ -2469,6 +2475,7 @@ bool SILoadStoreOptimizer::promoteConstantOffsetToImm(
   MemAddress AnchorAddr;
   uint32_t MaxDist = std::numeric_limits<uint32_t>::min();
   SmallVector<std::pair<MachineInstr *, int64_t>, 4> InstsWCommonBase;
+  bool MIIsAnchor = false;
 
   MachineBasicBlock *MBB = MI.getParent();
   MachineBasicBlock::iterator E = MBB->end();
@@ -2502,18 +2509,38 @@ bool SILoadStoreOptimizer::promoteConstantOffsetToImm(
 
     InstsWCommonBase.emplace_back(&MINext, MAddrNext.Offset);
 
-    int64_t Dist = MAddr.Offset - MAddrNext.Offset;
-    TargetLoweringBase::AddrMode AM;
-    AM.HasBaseReg = true;
-    AM.BaseOffs = Dist;
-    if (TLI->isLegalFlatAddressingMode(AM, AS) &&
-        (!TII->usesASYNC_CNT(MI) || Dist >= 0) &&
-        (uint32_t)std::abs(Dist) > MaxDist) {
-      MaxDist = std::abs(Dist);
+    if (AllowNegativeOffset) {
+      int64_t Dist = MAddr.Offset - MAddrNext.Offset;
+      TargetLoweringBase::AddrMode AM;
+      AM.HasBaseReg = true;
+      AM.BaseOffs = Dist;
+      if (TLI->isLegalFlatAddressingMode(AM, AS) &&
+          (uint32_t)std::abs(Dist) > MaxDist) {
+        MaxDist = std::abs(Dist);
 
-      AnchorAddr = MAddrNext;
-      AnchorInst = &MINext;
+        AnchorAddr = MAddrNext;
+        AnchorInst = &MINext;
+      }
     }
+  }
+
+  // When negative offsets are not allowed, pick the candidate with the smallest
+  // offset as anchor so all promoted offsets are non-negative. If MI itself has
+  // the smallest offset, MI becomes the reference point (MIIsAnchor).
+  if (!AllowNegativeOffset && !InstsWCommonBase.empty()) {
+    for (auto &[Inst, Offset] : InstsWCommonBase) {
+      int64_t Dist = MAddr.Offset - Offset;
+      TargetLoweringBase::AddrMode AM;
+      AM.HasBaseReg = true;
+      AM.BaseOffs = Dist;
+      if (Dist >= 0 && TLI->isLegalFlatAddressingMode(AM, AS) &&
+          (!AnchorInst || Offset < AnchorAddr.Offset)) {
+        AnchorAddr = Visited[Inst];
+        AnchorInst = Inst;
+      }
+    }
+    if (!AnchorInst)
+      MIIsAnchor = true;
   }
 
   if (AnchorInst) {
@@ -2536,7 +2563,7 @@ bool SILoadStoreOptimizer::promoteConstantOffsetToImm(
       AM.BaseOffs = OtherOffset - AnchorAddr.Offset;
 
       if (TLI->isLegalFlatAddressingMode(AM, AS) &&
-          (!TII->usesASYNC_CNT(*OtherMI) || AM.BaseOffs >= 0)) {
+          (AllowNegativeOffset || AM.BaseOffs >= 0)) {
         LLVM_DEBUG(dbgs() << "  Promote Offset(" << OtherOffset; dbgs() << ")";
                    OtherMI->dump());
         int32_t OtherOffsetDiff = OtherOffset - AnchorAddr.Offset;
@@ -2547,6 +2574,35 @@ bool SILoadStoreOptimizer::promoteConstantOffsetToImm(
     }
     AnchorList.insert(AnchorInst);
     return true;
+  }
+
+  if (MIIsAnchor) {
+    LLVM_DEBUG(dbgs() << "  MI is anchor (smallest offset); promoting "
+                         "candidates relative to MI's base.\n");
+
+    Register Base = TII->getNamedOperand(MI, AMDGPU::OpName::vaddr)->getReg();
+    bool AnyPromoted = false;
+
+    for (auto [OtherMI, OtherOffset] : InstsWCommonBase) {
+      int64_t Dist = OtherOffset - MAddr.Offset;
+      TargetLoweringBase::AddrMode AM;
+      AM.HasBaseReg = true;
+      AM.BaseOffs = Dist;
+      if (Dist >= 0 && TLI->isLegalFlatAddressingMode(AM, AS)) {
+        LLVM_DEBUG(dbgs() << "  Promote Offset(" << OtherOffset << ")";
+                   OtherMI->dump());
+        updateBaseAndOffset(*OtherMI, Base, Dist);
+        updateAsyncLDSAddress(*OtherMI, Dist);
+        LLVM_DEBUG(dbgs() << "     After promotion: "; OtherMI->dump());
+        AnyPromoted = true;
+      }
+    }
+
+    if (AnyPromoted) {
+      TII->getNamedOperand(MI, AMDGPU::OpName::vaddr)->setIsKill(false);
+      AnchorList.insert(&MI);
+      return true;
+    }
   }
 
   return false;
