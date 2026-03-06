@@ -3,6 +3,7 @@
 @var = global ptr null
 
 declare void @callee()
+declare void @llvm.ssp.protected(ptr)
 
 define void @caller1() ssp {
 ; CHECK-LABEL: define void @caller1()
@@ -17,6 +18,7 @@ define void @caller1() ssp {
 ; CHECK: musttail call void @callee()
 ; CHECK-NEXT: ret void
   %var = alloca [2 x i64]
+  call void @llvm.ssp.protected(ptr %var)
   store ptr %var, ptr @var
   musttail call void @callee()
   ret void
@@ -34,6 +36,7 @@ define void @justret() ssp {
 
 ; CHECK: ret void
   %var = alloca [2 x i64]
+  call void @llvm.ssp.protected(ptr %var)
   store ptr %var, ptr @var
   br label %retblock
 
@@ -58,6 +61,7 @@ define ptr @caller2() ssp {
 ; CHECK-NEXT: ret ptr [[TMP]]
 
   %var = alloca [2 x i64]
+  call void @llvm.ssp.protected(ptr %var)
   store ptr %var, ptr @var
   %tmp = musttail call ptr @callee2()
   ret ptr %tmp
@@ -76,6 +80,7 @@ define void @caller3() ssp {
 ; CHECK: tail call void @callee()
 ; CHECK-NEXT: ret void
   %var = alloca [2 x i64]
+  call void @llvm.ssp.protected(ptr %var)
   store ptr %var, ptr @var
   tail call void @callee()
   ret void
@@ -95,6 +100,7 @@ define ptr @caller4() ssp {
 ; CHECK-NEXT: ret ptr [[TMP]]
 
   %var = alloca [2 x i64]
+  call void @llvm.ssp.protected(ptr %var)
   store ptr %var, ptr @var
   %tmp = tail call ptr @callee2()
   ret ptr %tmp

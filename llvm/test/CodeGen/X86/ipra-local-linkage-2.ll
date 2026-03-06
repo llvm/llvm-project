@@ -111,6 +111,7 @@ define void @caller_use_rbx(i32 %X) nounwind ssp {
 ; X64-NEXT:    callq __stack_chk_fail@PLT
   %realign = alloca i32, align 32
   %addr = alloca i32, i32 %X
+  call void @llvm.ssp.protected(ptr %addr)
   call void @callee_clobber_rbx(ptr %realign)
   ret void
 }
@@ -147,6 +148,7 @@ define void @caller_use_esi(i32 %X) nounwind ssp {
 ; X86-NEXT:    calll __stack_chk_fail
   %realign = alloca i32, align 32
   %addr = alloca i32, i32 %X
+  call void @llvm.ssp.protected(ptr %addr)
   call void @callee_clobber_esi(ptr %realign)
   ret void
 }

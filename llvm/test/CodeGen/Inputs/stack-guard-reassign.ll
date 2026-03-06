@@ -2,6 +2,7 @@ define i32 @fn(ptr %str) #0 {
 entry:
   %str.addr = alloca ptr, align 4
   %buffer = alloca [65536 x i8], align 1
+  call void @llvm.ssp.protected(ptr %buffer)
   store ptr %str, ptr %str.addr, align 4
   %arraydecay = getelementptr inbounds [65536 x i8], ptr %buffer, i32 0, i32 0
   %0 = load ptr, ptr %str.addr, align 4
@@ -17,6 +18,7 @@ entry:
 declare ptr @strcpy(ptr, ptr)
 
 declare i32 @puts(ptr)
+declare void @llvm.ssp.protected(ptr)
 
 attributes #0 = { noinline nounwind optnone ssp }
 

@@ -131,6 +131,7 @@ define void @test(ptr %a) nounwind ssp {
 entry:
  %a_addr = alloca ptr    ; <ptr> [#uses=2]
  %buf = alloca [8 x i8]    ; <ptr> [#uses=2]
+ call void @llvm.ssp.protected(ptr %buf)
  store ptr %a, ptr %a_addr
  %0 = load ptr, ptr %a_addr, align 4    ; <ptr> [#uses=1]
  %1 = call ptr @strcpy(ptr %buf, ptr %0) nounwind   ; <ptr> [#uses=0]
@@ -270,6 +271,7 @@ define void @test_vla(i32 %n) nounwind ssp {
 ; MSVC-X64-O0-NEXT:    popq %rbp
 ; MSVC-X64-O0-NEXT:    retq
   %vla = alloca i32, i32 %n
+  call void @llvm.ssp.protected(ptr %vla)
   call void @escape(ptr %vla)
   ret void
 }
@@ -442,10 +444,13 @@ define void @test_vla_realign(i32 %n) nounwind ssp {
 ; MSVC-X64-O0-NEXT:    retq
   %realign = alloca i32, align 32
   %vla = alloca i32, i32 %n
+  call void @llvm.ssp.protected(ptr %vla)
   call void @escape(ptr %realign)
   call void @escape(ptr %vla)
   ret void
 }
+
+declare void @llvm.ssp.protected(ptr)
 
 declare ptr @strcpy(ptr, ptr) nounwind
 

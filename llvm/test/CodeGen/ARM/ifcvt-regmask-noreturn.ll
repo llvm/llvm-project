@@ -18,6 +18,7 @@ target triple = "thumbv7s-apple-ios8.0.0"
 define void @test(i32 %argc, ptr nocapture readonly %argv, ptr %ptr, i32 %val) #0 {
 entry:
   %count.i = alloca [256 x i32], align 4
+  call void @llvm.ssp.protected(ptr %count.i)
   %cmp284.i = icmp eq i32 %val, 0
   br i1 %cmp284.i, label %for.end31.i, label %for.body21.i
 
@@ -34,6 +35,7 @@ for.end31.i:                                      ; preds = %for.body21.i, %entr
 }
 
 declare void @free(ptr nocapture)
+declare void @llvm.ssp.protected(ptr)
 
 attributes #0 = { ssp "stack-protector-buffer-size"="8" }
 

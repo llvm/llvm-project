@@ -1294,6 +1294,9 @@ private:
       return;
     }
 
+    if (II.getIntrinsicID() == Intrinsic::ssp_protected)
+      return markAsDead(II); // Drop when alloca is promoted/sliced.
+
     if (II.getIntrinsicID() == Intrinsic::protected_field_ptr) {
       // We only handle loads and stores as users of llvm.protected.field.ptr.
       // Other uses may add items to the worklist, which will cause

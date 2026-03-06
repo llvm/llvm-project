@@ -23,6 +23,95 @@
 using namespace clang;
 using namespace clang::CIRGen;
 
+/// Returns true if \p ty contains an array requiring stack protection under
+/// the given SSP mode. Sets \p isLarge = true if the array is >=
+/// \p sspBufferSize bytes. \p inStruct indicates we are recursing into a
+/// record type.
+static bool containsProtectableArray(QualType ty, ASTContext &ctx,
+                                     uint64_t sspBufferSize, bool &isLarge,
+                                     bool strong, bool inStruct) {
+  ty = ty.getCanonicalType();
+
+  if (const ArrayType *at = ctx.getAsArrayType(ty)) {
+    QualType elemTy = at->getElementType().getUnqualifiedType();
+    // Treat all 1-byte integer types as char-like.
+    bool isCharArray = elemTy->isIntegerType() &&
+                       ctx.getTypeSizeInChars(elemTy) == CharUnits::One();
+    // If we're inside of a structure, or on a non-Darwin platform, don't
+    // add stack protectors unless the array is a character array.
+    // However, in strong mode any array, regardless of type and size,
+    // triggers a protector.
+    if (!isCharArray && !strong &&
+        (inStruct || !ctx.getTargetInfo().getTriple().isOSDarwin()))
+      return false;
+    if (const auto *cat = dyn_cast<ConstantArrayType>(at)) {
+      uint64_t allocSize =
+          cat->getZExtSize() * ctx.getTypeSizeInChars(elemTy).getQuantity();
+      if (allocSize >= sspBufferSize) {
+        isLarge = true;
+        return true;
+      }
+      if (strong)
+        return true;
+      return false;
+    }
+    isLarge = true;
+    return true;
+  }
+
+  if (const RecordType *rt = ty->getAs<RecordType>()) {
+    bool needsProtector = false;
+    for (const FieldDecl *fd : rt->getDecl()->fields()) {
+      if (containsProtectableArray(fd->getType(), ctx, sspBufferSize, isLarge,
+                                   strong, /*inStruct=*/true)) {
+        if (isLarge)
+          return true;
+        needsProtector = true;
+      }
+    }
+    return needsProtector;
+  }
+
+  return false;
+}
+
+/// If \p allocaAddr holds a variable of type \p ty and the current function
+/// has SSP enabled, mark the underlying alloca as needing stack protection.
+static void maybeEmitSSPProtected(const VarDecl &d, CIRGenFunction &cgf,
+                                  Address allocaAddr, QualType ty,
+                                  bool userDisabled) {
+  const LangOptions &langOpts = cgf.getLangOpts();
+  LangOptions::StackProtectorMode mode = langOpts.getStackProtector();
+  if (mode == LangOptions::SSPOff)
+    return;
+
+  // NoStackProtector attribute disables SSP for this decl.
+  if (cgf.curFuncDecl && cgf.curFuncDecl->hasAttr<NoStackProtectorAttr>())
+    return;
+
+  bool isReq = (mode == LangOptions::SSPReq);
+  bool isStrong = (mode == LangOptions::SSPStrong || isReq);
+
+  if (userDisabled) {
+    if (isReq)
+      cgf.cgm.getDiags().Report(d.getLocation(),
+                                diag::warn_stack_protection_ignore_attribute);
+    // TODO(cir): mark the alloca as excluded from stack protection at the CIR
+    // level.
+    assert(!cir::MissingFeatures::stackProtector());
+    return;
+  }
+
+  uint64_t sspSize = cgf.cgm.getCodeGenOpts().SSPBufferSize;
+  bool isLarge = false;
+  if (!containsProtectableArray(ty, cgf.getContext(), sspSize, isLarge,
+                                isStrong, /*inStruct=*/false))
+    return;
+
+  cir::SspProtectedOp::create(cgf.getBuilder(), cgf.getLoc(d.getSourceRange()),
+                              allocaAddr.getPointer());
+}
+
 CIRGenFunction::AutoVarEmission
 CIRGenFunction::emitAutoVarAlloca(const VarDecl &d,
                                   mlir::OpBuilder::InsertPoint ip) {
@@ -161,6 +250,9 @@ CIRGenFunction::emitAutoVarAlloca(const VarDecl &d,
 
   emission.addr = address;
   setAddrOfLocalVar(&d, address);
+
+  maybeEmitSSPProtected(d, *this, address, ty,
+                        d.hasAttr<StackProtectorIgnoreAttr>());
 
   return emission;
 }

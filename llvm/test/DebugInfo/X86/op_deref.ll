@@ -38,6 +38,7 @@ entry:
   %2 = call ptr @llvm.stacksave(), !dbg !12
   store ptr %2, ptr %saved_stack, !dbg !12
   %vla = alloca i32, i64 %1, align 16, !dbg !12
+  call void @llvm.ssp.protected(ptr %vla)
   call void @llvm.dbg.declare(metadata ptr %vla, metadata !14, metadata !30), !dbg !18
   call void @llvm.dbg.declare(metadata ptr %i, metadata !19, metadata !DIExpression()), !dbg !20
   store i32 0, ptr %i, align 4, !dbg !21

@@ -137,6 +137,7 @@ define internal fastcc void @_ZL9sme_crashv() unnamed_addr #1 {
 ; CHECK-NEXT:    .loh AdrpLdrGotLdr Lloh0, Lloh1, Lloh2
 entry:
   %uu = alloca [16 x float], align 256
+  call void @llvm.ssp.protected(ptr %uu)
   call void @llvm.lifetime.start.p0(i64 64, ptr nonnull %uu) #5
   call void @llvm.memset.p0.i64(ptr noundef nonnull align 256 dereferenceable(64) %uu, i8 0, i64 64, i1 false)
   call void asm sideeffect "ptrue p0.s\0Ast1w { z0.s }, p0, [$0]\0A", "r"(ptr nonnull %uu) #5
@@ -152,6 +153,8 @@ declare void @llvm.memset.p0.i64(ptr nocapture writeonly, i8, i64, i1 immarg) #3
 
 ; Function Attrs: mustprogress nocallback nofree nosync nounwind willreturn memory(argmem: readwrite)
 declare void @llvm.lifetime.end.p0(i64 immarg, ptr nocapture) #2
+
+declare void @llvm.ssp.protected(ptr)
 
 attributes #0 = { mustprogress norecurse nounwind ssp uwtable(sync) "stack-protector-buffer-size"="8" "target-cpu"="apple-a16" "target-features"="+sme,+sme-f64f64,+sme2" }
 attributes #1 = { mustprogress norecurse nounwind ssp uwtable(sync) "aarch64_pstate_sm_enabled" "stack-protector-buffer-size"="8" "target-cpu"="apple-a16" "target-features"="+sme,+sme-f64f64,+sme2" }

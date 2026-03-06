@@ -299,6 +299,7 @@ protected:
 
     case Intrinsic::lifetime_start:
     case Intrinsic::lifetime_end:
+    case Intrinsic::ssp_protected:
       return; // No-op intrinsics.
     }
   }

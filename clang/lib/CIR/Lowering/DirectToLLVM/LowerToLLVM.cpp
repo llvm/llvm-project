@@ -4108,6 +4108,16 @@ mlir::LogicalResult CIRToLLVMStackRestoreOpLowering::matchAndRewrite(
   return mlir::success();
 }
 
+mlir::LogicalResult CIRToLLVMSspProtectedOpLowering::matchAndRewrite(
+    cir::SspProtectedOp op, OpAdaptor adaptor,
+    mlir::ConversionPatternRewriter &rewriter) const {
+  auto intrinNameAttr =
+      mlir::StringAttr::get(op.getContext(), "llvm.ssp.protected");
+  rewriter.replaceOpWithNewOp<mlir::LLVM::CallIntrinsicOp>(
+      op, mlir::Type{}, intrinNameAttr, adaptor.getPtr());
+  return mlir::success();
+}
+
 mlir::LogicalResult CIRToLLVMVecCreateOpLowering::matchAndRewrite(
     cir::VecCreateOp op, OpAdaptor adaptor,
     mlir::ConversionPatternRewriter &rewriter) const {

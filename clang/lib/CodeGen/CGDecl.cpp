@@ -1476,6 +1476,101 @@ static bool shouldExtendLifetime(const ASTContext &Context,
   return true;
 }
 
+/// Returns true if \p Ty contains an array requiring stack protection under
+/// \p SSPAttr. Sets \p IsLarge = true if the array is >= \p SSPBufferSize
+/// bytes. \p InStruct indicates we are recursing into a record type.
+static bool ContainsProtectableArray(QualType Ty, ASTContext &Ctx,
+                                     uint64_t SSPBufferSize, bool &IsLarge,
+                                     bool Strong, bool InStruct) {
+  Ty = Ty.getCanonicalType();
+
+  if (const ArrayType *AT = Ctx.getAsArrayType(Ty)) {
+    QualType ElemTy = AT->getElementType().getUnqualifiedType();
+    // Treat all 1-byte integer types as char-like.
+    bool IsCharArray = ElemTy->isIntegerType() &&
+                       Ctx.getTypeSizeInChars(ElemTy) == CharUnits::One();
+    // If we're on a non-Darwin platform or we're inside of a structure, don't
+    // add stack protectors unless the array is a character array.
+    // However, in strong mode any array, regardless of type and size,
+    // triggers a protector.
+    if (!IsCharArray && !Strong &&
+        (InStruct || !Ctx.getTargetInfo().getTriple().isOSDarwin()))
+      return false;
+    if (auto *CAT = dyn_cast<ConstantArrayType>(AT)) {
+      uint64_t AllocSize =
+          CAT->getZExtSize() * Ctx.getTypeSizeInChars(ElemTy).getQuantity();
+      if (AllocSize >= SSPBufferSize) {
+        IsLarge = true;
+        return true;
+      }
+      if (Strong)
+        return true;
+      return false;
+    }
+    IsLarge = true;
+    return true;
+  }
+
+  if (const RecordType *RT = Ty->getAs<RecordType>()) {
+    bool NeedsProtector = false;
+    for (const FieldDecl *FD : RT->getDecl()->fields()) {
+      if (ContainsProtectableArray(FD->getType(), Ctx, SSPBufferSize, IsLarge,
+                                   Strong, /*InStruct=*/true)) {
+        if (IsLarge)
+          return true;
+        NeedsProtector = true;
+      }
+    }
+    return NeedsProtector;
+  }
+
+  return false;
+}
+
+/// If \p AllocaAddr holds an AllocaInst for a variable of type \p Ty and the
+/// current function has SSP enabled, emit an \c llvm.ssp.protected call on
+/// that alloca so the StackProtector pass can use QualType-derived info.
+static void MaybeEmitSSPProtected(const VarDecl &D, CodeGenFunction &CGF,
+                                  RawAddress AllocaAddr, QualType Ty,
+                                  bool UserDisabled) {
+  // Might need to remove addrspacecast to find the original alloca.
+  // Some frontends don't emit some variables with allocas (or at all).
+  if (!AllocaAddr.isValid())
+    return;
+  auto *AI =
+      dyn_cast<llvm::AllocaInst>(getUnderlyingObject(AllocaAddr.getPointer()));
+  if (!AI)
+    return;
+  if (UserDisabled) {
+    llvm::LLVMContext &Ctx = CGF.Builder.getContext();
+    auto *Operand = llvm::ConstantAsMetadata::get(CGF.Builder.getInt32(0));
+    AI->setMetadata("stack-protector", llvm::MDNode::get(Ctx, {Operand}));
+  }
+  std::optional<llvm::Attribute::AttrKind> SSPAttr =
+      CGF.CGM.StackProtectorAttribute(CGF.CurFuncDecl);
+  if (!SSPAttr)
+    return;
+  if (UserDisabled && *SSPAttr == llvm::Attribute::StackProtectReq)
+    CGF.CGM.getDiags().Report(D.getLocation(),
+                              diag::warn_stack_protection_ignore_attribute);
+  if (UserDisabled)
+    return;
+
+  bool Strong = (*SSPAttr == llvm::Attribute::StackProtectStrong ||
+                 *SSPAttr == llvm::Attribute::StackProtectReq);
+  // SSPSize is equal to
+  // CGF.CurFn->getFnAttributeAsParsedInteger("stack-protector-buffer-size", 8);
+  uint64_t SSPSize = CGF.CGM.getCodeGenOpts().SSPBufferSize;
+  bool IsLarge = false;
+  if (ContainsProtectableArray(Ty, CGF.getContext(), SSPSize, IsLarge, Strong,
+                               /*InStruct=*/false)) {
+    // TODO: IsLarge gets recomputed by LLVM, but we could add it as metadata
+    // for ssp_protected instead?
+    llvm::Function *Fn = CGF.CGM.getIntrinsic(llvm::Intrinsic::ssp_protected);
+    CGF.Builder.CreateCall(Fn, {AI});
+  }
+}
+
 /// EmitAutoVarAlloca - Emit the alloca and debug information for a
 /// local variable.  Does not emit initialization or destruction.
 CodeGenFunction::AutoVarEmission
@@ -1636,20 +1731,6 @@ CodeGenFunction::EmitAutoVarAlloca(const VarDecl &D) {
       }
     }
 
-    if (D.hasAttr<StackProtectorIgnoreAttr>()) {
-      if (auto *AI = dyn_cast<llvm::AllocaInst>(address.getBasePointer())) {
-        llvm::LLVMContext &Ctx = Builder.getContext();
-        auto *Operand = llvm::ConstantAsMetadata::get(Builder.getInt32(0));
-        AI->setMetadata("stack-protector", llvm::MDNode::get(Ctx, {Operand}));
-      }
-
-      std::optional<llvm::Attribute::AttrKind> Attr =
-          CGM.StackProtectorAttribute(&D);
-      if (Attr && (*Attr == llvm::Attribute::StackProtectReq)) {
-        CGM.getDiags().Report(D.getLocation(),
-                              diag::warn_stack_protection_ignore_attribute);
-      }
-    }
   } else {
     EnsureInsertPoint();
 
@@ -1732,6 +1813,8 @@ CodeGenFunction::EmitAutoVarAlloca(const VarDecl &D) {
                                         UsePointerValue);
   }
 
+  MaybeEmitSSPProtected(D, *this, AllocaAddr, Ty,
+                        D.hasAttr<StackProtectorIgnoreAttr>());
   if (D.hasAttr<AnnotateAttr>() && HaveInsertPoint())
     EmitVarAnnotations(&D, address.emitRawPointer(*this));
 
@@ -2867,6 +2950,10 @@ void CodeGenFunction::EmitParmDecl(const VarDecl &D, ParamValue Arg,
     }
   }
 
+  // TODO: should we annotate parameter allocas for SSP if they contained an
+  // array or strong?
+  // if (!Arg.isIndirect())
+  //  MaybeEmitSSPProtected(D, *this, AllocaPtr, Ty, false);
   if (D.hasAttr<AnnotateAttr>())
     EmitVarAnnotations(&D, DeclPtr.emitRawPointer(*this));
 

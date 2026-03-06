@@ -11,6 +11,7 @@ target triple = "x86_64-apple-macosx"
 define void @foo() #0 {
 entry:
   %_tags = alloca [3 x i32], align 4
+  call void @llvm.ssp.protected(ptr %_tags)
   ret void
 }
 
@@ -22,6 +23,7 @@ entry:
 define void @bar(i1 %arg) #1 {
 entry:
   %vt = alloca [2 x double], align 16
+  call void @llvm.ssp.protected(ptr %vt)
   br i1 %arg, label %cleanup.4091, label %for.cond.3850
 
 unreachable:
@@ -40,6 +42,8 @@ land.end.3857:
 cleanup.4091:
   ret void
 }
+
+declare void @llvm.ssp.protected(ptr)
 
 attributes #0 = { ssp }
 attributes #1 = { noinline optnone ssp }

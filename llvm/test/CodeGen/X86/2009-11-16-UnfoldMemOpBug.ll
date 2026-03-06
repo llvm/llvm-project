@@ -9,6 +9,7 @@ entry:
 ; CHECK: movups L_str+12(%rip), %xmm0
 ; CHECK: movups L_str(%rip), %xmm1
   %tmp0 = alloca [60 x i8], align 1
+  call void @llvm.ssp.protected(ptr %tmp0)
   br label %bb1
 
 bb1:
@@ -25,4 +26,5 @@ bb2:
   ret void
 }
 
+declare void @llvm.ssp.protected(ptr)
 declare void @llvm.memcpy.p0.p0.i64(ptr nocapture, ptr nocapture, i64, i1) nounwind

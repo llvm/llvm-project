@@ -13,10 +13,12 @@ target triple = "thumbv7-unknown-linux-android23"
 %"class.v8::internal::wasm::LiftoffAssembler" = type {}
 
 declare void @_ZN2v88internal9Assembler3addENS0_8RegisterES2_RKNS0_7OperandENS0_4SBitENS0_9ConditionE(ptr, [1 x i32], [1 x i32], ptr, i32, i32)
+declare void @llvm.ssp.protected(ptr)
 
 ; Function Attrs: ssp
 define void @_ZN2v88internal4wasm16LiftoffAssembler13emit_i32_addiENS0_8RegisterES3_i(ptr %0, [1 x i32] %1, [1 x i32] %2, i32 %3) #0 {
   %5 = alloca %"class.v8::internal::Operand", align 8
+  call void @llvm.ssp.protected(ptr %5)
   %6 = getelementptr %"class.v8::internal::Operand", ptr %5
   %7 = getelementptr %"class.v8::internal::Operand", ptr %5
   %8 = getelementptr %"class.v8::internal::Operand", ptr %5

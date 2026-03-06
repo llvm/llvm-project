@@ -2603,45 +2603,35 @@ For example:
     if the call site is dead code.
 
 ``ssp``
-    This attribute indicates that the function should emit a stack
-    smashing protector. It is in the form of a "canary" --- a random value
-    placed on the stack before the local variables that's checked upon
-    return from the function to see if it has been overwritten. A
-    heuristic is used to determine if a function needs stack protectors
-    or not. The heuristic used will enable protectors for functions with:
-
-    - Character arrays larger than ``ssp-buffer-size`` (default 8).
-    - Aggregates containing character arrays larger than ``ssp-buffer-size``.
-    - Calls to alloca() with variable sizes or constant sizes greater than
-      ``ssp-buffer-size``.
-
-    Variables that are identified as requiring a protector will be arranged
-    on the stack such that they are adjacent to the stack protector guard.
-
-    If a function with an ``ssp`` attribute is inlined into a calling function,
-    the attribute is not carried over to the calling function.
-
-``sspstrong``
-    This attribute indicates that the function should emit a stack smashing
-    protector. This attribute causes a strong heuristic to be used when
-    determining if a function needs stack protectors. The strong heuristic
-    will enable protectors for functions with:
-
-    - Arrays of any size and type
-    - Aggregates containing an array of any size and type.
-    - Calls to alloca().
-    - Local variables that have had their address taken.
+    This attribute indicates that the function can emit a stack smashing
+    protector. It is in the form of a "canary" --- a random value placed
+    on the stack before the local variables that's checked upon return from
+    the function to see if it has been overwritten.
 
     Variables that are identified as requiring a protector will be arranged
     on the stack such that they are adjacent to the stack protector guard.
     The specific layout rules are:
 
-    #. Large arrays and structures containing large arrays
-       (``>= ssp-buffer-size``) are closest to the stack protector.
-    #. Small arrays and structures containing small arrays
-       (``< ssp-buffer-size``) are 2nd closest to the protector.
+    #. Large annotated allocations (``>= ssp-buffer-size``) are closest to the
+       stack protector.
+    #. Small annotated allocations (``< ssp-buffer-size``) are 2nd closest to
+       the protector.
     #. Variables that have had their address taken are 3rd closest to the
-       protector.
+       protector. Only applicable to ``sspstrong`` and ``sspreq``.
+
+    With ``ssp``, only allocas marked with the
+    :ref:`llvm.ssp.protected <int_ssp_protected>` intrinsic trigger protection.
+
+    If a function with an ``ssp`` attribute is inlined into a calling function,
+    the attribute is not carried over to the calling function.
+
+``sspstrong``
+    This attribute overrides ``ssp`` and causes a strong heuristic to be used when
+    determining if a function needs stack protectors. The strong heuristic
+    will additionally enable protectors for functions with:
+
+    - Local variables that have had their address taken.
+    - Local variables that may have out-of-bounds accesses.
 
     This overrides the ``ssp`` function attribute.
 
@@ -2653,17 +2643,6 @@ For example:
     This attribute indicates that the function should *always* emit a stack
     smashing protector. This overrides the ``ssp`` and ``sspstrong`` function
     attributes.
-
-    Variables that are identified as requiring a protector will be arranged
-    on the stack such that they are adjacent to the stack protector guard.
-    The specific layout rules are:
-
-    #. Large arrays and structures containing large arrays
-       (``>= ssp-buffer-size``) are closest to the stack protector.
-    #. Small arrays and structures containing small arrays
-       (``< ssp-buffer-size``) are 2nd closest to the protector.
-    #. Variables that have had their address taken are 3rd closest to the
-       protector.
 
     If a function with an ``sspreq`` attribute is inlined into a calling
     function which has an ``ssp`` or ``sspstrong`` attribute, the calling
@@ -30434,6 +30413,38 @@ Arguments:
 """"""""""
 
 The argument should be an MDTuple containing any number of MDStrings.
+
+.. _int_ssp_protected:
+
+'``llvm.ssp.protected``' Intrinsic
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+Syntax:
+"""""""
+
+::
+
+      declare void @llvm.ssp.protected(ptr <alloca>)
+
+Overview:
+"""""""""
+
+The ``llvm.ssp.protected`` intrinsic marks a stack alloca as requiring stack
+smashing protection. It should be emitted to indicate that, if that alloca survives optimization, it should trigger ssp on that function.
+
+Arguments:
+""""""""""
+
+The single argument is the alloca to be protected.
+
+Semantics:
+""""""""""
+
+The intrinsic has no memory effects (``memory(none)``) and is otherwise a no-op
+at runtime. Its sole purpose is to communicate SSP intent from Clang to the
+StackProtector pass. When the StackProtector pass encounters an alloca that has
+an ``llvm.ssp.protected`` user, it applies stack protection to that function
+and alters the layout of that alloca.
 
 .. _llvm.trap:
 

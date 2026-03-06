@@ -377,6 +377,19 @@ static RValue emitBuiltinAlloca(CIRGenFunction &cgf, const CallExpr *e,
     }
   }
 
+  // Emit cir.ssp_protected when SSP is active for this function.
+  {
+    const LangOptions &langOpts = cgf.getLangOpts();
+    LangOptions::StackProtectorMode mode = langOpts.getStackProtector();
+    if (mode != LangOptions::SSPOff) {
+      bool noSSP =
+          cgf.curFuncDecl && cgf.curFuncDecl->hasAttr<NoStackProtectorAttr>();
+      if (!noSSP)
+        cir::SspProtectedOp::create(
+            cgf.getBuilder(), cgf.getLoc(e->getSourceRange()), allocaAddr);
+    }
+  }
+
   // An alloca will always return a pointer to the alloca (stack) address
   // space. This address space need not be the same as the AST / Language
   // default (e.g. in C / C++ auto vars are in the generic address space). At

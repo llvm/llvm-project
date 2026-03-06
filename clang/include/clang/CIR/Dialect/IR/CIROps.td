@@ -4133,6 +4133,34 @@ def CIR_StackRestoreOp : CIR_Op<"stackrestore"> {
 }
 
 //===----------------------------------------------------------------------===//
+// SspProtectedOp
+//===----------------------------------------------------------------------===//
+
+def CIR_SspProtectedOp : CIR_Op<"ssp_protected",
+    [DeclareOpInterfaceMethods<PromotableMemOpInterface>]> {
+  let summary = "Marks an alloca as requiring stack protection";
+  let description = [{
+    The `cir.ssp_protected` operation marks an alloca as requiring stack
+    protection by the StackProtector pass. It is emitted during CIR code
+    generation when a local variable's QualType or a dynamic alloca builtin
+    call requires SSP.
+
+    This operation corresponds to the LLVM intrinsic `llvm.ssp.protected`.
+
+    Example:
+
+    ```mlir
+    %buf = cir.alloca !cir.array<!u8i x 16>, !cir.ptr<!cir.array<!u8i x 16>>,
+               ["buf"] {alignment = 1 : i64}
+    cir.ssp_protected %buf : !cir.ptr<!cir.array<!u8i x 16>>
+    ```
+  }];
+
+  let arguments = (ins CIR_PointerType:$ptr);
+  let assemblyFormat = "$ptr attr-dict `:` qualified(type($ptr))";
+}
+
+//===----------------------------------------------------------------------===//
 // InlineAsmOp
 //===----------------------------------------------------------------------===//
 

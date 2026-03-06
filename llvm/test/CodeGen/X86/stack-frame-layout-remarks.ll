@@ -33,6 +33,7 @@ entry:
 
 ; Function Attrs: nocallback nofree nosync nounwind readnone speculatable willreturn
 declare void @llvm.dbg.declare(metadata, metadata, metadata) #0
+declare void @llvm.ssp.protected(ptr)
 
 ; BOTH: Function: cleanup_array
 ; BOTH-NEXT:  Offset: [SP+4], Type: Fixed, Align: 16, Size: 4
@@ -203,6 +204,7 @@ define i32 @caller() #1 {
 define i32 @test29b() #2 {
 entry:
   %test = alloca [5 x i8], align 1
+  call void @llvm.ssp.protected(ptr %test)
   %call = call i32 (ptr, ...) @printf(ptr @.str, ptr %test)
   ret i32 %call
 }

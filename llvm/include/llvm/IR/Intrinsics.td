@@ -1587,6 +1587,13 @@ def int_annotation : DefaultAttrsIntrinsic<
     [LLVMMatchType<0>, llvm_anyptr_ty, LLVMMatchType<1>, llvm_i32_ty],
     [IntrInaccessibleMemOnly]>;
 
+// SSP buffer protection marker. Emitted by clang on allocas whose QualType
+// contains a protectable array when SSP is enabled. The StackProtector pass
+// uses this instead of IR-level type analysis.
+def int_ssp_protected : DefaultAttrsIntrinsic<
+    [], [llvm_ptr_ty],
+    [IntrNoMem, IntrHasSideEffects, NoCapture<ArgIndex<0>>]>;
+
 // Annotates the current program point with metadata strings which are emitted
 // as CodeView debug info records. This is expensive, as it disables inlining
 // and is modelled as having side effects.
