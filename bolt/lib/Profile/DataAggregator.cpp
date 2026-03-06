@@ -186,7 +186,13 @@ void DataAggregator::findPerfExecutable() {
 }
 
 void DataAggregator::start() {
-  outs() << "PERF2BOLT: Starting data aggregation job for " << Filename << "\n";
+  if (PerfDataFiles.size() > 1) {
+    outs() << "PERF2BOLT: Starting data aggregation job for "
+           << PerfDataFiles.size() << " perf data files\n";
+  } else {
+    outs() << "PERF2BOLT: Starting data aggregation job for " << Filename
+           << "\n";
+  }
 
   // Turn on heatmap building if requested by --heatmap flag.
   if (!opts::HeatmapMode && opts::HeatmapOutput.getNumOccurrences())
@@ -258,12 +264,20 @@ void DataAggregator::launchPerfProcess(StringRef Name, PerfProcessInfo &PPI,
   SmallVector<StringRef, 4> Argv;
 
   outs() << "PERF2BOLT: spawning perf job to read " << Name << '\n';
-  Argv.push_back(PerfPath.data());
+  std::string ShellCmd = "(";
+  bool First = true;
+  for (const auto &PerfData : PerfDataFiles) {
+    if (!First)
+      ShellCmd += " && ";
+    ShellCmd +=
+        (Twine("\"") + PerfPath + "\" " + Args + " -f -i " + PerfData).str();
+    First = false;
+  }
+  ShellCmd += ")";
 
-  Args.split(Argv, ' ');
-  Argv.push_back("-f");
-  Argv.push_back("-i");
-  Argv.push_back(Filename.c_str());
+  Argv.push_back("/bin/sh");
+  Argv.push_back("-c");
+  Argv.push_back(ShellCmd);
 
   if (std::error_code Errc =
           sys::fs::createTemporaryFile("perf.script", "out", PPI.StdoutPath)) {
@@ -294,8 +308,7 @@ void DataAggregator::launchPerfProcess(StringRef Name, PerfProcessInfo &PPI,
            << "\n";
   });
 
-  PPI.PI = sys::ExecuteNoWait(PerfPath.data(), Argv, /*envp*/ std::nullopt,
-                              Redirects);
+  PPI.PI = sys::ExecuteNoWait(Argv[0], Argv, /*envp*/ std::nullopt, Redirects);
 }
 
 void DataAggregator::processFileBuildID(StringRef FileBuildID) {

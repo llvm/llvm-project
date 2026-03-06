@@ -464,6 +464,12 @@ Error RewriteInstance::setProfile(StringRef Filename) {
     return errorCodeToError(make_error_code(errc::no_such_file_or_directory));
 
   if (ProfileReader) {
+    if (ProfileReader->isDataAggregator() &&
+        DataAggregator::checkPerfDataMagic(Filename)) {
+      auto *DA = static_cast<DataAggregator *>(ProfileReader.get());
+      DA->addInputFile(Filename);
+      return Error::success();
+    }
     // Already exists
     return make_error<StringError>(Twine("multiple profiles specified: ") +
                                        ProfileReader->getFilename() + " and " +
