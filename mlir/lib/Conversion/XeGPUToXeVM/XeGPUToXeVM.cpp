@@ -22,8 +22,8 @@
 #include "mlir/Dialect/SCF/Transforms/Patterns.h"
 #include "mlir/Dialect/Vector/IR/VectorOps.h"
 #include "mlir/Dialect/XeGPU/IR/XeGPU.h"
-#include "mlir/Dialect/XeGPU/uArch/IntelGpuXe2.h"
 #include "mlir/Dialect/XeGPU/Utils/XeGPUUtils.h"
+#include "mlir/Dialect/XeGPU/uArch/IntelGpuXe2.h"
 #include "mlir/Pass/Pass.h"
 #include "mlir/Support/LLVM.h"
 #include "llvm/ADT/STLExtras.h"
@@ -921,11 +921,11 @@ class DpasToXeVMPattern : public OpConversionPattern<xegpu::DpasOp> {
                                          "DPAS not supported by target uArch");
 
     auto supportedA =
-      dpasInst->getSupportedTypes(*ctxt, xegpu::uArch::MMAOpndKind::MatrixA);
+        dpasInst->getSupportedTypes(*ctxt, xegpu::uArch::MMAOpndKind::MatrixA);
     auto supportedB =
-      dpasInst->getSupportedTypes(*ctxt, xegpu::uArch::MMAOpndKind::MatrixB);
+        dpasInst->getSupportedTypes(*ctxt, xegpu::uArch::MMAOpndKind::MatrixB);
     auto supportedD =
-      dpasInst->getSupportedTypes(*ctxt, xegpu::uArch::MMAOpndKind::MatrixD);
+        dpasInst->getSupportedTypes(*ctxt, xegpu::uArch::MMAOpndKind::MatrixD);
     // NOTE: Supported types for MatrixC and MatrixD are identical
 
     if (llvm::find(supportedA, aTy.getElementType()) == supportedA.end())
@@ -1094,8 +1094,8 @@ struct ConvertXeGPUToXeVMPass
       // If the element type is index, convert it to i64.
       if (llvm::isa<IndexType>(elemType))
         elemType = IntegerType::get(&getContext(), 64);
-      // If the vector rank is 0 or has a single element, return the element
-      if (rank == 0 || type.getNumElements() == 1)
+      // If the vector is a scalar or has a single element, return the element
+      if (rank < 1 || type.getNumElements() == 1)
         return elemType;
       // Otherwise, convert the vector to a flat vector type.
       int64_t sum = llvm::product_of(type.getShape());
@@ -1123,12 +1123,9 @@ struct ConvertXeGPUToXeVMPass
     // add materialization casts to handle them.
 
     // Materialization to convert memref to i64 or i32 depending on global/SLM
-    // Applies only to target materialization.
-    // Note: int type to memref materialization is not required as xegpu ops
-    // currently do not produce memrefs as result.
-    auto memrefToIntMaterializationCast = [](OpBuilder &builder, Type type,
-                                             ValueRange inputs,
-                                             Location loc) -> Value {
+    auto memrefMaterializationCast = [](OpBuilder &builder, Type type,
+                                        ValueRange inputs,
+                                        Location loc) -> Value {
       if (inputs.size() != 1)
         return {};
       auto input = inputs.front();
@@ -1187,12 +1184,9 @@ struct ConvertXeGPUToXeVMPass
     };
 
     // Materialization to convert ui64 to i64
-    // Applies only to target materialization.
-    // Note: i64 to ui64 materialization is not required as xegpu ops
-    // currently do not produce ui64 as result.
-    auto ui64ToI64MaterializationCast = [](OpBuilder &builder, Type type,
-                                           ValueRange inputs,
-                                           Location loc) -> Value {
+    auto ui64MaterializationCast = [](OpBuilder &builder, Type type,
+                                      ValueRange inputs,
+                                      Location loc) -> Value {
       if (inputs.size() != 1)
         return {};
       auto input = inputs.front();
@@ -1207,12 +1201,9 @@ struct ConvertXeGPUToXeVMPass
     };
 
     // Materialization to convert ui32 to i32
-    // Applies only to target materialization.
-    // Note: i32 to ui32 materialization is not required as xegpu ops
-    // currently do not produce ui32 as result.
-    auto ui32ToI32MaterializationCast = [](OpBuilder &builder, Type type,
-                                           ValueRange inputs,
-                                           Location loc) -> Value {
+    auto ui32MaterializationCast = [](OpBuilder &builder, Type type,
+                                      ValueRange inputs,
+                                      Location loc) -> Value {
       if (inputs.size() != 1)
         return {};
       auto input = inputs.front();
@@ -1227,17 +1218,25 @@ struct ConvertXeGPUToXeVMPass
     };
 
     // Materialization to convert
+    //   - single element 1D vector to scalar
     //   - bitcast vector of same rank
     //   - shape vector of different rank but same element type
-    // Applies to both source and target materialization.
-    auto vectorToVectorMaterializationCast = [](OpBuilder &builder, Type type,
-                                                ValueRange inputs,
-                                                Location loc) -> Value {
+    auto vectorMaterializationCast = [](OpBuilder &builder, Type type,
+                                        ValueRange inputs,
+                                        Location loc) -> Value {
       if (inputs.size() != 1)
         return {};
       auto input = inputs.front();
       if (auto vecTy = dyn_cast<VectorType>(input.getType())) {
-        if (auto targetVecTy = dyn_cast<VectorType>(type)) {
+        if (vecTy.getNumElements() == 1) {
+          // If the vector has a single element, return the element type.
+          Value cast =
+              vector::ExtractOp::create(builder, loc, input, 0).getResult();
+          if (vecTy.getElementType() == builder.getIndexType())
+            cast = arith::IndexCastUIOp::create(builder, loc, type, cast)
+                       .getResult();
+          return cast;
+        } else if (auto targetVecTy = dyn_cast<VectorType>(type)) {
           // If the target type is a vector of same rank,
           //   bitcast to the target type.
           if (targetVecTy.getRank() == vecTy.getRank())
@@ -1254,64 +1253,21 @@ struct ConvertXeGPUToXeVMPass
       return {};
     };
 
-    // Materialization to convert
-    //   - single element vector to single element of vector element type
-    // Applies only to target materialization.
-    auto vectorToSingleElementMaterializationCast =
-        [](OpBuilder &builder, Type type, ValueRange inputs,
-           Location loc) -> Value {
-      if (inputs.size() != 1)
-        return {};
-      auto input = inputs.front();
-      if (auto vecTy = dyn_cast<VectorType>(input.getType())) {
-        if (type == vecTy.getElementType() ||
-            ((vecTy.getElementType() == builder.getIndexType()) &&
-             type.isInteger())) {
-          // If the vector rank is 0 or has a single element,
-          // extract scalar of target type.
-          auto rank = vecTy.getRank();
-          Value cast;
-          if (rank == 0) {
-            cast =
-                vector::ExtractOp::create(builder, loc, input, {}).getResult();
-          } else {
-            cast = vector::ExtractOp::create(builder, loc, input,
-                                             SmallVector<int64_t>(rank, 0))
-                       .getResult();
-          }
-          if (type != vecTy.getElementType())
-            cast = arith::IndexCastUIOp::create(builder, loc, type, cast)
-                       .getResult();
-          return cast;
-        }
-      }
-      return {};
-    };
-
-    // Materialization to convert
-    //   - single element of vector element type to single element vector
     // If result type of original op is single element vector and lowered type
     // is scalar. This materialization cast creates a single element vector by
     // broadcasting the scalar value.
-    // Applies only to source materialization.
-    auto singleElementToVectorMaterializationCast =
+    auto singleElementVectorMaterializationCast =
         [](OpBuilder &builder, Type type, ValueRange inputs,
            Location loc) -> Value {
       if (inputs.size() != 1)
         return {};
       auto input = inputs.front();
-      // If the target type is a vector of rank 0 or single element vector
-      // of element type matching input type, broadcast input to target type.
-      if (auto vecTy = dyn_cast<VectorType>(type)) {
-        if (vecTy.getRank() == 0 || vecTy.getNumElements() == 1) {
-          if (input.getType() == vecTy.getElementType()) {
+      if (input.getType().isIntOrIndexOrFloat()) {
+        // If the input is a scalar, and the target type is a vector of single
+        // element, create a single element vector by broadcasting.
+        if (auto vecTy = dyn_cast<VectorType>(type)) {
+          if (vecTy.getNumElements() == 1) {
             return vector::BroadcastOp::create(builder, loc, vecTy, input)
-                .getResult();
-          } else if (vecTy.getElementType() == builder.getIndexType()) {
-            Value cast = arith::IndexCastUIOp::create(
-                             builder, loc, builder.getIndexType(), input)
-                             .getResult();
-            return vector::BroadcastOp::create(builder, loc, vecTy, cast)
                 .getResult();
           }
         }
@@ -1319,14 +1275,12 @@ struct ConvertXeGPUToXeVMPass
       return {};
     };
     typeConverter.addSourceMaterialization(
-        singleElementToVectorMaterializationCast);
-    typeConverter.addSourceMaterialization(vectorToVectorMaterializationCast);
-    typeConverter.addTargetMaterialization(memrefToIntMaterializationCast);
-    typeConverter.addTargetMaterialization(ui32ToI32MaterializationCast);
-    typeConverter.addTargetMaterialization(ui64ToI64MaterializationCast);
-    typeConverter.addTargetMaterialization(
-        vectorToSingleElementMaterializationCast);
-    typeConverter.addTargetMaterialization(vectorToVectorMaterializationCast);
+        singleElementVectorMaterializationCast);
+    typeConverter.addSourceMaterialization(vectorMaterializationCast);
+    typeConverter.addTargetMaterialization(memrefMaterializationCast);
+    typeConverter.addTargetMaterialization(ui32MaterializationCast);
+    typeConverter.addTargetMaterialization(ui64MaterializationCast);
+    typeConverter.addTargetMaterialization(vectorMaterializationCast);
     ConversionTarget target(getContext());
     target.addLegalDialect<xevm::XeVMDialect, LLVM::LLVMDialect,
                            vector::VectorDialect, arith::ArithDialect,
