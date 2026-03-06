@@ -2540,7 +2540,6 @@ private:
       // PFT branch analysis), allowing the loop to exit only when the condition
       // becomes false.
       if (!unstructuredContext) {
-        maybeStartBlock(preheaderBlock); // no block or empty block
         genDoWhileAsSCFWhile(*whileCondition, eval, doStmtEval);
         return;
       }
@@ -2797,8 +2796,6 @@ private:
                 has_attrs = true;
               },
               [&](const Fortran::parser::CompilerDirective::IVDep &iv) {
-                disableVecAttr =
-                    mlir::BoolAttr::get(builder->getContext(), false);
                 aga.push_back(
                     mlir::LLVM::AccessGroupAttr::get(builder->getContext()));
                 has_attrs = true;
@@ -5439,11 +5436,12 @@ private:
 
     // host = device
     if (!lhsIsDevice && rhsIsDevice) {
-      if (auto elementalOp = Fortran::lower::isTransferWithConversion(rhs)) {
+      auto [firstElOp, elOp] = Fortran::lower::isTransferWithConversion(rhs);
+      if (firstElOp) {
         mlir::OpBuilder::InsertionGuard insertionGuard(builder);
         auto designateOp =
-            *elementalOp.getBody()->getOps<hlfir::DesignateOp>().begin();
-        builder.setInsertionPoint(elementalOp);
+            *firstElOp.getBody()->getOps<hlfir::DesignateOp>().begin();
+        builder.setInsertionPoint(firstElOp);
         // Create a temp to transfer the rhs before applying the conversion.
         hlfir::Entity entity{designateOp.getMemref()};
         auto [temp, cleanup] = hlfir::createTempFromMold(loc, builder, entity);
@@ -5452,8 +5450,8 @@ private:
         cuf::DataTransferOp::create(builder, loc, designateOp.getMemref(), temp,
                                     /*shape=*/mlir::Value{}, transferKindAttr);
         designateOp.getMemrefMutable().assign(temp);
-        builder.setInsertionPointAfter(elementalOp);
-        hlfir::AssignOp::create(builder, loc, elementalOp, lhs,
+        builder.setInsertionPointAfter(elOp);
+        hlfir::AssignOp::create(builder, loc, elOp, lhs,
                                 isWholeAllocatableAssignment,
                                 keepLhsLengthInAllocatableAssignment);
         return;
@@ -6456,6 +6454,8 @@ private:
     builder->setComplexDivisionToRuntimeFlag(
         bridge.getLoweringOptions().getComplexDivisionToRuntime());
     builder->setFastMathFlags(bridge.getLoweringOptions().getMathOptions());
+    builder->setFPMaxminBehavior(
+        bridge.getLoweringOptions().getFPMaxminBehavior());
     builder->setInsertionPointToStart(&func.front());
     if (funit.parent.isA<Fortran::lower::pft::FunctionLikeUnit>()) {
       // Give internal linkage to internal functions. There are no name clash
@@ -6739,6 +6739,8 @@ private:
     builder = new fir::FirOpBuilder(func, bridge.getKindMap(), symbolTable);
     assert(builder && "FirOpBuilder did not instantiate");
     builder->setFastMathFlags(bridge.getLoweringOptions().getMathOptions());
+    builder->setFPMaxminBehavior(
+        bridge.getLoweringOptions().getFPMaxminBehavior());
     createGlobals();
     if (mlir::Region *region = func.getCallableRegion())
       region->dropAllReferences();

@@ -23,6 +23,7 @@
 #include <__type_traits/is_pointer.h>
 #include <__type_traits/remove_const.h>
 #include <__type_traits/remove_pointer.h>
+#include <__type_traits/void_t.h>
 #include <__utility/move.h>
 #include <string>
 #include <string_view>
@@ -93,15 +94,12 @@ typedef string __u8_string;
 
 struct _NullSentinel {};
 
-template <class _Tp>
-using _Void _LIBCPP_NODEBUG = void;
-
 template <class _Tp, class = void>
 struct __is_pathable_string : public false_type {};
 
 template <class _ECharT, class _Traits, class _Alloc>
 struct __is_pathable_string< basic_string<_ECharT, _Traits, _Alloc>,
-                             _Void<typename __can_convert_char<_ECharT>::__char_type> >
+                             void_t<typename __can_convert_char<_ECharT>::__char_type> >
     : public __can_convert_char<_ECharT> {
   using _Str _LIBCPP_NODEBUG = basic_string<_ECharT, _Traits, _Alloc>;
 
@@ -114,7 +112,7 @@ struct __is_pathable_string< basic_string<_ECharT, _Traits, _Alloc>,
 
 template <class _ECharT, class _Traits>
 struct __is_pathable_string< basic_string_view<_ECharT, _Traits>,
-                             _Void<typename __can_convert_char<_ECharT>::__char_type> >
+                             void_t<typename __can_convert_char<_ECharT>::__char_type> >
     : public __can_convert_char<_ECharT> {
   using _Str _LIBCPP_NODEBUG = basic_string_view<_ECharT, _Traits>;
 
@@ -154,7 +152,7 @@ template <class _Iter>
 struct __is_pathable_iter<
     _Iter,
     true,
-    _Void<typename __can_convert_char< typename iterator_traits<_Iter>::value_type>::__char_type> >
+    void_t<typename __can_convert_char< typename iterator_traits<_Iter>::value_type>::__char_type> >
     : __can_convert_char<typename iterator_traits<_Iter>::value_type> {
   using _ECharT _LIBCPP_NODEBUG = typename iterator_traits<_Iter>::value_type;
 
@@ -261,15 +259,14 @@ struct _PathCVT {
 
 template <>
 struct _PathCVT<__path_value> {
-  template <class _Iter, __enable_if_t<__has_exactly_input_iterator_category<_Iter>::value, int> = 0>
+  template <class _Iter>
   _LIBCPP_HIDE_FROM_ABI static void __append_range(__path_string& __dest, _Iter __b, _Iter __e) {
-    for (; __b != __e; ++__b)
-      __dest.push_back(*__b);
-  }
-
-  template <class _Iter, __enable_if_t<__has_forward_iterator_category<_Iter>::value, int> = 0>
-  _LIBCPP_HIDE_FROM_ABI static void __append_range(__path_string& __dest, _Iter __b, _Iter __e) {
-    __dest.append(__b, __e);
+    if constexpr (__has_forward_iterator_category<_Iter>::value) {
+      __dest.append(__b, __e);
+    } else {
+      for (; __b != __e; ++__b)
+        __dest.push_back(*__b);
+    }
   }
 
   template <class _Iter>
@@ -296,13 +293,7 @@ struct _PathCVT<char> {
     __char_to_wide(__str, const_cast<__path_value*>(__dest.data()) + __pos, __size);
   }
 
-  template <class _Iter, __enable_if_t<__has_exactly_input_iterator_category<_Iter>::value, int> = 0>
-  _LIBCPP_HIDE_FROM_ABI static void __append_range(__path_string& __dest, _Iter __b, _Iter __e) {
-    basic_string<char> __tmp(__b, __e);
-    __append_string(__dest, __tmp);
-  }
-
-  template <class _Iter, __enable_if_t<__has_forward_iterator_category<_Iter>::value, int> = 0>
+  template <class _Iter>
   _LIBCPP_HIDE_FROM_ABI static void __append_range(__path_string& __dest, _Iter __b, _Iter __e) {
     basic_string<char> __tmp(__b, __e);
     __append_string(__dest, __tmp);
@@ -876,23 +867,13 @@ public:
   [[nodiscard]] iterator end() const;
 
 #  if _LIBCPP_HAS_LOCALIZATION
-  template <
-      class _CharT,
-      class _Traits,
-      __enable_if_t<is_same<_CharT, value_type>::value && is_same<_Traits, char_traits<value_type> >::value, int> = 0>
+  template <class _CharT, class _Traits>
   _LIBCPP_HIDE_FROM_ABI friend basic_ostream<_CharT, _Traits>&
   operator<<(basic_ostream<_CharT, _Traits>& __os, const path& __p) {
-    __os << std::__quoted(__p.native());
-    return __os;
-  }
-
-  template <
-      class _CharT,
-      class _Traits,
-      __enable_if_t<!is_same<_CharT, value_type>::value || !is_same<_Traits, char_traits<value_type> >::value, int> = 0>
-  _LIBCPP_HIDE_FROM_ABI friend basic_ostream<_CharT, _Traits>&
-  operator<<(basic_ostream<_CharT, _Traits>& __os, const path& __p) {
-    __os << std::__quoted(__p.string<_CharT, _Traits>());
+    if constexpr (is_same<_CharT, value_type>::value && is_same<_Traits, char_traits<value_type> >::value)
+      __os << std::quoted(__p.native());
+    else
+      __os << std::quoted(__p.string<_CharT, _Traits>());
     return __os;
   }
 
@@ -900,7 +881,7 @@ public:
   _LIBCPP_HIDE_FROM_ABI friend basic_istream<_CharT, _Traits>&
   operator>>(basic_istream<_CharT, _Traits>& __is, path& __p) {
     basic_string<_CharT, _Traits> __tmp;
-    __is >> std::__quoted(__tmp);
+    __is >> std::quoted(__tmp);
     __p = __tmp;
     return __is;
   }

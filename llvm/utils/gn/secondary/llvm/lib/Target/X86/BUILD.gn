@@ -1,5 +1,14 @@
 import("//llvm/utils/TableGen/tablegen.gni")
 
+tablegen("X86GenAsmMatcher") {
+  visibility = [
+    ":LLVMX86CodeGen",
+    "AsmParser",
+  ]
+  args = [ "-gen-asm-matcher" ]
+  td_file = "X86.td"
+}
+
 tablegen("X86GenCallingConv") {
   visibility = [ ":LLVMX86CodeGen" ]
   args = [ "-gen-callingconv" ]
@@ -68,6 +77,7 @@ tablegen("X86GenPostLegalizeGICombiner") {
 
 static_library("LLVMX86CodeGen") {
   deps = [
+    ":X86GenAsmMatcher",
     ":X86GenCallingConv",
     ":X86GenDAGISel",
     ":X86GenFastISel",
@@ -109,6 +119,7 @@ static_library("LLVMX86CodeGen") {
     "X86AvoidTrailingCall.cpp",
     "X86CallFrameOptimization.cpp",
     "X86CallingConv.cpp",
+    "X86CleanupLocalDynamicTLS.cpp",
     "X86CmovConversion.cpp",
     "X86CodeGenPassBuilder.cpp",
     "X86CompressEVEX.cpp",
@@ -126,12 +137,13 @@ static_library("LLVMX86CodeGen") {
     "X86FlagsCopyLowering.cpp",
     "X86FloatingPoint.cpp",
     "X86FrameLowering.cpp",
+    "X86GlobalBaseReg.cpp",
     "X86ISelDAGToDAG.cpp",
     "X86ISelLowering.cpp",
     "X86ISelLoweringCall.cpp",
     "X86IndirectBranchTracking.cpp",
     "X86IndirectThunks.cpp",
-    "X86InsertWait.cpp",
+    "X86InsertX87Wait.cpp",
     "X86InstCombineIntrinsic.cpp",
     "X86InstrFMA3Info.cpp",
     "X86InstrFoldTables.cpp",

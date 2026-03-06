@@ -23,8 +23,8 @@ body:             |
     ; CHECK: liveins: $vgpr0_vgpr1_vgpr2_vgpr3_vgpr4_vgpr5
     ; CHECK-NEXT: {{  $}}
     ; CHECK-NEXT: $sgpr0 = S_ADD_I32 $sgpr32, 4084, implicit-def dead $scc
-    ; CHECK-NEXT: SCRATCH_STORE_DWORDX4_SADDR $vgpr0_vgpr1_vgpr2_vgpr3, $sgpr0, 0, 0, implicit $exec, implicit $flat_scr, implicit-def $vgpr0_vgpr1_vgpr2_vgpr3_vgpr4_vgpr5, implicit $vgpr0_vgpr1_vgpr2_vgpr3_vgpr4_vgpr5 :: (store (s128) into %fixed-stack.0, align 4, addrspace 5)
-    ; CHECK-NEXT: SCRATCH_STORE_DWORDX2_SADDR $vgpr4_vgpr5, killed $sgpr0, 16, 0, implicit $exec, implicit $flat_scr, implicit $vgpr0_vgpr1_vgpr2_vgpr3_vgpr4_vgpr5 :: (store (s64) into %fixed-stack.0 + 16, align 4, addrspace 5)
+    ; CHECK-NEXT: SCRATCH_STORE_DWORDX4_SADDR $vgpr0_vgpr1_vgpr2_vgpr3, $sgpr0, 0, 0, implicit $exec, implicit $flat_scr, implicit-def $vgpr0_vgpr1_vgpr2_vgpr3_vgpr4_vgpr5, implicit $vgpr0_vgpr1_vgpr2_vgpr3_vgpr4_vgpr5 :: ("amdgpu-thread-private" store (s128) into %fixed-stack.0, align 4, addrspace 5)
+    ; CHECK-NEXT: SCRATCH_STORE_DWORDX2_SADDR $vgpr4_vgpr5, killed $sgpr0, 16, 0, implicit $exec, implicit $flat_scr, implicit $vgpr0_vgpr1_vgpr2_vgpr3_vgpr4_vgpr5 :: ("amdgpu-thread-private" store (s64) into %fixed-stack.0 + 16, align 4, addrspace 5)
     ; CHECK-NEXT: S_ENDPGM 0
     SI_SPILL_AV192_SAVE $vgpr0_vgpr1_vgpr2_vgpr3_vgpr4_vgpr5, %fixed-stack.0, $sgpr32, 0, implicit $exec :: (store (s192) into %fixed-stack.0, align 4, addrspace 5)
     S_ENDPGM 0

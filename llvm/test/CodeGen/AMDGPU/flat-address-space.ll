@@ -129,7 +129,7 @@ define amdgpu_kernel void @zextload_flat_i16(ptr addrspace(1) noalias %out, ptr 
 define amdgpu_kernel void @flat_scratch_unaligned_load() {
   %scratch = alloca i32, addrspace(5)
   %fptr = addrspacecast ptr addrspace(5) %scratch to ptr
-  store volatile ptr %fptr, ptr addrspace(3) null
+  store volatile ptr %fptr, ptr addrspace(3) zeroinitializer
   %ld = load volatile i32, ptr %fptr, align 1
   ret void
 }
@@ -140,7 +140,7 @@ define amdgpu_kernel void @flat_scratch_unaligned_load() {
 define amdgpu_kernel void @flat_scratch_unaligned_store() {
   %scratch = alloca i32, addrspace(5)
   %fptr = addrspacecast ptr addrspace(5) %scratch to ptr
-  store volatile ptr %fptr, ptr addrspace(3) null
+  store volatile ptr %fptr, ptr addrspace(3) zeroinitializer
   store volatile i32 0, ptr %fptr, align 1
   ret void
 }

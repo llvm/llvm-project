@@ -221,8 +221,6 @@ public:
     return *currBldrCtx;
   }
 
-  const Stmt *getStmt() const;
-
   const LocationContext *getRootLocationContext() const {
     assert(G.getRoot());
     return G.getRoot()->getLocation().getLocationContext();
@@ -355,12 +353,13 @@ public:
 
   /// processIndirectGoto - Called by CoreEngine.  Used to generate successor
   ///  nodes by processing the 'effects' of a computed goto jump.
-  void processIndirectGoto(IndirectGotoNodeBuilder& builder);
+  void processIndirectGoto(IndirectGotoNodeBuilder &Builder,
+                           ExplodedNode *Pred);
 
   /// ProcessSwitch - Called by CoreEngine.  Used to generate successor
   ///  nodes by processing the 'effects' of a switch statement.
-  void processSwitch(const SwitchStmt *Switch, CoreEngine &CoreEng,
-                     const CFGBlock *B, ExplodedNode *Pred);
+  void processSwitch(NodeBuilderContext &BC, const SwitchStmt *Switch,
+                     ExplodedNode *Pred, ExplodedNodeSet &Dst);
 
   /// Called by CoreEngine.  Used to notify checkers that processing a
   /// function has begun. Called for both inlined and top-level functions.
@@ -615,11 +614,10 @@ public:
   ProgramStateRef handleLValueBitCast(ProgramStateRef state, const Expr *Ex,
                                       const LocationContext *LCtx, QualType T,
                                       QualType ExTy, const CastExpr *CastE,
-                                      StmtNodeBuilder &Bldr,
-                                      ExplodedNode *Pred);
+                                      NodeBuilder &Bldr, ExplodedNode *Pred);
 
   void handleUOExtension(ExplodedNode *N, const UnaryOperator *U,
-                         StmtNodeBuilder &Bldr);
+                         NodeBuilder &Bldr);
 
 public:
   SVal evalBinOp(ProgramStateRef ST, BinaryOperator::Opcode Op,

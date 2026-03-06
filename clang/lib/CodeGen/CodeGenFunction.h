@@ -1740,6 +1740,10 @@ public:
   void addInstToNewSourceAtom(llvm::Instruction *KeyInstruction,
                               llvm::Value *Backup);
 
+  /// Copy all PFP fields from SrcPtr to DestPtr while updating signatures,
+  /// assuming that DestPtr was already memcpy'd from SrcPtr.
+  void emitPFPPostCopyUpdates(Address DestPtr, Address SrcPtr, QualType Ty);
+
 private:
   /// SwitchInsn - This is nearest current switch instruction. It is null if
   /// current context is not in a switch.
@@ -3671,6 +3675,8 @@ public:
   LValue EmitCoyieldLValue(const CoyieldExpr *E);
   RValue EmitCoroutineIntrinsic(const CallExpr *E, unsigned int IID);
 
+  void EmitSYCLKernelCallStmt(const SYCLKernelCallStmt &S);
+
   void EnterCXXTryStmt(const CXXTryStmt &S, bool IsFnTryBlock = false);
   void ExitCXXTryStmt(const CXXTryStmt &S, bool IsFnTryBlock = false);
 
@@ -4445,6 +4451,7 @@ public:
   LValue EmitArraySectionExpr(const ArraySectionExpr *E,
                               bool IsLowerBound = true);
   LValue EmitExtVectorElementExpr(const ExtVectorElementExpr *E);
+  LValue EmitMatrixElementExpr(const MatrixElementExpr *E);
   LValue EmitMemberExpr(const MemberExpr *E);
   LValue EmitObjCIsaExpr(const ObjCIsaExpr *E);
   LValue EmitCompoundLiteralLValue(const CompoundLiteralExpr *E);
@@ -5066,8 +5073,8 @@ public:
 
   /// Create a store to \arg DstPtr from \arg Src, truncating the stored value
   /// to at most \arg DstSize bytes.
-  void CreateCoercedStore(llvm::Value *Src, Address Dst, llvm::TypeSize DstSize,
-                          bool DstIsVolatile);
+  void CreateCoercedStore(llvm::Value *Src, QualType SrcFETy, Address Dst,
+                          llvm::TypeSize DstSize, bool DstIsVolatile);
 
   /// EmitExtendGCLifetime - Given a pointer to an Objective-C object,
   /// make sure it survives garbage collection until this point.
@@ -5561,6 +5568,10 @@ public:
                                        ArrayRef<FMVResolverOption> Options);
   void EmitRISCVMultiVersionResolver(llvm::Function *Resolver,
                                      ArrayRef<FMVResolverOption> Options);
+
+  Address EmitAddressOfPFPField(Address RecordPtr, const PFPField &Field);
+  Address EmitAddressOfPFPField(Address RecordPtr, Address FieldPtr,
+                                const FieldDecl *Field);
 
 private:
   QualType getVarArgType(const Expr *Arg);
