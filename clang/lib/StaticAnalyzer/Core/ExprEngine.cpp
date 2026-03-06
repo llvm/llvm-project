@@ -2844,7 +2844,7 @@ void ExprEngine::processBranch(
 
   // Check for NULL conditions; e.g. "for(;;)"
   if (!Condition) {
-    BranchNodeBuilder NullCondBldr(Dst, BldCtx, DstT, DstF);
+    BranchNodeBuilder NullCondBldr(Dst, *currBldrCtx, DstT, DstF);
     NullCondBldr.generateNode(Pred->getState(), true, Pred);
     return;
   }
@@ -2852,7 +2852,7 @@ void ExprEngine::processBranch(
   if (const auto *Ex = dyn_cast<Expr>(Condition))
     Condition = Ex->IgnoreParens();
 
-  Condition = ResolveCondition(Condition, BldCtx.getBlock());
+  Condition = ResolveCondition(Condition, currBldrCtx->getBlock());
   PrettyStackTraceLoc CrashInfo(getContext().getSourceManager(),
                                 Condition->getBeginLoc(),
                                 "Error evaluating branch");
@@ -2864,7 +2864,7 @@ void ExprEngine::processBranch(
   if (CheckersOutSet.empty())
     return;
 
-  BranchNodeBuilder Builder(Dst, BldCtx, DstT, DstF);
+  BranchNodeBuilder Builder(Dst, *currBldrCtx, DstT, DstF);
   for (ExplodedNode *PredN : CheckersOutSet) {
     ProgramStateRef PrevState = PredN->getState();
 
@@ -2970,7 +2970,7 @@ void ExprEngine::processStaticInitializer(
   const auto *VD = cast<VarDecl>(DS->getSingleDecl());
   ProgramStateRef state = Pred->getState();
   bool initHasRun = state->contains<InitializedGlobalsSet>(VD);
-  BranchNodeBuilder Builder(Dst, BuilderCtx, DstT, DstF);
+  BranchNodeBuilder Builder(Dst, *currBldrCtx, DstT, DstF);
 
   if (!initHasRun) {
     state = state->add<InitializedGlobalsSet>(VD);
@@ -3100,7 +3100,7 @@ void ExprEngine::processSwitch(NodeBuilderContext &BC, const SwitchStmt *Switch,
   currBldrCtx = &BC;
   const Expr *Condition = Switch->getCond();
 
-  SwitchNodeBuilder Builder(Dst, BC);
+  SwitchNodeBuilder Builder(Dst, *currBldrCtx);
   ExplodedNodeSet CheckersOutSet;
 
   getCheckerManager().runCheckersForBranchCondition(
