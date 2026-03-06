@@ -85,8 +85,121 @@ template <typename ContainerIdT, typename ElementIdT> class WaitingOnGraph {
 public:
   using ContainerId = ContainerIdT;
   using ElementId = ElementIdT;
-  using ElementSet = DenseSet<ElementId>;
-  using ContainerElementsMap = DenseMap<ContainerId, ElementSet>;
+
+  class ElementSet : public DenseSet<ElementId> {
+    friend class ElementSetTest;
+
+  public:
+    using DenseSet<ElementId>::DenseSet;
+
+    /// Merge the elements of Other into this set. Returns true if any new
+    /// elements are added.
+    bool merge(const ElementSet &Other) {
+      size_t OrigSize = this->size();
+      this->insert(Other.begin(), Other.end());
+      return this->size() != OrigSize;
+    }
+
+    /// Remove all elements in Other from this set. Returns true if any
+    /// elements were removed.
+    bool remove(const ElementSet &Other) {
+      size_t OrigSize = this->size();
+
+      // Early out for empty sets.
+      if (OrigSize == 0 || Other.empty())
+        return false;
+
+      // TODO: Tweak condition to account for SmallVector cost. We may want to
+      //       prefer iterating over elements if the size difference is small.
+      if (OrigSize > Other.size()) {
+        for (auto &Elem : Other)
+          this->erase(Elem);
+      } else {
+        SmallVector<ElementId> ToRemove;
+        for (auto &Elem : *this)
+          if (Other.count(Elem))
+            ToRemove.push_back(Elem);
+        for (auto &Elem : ToRemove)
+          this->erase(Elem);
+      }
+      return this->size() < OrigSize;
+    }
+
+    /// Remove all elements for which Pred returns true.
+    /// Returns true if any elements were removed.
+    template <typename Pred> bool remove_if(Pred &&P) {
+      if (this->empty())
+        return false;
+
+      SmallVector<ElementId> ToRemove;
+      for (auto &Elem : *this)
+        if (P(Elem))
+          ToRemove.push_back(Elem);
+
+      for (auto &Elem : ToRemove)
+        this->erase(Elem);
+
+      return !ToRemove.empty();
+    }
+  };
+
+  class ContainerElementsMap : public DenseMap<ContainerId, ElementSet> {
+    friend class ContainerElementsMapTest;
+
+  public:
+    using DenseMap<ContainerId, ElementSet>::DenseMap;
+
+    /// Merge the elements of Other into this map. Returns true if any new
+    /// elements are added.
+    bool merge(const ContainerElementsMap &Other) {
+      bool Changed = false;
+      for (auto &[Container, Elements] : Other)
+        Changed |= (*this)[Container].merge(Elements);
+      return Changed;
+    }
+
+    /// Remove all elements in Other from this map. Returns true if any
+    /// elements were removed.
+    bool remove(const ContainerElementsMap &Other) {
+      bool Changed = false;
+      for (auto &[Container, Elements] : Other) {
+        assert(!Elements.empty() && "Stale row for Container in Other");
+        auto I = this->find(Container);
+        if (I == this->end())
+          continue;
+        Changed |= I->second.remove(Elements);
+        if (I->second.empty())
+          this->erase(Container);
+      }
+      return Changed;
+    }
+
+    /// Call V on each (Container, Elements) pair in this map.
+    ///
+    /// V should return true if it modifies any elements.
+    ///
+    /// Returns true if V returns true for any pair.
+    template <typename Visitor> bool visit(Visitor &&V) {
+      if (this->empty())
+        return false;
+
+      bool Changed = false;
+      SmallVector<ContainerId> ToRemove;
+      for (auto &[Container, Elements] : *this) {
+        assert(!Elements.empty() && "empty row for container");
+        if (V(Container, Elements)) {
+          Changed = true;
+          if (Elements.empty())
+            ToRemove.push_back(Container);
+        }
+      }
+
+      for (auto &Container : ToRemove)
+        this->erase(Container);
+
+      return Changed;
+    }
+  };
 
   class SuperNode;
 
@@ -164,56 +277,29 @@ public:
     /// Returns true if SuperNodeDeps was changed.
     bool hoistDeps(SuperNodeDepsMap &SuperNodeDeps,
                    ElemToSuperNodeMap &ElemToSN) {
-      bool Changed = false;
+      bool SuperNodeDepsChanged = false;
 
-      SmallVector<ContainerId> ContainersToRemove;
-      for (auto &[DepContainer, DepElems] : Deps) {
-        auto I = ElemToSN.find(DepContainer);
+      Deps.visit([&](ContainerId &Container, ElementSet &Elements) {
+        auto I = ElemToSN.find(Container);
         if (I == ElemToSN.end())
-          continue;
+          return false;
+
         auto &ContainerElemToSN = I->second;
+        return Elements.remove_if([&](const ElementId &Elem) {
+          auto J = ContainerElemToSN.find(Elem);
+          if (J == ContainerElemToSN.end())
+            return false;
 
-        // ElemToSN includes SuperNodes that define elements in DepContainer.
-        // We need to iterate over ContainerElemToSN or DepElems: we pick the
-        // smaller to minimize the cost.
-        if (ContainerElemToSN.size() < DepElems.size()) {
-          for (auto &[DefElem, DefSN] : ContainerElemToSN) {
-            if (DepElems.erase(DefElem) && DefSN != this) {
-              Changed = true;
-              SuperNodeDeps[DefSN].insert(this);
-            }
+          auto *DefSN = J->second;
+          if (DefSN != this) {
+            SuperNodeDepsChanged = true;
+            SuperNodeDeps[DefSN].insert(this);
           }
-        } else {
-          SmallVector<ElementId> ElemsToRemove;
-          for (auto &DepElem : DepElems) {
-            auto J = ContainerElemToSN.find(DepElem);
-            if (J == ContainerElemToSN.end())
-              continue;
-            ElemsToRemove.push_back(DepElem);
-            SuperNode *DefSN = J->second;
-            if (DefSN != this) {
-              Changed = true;
-              SuperNodeDeps[DefSN].insert(this);
-            }
-          }
+          return true;
+        });
+      });
 
-          for (auto &DepElem : ElemsToRemove)
-            DepElems.erase(DepElem);
-        }
-
-        // If DepElems has become empty then add DepContainer to the list of
-        // containers to remove.
-        if (DepElems.empty())
-          ContainersToRemove.push_back(DepContainer);
-      }
-
-      for (auto &DepContainer : ContainersToRemove) {
-        assert(Deps.count(DepContainer) && "already removed?");
-        assert(Deps[DepContainer].empty() && "non empty?");
-        Deps.erase(DepContainer);
-      }
-
-      return Changed;
+      return SuperNodeDepsChanged;
     }
   };
 
@@ -252,8 +338,7 @@ private:
         auto H = getHash(SN->Deps);
         if (auto *CanonicalSN = findCanonicalSuperNode(H, SN->Deps)) {
           SN->mapDefsTo(ElemToSN, CanonicalSN, AbandonOldMapping);
-          for (auto &[Container, Elems] : SN->Defs)
-            CanonicalSN->Defs[Container].insert(Elems.begin(), Elems.end());
+          CanonicalSN->Defs.merge(SN->Defs);
           std::swap(SN, SNs.back());
           SNs.pop_back();
         } else {
@@ -342,21 +427,7 @@ public:
     void add(ContainerElementsMap Defs, ContainerElementsMap Deps) {
       if (Defs.empty())
         return;
-      // Remove any self-reference.
-      SmallVector<ContainerId> ToRemove;
-      for (auto &[Container, Elems] : Defs) {
-        assert(!Elems.empty() && "Defs for container must not be empty");
-        auto I = Deps.find(Container);
-        if (I == Deps.end())
-          continue;
-        auto &DepsForContainer = I->second;
-        for (auto &Elem : Elems)
-          DepsForContainer.erase(Elem);
-        if (DepsForContainer.empty())
-          ToRemove.push_back(Container);
-      }
-      for (auto &Container : ToRemove)
-        Deps.erase(Container);
+      Deps.remove(Defs); // Remove any self-reference.
       if (auto SN = C.addOrCreateSuperNode(std::move(Defs), std::move(Deps)))
         SNs.push_back(std::move(SN));
     }
@@ -626,16 +697,9 @@ private:
         if (I == SuperNodeDeps.end())
           continue;
 
-        for (auto *DependantSN : I->second) {
-          bool Changed = false;
-          for (auto &[DepContainer, DepElems] : SN->Deps) {
-            auto &DepSNContainerElems = DependantSN->Deps[DepContainer];
-            for (auto &DepElem : DepElems)
-              Changed |= DepSNContainerElems.insert(DepElem).second;
-          }
-          if (Changed)
+        for (auto *DependantSN : I->second)
+          if (DependantSN->Deps.merge(SN->Deps))
             ToVisitNext.insert(DependantSN);
-        }
       }
 
       if (ToVisitNext.empty())
