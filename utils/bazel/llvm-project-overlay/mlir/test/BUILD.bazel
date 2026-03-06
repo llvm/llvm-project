@@ -109,6 +109,7 @@ cc_library(
         "//mlir:Pass",
         "//mlir:SideEffectInterfaces",
         "//mlir:Support",
+        "//mlir:UBDialect",
     ],
 )
 
@@ -458,6 +459,7 @@ cc_library(
         "//mlir:Parser",
         "//mlir:Pass",
         "//mlir:Support",
+        "//mlir:UBDialect",
     ],
 )
 
