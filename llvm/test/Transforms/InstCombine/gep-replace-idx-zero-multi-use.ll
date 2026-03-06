@@ -17,9 +17,8 @@ define i64 @gep_idx_zero_multi_use(i64 %idx) {
 ; CHECK-SAME: i64 [[IDX:%.*]]) {
 ; CHECK-NEXT:    [[BASE:%.*]] = alloca [1 x [[STRUCT_PAIR:%.*]]], align 16
 ; CHECK-NEXT:    call void @init(ptr nonnull [[BASE]])
-; CHECK-NEXT:    [[GEP:%.*]] = getelementptr inbounds [1 x [[STRUCT_PAIR]]], ptr [[BASE]], i64 [[IDX]]
 ; CHECK-NEXT:    [[LOAD1:%.*]] = load i64, ptr [[BASE]], align 16
-; CHECK-NEXT:    [[OFF:%.*]] = getelementptr inbounds nuw i8, ptr [[GEP]], i64 8
+; CHECK-NEXT:    [[OFF:%.*]] = getelementptr inbounds nuw i8, ptr [[BASE]], i64 8
 ; CHECK-NEXT:    [[LOAD2:%.*]] = load i64, ptr [[OFF]], align 8
 ; CHECK-NEXT:    [[SUM:%.*]] = add i64 [[LOAD1]], [[LOAD2]]
 ; CHECK-NEXT:    ret i64 [[SUM]]
@@ -39,9 +38,8 @@ define i64 @gep_idx_zero_multi_use_store(i64 %idx, i64 %val) {
 ; CHECK-LABEL: define i64 @gep_idx_zero_multi_use_store(
 ; CHECK-SAME: i64 [[IDX:%.*]], i64 [[VAL:%.*]]) {
 ; CHECK-NEXT:    [[BASE:%.*]] = alloca [1 x [[STRUCT_PAIR:%.*]]], align 16
-; CHECK-NEXT:    [[GEP:%.*]] = getelementptr inbounds [1 x [[STRUCT_PAIR]]], ptr [[BASE]], i64 [[IDX]]
 ; CHECK-NEXT:    store i64 [[VAL]], ptr [[BASE]], align 16
-; CHECK-NEXT:    [[OFF:%.*]] = getelementptr inbounds nuw i8, ptr [[GEP]], i64 8
+; CHECK-NEXT:    [[OFF:%.*]] = getelementptr inbounds nuw i8, ptr [[BASE]], i64 8
 ; CHECK-NEXT:    [[LOAD:%.*]] = load i64, ptr [[OFF]], align 8
 ; CHECK-NEXT:    ret i64 [[LOAD]]
 ;

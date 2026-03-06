@@ -991,6 +991,17 @@ static Instruction *replaceGEPIdxWithZero(InstCombinerImpl &IC, Value *Ptr,
   if (GetElementPtrInst *GEPI = dyn_cast<GetElementPtrInst>(Ptr)) {
     unsigned Idx;
     if (canReplaceGEPIdxWithZero(IC, GEPI, &MemI, Idx)) {
+      // If the memory instruction is guaranteed to execute whenever the GEP
+      // does, the dereference proves the index is unconditionally zero.
+      // Modify the GEP in place so all users benefit.
+      if (GEPI->getParent() == MemI.getParent() &&
+          isGuaranteedToTransferExecutionToSuccessor(GEPI->getIterator(),
+                                                     MemI.getIterator())) {
+        IC.replaceOperand(
+            *GEPI, Idx, ConstantInt::get(GEPI->getOperand(Idx)->getType(), 0));
+        IC.addToWorklist(GEPI);
+        return GEPI;
+      }
       Instruction *NewGEPI = GEPI->clone();
       NewGEPI->setOperand(Idx,
         ConstantInt::get(GEPI->getOperand(Idx)->getType(), 0));
