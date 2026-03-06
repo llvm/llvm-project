@@ -226,6 +226,10 @@ public:
     return G.getRoot()->getLocation().getLocationContext();
   }
 
+  const LocationContext *getCurrentLocationContext() const {
+    return currBldrCtx ? currBldrCtx->getLocationContext() : nullptr;
+  }
+
   const CFGBlock *getCurrentBlock() const {
     return currBldrCtx ? currBldrCtx->getBlock() : nullptr;
   }
