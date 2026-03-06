@@ -265,7 +265,7 @@ void MappingTraits<dsymutil::DebugMap>::mapping(IO &io,
   io.mapOptional("binary-path", DM.BinaryPath);
   if (void *Ctxt = io.getContext())
     reinterpret_cast<YAMLContext *>(Ctxt)->BinaryTriple = DM.BinaryTriple;
-  io.mapOptional("objects", DM.Objects);
+  io.mapOptional("objects", DM.getObjects());
 }
 
 void MappingTraits<std::unique_ptr<dsymutil::DebugMap>>::mapping(
@@ -276,7 +276,7 @@ void MappingTraits<std::unique_ptr<dsymutil::DebugMap>>::mapping(
   io.mapOptional("binary-path", DM->BinaryPath);
   if (void *Ctxt = io.getContext())
     reinterpret_cast<YAMLContext *>(Ctxt)->BinaryTriple = DM->BinaryTriple;
-  io.mapOptional("objects", DM->Objects);
+  io.mapOptional("objects", DM->getObjects());
 }
 
 MappingTraits<dsymutil::DebugMapObject>::YamlDMO::YamlDMO(
