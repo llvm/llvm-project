@@ -12497,7 +12497,7 @@ let Predicates = [HasVBMI2, NoVLX] in {
 
 // Use VPSHLD/VPSHRD to implement rotations.
 multiclass vbmi2_rotate<X86VectorVTInfo _, Instruction InstrStrRI, SDNode OpNodeRI,
-                                           Instruction InstrStrRR, SDNode OpNodeRR> {
+                        Instruction InstrStrRR, SDNode OpNodeRR> {
   def : Pat<(_.VT (OpNodeRI (_.VT _.RC:$src1), (i8 timm:$src2))),
             (InstrStrRI (_.VT _.RC:$src1), (_.VT _.RC:$src1), timm:$src2)>;
 
