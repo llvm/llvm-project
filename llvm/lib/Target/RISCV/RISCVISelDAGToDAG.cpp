@@ -2868,6 +2868,22 @@ void RISCVDAGToDAGISel::Select(SDNode *Node) {
     }
     break;
   }
+  case ISD::SPLAT_VECTOR: {
+    if (!Subtarget->hasStdExtP())
+      break;
+    auto *ConstNode = dyn_cast<ConstantSDNode>(Node->getOperand(0));
+    if (!ConstNode)
+      break;
+
+    if (ConstNode->isZero()) {
+      SDValue New =
+          CurDAG->getCopyFromReg(CurDAG->getEntryNode(), DL, RISCV::X0, VT);
+      ReplaceNode(Node, New.getNode());
+      return;
+    }
+
+    break;
+  }
   case ISD::SCALAR_TO_VECTOR:
     if (Subtarget->hasStdExtP()) {
       MVT SrcVT = Node->getOperand(0).getSimpleValueType();

@@ -648,10 +648,9 @@ define <2 x i16> @test_psslai_h(<2 x i16> %a) {
 define <4 x i8> @test_psslai_b(<4 x i8> %a) {
 ; CHECK-LABEL: test_psslai_b:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    pli.b a1, 0
+; CHECK-NEXT:    pmslt.b a1, a0, zero
 ; CHECK-NEXT:    li a2, 128
 ; CHECK-NEXT:    pli.b a3, 127
-; CHECK-NEXT:    pmslt.b a1, a0, a1
 ; CHECK-NEXT:    padd.bs a2, zero, a2
 ; CHECK-NEXT:    merge a1, a3, a2
 ; CHECK-NEXT:    pslli.b a2, a0, 2
