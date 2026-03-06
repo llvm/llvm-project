@@ -766,8 +766,8 @@ void CIRGenFunction::generateThunk(cir::FuncOp fn,
 
   // Create lexical scope - must stay alive for entire thunk generation.
   // startFunction() requires currLexScope to be set.
-  mlir::Location unknownLoc = builder.getUnknownLoc();
-  LexicalScope lexScope{*this, unknownLoc, entryBb};
+  SourceLocRAIIObject locRAII(*this, fn.getLoc());
+  LexicalScope lexScope{*this, fn.getLoc(), entryBb};
 
   startThunk(fn, gd, fnInfo, isUnprototyped);
   assert(!cir::MissingFeatures::generateDebugInfo());

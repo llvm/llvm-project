@@ -576,9 +576,9 @@ RISCVTargetLowering::RISCVTargetLowering(const TargetMachine &TM,
     setOperationAction({ISD::AVGFLOORS, ISD::AVGFLOORU}, VTs, Legal);
     for (MVT VT : VTs) {
       if (VT != MVT::v2i32)
-        setOperationAction({ISD::ABDS, ISD::ABDU}, VT, Legal);
+        setOperationAction({ISD::ABS, ISD::ABDS, ISD::ABDU}, VT, Legal);
       if (VT.getVectorElementType() != MVT::i8)
-        setOperationAction(ISD::SSHLSAT, VT, Legal);
+        setOperationAction(ISD::SSHLSAT, VT, Custom);
     }
     setOperationAction(ISD::SPLAT_VECTOR, VTs, Legal);
     setOperationAction(ISD::BUILD_VECTOR, VTs, Legal);
@@ -8891,6 +8891,20 @@ SDValue RISCVTargetLowering::LowerOperation(SDValue Op,
     assert(Op.getOperand(1).getValueType() == MVT::i32 && Subtarget.is64Bit() &&
            "Unexpected custom legalisation");
     return SDValue();
+  case ISD::SSHLSAT: {
+    MVT VT = Op.getSimpleValueType();
+    assert(VT.isFixedLengthVector() && Subtarget.hasStdExtP() &&
+           "Unexptect custom legalisation");
+    APInt Splat;
+    if (!ISD::isConstantSplatVector(Op.getOperand(1).getNode(), Splat))
+      return SDValue();
+    uint64_t ShAmt = Splat.getZExtValue();
+    if (ShAmt >= VT.getVectorElementType().getSizeInBits())
+      return SDValue();
+    SDLoc DL(Op);
+    return DAG.getNode(RISCVISD::PSSLAI, DL, VT, Op.getOperand(0),
+                       DAG.getTargetConstant(ShAmt, DL, Subtarget.getXLenVT()));
+  }
   case ISD::FABS:
   case ISD::FNEG:
     if (Op.getValueType() == MVT::f16 || Op.getValueType() == MVT::bf16)
