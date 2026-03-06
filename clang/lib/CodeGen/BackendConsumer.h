@@ -33,7 +33,6 @@ class BackendConsumer : public ASTConsumer {
   const CodeGenOptions &CodeGenOpts;
   const TargetOptions &TargetOpts;
   const LangOptions &LangOpts;
-  const CASOptions &CASOpts; // MCCAS
   std::unique_ptr<raw_pwrite_stream> AsmOutStream;
   std::unique_ptr<raw_pwrite_stream> CasIDStream;
   ASTContext *Context = nullptr;
@@ -74,7 +73,6 @@ class BackendConsumer : public ASTConsumer {
 public:
   BackendConsumer(CompilerInstance &CI, BackendAction Action,
                   IntrusiveRefCntPtr<llvm::vfs::FileSystem> VFS,
-                  const CASOptions &CASOpts,
                   llvm::LLVMContext &C, SmallVector<LinkModule, 4> LinkModules,
                   StringRef InFile, std::unique_ptr<raw_pwrite_stream> OS,
                   CoverageSourceInfo *CoverageInfo,
