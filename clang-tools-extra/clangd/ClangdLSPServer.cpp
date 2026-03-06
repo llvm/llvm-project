@@ -652,6 +652,8 @@ void ClangdLSPServer::onInitialize(const InitializeParams &Params,
       {"clangdInlayHintsProvider", true},
       {"inlayHintProvider", true},
       {"foldingRangeProvider", true},
+      {"languages",
+       {"c", "cpp", "cuda-cpp", "objective-c", "objective-cpp", "hlsl"}},
   };
 
   {
