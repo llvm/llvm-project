@@ -72,9 +72,9 @@ public:
 
   nb::list getFuncNames() {
     nb::list NbFuncNames;
-    for (const Function &F : M->getFunctionDefs()) {
+    for (const Function &F : M->getFunctionDefs())
       NbFuncNames.append(nb::str(F.getName().str().c_str()));
-    }
+
     return NbFuncNames;
   }
 

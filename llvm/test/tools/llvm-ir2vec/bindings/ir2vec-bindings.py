@@ -67,6 +67,7 @@ if tool is not None:
 # CHECK: Function: add
 # CHECK: Function: conditional
 # CHECK: Function: multiply
+# CHECK-NOT:  Function: external_func
 # CHECK: === Function Embeddings ===
 # CHECK: Function: add
 # CHECK-NEXT:   Embedding: [38.0, 40.0, 42.0]
