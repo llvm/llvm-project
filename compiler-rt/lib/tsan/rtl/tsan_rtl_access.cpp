@@ -12,6 +12,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "tsan_rtl.h"
+#include "tsan_simulate.h"
 
 namespace __tsan {
 
@@ -424,6 +425,10 @@ ALWAYS_INLINE USED void MemoryAccess(ThreadState* thr, uptr pc, uptr addr,
   if (thr->in_symbolizer)
     return;
 #endif
+#if !SANITIZER_GO
+  if (SimulateIsActive() && flags()->simulate_schedule_on_memory_access)
+    SimulateSchedule();
+#endif
   RawShadow* shadow_mem = MemToShadow(addr);
   UNUSED char memBuf[4][64];
   DPrintf2("#%d: Access: %d@%d %p/%zd typ=0x%x {%s, %s, %s, %s}\n", thr->tid,
@@ -462,6 +467,10 @@ ALWAYS_INLINE USED void MemoryAccess16(ThreadState* thr, uptr pc, uptr addr,
   FastState fast_state = thr->fast_state;
   if (UNLIKELY(fast_state.GetIgnoreBit()))
     return;
+#if !SANITIZER_GO
+  if (SimulateIsActive() && flags()->simulate_schedule_on_memory_access)
+    SimulateSchedule();
+#endif
   Shadow cur(fast_state, 0, 8, typ);
   RawShadow* shadow_mem = MemToShadow(addr);
   bool traced = false;
@@ -499,6 +508,10 @@ ALWAYS_INLINE USED void UnalignedMemoryAccess(ThreadState* thr, uptr pc,
   FastState fast_state = thr->fast_state;
   if (UNLIKELY(fast_state.GetIgnoreBit()))
     return;
+#if !SANITIZER_GO
+  if (SimulateIsActive() && flags()->simulate_schedule_on_memory_access)
+    SimulateSchedule();
+#endif
   RawShadow* shadow_mem = MemToShadow(addr);
   bool traced = false;
   uptr size1 = Min<uptr>(size, RoundUp(addr + 1, kShadowCell) - addr);

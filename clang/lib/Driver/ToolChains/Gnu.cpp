@@ -20,6 +20,7 @@
 #include "clang/Driver/Compilation.h"
 #include "clang/Driver/Driver.h"
 #include "clang/Driver/MultilibBuilder.h"
+#include "clang/Driver/SanitizerArgs.h"
 #include "clang/Driver/Tool.h"
 #include "clang/Driver/ToolChain.h"
 #include "clang/Options/Options.h"
@@ -448,6 +449,14 @@ void tools::gnutools::Linker::ConstructJob(Compilation &C, const JobAction &JA,
 
   bool NeedsSanitizerDeps = addSanitizerRuntimes(ToolChain, Args, CmdArgs);
   bool NeedsXRayDeps = addXRayRuntime(ToolChain, Args, CmdArgs);
+
+  // Add --wrap=main for ThreadSanitizer simulation mode
+  if (NeedsSanitizerDeps) {
+    const SanitizerArgs &SanArgs = ToolChain.getSanitizerArgs(Args);
+    if (SanArgs.needsTsanRt() && SanArgs.needsTsanSimulateMain())
+      CmdArgs.push_back("--wrap=main");
+  }
+
   addLinkerCompressDebugSectionsOption(ToolChain, Args, CmdArgs);
   AddLinkerInputs(ToolChain, Inputs, Args, CmdArgs, JA);
 

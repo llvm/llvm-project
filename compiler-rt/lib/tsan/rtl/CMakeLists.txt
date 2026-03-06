@@ -45,6 +45,7 @@ set(TSAN_SOURCES
   tsan_rtl_proc.cpp
   tsan_rtl_report.cpp
   tsan_rtl_thread.cpp
+  tsan_simulate.cpp
   tsan_stack_trace.cpp
   tsan_suppressions.cpp
   tsan_symbolize.cpp
@@ -101,6 +102,7 @@ set(TSAN_HEADERS
   tsan_report.h
   tsan_rtl.h
   tsan_shadow.h
+  tsan_simulate.h
   tsan_stack_trace.h
   tsan_suppressions.h
   tsan_symbolize.h

@@ -327,6 +327,281 @@ Increase sampling frequency for mutex operations:
 
   $ TSAN_OPTIONS=enable_adaptive_delay=1:adaptive_delay_mutex_sample_rate=5 ./myapp
 
+Simulation Scheduler
+--------------------
+
+Overview
+~~~~~~~~
+
+The Simulation Scheduler is an optional ThreadSanitizer feature that enables
+systematic exploration of thread interleavings to expose data races that may be
+difficult to trigger in normal execution. Unlike standard ThreadSanitizer which
+detects races as they occur naturally during program execution, the simulation
+scheduler takes control of thread scheduling to deliberately explore different
+execution orderings.
+
+Simulation is particularly useful for:
+
+* Testing concurrent data structure or algorithms during development to ensure
+  correctness (for example, a lock free queue).
+* Finding races in rarely-executed interleavings that standard TSAN may miss
+* Reproducing specific race conditions deterministically
+
+Simulation is not useful for running full applications, and will likely not
+work in these scenarios. The code run in simulation should almost always be a
+small unit test exercising very specific functionality.
+
+When enabled via the ``__tsan_simulate()`` API, the simulation scheduler runs
+the program's concurrent code multiple times (iterations), choosing different
+thread interleavings in each iteration. The scheduler injects context switches
+at synchronization points (atomic operations, mutex operations, thread lifecycle
+events) to maximize coverage of possible execution orderings. If a data race is
+detected, the simulation stops and reports which iteration exposed the race,
+allowing that specific interleaving to be reproduced.
+
+Usage
+~~~~~
+
+To use simulation, wrap the concurrent code you want to test in a callback
+function and invoke it through the ``__tsan_simulate()`` API:
+
+.. code-block:: c
+
+    extern "C" int __tsan_simulate(void (*callback)(void *), void *arg);
+
+    void test_concurrent_code(void *arg) {
+      // Create threads, run concurrent operations
+      pthread_t t1, t2;
+      pthread_create(&t1, NULL, thread_func, NULL);
+      pthread_create(&t2, NULL, thread_func, NULL);
+      pthread_join(t1, NULL);
+      pthread_join(t2, NULL);
+    }
+
+    int main() {
+      return __tsan_simulate(test_concurrent_code, NULL);
+    }
+
+Then compile with ThreadSanitizer and enable the simulation scheduler:
+
+.. code-block:: console
+
+  $ clang -fsanitize=thread -g -O1 mytest.c
+  $ TSAN_OPTIONS=simulate_scheduler=random ./a.out
+  ThreadSanitizer: simulation starting (iterations 0..999, max_depth=10000, scheduler=random)
+
+Automatic Main Wrapping
+~~~~~~~~~~~~~~~~~~~~~~~~
+
+For convenience, the ``-fsanitize-thread-simulate-main`` compiler flag
+automatically wraps ``main()`` to call ``__tsan_simulate()``, eliminating the
+need to manually modify code:
+
+.. code-block:: c
+
+    // No need to call __tsan_simulate() manually
+    void *thread_func(void *arg) { /* ... */ }
+
+    int main() {
+      // This entire main() runs under simulation automatically
+      pthread_t t1, t2;
+      pthread_create(&t1, NULL, thread_func, NULL);
+      pthread_create(&t2, NULL, thread_func, NULL);
+      pthread_join(t1, NULL);
+      pthread_join(t2, NULL);
+      return 0;
+    }
+
+Compile and run:
+
+.. code-block:: console
+
+  $ clang -fsanitize=thread -fsanitize-thread-simulate-main -g -O1 mytest.c
+  $ TSAN_OPTIONS=simulate_scheduler=random ./a.out
+  ThreadSanitizer: simulation starting (iterations 0..999, max_depth=10000, scheduler=random)
+
+**Platform Support**: This flag requires GNU ld linker support for ``--wrap=main``
+and is currently only supported on Linux. Do not manually specify ``-Wl,--wrap=main``
+when using this flag, as the compiler handles the wrapping automatically.
+
+Configuration Options
+~~~~~~~~~~~~~~~~~~~~~
+
+.. list-table:: Simulation Scheduler Options
+   :name: simulation-scheduler-options-table
+   :header-rows: 1
+   :widths: 35 10 15 40
+
+   * - Flag
+     - Type
+     - Default
+     - Description
+   * - ``simulate_scheduler``
+     - string
+     - ""
+     - Scheduler algorithm for simulation. Supported values: ``"random"`` for
+       random scheduling decisions. Empty string (default) means simulation is
+       disabled. Must be set to enable simulation.
+   * - ``simulate_iterations``
+     - int
+     - 1000
+     - Number of iterations to run. Each iteration explores a different thread
+       interleaving. More iterations increase the likelihood of finding races but
+       take longer to complete.
+   * - ``simulate_start_iteration``
+     - int
+     - 0
+     - Starting iteration number. Useful for reproducing specific iteration
+       failures. Set this to the iteration number reported when a race was found
+       to reproduce that exact interleaving.
+   * - ``simulate_max_depth``
+     - int
+     - 10000
+     - Maximum number of scheduling decisions per iteration. If exceeded, the
+       iteration is aborted and simulation returns an error. Prevents infinite
+       loops or excessive scheduling overhead.
+   * - ``simulate_schedule_probability``
+     - int
+     - 100
+     - Probability (0-100%) of performing a context switch at each scheduling
+       point. Lower values (e.g., 0) disable context switching, allowing threads
+       to run more sequentially. Useful for comparing simulation results against
+       sequential execution.
+   * - ``simulate_schedule_on_memory_access``
+     - bool
+     - false
+     - Insert scheduling points at every memory read/write during simulation for
+       maximum interleaving exploration. This can significantly increase overhead
+       but may expose additional races.
+   * - ``simulate_print_schedule_stacks``
+     - bool
+     - false
+     - Print stack trace at each scheduling point. Useful for debugging and
+       understanding exact interleavings, but generates significant output.
+
+Examples
+~~~~~~~~
+
+Basic race detection that standard TSAN rarely finds:
+
+.. code-block:: c
+
+    // Compile: clang -fsanitize=thread -g -O1 test.c
+    #include <pthread.h>
+    #include <stdatomic.h>
+
+    extern int __tsan_simulate(void (*callback)(void *), void *arg);
+
+    atomic_int d = 0;
+    int a = 0;  // Non-atomic - race target
+
+    void *thread_func(void *arg) {
+      atomic_fetch_add(&d, 1);
+      ++a;  // Data race!
+      atomic_fetch_add(&d, 1);
+      return NULL;
+    }
+
+    void test_callback(void *arg) {
+      pthread_t t1, t2;
+      pthread_create(&t1, NULL, thread_func, NULL);
+      pthread_create(&t2, NULL, thread_func, NULL);
+      pthread_join(t1, NULL);
+      pthread_join(t2, NULL);
+    }
+
+    int main() { return __tsan_simulate(test_callback, NULL); }
+
+Standard TSAN execution rarely detects this race. Running 100 times produces no
+output most of the time:
+
+.. code-block:: console
+
+  $ clang -fsanitize=thread -g -O1 test.c
+  $ for i in {1..100}; do ./a.out; done
+  (no output - race not detected)
+
+Run with simulation enabled:
+
+.. code-block:: console
+
+  $ TSAN_OPTIONS=simulate_scheduler=random:simulate_iterations=50 ./a.out
+  ThreadSanitizer: simulation starting (iterations 0..999, max_depth=10000, scheduler=random)
+  ==================
+  WARNING: ThreadSanitizer: data race
+    Write of size 4 at 0x... by thread T1:
+      #0 thread_func test.c:12
+
+    Previous write of size 4 at 0x... by thread T2:
+      #0 thread_func test.c:12
+  ==================
+  ThreadSanitizer: data race detected at iteration 4
+  ThreadSanitizer: to reproduce, set TSAN_OPTIONS=simulate_scheduler=random:simulate_start_iteration=4
+  ThreadSanitizer: simulation stopped due to race detection after 5 iterations
+
+To reproduce the specific iteration that found the race:
+
+.. code-block:: console
+
+  $ TSAN_OPTIONS=simulate_scheduler=random:simulate_start_iteration=4:simulate_iterations=1 ./a.out
+  ThreadSanitizer: simulation starting (iterations 4..4, max_depth=10000, scheduler=random)
+  ==================
+  WARNING: ThreadSanitizer: data race
+  ...
+
+Compare simulation results with sequential execution (no context switching):
+
+.. code-block:: console
+
+  $ TSAN_OPTIONS=simulate_scheduler=random:simulate_schedule_probability=0:simulate_iterations=100 ./a.out
+
+Deadlock detection
+~~~~~~~~~~~~~~~~~~
+
+Simulation detects when an actual deadlock occurs, i.e., no thread is runnable and the program
+will remain blocked forever. For example,
+
+.. code-block:: c
+
+    // Compile: clang -fsanitize=thread -g -O1 deadlock.c
+    #include <pthread.h>
+
+    extern int __tsan_simulate(void (*callback)(void *), void *arg);
+
+    pthread_mutex_t mutex;
+    pthread_cond_t condvar;
+
+    void *thread_func(void *arg) {
+      pthread_mutex_lock(&mutex);
+      // Wait on condition variable that will never be signaled
+      pthread_cond_wait(&condvar, &mutex);
+      pthread_mutex_unlock(&mutex);
+      return NULL;
+    }
+
+    void test_callback(void *arg) {
+      pthread_mutex_init(&mutex, NULL);
+      pthread_cond_init(&condvar, NULL);
+
+      pthread_t t1;
+      pthread_create(&t1, NULL, thread_func, NULL);
+      pthread_join(t1, NULL);
+
+      pthread_cond_destroy(&condvar);
+      pthread_mutex_destroy(&mutex);
+    }
+
+    int main() { return __tsan_simulate(test_callback, NULL); }
+
+Run with simulation:
+
+.. code-block:: console
+
+  $ TSAN_OPTIONS=simulate_scheduler=random:simulate_iterations=2 ./deadlock
+  ThreadSanitizer: simulation starting (iterations 0..1, max_depth=10000, scheduler=random)
+  ThreadSanitizer: deadlock detected at iteration 0 - all threads are blocked
+  ThreadSanitizer: to reproduce, set TSAN_OPTIONS=simulate_scheduler=random:simulate_start_iteration=0
+
 More Information
 ----------------
 `<https://github.com/google/sanitizers/wiki/ThreadSanitizerCppManual>`_

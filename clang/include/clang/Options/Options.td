@@ -2827,6 +2827,10 @@ def fno_sanitize_thread_atomics : Flag<["-"], "fno-sanitize-thread-atomics">,
                                   Group<f_clang_Group>,
                                   Visibility<[ClangOption, CLOption]>,
                                   HelpText<"Disable atomic operations instrumentation in ThreadSanitizer">;
+def fsanitize_thread_simulate_main
+    : Flag<["-"], "fsanitize-thread-simulate-main">,
+      Group<f_clang_Group>,
+      HelpText<"Wrap main() to run under ThreadSanitizer simulation mode">;
 def fsanitize_undefined_strip_path_components_EQ : Joined<["-"], "fsanitize-undefined-strip-path-components=">,
   Group<f_clang_Group>, MetaVarName<"<number>">,
   HelpText<"Strip (or keep only, if negative) a given number of path components "

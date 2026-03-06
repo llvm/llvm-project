@@ -67,6 +67,7 @@ class SanitizerArgs {
   bool TsanMemoryAccess = true;
   bool TsanFuncEntryExit = true;
   bool TsanAtomics = true;
+  bool TsanSimulateMain = false;
   bool MinimalRuntime = false;
   bool TrapLoop = false;
   bool TysanOutlineInstrumentation = true;
@@ -100,6 +101,7 @@ public:
   }
   bool needsTysanRt() const { return Sanitizers.has(SanitizerKind::Type); }
   bool needsTsanRt() const { return Sanitizers.has(SanitizerKind::Thread); }
+  bool needsTsanSimulateMain() const { return TsanSimulateMain; }
   bool needsMsanRt() const { return Sanitizers.has(SanitizerKind::Memory); }
   bool needsFuzzer() const { return Sanitizers.has(SanitizerKind::Fuzzer); }
   bool needsLsanRt() const {
