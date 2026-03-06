@@ -842,11 +842,8 @@ define <vscale x 2 x i64> @insertelt_nxv2i64_idx_cn1(<vscale x 2 x i64> %v, i32 
 define <vscale x 2 x i64> @insertelt_nxv2i64_sext(<vscale x 2 x i64> %v, i32 signext %elt, i32 %idx) {
 ; CHECK-LABEL: insertelt_nxv2i64_sext:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    srai a1, a0, 31
-; CHECK-NEXT:    vsetivli zero, 2, e32, m2, ta, ma
-; CHECK-NEXT:    vslide1down.vx v10, v8, a0
-; CHECK-NEXT:    vslide1down.vx v10, v10, a1
 ; CHECK-NEXT:    vsetivli zero, 4, e64, m2, tu, ma
+; CHECK-NEXT:    vmv.s.x v10, a0
 ; CHECK-NEXT:    vslideup.vi v8, v10, 3
 ; CHECK-NEXT:    ret
   %sext = sext i32 %elt to i64

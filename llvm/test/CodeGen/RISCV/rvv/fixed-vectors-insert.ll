@@ -575,19 +575,11 @@ define <8 x i64> @insertelt_v8i64_0(<8 x i64> %a, ptr %x) {
 }
 
 define <8 x i64> @insertelt_v8i64_sext_0(<8 x i64> %a, ptr %x, i32 signext %elt) {
-; RV32-LABEL: insertelt_v8i64_sext_0:
-; RV32:       # %bb.0:
-; RV32-NEXT:    srai a0, a1, 31
-; RV32-NEXT:    vsetivli zero, 2, e32, m1, tu, ma
-; RV32-NEXT:    vslide1down.vx v8, v8, a1
-; RV32-NEXT:    vslide1down.vx v8, v8, a0
-; RV32-NEXT:    ret
-;
-; RV64-LABEL: insertelt_v8i64_sext_0:
-; RV64:       # %bb.0:
-; RV64-NEXT:    vsetivli zero, 8, e64, m1, tu, ma
-; RV64-NEXT:    vmv.s.x v8, a1
-; RV64-NEXT:    ret
+; CHECK-LABEL: insertelt_v8i64_sext_0:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    vsetivli zero, 8, e64, m1, tu, ma
+; CHECK-NEXT:    vmv.s.x v8, a1
+; CHECK-NEXT:    ret
 ;
 ; VISNI-LABEL: insertelt_v8i64_sext_0:
 ; VISNI:       # %bb.0:
