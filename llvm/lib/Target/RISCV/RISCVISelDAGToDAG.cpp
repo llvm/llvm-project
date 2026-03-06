@@ -1873,7 +1873,7 @@ void RISCVDAGToDAGISel::Select(SDNode *Node) {
   }
   case RISCVISD::WSLL:
   case RISCVISD::WSLA: {
-    // Custom select (S/U)MUL_LOHI to WMUL(U) for RV32P.
+    // Custom select WSLL/WSLA for RV32P.
     assert(Subtarget->hasStdExtP() && !Subtarget->is64Bit() && VT == MVT::i32 &&
            "Unexpected opcode");
 
