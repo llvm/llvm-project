@@ -1147,7 +1147,7 @@ TEST_F(VPRecipeTest, CastVPBlendRecipeToVPUser) {
   Args.push_back(I1);
   Args.push_back(I2);
   Args.push_back(M2);
-  VPBlendRecipe Recipe(Phi, Args, {});
+  VPBlendRecipe Recipe(Phi, Args, {}, {});
 
   checkVPRecipeCastImpl<VPBlendRecipe, VPUser>(&Recipe);
 
@@ -1739,7 +1739,7 @@ TEST(VPDoubleValueDefTest, traverseUseLists) {
 TEST_F(VPRecipeTest, CastToVPSingleDefRecipe) {
   IntegerType *Int32 = IntegerType::get(C, 32);
   VPValue *Start = getPlan().getOrAddLiveIn(ConstantInt::get(Int32, 0));
-  VPEVLBasedIVPHIRecipe R(Start, {});
+  VPCurrentIterationPHIRecipe R(Start, {});
   VPRecipeBase *B = &R;
   EXPECT_TRUE(isa<VPSingleDefRecipe>(B));
   // TODO: check other VPSingleDefRecipes.

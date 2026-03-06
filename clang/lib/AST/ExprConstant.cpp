@@ -1772,12 +1772,13 @@ static bool EvaluateIntegerOrLValue(const Expr *E, APValue &Result,
                                     EvalInfo &Info);
 static bool EvaluateFloat(const Expr *E, APFloat &Result, EvalInfo &Info);
 static bool EvaluateComplex(const Expr *E, ComplexValue &Res, EvalInfo &Info);
+static bool EvaluateMatrix(const Expr *E, APValue &Result, EvalInfo &Info);
 static bool EvaluateAtomic(const Expr *E, const LValue *This, APValue &Result,
                            EvalInfo &Info);
 static bool EvaluateAsRValue(EvalInfo &Info, const Expr *E, APValue &Result);
-static bool EvaluateBuiltinStrLen(const Expr *E, uint64_t &Result,
-                                  EvalInfo &Info,
-                                  std::string *StringResult = nullptr);
+static std::optional<uint64_t>
+EvaluateBuiltinStrLen(const Expr *E, EvalInfo &Info,
+                      std::string *StringResult = nullptr);
 
 /// Evaluate an integer or fixed point expression into an APResult.
 static bool EvaluateFixedPointOrInteger(const Expr *E, APFixedPoint &Result,
@@ -2602,6 +2603,7 @@ static bool HandleConversionToBool(const APValue &Val, bool &Result) {
     Result = Val.getMemberPointerDecl();
     return true;
   case APValue::Vector:
+  case APValue::Matrix:
   case APValue::Array:
   case APValue::Struct:
   case APValue::Union:
@@ -2774,7 +2776,7 @@ static bool CheckedIntArithmetic(EvalInfo &Info, const Expr *E,
 
   APSInt Value(Op(LHS.extend(BitWidth), RHS.extend(BitWidth)), false);
   Result = Value.trunc(LHS.getBitWidth());
-  if (Result.extend(BitWidth) != Value) {
+  if (Result.extend(BitWidth) != Value && !E->getType().isWrapType()) {
     if (Info.checkingForUndefinedBehavior())
       Info.Ctx.getDiagnostics().Report(E->getExprLoc(),
                                        diag::warn_integer_constant_overflow)
@@ -3373,12 +3375,9 @@ static bool evaluateVarDeclInit(EvalInfo &Info, const Expr *E,
              "missing value for local variable");
       if (Info.checkingPotentialConstantExpression())
         return false;
-      // FIXME: This diagnostic is bogus; we do support captures. Is this code
-      // still reachable at all?
-      Info.FFDiag(E->getBeginLoc(),
-                  diag::note_unimplemented_constexpr_lambda_feature_ast)
-          << "captures not currently allowed";
-      return false;
+
+      llvm_unreachable(
+          "A variable in a frame should either be a local or a parameter");
     }
   }
 
@@ -3599,6 +3598,13 @@ static void expandArray(APValue &Array, unsigned Index) {
   Array.swap(NewValue);
 }
 
+// Expand an indeterminate vector to materialize all elements.
+static void expandVector(APValue &Vec, unsigned NumElements) {
+  assert(Vec.isIndeterminate());
+  SmallVector<APValue, 4> Elts(NumElements, APValue::IndeterminateValue());
+  Vec = APValue(Elts.data(), Elts.size());
+}
+
 /// Determine whether a type would actually be read by an lvalue-to-rvalue
 /// conversion. If it's of class type, we may assume that the copy operation
 /// is trivial. Note that this is never true for a union type with fields
@@ -3738,7 +3744,7 @@ static bool handleScalarCast(EvalInfo &Info, const FPOptions FPO, const Expr *E,
                                 Info.Ctx.getIntTypeForBitwidth(64, false),
                                 Result.getInt(), DestTy, Result2.getFloat()))
         return false;
-      Result = Result2;
+      Result = std::move(Result2);
     }
     return true;
   }
@@ -3928,6 +3934,12 @@ static unsigned elementwiseSize(EvalInfo &Info, QualType BaseTy) {
       Size += NumEl;
       continue;
     }
+    if (Type->isConstantMatrixType()) {
+      unsigned NumEl =
+          Type->castAs<ConstantMatrixType>()->getNumElementsFlattened();
+      Size += NumEl;
+      continue;
+    }
     if (Type->isConstantArrayType()) {
       QualType ElTy = cast<ConstantArrayType>(Info.Ctx.getAsArrayType(Type))
                           ->getElementType();
@@ -3978,6 +3990,11 @@ static bool hlslAggSplatHelper(EvalInfo &Info, const Expr *E, APValue &SrcVal,
     SrcTy = SrcTy->castAs<VectorType>()->getElementType();
     SrcVal = SrcVal.getVectorElt(0);
   }
+  if (SrcVal.isMatrix()) {
+    assert(SrcTy->isConstantMatrixType() && "Type mismatch.");
+    SrcTy = SrcTy->castAs<ConstantMatrixType>()->getElementType();
+    SrcVal = SrcVal.getMatrixElt(0, 0);
+  }
   return true;
 }
 
@@ -4004,6 +4021,22 @@ static bool flattenAPValue(EvalInfo &Info, const Expr *E, APValue Value,
         Elements.push_back(Work.getVectorElt(I));
         Types.push_back(ElTy);
         Populated++;
+      }
+      continue;
+    }
+    if (Work.isMatrix()) {
+      assert(Type->isConstantMatrixType() && "Type mismatch.");
+      const auto *MT = Type->castAs<ConstantMatrixType>();
+      QualType ElTy = MT->getElementType();
+      // Matrix elements are flattened in row-major order.
+      for (unsigned Row = 0; Row < Work.getMatrixNumRows() && Populated < Size;
+           Row++) {
+        for (unsigned Col = 0;
+             Col < Work.getMatrixNumColumns() && Populated < Size; Col++) {
+          Elements.push_back(Work.getMatrixElt(Row, Col));
+          Types.push_back(ElTy);
+          Populated++;
+        }
       }
       continue;
     }
@@ -4291,6 +4324,15 @@ findSubobject(EvalInfo &Info, const Expr *E, const CompleteObject &Obj,
 
       ObjType = VT->getElementType();
       assert(I == N - 1 && "extracting subobject of scalar?");
+
+      if (O->isIndeterminate()) {
+        if (isRead(handler.AccessKind)) {
+          Info.FFDiag(E);
+          return handler.failed();
+        }
+        expandVector(*O, NumElements);
+      }
+      assert(O->isVector() && "unexpected object during vector element access");
       return handler.found(O->getVectorElt(Index), ObjType);
     } else if (const FieldDecl *Field = getAsField(Sub.Entries[I])) {
       if (Field->isMutable() &&
@@ -7729,6 +7771,7 @@ class APValueToBufferConverter {
     case APValue::FixedPoint:
       // FIXME: We should support these.
 
+    case APValue::Matrix:
     case APValue::Union:
     case APValue::MemberPointer:
     case APValue::AddrLabelDiff: {
@@ -9633,7 +9676,7 @@ bool LValueExprEvaluator::VisitArraySubscriptExpr(const ArraySubscriptExpr *E) {
     if (Success) {
       Result.setFrom(Info.Ctx, Val);
       HandleLValueVectorElement(Info, E, Result, VT->getElementType(),
-                                VT->getNumElements(), Index.getExtValue());
+                                VT->getNumElements(), Index.getZExtValue());
     }
 
     return Success;
@@ -11654,8 +11697,17 @@ bool VectorExprEvaluator::VisitCastExpr(const CastExpr *E) {
     return Success(Elements, E);
   }
   case CK_HLSLMatrixTruncation: {
-    // TODO: See #168935. Add matrix truncation support to expr constant.
-    return Error(E);
+    // Matrix truncation occurs in row-major order.
+    APValue Val;
+    if (!EvaluateMatrix(SE, Val, Info))
+      return Error(E);
+    SmallVector<APValue, 16> Elements;
+    for (unsigned Row = 0;
+         Row < Val.getMatrixNumRows() && Elements.size() < NElts; Row++)
+      for (unsigned Col = 0;
+           Col < Val.getMatrixNumColumns() && Elements.size() < NElts; Col++)
+        Elements.push_back(Val.getMatrixElt(Row, Col));
+    return Success(Elements, E);
   }
   case CK_HLSLAggregateSplatCast: {
     APValue Val;
@@ -12125,6 +12177,20 @@ static bool evalShiftWithCount(
   return true;
 }
 
+std::optional<APFloat> EvalScalarMinMaxFp(const APFloat &A, const APFloat &B,
+                                          std::optional<APSInt> RoundingMode,
+                                          bool IsMin) {
+  APSInt DefaultMode(APInt(32, 4), /*isUnsigned=*/true);
+  if (RoundingMode.value_or(DefaultMode) != 4)
+    return std::nullopt;
+  if (A.isNaN() || A.isInfinity() || A.isDenormal() || B.isNaN() ||
+      B.isInfinity() || B.isDenormal())
+    return std::nullopt;
+  if (A.isZero() && B.isZero())
+    return B;
+  return IsMin ? llvm::minimum(A, B) : llvm::maximum(A, B);
+}
+
 bool VectorExprEvaluator::VisitCallExpr(const CallExpr *E) {
   if (!IsConstantEvaluatedBuiltinCall(E))
     return ExprEvaluatorBaseTy::VisitCallExpr(E);
@@ -12164,7 +12230,8 @@ bool VectorExprEvaluator::VisitCallExpr(const CallExpr *E) {
   auto EvaluateFpBinOpExpr =
       [&](llvm::function_ref<std::optional<APFloat>(
               const APFloat &, const APFloat &, std::optional<APSInt>)>
-              Fn) {
+              Fn,
+          bool IsScalar = false) {
         assert(E->getNumArgs() == 2 || E->getNumArgs() == 3);
         APValue A, B;
         if (!EvaluateAsRValue(Info, E->getArg(0), A) ||
@@ -12187,6 +12254,10 @@ bool VectorExprEvaluator::VisitCallExpr(const CallExpr *E) {
         ResultElements.reserve(NumElems);
 
         for (unsigned EltNum = 0; EltNum < NumElems; ++EltNum) {
+          if (IsScalar && EltNum > 0) {
+            ResultElements.push_back(A.getVectorElt(EltNum));
+            continue;
+          }
           const APFloat &EltA = A.getVectorElt(EltNum).getFloat();
           const APFloat &EltB = B.getVectorElt(EltNum).getFloat();
           std::optional<APFloat> Result = Fn(EltA, EltB, RoundingMode);
@@ -12194,6 +12265,42 @@ bool VectorExprEvaluator::VisitCallExpr(const CallExpr *E) {
             return false;
           ResultElements.push_back(APValue(*Result));
         }
+        return Success(APValue(ResultElements.data(), NumElems), E);
+      };
+
+  auto EvaluateScalarFpRoundMaskBinOp =
+      [&](llvm::function_ref<std::optional<APFloat>(
+              const APFloat &, const APFloat &, std::optional<APSInt>)>
+              Fn) {
+        assert(E->getNumArgs() == 5);
+        APValue VecA, VecB, VecSrc;
+        APSInt MaskVal, Rounding;
+
+        if (!EvaluateAsRValue(Info, E->getArg(0), VecA) ||
+            !EvaluateAsRValue(Info, E->getArg(1), VecB) ||
+            !EvaluateAsRValue(Info, E->getArg(2), VecSrc) ||
+            !EvaluateInteger(E->getArg(3), MaskVal, Info) ||
+            !EvaluateInteger(E->getArg(4), Rounding, Info))
+          return false;
+
+        unsigned NumElems = VecA.getVectorLength();
+        SmallVector<APValue, 8> ResultElements;
+        ResultElements.reserve(NumElems);
+
+        if (MaskVal.getZExtValue() & 1) {
+          const APFloat &EltA = VecA.getVectorElt(0).getFloat();
+          const APFloat &EltB = VecB.getVectorElt(0).getFloat();
+          std::optional<APFloat> Result = Fn(EltA, EltB, Rounding);
+          if (!Result)
+            return false;
+          ResultElements.push_back(APValue(*Result));
+        } else {
+          ResultElements.push_back(VecSrc.getVectorElt(0));
+        }
+
+        for (unsigned I = 1; I < NumElems; ++I)
+          ResultElements.push_back(VecA.getVectorElt(I));
+
         return Success(APValue(ResultElements.data(), NumElems), E);
       };
 
@@ -14280,6 +14387,34 @@ bool VectorExprEvaluator::VisitCallExpr(const CallExpr *E) {
           return llvm::minimum(A, B);
         });
 
+  case clang::X86::BI__builtin_ia32_minss:
+  case clang::X86::BI__builtin_ia32_minsd:
+    return EvaluateFpBinOpExpr(
+        [](const APFloat &A, const APFloat &B,
+           std::optional<APSInt> RoundingMode) -> std::optional<APFloat> {
+          return EvalScalarMinMaxFp(A, B, RoundingMode, /*IsMin=*/true);
+        },
+        /*IsScalar=*/true);
+
+  case clang::X86::BI__builtin_ia32_minsd_round_mask:
+  case clang::X86::BI__builtin_ia32_minss_round_mask:
+  case clang::X86::BI__builtin_ia32_minsh_round_mask:
+  case clang::X86::BI__builtin_ia32_maxsd_round_mask:
+  case clang::X86::BI__builtin_ia32_maxss_round_mask:
+  case clang::X86::BI__builtin_ia32_maxsh_round_mask: {
+    bool IsMin =
+        E->getBuiltinCallee() ==
+            clang::X86::BI__builtin_ia32_minsd_round_mask ||
+        E->getBuiltinCallee() ==
+            clang::X86::BI__builtin_ia32_minss_round_mask ||
+        E->getBuiltinCallee() == clang::X86::BI__builtin_ia32_minsh_round_mask;
+    return EvaluateScalarFpRoundMaskBinOp(
+        [IsMin](const APFloat &A, const APFloat &B,
+                std::optional<APSInt> RoundingMode) -> std::optional<APFloat> {
+          return EvalScalarMinMaxFp(A, B, RoundingMode, IsMin);
+        });
+  }
+
   case clang::X86::BI__builtin_ia32_maxps:
   case clang::X86::BI__builtin_ia32_maxpd:
   case clang::X86::BI__builtin_ia32_maxps256:
@@ -14299,6 +14434,15 @@ bool VectorExprEvaluator::VisitCallExpr(const CallExpr *E) {
             return B;
           return llvm::maximum(A, B);
         });
+
+  case clang::X86::BI__builtin_ia32_maxss:
+  case clang::X86::BI__builtin_ia32_maxsd:
+    return EvaluateFpBinOpExpr(
+        [](const APFloat &A, const APFloat &B,
+           std::optional<APSInt> RoundingMode) -> std::optional<APFloat> {
+          return EvalScalarMinMaxFp(A, B, RoundingMode, /*IsMin=*/false);
+        },
+        /*IsScalar=*/true);
 
   case clang::X86::BI__builtin_ia32_vcvtps2ph:
   case clang::X86::BI__builtin_ia32_vcvtps2ph256: {
@@ -14487,6 +14631,117 @@ bool VectorExprEvaluator::VisitShuffleVectorExpr(const ShuffleVectorExpr *E) {
   }
 
   return Success(APValue(ResultElements.data(), ResultElements.size()), E);
+}
+
+//===----------------------------------------------------------------------===//
+// Matrix Evaluation
+//===----------------------------------------------------------------------===//
+
+namespace {
+class MatrixExprEvaluator : public ExprEvaluatorBase<MatrixExprEvaluator> {
+  APValue &Result;
+
+public:
+  MatrixExprEvaluator(EvalInfo &Info, APValue &Result)
+      : ExprEvaluatorBaseTy(Info), Result(Result) {}
+
+  bool Success(ArrayRef<APValue> M, const Expr *E) {
+    auto *CMTy = E->getType()->castAs<ConstantMatrixType>();
+    assert(M.size() == CMTy->getNumElementsFlattened());
+    // FIXME: remove this APValue copy.
+    Result = APValue(M.data(), CMTy->getNumRows(), CMTy->getNumColumns());
+    return true;
+  }
+  bool Success(const APValue &M, const Expr *E) {
+    assert(M.isMatrix() && "expected matrix");
+    Result = M;
+    return true;
+  }
+
+  bool VisitCastExpr(const CastExpr *E);
+  bool VisitInitListExpr(const InitListExpr *E);
+};
+} // end anonymous namespace
+
+static bool EvaluateMatrix(const Expr *E, APValue &Result, EvalInfo &Info) {
+  assert(E->isPRValue() && E->getType()->isConstantMatrixType() &&
+         "not a matrix prvalue");
+  return MatrixExprEvaluator(Info, Result).Visit(E);
+}
+
+bool MatrixExprEvaluator::VisitCastExpr(const CastExpr *E) {
+  const auto *MT = E->getType()->castAs<ConstantMatrixType>();
+  unsigned NumRows = MT->getNumRows();
+  unsigned NumCols = MT->getNumColumns();
+  unsigned NElts = NumRows * NumCols;
+  QualType EltTy = MT->getElementType();
+  const Expr *SE = E->getSubExpr();
+
+  switch (E->getCastKind()) {
+  case CK_HLSLAggregateSplatCast: {
+    APValue Val;
+    QualType ValTy;
+
+    if (!hlslAggSplatHelper(Info, SE, Val, ValTy))
+      return false;
+
+    APValue CastedVal;
+    const FPOptions FPO = E->getFPFeaturesInEffect(Info.Ctx.getLangOpts());
+    if (!handleScalarCast(Info, FPO, E, ValTy, EltTy, Val, CastedVal))
+      return false;
+
+    SmallVector<APValue, 16> SplatEls(NElts, CastedVal);
+    return Success(SplatEls, E);
+  }
+  case CK_HLSLElementwiseCast: {
+    SmallVector<APValue> SrcVals;
+    SmallVector<QualType> SrcTypes;
+
+    if (!hlslElementwiseCastHelper(Info, SE, E->getType(), SrcVals, SrcTypes))
+      return false;
+
+    const FPOptions FPO = E->getFPFeaturesInEffect(Info.Ctx.getLangOpts());
+    SmallVector<QualType, 16> DestTypes(NElts, EltTy);
+    SmallVector<APValue, 16> ResultEls(NElts);
+    if (!handleElementwiseCast(Info, E, FPO, SrcVals, SrcTypes, DestTypes,
+                               ResultEls))
+      return false;
+    return Success(ResultEls, E);
+  }
+  default:
+    return ExprEvaluatorBaseTy::VisitCastExpr(E);
+  }
+}
+
+bool MatrixExprEvaluator::VisitInitListExpr(const InitListExpr *E) {
+  const auto *MT = E->getType()->castAs<ConstantMatrixType>();
+  QualType EltTy = MT->getElementType();
+
+  assert(E->getNumInits() == MT->getNumElementsFlattened() &&
+         "Expected number of elements in initializer list to match the number "
+         "of matrix elements");
+
+  SmallVector<APValue, 16> Elements;
+  Elements.reserve(MT->getNumElementsFlattened());
+
+  // The following loop assumes the elements of the matrix InitListExpr are in
+  // row-major order, which matches the row-major ordering assumption of the
+  // matrix APValue.
+  for (unsigned I = 0, N = MT->getNumElementsFlattened(); I < N; ++I) {
+    if (EltTy->isIntegerType()) {
+      llvm::APSInt IntVal;
+      if (!EvaluateInteger(E->getInit(I), IntVal, Info))
+        return false;
+      Elements.push_back(APValue(IntVal));
+    } else {
+      llvm::APFloat FloatVal(0.0);
+      if (!EvaluateFloat(E->getInit(I), FloatVal, Info))
+        return false;
+      Elements.push_back(APValue(FloatVal));
+    }
+  }
+
+  return Success(Elements, E);
 }
 
 //===----------------------------------------------------------------------===//
@@ -15370,6 +15625,7 @@ GCCTypeClass EvaluateBuiltinClassifyType(QualType T,
   case Type::Pipe:
   case Type::HLSLAttributedResource:
   case Type::HLSLInlineSpirv:
+  case Type::OverflowBehavior:
     // Classify all other types that don't fit into the regular
     // classification the same way.
     return GCCTypeClass::None;
@@ -15781,8 +16037,8 @@ static bool determineEndOffset(EvalInfo &Info, SourceLocation ExprLoc,
 ///
 /// If @p WasError is non-null, this will report whether the failure to evaluate
 /// is to be treated as an Error in IntExprEvaluator.
-static bool tryEvaluateBuiltinObjectSize(const Expr *E, unsigned Type,
-                                         EvalInfo &Info, uint64_t &Size) {
+static std::optional<uint64_t>
+tryEvaluateBuiltinObjectSize(const Expr *E, unsigned Type, EvalInfo &Info) {
   // Determine the denoted object.
   LValue LVal;
   {
@@ -15797,31 +16053,27 @@ static bool tryEvaluateBuiltinObjectSize(const Expr *E, unsigned Type,
       // Expr::tryEvaluateObjectSize.
       APValue RVal;
       if (!EvaluateAsRValue(Info, E, RVal))
-        return false;
+        return std::nullopt;
       LVal.setFrom(Info.Ctx, RVal);
     } else if (!EvaluatePointer(ignorePointerCastsAndParens(E), LVal, Info,
                                 /*InvalidBaseOK=*/true))
-      return false;
+      return std::nullopt;
   }
 
   // If we point to before the start of the object, there are no accessible
   // bytes.
-  if (LVal.getLValueOffset().isNegative()) {
-    Size = 0;
-    return true;
-  }
+  if (LVal.getLValueOffset().isNegative())
+    return 0;
 
   CharUnits EndOffset;
   if (!determineEndOffset(Info, E->getExprLoc(), Type, LVal, EndOffset))
-    return false;
+    return std::nullopt;
 
   // If we've fallen outside of the end offset, just pretend there's nothing to
   // write to/read from.
   if (EndOffset <= LVal.getLValueOffset())
-    Size = 0;
-  else
-    Size = (EndOffset - LVal.getLValueOffset()).getQuantity();
-  return true;
+    return 0;
+  return (EndOffset - LVal.getLValueOffset()).getQuantity();
 }
 
 bool IntExprEvaluator::VisitCallExpr(const CallExpr *E) {
@@ -15952,9 +16204,9 @@ bool IntExprEvaluator::VisitBuiltinCallExpr(const CallExpr *E,
         E->getArg(1)->EvaluateKnownConstInt(Info.Ctx).getZExtValue();
     assert(Type <= 3 && "unexpected type");
 
-    uint64_t Size;
-    if (tryEvaluateBuiltinObjectSize(E->getArg(0), Type, Info, Size))
-      return Success(Size, E);
+    if (std::optional<uint64_t> Size =
+            tryEvaluateBuiltinObjectSize(E->getArg(0), Type, Info))
+      return Success(*Size, E);
 
     if (E->getArg(0)->HasSideEffects(Info.Ctx))
       return Success((Type & 2) ? 0 : -1, E);
@@ -16041,6 +16293,7 @@ bool IntExprEvaluator::VisitBuiltinCallExpr(const CallExpr *E,
     return Success(AlignedVal, E);
   }
 
+  case Builtin::BI__builtin_bitreverseg:
   case Builtin::BI__builtin_bitreverse8:
   case Builtin::BI__builtin_bitreverse16:
   case Builtin::BI__builtin_bitreverse32:
@@ -16552,9 +16805,9 @@ bool IntExprEvaluator::VisitBuiltinCallExpr(const CallExpr *E,
   case Builtin::BI__builtin_wcslen: {
     // As an extension, we support __builtin_strlen() as a constant expression,
     // and support folding strlen() to a constant.
-    uint64_t StrLen;
-    if (EvaluateBuiltinStrLen(E->getArg(0), StrLen, Info))
-      return Success(StrLen, E);
+    if (std::optional<uint64_t> StrLen =
+            EvaluateBuiltinStrLen(E->getArg(0), Info))
+      return Success(*StrLen, E);
     return false;
   }
 
@@ -18498,6 +18751,7 @@ bool IntExprEvaluator::VisitUnaryExprOrTypeTraitExpr(
 }
 
 bool IntExprEvaluator::VisitOffsetOfExpr(const OffsetOfExpr *OOE) {
+  Info.Ctx.recordOffsetOfEvaluation(OOE);
   CharUnits Result;
   unsigned n = OOE->getNumComponents();
   if (n == 0)
@@ -18582,7 +18836,8 @@ bool IntExprEvaluator::VisitUnaryOperator(const UnaryOperator *E) {
       return false;
     if (!Result.isInt()) return Error(E);
     const APSInt &Value = Result.getInt();
-    if (Value.isSigned() && Value.isMinSignedValue() && E->canOverflow()) {
+    if (Value.isSigned() && Value.isMinSignedValue() && E->canOverflow() &&
+        !E->getType().isWrapType()) {
       if (Info.checkingForUndefinedBehavior())
         Info.Ctx.getDiagnostics().Report(E->getExprLoc(),
                                          diag::warn_integer_constant_overflow)
@@ -18827,8 +19082,10 @@ bool IntExprEvaluator::VisitCastExpr(const CastExpr *E) {
     return Success(Val.getVectorElt(0), E);
   }
   case CK_HLSLMatrixTruncation: {
-    // TODO: See #168935. Add matrix truncation support to expr constant.
-    return Error(E);
+    APValue Val;
+    if (!EvaluateMatrix(SubExpr, Val, Info))
+      return Error(E);
+    return Success(Val.getMatrixElt(0, 0), E);
   }
   case CK_HLSLElementwiseCast: {
     SmallVector<APValue> SrcVals;
@@ -19424,8 +19681,10 @@ bool FloatExprEvaluator::VisitCastExpr(const CastExpr *E) {
     return Success(Val.getVectorElt(0), E);
   }
   case CK_HLSLMatrixTruncation: {
-    // TODO: See #168935. Add matrix truncation support to expr constant.
-    return Error(E);
+    APValue Val;
+    if (!EvaluateMatrix(SubExpr, Val, Info))
+      return Error(E);
+    return Success(Val.getMatrixElt(0, 0), E);
   }
   case CK_HLSLElementwiseCast: {
     SmallVector<APValue> SrcVals;
@@ -20324,6 +20583,9 @@ static bool Evaluate(APValue &Result, EvalInfo &Info, const Expr *E) {
   } else if (T->isVectorType()) {
     if (!EvaluateVector(E, Result, Info))
       return false;
+  } else if (T->isConstantMatrixType()) {
+    if (!EvaluateMatrix(E, Result, Info))
+      return false;
   } else if (T->isIntegralOrEnumerationType()) {
     if (!IntExprEvaluator(Info, Result).Visit(E))
       return false;
@@ -20788,7 +21050,7 @@ bool Expr::EvaluateAsInitializer(APValue &Value, const ASTContext &Ctx,
   QualType DeclTy = VD->getType();
 
   if (Info.EnableNewConstInterp) {
-    auto &InterpCtx = const_cast<ASTContext &>(Ctx).getInterpContext();
+    auto &InterpCtx = Ctx.getInterpContext();
     if (!InterpCtx.evaluateAsInitializer(Info, VD, this, Value))
       return false;
 
@@ -20996,7 +21258,6 @@ static ICEDiag CheckICE(const Expr* E, const ASTContext &Ctx) {
   case Expr::ArraySectionExprClass:
   case Expr::OMPArrayShapingExprClass:
   case Expr::OMPIteratorExprClass:
-  case Expr::MemberExprClass:
   case Expr::CompoundAssignOperatorClass:
   case Expr::CompoundLiteralExprClass:
   case Expr::ExtVectorElementExprClass:
@@ -21073,6 +21334,24 @@ static ICEDiag CheckICE(const Expr* E, const ASTContext &Ctx) {
   case Expr::CXXParenListInitExprClass:
   case Expr::HLSLOutArgExprClass:
     return ICEDiag(IK_NotICE, E->getBeginLoc());
+
+  case Expr::MemberExprClass: {
+    if (Ctx.getLangOpts().C23) {
+      const Expr *ME = E->IgnoreParenImpCasts();
+      while (const auto *M = dyn_cast<MemberExpr>(ME)) {
+        if (M->isArrow())
+          return ICEDiag(IK_NotICE, E->getBeginLoc());
+        ME = M->getBase()->IgnoreParenImpCasts();
+      }
+      const auto *DRE = dyn_cast<DeclRefExpr>(ME);
+      if (DRE) {
+        if (const auto *VD = dyn_cast<VarDecl>(DRE->getDecl());
+            VD && VD->isConstexpr())
+          return CheckEvalInICE(E, Ctx);
+      }
+    }
+    return ICEDiag(IK_NotICE, E->getBeginLoc());
+  }
 
   case Expr::InitListExprClass: {
     // C++03 [dcl.init]p13: If T is a scalar type, then a declaration of the
@@ -21481,7 +21760,7 @@ bool Expr::isCXX11ConstantExpr(const ASTContext &Ctx, APValue *Result) const {
   APValue Scratch;
   if (FastEvaluateAsRValue(this, Scratch, Ctx, IsConst) && Scratch.hasValue()) {
     if (Result)
-      *Result = Scratch;
+      *Result = std::move(Scratch);
     return true;
   }
 
@@ -21661,29 +21940,28 @@ bool Expr::isPotentialConstantExprUnevaluated(Expr *E,
   return Diags.empty();
 }
 
-bool Expr::tryEvaluateObjectSize(uint64_t &Result, ASTContext &Ctx,
-                                 unsigned Type) const {
+std::optional<uint64_t> Expr::tryEvaluateObjectSize(const ASTContext &Ctx,
+                                                    unsigned Type) const {
   if (!getType()->isPointerType())
-    return false;
+    return std::nullopt;
 
   Expr::EvalStatus Status;
   EvalInfo Info(Ctx, Status, EvaluationMode::ConstantFold);
-  if (Info.EnableNewConstInterp) {
-    return Info.Ctx.getInterpContext().tryEvaluateObjectSize(Info, this, Type,
-                                                             Result);
-  }
-  return tryEvaluateBuiltinObjectSize(this, Type, Info, Result);
+  if (Info.EnableNewConstInterp)
+    return Info.Ctx.getInterpContext().tryEvaluateObjectSize(Info, this, Type);
+  return tryEvaluateBuiltinObjectSize(this, Type, Info);
 }
 
-static bool EvaluateBuiltinStrLen(const Expr *E, uint64_t &Result,
-                                  EvalInfo &Info, std::string *StringResult) {
+static std::optional<uint64_t>
+EvaluateBuiltinStrLen(const Expr *E, EvalInfo &Info,
+                      std::string *StringResult) {
   if (!E->getType()->hasPointerRepresentation() || !E->isPRValue())
-    return false;
+    return std::nullopt;
 
   LValue String;
 
   if (!EvaluatePointer(E, String, Info))
-    return false;
+    return std::nullopt;
 
   QualType CharTy = E->getType()->getPointeeType();
 
@@ -21702,10 +21980,9 @@ static bool EvaluateBuiltinStrLen(const Expr *E, uint64_t &Result,
       if (Pos != StringRef::npos)
         Str = Str.substr(0, Pos);
 
-      Result = Str.size();
       if (StringResult)
         *StringResult = Str;
-      return true;
+      return Str.size();
     }
 
     // Fall through to slow path.
@@ -21716,21 +21993,19 @@ static bool EvaluateBuiltinStrLen(const Expr *E, uint64_t &Result,
     APValue Char;
     if (!handleLValueToRValueConversion(Info, E, CharTy, String, Char) ||
         !Char.isInt())
-      return false;
-    if (!Char.getInt()) {
-      Result = Strlen;
-      return true;
-    } else if (StringResult)
+      return std::nullopt;
+    if (!Char.getInt())
+      return Strlen;
+    else if (StringResult)
       StringResult->push_back(Char.getInt().getExtValue());
     if (!HandleLValueArrayAdjustment(Info, E, String, CharTy, 1))
-      return false;
+      return std::nullopt;
   }
 }
 
 std::optional<std::string> Expr::tryEvaluateString(ASTContext &Ctx) const {
   Expr::EvalStatus Status;
   EvalInfo Info(Ctx, Status, EvaluationMode::ConstantFold);
-  uint64_t Result;
   std::string StringResult;
 
   if (Info.EnableNewConstInterp) {
@@ -21739,7 +22014,7 @@ std::optional<std::string> Expr::tryEvaluateString(ASTContext &Ctx) const {
     return StringResult;
   }
 
-  if (EvaluateBuiltinStrLen(this, Result, Info, &StringResult))
+  if (EvaluateBuiltinStrLen(this, Info, &StringResult))
     return StringResult;
   return std::nullopt;
 }
@@ -21816,14 +22091,13 @@ bool Expr::EvaluateCharRangeAsString(APValue &Result,
                                        PtrExpression, Ctx, Status);
 }
 
-bool Expr::tryEvaluateStrLen(uint64_t &Result, ASTContext &Ctx) const {
+std::optional<uint64_t> Expr::tryEvaluateStrLen(const ASTContext &Ctx) const {
   Expr::EvalStatus Status;
   EvalInfo Info(Ctx, Status, EvaluationMode::ConstantFold);
 
   if (Info.EnableNewConstInterp)
-    return Info.Ctx.getInterpContext().evaluateStrlen(Info, this, Result);
-
-  return EvaluateBuiltinStrLen(this, Result, Info);
+    return Info.Ctx.getInterpContext().evaluateStrlen(Info, this);
+  return EvaluateBuiltinStrLen(this, Info);
 }
 
 namespace {

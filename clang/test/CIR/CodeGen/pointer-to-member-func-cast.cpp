@@ -21,7 +21,7 @@ bool memfunc_to_bool(void (Foo::*func)(int)) {
 }
 
 // CIR-BEFORE: cir.func {{.*}} @_Z15memfunc_to_boolM3FooFviE
-// CIR-BEFORE:   %{{.*}} = cir.cast member_ptr_to_bool %{{.*}} : !cir.method<!cir.func<(!s32i)> in !rec_Foo> -> !cir.bool
+// CIR-BEFORE:   %{{.*}} = cir.cast member_ptr_to_bool %{{.*}} : !cir.method<!cir.func<(!cir.ptr<!rec_Foo>, !s32i)> in !rec_Foo> -> !cir.bool
 
 // CIR-AFTER: cir.func {{.*}} @_Z15memfunc_to_boolM3FooFviE
 // CIR-AFTER:   %[[FUNC:.*]] = cir.load{{.*}} %{{.*}} : !cir.ptr<!rec_anon_struct>, !rec_anon_struct
@@ -50,7 +50,7 @@ auto memfunc_reinterpret(void (Foo::*func)(int)) -> void (Bar::*)() {
 }
 
 // CIR-BEFORE: cir.func {{.*}} @_Z19memfunc_reinterpretM3FooFviE
-// CIR-BEFORE:   %{{.*}} = cir.cast bitcast %{{.*}} : !cir.method<!cir.func<(!s32i)> in !rec_Foo> -> !cir.method<!cir.func<()> in !rec_Bar>
+// CIR-BEFORE:   %{{.*}} = cir.cast bitcast %{{.*}} : !cir.method<!cir.func<(!cir.ptr<!rec_Foo>, !s32i)> in !rec_Foo> -> !cir.method<!cir.func<(!cir.ptr<!rec_Bar>)> in !rec_Bar>
 
 // CIR-AFTER: cir.func {{.*}} @_Z19memfunc_reinterpretM3FooFviE
 // CIR-AFTER:   %[[FUNC:.*]] = cir.load{{.*}} %{{.*}} : !cir.ptr<!rec_anon_struct>, !rec_anon_struct
@@ -93,8 +93,8 @@ DerivedMemFunc base_to_derived_zero_offset(Base1MemFunc ptr) {
 }
 
 // CIR-BEFORE: cir.func {{.*}} @_Z27base_to_derived_zero_offsetM5Base1FviE
-// CIR-BEFORE:   %[[PTR:.*]] = cir.load{{.*}} %{{.*}} : !cir.ptr<!cir.method<!cir.func<(!s32i)> in !rec_Base1>>, !cir.method<!cir.func<(!s32i)> in !rec_Base1>
-// CIR-BEFORE:   %{{.*}} = cir.derived_method %[[PTR]][0] : !cir.method<!cir.func<(!s32i)> in !rec_Base1> -> !cir.method<!cir.func<(!s32i)> in !rec_Derived>
+// CIR-BEFORE:   %[[PTR:.*]] = cir.load{{.*}} %{{.*}} : !cir.ptr<!cir.method<!cir.func<(!cir.ptr<!rec_Base1>, !s32i)> in !rec_Base1>>, !cir.method<!cir.func<(!cir.ptr<!rec_Base1>, !s32i)> in !rec_Base1>
+// CIR-BEFORE:   %{{.*}} = cir.derived_method %[[PTR]][0] : !cir.method<!cir.func<(!cir.ptr<!rec_Base1>, !s32i)> in !rec_Base1> -> !cir.method<!cir.func<(!cir.ptr<!rec_Derived>, !s32i)> in !rec_Derived>
 
 // CIR-AFTER: cir.func {{.*}} @_Z27base_to_derived_zero_offsetM5Base1FviE
 // CIR-AFTER:   %[[PTR:.*]] = cir.alloca !rec_anon_struct, !cir.ptr<!rec_anon_struct>, ["ptr", init]
@@ -125,14 +125,14 @@ DerivedMemFunc base_to_derived(Base2MemFunc ptr) {
 }
 
 // CIR-BEFORE: cir.func {{.*}} @_Z15base_to_derivedM5Base2FviE
-// CIR-BEFORE:   %[[PTR:.*]] = cir.load{{.*}} %{{.*}} : !cir.ptr<!cir.method<!cir.func<(!s32i)> in !rec_Base2>>, !cir.method<!cir.func<(!s32i)> in !rec_Base2>
-// CIR-BEFORE:   %{{.*}} = cir.derived_method %[[PTR]][16] : !cir.method<!cir.func<(!s32i)> in !rec_Base2> -> !cir.method<!cir.func<(!s32i)> in !rec_Derived>
+// CIR-BEFORE:   %[[PTR:.*]] = cir.load{{.*}} %{{.*}} : !cir.ptr<!cir.method<!cir.func<(!cir.ptr<!rec_Base2>, !s32i)> in !rec_Base2>>, !cir.method<!cir.func<(!cir.ptr<!rec_Base2>, !s32i)> in !rec_Base2>
+// CIR-BEFORE:   %{{.*}} = cir.derived_method %[[PTR]][16] : !cir.method<!cir.func<(!cir.ptr<!rec_Base2>, !s32i)> in !rec_Base2> -> !cir.method<!cir.func<(!cir.ptr<!rec_Derived>, !s32i)> in !rec_Derived>
 
 // CIR-AFTER: cir.func {{.*}} @_Z15base_to_derivedM5Base2FviE
 // CIR-AFTER:   %[[PTR:.*]] = cir.load{{.*}} %{{.*}} : !cir.ptr<!rec_anon_struct>, !rec_anon_struct
 // CIR-AFTER:   %[[OFFSET:.*]] = cir.extract_member %[[PTR]][1] : !rec_anon_struct -> !s64i
 // CIR-AFTER:   %[[OFFSET_ADJ:.*]] = cir.const #cir.int<16> : !s64i
-// CIR-AFTER:   %[[BINOP_KIND:.*]] = cir.binop(add, %[[OFFSET]], %[[OFFSET_ADJ]]) nsw : !s64i
+// CIR-AFTER:   %[[BINOP_KIND:.*]] = cir.add nsw %[[OFFSET]], %[[OFFSET_ADJ]] : !s64i
 // CIR-AFTER:   %{{.*}} = cir.insert_member %[[PTR]][1], %[[BINOP_KIND]] : !rec_anon_struct, !s64i
 
 // LLVM: define {{.*}} { i64, i64 } @_Z15base_to_derivedM5Base2FviE
@@ -154,8 +154,8 @@ Base1MemFunc derived_to_base_zero_offset(DerivedMemFunc ptr) {
 }
 
 // CIR-BEFORE: cir.func {{.*}} @_Z27derived_to_base_zero_offsetM7DerivedFviE
-// CIR-BEFORE:   %[[PTR:.*]] = cir.load{{.*}} %{{.*}} : !cir.ptr<!cir.method<!cir.func<(!s32i)> in !rec_Derived>>, !cir.method<!cir.func<(!s32i)> in !rec_Derived>
-// CIR-BEFORE:   %{{.*}} = cir.base_method %[[PTR]][0] : !cir.method<!cir.func<(!s32i)> in !rec_Derived> -> !cir.method<!cir.func<(!s32i)> in !rec_Base1>
+// CIR-BEFORE:   %[[PTR:.*]] = cir.load{{.*}} %{{.*}} : !cir.ptr<!cir.method<!cir.func<(!cir.ptr<!rec_Derived>, !s32i)> in !rec_Derived>>, !cir.method<!cir.func<(!cir.ptr<!rec_Derived>, !s32i)> in !rec_Derived>
+// CIR-BEFORE:   %{{.*}} = cir.base_method %[[PTR]][0] : !cir.method<!cir.func<(!cir.ptr<!rec_Derived>, !s32i)> in !rec_Derived> -> !cir.method<!cir.func<(!cir.ptr<!rec_Base1>, !s32i)> in !rec_Base1>
 
 // CIR-AFTER: cir.func {{.*}} @_Z27derived_to_base_zero_offsetM7DerivedFviE
 // CIR-AFTER:   %[[PTR:.*]] = cir.alloca !rec_anon_struct, !cir.ptr<!rec_anon_struct>, ["ptr", init]
@@ -186,14 +186,14 @@ Base2MemFunc derived_to_base(DerivedMemFunc ptr) {
 }
 
 // CIR-BEFORE: cir.func {{.*}} @_Z15derived_to_baseM7DerivedFviE
-// CIR-BEFORE:   %[[PTR:.*]] = cir.load{{.*}} %{{.*}} : !cir.ptr<!cir.method<!cir.func<(!s32i)> in !rec_Derived>>, !cir.method<!cir.func<(!s32i)> in !rec_Derived>
-// CIR-BEFORE:   %{{.*}} = cir.base_method %[[PTR]][16] : !cir.method<!cir.func<(!s32i)> in !rec_Derived> -> !cir.method<!cir.func<(!s32i)> in !rec_Base2>
+// CIR-BEFORE:   %[[PTR:.*]] = cir.load{{.*}} %{{.*}} : !cir.ptr<!cir.method<!cir.func<(!cir.ptr<!rec_Derived>, !s32i)> in !rec_Derived>>, !cir.method<!cir.func<(!cir.ptr<!rec_Derived>, !s32i)> in !rec_Derived>
+// CIR-BEFORE:   %{{.*}} = cir.base_method %[[PTR]][16] : !cir.method<!cir.func<(!cir.ptr<!rec_Derived>, !s32i)> in !rec_Derived> -> !cir.method<!cir.func<(!cir.ptr<!rec_Base2>, !s32i)> in !rec_Base2>
 
 // CIR-AFTER: cir.func {{.*}} @_Z15derived_to_baseM7DerivedFviE
 // CIR-AFTER:   %[[PTR:.*]] = cir.load{{.*}} %{{.*}} : !cir.ptr<!rec_anon_struct>, !rec_anon_struct
 // CIR-AFTER:   %[[OFFSET:.*]] = cir.extract_member %[[PTR]][1] : !rec_anon_struct -> !s64i
 // CIR-AFTER:   %[[OFFSET_ADJ:.*]] = cir.const #cir.int<16> : !s64i
-// CIR-AFTER:   %[[BINOP_KIND:.*]] = cir.binop(sub, %[[OFFSET]], %[[OFFSET_ADJ]]) nsw : !s64i
+// CIR-AFTER:   %[[BINOP_KIND:.*]] = cir.sub nsw %[[OFFSET]], %[[OFFSET_ADJ]] : !s64i
 // CIR-AFTER:   %{{.*}} = cir.insert_member %[[PTR]][1], %[[BINOP_KIND]] : !rec_anon_struct, !s64i
 
 // LLVM: define {{.*}} { i64, i64 } @_Z15derived_to_baseM7DerivedFviE

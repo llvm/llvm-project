@@ -435,6 +435,24 @@ static void CheckExplicitDataArg(const characteristics::DummyDataObject &dummy,
               actualDesc);
         }
       }
+    } else if (actualIsAssumedRank) {
+      if (actualType.type().category() != TypeCategory::Character &&
+          !intrinsic) {
+        // A more specific message will have already been emitted for
+        // assumed-rank argument that's CHARACTER, a callee that's ELEMENTAL,
+        // or an intrinsic procedure that can't handle assumed-rank.
+        if (!context.languageFeatures().IsEnabled(
+                common::LanguageFeature::AssumedRankPassedToNonAssumedRank)) {
+          messages.Say(
+              "Assumed-rank actual argument may not be associated with a %s that is not also assumed-rank"_err_en_US,
+              dummyName);
+        } else {
+          foldingContext.Warn(
+              common::LanguageFeature::AssumedRankPassedToNonAssumedRank,
+              "Assumed-rank actual argument should not be associated with a %s that is not also assumed-rank"_port_en_US,
+              dummyName);
+        }
+      }
     } else if (dummy.ignoreTKR.test(common::IgnoreTKR::Rank)) {
     } else if (dummyRank > 0 && !dummyIsAllocatableOrPointer &&
         !dummy.type.attrs().test(
@@ -1890,6 +1908,24 @@ static void CheckCoReduce(
   }
 }
 
+// DATE_AND_TIME (F'2023 16.9.69)
+static void CheckDate_And_Time(evaluate::ActualArguments &arguments,
+    evaluate::FoldingContext &foldingContext) {
+  if (arguments.size() >= 4 && arguments[3]) {
+    if (const auto valuesShape{
+            evaluate::GetShape(arguments[3]->UnwrapExpr())}) {
+      if (auto extents{
+              evaluate::AsConstantExtents(foldingContext, *valuesShape)}) {
+        if (!extents->empty() && extents->at(0) < 8) {
+          auto &messages{foldingContext.messages()};
+          messages.Say(arguments[3]->sourceLocation().value_or(messages.at()),
+              "VALUES= argument to DATE_AND_TIME must have at least 8 elements"_err_en_US);
+        }
+      }
+    }
+  }
+}
+
 // EVENT_QUERY (F'2023 16.9.82)
 static void CheckEvent_Query(evaluate::ActualArguments &arguments,
     evaluate::FoldingContext &foldingContext) {
@@ -2264,6 +2300,8 @@ static void CheckSpecificIntrinsic(const characteristics::Procedure &proc,
     CheckAssociated(arguments, context, scope);
   } else if (intrinsic.name == "co_reduce") {
     CheckCoReduce(arguments, context.foldingContext());
+  } else if (intrinsic.name == "date_and_time") {
+    CheckDate_And_Time(arguments, context.foldingContext());
   } else if (intrinsic.name == "event_query") {
     CheckEvent_Query(arguments, context.foldingContext());
   } else if (intrinsic.name == "image_index") {

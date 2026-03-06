@@ -89,6 +89,11 @@ Value *EmitAMDGPUWorkGroupSize(CodeGenFunction &CGF, unsigned Index) {
 
   auto Cov = CGF.getTarget().getTargetOpts().CodeObjectVersion;
 
+  // Do not emit __oclc_ABI_version references with non-empty environment.
+  if (Cov == CodeObjectVersionKind::COV_None &&
+      CGF.getTarget().getTriple().hasEnvironment())
+    Cov = CodeObjectVersionKind::COV_6;
+
   if (Cov == CodeObjectVersionKind::COV_None) {
     StringRef Name = "__oclc_ABI_version";
     auto *ABIVersionC = CGF.CGM.getModule().getNamedGlobal(Name);
@@ -290,6 +295,7 @@ static llvm::AtomicOrdering mapCABIAtomicOrdering(unsigned AO) {
   case llvm::AtomicOrderingCABI::relaxed:
     return llvm::AtomicOrdering::Monotonic;
   }
+  llvm_unreachable("Unknown AtomicOrderingCABI enum");
 }
 
 // For processing memory ordering and memory scope arguments of various
@@ -864,6 +870,11 @@ Value *CodeGenFunction::EmitAMDGPUBuiltinExpr(unsigned BuiltinID,
     // Should this have asan instrumentation?
     return emitBuiltinWithOneOverloadedType<5>(*this, E,
                                                Intrinsic::amdgcn_load_to_lds);
+  }
+  case AMDGPU::BI__builtin_amdgcn_load_async_to_lds: {
+    // Should this have asan instrumentation?
+    return emitBuiltinWithOneOverloadedType<5>(
+        *this, E, Intrinsic::amdgcn_load_async_to_lds);
   }
   case AMDGPU::BI__builtin_amdgcn_cooperative_atomic_load_32x4B:
   case AMDGPU::BI__builtin_amdgcn_cooperative_atomic_store_32x4B:

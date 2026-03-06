@@ -133,13 +133,14 @@ static IndexMatchResult matchOperandMap(AffineMap map, unsigned rowDimIdx,
 
 // Replaces genericOp with `NamedOpTy` op, supplied as a template arg.
 // All the variants expressed as pseudo regular expression:
-// `linalg.{batch_}?matmul{_transpose_a | _transpose_b}?`
-// have same number of ins/out, so its easy to stamp different versions.
+// `linalg.{batch_}?matmul` have same number of ins/out, so it's easy to
+// stamp different versions.
 // `castTy` is an optional type function that indicates whether (and which) cast
 // attribute is needed for the named matmul op variant.
 template <typename NamedOpTy>
 static LinalgOp replaceWithMatmulVariant(RewriterBase &rewriter, GenericOp op,
-                                         std::optional<TypeFn> castTy) {
+                                         std::optional<TypeFn> castTy,
+                                         ArrayRef<AffineMap> indexingMaps) {
   SmallVector<NamedAttribute> castAttrVec;
   // Only explicitly specify the cast attribute for unsigned cast; signed is
   // the default for linalg.matmul/linalg.batch_matmul.
@@ -147,9 +148,12 @@ static LinalgOp replaceWithMatmulVariant(RewriterBase &rewriter, GenericOp op,
     castAttrVec = {rewriter.getNamedAttr(
         "cast", TypeFnAttr::get(rewriter.getContext(), *castTy))};
 
-  LinalgOp namedOp = rewriter.replaceOpWithNewOp<NamedOpTy>(
+  auto namedOp = rewriter.replaceOpWithNewOp<NamedOpTy>(
       op, ValueRange{op.getDpsInputs()[0], op.getDpsInputs()[1]},
       ValueRange{op.getDpsInits()[0]}, castAttrVec);
+
+  namedOp.setIndexingMapsAttr(rewriter.getAffineMapArrayAttr(indexingMaps));
+
   return namedOp;
 }
 
@@ -286,10 +290,6 @@ static FailureOr<LinalgOp> specializeLinalgContractions(RewriterBase &rewriter,
   if (llvm::is_contained({a, b, c}, IndexMatchResult::Mismatch))
     return failure();
 
-  if (c != IndexMatchResult::Match ||
-      (a == IndexMatchResult::Transposed && b == IndexMatchResult::Transposed))
-    return failure();
-
   // Determine the cast type for the named matmul op, or bail out if casts
   // cannot be represented by the named op.
   std::optional<TypeFn> castTy = getCastTypeForMatmulLikeOp(genericOp);
@@ -297,11 +297,38 @@ static FailureOr<LinalgOp> specializeLinalgContractions(RewriterBase &rewriter,
     return rewriter.notifyMatchFailure(
         genericOp, "contains invalid cast ops for the named matmul op");
 
-  /// Codegen the different matmul variants.
+  // Build indexing maps for the named op in its canonical dimension ordering
+  auto *ctx = genericOp.getContext();
+  unsigned numLoopDims = numOfBatchDims + 3;
+  unsigned mIdx = numOfBatchDims;
+  unsigned nIdx = mIdx + 1;
+  unsigned kIdx = mIdx + 2;
+
+  // TODO: add support for indexing_maps with broadcasts.
+  auto makeMap = [&](IndexMatchResult match, unsigned rowIdx, unsigned colIdx) {
+    SmallVector<unsigned> tensorDims;
+    for (unsigned i = 0; i < numOfBatchDims; ++i)
+      tensorDims.push_back(i);
+    if (match == IndexMatchResult::Transposed)
+      llvm::append_values(tensorDims, colIdx, rowIdx);
+    else
+      llvm::append_values(tensorDims, rowIdx, colIdx);
+    return AffineMap::getMultiDimMapWithTargets(numLoopDims, tensorDims, ctx);
+  };
+
+  auto mapA = makeMap(a, mIdx, kIdx);
+  auto mapB = makeMap(b, kIdx, nIdx);
+  auto mapC = makeMap(c, mIdx, nIdx);
+
+  SmallVector<AffineMap> namedOpMaps = {mapA, mapB, mapC};
+
+  // Codegen the different matmul variants.
   if (numOfBatchDims) {
-    return replaceWithMatmulVariant<BatchMatmulOp>(rewriter, genericOp, castTy);
+    return replaceWithMatmulVariant<BatchMatmulOp>(rewriter, genericOp, castTy,
+                                                   namedOpMaps);
   }
-  return replaceWithMatmulVariant<MatmulOp>(rewriter, genericOp, castTy);
+  return replaceWithMatmulVariant<MatmulOp>(rewriter, genericOp, castTy,
+                                            namedOpMaps);
 }
 
 /// Utility to specialize a `genericOp` with a convolution op of type `ConvOpTy`
