@@ -475,15 +475,15 @@ loop:
   br label %loop
 }
 
-; Don't hoist if the ops are not associative.
-define void @noassoc_ops(i64 %c1, i64 %c2) {
-; CHECK-LABEL: @noassoc_ops(
+; Hoist sub-sub by reassociation.
+define void @sub_sub(i64 %c1, i64 %c2) {
+; CHECK-LABEL: @sub_sub(
 ; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[INVARIANT_OP:%.*]] = add i64 [[C1:%.*]], [[C2:%.*]]
 ; CHECK-NEXT:    br label [[LOOP:%.*]]
 ; CHECK:       loop:
 ; CHECK-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, [[ENTRY:%.*]] ], [ [[INDEX_NEXT:%.*]], [[LOOP]] ]
-; CHECK-NEXT:    [[STEP_ADD:%.*]] = sub i64 [[INDEX]], [[C1:%.*]]
-; CHECK-NEXT:    [[INDEX_NEXT]] = sub i64 [[STEP_ADD]], [[C2:%.*]]
+; CHECK-NEXT:    [[INDEX_NEXT]] = sub i64 [[INDEX]], [[INVARIANT_OP]]
 ; CHECK-NEXT:    br label [[LOOP]]
 ;
 entry:
@@ -926,6 +926,155 @@ loop:
   %step.add = add <2 x i64> %vec.ind, %.splat
   call void @use(<2 x i64> %step.add)
   %vec.ind.next = add <2 x i64> %step.add, %.splat
+  br label %loop
+}
+
+; Hoist add-sub by reassociation.
+define void @add_sub(i64 %c1, i64 %c2) {
+; CHECK-LABEL: @add_sub(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[INVARIANT_OP:%.*]] = sub i64 [[C1:%.*]], [[C2:%.*]]
+; CHECK-NEXT:    br label [[LOOP:%.*]]
+; CHECK:       loop:
+; CHECK-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, [[ENTRY:%.*]] ], [ [[INDEX_NEXT_REASS:%.*]], [[LOOP]] ]
+; CHECK-NEXT:    [[INDEX_NEXT_REASS]] = add i64 [[INDEX]], [[INVARIANT_OP]]
+; CHECK-NEXT:    br label [[LOOP]]
+;
+entry:
+  br label %loop
+
+loop:
+  %index = phi i64 [ 0, %entry ], [ %index.next, %loop ]
+  %step.add = add i64 %index, %c1
+  %index.next = sub i64 %step.add, %c2
+  br label %loop
+}
+
+; Hoist add-sub by reassociation, inner add operands commuted.
+define void @add_sub_comm(i64 %c1, i64 %c2) {
+; CHECK-LABEL: @add_sub_comm(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[INVARIANT_OP:%.*]] = sub i64 [[C1:%.*]], [[C2:%.*]]
+; CHECK-NEXT:    br label [[LOOP:%.*]]
+; CHECK:       loop:
+; CHECK-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, [[ENTRY:%.*]] ], [ [[INDEX_NEXT_REASS:%.*]], [[LOOP]] ]
+; CHECK-NEXT:    [[INDEX_NEXT_REASS]] = add i64 [[INDEX]], [[INVARIANT_OP]]
+; CHECK-NEXT:    br label [[LOOP]]
+;
+entry:
+  br label %loop
+
+loop:
+  %index = phi i64 [ 0, %entry ], [ %index.next, %loop ]
+  %step.add = add i64 %c1, %index
+  %index.next = sub i64 %step.add, %c2
+  br label %loop
+}
+
+; Hoist sub-add by reassociation.
+define void @sub_add(i64 %c1, i64 %c2) {
+; CHECK-LABEL: @sub_add(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[INVARIANT_OP:%.*]] = sub i64 [[C2:%.*]], [[C1:%.*]]
+; CHECK-NEXT:    br label [[LOOP:%.*]]
+; CHECK:       loop:
+; CHECK-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, [[ENTRY:%.*]] ], [ [[INDEX_NEXT_REASS:%.*]], [[LOOP]] ]
+; CHECK-NEXT:    [[INDEX_NEXT_REASS]] = add i64 [[INDEX]], [[INVARIANT_OP]]
+; CHECK-NEXT:    br label [[LOOP]]
+;
+entry:
+  br label %loop
+
+loop:
+  %index = phi i64 [ 0, %entry ], [ %index.next, %loop ]
+  %step.sub = sub i64 %index, %c1
+  %index.next = add i64 %step.sub, %c2
+  br label %loop
+}
+
+; Hoist sub-add by reassociation, outer add operands commuted.
+define void @sub_add_comm(i64 %c1, i64 %c2) {
+; CHECK-LABEL: @sub_add_comm(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[INVARIANT_OP:%.*]] = sub i64 [[C2:%.*]], [[C1:%.*]]
+; CHECK-NEXT:    br label [[LOOP:%.*]]
+; CHECK:       loop:
+; CHECK-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, [[ENTRY:%.*]] ], [ [[INDEX_NEXT_REASS:%.*]], [[LOOP]] ]
+; CHECK-NEXT:    [[INDEX_NEXT_REASS]] = add i64 [[INDEX]], [[INVARIANT_OP]]
+; CHECK-NEXT:    br label [[LOOP]]
+;
+entry:
+  br label %loop
+
+loop:
+  %index = phi i64 [ 0, %entry ], [ %index.next, %loop ]
+  %step.sub = sub i64 %index, %c1
+  %index.next = add i64 %c2, %step.sub
+  br label %loop
+}
+
+; Hoist sub-sub and drop overflow flags.
+define void @sub_sub_drop_flags(i64 %c1, i64 %c2) {
+; CHECK-LABEL: @sub_sub_drop_flags(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[INVARIANT_OP:%.*]] = add i64 [[C1:%.*]], [[C2:%.*]]
+; CHECK-NEXT:    br label [[LOOP:%.*]]
+; CHECK:       loop:
+; CHECK-NEXT:    [[INDEX:%.*]] = phi i64 [ 1000, [[ENTRY:%.*]] ], [ [[INDEX_NEXT_REASS:%.*]], [[LOOP]] ]
+; CHECK-NEXT:    [[INDEX_NEXT_REASS]] = sub i64 [[INDEX]], [[INVARIANT_OP]]
+; CHECK-NEXT:    br label [[LOOP]]
+;
+entry:
+  br label %loop
+
+loop:
+  %index = phi i64 [ 1000, %entry ], [ %index.next, %loop ]
+  %step.sub = sub nuw nsw i64 %index, %c1
+  %index.next = sub nuw nsw i64 %step.sub, %c2
+  br label %loop
+}
+
+; Don't hoist sub-sub if the inner op has more than one use.
+define void @sub_sub_two_uses(i64 %c1, i64 %c2) {
+; CHECK-LABEL: @sub_sub_two_uses(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    br label [[LOOP:%.*]]
+; CHECK:       loop:
+; CHECK-NEXT:    [[INDEX:%.*]] = phi i64 [ 1000, [[ENTRY:%.*]] ], [ [[INDEX_NEXT:%.*]], [[LOOP]] ]
+; CHECK-NEXT:    [[STEP_SUB:%.*]] = sub i64 [[INDEX]], [[C1:%.*]]
+; CHECK-NEXT:    call void @use(i64 [[STEP_SUB]])
+; CHECK-NEXT:    [[INDEX_NEXT]] = sub i64 [[STEP_SUB]], [[C2:%.*]]
+; CHECK-NEXT:    br label [[LOOP]]
+;
+entry:
+  br label %loop
+
+loop:
+  %index = phi i64 [ 1000, %entry ], [ %index.next, %loop ]
+  %step.sub = sub i64 %index, %c1
+  call void @use(i64 %step.sub)
+  %index.next = sub i64 %step.sub, %c2
+  br label %loop
+}
+
+; Don't hoist if the variant is on the RHS of the outer sub.
+define void @sub_sub_variant_rhs_neg(i64 %c1, i64 %c2) {
+; CHECK-LABEL: @sub_sub_variant_rhs_neg(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    br label [[LOOP:%.*]]
+; CHECK:       loop:
+; CHECK-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, [[ENTRY:%.*]] ], [ [[INDEX_NEXT:%.*]], [[LOOP]] ]
+; CHECK-NEXT:    [[STEP_SUB:%.*]] = sub i64 [[INDEX]], [[C1:%.*]]
+; CHECK-NEXT:    [[INDEX_NEXT]] = sub i64 [[C2:%.*]], [[STEP_SUB]]
+; CHECK-NEXT:    br label [[LOOP]]
+;
+entry:
+  br label %loop
+
+loop:
+  %index = phi i64 [ 0, %entry ], [ %index.next, %loop ]
+  %step.sub = sub i64 %index, %c1
+  %index.next = sub i64 %c2, %step.sub
   br label %loop
 }
 
