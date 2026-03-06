@@ -226,9 +226,12 @@ public:
     return G.getRoot()->getLocation().getLocationContext();
   }
 
+  const CFGBlock *getCurrentBlock() const {
+    return currBldrCtx ? currBldrCtx->getBlock() : nullptr;
+  }
+
   ConstCFGElementRef getCFGElementRef() const {
-    const CFGBlock *blockPtr = currBldrCtx ? currBldrCtx->getBlock() : nullptr;
-    return {blockPtr, currStmtIdx};
+    return {getCurrentBlock(), currStmtIdx};
   }
 
   /// Dump graph to the specified filename.
