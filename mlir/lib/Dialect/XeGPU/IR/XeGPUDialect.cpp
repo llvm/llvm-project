@@ -618,22 +618,95 @@ DistributeLayoutAttr LayoutAttr::collapseDims(SmallVector<int64_t> dimGroup) {
   SmallVector<int32_t> laneLayout32(laneLayout.begin(), laneLayout.end());
   SmallVector<int32_t> laneData32(laneData.begin(), laneData.end());
 
+  auto toAttr = [&](ArrayRef<int32_t> v) -> DenseI32ArrayAttr {
+    return v.empty() ? nullptr : DenseI32ArrayAttr::get(getContext(), v);
+  };
+
   auto collapsedLayout = xegpu::LayoutAttr::get(
-      getContext(),
-      sgLayout32.empty() ? DenseI32ArrayAttr()
-                         : DenseI32ArrayAttr::get(getContext(), sgLayout32),
-      sgData32.empty() ? DenseI32ArrayAttr()
-                       : DenseI32ArrayAttr::get(getContext(), sgData32),
-      instData32.empty() ? DenseI32ArrayAttr()
-                         : DenseI32ArrayAttr::get(getContext(), instData32),
-      laneLayout32.empty() ? DenseI32ArrayAttr()
-                           : DenseI32ArrayAttr::get(getContext(), laneLayout32),
-      laneData32.empty() ? DenseI32ArrayAttr()
-                         : DenseI32ArrayAttr::get(getContext(), laneData32),
-      collapsedOrder.empty()
-          ? DenseI32ArrayAttr()
-          : DenseI32ArrayAttr::get(getContext(), collapsedOrder));
+      getContext(), toAttr(sgLayout32), toAttr(sgData32), toAttr(instData32),
+      toAttr(laneLayout32), toAttr(laneData32), toAttr(collapsedOrder));
   return collapsedLayout;
+}
+
+// Derive a new layout by transpose the layout using `permutation`.
+DistributeLayoutAttr LayoutAttr::transposeDims(ArrayRef<int64_t> permutation) {
+
+  SmallVector<int64_t> origSgLayout = getEffectiveSgLayoutAsInt();
+  SmallVector<int64_t> origSgData = getEffectiveSgDataAsInt();
+  SmallVector<int64_t> origInstData = getEffectiveInstDataAsInt();
+  SmallVector<int64_t> origLaneLayout = getEffectiveLaneLayoutAsInt();
+  SmallVector<int64_t> origLaneData = getEffectiveLaneDataAsInt();
+  SmallVector<int64_t> origOrder = getEffectiveOrderAsInt();
+
+  SmallVector<int32_t> sgLayout;
+  SmallVector<int32_t> sgData;
+  SmallVector<int32_t> instData;
+  SmallVector<int32_t> laneLayout;
+  SmallVector<int32_t> laneData;
+  SmallVector<int32_t> order;
+
+  for (int64_t idx : permutation) {
+    if (!origLaneLayout.empty()) {
+      laneLayout.push_back(static_cast<int32_t>(origLaneLayout[idx]));
+      laneData.push_back(static_cast<int32_t>(origLaneData[idx]));
+    }
+    if (!origInstData.empty())
+      instData.push_back(static_cast<int32_t>(origInstData[idx]));
+    if (!origSgLayout.empty()) {
+      sgLayout.push_back(static_cast<int32_t>(origSgLayout[idx]));
+      sgData.push_back(static_cast<int32_t>(origSgData[idx]));
+    }
+    order.push_back(static_cast<int32_t>(origOrder[idx]));
+  }
+  if (origLaneLayout.empty() && origSgLayout.empty())
+    order.clear();
+
+  auto toAttr = [&](ArrayRef<int32_t> v) -> DenseI32ArrayAttr {
+    return v.empty() ? nullptr : DenseI32ArrayAttr::get(getContext(), v);
+  };
+  return xegpu::LayoutAttr::get(getContext(), toAttr(sgLayout), toAttr(sgData),
+                                toAttr(instData), toAttr(laneLayout),
+                                toAttr(laneData), toAttr(order));
+}
+
+/// Check if this layout is a transpose of another layout.
+bool LayoutAttr::isTransposeOf(const xegpu::DistributeLayoutAttr &other,
+                               ArrayRef<int64_t> perm,
+                               const xegpu::LayoutKind kind) {
+  if (!other)
+    return false;
+  if (getRank() != other.getRank() ||
+      perm.size() != static_cast<size_t>(getRank()))
+    return false;
+  if (!isPermutationVector(perm))
+    return false;
+  auto checkTranspose = [](ArrayRef<int64_t> dst, ArrayRef<int64_t> src,
+                           ArrayRef<int64_t> perm) {
+    for (const auto &ta : llvm::enumerate(perm)) {
+      if (src[ta.index()] != dst[ta.value()])
+        return false;
+    }
+    return true;
+  };
+  if (kind == xegpu::LayoutKind::Subgroup)
+    return checkTranspose(getEffectiveSgLayoutAsInt(),
+                          other.getEffectiveSgLayoutAsInt(), perm) &&
+           checkTranspose(getEffectiveSgDataAsInt(),
+                          other.getEffectiveSgDataAsInt(), perm) &&
+           checkTranspose(getEffectiveOrderAsInt(),
+                          other.getEffectiveOrderAsInt(), perm);
+  if (kind == xegpu::LayoutKind::InstData)
+    return checkTranspose(getEffectiveInstDataAsInt(),
+                          other.getEffectiveInstDataAsInt(), perm);
+  if (kind == xegpu::LayoutKind::Lane)
+    return checkTranspose(getEffectiveLaneLayoutAsInt(),
+                          other.getEffectiveLaneLayoutAsInt(), perm) &&
+           checkTranspose(getEffectiveLaneDataAsInt(),
+                          other.getEffectiveLaneDataAsInt(), perm) &&
+           checkTranspose(getEffectiveOrderAsInt(),
+                          other.getEffectiveOrderAsInt(), perm);
+
+  return false;
 }
 
 //===----------------------------------------------------------------------===//
@@ -879,6 +952,62 @@ DistributeLayoutAttr SliceAttr::collapseDims(SmallVector<int64_t> dimGroup) {
 
   return SliceAttr::get(getContext(), collapsedParent,
                         DenseI64ArrayAttr::get(getContext(), sliceDims));
+}
+
+SmallVector<int64_t> getPermForParentLayout(ArrayRef<int64_t> sliceDims,
+                                            ArrayRef<int64_t> permutation) {
+  SmallVector<int64_t> sortedSliceDims = llvm::to_vector(sliceDims);
+  llvm::sort(sortedSliceDims);
+
+  for (size_t i = 1; i < sortedSliceDims.size(); ++i) {
+    assert((sortedSliceDims[i] == sortedSliceDims[i - 1] + 1) &&
+           "slice dims non consecutive, cannot be transposed");
+  }
+
+  SmallVector<int64_t> permForParent;
+  if (sortedSliceDims.front() == 0) {
+    // Example: sliceDims.size() = 2, permutation= {1, 0}
+    // result: {3, 2, 1, 0}.
+    for (int64_t dim : permutation)
+      permForParent.push_back(dim + sortedSliceDims.size());
+    for (int64_t i = sortedSliceDims.size() - 1; i >= 0; --i)
+      permForParent.push_back(i);
+  } else {
+    // Example: sliceDims.size() = 2, permutation = {0, 1}
+    // result: {3, 2, 0, 1}.
+    for (int64_t i = sortedSliceDims.size() - 1; i >= 0; --i)
+      permForParent.push_back(i + permutation.size());
+    for (int64_t dim : permutation)
+      permForParent.push_back(dim);
+  }
+  return permForParent;
+}
+
+// Derive a new layout by transpose the layout using `permutation`.
+DistributeLayoutAttr SliceAttr::transposeDims(ArrayRef<int64_t> permutation) {
+  SmallVector<int64_t> sliceDims = llvm::to_vector(getDims().asArrayRef());
+  DistributeLayoutAttr parent = getParent();
+  SmallVector<int64_t> permForParent =
+      getPermForParentLayout(sliceDims, permutation);
+  auto transposedParent = parent.transposeDims(permForParent);
+  return SliceAttr::get(getContext(), transposedParent,
+                        DenseI64ArrayAttr::get(getContext(), sliceDims));
+}
+
+/// Check if this layout is a transpose of another layout.
+bool SliceAttr::isTransposeOf(const xegpu::DistributeLayoutAttr &other,
+                              ArrayRef<int64_t> perm,
+                              const xegpu::LayoutKind kind) {
+  // other must be a SliceAttr with the same slice dims.
+  auto otherSlice = dyn_cast<xegpu::SliceAttr>(other);
+  if (!otherSlice || getDims() != otherSlice.getDims())
+    return false;
+  // check whether the parent layout is transpose of each other.
+  SmallVector<int64_t> sliceDims = llvm::to_vector(getDims().asArrayRef());
+  DistributeLayoutAttr parent = getParent();
+  SmallVector<int64_t> permForParent = getPermForParentLayout(sliceDims, perm);
+  auto otherParent = otherSlice.getParent();
+  return parent.isTransposeOf(otherParent, permForParent, kind);
 }
 
 //===----------------------------------------------------------------------===//

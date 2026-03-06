@@ -1950,6 +1950,9 @@ mlir::Attribute ConstantEmitter::tryEmitPrivate(const APValue &value,
     cgm.errorNYI(
         "ConstExprEmitter::tryEmitPrivate fixed point, addr label diff");
     return {};
+  case APValue::Matrix:
+    cgm.errorNYI("ConstExprEmitter::tryEmitPrivate matrix");
+    return {};
   }
   llvm_unreachable("Unknown APValue kind");
 }

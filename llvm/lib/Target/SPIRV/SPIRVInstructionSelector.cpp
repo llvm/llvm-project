@@ -822,7 +822,7 @@ bool SPIRVInstructionSelector::select(MachineInstr &I) {
       MRI->setRegClass(SrcReg, MRI->getRegClass(DstReg));
       MRI->replaceRegWith(SrcReg, DstReg);
       GR.invalidateMachineInstr(&I);
-      I.removeFromParent();
+      I.eraseFromParent();
       return true;
     } else if (I.getNumDefs() == 1) {
       // Make all vregs 64 bits (for SPIR-V IDs).
@@ -837,6 +837,7 @@ bool SPIRVInstructionSelector::select(MachineInstr &I) {
     // erase it
     LLVM_DEBUG(dbgs() << "Instruction is folded and dead.\n");
     removeDeadInstruction(I);
+    DeadMIs.erase(&I);
     return true;
   }
 

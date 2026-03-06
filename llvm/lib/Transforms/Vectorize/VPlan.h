@@ -668,6 +668,7 @@ public:
 };
 
 /// Class to record and manage LLVM IR flags.
+LLVM_PACKED_START
 class VPIRFlags {
   enum class OperationType : unsigned char {
     Cmp,
@@ -1070,6 +1071,7 @@ public:
   void printFlags(raw_ostream &O) const;
 #endif
 };
+LLVM_PACKED_END
 
 static_assert(sizeof(VPIRFlags) <= 3, "VPIRFlags should not grow");
 

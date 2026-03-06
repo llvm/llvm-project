@@ -1381,7 +1381,7 @@ class PatGprImm<SDPatternOperator OpNode, RVInst Inst, ImmLeaf ImmType,
           (Inst GPR:$rs1, ImmType:$imm)>;
 class PatGprSimm12<SDPatternOperator OpNode, RVInstI Inst>
     : PatGprImm<OpNode, Inst, simm12_lo>;
-class PatGprUimmLog2XLen<SDPatternOperator OpNode, RVInstIShift Inst>
+class PatGprUimmLog2XLen<SDPatternOperator OpNode, RVInstIBase Inst>
     : PatGprImm<OpNode, Inst, uimmlog2xlen>;
 
 /// Predicates

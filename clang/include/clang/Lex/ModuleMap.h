@@ -726,7 +726,8 @@ public:
 
   /// Parse a module map without creating `clang::Module` instances.
   bool parseModuleMapFile(FileEntryRef File, bool IsSystem,
-                          DirectoryEntryRef Dir, FileID ID = FileID(),
+                          bool ImplicitlyDiscovered, DirectoryEntryRef Dir,
+                          FileID ID = FileID(),
                           SourceLocation ExternModuleLoc = SourceLocation());
 
   void loadAllParsedModules();
@@ -738,6 +739,9 @@ public:
   ///
   /// \param IsSystem Whether this module map file is in a system header
   /// directory, and therefore should be considered a system module.
+  ///
+  /// \param ImplicitlyDiscovered Whether this module map file was found via
+  ///        module map search.
   ///
   /// \param HomeDir The directory in which relative paths within this module
   ///        map file will be resolved.
@@ -753,6 +757,7 @@ public:
   /// \returns true if an error occurred, false otherwise.
   bool
   parseAndLoadModuleMapFile(FileEntryRef File, bool IsSystem,
+                            bool ImplicitlyDiscovered,
                             DirectoryEntryRef HomeDir, FileID ID = FileID(),
                             unsigned *Offset = nullptr,
                             SourceLocation ExternModuleLoc = SourceLocation());
