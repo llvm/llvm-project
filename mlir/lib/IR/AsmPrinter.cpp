@@ -3234,7 +3234,9 @@ void AsmPrinter::Impl::printAffineExprInternal(
           os << " - ";
           printAffineExprInternal(rhs.getLHS(), BindingStrength::Strong,
                                   printValueName);
-          os << " * " << -rrhs.getValue();
+          // Use unsigned negation to avoid signed integer overflow for
+          // INT64_MIN.
+          os << " * " << -static_cast<uint64_t>(rrhs.getValue());
           if (enclosingTightness == BindingStrength::Strong)
             os << ')';
           return;
@@ -3247,7 +3249,8 @@ void AsmPrinter::Impl::printAffineExprInternal(
   if (auto rhsConst = dyn_cast<AffineConstantExpr>(rhsExpr)) {
     if (rhsConst.getValue() < 0) {
       printAffineExprInternal(lhsExpr, BindingStrength::Weak, printValueName);
-      os << " - " << -rhsConst.getValue();
+      // Use unsigned negation to avoid signed integer overflow for INT64_MIN.
+      os << " - " << -static_cast<uint64_t>(rhsConst.getValue());
       if (enclosingTightness == BindingStrength::Strong)
         os << ')';
       return;
