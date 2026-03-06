@@ -234,6 +234,12 @@ public:
     return {getCurrentBlock(), currStmtIdx};
   }
 
+  unsigned getNumVisited(const LocationContext *LC,
+                         const CFGBlock *Block) const {
+    return Engine.WList->getBlockCounter().getNumVisited(LC->getStackFrame(),
+                                                         Block->getBlockID());
+  }
+
   /// Dump graph to the specified filename.
   /// If filename is empty, generate a temporary one.
   /// \return The filename the graph is written into.
