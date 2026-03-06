@@ -36,9 +36,7 @@ _LIBCPP_BEGIN_NAMESPACE_STD
 template <class _Tp> inline const bool __is_character_or_bool_v = false;
 template <> inline const bool __is_character_or_bool_v<bool>     = true;
 template <> inline const bool __is_character_or_bool_v<char>     = true;
-#  if _LIBCPP_HAS_WIDE_CHARACTERS
 template <> inline const bool __is_character_or_bool_v<wchar_t>  = true;
-#  endif
 #  if _LIBCPP_HAS_CHAR8_T
 template <> inline const bool __is_character_or_bool_v<char8_t>  = true;
 #  endif
