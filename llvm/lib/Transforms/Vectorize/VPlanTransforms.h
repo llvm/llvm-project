@@ -510,6 +510,11 @@ struct VPlanTransforms {
   static void makeMemOpWideningDecisions(VPlan &Plan, VFRange &Range,
                                          VPRecipeBuilder &RecipeBuilder,
                                          VPCostContext &CostCtx);
+
+  /// Make VPlan-based scalarization decision prior to delegating to the ones
+  /// made by the legacy CM. Only transforms "usesFirstLaneOnly` def-use chains
+  /// enabled by prior widening of consecutive memory operations for now.
+  static void makeScalarizationDecisions(VPlan &Plan, VFRange &Range);
 };
 
 /// A helper function that returns true if the given type is irregular. The

@@ -6354,3 +6354,58 @@ void VPlanTransforms::makeMemOpWideningDecisions(VPlan &Plan, VFRange &Range,
                              return ReplaceWith(VPI, Recipe);
                            });
 }
+
+void VPlanTransforms::makeScalarizationDecisions(VPlan &Plan, VFRange &Range) {
+  if (LoopVectorizationPlanner::getDecisionAndClampRange(
+          [&](ElementCount VF) { return VF.isScalar(); }, Range))
+    return;
+
+  VPRegionBlock *LoopRegion = Plan.getVectorLoopRegion();
+  VPBasicBlock *HeaderVPBB = LoopRegion->getEntryBasicBlock();
+  for (VPBasicBlock *VPBB : VPBlockUtils::blocksOnly<VPBasicBlock>(
+           post_order<VPBlockShallowTraversalWrapper<VPBlockBase *>>(
+               HeaderVPBB))) {
+    for (VPRecipeBase &R : make_early_inc_range(reverse(*VPBB))) {
+      auto *VPI = dyn_cast<VPInstruction>(&R);
+      if (!VPI)
+        continue;
+
+      auto *I = cast_or_null<Instruction>(VPI->getUnderlyingValue());
+      if (!I)
+        // Wouldn't be able to create a `VPReplicateRecipe` anyway.
+        continue;
+
+      bool CanTransformToFirstLaneOnly = [&]() {
+        if (VPI->mayHaveSideEffects())
+          return false;
+
+        if (is_contained({Instruction::SDiv, Instruction::UDiv,
+                          Instruction::SRem, Instruction::URem},
+                         VPI->getOpcode()) &&
+            VPI->getMask())
+          return false;
+
+        // Avoid rewriting IV increment as that interferes with
+        // `removeRedundantCanonicalIVs`.
+        if (VPI->getOpcode() == Instruction::Add &&
+            any_of(VPI->operands(), IsaPred<VPWidenInductionRecipe>))
+          return false;
+
+        if (!vputils::onlyFirstLaneUsed(VPI))
+          return false;
+
+        return true;
+      }();
+
+      if (CanTransformToFirstLaneOnly) {
+        auto *Recipe =
+            new VPReplicateRecipe(I, VPI->operandsWithoutMask(), true, nullptr,
+                                  *VPI, *VPI, VPI->getDebugLoc());
+        Recipe->insertBefore(VPI);
+        VPI->replaceAllUsesWith(Recipe);
+        VPI->eraseFromParent();
+        continue;
+      }
+    }
+  }
+}
