@@ -54,14 +54,16 @@ define <4 x bfloat> @fadd_v4bf16(<4 x bfloat> %a, <4 x bfloat> %b) {
 define <8 x bfloat> @fadd_v8bf16(<8 x bfloat> %a, <8 x bfloat> %b) {
 ; NOB16B16-LABEL: fadd_v8bf16:
 ; NOB16B16:       // %bb.0:
-; NOB16B16-NEXT:    shll v2.4s, v1.4h, #16
-; NOB16B16-NEXT:    shll v3.4s, v0.4h, #16
-; NOB16B16-NEXT:    shll2 v1.4s, v1.8h, #16
-; NOB16B16-NEXT:    shll2 v0.4s, v0.8h, #16
-; NOB16B16-NEXT:    fadd v2.4s, v3.4s, v2.4s
-; NOB16B16-NEXT:    fadd v1.4s, v0.4s, v1.4s
-; NOB16B16-NEXT:    bfcvtn v0.4h, v2.4s
-; NOB16B16-NEXT:    bfcvtn2 v0.8h, v1.4s
+; NOB16B16-NEXT:    movi v2.2d, #0000000000000000
+; NOB16B16-NEXT:    mov z4.h, #16256 // =0x3f80
+; NOB16B16-NEXT:    ptrue p0.s, vl4
+; NOB16B16-NEXT:    trn1 v3.8h, v2.8h, v0.8h
+; NOB16B16-NEXT:    trn2 v2.8h, v2.8h, v0.8h
+; NOB16B16-NEXT:    bfmlalb v3.4s, v1.8h, v4.8h
+; NOB16B16-NEXT:    bfmlalt v2.4s, v1.8h, v4.8h
+; NOB16B16-NEXT:    bfcvt z0.h, p0/m, z3.s
+; NOB16B16-NEXT:    bfcvtnt z0.h, p0/m, z2.s
+; NOB16B16-NEXT:    // kill: def $q0 killed $q0 killed $z0
 ; NOB16B16-NEXT:    ret
 ;
 ; B16B16-LABEL: fadd_v8bf16:
@@ -943,14 +945,17 @@ define <4 x bfloat> @fsub_v4bf16(<4 x bfloat> %a, <4 x bfloat> %b) {
 define <8 x bfloat> @fsub_v8bf16(<8 x bfloat> %a, <8 x bfloat> %b) {
 ; NOB16B16-LABEL: fsub_v8bf16:
 ; NOB16B16:       // %bb.0:
-; NOB16B16-NEXT:    shll v2.4s, v1.4h, #16
-; NOB16B16-NEXT:    shll v3.4s, v0.4h, #16
-; NOB16B16-NEXT:    shll2 v1.4s, v1.8h, #16
-; NOB16B16-NEXT:    shll2 v0.4s, v0.8h, #16
-; NOB16B16-NEXT:    fsub v2.4s, v3.4s, v2.4s
-; NOB16B16-NEXT:    fsub v1.4s, v0.4s, v1.4s
-; NOB16B16-NEXT:    bfcvtn v0.4h, v2.4s
-; NOB16B16-NEXT:    bfcvtn2 v0.8h, v1.4s
+; NOB16B16-NEXT:    movi v2.2d, #0000000000000000
+; NOB16B16-NEXT:    mov w8, #49024 // =0xbf80
+; NOB16B16-NEXT:    ptrue p0.s, vl4
+; NOB16B16-NEXT:    dup v4.8h, w8
+; NOB16B16-NEXT:    trn1 v3.8h, v2.8h, v0.8h
+; NOB16B16-NEXT:    trn2 v2.8h, v2.8h, v0.8h
+; NOB16B16-NEXT:    bfmlalb v3.4s, v1.8h, v4.8h
+; NOB16B16-NEXT:    bfmlalt v2.4s, v1.8h, v4.8h
+; NOB16B16-NEXT:    bfcvt z0.h, p0/m, z3.s
+; NOB16B16-NEXT:    bfcvtnt z0.h, p0/m, z2.s
+; NOB16B16-NEXT:    // kill: def $q0 killed $q0 killed $z0
 ; NOB16B16-NEXT:    ret
 ;
 ; B16B16-LABEL: fsub_v8bf16:
