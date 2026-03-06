@@ -4885,6 +4885,17 @@ add_fp_unittest(
 )
 
 add_fp_unittest(
+  atan2f16_test
+  SUITE
+    libc-math-smoke-tests
+  SRCS
+    atan2f16_test.cpp
+  DEPENDS
+    libc.src.math.atan2f16
+    libc.src.__support.FPUtil.fp_bits
+)
+
+add_fp_unittest(
   atan2_test
   SUITE
     libc-math-smoke-tests

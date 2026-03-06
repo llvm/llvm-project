@@ -260,6 +260,21 @@ add_header_library(
 )
 
 add_header_library(
+  atan2f16
+  HDRS
+    atan2f16.h
+  DEPENDS
+    .inv_trigf_utils
+    libc.src.__support.FPUtil.fenv_impl
+    libc.src.__support.FPUtil.fp_bits
+    libc.src.__support.FPUtil.cast
+    libc.src.__support.FPUtil.multiply_add
+    libc.src.__support.FPUtil.nearest_integer
+    libc.src.__support.macros.optimization
+    libc.include.llvm-libc-macros.float16_macros
+)
+
+add_header_library(
   atan2f128
   HDRS
     atan2f128.h
