@@ -19,7 +19,7 @@
 #include <cassert>
 
 consteval auto eval() {
-  std::array<std::string, 1000> r;
+  std::array<std::string, 5000> r;
   for (auto& s : r) {
     s = "hello";
   }

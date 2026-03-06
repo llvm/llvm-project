@@ -2337,18 +2337,26 @@ private:
   }
 
   _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 void __annotate_new(size_type __current_size) const _NOEXCEPT {
+    if (__libcpp_is_constant_evaluated())
+      return;
     __annotate_contiguous_container(data() + capacity() + 1, data() + __current_size + 1);
   }
 
   _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 void __annotate_delete() const _NOEXCEPT {
+    if (__libcpp_is_constant_evaluated())
+      return;
     __annotate_contiguous_container(data() + size() + 1, data() + capacity() + 1);
   }
 
   _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 void __annotate_increase(size_type __n) const _NOEXCEPT {
+    if (__libcpp_is_constant_evaluated())
+      return;
     __annotate_contiguous_container(data() + size() + 1, data() + size() + 1 + __n);
   }
 
   _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 void __annotate_shrink(size_type __old_size) const _NOEXCEPT {
+    if (__libcpp_is_constant_evaluated())
+      return;
     __annotate_contiguous_container(data() + __old_size + 1, data() + size() + 1);
   }
 
