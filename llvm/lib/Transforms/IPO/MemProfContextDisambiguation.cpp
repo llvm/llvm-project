@@ -3367,13 +3367,14 @@ void CallsiteContextGraph<DerivedCCG, FuncTy, CallTy>::printTotalSizes(
             Msg += " marked " + getAllocTypeString((uint8_t)AllocTypeFromCall) +
                    " due to cold byte percent";
           // Print the internal context id to aid debugging and visualization.
-          Msg += " (context id " + std::to_string(Id) + ")";
+          Msg += " (internal context id " + std::to_string(Id) + ")";
           if (MemProfReportHintedSizes)
             OS << Msg << "\n";
           if (EmitRemark)
             EmitRemark(DEBUG_TYPE, "MemProfReport", Msg);
         }
       } else {
+        // This is only emitted if the context size info is not present.
         std::string Msg =
             "MemProf hinting: " + getAllocTypeString((uint8_t)TypeI->second) +
             " is " + getAllocTypeString(Node->AllocTypes) + " after cloning";
@@ -3381,7 +3382,7 @@ void CallsiteContextGraph<DerivedCCG, FuncTy, CallTy>::printTotalSizes(
           Msg += " marked " + getAllocTypeString((uint8_t)AllocTypeFromCall) +
                  " due to cold byte percent";
         // Print the internal context id to aid debugging and visualization.
-        Msg += " (context id " + std::to_string(Id) + ")";
+        Msg += " (internal context id " + std::to_string(Id) + ")";
         if (MemProfReportHintedSizes)
           OS << Msg << "\n";
         if (EmitRemark)
