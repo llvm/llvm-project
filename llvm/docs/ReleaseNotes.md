@@ -69,6 +69,12 @@ Changes to the LLVM IR
 * The `"nooutline"` attribute is now writen as `nooutline`. Existing IR and
   bitcode will be automatically updated.
 
+* To be considered parallel, [loops with `llvm.loop.parallel_accesses` metadata
+  now require corresponding `llvm.access.group` metadata to be present on all
+  `alloca` instructions whose address range is being written to in the loop.](https://discourse.llvm.org/t/semantics-of-llvm-loop-parallel-accesses-and-interaction-with-alloca/89714)
+  If this metadata is not present, such loops are no longer considered parallel
+  and memory dependency checks are not skipped.
+
 Changes to LLVM infrastructure
 ------------------------------
 
