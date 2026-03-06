@@ -940,6 +940,15 @@ public:
   QualType getIntTypeForBitwidth(unsigned DestWidth,
                                  unsigned Signed) const;
 
+  /// getGCCCompatibleIntTypeForBitwidth -
+  /// sets integer QualTy according to specified details:
+  /// bitwidth, signed/unsigned.
+  /// this function is compatible with GCC's preference:
+  /// int > signed char > short > long > long long > int128_t
+  /// Returns empty type if there is no appropriate target types.
+  QualType getGCCCompatibleIntTypeForBitwidth(unsigned DestWidth,
+                                              unsigned Signed) const;
+
   /// getRealTypeForBitwidth -
   /// sets floating point QualTy according to specified bitwidth.
   /// Returns empty type if there is no appropriate target types.
