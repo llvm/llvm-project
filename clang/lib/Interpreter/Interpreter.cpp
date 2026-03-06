@@ -40,6 +40,7 @@
 #include "clang/Options/OptionUtils.h"
 #include "clang/Options/Options.h"
 #include "clang/Sema/Lookup.h"
+#include "clang/Sema/Sema.h"
 #include "clang/Serialization/ObjectFilePCHContainerReader.h"
 #include "llvm/ExecutionEngine/JITSymbol.h"
 #include "llvm/ExecutionEngine/Orc/EPCDynamicLibrarySearchGenerator.h"
@@ -465,14 +466,34 @@ Interpreter::Parse(llvm::StringRef Code) {
       return std::move(Err);
   }
 
-  // Tell the interpreter sliently ignore unused expressions since value
-  // printing could cause it.
-  getCompilerInstance()->getDiagnostics().setSeverity(
-      clang::diag::warn_unused_expr, diag::Severity::Ignored, SourceLocation());
+  // Tell the interpreter to silently ignore unused expression and
+  // [[nodiscard]] warnings during parsing. At parse time, we don't yet know
+  // whether the user omitted the semicolon (value will be printed, i.e.
+  // "used") or included it (value truly discarded). We suppress both warnings
+  // here and retroactively diagnose only the truly-discarded cases below.
+  DiagnosticsEngine &Diags = getCompilerInstance()->getDiagnostics();
+  Diags.setSeverity(clang::diag::warn_unused_expr, diag::Severity::Ignored,
+                    SourceLocation());
+  Diags.setSeverity(clang::diag::warn_unused_result, diag::Severity::Ignored,
+                    SourceLocation());
 
   llvm::Expected<TranslationUnitDecl *> TuOrErr = IncrParser->Parse(Code);
   if (!TuOrErr)
     return TuOrErr.takeError();
+
+  // Re-enable [[nodiscard]] warnings and retroactively diagnose for
+  // top-level expressions where the semicolon IS present (value discarded).
+  // Expressions without semicolons will have their values printed by the
+  // REPL, so the result is genuinely "used" and should not warn.
+  Diags.setSeverity(clang::diag::warn_unused_result, diag::Severity::Warning,
+                    SourceLocation());
+  for (Decl *D : (*TuOrErr)->decls()) {
+    if (auto *TLSD = llvm::dyn_cast<TopLevelStmtDecl>(D))
+      if (!TLSD->isSemiMissing())
+        if (auto *E = llvm::dyn_cast_or_null<Expr>(TLSD->getStmt()))
+          getCompilerInstance()->getSema().DiagnoseUnusedExprResult(
+              E, diag::warn_unused_result);
+  }
 
   PartialTranslationUnit &LastPTU = IncrParser->RegisterPTU(*TuOrErr);
 
