@@ -244,6 +244,10 @@ public:
                                                          Block->getBlockID());
   }
 
+  unsigned getNumVisitedCurrent() const {
+    return getNumVisited(getCurrentLocationContext(), getCurrentBlock());
+  }
+
   /// Dump graph to the specified filename.
   /// If filename is empty, generate a temporary one.
   /// \return The filename the graph is written into.
