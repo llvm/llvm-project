@@ -66,18 +66,15 @@ exit:
 ;   A[INT64_MAX] = 2;
 ; }
 ;
-; FIXME: DependenceAnalysis currently detects no dependency between the two
-; stores, but it does exist. When `%n` is 2^62, the value of `%offset` will be
-; the same as INT64_MAX at the last iteration.
-; The root cause is that the calculation of the difference between the two
-; constants (INT64_MAX and -1) overflows in a signed sense.
+; When `%n` is 2^62, the value of `%offset` will be the same as INT64_MAX at
+; the last iteration.
 ;
 define void @weakzero_dst_siv_delta_ovfl(ptr %A, i64 %n) {
 ; CHECK-ALL-LABEL: 'weakzero_dst_siv_delta_ovfl'
 ; CHECK-ALL-NEXT:  Src: store i8 1, ptr %gep.0, align 1 --> Dst: store i8 1, ptr %gep.0, align 1
 ; CHECK-ALL-NEXT:    da analyze - none!
 ; CHECK-ALL-NEXT:  Src: store i8 1, ptr %gep.0, align 1 --> Dst: store i8 2, ptr %gep.1, align 1
-; CHECK-ALL-NEXT:    da analyze - none!
+; CHECK-ALL-NEXT:    da analyze - output [*|<]!
 ; CHECK-ALL-NEXT:  Src: store i8 2, ptr %gep.1, align 1 --> Dst: store i8 2, ptr %gep.1, align 1
 ; CHECK-ALL-NEXT:    da analyze - output [S]!
 ;
@@ -85,7 +82,7 @@ define void @weakzero_dst_siv_delta_ovfl(ptr %A, i64 %n) {
 ; CHECK-WEAK-ZERO-SIV-NEXT:  Src: store i8 1, ptr %gep.0, align 1 --> Dst: store i8 1, ptr %gep.0, align 1
 ; CHECK-WEAK-ZERO-SIV-NEXT:    da analyze - output [*]!
 ; CHECK-WEAK-ZERO-SIV-NEXT:  Src: store i8 1, ptr %gep.0, align 1 --> Dst: store i8 2, ptr %gep.1, align 1
-; CHECK-WEAK-ZERO-SIV-NEXT:    da analyze - none!
+; CHECK-WEAK-ZERO-SIV-NEXT:    da analyze - output [*|<]!
 ; CHECK-WEAK-ZERO-SIV-NEXT:  Src: store i8 2, ptr %gep.1, align 1 --> Dst: store i8 2, ptr %gep.1, align 1
 ; CHECK-WEAK-ZERO-SIV-NEXT:    da analyze - output [S]!
 ;
