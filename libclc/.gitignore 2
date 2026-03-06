@@ -1,0 +1,15 @@
+Makefile
+amdgcn--
+amdgcn--amdhsa
+amdgcn-mesa-mesa3d
+build/*.pyc
+built_libs/
+generic--
+generic/lib/convert.cl
+libclc.pc
+nvptx--nvidiacl
+nvptx64--nvidiacl
+r600--
+utils/prepare-builtins
+utils/prepare-builtins.o
+utils/prepare-builtins.o.d

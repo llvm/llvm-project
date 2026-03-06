@@ -1,0 +1,107 @@
+name: Upload Release Artifact
+description: >-
+  Upload release artifact along with an attestation.  The action assumes that
+  the llvm-project repository has already been checked out.
+inputs:
+  release-version:
+    description: >-
+      The release where the artifact will be attached.
+    required: true
+  upload:
+    description: >-
+      Whether or not to upload the file and attestation to the release.  If this
+      is set to false, then the file will be uploaded to the job as an artifact,
+      but no atteastion will be generated and the artifact won't be uploaded
+      to the release.
+    default: true
+  user-token:
+    description: >-
+      Token with premissions to read llvm teams that is used to ensure that
+      the person who triggred the action has permission to upload artifacts.
+      This is required if upload is true.
+    requred: false
+  attestation-name:
+    description: >-
+      This will be used for the artifact name that is attached to the workflow and
+      will be used as the basename for the attestation file which will be called
+      $attestation-name.jsonl.  If this is not set, it will default
+      to the falue of `files`.
+    required: false
+  artifact-id:
+    description: >-
+      Artifact id of the artifact with the files to upload.
+    required: true
+  digest:
+    description: >-
+      sha256 digest to verify the authenticity of the files being uploaded.
+    required: true
+
+runs:
+  using: "composite"
+  steps:
+    - name: Download Artifact
+      uses: actions/download-artifact@018cc2cf5baa6db3ef3c5f8a56943fffe632ef53 # v6.0.0
+      id: download-artifact
+      with:
+        artifact-ids: ${{ inputs.artifact-id }}
+        path: downloads
+
+    # In theory github artifacts are immutable so we could just rely on using
+    # the artifact-id to download it, but just to be extra safe we want to
+    # generated a digest for the files we are uploading so we can verify it
+    # when downloading.
+    # See also: https://irsl.medium.com/github-artifact-immutability-is-a-lie-9b6244095694
+    - name: Verify Files
+      shell: bash
+      env:
+        INPUTS_DIGEST: ${{ inputs.digest }}
+      run: |
+        digest_file="sha256"
+        echo "$INPUTS_DIGEST -" > $digest_file
+        cat ${{ steps.download-artifact.outputs.download-path }}/* | sha256sum -c $digest_file
+
+    - name: Attest Build Provenance
+      id: provenance
+      uses: actions/attest-build-provenance@977bb373ede98d70efdf65b84cb5f73e068dcc2a # v3.0.0
+      with:
+        subject-path: ${{ steps.download-artifact.outputs.download-path }}/*
+
+    # Generate an attestation copy for each file to make it easier for users to verify
+    # the files.
+    - name: Rename attestation file
+      shell: bash
+      run: |
+        for f in ${{ steps.download-artifact.outputs.download-path }}/*; do
+          cp ${{ steps.provenance.outputs.bundle-path }} $(basename $f).jsonl
+        done
+
+    - name: Upload Build Provenance
+      uses: actions/upload-artifact@330a01c490aca151604b8cf639adc76d48f6c5d4 # v5.0.0
+      with:
+        name: ${{ inputs.attestation-name }}
+        path: |
+          *.jsonl
+
+    - name: Install Python Requirements
+      if: inputs.upload == 'true'
+      shell: bash
+      run: |
+        pip install --require-hashes -r ./llvm/utils/git/requirements.txt
+
+    - name: Check Permissions
+      if: inputs.upload == 'true'
+      env:
+        GITHUB_TOKEN: ${{ github.token }}
+        USER_TOKEN: ${{ inputs.user-token }}
+      shell: bash
+      run: |
+        ./llvm/utils/release/./github-upload-release.py --token "$GITHUB_TOKEN" --user "$GITHUB_ACTOR" --user-token "$USER_TOKEN" check-permissions
+    - name: Upload Release
+      shell: bash
+      if: inputs.upload == 'true'
+      run: |
+        ./llvm/utils/release/github-upload-release.py \
+        --token ${{ github.token }} \
+        --release ${{ inputs.release-version }} \
+        upload \
+        --files ${{ steps.download-artifact.outputs.download-path }}/* *.jsonl
