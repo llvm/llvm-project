@@ -30,7 +30,7 @@ class Task final {
 
     void unhandled_exception() {}
 
-    std::suspend_always initial_suspend() { return {}; }
+    std::suspend_always initial_suspend() noexcept { return {}; }
 
     auto await_transform(Task<void> co) {
       return await_transform(std::move(co.handle_.promise()));
