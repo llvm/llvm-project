@@ -1,9 +1,8 @@
 ; Test basic address sanitizer instrumentation.
 ;
-; RUN: opt -passes=asan -S  < %s | FileCheck %s
+; RUN: opt -passes=asan -mtriple=x86_64-pc-windows-msvc -S < %s | FileCheck %s
 ; RUN: opt -passes=asan -mtriple=aarch64-pc-windows-msvc -S < %s | FileCheck %s
 
-target triple = "x86_64-pc-windows-msvc"
 ; CHECK: @llvm.global_ctors = {{.*}}@asan.module_ctor
 
 define i32 @test_load(ptr %a) sanitize_address {
