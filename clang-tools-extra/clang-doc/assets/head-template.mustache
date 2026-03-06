@@ -1,6 +1,15 @@
 <head>
     <meta charset="utf-8"/>
     <title>{{Name}}</title>
+    <script data-cfasync="false">
+      (function() {
+        const root = document.documentElement;
+        const savedTheme = localStorage.getItem("theme");
+        const theme = savedTheme || (window.matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light");
+        root.setAttribute("color-scheme", theme);
+        window.__clangDocTheme = theme;
+      })();
+    </script>
     {{#Stylesheets}}
         <link rel="stylesheet" type="text/css" href="{{.}}"/>
     {{/Stylesheets}}
@@ -12,7 +21,6 @@
     <link id="hljs-dark-theme" rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/styles/dark.min.css" />
     <script>
       const root = document.documentElement;
-      const toggle = document.getElementById("theme-toggle");
       const hlLight = document.getElementById("hljs-light-theme");
       const hlDark = document.getElementById("hljs-dark-theme");
 
@@ -26,33 +34,19 @@
         }
       }
 
-      const savedTheme = localStorage.getItem("theme");
+      changeHighlightJS(window.__clangDocTheme);
       const themeQuery = window.matchMedia("(prefers-color-scheme: dark)");
-      if (savedTheme !== null) {
-        root.setAttribute("color-scheme", savedTheme);
-        changeHighlightJS(savedTheme);
-      } else {
-        let initialTheme;
-        if (themeQuery.matches) {
-          initialTheme = "dark";
-        } else {
-          initialTheme = "light";
-        }
-        root.setAttribute("color-scheme", initialTheme);
-        changeHighlightJS(initialTheme);
-      }
-
       // Listen to system theme changes.
       // If the user manually toggles the theme, the theme wont change according
       // to system changes.
       themeQuery.addEventListener("change", (event) => {
-        if (savedTheme === null) {
+        if (localStorage.getItem("theme") !== null) {
           return;
-        } else if (event.matches) {
-          changeHighlightJS("dark");
-        } else {
-          changeHighlightJS("light");
         }
+
+        const theme = event.matches ? "dark" : "light";
+        root.setAttribute("color-scheme", theme);
+        changeHighlightJS(theme);
       });
     </script>
     <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Material+Symbols+Rounded:opsz,wght,FILL,GRAD@24,400,0,0&icon_names=routine" />
