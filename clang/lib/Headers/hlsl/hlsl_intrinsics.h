@@ -839,6 +839,11 @@ template <typename T, int N> constexpr vector<T, N> mul(vector<T, N> x, T y) {
   return x * y;
 }
 
+// Case 5: vector * vector -> scalar (dot product)
+template <typename T, int N> T mul(vector<T, N> x, vector<T, N> y) {
+  return __detail::mul_vec_impl(x, y);
+}
+
 // Case 7: matrix * scalar -> matrix
 template <typename T, int R, int C>
 constexpr matrix<T, R, C> mul(matrix<T, R, C> x, T y) {

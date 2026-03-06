@@ -1062,38 +1062,10 @@ Value *CodeGenFunction::EmitHLSLBuiltinExpr(unsigned BuiltinID,
     QualType QTy1 = E->getArg(1)->getType();
 
     bool IsVec0 = QTy0->isVectorType();
-    bool IsVec1 = QTy1->isVectorType();
     bool IsMat0 = QTy0->isConstantMatrixType();
     bool IsMat1 = QTy1->isConstantMatrixType();
 
-    if (IsVec0 && IsVec1) {
-      // Case 5: vector * vector -> scalar (dot product)
-      auto *VecTy = QTy0->castAs<VectorType>();
-      QualType EltQTy = VecTy->getElementType();
-      llvm::Type *EltTy = Op0->getType()->getScalarType();
-
-      // For double vectors, DXIL has no dot intrinsic. Use fmul + fmuladd.
-      if (EltQTy->isDoubleType() &&
-          CGM.getTarget().getTriple().isDXIL()) {
-        unsigned N = VecTy->getNumElements();
-        Value *A0 = Builder.CreateExtractElement(Op0, uint64_t(0));
-        Value *B0 = Builder.CreateExtractElement(Op1, uint64_t(0));
-        Value *Sum = Builder.CreateFMul(A0, B0, "hlsl.mul");
-        for (unsigned I = 1; I < N; ++I) {
-          Value *AI = Builder.CreateExtractElement(Op0, I);
-          Value *BI = Builder.CreateExtractElement(Op1, I);
-          Sum = Builder.CreateIntrinsic(
-              EltTy, Intrinsic::fmuladd, {AI, BI, Sum}, nullptr, "hlsl.mul");
-        }
-        return Sum;
-      }
-
-      return Builder.CreateIntrinsic(
-          EltTy,
-          getDotProductIntrinsic(CGM.getHLSLRuntime(), EltQTy),
-          ArrayRef<Value *>{Op0, Op1}, nullptr, "hlsl.mul");
-    }
-
+    // Only matrix-involved cases reach the builtin (cases 6, 8, 9).
     llvm::MatrixBuilder MB(Builder);
     if (IsVec0 && IsMat1) {
       // Case 6: vector<N> * matrix<N,M> -> vector<M>

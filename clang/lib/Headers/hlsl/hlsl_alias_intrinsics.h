@@ -1801,11 +1801,6 @@ double4 min(double4, double4);
 ///   8. matrix * vector -> vector
 ///   9. matrix * matrix -> matrix
 
-// Case 5: vector * vector -> scalar (dot product)
-template <typename T, int N>
-_HLSL_BUILTIN_ALIAS(__builtin_hlsl_mul)
-T mul(vector<T, N>, vector<T, N>);
-
 // Case 6: vector * matrix -> vector
 template <typename T, int R, int C>
 _HLSL_BUILTIN_ALIAS(__builtin_hlsl_mul)
