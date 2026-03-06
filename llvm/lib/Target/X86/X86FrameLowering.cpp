@@ -2400,8 +2400,8 @@ static bool isTailCallOpcode(unsigned Opc) {
   return Opc == X86::TCRETURNri || Opc == X86::TCRETURN_WIN64ri ||
          Opc == X86::TCRETURN_HIPE32ri || Opc == X86::TCRETURNdi ||
          Opc == X86::TCRETURNmi || Opc == X86::TCRETURNri64 ||
-         Opc == X86::TCRETURNri64_ImpCall || Opc == X86::TCRETURNdi64 ||
-         Opc == X86::TCRETURNmi64 || Opc == X86::TCRETURN_WINmi64;
+         Opc == X86::TCRETURNdi64 || Opc == X86::TCRETURNmi64 ||
+         Opc == X86::TCRETURN_WINmi64;
 }
 
 void X86FrameLowering::emitEpilogue(MachineFunction &MF,
