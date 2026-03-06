@@ -16,25 +16,25 @@ define void @test_scalar_steps_target_instruction_cost(ptr %dst) {
 ; CHECK-NEXT:    [[BROADCAST_SPLATINSERT:%.*]] = insertelement <2 x i64> poison, i64 [[INDEX]], i64 0
 ; CHECK-NEXT:    [[BROADCAST_SPLAT:%.*]] = shufflevector <2 x i64> [[BROADCAST_SPLATINSERT]], <2 x i64> poison, <2 x i32> zeroinitializer
 ; CHECK-NEXT:    [[VEC_IV:%.*]] = add <2 x i64> [[BROADCAST_SPLAT]], <i64 0, i64 1>
-; CHECK-NEXT:    [[TMP0:%.*]] = icmp ule <2 x i64> [[VEC_IV]], splat (i64 8)
+; CHECK-NEXT:    [[TMP0:%.*]] = icmp ule <2 x i64> [[VEC_IV]], splat (i64 12)
 ; CHECK-NEXT:    [[TMP1:%.*]] = extractelement <2 x i1> [[TMP0]], i32 0
 ; CHECK-NEXT:    br i1 [[TMP1]], label %[[PRED_STORE_IF:.*]], label %[[PRED_STORE_CONTINUE:.*]]
 ; CHECK:       [[PRED_STORE_IF]]:
-; CHECK-NEXT:    [[TMP2:%.*]] = add i64 [[OFFSET_IDX]], 0
-; CHECK-NEXT:    [[TMP3:%.*]] = getelementptr inbounds i64, ptr [[DST]], i64 [[TMP2]]
-; CHECK-NEXT:    store i64 [[TMP2]], ptr [[TMP3]], align 8
+; CHECK-NEXT:    [[TMP5:%.*]] = add i64 [[OFFSET_IDX]], 0
+; CHECK-NEXT:    [[TMP6:%.*]] = getelementptr inbounds i64, ptr [[DST]], i64 [[TMP5]]
+; CHECK-NEXT:    store i64 [[TMP5]], ptr [[TMP6]], align 8
 ; CHECK-NEXT:    br label %[[PRED_STORE_CONTINUE]]
 ; CHECK:       [[PRED_STORE_CONTINUE]]:
 ; CHECK-NEXT:    [[TMP4:%.*]] = extractelement <2 x i1> [[TMP0]], i32 1
 ; CHECK-NEXT:    br i1 [[TMP4]], label %[[PRED_STORE_IF1:.*]], label %[[PRED_STORE_CONTINUE2]]
 ; CHECK:       [[PRED_STORE_IF1]]:
-; CHECK-NEXT:    [[TMP5:%.*]] = add i64 [[OFFSET_IDX]], 3
-; CHECK-NEXT:    [[TMP6:%.*]] = getelementptr inbounds i64, ptr [[DST]], i64 [[TMP5]]
-; CHECK-NEXT:    store i64 [[TMP5]], ptr [[TMP6]], align 8
+; CHECK-NEXT:    [[TMP8:%.*]] = add i64 [[OFFSET_IDX]], 3
+; CHECK-NEXT:    [[TMP9:%.*]] = getelementptr inbounds i64, ptr [[DST]], i64 [[TMP8]]
+; CHECK-NEXT:    store i64 [[TMP8]], ptr [[TMP9]], align 8
 ; CHECK-NEXT:    br label %[[PRED_STORE_CONTINUE2]]
 ; CHECK:       [[PRED_STORE_CONTINUE2]]:
 ; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 2
-; CHECK-NEXT:    [[TMP7:%.*]] = icmp eq i64 [[INDEX_NEXT]], 10
+; CHECK-NEXT:    [[TMP7:%.*]] = icmp eq i64 [[INDEX_NEXT]], 14
 ; CHECK-NEXT:    br i1 [[TMP7]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP0:![0-9]+]]
 ; CHECK:       [[MIDDLE_BLOCK]]:
 ; CHECK-NEXT:    br label %[[EXIT:.*]]
@@ -49,7 +49,7 @@ loop:
   %gep = getelementptr inbounds i64, ptr %dst, i64 %iv
   store i64 %iv, ptr %gep, align 8
   %iv.next = add nuw nsw i64 %iv, 3
-  %cmp = icmp ult i64 %iv, 22
+  %cmp = icmp ult i64 %iv, 34
   br i1 %cmp, label %loop, label %exit
 
 exit:

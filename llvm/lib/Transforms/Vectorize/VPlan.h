@@ -1350,7 +1350,8 @@ private:
     if (!getUnderlyingValue())
       return true;
 
-    return Opcode == Instruction::PHI || Opcode == Instruction::GetElementPtr;
+    return Opcode == Instruction::PHI || Opcode == Instruction::GetElementPtr ||
+           Opcode == VPInstruction::BranchOnCount;
   }
 
 public:

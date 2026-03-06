@@ -472,9 +472,19 @@ static void addCanonicalIVRecipes(VPlan &Plan, VPBasicBlock *HeaderVPBB,
   // We are about to replace the branch to exit the region. Remove the original
   // BranchOnCond, if there is any.
   DebugLoc LatchDL = DL;
-  if (!LatchVPBB->empty() && match(&LatchVPBB->back(), m_BranchOnCond())) {
+  Value *Underlying = nullptr;
+  VPValue *Cond = nullptr;
+  if (!LatchVPBB->empty() &&
+      match(&LatchVPBB->back(), m_BranchOnCond(m_VPValue(Cond)))) {
     LatchDL = LatchVPBB->getTerminator()->getDebugLoc();
     LatchVPBB->getTerminator()->eraseFromParent();
+    // If the original condition is now no longer used then we can remove it and
+    // mark the BranchOnCount as having the same underlying value.
+    auto *CondR = dyn_cast<VPSingleDefRecipe>(Cond);
+    if (CondR && CondR->getNumUsers() == 0) {
+      Underlying = CondR->getUnderlyingValue();
+      CondR->eraseFromParent();
+    }
   }
 
   VPBuilder Builder(LatchVPBB);
@@ -486,9 +496,11 @@ static void addCanonicalIVRecipes(VPlan &Plan, VPBasicBlock *HeaderVPBB,
   CanonicalIVPHI->addOperand(CanonicalIVIncrement);
 
   // Add the BranchOnCount VPInstruction to the latch.
-  Builder.createNaryOp(VPInstruction::BranchOnCount,
-                       {CanonicalIVIncrement, &Plan.getVectorTripCount()},
-                       LatchDL);
+  VPValue *V = Builder.createNaryOp(
+      VPInstruction::BranchOnCount,
+      {CanonicalIVIncrement, &Plan.getVectorTripCount()}, LatchDL);
+  if (Underlying)
+    V->setUnderlyingValue(Underlying);
 }
 
 /// Creates extracts for values in \p Plan defined in a loop region and used
