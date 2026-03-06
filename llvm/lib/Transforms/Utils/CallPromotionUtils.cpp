@@ -743,8 +743,7 @@ static bool tryDevirtualizeViaTypeTestAssume(CallBase &CB, Value *Object,
           continue;
         if (TypeMD->getOperand(1).get() != TypeId)
           continue;
-        auto *OffsetCmd =
-            dyn_cast<ConstantAsMetadata>(TypeMD->getOperand(0));
+        auto *OffsetCmd = dyn_cast<ConstantAsMetadata>(TypeMD->getOperand(0));
         if (!OffsetCmd)
           continue;
         if (MatchedVTable) {

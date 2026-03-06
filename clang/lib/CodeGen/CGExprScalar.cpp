@@ -2840,7 +2840,8 @@ Value *ScalarExprEmitter::VisitCastExpr(CastExpr *CE) {
     if (DerivedClassDecl->isPolymorphic() &&
         DerivedClassDecl->isEffectivelyFinal()) {
       llvm::Value *BasePtr = Base.emitRawPointer(CGF);
-      CanQualType Ty = CGF.CGM.getContext().getCanonicalTagType(DerivedClassDecl);
+      CanQualType Ty =
+          CGF.CGM.getContext().getCanonicalTagType(DerivedClassDecl);
       llvm::Metadata *MD = CGF.CGM.CreateMetadataIdentifierForType(Ty);
       llvm::Value *TypeId =
           llvm::MetadataAsValue::get(CGF.CGM.getLLVMContext(), MD);
