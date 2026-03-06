@@ -422,3 +422,19 @@ func.func @test_no_skip_block_erasure_block_args(%arg0: i32, %arg1: i32) -> i32 
 module {}
 // CHECK-LABEL: Block post-order erasures (no skip)
 // CHECK-NEXT:  Erasing block ^bb0 from region 0 from operation 'builtin.module'
+
+// -----
+
+// Regression test for https://github.com/llvm/llvm-project/issues/60213:
+// testNoSkipErasureCallbacks should not crash when getEffects is called on a
+// transform.sequence op whose body block has already been erased. Previously
+// printAsOperand triggered verification which called SequenceOp::getEffects ->
+// getBodyBlock() -> Region::front() on an empty region, causing an assertion.
+// CHECK-LABEL: Block post-order erasures (no skip)
+// CHECK:  Erasing block {{.*}} from region 0 from operation 'transform.sequence'
+transform.sequence failures(propagate) {
+^bb0(%arg0: !pdl.operation):
+  sequence %arg0 : !pdl.operation failures(propagate) {
+  ^bb0(%arg1: !pdl.operation):
+  }
+}
