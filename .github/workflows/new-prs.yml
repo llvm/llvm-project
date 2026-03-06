@@ -70,3 +70,31 @@ jobs:
         with:
           configuration-path: .github/new-prs-labeler.yml
           repo-token: ${{ secrets.ISSUE_SUBSCRIBER_TOKEN }}
+
+  check-commit-access:
+      runs-on: ubuntu-latest
+      permissions:
+        pull-requests: write
+      if: >-
+        (github.repository == 'llvm/llvm-project') &&
+        (github.event.action == 'opened')
+      steps:
+        - name: Checkout Automation Script
+          uses: actions/checkout@v4
+          with:
+            sparse-checkout: llvm/utils/git/
+            ref: main
+
+        - name: Setup Automation Script
+          working-directory: ./llvm/utils/git/
+          run: |
+            pip install --require-hashes -r requirements.txt
+
+        - name: Check Commit Access
+          working-directory: ./llvm/utils/git/
+          run: |
+            python3 ./github-automation.py \
+              --token '${{ secrets.GITHUB_TOKEN }}' \
+              check-commit-access \
+              --issue-number "${{ github.event.pull_request.number }}" \
+              --author "${{ github.event.pull_request.user.login }}"
