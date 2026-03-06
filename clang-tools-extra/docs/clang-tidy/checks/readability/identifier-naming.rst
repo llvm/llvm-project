@@ -85,6 +85,8 @@ The available options are summarized below:
  - :option:`CheckAnonFieldInParent`
  - :option:`GetConfigPerFile`
  - :option:`IgnoreMainLikeFunctions`
+ - :option:`TrimPrefixes`
+ - :option:`TrimSuffixes`
 
 **Specific options**
 
@@ -2651,6 +2653,58 @@ After:
 
     template <template <typename> class pre_tpl_parameter_post, int COUNT_params,
               typename... TYPE_parameters>
+
+.. option:: TrimPrefixes
+
+    When set to `true`, the suggested fix for identifiers that have the wrong
+    prefix will be trimmed of all known prefixes from other options. Default
+    is `false`.
+
+For example using values of:
+
+   - ParameterPrefix of ``p_``
+   - MemberPrefix of ``m_``
+   - TrimPrefixes of ``true``
+
+Identifies and/or transforms function parameter names as follows:
+
+Before:
+
+.. code-block:: c++
+
+    void f(int m_n) {}
+
+After:
+
+.. code-block:: c++
+
+    void f(int p_n) {}
+
+.. option:: TrimSuffixes
+
+    When set to `true`, the suggested fix for identifiers that have the wrong
+    suffix will be trimmed of all known suffixes from other options. Default
+    is `false`.
+
+For example using values of:
+
+   - ParameterSuffix of ``_p``
+   - MemberSuffix of ``_m``
+   - TrimSuffixes of ``true``
+
+Identifies and/or transforms function parameter names as follows:
+
+Before:
+
+.. code-block:: c++
+
+    void f(int n_m) {}
+
+After:
+
+.. code-block:: c++
+
+    void f(int n_p) {}
 
 .. option:: TypeAliasCase
 

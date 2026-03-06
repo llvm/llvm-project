@@ -128,10 +128,11 @@ public:
     FileStyle() : IsActive(false), IgnoreMainLikeFunctions(false) {}
     FileStyle(SmallVectorImpl<std::optional<NamingStyle>> &&Styles,
               HungarianNotationOption HNOption, bool IgnoreMainLike,
-              bool CheckAnonFieldInParent)
+              bool CheckAnonFieldInParent, bool TrimPrefixes, bool TrimSuffixes)
         : Styles(std::move(Styles)), HNOption(std::move(HNOption)),
           IsActive(true), IgnoreMainLikeFunctions(IgnoreMainLike),
-          CheckAnonFieldInParentScope(CheckAnonFieldInParent) {}
+          CheckAnonFieldInParentScope(CheckAnonFieldInParent),
+          TrimPrefixes(TrimPrefixes), TrimSuffixes(TrimSuffixes) {}
 
     ArrayRef<std::optional<NamingStyle>> getStyles() const {
       assert(IsActive);
@@ -149,6 +150,8 @@ public:
     bool isCheckingAnonFieldInParentScope() const {
       return CheckAnonFieldInParentScope;
     }
+    bool isTrimmingPrefixes() const { return TrimPrefixes; }
+    bool isTrimmingSuffixes() const { return TrimSuffixes; }
 
   private:
     SmallVector<std::optional<NamingStyle>, 0> Styles;
@@ -156,6 +159,8 @@ public:
     bool IsActive;
     bool IgnoreMainLikeFunctions;
     bool CheckAnonFieldInParentScope;
+    bool TrimPrefixes;
+    bool TrimSuffixes;
   };
 
   IdentifierNamingCheck::FileStyle
@@ -173,11 +178,12 @@ public:
                 const IdentifierNamingCheck::HungarianNotationOption &HNOption,
                 IdentifierNamingCheck::CaseType Case) const;
 
-  std::string
-  fixupWithStyle(StringRef Type, StringRef Name,
-                 const IdentifierNamingCheck::NamingStyle &Style,
-                 const IdentifierNamingCheck::HungarianNotationOption &HNOption,
-                 const Decl *D) const;
+  std::string fixupWithStyle(
+      StringRef Type, StringRef Name,
+      const IdentifierNamingCheck::NamingStyle &Style,
+      ArrayRef<std::optional<IdentifierNamingCheck::NamingStyle>> NamingStyles,
+      const IdentifierNamingCheck::HungarianNotationOption &HNOption,
+      bool TrimPrefixes, bool TrimSuffixes, const Decl *D) const;
 
   StyleKind findStyleKind(
       const NamedDecl *D,
@@ -189,7 +195,8 @@ public:
       SourceLocation Location,
       ArrayRef<std::optional<IdentifierNamingCheck::NamingStyle>> NamingStyles,
       const IdentifierNamingCheck::HungarianNotationOption &HNOption,
-      StyleKind SK, const SourceManager &SM, bool IgnoreFailedSplit) const;
+      StyleKind SK, const SourceManager &SM, bool IgnoreFailedSplit,
+      bool TrimPrefixes, bool TrimSuffixes) const;
 
   bool isParamInMainLikeFunction(const ParmVarDecl &ParmDecl,
                                  bool IncludeMainLike) const;
