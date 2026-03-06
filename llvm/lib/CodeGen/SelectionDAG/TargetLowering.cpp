@@ -1506,11 +1506,21 @@ bool TargetLowering::SimplifyDemandedBits(
       }
     }
 
+    // Compute the known bits of Op1 without forcing a deep recursive simplify
+    // so that we can appropriately narrow the DemandedBits for Op0.
+    KnownBits Op1Known = TLO.DAG.computeKnownBits(Op1, DemandedElts, Depth + 1);
+
     if (SimplifyDemandedBits(Op1, DemandedBits, DemandedElts, Known, TLO,
                              Depth + 1))
       return true;
-    if (SimplifyDemandedBits(Op0, ~Known.Zero & DemandedBits, DemandedElts,
-                             Known2, TLO, Depth + 1))
+    if (SimplifyDemandedBits(Op0, ~Op1Known.Zero & ~Known.Zero & DemandedBits,
+                             DemandedElts, Known2, TLO, Depth + 1))
+      return true;
+    // If we still haven't simplified the node, it may be because Op1 could be
+    // simplified using Op0's known zeros.
+    if ((~Known2.Zero & DemandedBits) != DemandedBits &&
+        SimplifyDemandedBits(Op1, ~Known2.Zero & DemandedBits, DemandedElts,
+                             Known, TLO, Depth + 1))
       return true;
 
     // If all of the demanded bits are known one on one side, return the other.
