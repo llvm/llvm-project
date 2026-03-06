@@ -1,5 +1,8 @@
-// RUN: mlir-opt %s -split-input-file -linalg-morph-ops=generic-to-named | FileCheck %s
-// RUN: mlir-opt %s -split-input-file -linalg-morph-ops=generic-to-category | FileCheck %s --check-prefix=CATEGORY
+// RUN: mlir-opt %s -split-input-file -linalg-morph-ops=generic-to-named \
+// RUN: | FileCheck %s --check-prefix=NAMED,ALL
+
+// RUN: mlir-opt %s -split-input-file -linalg-morph-ops=generic-to-category \
+// RUN: | FileCheck %s --check-prefix=CATEGORY,ALL
 
 #umap = affine_map<(d0, d1, d2) -> (d0, d1, d2)>
 func.func @unary_op_exp(%A: tensor<?x?x?xf32>, %Out: tensor<?x?x?xf32>) -> tensor<?x?x?xf32> {
@@ -13,13 +16,15 @@ func.func @unary_op_exp(%A: tensor<?x?x?xf32>, %Out: tensor<?x?x?xf32>) -> tenso
   return %0 : tensor<?x?x?xf32>
 }
 
-// CHECK-LABEL: unary_op_exp
-// CHECK-SAME: %[[A:.+]]: tensor<?x?x?xf32>, %[[Out:.+]]: tensor<?x?x?xf32>) -> tensor<?x?x?xf32>
-// CHECK-NOT: linalg.generic
-// CHECK: linalg.exp ins(%[[A]] : tensor<?x?x?xf32>) outs(%[[Out]] : tensor<?x?x?xf32>) -> tensor<?x?x?xf32>
+// ALL-LABEL: unary_op_exp
+// ALL-SAME: %[[A:.+]]: tensor<?x?x?xf32>, %[[OUT:.+]]: tensor<?x?x?xf32>) -> tensor<?x?x?xf32>
+
+// NAMED-NOT: linalg.generic
+// NAMED: linalg.exp
+// NAMED-SAME: ins(%[[A]] : tensor<?x?x?xf32>)
+// NAMED-SAME: outs(%[[OUT]] : tensor<?x?x?xf32>) -> tensor<?x?x?xf32>
 
 // Not supported yet.
-// CATEGORY-LABEL: unary_op_exp
 // CATEGORY: linalg.generic
 
 // -----
@@ -36,13 +41,16 @@ func.func @binary_op_div(%A: tensor<?x?xf32>, %B: tensor<?x?xf32>, %Out: tensor<
   return %0 : tensor<?x?xf32>
 }
 
-// CHECK-LABEL: binary_op_div
-// CHECK-SAME: %[[A:.+]]: tensor<?x?xf32>, %[[B:.+]]: tensor<?x?xf32>,  %[[Out:.+]]: tensor<?x?xf32>) -> tensor<?x?xf32>
-// CHECK-NOT: linalg.generic
-// CHECK: linalg.div ins(%[[A]], %[[B]] : tensor<?x?xf32>, tensor<?x?xf32>) outs(%[[Out]] : tensor<?x?xf32>) -> tensor<?x?xf32>
+// ALL-LABEL: binary_op_div
+// ALL-SAME: %[[A:.+]]: tensor<?x?xf32>, %[[B:.+]]: tensor<?x?xf32>,
+// ALL-SAME: %[[OUT:.+]]: tensor<?x?xf32>) -> tensor<?x?xf32>
+
+// NAMED-NOT: linalg.generic
+// NAMED: linalg.div
+// NAMED-SAME: ins(%[[A]], %[[B]] : tensor<?x?xf32>, tensor<?x?xf32>)
+// NAMED-SAME: outs(%[[OUT]] : tensor<?x?xf32>) -> tensor<?x?xf32>
 
 // Not supported yet.
-// CATEGORY-LABEL: binary_op_div
 // CATEGORY: linalg.generic
 
 // -----
@@ -66,21 +74,24 @@ func.func @op_matmul(%A: tensor<?x?xf32>, %B: tensor<?x?xf32>, %Out: tensor<?x?x
    return %0 : tensor<?x?xf32>
 }
 
-// CHECK-LABEL: op_matmul
-// CHECK-SAME: %[[A:.+]]: tensor<?x?xf32>, %[[B:.+]]: tensor<?x?xf32>,  %[[Out:.+]]: tensor<?x?xf32>) -> tensor<?x?xf32>
-// CHECK-NOT: linalg.generic
-// CHECK: linalg.matmul ins(%[[A]], %[[B]] : tensor<?x?xf32>, tensor<?x?xf32>) outs(%[[Out]] : tensor<?x?xf32>) -> tensor<?x?xf32>
-
 // CATEGORY-DAG: #[[$MAP_A:.+]] = affine_map<(d0, d1, d2) -> (d0, d2)>
 // CATEGORY-DAG: #[[$MAP_B:.+]] = affine_map<(d0, d1, d2) -> (d2, d1)>
 // CATEGORY-DAG: #[[$MAP_C:.+]] = affine_map<(d0, d1, d2) -> (d0, d1)>
 
-// CATEGORY-LABEL: op_matmul
-// CATEGORY-SAME: %[[A:.+]]: tensor<?x?xf32>, %[[B:.+]]: tensor<?x?xf32>,  %[[Out:.+]]: tensor<?x?xf32>) -> tensor<?x?xf32>
+// ALL-LABEL: op_matmul
+// ALL-SAME: %[[A:.+]]: tensor<?x?xf32>, %[[B:.+]]: tensor<?x?xf32>,
+// ALL-SAME: %[[OUT:.+]]: tensor<?x?xf32>) -> tensor<?x?xf32>
+
+// NAMED-NOT: linalg.generic
+// NAMED: linalg.matmul
+// NAMED-SAME: ins(%[[A]], %[[B]] : tensor<?x?xf32>, tensor<?x?xf32>)
+// NAMED-SAME: outs(%[[OUT]] : tensor<?x?xf32>) -> tensor<?x?xf32>
+
 // CATEGORY-NOT: linalg.generic
-// CATEGORY: linalg.contract indexing_maps = {{\[}}#[[$MAP_A]], #[[$MAP_B]], #[[$MAP_C]]{{\]}}
+// CATEGORY: linalg.contract
+// CATEGORY-SAME: indexing_maps = {{\[}}#[[$MAP_A]], #[[$MAP_B]], #[[$MAP_C]]{{\]}}
 // CATEGORY-SAME: ins(%[[A]], %[[B]] : tensor<?x?xf32>, tensor<?x?xf32>)
-// CATEGORY-SAME: outs(%[[Out]] : tensor<?x?xf32>) -> tensor<?x?xf32>
+// CATEGORY-SAME: outs(%[[OUT]] : tensor<?x?xf32>) -> tensor<?x?xf32>
 
 // Cast-auditing tests: ensure we only specialize when the cast semantics can
 // be expressed by linalg.matmul, and use the cast attribute when needed.
@@ -100,13 +111,14 @@ func.func @op_matmul_unsigned_cast(%A: tensor<16x8xi16>, %B: tensor<8x32xi32>,
   return %0 : tensor<16x32xi32>
 }
 
-// CHECK-LABEL: op_matmul_unsigned_cast
-// CHECK-NOT: linalg.generic
-// CHECK: linalg.matmul {cast = #linalg.type_fn<cast_unsigned>}
+// ALL-LABEL: op_matmul_unsigned_cast
 
-// CATEGORY-LABEL: op_matmul_unsigned_cast
+// NAMED-NOT: linalg.generic
+// NAMED: linalg.matmul {cast = #linalg.type_fn<cast_unsigned>}
+
 // CATEGORY-NOT: linalg.generic
-// CATEGORY: linalg.contract indexing_maps = {{\[}}#[[$MAP_A]], #[[$MAP_B]], #[[$MAP_C]]{{\]}}
+// CATEGORY: linalg.contract
+// CATEGORY-SAME: indexing_maps = {{\[}}#[[$MAP_A]], #[[$MAP_B]], #[[$MAP_C]]{{\]}}
 // CATEGORY-SAME: {cast = #linalg.type_fn<cast_unsigned>}
 
 // Ensures truncation rounding is tolerated with unsigned cases.
@@ -131,13 +143,14 @@ func.func @op_matmul_unsigned_cast_and_truncate(%A: tensor<16x8xi16>, %B: tensor
   return %0 : tensor<16x32xi32>
 }
 
-// CHECK-LABEL: op_matmul_unsigned_cast_and_truncate
-// CHECK-NOT: linalg.generic
-// CHECK: linalg.matmul {cast = #linalg.type_fn<cast_unsigned>}
+// ALL-LABEL: op_matmul_unsigned_cast_and_truncate
 
-// CATEGORY-LABEL: op_matmul_unsigned_cast_and_truncate
+// NAMED-NOT: linalg.generic
+// NAMED: linalg.matmul {cast = #linalg.type_fn<cast_unsigned>}
+
 // CATEGORY-NOT: linalg.generic
-// CATEGORY: linalg.contract indexing_maps = {{\[}}#[[$MAP_A]], #[[$MAP_B]], #[[$MAP_C]]{{\]}}
+// CATEGORY: linalg.contract
+// CATEGORY-SAME: indexing_maps = {{\[}}#[[$MAP_A]], #[[$MAP_B]], #[[$MAP_C]]{{\]}}
 // CATEGORY-SAME: {cast = #linalg.type_fn<cast_unsigned>}
 
 // Signed casts are the default, no cast attribute is required.
@@ -156,15 +169,18 @@ func.func @op_matmul_signed_cast(%A: tensor<16x8xi16>, %B: tensor<8x32xi16>,
    return %0 : tensor<16x32xi32>
 }
 
-// CHECK-LABEL: op_matmul_signed_cast
-// CHECK-NOT: linalg.generic
-// CHECK-NOT: linalg.matmul {cast = #linalg.type_fn<cast_unsigned>}
-// CHECK: linalg.matmul
+// ALL-LABEL: op_matmul_signed_cast
 
-// CATEGORY-LABEL: op_matmul_signed_cast
+// NAMED-NOT: linalg.generic
+// NAMED-NOT: linalg.matmul {cast = #linalg.type_fn<cast_unsigned>}
+// NAMED: linalg.matmul
+
 // CATEGORY-NOT: linalg.generic
-// CATEGORY: linalg.contract indexing_maps = {{\[}}#[[$MAP_A]], #[[$MAP_B]], #[[$MAP_C]]{{\]}}
+// CATEGORY: %[[RES:.+]] = linalg.contract
+// CATEGORY-SAME: indexing_maps = {{\[}}#[[$MAP_A]], #[[$MAP_B]], #[[$MAP_C]]{{\]}}
 // CATEGORY-NOT: {cast =
+// CATEGORY-SAME: ins
+// CATEGORY: return %[[RES]]
 
 // Mixed signed/unsigned inputs cannot be encoded with a single cast attribute.
 func.func @negative_op_matmul_mixed_cast(%A: tensor<16x8xi16>, %B: tensor<8x32xi16>,
@@ -182,11 +198,11 @@ func.func @negative_op_matmul_mixed_cast(%A: tensor<16x8xi16>, %B: tensor<8x32xi
    return %0 : tensor<16x32xi32>
 }
 
-// CHECK-LABEL: negative_op_matmul_mixed_cast
-// CHECK: linalg.generic
-// CHECK-NOT: linalg.matmul
+// ALL-LABEL: negative_op_matmul_mixed_cast
 
-// CATEGORY-LABEL: negative_op_matmul_mixed_cast
+// NAMED: linalg.generic
+// NAMED-NOT: linalg.matmul
+
 // CATEGORY: linalg.generic
 // CATEGORY-NOT: linalg.contract
 
@@ -206,11 +222,11 @@ func.func @negative_op_matmul_output_cast(%A: tensor<16x8xi32>, %B: tensor<8x32x
    return %0 : tensor<16x32xi64>
 }
 
-// CHECK-LABEL: negative_op_matmul_output_cast
-// CHECK: linalg.generic
-// CHECK-NOT: linalg.matmul
+// ALL-LABEL: negative_op_matmul_output_cast
 
-// CATEGORY-LABEL: negative_op_matmul_output_cast
+// NAMED: linalg.generic
+// NAMED-NOT: linalg.matmul
+
 // CATEGORY: linalg.generic
 // CATEGORY-NOT: linalg.contract
 
@@ -235,11 +251,11 @@ func.func @op_matmul_bitcast_int_to_float(%A: tensor<16x8xi32>,
   return %0 : tensor<16x32xf32>
 }
 
-// CHECK-LABEL: op_matmul_bitcast_int_to_float
-// CHECK-NOT: linalg.generic
-// CHECK: linalg.matmul
+// ALL-LABEL: op_matmul_bitcast_int_to_float
 
-// CATEGORY-LABEL: op_matmul_bitcast_int_to_float
+// NAMED-NOT: linalg.generic
+// NAMED: linalg.matmul
+
 // CATEGORY-NOT: linalg.generic
 // CATEGORY: linalg.contract
 
@@ -259,15 +275,16 @@ func.func @op_matmul_signed_cast_float(%A: tensor<16x8xi16>, %B: tensor<8x32xi16
   return %0 : tensor<16x32xf32>
 }
 
-// CHECK-LABEL: op_matmul_signed_cast_float
-// CHECK-NOT: linalg.generic
-// CHECK-NOT: linalg.matmul {cast = #linalg.type_fn<cast_unsigned>}
-// CHECK: linalg.matmul
+// ALL-LABEL: op_matmul_signed_cast_float
 
-// CATEGORY-LABEL: op_matmul_signed_cast_float
+// NAMED-NOT: linalg.generic
+// NAMED-NOT: linalg.matmul {cast = #linalg.type_fn<cast_unsigned>}
+// NAMED: linalg.matmul
+
 // CATEGORY-NOT: linalg.generic
 // CATEGORY-NOT: linalg.contract{{.*}}{cast =
-// CATEGORY: linalg.contract
+// CATEGORY: %[[RES:.+]] = linalg.contract
+// CATEGORY: return %[[RES]]
 
 // Unsigned float casts are expressed via uitofp and use the unsigned cast attr.
 func.func @op_matmul_unsigned_cast_float(%A: tensor<16x8xi16>, %B: tensor<8x32xi16>,
@@ -285,11 +302,11 @@ func.func @op_matmul_unsigned_cast_float(%A: tensor<16x8xi16>, %B: tensor<8x32xi
   return %0 : tensor<16x32xf32>
 }
 
-// CHECK-LABEL: op_matmul_unsigned_cast_float
-// CHECK-NOT: linalg.generic
-// CHECK: linalg.matmul {cast = #linalg.type_fn<cast_unsigned>}
+// ALL-LABEL: op_matmul_unsigned_cast_float
 
-// CATEGORY-LABEL: op_matmul_unsigned_cast_float
+// NAMED-NOT: linalg.generic
+// NAMED: linalg.matmul {cast = #linalg.type_fn<cast_unsigned>}
+
 // CATEGORY-NOT: linalg.generic
 // CATEGORY: linalg.contract{{.*}}{cast = #linalg.type_fn<cast_unsigned>}
 
@@ -314,20 +331,20 @@ func.func @op_batch_matmul(%A: tensor<2x16x8xf32>, %B: tensor<2x8x16xf32>, %Out:
   return %0 : tensor<2x16x16xf32>
 }
 
-// CHECK-LABEL: op_batch_matmul
-// CHECK-SAME: %[[A:.+]]: tensor<2x16x8xf32>, %[[B:.+]]: tensor<2x8x16xf32>,  %[[Out:.+]]: tensor<2x16x16xf32>) -> tensor<2x16x16xf32>
-// CHECK-NOT: linalg.generic
-// CHECK: linalg.batch_matmul ins(%[[A]], %[[B]] : tensor<2x16x8xf32>, tensor<2x8x16xf32>) outs(%[[Out]] : tensor<2x16x16xf32>) -> tensor<2x16x16xf32>
-
 // CATEGORY-DAG: #[[$MAP_A:.+]] = affine_map<(d0, d1, d2, d3) -> (d0, d1, d3)>
 // CATEGORY-DAG: #[[$MAP_B:.+]] = affine_map<(d0, d1, d2, d3) -> (d0, d3, d2)>
 // CATEGORY-DAG: #[[$MAP_C:.+]] = affine_map<(d0, d1, d2, d3) -> (d0, d1, d2)>
-// CATEGORY-LABEL: op_batch_matmul
-// CATEGORY-SAME: %[[A:.+]]: tensor<2x16x8xf32>, %[[B:.+]]: tensor<2x8x16xf32>,  %[[Out:.+]]: tensor<2x16x16xf32>) -> tensor<2x16x16xf32>
+
+// ALL-LABEL: op_batch_matmul
+// ALL-SAME: %[[A:.+]]: tensor<2x16x8xf32>, %[[B:.+]]: tensor<2x8x16xf32>,  %[[OUT:.+]]: tensor<2x16x16xf32>) -> tensor<2x16x16xf32>
+
+// NAMED-NOT: linalg.generic
+// NAMED: linalg.batch_matmul ins(%[[A]], %[[B]] : tensor<2x16x8xf32>, tensor<2x8x16xf32>) outs(%[[OUT]] : tensor<2x16x16xf32>) -> tensor<2x16x16xf32>
+
 // CATEGORY-NOT: linalg.generic
 // CATEGORY: linalg.contract indexing_maps = {{\[}}#[[$MAP_A]], #[[$MAP_B]], #[[$MAP_C]]{{\]}}
 // CATEGORY-SAME: ins(%[[A]], %[[B]] : tensor<2x16x8xf32>, tensor<2x8x16xf32>)
-// CATEGORY-SAME: outs(%[[Out]] : tensor<2x16x16xf32>) -> tensor<2x16x16xf32>
+// CATEGORY-SAME: outs(%[[OUT]] : tensor<2x16x16xf32>) -> tensor<2x16x16xf32>
 
 // Ensure that the unsigned cast path for cast detection is exercised for
 // batch_matmul as well.
@@ -349,11 +366,11 @@ func.func @op_batch_matmul_unsigned_cast(%A: tensor<2x16x8xi16>,
    return %0 : tensor<2x16x16xi32>
 }
 
-// CHECK-LABEL: op_batch_matmul_unsigned_cast
-// CHECK-NOT: linalg.generic
-// CHECK: linalg.batch_matmul {cast = #linalg.type_fn<cast_unsigned>}
+// ALL-LABEL: op_batch_matmul_unsigned_cast
 
-// CATEGORY-LABEL: op_batch_matmul_unsigned_cast
+// NAMED-NOT: linalg.generic
+// NAMED: linalg.batch_matmul {cast = #linalg.type_fn<cast_unsigned>}
+
 // CATEGORY-NOT: linalg.generic
 // CATEGORY: linalg.contract indexing_maps = {{\[}}#[[$MAP_A]], #[[$MAP_B]], #[[$MAP_C]]{{\]}}
 // CATEGORY-SAME: {cast = #linalg.type_fn<cast_unsigned>}
@@ -380,11 +397,11 @@ func.func @op_multi_reduction(%A: tensor<10x20x30xf32>,
   return %0 : tensor<10x40xf32>
 }
 
-// Cannot be lifted to named matrix multiply.
-// CHECK-LABEL: op_multi_reduction
-// CHECK: linalg.generic
+// ALL-LABEL: op_multi_reduction
 
-// CATEGORY-LABEL: op_multi_reduction
+// Cannot be lifted to named matrix multiply.
+// NAMED: linalg.generic
+
 // CATEGORY-NOT: linalg.generic
 // CATEGORY: linalg.contract
 
@@ -408,11 +425,11 @@ func.func @batch_matmul_non_identity_batch(%A: tensor<4x2x8xf32>, %B: tensor<2x8
   return %0 : tensor<2x4x16xf32>
 }
 
-// Cannot be lifted to named matrix multiply.
-// CHECK-LABEL: batch_matmul_non_identity_batch
-// CHECK: linalg.generic
+// ALL-LABEL: batch_matmul_non_identity_batch
 
-// CATEGORY-LABEL: batch_matmul_non_identity_batch
+// Cannot be lifted to named matrix multiply.
+// NAMED: linalg.generic
+
 // CATEGORY-NOT: linalg.generic
 // CATEGORY: linalg.contract
 
@@ -433,10 +450,11 @@ func.func @op_matvec(%A: tensor<?x?xf32>, %B: tensor<?xf32>, %Out: tensor<?xf32>
   } -> tensor<?xf32>
   return %0 : tensor<?xf32>
 }
-// CHECK-LABEL: op_matvec
-// CHECK: linalg.generic
 
-// CATEGORY-LABEL: op_matvec
+// ALL-LABEL: op_matvec
+
+// NAMED: linalg.generic
+
 // CATEGORY-NOT: linalg.generic
 // CATEGORY: linalg.contract
 
@@ -458,20 +476,22 @@ func.func @op_matmul_transpose_a(%A: tensor<?x?xf32>, %B: tensor<?x?xf32>, %Out:
    return %0 : tensor<?x?xf32>
 }
 
-// CHECK-DAG: #[[$MAP_TA:.+]] = affine_map<(d0, d1, d2) -> (d2, d0)>
-// CHECK-DAG: #[[$MAP_B:.+]] = affine_map<(d0, d1, d2) -> (d2, d1)>
-// CHECK-DAG: #[[$MAP_C:.+]] = affine_map<(d0, d1, d2) -> (d0, d1)>
-// CHECK-LABEL: op_matmul_transpose_a
-// CHECK-SAME: %[[A:.+]]: tensor<?x?xf32>, %[[B:.+]]: tensor<?x?xf32>, %[[Out:.+]]: tensor<?x?xf32>
-// CHECK-NOT: linalg.generic
-// CHECK: linalg.matmul
-// CHECK-SAME: indexing_maps = [#[[$MAP_TA]], #[[$MAP_B]], #[[$MAP_C]]]
-// CHECK-SAME: ins(%[[A]], %[[B]] : tensor<?x?xf32>, tensor<?x?xf32>)
-// CHECK-SAME: outs(%[[Out]] : tensor<?x?xf32>) -> tensor<?x?xf32>
+// ALL-DAG: #[[$MAP_TA:.+]] = affine_map<(d0, d1, d2) -> (d2, d0)>
+// ALL-DAG: #[[$MAP_B:.+]] = affine_map<(d0, d1, d2) -> (d2, d1)>
+// ALL-DAG: #[[$MAP_C:.+]] = affine_map<(d0, d1, d2) -> (d0, d1)>
 
-// CATEGORY-LABEL: op_matmul_transpose_a
+// ALL-LABEL: op_matmul_transpose_a
+// ALL-SAME: %[[A:.+]]: tensor<?x?xf32>, %[[B:.+]]: tensor<?x?xf32>, %[[OUT:.+]]: tensor<?x?xf32>
+
+// NAMED-NOT: linalg.generic
+// NAMED: linalg.matmul
+// NAMED-SAME: indexing_maps = [#[[$MAP_TA]], #[[$MAP_B]], #[[$MAP_C]]]
+// NAMED-SAME: ins(%[[A]], %[[B]] : tensor<?x?xf32>, tensor<?x?xf32>)
+// NAMED-SAME: outs(%[[OUT]] : tensor<?x?xf32>) -> tensor<?x?xf32>
+
 // CATEGORY-NOT: linalg.generic
 // CATEGORY: linalg.contract
+// CATEGORY-SAME: indexing_maps = [#[[$MAP_TA]], #[[$MAP_B]], #[[$MAP_C]]]
 
 // -----
 
@@ -491,27 +511,24 @@ func.func @op_matmul_transpose_b(%A: tensor<?x?xf32>, %B: tensor<?x?xf32>, %Out:
    return %0 : tensor<?x?xf32>
 }
 
-// CHECK-DAG: #[[$MAP_A:.+]] = affine_map<(d0, d1, d2) -> (d0, d2)>
-// CHECK-DAG: #[[$MAP_TB:.+]] = affine_map<(d0, d1, d2) -> (d1, d2)>
-// CHECK-DAG: #[[$MAP_C:.+]] = affine_map<(d0, d1, d2) -> (d0, d1)>
-// CHECK-LABEL: op_matmul_transpose_b
-// CHECK-SAME: %[[A:.+]]: tensor<?x?xf32>, %[[B:.+]]: tensor<?x?xf32>, %[[Out:.+]]: tensor<?x?xf32>
-// CHECK-NOT: linalg.generic
-// CHECK: linalg.matmul
-// CHECK-SAME: indexing_maps = [#[[$MAP_A]], #[[$MAP_TB]], #[[$MAP_C]]]
-// CHECK-SAME: ins(%[[A]], %[[B]] : tensor<?x?xf32>, tensor<?x?xf32>)
-// CHECK-SAME: outs(%[[Out]] : tensor<?x?xf32>) -> tensor<?x?xf32>
+// ALL-DAG: #[[$MAP_A:.+]] = affine_map<(d0, d1, d2) -> (d0, d2)>
+// ALL-DAG: #[[$MAP_TB:.+]] = affine_map<(d0, d1, d2) -> (d1, d2)>
+// ALL-DAG: #[[$MAP_C:.+]] = affine_map<(d0, d1, d2) -> (d0, d1)>
 
-// CATEGORY-DAG: #[[$MAP_A:.+]] = affine_map<(d0, d1, d2) -> (d0, d2)>
-// CATEGORY-DAG: #[[$MAP_TB:.+]] = affine_map<(d0, d1, d2) -> (d1, d2)>
-// CATEGORY-DAG: #[[$MAP_C:.+]] = affine_map<(d0, d1, d2) -> (d0, d1)>
-// CATEGORY-LABEL: op_matmul_transpose_b
-// CATEGORY-SAME: %[[A:.+]]: tensor<?x?xf32>, %[[B:.+]]: tensor<?x?xf32>, %[[Out:.+]]: tensor<?x?xf32>
+// ALL-LABEL: op_matmul_transpose_b
+// ALL-SAME: %[[A:.+]]: tensor<?x?xf32>, %[[B:.+]]: tensor<?x?xf32>, %[[OUT:.+]]: tensor<?x?xf32>
+
+// NAMED-NOT: linalg.generic
+// NAMED: linalg.matmul
+// NAMED-SAME: indexing_maps = [#[[$MAP_A]], #[[$MAP_TB]], #[[$MAP_C]]]
+// NAMED-SAME: ins(%[[A]], %[[B]] : tensor<?x?xf32>, tensor<?x?xf32>)
+// NAMED-SAME: outs(%[[OUT]] : tensor<?x?xf32>) -> tensor<?x?xf32>
+
 // CATEGORY-NOT: linalg.generic
 // CATEGORY: linalg.contract
 // CATEGORY-SAME: indexing_maps = [#[[$MAP_A]], #[[$MAP_TB]], #[[$MAP_C]]]
 // CATEGORY-SAME: ins(%[[A]], %[[B]] : tensor<?x?xf32>, tensor<?x?xf32>)
-// CATEGORY-SAME: outs(%[[Out]] : tensor<?x?xf32>) -> tensor<?x?xf32>
+// CATEGORY-SAME: outs(%[[OUT]] : tensor<?x?xf32>) -> tensor<?x?xf32>
 
 // -----
 
@@ -531,27 +548,24 @@ func.func @op_batch_matmul_transpose_a(%A: tensor<2x8x4xf32>, %B: tensor<2x8x16x
   return %0 : tensor<2x4x16xf32>
 }
 
-// CHECK-DAG: #[[$MAP_TA:.+]] = affine_map<(d0, d1, d2, d3) -> (d0, d3, d1)>
-// CHECK-DAG: #[[$MAP_B:.+]] = affine_map<(d0, d1, d2, d3) -> (d0, d3, d2)>
-// CHECK-DAG: #[[$MAP_C:.+]] = affine_map<(d0, d1, d2, d3) -> (d0, d1, d2)>
-// CHECK-LABEL: op_batch_matmul_transpose_a
-// CHECK-SAME: %[[A:.+]]: tensor<2x8x4xf32>, %[[B:.+]]: tensor<2x8x16xf32>, %[[Out:.+]]: tensor<2x4x16xf32>
-// CHECK-NOT: linalg.generic
-// CHECK: linalg.batch_matmul
-// CHECK-SAME: indexing_maps = [#[[$MAP_TA]], #[[$MAP_B]], #[[$MAP_C]]]
-// CHECK-SAME: ins(%[[A]], %[[B]] : tensor<2x8x4xf32>, tensor<2x8x16xf32>)
-// CHECK-SAME: outs(%[[Out]] : tensor<2x4x16xf32>) -> tensor<2x4x16xf32>
+// ALL-DAG: #[[$MAP_TA:.+]] = affine_map<(d0, d1, d2, d3) -> (d0, d3, d1)>
+// ALL-DAG: #[[$MAP_B:.+]] = affine_map<(d0, d1, d2, d3) -> (d0, d3, d2)>
+// ALL-DAG: #[[$MAP_C:.+]] = affine_map<(d0, d1, d2, d3) -> (d0, d1, d2)>
 
-// CATEGORY-DAG: #[[$MAP_TA:.+]] = affine_map<(d0, d1, d2, d3) -> (d0, d3, d1)>
-// CATEGORY-DAG: #[[$MAP_B:.+]] = affine_map<(d0, d1, d2, d3) -> (d0, d3, d2)>
-// CATEGORY-DAG: #[[$MAP_C:.+]] = affine_map<(d0, d1, d2, d3) -> (d0, d1, d2)>
-// CATEGORY-LABEL: op_batch_matmul_transpose_a
-// CATEGORY-SAME: %[[A:.+]]: tensor<2x8x4xf32>, %[[B:.+]]: tensor<2x8x16xf32>, %[[Out:.+]]: tensor<2x4x16xf32>
+// ALL-LABEL: op_batch_matmul_transpose_a
+// ALL-SAME: %[[A:.+]]: tensor<2x8x4xf32>, %[[B:.+]]: tensor<2x8x16xf32>, %[[OUT:.+]]: tensor<2x4x16xf32>
+
+// NAMED-NOT: linalg.generic
+// NAMED: linalg.batch_matmul
+// NAMED-SAME: indexing_maps = [#[[$MAP_TA]], #[[$MAP_B]], #[[$MAP_C]]]
+// NAMED-SAME: ins(%[[A]], %[[B]] : tensor<2x8x4xf32>, tensor<2x8x16xf32>)
+// NAMED-SAME: outs(%[[OUT]] : tensor<2x4x16xf32>) -> tensor<2x4x16xf32>
+
 // CATEGORY-NOT: linalg.generic
 // CATEGORY: linalg.contract
 // CATEGORY-SAME: indexing_maps = [#[[$MAP_TA]], #[[$MAP_B]], #[[$MAP_C]]]
 // CATEGORY-SAME: ins(%[[A]], %[[B]] : tensor<2x8x4xf32>, tensor<2x8x16xf32>)
-// CATEGORY-SAME: outs(%[[Out]] : tensor<2x4x16xf32>) -> tensor<2x4x16xf32>
+// CATEGORY-SAME: outs(%[[OUT]] : tensor<2x4x16xf32>) -> tensor<2x4x16xf32>
 
 // -----
 
@@ -571,27 +585,24 @@ func.func @op_batch_matmul_transpose_b(%A: tensor<2x4x8xf32>, %B: tensor<2x16x8x
   return %0 : tensor<2x4x16xf32>
 }
 
-// CHECK-DAG: #[[$MAP_A:.+]] = affine_map<(d0, d1, d2, d3) -> (d0, d1, d3)>
-// CHECK-DAG: #[[$MAP_TB:.+]] = affine_map<(d0, d1, d2, d3) -> (d0, d2, d3)>
-// CHECK-DAG: #[[$MAP_C:.+]] = affine_map<(d0, d1, d2, d3) -> (d0, d1, d2)>
-// CHECK-LABEL: op_batch_matmul_transpose_b
-// CHECK-SAME: %[[A:.+]]: tensor<2x4x8xf32>, %[[B:.+]]: tensor<2x16x8xf32>, %[[Out:.+]]: tensor<2x4x16xf32>
-// CHECK-NOT: linalg.generic
-// CHECK: linalg.batch_matmul
-// CHECK-SAME: indexing_maps = [#[[$MAP_A]], #[[$MAP_TB]], #[[$MAP_C]]]
-// CHECK-SAME: ins(%[[A]], %[[B]] : tensor<2x4x8xf32>, tensor<2x16x8xf32>)
-// CHECK-SAME: outs(%[[Out]] : tensor<2x4x16xf32>) -> tensor<2x4x16xf32>
+// ALL-DAG: #[[$MAP_A:.+]] = affine_map<(d0, d1, d2, d3) -> (d0, d1, d3)>
+// ALL-DAG: #[[$MAP_TB:.+]] = affine_map<(d0, d1, d2, d3) -> (d0, d2, d3)>
+// ALL-DAG: #[[$MAP_C:.+]] = affine_map<(d0, d1, d2, d3) -> (d0, d1, d2)>
 
-// CATEGORY-DAG: #[[$MAP_A:.+]] = affine_map<(d0, d1, d2, d3) -> (d0, d1, d3)>
-// CATEGORY-DAG: #[[$MAP_TB:.+]] = affine_map<(d0, d1, d2, d3) -> (d0, d2, d3)>
-// CATEGORY-DAG: #[[$MAP_C:.+]] = affine_map<(d0, d1, d2, d3) -> (d0, d1, d2)>
-// CATEGORY-LABEL: op_batch_matmul_transpose_b
-// CATEGORY-SAME: %[[A:.+]]: tensor<2x4x8xf32>, %[[B:.+]]: tensor<2x16x8xf32>, %[[Out:.+]]: tensor<2x4x16xf32>
+// ALL-LABEL: op_batch_matmul_transpose_b
+// ALL-SAME: %[[A:.+]]: tensor<2x4x8xf32>, %[[B:.+]]: tensor<2x16x8xf32>, %[[OUT:.+]]: tensor<2x4x16xf32>
+
+// NAMED-NOT: linalg.generic
+// NAMED: linalg.batch_matmul
+// NAMED-SAME: indexing_maps = [#[[$MAP_A]], #[[$MAP_TB]], #[[$MAP_C]]]
+// NAMED-SAME: ins(%[[A]], %[[B]] : tensor<2x4x8xf32>, tensor<2x16x8xf32>)
+// NAMED-SAME: outs(%[[OUT]] : tensor<2x4x16xf32>) -> tensor<2x4x16xf32>
+
 // CATEGORY-NOT: linalg.generic
 // CATEGORY: linalg.contract
 // CATEGORY-SAME: indexing_maps = [#[[$MAP_A]], #[[$MAP_TB]], #[[$MAP_C]]]
 // CATEGORY-SAME: ins(%[[A]], %[[B]] : tensor<2x4x8xf32>, tensor<2x16x8xf32>)
-// CATEGORY-SAME: outs(%[[Out]] : tensor<2x4x16xf32>) -> tensor<2x4x16xf32>
+// CATEGORY-SAME: outs(%[[OUT]] : tensor<2x4x16xf32>) -> tensor<2x4x16xf32>
 
 // -----
 
@@ -612,27 +623,24 @@ func.func @op_matmul_transpose_a_and_b(%A: tensor<?x?xf32>, %B: tensor<?x?xf32>,
    return %0 : tensor<?x?xf32>
 }
 
-// CHECK-DAG: #[[$MAP_TA:.+]] = affine_map<(d0, d1, d2) -> (d2, d0)>
-// CHECK-DAG: #[[$MAP_TB:.+]] = affine_map<(d0, d1, d2) -> (d1, d2)>
-// CHECK-DAG: #[[$MAP_C:.+]] = affine_map<(d0, d1, d2) -> (d0, d1)>
-// CHECK-LABEL: op_matmul_transpose_a_and_b
-// CHECK-SAME: %[[A:.+]]: tensor<?x?xf32>, %[[B:.+]]: tensor<?x?xf32>, %[[Out:.+]]: tensor<?x?xf32>
-// CHECK-NOT: linalg.generic
-// CHECK: linalg.matmul
-// CHECK-SAME: indexing_maps = [#[[$MAP_TA]], #[[$MAP_TB]], #[[$MAP_C]]]
-// CHECK-SAME: ins(%[[A]], %[[B]] : tensor<?x?xf32>, tensor<?x?xf32>)
-// CHECK-SAME: outs(%[[Out]] : tensor<?x?xf32>) -> tensor<?x?xf32>
+// ALL-DAG: #[[$MAP_TA:.+]] = affine_map<(d0, d1, d2) -> (d2, d0)>
+// ALL-DAG: #[[$MAP_TB:.+]] = affine_map<(d0, d1, d2) -> (d1, d2)>
+// ALL-DAG: #[[$MAP_C:.+]] = affine_map<(d0, d1, d2) -> (d0, d1)>
 
-// CATEGORY-DAG: #[[$MAP_TA:.+]] = affine_map<(d0, d1, d2) -> (d2, d0)>
-// CATEGORY-DAG: #[[$MAP_TB:.+]] = affine_map<(d0, d1, d2) -> (d1, d2)>
-// CATEGORY-DAG: #[[$MAP_C:.+]] = affine_map<(d0, d1, d2) -> (d0, d1)>
-// CATEGORY-LABEL: op_matmul_transpose_a_and_b
-// CATEGORY-SAME: %[[A:.+]]: tensor<?x?xf32>, %[[B:.+]]: tensor<?x?xf32>, %[[Out:.+]]: tensor<?x?xf32>
+// ALL-LABEL: op_matmul_transpose_a_and_b
+// ALL-SAME: %[[A:.+]]: tensor<?x?xf32>, %[[B:.+]]: tensor<?x?xf32>, %[[OUT:.+]]: tensor<?x?xf32>
+
+// NAMED-NOT: linalg.generic
+// NAMED: linalg.matmul
+// NAMED-SAME: indexing_maps = [#[[$MAP_TA]], #[[$MAP_TB]], #[[$MAP_C]]]
+// NAMED-SAME: ins(%[[A]], %[[B]] : tensor<?x?xf32>, tensor<?x?xf32>)
+// NAMED-SAME: outs(%[[OUT]] : tensor<?x?xf32>) -> tensor<?x?xf32>
+
 // CATEGORY-NOT: linalg.generic
 // CATEGORY: linalg.contract
 // CATEGORY-SAME: indexing_maps = [#[[$MAP_TA]], #[[$MAP_TB]], #[[$MAP_C]]]
 // CATEGORY-SAME: ins(%[[A]], %[[B]] : tensor<?x?xf32>, tensor<?x?xf32>)
-// CATEGORY-SAME: outs(%[[Out]] : tensor<?x?xf32>) -> tensor<?x?xf32>
+// CATEGORY-SAME: outs(%[[OUT]] : tensor<?x?xf32>) -> tensor<?x?xf32>
 
 // -----
 
@@ -653,27 +661,24 @@ func.func @op_matmul_transposed_output(%A: tensor<?x?xf32>, %B: tensor<?x?xf32>,
    return %0 : tensor<?x?xf32>
 }
 
-// CHECK-DAG: #[[$MAP_A:.+]] = affine_map<(d0, d1, d2) -> (d0, d2)>
-// CHECK-DAG: #[[$MAP_B:.+]] = affine_map<(d0, d1, d2) -> (d2, d1)>
-// CHECK-DAG: #[[$MAP_TC:.+]] = affine_map<(d0, d1, d2) -> (d1, d0)>
-// CHECK-LABEL: op_matmul_transposed_output
-// CHECK-SAME: %[[A:.+]]: tensor<?x?xf32>, %[[B:.+]]: tensor<?x?xf32>, %[[Out:.+]]: tensor<?x?xf32>
-// CHECK-NOT: linalg.generic
-// CHECK: linalg.matmul
-// CHECK-SAME: indexing_maps = [#[[$MAP_A]], #[[$MAP_B]], #[[$MAP_TC]]]
-// CHECK-SAME: ins(%[[A]], %[[B]] : tensor<?x?xf32>, tensor<?x?xf32>)
-// CHECK-SAME: outs(%[[Out]] : tensor<?x?xf32>) -> tensor<?x?xf32>
+// ALL-DAG: #[[$MAP_A:.+]] = affine_map<(d0, d1, d2) -> (d0, d2)>
+// ALL-DAG: #[[$MAP_B:.+]] = affine_map<(d0, d1, d2) -> (d2, d1)>
+// ALL-DAG: #[[$MAP_TC:.+]] = affine_map<(d0, d1, d2) -> (d1, d0)>
 
-// CATEGORY-DAG: #[[$MAP_A:.+]] = affine_map<(d0, d1, d2) -> (d0, d2)>
-// CATEGORY-DAG: #[[$MAP_B:.+]] = affine_map<(d0, d1, d2) -> (d2, d1)>
-// CATEGORY-DAG: #[[$MAP_TC:.+]] = affine_map<(d0, d1, d2) -> (d1, d0)>
-// CATEGORY-LABEL: op_matmul_transposed_output
-// CATEGORY-SAME: %[[A:.+]]: tensor<?x?xf32>, %[[B:.+]]: tensor<?x?xf32>, %[[Out:.+]]: tensor<?x?xf32>
+// ALL-LABEL: op_matmul_transposed_output
+// ALL-SAME: %[[A:.+]]: tensor<?x?xf32>, %[[B:.+]]: tensor<?x?xf32>, %[[OUT:.+]]: tensor<?x?xf32>
+
+// NAMED-NOT: linalg.generic
+// NAMED: linalg.matmul
+// NAMED-SAME: indexing_maps = [#[[$MAP_A]], #[[$MAP_B]], #[[$MAP_TC]]]
+// NAMED-SAME: ins(%[[A]], %[[B]] : tensor<?x?xf32>, tensor<?x?xf32>)
+// NAMED-SAME: outs(%[[OUT]] : tensor<?x?xf32>) -> tensor<?x?xf32>
+
 // CATEGORY-NOT: linalg.generic
 // CATEGORY: linalg.contract
 // CATEGORY-SAME: indexing_maps = [#[[$MAP_A]], #[[$MAP_B]], #[[$MAP_TC]]]
 // CATEGORY-SAME: ins(%[[A]], %[[B]] : tensor<?x?xf32>, tensor<?x?xf32>)
-// CATEGORY-SAME: outs(%[[Out]] : tensor<?x?xf32>) -> tensor<?x?xf32>
+// CATEGORY-SAME: outs(%[[OUT]] : tensor<?x?xf32>) -> tensor<?x?xf32>
 
 // -----
 
@@ -695,11 +700,23 @@ func.func @op_matmul_non_canonical_loops(%A: tensor<?x?xf32>, %B: tensor<?x?xf32
    return %0 : tensor<?x?xf32>
 }
 
-// CHECK-LABEL: op_matmul_non_canonical_loops
-// CHECK-SAME: %[[A:.+]]: tensor<?x?xf32>, %[[B:.+]]: tensor<?x?xf32>, %[[Out:.+]]: tensor<?x?xf32>
-// CHECK-NOT: linalg.generic
-// CHECK: linalg.matmul ins(%[[A]], %[[B]] : tensor<?x?xf32>, tensor<?x?xf32>) outs(%[[Out]] : tensor<?x?xf32>) -> tensor<?x?xf32>
+// CATEGORY-DAG: #[[$MAP_A:.+]] = affine_map<(d0, d1, d2) -> (d0, d1)>
+// CATEGORY-DAG: #[[$MAP_B:.+]] = affine_map<(d0, d1, d2) -> (d1, d2)>
+// CATEGORY-DAG: #[[$MAP_C:.+]] = affine_map<(d0, d1, d2) -> (d0, d2)>
 
+// ALL-LABEL: op_matmul_non_canonical_loops
+// ALL-SAME: %[[A:.+]]: tensor<?x?xf32>, %[[B:.+]]: tensor<?x?xf32>, %[[OUT:.+]]: tensor<?x?xf32>
+
+// NAMED-NOT: linalg.generic
+// NAMED: linalg.matmul
+// NAMED-SAME: ins(%[[A]], %[[B]] : tensor<?x?xf32>, tensor<?x?xf32>)
+// NAMED-SAME: outs(%[[OUT]] : tensor<?x?xf32>) -> tensor<?x?xf32>
+
+// CATEGORY-NOT: linalg.generic
+// CATEGORY: linalg.contract
+// CATEGORY-SAME: indexing_maps = [#[[$MAP_A]], #[[$MAP_B]], #[[$MAP_C]]]
+// CATEGORY-SAME: ins(%[[A]], %[[B]] : tensor<?x?xf32>, tensor<?x?xf32>)
+// CATEGORY-SAME: outs(%[[OUT]] : tensor<?x?xf32>) -> tensor<?x?xf32>
 // -----
 
 // Batch matmul with non-canonical loop ordering.
@@ -720,10 +737,23 @@ func.func @op_batch_matmul_non_canonical_loops(%A: tensor<2x16x8xf32>, %B: tenso
   return %0 : tensor<2x16x16xf32>
 }
 
-// CHECK-LABEL: op_batch_matmul_non_canonical_loops
-// CHECK-SAME: %[[A:.+]]: tensor<2x16x8xf32>, %[[B:.+]]: tensor<2x8x16xf32>, %[[Out:.+]]: tensor<2x16x16xf32>
-// CHECK-NOT: linalg.generic
-// CHECK: linalg.batch_matmul ins(%[[A]], %[[B]] : tensor<2x16x8xf32>, tensor<2x8x16xf32>) outs(%[[Out]] : tensor<2x16x16xf32>) -> tensor<2x16x16xf32>
+// CATEGORY-DAG: #[[$MAP_A:.+]] = affine_map<(d0, d1, d2, d3) -> (d0, d1, d2)>
+// CATEGORY-DAG: #[[$MAP_B:.+]] = affine_map<(d0, d1, d2, d3) -> (d0, d2, d3)>
+// CATEGORY-DAG: #[[$MAP_C:.+]] = affine_map<(d0, d1, d2, d3) -> (d0, d1, d3)>
+
+// ALL-LABEL: op_batch_matmul_non_canonical_loops
+// ALL-SAME: %[[A:.+]]: tensor<2x16x8xf32>, %[[B:.+]]: tensor<2x8x16xf32>, %[[OUT:.+]]: tensor<2x16x16xf32>
+
+// NAMED-NOT: linalg.generic
+// NAMED: linalg.batch_matmul
+// NAMED-SAME: ins(%[[A]], %[[B]] : tensor<2x16x8xf32>, tensor<2x8x16xf32>)
+// NAMED-SAME: outs(%[[OUT]] : tensor<2x16x16xf32>) -> tensor<2x16x16xf32>
+
+// CATEGORY-NOT: linalg.generic
+// CATEGORY: linalg.contract
+// CATEGORY-SAME: indexing_maps = [#[[$MAP_A]], #[[$MAP_B]], #[[$MAP_C]]]
+// CATEGORY-SAME: ins(%[[A]], %[[B]] : tensor<2x16x8xf32>, tensor<2x8x16xf32>)
+// CATEGORY-SAME: outs(%[[OUT]] : tensor<2x16x16xf32>) -> tensor<2x16x16xf32>
 
 // -----
 
@@ -745,16 +775,28 @@ func.func @op_matmul_non_canonical_transpose_b(%A: tensor<?x?xf32>, %B: tensor<?
    return %0 : tensor<?x?xf32>
 }
 
-// CHECK-DAG: #[[$MAP_A:.+]] = affine_map<(d0, d1, d2) -> (d0, d2)>
-// CHECK-DAG: #[[$MAP_TB:.+]] = affine_map<(d0, d1, d2) -> (d1, d2)>
-// CHECK-DAG: #[[$MAP_C:.+]] = affine_map<(d0, d1, d2) -> (d0, d1)>
-// CHECK-LABEL: op_matmul_non_canonical_transpose_b
-// CHECK-SAME: %[[A:.+]]: tensor<?x?xf32>, %[[B:.+]]: tensor<?x?xf32>, %[[Out:.+]]: tensor<?x?xf32>
-// CHECK-NOT: linalg.generic
-// CHECK: linalg.matmul
-// CHECK-SAME: indexing_maps = [#[[$MAP_A]], #[[$MAP_TB]], #[[$MAP_C]]]
-// CHECK-SAME: ins(%[[A]], %[[B]] : tensor<?x?xf32>, tensor<?x?xf32>)
-// CHECK-SAME: outs(%[[Out]] : tensor<?x?xf32>) -> tensor<?x?xf32>
+// NAMED-DAG: #[[$MAP_A:.+]] = affine_map<(d0, d1, d2) -> (d0, d2)>
+// NAMED-DAG: #[[$MAP_TB:.+]] = affine_map<(d0, d1, d2) -> (d1, d2)>
+// NAMED-DAG: #[[$MAP_C:.+]] = affine_map<(d0, d1, d2) -> (d0, d1)>
+
+// CATEGORY-DAG: #[[$MAP_A:.+]] = affine_map<(d0, d1, d2) -> (d0, d1)>
+// CATEGORY-DAG: #[[$MAP_TB:.+]] = affine_map<(d0, d1, d2) -> (d2, d1)>
+// CATEGORY-DAG: #[[$MAP_C:.+]] = affine_map<(d0, d1, d2) -> (d0, d2)>
+
+// ALL-LABEL: op_matmul_non_canonical_transpose_b
+// ALL-SAME: %[[A:.+]]: tensor<?x?xf32>, %[[B:.+]]: tensor<?x?xf32>, %[[OUT:.+]]: tensor<?x?xf32>
+
+// NAMED-NOT: linalg.generic
+// NAMED: linalg.matmul
+// NAMED-SAME: indexing_maps = [#[[$MAP_A]], #[[$MAP_TB]], #[[$MAP_C]]]
+// NAMED-SAME: ins(%[[A]], %[[B]] : tensor<?x?xf32>, tensor<?x?xf32>)
+// NAMED-SAME: outs(%[[OUT]] : tensor<?x?xf32>) -> tensor<?x?xf32>
+
+// CATEGORY-NOT: linalg.generic
+// CATEGORY: linalg.contract
+// CATEGORY-SAME: indexing_maps = [#[[$MAP_A]], #[[$MAP_TB]], #[[$MAP_C]]]
+// CATEGORY-SAME: ins(%[[A]], %[[B]] : tensor<?x?xf32>, tensor<?x?xf32>)
+// CATEGORY-SAME: outs(%[[OUT]] : tensor<?x?xf32>) -> tensor<?x?xf32>
 
 // -----
 
@@ -777,16 +819,28 @@ func.func @op_batch_matmul_non_canonical_transpose_b(%A: tensor<2x16x8xf32>, %B:
   return %0 : tensor<2x16x16xf32>
 }
 
-// CHECK-DAG: #[[$MAP_A:.+]] = affine_map<(d0, d1, d2, d3) -> (d0, d1, d3)>
-// CHECK-DAG: #[[$MAP_TB:.+]] = affine_map<(d0, d1, d2, d3) -> (d0, d2, d3)>
-// CHECK-DAG: #[[$MAP_C:.+]] = affine_map<(d0, d1, d2, d3) -> (d0, d1, d2)>
-// CHECK-LABEL: op_batch_matmul_non_canonical_transpose_b
-// CHECK-SAME: %[[A:.+]]: tensor<2x16x8xf32>, %[[B:.+]]: tensor<2x16x8xf32>, %[[Out:.+]]: tensor<2x16x16xf32>
-// CHECK-NOT: linalg.generic
-// CHECK: linalg.batch_matmul
-// CHECK-SAME: indexing_maps = [#[[$MAP_A]], #[[$MAP_TB]], #[[$MAP_C]]]
-// CHECK-SAME: ins(%[[A]], %[[B]] : tensor<2x16x8xf32>, tensor<2x16x8xf32>)
-// CHECK-SAME: outs(%[[Out]] : tensor<2x16x16xf32>) -> tensor<2x16x16xf32>
+// NAMED-DAG: #[[$MAP_A:.+]] = affine_map<(d0, d1, d2, d3) -> (d0, d1, d3)>
+// NAMED-DAG: #[[$MAP_TB:.+]] = affine_map<(d0, d1, d2, d3) -> (d0, d2, d3)>
+// NAMED-DAG: #[[$MAP_C:.+]] = affine_map<(d0, d1, d2, d3) -> (d0, d1, d2)>
+
+// CATEGORY-DAG: #[[$MAP_A:.+]] = affine_map<(d0, d1, d2, d3) -> (d0, d1, d2)>
+// CATEGORY-DAG: #[[$MAP_TB:.+]] = affine_map<(d0, d1, d2, d3) -> (d0, d3, d2)>
+// CATEGORY-DAG: #[[$MAP_C:.+]] = affine_map<(d0, d1, d2, d3) -> (d0, d1, d3)>
+
+// ALL-LABEL: op_batch_matmul_non_canonical_transpose_b
+// ALL-SAME: %[[A:.+]]: tensor<2x16x8xf32>, %[[B:.+]]: tensor<2x16x8xf32>, %[[OUT:.+]]: tensor<2x16x16xf32>
+
+// NAMED-NOT: linalg.generic
+// NAMED: linalg.batch_matmul
+// NAMED-SAME: indexing_maps = [#[[$MAP_A]], #[[$MAP_TB]], #[[$MAP_C]]]
+// NAMED-SAME: ins(%[[A]], %[[B]] : tensor<2x16x8xf32>, tensor<2x16x8xf32>)
+// NAMED-SAME: outs(%[[OUT]] : tensor<2x16x16xf32>) -> tensor<2x16x16xf32>
+
+// CATEGORY-NOT: linalg.generic
+// CATEGORY: linalg.contract
+// CATEGORY-SAME: indexing_maps = [#[[$MAP_A]], #[[$MAP_TB]], #[[$MAP_C]]]
+// CATEGORY-SAME: ins(%[[A]], %[[B]] : tensor<2x16x8xf32>, tensor<2x16x8xf32>)
+// CATEGORY-SAME: outs(%[[OUT]] : tensor<2x16x16xf32>) -> tensor<2x16x16xf32>
 
 // -----
 
@@ -808,10 +862,23 @@ func.func @op_matmul_fully_shuffled_loops(%A: tensor<?x?xf32>, %B: tensor<?x?xf3
    return %0 : tensor<?x?xf32>
 }
 
-// CHECK-LABEL: op_matmul_fully_shuffled_loops
-// CHECK-SAME: %[[A:.+]]: tensor<?x?xf32>, %[[B:.+]]: tensor<?x?xf32>, %[[Out:.+]]: tensor<?x?xf32>
-// CHECK-NOT: linalg.generic
-// CHECK: linalg.matmul ins(%[[A]], %[[B]] : tensor<?x?xf32>, tensor<?x?xf32>) outs(%[[Out]] : tensor<?x?xf32>) -> tensor<?x?xf32>
+// CATEGORY-DAG: #[[$MAP_A:.+]] = affine_map<(d0, d1, d2) -> (d1, d0)>
+// CATEGORY-DAG: #[[$MAP_B:.+]] = affine_map<(d0, d1, d2) -> (d0, d2)>
+// CATEGORY-DAG: #[[$MAP_C:.+]] = affine_map<(d0, d1, d2) -> (d1, d2)>
+
+// ALL-LABEL: op_matmul_fully_shuffled_loops
+// ALL-SAME: %[[A:.+]]: tensor<?x?xf32>, %[[B:.+]]: tensor<?x?xf32>, %[[OUT:.+]]: tensor<?x?xf32>
+
+// NAMED-NOT: linalg.generic
+// NAMED: linalg.matmul
+// NAMED-SAME: ins(%[[A]], %[[B]] : tensor<?x?xf32>, tensor<?x?xf32>)
+// NAMED-SAME: outs(%[[OUT]] : tensor<?x?xf32>) -> tensor<?x?xf32>
+
+// CATEGORY-NOT: linalg.generic
+// CATEGORY: linalg.contract
+// CATEGORY-SAME: indexing_maps = [#[[$MAP_A]], #[[$MAP_TB]], #[[$MAP_C]]]
+// CATEGORY-SAME: ins(%[[A]], %[[B]] : tensor<?x?xf32>, tensor<?x?xf32>)
+// CATEGORY-SAME: outs(%[[OUT]] : tensor<?x?xf32>) -> tensor<?x?xf32>
 
 // -----
 
@@ -819,7 +886,7 @@ func.func @op_matmul_fully_shuffled_loops(%A: tensor<?x?xf32>, %B: tensor<?x?xf3
 #map_bcast_a = affine_map<(d0, d1, d2) -> (d2)>
 #map_bcast_b = affine_map<(d0, d1, d2) -> (d2, d1)>
 #map_bcast_c = affine_map<(d0, d1, d2) -> (d0, d1)>
-func.func @negative_matmul_broadcast_a(%A: tensor<?xf32>, %B: tensor<?x?xf32>,
+func.func @op_matmul_broadcast_a(%A: tensor<?xf32>, %B: tensor<?x?xf32>,
                                         %Out: tensor<?x?xf32>) -> tensor<?x?xf32> {
   %0 = linalg.generic
          {indexing_maps = [#map_bcast_a, #map_bcast_b, #map_bcast_c],
@@ -833,9 +900,13 @@ func.func @negative_matmul_broadcast_a(%A: tensor<?xf32>, %B: tensor<?x?xf32>,
    return %0 : tensor<?x?xf32>
 }
 
-// CHECK-LABEL: negative_matmul_broadcast_a
-// CHECK: linalg.generic
-// CHECK-NOT: linalg.matmul
+// ALL-LABEL: op_matmul_broadcast_a
+
+// NAMED: linalg.generic
+// NAMED-NOT: linalg.matmul
+
+// CATEGORY-NOT: linalg.generic
+// CATEGORY: linalg.contract
 
 // -----
 
@@ -843,7 +914,7 @@ func.func @negative_matmul_broadcast_a(%A: tensor<?xf32>, %B: tensor<?x?xf32>,
 #map_bbcast_a = affine_map<(d0, d1, d2, d3) -> (d1, d3)>
 #map_bbcast_b = affine_map<(d0, d1, d2, d3) -> (d0, d3, d2)>
 #map_bbcast_c = affine_map<(d0, d1, d2, d3) -> (d0, d1, d2)>
-func.func @negative_batch_matmul_broadcast_a(%A: tensor<16x8xf32>, %B: tensor<2x8x16xf32>,
+func.func @op_batch_matmul_broadcast_a(%A: tensor<16x8xf32>, %B: tensor<2x8x16xf32>,
                                               %Out: tensor<2x16x16xf32>) -> tensor<2x16x16xf32> {
   %0 = linalg.generic
            {indexing_maps = [#map_bbcast_a, #map_bbcast_b, #map_bbcast_c],
@@ -857,9 +928,13 @@ func.func @negative_batch_matmul_broadcast_a(%A: tensor<16x8xf32>, %B: tensor<2x
   return %0 : tensor<2x16x16xf32>
 }
 
-// CHECK-LABEL: negative_batch_matmul_broadcast_a
-// CHECK: linalg.generic
-// CHECK-NOT: linalg.batch_matmul
+// ALL-LABEL: op_batch_matmul_broadcast_a
+
+// NAMED: linalg.generic
+// NAMED-NOT: linalg.batch_matmul
+
+// CATEGORY-NOT: linalg.generic
+// CATEGORY: linalg.contract
 
 // -----
 
@@ -867,7 +942,7 @@ func.func @negative_batch_matmul_broadcast_a(%A: tensor<16x8xf32>, %B: tensor<2x
 #map_bbcast2_a = affine_map<(d0, d1, d2, d3) -> (d0, d1, d3)>
 #map_bbcast2_b = affine_map<(d0, d1, d2, d3) -> (d3)>
 #map_bbcast2_c = affine_map<(d0, d1, d2, d3) -> (d0, d1, d2)>
-func.func @negative_batch_matmul_broadcast_b(%A: tensor<2x16x8xf32>, %B: tensor<8xf32>,
+func.func @op_batch_matmul_broadcast_b(%A: tensor<2x16x8xf32>, %B: tensor<8xf32>,
                                               %Out: tensor<2x16x16xf32>) -> tensor<2x16x16xf32> {
   %0 = linalg.generic
            {indexing_maps = [#map_bbcast2_a, #map_bbcast2_b, #map_bbcast2_c],
@@ -881,6 +956,10 @@ func.func @negative_batch_matmul_broadcast_b(%A: tensor<2x16x8xf32>, %B: tensor<
   return %0 : tensor<2x16x16xf32>
 }
 
-// CHECK-LABEL: negative_batch_matmul_broadcast_b
-// CHECK: linalg.generic
-// CHECK-NOT: linalg.batch_matmul
+// ALL-LABEL: op_batch_matmul_broadcast_b
+
+// NAMED: linalg.generic
+// NAMED-NOT: linalg.batch_matmul
+
+// CATEGORY-NOT: linalg.generic
+// CATEGORY: linalg.contract
