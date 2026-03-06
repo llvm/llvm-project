@@ -269,6 +269,10 @@ def N1Wr_IM64 : SchedWriteRes<[N1UnitM]> { let Latency = 4;
                                            let ReleaseAtCycles = [3]; }
 def N1Rd_IMA  : SchedReadAdvance<1, [N1Wr_IM32, N1Wr_IM64]>;
 
+def N1Wr_MH   : SchedWriteRes<[N1UnitM]> { let Latency = 5;
+                                           let ReleaseAtCycles = [4]; }
+def N1Rd_MH : SchedReadAdvance<2, [N1Wr_MH]>;
+
 def N1Wr_FMA : SchedWriteRes<[N1UnitV]> { let Latency = 4; }
 def N1Rd_FMA : SchedReadAdvance<2, [WriteFMul, N1Wr_FMA]>;
 
@@ -298,11 +302,6 @@ def N1Rd_VFMAL : SchedReadAdvance<3, [N1Wr_VFMAL]>;
 
 def N1Wr_CRC : SchedWriteRes<[N1UnitM]> { let Latency = 2; }
 def N1Rd_CRC : SchedReadAdvance<1, [N1Wr_CRC]>;
-
-def N1Wr_MH   : SchedWriteRes<[N1UnitM]> { let Latency = 5;
-                                           let ReleaseAtCycles = [4]; }
-def N1Rd_MH : SchedReadAdvance<2, [N1Wr_MH]>;
-
 
 // Miscellaneous Instructions
 // -----------------------------------------------------------------------------
