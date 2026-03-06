@@ -512,6 +512,16 @@ struct VPlanTransforms {
                                          VPCostContext &CostCtx);
 };
 
+/// A helper function that returns true if the given type is irregular. The
+/// type is irregular if its allocated size doesn't equal the store size of an
+/// element of the corresponding vector type.
+inline bool hasIrregularType(Type *Ty, const DataLayout &DL) {
+  // Determine if an array of N elements of type Ty is "bitcast compatible"
+  // with a <N x Ty> vector.
+  // This is only true if there is no padding between the array elements.
+  return DL.getTypeAllocSizeInBits(Ty) != DL.getTypeSizeInBits(Ty);
+}
+
 } // namespace llvm
 
 #endif // LLVM_TRANSFORMS_VECTORIZE_VPLANTRANSFORMS_H

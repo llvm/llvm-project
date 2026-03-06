@@ -6285,34 +6285,72 @@ void VPlanTransforms::makeMemOpWideningDecisions(VPlan &Plan, VFRange &Range,
     }
   }
 
-  auto *MiddleVPBB = Plan.getMiddleBlock();
-  VPBuilder FinalRedStoresBuilder(MiddleVPBB, MiddleVPBB->getFirstNonPhi());
+  // Few helpers to process different kinds of memory operations.
 
-  for (VPInstruction *VPI : MemOps) {
-    Instruction *Instr = cast<Instruction>(VPI->getUnderlyingValue());
-    RecipeBuilder.getVPBuilder().setInsertPoint(VPI);
+  // To be used as argument to `VPlanTransforms::runPass` which explicitly
+  // specified pass name, hence `VPlan &` parameter.
+  auto ProcessSubset = [&](VPlan &, auto ProcessVPInst) {
+    SmallVector<VPInstruction *> RemainingMemOps;
+    for (VPInstruction *VPI : MemOps) {
+      RecipeBuilder.getVPBuilder().setInsertPoint(VPI);
 
-    auto ReplaceWith = [&](VPRecipeBase *New) {
-      RecipeBuilder.setRecipe(Instr, New);
-      RecipeBuilder.getVPBuilder().insert(New);
-      if (VPI->getOpcode() == Instruction::Load)
-        VPI->replaceAllUsesWith(New->getVPSingleValue());
-      VPI->eraseFromParent();
-    };
-
-    if (RecipeBuilder.replaceWithFinalIfReductionStore(FinalRedStoresBuilder,
-                                                       VPI))
-      continue;
-
-    if (VPHistogramRecipe *Histogram = RecipeBuilder.widenIfHistogram(VPI)) {
-      ReplaceWith(Histogram);
-      continue;
+      if (!ProcessVPInst(VPI))
+        RemainingMemOps.push_back(VPI);
     }
 
-    VPRecipeBase *Recipe = RecipeBuilder.tryToWidenMemory(VPI, Range);
-    if (!Recipe)
-      Recipe = RecipeBuilder.handleReplication(cast<VPInstruction>(VPI), Range);
+    MemOps.clear();
+    std::swap(MemOps, RemainingMemOps);
+  };
 
-    ReplaceWith(Recipe);
-  }
+  auto ReplaceWith = [&](VPInstruction *VPI, VPRecipeBase *New) {
+    Instruction *Instr = cast<Instruction>(VPI->getUnderlyingValue());
+    RecipeBuilder.setRecipe(Instr, New);
+    RecipeBuilder.getVPBuilder().insert(New);
+    if (VPI->getOpcode() == Instruction::Load)
+      VPI->replaceAllUsesWith(New->getVPSingleValue());
+    VPI->eraseFromParent();
+
+    return true;
+  };
+
+  auto Scalarize = [&](VPInstruction *VPI) {
+    return ReplaceWith(VPI, RecipeBuilder.handleReplication(VPI, Range));
+  };
+
+  auto *MiddleVPBB = Plan.getMiddleBlock();
+  VPBuilder FinalRedStoresBuilder(MiddleVPBB, MiddleVPBB->getFirstNonPhi());
+  VPlanTransforms::runPass(
+      "lowerMemoryIdioms", ProcessSubset, Plan, [&](VPInstruction *VPI) {
+        if (RecipeBuilder.replaceWithFinalIfReductionStore(
+                FinalRedStoresBuilder, VPI))
+          return true;
+
+        if (VPHistogramRecipe *Histogram = RecipeBuilder.widenIfHistogram(VPI))
+          return ReplaceWith(VPI, Histogram);
+
+        return false;
+      });
+
+  // If the instruction's allocated size doesn't equal it's type size, it
+  // requires padding and will be scalarized.
+  VPlanTransforms::runPass(
+      "scalarizeMemOpsWithIrregularTypes", ProcessSubset, Plan,
+      [&](VPInstruction *VPI) {
+        Instruction *I = VPI->getUnderlyingInstr();
+        if (hasIrregularType(getLoadStoreType(I), I->getDataLayout()))
+          return Scalarize(VPI);
+
+        return false;
+      });
+
+  VPlanTransforms::runPass("delegateMemOpWideningToLegacyCM", ProcessSubset,
+                           Plan, [&](VPInstruction *VPI) {
+                             VPRecipeBase *Recipe =
+                                 RecipeBuilder.tryToWidenMemory(VPI, Range);
+                             if (!Recipe)
+                               Recipe = RecipeBuilder.handleReplication(
+                                   cast<VPInstruction>(VPI), Range);
+
+                             return ReplaceWith(VPI, Recipe);
+                           });
 }
