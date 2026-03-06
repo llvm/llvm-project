@@ -783,12 +783,12 @@ struct Allocator {
     AsanStats &thread_stats = GetCurrentThreadStats();
     thread_stats.reallocs++;
     thread_stats.realloced += new_size;
-    
+
     // Preserve the original allocation's alignment
     uptr orig_align = ComputeUserAlignment(m->user_requested_alignment_log);
     if (orig_align < 8)
       orig_align = 8;
-    void *new_ptr = Allocate(new_size, orig_align, stack, FROM_MALLOC, true);
+    void* new_ptr = Allocate(new_size, orig_align, stack, FROM_MALLOC, true);
     if (new_ptr) {
       u8 chunk_state = atomic_load(&m->chunk_state, memory_order_acquire);
       if (chunk_state != CHUNK_ALLOCATED)
@@ -1066,7 +1066,8 @@ void* asan_vec_calloc(uptr nmemb, uptr size, BufferedStackTrace* stack) {
 
 void* asan_vec_realloc(void* p, uptr size, BufferedStackTrace* stack) {
   if (!p)
-    return SetErrnoOnNull(instance.Allocate(size, 16, stack, FROM_MALLOC, true));
+    return SetErrnoOnNull(
+        instance.Allocate(size, 16, stack, FROM_MALLOC, true));
   return asan_realloc(p, size, stack);
 }
 #endif

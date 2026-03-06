@@ -54,12 +54,12 @@ INTERCEPTOR(void, free, void *ptr) {
 
 #if SANITIZER_INTERCEPT_CFREE
 INTERCEPTOR(void*, __linux_vec_malloc, uptr size) {
-   if (DlsymAlloc::Use())
-     return DlsymAlloc::Allocate(size, 16);
-   AsanInitFromRtl();
-   GET_STACK_TRACE_MALLOC;
-   return asan_vec_malloc(size, &stack);
- }
+  if (DlsymAlloc::Use())
+    return DlsymAlloc::Allocate(size, 16);
+  AsanInitFromRtl();
+  GET_STACK_TRACE_MALLOC;
+  return asan_vec_malloc(size, &stack);
+}
 
 INTERCEPTOR(void*, __linux_vec_calloc, uptr nmemb, uptr size) {
   if (DlsymAlloc::Use())
@@ -114,33 +114,33 @@ INTERCEPTOR(void*, malloc, uptr size) {
   if (DlsymAlloc::Use())
     return DlsymAlloc::Allocate(size, SANITIZER_AIX ? 16 : kWordSize);
   GET_STACK_TRACE_MALLOC;
-#if SANITIZER_AIX
+#  if SANITIZER_AIX
   return asan_vec_malloc(size, &stack);
-#else
+#  else
   return asan_malloc(size, &stack);
-#endif
+#  endif
 }
 
 INTERCEPTOR(void*, calloc, uptr nmemb, uptr size) {
   if (DlsymAlloc::Use())
     return DlsymAlloc::Callocate(nmemb, size, SANITIZER_AIX ? 16 : kWordSize);
   GET_STACK_TRACE_MALLOC;
-#if SANITIZER_AIX
+# if SANITIZER_AIX
   return asan_vec_calloc(nmemb, size, &stack);
-#else
+#  else
   return asan_calloc(nmemb, size, &stack);
-#endif
+#  endif
 }
 
 INTERCEPTOR(void*, realloc, void *ptr, uptr size) {
   if (DlsymAlloc::Use() || DlsymAlloc::PointerIsMine(ptr))
     return DlsymAlloc::Realloc(ptr, size, SANITIZER_AIX ? 16 : kWordSize);
   GET_STACK_TRACE_MALLOC;
-#if SANITIZER_AIX
+#  if SANITIZER_AIX
   return asan_vec_realloc(ptr, size, &stack);
-#else
+#  else
   return asan_realloc(ptr, size, &stack);
-#endif
+#  endif
 }
 
 #if SANITIZER_INTERCEPT_REALLOCARRAY
