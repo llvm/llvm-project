@@ -158,9 +158,6 @@ struct ModuleDeps {
   /// Whether this is a "system" module.
   bool IsSystem;
 
-  /// Whether current working directory is ignored.
-  bool IgnoreCWD;
-
   /// Whether this module is fully composed of file & module inputs from
   /// locations likely to stay the same across the active development and build
   /// cycle. For example, when all those input paths only resolve in Sysroot.
@@ -168,6 +165,9 @@ struct ModuleDeps {
   /// External paths, as opposed to virtual file paths, are always used
   /// for computing this value.
   bool IsInStableDirectories;
+
+  /// Whether current working directory is ignored.
+  bool IgnoreCWD;
 
   /// The path to the modulemap file which defines this module.
   ///
