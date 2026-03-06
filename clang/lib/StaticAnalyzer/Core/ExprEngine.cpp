@@ -2835,12 +2835,11 @@ assumeCondition(const Stmt *Condition, ExplodedNode *N) {
 }
 
 void ExprEngine::processBranch(
-    const Stmt *Condition, NodeBuilderContext &BldCtx, ExplodedNode *Pred,
-    ExplodedNodeSet &Dst, const CFGBlock *DstT, const CFGBlock *DstF,
+    const Stmt *Condition, ExplodedNode *Pred, ExplodedNodeSet &Dst,
+    const CFGBlock *DstT, const CFGBlock *DstF,
     std::optional<unsigned> IterationsCompletedInLoop) {
   assert((!Condition || !isa<CXXBindTemporaryExpr>(Condition)) &&
          "CXXBindTemporaryExprs are handled by processBindTemporary.");
-  currBldrCtx = &BldCtx;
 
   // Check for NULL conditions; e.g. "for(;;)"
   if (!Condition) {
@@ -2962,11 +2961,11 @@ void ExprEngine::processBranch(
 REGISTER_TRAIT_WITH_PROGRAMSTATE(InitializedGlobalsSet,
                                  llvm::ImmutableSet<const VarDecl *>)
 
-void ExprEngine::processStaticInitializer(
-    const DeclStmt *DS, NodeBuilderContext &BuilderCtx, ExplodedNode *Pred,
-    ExplodedNodeSet &Dst, const CFGBlock *DstT, const CFGBlock *DstF) {
-  currBldrCtx = &BuilderCtx;
-
+void ExprEngine::processStaticInitializer(const DeclStmt *DS,
+                                          ExplodedNode *Pred,
+                                          ExplodedNodeSet &Dst,
+                                          const CFGBlock *DstT,
+                                          const CFGBlock *DstF) {
   const auto *VD = cast<VarDecl>(DS->getSingleDecl());
   ProgramStateRef state = Pred->getState();
   bool initHasRun = state->contains<InitializedGlobalsSet>(VD);
@@ -3095,9 +3094,8 @@ void ExprEngine::processEndOfFunction(NodeBuilderContext& BC,
 
 /// ProcessSwitch - Called by CoreEngine.  Used to generate successor
 ///  nodes by processing the 'effects' of a switch statement.
-void ExprEngine::processSwitch(NodeBuilderContext &BC, const SwitchStmt *Switch,
-                               ExplodedNode *Pred, ExplodedNodeSet &Dst) {
-  currBldrCtx = &BC;
+void ExprEngine::processSwitch(const SwitchStmt *Switch, ExplodedNode *Pred,
+                               ExplodedNodeSet &Dst) {
   const Expr *Condition = Switch->getCond();
 
   SwitchNodeBuilder Builder(Dst, *currBldrCtx);

@@ -452,9 +452,9 @@ void CoreEngine::HandleBlockExit(const CFGBlock * B, ExplodedNode *Pred) {
         return;
 
       case Stmt::SwitchStmtClass: {
-        NodeBuilderContext Ctx(*this, B, Pred);
+        ExprEng.setCurrLocationContextAndBlock(Pred->getLocationContext(), B);
         ExplodedNodeSet Dst;
-        ExprEng.processSwitch(Ctx, cast<SwitchStmt>(Term), Pred, Dst);
+        ExprEng.processSwitch(cast<SwitchStmt>(Term), Pred, Dst);
         // Enqueue the new frontier onto the worklist.
         enqueue(Dst);
         return;
@@ -492,9 +492,9 @@ void CoreEngine::HandleCallEnter(const CallEnter &CE, ExplodedNode *Pred) {
 void CoreEngine::HandleBranch(const Stmt *Cond, const Stmt *Term,
                                 const CFGBlock * B, ExplodedNode *Pred) {
   assert(B->succ_size() == 2);
-  NodeBuilderContext Ctx(*this, B, Pred);
+  ExprEng.setCurrLocationContextAndBlock(Pred->getLocationContext(), B);
   ExplodedNodeSet Dst;
-  ExprEng.processBranch(Cond, Ctx, Pred, Dst, *(B->succ_begin()),
+  ExprEng.processBranch(Cond, Pred, Dst, *(B->succ_begin()),
                         *(B->succ_begin() + 1),
                         getCompletedIterationCount(B, Pred));
   // Enqueue the new frontier onto the worklist.
@@ -516,10 +516,10 @@ void CoreEngine::HandleCleanupTemporaryBranch(const CXXBindTemporaryExpr *BTE,
 void CoreEngine::HandleStaticInit(const DeclStmt *DS, const CFGBlock *B,
                                   ExplodedNode *Pred) {
   assert(B->succ_size() == 2);
-  NodeBuilderContext Ctx(*this, B, Pred);
+  ExprEng.setCurrLocationContextAndBlock(Pred->getLocationContext(), B);
   ExplodedNodeSet Dst;
-  ExprEng.processStaticInitializer(DS, Ctx, Pred, Dst,
-                                  *(B->succ_begin()), *(B->succ_begin()+1));
+  ExprEng.processStaticInitializer(DS, Pred, Dst, *(B->succ_begin()),
+                                   *(B->succ_begin() + 1));
   // Enqueue the new frontier onto the worklist.
   enqueue(Dst);
 }

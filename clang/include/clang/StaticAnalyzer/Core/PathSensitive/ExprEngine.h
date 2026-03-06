@@ -378,9 +378,9 @@ public:
   /// processing the 'effects' of a branch condition. If the branch condition
   /// is a loop condition, IterationsCompletedInLoop is the number of completed
   /// iterations (otherwise it's std::nullopt).
-  void processBranch(const Stmt *Condition, NodeBuilderContext &BuilderCtx,
-                     ExplodedNode *Pred, ExplodedNodeSet &Dst,
-                     const CFGBlock *DstT, const CFGBlock *DstF,
+  void processBranch(const Stmt *Condition, ExplodedNode *Pred,
+                     ExplodedNodeSet &Dst, const CFGBlock *DstT,
+                     const CFGBlock *DstF,
                      std::optional<unsigned> IterationsCompletedInLoop);
 
   /// Called by CoreEngine.
@@ -394,11 +394,8 @@ public:
 
   /// Called by CoreEngine.  Used to processing branching behavior
   /// at static initializers.
-  void processStaticInitializer(const DeclStmt *DS,
-                                NodeBuilderContext& BuilderCtx,
-                                ExplodedNode *Pred,
-                                ExplodedNodeSet &Dst,
-                                const CFGBlock *DstT,
+  void processStaticInitializer(const DeclStmt *DS, ExplodedNode *Pred,
+                                ExplodedNodeSet &Dst, const CFGBlock *DstT,
                                 const CFGBlock *DstF);
 
   /// processIndirectGoto - Called by CoreEngine.  Used to generate successor
@@ -408,8 +405,8 @@ public:
 
   /// ProcessSwitch - Called by CoreEngine.  Used to generate successor
   ///  nodes by processing the 'effects' of a switch statement.
-  void processSwitch(NodeBuilderContext &BC, const SwitchStmt *Switch,
-                     ExplodedNode *Pred, ExplodedNodeSet &Dst);
+  void processSwitch(const SwitchStmt *Switch, ExplodedNode *Pred,
+                     ExplodedNodeSet &Dst);
 
   /// Called by CoreEngine.  Used to notify checkers that processing a
   /// function has begun. Called for both inlined and top-level functions.
