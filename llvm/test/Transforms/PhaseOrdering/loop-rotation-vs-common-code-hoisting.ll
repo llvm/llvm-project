@@ -59,7 +59,7 @@ define void @_Z4loopi(i32 %width) {
 ; HOIST-NEXT:    br label [[RETURN]]
 ; HOIST:       for.body:
 ; HOIST-NEXT:    tail call void @f1()
-; HOIST-NEXT:    [[INC]] = add nuw i32 [[I_0]], 1
+; HOIST-NEXT:    [[INC]] = add nuw nsw i32 [[I_0]], 1
 ; HOIST-NEXT:    br label [[FOR_COND]]
 ; HOIST:       return:
 ; HOIST-NEXT:    ret void
