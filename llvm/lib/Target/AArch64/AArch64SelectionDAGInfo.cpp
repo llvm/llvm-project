@@ -12,6 +12,7 @@
 
 #include "AArch64SelectionDAGInfo.h"
 #include "AArch64MachineFunctionInfo.h"
+#include "llvm/ADT/ArrayRef.h"
 
 #define GET_SDNODE_DESC
 #include "AArch64GenSDNodeInfo.inc"
@@ -260,6 +261,44 @@ SDValue AArch64SelectionDAGInfo::EmitTargetCodeForMemset(
   return SDValue();
 }
 
+// Helper function to generate overlapping loads/stores for memmove.
+// Takes a list of (EVT, offset) pairs for loads/stores and generates the DAG.
+static SDValue EmitOverlappingMemmove(
+    SelectionDAG &DAG, const SDLoc &dl, SDValue Chain, SDValue Dst, SDValue Src,
+    ArrayRef<std::pair<EVT, uint64_t>> LoadOps, Align Alignment,
+    MachineMemOperand::Flags MMOFlags, MachinePointerInfo DstPtrInfo,
+    MachinePointerInfo SrcPtrInfo) {
+  SmallVector<SDValue, 8> Loads;
+  SmallVector<SDValue, 8> LoadChains;
+
+  // Generate all loads
+  for (const auto &[VT, Offset] : LoadOps) {
+    SDValue Load =
+        DAG.getLoad(VT, dl, Chain,
+                    DAG.getObjectPtrOffset(dl, Src, TypeSize::getFixed(Offset)),
+                    SrcPtrInfo.getWithOffset(Offset), Alignment, MMOFlags);
+    Loads.push_back(Load);
+    LoadChains.push_back(Load.getValue(1));
+  }
+
+  // Combine all load chains
+  Chain = DAG.getNode(ISD::TokenFactor, dl, MVT::Other, LoadChains);
+
+  // Generate all stores
+  SmallVector<SDValue, 8> Stores;
+  for (size_t i = 0; i < LoadOps.size(); ++i) {
+    uint64_t Offset = LoadOps[i].second;
+    SDValue Store = DAG.getStore(
+        Chain, dl, Loads[i],
+        DAG.getObjectPtrOffset(dl, Dst, TypeSize::getFixed(Offset)),
+        DstPtrInfo.getWithOffset(Offset), Alignment, MMOFlags);
+    Stores.push_back(Store);
+  }
+
+  // Combine all store chains
+  return DAG.getNode(ISD::TokenFactor, dl, MVT::Other, Stores);
+}
+
 SDValue AArch64SelectionDAGInfo::EmitTargetCodeForMemmove(
     SelectionDAG &DAG, const SDLoc &dl, SDValue Chain, SDValue Dst, SDValue Src,
     SDValue Size, Align Alignment, bool isVolatile,
@@ -276,6 +315,119 @@ SDValue AArch64SelectionDAGInfo::EmitTargetCodeForMemmove(
   if (LowerToSMERoutines && !Attrs.hasNonStreamingInterfaceAndBody())
     return EmitStreamingCompatibleMemLibCall(DAG, dl, Chain, Dst, Src, Size,
                                              RTLIB::MEMMOVE);
+
+  // Handle small memmove cases with overlapping loads/stores for better codegen
+  // For non-power-of-two sizes, use overlapping operations instead of
+  // mixed-size operations (e.g., for 7 bytes: two i32 loads/stores with overlap
+  // instead of i32 + i16 + i8). This optimization provides significant
+  // improvement for most sizes, though some specific sizes (e.g., 33, 49, 65)
+  // may show less improvement than others in their range.
+  if (ConstantSDNode *C = dyn_cast<ConstantSDNode>(Size)) {
+    uint64_t SizeVal = C->getZExtValue();
+    const TargetLowering &TLI = DAG.getTargetLoweringInfo();
+
+    auto AlignmentIsAcceptable = [&](EVT VT, Align AlignCheck) {
+      if (Alignment >= AlignCheck)
+        return true;
+      unsigned Fast;
+      return TLI.allowsMisalignedMemoryAccesses(
+                 VT, DstPtrInfo.getAddrSpace(), Align(1),
+                 MachineMemOperand::MONone, &Fast) &&
+             Fast;
+    };
+
+    MachineMemOperand::Flags MMOFlags =
+        isVolatile ? MachineMemOperand::MOVolatile : MachineMemOperand::MONone;
+
+    // Only handle non-power-of-two sizes > 4 and <= 65
+    // Check if size is non-power-of-two: (Size & (Size - 1)) != 0
+    if (SizeVal > 4 && SizeVal <= 65 && (SizeVal & (SizeVal - 1)) != 0) {
+      SmallVector<std::pair<EVT, uint64_t>, 4> LoadOps;
+
+      // For sizes 5-7 bytes: use two overlapping i32 operations
+      if (SizeVal >= 5 && SizeVal <= 7) {
+        if (AlignmentIsAcceptable(MVT::i32, Align(1))) {
+          LoadOps.push_back({MVT::i32, 0});
+          LoadOps.push_back({MVT::i32, SizeVal - 4});
+          return EmitOverlappingMemmove(DAG, dl, Chain, Dst, Src, LoadOps,
+                                        Alignment, MMOFlags, DstPtrInfo,
+                                        SrcPtrInfo);
+        }
+      }
+      // For sizes 9-15 bytes: use i64 + overlapping i64
+      else if (SizeVal >= 9 && SizeVal <= 15) {
+        if (AlignmentIsAcceptable(MVT::i64, Align(1))) {
+          LoadOps.push_back({MVT::i64, 0});
+          LoadOps.push_back({MVT::i64, SizeVal - 8});
+          return EmitOverlappingMemmove(DAG, dl, Chain, Dst, Src, LoadOps,
+                                        Alignment, MMOFlags, DstPtrInfo,
+                                        SrcPtrInfo);
+        }
+      }
+      // For sizes 17-23 bytes: use i64 + i64 + overlapping i64
+      else if (SizeVal >= 17 && SizeVal <= 23) {
+        if (AlignmentIsAcceptable(MVT::i64, Align(1))) {
+          LoadOps.push_back({MVT::i64, 0});
+          LoadOps.push_back({MVT::i64, 8});
+          LoadOps.push_back({MVT::i64, SizeVal - 8});
+          return EmitOverlappingMemmove(DAG, dl, Chain, Dst, Src, LoadOps,
+                                        Alignment, MMOFlags, DstPtrInfo,
+                                        SrcPtrInfo);
+        }
+      }
+      // For sizes 25-31 bytes: use v16i8 (vector) + overlapping i64
+      else if (SizeVal >= 25 && SizeVal <= 31) {
+        if (AlignmentIsAcceptable(MVT::v16i8, Align(1)) &&
+            AlignmentIsAcceptable(MVT::i64, Align(1))) {
+          LoadOps.push_back({MVT::v16i8, 0});
+          LoadOps.push_back({MVT::i64, SizeVal - 8});
+          return EmitOverlappingMemmove(DAG, dl, Chain, Dst, Src, LoadOps,
+                                        Alignment, MMOFlags, DstPtrInfo,
+                                        SrcPtrInfo);
+        }
+      }
+      // For sizes 33-47 bytes: use 2 x v16i8 (vectors) + overlapping i64
+      else if (SizeVal >= 33 && SizeVal <= 47) {
+        if (AlignmentIsAcceptable(MVT::v16i8, Align(1)) &&
+            AlignmentIsAcceptable(MVT::i64, Align(1))) {
+          LoadOps.push_back({MVT::v16i8, 0});
+          LoadOps.push_back({MVT::v16i8, 16});
+          LoadOps.push_back({MVT::i64, SizeVal - 8});
+          return EmitOverlappingMemmove(DAG, dl, Chain, Dst, Src, LoadOps,
+                                        Alignment, MMOFlags, DstPtrInfo,
+                                        SrcPtrInfo);
+        }
+      }
+      // For sizes 49-63 bytes: use 3 x v16i8 (vectors) + overlapping i64
+      else if (SizeVal >= 49 && SizeVal <= 63) {
+        if (AlignmentIsAcceptable(MVT::v16i8, Align(1)) &&
+            AlignmentIsAcceptable(MVT::i64, Align(1))) {
+          LoadOps.push_back({MVT::v16i8, 0});
+          LoadOps.push_back({MVT::v16i8, 16});
+          LoadOps.push_back({MVT::v16i8, 32});
+          LoadOps.push_back({MVT::i64, SizeVal - 8});
+          return EmitOverlappingMemmove(DAG, dl, Chain, Dst, Src, LoadOps,
+                                        Alignment, MMOFlags, DstPtrInfo,
+                                        SrcPtrInfo);
+        }
+      }
+      // For size 65 bytes: use 4 x v16i8 (vectors) + overlapping i64
+      else if (SizeVal == 65) {
+        if (AlignmentIsAcceptable(MVT::v16i8, Align(1)) &&
+            AlignmentIsAcceptable(MVT::i64, Align(1))) {
+          LoadOps.push_back({MVT::v16i8, 0});
+          LoadOps.push_back({MVT::v16i8, 16});
+          LoadOps.push_back({MVT::v16i8, 32});
+          LoadOps.push_back({MVT::v16i8, 48});
+          LoadOps.push_back({MVT::i64, SizeVal - 8});
+          return EmitOverlappingMemmove(DAG, dl, Chain, Dst, Src, LoadOps,
+                                        Alignment, MMOFlags, DstPtrInfo,
+                                        SrcPtrInfo);
+        }
+      }
+    }
+  }
+
   return SDValue();
 }
 
