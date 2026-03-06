@@ -357,7 +357,7 @@ void REPL::IOHandlerInputComplete(IOHandler &io_handler, std::string &code) {
       if (!persistent_state)
       {
         error_stream_sp->Lock().PutCString("error getting the expression "
-                             "context for the REPL.\n");
+                                           "context for the REPL.\n");
         io_handler.SetIsDone(true);
         return;
       }
