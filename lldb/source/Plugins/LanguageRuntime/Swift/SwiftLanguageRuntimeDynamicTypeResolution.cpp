@@ -1642,20 +1642,51 @@ SwiftLanguageRuntime::ProjectEnum(ValueObject &valobj) {
       SwiftLanguageRuntime::GetManglingFlavor(enum_type.GetMangledTypeName());
 
   auto project_indirect_enum =
-      [&](uint64_t offset, std::string name) -> llvm::Expected<ValueObjectSP> {
+      [&](const swift::reflection::FieldInfo &field_info)
+      -> llvm::Expected<ValueObjectSP> {
+    // Get the pointer to the box.
     lldb::addr_t pointer = ::MaskMaybeBridgedPointer(
         GetProcess(), valobj.GetPointerValue().address);
-    lldb::addr_t payload = pointer + offset;
+
+    // Skip heap object header to get to payload.
+    unsigned pointer_size = GetProcess().GetAddressByteSize();
+    uint64_t heap_header_size = 2 * pointer_size;
+    lldb::addr_t payload_addr = pointer + heap_header_size;
+
+    // Get payload type from the preserved indirect payload TypeRef.
+    const swift::reflection::TypeRef *payload_tr = field_info.IndirectPayloadTR;
+    if (!payload_tr)
+      return llvm::createStringError("no payload type for indirect case");
+
+    CompilerType payload_type = GetTypeFromTypeRef(ts, payload_tr, flavor);
+    if (!payload_type)
+      return llvm::createStringError("could not get payload type");
+
+    return ValueObjectMemory::Create(exe_ctx.GetBestExecutionContextScope(),
+                                     "$indirect." + field_info.Name,
+                                     payload_addr, payload_type);
+  };
+
+  // Type infos of single case enums simply are the payload's type's type info,
+  // in the case of an indirect enum this is just Builtin.NativeObject, so we
+  // still have to read metadata to figure out the real type.
+  // TODO: this won't work for embedded swift, perhaps we can change
+  // TypeLowering.cpp to store the payload type in this case as well.
+  auto project_single_case_indirect_enum =
+      [&]() -> llvm::Expected<ValueObjectSP> {
+    lldb::addr_t pointer = ::MaskMaybeBridgedPointer(
+        GetProcess(), valobj.GetPointerValue().address);
 
     ThreadSafeReflectionContext reflection_ctx = GetReflectionContext();
     // The indirect enum field should point to a closure context.
     LLDBTypeInfoProvider tip(*this, ts);
     auto ti_or_err = reflection_ctx->GetTypeInfoFromInstance(
-        payload, &tip, ts.GetDescriptorFinder());
+        pointer, &tip, ts.GetDescriptorFinder());
     if (!ti_or_err)
       return ti_or_err.takeError();
 
     CompilerType payload_type;
+    lldb::addr_t payload = pointer;
     auto *ti = &*ti_or_err;
     if (auto *rti = llvm::dyn_cast<swift::reflection::RecordTypeInfo>(ti)) {
       switch (rti->getRecordKind()) {
@@ -1685,14 +1716,14 @@ SwiftLanguageRuntime::ProjectEnum(ValueObject &valobj) {
     }
 
     return ValueObjectMemory::Create(exe_ctx.GetBestExecutionContextScope(),
-                                     "$indirect." + name, payload,
+                                     "$indirect.$single_case", payload,
                                      payload_type);
   };
 
   // Is this single-case indirect enum? These get lowered into their payload
   // type.
   if (ti->getKind() != swift::reflection::TypeInfoKind::Enum)
-    return project_indirect_enum(0, "$single_case");
+    return project_single_case_indirect_enum();
 
   // Prepare to project the enum to get the active case.
   MemoryReaderLocalBufferHolder holder;
@@ -1731,14 +1762,9 @@ SwiftLanguageRuntime::ProjectEnum(ValueObject &valobj) {
   if (!field_info.TR)
     return ValueObjectSP();
 
-  bool is_indirect_enum =
-      !field_info.Offset && field_info.TR &&
-      llvm::isa<swift::reflection::BuiltinTypeRef>(field_info.TR) &&
-      llvm::isa<swift::reflection::ReferenceTypeInfo>(field_info.TI) &&
-      llvm::cast<swift::reflection::ReferenceTypeInfo>(field_info.TI)
-              .getReferenceKind() == swift::reflection::ReferenceKind::Strong;
+  bool is_indirect_enum = field_info.IndirectPayloadTR != nullptr;
   if (is_indirect_enum)
-    return project_indirect_enum(field_info.Offset, field_info.Name);
+    return project_indirect_enum(field_info);
 
   CompilerType projected_type = GetTypeFromTypeRef(ts, field_info.TR, flavor);
   if (field_info.Offset != 0) {
