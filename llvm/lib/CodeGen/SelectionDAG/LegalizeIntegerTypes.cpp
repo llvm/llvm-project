@@ -2076,6 +2076,9 @@ bool DAGTypeLegalizer::PromoteIntegerOperand(SDNode *N, unsigned OpNo) {
   case ISD::FP16_TO_FP:
   case ISD::VP_UINT_TO_FP:
   case ISD::UINT_TO_FP:   Res = PromoteIntOp_UINT_TO_FP(N); break;
+  case ISD::CONVERT_FROM_ARBITRARY_FP:
+    Res = PromoteIntOp_CONVERT_FROM_ARBITRARY_FP(N);
+    break;
   case ISD::STRICT_FP16_TO_FP:
   case ISD::STRICT_UINT_TO_FP:  Res = PromoteIntOp_STRICT_UINT_TO_FP(N); break;
   case ISD::ZERO_EXTEND:  Res = PromoteIntOp_ZERO_EXTEND(N); break;
@@ -2683,6 +2686,12 @@ SDValue DAGTypeLegalizer::PromoteIntOp_UINT_TO_FP(SDNode *N) {
                    0);
   return SDValue(DAG.UpdateNodeOperands(N,
                                 ZExtPromotedInteger(N->getOperand(0))), 0);
+}
+
+SDValue DAGTypeLegalizer::PromoteIntOp_CONVERT_FROM_ARBITRARY_FP(SDNode *N) {
+  return SDValue(DAG.UpdateNodeOperands(N, GetPromotedInteger(N->getOperand(0)),
+                                        N->getOperand(1)),
+                 0);
 }
 
 SDValue DAGTypeLegalizer::PromoteIntOp_STRICT_UINT_TO_FP(SDNode *N) {

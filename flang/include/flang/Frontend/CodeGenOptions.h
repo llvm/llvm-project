@@ -16,6 +16,7 @@
 #define FORTRAN_FRONTEND_CODEGENOPTIONS_H
 
 #include "flang/Optimizer/OpenMP/Utils.h"
+#include "flang/Support/FPMaxminBehavior.h"
 #include "llvm/Frontend/Debug/Options.h"
 #include "llvm/Frontend/Driver/CodeGenOptions.h"
 #include "llvm/Support/CodeGen.h"

@@ -2314,17 +2314,19 @@ Instruction *InstCombinerImpl::foldBinopWithPhiOperands(BinaryOperator &BO) {
 }
 
 Instruction *InstCombinerImpl::foldBinOpIntoSelectOrPhi(BinaryOperator &I) {
-  bool IsOtherParamConst = isa<Constant>(I.getOperand(1));
+  auto TryFoldOperand = [&](unsigned OpIdx,
+                            bool IsOtherParamConst) -> Instruction * {
+    if (auto *Sel = dyn_cast<SelectInst>(I.getOperand(OpIdx)))
+      return FoldOpIntoSelect(I, Sel, false, !IsOtherParamConst);
+    if (auto *PN = dyn_cast<PHINode>(I.getOperand(OpIdx)))
+      return foldOpIntoPhi(I, PN);
+    return nullptr;
+  };
 
-  if (auto *Sel = dyn_cast<SelectInst>(I.getOperand(0))) {
-    if (Instruction *NewSel =
-            FoldOpIntoSelect(I, Sel, false, !IsOtherParamConst))
-      return NewSel;
-  } else if (auto *PN = dyn_cast<PHINode>(I.getOperand(0))) {
-    if (Instruction *NewPhi = foldOpIntoPhi(I, PN))
-      return NewPhi;
-  }
-  return nullptr;
+  if (Instruction *NewI =
+          TryFoldOperand(/*OpIdx=*/0, isa<Constant>(I.getOperand(1))))
+    return NewI;
+  return TryFoldOperand(/*OpIdx=*/1, isa<Constant>(I.getOperand(0)));
 }
 
 static bool shouldMergeGEPs(GEPOperator &GEP, GEPOperator &Src) {
@@ -3429,7 +3431,8 @@ Instruction *InstCombinerImpl::visitGetElementPtrInst(GetElementPtrInst &GEP) {
       !FirstIdx->getType()->isVectorTy()) {
     gep_type_iterator GTI = gep_type_begin(GEP);
     ++GTI;
-    if (!GTI.isStruct())
+    if (!GTI.isStruct() && GTI.getSequentialElementStride(DL) ==
+                               DL.getTypeAllocSize(GTI.getIndexedType()))
       return replaceInstUsesWith(GEP, Builder.CreateGEP(GTI.getIndexedType(),
                                                         GEP.getPointerOperand(),
                                                         drop_begin(Indices), "",
@@ -3486,6 +3489,24 @@ Instruction *InstCombinerImpl::visitGetElementPtrInst(GetElementPtrInst &GEP) {
     return GetElementPtrInst::Create(
         GetElementPtrInst::getIndexedType(GEPEltType, FrontIndices), FrontGEP,
         BackIndices, GEP.getNoWrapFlags());
+  }
+
+  // Canonicalize gep %T to gep [sizeof(%T) x i8]:
+  auto IsCanonicalType = [](Type *Ty) {
+    if (auto *AT = dyn_cast<ArrayType>(Ty))
+      Ty = AT->getElementType();
+    return Ty->isIntegerTy(8);
+  };
+  if (Indices.size() == 1 && !IsCanonicalType(GEPEltType)) {
+    TypeSize Scale = DL.getTypeAllocSize(GEPEltType);
+    assert(!Scale.isScalable() && "Should have been handled earlier");
+    Type *NewElemTy = Builder.getInt8Ty();
+    if (Scale.getFixedValue() != 1)
+      NewElemTy = ArrayType::get(NewElemTy, Scale.getFixedValue());
+    GEP.setSourceElementType(NewElemTy);
+    GEP.setResultElementType(NewElemTy);
+    // Don't bother revisiting the GEP after this change.
+    MadeIRChange = true;
   }
 
   // Check to see if the inputs to the PHI node are getelementptr instructions.

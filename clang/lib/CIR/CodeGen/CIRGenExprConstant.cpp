@@ -1167,8 +1167,8 @@ emitArrayConstant(CIRGenModule &cgm, mlir::Type desiredType,
       // (the nonzero data and the zeroinitializer).
       SmallVector<mlir::Attribute> eles;
       eles.reserve(nonzeroLength);
-      for (const auto &element : elements)
-        eles.push_back(element);
+      for (unsigned i = 0; i < nonzeroLength; ++i)
+        eles.push_back(elements[i]);
       auto initial = cir::ConstArrayAttr::get(
           cir::ArrayType::get(commonElementType, nonzeroLength),
           mlir::ArrayAttr::get(builder.getContext(), eles));
@@ -1412,10 +1412,9 @@ ConstantLValueEmitter::tryEmitBase(const APValue::LValueBase &base) {
   }
 
   // Handle typeid(T).
-  if (base.dyn_cast<TypeInfoLValue>()) {
-    cgm.errorNYI("ConstantLValueEmitter: typeid");
-    return {};
-  }
+  if (TypeInfoLValue typeInfo = base.dyn_cast<TypeInfoLValue>())
+    return cast<cir::GlobalViewAttr>(cgm.getAddrOfRTTIDescriptor(
+        cgm.getBuilder().getUnknownLoc(), QualType(typeInfo.getType(), 0)));
 
   // Otherwise, it must be an expression.
   return Visit(base.get<const Expr *>());
@@ -1479,8 +1478,12 @@ ConstantLValue ConstantLValueEmitter::VisitBlockExpr(const BlockExpr *e) {
 
 ConstantLValue
 ConstantLValueEmitter::VisitCXXTypeidExpr(const CXXTypeidExpr *e) {
-  cgm.errorNYI(e->getSourceRange(), "ConstantLValueEmitter: cxx typeid expr");
-  return {};
+  if (e->isTypeOperand())
+    return cast<cir::GlobalViewAttr>(
+        cgm.getAddrOfRTTIDescriptor(cgm.getLoc(e->getSourceRange()),
+                                    e->getTypeOperand(cgm.getASTContext())));
+  return cast<cir::GlobalViewAttr>(cgm.getAddrOfRTTIDescriptor(
+      cgm.getLoc(e->getSourceRange()), e->getExprOperand()->getType()));
 }
 
 ConstantLValue ConstantLValueEmitter::VisitMaterializeTemporaryExpr(
@@ -1946,6 +1949,9 @@ mlir::Attribute ConstantEmitter::tryEmitPrivate(const APValue &value,
   case APValue::AddrLabelDiff:
     cgm.errorNYI(
         "ConstExprEmitter::tryEmitPrivate fixed point, addr label diff");
+    return {};
+  case APValue::Matrix:
+    cgm.errorNYI("ConstExprEmitter::tryEmitPrivate matrix");
     return {};
   }
   llvm_unreachable("Unknown APValue kind");

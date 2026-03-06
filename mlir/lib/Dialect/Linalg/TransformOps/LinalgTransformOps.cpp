@@ -27,7 +27,7 @@
 #include "mlir/Dialect/Transform/IR/TransformTypes.h"
 #include "mlir/Dialect/Transform/Interfaces/TransformInterfaces.h"
 #include "mlir/Dialect/Transform/Utils/Utils.h"
-#include "mlir/Dialect/UB/IR/UBOps.h"
+#include "mlir/Dialect/UB/IR/UBMatchers.h"
 #include "mlir/Dialect/Utils/IndexingUtils.h"
 #include "mlir/Dialect/Utils/StaticValueUtils.h"
 #include "mlir/Dialect/Vector/Transforms/LoweringPatterns.h"
@@ -270,6 +270,26 @@ void transform::ApplyFoldIntoPackAndUnpackPatternsOp::populatePatterns(
 void transform::ApplyFoldPackUnpackIntoEmptyPatternsOp::populatePatterns(
     RewritePatternSet &patterns) {
   linalg::populateFoldPackUnpackIntoTensorEmptyPatterns(patterns);
+}
+
+void transform::ApplyDataLayoutPropagationPatternsOp::populatePatterns(
+    RewritePatternSet &patterns) {
+  linalg::ControlPropagationFn defaultControlFn = [](OpOperand *operand) {
+    return true;
+  };
+  linalg::populateDataLayoutPropagationPatterns(patterns, defaultControlFn,
+                                                getPoisonPadding());
+}
+
+void transform::ApplyExtractSliceSinkingPatternsOp::populatePatterns(
+    RewritePatternSet &patterns) {
+  linalg::ControlPropagationFn defaultControlFn =
+      [](OpOperand *opOperand) -> bool {
+    Operation *producer = opOperand->get().getDefiningOp();
+    Operation *consumer = opOperand->getOwner();
+    return consumer->getBlock() == producer->getBlock();
+  };
+  linalg::populateExtractSliceSinkingPatterns(patterns, defaultControlFn);
 }
 
 //===----------------------------------------------------------------------===//
@@ -2179,7 +2199,7 @@ transform::PadOp::apply(transform::TransformRewriter &rewriter,
     for (auto const &[untypedAttr, elementOrTensorType] :
          llvm::zip(getPaddingValues(), linalgTarget->getOperandTypes())) {
 
-      if (isa<ub::PoisonAttr>(untypedAttr)) {
+      if (matchPattern(untypedAttr, ub::m_Poison())) {
         paddingValues.push_back(untypedAttr);
         continue;
       }
@@ -2432,7 +2452,7 @@ transform::PadTilingInterfaceOp::apply(transform::TransformRewriter &rewriter,
       auto attr = dyn_cast<TypedAttr>(untypedAttr);
       Type elementType = getElementTypeOrSelf(elementOrTensorType);
 
-      if (isa<ub::PoisonAttr>(untypedAttr)) {
+      if (matchPattern(untypedAttr, ub::m_Poison())) {
         paddingValues.push_back(untypedAttr);
         continue;
       }

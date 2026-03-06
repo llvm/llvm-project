@@ -94,6 +94,7 @@ llvm::StringRef ProcessKDP::GetPluginDescriptionStatic() {
 }
 
 void ProcessKDP::Terminate() {
+  ProcessKDPLog::Terminate();
   PluginManager::UnregisterPlugin(ProcessKDP::CreateInstance);
 }
 

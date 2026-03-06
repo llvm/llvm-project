@@ -645,6 +645,12 @@ RegBankLegalizeRules::RegBankLegalizeRules(const GCNSubtarget &_ST,
       .Any({{UniBRC}, {{}, {}, VerifyAllSgpr}})
       .Any({{DivBRC}, {{}, {}, ApplyAllVgpr}});
 
+  addRulesForGOpcs({G_PHI})
+      .Any({{UniS1}, {{}, {}, AextToS32InIncomingBlockGPHI}})
+      .Any({{UniS16}, {{}, {}, VerifyAllSgprGPHI}})
+      .Any({{UniBRC}, {{}, {}, VerifyAllSgprGPHI}})
+      .Any({{DivBRC}, {{}, {}, VerifyAllSgprOrVgprGPHI}});
+
   // LOAD       {Div}, {{VgprDst...}, {VgprSrc, ..., Sgpr_WF_RsrcIdx}}
   // LOAD       {Uni}, {{UniInVgprDst...}, {VgprSrc, ..., Sgpr_WF_RsrcIdx}}
   // LOAD_NORET {}, {{}, {Imm, VgprSrc, ..., Sgpr_WF_RsrcIdx}}
@@ -1423,6 +1429,16 @@ RegBankLegalizeRules::RegBankLegalizeRules(const GCNSubtarget &_ST,
   addRulesForIOpcs({amdgcn_if_break}, Standard)
       .Uni(S64, {{Sgpr64}, {IntrId, Vcc, Sgpr64}})
       .Uni(S32, {{Sgpr32}, {IntrId, Vcc, Sgpr32}});
+
+  addRulesForIOpcs({amdgcn_exp})
+      .Any({{_, _, _, S32, S32, S32, S32},
+            {{}, {IntrId, Imm, Imm, Vgpr32, Vgpr32, Vgpr32, Vgpr32}}});
+
+  addRulesForIOpcs({amdgcn_exp_row})
+      .Any({{_, _, _, S32, S32, S32, S32, _, S32},
+            {{},
+             {IntrId, Imm, Imm, Vgpr32, Vgpr32, Vgpr32, Vgpr32, Imm,
+              SgprB32_M0}}});
 
   addRulesForIOpcs({amdgcn_mbcnt_lo, amdgcn_mbcnt_hi}, Standard)
       .Div(S32, {{}, {Vgpr32, None, Vgpr32, Vgpr32}});

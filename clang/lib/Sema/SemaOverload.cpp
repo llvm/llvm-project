@@ -2942,6 +2942,8 @@ bool Sema::IsOverflowBehaviorTypeConversion(QualType FromType,
     return false;
 
   if (FromType->isOverflowBehaviorType() && !ToType->isOverflowBehaviorType()) {
+    if (ToType->isBooleanType())
+      return false;
     // Don't allow implicit conversion from OverflowBehaviorType to scoped enum
     if (const EnumType *ToEnumType = ToType->getAs<EnumType>()) {
       const EnumDecl *ToED = ToEnumType->getDecl()->getDefinitionOrSelf();
