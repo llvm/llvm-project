@@ -9484,9 +9484,22 @@ LegalizerHelper::LegalizeResult LegalizerHelper::lowerInsert(MachineInstr &MI) {
   LLT DstTy = MRI.getType(Src);
   LLT InsertTy = MRI.getType(InsertSrc);
 
+  const DataLayout &DL = MIRBuilder.getDataLayout();
+  bool IsNonIntegralInsert =
+      InsertTy.isPointerOrPointerVector() &&
+      DL.isNonIntegralAddressSpace(InsertTy.getAddressSpace());
+  bool IsNonIntegralDst = DstTy.isPointerOrPointerVector() &&
+                          DL.isNonIntegralAddressSpace(DstTy.getAddressSpace());
+
   // Insert sub-vector or one element
-  if (DstTy.isVector() && !InsertTy.isPointer()) {
+  if (DstTy.isVector()) {
     LLT EltTy = DstTy.getElementType();
+
+    if ((IsNonIntegralInsert || IsNonIntegralDst) && InsertTy != EltTy) {
+      LLVM_DEBUG(dbgs() << "Not casting non-integral address space integer\n");
+      return UnableToLegalize;
+    }
+
     unsigned EltSize = EltTy.getSizeInBits();
     unsigned InsertSize = InsertTy.getSizeInBits();
 
@@ -9508,6 +9521,10 @@ LegalizerHelper::LegalizeResult LegalizerHelper::lowerInsert(MachineInstr &MI) {
           DstElts.push_back(UnmergeInsertSrc.getReg(i));
         }
       } else {
+        if (InsertTy.isPointer() && !EltTy.isPointer())
+          InsertSrc = MIRBuilder.buildPtrToInt(EltTy, InsertSrc).getReg(0);
+        else if (!InsertTy.isPointer() && EltTy.isPointer())
+          InsertSrc = MIRBuilder.buildIntToPtr(EltTy, InsertSrc).getReg(0);
         DstElts.push_back(InsertSrc);
         ++Idx;
       }
@@ -9527,11 +9544,7 @@ LegalizerHelper::LegalizeResult LegalizerHelper::lowerInsert(MachineInstr &MI) {
       (DstTy.isVector() && DstTy.getElementType() != InsertTy))
     return UnableToLegalize;
 
-  const DataLayout &DL = MIRBuilder.getDataLayout();
-  if ((DstTy.isPointer() &&
-       DL.isNonIntegralAddressSpace(DstTy.getAddressSpace())) ||
-      (InsertTy.isPointer() &&
-       DL.isNonIntegralAddressSpace(InsertTy.getAddressSpace()))) {
+  if (IsNonIntegralDst || IsNonIntegralInsert) {
     LLVM_DEBUG(dbgs() << "Not casting non-integral address space integer\n");
     return UnableToLegalize;
   }

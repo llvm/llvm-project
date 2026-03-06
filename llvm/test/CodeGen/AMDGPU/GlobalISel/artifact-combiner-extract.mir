@@ -86,8 +86,9 @@ name: extract_s32_merge_s128_s64_s64_offset32
 body: |
   bb.0:
     ; CHECK-LABEL: name: extract_s32_merge_s128_s64_s64_offset32
-    ; CHECK: [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 0
-    ; CHECK-NEXT: $vgpr0 = COPY [[C]](s32)
+    ; CHECK: [[C:%[0-9]+]]:_(s64) = G_CONSTANT i64 0
+    ; CHECK-NEXT: [[UV:%[0-9]+]]:_(s32), [[UV1:%[0-9]+]]:_(s32) = G_UNMERGE_VALUES [[C]](s64)
+    ; CHECK-NEXT: $vgpr0 = COPY [[UV1]](s32)
     %0:_(s64) = G_CONSTANT i64 0
     %1:_(s64) = G_CONSTANT i64 1
     %2:_(s128) = G_MERGE_VALUES %0, %1
@@ -117,8 +118,8 @@ body: |
   bb.0:
     ; CHECK-LABEL: name: extract_s32_merge_s128_s64_s64_offset96
     ; CHECK: [[C:%[0-9]+]]:_(s64) = G_CONSTANT i64 1
-    ; CHECK-NEXT: [[C1:%[0-9]+]]:_(s32) = G_CONSTANT i32 0
-    ; CHECK-NEXT: $vgpr0 = COPY [[C1]](s32)
+    ; CHECK-NEXT: [[UV:%[0-9]+]]:_(s32), [[UV1:%[0-9]+]]:_(s32) = G_UNMERGE_VALUES [[C]](s64)
+    ; CHECK-NEXT: $vgpr0 = COPY [[UV1]](s32)
     %0:_(s64) = G_CONSTANT i64 0
     %1:_(s64) = G_CONSTANT i64 1
     %2:_(s128) = G_MERGE_VALUES %0, %1
@@ -171,11 +172,10 @@ body: |
     ; CHECK-LABEL: name: extract_s64_merge_s128_s64_s64_offset32
     ; CHECK: [[C:%[0-9]+]]:_(s64) = G_CONSTANT i64 0
     ; CHECK-NEXT: [[C1:%[0-9]+]]:_(s64) = G_CONSTANT i64 1
-    ; CHECK-NEXT: [[C2:%[0-9]+]]:_(s32) = G_CONSTANT i32 32
-    ; CHECK-NEXT: [[LSHR:%[0-9]+]]:_(s64) = G_LSHR [[C]], [[C2]](s32)
-    ; CHECK-NEXT: [[SHL:%[0-9]+]]:_(s64) = G_SHL [[C1]], [[C2]](s32)
-    ; CHECK-NEXT: [[OR:%[0-9]+]]:_(s64) = G_OR [[LSHR]], [[SHL]]
-    ; CHECK-NEXT: $vgpr0_vgpr1 = COPY [[OR]](s64)
+    ; CHECK-NEXT: [[UV:%[0-9]+]]:_(s32), [[UV1:%[0-9]+]]:_(s32) = G_UNMERGE_VALUES [[C]](s64)
+    ; CHECK-NEXT: [[UV2:%[0-9]+]]:_(s32), [[UV3:%[0-9]+]]:_(s32) = G_UNMERGE_VALUES [[C1]](s64)
+    ; CHECK-NEXT: [[MV:%[0-9]+]]:_(s64) = G_MERGE_VALUES [[UV1]](s32), [[UV2]](s32)
+    ; CHECK-NEXT: $vgpr0_vgpr1 = COPY [[MV]](s64)
     %0:_(s64) = G_CONSTANT i64 0
     %1:_(s64) = G_CONSTANT i64 1
     %2:_(s128) = G_MERGE_VALUES %0, %1
@@ -266,17 +266,10 @@ name: extract_s64_merge_s96_s32_s32_s32_offset32
 body: |
   bb.0:
     ; CHECK-LABEL: name: extract_s64_merge_s96_s32_s32_s32_offset32
-    ; CHECK: [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 0
+    ; CHECK: [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 1
     ; CHECK-NEXT: [[C1:%[0-9]+]]:_(s32) = G_CONSTANT i32 1
-    ; CHECK-NEXT: [[C2:%[0-9]+]]:_(s32) = G_CONSTANT i32 1
-    ; CHECK-NEXT: [[DEF:%[0-9]+]]:_(s32) = G_IMPLICIT_DEF
     ; CHECK-NEXT: [[MV:%[0-9]+]]:_(s64) = G_MERGE_VALUES [[C]](s32), [[C1]](s32)
-    ; CHECK-NEXT: [[MV1:%[0-9]+]]:_(s64) = G_MERGE_VALUES [[C2]](s32), [[DEF]](s32)
-    ; CHECK-NEXT: [[C3:%[0-9]+]]:_(s32) = G_CONSTANT i32 32
-    ; CHECK-NEXT: [[LSHR:%[0-9]+]]:_(s64) = G_LSHR [[MV]], [[C3]](s32)
-    ; CHECK-NEXT: [[SHL:%[0-9]+]]:_(s64) = G_SHL [[MV1]], [[C3]](s32)
-    ; CHECK-NEXT: [[OR:%[0-9]+]]:_(s64) = G_OR [[LSHR]], [[SHL]]
-    ; CHECK-NEXT: $vgpr0_vgpr1 = COPY [[OR]](s64)
+    ; CHECK-NEXT: $vgpr0_vgpr1 = COPY [[MV]](s64)
     %0:_(s32) = G_CONSTANT i32 0
     %1:_(s32) = G_CONSTANT i32 1
     %2:_(s32) = G_CONSTANT i32 1
