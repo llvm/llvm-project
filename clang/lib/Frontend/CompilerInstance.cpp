@@ -295,8 +295,8 @@ void CompilerInstance::createVirtualFileSystem(
   DiagnosticsEngine Diags(DiagnosticIDs::create(), DiagOpts, DC,
                           /*ShouldOwnClient=*/false);
 
-  // CAS is passed here so that if we have cached a CAS already it is shared.
-  // Otherwise, createBaseFS will handle it.
+  if (getFrontendOpts().needsCAS())
+    getOrCreateCASDatabases(&Diags);
 
   VFS = createVFSFromCompilerInvocation(getInvocation(), Diags,
                                         std::move(BaseFS), CAS);
@@ -968,13 +968,14 @@ llvm::vfs::OutputBackend &CompilerInstance::getOrCreateOutputBackend() {
 
 std::pair<std::shared_ptr<llvm::cas::ObjectStore>,
           std::shared_ptr<llvm::cas::ActionCache>>
-CompilerInstance::getOrCreateCASDatabases() {
+CompilerInstance::getOrCreateCASDatabases(DiagnosticsEngine *Diags) {
+  if (!Diags)
+    Diags = this->Diagnostics.get();
   // Create a new CAS databases from the CompilerInvocation. Future calls to
   // createFileManager() will use the same CAS.
   std::tie(CAS, ActionCache) =
       getInvocation().getCASOpts().getOrCreateDatabases(
-          getDiagnostics(),
-          /*CreateEmptyCASOnFailure=*/true);
+          *Diags, /*CreateEmptyCASOnFailure=*/true);
   return {CAS, ActionCache};
 }
 
