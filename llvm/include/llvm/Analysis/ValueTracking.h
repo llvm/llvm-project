@@ -983,7 +983,11 @@ LLVM_ABI bool matchSimpleRecurrence(const PHINode *P, BinaryOperator *&BO,
                                     Value *&Start, Value *&Step);
 
 /// Analogous to the above, but starting from the binary operator
-LLVM_ABI bool matchSimpleRecurrence(const BinaryOperator *I, PHINode *&P,
+LLVM_ABI bool matchSimpleRecurrence(const Instruction *I, PHINode *&P,
+                                    Value *&Start, Value *&Step);
+
+/// Analogous to the above, but also supporting non-binary operators.
+LLVM_ABI bool matchSimpleRecurrence(const PHINode *P, Instruction *&BO,
                                     Value *&Start, Value *&Step);
 
 /// Attempt to match a simple value-accumulating recurrence of the form:
