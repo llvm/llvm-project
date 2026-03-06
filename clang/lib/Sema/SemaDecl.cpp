@@ -7740,6 +7740,26 @@ NamedDecl *Sema::ActOnVariableDeclarator(
     LookupResult &Previous, MultiTemplateParamsArg TemplateParamLists,
     bool &AddToScope, ArrayRef<BindingDecl *> Bindings) {
   QualType R = TInfo->getType();
+  
+  if (const AutoType *AT = R->getContainedAutoType()) {
+    if (AT->isConstrained()) {
+      bool IsInDependentContext = DC->isDependentContext();
+      bool ShouldBeDependent = IsInDependentContext && !AT->isDeduced();
+
+      if (ShouldBeDependent != AT->isDependentType()) {
+        QualType CanonAuto = Context.getAutoType(
+            AT->isDeduced() ? AT->getDeducedType() : QualType(),
+            AT->getKeyword(),
+            ShouldBeDependent,
+            false,
+            AT->getTypeConstraintConcept(),
+            AT->getTypeConstraintArguments());
+
+        R = Context.getQualifiedType(CanonAuto, R.getQualifiers());
+        TInfo = Context.getTrivialTypeSourceInfo(R, D.getBeginLoc());
+      }
+    }
+  }
   DeclarationName Name = GetNameForDeclarator(D).getName();
 
   IdentifierInfo *II = Name.getAsIdentifierInfo();
