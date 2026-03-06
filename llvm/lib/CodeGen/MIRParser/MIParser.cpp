@@ -1449,9 +1449,19 @@ static std::string getRegisterName(const TargetRegisterInfo *TRI,
 
 /// Return true if the parsed machine operands contain a given machine operand.
 static bool isImplicitOperandIn(const MachineOperand &ImplicitOperand,
-                                ArrayRef<ParsedMachineOperand> Operands) {
+                                ArrayRef<ParsedMachineOperand> Operands,
+                                const TargetRegisterInfo *TRI) {
   for (const auto &I : Operands) {
     if (ImplicitOperand.isIdenticalTo(I.Operand))
+      return true;
+    // Accept a sub-register in place of the expected super-register.  On
+    // targets that narrow physical registers for specific subtargets (e.g.,
+    // AMDGPU wave32 uses $vcc_lo instead of $vcc), the MIR printer emits the
+    // narrow register while the MCInstrDesc still references the wide
+    // super-register.
+    if (I.Operand.isReg() && I.Operand.isImplicit() &&
+        ImplicitOperand.isDef() == I.Operand.isDef() &&
+        TRI->isSubRegisterEq(ImplicitOperand.getReg(), I.Operand.getReg()))
       return true;
   }
   return false;
@@ -1474,7 +1484,7 @@ bool MIParser::verifyImplicitOperands(ArrayRef<ParsedMachineOperand> Operands,
   const auto *TRI = MF.getSubtarget().getRegisterInfo();
   assert(TRI && "Expected target register info");
   for (const auto &I : ImplicitOperands) {
-    if (isImplicitOperandIn(I, Operands))
+    if (isImplicitOperandIn(I, Operands, TRI))
       continue;
     return error(Operands.empty() ? Token.location() : Operands.back().End,
                  Twine("missing implicit register operand '") +
