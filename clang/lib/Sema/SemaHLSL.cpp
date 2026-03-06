@@ -5566,6 +5566,11 @@ QualType SemaHLSL::ActOnTemplateShorthand(TemplateDecl *Template,
   if (!Template->isImplicit())
     return QualType();
 
+  // We manually extract default arguments here instead of letting
+  // CheckTemplateIdType handle it. This ensures that for resource types that
+  // lack a default argument (like Buffer), we return a null QualType, which
+  // triggers the "requires template arguments" error rather than a less
+  // descriptive "too few template arguments" error.
   TemplateArgumentListInfo TemplateArgs(NameLoc, NameLoc);
   for (NamedDecl *P : *Params) {
     if (auto *TTP = dyn_cast<TemplateTypeParmDecl>(P)) {
