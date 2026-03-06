@@ -1898,6 +1898,29 @@ static void EmitDestroyingObjectDelete(CodeGenFunction &CGF,
                        ElementType);
 }
 
+static CXXDestructorDecl *TryDevirtualizeDtorCall(const CXXDeleteExpr *E,
+                                                  CXXDestructorDecl *Dtor,
+                                                  const LangOptions &LO) {
+  assert(Dtor && Dtor->isVirtual() && "virtual dtor is expected");
+  const Expr *DBase = E->getArgument();
+  if (auto *MaybeDevirtualizedDtor = dyn_cast_or_null<CXXDestructorDecl>(
+          Dtor->getDevirtualizedMethod(DBase, LO.AppleKext))) {
+    const CXXRecordDecl *DevirtualizedClass =
+        MaybeDevirtualizedDtor->getParent();
+    if (declaresSameEntity(getCXXRecord(DBase), DevirtualizedClass)) {
+      // Devirtualized to the class of the base type (the type of the
+      // whole expression).
+      return MaybeDevirtualizedDtor;
+    }
+    // Devirtualized to some other type. Would need to cast the this
+    // pointer to that type but we don't have support for that yet, so
+    // do a virtual call. FIXME: handle the case where it is
+    // devirtualized to the derived type (the type of the inner
+    // expression) as in EmitCXXMemberOrOperatorMemberCallExpr.
+  }
+  return nullptr;
+}
+
 /// Emit the code for deleting a single object.
 /// \return \c true if we started emitting UnconditionalDeleteBlock, \c false
 /// if not.
@@ -1917,34 +1940,16 @@ static bool EmitObjectDelete(CodeGenFunction &CGF, const CXXDeleteExpr *DE,
 
   // Find the destructor for the type, if applicable.  If the
   // destructor is virtual, we'll just emit the vcall and return.
-  const CXXDestructorDecl *Dtor = nullptr;
+  CXXDestructorDecl *Dtor = nullptr;
   if (const auto *RD = ElementType->getAsCXXRecordDecl()) {
     if (RD->hasDefinition() && !RD->hasTrivialDestructor()) {
       Dtor = RD->getDestructor();
 
       if (Dtor->isVirtual()) {
-        bool UseVirtualCall = true;
-        const Expr *Base = DE->getArgument();
-        if (auto *DevirtualizedDtor = dyn_cast_or_null<const CXXDestructorDecl>(
-                Dtor->getDevirtualizedMethod(
-                    Base, CGF.CGM.getLangOpts().AppleKext))) {
-          UseVirtualCall = false;
-          const CXXRecordDecl *DevirtualizedClass =
-              DevirtualizedDtor->getParent();
-          if (declaresSameEntity(getCXXRecord(Base), DevirtualizedClass)) {
-            // Devirtualized to the class of the base type (the type of the
-            // whole expression).
-            Dtor = DevirtualizedDtor;
-          } else {
-            // Devirtualized to some other type. Would need to cast the this
-            // pointer to that type but we don't have support for that yet, so
-            // do a virtual call. FIXME: handle the case where it is
-            // devirtualized to the derived type (the type of the inner
-            // expression) as in EmitCXXMemberOrOperatorMemberCallExpr.
-            UseVirtualCall = true;
-          }
-        }
-        if (UseVirtualCall) {
+        if (auto *DevirtualizedDtor =
+                TryDevirtualizeDtorCall(DE, Dtor, CGF.CGM.getLangOpts())) {
+          Dtor = DevirtualizedDtor;
+        } else {
           CGF.CGM.getCXXABI().emitVirtualObjectDelete(CGF, DE, Ptr, ElementType,
                                                       Dtor);
           return false;
@@ -2095,32 +2100,38 @@ void CodeGenFunction::EmitCXXDeleteExpr(const CXXDeleteExpr *E) {
     if (auto *RD = DeleteTy->getAsCXXRecordDecl()) {
       auto *Dtor = RD->getDestructor();
       if (Dtor && Dtor->isVirtual()) {
-        llvm::Value *NumElements = nullptr;
-        llvm::Value *AllocatedPtr = nullptr;
-        CharUnits CookieSize;
-        llvm::BasicBlock *BodyBB = createBasicBlock("vdtor.call");
-        llvm::BasicBlock *DoneBB = createBasicBlock("vdtor.nocall");
-        // Check array cookie to see if the array has length 0. Don't call
-        // the destructor in that case.
-        CGM.getCXXABI().ReadArrayCookie(*this, Ptr, E, DeleteTy, NumElements,
-                                        AllocatedPtr, CookieSize);
+        // Emit normal loop over the array elements if we can easily
+        // devirtualize destructor call.
+        // Emit virtual call to vector deleting destructor otherwise.
+        if (!TryDevirtualizeDtorCall(E, Dtor, CGM.getLangOpts())) {
+          llvm::Value *NumElements = nullptr;
+          llvm::Value *AllocatedPtr = nullptr;
+          CharUnits CookieSize;
+          llvm::BasicBlock *BodyBB = createBasicBlock("vdtor.call");
+          llvm::BasicBlock *DoneBB = createBasicBlock("vdtor.nocall");
+          // Check array cookie to see if the array has length 0. Don't call
+          // the destructor in that case.
+          CGM.getCXXABI().ReadArrayCookie(*this, Ptr, E, DeleteTy, NumElements,
+                                          AllocatedPtr, CookieSize);
 
-        auto *CondTy = cast<llvm::IntegerType>(NumElements->getType());
-        llvm::Value *IsEmpty = Builder.CreateICmpEQ(
-            NumElements, llvm::ConstantInt::get(CondTy, 0));
-        Builder.CreateCondBr(IsEmpty, DoneBB, BodyBB);
+          auto *CondTy = cast<llvm::IntegerType>(NumElements->getType());
+          llvm::Value *IsEmpty = Builder.CreateICmpEQ(
+              NumElements, llvm::ConstantInt::get(CondTy, 0));
+          Builder.CreateCondBr(IsEmpty, DoneBB, BodyBB);
 
-        // Delete cookie for empty array.
-        const FunctionDecl *OperatorDelete = E->getOperatorDelete();
-        EmitBlock(DoneBB);
-        EmitDeleteCall(OperatorDelete, AllocatedPtr, DeleteTy, NumElements,
-                       CookieSize);
-        EmitBranch(DeleteEnd);
+          // Delete cookie for empty array.
+          const FunctionDecl *OperatorDelete = E->getOperatorDelete();
+          EmitBlock(DoneBB);
+          EmitDeleteCall(OperatorDelete, AllocatedPtr, DeleteTy, NumElements,
+                         CookieSize);
+          EmitBranch(DeleteEnd);
 
-        EmitBlock(BodyBB);
-        if (!EmitObjectDelete(*this, E, Ptr, DeleteTy, DeleteEnd))
+          EmitBlock(BodyBB);
+          CGM.getCXXABI().emitVirtualObjectDelete(*this, E, Ptr, DeleteTy,
+                                                  Dtor);
           EmitBlock(DeleteEnd);
-        return;
+          return;
+        }
       }
     }
   }

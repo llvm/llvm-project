@@ -533,7 +533,9 @@ CGRecordLowering::accumulateBitFields(bool isNonVirtualBaseType,
         assert(BitOffset == Context.toBits(SpanOffset) + SpanSize &&
                "Concatenating non-contiguous bitfields");
       } else {
-        // Byte-aligned: potentially begins a new span.
+        // Byte-aligned: potentially begins a new span. This includes
+        // zero-length bitfields on non-aligning targets that lie at character
+        // boundaries (those are barriers to merging).
         bool IsBarrier = Field->isZeroLengthBitField();
         closeSpan(IsBarrier);
         SpanBegin = Field;
@@ -568,19 +570,25 @@ CGRecordLowering::accumulateBitFields(bool isNonVirtualBaseType,
     return ScissorOffset;
   };
 
-  // ---- Pass 2: Merge spans and emit access units: For each span, try to widen
-  // the access unit by incorporating subsequent non-barrier spans, subject to
-  // register-width, alignment, and available-padding constraints. Emit the best
-  // access unit found and advance past its spans.
+  // ---- Pass 2: Merge spans and emit access units.
+  // For each span, try to widen the access unit by incorporating subsequent
+  // non-barrier spans, subject to register-width, alignment, and
+  // available-padding constraints. Note that this requires lookahead to one or
+  // more subsequent spans. For instance, consider a 2-byte span followed by
+  // 2 1-byte spans. We can merge that into a 4-byte access-unit, but we would
+  // not want to merge a 2-byte followed by a single 1-byte (and no available
+  // tail padding). Emit the best access unit found and advance past its spans.
   const CharUnits RegSize =
       bitsToCharUnits(Context.getTargetInfo().getRegisterWidth());
   for (unsigned I = 0, Size = Spans.size(); I != Size;) {
     CharUnits BeginOffset = Spans[I].Offset;
-    // We keep track of the best access unit seen so far, and use that when we
-    // determine we cannot accumulate any more. Then we start again at the span
-    // following that best one.
+    // The (non-inclusive) end of the largest acceptable access unit we've found
+    // since I. BestEndOffset is the end of that access unit -- it might extend
+    // beyond the last character of the span, using available padding
+    // characters.
     unsigned BestEnd = I;
     CharUnits BestEndOffset;
+    // Whether the access unit must use a byte array [N x i8] instead of iN.
     bool BestClipped = true;
     for (unsigned J = I; J != Size; ++J) {
       // Compute the byte-rounded access size from BeginOffset through span J.
@@ -593,10 +601,13 @@ CGRecordLowering::accumulateBitFields(bool isNonVirtualBaseType,
 
       llvm::Type *Type = getIntNType(Context.toBits(AccessSize));
       if (!Context.getTargetInfo().hasCheapUnalignedBitFieldAccess()) {
-        // Reject the merge (`break;`) if the combined access unit would not be
-        // naturally aligned at its offset within the struct.
+        // Unaligned accesses are expensive. Only accumulate if the new unit is
+        // naturally aligned. Otherwise install the best we have, which is
+        // either the initial span (can't do better), or a naturally aligned
+        // accumulation (since we would have already installed it if it wasn't).
         CharUnits Align = getAlignment(Type);
-        if (Align > Layout.getAlignment() || !BeginOffset.isMultipleOf(Align)) {
+        if (Align > Layout.getAlignment() || // alignment exceeds the struct's
+            !BeginOffset.isMultipleOf(Align)) { // not naturally aligned
           // However, if this is the very first span (J == I), we still need to
           // record it as the best. Check whether it needs clipping.
           if (J == I) {
@@ -642,6 +653,9 @@ CGRecordLowering::accumulateBitFields(bool isNonVirtualBaseType,
         assert(getSize(Type) == AccessSize &&
                "Unclipped access must be clipped");
       }
+      // Add the storage member for the access unit to the record. The
+      // bitfields get the offset of their storage but come afterward and
+      // remain there after a stable sort.
       Members.push_back(StorageInfo(BeginOffset, Type));
       for (auto F = Spans[I].Begin; F != Spans[BestEnd - 1].End; ++F)
         if (!F->isZeroLengthBitField())

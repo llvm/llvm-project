@@ -16,9 +16,6 @@
 #include "flang-rt/runtime/lock.h"
 #include "flang-rt/runtime/tools.h"
 
-// NOTE: the header files above may define OpenMP declare target
-// variables, so they have to be included unconditionally
-// so that the offload entries are consistent between host and device.
 #if !defined(RT_USE_PSEUDO_FILE_UNIT)
 
 #include <cstdio>

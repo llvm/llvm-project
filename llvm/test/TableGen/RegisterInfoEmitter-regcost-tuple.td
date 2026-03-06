@@ -43,10 +43,10 @@ def GPR_128 : MyClass<128, [v4i32], (add GPR128)>;
 
 def MyTarget : Target;
 
-// CHECK: static const uint8_t CostPerUseTable[] = {
+// CHECK: static const uint8_t MyTargetCostPerUseTable[] = {
 // CHECK-NEXT:  0, 0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 0, 0, 2, 4, 6, 8, 10, 12, 14, 16, 18, 20, 22, 24, 26, 28, 30, 0, 2, 4, 6, 8, 10, 12, 14, 16, 18, 20, 22, 24, 26, 28, 0, 2, 4, 6, 8, 10, 12, 14, 16, 18, 20, 22, 24, };
 
 // CHECK:  static const TargetRegisterInfoDesc MyTargetRegInfoDesc = { // Extra Descriptors
-// CHECK-NEXT:  CostPerUseTable, 2, InAllocatableClassTable};
+// CHECK-NEXT:  MyTargetCostPerUseTable, 2, MyTargetInAllocatableClassTable};
 
-// CHECK:  TargetRegisterInfo(&MyTargetRegInfoDesc, RegisterClasses, RegisterClasses+3,
+// CHECK:  TargetRegisterInfo(&MyTargetRegInfoDesc, MyTargetRegisterClasses,

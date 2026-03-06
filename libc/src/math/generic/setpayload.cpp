@@ -7,14 +7,12 @@
 //===----------------------------------------------------------------------===//
 
 #include "src/math/setpayload.h"
-#include "src/__support/FPUtil/BasicOperations.h"
-#include "src/__support/common.h"
-#include "src/__support/macros/config.h"
+#include "src/__support/math/setpayload.h"
 
 namespace LIBC_NAMESPACE_DECL {
 
 LLVM_LIBC_FUNCTION(int, setpayload, (double *res, double pl)) {
-  return static_cast<int>(fputil::setpayload</*IsSignaling=*/false>(*res, pl));
+  return math::setpayload(res, pl);
 }
 
 } // namespace LIBC_NAMESPACE_DECL

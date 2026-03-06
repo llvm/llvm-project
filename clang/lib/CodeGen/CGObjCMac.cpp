@@ -2773,7 +2773,7 @@ llvm::Constant *CGObjCCommonMac::getBitmapBlockLayout(bool ComputeByrefLayout) {
     }
   }
 
-  auto *Entry = CreateCStringLiteral(BitMap, ObjCLabelType::ClassName,
+  auto *Entry = CreateCStringLiteral(BitMap, ObjCLabelType::LayoutBitMap,
                                      /*ForceNonFragileABI=*/true,
                                      /*NullTerminate=*/false);
   return getConstantGEP(VMContext, Entry, 0, 0);
@@ -4353,7 +4353,7 @@ void FragileHazards::emitHazardsInNewBlocks() {
   if (Locals.empty())
     return;
 
-  CGBuilderTy Builder(CGF, CGF.getLLVMContext());
+  CGBuilderTy Builder(CGF.CGM, CGF.getLLVMContext());
 
   // Iterate through all blocks, skipping those prior to the try.
   for (llvm::BasicBlock &BB : *CGF.CurFn) {

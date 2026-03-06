@@ -1279,6 +1279,11 @@ public:
 
     Value result = sourceAggregate;
     if (isNestedAggregate) {
+      if (!llvm::all_of(positionOf1DVectorWithinAggregate,
+                        llvm::IsaPred<Attribute>)) {
+        // llvm.insertvalue does not support dynamic dimensions.
+        return failure();
+      }
       result = LLVM::InsertValueOp::create(
           rewriter, loc, adaptor.getDest(), sourceAggregate,
           getAsIntegers(positionOf1DVectorWithinAggregate));
