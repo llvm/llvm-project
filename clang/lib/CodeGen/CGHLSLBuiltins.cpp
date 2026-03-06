@@ -1073,7 +1073,8 @@ Value *CodeGenFunction::EmitHLSLBuiltinExpr(unsigned BuiltinID,
       llvm::Type *EltTy = Op0->getType()->getScalarType();
 
       // For double vectors, DXIL has no dot intrinsic. Use fmul + fmuladd.
-      if (EltQTy->isDoubleType() && CGM.getTarget().getTriple().isDXIL()) {
+      if (EltQTy->isDoubleType() &&
+          CGM.getTarget().getTriple().isDXIL()) {
         unsigned N = VecTy->getNumElements();
         Value *A0 = Builder.CreateExtractElement(Op0, uint64_t(0));
         Value *B0 = Builder.CreateExtractElement(Op1, uint64_t(0));
@@ -1081,14 +1082,15 @@ Value *CodeGenFunction::EmitHLSLBuiltinExpr(unsigned BuiltinID,
         for (unsigned I = 1; I < N; ++I) {
           Value *AI = Builder.CreateExtractElement(Op0, I);
           Value *BI = Builder.CreateExtractElement(Op1, I);
-          Sum = Builder.CreateIntrinsic(EltTy, Intrinsic::fmuladd,
-                                        {AI, BI, Sum}, nullptr, "hlsl.mul");
+          Sum = Builder.CreateIntrinsic(
+              EltTy, Intrinsic::fmuladd, {AI, BI, Sum}, nullptr, "hlsl.mul");
         }
         return Sum;
       }
 
       return Builder.CreateIntrinsic(
-          EltTy, getDotProductIntrinsic(CGM.getHLSLRuntime(), EltQTy),
+          EltTy,
+          getDotProductIntrinsic(CGM.getHLSLRuntime(), EltQTy),
           ArrayRef<Value *>{Op0, Op1}, nullptr, "hlsl.mul");
     }
 
