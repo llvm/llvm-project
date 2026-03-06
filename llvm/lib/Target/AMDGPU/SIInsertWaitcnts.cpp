@@ -654,7 +654,8 @@ public:
                        MachineBasicBlock &Block, WaitcntBrackets &ScoreBrackets,
                        MachineInstr *OldWaitcntInstr);
   /// \returns all events that correspond to \p Inst.
-  WaitEventSet getEventsFor(const MachineInstr &Inst) const;
+  SmallVector<WaitEventType, NUM_WAIT_EVENTS>
+  getEventsFor(const MachineInstr &Inst) const;
   void updateEventWaitcntAfter(MachineInstr &Inst,
                                WaitcntBrackets *ScoreBrackets);
   bool isNextENDPGM(MachineBasicBlock::instr_iterator It,
@@ -2815,33 +2816,34 @@ bool SIInsertWaitcnts::insertForcedWaitAfter(MachineInstr &Inst,
   return Result;
 }
 
-WaitEventSet SIInsertWaitcnts::getEventsFor(const MachineInstr &Inst) const {
-  WaitEventSet Events;
+SmallVector<WaitEventType, NUM_WAIT_EVENTS>
+SIInsertWaitcnts::getEventsFor(const MachineInstr &Inst) const {
+  SmallVector<WaitEventType> Events;
   if (IsExpertMode) {
     if (const auto ET = getExpertSchedulingEventType(Inst))
-      Events.insert(*ET);
+      Events.push_back(*ET);
   }
 
   if (TII->isDS(Inst) && TII->usesLGKM_CNT(Inst)) {
     if (TII->isAlwaysGDS(Inst.getOpcode()) ||
         TII->hasModifiersSet(Inst, AMDGPU::OpName::gds)) {
-      Events.insert(GDS_ACCESS);
-      Events.insert(GDS_GPR_LOCK);
+      Events.push_back(GDS_ACCESS);
+      Events.push_back(GDS_GPR_LOCK);
     } else {
-      Events.insert(LDS_ACCESS);
+      Events.push_back(LDS_ACCESS);
     }
   } else if (TII->isFLAT(Inst)) {
     if (SIInstrInfo::isGFX12CacheInvOrWBInst(Inst.getOpcode())) {
-      Events.insert(getVmemWaitEventType(Inst));
+      Events.push_back(getVmemWaitEventType(Inst));
     } else {
       assert(Inst.mayLoadOrStore());
       if (TII->mayAccessVMEMThroughFlat(Inst)) {
         if (ST->hasWaitXcnt())
-          Events.insert(VMEM_GROUP);
-        Events.insert(getVmemWaitEventType(Inst));
+          Events.push_back(VMEM_GROUP);
+        Events.push_back(getVmemWaitEventType(Inst));
       }
       if (TII->mayAccessLDSThroughFlat(Inst))
-        Events.insert(LDS_ACCESS);
+        Events.push_back(LDS_ACCESS);
     }
   } else if (SIInstrInfo::isVMEM(Inst) &&
              (!AMDGPU::getMUBUFIsBufferInv(Inst.getOpcode()) ||
@@ -2850,41 +2852,41 @@ WaitEventSet SIInsertWaitcnts::getEventsFor(const MachineInstr &Inst) const {
     // followed "S_WAITCNT vmcnt(0)" is needed after to ensure the writeback has
     // completed.
     if (ST->hasWaitXcnt())
-      Events.insert(VMEM_GROUP);
-    Events.insert(getVmemWaitEventType(Inst));
+      Events.push_back(VMEM_GROUP);
+    Events.push_back(getVmemWaitEventType(Inst));
     if (ST->vmemWriteNeedsExpWaitcnt() &&
         (Inst.mayStore() || SIInstrInfo::isAtomicRet(Inst))) {
-      Events.insert(VMW_GPR_LOCK);
+      Events.push_back(VMW_GPR_LOCK);
     }
   } else if (TII->isSMRD(Inst)) {
     if (ST->hasWaitXcnt())
-      Events.insert(SMEM_GROUP);
-    Events.insert(SMEM_ACCESS);
+      Events.push_back(SMEM_GROUP);
+    Events.push_back(SMEM_ACCESS);
   } else if (SIInstrInfo::isLDSDIR(Inst)) {
-    Events.insert(EXP_LDS_ACCESS);
+    Events.push_back(EXP_LDS_ACCESS);
   } else if (SIInstrInfo::isEXP(Inst)) {
     unsigned Imm = TII->getNamedOperand(Inst, AMDGPU::OpName::tgt)->getImm();
     if (Imm >= AMDGPU::Exp::ET_PARAM0 && Imm <= AMDGPU::Exp::ET_PARAM31)
-      Events.insert(EXP_PARAM_ACCESS);
+      Events.push_back(EXP_PARAM_ACCESS);
     else if (Imm >= AMDGPU::Exp::ET_POS0 && Imm <= AMDGPU::Exp::ET_POS_LAST)
-      Events.insert(EXP_POS_ACCESS);
+      Events.push_back(EXP_POS_ACCESS);
     else
-      Events.insert(EXP_GPR_LOCK);
+      Events.push_back(EXP_GPR_LOCK);
   } else if (SIInstrInfo::isSBarrierSCCWrite(Inst.getOpcode())) {
-    Events.insert(SCC_WRITE);
+    Events.push_back(SCC_WRITE);
   } else {
     switch (Inst.getOpcode()) {
     case AMDGPU::S_SENDMSG:
     case AMDGPU::S_SENDMSG_RTN_B32:
     case AMDGPU::S_SENDMSG_RTN_B64:
     case AMDGPU::S_SENDMSGHALT:
-      Events.insert(SQ_MESSAGE);
+      Events.push_back(SQ_MESSAGE);
       break;
     case AMDGPU::S_MEMTIME:
     case AMDGPU::S_MEMREALTIME:
     case AMDGPU::S_GET_BARRIER_STATE_M0:
     case AMDGPU::S_GET_BARRIER_STATE_IMM:
-      Events.insert(SMEM_ACCESS);
+      Events.push_back(SMEM_ACCESS);
       break;
     }
   }
@@ -2893,12 +2895,8 @@ WaitEventSet SIInsertWaitcnts::getEventsFor(const MachineInstr &Inst) const {
 
 void SIInsertWaitcnts::updateEventWaitcntAfter(MachineInstr &Inst,
                                                WaitcntBrackets *ScoreBrackets) {
-
-  WaitEventSet InstEvents = getEventsFor(Inst);
-  for (WaitEventType E : wait_events()) {
-    if (InstEvents.contains(E))
-      ScoreBrackets->updateByEvent(E, Inst);
-  }
+  for (WaitEventType E : getEventsFor(Inst))
+    ScoreBrackets->updateByEvent(E, Inst);
 
   if (TII->isDS(Inst) && TII->usesLGKM_CNT(Inst)) {
     if (TII->isAlwaysGDS(Inst.getOpcode()) ||
