@@ -184,6 +184,7 @@ private:
     return [&body, this](Value lhs, Value rhs) -> Value {
       Block *block = rewriter.getInsertionBlock();
       Block *split = rewriter.splitBlock(block, rewriter.getInsertionPoint());
+      rewriter.setInsertionPointToEnd(block);
 
       // Insert accumulator body between split block.
       IRMapping mapping;
