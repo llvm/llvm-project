@@ -41,7 +41,11 @@ template <> struct int_type_of<double> {
   using type = fputil::FPBits<double>::StorageType;
 };
 template <> struct int_type_of<long double> {
+#ifdef LIBC_TYPES_LONG_DOUBLE_IS_DOUBLE_DOUBLE
+  using type = UInt128;
+#else
   using type = fputil::FPBits<long double>::StorageType;
+#endif // LIBC_TYPES_LONG_DOUBLE_IS_DOUBLE_DOUBLE
 };
 
 #ifdef LIBC_INTERNAL_PRINTF_HAS_FIXED_POINT
