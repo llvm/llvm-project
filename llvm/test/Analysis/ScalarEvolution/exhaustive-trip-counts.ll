@@ -177,6 +177,100 @@ exit:
   ret i64 %iv
 }
 
+define i64 @test_fp_fdiv_denormal_ieee() {
+; CHECK-LABEL: 'test_fp_fdiv_denormal_ieee'
+; CHECK-NEXT:  Determining loop execution counts for: @test_fp_fdiv_denormal_ieee
+; CHECK-NEXT:  Loop %loop: backedge-taken count is i32 39
+; CHECK-NEXT:  Loop %loop: constant max backedge-taken count is i32 39
+; CHECK-NEXT:  Loop %loop: symbolic max backedge-taken count is i32 39
+; CHECK-NEXT:  Loop %loop: Trip multiple is 40
+;
+entry:
+  br label %loop
+
+loop:
+  %iv = phi i64 [ 0, %entry ], [ %iv.next, %loop ]
+  %fv = phi float [ 0x3900000000000000, %entry ], [ %fv.next, %loop ]
+  call void @use.f32(float %fv)
+  %fv.next = fdiv float %fv, 2.0
+  %iv.next = add i64 %iv, 1
+  %fcmp = fcmp one float %fv, 0.0
+  br i1 %fcmp, label %loop, label %exit
+
+exit:
+  ret i64 %iv
+}
+
+define i64 @test_fp_fdiv_denormal_dynamic() denormal_fpenv(dynamic) {
+; CHECK-LABEL: 'test_fp_fdiv_denormal_dynamic'
+; CHECK-NEXT:  Determining loop execution counts for: @test_fp_fdiv_denormal_dynamic
+; CHECK-NEXT:  Loop %loop: Unpredictable backedge-taken count.
+; CHECK-NEXT:  Loop %loop: Unpredictable constant max backedge-taken count.
+; CHECK-NEXT:  Loop %loop: Unpredictable symbolic max backedge-taken count.
+;
+entry:
+  br label %loop
+
+loop:
+  %iv = phi i64 [ 0, %entry ], [ %iv.next, %loop ]
+  %fv = phi float [ 0x3900000000000000, %entry ], [ %fv.next, %loop ]
+  call void @use.f32(float %fv)
+  %fv.next = fdiv float %fv, 2.0
+  %iv.next = add i64 %iv, 1
+  %fcmp = fcmp one float %fv, 0.0
+  br i1 %fcmp, label %loop, label %exit
+
+exit:
+  ret i64 %iv
+}
+
+define i64 @test_fp_fdiv_denormal_preservesign() denormal_fpenv(preservesign) {
+; CHECK-LABEL: 'test_fp_fdiv_denormal_preservesign'
+; CHECK-NEXT:  Determining loop execution counts for: @test_fp_fdiv_denormal_preservesign
+; CHECK-NEXT:  Loop %loop: Unpredictable backedge-taken count.
+; CHECK-NEXT:  Loop %loop: Unpredictable constant max backedge-taken count.
+; CHECK-NEXT:  Loop %loop: Unpredictable symbolic max backedge-taken count.
+;
+entry:
+  br label %loop
+
+loop:
+  %iv = phi i64 [ 0, %entry ], [ %iv.next, %loop ]
+  %fv = phi float [ 0x3900000000000000, %entry ], [ %fv.next, %loop ]
+  call void @use.f32(float %fv)
+  %fv.next = fdiv float %fv, 2.0
+  %iv.next = add i64 %iv, 1
+  %fcmp = fcmp one float %fv, 0.0
+  br i1 %fcmp, label %loop, label %exit
+
+exit:
+  ret i64 %iv
+}
+
+define i64 @test_fp_fdiv_denormal_positivezero() denormal_fpenv(preservesign) {
+; CHECK-LABEL: 'test_fp_fdiv_denormal_positivezero'
+; CHECK-NEXT:  Determining loop execution counts for: @test_fp_fdiv_denormal_positivezero
+; CHECK-NEXT:  Loop %loop: Unpredictable backedge-taken count.
+; CHECK-NEXT:  Loop %loop: Unpredictable constant max backedge-taken count.
+; CHECK-NEXT:  Loop %loop: Unpredictable symbolic max backedge-taken count.
+;
+entry:
+  br label %loop
+
+loop:
+  %iv = phi i64 [ 0, %entry ], [ %iv.next, %loop ]
+  %fv = phi float [ 0x3900000000000000, %entry ], [ %fv.next, %loop ]
+  call void @use.f32(float %fv)
+  %fv.next = fdiv float %fv, 2.0
+  %iv.next = add i64 %iv, 1
+  %fcmp = fcmp one float %fv, 0.0
+  br i1 %fcmp, label %loop, label %exit
+
+exit:
+  ret i64 %iv
+}
+
 declare void @dummy()
-declare void @use(double %i)
+declare void @use(double)
+declare void @use.f32(float)
 declare double @llvm.sin.f64(double)

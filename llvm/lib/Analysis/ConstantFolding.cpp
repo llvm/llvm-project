@@ -1300,10 +1300,13 @@ Constant *llvm::ConstantFoldCompareInstOperands(
   if (CmpInst::isFPPredicate(Predicate)) {
     // Flush any denormal constant float input according to denormal handling
     // mode.
-    Ops0 = FlushFPConstant(Ops0, I, /*IsOutput=*/false);
+    // TODO: Pass through AllowNonDeterministic flag.
+    Ops0 = FlushFPConstant(Ops0, I, /*IsOutput=*/false,
+                           /*AllowNonDeterministic=*/true);
     if (!Ops0)
       return nullptr;
-    Ops1 = FlushFPConstant(Ops1, I, /*IsOutput=*/false);
+    Ops1 = FlushFPConstant(Ops1, I, /*IsOutput=*/false,
+                           /*AllowNonDeterministic=*/true);
     if (!Ops1)
       return nullptr;
   }
@@ -1332,7 +1335,12 @@ Constant *llvm::ConstantFoldBinaryOpOperands(unsigned Opcode, Constant *LHS,
 }
 
 static ConstantFP *flushDenormalConstant(Type *Ty, const APFloat &APF,
-                                         DenormalMode::DenormalModeKind Mode) {
+                                         DenormalMode::DenormalModeKind Mode,
+                                         bool AllowNonDeterministic) {
+  // All modes apart from ieee are non-deterministic.
+  if (!AllowNonDeterministic && Mode != DenormalMode::IEEE)
+    return nullptr;
+
   switch (Mode) {
   case DenormalMode::Dynamic:
     return nullptr;
@@ -1362,20 +1370,22 @@ static DenormalMode getInstrDenormalMode(const Instruction *CtxI, Type *Ty) {
 
 static ConstantFP *flushDenormalConstantFP(ConstantFP *CFP,
                                            const Instruction *Inst,
-                                           bool IsOutput) {
+                                           bool IsOutput,
+                                           bool AllowNonDeterministic) {
   const APFloat &APF = CFP->getValueAPF();
   if (!APF.isDenormal())
     return CFP;
 
   DenormalMode Mode = getInstrDenormalMode(Inst, CFP->getType());
   return flushDenormalConstant(CFP->getType(), APF,
-                               IsOutput ? Mode.Output : Mode.Input);
+                               IsOutput ? Mode.Output : Mode.Input,
+                               AllowNonDeterministic);
 }
 
 Constant *llvm::FlushFPConstant(Constant *Operand, const Instruction *Inst,
-                                bool IsOutput) {
+                                bool IsOutput, bool AllowNonDeterministic) {
   if (ConstantFP *CFP = dyn_cast<ConstantFP>(Operand))
-    return flushDenormalConstantFP(CFP, Inst, IsOutput);
+    return flushDenormalConstantFP(CFP, Inst, IsOutput, AllowNonDeterministic);
 
   if (isa<ConstantAggregateZero, UndefValue>(Operand))
     return Operand;
@@ -1384,7 +1394,8 @@ Constant *llvm::FlushFPConstant(Constant *Operand, const Instruction *Inst,
   VectorType *VecTy = dyn_cast<VectorType>(Ty);
   if (VecTy) {
     if (auto *Splat = dyn_cast_or_null<ConstantFP>(Operand->getSplatValue())) {
-      ConstantFP *Folded = flushDenormalConstantFP(Splat, Inst, IsOutput);
+      ConstantFP *Folded =
+          flushDenormalConstantFP(Splat, Inst, IsOutput, AllowNonDeterministic);
       if (!Folded)
         return nullptr;
       return ConstantVector::getSplat(VecTy->getElementCount(), Folded);
@@ -1409,7 +1420,8 @@ Constant *llvm::FlushFPConstant(Constant *Operand, const Instruction *Inst,
       if (!CFP)
         return nullptr;
 
-      ConstantFP *Folded = flushDenormalConstantFP(CFP, Inst, IsOutput);
+      ConstantFP *Folded =
+          flushDenormalConstantFP(CFP, Inst, IsOutput, AllowNonDeterministic);
       if (!Folded)
         return nullptr;
       NewElts.push_back(Folded);
@@ -1427,7 +1439,8 @@ Constant *llvm::FlushFPConstant(Constant *Operand, const Instruction *Inst,
       } else {
         DenormalMode Mode = getInstrDenormalMode(Inst, Ty);
         ConstantFP *Folded =
-            flushDenormalConstant(Ty, Elt, IsOutput ? Mode.Output : Mode.Input);
+            flushDenormalConstant(Ty, Elt, IsOutput ? Mode.Output : Mode.Input,
+                                  AllowNonDeterministic);
         if (!Folded)
           return nullptr;
         NewElts.push_back(Folded);
@@ -1446,10 +1459,12 @@ Constant *llvm::ConstantFoldFPInstOperands(unsigned Opcode, Constant *LHS,
                                            bool AllowNonDeterministic) {
   if (Instruction::isBinaryOp(Opcode)) {
     // Flush denormal inputs if needed.
-    Constant *Op0 = FlushFPConstant(LHS, I, /* IsOutput */ false);
+    Constant *Op0 =
+        FlushFPConstant(LHS, I, /*IsOutput=*/false, AllowNonDeterministic);
     if (!Op0)
       return nullptr;
-    Constant *Op1 = FlushFPConstant(RHS, I, /* IsOutput */ false);
+    Constant *Op1 =
+        FlushFPConstant(RHS, I, /*IsOutput=*/false, AllowNonDeterministic);
     if (!Op1)
       return nullptr;
 
@@ -1468,7 +1483,7 @@ Constant *llvm::ConstantFoldFPInstOperands(unsigned Opcode, Constant *LHS,
       return nullptr;
 
     // Flush denormal output if needed.
-    C = FlushFPConstant(C, I, /* IsOutput */ true);
+    C = FlushFPConstant(C, I, /*IsOutput=*/true, AllowNonDeterministic);
     if (!C)
       return nullptr;
 

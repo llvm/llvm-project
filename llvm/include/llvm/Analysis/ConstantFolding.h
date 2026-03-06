@@ -117,7 +117,7 @@ ConstantFoldFPInstOperands(unsigned Opcode, Constant *LHS, Constant *RHS,
 /// If the calling function's denormal_fpenv input mode is dynamic for the
 /// floating-point type, returns nullptr for denormal inputs.
 LLVM_ABI Constant *FlushFPConstant(Constant *Operand, const Instruction *I,
-                                   bool IsOutput);
+                                   bool IsOutput, bool AllowNonDeterministic);
 
 /// Attempt to constant fold a cast with the specified operand.  If it
 /// fails, it returns a constant expression of the specified operand.
