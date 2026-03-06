@@ -108,7 +108,7 @@ struct ObjectContainerCallbacks {
 
 struct StructuredDataPluginCallbacks {
   StructuredDataPluginCreateInstance create_callback;
-  StructuredDataFilterLaunchInfo filter_callback; // may be null
+  StructuredDataFilterLaunchInfo filter_callback;
 };
 
 struct REPLCallbacks {
