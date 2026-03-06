@@ -1,5 +1,4 @@
 // RUN: mlir-opt %s -one-shot-bufferize="bufferize-function-boundaries" | FileCheck %s
-// XFAIL: *
 
 module {
   func.func @foo(%arg0: tensor<64x20x40xf32>) -> tensor<64x20x40xf32> {
