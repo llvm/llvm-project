@@ -1383,7 +1383,10 @@ bool DependenceInfo::weakCrossingSIVtest(const SCEVAddRecExpr *Src,
   ++WeakCrossingSIVapplications;
   assert(0 < Level && Level <= CommonLevels && "Level out of range");
   Level--;
-  const SCEV *Delta = SE->getMinusSCEV(DstConst, SrcConst);
+  const SCEV *Delta = minusSCEVNoSignedOverflow(DstConst, SrcConst, *SE);
+  if (Delta == nullptr)
+    return false;
+
   LLVM_DEBUG(dbgs() << "\t    Delta = " << *Delta << "\n");
   if (Delta->isZero()) {
     Result.DV[Level].Direction &= ~Dependence::DVEntry::LT;
