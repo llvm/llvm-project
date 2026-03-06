@@ -924,8 +924,7 @@ Error JSONGenerator::serializeIndex(StringRef RootDir) {
   return Error::success();
 }
 
-static void serializeContexts(Info *I,
-                              StringMap<OwnedPtr<Info>> &Infos) {
+static void serializeContexts(Info *I, StringMap<OwnedPtr<Info>> &Infos) {
   if (I->USR == GlobalNamespaceID)
     return;
   auto ParentUSR = I->ParentUSR;
