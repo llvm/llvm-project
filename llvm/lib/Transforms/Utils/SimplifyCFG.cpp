@@ -8090,10 +8090,10 @@ template <> struct llvm::DenseMapInfo<const EqualBBWrapper *> {
 
     // Need to check that PHIs in successor have matching values.
     BasicBlock *Succ = ABI->getSuccessor(0);
-    auto IfPhiIVMatch = [A, B, &PhiPredIVs = *LHS->PhiPredIVs](PHINode &Phi) {
+    auto IfPhiIVMatch = [&](PHINode &Phi) {
       // Replace O(|Pred|) Phi.getIncomingValueForBlock with this O(1) hashmap
       // query.
-      auto &PredIVs = PhiPredIVs[&Phi];
+      auto &PredIVs = (*LHS->PhiPredIVs)[&Phi];
       return PredIVs[A] == PredIVs[B];
     };
     return all_of(Succ->phis(), IfPhiIVMatch);
