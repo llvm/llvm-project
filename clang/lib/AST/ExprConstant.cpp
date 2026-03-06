@@ -33,6 +33,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "ByteCode/Context.h"
+#include "ByteCode/EvalSettings.h"
 #include "ByteCode/Frame.h"
 #include "ByteCode/State.h"
 #include "ExprConstShared.h"
@@ -143,37 +144,6 @@ namespace {
   static bool isBaseAnAllocSizeCall(APValue::LValueBase Base) {
     const auto *E = Base.dyn_cast<const Expr *>();
     return E && E->getType()->isPointerType() && tryUnwrapAllocSizeCall(E);
-  }
-
-  /// Determines whether the given kind of constant expression is only ever
-  /// used for name mangling. If so, it's permitted to reference things that we
-  /// can't generate code for (in particular, dllimported functions).
-  static bool isForManglingOnly(ConstantExprKind Kind) {
-    switch (Kind) {
-    case ConstantExprKind::Normal:
-    case ConstantExprKind::ClassTemplateArgument:
-    case ConstantExprKind::ImmediateInvocation:
-      // Note that non-type template arguments of class type are emitted as
-      // template parameter objects.
-      return false;
-
-    case ConstantExprKind::NonClassTemplateArgument:
-      return true;
-    }
-    llvm_unreachable("unknown ConstantExprKind");
-  }
-
-  static bool isTemplateArgument(ConstantExprKind Kind) {
-    switch (Kind) {
-    case ConstantExprKind::Normal:
-    case ConstantExprKind::ImmediateInvocation:
-      return false;
-
-    case ConstantExprKind::ClassTemplateArgument:
-    case ConstantExprKind::NonClassTemplateArgument:
-      return true;
-    }
-    llvm_unreachable("unknown ConstantExprKind");
   }
 
   /// The bound to claim that an array of unknown bound has.
@@ -1926,31 +1896,30 @@ static bool EvaluateIgnoredValue(EvalInfo &Info, const Expr *E) {
   return true;
 }
 
-/// Should this call expression be treated as forming an opaque constant?
-static bool IsOpaqueConstantCall(const CallExpr *E) {
-  unsigned Builtin = E->getBuiltinCallee();
-  return (Builtin == Builtin::BI__builtin___CFStringMakeConstantString ||
-          Builtin == Builtin::BI__builtin___NSStringMakeConstantString ||
-          Builtin == Builtin::BI__builtin_ptrauth_sign_constant ||
-          Builtin == Builtin::BI__builtin_function_start);
-}
-
 static bool IsOpaqueConstantCall(const LValue &LVal) {
   const auto *BaseExpr =
       llvm::dyn_cast_if_present<CallExpr>(LVal.Base.dyn_cast<const Expr *>());
-  return BaseExpr && IsOpaqueConstantCall(BaseExpr);
+  return BaseExpr && isOpaqueConstantCall(BaseExpr);
 }
 
 static bool IsGlobalLValue(APValue::LValueBase B) {
+  if (B.is<TypeInfoLValue>() || B.is<DynamicAllocLValue>())
+    return true;
+
+  return isGlobalLValue(B.dyn_cast<const ValueDecl *>(),
+                        B.dyn_cast<const Expr *>());
+}
+
+bool isGlobalLValue(const ValueDecl *D, const Expr *E) {
   // C++11 [expr.const]p3 An address constant expression is a prvalue core
   // constant expression of pointer type that evaluates to...
 
   // ... a null pointer value, or a prvalue core constant expression of type
   // std::nullptr_t.
-  if (!B)
+  if (!D && !E)
     return true;
 
-  if (const ValueDecl *D = B.dyn_cast<const ValueDecl*>()) {
+  if (D) {
     // ... the address of an object with static storage duration,
     if (const VarDecl *VD = dyn_cast<VarDecl>(D))
       return VD->hasGlobalStorage();
@@ -1962,10 +1931,7 @@ static bool IsGlobalLValue(APValue::LValueBase B) {
     return isa<FunctionDecl, MSGuidDecl, UnnamedGlobalConstantDecl>(D);
   }
 
-  if (B.is<TypeInfoLValue>() || B.is<DynamicAllocLValue>())
-    return true;
-
-  const Expr *E = B.get<const Expr*>();
+  assert(E);
   switch (E->getStmtClass()) {
   default:
     return false;
@@ -1986,7 +1952,7 @@ static bool IsGlobalLValue(APValue::LValueBase B) {
   case Expr::ObjCBoxedExprClass:
     return cast<ObjCBoxedExpr>(E)->isExpressibleAsConstantInitializer();
   case Expr::CallExprClass:
-    return IsOpaqueConstantCall(cast<CallExpr>(E));
+    return isOpaqueConstantCall(cast<CallExpr>(E));
   // For GCC compatibility, &&label has static storage duration.
   case Expr::AddrLabelExprClass:
     return true;
@@ -2007,6 +1973,8 @@ static bool IsGlobalLValue(APValue::LValueBase B) {
     // an expression might be a global lvalue.
     return true;
   }
+
+  return false;
 }
 
 static const ValueDecl *GetLValueBaseDecl(const LValue &LVal) {
@@ -10324,7 +10292,7 @@ static bool isOneByteCharacterType(QualType T) {
 
 bool PointerExprEvaluator::VisitBuiltinCallExpr(const CallExpr *E,
                                                 unsigned BuiltinOp) {
-  if (IsOpaqueConstantCall(E))
+  if (isOpaqueConstantCall(E))
     return Success(E);
 
   switch (BuiltinOp) {
@@ -20702,12 +20670,8 @@ static bool EvaluateAsRValue(EvalInfo &Info, const Expr *E, APValue &Result) {
   if (!CheckLiteralType(Info, E))
     return false;
 
-  if (Info.EnableNewConstInterp) {
-    if (!Info.Ctx.getInterpContext().evaluateAsRValue(Info, E, Result))
-      return false;
-    return CheckConstantExpression(Info, E->getExprLoc(), E->getType(), Result,
-                                   ConstantExprKind::Normal);
-  }
+  if (Info.EnableNewConstInterp)
+    return Info.Ctx.getInterpContext().evaluateAsRValue(Info, E, Result);
 
   if (!::Evaluate(Result, Info, E))
     return false;
@@ -20839,6 +20803,18 @@ bool Expr::EvaluateAsRValue(EvalResult &Result, const ASTContext &Ctx,
   assert(!isValueDependent() &&
          "Expression evaluator can't be called on a dependent expression.");
   ExprTimeTraceScope TimeScope(this, Ctx, "EvaluateAsRValue");
+
+  bool IsConst;
+  if (FastEvaluateAsRValue(this, Result.Val, Ctx, IsConst) &&
+      Result.Val.hasValue())
+    return true;
+
+  if (Ctx.getLangOpts().EnableNewConstInterp) {
+    interp::EvalSettings S(EvaluationMode::IgnoreSideEffects, Result);
+    S.InConstantContext = InConstantContext;
+    return Ctx.getInterpContext().evaluateAsRValue(S, this, Result.Val);
+  }
+
   EvalInfo Info(Ctx, Result, EvaluationMode::IgnoreSideEffects);
   Info.InConstantContext = InConstantContext;
   return ::EvaluateAsRValue(this, Result, Ctx, Info);
@@ -20902,21 +20878,17 @@ bool Expr::EvaluateAsLValue(EvalResult &Result, const ASTContext &Ctx,
          "Expression evaluator can't be called on a dependent expression.");
 
   ExprTimeTraceScope TimeScope(this, Ctx, "EvaluateAsLValue");
+
+  if (Ctx.getLangOpts().EnableNewConstInterp) {
+    interp::EvalSettings S(EvaluationMode::ConstantFold, Result);
+    S.InConstantContext = InConstantContext;
+    return Ctx.getInterpContext().evaluate(S, this, Result.Val);
+  }
+
   EvalInfo Info(Ctx, Result, EvaluationMode::ConstantFold);
   Info.InConstantContext = InConstantContext;
   LValue LV;
   CheckedTemporaries CheckedTemps;
-
-  if (Info.EnableNewConstInterp) {
-    if (!Info.Ctx.getInterpContext().evaluate(Info, this, Result.Val,
-                                              ConstantExprKind::Normal))
-      return false;
-
-    LV.setFrom(Ctx, Result.Val);
-    return CheckLValueConstantExpression(
-        Info, getExprLoc(), Ctx.getLValueReferenceType(getType()), LV,
-        ConstantExprKind::Normal, CheckedTemps);
-  }
 
   if (!EvaluateLValue(this, LV, Info) || !Info.discardCleanups() ||
       Result.HasSideEffects ||
@@ -20963,16 +20935,15 @@ bool Expr::EvaluateAsConstantExpr(EvalResult &Result, const ASTContext &Ctx,
     return true;
 
   ExprTimeTraceScope TimeScope(this, Ctx, "EvaluateAsConstantExpr");
-  EvaluationMode EM = EvaluationMode::ConstantExpression;
-  EvalInfo Info(Ctx, Result, EM);
-  Info.InConstantContext = true;
 
-  if (Info.EnableNewConstInterp) {
-    if (!Info.Ctx.getInterpContext().evaluate(Info, this, Result.Val, Kind))
-      return false;
-    return CheckConstantExpression(Info, getExprLoc(),
-                                   getStorageType(Ctx, this), Result.Val, Kind);
+  if (Ctx.getLangOpts().EnableNewConstInterp) {
+    interp::EvalSettings S(EvaluationMode::ConstantExpression, Result, Kind);
+    S.InConstantContext = true;
+    return Ctx.getInterpContext().evaluate(S, this, Result.Val);
   }
+
+  EvalInfo Info(Ctx, Result, EvaluationMode::ConstantExpression);
+  Info.InConstantContext = true;
 
   // The type of the object we're initializing is 'const T' for a class NTTP.
   QualType T = getType();
@@ -21038,52 +21009,50 @@ bool Expr::EvaluateAsInitializer(APValue &Value, const ASTContext &Ctx,
   Expr::EvalStatus EStatus;
   EStatus.Diag = &Notes;
 
-  EvalInfo Info(Ctx, EStatus,
-                (IsConstantInitialization &&
-                 (Ctx.getLangOpts().CPlusPlus || Ctx.getLangOpts().C23))
-                    ? EvaluationMode::ConstantExpression
-                    : EvaluationMode::ConstantFold);
-  Info.setEvaluatingDecl(VD, Value);
-  Info.InConstantContext = IsConstantInitialization;
+  EvaluationMode EvalMode =
+      (IsConstantInitialization &&
+       (Ctx.getLangOpts().CPlusPlus || Ctx.getLangOpts().C23))
+          ? EvaluationMode::ConstantExpression
+          : EvaluationMode::ConstantFold;
+
+  if (Ctx.getLangOpts().EnableNewConstInterp) {
+    interp::EvalSettings S(EvalMode, EStatus);
+    S.InConstantContext = IsConstantInitialization;
+    return Ctx.getInterpContext().evaluateAsInitializer(S, VD, this, Value);
+  }
 
   SourceLocation DeclLoc = VD->getLocation();
   QualType DeclTy = VD->getType();
 
-  if (Info.EnableNewConstInterp) {
-    auto &InterpCtx = Ctx.getInterpContext();
-    if (!InterpCtx.evaluateAsInitializer(Info, VD, this, Value))
+  EvalInfo Info(Ctx, EStatus, EvalMode);
+  Info.setEvaluatingDecl(VD, Value);
+  Info.InConstantContext = IsConstantInitialization;
+
+  LValue LVal;
+  LVal.set(VD);
+
+  {
+    // C++23 [intro.execution]/p5
+    // A full-expression is ... an init-declarator ([dcl.decl]) or a
+    // mem-initializer.
+    // So we need to make sure temporary objects are destroyed after having
+    // evaluated the expression (per C++23 [class.temporary]/p4).
+    //
+    // FIXME: Otherwise this may break test/Modules/pr68702.cpp because the
+    // serialization code calls ParmVarDecl::getDefaultArg() which strips the
+    // outermost FullExpr, such as ExprWithCleanups.
+    FullExpressionRAII Scope(Info);
+    if (!EvaluateInPlace(Value, Info, LVal, this,
+                         /*AllowNonLiteralTypes=*/true) ||
+        EStatus.HasSideEffects)
       return false;
-
-    return CheckConstantExpression(Info, DeclLoc, DeclTy, Value,
-                                   ConstantExprKind::Normal);
-  } else {
-    LValue LVal;
-    LVal.set(VD);
-
-    {
-      // C++23 [intro.execution]/p5
-      // A full-expression is ... an init-declarator ([dcl.decl]) or a
-      // mem-initializer.
-      // So we need to make sure temporary objects are destroyed after having
-      // evaluated the expression (per C++23 [class.temporary]/p4).
-      //
-      // FIXME: Otherwise this may break test/Modules/pr68702.cpp because the
-      // serialization code calls ParmVarDecl::getDefaultArg() which strips the
-      // outermost FullExpr, such as ExprWithCleanups.
-      FullExpressionRAII Scope(Info);
-      if (!EvaluateInPlace(Value, Info, LVal, this,
-                           /*AllowNonLiteralTypes=*/true) ||
-          EStatus.HasSideEffects)
-        return false;
-    }
-
-    // At this point, any lifetime-extended temporaries are completely
-    // initialized.
-    Info.performLifetimeExtension();
-
-    if (!Info.discardCleanups())
-      llvm_unreachable("Unhandled cleanup; missing full expression marker?");
   }
+  // At this point, any lifetime-extended temporaries are completely
+  // initialized.
+  Info.performLifetimeExtension();
+
+  if (!Info.discardCleanups())
+    llvm_unreachable("Unhandled cleanup; missing full expression marker?");
 
   return CheckConstantExpression(Info, DeclLoc, DeclTy, Value,
                                  ConstantExprKind::Normal) &&
@@ -21868,19 +21837,22 @@ bool Expr::isPotentialConstantExpr(const FunctionDecl *FD,
     return Name;
   });
 
+  const ASTContext &Ctx = FD->getASTContext();
   Expr::EvalStatus Status;
   Status.Diag = &Diags;
 
-  EvalInfo Info(FD->getASTContext(), Status,
-                EvaluationMode::ConstantExpression);
-  Info.InConstantContext = true;
-  Info.CheckingPotentialConstantExpression = true;
-
   // The constexpr VM attempts to compile all methods to bytecode here.
-  if (Info.EnableNewConstInterp) {
-    Info.Ctx.getInterpContext().isPotentialConstantExpr(Info, FD);
+  if (Ctx.getLangOpts().EnableNewConstInterp) {
+    interp::EvalSettings S(EvaluationMode::ConstantExpression, Status);
+    S.InConstantContext = true;
+    S.CheckingPotentialConstantExpression = true;
+    FD->getASTContext().getInterpContext().isPotentialConstantExpr(S, FD);
     return Diags.empty();
   }
+
+  EvalInfo Info(Ctx, Status, EvaluationMode::ConstantExpression);
+  Info.InConstantContext = true;
+  Info.CheckingPotentialConstantExpression = true;
 
   const CXXMethodDecl *MD = dyn_cast<CXXMethodDecl>(FD);
   const CXXRecordDecl *RD = MD ? MD->getParent()->getCanonicalDecl() : nullptr;
@@ -21917,19 +21889,23 @@ bool Expr::isPotentialConstantExprUnevaluated(Expr *E,
                                                 PartialDiagnosticAt> &Diags) {
   assert(!E->isValueDependent() &&
          "Expression evaluator can't be called on a dependent expression.");
-
+  const ASTContext &Ctx = FD->getASTContext();
   Expr::EvalStatus Status;
   Status.Diag = &Diags;
 
-  EvalInfo Info(FD->getASTContext(), Status,
-                EvaluationMode::ConstantExpressionUnevaluated);
-  Info.InConstantContext = true;
-  Info.CheckingPotentialConstantExpression = true;
-
-  if (Info.EnableNewConstInterp) {
-    Info.Ctx.getInterpContext().isPotentialConstantExprUnevaluated(Info, E, FD);
+  if (Ctx.getLangOpts().EnableNewConstInterp) {
+    interp::EvalSettings S(EvaluationMode::ConstantExpressionUnevaluated,
+                           Status);
+    S.InConstantContext = true;
+    S.CheckingPotentialConstantExpression = true;
+    FD->getASTContext().getInterpContext().isPotentialConstantExprUnevaluated(
+        S, E, FD);
     return Diags.empty();
   }
+
+  EvalInfo Info(Ctx, Status, EvaluationMode::ConstantExpressionUnevaluated);
+  Info.InConstantContext = true;
+  Info.CheckingPotentialConstantExpression = true;
 
   // Fabricate a call stack frame to give the arguments a plausible cover story.
   CallStackFrame Frame(Info, SourceLocation(), FD, /*This=*/nullptr,
@@ -21946,9 +21922,12 @@ std::optional<uint64_t> Expr::tryEvaluateObjectSize(const ASTContext &Ctx,
     return std::nullopt;
 
   Expr::EvalStatus Status;
+  if (Ctx.getLangOpts().EnableNewConstInterp) {
+    interp::EvalSettings S(EvaluationMode::ConstantFold, Status);
+    return Ctx.getInterpContext().tryEvaluateObjectSize(S, this, Type);
+  }
+
   EvalInfo Info(Ctx, Status, EvaluationMode::ConstantFold);
-  if (Info.EnableNewConstInterp)
-    return Info.Ctx.getInterpContext().tryEvaluateObjectSize(Info, this, Type);
   return tryEvaluateBuiltinObjectSize(this, Type, Info);
 }
 
@@ -22005,15 +21984,16 @@ EvaluateBuiltinStrLen(const Expr *E, EvalInfo &Info,
 
 std::optional<std::string> Expr::tryEvaluateString(ASTContext &Ctx) const {
   Expr::EvalStatus Status;
-  EvalInfo Info(Ctx, Status, EvaluationMode::ConstantFold);
   std::string StringResult;
 
-  if (Info.EnableNewConstInterp) {
-    if (!Info.Ctx.getInterpContext().evaluateString(Info, this, StringResult))
+  if (Ctx.getLangOpts().EnableNewConstInterp) {
+    interp::EvalSettings S(EvaluationMode::ConstantFold, Status);
+    if (!Ctx.getInterpContext().evaluateString(S, this, StringResult))
       return std::nullopt;
     return StringResult;
   }
 
+  EvalInfo Info(Ctx, Status, EvaluationMode::ConstantFold);
   if (EvaluateBuiltinStrLen(this, Info, &StringResult))
     return StringResult;
   return std::nullopt;
@@ -22025,13 +22005,15 @@ static bool EvaluateCharRangeAsStringImpl(const Expr *, T &Result,
                                           const Expr *PtrExpression,
                                           ASTContext &Ctx,
                                           Expr::EvalResult &Status) {
+  if (Ctx.getLangOpts().EnableNewConstInterp) {
+    interp::EvalSettings S(EvaluationMode::ConstantExpression, Status);
+    S.InConstantContext = true;
+    return Ctx.getInterpContext().evaluateCharRange(S, SizeExpression,
+                                                    PtrExpression, Result);
+  }
+
   EvalInfo Info(Ctx, Status, EvaluationMode::ConstantExpression);
   Info.InConstantContext = true;
-
-  if (Info.EnableNewConstInterp)
-    return Info.Ctx.getInterpContext().evaluateCharRange(Info, SizeExpression,
-                                                         PtrExpression, Result);
-
   LValue String;
   FullExpressionRAII Scope(Info);
   APSInt SizeValue;
@@ -22093,10 +22075,13 @@ bool Expr::EvaluateCharRangeAsString(APValue &Result,
 
 std::optional<uint64_t> Expr::tryEvaluateStrLen(const ASTContext &Ctx) const {
   Expr::EvalStatus Status;
-  EvalInfo Info(Ctx, Status, EvaluationMode::ConstantFold);
 
-  if (Info.EnableNewConstInterp)
-    return Info.Ctx.getInterpContext().evaluateStrlen(Info, this);
+  if (Ctx.getLangOpts().EnableNewConstInterp) {
+    interp::EvalSettings S(EvaluationMode::ConstantFold, Status);
+    return Ctx.getInterpContext().evaluateStrlen(S, this);
+  }
+
+  EvalInfo Info(Ctx, Status, EvaluationMode::ConstantFold);
   return EvaluateBuiltinStrLen(this, Info);
 }
 

@@ -14,6 +14,7 @@
 #ifndef LLVM_CLANG_LIB_AST_EXPRCONSTSHARED_H
 #define LLVM_CLANG_LIB_AST_EXPRCONSTSHARED_H
 
+#include "ByteCode/State.h"
 #include "clang/Basic/TypeTraits.h"
 #include <cstdint>
 #include <optional>
@@ -88,5 +89,47 @@ llvm::APSInt NormalizeRotateAmount(const llvm::APSInt &Value,
 std::optional<llvm::APFloat>
 EvalScalarMinMaxFp(const llvm::APFloat &A, const llvm::APFloat &B,
                    std::optional<llvm::APSInt> RoundingMode, bool IsMin);
+
+/// Determines whether the given kind of constant expression is only ever
+/// used for name mangling. If so, it's permitted to reference things that we
+/// can't generate code for (in particular, dllimported functions).
+inline bool isForManglingOnly(ConstantExprKind Kind) {
+  switch (Kind) {
+  case ConstantExprKind::Normal:
+  case ConstantExprKind::ClassTemplateArgument:
+  case ConstantExprKind::ImmediateInvocation:
+    // Note that non-type template arguments of class type are emitted as
+    // template parameter objects.
+    return false;
+
+  case ConstantExprKind::NonClassTemplateArgument:
+    return true;
+  }
+  llvm_unreachable("unknown ConstantExprKind");
+}
+
+inline bool isTemplateArgument(ConstantExprKind Kind) {
+  switch (Kind) {
+  case ConstantExprKind::Normal:
+  case ConstantExprKind::ImmediateInvocation:
+    return false;
+
+  case ConstantExprKind::ClassTemplateArgument:
+  case ConstantExprKind::NonClassTemplateArgument:
+    return true;
+  }
+  llvm_unreachable("unknown ConstantExprKind");
+}
+
+/// Should this call expression be treated as forming an opaque constant?
+inline bool isOpaqueConstantCall(const CallExpr *E) {
+  unsigned Builtin = E->getBuiltinCallee();
+  return (Builtin == Builtin::BI__builtin___CFStringMakeConstantString ||
+          Builtin == Builtin::BI__builtin___NSStringMakeConstantString ||
+          Builtin == Builtin::BI__builtin_ptrauth_sign_constant ||
+          Builtin == Builtin::BI__builtin_function_start);
+}
+
+bool isGlobalLValue(const ValueDecl *D, const Expr *E);
 
 #endif

@@ -33,11 +33,16 @@ public:
   using LabelTy = uint32_t;
   using AddrTy = uintptr_t;
   using Local = Scope::Local;
-  using PtrCallback = llvm::function_ref<bool(const Pointer &)>;
+  using PtrCallback = llvm::function_ref<bool(InterpState &, const Pointer &)>;
 
-  EvaluationResult interpretExpr(const Expr *E,
-                                 bool ConvertResultToRValue = false,
+  EvaluationResult interpretExpr(const Expr *E) {
+    return interpretExpr(E, /*ConvertResultToRValue=*/E->isGLValue(),
+                         /*DestroyToplevelScope=*/false);
+  }
+
+  EvaluationResult interpretExpr(const Expr *E, bool ConvertResultToRValue,
                                  bool DestroyToplevelScope = false);
+
   EvaluationResult interpretDecl(const VarDecl *VD, const Expr *Init,
                                  bool CheckFullyInitialized);
   /// Interpret the given Expr to a Pointer.
@@ -49,8 +54,14 @@ public:
   /// Clean up all resources.
   void cleanup();
 
+  bool constantFolding() const {
+    return S.EvalMode == EvaluationMode::ConstantFold;
+  }
+
 protected:
   EvalEmitter(Context &Ctx, Program &P, State &Parent, InterpStack &Stk);
+  EvalEmitter(Context &Ctx, Program &P, const EvalSettings &Settings,
+              InterpStack &Stk);
 
   virtual ~EvalEmitter();
 
@@ -109,6 +120,7 @@ private:
   InterpState S;
   /// Location to write the result to.
   EvaluationResult EvalResult;
+  ConstantExprKind ConstexprKind = ConstantExprKind::Normal;
   /// Whether the result should be converted to an RValue.
   bool ConvertResultToRValue = false;
   /// Whether we should check if the result has been fully
