@@ -4,7 +4,6 @@ permissions:
   contents: read
 on:
   pull_request:
-    branches: [ "main" ]
     paths:
       - 'libc/**'
       - '.github/workflows/libc-fullbuild-tests.yml'
@@ -118,7 +117,6 @@ jobs:
         echo "build-install-dir=/__w/llvm-project/llvm-project/install" >> "$GITHUB_OUTPUT"
     
     # Configure libc fullbuild with scudo.
-    # Use MinSizeRel to reduce the size of the build.
     - name: Configure CMake
       run: |
         export RUNTIMES="compiler-rt;libc"
