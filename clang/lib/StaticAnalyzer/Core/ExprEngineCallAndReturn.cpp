@@ -552,7 +552,7 @@ void ExprEngine::inlineCall(WorkList *WList, const CallEvent &Call,
   AnalysisDeclContext *CalleeADC = AMgr.getAnalysisDeclContext(D);
   const StackFrameContext *CalleeSFC =
       CalleeADC->getStackFrame(ParentOfCallee, CallE, getCurrentBlock(),
-                               currBldrCtx->blockCount(), currStmtIdx);
+                               getNumVisitedCurrent(), currStmtIdx);
 
   CallEnter Loc(CallE, CalleeSFC, CurLC);
 
@@ -768,7 +768,7 @@ ProgramStateRef ExprEngine::bindReturnValue(const CallEvent &Call,
 
   SVal R;
   QualType ResultTy = Call.getResultType();
-  unsigned Count = currBldrCtx->blockCount();
+  unsigned Count = getNumVisitedCurrent();
   if (auto RTC = getCurrentCFGElement().getAs<CFGCXXRecordTypedCall>()) {
     // Conjure a temporary if the function returns an object by value.
     SVal Target;
@@ -833,7 +833,7 @@ ProgramStateRef ExprEngine::bindReturnValue(const CallEvent &Call,
 // a conjured return value.
 void ExprEngine::conservativeEvalCall(const CallEvent &Call, NodeBuilder &Bldr,
                                       ExplodedNode *Pred, ProgramStateRef State) {
-  State = Call.invalidateRegions(currBldrCtx->blockCount(), State);
+  State = Call.invalidateRegions(getNumVisitedCurrent(), State);
   State = bindReturnValue(Call, Pred->getLocationContext(), State);
 
   // And make the result node.
