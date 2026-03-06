@@ -1451,9 +1451,9 @@ X86TargetLowering::X86TargetLowering(const X86TargetMachine &TM,
   }
 
   if (!Subtarget.useSoftFloat() && Subtarget.hasXOP()) {
-    for (auto VT : { MVT::v16i8, MVT::v8i16,  MVT::v4i32, MVT::v2i64,
-                     MVT::v32i8, MVT::v16i16, MVT::v8i32, MVT::v4i64 }) {
-      setOperationAction(ISD::ROTL, VT, Custom);
+    for (MVT VT : { MVT::v16i8, MVT::v8i16,  MVT::v4i32, MVT::v2i64,
+                    MVT::v32i8, MVT::v16i16, MVT::v8i32, MVT::v4i64 }) {
+      setOperationAction(ISD::ROTL, VT, VT.is128BitVector() ? Legal : Custom);
       setOperationAction(ISD::ROTR, VT, Custom);
     }
 
@@ -1888,6 +1888,9 @@ X86TargetLowering::X86TargetLowering(const X86TargetMachine &TM,
     setOperationAction(ISD::XOR, MVT::i512, Custom);
     setOperationAction(ISD::ADD, MVT::i512, Custom);
     setOperationAction(ISD::SUB, MVT::i512, Custom);
+    setOperationAction(ISD::SRL, MVT::i512, Custom);
+    setOperationAction(ISD::SHL, MVT::i512, Custom);
+    setOperationAction(ISD::SRA, MVT::i512, Custom);
     setOperationAction(ISD::SELECT, MVT::i512, Custom);
 
     for (MVT VT : { MVT::v16i1, MVT::v16i8 }) {
@@ -2035,6 +2038,8 @@ X86TargetLowering::X86TargetLowering(const X86TargetMachine &TM,
       setOperationAction(ISD::UMAX,             VT, Legal);
       setOperationAction(ISD::SMIN,             VT, Legal);
       setOperationAction(ISD::UMIN,             VT, Legal);
+      setOperationAction(ISD::ROTL,             VT, Legal);
+      setOperationAction(ISD::ROTR,             VT, Legal);
       setOperationAction(ISD::ABS,              VT, Legal);
       setOperationAction(ISD::CTPOP,            VT, Custom);
     }
@@ -2132,8 +2137,8 @@ X86TargetLowering::X86TargetLowering(const X86TargetMachine &TM,
         setOperationAction(ISD::FSHR, VT, Legal);
       }
 
-      setOperationAction(ISD::ROTL, MVT::v32i16, Custom);
-      setOperationAction(ISD::ROTR, MVT::v32i16, Custom);
+      setOperationAction(ISD::ROTL, MVT::v32i16, Legal);
+      setOperationAction(ISD::ROTR, MVT::v32i16, Legal);
     }
 
     // Only PCLMUL required as we always unroll clmul vectors.
@@ -2157,9 +2162,14 @@ X86TargetLowering::X86TargetLowering(const X86TargetMachine &TM,
   if (!Subtarget.useSoftFloat() && Subtarget.hasVBMI2()) {
     for (auto VT : {MVT::v8i16, MVT::v4i32, MVT::v2i64, MVT::v16i16, MVT::v8i32,
                     MVT::v4i64}) {
-      setOperationAction(ISD::FSHL, VT, Subtarget.hasVLX() ? Legal : Custom);
-      setOperationAction(ISD::FSHR, VT, Subtarget.hasVLX() ? Legal : Custom);
+      setOperationAction(ISD::FSHL, VT, Legal);
+      setOperationAction(ISD::FSHR, VT, Legal);
     }
+
+    setOperationAction(ISD::ROTL, MVT::v16i16, Legal);
+    setOperationAction(ISD::ROTR, MVT::v16i16, Legal);
+    setOperationAction(ISD::ROTL, MVT::v8i16, Legal);
+    setOperationAction(ISD::ROTR, MVT::v8i16, Legal);
   }
 
   // This block controls legalization for operations that don't have
@@ -2199,8 +2209,8 @@ X86TargetLowering::X86TargetLowering(const X86TargetMachine &TM,
     }
 
     for (auto VT : { MVT::v4i32, MVT::v8i32, MVT::v2i64, MVT::v4i64 }) {
-      setOperationAction(ISD::ROTL,     VT, Custom);
-      setOperationAction(ISD::ROTR,     VT, Custom);
+      setOperationAction(ISD::ROTL,     VT, Legal);
+      setOperationAction(ISD::ROTR,     VT, Legal);
     }
 
     // Custom legalize 2x32 to get a little better code.
@@ -2778,6 +2788,8 @@ X86TargetLowering::X86TargetLowering(const X86TargetMachine &TM,
                        ISD::STRICT_FP_EXTEND,
                        ISD::FP_ROUND,
                        ISD::STRICT_FP_ROUND,
+                       ISD::ROTL,
+                       ISD::ROTR,
                        ISD::FSHL,
                        ISD::FSHR,
                        ISD::INTRINSIC_VOID,
@@ -2932,6 +2944,10 @@ static bool mayFoldIntoVector(SDValue Op, const SelectionDAG &DAG,
     // Check for larger than legal scalar integer ops that might have been
     // custom lowered to vector instruction.
     switch (Opcode) {
+    case ISD::SHL:
+    case ISD::SRL:
+    case ISD::SRA:
+      return mayFoldIntoVector(Op.getOperand(0), DAG, Subtarget);
     case ISD::AND:
     case ISD::OR:
     case ISD::XOR:
@@ -31736,16 +31752,6 @@ static SDValue LowerFunnelShift(SDValue Op, const X86Subtarget &Subtarget,
     APInt APIntShiftAmt;
     bool IsCstSplat = X86::isConstantSplat(Amt, APIntShiftAmt);
     unsigned NumElts = VT.getVectorNumElements();
-
-    // For non-VLX VBMI2 targets, widen 128/256-bit to 512-bit so
-    // the rest of the lowering/isel can select the VBMI2 forms.
-    // Only Custom types (v8i16, v4i32, v2i64, v16i16, v8i32, v4i64) can
-    // reach LowerFunnelShift with VBMI2 but no VLX, so no type check needed.
-    if (Subtarget.hasVBMI2() && !Subtarget.hasVLX() && EltSizeInBits > 8) {
-      return getAVX512Node(IsFSHR ? ISD::FSHR : ISD::FSHL, DL, VT,
-                           {Op0, Op1, Amt}, DAG, Subtarget);
-    }
-
     assert((VT == MVT::v16i8 || VT == MVT::v32i8 || VT == MVT::v64i8 ||
             VT == MVT::v8i16 || VT == MVT::v16i16 || VT == MVT::v32i16 ||
             VT == MVT::v4i32 || VT == MVT::v8i32 || VT == MVT::v16i32) &&
@@ -31938,26 +31944,6 @@ static SDValue LowerRotate(SDValue Op, const X86Subtarget &Subtarget,
   if (IsCstSplat && CstSplatValue.urem(EltSizeInBits) == 0)
     return R;
 
-  // AVX512 implicitly uses modulo rotation amounts.
-  if ((Subtarget.hasVLX() || Subtarget.hasAVX512()) && 32 <= EltSizeInBits) {
-    // Attempt to rotate by immediate.
-    if (IsCstSplat) {
-      unsigned RotOpc = IsROTL ? X86ISD::VROTLI : X86ISD::VROTRI;
-      uint64_t RotAmt = CstSplatValue.urem(EltSizeInBits);
-      return DAG.getNode(RotOpc, DL, VT, R,
-                         DAG.getTargetConstant(RotAmt, DL, MVT::i8));
-    }
-
-    // Else, fall-back on VPROLV/VPRORV.
-    return Op;
-  }
-
-  // AVX512 VBMI2 vXi16 - lower to funnel shifts.
-  if (Subtarget.hasVBMI2() && 16 == EltSizeInBits) {
-    unsigned FunnelOpc = IsROTL ? ISD::FSHL : ISD::FSHR;
-    return DAG.getNode(FunnelOpc, DL, VT, R, R, Amt);
-  }
-
   SDValue Z = DAG.getConstant(0, DL, VT);
 
   if (!IsROTL) {
@@ -31984,24 +31970,6 @@ static SDValue LowerRotate(SDValue Op, const X86Subtarget &Subtarget,
   // Split 256-bit integers on XOP/pre-AVX2 targets.
   if (VT.is256BitVector() && (Subtarget.hasXOP() || !Subtarget.hasAVX2()))
     return splitVectorIntBinary(Op, DAG, DL);
-
-  // XOP has 128-bit vector variable + immediate rotates.
-  // +ve/-ve Amt = rotate left/right - just need to handle ISD::ROTL.
-  // XOP implicitly uses modulo rotation amounts.
-  if (Subtarget.hasXOP()) {
-    assert(IsROTL && "Only ROTL expected");
-    assert(VT.is128BitVector() && "Only rotate 128-bit vectors!");
-
-    // Attempt to rotate by immediate.
-    if (IsCstSplat) {
-      uint64_t RotAmt = CstSplatValue.urem(EltSizeInBits);
-      return DAG.getNode(X86ISD::VROTLI, DL, VT, R,
-                         DAG.getTargetConstant(RotAmt, DL, MVT::i8));
-    }
-
-    // Use general rotate by variable (per-element).
-    return Op;
-  }
 
   // Rotate by an uniform constant - expand back to shifts.
   // TODO: Can't use generic expansion as UNDEF amt elements can be converted
@@ -34466,6 +34434,92 @@ void X86TargetLowering::ReplaceNodeResults(SDNode *N,
     SDValue Res =
         DAG.getNode(ISD::VSELECT, dl, VecVT, CorrVec, Adjusted, Partial);
 
+    Results.push_back(DAG.getBitcast(VT, Res));
+    return;
+  }
+  case ISD::SHL:
+  case ISD::SRL:
+  case ISD::SRA: {
+    EVT VT = N->getValueType(0);
+    SDValue Src = N->getOperand(0);
+    SDValue Amt = N->getOperand(1);
+    assert(Subtarget.useAVX512Regs() && "AVX512F required");
+    assert(VT == MVT::i512 && "Unexpected VT!");
+    MVT VecVT = MVT::getVectorVT(MVT::i64, VT.getSizeInBits() / 64);
+    MVT BoolVT = VecVT.changeVectorElementType(MVT::i1);
+
+    if (!mayFoldIntoVector(Src, DAG, Subtarget))
+      return;
+
+    // Early out if this will fold to a constant shift of whole byte elements.
+    // TODO: Directly lower to a shuffle?
+    if (auto *AmtC = dyn_cast<ConstantSDNode>(Amt)) {
+      assert(AmtC->getAPIntValue().ult(512) && "Out of bounds shift amount");
+      if (AmtC->getAPIntValue().urem(8) == 0)
+        return;
+    }
+
+    SDValue AmtLane = DAG.getNode(ISD::SRL, dl, MVT::i32,
+                                  DAG.getZExtOrTrunc(Amt, dl, MVT::i32),
+                                  DAG.getShiftAmountConstant(6, MVT::i32, dl));
+    AmtLane = DAG.getZExtOrTrunc(AmtLane, dl, MVT::i8);
+
+    if (auto *SrcC = dyn_cast<ConstantSDNode>(Src)) {
+      // Special case: SHL(1,Amt) --> SELECT(1<<(Amt/64), SPLAT(1<<(Amt%64)), 0)
+      if (Opc == ISD::SHL && SrcC->getAPIntValue() == 1) {
+        SDValue Bit = DAG.getConstant(1, dl, MVT::i64);
+        SDValue AmtMod = DAG.getNode(ISD::AND, dl, MVT::i64,
+                                     DAG.getZExtOrTrunc(Amt, dl, MVT::i64),
+                                     DAG.getConstant(63, dl, MVT::i64));
+        SDValue LaneMask = DAG.getNode(ISD::SHL, dl, MVT::i64, Bit, AmtLane);
+        LaneMask =
+            DAG.getBitcast(BoolVT, DAG.getZExtOrTrunc(LaneMask, dl, MVT::i8));
+        SDValue Elt = DAG.getNode(ISD::SHL, dl, MVT::i64, Bit, AmtMod);
+        SDValue Res =
+            DAG.getSelect(dl, VecVT, LaneMask, DAG.getSplat(VecVT, dl, Elt),
+                          DAG.getConstant(0, dl, VecVT));
+        Results.push_back(DAG.getBitcast(VT, Res));
+        return;
+      }
+    }
+
+    // Use EXPAND/COMPRESS to shuffle the i64 elements left/right with the
+    // ShiftAmt/64 'laneshift', and then shuffle one element along to get the
+    // shifted in bits from the neighbouring element. Finally use a funnel shift
+    // with the ShiftAmt%64 'elementshift' to get the final result.
+    SDValue Mask =
+        DAG.getNode(ISD::TRUNCATE, dl, MVT::i8,
+                    DAG.getNode(ISD::SHL, dl, MVT::i32,
+                                DAG.getAllOnesConstant(dl, MVT::i32), AmtLane));
+    Src = DAG.getBitcast(VecVT, Src);
+
+    SDValue PassThrough;
+    if (Opc == ISD::SRA) {
+      // Splat the MSB sign bit across the vector.
+      PassThrough = DAG.getNode(ISD::SRA, dl, VecVT, Src,
+                                DAG.getShiftAmountConstant(63, VecVT, dl));
+      PassThrough = DAG.getVectorShuffle(VecVT, dl, PassThrough, PassThrough,
+                                         {7, 7, 7, 7, 7, 7, 7, 7});
+    } else {
+      PassThrough = DAG.getConstant(0, dl, VecVT);
+    }
+    SDValue A, B;
+    if (Opc == ISD::SHL) {
+      A = DAG.getNode(X86ISD::EXPAND, dl, VecVT, Src, PassThrough,
+                      DAG.getBitcast(BoolVT, Mask));
+      B = DAG.getVectorShuffle(VecVT, dl, PassThrough, A,
+                               {7, 8, 9, 10, 11, 12, 13, 14});
+    } else {
+      B = DAG.getNode(X86ISD::COMPRESS, dl, VecVT, Src, PassThrough,
+                      DAG.getBitcast(BoolVT, Mask));
+      A = DAG.getVectorShuffle(VecVT, dl, B, PassThrough,
+                               {1, 2, 3, 4, 5, 6, 7, 8});
+    }
+    // Funnel shifts use modulo shift amount so no need to explicitly mask it.
+    SDValue Res =
+        DAG.getNode(Opc == ISD::SHL ? ISD::FSHL : ISD::FSHR, dl, VecVT, A, B,
+                    DAG.getSplatBuildVector(
+                        VecVT, dl, DAG.getZExtOrTrunc(Amt, dl, MVT::i64)));
     Results.push_back(DAG.getBitcast(VT, Res));
     return;
   }
@@ -48114,6 +48168,23 @@ static SDValue combineExtractVectorElt(SDNode *N, SelectionDAG &DAG,
             dl, DAG, DCI))
       return V;
 
+  // Scalarize single use funnel shift.
+  // Ideally DAG would handle this similar to scalarizeExtractedBinOp.
+  if (InputVector.getOpcode() == ISD::FSHL ||
+      InputVector.getOpcode() == ISD::FSHR) {
+    if (CIdx && InputVector.hasOneUse() &&
+        TLI.isOperationLegal(InputVector.getOpcode(), VT)) {
+      SDValue LHS = DAG.getExtractVectorElt(dl, VT, InputVector.getOperand(0),
+                                            CIdx->getZExtValue());
+      SDValue RHS = DAG.getExtractVectorElt(dl, VT, InputVector.getOperand(1),
+                                            CIdx->getZExtValue());
+      SDValue Amt = DAG.getExtractVectorElt(dl, VT, InputVector.getOperand(2),
+                                            CIdx->getZExtValue());
+      Amt = DAG.getShiftAmountOperand(VT, Amt);
+      return DAG.getNode(InputVector.getOpcode(), dl, VT, LHS, RHS, Amt);
+    }
+  }
+
   // Attempt to extract a i1 element by using MOVMSK to extract the signbits
   // and then testing the relevant element.
   //
@@ -58629,6 +58700,33 @@ static SDValue combineFP_TO_xINT_SAT(SDNode *N, SelectionDAG &DAG,
   return SDValue();
 }
 
+// Turn uniform-constant splat rotates into VROTLI/VROTRI
+static SDValue combineRotate(SDNode *N, SelectionDAG &DAG,
+                             TargetLowering::DAGCombinerInfo &DCI) {
+  SDLoc DL(N);
+  SDValue Src = N->getOperand(0);
+  SDValue Amt = N->getOperand(1);
+  EVT VT = Src.getValueType();
+
+  // Only combine if the operation is legal for this vector type.
+  // This ensures we don't try to convert types that need to be
+  // widened/promoted or prematurely convert to VROTLI/VROTRI before generic
+  // folds have a chance.
+  if (!VT.isVector() || !DCI.isAfterLegalizeDAG() ||
+      !DAG.getTargetLoweringInfo().isOperationLegal(N->getOpcode(), VT))
+    return SDValue();
+
+  APInt RotateVal;
+  if (!X86::isConstantSplat(Amt, RotateVal))
+    return SDValue();
+
+  bool IsROTR = N->getOpcode() == ISD::ROTR;
+  unsigned Opcode = IsROTR ? X86ISD::VROTRI : X86ISD::VROTLI;
+  uint64_t ModAmt = RotateVal.urem(VT.getScalarSizeInBits());
+  SDValue Imm = DAG.getTargetConstant(ModAmt, DL, MVT::i8);
+  return DAG.getNode(Opcode, DL, VT, {Src, Imm});
+}
+
 // Combiner: turn uniform-constant splat funnel shifts into VSHLD/VSHRD
 static SDValue combineFunnelShift(SDNode *N, SelectionDAG &DAG,
                                   TargetLowering::DAGCombinerInfo &DCI,
@@ -62380,6 +62478,8 @@ SDValue X86TargetLowering::PerformDAGCombine(SDNode *N,
   case ISD::OR:             return combineOr(N, DAG, DCI, Subtarget);
   case ISD::XOR:            return combineXor(N, DAG, DCI, Subtarget);
   case ISD::BITREVERSE:     return combineBITREVERSE(N, DAG, DCI, Subtarget);
+  case ISD::ROTL:
+  case ISD::ROTR:           return combineRotate(N, DAG, DCI);
   case ISD::AVGCEILS:
   case ISD::AVGCEILU:
   case ISD::AVGFLOORS:

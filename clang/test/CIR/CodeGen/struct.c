@@ -233,7 +233,7 @@ char f3(int a) {
 // OGCG-NEXT:   store i32 %[[ARG_A]], ptr %[[A_ADDR]], align 4
 // OGCG-NEXT:   %[[A_VAL:.*]] = load i32, ptr %[[A_ADDR]], align 4
 // OGCG-NEXT:   store i32 %[[A_VAL]], ptr @cs, align 4
-// OGCG-NEXT:   %[[CS_B_VAL:.*]] = load i8, ptr getelementptr inbounds nuw (%struct.CompleteS, ptr @cs, i32 0, i32 1), align 4
+// OGCG-NEXT:   %[[CS_B_VAL:.*]] = load i8, ptr getelementptr inbounds nuw (i8, ptr @cs, i64 4), align 4
 // OGCG-NEXT:   ret i8 %[[CS_B_VAL]]
 
 char f4(int a, struct CompleteS *p) {
