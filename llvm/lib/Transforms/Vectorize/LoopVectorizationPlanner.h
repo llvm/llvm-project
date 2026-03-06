@@ -389,6 +389,12 @@ public:
     return tryInsertInstruction(new VPExpandSCEVRecipe(Expr));
   }
 
+  VPExpandStridePredicatesRecipe *
+  createExpandSCEVPredicate(const SCEVUnionPredicate &StridePredicates) {
+    return tryInsertInstruction(
+        new VPExpandStridePredicatesRecipe(StridePredicates));
+  }
+
   //===--------------------------------------------------------------------===//
   // RAII helpers.
   //===--------------------------------------------------------------------===//

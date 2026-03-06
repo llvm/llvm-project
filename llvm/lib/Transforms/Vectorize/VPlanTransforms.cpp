@@ -47,6 +47,11 @@ using namespace llvm;
 using namespace VPlanPatternMatch;
 using namespace SCEVPatternMatch;
 
+static cl::opt<bool> EnableVPlanBasedStrideMV(
+    "enable-vplan-based-stride-mv", cl::init(false), cl::Hidden,
+    cl::desc("Perform stride multiversioning directly on VPlan instead of in "
+             "LoopAccessAnalysis."));
+
 bool VPlanTransforms::tryToConvertVPInstructionsToVPRecipes(
     VPlan &Plan, const TargetLibraryInfo &TLI) {
 
@@ -5158,6 +5163,16 @@ VPlanTransforms::expandSCEVs(VPlan &Plan, ScalarEvolution &SE) {
   for (VPRecipeBase &R : make_early_inc_range(*Entry)) {
     if (isa<VPIRInstruction, VPIRPhi>(&R))
       continue;
+    if (auto *ExpStrides = dyn_cast<VPExpandStridePredicatesRecipe>(&R)) {
+      Value *Res = Expander.expandCodeForPredicate(
+          ExpStrides->getSCEVPredicate(), EntryBB->getTerminator());
+      Res->setName("strides.mv.check");
+      VPValue *Exp = Plan.getOrAddLiveIn(Res);
+
+      ExpStrides->replaceAllUsesWith(Exp);
+      ExpStrides->eraseFromParent();
+      continue;
+    }
     auto *ExpSCEV = dyn_cast<VPExpandSCEVRecipe>(&R);
     if (!ExpSCEV)
       break;
@@ -5171,9 +5186,10 @@ VPlanTransforms::expandSCEVs(VPlan &Plan, ScalarEvolution &SE) {
       Plan.resetTripCount(Exp);
     ExpSCEV->eraseFromParent();
   }
-  assert(none_of(*Entry, IsaPred<VPExpandSCEVRecipe>) &&
-         "VPExpandSCEVRecipes must be at the beginning of the entry block, "
-         "before any VPIRInstructions");
+  assert(none_of(*Entry,
+                 IsaPred<VPExpandSCEVRecipe, VPExpandStridePredicatesRecipe>) &&
+         "VPExpandSCEVRecipes/VPExpandStridePredicatesRecipe must be at the "
+         "beginning of the entry block, before any VPIRInstructions");
   // Add IR instructions in the entry basic block but not in the VPIRBasicBlock
   // to the VPIRBasicBlock.
   auto EI = Entry->begin();
@@ -6343,6 +6359,10 @@ void VPlanTransforms::makeMemOpWideningDecisions(VPlan &Plan, VFRange &Range,
         return false;
       });
 
+  if (EnableVPlanBasedStrideMV)
+    RUN_VPLAN_PASS(VPlanTransforms::multiversionForUnitStridedMemOps, Plan,
+                   CostCtx, RecipeBuilder, Range, MemOps);
+
   VPlanTransforms::runPass("delegateMemOpWideningToLegacyCM", ProcessSubset,
                            Plan, [&](VPInstruction *VPI) {
                              VPRecipeBase *Recipe =
@@ -6353,6 +6373,231 @@ void VPlanTransforms::makeMemOpWideningDecisions(VPlan &Plan, VFRange &Range,
 
                              return ReplaceWith(VPI, Recipe);
                            });
+}
+
+void VPlanTransforms::multiversionForUnitStridedMemOps(
+    VPlan &Plan, VPCostContext &CostCtx, VPRecipeBuilder &RecipeBuilder,
+    VFRange &Range, SmallVectorImpl<VPInstruction *> &MemOps) {
+  if (CostCtx.L->getHeader()->getParent()->hasOptSize())
+    return;
+  SmallVector<VPInstruction *> RemainingOps;
+  // Makes a copy of VPTypeAnalysis (not sure where the problem is).
+  auto Types = CostCtx.Types;
+
+  ScalarEvolution *SE = CostCtx.PSE.getSE();
+
+  PredicatedScalarEvolution StrideMVPSE(*SE, const_cast<Loop &>(*CostCtx.L));
+
+  SCEVUnionPredicate StridePredicates({}, *SE);
+
+  // Use `for_each` so that we could do `return Skip();`.
+  for_each(MemOps, [&](VPInstruction *VPI) {
+    auto Skip = [&]() { RemainingOps.push_back(VPI); };
+    if (RecipeBuilder.isConsecutiveWithoutVPlanBasedStrideSpeculation(VPI))
+      return Skip();
+    auto *PtrOp = VPI->getOpcode() == Instruction::Load ? VPI->getOperand(0)
+                                                        : VPI->getOperand(1);
+
+    const SCEV *PtrSCEV =
+        vputils::getSCEVExprForVPValue(PtrOp, CostCtx.PSE, CostCtx.L);
+    const SCEV *Start = nullptr;
+    const SCEV *Stride = nullptr;
+
+    if (!match(PtrSCEV, m_scev_AffineAddRec(m_SCEV(Start), m_SCEV(Stride),
+                                            m_SpecificLoop(CostCtx.L)))) {
+      return Skip();
+    }
+
+    Type *ScalarTy = Types.inferScalarType(
+        VPI->getOpcode() == Instruction::Load ? VPI : VPI->getOperand(0));
+
+    if (VPI->getMask()) {
+      auto &TTI = CostCtx.TTI;
+      Instruction *I = VPI->getUnderlyingInstr();
+      unsigned AS = getLoadStoreAddressSpace(I);
+      const Align Alignment = getLoadStoreAlignment(I);
+      if (!LoopVectorizationPlanner::getDecisionAndClampRange(
+              [&](ElementCount VF) -> bool {
+                Type *VTy = VectorType::get(ScalarTy, VF);
+                return VPI->getOpcode() == Instruction::Load
+                           ? (TTI.isLegalMaskedLoad(VTy, Alignment, AS) ||
+                              TTI.isLegalMaskedGather(VTy, Alignment))
+                           : (TTI.isLegalMaskedStore(VTy, Alignment, AS) ||
+                              TTI.isLegalMaskedScatter(VTy, Alignment));
+              },
+              Range))
+        return Skip();
+    }
+
+    const SCEV *TypeSize = SE->getSizeOfExpr(
+        Stride->getType(), SE->getDataLayout().getTypeStoreSize(ScalarTy));
+
+    auto ReplaceWithUnitStrided = [&]() {
+      VPBuilder Builder(VPI);
+      auto *VecPtr = new VPVectorPointerRecipe(
+          PtrOp, ScalarTy, GEPNoWrapFlags::none(), VPI->getDebugLoc());
+      Builder.insert(VecPtr);
+      if (VPI->getOpcode() == Instruction::Load) {
+        auto *WideLoad = new VPWidenLoadRecipe(
+            cast<LoadInst>(*VPI->getUnderlyingInstr()), VecPtr, VPI->getMask(),
+            true, false, *VPI, VPI->getDebugLoc());
+        Builder.insert(WideLoad);
+        VPI->replaceAllUsesWith(WideLoad);
+      } else {
+        auto *WideStore =
+            new VPWidenStoreRecipe(cast<StoreInst>(*VPI->getUnderlyingInstr()),
+                                   VecPtr, VPI->getOperand(0), VPI->getMask(),
+                                   true, false, *VPI, VPI->getDebugLoc());
+        Builder.insert(WideStore);
+      }
+      VPI->eraseFromParent();
+    };
+
+    if (isa<SCEVConstant>(Stride)) {
+      if (Stride != TypeSize)
+        return Skip();
+
+      // Earlier MV helped with this memory operation too.
+      ReplaceWithUnitStrided();
+      return;
+    }
+
+    const SCEVConstant *StrideConstantMultiplier;
+    const SCEV *StrideNonConstantMultiplier;
+
+    const SCEV *ToMultiVersion = Stride;
+    const SCEV *MVConst = TypeSize;
+    if (match(Stride, m_scev_c_Mul(m_SCEVConstant(StrideConstantMultiplier),
+                                   m_SCEV(StrideNonConstantMultiplier)))) {
+      if (TypeSize != StrideConstantMultiplier) {
+        // TODO: Support `TypeSize = N * StrideCosntantMultiplier`,
+        // including negative `N`. For now, only process when they're equal,
+        // which matches the usefull part of the legacy behavior that
+        // multiversiones GEP index for stride one.
+        return Skip();
+      }
+      ToMultiVersion = StrideNonConstantMultiplier;
+      MVConst = SE->getOne(ToMultiVersion->getType());
+    } else if (!TypeSize->isOne()) {
+      // Likewise - try to match legacy behavior.
+      return Skip();
+    }
+
+    while (auto *C = dyn_cast<SCEVIntegralCastExpr>(ToMultiVersion)) {
+      ToMultiVersion = C->getOperand();
+      MVConst = SE->getTruncateOrSignExtend(MVConst, ToMultiVersion->getType());
+    }
+
+    if (!isa<SCEVUnknown>(ToMultiVersion)) {
+      // Match legacy behavior.
+      // If/when changed, make sure that explicit poison/undef in the defining
+      // expression doesn't cause any issues.
+      return Skip();
+    }
+
+    Value *StrideVal = cast<SCEVUnknown>(ToMultiVersion)->getValue();
+
+    if (isa<UndefValue>(StrideVal))
+      return Skip();
+
+    const SCEVPredicate *NewPred =
+        SE->getComparePredicate(CmpInst::ICMP_EQ, ToMultiVersion, MVConst);
+
+    // Check if new predicate implies that backedge is never taken. If so, there
+    // is no reason to multiversion for it.
+    SmallVector<const SCEVPredicate *> Preds{&CostCtx.PSE.getPredicate(),
+                                             &StridePredicates, NewPred};
+    auto *PredicatedMaxBTC = SE->rewriteUsingPredicate(
+        SE->getSymbolicMaxBackedgeTakenCount(CostCtx.L), CostCtx.L,
+        StridePredicates.getUnionWith(NewPred, *SE)
+            .getUnionWith(&CostCtx.PSE.getPredicate(), *SE));
+
+    if (LoopVectorizationPlanner::getDecisionAndClampRange(
+            [&](ElementCount VF) {
+              return SE->isKnownPositive(SE->getMinusSCEV(
+                  SE->getConstant(PredicatedMaxBTC->getType(),
+                                  VF.isScalable() ? 1 : VF.getFixedValue() - 1),
+                  PredicatedMaxBTC));
+            },
+            Range))
+      return Skip();
+
+    StridePredicates = StridePredicates.getUnionWith(NewPred, *SE);
+
+    auto ReplaceMVUses = [&](Value *V) {
+      VPValue *From = Plan.getLiveIn(V);
+      if (!From)
+        return;
+      VPValue *To = Plan.getConstantInt(
+          Types.inferScalarType(From),
+          cast<SCEVConstant>(MVConst)->getAPInt().getLimitedValue());
+      // TODO: Why is "If" necessary?
+      From->replaceUsesWithIf(To, [&](VPUser &U, unsigned) {
+        auto *R = cast<VPRecipeBase>(&U);
+        return R->getRegion() ||
+               R->getParent() ==
+                   Plan.getVectorLoopRegion()->getSinglePredecessor();
+      });
+    };
+
+    ReplaceMVUses(StrideVal);
+    for (auto *U : StrideVal->users())
+      if (isa<SExtInst, ZExtInst>(U))
+        ReplaceMVUses(U);
+
+    ReplaceWithUnitStrided();
+  });
+
+  MemOps.swap(RemainingOps);
+
+  if (StridePredicates.isAlwaysTrue())
+    return;
+
+  VPBasicBlock *Entry = Plan.getEntry();
+  VPBuilder Builder(Entry);
+
+  auto *Pred = Builder.createExpandSCEVPredicate(StridePredicates);
+
+  auto *StridesCheckBB = Plan.createVPBasicBlock("strides.check");
+  VPBlockBase *ScalarPH = Plan.getScalarPreheader();
+  VPBlockUtils::insertBlockBefore(StridesCheckBB, Plan.getVectorPreheader());
+  VPBlockUtils::connectBlocks(StridesCheckBB, ScalarPH);
+  // SCEVExpander::expandCodeForPredicate would negate the condition, so scalar
+  // preheader should be the first successor.
+  std::swap(StridesCheckBB->getSuccessors()[0],
+            StridesCheckBB->getSuccessors()[1]);
+  Builder.setInsertPoint(StridesCheckBB);
+  Builder.createNaryOp(VPInstruction::BranchOnCond, Pred);
+
+  for (VPRecipeBase &R : cast<VPBasicBlock>(ScalarPH)->phis()) {
+    auto &Phi = cast<VPPhi>(R);
+    Phi.addOperand(Phi.getIncomingValueForBlock(Entry));
+  }
+
+  auto RewriteVPExpandSCEV = [&](VPExpandSCEVRecipe *R) {
+    const SCEV *S = R->getSCEV();
+    Builder.setInsertPoint(R);
+    const SCEV *NewS =
+        SE->rewriteUsingPredicate(S, CostCtx.L, StridePredicates);
+    if (NewS == S)
+      return;
+    auto *NewR = Builder.createExpandSCEV(NewS);
+    R->replaceAllUsesWith(NewR);
+
+    // If this recipe is a trip count then we need to reset it explicitly.
+    if (R == Plan.getTripCount())
+      Plan.resetTripCount(NewR);
+
+    R->eraseFromParent();
+  };
+
+  if (auto *R = dyn_cast<VPExpandSCEVRecipe>(Plan.getTripCount())) {
+    RewriteVPExpandSCEV(R);
+  }
+
+  for (auto &R : make_early_inc_range(*Entry))
+    if (auto *ExpandSCEV = dyn_cast<VPExpandSCEVRecipe>(&R))
+      RewriteVPExpandSCEV(ExpandSCEV);
 }
 
 void VPlanTransforms::makeScalarizationDecisions(VPlan &Plan, VFRange &Range) {

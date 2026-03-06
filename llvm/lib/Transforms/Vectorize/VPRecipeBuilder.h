@@ -47,11 +47,6 @@ class VPRecipeBuilder {
   /// created.
   SmallVector<VPHeaderPHIRecipe *, 4> PhisToFix;
 
-  /// Check if \p I can be widened at the start of \p Range and possibly
-  /// decrease the range such that the returned value holds for the entire \p
-  /// Range. The function should not be called for memory instructions or calls.
-  bool shouldWiden(Instruction *I, VFRange &Range) const;
-
   /// Optimize the special case where the operand of \p VPI is a constant
   /// integer induction variable.
   VPWidenIntOrFpInductionRecipe *
@@ -74,6 +69,11 @@ public:
       : Plan(Plan), TLI(TLI), Legal(Legal), CM(CM), Builder(Builder) {}
 
   VPBuilder &getVPBuilder() const { return Builder; }
+
+  /// Check if \p I can be widened at the start of \p Range and possibly
+  /// decrease the range such that the returned value holds for the entire \p
+  /// Range. The function should not be called for memory instructions or calls.
+  bool shouldWiden(Instruction *I, VFRange &Range) const;
 
   /// Create and return a widened recipe for a non-phi recipe \p R if one can be
   /// created within the given VF \p Range.
@@ -99,6 +99,8 @@ public:
   /// FinalRedStoresBuidler.
   bool replaceWithFinalIfReductionStore(VPBuilder &FinalRedStoresBuilder,
                                         VPInstruction *VPI);
+
+  bool isConsecutiveWithoutVPlanBasedStrideSpeculation(VPInstruction *MemOp);
 
   /// Set the recipe created for given ingredient.
   void setRecipe(Instruction *I, VPRecipeBase *R) {

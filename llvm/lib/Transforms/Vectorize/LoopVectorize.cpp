@@ -8008,6 +8008,16 @@ bool VPRecipeBuilder::replaceWithFinalIfReductionStore(
   return false;
 }
 
+bool VPRecipeBuilder::isConsecutiveWithoutVPlanBasedStrideSpeculation(
+    VPInstruction *MemOp) {
+  auto *I = MemOp->getUnderlyingInstr();
+  auto *PtrOp = getLoadStorePointerOperand(I);
+  auto *ScalarTy = MemOp->getOpcode() == Instruction::Load
+                       ? I->getType()
+                       : I->getOperand(0)->getType();
+  return Legal->isConsecutivePtr(ScalarTy, PtrOp);
+}
+
 VPReplicateRecipe *VPRecipeBuilder::handleReplication(VPInstruction *VPI,
                                                       VFRange &Range) {
   auto *I = VPI->getUnderlyingInstr();
