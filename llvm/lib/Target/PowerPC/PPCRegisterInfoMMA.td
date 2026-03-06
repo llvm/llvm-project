@@ -51,7 +51,7 @@ let SubRegIndices = [sub_pair0, sub_pair1] in {
 // must represent 4 advacent vector registers. For example ACC1 must be
 // VS4 - VS7.
 // We want to allocate these registers even before we allocate global ranges.
-def ACCRC : PPCAccumulatorRegisterClass<[v512i1], 128,
+def ACCRC : PPCRegisterClassWithPriority<[v512i1], 128,
               (add ACC0, ACC1, ACC2, ACC3, ACC4, ACC5, ACC6, ACC7),
               31, 1, 512>;
 
@@ -69,7 +69,7 @@ let SubRegIndices = [sub_pair0, sub_pair1] in {
 // least 32 as we want to allocate these registers before we allocate other
 // global ranges. The value must be less than the AllocationPriority of the
 // ACC registers.
-def UACCRC : PPCAccumulatorRegisterClass<[v512i1], 128,
+def UACCRC : PPCRegisterClassWithPriority<[v512i1], 128,
                (add UACC0, UACC1, UACC2, UACC3,
                     UACC4, UACC5, UACC6, UACC7),
                4, 1, 512>;

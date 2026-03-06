@@ -133,20 +133,20 @@ let SubRegIndices = [sub_dmr0, sub_dmr1] in {
   def DMRp3 : DMRp<3, "dmrp3", [DMR6, DMR7]>, DwarfRegNum<[-1, -1]>;
 }
 
-def DMRROWRC : PPCDMRRegisterClass<[v128i1], 128,
+def DMRROWRC : PPCRegisterClassWithSize<[v128i1], 128,
                  (add (sequence "DMRROW%u", 0, 63)), 128>;
 
-def DMRROWpRC : PPCDMRRegisterClass<[v256i1], 128,
+def DMRROWpRC : PPCRegisterClassWithSize<[v256i1], 128,
                   (add (sequence "DMRROWp%u", 0, 31)), 256>;
 
-def WACCRC : PPCDMRRegisterClass<[v512i1], 128,
+def WACCRC : PPCRegisterClassWithSize<[v512i1], 128,
                (add (sequence "WACC%u", 0, 7)), 512>;
 
-def WACC_HIRC : PPCDMRRegisterClass<[v512i1], 128,
+def WACC_HIRC : PPCRegisterClassWithSize<[v512i1], 128,
                   (add (sequence "WACC_HI%u", 0, 7)), 512>;
 
-def DMRRC : PPCDMRRegisterClass<[v1024i1], 128,
+def DMRRC : PPCRegisterClassWithSize<[v1024i1], 128,
               (add (sequence "DMR%u", 0, 7)), 1024>;
 
-def DMRpRC : PPCDMRRegisterClass<[v2048i1], 128,
+def DMRpRC : PPCRegisterClassWithSize<[v2048i1], 128,
                (add DMRp0, DMRp1, DMRp2, DMRp3), 2048>;

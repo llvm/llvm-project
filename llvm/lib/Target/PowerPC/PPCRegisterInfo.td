@@ -168,10 +168,14 @@ let isArtificial = 1 in {
   }
 }
 
-def VFHRC : PPCNonAllocatableRegisterClassWithCopyCost<[f64], 64,
-              (sequence "VFH%u", 0, 31), -1>;
-def FHRC : PPCNonAllocatableRegisterClassWithCopyCost<[f64], 64,
-             (sequence "FH%u", 0, 31), -1>;
+def VFHRC : PPCNonAllocatableRegisterClass<[f64], 64,
+              (sequence "VFH%u", 0, 31)> {
+  let CopyCost = -1;
+}
+def FHRC : PPCNonAllocatableRegisterClass<[f64], 64,
+             (sequence "FH%u", 0, 31)> {
+  let CopyCost = -1;
+}
 
 // Floating-point pair registers
 foreach Index = { 0, 2, 4, 6, 8, 10, 12, 14, 16, 18, 20, 22, 24, 26, 28, 30 } in {
@@ -362,6 +366,7 @@ def SPERC : PPCRegisterClass<[f64], 64,
 def F8RC : PPCRegisterClass<[f64], 64,
              (add (sequence "F%u", 0, 13),
                   (sequence "F%u", 31, 14))>;
+
 def F4RC : PPCRegisterClass<[f32], 32, (add F8RC)>;
 
 // Floating point pair registers.
@@ -376,7 +381,7 @@ def FpRC : PPCRegisterClassWithSize<[ppcf128], 128,
                   Fpair14, Fpair16, Fpair18, Fpair20, Fpair22, Fpair24,
                   Fpair26, Fpair28, Fpair30), 128>;
 
-def VRRC : PPCVectorRegisterClass<[v16i8,v8i16,v4i32,v2i64,v1i128,v4f32,v2f64, f128],
+def VRRC : PPCRegisterClassWithSize<[v16i8,v8i16,v4i32,v2i64,v1i128,v4f32,v2f64, f128],
              128,
              (add V2, V3, V4, V5, V0, V1, V6, V7, V8, V9, V10, V11,
                   V12, V13, V14, V15, V16, V17, V18, V19, V31, V30,
@@ -384,10 +389,11 @@ def VRRC : PPCVectorRegisterClass<[v16i8,v8i16,v4i32,v2i64,v1i128,v4f32,v2f64, f
 
 // VSX register classes (the allocation order mirrors that of the corresponding
 // subregister classes).
-def VSLRC : PPCVectorRegisterClass<[v4i32,v4f32,v2f64,v2i64], 128,
+def VSLRC : PPCRegisterClassWithSize<[v4i32,v4f32,v2f64,v2i64], 128,
               (add (sequence "VSL%u", 0, 13),
                    (sequence "VSL%u", 31, 14)), 128>;
-def VSRC  : PPCVectorRegisterClass<[v4i32,v4f32,v2f64,v2i64], 128,
+
+def VSRC  : PPCRegisterClassWithSize<[v4i32,v4f32,v2f64,v2i64], 128,
               (add VSLRC, VRRC), 128>;
 
 // Register classes for the 64-bit "scalar" VSX subregisters.
@@ -397,6 +403,7 @@ def VFRC :  PPCRegisterClass<[f64], 64,
                    VF15, VF16, VF17, VF18, VF19, VF31, VF30,
                    VF29, VF28, VF27, VF26, VF25, VF24, VF23,
                    VF22, VF21, VF20)>;
+
 def VSFRC : PPCRegisterClass<[f64], 64, (add F8RC, VFRC)>;
 
 // Allow spilling GPR's into caller-saved VSR's.
@@ -428,15 +435,16 @@ def CRRC : PPCCRRegisterClass<[i32], 32,
 // The CTR registers are not allocatable because they're used by the
 // decrement-and-branch instructions, and thus need to stay live across
 // multiple basic blocks.
-def CTRRC : PPCSPRegisterClass<[i32], 32, (add CTR)>;
-def CTRRC8 : PPCSPRegisterClass<[i64], 64, (add CTR8)>;
+def CTRRC : PPCNonAllocatableRegisterClass<[i32], 32, (add CTR)>;
+def CTRRC8 : PPCNonAllocatableRegisterClass<[i64], 64, (add CTR8)>;
 
-def LRRC : PPCSPRegisterClass<[i32], 32, (add LR)>;
-def LR8RC : PPCSPRegisterClass<[i64], 64, (add LR8)>;
+def LRRC : PPCNonAllocatableRegisterClass<[i32], 32, (add LR)>;
+def LR8RC : PPCNonAllocatableRegisterClass<[i64], 64, (add LR8)>;
 
 def VRSAVERC : PPCRegisterClass<[i32], 32, (add VRSAVE)>;
-def CARRYRC : PPCNonAllocatableRegisterClassWithCopyCost<[i32], 32,
-                (add CARRY, XER), -1>;
+def CARRYRC : PPCNonAllocatableRegisterClass<[i32], 32, (add CARRY, XER)> {
+  let CopyCost = -1;
+}
 
 // Make AllocationOrder as similar as G8RC's to avoid potential spilling.
 // Similarly, we have an AltOrder for 64-bit ELF ABI which r2 is allocated
@@ -464,89 +472,42 @@ include "PPCRegisterInfoDMR.td"
 // For this purpose, we define one RegisterOperand for each RegisterClass,
 // using the same name as the class, just in lower case.
 
-def PPCRegGPRCAsmOperand : AsmOperandClass {
-  let Name = "RegGPRC"; let PredicateMethod = "isRegNumber";
+defm GPRC : PPCRegOperand<"isRegNumber">;
+defm G8RC : PPCRegOperand<"isRegNumber">;
+defm GPRC_NOR0 : PPCRegOperand<"isRegNumber">;
+defm G8RC_NOX0 : PPCRegOperand<"isRegNumber">;
+defm SPERC : PPCRegOperand<"isRegNumber">;
+defm F8RC : PPCRegOperand<"isRegNumber">;
+defm F4RC : PPCRegOperand<"isRegNumber">;
+defm FpRC : PPCRegOperand<"isEvenRegNumber", "fpairrc">;
+defm VRRC : PPCRegOperand<"isRegNumber">;
+defm VSRC : PPCRegOperand<"isVSRegNumber">;
+defm VFRC : PPCRegOperand<"isRegNumber">;
+defm VSFRC : PPCRegOperand<"isVSRegNumber">;
+defm SPILLTOVSRRC : PPCRegOperand<"isVSRegNumber">;
+defm VSSRC : PPCRegOperand<"isVSRegNumber">;
+defm CRBITRC : PPCRegOperand<"isCRBitNumber">;
+defm CRRC : PPCRegOperand<"isCCRegNumber">;
+defm G8pRC : PPCRegOperand<"isEvenRegNumber">;
+defm VSRpRC : PPCRegOperand<"isVSRpEvenRegNumber">;
+defm DMRROWRC : PPCRegOperand<"isDMRROWRegNumber", "dmrrow">;
+defm DMRROWpRC : PPCRegOperand<"isDMRROWpRegNumber", "dmrrowp">;
+defm DMRRC : PPCRegOperand<"isDMRRegNumber", "dmr">;
+defm DMRpRC : PPCRegOperand<"isDMRpRegNumber", "dmrp">;
+
+// Special case: spe4rc uses GPRC register class and its AsmOperandClass
+def spe4rc : PPCRegOperandOnly<"GPRC">;
+
+// ACC Register Operands - multiple operands share the same AsmOperandClass
+defm ACCRC : PPCRegOperand<"isACCRegNumber", "acc">;
+def uacc : RegisterOperand<UACCRC> {
+  let ParserMatchClass = PPCRegACCRCAsmOperand;
 }
-def gprc : RegisterOperand<GPRC> {
-  let ParserMatchClass = PPCRegGPRCAsmOperand;
+def wacc : RegisterOperand<WACCRC> {
+  let ParserMatchClass = PPCRegACCRCAsmOperand;
 }
-def PPCRegG8RCAsmOperand : AsmOperandClass {
-  let Name = "RegG8RC"; let PredicateMethod = "isRegNumber";
-}
-def g8rc : RegisterOperand<G8RC> {
-  let ParserMatchClass = PPCRegG8RCAsmOperand;
-}
-def PPCRegG8pRCAsmOperand : AsmOperandClass {
-  let Name = "RegG8pRC"; let PredicateMethod = "isEvenRegNumber";
-}
-def g8prc : RegisterOperand<G8pRC> {
-  let ParserMatchClass = PPCRegG8pRCAsmOperand;
-}
-def PPCRegGPRCNoR0AsmOperand : AsmOperandClass {
-  let Name = "RegGPRCNoR0"; let PredicateMethod = "isRegNumber";
-}
-def gprc_nor0 : RegisterOperand<GPRC_NOR0> {
-  let ParserMatchClass = PPCRegGPRCNoR0AsmOperand;
-}
-def PPCRegG8RCNoX0AsmOperand : AsmOperandClass {
-  let Name = "RegG8RCNoX0"; let PredicateMethod = "isRegNumber";
-}
-def g8rc_nox0 : RegisterOperand<G8RC_NOX0> {
-  let ParserMatchClass = PPCRegG8RCNoX0AsmOperand;
-}
-def PPCRegF8RCAsmOperand : AsmOperandClass {
-  let Name = "RegF8RC"; let PredicateMethod = "isRegNumber";
-}
-def f8rc : RegisterOperand<F8RC> {
-  let ParserMatchClass = PPCRegF8RCAsmOperand;
-}
-def PPCRegF4RCAsmOperand : AsmOperandClass {
-  let Name = "RegF4RC"; let PredicateMethod = "isRegNumber";
-}
-def f4rc : RegisterOperand<F4RC> {
-  let ParserMatchClass = PPCRegF4RCAsmOperand;
-}
-def PPCRegFpRCAsmOperand : AsmOperandClass {
-  let Name = "RegFpRC"; let PredicateMethod = "isEvenRegNumber";
-}
-def fpairrc : RegisterOperand<FpRC> {
-  let ParserMatchClass = PPCRegFpRCAsmOperand;
-}
-def PPCRegVRRCAsmOperand : AsmOperandClass {
-  let Name = "RegVRRC"; let PredicateMethod = "isRegNumber";
-}
-def vrrc : RegisterOperand<VRRC> {
-  let ParserMatchClass = PPCRegVRRCAsmOperand;
-}
-def PPCRegVFRCAsmOperand : AsmOperandClass {
-  let Name = "RegVFRC"; let PredicateMethod = "isRegNumber";
-}
-def vfrc : RegisterOperand<VFRC> {
-  let ParserMatchClass = PPCRegVFRCAsmOperand;
-}
-def PPCRegCRBITRCAsmOperand : AsmOperandClass {
-  let Name = "RegCRBITRC"; let PredicateMethod = "isCRBitNumber";
-}
-def crbitrc : RegisterOperand<CRBITRC> {
-  let ParserMatchClass = PPCRegCRBITRCAsmOperand;
-}
-def PPCRegCRRCAsmOperand : AsmOperandClass {
-  let Name = "RegCRRC"; let PredicateMethod = "isCCRegNumber";
-}
-def crrc : RegisterOperand<CRRC> {
-  let ParserMatchClass = PPCRegCRRCAsmOperand;
-}
-def PPCRegSPERCAsmOperand : AsmOperandClass {
-  let Name = "RegSPERC"; let PredicateMethod = "isRegNumber";
-}
-def sperc : RegisterOperand<SPERC> {
-  let ParserMatchClass = PPCRegSPERCAsmOperand;
-}
-def PPCRegSPE4RCAsmOperand : AsmOperandClass {
-  let Name = "RegSPE4RC"; let PredicateMethod = "isRegNumber";
-}
-def spe4rc : RegisterOperand<GPRC> {
-  let ParserMatchClass = PPCRegSPE4RCAsmOperand;
+def wacc_hi : RegisterOperand<WACC_HIRC> {
+  let ParserMatchClass = PPCRegACCRCAsmOperand;
 }
 
 // Address operands
@@ -652,108 +613,4 @@ def memr : Operand<iPTR> {
 def pred : Operand<OtherVT> {
   let PrintMethod = "printPredicateOperand";
   let MIOperandInfo = (ops i32imm:$bibo, crrc:$reg);
-}
-
-def PPCRegVSRCAsmOperand : AsmOperandClass {
-  let Name = "RegVSRC"; let PredicateMethod = "isVSRegNumber";
-}
-def vsrc : RegisterOperand<VSRC> {
-  let ParserMatchClass = PPCRegVSRCAsmOperand;
-}
-
-def PPCRegVSFRCAsmOperand : AsmOperandClass {
-  let Name = "RegVSFRC"; let PredicateMethod = "isVSRegNumber";
-}
-def vsfrc : RegisterOperand<VSFRC> {
-  let ParserMatchClass = PPCRegVSFRCAsmOperand;
-}
-
-def PPCRegVSSRCAsmOperand : AsmOperandClass {
-  let Name = "RegVSSRC"; let PredicateMethod = "isVSRegNumber";
-}
-def vssrc : RegisterOperand<VSSRC> {
-  let ParserMatchClass = PPCRegVSSRCAsmOperand;
-}
-
-def PPCRegSPILLTOVSRRCAsmOperand : AsmOperandClass {
-  let Name = "RegSPILLTOVSRRC"; let PredicateMethod = "isVSRegNumber";
-}
-
-def spilltovsrrc : RegisterOperand<SPILLTOVSRRC> {
-  let ParserMatchClass = PPCRegSPILLTOVSRRCAsmOperand;
-}
-
-def PPCRegVSRpRCAsmOperand : AsmOperandClass {
-  let Name = "RegVSRpRC"; let PredicateMethod = "isVSRpEvenRegNumber";
-}
-
-def vsrprc : RegisterOperand<VSRpRC> {
-  let ParserMatchClass = PPCRegVSRpRCAsmOperand;
-}
-
-def PPCRegVSRpEvenRCAsmOperand : AsmOperandClass {
-  let Name = "RegVSRpEvenRC"; let PredicateMethod = "isVSRpEvenRegNumber";
-}
-
-def vsrpevenrc : RegisterOperand<VSRpRC> {
-  let ParserMatchClass = PPCRegVSRpEvenRCAsmOperand;
-  let EncoderMethod = "getVSRpEvenEncoding";
-  let DecoderMethod = "decodeVSRpEvenOperands";
-}
-
-def PPCRegACCRCAsmOperand : AsmOperandClass {
-  let Name = "RegACCRC"; let PredicateMethod = "isACCRegNumber";
-}
-
-def acc : RegisterOperand<ACCRC> {
-  let ParserMatchClass = PPCRegACCRCAsmOperand;
-}
-
-def uacc : RegisterOperand<UACCRC> {
-  let ParserMatchClass = PPCRegACCRCAsmOperand;
-}
-
-// DMR Register Operands
-def PPCRegDMRROWRCAsmOperand : AsmOperandClass {
-  let Name = "RegDMRROWRC";
-  let PredicateMethod = "isDMRROWRegNumber";
-}
-
-def dmrrow : RegisterOperand<DMRROWRC> {
-  let ParserMatchClass = PPCRegDMRROWRCAsmOperand;
-}
-
-def PPCRegDMRROWpRCAsmOperand : AsmOperandClass {
-  let Name = "RegDMRROWpRC";
-  let PredicateMethod = "isDMRROWpRegNumber";
-}
-
-def dmrrowp : RegisterOperand<DMRROWpRC> {
-  let ParserMatchClass = PPCRegDMRROWpRCAsmOperand;
-}
-
-def wacc : RegisterOperand<WACCRC> {
-  let ParserMatchClass = PPCRegACCRCAsmOperand;
-}
-
-def wacc_hi : RegisterOperand<WACC_HIRC> {
-  let ParserMatchClass = PPCRegACCRCAsmOperand;
-}
-
-def PPCRegDMRRCAsmOperand : AsmOperandClass {
-  let Name = "RegDMRRC";
-  let PredicateMethod = "isDMRRegNumber";
-}
-
-def dmr : RegisterOperand<DMRRC> {
-  let ParserMatchClass = PPCRegDMRRCAsmOperand;
-}
-
-def PPCRegDMRpRCAsmOperand : AsmOperandClass {
-  let Name = "RegDMRpRC";
-  let PredicateMethod = "isDMRpRegNumber";
-}
-
-def dmrp : RegisterOperand<DMRpRC> {
-  let ParserMatchClass = PPCRegDMRpRCAsmOperand;
 }
