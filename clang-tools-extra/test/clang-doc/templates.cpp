@@ -370,12 +370,12 @@ struct tuple {};
 // HTML-STRUCT-NEXT:           <h1 class="hero__title-large">struct tuple</h1>
 // HTML-STRUCT-NEXT:           <p>Defined at line [[# @LINE - 6]] of file {{.*}}templates.cpp</p>
 // HTML-STRUCT-NEXT:           <div class="doc-card">
-// HTML-STRUCT-NEXT:               <p class="nested-delimiter-container">
-// HTML-STRUCT-NEXT:                   A Tuple type<br>
-// HTML-STRUCT-NEXT:               </p>
-// HTML-STRUCT-NEXT:               <p class="nested-delimiter-container">
-// HTML-STRUCT-NEXT:                   Does Tuple things.<br>
-// HTML-STRUCT-NEXT:               </p>
+// HTML-STRUCT-NEXT:               <div class="nested-delimiter-container">
+// HTML-STRUCT-NEXT:                   <p>A Tuple type</p>
+// HTML-STRUCT-NEXT:               </div>
+// HTML-STRUCT-NEXT:               <div class="nested-delimiter-container">
+// HTML-STRUCT-NEXT:                   <p>Does Tuple things.</p>
+// HTML-STRUCT-NEXT:               </div>
 // HTML-STRUCT-NEXT:           </div>
 // HTML-STRUCT-NEXT:       </div>
 // HTML-STRUCT-NEXT:   </section>
@@ -454,9 +454,9 @@ tuple<int, int, bool> func_with_tuple_param(tuple<int, int, bool> t) { return t;
 
 // HTML:           <pre><code class="language-cpp code-clang-doc">tuple&lt;int, int, bool&gt; func_with_tuple_param (tuple&lt;int, int, bool&gt; t)</code></pre>
 // HTML-NEXT:      <div class="doc-card">
-// HTML-NEXT:          <p class="nested-delimiter-container">
-// HTML-NEXT:              A function with a tuple parameter<br>
-// HTML-NEXT:          </p>
+// HTML-NEXT:          <div class="nested-delimiter-container">
+// HTML-NEXT:              <p>A function with a tuple parameter</p>
+// HTML-NEXT:          </div>
 // HTML-NEXT:          <div class="nested-delimiter-container">
 // HTML-NEXT:              <h3>Parameters</h3>
 // HTML-NEXT:              <div>

@@ -56,9 +56,9 @@ HTML-SHAPE-NEXT:                     <div class="doc-card">
 HTML-SHAPE-NEXT:                         <div class="nested-delimiter-container">
 HTML-SHAPE-NEXT:                             <p>Abstract base class for shapes.</p>
 HTML-SHAPE-NEXT:                         </div>
-HTML-SHAPE-NEXT:                         <p class="nested-delimiter-container">
-HTML-SHAPE-NEXT:                             Provides a common interface for different types of shapes.<br>
-HTML-SHAPE-NEXT:                         </p>
+HTML-SHAPE-NEXT:                         <div class="nested-delimiter-container">
+HTML-SHAPE-NEXT:                             <p>Provides a common interface for different types of shapes.</p>
+HTML-SHAPE-NEXT:                         </div>
 HTML-SHAPE-NEXT:                     </div>
 HTML-SHAPE-NEXT:                 </div>
 HTML-SHAPE-NEXT:             </section>
@@ -175,9 +175,9 @@ HTML-CALC-NEXT:                     <div class="doc-card">
 HTML-CALC-NEXT:                         <div class="nested-delimiter-container">
 HTML-CALC-NEXT:                             <p>A simple calculator class.</p>
 HTML-CALC-NEXT:                         </div>
-HTML-CALC-NEXT:                         <p class="nested-delimiter-container">
-HTML-CALC-NEXT:                             Provides basic arithmetic operations.<br>
-HTML-CALC-NEXT:                         </p>
+HTML-CALC-NEXT:                         <div class="nested-delimiter-container">
+HTML-CALC-NEXT:                             <p>Provides basic arithmetic operations.</p>
+HTML-CALC-NEXT:                         </div>
 HTML-CALC-NEXT:                     </div>
 HTML-CALC-NEXT:                 </div>
 HTML-CALC-NEXT:            </section>
@@ -359,9 +359,9 @@ HTML-RECTANGLE-NEXT:                     <div class="doc-card">
 HTML-RECTANGLE-NEXT:                         <div class="nested-delimiter-container">
 HTML-RECTANGLE-NEXT:                             <p>Rectangle class derived from Shape.</p>
 HTML-RECTANGLE-NEXT:                         </div>
-HTML-RECTANGLE-NEXT:                         <p class="nested-delimiter-container">
-HTML-RECTANGLE-NEXT:                             Represents a rectangle with a given width and height.<br>
-HTML-RECTANGLE-NEXT:                         </p>
+HTML-RECTANGLE-NEXT:                         <div class="nested-delimiter-container">
+HTML-RECTANGLE-NEXT:                             <p>Represents a rectangle with a given width and height.</p>
+HTML-RECTANGLE-NEXT:                         </div>
 HTML-RECTANGLE-NEXT:                     </div>
 HTML-RECTANGLE-NEXT:                 </div>
 HTML-RECTANGLE-NEXT:             </section>
@@ -464,9 +464,9 @@ HTML-CIRCLE-NEXT:                     <div class="doc-card">
 HTML-CIRCLE-NEXT:                         <div class="nested-delimiter-container">
 HTML-CIRCLE-NEXT:                             <p>Circle class derived from Shape.</p>
 HTML-CIRCLE-NEXT:                         </div>
-HTML-CIRCLE-NEXT:                         <p class="nested-delimiter-container">
-HTML-CIRCLE-NEXT:                             Represents a circle with a given radius.<br>
-HTML-CIRCLE-NEXT:                         </p>
+HTML-CIRCLE-NEXT:                         <div class="nested-delimiter-container">
+HTML-CIRCLE-NEXT:                             <p>Represents a circle with a given radius.</p>
+HTML-CIRCLE-NEXT:                         </div>
 HTML-CIRCLE-NEXT:                     </div>
 HTML-CIRCLE-NEXT:                 </div>
 HTML-CIRCLE-NEXT:             </section>

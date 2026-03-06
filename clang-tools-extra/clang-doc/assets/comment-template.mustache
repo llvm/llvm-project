@@ -13,11 +13,11 @@
 </div>
 {{/BriefComments}}
 {{#ParagraphComments}}
-<p class="nested-delimiter-container">
+<div class="nested-delimiter-container">
     {{#.}}
-    {{TextComment}}<br>
+    <p>{{TextComment}}</p>
     {{/.}}
-</p>
+</div>
 {{/ParagraphComments}}
 {{#ParagraphComment}}
 {{#Children}}
