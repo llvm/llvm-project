@@ -41,6 +41,7 @@ atomic/atom_or.cl
 atomic/atom_sub.cl
 atomic/atom_xchg.cl
 atomic/atom_xor.cl
+atomic/atomic_work_item_fence.cl
 common/degrees.cl
 common/mix.cl
 common/radians.cl
@@ -199,5 +200,7 @@ shared/max.cl
 shared/min.cl
 shared/vload.cl
 shared/vstore.cl
+synchronization/work_group_barrier.cl
+workitem/get_enqueued_local_size.cl
 workitem/get_global_id.cl
 workitem/get_global_size.cl

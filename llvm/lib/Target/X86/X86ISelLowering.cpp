@@ -2137,8 +2137,8 @@ X86TargetLowering::X86TargetLowering(const X86TargetMachine &TM,
         setOperationAction(ISD::FSHR, VT, Legal);
       }
 
-      setOperationAction(ISD::ROTL, MVT::v32i16, Custom);
-      setOperationAction(ISD::ROTR, MVT::v32i16, Custom);
+      setOperationAction(ISD::ROTL, MVT::v32i16, Legal);
+      setOperationAction(ISD::ROTR, MVT::v32i16, Legal);
     }
 
     // Only PCLMUL required as we always unroll clmul vectors.
@@ -2165,6 +2165,11 @@ X86TargetLowering::X86TargetLowering(const X86TargetMachine &TM,
       setOperationAction(ISD::FSHL, VT, Legal);
       setOperationAction(ISD::FSHR, VT, Legal);
     }
+
+    setOperationAction(ISD::ROTL, MVT::v16i16, Legal);
+    setOperationAction(ISD::ROTR, MVT::v16i16, Legal);
+    setOperationAction(ISD::ROTL, MVT::v8i16, Legal);
+    setOperationAction(ISD::ROTR, MVT::v8i16, Legal);
   }
 
   // This block controls legalization for operations that don't have
@@ -31938,12 +31943,6 @@ static SDValue LowerRotate(SDValue Op, const X86Subtarget &Subtarget,
   // Check for splat rotate by zero.
   if (IsCstSplat && CstSplatValue.urem(EltSizeInBits) == 0)
     return R;
-
-  // AVX512 VBMI2 vXi16 - lower to funnel shifts.
-  if (Subtarget.hasVBMI2() && 16 == EltSizeInBits) {
-    unsigned FunnelOpc = IsROTL ? ISD::FSHL : ISD::FSHR;
-    return DAG.getNode(FunnelOpc, DL, VT, R, R, Amt);
-  }
 
   SDValue Z = DAG.getConstant(0, DL, VT);
 
