@@ -1,0 +1,184 @@
+# RUN: llc -mtriple=amdgcn-- -mcpu=gfx900 -run-pass=print-machine-uniformity -o - %s 2>&1 | FileCheck %s
+# RUN: llc -mtriple=amdgcn-- -mcpu=gfx900 -passes='print<machine-uniformity>' -filetype=null %s 2>&1 | FileCheck %s
+
+# Test per-output (per-value) uniformity analysis for instructions with multiple
+# definitions where each definition can have different uniformity characteristics.
+#
+# The amdgcn.if and amdgcn.else intrinsics are the primary AMDGPU instructions
+# that produce multiple outputs with DIFFERENT uniformity:
+#   - First result (i1): Boolean flag indicating if any lanes are active.
+#                        Inherits divergence from the input condition.
+#   - Second result (i64): Saved exec mask - always uniform as all active lanes
+#                          see the same mask value.
+#
+# Most other multi-output instructions (G_SDIVREM, G_UADDO, G_ATOMIC_CMPXCHG_WITH_SUCCESS,
+# etc.) have all outputs with the SAME uniformity, so they don't require special
+# per-output handling.
+
+# Test amdgcn.if with UNIFORM input - both outputs should be uniform
+---
+name:            amdgcn_if_uniform_input
+tracksRegLiveness: true
+machineFunctionInfo:
+  isEntryFunction: true
+body:             |
+  bb.0:
+    ; CHECK-LABEL: MachineUniformityInfo for function:  @amdgcn_if_uniform_input
+    ; With uniform input, both outputs are uniform
+    ; CHECK: ALL VALUES UNIFORM
+    %0:_(s1) = G_IMPLICIT_DEF
+    %1:_(s1), %2:_(s64) = G_INTRINSIC_W_SIDE_EFFECTS intrinsic(@llvm.amdgcn.if), %0:_(s1)
+    S_ENDPGM 0
+...
+
+# Test amdgcn.if with DIVERGENT input - first output divergent, second uniform
+---
+name:            amdgcn_if_divergent_input
+tracksRegLiveness: true
+machineFunctionInfo:
+  isEntryFunction: true
+body:             |
+  bb.0:
+    ; CHECK-LABEL: MachineUniformityInfo for function:  @amdgcn_if_divergent_input
+    ; First output (%3, i1) inherits divergence from the divergent input
+    ; CHECK: DIVERGENT: %3
+    ; Second output (%4, exec mask) is always uniform regardless of input
+    ; CHECK-NOT: DIVERGENT: %4
+    %0:_(s32) = G_INTRINSIC intrinsic(@llvm.amdgcn.workitem.id.x)
+    %1:_(s32) = G_CONSTANT i32 16
+    %2:_(s1) = G_ICMP intpred(slt), %0:_(s32), %1:_
+    %3:_(s1), %4:_(s64) = G_INTRINSIC_W_SIDE_EFFECTS intrinsic(@llvm.amdgcn.if), %2:_(s1)
+    S_ENDPGM 0
+...
+
+# Test amdgcn.else with UNIFORM input - both outputs should be uniform
+---
+name:            amdgcn_else_uniform_input
+tracksRegLiveness: true
+machineFunctionInfo:
+  isEntryFunction: true
+body:             |
+  bb.0:
+    ; CHECK-LABEL: MachineUniformityInfo for function:  @amdgcn_else_uniform_input
+    ; With uniform input, both outputs are uniform
+    ; CHECK: ALL VALUES UNIFORM
+    %0:_(s64) = G_IMPLICIT_DEF
+    %1:_(s1), %2:_(s64) = G_INTRINSIC_W_SIDE_EFFECTS intrinsic(@llvm.amdgcn.else), %0:_(s64)
+    S_ENDPGM 0
+...
+
+# Test amdgcn.else with DIVERGENT input - first output divergent, second uniform
+---
+name:            amdgcn_else_divergent_input
+tracksRegLiveness: true
+machineFunctionInfo:
+  isEntryFunction: true
+body:             |
+  bb.0:
+    ; CHECK-LABEL: MachineUniformityInfo for function:  @amdgcn_else_divergent_input
+    ; First output (%2, i1) inherits divergence from the divergent input
+    ; CHECK: DIVERGENT: %2
+    ; Second output (%3, exec mask) is always uniform regardless of input
+    ; CHECK-NOT: DIVERGENT: %3
+    %0:_(s32) = G_INTRINSIC intrinsic(@llvm.amdgcn.workitem.id.x)
+    %1:_(s64) = G_ZEXT %0:_(s32)
+    %2:_(s1), %3:_(s64) = G_INTRINSIC_W_SIDE_EFFECTS intrinsic(@llvm.amdgcn.else), %1:_(s64)
+    S_ENDPGM 0
+...
+
+---
+name:            chained_if_else
+tracksRegLiveness: true
+machineFunctionInfo:
+  isEntryFunction: true
+body:             |
+  bb.0:
+    ; CHECK-LABEL: MachineUniformityInfo for function:  @chained_if_else
+    ; Divergent condition from workitem.id.x
+    ; CHECK: DIVERGENT: %0
+    ; CHECK: DIVERGENT: %2
+    ; CHECK: DIVERGENT: %3
+    ; CHECK-NOT: DIVERGENT: %4
+    ; CHECK-NOT: DIVERGENT: %5
+    ; CHECK-NOT: DIVERGENT: %6
+    %0:_(s32) = G_INTRINSIC intrinsic(@llvm.amdgcn.workitem.id.x)
+    %1:_(s32) = G_CONSTANT i32 16
+    %2:_(s1) = G_ICMP intpred(slt), %0:_(s32), %1:_
+    %3:_(s1), %4:_(s64) = G_INTRINSIC_W_SIDE_EFFECTS intrinsic(@llvm.amdgcn.if), %2:_(s1)
+    ; The exec mask from if (%4) is always uniform, so else sees uniform input
+    %5:_(s1), %6:_(s64) = G_INTRINSIC_W_SIDE_EFFECTS intrinsic(@llvm.amdgcn.else), %4:_(s64)
+    S_ENDPGM 0
+...
+
+---
+name:            uniform_exec_mask_usage
+tracksRegLiveness: true
+machineFunctionInfo:
+  isEntryFunction: true
+body:             |
+  bb.0:
+    ; CHECK-LABEL: MachineUniformityInfo for function:  @uniform_exec_mask_usage
+    ; CHECK: DIVERGENT: %0
+    ; CHECK: DIVERGENT: %2
+    ; CHECK: DIVERGENT: %3
+    ; CHECK-NOT: DIVERGENT: %4
+    ; CHECK-NOT: DIVERGENT: %5
+    ; CHECK-NOT: DIVERGENT: %6
+    %0:_(s32) = G_INTRINSIC intrinsic(@llvm.amdgcn.workitem.id.x)
+    %1:_(s32) = G_CONSTANT i32 16
+    %2:_(s1) = G_ICMP intpred(slt), %0:_(s32), %1:_
+    %3:_(s1), %4:_(s64) = G_INTRINSIC_W_SIDE_EFFECTS intrinsic(@llvm.amdgcn.if), %2:_(s1)
+    ; The exec mask is uniform, so operations on it are uniform
+    %5:_(s64) = G_CONSTANT i64 0
+    %6:_(s1) = G_ICMP intpred(eq), %4:_(s64), %5:_
+    S_ENDPGM 0
+...
+
+---
+name:            divergent_flag_propagation
+tracksRegLiveness: true
+machineFunctionInfo:
+  isEntryFunction: true
+body:             |
+  bb.0:
+    ; CHECK-LABEL: MachineUniformityInfo for function:  @divergent_flag_propagation
+    ; Divergent input
+    ; CHECK: DIVERGENT: %0
+    ; CHECK: DIVERGENT: %2
+    ; CHECK: DIVERGENT: %3
+    ; CHECK-NOT: DIVERGENT: %4
+    ; CHECK: DIVERGENT: %5
+    ; CHECK: DIVERGENT: %6
+    %0:_(s32) = G_INTRINSIC intrinsic(@llvm.amdgcn.workitem.id.x)
+    %1:_(s32) = G_CONSTANT i32 16
+    %2:_(s1) = G_ICMP intpred(slt), %0:_(s32), %1:_
+    %3:_(s1), %4:_(s64) = G_INTRINSIC_W_SIDE_EFFECTS intrinsic(@llvm.amdgcn.if), %2:_(s1)
+    ; The divergent flag (%3) propagates divergence
+    %5:_(s1) = G_XOR %3:_, %3:_
+    %6:_(s32) = G_ZEXT %3:_(s1)
+    S_ENDPGM 0
+...
+
+---
+name:            nested_if_divergent
+tracksRegLiveness: true
+machineFunctionInfo:
+  isEntryFunction: true
+body:             |
+  bb.0:
+    ; CHECK-LABEL: MachineUniformityInfo for function:  @nested_if_divergent
+    ; First amdgcn.if with divergent input
+    ; CHECK: DIVERGENT: %0
+    ; CHECK: DIVERGENT: %2
+    ; CHECK: DIVERGENT: %3
+    ; CHECK-NOT: DIVERGENT: %4
+    ; CHECK: DIVERGENT: %5
+    ; CHECK-NOT: DIVERGENT: %6
+    %0:_(s32) = G_INTRINSIC intrinsic(@llvm.amdgcn.workitem.id.x)
+    %1:_(s32) = G_CONSTANT i32 16
+    %2:_(s1) = G_ICMP intpred(slt), %0:_(s32), %1:_
+    %3:_(s1), %4:_(s64) = G_INTRINSIC_W_SIDE_EFFECTS intrinsic(@llvm.amdgcn.if), %2:_(s1)
+    ; Nested if using the divergent output from first if
+    %5:_(s1), %6:_(s64) = G_INTRINSIC_W_SIDE_EFFECTS intrinsic(@llvm.amdgcn.if), %3:_(s1)
+    S_ENDPGM 0
+...

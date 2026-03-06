@@ -357,8 +357,8 @@ public:
 
   const FunctionT &getFunction() const { return F; }
 
-  /// \brief Mark \p UniVal as a value that is always uniform.
-  void addUniformOverride(const InstructionT &Instr);
+  /// \brief Mark \p V as a value that is always uniform.
+  void addUniformOverride(ConstValueRefT V);
 
   /// \brief Examine \p I for divergent outputs and add to the worklist.
   void markDivergent(const InstructionT &I);
@@ -381,6 +381,9 @@ public:
   /// \brief Whether \p Val will always return a uniform value regardless of its
   /// operands
   bool isAlwaysUniform(const InstructionT &Instr) const;
+
+  /// \brief Whether \p V is always uniform (per-value check for MIR).
+  bool isAlwaysUniform(ConstValueRefT V) const;
 
   bool hasDivergentDefs(const InstructionT &I) const;
 
@@ -440,7 +443,7 @@ private:
   SyncDependenceAnalysisT SDA;
 
   // Set of known-uniform values.
-  SmallPtrSet<const InstructionT *, 32> UniformOverrides;
+  SmallDenseSet<ConstValueRefT, 8> UniformOverrides;
 
   /// \brief Mark all nodes in \p JoinBlock as divergent and push them on
   /// the worklist.
@@ -801,6 +804,8 @@ void GenericUniformityAnalysisImpl<ContextT>::markDivergent(
 template <typename ContextT>
 bool GenericUniformityAnalysisImpl<ContextT>::markDivergent(
     ConstValueRefT Val) {
+  if (isAlwaysUniform(Val))
+    return false;
   if (DivergentValues.insert(Val).second) {
     LLVM_DEBUG(dbgs() << "marked divergent: " << Context.print(Val) << "\n");
     return true;
@@ -810,8 +815,8 @@ bool GenericUniformityAnalysisImpl<ContextT>::markDivergent(
 
 template <typename ContextT>
 void GenericUniformityAnalysisImpl<ContextT>::addUniformOverride(
-    const InstructionT &Instr) {
-  UniformOverrides.insert(&Instr);
+    ConstValueRefT V) {
+  UniformOverrides.insert(V);
 }
 
 // Mark as divergent all external uses of values defined in \p DefCycle.
@@ -1141,6 +1146,12 @@ template <typename ContextT>
 bool GenericUniformityAnalysisImpl<ContextT>::isAlwaysUniform(
     const InstructionT &Instr) const {
   return UniformOverrides.contains(&Instr);
+}
+
+template <typename ContextT>
+bool GenericUniformityAnalysisImpl<ContextT>::isAlwaysUniform(
+    ConstValueRefT V) const {
+  return UniformOverrides.contains(V);
 }
 
 template <typename ContextT>
