@@ -775,14 +775,46 @@ RISCVTTIImpl::getShuffleCost(TTI::ShuffleKind Kind, VectorType *DstTy,
       // 2 x (vrgather + cost of generating the mask constant) + cost of mask
       // register for the second vrgather. We model this for an unknown
       // (shuffle) mask.
-      if (LT.first == 1 && (LT.second.getScalarSizeInBits() != 8 ||
-                            LT.second.getVectorNumElements() <= 256)) {
+      // If possible and cheaper, rather than mask the second vrgather, we
+      // can use a vslideup
+      unsigned NumElts = LT.second.getVectorNumElements();
+      if (LT.first == 1 &&
+          (LT.second.getScalarSizeInBits() != 8 || NumElts <= 256)) {
         auto &C = SrcTy->getContext();
         auto EC = SrcTy->getElementCount();
         VectorType *IdxTy = getVRGatherIndexType(LT.second, *ST, C);
         VectorType *MaskTy = VectorType::get(IntegerType::getInt1Ty(C), EC);
         InstructionCost IndexCost = getConstantPoolLoadCost(IdxTy, CostKind);
         InstructionCost MaskCost = getConstantPoolLoadCost(MaskTy, CostKind);
+        if (Mask.size() == NumElts) {
+          // We can use slideup to merge if the elements from one vector all
+          // occur before elements from the second vector
+          // e.g. <4 x i8> <i8 5, i8 1, i8 poison, i8 3>
+          int PrevOp = -1;
+          bool Switched = false;
+          bool CanSlideUpMerge = true;
+          unsigned SlideAmt;
+          for (unsigned Idx = 0; Idx < NumElts; ++Idx) {
+            if (Mask[Idx] == -1)
+              continue;
+            int CurrOp = ((unsigned)Mask[Idx] < NumElts) ? 0 : 1;
+            if (PrevOp != -1 && PrevOp != CurrOp) {
+              if (Switched) {
+                CanSlideUpMerge = false;
+                break;
+              }
+              Switched = true;
+              SlideAmt = Idx;
+            }
+            PrevOp = CurrOp;
+          }
+          if (CanSlideUpMerge)
+            MaskCost =
+                std::min(MaskCost, getRISCVInstructionCost(
+                                       isUInt<5>(SlideAmt) ? RISCV::VSLIDEUP_VI
+                                                           : RISCV::VSLIDEUP_VX,
+                                       LT.second, CostKind));
+        }
         return 2 * IndexCost +
                getRISCVInstructionCost({RISCV::VRGATHER_VV, RISCV::VRGATHER_VV},
                                        LT.second, CostKind) +
