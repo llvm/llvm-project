@@ -1,0 +1,41 @@
+// RUN: cir-opt %s -verify-diagnostics -split-input-file
+
+!s32i = !cir.int<s, 32>
+!s8i = !cir.int<s, 8>
+
+module {
+  // Strong ordering must not include unordered.
+  cir.func @cmp3way_strong_with_unordered(%arg0 : !s32i, %arg1 : !s32i) -> !s8i {
+    // expected-error@+1 {{strong and weak ordering do not include unordered}}
+    %0 = cir.cmp3way #cir.cmp3way_info<strong, lt = -1, eq = 0, gt = 1, unordered = -127> %arg0, %arg1 : !s32i -> !s8i
+    cir.return %0 : !s8i
+  }
+}
+
+// -----
+
+!s32i = !cir.int<s, 32>
+!s8i = !cir.int<s, 8>
+
+module {
+  // Weak ordering must not include unordered.
+  cir.func @cmp3way_weak_with_unordered(%arg0 : !s32i, %arg1 : !s32i) -> !s8i {
+    // expected-error@+1 {{strong and weak ordering do not include unordered}}
+    %0 = cir.cmp3way #cir.cmp3way_info<weak, lt = -1, eq = 0, gt = 1, unordered = -127> %arg0, %arg1 : !s32i -> !s8i
+    cir.return %0 : !s8i
+  }
+}
+
+// -----
+
+!s32i = !cir.int<s, 32>
+!s8i = !cir.int<s, 8>
+
+module {
+  // Partial ordering must include unordered.
+  cir.func @cmp3way_partial_without_unordered(%arg0 : !s32i, %arg1 : !s32i) -> !s8i {
+    // expected-error@+1 {{partial ordering requires unordered value}}
+    %0 = cir.cmp3way #cir.cmp3way_info<partial, lt = -1, eq = 0, gt = 1> %arg0, %arg1 : !s32i -> !s8i
+    cir.return %0 : !s8i
+  }
+}
