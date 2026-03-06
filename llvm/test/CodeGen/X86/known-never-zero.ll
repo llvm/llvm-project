@@ -134,7 +134,9 @@ define i32 @extractelt_nonzero_vec(<4 x i32> %a0, ptr %p1, i32 %a2) {
 ; X86-NEXT:    por %xmm0, %xmm1
 ; X86-NEXT:    movdqa %xmm1, (%eax)
 ; X86-NEXT:    movd %xmm1, %eax
-; X86-NEXT:    rep bsfl %eax, %eax
+; X86-NEXT:    bsfl %eax, %ecx
+; X86-NEXT:    movl $32, %eax
+; X86-NEXT:    cmovnel %ecx, %eax
 ; X86-NEXT:    retl
 ;
 ; X64-LABEL: extractelt_nonzero_vec:
@@ -142,8 +144,9 @@ define i32 @extractelt_nonzero_vec(<4 x i32> %a0, ptr %p1, i32 %a2) {
 ; X64-NEXT:    vmovaps {{.*#+}} xmm1 = [8,4294967295,4294967295,4294967295]
 ; X64-NEXT:    vblendvps %xmm0, {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm1, %xmm0
 ; X64-NEXT:    vmovaps %xmm0, (%rdi)
-; X64-NEXT:    vmovd %xmm0, %eax
-; X64-NEXT:    rep bsfl %eax, %eax
+; X64-NEXT:    vmovd %xmm0, %ecx
+; X64-NEXT:    movl $32, %eax
+; X64-NEXT:    rep bsfl %ecx, %eax
 ; X64-NEXT:    retq
   %cmp = icmp sgt <4 x i32> zeroinitializer, %a0
   %sel = select <4 x i1> %cmp, <4 x i32> <i32 4, i32 0, i32 0, i32 0>, <4 x i32> <i32 8, i32 -1, i32 -1, i32 -1>
@@ -218,7 +221,7 @@ define i32 @shl_known_nonzero_1s_bit_set_vec(<4 x i32> %x, ptr %p) {
 ; X86-NEXT:    pslld $23, %xmm0
 ; X86-NEXT:    paddd {{\.?LCPI[0-9]+_[0-9]+}}, %xmm0
 ; X86-NEXT:    cvttps2dq %xmm0, %xmm0
-; X86-NEXT:    pmuludq {{\.?LCPI[0-9]+_[0-9]+}}, %xmm0 # [123,0,0,0]
+; X86-NEXT:    pmuludq {{\.?LCPI[0-9]+_[0-9]+}}, %xmm0
 ; X86-NEXT:    movdqa {{.*#+}} xmm1 = [4294967295,0,4294967295,0]
 ; X86-NEXT:    pand %xmm0, %xmm1
 ; X86-NEXT:    movdqa %xmm1, (%eax)
@@ -233,7 +236,7 @@ define i32 @shl_known_nonzero_1s_bit_set_vec(<4 x i32> %x, ptr %p) {
 ; X64-NEXT:    vpslld $23, %xmm0, %xmm0
 ; X64-NEXT:    vpaddd {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm0
 ; X64-NEXT:    vcvttps2dq %xmm0, %xmm0
-; X64-NEXT:    vpmulld {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm0 # [123,0,0,0]
+; X64-NEXT:    vpmulld {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm0
 ; X64-NEXT:    vmovdqa %xmm0, (%rdi)
 ; X64-NEXT:    vmovd %xmm0, %ecx
 ; X64-NEXT:    movl $32, %eax
@@ -431,15 +434,18 @@ define i32 @uaddsat_known_nonzero_vec(<16 x i8> %x, ptr %p) {
 ; X86-NEXT:    paddusb {{\.?LCPI[0-9]+_[0-9]+}}, %xmm0
 ; X86-NEXT:    movdqa %xmm0, (%eax)
 ; X86-NEXT:    movzbl (%eax), %eax
-; X86-NEXT:    rep bsfl %eax, %eax
+; X86-NEXT:    bsfl %eax, %ecx
+; X86-NEXT:    movl $32, %eax
+; X86-NEXT:    cmovnel %ecx, %eax
 ; X86-NEXT:    retl
 ;
 ; X64-LABEL: uaddsat_known_nonzero_vec:
 ; X64:       # %bb.0:
 ; X64-NEXT:    vpaddusb {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm0
 ; X64-NEXT:    vmovdqa %xmm0, (%rdi)
-; X64-NEXT:    vpextrb $0, %xmm0, %eax
-; X64-NEXT:    rep bsfl %eax, %eax
+; X64-NEXT:    vpextrb $0, %xmm0, %ecx
+; X64-NEXT:    movl $32, %eax
+; X64-NEXT:    rep bsfl %ecx, %eax
 ; X64-NEXT:    retq
   %z = call <16 x i8> @llvm.uadd.sat.v16i8(<16 x i8> %x, <16 x i8> <i8 1, i8 0, i8 0, i8 0, i8 0, i8 0, i8 0, i8 0, i8 0, i8 0, i8 0, i8 0, i8 0, i8 0, i8 0, i8 0>)
   store <16 x i8> %z, ptr %p
@@ -970,14 +976,17 @@ define i32 @smax_known_never_zero_vec_element(<4 x i32> %x) {
 ; X86-NEXT:    pandn %xmm1, %xmm2
 ; X86-NEXT:    por %xmm0, %xmm2
 ; X86-NEXT:    movd %xmm2, %eax
-; X86-NEXT:    rep bsfl %eax, %eax
+; X86-NEXT:    bsfl %eax, %ecx
+; X86-NEXT:    movl $32, %eax
+; X86-NEXT:    cmovnel %ecx, %eax
 ; X86-NEXT:    retl
 ;
 ; X64-LABEL: smax_known_never_zero_vec_element:
 ; X64:       # %bb.0:
 ; X64-NEXT:    vpmaxsd {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm0
-; X64-NEXT:    vmovd %xmm0, %eax
-; X64-NEXT:    rep bsfl %eax, %eax
+; X64-NEXT:    vmovd %xmm0, %ecx
+; X64-NEXT:    movl $32, %eax
+; X64-NEXT:    rep bsfl %ecx, %eax
 ; X64-NEXT:    retq
   %z = call <4 x i32> @llvm.smax.v4i32(<4 x i32> %x, <4 x i32> <i32 54, i32 -23, i32 -12, i32 -1>)
   %el = extractelement <4 x i32> %z, i32 0
@@ -1276,7 +1285,9 @@ define i32 @sra_known_nonzero_exact_vec(<4 x i32> %x, <4 x i32> %yy, ptr %p) {
 ; X86-NEXT:    movdqa %xmm1, (%eax)
 ; X86-NEXT:    pshufd {{.*#+}} xmm0 = xmm1[1,1,1,1]
 ; X86-NEXT:    movd %xmm0, %eax
-; X86-NEXT:    rep bsfl %eax, %eax
+; X86-NEXT:    bsfl %eax, %ecx
+; X86-NEXT:    movl $32, %eax
+; X86-NEXT:    cmovnel %ecx, %eax
 ; X86-NEXT:    retl
 ;
 ; X64-LABEL: sra_known_nonzero_exact_vec:
@@ -1285,8 +1296,9 @@ define i32 @sra_known_nonzero_exact_vec(<4 x i32> %x, <4 x i32> %yy, ptr %p) {
 ; X64-NEXT:    vpor {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm1, %xmm1
 ; X64-NEXT:    vpsrad %xmm0, %xmm1, %xmm0
 ; X64-NEXT:    vmovdqa %xmm0, (%rdi)
-; X64-NEXT:    vpextrd $1, %xmm0, %eax
-; X64-NEXT:    rep bsfl %eax, %eax
+; X64-NEXT:    vpextrd $1, %xmm0, %ecx
+; X64-NEXT:    movl $32, %eax
+; X64-NEXT:    rep bsfl %ecx, %eax
 ; X64-NEXT:    retq
   %x.splat = shufflevector <4 x i32> %x, <4 x i32> poison, <4 x i32> zeroinitializer
   %y = or <4 x i32> %yy, <i32 0, i32 256, i32 0, i32 0>
@@ -1354,7 +1366,9 @@ define i32 @srl_known_nonzero_sign_bit_set_vec(<4 x i32> %x, ptr %p) {
 ; X86-NEXT:    movdqa %xmm0, (%eax)
 ; X86-NEXT:    pshufd {{.*#+}} xmm0 = xmm0[2,3,2,3]
 ; X86-NEXT:    movd %xmm0, %eax
-; X86-NEXT:    rep bsfl %eax, %eax
+; X86-NEXT:    bsfl %eax, %ecx
+; X86-NEXT:    movl $32, %eax
+; X86-NEXT:    cmovnel %ecx, %eax
 ; X86-NEXT:    retl
 ;
 ; X64-LABEL: srl_known_nonzero_sign_bit_set_vec:
@@ -1363,8 +1377,9 @@ define i32 @srl_known_nonzero_sign_bit_set_vec(<4 x i32> %x, ptr %p) {
 ; X64-NEXT:    vmovdqa {{.*#+}} xmm1 = [0,65535,2147606891,0]
 ; X64-NEXT:    vpsrld %xmm0, %xmm1, %xmm0
 ; X64-NEXT:    vmovdqa %xmm0, (%rdi)
-; X64-NEXT:    vpextrd $2, %xmm0, %eax
-; X64-NEXT:    rep bsfl %eax, %eax
+; X64-NEXT:    vpextrd $2, %xmm0, %ecx
+; X64-NEXT:    movl $32, %eax
+; X64-NEXT:    rep bsfl %ecx, %eax
 ; X64-NEXT:    retq
   %x.splat = shufflevector <4 x i32> %x, <4 x i32> poison, <4 x i32> zeroinitializer
   %z = lshr <4 x i32> <i32 0, i32 65535, i32 2147606891, i32 0>, %x.splat
@@ -1409,7 +1424,9 @@ define i32 @srl_known_nonzero_exact_vec(<4 x i32> %x, <4 x i32> %yy, ptr %p) {
 ; X86-NEXT:    movdqa %xmm1, (%eax)
 ; X86-NEXT:    pshufd {{.*#+}} xmm0 = xmm1[3,3,3,3]
 ; X86-NEXT:    movd %xmm0, %eax
-; X86-NEXT:    rep bsfl %eax, %eax
+; X86-NEXT:    bsfl %eax, %ecx
+; X86-NEXT:    movl $32, %eax
+; X86-NEXT:    cmovnel %ecx, %eax
 ; X86-NEXT:    retl
 ;
 ; X64-LABEL: srl_known_nonzero_exact_vec:
@@ -1418,8 +1435,9 @@ define i32 @srl_known_nonzero_exact_vec(<4 x i32> %x, <4 x i32> %yy, ptr %p) {
 ; X64-NEXT:    vpor {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm1, %xmm1
 ; X64-NEXT:    vpsrld %xmm0, %xmm1, %xmm0
 ; X64-NEXT:    vmovdqa %xmm0, (%rdi)
-; X64-NEXT:    vpextrd $3, %xmm0, %eax
-; X64-NEXT:    rep bsfl %eax, %eax
+; X64-NEXT:    vpextrd $3, %xmm0, %ecx
+; X64-NEXT:    movl $32, %eax
+; X64-NEXT:    rep bsfl %ecx, %eax
 ; X64-NEXT:    retq
   %x.splat = shufflevector <4 x i32> %x, <4 x i32> poison, <4 x i32> zeroinitializer
   %y = or <4 x i32> %yy, <i32 0, i32 0, i32 0, i32 256>
@@ -1766,15 +1784,18 @@ define i32 @add_nuw_known_nonzero_vec(<4 x i32> %xx, ptr %p) {
 ; X86-NEXT:    paddd {{\.?LCPI[0-9]+_[0-9]+}}, %xmm0
 ; X86-NEXT:    movdqa %xmm0, (%eax)
 ; X86-NEXT:    movd %xmm0, %eax
-; X86-NEXT:    rep bsfl %eax, %eax
+; X86-NEXT:    bsfl %eax, %ecx
+; X86-NEXT:    movl $32, %eax
+; X86-NEXT:    cmovnel %ecx, %eax
 ; X86-NEXT:    retl
 ;
 ; X64-LABEL: add_nuw_known_nonzero_vec:
 ; X64:       # %bb.0:
 ; X64-NEXT:    vpaddd {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm0
 ; X64-NEXT:    vmovdqa %xmm0, (%rdi)
-; X64-NEXT:    vmovd %xmm0, %eax
-; X64-NEXT:    rep bsfl %eax, %eax
+; X64-NEXT:    vmovd %xmm0, %ecx
+; X64-NEXT:    movl $32, %eax
+; X64-NEXT:    rep bsfl %ecx, %eax
 ; X64-NEXT:    retq
   %z = add nuw <4 x i32> %xx, <i32 1, i32 0, i32 0, i32 0>
   store <4 x i32> %z, ptr %p
@@ -1982,8 +2003,7 @@ define i32 @mul_maybe_zero(i32 %x, i32 %y) {
 define i32 @bitcast_known_nonzero(<2 x i16> %xx) {
 ; X86-LABEL: bitcast_known_nonzero:
 ; X86:       # %bb.0:
-; X86-NEXT:    pxor %xmm1, %xmm1
-; X86-NEXT:    punpcklwd {{.*#+}} xmm0 = xmm0[0],xmm1[0],xmm0[1],xmm1[1],xmm0[2],xmm1[2],xmm0[3],xmm1[3]
+; X86-NEXT:    punpcklwd {{.*#+}} xmm0 = xmm0[0,0,1,1,2,2,3,3]
 ; X86-NEXT:    pslld $23, %xmm0
 ; X86-NEXT:    paddd {{\.?LCPI[0-9]+_[0-9]+}}, %xmm0
 ; X86-NEXT:    cvttps2dq %xmm0, %xmm0
@@ -2058,6 +2078,7 @@ define i32 @zext_known_nonzero(i16 %xx) {
 ; X86-NEXT:    movzbl {{[0-9]+}}(%esp), %ecx
 ; X86-NEXT:    movl $256, %eax # imm = 0x100
 ; X86-NEXT:    shll %cl, %eax
+; X86-NEXT:    movzwl %ax, %eax
 ; X86-NEXT:    rep bsfl %eax, %eax
 ; X86-NEXT:    retl
 ;
@@ -2067,6 +2088,7 @@ define i32 @zext_known_nonzero(i16 %xx) {
 ; X64-NEXT:    movl $256, %eax # imm = 0x100
 ; X64-NEXT:    # kill: def $cl killed $cl killed $ecx
 ; X64-NEXT:    shll %cl, %eax
+; X64-NEXT:    movzwl %ax, %eax
 ; X64-NEXT:    rep bsfl %eax, %eax
 ; X64-NEXT:    retq
   %x = shl nuw nsw i16 256, %xx
@@ -2101,6 +2123,7 @@ define i32 @sext_known_nonzero(i16 %xx) {
 ; X86-NEXT:    movzbl {{[0-9]+}}(%esp), %ecx
 ; X86-NEXT:    movl $256, %eax # imm = 0x100
 ; X86-NEXT:    shll %cl, %eax
+; X86-NEXT:    movzwl %ax, %eax
 ; X86-NEXT:    rep bsfl %eax, %eax
 ; X86-NEXT:    retl
 ;
@@ -2110,6 +2133,7 @@ define i32 @sext_known_nonzero(i16 %xx) {
 ; X64-NEXT:    movl $256, %eax # imm = 0x100
 ; X64-NEXT:    # kill: def $cl killed $cl killed $ecx
 ; X64-NEXT:    shll %cl, %eax
+; X64-NEXT:    movzwl %ax, %eax
 ; X64-NEXT:    rep bsfl %eax, %eax
 ; X64-NEXT:    retq
   %x = shl nuw nsw i16 256, %xx
@@ -2169,8 +2193,9 @@ define i32 @test_zext_demanded_elts(<4 x i32> %a0, ptr %p) {
 ; X64-NEXT:    vunpckhps {{.*#+}} xmm2 = xmm0[2],xmm2[2],xmm0[3],xmm2[3]
 ; X64-NEXT:    vmovaps %xmm2, 16(%rdi)
 ; X64-NEXT:    vmovdqa %xmm1, (%rdi)
-; X64-NEXT:    vmovd %xmm0, %eax
-; X64-NEXT:    rep bsfq %rax, %rax
+; X64-NEXT:    vmovd %xmm0, %ecx
+; X64-NEXT:    movl $64, %eax
+; X64-NEXT:    rep bsfq %rcx, %rax
 ; X64-NEXT:    # kill: def $eax killed $eax killed $rax
 ; X64-NEXT:    retq
   %cmp = icmp sgt <4 x i32> zeroinitializer, %a0
@@ -2203,11 +2228,12 @@ define i32 @test_sext_demanded_elts(<4 x i32> %a0, ptr %p) {
 ; X86-NEXT:    movdqa %xmm0, 16(%eax)
 ; X86-NEXT:    movdqa %xmm2, (%eax)
 ; X86-NEXT:    movd %xmm1, %eax
-; X86-NEXT:    rep bsfl %ecx, %edx
-; X86-NEXT:    rep bsfl %eax, %eax
-; X86-NEXT:    addl $32, %eax
-; X86-NEXT:    testl %ecx, %ecx
-; X86-NEXT:    cmovnel %edx, %eax
+; X86-NEXT:    bsfl %eax, %eax
+; X86-NEXT:    movl $32, %edx
+; X86-NEXT:    cmovnel %eax, %edx
+; X86-NEXT:    addl $32, %edx
+; X86-NEXT:    bsfl %ecx, %eax
+; X86-NEXT:    cmovel %edx, %eax
 ; X86-NEXT:    retl
 ;
 ; X64-LABEL: test_sext_demanded_elts:
@@ -2219,8 +2245,9 @@ define i32 @test_sext_demanded_elts(<4 x i32> %a0, ptr %p) {
 ; X64-NEXT:    vpmovsxdq %xmm0, %xmm0
 ; X64-NEXT:    vmovdqa %xmm0, (%rdi)
 ; X64-NEXT:    vmovdqa %xmm1, 16(%rdi)
-; X64-NEXT:    vmovq %xmm0, %rax
-; X64-NEXT:    rep bsfq %rax, %rax
+; X64-NEXT:    vmovq %xmm0, %rcx
+; X64-NEXT:    movl $64, %eax
+; X64-NEXT:    rep bsfq %rcx, %rax
 ; X64-NEXT:    # kill: def $eax killed $eax killed $rax
 ; X64-NEXT:    retq
   %cmp = icmp sgt <4 x i32> zeroinitializer, %a0
