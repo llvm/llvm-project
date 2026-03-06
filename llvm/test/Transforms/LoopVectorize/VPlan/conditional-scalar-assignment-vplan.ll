@@ -49,7 +49,7 @@ define i32 @simple_csa_int_select(i64 %N, ptr %data, i32 %a) {
 ; CHECK-NEXT:  Successor(s): middle.block
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  middle.block:
-; CHECK-NEXT:    EMIT vp<[[VP11:%[0-9]+]]> = extract-last-active vp<[[VP9]]>, vp<[[VP8]]>, ir<-1>
+; CHECK-NEXT:    EMIT vp<[[VP11:%[0-9]+]]> = extract-last-active ir<-1>, vp<[[VP9]]>, vp<[[VP8]]>
 ; CHECK-NEXT:    EMIT vp<%cmp.n> = icmp eq ir<%N>, vp<[[VP2]]>
 ; CHECK-NEXT:    EMIT branch-on-cond vp<%cmp.n>
 ; CHECK-NEXT:  Successor(s): ir-bb<exit>, scalar.ph
@@ -112,7 +112,7 @@ define i32 @simple_csa_int_select(i64 %N, ptr %data, i32 %a) {
 ; CHECK-TF-NEXT:  Successor(s): middle.block
 ; CHECK-TF-EMPTY:
 ; CHECK-TF-NEXT:  middle.block:
-; CHECK-TF-NEXT:    EMIT vp<[[VP15:%[0-9]+]]> = extract-last-active vp<[[VP13]]>, vp<[[VP12]]>, ir<-1>
+; CHECK-TF-NEXT:    EMIT vp<[[VP15:%[0-9]+]]> = extract-last-active ir<-1>, vp<[[VP13]]>, vp<[[VP12]]>
 ; CHECK-TF-NEXT:  Successor(s): ir-bb<exit>
 ; CHECK-TF-EMPTY:
 ; CHECK-TF-NEXT:  ir-bb<exit>:
@@ -216,7 +216,7 @@ define i32 @simple_csa_int_load(ptr noalias %a, ptr noalias %b, i32 %default_val
 ; CHECK-NEXT:  Successor(s): middle.block
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  middle.block:
-; CHECK-NEXT:    EMIT vp<[[VP13:%[0-9]+]]> = extract-last-active vp<[[VP11]]>, vp<[[VP10]]>, ir<%default_val>
+; CHECK-NEXT:    EMIT vp<[[VP13:%[0-9]+]]> = extract-last-active ir<%default_val>, vp<[[VP11]]>, vp<[[VP10]]>
 ; CHECK-NEXT:    EMIT vp<%cmp.n> = icmp eq ir<%N>, vp<[[VP2]]>
 ; CHECK-NEXT:    EMIT branch-on-cond vp<%cmp.n>
 ; CHECK-NEXT:  Successor(s): ir-bb<exit>, scalar.ph
@@ -280,7 +280,7 @@ define i32 @simple_csa_int_load(ptr noalias %a, ptr noalias %b, i32 %default_val
 ; CHECK-TF-NEXT:  Successor(s): middle.block
 ; CHECK-TF-EMPTY:
 ; CHECK-TF-NEXT:  middle.block:
-; CHECK-TF-NEXT:    EMIT vp<[[VP17:%[0-9]+]]> = extract-last-active vp<[[VP15]]>, vp<[[VP14]]>, ir<%default_val>
+; CHECK-TF-NEXT:    EMIT vp<[[VP17:%[0-9]+]]> = extract-last-active ir<%default_val>, vp<[[VP15]]>, vp<[[VP14]]>
 ; CHECK-TF-NEXT:  Successor(s): ir-bb<exit>
 ; CHECK-TF-EMPTY:
 ; CHECK-TF-NEXT:  ir-bb<exit>:
