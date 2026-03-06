@@ -24,15 +24,15 @@ define void @vector_reverse_f64(i64 %N, ptr noalias %a, ptr noalias %b) #0{
 ; CHECK-NEXT:    [[TMP6:%.*]] = shl nuw i64 [[TMP4]], 4
 ; CHECK-NEXT:    [[N_MOD_VF:%.*]] = urem i64 [[N]], [[TMP6]]
 ; CHECK-NEXT:    [[N_VEC:%.*]] = sub nsw i64 [[N]], [[N_MOD_VF]]
+; CHECK-NEXT:    [[TMP12:%.*]] = sub i64 1, [[TMP5]]
+; CHECK-NEXT:    [[TMP22:%.*]] = sub i64 [[TMP12]], [[TMP5]]
 ; CHECK-NEXT:    br label [[VECTOR_BODY:%.*]]
 ; CHECK:       vector.body:
 ; CHECK-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, [[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], [[VECTOR_BODY]] ]
 ; CHECK-NEXT:    [[TMP7:%.*]] = xor i64 [[INDEX]], -1
 ; CHECK-NEXT:    [[TMP8:%.*]] = add i64 [[N]], [[TMP7]]
 ; CHECK-NEXT:    [[TMP9:%.*]] = getelementptr inbounds double, ptr [[B:%.*]], i64 [[TMP8]]
-; CHECK-NEXT:    [[TMP12:%.*]] = sub i64 1, [[TMP5]]
 ; CHECK-NEXT:    [[TMP14:%.*]] = getelementptr inbounds double, ptr [[TMP9]], i64 [[TMP12]]
-; CHECK-NEXT:    [[TMP22:%.*]] = sub i64 [[TMP12]], [[TMP5]]
 ; CHECK-NEXT:    [[TMP15:%.*]] = getelementptr inbounds double, ptr [[TMP9]], i64 [[TMP22]]
 ; CHECK-NEXT:    [[WIDE_LOAD:%.*]] = load <vscale x 8 x double>, ptr [[TMP14]], align 8
 ; CHECK-NEXT:    [[WIDE_LOAD1:%.*]] = load <vscale x 8 x double>, ptr [[TMP15]], align 8
@@ -95,15 +95,15 @@ define void @vector_reverse_i64(i64 %N, ptr %a, ptr %b) #0 {
 ; CHECK-NEXT:    [[TMP9:%.*]] = shl nuw i64 [[TMP7]], 4
 ; CHECK-NEXT:    [[N_MOD_VF:%.*]] = urem i64 [[N]], [[TMP9]]
 ; CHECK-NEXT:    [[N_VEC:%.*]] = sub nsw i64 [[N]], [[N_MOD_VF]]
+; CHECK-NEXT:    [[TMP15:%.*]] = sub i64 1, [[TMP8]]
+; CHECK-NEXT:    [[TMP25:%.*]] = sub i64 [[TMP15]], [[TMP8]]
 ; CHECK-NEXT:    br label [[VECTOR_BODY:%.*]]
 ; CHECK:       vector.body:
 ; CHECK-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, [[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], [[VECTOR_BODY]] ]
 ; CHECK-NEXT:    [[TMP10:%.*]] = xor i64 [[INDEX]], -1
 ; CHECK-NEXT:    [[TMP11:%.*]] = add i64 [[N]], [[TMP10]]
 ; CHECK-NEXT:    [[TMP12:%.*]] = getelementptr inbounds i64, ptr [[B]], i64 [[TMP11]]
-; CHECK-NEXT:    [[TMP15:%.*]] = sub i64 1, [[TMP8]]
 ; CHECK-NEXT:    [[TMP17:%.*]] = getelementptr inbounds i64, ptr [[TMP12]], i64 [[TMP15]]
-; CHECK-NEXT:    [[TMP25:%.*]] = sub i64 [[TMP15]], [[TMP8]]
 ; CHECK-NEXT:    [[TMP18:%.*]] = getelementptr inbounds i64, ptr [[TMP12]], i64 [[TMP25]]
 ; CHECK-NEXT:    [[WIDE_LOAD:%.*]] = load <vscale x 8 x i64>, ptr [[TMP17]], align 8
 ; CHECK-NEXT:    [[WIDE_LOAD3:%.*]] = load <vscale x 8 x i64>, ptr [[TMP18]], align 8

@@ -138,17 +138,17 @@ define void @pr173761(i8 %c, ptr %p, ptr noalias %q, ptr noalias %r) {
 ; CHECK-NEXT:    [[BROADCAST_SPLATINSERT1:%.*]] = insertelement <4 x ptr> poison, ptr [[P]], i64 0
 ; CHECK-NEXT:    [[BROADCAST_SPLAT2:%.*]] = shufflevector <4 x ptr> [[BROADCAST_SPLATINSERT1]], <4 x ptr> poison, <4 x i32> zeroinitializer
 ; CHECK-NEXT:    [[TMP0:%.*]] = getelementptr inbounds nuw i8, ptr [[P]], i64 16
-; CHECK-NEXT:    [[BROADCAST_SPLATINSERT3:%.*]] = insertelement <4 x ptr> poison, ptr [[TMP0]], i64 0
-; CHECK-NEXT:    [[BROADCAST_SPLAT4:%.*]] = shufflevector <4 x ptr> [[BROADCAST_SPLATINSERT3]], <4 x ptr> poison, <4 x i32> zeroinitializer
+; CHECK-NEXT:    [[DOTSPLATINSERT:%.*]] = insertelement <4 x ptr> poison, ptr [[TMP0]], i64 0
+; CHECK-NEXT:    [[DOTSPLAT:%.*]] = shufflevector <4 x ptr> [[DOTSPLATINSERT]], <4 x ptr> poison, <4 x i32> zeroinitializer
 ; CHECK-NEXT:    [[TMP1:%.*]] = trunc <4 x i8> [[BROADCAST_SPLAT]] to <4 x i1>
-; CHECK-NEXT:    [[TMP2:%.*]] = select <4 x i1> [[TMP1]], <4 x ptr> [[BROADCAST_SPLAT4]], <4 x ptr> [[BROADCAST_SPLAT2]]
+; CHECK-NEXT:    [[TMP2:%.*]] = select <4 x i1> [[TMP1]], <4 x ptr> [[DOTSPLAT]], <4 x ptr> [[BROADCAST_SPLAT2]]
+; CHECK-NEXT:    [[TMP3:%.*]] = extractelement <4 x ptr> [[TMP2]], i32 3
 ; CHECK-NEXT:    br label [[VECTOR_BODY:%.*]]
 ; CHECK:       vector.body:
 ; CHECK-NEXT:    [[INDEX:%.*]] = phi i32 [ 0, [[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], [[VECTOR_BODY]] ]
-; CHECK-NEXT:    [[TMP3:%.*]] = load i8, ptr [[P]], align 1
-; CHECK-NEXT:    store i8 [[TMP3]], ptr [[R]], align 1
-; CHECK-NEXT:    [[TMP4:%.*]] = extractelement <4 x ptr> [[TMP2]], i32 3
-; CHECK-NEXT:    [[TMP5:%.*]] = load i8, ptr [[TMP4]], align 1
+; CHECK-NEXT:    [[TMP4:%.*]] = load i8, ptr [[P]], align 1
+; CHECK-NEXT:    store i8 [[TMP4]], ptr [[R]], align 1
+; CHECK-NEXT:    [[TMP5:%.*]] = load i8, ptr [[TMP3]], align 1
 ; CHECK-NEXT:    store i8 [[TMP5]], ptr [[Q]], align 1
 ; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i32 [[INDEX]], 4
 ; CHECK-NEXT:    [[TMP6:%.*]] = icmp eq i32 [[INDEX_NEXT]], 1024

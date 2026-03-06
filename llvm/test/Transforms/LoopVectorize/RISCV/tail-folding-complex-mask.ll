@@ -25,6 +25,8 @@ define void @test(i64 %n, ptr noalias %src0, ptr noalias %src1, ptr noalias %src
 ; IF-EVL-NEXT:    [[TMP6:%.*]] = select <vscale x 4 x i1> [[TMP2]], <vscale x 4 x i1> [[TMP5]], <vscale x 4 x i1> zeroinitializer
 ; IF-EVL-NEXT:    [[BROADCAST_SPLATINSERT3:%.*]] = insertelement <vscale x 4 x i1> poison, i1 [[C3]], i64 0
 ; IF-EVL-NEXT:    [[BROADCAST_SPLAT4:%.*]] = shufflevector <vscale x 4 x i1> [[BROADCAST_SPLATINSERT3]], <vscale x 4 x i1> poison, <vscale x 4 x i32> zeroinitializer
+; IF-EVL-NEXT:    [[TMP8:%.*]] = call <vscale x 4 x i32> @llvm.stepvector.nxv4i32()
+; IF-EVL-NEXT:    [[TMP14:%.*]] = or <vscale x 4 x i1> [[TMP4]], [[TMP6]]
 ; IF-EVL-NEXT:    br label %[[VECTOR_BODY:.*]]
 ; IF-EVL:       [[VECTOR_BODY]]:
 ; IF-EVL-NEXT:    [[EVL_BASED_IV:%.*]] = phi i64 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_EVL_NEXT:%.*]], %[[VECTOR_BODY]] ]
@@ -32,7 +34,6 @@ define void @test(i64 %n, ptr noalias %src0, ptr noalias %src1, ptr noalias %src
 ; IF-EVL-NEXT:    [[TMP7:%.*]] = call i32 @llvm.experimental.get.vector.length.i64(i64 [[AVL]], i32 4, i1 true)
 ; IF-EVL-NEXT:    [[BROADCAST_SPLATINSERT5:%.*]] = insertelement <vscale x 4 x i32> poison, i32 [[TMP7]], i64 0
 ; IF-EVL-NEXT:    [[BROADCAST_SPLAT6:%.*]] = shufflevector <vscale x 4 x i32> [[BROADCAST_SPLATINSERT5]], <vscale x 4 x i32> poison, <vscale x 4 x i32> zeroinitializer
-; IF-EVL-NEXT:    [[TMP8:%.*]] = call <vscale x 4 x i32> @llvm.stepvector.nxv4i32()
 ; IF-EVL-NEXT:    [[TMP9:%.*]] = icmp ult <vscale x 4 x i32> [[TMP8]], [[BROADCAST_SPLAT6]]
 ; IF-EVL-NEXT:    [[TMP10:%.*]] = getelementptr i32, ptr [[SRC0]], i64 [[EVL_BASED_IV]]
 ; IF-EVL-NEXT:    [[VP_OP_LOAD:%.*]] = call <vscale x 4 x i32> @llvm.vp.load.nxv4i32.p0(ptr align 4 [[TMP10]], <vscale x 4 x i1> [[BROADCAST_SPLAT]], i32 [[TMP7]])
@@ -41,7 +42,6 @@ define void @test(i64 %n, ptr noalias %src0, ptr noalias %src1, ptr noalias %src
 ; IF-EVL-NEXT:    [[VP_OP_LOAD7:%.*]] = call <vscale x 4 x i32> @llvm.vp.load.nxv4i32.p0(ptr align 4 [[TMP11]], <vscale x 4 x i1> [[TMP4]], i32 [[TMP7]])
 ; IF-EVL-NEXT:    [[TMP12:%.*]] = add <vscale x 4 x i32> [[VP_OP_LOAD7]], [[PREDPHI]]
 ; IF-EVL-NEXT:    [[TMP13:%.*]] = select <vscale x 4 x i1> [[TMP9]], <vscale x 4 x i1> [[TMP6]], <vscale x 4 x i1> zeroinitializer
-; IF-EVL-NEXT:    [[TMP14:%.*]] = or <vscale x 4 x i1> [[TMP4]], [[TMP6]]
 ; IF-EVL-NEXT:    [[TMP15:%.*]] = select <vscale x 4 x i1> [[TMP9]], <vscale x 4 x i1> [[TMP14]], <vscale x 4 x i1> zeroinitializer
 ; IF-EVL-NEXT:    [[PREDPHI8:%.*]] = select <vscale x 4 x i1> [[TMP13]], <vscale x 4 x i32> zeroinitializer, <vscale x 4 x i32> [[TMP12]]
 ; IF-EVL-NEXT:    [[TMP17:%.*]] = select <vscale x 4 x i1> [[TMP15]], <vscale x 4 x i1> [[BROADCAST_SPLAT4]], <vscale x 4 x i1> zeroinitializer

@@ -149,6 +149,14 @@ define i32 @reverse_store_with_partial_reduction(ptr noalias %dst, ptr noalias %
 ; CHECK-NEXT:    [[TMP5:%.*]] = shl nuw i64 [[TMP4]], 2
 ; CHECK-NEXT:    [[N_MOD_VF:%.*]] = urem i64 [[TMP0]], [[TMP5]]
 ; CHECK-NEXT:    [[N_VEC:%.*]] = sub i64 [[TMP0]], [[N_MOD_VF]]
+; CHECK-NEXT:    [[TMP11:%.*]] = sub nuw nsw i64 [[TMP4]], 1
+; CHECK-NEXT:    [[TMP20:%.*]] = mul i64 [[TMP11]], -1
+; CHECK-NEXT:    [[TMP14:%.*]] = mul i64 -1, [[TMP4]]
+; CHECK-NEXT:    [[TMP13:%.*]] = add i64 [[TMP20]], [[TMP14]]
+; CHECK-NEXT:    [[TMP10:%.*]] = mul i64 -2, [[TMP4]]
+; CHECK-NEXT:    [[TMP25:%.*]] = add i64 [[TMP20]], [[TMP10]]
+; CHECK-NEXT:    [[TMP12:%.*]] = mul i64 -3, [[TMP4]]
+; CHECK-NEXT:    [[TMP15:%.*]] = add i64 [[TMP20]], [[TMP12]]
 ; CHECK-NEXT:    br label %[[VECTOR_BODY:.*]]
 ; CHECK:       [[VECTOR_BODY]]:
 ; CHECK-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[VECTOR_BODY]] ]
@@ -166,17 +174,9 @@ define i32 @reverse_store_with_partial_reduction(ptr noalias %dst, ptr noalias %
 ; CHECK-NEXT:    [[PARTIAL_REDUCE6]] = call <vscale x 4 x i32> @llvm.vector.partial.reduce.add.nxv4i32.nxv8i32(<vscale x 4 x i32> [[VEC_PHI3]], <vscale x 8 x i32> [[TMP8]])
 ; CHECK-NEXT:    [[PARTIAL_REDUCE7]] = call <vscale x 4 x i32> @llvm.vector.partial.reduce.add.nxv4i32.nxv8i32(<vscale x 4 x i32> [[VEC_PHI4]], <vscale x 8 x i32> [[TMP8]])
 ; CHECK-NEXT:    [[TMP9:%.*]] = getelementptr i16, ptr [[DST]], i64 [[TMP6]]
-; CHECK-NEXT:    [[TMP10:%.*]] = sub nuw nsw i64 [[TMP4]], 1
-; CHECK-NEXT:    [[TMP20:%.*]] = mul i64 [[TMP10]], -1
 ; CHECK-NEXT:    [[TMP23:%.*]] = getelementptr i16, ptr [[TMP9]], i64 [[TMP20]]
-; CHECK-NEXT:    [[TMP14:%.*]] = mul i64 -1, [[TMP4]]
-; CHECK-NEXT:    [[TMP13:%.*]] = add i64 [[TMP20]], [[TMP14]]
 ; CHECK-NEXT:    [[TMP19:%.*]] = getelementptr i16, ptr [[TMP9]], i64 [[TMP13]]
-; CHECK-NEXT:    [[TMP16:%.*]] = mul i64 -2, [[TMP4]]
-; CHECK-NEXT:    [[TMP25:%.*]] = add i64 [[TMP20]], [[TMP16]]
 ; CHECK-NEXT:    [[TMP28:%.*]] = getelementptr i16, ptr [[TMP9]], i64 [[TMP25]]
-; CHECK-NEXT:    [[TMP21:%.*]] = mul i64 -3, [[TMP4]]
-; CHECK-NEXT:    [[TMP15:%.*]] = add i64 [[TMP20]], [[TMP21]]
 ; CHECK-NEXT:    [[TMP29:%.*]] = getelementptr i16, ptr [[TMP9]], i64 [[TMP15]]
 ; CHECK-NEXT:    [[REVERSE:%.*]] = call <vscale x 8 x i16> @llvm.vector.reverse.nxv8i16(<vscale x 8 x i16> [[BROADCAST_SPLAT]])
 ; CHECK-NEXT:    store <vscale x 8 x i16> [[REVERSE]], ptr [[TMP23]], align 2
