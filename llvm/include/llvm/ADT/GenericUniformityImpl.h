@@ -386,7 +386,7 @@ public:
   void finalizeUniformValues();
 
   /// \brief Whether any value was marked or analyzed to be divergent.
-  bool hasDivergence() const { return !DivergentValues.empty(); }
+  bool hasDivergence() const { return HasDivergence; }
 
   /// \brief Whether \p Val will always return a uniform value regardless of its
   /// operands
@@ -402,14 +402,15 @@ public:
   };
 
   /// \brief Whether \p Val is divergent at its definition.
-  /// When UniformValues is populated (after finalization), values not in
-  /// either set (e.g. newly created) are conservatively treated as divergent.
+  /// When the target has no branch divergence, compute() is never called
+  /// and everything is uniform. Otherwise, values not in UniformValues
+  /// (e.g. newly created) are conservatively treated as divergent.
   bool isDivergent(ConstValueRefT V) const {
+    if (!HasBranchDivergence)
+      return false;
     if (ContextT::isNeverDivergent(V))
       return false;
-    if (UniformValues.empty())
-      return DivergentValues.count(V);
-    return !UniformValues.count(V);
+    return !UniformValues.contains(V);
   }
 
   bool isDivergentUse(const UseT &U) const;
@@ -426,12 +427,29 @@ public:
                                 const CycleT *);
 
 protected:
+  /// \brief Whether \p Val was marked divergent during internal uniformity
+  /// computation. Used by the divergence propagation worklist, not by
+  /// external consumers of the analysis.
+  bool isDivergentUnderConstruction(ConstValueRefT V) const {
+    if (ContextT::isNeverDivergent(V))
+      return false;
+    return DivergentValues.contains(V);
+  }
+
   const ContextT &Context;
   const FunctionT &F;
   const CycleInfoT &CI;
   const TargetTransformInfo *TTI = nullptr;
 
-  // Detected/marked divergent values.
+  bool HasDivergence = false;
+
+  // Whether the target has branch divergence. Set at the start of compute(),
+  // which is only called when the target has branch divergence. When false,
+  // isDivergent() returns false for all values.
+  bool HasBranchDivergence = false;
+
+  // Values detected as divergent during internal uniformity computation.
+  // Cleared after finalizeUniformValues() populates UniformValues.
   DenseSet<ConstValueRefT> DivergentValues;
   SmallPtrSet<const BlockT *, 32> DivergentTermBlocks;
 
@@ -1130,10 +1148,13 @@ void GenericUniformityAnalysisImpl<ContextT>::analyzeControlDivergence(
 
 template <typename ContextT>
 void GenericUniformityAnalysisImpl<ContextT>::compute() {
+  HasBranchDivergence = true;
+
   // Initialize worklist.
   auto DivValuesCopy = DivergentValues;
   for (const auto DivVal : DivValuesCopy) {
-    assert(isDivergent(DivVal) && "Worklist invariant violated!");
+    assert(isDivergentUnderConstruction(DivVal) &&
+           "Worklist invariant violated!");
     pushUsers(DivVal);
   }
 
@@ -1154,6 +1175,9 @@ void GenericUniformityAnalysisImpl<ContextT>::compute() {
     assert(isDivergent(*I) && "Worklist invariant violated!");
     pushUsers(*I);
   }
+
+  // Record before DivergentValues is cleared in finalizeUniformValues().
+  HasDivergence = !DivergentValues.empty();
 }
 
 template <typename ContextT>
@@ -1189,20 +1213,21 @@ void GenericUniformityAnalysisImpl<ContextT>::print(raw_ostream &OS) const {
   // Control flow instructions may be divergent even if their inputs are
   // uniform. Thus, although exceedingly rare, it is possible to have a program
   // with no divergent values but with divergent control structures.
-  if (DivergentValues.empty() && DivergentTermBlocks.empty() &&
+  if (!HasDivergence && DivergentTermBlocks.empty() &&
       DivergentExitCycles.empty()) {
     OS << "ALL VALUES UNIFORM\n";
     return;
   }
 
-  for (const auto &entry : DivergentValues) {
-    const BlockT *parent = Context.getDefBlock(entry);
-    if (!parent) {
-      if (!haveDivergentArgs) {
-        OS << "DIVERGENT ARGUMENTS:\n";
-        haveDivergentArgs = true;
+  if constexpr (!IsMIR) {
+    for (const auto &Arg : F.args()) {
+      if (isDivergent(&Arg)) {
+        if (!haveDivergentArgs) {
+          OS << "DIVERGENT ARGUMENTS:\n";
+          haveDivergentArgs = true;
+        }
+        OS << "  DIVERGENT: " << Context.print(&Arg) << '\n';
       }
-      OS << "  DIVERGENT: " << Context.print(entry) << '\n';
     }
   }
 
