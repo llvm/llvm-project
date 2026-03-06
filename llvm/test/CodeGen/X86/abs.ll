@@ -661,9 +661,10 @@ define i32 @test_sextinreg_i32(i32 %a) nounwind {
 define i64 @test_sextinreg_i64(i64 %a) nounwind {
 ; X64-LABEL: test_sextinreg_i64:
 ; X64:       # %bb.0:
-; X64-NEXT:    movl %edi, %eax
-; X64-NEXT:    negl %eax
-; X64-NEXT:    cmovsl %edi, %eax
+; X64-NEXT:    movslq %edi, %rcx
+; X64-NEXT:    movq %rcx, %rax
+; X64-NEXT:    negq %rax
+; X64-NEXT:    cmovsq %rcx, %rax
 ; X64-NEXT:    retq
 ;
 ; X86-LABEL: test_sextinreg_i64:
