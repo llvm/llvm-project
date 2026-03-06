@@ -51,6 +51,12 @@ static bool isPPCBareMetal(const llvm::Triple &Triple) {
          Triple.getEnvironment() == llvm::Triple::EABI;
 }
 
+/// Is the triple {ix86,x86_64}-*-none-elf?
+static bool isX86BareMetal(const llvm::Triple &Triple) {
+  return Triple.isX86() && Triple.getOS() == llvm::Triple::UnknownOS &&
+         Triple.getEnvironmentName() == "elf";
+}
+
 static bool findRISCVMultilibs(const Driver &D,
                                const llvm::Triple &TargetTriple,
                                const ArgList &Args, DetectedMultilibs &Result) {
@@ -351,7 +357,7 @@ void BareMetal::findMultilibs(const Driver &D, const llvm::Triple &Triple,
 bool BareMetal::handlesTarget(const llvm::Triple &Triple) {
   return arm::isARMEABIBareMetal(Triple) ||
          aarch64::isAArch64BareMetal(Triple) || isRISCVBareMetal(Triple) ||
-         isPPCBareMetal(Triple);
+         isPPCBareMetal(Triple) || isX86BareMetal(Triple);
 }
 
 Tool *BareMetal::buildLinker() const {
@@ -399,34 +405,33 @@ void BareMetal::AddClangSystemIncludeArgs(const ArgList &DriverArgs,
   if (DriverArgs.hasArg(options::OPT_nostdinc))
     return;
 
+  if (!DriverArgs.hasArg(options::OPT_nostdlibinc)) {
+    const Driver &D = getDriver();
+
+    if (std::optional<std::string> Path = getStdlibIncludePath())
+      addSystemInclude(DriverArgs, CC1Args, *Path);
+
+    const SmallString<128> SysRootDir(computeSysRoot());
+    if (!SysRootDir.empty()) {
+      for (const Multilib &M : getOrderedMultilibs()) {
+        SmallString<128> Dir(SysRootDir);
+        llvm::sys::path::append(Dir, M.includeSuffix());
+        llvm::sys::path::append(Dir, "include");
+        addSystemInclude(DriverArgs, CC1Args, Dir.str());
+      }
+      SmallString<128> Dir(SysRootDir);
+      llvm::sys::path::append(Dir, getTripleString());
+      if (D.getVFS().exists(Dir)) {
+        llvm::sys::path::append(Dir, "include");
+        addSystemInclude(DriverArgs, CC1Args, Dir.str());
+      }
+    }
+  }
+
   if (!DriverArgs.hasArg(options::OPT_nobuiltininc)) {
     SmallString<128> Dir(getDriver().ResourceDir);
     llvm::sys::path::append(Dir, "include");
     addSystemInclude(DriverArgs, CC1Args, Dir.str());
-  }
-
-  if (DriverArgs.hasArg(options::OPT_nostdlibinc))
-    return;
-
-  const Driver &D = getDriver();
-
-  if (std::optional<std::string> Path = getStdlibIncludePath())
-    addSystemInclude(DriverArgs, CC1Args, *Path);
-
-  const SmallString<128> SysRootDir(computeSysRoot());
-  if (!SysRootDir.empty()) {
-    for (const Multilib &M : getOrderedMultilibs()) {
-      SmallString<128> Dir(SysRootDir);
-      llvm::sys::path::append(Dir, M.includeSuffix());
-      llvm::sys::path::append(Dir, "include");
-      addSystemInclude(DriverArgs, CC1Args, Dir.str());
-    }
-    SmallString<128> Dir(SysRootDir);
-    llvm::sys::path::append(Dir, getTripleString());
-    if (D.getVFS().exists(Dir)) {
-      llvm::sys::path::append(Dir, "include");
-      addSystemInclude(DriverArgs, CC1Args, Dir.str());
-    }
   }
 }
 
