@@ -782,9 +782,12 @@ def _executeShCmd(cmd, shenv, results, timeoutHelper):
     assert isinstance(cmd, ShUtil.Pipeline)
 
     procs = []
+    proc_cmd_indices = []
     proc_not_counts = []
     proc_not_fail_if_crash = []
+    command_exit_codes = [None] * len(cmd.commands)
     default_stdin = subprocess.PIPE
+    inproc_pipeline_tempfiles = []
     stderrTempFiles = []
     opened_files = []
     named_temp_files = []
@@ -805,16 +808,34 @@ def _executeShCmd(cmd, shenv, results, timeoutHelper):
         "umask": executeBuiltinUmask,
         ":": executeBuiltinColon,
     }
+
+    def applyNotResult(exit_code, not_count, not_fail_if_crash):
+        if not_count % 2:
+            if not_fail_if_crash:
+                return int(exit_code <= 0)
+            return 1 if exit_code == 0 else 0
+        if not_count > 1:
+            return 1 if exit_code != 0 else 0
+        return exit_code
+
+    def stageInprocOutputForPipeline(output):
+        input_file = tempfile.TemporaryFile(mode="w+t", encoding="utf-8", newline="")
+        input_file.write(output)
+        input_file.seek(0, 0)
+        inproc_pipeline_tempfiles.append(input_file)
+        return input_file
+
     # To avoid deadlock, we use a single stderr stream for piped
     # output. This is null until we have seen some output using
     # stderr.
-    for i, j in enumerate(cmd.commands):
+    for cmd_index, j in enumerate(cmd.commands):
         # Reference the global environment by default.
         cmd_shenv = shenv
         args = list(j.args)
         not_args = []
         not_count = 0
         not_crash = False
+        handled_inproc_pipeline = False
 
         # Expand all late substitutions.
         args = _expandLateSubstitutions(j, args, cmd_shenv.cwd)
@@ -831,28 +852,36 @@ def _executeShCmd(cmd, shenv, results, timeoutHelper):
                     cmd_shenv = ShellEnvironment(shenv.cwd, shenv.env, shenv.umask)
                 args = updateEnv(cmd_shenv, args)
                 if not args:
+                    env_str = "\n".join(
+                        f"{key}={value}" for key, value in sorted(cmd_shenv.env.items())
+                    )
                     if len(cmd.commands) == 1:
                         # Single command: return environment variables in-process.
-                        env_str = "\n".join(
-                            f"{key}={value}"
-                            for key, value in sorted(cmd_shenv.env.items())
-                        )
                         results.append(
                             ShellCommandResult(
                                 j, env_str, "", 0, timeoutHelper.timeoutReached(), []
                             )
                         )
                         return 0
-                    # Pipeline: replace with a subprocess that prints the
-                    # environment variables to stdout so the output can be
-                    # piped to the next command.
-                    args = [
-                        sys.executable,
-                        "-c",
-                        "import os, sys; sys.stdout.write("
-                        "'\\n'.join(k + '=' + v"
-                        " for k, v in sorted(os.environ.items())) + '\\n')",
-                    ]
+                    if not_crash:
+                        raise InternalShellError(
+                            j, "Error: 'not --crash' cannot call 'env'"
+                        )
+
+                    # Keep one trailing newline even when the environment is
+                    # empty so downstream tools like FileCheck still see input.
+                    out = env_str if env_str else "\n"
+
+                    default_stdin = stageInprocOutputForPipeline(out)
+                    exit_code = applyNotResult(0, not_count, False)
+
+                    results.append(
+                        ShellCommandResult(
+                            j, out, "", exit_code, timeoutHelper.timeoutReached(), []
+                        )
+                    )
+                    command_exit_codes[cmd_index] = exit_code
+                    handled_inproc_pipeline = True
                     break
             elif args[0] == "not":
                 not_args.append(args.pop(0))
@@ -869,6 +898,9 @@ def _executeShCmd(cmd, shenv, results, timeoutHelper):
                     raise InternalShellError(j, "Error: '!' requires a" " subcommand")
             else:
                 break
+
+        if handled_inproc_pipeline:
+            continue
 
         # Handle in-process builtins.
         #
@@ -952,7 +984,7 @@ def _executeShCmd(cmd, shenv, results, timeoutHelper):
             # FIXME: This is slow, but so is deadlock.
             if stderr == subprocess.PIPE and j != cmd.commands[-1]:
                 stderr = tempfile.TemporaryFile(mode="w+b")
-                stderrTempFiles.append((i, stderr))
+                stderrTempFiles.append((len(procs), stderr))
 
         # Resolve the executable path ourselves.
         executable = None
@@ -1025,6 +1057,7 @@ def _executeShCmd(cmd, shenv, results, timeoutHelper):
             )
             if old_umask != -1:
                 os.umask(old_umask)
+            proc_cmd_indices.append(cmd_index)
             proc_not_counts.append(not_count)
             if not not_crash and not_args == ["not"]:
                 proc_not_fail_if_crash.append(True)
@@ -1078,19 +1111,16 @@ def _executeShCmd(cmd, shenv, results, timeoutHelper):
         procData[i] = (procData[i][0], f.read())
         f.close()
 
-    exitCode = None
     for i, (out, err) in enumerate(procData):
         res = procs[i].wait()
         # Detect Ctrl-C in subprocess.
         if res == -signal.SIGINT:
             raise KeyboardInterrupt
-        if proc_not_counts[i] % 2:
-            if proc_not_fail_if_crash[i]:
-                res = int(res <= 0)
-            else:
-                res = 1 if res == 0 else 0
-        elif proc_not_counts[i] > 1:
-            res = 1 if res != 0 else 0
+        res = applyNotResult(
+            res,
+            proc_not_counts[i],
+            proc_not_fail_if_crash[i],
+        )
 
         # Ensure the resulting output is always of string type.
         try:
@@ -1121,9 +1151,10 @@ def _executeShCmd(cmd, shenv, results, timeoutHelper):
                     if data is not None:
                         output_files.append((name, path, data))
 
+        cmd_index = proc_cmd_indices[i]
         results.append(
             ShellCommandResult(
-                cmd.commands[i],
+                cmd.commands[cmd_index],
                 out,
                 err,
                 res,
@@ -1131,12 +1162,21 @@ def _executeShCmd(cmd, shenv, results, timeoutHelper):
                 output_files,
             )
         )
+        command_exit_codes[cmd_index] = res
+
+    exitCode = None
+    for cmd_result in command_exit_codes:
         if cmd.pipe_err:
             # Take the last failing exit code from the pipeline.
-            if not exitCode or res != 0:
-                exitCode = res
+            if exitCode is None or cmd_result != 0:
+                exitCode = cmd_result
         else:
-            exitCode = res
+            exitCode = cmd_result
+    if exitCode is None:
+        exitCode = 0
+
+    for input_file in inproc_pipeline_tempfiles:
+        input_file.close()
 
     # Remove any named temporary files we created.
     for f in named_temp_files:
