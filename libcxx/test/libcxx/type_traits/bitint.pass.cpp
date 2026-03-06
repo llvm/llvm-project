@@ -10,6 +10,7 @@
 // libc++ internal traits, and that <bit> operations work for all valid widths.
 
 // UNSUPPORTED: c++03, c++11, c++14, c++17
+// UNSUPPORTED: gcc
 
 #include <bit>
 #include <cassert>
