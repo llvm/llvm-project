@@ -2063,6 +2063,40 @@ OpFoldResult tosa::DimOp::fold(FoldAdaptor adaptor) {
   return DenseElementsAttr::get(resultAttrTy, dimSize);
 }
 
+OpFoldResult concatShapeFold(tosa::ConcatShapeOp *op) {
+  auto const inputs = op->getInput();
+
+  if (inputs.empty())
+    return {};
+
+  SmallVector<APInt> concatDims;
+  concatDims.reserve(/*max elem*/ 64);
+  for (auto const &v : inputs) {
+    auto vConstShape = dyn_cast<tosa::ConstShapeOp>(v.getDefiningOp());
+    if (!vConstShape)
+      return {};
+
+    const auto vAttr = cast<DenseElementsAttr>(vConstShape.getValues());
+    if (!vAttr)
+      return {};
+
+    const auto vETy = vAttr.getElementType();
+    (void)vETy;
+    assert(vETy.isIntOrIndex());
+    auto const vAttrVals = vAttr.getValues<APInt>();
+    for (auto const &v : vAttrVals) {
+      concatDims.push_back(v);
+    }
+  }
+
+  auto *ctx = op->getContext();
+  assert(ctx != nullptr && "ctx is nullptr");
+  auto const rankedTy = RankedTensorType::get(
+      {static_cast<int64_t>(concatDims.size())}, IndexType::get(ctx));
+
+  return DenseElementsAttr::get(rankedTy, concatDims);
+}
+
 OpFoldResult tosa::AddShapeOp::fold(FoldAdaptor adaptor) {
   return binaryFold<AddShapeOp, AddFoldAdaptor>(this);
 }
@@ -2105,4 +2139,8 @@ OpFoldResult tosa::Log2CeilShapeOp::fold(FoldAdaptor adaptor) {
 
 OpFoldResult tosa::Log2FloorShapeOp::fold(FoldAdaptor adaptor) {
   return unaryShapeFold<Log2FloorShapeOp, Log2FloorFoldAdaptor>(this);
+}
+
+OpFoldResult tosa::ConcatShapeOp::fold(FoldAdaptor adaptor) {
+  return concatShapeFold(this);
 }
