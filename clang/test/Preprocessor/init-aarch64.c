@@ -257,7 +257,7 @@
 // AARCH64-NEXT: #define __PTRDIFF_FMTd__ "ld"
 // AARCH64-NEXT: #define __PTRDIFF_FMTi__ "li"
 // AARCH64-NEXT: #define __PTRDIFF_MAX__ 9223372036854775807L
-// AARCH64-NEXT: #define __PTRDIFF_TYPE__ long int
+// AARCH64-NEXT: #define __PTRDIFF_TYPE__ __typeof((int*)0-(int*)0)
 // AARCH64-NEXT: #define __PTRDIFF_WIDTH__ 64
 // AARCH64-NEXT: #define __SCHAR_MAX__ 127
 // AARCH64-NEXT: #define __SHRT_MAX__ 32767
@@ -282,7 +282,7 @@
 // AARCH64-NEXT: #define __SIZE_FMTu__ "lu"
 // AARCH64-NEXT: #define __SIZE_FMTx__ "lx"
 // AARCH64-NEXT: #define __SIZE_MAX__ 18446744073709551615UL
-// AARCH64-NEXT: #define __SIZE_TYPE__ long unsigned int
+// AARCH64-NEXT: #define __SIZE_TYPE__ __typeof(sizeof(0))
 // AARCH64-NEXT: #define __SIZE_WIDTH__ 64
 // AARCH64_CXX: #define __STDCPP_DEFAULT_NEW_ALIGNMENT__ 16UL
 // AARCH64_CXX: #define __STDCPP_THREADS__ 1
@@ -533,7 +533,7 @@
 // AARCH64-DARWIN: #define __LONG_MAX__ 9223372036854775807L
 // AARCH64-DARWIN: #define __LP64__ 1
 // AARCH64-DARWIN: #define __POINTER_WIDTH__ 64
-// AARCH64-DARWIN: #define __PTRDIFF_TYPE__ long int
+// AARCH64-DARWIN: #define __PTRDIFF_TYPE__ __typeof((int*)0-(int*)0)
 // AARCH64-DARWIN: #define __PTRDIFF_WIDTH__ 64
 // AARCH64-DARWIN: #define __SCHAR_MAX__ 127
 // AARCH64-DARWIN: #define __SHRT_MAX__ 32767
@@ -553,7 +553,7 @@
 // AARCH64-DARWIN: #define __SIZEOF_WCHAR_T__ 4
 // AARCH64-DARWIN: #define __SIZEOF_WINT_T__ 4
 // AARCH64-DARWIN: #define __SIZE_MAX__ 18446744073709551615UL
-// AARCH64-DARWIN: #define __SIZE_TYPE__ long unsigned int
+// AARCH64-DARWIN: #define __SIZE_TYPE__ __typeof(sizeof(0))
 // AARCH64-DARWIN: #define __SIZE_WIDTH__ 64
 // AARCH64-DARWIN: #define __UINT16_C(c) c
 // AARCH64-DARWIN: #define __UINT16_C_SUFFIX__
@@ -718,7 +718,7 @@
 // AARCH64-MSVC: #define __SIZEOF_WCHAR_T__ 2
 // AARCH64-MSVC: #define __SIZEOF_WINT_T__ 2
 // AARCH64-MSVC: #define __SIZE_MAX__ 18446744073709551615ULL
-// AARCH64-MSVC: #define __SIZE_TYPE__ long long unsigned int
+// AARCH64-MSVC: #define __SIZE_TYPE__ __typeof(sizeof(0))
 // AARCH64-MSVC: #define __SIZE_WIDTH__ 64
 // AARCH64-MSVC: #define __STDC_HOSTED__ 0
 // AARCH64-MSVC: #define __STDC_UTF_16__ 1
@@ -1013,7 +1013,7 @@
 // ARM64EC-MSVC: #define __PTRDIFF_FMTd__ "lld"
 // ARM64EC-MSVC: #define __PTRDIFF_FMTi__ "lli"
 // ARM64EC-MSVC: #define __PTRDIFF_MAX__ 9223372036854775807LL
-// ARM64EC-MSVC: #define __PTRDIFF_TYPE__ long long int
+// ARM64EC-MSVC: #define __PTRDIFF_TYPE__ __typeof((int*)0-(int*)0)
 // ARM64EC-MSVC: #define __PTRDIFF_WIDTH__ 64
 // ARM64EC-MSVC: #define __SCHAR_MAX__ 127
 // ARM64EC-MSVC: #define __SHRT_MAX__ 32767
@@ -1038,7 +1038,7 @@
 // ARM64EC-MSVC: #define __SIZE_FMTu__ "llu"
 // ARM64EC-MSVC: #define __SIZE_FMTx__ "llx"
 // ARM64EC-MSVC: #define __SIZE_MAX__ 18446744073709551615ULL
-// ARM64EC-MSVC: #define __SIZE_TYPE__ long long unsigned int
+// ARM64EC-MSVC: #define __SIZE_TYPE__ __typeof(sizeof(0))
 // ARM64EC-MSVC: #define __SIZE_WIDTH__ 64
 // ARM64EC-MSVC: #define __STDC_HOSTED__ 0
 // ARM64EC-MSVC: #define __STDC_NO_THREADS__ 1
