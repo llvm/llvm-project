@@ -15,6 +15,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "AMDGPUTargetTransformInfo.h"
+#include "AMDGPUSubtarget.h"
 #include "AMDGPUTargetMachine.h"
 #include "MCTargetDesc/AMDGPUMCTargetDesc.h"
 #include "SIModeRegisterDefaults.h"
@@ -1702,4 +1703,52 @@ GCNTTIImpl::getInstructionUniformity(const Value *V) const {
     return InstructionUniformity::NeverUniform;
 
   return InstructionUniformity::Default;
+}
+
+InstructionCost GCNTTIImpl::getScalingFactorCost(Type *Ty, GlobalValue *BaseGV,
+                                                 StackOffset BaseOffset,
+                                                 bool HasBaseReg, int64_t Scale,
+                                                 unsigned AddrSpace) const {
+  if (HasBaseReg && Scale != 0) {
+    // gfx1250+ can fold base+scale*index when scale matches the memory access
+    // size (scale_offset bit). Supported for flat/global/constant/scratch
+    // (VMEM, max 128 bits) and constant_32bit (SMRD, capped to 128 bits here).
+    if (getST()->hasScaleOffset() && Ty && Ty->isSized() &&
+        (AddrSpace == AMDGPUAS::FLAT_ADDRESS ||
+         AddrSpace == AMDGPUAS::GLOBAL_ADDRESS ||
+         AddrSpace == AMDGPUAS::CONSTANT_ADDRESS ||
+         AddrSpace == AMDGPUAS::CONSTANT_ADDRESS_32BIT ||
+         AddrSpace == AMDGPUAS::PRIVATE_ADDRESS)) {
+      unsigned StoreSize = getDataLayout().getTypeStoreSize(Ty).getFixedValue();
+      if (StoreSize <= 16 && static_cast<int64_t>(StoreSize) == Scale)
+        return 0;
+    }
+    return 1;
+  }
+  return BaseT::getScalingFactorCost(Ty, BaseGV, BaseOffset, HasBaseReg, Scale,
+                                     AddrSpace);
+}
+
+bool GCNTTIImpl::isLSRCostLess(const TTI::LSRCost &A,
+                               const TTI::LSRCost &B) const {
+  // Favor lower per-iteration work over preheader/setup costs.
+  // AMDGPU lacks rich addressing modes, so ScaleCost is folded into the
+  // effective instruction count (base+scale*index requires a separate ADD).
+  unsigned EffInsnsA = A.Insns + A.ScaleCost;
+  unsigned EffInsnsB = B.Insns + B.ScaleCost;
+
+  return std::tie(EffInsnsA, A.NumIVMuls, A.AddRecCost, A.NumBaseAdds,
+                  A.SetupCost, A.ImmCost, A.NumRegs) <
+         std::tie(EffInsnsB, B.NumIVMuls, B.AddRecCost, B.NumBaseAdds,
+                  B.SetupCost, B.ImmCost, B.NumRegs);
+}
+
+bool GCNTTIImpl::isNumRegsMajorCostOfLSR() const {
+  // isLSRCostLess de-prioritizes register count; keep consistent.
+  return false;
+}
+
+bool GCNTTIImpl::shouldDropLSRSolutionIfLessProfitable() const {
+  // Prefer the baseline when LSR cannot clearly reduce per-iteration work.
+  return true;
 }
