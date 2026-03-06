@@ -16,11 +16,19 @@ struct A {
 
 typedef A __attribute__((may_alias)) AA;
 
+// CHECK-OLD-LABEL: define void @_Z4copyP1AS0_(
+// CHECK-OLD-SAME: ptr noundef writeonly captures(none) initializes((0, 16)) [[A1:%.*]], ptr noundef readonly captures(none) [[A2:%.*]]) local_unnamed_addr #[[ATTR0:[0-9]+]] {
+// CHECK-OLD-NEXT:  [[ENTRY:.*:]]
+// CHECK-OLD-NEXT:    tail call void @llvm.memcpy.p0.p0.i64(ptr noundef nonnull align 4 dereferenceable(16) [[A1]], ptr noundef nonnull align 4 dereferenceable(16) [[A2]], i64 16, i1 false), !tbaa.struct [[TBAA_STRUCT6:![0-9]+]]
+// CHECK-OLD-NEXT:    ret void
+//
+// CHECK-NEW-LABEL: define void @_Z4copyP1AS0_(
+// CHECK-NEW-SAME: ptr noundef writeonly captures(none) initializes((0, 16)) [[A1:%.*]], ptr noundef readonly captures(none) [[A2:%.*]]) local_unnamed_addr #[[ATTR0:[0-9]+]] {
+// CHECK-NEW-NEXT:  [[ENTRY:.*:]]
+// CHECK-NEW-NEXT:    tail call void @llvm.memcpy.p0.p0.i64(ptr noundef nonnull align 4 dereferenceable(16) [[A1]], ptr noundef nonnull align 4 dereferenceable(16) [[A2]], i64 16, i1 false), !tbaa [[TBAA6:![0-9]+]], !tbaa.struct [[TBAA_STRUCT9:![0-9]+]]
+// CHECK-NEW-NEXT:    ret void
+//
 void copy(A *a1, A *a2) {
-// CHECK-LABEL: _Z4copyP1AS0_
-// CHECK: call void @llvm.memcpy.p0.p0.i64(ptr noundef nonnull align 4 dereferenceable(16) %{{.*}}, ptr noundef nonnull align 4 dereferenceable(16) %{{.*}}, i64 16, i1 false)
-// CHECK-OLD-SAME: !tbaa.struct [[TBAA_STRUCT6:![0-9]+]]
-// CHECK-NEW-SAME: !tbaa [[TBAA6:![0-9]+]]
 *a1 = *a2;
 }
 
@@ -30,11 +38,19 @@ struct B {
   int i;
 };
 
+// CHECK-OLD-LABEL: define void @_Z5copy2P1BS0_(
+// CHECK-OLD-SAME: ptr noundef writeonly captures(none) initializes((0, 24)) [[B1:%.*]], ptr noundef readonly captures(none) [[B2:%.*]]) local_unnamed_addr #[[ATTR0]] {
+// CHECK-OLD-NEXT:  [[ENTRY:.*:]]
+// CHECK-OLD-NEXT:    tail call void @llvm.memcpy.p0.p0.i64(ptr noundef nonnull align 4 dereferenceable(24) [[B1]], ptr noundef nonnull align 4 dereferenceable(24) [[B2]], i64 24, i1 false), !tbaa.struct [[TBAA_STRUCT13:![0-9]+]]
+// CHECK-OLD-NEXT:    ret void
+//
+// CHECK-NEW-LABEL: define void @_Z5copy2P1BS0_(
+// CHECK-NEW-SAME: ptr noundef writeonly captures(none) initializes((0, 24)) [[B1:%.*]], ptr noundef readonly captures(none) [[B2:%.*]]) local_unnamed_addr #[[ATTR0]] {
+// CHECK-NEW-NEXT:  [[ENTRY:.*:]]
+// CHECK-NEW-NEXT:    tail call void @llvm.memcpy.p0.p0.i64(ptr noundef nonnull align 4 dereferenceable(24) [[B1]], ptr noundef nonnull align 4 dereferenceable(24) [[B2]], i64 24, i1 false), !tbaa [[TBAA14:![0-9]+]], !tbaa.struct [[TBAA_STRUCT16:![0-9]+]]
+// CHECK-NEW-NEXT:    ret void
+//
 void copy2(B *b1, B *b2) {
-// CHECK-LABEL: _Z5copy2P1BS0_ 
-// CHECK: call void @llvm.memcpy.p0.p0.i64(ptr noundef nonnull align 4 dereferenceable(24) %{{.*}}, ptr noundef nonnull align 4 dereferenceable(24) %{{.*}}, i64 24, i1 false)
-// CHECK-OLD-SAME: !tbaa.struct [[TBAA_STRUCT10:![0-9]+]]
-// CHECK-NEW-SAME: !tbaa [[TBAA12:![0-9]+]]
   *b1 = *b2;
 }
 
@@ -48,11 +64,19 @@ union U {
   S s;
 };
 
+// CHECK-OLD-LABEL: define void @_Z5copy3P1US0_(
+// CHECK-OLD-SAME: ptr noundef writeonly captures(none) initializes((0, 12)) [[U1:%.*]], ptr noundef readonly captures(none) [[U2:%.*]]) local_unnamed_addr #[[ATTR0]] {
+// CHECK-OLD-NEXT:  [[ENTRY:.*:]]
+// CHECK-OLD-NEXT:    tail call void @llvm.memcpy.p0.p0.i64(ptr noundef nonnull align 4 dereferenceable(12) [[U1]], ptr noundef nonnull align 4 dereferenceable(12) [[U2]], i64 12, i1 false), !tbaa.struct [[TBAA_STRUCT21:![0-9]+]]
+// CHECK-OLD-NEXT:    ret void
+//
+// CHECK-NEW-LABEL: define void @_Z5copy3P1US0_(
+// CHECK-NEW-SAME: ptr noundef writeonly captures(none) initializes((0, 12)) [[U1:%.*]], ptr noundef readonly captures(none) [[U2:%.*]]) local_unnamed_addr #[[ATTR0]] {
+// CHECK-NEW-NEXT:  [[ENTRY:.*:]]
+// CHECK-NEW-NEXT:    tail call void @llvm.memcpy.p0.p0.i64(ptr noundef nonnull align 4 dereferenceable(12) [[U1]], ptr noundef nonnull align 4 dereferenceable(12) [[U2]], i64 12, i1 false), !tbaa [[TBAA23:![0-9]+]], !tbaa.struct [[TBAA_STRUCT24:![0-9]+]]
+// CHECK-NEW-NEXT:    ret void
+//
 void copy3(U *u1, U *u2) {
-// CHECK-LABEL: _Z5copy3P1US0_
-// CHECK: call void @llvm.memcpy.p0.p0.i64(ptr noundef nonnull align 4 dereferenceable(12) %{{.*}}, ptr noundef nonnull align 4 dereferenceable(12) %{{.*}}, i64 12, i1 false)
-// CHECK-OLD-SAME: !tbaa.struct [[TBAA_STRUCT11:![0-9]+]]
-// CHECK-NEW-SAME: !tbaa [[TBAA15:![0-9]+]]
 *u1 = *u2;
 }
 
@@ -64,11 +88,19 @@ struct C {
   char c;
 } __attribute__((ms_struct));
 
+// CHECK-OLD-LABEL: define void @_Z5copy4P1CS0_(
+// CHECK-OLD-SAME: ptr noundef writeonly captures(none) initializes((0, 3)) [[C1:%.*]], ptr noundef readonly captures(none) [[C2:%.*]]) local_unnamed_addr #[[ATTR0]] {
+// CHECK-OLD-NEXT:  [[ENTRY:.*:]]
+// CHECK-OLD-NEXT:    tail call void @llvm.memcpy.p0.p0.i64(ptr noundef nonnull align 1 dereferenceable(3) [[C1]], ptr noundef nonnull align 1 dereferenceable(3) [[C2]], i64 3, i1 false), !tbaa.struct [[TBAA_STRUCT23:![0-9]+]]
+// CHECK-OLD-NEXT:    ret void
+//
+// CHECK-NEW-LABEL: define void @_Z5copy4P1CS0_(
+// CHECK-NEW-SAME: ptr noundef writeonly captures(none) initializes((0, 3)) [[C1:%.*]], ptr noundef readonly captures(none) [[C2:%.*]]) local_unnamed_addr #[[ATTR0]] {
+// CHECK-NEW-NEXT:  [[ENTRY:.*:]]
+// CHECK-NEW-NEXT:    tail call void @llvm.memcpy.p0.p0.i64(ptr noundef nonnull align 1 dereferenceable(3) [[C1]], ptr noundef nonnull align 1 dereferenceable(3) [[C2]], i64 3, i1 false), !tbaa [[TBAA25:![0-9]+]], !tbaa.struct [[TBAA_STRUCT27:![0-9]+]]
+// CHECK-NEW-NEXT:    ret void
+//
 void copy4(C *c1, C *c2) {
-// CHECK-LABEL: _Z5copy4P1CS0_
-// CHECK: call void @llvm.memcpy.p0.p0.i64(ptr noundef nonnull align 1 dereferenceable(3) {{.*}}, ptr noundef nonnull align 1 dereferenceable(3) {{.*}}, i64 3, i1 false)
-// CHECK-OLD-SAME: !tbaa.struct [[TBAA_STRUCT12:![0-9]+]]
-// CHECK-NEW-SAME: !tbaa [[TBAA17:![0-9]+]]
   *c1 = *c2;
 }
 
@@ -79,27 +111,51 @@ struct D {
   char c;
 };
 
+// CHECK-OLD-LABEL: define void @_Z5copy5P1DS0_(
+// CHECK-OLD-SAME: ptr noundef writeonly captures(none) initializes((0, 6)) [[D1:%.*]], ptr noundef readonly captures(none) [[D2:%.*]]) local_unnamed_addr #[[ATTR0]] {
+// CHECK-OLD-NEXT:  [[ENTRY:.*:]]
+// CHECK-OLD-NEXT:    tail call void @llvm.memcpy.p0.p0.i64(ptr noundef nonnull align 1 dereferenceable(6) [[D1]], ptr noundef nonnull align 1 dereferenceable(6) [[D2]], i64 6, i1 false), !tbaa.struct [[TBAA_STRUCT28:![0-9]+]]
+// CHECK-OLD-NEXT:    ret void
+//
+// CHECK-NEW-LABEL: define void @_Z5copy5P1DS0_(
+// CHECK-NEW-SAME: ptr noundef writeonly captures(none) initializes((0, 6)) [[D1:%.*]], ptr noundef readonly captures(none) [[D2:%.*]]) local_unnamed_addr #[[ATTR0]] {
+// CHECK-NEW-NEXT:  [[ENTRY:.*:]]
+// CHECK-NEW-NEXT:    tail call void @llvm.memcpy.p0.p0.i64(ptr noundef nonnull align 1 dereferenceable(6) [[D1]], ptr noundef nonnull align 1 dereferenceable(6) [[D2]], i64 6, i1 false), !tbaa [[TBAA31:![0-9]+]], !tbaa.struct [[TBAA_STRUCT33:![0-9]+]]
+// CHECK-NEW-NEXT:    ret void
+//
 void copy5(D *d1, D *d2) {
-// CHECK-LABEL: _Z5copy5P1DS0_
-// CHECK: call void @llvm.memcpy.p0.p0.i64(ptr noundef nonnull align 1 dereferenceable(6) {{.*}}, ptr noundef nonnull align 1 dereferenceable(6) {{.*}}, i64 6, i1 false)
-// CHECK-OLD-SAME: !tbaa.struct [[TBAA_STRUCT13:![0-9]+]]
-// CHECK-NEW-SAME: !tbaa [[TBAA20:![0-9]+]]
   *d1 = *d2;
 }
 
+// CHECK-OLD-LABEL: define void @_Z5copy6P1AS0_(
+// CHECK-OLD-SAME: ptr noundef writeonly captures(none) initializes((0, 16)) [[A1:%.*]], ptr noundef readonly captures(none) [[A2:%.*]]) local_unnamed_addr #[[ATTR0]] {
+// CHECK-OLD-NEXT:  [[ENTRY:.*:]]
+// CHECK-OLD-NEXT:    tail call void @llvm.memcpy.p0.p0.i64(ptr noundef nonnull align 4 dereferenceable(16) [[A1]], ptr noundef nonnull align 4 dereferenceable(16) [[A2]], i64 16, i1 false), !tbaa.struct [[TBAA_STRUCT6]]
+// CHECK-OLD-NEXT:    ret void
+//
+// CHECK-NEW-LABEL: define void @_Z5copy6P1AS0_(
+// CHECK-NEW-SAME: ptr noundef writeonly captures(none) initializes((0, 16)) [[A1:%.*]], ptr noundef readonly captures(none) [[A2:%.*]]) local_unnamed_addr #[[ATTR0]] {
+// CHECK-NEW-NEXT:  [[ENTRY:.*:]]
+// CHECK-NEW-NEXT:    tail call void @llvm.memcpy.p0.p0.i64(ptr noundef nonnull align 4 dereferenceable(16) [[A1]], ptr noundef nonnull align 4 dereferenceable(16) [[A2]], i64 16, i1 false), !tbaa [[TBAA37:![0-9]+]], !tbaa.struct [[TBAA_STRUCT9]]
+// CHECK-NEW-NEXT:    ret void
+//
 void copy6(AA *a1, A *a2) {
-// CHECK-LABEL: _Z5copy6P1AS0_
-// CHECK: call void @llvm.memcpy.p0.p0.i64(ptr noundef nonnull align 4 dereferenceable(16) %{{.*}}, ptr noundef nonnull align 4 dereferenceable(16) %{{.*}}, i64 16, i1 false)
-// CHECK-OLD-SAME: !tbaa.struct [[TBAA_STRUCT6]]
-// CHECK-NEW-SAME: !tbaa [[TBAA23:![0-9]+]]
   *a1 = *a2;
 }
 
+// CHECK-OLD-LABEL: define void @_Z5copy7P1AS0_(
+// CHECK-OLD-SAME: ptr noundef writeonly captures(none) initializes((0, 16)) [[A1:%.*]], ptr noundef readonly captures(none) [[A2:%.*]]) local_unnamed_addr #[[ATTR0]] {
+// CHECK-OLD-NEXT:  [[ENTRY:.*:]]
+// CHECK-OLD-NEXT:    tail call void @llvm.memcpy.p0.p0.i64(ptr noundef nonnull align 4 dereferenceable(16) [[A1]], ptr noundef nonnull align 4 dereferenceable(16) [[A2]], i64 16, i1 false), !tbaa.struct [[TBAA_STRUCT6]]
+// CHECK-OLD-NEXT:    ret void
+//
+// CHECK-NEW-LABEL: define void @_Z5copy7P1AS0_(
+// CHECK-NEW-SAME: ptr noundef writeonly captures(none) initializes((0, 16)) [[A1:%.*]], ptr noundef readonly captures(none) [[A2:%.*]]) local_unnamed_addr #[[ATTR0]] {
+// CHECK-NEW-NEXT:  [[ENTRY:.*:]]
+// CHECK-NEW-NEXT:    tail call void @llvm.memcpy.p0.p0.i64(ptr noundef nonnull align 4 dereferenceable(16) [[A1]], ptr noundef nonnull align 4 dereferenceable(16) [[A2]], i64 16, i1 false), !tbaa [[TBAA37]], !tbaa.struct [[TBAA_STRUCT9]]
+// CHECK-NEW-NEXT:    ret void
+//
 void copy7(A *a1, AA *a2) {
-// CHECK-LABEL: _Z5copy7P1AS0_
-// CHECK: call void @llvm.memcpy.p0.p0.i64(ptr noundef nonnull align 4 dereferenceable(16) %{{.*}}, ptr noundef nonnull align 4 dereferenceable(16) %{{.*}}, i64 16, i1 false)
-// CHECK-OLD-SAME: !tbaa.struct [[TBAA_STRUCT6]]
-// CHECK-NEW-SAME: !tbaa [[TBAA23]]
   *a1 = *a2;
 }
 
@@ -110,11 +166,19 @@ struct NamedBitfields {
    double f3;
 };
 
+// CHECK-OLD-LABEL: define void @_Z5copy8P14NamedBitfieldsS0_(
+// CHECK-OLD-SAME: ptr noundef writeonly captures(none) initializes((0, 16)) [[A1:%.*]], ptr noundef readonly captures(none) [[A2:%.*]]) local_unnamed_addr #[[ATTR0]] {
+// CHECK-OLD-NEXT:  [[ENTRY:.*:]]
+// CHECK-OLD-NEXT:    tail call void @llvm.memcpy.p0.p0.i64(ptr noundef nonnull align 8 dereferenceable(16) [[A1]], ptr noundef nonnull align 8 dereferenceable(16) [[A2]], i64 16, i1 false), !tbaa.struct [[TBAA_STRUCT33:![0-9]+]]
+// CHECK-OLD-NEXT:    ret void
+//
+// CHECK-NEW-LABEL: define void @_Z5copy8P14NamedBitfieldsS0_(
+// CHECK-NEW-SAME: ptr noundef writeonly captures(none) initializes((0, 16)) [[A1:%.*]], ptr noundef readonly captures(none) [[A2:%.*]]) local_unnamed_addr #[[ATTR0]] {
+// CHECK-NEW-NEXT:  [[ENTRY:.*:]]
+// CHECK-NEW-NEXT:    tail call void @llvm.memcpy.p0.p0.i64(ptr noundef nonnull align 8 dereferenceable(16) [[A1]], ptr noundef nonnull align 8 dereferenceable(16) [[A2]], i64 16, i1 false), !tbaa [[TBAA38:![0-9]+]], !tbaa.struct [[TBAA_STRUCT41:![0-9]+]]
+// CHECK-NEW-NEXT:    ret void
+//
 void copy8(NamedBitfields *a1, NamedBitfields *a2) {
-// CHECK-LABEL: _Z5copy8P14NamedBitfieldsS0_
-// CHECK:   tail call void @llvm.memcpy.p0.p0.i64(ptr noundef nonnull align 8 dereferenceable(16) %a1, ptr noundef nonnull align 8 dereferenceable(16) %a2, i64 16, i1 false),
-// CHECK-OLD-SAME: !tbaa.struct [[TBAA_STRUCT14:![0-9]+]]
-// CHECK-NEW-SAME: !tbaa [[TBAA24:![0-9]+]], !tbaa.struct
   *a1 = *a2;
 }
 
@@ -127,11 +191,19 @@ struct NamedBitfields2 {
    unsigned f4 : 4;
 };
 
+// CHECK-OLD-LABEL: define void @_Z5copy9P15NamedBitfields2S0_(
+// CHECK-OLD-SAME: ptr noundef writeonly captures(none) initializes((0, 24)) [[A1:%.*]], ptr noundef readonly captures(none) [[A2:%.*]]) local_unnamed_addr #[[ATTR0]] {
+// CHECK-OLD-NEXT:  [[ENTRY:.*:]]
+// CHECK-OLD-NEXT:    tail call void @llvm.memcpy.p0.p0.i64(ptr noundef nonnull align 8 dereferenceable(24) [[A1]], ptr noundef nonnull align 8 dereferenceable(24) [[A2]], i64 24, i1 false), !tbaa.struct [[TBAA_STRUCT38:![0-9]+]]
+// CHECK-OLD-NEXT:    ret void
+//
+// CHECK-NEW-LABEL: define void @_Z5copy9P15NamedBitfields2S0_(
+// CHECK-NEW-SAME: ptr noundef writeonly captures(none) initializes((0, 24)) [[A1:%.*]], ptr noundef readonly captures(none) [[A2:%.*]]) local_unnamed_addr #[[ATTR0]] {
+// CHECK-NEW-NEXT:  [[ENTRY:.*:]]
+// CHECK-NEW-NEXT:    tail call void @llvm.memcpy.p0.p0.i64(ptr noundef nonnull align 8 dereferenceable(24) [[A1]], ptr noundef nonnull align 8 dereferenceable(24) [[A2]], i64 24, i1 false), !tbaa [[TBAA45:![0-9]+]], !tbaa.struct [[TBAA_STRUCT47:![0-9]+]]
+// CHECK-NEW-NEXT:    ret void
+//
 void copy9(NamedBitfields2 *a1, NamedBitfields2 *a2) {
-// CHECK-LABEL: _Z5copy9P15NamedBitfields2S0_
-// CHECK:   tail call void @llvm.memcpy.p0.p0.i64(ptr noundef nonnull align 8 dereferenceable(24) %a1, ptr noundef nonnull align 8 dereferenceable(24) %a2, i64 24, i1 false),
-// CHECK-OLD-SAME: !tbaa.struct [[TBAA_STRUCT17:![0-9]+]]
-// CHECK-NEW-SAME: !tbaa [[TBAA30:![0-9]+]], !tbaa.struct
   *a1 = *a2;
 }
 
@@ -144,11 +216,19 @@ struct NamedBitfields3 {
   double f2;
 };
 
+// CHECK-OLD-LABEL: define void @_Z6copy10P15NamedBitfields3S0_(
+// CHECK-OLD-SAME: ptr noundef writeonly captures(none) initializes((0, 16)) [[A1:%.*]], ptr noundef readonly captures(none) [[A2:%.*]]) local_unnamed_addr #[[ATTR0]] {
+// CHECK-OLD-NEXT:  [[ENTRY:.*:]]
+// CHECK-OLD-NEXT:    tail call void @llvm.memcpy.p0.p0.i64(ptr noundef nonnull align 8 dereferenceable(16) [[A1]], ptr noundef nonnull align 8 dereferenceable(16) [[A2]], i64 16, i1 false), !tbaa.struct [[TBAA_STRUCT44:![0-9]+]]
+// CHECK-OLD-NEXT:    ret void
+//
+// CHECK-NEW-LABEL: define void @_Z6copy10P15NamedBitfields3S0_(
+// CHECK-NEW-SAME: ptr noundef writeonly captures(none) initializes((0, 16)) [[A1:%.*]], ptr noundef readonly captures(none) [[A2:%.*]]) local_unnamed_addr #[[ATTR0]] {
+// CHECK-NEW-NEXT:  [[ENTRY:.*:]]
+// CHECK-NEW-NEXT:    tail call void @llvm.memcpy.p0.p0.i64(ptr noundef nonnull align 8 dereferenceable(16) [[A1]], ptr noundef nonnull align 8 dereferenceable(16) [[A2]], i64 16, i1 false), !tbaa [[TBAA53:![0-9]+]], !tbaa.struct [[TBAA_STRUCT55:![0-9]+]]
+// CHECK-NEW-NEXT:    ret void
+//
 void copy10(NamedBitfields3 *a1, NamedBitfields3 *a2) {
-// CHECK-LABEL: _Z6copy10P15NamedBitfields3S0_
-// CHECK:   tail call void @llvm.memcpy.p0.p0.i64(ptr noundef nonnull align 8 dereferenceable(16) %a1, ptr noundef nonnull align 8 dereferenceable(16) %a2, i64 16, i1 false),
-// CHECK-OLD-SAME: !tbaa.struct [[TBAA_STRUCT18:![0-9]+]]
-// CHECK-NEW-SAME: !tbaa [[TBAA33:![0-9]+]], !tbaa.struct
   *a1 = *a2;
 }
 
@@ -162,11 +242,19 @@ struct UnionMember1 {
   int p;
 };
 
+// CHECK-OLD-LABEL: define void @_Z6copy11P12UnionMember1S0_(
+// CHECK-OLD-SAME: ptr noundef writeonly captures(none) initializes((0, 16)) [[A1:%.*]], ptr noundef readonly captures(none) [[A2:%.*]]) local_unnamed_addr #[[ATTR0]] {
+// CHECK-OLD-NEXT:  [[ENTRY:.*:]]
+// CHECK-OLD-NEXT:    tail call void @llvm.memcpy.p0.p0.i64(ptr noundef nonnull align 8 dereferenceable(16) [[A1]], ptr noundef nonnull align 8 dereferenceable(16) [[A2]], i64 16, i1 false), !tbaa.struct [[TBAA_STRUCT47:![0-9]+]]
+// CHECK-OLD-NEXT:    ret void
+//
+// CHECK-NEW-LABEL: define void @_Z6copy11P12UnionMember1S0_(
+// CHECK-NEW-SAME: ptr noundef writeonly captures(none) initializes((0, 16)) [[A1:%.*]], ptr noundef readonly captures(none) [[A2:%.*]]) local_unnamed_addr #[[ATTR0]] {
+// CHECK-NEW-NEXT:  [[ENTRY:.*:]]
+// CHECK-NEW-NEXT:    tail call void @llvm.memcpy.p0.p0.i64(ptr noundef nonnull align 8 dereferenceable(16) [[A1]], ptr noundef nonnull align 8 dereferenceable(16) [[A2]], i64 16, i1 false), !tbaa [[TBAA58:![0-9]+]], !tbaa.struct [[TBAA_STRUCT60:![0-9]+]]
+// CHECK-NEW-NEXT:    ret void
+//
 void copy11(UnionMember1 *a1, UnionMember1 *a2) {
-// CHECK-LABEL: _Z6copy11P12UnionMember1S0_
-// CHECK:   tail call void @llvm.memcpy.p0.p0.i64(ptr noundef nonnull align 8 dereferenceable(16) %a1, ptr noundef nonnull align 8 dereferenceable(16) %a2, i64 16, i1 false),
-// CHECK-OLD-SAME: !tbaa.struct [[TBAA_STRUCT19:![0-9]+]]
-// CHECK-NEW-SAME: !tbaa [[TBAA37:![0-9]+]], !tbaa.struct
   *a1 = *a2;
 }
 
@@ -175,11 +263,19 @@ struct UnionMember2 {
   U2 u;
 };
 
+// CHECK-OLD-LABEL: define void @_Z6copy12P12UnionMember2S0_(
+// CHECK-OLD-SAME: ptr noundef writeonly captures(none) initializes((0, 16)) [[A1:%.*]], ptr noundef readonly captures(none) [[A2:%.*]]) local_unnamed_addr #[[ATTR0]] {
+// CHECK-OLD-NEXT:  [[ENTRY:.*:]]
+// CHECK-OLD-NEXT:    tail call void @llvm.memcpy.p0.p0.i64(ptr noundef nonnull align 8 dereferenceable(16) [[A1]], ptr noundef nonnull align 8 dereferenceable(16) [[A2]], i64 16, i1 false), !tbaa.struct [[TBAA_STRUCT50:![0-9]+]]
+// CHECK-OLD-NEXT:    ret void
+//
+// CHECK-NEW-LABEL: define void @_Z6copy12P12UnionMember2S0_(
+// CHECK-NEW-SAME: ptr noundef writeonly captures(none) initializes((0, 16)) [[A1:%.*]], ptr noundef readonly captures(none) [[A2:%.*]]) local_unnamed_addr #[[ATTR0]] {
+// CHECK-NEW-NEXT:  [[ENTRY:.*:]]
+// CHECK-NEW-NEXT:    tail call void @llvm.memcpy.p0.p0.i64(ptr noundef nonnull align 8 dereferenceable(16) [[A1]], ptr noundef nonnull align 8 dereferenceable(16) [[A2]], i64 16, i1 false), !tbaa [[TBAA63:![0-9]+]], !tbaa.struct [[TBAA_STRUCT65:![0-9]+]]
+// CHECK-NEW-NEXT:    ret void
+//
 void copy12(UnionMember2 *a1, UnionMember2 *a2) {
-// CHECK-LABEL: _Z6copy12P12UnionMember2S0_
-// CHECK:   tail call void @llvm.memcpy.p0.p0.i64(ptr noundef nonnull align 8 dereferenceable(16) %a1, ptr noundef nonnull align 8 dereferenceable(16) %a2, i64 16, i1 false),
-// CHECK-OLD-SAME: !tbaa.struct [[TBAA_STRUCT20:![0-9]+]]
-// CHECK-NEW-SAME: !tbaa [[TBAA41:![0-9]+]], !tbaa.struct
 
   *a1 = *a2;
 }
@@ -189,50 +285,121 @@ void copy12(UnionMember2 *a1, UnionMember2 *a2) {
 // CHECK-OLD  [[DOUBLE]] = !{!"double", [[CHAR]], i64 0}
 
 //.
-// CHECK-OLD: [[META2:![0-9]+]] = !{[[META3:![0-9]+]], [[META3]], i64 0}
-// CHECK-OLD: [[META3]] = !{!"int", [[META4:![0-9]+]], i64 0}
+// CHECK-OLD: [[META3:![0-9]+]] = !{!"int", [[META4:![0-9]+]], i64 0}
 // CHECK-OLD: [[META4]] = !{!"omnipotent char", [[META5:![0-9]+]], i64 0}
 // CHECK-OLD: [[META5]] = !{!"Simple C++ TBAA"}
-// CHECK-OLD: [[TBAA_STRUCT6]] = !{i64 0, i64 2, [[META7:![0-9]+]], i64 4, i64 4, [[META2]], i64 8, i64 1, [[META9:![0-9]+]], i64 12, i64 4, [[META2]]}
-// CHECK-OLD: [[META7]] = !{[[META8:![0-9]+]], [[META8]], i64 0}
-// CHECK-OLD: [[META8]] = !{!"short", [[META4]], i64 0}
-// CHECK-OLD: [[META9]] = !{[[META4]], [[META4]], i64 0}
-// CHECK-OLD: [[TBAA_STRUCT10]] = !{i64 0, i64 1, [[META9]], i64 4, i64 2, [[META7]], i64 8, i64 4, [[META2]], i64 12, i64 1, [[META9]], i64 16, i64 4, [[META2]], i64 20, i64 4, [[META2]]}
-// CHECK-OLD: [[TBAA_STRUCT11]] = !{i64 0, i64 12, [[META9]]}
-// CHECK-OLD: [[TBAA_STRUCT12]] = !{i64 0, i64 1, [[META9]], i64 1, i64 1, [[META9]], i64 2, i64 1, [[META9]]}
-// CHECK-OLD: [[TBAA_STRUCT13]] = !{i64 0, i64 1, [[META9]], i64 4, i64 1, [[META9]], i64 5, i64 1, [[META9]]}
-// CHECK-OLD: [[TBAA_STRUCT14]] = !{i64 0, i64 2, [[META9]], i64 2, i64 1, [[META9]], i64 8, i64 8, [[META15:![0-9]+]]}
-// CHECK-OLD: [[META15]] = !{[[META16:![0-9]+]], [[META16]], i64 0}
-// CHECK-OLD: [[META16]] = !{!"double", [[META4]], i64 0}
-// CHECK-OLD: [[TBAA_STRUCT17]] = !{i64 0, i64 1, [[META9]], i64 1, i64 1, [[META9]], i64 2, i64 1, [[META9]], i64 3, i64 2, [[META9]], i64 8, i64 8, [[META15]], i64 16, i64 1, [[META9]]}
-// CHECK-OLD: [[TBAA_STRUCT18]] = !{i64 0, i64 4, [[META9]], i64 8, i64 8, [[META15]]}
-// CHECK-OLD: [[TBAA_STRUCT19]] = !{i64 0, i64 8, [[META9]], i64 8, i64 4, [[META2]]}
-// CHECK-OLD: [[TBAA_STRUCT20]] = !{i64 0, i64 4, [[META2]], i64 8, i64 8, [[META9]]}
+// CHECK-OLD: [[TBAA_STRUCT6]] = !{i64 0, i64 2, [[META7:![0-9]+]], i64 4, i64 4, [[META10:![0-9]+]], i64 8, i64 1, [[META11:![0-9]+]], i64 12, i64 4, [[META12:![0-9]+]]}
+// CHECK-OLD: [[META7]] = !{[[META8:![0-9]+]], [[META9:![0-9]+]], i64 0}
+// CHECK-OLD: [[META8]] = !{!"_ZTS1A", [[META9]], i64 0, [[META3]], i64 4, [[META4]], i64 8, [[META3]], i64 12}
+// CHECK-OLD: [[META9]] = !{!"short", [[META4]], i64 0}
+// CHECK-OLD: [[META10]] = !{[[META8]], [[META3]], i64 4}
+// CHECK-OLD: [[META11]] = !{[[META8]], [[META4]], i64 8}
+// CHECK-OLD: [[META12]] = !{[[META8]], [[META3]], i64 12}
+// CHECK-OLD: [[TBAA_STRUCT13]] = !{i64 0, i64 1, [[META14:![0-9]+]], i64 4, i64 2, [[META16:![0-9]+]], i64 8, i64 4, [[META17:![0-9]+]], i64 12, i64 1, [[META18:![0-9]+]], i64 16, i64 4, [[META19:![0-9]+]], i64 20, i64 4, [[META20:![0-9]+]]}
+// CHECK-OLD: [[META14]] = !{[[META15:![0-9]+]], [[META4]], i64 0}
+// CHECK-OLD: [[META15]] = !{!"_ZTS1B", [[META4]], i64 0, [[META8]], i64 4, [[META3]], i64 20}
+// CHECK-OLD: [[META16]] = !{[[META15]], [[META9]], i64 4}
+// CHECK-OLD: [[META17]] = !{[[META15]], [[META3]], i64 8}
+// CHECK-OLD: [[META18]] = !{[[META15]], [[META4]], i64 12}
+// CHECK-OLD: [[META19]] = !{[[META15]], [[META3]], i64 16}
+// CHECK-OLD: [[META20]] = !{[[META15]], [[META3]], i64 20}
+// CHECK-OLD: [[TBAA_STRUCT21]] = !{i64 0, i64 12, [[META22:![0-9]+]]}
+// CHECK-OLD: [[META22]] = !{[[META4]], [[META4]], i64 0}
+// CHECK-OLD: [[TBAA_STRUCT23]] = !{i64 0, i64 1, [[META24:![0-9]+]], i64 1, i64 1, [[META26:![0-9]+]], i64 2, i64 1, [[META27:![0-9]+]]}
+// CHECK-OLD: [[META24]] = !{[[META25:![0-9]+]], [[META4]], i64 0}
+// CHECK-OLD: [[META25]] = !{!"_ZTS1C", [[META4]], i64 0, [[META4]], i64 1, [[META4]], i64 2}
+// CHECK-OLD: [[META26]] = !{[[META25]], [[META4]], i64 1}
+// CHECK-OLD: [[META27]] = !{[[META25]], [[META4]], i64 2}
+// CHECK-OLD: [[TBAA_STRUCT28]] = !{i64 0, i64 1, [[META29:![0-9]+]], i64 4, i64 1, [[META31:![0-9]+]], i64 5, i64 1, [[META32:![0-9]+]]}
+// CHECK-OLD: [[META29]] = !{[[META30:![0-9]+]], [[META4]], i64 0}
+// CHECK-OLD: [[META30]] = !{!"_ZTS1D", [[META4]], i64 0, [[META4]], i64 4, [[META4]], i64 5}
+// CHECK-OLD: [[META31]] = !{[[META30]], [[META4]], i64 4}
+// CHECK-OLD: [[META32]] = !{[[META30]], [[META4]], i64 5}
+// CHECK-OLD: [[TBAA_STRUCT33]] = !{i64 0, i64 2, [[META22]], i64 2, i64 1, [[META34:![0-9]+]], i64 8, i64 8, [[META37:![0-9]+]]}
+// CHECK-OLD: [[META34]] = !{[[META35:![0-9]+]], [[META4]], i64 2}
+// CHECK-OLD: [[META35]] = !{!"_ZTS14NamedBitfields", [[META3]], i64 0, [[META3]], i64 1, [[META4]], i64 2, [[META36:![0-9]+]], i64 8}
+// CHECK-OLD: [[META36]] = !{!"double", [[META4]], i64 0}
+// CHECK-OLD: [[META37]] = !{[[META35]], [[META36]], i64 8}
+// CHECK-OLD: [[TBAA_STRUCT38]] = !{i64 0, i64 1, [[META39:![0-9]+]], i64 1, i64 1, [[META41:![0-9]+]], i64 2, i64 1, [[META42:![0-9]+]], i64 3, i64 2, [[META22]], i64 8, i64 8, [[META43:![0-9]+]], i64 16, i64 1, [[META22]]}
+// CHECK-OLD: [[META39]] = !{[[META40:![0-9]+]], [[META4]], i64 0}
+// CHECK-OLD: [[META40]] = !{!"_ZTS15NamedBitfields2", [[META4]], i64 0, [[META4]], i64 1, [[META4]], i64 2, [[META3]], i64 3, [[META3]], i64 3, [[META4]], i64 4, [[META36]], i64 8, [[META3]], i64 16}
+// CHECK-OLD: [[META41]] = !{[[META40]], [[META4]], i64 1}
+// CHECK-OLD: [[META42]] = !{[[META40]], [[META4]], i64 2}
+// CHECK-OLD: [[META43]] = !{[[META40]], [[META36]], i64 8}
+// CHECK-OLD: [[TBAA_STRUCT44]] = !{i64 0, i64 4, [[META22]], i64 8, i64 8, [[META45:![0-9]+]]}
+// CHECK-OLD: [[META45]] = !{[[META46:![0-9]+]], [[META36]], i64 8}
+// CHECK-OLD: [[META46]] = !{!"_ZTS15NamedBitfields3", [[META3]], i64 1, [[META3]], i64 2, [[META36]], i64 8}
+// CHECK-OLD: [[TBAA_STRUCT47]] = !{i64 0, i64 8, [[META22]], i64 8, i64 4, [[META48:![0-9]+]]}
+// CHECK-OLD: [[META48]] = !{[[META49:![0-9]+]], [[META3]], i64 8}
+// CHECK-OLD: [[META49]] = !{!"_ZTS12UnionMember1", [[META4]], i64 0, [[META3]], i64 8}
+// CHECK-OLD: [[TBAA_STRUCT50]] = !{i64 0, i64 4, [[META51:![0-9]+]], i64 8, i64 8, [[META22]]}
+// CHECK-OLD: [[META51]] = !{[[META52:![0-9]+]], [[META3]], i64 0}
+// CHECK-OLD: [[META52]] = !{!"_ZTS12UnionMember2", [[META3]], i64 0, [[META4]], i64 8}
 //.
-// CHECK-NEW: [[META2:![0-9]+]] = !{[[META3:![0-9]+]], [[META3]], i64 0, i64 4}
-// CHECK-NEW: [[META3]] = !{[[META4:![0-9]+]], i64 4, !"int"}
+// CHECK-NEW: [[META3:![0-9]+]] = !{[[META4:![0-9]+]], i64 4, !"int"}
 // CHECK-NEW: [[META4]] = !{[[META5:![0-9]+]], i64 1, !"omnipotent char"}
 // CHECK-NEW: [[META5]] = !{!"Simple C++ TBAA"}
 // CHECK-NEW: [[TBAA6]] = !{[[META7:![0-9]+]], [[META7]], i64 0, i64 16}
 // CHECK-NEW: [[META7]] = !{[[META4]], i64 16, !"_ZTS1A", [[META8:![0-9]+]], i64 0, i64 2, [[META3]], i64 4, i64 4, [[META4]], i64 8, i64 1, [[META3]], i64 12, i64 4}
 // CHECK-NEW: [[META8]] = !{[[META4]], i64 2, !"short"}
-// CHECK-NEW: [[TBAA12]] = !{[[META13:![0-9]+]], [[META13]], i64 0, i64 24}
-// CHECK-NEW: [[META13]] = !{[[META4]], i64 24, !"_ZTS1B", [[META4]], i64 0, i64 1, [[META7]], i64 4, i64 16, [[META3]], i64 20, i64 4}
-// CHECK-NEW: [[TBAA15]] = !{[[META4]], [[META4]], i64 0, i64 12}
-// CHECK-NEW: [[TBAA17]] = !{[[META18:![0-9]+]], [[META18]], i64 0, i64 3}
-// CHECK-NEW: [[META18]] = !{[[META4]], i64 3, !"_ZTS1C", [[META4]], i64 0, i64 1, [[META4]], i64 1, i64 1, [[META4]], i64 2, i64 1}
-// CHECK-NEW: [[TBAA20]] = !{[[META21:![0-9]+]], [[META21]], i64 0, i64 6}
-// CHECK-NEW: [[META21]] = !{[[META4]], i64 6, !"_ZTS1D", [[META4]], i64 0, i64 1, [[META4]], i64 4, i64 1, [[META4]], i64 5, i64 1}
-// CHECK-NEW: [[TBAA23]] = !{[[META4]], [[META4]], i64 0, i64 0}
-// CHECK-NEW: [[TBAA24]] = !{[[META25:![0-9]+]], [[META25]], i64 0, i64 16}
-// CHECK-NEW: [[META25]] = !{[[META4]], i64 16, !"_ZTS14NamedBitfields", [[META3]], i64 0, i64 4, [[META3]], i64 1, i64 4, [[META4]], i64 2, i64 1, [[META26:![0-9]+]], i64 8, i64 8}
-// CHECK-NEW: [[META26]] = !{[[META4]], i64 8, !"double"}
-// CHECK-NEW: [[TBAA30]] = !{[[META31:![0-9]+]], [[META31]], i64 0, i64 24}
-// CHECK-NEW: [[META31]] = !{[[META4]], i64 24, !"_ZTS15NamedBitfields2", [[META4]], i64 0, i64 1, [[META4]], i64 1, i64 1, [[META4]], i64 2, i64 1, [[META3]], i64 3, i64 4, [[META3]], i64 3, i64 4, [[META4]], i64 4, i64 1, [[META26]], i64 8, i64 8, [[META3]], i64 16, i64 4}
-// CHECK-NEW: [[TBAA33]] = !{[[META34:![0-9]+]], [[META34]], i64 0, i64 16}
-// CHECK-NEW: [[META34]] = !{[[META4]], i64 16, !"_ZTS15NamedBitfields3", [[META3]], i64 1, i64 4, [[META3]], i64 2, i64 4, [[META26]], i64 8, i64 8}
-// CHECK-NEW: [[TBAA37]] = !{[[META38:![0-9]+]], [[META38]], i64 0, i64 16}
-// CHECK-NEW: [[META38]] = !{[[META4]], i64 16, !"_ZTS12UnionMember1", [[META4]], i64 0, i64 8, [[META3]], i64 8, i64 4}
-// CHECK-NEW: [[TBAA41]] = !{[[META42:![0-9]+]], [[META42]], i64 0, i64 16}
-// CHECK-NEW: [[META42]] = !{[[META4]], i64 16, !"_ZTS12UnionMember2", [[META3]], i64 0, i64 4, [[META4]], i64 8, i64 8}
+// CHECK-NEW: [[TBAA_STRUCT9]] = !{i64 0, i64 2, [[META10:![0-9]+]], i64 4, i64 4, [[META11:![0-9]+]], i64 8, i64 1, [[META12:![0-9]+]], i64 12, i64 4, [[META13:![0-9]+]]}
+// CHECK-NEW: [[META10]] = !{[[META7]], [[META8]], i64 0, i64 2}
+// CHECK-NEW: [[META11]] = !{[[META7]], [[META3]], i64 4, i64 4}
+// CHECK-NEW: [[META12]] = !{[[META7]], [[META4]], i64 8, i64 1}
+// CHECK-NEW: [[META13]] = !{[[META7]], [[META3]], i64 12, i64 4}
+// CHECK-NEW: [[TBAA14]] = !{[[META15:![0-9]+]], [[META15]], i64 0, i64 24}
+// CHECK-NEW: [[META15]] = !{[[META4]], i64 24, !"_ZTS1B", [[META4]], i64 0, i64 1, [[META7]], i64 4, i64 16, [[META3]], i64 20, i64 4}
+// CHECK-NEW: [[TBAA_STRUCT16]] = !{i64 0, i64 1, [[META17:![0-9]+]], i64 4, i64 2, [[META18:![0-9]+]], i64 8, i64 4, [[META19:![0-9]+]], i64 12, i64 1, [[META20:![0-9]+]], i64 16, i64 4, [[META21:![0-9]+]], i64 20, i64 4, [[META22:![0-9]+]]}
+// CHECK-NEW: [[META17]] = !{[[META15]], [[META4]], i64 0, i64 1}
+// CHECK-NEW: [[META18]] = !{[[META15]], [[META8]], i64 4, i64 2}
+// CHECK-NEW: [[META19]] = !{[[META15]], [[META3]], i64 8, i64 4}
+// CHECK-NEW: [[META20]] = !{[[META15]], [[META4]], i64 12, i64 1}
+// CHECK-NEW: [[META21]] = !{[[META15]], [[META3]], i64 16, i64 4}
+// CHECK-NEW: [[META22]] = !{[[META15]], [[META3]], i64 20, i64 4}
+// CHECK-NEW: [[TBAA23]] = !{[[META4]], [[META4]], i64 0, i64 12}
+// CHECK-NEW: [[TBAA_STRUCT24]] = !{i64 0, i64 12, [[TBAA23]]}
+// CHECK-NEW: [[TBAA25]] = !{[[META26:![0-9]+]], [[META26]], i64 0, i64 3}
+// CHECK-NEW: [[META26]] = !{[[META4]], i64 3, !"_ZTS1C", [[META4]], i64 0, i64 1, [[META4]], i64 1, i64 1, [[META4]], i64 2, i64 1}
+// CHECK-NEW: [[TBAA_STRUCT27]] = !{i64 0, i64 1, [[META28:![0-9]+]], i64 1, i64 1, [[META29:![0-9]+]], i64 2, i64 1, [[META30:![0-9]+]]}
+// CHECK-NEW: [[META28]] = !{[[META26]], [[META4]], i64 0, i64 1}
+// CHECK-NEW: [[META29]] = !{[[META26]], [[META4]], i64 1, i64 1}
+// CHECK-NEW: [[META30]] = !{[[META26]], [[META4]], i64 2, i64 1}
+// CHECK-NEW: [[TBAA31]] = !{[[META32:![0-9]+]], [[META32]], i64 0, i64 6}
+// CHECK-NEW: [[META32]] = !{[[META4]], i64 6, !"_ZTS1D", [[META4]], i64 0, i64 1, [[META4]], i64 4, i64 1, [[META4]], i64 5, i64 1}
+// CHECK-NEW: [[TBAA_STRUCT33]] = !{i64 0, i64 1, [[META34:![0-9]+]], i64 4, i64 1, [[META35:![0-9]+]], i64 5, i64 1, [[META36:![0-9]+]]}
+// CHECK-NEW: [[META34]] = !{[[META32]], [[META4]], i64 0, i64 1}
+// CHECK-NEW: [[META35]] = !{[[META32]], [[META4]], i64 4, i64 1}
+// CHECK-NEW: [[META36]] = !{[[META32]], [[META4]], i64 5, i64 1}
+// CHECK-NEW: [[TBAA37]] = !{[[META4]], [[META4]], i64 0, i64 0}
+// CHECK-NEW: [[TBAA38]] = !{[[META39:![0-9]+]], [[META39]], i64 0, i64 16}
+// CHECK-NEW: [[META39]] = !{[[META4]], i64 16, !"_ZTS14NamedBitfields", [[META3]], i64 0, i64 4, [[META3]], i64 1, i64 4, [[META4]], i64 2, i64 1, [[META40:![0-9]+]], i64 8, i64 8}
+// CHECK-NEW: [[META40]] = !{[[META4]], i64 8, !"double"}
+// CHECK-NEW: [[TBAA_STRUCT41]] = !{i64 0, i64 2, [[META42:![0-9]+]], i64 2, i64 1, [[META43:![0-9]+]], i64 8, i64 8, [[META44:![0-9]+]]}
+// CHECK-NEW: [[META42]] = !{[[META4]], [[META4]], i64 0, i64 2}
+// CHECK-NEW: [[META43]] = !{[[META39]], [[META4]], i64 2, i64 1}
+// CHECK-NEW: [[META44]] = !{[[META39]], [[META40]], i64 8, i64 8}
+// CHECK-NEW: [[TBAA45]] = !{[[META46:![0-9]+]], [[META46]], i64 0, i64 24}
+// CHECK-NEW: [[META46]] = !{[[META4]], i64 24, !"_ZTS15NamedBitfields2", [[META4]], i64 0, i64 1, [[META4]], i64 1, i64 1, [[META4]], i64 2, i64 1, [[META3]], i64 3, i64 4, [[META3]], i64 3, i64 4, [[META4]], i64 4, i64 1, [[META40]], i64 8, i64 8, [[META3]], i64 16, i64 4}
+// CHECK-NEW: [[TBAA_STRUCT47]] = !{i64 0, i64 1, [[META48:![0-9]+]], i64 1, i64 1, [[META49:![0-9]+]], i64 2, i64 1, [[META50:![0-9]+]], i64 3, i64 2, [[META42]], i64 8, i64 8, [[META51:![0-9]+]], i64 16, i64 1, [[META52:![0-9]+]]}
+// CHECK-NEW: [[META48]] = !{[[META46]], [[META4]], i64 0, i64 1}
+// CHECK-NEW: [[META49]] = !{[[META46]], [[META4]], i64 1, i64 1}
+// CHECK-NEW: [[META50]] = !{[[META46]], [[META4]], i64 2, i64 1}
+// CHECK-NEW: [[META51]] = !{[[META46]], [[META40]], i64 8, i64 8}
+// CHECK-NEW: [[META52]] = !{[[META4]], [[META4]], i64 0, i64 1}
+// CHECK-NEW: [[TBAA53]] = !{[[META54:![0-9]+]], [[META54]], i64 0, i64 16}
+// CHECK-NEW: [[META54]] = !{[[META4]], i64 16, !"_ZTS15NamedBitfields3", [[META3]], i64 1, i64 4, [[META3]], i64 2, i64 4, [[META40]], i64 8, i64 8}
+// CHECK-NEW: [[TBAA_STRUCT55]] = !{i64 0, i64 4, [[META56:![0-9]+]], i64 8, i64 8, [[META57:![0-9]+]]}
+// CHECK-NEW: [[META56]] = !{[[META4]], [[META4]], i64 0, i64 4}
+// CHECK-NEW: [[META57]] = !{[[META54]], [[META40]], i64 8, i64 8}
+// CHECK-NEW: [[TBAA58]] = !{[[META59:![0-9]+]], [[META59]], i64 0, i64 16}
+// CHECK-NEW: [[META59]] = !{[[META4]], i64 16, !"_ZTS12UnionMember1", [[META4]], i64 0, i64 8, [[META3]], i64 8, i64 4}
+// CHECK-NEW: [[TBAA_STRUCT60]] = !{i64 0, i64 8, [[META61:![0-9]+]], i64 8, i64 4, [[META62:![0-9]+]]}
+// CHECK-NEW: [[META61]] = !{[[META4]], [[META4]], i64 0, i64 8}
+// CHECK-NEW: [[META62]] = !{[[META59]], [[META3]], i64 8, i64 4}
+// CHECK-NEW: [[TBAA63]] = !{[[META64:![0-9]+]], [[META64]], i64 0, i64 16}
+// CHECK-NEW: [[META64]] = !{[[META4]], i64 16, !"_ZTS12UnionMember2", [[META3]], i64 0, i64 4, [[META4]], i64 8, i64 8}
+// CHECK-NEW: [[TBAA_STRUCT65]] = !{i64 0, i64 4, [[META66:![0-9]+]], i64 8, i64 8, [[META61]]}
+// CHECK-NEW: [[META66]] = !{[[META64]], [[META3]], i64 0, i64 4}
 //.
+//// NOTE: These prefixes are unused and the list is autogenerated. Do not add tests below this line:
+// CHECK: {{.*}}

@@ -240,5 +240,6 @@ int assign(void) {
 // C11-O2: [[META7]] = !{!"p1 int", [[META8:![0-9]+]], i64 0}
 // C11-O2: [[META8]] = !{!"any pointer", [[META4]], i64 0}
 // C11-O2: [[TBAA_STRUCT9]] = !{i64 0, i64 20, [[META10:![0-9]+]]}
-// C11-O2: [[META10]] = !{[[META4]], [[META4]], i64 0}
+// C11-O2: [[META10]] = !{[[META11:![0-9]+]], [[META4]], i64 0}
+// C11-O2: [[META11]] = !{!"X", [[META4]], i64 0}
 //.
