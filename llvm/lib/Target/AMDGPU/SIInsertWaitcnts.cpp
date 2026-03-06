@@ -3247,17 +3247,21 @@ bool SIInsertWaitcnts::insertWaitcntInBlock(MachineFunction &MF,
     if (Block.getFirstTerminator() == Inst)
       FlushFlags = isPreheaderToFlush(Block, ScoreBrackets);
 
-    if (Inst.getOpcode() == AMDGPU::ASYNCMARK) {
-      // FIXME: Not supported on GFX12 yet. Will need a new feature when we do.
-      assert(ST->getGeneration() < AMDGPUSubtarget::GFX12);
-      ScoreBrackets.recordAsyncMark(Inst);
-      continue;
-    }
-
     // Generate an s_waitcnt instruction to be placed before Inst, if needed.
     Modified |= generateWaitcntInstBefore(Inst, ScoreBrackets, OldWaitcntInstr,
                                           FlushFlags);
     OldWaitcntInstr = nullptr;
+
+    if (Inst.getOpcode() == AMDGPU::ASYNCMARK) {
+      // FIXME: Not supported on GFX12 yet. Will need a new feature when we do.
+      //
+      // Asyncmarks record the current wait state and so should not allow
+      // waitcnts that occur after them to be merged into waitcnts that occur
+      // before.
+      assert(ST->getGeneration() < AMDGPUSubtarget::GFX12);
+      ScoreBrackets.recordAsyncMark(Inst);
+      continue;
+    }
 
     if (TII->isSMRD(Inst)) {
       for (const MachineMemOperand *Memop : Inst.memoperands()) {
