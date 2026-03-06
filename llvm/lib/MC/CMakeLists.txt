@@ -25,6 +25,7 @@ add_llvm_component_library(LLVMMC
   MCELFStreamer.cpp
   MCExpr.cpp
   MCFragment.cpp
+  MCGNUAsmStreamer.cpp
   MCGOFFStreamer.cpp
   MCInst.cpp
   MCInstPrinter.cpp
