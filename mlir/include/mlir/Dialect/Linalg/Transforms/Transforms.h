@@ -923,7 +923,7 @@ FailureOr<GenericOp> interchangeGenericOp(RewriterBase &rewriter,
 FailureOr<GenericOp> generalizeNamedOp(RewriterBase &rewriter,
                                        LinalgOp linalgOp);
 
-struct SpecializationOptions {
+struct GenericOpSpecializationOptions {
   // Specialize generics to category ops (default: named ops).
   bool emitCategoryOps = false;
 };
@@ -931,7 +931,7 @@ struct SpecializationOptions {
 /// Replace the given GenericOp with a namedOp or categoryOp.
 FailureOr<LinalgOp>
 specializeGenericOp(RewriterBase &rewriter, GenericOp genericOp,
-                    const SpecializationOptions &options = {});
+                    const GenericOpSpecializationOptions &options = {});
 
 /// Create a new buffer using the `allocationFn` provided. The size of this
 /// buffer is either the original subview size when 'useOriginalSubviewSize' is
@@ -1724,9 +1724,9 @@ struct LinalgGeneralizationPattern
 
 struct LinalgSpecializationPattern : public OpRewritePattern<GenericOp> {
 
-  LinalgSpecializationPattern(MLIRContext *context,
-                              const SpecializationOptions &options = {},
-                              PatternBenefit benefit = 1)
+  LinalgSpecializationPattern(
+      MLIRContext *context, const GenericOpSpecializationOptions &options = {},
+      PatternBenefit benefit = 1)
       : OpRewritePattern<GenericOp>(context, benefit), options(options) {}
 
   FailureOr<GenericOp>
@@ -1740,7 +1740,7 @@ struct LinalgSpecializationPattern : public OpRewritePattern<GenericOp> {
   }
 
 private:
-  SpecializationOptions options;
+  GenericOpSpecializationOptions options;
 };
 
 /// Vectorization pattern for memref::CopyOp.
@@ -1956,7 +1956,8 @@ void populateLinalgNamedOpsGeneralizationPatterns(RewritePatternSet &patterns);
 ///     p(x) = an*x^n + ... + a1x + a0
 /// There is no equivalent named op to convert to. Many such cases exist.
 void populateLinalgGenericOpsSpecializationPatterns(
-    RewritePatternSet &patterns, const SpecializationOptions &options = {});
+    RewritePatternSet &patterns,
+    const GenericOpSpecializationOptions &options = {});
 
 /// Populates `patterns` that convert linalg named ops e.g. `linalg.add`
 /// to equivalent `linalg.elementwise`.

@@ -450,9 +450,9 @@ static FailureOr<LinalgOp> specializeLinalgConvolutions(RewriterBase &rewriter,
 //===----------------------------------------------------------------------===//
 // Categorize linalg generic to named op where possible.
 //===----------------------------------------------------------------------===//
-FailureOr<LinalgOp>
-mlir::linalg::specializeGenericOp(RewriterBase &rewriter, GenericOp genericOp,
-                                  const SpecializationOptions &options) {
+FailureOr<LinalgOp> mlir::linalg::specializeGenericOp(
+    RewriterBase &rewriter, GenericOp genericOp,
+    const GenericOpSpecializationOptions &options) {
   // Contraction - e.g. matmul
   if (isaContractionOpInterface(genericOp)) {
     return specializeLinalgContractions(rewriter, genericOp,
@@ -560,6 +560,7 @@ void LinalgSpecializeGenericOpsPass::runOnOperation() {
 }
 
 void mlir::linalg::populateLinalgGenericOpsSpecializationPatterns(
-    RewritePatternSet &patterns, const SpecializationOptions &options) {
+    RewritePatternSet &patterns,
+    const GenericOpSpecializationOptions &options) {
   patterns.add<LinalgSpecializationPattern>(patterns.getContext(), options);
 }
