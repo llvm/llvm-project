@@ -135,6 +135,7 @@ optional<size_t> choose_alloc_idx(const AllocVec &allocs, const uint8_t *&data,
   TYPE NAME = *maybe_##NAME
 
 extern "C" int LLVMFuzzerTestOneInput(const uint8_t *data, size_t remainder) {
+  using LIBC_NAMESPACE::Block;
   LIBC_NAMESPACE::FreeListHeapBuffer<heap_size> heap;
   AllocVec allocs(heap);
 
