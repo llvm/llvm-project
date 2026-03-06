@@ -9,11 +9,13 @@
 #include "Generators.h"
 #include "Representation.h"
 #include "llvm/ADT/ArrayRef.h"
+#include "llvm/ADT/SmallString.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Support/FileSystem.h"
 #include "llvm/Support/FormatVariadic.h"
 #include "llvm/Support/Path.h"
 #include "llvm/Support/raw_ostream.h"
+#include <cstdint>
 #include <string>
 
 using namespace llvm;
@@ -68,46 +70,43 @@ static void writeSourceFileRef(const ClangDocContext &CDCtx, const Location &L,
   OS << "\n\n";
 }
 
-static std::string extractCommentText(const CommentInfo &Comment) {
-  std::vector<std::string> Parts;
+static void extractCommentText(const CommentInfo &Comment,
+                               llvm::raw_ostream &OS) {
 
-  if (!Comment.Text.empty())
-    Parts.push_back(StringRef(Comment.Text).str());
+  OS << Comment.Text;
+  bool FirstChild = true;
 
-  for (size_t Idx = 0; Idx < Comment.Children.size(); ++Idx) {
+  for (size_t Idx = 0, End = Comment.Children.size(); Idx < End; ++Idx) {
     const auto &Child = Comment.Children[Idx];
-    std::string ChildText = extractCommentText(*Child);
+    llvm::SmallString<128> ChildBuffer;
+    llvm::raw_svector_ostream ChildOS(ChildBuffer);
+    extractCommentText(*Child, ChildOS);
 
-    if (ChildText.empty())
+    if (ChildBuffer.empty())
       continue;
 
-    if (Idx > 0 && Comment.Kind == CommentKind::CK_ParagraphComment) {
-      if (Comment.Children[Idx - 1]->Kind == CommentKind::CK_TextComment &&
-          Child->Kind == CommentKind::CK_TextComment) {
-        Parts.push_back("<br>");
-      }
-    }
+    if (Idx > 0 && Comment.Kind == CommentKind::CK_ParagraphComment &&
+        Comment.Children[Idx - 1]->Kind == CommentKind::CK_TextComment &&
+        Child->Kind == CommentKind::CK_TextComment)
+      OS << "<br>";
 
-    Parts.push_back(ChildText);
+    if (FirstChild)
+      FirstChild = false;
+    else if (Comment.Kind == CommentKind::CK_BlockCommandComment ||
+             Comment.Kind == CommentKind::CK_FullComment)
+      OS << "<br><br>";
+
+    OS << ChildBuffer;
   }
-
-  if (Comment.Kind == CommentKind::CK_BlockCommandComment ||
-      Comment.Kind == CommentKind::CK_FullComment) {
-    return llvm::join(Parts, "<br><br>");
-  }
-
-  return llvm::join(Parts, "");
 }
 
 static void genCommentString(llvm::ArrayRef<CommentInfo> Comments,
                              llvm::raw_ostream &OS) {
-  std::string CommentText = "";
+  uint64_t InitPos = OS.tell();
   for (const auto &Child : Comments) {
-    CommentText += extractCommentText(Child);
+    extractCommentText(Child, OS);
   }
-  if (!CommentText.empty())
-    OS << CommentText;
-  else
+  if (InitPos == OS.tell())
     OS << "--";
 }
 
