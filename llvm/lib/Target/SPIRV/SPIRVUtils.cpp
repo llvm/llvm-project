@@ -1197,11 +1197,23 @@ Type *reconstitutePeeledArrayType(Type *Ty) {
 
 std::optional<SPIRV::LinkageType::LinkageType>
 getSpirvLinkageTypeFor(const SPIRVSubtarget &ST, const GlobalValue &GV) {
-  if (GV.hasLocalLinkage() || GV.hasHiddenVisibility())
+  if (GV.hasLocalLinkage())
     return std::nullopt;
 
-  if (GV.isDeclarationForLinker())
+  if (GV.isDeclarationForLinker()) {
+    // Interface variables mustn't not get Import linkage.
+    if (const auto *GVar = dyn_cast<GlobalVariable>(&GV)) {
+      auto SC = addressSpaceToStorageClass(GVar->getAddressSpace(), ST);
+      if (SC == SPIRV::StorageClass::Input ||
+          SC == SPIRV::StorageClass::Output ||
+          SC == SPIRV::StorageClass::PushConstant)
+        return std::nullopt;
+    }
     return SPIRV::LinkageType::Import;
+  }
+
+  if (GV.hasHiddenVisibility())
+    return std::nullopt;
 
   if (GV.hasLinkOnceODRLinkage() &&
       ST.canUseExtension(SPIRV::Extension::SPV_KHR_linkonce_odr))
